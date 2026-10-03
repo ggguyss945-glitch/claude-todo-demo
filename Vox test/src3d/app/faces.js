@@ -76,8 +76,8 @@ export function paintFace(params, size = 640) {
   // ---- eyes
   const ey = H * 0.445;
   for (const side of [-1, 1]) {
-    const ex = W * (0.5 + side * 0.19 * p.widthK);
-    const ew = W * 0.108, eh = H * 0.029 * p.eyeOpen;
+    const ex = W * (0.5 + side * 0.185 * p.widthK);
+    const ew = W * 0.098, eh = H * 0.024 * p.eyeOpen;
     blob(g, ex, ey - H * 0.022, ew * 1.15, H * 0.075, rgba(deep, 0.32 + p.age * 0.1)); // socket
     blob(g, ex + side * ew * 0.12, ey + H * 0.048, ew * 0.85, H * 0.03, rgba('#5a2a30', 0.16 + p.age * 0.14)); // under-eye
     blob(g, ex - side * ew * 0.75, ey, W * 0.03, H * 0.03, rgba('#5a2a24', 0.25)); // inner corner shadow
@@ -110,6 +110,14 @@ export function paintFace(params, size = 640) {
       g.beginPath(); g.arc(ix + ir * 0.35, iy + ir * 0.3, ir * 0.07, 0, Math.PI * 2); g.fill();
       g.fillStyle = 'rgba(40,20,10,0.42)'; // lid shadow on the eyeball
       g.fillRect(ex - ew, ey - eh * 1.6, ew * 2, eh * 0.95);
+      g.fillStyle = shadeHex(skin, -0.12); // upper lid rests over the top of the iris
+      g.beginPath();
+      g.moveTo(ex - ew, ey - eh * 2);
+      g.lineTo(ex + ew, ey - eh * 2);
+      g.lineTo(ex + ew, ey - eh * 0.1 * side);
+      g.bezierCurveTo(ex + ew * 0.45, ey - eh * 1.25, ex - ew * 0.5, ey - eh * 1.25, ex - ew, ey + eh * 0.1 * side);
+      g.closePath();
+      g.fill();
       g.restore();
     }
     // upper lid crease + lash line
@@ -139,9 +147,9 @@ export function paintFace(params, size = 640) {
     g.quadraticCurveTo(ex, ey + eh * 1.6, ex + ew * 0.9, ey + eh * 0.35);
     g.stroke();
     // brows: many short hair strokes along an arch
-    const by = ey - H * (0.075 + p.browRaise * 0.022);
+    const by = ey - H * (0.06 + p.browRaise * 0.022);
     const browCol = p.hairStyle === 'bald' ? (p.age > 0.6 ? '#9a9088' : shadeHex(skin, -0.62)) : shadeHex(p.hair, 0.05);
-    for (let i = 0; i < 110 * p.brow; i++) {
+    for (let i = 0; i < 170 * p.brow; i++) {
       const u = r();
       const bx = ex + side * (u - 0.42) * ew * 2.15;
       const arch = Math.sin(Math.min(1, u * 1.15) * Math.PI) * H * 0.02;

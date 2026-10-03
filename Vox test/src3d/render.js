@@ -65,7 +65,7 @@ async function openPage(browser, port, wid) {
   const page = await browser.newPage({ viewport: { width: 360, height: 640 } });
   page.on('console', (m) => { const t = m.text(); if (!t.includes('GPU stall')) console.log(`[w${wid}]`, t); });
   page.on('pageerror', (e) => console.log(`[w${wid}] PAGEERROR`, e.message, e.stack));
-  await page.goto(`http://127.0.0.1:${port}/${args.app || 'app'}/index.html?v=${VERSION}&w=${W}&h=${H}&fps=${FPS}&wid=${wid}${args.prof ? '&prof=1' : ''}${args.off ? '&off=' + args.off : ''}${args.sub ? '&sub=' + args.sub : ''}`);
+  await page.goto(`http://127.0.0.1:${port}/${args.app || 'app'}/index.html?v=${VERSION}&w=${W}&h=${H}&fps=${FPS}&wid=${wid}${args.prof ? '&prof=1' : ''}${args.off ? '&off=' + args.off : ''}${args.sub ? '&sub=' + args.sub : ''}${args.msaa ? '&msaa=' + args.msaa : ''}${args.forcesub ? '&forcesub=1' : ''}`);
   await page.waitForFunction('window.__ready === true', null, { timeout: 600000 });
   return page;
 }

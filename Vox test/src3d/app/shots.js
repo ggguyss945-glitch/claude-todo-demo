@@ -1,13 +1,13 @@
 // Shot list: camera paths + staging for every cut of the original, timed to the
 // voice-over. Each shot is a pure function of time (deterministic rendering).
 import * as THREE from 'three';
-import { POSES, blendPose, walkPose, makeGlasses, mat, cyl, box } from './chars.js';
+import { POSES, blendPose, walkPose, makeGlasses, mat, cyl, box, reachIK } from './chars.js';
 import { TABLE, chipPile, chipStack, BLUE, REDC, makePhone, makeWalkie } from './props.js';
 import { SURV, OFFICE } from './world.js';
 import { prog, lerp, keys, easeInOut, easeOut, easeIn, smooth, shake, clamp, hash, easeInOutQuint } from './util.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const S2P = new THREE.Vector3(3.2, 0, 5.4), S2RY = -Math.PI / 2 - 0.35;
+const S2P = new THREE.Vector3(6.2, 0, 6.9), S2RY = -Math.PI / 2 - 0.55;
 function s2Glasses() {
   const F = [Math.sin(S2RY), Math.cos(S2RY)], L = [Math.cos(S2RY), -Math.sin(S2RY)];
   return new THREE.Vector3(S2P.x + F[0] * 0.36 + L[0] * 0.14, 1.06, S2P.z + F[1] * 0.36 + L[1] * 0.14);
@@ -227,14 +227,14 @@ export const SHOTS = [
     setup(W, t) {
       const C = W.cast;
       const tb = W.props.bgTables[2];
-      tb.position.set(-4.5, 0, 3.75); tb.rotation.y = 2.25;
+      tb.position.set(-4.35, 0, 4.55); tb.rotation.y = 2.25;
       const tb2 = W.props.bgTables[3];
       tb2.position.set(-4.25, 0, 6.35); tb2.rotation.y = Math.PI / 2;
       const tb3 = W.props.bgTables[4];
       tb3.position.set(-6.7, 0, 7.5); tb3.rotation.y = 0.3;
       show(C.player, -4.95, 6.9, Math.PI - 0.12, { ...POSES.stand, lShoulder: [-0.7, 0, 0.22], rShoulder: [-0.7, 0, -0.22], lElbow: [-1.25, 0, -0.25], rElbow: [-1.25, 0, 0.25] });
       C.player.glasses.visible = false;
-      show(C.ladyRed, -3.8, 3.05, -0.85, POSES.sitTable);
+      show(C.ladyRed, -3.62, 3.9, -0.85, POSES.sitTable);
       show(C.blondBlue, -6.0, 7.9, -2.4, POSES.sitTable);
       W.props.chandeliers[3].position.set(-5.85, 3.0, 4.25);
       W.props.chandeliers[4].position.set(-5.35, 3.35, 6.3);
@@ -252,7 +252,7 @@ export const SHOTS = [
       rig.userData.glasses.rotation.set(0.3, 0, 0);
       rig.userData.glasses.scale.setScalar(1.0);
     },
-    cam: (t) => ({ p: keys(t, [[0, [-4.82, 2.12, 2.35]], [1.333, [-4.85, 2.08, 2.68]]]), l: keys(t, [[0, [-5.0, 0.9, 7.2]], [1.333, [-5.05, 0.9, 7.2]]]), fov: 62 }),
+    cam: (t) => ({ p: keys(t, [[0, [-4.3, 2.18, 2.75]], [1.333, [-4.36, 2.12, 3.1]]]), l: keys(t, [[0, [-4.95, 0.95, 7.2]], [1.333, [-5.0, 0.95, 7.2]]]), fov: 62 }),
   },
   // 2 — close on the glasses with sparkles
   {
@@ -272,8 +272,8 @@ export const SHOTS = [
       rig.userData.glasses.scale.setScalar(1.0);
       getSparkles(W.scene);
       updateSparkles(g, t, 0.2);
-      const tb2 = W.props.bgTables[3];
-      tb2.position.set(S2P.x - 2.6, 0, S2P.z - 3.4); tb2.rotation.y = 0.9;
+      const tb2 = W.props.bgTables[4];
+      tb2.position.set(S2P.x - 3.4, 0, S2P.z - 2.6); tb2.rotation.y = 0.9;
     },
     cam: (t) => {
       const lt = prog(t, 1.333, 2.467);
@@ -524,7 +524,7 @@ export const SHOTS = [
         pileAt(root, -0.7, 0.0, [{ x: 0, z: 0, n: 8 }], 20);
       });
     },
-    cam: (t) => ({ p: [-1.6, 2.4, 0.5], l: [0.15, 1.0, 1.75], fov: 46, fill: 0.6 }),
+    cam: (t) => ({ p: [-2.25, 2.95, 0.25], l: [0.15, 0.95, 1.8], fov: 46, fill: 0.6 }),
   },
   // 13 — CCTV Cam 11: chips + hand, rewinding the tape
   {
@@ -634,7 +634,7 @@ export const SHOTS = [
   {
     t0: 39.0, t1: 40.233, set: 'surv', paper: true,
     setup(W, t) {},
-    cam: (t) => ({ p: keys(t, [[39.0, [SURV.x + 0.36, 1.36, SURV.z - 1.3]], [40.233, [SURV.x + 0.38, 1.34, SURV.z - 1.5]]]), l: [SURV.x + 0.36, 1.3, SURV.z - 2.5], fov: 54 }),
+    cam: (t) => ({ p: keys(t, [[39.0, [SURV.x + 0.38, 1.3, SURV.z - 0.95]], [40.233, [SURV.x + 0.4, 1.28, SURV.z - 1.12]]]), l: [SURV.x + 0.4, 1.22, SURV.z - 2.5], fov: 54 }),
   },
   // 21 — the operator compares the sheet with the screen
   {
@@ -802,7 +802,7 @@ export const SHOTS = [
   {
     t0: 68.967, t1: 71.133, set: 'surv', paper: true, polaroid: true,
     setup(W, t) {},
-    cam: (t) => ({ p: keys(t, [[68.967, [SURV.x + 0.3, 1.32, SURV.z - 1.05]], [71.133, [SURV.x + 0.3, 1.3, SURV.z - 1.2]]]), l: [SURV.x + 0.3, 1.12, SURV.z - 2.4], fov: 54 }),
+    cam: (t) => ({ p: keys(t, [[68.967, [SURV.x + 0.28, 1.3, SURV.z - 0.82]], [71.133, [SURV.x + 0.28, 1.28, SURV.z - 0.98]]]), l: [SURV.x + 0.28, 1.08, SURV.z - 2.4], fov: 54 }),
   },
   // 31 — security congratulates you and asks you to stop
   {

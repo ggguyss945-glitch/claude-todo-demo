@@ -14,7 +14,7 @@ const VERSION = params.get('v') || 'v2';
 const W = parseInt(params.get('w') || '1440'), H = parseInt(params.get('h') || '2560');
 const QUALITY = {
   v2: { shadow: 2048, msaa: 0, smaa: true, feedRes: 256 },
-  v3: { shadow: 4096, msaa: 4, smaa: false, feedRes: 384, sub: 3 },
+  v3: { shadow: 4096, msaa: parseInt(params.get('msaa') || '4'), smaa: params.get('msaa') === '0', feedRes: 384, sub: 3 },
 };
 const Q = QUALITY[VERSION] || QUALITY.v2;
 
@@ -162,7 +162,7 @@ async function boot() {
   }
   // polaroid of you, taken from the Cam 7 angle
   const pl = world.cast.player;
-  pl.root.visible = true;
+  pl.root.visible = true; pl.J.neck.visible = true;
   pl.root.position.set(0, 0, 2.02);
   pl.root.rotation.set(0, Math.PI, 0);
   pl.setPose(POSES.sitTable);
@@ -235,6 +235,7 @@ async function boot() {
     L.hemi.intensity = { casino: 0.6, surv: 0.3, office: 0.22 }[set];
     // key light framing per shot type
     world.props.chandeliers.forEach((ch) => (ch.visible = !shot.topdown));
+    world.props.claw.visible = !!(shot.claw || shot.handshake);
     if (world.props.ceiling) world.props.ceiling.visible = !shot.topdown;
     if (world.props.tableShaft) world.props.tableShaft.visible = !shot.topdown;
     if (shot.topdown) {
@@ -287,16 +288,32 @@ async function boot() {
   quadScene.add(quad);
   const SUB = params.get('sub') ? parseInt(params.get('sub')) : (Q.sub || 1);
 
+  // adaptive motion blur: only frames with a fast-moving camera get subframes
+  function camSpeed(shot, t) {
+    const dt = 1 / 60;
+    const a = shot.cam(Math.max(shot.t0, t - dt)), b = shot.cam(Math.min(shot.t1 - 0.002, t + dt));
+    const dp = Math.hypot(a.p[0] - b.p[0], a.p[1] - b.p[1], a.p[2] - b.p[2]);
+    const da = new THREE.Vector3(...a.l).sub(new THREE.Vector3(...a.p)).normalize();
+    const db = new THREE.Vector3(...b.l).sub(new THREE.Vector3(...b.p)).normalize();
+    const ang = Math.acos(Math.min(1, da.dot(db))) + Math.abs((a.roll || 0) - (b.roll || 0)) + Math.abs((a.fov || 60) - (b.fov || 60)) * 0.01;
+    return dp * 4 + ang;
+  }
+
   async function renderFrame(t) {
-    if (SUB <= 1) return renderSub(t, t, true);
-    const shot = findShot(t);
+    const shotT = findShot(t);
+    const spd = camSpeed(shotT, t);
+    if (PROF) console.log('camSpeed', t, spd.toFixed(4));
+    if (SUB <= 1 || (spd < 0.02 && params.get('forcesub') !== '1')) return renderSub(t, t, true);
+    // enough samples that consecutive subframes differ by a small amount
+    const NS = Math.max(3, Math.min(12, Math.ceil(spd / 0.012)));
+    const shot = shotT;
     composer.renderToScreen = false;
-    for (let k = 0; k < SUB; k++) {
-      const off = (k / (SUB - 1) - 0.5) * (1 / 60);
+    for (let k = 0; k < NS; k++) {
+      const off = (k / (NS - 1) - 0.5) * (1 / 60);
       const tk = Math.min(Math.max(t + off, shot.t0), shot.t1 - 0.002);
       await renderSub(tk, t, false);
       accMat.uniforms.tDiffuse.value = composer.readBuffer.texture;
-      accMat.uniforms.uW.value = 1 / SUB;
+      accMat.uniforms.uW.value = 1 / NS;
       accMat.blending = k === 0 ? THREE.NoBlending : THREE.AdditiveBlending;
       accMat.transparent = k !== 0;
       renderer.setRenderTarget(accRT);
@@ -362,13 +379,13 @@ async function boot() {
       reflMat.opacity = 0.75 * k;
       if (k > 0) {
         const pl = world.cast.player;
-        pl.root.visible = true;
+        pl.root.visible = true; pl.J.neck.visible = true;
         pl.root.position.set(0, 0, 2.02);
         pl.root.rotation.set(0, Math.PI, 0);
         pl.setPose(POSES.sitTable);
-        reflCam.position.set(-0.15, 1.95, 1.05);
-        reflCam.fov = 34; reflCam.updateProjectionMatrix();
-        reflCam.lookAt(0.0, 1.32, 2.02);
+        reflCam.position.set(-0.3, 1.7, 0.45);
+        reflCam.fov = 44; reflCam.updateProjectionMatrix();
+        reflCam.lookAt(0.0, 1.3, 2.02);
         world.sets.casino.visible = true;
         renderer.setRenderTarget(reflRT);
         renderer.render(scene, reflCam);
@@ -382,7 +399,7 @@ async function boot() {
       // stage the casino for the feeds
       const C = world.cast;
       const pl = C.player;
-      pl.root.visible = true; pl.root.position.set(0, 0, 2.02); pl.root.rotation.set(0, Math.PI, 0); pl.setPose(POSES.sitTable);
+      pl.root.visible = true; pl.J.neck.visible = true; pl.root.position.set(0, 0, 2.02); pl.root.rotation.set(0, Math.PI, 0); pl.setPose(POSES.sitTable);
       world.sets.casino.visible = true;
       L.key.visible = true; L.hemi.intensity = 0.6;
       const survVisibleChars = [];

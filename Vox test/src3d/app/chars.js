@@ -332,19 +332,19 @@ export function makeCharacter(o) {
     head.add(lobe);
   }
   // hair volume: a slightly oversized cap that follows the head silhouette
-  if (faceP.hairStyle !== 'bald') {
+  if (faceP.hairStyle !== 'bald' && faceP.hairStyle !== 'buzz') {
     const hairMat = new THREE.MeshStandardMaterial({ map: hairTexture(faceP.hair, faceP.seed), roughness: 0.75, flatShading: true });
     const style = faceP.hairStyle;
-    const capH = { buzz: 0.16, short: 0.3, slick: 0.24, bun: 0.28, long: 0.34, curly: 0.38 }[style] || 0.28;
+    const capH = { buzz: 0.1, short: 0.3, slick: 0.24, bun: 0.28, long: 0.34, curly: 0.38 }[style] || 0.28;
     const g = new THREE.CylinderGeometry(0.5 * 0.86, 0.5, 1, 8, 1, false, Math.PI / 8, Math.PI * 2);
     g.scale(hw * 1.07, hh * capH, hd * 1.08);
     const cap = new THREE.Mesh(g, hairMat);
     cap.position.set(0, hh * (1.0 - capH / 2) + 0.004 * s, -0.004 * s);
     head.add(cap);
     // fringe edge sits just above the brow line at the front
-    const fr = new THREE.Mesh(box(hw * 0.86, hh * 0.05, hd * 0.12), hairMat);
+    const fr = new THREE.Mesh(box(hw * 0.86, hh * 0.04, hd * 0.1), hairMat);
     fr.position.set(0, hh * (0.86 - (style === 'buzz' ? 0.0 : 0.02)), hd * 0.47);
-    if (style !== 'slick') head.add(fr);
+    if (style !== 'slick' && style !== 'buzz') head.add(fr);
     if (style === 'long' || faceP.female) {
       const back = new THREE.Mesh(box(hw * 1.06, hh * 0.95, hd * 0.25), hairMat);
       back.position.set(0, hh * 0.45, -hd * 0.45);
@@ -660,6 +660,28 @@ function applyPose(ch, pose) {
     if (k === 'hipsRot') { J.hips.rotation.set(...pose[k]); continue; }
     if (J[k]) J[k].rotation.set(...pose[k]);
   }
+}
+
+// Two-bone arm IK: place the wrist of arm `L` ('l' or 'r') at a world-space target.
+// elbowOut > 0 swings the elbow away from the body.
+export function reachIK(ch, L, target, elbowOut = 0.6) {
+  const s = ch.scale || 1;
+  const sh = ch.J[L + 'Shoulder'];
+  ch.root.updateMatrixWorld(true);
+  const parent = sh.parent;
+  const T = parent.worldToLocal(target.clone()).sub(sh.position);
+  const L1 = 0.31 * s, L2 = 0.27 * s + 0.06 * s;
+  const d = Math.min(T.length(), L1 + L2 - 1e-3);
+  const interior = Math.acos(Math.max(-1, Math.min(1, (L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2))));
+  const bend = Math.PI - interior;
+  const P0 = new THREE.Vector3(0, -L1, 0).add(new THREE.Vector3(0, -L2, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), -bend));
+  const q = new THREE.Quaternion().setFromUnitVectors(P0.clone().normalize(), T.clone().normalize());
+  // twist about the reach axis so the elbow points outward/down
+  const side = L === 'l' ? 1 : -1;
+  const tw = new THREE.Quaternion().setFromAxisAngle(T.clone().normalize(), side * elbowOut);
+  q.premultiply(tw);
+  sh.quaternion.copy(q);
+  ch.J[L + 'Elbow'].rotation.set(-bend, 0, 0);
 }
 
 // walking cycle (phase in cycles)
