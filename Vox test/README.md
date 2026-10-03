@@ -10,15 +10,28 @@ music) is the only thing reused.
 | `V1_transcript_edit.mp4` | Edit built from the transcript alone, before any frame of the original was viewed. It uses a Vox-style motion-graphics language: paper texture, highlighter, cut-out illustrations, a HUD and word-synced captions. | 1440×2560, 30 fps |
 | `V2_recreation.mp4` | A 1:1 recreation of the original's look: a low-poly 3D casino, painted "photo" faces, first-person shots, CCTV feeds, bloom and a sharpened, saturated grade. It follows the original's ~32 shots and their cut points to the frame. | 1440×2560, 30 fps |
 | `V3_final.mp4` | V2 with far more detail and checked shot by shot against the original. Characters gain fingers, hair volume, blinking, breathing and real lapels and shoes. The sets gain architecture, light shafts, dust, background players, a bartender and clutter. Rendering adds 4× MSAA, motion blur that scales with camera speed (up to 32 subframes per frame on whip pans), contact shadows and 4K shadow maps. | 1440×2560, 30 fps |
-| `Comparison_V1_V2_V3_1440p.mp4` | All three versions playing in sync, with labels. A 4K (3840×2160) master was delivered separately. | 2560×1440 |
+| `Comparison_V1_V2_V3_1440p.mp4` | All three versions playing in sync, with labels. A 4K master is in `masters/`. | 2560×1440 |
 
 ### Bitrates
 
 GitHub rejects files over 100 MB, and Git LFS is blocked by this environment's network
-policy (`lfs.github.com`). The copies committed here are therefore two-pass encodes at
-about 9 Mbps, sized to stay just under that limit. The high-bitrate masters (about 44 Mbps
-H.264 High, 1440×2560, with 320 kbps AAC audio) were delivered separately. They can be
-re-encoded at any bitrate from the lossless render segments with the commands below.
+policy (`lfs.github.com`). The videos in this folder are therefore two-pass encodes at
+about 9 Mbps, sized to stay just under that limit, and they play directly.
+
+The high-bitrate masters live in `masters/`, split into parts of up to 95 MB each. They are
+H.264 High at about 44 Mbps with 320 kbps AAC audio:
+
+| Master | Resolution |
+|--------|------------|
+| `V2_recreation_HQ.mp4` | 1440×2560 |
+| `V3_final_HQ.mp4` | 1440×2560 |
+| `Comparison_V1_V2_V3_4K.mp4` | 3840×2160 |
+
+Rebuild them, with a sha256 check, by running:
+
+```bash
+cd masters && ./join.sh
+```
 
 ## How it was made
 

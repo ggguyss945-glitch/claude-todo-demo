@@ -19,7 +19,7 @@ else
   K=2; OUT=${OUT:-Comparison_V1_V2_V3_1440p.mp4}; RATE=9500k; MAXR=15000k
 fi
 # layout in 1/3-of-4K units so both sizes share one design
-s() { echo $(( $1 * K / 3 )); }
+s() { echo $(( $1 * K / 3 / 2 * 2 )); }
 FW=$(s 3840); FH=$(s 2160); PW=$(s 1148); PH=$(s 2040); BAR=$(s 120)
 X1=$(s 114); X2=$(s 1346); X3=$(s 2578); T1=$(s 58); T2=$(s 34); Y1=$(s 22); Y2=$(s 86)
 
