@@ -9,7 +9,7 @@ music) is the only thing reused.
 |------|------------|------------|
 | `V1_transcript_edit.mp4` | Edit built from the transcript alone, before any frame of the original was viewed. It uses a Vox-style motion-graphics language: paper texture, highlighter, cut-out illustrations, a HUD and word-synced captions. | 1440×2560, 30 fps |
 | `V2_recreation.mp4` | A 1:1 recreation of the original's look: a low-poly 3D casino, painted "photo" faces, first-person shots, CCTV feeds, bloom and a sharpened, saturated grade. It follows the original's ~32 shots and their cut points to the frame. | 1440×2560, 30 fps |
-| `V3_final.mp4` | V2 with far more detail and checked shot by shot against the original. Characters gain fingers, hair volume, blinking, breathing and real lapels and shoes. The sets gain architecture, light shafts, dust, background players, a bartender and clutter. Rendering adds 4× MSAA, motion blur that scales with camera speed (up to 12 subframes per frame on whip pans), contact shadows and 4K shadow maps. | 1440×2560, 30 fps |
+| `V3_final.mp4` | V2 with far more detail and checked shot by shot against the original. Characters gain fingers, hair volume, blinking, breathing and real lapels and shoes. The sets gain architecture, light shafts, dust, background players, a bartender and clutter. Rendering adds 4× MSAA, motion blur that scales with camera speed (up to 32 subframes per frame on whip pans), contact shadows and 4K shadow maps. | 1440×2560, 30 fps |
 | `Comparison_V1_V2_V3_1440p.mp4` | All three versions playing in sync, with labels. A 4K (3840×2160) master was delivered separately. | 2560×1440 |
 
 ### Bitrates

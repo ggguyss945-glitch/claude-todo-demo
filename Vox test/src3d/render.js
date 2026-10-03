@@ -129,6 +129,15 @@ async function video() {
   const chunks = [];
   for (let a = f0; a < f1; a += CH) chunks.push([a, Math.min(f1, a + CH)]);
   const segOf = (a) => path.join(segDir, `c${String(a).padStart(6, '0')}.mkv`);
+  // several independent processes may share one segment dir: chunks are claimed
+  // with an exclusive lock file; a slot clears its own stale claims on start-up.
+  const slot = String(args.slot ?? '0');
+  for (const f of fs.readdirSync(segDir)) {
+    if (!f.endsWith('.claim')) continue;
+    const pth = path.join(segDir, f);
+    try { if (fs.readFileSync(pth, 'utf8') === slot && !fs.existsSync(pth.replace('.claim', '.done'))) fs.unlinkSync(pth); } catch (e) {}
+  }
+  const claim = (a) => { try { fs.writeFileSync(segOf(a) + '.claim', slot, { flag: 'wx' }); return true; } catch (e) { return false; } };
   const todo = chunks.filter(([a]) => !fs.existsSync(segOf(a) + '.done'));
   const total = todo.reduce((n, [a, b]) => n + b - a, 0);
   console.log(`${chunks.length} chunks, ${todo.length} to render (${total} frames)`);
@@ -141,13 +150,21 @@ async function video() {
       const page = await openPage(browser, port, w);
       while (todo.length) {
         const [a, b] = todo.shift();
+        if (fs.existsSync(segOf(a) + '.done') || !claim(a)) continue;
         const seg = segOf(a);
         const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`,
           '-r', String(FPS), '-i', '-', '-c:v', 'libx264rgb', '-qp', '0', '-preset', 'ultrafast', '-threads', '1', seg],
           { stdio: ['pipe', 'inherit', 'inherit'] });
+        let ffDead = false;
+        ff.on('exit', () => { ffDead = true; });
+        ff.stdin.on('error', () => { ffDead = true; });
         for (let f = a; f < b; f++) {
           let buf = await renderFrameTo(page, `w${w}f${f}`, f / FPS);
-          if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
+          if (ffDead) throw new Error(`encoder for chunk ${a} died`);
+          if (!ff.stdin.write(buf)) {
+            await new Promise((r) => { ff.stdin.once('drain', r); ff.once('exit', r); });
+            if (ffDead) throw new Error(`encoder for chunk ${a} died`);
+          }
           buf = null;
           done++;
           if (global.gc && done % 8 === 0) global.gc();
@@ -159,7 +176,8 @@ async function video() {
           }
         }
         ff.stdin.end();
-        await new Promise((r) => ff.on('close', r));
+        const code = await new Promise((r) => (ff.exitCode !== null ? r(ff.exitCode) : ff.on('close', r)));
+        if (code !== 0) throw new Error(`encoder for chunk ${a} exited with ${code}`);
         fs.writeFileSync(seg + '.done', 'ok');
         if (process.memoryUsage().rss > (parseFloat(args.maxrss || '3.5') * 1e9)) { restart = true; break; }
         if (restart) break;

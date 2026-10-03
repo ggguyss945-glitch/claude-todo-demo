@@ -305,7 +305,7 @@ async function boot() {
     if (PROF) console.log('camSpeed', t, spd.toFixed(4));
     if (SUB <= 1 || (spd < 0.02 && params.get('forcesub') !== '1')) return renderSub(t, t, true);
     // enough samples that consecutive subframes differ by a small amount
-    const NS = Math.max(3, Math.min(12, Math.ceil(spd / 0.012)));
+    const NS = Math.max(3, Math.min(32, Math.ceil(spd / 0.01)));
     const shot = shotT;
     composer.renderToScreen = false;
     for (let k = 0; k < NS; k++) {
@@ -330,6 +330,7 @@ async function boot() {
     return finishOverlay(findShot(t), t);
   }
 
+  let feedsFor = -1;
   async function renderSub(t, tOverlay, toScreen) {
     mark('a');
     const shot = findShot(t);
@@ -404,12 +405,16 @@ async function boot() {
       L.key.visible = true; L.hemi.intensity = 0.6;
       const survVisibleChars = [];
       for (const k of ['operator', 'operator2', 'guard', 'guard2']) if (C[k].root.visible) { survVisibleChars.push(k); }
-      renderFeeds(t);
-      cam7.position.set(-0.42, 1.42, 1.25);
-      cam7.lookAt(0.08, 1.22, 2.05);
-      renderer.setRenderTarget(cam7RT);
-      renderer.render(scene, cam7);
-      renderer.setRenderTarget(null);
+      // monitor feeds change slowly: render them once per output frame, not per subframe
+      if (feedsFor !== tOverlay) {
+        feedsFor = tOverlay;
+        renderFeeds(t);
+        cam7.position.set(-0.42, 1.42, 1.25);
+        cam7.lookAt(0.08, 1.22, 2.05);
+        renderer.setRenderTarget(cam7RT);
+        renderer.render(scene, cam7);
+        renderer.setRenderTarget(null);
+      }
       pl.root.visible = false;
       world.sets.casino.visible = vis.casino;
       L.key.visible = false;
