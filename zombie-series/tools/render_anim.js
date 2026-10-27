@@ -20,7 +20,12 @@ const server = http.createServer((req, res) => {
   const T = JSON.parse(fs.readFileSync(tlPath));
   const times = onlyArg ? onlyArg.split(',').map(Number) : Array.from({ length: Math.round(T.dur * fps) }, (_, i) => i / fps);
   const browser = await chromium.launch();
-  let next = 0, done = 0; const t0 = Date.now();
+  let next = 0, done = 0, last = ''; const t0 = Date.now();
+  // progress.json lets a watcher (the live render page) follow the job without parsing logs.
+  const progress = (finished) => fs.writeFileSync(path.join(outDir, 'progress.json'), JSON.stringify({
+    done, total: times.length, fps, last, finished, started_at: new Date(t0).toISOString(),
+    updated_at: new Date().toISOString(), rate: +(done / Math.max(0.001, (Date.now() - t0) / 1000)).toFixed(2) }));
+  progress(false);
   async function worker() {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
@@ -31,11 +36,14 @@ const server = http.createServer((req, res) => {
       await page.evaluate((t) => window.renderAt(t), t);
       const name = onlyArg ? `t_${t.toFixed(2)}.jpg` : `f_${String(i).padStart(5, '0')}.jpg`;
       await page.locator('#stage').screenshot({ path: path.join(outDir, name), type: 'jpeg', quality: 93 });
-      if (++done % 150 === 0) console.log(`${done}/${times.length} frames, ${((Date.now() - t0) / done).toFixed(0)} ms/frame`);
+      last = name;
+      if (++done % 30 === 0) progress(false);
+      if (done % 150 === 0) console.log(`${done}/${times.length} frames, ${((Date.now() - t0) / done).toFixed(0)} ms/frame`);
     }
     await page.close();
   }
   await Promise.all(Array.from({ length: workers }, worker));
+  progress(true);
   console.log(`done ${done} frames in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   await browser.close(); server.close();
 })();
