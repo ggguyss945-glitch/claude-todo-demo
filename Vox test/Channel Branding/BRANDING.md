@@ -51,6 +51,7 @@ Both are under the SIL Open Font License, and the licence files are in `fonts/`.
 | `preview_banner_mobile_crop.png`, `preview_banner_desktop_crop.png` | The banner exactly as a phone and a desktop crop it. |
 | `preview_logo_round_crop.png` | The logo in YouTube's round crop at 240, 98 and 40 px. |
 | `src/make_brand.py` | The 2D finishing pass: lettering, button, depth of field and previews. |
+| `thumbnail/`, `src/make_thumbnail.py` | The first video's 9:16 4K thumbnail and its finishing pass (see *First video* below). |
 
 **Banner safe area.** The name, the red ring, the tagline, the subscribe button and its note all sit
 inside the 1235×338 area every device shows. `make_brand.py` checks this and prints the bounds of each
@@ -127,5 +128,35 @@ perfect score, 100 on every exam, accused of cheating, student accused of cheati
   for search and accessibility.
 * **Audience:** it's written for a general audience (teens and adults). Only mark it "made for kids" if
   children are the audience you mean it for. That setting turns off comments and some features.
-* **Thumbnail frame** (for a long-form re-upload): the "CANCELLED" stamp over the red 100, around 47.0 s, or the
-  hero's "Cheater." close-up at about 50.6 s.
+* **Thumbnail:** `thumbnail/Perfect_Score_thumbnail_2160x3840.jpg` (see below).
+
+### Thumbnail
+
+![Perfect Score thumbnail](thumbnail/Perfect_Score_thumbnail_1080x1920.jpg)
+
+| File | Use |
+|---|---|
+| `thumbnail/Perfect_Score_thumbnail_2160x3840.jpg` | **Upload this one**: 4K 9:16, 1.7 MB, under YouTube's 2 MB thumbnail limit. |
+| `thumbnail/Perfect_Score_thumbnail_2160x3840.png` | Lossless master. |
+| `thumbnail/Perfect_Score_thumbnail_1080x1920.jpg` | A lighter copy for sharing. |
+| `thumbnail/preview_thumbnail_phone.png` | How it reads in a Shorts shelf tile and in the smallest grid (180 px wide). |
+
+It tells the whole story in about one second, in this order:
+
+1. **The faces.** Adam is shocked, with his eyes on the viewer, and the teacher looms behind him with
+   arms crossed and an angry glare. Adam's face is the brightest point in the frame.
+2. **EVERY. SINGLE. EXAM.** This is the context, in big yellow faceted letters in the empty ceiling.
+3. **A red marker arrow** runs from the words to the circled **100** on the paper he holds up.
+4. **CHEATER?** is rubber-stamped in red across his paper, echoing the CANCELLED stamp in the film. It
+   is the hook, and the question mark is the reason to watch.
+
+Classmates stare from the blurred background. The text never covers a face, and nothing important sits
+in the bottom strip where YouTube draws its overlays.
+
+To rebuild it:
+
+```bash
+cd "Vox test/Perfect Score V1"
+node render.js --app app --gl egl --w 2160 --h 3840 --q brand=1 --stills 220.5,221.5
+python3 "../Channel Branding/src/make_thumbnail.py" stills/v2_220.50.png stills/v2_221.50.png "../Channel Branding/thumbnail"
+```

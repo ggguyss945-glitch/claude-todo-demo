@@ -3,11 +3,13 @@
 //   200: square logo, the hero with a director's clapperboard
 //   210: banner group portrait (2048x1152), the middle left clear for the channel name
 //   211: the same banner with the cast hidden (a clean plate for the depth-of-field composite)
+//   220: first-video thumbnail (2160x3840): the teacher looms over the hero with his 100
+//   221: the same thumbnail without the two leads (plate for the depth-of-field composite)
 import * as THREE from 'three';
-import { POSES } from './chars.js';
+import { POSES, EXPR } from './chars.js';
 import { V3, placeChar, handQuat, palmAt, local, look } from './anim.js';
 import { SHOTS } from './shots.js';
-import { X } from './stage.js';
+import { X, seatedWriter } from './stage.js';
 import { canvas, toTex } from './tex.js';
 
 export const BRAND = { name: 'POLYWIT' };
@@ -143,4 +145,55 @@ export async function addBrandShots(world) {
   const bannerCam = () => ({ p: [CX, 1.62, 2.15], l: [CX, 1.58, Z], fov: 33 });
   SHOTS.push({ t0: 210, t1: 211, set: 'class', vignette: 0.12, cam: bannerCam, setup: banner(false) });
   SHOTS.push({ t0: 211, t1: 212, set: 'class', vignette: 0.12, cam: bannerCam, setup: banner(true) });
+
+  // ---- 220/221: thumbnail for "Perfect Score"
+  // the hero at a front-row desk holding up his 100, shocked, eyes on the viewer; the teacher right behind
+  // him with arms crossed; the class behind them all turned to stare. The lower half of the paper is
+  // left clear for the "CHEATER?" stamp added in the finishing pass
+  EXPR.thumbShock = { browRaise: 2.1, eyeOpen: 1.7, irisK: 0.7, mouthOpen: 1.6, smile: -0.15 };
+  EXPR.thumbAngry = { frown: 1.5, eyeOpen: 0.82, smile: -0.7, mouthOpen: 0.3 };
+  const seats = world.class.seats;
+  const seatAt = (ci, ri) => seats.find((q) => q.ci === ci && q.ri === ri);
+  const HS = seatAt(2, 0);
+  const watchers = [[1, 1, 3], [1, 2, 6], [2, 1, 9], [2, 2, 12], [3, 1, 1], [3, 2, 14], [1, 3, 5], [2, 3, 8], [0, 1, 11], [0, 2, 16]];
+  const rim = new THREE.SpotLight('#fff0dc', 14, 6, 0.6, 0.6, 1.5);
+  rim.position.set(HS.x - 0.7, 2.7, HS.z + 1.7); scene.add(rim); scene.add(rim.target); X.all.push(rim);
+  // soft key from the camera side so the hero's face, the focal point, is the brightest thing in frame
+  const key = new THREE.SpotLight('#fff3e4', 9, 5, 0.45, 0.8, 1.5);
+  key.position.set(HS.x + 0.55, 1.95, HS.z - 1.7); scene.add(key); scene.add(key.target); X.all.push(key);
+  const thumbCam = () => ({ p: [HS.x + 0.1, 1.1, HS.z - 1.18], l: [HS.x + 0.05, 1.22, HS.z + 0.3], fov: 58 });
+  const thumb = (leads) => (Wd, t) => {
+    const camP = V3(...thumbCam().p);
+    const h = C.you;
+    const headOf = (c) => c.J.head.getWorldPosition(V3()).add(V3(0, 0.1, 0));
+    if (leads) {
+      h.faceRes = 2048; C.teacher.faceRes = 1280;
+      seatedWriter(h, HS.x, HS.z, Math.PI, null, null, t, 1, { write: false, leftHand: false });
+      // he holds up his paper, the red 100 facing the viewer
+      const pg = X.pDone.group; pg.visible = true;
+      pg.position.copy(local(h, 0.0, 0.97, 0.34));
+      pg.rotation.set(Math.PI / 2 - 0.16, 0, 0); pg.rotateOnWorldAxis(V3(0, 1, 0), Math.PI - 0.05);
+      pg.updateMatrixWorld(true);
+      const pc = (u, v) => V3(u * 0.105, 0.002, v * 0.1485).applyMatrix4(pg.matrixWorld);
+      palmAt(h, 'l', pc(0.98, 0.45).add(V3(0, 0, 0.012)), handQuat(h, [0.15, 1, 0], [0, 0, 1]), 1, local(h, 0.6, 0.7, -0.3), 0.85);
+      palmAt(h, 'r', pc(-0.98, 0.45).add(V3(0, 0, 0.012)), handQuat(h, [-0.15, 1, 0], [0, 0, 1]), 1, local(h, -0.6, 0.7, -0.3), 0.85);
+      look(h, camP, 1, 1); h.expr = 'thumbShock';
+      // the teacher right behind him, arms crossed, glaring down at him
+      const T_ = C.teacher;
+      placeChar(T_, HS.x + 0.32, HS.z + 0.42, Math.PI - 0.22, { ...POSES.armsCrossed, spine: [0.22, 0, 0], neck: [0.1, 0, 0] });
+      look(T_, headOf(h), 1, 1); T_.expr = 'thumbAngry';
+      rim.visible = true; rim.target.position.copy(headOf(h)); rim.target.updateMatrixWorld();
+      key.visible = true; key.target.position.copy(h.J.head.getWorldPosition(V3()).add(V3(0, 0.08, 0))); key.target.updateMatrixWorld();
+    }
+    // the class stares at the hero
+    const faces = ['surprised', 'shocked', 'suspicious', 'surprised', 'worried', 'shocked', 'suspicious', 'surprised', 'shocked', 'worried'];
+    watchers.forEach(([ci, ri, k], i) => {
+      const st = seatAt(ci, ri), kid = world.kids[k];
+      seatedWriter(kid, st.x, st.z, Math.PI, X.kidPapers[i], null, t, i * 1.37 + 0.5, { write: false });
+      kid.J.spine.rotation.y += (st.x > HS.x ? -0.25 : st.x < HS.x ? 0.25 : 0);
+      look(kid, V3(HS.x, 1.12, HS.z), 1, 1); kid.expr = faces[i];
+    });
+  };
+  SHOTS.push({ t0: 220, t1: 221, set: 'class', vignette: 0.3, sat: 1.2, cam: thumbCam, setup: thumb(true) });
+  SHOTS.push({ t0: 221, t1: 222, set: 'class', vignette: 0.3, sat: 1.2, cam: thumbCam, setup: thumb(false) });
 }

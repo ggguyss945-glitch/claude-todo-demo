@@ -103,7 +103,7 @@ export function paintFace(params, size = 640) {
       g.fillRect(ex - ew, ey - eh * 1.6, ew * 2, eh * 3.2);
       blob(g, ex - side * ew * 0.75, ey, ew * 0.25, eh * 0.8, rgba('#d08080', 0.55)); // caruncle
       const ix = ex + p.look[0] * ew * 0.35, iy = ey + p.look[1] * eh * 0.3 - eh * 0.1;
-      const ir = Math.max(eh * 1.08, W * 0.03);
+      const ir = Math.max(eh * 1.08, W * 0.03) * (p.irisK ?? 1); // irisK < 1 shows white around the iris (wide-eyed shock)
       const ig = g.createRadialGradient(ix, iy, ir * 0.15, ix, iy, ir);
       ig.addColorStop(0, shade(p.eye, 0.45)); ig.addColorStop(0.55, p.eye); ig.addColorStop(0.88, shade(p.eye, -0.35)); ig.addColorStop(1, shade(p.eye, -0.85));
       g.fillStyle = ig;
