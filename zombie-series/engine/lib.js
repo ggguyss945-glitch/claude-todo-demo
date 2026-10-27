@@ -88,10 +88,17 @@ export function defs(seed = 7, boil = seed) {
 </defs>`;
 }
 
+// ---------- static layers ----------
+// A layer is markup that never changes between frames. Without a baker it is drawn inline; the frame
+// renderer installs a baker that rasterizes it once and reuses the bitmap, which skips costly filters.
+let BAKER = null;
+export function setBaker(fn) { BAKER = fn; }
+export function layer(key, make, box = { x: 0, y: 0, w: W, h: H }) { return BAKER ? BAKER(key, make, box) : make(); }
+
 // paper grain + vignette on top of everything
 export function finish({ vignette = 0.85, grain = 0.10 } = {}) {
-  return rect(0, 0, W, H, { filter: 'url(#blotch)', opacity: 0.07, style: 'mix-blend-mode:multiply' })
-    + rect(0, 0, W, H, { filter: 'url(#grain)', opacity: grain, style: 'mix-blend-mode:multiply' })
+  return g(layer('blotch', () => rect(0, 0, W, H, { filter: 'url(#blotch)' })), { opacity: 0.07, style: 'mix-blend-mode:multiply' })
+    + g(layer('grain', () => rect(0, 0, W, H, { filter: 'url(#grain)' })), { opacity: grain, style: 'mix-blend-mode:multiply' })
     + rect(0, 0, W, H, { fill: 'url(#vignette)', opacity: vignette });
 }
 
@@ -127,6 +134,15 @@ const POSES = {
   crouch: { drop: 0.95, la: [-0.2, 1.2], ra: [1.0, 1.1], ll: [-0.3, 1.25], rl: [0.45, 1.25], kneeL: [0.8, -0.3], kneeR: [1.05, -0.2] },
   reach: { la: [1.4, 0.5], ra: [1.5, 0.8], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
   shush: { la: [-0.55, 1.75], ra: [0.35, -0.85], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
+  sneak: { drop: 0.25, la: [-1.05, 1.05], ra: [1.0, 0.95], ll: [-0.55, 2.0], rl: [0.5, 2.0] },
+  climb: { la: [-0.7, -1.4], ra: [0.85, -1.0], ll: [-0.4, 2.2], rl: [0.55, 1.3], kneeR: [0.95, 0.6] },
+  carry: { la: [-0.45, 0.85], ra: [0.5, 0.85], ll: [-0.6, 2.15], rl: [0.55, 2.15] },
+  push: { la: [1.25, 0.8], ra: [1.4, 0.9], ll: [-0.95, 2.1], rl: [0.55, 2.15] },
+  throw: { la: [-0.95, 1.3], ra: [1.05, -1.45], ll: [-0.65, 2.2], rl: [0.6, 2.2] },
+  sit: { drop: 1.15, la: [-0.85, 1.55], ra: [0.85, 1.55], ll: [-0.75, 1.05], rl: [0.75, 1.05], kneeL: [-0.85, 0.25], kneeR: [0.85, 0.25] },
+  radio: { la: [-0.8, 1.8], ra: [0.42, 0.2], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
+  hips: { la: [-0.98, 1.05], ra: [0.98, 1.05], ll: [-0.5, 2.2], rl: [0.5, 2.2] },
+  bang: { la: [-0.55, -1.2], ra: [0.6, -1.25], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
 };
 
 function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0 }) {
@@ -170,7 +186,7 @@ function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0
   return s;
 }
 
-function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie, outfit, facing = 1, hold, aim = -8 }) {
+function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie, outfit, facing = 1, hold, aim = -8, back = false }) {
   const P = POSES[pose] || POSES.stand;
   const dr = (P.drop || 0) * u;
   const hipY = y - 2.2 * u + dr, shY = y - 4.05 * u + dr, neckY = y - 4.25 * u + dr;
@@ -203,7 +219,8 @@ function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie
   if (!zombie) {
     s += line(x + 0.05 * u * facing, top + 0.1 * u, x + 0.05 * u * facing, bot - 0.05 * u, { stroke: torsoDark, strokeWidth: 5 });
     s += path(`M${f(x - 0.42 * u)} ${f(bot - 0.55 * u)} h${f(0.3 * u)}`, { stroke: torsoDark, strokeWidth: 4, fill: 'none' });
-  } else s += outfitDetails({ x, u, top, bot, outfit });
+  } else if (!back) s += outfitDetails({ x, u, top, bot, outfit });
+  else s += line(x, top + 0.15 * u, x, bot - 0.1 * u, { stroke: '#00000040', strokeWidth: 3 });
   s += A1.o + A2.o;
   if (hold === 'flashlight') s += flashlight(A2.hand[0], A2.hand[1], 0.95 * u, facing > 0 ? aim : 180 - aim);
   return { s, neckY, dr, hands: [A1.hand, A2.hand] };
@@ -237,7 +254,7 @@ function flashlight(x, y, len, angDeg) {
     + line(x + dx * 0.55, y + dy * 0.55, x + dx * 0.72, y + dy * 0.72, { stroke: '#C9A43A', strokeWidth: len * 0.3, strokeLinecap: 'butt' });
 }
 
-export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '' }) {
+export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '', filter = true }) {
   const u = 60 * s;
   const B = body({ x, y, u, pose, torsoFill: PAL.jacket, torsoDark: PAL.jacketDark, facing, hold, aim });
   const cy = y - 5.25 * u + B.dr, cx = x + (pose === 'run' ? 0.25 * u * facing : 0);
@@ -261,22 +278,24 @@ export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, 
   if (pose === 'shush') h += line(cx + 0.05 * u, cy + 0.35 * u, cx + 0.05 * u, cy + 0.7 * u, ink(0.1 * u));
   const head = tilt ? g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }) : h;
   const bodyT = breathe ? `translate(${f(x)} ${f(y)}) scale(1 ${f(1 + breathe)}) translate(${f(-x)} ${f(-y)})` : undefined;
-  return g(B.s + head + extra, { filter: 'url(#wobbleSoft)', transform: bodyT });
+  return g(B.s + head + extra, { filter: filter ? 'url(#wobbleSoft)' : undefined, transform: bodyT });
 }
 
-export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '' }) {
+export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '', back = false, filter = true }) {
   const u = 60 * s;
   const fills = { cashier: '#8C8C86', guard: '#2E3D55', suit: '#3B3F48', janitor: '#5E6E70', jogger: '#C76A83', shopper: '#7C6A8E', park: '#8A7A4E', nurse: '#6FA3A6' };
-  const B = body({ x, y, u, pose, torsoFill: fills[outfit] || '#777', torsoDark: '#333', zombie: true, outfit, facing });
+  const B = body({ x, y, u, pose, torsoFill: fills[outfit] || '#777', torsoDark: '#333', zombie: true, outfit, facing, back });
   const cx = x + 0.1 * u * facing, cy = y - 5.15 * u + B.dr;
   let h = circle(cx, cy, u, { fill: PAL.zSkin, ...ink(6) });
   h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.4 * u)} Q${f(cx - 0.2 * u)} ${f(cy - 1.15 * u)} ${f(cx + 0.85 * u)} ${f(cy - 0.5 * u)}`, { fill: 'none', stroke: PAL.zSkinDark, strokeWidth: 0.18 * u, opacity: 0.6 });
   if (outfit === 'guard') h += path(`M${f(cx - 0.95 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.35 * u)} ${f(cx + 0.95 * u)} ${f(cy - 0.45 * u)} Z M${f(cx - 0.2 * u)} ${f(cy - 0.5 * u)} h${f(1.4 * u)}`, { fill: '#1B2433', ...ink(5) });
   if (outfit === 'jogger') h += rect(cx - 0.98 * u, cy - 0.55 * u, 1.96 * u, 0.22 * u, { fill: '#F2F0EA', ...ink(4), rx: 6 });
   if (outfit === 'janitor') h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.9 * u)} ${f(cy - 0.45 * u)} Z`, { fill: '#3E7C7B', ...ink(5) });
-  h += face({ cx, cy, u, look, zombie: true });
+  if (back) h += path(`M${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy + 0.25 * u)} ${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Z`, { fill: '#5B5F55', opacity: 0.55 })
+    + ellipse(cx - 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) }) + ellipse(cx + 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) });
+  else h += face({ cx, cy, u, look, zombie: true });
   const inner = g(B.s + extra + g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }));
-  return g(inner + (dim ? g(inner, { opacity: dim, style: 'mix-blend-mode:multiply' }) : ''), { filter: 'url(#wobbleSoft)', transform: sway ? `rotate(${f(sway)} ${f(x)} ${f(y)})` : undefined });
+  return g(inner + (dim ? g(inner, { opacity: dim, style: 'mix-blend-mode:multiply' }) : ''), { filter: filter ? 'url(#wobbleSoft)' : undefined, transform: sway ? `rotate(${f(sway)} ${f(x)} ${f(y)})` : undefined });
 }
 
 // distant crowd: simplified figures, back rows smaller

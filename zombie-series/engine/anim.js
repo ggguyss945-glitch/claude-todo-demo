@@ -1,6 +1,6 @@
 // 60 s test: every shot is a function of time. frame(T, tg) returns the full SVG for global time tg.
 import { W, H, INK, PAL, defs, finish, grade, glow, hero, zombie, crowd, caption, soundCaption, hud, watermark,
-  g, rect, circle, ellipse, line, poly, path, text, ink, rng } from './lib.js';
+  g, rect, circle, ellipse, line, poly, path, text, ink, rng, layer } from './lib.js';
 import { aisle, at, icon, smallCaps, big, cream } from './scenes.js';
 
 // ---------- helpers ----------
@@ -75,13 +75,16 @@ function beam(from, to, spread = 0.2, op = 0.5, pool = 1, poolOp = 1) {
 }
 const exitSign = () => glow(960, 395, 90, '#7CFF9A', 0.5) + rect(925, 380, 70, 26, { fill: '#3DBE6A', stroke: INK, strokeWidth: 2 }) + text(960, 400, 'EXIT', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 18, fill: '#EFFFF2', textAnchor: 'middle' });
 let AISLE = null; const aisleNight = () => (AISLE ||= aisle({ night: true, seed: 5 }));
+// the night aisle never changes, so it is drawn as a baked layer (sharp, and blurred for close-ups)
+const bgAisle = () => layer('aisleNight', () => aisleNight().s);
+const bgAisleSoft = () => layer('aisleNightSoft', () => g(aisleNight().s, { filter: 'url(#softS)' }));
 
 // ---------- shots ----------
 const SHOTS = {};
 
 SHOTS.pov_open = (T, tg, lt) => {
   const E = T.events, A = aisleNight();
-  let s = A.s;
+  let s = bgAisle();
   // the dead: enter the far end after the PA starts, walk toward the speaker, stop after the click
   const zs = [[1030, 'cashier', 0.0, 12], [830, 'suit', 0.5, -8], [1230, 'shopper', 0.9, 6]];
   let nearFace = [1020, 560];
@@ -139,7 +142,7 @@ SHOTS.pov_open = (T, tg, lt) => {
 };
 
 function aisleScene(T, tg, lt, { pose = 'flashlight', hold = 'flashlight', expr = 'scared', look = 0.5, zLook = -0.5, zSnap = 0, blink = 0, noise = 1, push = [1, 1.06], hudOn = false, time = '2:14 AM', flicker = 0, paBoxOn = false }) {
-  const A = aisleNight(); let s = A.s;
+  const A = aisleNight(); let s = bgAisle();
   const zs = [[1250, 2.6, 'cashier', 12], [1060, 3.4, 'suit', -6], [760, 3.9, 'shopper', 8], [1400, 4.6, 'guard', -10]];
   zs.forEach(([x, Zd, o, tl], i) => {
     const q = at(A, x, Zd);
@@ -193,7 +196,7 @@ SHOTS.zombies_turn = (T, tg, lt) => zombieClose(T, tg, lt, { look: (t) => lerp(-
 
 function heroClose(T, tg, lt, { expr = 'scared', look = 0, blink = 0, tilt = 0, s = 1, shake = 0, warm = false, flicker = 0, bgNight = true }) {
   const A = aisleNight();
-  let bg = g(A.s, { filter: 'url(#softS)' });
+  let bg = bgAisleSoft();
   bg += nightTint(warm ? 0.7 : 0.88);
   let ch = hero({ x: 960, y: 1340, s: 2.6, pose: expr === 'scared' ? 'scared' : 'stand', expr, facing: 1, look, blink, tilt: tilt + 1.3 * Math.sin(tg * 0.85), breathe: 0.011 * Math.sin(tg * 2.4) });
   let sc = bg + ch;
@@ -260,7 +263,7 @@ SHOTS.shutter_hands = (T, tg, lt) => {
 };
 
 SHOTS.gary = (T, tg, lt) => {
-  const A = aisleNight(); let s = g(A.s, { filter: 'url(#softS)' });
+  let s = '';
   const x = 900, y = 1150, k = 2.3, u = 60 * k;
   const cx = x + 0.1 * u, top = y - 4.2 * u;
   const tag = rect(cx + 0.08 * u, top + 0.5 * u, 0.95 * u, 0.46 * u, { rx: 10, fill: '#FBF6EA', ...ink(5) })
@@ -271,7 +274,7 @@ SHOTS.gary = (T, tg, lt) => {
     + text(cx - 0.36 * u, top + 1.31 * u, 'ABOUT DEALS', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 0.04 * u, fill: INK, textAnchor: 'middle' });
   const clip = g(rect(-0.32 * u, -0.45 * u, 0.64 * u, 0.86 * u, { rx: 6, fill: '#B58759', ...ink(5) }) + rect(-0.26 * u, -0.32 * u, 0.52 * u, 0.68 * u, { fill: '#F7F2E6', ...ink(3) }) + rect(-0.12 * u, -0.52 * u, 0.24 * u, 0.12 * u, { fill: '#8A8F96', ...ink(3) }), { transform: `translate(${f1(x + 0.85 * u)} ${f1(y - 2.4 * u)}) rotate(-8)` });
   s += zombie({ x, y, s: k, outfit: 'suit', tilt: -10 + 5 * Math.sin(tg * 0.8), look: 0.15, sway: 2 * Math.sin(tg * 0.6), extra: tag + badge + clip });
-  s = g(A.s, { filter: 'url(#softS)' }) + nightTint(0.85) + s.slice(g(A.s, { filter: 'url(#softS)' }).length);
+  s = bgAisleSoft() + nightTint(0.85) + s;
   s += beam([120, 1080], [1000, 520], 0.24, 0.3, 1.9, 0.38);
   s = cam(s, { s: lerp(1.0, 1.08, ease(lt / D)), cx: 980, cy: 480 });
   return s + hud({ theme: 'price', day: 0, time: '2:15 AM', noise: 1, place: 'FRESHWAY · AISLE 7' }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
@@ -285,7 +288,7 @@ SHOTS.hero_deadpan = (T, tg, lt) => {
 };
 
 SHOTS.counting = (T, tg, lt) => {
-  const A = aisleNight(); let s = g(A.s, { filter: 'url(#softS)' });
+  let s = bgAisleSoft();
   // stacked cans, upturned crate, lantern
   const r = rng(77); let cans = '';
   for (let row = 0; row < 4; row++) for (let i = 0; i < 6 - row; i++) {
@@ -383,3 +386,5 @@ export function frame(T, tg) {
   return wrap(SHOTS[sh.name](T, tg, tg - sh.start), 5, boil);
 }
 export const SHOT_NAMES = Object.keys(SHOTS);
+// draw one cold-open shot inside another timeline (the full episode reuses the test's first minute)
+export function drawShot(T, sh, tg) { D = sh.end - sh.start; return SHOTS[sh.name](T, tg, tg - sh.start); }

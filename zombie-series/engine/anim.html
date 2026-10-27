@@ -4,8 +4,11 @@
 <style>html,body{margin:0;background:#000}#stage{width:1920px;height:1080px;overflow:hidden}svg{display:block}</style>
 </head><body><div id="stage"></div>
 <script type="module">
+const q0 = new URLSearchParams(location.search);
 import { frame } from './anim.js';
-const q = new URLSearchParams(location.search);
+import { installBaker } from './baker.js';
+if (q0.get('bake') !== '0') installBaker();
+const q = q0;
 const T = await (await fetch(q.get('timeline'))).json();
 await document.fonts.load('92px Bangers'); await document.fonts.load('800 40px Rubik'); await document.fonts.load('italic 500 40px Rubik'); await document.fonts.load('40px "Patrick Hand"');
 const stage = document.getElementById('stage');
