@@ -34,6 +34,15 @@ function tickStroke(x, y, s) {
   return [[x - s * 0.45, y - s * 0.05], [x - s * 0.1, y + s * 0.35], [x + s * 0.55, y - s * 0.6]];
 }
 
+// handwritten lines appear one after another; each line after the first starts with a short pen
+// carry from the end of the previous line, during which nothing new is written
+const TRAVEL = { ans: 0.2, bonus: 0.3, name: 0 };
+const smoothstep = (f) => f * f * (3 - 2 * f);
+function lineReveal(k, n, i, tr) {
+  const f = clamp(k * n - i);
+  return i === 0 ? f : clamp((f - tr) / (1 - tr));
+}
+
 // timeline of strokes with pen lifts between them: returns {pts, u, v, down} at progress k
 function strokeTimeline(strokes) {
   const segs = [];
@@ -226,10 +235,10 @@ export function makePaper(spec = {}) {
     drawHand(nameItem, s.name);
     // answers appear one after another as `answers` goes 0..1
     const n = ansItems.length;
-    ansItems.forEach((it, i) => drawHand(it, clamp(s.answers * n - i)));
+    ansItems.forEach((it, i) => drawHand(it, lineReveal(s.answers, n, i, TRAVEL.ans)));
     if (bonusItems.length) {
       const nb = bonusItems.length;
-      bonusItems.forEach((it, i) => drawHand(it, clamp(s.bonus * nb - i)));
+      bonusItems.forEach((it, i) => drawHand(it, lineReveal(s.bonus, nb, i, TRAVEL.bonus)));
       if (s.bonusBox > 0) { g.strokeStyle = '#3a3a44'; g.lineWidth = 5; g.lineCap = 'round'; drawPartial(g, bonusTL, s.bonusBox); }
     }
     red(9);
@@ -266,15 +275,18 @@ export function makePaper(spec = {}) {
   // pencil follows the reveal front of a handwritten line, bobbing with the letters
   function writeTip(listName, k) {
     const list = listName === 'bonus' ? bonusItems : listName === 'name' ? [nameItem] : ansItems;
-    const n = list.length;
+    const n = list.length, tr = TRAVEL[listName] ?? TRAVEL.ans;
     const i = Math.min(n - 1, Math.floor(clamp(k) * n));
-    const f = clamp(k * n - i);
-    const it = list[i];
-    const x = it.x + it.w * f;
-    const y = it.y - it.size * 0.3 + Math.sin(f * it.w * 0.09) * it.size * 0.22;
-    // pen lifts briefly between lines
-    const h = (f < 0.04 || f > 0.97) && n > 1 ? 0.006 : 0;
-    return toLocal(x, y, h);
+    const fr = clamp(k * n - i);
+    const at = (it, f) => [it.x + it.w * f, it.y - it.size * 0.3 + Math.sin(f * it.w * 0.09) * it.size * 0.22];
+    // the pen lifts and carries over from the end of the previous line, then writes this one
+    if (i > 0 && fr < tr) {
+      const e = smoothstep(fr / tr);
+      const a = at(list[i - 1], 1), b = at(list[i], 0);
+      return toLocal(lerp(a[0], b[0], e), lerp(a[1], b[1], e), Math.sin(Math.PI * e) * 0.012);
+    }
+    const p = at(list[i], lineReveal(k, n, i, tr));
+    return toLocal(p[0], p[1], 0);
   }
   function boxTip(k) { const p = tipOf(bonusTL, k); return toLocal(p.x, p.y, p.h); }
 

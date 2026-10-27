@@ -45,7 +45,7 @@ Everything is generated from code. No footage, images or samples are used.
 * **Score** (`src/music.py`): an original score in B minor at 120 BPM, written note by note against the
   timeline. It is rendered with FluidSynth (MuseScore General) as eight stems, and the hits land on the
   slam, the stand-up, CANCELLED, "Cheater." and "One hundred."
-* **SFX** (`src/sfx.py`, `src/mix.py`): about 190 synthesized foley events.
+* **SFX** (`src/sfx.py`, `src/mix.py`): about 200 synthesized foley events.
   * Footsteps fall on the walk-cycle phases.
   * Marker squeaks follow the strokes being drawn.
   * Desk scrapes follow the desk's speed.

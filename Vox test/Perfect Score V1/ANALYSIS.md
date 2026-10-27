@@ -94,6 +94,6 @@ suspicion. Nothing in it involves gambling or anything haram.
   * solo piano in the dip
   * an ostinato build and snare roll that stop dead before *"One hundred."*
   * an orchestral hit, then silence, then warm D major for the payoff
-* **SFX:** about 187 synthesized foley events, around 140 per minute, plus room tone for each location. Every footstep sits on the walk
+* **SFX:** about 200 synthesized foley events, around 150 per minute, plus room tone for each location. Every footstep sits on the walk
   cycle, every pen squeak follows the stroke being drawn, and the slam, stamp and bounce land on their
   contact frames.

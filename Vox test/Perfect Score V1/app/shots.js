@@ -557,12 +557,16 @@ function heroPushing(t, d) {
 {
   S(27.15, 28.35, 'class', (t) => ck(t, [K3(27.15, [-1.13, 1.1, -2.4], [-1.08, 0.661, -2.51], 42), K3(28.35, [-1.13, 1.05, -2.42], [-1.08, 0.661, -2.51], 40)]), (Wd, t) => {
     const d = stageClass(t, { kidsOpt: { mode: 'write', paper: 'final' } });
-    const kb = prog(t, 27.2, 27.92), kx = prog(t, 27.95, 28.25);
+    const kb = prog(t, 27.2, 27.9), kx = prog(t, 28.0, 28.25);
     X.pFinal.setState({ answers: 1, bonus: kb, bonusBox: kx, name: 1 });
     const { h } = heroAtDesk(t, d, X.pFinal, { write: true });
     h.J.neck.visible = false; // point of view
     X.pFinal.group.updateMatrixWorld(true);
-    let tipL = t < 27.95 ? X.pFinal.writeTip('bonus', kb) : X.pFinal.boxTip(kx);
+    let tipL = t < 27.9 ? X.pFinal.writeTip('bonus', kb) : X.pFinal.boxTip(kx);
+    if (t >= 27.9 && t < 28.0) { // lift and carry to where the box starts
+      const e = easeInOut(prog(t, 27.9, 28.0));
+      tipL = X.pFinal.writeTip('bonus', 1).lerp(X.pFinal.boxTip(0), e); tipL.y += 0.012 * Math.sin(e * Math.PI);
+    }
     if (t > 28.25) tipL = lift(X.pFinal.boxTip(1), 0.03 * prog(t, 28.25, 28.35));
     const tip = tipL.applyMatrix4(X.pFinal.group.matrixWorld);
     writeWith(h, 'r', X.heroPencil, tip, 1, 0, local(h, -0.5, 0.75, -0.2));
@@ -759,7 +763,7 @@ function drawFeedHud(t, rewind) {
 }
 // S14b 37.05-39.60 side by side: your answers vs the smartest kid's
 {
-  S(37.05, 39.6, 'office', (t) => ck(t, [OC(37.05, [59.9, 0.775, -1.38], 0, 62, 0.55, 40), OC(38.15, [59.92, 0.775, -1.38], 0, 62, 0.55, 40), OC(38.9, [60.1, 0.775, -1.45], 0, 65, 0.4, 38), OC(39.6, [60.1, 0.775, -1.45], 0, 66, 0.38, 37)]), (Wd, t) => {
+  S(37.05, 39.6, 'office', (t) => ck(t, [OC(37.05, [59.885, 0.775, -1.38], 0, 62, 0.55, 40), OC(38.15, [59.9, 0.775, -1.38], 0, 62, 0.55, 40), OC(38.9, [60.1, 0.775, -1.45], 0, 65, 0.4, 38), OC(39.6, [60.1, 0.775, -1.45], 0, 66, 0.38, 37)]), (Wd, t) => {
     X.pFinal.setState({ answers: 1, bonus: 1, bonusBox: 1, name: 1, ticks: 3, score: 1 });
     const a = X.pFinal.group, b = X.pSmart.group;
     a.visible = b.visible = true;
@@ -767,13 +771,19 @@ function drawFeedHud(t, rewind) {
     b.position.set(60.1, 0.7752, -1.37); b.rotation.set(0, -0.04, 0); b.updateMatrixWorld(true);
     const Pn = PRIN();
     placeChar(Pn, DESK_O.x, DESK_O.z - 0.62, 0, { ...POSES.stand, spine: [0.6, 0, 0], hipsZ: -0.08 });
-    // red pen tip hops between matching answers on the two sheets
-    const line = Math.floor(clamp((t - 37.1) / 0.42, 0, 5.99));
-    const f = ((t - 37.1) / 0.42) % 1;
-    const onA = line % 2 === 0;
-    const sheet = onA ? a : b;
-    const qi = Math.floor(line / 2);
-    const tl = V3(-0.04, 0.012 + 0.02 * Math.sin(f * Math.PI), -0.1 + qi * 0.03 + 0.012).applyMatrix4(sheet.matrixWorld);
+    // the red pen underlines your three answers, then follows the camera to the same answers on the other sheet
+    const ansAt = (P, q, u) => P.toLocal(185 + 150 * u, 464 + 140 * q + 14, 0.008).applyMatrix4(P.group.matrixWorld);
+    const steps = [[X.pFinal, 0, 37.1, 0], [X.pFinal, 1, 37.5, 0.16], [X.pFinal, 2, 37.9, 0.16], [X.pSmart, 0, 38.3, 0.5], [X.pSmart, 1, 39.1, 0.18]];
+    let si = 0; while (si < steps.length - 1 && t >= steps[si + 1][2]) si++;
+    const [P, q, t0, car] = steps[si];
+    let tl;
+    if (si > 0 && t < t0 + car) {
+      const [P0, q0] = steps[si - 1], e = easeInOut(prog(t, t0, t0 + car));
+      tl = ansAt(P0, q0, 1).lerp(ansAt(P, q, 0), e); tl.y += (car > 0.3 ? 0.05 : 0.025) * Math.sin(e * Math.PI);
+    } else {
+      const g = prog(t, t0 + car, t0 + car + 0.3);
+      tl = ansAt(P, q, easeInOut(g)); tl.y -= 0.005 * Math.sin(g * Math.PI);
+    }
     show(X.redPen);
     writeWith(Pn, 'r', X.redPen, tl, 1, 0.2, local(Pn, -0.6, 0.8, -0.3));
     palmAt(Pn, 'l', local(Pn, 0.25, 0.785, 0.38), handQuat(Pn, [-0.25, 0, 1], [0, -1, 0]), 1, null, 0.2);
