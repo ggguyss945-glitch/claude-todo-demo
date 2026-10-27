@@ -1,0 +1,299 @@
+<title>Библия сериала</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: одна колонка ~72ch, галерея кадров во всю ширину, разделы-карточки как в самих роликах */
+:root{
+  --paper:#F5EDDF; --sheet:#FFFAF2; --ink:#1F1B19; --muted:#6A6158; --line:#E3D6C1;
+  --cap:#C9472A; --tag:#EDB344; --board:#32493F; --boardInk:#EDE7D6; --olive:#5E6B3A; --orange:#F08A24;
+  --display:"Rubik","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#161514; --sheet:#1F1D1B; --ink:#EFE7D8; --muted:#A99F91; --line:#36322D;
+  --cap:#EE6748; --tag:#EDB344; --board:#2B3D34; --boardInk:#EDE7D6; --olive:#9AAE62; --orange:#F5A04C; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#161514; --sheet:#1F1D1B; --ink:#EFE7D8; --muted:#A99F91; --line:#36322D;
+  --cap:#EE6748; --tag:#EDB344; --board:#2B3D34; --boardInk:#EDE7D6; --olive:#9AAE62; --orange:#F5A04C; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:16px/1.6 var(--body);margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.1rem,6vw,3.3rem);font-weight:900}
+h2{font-size:clamp(1.45rem,3.6vw,2rem);font-weight:800}
+h3{font-size:1.18rem;font-weight:700;margin-top:28px}
+h4{font-size:1rem;font-weight:700}
+p,li{max-width:74ch}
+p{margin:.6em 0}
+ul,ol{padding-left:1.25em;margin:.5em 0}
+li{margin:.3em 0}
+a{color:var(--cap)}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.88em}
+.muted{color:var(--muted)}
+.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.hud .day{background:var(--board);color:var(--boardInk);border:3px solid #8A6A45;border-radius:6px;padding:4px 12px;font:600 15px var(--mono)}
+.hud .note{color:var(--muted);font-size:14px}
+.lead{font-size:1.15rem;margin-top:14px}
+nav.toc{margin:26px 0 8px;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);padding-block:12px}
+nav.toc ol{columns:2;column-gap:32px;margin:0;padding-left:1.4em;font-size:15px}
+@media (max-width:640px){nav.toc ol{columns:1}}
+section{margin-top:56px}
+.eyebrow{font:700 12px var(--display);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.sec-head{border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:16px}
+.rule{background:#1C1819;color:#F3EBDD;border-radius:10px;padding:18px 20px 16px;margin:20px 0}
+.rule .tag{display:inline-block;background:var(--tag);color:#1C1819;font:800 13px var(--display);letter-spacing:.12em;padding:4px 10px;transform:rotate(-1.5deg);margin-bottom:8px}
+.rule p,.rule li{color:#F3EBDD}
+.hero-img{margin:18px 0 0;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.hero-img img{display:block;width:100%;height:auto;max-width:100%}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin:16px 0}
+@media (max-width:420px){.grid{grid-template-columns:1fr}}
+figure{margin:0;background:var(--sheet);border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:0}
+figure img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;max-width:100%}
+figure.wide{grid-column:1/-1}
+figcaption{padding:9px 12px 11px;font-size:14px;line-height:1.45}
+figcaption b{font-family:var(--display);font-weight:700}
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--sheet)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:680px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font:700 12px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.mono{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));margin:14px 0}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.card h4{margin-bottom:6px}
+.card p,.card li{font-size:14.5px}
+.card .src{font:600 11px var(--mono);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.pill{display:inline-block;font:600 11px var(--mono);padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.timeline{display:flex;gap:4px;margin:14px 0 6px;min-width:0}
+.timeline div{flex:var(--f);min-width:0;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:8px 8px 10px;font-size:12.5px;line-height:1.35}
+.timeline div b{display:block;font:800 13px var(--display)}
+.timeline div.ep{border-top:4px solid var(--olive)}
+.timeline div.film{border-top:4px solid var(--cap)}
+@media (max-width:700px){.timeline{flex-direction:column}}
+.script{background:var(--sheet);border:1px dashed var(--muted);border-radius:8px;padding:14px 16px;font-size:14.5px;margin:12px 0}
+.script p{margin:.45em 0}
+.script .dir{font:12px var(--mono);color:var(--cap)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="hud"><span class="day">ПИЛОТ · DAY 0</span><span class="note">рабочее название канала «LAST LIGHT», заменим, когда выберете своё</span></div>
+  <h1>Библия сериала</h1>
+  <p class="lead">Как устроены наши серии: сильные стороны каждого референса, собранные в один механизм поверх стиля Nobody Gets In; сезон из 4–5 серий и сборка-фильм с расширенными сценами; стиль-кадры, которые я нарисовал своим движком; конвейер, по которому я делаю видео целиком сам.</p>
+  <div class="hero-img"><img src="frames/supermarket_night.jpg" alt="Ночной проход супермаркета: герой в оливковой куртке с оранжевыми наушниками светит фонариком на мертвецов в конце прохода, HUD в виде ценника, субтитр BREATHE"></div>
+</header>
+
+<nav class="toc" aria-label="Содержание">
+<ol>
+<li><a href="#decided">Что решили</a></li>
+<li><a href="#take">Что берём у каждого</a></li>
+<li><a href="#engine">Механизм серии</a></li>
+<li><a href="#season">Сезон и сборка-фильм</a></li>
+<li><a href="#episode">Шаблон серии на 14 минут</a></li>
+<li><a href="#frames">Стиль-кадры</a></li>
+<li><a href="#visual">Визуальная система</a></li>
+<li><a href="#sound">Звуковая система</a></li>
+<li><a href="#pipeline">Как я делаю видео сам</a></li>
+<li><a href="#next">Что нужно от вас</a></li>
+</ol>
+</nav>
+
+<section id="decided">
+<div class="sec-head"><div class="eyebrow">Раздел 1</div><h2>Что решили</h2></div>
+<ul>
+<li><strong>Анимация, а не слайд-шоу.</strong> Плоский 2D с толстым дрожащим контуром, бумажным зерном и виньеткой, как у Nobody Gets In. Персонажи — риги (руки, ноги, голова на шарнирах), камера всё время живёт: медленный наезд, параллакс, панорама.</li>
+<li><strong>Рассказ во втором лице</strong> («ты»), настоящее время, точное время суток, реальные факты выживания. Это ядро Nobody Gets In, его не трогаем.</li>
+<li><strong>Наш апгрейд:</strong> POV-сцены без рассказчика, где только звук мира, тишина как приём, свет как сюжет, шкала шума в HUD.</li>
+<li><strong>Сериальность:</strong> сезон из 4–5 серий по 13–15 минут в одной локации, потом сборка-фильм с расширенными сценами.</li>
+<li><strong>Всё делаю я:</strong> сценарий, рисовка, анимация, графика, голос, звук, монтаж. Вы как автор утверждаете идеи, сценарий, аниматик и финальный ролик.</li>
+</ul>
+<div class="rule"><span class="tag">ПРАВИЛО МИРА СЕЗОНА 1</span>
+<p><strong>«They hear. They don't see.»</strong> Мертвецы реагируют только на звук. Это одно правило связывает всё, чем мы отличаемся: шкалу шума в HUD, POV-сцены, где зритель сам вслушивается, тишину в звуке и сюжетные ловушки (будильники, двери, сигнализации). У Nobody Gets In правило в каждой серии новое. У нас оно одно на сезон и с каждой серией раскрывается глубже.</p>
+</div>
+</section>
+
+<section id="take">
+<div class="sec-head"><div class="eyebrow">Раздел 2</div><h2>Что берём у каждого</h2></div>
+<div class="cards">
+<div class="card"><div class="src">Nobody Gets In · основа</div><h4>Сценарная машина и визуальная грамматика</h4><ul><li>Второе лицо, хук из двух фраз, первое слово на 0,4 с</li><li>«Первая проблема… Правило один…», реальный факт раз в 60–90 с</li><li>Мотив-перекличка, улики под твист, финальный инвентарь</li><li>Пословные субтитры, реплики оранжевым курсивом</li><li>План меняется каждые 2–2,5 с, картинка показывает звучащее слово</li><li>Карта здания, схемы, карточки, голос персонажей через фильтр динамика</li></ul></div>
+<div class="card"><div class="src">Beanie Survives</div><h4>Сериал и картинка</h4><ul><li>Сквозная тайна сезона, которая закрывается только в финале (у них вторая серия удержала 37% против 17–25%)</li><li>Дашборд припасов, который убывает от серии к серии</li><li>Повторяющийся POV-ракурс (глазок): рост угрозы без слов</li><li>Подпись-удар под карточкой: «Water is solved. Food is not.»</li><li>Свет и погода как настроение</li></ul></div>
+<div class="card"><div class="src">Oddly Elsewhere</div><h4>POV и тишина</h4><ul><li>Руки героя в кадре, экран телефона, бинокль</li><li>35% хронометража без музыки</li><li>Свет как атмосфера: проектор, таблички EXIT</li><li>Титры глав со временем («HOUR 3 — THE MOVIE THEATER»)</li></ul></div>
+<div class="card"><div class="src">FunNotSoFun · One More Day</div><h4>HUD как игра</h4><ul><li>Постоянный HUD с ресурсом, а не только днём</li><li>HUD оформлен как предмет локации: ценник, талон, табличка</li><li>Всплывающие окна-события: рация, записка, экран</li></ul></div>
+<div class="card"><div class="src">Видео про бессмертие · Awaken</div><h4>Факты на экране</h4><ul><li>Подпись-факт прямо на предмете («ХВАТИТ НА 19 ДНЕЙ»)</li><li>Комикс-звукоподражание на 2–3 ударах за серию</li><li>Источник мелким шрифтом на карточке-факте</li><li>Обещание удержания в первые 30 секунд</li></ul></div>
+<div class="card"><div class="src">Stick Through Collapse</div><h4>Хоррор-крючки</h4><ul><li>Обещание на 0:30: «переживёшь не из-за удачи, а из-за одного решения»</li><li>Надпись-загадка в начале, которая окупается последней фразой</li><li>Конус фонарика в темноте как основной кадр страха</li></ul></div>
+</div>
+<p class="muted">Чего не берём: статичные картинки на 4+ секунды (Beanie), стену слов на 190 в минуту без пауз (One More Day), сведение без музыки и тихое −25 LUFS.</p>
+</section>
+
+<section id="engine">
+<div class="sec-head"><div class="eyebrow">Раздел 3</div><h2>Механизм серии</h2></div>
+<p>Каждая серия собирается из восьми деталей. Если какой-то нет, серия не готова к записи.</p>
+<div class="tbl"><table>
+<thead><tr><th>Деталь</th><th>Что это</th><th>Пример (сезон «Freshway»)</th></tr></thead>
+<tbody>
+<tr><td><b>1. Хук</b></td><td>Две фразы: ситуация и поворот. Первое слово на первой секунде</td><td>«Automatic doors open for anything that walks up to them. Tonight one of them doesn't walk.»</td></tr>
+<tr><td><b>2. Системы локации</b></td><td>3–4 реальные системы здания, на которых строятся задачи и решения</td><td>Ставни, морозильная камера, пожарный выход на магните, музыка в торговом зале</td></tr>
+<tr><td><b>3. Задачи</b></td><td>«Problem 1–4»: свет, вода, еда, двери, люди. Каждая решается физикой здания</td><td>Морозильник держит холод 48 часов → переносишь всё мясо внутрь и запечатываешь</td></tr>
+<tr><td><b>4. Правила героя</b></td><td>Выводы, которые герой делает сам, и их перечень в конце</td><td>«Rule 1: They hear. They don't see. Rule 2: Music is a dinner bell»</td></tr>
+<tr><td><b>5. Мотив-перекличка</b></td><td>Повторяющаяся деталь, которая каждый раз значит больше</td><td>Будильник на 7:00, который кто-то каждую ночь заново заводит</td></tr>
+<tr><td><b>6. Живая угроза</b></td><td>Человек опаснее мертвецов</td><td>Охранник торгового центра, который «помогает» по рации</td></tr>
+<tr><td><b>7. Улики и твист серии</b></td><td>2–3 детали, которые финальная фраза серии переворачивает</td><td>Голос по рации знает то, чего не мог видеть</td></tr>
+<tr><td><b>8. Тайна сезона</b></td><td>Один вопрос на всю арку: в каждой серии новая улика, ответ в финале сезона</td><td>Кто каждую ночь заводит будильник?</td></tr>
+</tbody></table></div>
+<h3>Язык</h3>
+<ul>
+<li>Короткие фразы (в среднем 5–6 слов), конкретные числа вместо прилагательных, сухой юмор в самые страшные моменты.</li>
+<li>Мертвецы остаются людьми со своей работой: кассир, охранник, уборщик. Они повторяют привычки, на этом строятся и жуть, и жалость.</li>
+<li>Темп 160–170 слов в минуту, а не 190: остаётся место для пауз и POV.</li>
+</ul>
+</section>
+
+<section id="season">
+<div class="sec-head"><div class="eyebrow">Раздел 4</div><h2>Сезон и сборка-фильм</h2></div>
+<p>Один сезон — одна локация и 30 дней. Каждая серия закрывает свою неделю, свою задачу и свой твист, но оставляет открытой тайну сезона. После последней серии выходит фильм.</p>
+<div class="timeline" role="list">
+<div class="ep" style="--f:3" role="listitem"><b>Ep. 1 · Day 0–7</b>Ночная смена. Правило мира. Ставни и холод. Твист серии + первая улика тайны</div>
+<div class="ep" style="--f:3" role="listitem"><b>Ep. 2 · Day 8–14</b>Вода и вылазка в торговый центр. Первый живой человек</div>
+<div class="ep" style="--f:3" role="listitem"><b>Ep. 3 · Day 15–21</b>Свет кончается. Рация, союз, подозрение</div>
+<div class="ep" style="--f:3" role="listitem"><b>Ep. 4 · Day 22–28</b>Предательство. Потеря базы. Парк</div>
+<div class="ep" style="--f:3" role="listitem"><b>Ep. 5 · Day 29–30</b>Финал, ответ на тайну сезона, крючок на сезон 2</div>
+<div class="film" style="--f:5" role="listitem"><b>Фильм · 70–80 мин</b>Все серии одной историей + расширенные сцены + новая концовка</div>
+</div>
+<h3>Длина серии: 15 минут, но с оговоркой</h3>
+<p>По данным ниши лучше всего сейчас работают 8–10 минут: два лидера держат именно эту длину, а каналы с роликами по 17–27 минут собирают в разы меньше. 15 минут — рискованная зона, но не провальная (у Beanie серии по 9–13,5 минуты набирают 100–600K). Предлагаю 13–15 минут, построенные как три акта по 4–5 минут, у каждого свой мини-финал. Если по аналитике пилота удержание просядет на 8–9 минуте, вторая серия будет короче.</p>
+<h3>Сборка-фильм с расширенными сценами</h3>
+<p>Канал Линча я посмотреть не смог: YouTube в моём окружении закрыт, а лимит NexLev на эту неделю исчерпан до 3 ноября. Делаю по вашему описанию, а подтверждение из ниши есть: у Kit vs The End часовая склейка (141K) обогнала лучший отдельный эпизод (42K), у Stick Through Collapse 32-минутная склейка набрала 82K против ~9,5K у частей.</p>
+<ul>
+<li><strong>Новый холодный старт</strong> на 30–60 секунд, которого не было ни в одной серии (например, POV-сцена из ночи «до»).</li>
+<li><strong>Вырезаем повторы:</strong> «в прошлой серии», конечные заставки, повторные хуки.</li>
+<li><strong>Добавляем 3–5 расширенных сцен (8–12 минут нового материала):</strong> POV-сцены, на которые в сериях не хватило времени; день глазами другого персонажа; что происходило снаружи; ответ на популярный вопрос из комментариев.</li>
+<li><strong>Новая концовка-эпилог</strong> только в фильме: так у зрителя серий тоже есть повод смотреть.</li>
+<li><strong>Упаковка:</strong> «Zombie Outbreak: 30 Days Locked Inside a Supermarket (Full Movie, Extended)», главы в описании, выход через 3–7 дней после последней серии.</li>
+</ul>
+<h3>Названия серий</h3>
+<p><code>Zombie Outbreak: 30 Days Locked Inside a Supermarket — Ep. 1: The Night Shift (Day 0–7)</code>. Бренд-префикс и «30 days» узнаются в поиске, номер эпизода и дни в скобках сразу показывают сериал, как у Beanie.</p>
+</section>
+
+<section id="episode">
+<div class="sec-head"><div class="eyebrow">Раздел 5</div><h2>Шаблон серии на 14 минут</h2></div>
+<div class="tbl"><table>
+<thead><tr><th>Время</th><th>Блок</th><th>Что на экране</th></tr></thead>
+<tbody>
+<tr><td class="mono">0:00</td><td>Холодное POV-открытие 5–10 с, без рассказчика</td><td>Леттербокс, звук мира, подписи звуков</td></tr>
+<tr><td class="mono">0:08</td><td>Хук из двух фраз</td><td>Пословные субтитры, HUD появляется</td></tr>
+<tr><td class="mono">0:20</td><td>Обещание удержания + тайна сезона (одна строка)</td><td>Деталь-загадка крупно</td></tr>
+<tr><td class="mono">0:40</td><td><b>Акт 1:</b> сеттинг, правило мира, Problem 1 → решение</td><td>Карта, схема, карточка PROBLEM</td></tr>
+<tr><td class="mono">2:30</td><td>Problem 2 + факт + дашборд припасов</td><td>Карточка-факт, SUPPLIES</td></tr>
+<tr><td class="mono">3:30</td><td>Вылазка</td><td>POV-сцена №2, шкала шума растёт</td></tr>
+<tr><td class="mono">4:30</td><td>Мини-финал акта 1, RULE 1</td><td>Тёмная карточка с жёлтым тегом</td></tr>
+<tr><td class="mono">5:00</td><td><b>Акт 2:</b> живой человек, улика 1, мотив входит в быт</td><td>Голос через рацию или динамик</td></tr>
+<tr><td class="mono">7:00</td><td>Катастрофа середины, вопрос в комментарии</td><td>Комикс-звукоподражание, экшен</td></tr>
+<tr><td class="mono">8:30</td><td>Привязанность и юмор, улика 2, мини-финал акта 2</td><td>Тёплый свет, тихая сцена</td></tr>
+<tr><td class="mono">9:30</td><td><b>Акт 3:</b> план, ложная надежда</td><td>Карта с маршрутом, будильники-приманки</td></tr>
+<tr><td class="mono">11:30</td><td>Кульминация</td><td>POV-сцена №3, музыка обрывается в тишину</td></tr>
+<tr><td class="mono">12:40</td><td>Твист серии: одна фраза переворачивает улики</td><td>Крупный план реакции</td></tr>
+<tr><td class="mono">13:15</td><td>Инвентарь, правила, новое правило</td><td>Карточка инвентаря</td></tr>
+<tr><td class="mono">13:40</td><td>Клиффхэнгер: новая улика тайны сезона</td><td>Последний кадр без субтитров, звук</td></tr>
+<tr><td class="mono">13:55</td><td>Конечная заставка: «Day 8?», следующая серия</td><td>Карточка эпизода</td></tr>
+</tbody></table></div>
+<div class="script">
+<p class="dir">ПРИМЕР · холодное открытие Ep. 1 · 0:00–0:12</p>
+<p class="dir">[POV, леттербокс. Тёмный склад. Гул холодильников. Дыхание близко.]</p>
+<p class="dir">[Где-то в зале щёлкает радио магазина: «…attention shoppers…». Шаги, много шагов, все идут на звук.]</p>
+<p class="dir">[Рука находит выключатель. Щелчок. Тишина. Шаги останавливаются.]</p>
+<p class="dir">[Склейка в 2D, HUD, музыка входит]</p>
+<p><b>Рассказчик:</b> They don't see you. They hear you. And the store radio just told them where you are.</p>
+</div>
+</section>
+
+<section id="frames">
+<div class="sec-head"><div class="eyebrow">Раздел 6</div><h2>Стиль-кадры</h2></div>
+<p>Все кадры ниже нарисованы кодом моего движка: каждый персонаж, предмет и декорация описаны геометрией. Из этого же кода будут делаться анимационные кадры роликов, поэтому эти картинки заодно проверяют сам конвейер. Это первая итерация стиля, её можно править.</p>
+<div class="grid">
+<figure class="wide"><img src="frames/sheet.jpg" alt="Лист персонажей: герой в семи позах, шесть типов мертвецов, предметы и палитра" loading="lazy"><figcaption><b>Лист персонажей.</b> Герой: оливковая куртка, оранжевые наушники на шее, лохматые тёмные волосы. Отличается от красной кепки Nobody Gets In и шапок Beanie и One More Day. Мертвецы носят форму своей прежней работы. Предметы и палитра сезона.</figcaption></figure>
+<figure><img src="frames/supermarket_day.jpg" alt="Проход супермаркета днём, герой и два мертвеца в конце прохода" loading="lazy"><figcaption><b>Супермаркет, день 3.</b> Проход в центральной перспективе. HUD в виде ценника: название магазина, день, шкала шума, штрихкод.</figcaption></figure>
+<figure><img src="frames/supermarket_night.jpg" alt="Тот же проход ночью, герой светит фонариком на мертвецов" loading="lazy"><figcaption><b>Тот же проход, день 10, 4:51.</b> Ночной синий грейд, конус фонарика, светится табличка EXIT. Шкала шума уже в красной зоне.</figcaption></figure>
+<figure><img src="frames/exterior_night.jpg" alt="Экстерьер супермаркета ночью, толпа у ставней, герой на крыше" loading="lazy"><figcaption><b>Суббота, 23:58.</b> Постоянные покупатели давят на ставни. Ты на крыше с фонариком. Масштаб угрозы одним кадром.</figcaption></figure>
+<figure><img src="frames/closeup_shutter.jpg" alt="Крупный план испуганного героя, серые руки лезут из-под ставней" loading="lazy"><figcaption><b>Крупный план реакции.</b> Руки из-под погнутых ставней. Такие кадры Nobody Gets In ставит после каждого удара.</figcaption></figure>
+<figure><img src="frames/mall.jpg" alt="Торговый центр, вид со второго этажа на толпу у фонтана" loading="lazy"><figcaption><b>Торговый центр, день 4.</b> Толпа у сухого фонтана, остановленный эскалатор. HUD в виде наклейки «YOU ARE HERE».</figcaption></figure>
+<figure><img src="frames/park.jpg" alt="Парк на закате, герой на игровой башне, мертвецы тянутся снизу" loading="lazy"><figcaption><b>Парк, день 2, закат.</b> Игровая башня как убежище, туман у земли, фонари. HUD в виде парковой таблички.</figcaption></figure>
+<figure><img src="frames/pov_stockroom.jpg" alt="POV: рука с фонариком, свет падает на лицо мертвеца в складе" loading="lazy"><figcaption><b>POV-режим.</b> Леттербокс, без HUD и рассказчика, только подпись звука. Рука героя держит фонарик, пятно света падает на лицо.</figcaption></figure>
+<figure><img src="frames/card_map.jpg" alt="Карта магазина на миллиметровке с меткой YOU и кругами звука" loading="lazy"><figcaption><b>Карта.</b> План на миллиметровке, метка YOU, маршрут, мертвецы точками, круги звука от будильника за пожарным выходом.</figcaption></figure>
+<figure><img src="frames/card_episode.jpg" alt="Карточка эпизода: EPISODE 1 THE NIGHT SHIFT" loading="lazy"><figcaption><b>Карточка эпизода</b> в начале каждой серии.</figcaption></figure>
+<figure><img src="frames/card_day.jpg" alt="Карточка DAY 3 THE REGULARS" loading="lazy"><figcaption><b>Карточка дня</b> с названием главы.</figcaption></figure>
+<figure><img src="frames/card_problem.jpg" alt="Карточка PROBLEM 2 WATER" loading="lazy"><figcaption><b>Задача</b>: иконка, номер, крупное слово.</figcaption></figure>
+<figure><img src="frames/card_rule.jpg" alt="Карточка RULE 1 THEY HEAR THEY DON'T SEE" loading="lazy"><figcaption><b>Правило</b> на тёмной карточке с жёлтым тегом.</figcaption></figure>
+<figure><img src="frames/card_fact.jpg" alt="Карточка-факт 48 часов" loading="lazy"><figcaption><b>Факт</b>: крупная цифра, шкала и источник.</figcaption></figure>
+<figure><img src="frames/card_inventory.jpg" alt="Карточка SUPPLIES DAY 5" loading="lazy"><figcaption><b>Дашборд припасов</b> с подписью-ударом: «Food is not the problem. Light is.»</figcaption></figure>
+</div>
+<p class="muted">Что уже видно и что дорабатывать: мертвецы пока немного «мультяшнее», чем у Nobody Gets In; в анимации добавятся покачивание, моргание, ходьба и шаткий наклон головы. Толпы будут гуще и разнообразнее. Субтитры в кадрах статичны, в видео они идут по одному слову синхронно с голосом.</p>
+</section>
+
+<section id="visual">
+<div class="sec-head"><div class="eyebrow">Раздел 7</div><h2>Визуальная система</h2></div>
+<div class="cards">
+<div class="card"><h4>Анимация</h4><ul><li>Персонажи-риги: ходьба, бег, присед, поворот головы, моргание, рот при репликах</li><li>Камера: медленный наезд в каждом плане, параллакс слоёв, панорамы, тряска на ударах</li><li>План 2–2,5 с в закадре, длинные удержания 4–7 с на страхе</li></ul></div>
+<div class="card"><h4>Свет</h4><ul><li>Грейды: день, закат, ночь, без электричества, аварийный красный</li><li>Источники отдельным слоем: фонарик, EXIT, фонари, свеча</li><li>Свет = сюжет: включили, выключили, мигнуло</li></ul></div>
+<div class="card"><h4>HUD</h4><ul><li>Оформлен как предмет локации: ценник, наклейка «YOU ARE HERE», табличка</li><li>День, время, шкала шума (наш фирменный элемент)</li><li>В POV-сценах исчезает</li></ul></div>
+<div class="card"><h4>Моушн-графика</h4><ul><li>Карточки: эпизод, день, задача, правило, факт, инвентарь, конечная заставка</li><li>Карта и схемы с анимацией маршрута и кругов звука</li><li>Подписи-факты на предметах, 2–3 звукоподражания за серию</li></ul></div>
+<div class="card"><h4>Субтитры</h4><ul><li>Одно слово в момент произнесения, комикс-шрифт, белая заливка, тёмная обводка</li><li>Реплики персонажей оранжевым курсивом</li><li>В POV вместо слов курсивные подписи звуков</li></ul></div>
+<div class="card"><h4>POV-грамматика</h4><ul><li>Вход: обрыв музыки, леттербокс, HUD уезжает</li><li>Руки героя в кадре, одно действие на сцену</li><li>Выход: резкая склейка и короткая фраза рассказчика</li></ul></div>
+</div>
+</section>
+
+<section id="sound">
+<div class="sec-head"><div class="eyebrow">Раздел 8</div><h2>Звуковая система</h2></div>
+<ul>
+<li><strong>Рассказчик:</strong> спокойный мужской баритон, 160–170 слов в минуту, паузы 1–3 секунды перед ударами.</li>
+<li><strong>Персонажи:</strong> отдельные голоса через фильтры устройств (динамик, рация, телефон), голоса за дверью приглушены.</li>
+<li><strong>Музыка по актам:</strong> 3–4 темы на серию, обрыв в тишину перед каждым твистом. У Nobody Gets In этого нет: тишины в их ролике меньше 1%.</li>
+<li><strong>Атмосфера локации:</strong> гул холодильников и ламп, эхо торгового центра, ветер и вороны в парке.</li>
+<li><strong>POV:</strong> дыхание, шаги по материалу пола, сердцебиение, панорама слева и справа показывает, откуда угроза.</li>
+<li><strong>Сведение:</strong> −14 LUFS, музыка на 18–20 дБ ниже голоса, в POV атмосфера громче и шире.</li>
+</ul>
+</section>
+
+<section id="pipeline">
+<div class="sec-head"><div class="eyebrow">Раздел 9</div><h2>Как я делаю видео сам</h2></div>
+<div class="tbl"><table>
+<thead><tr><th>Этап</th><th>Что делаю я</th><th>Что делаете вы</th></tr></thead>
+<tbody>
+<tr><td>1. Идея сезона</td><td>3 варианта: локация, правило, тайна, твисты серий</td><td>Выбираете и правите</td></tr>
+<tr><td>2. Сценарий серии</td><td>Текст ~2 000–2 300 слов с разметкой планов, POV и карточек</td><td>Утверждаете</td></tr>
+<tr><td>3. Раскадровка</td><td>Список планов: декорация, позы, камера, длительность</td><td>Смотрите ключевые кадры</td></tr>
+<tr><td>4. Голос</td><td>Синтез речи с таймкодами слов (для субтитров и монтажа)</td><td>Выбираете голос</td></tr>
+<tr><td>5. Анимация</td><td>Рендер всех планов движком: риги, камера, свет, графика, субтитры</td><td>—</td></tr>
+<tr><td>6. Звук</td><td>Музыка, атмосфера, эффекты, сведение в −14 LUFS</td><td>—</td></tr>
+<tr><td>7. Аниматик и финал</td><td>Сначала 60-секундный тест, потом серия целиком в MP4 1080p</td><td>Даёте правки</td></tr>
+<tr><td>8. Упаковка</td><td>Название, описание с главами и источниками, варианты превью</td><td>Публикуете</td></tr>
+</tbody></table></div>
+<h3>Ограничения, о которых нужно знать заранее</h3>
+<ul>
+<li><strong>Голос.</strong> Здесь я могу синтезировать речь офлайн открытыми моделями: это бесплатно, но звучит проще, чем у топов. Если хотите уровень ElevenLabs, понадобится ваш аккаунт или готовые аудиофайлы, которые вы пришлёте. Разметку и субтитры я сделаю в обоих случаях.</li>
+<li><strong>Музыка и эффекты.</strong> Простую атмосферу и музыкальные подложки могу синтезировать сам. Для качественных эффектов (шаги, двери, стоны) лучше лицензионная библиотека, файлы которой вы загрузите один раз.</li>
+<li><strong>Время рендера.</strong> 15 минут видео — около 27 000 кадров. Статичные слои я кеширую, но серия всё равно будет рендериться часами, а не минутами.</li>
+<li><strong>Сессия временная.</strong> Весь код движка и материалы я сохраняю в репозиторий, иначе они пропадут вместе с контейнером.</li>
+</ul>
+</section>
+
+<section id="next">
+<div class="sec-head"><div class="eyebrow">Раздел 10</div><h2>Что нужно от вас</h2></div>
+<ol>
+<li><strong>Стиль.</strong> Нравится ли направление кадров? Что поменять в герое: куртка, наушники, причёска.</li>
+<li><strong>Сезон 1.</strong> Супермаркет «Freshway» с вылазками в торговый центр и парк, или другая локация?</li>
+<li><strong>Название канала</strong> вместо рабочего «LAST LIGHT».</li>
+<li><strong>Голос:</strong> офлайн-синтез здесь или ваш ElevenLabs.</li>
+<li><strong>Длина:</strong> 13–15 минут на пилот, как вы хотите, или сначала 10–12, чтобы проверить удержание.</li>
+</ol>
+<div class="rule"><span class="tag">СЛЕДУЮЩИЙ ШАГ</span>
+<p>Когда ответите, пишу сценарий первой серии и делаю 60-секундный анимированный тест: холодное POV-открытие, хук, первый план с HUD и субтитрами, с голосом и звуком. По нему проверим стиль в движении до того, как браться за 15 минут.</p>
+</div>
+</section>
+</div>
