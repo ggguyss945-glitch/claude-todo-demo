@@ -330,7 +330,7 @@ N('M3', "Two hundred of them start walking back.", shot=('lot', dict(mode='retur
 N('M4', "Now you run.", gap=0.3, shot=('run', dict()), sfx=[(0, 'run_steps', dict(dur=6.0))])
 N('M5', "Not to the roof.", 0.25, "Not to the dock.", 0.3, "To the staff door on the side of the building.", shot=('map', dict(mode='plan', reveal='staffdoor')))
 N('M6', "Steel door.", 0.25, "Key lock.", 0.3, "And you have Gary's keys.", shot=('staffdoor', dict(mode='arrive', hud=H(7, '2:07 AM', 3, 'FRESHWAY · STAFF DOOR'))))
-N('M7', "Fourteen keys.", 0.3, "No labels.", shot=('prop', dict(item='keys', mode='shake')), sfx=[(0, 'keys_jingle', {})])
+N('M7', "Fourteen keys.", 0.3, "No labels.", shot=('prop', dict(item='keys', mode='shake')), sfx=[(0, 'keys_jingle', dict(level=-25))])
 N('M8', "Gary labeled every shelf in that store.", 0.3, "Not one key.", gap=0.4)
 BEAT('M9', 6.0, shot=('staffdoor', dict(mode='keys', hud=H(7, '2:07 AM', 4, 'FRESHWAY · STAFF DOOR'))),
      caps=[(0.2, 1.8, 'first key'), (1.9, 3.5, 'second'), (3.6, 5.8, 'third')],

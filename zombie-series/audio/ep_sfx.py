@@ -133,7 +133,7 @@ def tok(p, dur=None): return X.tok(1.0, 980)
 EFFECTS = {k: v for k, v in globals().items() if callable(v) and not k.startswith('_') and k not in ('fx', 'place', 'tink', 'st', 'fade', 'norm', 't_', 'lp', 'hp', 'bp', 'white', 'pink', 'brown', 'bed')}
 # default gain (dB) of each effect in the SFX bus
 LEVEL = dict(alarm_far=-15, alarm_near=-14, decoy_alarm=-21, phone_ring=-14, heartbeat_run=-12, steps_close=-10, groan_close=-20, keys_jingle=-18,
-             crowd_surge=-11, crash=-6, freezer_slam=-6, hatch_clang=-8, maglock_clunk=-6, door_bang=-8, boom=-6, breath_run=-18, crowd_steps_far=-16,
+             crowd_surge=-11, crash=-6, freezer_slam=-6, hatch_clang=-8, maglock_clunk=-6, door_bang=-8, boom=-8, breath_run=-18, crowd_steps_far=-16,
              run_steps=-14, pizz_sting=-8, whoosh=-16, slam=-9, tok=-12, stamp=-9, thud_land=-8, low_sting=-14, sock_step=-14, creak=-12, cable_rip=-10,
              power_down=-8, hum_stop=-14, radio_click=-12, lock_click=-12, door_bang_soft=-12, bags_slide=-12, throw_whoosh=-16, glass_crunch=-14,
              ladder_steps=-16, key_try=-12, big_switch=-9, pa_pop=-12, door_close=-12, thump_metal=-10, tap=-16, jingle_cut=-14, metal_rattle=-14, decoy_stop=-30, ring_cut=-30)
