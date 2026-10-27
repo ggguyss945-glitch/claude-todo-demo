@@ -8,8 +8,10 @@ S, TL, A = sys.argv[1:4]
 tts.init(S)
 T = json.load(open(TL)); E0 = T['ep_start']
 mix, sr = sf.read(f'{A}/mix.wav', dtype='float32'); mono = mix.mean(1)
-stems = {k: sf.read(f'{A}/stem_{k}.wav', dtype='float32')[0] for k in ('voice', 'score', 'sfx')}
-rms = lambda x: 20 * np.log10(np.sqrt(np.mean(x ** 2)) + 1e-9)
+# balance is judged in the speech band, where masking happens; rumble under a line does not hide it
+from scipy.signal import butter, sosfilt
+band = butter(4, [300, 4000], 'bandpass', fs=12000, output='sos')
+stems = {k: sosfilt(band, sf.read(f'{A}/stem_{k}.wav', dtype='float32')[0]) for k in ('voice', 'score', 'sfx')}
 bad, low = [], []
 for L in T['voice']['lines']:
     if L['start'] < E0: continue
@@ -19,7 +21,10 @@ for L in T['voice']['lines']:
     exp, heard = tts.asr(y)
     ok = tts.align(tts.asr.raw, L['text'], len(y) / tts.SR) is not None
     i0, i1 = int((L['start'] - E0) * 12000), int((L['start'] + L['dur'] - E0) * 12000)
-    v, s, f = (rms(stems[k][i0:i1]) for k in ('voice', 'score', 'sfx'))
+    # compare only where the voice is actually speaking (50 ms frames within 20 dB of the line's loudest)
+    fr = lambda x: np.sqrt(np.mean(x[:len(x) // 600 * 600].reshape(-1, 600) ** 2, 1)) + 1e-9
+    ev = fr(stems['voice'][i0:i1]); on = ev > ev.max() * 0.1
+    v, s, f = (20 * np.log10(np.sqrt(np.mean(fr(stems[k][i0:i1])[on] ** 2))) for k in ('voice', 'score', 'sfx'))
     if not ok: bad.append((L['id'], L['text'], heard))
     if v - max(s, f) < 8: low.append((L['id'], round(v - s, 1), round(v - f, 1), L['text'][:50]))
 print('lines', sum(1 for L in T['voice']['lines'] if L['start'] >= E0), '| not understood:', len(bad), '| voice < 8 dB above music or sfx:', len(low))

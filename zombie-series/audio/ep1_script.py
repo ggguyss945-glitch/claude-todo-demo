@@ -302,11 +302,11 @@ N('K7', "You climb down the back ladder.", gap=0.3, music=('stop', {'fade': 0.5}
 BEAT('POV3a', 5.5, shot=('povlot', dict(phase='ladder')), amb='lot_night', caps=[(0.3, 5.2, 'alarms in the distance')], sfx=[(0.5, 'ladder_steps', {})])
 BEAT('POV3b', 6.0, shot=('povlot', dict(phase='walk')), caps=[(0.3, 2.8, 'your breathing'), (3.2, 5.8, 'glass under your shoe')],
      sfx=[(0.2, 'breath_run', dict(until='K8', off=0.0)), (3.2, 'glass_crunch', {}), (3.6, 'decoy_alarm', dict(k=5))])
-DALE('POV3c', "Stop.", 0.4, "Don't move.", gap=0.3, level=-2, shot=('povlot', dict(phase='freeze')))
+DALE('POV3c', "Stop.", 0.4, "Don't move.", gap=0.3, level=-0.5, shot=('povlot', dict(phase='freeze')))
 BEAT('POV3d', 7.0, shot=('povlot', dict(phase='pass')), caps=[(0.4, 3.0, 'footsteps'), (3.2, 6.8, 'right next to you')],
      sfx=[(0.4, 'steps_close', dict(dur=6.0, n=1)), (3.0, 'groan_close', {})])
 BEAT('POV3e', 3.0, shot=('povlot', dict(phase='gone')), caps=[(0.3, 2.8, 'it moves on')], sfx=[(0.5, 'decoy_alarm', dict(k=6))])
-DALE('POV3f', "Okay.", 0.4, "Keep coming.", gap=0.3, level=-2)
+DALE('POV3f', "Okay.", 0.4, "Keep coming.", gap=0.3, level=-0.5)
 BEAT('POV3g', 3.2, shot=('povlot', dict(phase='mall')), caps=[(0.3, 3.0, 'eighty meters')])
 N('K8', "Halfway across, Dale talks again.", music=('reveal', {}), shot=('hclose', dict(expr='worried', bg='lot_night', prop='radio')))
 DALE('K9', "Don't stop now, kid.", gap=0.4, echo=True, shot=('radio', dict(mode='talk', who='dale', echo=True)))
@@ -355,6 +355,6 @@ HERO('O4', "This is my store.", gap=0.8, shot=('hclose', dict(expr='determined',
 BEAT('O5', 1.8, shot=('aisle', dict(mode='dark', clock12=True, hud=None)), sfx=[(0.6, 'alarm_far', dict(until='O9', off=0.0))])
 N('O6', "In aisle twelve, the alarm starts to ring.", gap=0.6, shot=('prop', dict(item='clock', mode='ring')))
 BEAT('O7', 1.2)
-DALE('O8', "That...", 0.6, "That's not me.", gap=0.6, rate=2.2, level=-3, shot=('radio', dict(mode='talk', who='dale', scared=True)))
+DALE('O8', "That...", 0.6, "That's not me.", gap=0.6, rate=2.2, level=-1, shot=('radio', dict(mode='talk', who='dale', scared=True)))
 BEAT('O9', 2.6, shot=('black', dict()), sfx=[(0.0, 'ring_cut', {})])
 BEAT('END', 6.5, shot=('card', dict(kind='end')), music=('end', {}), amb='silence')

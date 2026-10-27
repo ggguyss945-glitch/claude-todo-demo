@@ -164,11 +164,11 @@ SH.povlot = (T, tg, lt, p, D) => {
       const k = ph === 'pass' ? ease(ramp(lt, 0.6, 6.6)) : 0;
       if (ph === 'pass') s += zombie({ x: lerp(-200, 2200, k), y: 1500, s: 3.0, outfit: 'jogger', tilt: 10 + 6 * Math.sin(tg * 4.6), look: -0.2, sway: Math.sin(tg * 4.6) * 3 });
     }
-    s += nightTint(0.55) + glow(1660, 470, 70, '#FFB866', 0.5);
+    s += nightTint(0.42) + glow(1660, 470, 70, '#FFB866', 0.5) + screenGlow(960, 380, 900, 260, '#5A6A8A', 0.18);
     if (ph === 'walk') s += g(sleeve('M0 1080 L260 860 L420 940 L300 1080 Z') + mitt(330, 880, -20, 1.1), { filter: 'url(#wobbleSoft)' });
   }
   const bob = ph === 'walk' ? Math.sin(lt * 5) * 8 : ph === 'freeze' || ph === 'pass' ? 0 : Math.sin(lt * 3) * 4;
-  s += darkness(0.5, 0.5, 0.65, 0.75, 'pld');
+  s += darkness(0.5, 0.5, 0.65, 0.6, 'pld');
   s = cam(s, { s: 1.04, x: wob(tg * 0.7, 1) * 5, y: bob });
   // Dale's lines in the POV come as quoted radio text
   let q = '';
@@ -230,7 +230,7 @@ SH.staffdoor = (T, tg, lt, p, D) => {
     const trem = mode === 'keys' ? Math.sin(tg * 30) * 4 : 0, turn = mode === 'turn' ? ease(ramp(lt, 0.1, 0.5)) * 90 : 0;
     s += g(keyring(900, 470, 1.6, tg, 0.6), { transform: `translate(${f1(trem)} ${f1(trem * 0.5)}) rotate(${f1(turn * 0.3)} 1170 520)` });
     s += g(sleeve('M0 1080 L640 520 L760 620 L300 1080 Z') + mitt(800, 540, -20, 1.4), { transform: `translate(${f1(trem)} 0)`, filter: 'url(#wobbleSoft)' });
-    if (mode === 'keys') for (let i = 0; i < 3; i++) s += g(zombie({ x: 200 + i * 220, y: 1500, s: 2.2, outfit: ['jogger', 'shopper', 'park'][i], tilt: 10, look: 0.6, filter: false }), { opacity: f1(clamp(lt / 6 * (1 + i * 0.3)) * 0.55 * 100) / 100 });
+    if (mode === 'keys') for (let i = 0; i < 3; i++) s += zombie({ x: 200 + i * 220, y: 1500 + (1 - easeOut(clamp(lt / 6 * (1 + i * 0.3)))) * 520, s: 2.2, outfit: ['jogger', 'shopper', 'park'][i], tilt: 10 + 2 * Math.sin(tg * 1.3 + i), look: 0.6, dim: 0.45, filter: false });
     if (mode === 'turn') s += bang('CLICK', 1400, 360, lt - 0.45, { size: 100, life: 1.0 });
     s = g(s, { filter: 'url(#wobbleSoft)' });
   }
@@ -245,13 +245,20 @@ SH.camp = (T, tg, lt, p, D) => {
   const hp = p.hero;
   const lantern = (x, y) => g(rect(x - 30, y - 80, 60, 80, { rx: 10, fill: '#2E2E2E', ...ink(4) }) + rect(x - 20, y - 70, 40, 56, { rx: 6, fill: '#FFE7A8', ...ink(3) }) + path(`M${x - 22} ${y - 80} q22 -30 44 0`, { fill: 'none', ...ink(4) }), { filter: 'url(#wobbleSoft)' });
   s += lantern(1220, 860);
-  if (hp === 'sit' || hp === 'radio' || hp === 'laugh') s += hero({ x: 1400, y: 930, s: 1.6, pose: hp === 'radio' || hp === 'laugh' ? 'radio' : 'sit', expr: hp === 'laugh' ? 'smile' : 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt), tilt: hp === 'laugh' ? 6 * Math.sin(tg * 3) : 0, breathe: 0.01 * Math.sin(tg * 2.2), extra: hp === 'radio' || hp === 'laugh' ? radioProp(1400 - 0.6 * 96, 930 - 4.4 * 96, 0.5, { on: true }) : '' });
-  if (hp === 'lie') s += g(ellipse(860, 830, 160, 40, { fill: '#3E6E9A', ...ink(5) }) + circle(740, 805, 40, { fill: PAL.skin, ...ink(5) }) + path('M705 790 q35 -40 75 -5', { fill: PAL.hair, ...ink(4) }), { filter: 'url(#wobbleSoft)' });
-  if (hp === 'wake') s += hero({ x: 1420, y: 880, s: 1.3, pose: 'scared', expr: 'neutral', facing: -1, look: 0, blink: keys(lt, [[0, 1], [0.6, 0]], 0.3) });
-  if (hp === 'tent') s += hero({ x: 1400, y: 880, s: 1.3, pose: 'point', expr: 'smile', facing: -1, look: -0.6, blink: autoBlink(lt) });
+  let fig = '';   // the hero is lit by the lantern, not buried under the night tint
+  if (hp === 'sit' || hp === 'radio' || hp === 'laugh') fig += hero({ x: 1400, y: 930, s: 1.6, pose: hp === 'radio' || hp === 'laugh' ? 'radio' : 'sit', expr: hp === 'laugh' ? 'smile' : 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt), tilt: hp === 'laugh' ? 6 * Math.sin(tg * 3) : 0, breathe: 0.01 * Math.sin(tg * 2.2), extra: hp === 'radio' || hp === 'laugh' ? radioProp(1400 - 0.6 * 96, 930 - 4.4 * 96, 0.5, { on: true }) : '' });
+  if (hp === 'lie') fig += g(ellipse(860, 830, 160, 40, { fill: '#3E6E9A', ...ink(5) }) + circle(740, 805, 40, { fill: PAL.skin, ...ink(5) }) + path('M705 790 q35 -40 75 -5', { fill: PAL.hair, ...ink(4) }), { filter: 'url(#wobbleSoft)' });
+  if (hp === 'wake') fig += hero({ x: 1420, y: 880, s: 1.3, pose: 'scared', expr: 'neutral', facing: -1, look: 0, blink: keys(lt, [[0, 1], [0.6, 0]], 0.3) });
+  if (hp === 'tent') fig += hero({ x: 1400, y: 880, s: 1.3, pose: 'point', expr: 'smile', facing: -1, look: -0.6, blink: autoBlink(lt) });
   if (p.sign) s += g(rect(1260, 170, 260, 70, { rx: 8, fill: '#FBF6EA', ...ink(4) }) + label(1390, 215, 'SLEEPS 2', 28, PAL.red), { transform: `rotate(-4 1390 205)`, filter: 'url(#wobbleSoft)' });
-  if (time === 'night') s += nightTint(0.8, '#2A2238') + screenGlow(1250, 760, 560, 360, '#FFB866', 0.28) + screenGlow(1220, 800, 110, 90, '#FFE7A8', 0.55, 'softS') + screenGlow(1400, 700, 240, 320, '#FFB866', 0.3);
-  else if (time === 'morning') s += nightTint(0.45, '#6E6A8A') + screenGlow(200, 300, 600, 400, '#E8D8C8', 0.25);
+  if (time === 'night') {
+    s += nightTint(0.8, '#2A2238') + screenGlow(1250, 760, 560, 360, '#FFB866', 0.28) + screenGlow(1400, 700, 240, 320, '#FFB866', 0.18);
+    s += '<defs><filter id="lampLit" x="-20%" y="-20%" width="140%" height="140%"><feColorMatrix type="matrix" values="0.8 0 0 0 0.04 0 0.66 0 0 0.02 0 0 0.52 0 0.03 0 0 0 1 0"/></filter></defs>';
+    s += (fig ? g(fig, { filter: 'url(#lampLit)' }) : '') + screenGlow(1220, 800, 110, 90, '#FFE7A8', 0.55, 'softS');
+  } else {
+    s += fig;
+    if (time === 'morning') s += nightTint(0.45, '#6E6A8A') + screenGlow(200, 300, 600, 400, '#E8D8C8', 0.25);
+  }
   return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 1100, cy: 600 }) + hudAt(p.hud);
 };
 

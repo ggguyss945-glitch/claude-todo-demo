@@ -166,15 +166,21 @@ SH.stock = (T, tg, lt, p, D) => {
   const hp = p.hero;
   if (hp === 'place') s += hero({ x: 1380 + lt * 4, y: 790, s: 1.2, pose: 'crouch', expr: 'worried', facing: 1, look: 0.5, blink: autoBlink(lt), breathe: 0.01 * Math.sin(tg * 2.2) });
   if (hp === 'climb') { const up = ease(ramp(lt, 0.1, D)); s += hero({ x: 560, y: lerp(770, 560, up), s: 1.0, pose: 'climb', expr: 'determined', facing: -1, look: -0.2, blink: autoBlink(lt) }); }
-  if (hp === 'top') s += rect(588, 118, 444, 20, { rx: 4, fill: '#3E6E9A', ...ink(4) }) + g(hero({ x: 0, y: 0, s: 0.62, pose: 'stand', expr: 'worried', facing: 1, look: 0.6, blink: autoBlink(lt), breathe: 0.01 * Math.sin(tg * 2.2) }), { transform: 'translate(960 120) rotate(-90)' });
-  const dark = p.view === 'top_dark';
-  s += nightTint(dark ? 0.93 : 0.82);
+  const dark = p.view === 'top_dark', high = hp === 'top' || dark;
+  if (high) {   // the camera tilts up to the top of the shelving: continue the brick wall and the lamp cable above the set
+    let ext = rect(0, -260, W, 262, { fill: '#B8B3A5' }) + rect(0, -260, W, 34, { fill: '#8E897D' }) + line(0, -226, W, -226, ink(5)) + line(935, -226, 935, 30, ink(4));
+    for (let y = -216; y < 0; y += 54) for (let x = (y / 54) % 2 ? -60 : 0; x < W; x += 120) ext += rect(x, y, 120, 54, { fill: 'none', stroke: '#9E998C', strokeWidth: 3 });
+    s = g(ext, { filter: 'url(#wobbleSoft)' }) + s;
+  }
+  if (high) s += rect(588, 118, 444, 20, { rx: 4, fill: '#3E6E9A', ...ink(4) }) + g(hero({ x: 0, y: 0, s: 0.62, pose: 'stand', expr: 'worried', facing: 1, look: 0.6, blink: autoBlink(lt), breathe: 0.01 * Math.sin(tg * 2.2) }), { transform: 'translate(960 120) rotate(-90)' });
+  s += nightTint(dark ? 0.93 : 0.82) + (high ? rect(0, -260, W, 262, { fill: '#1F2940', opacity: dark ? 0.93 : 0.82, style: 'mix-blend-mode:multiply' }) : '');
   if (open) s += screenGlow(1490, 560, 300, 320, '#BFE3F2', dark ? 0.32 : 0.45) + screenGlow(1480, 760, 260, 60, '#BFE3F2', 0.5, 'softS');
   if (p.phone) s += screenGlow(1480, 740, 70, 40, '#BFE3F2', 0.8, 'softS');
   s += screenGlow(935, 62, 120, 60, '#F6EBC0', 0.5);
   if (p.label) s += g(rect(240, 200, 260, 60, { rx: 6, fill: PAL.yellow, ...ink(4) }) + label(370, 240, p.label, 24), { opacity: f1(clamp((lt - 0.3) * 3) * 100) / 100, filter: 'url(#wobbleSoft)' });
   const fv = p.view === 'freezer_open';
-  s = cam(s, fv ? { s: lerp(1.45, 1.55, ease(lt / D)), cx: 1480, cy: 560 } : { s: push(lt, D, dark ? [1.0, 1.04] : [1.0, 1.06]), cx: 960, cy: 500 });
+  // high: frame the top of the shelving so the hero lying up there reads well below the HUD
+  s = cam(s, fv ? { s: lerp(1.45, 1.55, ease(lt / D)), cx: 1480, cy: 560 } : high ? { s: push(lt, D, [1.2, 1.26]), cx: 960, cy: 400, y: 170 } : { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 500 });
   return s + hudAt(p.hud);
 };
 
@@ -249,7 +255,7 @@ SH.phone = (T, tg, lt, p, D) => {
   let s = rect(0, 0, W, H, { fill: '#0E1016' }) + blurred('stock_open', () => S.stockroom({ open: true })) + nightTint(0.92);
   const k = 1.4;
   let ph = rect(-190, -360, 380, 720, { rx: 46, fill: '#1E1F22', ...ink(7) }) + rect(-168, -330, 336, 660, { rx: 30, fill: p.ui === 'alarm' ? '#10141C' : '#20324A' });
-  ph += text(0, -250, p.ui === 'alarm' ? 'Alarm' : '2:44', { fontFamily: 'Rubik', fontWeight: p.ui === 'alarm' ? 800 : 500, fontSize: p.ui === 'alarm' ? 40 : 110, fill: '#F2F2EE', textAnchor: 'middle' });
+  ph += text(0, p.ui === 'alarm' ? -230 : -170, p.ui === 'alarm' ? 'Alarm' : '2:44', { fontFamily: 'Rubik', fontWeight: p.ui === 'alarm' ? 800 : 500, fontSize: p.ui === 'alarm' ? 40 : 110, fill: '#F2F2EE', textAnchor: 'middle' });
   ph += text(-140, -300, 'No Service', { fontFamily: 'Rubik', fontWeight: 600, fontSize: 18, fill: '#C9D8E6' }) + rect(70, -316, 56, 22, { rx: 5, fill: 'none', stroke: '#F2F2EE', strokeWidth: 3 }) + rect(74, -312, 17, 14, { fill: PAL.red }) + text(140, -298, '31%', { fontFamily: 'Rubik', fontWeight: 700, fontSize: 16, fill: '#F2F2EE' });
   if (p.ui === 'alarm') {
     const on = ease(ramp(lt, D - 0.9, D - 0.6));
@@ -257,8 +263,8 @@ SH.phone = (T, tg, lt, p, D) => {
     ph += rect(60, -90, 90, 50, { rx: 25, fill: on > 0.5 ? '#3DBE6A' : '#3A4150' }) + circle(lerp(85, 125, on), -65, 21, { fill: '#F2F2EE' });
     ph += rect(-150, 60, 300, 120, { rx: 22, fill: '#1E2533', opacity: 0.6 }) + text(-120, 135, '7:00', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 60, fill: '#5C6575' });
   } else {
-    ph += text(0, -170, 'Tuesday, March 4', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 24, fill: '#C9D8E6', textAnchor: 'middle' });
-    ph += rect(-150, -100, 300, 110, { rx: 18, fill: '#2C4462', opacity: 0.9 }) + text(-130, -55, 'MOM', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 18, fill: '#F2F2EE' }) + text(-130, -25, 'call me when you get this', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 17, fill: '#C9D8E6' });
+    ph += text(0, -115, 'Tuesday, March 4', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 24, fill: '#C9D8E6', textAnchor: 'middle' });
+    ph += rect(-150, -70, 300, 110, { rx: 18, fill: '#2C4462', opacity: 0.9 }) + text(-130, -25, 'MOM', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 18, fill: '#F2F2EE' }) + text(-130, 5, 'call me when you get this', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 17, fill: '#C9D8E6' });
   }
   s += g(ph, { transform: `translate(960 560) scale(${k}) rotate(${f1(-4 + 1.5 * Math.sin(tg * 0.6))})`, filter: 'url(#wobbleSoft)' });
   s += g(sleeve('M200 1080 L620 820 L800 900 L640 1080 Z') + mitt(760, 860, -30, 1.3), { filter: 'url(#wobbleSoft)' });
@@ -357,7 +363,7 @@ SH.office = (T, tg, lt, p, D) => {
   const blastK = v === 'blast' || v === 'cable' ? 1 : 0;
   const turn = v === 'blast' ? ease(ramp(lt, 0.15, 0.4)) : v === 'cable' || v === 'cable_pulled' ? 1 : 0;
   // Gary behind the desk, facing the clock; the music makes him turn
-  s += zombie({ x: 800, y: 700, s: 1.55, outfit: 'suit', tilt: lerp(-4, 14, turn) + 2 * Math.sin(tg * 0.8), back: turn < 0.5, look: 0.9, sway: 1.2 * Math.sin(tg * 0.6) });
+  s += zombie({ x: 800, y: 850, s: 1.5, outfit: 'suit', tilt: lerp(-4, 14, turn) + 2 * Math.sin(tg * 0.8), back: turn < 0.5, look: 0.9, sway: 1.2 * Math.sin(tg * 0.6) });
   s += rect(430, 640, 760, 70, { fill: '#9B6E45', ...ink(6) });
   const heroAt = { door: [250, 'stand', 'worried'], sneak1: [520 + lt * 30, 'sneak', 'worried'], sneak2: [1010 + lt * 25, 'sneak', 'scared'], panel: [1560, 'reach', 'determined'] }[p.hero];
   if (heroAt) s += hero({ x: heroAt[0], y: 1000, s: 1.4, pose: heroAt[1], expr: heroAt[2], facing: 1, look: p.hero === 'sneak2' ? -0.5 : 0.4, blink: autoBlink(lt, 3), breathe: 0.01 * Math.sin(tg * 2.4) });
@@ -369,7 +375,7 @@ SH.office = (T, tg, lt, p, D) => {
   if (p.path) {
     const k = ease(ramp(lt, 0.3, 2.2));
     s += path('M300 900 Q600 950 900 930 T1560 880', { fill: 'none', stroke: PAL.yellow, strokeWidth: 8, strokeDasharray: '4 18', strokeLinecap: 'round', opacity: f1(k * 100) / 100 });
-    s += circle(800, 600, 260, { fill: 'none', stroke: PAL.red, strokeWidth: 6, strokeDasharray: '16 12', opacity: f1(ease(ramp(lt, 1.6, 2.4)) * 0.8 * 100) / 100 }) + label(800, 330, "ARM'S REACH", 26, PAL.red);
+    s += circle(800, 660, 260, { fill: 'none', stroke: PAL.red, strokeWidth: 6, strokeDasharray: '16 12', opacity: f1(ease(ramp(lt, 1.6, 2.4)) * 0.8 * 100) / 100 }) + label(800, 390, "ARM'S REACH", 26, PAL.red);
   }
   if (blastK) {
     s += rings(980, 70, tg, { color: '#FFE27A', max: 700, period: 0.45, width: 14, dash: '30 14', op: 1 }) + rings(1700, 740, tg + 0.2, { color: '#FFE27A', max: 300, period: 0.45, width: 10, op: 1 });
