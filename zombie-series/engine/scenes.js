@@ -441,3 +441,5 @@ function closeup_shutter() {
 }
 
 Object.assign(SCENES, { closeup_shutter, exterior_night, pov_stockroom, card_episode, card_day, card_problem, card_rule, card_fact, card_inventory, card_map });
+
+export { svg, aisle, at, icon, smallCaps, big, cream, PROD };

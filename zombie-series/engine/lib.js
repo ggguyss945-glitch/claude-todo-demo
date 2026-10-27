@@ -44,14 +44,14 @@ export const ink = (w = 6) => ({ stroke: INK, strokeWidth: w, strokeLinejoin: 'r
 export const filled = (fill, w = 6) => ({ fill, ...ink(w) });
 
 // ---------- global defs: wobble, grain, vignette ----------
-export function defs(seed = 7) {
+export function defs(seed = 7, boil = seed) {
   return `<defs>
   <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
     <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="${seed}" result="n"/>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
   <filter id="wobbleSoft" x="-5%" y="-5%" width="110%" height="110%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="1" seed="${seed + 3}" result="n"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="1" seed="${boil + 3}" result="n"/>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
   <filter id="grain" x="0" y="0" width="100%" height="100%">
@@ -129,7 +129,7 @@ const POSES = {
   shush: { la: [-0.55, 1.75], ra: [0.35, -0.85], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
 };
 
-function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false }) {
+function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0 }) {
   const ex = cx + look * 0.3 * u, ey = cy + 0.0 * u, sp = 0.44 * u;
   let s = '';
   if (zombie) {
@@ -143,9 +143,10 @@ function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false }) {
     return s;
   }
   const eyeH = { scared: 0.17, surprised: 0.17, neutral: 0.13, worried: 0.13, determined: 0.1, smile: 0.12, whisper: 0.12 }[expr] ?? 0.13;
-  s += ellipse(ex - sp / 2, ey, 0.105 * u, (eyeH + 0.03) * u, { fill: INK });
-  s += ellipse(ex + sp / 2, ey, 0.105 * u, (eyeH + 0.03) * u, { fill: INK });
-  s += circle(ex - sp / 2 + 0.03 * u, ey - 0.06 * u, 0.03 * u, { fill: '#FFF' }) + circle(ex + sp / 2 + 0.03 * u, ey - 0.06 * u, 0.03 * u, { fill: '#FFF' });
+  const eo = Math.max(0.08, 1 - blink);
+  s += ellipse(ex - sp / 2, ey, 0.105 * u, (eyeH + 0.03) * u * eo, { fill: INK });
+  s += ellipse(ex + sp / 2, ey, 0.105 * u, (eyeH + 0.03) * u * eo, { fill: INK });
+  if (eo > 0.5) s += circle(ex - sp / 2 + 0.03 * u, ey - 0.06 * u, 0.03 * u, { fill: '#FFF' }) + circle(ex + sp / 2 + 0.03 * u, ey - 0.06 * u, 0.03 * u, { fill: '#FFF' });
   const my = cy + 0.48 * u, mx = ex + look * 0.05 * u;
   const mouth = {
     neutral: line(mx - 0.1 * u, my, mx + 0.1 * u, my, ink(4)),
@@ -236,7 +237,7 @@ function flashlight(x, y, len, angDeg) {
     + line(x + dx * 0.55, y + dy * 0.55, x + dx * 0.72, y + dy * 0.72, { stroke: '#C9A43A', strokeWidth: len * 0.3, strokeLinecap: 'butt' });
 }
 
-export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true }) {
+export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '' }) {
   const u = 60 * s;
   const B = body({ x, y, u, pose, torsoFill: PAL.jacket, torsoDark: PAL.jacketDark, facing, hold, aim });
   const cy = y - 5.25 * u + B.dr, cx = x + (pose === 'run' ? 0.25 * u * facing : 0);
@@ -256,12 +257,14 @@ export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, 
     L${f(cx + 0.7 * u)} ${f(cy - 0.42 * u)} L${f(cx + 0.48 * u)} ${f(cy - 0.3 * u)} L${f(cx + 0.18 * u)} ${f(cy - 0.5 * u)} L${f(cx - 0.12 * u)} ${f(cy - 0.36 * u)} L${f(cx - 0.45 * u)} ${f(cy - 0.52 * u)} L${f(cx - 0.72 * u)} ${f(cy - 0.32 * u)} Z`, { fill: PAL.hair, ...ink(5) });
   h += path(`M${f(cx + 0.05 * u)} ${f(cy - 0.98 * u)} q${f(0.1 * u)} ${f(-0.35 * u)} ${f(0.38 * u)} ${f(-0.3 * u)}`, { fill: 'none', stroke: PAL.hair, strokeWidth: 0.12 * u, strokeLinecap: 'round' });
   h += path(`M${f(cx + 0.05 * u)} ${f(cy - 0.98 * u)} q${f(0.1 * u)} ${f(-0.35 * u)} ${f(0.38 * u)} ${f(-0.3 * u)}`, { fill: 'none', stroke: INK, strokeWidth: 3 });
-  h += face({ cx, cy, u, look: look || facing * 0.25, expr });
+  h += face({ cx, cy, u, look: look || facing * 0.25, expr, blink });
   if (pose === 'shush') h += line(cx + 0.05 * u, cy + 0.35 * u, cx + 0.05 * u, cy + 0.7 * u, ink(0.1 * u));
-  return g(B.s + h, { filter: 'url(#wobbleSoft)' });
+  const head = tilt ? g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }) : h;
+  const bodyT = breathe ? `translate(${f(x)} ${f(y)}) scale(1 ${f(1 + breathe)}) translate(${f(-x)} ${f(-y)})` : undefined;
+  return g(B.s + head + extra, { filter: 'url(#wobbleSoft)', transform: bodyT });
 }
 
-export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0 }) {
+export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '' }) {
   const u = 60 * s;
   const fills = { cashier: '#8C8C86', guard: '#2E3D55', suit: '#3B3F48', janitor: '#5E6E70', jogger: '#C76A83', shopper: '#7C6A8E', park: '#8A7A4E', nurse: '#6FA3A6' };
   const B = body({ x, y, u, pose, torsoFill: fills[outfit] || '#777', torsoDark: '#333', zombie: true, outfit, facing });
@@ -272,26 +275,27 @@ export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt =
   if (outfit === 'jogger') h += rect(cx - 0.98 * u, cy - 0.55 * u, 1.96 * u, 0.22 * u, { fill: '#F2F0EA', ...ink(4), rx: 6 });
   if (outfit === 'janitor') h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.9 * u)} ${f(cy - 0.45 * u)} Z`, { fill: '#3E7C7B', ...ink(5) });
   h += face({ cx, cy, u, look, zombie: true });
-  const inner = g(B.s + g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }));
-  return g(inner + (dim ? g(inner, { opacity: dim, style: 'mix-blend-mode:multiply' }) : ''), { filter: 'url(#wobbleSoft)' });
+  const inner = g(B.s + extra + g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }));
+  return g(inner + (dim ? g(inner, { opacity: dim, style: 'mix-blend-mode:multiply' }) : ''), { filter: 'url(#wobbleSoft)', transform: sway ? `rotate(${f(sway)} ${f(x)} ${f(y)})` : undefined });
 }
 
 // distant crowd: simplified figures, back rows smaller
-export function crowd({ x0, x1, y, rows = 3, n = 20, s = 0.35, seed = 1, spread = 60, arms = false }) {
+export function crowd({ x0, x1, y, rows = 3, n = 20, s = 0.35, seed = 1, spread = 60, arms = false, t = 0, lean = 0 }) {
   const r = rng(seed), cols = ['#8C8C86', '#2E3D55', '#3B3F48', '#C76A83', '#7C6A8E', '#8A7A4E', '#6FA3A6', '#A65F4A', '#596471'];
   let out = '';
   for (let row = rows - 1; row >= 0; row--) {
     const sc = s * (1 - row * 0.16), yy = y - row * spread * s * 3;
     for (let i = 0; i < n; i++) {
       const xx = x0 + (x1 - x0) * (i + r() * 0.8) / n, u = 60 * sc * (0.9 + r() * 0.2);
-      const c = cols[Math.floor(r() * cols.length)], tilt = (r() - 0.5) * 24;
+      const ph = r() * 6.28, c = cols[Math.floor(r() * cols.length)], tilt = (r() - 0.5) * 24 + 5 * Math.sin(t * (0.6 + 0.5 * ((i * 7) % 5) / 5) + ph);
+      const bodySway = 2.5 * Math.sin(t * 0.7 + ph) + lean;
       let fig = line(xx - 0.25 * u, yy - 2.2 * u, xx - 0.35 * u, yy, ink(Math.max(3, 0.12 * u)))
         + line(xx + 0.25 * u, yy - 2.2 * u, xx + 0.35 * u, yy, ink(Math.max(3, 0.12 * u)))
         + rect(xx - 0.6 * u, yy - 4.2 * u, 1.2 * u, 2.1 * u, { rx: 0.25 * u, fill: c, ...ink(Math.max(3, 0.1 * u)) });
       if (arms) fig += line(xx + 0.5 * u, yy - 3.9 * u, xx + 1.4 * u, yy - 3.7 * u, ink(Math.max(3, 0.1 * u)));
       fig += g(circle(xx, yy - 5.15 * u, u, { fill: PAL.zSkin, ...ink(Math.max(3, 0.1 * u)) })
         + circle(xx - 0.3 * u, yy - 5.15 * u, 0.17 * u, { fill: PAL.zEye }) + circle(xx + 0.3 * u, yy - 5.12 * u, 0.16 * u, { fill: PAL.zEye }), { transform: `rotate(${f(tilt)} ${f(xx)} ${f(yy - 4.2 * u)})` });
-      out += fig;
+      out += g(fig, { transform: `rotate(${f(bodySway)} ${f(xx)} ${f(yy)})` });
     }
   }
   return g(out, { filter: 'url(#wobbleSoft)' });
