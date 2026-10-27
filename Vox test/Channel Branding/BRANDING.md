@@ -128,35 +128,58 @@ perfect score, 100 on every exam, accused of cheating, student accused of cheati
   for search and accessibility.
 * **Audience:** it's written for a general audience (teens and adults). Only mark it "made for kids" if
   children are the audience you mean it for. That setting turns off comments and some features.
-* **Thumbnail:** `thumbnail/Perfect_Score_thumbnail_2160x3840.jpg` (see below).
+* **Thumbnail:** `thumbnail/Perfect_Score_thumbnail_v2B_2160x3840.jpg` (see below).
 
 ### Thumbnail
 
-![Perfect Score thumbnail](thumbnail/Perfect_Score_thumbnail_1080x1920.jpg)
+This version is modelled on the thumbnails of [Loaded Dice](https://youtube.com/@loadeddiceshorts), the
+channel behind *How the Eye in the Sky works*.
+
+**What their thumbnails do.** I took this from nine of their Shorts in screenshots of the channel grid:
+
+| Short | Views | Thumbnail |
+|---|---|---|
+| How the Eye In The Sky works | 37M | A man in a suit and sunglasses holds a radio, centred, with the camera wall behind. Caption: "management is faced". |
+| Unluckiest win ever | 18M | A woman at a slot machine. Caption: "at a slot machine". |
+| Is this cheating or just being smart? | 12M | A man holds up two cards to the camera. Caption: "accidentally noticed". |
+| Crazy tricks casinos use to keep you hooked | 11M | Three staff lined up, one with a tray of drinks. Caption: "give them free drinks." |
+| Don't be fooled by this strategy | 10M | A view over the table with chips in the foreground. Caption: "You just bet $10 on Red". |
+| CASINO on the MOON would be a NIGHTMARE | 325K in 1 day (2.3× their usual) | The only one with a graphic: a flat blue **BAD IDEA** box and a white hand-drawn arrow. |
+
+* **They are just frames from the video.** There are no big titles or stickers.
+* **One subject, centred, in a medium shot,** holding the story's key prop toward the camera, with the
+  setting behind for context.
+* **The video's own small caption is burned in.** It is a mid-sentence fragment that makes you want the rest.
+* **The grade is cinematic:** saturated, with a darker surround and the light on the subject.
+* **Desktop crop:** the desktop grid shows Shorts at about 2:3, so roughly 8% is cut from the top and the bottom. Everything that
+  matters has to sit inside that.
+
+**Ours.** It is a plain frame from the film's world, built the same way:
+
+* Adam stands centred, with a slight confident smile, holding his **100** toward the camera, like their cards shot.
+* The teacher stands behind him at the board with arms crossed and a suspicious glare.
+* The board reads **EXAM** and **Bonus: +10**, and the ABC cards place it in a classroom.
+* The film's own caption, **"to accuse you of cheating."**, is burned in with the same font, outline and
+  position as in the video. It lands at about 75% of the tile height, as theirs do.
+* **B** adds one flat blue **TOO PERFECT?** label with a white hand-drawn arrow to the 100, in the style of
+  their newest thumbnail. **A** is the frame alone, like their biggest hits.
+
+![Thumbnail v2](thumbnail/preview_thumbnail_v2_grid.png)
 
 | File | Use |
 |---|---|
-| `thumbnail/Perfect_Score_thumbnail_2160x3840.jpg` | **Upload this one**: 4K 9:16, 1.7 MB, under YouTube's 2 MB thumbnail limit. |
-| `thumbnail/Perfect_Score_thumbnail_2160x3840.png` | Lossless master. |
-| `thumbnail/Perfect_Score_thumbnail_1080x1920.jpg` | A lighter copy for sharing. |
-| `thumbnail/preview_thumbnail_phone.png` | How it reads in a Shorts shelf tile and in the smallest grid (180 px wide). |
-
-It tells the whole story in about one second, in this order:
-
-1. **The faces.** Adam is shocked, with his eyes on the viewer, and the teacher looms behind him with
-   arms crossed and an angry glare. Adam's face is the brightest point in the frame.
-2. **EVERY. SINGLE. EXAM.** This is the context, in big yellow faceted letters in the empty ceiling.
-3. **A red marker arrow** runs from the words to the circled **100** on the paper he holds up.
-4. **CHEATER?** is rubber-stamped in red across his paper, echoing the CANCELLED stamp in the film. It
-   is the hook, and the question mark is the reason to watch.
-
-Classmates stare from the blurred background. The text never covers a face, and nothing important sits
-in the bottom strip where YouTube draws its overlays.
+| `thumbnail/Perfect_Score_thumbnail_v2B_2160x3840.jpg` | **Recommended.** 4K 9:16, about 1.6 MB, under YouTube's 2 MB limit. |
+| `thumbnail/Perfect_Score_thumbnail_v2A_2160x3840.jpg` | The pure-frame version, for an A/B test. |
+| `thumbnail/*_v2?_2160x3840.png` | Lossless masters. |
+| `thumbnail/preview_thumbnail_v2_grid.png` | Both versions as the desktop grid (2:3) and a phone (9:16) show them. |
+| `thumbnail/v1_designed/` | The first, more designed version, with EVERY. SINGLE. EXAM. and the CHEATER? stamp. |
 
 To rebuild it:
 
 ```bash
 cd "Vox test/Perfect Score V1"
-node render.js --app app --gl egl --w 2160 --h 3840 --q brand=1 --stills 220.5,221.5
-python3 "../Channel Branding/src/make_thumbnail.py" stills/v2_220.50.png stills/v2_221.50.png "../Channel Branding/thumbnail"
+node render.js --app app --gl egl --w 2160 --h 3840 --q brand=1 --stills 230.5,231.5
+python3 "../Channel Branding/src/make_thumbnail_v2.py" stills/v2_230.50.png stills/v2_231.50.png "../Channel Branding/thumbnail"
 ```
+
+The first version is rebuilt from shots `220.5,221.5` with `src/make_thumbnail.py`.

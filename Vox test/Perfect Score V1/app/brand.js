@@ -5,6 +5,9 @@
 //   211: the same banner with the cast hidden (a clean plate for the depth-of-field composite)
 //   220: first-video thumbnail (2160x3840): the teacher looms over the hero with his 100
 //   221: the same thumbnail without the two leads (plate for the depth-of-field composite)
+//   230: thumbnail v2, styled on the Loaded Dice channel's top Shorts: a clean frame, one centred subject
+//        holding the story's prop to camera, context behind, the film's caption burned in (added in 2D)
+//   231: the same frame without the hero (plate)
 import * as THREE from 'three';
 import { POSES, EXPR } from './chars.js';
 import { V3, placeChar, handQuat, palmAt, local, look } from './anim.js';
@@ -152,6 +155,7 @@ export async function addBrandShots(world) {
   // left clear for the "CHEATER?" stamp added in the finishing pass
   EXPR.thumbShock = { browRaise: 2.1, eyeOpen: 1.7, irisK: 0.7, mouthOpen: 1.6, smile: -0.15 };
   EXPR.thumbAngry = { frown: 1.5, eyeOpen: 0.82, smile: -0.7, mouthOpen: 0.3 };
+  EXPR.thumbSusp = { frown: 1.15, eyeOpen: 0.7, smile: -0.35 };
   const seats = world.class.seats;
   const seatAt = (ci, ri) => seats.find((q) => q.ci === ci && q.ri === ri);
   const HS = seatAt(2, 0);
@@ -183,6 +187,7 @@ export async function addBrandShots(world) {
       placeChar(T_, HS.x + 0.32, HS.z + 0.42, Math.PI - 0.22, { ...POSES.armsCrossed, spine: [0.22, 0, 0], neck: [0.1, 0, 0] });
       look(T_, headOf(h), 1, 1); T_.expr = 'thumbAngry';
       rim.visible = true; rim.target.position.copy(headOf(h)); rim.target.updateMatrixWorld();
+      key.intensity = 9;
       key.visible = true; key.target.position.copy(h.J.head.getWorldPosition(V3()).add(V3(0, 0.08, 0))); key.target.updateMatrixWorld();
     }
     // the class stares at the hero
@@ -196,4 +201,38 @@ export async function addBrandShots(world) {
   };
   SHOTS.push({ t0: 220, t1: 221, set: 'class', vignette: 0.3, sat: 1.2, cam: thumbCam, setup: thumb(true) });
   SHOTS.push({ t0: 221, t1: 222, set: 'class', vignette: 0.3, sat: 1.2, cam: thumbCam, setup: thumb(false) });
+
+  // ---- 230/231: thumbnail v2, a plain frame from the film's world
+  const VX = 0.0, VZ = -2.05; // places EXAM on the board fully to the right of the hero's head
+  const v2Cam = () => ({ p: [VX + 0.03, 1.39, VZ + 1.55], l: [VX + 0.01, 1.29, VZ], fov: 46 });
+  const v2 = (hero) => (Wd, t) => {
+    const camP = V3(...v2Cam().p);
+    world.props.board.userData.write((g) => {
+      // big enough to read either side of the hero's head
+      g.fillStyle = '#c0201a'; g.font = 'bold 150px "Liberation Sans"';
+      g.fillText('FINAL', 120, 190); g.fillText('EXAM', 560, 190);
+      g.strokeStyle = '#c0201a'; g.lineWidth = 11; g.beginPath(); g.moveTo(150, 222); g.lineTo(1100, 222); g.stroke();
+      g.font = 'italic 64px "Liberation Sans"'; g.fillStyle = '#16161c';
+      g.fillText('Bonus: +10', 570, 320);
+    });
+    // the teacher at the board, arms crossed, not buying it
+    const T_ = C.teacher;
+    placeChar(T_, VX - 0.4, VZ - 1.0, 0.34, POSES.armsCrossed);
+    T_.faceRes = 1280;
+    look(T_, V3(VX, 1.45, VZ), 1, 1); T_.expr = 'thumbSusp';
+    key.visible = true; key.intensity = 3.2; key.position.set(VX + 0.9, 2.05, VZ + 1.9);
+    if (!hero) { key.target.position.set(VX, 1.45, VZ); key.target.updateMatrixWorld(); return; }
+    const h = C.you; h.faceRes = 2048;
+    placeChar(h, VX, VZ, 0.05, POSES.stand);
+    const pg = X.pDone.group; pg.visible = true;
+    pg.position.copy(local(h, 0.0, 1.27, 0.3)); pg.rotation.set(Math.PI / 2 - 0.1, 0, 0);
+    pg.rotateOnWorldAxis(V3(0, 1, 0), 0.05); pg.updateMatrixWorld(true);
+    const pc = (u, v) => V3(u * 0.105, 0.002, v * 0.1485).applyMatrix4(pg.matrixWorld);
+    palmAt(h, 'l', pc(0.98, 0.5).add(V3(0, 0, -0.012)), handQuat(h, [0.15, 1, 0], [0, 0, 1]), 1, local(h, 0.6, 0.7, -0.3), 0.85);
+    palmAt(h, 'r', pc(-0.98, 0.5).add(V3(0, 0, -0.012)), handQuat(h, [-0.15, 1, 0], [0, 0, 1]), 1, local(h, -0.6, 0.7, -0.3), 0.85);
+    look(h, camP, 1, 1); h.expr = 'grin';
+    key.target.position.copy(h.J.head.getWorldPosition(V3())); key.target.updateMatrixWorld();
+  };
+  SHOTS.push({ t0: 230, t1: 231, set: 'class', vignette: 0.42, sat: 1.18, cam: v2Cam, setup: v2(true) });
+  SHOTS.push({ t0: 231, t1: 232, set: 'class', vignette: 0.42, sat: 1.18, cam: v2Cam, setup: v2(false) });
 }
