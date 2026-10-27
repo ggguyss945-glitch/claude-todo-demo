@@ -993,8 +993,9 @@ function hallKids(t, heroPos, o = {}) {
   }, { sat: 0.85, vignette: 0.6 });
 }
 // S22 51.30-53.15 "So the principal makes a decision." at the window, he turns
+// (the camera stays >= 10 cm inside the window's sun-shaft volume: crossing one of its faces pops the haze)
 {
-  S(51.3, 53.15, 'office', (t) => ck(t, [K3(51.3, [61.1, 1.62, -2.85], [60.0, 1.55, -2.45], 40), K3(53.15, [61.0, 1.6, -2.82], [60.0, 1.58, -2.45], 36)], (x) => x), (Wd, t) => {
+  S(51.3, 53.15, 'office', (t) => ck(t, [K3(51.3, [60.92, 1.62, -2.86], [60.0, 1.55, -2.45], 40), K3(53.15, [60.88, 1.6, -2.83], [60.0, 1.58, -2.45], 36)], (x) => x), (Wd, t) => {
     const Pn = PRIN();
     placeChar(Pn, 60.0, -2.5, Math.PI, POSES.handsBack);
     const k = easeInOut(prog(t, 51.95, 52.6));
