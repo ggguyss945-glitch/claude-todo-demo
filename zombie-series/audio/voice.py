@@ -1,4 +1,6 @@
 # Synthesize narration + PA line, process like a close, warm studio mic, and get word timings.
+# Narration: Supertonic-3, voiced phrase by phrase; each phrase gets several takes and the best one is kept
+# (it must read back correctly through ASR, sit near the target pace, and have the liveliest pitch).
 # usage: python3 -I voice.py <scratch_dir> <out_dir>
 import sys, os, json, re, numpy as np, soundfile as sf, librosa, warnings
 warnings.filterwarnings('ignore')
@@ -6,31 +8,44 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from kokoro_onnx import Kokoro
 import sherpa_onnx
 from pedalboard import (Pedalboard, HighpassFilter, LowpassFilter, LowShelfFilter, HighShelfFilter, PeakFilter,
-                        Compressor, Limiter, Reverb, Gain, Distortion)
+                        Compressor, Reverb, Gain, Distortion)
 from script_test import LINES, PA_LINE, NARRATOR, NARRATION_START
 
 S, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 SR = 48000
-k = Kokoro(f'{S}/tts/kokoro-v1.0.onnx', f'{S}/tts/voices-v1.0.bin')
-narr_style = sum(w * k.get_voice_style(v) for v, w in NARRATOR.items())
+rng = np.random.default_rng(7)
 
-def tts(text, style, speed):
-    a, sr = k.create(text, voice=style, speed=speed, lang='en-us')
-    a = librosa.resample(a.astype(np.float32), orig_sr=sr, target_sr=SR)
-    # trim leading/trailing silence but keep 40 ms of breath room
-    idx = np.where(np.abs(a) > 0.008)[0]
-    a = a[max(0, idx[0] - int(0.04 * SR)): idx[-1] + int(0.12 * SR)]
+d = f'{S}/models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11/'
+narr = sherpa_onnx.OfflineTts(sherpa_onnx.OfflineTtsConfig(model=sherpa_onnx.OfflineTtsModelConfig(
+    supertonic=sherpa_onnx.OfflineTtsSupertonicModelConfig(
+        duration_predictor=d + 'duration_predictor.int8.onnx', text_encoder=d + 'text_encoder.int8.onnx',
+        vector_estimator=d + 'vector_estimator.int8.onnx', vocoder=d + 'vocoder.int8.onnx', tts_json=d + 'tts.json',
+        unicode_indexer=d + 'unicode_indexer.bin', voice_style=d + 'voice.bin'), num_threads=4)))
+kok = Kokoro(f'{S}/tts/kokoro-v1.0.onnx', f'{S}/tts/voices-v1.0.bin')
+
+def trim(a, pre=0.03, post=0.1):
+    idx = np.where(np.abs(a) > 0.02 * np.abs(a).max())[0]
+    a = a[max(0, idx[0] - int(pre * SR)): idx[-1] + int(post * SR)].copy()
+    fi, fo = int(0.008 * SR), int(0.03 * SR)
+    a[:fi] *= np.linspace(0, 1, fi); a[-fo:] *= np.linspace(1, 0, fo)
     return a
+
+def take(text, speed):
+    g = sherpa_onnx.GenerationConfig(); g.sid = NARRATOR['sid']; g.speed = float(speed); g.num_steps = 8
+    r = narr.generate(text, g)
+    a = librosa.resample(np.asarray(r.samples, np.float32), orig_sr=r.sample_rate, target_sr=SR)
+    a = trim(a)
+    return a / (np.sqrt(np.mean(a ** 2)) + 1e-9) * 0.08     # same speech level for every take
 
 def hp(x, f, order=4):
     from scipy.signal import butter, sosfilt
     return sosfilt(butter(order, f / (SR / 2), 'high', output='sos'), x)
 
-# "studio mic" chain: proximity warmth, cut boxiness, presence, air, gentle compression
-mic = Pedalboard([HighpassFilter(70), LowShelfFilter(cutoff_frequency_hz=160, gain_db=2.0), PeakFilter(330, -2.5, 1.0),
-                  PeakFilter(3200, 2.5, 0.8), HighShelfFilter(cutoff_frequency_hz=9000, gain_db=2.0),
-                  Compressor(threshold_db=-22, ratio=3.0, attack_ms=4, release_ms=90), Gain(3)])
+# "studio mic" chain: a little proximity warmth, less boxiness, gentle presence, light compression, dry
+mic = Pedalboard([HighpassFilter(75), LowShelfFilter(cutoff_frequency_hz=150, gain_db=1.5), PeakFilter(320, -2.0, 1.0),
+                  PeakFilter(3400, 1.5, 0.9), HighShelfFilter(cutoff_frequency_hz=10000, gain_db=0.8),
+                  Compressor(threshold_db=-21, ratio=2.4, attack_ms=8, release_ms=130), Gain(3)])
 def deess(x):
     # dynamic cut of 5.5-9 kHz when it dominates
     from scipy.signal import butter, sosfiltfilt
@@ -39,16 +54,11 @@ def deess(x):
     full = np.sqrt(np.convolve(x ** 2, np.ones(240) / 240, 'same')) + 1e-9
     red = np.clip((env / full - 0.35) * 1.6, 0, 0.6)
     return x - band * red
-def exciter(x):
-    # add gentle air above the 12 kHz ceiling of the model
-    h = hp(x, 3500); h = np.tanh(4 * h) / 4
-    return x + 0.12 * hp(h, 11000)
 
 def process_narration(a):
     a = mic(a.astype(np.float32), SR)
-    a = deess(a); a = exciter(a)
-    room = Pedalboard([Reverb(room_size=0.12, damping=0.7, wet_level=0.045, dry_level=1.0, width=0.2)])
-    return room(a.astype(np.float32), SR)
+    room = Pedalboard([Reverb(room_size=0.08, damping=0.8, wet_level=0.018, dry_level=1.0, width=0.1)])
+    return room(deess(a).astype(np.float32), SR)
 
 pa_chain = Pedalboard([HighpassFilter(450), LowpassFilter(3600), PeakFilter(1800, 5, 1.2), Distortion(drive_db=9),
                        Compressor(threshold_db=-18, ratio=6), Reverb(room_size=0.85, damping=0.4, wet_level=0.35, dry_level=0.75, width=0.6), Gain(-4)])
@@ -57,7 +67,6 @@ M = S + '/models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8'
 rec = sherpa_onnx.OfflineRecognizer.from_transducer(encoder=M + '/encoder.int8.onnx', decoder=M + '/decoder.int8.onnx',
         joiner=M + '/joiner.int8.onnx', tokens=M + '/tokens.txt', num_threads=4, model_type='nemo_transducer')
 
-SMALL = {0: 1, 1: 1}
 def num_words(w):
     """How many spoken script words an ASR token stands for (digits only)."""
     w = w.strip('.,!?')
@@ -68,7 +77,8 @@ def num_words(w):
     if n >= 1000 and n % 1000 == 0: return 2   # nine thousand
     return 1                                     # 12 -> twelve, 38 -> thirty-eight
 
-def word_times(a, text):
+def asr(a):
+    """Recognized words with start times; numbers expanded into one placeholder per script word."""
     y = librosa.resample(a.astype(np.float32), orig_sr=SR, target_sr=16000)
     st = rec.create_stream(); st.accept_waveform(16000, y); rec.decode_stream(st)
     r = st.result; words = []; cur = None
@@ -78,38 +88,77 @@ def word_times(a, text):
             cur = [tok.strip(), t]
         else: cur[0] += tok
     if cur: words.append(cur)
-    script_words = re.findall(r"[A-Za-z0-9'\-]+", text)
-    asr = [w for w in words if re.search(r'[A-Za-z0-9]', w[0])]
-    dur = len(a) / SR
-    # expand ASR numbers ("2.14", "9,000", "12") into the number of script words they cover
-    exp = []
-    for i, (w, t0) in enumerate(asr):
-        t1 = asr[i + 1][1] if i + 1 < len(asr) else dur - 0.1
+    words = [w for w in words if re.search(r'[A-Za-z0-9]', w[0])]
+    exp, dur = [], len(a) / SR
+    for i, (w, t0) in enumerate(words):
+        t1 = words[i + 1][1] if i + 1 < len(words) else dur - 0.1
         n = num_words(w)
-        for j in range(n): exp.append(t0 + (t1 - t0) * j / n)
-    if len(exp) == len(script_words):
-        times = exp
-    elif len(asr) == len(script_words):
-        times = [w[1] for w in asr]
-    else:  # fall back to character-proportional timing
-        lens = np.array([len(w) + 1 for w in script_words], float); times = list(np.concatenate([[0], np.cumsum(lens)[:-1]]) / lens.sum() * dur * 0.92 + 0.05)
-        print('  timing fallback for', text, '| asr:', ' '.join(w[0] for w in asr))
-    return [{'w': w, 't': float(t)} for w, t in zip(script_words, times)], r.text
+        for j in range(n): exp.append(('#' if n > 1 or re.search(r'\d', w) else w.lower().strip('.,!?'), t0 + (t1 - t0) * j / n))
+    return exp, r.text
 
-out = {'sr': SR, 'lines': []}
+script_words = lambda text: re.findall(r"[A-Za-z0-9'\-]+", text)
+SAME = {'isle': 'aisle'}   # homophones the ASR may spell either way
+def reads_back(exp, text):
+    sw = [SAME.get(w.lower(), w.lower()) for w in script_words(text)]
+    return len(exp) == len(sw) and all(h == '#' or SAME.get(h, h) == s for (h, _), s in zip(exp, sw))
+
+def pitch_life(a):
+    """Std of pitch in semitones over voiced frames: higher = livelier intonation."""
+    y = librosa.resample(a, orig_sr=SR, target_sr=16000)
+    f0, vf, _ = librosa.pyin(y, fmin=60, fmax=400, sr=16000, frame_length=1024, hop_length=160)
+    f = f0[vf & ~np.isnan(f0)]
+    return float((12 * np.log2(f / np.median(f))).std()) if len(f) > 5 else 0.0
+
+def longest_gap(a):
+    fr = librosa.feature.rms(y=a, frame_length=960, hop_length=960)[0]; q = 20 * np.log10(fr / fr.max() + 1e-9) < -38
+    best = c = 0
+    for v in q: c = c + 1 if v else 0; best = max(best, c)
+    return best * 0.02
+
+def best_take(text, rate, say=None):
+    """Voice `say` (default: text) and keep the take that reads back as `text`."""
+    n = len(script_words(text)); target = n / rate + 0.13
+    probe = take(say or text, 1.0)
+    # short phrases come out quick, so they may be slowed further before the voice starts to drag
+    speed = float(np.clip(len(probe) / SR / target, 0.64 if n <= 4 else 0.72, 1.12))
+    cands = []
+    for k in range(NARRATOR['takes']):
+        a = take(say or text, speed * (0.97, 1.0, 1.03)[k % 3])
+        exp, heard = asr(a)
+        ok = reads_back(exp, text)
+        score = pitch_life(a) - 5 * abs(np.log(len(a) / SR / target)) - (2 if longest_gap(a) > 0.3 else 0) - (0 if ok else 100)
+        cands.append((score, a, exp, heard))
+    cands.sort(key=lambda c: -c[0])
+    s, a, exp, heard = cands[0]
+    if s < -50: print('  WARNING: no take reads back cleanly for', repr(text), '| best heard:', heard)
+    return a, exp, heard, speed, s
+
+out = {'sr': SR, 'lines': [], 'narrator': NARRATOR}
 t = NARRATION_START
 for L in LINES:
-    raw = tts(L['text'], narr_style, L['speed'])
+    parts, words, heard_all, pos = [], [], [], 0.0
+    for i, (ptxt, pause, *say) in enumerate(L['phrases']):
+        a, exp, heard, speed, score = best_take(ptxt, L['rate'], say[0] if say else None)
+        sw = script_words(ptxt)
+        for j, w in enumerate(sw):
+            words.append({'w': w, 't': round(pos + (exp[j][1] if j < len(exp) else len(a) / SR * j / len(sw)), 3)})
+        words[-1]['e'] = round(pos + len(a) / SR - 0.06, 3)       # phrase-final word: when the voice stops
+        parts.append(a); heard_all.append(heard); pos += len(a) / SR
+        print(f'  {L["id"]:4s} "{ptxt}" speed {speed:.2f} score {score:.2f} | {heard}')
+        if i < len(L['phrases']) - 1:
+            parts.append(np.zeros(int(pause * SR), np.float32)); pos += pause
+    raw = np.concatenate(parts)
     a = process_narration(raw) * 10 ** (L['level'] / 20)
-    words, heard = word_times(raw, L['text'])
     sf.write(f'{OUT}/{L["id"]}.wav', a.astype(np.float32), SR)
-    out['lines'].append({**L, 'start': round(t, 3), 'dur': round(len(a) / SR, 3), 'words': words, 'asr': heard})
-    print(f'{L["id"]:4s} {t:6.2f}s +{len(a)/SR:4.2f}s  {heard}')
+    out['lines'].append({k: v for k, v in L.items() if k != 'phrases'} | {'phrases': [list(p) for p in L['phrases']],
+                        'start': round(t, 3), 'dur': round(len(a) / SR, 3), 'words': words, 'asr': ' '.join(heard_all)})
+    print(f'{L["id"]:4s} {t:6.2f}s +{len(a)/SR:4.2f}s  {len(words) / (len(a) / SR):.2f} w/s')
     t += len(a) / SR + L['gap']
 out['narration_end'] = round(t, 3)
 
-pa = tts(PA_LINE['text'], k.get_voice_style(PA_LINE['voice']), PA_LINE['speed'])
-pa_words, _ = word_times(pa, PA_LINE['text'])
+pa, psr = kok.create(PA_LINE['text'], voice=PA_LINE['voice'], speed=PA_LINE['speed'], lang='en-us')
+pa = trim(librosa.resample(pa.astype(np.float32), orig_sr=psr, target_sr=SR))
+pa_exp, _ = asr(pa); pa_words = [{'w': w, 't': round(tt, 3)} for w, (_, tt) in zip(script_words(PA_LINE['text']), pa_exp)]
 pa_p = pa_chain(pa.astype(np.float32), SR)
 sf.write(f'{OUT}/PA.wav', pa_p, SR)
 out['pa'] = {'dur': round(len(pa_p) / SR, 3), 'words': pa_words, 'text': PA_LINE['text']}

@@ -15,6 +15,9 @@ const f1 = (n) => Math.round(n * 10) / 10;
 function cam(inner, { s = 1, x = 0, y = 0, cx = W / 2, cy = H / 2, r = 0 } = {}) {
   return g(inner, { transform: `translate(${f1(cx + x)} ${f1(cy + y)}) rotate(${f1(r)}) scale(${s.toFixed(4)}) translate(${-cx} ${-cy})` });
 }
+// value that holds and then eases to the next key over d seconds: [[t0, v0], [t1, v1], ...]
+const keys = (t, ks, d = 0.1) => { let v = ks[0][1]; for (let i = 1; i < ks.length; i++) v = lerp(v, ks[i][1], ease(ramp(t, ks[i][0], ks[i][0] + d))); return v; };
+let D = 1;   // duration of the shot being drawn, so slow camera moves span the whole shot
 const blinkAt = (t, times, d = 0.14) => { for (const b of times) { const k = (t - b) / d; if (k > 0 && k < 1) return Math.sin(Math.PI * k); } return 0; };
 const wrap = (inner, seed, boil) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs(seed, boil)}${inner}</svg>`;
 
@@ -26,7 +29,8 @@ function narratorWord(T, tg) {
     for (let i = ws.length - 1; i >= 0; i--) {
       const ts = L.start + ws[i].t - 0.03;
       if (tg >= ts) {
-        const te = i + 1 < ws.length ? L.start + ws[i + 1].t - 0.03 : L.start + L.dur + 0.15;
+        let te = i + 1 < ws.length ? L.start + ws[i + 1].t - 0.03 : L.start + L.dur + 0.15;
+        if (ws[i].e !== undefined) te = Math.min(te, L.start + ws[i].e + 0.35);
         if (tg <= te) return { w: ws[i].w.replace(/[.,!?]$/, ''), age: tg - ts };
       }
     }
@@ -88,7 +92,7 @@ SHOTS.pov_open = (T, tg, lt) => {
     if (i === 0) Zd -= 0.4 * ease(ramp(lt, E.last_step - 0.1, E.last_step + 0.35));   // one more step
     if (i === 0) { const q0 = at(A, x, Zd); nearFace = [q0.x + 10, q0.y - 5.15 * 60 * 1.4 * q0.k]; }
     const q = at(A, x, Zd);
-    const walk = lt < E.steps_stop ? Math.sin(lt * 5.5 + i) * 5 : 0;
+    const walk = Math.sin(lt * 5.5 + i) * 5 * (1 - ease(ramp(lt, E.steps_stop - 0.15, E.steps_stop + 0.2)));   // gait settles, no freeze
     s += g(zombie({ x: q.x, y: q.y, s: 1.4 * q.k, outfit: o, tilt: tl + walk, look: -0.4 + 0.3 * i, sway: walk * 0.4 }), { opacity: f1(kIn * 10) / 10 });
   });
   s += exitSign();
@@ -102,9 +106,9 @@ SHOTS.pov_open = (T, tg, lt) => {
   }
   // flashlight: explore the shelves, then snap to the far end, then onto the nearest one
   let tx = lt < 3.4 ? lerp(520, 1450, ease(lt / 3.4)) : lerp(1450, nearFace[0], ease(ramp(lt, 3.4, 4.1)));
-  let ty = lt < 3.4 ? 520 + 60 * Math.sin(lt * 1.3) : lerp(520, nearFace[1] + 40, ease(ramp(lt, 3.4, 4.1)));
+  let ty = lt < 3.4 ? 520 + 60 * Math.sin(lt * 1.3) : lerp(520 + 60 * Math.sin(3.4 * 1.3), nearFace[1] + 40, ease(ramp(lt, 3.4, 4.1)));
   if (lt > 4.1) { tx = nearFace[0]; ty = nearFace[1] + 40 - 40 * ease(ramp(lt, E.last_step, E.last_step + 0.4)); }
-  const tremble = lt > E.switch ? 6 : 2;
+  const tremble = 2 + 4 * ease(ramp(lt, E.switch, E.switch + 0.3));
   const to = [tx + wob(lt * 4, 1) * tremble, ty + wob(lt * 4, 2) * tremble];
   const lens = [1250 + wob(lt, 3) * 10, 830 + wob(lt, 4) * 8];
   s += beam(lens, to, 0.16, 0.38, 1.2, 0.45);
@@ -121,7 +125,7 @@ SHOTS.pov_open = (T, tg, lt) => {
   fg += mitt(lens[0] + 120, lens[1] + 30, -15, 1.0);
   s += g(fg, { filter: 'url(#wobbleSoft)' });
   s += `<radialGradient id="povDark" cx="0.53" cy="0.52" r="0.62"><stop offset="0.3" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.75"/></radialGradient>` + rect(0, 0, W, H, { fill: 'url(#povDark)' });
-  const shake = 1 + (lt > E.steps_start ? 1.5 : 0) - (lt > E.switch ? 1.2 : 0);
+  const shake = 1 + 1.5 * ease(ramp(lt, E.steps_start, E.steps_start + 0.6)) - 1.2 * ease(ramp(lt, E.switch, E.switch + 0.4));
   s = cam(s, { s: 1.06 + 0.02 * ease(lt / 9.5), x: wob(lt * 0.9, 5) * 7 * shake, y: wob(lt * 0.8, 6) * 5 * shake, r: wob(lt * 0.5, 7) * 0.4 });
   // POV grammar: letterbox, no HUD, sound captions
   s += letterbox();
@@ -148,8 +152,8 @@ function aisleScene(T, tg, lt, { pose = 'flashlight', hold = 'flashlight', expr 
   const x = paBoxOn ? 590 : h.x;
   if (hold === 'flashlight') {
     const hx1 = x + 1.45 * hu, hy1 = h.y - 3.45 * hu, T1 = [990, 500];
-    H_ += hero({ x, y: h.y, s: 1.45 * h.k, pose, expr, hold, aim: Math.atan2(T1[1] - hy1, T1[0] - hx1) * 180 / Math.PI, facing: 1, look, blink, breathe: 0.006 * Math.sin(tg * 2.2) });
-  } else H_ += hero({ x, y: h.y, s: 1.45 * h.k, pose, expr, facing: -1, look, blink, breathe: 0.006 * Math.sin(tg * 2.2) });
+    H_ += hero({ x, y: h.y, s: 1.45 * h.k, pose, expr, hold, aim: Math.atan2(T1[1] - hy1, T1[0] - hx1) * 180 / Math.PI, facing: 1, look, blink, breathe: 0.009 * Math.sin(tg * 2.2) });
+  } else H_ += hero({ x, y: h.y, s: 1.45 * h.k, pose, expr, facing: -1, look, blink, breathe: 0.009 * Math.sin(tg * 2.2) });
   s += H_;
   s += nightTint(0.86) + exitSign();
   if (hold === 'flashlight' && flicker < 0.5) {
@@ -157,7 +161,7 @@ function aisleScene(T, tg, lt, { pose = 'flashlight', hold = 'flashlight', expr 
     s += beam([hx0 + Math.cos(a) * 0.7 * hu, hy0 + Math.sin(a) * 0.7 * hu], Tt, 0.2, 0.6);
     s += ellipse(x + 60, h.y - 300, 260, 340, { fill: '#FFF2C4', opacity: 0.16, filter: 'url(#soft)', style: 'mix-blend-mode:screen' });
   }
-  s = cam(s, { s: lerp(push[0], push[1], ease(lt / 4.5)), cx: 980, cy: 520 });
+  s = cam(s, { s: lerp(push[0], push[1], ease(lt / D)), cx: 980, cy: 520 });
   if (flicker >= 0.5) s += rect(0, 0, W, H, { fill: '#05070C', opacity: 0.75 });
   if (hudOn) s += hud({ theme: 'price', day: 0, time, noise, place: 'FRESHWAY · AISLE 7' });
   return s;
@@ -183,7 +187,7 @@ function zombieClose(T, tg, lt, { look, tiltK = 0, shake = 0, ring = 0 }) {
     s += g(text(1650, 330, 'RRRING!', { fontFamily: 'Bangers, Impact', fontSize: 120, fill: '#FFE27A', stroke: '#2B1D21', strokeWidth: 10, paintOrder: 'stroke', textAnchor: 'middle' }),
       { transform: `translate(1650 300) rotate(${f1(-8 + 4 * Math.sin(tg * 40))}) scale(${(0.6 + 0.4 * k).toFixed(3)}) translate(-1650 -300)` });
   }
-  return cam(s, { s: 1.0 + 0.05 * ease(lt / 2.5), x: shake * wob(tg * 9, 1) * 12, y: shake * wob(tg * 9, 2) * 8 });
+  return cam(s, { s: 1.0 + 0.05 * ease(lt / D), x: shake * wob(tg * 9, 1) * 12, y: shake * wob(tg * 9, 2) * 8 });
 }
 SHOTS.zombies_turn = (T, tg, lt) => zombieClose(T, tg, lt, { look: (t) => lerp(-0.75, 0.05, ease(ramp(t, 0.35, 1.9))) }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 
@@ -191,7 +195,7 @@ function heroClose(T, tg, lt, { expr = 'scared', look = 0, blink = 0, tilt = 0, 
   const A = aisleNight();
   let bg = g(A.s, { filter: 'url(#softS)' });
   bg += nightTint(warm ? 0.7 : 0.88);
-  let ch = hero({ x: 960, y: 1340, s: 2.6, pose: expr === 'scared' ? 'scared' : 'stand', expr, facing: 1, look, blink, tilt, breathe: 0.005 * Math.sin(tg * 2.4) });
+  let ch = hero({ x: 960, y: 1340, s: 2.6, pose: expr === 'scared' ? 'scared' : 'stand', expr, facing: 1, look, blink, tilt: tilt + 1.3 * Math.sin(tg * 0.85), breathe: 0.011 * Math.sin(tg * 2.4) });
   let sc = bg + ch;
   sc += glow(640, 380, 260, warm ? '#FFD9A0' : '#FFF2C4', warm ? 0.28 : 0.1);
   sc = cam(sc, { s, cx: 960, cy: 520, x: shake * wob(tg * 10, 3) * 14, y: shake * wob(tg * 10, 4) * 10 });
@@ -200,9 +204,9 @@ function heroClose(T, tg, lt, { expr = 'scared', look = 0, blink = 0, tilt = 0, 
 }
 SHOTS.hero_where = (T, tg, lt) => {
   const b = T.events.boom_where - T.shots.find((x) => x.name === 'hero_where').start;
-  const look = lt < 0.5 ? -0.35 : lt < 1.0 ? 0.35 : -0.05;
+  const look = keys(lt, [[0, -0.35], [0.45, 0.35], [0.95, -0.05]], 0.09);    // quick eye darts, not jumps
   const kick = Math.max(0, 1 - Math.abs(lt - b) / 0.35) * (lt > b ? 1 : 0);
-  return heroClose(T, tg, lt, { expr: 'scared', look, blink: blinkAt(lt, [0.15]), s: 1 + 0.06 * ease(ramp(lt, b - 0.05, b + 0.15)), shake: kick * 1.5 }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
+  return heroClose(T, tg, lt, { expr: 'scared', look, blink: blinkAt(lt, [0.15]), s: 1 + 0.02 * ease(lt / D) + 0.06 * ease(ramp(lt, b - 0.05, b + 0.15)), shake: kick * 1.5 }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 };
 
 SHOTS.exterior = (T, tg, lt) => {
@@ -214,7 +218,7 @@ SHOTS.exterior = (T, tg, lt) => {
   s += rect(160, 260, 1600, 470, { fill: '#C9BFA7', ...ink(6) }) + rect(160, 260, 1600, 110, { fill: '#3E6E5A', ...ink(6) });
   s += text(960, 340, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 84, fill: '#F5EFE0', textAnchor: 'middle', letterSpacing: 8 });
   s += rect(1430, 290, 270, 54, { rx: 8, fill: '#B5452F', ...ink(4) }) + text(1565, 327, 'OPEN 24 HOURS', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 24, fill: '#FFF', textAnchor: 'middle', letterSpacing: 1 });
-  const rattle = 2 * Math.sin(tg * 37) * (Math.sin(tg * 1.3) > 0.6 ? 1 : 0);
+  const rattle = 2 * Math.sin(tg * 37) * ease((Math.sin(tg * 1.3) - 0.45) / 0.3);
   let sh = rect(260, 400, 1400, 330, { fill: '#9C988C', ...ink(6) });
   for (let y = 412; y < 730; y += 16) sh += path(`M260 ${y} Q960 ${y + 16 * (1 - Math.abs(y - 560) / 170)} 1660 ${y}`, { fill: 'none', stroke: '#6E6A60', strokeWidth: 3 });
   s += g(sh, { transform: `translate(0 ${f1(rattle)})` });
@@ -228,13 +232,13 @@ SHOTS.exterior = (T, tg, lt) => {
   s += line(80, 1080, 80, 520, { stroke: INK, strokeWidth: 14 }) + rect(60, 506, 90, 22, { fill: '#FFB866', ...ink(4) });
   s += glow(105, 535, 55, '#FFB866', 0.75) + ellipse(240, 1010, 300, 80, { fill: '#FFB866', opacity: 0.22, filter: 'url(#soft)', style: 'mix-blend-mode:screen' });
   s += glow(1565, 316, 60, '#FF6A4A', 0.4 + 0.1 * Math.sin(tg * 3));
-  s = cam(s, { s: 1.08, x: lerp(40, -40, ease(lt / 5)), y: 10 });
+  s = cam(s, { s: 1.08, x: lerp(40, -40, ease(lt / D)), y: 10 });
   return s + hudIn(T, tg, { theme: 'price', day: 0, time: '2:14 AM', noise: 0, place: 'FRESHWAY · PARKING LOT' }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 };
 
 SHOTS.shutter_hands = (T, tg, lt) => {
   let s = rect(0, 0, W, H, { fill: '#9C988C' });
-  const vib = (Math.sin(tg * 1.9) > 0.3 ? 3 : 0.6) * Math.sin(tg * 41);
+  const vib = (0.6 + 2.4 * ease((Math.sin(tg * 1.9) - 0.15) / 0.3)) * Math.sin(tg * 41);
   let sh = '';
   for (let y = 0; y < 760; y += 30) sh += path(`M0 ${y} Q960 ${y + 26 * Math.sin(y / 120)} ${W} ${y}`, { fill: 'none', stroke: '#6E6A60', strokeWidth: 5 });
   sh += path('M0 760 Q960 700 1920 770 L1920 800 Q960 740 0 790 Z', { fill: '#5E5A52', ...ink(6) });
@@ -251,7 +255,7 @@ SHOTS.shutter_hands = (T, tg, lt) => {
   };
   [[260, -10, 0.9, 0], [560, 8, 1, 1.3], [900, -4, 1.05, 2.2], [1300, -6, 0.85, 3.1], [1640, 12, 0.95, 4.4]].forEach((a) => { s += hand(...a); });
   s += grade('night') + rect(0, 0, W, 700, { fill: '#10141F', opacity: 0.35, style: 'mix-blend-mode:multiply' }) + ellipse(960, 785, 1000, 55, { fill: '#FFB866', opacity: 0.3, filter: 'url(#soft)', style: 'mix-blend-mode:screen' });
-  s = cam(s, { s: lerp(1.04, 1.12, ease(lt / 3.7)), cy: 760 });
+  s = cam(s, { s: lerp(1.04, 1.12, ease(lt / D)), cy: 760 });
   return s + hud({ theme: 'price', day: 0, time: '2:14 AM', noise: 0, place: 'FRESHWAY · FRONT' }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 };
 
@@ -269,14 +273,14 @@ SHOTS.gary = (T, tg, lt) => {
   s += zombie({ x, y, s: k, outfit: 'suit', tilt: -10 + 5 * Math.sin(tg * 0.8), look: 0.15, sway: 2 * Math.sin(tg * 0.6), extra: tag + badge + clip });
   s = g(A.s, { filter: 'url(#softS)' }) + nightTint(0.85) + s.slice(g(A.s, { filter: 'url(#softS)' }).length);
   s += beam([120, 1080], [1000, 520], 0.24, 0.3, 1.9, 0.38);
-  s = cam(s, { s: lerp(1.0, 1.08, ease(lt / 3.4)), cx: 980, cy: 480 });
+  s = cam(s, { s: lerp(1.0, 1.08, ease(lt / D)), cx: 980, cy: 480 });
   return s + hud({ theme: 'price', day: 0, time: '2:15 AM', noise: 1, place: 'FRESHWAY · AISLE 7' }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 };
 
 SHOTS.hero_deadpan = (T, tg, lt) => {
   const st = T.events.pizz_sting - T.shots.find((x) => x.name === 'hero_deadpan').start;
   const look = lerp(-0.45, 0.0, ease(ramp(lt, st - 0.05, st + 0.1)));
-  return heroClose(T, tg, lt, { expr: 'neutral', look, blink: blinkAt(lt, [0.9, st + 0.55], 0.18), warm: true, s: 1.0 + 0.03 * ease(lt / 2.7) })
+  return heroClose(T, tg, lt, { expr: 'neutral', look, blink: blinkAt(lt, [0.9, st + 0.55], 0.18), warm: true, s: 1.0 + 0.03 * ease(lt / D) })
     + hud({ theme: 'price', day: 0, time: '2:15 AM', noise: 1, place: 'FRESHWAY · AISLE 7' }) + captions(T, tg) + watermark() + finish({ vignette: 0.9 });
 };
 
@@ -293,18 +297,19 @@ SHOTS.counting = (T, tg, lt) => {
   const lx = 980, ly = 1010, fl = 0.9 + 0.1 * Math.sin(tg * 13) * Math.sin(tg * 7);
   s += g(rect(lx - 40, ly - 110, 80, 110, { rx: 12, fill: '#2E2E2E', ...ink(5) }) + rect(lx - 28, ly - 95, 56, 70, { rx: 8, fill: '#FFE7A8', ...ink(3) }) + path(`M${lx - 30} ${ly - 110} q30 -40 60 0`, { fill: 'none', ...ink(5) }), { filter: 'url(#wobbleSoft)' });
   const clip = g(rect(-55, -75, 110, 150, { rx: 8, fill: '#B58759', ...ink(5) }) + rect(-45, -58, 90, 118, { fill: '#F7F2E6', ...ink(3) }) + line(-32, -30, 30, -30, { stroke: '#8E8576', strokeWidth: 3 }) + line(-32, -10, 22, -10, { stroke: '#8E8576', strokeWidth: 3 }) + line(-32, 10, 30, 10, { stroke: '#8E8576', strokeWidth: 3 }), { transform: 'translate(905 735) rotate(-14)' });
-  s += hero({ x: 710, y: 1012, s: 1.25, pose: 'crouch', expr: 'neutral', facing: 1, look: 0.55, tilt: 6, blink: blinkAt(lt, [1.8, 3.6]), breathe: 0.006 * Math.sin(tg * 1.8), extra: clip });
+  s += hero({ x: 710, y: 1012, s: 1.25, pose: 'crouch', expr: 'neutral', facing: 1, look: 0.55, tilt: 6, blink: blinkAt(lt, [1.8, 3.6]), breathe: 0.009 * Math.sin(tg * 1.8), extra: clip });
   s += rect(0, 0, W, H, { fill: '#2A2A3A', opacity: 0.5, style: 'mix-blend-mode:multiply' });
   s += glow(lx, ly - 60, 330 * fl, '#FFC97A', 0.55) + glow(lx, ly - 60, 120, '#FFE7A8', 0.6);
-  s = cam(s, { s: lerp(1.0, 1.06, ease(lt / 4.1)), cx: 900, cy: 760 });
+  s = cam(s, { s: lerp(1.0, 1.06, ease(lt / D)), cx: 900, cy: 760 });
   return s + hud({ theme: 'price', day: 0, time: '2:20 AM', noise: 0, place: 'FRESHWAY · AISLE 7' }) + captions(T, tg) + watermark() + finish({ vignette: 0.9 });
 };
 
 SHOTS.inventory = (T, tg, lt) => {
   const E = T.events; let s = cream();
   s += smallCaps(W / 2, 150, 'SUPPLIES  ·  DAY 0', 40, INK);
-  const row = (y, label, value, items, t0, color = INK, stamp = '') => {
-    const k = back(ramp(tg, t0 - 0.12, t0 + 0.25)); if (k <= 0.001) return '';
+  const lineStart = (id) => { const L = T.voice.lines.find((l) => l.id === id); return L.start + L.words[0].t; };
+  const row = (y, label, value, items, t0, color = INK, stamp = '', tl = t0) => {
+    const k = back(ramp(tg, tl - 0.12, tl + 0.25)); if (k <= 0.001) return '';
     let o = text(420, y, label, { fontFamily: 'Rubik', fontWeight: 700, fontSize: 34, fill: '#6B5F55' }) + text(1500, y, value, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 56, fill: color, textAnchor: 'end' });
     items.forEach((it, i) => { const kk = back(ramp(tg, t0 + i * 0.04, t0 + i * 0.04 + 0.25)); if (kk > 0.01) o += g(it, { transform: `translate(${450 + i * 105} ${y + 110}) scale(${kk.toFixed(3)})` }); });
     o += stamp;
@@ -317,9 +322,9 @@ SHOTS.inventory = (T, tg, lt) => {
   const battery = (full) => g(rect(-26, -50, 52, 100, { rx: 8, fill: '#F2F0EA', ...ink(5) }) + rect(-10, -62, 20, 14, { fill: '#2E2E2E', ...ink(3) }) + rect(-18, 50 - 8 - 84 * full, 36, 84 * full, { fill: full < 0.3 ? '#D65632' : '#7FB069' }), { filter: 'url(#wobbleSoft)' });
   const pulse = tg > pr ? 0.6 + 0.4 * Math.sin((tg - pr) * 9) : 1;
   const battIt = [battery(0.22), battery(0.12)].map((b) => g(b, { opacity: pulse.toFixed(2) }));
-  s += row(250, 'Food', '9,000 cans', cansIt, E.item_cans, INK, check);
-  s += row(520, 'Water', '38 gal', waterIt, E.item_water);
-  s += row(790, 'Batteries', '2', battIt, E.item_batt, tg > pr ? '#D65632' : INK);
+  s += row(250, 'Food', '9,000 cans', cansIt, E.item_cans, INK, check, lineStart('L9a'));
+  s += row(520, 'Water', '38 gal', waterIt, E.item_water, INK, '', lineStart('L9b'));
+  s += row(790, 'Batteries', '2', battIt, E.item_batt, tg > pr ? '#D65632' : INK, '', lineStart('L9c'));
   s = cam(s, { s: lerp(1.0, 1.03, ease(ramp(tg, E.item_cans - 0.5, pr + 1.5))) });
   return s + captions(T, tg, { y: 1030 }) + finish({ vignette: 0.5, grain: 0.1 });
 };
@@ -334,9 +339,9 @@ SHOTS.rule = (T, tg, lt) => {
   const l1 = back(ramp(tg, wt('hear') - 0.25, wt('hear') + 0.05)), l2 = back(ramp(tg, wt('see') - 0.35, wt('see') + 0.05));
   if (l1 > 0.01) s += g(big(W / 2, 560, 'THEY HEAR.', 130, '#F3EBDD'), { opacity: clamp(l1).toFixed(2), transform: `translate(0 ${f1((1 - l1) * 30)})` });
   if (l2 > 0.01) s += g(big(W / 2, 720, "THEY DON'T SEE.", 130, '#F3EBDD'), { opacity: clamp(l2).toFixed(2), transform: `translate(0 ${f1((1 - l2) * 30)})` });
-  const hb = Math.exp(-((tg - E.heart_start) % 0.9) * 6);
-  s += g(icon.ear(W / 2 - 40, 880, 0.8), { transform: `translate(${W / 2} 880) scale(${(1 + 0.06 * hb).toFixed(3)}) translate(${-W / 2} -880)` });
-  return s + captions(T, tg, { y: 1020 }) + finish({ vignette: 0.9, grain: 0.14 });
+  const hb = tg < E.heart_start ? 0 : Math.exp(-((tg - E.heart_start) % 0.9) * 6);
+  s += g(icon.ear(W / 2 - 40, 860, 0.75), { transform: `translate(${W / 2} 860) scale(${(1 + 0.06 * hb).toFixed(3)}) translate(${-W / 2} -860)` });
+  return s + captions(T, tg, { y: 1040 }) + finish({ vignette: 0.9, grain: 0.14 });
 };
 
 SHOTS.aisle_alarm = (T, tg, lt) => {
@@ -353,7 +358,7 @@ SHOTS.zombies_snap = (T, tg, lt) => {
 SHOTS.hero_alarm = (T, tg, lt) => {
   const E = T.events, f = [E.flicker1, E.flicker2].some((x) => tg > x && tg < x + 0.09);
   const look = lerp(0.0, 0.6, ease(ramp(lt, 0.3, 1.6)));
-  return heroClose(T, tg, lt, { expr: 'scared', look, blink: 0, s: lerp(1.0, 1.2, ease(lt / 2.3)), shake: 0.25, flicker: f ? 1 : 0 })
+  return heroClose(T, tg, lt, { expr: 'scared', look, blink: 0, s: lerp(1.0, 1.2, ease(lt / D)), shake: 0.25, flicker: f ? 1 : 0 })
     + hud({ theme: 'price', day: 0, time: '2:31 AM', noise: Math.sin(tg * 18) > 0 ? 5 : 4, place: 'FRESHWAY · AISLE 7' }) + captions(T, tg) + watermark() + finish({ vignette: 1 });
 };
 
@@ -373,6 +378,7 @@ SHOTS.title = (T, tg, lt) => {
 
 export function frame(T, tg) {
   const sh = T.shots.find((x) => tg >= x.start && tg < x.end) || T.shots[T.shots.length - 1];
+  D = sh.end - sh.start;
   const boil = 7 + (Math.floor(tg * 6) % 3) * 13;    // hand-drawn line boil at 6 fps
   return wrap(SHOTS[sh.name](T, tg, tg - sh.start), 5, boil);
 }

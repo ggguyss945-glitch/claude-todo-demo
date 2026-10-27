@@ -1,4 +1,4 @@
-# Master timeline for the 60 s test, derived from voice.json so picture and sound stay in sync.
+# Master timeline for the ~60 s test, derived from voice.json so picture and sound stay in sync.
 # usage: python3 -I timeline.py <voice.json> <out timeline.json>
 import json, sys
 
@@ -8,11 +8,11 @@ s = lambda i: L[i]['start']
 e = lambda i: L[i]['start'] + L[i]['dur']
 w = lambda i, word: L[i]['start'] + next(x['t'] for x in L[i]['words'] if x['w'].lower().strip("'") == word)
 
-DUR = 60.0
 PA_START, PA_CUT = 2.8, 5.95            # PA voice is cut off by the switch
 SWITCH = PA_CUT
 RING = w('L12', 'ring')                 # alarm clock starts exactly on the word
 TITLE = e('L13') + 0.55
+DUR = round(max(60.0, TITLE + 4.6), 2)   # the title card always gets its full hold
 
 shots = [
     ('pov_open',        0.0,              9.55),

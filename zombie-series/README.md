@@ -6,11 +6,11 @@
 - `docs/` — series bible page and the rendered style frames.
 
 ## 60-second test pipeline
-1. `audio/voice.py <scratch> <voice_dir>` — Kokoro TTS (blend am_puck + am_michael), studio-mic chain, word timings via Parakeet ASR.
+1. `audio/voice.py <scratch> <voice_dir>` — Supertonic-3 narrator (voice M1), voiced phrase by phrase with designed pauses; the best of 6 takes per phrase is kept (reads back through Parakeet ASR, near target pace, liveliest pitch). Kokoro voices the PA line. Studio-mic chain, word timings.
 2. `audio/timeline.py <voice.json> <timeline.json>` — shots and sound events derived from the voice.
 3. `audio/mix.py <scratch> <timeline.json> <voice_dir> <audio_dir>` — synthesized SFX (`audio/sfx.py`), score on GeneralUser GS (`audio/music.py`), ducking, -14 LUFS master.
-4. `tools/render_anim.js <timeline.json> <frames_dir> 30 4` — renders `engine/anim.js` frame by frame and keeps `<frames_dir>/progress.json` current.
-5. `tools/encode.sh <frames_dir> <mix.wav> <out.mp4>`.
+4. `tools/render_anim.js <timeline.json> <frames_dir> 60 4 - 1.3333` — renders (60 fps, 2560×1440) `engine/anim.js` frame by frame and keeps `<frames_dir>/progress.json` current.
+5. `tools/encode.sh <frames_dir> <mix.wav> <out.mp4> 60`.
 
 ## Live render monitor
 `tools/live_monitor.html` is the published render page (db `render/status` + uploaded preview frames). `tools/watch_render.sh <frames_dir>` prints a line each time `progress.json` changes; each line is pushed to the page.
