@@ -20,7 +20,7 @@ for (let i = 2; i < process.argv.length; i++) {
 }
 const VERSION = args.version || 'v2';
 const SCALE = parseFloat(args.scale || '1');
-const W = Math.round(1440 * SCALE), H = Math.round(2560 * SCALE);
+const W = args.w ? parseInt(args.w) : Math.round(1440 * SCALE), H = args.h ? parseInt(args.h) : Math.round(2560 * SCALE);
 const FPS = parseInt(args.fps || '30');
 const DURATION = parseFloat(args.duration || '81.0');
 const ROOT = __dirname;

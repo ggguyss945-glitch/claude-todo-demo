@@ -41,6 +41,7 @@ async function boot() {
   const world = buildWorld(scene);
   world.renderer = renderer; world.scene = scene; world.camera = camera;
   await initShots(world);
+  if (params.get('brand')) await (await import('./brand.js')).addBrandShots(world); // channel art stills (t >= 200)
   const { composer, bloom, look } = makeComposer(renderer, scene, camera, W, H, Q);
   bloom.threshold = 1.15; bloom.strength = 0.35; bloom.radius = 0.5;
   const u = look.uniforms;
