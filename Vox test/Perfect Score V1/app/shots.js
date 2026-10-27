@@ -571,7 +571,7 @@ function heroPushing(t, d) {
     const tip = tipL.applyMatrix4(X.pFinal.group.matrixWorld);
     writeWith(h, 'r', X.heroPencil, tip, 1, 0, local(h, -0.5, 0.75, -0.2));
     h.expr = 'focus';
-  }, { blur: () => 4 });
+  }, { blur: (t) => ((t > 27.42 && t < 27.52) || (t > 27.65 && t < 27.76) || (t > 27.89 && t < 28.01) ? 16 : t > 27.18 && t < 28.27 ? 12 : 4) }); // pencil carries are the fastest moves
 }
 // S11 28.35-30.25 "And now, this can't be ignored." the pen drops, the teacher shoots up
 {
@@ -613,7 +613,7 @@ function heroPushing(t, d) {
     look(T_, bonusTip, 1 - upLook, 0.95);
     look(T_, V3(-1.05, 1.15, -2.2), upLook, 0.95);
     T_.expr = t > drop - 0.05 ? 'shocked' : 'focus';
-  });
+  }, { blur: (t) => (t > stand - 0.03 && t < stand + 0.42 ? 14 : 0) }); // the teacher shoots up out of the chair
 }
 // S12 30.25-32.05 the corridor: you walk to the principal's door; it opens
 const HALL_WALK = curve([[30.05, -18.55], [30.02, -19.6], [30.0, -20.85]]);
@@ -927,7 +927,7 @@ function drawReport(t) {
     holdObj(Pn, 'r', st, 1, { pole: local(Pn, -0.6, 0.8, -0.4) });
     setGrip(Pn, 'r', 0.75);
     palmAt(Pn, 'l', local(Pn, 0.28, 0.785, 0.35), handQuat(Pn, [-0.25, 0, 1], [0, -1, 0]), 1, null, 0.2);
-  }, { blur: (t) => (t > 46.7 && t < 46.97 ? 6 : 0) });
+  }, { blur: (t) => ((t > 46.75 && t < 46.96) || (t > 47.1 && t < 47.31) ? 16 : 0) }); // stamp coming down and lifting off
 }
 // S20 47.60-50.25 "By lunch, the whole school is whispering" - the corridor stares
 const HALL_WALK2 = curve([[30.15, -5.6], [30.1, -7.4], [30.1, -9.3]]);
