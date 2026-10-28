@@ -38,7 +38,7 @@ for L in T['voice']['lines']:
     if L['start'] < E0 - 0.01: continue
     a, _ = sf.read(f"{VD}/{L['id']}.wav", dtype='float32')
     if L['who'] == 'PA': voice.add(store_room(a, SR), L['start'], -2)
-    else: voice.add(a, L['start'], 0 if L['who'] == 'N' else -1)
+    else: voice.add(a, L['start'], {'N': 0, 'NORA': 1.5}.get(L['who'], -1))   # Nora is hushed, so she sits a little higher
     if L.get('echo'):   # the same voice, live, from the roof behind you: late, far, wide
         c, _ = sf.read(f"{VD}/{L['id']}_clean.wav", dtype='float32')
         far = fx(c, HighpassFilter(250), LowpassFilter(2200), Reverb(room_size=0.95, damping=0.6, wet_level=0.7, dry_level=0.35, width=1.0))
@@ -108,7 +108,7 @@ sm = np.zeros(nf, np.float32); cur = 0.0
 for i in range(nf):
     cur += (on[i] - cur) * (a_up if on[i] > cur else a_dn); sm[i] = cur
 act = np.interp(np.arange(N), np.arange(nf) * hop + hop / 2, sm).astype(np.float32)
-for tr, d in ((score, -11), (loopT, -12), (amb, -5)): tr.x *= (1 - act * (1 - db(d)))[:, None]
+for tr, d in ((score, -11), (loopT, -13), (amb, -9)): tr.x *= (1 - act * (1 - db(d)))[:, None]
 
 def limit(x, ceil_db=-1.0, ms=30):
     # lookahead peak limiter with no makeup gain: the gain curve is the minimum over +-ms/2, then a moving

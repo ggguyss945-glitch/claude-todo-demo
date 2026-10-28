@@ -303,7 +303,7 @@ N('F10', "Dale doesn't answer.", 0.4, "For a long time, the radio just hisses.",
 DALE('F10b', "I've looked everywhere, honey.", 0.6, "Every night.", 0.6, "I count to a hundred.", 0.4, "And I look.", gap=0.9, rate=2.2, shot=('radio', dict(mode='doors', night=True)), music=('tender', {}))
 NORA('F10c', "It's his favorite game.", 0.4, "He always hides.", 0.4, "You always find him.", gap=1.0, shot=('nora', dict(mode='close', expr='sad', bg='store')))
 N('F11', "Two thirty-one.", gap=0.3, shot=('prop2', dict(item='clock12', mode='still')), music=('stop', {'fade': 0.5}))
-N('F12', "The alarm in aisle twelve starts to ring.", shot=('prop2', dict(item='clock12', mode='ring')), sfx=[(0, 'alarm_near', dict(until='F13', off=1.4))])
+N('F12', "The alarm in aisle twelve starts to ring.", shot=('prop2', dict(item='clock12', mode='ring')), sfx=[(0, 'alarm_near', dict(until='F13', off=1.4, level=-19))])
 N('F13', "Nora runs.", gap=0.6, shot=('aisle2', dict(mode='nora_run')), sfx=[(0, 'run_steps', dict(dur=2.2, level=-16))])
 N('F14', "Next to the clock, there's a drawing.", 0.35, "In crayon.", shot=('prop2', dict(item='drawing', mode='reveal')), sfx=[(0.1, 'paper_rustle', {})], music=('sting_mystery', {}))
 N('F15', "A girl.", 0.3, "A man in a cap.", 0.3, "And you.", 0.35, "Orange headphones and all.", shot=('prop2', dict(item='drawing', mode='close')))

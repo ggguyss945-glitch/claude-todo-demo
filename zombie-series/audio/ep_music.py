@@ -232,7 +232,7 @@ CUES = dict(dawn=dawn, dread=dread, pulse_soft=pulse_soft, tick=tick, stalk=stal
             night_op=night_op, reveal=reveal, twist=twist, chase=chase, resolve=resolve, end=end, relief=relief, storm=storm, vast=vast, tender=tender)
 # cue loudness in the score bus (dB); diegetic jingle is handled by the mixer
 GAIN = dict(dawn=0, dread=1, pulse_soft=-1, tick=0, stalk=1, jingle=0, chaos=2, rule=2, humor=0, day=-2, think=0, build=-1, hope=1,
-            radio=0, warm=0, action=1, sting_mystery=2, plan=-1, night_op=1, reveal=2, twist=3, chase=1, resolve=1, end=2, relief=0, storm=-3.5, vast=-3, tender=0)
+            radio=0, warm=0, action=1, sting_mystery=2, plan=-1, night_op=1, reveal=2, twist=0, chase=1, resolve=1, end=2, relief=0, storm=-3.5, vast=-3, tender=0)
 
 def render_cue(sf2, cue, D, p, tail=2.5):
     sc = Score(sf2, D + tail)
