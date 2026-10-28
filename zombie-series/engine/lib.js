@@ -63,8 +63,8 @@ export function defs(seed = 7, boil = seed) {
     <feTurbulence type="fractalNoise" baseFrequency="0.0035" numOctaves="3" seed="${seed + 21}"/>
     <feColorMatrix type="saturate" values="0"/>
   </filter>
-  <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
-  <filter id="softS"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="18"/></filter>
+  <filter id="softS" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
   <filter id="capShadow" x="-20%" y="-40%" width="140%" height="180%">
     <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="b"/>
     <feFlood flood-color="#000" flood-opacity="0.55"/><feComposite in2="b" operator="in" result="s"/>
@@ -141,6 +141,7 @@ const POSES = {
   throw: { la: [-0.95, 1.3], ra: [1.05, -1.45], ll: [-0.65, 2.2], rl: [0.6, 2.2] },
   sit: { drop: 1.15, la: [-0.85, 1.55], ra: [0.85, 1.55], ll: [-0.75, 1.05], rl: [0.75, 1.05], kneeL: [-0.85, 0.25], kneeR: [0.85, 0.25] },
   radio: { la: [-0.8, 1.8], ra: [0.42, 0.2], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
+  talkie: { la: [-0.8, 1.8], ra: [0.98, -0.62], ll: [-0.42, 2.2], rl: [0.42, 2.2] },   // walkie-talkie held up at the cheek
   hips: { la: [-0.98, 1.05], ra: [0.98, 1.05], ll: [-0.5, 2.2], rl: [0.5, 2.2] },
   bang: { la: [-0.55, -1.2], ra: [0.6, -1.25], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
 };

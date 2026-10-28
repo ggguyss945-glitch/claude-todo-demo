@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Lilita+One&family=Rubik:ital,wght@0,500;0,700;0,800;0,900;1,500&display=swap">
+<style>html,body{margin:0;background:#000}#stage{overflow:hidden}svg{display:block}</style>
+</head><body><div id="stage"></div>
+<script type="module">
+// Channel art: ?item=thumbA|thumbB|thumbC|logo|banner draws one piece at its own size.
+import { ITEMS } from './brand/brand.js';
+const item = new URLSearchParams(location.search).get('item');
+await document.fonts.load('100px "Lilita One"'); await document.fonts.load('92px Bangers'); await document.fonts.load('900 40px Rubik'); await document.fonts.load('800 40px Rubik');
+const { w, h, svg, css } = ITEMS[item]();
+const stage = document.getElementById('stage');
+stage.style.width = w + 'px'; stage.style.height = h + 'px';
+if (css) stage.style.filter = css;
+stage.innerHTML = svg;
+await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+window.__ready = true;
+</script></body></html>
