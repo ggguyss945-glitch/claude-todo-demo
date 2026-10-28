@@ -214,7 +214,7 @@ LEVEL = dict(alarm_far=-15, alarm_near=-14, decoy_alarm=-21, phone_ring=-14, hea
              run_steps=-14, pizz_sting=-8, whoosh=-17, slam=-12, tok=-12, stamp=-9, thud_land=-8, low_sting=-14, sock_step=-14, creak=-12, cable_rip=-10,
              power_down=-8, hum_stop=-14, radio_click=-12, lock_click=-12, door_bang_soft=-12, bags_slide=-12, throw_whoosh=-16, glass_crunch=-14,
              ladder_steps=-16, key_try=-12, big_switch=-9, pa_pop=-12, door_close=-12, thump_metal=-10, tap=-16, jingle_cut=-14, metal_rattle=-14, decoy_stop=-30, ring_cut=-30,
-             pipe_cough=-10, valve_squeak=-16, water_pour=-15, lid_clunk=-12, pipe_knock=-9, chain_rattle=-12, thunder=-12, glass_break=-9, escalator_clank=-10,
+             pipe_cough=-10, valve_squeak=-16, water_pour=-15, lid_clunk=-12, pipe_knock=-9, chain_rattle=-12, thunder=-11, glass_break=-9, escalator_clank=-10,
              drone_buzz=-14, drone_beep=-13, bottle_roll=-13, clink=-11, paper_rustle=-16, drone_song=-12)
 
 # ---------- ambience beds ----------
@@ -257,5 +257,5 @@ def _bed2(name, dur, n):
 # beds also carry distant groans of the dead outside, a few per minute
 GROANS = dict(store_night=7, store_dawn=4, store_dark=6, roof=5, roof_night=6, lot_dawn=5, lot_night=7, office=2, store_day=3, mall_quiet=6, mall_rain=2, restroom=1)
 BED_LEVEL = dict(silence=-40, store_night=-22, store_dawn=-22, store_day=-21, store_dark=-24, office=-22, freezer_hum=-18, roof=-17, roof_night=-18, lot_dawn=-19, lot_night=-17,
-                 restroom=-23, storm=-25, mall_rain=-26, mall_quiet=-23)
+                 restroom=-23, storm=-27, mall_rain=-28, mall_quiet=-23)
 SF2 = None

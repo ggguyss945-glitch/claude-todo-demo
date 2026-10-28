@@ -28,7 +28,7 @@ class Track:
 voice, score, amb, sfxT, loopT = Track(), Track(), Track(), Track(), Track()
 # sustained effects (alarms, breathing, the store jingle) duck under the voice like the beds; one-shot hits do not
 CONT = {'alarm_far', 'alarm_near', 'decoy_alarm', 'heartbeat_run', 'breath_run', 'crowd_steps_far', 'phone_ring', 'crowd_surge', 'run_steps',
-        'drone_buzz', 'drone_song', 'water_pour'}
+        'drone_buzz', 'drone_song', 'water_pour', 'thunder'}   # thunder rolls for seconds: it must bow to the voice too
 # cues that are meant to hit; every other cue eases in so a change of music never jumps out
 STINGS = {'rule', 'twist', 'sting_mystery', 'end', 'chaos', 'reveal'}
 
