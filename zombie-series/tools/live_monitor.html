@@ -151,7 +151,7 @@ section h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing
         <div><dt>Осталось</dt><dd id="eta">—</dd></div>
         <div><dt>Обновлено</dt><dd id="ago">—</dd></div>
       </dl>
-      <p class="est" id="estNote" hidden>Между обновлениями счётчик идёт по оценке скорости (≈). Точные числа приходят каждые 20–30 секунд.</p>
+      <p class="est" id="estNote" hidden>Между обновлениями счётчик идёт по оценке скорости (≈). Точные числа приходят каждые 5–10 минут.</p>
       <ol class="stages" id="stages"></ol>
     </aside>
   </div>
@@ -203,8 +203,9 @@ const fmt = (n) => n.toLocaleString("ru-RU");
 function estimate(now) {
   const total = +S.total || 0, done = +S.done || 0, rate = +S.rate || 0;
   if (S.stage !== "frames" || !rate || !S.updated_at) return { frames: done, approx: false };
-  const extra = rate * Math.max(0, now - Date.parse(S.updated_at)) / 1000;
-  const frames = Math.min(total, Math.floor(done + Math.min(extra, rate * 90)));
+  // count on from when this device received the update (a clock that is off can't stall it), for up to 25 minutes
+  const extra = rate * Math.max(0, now - (lastFresh || Date.parse(S.updated_at))) / 1000;
+  const frames = Math.min(total, Math.floor(done + Math.min(extra, rate * 1500)));
   return { frames, approx: frames > done };
 }
 
