@@ -72,10 +72,15 @@ async function openPage(browser, port, wid) {
 
 function launch() {
   const gl = args.gl || 'swiftshader';
+  // 'gpu': the computer's own graphics card (Direct3D 11 on Windows), in a visible browser window, since a
+  // headless browser may fall back to software rendering; '--headless' forces headless anyway
   const glArgs = gl === 'swiftshader' ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
     : gl === 'egl' ? ['--use-gl=angle', '--use-angle=gl-egl'] : gl === 'vulkan' ? ['--use-gl=angle', '--use-angle=vulkan', '--enable-features=Vulkan']
+    : gl === 'gpu' ? [...(process.platform === 'win32' ? ['--use-angle=d3d11'] : []), '--force_high_performance_gpu', '--enable-gpu-rasterization',
+      '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows']
     : ['--use-gl=egl'];
   return chromium.launch({
+    headless: gl === 'gpu' ? !!args.headless : true,
     env: { ...process.env, GALLIUM_DRIVER: 'llvmpipe', LP_NUM_THREADS: String(args.lpthreads || 4) },
     args: [...glArgs, '--ignore-gpu-blocklist',
       '--disable-gpu-watchdog', '--disable-features=GpuWatchdog', '--js-flags=--max-old-space-size=8192'],
