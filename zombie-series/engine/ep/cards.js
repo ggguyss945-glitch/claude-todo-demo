@@ -24,6 +24,8 @@ const ICONS = {
   exit: (x, y) => g(rect(x - 150, y - 60, 300, 120, { rx: 12, fill: '#3DBE6A', ...ink(6) }) + text(x, y + 26, 'EXIT', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 76, fill: '#EFFFF2', textAnchor: 'middle' }), { filter: 'url(#wobbleSoft)' }),
   snow: (x, y) => g([0, 60, 120].map((a) => line(x - Math.cos(a * Math.PI / 180) * 110, y - Math.sin(a * Math.PI / 180) * 110, x + Math.cos(a * Math.PI / 180) * 110, y + Math.sin(a * Math.PI / 180) * 110, { stroke: '#5E8FB5', strokeWidth: 18, strokeLinecap: 'round' })).join(''), { filter: 'url(#wobbleSoft)' }),
   note: (x, y) => text(x, y + 60, '♫', { fontFamily: 'Rubik', fontSize: 200, fill: '#F3EBDD', textAnchor: 'middle' }),
+  speaker: (x, y) => g(rect(x - 150, y - 70, 90, 140, { rx: 10, fill: '#3A3F46', ...ink(6) }) + path(`M${x - 60} ${y - 70} L${x + 20} ${y - 140} V${y + 140} L${x - 60} ${y + 70} Z`, { fill: '#5E6670', ...ink(6) })
+    + [0, 1, 2].map((i) => path(`M${x + 60 + i * 40} ${y - 70 - i * 25} q${40 + i * 12} ${70 + i * 25} 0 ${140 + i * 50}`, { fill: 'none', stroke: PAL.red, strokeWidth: 12, strokeLinecap: 'round', opacity: 1 - i * 0.3 })).join(''), { filter: 'url(#wobbleSoft)' }),
   drop: (x, y) => g(path(`M${x} ${y - 140} C${x + 40} ${y - 70} ${x + 105} ${y - 10} ${x + 105} ${y + 50} A105 105 0 0 1 ${x - 105} ${y + 50} C${x - 105} ${y - 10} ${x - 40} ${y - 70} ${x} ${y - 140} Z`, { fill: '#5E9BC8', ...ink(7) })
     + path(`M${x - 55} ${y + 40} q0 45 40 60`, { fill: 'none', stroke: '#DCEFFA', strokeWidth: 14, strokeLinecap: 'round' }), { filter: 'url(#wobbleSoft)' }),
   ear: (x, y) => g(path(`M${x - 70} ${y - 40} C${x - 70} ${y - 150} ${x + 90} ${y - 160} ${x + 90} ${y - 30} C${x + 90} ${y + 40} ${x + 20} ${y + 50} ${x + 10} ${y + 110} C${x} ${y + 160} ${x - 80} ${y + 150} ${x - 75} ${y + 90}`, { fill: '#F1D9C4', ...ink(8) })
@@ -72,7 +74,7 @@ SH.card = (T, tg, lt, p, D) => {
     return cam(s, { s: push(lt, D, [1.0, 1.03]) });
   }
   if (k === 'backpack') {
-    let s = cream() + smallCaps(W2, 150, 'BACKPACK  ·  DAY 6', 40, INK);
+    let s = cream() + smallCaps(W2, 150, `BACKPACK  ·  DAY ${p.day ?? 6}`, 40, INK);
     s += g(path('M560 360 q0 -120 140 -120 h120 q140 0 140 120 v520 q0 60 -60 60 h-280 q-60 0 -60 -60 z', { fill: '#7A3B33', ...ink(7) }) + rect(600, 520, 320, 200, { rx: 30, fill: '#8E4A40', ...ink(5) }), { filter: 'url(#wobbleSoft)' });
     p.items.forEach((it, i) => { s += slideIn(text(1080, 420 + i * 160, it, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 54, fill: i === 2 ? PAL.red : INK }), lt - 0.3 - i * 0.55); });
     return cam(s, { s: push(lt, D, [1.0, 1.03]) });
@@ -80,10 +82,10 @@ SH.card = (T, tg, lt, p, D) => {
   if (k === 'rules' || k === 'promise_rules') {
     let s = dark();
     const R = [['THEY HEAR. THEY DON\'T SEE.'], ['MUSIC IS A DINNER BELL.'], ['COUNT THE RADIOS.'], ['NEVER TELL ANYONE WHAT YOU HAVE.'], ['THE WALLS HAVE EARS.']];
-    const nR = p.n || 4, step = nR > 4 ? 156 : 190;
+    const nR = p.n || 4, step = nR > 4 ? 150 : 190;
     s += smallCaps(W2, 150, k === 'rules' ? `WHAT YOU KNOW  ·  DAY ${p.day ?? 7}` : 'THIS WEEK', 36, '#B9AE97');
     for (let i = 0; i < nR; i++) {
-      const y = 290 + i * step, shown = k === 'promise_rules' ? lt > 1.2 + i * 0.25 : i < p.show, cur = k === 'rules' && i === p.show - 1;
+      const y = (nR > 4 ? 270 : 290) + i * step, shown = k === 'promise_rules' ? lt > 1.2 + i * 0.25 : i < p.show, cur = k === 'rules' && i === p.show - 1;
       s += g(rect(250, y - 50, 230, 70, { fill: shown ? PAL.tag : '#3A3236' }) + text(365, y + 4, `RULE ${i + 1}`, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 40, fill: PAL.card, textAnchor: 'middle', letterSpacing: 3 }), { transform: `rotate(-2 365 ${y})`, opacity: k === 'promise_rules' ? f1(clamp((lt - 1.2 - i * 0.25) * 4) * 100) / 100 : 1 });
       const txt = k === 'promise_rules' ? '? ? ?' : shown ? R[i][0] : '';
       if (txt) s += (cur ? slideIn : (x) => x)(text(540, y + 10, txt, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 56, fill: cur ? '#F3EBDD' : '#B9AE97' }), lt - 0.1);

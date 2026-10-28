@@ -130,17 +130,99 @@ def whoosh(p, dur=None): return X.whoosh(0.45, 1.0)
 def slam(p, dur=None): return X.slam(1.0)
 def tok(p, dur=None): return X.tok(1.0, 980)
 
+# ---------- episode 2 ----------
+def _glug(f0, d, a=1.0):
+    t = t_(d); f = f0 * (1.6 - 0.6 * np.exp(-t / (d * 0.3)))
+    return a * np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / (d * 0.35)) * (1 - np.exp(-t / 0.004))
+def pipe_cough(p, dur=None):
+    # air in the line: a choke, a spit of water, a hollow glug down the pipe
+    k = p.get('k', 1); n = 0.9 if k == 1 else 0.7
+    air = fx(white(int(0.25 * SR)) * np.exp(-t_(0.25) / 0.06), HighpassFilter(900), LowpassFilter(6000)) * 0.6
+    spit = fx(white(int(0.4 * SR)) * (np.abs(np.sin(2 * np.pi * 9 * t_(0.4))) ** 3) * np.exp(-t_(0.4) / 0.15), HighpassFilter(1500), LowpassFilter(8000)) * 0.5
+    return norm(fx(place(int(n * SR), [(0, air), (0.05, spit), (0.02, _glug(140 + 30 * k, 0.5, 0.7)), (0.1, 0.5 * _glug(95, 0.6, 0.6))]), Reverb(room_size=0.35, damping=0.6, wet_level=0.22, dry_level=0.9)), 0.8)
+def valve_squeak(p, dur=None):
+    d = 0.7; t = t_(d); f = 1900 + 500 * np.sin(2 * np.pi * 1.6 * t) + 120 * np.sin(2 * np.pi * 37 * t)
+    y = np.sin(2 * np.pi * np.cumsum(f) / SR) * (0.5 + 0.5 * np.abs(np.sin(2 * np.pi * 13 * t))) * np.sin(np.pi * t / d) ** 0.6
+    return st(lp(y, 5000) * 0.35)
+def water_pour(p, dur):
+    # a stream into a plastic bucket: bright noise riding a slow wobble, little bubbles, the note rising as it fills
+    dur = dur or 4.0; t = t_(dur); n = len(t)
+    jet = bp(pink(n), 500, 5000) * (0.75 + 0.25 * np.sin(2 * np.pi * 3.1 * t) * np.sin(2 * np.pi * 0.7 * t))
+    r = np.random.default_rng(4); bub = np.zeros(n, np.float32)
+    for _ in range(int(dur * 14)):
+        i = int(r.uniform(0, n - 0.08 * SR)); g = _glug(r.uniform(350, 900) * (1 + t[i] / dur * 0.6), 0.07, r.uniform(0.2, 0.5)); bub[i:i + len(g)] += g
+    env = np.minimum(1, t / 0.15) * np.minimum(1, (dur - t) / 0.3)
+    return fx(st((jet * 0.5 + bub * 0.5) * env, 0, 0.3), Reverb(room_size=0.3, damping=0.6, wet_level=0.18, dry_level=0.9))
+def lid_clunk(p, dur=None):
+    return place(int(0.8 * SR), [(0, X.tok(0.7, 620)), (0.0, fx(X.scrape(0.25, 0.5, 6), LowpassFilter(3000)) * 0.4), (0.03, X.tok(0.4, 1400))])
+def pipe_knock(p, dur=None):
+    # a knuckle on a pipe somewhere else in the building: dull hit, metallic ring, long hollow tail
+    k = p.get('k', 1); t = t_(1.6)
+    ring = (np.sin(2 * np.pi * 880 * t) + 0.6 * np.sin(2 * np.pi * 1427 * t) + 0.3 * np.sin(2 * np.pi * 2310 * t)) * np.exp(-t / 0.25) * 0.25
+    hit = X.tok(0.9, 300 + 40 * k)
+    y = place(int(1.6 * SR), [(0, hit), (0.0, st(ring))])
+    return fx(y, LowpassFilter(3500), Reverb(room_size=0.7, damping=0.5, wet_level=0.45, dry_level=0.7, width=0.6))
+def chain_rattle(p, dur=None):
+    r = np.random.default_rng(12); parts = [(0, X.metal_rattle(0.9, 0.8, 7))]
+    for i in range(9): parts.append((0.08 + i * 0.11 + r.uniform(-0.02, 0.02), st(tink(r.uniform(2200, 4200), 0.12, 0.25))))
+    return place(int(1.4 * SR), parts)
+def thunder(p, dur=None):
+    # close: a crack, then the roll; far: only the low roll, longer and softer
+    far, close = p.get('far', False), p.get('close', False)
+    d = 5.5 if far else 4.5; t = t_(d); n = len(t)
+    roll = lp(brown(n), 180 if far else 320) * (1 - np.exp(-t / (0.5 if far else 0.08))) * np.exp(-t / (2.2 if far else 1.6))
+    roll *= 0.75 + 0.25 * np.abs(np.sin(2 * np.pi * 0.9 * t + 1.3 * np.sin(2 * np.pi * 0.37 * t)))
+    y = st(roll * (0.7 if far else 1.0), 0, 0.8)
+    if not far:
+        crack = fx(white(int(0.5 * SR)) * np.exp(-t_(0.5) / (0.05 if close else 0.09)), HighpassFilter(300), LowpassFilter(7000)) * (0.9 if close else 0.45)
+        y = place(n, [(0, y), (0, st(crack, 0, 0.6))])
+    return fx(y, Reverb(room_size=0.95, damping=0.5, wet_level=0.35, dry_level=0.9, width=1.0))
+def glass_break(p, dur=None):
+    r = np.random.default_rng(31); parts = [(0, fx(white(int(0.35 * SR)) * np.exp(-t_(0.35) / 0.07), HighpassFilter(1800)) * 0.9)]
+    for i in range(34): parts.append((r.uniform(0.02, 1.1) ** 1.6, st(tink(r.uniform(2500, 7500), r.uniform(0.05, 0.18), r.uniform(0.08, 0.3)), r.uniform(-0.7, 0.7))))
+    return norm(fx(place(int(1.6 * SR), parts), Reverb(room_size=0.5, wet_level=0.2, dry_level=0.9)), 0.9)
+def escalator_clank(p, dur=None):
+    t = t_(1.4); ring = (np.sin(2 * np.pi * 310 * t) + 0.5 * np.sin(2 * np.pi * 777 * t)) * np.exp(-t / 0.35) * 0.3
+    return norm(fx(place(int(1.4 * SR), [(0, X.tok(1.0, 240)), (0.01, X.metal_rattle(0.4, 0.6, 3)), (0, st(ring))]), Reverb(room_size=0.95, damping=0.4, wet_level=0.5, dry_level=0.8, width=1.0)), 0.9)
+def drone_buzz(p, dur):
+    # four props: a buzzing tone with beats, flying away over the shot (quieter and duller with distance)
+    dur = dur or 6.0; t = t_(dur); n = len(t)
+    f = 205 + 8 * np.sin(2 * np.pi * 0.4 * t)
+    y = sum(np.sign(np.sin(2 * np.pi * np.cumsum(f * r) / SR)) * a for r, a in ((1.0, 0.5), (1.013, 0.4), (0.987, 0.35), (2.02, 0.15)))
+    y = y + 0.3 * bp(white(n), 800, 4000)
+    away = np.clip(t / max(6.0, dur * 0.5), 0, 1)
+    y = lp(y, 3000) * (1 - 0.8 * away) * np.minimum(1, t / 0.8)
+    return st(y * 0.12, 0.2, 0.4)
+def drone_beep(p, dur=None):
+    t = t_(0.5); b = np.sin(2 * np.pi * 2300 * t) * ((t < 0.12) | ((t > 0.2) & (t < 0.32)))
+    return fx(st(b * 0.25), LowpassFilter(5000), Reverb(room_size=0.9, wet_level=0.45, dry_level=0.6))
+def bottle_roll(p, dur=None):
+    d = 1.6; t = t_(d); n = len(t)
+    y = bp(white(n), 300, 2500) * (0.5 + 0.5 * np.abs(np.sin(2 * np.pi * 5.5 * t))) * np.exp(-t / 0.9) * np.minimum(1, t / 0.05)
+    return fx(st(y * 0.5, 0.15, 0.2), Reverb(room_size=0.6, wet_level=0.3, dry_level=0.8))
+def clink(p, dur=None): return place(int(0.6 * SR), [(0, X.tok(0.5, 1600)), (0.01, st(tink(2900, 0.2, 0.5)))])
+def paper_rustle(p, dur=None):
+    d = 0.9; t = t_(d); y = bp(white(len(t)), 1500, 7000) * (np.abs(np.sin(2 * np.pi * 7 * t)) ** 2) * np.sin(np.pi * t / d)
+    return st(y * 0.35)
+def drone_song(p, dur):
+    return np.zeros((int((dur or 1) * SR), 2), np.float32)   # rendered by the mixer from the jingle cue
+
 EFFECTS = {k: v for k, v in globals().items() if callable(v) and not k.startswith('_') and k not in ('fx', 'place', 'tink', 'st', 'fade', 'norm', 't_', 'lp', 'hp', 'bp', 'white', 'pink', 'brown', 'bed')}
 # default gain (dB) of each effect in the SFX bus
 LEVEL = dict(alarm_far=-15, alarm_near=-14, decoy_alarm=-21, phone_ring=-14, heartbeat_run=-12, steps_close=-10, groan_close=-20, keys_jingle=-18,
              crowd_surge=-11, crash=-6, freezer_slam=-6, hatch_clang=-8, maglock_clunk=-6, door_bang=-8, boom=-8, breath_run=-18, crowd_steps_far=-16,
              run_steps=-14, pizz_sting=-8, whoosh=-16, slam=-9, tok=-12, stamp=-9, thud_land=-8, low_sting=-14, sock_step=-14, creak=-12, cable_rip=-10,
              power_down=-8, hum_stop=-14, radio_click=-12, lock_click=-12, door_bang_soft=-12, bags_slide=-12, throw_whoosh=-16, glass_crunch=-14,
-             ladder_steps=-16, key_try=-12, big_switch=-9, pa_pop=-12, door_close=-12, thump_metal=-10, tap=-16, jingle_cut=-14, metal_rattle=-14, decoy_stop=-30, ring_cut=-30)
+             ladder_steps=-16, key_try=-12, big_switch=-9, pa_pop=-12, door_close=-12, thump_metal=-10, tap=-16, jingle_cut=-14, metal_rattle=-14, decoy_stop=-30, ring_cut=-30,
+             pipe_cough=-10, valve_squeak=-16, water_pour=-13, lid_clunk=-12, pipe_knock=-9, chain_rattle=-12, thunder=-6, glass_break=-8, escalator_clank=-9,
+             drone_buzz=-14, drone_beep=-13, bottle_roll=-13, clink=-11, paper_rustle=-16, drone_song=-12)
 
 # ---------- ambience beds ----------
+BED_RMS = 0.02
+def _rms_to(x, r=BED_RMS): return (x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * r).astype(np.float32)
 def bed(name, dur):
     n = int(dur * SR)
+    if name in ('restroom', 'storm', 'mall_rain', 'mall_quiet'): return _rms_to(_bed2(name, dur, n))
     if name in ('silence',): return X.room_tone(dur, 0.02)
     if name in ('store_night', 'store_dawn'):
         return X.fridge_hum(dur, 0.18) + X.room_tone(dur, 0.06)
@@ -158,7 +240,22 @@ def bed(name, dur):
             x += st(chirp * 0.01, 0.4, 0.6)
         return x
     return X.room_tone(dur, 0.05)
+def _bed2(name, dur, n):
+    if name == 'restroom':   # fluorescent buzz, a slow drip into the sink
+        t = t_(dur); x = X.room_tone(dur, 0.05) + st(0.006 * np.sin(2 * np.pi * 120 * t) + 0.003 * np.sin(2 * np.pi * 240 * t), 0, 0.2)
+        return x + place(n, [(i * 2.3 + 0.7, st(0.5 * _glug(1200, 0.06, 0.4), 0.3, 0)) for i in range(int(dur / 2.3))])
+    if name in ('storm', 'mall_rain'):
+        t = t_(dur); nn = len(t)
+        sheet = bp(pink(nn), 400, 9000) * (0.85 + 0.15 * np.sin(2 * np.pi * 0.11 * t))
+        r = np.random.default_rng(6); drops = np.zeros(nn, np.float32)
+        for i in r.integers(0, nn - 400, int(dur * 120)): drops[i:i + 300] += r.uniform(0.05, 0.25) * np.exp(-np.arange(300) / 40) * np.sin(np.arange(300) * r.uniform(0.3, 0.9))
+        if name == 'storm': return st(sheet * 0.5, 0, 0.9) + st(hp(drops, 1500) * 0.6, 0, 0.9) + X.wind(dur, 0.25)
+        # indoors under a glass roof: duller sheet, drumming on the panes, a big hall around it
+        return fx(st(lp(sheet, 3500) * 0.45 + hp(drops, 800) * 0.8, 0, 0.9), Reverb(room_size=0.96, damping=0.5, wet_level=0.45, dry_level=0.7, width=1.0))
+    if name == 'mall_quiet':   # a huge empty hall: low air, far creaks
+        return fx(X.room_tone(dur, 0.06) + st(lp(brown(n), 90) * 0.1, 0, 0.9), Reverb(room_size=0.97, damping=0.5, wet_level=0.5, dry_level=0.6, width=1.0))
 # beds also carry distant groans of the dead outside, a few per minute
-GROANS = dict(store_night=7, store_dawn=4, store_dark=6, roof=5, roof_night=6, lot_dawn=5, lot_night=7, office=2, store_day=3)
-BED_LEVEL = dict(silence=-40, store_night=-22, store_dawn=-22, store_day=-21, store_dark=-24, office=-22, freezer_hum=-18, roof=-17, roof_night=-18, lot_dawn=-19, lot_night=-17)
+GROANS = dict(store_night=7, store_dawn=4, store_dark=6, roof=5, roof_night=6, lot_dawn=5, lot_night=7, office=2, store_day=3, mall_quiet=6, mall_rain=2, restroom=1)
+BED_LEVEL = dict(silence=-40, store_night=-22, store_dawn=-22, store_day=-21, store_dark=-24, office=-22, freezer_hum=-18, roof=-17, roof_night=-18, lot_dawn=-19, lot_night=-17,
+                 restroom=-23, storm=-15, mall_rain=-17, mall_quiet=-22)
 SF2 = None

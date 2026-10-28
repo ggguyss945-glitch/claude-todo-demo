@@ -4,6 +4,8 @@
 //   page=engine/anim.html  which page draws the frames (it must expose renderAt and may install a baker)
 //   frames=a:b             render only frame indices a..b-1 (chunked renders); progress.json counts this range
 //   bake=0                 draw static layers inline instead of baking them into bitmaps
+//   warm=1                 bake every shot's static layers before the first frame, so no frame ever shows a layer
+//                          drawn inline while its bitmap is still on the way (the two can differ by a hair)
 const { chromium } = require('playwright');
 const path = require('path'), http = require('http'), fs = require('fs'), crypto = require('crypto');
 const root = path.resolve(__dirname, '..');
@@ -62,6 +64,23 @@ const server = http.createServer((req, res) => {
     }));
     baked.set(job.key, pr);
     return pr;
+  }
+
+  // warm-up: one page visits the start of every shot in range and hands its layers to the baker
+  if (opt.warm === '1' && opt.bake !== '0') {
+    const wp = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: scale });
+    await wp.goto(`http://127.0.0.1:${port}${pageUrl}?timeline=/timeline.json`);
+    await wp.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
+    const defs = await wp.evaluate(() => window.bakeDefs || '');
+    const t0r = times[0], t1r = times[times.length - 1];
+    const starts = (T.shots || []).filter((sh) => sh.end > t0r && sh.start <= t1r).map((sh) => Math.max(sh.start, t0r) + 0.02);
+    for (const t of starts) {
+      await wp.evaluate((t) => window.renderAt(t), t);
+      const jobs = await wp.evaluate(() => (window.takeBakeJobs ? window.takeBakeJobs() : []));
+      for (const j of jobs) bake(j, defs);
+    }
+    await bakeQueue; await wp.close();
+    console.log(`warm-up: ${starts.length} shots, ${baked.size} layers baked`);
   }
 
   async function worker() {

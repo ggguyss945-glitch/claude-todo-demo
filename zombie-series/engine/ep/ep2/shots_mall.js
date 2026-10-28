@@ -91,7 +91,7 @@ SH.storm = (T, tg, lt, p, D) => {
   let cr = '';
   for (let i = 0; i < 46; i++) {
     const x = r() * W, y = 520 + r() * 520, k = 0.25 + (y - 520) / 520 * 0.75;
-    cr += g(zombie({ x, y, s: k, outfit: ['cashier', 'jogger', 'shopper', 'park', 'nurse', 'guard', 'janitor'][i % 7], tilt: -18 + 4 * Math.sin(tg * 0.6 + i), look: 0, filter: false }), {});
+    cr += zombie({ x, y, s: k, outfit: ['cashier', 'jogger', 'shopper', 'park', 'nurse', 'guard', 'janitor'][i % 7], tilt: -8 + 4 * Math.sin(tg * 0.6 + i), look: 0.1 * Math.sin(i), filter: false, up: 0.9 });
   }
   s += cr;
   s += nightTint(0.62) + splashes(tg, 560, 1060, 40) + rain(tg, { n: 170, op: 0.5, len: 80 }) + flashLayer(fl);
@@ -118,19 +118,25 @@ SH.povstorm = (T, tg, lt, p, D) => {
   rows.sort((a, b) => a.y - b.y);
   for (const q of rows) {
     const k = 0.35 + (q.y - 640) / 330 * 1.1, x = q.x - walkX * k;
-    z += zombie({ x, y: q.y + 60 * k, s: k, outfit: q.o, tilt: -20 + 4 * Math.sin(tg * 0.5 + q.ph), look: 0, filter: false, sway: 1.5 * Math.sin(tg * 0.6 + q.ph) });
+    z += zombie({ x, y: q.y + 60 * k, s: k, outfit: q.o, tilt: -8 + 4 * Math.sin(tg * 0.5 + q.ph), look: 0, filter: false, sway: 1.5 * Math.sin(tg * 0.6 + q.ph), up: 0.9 });
   }
   s += z;
+  if (ph === 'bottle' || ph === 'freeze') {
+    const k = ph === 'bottle' ? easeOut(ramp(lt, Math.max(0, D - 0.6), D + 2.0)) : 1;
+    const bx = lerp(980, 1500, k), by = lerp(880, 820, k), rot = k * 900;
+    s += g(rect(-60, -22, 120, 44, { rx: 20, fill: '#9FC6D9', opacity: 0.85, ...ink(4) }) + rect(60, -12, 26, 24, { rx: 5, fill: PAL.blue, ...ink(3) }), { transform: `translate(${f1(bx)} ${f1(by)}) rotate(${f1(rot)})`, filter: 'url(#wobbleSoft)' });
+    if (ph === 'freeze') s += zombie({ x: 520, y: 1650, s: 2.8, outfit: 'shopper', tilt: -10 + 2 * Math.sin(tg * 0.6), look: 0.3 * ease(ramp(lt, 0.3, 1.2)), sway: 0.6 * Math.sin(tg * 0.5), up: lerp(0.9, 0.3, ease(ramp(lt, 0.3, 1.2))) });
+  }
   if (ph === 'pass') {
     // one of them right beside you; you slide past it
     const k = ease(ramp(lt, 0.2, D));
-    s += zombie({ x: lerp(1500, 1180, k), y: 1700, s: 3.2, outfit: 'jogger', tilt: -24 + 2 * Math.sin(tg * 0.7), look: 0, sway: 0.8 * Math.sin(tg * 0.5) });
+    s += zombie({ x: lerp(1500, 1180, k), y: 1700, s: 3.2, outfit: 'jogger', tilt: -10 + 2 * Math.sin(tg * 0.7), look: 0, sway: 0.8 * Math.sin(tg * 0.5), up: 0.9 });
     s += path(`M${f1(lerp(1500, 1180, k) - 40)} 820 q-6 60 0 120`, { fill: 'none', stroke: '#C9D8E8', strokeWidth: 6, opacity: 0.6 });   // rain running down its face
   }
   s += nightTint(0.5) + splashes(tg, 680, 1060, 34) + rain(tg, { n: 190, op: 0.55, len: 90, slant: 18 }) + flashLayer(fl);
   if (ph === 'walk') s += g(sleeve('M0 1080 L240 880 L400 960 L290 1080 Z') + mitt(320, 900, -20, 1.1), { filter: 'url(#wobbleSoft)' });
   s += darkness(0.5, 0.5, 0.65, 0.65, 'psd');
-  const bob = ph === 'pass' ? Math.sin(lt * 3) * 3 : Math.sin(lt * 4.4) * 8;
+  const bob = ph === 'pass' || ph === 'freeze' ? Math.sin(lt * 3) * 3 : Math.sin(lt * 4.4) * 8;
   s = cam(s, { s: 1.05, x: wob(tg * 0.7, 1) * 5 - (ph === 'pass' ? ease(lt / D) * 80 : 0), y: bob });
   return s + letterbox() + capsAt(T, tg);
 };
@@ -139,7 +145,8 @@ SH.povstorm = (T, tg, lt, p, D) => {
 SH.malldoor = (T, tg, lt, p, D) => {
   const fl = flash(T, tg);
   let s = set('mallsidedoor', () => S2.mallSideDoor());
-  const brk = typeof p.at === 'number' ? p.at : (sfxAt(T, 'glass_break', tg - lt - 0.1, tg - lt + D)[0] ?? 1e9) - (tg - lt);
+  const brk = p.mode === 'broken' ? -10 : typeof p.at === 'number' ? p.at : (sfxAt(T, 'glass_break', tg - lt - 0.1, tg - lt + D)[0] ?? 1e9) - (tg - lt);
+  const dry = p.mode === 'broken';
   // the chain on the doors
   let ch = '';
   for (let i = 0; i < 22; i++) { const x = lerp(470, 1030, i / 21), y = 535 + 18 * Math.sin(i * 0.8); ch += ellipse(x, y, 16, 10, { fill: 'none', stroke: '#8E9499', strokeWidth: 8, transform: `rotate(${i % 2 ? 60 : -30} ${f1(x)} ${f1(y)})` }); }
@@ -157,12 +164,22 @@ SH.malldoor = (T, tg, lt, p, D) => {
       const yy = Math.min(y, 880 + r() * 120), sz = 10 + r() * 26;
       s += poly([[x, yy - sz], [x + sz * 0.7, yy + sz * 0.3], [x - sz * 0.4, yy + sz * 0.5]], { fill: '#BFD3E6', opacity: 0.85, stroke: INK, strokeWidth: 2, transform: `rotate(${f1(i * 47 + a * 200)} ${f1(x)} ${f1(yy)})` });
     }
-    s += bang('KRA-KOOM!', 1260, 330, a, { size: 150, life: 1.3, rot: -6 });
+    if (!dry) s += bang('KRA-KOOM!', 1260, 330, a, { size: 150, life: 1.3, rot: -6 });
   }
-  s += nightTint(0.55) + rain(tg, { n: 150, op: 0.5, len: 80 }) + splashes(tg, 870, 1070, 24) + flashLayer(fl);
-  // you, from behind, with the hammer
-  const raise = broken ? 0 : ease(ramp(lt, brk - 0.8, brk - 0.1));
-  s += hero({ x: 1700, y: 1250, s: 2.0, pose: raise > 0.5 ? 'throw' : 'stand', expr: 'determined', facing: -1, look: -0.4, blink: autoBlink(lt, 1) });
+  s += dry ? nightTint(0.7) : nightTint(0.55) + rain(tg, { n: 150, op: 0.5, len: 80 }) + splashes(tg, 870, 1070, 24) + flashLayer(fl);
+  if (dry) {
+    // the two of you slipping out through the hole, toward the lot
+    const k = ease(lt / D);
+    s += nora({ x: lerp(1300, 1700, k), y: 1080, s: 1.6, pose: walkPose(tg * 6), expr: 'worried', facing: 1, look: 0.3 });
+    s += hero({ x: lerp(1120, 1520, k), y: 1100, s: 1.65, pose: walkPose(tg * 6 + 2), expr: 'worried', facing: 1, look: 0.3 });
+  } else {
+    // your arm and the hammer: it rises for the swing, then snaps forward through the glass
+    const raise = broken ? 0 : ease(ramp(lt, brk - 0.9, brk - 0.12)), hitK = broken ? easeOut(ramp(lt, brk, brk + 0.12)) * (1 - ease(ramp(lt, brk + 0.5, brk + 1.4))) : 0;
+    const hx = lerp(lerp(1560, 1640, raise), 1380, hitK), hy = lerp(lerp(860, 600, raise), 640, hitK), ang = lerp(lerp(-30, -75, raise), 10, hitK);
+    s += g(sleeve(`M1960 1180 L${f1(hx - 40)} ${f1(hy + 60)} L${f1(hx + 90)} ${f1(hy + 160)} L1960 980 Z`)
+      + g(rect(-12, -230, 24, 250, { rx: 8, fill: '#8E5B3A', ...ink(5) }) + rect(-70, -270, 140, 54, { rx: 10, fill: '#5E6670', ...ink(5) }) + path('M70 -262 q40 -10 50 -40', { fill: 'none', stroke: '#5E6670', strokeWidth: 16, strokeLinecap: 'round' }), { transform: `translate(${f1(hx)} ${f1(hy)}) rotate(${f1(ang)})` })
+      + mitt(hx + 10, hy + 10, ang + 20, 1.05), { filter: 'url(#wobbleSoft)' });
+  }
   return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 1150, cy: 560, ...shake(tg, broken && a < 0.5 ? 1.2 * (1 - a * 2) : 0) }) + hudAt(p.hud);
 };
 
@@ -179,16 +196,22 @@ function fountainCrowd(tg, cx, cy, k, n = 30, seed = 23) {
 SH.atrium = (T, tg, lt, p, D) => {
   const mode = p.mode || 'wide', fl = flash(T, tg);
   if (mode === 'skylight') {
-    let s = set('skylight', () => S2.skylight());
-    s += splashes(tg, 0, 980, 60, 4) + rain(tg, { n: 80, op: 0.25, len: 30, slant: 0, speed: 900 });
-    s += nightTint(0.4) + flashLayer(fl, '#DDE6FF');
+    let s = rect(0, 0, W, H, { fill: '#2A3448' });
+    const r = rng(19);
+    for (let i = 0; i < 14; i++) { const x = ((r() * 2600 + tg * (30 + r() * 30)) % 2600) - 340, y = r() * 900; s += ellipse(x, y, 260 + r() * 200, 90 + r() * 70, { fill: ['#3A4458', '#323C50', '#46506A'][i % 3], opacity: 0.9 }); }
+    s += flashLayer(fl, '#DDE6FF') + set('skylight', () => S2.skylight());
+    for (let i = 0; i < 22; i++) { const x = (i * 97) % W, ph = (tg * 0.35 + i * 0.37) % 1, y0 = ph * 1300 - 200; s += path(`M${x} ${f1(y0)} q8 40 -2 80 t4 80`, { fill: 'none', stroke: '#9FB8D0', strokeWidth: 5, opacity: 0.45, strokeLinecap: 'round' }); }
+    s += splashes(tg, 0, 980, 70, 4) + rain(tg, { n: 60, op: 0.2, len: 30, slant: 0, speed: 900 });
+    s += nightTint(0.35);
     return cam(s, { s: push(lt, D, [1.0, 1.08]), cy: 420 });
   }
   if (mode === 'after') {
-    let s = set('atrium_down', () => S2.atriumDown());
-    s += g(fountainCrowd(tg, 960, 690, 0.32, 30), {});
-    s += nightTint(0.55, '#4A4060') + screenGlow(960, 300, 900, 400, '#F2B88A', 0.22);
-    return cam(s, { s: push(lt, D, [1.0, 1.07]), cy: 640 }) + hudAt(p.hud);
+    // the storm is over: low evening sun through the glass roof, long shafts of light, the dead gone still
+    let s = set('atrium', () => S2.atrium()) + fountainCrowd(tg * 0.5, 960, 975, 1.0, 30);
+    s += nightTint(0.5, '#5A4A6A');
+    for (const [x, w, o] of [[420, 160, 0.16], [880, 220, 0.2], [1380, 180, 0.14]]) s += poly([[x, 0], [x + w, 0], [x + w + 260, H], [x + 140, H]], { fill: '#F2B88A', opacity: o, style: 'mix-blend-mode:screen', filter: 'url(#softS)' });
+    s += screenGlow(960, 60, 900, 160, '#F2B88A', 0.3);
+    return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 560 }) + hudAt(p.hud);
   }
   let s = set('atrium', () => S2.atrium());
   // rain sheeting down the glass roof
@@ -196,9 +219,20 @@ SH.atrium = (T, tg, lt, p, D) => {
   if (mode === 'fountain') s += fountainCrowd(tg, 960, 975, 1.0, 30);
   else s += fountainCrowd(tg, 960, 975, 1.0, 12, 5);
   s += nightTint(0.6) + screenGlow(960, 80, 900, 160, '#6A7A9A', 0.3) + flashLayer(fl * 0.8, '#DDE6FF');
+  if (mode === 'climb') {
+    // you, small, on the balcony of this level, walking along the railing
+    const lv = p.level || 2, y = { 2: 640, 3: 470, 4: 300 }[lv], k = ease(lt / D);
+    const cfg = { 2: { hx: [560, 900], cx: [700, 900] }, 3: { hx: [520, 820], cx: [380, 520] } }[lv] || { hx: [700, 1150], cx: [820, 1080] };
+    if (lv === 2) s += g(Array.from({ length: 6 }, (_, i) => { const bx = 600 + i * 58, by = 600 + (i % 2) * 8; return circle(bx, by, 20, { fill: '#B5652F', ...ink(3) }) + circle(bx - 14, by - 18, 8, { fill: '#B5652F', ...ink(2) }) + circle(bx + 14, by - 18, 8, { fill: '#B5652F', ...ink(2) }) + circle(bx - 6, by - 2, 2.5, { fill: INK }) + circle(bx + 6, by - 2, 2.5, { fill: INK }); }).join(''), { filter: 'url(#wobbleSoft)' });
+    if (lv === 3) s += g(rect(180, 360, 120, 150, { fill: '#E9B93E', ...ink(3) }) + rect(192, 372, 96, 80, { fill: '#3A2A3A' }) + circle(240, 405, 18, { fill: PAL.zSkin, ...ink(2) }) + label(240, 476, 'COMING', 16, INK) + label(240, 498, 'SOON', 19, PAL.red), { filter: 'url(#wobbleSoft)' });
+    s += hero({ x: lerp(cfg.hx[0], cfg.hx[1], k), y: y - 12, s: 0.42, pose: walkPose(tg * 6), expr: 'worried', facing: 1, look: 0.2 });
+    const c = { s: 2.0, cx: lerp(cfg.cx[0], cfg.cx[1], k), cy: y - 90 };
+    return cam(s, c) + hudAt(p.hud || MALLHUD(lv));
+  }
   const c = mode === 'fountain' ? { s: lerp(1.5, 1.62, ease(lt / D)), cx: 960, cy: 900 } : { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 520 };
   return cam(s, c) + hudAt(p.hud);
 };
+const MALLHUD = (lv) => ({ day: 10, time: '2:38 PM', noise: 1, place: `BROOKFIELD MALL · LEVEL ${lv}` });
 CLOSE_BG.mall = () => blurred('atrium', () => S2.atrium()) + nightTint(0.55);
 
 // ---------- the stopped escalator ----------
@@ -228,8 +262,13 @@ SH.escalator = (T, tg, lt, p, D) => {
     return cam(s, { s: push(lt, D, [1.0, 1.05]), cy: 600 });
   }
   let s = set('esc_side', () => S2.escalatorSide());
-  // you at the bottom, looking up four floors of metal stairs
-  s += hero({ x: 140, y: 900, s: 1.05, pose: 'stand', expr: 'worried', facing: 1, look: 0.6, blink: autoBlink(lt, 3), breathe: 0.01 * Math.sin(tg * 2.2) });
+  if (p.two) {
+    // coming down: both on the steps, shoes in hand, slow
+    const k = ease(lt / D), q = (t) => [lerp(1150, 420, t), lerp(334, 830, t)];
+    const [nx, ny] = q(clamp(k * 0.8 + 0.05)), [hx, hy] = q(clamp(k * 0.8 - 0.07));
+    s += nora({ x: nx, y: ny, s: 0.95, pose: walkPose(tg * 4), expr: 'worried', facing: -1, look: -0.2, tilt: 4 });
+    s += hero({ x: hx, y: hy, s: 1.0, pose: walkPose(tg * 4 + 2), expr: 'worried', facing: -1, look: -0.2, tilt: 4 });
+  } else s += hero({ x: 420, y: 960, s: 1.05, pose: 'stand', expr: 'worried', facing: 1, look: 0.6, blink: autoBlink(lt, 3), breathe: 0.01 * Math.sin(tg * 2.2) });
   s += nightTint(0.6) + screenGlow(1300, 160, 700, 200, '#6A7A9A', 0.3) + flashLayer(fl * 0.6, '#DDE6FF');
   return cam(s, { s: push(lt, D, [1.0, 1.07]), cx: 700, cy: 600 }) + hudAt(p.hud);
 };
@@ -257,14 +296,14 @@ SH.brighttech = (T, tg, lt, p, D) => {
   }
   // lantern: Nora (and you) on the floor around the lantern
   let s = blurred('bright_inside', () => S2.brightInside()) + nightTint(0.86, '#2A2238');
-  s += rect(0, 820, W, 260, { fill: '#3A3440', opacity: 0.6 }) + lantern(960, 900, 1.5);
+  s += rect(0, 820, W, 260, { fill: '#3A3440', opacity: 0.6 }) + lantern(960, 1010, 1.3);
   let figs = '';
-  figs += nora({ x: 640, y: 1010, s: 1.5, pose: 'sit', expr: p.two ? 'neutral' : 'serious', facing: 1, look: 0.4, blink: autoBlink(lt, 4), breathe: 0.01 * Math.sin(tg * 2.0), tilt: 2 * Math.sin(tg * 0.7) });
-  if (p.two) figs += hero({ x: 1300, y: 1010, s: 1.55, pose: 'sit', expr: 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt, 2), breathe: 0.01 * Math.sin(tg * 2.2) });
-  if (p.day) figs += g(rect(-120, -40, 240, 80, { rx: 6, fill: '#E9E5DC', ...ink(4) }) + label(0, 10, 'SKYHAWK', 26, '#3E6E9A'), { transform: 'translate(960 1010) rotate(-6)', filter: 'url(#wobbleSoft)' });
+  figs += nora({ x: p.two ? 620 : 700, y: 1060, s: 2.0, pose: 'sit', expr: p.two ? 'neutral' : 'serious', facing: 1, look: 0.4, blink: autoBlink(lt, 4), breathe: 0.01 * Math.sin(tg * 2.0), tilt: 2 * Math.sin(tg * 0.7) });
+  if (p.two) figs += hero({ x: 1320, y: 1060, s: 2.05, pose: 'sit', expr: 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt, 2), breathe: 0.01 * Math.sin(tg * 2.2) });
+  if (p.day) figs += g(rect(-150, -70, 300, 130, { rx: 8, fill: '#2E4A6E', ...ink(5) }) + rect(-150, -70, 300, 40, { fill: '#3E6E9A', ...ink(4) }) + label(0, -40, 'SKYHAWK', 26, '#F7F2E6'), { transform: 'translate(1100 920) rotate(-6)', filter: 'url(#wobbleSoft)' });
   s += lampLit + g(figs, { filter: 'url(#lampLit2)' });
-  s += screenGlow(960, 840, 640, 380, '#FFB866', 0.4 * flick) + glow(960, 830, 60, '#FFE7A8', 0.7 * flick);
-  return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 660 }) + hudAt(p.hud);
+  s += screenGlow(960, 920, 640, 380, '#FFB866', 0.4 * flick) + glow(960, 955, 60, '#FFE7A8', 0.7 * flick);
+  return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 720 }) + hudAt(p.hud);
 };
 
 // ---------- Nora ----------
@@ -277,7 +316,7 @@ SH.nora = (T, tg, lt, p, D) => {
   if (mode === 'behind') {
     // over your shoulder: the back of your head, the cold nozzle against your neck
     let s = NORA_BG.brighttech();
-    s += hero({ x: 820, y: 1700, s: 3.0, pose: 'stand', expr: 'neutral', facing: 1, look: 0, blink: 0, filter: true, extra: '' });
+    s += hero({ x: 820, y: 1700, s: 3.0, pose: 'stand', expr: 'neutral', facing: 1, look: 0, blink: 0, filter: true, back: true, breathe: 0.004 * Math.sin(tg * 5) });
     s += g(path('M1920 380 Q1500 420 1240 600 Q1120 690 1060 740', { fill: 'none', stroke: INK, strokeWidth: 44, strokeLinecap: 'round' }) + path('M1920 380 Q1500 420 1240 600 Q1120 690 1060 740', { fill: 'none', stroke: '#2B2B2B', strokeWidth: 30, strokeLinecap: 'round' })
       + g(rect(-70, -28, 140, 56, { rx: 10, fill: '#3A3A3A', ...ink(6) }), { transform: 'translate(1040 752) rotate(35)' }), { filter: 'url(#wobbleSoft)', transform: `translate(${f1(lerp(160, 0, easeOut(ramp(lt, 0, 0.35))))} ${f1(lerp(-60, 0, easeOut(ramp(lt, 0, 0.35))))})` });
     s += screenGlow(1000, 760, 120, 80, '#BFE3F2', 0.35 * ease(ramp(lt, 0.3, 0.6)), 'softS');
@@ -285,8 +324,10 @@ SH.nora = (T, tg, lt, p, D) => {
   }
   if (mode === 'reveal') {
     let s = NORA_BG.brighttech();
+    const nu = 60 * 1.9 * 0.93, ex = 1240 - 1.05 * nu, ey = 1080 - 4.05 * nu + 0.45 * nu;
     let figs = nora({ x: 1240, y: 1080, s: 1.9, pose: 'extinguisher', expr: 'serious', facing: -1, look: -0.4, blink: autoBlink(lt, 4), breathe: 0.01 * Math.sin(tg * 2.6),
-      extra: g(rect(-60, -150, 120, 300, { rx: 40, fill: PAL.red, ...ink(6) }) + rect(-30, -190, 60, 50, { fill: '#2B2B2B', ...ink(4) }) + rect(-50, -70, 100, 60, { fill: '#FBF6EA', ...ink(3) }), { transform: `translate(${1240 - 1.25 * 105} ${1080 - 4.6 * 105}) rotate(-20)` }) });
+      extra: g(rect(-48, -120, 96, 240, { rx: 34, fill: PAL.red, ...ink(6) }) + rect(-26, -152, 52, 40, { fill: '#2B2B2B', ...ink(4) }) + rect(-40, -50, 80, 50, { fill: '#FBF6EA', ...ink(3) })
+        + path('M0 -150 Q-60 -190 -150 -170', { fill: 'none', stroke: '#2B2B2B', strokeWidth: 16, strokeLinecap: 'round' }) + rect(-190, -186, 50, 30, { rx: 8, fill: '#2B2B2B', ...ink(3) }), { transform: `translate(${f1(ex)} ${f1(ey)}) rotate(-62)` }) });
     figs += hero({ x: 520, y: 1160, s: 1.8, pose: 'bang', expr: 'scared', facing: 1, look: 0.5, blink: autoBlink(lt, 1) });
     s += lampLit + g(figs, { filter: 'url(#lampLit2)' }) + screenGlow(1500, 760, 400, 300, '#FFB866', 0.25 * flick);
     return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 560 });
@@ -297,28 +338,43 @@ SH.nora = (T, tg, lt, p, D) => {
       o += rect(0, 0, 200, H, { fill: '#2A303A', ...ink(5) }) + rect(1880, 0, 40, H, { fill: '#2A303A' }) + rect(0, 920, W, 160, { fill: '#2A303A', ...ink(5) });
       return g(o, { filter: 'url(#wobble)' });
     });
+    if (p.crowd) {
+      const r = rng(44); let cr = '';
+      for (let i = 0; i < 90; i++) { const x = 220 + r() * 1660, y = 640 + r() * 260, u = 60 * (0.08 + (y - 640) / 260 * 0.08); cr += rect(x - 0.6 * u, y - 4.2 * u, 1.2 * u, 2.1 * u, { rx: 0.25 * u, fill: ['#8C8C86', '#2E3D55', '#7C6A8E', '#A65F4A'][i % 4], stroke: INK, strokeWidth: 2 }) + circle(x, y - 5.15 * u, u, { fill: PAL.zSkin, stroke: INK, strokeWidth: 2 }); }
+      s += g(cr, { filter: 'url(#wobbleSoft)' });
+    }
     const alarmOn = (tg % 3) < 1.6;
     s += nightTint(0.5) + screenGlow(1420, 470, 70, 50, '#FFE27A', alarmOn ? 0.2 : 0.05);
-    s += nora({ x: 620, y: 1240, s: 2.2, pose: 'hug', expr: 'sad', facing: 1, look: 0.9, blink: autoBlink(lt, 3), breathe: 0.01 * Math.sin(tg * 2.0) });
+    if (p.bag) s += g(rect(250, 860, 150, 70, { rx: 10, fill: '#7FD36B', ...ink(4) }) + label(325, 905, 'SOUR', 22, '#E05AA0'), { filter: 'url(#wobbleSoft)', transform: 'rotate(-4 325 895)' });
+    if (!p.empty) s += nora({ x: 620, y: 1240, s: 2.2, pose: 'hug', expr: 'sad', facing: 1, look: 0.9, blink: autoBlink(lt, 3), breathe: 0.01 * Math.sin(tg * 2.0) });
     s += screenGlow(640, 500, 300, 300, '#3A4A6A', 0.3);
-    return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 900, cy: 520 });
+    return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 900, cy: 520 }) + hudAt(p.hud);
   }
   if (mode === 'radio') {
     let s = NORA_BG.brighttech();
     const talking = T.voice.lines.some((L) => L.who === 'NORA' && tg >= L.start + 0.05 && tg < L.start + L.dur - 0.05);
+    const dale = T.voice.lines.some((L) => L.who === 'DALE' && tg >= L.start + 0.1 && tg < L.start + L.dur - 0.1);
     const u = 60 * 2.5 * 0.93;
+    if (dale) { let wv = ''; for (let i = 0; i < 26; i++) { const a = 0.25 + 0.75 * Math.abs(Math.sin(tg * 13 + i * 0.7) * Math.sin(tg * 5.3 + i * 0.31)); wv += rect(1300 + i * 20, 420 - a * 90, 10, a * 180, { rx: 5, fill: '#F2A73B', opacity: 0.85 }); } s += wv + label(1300, 300, 'DALE · CH 4', 28, '#F2A73B', 'start', 4); }
     s += nora({ x: 960, y: 1330, s: 2.5, pose: 'talkie', expr: talking ? 'serious' : 'neutral', facing: 1, look: -0.2, blink: autoBlink(lt, 4), breathe: 0.01 * Math.sin(tg * 2.4), tilt: 1.2 * Math.sin(tg * 0.8),
-      extra: radioProp(960 + 0.98 * u + 6, 1330 - 4.05 * u - 0.62 * u + 70, 0.62, { on: true, led: talking ? PAL.red : '#7FD36B', rot: 8 }) });
+      extra: radioProp(960 + 0.98 * u + 6, 1330 - 4.05 * u - 0.62 * u + 70, 0.62, { on: true, led: p.broken ? '#7FD36B' : talking ? PAL.red : '#7FD36B', rot: 8 }) });
+    if (p.broken) {
+      // the talk button on the side, taped over and cracked
+      const bx = 960 + 0.98 * u + 6 + 0.62 * 61, by = 1330 - 4.05 * u - 0.62 * u + 70 - 0.62 * 30;
+      s += g(rect(bx - 14, by - 40, 34, 60, { fill: '#D9C79A', opacity: 0.9, ...ink(3) }) + path(`M${bx - 6} ${by - 30} l14 18 l-10 10 l14 16`, { fill: 'none', stroke: PAL.red, strokeWidth: 4 }), { filter: 'url(#wobbleSoft)' });
+      s += g(rect(1240, 300, 300, 80, { rx: 12, fill: '#FBF6EA', ...ink(4) }) + label(1390, 352, 'TALK: BROKEN', 30, PAL.red), { opacity: f1(clamp((lt - 0.6) * 3) * 100) / 100, transform: 'rotate(4 1390 340)', filter: 'url(#wobbleSoft)' });
+    }
     return cam(s, { s: push(lt, D, [1.0, 1.05]), cx: 960, cy: 520 });
   }
   // close-up with an expression; bg brighttech (default) or store
   let s = (NORA_BG[p.bg] || NORA_BG.brighttech)();
   const talking = T.voice.lines.some((L) => L.who === 'NORA' && tg >= L.start + 0.05 && tg < L.start + L.dur - 0.05);
   const expr = p.expr || 'serious', mouth = talking && expr !== 'shock' && Math.sin(tg * 15) > 0.2 ? 'whisper' : expr;
-  s += nora({ x: 960, y: 1360, s: 2.6, pose: expr === 'shock' ? 'scared' : 'stand', expr: talking ? (Math.sin(tg * 15) > 0.3 ? mouth : expr) : expr, facing: 1, look: p.look ?? -0.15 + 0.06 * Math.sin(tg * 0.6),
+  const nx = 960 + (p.x ?? [-230, 0, 230][Math.floor(tg - lt) % 3]);
+  s += nora({ x: nx, y: 1360, s: 2.6, pose: expr === 'shock' ? 'scared' : 'stand', expr: talking ? (Math.sin(tg * 15) > 0.3 ? mouth : expr) : expr, facing: 1, look: p.look ?? -0.15 + 0.06 * Math.sin(tg * 0.6),
     blink: autoBlink(lt, 4), breathe: 0.011 * Math.sin(tg * 2.4), tilt: 1.2 * Math.sin(tg * 0.85) });
-  if (p.bg !== 'store') s += screenGlow(1250, 640, 420, 380, '#FFD9A0', 0.18 * flick);
-  return cam(s, { s: push(lt, D, expr === 'shock' ? [1.02, 1.12] : [1.0, 1.05]), cx: 960, cy: 520 });
+  if (p.bg !== 'store') s += screenGlow(nx + 290, 640, 420, 380, '#FFD9A0', 0.18 * flick);
+  return cam(s, { s: push(lt, D, expr === 'shock' ? [1.02, 1.12] : [1.0, 1.05]), cx: nx, cy: 520 });
 };
 
 // ---------- the drone ----------
@@ -372,9 +428,18 @@ SH.drone = (T, tg, lt, p, D) => {
   }
   s += cr + nightTint(0.6);
   for (const lx of [300, 980, 1660]) s += glow(lx, 470, 70, '#FFB866', 0.6);
-  s += droneProp(dx, dy, 0.45, tg, true) + speakerProp(dx, dy + 34, 0.45) + rings(dx, dy + 30, tg, { color: '#FFE27A', max: 260, period: 0.9, op: 0.7, width: 5 }) + notes(dx, dy - 30, tg, 5);
-  s += screenGlow(dx, dy, 160, 120, '#FFE27A', 0.25);
-  return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: lerp(900, 1100, fly), cy: 600 }) + hudAt(p.hud);
+  const far = p.far ? 0.55 : 1, ddx = p.far ? 1780 : dx, ddy = p.far ? 300 + 20 * Math.sin(tg * 1.3) : dy;
+  s += droneProp(ddx, ddy, 0.45 * far, tg, true) + speakerProp(ddx, ddy + 34 * far, 0.45 * far) + rings(ddx, ddy + 30 * far, tg, { color: '#FFE27A', max: 260 * far, period: 0.9, op: 0.7, width: 5 }) + notes(ddx, ddy - 30, tg, 5);
+  s += screenGlow(ddx, ddy, 160 * far, 120 * far, '#FFE27A', 0.25);
+  s = cam(s, { s: push(lt, D, [1.0, 1.06]), cx: lerp(900, 1100, fly), cy: 600 });
+  if (p.battery) {
+    // the phone's flight app: battery draining over the shot
+    const pct = Math.round(lerp(p.battery[0], p.battery[1], ease(lt / D))), low = pct <= 15, blink = low && Math.sin(tg * 9) > 0;
+    s += g(rect(1560, 840, 320, 170, { rx: 22, fill: '#1E1F22', ...ink(5) }) + rect(1580, 860, 280, 130, { rx: 12, fill: '#20324A' }) + label(1720, 900, 'SKYHAWK', 20, '#BFD3E6', 'middle', 4)
+      + rect(1610, 920, 200, 46, { rx: 8, fill: 'none', stroke: '#F2F2EE', strokeWidth: 4 }) + rect(1810, 932, 10, 22, { fill: '#F2F2EE' })
+      + rect(1616, 926, 188 * pct / 100, 34, { rx: 5, fill: low ? (blink ? PAL.red : '#7A2A22') : '#7FD36B' }) + label(1710, 954, `${pct}%`, 26, '#FFFFFF'), { filter: 'url(#wobbleSoft)' });
+  }
+  return s + hudAt(p.hud);
 };
 
 // ---------- staff door with Nora (episode 2) ----------
@@ -391,9 +456,23 @@ SH.staffdoor = (T, tg, lt, p, D) => {
     return cam(s, { s: push(lt, D, [1.0, 1.05]) }) + hudAt(p.hud);
   }
   let s = set('staffwall', () => S.staffWall({}));
-  const k = ease(ramp(lt, 0, 1.4)), run = lt < 1.4;
-  s += nora({ x: lerp(160, 640, k), y: 990, s: 1.3, pose: run ? runPose(tg * 11) : 'stand', expr: 'scared', facing: 1, look: 0.4, tilt: run ? -6 : 0 });
-  s += hero({ x: lerp(300, 820, k), y: 990, s: 1.35, pose: run ? runPose(tg * 11 + 1.3) : 'reach', expr: 'scared', facing: 1, look: 0.4, tilt: run ? -6 : 0 });
+  // they run in and settle: the stride blends into standing / reaching for the lock instead of snapping
+  const k = ease(ramp(lt, 0, 1.4)), st = ease(ramp(lt, 1.15, 1.65));
+  s += nora({ x: lerp(160, 640, k), y: 990, s: 1.3, pose: { a: runPose(tg * 11), b: 'stand', k: st }, expr: 'scared', facing: 1, look: 0.4, tilt: -6 * (1 - st) });
+  s += hero({ x: lerp(300, 820, k), y: 990, s: 1.35, pose: { a: runPose(tg * 11 + 1.3), b: 'reach', k: st }, expr: 'scared', facing: 1, look: 0.4, tilt: -6 * (1 - st) });
   s += nightTint(0.55);
   return cam(s, { s: push(lt, D, [1.0, 1.06]) }) + hudAt(p.hud);
+};
+
+// ---------- Dale's voice over the stockroom doors (he's right behind them) ----------
+const radio1 = SH.radio;
+SH.radio = (T, tg, lt, p, D) => {
+  if (p.mode !== 'doors') return radio1(T, tg, lt, p, D);
+  let s = blurred('stockdoors', () => S2.stockDoors()) + nightTint(p.night ? 0.86 : 0.5, p.night ? '#1F2940' : '#3A3850');
+  const talking = T.voice.lines.some((L) => L.who === 'DALE' && tg >= L.start + 0.1 && tg < L.start + L.dur - 0.1);
+  let wv = '';
+  for (let i = 0; i < 40; i++) { const a = talking ? 0.25 + 0.75 * Math.abs(Math.sin(tg * 13 + i * 0.7) * Math.sin(tg * 5.3 + i * 0.31)) : 0.05; wv += rect(560 + i * 20, 540 - a * 110, 10, a * 220, { rx: 5, fill: '#F2A73B', opacity: 0.9 }); }
+  s += wv + label(560, 380, 'DALE · CH 3 · BEHIND THESE DOORS', 28, '#F2A73B', 'start', 4);
+  s += radioProp(300, 900, 1.2, { on: true, led: talking ? PAL.red : '#7FD36B', rot: -8 }) + (talking ? screenGlow(265, 735, 60, 60, PAL.red, 0.6, 'softS') : '');
+  return cam(s, { s: push(lt, D, [1.0, 1.05]), cy: 540 });
 };

@@ -48,23 +48,25 @@ SH.povaisle = (T, tg, lt, p, D) => {
   s = aisle12bg();
   // the clock sits on the end shelf, far down the aisle, then closer as we walk
   const ringing = ph === 'reach' ? (lt < (p.cut ?? 1.05) ? 1 : 0) : 1;
-  const cq = at(A, 1180, 2.6);
-  s += alarmClock(cq.x, cq.y - 470 * cq.k, 0.95 * cq.k, { ring: ringing, t: tg, tape: true });
+  const cq = at(A, 1180, 2.6), CK = 1.5 * cq.k;
+  s += alarmClock(cq.x, cq.y - 470 * cq.k, CK, { ring: ringing, t: tg, tape: true });
   s += nightTint(0.88);
   if (ringing) s += rings(cq.x, cq.y - 470 * cq.k, tg, { color: '#FFE27A', max: 140, period: 0.8, op: 0.55, width: 4 }) + screenGlow(cq.x, cq.y - 470 * cq.k, 120, 90, '#FFE27A', 0.18 + 0.08 * Math.sin(tg * 18));
   // the torch beam we carry
   s += screenGlow(cq.x - 40, cq.y - 430 * cq.k, 420, 300, '#FFF2C4', 0.16) + screenGlow(960, 900, 700, 220, '#FFF2C4', 0.08);
   let c;
-  if (ph === 'walk') { const k = ease(lt / D); c = { s: lerp(1.0, 1.55, k), cx: cq.x, cy: cq.y - 450 * cq.k, x: wob(tg * 0.9, 1) * 6, y: Math.sin(lt * 4.6) * 9 }; }
-  else if (ph === 'near') { const k = easeOut(lt / D); c = { s: lerp(1.6, 2.4, k), cx: cq.x, cy: cq.y - 460 * cq.k, x: wob(tg * 0.9, 1) * 5, y: Math.sin(lt * 4.2) * 6 * (1 - k) }; }
-  else c = { s: 2.6, cx: cq.x, cy: cq.y - 460 * cq.k, x: wob(tg * 0.6, 1) * 3, y: wob(tg * 0.6, 2) * 3 };
+  const fx = cq.x, fy = cq.y - 470 * cq.k;   // the clock stays put on screen while the camera closes in
+  if (ph === 'walk') { const k = ease(lt / D); c = { s: lerp(1.0, 1.7, k), cx: fx, cy: fy, x: wob(tg * 0.9, 1) * 6, y: Math.sin(lt * 4.6) * 9 }; }
+  else if (ph === 'near') { const k = easeOut(lt / D); c = { s: lerp(1.75, 3.0, k), cx: fx, cy: fy, x: wob(tg * 0.9, 1) * 5, y: Math.sin(lt * 4.2) * 6 * (1 - k) }; }
+  else c = { s: 3.4, cx: fx, cy: fy, x: wob(tg * 0.6, 1) * 3, y: wob(tg * 0.6, 2) * 3 };
   s = cam(s, c);
   if (ph === 'reach') {
     // our hand comes in from the lower right and presses the button on top of the clock
     const cut = p.cut ?? 1.05, k = easeOut(ramp(lt, 0.1, cut - 0.05)), press = ramp(lt, cut - 0.08, cut) * (1 - ramp(lt, cut + 0.25, cut + 0.6));
-    const hx = lerp(1500, 1020, k), hy = lerp(1150, 360 + press * 18, k);
-    s += g(sleeve(`M${hx + 260} 1200 L${hx + 40} ${hy + 60} L${hx + 170} ${hy + 160} L${hx + 470} 1200 Z`) + mitt(hx + 70, hy + 40, -32, 1.25), { filter: 'url(#wobbleSoft)' });
-    s += bang('CLICK', 760, 300, lt - cut, { size: 90, rot: -6, life: 0.8, fill: '#F3EBDD' });
+    const bx = fx + c.x, by = fy + c.y - 96 * CK * 3.4;   // the button, on screen
+    const hx = lerp(1700, bx + 40, k), hy = lerp(1250, by - 10 + press * 16, k);
+    s += g(sleeve(`M${f1(hx + 330)} 1250 L${f1(hx + 60)} ${f1(hy + 70)} L${f1(hx + 170)} ${f1(hy + 190)} L${f1(hx + 560)} 1250 Z`) + mitt(hx + 60, hy + 30, -38, 1.1), { filter: 'url(#wobbleSoft)' });
+    s += bang('CLICK', fx - 380, by + 40, lt - cut, { size: 90, rot: -6, life: 0.8, fill: '#F3EBDD' });
   }
   s += darkness(0.5, 0.45, 0.6, 0.75, 'pad');
   return s + letterbox() + capsAt(T, tg) + hudAt(p.hud);
@@ -80,7 +82,7 @@ const wrapperProp = (x, y, k = 1, rot = -12) => g(path(`M${-150 * k} ${-60 * k} 
 
 function drawing(x, y, k = 1) {
   // crayon drawing on lined paper: a girl, a man in a cap, you with orange headphones; three words underneath
-  const cr = (d, col, w = 9) => path(d, { fill: 'none', stroke: col, strokeWidth: w * k, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: 0.92 });
+  const cr = (d, col, w = 9) => path(d, { fill: 'none', stroke: col, strokeWidth: w * 1.7 * k, strokeLinecap: 'round', strokeLinejoin: 'round', opacity: 0.95 });
   let s = rect(-460 * k, -330 * k, 920 * k, 660 * k, { fill: '#FBF8EE', ...ink(5) });
   for (let i = 0; i < 9; i++) s += line(-460 * k, (-260 + i * 64) * k, 460 * k, (-260 + i * 64) * k, { stroke: '#BFD3E6', strokeWidth: 2 });
   s += line(-380 * k, -330 * k, -380 * k, 330 * k, { stroke: '#E9A0A0', strokeWidth: 3 });
@@ -130,10 +132,10 @@ SH.prop2 = (T, tg, lt, p, D) => {
   }
   if (it === 'drawing') {
     const mode = p.mode || 'reveal';
-    let s = shelfBg() + alarmClock(1460, 420, 1.1, { tape: true, time: [2, 33] }) + drawing(760, 470, 0.72);
+    let s = shelfBg() + alarmClock(1500, 420, 1.1, { tape: true, time: [2, 33] }) + drawing(780, 470, 0.86);
     const sweep = mode === 'reveal' ? easeOut(ramp(lt, 0.1, 1.4)) : 1;
-    s += nightTint(0.84) + screenGlow(lerp(1500, 760, sweep), 480, 520, 380, '#FFF2C4', lerp(0.1, 0.36, sweep));
-    const c = mode === 'reveal' ? { s: push(lt, D, [1.0, 1.08]), cx: 900, cy: 480 } : mode === 'close' ? { s: lerp(1.45, 1.6, ease(lt / D)), cx: 760, cy: 420 } : { s: lerp(1.9, 2.25, ease(lt / D)), cx: 760, cy: 640 };
+    s += nightTint(0.8) + screenGlow(lerp(1500, 780, sweep), 480, 560, 420, '#FFF2C4', lerp(0.1, 0.42, sweep));
+    const c = mode === 'reveal' ? { s: push(lt, D, [1.0, 1.08]), cx: 900, cy: 480 } : mode === 'close' ? { s: lerp(1.3, 1.42, ease(lt / D)), cx: 780, cy: 400 } : { s: lerp(1.75, 2.05, ease(lt / D)), cx: 780, cy: 660 };
     return cam(s, c);
   }
   return '';
@@ -183,8 +185,11 @@ SH.map2 = (T, tg, lt, p, D) => {
   const tagAt = (x, y, txt, col, age) => { const k = back(age / 0.3); return k <= 0.01 ? '' : g(rect(x - 110, y - 34, 220, 64, { rx: 12, fill: col, ...ink(4) }) + lbl(x, y + 10, txt, '#FFF', 30), { transform: `translate(${x} ${y}) scale(${f1((0.6 + 0.4 * k) * 100) / 100}) translate(${-x} ${-y})`, opacity: f1(clamp(k) * 100) / 100 }); };
   if (front) s += tagAt(X + 980, Y + 470, 'YOURS', PAL.phones, lt - 0.3);
   if (backOn) s += tagAt(X + 280, Y + 40 + 20, "DALE'S", '#3E6E9A', lt - 0.3);
-  if (show === 'front') ['14 AISLES', '8,000 CANS', "GARY'S OFFICE"].forEach((t, i) => { s += g(lbl(X + 980, Y + 560 + i * 44, t, INK, 30), { opacity: f1(appear(lt - 0.8 - i * 0.5) * 100) / 100 }); });
-  if (show === 'wall') s += g(rect(X + 10, Y + BACK[3] - 10, 560, 54, { fill: 'none', stroke: PAL.red, strokeWidth: 8, rx: 10 }) + lbl(X + 290, Y + BACK[3] + 90, 'ALL YOUR WATER', PAL.red, 34), { opacity: f1(appear(lt - 0.2) * 100) / 100 });
+  if (show === 'front') {
+    s += g(rect(X + 830, Y + 520, 330, 170, { rx: 12, fill: '#FBF6EA', ...ink(4) }), { opacity: f1(appear(lt - 0.6) * 100) / 100 });
+    ['14 AISLES', '8,000 CANS', "GARY'S OFFICE"].forEach((t, i) => { s += g(lbl(X + 995, Y + 568 + i * 46, t, INK, 30), { opacity: f1(appear(lt - 0.8 - i * 0.5) * 100) / 100 }); });
+  }
+  if (show === 'wall') s += g(rect(X + 10, Y + BACK[3] - 10, 560, 54, { fill: 'none', stroke: PAL.red, strokeWidth: 8, rx: 10 }) + rect(X + 120, Y + BACK[3] + 52, 340, 56, { rx: 10, fill: '#FBF6EA', ...ink(4) }) + lbl(X + 290, Y + BACK[3] + 92, 'ALL YOUR WATER', PAL.red, 34), { opacity: f1(appear(lt - 0.2) * 100) / 100 });
   if (show === 'both') {
     s += g(circle(X + 300, Y + 140, 30, { fill: '#3E6E9A', ...ink(4) }) + lbl(X + 300, Y + 149, 'D', '#FFF', 28) + circle(X + 900, Y + 560, 30, { fill: PAL.phones, ...ink(4) }) + lbl(X + 900, Y + 569, 'Y', '#FFF', 28), {});
     s += bang('?', X + 600, Y + 360, lt - 1.6, { size: 200, rot: 6, life: 99, fill: PAL.red });
@@ -202,13 +207,13 @@ SH.stockdoors = (T, tg, lt, p, D) => {
   s += win(779) + win(1141);
   if (mode === 'jammed' || mode === 'chain') {
     // pallets of bottled water pushed up against the far side
-    let wall = '';
-    for (let r = 0; r < 4; r++) for (let i = 0; i < 12; i++) wall += rect(700 + i * 46 - (r % 2) * 20, 320 + r * 36, 40, 34, { rx: 8, fill: '#5E9BC8', stroke: INK, strokeWidth: 2 });
-    s += g(wall, { clipPath: 'url(#sd779)' }) + g(wall, { clipPath: 'url(#sd1141)', transform: 'translate(360 0)' });
+    const wall = (x0) => { let o = ''; for (let r = 0; r < 4; r++) for (let i = 0; i < 6; i++) o += rect(x0 - 90 + i * 40 - (r % 2) * 18, 322 + r * 30, 34, 28, { rx: 7, fill: '#5E9BC8', stroke: INK, strokeWidth: 2 }); return o; };
+    s += g(wall(779), { clipPath: 'url(#sd779)' }) + g(wall(1141), { clipPath: 'url(#sd1141)' });
   }
   if (night) {
     // Dale's silhouette in the right window: cap, shoulders, the red LED of his radio
     const sway = 3 * Math.sin(tg * 0.7);
+    s += g(circle(1141, 380, 62, { fill: '#4A5E7A' }) + circle(1141, 370, 36, { fill: '#6A82A0', opacity: 0.6 }), { clipPath: 'url(#sd1141)' });   // a lamp somewhere behind him
     s += g(circle(1141 + sway, 372, 30, { fill: '#090B0F' }) + rect(1105 + sway, 336, 74, 16, { rx: 6, fill: '#090B0F' }) + rect(1081 + sway, 400, 120, 60, { rx: 24, fill: '#090B0F' })
       + circle(1176 + sway, 410, 5, { fill: PAL.red }), { clipPath: 'url(#sd1141)' });
   }
@@ -234,7 +239,7 @@ SH.restroom = (T, tg, lt, p, D) => {
   const v = p.view || 'sink', t0 = tg - lt;
   if (v === 'sink') {
     let s = set('restroom', () => S2.restroom());
-    s += hero({ x: 860, y: 900, s: 1.35, pose: 'reach', expr: 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt, 2), breathe: 0.01 * Math.sin(tg * 2.2) });
+    s += hero({ x: 690, y: 905, s: 1.35, pose: 'reach', expr: 'neutral', facing: -1, look: -0.4, blink: autoBlink(lt, 2), breathe: 0.01 * Math.sin(tg * 2.2) });
     s += nightTint(0.3, '#6E7A8A') + screenGlow(960, 60, 600, 200, '#F6F1DE', 0.25);
     return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 800, cy: 540 }) + hudAt(p.hud);
   }
@@ -265,7 +270,7 @@ SH.restroom = (T, tg, lt, p, D) => {
     const sq = sfxAt(T, 'valve_squeak', t0 - 0.5, t0 + D)[0] ?? t0 + 0.4, po = sfxAt(T, 'water_pour', t0 - 0.5, t0 + D)[0] ?? sq + 0.6;
     const turn = ease(ramp(tg, sq - 0.1, sq + 0.6)) * 90;
     s += g(rect(-90, -22, 180, 44, { rx: 18, fill: PAL.red, ...ink(5) }) + circle(0, 0, 20, { fill: '#C9A43A', ...ink(4) }), { transform: `translate(960 560) rotate(${f1(turn)})`, filter: 'url(#wobbleSoft)' });
-    s += g(sleeve('M1920 1100 L1300 700 L1180 800 L1600 1100 Z') + mitt(1110, 590, 30 + turn * 0.3, 1.2), { filter: 'url(#wobbleSoft)', transform: `translate(${f1(ease(ramp(tg, sq + 0.8, sq + 1.5)) * 600)} ${f1(ease(ramp(tg, sq + 0.8, sq + 1.5)) * 300)})` });
+    s += g(sleeve('M1920 1100 L1300 700 L1180 800 L1600 1100 Z') + mitt(1110, 590, 30 + turn * 0.3, 1.2), { filter: 'url(#wobbleSoft)', transform: `translate(${f1(ease(ramp(tg, sq + 0.8, sq + 1.5)) * 1000)} ${f1(ease(ramp(tg, sq + 0.8, sq + 1.5)) * 600)})` });
     if (tg > po) {
       const a = tg - po, clear = ease(ramp(a, 2.2, 3.4));
       const col = `rgb(${Math.round(lerp(140, 150, clear))},${Math.round(lerp(96, 190, clear))},${Math.round(lerp(52, 220, clear))})`;
@@ -283,8 +288,9 @@ SH.restroom = (T, tg, lt, p, D) => {
     const up = ease(ramp(tg, cl - 0.5, cl - 0.05));
     // the water inside the open tank
     s += rect(690, 268, 540, 60, { rx: 10, fill: '#5E9BC8', opacity: f1(up * 85) / 100, ...ink(3) }) + path('M720 290 q60 -10 120 0 t120 0 t120 0 t120 0', { fill: 'none', stroke: '#DCEFFA', strokeWidth: 5, opacity: f1(up * 0.8 * 100) / 100 });
-    s += g(rect(-320, -34, 640, 68, { rx: 18, fill: '#F4F2EC', ...ink(7) }), { transform: `translate(${f1(960 + up * 260)} ${f1(250 - up * 220)}) rotate(${f1(up * 18)})`, filter: 'url(#wobbleSoft)' });
-    s += g(sleeve('M1920 1100 L1500 300 L1380 380 L1700 1100 Z') + mitt(1330 + 0, lerp(300, 80, up), 10, 1.2), { filter: 'url(#wobbleSoft)', transform: `translate(${f1(up * 40)} 0)` });
+    const lx = 960 + up * 330, ly = 250 - up * 110;
+    s += g(rect(-320, -34, 640, 68, { rx: 18, fill: '#F4F2EC', ...ink(7) }), { transform: `translate(${f1(lx)} ${f1(ly)}) rotate(${f1(up * 12)})`, filter: 'url(#wobbleSoft)' });
+    s += g(sleeve(`M1960 1100 L${f1(lx + 250)} ${f1(ly + 10)} L${f1(lx + 380)} ${f1(ly + 90)} L1960 860 Z`) + mitt(lx + 270, ly + 10, 20, 1.15), { filter: 'url(#wobbleSoft)' });
     s += nightTint(0.3, '#6E7A8A');
     return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 980, cy: 470 });
   }
@@ -295,6 +301,11 @@ SH.restroom = (T, tg, lt, p, D) => {
     s += nightTint(0.9) + screenGlow(700, 520, 520, 120, '#6A7A9A', 0.25);
     for (const k of knocks) { const a = tg - k; if (a > 0 && a < 1.6) s += rings(1360, 520, a, { color: '#8FB3D5', max: 260, period: 1.6, op: 0.8 * (1 - a / 1.6), width: 5, n: 1 }); }
     s += bang('TAP', 1500, 400, tg - (knocks[0] ?? 1e9), { size: 90, life: 0.9, fill: '#8FB3D5' });
+    if (p.voice) {
+      // while Dale's voice comes through, a faint wave rides along the middle pipe
+      const L = T.voice.lines.find((x) => x.who === 'DALE' && tg >= x.start - 0.1 && tg < x.start + x.dur + 0.3);
+      if (L) { let wv = ''; for (let i = 0; i < 40; i++) { const a = 0.3 + 0.7 * Math.abs(Math.sin(tg * 11 + i * 0.6) * Math.sin(tg * 4.1 + i * 0.3)); wv += rect(200 + i * 30, 520 - a * 50, 12, a * 100, { rx: 6, fill: '#8FB3D5', opacity: 0.55 }); } s += wv; }
+    }
     return cam(s, { s: push(lt, D, [1.0, 1.08]), cx: 1100, cy: 540 });
   }
   return '';
@@ -322,9 +333,9 @@ SH.card2 = (T, tg, lt, p, D) => {
     let s = rect(0, 0, W, H, { fill: PAL.cream }) + smallCaps(W2, 160, 'RULE 3 · COUNT THE RADIOS', 36, INK);
     [['YOU', PAL.phones], ['DALE', '#3E6E9A'], ['NORA', NORA.hoodie]].forEach(([who, col], i) => {
       const x = 480 + i * 480, a = lt - 0.2 - i * 0.45;
-      s += pop(g(radioProp(x, 560, 1.25, { on: true, led: i === 2 ? PAL.red : '#7FD36B' }) + rect(x - 120, 780, 240, 70, { rx: 14, fill: col, ...ink(4) }) + label(x, 828, who, 38, '#FFF')), a, x, 560);
+      s += pop(g(radioProp(x, 600, 1.25, { on: true, led: i === 2 ? PAL.red : '#7FD36B' }) + rect(x - 120, 800, 240, 70, { rx: 14, fill: col, ...ink(4) }) + label(x, 848, who, 38, '#FFF')
+        + circle(x - 150, 330, 44, { fill: i === 2 ? PAL.red : INK, ...ink(4) }) + label(x - 150, 348, String(i + 1), 50, '#FFF')), a, x, 600);
     });
-    s += pop(big(W2, 1000, '3', 120, PAL.red), lt - 1.8, W2, 960);
     return cam(s, { s: push(lt, D, [1.0, 1.03]) });
   }
   if (k === 'clues') {
@@ -337,6 +348,28 @@ SH.card2 = (T, tg, lt, p, D) => {
     });
     s += g(smallCaps(W2, 900, 'HE WAS LOOKING FOR SOMEONE', 40, PAL.red), { opacity: f1(clamp((lt - D + 1.0) * 3) * 100) / 100 });
     return cam(s, { s: push(lt, D, [1.0, 1.03]) });
+  }
+  if (k === 'trade') {
+    let s = rect(0, 0, W, H, { fill: PAL.cream }) + smallCaps(W2, 160, "DALE'S PRICE LIST", 36, INK);
+    const can = (x, y) => g(rect(-46, -62, 92, 124, { rx: 10, fill: PAL.red, ...ink(4) }) + rect(-46, -22, 92, 44, { fill: '#F3EEDF', ...ink(3) }) + ellipse(0, -62, 46, 12, { fill: '#C9C3B5', ...ink(3) }), { transform: `translate(${x} ${y})` });
+    let cans = '';
+    for (let i = 0; i < 20; i++) cans += can(300 + (i % 5) * 110, 380 + Math.floor(i / 5) * 140);
+    s += g(cans, { filter: 'url(#wobbleSoft)', opacity: f1(clamp((lt - 0.1) * 3) * 100) / 100 });
+    s += pop(text(1060, 620, '=', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 200, fill: INK, textAnchor: 'middle' }), lt - 0.6, 1060, 560);
+    s += pop(g(path('M1330 300 h220 v70 q90 50 90 160 v330 q0 50 -50 50 h-300 q-50 0 -50 -50 v-330 q0 -110 90 -160 z', { fill: '#CFE3EA', ...ink(7) }) + path('M1250 640 Q1440 610 1630 640 V860 q0 50 -50 50 h-280 q-50 0 -50 -50 Z', { fill: '#5E9BC8', opacity: 0.8 })
+      + rect(1340, 240, 200, 70, { rx: 10, fill: PAL.blue, ...ink(5) }) + label(1440, 560, '1 GAL', 54, INK)), lt - 0.9, 1440, 600);
+    s += g(rect(1180, 870, 520, 110, { rx: 12, fill: '#F7E3C8', stroke: PAL.red, strokeWidth: 9 }) + label(1440, 945, 'TERRIBLE DEAL', 56, PAL.red), { transform: 'rotate(-6 1440 925)', opacity: f1(clamp((lt - D * 0.45) * 3) * 100) / 100 });
+    return cam(s, { s: push(lt, D, [1.0, 1.03]) });
+  }
+  if (k === 'receipt') {
+    let s = rect(0, 0, W, H, { fill: '#2A2630' }) + screenGlow(960, 560, 700, 500, '#FFB866', 0.2);
+    let rc = path('M-300 -460 H300 V430 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 l-30 30 l-30 -30 Z', { fill: '#F7F4EC', ...ink(6) });
+    rc += text(0, -390, "NORA'S RULES", { fontFamily: 'Patrick Hand, Rubik', fontSize: 64, fill: '#3E8E86', textAnchor: 'middle' }) + line(-220, -360, 220, -360, { stroke: '#3E8E86', strokeWidth: 4 });
+    const R = ['1. NEVER SLEEP ON', '   THE GROUND FLOOR', '2. SHOES OFF ON', '   THE ESCALATOR', '3. THE SOUR WORMS', '   ARE FOR LEO'];
+    R.forEach((t, i) => { const a = lt - 0.4 - Math.floor(i / 2) * (D / 4); rc += g(text(-250, -270 + i * 70 + Math.floor(i / 2) * 30, t, { fontFamily: 'Patrick Hand, Rubik', fontSize: 50, fill: i >= 4 ? PAL.red : '#2B2B2B' }), { opacity: f1(clamp(a * 3) * 100) / 100 }); });
+    rc += text(0, 360, 'BRIGHT TECH · TOTAL $0.00', { fontFamily: 'Rubik', fontWeight: 700, fontSize: 22, fill: '#8E8576', textAnchor: 'middle', letterSpacing: 2 });
+    s += g(rc, { transform: `translate(960 560) rotate(${f1(-3 + 0.4 * Math.sin(tg * 0.8))}) scale(0.86)`, filter: 'url(#wobbleSoft)' });
+    return cam(s, { s: push(lt, D, [1.0, 1.06]), cy: 500 });
   }
   return rect(0, 0, W, H, { fill: PAL.cream });
 };
@@ -354,8 +387,8 @@ SH.aisle2 = (T, tg, lt, p, D) => {
   const cq = at(A, 1180, 2.6);
   const ring = lt < (p.ringUntil ?? 1.4) ? 1 : 0;   // the alarm runs on into this shot, then she reaches it
   s += alarmClock(cq.x, cq.y - 470 * cq.k, 0.95 * cq.k, { ring, t: tg, tape: true });
-  const k = easeOut(lt / Math.max(D, 0.1)), q = at(A, lerp(900, 1120, k), lerp(0.25, 2.1, k));
-  s += nora({ x: q.x, y: q.y, s: 1.45 * q.k, pose: runPose(tg * 11), expr: 'determined', facing: 1, look: 0, filter: true, tilt: -6 });
+  const k = ease(lt / Math.max(D, 0.1)), q = at(A, lerp(960, 1140, k), lerp(-0.25, 1.6, k));
+  s += nora({ x: q.x, y: q.y, s: 1.45 * q.k, pose: runPose(tg * 11), expr: 'determined', facing: 1, look: 0, filter: true, tilt: 3 * Math.sin(tg * 11), back: true });
   s += nightTint(0.84) + rings(cq.x, cq.y - 470 * cq.k, tg, { color: '#FFE27A', max: 140, period: 0.8, op: 0.5 * ring, width: 4 }) + screenGlow(cq.x, cq.y - 470 * cq.k, 160, 120, '#FFE27A', 0.2 * ring);
   return cam(s, { s: push(lt, D, [1.05, 1.15]), cx: 1000, cy: 520 }) + hudAt(p.hud);
 };

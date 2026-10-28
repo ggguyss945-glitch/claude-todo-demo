@@ -1,7 +1,7 @@
 # Render a long episode in chunks. Each chunk of frames is rendered, then encoded to a video-only H.264 segment in the
 # background while the next chunk renders, then deleted, so the whole episode's frames never sit on disk at once.
 # Finished segments are kept, so a stopped job resumes where it left off.
-# usage: python3 -I tools/render_ep.py <timeline.json> <work_dir> <first_frame> <end_frame> [fps=60] [scale=1.3333333] [chunk=3000]
+# usage: python3 -I tools/render_ep.py <timeline.json> <work_dir> <first_frame> <end_frame> [fps=60] [scale=1.3333333] [chunk=3000] [page=engine/ep.html]
 # status: <work_dir>/status.json  {done, total, rate, chunk, chunks, last, segments, finished}
 import sys, os, json, time, shutil, subprocess, threading, datetime
 
@@ -10,6 +10,7 @@ FIRST, END = int(sys.argv[3]), int(sys.argv[4])
 FPS = int(sys.argv[5]) if len(sys.argv) > 5 else 60
 SCALE = sys.argv[6] if len(sys.argv) > 6 else '1.3333333'
 CHUNK = int(sys.argv[7]) if len(sys.argv) > 7 else 3000
+PAGE = sys.argv[8] if len(sys.argv) > 8 else 'engine/ep.html'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.makedirs(WORK, exist_ok=True)
 chunks = [(a, min(a + CHUNK, END)) for a in range(FIRST, END, CHUNK)]
@@ -43,7 +44,7 @@ for k, (a, b) in enumerate(chunks):
     have = len([f for f in os.listdir(frames) if f.endswith('.jpg')]) if os.path.isdir(frames) else 0
     if have < b - a:
         shutil.rmtree(frames, ignore_errors=True)
-        p = subprocess.Popen(['node', f'{ROOT}/tools/render_anim.js', TL, frames, str(FPS), '4', '-', SCALE, 'page=engine/ep.html', f'frames={a}:{b}'],
+        p = subprocess.Popen(['node', f'{ROOT}/tools/render_anim.js', TL, frames, str(FPS), '4', '-', SCALE, f'page={PAGE}', f'frames={a}:{b}', 'warm=1'],
                              cwd=ROOT, stdout=open(f'{WORK}/render_{a:05d}.log', 'w'), stderr=subprocess.STDOUT)
         t_chunk = time.time()
         while p.poll() is None:

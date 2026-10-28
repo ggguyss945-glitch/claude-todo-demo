@@ -123,9 +123,9 @@ export function stockDoors() {
 
 // ---------- Brookfield Mall: the atrium across four floors ----------
 const SHOPS = [
-  ['BRIGHT TECH', '#3E6E9A', true], ['SPORTS HUB', '#6F8F4E', false], ['PHOTO PLUS', '#8E5B4A', false], ['GAME ZONE', '#7C6A8E', false],
-  ['CINEMA 6', '#A0453A', false], ['STYLE CO', '#C76A83', false], ['BOOK NOOK', '#B58759', false], ['TOY TOWN', '#E9B93E', false],
-  ['KIDS WORLD', '#6FA3A6', false], ['NAIL BAR', '#C76A83', false], ['SHOE ZONE', '#3B3F48', false], ['CAFE 22', '#7A5C40', false],
+  ['BRIGHT TECH', '#3E6E9A', true], ['SPORTS HUB', '#6F8F4E', false], ['PHOTO PLUS', '#8E5B4A', false], ['NAIL BAR', '#C76A83', false],
+  ['CINEMA 6', '#A0453A', false], ['STYLE CO', '#C76A83', false], ['BOOK NOOK', '#B58759', false], ['GAME ZONE', '#7C6A8E', false],
+  ['KIDS WORLD', '#6FA3A6', false], ['TOY TOWN', '#E9B93E', false], ['SHOE ZONE', '#3B3F48', false], ['CAFE 22', '#7A5C40', false],
   ['PRETZEL PALACE', '#C4473A', false], ['FOOD COURT', '#E07A3A', false], ['GIFTS', '#7C6A8E', false], ['PHARMACY', '#3E6E5A', false],
 ];
 export function atrium() {
@@ -172,13 +172,17 @@ export function atriumDown() {
     s += rect(x0, y0, x1 - x0, y1 - y0, { fill: col, ...ink(5) });
     if (i < 3) for (let x = x0 + 60; x < x1 - 40; x += 160) s += rect(x, y0 + 10, 110, 40 - i * 8, { fill: SHOPS[(i * 3 + Math.floor(x / 160)) % 16][1], ...ink(3) });
   });
+  rings_.slice(1).forEach(([k]) => {
+    const x0 = 60 + k * 700, y0 = 40 + k * 380, x1 = W - x0, y1 = H - 60 - k * 300;
+    s += rect(x0 - 14, y0 - 14, x1 - x0 + 28, y1 - y0 + 28, { fill: 'none', stroke: '#C9CDD0', strokeWidth: 9, opacity: 0.85 }) + rect(x0 - 14, y0 - 14, x1 - x0 + 28, y1 - y0 + 28, { fill: 'none', stroke: INK, strokeWidth: 3 });
+  });
   s += ellipse(960, 690, 190, 70, { fill: '#9C968A', ...ink(5) }) + ellipse(960, 684, 160, 54, { fill: '#6E685E', ...ink(4) }) + circle(960, 676, 22, { fill: '#C9C3B5', ...ink(4) });
   // the railing we stand at, in the foreground
   s += rect(0, 930, W, 150, { fill: '#C9C3B5', ...ink(6) }) + rect(0, 900, W, 40, { fill: '#9FB8C4', opacity: 0.25 }) + line(0, 900, W, 900, { stroke: INK, strokeWidth: 16 }) + line(0, 900, W, 900, { stroke: '#C9CDD0', strokeWidth: 8 });
   return wob(s);
 }
 export function skylight() {
-  let s = rect(0, 0, W, H, { fill: '#1E2638' });
+  let s = '';
   // panes converging to a vanishing point high in the middle
   const vp = [960, -600];
   for (let x = -1200; x <= W + 1200; x += 240) s += line(x, H + 100, vp[0] + (x - vp[0]) * 0.18, 0, { stroke: '#0E1320', strokeWidth: 18 });

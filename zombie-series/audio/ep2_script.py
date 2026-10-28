@@ -60,7 +60,7 @@ BEAT('A5b', 1.0, sfx=[(0.2, 'radio_click', {})])
 DALE('A6', "Here's how this works, kid.", 0.35, "You stay up front.", 0.3, "I stay in back.", 0.35, "Nobody gets hurt.",
      shot=('radio', dict(mode='talk', who='dale')), music=('radio', {}))
 HERO('A7', "And the water?", gap=0.5, shot=('hclose2', dict(expr='determined', bg='stockdoors', prop='radio_mouth')))
-DALE('A8', "One gallon.", 0.35, "For twenty cans.", 0.3, "Every morning.", shot=('radio', dict(mode='talk', who='dale')))
+DALE('A8', "One gallon.", 0.35, "For twenty cans.", 0.3, "Every morning.", shot=('radio', dict(mode='doors')))
 N('A8b', "Twenty cans for one gallon.", 0.35, "In a normal store, that's a terrible deal.", 0.4, "This is not a normal store anymore.",
   shot=('card2', dict(kind='trade')), music=('humor', {}))
 DALE('A8c', "So how many cans you got left, anyway?", shot=('radio', dict(mode='talk', who='dale')), music=('radio', {}))
@@ -68,7 +68,7 @@ N('A9', "He wants to know how many cans you have.", shot=('hclose2', dict(expr='
 N('A10', "Rule four.", 0.35, "Never tell anyone what you have.", shot=('card', dict(kind='rule', n=4, lines=['NEVER TELL ANYONE', 'WHAT YOU HAVE.'], icon='note')),
   sfx=[(0, 'whoosh', {}), (0.15, 'stamp', dict(level=-14))])
 HERO('A11', "Maybe a hundred.", gap=0.6, shot=('hclose2', dict(expr='neutral', bg='aisle_day', prop='radio_mouth')))
-DALE('A11b', "Last week you said nine thousand.", gap=0.5, shot=('radio', dict(mode='talk', who='dale')))
+DALE('A11b', "Last week you said nine thousand.", gap=0.5, shot=('radio', dict(mode='doors')))
 HERO('A11c', "It's been a long week.", gap=0.7, shot=('hclose2', dict(expr='neutral', bg='aisle_day', prop='radio_mouth', look=-0.2)))
 N('A12', "You have eight thousand nine hundred.", gap=0.7, music=('humor', {}),
   shot=('card', dict(kind='supplies', day=8, rows=[['Food', '8,900 cans', ''], ['Water', '2 liters', 'THE REST IS DALE\'S'], ['Batteries', '2', '']])))
@@ -152,7 +152,7 @@ N('P6f', "You pack light.", 0.3, "A flashlight.", 0.3, "A hammer from aisle thre
 N('P7', "Before you go, you chain the stockroom doors.", 0.3, "From your side.", amb='store_day',
   shot=('stockdoors', dict(mode='chain')), sfx=[('@chain', 'chain_rattle', {}), ('$', 'lock_click', {})])
 BEAT('P7b', 0.9, sfx=[(0.3, 'radio_click', {})])
-DALE('P8', "Going somewhere, kid?", gap=0.5, shot=('radio', dict(mode='talk', who='dale')))
+DALE('P8', "Going somewhere, kid?", gap=0.5, shot=('radio', dict(mode='doors')))
 N('P9', "Rule four.", 0.35, "You don't answer.", gap=0.8, shot=('hclose2', dict(expr='determined', bg='stockdoors', look=-0.3)), music=('stop', {'fade': 0.6}))
 
 # ======================= POV · ACROSS THE LOT IN THE RAIN =======================
@@ -228,7 +228,7 @@ N('N10b', "You think about the batteries.", 0.35, "Somebody keeps putting new on
 N('N11', "The candy wrapper.", 0.4, "Sour worms.", gap=0.6, shot=('prop2', dict(item='wrapper')), sfx=[(0.1, 'low_sting', {})])
 N('N11b', "Somebody small.", 0.4, "Who likes sour worms.", gap=0.8)
 N('N12', "Then Nora's radio clicks.", 0.35, "Not channel three.", 0.3, "Channel four.", music=('stop', {'fade': 0.6}), shot=('nora', dict(mode='radio')), sfx=[(0.0, 'radio_click', {})])
-DALE('N13', "Nora?", 0.5, "Honey?", 0.5, "Are you there?", gap=0.6, shot=('radio', dict(mode='talk', who='dale')))
+DALE('N13', "Nora?", 0.5, "Honey?", 0.5, "Are you there?", gap=0.6)
 N('N14', "Nora goes white.", gap=0.5, shot=('nora', dict(mode='close', expr='shock')))
 NORA('N15', "That's my dad.", gap=0.9)
 N('N16', "Dale is her father.", gap=0.8, music=('twist', {}), shot=('hclose2', dict(expr='surprised', bg='brighttech', look=0.1)), sfx=[(0, 'low_sting', {})])
@@ -294,7 +294,7 @@ N('F7', "The radio clicks.", music=('stop', {'fade': 0.8}), shot=('radio', dict(
 DALE('F8', "You brought her home.", 0.5, "Thank you.", gap=0.6, shot=('radio', dict(mode='talk', who='dale')))
 NORA('F9', "Where's Leo, Dad?", gap=1.2, shot=('nora', dict(mode='close', expr='serious', bg='store')))
 N('F10', "Dale doesn't answer.", 0.4, "For a long time, the radio just hisses.", gap=0.8, shot=('radio', dict(mode='belt')))
-DALE('F10b', "I've looked everywhere, honey.", 0.6, "Every night.", 0.6, "I count to a hundred.", 0.4, "And I look.", gap=0.9, rate=2.2, shot=('radio', dict(mode='talk', who='dale')), music=('tender', {}))
+DALE('F10b', "I've looked everywhere, honey.", 0.6, "Every night.", 0.6, "I count to a hundred.", 0.4, "And I look.", gap=0.9, rate=2.2, shot=('radio', dict(mode='doors', night=True)), music=('tender', {}))
 NORA('F10c', "It's his favorite game.", 0.4, "He always hides.", 0.4, "You always find him.", gap=1.0, shot=('nora', dict(mode='close', expr='sad', bg='store')))
 N('F11', "Two thirty-one.", gap=0.3, shot=('prop2', dict(item='clock12', mode='still')), music=('stop', {'fade': 0.5}))
 N('F12', "The alarm in aisle twelve starts to ring.", shot=('prop2', dict(item='clock12', mode='ring')), sfx=[(0, 'alarm_near', dict(until='F13', off=1.4))])

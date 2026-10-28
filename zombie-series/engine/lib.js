@@ -169,11 +169,15 @@ export function poseOf(pose) {
   return o;
 }
 // walk / run cycles as continuous blends; phase in radians
+// how much of a pose is a run (the head leans forward when running), so blends lean smoothly too
+export const runWeight = (pose) => (!pose ? 0 : typeof pose === 'string' ? (pose === 'run' || pose === 'runA' || pose === 'runB' ? 1 : 0)
+  : (1 - Math.max(0, Math.min(1, pose.k))) * runWeight(pose.a) + Math.max(0, Math.min(1, pose.k)) * runWeight(pose.b));
 export const walkPose = (ph) => ({ a: 'strideA', b: 'strideB', k: 0.5 + 0.5 * Math.sin(ph) });
 export const runPose = (ph) => ({ a: 'runA', b: 'runB', k: 0.5 + 0.5 * Math.sin(ph) });
 
-export function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0 }) {
-  const ex = cx + look * 0.3 * u, ey = cy + 0.0 * u, sp = 0.44 * u;
+export function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0, up = 0 }) {
+  const ex = cx + look * 0.3 * u, sp = 0.44 * u;
+  cy = cy - up * 0.38 * u; const ey = cy;
   let s = '';
   if (zombie) {
     s += ellipse(ex - sp / 2 - 0.02 * u, ey + 0.02 * u, 0.22 * u, 0.25 * u, { fill: PAL.zEye });
@@ -285,10 +289,10 @@ function flashlight(x, y, len, angDeg) {
     + line(x + dx * 0.55, y + dy * 0.55, x + dx * 0.72, y + dy * 0.72, { stroke: '#C9A43A', strokeWidth: len * 0.3, strokeLinecap: 'butt' });
 }
 
-export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '', filter = true }) {
+export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '', filter = true, back = false }) {
   const u = 60 * s;
   const B = body({ x, y, u, pose, torsoFill: PAL.jacket, torsoDark: PAL.jacketDark, facing, hold, aim });
-  const runLean = pose === 'run' || (pose && pose.a === 'runA') ? 0.25 : 0;
+  const runLean = 0.25 * runWeight(pose);
   const cy = y - 5.25 * u + B.dr, cx = x + runLean * u * facing;
   let h = '';
   // headphones around neck (signature accent)
@@ -306,14 +310,18 @@ export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, 
     L${f(cx + 0.7 * u)} ${f(cy - 0.42 * u)} L${f(cx + 0.48 * u)} ${f(cy - 0.3 * u)} L${f(cx + 0.18 * u)} ${f(cy - 0.5 * u)} L${f(cx - 0.12 * u)} ${f(cy - 0.36 * u)} L${f(cx - 0.45 * u)} ${f(cy - 0.52 * u)} L${f(cx - 0.72 * u)} ${f(cy - 0.32 * u)} Z`, { fill: PAL.hair, ...ink(5) });
   h += path(`M${f(cx + 0.05 * u)} ${f(cy - 0.98 * u)} q${f(0.1 * u)} ${f(-0.35 * u)} ${f(0.38 * u)} ${f(-0.3 * u)}`, { fill: 'none', stroke: PAL.hair, strokeWidth: 0.12 * u, strokeLinecap: 'round' });
   h += path(`M${f(cx + 0.05 * u)} ${f(cy - 0.98 * u)} q${f(0.1 * u)} ${f(-0.35 * u)} ${f(0.38 * u)} ${f(-0.3 * u)}`, { fill: 'none', stroke: INK, strokeWidth: 3 });
-  h += face({ cx, cy, u, look: look || facing * 0.25, expr, blink });
+  if (back) {
+    h += ellipse(cx - 0.98 * u, cy + 0.08 * u, 0.16 * u, 0.24 * u, { fill: PAL.skin, ...ink(4) }) + ellipse(cx + 0.98 * u, cy + 0.08 * u, 0.16 * u, 0.24 * u, { fill: PAL.skin, ...ink(4) });
+    h += path(`M${f(cx - 0.97 * u)} ${f(cy + 0.25 * u)} C${f(cx - 1.1 * u)} ${f(cy - 1.2 * u)} ${f(cx + 1.1 * u)} ${f(cy - 1.2 * u)} ${f(cx + 0.97 * u)} ${f(cy + 0.25 * u)} Q${f(cx + 0.6 * u)} ${f(cy + 0.75 * u)} ${f(cx)} ${f(cy + 0.72 * u)} Q${f(cx - 0.6 * u)} ${f(cy + 0.75 * u)} ${f(cx - 0.97 * u)} ${f(cy + 0.25 * u)} Z`, { fill: PAL.hair, ...ink(5) });
+    h += path(`M${f(cx - 0.3 * u)} ${f(cy - 0.5 * u)} q${f(0.2 * u)} ${f(0.35 * u)} ${f(0.05 * u)} ${f(0.7 * u)} M${f(cx + 0.35 * u)} ${f(cy - 0.4 * u)} q${f(-0.1 * u)} ${f(0.3 * u)} ${f(0.08 * u)} ${f(0.6 * u)}`, { fill: 'none', stroke: '#2A1E18', strokeWidth: 4 });
+  } else h += face({ cx, cy, u, look: look || facing * 0.25, expr, blink });
   if (pose === 'shush') h += line(cx + 0.05 * u, cy + 0.35 * u, cx + 0.05 * u, cy + 0.7 * u, ink(0.1 * u));
   const head = tilt ? g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }) : h;
   const bodyT = breathe ? `translate(${f(x)} ${f(y)}) scale(1 ${f(1 + breathe)}) translate(${f(-x)} ${f(-y)})` : undefined;
   return g(B.s + head + extra, { filter: filter ? 'url(#wobbleSoft)' : undefined, transform: bodyT });
 }
 
-export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '', back = false, filter = true }) {
+export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '', back = false, filter = true, up = 0 }) {
   const u = 60 * s;
   const fills = { cashier: '#8C8C86', guard: '#2E3D55', suit: '#3B3F48', janitor: '#5E6E70', jogger: '#C76A83', shopper: '#7C6A8E', park: '#8A7A4E', nurse: '#6FA3A6', pretzel: '#C4473A' };
   const B = body({ x, y, u, pose, torsoFill: fills[outfit] || '#777', torsoDark: '#333', zombie: true, outfit, facing, back });
@@ -327,7 +335,7 @@ export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt =
   if (outfit === 'janitor') h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.9 * u)} ${f(cy - 0.45 * u)} Z`, { fill: '#3E7C7B', ...ink(5) });
   if (back) h += path(`M${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy + 0.25 * u)} ${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Z`, { fill: '#5B5F55', opacity: 0.55 })
     + ellipse(cx - 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) }) + ellipse(cx + 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) });
-  else h += face({ cx, cy, u, look, zombie: true });
+  else h += face({ cx, cy, u, look, zombie: true, up });
   const inner = g(B.s + extra + g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }));
   return g(inner + (dim ? g(inner, { opacity: dim, style: 'mix-blend-mode:multiply' }) : ''), { filter: filter ? 'url(#wobbleSoft)' : undefined, transform: sway ? `rotate(${f(sway)} ${f(x)} ${f(y)})` : undefined });
 }

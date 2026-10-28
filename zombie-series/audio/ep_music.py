@@ -200,12 +200,39 @@ def relief(sc, D, p):
     pad(sc, st, 0, min(D, 7), ms('F3', 'A3', 'C4', 'F4'), 50, 1.2, 2.5, 85); pad(sc, pd, 0, min(D, 7), ms('F2', 'C3'), 36, 1.0, 2.5, 70)
     sc.cc.append((0, pn, 64, 127)); sc.note(0.3, 3, pn, m('F2'), 46); sc.chord(0.35, 3, pn, ms('A3', 'C4', 'F4'), 40)
 
+def storm(sc, D, p):
+    # under the rain: a low bed and a slow swell, so the downpour stays the loudest thing
+    cb, ha, tr, tp = sc.inst(0, 'contrabass'), sc.inst(1, 'halo'), sc.inst(2, 'tremolo'), sc.inst(3, 'timpani')
+    pad(sc, cb, 0, D, ms('D1', 'A1'), 80, 2.5, 2.0, 95); pad(sc, ha, 0, D, ms('D3', 'F3', 'A3'), 36, 3.0, 2.0, 62)
+    sc.ramp(tr, 0, D * 0.7, 0, 55); sc.ramp(tr, D * 0.7, D, 55, 0); sc.chord(0.5, D, tr, ms('A3', 'D4'), 46)
+    t = 2.0
+    while t < D - 2: sc.note(t, 1.6, tp, m('D2'), 42); t += 5.3
+
+def vast(sc, D, p):
+    # the empty mall: high glass, a choir far away, a slow low cello line
+    ch, gl, ce, cb = sc.inst(0, 'choir'), sc.inst(1, 'glass'), sc.inst(2, 'cello'), sc.inst(3, 'contrabass')
+    pad(sc, ch, 0, D, ms('D3', 'A3', 'E4'), 44, 3.5, 2.5, 72); pad(sc, cb, 0, D, ms('D1'), 70, 3.0, 2.0, 85)
+    for i, (k, t) in enumerate([('A5', 1.0), ('E6', 4.2), ('D6', 7.6), ('A5', 11.0), ('F6', 14.4)]):
+        if t < D - 1.5: sc.note(t, 3.0, gl, m(k), 30)
+    t = 2.5; seq = ms('D3', 'C3', 'Bb2', 'A2'); i = 0
+    while t < D - 3: sc.note(t, 3.4, ce, seq[i % 4], 50); t += 3.8; i += 1
+
+def tender(sc, D, p):
+    # Nora: soft piano, slow strings, a small clarinet line; F major leaning on D minor
+    pn, st, cl, pd = sc.inst(0, 'piano'), sc.inst(1, 'slow_strings'), sc.inst(2, 'clarinet'), sc.inst(3, 'warm_pad')
+    sc.cc.append((0, pn, 64, 127)); bar = 60 / 62 * 4
+    seq = [('F2', ms('A3', 'C4', 'F4')), ('D2', ms('A3', 'D4', 'F4')), ('Bb1', ms('F3', 'Bb3', 'D4')), ('C2', ms('G3', 'C4', 'E4'))]
+    chords_seq(sc, pn, 0.2, D, seq, bar, 38, pn, 44, arp=True); chords_seq(sc, st, 0.2, D, seq, bar, 34)
+    sc.ramp(st, 0, 4, 5, 62); sc.ramp(st, D - 2.5, D, 62, 0); pad(sc, pd, 0, D, ms('F3', 'C4'), 26, 2.5, 2.5, 60)
+    mel = ms('C5', 'A4', 'F4', 'G4', 'A4', 'D5', 'C5', 'Bb4'); t = bar * 1.5; i = 0
+    while t < D - bar: sc.note(t, bar * 0.85, cl, mel[i % 8], 40); t += bar; i += 1
+
 CUES = dict(dawn=dawn, dread=dread, pulse_soft=pulse_soft, tick=tick, stalk=stalk, jingle=jingle, chaos=chaos, rule=rule, humor=humor,
             day=day, think=think, build=build, hope=hope, radio=radio, warm=warm, action=action, sting_mystery=sting_mystery, plan=plan,
-            night_op=night_op, reveal=reveal, twist=twist, chase=chase, resolve=resolve, end=end, relief=relief)
+            night_op=night_op, reveal=reveal, twist=twist, chase=chase, resolve=resolve, end=end, relief=relief, storm=storm, vast=vast, tender=tender)
 # cue loudness in the score bus (dB); diegetic jingle is handled by the mixer
 GAIN = dict(dawn=0, dread=1, pulse_soft=-1, tick=0, stalk=1, jingle=0, chaos=2, rule=2, humor=0, day=-2, think=0, build=-1, hope=1,
-            radio=0, warm=0, action=1, sting_mystery=2, plan=-1, night_op=1, reveal=2, twist=3, chase=1, resolve=1, end=2, relief=0)
+            radio=0, warm=0, action=1, sting_mystery=2, plan=-1, night_op=1, reveal=2, twist=3, chase=1, resolve=1, end=2, relief=0, storm=-1, vast=0, tender=-1)
 
 def render_cue(sf2, cue, D, p, tail=2.5):
     sc = Score(sf2, D + tail)

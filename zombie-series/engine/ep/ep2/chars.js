@@ -1,5 +1,5 @@
 // Episode 2 cast: Nora (15, auburn hair, teal hoodie, freckles) and Leo's photo face.
-import { INK, PAL, g, rect, circle, ellipse, line, path, ink, body } from '../../lib.js';
+import { INK, PAL, g, rect, circle, ellipse, line, path, ink, body, runWeight } from '../../lib.js';
 
 const f = (n) => Math.round(n * 10) / 10;
 export const NORA = { hair: '#A4472C', hairDark: '#7E3220', hoodie: '#3E8E86', hoodieDark: '#2F6E68', skin: '#F3E3D3', freckle: '#C98A6A' };
@@ -41,10 +41,10 @@ function noraFace({ cx, cy, u, look = 0, expr = 'neutral', blink = 0 }) {
 }
 
 // (x, y) is the ground point, like hero(); s=1 is the hero's scale, Nora is drawn a little smaller
-export function nora({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, blink = 0, tilt = 0, breathe = 0, extra = '', hood = false, filter = true, behind = '' }) {
+export function nora({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, blink = 0, tilt = 0, breathe = 0, extra = '', hood = false, filter = true, behind = '', back: fromBehind = false }) {
   const u = 60 * s * 0.93;
   const B = body({ x, y, u, pose, torsoFill: NORA.hoodie, torsoDark: NORA.hoodieDark, facing, skin: NORA.skin });
-  const cy = y - 5.25 * u + B.dr, cx = x + ((pose === 'run' || (pose && pose.a === 'runA')) ? 0.25 * u * facing : 0);
+  const cy = y - 5.25 * u + B.dr, cx = x + 0.25 * runWeight(pose) * u * facing;
   // long hair falls behind the shoulders: drawn before the body
   const back = path(`M${f(cx - 1.02 * u)} ${f(cy - 0.1 * u)} C${f(cx - 1.25 * u)} ${f(cy + 0.9 * u)} ${f(cx - 1.05 * u)} ${f(cy + 1.75 * u)} ${f(cx - 0.6 * u)} ${f(cy + 1.95 * u)}
     L${f(cx + 0.6 * u)} ${f(cy + 1.95 * u)} C${f(cx + 1.05 * u)} ${f(cy + 1.75 * u)} ${f(cx + 1.25 * u)} ${f(cy + 0.9 * u)} ${f(cx + 1.02 * u)} ${f(cy - 0.1 * u)} Z`, { fill: NORA.hair, ...ink(5) });
@@ -58,8 +58,10 @@ export function nora({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, 
     L${f(cx + 0.82 * u)} ${f(cy - 0.2 * u)} C${f(cx + 0.55 * u)} ${f(cy - 0.45 * u)} ${f(cx + 0.2 * u)} ${f(cy - 0.62 * u)} ${f(cx + 0.02 * u)} ${f(cy - 0.78 * u)}
     C${f(cx - 0.25 * u)} ${f(cy - 0.5 * u)} ${f(cx - 0.6 * u)} ${f(cy - 0.42 * u)} ${f(cx - 0.84 * u)} ${f(cy - 0.18 * u)} Z`, { fill: NORA.hair, ...ink(5) });
   h += path(`M${f(cx + 0.02 * u)} ${f(cy - 0.95 * u)} q${f(-0.05 * u)} ${f(0.1 * u)} 0 ${f(0.17 * u)}`, { fill: 'none', stroke: NORA.hairDark, strokeWidth: 3 });
+  if (fromBehind) h += path(`M${f(cx - 1.02 * u)} ${f(cy + 0.3 * u)} C${f(cx - 1.12 * u)} ${f(cy - 1.2 * u)} ${f(cx + 1.12 * u)} ${f(cy - 1.2 * u)} ${f(cx + 1.02 * u)} ${f(cy + 0.3 * u)} L${f(cx + 0.9 * u)} ${f(cy + 1.0 * u)} H${f(cx - 0.9 * u)} Z`, { fill: NORA.hair, ...ink(5) })
+    + path(`M${f(cx)} ${f(cy - 0.9 * u)} q${f(-0.15 * u)} ${f(0.8 * u)} 0 ${f(1.7 * u)}`, { fill: 'none', stroke: NORA.hairDark, strokeWidth: 4 });
   if (hood) h += path(`M${f(cx - 1.12 * u)} ${f(cy + 0.4 * u)} C${f(cx - 1.3 * u)} ${f(cy - 1.45 * u)} ${f(cx + 1.3 * u)} ${f(cy - 1.45 * u)} ${f(cx + 1.12 * u)} ${f(cy + 0.4 * u)} L${f(cx + 0.95 * u)} ${f(cy + 0.3 * u)} C${f(cx + 1.0 * u)} ${f(cy - 1.05 * u)} ${f(cx - 1.0 * u)} ${f(cy - 1.05 * u)} ${f(cx - 0.95 * u)} ${f(cy + 0.3 * u)} Z`, { fill: NORA.hoodie, ...ink(5) });
-  h += noraFace({ cx, cy, u, look: look || facing * 0.2, expr, blink });
+  if (!fromBehind) h += noraFace({ cx, cy, u, look: look || facing * 0.2, expr, blink });
   const head = tilt ? g(h, { transform: `rotate(${tilt} ${f(cx)} ${f(cy + u)})` }) : h;
   const bodyT = breathe ? `translate(${f(x)} ${f(y)}) scale(1 ${f(1 + breathe)}) translate(${f(-x)} ${f(-y)})` : undefined;
   const backT = tilt ? g(back, { transform: `rotate(${tilt * 0.6} ${f(cx)} ${f(cy + u)})` }) : back;
