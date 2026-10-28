@@ -1,0 +1,218 @@
+[
+ {
+  "i": 0,
+  "beat": "hook",
+  "who": "narrator",
+  "text": "He gave away so much gold,",
+  "start": 0.02,
+  "end": 1.421
+ },
+ {
+  "i": 1,
+  "beat": "hook",
+  "who": "narrator",
+  "text": "that gold became worthless.",
+  "start": 1.586,
+  "end": 3.07
+ },
+ {
+  "i": 2,
+  "beat": "context",
+  "who": "narrator",
+  "text": "You see, in thirteen twenty-four, the king of Mali stopped in Cairo, on his way to Mecca,",
+  "start": 3.364,
+  "end": 6.945
+ },
+ {
+  "i": 3,
+  "beat": "context",
+  "who": "narrator",
+  "text": "with sixty thousand people, and a hundred camels carrying gold.",
+  "start": 7.018,
+  "end": 9.875
+ },
+ {
+  "i": 4,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "And Mansa Musa doesn't just pay for things.",
+  "start": 10.151,
+  "end": 12.071
+ },
+ {
+  "i": 5,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "He hands out gold to everyone.",
+  "start": 12.163,
+  "end": 13.654
+ },
+ {
+  "i": 6,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "Merchants.",
+  "start": 13.857,
+  "end": 14.483
+ },
+ {
+  "i": 7,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "Beggars.",
+  "start": 14.63,
+  "end": 15.177
+ },
+ {
+  "i": 8,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "Kids.",
+  "start": 15.324,
+  "end": 15.823
+ },
+ {
+  "i": 9,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "The guy holding his camel.",
+  "start": 16.007,
+  "end": 17.283
+ },
+ {
+  "i": 10,
+  "beat": "rise",
+  "who": "narrator",
+  "text": "Suddenly, Cairo is drowning in gold.",
+  "start": 17.577,
+  "end": 19.39
+ },
+ {
+  "i": 11,
+  "beat": "turn",
+  "who": "narrator",
+  "text": "Except, the shopkeepers start asking for more gold, for the same bread.",
+  "start": 19.702,
+  "end": 22.625
+ },
+ {
+  "i": 12,
+  "beat": "turn",
+  "who": "narrator",
+  "text": "The baker just shrugs.",
+  "start": 22.827,
+  "end": 24.021
+ },
+ {
+  "i": 13,
+  "beat": "turn",
+  "who": "baker",
+  "text": "Everyone's got gold now, my friend!",
+  "start": 24.132,
+  "end": 25.906
+ },
+ {
+  "i": 14,
+  "beat": "turn",
+  "who": "narrator",
+  "text": "Even the money changers start giving less for every coin.",
+  "start": 26.2,
+  "end": 28.713
+ },
+ {
+  "i": 15,
+  "beat": "question",
+  "who": "narrator",
+  "text": "So how do you ruin a city,",
+  "start": 28.989,
+  "end": 30.235
+ },
+ {
+  "i": 16,
+  "beat": "question",
+  "who": "narrator",
+  "text": "by giving it money?",
+  "start": 30.364,
+  "end": 31.308
+ },
+ {
+  "i": 17,
+  "beat": "explain",
+  "who": "narrator",
+  "text": "Well, gold is only valuable because it's rare.",
+  "start": 31.603,
+  "end": 33.688
+ },
+ {
+  "i": 18,
+  "beat": "explain",
+  "who": "narrator",
+  "text": "Flood a city with it, and it's just shiny metal.",
+  "start": 33.817,
+  "end": 35.596
+ },
+ {
+  "i": 19,
+  "beat": "explain",
+  "who": "narrator",
+  "text": "Twelve years later, Cairo's gold still hadn't recovered.",
+  "start": 35.854,
+  "end": 38.276
+ },
+ {
+  "i": 20,
+  "beat": "twist",
+  "who": "narrator",
+  "text": "But here's the best part.",
+  "start": 38.607,
+  "end": 39.737
+ },
+ {
+  "i": 21,
+  "beat": "twist",
+  "who": "narrator",
+  "text": "On the way home, the richest king on Earth,",
+  "start": 39.921,
+  "end": 41.686
+ },
+ {
+  "i": 22,
+  "beat": "twist",
+  "who": "narrator",
+  "text": "runs out of money.",
+  "start": 41.888,
+  "end": 42.874
+ },
+ {
+  "i": 23,
+  "beat": "payoff",
+  "who": "narrator",
+  "text": "So he goes back to the same merchants he showered with gold,",
+  "start": 43.168,
+  "end": 45.602
+ },
+ {
+  "i": 24,
+  "beat": "payoff",
+  "who": "musa",
+  "text": "Hey. Remember me?",
+  "start": 45.749,
+  "end": 46.81
+ },
+ {
+  "i": 25,
+  "beat": "payoff",
+  "who": "narrator",
+  "text": "And they lend it to him.",
+  "start": 47.086,
+  "end": 48.18
+ },
+ {
+  "i": 26,
+  "beat": "payoff",
+  "who": "narrator",
+  "text": "Because now, they're the ones with all the gold.",
+  "start": 48.291,
+  "end": 50.231
+ }
+]
