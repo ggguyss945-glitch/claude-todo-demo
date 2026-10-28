@@ -35,7 +35,7 @@ export function headline(x, y, str, { size = 200, fill = 'url(#pro_white)', sw =
 }
 
 // ---------- the hero, acting for the thumbnail ----------
-function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = false, scratch = false, rim, id = 'h' }) {
+function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = false, scratch = false, lick: showLick = true, rim, id = 'h' }) {
   let s = circle(cx, cy, u, { fill: PAL.skin });
   if (rim) s += `<mask id="rim_${id}"><circle cx="${F(cx)}" cy="${F(cy)}" r="${F(u)}" fill="#fff"/><circle cx="${F(cx - rim.side * 0.16 * u)}" cy="${F(cy + 0.06 * u)}" r="${F(u)}" fill="#000"/></mask>`
     + circle(cx, cy, u, { fill: rim.color, opacity: rim.op ?? 0.85, mask: `url(#rim_${id})` });
@@ -43,7 +43,7 @@ function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = fa
   s += path(`M${F(hx + 0.02 * u)} ${F(hy - 0.05 * u)} C${F(hx - 0.02 * u)} ${F(hy - 1.1 * u)} ${F(cx + 1.1 * u)} ${F(cy - 1.25 * u)} ${F(cx + 0.98 * u)} ${F(cy - 0.12 * u)} L${F(cx + 0.7 * u)} ${F(cy - 0.42 * u)} L${F(cx + 0.48 * u)} ${F(cy - 0.3 * u)} L${F(cx + 0.18 * u)} ${F(cy - 0.5 * u)} L${F(cx - 0.12 * u)} ${F(cy - 0.36 * u)} L${F(cx - 0.45 * u)} ${F(cy - 0.52 * u)} L${F(cx - 0.72 * u)} ${F(cy - 0.32 * u)} Z`, { fill: PAL.hair, ...ink(0.04 * u) });
   if (rim) s += path(`M${F(cx + rim.side * 0.62 * u)} ${F(cy - 0.78 * u)} Q${F(cx + rim.side * 0.95 * u)} ${F(cy - 0.5 * u)} ${F(cx + rim.side * 0.98 * u)} ${F(cy - 0.12 * u)}`, { fill: 'none', stroke: rim.color, strokeWidth: 0.06 * u, strokeLinecap: 'round', opacity: 0.7 });
   const lick = `M${F(cx + 0.05 * u)} ${F(cy - 0.98 * u)} q${F(0.1 * u)} ${F(-0.35 * u)} ${F(0.38 * u)} ${F(-0.3 * u)}`;
-  s += path(lick, { fill: 'none', stroke: INK, strokeWidth: 0.19 * u, strokeLinecap: 'round' }) + path(lick, { fill: 'none', stroke: PAL.hair, strokeWidth: 0.11 * u, strokeLinecap: 'round' });
+  if (showLick) s += path(lick, { fill: 'none', stroke: INK, strokeWidth: 0.19 * u, strokeLinecap: 'round' }) + path(lick, { fill: 'none', stroke: PAL.hair, strokeWidth: 0.11 * u, strokeLinecap: 'round' });
   if (bandage) s += g(rect(-0.34 * u, -0.1 * u, 0.68 * u, 0.2 * u, { rx: 0.05 * u, fill: '#F4EEDF', ...ink(0.025 * u) }) + line(-0.06 * u, -0.06 * u, -0.06 * u, 0.06 * u, { stroke: '#C9BFA6', strokeWidth: 0.02 * u }) + line(0.06 * u, -0.06 * u, 0.06 * u, 0.06 * u, { stroke: '#C9BFA6', strokeWidth: 0.02 * u }),
     { transform: `translate(${F(cx - 0.42 * u)} ${F(cy - 0.46 * u)}) rotate(-24)` });
   const ex = cx + look * 0.26 * u, ey = cy + 0.04 * u, sp = 0.5 * u;
@@ -89,10 +89,14 @@ function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = fa
   return s;
 }
 // the hero with a thumbnail face; `front` is drawn over the head (props held up at the cheek)
-export function actor({ x, y, s: sc, pose = 'stand', face = 'happy', look = 0, tired = false, bandage = false, scratch = false, rim, extra = '', front = '', id = 'a', sticker = true }) {
+export function actor({ x, y, s: sc, pose = 'stand', face = 'happy', look = 0, tired = false, bandage = false, scratch = false, lick = true, rim, extra = '', front = '', id = 'a', sticker = true }) {
   const u = 60 * sc;
-  const body = hero({ x, y, s: sc, pose, expr: face === 'happy' ? 'smile' : 'scared', look, extra, filter: false });
-  const hd = head(x, y - 5.25 * u, u, { face, look, tired, bandage, scratch, rim, id });
+  let body = hero({ x, y, s: sc, pose, expr: face === 'happy' ? 'smile' : 'scared', look, extra, filter: false });
+  if (!lick) {   // under a helmet: mask out the base figure's cowlick
+    const cy = y - 5.25 * u;
+    body = `<mask id="nolick_${id}" maskUnits="userSpaceOnUse" x="${F(x - 4 * u)}" y="${F(y - 9 * u)}" width="${F(8 * u)}" height="${F(10 * u)}"><rect x="${F(x - 4 * u)}" y="${F(y - 9 * u)}" width="${F(8 * u)}" height="${F(10 * u)}" fill="#fff"/><ellipse cx="${F(x + 0.25 * u)}" cy="${F(cy - 1.2 * u)}" rx="${F(0.42 * u)}" ry="${F(0.26 * u)}" fill="#000"/></mask>` + g(body, { mask: `url(#nolick_${id})` });
+  }
+  const hd = head(x, y - 5.25 * u, u, { face, look, tired, bandage, scratch, lick, rim, id });
   return g(g(body + hd + front, { filter: 'url(#wobbleSoft)' }), { filter: sticker ? 'url(#pro_stk)' : undefined });
 }
 // walkie-talkie up at the cheek, red light on; returns [markup, led x, led y]

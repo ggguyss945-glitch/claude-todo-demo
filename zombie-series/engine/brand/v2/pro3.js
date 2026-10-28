@@ -4,7 +4,7 @@ import { W, H, INK, PAL, finish, glow, hero, zombie, g, rect, circle, ellipse, l
 import { radioProp, mitt } from '../../ep/kit.js';
 import { aisle } from '../../scenes.js';
 import * as S from '../../ep/sets.js';
-import { svgOf, headline, bloom, grade, RED, TAPE } from './pro.js';
+import { svgOf, headline, bloom, grade, actor, RED, TAPE } from './pro.js';
 
 const F = (n) => (+n).toFixed(1);
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -141,4 +141,74 @@ function ledDigits(x, y, str, h, on = '#FF3B2F', off = '#3A1010') {
   return g(g(s, { filter: 'url(#pro_glowS)', opacity: 0.9 }) + s, { transform: `skewX(-7) translate(${(y + h) * 0.12} 0)` });
 }
 
-export const THUMBS3 = { thumbA, thumbB, thumbC };
+// ---------- B5: DON'T ANSWER, the hero in full tactical kit, the horde lit by the moon ----------
+// rifle in local coordinates along its axis (x forward from the pistol grip), rotated into place
+function rifle(gx, gy, u, ang) {
+  const k = u / 100, R = (x, y, w, h, a = {}) => rect(x * k, y * k, w * k, h * k, { ...ink(3.5 * k + 1), ...a });
+  let s = '';
+  s += poly([[-30 * k, -6 * k], [-95 * k, -2 * k], [-100 * k, 26 * k], [-86 * k, 30 * k], [-40 * k, 12 * k], [-30 * k, 12 * k]], { fill: '#4A4E55', ...ink(3.5 * k + 1) });   // stock
+  s += R(-32, -14, 92, 26, { rx: 4 * k, fill: '#565B63' }) + R(-10, -22, 60, 9, { rx: 2 * k, fill: '#33363B' }) + line(-26 * k, -8 * k, 54 * k, -8 * k, { stroke: '#8A9099', strokeWidth: 3 * k, strokeLinecap: 'round' });                                                          // receiver + rail
+  s += path(`M${8 * k} ${12 * k} q${-4 * k} ${30 * k} ${8 * k} ${52 * k} l${20 * k} ${-6 * k} q${-10 * k} ${-20 * k} ${-6 * k} ${-46 * k} Z`, { fill: '#B59A6A', ...ink(3.5 * k + 1) });   // magazine
+  s += path(`M${-14 * k} ${12 * k} l${-6 * k} ${30 * k} l${14 * k} ${2 * k} l${8 * k} ${-32 * k} Z`, { fill: '#24262A', ...ink(3 * k + 1) });                               // pistol grip
+  s += R(58, -11, 66, 20, { rx: 5 * k, fill: '#6B6F56' }) + R(122, -5, 46, 8, { fill: '#3A3D42' }) + R(166, -8, 16, 14, { rx: 2 * k, fill: '#2A2C30' });                  // handguard, barrel, muzzle
+  s += R(4, -36, 40, 14, { rx: 4 * k, fill: '#1E2024' }) + circle(46 * k, -29 * k, 6 * k, { fill: '#6FB4FF', ...ink(2 * k + 1) });                                         // optic
+  return g(s, { transform: `translate(${F(gx)} ${F(gy)}) rotate(${ang})` });
+}
+function tacticalKit(x, y, u) {
+  // plate carrier with pouches, shoulder straps and a patch; drawn over the torso and the hanging arms
+  let s = rect(x - 0.66 * u, y - 4.16 * u, 1.32 * u, 1.72 * u, { rx: 0.14 * u, fill: '#3B4230', ...ink(0.045 * u) });
+  for (const side of [-1, 1]) s += rect(x + side * 0.42 * u - 0.12 * u, y - 4.3 * u, 0.24 * u, 0.3 * u, { rx: 0.05 * u, fill: '#323827', ...ink(0.03 * u) });
+  for (let i = 0; i < 3; i++) s += rect(x - 0.58 * u + i * 0.4 * u, y - 3.12 * u, 0.36 * u, 0.5 * u, { rx: 0.06 * u, fill: '#454C38', ...ink(0.03 * u) }) + line(x - 0.58 * u + i * 0.4 * u, y - 3.0 * u, x - 0.22 * u + i * 0.4 * u, y - 3.0 * u, { stroke: INK, strokeWidth: 0.02 * u });
+  s += rect(x - 0.5 * u, y - 3.92 * u, 0.44 * u, 0.26 * u, { rx: 0.04 * u, fill: '#2A2F22', ...ink(0.025 * u) }) + rect(x - 0.46 * u, y - 3.88 * u, 0.36 * u, 0.18 * u, { fill: '#C9A43A' }) + text(x - 0.28 * u, y - 3.74 * u, 'CH 3', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.1 * u, fill: INK, textAnchor: 'middle' });
+  s += rect(x - 0.66 * u, y - 2.52 * u, 1.32 * u, 0.14 * u, { fill: '#2A2F22', ...ink(0.03 * u) });
+  return s;
+}
+function helmet(cx, cy, u) {
+  // FAST-style helmet over the hair, the orange headphones worn as a headset with a boom mic
+  let s = path(`M${F(cx - 1.06 * u)} ${F(cy - 0.1 * u)} C${F(cx - 1.12 * u)} ${F(cy - 1.35 * u)} ${F(cx + 1.12 * u)} ${F(cy - 1.35 * u)} ${F(cx + 1.06 * u)} ${F(cy - 0.1 * u)} L${F(cx + 0.86 * u)} ${F(cy - 0.12 * u)} Q${F(cx + 0.5 * u)} ${F(cy - 0.5 * u)} ${F(cx)} ${F(cy - 0.52 * u)} Q${F(cx - 0.5 * u)} ${F(cy - 0.5 * u)} ${F(cx - 0.86 * u)} ${F(cy - 0.12 * u)} Z`, { fill: '#4A5238', ...ink(0.05 * u) });
+  s += path(`M${F(cx - 0.62 * u)} ${F(cy - 0.62 * u)} Q${F(cx)} ${F(cy - 0.78 * u)} ${F(cx + 0.62 * u)} ${F(cy - 0.62 * u)}`, { fill: 'none', stroke: '#2F3524', strokeWidth: 0.08 * u, strokeLinecap: 'round' });
+  s += rect(cx - 0.17 * u, cy - 0.98 * u, 0.34 * u, 0.24 * u, { rx: 0.04 * u, fill: '#25291C', ...ink(0.03 * u) }) + rect(cx - 0.98 * u, cy - 0.66 * u, 0.12 * u, 0.4 * u, { rx: 0.03 * u, fill: '#25291C' }) + rect(cx + 0.86 * u, cy - 0.66 * u, 0.12 * u, 0.4 * u, { rx: 0.03 * u, fill: '#25291C' });
+  for (const side of [-1, 1]) s += rect(cx + side * 1.0 * u - 0.17 * u, cy - 0.22 * u, 0.34 * u, 0.5 * u, { rx: 0.13 * u, fill: PAL.phones, ...ink(0.04 * u) });
+  s += path(`M${F(cx + 1.0 * u)} ${F(cy + 0.2 * u)} Q${F(cx + 0.8 * u)} ${F(cy + 0.62 * u)} ${F(cx + 0.28 * u)} ${F(cy + 0.52 * u)}`, { fill: 'none', ...ink(0.05 * u) }) + circle(cx + 0.26 * u, cy + 0.52 * u, 0.07 * u, { fill: '#2A2C30', ...ink(0.025 * u) });
+  return s;
+}
+function thumbB5() {
+  let s = `<defs><linearGradient id="p5b_sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A1230"/><stop offset="0.6" stop-color="#1B2E5C"/><stop offset="1" stop-color="#2C4A7A"/></linearGradient></defs>`;
+  s += rect(0, 0, W, H, { fill: 'url(#p5b_sky)' });
+  const r = rng(8); for (let i = 0; i < 110; i++) s += circle(r() * W, r() * 600, 0.8 + r() * 2, { fill: '#FFFFFF', opacity: (0.3 + r() * 0.6).toFixed(2) });
+  // the moon right behind Dale, the roof of Freshway, the sign
+  const mx = 1450, my = 330;
+  s += bloom(mx, my, 330, 330, '#F6E7B8', 0.55) + circle(mx, my, 230, { fill: '#F4E9C8', ...ink(6) }) + circle(mx - 70, my - 60, 34, { fill: '#E4D6AE' }) + circle(mx + 80, my + 40, 22, { fill: '#E4D6AE' }) + circle(mx + 20, my + 120, 16, { fill: '#E4D6AE' });
+  s += g(rect(860, 540, 1100, 560, { fill: '#141B2E', ...ink(6) }) + rect(860, 520, 1100, 34, { fill: '#0C1120', ...ink(5) }) + rect(1040, 600, 760, 110, { rx: 10, fill: '#1F3A30', ...ink(5) })
+    + text(1420, 682, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 78, fill: '#5E8E78', textAnchor: 'middle', letterSpacing: 10 }), { filter: 'url(#wobble)' });
+  const fx = mx, fy = 522, k = 3.6, C = '#05070D';
+  let fig = circle(fx, fy - 62 * k, 15 * k, { fill: C }) + rect(fx - 22 * k, fy - 67 * k, 44 * k, 9 * k, { rx: 3 * k, fill: C }) + rect(fx - 19 * k, fy - 48 * k, 38 * k, 48 * k, { rx: 9 * k, fill: C });
+  fig += line(fx + 14 * k, fy - 40 * k, fx + 26 * k, fy - 66 * k, { stroke: C, strokeWidth: 8 * k, strokeLinecap: 'round' }) + rect(fx + 20 * k, fy - 86 * k, 12 * k, 24 * k, { rx: 3 * k, fill: C }) + line(fx + 28 * k, fy - 86 * k, fx + 28 * k, fy - 106 * k, { stroke: C, strokeWidth: 3 * k, strokeLinecap: 'round' });
+  s += fig + circle(fx - 5 * k, fy - 61 * k, 2.2 * k, { fill: '#F2F0E0' }) + circle(fx + 6 * k, fy - 61 * k, 2.2 * k, { fill: '#F2F0E0' });
+  s += circle(fx + 26 * k, fy - 80 * k, 3.4 * k, { fill: RED }) + bloom(fx + 26 * k, fy - 80 * k, 60, 60, RED, 0.95, true) + bloom(fx + 26 * k, fy - 80 * k, 120, 120, RED, 0.14);
+  s += g(path('M1060 250 Q1150 200 1225 255', { fill: 'none', stroke: INK, strokeWidth: 34, strokeLinecap: 'round' }) + path('M1060 250 Q1150 200 1225 255', { fill: 'none', stroke: RED, strokeWidth: 18, strokeLinecap: 'round' })
+    + poly([[1250, 275], [1190, 285], [1225, 230]], { fill: RED, ...ink(8) }), { filter: 'url(#wobbleSoft)' });
+  // the lot, and the dead filling it: in colour, moonlit from the right, faces you can read
+  s += rect(0, 880, W, 200, { fill: '#1E2638' }) + line(0, 880, W, 880, ink(5));
+  s += bloom(1400, 980, 760, 200, '#7F9BD8', 0.3);
+  s += horde({ x0: -60, x1: 2000, yb: 900, yf: 1170, rows: 4, s0: 0.5, s1: 1.05, seed: 31, arms: 0.6, rim: '#CFE0FF', rimSide: 1, fog: '#1E2638', fogK: 0.35, density: 1.4 });
+  // you, in full kit: helmet and headset, plate carrier, rifle at the ready, radio on the chest lit red
+  const sc = 2.7, gx = 560, gy = 1440, u = 60 * sc, ang = -32;
+  const G = [gx + 0.32 * u, gy - 3.02 * u], d = [Math.cos(ang * Math.PI / 180), Math.sin(ang * Math.PI / 180)];
+  const fore = [G[0] + 1.2 * u * d[0], G[1] + 1.2 * u * d[1]], lw = Math.max(4, 0.1 * u);
+  const shR = [gx + 0.5 * u, gy - 4.0 * u], shL = [gx - 0.5 * u, gy - 4.0 * u];
+  let front = rifle(G[0], G[1], u * 1.4, ang);
+  front += path(`M${F(shR[0])} ${F(shR[1])} Q${F(gx + 0.82 * u)} ${F(gy - 3.5 * u)} ${F(G[0])} ${F(G[1])}`, { fill: 'none', ...ink(lw) }) + path(`M${F(shL[0])} ${F(shL[1])} Q${F(gx + 0.2 * u)} ${F(gy - 3.0 * u)} ${F(fore[0])} ${F(fore[1])}`, { fill: 'none', ...ink(lw) });
+  front += circle(G[0], G[1], 0.16 * u, { fill: '#2A2C30', ...ink(0.04 * u) }) + circle(fore[0], fore[1], 0.16 * u, { fill: '#2A2C30', ...ink(0.04 * u) });
+  front += helmet(gx, gy - 5.25 * u, u);
+  const rdx = gx + 0.44 * u, rdy = gy - 3.85 * u;
+  s += bloom(gx, 640, 420, 480, '#4A78C8', 0.3);
+  s += actor({ x: gx, y: gy, s: sc, pose: 'stand', face: 'serious', look: 0.5, scratch: true, lick: false, id: 'b5', rim: { color: '#FF6A5A', side: 1, op: 0.8 },
+    extra: tacticalKit(gx, gy, u) + radioProp(rdx, rdy, 0.4, { on: true, led: RED, rot: 6 }), front });
+  s += bloom(rdx - 12, rdy - 56, 60, 60, RED, 0.95, true) + bloom(rdx, rdy - 40, 200, 180, RED, 0.25);
+  s += headline(60, 200, "DON'T ANSWER", { size: 165, anchor: 'start', rich: `DON'T <tspan fill="url(#pro_red)">ANSWER</tspan>` });
+  s += finish({ vignette: 0.55, grain: 0.05 });
+  return { w: W, h: H, svg: svgOf(s, 6), css: 'saturate(1.12) contrast(1.06)' };
+}
+
+export const THUMBS3 = { thumbA, thumbB, thumbC, thumbB5 };
