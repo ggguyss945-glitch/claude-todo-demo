@@ -113,14 +113,17 @@ function clothTexture(o, H) {
 // body profiles (radius, height) for s = 1; the head sits on top with no neck
 const PROFILES = {
   // long robe to the ankles, like a kaftan or galabeya; the belt sits at 0.78
-  robe: { pts: [[0, 0.06], [0.185, 0.06], [0.192, 0.09], [0.186, 0.3], [0.174, 0.6], [0.162, 0.8], [0.156, 1.0], [0.146, 1.12], [0.126, 1.22], [0.086, 1.29], [0.035, 1.315], [0, 1.32]], belt: 0.79, hip: 0.14 },
-  // short bean-shaped body on long stick legs
-  bean: { pts: [[0, 0.6], [0.1, 0.6], [0.152, 0.625], [0.172, 0.68], [0.176, 0.8], [0.17, 0.98], [0.158, 1.1], [0.133, 1.21], [0.092, 1.285], [0.035, 1.315], [0, 1.32]], belt: 0.78, hip: 0.66 },
+  // (the king): a rounded bean of a chest over a skirt that flares to the ankles
+  robe: { pts: [[0, 0.08], [0.205, 0.08], [0.215, 0.11], [0.2, 0.35], [0.182, 0.6], [0.168, 0.8], [0.176, 0.95], [0.172, 1.08], [0.155, 1.2], [0.11, 1.28], [0.045, 1.32], [0, 1.325]], belt: 0.8, hip: 0.16 },
+  // long dress, narrow at the shoulders and wide at the hem
+  dress: { pts: [[0, 0.06], [0.235, 0.06], [0.24, 0.09], [0.215, 0.4], [0.188, 0.7], [0.165, 0.95], [0.15, 1.12], [0.125, 1.22], [0.08, 1.29], [0.03, 1.32], [0, 1.325]], belt: 0.8, hip: 0.14 },
+  // the classic: a bean-shaped body, widest low down, on long stick legs
+  bean: { pts: [[0, 0.7], [0.1, 0.7], [0.165, 0.728], [0.198, 0.79], [0.208, 0.9], [0.203, 1.0], [0.19, 1.1], [0.165, 1.2], [0.12, 1.28], [0.05, 1.32], [0, 1.325]], belt: 0.86, hip: 0.76 },
 };
 
 export function makeToon(def) {
   const s = def.scale || 1, gth = def.girth || 1;
-  const kind = def.body === 'tunic' ? 'bean' : (def.body || 'robe');
+  const kind = def.body === 'tunic' ? 'bean' : (def.body || 'bean');
   const P = PROFILES[kind];
   const ch = { def, s, kind, root: new THREE.Group(), name: def.name };
   ch.root.name = def.name;
@@ -156,22 +159,22 @@ export function makeToon(def) {
   if (def.hat) HW.build(def.hat, headG, R, def);
   if (def.beard3d) HW.longBeard(headG, R, def.beard3d);
   // stick arms with ball hands
-  const armR = 0.0085 * s, handR = 0.036 * s;
+  const armR = 0.0118 * s, handR = 0.04 * s;
   ch.arms = {};
   for (const L of ['l', 'r']) {
     const sd = L === 'l' ? 1 : -1;
     const hose = new Hose(armR, inkMat, 14, 6);
     body.add(hose.mesh);
     const hand = mk(new THREE.SphereGeometry(handR, 16, 12), handMat, ch.root, { outline: false });
-    ch.arms[L] = { sd, hose, hand, shoulder: V(sd * 0.13 * s * Math.min(gth, 1.2), 1.17 * s, 0.0), target: V(sd * 0.22 * s, 0.78 * s, 0.06 * s), bend: 1 };
+    ch.arms[L] = { sd, hose, hand, shoulder: V(sd * 0.15 * s * Math.min(gth, 1.2), 1.18 * s, 0.0), target: V(sd * 0.25 * s, 0.84 * s, 0.06 * s), bend: 1 };
   }
   // stick legs with small black feet (only the ankles show under a long robe)
   ch.legs = {};
   for (const L of ['l', 'r']) {
     const sd = L === 'l' ? 1 : -1;
-    const shoe = mk(new THREE.SphereGeometry(0.034 * s, 14, 10), def.shoes ? toon(def.shoes, { lift: 0.1 }) : handMat, ch.root, { scale: [0.95, 0.6, 1.75], outline: def.shoes ? 2.5 : false });
-    const hose = new Hose(0.0092 * s, inkMat, 10, 6); ch.root.add(hose.mesh);
-    ch.legs[L] = { sd, shoe, hose, hip: V(sd * 0.07 * s, P.hip * s, 0), foot: V(sd * 0.075 * s, 0.02 * s, 0.035 * s) };
+    const shoe = mk(new THREE.SphereGeometry(0.04 * s, 14, 10), def.shoes ? toon(def.shoes, { lift: 0.1 }) : handMat, ch.root, { scale: [0.95, 0.6, 1.65], outline: def.shoes ? 2.5 : false });
+    const hose = new Hose(0.0125 * s, inkMat, 10, 6); ch.root.add(hose.mesh);
+    ch.legs[L] = { sd, shoe, hose, hip: V(sd * 0.08 * s, P.hip * s, 0), foot: V(sd * 0.1 * s, 0.024 * s, 0.03 * s) };
   }
   // hand-drawn outlines on everything the character wears
   ch.root.traverse((o) => { if (o.userData.isHull) o.material = hullMaterial(o.material.userData.width ?? o.material.uniforms.uWidth.value, OUTLINE, true); });

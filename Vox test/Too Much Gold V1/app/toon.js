@@ -50,7 +50,7 @@ export function hullMaterial(widthPx = 4, color = OUTLINE, wob = false) {
         float l = length(dir);
         dir = l > 1e-5 ? dir / l : vec2(0.0);
         // a touch thicker in close-ups, thinner far away, never vanishing
-        float w = uWidth * (uRes.x / 1440.0) * clamp(3.4 / max(-mv.z, 0.05), 0.72, 1.7);
+        float w = uWidth * (uRes.x / 1440.0) * clamp(3.4 / max(-mv.z, 0.05), 0.72, 1.7) * (uWob > 0.5 ? 1.0 : 1.35);
         w *= 1.0 + uWob * (0.13 * sin(position.x * 23.0 + position.y * 17.0) + 0.08 * sin(position.y * 41.0 - position.x * 13.0 + 1.7));
         clip.xy += dir * w * 2.0 / uRes * clip.w;
         gl_Position = clip;

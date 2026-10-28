@@ -1,6 +1,6 @@
 // Shot list, timed to the narration's word timings.
 import * as THREE from 'three';
-import { defaultPose } from './chars.js';
+import { defaultPose, CH2D } from './chars2d.js';
 
 export const SHOTS = [];
 export function findShot(t) {
@@ -25,7 +25,11 @@ export function resetFrame(world, t, shot) {
   world.reset?.(t);
 }
 
+// the drawings pick up a little of each scene's light colour
+const TINT = { 'market:gold': '#ffe8d6', 'market:morning': '#f1f3ff', 'market:day': '#ffffff', 'desert:sunrise': '#ffe6d4', 'desert:sunset': '#ffd4cc', 'void:': '#ecdcff', 'camp:': '#a9b6ff', 'test:': '#ffffff' };
 export function finishFrame(world, t, shot, camera) {
+  CH2D.cam = camera; CH2D.H = world.renderer.domElement.height;
+  CH2D.tint.set(shot.tint || TINT[shot.set + ':' + (shot.light || '')] || TINT[shot.set + ':'] || '#ffffff');
   for (const c of allChars()) if (c.root.visible) c.update(t);
   for (const cm of world.anchors.desert.camels) if (cm.root.visible) cm.update(t);
 }

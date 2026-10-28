@@ -2,7 +2,7 @@
 // hands and held props, talking, cheering, riding a camel.
 import * as THREE from 'three';
 import { clamp, lerp, prog, smooth, easeInOut, easeOut, noise1, hash } from './util.js';
-import { toRoot, lookAt } from './chars.js';
+import { toRoot, lookAt } from './chars2d.js';
 
 export const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 export { clamp, lerp, prog, smooth, easeInOut, easeOut, hash };

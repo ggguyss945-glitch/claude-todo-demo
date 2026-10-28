@@ -8,6 +8,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { LAYER } from './toon.js';
+import { CARDS, CHAR_LAYER } from './chars2d.js';
 
 const QUAD_VS = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
 const LIN = `
@@ -18,7 +19,7 @@ const LIN = `
 const EdgeShader = {
   uniforms: {
     tDiffuse: { value: null }, tNormal: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2(1440, 2560) },
-    near: { value: 0.05 }, far: { value: 600 }, uWidth: { value: 2.0 }, uStrength: { value: 0.95 }, uDepthK: { value: 0.012 },
+    near: { value: 0.05 }, far: { value: 600 }, uWidth: { value: 2.6 }, uStrength: { value: 0.95 }, uDepthK: { value: 0.012 },
     uNormK: { value: 0.22 }, uLine: { value: new THREE.Color('#120b07') }, uFar: { value: 400 },
   },
   vertexShader: QUAD_VS,
@@ -195,8 +196,15 @@ export function makePipeline(renderer, scene, camera, W, H, Q) {
     renderer.setClearColor(0x8080ff, 1);
     renderer.clear();
     renderer.render(scene, camera);
-    renderer.setRenderTarget(null);
+    // the 2D characters: depth where they are drawn, a flat normal (their own ink lines do the outlining)
     scene.overrideMaterial = null;
+    camera.layers.set(CHAR_LAYER);
+    for (const c of CARDS) { c.userData.keep = c.material; c.material = c.userData.ndMat; }
+    renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.autoClear = true;
+    for (const c of CARDS) c.material = c.userData.keep;
+    renderer.setRenderTarget(null);
     scene.background = bg; scene.fog = fog;
     camera.layers.enableAll();
     for (const p of [edges.uniforms, dof.uniforms]) { p.near.value = camera.near; p.far.value = camera.far; }

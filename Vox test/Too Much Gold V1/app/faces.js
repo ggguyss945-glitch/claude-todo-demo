@@ -54,7 +54,7 @@ export function paintFace(def, state, res = 640) {
   g.fillStyle = cg; g.fillRect(0, 0, S, S);
   g.lineCap = 'round'; g.lineJoin = 'round';
   const lw = u * 0.055;
-  const ey = 0.02 + (def.eyeY || 0), ex = 0.26 * (def.eyeSpread || 1);
+  const ey = 0.03 + (def.eyeY || 0), ex = 0.3 * (def.eyeSpread || 1);
 
   // drawn beard: a tidy chin beard below the mouth with skin showing between them (never a mask)
   if (def.beard) {
@@ -75,14 +75,14 @@ export function paintFace(def, state, res = 640) {
     const type = blink ? 'closed' : e.eyes;
     g.strokeStyle = INK; g.fillStyle = INK; g.lineWidth = lw * 0.6;
     if (type === 'dot') {
-      ell(g, cx + lx * 0.6, cy + ly * 0.6, u * 0.064, u * 0.088); g.fill();
+      ell(g, cx + lx * 0.6, cy + ly * 0.6, u * 0.082, u * 0.112); g.fill();
     } else if (type === 'lid') { // dot cut flat on top by a heavy lid: deadpan
-      const rx = u * 0.068, ry = u * 0.09;
+      const rx = u * 0.088, ry = u * 0.112;
       g.save(); g.beginPath(); g.rect(cx - rx * 2, cy - ry * 0.12, rx * 4, ry * 3); g.clip();
       ell(g, cx + lx * 0.5, cy + ly * 0.4, rx, ry); g.fill(); g.restore();
       g.lineWidth = lw * 0.95; g.beginPath(); g.moveTo(cx - rx * 1.45, cy - ry * 0.12); g.lineTo(cx + rx * 1.45, cy - ry * 0.12); g.stroke();
     } else if (type === 'open' || type === 'wide' || type === 'money') {
-      const rx = u * (type === 'wide' ? 0.15 : 0.12), ry = u * (type === 'wide' ? 0.16 : 0.13);
+      const rx = u * (type === 'wide' ? 0.17 : 0.145), ry = u * (type === 'wide' ? 0.18 : 0.155);
       g.fillStyle = '#fbfbf6'; g.lineWidth = lw * 0.7; ell(g, cx, cy, rx, ry); g.fill(); g.stroke();
       if (type === 'money') {
         const pr = u * 0.075;
@@ -90,13 +90,13 @@ export function paintFace(def, state, res = 640) {
         g.strokeStyle = '#b07800'; g.lineWidth = lw * 0.35; ell(g, cx + lx, cy + ly, pr * 0.6, pr * 0.6); g.stroke();
         g.fillStyle = 'rgba(255,255,255,0.95)'; ell(g, cx + lx - pr * 0.35, cy + ly - pr * 0.35, pr * 0.22, pr * 0.22); g.fill();
       } else {
-        const pr = u * (type === 'wide' ? 0.036 : 0.045);
+        const pr = u * (type === 'wide' ? 0.045 : 0.055);
         g.fillStyle = INK; ell(g, cx + lx, cy + ly, pr, pr * 1.1); g.fill();
       }
     } else if (type === 'happy') {
-      g.lineWidth = lw * 1.05; g.beginPath(); g.arc(cx, cy + u * 0.045, u * 0.085, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+      g.lineWidth = lw * 1.15; g.beginPath(); g.arc(cx, cy + u * 0.06, u * 0.11, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
     } else if (type === 'closed') {
-      g.lineWidth = lw * 1.05; g.beginPath(); g.moveTo(cx - u * 0.09, cy); g.lineTo(cx + u * 0.09, cy); g.stroke();
+      g.lineWidth = lw * 1.15; g.beginPath(); g.moveTo(cx - u * 0.12, cy); g.lineTo(cx + u * 0.12, cy); g.stroke();
     }
   }
   if (def.glasses) {
@@ -109,12 +109,12 @@ export function paintFace(def, state, res = 640) {
   const br = Array.isArray(e.brows[0]) ? e.brows : [e.brows, e.brows];
   for (const sd of [-1, 1]) {
     const [raise, ang] = sd < 0 ? br[0] : br[1];
-    const by = ey + 0.24 + raise * 0.08 + (def.browY || 0);
+    const by = ey + 0.27 + raise * 0.08 + (def.browY || 0);
     const a = (ang * Math.PI / 180) * sd;       // positive = inner end down (cross)
-    const len = 0.105 * (def.browLen || 1);
+    const len = 0.14 * (def.browLen || 1);
     const [cx, cy] = P(sd * (ex + 0.015), by);
     const dx = Math.cos(a) * len * u, dy = Math.sin(a) * len * u;
-    g.strokeStyle = INK; g.lineWidth = lw * 1.45 * (def.browW || 1);
+    g.strokeStyle = INK; g.lineWidth = lw * 1.6 * (def.browW || 1);
     g.beginPath(); g.moveTo(cx - dx, cy - dy); g.quadraticCurveTo(cx, cy - u * 0.02, cx + dx, cy + dy); g.stroke();
   }
   // ---- moustache (drawn)
@@ -125,7 +125,7 @@ export function paintFace(def, state, res = 640) {
   {
     const [cx, cy] = P(0, my);
     g.strokeStyle = INK; g.lineWidth = lw; g.fillStyle = '#3a0d0d';
-    const W = u * 0.12 * (def.mouthW || 1);
+    const W = u * 0.15 * (def.mouthW || 1);
     if (m === 'line' || m === 'flat') { g.beginPath(); g.moveTo(cx - W * (m === 'flat' ? 0.8 : 1), cy); g.lineTo(cx + W * (m === 'flat' ? 0.8 : 1), cy); g.stroke(); }
     else if (m === 'smileOpen') {
       g.beginPath(); g.moveTo(cx - W * 1.1, cy - u * 0.02); g.lineTo(cx + W * 1.1, cy - u * 0.02); g.quadraticCurveTo(cx, cy + u * 0.17, cx - W * 1.1, cy - u * 0.02); g.closePath(); g.fill();

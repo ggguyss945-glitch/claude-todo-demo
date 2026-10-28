@@ -21,6 +21,7 @@ function sunLight(group, color, intensity, size = 30, res = 4096) {
   l.shadow.mapSize.set(res, res);
   const c = l.shadow.camera; c.left = -size; c.right = size; c.top = size; c.bottom = -size; c.near = 1; c.far = 500;
   l.shadow.bias = -0.0005; l.shadow.normalBias = 0.03; l.shadow.radius = 4;
+  l.shadow.camera.layers.enable(3); // the 2D characters cast shadows too
   group.add(l, l.target);
   return l;
 }

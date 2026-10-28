@@ -52,11 +52,11 @@ export function makeCamel(o = {}) {
   // sphere UVs: the front (+z) sits at u = 0.25; circles need half the width in u
   cm.drawEyes = (lid) => {
     fg.fillStyle = o.fur || '#d6a65e'; fg.fillRect(0, 0, 256, 256);
-    for (const x of [45, 83]) {
-      const y = 104, rx = 12, ry = 24;
+    for (const x of [40, 88]) {
+      const y = 100, rx = 17, ry = 32;
       fg.fillStyle = '#fbfbf6'; fg.beginPath(); fg.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); fg.fill();
       fg.strokeStyle = '#141010'; fg.lineWidth = 3.5; fg.stroke();
-      fg.fillStyle = '#141010'; fg.beginPath(); fg.ellipse(x, y + 7, 5, 10, 0, 0, Math.PI * 2); fg.fill();
+      fg.fillStyle = '#141010'; fg.beginPath(); fg.ellipse(x, y + 9, 7, 13, 0, 0, Math.PI * 2); fg.fill();
       // heavy, unimpressed eyelid
       const ly = y - ry + 2 * ry * lid;
       fg.save(); fg.beginPath(); fg.ellipse(x, y, rx + 1, ry + 1, 0, 0, Math.PI * 2); fg.clip();
