@@ -1,0 +1,12499 @@
+{
+ "dur": 921.97,
+ "ep_start": 0.0,
+ "cold_dur": 0,
+ "gap_scale": 1.5,
+ "shots": [
+  {
+   "name": "povaisle",
+   "start": 0.0,
+   "p": {
+    "phase": "walk"
+   },
+   "end": 5.0
+  },
+  {
+   "name": "povaisle",
+   "start": 5.0,
+   "p": {
+    "phase": "near"
+   },
+   "end": 8.385
+  },
+  {
+   "name": "prop2",
+   "start": 8.385,
+   "p": {
+    "item": "clock12",
+    "mode": "ring"
+   },
+   "end": 11.867
+  },
+  {
+   "name": "lot",
+   "start": 11.867,
+   "p": {
+    "mode": "turn",
+    "time": "night",
+    "hud": {
+     "day": 8,
+     "time": "2:31 AM",
+     "noise": 4,
+     "place": "FRESHWAY \u00b7 PARKING LOT"
+    }
+   },
+   "end": 16.035
+  },
+  {
+   "name": "povaisle",
+   "start": 16.035,
+   "p": {
+    "phase": "reach"
+   },
+   "end": 18.635
+  },
+  {
+   "name": "prop2",
+   "start": 18.635,
+   "p": {
+    "item": "wrapper"
+   },
+   "end": 26.725
+  },
+  {
+   "name": "radio",
+   "start": 26.725,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 29.736
+  },
+  {
+   "name": "map2",
+   "start": 29.736,
+   "p": {
+    "mode": "split",
+    "show": "both"
+   },
+   "end": 35.089
+  },
+  {
+   "name": "prop2",
+   "start": 35.089,
+   "p": {
+    "item": "bottle"
+   },
+   "end": 38.359
+  },
+  {
+   "name": "mall",
+   "start": 38.359,
+   "p": {
+    "time": "night"
+   },
+   "end": 43.22
+  },
+  {
+   "name": "stockdoors",
+   "start": 43.22,
+   "p": {
+    "mode": "shadow"
+   },
+   "end": 47.035
+  },
+  {
+   "name": "ep_title",
+   "start": 47.035,
+   "p": {
+    "ep": 2,
+    "title": "THE MALL"
+   },
+   "end": 52.635
+  },
+  {
+   "name": "map2",
+   "start": 52.635,
+   "p": {
+    "mode": "split",
+    "show": "none"
+   },
+   "end": 56.011
+  },
+  {
+   "name": "map2",
+   "start": 56.011,
+   "p": {
+    "mode": "split",
+    "show": "front"
+   },
+   "end": 61.474
+  },
+  {
+   "name": "map2",
+   "start": 61.474,
+   "p": {
+    "mode": "split",
+    "show": "back"
+   },
+   "end": 69.679
+  },
+  {
+   "name": "map2",
+   "start": 69.679,
+   "p": {
+    "mode": "split",
+    "show": "wall"
+   },
+   "end": 76.61
+  },
+  {
+   "name": "stockdoors",
+   "start": 76.61,
+   "p": {
+    "mode": "jammed",
+    "hud": {
+     "day": 8,
+     "time": "9:12 AM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 STOCKROOM DOORS"
+    }
+   },
+   "end": 81.618
+  },
+  {
+   "name": "radio",
+   "start": 81.618,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 89.434
+  },
+  {
+   "name": "hclose2",
+   "start": 89.434,
+   "p": {
+    "expr": "determined",
+    "bg": "stockdoors",
+    "prop": "radio_mouth"
+   },
+   "end": 90.986
+  },
+  {
+   "name": "radio",
+   "start": 90.986,
+   "p": {
+    "mode": "doors"
+   },
+   "end": 95.352
+  },
+  {
+   "name": "card2",
+   "start": 95.352,
+   "p": {
+    "kind": "trade"
+   },
+   "end": 103.954
+  },
+  {
+   "name": "radio",
+   "start": 103.954,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 107.369
+  },
+  {
+   "name": "hclose2",
+   "start": 107.369,
+   "p": {
+    "expr": "worried",
+    "bg": "aisle_day",
+    "look": 0.3
+   },
+   "end": 110.397
+  },
+  {
+   "name": "card",
+   "start": 110.397,
+   "p": {
+    "kind": "rule",
+    "n": 4,
+    "lines": [
+     "NEVER TELL ANYONE",
+     "WHAT YOU HAVE."
+    ],
+    "icon": "note"
+   },
+   "end": 114.501
+  },
+  {
+   "name": "hclose2",
+   "start": 114.501,
+   "p": {
+    "expr": "neutral",
+    "bg": "aisle_day",
+    "prop": "radio_mouth"
+   },
+   "end": 116.468
+  },
+  {
+   "name": "radio",
+   "start": 116.468,
+   "p": {
+    "mode": "doors"
+   },
+   "end": 119.934
+  },
+  {
+   "name": "hclose2",
+   "start": 119.934,
+   "p": {
+    "expr": "neutral",
+    "bg": "aisle_day",
+    "prop": "radio_mouth",
+    "look": -0.2
+   },
+   "end": 122.239
+  },
+  {
+   "name": "card",
+   "start": 122.239,
+   "p": {
+    "kind": "supplies",
+    "day": 8,
+    "rows": [
+     [
+      "Food",
+      "8,900 cans",
+      ""
+     ],
+     [
+      "Water",
+      "2 liters",
+      "THE REST IS DALE'S"
+     ],
+     [
+      "Batteries",
+      "2",
+      ""
+     ]
+    ]
+   },
+   "end": 134.088
+  },
+  {
+   "name": "stockdoors",
+   "start": 134.088,
+   "p": {
+    "mode": "jammed",
+    "hud": {
+     "day": 9,
+     "time": "7:01 AM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 STOCKROOM DOORS"
+    }
+   },
+   "end": 139.195
+  },
+  {
+   "name": "radio",
+   "start": 139.195,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 144.92
+  },
+  {
+   "name": "card",
+   "start": 144.92,
+   "p": {
+    "kind": "problem",
+    "n": 1,
+    "title": "WATER",
+    "sub": "YOU HAVE TWO LITERS",
+    "icon": "drop"
+   },
+   "end": 147.061
+  },
+  {
+   "name": "card",
+   "start": 147.061,
+   "p": {
+    "kind": "fact",
+    "big": "3",
+    "unit": "DAYS",
+    "icon": "drop",
+    "note": "HOW LONG A PERSON LASTS WITHOUT WATER",
+    "src": "RULE OF THREES \u00b7 SURVIVAL MEDICINE"
+   },
+   "end": 153.632
+  },
+  {
+   "name": "hclose2",
+   "start": 153.632,
+   "p": {
+    "expr": "determined",
+    "bg": "aisle_day",
+    "look": 0.2
+   },
+   "end": 157.701
+  },
+  {
+   "name": "restroom",
+   "start": 157.701,
+   "p": {
+    "view": "sink",
+    "hud": {
+     "day": 9,
+     "time": "7:40 AM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 STAFF RESTROOM"
+    }
+   },
+   "end": 160.936
+  },
+  {
+   "name": "restroom",
+   "start": 160.936,
+   "p": {
+    "view": "faucet"
+   },
+   "end": 164.387
+  },
+  {
+   "name": "card",
+   "start": 164.387,
+   "p": {
+    "kind": "fact",
+    "big": "1-2",
+    "unit": "DAYS",
+    "icon": "drop",
+    "note": "CITY WATER PRESSURE AFTER THE PUMPS STOP",
+    "src": "MUNICIPAL WATER SYSTEMS \u00b7 GRAVITY STORAGE"
+   },
+   "end": 172.016
+  },
+  {
+   "name": "restroom",
+   "start": 172.016,
+   "p": {
+    "view": "heater"
+   },
+   "end": 182.666
+  },
+  {
+   "name": "restroom",
+   "start": 182.666,
+   "p": {
+    "view": "drain"
+   },
+   "end": 197.001
+  },
+  {
+   "name": "card",
+   "start": 197.001,
+   "p": {
+    "kind": "fact",
+    "big": "8",
+    "unit": "DROPS",
+    "icon": "drop",
+    "note": "OF PLAIN, UNSCENTED BLEACH PER GALLON \u00b7 WAIT 30 MINUTES",
+    "src": "EPA \u00b7 EMERGENCY DISINFECTION OF DRINKING WATER"
+   },
+   "end": 207.153
+  },
+  {
+   "name": "restroom",
+   "start": 207.153,
+   "p": {
+    "view": "tanks"
+   },
+   "end": 219.027
+  },
+  {
+   "name": "card",
+   "start": 219.027,
+   "p": {
+    "kind": "problem",
+    "n": 1,
+    "title": "WATER",
+    "sub": "ABOUT A MONTH, IF YOU'RE CAREFUL",
+    "icon": "drop",
+    "stamp": "SOLVED"
+   },
+   "end": 221.639
+  },
+  {
+   "name": "radio",
+   "start": 221.639,
+   "p": {
+    "mode": "belt"
+   },
+   "end": 223.876
+  },
+  {
+   "name": "radio",
+   "start": 223.876,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 231.779
+  },
+  {
+   "name": "hclose2",
+   "start": 231.779,
+   "p": {
+    "expr": "worried",
+    "bg": "camp",
+    "prop": "radio"
+   },
+   "end": 233.873
+  },
+  {
+   "name": "restroom",
+   "start": 233.873,
+   "p": {
+    "view": "pipes_dark"
+   },
+   "end": 238.91
+  },
+  {
+   "name": "map2",
+   "start": 238.91,
+   "p": {
+    "mode": "pipes"
+   },
+   "end": 246.097
+  },
+  {
+   "name": "card",
+   "start": 246.097,
+   "p": {
+    "kind": "rule",
+    "n": 5,
+    "lines": [
+     "THE WALLS",
+     "HAVE EARS."
+    ],
+    "icon": "ear"
+   },
+   "end": 249.785
+  },
+  {
+   "name": "restroom",
+   "start": 249.785,
+   "p": {
+    "view": "pipes_dark",
+    "voice": true
+   },
+   "end": 265.216
+  },
+  {
+   "name": "hclose2",
+   "start": 265.216,
+   "p": {
+    "expr": "worried",
+    "bg": "camp",
+    "look": -0.3
+   },
+   "end": 272.941
+  },
+  {
+   "name": "restroom",
+   "start": 272.941,
+   "p": {
+    "view": "pipes_dark"
+   },
+   "end": 274.941
+  },
+  {
+   "name": "roof",
+   "start": 274.941,
+   "p": {
+    "time": "night",
+    "hero": "edge",
+    "hud": {
+     "day": 9,
+     "time": "11:02 PM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 ROOF"
+    }
+   },
+   "end": 280.954
+  },
+  {
+   "name": "mallwin",
+   "start": 280.954,
+   "p": {
+    "mode": "steady"
+   },
+   "end": 290.378
+  },
+  {
+   "name": "mallwin",
+   "start": 290.378,
+   "p": {
+    "mode": "blink"
+   },
+   "end": 295.123
+  },
+  {
+   "name": "card2",
+   "start": 295.123,
+   "p": {
+    "kind": "morse"
+   },
+   "end": 304.615
+  },
+  {
+   "name": "mallwin",
+   "start": 304.615,
+   "p": {
+    "mode": "blink"
+   },
+   "end": 311.563
+  },
+  {
+   "name": "card",
+   "start": 311.563,
+   "p": {
+    "kind": "comment",
+    "text": "Would you answer the SOS?"
+   },
+   "end": 315.59
+  },
+  {
+   "name": "prop",
+   "start": 315.59,
+   "p": {
+    "item": "clocks6",
+    "hud": {
+     "day": 10,
+     "time": "9:20 AM",
+     "noise": 0,
+     "place": "FRESHWAY \u00b7 AISLE 11"
+    }
+   },
+   "end": 321.549
+  },
+  {
+   "name": "hclose2",
+   "start": 321.549,
+   "p": {
+    "expr": "determined",
+    "bg": "aisle_day",
+    "look": 0.2
+   },
+   "end": 326.11
+  },
+  {
+   "name": "storm",
+   "start": 326.11,
+   "p": {
+    "mode": "clouds",
+    "hud": {
+     "day": 10,
+     "time": "2:04 PM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 ROOF"
+    }
+   },
+   "end": 334.897
+  },
+  {
+   "name": "card",
+   "start": 334.897,
+   "p": {
+    "kind": "fact",
+    "big": "50",
+    "unit": "DECIBELS",
+    "icon": "rain",
+    "note": "HEAVY RAIN \u00b7 FOOTSTEPS ARE ABOUT 30",
+    "src": "TYPICAL SOUND LEVELS"
+   },
+   "end": 340.197
+  },
+  {
+   "name": "storm",
+   "start": 340.197,
+   "p": {
+    "mode": "crowd"
+   },
+   "end": 350.875
+  },
+  {
+   "name": "card",
+   "start": 350.875,
+   "p": {
+    "kind": "fact",
+    "big": "3",
+    "unit": "SECONDS = 1 KM",
+    "icon": "bolt",
+    "note": "COUNT FROM THE FLASH TO THE THUNDER",
+    "src": "SPEED OF SOUND \u00b7 343 METERS PER SECOND"
+   },
+   "end": 356.884
+  },
+  {
+   "name": "storm",
+   "start": 356.884,
+   "p": {
+    "mode": "clouds"
+   },
+   "end": 370.922
+  },
+  {
+   "name": "card",
+   "start": 370.922,
+   "p": {
+    "kind": "backpack",
+    "day": 10,
+    "items": [
+     "FLASHLIGHT",
+     "HAMMER",
+     "RADIO \u00b7 VOLUME 0"
+    ]
+   },
+   "end": 378.532
+  },
+  {
+   "name": "stockdoors",
+   "start": 378.532,
+   "p": {
+    "mode": "chain"
+   },
+   "end": 384.133
+  },
+  {
+   "name": "radio",
+   "start": 384.133,
+   "p": {
+    "mode": "doors"
+   },
+   "end": 386.315
+  },
+  {
+   "name": "hclose2",
+   "start": 386.315,
+   "p": {
+    "expr": "determined",
+    "bg": "stockdoors",
+    "look": -0.3
+   },
+   "end": 389.56
+  },
+  {
+   "name": "povstorm",
+   "start": 389.56,
+   "p": {
+    "phase": "walk"
+   },
+   "end": 395.96
+  },
+  {
+   "name": "povstorm",
+   "start": 395.96,
+   "p": {
+    "phase": "crowd"
+   },
+   "end": 401.091
+  },
+  {
+   "name": "povstorm",
+   "start": 401.091,
+   "p": {
+    "phase": "pass"
+   },
+   "end": 407.004
+  },
+  {
+   "name": "povstorm",
+   "start": 407.004,
+   "p": {
+    "phase": "bottle"
+   },
+   "end": 412.657
+  },
+  {
+   "name": "povstorm",
+   "start": 412.657,
+   "p": {
+    "phase": "freeze"
+   },
+   "end": 420.089
+  },
+  {
+   "name": "povstorm",
+   "start": 420.089,
+   "p": {
+    "phase": "walk"
+   },
+   "end": 424.293
+  },
+  {
+   "name": "malldoor",
+   "start": 424.293,
+   "p": {
+    "mode": "chained",
+    "hud": {
+     "day": 10,
+     "time": "2:31 PM",
+     "noise": 2,
+     "place": "BROOKFIELD MALL \u00b7 SIDE DOOR"
+    }
+   },
+   "end": 440.134
+  },
+  {
+   "name": "malldoor",
+   "start": 440.134,
+   "p": {
+    "mode": "break",
+    "at": 1.84
+   },
+   "end": 443.005
+  },
+  {
+   "name": "black",
+   "start": 443.005,
+   "p": {},
+   "end": 444.205
+  },
+  {
+   "name": "atrium",
+   "start": 444.205,
+   "p": {
+    "mode": "wide",
+    "hud": {
+     "day": 10,
+     "time": "2:33 PM",
+     "noise": 2,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 1"
+    }
+   },
+   "end": 450.867
+  },
+  {
+   "name": "atrium",
+   "start": 450.867,
+   "p": {
+    "mode": "skylight"
+   },
+   "end": 458.082
+  },
+  {
+   "name": "atrium",
+   "start": 458.082,
+   "p": {
+    "mode": "fountain"
+   },
+   "end": 461.236
+  },
+  {
+   "name": "zname",
+   "start": 461.236,
+   "p": {
+    "who": "shopper",
+    "label": "SHOPPER \u00b7 LEVEL 1",
+    "bg": "mall"
+   },
+   "end": 462.596
+  },
+  {
+   "name": "zname",
+   "start": 462.596,
+   "p": {
+    "who": "mike",
+    "label": "MALL SECURITY",
+    "bg": "mall"
+   },
+   "end": 464.116
+  },
+  {
+   "name": "zname",
+   "start": 464.116,
+   "p": {
+    "who": "pretzel",
+    "label": "PRETZEL PALACE \u00b7 16",
+    "bg": "mall"
+   },
+   "end": 467.976
+  },
+  {
+   "name": "atrium",
+   "start": 467.976,
+   "p": {
+    "mode": "fountain"
+   },
+   "end": 474.302
+  },
+  {
+   "name": "escalator",
+   "start": 474.302,
+   "p": {
+    "mode": "side"
+   },
+   "end": 485.032
+  },
+  {
+   "name": "escalator",
+   "start": 485.032,
+   "p": {
+    "mode": "feet"
+   },
+   "end": 489.866
+  },
+  {
+   "name": "escalator",
+   "start": 489.866,
+   "p": {
+    "mode": "pov"
+   },
+   "end": 493.866
+  },
+  {
+   "name": "atrium",
+   "start": 493.866,
+   "p": {
+    "mode": "climb",
+    "level": 2
+   },
+   "end": 499.627
+  },
+  {
+   "name": "atrium",
+   "start": 499.627,
+   "p": {
+    "mode": "climb",
+    "level": 3
+   },
+   "end": 504.666
+  },
+  {
+   "name": "brighttech",
+   "start": 504.666,
+   "p": {
+    "mode": "front",
+    "hud": {
+     "day": 10,
+     "time": "2:41 PM",
+     "noise": 1,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 4"
+    }
+   },
+   "end": 510.622
+  },
+  {
+   "name": "brighttech",
+   "start": 510.622,
+   "p": {
+    "mode": "inside"
+   },
+   "end": 512.152
+  },
+  {
+   "name": "brighttech",
+   "start": 512.152,
+   "p": {
+    "mode": "camp"
+   },
+   "end": 526.319
+  },
+  {
+   "name": "nora",
+   "start": 526.319,
+   "p": {
+    "mode": "behind"
+   },
+   "end": 532.369
+  },
+  {
+   "name": "nora",
+   "start": 532.369,
+   "p": {
+    "mode": "reveal"
+   },
+   "end": 537.497
+  },
+  {
+   "name": "nora",
+   "start": 537.497,
+   "p": {
+    "mode": "close",
+    "expr": "serious"
+   },
+   "end": 539.478
+  },
+  {
+   "name": "hclose2",
+   "start": 539.478,
+   "p": {
+    "expr": "surprised",
+    "bg": "brighttech"
+   },
+   "end": 540.994
+  },
+  {
+   "name": "nora",
+   "start": 540.994,
+   "p": {
+    "mode": "radio"
+   },
+   "end": 545.76
+  },
+  {
+   "name": "hclose2",
+   "start": 545.76,
+   "p": {
+    "expr": "worried",
+    "bg": "brighttech",
+    "look": 0.2
+   },
+   "end": 548.318
+  },
+  {
+   "name": "nora",
+   "start": 548.318,
+   "p": {
+    "mode": "radio",
+    "broken": true
+   },
+   "end": 560.536
+  },
+  {
+   "name": "card2",
+   "start": 560.536,
+   "p": {
+    "kind": "radios3"
+   },
+   "end": 565.218
+  },
+  {
+   "name": "nora",
+   "start": 565.218,
+   "p": {
+    "mode": "close",
+    "expr": "smirk"
+   },
+   "end": 569.693
+  },
+  {
+   "name": "hclose2",
+   "start": 569.693,
+   "p": {
+    "expr": "smile",
+    "bg": "brighttech"
+   },
+   "end": 572.645
+  },
+  {
+   "name": "atrium",
+   "start": 572.645,
+   "p": {
+    "mode": "after",
+    "hud": {
+     "day": 10,
+     "time": "6:02 PM",
+     "noise": 1,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 4"
+    }
+   },
+   "end": 580.087
+  },
+  {
+   "name": "brighttech",
+   "start": 580.087,
+   "p": {
+    "mode": "lantern"
+   },
+   "end": 584.99
+  },
+  {
+   "name": "nora",
+   "start": 584.99,
+   "p": {
+    "mode": "close",
+    "expr": "sad"
+   },
+   "end": 588.863
+  },
+  {
+   "name": "brighttech",
+   "start": 588.863,
+   "p": {
+    "mode": "lantern",
+    "two": true
+   },
+   "end": 594.199
+  },
+  {
+   "name": "nora",
+   "start": 594.199,
+   "p": {
+    "mode": "close",
+    "expr": "serious"
+   },
+   "end": 600.837
+  },
+  {
+   "name": "prop2",
+   "start": 600.837,
+   "p": {
+    "item": "photo"
+   },
+   "end": 603.614
+  },
+  {
+   "name": "hclose2",
+   "start": 603.614,
+   "p": {
+    "expr": "worried",
+    "bg": "brighttech",
+    "look": -0.2
+   },
+   "end": 608.292
+  },
+  {
+   "name": "nora",
+   "start": 608.292,
+   "p": {
+    "mode": "window"
+   },
+   "end": 619.66
+  },
+  {
+   "name": "prop2",
+   "start": 619.66,
+   "p": {
+    "item": "clock12",
+    "mode": "still"
+   },
+   "end": 625.801
+  },
+  {
+   "name": "prop2",
+   "start": 625.801,
+   "p": {
+    "item": "wrapper"
+   },
+   "end": 632.814
+  },
+  {
+   "name": "nora",
+   "start": 632.814,
+   "p": {
+    "mode": "radio"
+   },
+   "end": 641.178
+  },
+  {
+   "name": "nora",
+   "start": 641.178,
+   "p": {
+    "mode": "close",
+    "expr": "shock"
+   },
+   "end": 645.25
+  },
+  {
+   "name": "hclose2",
+   "start": 645.25,
+   "p": {
+    "expr": "surprised",
+    "bg": "brighttech",
+    "look": 0.1
+   },
+   "end": 647.628
+  },
+  {
+   "name": "nora",
+   "start": 647.628,
+   "p": {
+    "mode": "close",
+    "expr": "sad"
+   },
+   "end": 649.828
+  },
+  {
+   "name": "nora",
+   "start": 649.828,
+   "p": {
+    "mode": "close",
+    "expr": "sad"
+   },
+   "end": 661.686
+  },
+  {
+   "name": "card2",
+   "start": 661.686,
+   "p": {
+    "kind": "clues"
+   },
+   "end": 669.465
+  },
+  {
+   "name": "stockdoors",
+   "start": 669.465,
+   "p": {
+    "mode": "shadow"
+   },
+   "end": 674.822
+  },
+  {
+   "name": "hclose2",
+   "start": 674.822,
+   "p": {
+    "expr": "determined",
+    "bg": "brighttech"
+   },
+   "end": 680.069
+  },
+  {
+   "name": "freshroof",
+   "start": 680.069,
+   "p": {
+    "mode": "figure"
+   },
+   "end": 687.76
+  },
+  {
+   "name": "nora",
+   "start": 687.76,
+   "p": {
+    "mode": "close",
+    "expr": "serious"
+   },
+   "end": 691.976
+  },
+  {
+   "name": "nora",
+   "start": 691.976,
+   "p": {
+    "mode": "window",
+    "empty": true,
+    "crowd": true,
+    "hud": {
+     "day": 12,
+     "time": "6:40 PM",
+     "noise": 1,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 4"
+    }
+   },
+   "end": 697.66
+  },
+  {
+   "name": "card2",
+   "start": 697.66,
+   "p": {
+    "kind": "receipt"
+   },
+   "end": 711.838
+  },
+  {
+   "name": "nora",
+   "start": 711.838,
+   "p": {
+    "mode": "window",
+    "bag": true
+   },
+   "end": 715.916
+  },
+  {
+   "name": "nora",
+   "start": 715.916,
+   "p": {
+    "mode": "window",
+    "bag": true,
+    "hud": {
+     "day": 12,
+     "time": "2:31 AM",
+     "noise": 1,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 4"
+    }
+   },
+   "end": 724.377
+  },
+  {
+   "name": "nora",
+   "start": 724.377,
+   "p": {
+    "mode": "close",
+    "expr": "sad"
+   },
+   "end": 730.362
+  },
+  {
+   "name": "brighttech",
+   "start": 730.362,
+   "p": {
+    "mode": "lantern",
+    "two": true,
+    "day": true,
+    "hud": {
+     "day": 13,
+     "time": "1:05 AM",
+     "noise": 1,
+     "place": "BROOKFIELD MALL \u00b7 LEVEL 4"
+    }
+   },
+   "end": 736.691
+  },
+  {
+   "name": "lot",
+   "start": 736.691,
+   "p": {
+    "mode": "count",
+    "time": "night",
+    "hud": {
+     "day": 13,
+     "time": "1:10 AM",
+     "noise": 1,
+     "place": "FRESHWAY \u00b7 PARKING LOT"
+    }
+   },
+   "end": 742.086
+  },
+  {
+   "name": "drone",
+   "start": 742.086,
+   "p": {
+    "mode": "box"
+   },
+   "end": 745.892
+  },
+  {
+   "name": "drone",
+   "start": 745.892,
+   "p": {
+    "mode": "clip"
+   },
+   "end": 749.276
+  },
+  {
+   "name": "card",
+   "start": 749.276,
+   "p": {
+    "kind": "fact",
+    "big": "-6",
+    "unit": "DECIBELS",
+    "icon": "speaker",
+    "note": "EVERY TIME THE DISTANCE DOUBLES",
+    "src": "INVERSE SQUARE LAW \u00b7 SOUND IN OPEN AIR"
+   },
+   "end": 760.544
+  },
+  {
+   "name": "card",
+   "start": 760.544,
+   "p": {
+    "kind": "rule",
+    "n": 2,
+    "lines": [
+     "MUSIC IS A",
+     "DINNER BELL."
+    ],
+    "icon": "note"
+   },
+   "end": 767.053
+  },
+  {
+   "name": "drone",
+   "start": 767.053,
+   "p": {
+    "mode": "box"
+   },
+   "end": 772.361
+  },
+  {
+   "name": "nora",
+   "start": 772.361,
+   "p": {
+    "mode": "close",
+    "expr": "smirk"
+   },
+   "end": 777.048
+  },
+  {
+   "name": "drone",
+   "start": 777.048,
+   "p": {
+    "mode": "fly"
+   },
+   "end": 786.048
+  },
+  {
+   "name": "drone",
+   "start": 786.048,
+   "p": {
+    "mode": "lot",
+    "battery": [
+     64,
+     40
+    ]
+   },
+   "end": 793.314
+  },
+  {
+   "name": "escalator",
+   "start": 793.314,
+   "p": {
+    "mode": "side",
+    "two": true
+   },
+   "end": 797.602
+  },
+  {
+   "name": "malldoor",
+   "start": 797.602,
+   "p": {
+    "mode": "broken",
+    "hud": {
+     "day": 13,
+     "time": "1:31 AM",
+     "noise": 2,
+     "place": "BROOKFIELD MALL \u00b7 SIDE DOOR"
+    }
+   },
+   "end": 802.57
+  },
+  {
+   "name": "drone",
+   "start": 802.57,
+   "p": {
+    "mode": "lot",
+    "battery": [
+     22,
+     12
+    ],
+    "far": true
+   },
+   "end": 805.57
+  },
+  {
+   "name": "drone",
+   "start": 805.57,
+   "p": {
+    "mode": "lot",
+    "battery": [
+     10,
+     4
+    ],
+    "far": true
+   },
+   "end": 811.639
+  },
+  {
+   "name": "lot",
+   "start": 811.639,
+   "p": {
+    "mode": "turn",
+    "time": "night"
+   },
+   "end": 816.676
+  },
+  {
+   "name": "staffdoor",
+   "start": 816.676,
+   "p": {
+    "mode": "arrive",
+    "nora": true,
+    "hud": {
+     "day": 13,
+     "time": "1:42 AM",
+     "noise": 3,
+     "place": "FRESHWAY \u00b7 STAFF DOOR"
+    }
+   },
+   "end": 823.773
+  },
+  {
+   "name": "staffdoor",
+   "start": 823.773,
+   "p": {
+    "mode": "inside",
+    "nora": true
+   },
+   "end": 829.134
+  },
+  {
+   "name": "card",
+   "start": 829.134,
+   "p": {
+    "kind": "rules",
+    "show": 0,
+    "day": 14,
+    "n": 5
+   },
+   "end": 832.151
+  },
+  {
+   "name": "card",
+   "start": 832.151,
+   "p": {
+    "kind": "rules",
+    "show": 1,
+    "day": 14,
+    "n": 5
+   },
+   "end": 835.816
+  },
+  {
+   "name": "card",
+   "start": 835.816,
+   "p": {
+    "kind": "rules",
+    "show": 2,
+    "day": 14,
+    "n": 5
+   },
+   "end": 839.343
+  },
+  {
+   "name": "card",
+   "start": 839.343,
+   "p": {
+    "kind": "rules",
+    "show": 3,
+    "day": 14,
+    "n": 5
+   },
+   "end": 842.099
+  },
+  {
+   "name": "card",
+   "start": 842.099,
+   "p": {
+    "kind": "rules",
+    "show": 4,
+    "day": 14,
+    "n": 5
+   },
+   "end": 845.965
+  },
+  {
+   "name": "card",
+   "start": 845.965,
+   "p": {
+    "kind": "rules",
+    "show": 5,
+    "day": 14,
+    "n": 5
+   },
+   "end": 849.719
+  },
+  {
+   "name": "radio",
+   "start": 849.719,
+   "p": {
+    "mode": "belt"
+   },
+   "end": 851.451
+  },
+  {
+   "name": "radio",
+   "start": 851.451,
+   "p": {
+    "mode": "talk",
+    "who": "dale"
+   },
+   "end": 855.307
+  },
+  {
+   "name": "nora",
+   "start": 855.307,
+   "p": {
+    "mode": "close",
+    "expr": "serious",
+    "bg": "store"
+   },
+   "end": 858.009
+  },
+  {
+   "name": "radio",
+   "start": 858.009,
+   "p": {
+    "mode": "belt"
+   },
+   "end": 863.676
+  },
+  {
+   "name": "radio",
+   "start": 863.676,
+   "p": {
+    "mode": "doors",
+    "night": true
+   },
+   "end": 872.605
+  },
+  {
+   "name": "nora",
+   "start": 872.605,
+   "p": {
+    "mode": "close",
+    "expr": "sad",
+    "bg": "store"
+   },
+   "end": 879.054
+  },
+  {
+   "name": "prop2",
+   "start": 879.054,
+   "p": {
+    "item": "clock12",
+    "mode": "still"
+   },
+   "end": 880.293
+  },
+  {
+   "name": "prop2",
+   "start": 880.293,
+   "p": {
+    "item": "clock12",
+    "mode": "ring"
+   },
+   "end": 883.658
+  },
+  {
+   "name": "aisle2",
+   "start": 883.658,
+   "p": {
+    "mode": "nora_run"
+   },
+   "end": 885.251
+  },
+  {
+   "name": "prop2",
+   "start": 885.251,
+   "p": {
+    "item": "drawing",
+    "mode": "reveal"
+   },
+   "end": 889.543
+  },
+  {
+   "name": "prop2",
+   "start": 889.543,
+   "p": {
+    "item": "drawing",
+    "mode": "close"
+   },
+   "end": 895.715
+  },
+  {
+   "name": "prop2",
+   "start": 895.715,
+   "p": {
+    "item": "drawing",
+    "mode": "words"
+   },
+   "end": 902.061
+  },
+  {
+   "name": "povaisle",
+   "start": 902.061,
+   "p": {
+    "phase": "vent",
+    "eyes": 5.68
+   },
+   "end": 910.47
+  },
+  {
+   "name": "card",
+   "start": 910.47,
+   "p": {
+    "kind": "end",
+    "day": 15,
+    "ep": 3,
+    "title": "LIGHTS OUT",
+    "sub": "WHERE IS LEO?"
+   },
+   "end": 921.97
+  }
+ ],
+ "events": [],
+ "voice": {
+  "lines": [
+   {
+    "id": "C1",
+    "who": "N",
+    "start": 5.0,
+    "dur": 2.71,
+    "words": [
+     {
+      "w": "Two",
+      "t": 0.08
+     },
+     {
+      "w": "thirty-one",
+      "t": 0.48
+     },
+     {
+      "w": "in",
+      "t": 0.88
+     },
+     {
+      "w": "the",
+      "t": 1.04
+     },
+     {
+      "w": "morning",
+      "t": 1.12,
+      "e": 1.46
+     },
+     {
+      "w": "Day",
+      "t": 1.92
+     },
+     {
+      "w": "eight",
+      "t": 2.16,
+      "e": 2.65
+     }
+    ],
+    "text": "Two thirty-one in the morning. Day eight.",
+    "echo": false
+   },
+   {
+    "id": "C2",
+    "who": "N",
+    "start": 8.385,
+    "dur": 2.807,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "alarm",
+      "t": 0.16
+     },
+     {
+      "w": "in",
+      "t": 0.56
+     },
+     {
+      "w": "aisle",
+      "t": 0.72
+     },
+     {
+      "w": "twelve",
+      "t": 1.12
+     },
+     {
+      "w": "is",
+      "t": 1.6
+     },
+     {
+      "w": "ringing",
+      "t": 1.84
+     },
+     {
+      "w": "again",
+      "t": 2.4,
+      "e": 2.747
+     }
+    ],
+    "text": "The alarm in aisle twelve is ringing again.",
+    "echo": false
+   },
+   {
+    "id": "C3",
+    "who": "N",
+    "start": 11.867,
+    "dur": 3.493,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "every",
+      "t": 0.32
+     },
+     {
+      "w": "dead",
+      "t": 0.64
+     },
+     {
+      "w": "thing",
+      "t": 1.04
+     },
+     {
+      "w": "outside",
+      "t": 1.36
+     },
+     {
+      "w": "Freshway",
+      "t": 1.92
+     },
+     {
+      "w": "can",
+      "t": 2.72
+     },
+     {
+      "w": "hear",
+      "t": 2.88
+     },
+     {
+      "w": "it",
+      "t": 3.12,
+      "e": 3.433
+     }
+    ],
+    "text": "And every dead thing outside Freshway can hear it.",
+    "echo": false
+   },
+   {
+    "id": "C4",
+    "who": "N",
+    "start": 18.635,
+    "dur": 4.722,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "turn",
+      "t": 0.24
+     },
+     {
+      "w": "it",
+      "t": 0.64
+     },
+     {
+      "w": "off",
+      "t": 0.88,
+      "e": 1.02
+     },
+     {
+      "w": "And",
+      "t": 1.52
+     },
+     {
+      "w": "under",
+      "t": 1.76
+     },
+     {
+      "w": "the",
+      "t": 2.0
+     },
+     {
+      "w": "clock",
+      "t": 2.24
+     },
+     {
+      "w": "there's",
+      "t": 3.12
+     },
+     {
+      "w": "a",
+      "t": 3.44
+     },
+     {
+      "w": "candy",
+      "t": 3.6
+     },
+     {
+      "w": "wrapper",
+      "t": 4.08,
+      "e": 4.662
+     }
+    ],
+    "text": "You turn it off. And under the clock, there's a candy wrapper.",
+    "echo": false
+   },
+   {
+    "id": "C5",
+    "who": "N",
+    "start": 24.032,
+    "dur": 1.793,
+    "words": [
+     {
+      "w": "Sour",
+      "t": 0.0
+     },
+     {
+      "w": "worms",
+      "t": 0.4,
+      "e": 0.71
+     },
+     {
+      "w": "Still",
+      "t": 0.96
+     },
+     {
+      "w": "sticky",
+      "t": 1.28,
+      "e": 1.733
+     }
+    ],
+    "text": "Sour worms. Still sticky.",
+    "echo": false
+   },
+   {
+    "id": "C6",
+    "who": "DALE",
+    "start": 26.725,
+    "dur": 2.111,
+    "words": [
+     {
+      "w": "Kid",
+      "t": 0.28,
+      "e": 0.58
+     },
+     {
+      "w": "That",
+      "t": 0.92
+     },
+     {
+      "w": "wasn't",
+      "t": 1.16
+     },
+     {
+      "w": "me",
+      "t": 1.48,
+      "e": 1.891
+     }
+    ],
+    "text": "Kid. That wasn't me.",
+    "echo": false
+   },
+   {
+    "id": "C7",
+    "who": "N",
+    "start": 29.736,
+    "dur": 4.678,
+    "words": [
+     {
+      "w": "Two",
+      "t": 0.0
+     },
+     {
+      "w": "people",
+      "t": 0.32
+     },
+     {
+      "w": "are",
+      "t": 0.56
+     },
+     {
+      "w": "locked",
+      "t": 0.8
+     },
+     {
+      "w": "inside",
+      "t": 1.28
+     },
+     {
+      "w": "this",
+      "t": 1.76
+     },
+     {
+      "w": "store",
+      "t": 2.16,
+      "e": 2.45
+     },
+     {
+      "w": "One",
+      "t": 3.04
+     },
+     {
+      "w": "of",
+      "t": 3.28
+     },
+     {
+      "w": "them",
+      "t": 3.44
+     },
+     {
+      "w": "is",
+      "t": 3.76
+     },
+     {
+      "w": "lying",
+      "t": 4.0,
+      "e": 4.618
+     }
+    ],
+    "text": "Two people are locked inside this store. One of them is lying.",
+    "echo": false
+   },
+   {
+    "id": "C8",
+    "who": "N",
+    "start": 35.089,
+    "dur": 2.52,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "in",
+      "t": 0.24
+     },
+     {
+      "w": "three",
+      "t": 0.4
+     },
+     {
+      "w": "days",
+      "t": 0.72
+     },
+     {
+      "w": "you",
+      "t": 1.28
+     },
+     {
+      "w": "run",
+      "t": 1.44
+     },
+     {
+      "w": "out",
+      "t": 1.68
+     },
+     {
+      "w": "of",
+      "t": 1.84
+     },
+     {
+      "w": "water",
+      "t": 1.92,
+      "e": 2.46
+     }
+    ],
+    "text": "And in three days, you run out of water.",
+    "echo": false
+   },
+   {
+    "id": "C9",
+    "who": "N",
+    "start": 38.359,
+    "dur": 4.186,
+    "words": [
+     {
+      "w": "This",
+      "t": 0.0
+     },
+     {
+      "w": "week",
+      "t": 0.24
+     },
+     {
+      "w": "you'll",
+      "t": 0.8
+     },
+     {
+      "w": "cross",
+      "t": 1.12
+     },
+     {
+      "w": "to",
+      "t": 1.52
+     },
+     {
+      "w": "the",
+      "t": 1.68
+     },
+     {
+      "w": "mall",
+      "t": 1.84,
+      "e": 2.2
+     },
+     {
+      "w": "You'll",
+      "t": 2.64
+     },
+     {
+      "w": "meet",
+      "t": 2.88
+     },
+     {
+      "w": "someone",
+      "t": 3.12
+     },
+     {
+      "w": "alive",
+      "t": 3.52,
+      "e": 4.126
+     }
+    ],
+    "text": "This week, you'll cross to the mall. You'll meet someone alive.",
+    "echo": false
+   },
+   {
+    "id": "C10",
+    "who": "N",
+    "start": 43.22,
+    "dur": 2.615,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "you'll",
+      "t": 0.24
+     },
+     {
+      "w": "learn",
+      "t": 0.48
+     },
+     {
+      "w": "what",
+      "t": 0.72
+     },
+     {
+      "w": "Dale",
+      "t": 0.88
+     },
+     {
+      "w": "has",
+      "t": 1.52
+     },
+     {
+      "w": "been",
+      "t": 1.76
+     },
+     {
+      "w": "hiding",
+      "t": 2.0,
+      "e": 2.555
+     }
+    ],
+    "text": "And you'll learn what Dale has been hiding.",
+    "echo": false
+   },
+   {
+    "id": "A1",
+    "who": "N",
+    "start": 52.635,
+    "dur": 2.701,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.0
+     },
+     {
+      "w": "eight",
+      "t": 0.32,
+      "e": 0.6
+     },
+     {
+      "w": "Here's",
+      "t": 0.96
+     },
+     {
+      "w": "the",
+      "t": 1.28
+     },
+     {
+      "w": "new",
+      "t": 1.36
+     },
+     {
+      "w": "map",
+      "t": 1.52
+     },
+     {
+      "w": "of",
+      "t": 1.76
+     },
+     {
+      "w": "Freshway",
+      "t": 1.92,
+      "e": 2.641
+     }
+    ],
+    "text": "Day eight. Here's the new map of Freshway.",
+    "echo": false
+   },
+   {
+    "id": "A2",
+    "who": "N",
+    "start": 56.011,
+    "dur": 4.788,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "front",
+      "t": 0.16
+     },
+     {
+      "w": "is",
+      "t": 0.4
+     },
+     {
+      "w": "yours",
+      "t": 0.64,
+      "e": 1.02
+     },
+     {
+      "w": "Fourteen",
+      "t": 1.36
+     },
+     {
+      "w": "aisles",
+      "t": 1.84,
+      "e": 2.36
+     },
+     {
+      "w": "Eight",
+      "t": 2.56
+     },
+     {
+      "w": "thousand",
+      "t": 2.88
+     },
+     {
+      "w": "cans",
+      "t": 3.2,
+      "e": 3.68
+     },
+     {
+      "w": "Gary's",
+      "t": 3.84
+     },
+     {
+      "w": "office",
+      "t": 4.32,
+      "e": 4.728
+     }
+    ],
+    "text": "The front is yours. Fourteen aisles. Eight thousand cans. Gary's office.",
+    "echo": false
+   },
+   {
+    "id": "A3",
+    "who": "N",
+    "start": 61.474,
+    "dur": 7.53,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "back",
+      "t": 0.24
+     },
+     {
+      "w": "is",
+      "t": 0.56
+     },
+     {
+      "w": "Dale's",
+      "t": 0.8,
+      "e": 1.65
+     },
+     {
+      "w": "The",
+      "t": 2.0
+     },
+     {
+      "w": "stockroom",
+      "t": 2.24,
+      "e": 3.08
+     },
+     {
+      "w": "The",
+      "t": 3.36
+     },
+     {
+      "w": "freezer",
+      "t": 3.52,
+      "e": 4.27
+     },
+     {
+      "w": "And",
+      "t": 4.72
+     },
+     {
+      "w": "the",
+      "t": 4.88
+     },
+     {
+      "w": "wall",
+      "t": 5.12
+     },
+     {
+      "w": "you",
+      "t": 5.52
+     },
+     {
+      "w": "built",
+      "t": 5.68
+     },
+     {
+      "w": "out",
+      "t": 6.08
+     },
+     {
+      "w": "of",
+      "t": 6.24
+     },
+     {
+      "w": "bottled",
+      "t": 6.48
+     },
+     {
+      "w": "water",
+      "t": 7.04,
+      "e": 7.47
+     }
+    ],
+    "text": "The back is Dale's. The stockroom. The freezer. And the wall you built out of bottled water.",
+    "echo": false
+   },
+   {
+    "id": "A4",
+    "who": "N",
+    "start": 69.679,
+    "dur": 6.256,
+    "words": [
+     {
+      "w": "Every",
+      "t": 0.0
+     },
+     {
+      "w": "gallon",
+      "t": 0.32
+     },
+     {
+      "w": "you",
+      "t": 1.12
+     },
+     {
+      "w": "have",
+      "t": 1.36
+     },
+     {
+      "w": "is",
+      "t": 1.68
+     },
+     {
+      "w": "in",
+      "t": 2.0
+     },
+     {
+      "w": "that",
+      "t": 2.32
+     },
+     {
+      "w": "wall",
+      "t": 2.64,
+      "e": 3.07
+     },
+     {
+      "w": "And",
+      "t": 3.6
+     },
+     {
+      "w": "Dale",
+      "t": 3.84
+     },
+     {
+      "w": "is",
+      "t": 4.56
+     },
+     {
+      "w": "on",
+      "t": 4.8
+     },
+     {
+      "w": "the",
+      "t": 5.04
+     },
+     {
+      "w": "other",
+      "t": 5.2
+     },
+     {
+      "w": "side",
+      "t": 5.44
+     },
+     {
+      "w": "of",
+      "t": 5.76
+     },
+     {
+      "w": "it",
+      "t": 5.92,
+      "e": 6.196
+     }
+    ],
+    "text": "Every gallon you have is in that wall. And Dale is on the other side of it.",
+    "echo": false
+   },
+   {
+    "id": "A5",
+    "who": "N",
+    "start": 76.61,
+    "dur": 3.333,
+    "words": [
+     {
+      "w": "On",
+      "t": 0.0
+     },
+     {
+      "w": "day",
+      "t": 0.24
+     },
+     {
+      "w": "seven",
+      "t": 0.48
+     },
+     {
+      "w": "he",
+      "t": 1.2
+     },
+     {
+      "w": "jammed",
+      "t": 1.36
+     },
+     {
+      "w": "the",
+      "t": 1.76
+     },
+     {
+      "w": "stockroom",
+      "t": 1.92
+     },
+     {
+      "w": "doors",
+      "t": 2.56
+     },
+     {
+      "w": "shut",
+      "t": 2.88,
+      "e": 3.273
+     }
+    ],
+    "text": "On day seven, he jammed the stockroom doors shut.",
+    "echo": false
+   },
+   {
+    "id": "A6",
+    "who": "DALE",
+    "start": 81.618,
+    "dur": 7.141,
+    "words": [
+     {
+      "w": "Here's",
+      "t": 0.12
+     },
+     {
+      "w": "how",
+      "t": 0.52
+     },
+     {
+      "w": "this",
+      "t": 0.76
+     },
+     {
+      "w": "works",
+      "t": 1.0
+     },
+     {
+      "w": "kid",
+      "t": 1.64,
+      "e": 2.09
+     },
+     {
+      "w": "You",
+      "t": 2.44
+     },
+     {
+      "w": "stay",
+      "t": 2.6
+     },
+     {
+      "w": "up",
+      "t": 3.0
+     },
+     {
+      "w": "front",
+      "t": 3.32,
+      "e": 4.02
+     },
+     {
+      "w": "I",
+      "t": 4.28
+     },
+     {
+      "w": "stay",
+      "t": 4.52
+     },
+     {
+      "w": "in",
+      "t": 4.84
+     },
+     {
+      "w": "back",
+      "t": 5.08,
+      "e": 5.41
+     },
+     {
+      "w": "Nobody",
+      "t": 5.72
+     },
+     {
+      "w": "gets",
+      "t": 6.2
+     },
+     {
+      "w": "hurt",
+      "t": 6.44,
+      "e": 6.921
+     }
+    ],
+    "text": "Here's how this works, kid. You stay up front. I stay in back. Nobody gets hurt.",
+    "echo": false
+   },
+   {
+    "id": "A7",
+    "who": "HERO",
+    "start": 89.434,
+    "dur": 0.802,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "water",
+      "t": 0.32,
+      "e": 0.742
+     }
+    ],
+    "text": "And the water?",
+    "echo": false
+   },
+   {
+    "id": "A8",
+    "who": "DALE",
+    "start": 90.986,
+    "dur": 3.691,
+    "words": [
+     {
+      "w": "One",
+      "t": 0.2
+     },
+     {
+      "w": "gallon",
+      "t": 0.52,
+      "e": 0.91
+     },
+     {
+      "w": "For",
+      "t": 1.24
+     },
+     {
+      "w": "twenty",
+      "t": 1.4
+     },
+     {
+      "w": "cans",
+      "t": 1.8,
+      "e": 2.37
+     },
+     {
+      "w": "Every",
+      "t": 2.68
+     },
+     {
+      "w": "morning",
+      "t": 2.92,
+      "e": 3.471
+     }
+    ],
+    "text": "One gallon. For twenty cans. Every morning.",
+    "echo": false
+   },
+   {
+    "id": "A8b",
+    "who": "N",
+    "start": 95.352,
+    "dur": 7.927,
+    "words": [
+     {
+      "w": "Twenty",
+      "t": 0.0
+     },
+     {
+      "w": "cans",
+      "t": 0.4
+     },
+     {
+      "w": "for",
+      "t": 0.88
+     },
+     {
+      "w": "one",
+      "t": 1.04
+     },
+     {
+      "w": "gallon",
+      "t": 1.28,
+      "e": 1.73
+     },
+     {
+      "w": "In",
+      "t": 2.16
+     },
+     {
+      "w": "a",
+      "t": 2.4
+     },
+     {
+      "w": "normal",
+      "t": 2.48
+     },
+     {
+      "w": "store",
+      "t": 2.96
+     },
+     {
+      "w": "that's",
+      "t": 3.68
+     },
+     {
+      "w": "a",
+      "t": 4.0
+     },
+     {
+      "w": "terrible",
+      "t": 4.16
+     },
+     {
+      "w": "deal",
+      "t": 4.88,
+      "e": 5.2
+     },
+     {
+      "w": "This",
+      "t": 5.68
+     },
+     {
+      "w": "is",
+      "t": 5.92
+     },
+     {
+      "w": "not",
+      "t": 6.16
+     },
+     {
+      "w": "a",
+      "t": 6.4
+     },
+     {
+      "w": "normal",
+      "t": 6.56
+     },
+     {
+      "w": "store",
+      "t": 6.96
+     },
+     {
+      "w": "anymore",
+      "t": 7.36,
+      "e": 7.867
+     }
+    ],
+    "text": "Twenty cans for one gallon. In a normal store, that's a terrible deal. This is not a normal store anymore.",
+    "echo": false
+   },
+   {
+    "id": "A8c",
+    "who": "DALE",
+    "start": 103.954,
+    "dur": 2.74,
+    "words": [
+     {
+      "w": "So",
+      "t": 0.12
+     },
+     {
+      "w": "how",
+      "t": 0.44
+     },
+     {
+      "w": "many",
+      "t": 0.6
+     },
+     {
+      "w": "cans",
+      "t": 0.76
+     },
+     {
+      "w": "you",
+      "t": 1.16
+     },
+     {
+      "w": "got",
+      "t": 1.4
+     },
+     {
+      "w": "left",
+      "t": 1.56
+     },
+     {
+      "w": "anyway",
+      "t": 2.04,
+      "e": 2.52
+     }
+    ],
+    "text": "So how many cans you got left, anyway?",
+    "echo": false
+   },
+   {
+    "id": "A9",
+    "who": "N",
+    "start": 107.369,
+    "dur": 2.353,
+    "words": [
+     {
+      "w": "He",
+      "t": 0.0
+     },
+     {
+      "w": "wants",
+      "t": 0.24
+     },
+     {
+      "w": "to",
+      "t": 0.56
+     },
+     {
+      "w": "know",
+      "t": 0.72
+     },
+     {
+      "w": "how",
+      "t": 0.96
+     },
+     {
+      "w": "many",
+      "t": 1.12
+     },
+     {
+      "w": "cans",
+      "t": 1.36
+     },
+     {
+      "w": "you",
+      "t": 1.84
+     },
+     {
+      "w": "have",
+      "t": 2.0,
+      "e": 2.293
+     }
+    ],
+    "text": "He wants to know how many cans you have.",
+    "echo": false
+   },
+   {
+    "id": "A10",
+    "who": "N",
+    "start": 110.397,
+    "dur": 3.429,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.48,
+      "e": 0.88
+     },
+     {
+      "w": "Never",
+      "t": 1.52
+     },
+     {
+      "w": "tell",
+      "t": 1.92
+     },
+     {
+      "w": "anyone",
+      "t": 2.16
+     },
+     {
+      "w": "what",
+      "t": 2.56
+     },
+     {
+      "w": "you",
+      "t": 2.8
+     },
+     {
+      "w": "have",
+      "t": 2.96,
+      "e": 3.369
+     }
+    ],
+    "text": "Rule four. Never tell anyone what you have.",
+    "echo": false
+   },
+   {
+    "id": "A11",
+    "who": "HERO",
+    "start": 114.501,
+    "dur": 1.067,
+    "words": [
+     {
+      "w": "Maybe",
+      "t": 0.08
+     },
+     {
+      "w": "a",
+      "t": 0.4
+     },
+     {
+      "w": "hundred",
+      "t": 0.48,
+      "e": 1.007
+     }
+    ],
+    "text": "Maybe a hundred.",
+    "echo": false
+   },
+   {
+    "id": "A11b",
+    "who": "DALE",
+    "start": 116.468,
+    "dur": 2.716,
+    "words": [
+     {
+      "w": "Last",
+      "t": 0.12
+     },
+     {
+      "w": "week",
+      "t": 0.52
+     },
+     {
+      "w": "you",
+      "t": 0.92
+     },
+     {
+      "w": "said",
+      "t": 1.08
+     },
+     {
+      "w": "nine",
+      "t": 1.4
+     },
+     {
+      "w": "thousand",
+      "t": 1.928,
+      "e": 2.496
+     }
+    ],
+    "text": "Last week you said nine thousand.",
+    "echo": false
+   },
+   {
+    "id": "A11c",
+    "who": "HERO",
+    "start": 119.934,
+    "dur": 1.255,
+    "words": [
+     {
+      "w": "It's",
+      "t": 0.0
+     },
+     {
+      "w": "been",
+      "t": 0.32
+     },
+     {
+      "w": "a",
+      "t": 0.48
+     },
+     {
+      "w": "long",
+      "t": 0.56
+     },
+     {
+      "w": "week",
+      "t": 0.72,
+      "e": 1.195
+     }
+    ],
+    "text": "It's been a long week.",
+    "echo": false
+   },
+   {
+    "id": "A12",
+    "who": "N",
+    "start": 122.239,
+    "dur": 2.195,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "have",
+      "t": 0.24
+     },
+     {
+      "w": "eight",
+      "t": 0.48
+     },
+     {
+      "w": "thousand",
+      "t": 0.884
+     },
+     {
+      "w": "nine",
+      "t": 1.288
+     },
+     {
+      "w": "hundred",
+      "t": 1.691,
+      "e": 2.135
+     }
+    ],
+    "text": "You have eight thousand nine hundred.",
+    "echo": false
+   },
+   {
+    "id": "A12b",
+    "who": "N",
+    "start": 125.484,
+    "dur": 7.929,
+    "words": [
+     {
+      "w": "At",
+      "t": 0.0
+     },
+     {
+      "w": "twenty",
+      "t": 0.24
+     },
+     {
+      "w": "cans",
+      "t": 0.72
+     },
+     {
+      "w": "a",
+      "t": 1.2
+     },
+     {
+      "w": "day",
+      "t": 1.36
+     },
+     {
+      "w": "that's",
+      "t": 1.92
+     },
+     {
+      "w": "enough",
+      "t": 2.24
+     },
+     {
+      "w": "to",
+      "t": 2.56
+     },
+     {
+      "w": "buy",
+      "t": 2.72
+     },
+     {
+      "w": "water",
+      "t": 3.12
+     },
+     {
+      "w": "for",
+      "t": 3.6
+     },
+     {
+      "w": "over",
+      "t": 3.92
+     },
+     {
+      "w": "a",
+      "t": 4.16
+     },
+     {
+      "w": "year",
+      "t": 4.64,
+      "e": 4.75
+     },
+     {
+      "w": "As",
+      "t": 5.28
+     },
+     {
+      "w": "long",
+      "t": 5.52
+     },
+     {
+      "w": "as",
+      "t": 5.76
+     },
+     {
+      "w": "Dale",
+      "t": 6.0
+     },
+     {
+      "w": "keeps",
+      "t": 6.8
+     },
+     {
+      "w": "his",
+      "t": 7.28
+     },
+     {
+      "w": "word",
+      "t": 7.44,
+      "e": 7.869
+     }
+    ],
+    "text": "At twenty cans a day, that's enough to buy water for over a year. As long as Dale keeps his word.",
+    "echo": false
+   },
+   {
+    "id": "A12c",
+    "who": "N",
+    "start": 134.088,
+    "dur": 4.207,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.08
+     },
+     {
+      "w": "nine",
+      "t": 0.4,
+      "e": 0.96
+     },
+     {
+      "w": "Seven",
+      "t": 1.36
+     },
+     {
+      "w": "in",
+      "t": 1.76
+     },
+     {
+      "w": "the",
+      "t": 1.92
+     },
+     {
+      "w": "morning",
+      "t": 2.0,
+      "e": 2.43
+     },
+     {
+      "w": "The",
+      "t": 2.72
+     },
+     {
+      "w": "gallon",
+      "t": 2.88
+     },
+     {
+      "w": "doesn't",
+      "t": 3.52
+     },
+     {
+      "w": "come",
+      "t": 3.76,
+      "e": 4.147
+     }
+    ],
+    "text": "Day nine. Seven in the morning. The gallon doesn't come.",
+    "echo": false
+   },
+   {
+    "id": "A12d",
+    "who": "DALE",
+    "start": 139.195,
+    "dur": 4.825,
+    "words": [
+     {
+      "w": "Tell",
+      "t": 0.12
+     },
+     {
+      "w": "me",
+      "t": 0.52
+     },
+     {
+      "w": "the",
+      "t": 0.76
+     },
+     {
+      "w": "real",
+      "t": 1.0
+     },
+     {
+      "w": "number",
+      "t": 1.24
+     },
+     {
+      "w": "kid",
+      "t": 1.96,
+      "e": 2.38
+     },
+     {
+      "w": "Then",
+      "t": 2.76
+     },
+     {
+      "w": "the",
+      "t": 3.08
+     },
+     {
+      "w": "water",
+      "t": 3.24
+     },
+     {
+      "w": "comes",
+      "t": 3.72
+     },
+     {
+      "w": "back",
+      "t": 4.12,
+      "e": 4.605
+     }
+    ],
+    "text": "Tell me the real number, kid. Then the water comes back.",
+    "echo": false
+   },
+   {
+    "id": "A13",
+    "who": "N",
+    "start": 144.92,
+    "dur": 1.391,
+    "words": [
+     {
+      "w": "Problem",
+      "t": 0.0
+     },
+     {
+      "w": "one",
+      "t": 0.4,
+      "e": 0.61
+     },
+     {
+      "w": "Water",
+      "t": 0.88,
+      "e": 1.331
+     }
+    ],
+    "text": "Problem one. Water.",
+    "echo": false
+   },
+   {
+    "id": "A14",
+    "who": "N",
+    "start": 147.061,
+    "dur": 5.896,
+    "words": [
+     {
+      "w": "A",
+      "t": 0.0
+     },
+     {
+      "w": "person",
+      "t": 0.24
+     },
+     {
+      "w": "needs",
+      "t": 0.64
+     },
+     {
+      "w": "about",
+      "t": 0.96
+     },
+     {
+      "w": "three",
+      "t": 1.2
+     },
+     {
+      "w": "liters",
+      "t": 1.52
+     },
+     {
+      "w": "a",
+      "t": 2.08
+     },
+     {
+      "w": "day",
+      "t": 2.4,
+      "e": 2.51
+     },
+     {
+      "w": "With",
+      "t": 3.04
+     },
+     {
+      "w": "none",
+      "t": 3.36
+     },
+     {
+      "w": "you",
+      "t": 4.08
+     },
+     {
+      "w": "get",
+      "t": 4.32
+     },
+     {
+      "w": "about",
+      "t": 4.56
+     },
+     {
+      "w": "three",
+      "t": 4.88
+     },
+     {
+      "w": "days",
+      "t": 5.2,
+      "e": 5.836
+     }
+    ],
+    "text": "A person needs about three liters a day. With none, you get about three days.",
+    "echo": false
+   },
+   {
+    "id": "A15",
+    "who": "N",
+    "start": 153.632,
+    "dur": 3.169,
+    "words": [
+     {
+      "w": "So",
+      "t": 0.0
+     },
+     {
+      "w": "you",
+      "t": 0.24
+     },
+     {
+      "w": "need",
+      "t": 0.32
+     },
+     {
+      "w": "water",
+      "t": 0.48
+     },
+     {
+      "w": "Dale",
+      "t": 0.88
+     },
+     {
+      "w": "doesn't",
+      "t": 1.36
+     },
+     {
+      "w": "control",
+      "t": 1.68,
+      "e": 2.2
+     },
+     {
+      "w": "Today",
+      "t": 2.64,
+      "e": 3.109
+     }
+    ],
+    "text": "So you need water Dale doesn't control. Today.",
+    "echo": false
+   },
+   {
+    "id": "B1",
+    "who": "N",
+    "start": 157.701,
+    "dur": 2.56,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "try",
+      "t": 0.24
+     },
+     {
+      "w": "the",
+      "t": 0.48
+     },
+     {
+      "w": "faucet",
+      "t": 0.64
+     },
+     {
+      "w": "in",
+      "t": 1.2
+     },
+     {
+      "w": "the",
+      "t": 1.28
+     },
+     {
+      "w": "staff",
+      "t": 1.44
+     },
+     {
+      "w": "restroom",
+      "t": 1.84,
+      "e": 2.5
+     }
+    ],
+    "text": "You try the faucet in the staff restroom.",
+    "echo": false
+   },
+   {
+    "id": "B2",
+    "who": "N",
+    "start": 160.936,
+    "dur": 2.551,
+    "words": [
+     {
+      "w": "It",
+      "t": 0.0
+     },
+     {
+      "w": "coughs",
+      "t": 0.16,
+      "e": 0.77
+     },
+     {
+      "w": "Spits",
+      "t": 1.04,
+      "e": 1.52
+     },
+     {
+      "w": "And",
+      "t": 1.76
+     },
+     {
+      "w": "stops",
+      "t": 1.92,
+      "e": 2.491
+     }
+    ],
+    "text": "It coughs. Spits. And stops.",
+    "echo": false
+   },
+   {
+    "id": "B3",
+    "who": "N",
+    "start": 164.387,
+    "dur": 6.954,
+    "words": [
+     {
+      "w": "City",
+      "t": 0.0
+     },
+     {
+      "w": "water",
+      "t": 0.48
+     },
+     {
+      "w": "runs",
+      "t": 0.88
+     },
+     {
+      "w": "on",
+      "t": 1.2
+     },
+     {
+      "w": "pumps",
+      "t": 1.44,
+      "e": 1.99
+     },
+     {
+      "w": "No",
+      "t": 2.48
+     },
+     {
+      "w": "power",
+      "t": 2.88
+     },
+     {
+      "w": "no",
+      "t": 3.6
+     },
+     {
+      "w": "pumps",
+      "t": 3.84,
+      "e": 4.36
+     },
+     {
+      "w": "The",
+      "t": 4.8
+     },
+     {
+      "w": "towers",
+      "t": 4.96
+     },
+     {
+      "w": "drain",
+      "t": 5.44
+     },
+     {
+      "w": "in",
+      "t": 5.92
+     },
+     {
+      "w": "a",
+      "t": 6.08
+     },
+     {
+      "w": "day",
+      "t": 6.24
+     },
+     {
+      "w": "or",
+      "t": 6.4
+     },
+     {
+      "w": "two",
+      "t": 6.56,
+      "e": 6.894
+     }
+    ],
+    "text": "City water runs on pumps. No power, no pumps. The towers drain in a day or two.",
+    "echo": false
+   },
+   {
+    "id": "B4",
+    "who": "N",
+    "start": 172.016,
+    "dur": 3.543,
+    "words": [
+     {
+      "w": "But",
+      "t": 0.0
+     },
+     {
+      "w": "every",
+      "t": 0.24
+     },
+     {
+      "w": "building",
+      "t": 0.56
+     },
+     {
+      "w": "with",
+      "t": 1.04
+     },
+     {
+      "w": "hot",
+      "t": 1.28
+     },
+     {
+      "w": "water",
+      "t": 1.6
+     },
+     {
+      "w": "keeps",
+      "t": 2.24
+     },
+     {
+      "w": "a",
+      "t": 2.56
+     },
+     {
+      "w": "tank",
+      "t": 2.8
+     },
+     {
+      "w": "of",
+      "t": 3.12
+     },
+     {
+      "w": "it",
+      "t": 3.2,
+      "e": 3.483
+     }
+    ],
+    "text": "But every building with hot water keeps a tank of it.",
+    "echo": false
+   },
+   {
+    "id": "B5",
+    "who": "N",
+    "start": 176.234,
+    "dur": 5.757,
+    "words": [
+     {
+      "w": "This",
+      "t": 0.0
+     },
+     {
+      "w": "one",
+      "t": 0.32
+     },
+     {
+      "w": "holds",
+      "t": 0.64
+     },
+     {
+      "w": "twenty",
+      "t": 1.04
+     },
+     {
+      "w": "gallons",
+      "t": 1.6,
+      "e": 2.33
+     },
+     {
+      "w": "Clean",
+      "t": 2.8,
+      "e": 3.56
+     },
+     {
+      "w": "And",
+      "t": 3.92
+     },
+     {
+      "w": "it's",
+      "t": 4.08
+     },
+     {
+      "w": "on",
+      "t": 4.32
+     },
+     {
+      "w": "your",
+      "t": 4.48
+     },
+     {
+      "w": "side",
+      "t": 4.72
+     },
+     {
+      "w": "of",
+      "t": 4.96
+     },
+     {
+      "w": "the",
+      "t": 5.04
+     },
+     {
+      "w": "border",
+      "t": 5.2,
+      "e": 5.697
+     }
+    ],
+    "text": "This one holds twenty gallons. Clean. And it's on your side of the border.",
+    "echo": false
+   },
+   {
+    "id": "B6",
+    "who": "N",
+    "start": 182.666,
+    "dur": 6.777,
+    "words": [
+     {
+      "w": "There's",
+      "t": 0.0
+     },
+     {
+      "w": "a",
+      "t": 0.32
+     },
+     {
+      "w": "drain",
+      "t": 0.48
+     },
+     {
+      "w": "valve",
+      "t": 0.88
+     },
+     {
+      "w": "at",
+      "t": 1.36
+     },
+     {
+      "w": "the",
+      "t": 1.6
+     },
+     {
+      "w": "bottom",
+      "t": 1.76,
+      "e": 2.23
+     },
+     {
+      "w": "The",
+      "t": 2.72
+     },
+     {
+      "w": "first",
+      "t": 2.96
+     },
+     {
+      "w": "gallon",
+      "t": 3.2
+     },
+     {
+      "w": "comes",
+      "t": 4.0
+     },
+     {
+      "w": "out",
+      "t": 4.24
+     },
+     {
+      "w": "brown",
+      "t": 4.48,
+      "e": 5.02
+     },
+     {
+      "w": "Then",
+      "t": 5.44
+     },
+     {
+      "w": "it",
+      "t": 5.76
+     },
+     {
+      "w": "runs",
+      "t": 5.92
+     },
+     {
+      "w": "clear",
+      "t": 6.16,
+      "e": 6.717
+     }
+    ],
+    "text": "There's a drain valve at the bottom. The first gallon comes out brown. Then it runs clear.",
+    "echo": false
+   },
+   {
+    "id": "B6b",
+    "who": "N",
+    "start": 190.118,
+    "dur": 6.208,
+    "words": [
+     {
+      "w": "Water",
+      "t": 0.0
+     },
+     {
+      "w": "that",
+      "t": 0.48
+     },
+     {
+      "w": "sits",
+      "t": 0.72
+     },
+     {
+      "w": "in",
+      "t": 1.2
+     },
+     {
+      "w": "a",
+      "t": 1.28
+     },
+     {
+      "w": "tank",
+      "t": 1.44
+     },
+     {
+      "w": "can",
+      "t": 1.92
+     },
+     {
+      "w": "grow",
+      "t": 2.16
+     },
+     {
+      "w": "things",
+      "t": 2.96,
+      "e": 3.08
+     },
+     {
+      "w": "So",
+      "t": 3.6
+     },
+     {
+      "w": "before",
+      "t": 3.84
+     },
+     {
+      "w": "you",
+      "t": 4.16
+     },
+     {
+      "w": "drink",
+      "t": 4.4
+     },
+     {
+      "w": "it",
+      "t": 4.8
+     },
+     {
+      "w": "you",
+      "t": 5.2
+     },
+     {
+      "w": "clean",
+      "t": 5.44
+     },
+     {
+      "w": "it",
+      "t": 5.84,
+      "e": 6.148
+     }
+    ],
+    "text": "Water that sits in a tank can grow things. So before you drink it, you clean it.",
+    "echo": false
+   },
+   {
+    "id": "B6c",
+    "who": "N",
+    "start": 197.001,
+    "dur": 4.304,
+    "words": [
+     {
+      "w": "Eight",
+      "t": 0.0
+     },
+     {
+      "w": "drops",
+      "t": 0.32
+     },
+     {
+      "w": "of",
+      "t": 0.64
+     },
+     {
+      "w": "plain",
+      "t": 0.8
+     },
+     {
+      "w": "bleach",
+      "t": 1.2
+     },
+     {
+      "w": "per",
+      "t": 1.68
+     },
+     {
+      "w": "gallon",
+      "t": 1.84,
+      "e": 2.33
+     },
+     {
+      "w": "Then",
+      "t": 2.8
+     },
+     {
+      "w": "wait",
+      "t": 3.04
+     },
+     {
+      "w": "thirty",
+      "t": 3.36
+     },
+     {
+      "w": "minutes",
+      "t": 3.68,
+      "e": 4.244
+     }
+    ],
+    "text": "Eight drops of plain bleach per gallon. Then wait thirty minutes.",
+    "echo": false
+   },
+   {
+    "id": "B6d",
+    "who": "N",
+    "start": 201.98,
+    "dur": 4.273,
+    "words": [
+     {
+      "w": "Aisle",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.4
+     },
+     {
+      "w": "has",
+      "t": 0.72
+     },
+     {
+      "w": "bleach",
+      "t": 0.88,
+      "e": 1.46
+     },
+     {
+      "w": "Gary",
+      "t": 1.92
+     },
+     {
+      "w": "labeled",
+      "t": 2.48
+     },
+     {
+      "w": "the",
+      "t": 2.96
+     },
+     {
+      "w": "shelf",
+      "t": 3.04
+     },
+     {
+      "w": "of",
+      "t": 3.6
+     },
+     {
+      "w": "course",
+      "t": 3.76,
+      "e": 4.213
+     }
+    ],
+    "text": "Aisle four has bleach. Gary labeled the shelf, of course.",
+    "echo": false
+   },
+   {
+    "id": "B7",
+    "who": "N",
+    "start": 207.153,
+    "dur": 5.832,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "toilet",
+      "t": 0.32
+     },
+     {
+      "w": "tanks",
+      "t": 0.72,
+      "e": 1.13
+     },
+     {
+      "w": "Not",
+      "t": 1.68
+     },
+     {
+      "w": "the",
+      "t": 1.92
+     },
+     {
+      "w": "bowls",
+      "t": 2.08,
+      "e": 2.59
+     },
+     {
+      "w": "The",
+      "t": 2.88
+     },
+     {
+      "w": "tanks",
+      "t": 3.12,
+      "e": 3.91
+     },
+     {
+      "w": "Same",
+      "t": 4.32
+     },
+     {
+      "w": "water",
+      "t": 4.64
+     },
+     {
+      "w": "as",
+      "t": 5.04
+     },
+     {
+      "w": "the",
+      "t": 5.2
+     },
+     {
+      "w": "tap",
+      "t": 5.28,
+      "e": 5.772
+     }
+    ],
+    "text": "And the toilet tanks. Not the bowls. The tanks. Same water as the tap.",
+    "echo": false
+   },
+   {
+    "id": "B7b",
+    "who": "N",
+    "start": 213.66,
+    "dur": 4.692,
+    "words": [
+     {
+      "w": "Twenty",
+      "t": 0.0
+     },
+     {
+      "w": "gallons",
+      "t": 0.48
+     },
+     {
+      "w": "plus",
+      "t": 1.04
+     },
+     {
+      "w": "four",
+      "t": 1.36
+     },
+     {
+      "w": "tanks",
+      "t": 1.68,
+      "e": 2.17
+     },
+     {
+      "w": "If",
+      "t": 2.64
+     },
+     {
+      "w": "you're",
+      "t": 2.8
+     },
+     {
+      "w": "careful",
+      "t": 3.12
+     },
+     {
+      "w": "that's",
+      "t": 3.68
+     },
+     {
+      "w": "about",
+      "t": 3.92
+     },
+     {
+      "w": "a",
+      "t": 4.16
+     },
+     {
+      "w": "month",
+      "t": 4.24,
+      "e": 4.632
+     }
+    ],
+    "text": "Twenty gallons, plus four tanks. If you're careful, that's about a month.",
+    "echo": false
+   },
+   {
+    "id": "B8",
+    "who": "N",
+    "start": 219.027,
+    "dur": 1.712,
+    "words": [
+     {
+      "w": "Problem",
+      "t": 0.0
+     },
+     {
+      "w": "one",
+      "t": 0.48,
+      "e": 0.791
+     },
+     {
+      "w": "Solved",
+      "t": 1.231,
+      "e": 1.651
+     }
+    ],
+    "text": "Problem one. Solved.",
+    "echo": false
+   },
+   {
+    "id": "B9",
+    "who": "N",
+    "start": 221.639,
+    "dur": 1.562,
+    "words": [
+     {
+      "w": "That",
+      "t": 0.0
+     },
+     {
+      "w": "night",
+      "t": 0.24
+     },
+     {
+      "w": "the",
+      "t": 0.56
+     },
+     {
+      "w": "radio",
+      "t": 0.64
+     },
+     {
+      "w": "clicks",
+      "t": 0.96,
+      "e": 1.502
+     }
+    ],
+    "text": "That night, the radio clicks.",
+    "echo": false
+   },
+   {
+    "id": "B10",
+    "who": "DALE",
+    "start": 223.876,
+    "dur": 3.289,
+    "words": [
+     {
+      "w": "Heard",
+      "t": 0.12
+     },
+     {
+      "w": "you",
+      "t": 0.52
+     },
+     {
+      "w": "found",
+      "t": 0.68
+     },
+     {
+      "w": "the",
+      "t": 1.0
+     },
+     {
+      "w": "water",
+      "t": 1.16
+     },
+     {
+      "w": "heater",
+      "t": 1.56,
+      "e": 2.09
+     },
+     {
+      "w": "Smart",
+      "t": 2.44,
+      "e": 3.069
+     }
+    ],
+    "text": "Heard you found the water heater. Smart.",
+    "echo": false
+   },
+   {
+    "id": "B10b",
+    "who": "DALE",
+    "start": 228.065,
+    "dur": 2.814,
+    "words": [
+     {
+      "w": "Guess",
+      "t": 0.2
+     },
+     {
+      "w": "you",
+      "t": 0.52
+     },
+     {
+      "w": "don't",
+      "t": 0.68
+     },
+     {
+      "w": "need",
+      "t": 1.0
+     },
+     {
+      "w": "my",
+      "t": 1.24
+     },
+     {
+      "w": "water",
+      "t": 1.48
+     },
+     {
+      "w": "anymore",
+      "t": 1.96,
+      "e": 2.594
+     }
+    ],
+    "text": "Guess you don't need my water anymore.",
+    "echo": false
+   },
+   {
+    "id": "B11",
+    "who": "N",
+    "start": 231.779,
+    "dur": 1.044,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "never",
+      "t": 0.24
+     },
+     {
+      "w": "told",
+      "t": 0.48
+     },
+     {
+      "w": "him",
+      "t": 0.72,
+      "e": 0.984
+     }
+    ],
+    "text": "You never told him.",
+    "echo": false
+   },
+   {
+    "id": "B12",
+    "who": "N",
+    "start": 233.873,
+    "dur": 3.837,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "you",
+      "t": 0.32
+     },
+     {
+      "w": "hear",
+      "t": 0.48
+     },
+     {
+      "w": "it",
+      "t": 0.8,
+      "e": 0.99
+     },
+     {
+      "w": "A",
+      "t": 1.44
+     },
+     {
+      "w": "tap",
+      "t": 1.68,
+      "e": 2.34
+     },
+     {
+      "w": "In",
+      "t": 2.72
+     },
+     {
+      "w": "the",
+      "t": 2.96
+     },
+     {
+      "w": "pipes",
+      "t": 3.12,
+      "e": 3.777
+     }
+    ],
+    "text": "Then you hear it. A tap. In the pipes.",
+    "echo": false
+   },
+   {
+    "id": "B13",
+    "who": "N",
+    "start": 238.91,
+    "dur": 6.512,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "pipes",
+      "t": 0.16
+     },
+     {
+      "w": "run",
+      "t": 0.72
+     },
+     {
+      "w": "through",
+      "t": 0.96
+     },
+     {
+      "w": "the",
+      "t": 1.2
+     },
+     {
+      "w": "whole",
+      "t": 1.36
+     },
+     {
+      "w": "building",
+      "t": 1.68,
+      "e": 2.24
+     },
+     {
+      "w": "Every",
+      "t": 2.64
+     },
+     {
+      "w": "sound",
+      "t": 2.96
+     },
+     {
+      "w": "in",
+      "t": 3.44
+     },
+     {
+      "w": "that",
+      "t": 3.68
+     },
+     {
+      "w": "restroom",
+      "t": 3.92
+     },
+     {
+      "w": "ends",
+      "t": 4.88
+     },
+     {
+      "w": "up",
+      "t": 5.36
+     },
+     {
+      "w": "in",
+      "t": 5.6
+     },
+     {
+      "w": "his",
+      "t": 5.76
+     },
+     {
+      "w": "ear",
+      "t": 6.0,
+      "e": 6.452
+     }
+    ],
+    "text": "The pipes run through the whole building. Every sound in that restroom ends up in his ear.",
+    "echo": false
+   },
+   {
+    "id": "B14",
+    "who": "N",
+    "start": 246.097,
+    "dur": 2.488,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "five",
+      "t": 0.48,
+      "e": 0.94
+     },
+     {
+      "w": "The",
+      "t": 1.2
+     },
+     {
+      "w": "walls",
+      "t": 1.36
+     },
+     {
+      "w": "have",
+      "t": 1.76
+     },
+     {
+      "w": "ears",
+      "t": 1.92,
+      "e": 2.428
+     }
+    ],
+    "text": "Rule five. The walls have ears.",
+    "echo": false
+   },
+   {
+    "id": "B15",
+    "who": "N",
+    "start": 249.785,
+    "dur": 3.146,
+    "words": [
+     {
+      "w": "Later",
+      "t": 0.0
+     },
+     {
+      "w": "that",
+      "t": 0.48
+     },
+     {
+      "w": "night",
+      "t": 0.64
+     },
+     {
+      "w": "the",
+      "t": 1.2
+     },
+     {
+      "w": "pipes",
+      "t": 1.36
+     },
+     {
+      "w": "carry",
+      "t": 1.92
+     },
+     {
+      "w": "something",
+      "t": 2.32
+     },
+     {
+      "w": "else",
+      "t": 2.56,
+      "e": 3.086
+     }
+    ],
+    "text": "Later that night, the pipes carry something else.",
+    "echo": false
+   },
+   {
+    "id": "B16",
+    "who": "N",
+    "start": 253.606,
+    "dur": 3.724,
+    "words": [
+     {
+      "w": "Dale's",
+      "t": 0.0
+     },
+     {
+      "w": "voice",
+      "t": 0.56,
+      "e": 1.07
+     },
+     {
+      "w": "Not",
+      "t": 1.44
+     },
+     {
+      "w": "on",
+      "t": 1.68
+     },
+     {
+      "w": "the",
+      "t": 1.84
+     },
+     {
+      "w": "radio",
+      "t": 2.0,
+      "e": 2.56
+     },
+     {
+      "w": "Through",
+      "t": 2.88
+     },
+     {
+      "w": "the",
+      "t": 3.12
+     },
+     {
+      "w": "wall",
+      "t": 3.2,
+      "e": 3.664
+     }
+    ],
+    "text": "Dale's voice. Not on the radio. Through the wall.",
+    "echo": false
+   },
+   {
+    "id": "B17",
+    "who": "DALE",
+    "start": 258.23,
+    "dur": 5.636,
+    "words": [
+     {
+      "w": "Ninety-eight",
+      "t": 0.16,
+      "e": 1.02
+     },
+     {
+      "w": "Ninety-nine",
+      "t": 1.6,
+      "e": 2.54
+     },
+     {
+      "w": "A",
+      "t": 3.12
+     },
+     {
+      "w": "hundred",
+      "t": 3.28,
+      "e": 3.79
+     },
+     {
+      "w": "Ready",
+      "t": 4.56
+     },
+     {
+      "w": "or",
+      "t": 5.04
+     },
+     {
+      "w": "not",
+      "t": 5.2,
+      "e": 5.576
+     }
+    ],
+    "text": "Ninety-eight. Ninety-nine. A hundred. Ready or not.",
+    "echo": false
+   },
+   {
+    "id": "B18",
+    "who": "N",
+    "start": 265.216,
+    "dur": 2.843,
+    "words": [
+     {
+      "w": "He's",
+      "t": 0.0
+     },
+     {
+      "w": "counting",
+      "t": 0.32,
+      "e": 0.66
+     },
+     {
+      "w": "Like",
+      "t": 1.04
+     },
+     {
+      "w": "a",
+      "t": 1.2
+     },
+     {
+      "w": "kid",
+      "t": 1.36
+     },
+     {
+      "w": "playing",
+      "t": 1.68
+     },
+     {
+      "w": "hide-and-seek",
+      "t": 1.92,
+      "e": 2.783
+     }
+    ],
+    "text": "He's counting. Like a kid playing hide-and-seek.",
+    "echo": false
+   },
+   {
+    "id": "B19",
+    "who": "N",
+    "start": 268.734,
+    "dur": 2.707,
+    "words": [
+     {
+      "w": "Who",
+      "t": 0.0
+     },
+     {
+      "w": "counts",
+      "t": 0.32
+     },
+     {
+      "w": "to",
+      "t": 0.64
+     },
+     {
+      "w": "a",
+      "t": 0.8
+     },
+     {
+      "w": "hundred",
+      "t": 0.96
+     },
+     {
+      "w": "in",
+      "t": 1.44
+     },
+     {
+      "w": "an",
+      "t": 1.6
+     },
+     {
+      "w": "empty",
+      "t": 1.76
+     },
+     {
+      "w": "store",
+      "t": 2.16,
+      "e": 2.647
+     }
+    ],
+    "text": "Who counts to a hundred in an empty store?",
+    "echo": false
+   },
+   {
+    "id": "L1",
+    "who": "N",
+    "start": 277.441,
+    "dur": 2.838,
+    "words": [
+     {
+      "w": "Eleven",
+      "t": 0.0
+     },
+     {
+      "w": "at",
+      "t": 0.56
+     },
+     {
+      "w": "night",
+      "t": 0.72,
+      "e": 1.05
+     },
+     {
+      "w": "You",
+      "t": 1.36
+     },
+     {
+      "w": "climb",
+      "t": 1.6
+     },
+     {
+      "w": "to",
+      "t": 2.08
+     },
+     {
+      "w": "the",
+      "t": 2.16
+     },
+     {
+      "w": "roof",
+      "t": 2.24,
+      "e": 2.778
+     }
+    ],
+    "text": "Eleven at night. You climb to the roof.",
+    "echo": false
+   },
+   {
+    "id": "L2",
+    "who": "N",
+    "start": 280.954,
+    "dur": 4.849,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "light",
+      "t": 0.24
+     },
+     {
+      "w": "in",
+      "t": 0.56
+     },
+     {
+      "w": "the",
+      "t": 0.72
+     },
+     {
+      "w": "mall",
+      "t": 0.88
+     },
+     {
+      "w": "is",
+      "t": 1.28
+     },
+     {
+      "w": "still",
+      "t": 1.6
+     },
+     {
+      "w": "on",
+      "t": 1.92,
+      "e": 2.13
+     },
+     {
+      "w": "Top",
+      "t": 2.56
+     },
+     {
+      "w": "floor",
+      "t": 2.96,
+      "e": 3.42
+     },
+     {
+      "w": "Same",
+      "t": 4.0
+     },
+     {
+      "w": "window",
+      "t": 4.24,
+      "e": 4.789
+     }
+    ],
+    "text": "The light in the mall is still on. Top floor. Same window.",
+    "echo": false
+   },
+   {
+    "id": "L3",
+    "who": "N",
+    "start": 286.478,
+    "dur": 3.0,
+    "words": [
+     {
+      "w": "Last",
+      "t": 0.0
+     },
+     {
+      "w": "week",
+      "t": 0.4
+     },
+     {
+      "w": "you",
+      "t": 0.88
+     },
+     {
+      "w": "decided",
+      "t": 1.04
+     },
+     {
+      "w": "nobody",
+      "t": 1.6
+     },
+     {
+      "w": "was",
+      "t": 2.08
+     },
+     {
+      "w": "over",
+      "t": 2.32
+     },
+     {
+      "w": "there",
+      "t": 2.56,
+      "e": 2.94
+     }
+    ],
+    "text": "Last week, you decided nobody was over there.",
+    "echo": false
+   },
+   {
+    "id": "L4",
+    "who": "N",
+    "start": 290.378,
+    "dur": 1.045,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "then",
+      "t": 0.16
+     },
+     {
+      "w": "it",
+      "t": 0.32
+     },
+     {
+      "w": "blinks",
+      "t": 0.48,
+      "e": 0.985
+     }
+    ],
+    "text": "And then it blinks.",
+    "echo": false
+   },
+   {
+    "id": "L6",
+    "who": "N",
+    "start": 295.123,
+    "dur": 2.833,
+    "words": [
+     {
+      "w": "Three",
+      "t": 0.0
+     },
+     {
+      "w": "short",
+      "t": 0.4,
+      "e": 0.67
+     },
+     {
+      "w": "Three",
+      "t": 1.04
+     },
+     {
+      "w": "long",
+      "t": 1.44,
+      "e": 1.77
+     },
+     {
+      "w": "Three",
+      "t": 2.16
+     },
+     {
+      "w": "short",
+      "t": 2.48,
+      "e": 2.773
+     }
+    ],
+    "text": "Three short. Three long. Three short.",
+    "echo": false
+   },
+   {
+    "id": "L7",
+    "who": "N",
+    "start": 298.631,
+    "dur": 5.084,
+    "words": [
+     {
+      "w": "S",
+      "t": 0.16
+     },
+     {
+      "w": "O",
+      "t": 0.4
+     },
+     {
+      "w": "S",
+      "t": 0.72,
+      "e": 1.152
+     },
+     {
+      "w": "Somebody",
+      "t": 1.662
+     },
+     {
+      "w": "over",
+      "t": 2.142
+     },
+     {
+      "w": "there",
+      "t": 2.302
+     },
+     {
+      "w": "is",
+      "t": 2.542
+     },
+     {
+      "w": "alive",
+      "t": 2.702,
+      "e": 3.188
+     },
+     {
+      "w": "And",
+      "t": 3.598
+     },
+     {
+      "w": "asking",
+      "t": 3.998
+     },
+     {
+      "w": "for",
+      "t": 4.398
+     },
+     {
+      "w": "help",
+      "t": 4.558,
+      "e": 5.024
+     }
+    ],
+    "text": "S. O. S. Somebody over there is alive. And asking for help.",
+    "echo": false
+   },
+   {
+    "id": "L7b",
+    "who": "N",
+    "start": 304.615,
+    "dur": 6.048,
+    "words": [
+     {
+      "w": "Not",
+      "t": 0.0
+     },
+     {
+      "w": "on",
+      "t": 0.4
+     },
+     {
+      "w": "the",
+      "t": 0.56
+     },
+     {
+      "w": "radio",
+      "t": 0.72,
+      "e": 1.32
+     },
+     {
+      "w": "With",
+      "t": 1.6
+     },
+     {
+      "w": "a",
+      "t": 1.84
+     },
+     {
+      "w": "lamp",
+      "t": 2.0,
+      "e": 2.38
+     },
+     {
+      "w": "Whoever",
+      "t": 2.8
+     },
+     {
+      "w": "it",
+      "t": 3.28
+     },
+     {
+      "w": "is",
+      "t": 3.52
+     },
+     {
+      "w": "they",
+      "t": 4.08
+     },
+     {
+      "w": "don't",
+      "t": 4.32
+     },
+     {
+      "w": "want",
+      "t": 4.64
+     },
+     {
+      "w": "Dale",
+      "t": 4.88
+     },
+     {
+      "w": "to",
+      "t": 5.44
+     },
+     {
+      "w": "hear",
+      "t": 5.6,
+      "e": 5.988
+     }
+    ],
+    "text": "Not on the radio. With a lamp. Whoever it is, they don't want Dale to hear.",
+    "echo": false
+   },
+   {
+    "id": "L8",
+    "who": "N",
+    "start": 311.563,
+    "dur": 2.977,
+    "words": [
+     {
+      "w": "Would",
+      "t": 0.0
+     },
+     {
+      "w": "you",
+      "t": 0.4
+     },
+     {
+      "w": "go",
+      "t": 0.72,
+      "e": 0.96
+     },
+     {
+      "w": "Tell",
+      "t": 1.36
+     },
+     {
+      "w": "me",
+      "t": 1.76
+     },
+     {
+      "w": "in",
+      "t": 2.0
+     },
+     {
+      "w": "the",
+      "t": 2.16
+     },
+     {
+      "w": "comments",
+      "t": 2.32,
+      "e": 2.917
+     }
+    ],
+    "text": "Would you go? Tell me in the comments.",
+    "echo": false
+   },
+   {
+    "id": "P1",
+    "who": "N",
+    "start": 315.59,
+    "dur": 5.284,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.0
+     },
+     {
+      "w": "ten",
+      "t": 0.32,
+      "e": 0.7
+     },
+     {
+      "w": "The",
+      "t": 1.12
+     },
+     {
+      "w": "decoy",
+      "t": 1.28
+     },
+     {
+      "w": "clocks",
+      "t": 2.0
+     },
+     {
+      "w": "are",
+      "t": 2.4
+     },
+     {
+      "w": "gone",
+      "t": 2.56,
+      "e": 2.89
+     },
+     {
+      "w": "And",
+      "t": 3.36
+     },
+     {
+      "w": "Dale",
+      "t": 3.52
+     },
+     {
+      "w": "knows",
+      "t": 4.0
+     },
+     {
+      "w": "that",
+      "t": 4.24
+     },
+     {
+      "w": "trick",
+      "t": 4.48
+     },
+     {
+      "w": "anyway",
+      "t": 4.8,
+      "e": 5.224
+     }
+    ],
+    "text": "Day ten. The decoy clocks are gone. And Dale knows that trick anyway.",
+    "echo": false
+   },
+   {
+    "id": "P2",
+    "who": "N",
+    "start": 321.549,
+    "dur": 3.886,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "need",
+      "t": 0.24
+     },
+     {
+      "w": "a",
+      "t": 0.4
+     },
+     {
+      "w": "sound",
+      "t": 0.64
+     },
+     {
+      "w": "bigger",
+      "t": 1.12
+     },
+     {
+      "w": "than",
+      "t": 1.6
+     },
+     {
+      "w": "you",
+      "t": 1.84,
+      "e": 2.04
+     },
+     {
+      "w": "Bigger",
+      "t": 2.48
+     },
+     {
+      "w": "than",
+      "t": 3.04
+     },
+     {
+      "w": "anything",
+      "t": 3.2,
+      "e": 3.826
+     }
+    ],
+    "text": "You need a sound bigger than you. Bigger than anything.",
+    "echo": false
+   },
+   {
+    "id": "P3",
+    "who": "N",
+    "start": 326.11,
+    "dur": 3.515,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "at",
+      "t": 0.56
+     },
+     {
+      "w": "two",
+      "t": 0.8
+     },
+     {
+      "w": "in",
+      "t": 1.04
+     },
+     {
+      "w": "the",
+      "t": 1.2
+     },
+     {
+      "w": "afternoon",
+      "t": 1.36
+     },
+     {
+      "w": "the",
+      "t": 2.08
+     },
+     {
+      "w": "sky",
+      "t": 2.24
+     },
+     {
+      "w": "goes",
+      "t": 2.64
+     },
+     {
+      "w": "dark",
+      "t": 2.88,
+      "e": 3.455
+     }
+    ],
+    "text": "Then, at two in the afternoon, the sky goes dark.",
+    "echo": false
+   },
+   {
+    "id": "P4",
+    "who": "N",
+    "start": 330.3,
+    "dur": 1.347,
+    "words": [
+     {
+      "w": "A",
+      "t": 0.0
+     },
+     {
+      "w": "storm",
+      "t": 0.24
+     },
+     {
+      "w": "is",
+      "t": 0.64
+     },
+     {
+      "w": "coming",
+      "t": 0.8,
+      "e": 1.287
+     }
+    ],
+    "text": "A storm is coming.",
+    "echo": false
+   },
+   {
+    "id": "P5",
+    "who": "N",
+    "start": 334.897,
+    "dur": 4.625,
+    "words": [
+     {
+      "w": "Heavy",
+      "t": 0.0
+     },
+     {
+      "w": "rain",
+      "t": 0.32
+     },
+     {
+      "w": "is",
+      "t": 0.56
+     },
+     {
+      "w": "about",
+      "t": 0.72
+     },
+     {
+      "w": "fifty",
+      "t": 0.88
+     },
+     {
+      "w": "decibels",
+      "t": 1.28,
+      "e": 1.88
+     },
+     {
+      "w": "Footsteps",
+      "t": 2.4
+     },
+     {
+      "w": "on",
+      "t": 2.96
+     },
+     {
+      "w": "wet",
+      "t": 3.12
+     },
+     {
+      "w": "asphalt",
+      "t": 3.36
+     },
+     {
+      "w": "about",
+      "t": 3.92
+     },
+     {
+      "w": "thirty",
+      "t": 4.16,
+      "e": 4.565
+     }
+    ],
+    "text": "Heavy rain is about fifty decibels. Footsteps on wet asphalt, about thirty.",
+    "echo": false
+   },
+   {
+    "id": "P6",
+    "who": "N",
+    "start": 340.197,
+    "dur": 6.506,
+    "words": [
+     {
+      "w": "In",
+      "t": 0.0
+     },
+     {
+      "w": "a",
+      "t": 0.24
+     },
+     {
+      "w": "storm",
+      "t": 0.4
+     },
+     {
+      "w": "they",
+      "t": 1.12
+     },
+     {
+      "w": "can't",
+      "t": 1.28
+     },
+     {
+      "w": "pick",
+      "t": 1.68
+     },
+     {
+      "w": "you",
+      "t": 2.0
+     },
+     {
+      "w": "out",
+      "t": 2.24,
+      "e": 2.57
+     },
+     {
+      "w": "They",
+      "t": 2.88
+     },
+     {
+      "w": "just",
+      "t": 3.12
+     },
+     {
+      "w": "stand",
+      "t": 3.6
+     },
+     {
+      "w": "there",
+      "t": 4.24,
+      "e": 4.51
+     },
+     {
+      "w": "Listening",
+      "t": 4.88
+     },
+     {
+      "w": "to",
+      "t": 5.44
+     },
+     {
+      "w": "the",
+      "t": 5.6
+     },
+     {
+      "w": "sky",
+      "t": 5.76,
+      "e": 6.446
+     }
+    ],
+    "text": "In a storm, they can't pick you out. They just stand there. Listening to the sky.",
+    "echo": false
+   },
+   {
+    "id": "P6b",
+    "who": "N",
+    "start": 347.378,
+    "dur": 2.822,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "thunder",
+      "t": 0.4
+     },
+     {
+      "w": "tells",
+      "t": 0.96
+     },
+     {
+      "w": "you",
+      "t": 1.36
+     },
+     {
+      "w": "where",
+      "t": 1.6
+     },
+     {
+      "w": "the",
+      "t": 1.84
+     },
+     {
+      "w": "storm",
+      "t": 2.0
+     },
+     {
+      "w": "is",
+      "t": 2.4,
+      "e": 2.762
+     }
+    ],
+    "text": "And the thunder tells you where the storm is.",
+    "echo": false
+   },
+   {
+    "id": "P6c",
+    "who": "N",
+    "start": 350.875,
+    "dur": 5.334,
+    "words": [
+     {
+      "w": "Count",
+      "t": 0.0
+     },
+     {
+      "w": "from",
+      "t": 0.48
+     },
+     {
+      "w": "the",
+      "t": 0.64
+     },
+     {
+      "w": "flash",
+      "t": 0.8
+     },
+     {
+      "w": "to",
+      "t": 1.2
+     },
+     {
+      "w": "the",
+      "t": 1.36
+     },
+     {
+      "w": "boom",
+      "t": 1.52,
+      "e": 2.01
+     },
+     {
+      "w": "Every",
+      "t": 2.48
+     },
+     {
+      "w": "three",
+      "t": 2.88
+     },
+     {
+      "w": "seconds",
+      "t": 3.2
+     },
+     {
+      "w": "is",
+      "t": 3.76
+     },
+     {
+      "w": "about",
+      "t": 4.08
+     },
+     {
+      "w": "a",
+      "t": 4.32
+     },
+     {
+      "w": "kilometer",
+      "t": 4.48,
+      "e": 5.274
+     }
+    ],
+    "text": "Count from the flash to the boom. Every three seconds is about a kilometer.",
+    "echo": false
+   },
+   {
+    "id": "P6d",
+    "who": "N",
+    "start": 356.884,
+    "dur": 5.215,
+    "words": [
+     {
+      "w": "Flash",
+      "t": 0.0,
+      "e": 0.57
+     },
+     {
+      "w": "One",
+      "t": 1.12,
+      "e": 1.69
+     },
+     {
+      "w": "Two",
+      "t": 2.16,
+      "e": 2.57
+     },
+     {
+      "w": "Boom",
+      "t": 3.04,
+      "e": 3.56
+     },
+     {
+      "w": "Less",
+      "t": 3.92
+     },
+     {
+      "w": "than",
+      "t": 4.24
+     },
+     {
+      "w": "a",
+      "t": 4.4
+     },
+     {
+      "w": "kilometer",
+      "t": 4.56,
+      "e": 5.155
+     }
+    ],
+    "text": "Flash. One. Two. Boom. Less than a kilometer.",
+    "echo": false
+   },
+   {
+    "id": "P6e",
+    "who": "N",
+    "start": 362.774,
+    "dur": 7.248,
+    "words": [
+     {
+      "w": "When",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "flash",
+      "t": 0.4
+     },
+     {
+      "w": "and",
+      "t": 1.04
+     },
+     {
+      "w": "the",
+      "t": 1.28
+     },
+     {
+      "w": "boom",
+      "t": 1.44
+     },
+     {
+      "w": "come",
+      "t": 1.92
+     },
+     {
+      "w": "together",
+      "t": 2.16
+     },
+     {
+      "w": "it's",
+      "t": 2.96
+     },
+     {
+      "w": "right",
+      "t": 3.44
+     },
+     {
+      "w": "on",
+      "t": 3.68
+     },
+     {
+      "w": "top",
+      "t": 3.92
+     },
+     {
+      "w": "of",
+      "t": 4.4
+     },
+     {
+      "w": "you",
+      "t": 4.8,
+      "e": 4.91
+     },
+     {
+      "w": "That's",
+      "t": 5.44
+     },
+     {
+      "w": "the",
+      "t": 5.84
+     },
+     {
+      "w": "loudest",
+      "t": 6.0
+     },
+     {
+      "w": "it",
+      "t": 6.56
+     },
+     {
+      "w": "gets",
+      "t": 6.72,
+      "e": 7.188
+     }
+    ],
+    "text": "When the flash and the boom come together, it's right on top of you. That's the loudest it gets.",
+    "echo": false
+   },
+   {
+    "id": "P6f",
+    "who": "N",
+    "start": 370.922,
+    "dur": 6.935,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "pack",
+      "t": 0.24
+     },
+     {
+      "w": "light",
+      "t": 0.56,
+      "e": 0.99
+     },
+     {
+      "w": "A",
+      "t": 1.2
+     },
+     {
+      "w": "flashlight",
+      "t": 1.44,
+      "e": 2.2
+     },
+     {
+      "w": "A",
+      "t": 2.48
+     },
+     {
+      "w": "hammer",
+      "t": 2.64
+     },
+     {
+      "w": "from",
+      "t": 3.04
+     },
+     {
+      "w": "aisle",
+      "t": 3.2
+     },
+     {
+      "w": "three",
+      "t": 3.6,
+      "e": 4.03
+     },
+     {
+      "w": "And",
+      "t": 4.4
+     },
+     {
+      "w": "the",
+      "t": 4.56
+     },
+     {
+      "w": "radio",
+      "t": 4.72
+     },
+     {
+      "w": "turned",
+      "t": 5.52
+     },
+     {
+      "w": "all",
+      "t": 6.0
+     },
+     {
+      "w": "the",
+      "t": 6.16
+     },
+     {
+      "w": "way",
+      "t": 6.32
+     },
+     {
+      "w": "down",
+      "t": 6.48,
+      "e": 6.875
+     }
+    ],
+    "text": "You pack light. A flashlight. A hammer from aisle three. And the radio, turned all the way down.",
+    "echo": false
+   },
+   {
+    "id": "P7",
+    "who": "N",
+    "start": 378.532,
+    "dur": 4.026,
+    "words": [
+     {
+      "w": "Before",
+      "t": 0.0
+     },
+     {
+      "w": "you",
+      "t": 0.4
+     },
+     {
+      "w": "go",
+      "t": 0.56
+     },
+     {
+      "w": "you",
+      "t": 0.96
+     },
+     {
+      "w": "chain",
+      "t": 1.12
+     },
+     {
+      "w": "the",
+      "t": 1.44
+     },
+     {
+      "w": "stockroom",
+      "t": 1.6
+     },
+     {
+      "w": "doors",
+      "t": 2.24,
+      "e": 2.73
+     },
+     {
+      "w": "From",
+      "t": 3.04
+     },
+     {
+      "w": "your",
+      "t": 3.28
+     },
+     {
+      "w": "side",
+      "t": 3.44,
+      "e": 3.966
+     }
+    ],
+    "text": "Before you go, you chain the stockroom doors. From your side.",
+    "echo": false
+   },
+   {
+    "id": "P8",
+    "who": "DALE",
+    "start": 384.133,
+    "dur": 1.432,
+    "words": [
+     {
+      "w": "Going",
+      "t": 0.2
+     },
+     {
+      "w": "somewhere",
+      "t": 0.44
+     },
+     {
+      "w": "kid",
+      "t": 0.84,
+      "e": 1.212
+     }
+    ],
+    "text": "Going somewhere, kid?",
+    "echo": false
+   },
+   {
+    "id": "P9",
+    "who": "N",
+    "start": 386.315,
+    "dur": 2.045,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.4,
+      "e": 0.77
+     },
+     {
+      "w": "You",
+      "t": 1.12
+     },
+     {
+      "w": "don't",
+      "t": 1.28
+     },
+     {
+      "w": "answer",
+      "t": 1.52,
+      "e": 1.985
+     }
+    ],
+    "text": "Rule four. You don't answer.",
+    "echo": false
+   },
+   {
+    "id": "R1",
+    "who": "N",
+    "start": 395.96,
+    "dur": 4.456,
+    "words": [
+     {
+      "w": "Two",
+      "t": 0.0
+     },
+     {
+      "w": "hundred",
+      "t": 0.4
+     },
+     {
+      "w": "of",
+      "t": 0.88
+     },
+     {
+      "w": "them",
+      "t": 1.12,
+      "e": 1.28
+     },
+     {
+      "w": "Standing",
+      "t": 1.68
+     },
+     {
+      "w": "in",
+      "t": 2.24
+     },
+     {
+      "w": "the",
+      "t": 2.4
+     },
+     {
+      "w": "rain",
+      "t": 2.56,
+      "e": 3.15
+     },
+     {
+      "w": "Faces",
+      "t": 3.52
+     },
+     {
+      "w": "up",
+      "t": 4.08,
+      "e": 4.396
+     }
+    ],
+    "text": "Two hundred of them. Standing in the rain. Faces up.",
+    "echo": false
+   },
+   {
+    "id": "R2",
+    "who": "N",
+    "start": 405.291,
+    "dur": 0.813,
+    "words": [
+     {
+      "w": "Nobody",
+      "t": 0.0
+     },
+     {
+      "w": "turns",
+      "t": 0.4,
+      "e": 0.753
+     }
+    ],
+    "text": "Nobody turns.",
+    "echo": false
+   },
+   {
+    "id": "R2b",
+    "who": "N",
+    "start": 407.004,
+    "dur": 2.578,
+    "words": [
+     {
+      "w": "Halfway",
+      "t": 0.0
+     },
+     {
+      "w": "across",
+      "t": 0.56
+     },
+     {
+      "w": "your",
+      "t": 1.2
+     },
+     {
+      "w": "shoe",
+      "t": 1.36
+     },
+     {
+      "w": "hits",
+      "t": 1.68
+     },
+     {
+      "w": "a",
+      "t": 1.92
+     },
+     {
+      "w": "bottle",
+      "t": 2.08,
+      "e": 2.518
+     }
+    ],
+    "text": "Halfway across, your shoe hits a bottle.",
+    "echo": false
+   },
+   {
+    "id": "R2d",
+    "who": "N",
+    "start": 412.657,
+    "dur": 4.782,
+    "words": [
+     {
+      "w": "It",
+      "t": 0.0
+     },
+     {
+      "w": "clinks",
+      "t": 0.24
+     },
+     {
+      "w": "against",
+      "t": 0.72
+     },
+     {
+      "w": "a",
+      "t": 1.04
+     },
+     {
+      "w": "car",
+      "t": 1.28,
+      "e": 1.65
+     },
+     {
+      "w": "The",
+      "t": 2.0
+     },
+     {
+      "w": "closest",
+      "t": 2.16
+     },
+     {
+      "w": "one",
+      "t": 2.88
+     },
+     {
+      "w": "is",
+      "t": 3.12
+     },
+     {
+      "w": "two",
+      "t": 3.36
+     },
+     {
+      "w": "steps",
+      "t": 3.76
+     },
+     {
+      "w": "away",
+      "t": 4.16,
+      "e": 4.722
+     }
+    ],
+    "text": "It clinks against a car. The closest one is two steps away.",
+    "echo": false
+   },
+   {
+    "id": "R2f",
+    "who": "N",
+    "start": 420.089,
+    "dur": 3.304,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "rain",
+      "t": 0.16
+     },
+     {
+      "w": "eats",
+      "t": 0.56
+     },
+     {
+      "w": "the",
+      "t": 0.96
+     },
+     {
+      "w": "sound",
+      "t": 1.12,
+      "e": 1.54
+     },
+     {
+      "w": "You",
+      "t": 2.0
+     },
+     {
+      "w": "keep",
+      "t": 2.24
+     },
+     {
+      "w": "walking",
+      "t": 2.48,
+      "e": 3.244
+     }
+    ],
+    "text": "The rain eats the sound. You keep walking.",
+    "echo": false
+   },
+   {
+    "id": "R3",
+    "who": "N",
+    "start": 424.293,
+    "dur": 4.599,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "mall's",
+      "t": 0.16
+     },
+     {
+      "w": "side",
+      "t": 0.64
+     },
+     {
+      "w": "door",
+      "t": 0.96
+     },
+     {
+      "w": "is",
+      "t": 1.28
+     },
+     {
+      "w": "chained",
+      "t": 1.52,
+      "e": 2.09
+     },
+     {
+      "w": "The",
+      "t": 2.56
+     },
+     {
+      "w": "glass",
+      "t": 2.72
+     },
+     {
+      "w": "next",
+      "t": 3.2
+     },
+     {
+      "w": "to",
+      "t": 3.52
+     },
+     {
+      "w": "it",
+      "t": 3.68
+     },
+     {
+      "w": "isn't",
+      "t": 3.92,
+      "e": 4.539
+     }
+    ],
+    "text": "The mall's side door is chained. The glass next to it isn't.",
+    "echo": false
+   },
+   {
+    "id": "R3b",
+    "who": "N",
+    "start": 429.567,
+    "dur": 4.798,
+    "words": [
+     {
+      "w": "Flash",
+      "t": 0.16,
+      "e": 0.66
+     },
+     {
+      "w": "One",
+      "t": 1.12,
+      "e": 1.6
+     },
+     {
+      "w": "Boom",
+      "t": 2.08,
+      "e": 2.51
+     },
+     {
+      "w": "Close",
+      "t": 2.88,
+      "e": 3.49
+     },
+     {
+      "w": "Not",
+      "t": 3.76
+     },
+     {
+      "w": "close",
+      "t": 4.0
+     },
+     {
+      "w": "enough",
+      "t": 4.32,
+      "e": 4.738
+     }
+    ],
+    "text": "Flash. One. Boom. Close. Not close enough.",
+    "echo": false
+   },
+   {
+    "id": "R3c",
+    "who": "N",
+    "start": 435.04,
+    "dur": 4.344,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "wait",
+      "t": 0.24,
+      "e": 0.7
+     },
+     {
+      "w": "Rain",
+      "t": 1.36
+     },
+     {
+      "w": "on",
+      "t": 1.92
+     },
+     {
+      "w": "your",
+      "t": 2.08
+     },
+     {
+      "w": "neck",
+      "t": 2.32,
+      "e": 2.64
+     },
+     {
+      "w": "Hammer",
+      "t": 3.04
+     },
+     {
+      "w": "in",
+      "t": 3.52
+     },
+     {
+      "w": "your",
+      "t": 3.68
+     },
+     {
+      "w": "hand",
+      "t": 3.84,
+      "e": 4.284
+     }
+    ],
+    "text": "You wait. Rain on your neck. Hammer in your hand.",
+    "echo": false
+   },
+   {
+    "id": "R4",
+    "who": "N",
+    "start": 440.134,
+    "dur": 2.421,
+    "words": [
+     {
+      "w": "Flash",
+      "t": 0.0
+     },
+     {
+      "w": "and",
+      "t": 0.4
+     },
+     {
+      "w": "boom",
+      "t": 0.48
+     },
+     {
+      "w": "together",
+      "t": 0.88,
+      "e": 1.33
+     },
+     {
+      "w": "You",
+      "t": 1.68
+     },
+     {
+      "w": "swing",
+      "t": 1.84,
+      "e": 2.361
+     }
+    ],
+    "text": "Flash and boom, together. You swing.",
+    "echo": false
+   },
+   {
+    "id": "M1",
+    "who": "N",
+    "start": 444.205,
+    "dur": 2.587,
+    "words": [
+     {
+      "w": "Brookfield",
+      "t": 0.0
+     },
+     {
+      "w": "Mall",
+      "t": 0.56,
+      "e": 0.77
+     },
+     {
+      "w": "Four",
+      "t": 1.12
+     },
+     {
+      "w": "floors",
+      "t": 1.44,
+      "e": 1.79
+     },
+     {
+      "w": "Dark",
+      "t": 2.16,
+      "e": 2.527
+     }
+    ],
+    "text": "Brookfield Mall. Four floors. Dark.",
+    "echo": false
+   },
+   {
+    "id": "M2",
+    "who": "N",
+    "start": 450.867,
+    "dur": 6.315,
+    "words": [
+     {
+      "w": "Rain",
+      "t": 0.0
+     },
+     {
+      "w": "drums",
+      "t": 0.48
+     },
+     {
+      "w": "on",
+      "t": 1.04
+     },
+     {
+      "w": "the",
+      "t": 1.2
+     },
+     {
+      "w": "glass",
+      "t": 1.36
+     },
+     {
+      "w": "roof",
+      "t": 1.68,
+      "e": 2.23
+     },
+     {
+      "w": "It's",
+      "t": 2.64
+     },
+     {
+      "w": "the",
+      "t": 3.12
+     },
+     {
+      "w": "loudest",
+      "t": 3.36
+     },
+     {
+      "w": "room",
+      "t": 3.92
+     },
+     {
+      "w": "you've",
+      "t": 4.24
+     },
+     {
+      "w": "ever",
+      "t": 4.56
+     },
+     {
+      "w": "stood",
+      "t": 4.88
+     },
+     {
+      "w": "in",
+      "t": 5.28,
+      "e": 5.45
+     },
+     {
+      "w": "Good",
+      "t": 5.84,
+      "e": 6.255
+     }
+    ],
+    "text": "Rain drums on the glass roof. It's the loudest room you've ever stood in. Good.",
+    "echo": false
+   },
+   {
+    "id": "M3",
+    "who": "N",
+    "start": 458.082,
+    "dur": 2.479,
+    "words": [
+     {
+      "w": "Around",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.4
+     },
+     {
+      "w": "dry",
+      "t": 0.56
+     },
+     {
+      "w": "fountain",
+      "t": 0.96
+     },
+     {
+      "w": "thirty",
+      "t": 1.68
+     },
+     {
+      "w": "of",
+      "t": 2.0
+     },
+     {
+      "w": "them",
+      "t": 2.16,
+      "e": 2.419
+     }
+    ],
+    "text": "Around the dry fountain, thirty of them.",
+    "echo": false
+   },
+   {
+    "id": "M4",
+    "who": "N",
+    "start": 461.236,
+    "dur": 6.065,
+    "words": [
+     {
+      "w": "Shoppers",
+      "t": 0.0,
+      "e": 0.76
+     },
+     {
+      "w": "A",
+      "t": 1.2
+     },
+     {
+      "w": "security",
+      "t": 1.36
+     },
+     {
+      "w": "guard",
+      "t": 2.0,
+      "e": 2.38
+     },
+     {
+      "w": "A",
+      "t": 2.72
+     },
+     {
+      "w": "kid",
+      "t": 2.88
+     },
+     {
+      "w": "from",
+      "t": 3.12
+     },
+     {
+      "w": "the",
+      "t": 3.28
+     },
+     {
+      "w": "pretzel",
+      "t": 3.36
+     },
+     {
+      "w": "stand",
+      "t": 4.08
+     },
+     {
+      "w": "still",
+      "t": 4.72
+     },
+     {
+      "w": "in",
+      "t": 5.04
+     },
+     {
+      "w": "his",
+      "t": 5.12
+     },
+     {
+      "w": "paper",
+      "t": 5.28
+     },
+     {
+      "w": "hat",
+      "t": 5.6,
+      "e": 6.005
+     }
+    ],
+    "text": "Shoppers. A security guard. A kid from the pretzel stand, still in his paper hat.",
+    "echo": false
+   },
+   {
+    "id": "M4b",
+    "who": "N",
+    "start": 467.976,
+    "dur": 5.426,
+    "words": [
+     {
+      "w": "They",
+      "t": 0.0
+     },
+     {
+      "w": "were",
+      "t": 0.24
+     },
+     {
+      "w": "shopping",
+      "t": 0.4
+     },
+     {
+      "w": "when",
+      "t": 0.96
+     },
+     {
+      "w": "it",
+      "t": 1.2
+     },
+     {
+      "w": "started",
+      "t": 1.44,
+      "e": 1.88
+     },
+     {
+      "w": "Some",
+      "t": 2.32
+     },
+     {
+      "w": "of",
+      "t": 2.8
+     },
+     {
+      "w": "them",
+      "t": 3.04
+     },
+     {
+      "w": "are",
+      "t": 3.36
+     },
+     {
+      "w": "still",
+      "t": 3.68
+     },
+     {
+      "w": "holding",
+      "t": 4.0
+     },
+     {
+      "w": "the",
+      "t": 4.56
+     },
+     {
+      "w": "bags",
+      "t": 4.72,
+      "e": 5.366
+     }
+    ],
+    "text": "They were shopping when it started. Some of them are still holding the bags.",
+    "echo": false
+   },
+   {
+    "id": "M5",
+    "who": "N",
+    "start": 474.302,
+    "dur": 5.601,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "window",
+      "t": 0.16
+     },
+     {
+      "w": "was",
+      "t": 0.56
+     },
+     {
+      "w": "on",
+      "t": 0.72
+     },
+     {
+      "w": "the",
+      "t": 0.88
+     },
+     {
+      "w": "top",
+      "t": 1.04
+     },
+     {
+      "w": "floor",
+      "t": 1.44,
+      "e": 1.77
+     },
+     {
+      "w": "The",
+      "t": 2.64
+     },
+     {
+      "w": "escalators",
+      "t": 2.8
+     },
+     {
+      "w": "stopped",
+      "t": 3.76
+     },
+     {
+      "w": "when",
+      "t": 4.48
+     },
+     {
+      "w": "the",
+      "t": 4.72
+     },
+     {
+      "w": "power",
+      "t": 4.8
+     },
+     {
+      "w": "did",
+      "t": 5.2,
+      "e": 5.541
+     }
+    ],
+    "text": "The window was on the top floor. The escalators stopped when the power did.",
+    "echo": false
+   },
+   {
+    "id": "M6",
+    "who": "N",
+    "start": 480.578,
+    "dur": 3.779,
+    "words": [
+     {
+      "w": "A",
+      "t": 0.0
+     },
+     {
+      "w": "stopped",
+      "t": 0.16
+     },
+     {
+      "w": "escalator",
+      "t": 0.56
+     },
+     {
+      "w": "is",
+      "t": 1.04
+     },
+     {
+      "w": "just",
+      "t": 1.2
+     },
+     {
+      "w": "stairs",
+      "t": 1.44,
+      "e": 1.97
+     },
+     {
+      "w": "Loud",
+      "t": 2.24
+     },
+     {
+      "w": "stairs",
+      "t": 2.56,
+      "e": 3.05
+     },
+     {
+      "w": "Metal",
+      "t": 3.28,
+      "e": 3.719
+     }
+    ],
+    "text": "A stopped escalator is just stairs. Loud stairs. Metal.",
+    "echo": false
+   },
+   {
+    "id": "M7",
+    "who": "N",
+    "start": 485.032,
+    "dur": 4.159,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "walk",
+      "t": 0.24
+     },
+     {
+      "w": "on",
+      "t": 0.48
+     },
+     {
+      "w": "the",
+      "t": 0.64
+     },
+     {
+      "w": "edges",
+      "t": 0.8,
+      "e": 1.37
+     },
+     {
+      "w": "Where",
+      "t": 1.84
+     },
+     {
+      "w": "the",
+      "t": 2.16
+     },
+     {
+      "w": "steps",
+      "t": 2.32
+     },
+     {
+      "w": "are",
+      "t": 2.88
+     },
+     {
+      "w": "bolted",
+      "t": 3.04
+     },
+     {
+      "w": "down",
+      "t": 3.68,
+      "e": 4.099
+     }
+    ],
+    "text": "You walk on the edges. Where the steps are bolted down.",
+    "echo": false
+   },
+   {
+    "id": "M7c",
+    "who": "N",
+    "start": 493.866,
+    "dur": 5.086,
+    "words": [
+     {
+      "w": "Level",
+      "t": 0.0
+     },
+     {
+      "w": "two",
+      "t": 0.56,
+      "e": 0.89
+     },
+     {
+      "w": "A",
+      "t": 1.28
+     },
+     {
+      "w": "toy",
+      "t": 1.52
+     },
+     {
+      "w": "store",
+      "t": 1.92,
+      "e": 2.5
+     },
+     {
+      "w": "Every",
+      "t": 2.8
+     },
+     {
+      "w": "teddy",
+      "t": 3.2
+     },
+     {
+      "w": "bear",
+      "t": 3.6
+     },
+     {
+      "w": "still",
+      "t": 4.08
+     },
+     {
+      "w": "in",
+      "t": 4.32
+     },
+     {
+      "w": "the",
+      "t": 4.48
+     },
+     {
+      "w": "window",
+      "t": 4.56,
+      "e": 5.026
+     }
+    ],
+    "text": "Level two. A toy store. Every teddy bear still in the window.",
+    "echo": false
+   },
+   {
+    "id": "M7d",
+    "who": "N",
+    "start": 499.627,
+    "dur": 4.139,
+    "words": [
+     {
+      "w": "Level",
+      "t": 0.0
+     },
+     {
+      "w": "three",
+      "t": 0.48,
+      "e": 0.94
+     },
+     {
+      "w": "The",
+      "t": 1.2
+     },
+     {
+      "w": "cinema",
+      "t": 1.36,
+      "e": 2.04
+     },
+     {
+      "w": "The",
+      "t": 2.24
+     },
+     {
+      "w": "poster",
+      "t": 2.4
+     },
+     {
+      "w": "still",
+      "t": 2.88
+     },
+     {
+      "w": "says",
+      "t": 3.04
+     },
+     {
+      "w": "coming",
+      "t": 3.44
+     },
+     {
+      "w": "soon",
+      "t": 3.76,
+      "e": 4.079
+     }
+    ],
+    "text": "Level three. The cinema. The poster still says coming soon.",
+    "echo": false
+   },
+   {
+    "id": "M8",
+    "who": "N",
+    "start": 504.666,
+    "dur": 5.281,
+    "words": [
+     {
+      "w": "Top",
+      "t": 0.0
+     },
+     {
+      "w": "floor",
+      "t": 0.4,
+      "e": 0.75
+     },
+     {
+      "w": "A",
+      "t": 1.28
+     },
+     {
+      "w": "store",
+      "t": 1.52
+     },
+     {
+      "w": "called",
+      "t": 1.92
+     },
+     {
+      "w": "Bright",
+      "t": 2.16
+     },
+     {
+      "w": "Tech",
+      "t": 2.72,
+      "e": 3.1
+     },
+     {
+      "w": "The",
+      "t": 3.6
+     },
+     {
+      "w": "lantern",
+      "t": 3.76
+     },
+     {
+      "w": "is",
+      "t": 4.32
+     },
+     {
+      "w": "in",
+      "t": 4.48
+     },
+     {
+      "w": "the",
+      "t": 4.56
+     },
+     {
+      "w": "window",
+      "t": 4.64,
+      "e": 5.221
+     }
+    ],
+    "text": "Top floor. A store called Bright Tech. The lantern is in the window.",
+    "echo": false
+   },
+   {
+    "id": "M9",
+    "who": "N",
+    "start": 510.622,
+    "dur": 0.78,
+    "words": [
+     {
+      "w": "Nobody's",
+      "t": 0.0
+     },
+     {
+      "w": "there",
+      "t": 0.48,
+      "e": 0.72
+     }
+    ],
+    "text": "Nobody's there.",
+    "echo": false
+   },
+   {
+    "id": "M10",
+    "who": "N",
+    "start": 512.152,
+    "dur": 4.901,
+    "words": [
+     {
+      "w": "A",
+      "t": 0.0
+     },
+     {
+      "w": "sleeping",
+      "t": 0.24
+     },
+     {
+      "w": "bag",
+      "t": 0.64,
+      "e": 1.01
+     },
+     {
+      "w": "Two",
+      "t": 1.28
+     },
+     {
+      "w": "backpacks",
+      "t": 1.6,
+      "e": 2.31
+     },
+     {
+      "w": "A",
+      "t": 2.8
+     },
+     {
+      "w": "solar",
+      "t": 2.96
+     },
+     {
+      "w": "panel",
+      "t": 3.44
+     },
+     {
+      "w": "taped",
+      "t": 3.84
+     },
+     {
+      "w": "to",
+      "t": 4.16
+     },
+     {
+      "w": "the",
+      "t": 4.32
+     },
+     {
+      "w": "glass",
+      "t": 4.4,
+      "e": 4.841
+     }
+    ],
+    "text": "A sleeping bag. Two backpacks. A solar panel taped to the glass.",
+    "echo": false
+   },
+   {
+    "id": "M10b",
+    "who": "N",
+    "start": 517.728,
+    "dur": 5.841,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "a",
+      "t": 0.24
+     },
+     {
+      "w": "desk",
+      "t": 0.32
+     },
+     {
+      "w": "lamp",
+      "t": 0.72
+     },
+     {
+      "w": "wired",
+      "t": 1.44
+     },
+     {
+      "w": "to",
+      "t": 1.92
+     },
+     {
+      "w": "the",
+      "t": 2.08
+     },
+     {
+      "w": "panel",
+      "t": 2.24,
+      "e": 2.75
+     },
+     {
+      "w": "That's",
+      "t": 3.2
+     },
+     {
+      "w": "the",
+      "t": 3.52
+     },
+     {
+      "w": "light",
+      "t": 3.68
+     },
+     {
+      "w": "you've",
+      "t": 4.08
+     },
+     {
+      "w": "been",
+      "t": 4.4
+     },
+     {
+      "w": "watching",
+      "t": 4.64
+     },
+     {
+      "w": "all",
+      "t": 5.04
+     },
+     {
+      "w": "week",
+      "t": 5.28,
+      "e": 5.781
+     }
+    ],
+    "text": "And a desk lamp, wired to the panel. That's the light you've been watching all week.",
+    "echo": false
+   },
+   {
+    "id": "M11",
+    "who": "N",
+    "start": 526.319,
+    "dur": 3.241,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "something",
+      "t": 0.48
+     },
+     {
+      "w": "cold",
+      "t": 0.8
+     },
+     {
+      "w": "touches",
+      "t": 1.36
+     },
+     {
+      "w": "the",
+      "t": 1.92
+     },
+     {
+      "w": "back",
+      "t": 2.16
+     },
+     {
+      "w": "of",
+      "t": 2.4
+     },
+     {
+      "w": "your",
+      "t": 2.56
+     },
+     {
+      "w": "neck",
+      "t": 2.72,
+      "e": 3.181
+     }
+    ],
+    "text": "Then something cold touches the back of your neck.",
+    "echo": false
+   },
+   {
+    "id": "M12",
+    "who": "NORA",
+    "start": 530.01,
+    "dur": 1.309,
+    "words": [
+     {
+      "w": "Don't",
+      "t": 0.16,
+      "e": 0.27
+     },
+     {
+      "w": "Move",
+      "t": 0.72,
+      "e": 1.249
+     }
+    ],
+    "text": "Don't. Move.",
+    "echo": false
+   },
+   {
+    "id": "M13",
+    "who": "N",
+    "start": 532.369,
+    "dur": 4.453,
+    "words": [
+     {
+      "w": "It's",
+      "t": 0.0
+     },
+     {
+      "w": "a",
+      "t": 0.24
+     },
+     {
+      "w": "fire",
+      "t": 0.32
+     },
+     {
+      "w": "extinguisher",
+      "t": 0.56,
+      "e": 1.35
+     },
+     {
+      "w": "Held",
+      "t": 1.76
+     },
+     {
+      "w": "by",
+      "t": 2.08
+     },
+     {
+      "w": "a",
+      "t": 2.24
+     },
+     {
+      "w": "girl",
+      "t": 2.32,
+      "e": 2.73
+     },
+     {
+      "w": "Fifteen",
+      "t": 3.04,
+      "e": 3.6
+     },
+     {
+      "w": "Maybe",
+      "t": 3.92,
+      "e": 4.393
+     }
+    ],
+    "text": "It's a fire extinguisher. Held by a girl. Fifteen. Maybe.",
+    "echo": false
+   },
+   {
+    "id": "M14",
+    "who": "NORA",
+    "start": 537.497,
+    "dur": 1.231,
+    "words": [
+     {
+      "w": "You're",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "Freshway",
+      "t": 0.32
+     },
+     {
+      "w": "guy",
+      "t": 0.88,
+      "e": 1.171
+     }
+    ],
+    "text": "You're the Freshway guy.",
+    "echo": false
+   },
+   {
+    "id": "M15",
+    "who": "N",
+    "start": 539.478,
+    "dur": 0.916,
+    "words": [
+     {
+      "w": "She",
+      "t": 0.0
+     },
+     {
+      "w": "knows",
+      "t": 0.32
+     },
+     {
+      "w": "you",
+      "t": 0.56,
+      "e": 0.856
+     }
+    ],
+    "text": "She knows you.",
+    "echo": false
+   },
+   {
+    "id": "M16",
+    "who": "NORA",
+    "start": 540.994,
+    "dur": 4.091,
+    "words": [
+     {
+      "w": "I've",
+      "t": 0.0
+     },
+     {
+      "w": "been",
+      "t": 0.32
+     },
+     {
+      "w": "listening",
+      "t": 0.48
+     },
+     {
+      "w": "to",
+      "t": 0.96
+     },
+     {
+      "w": "you",
+      "t": 1.12,
+      "e": 1.3
+     },
+     {
+      "w": "Every",
+      "t": 1.76
+     },
+     {
+      "w": "night",
+      "t": 2.08,
+      "e": 2.6
+     },
+     {
+      "w": "Channel",
+      "t": 3.04
+     },
+     {
+      "w": "three",
+      "t": 3.6,
+      "e": 4.031
+     }
+    ],
+    "text": "I've been listening to you. Every night. Channel three.",
+    "echo": false
+   },
+   {
+    "id": "M16b",
+    "who": "HERO",
+    "start": 545.76,
+    "dur": 1.808,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "why",
+      "t": 0.32
+     },
+     {
+      "w": "didn't",
+      "t": 0.56
+     },
+     {
+      "w": "you",
+      "t": 0.88
+     },
+     {
+      "w": "say",
+      "t": 1.04
+     },
+     {
+      "w": "something",
+      "t": 1.28,
+      "e": 1.748
+     }
+    ],
+    "text": "Then why didn't you say something?",
+    "echo": false
+   },
+   {
+    "id": "M16c",
+    "who": "NORA",
+    "start": 548.318,
+    "dur": 3.994,
+    "words": [
+     {
+      "w": "My",
+      "t": 0.0
+     },
+     {
+      "w": "button's",
+      "t": 0.24
+     },
+     {
+      "w": "broken",
+      "t": 0.72,
+      "e": 1.18
+     },
+     {
+      "w": "I",
+      "t": 1.68
+     },
+     {
+      "w": "can",
+      "t": 1.84
+     },
+     {
+      "w": "hear",
+      "t": 2.24,
+      "e": 2.5
+     },
+     {
+      "w": "I",
+      "t": 2.96
+     },
+     {
+      "w": "can't",
+      "t": 3.12
+     },
+     {
+      "w": "talk",
+      "t": 3.52,
+      "e": 3.934
+     }
+    ],
+    "text": "My button's broken. I can hear. I can't talk.",
+    "echo": false
+   },
+   {
+    "id": "M16d",
+    "who": "N",
+    "start": 553.212,
+    "dur": 6.424,
+    "words": [
+     {
+      "w": "So",
+      "t": 0.0
+     },
+     {
+      "w": "she",
+      "t": 0.4
+     },
+     {
+      "w": "used",
+      "t": 0.64
+     },
+     {
+      "w": "the",
+      "t": 0.96
+     },
+     {
+      "w": "light",
+      "t": 1.2,
+      "e": 1.75
+     },
+     {
+      "w": "And",
+      "t": 2.24
+     },
+     {
+      "w": "a",
+      "t": 2.56
+     },
+     {
+      "w": "page",
+      "t": 2.8
+     },
+     {
+      "w": "of",
+      "t": 3.12
+     },
+     {
+      "w": "Morse",
+      "t": 3.28
+     },
+     {
+      "w": "code",
+      "t": 3.92
+     },
+     {
+      "w": "from",
+      "t": 4.24
+     },
+     {
+      "w": "the",
+      "t": 4.4
+     },
+     {
+      "w": "bookstore",
+      "t": 4.48
+     },
+     {
+      "w": "on",
+      "t": 5.28
+     },
+     {
+      "w": "level",
+      "t": 5.44
+     },
+     {
+      "w": "two",
+      "t": 5.92,
+      "e": 6.364
+     }
+    ],
+    "text": "So she used the light. And a page of Morse code from the bookstore on level two.",
+    "echo": false
+   },
+   {
+    "id": "M17",
+    "who": "N",
+    "start": 560.536,
+    "dur": 3.482,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "three",
+      "t": 0.4,
+      "e": 0.72
+     },
+     {
+      "w": "Count",
+      "t": 1.12
+     },
+     {
+      "w": "the",
+      "t": 1.44
+     },
+     {
+      "w": "radios",
+      "t": 1.52,
+      "e": 2.32
+     },
+     {
+      "w": "There",
+      "t": 2.64
+     },
+     {
+      "w": "are",
+      "t": 2.8
+     },
+     {
+      "w": "three",
+      "t": 3.04,
+      "e": 3.422
+     }
+    ],
+    "text": "Rule three. Count the radios. There are three.",
+    "echo": false
+   },
+   {
+    "id": "M17b",
+    "who": "NORA",
+    "start": 565.218,
+    "dur": 3.725,
+    "words": [
+     {
+      "w": "Rate",
+      "t": 0.0
+     },
+     {
+      "w": "your",
+      "t": 0.4
+     },
+     {
+      "w": "day",
+      "t": 0.64
+     },
+     {
+      "w": "one",
+      "t": 1.04
+     },
+     {
+      "w": "to",
+      "t": 1.36
+     },
+     {
+      "w": "ten",
+      "t": 1.52,
+      "e": 1.86
+     },
+     {
+      "w": "Every",
+      "t": 2.48
+     },
+     {
+      "w": "single",
+      "t": 2.8
+     },
+     {
+      "w": "night",
+      "t": 3.2,
+      "e": 3.665
+     }
+    ],
+    "text": "Rate your day, one to ten. Every single night.",
+    "echo": false
+   },
+   {
+    "id": "M17c",
+    "who": "N",
+    "start": 569.693,
+    "dur": 1.902,
+    "words": [
+     {
+      "w": "She",
+      "t": 0.04
+     },
+     {
+      "w": "does",
+      "t": 0.285
+     },
+     {
+      "w": "a",
+      "t": 0.59
+     },
+     {
+      "w": "pretty",
+      "t": 0.713
+     },
+     {
+      "w": "good",
+      "t": 1.141
+     },
+     {
+      "w": "Dale",
+      "t": 1.446,
+      "e": 1.842
+     }
+    ],
+    "text": "She does a pretty good Dale.",
+    "echo": false
+   },
+   {
+    "id": "N1",
+    "who": "N",
+    "start": 572.645,
+    "dur": 3.847,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "storm",
+      "t": 0.24
+     },
+     {
+      "w": "ends",
+      "t": 0.64
+     },
+     {
+      "w": "at",
+      "t": 0.96
+     },
+     {
+      "w": "six",
+      "t": 1.12,
+      "e": 1.66
+     },
+     {
+      "w": "And",
+      "t": 2.16
+     },
+     {
+      "w": "the",
+      "t": 2.32
+     },
+     {
+      "w": "silence",
+      "t": 2.48
+     },
+     {
+      "w": "comes",
+      "t": 3.04
+     },
+     {
+      "w": "back",
+      "t": 3.44,
+      "e": 3.787
+     }
+    ],
+    "text": "The storm ends at six. And the silence comes back.",
+    "echo": false
+   },
+   {
+    "id": "N2",
+    "who": "N",
+    "start": 577.167,
+    "dur": 2.02,
+    "words": [
+     {
+      "w": "You're",
+      "t": 0.0
+     },
+     {
+      "w": "not",
+      "t": 0.32
+     },
+     {
+      "w": "crossing",
+      "t": 0.48
+     },
+     {
+      "w": "that",
+      "t": 0.96
+     },
+     {
+      "w": "lot",
+      "t": 1.2
+     },
+     {
+      "w": "tonight",
+      "t": 1.44,
+      "e": 1.96
+     }
+    ],
+    "text": "You're not crossing that lot tonight.",
+    "echo": false
+   },
+   {
+    "id": "N3",
+    "who": "N",
+    "start": 580.087,
+    "dur": 4.228,
+    "words": [
+     {
+      "w": "Her",
+      "t": 0.0
+     },
+     {
+      "w": "name",
+      "t": 0.24
+     },
+     {
+      "w": "is",
+      "t": 0.48
+     },
+     {
+      "w": "Nora",
+      "t": 0.64,
+      "e": 1.29
+     },
+     {
+      "w": "She's",
+      "t": 1.92
+     },
+     {
+      "w": "been",
+      "t": 2.4
+     },
+     {
+      "w": "here",
+      "t": 2.56
+     },
+     {
+      "w": "since",
+      "t": 2.88
+     },
+     {
+      "w": "the",
+      "t": 3.28
+     },
+     {
+      "w": "first",
+      "t": 3.44
+     },
+     {
+      "w": "night",
+      "t": 3.68,
+      "e": 4.168
+     }
+    ],
+    "text": "Her name is Nora. She's been here since the first night.",
+    "echo": false
+   },
+   {
+    "id": "N4",
+    "who": "NORA",
+    "start": 584.99,
+    "dur": 2.973,
+    "words": [
+     {
+      "w": "My",
+      "t": 0.0
+     },
+     {
+      "w": "mom",
+      "t": 0.24
+     },
+     {
+      "w": "worked",
+      "t": 0.56
+     },
+     {
+      "w": "nights",
+      "t": 0.88
+     },
+     {
+      "w": "here",
+      "t": 1.36,
+      "e": 1.53
+     },
+     {
+      "w": "Inventory",
+      "t": 2.08,
+      "e": 2.913
+     }
+    ],
+    "text": "My mom worked nights here. Inventory.",
+    "echo": false
+   },
+   {
+    "id": "N5",
+    "who": "N",
+    "start": 588.863,
+    "dur": 4.286,
+    "words": [
+     {
+      "w": "She",
+      "t": 0.0
+     },
+     {
+      "w": "doesn't",
+      "t": 0.32
+     },
+     {
+      "w": "say",
+      "t": 0.8
+     },
+     {
+      "w": "what",
+      "t": 1.2
+     },
+     {
+      "w": "happened",
+      "t": 1.44
+     },
+     {
+      "w": "to",
+      "t": 1.84
+     },
+     {
+      "w": "her",
+      "t": 2.0
+     },
+     {
+      "w": "mom",
+      "t": 2.24,
+      "e": 2.83
+     },
+     {
+      "w": "You",
+      "t": 3.2
+     },
+     {
+      "w": "don't",
+      "t": 3.36
+     },
+     {
+      "w": "ask",
+      "t": 3.68,
+      "e": 4.226
+     }
+    ],
+    "text": "She doesn't say what happened to her mom. You don't ask.",
+    "echo": false
+   },
+   {
+    "id": "N6",
+    "who": "NORA",
+    "start": 594.199,
+    "dur": 5.963,
+    "words": [
+     {
+      "w": "My",
+      "t": 0.0
+     },
+     {
+      "w": "little",
+      "t": 0.24
+     },
+     {
+      "w": "brother",
+      "t": 0.48
+     },
+     {
+      "w": "went",
+      "t": 0.96
+     },
+     {
+      "w": "across",
+      "t": 1.36
+     },
+     {
+      "w": "the",
+      "t": 1.76
+     },
+     {
+      "w": "street",
+      "t": 1.92
+     },
+     {
+      "w": "that",
+      "t": 2.4
+     },
+     {
+      "w": "night",
+      "t": 2.64,
+      "e": 2.76
+     },
+     {
+      "w": "To",
+      "t": 3.36
+     },
+     {
+      "w": "Freshway",
+      "t": 3.6,
+      "e": 4.35
+     },
+     {
+      "w": "For",
+      "t": 4.96
+     },
+     {
+      "w": "candy",
+      "t": 5.2,
+      "e": 5.903
+     }
+    ],
+    "text": "My little brother went across the street that night. To Freshway. For candy.",
+    "echo": false
+   },
+   {
+    "id": "N7",
+    "who": "N",
+    "start": 600.837,
+    "dur": 2.102,
+    "words": [
+     {
+      "w": "He's",
+      "t": 0.0
+     },
+     {
+      "w": "nine",
+      "t": 0.32,
+      "e": 0.75
+     },
+     {
+      "w": "His",
+      "t": 1.04
+     },
+     {
+      "w": "name",
+      "t": 1.2
+     },
+     {
+      "w": "is",
+      "t": 1.44
+     },
+     {
+      "w": "Leo",
+      "t": 1.6,
+      "e": 2.042
+     }
+    ],
+    "text": "He's nine. His name is Leo.",
+    "echo": false
+   },
+   {
+    "id": "N8",
+    "who": "N",
+    "start": 603.614,
+    "dur": 4.003,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "were",
+      "t": 0.24
+     },
+     {
+      "w": "in",
+      "t": 0.4
+     },
+     {
+      "w": "Freshway",
+      "t": 0.56
+     },
+     {
+      "w": "that",
+      "t": 1.28
+     },
+     {
+      "w": "night",
+      "t": 1.52,
+      "e": 1.86
+     },
+     {
+      "w": "You",
+      "t": 2.4
+     },
+     {
+      "w": "never",
+      "t": 2.64
+     },
+     {
+      "w": "saw",
+      "t": 2.96
+     },
+     {
+      "w": "a",
+      "t": 3.36
+     },
+     {
+      "w": "kid",
+      "t": 3.44,
+      "e": 3.943
+     }
+    ],
+    "text": "You were in Freshway that night. You never saw a kid.",
+    "echo": false
+   },
+   {
+    "id": "N9",
+    "who": "NORA",
+    "start": 608.292,
+    "dur": 6.761,
+    "words": [
+     {
+      "w": "Every",
+      "t": 0.16
+     },
+     {
+      "w": "night",
+      "t": 0.4
+     },
+     {
+      "w": "at",
+      "t": 1.04
+     },
+     {
+      "w": "two",
+      "t": 1.28
+     },
+     {
+      "w": "thirty-one",
+      "t": 2.08
+     },
+     {
+      "w": "there's",
+      "t": 2.88
+     },
+     {
+      "w": "an",
+      "t": 3.2
+     },
+     {
+      "w": "alarm",
+      "t": 3.44
+     },
+     {
+      "w": "over",
+      "t": 4.16
+     },
+     {
+      "w": "there",
+      "t": 4.48,
+      "e": 4.67
+     },
+     {
+      "w": "I",
+      "t": 5.12
+     },
+     {
+      "w": "can",
+      "t": 5.28
+     },
+     {
+      "w": "hear",
+      "t": 5.6
+     },
+     {
+      "w": "it",
+      "t": 5.84
+     },
+     {
+      "w": "from",
+      "t": 6.0
+     },
+     {
+      "w": "here",
+      "t": 6.32,
+      "e": 6.701
+     }
+    ],
+    "text": "Every night, at two thirty-one, there's an alarm over there. I can hear it from here.",
+    "echo": false
+   },
+   {
+    "id": "N10",
+    "who": "NORA",
+    "start": 615.728,
+    "dur": 2.882,
+    "words": [
+     {
+      "w": "That's",
+      "t": 0.0
+     },
+     {
+      "w": "him",
+      "t": 0.56,
+      "e": 0.68
+     },
+     {
+      "w": "That's",
+      "t": 1.2
+     },
+     {
+      "w": "how",
+      "t": 1.52
+     },
+     {
+      "w": "I",
+      "t": 1.68
+     },
+     {
+      "w": "know",
+      "t": 1.84
+     },
+     {
+      "w": "he's",
+      "t": 2.08
+     },
+     {
+      "w": "alive",
+      "t": 2.32,
+      "e": 2.822
+     }
+    ],
+    "text": "That's him. That's how I know he's alive.",
+    "echo": false
+   },
+   {
+    "id": "N10b",
+    "who": "N",
+    "start": 619.66,
+    "dur": 5.466,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "think",
+      "t": 0.24
+     },
+     {
+      "w": "about",
+      "t": 0.48
+     },
+     {
+      "w": "the",
+      "t": 0.72
+     },
+     {
+      "w": "batteries",
+      "t": 0.88,
+      "e": 1.73
+     },
+     {
+      "w": "Somebody",
+      "t": 2.24
+     },
+     {
+      "w": "keeps",
+      "t": 2.8
+     },
+     {
+      "w": "putting",
+      "t": 3.36
+     },
+     {
+      "w": "new",
+      "t": 3.84
+     },
+     {
+      "w": "ones",
+      "t": 4.08
+     },
+     {
+      "w": "in",
+      "t": 4.4
+     },
+     {
+      "w": "that",
+      "t": 4.64
+     },
+     {
+      "w": "clock",
+      "t": 4.88,
+      "e": 5.406
+     }
+    ],
+    "text": "You think about the batteries. Somebody keeps putting new ones in that clock.",
+    "echo": false
+   },
+   {
+    "id": "N11",
+    "who": "N",
+    "start": 625.801,
+    "dur": 2.306,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "candy",
+      "t": 0.24
+     },
+     {
+      "w": "wrapper",
+      "t": 0.56,
+      "e": 0.97
+     },
+     {
+      "w": "Sour",
+      "t": 1.51
+     },
+     {
+      "w": "worms",
+      "t": 1.83,
+      "e": 2.246
+     }
+    ],
+    "text": "The candy wrapper. Sour worms.",
+    "echo": false
+   },
+   {
+    "id": "N11b",
+    "who": "N",
+    "start": 629.007,
+    "dur": 2.607,
+    "words": [
+     {
+      "w": "Somebody",
+      "t": 0.0
+     },
+     {
+      "w": "small",
+      "t": 0.56,
+      "e": 0.96
+     },
+     {
+      "w": "Who",
+      "t": 1.28
+     },
+     {
+      "w": "likes",
+      "t": 1.52
+     },
+     {
+      "w": "sour",
+      "t": 1.76
+     },
+     {
+      "w": "worms",
+      "t": 2.08,
+      "e": 2.547
+     }
+    ],
+    "text": "Somebody small. Who likes sour worms.",
+    "echo": false
+   },
+   {
+    "id": "N12",
+    "who": "N",
+    "start": 632.814,
+    "dur": 3.928,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "Nora's",
+      "t": 0.16
+     },
+     {
+      "w": "radio",
+      "t": 0.64
+     },
+     {
+      "w": "clicks",
+      "t": 0.96,
+      "e": 1.08
+     },
+     {
+      "w": "Not",
+      "t": 1.76
+     },
+     {
+      "w": "channel",
+      "t": 2.0
+     },
+     {
+      "w": "three",
+      "t": 2.4,
+      "e": 2.76
+     },
+     {
+      "w": "Channel",
+      "t": 3.04
+     },
+     {
+      "w": "four",
+      "t": 3.44,
+      "e": 3.868
+     }
+    ],
+    "text": "Then Nora's radio clicks. Not channel three. Channel four.",
+    "echo": false
+   },
+   {
+    "id": "N13",
+    "who": "DALE",
+    "start": 637.417,
+    "dur": 2.861,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.12,
+      "e": 0.59
+     },
+     {
+      "w": "Honey",
+      "t": 1.0,
+      "e": 1.52
+     },
+     {
+      "w": "Are",
+      "t": 1.96
+     },
+     {
+      "w": "you",
+      "t": 2.12
+     },
+     {
+      "w": "there",
+      "t": 2.28,
+      "e": 2.641
+     }
+    ],
+    "text": "Nora? Honey? Are you there?",
+    "echo": false
+   },
+   {
+    "id": "N14",
+    "who": "N",
+    "start": 641.178,
+    "dur": 1.072,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.0
+     },
+     {
+      "w": "goes",
+      "t": 0.48
+     },
+     {
+      "w": "white",
+      "t": 0.64,
+      "e": 1.012
+     }
+    ],
+    "text": "Nora goes white.",
+    "echo": false
+   },
+   {
+    "id": "N15",
+    "who": "NORA",
+    "start": 643.0,
+    "dur": 0.9,
+    "words": [
+     {
+      "w": "That's",
+      "t": 0.0
+     },
+     {
+      "w": "my",
+      "t": 0.32
+     },
+     {
+      "w": "dad",
+      "t": 0.48,
+      "e": 0.84
+     }
+    ],
+    "text": "That's my dad.",
+    "echo": false
+   },
+   {
+    "id": "N16",
+    "who": "N",
+    "start": 645.25,
+    "dur": 1.178,
+    "words": [
+     {
+      "w": "Dale",
+      "t": 0.0
+     },
+     {
+      "w": "is",
+      "t": 0.48
+     },
+     {
+      "w": "her",
+      "t": 0.56
+     },
+     {
+      "w": "father",
+      "t": 0.72,
+      "e": 1.118
+     }
+    ],
+    "text": "Dale is her father.",
+    "echo": false
+   },
+   {
+    "id": "N16b",
+    "who": "NORA",
+    "start": 649.828,
+    "dur": 5.244,
+    "words": [
+     {
+      "w": "Channel",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.48
+     },
+     {
+      "w": "is",
+      "t": 0.8
+     },
+     {
+      "w": "ours",
+      "t": 1.04,
+      "e": 1.46
+     },
+     {
+      "w": "He",
+      "t": 1.92
+     },
+     {
+      "w": "calls",
+      "t": 2.08
+     },
+     {
+      "w": "every",
+      "t": 2.64
+     },
+     {
+      "w": "night",
+      "t": 2.88,
+      "e": 3.26
+     },
+     {
+      "w": "And",
+      "t": 3.84
+     },
+     {
+      "w": "I",
+      "t": 4.08
+     },
+     {
+      "w": "can't",
+      "t": 4.24
+     },
+     {
+      "w": "answer",
+      "t": 4.64,
+      "e": 5.184
+     }
+    ],
+    "text": "Channel four is ours. He calls every night. And I can't answer.",
+    "echo": false
+   },
+   {
+    "id": "N16c",
+    "who": "N",
+    "start": 656.122,
+    "dur": 4.664,
+    "words": [
+     {
+      "w": "Mall",
+      "t": 0.0
+     },
+     {
+      "w": "security",
+      "t": 0.48,
+      "e": 1.06
+     },
+     {
+      "w": "That",
+      "t": 1.52
+     },
+     {
+      "w": "part",
+      "t": 1.76
+     },
+     {
+      "w": "was",
+      "t": 2.0
+     },
+     {
+      "w": "true",
+      "t": 2.24,
+      "e": 2.61
+     },
+     {
+      "w": "He",
+      "t": 3.12
+     },
+     {
+      "w": "just",
+      "t": 3.36
+     },
+     {
+      "w": "wasn't",
+      "t": 3.52
+     },
+     {
+      "w": "at",
+      "t": 3.92
+     },
+     {
+      "w": "the",
+      "t": 4.08
+     },
+     {
+      "w": "mall",
+      "t": 4.16,
+      "e": 4.604
+     }
+    ],
+    "text": "Mall security. That part was true. He just wasn't at the mall.",
+    "echo": false
+   },
+   {
+    "id": "N17",
+    "who": "N",
+    "start": 661.686,
+    "dur": 7.104,
+    "words": [
+     {
+      "w": "He",
+      "t": 0.0
+     },
+     {
+      "w": "asked",
+      "t": 0.24
+     },
+     {
+      "w": "how",
+      "t": 0.56
+     },
+     {
+      "w": "many",
+      "t": 0.72
+     },
+     {
+      "w": "of",
+      "t": 0.96
+     },
+     {
+      "w": "you",
+      "t": 1.2
+     },
+     {
+      "w": "there",
+      "t": 1.52
+     },
+     {
+      "w": "were",
+      "t": 1.84,
+      "e": 2.33
+     },
+     {
+      "w": "He",
+      "t": 2.72
+     },
+     {
+      "w": "asked",
+      "t": 2.96
+     },
+     {
+      "w": "about",
+      "t": 3.44
+     },
+     {
+      "w": "the",
+      "t": 3.92
+     },
+     {
+      "w": "freezer",
+      "t": 4.08,
+      "e": 4.76
+     },
+     {
+      "w": "He",
+      "t": 5.36
+     },
+     {
+      "w": "asked",
+      "t": 5.6
+     },
+     {
+      "w": "about",
+      "t": 6.0
+     },
+     {
+      "w": "the",
+      "t": 6.24
+     },
+     {
+      "w": "alarm",
+      "t": 6.48,
+      "e": 7.045
+     }
+    ],
+    "text": "He asked how many of you there were. He asked about the freezer. He asked about the alarm.",
+    "echo": false
+   },
+   {
+    "id": "N18",
+    "who": "N",
+    "start": 669.465,
+    "dur": 4.307,
+    "words": [
+     {
+      "w": "He",
+      "t": 0.0
+     },
+     {
+      "w": "wasn't",
+      "t": 0.24
+     },
+     {
+      "w": "counting",
+      "t": 0.72
+     },
+     {
+      "w": "your",
+      "t": 1.2
+     },
+     {
+      "w": "food",
+      "t": 1.44,
+      "e": 2.02
+     },
+     {
+      "w": "He",
+      "t": 2.48
+     },
+     {
+      "w": "was",
+      "t": 2.64
+     },
+     {
+      "w": "looking",
+      "t": 2.88
+     },
+     {
+      "w": "for",
+      "t": 3.2
+     },
+     {
+      "w": "his",
+      "t": 3.44
+     },
+     {
+      "w": "son",
+      "t": 3.68,
+      "e": 4.247
+     }
+    ],
+    "text": "He wasn't counting your food. He was looking for his son.",
+    "echo": false
+   },
+   {
+    "id": "N19",
+    "who": "N",
+    "start": 674.822,
+    "dur": 4.572,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.48
+     },
+     {
+      "w": "works",
+      "t": 0.88
+     },
+     {
+      "w": "both",
+      "t": 1.28
+     },
+     {
+      "w": "ways",
+      "t": 1.76,
+      "e": 2.04
+     },
+     {
+      "w": "Dale",
+      "t": 2.56
+     },
+     {
+      "w": "never",
+      "t": 3.12
+     },
+     {
+      "w": "told",
+      "t": 3.28
+     },
+     {
+      "w": "you",
+      "t": 3.6
+     },
+     {
+      "w": "what",
+      "t": 3.76
+     },
+     {
+      "w": "he",
+      "t": 3.92
+     },
+     {
+      "w": "has",
+      "t": 4.08,
+      "e": 4.512
+     }
+    ],
+    "text": "Rule four works both ways. Dale never told you what he has.",
+    "echo": false
+   },
+   {
+    "id": "N20",
+    "who": "N",
+    "start": 680.069,
+    "dur": 2.835,
+    "words": [
+     {
+      "w": "He",
+      "t": 0.0
+     },
+     {
+      "w": "has",
+      "t": 0.24
+     },
+     {
+      "w": "a",
+      "t": 0.4
+     },
+     {
+      "w": "son",
+      "t": 0.56,
+      "e": 0.84
+     },
+     {
+      "w": "Somewhere",
+      "t": 1.28
+     },
+     {
+      "w": "inside",
+      "t": 1.76
+     },
+     {
+      "w": "Freshway",
+      "t": 2.16,
+      "e": 2.775
+     }
+    ],
+    "text": "He has a son. Somewhere inside Freshway.",
+    "echo": false
+   },
+   {
+    "id": "N20b",
+    "who": "N",
+    "start": 684.104,
+    "dur": 2.456,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "now",
+      "t": 0.24
+     },
+     {
+      "w": "you",
+      "t": 0.72
+     },
+     {
+      "w": "know",
+      "t": 0.88
+     },
+     {
+      "w": "where",
+      "t": 1.12
+     },
+     {
+      "w": "his",
+      "t": 1.36
+     },
+     {
+      "w": "daughter",
+      "t": 1.6
+     },
+     {
+      "w": "is",
+      "t": 2.0,
+      "e": 2.396
+     }
+    ],
+    "text": "And now you know where his daughter is.",
+    "echo": false
+   },
+   {
+    "id": "N21",
+    "who": "NORA",
+    "start": 687.76,
+    "dur": 2.716,
+    "words": [
+     {
+      "w": "Take",
+      "t": 0.0
+     },
+     {
+      "w": "me",
+      "t": 0.4
+     },
+     {
+      "w": "back",
+      "t": 0.64
+     },
+     {
+      "w": "with",
+      "t": 0.96
+     },
+     {
+      "w": "you",
+      "t": 1.28,
+      "e": 1.39
+     },
+     {
+      "w": "Please",
+      "t": 1.92,
+      "e": 2.656
+     }
+    ],
+    "text": "Take me back with you. Please.",
+    "echo": false
+   },
+   {
+    "id": "D1",
+    "who": "N",
+    "start": 691.976,
+    "dur": 5.009,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.0
+     },
+     {
+      "w": "twelve",
+      "t": 0.4,
+      "e": 1.0
+     },
+     {
+      "w": "The",
+      "t": 1.36
+     },
+     {
+      "w": "lot",
+      "t": 1.6
+     },
+     {
+      "w": "fills",
+      "t": 2.08
+     },
+     {
+      "w": "up",
+      "t": 2.64
+     },
+     {
+      "w": "again",
+      "t": 2.96,
+      "e": 3.27
+     },
+     {
+      "w": "You",
+      "t": 3.6
+     },
+     {
+      "w": "wait",
+      "t": 3.76
+     },
+     {
+      "w": "for",
+      "t": 4.08
+     },
+     {
+      "w": "a",
+      "t": 4.24
+     },
+     {
+      "w": "plan",
+      "t": 4.4,
+      "e": 4.949
+     }
+    ],
+    "text": "Day twelve. The lot fills up again. You wait for a plan.",
+    "echo": false
+   },
+   {
+    "id": "D2",
+    "who": "N",
+    "start": 697.66,
+    "dur": 4.996,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.0
+     },
+     {
+      "w": "has",
+      "t": 0.72
+     },
+     {
+      "w": "rules",
+      "t": 0.96
+     },
+     {
+      "w": "too",
+      "t": 1.6,
+      "e": 1.92
+     },
+     {
+      "w": "She",
+      "t": 2.4
+     },
+     {
+      "w": "wrote",
+      "t": 2.64
+     },
+     {
+      "w": "them",
+      "t": 3.12
+     },
+     {
+      "w": "on",
+      "t": 3.36
+     },
+     {
+      "w": "the",
+      "t": 3.6
+     },
+     {
+      "w": "back",
+      "t": 3.76
+     },
+     {
+      "w": "of",
+      "t": 4.0
+     },
+     {
+      "w": "a",
+      "t": 4.16
+     },
+     {
+      "w": "receipt",
+      "t": 4.32,
+      "e": 4.936
+     }
+    ],
+    "text": "Nora has rules too. She wrote them on the back of a receipt.",
+    "echo": false
+   },
+   {
+    "id": "D3",
+    "who": "N",
+    "start": 703.331,
+    "dur": 7.457,
+    "words": [
+     {
+      "w": "Never",
+      "t": 0.0
+     },
+     {
+      "w": "sleep",
+      "t": 0.48
+     },
+     {
+      "w": "on",
+      "t": 0.88
+     },
+     {
+      "w": "the",
+      "t": 1.04
+     },
+     {
+      "w": "ground",
+      "t": 1.2
+     },
+     {
+      "w": "floor",
+      "t": 1.6,
+      "e": 2.18
+     },
+     {
+      "w": "Shoes",
+      "t": 2.72
+     },
+     {
+      "w": "off",
+      "t": 3.28
+     },
+     {
+      "w": "on",
+      "t": 3.44
+     },
+     {
+      "w": "the",
+      "t": 3.6
+     },
+     {
+      "w": "escalator",
+      "t": 3.76,
+      "e": 4.54
+     },
+     {
+      "w": "And",
+      "t": 5.2
+     },
+     {
+      "w": "the",
+      "t": 5.36
+     },
+     {
+      "w": "sour",
+      "t": 5.52
+     },
+     {
+      "w": "worms",
+      "t": 6.08
+     },
+     {
+      "w": "are",
+      "t": 6.48
+     },
+     {
+      "w": "for",
+      "t": 6.64
+     },
+     {
+      "w": "Leo",
+      "t": 6.88,
+      "e": 7.397
+     }
+    ],
+    "text": "Never sleep on the ground floor. Shoes off on the escalator. And the sour worms are for Leo.",
+    "echo": false
+   },
+   {
+    "id": "D4",
+    "who": "N",
+    "start": 711.838,
+    "dur": 2.578,
+    "words": [
+     {
+      "w": "She's",
+      "t": 0.0
+     },
+     {
+      "w": "been",
+      "t": 0.32
+     },
+     {
+      "w": "saving",
+      "t": 0.48
+     },
+     {
+      "w": "one",
+      "t": 0.88
+     },
+     {
+      "w": "bag",
+      "t": 1.12
+     },
+     {
+      "w": "for",
+      "t": 1.44
+     },
+     {
+      "w": "twelve",
+      "t": 1.6
+     },
+     {
+      "w": "days",
+      "t": 2.08,
+      "e": 2.518
+     }
+    ],
+    "text": "She's been saving one bag for twelve days.",
+    "echo": false
+   },
+   {
+    "id": "D5",
+    "who": "N",
+    "start": 715.916,
+    "dur": 3.269,
+    "words": [
+     {
+      "w": "At",
+      "t": 0.0
+     },
+     {
+      "w": "two",
+      "t": 0.24
+     },
+     {
+      "w": "thirty-one",
+      "t": 0.8
+     },
+     {
+      "w": "the",
+      "t": 1.36
+     },
+     {
+      "w": "alarm",
+      "t": 1.52
+     },
+     {
+      "w": "rings",
+      "t": 2.0
+     },
+     {
+      "w": "across",
+      "t": 2.32
+     },
+     {
+      "w": "the",
+      "t": 2.64
+     },
+     {
+      "w": "street",
+      "t": 2.72,
+      "e": 3.209
+     }
+    ],
+    "text": "At two thirty-one, the alarm rings across the street.",
+    "echo": false
+   },
+   {
+    "id": "D6",
+    "who": "N",
+    "start": 719.86,
+    "dur": 3.317,
+    "words": [
+     {
+      "w": "Faint",
+      "t": 0.16,
+      "e": 0.62
+     },
+     {
+      "w": "Like",
+      "t": 1.04
+     },
+     {
+      "w": "a",
+      "t": 1.28
+     },
+     {
+      "w": "phone",
+      "t": 1.52
+     },
+     {
+      "w": "ringing",
+      "t": 1.92
+     },
+     {
+      "w": "in",
+      "t": 2.32
+     },
+     {
+      "w": "another",
+      "t": 2.56
+     },
+     {
+      "w": "room",
+      "t": 2.8,
+      "e": 3.257
+     }
+    ],
+    "text": "Faint. Like a phone ringing in another room.",
+    "echo": false
+   },
+   {
+    "id": "D7",
+    "who": "NORA",
+    "start": 724.377,
+    "dur": 0.802,
+    "words": [
+     {
+      "w": "Hi",
+      "t": 0.0
+     },
+     {
+      "w": "Leo",
+      "t": 0.32,
+      "e": 0.742
+     }
+    ],
+    "text": "Hi, Leo.",
+    "echo": false
+   },
+   {
+    "id": "D8",
+    "who": "N",
+    "start": 727.279,
+    "dur": 1.583,
+    "words": [
+     {
+      "w": "She",
+      "t": 0.0
+     },
+     {
+      "w": "says",
+      "t": 0.32
+     },
+     {
+      "w": "it",
+      "t": 0.64
+     },
+     {
+      "w": "every",
+      "t": 0.8
+     },
+     {
+      "w": "night",
+      "t": 1.04,
+      "e": 1.523
+     }
+    ],
+    "text": "She says it every night.",
+    "echo": false
+   },
+   {
+    "id": "S1",
+    "who": "N",
+    "start": 730.362,
+    "dur": 5.654,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.0
+     },
+     {
+      "w": "thirteen",
+      "t": 0.32,
+      "e": 0.99
+     },
+     {
+      "w": "One",
+      "t": 1.36
+     },
+     {
+      "w": "in",
+      "t": 1.68
+     },
+     {
+      "w": "the",
+      "t": 1.84
+     },
+     {
+      "w": "morning",
+      "t": 2.0,
+      "e": 2.65
+     },
+     {
+      "w": "Time",
+      "t": 2.96
+     },
+     {
+      "w": "to",
+      "t": 3.36
+     },
+     {
+      "w": "go",
+      "t": 3.6
+     },
+     {
+      "w": "home",
+      "t": 3.84,
+      "e": 4.2
+     },
+     {
+      "w": "Both",
+      "t": 4.8
+     },
+     {
+      "w": "of",
+      "t": 5.12
+     },
+     {
+      "w": "you",
+      "t": 5.28,
+      "e": 5.594
+     }
+    ],
+    "text": "Day thirteen. One in the morning. Time to go home. Both of you.",
+    "echo": false
+   },
+   {
+    "id": "S2",
+    "who": "N",
+    "start": 736.691,
+    "dur": 4.72,
+    "words": [
+     {
+      "w": "No",
+      "t": 0.0
+     },
+     {
+      "w": "storm",
+      "t": 0.4,
+      "e": 0.92
+     },
+     {
+      "w": "No",
+      "t": 1.28
+     },
+     {
+      "w": "clocks",
+      "t": 1.52,
+      "e": 2.36
+     },
+     {
+      "w": "Just",
+      "t": 2.64
+     },
+     {
+      "w": "two",
+      "t": 2.88
+     },
+     {
+      "w": "hundred",
+      "t": 3.24
+     },
+     {
+      "w": "of",
+      "t": 3.6
+     },
+     {
+      "w": "them",
+      "t": 3.76
+     },
+     {
+      "w": "in",
+      "t": 3.92
+     },
+     {
+      "w": "the",
+      "t": 4.08
+     },
+     {
+      "w": "lot",
+      "t": 4.24,
+      "e": 4.66
+     }
+    ],
+    "text": "No storm. No clocks. Just two hundred of them in the lot.",
+    "echo": false
+   },
+   {
+    "id": "S3",
+    "who": "N",
+    "start": 742.086,
+    "dur": 3.131,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.0
+     },
+     {
+      "w": "has",
+      "t": 0.48
+     },
+     {
+      "w": "an",
+      "t": 0.64
+     },
+     {
+      "w": "idea",
+      "t": 0.8,
+      "e": 1.21
+     },
+     {
+      "w": "Bright",
+      "t": 1.6
+     },
+     {
+      "w": "Tech",
+      "t": 2.0
+     },
+     {
+      "w": "sells",
+      "t": 2.32
+     },
+     {
+      "w": "drones",
+      "t": 2.56,
+      "e": 3.071
+     }
+    ],
+    "text": "Nora has an idea. Bright Tech sells drones.",
+    "echo": false
+   },
+   {
+    "id": "S4",
+    "who": "N",
+    "start": 745.892,
+    "dur": 2.709,
+    "words": [
+     {
+      "w": "And",
+      "t": 0.0
+     },
+     {
+      "w": "a",
+      "t": 0.24
+     },
+     {
+      "w": "speaker",
+      "t": 0.4
+     },
+     {
+      "w": "that",
+      "t": 0.88
+     },
+     {
+      "w": "clips",
+      "t": 1.12
+     },
+     {
+      "w": "onto",
+      "t": 1.68
+     },
+     {
+      "w": "anything",
+      "t": 2.08,
+      "e": 2.649
+     }
+    ],
+    "text": "And a speaker that clips onto anything.",
+    "echo": false
+   },
+   {
+    "id": "S4b",
+    "who": "N",
+    "start": 749.276,
+    "dur": 4.712,
+    "words": [
+     {
+      "w": "Every",
+      "t": 0.0
+     },
+     {
+      "w": "time",
+      "t": 0.32
+     },
+     {
+      "w": "you",
+      "t": 0.56
+     },
+     {
+      "w": "double",
+      "t": 0.8
+     },
+     {
+      "w": "the",
+      "t": 1.2
+     },
+     {
+      "w": "distance",
+      "t": 1.28
+     },
+     {
+      "w": "a",
+      "t": 2.08
+     },
+     {
+      "w": "sound",
+      "t": 2.24
+     },
+     {
+      "w": "gets",
+      "t": 2.64
+     },
+     {
+      "w": "about",
+      "t": 2.88
+     },
+     {
+      "w": "six",
+      "t": 3.12
+     },
+     {
+      "w": "decibels",
+      "t": 3.52
+     },
+     {
+      "w": "quieter",
+      "t": 4.16,
+      "e": 4.652
+     }
+    ],
+    "text": "Every time you double the distance, a sound gets about six decibels quieter.",
+    "echo": false
+   },
+   {
+    "id": "S4c",
+    "who": "N",
+    "start": 754.663,
+    "dur": 4.981,
+    "words": [
+     {
+      "w": "So",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.32
+     },
+     {
+      "w": "song",
+      "t": 0.48
+     },
+     {
+      "w": "has",
+      "t": 0.88
+     },
+     {
+      "w": "to",
+      "t": 1.12
+     },
+     {
+      "w": "go",
+      "t": 1.28
+     },
+     {
+      "w": "far",
+      "t": 1.6,
+      "e": 1.96
+     },
+     {
+      "w": "And",
+      "t": 2.56
+     },
+     {
+      "w": "you",
+      "t": 2.8
+     },
+     {
+      "w": "have",
+      "t": 3.04
+     },
+     {
+      "w": "to",
+      "t": 3.28
+     },
+     {
+      "w": "stay",
+      "t": 3.52
+     },
+     {
+      "w": "very",
+      "t": 3.92
+     },
+     {
+      "w": "quiet",
+      "t": 4.24,
+      "e": 4.921
+     }
+    ],
+    "text": "So the song has to go far. And you have to stay very quiet.",
+    "echo": false
+   },
+   {
+    "id": "S5",
+    "who": "N",
+    "start": 760.544,
+    "dur": 5.609,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "two",
+      "t": 0.48,
+      "e": 0.91
+     },
+     {
+      "w": "Music",
+      "t": 1.44
+     },
+     {
+      "w": "is",
+      "t": 1.92
+     },
+     {
+      "w": "a",
+      "t": 2.08
+     },
+     {
+      "w": "dinner",
+      "t": 2.16
+     },
+     {
+      "w": "bell",
+      "t": 2.56,
+      "e": 2.93
+     },
+     {
+      "w": "This",
+      "t": 3.28
+     },
+     {
+      "w": "time",
+      "t": 3.6
+     },
+     {
+      "w": "you",
+      "t": 4.16
+     },
+     {
+      "w": "ring",
+      "t": 4.32
+     },
+     {
+      "w": "it",
+      "t": 4.64
+     },
+     {
+      "w": "on",
+      "t": 4.8
+     },
+     {
+      "w": "purpose",
+      "t": 4.96,
+      "e": 5.549
+     }
+    ],
+    "text": "Rule two. Music is a dinner bell. This time, you ring it on purpose.",
+    "echo": false
+   },
+   {
+    "id": "S5b",
+    "who": "N",
+    "start": 767.053,
+    "dur": 4.633,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "box",
+      "t": 0.24
+     },
+     {
+      "w": "says",
+      "t": 0.56
+     },
+     {
+      "w": "thirty",
+      "t": 1.28
+     },
+     {
+      "w": "minutes",
+      "t": 1.68
+     },
+     {
+      "w": "of",
+      "t": 2.08
+     },
+     {
+      "w": "flight",
+      "t": 2.24,
+      "e": 2.794
+     },
+     {
+      "w": "That's",
+      "t": 3.204
+     },
+     {
+      "w": "the",
+      "t": 3.444
+     },
+     {
+      "w": "plan's",
+      "t": 3.604
+     },
+     {
+      "w": "clock",
+      "t": 4.164,
+      "e": 4.573
+     }
+    ],
+    "text": "The box says thirty minutes of flight. That's the plan's clock.",
+    "echo": false
+   },
+   {
+    "id": "S6",
+    "who": "N",
+    "start": 772.361,
+    "dur": 3.937,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.0
+     },
+     {
+      "w": "has",
+      "t": 0.56
+     },
+     {
+      "w": "one",
+      "t": 0.8
+     },
+     {
+      "w": "song",
+      "t": 1.04
+     },
+     {
+      "w": "on",
+      "t": 1.52
+     },
+     {
+      "w": "her",
+      "t": 1.68
+     },
+     {
+      "w": "phone",
+      "t": 1.92,
+      "e": 2.49
+     },
+     {
+      "w": "Guess",
+      "t": 2.8
+     },
+     {
+      "w": "which",
+      "t": 3.2
+     },
+     {
+      "w": "one",
+      "t": 3.44,
+      "e": 3.877
+     }
+    ],
+    "text": "Nora has one song on her phone. Guess which one.",
+    "echo": false
+   },
+   {
+    "id": "S8",
+    "who": "N",
+    "start": 786.048,
+    "dur": 6.591,
+    "words": [
+     {
+      "w": "Two",
+      "t": 0.0
+     },
+     {
+      "w": "hundred",
+      "t": 0.36
+     },
+     {
+      "w": "dead",
+      "t": 0.72
+     },
+     {
+      "w": "people",
+      "t": 1.12
+     },
+     {
+      "w": "follow",
+      "t": 1.52
+     },
+     {
+      "w": "a",
+      "t": 2.08
+     },
+     {
+      "w": "song",
+      "t": 2.32
+     },
+     {
+      "w": "about",
+      "t": 2.88
+     },
+     {
+      "w": "discount",
+      "t": 3.2
+     },
+     {
+      "w": "yogurt",
+      "t": 3.84,
+      "e": 4.5
+     },
+     {
+      "w": "To",
+      "t": 4.96
+     },
+     {
+      "w": "the",
+      "t": 5.12
+     },
+     {
+      "w": "far",
+      "t": 5.28
+     },
+     {
+      "w": "end",
+      "t": 5.6
+     },
+     {
+      "w": "of",
+      "t": 5.84
+     },
+     {
+      "w": "the",
+      "t": 5.92
+     },
+     {
+      "w": "lot",
+      "t": 6.08,
+      "e": 6.532
+     }
+    ],
+    "text": "Two hundred dead people follow a song about discount yogurt. To the far end of the lot.",
+    "echo": false
+   },
+   {
+    "id": "S8b",
+    "who": "N",
+    "start": 793.314,
+    "dur": 3.613,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "go",
+      "t": 0.24
+     },
+     {
+      "w": "down",
+      "t": 0.48
+     },
+     {
+      "w": "the",
+      "t": 0.72
+     },
+     {
+      "w": "escalator",
+      "t": 0.88,
+      "e": 1.8
+     },
+     {
+      "w": "Shoes",
+      "t": 2.24
+     },
+     {
+      "w": "in",
+      "t": 2.72
+     },
+     {
+      "w": "your",
+      "t": 2.88
+     },
+     {
+      "w": "hands",
+      "t": 3.04,
+      "e": 3.553
+     }
+    ],
+    "text": "You go down the escalator. Shoes in your hands.",
+    "echo": false
+   },
+   {
+    "id": "S8c",
+    "who": "N",
+    "start": 797.602,
+    "dur": 4.293,
+    "words": [
+     {
+      "w": "Out",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.32
+     },
+     {
+      "w": "side",
+      "t": 0.48
+     },
+     {
+      "w": "door",
+      "t": 0.8,
+      "e": 1.08
+     },
+     {
+      "w": "Past",
+      "t": 1.52
+     },
+     {
+      "w": "the",
+      "t": 1.92
+     },
+     {
+      "w": "broken",
+      "t": 2.08
+     },
+     {
+      "w": "glass",
+      "t": 2.56,
+      "e": 2.94
+     },
+     {
+      "w": "Into",
+      "t": 3.44
+     },
+     {
+      "w": "the",
+      "t": 3.68
+     },
+     {
+      "w": "lot",
+      "t": 3.84,
+      "e": 4.233
+     }
+    ],
+    "text": "Out the side door. Past the broken glass. Into the lot.",
+    "echo": false
+   },
+   {
+    "id": "S8e",
+    "who": "N",
+    "start": 805.57,
+    "dur": 2.478,
+    "words": [
+     {
+      "w": "Then",
+      "t": 0.0
+     },
+     {
+      "w": "the",
+      "t": 0.24
+     },
+     {
+      "w": "drone",
+      "t": 0.32
+     },
+     {
+      "w": "beeps",
+      "t": 0.64,
+      "e": 1.17
+     },
+     {
+      "w": "Low",
+      "t": 1.6
+     },
+     {
+      "w": "battery",
+      "t": 1.92,
+      "e": 2.418
+     }
+    ],
+    "text": "Then the drone beeps. Low battery.",
+    "echo": false
+   },
+   {
+    "id": "S8f",
+    "who": "N",
+    "start": 808.723,
+    "dur": 2.166,
+    "words": [
+     {
+      "w": "Twelve",
+      "t": 0.0
+     },
+     {
+      "w": "minutes",
+      "t": 0.4
+     },
+     {
+      "w": "early",
+      "t": 0.72,
+      "e": 0.95
+     },
+     {
+      "w": "Cheap",
+      "t": 1.28
+     },
+     {
+      "w": "drone",
+      "t": 1.68,
+      "e": 2.106
+     }
+    ],
+    "text": "Twelve minutes early. Cheap drone.",
+    "echo": false
+   },
+   {
+    "id": "S8g",
+    "who": "N",
+    "start": 811.639,
+    "dur": 4.362,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "song",
+      "t": 0.24
+     },
+     {
+      "w": "stops",
+      "t": 0.64,
+      "e": 1.36
+     },
+     {
+      "w": "Two",
+      "t": 1.76
+     },
+     {
+      "w": "hundred",
+      "t": 2.08
+     },
+     {
+      "w": "heads",
+      "t": 2.4
+     },
+     {
+      "w": "turn",
+      "t": 2.8
+     },
+     {
+      "w": "back",
+      "t": 3.12
+     },
+     {
+      "w": "toward",
+      "t": 3.36
+     },
+     {
+      "w": "the",
+      "t": 3.68
+     },
+     {
+      "w": "store",
+      "t": 3.84,
+      "e": 4.302
+     }
+    ],
+    "text": "The song stops. Two hundred heads turn back toward the store.",
+    "echo": false
+   },
+   {
+    "id": "S9",
+    "who": "N",
+    "start": 816.676,
+    "dur": 6.422,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.0
+     },
+     {
+      "w": "run",
+      "t": 0.24
+     },
+     {
+      "w": "for",
+      "t": 0.48
+     },
+     {
+      "w": "the",
+      "t": 0.56
+     },
+     {
+      "w": "staff",
+      "t": 0.72
+     },
+     {
+      "w": "door",
+      "t": 1.2,
+      "e": 1.49
+     },
+     {
+      "w": "Gary's",
+      "t": 1.92
+     },
+     {
+      "w": "keys",
+      "t": 2.64,
+      "e": 3.06
+     },
+     {
+      "w": "The",
+      "t": 3.44
+     },
+     {
+      "w": "fourth",
+      "t": 3.68
+     },
+     {
+      "w": "one",
+      "t": 4.16,
+      "e": 4.34
+     },
+     {
+      "w": "You",
+      "t": 5.04
+     },
+     {
+      "w": "remember",
+      "t": 5.2
+     },
+     {
+      "w": "this",
+      "t": 5.76
+     },
+     {
+      "w": "time",
+      "t": 6.0,
+      "e": 6.362
+     }
+    ],
+    "text": "You run for the staff door. Gary's keys. The fourth one. You remember this time.",
+    "echo": false
+   },
+   {
+    "id": "S10",
+    "who": "N",
+    "start": 823.773,
+    "dur": 1.661,
+    "words": [
+     {
+      "w": "You're",
+      "t": 0.0
+     },
+     {
+      "w": "in",
+      "t": 0.32,
+      "e": 0.6
+     },
+     {
+      "w": "Both",
+      "t": 0.88
+     },
+     {
+      "w": "of",
+      "t": 1.2
+     },
+     {
+      "w": "you",
+      "t": 1.28,
+      "e": 1.601
+     }
+    ],
+    "text": "You're in. Both of you.",
+    "echo": false
+   },
+   {
+    "id": "F1",
+    "who": "N",
+    "start": 829.134,
+    "dur": 2.342,
+    "words": [
+     {
+      "w": "Day",
+      "t": 0.0
+     },
+     {
+      "w": "fourteen",
+      "t": 0.32,
+      "e": 1.04
+     },
+     {
+      "w": "Here's",
+      "t": 1.36
+     },
+     {
+      "w": "what",
+      "t": 1.68
+     },
+     {
+      "w": "you",
+      "t": 1.84
+     },
+     {
+      "w": "know",
+      "t": 2.0,
+      "e": 2.282
+     }
+    ],
+    "text": "Day fourteen. Here's what you know.",
+    "echo": false
+   },
+   {
+    "id": "F2",
+    "who": "N",
+    "start": 832.151,
+    "dur": 2.99,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "one",
+      "t": 0.48,
+      "e": 0.76
+     },
+     {
+      "w": "They",
+      "t": 1.12
+     },
+     {
+      "w": "hear",
+      "t": 1.36,
+      "e": 1.81
+     },
+     {
+      "w": "They",
+      "t": 2.08
+     },
+     {
+      "w": "don't",
+      "t": 2.24
+     },
+     {
+      "w": "see",
+      "t": 2.56,
+      "e": 2.93
+     }
+    ],
+    "text": "Rule one. They hear. They don't see.",
+    "echo": false
+   },
+   {
+    "id": "F3",
+    "who": "N",
+    "start": 835.816,
+    "dur": 2.852,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "two",
+      "t": 0.48,
+      "e": 0.89
+     },
+     {
+      "w": "Music",
+      "t": 1.28
+     },
+     {
+      "w": "is",
+      "t": 1.84
+     },
+     {
+      "w": "a",
+      "t": 2.0
+     },
+     {
+      "w": "dinner",
+      "t": 2.08
+     },
+     {
+      "w": "bell",
+      "t": 2.4,
+      "e": 2.792
+     }
+    ],
+    "text": "Rule two. Music is a dinner bell.",
+    "echo": false
+   },
+   {
+    "id": "F4",
+    "who": "N",
+    "start": 839.343,
+    "dur": 2.081,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "three",
+      "t": 0.48,
+      "e": 0.78
+     },
+     {
+      "w": "Count",
+      "t": 1.04
+     },
+     {
+      "w": "the",
+      "t": 1.36
+     },
+     {
+      "w": "radios",
+      "t": 1.44,
+      "e": 2.021
+     }
+    ],
+    "text": "Rule three. Count the radios.",
+    "echo": false
+   },
+   {
+    "id": "F5",
+    "who": "N",
+    "start": 842.099,
+    "dur": 3.191,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "four",
+      "t": 0.48,
+      "e": 0.94
+     },
+     {
+      "w": "Never",
+      "t": 1.44
+     },
+     {
+      "w": "tell",
+      "t": 1.76
+     },
+     {
+      "w": "anyone",
+      "t": 2.08
+     },
+     {
+      "w": "what",
+      "t": 2.48
+     },
+     {
+      "w": "you",
+      "t": 2.64
+     },
+     {
+      "w": "have",
+      "t": 2.72,
+      "e": 3.131
+     }
+    ],
+    "text": "Rule four. Never tell anyone what you have.",
+    "echo": false
+   },
+   {
+    "id": "F6",
+    "who": "N",
+    "start": 845.965,
+    "dur": 2.554,
+    "words": [
+     {
+      "w": "Rule",
+      "t": 0.0
+     },
+     {
+      "w": "five",
+      "t": 0.48,
+      "e": 1.04
+     },
+     {
+      "w": "The",
+      "t": 1.28
+     },
+     {
+      "w": "walls",
+      "t": 1.44
+     },
+     {
+      "w": "have",
+      "t": 1.84
+     },
+     {
+      "w": "ears",
+      "t": 2.0,
+      "e": 2.494
+     }
+    ],
+    "text": "Rule five. The walls have ears.",
+    "echo": false
+   },
+   {
+    "id": "F7",
+    "who": "N",
+    "start": 849.719,
+    "dur": 1.057,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "radio",
+      "t": 0.16
+     },
+     {
+      "w": "clicks",
+      "t": 0.48,
+      "e": 0.997
+     }
+    ],
+    "text": "The radio clicks.",
+    "echo": false
+   },
+   {
+    "id": "F8",
+    "who": "DALE",
+    "start": 851.451,
+    "dur": 2.956,
+    "words": [
+     {
+      "w": "You",
+      "t": 0.12
+     },
+     {
+      "w": "brought",
+      "t": 0.52
+     },
+     {
+      "w": "her",
+      "t": 0.92
+     },
+     {
+      "w": "home",
+      "t": 1.16,
+      "e": 1.5
+     },
+     {
+      "w": "Thank",
+      "t": 1.96
+     },
+     {
+      "w": "you",
+      "t": 2.36,
+      "e": 2.736
+     }
+    ],
+    "text": "You brought her home. Thank you.",
+    "echo": false
+   },
+   {
+    "id": "F9",
+    "who": "NORA",
+    "start": 855.307,
+    "dur": 0.902,
+    "words": [
+     {
+      "w": "Where's",
+      "t": 0.0
+     },
+     {
+      "w": "Leo",
+      "t": 0.24
+     },
+     {
+      "w": "Dad",
+      "t": 0.56,
+      "e": 0.842
+     }
+    ],
+    "text": "Where's Leo, Dad?",
+    "echo": false
+   },
+   {
+    "id": "F10",
+    "who": "N",
+    "start": 858.009,
+    "dur": 4.467,
+    "words": [
+     {
+      "w": "Dale",
+      "t": 0.0
+     },
+     {
+      "w": "doesn't",
+      "t": 0.4
+     },
+     {
+      "w": "answer",
+      "t": 0.72,
+      "e": 1.07
+     },
+     {
+      "w": "For",
+      "t": 1.52
+     },
+     {
+      "w": "a",
+      "t": 1.76
+     },
+     {
+      "w": "long",
+      "t": 2.08
+     },
+     {
+      "w": "time",
+      "t": 2.32
+     },
+     {
+      "w": "the",
+      "t": 2.88
+     },
+     {
+      "w": "radio",
+      "t": 3.04
+     },
+     {
+      "w": "just",
+      "t": 3.52
+     },
+     {
+      "w": "hisses",
+      "t": 3.76,
+      "e": 4.407
+     }
+    ],
+    "text": "Dale doesn't answer. For a long time, the radio just hisses.",
+    "echo": false
+   },
+   {
+    "id": "F10b",
+    "who": "DALE",
+    "start": 863.676,
+    "dur": 7.579,
+    "words": [
+     {
+      "w": "I've",
+      "t": 0.12
+     },
+     {
+      "w": "looked",
+      "t": 0.6
+     },
+     {
+      "w": "everywhere",
+      "t": 0.92
+     },
+     {
+      "w": "honey",
+      "t": 1.72,
+      "e": 2.2
+     },
+     {
+      "w": "Every",
+      "t": 2.76
+     },
+     {
+      "w": "night",
+      "t": 3.24,
+      "e": 3.67
+     },
+     {
+      "w": "I",
+      "t": 4.2
+     },
+     {
+      "w": "count",
+      "t": 4.44
+     },
+     {
+      "w": "to",
+      "t": 4.92
+     },
+     {
+      "w": "a",
+      "t": 5.16
+     },
+     {
+      "w": "hundred",
+      "t": 5.4,
+      "e": 5.91
+     },
+     {
+      "w": "And",
+      "t": 6.36
+     },
+     {
+      "w": "I",
+      "t": 6.6
+     },
+     {
+      "w": "look",
+      "t": 6.84,
+      "e": 7.359
+     }
+    ],
+    "text": "I've looked everywhere, honey. Every night. I count to a hundred. And I look.",
+    "echo": false
+   },
+   {
+    "id": "F10c",
+    "who": "NORA",
+    "start": 872.605,
+    "dur": 4.949,
+    "words": [
+     {
+      "w": "It's",
+      "t": 0.0
+     },
+     {
+      "w": "his",
+      "t": 0.24
+     },
+     {
+      "w": "favorite",
+      "t": 0.48
+     },
+     {
+      "w": "game",
+      "t": 1.12,
+      "e": 1.45
+     },
+     {
+      "w": "He",
+      "t": 2.0
+     },
+     {
+      "w": "always",
+      "t": 2.24
+     },
+     {
+      "w": "hides",
+      "t": 2.56,
+      "e": 3.38
+     },
+     {
+      "w": "You",
+      "t": 3.76
+     },
+     {
+      "w": "always",
+      "t": 4.0
+     },
+     {
+      "w": "find",
+      "t": 4.24
+     },
+     {
+      "w": "him",
+      "t": 4.48,
+      "e": 4.889
+     }
+    ],
+    "text": "It's his favorite game. He always hides. You always find him.",
+    "echo": false
+   },
+   {
+    "id": "F11",
+    "who": "N",
+    "start": 879.054,
+    "dur": 0.789,
+    "words": [
+     {
+      "w": "Two",
+      "t": 0.08
+     },
+     {
+      "w": "thirty-one",
+      "t": 0.385,
+      "e": 0.729
+     }
+    ],
+    "text": "Two thirty-one.",
+    "echo": false
+   },
+   {
+    "id": "F12",
+    "who": "N",
+    "start": 880.293,
+    "dur": 2.69,
+    "words": [
+     {
+      "w": "The",
+      "t": 0.0
+     },
+     {
+      "w": "alarm",
+      "t": 0.24
+     },
+     {
+      "w": "in",
+      "t": 0.64
+     },
+     {
+      "w": "aisle",
+      "t": 0.8
+     },
+     {
+      "w": "twelve",
+      "t": 1.28
+     },
+     {
+      "w": "starts",
+      "t": 1.76
+     },
+     {
+      "w": "to",
+      "t": 2.08
+     },
+     {
+      "w": "ring",
+      "t": 2.24,
+      "e": 2.63
+     }
+    ],
+    "text": "The alarm in aisle twelve starts to ring.",
+    "echo": false
+   },
+   {
+    "id": "F13",
+    "who": "N",
+    "start": 883.658,
+    "dur": 0.693,
+    "words": [
+     {
+      "w": "Nora",
+      "t": 0.0
+     },
+     {
+      "w": "runs",
+      "t": 0.4,
+      "e": 0.633
+     }
+    ],
+    "text": "Nora runs.",
+    "echo": false
+   },
+   {
+    "id": "F14",
+    "who": "N",
+    "start": 885.251,
+    "dur": 3.617,
+    "words": [
+     {
+      "w": "Next",
+      "t": 0.0
+     },
+     {
+      "w": "to",
+      "t": 0.32
+     },
+     {
+      "w": "the",
+      "t": 0.48
+     },
+     {
+      "w": "clock",
+      "t": 0.64
+     },
+     {
+      "w": "there's",
+      "t": 1.28
+     },
+     {
+      "w": "a",
+      "t": 1.52
+     },
+     {
+      "w": "drawing",
+      "t": 1.68,
+      "e": 2.3
+     },
+     {
+      "w": "In",
+      "t": 2.64
+     },
+     {
+      "w": "crayon",
+      "t": 2.88,
+      "e": 3.557
+     }
+    ],
+    "text": "Next to the clock, there's a drawing. In crayon.",
+    "echo": false
+   },
+   {
+    "id": "F15",
+    "who": "N",
+    "start": 889.543,
+    "dur": 5.497,
+    "words": [
+     {
+      "w": "A",
+      "t": 0.0
+     },
+     {
+      "w": "girl",
+      "t": 0.32,
+      "e": 0.69
+     },
+     {
+      "w": "A",
+      "t": 1.04
+     },
+     {
+      "w": "man",
+      "t": 1.2
+     },
+     {
+      "w": "in",
+      "t": 1.52
+     },
+     {
+      "w": "a",
+      "t": 1.68
+     },
+     {
+      "w": "cap",
+      "t": 1.84,
+      "e": 2.18
+     },
+     {
+      "w": "And",
+      "t": 2.64
+     },
+     {
+      "w": "you",
+      "t": 2.88,
+      "e": 3.26
+     },
+     {
+      "w": "Orange",
+      "t": 3.76
+     },
+     {
+      "w": "headphones",
+      "t": 4.24
+     },
+     {
+      "w": "and",
+      "t": 4.88
+     },
+     {
+      "w": "all",
+      "t": 5.04,
+      "e": 5.437
+     }
+    ],
+    "text": "A girl. A man in a cap. And you. Orange headphones and all.",
+    "echo": false
+   },
+   {
+    "id": "F16",
+    "who": "N",
+    "start": 895.715,
+    "dur": 3.146,
+    "words": [
+     {
+      "w": "Under",
+      "t": 0.0
+     },
+     {
+      "w": "it",
+      "t": 0.32
+     },
+     {
+      "w": "three",
+      "t": 0.72
+     },
+     {
+      "w": "words",
+      "t": 0.96,
+      "e": 1.49
+     },
+     {
+      "w": "Come",
+      "t": 2.16
+     },
+     {
+      "w": "find",
+      "t": 2.48
+     },
+     {
+      "w": "me",
+      "t": 2.72,
+      "e": 3.086
+     }
+    ],
+    "text": "Under it, three words. Come find me.",
+    "echo": false
+   },
+   {
+    "id": "F17",
+    "who": "N",
+    "start": 902.061,
+    "dur": 6.309,
+    "words": [
+     {
+      "w": "Leo",
+      "t": 0.0
+     },
+     {
+      "w": "is",
+      "t": 0.48
+     },
+     {
+      "w": "alive",
+      "t": 0.72,
+      "e": 1.19
+     },
+     {
+      "w": "He's",
+      "t": 1.6
+     },
+     {
+      "w": "in",
+      "t": 1.92
+     },
+     {
+      "w": "this",
+      "t": 2.08
+     },
+     {
+      "w": "store",
+      "t": 2.32,
+      "e": 2.74
+     },
+     {
+      "w": "And",
+      "t": 3.28
+     },
+     {
+      "w": "they",
+      "t": 3.52
+     },
+     {
+      "w": "don't",
+      "t": 3.68
+     },
+     {
+      "w": "see",
+      "t": 4.24
+     },
+     {
+      "w": "you",
+      "t": 4.56,
+      "e": 4.67
+     },
+     {
+      "w": "But",
+      "t": 5.2
+     },
+     {
+      "w": "he",
+      "t": 5.44
+     },
+     {
+      "w": "does",
+      "t": 5.68,
+      "e": 6.249
+     }
+    ],
+    "text": "Leo is alive. He's in this store. And they don't see you. But he does.",
+    "echo": false
+   }
+  ],
+  "pa": []
+ },
+ "caps": [
+  [
+   0.4,
+   2.6,
+   "an alarm clock"
+  ],
+  [
+   2.8,
+   4.8,
+   "aisle twelve"
+  ],
+  [
+   16.335,
+   17.235,
+   "click"
+  ],
+  [
+   17.435,
+   18.535,
+   "silence"
+  ],
+  [
+   273.141,
+   274.741,
+   "the pipes go quiet"
+  ],
+  [
+   275.241,
+   277.241,
+   "wind on the roof"
+  ],
+  [
+   291.923,
+   294.923,
+   "a light, blinking"
+  ],
+  [
+   332.597,
+   334.697,
+   "thunder, far away"
+  ],
+  [
+   389.86,
+   392.16,
+   "heavy rain"
+  ],
+  [
+   392.56,
+   394.76,
+   "thunder"
+  ],
+  [
+   401.391,
+   404.991,
+   "right next to you"
+  ],
+  [
+   410.457,
+   412.457,
+   "a bottle, rolling"
+  ],
+  [
+   418.089,
+   419.889,
+   "rain"
+  ],
+  [
+   447.667,
+   449.667,
+   "rain on glass"
+  ],
+  [
+   490.166,
+   491.666,
+   "a clank"
+  ],
+  [
+   491.866,
+   493.666,
+   "thunder covers it"
+  ],
+  [
+   524.519,
+   526.119,
+   "rain on the glass"
+  ],
+  [
+   777.348,
+   780.648,
+   "the Freshway jingle"
+  ],
+  [
+   781.048,
+   785.648,
+   "two hundred of them, turning"
+  ],
+  [
+   802.77,
+   805.37,
+   "the jingle, far away"
+  ],
+  [
+   826.834,
+   828.934,
+   "two people, breathing"
+  ]
+ ],
+ "sfx": [
+  {
+   "t": 0.0,
+   "name": "alarm_far",
+   "p": {
+    "until": "CO4",
+    "off": -1.2
+   },
+   "item": "CO1"
+  },
+  {
+   "t": 12.667,
+   "name": "crowd_surge",
+   "p": {
+    "dur": 3.2,
+    "level": -18
+   },
+   "item": "C3"
+  },
+  {
+   "t": 17.085,
+   "name": "ring_cut",
+   "p": {},
+   "item": "CO4"
+  },
+  {
+   "t": 17.135,
+   "name": "tok",
+   "p": {},
+   "item": "CO4"
+  },
+  {
+   "t": 47.135,
+   "name": "low_sting",
+   "p": {},
+   "item": "TITLE"
+  },
+  {
+   "t": 79.543,
+   "name": "thump_metal",
+   "p": {
+    "level": -16
+   },
+   "item": "A5"
+  },
+  {
+   "t": 80.818,
+   "name": "radio_click",
+   "p": {},
+   "item": "A5b"
+  },
+  {
+   "t": 110.397,
+   "name": "whoosh",
+   "p": {},
+   "item": "A10"
+  },
+  {
+   "t": 110.547,
+   "name": "stamp",
+   "p": {
+    "level": -14
+   },
+   "item": "A10"
+  },
+  {
+   "t": 144.92,
+   "name": "whoosh",
+   "p": {},
+   "item": "A13"
+  },
+  {
+   "t": 145.07,
+   "name": "slam",
+   "p": {},
+   "item": "A13"
+  },
+  {
+   "t": 160.936,
+   "name": "pipe_cough",
+   "p": {},
+   "item": "B2"
+  },
+  {
+   "t": 161.976,
+   "name": "pipe_cough",
+   "p": {
+    "k": 2
+   },
+   "item": "B2"
+  },
+  {
+   "t": 163.287,
+   "name": "tok",
+   "p": {
+    "level": -20
+   },
+   "item": "B2"
+  },
+  {
+   "t": 183.146,
+   "name": "valve_squeak",
+   "p": {},
+   "item": "B6"
+  },
+  {
+   "t": 185.626,
+   "name": "water_pour",
+   "p": {
+    "dur": 5.0
+   },
+   "item": "B6"
+  },
+  {
+   "t": 207.873,
+   "name": "lid_clunk",
+   "p": {},
+   "item": "B7"
+  },
+  {
+   "t": 219.327,
+   "name": "stamp",
+   "p": {},
+   "item": "B8"
+  },
+  {
+   "t": 223.051,
+   "name": "radio_click",
+   "p": {},
+   "item": "B9"
+  },
+  {
+   "t": 235.553,
+   "name": "pipe_knock",
+   "p": {},
+   "item": "B12"
+  },
+  {
+   "t": 237.71,
+   "name": "pipe_knock",
+   "p": {
+    "k": 2
+   },
+   "item": "B12"
+  },
+  {
+   "t": 238.21,
+   "name": "pipe_knock",
+   "p": {
+    "k": 3
+   },
+   "item": "B12"
+  },
+  {
+   "t": 246.097,
+   "name": "whoosh",
+   "p": {},
+   "item": "B14"
+  },
+  {
+   "t": 246.247,
+   "name": "slam",
+   "p": {},
+   "item": "B14"
+  },
+  {
+   "t": 329.625,
+   "name": "thunder",
+   "p": {
+    "far": true
+   },
+   "item": "P3"
+  },
+  {
+   "t": 332.997,
+   "name": "thunder",
+   "p": {
+    "far": true
+   },
+   "item": "P4x"
+  },
+  {
+   "t": 346.203,
+   "name": "thunder",
+   "p": {},
+   "item": "P6"
+  },
+  {
+   "t": 359.924,
+   "name": "thunder",
+   "p": {},
+   "item": "P6d"
+  },
+  {
+   "t": 379.652,
+   "name": "chain_rattle",
+   "p": {},
+   "item": "P7"
+  },
+  {
+   "t": 382.558,
+   "name": "lock_click",
+   "p": {},
+   "item": "P7"
+  },
+  {
+   "t": 383.533,
+   "name": "radio_click",
+   "p": {},
+   "item": "P7b"
+  },
+  {
+   "t": 392.56,
+   "name": "thunder",
+   "p": {},
+   "item": "R0"
+  },
+  {
+   "t": 401.891,
+   "name": "groan_close",
+   "p": {
+    "level": -24
+   },
+   "item": "R1b"
+  },
+  {
+   "t": 409.382,
+   "name": "bottle_roll",
+   "p": {},
+   "item": "R2b"
+  },
+  {
+   "t": 411.757,
+   "name": "clink",
+   "p": {},
+   "item": "R2c"
+  },
+  {
+   "t": 419.089,
+   "name": "thunder",
+   "p": {
+    "until": "R2f",
+    "off": 0.6
+   },
+   "item": "R2e"
+  },
+  {
+   "t": 431.647,
+   "name": "thunder",
+   "p": {},
+   "item": "R3b"
+  },
+  {
+   "t": 441.974,
+   "name": "thunder",
+   "p": {
+    "close": true,
+    "until": "M1",
+    "off": 0.5
+   },
+   "item": "R4"
+  },
+  {
+   "t": 441.974,
+   "name": "glass_break",
+   "p": {},
+   "item": "R4"
+  },
+  {
+   "t": 490.366,
+   "name": "escalator_clank",
+   "p": {},
+   "item": "M7b"
+  },
+  {
+   "t": 491.766,
+   "name": "thunder",
+   "p": {
+    "until": "M7c",
+    "off": 0.6
+   },
+   "item": "M7b"
+  },
+  {
+   "t": 529.26,
+   "name": "tok",
+   "p": {
+    "level": -14
+   },
+   "item": "M11"
+  },
+  {
+   "t": 560.536,
+   "name": "whoosh",
+   "p": {},
+   "item": "M17"
+  },
+  {
+   "t": 625.901,
+   "name": "low_sting",
+   "p": {},
+   "item": "N11"
+  },
+  {
+   "t": 632.814,
+   "name": "radio_click",
+   "p": {},
+   "item": "N12"
+  },
+  {
+   "t": 645.25,
+   "name": "low_sting",
+   "p": {},
+   "item": "N16"
+  },
+  {
+   "t": 716.316,
+   "name": "alarm_far",
+   "p": {
+    "until": "D8",
+    "off": 1.0,
+    "level": -24
+   },
+   "item": "D5"
+  },
+  {
+   "t": 748.301,
+   "name": "tok",
+   "p": {},
+   "item": "S4"
+  },
+  {
+   "t": 760.544,
+   "name": "whoosh",
+   "p": {},
+   "item": "S5"
+  },
+  {
+   "t": 777.048,
+   "name": "drone_buzz",
+   "p": {
+    "until": "S8g",
+    "off": 0.3
+   },
+   "item": "S7"
+  },
+  {
+   "t": 777.648,
+   "name": "drone_song",
+   "p": {
+    "until": "S8g",
+    "off": 0.0
+   },
+   "item": "S7"
+  },
+  {
+   "t": 806.21,
+   "name": "drone_beep",
+   "p": {},
+   "item": "S8e"
+  },
+  {
+   "t": 808.048,
+   "name": "drone_beep",
+   "p": {},
+   "item": "S8e"
+  },
+  {
+   "t": 812.239,
+   "name": "crowd_surge",
+   "p": {
+    "dur": 3.0,
+    "level": -18
+   },
+   "item": "S8g"
+  },
+  {
+   "t": 816.676,
+   "name": "run_steps",
+   "p": {
+    "dur": 3.0
+   },
+   "item": "S9"
+  },
+  {
+   "t": 820.356,
+   "name": "lock_click",
+   "p": {},
+   "item": "S9"
+  },
+  {
+   "t": 824.093,
+   "name": "door_bang",
+   "p": {},
+   "item": "S10"
+  },
+  {
+   "t": 826.734,
+   "name": "breath_run",
+   "p": {
+    "dur": 2.3,
+    "level": -22
+   },
+   "item": "S10x"
+  },
+  {
+   "t": 850.676,
+   "name": "radio_click",
+   "p": {},
+   "item": "F7"
+  },
+  {
+   "t": 880.293,
+   "name": "alarm_near",
+   "p": {
+    "until": "F13",
+    "off": 1.4,
+    "level": -23
+   },
+   "item": "F12"
+  },
+  {
+   "t": 883.658,
+   "name": "run_steps",
+   "p": {
+    "dur": 2.2,
+    "level": -16
+   },
+   "item": "F13"
+  },
+  {
+   "t": 885.351,
+   "name": "paper_rustle",
+   "p": {},
+   "item": "F14"
+  }
+ ],
+ "music": [
+  {
+   "t": 0.0,
+   "cue": "dread",
+   "p": {},
+   "item": "CO1"
+  },
+  {
+   "t": 18.635,
+   "cue": "sting_mystery",
+   "p": {},
+   "item": "C4"
+  },
+  {
+   "t": 29.736,
+   "cue": "pulse_soft",
+   "p": {},
+   "item": "C7"
+  },
+  {
+   "t": 47.035,
+   "cue": "stop",
+   "p": {
+    "fade": 0.6
+   },
+   "item": "TITLE"
+  },
+  {
+   "t": 52.635,
+   "cue": "think",
+   "p": {},
+   "item": "A1"
+  },
+  {
+   "t": 81.618,
+   "cue": "radio",
+   "p": {},
+   "item": "A6"
+  },
+  {
+   "t": 95.352,
+   "cue": "humor",
+   "p": {},
+   "item": "A8b"
+  },
+  {
+   "t": 103.954,
+   "cue": "radio",
+   "p": {},
+   "item": "A8c"
+  },
+  {
+   "t": 122.239,
+   "cue": "humor",
+   "p": {},
+   "item": "A12"
+  },
+  {
+   "t": 125.484,
+   "cue": "stop",
+   "p": {
+    "fade": 1.0
+   },
+   "item": "A12b"
+  },
+  {
+   "t": 134.088,
+   "cue": "pulse_soft",
+   "p": {},
+   "item": "A12c"
+  },
+  {
+   "t": 157.701,
+   "cue": "stop",
+   "p": {
+    "fade": 1.0
+   },
+   "item": "B1"
+  },
+  {
+   "t": 164.387,
+   "cue": "think",
+   "p": {},
+   "item": "B3"
+  },
+  {
+   "t": 201.98,
+   "cue": "humor",
+   "p": {},
+   "item": "B6d"
+  },
+  {
+   "t": 221.639,
+   "cue": "radio",
+   "p": {},
+   "item": "B9"
+  },
+  {
+   "t": 231.779,
+   "cue": "stop",
+   "p": {
+    "fade": 0.8
+   },
+   "item": "B11"
+  },
+  {
+   "t": 238.91,
+   "cue": "dread",
+   "p": {},
+   "item": "B13"
+  },
+  {
+   "t": 246.097,
+   "cue": "rule",
+   "p": {},
+   "item": "B14"
+  },
+  {
+   "t": 249.785,
+   "cue": "stop",
+   "p": {
+    "fade": 0.8
+   },
+   "item": "B15"
+  },
+  {
+   "t": 265.216,
+   "cue": "sting_mystery",
+   "p": {},
+   "item": "B18"
+  },
+  {
+   "t": 274.941,
+   "cue": "night_op",
+   "p": {},
+   "item": "L0"
+  },
+  {
+   "t": 290.378,
+   "cue": "stop",
+   "p": {
+    "fade": 0.3
+   },
+   "item": "L4"
+  },
+  {
+   "t": 298.631,
+   "cue": "hope",
+   "p": {},
+   "item": "L7"
+  },
+  {
+   "t": 315.59,
+   "cue": "plan",
+   "p": {},
+   "item": "P1"
+  },
+  {
+   "t": 347.378,
+   "cue": "think",
+   "p": {},
+   "item": "P6b"
+  },
+  {
+   "t": 370.922,
+   "cue": "plan",
+   "p": {},
+   "item": "P6f"
+  },
+  {
+   "t": 386.315,
+   "cue": "stop",
+   "p": {
+    "fade": 0.6
+   },
+   "item": "P9"
+  },
+  {
+   "t": 389.56,
+   "cue": "storm",
+   "p": {},
+   "item": "R0"
+  },
+  {
+   "t": 443.005,
+   "cue": "stop",
+   "p": {
+    "fade": 0.3
+   },
+   "item": "R4b"
+  },
+  {
+   "t": 444.205,
+   "cue": "vast",
+   "p": {},
+   "item": "M1"
+  },
+  {
+   "t": 499.627,
+   "cue": "humor",
+   "p": {},
+   "item": "M7d"
+  },
+  {
+   "t": 504.666,
+   "cue": "think",
+   "p": {},
+   "item": "M8"
+  },
+  {
+   "t": 526.319,
+   "cue": "stop",
+   "p": {
+    "fade": 0.15
+   },
+   "item": "M11"
+  },
+  {
+   "t": 532.369,
+   "cue": "tender",
+   "p": {},
+   "item": "M13"
+  },
+  {
+   "t": 565.218,
+   "cue": "humor",
+   "p": {},
+   "item": "M17b"
+  },
+  {
+   "t": 572.645,
+   "cue": "tender",
+   "p": {},
+   "item": "N1"
+  },
+  {
+   "t": 632.814,
+   "cue": "stop",
+   "p": {
+    "fade": 0.6
+   },
+   "item": "N12"
+  },
+  {
+   "t": 645.25,
+   "cue": "twist",
+   "p": {},
+   "item": "N16"
+  },
+  {
+   "t": 691.976,
+   "cue": "tender",
+   "p": {},
+   "item": "D1"
+  },
+  {
+   "t": 715.916,
+   "cue": "stop",
+   "p": {
+    "fade": 1.0
+   },
+   "item": "D5"
+  },
+  {
+   "t": 730.362,
+   "cue": "plan",
+   "p": {},
+   "item": "S1"
+  },
+  {
+   "t": 749.276,
+   "cue": "think",
+   "p": {},
+   "item": "S4b"
+  },
+  {
+   "t": 772.361,
+   "cue": "stop",
+   "p": {
+    "fade": 0.4
+   },
+   "item": "S6"
+  },
+  {
+   "t": 816.676,
+   "cue": "chase",
+   "p": {},
+   "item": "S9"
+  },
+  {
+   "t": 823.773,
+   "cue": "stop",
+   "p": {
+    "fade": 0.4
+   },
+   "item": "S10"
+  },
+  {
+   "t": 829.134,
+   "cue": "resolve",
+   "p": {},
+   "item": "F1"
+  },
+  {
+   "t": 849.719,
+   "cue": "stop",
+   "p": {
+    "fade": 0.8
+   },
+   "item": "F7"
+  },
+  {
+   "t": 863.676,
+   "cue": "tender",
+   "p": {},
+   "item": "F10b"
+  },
+  {
+   "t": 879.054,
+   "cue": "stop",
+   "p": {
+    "fade": 0.5
+   },
+   "item": "F11"
+  },
+  {
+   "t": 885.251,
+   "cue": "sting_mystery",
+   "p": {},
+   "item": "F14"
+  },
+  {
+   "t": 902.061,
+   "cue": "end",
+   "p": {},
+   "item": "F17"
+  }
+ ],
+ "amb": [
+  {
+   "t": 0.0,
+   "bed": "store_dark"
+  },
+  {
+   "t": 47.035,
+   "bed": "silence"
+  },
+  {
+   "t": 52.635,
+   "bed": "store_day"
+  },
+  {
+   "t": 157.701,
+   "bed": "restroom"
+  },
+  {
+   "t": 221.639,
+   "bed": "store_night"
+  },
+  {
+   "t": 249.785,
+   "bed": "store_dark"
+  },
+  {
+   "t": 274.941,
+   "bed": "roof_night"
+  },
+  {
+   "t": 315.59,
+   "bed": "store_day"
+  },
+  {
+   "t": 326.11,
+   "bed": "roof"
+  },
+  {
+   "t": 340.197,
+   "bed": "storm"
+  },
+  {
+   "t": 378.532,
+   "bed": "store_day"
+  },
+  {
+   "t": 389.56,
+   "bed": "storm"
+  },
+  {
+   "t": 444.205,
+   "bed": "mall_rain"
+  },
+  {
+   "t": 572.645,
+   "bed": "mall_quiet"
+  },
+  {
+   "t": 691.976,
+   "bed": "mall_quiet"
+  },
+  {
+   "t": 715.916,
+   "bed": "mall_quiet"
+  },
+  {
+   "t": 730.362,
+   "bed": "mall_quiet"
+  },
+  {
+   "t": 777.048,
+   "bed": "lot_night"
+  },
+  {
+   "t": 823.773,
+   "bed": "store_dark"
+  },
+  {
+   "t": 910.47,
+   "bed": "silence"
+  }
+ ],
+ "items": {
+  "CO1": [
+   0.0,
+   5.0
+  ],
+  "C1": [
+   5.0,
+   7.71
+  ],
+  "C2": [
+   8.385,
+   11.192
+  ],
+  "C3": [
+   11.867,
+   15.36
+  ],
+  "CO4": [
+   16.035,
+   18.635
+  ],
+  "C4": [
+   18.635,
+   23.357
+  ],
+  "C5": [
+   24.032,
+   25.825
+  ],
+  "C6": [
+   26.725,
+   28.836
+  ],
+  "C7": [
+   29.736,
+   34.414
+  ],
+  "C8": [
+   35.089,
+   37.609
+  ],
+  "C9": [
+   38.359,
+   42.545
+  ],
+  "C10": [
+   43.22,
+   45.835
+  ],
+  "TITLE": [
+   47.035,
+   52.635
+  ],
+  "A1": [
+   52.635,
+   55.336
+  ],
+  "A2": [
+   56.011,
+   60.799
+  ],
+  "A3": [
+   61.474,
+   69.004
+  ],
+  "A4": [
+   69.679,
+   75.935
+  ],
+  "A5": [
+   76.61,
+   79.943
+  ],
+  "A5b": [
+   80.618,
+   81.618
+  ],
+  "A6": [
+   81.618,
+   88.759
+  ],
+  "A7": [
+   89.434,
+   90.236
+  ],
+  "A8": [
+   90.986,
+   94.677
+  ],
+  "A8b": [
+   95.352,
+   103.279
+  ],
+  "A8c": [
+   103.954,
+   106.694
+  ],
+  "A9": [
+   107.369,
+   109.722
+  ],
+  "A10": [
+   110.397,
+   113.826
+  ],
+  "A11": [
+   114.501,
+   115.568
+  ],
+  "A11b": [
+   116.468,
+   119.184
+  ],
+  "A11c": [
+   119.934,
+   121.189
+  ],
+  "A12": [
+   122.239,
+   124.434
+  ],
+  "A12b": [
+   125.484,
+   133.413
+  ],
+  "A12c": [
+   134.088,
+   138.295
+  ],
+  "A12d": [
+   139.195,
+   144.02
+  ],
+  "A13": [
+   144.92,
+   146.311
+  ],
+  "A14": [
+   147.061,
+   152.957
+  ],
+  "A15": [
+   153.632,
+   156.801
+  ],
+  "B1": [
+   157.701,
+   160.261
+  ],
+  "B2": [
+   160.936,
+   163.487
+  ],
+  "B3": [
+   164.387,
+   171.341
+  ],
+  "B4": [
+   172.016,
+   175.559
+  ],
+  "B5": [
+   176.234,
+   181.991
+  ],
+  "B6": [
+   182.666,
+   189.443
+  ],
+  "B6b": [
+   190.118,
+   196.326
+  ],
+  "B6c": [
+   197.001,
+   201.305
+  ],
+  "B6d": [
+   201.98,
+   206.253
+  ],
+  "B7": [
+   207.153,
+   212.985
+  ],
+  "B7b": [
+   213.66,
+   218.352
+  ],
+  "B8": [
+   219.027,
+   220.739
+  ],
+  "B9": [
+   221.639,
+   223.201
+  ],
+  "B10": [
+   223.876,
+   227.165
+  ],
+  "B10b": [
+   228.065,
+   230.879
+  ],
+  "B11": [
+   231.779,
+   232.823
+  ],
+  "B12": [
+   233.873,
+   237.71
+  ],
+  "B13": [
+   238.91,
+   245.422
+  ],
+  "B14": [
+   246.097,
+   248.585
+  ],
+  "B15": [
+   249.785,
+   252.931
+  ],
+  "B16": [
+   253.606,
+   257.33
+  ],
+  "B17": [
+   258.23,
+   263.866
+  ],
+  "B18": [
+   265.216,
+   268.059
+  ],
+  "B19": [
+   268.734,
+   271.441
+  ],
+  "B19x": [
+   272.941,
+   274.941
+  ],
+  "L0": [
+   274.941,
+   277.441
+  ],
+  "L1": [
+   277.441,
+   280.279
+  ],
+  "L2": [
+   280.954,
+   285.803
+  ],
+  "L3": [
+   286.478,
+   289.478
+  ],
+  "L4": [
+   290.378,
+   291.423
+  ],
+  "L5": [
+   291.723,
+   295.123
+  ],
+  "L6": [
+   295.123,
+   297.956
+  ],
+  "L7": [
+   298.631,
+   303.715
+  ],
+  "L7b": [
+   304.615,
+   310.663
+  ],
+  "L8": [
+   311.563,
+   314.54
+  ],
+  "P1": [
+   315.59,
+   320.874
+  ],
+  "P2": [
+   321.549,
+   325.435
+  ],
+  "P3": [
+   326.11,
+   329.625
+  ],
+  "P4": [
+   330.3,
+   331.647
+  ],
+  "P4x": [
+   332.397,
+   334.897
+  ],
+  "P5": [
+   334.897,
+   339.522
+  ],
+  "P6": [
+   340.197,
+   346.703
+  ],
+  "P6b": [
+   347.378,
+   350.2
+  ],
+  "P6c": [
+   350.875,
+   356.209
+  ],
+  "P6d": [
+   356.884,
+   362.099
+  ],
+  "P6e": [
+   362.774,
+   370.022
+  ],
+  "P6f": [
+   370.922,
+   377.857
+  ],
+  "P7": [
+   378.532,
+   382.558
+  ],
+  "P7b": [
+   383.233,
+   384.133
+  ],
+  "P8": [
+   384.133,
+   385.565
+  ],
+  "P9": [
+   386.315,
+   388.36
+  ],
+  "R0": [
+   389.56,
+   395.96
+  ],
+  "R1": [
+   395.96,
+   400.416
+  ],
+  "R1b": [
+   401.091,
+   405.291
+  ],
+  "R2": [
+   405.291,
+   406.104
+  ],
+  "R2b": [
+   407.004,
+   409.582
+  ],
+  "R2c": [
+   410.257,
+   412.657
+  ],
+  "R2d": [
+   412.657,
+   417.439
+  ],
+  "R2e": [
+   417.889,
+   420.089
+  ],
+  "R2f": [
+   420.089,
+   423.393
+  ],
+  "R3": [
+   424.293,
+   428.892
+  ],
+  "R3b": [
+   429.567,
+   434.365
+  ],
+  "R3c": [
+   435.04,
+   439.384
+  ],
+  "R4": [
+   440.134,
+   442.555
+  ],
+  "R4b": [
+   443.005,
+   444.205
+  ],
+  "M1": [
+   444.205,
+   446.792
+  ],
+  "M1b": [
+   447.467,
+   450.867
+  ],
+  "M2": [
+   450.867,
+   457.182
+  ],
+  "M3": [
+   458.082,
+   460.561
+  ],
+  "M4": [
+   461.236,
+   467.301
+  ],
+  "M4b": [
+   467.976,
+   473.402
+  ],
+  "M5": [
+   474.302,
+   479.903
+  ],
+  "M6": [
+   480.578,
+   484.357
+  ],
+  "M7": [
+   485.032,
+   489.191
+  ],
+  "M7b": [
+   489.866,
+   493.866
+  ],
+  "M7c": [
+   493.866,
+   498.952
+  ],
+  "M7d": [
+   499.627,
+   503.766
+  ],
+  "M8": [
+   504.666,
+   509.947
+  ],
+  "M9": [
+   510.622,
+   511.402
+  ],
+  "M10": [
+   512.152,
+   517.053
+  ],
+  "M10b": [
+   517.728,
+   523.569
+  ],
+  "M10c": [
+   524.319,
+   526.319
+  ],
+  "M11": [
+   526.319,
+   529.56
+  ],
+  "M12": [
+   530.01,
+   531.319
+  ],
+  "M13": [
+   532.369,
+   536.822
+  ],
+  "M14": [
+   537.497,
+   538.728
+  ],
+  "M15": [
+   539.478,
+   540.394
+  ],
+  "M16": [
+   540.994,
+   545.085
+  ],
+  "M16b": [
+   545.76,
+   547.568
+  ],
+  "M16c": [
+   548.318,
+   552.312
+  ],
+  "M16d": [
+   553.212,
+   559.636
+  ],
+  "M17": [
+   560.536,
+   564.018
+  ],
+  "M17b": [
+   565.218,
+   568.943
+  ],
+  "M17c": [
+   569.693,
+   571.595
+  ],
+  "N1": [
+   572.645,
+   576.492
+  ],
+  "N2": [
+   577.167,
+   579.187
+  ],
+  "N3": [
+   580.087,
+   584.315
+  ],
+  "N4": [
+   584.99,
+   587.963
+  ],
+  "N5": [
+   588.863,
+   593.149
+  ],
+  "N6": [
+   594.199,
+   600.162
+  ],
+  "N7": [
+   600.837,
+   602.939
+  ],
+  "N8": [
+   603.614,
+   607.617
+  ],
+  "N9": [
+   608.292,
+   615.053
+  ],
+  "N10": [
+   615.728,
+   618.61
+  ],
+  "N10b": [
+   619.66,
+   625.126
+  ],
+  "N11": [
+   625.801,
+   628.107
+  ],
+  "N11b": [
+   629.007,
+   631.614
+  ],
+  "N12": [
+   632.814,
+   636.742
+  ],
+  "N13": [
+   637.417,
+   640.278
+  ],
+  "N14": [
+   641.178,
+   642.25
+  ],
+  "N15": [
+   643.0,
+   643.9
+  ],
+  "N16": [
+   645.25,
+   646.428
+  ],
+  "N16x": [
+   647.628,
+   649.828
+  ],
+  "N16b": [
+   649.828,
+   655.072
+  ],
+  "N16c": [
+   656.122,
+   660.786
+  ],
+  "N17": [
+   661.686,
+   668.79
+  ],
+  "N18": [
+   669.465,
+   673.772
+  ],
+  "N19": [
+   674.822,
+   679.394
+  ],
+  "N20": [
+   680.069,
+   682.904
+  ],
+  "N20b": [
+   684.104,
+   686.56
+  ],
+  "N21": [
+   687.76,
+   690.476
+  ],
+  "D1": [
+   691.976,
+   696.985
+  ],
+  "D2": [
+   697.66,
+   702.656
+  ],
+  "D3": [
+   703.331,
+   710.788
+  ],
+  "D4": [
+   711.838,
+   714.416
+  ],
+  "D5": [
+   715.916,
+   719.185
+  ],
+  "D6": [
+   719.86,
+   723.177
+  ],
+  "D7": [
+   724.377,
+   725.179
+  ],
+  "D8": [
+   727.279,
+   728.862
+  ],
+  "S1": [
+   730.362,
+   736.016
+  ],
+  "S2": [
+   736.691,
+   741.411
+  ],
+  "S3": [
+   742.086,
+   745.217
+  ],
+  "S4": [
+   745.892,
+   748.601
+  ],
+  "S4b": [
+   749.276,
+   753.988
+  ],
+  "S4c": [
+   754.663,
+   759.644
+  ],
+  "S5": [
+   760.544,
+   766.153
+  ],
+  "S5b": [
+   767.053,
+   771.686
+  ],
+  "S6": [
+   772.361,
+   776.298
+  ],
+  "S7": [
+   777.048,
+   786.048
+  ],
+  "S8": [
+   786.048,
+   792.639
+  ],
+  "S8b": [
+   793.314,
+   796.927
+  ],
+  "S8c": [
+   797.602,
+   801.895
+  ],
+  "S8d": [
+   802.57,
+   805.57
+  ],
+  "S8e": [
+   805.57,
+   808.048
+  ],
+  "S8f": [
+   808.723,
+   810.889
+  ],
+  "S8g": [
+   811.639,
+   816.001
+  ],
+  "S9": [
+   816.676,
+   823.098
+  ],
+  "S10": [
+   823.773,
+   825.434
+  ],
+  "S10x": [
+   826.634,
+   829.134
+  ],
+  "F1": [
+   829.134,
+   831.476
+  ],
+  "F2": [
+   832.151,
+   835.141
+  ],
+  "F3": [
+   835.816,
+   838.668
+  ],
+  "F4": [
+   839.343,
+   841.424
+  ],
+  "F5": [
+   842.099,
+   845.29
+  ],
+  "F6": [
+   845.965,
+   848.519
+  ],
+  "F7": [
+   849.719,
+   850.776
+  ],
+  "F8": [
+   851.451,
+   854.407
+  ],
+  "F9": [
+   855.307,
+   856.209
+  ],
+  "F10": [
+   858.009,
+   862.476
+  ],
+  "F10b": [
+   863.676,
+   871.255
+  ],
+  "F10c": [
+   872.605,
+   877.554
+  ],
+  "F11": [
+   879.054,
+   879.843
+  ],
+  "F12": [
+   880.293,
+   882.983
+  ],
+  "F13": [
+   883.658,
+   884.351
+  ],
+  "F14": [
+   885.251,
+   888.868
+  ],
+  "F15": [
+   889.543,
+   895.04
+  ],
+  "F16": [
+   895.715,
+   898.861
+  ],
+  "F16x": [
+   900.061,
+   902.061
+  ],
+  "F17": [
+   902.061,
+   908.37
+  ],
+  "END": [
+   910.47,
+   921.77
+  ]
+ }
+}
