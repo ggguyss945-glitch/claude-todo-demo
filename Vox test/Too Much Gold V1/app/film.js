@@ -20,7 +20,7 @@ export function addFilm(S, W) {
   const act = (o) => { scene.add(o); o.visible = false; W.actors.push(o); return o; };
   // coin pools (world space)
   const coins = (W.coins = {
-    main: new PR.CoinPool(scene, 7000), fly: new PR.CoinPool(scene, 1200), silver: new PR.CoinPool(scene, 40, true),
+    main: new PR.CoinPool(scene, 12000), fly: new PR.CoinPool(scene, 1200), silver: new PR.CoinPool(scene, 40, true),
     big: new PR.CoinPool(scene, 2, false, 2.4), flood: new PR.CoinPool(scene, 7000, false, 1.7), fall: new PR.CoinPool(scene, 900, false, 1.7),
   });
   const pouchA = act(PR.pouch('#8a2a2a')), pouchB = act(PR.pouch('#2a5a8a')), pouchC = act(PR.pouch('#6a3a8a', 0.8));
@@ -305,7 +305,7 @@ export function addFilm(S, W) {
     S.push({ t0: 17.56, t1: 19.7, set: 'market', light: 'gold', blur: () => 2,
       cam: cam([[17.56, [0.45, 2.0, 2.9], [0.0, 2.1, -10], 50], [19.7, [0.25, 8.6, 3.7], [0.0, 0.6, -12.5], 50]], { ap: 3, focus: [0, 1, -8], drift: 0.03, seed: 13 }),
       setup(w, t) {
-        coins.main.scatter(-3.3, 3.3, -30, 3, 3000, 0.004, 301, 1.5);
+        coins.main.scatter(-3.3, 3.3, -30, 3, 6500, 0.004, 301, 1.5);
         for (const [x, z, r] of [[-2.9, 0.4, 0.7], [2.9, -6.2, 0.75], [-2.9, -12.2, 0.8], [3.0, -1.6, 0.6], [3.0, -12.6, 0.7], [-3.0, -6.0, 0.65], [-3.0, -25, 0.8], [2.8, -24, 0.7], [0.3, -18, 0.6]]) coins.main.heap(V(x, 0, z), r, 0.42, 300, x * 7 + z, 1.4);
         coins.fly.flight(t, rain);
         const all = [...people, ...C.caravan.slice(0, 8), C.kid1, C.kid2, C.kid3, C.beggar, C.camelguy, C.baker, C.spice, C.cloth];
@@ -511,7 +511,7 @@ export function addFilm(S, W) {
     });
     for (const [x, z, r, h] of [[-3.0, 0.3, 0.55, 0.45], [-2.9, -1.6, 0.6, 0.55], [-2.95, -3.1, 0.5, 0.4], [-3.1, 1.9, 0.5, 0.42]]) coins.main.heap(V(x, 0, z), r, h, 420, x * 11 + z);
   };
-  S.push({ t0: 43.2, t1: 45.76, set: 'market', light: 'day', dissolve: 0.25,
+  S.push({ t0: 43.2, t1: 45.76, set: 'market', light: 'day', shafts: 0.2, dissolve: 0.25,
     cam: (t) => { const mp = V(1.75, 0, 3.4).lerp(V(0.45, 0, 0.55), easeInOut(prog(t, 43.2, 45.3))); return cam([[43.2, [mp.x + 0.75, 1.72, mp.z + 1.8], [-1.9, 1.45, -1.0], 44], [45.76, [mp.x + 0.75, 1.72, mp.z + 1.8], [-1.9, 1.45, -1.0], 42]], { ap: 6, focus: [-1.9, 1.5, -1.0], seed: 26 })(t); },
     setup(w, t) {
       merchants(t, 'smug');
@@ -520,8 +520,8 @@ export function addFilm(S, W) {
       people.slice(4, 8).forEach((c, i) => walk(c, V(1.6 + i * 0.3, 0, -6 - i * 2), V(1.2, 0, -10 - i * 2), 42.8, 46, t));
     } });
   // ------------------------------------------------------------ S27 Musa: "Hey. Remember me?"
-  S.push({ t0: 45.76, t1: 47.08, set: 'market', light: 'day',
-    cam: cam([[45.76, [-1.6, 1.5, -0.5], [0.45, 1.55, 0.55], 38], [47.08, [-1.4, 1.52, -0.4], [0.45, 1.56, 0.55], 35]], { ap: 10, focus: [0.45, 1.55, 0.55], seed: 27 }),
+  S.push({ t0: 45.76, t1: 47.08, set: 'market', light: 'day', shafts: 0.2,
+    cam: cam([[45.76, [-1.45, 1.48, 0.7], [0.45, 1.5, 0.5], 40], [47.08, [-1.25, 1.49, 0.68], [0.45, 1.51, 0.5], 37]], { ap: 9, focus: [0.45, 1.5, 0.55], seed: 27 }),
     setup(w, t) {
       merchants(t, 'smug');
       const m = put(C.musa, V(0.45, 0, 0.55), yawTo(V(0.45, 0, 0.55), V(-1.9, 0, -0.6)), 'sheepish');
@@ -532,7 +532,7 @@ export function addFilm(S, W) {
       m.pose.headRoll += 0.1; m.pose.lean = -0.04;
     } });
   // ------------------------------------------------------------ S28 "And they lend it to him."
-  S.push({ t0: 47.08, t1: 48.3, set: 'market', light: 'day',
+  S.push({ t0: 47.08, t1: 48.3, set: 'market', light: 'day', shafts: 0.2,
     cam: cam([[47.08, [0.05, 1.55, 2.25], [-0.9, 1.35, -0.1], 40], [48.3, [0.0, 1.56, 2.0], [-0.9, 1.35, -0.1], 37]], { ap: 7, focus: [-0.9, 1.35, -0.15], seed: 28 }),
     setup(w, t) {
       merchants(t, (i) => (i === 1 ? 'greedy' : 'smug'));
@@ -550,7 +550,7 @@ export function addFilm(S, W) {
   // ------------------------------------------------------------ S29 "Because now, they're the ones with all the gold." (and a coin flips into the lens: loop)
   {
     const flip = [{ t0: 50.25, o: V(-1.6, 1.25, -0.3), v: V(1.55, 3.05, 3.7), r0: 0, spin: V(18, 2, 6), seed: 991, s: 1.4 }];
-    S.push({ t0: 48.3, t1: 51.0, set: 'market', light: 'day', blur: (t) => (t > 50.2 ? 6 : 0),
+    S.push({ t0: 48.3, t1: 51.0, set: 'market', light: 'day', shafts: 0.2, blur: (t) => (t > 50.2 ? 6 : 0),
       cam: cam([[48.3, [-0.9, 1.72, 0.55], [-1.95, 1.62, -0.55], 38], [50.05, [1.7, 2.4, 3.6], [-1.6, 1.2, -1.2], 46], [51.0, [1.75, 2.42, 3.62], [-1.6, 1.25, -1.2], 46]], { ap: 6, focusFn: (t) => (t < 49.0 ? 1.55 : 4.9), drift: 0.02, seed: 29 }),
       setup(w, t) {
         merchants(t, 'laugh');

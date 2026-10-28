@@ -103,11 +103,11 @@ BUILD.market = (scene, W) => {
   // ground: flagstones with a dusty centre
   mk(new THREE.PlaneGeometry(24, 90).rotateX(-Math.PI / 2), toon('#ffffff', { map: TX.flagstones('#d0ae7e', [5, 18]) }), g, { pos: [0, 0, -18], cast: false, outline: false });
   const walls = {
-    a: toon('#ffffff', { map: TX.ablaq('#ead0a2', '#c4643c', [1, 1], 1) }),
-    b: toon('#ffffff', { map: TX.ablaq('#e2c08e', '#5a6e8a', [1, 1], 2) }),
-    c: toon('#ffffff', { map: TX.plaster('#f0d8ae', [1, 1], 3) }),
-    d: toon('#ffffff', { map: TX.plaster('#e8c49a', [1, 1], 4) }),
-    e: toon('#ffffff', { map: TX.ablaq('#f0dcb4', '#b84a3a', [1, 1], 5) }),
+    a: toon('#ffffff', { map: TX.ablaq('#f2c886', '#d04a2a', [1, 1], 1) }),
+    b: toon('#ffffff', { map: TX.ablaq('#eab878', '#2f5aa8', [1, 1], 2) }),
+    c: toon('#ffffff', { map: TX.plaster('#7fb4cc', [1, 1], 3) }),
+    d: toon('#ffffff', { map: TX.plaster('#e8956a', [1, 1], 4) }),
+    e: toon('#ffffff', { map: TX.ablaq('#f6d6a0', '#b8322a', [1, 1], 5) }),
   };
   const dark = toon('#3a2214'), woodM = toon('#ffffff', { map: TX.wood('#8a5a30', [1, 1], 5) });
   const latticeM = toon('#ffffff', { map: TX.lattice('#8a5228') });
@@ -270,9 +270,9 @@ BUILD.market = (scene, W) => {
   ];
   const motes = dust(g, [-3.2, 3.2, 0.3, 5, -24, 6], 900, '#ffe6b8', 0.045, 5);
   const LIGHT = {
-    gold: { sunPos: [26, 30, -34], sunCol: '#ffbf72', sunI: 3.4, hemi: ['#9ab4e8', '#c88a50', 0.5], sky: ['#4a6ed0', '#f0aa80', '#ffd49a'], sunDir: [0.5, 0.4, -0.75], fog: '#f6c896', shafts: 1, exposure: 1.0 },
-    morning: { sunPos: [-28, 24, 12], sunCol: '#ffe0b4', sunI: 2.7, hemi: ['#b8ccf0', '#b89070', 0.68], sky: ['#5a8ee0', '#b6d0f0', '#f4e4c8'], sunDir: [-0.6, 0.4, 0.3], fog: '#dce4ee', shafts: 0.55, exposure: 1.0 },
-    day: { sunPos: [18, 38, -20], sunCol: '#fff0d4', sunI: 3.3, hemi: ['#a8c4f0', '#c09060', 0.6], sky: ['#3e72d8', '#a0c4f0', '#f6e0bc'], sunDir: [0.4, 0.6, -0.5], fog: '#ead8bc', shafts: 0.8, exposure: 1.0 },
+    gold: { sunPos: [26, 30, -34], sunCol: '#ffb460', sunI: 4.0, hemi: ['#6f8ee8', '#b8703a', 0.5], sky: ['#3a5ad0', '#f08a7a', '#ffc884'], sunDir: [0.5, 0.4, -0.75], fog: '#f0a882', shafts: 1, exposure: 1.0 },
+    morning: { sunPos: [-28, 24, 12], sunCol: '#ffd9a0', sunI: 3.3, hemi: ['#88aaf0', '#b07a50', 0.6], sky: ['#3a7ee0', '#9cc4f4', '#f4dcb8'], sunDir: [-0.6, 0.4, 0.3], fog: '#c8d8f0', shafts: 0.55, exposure: 1.0 },
+    day: { sunPos: [18, 38, -20], sunCol: '#ffe8c0', sunI: 3.8, hemi: ['#88aaf0', '#b07a4a', 0.55], sky: ['#2e66d8', '#8cbaf4', '#f6dcb0'], sunDir: [0.4, 0.6, -0.5], fog: '#dcd0c0', shafts: 0.8, exposure: 1.0 },
   };
   return {
     group: g, sun, A,
@@ -282,13 +282,13 @@ BUILD.market = (scene, W) => {
       hemi.color.set(L.hemi[0]); hemi.groundColor.set(L.hemi[1]); hemi.intensity = L.hemi[2];
       sky.material.uniforms.top.value.set(L.sky[0]); sky.material.uniforms.mid.value.set(L.sky[1]); sky.material.uniforms.hor.value.set(L.sky[2]);
       sky.material.uniforms.sunDir.value.set(...L.sunDir).normalize(); sky.material.uniforms.sunCol.value.set(L.sunCol);
-      scene.fog = new THREE.Fog(L.fog, 40, 160);
+      scene.fog = new THREE.Fog(L.fog, 70, 260);
       scene.environmentIntensity = 0.3;
-      for (const s of shafts) { s.visible = L.shafts > 0; s.userData.mat.uniforms.op.value = s.userData.base ?? (s.userData.base = s.userData.mat.uniforms.op.value); s.userData.mat.uniforms.op.value = s.userData.base * L.shafts; s.userData.mat.uniforms.col.value.set(L.sunCol); }
+      for (const s of shafts) { s.visible = L.shafts > 0; s.userData.mat.uniforms.op.value = s.userData.base ?? (s.userData.base = s.userData.mat.uniforms.op.value); s.userData.mat.uniforms.op.value = s.userData.base * L.shafts * (shot.shafts ?? 1); s.userData.mat.uniforms.col.value.set(L.sunCol); }
       motes.userData.tick(t);
       cat.userData.breathe(t);
     },
-    grade: { bloomThr: 0.95, bloom: 0.38, contrast: 1.08, sat: 1.12, lineFar: 120 },
+    grade: { bloomThr: 1.0, bloom: 0.34, contrast: 1.16, sat: 1.3, shadow: [0.86, 0.9, 1.16], high: [1.08, 1.0, 0.9], vignette: 0.36, lineFar: 120 },
   };
 };
 
@@ -368,7 +368,7 @@ BUILD.desert = (scene, W) => {
       scene.environmentIntensity = 0.3;
       sandDust.userData.tick(t);
     },
-    grade: { bloomThr: 0.95, bloom: 0.42, contrast: 1.08, sat: 1.14, lineFar: 260 },
+    grade: { bloomThr: 0.92, bloom: 0.45, contrast: 1.14, sat: 1.28, shadow: [0.88, 0.9, 1.14], high: [1.08, 1.0, 0.9], vignette: 0.36, lineFar: 260 },
   };
 };
 

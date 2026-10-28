@@ -28,7 +28,9 @@ let _gm = null, _sm = null;
 export function coinMats() {
   if (!_gm) {
     const ft = coinFaceTex(false), st = coinFaceTex(true);
-    const g = gold({ rough: 0.22, glow: 1.0, env: 1.8 }), gf = gold({ rough: 0.22, glow: 1.0, env: 1.8, map: ft });
+    const g = gold({ rough: 0.22, glow: 0.8, env: 1.8 }), gf = gold({ rough: 0.22, glow: 0.8, env: 1.8, map: ft });
+    // coins read as bright yellow gold even in shade
+    for (const m of [g, gf]) m.emissive.set('#b8820e');
     const s = new THREE.MeshStandardMaterial({ color: '#dde2ea', metalness: 1, roughness: 0.25 }), sf = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 1, roughness: 0.25, map: st });
     _gm = [g, gf, gf]; _sm = [s, sf, sf];
   }

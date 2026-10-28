@@ -18,8 +18,8 @@ const LIN = `
 const EdgeShader = {
   uniforms: {
     tDiffuse: { value: null }, tNormal: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2(1440, 2560) },
-    near: { value: 0.05 }, far: { value: 600 }, uWidth: { value: 1.25 }, uStrength: { value: 0.88 }, uDepthK: { value: 0.012 },
-    uNormK: { value: 0.22 }, uLine: { value: new THREE.Color('#1c130d') }, uFar: { value: 400 },
+    near: { value: 0.05 }, far: { value: 600 }, uWidth: { value: 2.0 }, uStrength: { value: 0.95 }, uDepthK: { value: 0.012 },
+    uNormK: { value: 0.22 }, uLine: { value: new THREE.Color('#120b07') }, uFar: { value: 400 },
   },
   vertexShader: QUAD_VS,
   fragmentShader: `

@@ -11,7 +11,6 @@ function stripeTex(base, stripe, n = 8, wobble = 0) {
     g.fillStyle = stripe;
     for (let i = 0; i < n; i++) { g.save(); g.translate(0, (i + 0.5) * 256 / n); g.rotate(wobble); g.fillRect(-20, -5, 300, 10); g.restore(); }
   }
-  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.04})`; g.fillRect(Math.random() * 256, Math.random() * 256, 3, 2); }
   return toTex(c, { aniso: 4 });
 }
 

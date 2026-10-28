@@ -106,7 +106,7 @@ async function boot() {
     u.uFade.value = shot.fade ? shot.fade(t) : 0;
     bloom.strength = gr.bloom ?? 0.45; bloom.threshold = gr.bloomThr ?? 0.88;
     renderer.toneMappingExposure = gr.exposure ?? 1.0;
-    edges.uniforms.uStrength.value = gr.lines ?? 0.88;
+    edges.uniforms.uStrength.value = gr.lines ?? 0.97;
     edges.uniforms.uFar.value = gr.lineFar ?? 400;
     prepass();
     composer.renderToScreen = false;

@@ -5,28 +5,29 @@ import * as THREE from 'three';
 const INK = '#141010';
 
 // expression presets
+// Small, deadpan features: dot eyes, thick dash brows, tiny mouths. Big white eyes only for shock.
 export const EXPR = {
   neutral: { eyes: 'dot', brows: [0, 0], mouth: 'line' },
-  calm: { eyes: 'dot', brows: [0.1, 0], mouth: 'smile' },
-  happy: { eyes: 'open', brows: [0.4, -6], mouth: 'bigsmile' },
-  joy: { eyes: 'happy', brows: [0.5, -10], mouth: 'bigsmile', blush: 1 },
-  grin: { eyes: 'open', brows: [0.25, 8], mouth: 'grin' },
-  proud: { eyes: 'half', brows: [0.15, -4], mouth: 'smirk' },
-  smug: { eyes: 'half', brows: [0.0, 10], mouth: 'smirk' },
+  calm: { eyes: 'dot', brows: [0.1, -4], mouth: 'smile' },
+  happy: { eyes: 'dot', brows: [0.45, -8], mouth: 'smileOpen' },
+  joy: { eyes: 'happy', brows: [0.55, -10], mouth: 'bigsmile', blush: 1 },
+  grin: { eyes: 'happy', brows: [0.3, -6], mouth: 'grin' },
+  proud: { eyes: 'lid', brows: [0.2, 6], mouth: 'smirk' },
+  smug: { eyes: 'lid', brows: [[0.05, 12], [0.4, 4]], mouth: 'smirk' },
   greedy: { eyes: 'money', brows: [0.45, -10], mouth: 'grin', goldTooth: 1 },
-  bored: { eyes: 'half', brows: [-0.1, 0], mouth: 'line' },
-  unimpressed: { eyes: 'half', brows: [[-0.15, 0], [0.35, -6]], mouth: 'flat' },
-  surprised: { eyes: 'open', brows: [0.7, -8], mouth: 'o' },
-  shocked: { eyes: 'wide', brows: [0.9, -12], mouth: 'open', sweat: 1 },
-  panic: { eyes: 'wide', brows: [0.8, -18], mouth: 'shout', sweat: 1 },
-  worried: { eyes: 'open', brows: [0.45, -20], mouth: 'wavy', sweat: 1 },
-  sheepish: { eyes: 'open', brows: [0.35, -18], mouth: 'grin', sweat: 1, blush: 0.6 },
-  angry: { eyes: 'open', brows: [-0.2, 24], mouth: 'frown', vein: 1 },
-  confused: { eyes: 'open', brows: [[0.5, -8], [-0.1, 12]], mouth: 'wavy' },
-  laugh: { eyes: 'happy', brows: [0.4, -6], mouth: 'shout', blush: 0.4 },
+  bored: { eyes: 'lid', brows: [-0.05, 0], mouth: 'line' },
+  unimpressed: { eyes: 'lid', brows: [[-0.1, 4], [0.3, -4]], mouth: 'flat' },
+  surprised: { eyes: 'open', brows: [0.8, -6], mouth: 'o' },
+  shocked: { eyes: 'wide', brows: [1.0, -10], mouth: 'open', sweat: 1 },
+  panic: { eyes: 'wide', brows: [0.9, -18], mouth: 'shout', sweat: 1 },
+  worried: { eyes: 'dot', brows: [0.5, -22], mouth: 'wavy', sweat: 1 },
+  sheepish: { eyes: 'happy', brows: [0.45, -20], mouth: 'grin', sweat: 1, blush: 0.7 },
+  angry: { eyes: 'dot', brows: [-0.25, 26], mouth: 'frown', vein: 1 },
+  confused: { eyes: 'dot', brows: [[0.6, -8], [-0.1, 14]], mouth: 'wavy' },
+  laugh: { eyes: 'happy', brows: [0.45, -8], mouth: 'shout', blush: 0.5 },
   sleepy: { eyes: 'closed', brows: [0, 0], mouth: 'line' },
-  dazzled: { eyes: 'money', brows: [0.6, -10], mouth: 'open' },
-  shrug: { eyes: 'half', brows: [0.55, -14], mouth: 'smirk' },
+  dazzled: { eyes: 'money', brows: [0.7, -10], mouth: 'open' },
+  shrug: { eyes: 'lid', brows: [0.65, -14], mouth: 'smirk' },
 };
 
 const cache = new Map();
@@ -52,28 +53,28 @@ export function paintFace(def, state, res = 640) {
   cg.addColorStop(0, 'rgba(255,255,255,0.06)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = cg; g.fillRect(0, 0, S, S);
   g.lineCap = 'round'; g.lineJoin = 'round';
-  const lw = u * 0.045;
-  const ey = 0.08 + (def.eyeY || 0), ex = 0.3 * (def.eyeSpread || 1);
+  const lw = u * 0.055;
+  const ey = 0.02 + (def.eyeY || 0), ex = 0.26 * (def.eyeSpread || 1);
 
-  // drawn beard: a crescent along the jaw that leaves the mouth clear
+  // drawn beard: a slim line along the jaw that meets a small chin beard; the mouth stays clear
   if (def.beard) {
     const full = def.beard === 'full';
+    const rin = full ? 0.72 : 0.8, rout = 0.98;
+    const a0 = Math.PI * (full ? 1.08 : 1.14), a1 = Math.PI * (full ? 1.92 : 1.86);
     g.fillStyle = def.beardColor || def.hair || INK;
-    const a0 = Math.PI + (full ? 0.12 : 0.62), a1 = 2 * Math.PI - (full ? 0.12 : 0.62);
-    const myb = -0.34 + (def.mouthY || 0);
     g.beginPath();
-    for (let i = 0; i <= 28; i++) {
-      const a = a0 + (a1 - a0) * (i / 28);
-      const rr = (full ? 0.88 : 0.76) + (i % 2 ? 0.03 : 0) * (i > 2 && i < 26 ? 1 : 0);
-      const [x, y] = P(Math.cos(a) * rr * 0.9, -0.08 + Math.sin(a) * rr * 0.92);
+    for (let i = 0; i <= 32; i++) {
+      const a = a0 + (a1 - a0) * (i / 32);
+      const chin = Math.exp(-Math.pow((a - Math.PI * 1.5) / 0.22, 2)) * (full ? 0.08 : 0.06);
+      const [x, y] = P(Math.cos(a) * rout, -0.02 + Math.sin(a) * (rout + chin));
       i ? g.lineTo(x, y) : g.moveTo(x, y);
     }
-    const ex1 = Math.cos(a1) * (full ? 0.88 : 0.76) * 0.9, ey1 = -0.08 + Math.sin(a1) * (full ? 0.88 : 0.76) * 0.92;
-    g.quadraticCurveTo(...P(ex1 * 0.75, myb + 0.02), ...P(0.26, myb - 0.08));
-    g.quadraticCurveTo(...P(0, myb - 0.26), ...P(-0.26, myb - 0.08));
-    g.quadraticCurveTo(...P(-ex1 * 0.75, myb + 0.02), ...P(-ex1, ey1));
+    for (let i = 32; i >= 0; i--) {
+      const a = a0 + (a1 - a0) * (i / 32);
+      const [x, y] = P(Math.cos(a) * rin * 1.1, -0.06 + Math.sin(a) * rin);
+      g.lineTo(x, y);
+    }
     g.closePath(); g.fill();
-    g.strokeStyle = INK; g.lineWidth = u * 0.012; g.stroke();
   }
   // ---- eyes
   for (const sd of [-1, 1]) {
@@ -82,55 +83,62 @@ export function paintFace(def, state, res = 640) {
     const type = blink ? 'closed' : e.eyes;
     g.strokeStyle = INK; g.fillStyle = INK; g.lineWidth = lw * 0.6;
     if (type === 'dot') {
-      ell(g, cx + lx * 0.6, cy + ly * 0.6, u * 0.058, u * 0.078); g.fill();
+      ell(g, cx + lx * 0.6, cy + ly * 0.6, u * 0.064, u * 0.088); g.fill();
+    } else if (type === 'lid') { // dot cut flat on top by a heavy lid: deadpan
+      const rx = u * 0.068, ry = u * 0.09;
+      g.save(); g.beginPath(); g.rect(cx - rx * 2, cy - ry * 0.12, rx * 4, ry * 3); g.clip();
+      ell(g, cx + lx * 0.5, cy + ly * 0.4, rx, ry); g.fill(); g.restore();
+      g.lineWidth = lw * 0.95; g.beginPath(); g.moveTo(cx - rx * 1.45, cy - ry * 0.12); g.lineTo(cx + rx * 1.45, cy - ry * 0.12); g.stroke();
     } else if (type === 'open' || type === 'wide' || type === 'money') {
-      const rx = u * (type === 'wide' ? 0.17 : 0.135), ry = u * (type === 'wide' ? 0.2 : 0.16);
-      g.fillStyle = '#fbfbf6'; ell(g, cx, cy, rx, ry); g.fill(); g.stroke();
+      const rx = u * (type === 'wide' ? 0.15 : 0.12), ry = u * (type === 'wide' ? 0.16 : 0.13);
+      g.fillStyle = '#fbfbf6'; g.lineWidth = lw * 0.7; ell(g, cx, cy, rx, ry); g.fill(); g.stroke();
       if (type === 'money') {
-        const pr = u * 0.085;
+        const pr = u * 0.075;
         g.fillStyle = '#ffc21a'; ell(g, cx + lx, cy + ly, pr, pr); g.fill(); g.lineWidth = lw * 0.45; g.stroke();
-        g.strokeStyle = '#b07800'; g.lineWidth = lw * 0.35; ell(g, cx + lx, cy + ly, pr * 0.62, pr * 0.62); g.stroke();
+        g.strokeStyle = '#b07800'; g.lineWidth = lw * 0.35; ell(g, cx + lx, cy + ly, pr * 0.6, pr * 0.6); g.stroke();
         g.fillStyle = 'rgba(255,255,255,0.95)'; ell(g, cx + lx - pr * 0.35, cy + ly - pr * 0.35, pr * 0.22, pr * 0.22); g.fill();
       } else {
-        const pr = u * (type === 'wide' ? 0.05 : 0.068);
-        g.fillStyle = INK; ell(g, cx + lx, cy + ly, pr, pr * 1.08); g.fill();
-        g.fillStyle = 'rgba(255,255,255,0.95)'; ell(g, cx + lx - pr * 0.35, cy + ly - pr * 0.4, pr * 0.3, pr * 0.3); g.fill();
+        const pr = u * (type === 'wide' ? 0.036 : 0.045);
+        g.fillStyle = INK; ell(g, cx + lx, cy + ly, pr, pr * 1.1); g.fill();
       }
-    } else if (type === 'half') {
-      const rx = u * 0.13, ry = u * 0.14;
-      g.save(); g.beginPath(); g.rect(cx - rx * 1.5, cy - ry * 0.05, rx * 3, ry * 2); g.clip();
-      g.fillStyle = '#fbfbf6'; ell(g, cx, cy, rx, ry); g.fill(); g.lineWidth = lw * 0.6; g.stroke();
-      g.fillStyle = INK; ell(g, cx + lx, cy + ly + ry * 0.35, u * 0.06, u * 0.06); g.fill();
-      g.restore();
-      g.lineWidth = lw * 0.9; g.beginPath(); g.moveTo(cx - rx * 1.05, cy); g.lineTo(cx + rx * 1.05, cy); g.stroke();
     } else if (type === 'happy') {
-      g.lineWidth = lw; g.beginPath(); g.arc(cx, cy + u * 0.05, u * 0.1, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+      g.lineWidth = lw * 1.05; g.beginPath(); g.arc(cx, cy + u * 0.045, u * 0.085, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
     } else if (type === 'closed') {
-      g.lineWidth = lw * 0.85; g.beginPath(); g.arc(cx, cy - u * 0.05, u * 0.1, Math.PI * 0.12, Math.PI * 0.88); g.stroke();
+      g.lineWidth = lw * 1.05; g.beginPath(); g.moveTo(cx - u * 0.09, cy); g.lineTo(cx + u * 0.09, cy); g.stroke();
     }
+  }
+  if (def.glasses) {
+    g.strokeStyle = INK; g.lineWidth = lw * 0.55;
+    for (const sd of [-1, 1]) { const [cx, cy] = P(sd * ex, ey); ell(g, cx, cy, u * 0.16, u * 0.15); g.stroke(); }
+    const [a, b] = P(-ex + 0.16, ey + 0.02), [c2, d] = P(ex - 0.16, ey + 0.02);
+    g.beginPath(); g.moveTo(a, b); g.quadraticCurveTo((a + c2) / 2, b - u * 0.05, c2, d); g.stroke();
   }
   // ---- brows
   const br = Array.isArray(e.brows[0]) ? e.brows : [e.brows, e.brows];
   for (const sd of [-1, 1]) {
     const [raise, ang] = sd < 0 ? br[0] : br[1];
-    const by = ey + 0.27 + raise * 0.08 + (def.browY || 0);
+    const by = ey + 0.24 + raise * 0.08 + (def.browY || 0);
     const a = (ang * Math.PI / 180) * sd;       // positive = inner end down (cross)
-    const len = 0.13 * (def.browLen || 1);
-    const [cx, cy] = P(sd * (ex + 0.02), by);
+    const len = 0.105 * (def.browLen || 1);
+    const [cx, cy] = P(sd * (ex + 0.015), by);
     const dx = Math.cos(a) * len * u, dy = Math.sin(a) * len * u;
-    g.strokeStyle = INK; g.lineWidth = lw * (def.browW || 1.15);
-    g.beginPath(); g.moveTo(cx - dx, cy - dy); g.quadraticCurveTo(cx, cy - u * 0.035, cx + dx, cy + dy); g.stroke();
+    g.strokeStyle = INK; g.lineWidth = lw * 1.45 * (def.browW || 1);
+    g.beginPath(); g.moveTo(cx - dx, cy - dy); g.quadraticCurveTo(cx, cy - u * 0.02, cx + dx, cy + dy); g.stroke();
   }
   // ---- moustache (drawn)
-  const my = -0.34 + (def.mouthY || 0);
+  const my = -0.31 + (def.mouthY || 0);
   // ---- mouth
   let m = e.mouth;
   if (talk > 0) m = talk >= 0.75 ? (m === 'grin' || m === 'bigsmile' ? 'bigsmile' : 'open') : talk >= 0.5 ? 'openSmall' : 'o';
   {
     const [cx, cy] = P(0, my);
     g.strokeStyle = INK; g.lineWidth = lw; g.fillStyle = '#3a0d0d';
-    const W = u * 0.17 * (def.mouthW || 1);
+    const W = u * 0.12 * (def.mouthW || 1);
     if (m === 'line' || m === 'flat') { g.beginPath(); g.moveTo(cx - W * (m === 'flat' ? 0.8 : 1), cy); g.lineTo(cx + W * (m === 'flat' ? 0.8 : 1), cy); g.stroke(); }
+    else if (m === 'smileOpen') {
+      g.beginPath(); g.moveTo(cx - W * 1.1, cy - u * 0.02); g.lineTo(cx + W * 1.1, cy - u * 0.02); g.quadraticCurveTo(cx, cy + u * 0.17, cx - W * 1.1, cy - u * 0.02); g.closePath(); g.fill();
+      g.save(); g.clip(); g.fillStyle = '#d65a62'; ell(g, cx, cy + u * 0.1, W * 0.6, u * 0.05); g.fill(); g.restore(); g.stroke();
+    }
     else if (m === 'smile') { g.beginPath(); g.moveTo(cx - W, cy - u * 0.03); g.quadraticCurveTo(cx, cy + u * 0.12, cx + W, cy - u * 0.03); g.stroke(); }
     else if (m === 'frown') { g.beginPath(); g.moveTo(cx - W, cy + u * 0.05); g.quadraticCurveTo(cx, cy - u * 0.08, cx + W, cy + u * 0.05); g.stroke(); }
     else if (m === 'smirk') { g.beginPath(); g.moveTo(cx - W, cy + u * 0.01); g.quadraticCurveTo(cx + W * 0.2, cy + u * 0.05, cx + W * 1.05, cy - u * 0.07); g.stroke(); }
@@ -148,7 +156,7 @@ export function paintFace(def, state, res = 640) {
       if (m === 'shout') { g.fillStyle = '#fbfbf6'; g.fillRect(cx - rx, cy - ry * 0.85, rx * 2, ry * 0.42); }
       g.restore(); ell(g, cx, cy + ry * 0.2, rx, ry); g.stroke();
     } else if (m === 'grin') {
-      const rx = u * 0.2 * (def.mouthW || 1), ry = u * 0.085;
+      const rx = u * 0.17 * (def.mouthW || 1), ry = u * 0.075;
       g.fillStyle = '#fbfbf6';
       g.beginPath(); g.roundRect(cx - rx, cy - ry, rx * 2, ry * 2, ry * 0.9); g.fill();
       g.save(); g.beginPath(); g.roundRect(cx - rx, cy - ry, rx * 2, ry * 2, ry * 0.9); g.clip();
@@ -158,7 +166,7 @@ export function paintFace(def, state, res = 640) {
       g.stroke(); g.restore();
       g.lineWidth = lw * 0.8; g.beginPath(); g.roundRect(cx - rx, cy - ry, rx * 2, ry * 2, ry * 0.9); g.stroke();
     } else if (m === 'bigsmile') {
-      const rx = u * 0.17, ry = u * 0.15;
+      const rx = u * 0.15, ry = u * 0.13;
       g.beginPath(); g.moveTo(cx - rx, cy - ry * 0.35); g.lineTo(cx + rx, cy - ry * 0.35);
       g.quadraticCurveTo(cx + rx, cy + ry * 1.1, cx, cy + ry * 1.1); g.quadraticCurveTo(cx - rx, cy + ry * 1.1, cx - rx, cy - ry * 0.35);
       g.closePath(); g.fill();

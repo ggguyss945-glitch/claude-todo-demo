@@ -1,5 +1,5 @@
-// Round-head cartoon people: big sphere head with a drawn face, a robe or tunic body, rubber-hose
-// arms and legs (smooth curves, so there are no joints to break), blob hands, and outlines.
+// Cartoon people in the hand-drawn web-short style: a big white ball head with a tiny drawn face,
+// a bean-shaped body or a long robe, stick-thin black arms and legs, ball hands, thick outlines.
 // Root sits at the feet, facing +z. Everything is rigid geometry except the hose limbs.
 import * as THREE from 'three';
 import { toon, outline, mk, gold } from './toon.js';
@@ -10,7 +10,9 @@ import * as HW from './headwear.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const INK = '#141010';
+const HEAD = '#f7f3ec';
 const inkMat = new THREE.MeshStandardMaterial({ color: INK, roughness: 0.7 });
+const handMat = new THREE.MeshStandardMaterial({ color: '#1a1414', roughness: 0.35 });
 
 // a quadratic-bezier tube whose vertices are rewritten in place each frame
 export class Hose {
@@ -58,100 +60,115 @@ export class Hose {
   }
 }
 
-// cloth pattern for robes and tunics: u wraps round (front at 0.5), v runs hem (0) to neck (1)
-function robeTexture(o) {
-  const [c, g] = canvas(512, 512);
-  g.fillStyle = o.color; g.fillRect(0, 0, 512, 512);
-  const r = (s) => hash(s, o.seed || 1);
-  if (o.pattern === 'stripes') {
-    g.fillStyle = o.stripe; for (let x = 0; x < 512; x += 32) g.fillRect(x, 0, 11, 512);
-  } else if (o.pattern === 'mudcloth') {
-    g.strokeStyle = o.stripe; g.fillStyle = o.stripe; g.lineWidth = 5;
-    for (let y = 30; y < 512; y += 70) {
-      for (let x = 0; x < 512; x += 32) {
-        const k = (x / 32 + y / 70) % 3;
-        if (k === 0) { g.beginPath(); g.moveTo(x + 4, y - 12); g.lineTo(x + 16, y + 12); g.lineTo(x + 28, y - 12); g.stroke(); }
-        else if (k === 1) { g.beginPath(); g.arc(x + 16, y, 6, 0, Math.PI * 2); g.fill(); }
-        else { g.fillRect(x + 6, y - 2, 20, 5); }
-      }
-      g.fillRect(0, y + 24, 512, 4);
-    }
-  } else if (o.pattern === 'checks') {
-    g.fillStyle = o.stripe; for (let x = 0; x < 512; x += 40) for (let y = 0; y < 512; y += 40) if (((x + y) / 40) % 2 === 0) g.fillRect(x, y, 40, 40);
-  } else if (o.pattern === 'patched') {
-    for (let i = 0; i < 9; i++) {
-      g.fillStyle = ['#8a6a48', '#6e5a40', '#9a7c58', '#5c4a36'][i % 4];
-      const x = r(i) * 470, y = r(i + 20) * 470, w = 40 + r(i + 40) * 40, h = 40 + r(i + 60) * 40;
-      g.fillRect(x, y, w, h); g.strokeStyle = '#2a1e14'; g.lineWidth = 3; g.setLineDash([7, 6]); g.strokeRect(x + 4, y + 4, w - 8, h - 8); g.setLineDash([]);
+// Clothes are flat colour with a few drawn details (collar, belt, trim, buttons, apron), like a
+// hand-drawn cartoon. u wraps round the body (front at 0.5), v runs from the hem (0) to the top (1).
+function clothTexture(o, H) {
+  const [c, g] = canvas(1024, 1024);
+  const S = 1024;
+  const X = (u) => u * S, Y = (v) => (1 - v) * S;
+  const vAt = (y) => (y - H.y0) / (H.y1 - H.y0);
+  g.fillStyle = o.color; g.fillRect(0, 0, S, S);
+  const ink = 'rgba(20,14,10,0.85)';
+  if (o.pattern === 'stripes') { g.fillStyle = o.stripe; for (let x = 0; x < S; x += 64) g.fillRect(x + 20, 0, 18, S); }
+  if (o.pattern === 'pinstripe') { g.fillStyle = o.stripe; for (let x = 0; x < S; x += 40) g.fillRect(x, 0, 7, S); }
+  if (o.pattern === 'patched') {
+    const r = (k) => hash(k, o.seed || 1);
+    for (let i = 0; i < 6; i++) {
+      const x = 200 + r(i) * 600, y = 200 + r(i + 9) * 600, w = 90 + r(i + 3) * 60, h = 80 + r(i + 5) * 60;
+      g.fillStyle = ['#8a6a48', '#6e5a40', '#a08060'][i % 3]; g.fillRect(x, y, w, h);
+      g.strokeStyle = ink; g.lineWidth = 4; g.setLineDash([12, 9]); g.strokeRect(x + 7, y + 7, w - 14, h - 14); g.setLineDash([]);
     }
   }
-  // soft woven noise
-  for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(${r(i) > 0.5 ? '255,255,255' : '0,0,0'},0.018)`; g.fillRect(r(i + 3) * 512, r(i + 7) * 512, 6, 6); }
-  if (o.trim) { // front opening band and hem band
-    g.fillStyle = o.trim; g.fillRect(256 - 18, 0, 36, 512); g.fillRect(0, 0, 512, 34);
-    if (o.trimDots) { g.fillStyle = o.trimDots; for (let y = 20; y < 512; y += 30) { g.beginPath(); g.arc(256, y, 6, 0, Math.PI * 2); g.fill(); } }
+  if (o.apron) {
+    const top = vAt(H.y1 - 0.04);
+    g.fillStyle = o.apron; g.beginPath(); g.roundRect(X(0.36), Y(top), X(0.28), Y(vAt(H.y0 + 0.08)) - Y(top), 30); g.fill();
+    g.strokeStyle = ink; g.lineWidth = 6; g.stroke();
+    g.beginPath(); g.roundRect(X(0.44), Y(vAt(H.belt - 0.04)), X(0.12), 90, 10); g.stroke();
   }
-  if (o.apron) { g.fillStyle = o.apron; g.fillRect(256 - 120, 0, 240, 360); g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(256 - 120, 340, 240, 20); }
-  if (o.sashBand) { g.fillStyle = o.sashBand; g.fillRect(0, 300, 512, 40); }
-  return toTex(c, { aniso: 4 });
+  if (o.trim) { // a front band from hem to collar, with buttons or jewels
+    g.fillStyle = o.trim; g.fillRect(X(0.5) - 34, 0, 68, S);
+    g.strokeStyle = ink; g.lineWidth = 5; g.beginPath(); g.moveTo(X(0.5) - 34, 0); g.lineTo(X(0.5) - 34, S); g.moveTo(X(0.5) + 34, 0); g.lineTo(X(0.5) + 34, S); g.stroke();
+    if (o.trimDots) { g.fillStyle = o.trimDots; for (let y = 60; y < S; y += 74) { g.beginPath(); g.arc(X(0.5), y, 13, 0, Math.PI * 2); g.fill(); } }
+  }
+  if (o.hem) { g.fillStyle = o.hem; g.fillRect(0, Y(vAt(H.y0 + 0.07)), S, S); g.strokeStyle = ink; g.lineWidth = 6; g.beginPath(); g.moveTo(0, Y(vAt(H.y0 + 0.07))); g.lineTo(S, Y(vAt(H.y0 + 0.07))); g.stroke(); }
+  if (o.belt) {
+    const a = Y(vAt(H.belt + 0.035)), b = Y(vAt(H.belt - 0.035));
+    g.fillStyle = o.belt; g.fillRect(0, a, S, b - a);
+    g.strokeStyle = ink; g.lineWidth = 6; g.beginPath(); g.moveTo(0, a); g.lineTo(S, a); g.moveTo(0, b); g.lineTo(S, b); g.stroke();
+  }
+  if (o.collar) { // crossed lapels meeting on the chest (an X / V collar)
+    const top = Y(1), meet = Y(vAt(H.y1 - 0.24));
+    g.fillStyle = o.collar; g.strokeStyle = ink; g.lineWidth = 6;
+    for (const sd of [-1, 1]) {
+      g.beginPath(); g.moveTo(X(0.5 + sd * 0.11), top); g.lineTo(X(0.5 + sd * 0.05), top); g.lineTo(X(0.5 - sd * 0.012), meet); g.lineTo(X(0.5 + sd * 0.035), meet + 30); g.closePath(); g.fill(); g.stroke();
+    }
+  }
+  if (o.buttons) { g.fillStyle = o.buttons; g.strokeStyle = ink; g.lineWidth = 4; for (let i = 0; i < 4; i++) { const y = Y(vAt(H.y1 - 0.12 - i * 0.11)); g.beginPath(); g.arc(X(0.5), y, 15, 0, Math.PI * 2); g.fill(); g.stroke(); } }
+  if (o.sashBand) { const y = Y(vAt(H.belt)); g.fillStyle = o.sashBand; g.save(); g.translate(X(0.5), y); g.rotate(-0.5); g.fillRect(-300, -30, 600, 60); g.restore(); }
+  return toTex(c, { aniso: 8 });
 }
 
+// body profiles (radius, height) for s = 1; the head sits on top with no neck
 const PROFILES = {
-  robe: [[0.265, 0.0], [0.275, 0.05], [0.262, 0.25], [0.25, 0.5], [0.242, 0.75], [0.236, 0.95], [0.222, 1.08], [0.19, 1.17], [0.12, 1.23], [0.06, 1.26]],
-  tunic: [[0.0, 0.5], [0.24, 0.5], [0.255, 0.56], [0.25, 0.75], [0.235, 0.95], [0.2, 1.1], [0.17, 1.18], [0.11, 1.24], [0.06, 1.26]],
+  // long robe to the ankles, like a kaftan or galabeya; the belt sits at 0.78
+  robe: { pts: [[0, 0.06], [0.185, 0.06], [0.192, 0.09], [0.186, 0.3], [0.174, 0.6], [0.162, 0.8], [0.156, 1.0], [0.146, 1.12], [0.126, 1.22], [0.086, 1.29], [0.035, 1.315], [0, 1.32]], belt: 0.79, hip: 0.14 },
+  // short bean-shaped body on long stick legs
+  bean: { pts: [[0, 0.6], [0.1, 0.6], [0.152, 0.625], [0.172, 0.68], [0.176, 0.8], [0.17, 0.98], [0.158, 1.1], [0.133, 1.21], [0.092, 1.285], [0.035, 1.315], [0, 1.32]], belt: 0.78, hip: 0.66 },
 };
 
 export function makeToon(def) {
   const s = def.scale || 1, gth = def.girth || 1;
-  const kind = def.body || 'robe';
+  const kind = def.body === 'tunic' ? 'bean' : (def.body || 'robe');
+  const P = PROFILES[kind];
   const ch = { def, s, kind, root: new THREE.Group(), name: def.name };
   ch.root.name = def.name;
   const body = new THREE.Group(); ch.root.add(body); ch.body = body;
-  const prof = PROFILES[kind].map(([r, y]) => new THREE.Vector2(r * s * (y < 1.0 ? gth : lerp(gth, 1, (y - 1.0) / 0.26)), y * s));
-  const lathe = new THREE.LatheGeometry(prof, 36);
+  const y0 = P.pts[0][1], y1 = P.pts[P.pts.length - 1][1];
+  const prof = P.pts.map(([r, y]) => new THREE.Vector2(r * s * (y < 1.05 ? gth : lerp(gth, 1, (y - 1.05) / 0.27)), y * s));
+  const lathe = new THREE.LatheGeometry(prof, 48);
   lathe.rotateY(Math.PI); // seam at the back
-  const robeMat = toon('#ffffff', { map: robeTexture({ color: def.color, pattern: def.pattern, stripe: def.stripe, trim: def.trim, trimDots: def.trimDots, apron: def.apron, seed: def.seed }), lift: 0.08 });
-  const torso = mk(lathe, robeMat, body, { outline: 7.5 });
+  // v by height, so the drawn details land where they belong
+  const pos = lathe.getAttribute('position'), uv = lathe.getAttribute('uv');
+  for (let i = 0; i < pos.count; i++) uv.setY(i, (pos.getY(i) / s - y0) / (y1 - y0));
+  const tex = clothTexture({ color: def.color, pattern: def.pattern, stripe: def.stripe, trim: def.trim, trimDots: def.trimDots, apron: def.apron, seed: def.seed,
+    belt: def.belt, collar: def.collar, buttons: def.buttons, hem: def.hem, sashBand: def.sashBand }, { y0, y1, belt: P.belt });
+  const robeMat = toon('#ffffff', { map: tex, lift: 0.22, rough: 0.85 });
+  const torso = mk(lathe, robeMat, body, { outline: 10 });
   ch.torso = torso;
-  // collar / necklace / sash
   if (def.necklace) {
-    const nk = mk(new THREE.TorusGeometry(0.13 * s, 0.022 * s, 8, 28), gold({ glow: 0.25 }), body, { pos: [0, 1.2 * s, 0.035 * s], rot: [Math.PI / 2 + 0.35, 0, 0], outline: 2.4 });
-    if (def.medallion) mk(new THREE.CylinderGeometry(0.05 * s, 0.05 * s, 0.015 * s, 20), gold(), body, { pos: [0, 1.08 * s, 0.205 * s], rot: [Math.PI / 2 - 0.25, 0, 0], outline: 2.4 });
+    mk(new THREE.TorusGeometry(0.11 * s, 0.018 * s, 8, 28), gold({ glow: 0.35 }), body, { pos: [0, 1.22 * s, 0.035 * s], rot: [Math.PI / 2 + 0.5, 0, 0], outline: 3 });
+    if (def.medallion) mk(new THREE.CylinderGeometry(0.045 * s, 0.045 * s, 0.014 * s, 20), gold({ glow: 0.4 }), body, { pos: [0, 1.11 * s, 0.155 * s], rot: [Math.PI / 2 - 0.3, 0, 0], outline: 3 });
   }
-  if (def.sash) mk(new THREE.TorusGeometry(0.236 * s * gth, 0.032 * s, 8, 32), toon(def.sash, { lift: 0.06 }), body, { pos: [0, 0.82 * s, 0], rot: [Math.PI / 2, 0, 0], outline: 2.6 });
-  // head on a neck pivot
-  const neck = new THREE.Group(); neck.position.set(0, 1.24 * s, 0); body.add(neck); ch.neck = neck;
-  const R = (def.head || 0.27) * s; ch.R = R;
-  const headG = new THREE.Group(); headG.position.set(0, R * 0.82, 0); neck.add(headG); ch.head = headG;
-  ch.faceDef = { id: def.name, skin: def.skin || '#f4ece0', hair: def.hairColor || INK, beard: def.beard, beardColor: def.beardColor, moustache: def.moustache,
-    eyeY: def.eyeY, eyeSpread: def.eyeSpread, browW: def.browW, mouthW: def.mouthW, blush: def.blushBase };
-  const face0 = paintFace(ch.faceDef, { expr: 'neutral' }, def.faceRes || 512);
-  ch.faceMat = new THREE.MeshStandardMaterial({ map: face0.tex, roughness: 0.82, emissive: new THREE.Color(0xffffff), emissiveMap: face0.tex, emissiveIntensity: 0.06 });
-  const headMesh = mk(headGeometry(R), ch.faceMat, headG, { outline: 9.0 });
+  // head: a big round ball resting on the body
+  const neck = new THREE.Group(); neck.position.set(0, 1.28 * s, 0); body.add(neck); ch.neck = neck;
+  const R = (def.head || 0.285) * s; ch.R = R;
+  const headG = new THREE.Group(); headG.position.set(0, R * 0.7, 0); neck.add(headG); ch.head = headG;
+  ch.faceDef = { id: def.name, skin: def.skin || HEAD, hair: def.hairColor || INK, beard: def.beard, beardColor: def.beardColor, moustache: def.moustache,
+    eyeY: def.eyeY, eyeSpread: def.eyeSpread, browW: def.browW, mouthW: def.mouthW, blush: def.blushBase, glasses: def.glasses };
+  const face0 = paintFace(ch.faceDef, { expr: 'neutral' }, def.faceRes || 768);
+  ch.faceMat = new THREE.MeshStandardMaterial({ map: face0.tex, roughness: 0.75, emissive: new THREE.Color(0xffffff), emissiveMap: face0.tex, emissiveIntensity: 0.42 });
+  const headMesh = mk(headGeometry(R), ch.faceMat, headG, { outline: 13 });
   ch.headMesh = headMesh;
   if (def.hat) HW.build(def.hat, headG, R, def);
   if (def.beard3d) HW.longBeard(headG, R, def.beard3d);
-  // limbs
-  const armR = 0.019 * s, handR = 0.046 * s;
+  // stick arms with ball hands
+  const armR = 0.0085 * s, handR = 0.036 * s;
   ch.arms = {};
   for (const L of ['l', 'r']) {
     const sd = L === 'l' ? 1 : -1;
     const hose = new Hose(armR, inkMat, 14, 6);
     body.add(hose.mesh);
-    const hand = mk(new THREE.SphereGeometry(handR, 16, 12), inkMat, ch.root, { outline: false });
-    hand.castShadow = true;
-    const sleeve = def.sleeve ? mk(new THREE.SphereGeometry(armR * 2.4, 12, 8), toon(def.sleeve), body, { outline: 2 }) : null;
-    ch.arms[L] = { sd, hose, hand, sleeve, shoulder: V(sd * 0.19 * s * Math.min(gth, 1.15), 1.12 * s, 0.0), target: V(sd * 0.27 * s, 0.7 * s, 0.05 * s), bend: 1 };
+    const hand = mk(new THREE.SphereGeometry(handR, 16, 12), handMat, ch.root, { outline: false });
+    ch.arms[L] = { sd, hose, hand, shoulder: V(sd * 0.13 * s * Math.min(gth, 1.2), 1.17 * s, 0.0), target: V(sd * 0.22 * s, 0.78 * s, 0.06 * s), bend: 1 };
   }
+  // stick legs with small black feet (only the ankles show under a long robe)
   ch.legs = {};
   for (const L of ['l', 'r']) {
     const sd = L === 'l' ? 1 : -1;
-    const shoe = mk(new THREE.SphereGeometry(0.06 * s, 14, 10), def.shoes ? toon(def.shoes) : inkMat, ch.root, { scale: [0.95, 0.62, 1.55], outline: def.shoes ? 2.2 : false });
-    let hose = null;
-    if (kind === 'tunic') { hose = new Hose(0.022 * s, inkMat, 10, 6); ch.root.add(hose.mesh); }
-    ch.legs[L] = { sd, shoe, hose, hip: V(sd * 0.085 * s, 0.56 * s, 0), foot: V(sd * 0.085 * s, 0.03 * s, kind === 'robe' ? 0.2 * s : 0.03 * s) };
+    const shoe = mk(new THREE.SphereGeometry(0.034 * s, 14, 10), def.shoes ? toon(def.shoes, { lift: 0.1 }) : handMat, ch.root, { scale: [0.95, 0.6, 1.75], outline: def.shoes ? 2.5 : false });
+    const hose = new Hose(0.0092 * s, inkMat, 10, 6); ch.root.add(hose.mesh);
+    ch.legs[L] = { sd, shoe, hose, hip: V(sd * 0.07 * s, P.hip * s, 0), foot: V(sd * 0.075 * s, 0.02 * s, 0.035 * s) };
   }
-  // props held in hands are parented here by the shots
   ch.state = { expr: 'neutral', look: [0, 0], talk: 0, blink: false };
   ch.pose = defaultPose();
   ch.update = (t) => updateToon(ch, t);
@@ -178,18 +195,17 @@ export function updateToon(ch, t) {
     const sh = a.shoulder.clone();
     const shRoot = sh.clone().applyMatrix4(ch.body.matrix);
     const d = tgt.clone().sub(shRoot);
-    const maxLen = 0.6 * s;
+    const maxLen = 0.58 * s;
     if (d.length() > maxLen) tgt.copy(shRoot).add(d.setLength(maxLen));
     a.hand.position.copy(tgt);
     const tB = tgt.clone().applyMatrix4(ch.root.matrixWorld).applyMatrix4(inv);
     const mid = sh.clone().add(tB).multiplyScalar(0.5);
     const len = sh.distanceTo(tB);
-    const slack = Math.max(0, 0.6 * s - len);
+    const slack = Math.max(0, 0.58 * s - len);
     const bend = (L === 'l' ? p.bendL : p.bendR) ?? 1;
     // elbows bow outwards and slightly back, more when the arm is folded
     const out = V(a.sd, -0.35, -0.45).normalize().multiplyScalar(slack * 0.7 * bend + 0.02 * s);
     a.hose.update(sh, mid.add(out), tB);
-    if (a.sleeve) a.sleeve.position.copy(sh);
   }
   // legs / feet
   const w = p.walk; // {phase, stride, lift}
@@ -203,16 +219,18 @@ export function updateToon(ch, t) {
     }
     lg.shoe.position.copy(f);
     lg.shoe.rotation.set(w ? -Math.max(0, Math.cos(w.phase * Math.PI * 2 + (L === 'l' ? 0 : Math.PI))) * 0.3 : 0, 0, 0);
-    if (lg.hose) {
+    {
       const hip = lg.hip.clone().applyMatrix4(ch.body.matrix);
-      const top = f.clone().add(V(0, 0.04 * s, -0.02 * s));
-      const mid = hip.clone().add(top).multiplyScalar(0.5).add(V(0, 0, 0.05 * s));
+      const top = f.clone().add(V(0, 0.01 * s, -0.025 * s));
+      // knees bow a little forward when the leg is shorter than its rest length
+      const len = hip.distanceTo(top), rest = (lg.hip.y - lg.foot.y);
+      const mid = hip.clone().add(top).multiplyScalar(0.5).add(V(0, 0, 0.02 * s + Math.max(0, rest - len) * 0.8));
       lg.hose.update(hip, mid, top);
     }
   }
   const st = ch.state;
   const blink = st.blink || (!st.noBlink && isBlink(ch, t));
-  const fv = paintFace(ch.faceDef, { expr: st.expr, look: st.look, talk: st.talk, blink, extra: st.extra }, ch.def.faceRes || 512);
+  const fv = paintFace(ch.faceDef, { expr: st.expr, look: st.look, talk: st.talk, blink, extra: st.extra }, ch.def.faceRes || 768);
   if (ch.faceMat.map !== fv.tex) { ch.faceMat.map = fv.tex; ch.faceMat.emissiveMap = fv.tex; ch.faceMat.needsUpdate = true; }
 }
 
