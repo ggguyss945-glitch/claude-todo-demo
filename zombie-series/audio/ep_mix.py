@@ -93,7 +93,7 @@ for e in T['sfx']:
         tt = np.arange(len(j)) / SR; away = np.clip(tt / max(8.0, dur * 0.6), 0, 1)
         j = j * (1 - 0.75 * away)[:, None]
         y = fx(j, Reverb(room_size=0.95, damping=0.55, wet_level=0.5, dry_level=0.6, width=1.0))
-    if dur is not None: y = X.fade(y[:int(dur * SR)], 0.01, 0.03 if name in ('phone_ring', 'alarm_far', 'alarm_near', 'decoy_alarm') else 0.3)
+    if dur is not None: y = X.fade(y[:int(dur * SR)], 0.01, 0.03 if name in ('phone_ring', 'alarm_far', 'alarm_near', 'decoy_alarm') else 1.0 if name == 'thunder' else 0.3)
     (loopT if name in CONT else sfxT).add(y, t, p.get('level', FX.LEVEL.get(name, -12)))
 
 # ---------- ducking under any voice: score -9 dB, sustained effects -12 dB, beds -6 dB ----------

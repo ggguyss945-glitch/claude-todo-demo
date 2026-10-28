@@ -167,13 +167,13 @@ N('R2', "Nobody turns.", gap=0.6)
 N('R2b', "Halfway across, your shoe hits a bottle.", shot=('povstorm', dict(phase='bottle')), sfx=[('$-0.2', 'bottle_roll', {})])
 BEAT('R2c', 2.4, caps=[(0.2, 2.2, 'a bottle, rolling')], sfx=[(1.5, 'clink', {})])
 N('R2d', "It clinks against a car.", 0.4, "The closest one is two steps away.", gap=0.3, shot=('povstorm', dict(phase='freeze')))
-BEAT('R2e', 2.2, caps=[(0.2, 2.0, 'rain')], sfx=[(1.2, 'thunder', {})])
+BEAT('R2e', 2.2, caps=[(0.2, 2.0, 'rain')], sfx=[(1.2, 'thunder', dict(until='R2f', off=0.6))])
 N('R2f', "The rain eats the sound.", 0.35, "You keep walking.", gap=0.6, shot=('povstorm', dict(phase='walk')))
 N('R3', "The mall's side door is chained.", 0.35, "The glass next to it isn't.", shot=('malldoor', dict(mode='chained', hud=MALL(10, '2:31 PM', 2, 'BROOKFIELD MALL · SIDE DOOR'))))
 N('R3b', "Flash.", 0.5, "One.", 0.5, "Boom.", 0.4, "Close.", 0.3, "Not close enough.", rate=2.2, sfx=[('@Boom', 'thunder', {})])
 N('R3c', "You wait.", 0.6, "Rain on your neck.", 0.4, "Hammer in your hand.", gap=0.5)
 N('R4', "Flash and boom, together.", 0.35, "You swing.", gap=0.3, shot=('malldoor', dict(mode='break', at='@swing')),
-  sfx=[('@swing', 'thunder', dict(close=True)), ('@swing', 'glass_break', {})])
+  sfx=[('@swing', 'thunder', dict(close=True, until='M1', off=0.5)), ('@swing', 'glass_break', {})])
 BEAT('R4b', 1.2, shot=('black', {}), music=('stop', {'fade': 0.3}))
 
 # ======================= ACT 2 · THE MALL =======================
@@ -190,7 +190,7 @@ N('M5', "The window was on the top floor.", 0.35, "The escalators stopped when t
 N('M6', "A stopped escalator is just stairs.", 0.3, "Loud stairs.", 0.3, "Metal.")
 N('M7', "You walk on the edges.", 0.3, "Where the steps are bolted down.", shot=('escalator', dict(mode='feet')))
 BEAT('M7b', 4.0, shot=('escalator', dict(mode='pov')), caps=[(0.3, 1.8, 'a clank'), (2.0, 3.8, 'thunder covers it')],
-     sfx=[(0.5, 'escalator_clank', {}), (1.9, 'thunder', {})])
+     sfx=[(0.5, 'escalator_clank', {}), (1.9, 'thunder', dict(until='M7c', off=0.6))])
 N('M7c', "Level two.", 0.3, "A toy store.", 0.3, "Every teddy bear still in the window.", shot=('atrium', dict(mode='climb', level=2)))
 N('M7d', "Level three.", 0.3, "The cinema.", 0.3, "The poster still says coming soon.", gap=0.6, shot=('atrium', dict(mode='climb', level=3)), music=('humor', {}))
 N('M8', "Top floor.", 0.3, "A store called Bright Tech.", 0.3, "The lantern is in the window.", music=('think', {}),
