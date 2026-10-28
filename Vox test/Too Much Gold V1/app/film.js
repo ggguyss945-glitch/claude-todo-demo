@@ -106,10 +106,11 @@ export function addFilm(S, W) {
         idle(m, t, 0.6);
         m.pose.lean = 0.16;
         const tip = tipAt(t);
-        const hands = local(m, 0.0, 0.98, 0.45);
+        // a short broom held low: the handle ends at his chest, never across his face
+        const hands = local(m, 0.0, 0.86, 0.42);
         const dir = hands.clone().sub(tip).normalize();
-        broom.visible = true; broom.position.copy(tip).add(V(0, 0.16, 0)); broom.quaternion.setFromUnitVectors(V(0, 1, 0), dir); broom.updateMatrixWorld(true);
-        handW(m, 'l', tip.clone().addScaledVector(dir, 1.12)); handW(m, 'r', tip.clone().addScaledVector(dir, 0.78));
+        broom.visible = true; broom.scale.set(1, 0.78, 1); broom.position.copy(tip).add(V(0, 0.12, 0)); broom.quaternion.setFromUnitVectors(V(0, 1, 0), dir); broom.updateMatrixWorld(true);
+        handW(m, 'l', tip.clone().addScaledVector(dir, 1.0)); handW(m, 'r', tip.clone().addScaledVector(dir, 0.7));
         look(m, tip.clone().add(V(0.3, 0, 0)), 0.6);
         const f = front(t);
         coins.main.heap(V(f + 0.18, 0, 0.62), 0.28, 0.07, 110, 31);
