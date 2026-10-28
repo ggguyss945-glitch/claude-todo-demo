@@ -62,6 +62,7 @@ function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = fa
     }
     const by = ey - 0.3 * u;
     if (face === 'bored') s += line(x0 - 0.13 * u, by + 0.07 * u, x0 + 0.13 * u, by + 0.07 * u, ink(0.045 * u));
+    if (face === 'calm') s += path(`M${F(x0 - 0.11 * u)} ${F(by + 0.02 * u)} Q${F(x0)} ${F(by - 0.05 * u)} ${F(x0 + 0.11 * u)} ${F(by + 0.02 * u)}`, { fill: 'none', ...ink(0.035 * u) });
     if (face === 'serious') s += line(x0 + side * 0.16 * u, by - 0.01 * u, x0 - side * 0.13 * u, by + 0.11 * u, ink(0.065 * u));
     if (face === 'terrified') s += path(`M${F(x0 + side * 0.15 * u)} ${F(by + 0.06 * u)} L${F(x0 - side * 0.13 * u)} ${F(by - 0.07 * u)}`, { fill: 'none', ...ink(0.06 * u) });
   }
@@ -70,6 +71,8 @@ function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = fa
     s += path(`M${F(mx - 0.21 * u)} ${F(my - 0.05 * u)} Q${F(mx)} ${F(my + 0.3 * u)} ${F(mx + 0.21 * u)} ${F(my - 0.05 * u)} Z`, { fill: '#3A1F1F', ...ink(0.04 * u) })
       + path(`M${F(mx - 0.1 * u)} ${F(my + 0.12 * u)} Q${F(mx)} ${F(my + 0.03 * u)} ${F(mx + 0.11 * u)} ${F(my + 0.12 * u)} Q${F(mx)} ${F(my + 0.2 * u)} ${F(mx - 0.1 * u)} ${F(my + 0.12 * u)} Z`, { fill: '#E07A7A' });
     s += ellipse(cx - 0.55 * u, cy + 0.3 * u, 0.13 * u, 0.065 * u, { fill: '#F2A3A3', opacity: 0.6 }) + ellipse(cx + 0.55 * u, cy + 0.3 * u, 0.13 * u, 0.065 * u, { fill: '#F2A3A3', opacity: 0.6 });
+  } else if (face === 'calm') {
+    s += path(`M${F(mx - 0.12 * u)} ${F(my - 0.01 * u)} Q${F(mx)} ${F(my + 0.08 * u)} ${F(mx + 0.12 * u)} ${F(my - 0.01 * u)}`, { fill: 'none', ...ink(0.045 * u) });
   } else if (face === 'bored') {
     s += path(`M${F(mx - 0.13 * u)} ${F(my + 0.03 * u)} Q${F(mx)} ${F(my + 0.01 * u)} ${F(mx + 0.13 * u)} ${F(my - 0.02 * u)}`, { fill: 'none', ...ink(0.045 * u) });
   } else if (face === 'serious') {
@@ -180,15 +183,39 @@ function crowbar(x, y, u) {
   s += line(B[0] - 0.1 * u, B[1] - 0.16 * u, T[0] + 0.25 * u, T[1] + 0.38 * u, { stroke: '#FF8A70', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.7 });
   return s;
 }
+// a stack of stock in the worker's arms: two cartons with made-up brands on them, hands under the bottom one
+function stock(x, y, u) {
+  const box = (bx, by, w, h, fill) => rect(bx, by, w, h, { rx: 0.04 * u, fill, ...ink(0.04 * u) }) + line(bx, by + 0.16 * u, bx + w, by + 0.16 * u, { stroke: '#8E6A40', strokeWidth: 0.025 * u });
+  let s = '';
+  // bottom carton: CRUNCHY O's cereal
+  const b0 = [x - 0.88 * u, y - 3.42 * u, 1.76 * u, 0.92 * u];
+  s += box(...b0, '#C9A06E');
+  s += rect(x - 0.72 * u, y - 3.14 * u, 0.98 * u, 0.5 * u, { rx: 0.06 * u, fill: '#D8261A', ...ink(0.03 * u) }) + circle(x - 0.6 * u, y - 2.89 * u, 0.16 * u, { fill: '#F2C230', ...ink(0.025 * u) })
+    + text(x - 0.6 * u, y - 2.84 * u, 'O', { fontFamily: "'Lilita One'", fontSize: 0.17 * u, fill: '#D8261A', textAnchor: 'middle' })
+    + text(x - 0.13 * u, y - 2.93 * u, 'CRUNCHY', { fontFamily: "'Lilita One'", fontSize: 0.16 * u, fill: '#FFFFFF', textAnchor: 'middle' }) + text(x - 0.13 * u, y - 2.74 * u, "O's", { fontFamily: "'Lilita One'", fontSize: 0.16 * u, fill: '#F2C230', textAnchor: 'middle' });
+  s += text(x + 0.55 * u, y - 2.95 * u, '12 x 500g', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.1 * u, fill: '#5A4026', textAnchor: 'middle' });
+  s += path(`M${F(x + 0.45 * u)} ${F(y - 2.68 * u)} l0 ${F(-0.16 * u)} M${F(x + 0.39 * u)} ${F(y - 2.78 * u)} l${F(0.06 * u)} ${F(-0.06 * u)} l${F(0.06 * u)} ${F(0.06 * u)} M${F(x + 0.65 * u)} ${F(y - 2.68 * u)} l0 ${F(-0.16 * u)} M${F(x + 0.59 * u)} ${F(y - 2.78 * u)} l${F(0.06 * u)} ${F(-0.06 * u)} l${F(0.06 * u)} ${F(0.06 * u)}`, { fill: 'none', stroke: '#5A4026', strokeWidth: 0.025 * u, strokeLinecap: 'round' });
+  // top carton: AQUA PURE water, a little off-centre
+  const t0 = [x - 0.62 * u, y - 4.12 * u, 1.36 * u, 0.7 * u];
+  s += box(...t0, '#D4AE7C');
+  s += rect(x - 0.5 * u, y - 3.9 * u, 0.86 * u, 0.36 * u, { rx: 0.05 * u, fill: '#2F7FC1', ...ink(0.03 * u) }) + path(`M${F(x - 0.38 * u)} ${F(y - 3.62 * u)} q${F(0.06 * u)} ${F(-0.16 * u)} ${F(0.12 * u)} 0 q${F(-0.06 * u)} ${F(0.06 * u)} ${F(-0.12 * u)} 0 Z`, { fill: '#BFE8FF' })
+    + text(x - 0.0 * u, y - 3.67 * u, 'AQUA PURE', { fontFamily: "'Lilita One'", fontSize: 0.14 * u, fill: '#FFFFFF', textAnchor: 'middle' });
+  s += rect(x + 0.42 * u, y - 3.92 * u, 0.26 * u, 0.4 * u, { rx: 0.03 * u, fill: '#F6F1E4', ...ink(0.02 * u) }) + text(x + 0.55 * u, y - 3.74 * u, '24', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.1 * u, fill: INK, textAnchor: 'middle' }) + text(x + 0.55 * u, y - 3.6 * u, 'PCS', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.06 * u, fill: INK, textAnchor: 'middle' });
+  // a FRESHWAY stock sticker on the bottom carton
+  s += g(rect(-0.2 * u, -0.07 * u, 0.4 * u, 0.14 * u, { rx: 0.03 * u, fill: '#2F6B52', ...ink(0.02 * u) }) + text(0, 0.04 * u, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.07 * u, fill: '#F3EAD2', textAnchor: 'middle' }), { transform: `translate(${F(x + 0.52 * u)} ${F(y - 3.28 * u)}) rotate(-4)` });
+  return s;
+}
+const stockHands = (x, y, u) => circle(x - 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(x + 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) });
+
 function thumbA4() {
   const SEAM = [[1000, 0], [920, 1080]];
   let s = `<defs><clipPath id="p4_l"><polygon points="0,0 ${SEAM[0].join(',')} ${SEAM[1].join(',')} 0,1080"/></clipPath><clipPath id="p4_r"><polygon points="${SEAM[0].join(',')} 1920,0 1920,1080 ${SEAM[1].join(',')}"/></clipPath>
     <linearGradient id="p4_warm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE7A6" stop-opacity="0.55"/><stop offset="1" stop-color="#FFB36B" stop-opacity="0.1"/></linearGradient></defs>`;
   const sc = 2.75, gy = 1430, u = 60 * sc;
-  // Day 0: the bright store; a tired, unimpressed night-shift worker in the Freshway apron, coffee in hand
+  // Day 0: the bright store; an ordinary night-shift worker in the Freshway apron carrying stock, looking at us
   let L = g(aisle({ night: false, seed: 5 }).s, { transform: 'translate(-460 -20) scale(1.04)', filter: 'url(#pro_b2)' });
   L += rect(0, 0, 1000, 1080, { fill: 'url(#p4_warm)', opacity: 0.6, style: 'mix-blend-mode:multiply' }) + bloom(470, 330, 420, 260, '#FFF6DA', 0.4);
-  L += actor({ x: 470, y: gy, s: sc, pose: 'radio', face: 'bored', look: 0.1, tired: true, extra: apron(470, gy, u), front: coffeeArm(470, gy, u), id: 'p40', rim: { color: '#FFF3C8', side: -1, op: 0.6 } });
+  L += actor({ x: 470, y: gy, s: sc, pose: 'carry', face: 'calm', look: 0, extra: apron(470, gy, u) + stock(470, gy, u), front: stockHands(470, gy, u), id: 'p40', rim: { color: '#FFF3C8', side: -1, op: 0.6 } });
   s += g(L, { clipPath: 'url(#p4_l)' });
   // Day 7: the same doors at night, the glass full of them; a survivor now, crowbar on the shoulder
   let R = g(S.doorsOutside({ dawn: false }) + glassCrowd(4) + doorsFrame(0.5), { transform: 'translate(500 -30) scale(1.03)', filter: 'url(#pro_b1)' });
