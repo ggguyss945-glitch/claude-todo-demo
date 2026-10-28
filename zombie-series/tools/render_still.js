@@ -1,4 +1,5 @@
-// Render one piece of channel art to PNG: node tools/render_still.js <item> <out.png> [scale=2]
+// Render one piece of channel art to PNG: node tools/render_still.js <item|mod:path.js> <out.png> [scale=2]
+//   item draws ITEMS[item] from engine/brand/brand.js; mod:brand/v2/x.js draws that module's default export.
 // The page sizes itself from the item; scale supersamples it (2 = a 1920x1080 design comes out 3840x2160).
 const { chromium } = require('playwright');
 const path = require('path'), http = require('http'), fs = require('fs');
@@ -14,7 +15,8 @@ const server = http.createServer((req, res) => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 4000, height: 2400 }, deviceScaleFactor: +(scaleArg || 2) });
   page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
-  await page.goto(`http://127.0.0.1:${server.address().port}/engine/brand.html?item=${item}`);
+  const q = item.startsWith('mod:') ? `brand2.html?mod=${encodeURIComponent(item.slice(4))}` : `brand.html?item=${item}`;
+  await page.goto(`http://127.0.0.1:${server.address().port}/engine/${q}`);
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
   await page.locator('#stage').screenshot({ path: out, type: 'png' });
   await browser.close(); server.close();
