@@ -35,7 +35,7 @@ export function headline(x, y, str, { size = 200, fill = 'url(#pro_white)', sw =
 }
 
 // ---------- the hero, acting for the thumbnail ----------
-function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = false, rim, id = 'h' }) {
+function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = false, scratch = false, rim, id = 'h' }) {
   let s = circle(cx, cy, u, { fill: PAL.skin });
   if (rim) s += `<mask id="rim_${id}"><circle cx="${F(cx)}" cy="${F(cy)}" r="${F(u)}" fill="#fff"/><circle cx="${F(cx - rim.side * 0.16 * u)}" cy="${F(cy + 0.06 * u)}" r="${F(u)}" fill="#000"/></mask>`
     + circle(cx, cy, u, { fill: rim.color, opacity: rim.op ?? 0.85, mask: `url(#rim_${id})` });
@@ -53,29 +53,43 @@ function head(cx, cy, u, { face = 'happy', look = 0, tired = false, bandage = fa
     if (tired) s += path(`M${F(x0 - 0.14 * u)} ${F(ey + 0.24 * u)} q${F(0.14 * u)} ${F(0.1 * u)} ${F(0.28 * u)} 0`, { fill: 'none', stroke: '#8E7FA6', strokeWidth: 0.045 * u, strokeLinecap: 'round' });
     s += ellipse(x0, ey, 0.13 * u * big, 0.19 * u * big, { fill: INK });
     s += circle(x0 + 0.045 * u, ey - 0.075 * u, 0.048 * u, { fill: '#FFFFFF' }) + circle(x0 - 0.04 * u, ey + 0.07 * u, 0.022 * u, { fill: '#FFFFFF' });
+    if (face === 'bored' || face === 'serious') {
+      // heavy upper lid: flat and half shut when bored, slanted down to the nose when serious
+      const base = ey - 0.19 * u + (face === 'bored' ? 0.5 : 0.36) * 0.38 * u, tilt = face === 'serious' ? 0.05 * u : 0;
+      const yo = base - tilt, yi = base + tilt, xo = x0 + side * 0.17 * u, xi = x0 - side * 0.17 * u;
+      s += poly([[xo, ey - 0.26 * u], [xi, ey - 0.26 * u], [xi, yi], [xo, yo]], { fill: PAL.skin }) + line(xo, yo, xi, yi, ink(0.05 * u));
+      s += circle(x0 + 0.04 * u, (yo + yi) / 2 + 0.07 * u, 0.03 * u, { fill: '#FFFFFF' });
+    }
     const by = ey - 0.3 * u;
-    if (face !== 'happy') s += path(`M${F(x0 + side * 0.15 * u)} ${F(by + 0.06 * u)} L${F(x0 - side * 0.13 * u)} ${F(by - 0.07 * u)}`, { fill: 'none', ...ink(0.06 * u) });
+    if (face === 'bored') s += line(x0 - 0.13 * u, by + 0.07 * u, x0 + 0.13 * u, by + 0.07 * u, ink(0.045 * u));
+    if (face === 'serious') s += line(x0 + side * 0.16 * u, by - 0.01 * u, x0 - side * 0.13 * u, by + 0.11 * u, ink(0.065 * u));
+    if (face === 'terrified') s += path(`M${F(x0 + side * 0.15 * u)} ${F(by + 0.06 * u)} L${F(x0 - side * 0.13 * u)} ${F(by - 0.07 * u)}`, { fill: 'none', ...ink(0.06 * u) });
   }
   const mx = ex + look * 0.05 * u, my = cy + 0.5 * u;
   if (face === 'happy') {
     s += path(`M${F(mx - 0.21 * u)} ${F(my - 0.05 * u)} Q${F(mx)} ${F(my + 0.3 * u)} ${F(mx + 0.21 * u)} ${F(my - 0.05 * u)} Z`, { fill: '#3A1F1F', ...ink(0.04 * u) })
       + path(`M${F(mx - 0.1 * u)} ${F(my + 0.12 * u)} Q${F(mx)} ${F(my + 0.03 * u)} ${F(mx + 0.11 * u)} ${F(my + 0.12 * u)} Q${F(mx)} ${F(my + 0.2 * u)} ${F(mx - 0.1 * u)} ${F(my + 0.12 * u)} Z`, { fill: '#E07A7A' });
     s += ellipse(cx - 0.55 * u, cy + 0.3 * u, 0.13 * u, 0.065 * u, { fill: '#F2A3A3', opacity: 0.6 }) + ellipse(cx + 0.55 * u, cy + 0.3 * u, 0.13 * u, 0.065 * u, { fill: '#F2A3A3', opacity: 0.6 });
+  } else if (face === 'bored') {
+    s += path(`M${F(mx - 0.13 * u)} ${F(my + 0.03 * u)} Q${F(mx)} ${F(my + 0.01 * u)} ${F(mx + 0.13 * u)} ${F(my - 0.02 * u)}`, { fill: 'none', ...ink(0.045 * u) });
+  } else if (face === 'serious') {
+    s += path(`M${F(mx - 0.15 * u)} ${F(my + 0.05 * u)} Q${F(mx)} ${F(my - 0.04 * u)} ${F(mx + 0.15 * u)} ${F(my + 0.05 * u)}`, { fill: 'none', ...ink(0.055 * u) });
   } else {
     s += ellipse(mx, my + 0.06 * u, 0.15 * u, 0.21 * u, { fill: '#3A1F1F', ...ink(0.04 * u) });
     s += rect(mx - 0.1 * u, my - 0.13 * u, 0.2 * u, 0.06 * u, { rx: 0.02 * u, fill: '#FBF8EE' }) + ellipse(mx, my + 0.19 * u, 0.09 * u, 0.05 * u, { fill: '#E07A7A' });
     s += path(`M${F(cx + 0.78 * u)} ${F(cy - 0.5 * u)} q${F(0.09 * u)} ${F(0.2 * u)} 0 ${F(0.29 * u)} q${F(-0.09 * u)} ${F(-0.09 * u)} 0 ${F(-0.29 * u)}`, { fill: '#9ED8F5', ...ink(0.025 * u) })
       + path(`M${F(cx - 0.86 * u)} ${F(cy - 0.12 * u)} q${F(0.06 * u)} ${F(0.14 * u)} 0 ${F(0.2 * u)} q${F(-0.06 * u)} ${F(-0.06 * u)} 0 ${F(-0.2 * u)}`, { fill: '#9ED8F5', ...ink(0.02 * u) });
   }
+  if (scratch) for (const [dx, dy] of [[0.42, 0.18], [0.5, 0.26]]) s += line(cx + dx * u, cy + dy * u, cx + (dx + 0.2) * u, cy + (dy - 0.1) * u, { stroke: '#B5452F', strokeWidth: 0.035 * u, strokeLinecap: 'round' });
   if (tired) for (const [dx, dy, r] of [[0.48, 0.62, 0.07], [-0.6, 0.45, 0.05], [0.25, 0.75, 0.04]]) s += circle(cx + dx * u, cy + dy * u, r * u, { fill: '#7B6E5E', opacity: 0.35 });
   s += circle(cx, cy, u, { fill: 'none', ...ink(0.045 * u) });
   return s;
 }
 // the hero with a thumbnail face; `front` is drawn over the head (props held up at the cheek)
-export function actor({ x, y, s: sc, pose = 'stand', face = 'happy', look = 0, tired = false, bandage = false, rim, extra = '', front = '', id = 'a', sticker = true }) {
+export function actor({ x, y, s: sc, pose = 'stand', face = 'happy', look = 0, tired = false, bandage = false, scratch = false, rim, extra = '', front = '', id = 'a', sticker = true }) {
   const u = 60 * sc;
   const body = hero({ x, y, s: sc, pose, expr: face === 'happy' ? 'smile' : 'scared', look, extra, filter: false });
-  const hd = head(x, y - 5.25 * u, u, { face, look, tired, bandage, rim, id });
+  const hd = head(x, y - 5.25 * u, u, { face, look, tired, bandage, scratch, rim, id });
   return g(g(body + hd + front, { filter: 'url(#wobbleSoft)' }), { filter: sticker ? 'url(#pro_stk)' : undefined });
 }
 // walkie-talkie up at the cheek, red light on; returns [markup, led x, led y]
@@ -119,6 +133,72 @@ function thumbA() {
   R += actor({ x: 1440, y: gy, s: sc, pose: 'talkie', face: 'terrified', look: -0.28, tired: true, bandage: true, id: 'a7', rim: { color: '#7FC4FF', side: -1, op: 0.75 }, front: tk });
   R += bloom(lx, ly, 70, 70, RED, 0.95, true) + bloom(lx + 40, ly + 60, 220, 200, RED, 0.28);
   s += g(R, { clipPath: 'url(#pa_r)' });
+  s += line(...SEAM[0], ...SEAM[1], { stroke: INK, strokeWidth: 42 }) + line(...SEAM[0], ...SEAM[1], { stroke: '#FFFFFF', strokeWidth: 22 });
+  s += headline(470, 210, 'DAY 0', { size: 210 }) + headline(1450, 210, 'DAY 7', { size: 210, fill: 'url(#pro_red)' });
+  s += finish({ vignette: 0.35, grain: 0.05 });
+  return { w: W, h: H, svg: svgOf(s, 5), css: 'saturate(1.12) contrast(1.06)' };
+}
+
+// ---------- A4: the same split; a bored night-shift worker on day 0, a survivor with a crowbar on day 7 ----------
+function apron(x, y, u) {
+  let s = poly([[x - 0.43 * u, y - 3.98 * u], [x + 0.43 * u, y - 3.98 * u], [x + 0.55 * u, y - 2.05 * u], [x - 0.55 * u, y - 2.05 * u]], { fill: '#2F6B52', ...ink(0.04 * u) });
+  s += line(x - 0.3 * u, y - 3.98 * u, x - 0.22 * u, y - 4.3 * u, ink(0.04 * u)) + line(x + 0.3 * u, y - 3.98 * u, x + 0.22 * u, y - 4.3 * u, ink(0.04 * u));
+  s += text(x, y - 3.42 * u, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.15 * u, fill: '#F3EAD2', textAnchor: 'middle', letterSpacing: 1 });
+  s += rect(x - 0.28 * u, y - 3.0 * u, 0.56 * u, 0.34 * u, { rx: 0.04 * u, fill: '#265A45', ...ink(0.03 * u) }) + line(x, y - 3.0 * u, x, y - 2.66 * u, ink(0.02 * u));
+  s += g(rect(-0.2 * u, -0.08 * u, 0.4 * u, 0.16 * u, { rx: 0.03 * u, fill: '#F6F1E4', ...ink(0.02 * u) }) + text(0, 0.05 * u, 'STAFF', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.1 * u, fill: '#B5452F', textAnchor: 'middle' }), { transform: `translate(${F(x - 0.16 * u)} ${F(y - 3.72 * u)}) rotate(-5)` });
+  return s;
+}
+function coffeeArm(x, y, u) {
+  // the 'radio' pose's right forearm, redrawn over the apron, holding a paper cup at the chest
+  const shY = y - 4.05 * u, sx = x + 0.5 * u, sy = shY + 0.05 * u, ax = x + 0.42 * u, hy = shY + 0.2 * u;
+  const mx = (sx + ax) / 2 + 0.15 * u, my = (sy + hy) / 2 + 0.1 * u, lw = Math.max(4, 0.1 * u);
+  let s = path(`M${F(sx)} ${F(sy)} Q${F(mx)} ${F(my)} ${F(ax)} ${F(hy)}`, { fill: 'none', ...ink(lw) });
+  s += poly([[ax - 0.15 * u, hy - 0.5 * u], [ax + 0.15 * u, hy - 0.5 * u], [ax + 0.12 * u, hy + 0.02 * u], [ax - 0.12 * u, hy + 0.02 * u]], { fill: '#F4EFE4', ...ink(0.035 * u) });
+  s += rect(ax - 0.17 * u, hy - 0.58 * u, 0.34 * u, 0.09 * u, { rx: 0.03 * u, fill: '#FFFFFF', ...ink(0.03 * u) }) + poly([[ax - 0.145 * u, hy - 0.36 * u], [ax + 0.145 * u, hy - 0.36 * u], [ax + 0.135 * u, hy - 0.2 * u], [ax - 0.135 * u, hy - 0.2 * u]], { fill: '#A8683A', ...ink(0.025 * u) });
+  s += path(`M${F(ax - 0.04 * u)} ${F(hy - 0.64 * u)} q${F(0.05 * u)} ${F(-0.08 * u)} 0 ${F(-0.16 * u)} M${F(ax + 0.06 * u)} ${F(hy - 0.66 * u)} q${F(0.05 * u)} ${F(-0.08 * u)} 0 ${F(-0.16 * u)}`, { fill: 'none', stroke: '#FFFFFF', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.8 });
+  s += circle(ax, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) });
+  return s;
+}
+function survivalGear(x, y, u) {
+  // backpack straps, a chest strap, a rip and dirt on the jacket
+  let s = '';
+  for (const side of [-1, 1]) s += poly([[x + side * 0.42 * u, y - 4.12 * u], [x + side * 0.24 * u, y - 4.12 * u], [x + side * 0.28 * u, y - 2.2 * u], [x + side * 0.46 * u, y - 2.2 * u]], { fill: '#4A3424', ...ink(0.035 * u) });
+  s += rect(x - 0.44 * u, y - 3.62 * u, 0.88 * u, 0.12 * u, { fill: '#3A2A1E', ...ink(0.03 * u) }) + rect(x - 0.09 * u, y - 3.66 * u, 0.18 * u, 0.2 * u, { rx: 0.03 * u, fill: '#9C9890', ...ink(0.03 * u) });
+  s += path(`M${F(x + 0.05 * u)} ${F(y - 2.9 * u)} l${F(0.08 * u)} ${F(0.12 * u)} l${F(0.07 * u)} ${F(-0.1 * u)} l${F(0.08 * u)} ${F(0.14 * u)} l${F(0.06 * u)} ${F(-0.08 * u)} l${F(-0.02 * u)} ${F(0.2 * u)} l${F(-0.3 * u)} 0 Z`, { fill: '#2C3020', ...ink(0.02 * u) });
+  for (const [dx, dy, r] of [[-0.12, 2.6, 0.12], [0.2, 3.3, 0.09], [-0.32, 3.0, 0.07]]) s += ellipse(x + dx * u, y - dy * u, r * u, r * 0.7 * u, { fill: '#2B2A22', opacity: 0.3 });
+  return s;
+}
+function crowbar(x, y, u) {
+  // held at the cheek, resting on the shoulder, the hook sticking up behind the head
+  const B = [x + 1.3 * u, y - 4.12 * u], T = [x - 0.55 * u, y - 7.0 * u], w = 0.15 * u;
+  const hook = `M${F(T[0])} ${F(T[1])} q${F(-0.34 * u)} ${F(-0.16 * u)} ${F(-0.4 * u)} ${F(0.26 * u)}`;
+  const tip = `M${F(B[0])} ${F(B[1])} l${F(0.16 * u)} ${F(0.08 * u)}`;
+  let s = '';
+  for (const [c, ww] of [[INK, w + 0.07 * u], ['#B8261C', w]]) {
+    s += line(B[0], B[1], T[0], T[1], { stroke: c, strokeWidth: ww, strokeLinecap: 'round' }) + path(hook, { fill: 'none', stroke: c, strokeWidth: ww, strokeLinecap: 'round' }) + path(tip, { fill: 'none', stroke: c, strokeWidth: ww, strokeLinecap: 'round' });
+  }
+  s += line(B[0] - 0.1 * u, B[1] - 0.16 * u, T[0] + 0.25 * u, T[1] + 0.38 * u, { stroke: '#FF8A70', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.7 });
+  return s;
+}
+function thumbA4() {
+  const SEAM = [[1000, 0], [920, 1080]];
+  let s = `<defs><clipPath id="p4_l"><polygon points="0,0 ${SEAM[0].join(',')} ${SEAM[1].join(',')} 0,1080"/></clipPath><clipPath id="p4_r"><polygon points="${SEAM[0].join(',')} 1920,0 1920,1080 ${SEAM[1].join(',')}"/></clipPath>
+    <linearGradient id="p4_warm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE7A6" stop-opacity="0.55"/><stop offset="1" stop-color="#FFB36B" stop-opacity="0.1"/></linearGradient></defs>`;
+  const sc = 2.75, gy = 1430, u = 60 * sc;
+  // Day 0: the bright store; a tired, unimpressed night-shift worker in the Freshway apron, coffee in hand
+  let L = g(aisle({ night: false, seed: 5 }).s, { transform: 'translate(-460 -20) scale(1.04)', filter: 'url(#pro_b2)' });
+  L += rect(0, 0, 1000, 1080, { fill: 'url(#p4_warm)', opacity: 0.6, style: 'mix-blend-mode:multiply' }) + bloom(470, 330, 420, 260, '#FFF6DA', 0.4);
+  L += actor({ x: 470, y: gy, s: sc, pose: 'radio', face: 'bored', look: 0.1, tired: true, extra: apron(470, gy, u), front: coffeeArm(470, gy, u), id: 'p40', rim: { color: '#FFF3C8', side: -1, op: 0.6 } });
+  s += g(L, { clipPath: 'url(#p4_l)' });
+  // Day 7: the same doors at night, the glass full of them; a survivor now, crowbar on the shoulder
+  let R = g(S.doorsOutside({ dawn: false }) + glassCrowd(4) + doorsFrame(0.5), { transform: 'translate(500 -30) scale(1.03)', filter: 'url(#pro_b1)' });
+  R += grade('#3A6A9A', 0.3) + bloom(1460, 600, 520, 320, '#6FB4FF', 0.22) + bloom(1890, 90, 300, 240, RED, 0.4) + bloom(990, 1060, 260, 160, RED, 0.22);
+  const x7 = 1440, hx = x7 + 0.98 * u, hy = gy - 4.67 * u;
+  const chestRadio = radioProp(x7 - 0.33 * u, gy - 3.05 * u, 0.42, { on: true, led: RED, rot: -6 });
+  R += actor({ x: x7, y: gy, s: sc, pose: 'talkie', face: 'serious', look: -0.22, tired: true, bandage: true, scratch: true, id: 'p47',
+    rim: { color: '#7FC4FF', side: -1, op: 0.75 }, extra: survivalGear(x7, gy, u) + chestRadio + crowbar(x7, gy, u), front: circle(hx, hy, 0.17 * u, { fill: PAL.skin, ...ink(0.05 * u) }) });
+  R += bloom(x7 - 0.33 * u - 30 * 0.42, gy - 3.05 * u - 140 * 0.42, 50, 50, RED, 0.9, true);
+  s += g(R, { clipPath: 'url(#p4_r)' });
   s += line(...SEAM[0], ...SEAM[1], { stroke: INK, strokeWidth: 42 }) + line(...SEAM[0], ...SEAM[1], { stroke: '#FFFFFF', strokeWidth: 22 });
   s += headline(470, 210, 'DAY 0', { size: 210 }) + headline(1450, 210, 'DAY 7', { size: 210, fill: 'url(#pro_red)' });
   s += finish({ vignette: 0.35, grain: 0.05 });
@@ -190,4 +270,4 @@ function ledDigits(x, y, str, h, on = '#FF3B2F', off = '#3A1010') {
   return g(g(s, { filter: 'url(#pro_glowS)', opacity: 0.9 }) + s, { transform: `skewX(-7) translate(${(y + h) * 0.12} 0)` });
 }
 
-export const THUMBS = { thumbA, thumbB, thumbC };
+export const THUMBS = { thumbA, thumbA4, thumbB, thumbC };
