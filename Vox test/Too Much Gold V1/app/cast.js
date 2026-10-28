@@ -10,14 +10,14 @@ const LIGHT = ['#f7f3ec', '#f7f3ec', '#f4ede2', '#ecd6b6', '#f7f3ec', '#efe2cc']
 export const CAST_DEFS = {
   // Mansa Musa: cream robe with a gold front band, gold collar and belt, crown, chain and medallion
   musa: { body: 'robe', color: '#f4ecda', trim: '#e2aa2a', trimDots: '#c0392b', collar: '#e8b530', belt: '#e2aa2a', hem: '#e2aa2a', necklace: true, medallion: true,
-    girth: 1.08, skin: '#a2704a', beard: 'short', beardColor: '#1e140e', hat: { type: 'crown', cap: '#b01c2c' }, head: 0.3, faceRes: 1024, shoes: '#d9a521' },
+    girth: 1.08, skin: '#a2704a', beard: 'short', beardColor: '#1e140e', moustache: 'thin', hairColor: '#1e140e', hat: { type: 'crown', cap: '#b01c2c' }, head: 0.3, faceRes: 1024, shoes: '#d9a521' },
   // royal attendants: indigo / rust / green robes, white collars, gold belts
   att1: { body: 'robe', color: '#2c3a8c', collar: '#f2ead8', belt: '#e2aa2a', skin: '#8f5f3d', hat: { type: 'turban', color: '#f4f0e6', stripe: '#2c3a8c', bands: 2 } },
   att2: { body: 'robe', color: '#8a3a1e', collar: '#f2ead8', belt: '#e2aa2a', skin: '#b07a52', hat: { type: 'turban', color: '#f4f0e6', stripe: '#8a3a1e', bands: 2 }, moustache: 'thin' },
   att3: { body: 'robe', color: '#2c3a8c', collar: '#f2ead8', belt: '#e2aa2a', skin: '#7c5034', hat: { type: 'kufi', color: '#f4f0e6', stripe: '#e2aa2a' } },
   att4: { body: 'robe', color: '#2b6e44', collar: '#f2ead8', belt: '#e2aa2a', skin: '#966442', hat: { type: 'turban', color: '#e8c24a', stripe: '#2b6e44', bands: 2 } },
   // Cairo merchants
-  spice: { body: 'robe', color: '#2f8a52', collar: '#f4e7c4', belt: '#c9962a', girth: 1.22, skin: '#f7f3ec', beard: 'full', beardColor: '#2a1a10',
+  spice: { body: 'robe', color: '#2f8a52', collar: '#f4e7c4', belt: '#c9962a', girth: 1.22, skin: '#f7f3ec', beard: 'full', beardColor: '#3a2618',
     hat: { type: 'turban', color: '#f6f1e6', stripe: '#d8cdb4', bands: 3, size: 1.1 }, faceRes: 1024 },
   cloth: { body: 'robe', color: '#e0702c', pattern: 'pinstripe', stripe: '#f2b84a', collar: '#f6e2b0', belt: '#7a2a1a', skin: '#f7f3ec', moustache: 'curl', hairColor: '#20140c',
     hat: { type: 'turban', color: '#c0282e', stripe: '#e8b43a', bands: 2 }, faceRes: 1024 },

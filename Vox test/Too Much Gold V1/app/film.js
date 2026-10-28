@@ -31,10 +31,11 @@ export function addFilm(S, W) {
   const bling = {};
   for (const k of ['spice', 'cloth', 'jewel', 'changer']) {
     const ch = C[k], s = ch.s, grp = new THREE.Group();
-    mk(new THREE.TorusGeometry(0.16 * s, 0.026 * s, 8, 28), gold({ glow: 0.4 }), grp, { pos: [0, 1.17 * s, 0.03], rot: [PI / 2 + 0.4, 0, 0], outline: 3 });
-    mk(new THREE.TorusGeometry(0.2 * s, 0.022 * s, 8, 28), gold({ glow: 0.4 }), grp, { pos: [0, 1.08 * s, 0.05], rot: [PI / 2 + 0.55, 0, 0], outline: 3 });
-    mk(new THREE.CylinderGeometry(0.055, 0.055, 0.016, 18), gold(), grp, { pos: [0, 0.95 * s, 0.24 * s * (ch.def.girth || 1)], rot: [PI / 2 - 0.25, 0, 0], outline: 2.5 });
-    ch.body.add(grp); grp.visible = false; bling[k] = grp;
+    const gr = (ch.def.girth || 1) * s;
+    mk(new THREE.TorusGeometry(0.115 * gr, 0.017 * s, 8, 28), gold({ glow: 0.4 }), grp, { pos: [0, 1.2 * s, 0.035 * gr], rot: [PI / 2 + 0.62, 0, 0], outline: 3 });
+    mk(new THREE.TorusGeometry(0.135 * gr, 0.015 * s, 8, 28), gold({ glow: 0.4 }), grp, { pos: [0, 1.12 * s, 0.05 * gr], rot: [PI / 2 + 0.75, 0, 0], outline: 3 });
+    mk(new THREE.CylinderGeometry(0.05, 0.05, 0.016, 18), gold({ glow: 0.45 }), grp, { pos: [0, 1.0 * s, 0.165 * gr], rot: [PI / 2 - 0.25, 0, 0], outline: 2.5 });
+    ch.torso.add(grp); grp.visible = false; bling[k] = grp;
   }
   const royal = A.desert.camels[2];
   const camels = A.desert.camels;
@@ -46,7 +47,7 @@ export function addFilm(S, W) {
     for (const cm of camels) { Object.assign(cm.pose, { walk: null, neck: 0, headPitch: 0, headYaw: 0, chew: 0, lid: 0.55, sit: 0 }); }
     M.tallyBoard.material.map = tallyBase;
     M.balance.userData.set(0);
-    A.camp.chest.userData.lid.rotation.x = 0;
+    A.camp.chest.userData.lid.rotation.x = 0; A.camp.chest.userData.outer.visible = true;
     M.cat.visible = true;
   };
   const people = [...C.town];
@@ -62,7 +63,7 @@ export function addFilm(S, W) {
     const rain = PR.throwCoins(60, -0.6, V(0, 3.1, -3.0), V(0, 1, 0.4), 3.2, 3.4, 13, 1.0);
     S.push({ t0, t1, set: 'market', light: 'gold',
       cam: cam([[0, [1.05, 2.62, -1.05], [0.0, 2.8, -3.3], 56], [1.5, [0.62, 2.74, -1.75], [0.0, 2.82, -3.3], 50, easeOutQ]], { ap: 9, focus: [0, 2.9, -3.3], drift: 0.02, seed: 1 }),
-      setup(w, t) {
+      setup(w, t, camera) {
         royal.root.visible = true; royal.root.position.copy(camelP); royal.root.rotation.set(0, 0, 0);
         royal.pose.neck = Math.sin(t * 1.5) * 0.04;
         royal.update(t); const m = C.musa; ride(m, royal);
@@ -74,7 +75,7 @@ export function addFilm(S, W) {
         handL(m, 'r', lerp(-0.27, -0.4, r1) - r2 * 0.1, lerp(0.7, 1.4, r1) - r2 * 0.12, lerp(0.05, -0.2, r1) + r2 * 0.75);
         handL(m, 'l', lerp(0.27, 0.4, l1) + l2 * 0.1, lerp(0.7, 1.4, l1) - l2 * 0.12, lerp(0.05, -0.2, l1) + l2 * 0.75);
         m.pose.lean = -0.08 * r1 + 0.12 * r2 - 0.08 * l1 + 0.12 * l2;
-        m.pose.headPitch = -0.12;
+        look(m, camera.position, 0.85);
         coins.fly.flight(t, throwsL); coins.fly.flight(t, throwsR); coins.fly.flight(t, rain);
         coins.main.scatter(-2.6, 2.6, -7, 0.5, 260, 0.003, 21);
         // the crowd cheers around the camel
@@ -464,41 +465,40 @@ export function addFilm(S, W) {
   // ------------------------------------------------------------ S24 "On the way home, the richest king on Earth," (he opens his treasure chest)
   {
     const chest = A.camp.chest;
+    const stand = () => chest.localToWorld(V(0, 0, -0.47));
     S.push({ t0: 39.94, t1: 41.92, set: 'camp', dissolve: 0.3,
-      cam: cam([[39.94, [C0.x + 2.35, 1.3, -0.55], [C0.x + 0.95, 1.25, 0.85], 40], [41.92, [C0.x + 2.15, 1.32, -0.35], [C0.x + 0.98, 1.22, 0.85], 37]], { ap: 9, focus: [C0.x + 1.05, 1.3, 0.85], seed: 24 }),
+      cam: cam([[39.94, [C0.x + 1.4, 1.02, 4.4], [C0.x + 1.0, 1.02, 0.0], 42], [41.92, [C0.x + 1.28, 1.04, 3.7], [C0.x + 1.0, 1.06, 0.0], 40]], { ap: 6, focus: [C0.x + 1.0, 1.1, 0.0], drift: 0.012, seed: 24 }),
       setup(w, t) {
         chest.updateMatrixWorld(true);
-        const front = chest.localToWorld(V(0, 0, 0.72));
-        const m = put(C.musa, front, chest.rotation.y + PI, exprAt(t, [[0, 'happy'], [40.9, 'grin']]));
+        const m = put(C.musa, stand(), chest.rotation.y, exprAt(t, [[0, 'proud'], [40.55, 'grin'], [41.3, 'joy']]));
         idle(m, t, 0.6);
-        const lift = smooth(prog(t, 40.95, 41.7));
-        chest.userData.lid.rotation.x = -1.75 * lift;
-        m.pose.lean = 0.32 - 0.1 * lift;
-        const lidFront = chest.userData.lid.localToWorld(V(0, 0.05, 0.5));
-        handW(m, 'l', lidFront.clone().add(V(0.15, 0, 0))); handW(m, 'r', lidFront.clone().add(V(-0.15, 0, 0)));
-        look(m, chest.localToWorld(V(0, 0.3, 0)), 0.8);
-        // his people by the fire in the background
-        put(C.att1, cV(-1.6, 0, -1.7), 0.6, 'happy'); put(C.att2, cV(-0.1, 0, -2.0), -0.3, 'calm');
-        for (const a of [C.att1, C.att2]) idle(a, t);
+        const lift = smooth(prog(t, 40.55, 41.45));
+        chest.userData.lid.rotation.x = -1.3 * lift;
+        m.pose.lean = 0.36 - 0.12 * lift;
+        chest.updateMatrixWorld(true);
+        for (const [L, x] of [['l', 0.36], ['r', -0.36]]) handW(m, L, chest.userData.lid.localToWorld(V(x, 0.03, 0.46)));
+        // his people warm their hands at the fire behind him
+        put(C.att1, cV(-0.55, 0, -2.45), 0.7, 'happy'); put(C.att2, cV(0.95, 0, -2.7), -0.6, 'calm');
+        for (const a of [C.att1, C.att2]) { idle(a, t); handL(a, 'l', 0.14, 0.9, 0.3); handL(a, 'r', -0.14, 0.9, 0.3); }
       } });
   }
   // ------------------------------------------------------------ S25 "runs out of money." (inside the empty chest: a moth flies out)
   {
     const chest = A.camp.chest;
     S.push({ t0: 41.92, t1: 43.2, set: 'camp',
-      cam: (t) => { chest.updateMatrixWorld(true); const p = chest.localToWorld(V(0.02, 0.1, -0.05)); const l = chest.localToWorld(V(0, 1.45, 0.62)); const c = cam([[41.92, p.toArray(), l.toArray(), 62], [43.2, p.toArray(), l.clone().add(V(0, 0.05, 0)).toArray(), 58]], { ap: 4, focus: l.toArray(), drift: 0.01, seed: 25 })(t); c.near = 0.02; return c; },
+      cam: (t) => { chest.updateMatrixWorld(true); const p = chest.localToWorld(V(0.02, 0.1, 0.06)); const l = chest.localToWorld(V(0, 1.5, -0.1)); const c = cam([[41.92, p.toArray(), l.toArray(), 64], [43.2, p.toArray(), l.clone().add(V(0, 0.05, 0)).toArray(), 60]], { ap: 4, focus: l.toArray(), drift: 0.01, seed: 25 })(t); c.near = 0.02; return c; },
       setup(w, t) {
-        chest.userData.lid.rotation.x = -1.75;
-        const front = chest.localToWorld(V(0, 0, 0.72));
-        const m = put(C.musa, front, chest.rotation.y + PI, exprAt(t, [[0, 'surprised'], [42.25, 'shocked']]));
+        chest.userData.lid.rotation.x = -1.3;
+        chest.userData.outer.visible = false; // the camera sits inside the box
+        chest.updateMatrixWorld(true);
+        const m = put(C.musa, chest.localToWorld(V(0, 0, -0.47)), chest.rotation.y, exprAt(t, [[0, 'surprised'], [42.25, 'shocked']]));
         m.pose.lean = 0.42; idle(m, t, 0.4);
-        handW(m, 'l', chest.localToWorld(V(0.32, 0.45, 0.25))); handW(m, 'r', chest.localToWorld(V(-0.32, 0.45, 0.25)));
+        handW(m, 'l', chest.localToWorld(V(0.34, 0.45, -0.12))); handW(m, 'r', chest.localToWorld(V(-0.34, 0.45, -0.12)));
         // the moth flutters up out of the chest, past his nose
         const k = prog(t, 42.0, 43.2);
-        const mp = chest.localToWorld(V(Math.sin(k * 9) * 0.12, 0.15 + k * 1.6, 0.1 + k * 0.35 + Math.cos(k * 7) * 0.06));
+        const mp = chest.localToWorld(V(Math.sin(k * 9) * 0.12, 0.15 + k * 1.6, 0.05 - k * 0.1 + Math.cos(k * 7) * 0.06));
         A.camp.moth.visible = true; A.camp.moth.position.copy(mp); A.camp.moth.rotation.set(-0.6, k * 4, Math.sin(k * 12) * 0.4); A.camp.moth.userData.flap(t);
         look(m, mp, 1);
-        m.state.look = [m.state.look[0], clamp(m.state.look[1] + 0.3, -1, 1)];
       } });
   }
   // ------------------------------------------------------------ S26 "So he goes back to the same merchants he showered with gold,"
@@ -524,7 +524,7 @@ export function addFilm(S, W) {
     cam: cam([[45.76, [-1.45, 1.48, 0.7], [0.45, 1.5, 0.5], 40], [47.08, [-1.25, 1.49, 0.68], [0.45, 1.51, 0.5], 37]], { ap: 9, focus: [0.45, 1.5, 0.55], seed: 27 }),
     setup(w, t) {
       merchants(t, 'smug');
-      const m = put(C.musa, V(0.45, 0, 0.55), yawTo(V(0.45, 0, 0.55), V(-1.9, 0, -0.6)), 'sheepish');
+      const m = put(C.musa, V(0.45, 0, 0.55), yawTo(V(0.45, 0, 0.55), V(-1.45, 0, 0.7)) + 0.15, 'sheepish');
       idle(m, t); talk(m, w, 'musa', t);
       const wave = smooth(prog(t, 45.8, 46.05));
       handL(m, 'r', lerp(-0.27, -0.36, wave) + Math.sin(t * 12) * 0.05 * wave, lerp(0.7, 1.5, wave), lerp(0.05, 0.22, wave));
@@ -549,17 +549,25 @@ export function addFilm(S, W) {
     } });
   // ------------------------------------------------------------ S29 "Because now, they're the ones with all the gold." (and a coin flips into the lens: loop)
   {
-    const flip = [{ t0: 50.25, o: V(-1.6, 1.25, -0.3), v: V(1.55, 3.05, 3.7), r0: 0, spin: V(18, 2, 6), seed: 991, s: 1.4 }];
+    const camEnd = V(1.8, 2.3, 3.5);
+    const flip = [{ t0: 50.25, o: V(-1.3, 1.3, -0.6), v: V(4.1, 4.6, 5.4), r0: 0, spin: V(18, 2, 6), seed: 991, s: 1.4 }];
+    const GROUP = [[C.spice, V(-1.3, 0, -0.85), 'laugh'], [C.jewel, V(-1.45, 0, 0.05), 'laugh'], [C.cloth, V(-2.05, 0, -0.32), 'laugh'], [C.changer, V(-2.2, 0, -1.1), 'grin']];
     S.push({ t0: 48.3, t1: 51.0, set: 'market', light: 'day', shafts: 0.2, blur: (t) => (t > 50.2 ? 6 : 0),
-      cam: cam([[48.3, [-0.9, 1.72, 0.55], [-1.95, 1.62, -0.55], 38], [50.05, [1.7, 2.4, 3.6], [-1.6, 1.2, -1.2], 46], [51.0, [1.75, 2.42, 3.62], [-1.6, 1.25, -1.2], 46]], { ap: 6, focusFn: (t) => (t < 49.0 ? 1.55 : 4.9), drift: 0.02, seed: 29 }),
-      setup(w, t) {
-        merchants(t, 'laugh');
-        MERCH.forEach(([c], i) => { c.pose.bob += Math.abs(Math.sin(t * 9 + i)) * 0.03; c.pose.headPitch -= 0.15; });
-        const m = put(C.musa, V(0.35, 0, 0.6), yawTo(V(0.35, 0, 0.6), V(-1.9, 0, -0.6)), 'sheepish');
-        idle(m, t); handL(m, 'l', 0.18, 0.95, 0.3);
+      cam: cam([[48.3, [0.75, 1.52, -0.3], [-2.0, 1.38, -0.42], 54], [49.7, [0.9, 1.55, -0.22], [-2.0, 1.38, -0.42], 52], [50.3, camEnd.toArray(), [-1.5, 1.15, -0.9], 50], [51.0, [1.85, 2.32, 3.58], [-1.5, 1.18, -0.9], 50]], { ap: 7, focusFn: (t) => (t < 49.9 ? 2.4 : 4.6), drift: 0.015, seed: 29 }),
+      setup(w, t, camera) {
+        GROUP.forEach(([c, p, e], i) => {
+          put(c, p, yawTo(p, V(0.6, 0, -0.3)) + (i % 2 ? -0.1 : 0.1), e);
+          bling[c.name].visible = true; idle(c, t, 1.3);
+          c.pose.bob += Math.abs(Math.sin(t * 8.5 + i * 1.3)) * 0.035; c.pose.headPitch -= 0.12 + 0.05 * Math.sin(t * 8.5 + i);
+          c.pose.lean = -0.06; c.pose.side += Math.sin(t * 4 + i) * 0.04;
+          handL(c, 'l', 0.2, 0.86 + 0.05 * Math.sin(t * 8 + i), 0.24); handL(c, 'r', -0.2, 0.86 + 0.05 * Math.sin(t * 8 + i + 1), 0.24);
+        });
+        for (const [x, z, r, h] of [[-3.0, 0.3, 0.6, 0.5], [-2.95, -1.6, 0.65, 0.6], [-3.05, -3.1, 0.55, 0.45], [-3.1, 1.9, 0.55, 0.45]]) coins.main.heap(V(x, 0, z), r, h, 420, x * 11 + z, 1.3);
+        const m = put(C.musa, V(0.15, 0, 1.25), yawTo(V(0.15, 0, 1.25), V(-1.7, 0, -0.5)), 'sheepish');
+        idle(m, t); handL(m, 'l', 0.18, 0.9, 0.28);
         holdProp(pouchC, m, 'l', V(0, -0.03, 0));
         coins.fly.flight(t, flip);
-        const sp = C.spice; if (t > 50.0) { const k = smooth(prog(t, 50.0, 50.25)); handL(sp, 'r', lerp(-0.1, -0.35, k), lerp(0.84, 1.3, k), lerp(0.3, 0.4, k)); }
+        const sp = C.spice; if (t > 50.0) { const k = smooth(prog(t, 50.0, 50.25)); handL(sp, 'r', lerp(-0.2, -0.36, k), lerp(0.86, 1.3, k), lerp(0.24, 0.4, k)); }
       } });
   }
 }

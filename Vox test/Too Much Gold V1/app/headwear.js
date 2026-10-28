@@ -24,14 +24,14 @@ const BUILDERS = {
   turban(h, head, R) {
     const mat = toon('#ffffff', { map: stripeTex(h.color, h.stripe, h.bands || 6, 0.5), lift: 0.06 });
     const big = h.size || 1;
-    const rings = [[0.38, 0.88, 0.26, 0.12], [0.6, 0.84, 0.25, -0.16], [0.8, 0.72, 0.23, 0.1]];
+    const rings = [[0.58, 0.86, 0.24, 0.12], [0.78, 0.8, 0.23, -0.16], [0.96, 0.66, 0.21, 0.1]];
     for (const [y, rr, tube, tilt] of rings) {
       mk(new THREE.TorusGeometry(R * rr * big, R * tube * big, 12, 32), mat, head, { pos: [0, R * y, -R * 0.04], rot: [Math.PI / 2 + tilt, 0, tilt * 0.6], outline: 6.5 });
     }
-    mk(new THREE.SphereGeometry(R * 0.78 * big, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), mat, head, { pos: [0, R * 0.62, -R * 0.05], scale: [1, 0.95, 1], outline: 6.5 });
+    mk(new THREE.SphereGeometry(R * 0.76 * big, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), mat, head, { pos: [0, R * 0.8, -R * 0.05], scale: [1, 0.95, 1], outline: 6.5 });
     if (h.jewel) {
-      mk(new THREE.SphereGeometry(R * 0.11, 16, 12), toon(h.jewel, { rough: 0.25, lift: 0.25 }), head, { pos: [0, R * 0.62, R * 0.98], outline: 4.6 });
-      mk(new THREE.TorusGeometry(R * 0.13, R * 0.03, 8, 20), gold(), head, { pos: [0, R * 0.62, R * 0.96], outline: false });
+      mk(new THREE.SphereGeometry(R * 0.11, 16, 12), toon(h.jewel, { rough: 0.25, lift: 0.25 }), head, { pos: [0, R * 0.8, R * 0.98], outline: 4.6 });
+      mk(new THREE.TorusGeometry(R * 0.13, R * 0.03, 8, 20), gold(), head, { pos: [0, R * 0.8, R * 0.96], outline: false });
     }
     if (h.feather) {
       const fm = mk(new THREE.SphereGeometry(R * 0.12, 12, 10), toon(h.feather, { lift: 0.1 }), head, { pos: [R * 0.05, R * 1.1, R * 0.62], scale: [0.6, 2.6, 0.5], rot: [0.3, 0, -0.25], outline: 4.2 });

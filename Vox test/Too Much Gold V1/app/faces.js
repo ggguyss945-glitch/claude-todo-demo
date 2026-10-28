@@ -56,24 +56,16 @@ export function paintFace(def, state, res = 640) {
   const lw = u * 0.055;
   const ey = 0.02 + (def.eyeY || 0), ex = 0.26 * (def.eyeSpread || 1);
 
-  // drawn beard: a slim line along the jaw that meets a small chin beard; the mouth stays clear
+  // drawn beard: a tidy chin beard below the mouth with skin showing between them (never a mask)
   if (def.beard) {
     const full = def.beard === 'full';
-    const rin = full ? 0.72 : 0.8, rout = 0.98;
-    const a0 = Math.PI * (full ? 1.08 : 1.14), a1 = Math.PI * (full ? 1.92 : 1.86);
+    const w = full ? 0.34 : 0.2, top = -0.52, h = full ? 0.3 : 0.22;
     g.fillStyle = def.beardColor || def.hair || INK;
     g.beginPath();
-    for (let i = 0; i <= 32; i++) {
-      const a = a0 + (a1 - a0) * (i / 32);
-      const chin = Math.exp(-Math.pow((a - Math.PI * 1.5) / 0.22, 2)) * (full ? 0.08 : 0.06);
-      const [x, y] = P(Math.cos(a) * rout, -0.02 + Math.sin(a) * (rout + chin));
-      i ? g.lineTo(x, y) : g.moveTo(x, y);
-    }
-    for (let i = 32; i >= 0; i--) {
-      const a = a0 + (a1 - a0) * (i / 32);
-      const [x, y] = P(Math.cos(a) * rin * 1.1, -0.06 + Math.sin(a) * rin);
-      g.lineTo(x, y);
-    }
+    g.moveTo(...P(-w, top + 0.02));
+    g.quadraticCurveTo(...P(0, top + 0.06), ...P(w, top + 0.02));
+    g.bezierCurveTo(...P(w * 1.05, top - h * 0.5), ...P(w * 0.45, top - h * 0.95), ...P(0, top - h));
+    g.bezierCurveTo(...P(-w * 0.45, top - h * 0.95), ...P(-w * 1.05, top - h * 0.5), ...P(-w, top + 0.02));
     g.closePath(); g.fill();
   }
   // ---- eyes
@@ -224,15 +216,22 @@ export function paintFace(def, state, res = 640) {
   return v;
 }
 
-// sphere with planar UVs on the front hemisphere (back maps to a plain skin corner)
-export function headGeometry(r, seg = 40) {
+// ball head with planar UVs on the front hemisphere (back maps to a plain skin corner). The outline
+// is hand-drawn, never a perfect circle: a gentle, per-person wobble and a slightly wider crown.
+export function headGeometry(r, seg = 48, seed = 1) {
   const g = new THREE.SphereGeometry(r, seg, Math.round(seg * 0.75));
   const pos = g.getAttribute('position'), uv = g.getAttribute('uv');
+  const h = (k) => { const x = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+  const p2 = h(1) * 6.28, p3 = h(2) * 6.28, a2 = 0.02 + h(3) * 0.025, a3 = 0.012 + h(4) * 0.015;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     if (z > -0.05 * r) uv.setXY(i, 0.5 + x / (2 * r) * 0.98, 0.5 + y / (2 * r) * 0.98);
     else uv.setXY(i, 0.01, 0.99);
+    const th = Math.atan2(y, x);
+    const k = 1 + a2 * Math.cos(2 * th + p2) + a3 * Math.cos(3 * th + p3) + 0.025 * (y / r);
+    pos.setXYZ(i, x * k, y * k, z);
   }
   uv.needsUpdate = true;
+  g.computeVertexNormals();
   return g;
 }

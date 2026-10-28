@@ -94,6 +94,63 @@ BUILD.test = (scene) => {
   return { group: g, origin: V(-600, 0, 0), apply: () => { scene.fog = null; scene.environmentIntensity = 0.35; }, grade: { bloomThr: 1.0, bloom: 0.32, contrast: 1.1 } };
 };
 
+
+// puffy cartoon clouds: clusters of soft white balls, no outlines (they live on the FX layer)
+function clouds(parent, list, color = '#ffffff', lift = 0.45) {
+  const mat = toon(color, { lift, rough: 1 });
+  mat.fog = false;
+  const out = [];
+  list.forEach(([x, y, z, s, seed]) => {
+    const c = new THREE.Group(); c.position.set(x, y, z);
+    const n = 5 + Math.floor(hash(seed, 1) * 3);
+    for (let i = 0; i < n; i++) {
+      const px = (i / (n - 1) - 0.5) * 2.4 * s, r = s * (0.55 + 0.45 * Math.sin((i / (n - 1)) * Math.PI)) * (0.8 + 0.3 * hash(seed, i));
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat);
+      m.position.set(px, r * 0.35 + hash(seed, i + 9) * s * 0.15, (hash(seed, i + 3) - 0.5) * s * 0.4); m.scale.set(1, 0.82, 0.55); c.add(m);
+    }
+    const base = new THREE.Mesh(new THREE.SphereGeometry(s * 1.5, 20, 12), mat); base.scale.set(1.0, 0.3, 0.4); base.position.y = s * 0.05; c.add(base);
+    fxLayer(c); parent.add(c); out.push(c);
+  });
+  return out;
+}
+// a big glowing moon disc with a soft halo
+function moonDisc(parent, pos, r) {
+  const g = new THREE.Group(); g.position.copy(pos);
+  const [c, x] = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 256; return [cv, cv.getContext('2d')]; })();
+  x.fillStyle = '#f4f2ea'; x.beginPath(); x.arc(128, 128, 120, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(190,196,214,0.55)'; for (const [a, b, rr] of [[90, 100, 22], [160, 150, 16], [120, 175, 12], [170, 85, 10]]) { x.beginPath(); x.arc(a, b, rr, 0, Math.PI * 2); x.fill(); }
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 48), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: new THREE.Color(1.15, 1.15, 1.2), fog: false, transparent: true }));
+  g.add(disc);
+  const hc = document.createElement('canvas'); hc.width = hc.height = 256; const hx = hc.getContext('2d');
+  const gr = hx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(255,255,255,0.35)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  hx.fillStyle = gr; hx.fillRect(0, 0, 256, 256);
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(r * 7, r * 7), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(hc), color: '#9ab0ff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  halo.position.z = -0.5; g.add(halo);
+  fxLayer(g); parent.add(g);
+  return g;
+}
+// a mud-brick desert fortress with towers, crenellations, a gate and lit windows
+function fortress(parent, pos, rotY = 0) {
+  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = rotY; parent.add(g);
+  const wall = toon('#ffffff', { map: TX.plaster('#c49a86', [1, 1], 21) }), dark = toon('#2a1a20');
+  const lit = new THREE.MeshStandardMaterial({ color: '#ffcf7a', emissive: '#ffb04a', emissiveIntensity: 2.2 });
+  mk(boxGeo(26, 7, 2, 3), wall, g, { pos: [0, 3.5, 0], outline: 5 });
+  for (let x = -12.5; x <= 12.6; x += 1.6) mk(boxGeo(0.8, 0.9, 2.1, 1), wall, g, { pos: [x, 7.45, 0], outline: 4 });
+  for (const [x, h, r] of [[-13, 11, 2.2], [13, 12, 2.4], [-4.5, 9.5, 1.8], [5, 10, 1.9]]) {
+    mk(new THREE.CylinderGeometry(r * 0.9, r, h, 16), wall, g, { pos: [x, h / 2, 0.4], outline: 5 });
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; mk(boxGeo(0.7, 0.9, 0.7, 1), wall, g, { pos: [x + Math.cos(a) * r * 0.85, h + 0.45, 0.4 + Math.sin(a) * r * 0.85], rot: [0, -a, 0], outline: 3.5 }); }
+    for (const y of [h * 0.45, h * 0.75]) mk(boxGeo(0.45, 0.8, 0.1, 1), lit, g, { pos: [x, y, 0.4 + r * 0.98], outline: 2.5 });
+    const fl = mk(new THREE.PlaneGeometry(1.4, 0.8), toon('#c0282e', { side: THREE.DoubleSide, lift: 0.2 }), g, { pos: [x + 0.7, h + 2.2, 0.4], outline: 2 });
+    mk(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 6), dark, g, { pos: [x, h + 1.6, 0.4], outline: 2 });
+  }
+  mk(boxGeo(3.2, 4.2, 0.3, 1), dark, g, { pos: [0, 2.1, 1.05], outline: 4 });
+  mk(new THREE.TorusGeometry(1.75, 0.35, 8, 20, Math.PI), wall, g, { pos: [0, 4.1, 1.1], outline: 4 });
+  for (const x of [-8, -6.5, 7.5, 9]) mk(boxGeo(0.5, 0.9, 0.1, 1), lit, g, { pos: [x, 4.6, 1.02], outline: 2.5 });
+  for (const x of [-2.2, 2.2]) { const pl = new THREE.PointLight('#ff9a40', 6, 9, 1.8); pl.position.set(x, 4.5, 2.2); g.add(pl); mk(new THREE.SphereGeometry(0.22, 10, 8), lit, g, { pos: [x, 4.5, 1.4], outline: 2 }); }
+  return g;
+}
+
 // ======================================================================= market
 export const MK = { half: 3.6, near: 9, far: -46 };
 BUILD.market = (scene, W) => {
@@ -260,6 +317,7 @@ BUILD.market = (scene, W) => {
   }
   // sky, light, haze
   const sky = skyDome(g, { top: '#4a6ed0', mid: '#f0b48a', horizon: '#ffd9a0', sunDir: [0.5, 0.45, -0.75], sun: '#ffd28a', radius: 600 });
+  const mClouds = clouds(g, [[-14, 34, -120, 7, 1], [18, 40, -150, 9, 2], [-4, 52, -200, 10, 3], [30, 30, -90, 6, 4], [-30, 44, -110, 8, 5], [8, 30, 60, 7, 6], [-20, 38, 90, 8, 7], [26, 46, 20, 7, 8], [-28, 42, -20, 7, 9]]);
   const sun = sunLight(g, '#ffc27a', 3.2, 34, 4096);
   const hemi = new THREE.HemisphereLight('#9ab4e8', '#c08050', 0.55); g.add(hemi);
   const fill = new THREE.DirectionalLight('#a8b8ff', 0.35); fill.position.set(-20, 15, 20); g.add(fill);
@@ -270,9 +328,9 @@ BUILD.market = (scene, W) => {
   ];
   const motes = dust(g, [-3.2, 3.2, 0.3, 5, -24, 6], 900, '#ffe6b8', 0.045, 5);
   const LIGHT = {
-    gold: { sunPos: [26, 30, -34], sunCol: '#ffb460', sunI: 4.0, hemi: ['#6f8ee8', '#b8703a', 0.5], sky: ['#3a5ad0', '#f08a7a', '#ffc884'], sunDir: [0.5, 0.4, -0.75], fog: '#f0a882', shafts: 1, exposure: 1.0 },
-    morning: { sunPos: [-28, 24, 12], sunCol: '#ffd9a0', sunI: 3.3, hemi: ['#88aaf0', '#b07a50', 0.6], sky: ['#3a7ee0', '#9cc4f4', '#f4dcb8'], sunDir: [-0.6, 0.4, 0.3], fog: '#c8d8f0', shafts: 0.55, exposure: 1.0 },
-    day: { sunPos: [18, 38, -20], sunCol: '#ffe8c0', sunI: 3.8, hemi: ['#88aaf0', '#b07a4a', 0.55], sky: ['#2e66d8', '#8cbaf4', '#f6dcb0'], sunDir: [0.4, 0.6, -0.5], fog: '#dcd0c0', shafts: 0.8, exposure: 1.0 },
+    gold: { sunPos: [26, 30, -34], sunCol: '#ffb460', sunI: 4.0, hemi: ['#6f8ee8', '#b8703a', 0.5], sky: ['#3a5ad0', '#f08a7a', '#ffc884'], sunDir: [0.5, 0.4, -0.75], fog: '#f0a882', shafts: 1, exposure: 1.0, cloud: '#e0a0c8' },
+    morning: { sunPos: [-28, 24, 12], sunCol: '#ffd9a0', sunI: 3.3, hemi: ['#88aaf0', '#b07a50', 0.6], sky: ['#2a6ee0', '#8cc0f4', '#f4dcb8'], sunDir: [-0.6, 0.4, 0.3], fog: '#c8d8f0', shafts: 0.55, exposure: 1.0, cloud: '#fff4ec' },
+    day: { sunPos: [18, 38, -20], sunCol: '#fff0d0', sunI: 3.9, hemi: ['#7aa8ff', '#b07a4a', 0.6], sky: ['#1656d6', '#3f8cf2', '#a8d6ff'], sunDir: [0.4, 0.6, -0.5], fog: '#bcd6f4', shafts: 0.8, exposure: 1.0, cloud: '#ffffff' },
   };
   return {
     group: g, sun, A,
@@ -283,6 +341,7 @@ BUILD.market = (scene, W) => {
       sky.material.uniforms.top.value.set(L.sky[0]); sky.material.uniforms.mid.value.set(L.sky[1]); sky.material.uniforms.hor.value.set(L.sky[2]);
       sky.material.uniforms.sunDir.value.set(...L.sunDir).normalize(); sky.material.uniforms.sunCol.value.set(L.sunCol);
       scene.fog = new THREE.Fog(L.fog, 70, 260);
+      for (const c of mClouds) c.children[0].material.color.set(L.cloud);
       scene.environmentIntensity = 0.3;
       for (const s of shafts) { s.visible = L.shafts > 0; s.userData.mat.uniforms.op.value = s.userData.base ?? (s.userData.base = s.userData.mat.uniforms.op.value); s.userData.mat.uniforms.op.value = s.userData.base * L.shafts * (shot.shafts ?? 1); s.userData.mat.uniforms.col.value.set(L.sunCol); }
       motes.userData.tick(t);
@@ -408,24 +467,28 @@ export const CP = { origin: V(3000, 0, 0) };
 BUILD.camp = (scene, W) => {
   const g = new THREE.Group(); g.position.copy(CP.origin); scene.add(g);
   const A = (W.anchors.camp = {});
-  mk(dunes(500, 160, 4.1, [[60, 12, 25]]), toon('#ffffff', { map: TX.sand('#c8a888', [50, 50], 6) }), g, { pos: [0, -0.02, -60], cast: false, outline: false });
-  for (const [x, z, c, s] of [[-3.6, -3.2, '#e8dcc0', '#b8402a'], [3.4, -4.4, '#e0d0b0', '#26307a'], [-7, -8, '#d8c8a8', '#2b5e3a']]) { const tt = PR.tent(c, s); tt.position.set(x, 0, z); tt.rotation.y = hash(x, z) * 2; g.add(tt); }
-  const fire = PR.campfire(); fire.position.set(-0.6, 0, -0.6); g.add(fire); A.fire = fire;
-  const ch = PR.chest(); ch.position.set(1.0, 0, 0.3); ch.rotation.y = -0.35; g.add(ch); A.chest = ch;
+  mk(dunes(500, 160, 4.1, [[60, 12, 25]]), toon('#ffffff', { map: TX.sand('#a98fa0', [50, 50], 6) }), g, { pos: [0, -0.02, -60], cast: false, outline: false });
+  for (const [x, z, c, s] of [[-1.4, -6.4, '#e8dcc0', '#b8402a'], [3.6, -7.4, '#e0d0b0', '#26307a'], [-6.5, -9.5, '#d8c8a8', '#2b5e3a']]) { const tt = PR.tent(c, s); tt.position.set(x, 0, z); tt.rotation.y = hash(x, z) * 2; g.add(tt); }
+  const fire = PR.campfire(); fire.position.set(0.15, 0, -1.9); g.add(fire); A.fire = fire;
+  const ch = PR.chest(); ch.position.set(1.0, 0, 0.3); ch.rotation.y = 0.12; g.add(ch); A.chest = ch;
   A.moth = PR.moth(); scene.add(A.moth); A.moth.visible = false; (W.actors ||= []).push(A.moth);
   A.camels = [];
-  for (const [x, z, r] of [[-5.2, -1.2, 0.9], [5.6, -2.0, -1.2], [-1.5, -6.5, 0.3]]) { const cm = makeCamel({ sacks: false, cloth: '#26307a' }); cm.root.position.set(x, 0, z); cm.root.rotation.y = r; cm.pose.sit = 1; g.add(cm.root); A.camels.push(cm); }
-  const sky = skyDome(g, { top: '#070b24', mid: '#16245a', horizon: '#3a3a72', sunDir: [-0.5, 0.42, -0.75], sun: '#dfe6ff', sunSize: 0.99965, glow: 0.5, stars: true, radius: 400 });
-  const moon = sunLight(g, '#9ab6ff', 0.9, 20, 2048); moon.position.copy(CP.origin).add(V(-25, 20, -30)); moon.target.position.copy(CP.origin);
-  g.add(new THREE.HemisphereLight('#3a4a8a', '#20140c', 0.45));
-  const embers = dust(g, [-1.2, 0, 0.3, 3, -1.2, 0], 60, '#ffb060', 0.035, 21);
+  for (const [x, z, r] of [[-3.4, -3.8, 0.9], [4.6, -3.6, -1.2], [-1.8, -10, 0.3]]) { const cm = makeCamel({ sacks: false, cloth: '#26307a' }); cm.root.position.set(x, 0, z); cm.root.rotation.y = r; cm.pose.sit = 1; g.add(cm.root); A.camels.push(cm); }
+  const sky = skyDome(g, { top: '#0b1660', mid: '#2a3aa8', horizon: '#6a58c0', sunDir: [-0.15, 0.3, -1], sun: '#dfe6ff', sunSize: 0.99999, glow: 0.35, stars: true, radius: 400 });
+  moonDisc(g, V(-26, 52, -160), 7);
+  clouds(g, [[-60, 40, -170, 9, 11], [40, 48, -190, 11, 12], [-10, 70, -230, 12, 13], [80, 36, -140, 8, 14]], '#4a58b8', 0.25);
+  fortress(g, V(-9, 0.8, -80), 0.1);
+  const moon = sunLight(g, '#8ea4ff', 1.25, 20, 2048); moon.position.copy(CP.origin).add(V(-14, 28, -60)); moon.target.position.copy(CP.origin);
+  g.add(new THREE.HemisphereLight('#4a5cc0', '#2a1c40', 0.6));
+  for (const [x, z] of [[-0.4, -5.0], [2.6, -6.0]]) { mk(new THREE.CylinderGeometry(0.03, 0.03, 1.75, 6), toon('#5a3a22'), g, { pos: [x, 0.87, z - 0.12], outline: 2 }); const lt = PR.lantern('#ffb85a'); lt.position.set(x, 1.6, z); g.add(lt); const pl = new THREE.PointLight('#ffa850', 2.2, 5, 1.8); pl.position.set(x, 1.5, z + 0.3); g.add(pl); }
+  const embers = dust(g, [-0.45, 0.75, 0.3, 3, -2.5, -1.3], 60, '#ffb060', 0.035, 21);
   return {
     group: g, A,
     apply(t) {
-      scene.fog = new THREE.Fog('#1a2048', 25, 180); scene.environmentIntensity = 0.12;
+      scene.fog = new THREE.Fog('#28307a', 40, 260); scene.environmentIntensity = 0.18;
       fire.userData.tick(t); embers.userData.tick(t * 2.5);
       for (const cm of A.camels) cm.update(t);
     },
-    grade: { bloomThr: 0.8, bloom: 0.55, contrast: 1.08, sat: 1.12, shadow: [0.9, 0.92, 1.1], high: [1.08, 0.98, 0.9], lineFar: 80 },
+    grade: { bloomThr: 0.9, bloom: 0.45, contrast: 1.14, sat: 1.3, shadow: [0.86, 0.9, 1.2], high: [1.1, 0.98, 0.88], vignette: 0.45, exposure: 0.88, lineFar: 160 },
   };
 };

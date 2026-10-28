@@ -31,14 +31,15 @@ export function addSmoothNormals(geo) {
 }
 
 const hullMats = new Map();
-export function hullMaterial(widthPx = 4, color = OUTLINE) {
-  const k = widthPx + color;
+// wob: hand-drawn outlines whose thickness swells and thins along the shape (used on characters)
+export function hullMaterial(widthPx = 4, color = OUTLINE, wob = false) {
+  const k = widthPx + color + (wob ? 'w' : '');
   if (hullMats.has(k)) return hullMats.get(k);
   const m = new THREE.ShaderMaterial({
-    uniforms: { uWidth: { value: widthPx }, uRes: { value: RES }, uColor: { value: new THREE.Color(color) } },
+    uniforms: { uWidth: { value: widthPx }, uRes: { value: RES }, uColor: { value: new THREE.Color(color) }, uWob: { value: wob ? 1 : 0 } },
     vertexShader: `
       attribute vec3 smoothNormal;
-      uniform float uWidth; uniform vec2 uRes;
+      uniform float uWidth, uWob; uniform vec2 uRes;
       #include <common>
       #include <fog_pars_vertex>
       void main(){
@@ -50,6 +51,7 @@ export function hullMaterial(widthPx = 4, color = OUTLINE) {
         dir = l > 1e-5 ? dir / l : vec2(0.0);
         // a touch thicker in close-ups, thinner far away, never vanishing
         float w = uWidth * (uRes.x / 1440.0) * clamp(3.4 / max(-mv.z, 0.05), 0.72, 1.7);
+        w *= 1.0 + uWob * (0.13 * sin(position.x * 23.0 + position.y * 17.0) + 0.08 * sin(position.y * 41.0 - position.x * 13.0 + 1.7));
         clip.xy += dir * w * 2.0 / uRes * clip.w;
         gl_Position = clip;
         vec4 mvPosition = mv;
@@ -66,6 +68,7 @@ export function hullMaterial(widthPx = 4, color = OUTLINE) {
   });
   m.uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, m.uniforms]);
   m.uniforms.uRes.value = RES;
+  m.userData.width = widthPx;
   hullMats.set(k, m);
   return m;
 }

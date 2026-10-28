@@ -2,7 +2,7 @@
 // a bean-shaped body or a long robe, stick-thin black arms and legs, ball hands, thick outlines.
 // Root sits at the feet, facing +z. Everything is rigid geometry except the hose limbs.
 import * as THREE from 'three';
-import { toon, outline, mk, gold } from './toon.js';
+import { toon, outline, mk, gold, hullMaterial, OUTLINE } from './toon.js';
 import { paintFace, headGeometry } from './faces.js';
 import { canvas, toTex } from './tex.js';
 import { clamp, lerp, hash, noise1 } from './util.js';
@@ -11,8 +11,10 @@ import * as HW from './headwear.js';
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const INK = '#141010';
 const HEAD = '#f7f3ec';
-const inkMat = new THREE.MeshStandardMaterial({ color: INK, roughness: 0.7 });
-const handMat = new THREE.MeshStandardMaterial({ color: '#1a1414', roughness: 0.35 });
+const inkMat = new THREE.MeshStandardMaterial({ color: '#1c1a20', roughness: 0.6 });
+const handMat = new THREE.MeshStandardMaterial({ color: '#1c1a20', roughness: 0.35 });
+// 'flat 3D': heads and bodies are squashed front-to-back like thick cut-outs
+const FLAT_HEAD = 0.6, FLAT_BODY = 0.72;
 
 // a quadratic-bezier tube whose vertices are rewritten in place each frame
 export class Hose {
@@ -134,20 +136,22 @@ export function makeToon(def) {
     belt: def.belt, collar: def.collar, buttons: def.buttons, hem: def.hem, sashBand: def.sashBand }, { y0, y1, belt: P.belt });
   const robeMat = toon('#ffffff', { map: tex, lift: 0.22, rough: 0.85 });
   const torso = mk(lathe, robeMat, body, { outline: 10 });
+  torso.scale.z = FLAT_BODY;
   ch.torso = torso;
   if (def.necklace) {
-    mk(new THREE.TorusGeometry(0.11 * s, 0.018 * s, 8, 28), gold({ glow: 0.35 }), body, { pos: [0, 1.22 * s, 0.035 * s], rot: [Math.PI / 2 + 0.5, 0, 0], outline: 3 });
-    if (def.medallion) mk(new THREE.CylinderGeometry(0.045 * s, 0.045 * s, 0.014 * s, 20), gold({ glow: 0.4 }), body, { pos: [0, 1.11 * s, 0.155 * s], rot: [Math.PI / 2 - 0.3, 0, 0], outline: 3 });
+    mk(new THREE.TorusGeometry(0.11 * s, 0.018 * s, 8, 28), gold({ glow: 0.35 }), torso, { pos: [0, 1.22 * s, 0.035 * s], rot: [Math.PI / 2 + 0.5, 0, 0], outline: 3 });
+    if (def.medallion) mk(new THREE.CylinderGeometry(0.045 * s, 0.045 * s, 0.014 * s, 20), gold({ glow: 0.4 }), torso, { pos: [0, 1.11 * s, 0.155 * s], rot: [Math.PI / 2 - 0.3, 0, 0], outline: 3 });
   }
   // head: a big round ball resting on the body
   const neck = new THREE.Group(); neck.position.set(0, 1.28 * s, 0); body.add(neck); ch.neck = neck;
   const R = (def.head || 0.285) * s; ch.R = R;
-  const headG = new THREE.Group(); headG.position.set(0, R * 0.7, 0); neck.add(headG); ch.head = headG;
+  const headG = new THREE.Group(); headG.position.set(0, R * 0.7, 0); headG.scale.z = FLAT_HEAD; neck.add(headG); ch.head = headG;
   ch.faceDef = { id: def.name, skin: def.skin || HEAD, hair: def.hairColor || INK, beard: def.beard, beardColor: def.beardColor, moustache: def.moustache,
     eyeY: def.eyeY, eyeSpread: def.eyeSpread, browW: def.browW, mouthW: def.mouthW, blush: def.blushBase, glasses: def.glasses };
   const face0 = paintFace(ch.faceDef, { expr: 'neutral' }, def.faceRes || 768);
-  ch.faceMat = new THREE.MeshStandardMaterial({ map: face0.tex, roughness: 0.75, emissive: new THREE.Color(0xffffff), emissiveMap: face0.tex, emissiveIntensity: 0.42 });
-  const headMesh = mk(headGeometry(R), ch.faceMat, headG, { outline: 13 });
+  // glossy: the sky and sun leave a soft sheen across the forehead
+  ch.faceMat = new THREE.MeshStandardMaterial({ map: face0.tex, roughness: 0.42, envMapIntensity: 0.55, emissive: new THREE.Color(0xffffff), emissiveMap: face0.tex, emissiveIntensity: 0.32 });
+  const headMesh = mk(headGeometry(R, 48, (def.seed || 1) + def.name.length * 7.3), ch.faceMat, headG, { outline: 13 });
   ch.headMesh = headMesh;
   if (def.hat) HW.build(def.hat, headG, R, def);
   if (def.beard3d) HW.longBeard(headG, R, def.beard3d);
@@ -169,6 +173,8 @@ export function makeToon(def) {
     const hose = new Hose(0.0092 * s, inkMat, 10, 6); ch.root.add(hose.mesh);
     ch.legs[L] = { sd, shoe, hose, hip: V(sd * 0.07 * s, P.hip * s, 0), foot: V(sd * 0.075 * s, 0.02 * s, 0.035 * s) };
   }
+  // hand-drawn outlines on everything the character wears
+  ch.root.traverse((o) => { if (o.userData.isHull) o.material = hullMaterial(o.material.userData.width ?? o.material.uniforms.uWidth.value, OUTLINE, true); });
   ch.state = { expr: 'neutral', look: [0, 0], talk: 0, blink: false };
   ch.pose = defaultPose();
   ch.update = (t) => updateToon(ch, t);

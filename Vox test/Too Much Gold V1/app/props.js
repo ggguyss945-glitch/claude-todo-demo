@@ -219,7 +219,7 @@ export function parasol() {
 export function chest() {
   const g = new THREE.Group();
   const wood = toon('#8a5228'), band = gold({ color: '#d0a040', rough: 0.35, glow: 0.12 });
-  mk(new THREE.BoxGeometry(0.8, 0.42, 0.5), wood, g, { pos: [0, 0.21, 0], outline: 4 });
+  g.userData.outer = mk(new THREE.BoxGeometry(0.8, 0.42, 0.5), wood, g, { pos: [0, 0.21, 0], outline: 4 });
   // the inside: dark wooden walls facing inwards (seen from a camera inside the chest)
   const inner = toon('#3a2010', { side: THREE.BackSide });
   const hide = new THREE.MeshBasicMaterial({ visible: false });
