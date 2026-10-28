@@ -28,7 +28,11 @@ function spoken(T, tg) {
         if (tg > te) break;
         // a one-letter word ("I", "a", the letters of S. O. S.) rides with its neighbour, so it never flashes alone
         let txt = clean(ws[i].w), t0 = ts;
-        if (i > 0 && clean(ws[i - 1].w).length <= 1 && txt.length > 1) { txt = clean(ws[i - 1].w) + ' ' + txt; t0 = L.start + ws[i - 1].t - 0.03; }
+        const one = (k) => k >= 0 && k < ws.length && clean(ws[k].w).length <= 1;
+        let j0 = i, j1 = i; while (one(j0 - 1) && one(i)) j0--; while (one(j1 + 1) && one(i)) j1++;
+        if (one(i) && j1 > j0) {   // spelled-out letters (S. O. S.) show together as one word
+          txt = ws.slice(j0, j1 + 1).map((x) => clean(x.w)).join('.') + '.'; t0 = L.start + ws[j0].t - 0.03;
+        } else if (i > 0 && one(i - 1) && !one(i - 2) && txt.length > 1) { txt = clean(ws[i - 1].w) + ' ' + txt; t0 = L.start + ws[i - 1].t - 0.03; }
         else if (txt.length <= 1 && i + 1 < ws.length) txt += ' ' + clean(ws[i + 1].w);
         return { w: txt, age: tg - t0, dialogue: L.who && L.who !== 'N', color: CAP_COLOR[L.who] };
       }

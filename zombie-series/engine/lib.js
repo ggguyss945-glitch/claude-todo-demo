@@ -150,6 +150,7 @@ const POSES = {
   runB: { drop: 0.1, la: [1.1, 1.2], ra: [-1.2, 0.9], ll: [1.1, 2.0], rl: [-1.2, 1.8], kneeL: [0.9, 0.9], kneeR: [-0.2, 1.3] },
   extinguisher: { la: [0.9, 0.55], ra: [1.25, 0.15], ll: [-0.45, 2.2], rl: [0.45, 2.2] },
   hug: { la: [-0.5, 1.0], ra: [0.55, 0.95], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
+  handsup: { la: [-1.2, -0.85], ra: [1.2, -0.85], ll: [-0.45, 2.2], rl: [0.45, 2.2] },
 };
 
 // a pose can be a name or a blend { a, b, k } between two named poses, so limbs move instead of snapping

@@ -328,7 +328,7 @@ SH.nora = (T, tg, lt, p, D) => {
     let figs = nora({ x: 1240, y: 1080, s: 1.9, pose: 'extinguisher', expr: 'serious', facing: -1, look: -0.4, blink: autoBlink(lt, 4), breathe: 0.01 * Math.sin(tg * 2.6),
       extra: g(rect(-48, -120, 96, 240, { rx: 34, fill: PAL.red, ...ink(6) }) + rect(-26, -152, 52, 40, { fill: '#2B2B2B', ...ink(4) }) + rect(-40, -50, 80, 50, { fill: '#FBF6EA', ...ink(3) })
         + path('M0 -150 Q-60 -190 -150 -170', { fill: 'none', stroke: '#2B2B2B', strokeWidth: 16, strokeLinecap: 'round' }) + rect(-190, -186, 50, 30, { rx: 8, fill: '#2B2B2B', ...ink(3) }), { transform: `translate(${f1(ex)} ${f1(ey)}) rotate(-62)` }) });
-    figs += hero({ x: 520, y: 1160, s: 1.8, pose: 'bang', expr: 'scared', facing: 1, look: 0.5, blink: autoBlink(lt, 1) });
+    figs += hero({ x: 520, y: 1160, s: 1.8, pose: { a: 'stand', b: 'handsup', k: ease(ramp(lt, 0.1, 0.6)) }, expr: 'scared', facing: 1, look: 0.5, blink: autoBlink(lt, 1) });
     s += lampLit + g(figs, { filter: 'url(#lampLit2)' }) + screenGlow(1500, 760, 400, 300, '#FFB866', 0.25 * flick);
     return cam(s, { s: push(lt, D, [1.0, 1.06]), cx: 960, cy: 560 });
   }
