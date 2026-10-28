@@ -22,7 +22,10 @@ export function addFilm(S, W) {
   const coins = (W.coins = {
     main: new PR.CoinPool(scene, 12000), fly: new PR.CoinPool(scene, 1200), silver: new PR.CoinPool(scene, 40, true),
     big: new PR.CoinPool(scene, 2, false, 2.4), flood: new PR.CoinPool(scene, 7000, false, 1.7), fall: new PR.CoinPool(scene, 900, false, 1.7),
+    // the merchants' piles: no line art on every coin (at a distance the lines merge and the gold turns black)
+    piles: new PR.CoinPool(scene, 2600),
   });
+  coins.piles.mesh.layers.set(2);
   const pouchA = act(PR.pouch('#8a2a2a')), pouchB = act(PR.pouch('#2a5a8a')), pouchC = act(PR.pouch('#6a3a8a', 0.8));
   const broom = act(PR.broom()), bowl = act(PR.bowl()), bread = act(PR.flatbread(0.12));
   const loaf = act(PR.loaf()); loaf.scale.setScalar(1.15);
@@ -516,13 +519,14 @@ export function addFilm(S, W) {
       bling[c.name].visible = true; idle(c, t);
       handL(c, 'l', 0.1, 0.84, 0.3); handL(c, 'r', -0.1, 0.84, 0.3);
     });
-    for (const [x, z, r, h] of [[-3.0, 0.3, 0.55, 0.45], [-2.9, -1.6, 0.6, 0.55], [-2.95, -3.1, 0.5, 0.4], [-3.1, 1.9, 0.5, 0.42]]) coins.main.heap(V(x, 0, z), r, h, 420, x * 11 + z);
+    for (const [x, z, r, h] of [[-3.0, 0.3, 0.55, 0.45], [-2.9, -1.6, 0.6, 0.55], [-2.95, -3.1, 0.5, 0.4], [-3.1, 1.9, 0.5, 0.42]]) coins.piles.heap(V(x, 0, z), r, h, 420, x * 11 + z);
   };
   S.push({ t0: 43.2, t1: 45.76, set: 'market', light: 'day', shafts: 0.2, dissolve: 0.25,
     cam: cam([[43.2, [1.75, 1.45, 1.45], [-1.8, 1.1, -1.0], 46], [45.76, [1.6, 1.44, 1.3], [-1.8, 1.1, -1.0], 44]], { ap: 6, focus: [-1.9, 1.2, -1.0], seed: 26 }),
     setup(w, t) {
       merchants(t, 'smug');
-      walk(C.musa, V(2.7, 0, 0.15), V(0.45, 0, 0.55), 43.3, 45.4, t, { ease: easeInOut });
+      // he walks in from the right, across the street, up to the merchants (never past the lens)
+      walk(C.musa, V(2.5, 0, -1.25), V(-0.55, 0, -0.55), 43.3, 45.45, t, { ease: easeInOut });
       C.musa.state.expr = 'sheepish';
       people.slice(4, 8).forEach((c, i) => walk(c, V(1.6 + i * 0.3, 0, -6 - i * 2), V(1.2, 0, -10 - i * 2), 42.8, 46, t));
     } });
@@ -570,7 +574,7 @@ export function addFilm(S, W) {
           c.pose.lean = -0.06; c.pose.side += Math.sin(t * 4 + i) * 0.04;
           handL(c, 'l', 0.2, 0.86 + 0.05 * Math.sin(t * 8 + i), 0.24); handL(c, 'r', -0.2, 0.86 + 0.05 * Math.sin(t * 8 + i + 1), 0.24);
         });
-        for (const [x, z, r, h] of [[-3.0, 0.3, 0.6, 0.5], [-2.95, -1.6, 0.65, 0.6], [-3.05, -3.1, 0.55, 0.45], [-3.1, 1.9, 0.55, 0.45]]) coins.main.heap(V(x, 0, z), r, h, 420, x * 11 + z, 1.3);
+        for (const [x, z, r, h] of [[-3.0, 0.3, 0.6, 0.5], [-2.95, -1.6, 0.65, 0.6], [-3.05, -3.1, 0.55, 0.45], [-3.1, 1.9, 0.55, 0.45]]) coins.piles.heap(V(x, 0, z), r, h, 420, x * 11 + z, 1.3);
         const m = put(C.musa, V(0.15, 0, 1.25), yawTo(V(0.15, 0, 1.25), V(-1.7, 0, -0.5)), 'sheepish');
         idle(m, t); handL(m, 'l', 0.18, 0.9, 0.28);
         holdProp(pouchC, m, 'l', V(0, -0.03, 0));
