@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Rubik:ital,wght@0,500;0,700;0,800;0,900;1,500&family=Patrick+Hand&display=swap">
+<style>html,body{margin:0;background:#000}#stage{width:1920px;height:1080px;overflow:hidden}svg{display:block}</style>
+</head><body><div id="stage"></div>
+<script type="module">
+const q0 = new URLSearchParams(location.search);
+import { frame } from './ep2.js';
+import { installBaker } from './baker.js';
+if (q0.get('bake') !== '0') installBaker();
+const q = q0;
+const T = await (await fetch(q.get('timeline'))).json();
+await document.fonts.load('92px Bangers'); await document.fonts.load('800 40px Rubik'); await document.fonts.load('italic 500 40px Rubik'); await document.fonts.load('40px "Patrick Hand"');
+const stage = document.getElementById('stage');
+window.renderAt = (t) => { stage.innerHTML = frame(T, t); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); };
+window.__ready = true;
+</script></body></html>

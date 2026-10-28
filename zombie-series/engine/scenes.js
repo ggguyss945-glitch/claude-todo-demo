@@ -49,7 +49,7 @@ export const SCENES = { sheet };
 
 // ---------- supermarket aisle (one-point perspective) ----------
 const PROD = ['#C2674A', '#D4AE52', '#5A7396', '#7A8F5C', '#B57A88', '#C98A55', '#7F6F9C', '#4F7F7C', '#A8594A', '#C9B67F'];
-function aisle({ night = false, seed = 5 } = {}) {
+function aisle({ night = false, seed = 5, name = 'AISLE 7', sub = 'CANNED · SOUP · BEANS' } = {}) {
   const VP = [960, 440], FAR = 0.16, p = persp(VP, FAR), r = rng(seed);
   const zOf = (Zd) => (1 - 1 / (1 + Zd)) / (1 - FAR); // world depth ratio -> param z
   const Lx = 250, Rx = 1670, FY = 1040, TOP = 120, CEIL = -260, Z0 = -0.6;
@@ -95,8 +95,8 @@ function aisle({ night = false, seed = 5 } = {}) {
   const sg = p(960, -40, zOf(0.9)), sc = 1 - (1 - FAR) * zOf(0.9);
   s += line(sg[0] - 120 * sc, 0, sg[0] - 120 * sc, sg[1] - 50 * sc, { stroke: INK, strokeWidth: 3 }) + line(sg[0] + 120 * sc, 0, sg[0] + 120 * sc, sg[1] - 50 * sc, { stroke: INK, strokeWidth: 3 });
   s += rect(sg[0] - 190 * sc, sg[1] - 50 * sc, 380 * sc, 120 * sc, { rx: 8, fill: PAL.yellow, stroke: INK, strokeWidth: 4 });
-  s += text(sg[0], sg[1] + 10 * sc, 'AISLE 7', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 52 * sc, fill: INK, textAnchor: 'middle' });
-  s += text(sg[0], sg[1] + 50 * sc, 'CANNED · SOUP · BEANS', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 20 * sc, fill: INK, textAnchor: 'middle', letterSpacing: 2 });
+  s += text(sg[0], sg[1] + 10 * sc, name, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 52 * sc, fill: INK, textAnchor: 'middle' });
+  s += text(sg[0], sg[1] + 50 * sc, sub, { fontFamily: 'Rubik', fontWeight: 800, fontSize: 20 * sc, fill: INK, textAnchor: 'middle', letterSpacing: 2 });
   return { s: g(s, { filter: 'url(#wobble)' }), p, zOf, FY };
 }
 const at = (A, x, Zd) => { const z = A.zOf(Zd); const q = A.p(x, A.FY, z); return { x: q[0], y: q[1], k: 1 - (1 - 0.16) * z }; };

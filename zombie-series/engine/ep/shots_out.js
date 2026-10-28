@@ -326,7 +326,7 @@ SH.prop = (T, tg, lt, p, D) => {
     s += g(rect(830, 690, 260, 90, { rx: 10, fill: '#FBF6EA', ...ink(4) }) + label(960, 752, '$4.99', 52, PAL.red), { filter: 'url(#wobbleSoft)' });
     if (p.set) for (let i = 0; i < 6; i++) s += g(rect(240 + i * 264, 400, 120, 50, { rx: 8, fill: '#2B1D21', ...ink(3) }) + label(300 + i * 264, 436, `2:0${i + 1}`, 30, '#FFE27A'), { opacity: f1(clamp((lt - i * 0.35) * 3) * 100) / 100 });
     s += nightTint(0.35, '#6E6A8A');
-    return cam(s, { s: push(lt, D, [1.0, 1.06]), cy: 560 }) + hudAt({ day: 6, time: '2:10 PM', noise: 0, place: 'FRESHWAY · AISLE 11' });
+    return cam(s, { s: push(lt, D, [1.0, 1.06]), cy: 560 }) + hudAt(p.hud || { day: 6, time: '2:10 PM', noise: 0, place: 'FRESHWAY · AISLE 11' });
   }
   if (it === 'fridge') {
     let s = rect(0, 0, W, H, { fill: '#3A3F46' });

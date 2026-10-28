@@ -52,7 +52,7 @@ export function rings(x, y, t, { color = PAL.red, n = 3, max = 220, period = 1.2
   return s;
 }
 
-export const hudAt = (p, noise) => (p && p.day !== undefined ? hud({ theme: 'price', day: p.day, time: p.time, noise: noise ?? p.noise ?? 1, place: p.place }) : '');
+export const hudAt = (p, noise) => (p && p.day !== undefined ? hud({ theme: p.theme || (/^BROOKFIELD/.test(p.place || '') ? 'mall' : 'price'), day: p.day, time: p.time, noise: noise ?? p.noise ?? 1, place: p.place }) : '');
 
 // ---------- props ----------
 export const sleeve = (d) => path(d, { fill: PAL.jacket, ...ink(7) });

@@ -2,14 +2,16 @@
 # Gaps between items are scaled together so the episode lands on the target length.
 # Shots, sounds and pauses come from the script itself; the voice file only supplies durations and word times,
 # so pictures and sound can be re-cut without re-voicing.
-# usage: python3 -I ep_timeline.py <cold_timeline.json> <ep_voice.json> <out.json> [target_s=915] [script=ep1_script]
+# usage: python3 -I ep_timeline.py <cold_timeline.json|-> <ep_voice.json> <out.json> [target_s=915] [script=ep1_script]
+#   '-' for an episode with no reused cold open (it starts at 0:00 with its own items)
 import sys, os, json, re, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 COLD, VOICE, OUT = sys.argv[1:4]
 TARGET = float(sys.argv[4]) if len(sys.argv) > 4 else 915.0
 SC = importlib.import_module(sys.argv[5] if len(sys.argv) > 5 else 'ep1_script')
-C = json.load(open(COLD)); V = json.load(open(VOICE))
+C = json.load(open(COLD)) if COLD != '-' else {'shots': [], 'voice': {'lines': [], 'pa': []}, 'dur': -0.25, 'events': []}
+V = json.load(open(VOICE))
 voiced = {it['id']: it for it in V['items']}
 items = []
 for it in SC.ITEMS:
@@ -54,7 +56,7 @@ for it in items:
     def local_params(p, s0):
         q = {}
         for k, v in (p or {}).items():
-            q[k] = round(anchor(it, start, v) - s0, 3) if isinstance(v, str) and v.startswith('@') and k in ('blackout',) else v
+            q[k] = round(anchor(it, start, v) - s0, 3) if isinstance(v, str) and v.startswith('@') else v
         return q
     if it.get('shot'):
         tm, p = it['shot']; ep_shots.append({'name': tm, 'start': round(start, 3), 'p': local_params(p, start)})
@@ -75,7 +77,7 @@ allshots = shots + ep_shots
 for i, s in enumerate(allshots):
     s['end'] = allshots[i + 1]['start'] if i + 1 < len(allshots) else DUR
     if s['end'] - s['start'] < 0.05: print('  WARNING: very short shot', s)
-T = {'dur': DUR, 'ep_start': EP0, 'cold_dur': C['dur'], 'gap_scale': round(scale, 3), 'shots': allshots, 'events': C['events'],
+T = {'dur': DUR, 'ep_start': EP0, 'cold_dur': max(0, C['dur']), 'gap_scale': round(scale, 3), 'shots': allshots, 'events': C['events'],
      'voice': {'lines': lines, 'pa': C['voice']['pa']}, 'caps': caps, 'sfx': sfx, 'music': music, 'amb': amb, 'items': spans}
 json.dump(T, open(OUT, 'w'), indent=1)
 m, s = divmod(DUR, 60)

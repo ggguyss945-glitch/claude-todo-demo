@@ -17,7 +17,9 @@ const tintFor = (mode) => ({ day: 0, dawn: 0.45, night: 0.86, dark: 0.93 })[mode
 const tintColor = (mode) => (mode === 'dawn' ? '#6E6A8A' : '#1F2940');
 
 // the four dead from the night shift, by name
-const WHO = { darlene: 'cashier', mike: 'guard', milk: 'shopper', gary: 'suit', jogger: 'jogger', park: 'park', nurse: 'nurse', janitor: 'janitor' };
+const WHO = { darlene: 'cashier', mike: 'guard', milk: 'shopper', gary: 'suit', jogger: 'jogger', park: 'park', nurse: 'nurse', janitor: 'janitor', shopper: 'shopper', pretzel: 'pretzel' };
+// close-up backgrounds other modules can add to (episode 2 adds the mall)
+export const CLOSE_BG = {};
 
 // ---------- the aisle, any time of day ----------
 SH.aisle = (T, tg, lt, p, D) => {
@@ -51,6 +53,7 @@ SH.aisle = (T, tg, lt, p, D) => {
 
 // ---------- close-ups of the dead ----------
 function closeBg(bg) {
+  if (CLOSE_BG[bg]) return CLOSE_BG[bg]();
   if (bg === 'lot_sunset') return set('zc_lot_sunset', () => S.sky('sunset') + S.cityBand('sunset') + rect(0, 760, W, 320, { fill: '#6A6066' }));
   if (bg === 'stock') return blurred('stock_open', () => S.stockroom({ open: true }));
   if (bg === 'aisle') return blurred('aisle_night', () => aisleOf(true).s);
@@ -76,7 +79,7 @@ SH.zclose = (T, tg, lt, p, D) => {
   return cam(s, { s: push(lt, D, [1.0, 1.05]) }) ;
 };
 SH.zname = (T, tg, lt, p, D) => {
-  let s = closeBg('aisle');
+  let s = closeBg(p.bg || 'aisle');
   const o = WHO[p.who] || 'cashier';
   s += zombie({ x: 960, y: 1300, s: 2.5, outfit: o, tilt: -8 + 3 * Math.sin(tg * 0.8), look: 0.1 * Math.sin(tg * 0.6), sway: 1.5 * Math.sin(tg * 0.7) });
   s += nightTint(0.6) + screenGlow(700, 300, 400, 300, '#FFF2C4', 0.12);
@@ -121,7 +124,7 @@ SH.gary = (T, tg, lt, p, D) => {
 };
 
 // ---------- hero close-ups on many backgrounds ----------
-const HC_BG = {
+export const HC_BG = {
   aisle_dark: () => blurred('aisle_night', () => aisleOf(true).s) + nightTint(0.9),
   aisle_dawn: () => blurred('aisle_night', () => aisleOf(true).s) + nightTint(0.55, '#6E6A8A'),
   aisle_day: () => blurred('aisle_day', () => aisleOf(false).s),

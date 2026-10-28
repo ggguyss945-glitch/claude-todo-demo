@@ -29,8 +29,8 @@ def trim(a, pre=0.03, post=0.1):
     a[:fi] *= np.linspace(0, 1, fi); a[-fo:] *= np.linspace(1, 0, fo)
     return a
 
-def take(text, speed, sid):
-    g = sherpa_onnx.GenerationConfig(); g.sid = sid; g.speed = float(speed); g.num_steps = 8
+def take(text, speed, sid, steps=8):
+    g = sherpa_onnx.GenerationConfig(); g.sid = sid; g.speed = float(speed); g.num_steps = steps
     r = narr.generate(text, g)
     a = librosa.resample(np.asarray(r.samples, np.float32), orig_sr=r.sample_rate, target_sr=SR)
     a = trim(a)
@@ -78,14 +78,18 @@ def radio(a, seed=0):
     y[-int(0.01 * SR):] *= np.linspace(1, 0, int(0.01 * SR))
     return y.astype(np.float32), pre / SR
 
-def whisper(a, seed=0):
+# heard through the building's pipes: no lows, a hollow metal resonance, a long tail
+pipe_chain = Pedalboard([HighpassFilter(260), LowpassFilter(1900), PeakFilter(620, 7, 2.5), PeakFilter(1400, 4, 3.0),
+                         Compressor(threshold_db=-24, ratio=3), Reverb(room_size=0.45, damping=0.7, wet_level=0.38, dry_level=0.7, width=0.3), Gain(-4)])
+
+def whisper(a, seed=0, air_mix=0.45):
     """Close, hushed delivery: thinner low end, breath noise following the voice envelope."""
     r = np.random.default_rng(seed)
     y = Pedalboard([HighpassFilter(140), LowShelfFilter(cutoff_frequency_hz=250, gain_db=-4), PeakFilter(2800, 2.5, 0.9),
                     Compressor(threshold_db=-24, ratio=3, attack_ms=5, release_ms=120)])(a.astype(np.float32), SR)
     env = np.sqrt(np.convolve(y ** 2, np.ones(480) / 480, 'same'))
     air = Pedalboard([HighpassFilter(1800), LowpassFilter(7000)])(r.standard_normal(len(y)).astype(np.float32), SR)
-    y = y * 0.75 + air * env * 0.45
+    y = y * 0.75 + air * env * air_mix
     return deess(y).astype(np.float32)
 
 def num_words(w):
@@ -165,7 +169,7 @@ def align(raw, text, dur):
     return times
 
 script_words = lambda text: re.findall(r"[A-Za-z0-9'\-]+", text)
-SAME = {'isle': 'aisle', 'ok': 'okay', "four's": 'fours'}   # spellings the ASR may use either way
+SAME = {'isle': 'aisle', 'ok': 'okay', "four's": 'fours', 'sore': 'sour'}   # spellings the ASR may use either way
 _norm = lambda w: SAME.get(w.lower().strip("'"), w.lower().strip("'"))
 def reads_back(exp, text):
     sw = [_norm(w) for w in script_words(text)]
@@ -187,15 +191,15 @@ def longest_gap(a):
     for v in q: c = c + 1 if v else 0; best = max(best, c)
     return best * 0.02
 
-def best_take(text, rate, sid, takes=6, say=None):
+def best_take(text, rate, sid, takes=6, say=None, steps=8):
     """Voice `say` (default: text) and keep the take that reads back as `text`."""
     n = len(script_words(text)); target = n / rate + 0.13
-    probe = take(say or text, 1.0, sid)
+    probe = take(say or text, 1.0, sid, steps)
     # short phrases come out quick, so they may be slowed further before the voice starts to drag
     speed = float(np.clip(len(probe) / SR / target, 0.64 if n <= 4 else 0.72, 1.12))
     cands = []
     for k in range(takes):
-        a = take(say or text, speed * (0.97, 1.0, 1.03)[k % 3], sid)
+        a = take(say or text, speed * (0.97, 1.0, 1.03)[k % 3], sid, steps)
         exp, heard = asr(a)
         ok = align(asr.raw, text, len(a) / SR) is not None
         score = pitch_life(a) - 5 * abs(np.log(len(a) / SR / target)) - (2 if longest_gap(a) > 0.3 else 0) - (0 if ok else 100)
@@ -204,3 +208,87 @@ def best_take(text, rate, sid, takes=6, say=None):
     s, a, exp, heard = cands[0]
     if s < -50: print('  WARNING: no take reads back cleanly for', repr(text), '| best heard:', heard)
     return a, exp, heard, speed, s
+
+
+# ---------- whole-line takes: one synthesis per line, so the intonation runs across its sentences ----------
+def quiet_runs(a, lo, hi, floor=-40):
+    """Silent stretches (seconds) between lo and hi: frames 10 ms apart under `floor` dB of the line's peak."""
+    fr = librosa.feature.rms(y=a, frame_length=960, hop_length=480)[0]
+    q = 20 * np.log10(fr / (fr.max() + 1e-12) + 1e-9) < floor
+    f0, f1 = max(0, int(lo / 0.01)), min(len(q), int(hi / 0.01) + 1)
+    runs, s = [], None
+    for f in range(f0, f1):
+        if q[f] and s is None: s = f
+        if (not q[f] or f == f1 - 1) and s is not None:
+            e = f + 1 if q[f] else f
+            runs.append((s * 0.01, e * 0.01)); s = None
+    return runs
+
+def speech_time(a):
+    return len(a) / SR - sum(e - s for s, e in quiet_runs(a, 0, len(a) / SR) if e - s > 0.12)
+
+def set_pauses(a, starts, bounds, pauses):
+    """Make the silence before each phrase start (word index in bounds) last `pauses` seconds.
+    The cut or the inserted silence sits in the middle of the quietest stretch, so no word is touched."""
+    edits = []
+    for b, p in zip(bounds, pauses):
+        runs = [r for r in quiet_runs(a, starts[b - 1] + 0.12, starts[b] + 0.02)]
+        if runs:
+            s, e = max(runs, key=lambda r: r[1] - r[0]); gap = e - s
+        else:   # no clear silence: join right before the next phrase's first word
+            s = e = max(starts[b - 1] + 0.1, starts[b] - 0.04); gap = 0.0
+        delta = max(p - gap, -(gap - 0.14)) if gap > 0.14 else p - gap
+        edits.append(((s + e) / 2, delta))
+    out, pos, fade = [], 0, int(0.004 * SR)
+    for t, d in edits:
+        c = int(t * SR); n = int(abs(d) * SR)
+        if d >= 0:
+            out += [a[pos:c], np.zeros(n, np.float32)]; pos = c
+        else:
+            k0, k1 = c - n // 2, c + n - n // 2
+            seg = a[pos:k0].copy(); nxt = a[k1:k1 + fade].copy()
+            if len(seg) > fade and len(nxt) == fade:   # tiny crossfade across the cut
+                seg[-fade:] = seg[-fade:] * np.linspace(1, 0, fade) + nxt * np.linspace(0, 1, fade)
+                out.append(seg); pos = k1 + fade
+            else:
+                out.append(seg); pos = k1
+    out.append(a[pos:])
+    return np.concatenate(out).astype(np.float32)
+
+def item_take(phrases, rate, sid, takes=4, say=None, steps=16, slowest=0.78):
+    """Voice a whole line in one pass and fit its pauses. phrases: [(text, pause_after), ...].
+    Returns (audio, word starts, phrase-end times, heard, speed, score) or None if no take reads back."""
+    texts = [t for t, _ in phrases]; text = ' '.join(texts)
+    nw = [len(script_words(t)) for t in texts]; bounds = list(np.cumsum(nw)[:-1])
+    n = sum(nw); target = n / rate
+    probe = take(say or text, 1.0, sid, steps)
+    speed = float(np.clip(speech_time(probe) / target, slowest, 1.1))
+    cands = []
+    for k in range(takes):
+        a = take(say or text, speed * (1.0, 0.97, 1.03, 1.0, 0.985)[k % 5], sid, steps)
+        exp, heard = asr(a)
+        st = align(asr.raw, text, len(a) / SR)
+        if st is None: cands.append((-100, a, None, heard)); continue
+        # a pause in the middle of a phrase sounds like the voice lost its place
+        stall = 0
+        for i in range(n - 1):
+            if i + 1 in bounds: continue
+            stall += sum(max(0, (e - s) - 0.28) for s, e in quiet_runs(a, st[i] + 0.08, st[i + 1]))
+        life = pitch_life(a)
+        score = min(life, 4.2) - 4 * abs(np.log(speech_time(a) / target)) - 6 * stall
+        cands.append((score, a, st, heard))
+    cands.sort(key=lambda c: -c[0])
+    score, a, st, heard = cands[0]
+    if st is None: return None
+    if bounds:
+        a = set_pauses(a, st, bounds, [p for _, p in phrases[:-1]])
+        exp, heard = asr(a)
+        st2 = align(asr.raw, text, len(a) / SR)
+        if st2 is None: return None
+        st = st2
+    ends = []
+    for b in bounds:   # a phrase ends where the silence before the next one begins
+        runs = quiet_runs(a, st[b - 1] + 0.12, st[b] + 0.02)
+        ends.append(max(runs, key=lambda r: r[1] - r[0])[0] if runs else st[b] - 0.05)
+    ends.append(len(a) / SR - 0.06)
+    return a, st, ends, heard, speed, score

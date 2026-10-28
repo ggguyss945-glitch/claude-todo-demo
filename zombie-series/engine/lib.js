@@ -144,9 +144,35 @@ const POSES = {
   talkie: { la: [-0.8, 1.8], ra: [0.98, -0.62], ll: [-0.42, 2.2], rl: [0.42, 2.2] },   // walkie-talkie held up at the cheek
   hips: { la: [-0.98, 1.05], ra: [0.98, 1.05], ll: [-0.5, 2.2], rl: [0.5, 2.2] },
   bang: { la: [-0.55, -1.2], ra: [0.6, -1.25], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
+  strideA: { la: [-0.95, 1.5], ra: [0.85, 1.55], ll: [-0.8, 2.15], rl: [0.7, 2.15], kneeL: [-0.35, 1.15], kneeR: [0.45, 1.1] },
+  strideB: { la: [0.85, 1.55], ra: [-0.95, 1.5], ll: [0.7, 2.15], rl: [-0.8, 2.15], kneeL: [0.45, 1.1], kneeR: [-0.35, 1.15] },
+  runA: { drop: 0.1, la: [-1.2, 0.9], ra: [1.1, 1.2], ll: [-1.2, 1.8], rl: [1.1, 2.0], kneeL: [-0.2, 1.3], kneeR: [0.9, 0.9] },
+  runB: { drop: 0.1, la: [1.1, 1.2], ra: [-1.2, 0.9], ll: [1.1, 2.0], rl: [-1.2, 1.8], kneeL: [0.9, 0.9], kneeR: [-0.2, 1.3] },
+  extinguisher: { la: [0.9, 0.55], ra: [1.25, 0.15], ll: [-0.45, 2.2], rl: [0.45, 2.2] },
+  hug: { la: [-0.5, 1.0], ra: [0.55, 0.95], ll: [-0.42, 2.2], rl: [0.42, 2.2] },
 };
 
-function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0 }) {
+// a pose can be a name or a blend { a, b, k } between two named poses, so limbs move instead of snapping
+export function poseOf(pose) {
+  if (typeof pose === 'string' || !pose) return POSES[pose] || POSES.stand;
+  const A = poseOf(pose.a), B = poseOf(pose.b), k = Math.max(0, Math.min(1, pose.k)), o = {};
+  for (const key of new Set([...Object.keys(A), ...Object.keys(B)])) {
+    const va = A[key] ?? (key === 'drop' ? 0 : key.startsWith('knee') ? null : undefined), vb = B[key] ?? (key === 'drop' ? 0 : key.startsWith('knee') ? null : undefined);
+    if (key === 'drop') o.drop = (va || 0) + ((vb || 0) - (va || 0)) * k;
+    else if (va && vb) o[key] = [va[0] + (vb[0] - va[0]) * k, va[1] + (vb[1] - va[1]) * k];
+    else if (va || vb) {   // a knee only one pose bends: straighten it toward the hip-foot midpoint
+      const leg = key === 'kneeL' ? 'll' : 'rl', src = va || vb, mid = [(A[leg][0] + B[leg][0]) / 4, 1.1];
+      const kk = va ? k : 1 - k;
+      o[key] = [src[0] + (mid[0] - src[0]) * kk, src[1] + (mid[1] - src[1]) * kk];
+    }
+  }
+  return o;
+}
+// walk / run cycles as continuous blends; phase in radians
+export const walkPose = (ph) => ({ a: 'strideA', b: 'strideB', k: 0.5 + 0.5 * Math.sin(ph) });
+export const runPose = (ph) => ({ a: 'runA', b: 'runB', k: 0.5 + 0.5 * Math.sin(ph) });
+
+export function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0 }) {
   const ex = cx + look * 0.3 * u, ey = cy + 0.0 * u, sp = 0.44 * u;
   let s = '';
   if (zombie) {
@@ -187,8 +213,8 @@ function face({ cx, cy, u, look = 0, expr = 'neutral', zombie = false, blink = 0
   return s;
 }
 
-function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie, outfit, facing = 1, hold, aim = -8, back = false }) {
-  const P = POSES[pose] || POSES.stand;
+export function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie, outfit, facing = 1, hold, aim = -8, back = false, skin }) {
+  const P = poseOf(pose);
   const dr = (P.drop || 0) * u;
   const hipY = y - 2.2 * u + dr, shY = y - 4.05 * u + dr, neckY = y - 4.25 * u + dr;
   const lw = armW ?? Math.max(4, 0.1 * u);
@@ -212,7 +238,7 @@ function body({ x, y, u, pose, torsoFill, torsoDark, legFill = INK, armW, zombie
     const ax = x + (side * 0.5 * u) + (tgt[0] * u * facing - side * 0.5 * u);
     const mx = (sx + ax) / 2 + side * 0.15 * u, my = (sy + hy) / 2 + 0.1 * u;
     let o = bent(sx, sy, mx, my, ax, hy, lw);
-    o += circle(ax, hy, 0.15 * u, { fill: zombie ? PAL.zSkin : PAL.skin, ...ink(4) });
+    o += circle(ax, hy, 0.15 * u, { fill: skin || (zombie ? PAL.zSkin : PAL.skin), ...ink(4) });
     return { o, hand: [ax, hy] };
   };
   const A1 = arm(-1, P.la), A2 = arm(1, P.ra);
@@ -243,6 +269,10 @@ function outfitDetails({ x, u, top, bot, outfit }) {
     s += rect(x - 0.38 * u, top + 0.35 * u, 0.76 * u, 0.5 * u, { fill: '#3E7C7B', stroke: INK, strokeWidth: 3, rx: 4 });
   } else if (outfit === 'jogger') {
     s += path(`M${f(x - 0.5 * u)} ${f(top + 0.55 * u)} h${f(u)}`, { stroke: '#FFFFFF', strokeWidth: 5, opacity: 0.8 });
+  } else if (outfit === 'pretzel') {   // striped apron with the stand's pretzel badge
+    s += rect(x - 0.4 * u, top + 0.3 * u, 0.8 * u, bot - top - 0.3 * u, { fill: '#F3E6C8', stroke: INK, strokeWidth: 3, rx: 4 });
+    for (let i = 0; i < 3; i++) s += line(x - 0.4 * u, top + (0.55 + i * 0.35) * u, x + 0.4 * u, top + (0.55 + i * 0.35) * u, { stroke: PAL.red, strokeWidth: 4, opacity: 0.8 });
+    s += circle(x, top + 0.5 * u, 0.13 * u, { fill: '#B5652F', stroke: INK, strokeWidth: 2 });
   }
   // tears
   s += path(`M${f(x + 0.2 * u)} ${f(bot)} l${f(0.08 * u)} ${f(-0.22 * u)} l${f(0.08 * u)} ${f(0.22 * u)}`, { fill: PAL.zSkinDark, stroke: INK, strokeWidth: 2 });
@@ -258,7 +288,8 @@ function flashlight(x, y, len, angDeg) {
 export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, facing = 1, hold, aim = -8, phones = true, blink = 0, tilt = 0, breathe = 0, extra = '', filter = true }) {
   const u = 60 * s;
   const B = body({ x, y, u, pose, torsoFill: PAL.jacket, torsoDark: PAL.jacketDark, facing, hold, aim });
-  const cy = y - 5.25 * u + B.dr, cx = x + (pose === 'run' ? 0.25 * u * facing : 0);
+  const runLean = pose === 'run' || (pose && pose.a === 'runA') ? 0.25 : 0;
+  const cy = y - 5.25 * u + B.dr, cx = x + runLean * u * facing;
   let h = '';
   // headphones around neck (signature accent)
   if (phones) {
@@ -284,13 +315,15 @@ export function hero({ x, y, s = 1, pose = 'stand', expr = 'neutral', look = 0, 
 
 export function zombie({ x, y, s = 1, outfit = 'cashier', pose = 'stand', tilt = -8, look = 0, facing = 1, dim = 0, sway = 0, extra = '', back = false, filter = true }) {
   const u = 60 * s;
-  const fills = { cashier: '#8C8C86', guard: '#2E3D55', suit: '#3B3F48', janitor: '#5E6E70', jogger: '#C76A83', shopper: '#7C6A8E', park: '#8A7A4E', nurse: '#6FA3A6' };
+  const fills = { cashier: '#8C8C86', guard: '#2E3D55', suit: '#3B3F48', janitor: '#5E6E70', jogger: '#C76A83', shopper: '#7C6A8E', park: '#8A7A4E', nurse: '#6FA3A6', pretzel: '#C4473A' };
   const B = body({ x, y, u, pose, torsoFill: fills[outfit] || '#777', torsoDark: '#333', zombie: true, outfit, facing, back });
   const cx = x + 0.1 * u * facing, cy = y - 5.15 * u + B.dr;
   let h = circle(cx, cy, u, { fill: PAL.zSkin, ...ink(6) });
   h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.4 * u)} Q${f(cx - 0.2 * u)} ${f(cy - 1.15 * u)} ${f(cx + 0.85 * u)} ${f(cy - 0.5 * u)}`, { fill: 'none', stroke: PAL.zSkinDark, strokeWidth: 0.18 * u, opacity: 0.6 });
   if (outfit === 'guard') h += path(`M${f(cx - 0.95 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.35 * u)} ${f(cx + 0.95 * u)} ${f(cy - 0.45 * u)} Z M${f(cx - 0.2 * u)} ${f(cy - 0.5 * u)} h${f(1.4 * u)}`, { fill: '#1B2433', ...ink(5) });
   if (outfit === 'jogger') h += rect(cx - 0.98 * u, cy - 0.55 * u, 1.96 * u, 0.22 * u, { fill: '#F2F0EA', ...ink(4), rx: 6 });
+  if (outfit === 'pretzel') h += path(`M${f(cx - 0.75 * u)} ${f(cy - 0.62 * u)} L${f(cx - 0.6 * u)} ${f(cy - 1.25 * u)} L${f(cx + 0.65 * u)} ${f(cy - 1.25 * u)} L${f(cx + 0.8 * u)} ${f(cy - 0.62 * u)} Z`, { fill: '#F7F2E6', ...ink(4) })
+    + path(`M${f(cx - 0.7 * u)} ${f(cy - 0.82 * u)} h${f(1.45 * u)}`, { stroke: PAL.red, strokeWidth: 0.1 * u });
   if (outfit === 'janitor') h += path(`M${f(cx - 0.9 * u)} ${f(cy - 0.45 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.9 * u)} ${f(cy - 0.45 * u)} Z`, { fill: '#3E7C7B', ...ink(5) });
   if (back) h += path(`M${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy - 1.3 * u)} ${f(cx + 0.95 * u)} ${f(cy - 0.1 * u)} Q${f(cx)} ${f(cy + 0.25 * u)} ${f(cx - 0.95 * u)} ${f(cy - 0.1 * u)} Z`, { fill: '#5B5F55', opacity: 0.55 })
     + ellipse(cx - 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) }) + ellipse(cx + 0.98 * u, cy + 0.05 * u, 0.14 * u, 0.24 * u, { fill: PAL.zSkin, ...ink(4) });
@@ -322,8 +355,8 @@ export function crowd({ x0, x1, y, rows = 3, n = 20, s = 0.35, seed = 1, spread 
 }
 
 // ---------- captions & HUD ----------
-export function caption(word, { dialogue = false, y = 870, size = 92 } = {}) {
-  const fill = dialogue ? '#F2A73B' : '#FFFFFF';
+export function caption(word, { dialogue = false, y = 870, size = 92, color } = {}) {
+  const fill = color || (dialogue ? '#F2A73B' : '#FFFFFF');
   return g(text(W / 2, y, word.toUpperCase(), {
     fontFamily: 'Bangers, Impact, sans-serif', fontSize: size, letterSpacing: 2, textAnchor: 'middle',
     fill, stroke: '#2B1D21', strokeWidth: 9, paintOrder: 'stroke', transform: dialogue ? `skewX(-10)` : undefined,

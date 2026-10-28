@@ -24,6 +24,13 @@ const ICONS = {
   exit: (x, y) => g(rect(x - 150, y - 60, 300, 120, { rx: 12, fill: '#3DBE6A', ...ink(6) }) + text(x, y + 26, 'EXIT', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 76, fill: '#EFFFF2', textAnchor: 'middle' }), { filter: 'url(#wobbleSoft)' }),
   snow: (x, y) => g([0, 60, 120].map((a) => line(x - Math.cos(a * Math.PI / 180) * 110, y - Math.sin(a * Math.PI / 180) * 110, x + Math.cos(a * Math.PI / 180) * 110, y + Math.sin(a * Math.PI / 180) * 110, { stroke: '#5E8FB5', strokeWidth: 18, strokeLinecap: 'round' })).join(''), { filter: 'url(#wobbleSoft)' }),
   note: (x, y) => text(x, y + 60, '♫', { fontFamily: 'Rubik', fontSize: 200, fill: '#F3EBDD', textAnchor: 'middle' }),
+  drop: (x, y) => g(path(`M${x} ${y - 140} C${x + 40} ${y - 70} ${x + 105} ${y - 10} ${x + 105} ${y + 50} A105 105 0 0 1 ${x - 105} ${y + 50} C${x - 105} ${y - 10} ${x - 40} ${y - 70} ${x} ${y - 140} Z`, { fill: '#5E9BC8', ...ink(7) })
+    + path(`M${x - 55} ${y + 40} q0 45 40 60`, { fill: 'none', stroke: '#DCEFFA', strokeWidth: 14, strokeLinecap: 'round' }), { filter: 'url(#wobbleSoft)' }),
+  ear: (x, y) => g(path(`M${x - 70} ${y - 40} C${x - 70} ${y - 150} ${x + 90} ${y - 160} ${x + 90} ${y - 30} C${x + 90} ${y + 40} ${x + 20} ${y + 50} ${x + 10} ${y + 110} C${x} ${y + 160} ${x - 80} ${y + 150} ${x - 75} ${y + 90}`, { fill: '#F1D9C4', ...ink(8) })
+    + path(`M${x - 25} ${y - 30} C${x - 25} ${y - 90} ${x + 45} ${y - 90} ${x + 45} ${y - 30} C${x + 45} ${y + 5} ${x + 5} ${y + 10} ${x + 5} ${y + 40}`, { fill: 'none', ...ink(7) })
+    + [0, 1, 2].map((i) => path(`M${x - 150 - i * 34} ${y - 70 - i * 22} q-30 ${70 + i * 22} 0 ${140 + i * 44}`, { fill: 'none', stroke: PAL.red, strokeWidth: 9, strokeLinecap: 'round', opacity: 1 - i * 0.25 })).join(''), { filter: 'url(#wobbleSoft)' }),
+  rain: (x, y) => g(path(`M${x - 150} ${y - 20} q-10 -90 80 -100 q30 -80 120 -50 q80 -30 110 50 q70 10 60 100 z`, { fill: '#8E97A6', ...ink(7) })
+    + [-110, -40, 30, 100].map((dx, i) => line(x + dx, y + 30 + (i % 2) * 20, x + dx - 26, y + 110 + (i % 2) * 20, { stroke: '#5E9BC8', strokeWidth: 14, strokeLinecap: 'round' })).join(''), { filter: 'url(#wobbleSoft)' }),
 };
 
 SH.card = (T, tg, lt, p, D) => {
@@ -72,10 +79,11 @@ SH.card = (T, tg, lt, p, D) => {
   }
   if (k === 'rules' || k === 'promise_rules') {
     let s = dark();
-    const R = [['THEY HEAR. THEY DON\'T SEE.'], ['MUSIC IS A DINNER BELL.'], ['COUNT THE RADIOS.'], ['NEVER TELL ANYONE WHAT YOU HAVE.']];
-    s += smallCaps(W2, 150, k === 'rules' ? 'WHAT YOU KNOW  ·  DAY 7' : 'THIS WEEK', 36, '#B9AE97');
-    for (let i = 0; i < 4; i++) {
-      const y = 290 + i * 190, shown = k === 'promise_rules' ? lt > 1.2 + i * 0.25 : i < p.show, cur = k === 'rules' && i === p.show - 1;
+    const R = [['THEY HEAR. THEY DON\'T SEE.'], ['MUSIC IS A DINNER BELL.'], ['COUNT THE RADIOS.'], ['NEVER TELL ANYONE WHAT YOU HAVE.'], ['THE WALLS HAVE EARS.']];
+    const nR = p.n || 4, step = nR > 4 ? 156 : 190;
+    s += smallCaps(W2, 150, k === 'rules' ? `WHAT YOU KNOW  ·  DAY ${p.day ?? 7}` : 'THIS WEEK', 36, '#B9AE97');
+    for (let i = 0; i < nR; i++) {
+      const y = 290 + i * step, shown = k === 'promise_rules' ? lt > 1.2 + i * 0.25 : i < p.show, cur = k === 'rules' && i === p.show - 1;
       s += g(rect(250, y - 50, 230, 70, { fill: shown ? PAL.tag : '#3A3236' }) + text(365, y + 4, `RULE ${i + 1}`, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 40, fill: PAL.card, textAnchor: 'middle', letterSpacing: 3 }), { transform: `rotate(-2 365 ${y})`, opacity: k === 'promise_rules' ? f1(clamp((lt - 1.2 - i * 0.25) * 4) * 100) / 100 : 1 });
       const txt = k === 'promise_rules' ? '? ? ?' : shown ? R[i][0] : '';
       if (txt) s += (cur ? slideIn : (x) => x)(text(540, y + 10, txt, { fontFamily: 'Rubik', fontWeight: 900, fontSize: 56, fill: cur ? '#F3EBDD' : '#B9AE97' }), lt - 0.1);
@@ -96,7 +104,7 @@ SH.card = (T, tg, lt, p, D) => {
   if (k === 'comment') {
     let s = rect(0, 0, W, H, { fill: '#F2EEE6' });
     s += pop(g(rect(360, 300, 1200, 420, { rx: 30, fill: '#FFFFFF', ...ink(5) }) + circle(470, 410, 50, { fill: PAL.phones, ...ink(4) }) + text(560, 400, '@you', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 34, fill: INK }) + text(560, 440, 'just now', { fontFamily: 'Rubik', fontWeight: 500, fontSize: 24, fill: '#8E8576' })
-      + text(440, 540, 'What would you have thrown?', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 54, fill: INK }) + text(440, 630, '♥  1.2K      REPLY', { fontFamily: 'Rubik', fontWeight: 600, fontSize: 30, fill: '#6B5F55' })), lt - 0.1, { y: 510 });
+      + text(440, 540, p.text || 'What would you have thrown?', { fontFamily: 'Rubik', fontWeight: 800, fontSize: 54, fill: INK }) + text(440, 630, '♥  1.2K      REPLY', { fontFamily: 'Rubik', fontWeight: 600, fontSize: 30, fill: '#6B5F55' })), lt - 0.1, { y: 510 });
     return s;
   }
   if (k === 'twowaves') {
@@ -108,9 +116,9 @@ SH.card = (T, tg, lt, p, D) => {
   }
   if (k === 'end') {
     let s = dark();
-    s += pop(big(W2, 480, 'DAY 8', 200, '#F3EBDD'), lt - 0.2, { y: 420 });
-    s += slideIn(smallCaps(W2, 590, 'EPISODE 2  ·  THE MALL', 44, PAL.tag), lt - 0.7);
-    s += slideIn(smallCaps(W2, 680, 'WHO SETS THE ALARM?', 30, '#B9AE97'), lt - 1.3);
+    s += pop(big(W2, 480, `DAY ${p.day ?? 8}`, 200, '#F3EBDD'), lt - 0.2, { y: 420 });
+    s += slideIn(smallCaps(W2, 590, `EPISODE ${p.ep ?? 2}  ·  ${p.title ?? 'THE MALL'}`, 44, PAL.tag), lt - 0.7);
+    s += slideIn(smallCaps(W2, 680, p.sub ?? 'WHO SETS THE ALARM?', 30, '#B9AE97'), lt - 1.3);
     s += pop(g(rect(W2 - 220, 780, 440, 110, { rx: 16, fill: PAL.red, ...ink(4) }) + text(W2, 852, 'SUBSCRIBE', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 52, fill: '#FFF', textAnchor: 'middle', letterSpacing: 4 })), lt - 2.0, { y: 835 });
     if (lt > D - 0.8) s += rect(0, 0, W, H, { fill: '#000', opacity: f1(ease(ramp(lt, D - 0.8, D)) * 100) / 100 });
     return s;
@@ -184,7 +192,7 @@ SH.ep_title = (T, tg, lt, p, D) => {
   s += glow(W2, 480, 300, '#F08A24', 0.28 * k * gl);
   s += text(W2, 520, 'LAST LIGHT', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 190, letterSpacing: 18, fill: k > 0.5 ? '#F7E3C8' : '#3A302A', textAnchor: 'middle' });
   const k2 = ease(ramp(lt, 0.9, 1.6));
-  s += g(smallCaps(W2, 640, 'EPISODE 1  ·  THE NIGHT SHIFT', 38, '#EDB344') + smallCaps(W2, 700, 'ZOMBIE OUTBREAK: 30 DAYS LOCKED INSIDE A SUPERMARKET', 22, '#8E8576'), { opacity: k2.toFixed(2) });
+  s += g(smallCaps(W2, 640, `EPISODE ${p.ep ?? 1}  ·  ${p.title ?? 'THE NIGHT SHIFT'}`, 38, '#EDB344') + smallCaps(W2, 700, 'ZOMBIE OUTBREAK: 30 DAYS LOCKED INSIDE A SUPERMARKET', 22, '#8E8576'), { opacity: k2.toFixed(2) });
   s += rect(0, 0, W, H, { fill: '#000', opacity: f1(ease(ramp(lt, D - 0.7, D)) * 100) / 100 });
   return s;
 };
