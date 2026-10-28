@@ -25,6 +25,7 @@ export function addFilm(S, W) {
   });
   const pouchA = act(PR.pouch('#8a2a2a')), pouchB = act(PR.pouch('#2a5a8a')), pouchC = act(PR.pouch('#6a3a8a', 0.8));
   const broom = act(PR.broom()), bowl = act(PR.bowl()), bread = act(PR.flatbread(0.12));
+  const loaf = act(PR.loaf()); loaf.scale.setScalar(1.15);
   const ropeMat = toon('#a8865a');
   const rope = new Hose(0.012, ropeMat, 18, 5); act(rope.mesh);
   // gold chains for the merchants when they come back rich
@@ -99,7 +100,7 @@ export function addFilm(S, W) {
     const slide = [];
     for (const [a] of strokes) for (let i = 0; i < 7; i++) slide.push({ t0: a + 0.12 + i * 0.03, o: V(-2.3, 0.02, 0.6), v: V(1.6 + hash(a, i) * 1.4, 0.7 + hash(i, a) * 0.6, (hash(a + i, 3) - 0.5) * 1.4), r0: 0, spin: V(20 * hash(i, 1), 6, 12), seed: a * 10 + i });
     S.push({ t0, t1, set: 'market', light: 'gold',
-      cam: cam([[t0, [-0.7, 0.34, 1.75], [-2.35, 0.82, 0.45], 46], [t1, [-0.85, 0.36, 1.62], [-2.45, 0.86, 0.45], 42]], { ap: 12, focus: [-2.7, 1.2, 0.5], drift: 0.008, seed: 2 }),
+      cam: cam([[t0, [-0.75, 1.15, 2.85], [-2.5, 0.88, 0.45], 46], [t1, [-0.95, 1.12, 2.6], [-2.5, 0.88, 0.45], 43]], { ap: 6, focus: [-2.7, 1.0, 0.5], drift: 0.008, seed: 2 }),
       setup(w, t) {
         const m = put(C.spice, mp, yaw, t < 2.45 ? 'bored' : 'unimpressed');
         idle(m, t, 0.6);
@@ -164,7 +165,7 @@ export function addFilm(S, W) {
     } });
   // ------------------------------------------------------------ S06 camels carrying gold (tracking on the sacks)
   S.push({ t0: 8.42, t1: 10.12, set: 'desert', light: 'sunrise', lightCentre: V(-6, 0, 0),
-    cam: (t) => { const x = 12 - 4 * 5 + CAR_V * (t - 3.3); return cam([[8.42, [D0.x + x + 1.15, 1.45, 1.75], [D0.x + x + 0.0, 1.25, 0.45], 40], [10.12, [D0.x + x + 0.65, 1.5, 1.6], [D0.x + x - 0.15, 1.3, 0.45], 36]], { ap: 12, focus: [D0.x + x, 1.25, 0.5], drift: 0.012, seed: 6 })(t); },
+    cam: (t) => { const x = 12 - 4 * 5 + CAR_V * (t - 3.3); return cam([[8.42, [D0.x + x + 0.55, 1.55, 7.6], [D0.x + x + 0.25, 1.25, 0], 42], [10.12, [D0.x + x + 0.25, 1.6, 7.1], [D0.x + x + 0.1, 1.27, 0], 40]], { ap: 5, focus: [D0.x + x, 1.3, 0.3], drift: 0.012, seed: 6 })(t); },
     setup(w, t) {
       caravan(t, 1, 12, 3.3, { noMusa: true });
       const x = 12 - 4 * 5 + CAR_V * (t - 3.3);
@@ -174,11 +175,11 @@ export function addFilm(S, W) {
     } });
   // ------------------------------------------------------------ S07 "doesn't just pay for things": a whole pouch for one roll of cloth
   {
-    const mp = V(1.3, 0, 7.55), cp = V(2.65, 0, 7.35);
+    const mp = V(1.55, 0, 7.5), cp = V(2.45, 0, 7.4);
     S.push({ t0: 10.12, t1: 12.15, set: 'market', light: 'gold',
-      cam: cam([[10.12, [2.05, 1.5, 10.6], [1.95, 1.42, 7.45], 40], [12.15, [2.0, 1.52, 10.1], [1.95, 1.45, 7.45], 37]], { ap: 9, focus: [2.0, 1.4, 7.45], seed: 7 }),
+      cam: cam([[10.12, [2.05, 1.32, 10.7], [2.0, 1.12, 7.45], 46], [12.15, [2.02, 1.34, 10.3], [2.0, 1.14, 7.45], 43]], { ap: 6, focus: [2.0, 1.2, 7.45], seed: 7 }),
       setup(w, t) {
-        const m = put(C.musa, mp, yawTo(mp, cp) + 0.5, 'happy'), c = put(C.cloth, cp, yawTo(cp, mp) - 0.5, 'neutral');
+        const m = put(C.musa, mp, yawTo(mp, cp) - 0.75, 'happy'), c = put(C.cloth, cp, yawTo(cp, mp) + 0.75, 'neutral');
         idle(m, t); idle(c, t);
         // the merchant holds out his palm for one coin
         const k = smooth(prog(t, 10.2, 10.6));
@@ -223,9 +224,9 @@ export function addFilm(S, W) {
     const sp = V(-2.35, 0, -0.55);
     const toss = [{ t0: 13.5, o: V(0.4, 2.2, 0.6), v: V(-3.6, 2.0, -1.55), r0: 0, spin: V(3, 4, 2), seed: 91 }];
     S.push({ t0: 13.84, t1: 14.6, set: 'market', light: 'gold',
-      cam: cam([[13.84, [-1.48, 1.62, 0.62], [-2.35, 1.55, -0.55], 40], [14.6, [-1.62, 1.6, 0.38], [-2.35, 1.55, -0.55], 36, easeOutQ]], { ap: 14, focus: [-2.35, 1.55, -0.55], seed: 9 }),
+      cam: cam([[13.84, [-1.0, 1.45, 1.55], [-2.35, 1.3, -0.55], 44], [14.6, [-1.12, 1.46, 1.3], [-2.35, 1.32, -0.55], 41, easeOutQ]], { ap: 7, focus: [-2.35, 1.35, -0.55], seed: 9 }),
       setup(w, t) {
-        const m = put(C.spice, sp, 0.75, exprAt(t, [[0, 'surprised'], [14.08, 'greedy']]));
+        const m = put(C.spice, sp, 0.6, exprAt(t, [[0, 'surprised'], [14.08, 'greedy']]));
         const catchK = smooth(prog(t, 13.84, 14.0));
         handL(m, 'l', 0.12, lerp(0.75, 1.02, catchK), lerp(0.1, 0.42, catchK)); handL(m, 'r', -0.12, lerp(0.75, 1.02, catchK), lerp(0.1, 0.42, catchK));
         const hp = handPt(m, 'l').add(handPt(m, 'r')).multiplyScalar(0.5);
@@ -243,9 +244,9 @@ export function addFilm(S, W) {
     const drops = [];
     for (let i = 0; i < 70; i++) drops.push({ t0: 14.45 + i * 0.009, o: V(2.62 + (hash(i, 1) - 0.5) * 0.3, 2.4 + hash(i, 2) * 0.6, -16.55 + (hash(i, 3) - 0.5) * 0.3), v: V((hash(i, 4) - 0.5) * 0.6, -1.0, (hash(i, 5) - 0.5) * 0.6), r0: hash(i, 6) * 3, spin: V(12, 5, 9), seed: 100 + i });
     S.push({ t0: 14.6, t1: 15.32, set: 'market', light: 'gold', blur: () => 4,
-      cam: cam([[14.6, [1.85, 1.22, -15.65], [2.75, 1.08, -16.6], 40], [15.32, [1.95, 1.25, -15.8], [2.78, 1.1, -16.62], 36]], { ap: 12, focus: [2.7, 1.15, -16.6], seed: 10 }),
+      cam: cam([[14.6, [1.45, 1.32, -14.85], [2.85, 1.05, -16.75], 44], [15.32, [1.55, 1.33, -15.0], [2.85, 1.07, -16.75], 41]], { ap: 7, focus: [2.85, 1.1, -16.75], seed: 10 }),
       setup(w, t) {
-        const b = put(C.beggar, bp, yawTo(bp, V(1.7, 0, -15.5)), exprAt(t, [[0, 'shocked'], [14.95, 'joy']]));
+        const b = put(C.beggar, bp, yawTo(bp, V(1.45, 0, -14.85)), exprAt(t, [[0, 'shocked'], [14.95, 'joy']]));
         b.pose.lean = 0.18; idle(b, t, 0.5);
         handL(b, 'l', 0.13, 0.9, 0.36); handL(b, 'r', -0.13, 0.9, 0.36);
         const bw = handPt(b, 'l').add(handPt(b, 'r')).multiplyScalar(0.5).add(V(0, -0.02, 0));
@@ -261,10 +262,10 @@ export function addFilm(S, W) {
     const rain = [];
     for (let i = 0; i < 90; i++) rain.push({ t0: 14.9 + i * 0.012, o: V((hash(i, 1) - 0.5) * 3, 3.6 + hash(i, 2), -8.3 + (hash(i, 3) - 0.5) * 2), v: V(0, -0.5, 0), r0: hash(i, 4) * 3, spin: V(10, 8, 12), seed: 200 + i });
     S.push({ t0: 15.32, t1: 15.98, set: 'market', light: 'gold', blur: () => 4,
-      cam: cam([[15.32, [0.2, 0.62, -6.2], [0.25, 1.15, -8.4], 48], [15.98, [0.22, 0.6, -6.5], [0.25, 1.2, -8.4], 46]], { ap: 9, focus: [0.25, 0.9, -8.3], drift: 0.02, seed: 11 }),
+      cam: cam([[15.32, [0.22, 0.85, -5.35], [0.22, 0.8, -8.4], 54], [15.98, [0.24, 0.84, -5.6], [0.22, 0.82, -8.4], 52]], { ap: 6, focus: [0.22, 0.8, -8.3], drift: 0.02, seed: 11 }),
       setup(w, t) {
-        [[C.kid1, -0.55, -8.35, 0], [C.kid2, 0.28, -8.05, 0.33], [C.kid3, 1.0, -8.5, 0.66]].forEach(([k, x, z, ph], i) => {
-          const c = put(k, V(x, 0, z), (i - 1) * -0.3, i === 1 ? 'joy' : 'laugh'); hop(c, t, 2.6, 0.22, ph); cheer(c, t, 1);
+        [[C.kid1, -0.42, -8.35, 0], [C.kid2, 0.22, -8.05, 0.33], [C.kid3, 0.86, -8.45, 0.66]].forEach(([k, x, z, ph], i) => {
+          const c = put(k, V(x, 0, z), (i - 1) * -0.25, i === 1 ? 'joy' : 'laugh'); hop(c, t, 2.6, 0.22, ph); cheer(c, t, 1);
         });
         coins.fly.flight(t, rain);
         coins.main.scatter(-1.6, 1.8, -9.4, -7.2, 120, 0.003, 201);
@@ -341,29 +342,25 @@ export function addFilm(S, W) {
       });
     };
     S.push({ t0: 19.7, t1: 22.82, set: 'market', light: 'morning', dissolve: 0.35,
-      cam: cam([[19.7, [2.62, 1.48, -7.42], [3.8, 1.45, -7.5], 30], [21.55, [2.55, 1.49, -7.4], [3.8, 1.45, -7.5], 28], [22.6, [1.25, 1.6, -5.55], [3.55, 1.3, -6.95], 40]], { ap: 9, focusFn: (t, p) => (t < 21.6 ? 1.25 : 2.6), seed: 14 }),
+      cam: cam([[19.7, [2.62, 1.48, -7.42], [3.8, 1.45, -7.5], 30], [21.55, [2.55, 1.49, -7.4], [3.8, 1.45, -7.5], 28], [22.6, [1.6, 1.45, -4.2], [4.3, 1.3, -6.95], 46]], { ap: 7, focusFn: (t, p) => (t < 21.6 ? 1.25 : 3.8), seed: 14 }),
       setup(w, t) {
         drawBoard(smooth(prog(t, 20.95, 21.35)), smooth(prog(t, 21.35, 21.85)));
-        const b = put(C.baker, V(4.78, 0, -6.35), -PI / 2, 'smug'); idle(b, t);
+        const b = put(C.baker, V(4.78, 0, -6.35), -PI / 2 - 0.3, 'smug'); idle(b, t);
         const pk = smooth(prog(t, 20.9, 21.3)) * (1 - smooth(prog(t, 21.9, 22.3)));
         handL(b, 'r', lerp(-0.27, -0.2, pk), lerp(0.7, 1.32, pk), lerp(0.05, 0.42, pk));
-        const cu = put(people[1], V(2.55, 0, -6.95), PI / 2 + 0.15, exprAt(t, [[0, 'neutral'], [21.7, 'worried']])); idle(cu, t);
-        handL(cu, 'l', 0.18, 0.98, 0.38);
-        coins.main.add(handPt(cu, 'l').add(V(0, 0.01, 0)), 0, 0, 0, 1);
-        look(cu, V(3.8, 1.45, -7.5), 0.9);
         [[-1.5, -2], [0.8, -12]].forEach(([x, z], i) => walk(people[i + 6], V(x, 0, z), V(x, 0, z - 3), 19.5, 23, t));
       } });
   }
   // ------------------------------------------------------------ S15 "The baker just shrugs."
   S.push({ t0: 22.82, t1: 24.12, set: 'market', light: 'morning',
-    cam: cam([[22.82, [2.2, 1.62, -6.05], [4.7, 1.62, -6.4], 34], [24.12, [2.35, 1.63, -6.1], [4.7, 1.64, -6.4], 32]], { ap: 9, focus: [4.7, 1.6, -6.35], seed: 15 }),
+    cam: cam([[22.82, [2.2, 1.45, -5.95], [4.7, 1.38, -6.4], 42], [24.12, [2.4, 1.46, -6.0], [4.7, 1.4, -6.4], 39]], { ap: 7, focus: [4.7, 1.4, -6.35], seed: 15 }),
     setup(w, t) {
       const b = put(C.baker, V(4.78, 0, -6.35), -PI / 2 + 0.15, 'shrug'); idle(b, t);
       shrug(b, smooth(prog(t, 23.45, 23.85)) * (1 - 0.3 * smooth(prog(t, 23.95, 24.1))));
     } });
   // ------------------------------------------------------------ S16 baker: "Everyone's got gold now, my friend!"
   S.push({ t0: 24.12, t1: 26.2, set: 'market', light: 'morning',
-    cam: cam([[24.12, [2.1, 1.7, -7.35], [4.65, 1.78, -6.42], 33], [26.2, [2.4, 1.72, -7.1], [4.65, 1.8, -6.42], 30]], { ap: 10, focus: [4.65, 1.78, -6.4], seed: 16 }),
+    cam: cam([[24.12, [2.3, 1.42, -7.05], [4.7, 1.36, -6.4], 42], [26.2, [2.55, 1.43, -6.95], [4.7, 1.38, -6.4], 39]], { ap: 7, focus: [4.7, 1.4, -6.4], seed: 16 }),
     setup(w, t) {
       const b = put(C.baker, V(4.75, 0, -6.35), -PI / 2 - 0.12, 'grin'); idle(b, t, 1.2);
       b.pose.lean = 0.16; talk(b, w, 'baker', t);
@@ -371,16 +368,15 @@ export function addFilm(S, W) {
       const sw = Math.sin(t * 5) * 0.06;
       handL(b, 'r', -0.38, 1.25 + sw, 0.32);
       holdProp(bread, b, 'r', V(0, 0.06, 0), [PI / 2 - 0.3, 0, 0.3]);
-      const cu = put(people[1], V(2.75, 0, -6.95), PI / 2 + 0.2, 'worried'); idle(cu, t);
     } });
   // ------------------------------------------------------------ S17 "Even the money changers start giving less for every coin."
   {
     const bal = M.balance;
     S.push({ t0: 26.2, t1: 28.98, set: 'market', light: 'morning',
-      cam: cam([[26.2, [-2.82, 1.22, -12.02], [-3.82, 1.12, -12.55], 32], [27.85, [-2.8, 1.24, -12.05], [-3.82, 1.12, -12.55], 30], [28.7, [-2.75, 1.62, -12.0], [-4.62, 1.72, -12.5], 36]], { ap: 10, focusFn: (t) => (t < 27.9 ? 1.15 : 1.95), seed: 17 }),
+      cam: cam([[26.2, [-1.45, 1.38, -14.75], [-3.95, 1.0, -12.3], 46], [26.8, [-1.62, 1.33, -14.5], [-3.9, 1.0, -12.4], 44], [27.45, [-2.7, 1.15, -13.35], [-3.8, 0.95, -12.55], 40], [27.95, [-2.72, 1.15, -13.37], [-3.8, 0.95, -12.55], 39], [28.7, [-2.5, 1.42, -13.5], [-4.55, 1.38, -12.5], 44]], { ap: 7, focusFn: (t) => (t < 26.9 ? 3.3 : t < 28.0 ? 1.65 : 2.6), seed: 17 }),
       setup(w, t) {
-        const c = put(C.changer, V(-4.72, 0, -12.5), PI / 2, exprAt(t, [[0, 'neutral'], [27.75, 'smug']])); idle(c, t, 0.7);
-        const cu = put(people[3], V(-2.95, 0, -12.1), -PI / 2 - 0.2, exprAt(t, [[0, 'neutral'], [28.0, 'worried']])); idle(cu, t);
+        const c = put(C.changer, V(-4.72, 0, -12.5), PI / 2 - 0.35, exprAt(t, [[0, 'neutral'], [27.75, 'smug']])); idle(c, t, 0.7);
+        const cu = put(people[3], V(-2.85, 0, -11.95), -PI / 2 - 0.35, exprAt(t, [[0, 'neutral'], [28.0, 'worried']])); idle(cu, t);
         // how many silver coins on the pan: 3, then the changer takes one back
         const nS = t < 26.85 ? 0 : t < 27.15 ? 1 : t < 27.45 ? 2 : t < 27.85 ? 3 : 2;
         const goldOn = t > 26.45;
@@ -398,29 +394,41 @@ export function addFilm(S, W) {
         const putK = (t > 26.55 && t < 27.6) ? Math.abs(Math.sin((t - 26.55) * PI / 0.3)) : 0;
         handW(c, 'l', pB.clone().add(V(0, 0.08 + 0.1 * (1 - putK), 0.0)).lerp(local(c, 0.27, 0.72, 0.05), t > 27.6 && t < 27.8 ? 1 : 0));
         if (t > 27.85) { const tk = smooth(prog(t, 27.85, 28.15)); const hp = pB.clone().add(V(0.0, 0.09, 0)).lerp(local(c, 0.2, 1.0, 0.25), tk); handW(c, 'l', hp); coins.silver.add(hp.clone().add(V(0, 0.02, 0)), 0.3, 0, 0, 1); }
-        look(c, t < 28.0 ? pB : V(-2.6, 1.7, -12.0), 0.9);
+        look(c, t < 28.0 ? pB : V(-2.5, 1.45, -13.5), 0.9);
         look(cu, pA, 0.8);
+        if (t > 26.8) cu.root.visible = false; // out of shot once the camera pushes in on the scale
       } });
   }
-  // ------------------------------------------------------------ S18 "So how do you ruin a city," (a cat asleep on a pile of gold)
-  S.push({ t0: 28.98, t1: 30.34, set: 'market', light: 'morning',
-    cam: cam([[28.98, [2.55, 0.55, -19.55], [4.5, 0.3, -20.3], 36], [30.34, [2.95, 0.5, -19.75], [4.5, 0.28, -20.3], 33]], { ap: 12, focus: [4.5, 0.3, -20.3], seed: 18 }),
-    setup(w, t) {
-      coins.main.heap(V(4.5, 0, -20.3), 0.5, 0.17, 320, 181);
-      coins.main.scatter(3.7, 5.6, -21.4, -19.3, 60, 0.003, 182);
-      M.cat.position.set(4.5, 0.28, -20.3);
-    } });
+  // ------------------------------------------------------------ S18 "So how do you ruin a city," (a man sunk to the waist in gold, holding up one loaf)
+  {
+    const bp = V(0.6, 0, -14.5);
+    S.push({ t0: 28.98, t1: 30.34, set: 'market', light: 'morning',
+      cam: cam([[28.98, [1.5, 1.05, -12.25], [0.6, 0.78, -14.5], 44], [30.34, [1.35, 1.0, -12.75], [0.6, 0.8, -14.5], 40]], { ap: 6, focus: [0.6, 0.9, -14.5], seed: 18 }),
+      setup(w, t, camera) {
+        coins.main.heap(bp, 1.15, 0.62, 1100, 181, 1.35);
+        coins.main.scatter(-3.2, 3.2, -19.5, -11.0, 700, 0.004, 182, 1.4);
+        for (const [x, z] of [[-1.7, -17.2], [2.1, -18.4]]) coins.main.heap(V(x, 0, z), 0.8, 0.5, 450, x * 13 + z, 1.35);
+        const m = put(people[3], bp.clone().add(V(0, -0.52, 0)), yawTo(bp, camera.position), exprAt(t, [[0, 'confused'], [29.75, 'worried']]));
+        idle(m, t);
+        const up = smooth(prog(t, 29.0, 29.35));
+        handL(m, 'r', -0.36, lerp(0.95, 1.62, up), 0.18); handL(m, 'l', 0.36, 1.0 + 0.08 * Math.sin(t * 4), 0.2);
+        holdProp(loaf, m, 'r', V(0, 0.09, 0), [0.2, 0.4, 0.1]);
+        look(m, t < 29.7 ? loaf.position : camera.position, 0.9);
+        [[-1.7, -17.2, 'worried'], [2.1, -18.4, 'confused']].forEach(([x, z, e], i) => { const c = put(people[8 + i], V(x, -0.4, z), yawTo(V(x, 0, z), camera.position), e); idle(c, t); shrug(c, 0.6 + 0.4 * Math.sin(t * 2 + i)); });
+      } });
+  }
   // ------------------------------------------------------------ S19 "by giving it money?" (a coin in the dirt, stepped over)
   S.push({ t0: 30.34, t1: 31.6, set: 'market', light: 'morning',
     cam: cam([[30.34, [0.12, 0.1, -9.62], [0.42, 0.06, -10.55], 52], [31.6, [0.14, 0.11, -9.7], [0.42, 0.06, -10.55], 50]], { ap: 16, focus: [0.42, 0.02, -10.5], drift: 0.004, seed: 19 }),
     setup(w, t) {
       coins.big.add(V(0.42, 0.012, -10.52), 0.08, 0.6, 0.03, 0.75);
       coins.main.scatter(-1.5, 2, -13, -10.8, 40, 0.003, 191);
-      walk(people[5], V(-1.6, 0, -10.35), V(2.1, 0, -10.75), 30.2, 31.9, t, { stride: 0.5 });
+      const g = walk(C.camelguy, V(-1.6, 0, -10.45), V(2.1, 0, -10.6), 30.25, 31.8, t, { stride: 0.55 }); C.camelguy.state.expr = 'bored';
       walk(people[9], V(2.6, 0, -12.6), V(-1.8, 0, -12.2), 29.8, 32.2, t);
+      walk(people[2], V(-2.2, 0, -13.6), V(2.4, 0, -13.9), 29.6, 32.4, t);
     } });
   // ------------------------------------------------------------ S20 "Well, gold is only valuable because it's rare." (one coin on a pedestal)
-  S.push({ t0: 31.6, t1: 33.84, set: 'void', dissolve: 0.25, beam: 0.42,
+  S.push({ t0: 31.6, t1: 33.84, set: 'void', dissolve: 0.25, beam: 0.16,
     cam: cam([[31.6, [V0.x + 0.35, 1.72, 3.2], [V0.x, 1.4, 0], 36], [33.84, [V0.x + 0.12, 1.52, 1.55], [V0.x, 1.42, 0], 34]], { ap: 9, focus: [V0.x, 1.42, 0], drift: 0.006, seed: 20 }),
     setup(w, t) { coins.big.add(vV(0, 1.325 + 0.075, 0), PI / 2, 0, t * 0.7, 1); } });
   // ------------------------------------------------------------ S21 "Flood a city with it, and it's just shiny metal."
@@ -430,7 +438,7 @@ export function addFilm(S, W) {
       const a = hash(i, 1) * PI * 2, r = Math.sqrt(hash(i, 2)) * 2.2;
       fall.push({ t0: 33.72 + hash(i, 3) * 2.0, o: vV(Math.cos(a) * r * 0.6, 6 + hash(i, 4) * 2.5, Math.sin(a) * r * 0.6), v: V(Math.cos(a) * 0.4, -2, Math.sin(a) * 0.4), r0: hash(i, 5) * 3, spin: V(9, 7, 11), seed: 400 + i, s: 1 });
     }
-    S.push({ t0: 33.84, t1: 35.86, set: 'void', beam: 0.42, blur: () => 3,
+    S.push({ t0: 33.84, t1: 35.86, set: 'void', beam: 0.16, blur: () => 3,
       cam: cam([[33.84, [V0.x + 0.12, 1.52, 1.55], [V0.x, 1.42, 0], 34], [35.86, [V0.x + 1.0, 3.6, 6.8], [V0.x, 0.9, 0], 44, easeInOut]], { ap: 6, focus: [V0.x, 1.2, 0], drift: 0.01, seed: 21 }),
       setup(w, t) {
         const k = smooth(prog(t, 34.0, 35.4));
@@ -458,7 +466,7 @@ export function addFilm(S, W) {
     } });
   // ------------------------------------------------------------ S23 "But here's the best part." (sunset, the caravan heads home)
   S.push({ t0: 38.62, t1: 39.94, set: 'desert', light: 'sunset', dissolve: 0.3, lightCentre: V(-8, 0, 0),
-    cam: cam([[38.62, [D0.x + 16, 2.0, 4.2], [D0.x - 30, 3.2, -4], 42], [39.94, [D0.x + 15, 2.3, 4.0], [D0.x - 30, 3.3, -4], 40]], { ap: 3, focus: [D0.x + 2, 2, 0], drift: 0.02, seed: 23 }),
+    cam: cam([[38.62, [D0.x + 16, 2.6, 7.5], [D0.x - 6, 2.0, -2], 40], [39.94, [D0.x + 15, 2.75, 7.4], [D0.x - 6, 2.1, -2], 38]], { ap: 3, focus: [D0.x + 6, 2, 0], drift: 0.02, seed: 23 }),
     setup(w, t) { caravan(t, -1, 4, 38.62); } });
   // ------------------------------------------------------------ S24 "On the way home, the richest king on Earth," (he opens his treasure chest)
   {
@@ -510,10 +518,10 @@ export function addFilm(S, W) {
     for (const [x, z, r, h] of [[-3.0, 0.3, 0.55, 0.45], [-2.9, -1.6, 0.6, 0.55], [-2.95, -3.1, 0.5, 0.4], [-3.1, 1.9, 0.5, 0.42]]) coins.main.heap(V(x, 0, z), r, h, 420, x * 11 + z);
   };
   S.push({ t0: 43.2, t1: 45.76, set: 'market', light: 'day', shafts: 0.2, dissolve: 0.25,
-    cam: (t) => { const mp = V(1.75, 0, 3.4).lerp(V(0.45, 0, 0.55), easeInOut(prog(t, 43.2, 45.3))); return cam([[43.2, [mp.x + 0.75, 1.72, mp.z + 1.8], [-1.9, 1.45, -1.0], 44], [45.76, [mp.x + 0.75, 1.72, mp.z + 1.8], [-1.9, 1.45, -1.0], 42]], { ap: 6, focus: [-1.9, 1.5, -1.0], seed: 26 })(t); },
+    cam: cam([[43.2, [1.75, 1.45, 1.45], [-1.8, 1.1, -1.0], 46], [45.76, [1.6, 1.44, 1.3], [-1.8, 1.1, -1.0], 44]], { ap: 6, focus: [-1.9, 1.2, -1.0], seed: 26 }),
     setup(w, t) {
       merchants(t, 'smug');
-      walk(C.musa, V(1.75, 0, 3.4), V(0.45, 0, 0.55), 43.2, 45.3, t, { ease: easeInOut });
+      walk(C.musa, V(2.7, 0, 0.15), V(0.45, 0, 0.55), 43.3, 45.4, t, { ease: easeInOut });
       C.musa.state.expr = 'sheepish';
       people.slice(4, 8).forEach((c, i) => walk(c, V(1.6 + i * 0.3, 0, -6 - i * 2), V(1.2, 0, -10 - i * 2), 42.8, 46, t));
     } });
@@ -531,14 +539,15 @@ export function addFilm(S, W) {
     } });
   // ------------------------------------------------------------ S28 "And they lend it to him."
   S.push({ t0: 47.08, t1: 48.3, set: 'market', light: 'day', shafts: 0.2,
-    cam: cam([[47.08, [0.05, 1.55, 2.25], [-0.9, 1.35, -0.1], 40], [48.3, [0.0, 1.56, 2.0], [-0.9, 1.35, -0.1], 37]], { ap: 7, focus: [-0.9, 1.35, -0.15], seed: 28 }),
+    cam: cam([[47.08, [-0.9, 1.42, 3.35], [-0.95, 1.12, -0.45], 46], [48.3, [-0.92, 1.43, 3.05], [-0.95, 1.14, -0.45], 44]], { ap: 6, focus: [-0.95, 1.25, -0.45], seed: 28 }),
     setup(w, t) {
       merchants(t, (i) => (i === 1 ? 'greedy' : 'smug'));
-      const sp = C.spice; put(sp, V(-1.55, 0, -0.42), yawTo(V(-1.55, 0, -0.42), V(0.2, 0, 0.45)), 'greedy');
-      const m = put(C.musa, V(0.2, 0, 0.45), yawTo(V(0.2, 0, 0.45), V(-1.55, 0, -0.42)), exprAt(t, [[0, 'sheepish'], [47.75, 'happy']]));
+      C.jewel.root.visible = false;
+      const sp = C.spice; put(sp, V(-1.45, 0, -0.4), 1.0, 'greedy');
+      const m = put(C.musa, V(-0.45, 0, -0.55), -0.8, exprAt(t, [[0, 'sheepish'], [47.75, 'happy']]));
       idle(m, t);
       const reach = smooth(prog(t, 47.1, 47.5));
-      const meet = V(-0.7, 1.05, 0.05);
+      const meet = V(-0.97, 1.05, -0.38);
       handW(sp, 'r', local(sp, -0.2, 0.95, 0.35).lerp(meet, reach * (t < 47.8 ? 1 : 1 - smooth(prog(t, 47.8, 48.1)))));
       handW(m, 'l', local(m, 0.27, 0.72, 0.1).lerp(meet.clone().add(V(0.02, -0.05, 0)), smooth(prog(t, 47.35, 47.7))));
       const owner = t < 47.72 ? [sp, 'r'] : [m, 'l'];

@@ -1,6 +1,7 @@
 // Shot list, timed to the narration's word timings.
 import * as THREE from 'three';
 import { defaultPose, CH2D } from './chars2d.js';
+import { drawCamels } from './camel2d.js';
 
 export const SHOTS = [];
 export function findShot(t) {
@@ -32,4 +33,5 @@ export function finishFrame(world, t, shot, camera) {
   CH2D.tint.set(shot.tint || TINT[shot.set + ':' + (shot.light || '')] || TINT[shot.set + ':'] || '#ffffff');
   for (const c of allChars()) if (c.root.visible) c.update(t);
   for (const cm of world.anchors.desert.camels) if (cm.root.visible) cm.update(t);
+  drawCamels();
 }

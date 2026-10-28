@@ -4,6 +4,7 @@ import { toon, gold, mk } from './toon.js';
 import { Hose } from './chars.js';
 import { canvas, toTex } from './tex.js';
 import { coinGeometry, coinMats } from './props.js';
+import { toCard } from './camel2d.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
@@ -86,10 +87,12 @@ export function makeCamel(o = {}) {
   cm.tail = new Hose(0.025, dark, 8, 6, 0.2); body.add(cm.tail.mesh);
   cm.pose = { walk: null, neck: 0, headPitch: 0, headYaw: 0, chew: 0, lid: 0.55, sit: 0 };
   cm.update = (t) => updateCamel(cm, t);
+  toCard(cm); // drawn flat, like the people
   return cm;
 }
 
 function updateCamel(cm, t) {
+  cm._t = t;
   const p = cm.pose;
   const w = p.walk; // {phase, stride}
   const sit = p.sit || 0;
@@ -117,6 +120,7 @@ function updateCamel(cm, t) {
     const foot = V(L.x, fy, fz);
     const knee = hip.clone().lerp(foot, 0.5).add(V(0, sit * 0.2, (L.front ? 0.05 : -0.05) + sit * (L.front ? 0.35 : -0.25)));
     // the hose lives in body space (body may bob): convert
+    L.hipR = hip.clone(); L.kneeR = knee.clone(); L.footR = foot.clone();
     const off = V(0, cm.body.position.y, 0);
     L.hose.update(hip.clone().sub(off), knee.clone().sub(off), foot.clone().sub(off));
     L.knee.position.copy(knee).sub(off);

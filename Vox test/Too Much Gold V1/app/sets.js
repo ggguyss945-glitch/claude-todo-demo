@@ -441,7 +441,7 @@ BUILD.void = (scene, W) => {
   const back = mk(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({ color: '#1a0e26', side: THREE.BackSide }), g, { cast: false, outline: false });
   back.layers.set(LAYER.FX);
   // pedestal: marble column with gold rings and a red velvet cushion
-  const marble = toon('#ece4f0', { rough: 0.5 });
+  const marble = toon('#d2c6e2', { rough: 0.5 });
   mk(new THREE.CylinderGeometry(0.42, 0.5, 0.12, 32), marble, g, { pos: [0, 0.06, 0], outline: 5 });
   mk(new THREE.CylinderGeometry(0.28, 0.32, 1.0, 32), marble, g, { pos: [0, 0.62, 0], outline: 5 });
   mk(new THREE.CylinderGeometry(0.4, 0.36, 0.1, 32), marble, g, { pos: [0, 1.17, 0], outline: 5 });
@@ -449,7 +449,7 @@ BUILD.void = (scene, W) => {
   mk(new THREE.BoxGeometry(0.5, 0.1, 0.5), toon('#a8102a', { rough: 0.95, lift: 0.08 }), g, { pos: [0, 1.27, 0], outline: 4.5 });
   for (const [x, z] of [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]]) mk(new THREE.SphereGeometry(0.03, 8, 6), gold(), g, { pos: [x, 1.3, z], outline: false });
   A.top = V(0, 1.325, 0);
-  const spot = new THREE.SpotLight('#fff0d0', 70, 14, 0.32, 0.55, 1.4);
+  const spot = new THREE.SpotLight('#fff0d0', 46, 14, 0.3, 0.6, 1.4);
   spot.position.set(0, 7, 0.6); spot.target.position.set(0, 1.2, 0); spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048);
   g.add(spot, spot.target);
   g.add(new THREE.HemisphereLight('#5a4a8a', '#1a0e20', 0.35));
@@ -459,7 +459,7 @@ BUILD.void = (scene, W) => {
   return {
     group: g, A,
     apply(t, shot) { scene.fog = null; scene.environmentIntensity = 0.5; motes.userData.tick(t); beam.userData.mat.uniforms.op.value = shot.beam ?? 0.5; },
-    grade: { bloomThr: 0.85, bloom: 0.6, contrast: 1.1, sat: 1.15, vignette: 0.5, lineFar: 60 },
+    grade: { bloomThr: 0.98, bloom: 0.4, contrast: 1.14, sat: 1.2, vignette: 0.55, exposure: 0.85, lineFar: 60 },
   };
 };
 

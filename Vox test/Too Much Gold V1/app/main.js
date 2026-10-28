@@ -12,6 +12,7 @@ const params = new URLSearchParams(location.search);
 const W = parseInt(params.get('w') || '1440'), H = parseInt(params.get('h') || '2560');
 const Q = { msaa: parseInt(params.get('msaa') || '4'), sub: params.get('sub') ? parseInt(params.get('sub')) : 3 };
 const PROF = params.get('prof') === '1';
+const FPS = parseInt(params.get('fps') || '30');
 RES.set(W, H);
 
 async function boot() {
@@ -120,7 +121,7 @@ async function boot() {
     if (Q.sub <= 1 || need < 1.5) { quad(target, renderShot(shot, t), null, 0, 1, false); return; }
     const NS = Math.max(3, Math.min(14, Math.ceil(need)));
     for (let k = 0; k < NS; k++) {
-      const off = (k / (NS - 1) - 0.5) * (1 / 60); // 180-degree shutter
+      const off = (k / (NS - 1) - 0.5) * (0.5 / FPS); // 180-degree shutter
       const tex = renderShot(shot, t + off);
       quad(target, tex, null, 0, 1 / NS, k > 0);
     }

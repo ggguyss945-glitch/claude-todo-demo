@@ -163,7 +163,7 @@ function updateToon(ch, t) {
   const dC = -Cc.z;
   if (dC < 0.12) { ch.card.visible = false; return; }
   ch.card.visible = true;
-  const dCard = dC + 0.12 * s; // a little behind the body, so held props sit in front of the drawing
+  const dCard = dC + (p.push ?? 0.12 * s); // a little behind the body, so held props sit in front of the drawing
   const pr = (Pw) => { const c = Pw.clone().applyMatrix4(_inv); const z = Math.max(-c.z, 0.03); return [c.x * dCard / z, c.y * dCard / z, z]; };
   const scl = (z) => dCard / z;
   // ---- facing: angle between where the body/head point and the direction to the camera
@@ -200,8 +200,11 @@ function updateToon(ch, t) {
   grow(hc[0], hc[1], Rp * 1.45); grow(hc[0], hc[1] + Rp * 1.0, Rp * 1.0);
   for (const L of ['l', 'r']) { grow(A[L].hd[0], A[L].hd[1], 0.08 * s); grow(A[L].el[0], A[L].el[1], 0.05 * s); grow(Lg[L].ft[0], Lg[L].ft[1], 0.09 * s); }
   if (ch.def.beard3d) grow(hc[0], hc[1] - Rp * 1.9, Rp * 0.7);
-  // pixels per plane metre: as big as it appears on screen (capped)
+  // only what the camera can see needs pixels (a head right in front of the lens stays sharp)
   const fov = (cam.fov || 40) * Math.PI / 180;
+  { const hh = dCard * Math.tan(fov / 2) * 1.08, hw = hh * (cam.aspect || 0.5625);
+    x0 = Math.max(x0, -hw); x1 = Math.min(x1, hw); y0 = Math.max(y0, -hh); y1 = Math.min(y1, hh);
+    if (x1 <= x0 || y1 <= y0) { ch.card.visible = false; return; } }
   let k = CH2D.H / (2 * dCard * Math.tan(fov / 2));
   const MAXPX = 1700;
   if (Math.max(x1 - x0, y1 - y0) * k > MAXPX) k = MAXPX / Math.max(x1 - x0, y1 - y0);
@@ -212,7 +215,9 @@ function updateToon(ch, t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, chh);
   const X = (x) => (x - x0) * k, Y = (y) => (y1 - y) * k;
   const D = { g, X, Y, k, s, ch, t, prof, hc, Rp, roll, headYaw, bodyYaw, A, Lg, scl, min: CH2D.H / 2560 };
-  drawCharacter(D);
+  // riders are cut off at the seat
+  if (p.clipY != null) { const cy = pr(V(C.x, p.clipY, C.z))[1]; g.save(); g.beginPath(); g.rect(0, 0, cw, Y(cy)); g.clip(); drawCharacter(D); g.restore(); }
+  else drawCharacter(D);
   ch.tex.needsUpdate = true;
   // ---- place the card (world transform -> local to the root)
   const camQ = new THREE.Quaternion().setFromRotationMatrix(cam.matrixWorld);

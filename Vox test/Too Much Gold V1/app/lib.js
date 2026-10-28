@@ -119,6 +119,7 @@ export function ride(ch, camel, yawOff = 0) {
   ch.root.position.copy(p);
   ch.root.rotation.set(0, camel.root.rotation.y + yawOff, 0);
   ch.pose.lean += camel.body.rotation.x;
+  ch.pose.clipY = p.y + 0.64; ch.pose.push = -0.5; // drawn sitting in the seat, in front of the camel
   ch.root.updateMatrixWorld(true);
   return p;
 }
