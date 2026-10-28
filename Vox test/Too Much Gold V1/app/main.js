@@ -116,10 +116,12 @@ async function boot() {
   }
 
   function renderSharpOrBlurred(shot, t, target) {
-    const extra = shot.blur ? shot.blur(t) : 0;
-    const need = Math.max(camSpeed(shot, t) / 0.012, extra);
+    // the shutter is open half a frame: at 60 fps that is half the smear of 30 fps, so half the samples
+    const k30 = 30 / FPS;
+    const extra = (shot.blur ? shot.blur(t) : 0) * k30;
+    const need = Math.max(camSpeed(shot, t) * k30 / 0.012, extra);
     if (Q.sub <= 1 || need < 1.5) { quad(target, renderShot(shot, t), null, 0, 1, false); return; }
-    const NS = Math.max(3, Math.min(14, Math.ceil(need)));
+    const NS = Math.max(3, Math.min(6, Math.ceil(need)));
     for (let k = 0; k < NS; k++) {
       const off = (k / (NS - 1) - 0.5) * (0.5 / FPS); // 180-degree shutter
       const tex = renderShot(shot, t + off);
