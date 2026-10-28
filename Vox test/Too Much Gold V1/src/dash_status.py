@@ -51,9 +51,15 @@ hist = json.load(open(HIST)) if os.path.exists(HIST) else []
 if not hist or frames != hist[-1][1] or now - hist[-1][0] > 600: hist.append([now, frames])
 hist = hist[-200:]
 json.dump(hist, open(HIST, 'w'))
-win = [h for h in hist if now - h[0] <= 1500] or hist
-fps = (hist[-1][1] - win[0][1]) / max(1, hist[-1][0] - win[0][0]) if len(win) > 1 else 0.0
-if fps <= 0 and frames > 0: fps = frames / max(1, now - start)
+# speed from how long each finished second took (claim -> done), so a stop or a restart doesn't skew it
+spans = []
+for f in glob.glob(os.path.join(SEG, '*.done')):
+    c = f.replace('.done', '.claim')
+    if os.path.exists(c):
+        d = os.path.getmtime(f) - os.path.getmtime(c)
+        if d > 0: spans.append((os.path.getmtime(f), d))
+spans = [d for _, d in sorted(spans)[-6:]]
+fps = (FPS / (sum(spans) / len(spans))) * max(1, alive) if spans else 0.0
 state = 'done' if len(done) >= TOTAL_S else ('rendering' if alive else 'stopped')
 eta = (TOTAL - frames) / fps / 60 if fps > 0 and state != 'done' else 0
 
