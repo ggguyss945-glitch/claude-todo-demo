@@ -7,16 +7,19 @@
 :root {
   --bg: #F3EEE3; --panel: #FFFCF6; --line: #DCD2C1; --fg: #1B2230; --muted: #687080;
   --accent: #B5690A; --live: #C8323A; --ok: #2E8A52; --screen: #0E1219; --on-screen: #E9E4D8;
+  --narr: #1B2230; --dale: #B5690A; --hero: #8A6A12; --nora: #2B8C80;
   --display: "Bangers", "Impact", "Arial Narrow", sans-serif;
   --body: "Rubik", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0E1219; --panel: #151B25; --line: #273142; --fg: #E9E4D8; --muted: #8E99AA;
-  --accent: #F2A73B; --live: #F0555A; --ok: #63C485; --screen: #06080C; --on-screen: #E9E4D8; color-scheme: dark } }
+  --accent: #F2A73B; --live: #F0555A; --ok: #63C485; --screen: #06080C; --on-screen: #E9E4D8;
+  --narr: #E9E4D8; --dale: #F2A73B; --hero: #E3C66A; --nora: #7FD8CC; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #0E1219; --panel: #151B25; --line: #273142; --fg: #E9E4D8; --muted: #8E99AA;
-  --accent: #F2A73B; --live: #F0555A; --ok: #63C485; --screen: #06080C; --on-screen: #E9E4D8; color-scheme: dark }
+  --accent: #F2A73B; --live: #F0555A; --ok: #63C485; --screen: #06080C; --on-screen: #E9E4D8;
+  --narr: #E9E4D8; --dale: #F2A73B; --hero: #E3C66A; --nora: #7FD8CC; color-scheme: dark }
 
 body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
@@ -94,6 +97,29 @@ section h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing
 .log time { font-family: var(--mono); color: var(--muted); font-size: 13px; }
 .note { color: var(--muted); font-size: 13px; margin: 0; max-width: 70ch; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* the voice booth: the line being voiced shows on the monitor as the episode's own caption */
+.say { position: absolute; left: 6%; right: 6%; bottom: 14%; text-align: center; font-family: var(--display); font-weight: 400;
+  font-size: clamp(22px, 4.4vw, 54px); letter-spacing: .03em; line-height: 1.08; text-wrap: balance; color: #FFFFFF;
+  -webkit-text-stroke: 1.5px #2B1D21; paint-order: stroke; text-shadow: 0 3px 8px rgba(0, 0, 0, .55); }
+.say.d { color: #F2A73B; font-style: italic; } .say.n { color: #7FD8CC; font-style: italic; }
+.who-tag { position: absolute; left: 12px; top: 10px; font-family: var(--mono); font-size: 12px; background: rgba(6, 8, 12, .62); padding: 3px 8px; border-radius: 3px; }
+.booth { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .booth { grid-template-columns: minmax(0, 1fr); } }
+.lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.lines li { display: grid; grid-template-columns: 52px 74px minmax(0, 1fr) 52px; gap: 10px; align-items: baseline; padding: 8px 12px; border-top: 1px solid var(--line); }
+.lines li:first-child { border-top: 0; }
+.lines .id, .lines .len { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lines .len { text-align: right; }
+.lines .txt { min-width: 0; overflow-wrap: anywhere; }
+.chip { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.chip.N { color: var(--narr); } .chip.DALE { color: var(--dale); } .chip.HERO { color: var(--hero); } .chip.NORA { color: var(--nora); } .chip.PA { color: var(--muted); }
+.vside { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.cast { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cast li { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 14px; }
+.cast b { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.samples { display: grid; gap: 10px; }
+.sample { display: grid; gap: 4px; } .sample audio { width: 100%; height: 34px; }
+.sample span { font-size: 13px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -109,6 +135,8 @@ section h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing
       <img id="preview" alt="Последний отрендеренный кадр" hidden>
       <video id="video" controls playsinline preload="metadata" hidden></video>
       <div class="osd" id="osd" hidden><span id="osdTc">00:00:00:00</span><span id="osdShot"></span></div>
+      <span class="who-tag" id="sayWho" hidden></span>
+      <div class="say" id="say" hidden></div>
     </div>
 
     <aside class="side" id="side">
@@ -127,6 +155,22 @@ section h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing
       <ol class="stages" id="stages"></ol>
     </aside>
   </div>
+
+  <section id="voiceSec" hidden>
+    <h2>Озвучка</h2>
+    <div class="booth">
+      <ul class="lines" id="lines"></ul>
+      <aside class="vside">
+        <div class="count">
+          <span class="label">Реплики</span>
+          <span class="big" id="vcount">—<small></small></span>
+          <div class="bar"><div id="vbar"></div></div>
+        </div>
+        <ul class="cast" id="cast"></ul>
+        <div class="samples" id="samples"></div>
+      </aside>
+    </div>
+  </section>
 
   <section>
     <h2>Монтаж по планам</h2>
@@ -179,7 +223,7 @@ function buildStrip() {
       sp.textContent = `${Math.floor(t / 60)}:${pad(Math.round(t % 60))}`; ruler.append(sp); } }
 }
 
-function render() {
+let render = function () {
   if (!S) return;
   const now = Date.now(), total = +S.total || 0, fps = +S.fps || 30;
   const { frames, approx } = estimate(now);
@@ -243,7 +287,48 @@ function render() {
       const sp = document.createElement("span"); sp.textContent = e.msg; li.append(tm, sp); ul.append(li); } }
 }
 
-setInterval(render, 1000);
+const WHO = { N: "Рассказчик", DALE: "Дейл", HERO: "Ты", NORA: "Нора", PA: "Динамики" };
+let samplesKey = "";
+function renderVoice() {
+  const V = S.voice; $("voiceSec").hidden = !V;
+  const say = $("say"), sayWho = $("sayWho");
+  const showSay = !!(V && V.current && !S.preview && !S.video);
+  say.hidden = sayWho.hidden = !showSay;
+  if (showSay) $("empty").hidden = true;
+  if (!V) return;
+  if (showSay) {
+    say.textContent = V.current.text; say.className = "say" + (V.current.who === "NORA" ? " n" : V.current.who !== "N" ? " d" : "");
+    sayWho.textContent = `${V.current.id} · ${WHO[V.current.who] || V.current.who}`;
+  }
+  const vt = +V.total || 0, vd = +V.done || 0;
+  $("vcount").innerHTML = ""; $("vcount").append(fmt(vd));
+  const sm = document.createElement("small"); sm.textContent = ` / ${fmt(vt)} · ${vt ? Math.floor(vd / vt * 100) : 0}%`; $("vcount").append(sm);
+  $("vbar").style.width = `${vt ? (vd / vt * 100).toFixed(1) : 0}%`;
+  const ul = $("lines"); ul.textContent = "";
+  for (const L of (V.recent || []).slice(-10).reverse()) {
+    const li = document.createElement("li");
+    const id = document.createElement("span"); id.className = "id"; id.textContent = L.id;
+    const ch = document.createElement("span"); ch.className = "chip " + L.who; ch.textContent = WHO[L.who] || L.who;
+    const tx = document.createElement("span"); tx.className = "txt"; tx.textContent = L.text;
+    const ln = document.createElement("span"); ln.className = "len"; ln.textContent = L.dur ? `${(+L.dur).toFixed(1)} с` : "";
+    li.append(id, ch, tx, ln); ul.append(li);
+  }
+  const cast = $("cast"); cast.textContent = "";
+  for (const [k, n] of Object.entries(V.by || {})) { const li = document.createElement("li"); const a = document.createElement("span"); a.className = "chip " + k; a.textContent = WHO[k] || k; const b = document.createElement("b"); b.textContent = n; li.append(a, b); cast.append(li); }
+  const smp = Array.isArray(V.samples) ? V.samples : [], key = smp.map((x) => x.asset).join("|");
+  if (key !== samplesKey) {
+    samplesKey = key; const box = $("samples"); box.textContent = "";
+    for (const x of smp) {
+      const d = document.createElement("div"); d.className = "sample";
+      const t = document.createElement("span"); t.textContent = `${WHO[x.who] || x.who}: «${x.text}»`;
+      const a = document.createElement("audio"); a.controls = true; a.preload = "none"; a.src = blob(x.asset);
+      d.append(t, a); box.append(d);
+    }
+  }
+}
+const render0 = render;
+render = function () { render0(); if (S) renderVoice(); };
+setInterval(() => render(), 1000);
 
 (async () => {
   const db = await window.claude?.use?.("db");
