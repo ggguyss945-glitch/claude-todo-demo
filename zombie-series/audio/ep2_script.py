@@ -43,7 +43,7 @@ N('C7', "Two people are locked inside this store.", 0.35, "One of them is lying.
 N('C8', "And in three days, you run out of water.", gap=0.5, shot=('prop2', dict(item='bottle')))
 N('C9', "This week, you'll cross to the mall.", 0.3, "You'll meet someone alive.", shot=('mall', dict(time='night')))
 N('C10', "And you'll learn what Dale has been hiding.", gap=0.8, shot=('stockdoors', dict(mode='shadow')))
-BEAT('TITLE', 4.6, shot=('ep_title', dict(ep=2, title='THE MALL')), music=('stop', {'fade': 0.6}), amb='silence', sfx=[(0.1, 'low_sting', {})])
+BEAT('TITLE', 5.6, shot=('ep_title', dict(ep=2, title='THE MALL')), music=('stop', {'fade': 0.6}), amb='silence', sfx=[(0.1, 'low_sting', {})])
 
 # ======================= ACT 1 · DAY 8 · THE BORDER =======================
 N('A1', "Day eight.", 0.35, "Here's the new map of Freshway.", music=('think', {}), amb='store_day',
@@ -117,10 +117,12 @@ N('B16', "Dale's voice.", 0.35, "Not on the radio.", 0.3, "Through the wall.", g
 DALE('B17', "Ninety-eight.", 0.6, "Ninety-nine.", 0.6, "A hundred.", 0.9, "Ready or not.", gap=0.9, pipe=True, rate=2.0, level=-2)
 N('B18', "He's counting.", 0.35, "Like a kid playing hide-and-seek.", music=('sting_mystery', {}), shot=('hclose2', dict(expr='worried', bg='camp', look=-0.3)))
 N('B19', "Who counts to a hundred in an empty store?", gap=1.0)
+BEAT('B19x', 2.0, shot=('restroom', dict(view='pipes_dark')), caps=[(0.2, 1.8, 'the pipes go quiet')])
 
 # ======================= ACT 2 · DAY 9 · THE LIGHT =======================
-N('L1', "Eleven at night.", 0.3, "You climb to the roof.", music=('night_op', {}), amb='roof_night',
-  shot=('roof', dict(time='night', hero='edge', hud=H(9, '11:02 PM', 1, 'FRESHWAY · ROOF'))))
+BEAT('L0', 2.5, music=('night_op', {}), amb='roof_night', shot=('roof', dict(time='night', hero='edge', hud=H(9, '11:02 PM', 1, 'FRESHWAY · ROOF'))),
+     caps=[(0.3, 2.3, 'wind on the roof')])
+N('L1', "Eleven at night.", 0.3, "You climb to the roof.")
 N('L2', "The light in the mall is still on.", 0.3, "Top floor.", 0.3, "Same window.", shot=('mallwin', dict(mode='steady')))
 N('L3', "Last week, you decided nobody was over there.", gap=0.6)
 N('L4', "And then it blinks.", gap=0.2, shot=('mallwin', dict(mode='blink')), music=('stop', {'fade': 0.3}))
@@ -137,6 +139,7 @@ N('P2', "You need a sound bigger than you.", 0.3, "Bigger than anything.", shot=
 N('P3', "Then, at two in the afternoon, the sky goes dark.", amb='roof', shot=('storm', dict(mode='clouds', hud=H(10, '2:04 PM', 1, 'FRESHWAY · ROOF'))),
   sfx=[('$', 'thunder', dict(far=True))])
 N('P4', "A storm is coming.", gap=0.5)
+BEAT('P4x', 2.5, caps=[(0.2, 2.3, 'thunder, far away')], sfx=[(0.6, 'thunder', dict(far=True))])
 N('P5', "Heavy rain is about fifty decibels.", 0.35, "Footsteps on wet asphalt, about thirty.",
   shot=('card', dict(kind='fact', big='50', unit='DECIBELS', icon='rain', note='HEAVY RAIN · FOOTSTEPS ARE ABOUT 30', src='TYPICAL SOUND LEVELS')))
 N('P6', "In a storm, they can't pick you out.", 0.3, "They just stand there.", 0.3, "Listening to the sky.",
@@ -156,7 +159,7 @@ DALE('P8', "Going somewhere, kid?", gap=0.5, shot=('radio', dict(mode='doors')))
 N('P9', "Rule four.", 0.35, "You don't answer.", gap=0.8, shot=('hclose2', dict(expr='determined', bg='stockdoors', look=-0.3)), music=('stop', {'fade': 0.6}))
 
 # ======================= POV · ACROSS THE LOT IN THE RAIN =======================
-BEAT('R0', 5.4, shot=('povstorm', dict(phase='walk')), amb='storm', music=('storm', {}),
+BEAT('R0', 6.4, shot=('povstorm', dict(phase='walk')), amb='storm', music=('storm', {}),
      caps=[(0.3, 2.6, 'heavy rain'), (3.0, 5.2, 'thunder')], sfx=[(3.0, 'thunder', {})])
 N('R1', "Two hundred of them.", 0.35, "Standing in the rain.", 0.35, "Faces up.", shot=('povstorm', dict(phase='crowd')))
 BEAT('R1b', 4.2, shot=('povstorm', dict(phase='pass')), caps=[(0.3, 3.9, 'right next to you')], sfx=[(0.8, 'groan_close', dict(level=-24))])
@@ -176,7 +179,7 @@ BEAT('R4b', 1.2, shot=('black', {}), music=('stop', {'fade': 0.3}))
 # ======================= ACT 2 · THE MALL =======================
 N('M1', "Brookfield Mall.", 0.35, "Four floors.", 0.3, "Dark.", amb='mall_rain', music=('vast', {}),
   shot=('atrium', dict(mode='wide', hud=MALL(10, '2:33 PM', 2))))
-BEAT('M1b', 2.4, caps=[(0.2, 2.2, 'rain on glass')])
+BEAT('M1b', 3.4, caps=[(0.2, 2.2, 'rain on glass')])
 N('M2', "Rain drums on the glass roof.", 0.3, "It's the loudest room you've ever stood in.", 0.4, "Good.", gap=0.6, shot=('atrium', dict(mode='skylight')))
 N('M3', "Around the dry fountain, thirty of them.", shot=('atrium', dict(mode='fountain')))
 N('M4', "Shoppers.", 0.3, "A security guard.", 0.3, "A kid from the pretzel stand, still in his paper hat.",
@@ -195,6 +198,7 @@ N('M8', "Top floor.", 0.3, "A store called Bright Tech.", 0.3, "The lantern is i
 N('M9', "Nobody's there.", gap=0.5, shot=('brighttech', dict(mode='inside')))
 N('M10', "A sleeping bag.", 0.3, "Two backpacks.", 0.3, "A solar panel taped to the glass.", shot=('brighttech', dict(mode='camp')))
 N('M10b', "And a desk lamp, wired to the panel.", 0.35, "That's the light you've been watching all week.", gap=0.5)
+BEAT('M10c', 2.0, caps=[(0.2, 1.8, 'rain on the glass')])
 N('M11', "Then something cold touches the back of your neck.", gap=0.3, music=('stop', {'fade': 0.15}),
   shot=('nora', dict(mode='behind')), sfx=[('$-0.3', 'tok', dict(level=-14))])
 NORA('M12', "Don't.", 0.5, "Move.", gap=0.7)
@@ -232,6 +236,7 @@ DALE('N13', "Nora?", 0.5, "Honey?", 0.5, "Are you there?", gap=0.6)
 N('N14', "Nora goes white.", gap=0.5, shot=('nora', dict(mode='close', expr='shock')))
 NORA('N15', "That's my dad.", gap=0.9)
 N('N16', "Dale is her father.", gap=0.8, music=('twist', {}), shot=('hclose2', dict(expr='surprised', bg='brighttech', look=0.1)), sfx=[(0, 'low_sting', {})])
+BEAT('N16x', 2.2, shot=('nora', dict(mode='close', expr='sad')))
 NORA('N16b', "Channel four is ours.", 0.35, "He calls every night.", 0.4, "And I can't answer.", gap=0.7, shot=('nora', dict(mode='close', expr='sad')))
 N('N16c', "Mall security.", 0.3, "That part was true.", 0.4, "He just wasn't at the mall.", gap=0.6)
 N('N17', "He asked how many of you there were.", 0.35, "He asked about the freezer.", 0.35, "He asked about the alarm.",
@@ -267,8 +272,8 @@ N('S5', "Rule two.", 0.3, "Music is a dinner bell.", 0.4, "This time, you ring i
   shot=('card', dict(kind='rule', n=2, lines=['MUSIC IS A', 'DINNER BELL.'], icon='note')), sfx=[(0, 'whoosh', {})])
 N('S5b', "The box says thirty minutes of flight.", 0.35, "That's the plan's clock.", shot=('drone', dict(mode='box')))
 N('S6', "Nora has one song on her phone.", 0.35, "Guess which one.", gap=0.5, music=('stop', {'fade': 0.4}), shot=('nora', dict(mode='close', expr='smirk')))
-BEAT('S7', 7.0, shot=('drone', dict(mode='fly')), amb='lot_night',
-     caps=[(0.3, 3.2, 'the Freshway jingle'), (3.4, 6.8, 'two hundred of them, turning')],
+BEAT('S7', 9.0, shot=('drone', dict(mode='fly')), amb='lot_night',
+     caps=[(0.3, 3.6, 'the Freshway jingle'), (4.0, 8.6, 'two hundred of them, turning')],
      sfx=[(0, 'drone_buzz', dict(until='S8g', off=0.3)), (0.6, 'drone_song', dict(until='S8g', off=0.0))])
 N('S8', "Two hundred dead people follow a song about discount yogurt.", 0.35, "To the far end of the lot.",
   shot=('drone', dict(mode='lot', battery=[64, 40])))
@@ -282,6 +287,7 @@ N('S9', "You run for the staff door.", 0.3, "Gary's keys.", 0.3, "The fourth one
   music=('chase', {}), shot=('staffdoor', dict(mode='arrive', nora=True, hud=H(13, '1:42 AM', 3, 'FRESHWAY · STAFF DOOR'))), sfx=[(0, 'run_steps', dict(dur=3.0)), ('@fourth', 'lock_click', {})])
 N('S10', "You're in.", 0.35, "Both of you.", gap=0.8, music=('stop', {'fade': 0.4}), amb='store_dark',
   shot=('staffdoor', dict(mode='inside', nora=True)), sfx=[('@in', 'door_bang', {})])
+BEAT('S10x', 2.5, caps=[(0.2, 2.3, 'two people, breathing')], sfx=[(0.1, 'breath_run', dict(dur=2.3, level=-22))])
 
 # ======================= FINALE · DAY 14 =======================
 N('F1', "Day fourteen.", 0.35, "Here's what you know.", music=('resolve', {}), shot=('card', dict(kind='rules', show=0, day=14, n=5)))
@@ -302,6 +308,7 @@ N('F13', "Nora runs.", gap=0.6, shot=('aisle2', dict(mode='nora_run')), sfx=[(0,
 N('F14', "Next to the clock, there's a drawing.", 0.35, "In crayon.", shot=('prop2', dict(item='drawing', mode='reveal')), sfx=[(0.1, 'paper_rustle', {})], music=('sting_mystery', {}))
 N('F15', "A girl.", 0.3, "A man in a cap.", 0.3, "And you.", 0.35, "Orange headphones and all.", shot=('prop2', dict(item='drawing', mode='close')))
 N('F16', "Under it, three words.", 0.6, "Come find me.", gap=0.8, shot=('prop2', dict(item='drawing', mode='words')))
+BEAT('F16x', 2.0)
 N('F17', "Leo is alive.", 0.35, "He's in this store.", 0.4, "And they don't see you.", 0.5, "But he does.", gap=1.4,
   shot=('povaisle', dict(phase='vent', eyes='@does')), music=('end', {}))
-BEAT('END', 8.0, shot=('card', dict(kind='end', day=15, ep=3, title='LIGHTS OUT', sub='WHERE IS LEO?')), amb='silence')
+BEAT('END', 11.3, shot=('card', dict(kind='end', day=15, ep=3, title='LIGHTS OUT', sub='WHERE IS LEO?')), amb='silence')
