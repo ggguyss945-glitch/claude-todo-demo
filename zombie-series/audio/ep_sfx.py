@@ -257,5 +257,5 @@ def _bed2(name, dur, n):
 # beds also carry distant groans of the dead outside, a few per minute
 GROANS = dict(store_night=7, store_dawn=4, store_dark=6, roof=5, roof_night=6, lot_dawn=5, lot_night=7, office=2, store_day=3, mall_quiet=6, mall_rain=2, restroom=1)
 BED_LEVEL = dict(silence=-40, store_night=-22, store_dawn=-22, store_day=-21, store_dark=-24, office=-22, freezer_hum=-18, roof=-17, roof_night=-18, lot_dawn=-19, lot_night=-17,
-                 restroom=-23, storm=-27, mall_rain=-28, mall_quiet=-23)
+                 restroom=-23, storm=-29, mall_rain=-31, mall_quiet=-23)
 SF2 = None
