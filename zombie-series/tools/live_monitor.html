@@ -188,6 +188,9 @@ section h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing
 const $ = (id) => document.getElementById(id);
 const STAGES = [["voice", "Голос"], ["audio", "Музыка, SFX, сведение"], ["frames", "Кадры"], ["encode", "Сборка MP4"], ["qa", "Проверка"]];
 let S = null, lastPreview = "", lastVideo = "", stripKey = "";
+// freshness is measured on this device's own clock from when an update arrived, so a phone whose clock
+// is a few minutes off never shows the signal as lost; an update first seen on load uses its own timestamp
+let lastFresh = 0, liveUpdates = 0;
 
 const blob = (id) => (id ? "/_blob/" + id : "");
 const pad = (n) => String(n).padStart(2, "0");
@@ -229,7 +232,7 @@ let render = function () {
   const { frames, approx } = estimate(now);
   const pct = total ? frames / total : 0;
   const finished = S.stage === "done";
-  const stale = !finished && S.updated_at && now - Date.parse(S.updated_at) > 120000;
+  const stale = !finished && lastFresh && now - lastFresh > (liveUpdates > 1 ? 25 : 60) * 60000;
 
   $("job").textContent = S.job || "Рендер-монитор";
   const pill = $("pill"); pill.className = "pill " + (finished ? "done" : stale ? "stale" : "live");
@@ -244,7 +247,7 @@ let render = function () {
   const end = S.finished_at ? Date.parse(S.finished_at) : now;
   $("elapsed").textContent = S.started_at ? dur(end - Date.parse(S.started_at)) : "—";
   $("eta").textContent = finished ? "0 с" : S.stage === "frames" && S.rate ? "≈ " + dur(((total - frames) / S.rate) * 1000) : S.eta_note || "—";
-  $("ago").textContent = S.updated_at ? (now - Date.parse(S.updated_at) < 5000 ? "только что" : dur(now - Date.parse(S.updated_at)) + " назад") : "—";
+  $("ago").textContent = lastFresh ? (now - lastFresh < 5000 ? "только что" : dur(now - lastFresh) + " назад") : "—";
 
   const st = S.stages || {};
   const ol = $("stages"); ol.textContent = "";
@@ -335,7 +338,11 @@ setInterval(() => render(), 1000);
   if (!db) { $("dbNote").hidden = false; $("emptyText").textContent = "Живые данные недоступны в этом просмотре."; return; }
   db.doc("render/status").onSnapshot((snap) => {
     if (!snap.exists) { S = null; $("empty").hidden = false; return; }
-    S = snap.data(); render();
+    S = snap.data();
+    const ua = Date.parse(S.updated_at);
+    lastFresh = lastFresh ? Date.now() : Math.min(Date.now(), isNaN(ua) ? Date.now() : ua);
+    liveUpdates++;
+    render();
   }, () => { $("pillText").textContent = "Нет связи"; $("pill").className = "pill stale"; });
 })();
 </script>
