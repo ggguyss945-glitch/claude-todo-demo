@@ -205,7 +205,7 @@ export function addFilm(S, W) {
     const flights = [];
     for (let i = 0; i < 7; i++) flights.push(...PR.throwCoins(16, 12.2 + i * 0.22, V(0, 2.95, -5.6 + 0.6 * i * 0.22), V(i % 2 ? 1 : -1, 0.9, 0.3), 3.4, 1.1, 80 + i, 1.0));
     S.push({ t0: 12.15, t1: 13.84, set: 'market', light: 'gold', blur: () => 3,
-      cam: cam([[12.15, [3.0, 4.4, 2.0], [0, 1.7, -6.2], 46], [13.84, [2.4, 5.0, 3.0], [0, 1.9, -5.4], 44]], { ap: 4, focus: [0, 2.6, -5.6], drift: 0.025, seed: 8 }),
+      cam: cam([[12.15, [0.55, 3.5, 0.2], [0.0, 1.8, -6.2], 50], [13.84, [0.45, 3.9, 0.9], [0.0, 1.9, -5.6], 48]], { ap: 4, focus: [0, 2.4, -5.8], drift: 0.025, seed: 8 }),
       setup(w, t) {
         royal.root.visible = true; royal.root.position.set(0, 0, -6.0 + 0.6 * (t - 12.15)); royal.root.rotation.set(0, 0, 0);
         royal.pose.walk = { phase: t * 0.55, stride: 0.5 };
