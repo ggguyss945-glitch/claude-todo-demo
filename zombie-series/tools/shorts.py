@@ -39,7 +39,9 @@ def resolve(plan_path):
             if b <= a: continue
             key = f"{sh['start']:.2f}"
             d = FR.get(key) or ({'mode': 'fit'} if sh['name'] in ('card', 'card2', 'map', 'map2') else {'x': 960})
-            pieces.append(dict(d, t0=a / FPS, t1=b / FPS, shot=key, name=sh['name']))
+            md = (sh.get('p') or {}).get('mode')
+            close = sh['name'] in ('hclose', 'hclose2', 'zclose') or (sh['name'] == 'nora' and md in ('close', 'radio', 'window', None))
+            pieces.append(dict(d, t0=a / FPS, t1=b / FPS, shot=key, name=sh['name'], close=close))
     out = dict(P, segments=segs, pieces=pieces)
     os.makedirs(f'{ROOT}/shorts', exist_ok=True)
     json.dump(out, open(f'{ROOT}/shorts/{P["id"]}.json', 'w'), indent=1)

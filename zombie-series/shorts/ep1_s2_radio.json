@@ -73,161 +73,184 @@
    "t0": 476.43333333333334,
    "t1": 478.8,
    "shot": "476.43",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 760,
    "t0": 478.8,
    "t1": 482.8666666666667,
    "shot": "478.79",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 760,
    "t0": 486.06666666666666,
    "t1": 493.05,
    "shot": "486.06",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 960,
    "t0": 493.05,
    "t1": 496.75,
    "shot": "493.04",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 960,
    "t0": 496.75,
    "t1": 498.1166666666667,
    "shot": "496.76",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 760,
    "t0": 498.1166666666667,
    "t1": 505.26666666666665,
    "shot": "498.11",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 960,
    "t0": 505.26666666666665,
    "t1": 507.03333333333336,
    "shot": "505.26",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 760,
    "t0": 507.03333333333336,
    "t1": 509.9,
    "shot": "507.04",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 760,
    "t0": 517.7333333333333,
    "t1": 523.05,
    "shot": "517.74",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 960,
    "t0": 523.05,
    "t1": 525.2833333333333,
    "shot": "523.05",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 760,
    "t0": 631.0,
    "t1": 634.4166666666666,
    "shot": "631.00",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 634.4166666666666,
    "t1": 635.7833333333333,
    "shot": "634.42",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 760,
    "t0": 635.7833333333333,
    "t1": 639.0833333333334,
    "shot": "635.79",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 960,
    "t0": 639.0833333333334,
    "t1": 643.3666666666667,
    "shot": "639.08",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 960,
    "t0": 786.75,
    "t1": 789.1166666666667,
    "shot": "786.75",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 760,
    "t0": 789.1166666666667,
    "t1": 791.4333333333333,
    "shot": "789.12",
-   "name": "radio"
+   "name": "radio",
+   "close": false
   },
   {
    "x": 960,
    "t0": 791.4333333333333,
    "t1": 793.1666666666666,
    "shot": "791.43",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "mode": "fit",
    "t0": 793.1666666666666,
    "t1": 797.4666666666667,
    "shot": "793.17",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 797.4666666666667,
    "t1": 799.6833333333333,
    "shot": "797.47",
-   "name": "freshroof"
+   "name": "freshroof",
+   "close": false
   },
   {
    "x": 960,
    "t0": 799.6833333333333,
    "t1": 802.0166666666667,
    "shot": "799.68",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 1040,
    "t0": 802.0166666666667,
    "t1": 808.05,
    "shot": "802.02",
-   "name": "mall"
+   "name": "mall",
+   "close": false
   },
   {
    "x": 940,
    "t0": 808.05,
    "t1": 810.85,
    "shot": "808.05",
-   "name": "freshroof"
+   "name": "freshroof",
+   "close": false
   },
   {
    "x": 960,
    "t0": 814.8,
    "t1": 820.5,
    "shot": "814.79",
-   "name": "freshroof"
+   "name": "freshroof",
+   "close": false
   }
  ]
 }

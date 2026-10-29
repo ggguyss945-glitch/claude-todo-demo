@@ -63,6 +63,11 @@ for i, c in enumerate(cues):
     else: score.add(y, t0, GAIN.get(c['cue'], 0))
     print(f"cue {c['cue']:14s} {t0:7.2f}-{t1:7.2f} ({D:5.1f}s)", flush=True)
 
+if os.environ.get('STEMS_SCORE'):
+    # the score alone at its bus level, before any ducking, for shorts that want the music up front
+    sf.write(f'{OUT}/stemfull_score.wav', score.x * db(-6.5), SR, subtype='PCM_24')
+    print('score stem written from', E0); sys.exit(0)
+
 # ---------- ambience beds ----------
 beds = sorted(T['amb'], key=lambda b: b['t'])
 rg = np.random.default_rng(3)

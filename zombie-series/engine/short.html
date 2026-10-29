@@ -65,7 +65,7 @@ function hook(st) {
 const CAP_COL = { NORA: '#7FD8CC' };
 function caption(t) {
   const w = spoken(T, t); if (!w || !w.w) return '';
-  const k = 0.84 + 0.16 * ease(w.age / 0.08), y = segAt(t).mode === 'fit' ? 1420 : (P.capY || 1230);
+  const k = 0.84 + 0.16 * ease(w.age / 0.08), y = segAt(t).mode === 'fit' ? 1420 : segAt(t).close ? 1450 : (P.capY || 1230);   // below a face in close-ups
   const fill = w.color || (w.dialogue ? '#F2A73B' : '#FFFFFF');
   const word = w.w.toUpperCase(), size = word.length > 9 ? 128 : 150;
   return `<g filter="url(#sh)" transform="translate(540 ${y}) scale(${k.toFixed(3)}) translate(-540 ${-y})${w.dialogue ? ` translate(${(y * 0.17).toFixed(1)} 0) skewX(-10)` : ''}">`

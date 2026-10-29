@@ -65,35 +65,40 @@
    "t0": 395.96666666666664,
    "t1": 401.0833333333333,
    "shot": "395.96",
-   "name": "povstorm"
+   "name": "povstorm",
+   "close": false
   },
   {
    "x": 1450,
    "t0": 401.0833333333333,
    "t1": 406.45,
    "shot": "401.09",
-   "name": "povstorm"
+   "name": "povstorm",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 334.9,
    "t1": 340.2,
    "shot": "334.90",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 340.2,
    "t1": 347.05,
    "shot": "340.20",
-   "name": "storm"
+   "name": "storm",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 350.8666666666667,
    "t1": 356.8833333333333,
    "shot": "350.88",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 700,
@@ -101,28 +106,32 @@
    "t0": 356.8833333333333,
    "t1": 370.3666666666667,
    "shot": "356.88",
-   "name": "storm"
+   "name": "storm",
+   "close": false
   },
   {
    "x": 1150,
    "t0": 407.0,
    "t1": 412.65,
    "shot": "407.00",
-   "name": "povstorm"
+   "name": "povstorm",
+   "close": false
   },
   {
    "x": 520,
    "t0": 412.65,
    "t1": 420.0833333333333,
    "shot": "412.66",
-   "name": "povstorm"
+   "name": "povstorm",
+   "close": false
   },
   {
    "x": 960,
    "t0": 420.0833333333333,
    "t1": 423.75,
    "shot": "420.09",
-   "name": "povstorm"
+   "name": "povstorm",
+   "close": false
   },
   {
    "x": 900,
@@ -130,21 +139,24 @@
    "t0": 424.3,
    "t1": 440.1333333333333,
    "shot": "424.29",
-   "name": "malldoor"
+   "name": "malldoor",
+   "close": false
   },
   {
    "x": 1250,
    "t0": 440.1333333333333,
    "t1": 443.0,
    "shot": "440.13",
-   "name": "malldoor"
+   "name": "malldoor",
+   "close": false
   },
   {
    "x": 960,
    "t0": 443.0,
    "t1": 444.15,
    "shot": "443.00",
-   "name": "black"
+   "name": "black",
+   "close": false
   }
  ]
 }

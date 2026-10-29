@@ -91,35 +91,40 @@
    "t0": 234.86666666666667,
    "t1": 238.7,
    "shot": "234.86",
-   "name": "doors"
+   "name": "doors",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 238.7,
    "t1": 244.11666666666667,
    "shot": "238.71",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 244.11666666666667,
    "t1": 248.1,
    "shot": "244.12",
-   "name": "doors"
+   "name": "doors",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 250.38333333333333,
    "t1": 254.01666666666668,
    "shot": "250.38",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 760,
    "t0": 259.7,
    "t1": 265.8,
    "shot": "259.69",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 420,
@@ -127,105 +132,120 @@
    "t0": 269.5,
    "t1": 276.3666666666667,
    "shot": "269.50",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 1040,
    "t0": 276.3666666666667,
    "t1": 280.26666666666665,
    "shot": "276.37",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 1000,
    "t0": 284.51666666666665,
    "t1": 285.8333333333333,
    "shot": "284.52",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 1250,
    "t0": 285.8333333333333,
    "t1": 291.4166666666667,
    "shot": "285.82",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 294.45,
    "t1": 297.81666666666666,
    "shot": "294.45",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 960,
    "t0": 297.81666666666666,
    "t1": 300.76666666666665,
    "shot": "297.82",
-   "name": "doors"
+   "name": "doors",
+   "close": false
   },
   {
    "x": 1500,
    "t0": 300.93333333333334,
    "t1": 305.55,
    "shot": "300.94",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 1000,
    "t0": 305.55,
    "t1": 308.23333333333335,
    "shot": "305.54",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 960,
    "t0": 308.23333333333335,
    "t1": 313.31666666666666,
    "shot": "308.23",
-   "name": "doors"
+   "name": "doors",
+   "close": false
   },
   {
    "x": 1450,
    "t0": 313.31666666666666,
    "t1": 318.3666666666667,
    "shot": "313.31",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 1450,
    "t0": 318.3666666666667,
    "t1": 320.56666666666666,
    "shot": "318.37",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 960,
    "t0": 320.56666666666666,
    "t1": 322.06666666666666,
    "shot": "320.57",
-   "name": "doors"
+   "name": "doors",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 322.06666666666666,
    "t1": 325.1,
    "shot": "322.06",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 330.65,
    "t1": 333.55,
    "shot": "330.64",
-   "name": "office"
+   "name": "office",
+   "close": false
   },
   {
    "x": 960,
    "t0": 333.55,
    "t1": 338.5833333333333,
    "shot": "333.55",
-   "name": "gary"
+   "name": "gary",
+   "close": false
   }
  ]
 }

@@ -74,7 +74,8 @@
    "t0": 86.25,
    "t1": 88.96666666666667,
    "shot": "84.88",
-   "name": "aisle"
+   "name": "aisle",
+   "close": false
   },
   {
    "x": 600,
@@ -82,126 +83,144 @@
    "t0": 88.96666666666667,
    "t1": 93.2,
    "shot": "88.97",
-   "name": "zclose"
+   "name": "zclose",
+   "close": true
   },
   {
    "mode": "fit",
    "t0": 117.28333333333333,
    "t1": 121.7,
    "shot": "117.28",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 1450,
    "t0": 126.11666666666666,
    "t1": 129.03333333333333,
    "shot": "126.11",
-   "name": "stock"
+   "name": "stock",
+   "close": false
   },
   {
    "x": 960,
    "t0": 136.0,
    "t1": 139.01666666666668,
    "shot": "136.00",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   },
   {
    "x": 930,
    "t0": 139.01666666666668,
    "t1": 143.93333333333334,
    "shot": "139.01",
-   "name": "phone"
+   "name": "phone",
+   "close": false
   },
   {
    "x": 930,
    "t0": 143.93333333333334,
    "t1": 145.91666666666666,
    "shot": "143.94",
-   "name": "phone"
+   "name": "phone",
+   "close": false
   },
   {
    "x": 1300,
    "t0": 145.91666666666666,
    "t1": 153.16666666666666,
    "shot": "145.92",
-   "name": "stock"
+   "name": "stock",
+   "close": false
   },
   {
    "x": 560,
    "t0": 153.16666666666666,
    "t1": 154.61666666666667,
    "shot": "153.17",
-   "name": "stock"
+   "name": "stock",
+   "close": false
   },
   {
    "x": 960,
    "t0": 160.85,
    "t1": 164.85,
    "shot": "160.84",
-   "name": "prop"
+   "name": "prop",
+   "close": false
   },
   {
    "x": 800,
    "t0": 164.85,
    "t1": 167.11666666666667,
    "shot": "164.85",
-   "name": "stock"
+   "name": "stock",
+   "close": false
   },
   {
    "x": 900,
    "t0": 178.3,
    "t1": 185.26666666666668,
    "shot": "178.27",
-   "name": "povshelf"
+   "name": "povshelf",
+   "close": false
   },
   {
    "x": 900,
    "t0": 185.26666666666668,
    "t1": 191.26666666666668,
    "shot": "185.27",
-   "name": "povshelf"
+   "name": "povshelf",
+   "close": false
   },
   {
    "x": 900,
    "t0": 191.26666666666668,
    "t1": 195.26666666666668,
    "shot": "191.27",
-   "name": "povshelf"
+   "name": "povshelf",
+   "close": false
   },
   {
    "x": 900,
    "t0": 195.26666666666668,
    "t1": 199.76666666666668,
    "shot": "195.27",
-   "name": "povshelf"
+   "name": "povshelf",
+   "close": false
   },
   {
    "x": 1450,
    "t0": 199.76666666666668,
    "t1": 202.6,
    "shot": "199.77",
-   "name": "povshelf"
+   "name": "povshelf",
+   "close": false
   },
   {
    "x": 960,
    "t0": 202.81666666666666,
    "t1": 206.91666666666666,
    "shot": "202.81",
-   "name": "freezer"
+   "name": "freezer",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 206.91666666666666,
    "t1": 208.4,
    "shot": "206.92",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 208.4,
    "t1": 216.43333333333334,
    "shot": "208.41",
-   "name": "hclose"
+   "name": "hclose",
+   "close": true
   }
  ]
 }

@@ -65,14 +65,16 @@
    "t0": 458.0833333333333,
    "t1": 460.9166666666667,
    "shot": "458.08",
-   "name": "atrium"
+   "name": "atrium",
+   "close": false
   },
   {
    "x": 880,
    "t0": 526.3166666666667,
    "t1": 532.3666666666667,
    "shot": "526.32",
-   "name": "nora"
+   "name": "nora",
+   "close": false
   },
   {
    "x": 560,
@@ -80,84 +82,96 @@
    "t0": 532.3666666666667,
    "t1": 537.5,
    "shot": "532.37",
-   "name": "nora"
+   "name": "nora",
+   "close": false
   },
   {
    "x": 740,
    "t0": 537.5,
    "t1": 539.4833333333333,
    "shot": "537.50",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 960,
    "t0": 539.4833333333333,
    "t1": 541.0,
    "shot": "539.48",
-   "name": "hclose2"
+   "name": "hclose2",
+   "close": true
   },
   {
    "x": 960,
    "t0": 541.0,
    "t1": 545.7666666666667,
    "shot": "540.99",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 960,
    "t0": 545.7666666666667,
    "t1": 548.3166666666667,
    "shot": "545.76",
-   "name": "hclose2"
+   "name": "hclose2",
+   "close": true
   },
   {
    "x": 1100,
    "t0": 548.3166666666667,
    "t1": 552.6666666666666,
    "shot": "548.32",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 740,
    "t0": 594.2,
    "t1": 600.8333333333334,
    "shot": "594.20",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 960,
    "t0": 600.8333333333334,
    "t1": 603.2833333333333,
    "shot": "600.84",
-   "name": "prop2"
+   "name": "prop2",
+   "close": false
   },
   {
    "x": 960,
    "t0": 632.8166666666667,
    "t1": 641.1833333333333,
    "shot": "632.81",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 1160,
    "t0": 641.1833333333333,
    "t1": 645.25,
    "shot": "641.18",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 960,
    "t0": 645.25,
    "t1": 646.7833333333333,
    "shot": "645.25",
-   "name": "hclose2"
+   "name": "hclose2",
+   "close": true
   },
   {
    "x": 960,
    "t0": 669.4666666666667,
    "t1": 674.5666666666667,
    "shot": "669.47",
-   "name": "stockdoors"
+   "name": "stockdoors",
+   "close": false
   }
  ]
 }

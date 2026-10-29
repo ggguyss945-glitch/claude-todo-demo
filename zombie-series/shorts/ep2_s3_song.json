@@ -68,35 +68,40 @@
    "t0": 736.6833333333333,
    "t1": 741.7666666666667,
    "shot": "736.69",
-   "name": "lot"
+   "name": "lot",
+   "close": false
   },
   {
    "x": 960,
    "t0": 742.0833333333334,
    "t1": 745.9,
    "shot": "742.09",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "x": 1000,
    "t0": 745.9,
    "t1": 748.95,
    "shot": "745.89",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "mode": "fit",
    "t0": 760.55,
    "t1": 766.5,
    "shot": "760.54",
-   "name": "card"
+   "name": "card",
+   "close": false
   },
   {
    "x": 960,
    "t0": 772.3666666666667,
    "t1": 777.05,
    "shot": "772.36",
-   "name": "nora"
+   "name": "nora",
+   "close": true
   },
   {
    "x": 320,
@@ -106,7 +111,8 @@
    "t0": 777.05,
    "t1": 786.05,
    "shot": "777.05",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "x": 1100,
@@ -116,7 +122,8 @@
    "t0": 786.05,
    "t1": 792.9833333333333,
    "shot": "786.05",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "x": 1050,
@@ -124,7 +131,8 @@
    "t0": 793.3166666666667,
    "t1": 797.6,
    "shot": "793.31",
-   "name": "escalator"
+   "name": "escalator",
+   "close": false
   },
   {
    "x": 1000,
@@ -132,7 +140,8 @@
    "t0": 797.6,
    "t1": 802.5666666666667,
    "shot": "797.60",
-   "name": "malldoor"
+   "name": "malldoor",
+   "close": false
   },
   {
    "x": 1600,
@@ -141,7 +150,8 @@
    "t0": 802.5666666666667,
    "t1": 805.5666666666667,
    "shot": "802.57",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "x": 1550,
@@ -150,7 +160,8 @@
    "t0": 805.5666666666667,
    "t1": 811.6333333333333,
    "shot": "805.57",
-   "name": "drone"
+   "name": "drone",
+   "close": false
   },
   {
    "x": 960,
@@ -159,7 +170,8 @@
    "t0": 811.6333333333333,
    "t1": 816.6833333333333,
    "shot": "811.64",
-   "name": "lot"
+   "name": "lot",
+   "close": false
   },
   {
    "x": 700,
@@ -167,14 +179,16 @@
    "t0": 816.6833333333333,
    "t1": 823.7666666666667,
    "shot": "816.68",
-   "name": "staffdoor"
+   "name": "staffdoor",
+   "close": false
   },
   {
    "x": 960,
    "t0": 823.7666666666667,
    "t1": 826.2333333333333,
    "shot": "823.77",
-   "name": "staffdoor"
+   "name": "staffdoor",
+   "close": false
   }
  ]
 }
