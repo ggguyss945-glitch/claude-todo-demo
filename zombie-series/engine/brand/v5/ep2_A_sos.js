@@ -20,10 +20,10 @@ function sky() {
 
 // ---------- Brookfield Mall: a dark block across the lot, glass skylight on top, one window lit ----------
 const MALL = { x0: 780, x1: 2000, roof: 180, ground: 660 };
-const COLS = [], CW = 200, GAP = 34;
+const COLS = [], CW = 240, GAP = 36;
 for (let x = MALL.x0 + 40; x < MALL.x1; x += CW + GAP) COLS.push(x);
-const FLOORS = [[272, 150], [442, 84], [544, 62], [624, 36]];
-const WIN = { x: COLS[3], y: FLOORS[0][0], w: CW, h: FLOORS[0][1] };   // the lit window, top floor (Bright Tech)
+const FLOORS = [[268, 176], [464, 80], [562, 56], [636, 24]];
+const WIN = { x: COLS[2], y: FLOORS[0][0], w: CW, h: FLOORS[0][1] };   // the lit window, top floor (Bright Tech)
 function mall() {
   const { x0, x1, roof, ground } = MALL;
   let s = '';
@@ -67,7 +67,7 @@ function litWindow() {
     rays += poly([[cx, cy], [cx + Math.cos(a0) * len, cy + Math.sin(a0) * len], [cx + Math.cos(a1) * len, cy + Math.sin(a1) * len]], { fill: 'url(#sosA_rayg)' });
   }
   s += g(rays, { filter: 'url(#pro_glowS)', style: 'mix-blend-mode:screen' });
-  s += bloom(cx, cy, 280, 200, '#FFA62E', 0.32) + bloom(cx, cy, 150, 110, WARM, 0.6);
+  s += bloom(cx, cy, 260, 190, '#FFA62E', 0.24) + bloom(cx, cy, 150, 110, WARM, 0.6);
   s += rect(x, y, w, h, { fill: 'url(#sosA_win)', ...ink(5) });
   // the person in the window, a dark shape against the glow, arm up with the lantern
   const k = h / 112, px = x + 0.34 * w, py = y + h, C = '#2A1A14';
@@ -145,18 +145,19 @@ function thumb() {
   s += bloom(1150, 880, 900, 260, '#7FA0E0', 0.26);
   // back rows: small, fogged, a touch soft so the front rows and the window win
   s += g(horde({ x0: -60, x1: 2000, yb: 690, yf: 880, rows: 4, s0: 0.32, s1: 0.72, seed: 43, arms: 0.5, rim: '#B8CCF5', rimSide: -1, fog: '#16203A', fogK: 0.62, density: 1.4 }), { filter: 'url(#pro_b1)' });
+  s += bloom(WIN.x + WIN.w / 2, 650, 520, 110, '#FFB050', 0.16);   // the window's light just reaching the far rows
   // front rows: big, in colour, faces you can read
-  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.7, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
+  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.6, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
   // you, on Freshway's roof: binoculars down on the ledge, looking across at the window
   const sc = 2.8, gx = 450, gy = 1455, u = 60 * sc, top = 984;
-  const cy = gy - 5.25 * u, by = top - 0.3 * u;
+  const cy = gy - 5.25 * u, by = top - 0.33 * u, hy = gy - 4.05 * u + 0.85 * u;   // binoculars on the ledge; hands where the 'carry' pose puts them
   s += bloom(gx, 600, 400, 440, '#3E64B0', 0.35);
-  const hands = circle(gx - 0.5 * u, by + 0.06 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(gx + 0.5 * u, by + 0.06 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) });
+  const hands = circle(gx - 0.45 * u, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(gx + 0.5 * u, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) });
   s += actor({ x: gx, y: gy, s: sc, pose: 'carry', face: 'serious', look: 0.55, scratch: true, lick: false, id: 'sosA', rim: { color: '#FFC070', side: 1, op: 0.7 },
     extra: binoculars(gx, by, u) + hands, front: cowlick(gx, cy, u) });
   s += parapet(top);
   // the signal, from the window across the lot to you
-  s += morse(morsePath([WIN.x - 34, WIN.y + 92], [1200, 450], [790, 505]));
+  s += morse(morsePath([WIN.x - 36, WIN.y + 104], [1110, 450], [780, 505], 0.68, 1.2));
   s += headline(56, 300, 'S.O.S.', { size: 310, anchor: 'start', fill: 'url(#pro_yel)', sw: 30, ls: 6 });
   s += finish({ vignette: 0.5, grain: 0.05 });
   return { w: W, h: H, svg: svgOf(s, 9), css: 'saturate(1.12) contrast(1.06)' };
