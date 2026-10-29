@@ -18,6 +18,8 @@ export async function initShots(world) {
     return;
   }
   (await import('./film.js')).addFilm(SHOTS, world);
+  // channel branding stills past the end of the film (t >= 200): ?brand=1
+  if (new URLSearchParams(location.search).get('brand') === '1') (await import('./brand.js')).addBrand(SHOTS, world);
 }
 
 export function resetFrame(world, t, shot) {
