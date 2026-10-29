@@ -4,7 +4,7 @@
 import os, sys, json, math, subprocess, re
 import numpy as np, soundfile as sf, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-from pedalboard import Pedalboard, Compressor, time_stretch
+from pedalboard import Pedalboard, Compressor, LowpassFilter, time_stretch
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, f'{ROOT}/audio')
 import sfx as X
@@ -73,11 +73,13 @@ def sound(E, clips, dur, out):
     act = np.interp(np.arange(N), np.arange(nf) * hop + hop / 2, sm).astype(np.float32)
     music *= (1 - act * (1 - db(-10)))[:, None]
     # hits: the hook, the punches and the twists; whooshes on every change of shot; a riser into each music switch
-    place(hits, X.boom(1.0, 2.0), 0.0, -6); place(hits, X.whoosh(0.5, 1.0), 0.0, -14)
+    # booms land under words, so only their low end is kept: felt, never covering a consonant
+    sub = lambda y: Pedalboard([LowpassFilter(160)])(y.astype(np.float32), SR)
+    place(hits, sub(X.boom(1.0, 2.0)), 0.0, -7); place(hits, X.whoosh(0.5, 1.0), -0.25, -18)
     prev = None
     for c in clips:
         if c['out0'] > 0.05 and prev is not None and c['shot'] != prev['shot'] and c['k'] == 0: place(hits, X.whoosh(0.32, 1.0), c['out0'] - 0.16, -17)
-        if c['fx'] == 'hit' and c['out0'] > 0.05: place(hits, X.boom(1.0, 1.6), c['out0'], -9); place(hits, X.slam(0.6), c['out0'], -16)
+        if c['fx'] == 'hit' and c['out0'] > 0.05: place(hits, sub(X.boom(1.0, 1.6)), c['out0'], -9); place(hits, sub(X.slam(0.6)), c['out0'], -14)
         if c['fx'] == 'punch': place(hits, X.whoosh(0.28, 1.0, up=False), c['out0'] - 0.12, -15)
         prev = c
     for b, cue in E['music'][1:]:
