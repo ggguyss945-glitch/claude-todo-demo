@@ -24,6 +24,7 @@ ffmpeg -v error -y -i "$EN" -i "$OUT/If_A_Police_Officer_Knocks_RU_dub.m4a" -map
 # a single-file copy under 400 MiB (HEVC keeps the film grain best at this size, ~4.3 Mbps), for transfers with a size limit
 ffmpeg -v error -stats -y -f concat -safe 0 -i "$PIC/list.txt" -i "$W/mix_en.wav" -map 0:v -map 1:a \
   -c:v libx265 -preset fast -b:v 4000k -x265-params log-level=error:vbv-maxrate=8000:vbv-bufsize=16000:keyint=120 \
-  -pix_fmt yuv420p -tag:v hvc1 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -c:a aac -b:a 160k -ar 48000 \
+  -pix_fmt yuv420p -tag:v hvc1 -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
+  -af alimiter=limit=0.708:attack=1:release=60:level=false -c:a aac -b:a 160k -ar 48000 \
   -metadata:s:a:0 language=eng -t "$DUR" -movflags +faststart "$OUT/If_A_Police_Officer_Knocks_EN_1440p60_HEVC.mp4"
 ls -la "$OUT"
