@@ -90,8 +90,7 @@ function mall() {
 // the lit window: hot glass, a girl's shape holding the lantern up, a glint
 function litWindow() {
   const { x, y, w, h } = WIN, cx = x + w / 2, cy = y + h / 2;
-  let s = `<defs><radialGradient id="sosA_win" cx="0.7" cy="0.3" r="0.85"><stop offset="0" stop-color="#FFFDF2"/><stop offset="0.4" stop-color="#FFEBA8"/><stop offset="1" stop-color="#FFB040"/></radialGradient>
-    <linearGradient id="sosA_ray" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#FFE7A0" stop-opacity="0.55"/><stop offset="1" stop-color="#FFE7A0" stop-opacity="0"/></linearGradient></defs>`;
+  let s = `<defs><radialGradient id="sosA_win" cx="0.7" cy="0.3" r="0.85"><stop offset="0" stop-color="#FFFDF2"/><stop offset="0.4" stop-color="#FFEBA8"/><stop offset="1" stop-color="#FFB040"/></radialGradient></defs>`;
   // soft god rays fanning out of the window, fading with distance
   s += `<defs><radialGradient id="sosA_rayg" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="820"><stop offset="0" stop-color="#FFE2A0" stop-opacity="0.34"/><stop offset="0.35" stop-color="#FFD890" stop-opacity="0.12"/><stop offset="1" stop-color="#FFD890" stop-opacity="0"/></radialGradient></defs>`;
   let rays = '';
@@ -111,7 +110,7 @@ function litWindow() {
   s += path(`M${F(px + 30 * k)} ${F(py - 42 * k)} Q${F(hx - 8 * k)} ${F(py - 62 * k)} ${F(hx)} ${F(hy + 6 * k)}`, { fill: 'none', stroke: C, strokeWidth: 15 * k, strokeLinecap: 'round' });
   s += path(`M${F(lx - 11 * k)} ${F(ly - 16 * k)} Q${F(lx)} ${F(hy - 6 * k)} ${F(lx + 11 * k)} ${F(ly - 16 * k)}`, { fill: 'none', stroke: C, strokeWidth: 4 * k });
   s += rect(lx - 15 * k, ly - 18 * k, 30 * k, 38 * k, { rx: 7 * k, fill: '#FFFFFF', stroke: C, strokeWidth: 4 * k }) + rect(lx - 17 * k, ly - 22 * k, 34 * k, 7 * k, { rx: 3 * k, fill: C });
-  s += line(x + w * 0.86, y, x + w * 0.86, y + h, { stroke: INK, strokeWidth: 5 }) + line(x, y + h * 0.62, x + w * 0.34 - 50 * k, y + h * 0.62, { stroke: INK, strokeWidth: 4, opacity: 0.0 });
+  s += line(x + w * 0.86, y, x + w * 0.86, y + h, { stroke: INK, strokeWidth: 5 });
   s += bloom(lx, ly, 56, 56, '#FFFFFF', 0.85, true) + bloom(lx, ly, 22, 22, '#FFFFFF', 1, true);
   s += g(path(`M${F(lx)} ${F(ly - 110)} L${F(lx + 7)} ${F(ly)} L${F(lx)} ${F(ly + 110)} L${F(lx - 7)} ${F(ly)} Z M${F(lx - 150)} ${F(ly)} L${F(lx)} ${F(ly - 7)} L${F(lx + 150)} ${F(ly)} L${F(lx)} ${F(ly + 7)} Z`, { fill: '#FFFBEA' }), { opacity: 0.9, style: 'mix-blend-mode:screen' });
   return s;
