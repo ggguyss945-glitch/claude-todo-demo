@@ -22,6 +22,7 @@ function soft(cx, cy, rx, ry, color, op) {
 const FR = 'filterUnits="userSpaceOnUse" x="-120" y="-120" width="2160" height="1320"';
 
 // ---------- palette ----------
+const SKINS = ['#9DB28E', '#A4B592', '#94AC8A', '#A9B48C', '#98B096'];
 const SKIN = '#9DB28E', SKIN_UNDER = '#56685A', SOCKET = '#272C27', PUPIL = '#F1F4E2', MOUTH = '#221C1B';
 const RIM = '#E4DCFF', HAZE = '#6688A8', BOLT = '#F4F1FF', BOLT_GLOW = '#A993FF';
 const CLOTHES = ['#C76A83', '#6FA3A6', '#A65F4A', '#7C6A8E', '#2E3D55', '#8A7A4E', '#D9A441', '#596471', '#B5452F', '#4F7A52', '#E0894A', '#8C8C86'];
@@ -103,6 +104,9 @@ export function horizon() {
   s += g(city, { filter: 'url(#sb_cblur)', opacity: 0.9 });
   s += `<linearGradient id="sb_lot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E7E96"/><stop offset="1" stop-color="#2E4E6A"/></linearGradient>`;
   s += rect(0, 520, W, 560, { fill: 'url(#sb_lot)' });
+  // a curtain of rain haze where the lot meets the city, so the far edge has no hard line
+  s += `<linearGradient id="sb_mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8C9AD0" stop-opacity="0"/><stop offset="0.5" stop-color="#8C9AD0" stop-opacity="0.55"/><stop offset="1" stop-color="#8C9AD0" stop-opacity="0"/></linearGradient>`;
+  s += rect(0, 450, W, 150, { fill: 'url(#sb_mist)' });
   s += soft(1700, 540, 700, 110, '#E2DAFF', 0.6);
   return s;
 }
@@ -112,28 +116,30 @@ export function horizon() {
 // we see up the nostrils and the whole dark underside of the jaw. detail 0 = distant, 1 = mid, 2 = close.
 function upHead(hx, hy, u, { skin, under, socket, pupil, rim, rimOp, lw, detail, r, hair }) {
   let s = circle(hx, hy, u, { fill: skin });
-  if (hair) s += path(`M${F(hx - 0.9 * u)} ${F(hy - 0.44 * u)} A${F(u)} ${F(u)} 0 0 1 ${F(hx + 0.9 * u)} ${F(hy - 0.44 * u)} Q${F(hx)} ${F(hy - 0.9 * u)} ${F(hx - 0.9 * u)} ${F(hy - 0.44 * u)} Z`, { fill: hair });
-  // the underside of the jaw
-  const a1 = 0.2, a2 = Math.PI - 0.2, p1 = [hx + Math.cos(a1) * u, hy + Math.sin(a1) * u], p2 = [hx + Math.cos(a2) * u, hy + Math.sin(a2) * u];
-  s += path(`M${F(p1[0])} ${F(p1[1])} A${F(u)} ${F(u)} 0 0 1 ${F(p2[0])} ${F(p2[1])} Q${F(hx)} ${F(hy + 0.74 * u)} ${F(p1[0])} ${F(p1[1])} Z`, { fill: under });
-  s += path(`M${F(p2[0] + 0.03 * u)} ${F(p2[1] + 0.01 * u)} Q${F(hx)} ${F(hy + 0.74 * u)} ${F(p1[0] - 0.03 * u)} ${F(p1[1] + 0.01 * u)}`, { fill: 'none', stroke: INK, strokeWidth: lw * (detail ? 0.7 : 0.5), strokeLinecap: 'round', opacity: 0.8 });
-  // eyes high, flattened by the angle, the pupils rolled right up to the top lids
-  const ey = hy - 0.44 * u, sz = 0.94 + r() * 0.12;
-  s += ellipse(hx - 0.34 * u, ey + 0.02 * u, 0.2 * u * sz, 0.12 * u * sz, { fill: socket }) + ellipse(hx + 0.33 * u, ey, 0.19 * u * sz, 0.115 * u * sz, { fill: socket });
-  s += circle(hx - 0.33 * u, ey - 0.055 * u, 0.042 * u, { fill: pupil }) + circle(hx + 0.34 * u, ey - 0.07 * u, 0.04 * u, { fill: pupil });
+  // the face plane, turned to the sky, catches the flash
+  s += ellipse(hx, hy - 0.34 * u, 0.7 * u, 0.5 * u, { fill: '#F4F8E6', opacity: 0.16 });
+  // only a band of hair shows over the crown
+  if (hair) s += path(`M${F(hx - 0.8 * u)} ${F(hy - 0.6 * u)} A${F(u)} ${F(u)} 0 0 1 ${F(hx + 0.8 * u)} ${F(hy - 0.6 * u)} Q${F(hx)} ${F(hy - 0.95 * u)} ${F(hx - 0.8 * u)} ${F(hy - 0.6 * u)} Z`, { fill: hair });
+  // the underside of the jaw, in shadow
+  const a1 = 0.05, a2 = Math.PI - 0.05, p1 = [hx + Math.cos(a1) * u, hy + Math.sin(a1) * u], p2 = [hx + Math.cos(a2) * u, hy + Math.sin(a2) * u];
+  s += path(`M${F(p1[0])} ${F(p1[1])} A${F(u)} ${F(u)} 0 0 1 ${F(p2[0])} ${F(p2[1])} Q${F(hx)} ${F(hy + 0.62 * u)} ${F(p1[0])} ${F(p1[1])} Z`, { fill: under });
+  s += path(`M${F(p2[0] + 0.05 * u)} ${F(p2[1] + 0.01 * u)} Q${F(hx)} ${F(hy + 0.62 * u)} ${F(p1[0] - 0.05 * u)} ${F(p1[1] + 0.01 * u)}`, { fill: 'none', stroke: INK, strokeWidth: lw * (detail ? 0.7 : 0.55), strokeLinecap: 'round', opacity: 0.85 });
+  // eyes high, flattened by the angle, the pupils rolled right up under the top lids
+  const ey = hy - 0.56 * u, sz = 0.94 + r() * 0.12;
+  s += ellipse(hx - 0.33 * u, ey + 0.02 * u, 0.19 * u * sz, 0.1 * u * sz, { fill: socket }) + ellipse(hx + 0.32 * u, ey, 0.18 * u * sz, 0.095 * u * sz, { fill: socket });
+  s += circle(hx - 0.32 * u, ey - 0.045 * u, 0.04 * u, { fill: pupil }) + circle(hx + 0.33 * u, ey - 0.055 * u, 0.038 * u, { fill: pupil });
   // up the nose
-  s += ellipse(hx - 0.075 * u, hy - 0.16 * u, 0.045 * u, 0.035 * u, { fill: socket }) + ellipse(hx + 0.075 * u, hy - 0.16 * u, 0.045 * u, 0.035 * u, { fill: socket });
-  // the jaw hangs open
+  s += ellipse(hx - 0.07 * u, hy - 0.36 * u, 0.042 * u, 0.03 * u, { fill: socket }) + ellipse(hx + 0.07 * u, hy - 0.36 * u, 0.042 * u, 0.03 * u, { fill: socket });
+  // the jaw hangs slack
   const m = (x, y) => `${F(hx + x * u)} ${F(hy + y * u)}`;
-  s += path(`M${m(-0.08, 0.04)} Q${m(0.01, 0.0)} ${m(0.09, 0.05)} Q${m(0.1, 0.26)} ${m(0.01, 0.27)} Q${m(-0.1, 0.25)} ${m(-0.08, 0.04)} Z`, { fill: MOUTH });
+  s += path(`M${m(-0.08, -0.22)} Q${m(0.01, -0.25)} ${m(0.09, -0.21)} Q${m(0.1, -0.01)} ${m(0.01, 0.0)} Q${m(-0.1, -0.02)} ${m(-0.08, -0.22)} Z`, { fill: MOUTH });
   // the bolt's light along the wet right side of the skull
-  s += path(`M${F(hx + Math.cos(-1.25) * 0.86 * u)} ${F(hy + Math.sin(-1.25) * 0.86 * u)} A${F(0.86 * u)} ${F(0.86 * u)} 0 0 1 ${F(hx + Math.cos(0.2) * 0.86 * u)} ${F(hy + Math.sin(0.2) * 0.86 * u)}`,
-    { fill: 'none', stroke: rim, strokeWidth: 0.09 * u, strokeLinecap: 'round', opacity: rimOp * 0.8 });
+  s += path(`M${F(hx + Math.cos(-1.2) * 0.88 * u)} ${F(hy + Math.sin(-1.2) * 0.88 * u)} A${F(0.88 * u)} ${F(0.88 * u)} 0 0 1 ${F(hx + Math.cos(0.0) * 0.88 * u)} ${F(hy + Math.sin(0.0) * 0.88 * u)}`,
+    { fill: 'none', stroke: rim, strokeWidth: 0.07 * u, strokeLinecap: 'round', opacity: rimOp * 0.65 });
   if (detail >= 2) {
-    // rain running down the cheeks, drops bouncing off the crown
-    s += path(`M${F(hx - 0.66 * u)} ${F(hy - 0.2 * u)} q${F(-0.03 * u)} ${F(0.2 * u)} ${F(0.02 * u)} ${F(0.38 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.04 * u, strokeLinecap: 'round', opacity: 0.75 })
-      + path(`M${F(hx + 0.62 * u)} ${F(hy - 0.16 * u)} q${F(0.03 * u)} ${F(0.18 * u)} ${F(-0.02 * u)} ${F(0.32 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.035 * u, strokeLinecap: 'round', opacity: 0.65 });
+    // drops bouncing off the crown and the face
     for (const [dx, dy, a] of [[-0.3, -1.06, -35], [0.34, -1.04, 30], [0.02, -1.13, 0]]) s += line(hx + dx * u, hy + dy * u, hx + dx * u + Math.sin(a * Math.PI / 180) * 0.11 * u, hy + dy * u - Math.cos(a * Math.PI / 180) * 0.11 * u, { stroke: '#E8F0FF', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.85 });
+    for (const [dx, dy] of [[-0.55, -0.2], [0.5, -0.3], [0.2, -0.75]]) s += circle(hx + dx * u, hy + dy * u, 0.025 * u, { fill: '#EEF4FF', opacity: 0.8 });
   }
   s += circle(hx, hy, u, { fill: 'none', stroke: INK, strokeWidth: lw });
   return s;
@@ -157,7 +163,8 @@ function upZombie(x, yg, sc, { body, fogK = 0, detail = 1, r, tilt = 0, rimOp = 
       s += path(`M${F(sx)} ${F(sy)} Q${F(x + side * 0.86 * u)} ${F(top + 1.0 * u)} ${F(ex)} ${F(ey)}`, { fill: 'none', ...ik }) + circle(ex, ey, 0.17 * u, { fill: fog(SKIN), ...ik });
     }
   }
-  const hd = upHead(hx, hy, u, { skin: fog(SKIN), under: fog(SKIN_UNDER), socket: mix(SOCKET, HAZE, fogK * 0.5), pupil: PUPIL, rim: RIM, rimOp, lw, detail, r, hair: hair ? fog(hair) : null });
+  const sk = SKINS[Math.floor(r() * SKINS.length)];
+  const hd = upHead(hx, hy, u, { skin: fog(sk), under: fog(SKIN_UNDER), socket: mix(SOCKET, HAZE, fogK * 0.5), pupil: PUPIL, rim: RIM, rimOp, lw, detail, r, hair: hair ? fog(hair) : null });
   s += g(hd, { transform: `rotate(${F(tilt)} ${F(hx)} ${F(hy + u)})` });
   return s;
 }
@@ -227,6 +234,12 @@ function hammer(gx, gy, u, ang) {
   s += line(1.31 * u, -0.17 * u, 1.31 * u, 0.06 * u, { stroke: '#FFFFFF', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.85 });   // lightning glint
   return g(s, { transform: `translate(${F(gx)} ${F(gy)}) rotate(${ang})` });
 }
+// a jacket sleeve along shoulder -> elbow -> wrist, ink-outlined, round at the joints
+function sleeveArm(pts, u, w = 0.24 * u) {
+  const dd = 'M' + pts.map(([px, py]) => `${F(px)} ${F(py)}`).join(' L');
+  return path(dd, { fill: 'none', stroke: INK, strokeWidth: w + 0.09 * u, strokeLinejoin: 'round', strokeLinecap: 'round' })
+    + path(dd, { fill: 'none', stroke: PAL.jacket, strokeWidth: w, strokeLinejoin: 'round', strokeLinecap: 'round' });
+}
 function you(x, y, sc) {
   const u = 60 * sc, shY = y - 4.05 * u, neckY = y - 4.25 * u, hipY = y - 2.2 * u, cx = x, cy = y - 5.25 * u, lw = Math.max(4, 0.1 * u);
   const tw = 0.62 * u, bw = 0.56 * u, top = shY - 0.15 * u, bot = hipY + 0.1 * u;
@@ -242,12 +255,12 @@ function you(x, y, sc) {
   b += path(hp, { fill: 'none', stroke: INK, strokeWidth: 0.2 * u }) + path(hp, { fill: 'none', stroke: PAL.phones, strokeWidth: 0.11 * u });
   b += rect(x - 0.86 * u, neckY - 0.3 * u, 0.36 * u, 0.5 * u, { rx: 0.12 * u, fill: PAL.phones, ...ink(0.035 * u) }) + rect(x + 0.5 * u, neckY - 0.3 * u, 0.36 * u, 0.5 * u, { rx: 0.12 * u, fill: PAL.phones, ...ink(0.035 * u) });
   // the hammer arm (your right, our left): elbow down at the side, the hammer raised by the head
-  const sL = [x - 0.52 * u, shY + 0.08 * u], eL = [x - 1.12 * u, shY + 0.66 * u], hL = [x - 1.04 * u, shY - 0.3 * u];
-  b += path(`M${F(sL[0])} ${F(sL[1])} L${F(eL[0])} ${F(eL[1])} L${F(hL[0])} ${F(hL[1])}`, { fill: 'none', ...ink(lw) });
+  const sL = [x - 0.52 * u, shY + 0.08 * u], eL = [x - 0.86 * u, shY + 0.78 * u], hL = [x - 1.0 * u, shY - 0.3 * u];
+  b += sleeveArm([sL, eL, hL], u);
   const hm = hammer(hL[0], hL[1], u, -100);
   // the shush arm (your left, our right): elbow out, the fist up under the chin
-  const fist = [cx + 0.15 * u, cy + 0.98 * u], sR = [x + 0.52 * u, shY + 0.08 * u], eR = [x + 1.0 * u, shY + 0.82 * u];
-  b += path(`M${F(sR[0])} ${F(sR[1])} L${F(eR[0])} ${F(eR[1])} L${F(fist[0] + 0.06 * u)} ${F(fist[1] + 0.06 * u)}`, { fill: 'none', ...ink(lw) });
+  const fist = [cx + 0.15 * u, cy + 0.98 * u], sR = [x + 0.52 * u, shY + 0.08 * u], eR = [x + 0.86 * u, shY + 0.8 * u];
+  b += sleeveArm([sR, eR, [fist[0] + 0.05 * u, fist[1] + 0.08 * u]], u);
   const hd = heroHead(cx, cy, u, { down: 0.08, rim: { color: '#CDBEFF', side: 1, op: 0.8 } });
   // the hand at the lips: a fist under the chin, one finger up across the mouth
   let fr = rect(cx + 0.0 * u, cy + 0.4 * u, 0.15 * u, 0.5 * u, { rx: 0.075 * u, fill: PAL.skin, ...ink(0.035 * u) });
@@ -272,7 +285,7 @@ function thumbStorm() {
   let s = sky() + lightning() + horizon();
   // the lot, packed to the far edge: back rows small and hazy, nearer rows bigger and sharper
   const far = [];
-  for (let i = 0; i < 6; i++) { const t = i / 5; far.push({ x0: -60, x1: W + 60, y: lerp(640, 830, t), s: lerp(0.27, 0.64, t), dens: 1.35, fog: lerp(0.55, 0.28, t), detail: t > 0.6 ? 1 : 0, rim: lerp(0.5, 0.8, t) }); }
+  for (let i = 0; i < 6; i++) { const t = i / 5; far.push({ x0: -60, x1: W + 60, y: lerp(600, 820, t), s: lerp(0.25, 0.64, t), dens: 1.35, fog: lerp(0.55, 0.28, t), detail: t > 0.6 ? 1 : 0, rim: lerp(0.5, 0.8, t) }); }
   s += rows({ list: far, seed: 3 });
   s += rect(0, 0, W, H, { fill: '#6F64C8', opacity: 0.06, style: 'mix-blend-mode:screen' });
   // the rows around you: packed close on both sides, behind your shoulders
@@ -285,7 +298,7 @@ function thumbStorm() {
   const r = rng(51);
   // the two right beside you, a step behind
   s += g(upZombie(HX - 480, 1470, 2.15, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: -7, hair: '#5B4636' })
-    + upZombie(HX + 480, 1480, 2.2, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 8, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
+    + upZombie(HX + 440, 1470, 2.15, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 8, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
   // light from the bolt washing the crowd from the upper right
   s += soft(1650, 560, 1000, 520, '#B6A6FF', 0.3);
   // you
@@ -293,8 +306,8 @@ function thumbStorm() {
   s += you(HX, HY, HS);
   // the nearest ones at the edges of frame, cropped and a shade darker, out of the flash
   s += `<defs><filter id="sb_near"><feColorMatrix type="matrix" values="0.8 0 0 0 0 0 0.8 0 0 0 0 0 0.86 0 0.01 0 0 0 1 0"/></filter></defs>`;
-  s += g(g(upZombie(90, 1860, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
-    + upZombie(1830, 1880, 3.1, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 10, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
+  s += g(g(upZombie(60, 1900, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
+    + upZombie(1890, 1960, 3.1, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 10, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
   // the downpour over everything, heavier and softer up close
   s += rain({ n: 110, seed: 8, len: [130, 230], w: 5, op: 0.36, blur: 'sb_rainblur' });
   s += grade('#3B2F6E', 0.1);
