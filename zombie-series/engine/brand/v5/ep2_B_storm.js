@@ -23,14 +23,14 @@ function soft(cx, cy, rx, ry, color, op) {
 const FR = (x, y, w, h) => `filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"`;
 
 // ---------- palette ----------
-const SKINS = ['#9DB28E', '#A4B592', '#94AC8A', '#A9B48C', '#98B096'];
+const SKINS = ['#97B486', '#A0B88C', '#8FAE84', '#A6B888', '#94B190'];
 const SKIN = '#9DB28E', SKIN_UNDER = '#56685A', SOCKET = '#272C27', PUPIL = '#F1F4E2', MOUTH = '#221C1B';
 const RIM = '#E4DCFF', HAZE = '#6688A8', BOLT = '#F4F1FF', BOLT_GLOW = '#A993FF';
 const CLOTHES = ['#C76A83', '#6FA3A6', '#A65F4A', '#7C6A8E', '#2E3D55', '#8A7A4E', '#D9A441', '#596471', '#B5452F', '#4F7A52', '#E0894A', '#8C8C86'];
 const HAIR = ['#3A2A22', '#5B4636', '#2B2B2E', '#7A6A55', '#8E8A80'];
 
 // ---------- the sky: violet storm ceiling, teal toward the horizon, lit from inside by the bolt ----------
-export function sky() {
+function sky() {
   let s = `<defs>
     <linearGradient id="sb_sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#120C28"/><stop offset="0.42" stop-color="#2A2155"/><stop offset="0.72" stop-color="#3E4F86"/><stop offset="1" stop-color="#4F8C96"/></linearGradient>
     <radialGradient id="sb_flash" cx="0.84" cy="0.22" r="0.62"><stop offset="0" stop-color="#F1ECFF" stop-opacity="0.95"/><stop offset="0.28" stop-color="#B9A8FF" stop-opacity="0.55"/><stop offset="0.65" stop-color="#6B5FC8" stop-opacity="0.18"/><stop offset="1" stop-color="#2A2155" stop-opacity="0"/></radialGradient>
@@ -76,7 +76,7 @@ function boltPath(x0, y0, x1, y1, segs, amp, r) {
   return pts;
 }
 const d = (pts) => 'M' + pts.map(([x, y]) => `${F(x)} ${F(y)}`).join(' L');
-export function lightning() {
+function lightning() {
   const r = rng(77);
   const main = boltPath(1600, -30, 1700, 560, 11, 70, r);
   const branches = [];
@@ -87,18 +87,18 @@ export function lightning() {
   }
   let s = '';
   // the air around it glows
-  s += soft(1680, 260, 760, 620, '#C9BCFF', 0.6) + soft(1700, 520, 520, 160, '#EDE8FF', 0.7);
+  s += soft(1680, 280, 820, 640, '#CFC4FF', 0.72) + soft(1690, 300, 300, 420, '#F2EEFF', 0.45) + soft(1700, 520, 560, 170, '#EDE8FF', 0.75);
   s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 150, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
   s += g(branches.map((b) => path(d(b), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' })).join('')
     + path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 44, strokeLinejoin: 'round', strokeLinecap: 'round' }), { filter: 'url(#sb_boltglowS)', opacity: 0.75 });
   for (const b of branches) s += path(d(b), { fill: 'none', stroke: '#D9CFFF', strokeWidth: 15, strokeLinejoin: 'round', strokeLinecap: 'round' }) + path(d(b), { fill: 'none', stroke: BOLT, strokeWidth: 6, strokeLinejoin: 'round', strokeLinecap: 'round' });
-  s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 36, strokeLinejoin: 'round', strokeLinecap: 'round' });
-  s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 18, strokeLinejoin: 'round', strokeLinecap: 'round' });
+  s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' });
+  s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 21, strokeLinejoin: 'round', strokeLinecap: 'round' });
   return s;
 }
 
 // the far edge of the lot: the city through the rain, a teal haze, the flash where the bolt comes down
-export function horizon() {
+function horizon() {
   let s = '';
   const r = rng(12);
   let city = '';
@@ -154,7 +154,6 @@ function upZombie(x, yg, sc, { body, fogK = 0, detail = 1, r, tilt = 0, rimOp = 
   let s = '';
   // the neck stretched out: chins up, throats bare to the rain
   s += rect(hx - 0.25 * u, hy + 0.6 * u, 0.5 * u, top - hy - 0.45 * u, { fill: fog(SKIN_UNDER), ...ik });
-  if (detail >= 1) s += path(`M${F(hx - 0.04 * u)} ${F(hy + 1.08 * u)} q${F(0.05 * u)} ${F(0.06 * u)} ${F(0.1 * u)} 0`, { fill: 'none', stroke: mix(INK, HAZE, fogK * 0.35), strokeWidth: lw * 0.5, strokeLinecap: 'round' });
   s += path(`M${F(x - 0.6 * u)} ${F(bot)} L${F(x - 0.66 * u)} ${F(top + 0.3 * u)} Q${F(x - 0.66 * u)} ${F(top)} ${F(x - 0.34 * u)} ${F(top)} L${F(x + 0.34 * u)} ${F(top)} Q${F(x + 0.66 * u)} ${F(top)} ${F(x + 0.66 * u)} ${F(top + 0.3 * u)} L${F(x + 0.6 * u)} ${F(bot)} Z`, { fill: cloth, ...ik });
   if (detail >= 1) {
     // collar and the light along the wet shoulder
@@ -295,6 +294,7 @@ function thumbStorm() {
     { x0: -80, x1: W + 80, y: 975, s: 0.92, dens: 1.3, fog: 0.18, detail: 1, rim: 0.85 },
     { x0: -80, x1: W + 80, y: 1150, s: 1.3, dens: 1.4, fog: 0.08, detail: 1, rim: 0.9 },
   ];
+  s += soft(1650, 600, 900, 300, '#B6A6FF', 0.22);   // the flash hanging in the rain over the far rows
   s += rows({ list: mid, seed: 9, skip: (x) => Math.abs(x - HX) < 150 });
   s += rain({ n: 260, seed: 4, len: [50, 100], w: 2.6, op: 0.32 });
   const r = rng(51);
@@ -302,12 +302,11 @@ function thumbStorm() {
   s += g(upZombie(HX - 480, 1470, 2.15, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: 6, hair: '#5B4636' })
     + upZombie(HX + 440, 1470, 2.15, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 11, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
   // light from the bolt washing the crowd from the upper right
-  s += soft(1650, 560, 1000, 520, '#B6A6FF', 0.3);
   // you
-  s += soft(HX + 40, 600, 420, 420, '#8E7FE0', 0.3);
+  s += soft(HX + 40, 600, 380, 380, '#8E7FE0', 0.16);
   s += you(HX, HY, HS);
   // the nearest ones at the edges of frame, cropped and a shade darker, out of the flash
-  s += `<defs><filter id="sb_near"><feColorMatrix type="matrix" values="0.8 0 0 0 0 0 0.8 0 0 0 0 0 0.86 0 0.01 0 0 0 1 0"/></filter></defs>`;
+  s += `<defs><filter id="sb_near"><feColorMatrix type="matrix" values="0.86 0 0 0 0 0 0.88 0 0 0 0 0 0.92 0 0.01 0 0 0 1 0"/></filter></defs>`;
   s += g(g(upZombie(60, 1900, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: 7, hair: '#2B2B2E' })
     + upZombie(1880, 1900, 3.0, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 13, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
   // the downpour over everything, heavier and softer up close
