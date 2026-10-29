@@ -21,9 +21,9 @@ ffmpeg -v error -y -i "$W/mix_ru.wav" -t "$DUR" -c:a pcm_s24le "$OUT/If_A_Police
 ffmpeg -v error -y -i "$EN" -i "$OUT/If_A_Police_Officer_Knocks_RU_dub.m4a" -map 0:v -map 0:a -map 1:a -c copy \
   -metadata:s:a:0 language=eng -metadata:s:a:0 title=English -metadata:s:a:1 language=rus -metadata:s:a:1 title=Русский \
   -disposition:a:0 default -disposition:a:1 0 -movflags +faststart "$OUT/If_A_Police_Officer_Knocks_EN+RU_1440p60.mp4"
-# a single-file copy under 500 MiB (HEVC keeps the film grain best at ~5.4 Mbps), for transfers with a size limit
+# a single-file copy under 400 MiB (HEVC keeps the film grain best at this size, ~4.3 Mbps), for transfers with a size limit
 ffmpeg -v error -stats -y -f concat -safe 0 -i "$PIC/list.txt" -i "$W/mix_en.wav" -map 0:v -map 1:a \
-  -c:v libx265 -preset fast -b:v 5200k -x265-params log-level=error:vbv-maxrate=8000:vbv-bufsize=16000:keyint=120 \
-  -pix_fmt yuv420p -tag:v hvc1 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -c:a aac -b:a 192k -ar 48000 \
+  -c:v libx265 -preset fast -b:v 4000k -x265-params log-level=error:vbv-maxrate=8000:vbv-bufsize=16000:keyint=120 \
+  -pix_fmt yuv420p -tag:v hvc1 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -c:a aac -b:a 160k -ar 48000 \
   -metadata:s:a:0 language=eng -t "$DUR" -movflags +faststart "$OUT/If_A_Police_Officer_Knocks_EN_1440p60_HEVC.mp4"
 ls -la "$OUT"
