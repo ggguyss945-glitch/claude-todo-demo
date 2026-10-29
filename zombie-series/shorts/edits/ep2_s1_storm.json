@@ -1,0 +1,70 @@
+{
+ "ep": 2,
+ "hook": [
+  "200 ZOMBIES.",
+  "ONE [[STORM]]."
+ ],
+ "loop": true,
+ "beats": [
+  {
+   "line": "R4",
+   "post": 0.9,
+   "fx": "hit"
+  },
+  {
+   "line": "R1"
+  },
+  {
+   "line": "R2",
+   "fx": "punch"
+  },
+  {
+   "line": "P5"
+  },
+  {
+   "line": "P6"
+  },
+  {
+   "line": "P6c"
+  },
+  {
+   "line": "P6e"
+  },
+  {
+   "line": "R2b"
+  },
+  {
+   "line": "R2d",
+   "fx": "punch"
+  },
+  {
+   "line": "R2f"
+  },
+  {
+   "line": "R3"
+  },
+  {
+   "line": "R3b",
+   "keep": true,
+   "speed": 1.0,
+   "flash_word": 2
+  },
+  {
+   "line": "R3c"
+  }
+ ],
+ "music": [
+  [
+   0,
+   "stalk"
+  ],
+  [
+   10,
+   "build"
+  ]
+ ],
+ "id": "ep2_s1_storm",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 2",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}

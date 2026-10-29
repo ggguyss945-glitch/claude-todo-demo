@@ -47,7 +47,7 @@ for L in T['voice']['lines']:
 # ---------- score ----------
 hall = Pedalboard([Reverb(room_size=0.78, damping=0.45, wet_level=0.28, dry_level=0.85, width=1.0)])
 pa_music = Pedalboard([HighpassFilter(350), LowpassFilter(4200), PeakFilter(1800, 4, 1.0), Distortion(drive_db=6), Reverb(room_size=0.92, damping=0.4, wet_level=0.5, dry_level=0.65, width=1.0)])
-cues = sorted(T['music'], key=lambda c: c['t'])
+cues = [] if os.environ.get('STEMS_ONLY') else sorted(T['music'], key=lambda c: c['t'])   # STEMS_ONLY: voice and effects only, for shorts
 for i, c in enumerate(cues):
     if c['cue'] == 'stop': continue
     t0 = c['t']; nxt = cues[i + 1] if i + 1 < len(cues) else None; t1 = nxt['t'] if nxt else DUR
@@ -109,6 +109,11 @@ for i in range(nf):
     cur += (on[i] - cur) * (a_up if on[i] > cur else a_dn); sm[i] = cur
 act = np.interp(np.arange(N), np.arange(nf) * hop + hop / 2, sm).astype(np.float32)
 for tr, d in ((score, -11), (loopT, -13), (amb, -9)): tr.x *= (1 - act * (1 - db(d)))[:, None]
+if os.environ.get('STEMS_ONLY'):
+    # full-rate stems from ep_start: the voice, and everything that isn't the score (effects, the store speakers, beds)
+    sf.write(f'{OUT}/stemfull_voice.wav', voice.x * db(-1), SR, subtype='PCM_24')
+    sf.write(f'{OUT}/stemfull_fx.wav', amb.x + sfxT.x + loopT.x, SR, subtype='PCM_24')
+    print('stems written from', E0); sys.exit(0)
 
 def limit(x, ceil_db=-1.0, ms=30):
     # lookahead peak limiter with no makeup gain: the gain curve is the minimum over +-ms/2, then a moving

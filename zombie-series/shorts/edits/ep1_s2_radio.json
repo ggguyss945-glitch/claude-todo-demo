@@ -1,0 +1,100 @@
+{
+ "ep": 1,
+ "hook": [
+  "DON'T TRUST",
+  "THE [[RADIO]]"
+ ],
+ "beats": [
+  {
+   "line": "D2"
+  },
+  {
+   "line": "D3"
+  },
+  {
+   "line": "D5"
+  },
+  {
+   "line": "D7"
+  },
+  {
+   "line": "D9"
+  },
+  {
+   "line": "D10"
+  },
+  {
+   "line": "D11"
+  },
+  {
+   "line": "D14"
+  },
+  {
+   "line": "D15",
+   "fx": "punch"
+  },
+  {
+   "line": "H13"
+  },
+  {
+   "line": "H15",
+   "fx": "punch"
+  },
+  {
+   "line": "K8",
+   "w": [
+    0,
+    1
+   ]
+  },
+  {
+   "line": "K9"
+  },
+  {
+   "line": "K10"
+  },
+  {
+   "line": "K11"
+  },
+  {
+   "line": "K12",
+   "fx": "hit"
+  },
+  {
+   "line": "K13",
+   "fx": "hit"
+  },
+  {
+   "line": "K15"
+  },
+  {
+   "line": "K17"
+  },
+  {
+   "line": "K18",
+   "fx": "punch"
+  }
+ ],
+ "music": [
+  [
+   0,
+   "radio"
+  ],
+  [
+   7,
+   "stalk"
+  ],
+  [
+   13,
+   "build"
+  ],
+  [
+   16,
+   "twist"
+  ]
+ ],
+ "id": "ep1_s2_radio",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 1",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}

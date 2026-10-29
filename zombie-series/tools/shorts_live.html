@@ -59,7 +59,7 @@ h2 { font-size: 22px; }
 <div class="wrap">
   <header style="display:grid;gap:14px">
     <div class="top">
-      <div class="brand"><h1>LAST LIGHT</h1><span>Shorts · 6 vertical cuts · 1440×2560 · 60 fps</span></div>
+      <div class="brand"><h1>LAST LIGHT</h1><span>Shorts · 6 edited verticals · 1440×2560 · 60 fps</span></div>
       <span class="pill" id="pill"><i></i><span id="pillText">Connecting</span></span>
     </div>
     <div class="meters">
@@ -70,7 +70,7 @@ h2 { font-size: 22px; }
     </div>
   </header>
   <section style="display:grid;gap:12px">
-    <div class="top"><h2>The six shorts</h2><span class="note">Latest rendered frame of each. A finished short plays here as a small preview.</span></div>
+    <div class="top"><h2>The six shorts</h2><span class="note">Each short goes: rendering frames → editing (tight cuts, zooms, captions, music, sound effects) → done, and then plays here.</span></div>
     <div class="wall" id="wall"></div>
   </section>
   <section style="display:grid;gap:10px"><h2>Log</h2><ul class="log" id="log"><li><time>—</time><span>No events yet.</span></li></ul></section>
@@ -83,7 +83,7 @@ const blob = (id) => (id ? "/_blob/" + id : "");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const clock = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
-const ST = { queued: ["Queued", ""], rendering: ["Rendering", "run"], encoding: ["Encoding", "run"], done: ["Done", "ok"], failed: ["Failed", "bad"] };
+const ST = { queued: ["Queued", ""], rendering: ["Rendering frames", "run"], editing: ["Editing · sound + picture", "run"], encoding: ["Encoding", "run"], done: ["Done", "ok"], failed: ["Failed", "bad"] };
 let S = null, lastFresh = 0, videoKey = "";
 
 function render() {
@@ -102,7 +102,7 @@ function render() {
   $("eta").innerHTML = done ? "0 <small>min</small>" : left == null ? "—" : left >= 60 ? `${Math.floor(left / 60)} <small>h</small> ${Math.round(left % 60)} <small>min</small>` : `${Math.max(1, Math.round(left))} <small>min</small>`;
   $("etaNote").textContent = done ? "all six are ready" : left == null ? "measuring speed" : "about " + new Date(now + left * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   $("rate").innerHTML = S.rate ? `${S.rate.toFixed(1)} <small>fps</small>` : "—";
-  const cur = (S.shorts || []).find((x) => x.status === "rendering" || x.status === "encoding");
+  const cur = (S.shorts || []).find((x) => x.status === "rendering" || x.status === "editing" || x.status === "encoding");
   $("now").textContent = done ? "All six finished" : cur ? `${ST[cur.status][0]} · ${cur.name}` : "Between shorts";
   $("updated").textContent = "updated " + clock(S.updated_at);
   const key = (S.shorts || []).map((x) => x.video || x.preview || "").join("|");
@@ -123,7 +123,7 @@ function render() {
     const b = document.querySelector(`[data-bar="${x.id}"]`); if (!b) continue;
     let d = x.done; if (x.status === "rendering") d = Math.min(x.frames, d + extra);
     b.style.width = (x.status === "done" ? 100 : 100 * d / Math.max(1, x.frames)) + "%";
-    const c = document.querySelector(`[data-st="${x.id}"]`); if (c && x.status === "rendering") c.textContent = `Rendering · ${Math.floor(100 * d / Math.max(1, x.frames))}%`;
+    const c = document.querySelector(`[data-st="${x.id}"]`); if (c && x.status === "rendering") c.textContent = `Rendering frames · ${Math.floor(100 * d / Math.max(1, x.frames))}%`;
   }
   $("log").innerHTML = (S.log || []).map((e) => `<li><time>${clock(e.t)}</time><span>${esc(e.msg)}</span></li>`).join("") || "<li><time>—</time><span>No events yet.</span></li>";
 }

@@ -83,7 +83,7 @@ window.renderAt = (t) => {
   ep.innerHTML = svg;
   ep.style.transform = camera(sg, t);
   if (sg.mode === 'fit') { bg.innerHTML = svg; bg.style.transform = `translate(${(-(960 - CW / 2)).toFixed(2)}px, 0px)`; } else if (bg.innerHTML) bg.innerHTML = '';
-  ov.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="${CW}" height="${HH}">${DEFS}${hook(st)}${caption(t)}${cta(st)}</svg>`;
+  if (q.get('clean') === '1') ov.innerHTML = ''; else ov.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="${CW}" height="${HH}">${DEFS}${hook(st)}${caption(t)}${cta(st)}</svg>`;
   return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 };
 window.__ready = true;

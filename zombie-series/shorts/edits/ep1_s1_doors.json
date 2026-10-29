@@ -1,0 +1,93 @@
+{
+ "ep": 1,
+ "hook": [
+  "THE DOORS OPEN",
+  "AT [[7:00 AM]]"
+ ],
+ "beats": [
+  {
+   "line": "F5",
+   "fx": "hit"
+  },
+  {
+   "line": "F3"
+  },
+  {
+   "line": "F4"
+  },
+  {
+   "line": "F7",
+   "fx": "punch"
+  },
+  {
+   "line": "G3",
+   "w": [
+    3,
+    21
+   ]
+  },
+  {
+   "line": "G4"
+  },
+  {
+   "line": "G6"
+  },
+  {
+   "line": "G7"
+  },
+  {
+   "line": "G9"
+  },
+  {
+   "line": "G10"
+  },
+  {
+   "line": "G11",
+   "fx": "punch"
+  },
+  {
+   "line": "G12",
+   "fx": "hit",
+   "post": 0.4
+  },
+  {
+   "line": "G13"
+  },
+  {
+   "line": "G14"
+  },
+  {
+   "line": "G16"
+  },
+  {
+   "line": "G17",
+   "fx": "hit"
+  }
+ ],
+ "music": [
+  [
+   0,
+   "tick"
+  ],
+  [
+   4,
+   "stalk"
+  ],
+  [
+   11,
+   "-"
+  ],
+  [
+   12,
+   "chaos"
+  ],
+  [
+   15,
+   "rule"
+  ]
+ ],
+ "id": "ep1_s1_doors",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 1",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}

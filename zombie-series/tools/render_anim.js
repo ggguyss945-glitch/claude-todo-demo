@@ -5,6 +5,7 @@
 //   frames=a:b             render only frame indices a..b-1 (chunked renders); progress.json counts this range
 //   bake=0                 draw static layers inline instead of baking them into bitmaps
 //   times=<file.json>       render exactly these timeline times (a JSON array), frames named f_00000.. in that order
+//   names=ep               with times=: name frames f_<round(t*fps)>.jpg (six digits), so renders of the same episode share them
 //   warm=1                 bake every shot's static layers before the first frame, so no frame ever shows a layer
 //                          drawn inline while its bitmap is still on the way (the two can differ by a hair)
 const { chromium } = require('playwright');
@@ -97,8 +98,8 @@ const server = http.createServer((req, res) => {
     while (next < times.length) {
       const i = next++, t = times[i];
       await page.evaluate((t) => window.renderAt(t), t);
-      const name = listed ? `f_${String(i).padStart(5, '0')}.jpg` : onlyArg ? `t_${t.toFixed(2)}.jpg` : `f_${String(f0 + i).padStart(5, '0')}.jpg`;
-      await page.locator('#stage').screenshot({ path: path.join(outDir, name), type: 'jpeg', quality: 95 });
+      const name = listed ? (opt.names === 'ep' ? `f_${String(Math.round(t * fps)).padStart(6, '0')}.jpg` : `f_${String(i).padStart(5, '0')}.jpg`) : onlyArg ? `t_${t.toFixed(2)}.jpg` : `f_${String(f0 + i).padStart(5, '0')}.jpg`;
+      await page.locator('#stage').screenshot({ path: path.join(outDir, name), type: 'jpeg', quality: +(opt.quality || 95) });
       const jobs = await page.evaluate(() => (window.takeBakeJobs ? window.takeBakeJobs() : []));
       for (const j of jobs) bake(j, defs);
       last = name;

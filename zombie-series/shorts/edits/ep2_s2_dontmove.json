@@ -1,0 +1,78 @@
+{
+ "ep": 2,
+ "hook": [
+  "SOMETHING COLD",
+  "ON YOUR [[NECK]]"
+ ],
+ "beats": [
+  {
+   "line": "M3"
+  },
+  {
+   "line": "M11"
+  },
+  {
+   "line": "M12",
+   "keep": true,
+   "speed": 1.0,
+   "fx": "hit"
+  },
+  {
+   "line": "M13"
+  },
+  {
+   "line": "M14"
+  },
+  {
+   "line": "M16"
+  },
+  {
+   "line": "M16c"
+  },
+  {
+   "line": "N6"
+  },
+  {
+   "line": "N7"
+  },
+  {
+   "line": "N12"
+  },
+  {
+   "line": "N13"
+  },
+  {
+   "line": "N14",
+   "fx": "punch"
+  },
+  {
+   "line": "N15",
+   "fx": "hit"
+  },
+  {
+   "line": "N16",
+   "fx": "hit"
+  },
+  {
+   "line": "N18"
+  }
+ ],
+ "music": [
+  [
+   0,
+   "dread"
+  ],
+  [
+   9,
+   "stalk"
+  ],
+  [
+   12,
+   "twist"
+  ]
+ ],
+ "id": "ep2_s2_dontmove",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 2",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}

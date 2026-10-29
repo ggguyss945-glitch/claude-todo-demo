@@ -1,0 +1,113 @@
+{
+ "ep": 1,
+ "hook": [
+  "THEY CAN'T SEE.",
+  "THEY [[HEAR]]."
+ ],
+ "beats": [
+  {
+   "line": "A10",
+   "w": [
+    4,
+    9
+   ],
+   "fx": "hit"
+  },
+  {
+   "line": "A9"
+  },
+  {
+   "line": "A11"
+  },
+  {
+   "line": "A13"
+  },
+  {
+   "line": "A14"
+  },
+  {
+   "line": "A15",
+   "w": [
+    5,
+    10
+   ]
+  },
+  {
+   "line": "A16"
+  },
+  {
+   "line": "A17"
+  },
+  {
+   "line": "A18"
+  },
+  {
+   "line": "A20"
+  },
+  {
+   "line": "A21"
+  },
+  {
+   "act": [
+    174.0,
+    176.5
+   ],
+   "speed": 1.0
+  },
+  {
+   "act": [
+    179.0,
+    183.0
+   ],
+   "speed": 1.5
+  },
+  {
+   "act": [
+    196.5,
+    202.6
+   ],
+   "speed": 1.25
+  },
+  {
+   "line": "A22",
+   "fx": "hit"
+  },
+  {
+   "line": "A23"
+  },
+  {
+   "line": "A24"
+  },
+  {
+   "line": "A25",
+   "keep": true,
+   "speed": 1.0
+  }
+ ],
+ "music": [
+  [
+   0,
+   "night_op"
+  ],
+  [
+   11,
+   "-"
+  ],
+  [
+   12,
+   "chase"
+  ],
+  [
+   14,
+   "rule"
+  ],
+  [
+   16,
+   "humor"
+  ]
+ ],
+ "id": "ep1_s3_freezer",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 1",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}

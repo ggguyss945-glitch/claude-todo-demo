@@ -1,0 +1,84 @@
+{
+ "ep": 2,
+ "hook": [
+  "200 ZOMBIES",
+  "VS ONE [[SONG]]"
+ ],
+ "beats": [
+  {
+   "line": "S2"
+  },
+  {
+   "line": "S3"
+  },
+  {
+   "line": "S4"
+  },
+  {
+   "line": "S5",
+   "fx": "punch"
+  },
+  {
+   "line": "S6"
+  },
+  {
+   "act": [
+    777.3,
+    781.8
+   ],
+   "speed": 1.0
+  },
+  {
+   "line": "S8"
+  },
+  {
+   "line": "S8b"
+  },
+  {
+   "line": "S8c"
+  },
+  {
+   "line": "S8e",
+   "fx": "punch"
+  },
+  {
+   "line": "S8f"
+  },
+  {
+   "line": "S8g",
+   "fx": "hit"
+  },
+  {
+   "line": "S9"
+  },
+  {
+   "line": "S10"
+  }
+ ],
+ "music": [
+  [
+   0,
+   "plan"
+  ],
+  [
+   5,
+   "-"
+  ],
+  [
+   6,
+   "night_op"
+  ],
+  [
+   11,
+   "chase"
+  ],
+  [
+   13,
+   "relief"
+  ]
+ ],
+ "id": "ep2_s3_song",
+ "speed": 1.1,
+ "tag": "LAST LIGHT \u00b7 EP 2",
+ "cta": "FULL EPISODE ON THE CHANNEL"
+}
