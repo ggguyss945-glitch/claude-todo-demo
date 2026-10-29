@@ -71,7 +71,8 @@ def sound(E, clips, dur, out):
     sm = np.zeros(nf, np.float32); cur = 0.0
     for i in range(nf): cur += (on[i] - cur) * ((1 - np.exp(-1 / 4)) if on[i] > cur else (1 - np.exp(-1 / 25))); sm[i] = cur
     act = np.interp(np.arange(N), np.arange(nf) * hop + hop / 2, sm).astype(np.float32)
-    music *= (1 - act * (1 - db(-10)))[:, None]
+    act = np.concatenate([act[int(0.06 * SR):], np.full(int(0.06 * SR), act[-1], np.float32)])   # 60 ms lookahead: down before the word
+    music *= (1 - act * (1 - db(-11)))[:, None]
     # hits: the hook, the punches and the twists; whooshes on every change of shot; a riser into each music switch
     # booms land under words, so only their low end is kept: felt, never covering a consonant
     sub = lambda y: Pedalboard([LowpassFilter(160)])(y.astype(np.float32), SR)
@@ -86,6 +87,7 @@ def sound(E, clips, dur, out):
         if b not in beat_t: continue
         t = beat_t[b]
         if cue != '-' and t > 2: place(hits, X.riser(1.3, 1.0), t - 1.3, -17)
+    sf.write(f'{out}/voice_only.wav', voice[:int(round(dur * SR))], SR, subtype='PCM_16')
     mix = voice + fx + music + hits
     mix = Pedalboard([Compressor(threshold_db=-18, ratio=2.5, attack_ms=8, release_ms=120)])(mix, SR)
     mix = limit(mix[:int(round(dur * SR))], -2.0)
@@ -244,11 +246,11 @@ def picture(E, clips, dur, out):
             if gr and gr['t0'] <= t < gr['t1']:
                 act = max([i for i, w in enumerate(gr['words']) if w['o'] <= t] or [0])
                 sc = 1 + 0.16 * (1 - ease((t - gr['t0']) / 0.09))
-                cy = 1930 if clips[gr['clip']].get('fit') else 1640
+                cl = clips[gr['clip']]; cy = 1930 if cl.get('fit') else 1900 if cl.get('close') else 1640
                 blit(frame, cap_img(gi, act), OW / 2, cy, sc)
-                if gr['who'] in labels: blit(frame, labels[gr['who']], OW / 2, cy - 120, 1.0)
+                if gr['who'] in labels: blit(frame, labels[gr['who']], OW / 2, cy + 118, 1.0)   # under the line, never on a face
             # the call to action over the last 2.5 seconds
-            if t > dur - 2.5: blit(frame, cta, OW / 2, 470, 1.0, ease((t - (dur - 2.5)) / 0.3))
+            if t > dur - 2.5: blit(frame, cta, OW / 2, 560, 1.0, ease((t - (dur - 2.5)) / 0.3))
             enc.stdin.write(frame.tobytes())
     enc.stdin.close(); enc.wait()
     print('picture done', flush=True)

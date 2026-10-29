@@ -33,6 +33,9 @@ def plan(E):
     def is_fit(i):   # text cards are shown whole across the width; captions then sit below them
         sh = T['shots'][i]; d = FR.get(f"{sh['start']:.2f}")
         return (d or {}).get('mode') == 'fit' or (d is None and sh['name'] in ('card', 'card2', 'map', 'map2'))
+    def is_close(i):   # a face fills the middle of the frame: captions go below it
+        sh = T['shots'][i]; md = (sh.get('p') or {}).get('mode')
+        return sh['name'] in ('hclose', 'hclose2', 'zclose') or (sh['name'] == 'nora' and md in ('close', 'radio', 'window', None))
     clips = []
     for bi, b in enumerate(E['beats']):
         sp = b.get('speed', E['speed'])
@@ -44,7 +47,7 @@ def plan(E):
         for k, (a, z, words) in enumerate(ps):
             f0 = round(a * FPS); n = max(1, round((z - a) / sp * FPS))
             src = [round((a + j * sp / FPS) * FPS) for j in range(n)]
-            clips.append(dict(beat=bi, k=k, t0=a, t1=z, speed=sp, n=n, src=src, words=words, who=who, shot=shot_at((a + z) / 2), fit=is_fit(shot_at((a + z) / 2)),
+            clips.append(dict(beat=bi, k=k, t0=a, t1=z, speed=sp, n=n, src=src, words=words, who=who, shot=shot_at((a + z) / 2), fit=is_fit(shot_at((a + z) / 2)), close=is_close(shot_at((a + z) / 2)),
                               fx=b.get('fx') if k == 0 else None, flash_word=b.get('flash_word'), act='act' in b))
     # no clip may start inside the previous one's source span when they are neighbours in the episode
     t = 0.0
@@ -85,6 +88,7 @@ if __name__ == '__main__':
         print(E['id'], f'{dur:.1f} s,', len(clips), 'clips,', len(need), 'frames to render')
     elif cmd == 'render': render(E)
     elif cmd == 'clean':   # free the disk once the short is made: its frames are not shared with the others
+        if os.path.exists(f'{SCR}/KEEP_FRAMES'): sys.exit(0)
         T, clips, dur = plan(E)
         for f in set(f for c in clips for f in c['src']):
             try: os.remove(f"{CACHE(E['ep'])}/f_{f:06d}.jpg")
