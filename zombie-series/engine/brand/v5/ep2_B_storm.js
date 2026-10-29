@@ -19,7 +19,8 @@ function soft(cx, cy, rx, ry, color, op) {
   return `<radialGradient id="${id}"><stop offset="0" stop-color="${color}" stop-opacity="${op}"/><stop offset="0.4" stop-color="${color}" stop-opacity="${(op * 0.55).toFixed(3)}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`
     + ellipse(cx, cy, rx, ry, { fill: `url(#${id})`, style: 'mix-blend-mode:screen' });
 }
-const FR = 'filterUnits="userSpaceOnUse" x="-120" y="-120" width="2160" height="1320"';
+// user-space filter regions, each only as big as its layer needs (big regions at 2x cost GPU memory)
+const FR = (x, y, w, h) => `filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"`;
 
 // ---------- palette ----------
 const SKINS = ['#9DB28E', '#A4B592', '#94AC8A', '#A9B48C', '#98B096'];
@@ -34,10 +35,11 @@ export function sky() {
     <linearGradient id="sb_sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#120C28"/><stop offset="0.42" stop-color="#2A2155"/><stop offset="0.72" stop-color="#3E4F86"/><stop offset="1" stop-color="#4F8C96"/></linearGradient>
     <radialGradient id="sb_flash" cx="0.84" cy="0.22" r="0.62"><stop offset="0" stop-color="#F1ECFF" stop-opacity="0.95"/><stop offset="0.28" stop-color="#B9A8FF" stop-opacity="0.55"/><stop offset="0.65" stop-color="#6B5FC8" stop-opacity="0.18"/><stop offset="1" stop-color="#2A2155" stop-opacity="0"/></radialGradient>
     <linearGradient id="sb_cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1A1438"/><stop offset="1" stop-color="#3A3170"/></linearGradient>
-    <filter id="sb_cblur" ${FR}><feGaussianBlur stdDeviation="6"/></filter>
-    <filter id="sb_boltglow" ${FR}><feGaussianBlur stdDeviation="22"/></filter>
-    <filter id="sb_boltglowS" ${FR}><feGaussianBlur stdDeviation="7"/></filter>
-    <filter id="sb_rainblur" ${FR}><feGaussianBlur stdDeviation="1.6"/></filter>
+    <filter id="sb_cblur" ${FR(-200, -200, 2320, 700)}><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="sb_cblur2" ${FR(-200, 250, 2320, 250)}><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="sb_cityblur" ${FR(-100, 360, 2120, 260)}><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="sb_boltglow" ${FR(1250, -150, 800, 850)}><feGaussianBlur stdDeviation="22"/></filter>
+    <filter id="sb_boltglowS" ${FR(1250, -150, 800, 850)}><feGaussianBlur stdDeviation="7"/></filter>
   </defs>`;
   s += rect(0, 0, W, H, { fill: 'url(#sb_sky)' });
   s += rect(0, 0, W, 700, { fill: 'url(#sb_flash)', style: 'mix-blend-mode:screen' });
@@ -59,7 +61,7 @@ export function sky() {
     const near = Math.max(0, 1 - Math.abs(x - 1650) / 700);
     cl2 += ellipse(x, y, rx, ry, { fill: mix('#3A3A78', '#B7AAF5', near * 0.6), opacity: 0.55 });
   }
-  s += g(cl2, { filter: 'url(#sb_cblur)' });
+  s += g(cl2, { filter: 'url(#sb_cblur2)' });
   return s;
 }
 
@@ -87,9 +89,9 @@ export function lightning() {
   // the air around it glows
   s += soft(1680, 260, 760, 620, '#C9BCFF', 0.6) + soft(1700, 520, 520, 160, '#EDE8FF', 0.7);
   s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 120, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
-  for (const b of branches) s += path(d(b), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.65, filter: 'url(#sb_boltglowS)' });
+  s += g(branches.map((b) => path(d(b), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' })).join('')
+    + path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 44, strokeLinejoin: 'round', strokeLinecap: 'round' }), { filter: 'url(#sb_boltglowS)', opacity: 0.75 });
   for (const b of branches) s += path(d(b), { fill: 'none', stroke: '#D9CFFF', strokeWidth: 12, strokeLinejoin: 'round', strokeLinecap: 'round' }) + path(d(b), { fill: 'none', stroke: BOLT, strokeWidth: 5, strokeLinejoin: 'round', strokeLinecap: 'round' });
-  s += path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 44, strokeLinejoin: 'round', strokeLinecap: 'round', filter: 'url(#sb_boltglowS)' });
   s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 28, strokeLinejoin: 'round', strokeLinecap: 'round' });
   s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 14, strokeLinejoin: 'round', strokeLinecap: 'round' });
   return s;
@@ -101,7 +103,7 @@ export function horizon() {
   const r = rng(12);
   let city = '';
   for (let x = -40; x < W; x += 90) { const h = 30 + r() * 100, near = Math.max(0, 1 - Math.abs(x - 1700) / 650); city += rect(x, 540 - h, 86, h + 40, { fill: mix('#34416E', '#7A7CC0', near * 0.7) }); }
-  s += g(city, { filter: 'url(#sb_cblur)', opacity: 0.9 });
+  s += g(city, { filter: 'url(#sb_cityblur)', opacity: 0.9 });
   s += `<linearGradient id="sb_lot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E7E96"/><stop offset="1" stop-color="#2E4E6A"/></linearGradient>`;
   s += rect(0, 520, W, 560, { fill: 'url(#sb_lot)' });
   // a curtain of rain haze where the lot meets the city, so the far edge has no hard line
@@ -309,7 +311,7 @@ function thumbStorm() {
   s += g(g(upZombie(60, 1900, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
     + upZombie(1890, 1960, 3.1, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 10, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
   // the downpour over everything, heavier and softer up close
-  s += rain({ n: 110, seed: 8, len: [130, 230], w: 5, op: 0.36, blur: 'sb_rainblur' });
+  s += rain({ n: 110, seed: 8, len: [130, 230], w: 4.5, op: 0.3 });
   s += grade('#3B2F6E', 0.1);
   s += headline(64, 210, 'WAIT FOR', { size: 178, anchor: 'start' }) + headline(56, 438, 'THUNDER', { size: 250, anchor: 'start', fill: 'url(#pro_red)' });
   s += finish({ vignette: 0.5, grain: 0.05 });
