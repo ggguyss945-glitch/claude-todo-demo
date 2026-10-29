@@ -147,7 +147,7 @@ function thumbA() {
 }
 
 // ---------- A4: the same split; a bored night-shift worker on day 0, a survivor with a crowbar on day 7 ----------
-function apron(x, y, u) {
+export function apron(x, y, u) {
   let s = poly([[x - 0.43 * u, y - 3.98 * u], [x + 0.43 * u, y - 3.98 * u], [x + 0.55 * u, y - 2.05 * u], [x - 0.55 * u, y - 2.05 * u]], { fill: '#2F6B52', ...ink(0.04 * u) });
   s += line(x - 0.3 * u, y - 3.98 * u, x - 0.22 * u, y - 4.3 * u, ink(0.04 * u)) + line(x + 0.3 * u, y - 3.98 * u, x + 0.22 * u, y - 4.3 * u, ink(0.04 * u));
   s += text(x, y - 3.42 * u, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.15 * u, fill: '#F3EAD2', textAnchor: 'middle', letterSpacing: 1 });
@@ -166,7 +166,7 @@ function coffeeArm(x, y, u) {
   s += circle(ax, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) });
   return s;
 }
-function survivalGear(x, y, u) {
+export function survivalGear(x, y, u) {
   // backpack straps, a chest strap, a rip and dirt on the jacket
   let s = '';
   for (const side of [-1, 1]) s += poly([[x + side * 0.42 * u, y - 4.12 * u], [x + side * 0.24 * u, y - 4.12 * u], [x + side * 0.28 * u, y - 2.2 * u], [x + side * 0.46 * u, y - 2.2 * u]], { fill: '#4A3424', ...ink(0.035 * u) });
@@ -175,7 +175,7 @@ function survivalGear(x, y, u) {
   for (const [dx, dy, r] of [[-0.12, 2.6, 0.12], [0.2, 3.3, 0.09], [-0.32, 3.0, 0.07]]) s += ellipse(x + dx * u, y - dy * u, r * u, r * 0.7 * u, { fill: '#2B2A22', opacity: 0.3 });
   return s;
 }
-function crowbar(x, y, u) {
+export function crowbar(x, y, u) {
   // held at the cheek, resting on the shoulder, the hook sticking up behind the head
   const B = [x + 1.3 * u, y - 4.12 * u], T = [x - 0.55 * u, y - 7.0 * u], w = 0.15 * u;
   const hook = `M${F(T[0])} ${F(T[1])} q${F(-0.34 * u)} ${F(-0.16 * u)} ${F(-0.4 * u)} ${F(0.26 * u)}`;
@@ -188,7 +188,7 @@ function crowbar(x, y, u) {
   return s;
 }
 // a stack of stock in the worker's arms: two cartons with made-up brands on them, hands under the bottom one
-function stock(x, y, u) {
+export function stock(x, y, u) {
   const box = (bx, by, w, h, fill) => rect(bx, by, w, h, { rx: 0.04 * u, fill, ...ink(0.04 * u) }) + line(bx, by + 0.16 * u, bx + w, by + 0.16 * u, { stroke: '#8E6A40', strokeWidth: 0.025 * u });
   let s = '';
   // bottom carton: CRUNCHY O's cereal
@@ -209,7 +209,7 @@ function stock(x, y, u) {
   s += g(rect(-0.2 * u, -0.07 * u, 0.4 * u, 0.14 * u, { rx: 0.03 * u, fill: '#2F6B52', ...ink(0.02 * u) }) + text(0, 0.04 * u, 'FRESHWAY', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 0.07 * u, fill: '#F3EAD2', textAnchor: 'middle' }), { transform: `translate(${F(x + 0.52 * u)} ${F(y - 3.28 * u)}) rotate(-4)` });
   return s;
 }
-const stockHands = (x, y, u) => circle(x - 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(x + 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) });
+export const stockHands = (x, y, u) => circle(x - 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(x + 0.86 * u, y - 2.62 * u, 0.15 * u, { fill: PAL.skin, ...ink(4) });
 
 function thumbA4() {
   const SEAM = [[1000, 0], [920, 1080]];

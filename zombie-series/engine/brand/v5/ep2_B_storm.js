@@ -88,9 +88,9 @@ function lightning() {
   let s = '';
   // the air around it glows
   s += soft(1680, 280, 820, 640, '#CFC4FF', 0.72) + soft(1690, 300, 300, 420, '#F2EEFF', 0.45) + soft(1700, 520, 560, 170, '#EDE8FF', 0.75);
-  s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 150, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
+  s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 210, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
   s += g(branches.map((b) => path(d(b), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' })).join('')
-    + path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 44, strokeLinejoin: 'round', strokeLinecap: 'round' }), { filter: 'url(#sb_boltglowS)', opacity: 0.75 });
+    + path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 62, strokeLinejoin: 'round', strokeLinecap: 'round' }), { filter: 'url(#sb_boltglowS)', opacity: 0.75 });
   for (const b of branches) s += path(d(b), { fill: 'none', stroke: '#D9CFFF', strokeWidth: 15, strokeLinejoin: 'round', strokeLinecap: 'round' }) + path(d(b), { fill: 'none', stroke: BOLT, strokeWidth: 6, strokeLinejoin: 'round', strokeLinecap: 'round' });
   s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' });
   s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 21, strokeLinejoin: 'round', strokeLinecap: 'round' });

@@ -190,16 +190,16 @@ function thumb() {
   s += rect(0, MALL.ground, W, H - MALL.ground, { fill: '#1A2236' }) + line(0, MALL.ground, W, MALL.ground, ink(5));
   s += bloom(1150, 880, 900, 260, '#7FA0E0', 0.26);
   // back rows: small, fogged, a touch soft so the front rows and the window win
-  s += g(horde({ x0: -60, x1: 2000, yb: 690, yf: 880, rows: 4, s0: 0.32, s1: 0.72, seed: 43, arms: 0.5, rim: '#B8CCF5', rimSide: -1, fog: '#16203A', fogK: 0.62, density: 1.4 }), { filter: 'url(#pro_b1)' });
+  s += g(horde({ x0: -60, x1: 2000, yb: 690, yf: 880, rows: 4, s0: 0.32, s1: 0.72, seed: 43, arms: 0, rim: '#B8CCF5', rimSide: -1, fog: '#16203A', fogK: 0.62, density: 1.4 }), { filter: 'url(#pro_b1)' });
   s += bloom(WIN.x + WIN.w / 2, 650, 520, 110, '#FFB050', 0.16);   // the window's light just reaching the far rows
   // front rows: big, in colour, faces you can read
-  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.35, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
+  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.1, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
   // you, on Freshway's roof: binoculars down on the ledge, looking across at the window
   const sc = 2.8, gx = 450, gy = 1455, u = 60 * sc, top = 984;
   const cy = gy - 5.25 * u, by = top - 0.33 * u, hy = gy - 4.05 * u + 0.85 * u;   // binoculars on the ledge; hands where the 'carry' pose puts them
   s += bloom(gx, 600, 400, 440, '#3E64B0', 0.35);
   const hands = circle(gx - 0.45 * u, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) }) + circle(gx + 0.5 * u, hy, 0.15 * u, { fill: PAL.skin, ...ink(4) });
-  s += actor({ x: gx, y: gy, s: sc, pose: 'carry', face: 'serious', look: 0.55, scratch: true, lick: false, id: 'sosA', rim: { color: '#FFC070', side: 1, op: 0.7 },
+  s += actor({ x: gx, y: gy, s: sc, pose: 'carry', face: 'serious', look: 0.85, scratch: true, lick: false, id: 'sosA', rim: { color: '#FFC070', side: 1, op: 0.7 },
     extra: binoculars(gx, by, u) + hands, front: cowlick(gx, cy, u) });
   s += parapet(top);
   // the signal, from the window across the lot to you
