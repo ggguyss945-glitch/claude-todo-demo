@@ -3,10 +3,43 @@
 // One idea: the warm light across the dark. Deep blue night, one warm light, the headline in that light's colour.
 import { W, H, INK, PAL, finish, g, rect, circle, ellipse, line, poly, path, text, ink, rng } from '../../lib.js';
 import { svgOf, headline, bloom, actor } from '../v2/pro.js';
-import { horde } from '../v2/pro3.js';
 
 const F = (n) => (+n).toFixed(1);
 const WARM = '#FFD46A';
+
+// ---------- the horde (pro3's horde(), with a palette and skin of our own: brighter clothes for the front rows) ----------
+const lerp = (a, b, k) => a + (b - a) * k;
+function mix(a, b, k) {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b);
+  return '#' + A.map((v, i) => Math.round(lerp(v, B[i], k)).toString(16).padStart(2, '0')).join('');
+}
+const CLOTHES = ['#4FA3A8', '#D0668A', '#8A6FB0', '#C9A24A', '#C2603F', '#4F78B8', '#8C8C86', '#6E9A5A', '#B8453A', '#6FA3A6', '#7C6A8E'];
+function horde({ x0, x1, yb, yf, rows = 6, s0 = 0.42, s1 = 1.3, seed = 1, arms = 0.75, rim = '#CFE0FF', rimSide = -1, fog = '#0B0F1E', fogK = 0.65, density = 1.55, skin = '#93A487', clothes = CLOTHES }) {
+  const r = rng(seed); let out = '';
+  for (let row = 0; row < rows; row++) {
+    const t = rows > 1 ? row / (rows - 1) : 1, y = lerp(yb, yf, t * t * 0.5 + t * 0.5), sc = lerp(s0, s1, t * t), u = 60 * sc;
+    const dim = fogK * (1 - t), lw = Math.max(2.5, 0.09 * u);
+    const n = Math.max(3, Math.round((x1 - x0) / (u * density)));
+    for (let i = 0; i < n; i++) {
+      const x = x0 + ((i + 0.5 + (r() - 0.5) * 0.7) * (x1 - x0)) / n, yy = y + (r() - 0.5) * u * 0.6;
+      const sk = mix(skin, fog, dim), body = mix(clothes[Math.floor(r() * clothes.length)], fog, dim), ink2 = { stroke: mix(INK, fog, dim * 0.4), strokeWidth: lw, strokeLinecap: 'round', strokeLinejoin: 'round' };
+      const hx = x + (r() - 0.5) * 0.3 * u, hy = yy - 5.15 * u, tilt = (r() - 0.5) * 26;
+      let z = rect(x - 0.62 * u, yy - 4.2 * u, 1.24 * u, 2.3 * u, { rx: 0.28 * u, fill: body, ...ink2 });
+      if (r() < arms) for (const side of [-1, 1]) {
+        const ax = x + side * (0.75 + r() * 0.45) * u, ay = yy - (6.3 + r() * 0.9) * u;
+        z += path(`M${F(x + side * 0.5 * u)} ${F(yy - 3.9 * u)} Q${F(x + side * 0.95 * u)} ${F(yy - 5 * u)} ${F(ax)} ${F(ay)}`, { fill: 'none', ...ink2 }) + circle(ax, ay, 0.2 * u, { fill: sk, ...ink2 });
+      }
+      let hd = circle(hx, hy, u, { fill: sk, ...ink2 });
+      const R = u * 0.86, a1 = rimSide < 0 ? 2.1 : -1.05, a2 = rimSide < 0 ? 4.2 : 1.05;
+      hd += path(`M${F(hx + Math.cos(a1) * R)} ${F(hy + Math.sin(a1) * R)} A${F(R)} ${F(R)} 0 0 1 ${F(hx + Math.cos(a2) * R)} ${F(hy + Math.sin(a2) * R)}`, { fill: 'none', stroke: rim, strokeWidth: 0.16 * u, strokeLinecap: 'round', opacity: (0.35 + 0.6 * t).toFixed(2) });
+      hd += ellipse(hx - 0.32 * u, hy + 0.02 * u, 0.2 * u, 0.23 * u, { fill: mix('#2B302A', fog, dim * 0.5) }) + ellipse(hx + 0.32 * u, hy + 0.05 * u, 0.19 * u, 0.21 * u, { fill: mix('#2B302A', fog, dim * 0.5) });
+      hd += circle(hx - 0.29 * u, hy + 0.06 * u, 0.06 * u, { fill: '#E6EAD6' }) + circle(hx + 0.34 * u, hy + 0.09 * u, 0.055 * u, { fill: '#E6EAD6' }) + ellipse(hx + 0.03 * u, hy + 0.55 * u, 0.15 * u, 0.2 * u, { fill: '#241E1C' });
+      out += g(z + g(hd, { transform: `rotate(${F(tilt)} ${F(hx)} ${F(hy + u)})` }));
+    }
+  }
+  return g(out, { filter: 'url(#wobbleSoft)' });
+}
 
 // ---------- the sky: deep blue, a cool moon glow off-frame top left, a few stars ----------
 function sky() {
@@ -87,25 +120,39 @@ function litWindow() {
 // ---------- the signal: · · · — — — · · · flying out of the window toward you ----------
 function morse(pts) {
   let glow = '', marks = '';
-  pts.forEach(([x, y, a, k], i) => {
-    const dash = i >= 3 && i <= 5, r = 25 * k, len = 96 * k, tr = `translate(${F(x)} ${F(y)}) rotate(${F(a)})`;
-    const shape = (o) => (dash ? rect(-len / 2, -r, len, 2 * r, { rx: r, ...o }) : circle(0, 0, r, o));
+  pts.forEach(([x, y, a, d, len]) => {
+    const r = d / 2, tr = `translate(${F(x)} ${F(y)}) rotate(${F(a)})`;
+    const shape = (o) => (len > d ? rect(-len / 2, -r, len, d, { rx: r, ...o }) : circle(0, 0, r, o));
     glow += g(shape({ fill: WARM }), { transform: tr });
-    marks += g(shape({ fill: 'url(#sosA_mk)', ...ink(Math.max(6, 9 * k)) }), { transform: tr });
+    marks += g(shape({ fill: 'url(#sosA_mk)', ...ink(Math.max(6, 0.17 * d)) }), { transform: tr });
   });
   return `<defs><linearGradient id="sosA_mk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFBEA"/><stop offset="1" stop-color="#FFC94A"/></linearGradient></defs>`
     + g(glow, { filter: 'url(#pro_glow)', opacity: 0.8, style: 'mix-blend-mode:screen' }) + g(marks, { filter: 'url(#pro_shadow)' });
 }
-// the nine marks along a quadratic curve, Morse spacing, growing as they come closer
-function morsePath(P0, P1, P2, k0 = 0.7, k1 = 1.25) {
+// the nine marks laid along a quadratic curve by arc length, in Morse proportions (dash = 2.1 dots,
+// gaps 0.42 inside a letter, 1.05 between letters), every mark and gap growing as the signal comes closer
+function morsePath(P0, P1, P2, k0 = 0.75, k1 = 1.2) {
   const q = (t) => [(1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * P1[0] + t * t * P2[0], (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * P1[1] + t * t * P2[1]];
-  const L = [1, 1, 1, 2.6, 2.6, 2.6, 1, 1, 1];
-  const pos = []; let c = 0;
-  L.forEach((l, i) => { if (i) c += i === 3 || i === 6 ? 1.7 : 0.8; pos.push(c + l / 2); c += l; });
-  return pos.map((p) => {
-    const t = p / c, [x, y] = q(t), [x2, y2] = q(Math.min(1, t + 0.01)), [x1, y1] = q(Math.max(0, t - 0.01));
+  const N = 400, acc = [0], P = [q(0)];
+  for (let i = 1; i <= N; i++) { P.push(q(i / N)); acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); }
+  const total = acc[N];
+  const at = (sArc) => { let i = acc.findIndex((v) => v >= sArc); if (i <= 0) i = 1; const k = (sArc - acc[i - 1]) / (acc[i] - acc[i - 1] || 1); return [i - 1 + k, P[i - 1][0] + (P[i][0] - P[i - 1][0]) * k, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * k]; };
+  const kind = ['d', 'd', 'd', 'D', 'D', 'D', 'd', 'd', 'd'];
+  const walk = (sig) => {
+    let c = 0; const out = [];
+    kind.forEach((m, i) => {
+      const d = sig * (k0 + (k1 - k0) * Math.min(1, c / total)), len = m === 'D' ? 2.1 * d : d;
+      out.push([c + len / 2, d, len]); c += len;
+      if (i < 8) c += (i === 2 || i === 5 ? 1.05 : 0.42) * d;
+    });
+    return [out, c];
+  };
+  let sig = 50, res;
+  for (let it = 0; it < 8; it++) { res = walk(sig); sig *= total / res[1]; }
+  return res[0].map(([c, d, len]) => {
+    const [ti, x, y] = at(c), [, x1, y1] = at(Math.max(0, c - 4)), [, x2, y2] = at(Math.min(total, c + 4));
     let a = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI; if (a > 90) a -= 180; if (a < -90) a += 180;
-    return [x, y, a, k0 + (k1 - k0) * t];
+    return [x, y, a, d, len];
   });
 }
 
@@ -147,7 +194,7 @@ function thumb() {
   s += g(horde({ x0: -60, x1: 2000, yb: 690, yf: 880, rows: 4, s0: 0.32, s1: 0.72, seed: 43, arms: 0.5, rim: '#B8CCF5', rimSide: -1, fog: '#16203A', fogK: 0.62, density: 1.4 }), { filter: 'url(#pro_b1)' });
   s += bloom(WIN.x + WIN.w / 2, 650, 520, 110, '#FFB050', 0.16);   // the window's light just reaching the far rows
   // front rows: big, in colour, faces you can read
-  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.6, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
+  s += horde({ x0: -60, x1: 2000, yb: 1010, yf: 1225, rows: 2, s0: 1.0, s1: 1.32, seed: 41, arms: 0.35, rim: '#CFE0FF', rimSide: -1, fog: '#16203A', fogK: 0.18, density: 1.38 });
   // you, on Freshway's roof: binoculars down on the ledge, looking across at the window
   const sc = 2.8, gx = 450, gy = 1455, u = 60 * sc, top = 984;
   const cy = gy - 5.25 * u, by = top - 0.33 * u, hy = gy - 4.05 * u + 0.85 * u;   // binoculars on the ledge; hands where the 'carry' pose puts them
@@ -157,7 +204,7 @@ function thumb() {
     extra: binoculars(gx, by, u) + hands, front: cowlick(gx, cy, u) });
   s += parapet(top);
   // the signal, from the window across the lot to you
-  s += morse(morsePath([WIN.x - 36, WIN.y + 104], [1110, 450], [780, 505], 0.68, 1.2));
+  s += morse(morsePath([WIN.x - 32, WIN.y + 98], [1080, 470], [712, 520], 0.72, 1.2));
   s += headline(56, 300, 'S.O.S.', { size: 310, anchor: 'start', fill: 'url(#pro_yel)', sw: 30, ls: 6 });
   s += finish({ vignette: 0.5, grain: 0.05 });
   return { w: W, h: H, svg: svgOf(s, 9), css: 'saturate(1.12) contrast(1.06)' };

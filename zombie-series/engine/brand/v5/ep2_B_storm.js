@@ -96,32 +96,33 @@ function horizon() {
 }
 
 // ---------- the dead, faces turned up to the rain ----------
-// (x, yg) ground point like lib's zombie(); detail 0 = distant blob, 1 = arms and chin, 2 = close-up with rain on the face
+// The head is tipped right back: the features crowd into the top of the face, the eyes are rolled up to the sky,
+// we see up the nostrils and the whole dark underside of the jaw. detail 0 = distant, 1 = mid, 2 = close.
 function upHead(hx, hy, u, { skin, under, socket, pupil, rim, rimOp, lw, detail, r, hair }) {
   let s = circle(hx, hy, u, { fill: skin });
-  if (hair) s += path(`M${F(hx - 0.94 * u)} ${F(hy - 0.34 * u)} A${F(u)} ${F(u)} 0 0 1 ${F(hx + 0.94 * u)} ${F(hy - 0.34 * u)} Q${F(hx)} ${F(hy - 0.86 * u)} ${F(hx - 0.94 * u)} ${F(hy - 0.34 * u)} Z`, { fill: hair });
-  // the underside of the jaw: the head is tipped back, so we see under the chin
-  const a1 = 0.42, a2 = Math.PI - 0.42, p1 = [hx + Math.cos(a1) * u, hy + Math.sin(a1) * u], p2 = [hx + Math.cos(a2) * u, hy + Math.sin(a2) * u];
-  s += path(`M${F(p1[0])} ${F(p1[1])} A${F(u)} ${F(u)} 0 0 1 ${F(p2[0])} ${F(p2[1])} Q${F(hx)} ${F(hy + 0.98 * u)} ${F(p1[0])} ${F(p1[1])} Z`, { fill: under });
-  if (detail >= 1) s += path(`M${F(p2[0] + 0.06 * u)} ${F(p2[1] + 0.02 * u)} Q${F(hx)} ${F(hy + 0.98 * u)} ${F(p1[0] - 0.06 * u)} ${F(p1[1] + 0.02 * u)}`, { fill: 'none', stroke: INK, strokeWidth: lw * 0.6, strokeLinecap: 'round', opacity: 0.7 });
-  // eyes high on the face, pupils rolled up to the sky
-  const ey = hy - 0.4 * u, sz = 0.92 + r() * 0.16;
-  s += ellipse(hx - 0.34 * u, ey + 0.02 * u, 0.21 * u * sz, 0.17 * u * sz, { fill: socket }) + ellipse(hx + 0.33 * u, ey, 0.2 * u * sz, 0.165 * u * sz, { fill: socket });
-  s += circle(hx - 0.33 * u, ey - 0.05 * u, 0.065 * u, { fill: pupil }) + circle(hx + 0.34 * u, ey - 0.07 * u, 0.06 * u, { fill: pupil });
-  if (detail >= 1) s += circle(hx - 0.06 * u, hy - 0.1 * u, 0.035 * u, { fill: socket }) + circle(hx + 0.06 * u, hy - 0.1 * u, 0.035 * u, { fill: socket });   // nostrils, seen from below
-  // slack open mouth catching the rain
-  s += ellipse(hx + 0.02 * u, hy + 0.16 * u, 0.13 * u, 0.15 * u, { fill: MOUTH });
-  if (detail >= 1) s += rect(hx - 0.07 * u, hy + 0.03 * u, 0.15 * u, 0.05 * u, { rx: 0.02 * u, fill: '#E9E4D3' });
-  // the bolt's light on the up-turned face and the wet top of the head
-  s += path(`M${F(hx + Math.cos(-1.9) * 0.86 * u)} ${F(hy + Math.sin(-1.9) * 0.86 * u)} A${F(0.86 * u)} ${F(0.86 * u)} 0 0 1 ${F(hx + Math.cos(0.25) * 0.86 * u)} ${F(hy + Math.sin(0.25) * 0.86 * u)}`,
-    { fill: 'none', stroke: rim, strokeWidth: 0.14 * u, strokeLinecap: 'round', opacity: rimOp });
+  if (hair) s += path(`M${F(hx - 0.9 * u)} ${F(hy - 0.44 * u)} A${F(u)} ${F(u)} 0 0 1 ${F(hx + 0.9 * u)} ${F(hy - 0.44 * u)} Q${F(hx)} ${F(hy - 0.9 * u)} ${F(hx - 0.9 * u)} ${F(hy - 0.44 * u)} Z`, { fill: hair });
+  // the underside of the jaw
+  const a1 = 0.2, a2 = Math.PI - 0.2, p1 = [hx + Math.cos(a1) * u, hy + Math.sin(a1) * u], p2 = [hx + Math.cos(a2) * u, hy + Math.sin(a2) * u];
+  s += path(`M${F(p1[0])} ${F(p1[1])} A${F(u)} ${F(u)} 0 0 1 ${F(p2[0])} ${F(p2[1])} Q${F(hx)} ${F(hy + 0.74 * u)} ${F(p1[0])} ${F(p1[1])} Z`, { fill: under });
+  s += path(`M${F(p2[0] + 0.03 * u)} ${F(p2[1] + 0.01 * u)} Q${F(hx)} ${F(hy + 0.74 * u)} ${F(p1[0] - 0.03 * u)} ${F(p1[1] + 0.01 * u)}`, { fill: 'none', stroke: INK, strokeWidth: lw * (detail ? 0.7 : 0.5), strokeLinecap: 'round', opacity: 0.8 });
+  // eyes high, flattened by the angle, the pupils rolled right up to the top lids
+  const ey = hy - 0.44 * u, sz = 0.94 + r() * 0.12;
+  s += ellipse(hx - 0.34 * u, ey + 0.02 * u, 0.2 * u * sz, 0.12 * u * sz, { fill: socket }) + ellipse(hx + 0.33 * u, ey, 0.19 * u * sz, 0.115 * u * sz, { fill: socket });
+  s += circle(hx - 0.33 * u, ey - 0.055 * u, 0.042 * u, { fill: pupil }) + circle(hx + 0.34 * u, ey - 0.07 * u, 0.04 * u, { fill: pupil });
+  // up the nose
+  s += ellipse(hx - 0.075 * u, hy - 0.16 * u, 0.045 * u, 0.035 * u, { fill: socket }) + ellipse(hx + 0.075 * u, hy - 0.16 * u, 0.045 * u, 0.035 * u, { fill: socket });
+  // the jaw hangs open
+  const m = (x, y) => `${F(hx + x * u)} ${F(hy + y * u)}`;
+  s += path(`M${m(-0.15, 0.0)} Q${m(0.0, -0.05)} ${m(0.16, 0.01)} Q${m(0.17, 0.27)} ${m(0.01, 0.3)} Q${m(-0.16, 0.27)} ${m(-0.15, 0.0)} Z`, { fill: MOUTH });
+  if (detail >= 1) s += rect(hx - 0.09 * u, hy - 0.02 * u, 0.07 * u, 0.06 * u, { rx: 0.015 * u, fill: '#D9D4C0' }) + rect(hx + 0.03 * u, hy - 0.015 * u, 0.06 * u, 0.055 * u, { rx: 0.015 * u, fill: '#D9D4C0' });
+  // the bolt's light along the wet right side of the skull
+  s += path(`M${F(hx + Math.cos(-1.25) * 0.86 * u)} ${F(hy + Math.sin(-1.25) * 0.86 * u)} A${F(0.86 * u)} ${F(0.86 * u)} 0 0 1 ${F(hx + Math.cos(0.2) * 0.86 * u)} ${F(hy + Math.sin(0.2) * 0.86 * u)}`,
+    { fill: 'none', stroke: rim, strokeWidth: 0.09 * u, strokeLinecap: 'round', opacity: rimOp * 0.8 });
   if (detail >= 2) {
-    s += ellipse(hx + 0.5 * u, hy - 0.62 * u, 0.12 * u, 0.06 * u, { fill: '#FFFFFF', opacity: 0.7, transform: `rotate(40 ${F(hx + 0.5 * u)} ${F(hy - 0.62 * u)})` });
-    // rain running off the cheeks
-    s += path(`M${F(hx - 0.62 * u)} ${F(hy - 0.12 * u)} q${F(-0.04 * u)} ${F(0.22 * u)} ${F(0.02 * u)} ${F(0.42 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.05 * u, strokeLinecap: 'round', opacity: 0.8 })
-      + path(`M${F(hx + 0.6 * u)} ${F(hy - 0.08 * u)} q${F(0.03 * u)} ${F(0.2 * u)} ${F(-0.02 * u)} ${F(0.36 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.045 * u, strokeLinecap: 'round', opacity: 0.7 });
-    // drops bouncing off the crown
-    for (const [dx, dy, a] of [[-0.25, -1.08, -40], [0.32, -1.05, 30], [0.02, -1.14, 0]]) s += line(hx + dx * u, hy + dy * u, hx + dx * u + Math.sin(a * Math.PI / 180) * 0.12 * u, hy + dy * u - Math.cos(a * Math.PI / 180) * 0.12 * u, { stroke: '#E8F0FF', strokeWidth: 0.035 * u, strokeLinecap: 'round', opacity: 0.85 });
+    // rain running down the cheeks, drops bouncing off the crown
+    s += path(`M${F(hx - 0.66 * u)} ${F(hy - 0.2 * u)} q${F(-0.03 * u)} ${F(0.2 * u)} ${F(0.02 * u)} ${F(0.38 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.04 * u, strokeLinecap: 'round', opacity: 0.75 })
+      + path(`M${F(hx + 0.62 * u)} ${F(hy - 0.16 * u)} q${F(0.03 * u)} ${F(0.18 * u)} ${F(-0.02 * u)} ${F(0.32 * u)}`, { fill: 'none', stroke: '#DCEBFF', strokeWidth: 0.035 * u, strokeLinecap: 'round', opacity: 0.65 });
+    for (const [dx, dy, a] of [[-0.3, -1.06, -35], [0.34, -1.04, 30], [0.02, -1.13, 0]]) s += line(hx + dx * u, hy + dy * u, hx + dx * u + Math.sin(a * Math.PI / 180) * 0.11 * u, hy + dy * u - Math.cos(a * Math.PI / 180) * 0.11 * u, { stroke: '#E8F0FF', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.85 });
   }
   s += circle(hx, hy, u, { fill: 'none', stroke: INK, strokeWidth: lw });
   return s;
@@ -129,17 +130,18 @@ function upHead(hx, hy, u, { skin, under, socket, pupil, rim, rimOp, lw, detail,
 function upZombie(x, yg, sc, { body, fogK = 0, detail = 1, r, tilt = 0, rimOp = 0.9, hair }) {
   const u = 60 * sc, lw = Math.max(2.2, 0.085 * u), fog = (c) => mix(c, HAZE, fogK);
   const ik = { stroke: mix(INK, HAZE, fogK * 0.35), strokeWidth: lw, strokeLinecap: 'round', strokeLinejoin: 'round' };
-  const top = yg - 4.25 * u, bot = yg - 1.5 * u, hx = x + (r() - 0.5) * 0.2 * u, hy = yg - 5.15 * u;
-  const cloth = fog(body);
+  const top = yg - 4.25 * u, bot = yg - 2.0 * u, hx = x + (r() - 0.5) * 0.2 * u, hy = yg - 5.15 * u;
+  const cloth = fog(body), legs = fog(['#2F3A4A', '#3B3F48', '#4A4238', '#2E3446'][Math.floor(r() * 4)]);
   let s = '';
+  // legs down to the ground, so no row ever floats
+  s += rect(x - 0.5 * u, bot - 0.2 * u, 0.44 * u, yg - bot + 0.2 * u, { fill: legs, ...ik }) + rect(x + 0.06 * u, bot - 0.2 * u, 0.44 * u, yg - bot + 0.2 * u, { fill: legs, ...ik });
   // neck, longer than usual: the head is tipped right back
   s += rect(hx - 0.24 * u, hy + 0.5 * u, 0.48 * u, top - hy - 0.3 * u, { fill: fog(SKIN_UNDER), ...ik });
   s += path(`M${F(x - 0.6 * u)} ${F(bot)} L${F(x - 0.66 * u)} ${F(top + 0.3 * u)} Q${F(x - 0.66 * u)} ${F(top)} ${F(x - 0.34 * u)} ${F(top)} L${F(x + 0.34 * u)} ${F(top)} Q${F(x + 0.66 * u)} ${F(top)} ${F(x + 0.66 * u)} ${F(top + 0.3 * u)} L${F(x + 0.6 * u)} ${F(bot)} Z`, { fill: cloth, ...ik });
   if (detail >= 1) {
-    // collar, a tear, the light along the wet shoulder
+    // collar and the light along the wet shoulder
     s += path(`M${F(x - 0.3 * u)} ${F(top + 0.02 * u)} L${F(x)} ${F(top + 0.32 * u)} L${F(x + 0.3 * u)} ${F(top + 0.02 * u)}`, { fill: 'none', stroke: mix(cloth, '#000000', 0.35), strokeWidth: lw * 0.8, strokeLinejoin: 'round' });
-    s += path(`M${F(x + 0.2 * u)} ${F(top + 1.6 * u)} l${F(0.08 * u)} ${F(-0.22 * u)} l${F(0.08 * u)} ${F(0.22 * u)}`, { fill: mix(cloth, '#000000', 0.3), stroke: INK, strokeWidth: lw * 0.5 });
-    s += path(`M${F(x + 0.36 * u)} ${F(top + 0.04 * u)} Q${F(x + 0.62 * u)} ${F(top + 0.04 * u)} ${F(x + 0.62 * u)} ${F(top + 0.4 * u)}`, { fill: 'none', stroke: RIM, strokeWidth: 0.09 * u, strokeLinecap: 'round', opacity: 0.55 * rimOp });
+    s += path(`M${F(x + 0.36 * u)} ${F(top + 0.04 * u)} Q${F(x + 0.62 * u)} ${F(top + 0.04 * u)} ${F(x + 0.62 * u)} ${F(top + 0.4 * u)}`, { fill: 'none', stroke: RIM, strokeWidth: 0.09 * u, strokeLinecap: 'round', opacity: 0.5 * rimOp });
     // arms hanging limp at the sides: they are not reaching for anything
     for (const side of [-1, 1]) {
       const sx = x + side * 0.58 * u, sy = top + 0.25 * u, ex = x + side * 0.74 * u, ey = top + 1.85 * u;
