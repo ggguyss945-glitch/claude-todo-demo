@@ -15,7 +15,7 @@ const FINISH = { card: { vignette: 0.5, grain: 0.1 }, map: { vignette: 0.45, gra
 
 // the word being spoken now, from any voiced line; dialogue (Dale, you, the PA) shows in orange
 const clean = (w) => w.replace(/[.,!?]+$/, '').replace(/^\.+/, '');
-function spoken(T, tg) {
+export function spoken(T, tg) {
   for (const L of T.voice.lines) {
     if (tg < L.start - 0.02 || tg > L.start + L.dur + 0.15) continue;
     const ws = L.words;
@@ -48,8 +48,8 @@ export function frame(T, tg) {
   const D = sh.end - sh.start, lt = tg - sh.start, fn = SH[sh.name];
   let s = fn ? fn(T, tg, lt, sh.p || {}, D) : '';
   const low = CARD_Y.has(sh.name) || (sh.p && ['diagram', 'panel', 'switch'].includes(sh.p.view));   // keep captions off on-screen text
-  if (!NO_CAPS.has(sh.name)) s += captions(T, tg, low ? 1030 : 870);
-  if (!NO_MARK.has(sh.name)) s += watermark();
+  if (!NO_CAPS.has(sh.name) && !globalThis.SHORTS) s += captions(T, tg, low ? 1030 : 870);
+  if (!NO_MARK.has(sh.name) && !globalThis.SHORTS) s += watermark();
   s += finish(FINISH[sh.name] || { vignette: 0.9, grain: 0.12 });
   return wrap(s, 5, boil);
 }

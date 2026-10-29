@@ -1,0 +1,56 @@
+{
+ "ep": 1,
+ "timeline": "episodes/ep1/timeline.json",
+ "source": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/final/last_light_ep1_the_night_shift_1440p60.mp4",
+ "tag": "LAST LIGHT \u00b7 EP 1",
+ "hook": {
+  "lines": [
+   "THE DOORS OPEN",
+   "AT [[7:00 AM]]"
+  ],
+  "dur": 3.0
+ },
+ "segments": [
+  {
+   "from": "F3",
+   "to": "F5",
+   "x": 960
+  },
+  {
+   "from": "F7",
+   "to": "F7",
+   "x": 960
+  },
+  {
+   "from": "G1",
+   "to": "G1",
+   "x": 960
+  },
+  {
+   "from": "G3",
+   "to": "G4",
+   "x": 960
+  },
+  {
+   "from": "G6",
+   "to": "G7",
+   "x": 960
+  },
+  {
+   "from": "G9",
+   "to": "G10",
+   "x": 960
+  },
+  {
+   "from": "G11",
+   "to": "G17",
+   "x": 960
+  },
+  {
+   "from": "G19",
+   "to": "G20",
+   "x": 960
+  }
+ ],
+ "id": "ep1_s1_doors"
+}

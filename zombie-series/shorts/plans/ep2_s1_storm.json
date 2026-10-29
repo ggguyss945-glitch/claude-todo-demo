@@ -1,0 +1,42 @@
+{
+ "ep": 2,
+ "timeline": "episodes/ep2/timeline.json",
+ "source": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/final/ep2/last_light_ep2_the_mall_1440p60.mp4",
+ "tag": "LAST LIGHT \u00b7 EP 2",
+ "hook": {
+  "lines": [
+   "200 ZOMBIES.",
+   "ONE [[STORM]]."
+  ],
+  "dur": 3.0
+ },
+ "segments": [
+  {
+   "from": "R1",
+   "to": "R2",
+   "x": 960
+  },
+  {
+   "from": "P5",
+   "to": "P6",
+   "x": 960
+  },
+  {
+   "from": "P6c",
+   "to": "P6e",
+   "x": 960
+  },
+  {
+   "from": "R2b",
+   "to": "R2f",
+   "x": 960
+  },
+  {
+   "from": "R3",
+   "to": "R4",
+   "x": 960,
+   "post": 1.6
+  }
+ ],
+ "id": "ep2_s1_storm"
+}

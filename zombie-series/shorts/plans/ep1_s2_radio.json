@@ -1,0 +1,46 @@
+{
+ "ep": 1,
+ "timeline": "episodes/ep1/timeline.json",
+ "source": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/final/last_light_ep1_the_night_shift_1440p60.mp4",
+ "tag": "LAST LIGHT \u00b7 EP 1",
+ "hook": {
+  "lines": [
+   "DON'T TRUST",
+   "THE [[RADIO]]"
+  ],
+  "dur": 3.0
+ },
+ "segments": [
+  {
+   "from": "D2",
+   "to": "D3",
+   "x": 960
+  },
+  {
+   "from": "D5",
+   "to": "D11",
+   "x": 960
+  },
+  {
+   "from": "D14",
+   "to": "D15",
+   "x": 960
+  },
+  {
+   "from": "H11",
+   "to": "H15",
+   "x": 960
+  },
+  {
+   "from": "K8",
+   "to": "K15",
+   "x": 960
+  },
+  {
+   "from": "K17",
+   "to": "K18",
+   "x": 960
+  }
+ ],
+ "id": "ep1_s2_radio"
+}

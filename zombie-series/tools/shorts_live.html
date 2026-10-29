@@ -1,0 +1,143 @@
+<title>Last Light · Shorts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Rubik:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a wall of six phone screens, one per short, under a strip of counters; the log last. Dark by choice. */
+:root {
+  --bg: #0F0F0F; --panel: #181818; --raise: #222; --line: #2E2E2E; --fg: #F1F1F1; --muted: #A3A3A3;
+  --accent: #F2C230; --red: #FF4E45; --ok: #3FB66B; --warn: #F2A73B;
+  --display: "Lilita One", "Arial Black", Impact, sans-serif;
+  --body: "Rubik", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 24px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--display); font-weight: 400; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h2 { font-size: 22px; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.brand { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.brand h1 { font-size: 34px; color: var(--accent); line-height: 1; }
+.brand span { color: var(--muted); }
+.pill { display: inline-flex; gap: 8px; align-items: center; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.pill.live { color: var(--red); border-color: var(--red); } .pill.live i { background: var(--red); animation: pulse 1.4s ease-in-out infinite; }
+.pill.done { color: var(--ok); border-color: var(--ok); } .pill.done i { background: var(--ok); }
+.pill.stale { color: var(--warn); border-color: var(--warn); } .pill.stale i { background: var(--warn); }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pill.live i { animation: none; } }
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.meter { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.meter b { font-family: var(--mono); font-size: 26px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.meter b small { font-size: 14px; color: var(--muted); font-weight: 400; }
+.note { color: var(--muted); font-size: 13px; }
+.bar { height: 6px; border-radius: 3px; background: var(--raise); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .6s; }
+.wall { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px 14px; }
+.short { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.phone { position: relative; aspect-ratio: 9 / 16; max-width: 100%; border-radius: 14px; overflow: hidden; background: var(--raise); border: 1px solid var(--line); }
+.phone img, .phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.phone .ph { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 6px; padding: 14px; color: var(--muted); }
+.phone .ph b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--fg); line-height: 1.15; }
+.phone .tag { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.72); color: var(--accent); font: 700 10px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; padding: 5px 7px; border-radius: 4px; }
+.short h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.3; }
+.short .hook { color: var(--muted); font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chip.run { color: var(--accent); border-color: var(--accent); } .chip.ok { color: var(--ok); border-color: var(--ok); } .chip.bad { color: var(--red); border-color: var(--red); }
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; max-height: 320px; overflow: auto; }
+.log li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.log time { font-family: var(--mono); color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:14px">
+    <div class="top">
+      <div class="brand"><h1>LAST LIGHT</h1><span>Shorts · 6 vertical cuts · 1440×2560 · 60 fps</span></div>
+      <span class="pill" id="pill"><i></i><span id="pillText">Connecting</span></span>
+    </div>
+    <div class="meters">
+      <div class="meter"><span class="label">Time left</span><b id="eta">—</b><span class="note" id="etaNote">waiting for the first update</span></div>
+      <div class="meter"><span class="label">Frames rendered</span><b id="frames">—</b><div class="bar"><i id="framesBar"></i></div></div>
+      <div class="meter"><span class="label">Speed</span><b id="rate">—</b><span class="note">frames per second, all 4 cores</span></div>
+      <div class="meter"><span class="label">Now</span><b id="now" style="font-family:var(--body);font-size:17px;font-weight:500">—</b><span class="note" id="updated">—</span></div>
+    </div>
+  </header>
+  <section style="display:grid;gap:12px">
+    <div class="top"><h2>The six shorts</h2><span class="note">Latest rendered frame of each. A finished short plays here as a small preview.</span></div>
+    <div class="wall" id="wall"></div>
+  </section>
+  <section style="display:grid;gap:10px"><h2>Log</h2><ul class="log" id="log"><li><time>—</time><span>No events yet.</span></li></ul></section>
+  <p class="note" id="dbNote" hidden>Live data isn't available in this view. Open the page on claude.ai while signed in.</p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const blob = (id) => (id ? "/_blob/" + id : "");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clock = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const ST = { queued: ["Queued", ""], rendering: ["Rendering", "run"], encoding: ["Encoding", "run"], done: ["Done", "ok"], failed: ["Failed", "bad"] };
+let S = null, lastFresh = 0, videoKey = "";
+
+function render() {
+  if (!S) return;
+  const now = Date.now(), age = (now - lastFresh) / 60000, done = S.stage === "done";
+  const pill = $("pill");
+  if (done) { pill.className = "pill done"; $("pillText").textContent = "Done"; }
+  else if (age > 25) { pill.className = "pill stale"; $("pillText").textContent = "Quiet " + Math.round(age) + " min"; }
+  else { pill.className = "pill live"; $("pillText").textContent = "Live"; }
+  // count frames on between updates at the measured speed (for up to 20 minutes), so the numbers move
+  const extra = done || !S.rate ? 0 : Math.min(S.rate * Math.max(0, now - lastFresh) / 1000, S.rate * 1200);
+  const fr = Math.min(S.total_frames, Math.floor(S.done_frames + extra));
+  $("frames").innerHTML = `${fr.toLocaleString()} <small>/ ${S.total_frames.toLocaleString()}</small>`;
+  $("framesBar").style.width = (100 * fr / Math.max(1, S.total_frames)) + "%";
+  const left = done ? 0 : S.rate ? (S.total_frames - fr) / S.rate / 60 + (S.encode_min || 0) : null;
+  $("eta").innerHTML = done ? "0 <small>min</small>" : left == null ? "—" : left >= 60 ? `${Math.floor(left / 60)} <small>h</small> ${Math.round(left % 60)} <small>min</small>` : `${Math.max(1, Math.round(left))} <small>min</small>`;
+  $("etaNote").textContent = done ? "all six are ready" : left == null ? "measuring speed" : "about " + new Date(now + left * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  $("rate").innerHTML = S.rate ? `${S.rate.toFixed(1)} <small>fps</small>` : "—";
+  const cur = (S.shorts || []).find((x) => x.status === "rendering" || x.status === "encoding");
+  $("now").textContent = done ? "All six finished" : cur ? `${ST[cur.status][0]} · ${cur.name}` : "Between shorts";
+  $("updated").textContent = "updated " + clock(S.updated_at);
+  const key = (S.shorts || []).map((x) => x.video || x.preview || "").join("|");
+  if (key !== videoKey) {
+    videoKey = key;
+    $("wall").innerHTML = (S.shorts || []).map((x) => {
+      const [t, k] = ST[x.status] || [x.status, ""];
+      const media = x.video ? `<video src="${blob(x.video)}" controls playsinline preload="metadata" poster="${blob(x.preview)}"></video>`
+        : x.preview ? `<img src="${blob(x.preview)}" alt="Latest frame of ${esc(x.name)}" loading="lazy">`
+        : `<div class="ph"><b>${esc(x.hook)}</b><span>${x.status === "queued" ? "waits its turn" : "first frames on the way"}</span></div>`;
+      return `<article class="short"><div class="phone">${media}<span class="tag">EP ${esc(x.ep)}</span></div>
+        <h3>${esc(x.name)}</h3><span class="hook">Hook: “${esc(x.hook)}”</span>
+        <div class="chips"><span class="chip ${k}" data-st="${esc(x.id)}">${t}</span><span class="chip">${mmss(x.len)}</span></div>
+        <div class="bar"><i data-bar="${esc(x.id)}"></i></div></article>`;
+    }).join("");
+  }
+  for (const x of S.shorts || []) {
+    const b = document.querySelector(`[data-bar="${x.id}"]`); if (!b) continue;
+    let d = x.done; if (x.status === "rendering") d = Math.min(x.frames, d + extra);
+    b.style.width = (x.status === "done" ? 100 : 100 * d / Math.max(1, x.frames)) + "%";
+    const c = document.querySelector(`[data-st="${x.id}"]`); if (c && x.status === "rendering") c.textContent = `Rendering · ${Math.floor(100 * d / Math.max(1, x.frames))}%`;
+  }
+  $("log").innerHTML = (S.log || []).map((e) => `<li><time>${clock(e.t)}</time><span>${esc(e.msg)}</span></li>`).join("") || "<li><time>—</time><span>No events yet.</span></li>";
+}
+setInterval(render, 5000);
+
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) { $("dbNote").hidden = false; $("pillText").textContent = "Offline"; return; }
+  db.doc("shorts/status").onSnapshot((snap) => {
+    if (!snap.exists) return;
+    S = snap.data();
+    const ua = Date.parse(S.updated_at);
+    lastFresh = lastFresh ? Date.now() : Math.min(Date.now(), isNaN(ua) ? Date.now() : ua);
+    render();
+  }, () => { $("pillText").textContent = "No connection"; $("pill").className = "pill stale"; });
+})();
+</script>

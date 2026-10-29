@@ -373,6 +373,7 @@ export function caption(word, { dialogue = false, y = 870, size = 92, color } = 
   }), { filter: 'url(#capShadow)' });
 }
 export function soundCaption(s, { y = 1000 } = {}) {
+  if (globalThis.SHORTS) return '';
   return text(W / 2, y, `[${s}]`, { fontFamily: 'Rubik, sans-serif', fontStyle: 'italic', fontWeight: 500, fontSize: 34, fill: '#E8E1D2', textAnchor: 'middle', opacity: 0.9, letterSpacing: 1 });
 }
 
@@ -387,6 +388,7 @@ function noiseBars(x, y, n, h = 34) {
 }
 // themed HUD: 'price' (supermarket shelf tag), 'mall' (YOU ARE HERE sticker), 'park' (wooden sign)
 export function hud({ theme = 'price', day = 1, time = '4:12 PM', noise = 2, place = '' } = {}) {
+  if (globalThis.SHORTS) return '';   // vertical shorts draw their own titles
   const x = 36, y = 30;
   let s = '';
   if (theme === 'price') {

@@ -1,0 +1,90 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Lilita+One&family=Rubik:ital,wght@0,500;0,700;0,800;0,900;1,500&family=Patrick+Hand&display=swap">
+<style>html,body{margin:0;background:#000}#stage{position:relative;width:607.5px;height:1080px;overflow:hidden;background:#000}
+#bg{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;filter:blur(10px) brightness(0.42) saturate(0.8)}#ep{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}#ov{position:absolute;left:0;top:0;width:607.5px;height:1080px}svg{display:block}</style>
+</head><body><div id="stage"><div id="bg"></div><div id="ep"></div><div id="ov"></div></div>
+<script type="module">
+// A vertical short cut from an episode: ?ep=1|2&plan=/shorts/<id>.json (render_anim adds &timeline=).
+// The episode's 1920x1080 frame is drawn as usual and looked at through a 9:16 window (607.5x1080 design px,
+// 1440x2560 at scale 2.370370); the plan's segments say where the window sits. Titles and captions are drawn on
+// top in short space (1080x1920), sized for a phone and kept clear of the Shorts player's buttons.
+globalThis.SHORTS = true;
+const q = new URLSearchParams(location.search);
+const { frame, spoken } = await import(q.get('ep') === '1' ? './ep1.js' : './ep2.js');
+const { installBaker } = await import('./baker.js');
+if (q.get('bake') !== '0') installBaker();
+const T = await (await fetch(q.get('timeline'))).json();
+const P = await (await fetch(q.get('plan'))).json();
+for (const f of ['92px Bangers', '100px "Lilita One"', '800 40px Rubik', 'italic 500 40px Rubik', '40px "Patrick Hand"', '900 40px Rubik']) await document.fonts.load(f);
+const bg = document.getElementById('bg'), ep = document.getElementById('ep'), ov = document.getElementById('ov');
+const WW = 1920, HH = 1080, CW = 607.5;
+const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+// segments in short time: each {t0, t1, x, x1?, z?, y?}; x = window centre in episode px
+const PC = P.pieces || P.segments;
+let off = 0;
+for (const sg of PC) { sg.off = off; off += sg.t1 - sg.t0; }
+const LEN = off;
+const segAt = (t) => PC.find((sg) => t >= sg.t0 - 1e-6 && t < sg.t1 - 1e-6) || PC.find((sg) => t >= sg.t0 - 1e-6 && t < sg.t1 + 1e-6) || PC[0];
+
+const FITZ = CW / WW;
+function camera(sg, t) {
+  // fit: the whole 16:9 frame (a card full of text) across the width, the same frame blurred and dark behind it
+  if (sg.mode === 'fit') return `translate(0px, ${((HH - HH * FITZ) / 2 + (sg.dy || 0)).toFixed(2)}px) scale(${FITZ})`;
+  const k = ease((t - sg.t0) / Math.max(0.001, sg.t1 - sg.t0));
+  const z = sg.z || 1, w = CW / z, h = HH / z;
+  const cx = Math.min(WW - w / 2, Math.max(w / 2, sg.x + ((sg.x1 ?? sg.x) - sg.x) * k));
+  const cy = Math.min(HH - h / 2, Math.max(h / 2, sg.y ?? 540));
+  return `translate(${(-(cx - w / 2) * z).toFixed(2)}px, ${(-(cy - h / 2) * z).toFixed(2)}px) scale(${z})`;
+}
+
+// ---------- overlay, in 1080x1920 ----------
+const INK = '#2B1D21';
+const TXT = (x, y, str, o) => `<text x="${x}" y="${y}" font-family="${o.font || "'Lilita One'"}" font-size="${o.size}" text-anchor="middle" letter-spacing="${o.ls ?? 2}" fill="${o.fill || '#fff'}" stroke="${INK}" stroke-width="${o.sw ?? 16}" stroke-linejoin="round" paint-order="stroke"${o.extra || ''}>${o.rich || esc(str)}</text>`;
+const DEFS = `<defs><filter id="sh" x="-20%" y="-30%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="5"/><feOffset dy="8" result="b"/><feFlood flood-color="#000" flood-opacity="0.55"/><feComposite in2="b" operator="in" result="s"/><feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></defs>`;
+// hook lines: [{text, color?}], one or two lines; ".." in text marks the red word as [[word]]
+const rich = (s) => esc(s).replace(/\[\[(.+?)\]\]/g, '<tspan fill="#FF4A3A">$1</tspan>').replace(/\{\{(.+?)\}\}/g, '<tspan fill="#FFD23F">$1</tspan>');
+function hook(st) {
+  const H = P.hook, n = H.lines.length;
+  const big = st < H.dur, k = big ? 0 : ease((st - H.dur) / 0.35);
+  const size = (H.size || 124) * (1 - 0.45 * k), lh = size * 1.08, y0 = (big ? 300 : 300 - 120 * k) - (n - 1) * lh / 2;
+  const pop = big ? 1 + 0.12 * (1 - ease(st / 0.18)) : 1;
+  let s = `<rect x="0" y="0" width="1080" height="${(520 - 200 * k).toFixed(0)}" fill="url(#top)"/>`;
+  let t = '';
+  H.lines.forEach((ln, i) => { t += TXT(540, (y0 + i * lh).toFixed(1), '', { size: size.toFixed(1), sw: (16 - 5 * k).toFixed(1), rich: rich(ln) }); });
+  s += `<g filter="url(#sh)" transform="translate(540 ${y0.toFixed(1)}) scale(${pop.toFixed(3)}) translate(-540 ${(-y0).toFixed(1)})">${t}</g>`;
+  // the series tag under the title
+  const ty = y0 + n * lh - size * 0.55 + 18;
+  s += `<g opacity="${(0.92).toFixed(2)}"><rect x="${540 - 150}" y="${(ty).toFixed(1)}" width="300" height="46" rx="23" fill="#000" fill-opacity="0.5"/>`
+    + `<text x="540" y="${(ty + 32).toFixed(1)}" font-family="Rubik" font-weight="800" font-size="22" letter-spacing="5" fill="#F2C230" text-anchor="middle">${esc(P.tag)}</text></g>`;
+  return s;
+}
+const CAP_COL = { NORA: '#7FD8CC' };
+function caption(t) {
+  const w = spoken(T, t); if (!w || !w.w) return '';
+  const k = 0.84 + 0.16 * ease(w.age / 0.08), y = segAt(t).mode === 'fit' ? 1420 : (P.capY || 1230);
+  const fill = w.color || (w.dialogue ? '#F2A73B' : '#FFFFFF');
+  const word = w.w.toUpperCase(), size = word.length > 9 ? 128 : 150;
+  return `<g filter="url(#sh)" transform="translate(540 ${y}) scale(${k.toFixed(3)}) translate(-540 ${-y})${w.dialogue ? ` translate(${(y * 0.17).toFixed(1)} 0) skewX(-10)` : ''}">`
+    + TXT(540, y, word, { font: 'Bangers, Impact, sans-serif', size, sw: 14, fill, ls: 3 }) + '</g>';
+}
+function cta(st) {
+  const a = ease((st - (LEN - (P.ctaDur || 2.6))) / 0.3); if (a <= 0) return '';
+  const y = 470;
+  return `<g opacity="${a.toFixed(3)}" filter="url(#sh)" transform="translate(0 ${(20 * (1 - a)).toFixed(1)})"><rect x="150" y="${y - 70}" width="780" height="104" rx="52" fill="#D8261A" stroke="${INK}" stroke-width="8"/>`
+    + `<text x="540" y="${y + 2}" font-family="'Lilita One'" font-size="54" letter-spacing="2" fill="#fff" text-anchor="middle">${esc(P.cta || 'FULL EPISODE ON THE CHANNEL')}</text></g>`;
+}
+window.renderAt = (t) => {
+  const sg = segAt(t), st = sg.off + (t - sg.t0);
+  const svg = frame(T, t);
+  ep.innerHTML = svg;
+  ep.style.transform = camera(sg, t);
+  if (sg.mode === 'fit') { bg.innerHTML = svg; bg.style.transform = `translate(${(-(960 - CW / 2)).toFixed(2)}px, 0px)`; } else if (bg.innerHTML) bg.innerHTML = '';
+  ov.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="${CW}" height="${HH}">${DEFS}${hook(st)}${caption(t)}${cta(st)}</svg>`;
+  return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+};
+window.__ready = true;
+</script></body></html>
