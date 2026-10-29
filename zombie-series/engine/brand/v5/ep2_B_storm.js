@@ -17,7 +17,7 @@ let GID = 0;
 function soft(cx, cy, rx, ry, color, op) {
   const id = `sb_g${GID++}`;
   return `<radialGradient id="${id}"><stop offset="0" stop-color="${color}" stop-opacity="${op}"/><stop offset="0.4" stop-color="${color}" stop-opacity="${(op * 0.55).toFixed(3)}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`
-    + ellipse(cx, cy, rx, ry, { fill: `url(#${id})`, style: 'mix-blend-mode:screen' });
+    + ellipse(cx, cy, rx, ry, { fill: `url(#${id})` });
 }
 // user-space filter regions, each only as big as its layer needs (big regions at 2x cost GPU memory)
 const FR = (x, y, w, h) => `filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"`;
@@ -42,7 +42,7 @@ export function sky() {
     <filter id="sb_boltglowS" ${FR(1250, -150, 800, 850)}><feGaussianBlur stdDeviation="7"/></filter>
   </defs>`;
   s += rect(0, 0, W, H, { fill: 'url(#sb_sky)' });
-  s += rect(0, 0, W, 700, { fill: 'url(#sb_flash)', style: 'mix-blend-mode:screen' });
+  s += rect(0, 0, W, 700, { fill: 'url(#sb_flash)' });
   // the cloud ceiling: heavy lumps, darker over the headline, their bellies lit near the bolt
   const r = rng(41);
   let cl = '';
@@ -88,12 +88,12 @@ export function lightning() {
   let s = '';
   // the air around it glows
   s += soft(1680, 260, 760, 620, '#C9BCFF', 0.6) + soft(1700, 520, 520, 160, '#EDE8FF', 0.7);
-  s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 120, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
+  s += path(d(main), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 150, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.8, filter: 'url(#sb_boltglow)' });
   s += g(branches.map((b) => path(d(b), { fill: 'none', stroke: BOLT_GLOW, strokeWidth: 40, strokeLinejoin: 'round', strokeLinecap: 'round' })).join('')
     + path(d(main), { fill: 'none', stroke: '#D4C8FF', strokeWidth: 44, strokeLinejoin: 'round', strokeLinecap: 'round' }), { filter: 'url(#sb_boltglowS)', opacity: 0.75 });
-  for (const b of branches) s += path(d(b), { fill: 'none', stroke: '#D9CFFF', strokeWidth: 12, strokeLinejoin: 'round', strokeLinecap: 'round' }) + path(d(b), { fill: 'none', stroke: BOLT, strokeWidth: 5, strokeLinejoin: 'round', strokeLinecap: 'round' });
-  s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 28, strokeLinejoin: 'round', strokeLinecap: 'round' });
-  s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 14, strokeLinejoin: 'round', strokeLinecap: 'round' });
+  for (const b of branches) s += path(d(b), { fill: 'none', stroke: '#D9CFFF', strokeWidth: 15, strokeLinejoin: 'round', strokeLinecap: 'round' }) + path(d(b), { fill: 'none', stroke: BOLT, strokeWidth: 6, strokeLinejoin: 'round', strokeLinecap: 'round' });
+  s += path(d(main), { fill: 'none', stroke: '#E7E0FF', strokeWidth: 36, strokeLinejoin: 'round', strokeLinecap: 'round' });
+  s += path(d(main), { fill: 'none', stroke: '#FFFFFF', strokeWidth: 18, strokeLinejoin: 'round', strokeLinecap: 'round' });
   return s;
 }
 
@@ -129,7 +129,7 @@ function upHead(hx, hy, u, { skin, under, socket, pupil, rim, rimOp, lw, detail,
   // eyes high, flattened by the angle, the pupils rolled right up under the top lids
   const ey = hy - 0.56 * u, sz = 0.94 + r() * 0.12;
   s += ellipse(hx - 0.33 * u, ey + 0.02 * u, 0.19 * u * sz, 0.1 * u * sz, { fill: socket }) + ellipse(hx + 0.32 * u, ey, 0.18 * u * sz, 0.095 * u * sz, { fill: socket });
-  s += circle(hx - 0.32 * u, ey - 0.045 * u, 0.04 * u, { fill: pupil }) + circle(hx + 0.33 * u, ey - 0.055 * u, 0.038 * u, { fill: pupil });
+  s += circle(hx - 0.29 * u, ey - 0.045 * u, 0.04 * u, { fill: pupil }) + circle(hx + 0.36 * u, ey - 0.055 * u, 0.038 * u, { fill: pupil });
   // up the nose
   s += ellipse(hx - 0.07 * u, hy - 0.36 * u, 0.042 * u, 0.03 * u, { fill: socket }) + ellipse(hx + 0.07 * u, hy - 0.36 * u, 0.042 * u, 0.03 * u, { fill: socket });
   // the jaw hangs slack
@@ -149,11 +149,12 @@ function upHead(hx, hy, u, { skin, under, socket, pupil, rim, rimOp, lw, detail,
 function upZombie(x, yg, sc, { body, fogK = 0, detail = 1, r, tilt = 0, rimOp = 0.9, hair }) {
   const u = 60 * sc, lw = Math.max(2.2, 0.085 * u), fog = (c) => mix(c, HAZE, fogK);
   const ik = { stroke: mix(INK, HAZE, fogK * 0.35), strokeWidth: lw, strokeLinecap: 'round', strokeLinejoin: 'round' };
-  const top = yg - 4.25 * u, bot = yg, hx = x + (r() - 0.5) * 0.2 * u, hy = yg - 5.15 * u;
+  const top = yg - 4.25 * u, bot = yg, hx = x + (r() - 0.5) * 0.2 * u, hy = yg - 5.5 * u;
   const cloth = fog(body);
   let s = '';
-  // neck, longer than usual: the head is tipped right back
-  s += rect(hx - 0.24 * u, hy + 0.5 * u, 0.48 * u, top - hy - 0.3 * u, { fill: fog(SKIN_UNDER), ...ik });
+  // the neck stretched out: chins up, throats bare to the rain
+  s += rect(hx - 0.25 * u, hy + 0.6 * u, 0.5 * u, top - hy - 0.45 * u, { fill: fog(SKIN_UNDER), ...ik });
+  if (detail >= 1) s += path(`M${F(hx - 0.04 * u)} ${F(hy + 1.08 * u)} q${F(0.05 * u)} ${F(0.06 * u)} ${F(0.1 * u)} 0`, { fill: 'none', stroke: mix(INK, HAZE, fogK * 0.35), strokeWidth: lw * 0.5, strokeLinecap: 'round' });
   s += path(`M${F(x - 0.6 * u)} ${F(bot)} L${F(x - 0.66 * u)} ${F(top + 0.3 * u)} Q${F(x - 0.66 * u)} ${F(top)} ${F(x - 0.34 * u)} ${F(top)} L${F(x + 0.34 * u)} ${F(top)} Q${F(x + 0.66 * u)} ${F(top)} ${F(x + 0.66 * u)} ${F(top + 0.3 * u)} L${F(x + 0.6 * u)} ${F(bot)} Z`, { fill: cloth, ...ik });
   if (detail >= 1) {
     // collar and the light along the wet shoulder
@@ -171,21 +172,21 @@ function upZombie(x, yg, sc, { body, fogK = 0, detail = 1, r, tilt = 0, rimOp = 
   return s;
 }
 // rows of them from the far edge of the lot forward; `skip(x, y)` keeps a corridor clear
-function rows({ list, seed, skip = () => false }) {
+function rows({ list, seed, skip = () => false, wobble = true }) {
   const r = rng(seed);
   let out = '';
   for (const R of list) {
     const u = 60 * R.s, n = Math.round((R.x1 - R.x0) / (u * R.dens));
     for (let i = 0; i < n; i++) {
       const x = R.x0 + ((i + 0.5 + (r() - 0.5) * 0.6) * (R.x1 - R.x0)) / n, yg = R.y + (r() - 0.5) * u * 0.5;
-      const body = CLOTHES[Math.floor(r() * CLOTHES.length)], tilt = (r() - 0.5) * 22, hair = r() < 0.45 ? HAIR[Math.floor(r() * HAIR.length)] : null;
+      const body = CLOTHES[Math.floor(r() * CLOTHES.length)], tilt = r() < 0.85 ? 3 + r() * 12 : -r() * 8, hair = r() < 0.45 ? HAIR[Math.floor(r() * HAIR.length)] : null;
       const sc = R.s * (0.92 + r() * 0.16);
       if (skip(x, yg, sc)) continue;
       // nearer the bolt (right), a little brighter rim
       out += upZombie(x, yg, sc, { body, fogK: R.fog, detail: R.detail, r, tilt, rimOp: R.rim * (0.75 + 0.25 * (x / W)), hair });
     }
   }
-  return g(out, { filter: 'url(#wobbleSoft)' });
+  return wobble ? g(out, { filter: 'url(#wobbleSoft)' }) : out;
 }
 
 // ---------- you: walking through them, head a little down, finger at the lips, hammer up and ready ----------
@@ -288,8 +289,7 @@ function thumbStorm() {
   // the lot, packed to the far edge: back rows small and hazy, nearer rows bigger and sharper
   const far = [];
   for (let i = 0; i < 6; i++) { const t = i / 5; far.push({ x0: -60, x1: W + 60, y: lerp(600, 820, t), s: lerp(0.25, 0.64, t), dens: 1.35, fog: lerp(0.55, 0.28, t), detail: t > 0.6 ? 1 : 0, rim: lerp(0.5, 0.8, t) }); }
-  s += rows({ list: far, seed: 3 });
-  s += rect(0, 0, W, H, { fill: '#6F64C8', opacity: 0.06, style: 'mix-blend-mode:screen' });
+  s += rows({ list: far, seed: 3, wobble: false });
   // the rows around you: packed close on both sides, behind your shoulders
   const mid = [
     { x0: -80, x1: W + 80, y: 975, s: 0.92, dens: 1.3, fog: 0.18, detail: 1, rim: 0.85 },
@@ -299,8 +299,8 @@ function thumbStorm() {
   s += rain({ n: 260, seed: 4, len: [50, 100], w: 2.6, op: 0.32 });
   const r = rng(51);
   // the two right beside you, a step behind
-  s += g(upZombie(HX - 480, 1470, 2.15, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: -7, hair: '#5B4636' })
-    + upZombie(HX + 440, 1470, 2.15, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 8, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
+  s += g(upZombie(HX - 480, 1470, 2.15, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: 6, hair: '#5B4636' })
+    + upZombie(HX + 440, 1470, 2.15, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 11, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
   // light from the bolt washing the crowd from the upper right
   s += soft(1650, 560, 1000, 520, '#B6A6FF', 0.3);
   // you
@@ -308,8 +308,8 @@ function thumbStorm() {
   s += you(HX, HY, HS);
   // the nearest ones at the edges of frame, cropped and a shade darker, out of the flash
   s += `<defs><filter id="sb_near"><feColorMatrix type="matrix" values="0.8 0 0 0 0 0 0.8 0 0 0 0 0 0.86 0 0.01 0 0 0 1 0"/></filter></defs>`;
-  s += g(g(upZombie(60, 1900, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
-    + upZombie(1890, 1960, 3.1, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 10, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
+  s += g(g(upZombie(60, 1900, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: 7, hair: '#2B2B2E' })
+    + upZombie(1880, 1900, 3.0, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 13, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
   // the downpour over everything, heavier and softer up close
   s += rain({ n: 110, seed: 8, len: [130, 230], w: 4.5, op: 0.3 });
   s += grade('#3B2F6E', 0.1);
