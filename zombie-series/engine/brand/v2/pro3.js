@@ -16,7 +16,7 @@ function mix(a, b, k) {
 const UNI = ['#8C8C86', '#2E3D55', '#C76A83', '#7C6A8E', '#8A7A4E', '#6FA3A6', '#A65F4A', '#596471', '#3B3F48'];
 
 // a horde, back rows small and dark, front rows big; arms up, a rim of coloured light on one side of every head
-function horde({ x0, x1, yb, yf, rows = 6, s0 = 0.42, s1 = 1.3, seed = 1, arms = 0.75, rim = RED, rimSide = -1, fog = '#0B0F1E', fogK = 0.65, density = 1.55 }) {
+export function horde({ x0, x1, yb, yf, rows = 6, s0 = 0.42, s1 = 1.3, seed = 1, arms = 0.75, rim = RED, rimSide = -1, fog = '#0B0F1E', fogK = 0.65, density = 1.55 }) {
   const r = rng(seed); let out = '';
   for (let row = 0; row < rows; row++) {
     const t = row / (rows - 1), y = lerp(yb, yf, t * t * 0.5 + t * 0.5), sc = lerp(s0, s1, t * t), u = 60 * sc;
@@ -43,7 +43,7 @@ function horde({ x0, x1, yb, yf, rows = 6, s0 = 0.42, s1 = 1.3, seed = 1, arms =
 }
 
 // a shopping cart full of boxes, (x, y) = front wheel on the floor, facing left
-function cart(x, y, k) {
+export function cart(x, y, k) {
   let s = '';
   s += path(`M${x} ${y - 70 * k} L${x + 20 * k} ${y - 230 * k} L${x + 300 * k} ${y - 230 * k} L${x + 280 * k} ${y - 70 * k} Z`, { fill: 'none', ...ink(6 * k) });
   for (let i = 1; i < 6; i++) s += line(x + (20 + i * 46) * k, y - 228 * k, x + (6 + i * 46) * k, y - 72 * k, { stroke: INK, strokeWidth: 3 * k });
@@ -129,7 +129,7 @@ function thumbC() {
   return { w: W, h: H, svg: svgOf(s, 7), css: 'saturate(1.12) contrast(1.06)' };
 }
 const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
-function ledDigits(x, y, str, h, on = '#FF3B2F', off = '#3A1010') {
+export function ledDigits(x, y, str, h, on = '#FF3B2F', off = '#3A1010') {
   const w = h * 0.56, t = h * 0.14, hh = h / 2;
   const seg = { a: [t * 0.6, 0, w - t * 1.2, t], g: [t * 0.6, hh - t / 2, w - t * 1.2, t], d: [t * 0.6, h - t, w - t * 1.2, t], f: [0, t * 0.6, t, hh - t * 0.9], b: [w - t, t * 0.6, t, hh - t * 0.9], e: [0, hh + t * 0.3, t, hh - t * 0.9], c: [w - t, hh + t * 0.3, t, hh - t * 0.9] };
   let s = '', cx = x;
@@ -143,7 +143,7 @@ function ledDigits(x, y, str, h, on = '#FF3B2F', off = '#3A1010') {
 
 // ---------- B5: DON'T ANSWER, the hero in full tactical kit, the horde lit by the moon ----------
 // rifle in local coordinates along its axis (x forward from the pistol grip), rotated into place
-function rifle(gx, gy, u, ang) {
+export function rifle(gx, gy, u, ang) {
   const k = u / 100, R = (x, y, w, h, a = {}) => rect(x * k, y * k, w * k, h * k, { ...ink(3.5 * k + 1), ...a });
   let s = '';
   s += poly([[-30 * k, -6 * k], [-95 * k, -2 * k], [-100 * k, 26 * k], [-86 * k, 30 * k], [-40 * k, 12 * k], [-30 * k, 12 * k]], { fill: '#4A4E55', ...ink(3.5 * k + 1) });   // stock
@@ -154,7 +154,7 @@ function rifle(gx, gy, u, ang) {
   s += R(4, -36, 40, 14, { rx: 4 * k, fill: '#1E2024' }) + circle(46 * k, -29 * k, 6 * k, { fill: '#6FB4FF', ...ink(2 * k + 1) });                                         // optic
   return g(s, { transform: `translate(${F(gx)} ${F(gy)}) rotate(${ang})` });
 }
-function tacticalKit(x, y, u) {
+export function tacticalKit(x, y, u) {
   // plate carrier with pouches, shoulder straps and a patch; drawn over the torso and the hanging arms
   let s = rect(x - 0.66 * u, y - 4.16 * u, 1.32 * u, 1.72 * u, { rx: 0.14 * u, fill: '#3B4230', ...ink(0.045 * u) });
   for (const side of [-1, 1]) s += rect(x + side * 0.42 * u - 0.12 * u, y - 4.3 * u, 0.24 * u, 0.3 * u, { rx: 0.05 * u, fill: '#323827', ...ink(0.03 * u) });
@@ -163,7 +163,7 @@ function tacticalKit(x, y, u) {
   s += rect(x - 0.66 * u, y - 2.52 * u, 1.32 * u, 0.14 * u, { fill: '#2A2F22', ...ink(0.03 * u) });
   return s;
 }
-function helmet(cx, cy, u) {
+export function helmet(cx, cy, u) {
   // FAST-style helmet over the hair, the orange headphones worn as a headset with a boom mic
   let s = path(`M${F(cx - 1.06 * u)} ${F(cy - 0.1 * u)} C${F(cx - 1.12 * u)} ${F(cy - 1.35 * u)} ${F(cx + 1.12 * u)} ${F(cy - 1.35 * u)} ${F(cx + 1.06 * u)} ${F(cy - 0.1 * u)} L${F(cx + 0.86 * u)} ${F(cy - 0.12 * u)} Q${F(cx + 0.5 * u)} ${F(cy - 0.5 * u)} ${F(cx)} ${F(cy - 0.52 * u)} Q${F(cx - 0.5 * u)} ${F(cy - 0.5 * u)} ${F(cx - 0.86 * u)} ${F(cy - 0.12 * u)} Z`, { fill: '#4A5238', ...ink(0.05 * u) });
   s += path(`M${F(cx - 0.62 * u)} ${F(cy - 0.62 * u)} Q${F(cx)} ${F(cy - 0.78 * u)} ${F(cx + 0.62 * u)} ${F(cy - 0.62 * u)}`, { fill: 'none', stroke: '#2F3524', strokeWidth: 0.08 * u, strokeLinecap: 'round' });
