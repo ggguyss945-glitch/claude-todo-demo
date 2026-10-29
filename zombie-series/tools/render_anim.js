@@ -34,7 +34,10 @@ const server = http.createServer((req, res) => {
   const T = JSON.parse(fs.readFileSync(tlPath));
   const all = Math.round(T.dur * fps);
   const [f0, f1] = (opt.frames || `0:${all}`).split(':').map(Number);
-  const listed = opt.times ? JSON.parse(fs.readFileSync(opt.times)) : null;
+  // a times list may hold [index, t] pairs, so a resumed render keeps each frame's original number
+  const listedRaw = opt.times ? JSON.parse(fs.readFileSync(opt.times)) : null;
+  const listed = listedRaw ? listedRaw.map((x) => (Array.isArray(x) ? x[1] : x)) : null;
+  const listedIdx = listedRaw ? listedRaw.map((x, i) => (Array.isArray(x) ? x[0] : i)) : null;
   const times = listed || (onlyArg ? onlyArg.split(',').map(Number) : Array.from({ length: Math.min(f1, all) - f0 }, (_, i) => (f0 + i) / fps));
   const browser = await chromium.launch();
   let next = 0, done = 0, last = ''; const t0 = Date.now();
@@ -98,7 +101,7 @@ const server = http.createServer((req, res) => {
     while (next < times.length) {
       const i = next++, t = times[i];
       await page.evaluate((t) => window.renderAt(t), t);
-      const name = listed ? (opt.names === 'ep' ? `f_${String(Math.round(t * fps)).padStart(6, '0')}.jpg` : `f_${String(i).padStart(5, '0')}.jpg`) : onlyArg ? `t_${t.toFixed(2)}.jpg` : `f_${String(f0 + i).padStart(5, '0')}.jpg`;
+      const name = listed ? (opt.names === 'ep' ? `f_${String(Math.round(t * fps)).padStart(6, '0')}.jpg` : `f_${String(listedIdx[i]).padStart(5, '0')}.jpg`) : onlyArg ? `t_${t.toFixed(2)}.jpg` : `f_${String(f0 + i).padStart(5, '0')}.jpg`;
       await page.locator('#stage').screenshot({ path: path.join(outDir, name), type: 'jpeg', quality: +(opt.quality || 95) });
       const jobs = await page.evaluate(() => (window.takeBakeJobs ? window.takeBakeJobs() : []));
       for (const j of jobs) bake(j, defs);

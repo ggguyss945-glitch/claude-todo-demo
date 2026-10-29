@@ -80,8 +80,15 @@ def render(plan_path, work):
     frames = f'{work}/frames'; n = len(times)
     have = len([f for f in os.listdir(frames) if f.endswith('.jpg')]) if os.path.isdir(frames) else 0
     if have < n:
+        # resume: only the frames that are missing (a crash can leave the newest few half written, so those go too)
+        os.makedirs(frames, exist_ok=True)
+        got = sorted(int(f[2:7]) for f in os.listdir(frames) if f.startswith('f_') and f.endswith('.jpg'))
+        for i in got[-12:]: os.remove(f'{frames}/f_{i:05d}.jpg')
+        got = set(got[:-12])
+        todo = [[i, t] for i, t in enumerate(times) if i not in got]
+        json.dump(todo, open(f'{work}/times_todo.json', 'w'))
         page = f'engine/short.html?ep={P["ep"]}&plan=/shorts/{P["id"]}.json'
-        r = subprocess.run(['node', f'{ROOT}/tools/render_anim.js', P['timeline'], frames, str(FPS), '4', '-', f'{SCALE:.7f}', f'page={page}', f'times={work}/times.json', 'warm=1'],
+        r = subprocess.run(['node', f'{ROOT}/tools/render_anim.js', P['timeline'], frames, str(FPS), '4', '-', f'{SCALE:.7f}', f'page={page}', f'times={work}/times_todo.json', 'warm=1'],
                            cwd=ROOT, stdout=open(f'{work}/render.log', 'w'), stderr=subprocess.STDOUT)
         if r.returncode != 0: sys.exit(f'render failed, see {work}/render.log')
     vid = f'{work}/video.mp4'
