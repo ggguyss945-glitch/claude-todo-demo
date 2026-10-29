@@ -40,6 +40,12 @@ def build(sid, work):
     voice, fx, score = (np.zeros((N + SR, 2), np.float32) for _ in range(3))
     cues = sorted(T['music'], key=lambda c: c['t'])
     iv = [(c['t'], cues[i + 1]['t'] if i + 1 < len(cues) else T['dur']) for i, c in enumerate(cues) if c['cue'] != 'stop']
+    # music playing inside the story (the store jingle out of the drone) counts as music: no filler over it
+    for e in T['sfx']:
+        if e['name'] in ('drone_song', 'jingle'):
+            p = e.get('p') or {}
+            end = T['items'][p['until']][0] + p.get('off', 0) if 'until' in p else e['t'] + p.get('dur', 10)
+            iv.append((e['t'], end))
     has_score = np.zeros(N + SR, np.float32)
     o = 0
     for k, s in enumerate(segs):
