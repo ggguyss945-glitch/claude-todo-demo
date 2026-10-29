@@ -13,8 +13,8 @@ function mix(a, b, k) {
 }
 
 // ---------- palette ----------
-const SKIN = '#9DB28E', SKIN_UNDER = '#61735F', SOCKET = '#272C27', PUPIL = '#F1F4E2', MOUTH = '#221C1B';
-const RIM = '#E4DCFF', HAZE = '#6C6AA8', BOLT = '#F4F1FF', BOLT_GLOW = '#A993FF';
+const SKIN = '#9DB28E', SKIN_UNDER = '#56685A', SOCKET = '#272C27', PUPIL = '#F1F4E2', MOUTH = '#221C1B';
+const RIM = '#E4DCFF', HAZE = '#6688A8', BOLT = '#F4F1FF', BOLT_GLOW = '#A993FF';
 const CLOTHES = ['#C76A83', '#6FA3A6', '#A65F4A', '#7C6A8E', '#2E3D55', '#8A7A4E', '#D9A441', '#596471', '#B5452F', '#4F7A52', '#E0894A', '#8C8C86'];
 const HAIR = ['#3A2A22', '#5B4636', '#2B2B2E', '#7A6A55', '#8E8A80'];
 
@@ -170,20 +170,20 @@ function rows({ list, seed, skip = () => false }) {
   return g(out, { filter: 'url(#wobbleSoft)' });
 }
 
-// ---------- you: walking through them, head a little down, finger at the lips, hammer ready ----------
+// ---------- you: walking through them, head a little down, finger at the lips, hammer up and ready ----------
 function heroHead(cx, cy, u, { down = 0.08, rim, id = 'sbh' }) {
   let s = circle(cx, cy, u, { fill: PAL.skin });
   s += `<mask id="rim_${id}"><circle cx="${F(cx)}" cy="${F(cy)}" r="${F(u)}" fill="#fff"/><circle cx="${F(cx - rim.side * 0.17 * u)}" cy="${F(cy + 0.08 * u)}" r="${F(u)}" fill="#000"/></mask>`
     + circle(cx, cy, u, { fill: rim.color, opacity: rim.op, mask: `url(#rim_${id})` });
-  // hair, rain-flattened: the canon cap with a heavier fringe; the cowlick still stands
+  // hair, rain-flattened: the canon cap with the fringe a little lower; the cowlick still stands
   const hx = cx - u, hy = cy, dy = down * 0.6 * u;
   s += path(`M${F(hx + 0.02 * u)} ${F(hy - 0.05 * u)} C${F(hx - 0.02 * u)} ${F(hy - 1.1 * u)} ${F(cx + 1.1 * u)} ${F(cy - 1.25 * u)} ${F(cx + 0.98 * u)} ${F(cy - 0.12 * u)} L${F(cx + 0.7 * u)} ${F(cy - 0.4 * u + dy)} L${F(cx + 0.48 * u)} ${F(cy - 0.27 * u + dy)} L${F(cx + 0.18 * u)} ${F(cy - 0.47 * u + dy)} L${F(cx - 0.12 * u)} ${F(cy - 0.33 * u + dy)} L${F(cx - 0.45 * u)} ${F(cy - 0.5 * u + dy)} L${F(cx - 0.72 * u)} ${F(cy - 0.3 * u + dy)} Z`, { fill: PAL.hair, ...ink(0.04 * u) });
+  // wet sheen on the hair from the flash
+  s += path(`M${F(cx + 0.2 * u)} ${F(cy - 0.86 * u)} Q${F(cx + 0.62 * u)} ${F(cy - 0.78 * u)} ${F(cx + 0.82 * u)} ${F(cy - 0.42 * u)}`, { fill: 'none', stroke: '#B9A8E8', strokeWidth: 0.07 * u, strokeLinecap: 'round', opacity: 0.75 });
+  s += path(`M${F(cx - 0.62 * u)} ${F(cy - 0.62 * u)} Q${F(cx - 0.4 * u)} ${F(cy - 0.8 * u)} ${F(cx - 0.12 * u)} ${F(cy - 0.84 * u)}`, { fill: 'none', stroke: '#8E7FB8', strokeWidth: 0.05 * u, strokeLinecap: 'round', opacity: 0.6 });
   s += path(`M${F(cx + rim.side * 0.6 * u)} ${F(cy - 0.8 * u)} Q${F(cx + rim.side * 0.95 * u)} ${F(cy - 0.52 * u)} ${F(cx + rim.side * 0.98 * u)} ${F(cy - 0.14 * u)}`, { fill: 'none', stroke: rim.color, strokeWidth: 0.07 * u, strokeLinecap: 'round', opacity: 0.85 });
   const lick = `M${F(cx + 0.05 * u)} ${F(cy - 0.98 * u)} q${F(0.1 * u)} ${F(-0.35 * u)} ${F(0.38 * u)} ${F(-0.3 * u)}`;
   s += path(lick, { fill: 'none', stroke: INK, strokeWidth: 0.19 * u, strokeLinecap: 'round' }) + path(lick, { fill: 'none', stroke: PAL.hair, strokeWidth: 0.11 * u, strokeLinecap: 'round' });
-  // wet: drops on the hair, one on the temple
-  for (const [dx, dy, k] of [[-0.55, -0.62, 1], [0.3, -0.78, 0.8], [0.72, -0.45, 0.9]]) s += ellipse(cx + dx * u, cy + dy * u, 0.04 * u * k, 0.06 * u * k, { fill: '#CFE4FF', opacity: 0.9 });
-  s += path(`M${F(cx - 0.8 * u)} ${F(cy - 0.08 * u)} q${F(0.05 * u)} ${F(0.09 * u)} 0 ${F(0.13 * u)} q${F(-0.05 * u)} ${F(-0.04 * u)} 0 ${F(-0.13 * u)}`, { fill: '#BFE0F5', ...ink(0.018 * u) });
   // serious eyes under heavy lids, looking straight out at you; brows down to the nose
   const ex = cx, ey = cy + 0.04 * u + down * u, sp = 0.5 * u;
   for (const side of [-1, 1]) {
@@ -198,29 +198,33 @@ function heroHead(cx, cy, u, { down = 0.08, rim, id = 'sbh' }) {
     s += line(x0 + side * 0.16 * u, by - 0.01 * u, x0 - side * 0.13 * u, by + 0.11 * u, ink(0.065 * u));
   }
   const mx = ex, my = cy + 0.5 * u + down * u;
-  s += path(`M${F(mx - 0.15 * u)} ${F(my + 0.05 * u)} Q${F(mx)} ${F(my - 0.04 * u)} ${F(mx + 0.15 * u)} ${F(my + 0.05 * u)}`, { fill: 'none', ...ink(0.055 * u) });
+  s += path(`M${F(mx - 0.16 * u)} ${F(my + 0.05 * u)} Q${F(mx)} ${F(my - 0.04 * u)} ${F(mx + 0.16 * u)} ${F(my + 0.05 * u)}`, { fill: 'none', ...ink(0.055 * u) });
   s += circle(cx, cy, u, { fill: 'none', ...ink(0.045 * u) });
   return s;
 }
-function hammer(hx, hy, u, ang) {
-  // claw hammer, (hx, hy) = the grip, pointing along `ang` (degrees) from the grip to the head
-  const k = u / 100;
-  let s = rect(-8 * k, -14 * k, 150 * k, 28 * k, { rx: 12 * k, fill: '#9A6440', ...ink(4 * k + 1) });
-  s += line(20 * k, -6 * k, 120 * k, -6 * k, { stroke: '#C08A5C', strokeWidth: 5 * k, strokeLinecap: 'round' });
-  s += rect(-30 * k, -16 * k, 46 * k, 32 * k, { rx: 10 * k, fill: '#2A2C30', ...ink(3.5 * k + 1) });   // rubber grip
-  const hd = `M${136 * k} ${-62 * k} L${172 * k} ${-62 * k} L${172 * k} ${36 * k} Q${200 * k} ${50 * k} ${214 * k} ${86 * k} Q${180 * k} ${78 * k} ${160 * k} ${58 * k} L${136 * k} ${58 * k} Z`;
-  s += path(hd, { fill: '#8E98A3', ...ink(4 * k + 1) });
-  s += rect(128 * k, -84 * k, 52 * k, 30 * k, { rx: 6 * k, fill: '#AEB8C2', ...ink(4 * k + 1) });   // striking face
-  s += line(178 * k, -76 * k, 178 * k, -60 * k, { stroke: '#FFFFFF', strokeWidth: 5 * k, strokeLinecap: 'round', opacity: 0.9 });   // lightning glint
-  return g(s, { transform: `translate(${F(hx)} ${F(hy)}) rotate(${ang})` });
+// claw hammer; (gx, gy) = the grip, `ang` (degrees) points from the grip up the handle; the claw is on local +y
+function hammer(gx, gy, u, ang) {
+  const P = (x, y) => `${F(x * u)} ${F(y * u)}`, o = ink(0.035 * u);
+  let s = rect(-0.3 * u, -0.075 * u, 1.62 * u, 0.15 * u, { rx: 0.07 * u, fill: '#9A6440', ...o });
+  s += line(0.25 * u, -0.025 * u, 1.2 * u, -0.025 * u, { stroke: '#C69062', strokeWidth: 0.03 * u, strokeLinecap: 'round' });
+  s += rect(-0.36 * u, -0.09 * u, 0.5 * u, 0.18 * u, { rx: 0.08 * u, fill: '#25272B', ...o });                    // rubber grip
+  // the claw, curving back toward the handle
+  s += path(`M${P(1.5, 0.08)} Q${P(1.52, 0.42)} ${P(1.18, 0.6)} Q${P(1.3, 0.4)} ${P(1.28, 0.1)} Z`, { fill: '#7E8893', ...o });
+  s += path(`M${P(1.42, 0.22)} Q${P(1.38, 0.4)} ${P(1.26, 0.5)}`, { fill: 'none', stroke: INK, strokeWidth: 0.02 * u, strokeLinecap: 'round' });
+  // the block, the neck and the round striking face
+  s += rect(1.26 * u, -0.2 * u, 0.26 * u, 0.32 * u, { rx: 0.04 * u, fill: '#8E98A3', ...o });
+  s += rect(1.3 * u, -0.36 * u, 0.18 * u, 0.18 * u, { fill: '#8E98A3', ...o });
+  s += rect(1.25 * u, -0.48 * u, 0.28 * u, 0.13 * u, { rx: 0.04 * u, fill: '#B4BEC8', ...o });
+  s += line(1.31 * u, -0.17 * u, 1.31 * u, 0.06 * u, { stroke: '#FFFFFF', strokeWidth: 0.03 * u, strokeLinecap: 'round', opacity: 0.85 });   // lightning glint
+  return g(s, { transform: `translate(${F(gx)} ${F(gy)}) rotate(${ang})` });
 }
 function you(x, y, sc) {
   const u = 60 * sc, shY = y - 4.05 * u, neckY = y - 4.25 * u, hipY = y - 2.2 * u, cx = x, cy = y - 5.25 * u, lw = Math.max(4, 0.1 * u);
   const tw = 0.62 * u, bw = 0.56 * u, top = shY - 0.15 * u, bot = hipY + 0.1 * u;
   let b = '';
-  // jacket, its hood down behind the neck
+  // jacket, its hood down behind the neck, the flash along its wet right edge
   b += path(`M${F(x - tw)} ${F(top + 0.2 * u)} Q${F(x - tw)} ${F(top)} ${F(x - tw + 0.25 * u)} ${F(top)} L${F(x + tw - 0.25 * u)} ${F(top)} Q${F(x + tw)} ${F(top)} ${F(x + tw)} ${F(top + 0.2 * u)} L${F(x + bw)} ${F(bot)} L${F(x - bw)} ${F(bot)} Z`, { fill: PAL.jacket, ...ink(0.045 * u) });
-  b += path(`M${F(x + tw - 0.06 * u)} ${F(top + 0.16 * u)} L${F(x + bw - 0.04 * u)} ${F(bot)}`, { fill: 'none', stroke: '#C9B8FF', strokeWidth: 0.07 * u, opacity: 0.6, strokeLinecap: 'round' });   // the flash along the wet jacket
+  b += path(`M${F(x + tw - 0.06 * u)} ${F(top + 0.16 * u)} L${F(x + bw - 0.04 * u)} ${F(bot)}`, { fill: 'none', stroke: '#C9B8FF', strokeWidth: 0.07 * u, opacity: 0.6, strokeLinecap: 'round' });
   b += line(x + 0.04 * u, top + 0.12 * u, x + 0.04 * u, bot - 0.05 * u, { stroke: PAL.jacketDark, strokeWidth: 0.04 * u });
   b += path(`M${F(x - 0.42 * u)} ${F(bot - 0.75 * u)} h${F(0.28 * u)}`, { stroke: PAL.jacketDark, strokeWidth: 0.035 * u, fill: 'none' }) + path(`M${F(x + 0.16 * u)} ${F(bot - 0.75 * u)} h${F(0.28 * u)}`, { stroke: PAL.jacketDark, strokeWidth: 0.035 * u, fill: 'none' });
   b += path(`M${F(x - 0.55 * u)} ${F(top + 0.05 * u)} Q${F(x)} ${F(top - 0.32 * u)} ${F(x + 0.55 * u)} ${F(top + 0.05 * u)} Q${F(x)} ${F(top + 0.3 * u)} ${F(x - 0.55 * u)} ${F(top + 0.05 * u)} Z`, { fill: PAL.jacketDark, ...ink(0.035 * u) });
@@ -228,19 +232,19 @@ function you(x, y, sc) {
   const hp = `M${F(x - 0.55 * u)} ${F(neckY - 0.05 * u)} Q${F(x)} ${F(neckY + 0.55 * u)} ${F(x + 0.55 * u)} ${F(neckY - 0.05 * u)}`;
   b += path(hp, { fill: 'none', stroke: INK, strokeWidth: 0.2 * u }) + path(hp, { fill: 'none', stroke: PAL.phones, strokeWidth: 0.11 * u });
   b += rect(x - 0.86 * u, neckY - 0.3 * u, 0.36 * u, 0.5 * u, { rx: 0.12 * u, fill: PAL.phones, ...ink(0.035 * u) }) + rect(x + 0.5 * u, neckY - 0.3 * u, 0.36 * u, 0.5 * u, { rx: 0.12 * u, fill: PAL.phones, ...ink(0.035 * u) });
-  // the hammer arm (your right, our left): elbow out, the grip at the chest, the head up by the shoulder
-  const grip = [x - 0.18 * u, shY + 0.95 * u];
-  b += path(`M${F(x - 0.5 * u)} ${F(shY + 0.05 * u)} Q${F(x - 0.95 * u)} ${F(shY + 1.05 * u)} ${F(grip[0])} ${F(grip[1])}`, { fill: 'none', ...ink(lw) });
-  const hm = hammer(grip[0], grip[1], u * 0.95, -128);
-  // the shush arm (your left, our right): up to the lips
-  const fist = [cx + 0.12 * u, cy + 1.02 * u];
-  b += path(`M${F(x + 0.5 * u)} ${F(shY + 0.05 * u)} Q${F(x + 1.05 * u)} ${F(shY + 0.75 * u)} ${F(fist[0] + 0.08 * u)} ${F(fist[1] + 0.06 * u)}`, { fill: 'none', ...ink(lw) });
+  // the hammer arm (your right, our left): elbow down at the side, the hammer raised by the head
+  const sL = [x - 0.52 * u, shY + 0.08 * u], eL = [x - 1.12 * u, shY + 0.66 * u], hL = [x - 1.04 * u, shY - 0.3 * u];
+  b += path(`M${F(sL[0])} ${F(sL[1])} L${F(eL[0])} ${F(eL[1])} L${F(hL[0])} ${F(hL[1])}`, { fill: 'none', ...ink(lw) });
+  const hm = hammer(hL[0], hL[1], u, -100);
+  // the shush arm (your left, our right): elbow out, the fist up under the chin
+  const fist = [cx + 0.15 * u, cy + 0.98 * u], sR = [x + 0.52 * u, shY + 0.08 * u], eR = [x + 1.0 * u, shY + 0.82 * u];
+  b += path(`M${F(sR[0])} ${F(sR[1])} L${F(eR[0])} ${F(eR[1])} L${F(fist[0] + 0.06 * u)} ${F(fist[1] + 0.06 * u)}`, { fill: 'none', ...ink(lw) });
   const hd = heroHead(cx, cy, u, { down: 0.08, rim: { color: '#CDBEFF', side: 1, op: 0.8 } });
   // the hand at the lips: a fist under the chin, one finger up across the mouth
-  let fr = circle(fist[0], fist[1], 0.17 * u, { fill: PAL.skin, ...ink(0.04 * u) });
-  fr += rect(cx + 0.03 * u, cy + 0.36 * u, 0.13 * u, 0.62 * u, { rx: 0.065 * u, fill: PAL.skin, ...ink(0.035 * u) });
-  fr += line(cx + 0.06 * u, cy + 0.44 * u, cx + 0.13 * u, cy + 0.44 * u, { stroke: '#D9CFC0', strokeWidth: 0.02 * u, strokeLinecap: 'round' });   // the nail
-  const gripHand = circle(grip[0], grip[1], 0.17 * u, { fill: PAL.skin, ...ink(0.04 * u) });
+  let fr = rect(cx + 0.0 * u, cy + 0.4 * u, 0.15 * u, 0.5 * u, { rx: 0.075 * u, fill: PAL.skin, ...ink(0.035 * u) });
+  fr += circle(fist[0], fist[1], 0.2 * u, { fill: PAL.skin, ...ink(0.04 * u) });
+  fr += path(`M${F(fist[0] - 0.12 * u)} ${F(fist[1] - 0.02 * u)} q${F(0.1 * u)} ${F(0.05 * u)} ${F(0.2 * u)} 0`, { fill: 'none', stroke: INK, strokeWidth: 0.025 * u, strokeLinecap: 'round' });   // curled fingers
+  const gripHand = circle(hL[0], hL[1], 0.19 * u, { fill: PAL.skin, ...ink(0.04 * u) });
   return g(g(b + hm + gripHand + hd + fr, { filter: 'url(#wobbleSoft)' }), { filter: 'url(#pro_stk)' });
 }
 
@@ -255,36 +259,36 @@ function rain({ n, seed, len = [60, 120], w = 3, op = 0.4, col = '#D5E4F5', slan
 }
 
 function thumbStorm() {
-  const HX = 1185, HY = 1455, HS = 2.7, HU = 60 * HS;
+  const HX = 1240, HS = 3.0, HU = 60 * HS, HY = 615 + 5.25 * HU;
   let s = sky() + lightning() + horizon();
   // the lot, packed to the far edge: back rows small and hazy, nearer rows bigger and sharper
   const far = [];
-  for (let i = 0; i < 6; i++) { const t = i / 5; far.push({ x0: -60, x1: W + 60, y: lerp(640, 820, t), s: lerp(0.27, 0.62, t), dens: 1.35, fog: lerp(0.55, 0.3, t), detail: t > 0.6 ? 1 : 0, rim: lerp(0.5, 0.8, t) }); }
+  for (let i = 0; i < 6; i++) { const t = i / 5; far.push({ x0: -60, x1: W + 60, y: lerp(640, 830, t), s: lerp(0.27, 0.64, t), dens: 1.35, fog: lerp(0.55, 0.28, t), detail: t > 0.6 ? 1 : 0, rim: lerp(0.5, 0.8, t) }); }
   s += rows({ list: far, seed: 3 });
-  s += rect(0, 0, W, H, { fill: '#6F64C8', opacity: 0.07, style: 'mix-blend-mode:screen' });
+  s += rect(0, 0, W, H, { fill: '#6F64C8', opacity: 0.06, style: 'mix-blend-mode:screen' });
   // the rows around you: packed close on both sides, behind your shoulders
   const mid = [
-    { x0: -80, x1: W + 80, y: 960, s: 0.9, dens: 1.5, fog: 0.2, detail: 1, rim: 0.85 },
-    { x0: -80, x1: W + 80, y: 1110, s: 1.25, dens: 1.6, fog: 0.1, detail: 1, rim: 0.9 },
+    { x0: -80, x1: W + 80, y: 975, s: 0.92, dens: 1.5, fog: 0.18, detail: 1, rim: 0.85 },
+    { x0: -80, x1: W + 80, y: 1150, s: 1.3, dens: 1.6, fog: 0.08, detail: 1, rim: 0.9 },
   ];
-  s += rows({ list: mid, seed: 9, skip: (x) => Math.abs(x - HX) < 120 });
+  s += rows({ list: mid, seed: 9, skip: (x) => Math.abs(x - HX) < 150 });
   s += rain({ n: 260, seed: 4, len: [50, 100], w: 2.6, op: 0.32 });
   const r = rng(51);
   // the two right beside you, a step behind
-  s += g(upZombie(HX - 430, 1380, 2.05, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: -6, hair: '#5B4636' })
-    + upZombie(HX + 445, 1395, 2.1, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 7, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
+  s += g(upZombie(HX - 480, 1470, 2.15, { body: '#C76A83', fogK: 0, detail: 2, r, tilt: -7, hair: '#5B4636' })
+    + upZombie(HX + 480, 1480, 2.2, { body: '#6FA3A6', fogK: 0, detail: 2, r, tilt: 8, rimOp: 1 }), { filter: 'url(#wobbleSoft)' });
   // light from the bolt washing the crowd from the upper right
-  s += bloom(1650, 520, 700, 330, '#B6A6FF', 0.28);
+  s += bloom(1650, 520, 700, 330, '#B6A6FF', 0.26);
   // you
-  s += bloom(HX, 640, 320, 300, '#8E7FE0', 0.25);
+  s += bloom(HX, 640, 340, 320, '#8E7FE0', 0.22);
   s += you(HX, HY, HS);
-  // the nearest ones, at the edges of frame, cropped: faces up, mouths open to the rain
-  s += g(upZombie(110, 1700, 3.0, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
-    + upZombie(560, 1790, 2.65, { body: '#2E3D55', fogK: 0, detail: 2, r, tilt: 8 })
-    + upZombie(1790, 1720, 3.0, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 9, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' });
+  // the nearest ones at the edges of frame, cropped and a shade darker, out of the flash
+  s += `<defs><filter id="sb_near"><feColorMatrix type="matrix" values="0.8 0 0 0 0 0 0.8 0 0 0 0 0 0.86 0 0.01 0 0 0 1 0"/></filter></defs>`;
+  s += g(g(upZombie(90, 1860, 3.1, { body: '#D9A441', fogK: 0, detail: 2, r, tilt: -10, hair: '#2B2B2E' })
+    + upZombie(1830, 1880, 3.1, { body: '#B5452F', fogK: 0, detail: 2, r, tilt: 10, rimOp: 1, hair: '#7A6A55' }), { filter: 'url(#wobbleSoft)' }), { filter: 'url(#sb_near)' });
   // the downpour over everything, heavier and softer up close
-  s += rain({ n: 120, seed: 8, len: [120, 220], w: 4.5, op: 0.4, blur: 'sb_rainblur' });
-  s += grade('#3B2F6E', 0.12);
+  s += rain({ n: 110, seed: 8, len: [130, 230], w: 5, op: 0.36, blur: 'sb_rainblur' });
+  s += grade('#3B2F6E', 0.1);
   s += headline(64, 210, 'WAIT FOR', { size: 178, anchor: 'start' }) + headline(56, 438, 'THUNDER', { size: 250, anchor: 'start', fill: 'url(#pro_red)' });
   s += finish({ vignette: 0.5, grain: 0.05 });
   return { w: W, h: H, svg: svgOf(s, 10), css: 'saturate(1.14) contrast(1.06)' };

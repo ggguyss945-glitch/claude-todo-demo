@@ -52,7 +52,7 @@ function sky() {
 }
 
 // ---------- Brookfield Mall: a dark block across the lot, glass skylight on top, one window lit ----------
-const MALL = { x0: 780, x1: 2000, roof: 180, ground: 660 };
+const MALL = { x0: 880, x1: 2000, roof: 180, ground: 660 };
 const COLS = [], CW = 240, GAP = 36;
 for (let x = MALL.x0 + 40; x < MALL.x1; x += CW + GAP) COLS.push(x);
 const FLOORS = [[268, 176], [464, 80], [562, 56], [636, 24]];
@@ -61,7 +61,7 @@ function mall() {
   const { x0, x1, roof, ground } = MALL;
   let s = '';
   // the glass skylight vault over the atrium, catching a little moonlight
-  const vx = 1190, vr = 280, vh = 150, vy = roof - 10;
+  const vx = x0 + 400, vr = 280, vh = 150, vy = roof - 10;
   const dome = `M${vx - vr} ${vy} A${vr} ${vh} 0 0 1 ${vx + vr} ${vy} Z`;
   s += `<defs><clipPath id="sosA_dome"><path d="${dome}"/></clipPath></defs>` + path(dome, { fill: '#1C2B4C' });
   let ribs = '';
@@ -75,7 +75,7 @@ function mall() {
   s += line(x0 + 6, roof + 18, x0 + 6, ground, { stroke: '#4A6AA8', strokeWidth: 6, opacity: 0.5 });   // moonlit corner
   // sign band, unlit
   s += rect(x0, roof + 14, x1 - x0, 64, { fill: '#0F1729', ...ink(5) });
-  s += text(1150, roof + 64, 'BROOKFIELD MALL', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 48, fill: '#34445F', textAnchor: 'middle', letterSpacing: 10 });
+  s += text(x0 + 360, roof + 64, 'BROOKFIELD MALL', { fontFamily: 'Rubik', fontWeight: 900, fontSize: 48, fill: '#34445F', textAnchor: 'middle', letterSpacing: 10 });
   // four floors of dark glass
   FLOORS.forEach(([y, h], fl) => {
     s += line(x0, y - 10, x1, y - 10, { stroke: '#0A1020', strokeWidth: 6 });
