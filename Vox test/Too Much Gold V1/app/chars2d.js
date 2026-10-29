@@ -170,7 +170,10 @@ function updateToon(ch, t) {
   const camPos = V().setFromMatrixPosition(cam.matrixWorld);
   const facing = (obj) => {
     const f = V(0, 0, 1).transformDirection(obj.matrixWorld); const o = V(); obj.getWorldPosition(o);
-    const c = camPos.clone().sub(o); f.y = 0; c.y = 0; f.normalize(); c.normalize();
+    const c = camPos.clone().sub(o);
+    // camera almost straight above or below (looking up out of the chest): the flat direction to it is noise, judge in the camera's own frame
+    if (Math.hypot(c.x, c.z) < 0.35 * c.length()) { const fc = f.transformDirection(_inv); return Math.atan2(fc.x, fc.z); }
+    f.y = 0; c.y = 0; f.normalize(); c.normalize();
     return Math.atan2(f.x * c.z - f.z * c.x, f.x * c.x + f.z * c.z);
   };
   const bodyYaw = facing(ch.body), headYaw = facing(ch.head);
