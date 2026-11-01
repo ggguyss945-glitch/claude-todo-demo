@@ -115,7 +115,7 @@ def caption(cv, s, alpha=255):
         w = text_width(l, 600, 31, 0.035)
         yb = y0 + i * 42
         cv.drawRRect(skia.RRect.MakeRectXY(skia.Rect.MakeXYWH(DW / 2 - w / 2 - 26, yb - 34, w + 52, 46), 22, 22),
-                     skia.Paint(Color=skia.Color4f(0, 0, 0, 0.42 * alpha / 255).toColor(), AntiAlias=True, MaskFilter=_CAP_BLUR['mf']))
+                     skia.Paint(Color=skia.Color4f(0, 0, 0, 0.6 * alpha / 255).toColor(), AntiAlias=True, MaskFilter=_CAP_BLUR['mf']))
     for i, l in enumerate(lines): text(cv, l, DW / 2, y0 + i * 42, 600, 31, '#ffffff', alpha, 0.035, 'center', 1.0)
 
 

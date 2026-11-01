@@ -1689,6 +1689,12 @@ def _prop(c, name, det, t=0.0):
         c.fill(oval(-27, 0, 6), '#7a6a60'); c.fill(rect(-36, 8, 18, 12), '#7a6a60')
         for k in range(4): c.fill(rect(-8, -6 + k * 7, 44 - k * 6, 3), '#7b7f88', 200)
         if det >= 2: text(c.cv, '', 0, 0)
+    elif name == 'pen':                       # black ballpoint, held upright: barrel, silver clip and tip
+        c.shape(rrect(-6, -44, 12, 80, 5), '#17181c')
+        c.fill(rrect(-4, -40, 3, 70, 1.5), '#4a4d57', 160)
+        c.shape(rrect(3, -42, 4, 30, 2), '#c9ccd3', c.lw * 0.5)
+        c.shape(poly([(-6, 36), (6, 36), (1.2, 50), (-1.2, 50)]), '#c9ccd3', c.lw * 0.5)
+        c.fill(rrect(-6, -46, 12, 6, 3), '#2b2d33')
     elif name == 'notebook':
         r = rrect(-34, -46, 68, 92, 5)
         c.shape(r, '#1a1b1f'); c.fill(rect(18, -46, 6, 92), '#33343a'); c.line(rect(18, -46, 6, 92), c.lw * 0.4)
@@ -3037,7 +3043,7 @@ class Acting:
             self._arm(P, side, w, -(self.sp['body']['sh'] - 17) * 0.45, -105.0 + bob, 240.0, 'grip', up=1.0, prop=prop)
             P.h_nod += 0.04 * w
         self._add(t0, t1 + 0.5, fn)
-        name = {'card': 'paper', 'notebook': 'paper', 'photo': 'paper', 'radio': 'radio_click', 'phone': 'ui_pop'}.get(prop)
+        name = {'card': 'paper', 'notebook': 'paper', 'photo': 'paper', 'radio': 'radio_click', 'phone': 'ui_pop', 'pen': 'pen_click'}.get(prop)
         return [self._ev(t0 + 0.1, name, -6.0)] if name else []
 
     def hand_on_glass(self, t0, t1, side=1, reach=470.0):

@@ -1828,12 +1828,12 @@ def plan(F):
     # ============================================================ RULE 4 (278.2 - 355.8): the complaint, the double
     C(T(109), 'rule', n=4, bg='hall')
     C(T(111), 'door', ppl=[P(O, path=(T(111) - 0.1, T(111) + 1.0, [DA(0.35, 1.25), DA(-0.15, 0.82)]),
-                            act=_A(ex('polite'), lambda a, s: a.set(s.t0 + 1.0, None, 0.8, crouch=0.6, lean=0.35), hold_prop('card', 0.6, -1),
+                            act=_A(ex('polite'), lambda a, s: a.set(s.t0 + 1.0, None, 0.8, crouch=0.6, lean=0.35),
                                    lambda a, s: a.set(s.t0 + 2.0, None, 0.4, look_y=-0.6, h_nod=-0.15)))], py=60, z1=1.2)
     C(w(111, 'mail') - 0.1, 'ins', name='mail_slot', kw=lambda t_, t0=w(111, 'mail'): dict(feed=clamp((t_ - t0 - 0.3) / 2.2), item='complaint', flap=1.0),
       cam=dict(mv='push', x=960, y=600, z=1.0, rate=0.03), sfx=[(w(111, 'mail') + 0.2, 'mail_slot', 0, 0, 'inside', dict(paper=True))])
     C(T(112), 'door', ppl=[P(O, at=DA(-0.1, 0.8), act=_A(ex('polite'), lambda a, s: a.set(s.t0 - 0.5, None, 0.6, crouch=0.6, lean=0.35),
-                                                        hold_prop('card', -0.3, -1), creep(6, 3, None)))], py=80, z1=1.15)
+                                                        creep(6, 3, None)))], py=80, z1=1.15)
     C(T(113), 'ins', name='complaint', kw=dict(highlight='address'), cam=dict(mv='push', x=960, y=380, z=1.3, rate=0.03))
     C(T(114), 'ins', name='complaint', kw=dict(highlight='description'), cam=dict(mv='move', x=880, y=520, z=1.4, x1=1060, y1=540, z1=1.5))
     C(T(115), 'ins', name='complaint', kw=dict(highlight='description'), cam=dict(mv='push', x=820, y=560, z=1.9, rate=0.04))
@@ -1880,7 +1880,7 @@ def plan(F):
     C(T(135), 'bust', who=Y, bg='hall', act=_A(ex('nervous'), down(0.0, 0.8)), cam=dict(mv='push', x=960, y=600))
     C(T(136), 'ins', name='complaint_verified', cam=dict(mv='push', x=960, y=540, z=1.0, rate=0.035),
       tags=[(w(136, 'empty'), 'EMPTY', 1200, 640, 'red', 1.6)], music=[(w(136, 'empty'), 'hit', 0.6)])
-    C(T(137), 'bust', who=O, cy=440, act=_A(stare(), hold_prop('notebook', 0.3, 1)), cam=dict(mv='push', x=980, y=640, z=1.05),
+    C(T(137), 'bust', who=O, cy=440, act=_A(stare(), hold_prop('pen', 0.3, 1)), cam=dict(mv='push', x=980, y=640, z=1.05),
       sfx=[(w(137, 'pen') + 0.3, 'pen_click', -2, 0.1, 'outside', dict(n=1))])
     C(T(138), 'bust', who=O, scale=1.15, act=_A(grin(-0.6), tilt(0.5, 16, 1.2)), cam=dict(mv='push', x=960, y=520, z=1.0, rate=0.04))
     C(T(140), 'peep', ppl=[P(O, at='officer_close', act=_A(grin(-1)))], cam=dict(mv='push', x=960, y=440, z=1.0, rate=0.05))
