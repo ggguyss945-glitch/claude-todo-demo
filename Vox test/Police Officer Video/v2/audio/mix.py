@@ -15,10 +15,12 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
     stems/voice_en.wav, stems/voice_ru.wav, stems/sfx.wav, stems/music.wav   float32 at the final gain, after the bus
                                   processing and before the limiter (voice_xx + sfx + music = mix before limiting;
                                   the EN ducking is baked into sfx/music)
-    mix_report.json               measured loudness, levels relative to the voice, events per minute, limiter use
+    mix_report.json               measured loudness, levels relative to the voice, events per minute, limiter use,
+                                  cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Signal flow
-    voice  -> v1 radio/phone line FX (kept from ../src/mix.py) -> -14 LUFS -> 2.5:1 compression on the loudest
+    voice  -> v1 radio/phone line FX (kept from ../src/mix.py; radio drive 1.8; each processed line loudness-matched
+              to the dry line, radio -2 LU, phone -1, phone_far -2) -> -14 LUFS -> 2.5:1 compression on the loudest
               syllables -> true-peak limiter at PLR 11.5 dB (the EN narration arrives at PLR 15.6 dB)
     sfx    -> sfx.render_event per cue (seeded by cue order, so renders repeat) -> gain/pan -> 3 buses:
               beds (ambience, room tone, static...), events, hits
@@ -29,7 +31,9 @@ Signal flow
           (score.py ducks its own hits; SFX beds also dip for the score's hits)
         - score bus: bounded auto tilt EQ toward the AUDIO_SPEC octave tilt, width 0.7, slow two-way leveler
         - dynamic bell cut at 1-4.5 kHz keyed by the voice (music/beds up to -5 dB, events -2 dB, hits 0)
-        - sidechain duck from the voice envelope: music/beds -3 dB (max 6), events -1.5 dB, hits 0
+        - sidechain duck from the voice envelope: music/beds -4.5 dB (0.25 s release), events -1.5 dB,
+          hits (SFX hits bus + score hits stem) -6 dB (20 ms attack, 250 ms release), so reveal lines stay clear
+        - foley dip: the music dips 2.5 dB under the SFX events bus (footsteps, keys, paper read over the score)
         - glue compressor 2:1 on the whole bed bus (slow, RMS, ~1-3 dB)
         - music gain solved so the bed's 3 s short-term median = voice - 16 LU and its integrated <= voice - 11.5 LU.
           These are the references re-measured with true per-channel K-weighting (bed integrated -12.5/-12.8/-13.4,
@@ -61,8 +65,11 @@ def band(x, lo, hi, order=4):
     return signal.sosfilt(signal.butter(order, [lo, hi], 'bandpass', fs=SR, output='sos'), x).astype(np.float32)
 
 
+LINE_FX_LU = {'radio': -2.0, 'phone': -1.0, 'phone_far': -2.0}   # processed line vs the same line dry (K-weighted)
+
+
 def radio_fx(x):
-    y = band(x, 380, 3200); y = np.tanh(y * 3.0) / np.tanh(3.0)
+    y = band(x, 380, 3200); y = np.tanh(y * 1.8) / np.tanh(1.8)
     return (y + band(np.random.default_rng(1).normal(0, 1, len(y)).astype(np.float32), 1500, 6000) * 0.006) * 1.1
 
 
@@ -80,6 +87,10 @@ def apply_line_fx(vo, spans):
         seg = vo[i0:i1]
         if len(seg) < 100: continue
         y = radio_fx(seg) if kind == 'radio' else phone_fx(seg, kind == 'phone_far')
+        # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
+        Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
+        if Ls > -70 and Ly > -70:
+            y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(kind, -1.0) - Ly) / 20))
         f = int(0.01 * SR); w = np.ones(len(seg), np.float32); w[:f] = np.linspace(0, 1, f); w[-f:] = np.linspace(1, 0, f)
         out[i0:i1] = seg * (1 - w) + y[:len(seg)] * w
     return out
@@ -294,7 +305,8 @@ def match_tilt(m, amount=0.8, lo=-6.0, hi=2.0, probe=None):
     f, P = signal.welch(x, SR, nperseg=8192)
     lev = lambda c: 10 * np.log10(P[(f >= c / 1.414) & (f < c * 1.414)].sum() + 1e-30)
     ref = lev(1000)
-    corr = {c: float(np.clip(amount * (t - (lev(c) - ref)), lo, hi if c < 2000 else 0.0)) for c, t in TILT.items()}
+    # the 63 Hz bell only cuts (critic: the score is sub-heavy, 36 % sub vs 28 %, and a +2 dB boost ate limiter headroom)
+    corr = {c: float(np.clip(amount * (t - (lev(c) - ref)), lo, hi if 63 < c < 2000 else 0.0)) for c, t in TILT.items()}
     bands = [('peak', c, g, 1.41) for c, g in corr.items() if abs(g) > 0.3]
     return (SX.eq(m, *bands) if bands else m), {c: round(g, 1) for c, g in corr.items()}
 
@@ -322,12 +334,45 @@ def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5)
     return m * (10 ** (gs / 20))[:, None], g
 
 
+DUCK_DB = 4.5        # music + SFX beds under the voice (critic: 3 -> 4.5 dB, so the bed sits ~-13 LU under speech)
+HIT_DUCK_DB = 6.0    # hits bus (SFX + score hits) under the voice: the reveal line stays clear of the hit's tail
+FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
+
+
+def event_activity(e, att=0.01, rel=0.25, lo=-52.0, span=12.0):
+    """0..1 activity of the foley events bus (absolute: the SFX are calibrated to a -14 LUFS voice)."""
+    a = np.abs(e).max(1).astype(np.float64)
+    env = SX.follow(a, SX.coef(att), SX.coef(rel))
+    return np.clip((SX.db(env) - lo) / span, 0, 1).astype(np.float32)
+
+
+def cue_hashes(cues_dir):
+    import hashlib
+    out = {}
+    for f in ('sfx_cues.json', 'music_cues.json'):
+        p = os.path.join(cues_dir, f)
+        out[f] = hashlib.sha1(open(p, 'rb').read()).hexdigest() if os.path.exists(p) else None
+    return out
+
+
+def stale(cues_dir, out_dir):
+    """True when out_dir/mix_report.json was not rendered from the current cue sheets (render.py --audio guard)."""
+    p = os.path.join(out_dir, 'mix_report.json')
+    if not os.path.exists(p):
+        return True
+    return json.load(open(p)).get('cues_sha1') != cue_hashes(cues_dir)
+
+
 def short_term_rel(x, ref, win=0.4, hop=0.1):
     return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20) - ref
 
 
 # ============================================================================ main
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == '--check':          # mix.py --check <cues dir> <out dir>
+        st_ = stale(sys.argv[2], sys.argv[3])
+        print('STALE: the mix was not rendered from the current cues' if st_ else 'ok: mix matches the cues')
+        sys.exit(1 if st_ else 0)
     ap = argparse.ArgumentParser()
     ap.add_argument('timeline'); ap.add_argument('vo_en'); ap.add_argument('vo_ru'); ap.add_argument('cues')
     ap.add_argument('out')
@@ -383,8 +428,9 @@ def main():
             continue
         try:
             y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
-        except Exception as e:
-            log('SFX failed', name, repr(e)[:160]); skipped.append(name); continue
+        except Exception as e:                  # a failed cue is a silent hole in the film: stop, never skip
+            log('SFX failed', name, c['t'], repr(e)[:160])
+            raise
         y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
         if c.get('pan'):
             y = SX.pan(y, float(c['pan']))
@@ -440,14 +486,26 @@ def main():
     log(f'music leveler: gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / {np.percentile(lev, 50):+.1f} / {np.percentile(lev, 95):+.1f} dB')
     n_sil = sum(1 for e in mc['events'] if e['type'] == 'silence' and 0 <= e['t'] <= dur)
 
-    def bed_for(act, gm):
-        dm = (10 ** (-3.0 * act / 20)).astype(np.float32)
-        m = dyn_cut(music, act, 5.0); m *= (dm * autom * np.float32(gm))[:, None]
-        m += mhits * np.float32(gm)
+    foley_dip = (10 ** (-FOLEY_DIP_DB * event_activity(buses['events']) / 20)).astype(np.float32)
+    # the hit duck spares each hit's first 0.15 s (the transient lands on the cut), then takes the tail down under the line
+    spare = np.ones(N, np.float32)
+    for h in hit_times + mus_hits:
+        a = int((h - 0.03) * SR); b = int((h + 0.15) * SR); c = int((h + 0.35) * SR)
+        if b <= 0 or a >= N: continue
+        spare[max(0, a):min(N, b)] = 0.0
+        if c > b:
+            r = np.linspace(0, 1, c - b, dtype=np.float32)[:max(0, min(N, c) - b)]
+            spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
+
+    def bed_for(act, gm, act_h):
+        dm = (10 ** (-DUCK_DB * act / 20)).astype(np.float32)
+        hd = (10 ** (-HIT_DUCK_DB * act_h * spare / 20)).astype(np.float32)
+        m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
+        m += mhits * (hd * np.float32(gm))[:, None]
         s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
         e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
         s += e; del e
-        s += buses['hits']
+        s += buses['hits'] * hd[:, None]; del hd
         bed, gr, gg = glue(m + s)
         m *= gg[:, None]; s *= gg[:, None]
         return bed, m, s, gr
@@ -457,7 +515,8 @@ def main():
     # re-measured with true per-channel K-weighting give -15.3 / -16.1 / -16.5; AUDIO_SPEC's short-term numbers come
     # from analysis/measure.py, whose kweight() filters across channels, so they read about 4 dB hot), while the
     # integrated bed stays at or under voice + bed_rel + 1.5 (references: -12.5 / -12.8 / -13.4).
-    act_key = voice_activity(key)
+    act_key = voice_activity(key, rel=0.25)
+    acth_key = voice_activity(key, att=0.02, rel=0.25)
     Lv = SX.lufs_int(key)
     def bstat(b):
         st3 = -0.691 + 10 * np.log10(SX._blocks(b, 3.0, 1.0) + 1e-20)
@@ -465,25 +524,31 @@ def main():
     Lm0 = SX.lufs_int(music + mhits)
     gm = 10 ** ((Lv + A.bed_rel - 1.0 - Lm0) / 20) if Lm0 > -70 else 1.0
     for it in range(5):
-        bed, _m, _s, gr = bed_for(act_key, gm); del _m, _s
+        bed, _m, _s, gr = bed_for(act_key, gm, acth_key); del _m, _s
         Li, P50 = bstat(bed); del bed
         err = min(A.bed_p50 - P50, (A.bed_rel + 1.5) - Li)
         log(f'  music gain iter {it}: music {20 * np.log10(gm):+.1f} dB, bed integrated {Li:+.2f} LU, p50 {P50:+.2f} LU rel voice')
         if abs(err) < 0.2:
             break
         gm *= 10 ** (err * 1.1 / 20)
-    # keep the music clearly present: music alone within voice -17 .. -10 LU
-    Lm = SX.lufs_int((music + mhits) * gm) - Lv
+    # keep the music clearly present: music alone, as heard (after the ducks), within voice -17 .. -10 LU (v2.1: was
+    # measured before the ducks, which with the 4.5 dB duck pulled the whole bed 2 dB under the target)
+    _b, _m, _s, _g = bed_for(act_key, gm, acth_key); del _b, _s
+    Lm = SX.lufs_int(_m) - Lv; del _m
     if Lm < -17: gm *= 10 ** ((-17 - Lm) / 20)
     if Lm > -10: gm *= 10 ** ((-10 - Lm) / 20)
 
-    report = {'window': [t0, t1], 'score': score_src, 'music_gain_db': round(20 * np.log10(gm), 2),
+    report = {'cues_sha1': cue_hashes(A.cues), 'window': [t0, t1], 'score': score_src,
+              'music_gain_db': round(20 * np.log10(gm), 2),
               'sfx_counts': counts, 'silences': n_sil, 'langs': {}}
     stem_dir = os.path.join(A.out, 'stems'); os.makedirs(stem_dir, exist_ok=True)
     for lang in langs:
         v = vo[lang]
-        act = act_key if lang == langs[0] and lang == 'en' else voice_activity(v)
-        bed, m_out, s_out, gr = bed_for(act, gm)
+        if lang == langs[0] and lang == 'en':
+            act, act_h = act_key, acth_key
+        else:
+            act, act_h = voice_activity(v, rel=0.25), voice_activity(v, att=0.02, rel=0.25)
+        bed, m_out, s_out, gr = bed_for(act, gm, act_h)
         vst = np.stack([v, v], 1)
         mix = vst + bed
         gdb = TARGET - SX.lufs_int(mix); ceiling = -1.7; y = None

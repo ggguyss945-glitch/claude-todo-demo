@@ -306,6 +306,7 @@ class Film:
         sfx.extend(e for e in self.globals if 'name' in e)
         mus.extend(e for e in self.globals if 'type' in e)
         sfx = [e for e in sfx if 0 <= e['t'] <= self.duration]
+        sfx, mus = polish_cues(self, sfx, mus)
         sfx.sort(key=lambda e: (e['t'], e['name']))
         mus.sort(key=lambda e: e['t'])
         music = {'duration': round(self.duration, 2), 'intensity': intensity_curve(self), 'events': mus}
@@ -1160,7 +1161,7 @@ def B_rule(F, sh):
 
 BUILDERS = {k[2:]: v for k, v in dict(globals()).items() if k.startswith('B_')}
 
-SPACE = {'street': 'street', 'door': 'outside', 'peep': 'outside', 'car': 'street', 'hall': 'inside', 'kitchen': 'inside',
+SPACE = {'street': 'street', 'door': 'doorbell_mic', 'peep': 'outside', 'car': 'street', 'hall': 'inside', 'kitchen': 'inside',
          'living': 'inside', 'mumext': 'phone', 'mumroom': 'phone', 'ins': 'close', 'hands': 'close', 'phone': 'close',
          'wave': 'radio', 'rule': None, 'curtain': 'phone', 'black': None}
 
@@ -1180,12 +1181,19 @@ def shot_common(F, sh, spec):
                 pr = dict(e.get('params') or {})
                 g = e.get('gain_db', 0.0)
                 if e['name'].startswith('footsteps') and sh.kind in ('street', 'mumext'): g -= 5
-                sh.sfx.append(_ev(e['t'], e['name'], g, e.get('pan', 0.0), space if space != 'radio' else 'outside', **pr))
+                sp_e = space if space != 'radio' else 'outside'
+                if e['name'] == 'knock_door':
+                    lens_ = pr.pop('lens', False)
+                    if lens_: sp_e = 'doorbell_mic'                  # knuckles on the camera itself
+                    elif sp_e == 'doorbell_mic':                      # the doorbell view: the knock as heard inside
+                        sp_e = 'outside'                              # (body through the door) + the camera mic layer
+                        sh.sfx.append(_ev(e['t'], 'knock_door', g - 5, e.get('pan', 0.0), 'doorbell_mic', **pr))
+                sh.sfx.append(_ev(e['t'], e['name'], g, e.get('pan', 0.0), sp_e, **pr))
     mv = (p.get('cam') or {}).get('mv')
-    if mv in ('fast', 'pull') or (p.get('cam') or {}).get('snap'):
-        sh.sfx.append(_ev(sh.t0 + 0.02, 'whoosh', -6 if mv == 'fast' else -4, 0, None, kind='soft' if mv != 'pull' else 'hard'))
-    if (p.get('cam') or {}).get('snap'):
+    if (p.get('cam') or {}).get('snap'):                 # snap zoom = a reveal: hard whoosh on the snap
         sh.sfx.append(_ev(p['cam']['snap'][0], 'whoosh', -3, 0, None, kind='hard'))
+    elif mv == 'pull':                                    # pull reveal (no automatic whoosh on mv='fast' any more)
+        sh.sfx.append(_ev(sh.t0 + 0.02, 'whoosh', -4, 0, None, kind='hard'))
     for tg in p.get('tags', []):
         sh.sfx.append(_ev(tg[0], 'ui_pop', -3, 0, 'close'))
     if p.get('cut') in ('static', 'glitch'):
@@ -1215,6 +1223,7 @@ def shot_common(F, sh, spec):
         sh.music.append({'t': round(sh.t0, 3), 'type': 'riser', 'level': 0.55, 'len': 4.0})
     if sh.kind == 'phone':
         for k, (tt, st) in enumerate(p.get('states', [(sh.t0, 'calling')])):
+            if not (sh.t0 - 0.05 <= tt < sh.t1 + 0.4): continue      # later shots carry the state only for the timer
             if st == 'calling': sh.sfx.append(_ev(tt + 0.25, 'phone_ring', -4, 0, 'phone', kind='ringback', dur=round(min(4.0, sh.t1 - tt), 2)))
             elif st == 'busy': sh.sfx.append(_ev(tt, 'phone_busy', -4, 0, 'phone', dur=round(min(3.0, sh.t1 - tt), 2)))
             elif st == 'connected': sh.sfx.append(_ev(tt, 'phone_pickup', -2, 0, 'close'))
@@ -1320,9 +1329,122 @@ INTENSITY = [  # (line index or seconds, level): the story's tension, read off t
 
 
 def intensity_curve(F):
-    pts = [[round(t, 2), v] for t, v in INTENSITY]
+    pts = []
+    for t, v in INTENSITY:
+        if 160.0 <= t <= 300.0:              # v2.1: the second quarter is the calm one (AUDIO_SPEC 3): 0.28-0.42
+            v = min(0.42, 0.28 + (v - 0.38) * 0.5) if v > 0.38 else max(0.26, v - 0.1)
+        elif t < 160.0:                      # and the opening sits above it (spec quarters: Q1 > Q2 < Q3 < Q4)
+            v = min(1.0, v + 0.06)
+        pts.append([round(t, 2), round(v, 3)])
     pts.append([round(F.duration, 2), 0.0])
     return pts
+
+
+# ---------------------------------------------------------------------------------------------------- cue polish
+HIT_SFX = ('impact_hit', 'stinger', 'braam', 'sub_drop')
+HIT_MUS = ('hit', 'stinger', 'braam', 'sub_drop')
+# extra drop-outs under ominous lines (sound critic: none before rules 3, 5, 6, "It was your father", the countdown)
+EXTRA_SIL = [(232.40, 1.8), (253.90, 1.8), (373.80, 1.8), (397.70, 1.75), (419.85, 1.6), (473.65, 1.7), (664.60, 1.6)]
+WHOOSH_GAP = 40.0                            # at most about one whoosh a minute (AUDIO_SPEC 5)
+
+
+def polish_cues(F, sfx, mus):
+    """Cue-sheet pass after the shots: hits land on the reveal cut, braams leave the reveal line clear, whooshes are
+    rationed, silences sit before the big scares, swells breathe (2.5 / min, ~13 s), duplicates are merged."""
+    cuts = sorted(sh.t0 for sh in F.shots)
+    snaps = [sh.p['cam']['snap'][0] for sh in F.shots if (sh.p.get('cam') or {}).get('snap')]
+    lines = [(l['t'], l['end']) for l in F.L]
+
+    def line_at(t):
+        for a, b in lines:
+            if a - 0.02 <= t <= b: return (a, b)
+        return None
+
+    def retime(t):
+        if any(abs(t - sn) < 0.06 for sn in snaps):          # the snap zoom is the reveal: stay on it
+            return t
+        prev = [c for c in cuts if 0.0 < t - c <= 0.25]
+        if prev: return max(prev)                             # the new image appears at the cut, not 0.1-0.2 s later
+        ln = line_at(t); nxt = [c for c in cuts if 0.0 < c - t <= 0.35]
+        if ln and nxt and ln[1] <= nxt[0] + 0.02: return min(nxt)   # late in a line: wait for the cut after it
+        return t
+
+    for e in sfx:
+        if e['name'] in HIT_SFX: e['t'] = round(retime(e['t']), 3)
+    for e in mus:
+        if e['type'] in HIT_MUS: e['t'] = round(retime(e['t']), 3)
+    # braams are long and loud: one that lands inside a line moves to the first cut after the line (<= 1 s), so the
+    # reveal line ("It's empty.") stays clear; the hit + impact stay on the reveal frame
+    for e in mus:
+        if e['type'] != 'braam': continue
+        ln = line_at(e['t'] + 0.02)
+        if ln and ln[0] < e['t'] - 0.02:
+            nxt = [c for c in cuts if ln[1] - 0.05 <= c <= ln[1] + 1.0]
+            e['t'] = round(min(nxt) if nxt else ln[1] + 0.05, 3)
+
+    # whooshes: snap zooms first, then those on a hit, then the rest; at least WHOOSH_GAP apart
+    ht = [e['t'] for e in mus if e['type'] in HIT_MUS] + [e['t'] for e in sfx if e['name'] in HIT_SFX]
+    wh = [e for e in sfx if e['name'] == 'whoosh']
+    pri = lambda e: (0 if any(abs(e['t'] - sn) < 0.06 for sn in snaps) else 1 if any(abs(e['t'] - h) < 0.4 for h in ht) else 2)
+    keep = []
+    for e in sorted(wh, key=lambda e: (pri(e), e['t'])):
+        if all(abs(e['t'] - k['t']) >= WHOOSH_GAP for k in keep): keep.append(e)
+    kid = set(map(id, keep))
+    sfx = [e for e in sfx if e['name'] != 'whoosh' or id(e) in kid]
+
+    # silences: extra ones before the big scares; every drop at least 1.4 s; one that runs into a hit ends on it
+    for t, ln in EXTRA_SIL:
+        if not any(e['type'] == 'silence' and abs(e['t'] - t) < 3 for e in mus):
+            mus.append({'t': t, 'type': 'silence', 'level': 0.0, 'len': ln})
+    hts = sorted(e['t'] for e in mus if e['type'] in HIT_MUS + ('rule',))
+    for e in mus:
+        if e['type'] != 'silence': continue
+        ln = max(1.7, float(e.get('len', 1.7)))           # measured drops run ~0.3 s shorter (fades)
+        h = [x for x in hts if e['t'] < x <= e['t'] + ln + 0.6]
+        if h:                                                  # keep the hit right after the drop, not inside it
+            end = min(h) - 0.04
+            start = max(end - ln, e['t'] - 1.2)                # grow backwards (at most 1.2 s earlier)
+            e['t'] = round(start, 3); ln = end - start
+        e['len'] = round(max(0.6, ln), 2)
+
+    # swells: 13 s string/bed crescendos peaking just before hits and on some rule cards; existing short swells keep
+    # their peak and start earlier
+    for e in mus:
+        if e['type'] == 'swell' and float(e.get('len', 12)) < 12:
+            pk = e['t'] + float(e.get('len', 6)); e['len'] = 13.0; e['t'] = round(max(0.5, pk - 13.0), 3)
+    peaks = [e['t'] + e['len'] for e in mus if e['type'] == 'swell']
+    sil = [(e['t'], e['t'] + e['len']) for e in mus if e['type'] == 'silence']
+    rules = sorted(e['t'] for e in mus if e['type'] == 'rule')
+    cand = sorted(set([round(h - 0.9, 2) for h in hts if h > 16] + [round(r - 0.4, 2) for k, r in enumerate(rules) if k % 2 == 0]))
+    want = int(F.duration / 60 * 2.5)
+    for pk in cand:
+        if len(peaks) >= want: break
+        if any(abs(pk - q) < 14 for q in peaks): continue
+        if any(a - 0.5 <= pk <= b + 0.5 for a, b in sil): continue
+        mus.append({'t': round(pk - 13.0, 3), 'type': 'swell', 'level': 0.6, 'len': 13.0}); peaks.append(pk)
+    # fill the remaining gaps (> 40 s with no swell) at intensity peaks of the story
+    iv = intensity_curve(F)
+    for t, v in sorted(iv, key=lambda p: -p[1]):
+        if len(peaks) >= want: break
+        if t < 16 or t > F.duration - 4: continue
+        if any(abs(t - q) < 20 for q in peaks) or any(a - 0.5 <= t <= b + 0.5 for a, b in sil): continue
+        mus.append({'t': round(t - 13.0, 3), 'type': 'swell', 'level': 0.5, 'len': 13.0}); peaks.append(t)
+
+    # duplicates: the same SFX (same space) within 60 ms, the same music event type within 60 ms -> keep the loudest
+    out = []
+    kk = lambda e: (e['name'], str(e.get('space')) if e['name'] == 'knock_door' else '')   # knocks: inside + camera layers
+    for e in sorted(sfx, key=lambda e: kk(e) + (e['t'],)):
+        if out and kk(out[-1]) == kk(e) and e['t'] - out[-1]['t'] < 0.06:
+            if e['gain_db'] > out[-1]['gain_db']: out[-1] = e
+            continue
+        out.append(e)
+    mo = []
+    for e in sorted(mus, key=lambda e: (e['type'], e['t'])):
+        if mo and mo[-1]['type'] == e['type'] and e['type'] != 'silence' and e['t'] - mo[-1]['t'] < 0.06:
+            if e.get('level', 0) > mo[-1].get('level', 0): mo[-1] = e
+            continue
+        mo.append(e)
+    return out, mo
 
 
 # ==================================================================================================== the shot plan

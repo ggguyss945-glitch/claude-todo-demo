@@ -10,7 +10,7 @@ Public API
                    by fit of the track's loudness/brightness to the intensity curve, no reuse of material, D/A keys
                    preferred, the D-major track (Tefu) only for calm passages; 3 s equal-power crossfades (or a
                    switch inside a silence); tape varispeed (B->A, F->D, Bb->A, no artefacts); gain automation
-                   follows the intensity curve and flattens 60-80 % of the track's own dynamics
+                   follows the intensity curve and flattens 30 % of the track's own dynamics
           drones   synth sub (key root, slow beating, glides at key changes) + recorded contrabass/celli sustains
                    on root and fifth (crossfaded sample chains, velocity layers cross-fade pp -> f with intensity)
           pulse    heartbeat ostinato between pulse_on / pulse_off: contrabass pizz + bass drum "lub-dub"; celli
@@ -29,7 +29,7 @@ Public API
                    T60 1.5-2.8 s plus a 2 s hall, and is peak-limited to -3 dBFS
         Levels (normalize=True): the sum of every stem except `hits` integrates at REF_LUFS = -28 LUFS (AUDIO_SPEC
         bed = voice - 13 LU, minus room for SFX). Hits are sized against that reference, not normalised:
-        momentary max = REF + 5 + 13 * level LU (level 0.75 = the spec's +15 LU hit median, 1.0 = +18).
+        momentary max = REF + 2 + 9 * level LU (v2.1; braams REF + 9 * level; mix.py ducks the hit tails under the voice).
         mix.py: apply ONE gain to all stems (e.g. voice_integrated - 13 - REF_LUFS); do not loudness-normalise the
         score sum (hits would pull the bed down). Silences, the end fade, pre-hit cuts (bed down 6-16 dB for
         0.35-1 s before each hit) and the post-silence re-entry (music back 12 dB quieter) are already applied;
@@ -77,7 +77,7 @@ NOM = -20.0                      # every sample is normalised to this momentary-
 S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
 CACHE = os.path.join(S, 'pov2', 'cache', 'score')
 CR = 100                         # control rate for gain curves (Hz)
-SLOPE = 9.0                      # bed level change (dB) from intensity 0 to 1
+SLOPE = 13.5                     # bed level change (dB) from intensity 0 to 1 (v2.1: 9 -> 13.5, the bed breathes)
 PC = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 # Epidemic tracks: varispeed (semitones, resampling = tape-style, no artefacts) so every track sits on D, A or G.
@@ -89,8 +89,14 @@ TRACKS = {
     'in_continuum_dream_cave': 0,                # D minor
     'tefu_sayuri_hayashi_egnell': 0,             # D major (false comfort)
 }
-KEYPREF = {2: 0.0, 9: 0.15, 7: 0.5, 10: 0.5, 0: 0.6, 5: 0.7}   # cost by root pitch class: D, A, G, Bb, C, F
+KEYPREF = {2: 0.0, 9: 0.05, 5: 0.45, 10: 0.45, 7: 0.6, 0: 0.7}   # cost by root pitch class: D, A, F, Bb, G, C
+KEY_W = 2.0                      # weight of the key cost (v2.1: 0.2 -> 0.6, every section lands on D or A)
+OTHER_KEY = 3.0                  # cost of any other root (Eb, Ab, B, E, F#, C#: the semitone / tritone clashes)
+CLASH = (1, 2, 6, 10, 11)        # root intervals that must not crossfade (semitone, whole tone, tritone)
+CALM_MAX = 0.30                  # the D-major track (Tefu) only where the intensity stays under this (75th pct)
+REUSE_W = 1.2                    # cost of replaying the same track material (fraction of the section)
 FIXED_KEY = {'tefu_sayuri_hayashi_egnell': (2, 1)}   # melodic bass: root detection unreliable; D pedal, major
+FLATTEN = 0.3                    # share of each track's own dynamics flattened by the gain automation (was 0.6-0.8)
 DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0}
 
 
@@ -545,7 +551,7 @@ def plan(cues, duration=None, bank=None):
             cut = min(cand, key=lambda s: abs(s - mid)) if cand else mid
             stack[:0] = [(a, cut), (cut, c)]
     used = {k: [] for k in info}
-    segs, prev = [], None
+    segs, prev, prev_root = [], None, None
     for si, (s0, s1) in enumerate(secs):
         ln = s1 - s0
         tk = np.arange(s0, s1, 2.0)
@@ -562,13 +568,17 @@ def plan(cues, duration=None, bank=None):
                 if room < ln:
                     cost += 1.0 + (ln - room) / ln            # would need to loop: strongly avoided
                 ov = sum(max(0, min(o + ln, u1) - max(o, u0)) for u0, u1 in used[slug])
-                cost += 1.5 * ov / ln
+                cost += REUSE_W * ov / ln                      # reuse allowed when the key fit needs it
                 if slug == prev:
                     cost += 0.08
                 rts = np.asarray(v['root'])[idx]
-                cost += 0.2 * float(np.mean([KEYPREF.get(int(r), 1.0) for r in rts]))
+                cost += KEY_W * float(np.mean([KEYPREF.get(int(r), OTHER_KEY) for r in rts]))
                 if np.mean(np.asarray(v['mode'])[idx]) > 0:     # major = false comfort: only for calm passages
-                    cost += 0.6 * max(0.0, float(Ik.mean()) - 0.35)
+                    cost += 1.5 * max(0.0, float(Ik.mean()) - 0.3)
+                if FIXED_KEY.get(slug, (0, -1))[1] > 0 and float(np.percentile(Ik, 75)) > CALM_MAX:
+                    cost += 5.0                                 # Tefu (D major) never under tension
+                if prev_root is not None and (int(rts[0]) - prev_root) % 12 in CLASH:
+                    cost += 0.25                                # would clash with the outgoing section
                 if (si == 0 or si == len(secs) - 1) and rts[0] != 2:
                     cost += 0.04
                 if o == 0:
@@ -579,6 +589,8 @@ def plan(cues, duration=None, bank=None):
         used[slug].append((o, o + ln))
         segs.append(dict(slug=slug, s0=s0, s1=s1, off=o))
         prev = slug
+        v = info[slug]
+        prev_root = int(v['root'][min(int((o + ln - 1.0) / 2), len(v['root']) - 1)])
     # boundary kinds: a silence starting within 2.5 s before the boundary -> switch inside the silence
     for k in range(1, len(segs)):
         bt = segs[k]['s0']
@@ -626,6 +638,14 @@ def plan(cues, duration=None, bank=None):
         else:
             merged.append(r)
     out = merged
+    for k in range(1, len(segs)):
+        if segs[k].get('via_silence'):
+            continue
+        bt = segs[k]['s0']
+        r0, r1 = _key_at(out, bt - 1.0)[0], _key_at(out, bt + 0.5)[0]
+        if (r1 - r0) % 12 in CLASH:          # no crossfade between clashing keys: a hard switch on the rule sting
+            segs[k]['via_silence'] = (bt - 0.35, bt + 0.05)
+            segs[k]['switch'] = 'sting'
     return dict(duration=dur, sections=segs, keys=out, t_end=t_end)
 
 
@@ -815,7 +835,7 @@ class Score:
             l2 = np.asarray(v['L2']) - v['lufs']
             l2s = _smooth(l2, 2)
             li = np.interp(tau / 2.0, np.arange(len(l2s)), l2s)
-            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - np.where(li < 0, 0.8, 0.6) * li - 1.5
+            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - FLATTEN * li - 1.5
             gc = np.clip(gc, -30, 10)
             x = np.arange(len(seg)) * (CR / SR)
             g = db(np.interp(x, np.arange(len(gc)), gc)).astype(np.float32)
@@ -896,7 +916,7 @@ class Score:
             f[sel] = 440 * 2 ** ((_reg(root, 26, 37) - 69) / 12)
         f[f == 0] = f[f > 0][-1] if np.any(f > 0) else 36.7
         f = _smooth(f, int(0.8 * CR))
-        amp_db = self.curve_bed() - 11.0 + 4.0 * (self.Is - 0.5) + 3.0 * self.swell
+        amp_db = self.curve_bed() - 14.0 + 4.0 * (self.Is - 0.5) + 3.0 * self.swell      # v2.1: -3 dB (sub-heavy)
         ph0 = 0.0
         step = 1 << 21
         sos = butter(4, 160, 'lowpass', fs=SR, output='sos')
@@ -999,13 +1019,15 @@ class Score:
         for e in motifs:
             t1 = self.motif(e)
             busy.append((e['t'] - 3, t1 + 2))
-        # sparse low-piano lament between motifs (D C Bb A, then the A-Bb-A neighbour)
-        lament = [0, -2, -4, -5, -5, -4, -5]
+        # sparse low-piano lament between motifs (D C Bb A, then the A-Bb-A neighbour, the F-E-D fall, the Eb rub);
+        # v2.1: about 3x denser (critic: 22 pitch changes / min vs 91-114 in the references), every third note
+        # doubled by a low string (celli) so the line moves over the drone
+        lament = [0, -2, -4, -5, -4, -5, 3, 2, 0, 1, 0, -2, -4, -5, -7, -5]
         t, k = 4.0, 0
         sils = [(e['t'] - 0.5, e['t'] + e['len'] + 0.3) for e in self.ev if e['type'] == 'silence']
         while t < self.t_end - 2:
             I = self.i_at(t, True)
-            gap = 7.5 - 4.5 * I + float(self.rng.uniform(-0.8, 0.8))
+            gap = (7.5 - 4.5 * I) / 2.8 + float(self.rng.uniform(-0.35, 0.35))
             if not any(a <= t < b for a, b in busy + sils):
                 root, mode = _key_at(self.keys, t)
                 off = lament[k % len(lament)]
@@ -1021,8 +1043,14 @@ class Score:
                 if I > 0.6 and k % 2 == 0:           # octave below doubles at higher tension
                     y3 = self.bank.play('score/piano/horror_soft', m - 12, dur=gap + 1, rel=1.2)
                     bus.add(t, y3, db(gdb - 5), rev={'hall': 0.5}, at=_onset(y3))
+                if k % 3 == 1:                       # low-string lament doubling
+                    try:
+                        y4 = self.bank.play('score/strings/celli_sustain', m + 12 if m + 12 <= 57 else m, dur=gap + 1.2, rel=0.8)
+                        bus.add(t + 0.05, y4, db(gdb - 4), pan=0.25, rev={'hall': 0.6})
+                    except Exception:
+                        pass
                 k += 1
-            t += max(2.5, gap)
+            t += max(1.3, gap)
 
     def motif(self, e, wind_down=False, force_inst=None):
         bus = self.bus['melodic']
@@ -1283,7 +1311,7 @@ class Score:
             if st:
                 parts.append((self.bank.get('epi:' + st[(rr + 1) % len(st)]), 0.0, 0.0, 0.0))
         y = self._decay(_width(self._layer(parts), 0.75), 1.5 + 1.3 * lv, hold=0.1)
-        target = REF_LUFS + 5 + 13 * lv
+        target = REF_LUFS + 2 + 9 * lv          # v2.1: was +5 + 13 * lv (hits masked the reveal lines)
         y = self.norm_to(y, target)
         self.bus['hits'].add(t, _limit(y), rev={'hall': 0.45, 'cavern': 0.12 * lv})
         self.pre_duck(t, lv)
@@ -1355,7 +1383,7 @@ class Score:
             ye = self.bank.get('epi:' + bsrc)
             layers.append((ye, -2.0, 0.0, 0.0))
         y = self._decay(_width(self._layer(layers), 0.75), hold + 2.5, hold=hold * 0.6)
-        y = self.norm_to(y, REF_LUFS + 2 + 12 * lv)
+        y = self.norm_to(y, REF_LUFS + 0 + 9 * lv)
         self.bus['hits'].add(t, _limit(y), rev={'hall': 0.4, 'cavern': 0.15})
         self.pre_duck(t, lv)
 
@@ -1367,7 +1395,7 @@ class Score:
         if sd:
             parts.append((self.bank.get('epi:' + sd[e['i'] % len(sd)]), -3.0, 0.0, 0.0))
         y = self._layer(parts)
-        y = self.norm_to(y, REF_LUFS + 1 + 12 * lv)
+        y = self.norm_to(y, REF_LUFS - 1 + 9 * lv)
         self.bus['hits'].add(t, _limit(y), rev={'hall': 0.15})
         if lv > 0.6:
             self.pre_duck(t, lv * 0.7)
@@ -1396,7 +1424,7 @@ class Score:
             y[-int(3 * SR):] *= _fade(int(3 * SR), 'out')[:, None]
             parts.append((y, -6.0, 0.2, 0.0))
         y = self._decay(_width(self._layer(parts), 0.75), 2.2, hold=0.15)
-        y = self.norm_to(y, REF_LUFS + 3 + 10 * lv)
+        y = self.norm_to(y, REF_LUFS + 1 + 9 * lv)
         self.bus['hits'].add(t, _limit(y), rev={'hall': 0.35, 'cavern': 0.3})
         # music-box bell: the motif's head note (fifth below then root), octave up
         shift = ((root - 2 + 6) % 12) - 6
@@ -1512,10 +1540,12 @@ class Score:
         self.log(f'drones {time.time() - t00:.1f}s')
         ends = [e for e in self.ev if e['type'] == 'end']
         # pre-reverb automation (ducks, re-entry, swell breathing, end fade); silences are gated after the reverb
-        pre = {'tracks': self.duck + self.reentry + 4.0 * self.swell + self.endfade,
-               'drones': self.duck + self.reentry + self.endfade,
+        # v2.1: swells lift the whole bed (tracks +7, drones +3, string bed +4 dB at the peak; was tracks +4 only), so
+        # the bed breathes in ~13 s rises of 8-12 LU like the references
+        pre = {'tracks': self.duck + self.reentry + 7.0 * self.swell + self.endfade,
+               'drones': self.duck + self.reentry + 3.0 * self.swell + self.endfade,
                'pulse': self.duck + self.reentry + self.endfade,
-               'strings_bed': self.duck + self.reentry + self.endfade,
+               'strings_bed': self.duck + self.reentry + 4.0 * self.swell + self.endfade,
                'melodic': np.maximum(self.duck, -8.0) + self.endfade,
                'strings_fx': self.endfade, 'hits': self.endfade}
         for k, c in pre.items():

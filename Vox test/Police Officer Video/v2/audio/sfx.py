@@ -29,7 +29,8 @@ Calibration: output loudness is absolute for a mix whose voice sits at -14 LUFS 
 loudness the same way. gain_db = 0 in sfx_cues.json therefore gives the house level.
 
 Parameters (all optional; unknown keys are ignored; every name accepts seed, space, level, dur where it makes sense)
-    knock_door      n=3, spacing=0.32, force=0.7 (0..1), accel=0 (0..0.3 speeds up), material='wood'|'glass', door=1
+    knock_door      n=3, spacing=0.32, force=0.7 (0..1) or strength (Acting: 1.0..1.4 -> force 0.7..1.0),
+                    accel=0 (0..0.3 speeds up), material='wood'|'glass', door=1
     doorbell_chime  -                                footsteps_porch / footsteps_wood_inside  n or dur, rate=1.8
                                                      steps/s, approach=0 (+1 nearer, -1 away), creak=0.3, weight=0.7
     car_pass        dist=1 (x reference distance), direction=1|-1, dur=None (window around the pass)
@@ -71,13 +72,16 @@ NAMES = ('knock_door', 'doorbell_chime', 'footsteps_porch', 'footsteps_wood_insi
          'riser', 'braam', 'impact_hit', 'sub_drop', 'stinger', 'glitch', 'ui_pop', 'typing', 'tinnitus',
          'ambience_night', 'room_tone', 'clock_tick', 'countdown_tick', 'tv_off', 'crowd_whisper')
 
-LEVEL_LU = dict(knock_door=-3, doorbell_chime=-6, footsteps_porch=-11, footsteps_wood_inside=-11, car_pass=-13,
-                car_idle=-23, car_door_open=-12, car_door_close=-7, siren_far=-16, police_radio_squelch=-8,
-                radio_click=-11, radio_static=-19, bodycam_beep=-9, phone_ring=-7, phone_busy=-12, phone_vibrate=-11,
-                phone_pickup=-11, mail_slot=-7, paper=-13, pen_click=-11, key_in_lock=-10, lock_turn=-7,
-                chain_lock=-8, door_creak=-9, breath=-13, heartbeat=-8, whoosh=-8, riser=-4, braam=-1,
-                impact_hit=+1, sub_drop=-3, stinger=0, glitch=-8, ui_pop=-13, typing=-14, tinnitus=-15,
-                ambience_night=-25, room_tone=-31, clock_tick=-15, countdown_tick=-9, tv_off=-9, crowd_whisper=-13)
+# v2.1 (sound critic): foley raised so it reads over the music (footsteps -11 -> -7, typing -14 -> -9,
+# pen -11 -> -6, paper -13 -> -9, breath -13 -> -8, radio_click -11 -> -8, chain -8 -> -1, creak -9 -> -3,
+# key -10 -> -4, clock -15 -> -8; measured against the music in the final mix); hits sized down (impact_hit +1 -> -2, stinger 0 -> -2, braam -1 -> -3: AUDIO_SPEC hit peak +2 / +9)
+LEVEL_LU = dict(knock_door=-3, doorbell_chime=-6, footsteps_porch=-7, footsteps_wood_inside=-8, car_pass=-12,
+                car_idle=-23, car_door_open=-10, car_door_close=-6, siren_far=-15, police_radio_squelch=-8,
+                radio_click=-8, radio_static=-19, bodycam_beep=-8, phone_ring=-7, phone_busy=-12, phone_vibrate=-9,
+                phone_pickup=-8, mail_slot=-6, paper=-9, pen_click=-6, key_in_lock=-4, lock_turn=-6,
+                chain_lock=-1, door_creak=-3, breath=-8, heartbeat=-8, whoosh=-9, riser=-5, braam=-3,
+                impact_hit=-2, sub_drop=-4, stinger=-2, glitch=-8, ui_pop=-12, typing=-9, tinnitus=-15,
+                ambience_night=-25, room_tone=-31, clock_tick=-8, countdown_tick=-8, tv_off=-9, crowd_whisper=-13)
 SPACE_LU = dict(close=1.0, inside=0.0, outside=-7.0, doorbell_mic=-2.0, street=-6.0, phone=-4.0, radio=-3.0,
                 car=-2.0, dry=0.0)
 SPACES = tuple(SPACE_LU)
@@ -697,10 +701,12 @@ def noise(dur, seed=0):
     return np.random.default_rng(seed).standard_normal(n_(dur)).astype(np.float32)
 
 
-def sweep_bp(x, f_start, f_end, q=2.0, steps=48):
-    """Time-varying band-pass (piecewise) for whooshes and risers; f follows a geometric path."""
+def sweep_bp(x, f_start, f_end=None, q=2.0, steps=48):
+    """Time-varying band-pass (piecewise) for whooshes and risers; f follows a geometric path from f_start to f_end,
+    or f_start is an array of `steps` centre frequencies (then f_end is ignored)."""
     n = len(x); out = np.zeros_like(x); seg = int(np.ceil(n / steps)); zi = None
-    fs = np.geomspace(f_start, f_end, steps) if np.ndim(f_start) == 0 else f_start
+    fs = np.geomspace(f_start, f_end, steps) if np.ndim(f_start) == 0 else np.asarray(f_start, float)
+    steps = len(fs)
     for k in range(steps):
         f = float(np.clip(fs[k], 30, SR * 0.45)); bw = f / q
         sos = signal.butter(2, [max(20, f - bw / 2), min(SR * 0.48, f + bw / 2)], 'bandpass', fs=SR, output='sos')
@@ -763,7 +769,10 @@ def _seq(events, extra=0.5):
     return out
 
 
-def r_knock_door(rng, sp, n=3, spacing=0.32, force=0.7, accel=0.0, material='wood', door=1, **_):
+def r_knock_door(rng, sp, n=3, spacing=0.32, force=None, accel=0.0, material='wood', door=1, strength=None, **_):
+    # characters.Acting.knock emits strength (1.0 first knock .. 1.4 climax): 1.0 -> 0.7, 1.2 -> 0.85, 1.4 -> 1.0
+    if force is None:
+        force = 0.7 + 0.75 * (float(strength) - 1.0) if strength is not None else 0.7
     if material == 'glass':
         A = pool('knock_glass', lambda: src('knock_door', has=['glass_panel']), 'onset', gap=0.12, max_len=0.8)
     else:
@@ -790,7 +799,7 @@ def r_knock_door(rng, sp, n=3, spacing=0.32, force=0.7, accel=0.0, material='woo
         ev.append((t, pan(layer, rng.uniform(-0.05, 0.05))))
         t += spacing * (1 - accel) ** k * (1 + 0.07 * rng.standard_normal())
     y = _seq(ev, 0.3)
-    return y, 0.003, 9 * np.log10(force / 0.7), False
+    return y, 0.003, 16 * np.log10(force / 0.7), False      # +2.5 LU at full force: the escalation is heard
 
 
 def r_doorbell_chime(rng, sp, **_):
@@ -1048,7 +1057,7 @@ def r_key_in_lock(rng, sp, **_):
     I = pool('key_insert', lambda: src('key_in_lock', has=['mechlock']), 'phrase', gap=0.12, max_len=2.2, keep=-16)
     j = J.get(rng, rj=0.04, fo=0.08) * 0.45
     k = I.get(rng, rj=0.03, fo=0.05)
-    return _seq([(0, j), (0.18, k)], 0.05), 0.18, 0.0, False
+    return _seq([(0, j), (0.18, k)], 0.05), 0.18 + onset_s(k, -12), 0.0, False   # the key's click lands on t
 
 
 def r_lock_turn(rng, sp, **_):
