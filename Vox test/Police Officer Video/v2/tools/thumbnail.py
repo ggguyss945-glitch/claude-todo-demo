@@ -6,6 +6,9 @@ Drawn in a 1280x720 design space and rendered at 3x.
 """
 import os, sys, math
 import numpy as np, cv2, skia
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import characters as C
+from engine.core import set_render_size, Pen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONTS = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'fonts')
@@ -230,12 +233,16 @@ def scene(cv, x, y, w, h):
     # patrol car light bar behind them, washing everything red and blue
     glow(cv, x + 30, y + 330, 280, '#ff1830', 170)
     glow(cv, x + w - 30, y + 330, 280, '#2a5cff', 180)
-    # two more officers behind, in the dark
-    officer(cv, x + 60, y + 300, 0.56, dim=0.42)
-    officer(cv, x + w - 60, y + 300, 0.56, dim=0.42)
-    # the one at the door
-    cv.save(); cv.rotate(-5, x + w / 2, y + 318)
-    officer(cv, x + w / 2, y + 318, 0.84)
+    # the film's own cast: the double (left) and the second officer (right) behind, in the dark
+    pen = Pen(cv)
+    red_rim = dict(rim='#ff3048', rim_a=120, side=-1)
+    blue_rim = dict(rim='#5a86ff', rim_a=130, side=1)
+    C.draw_bust(pen, 'double', x + 70, y + 300, 0.33, C.Pose('wide_grin', t=2.0, turn=0.25), detail=2, light=red_rim)
+    C.draw_bust(pen, 'officer2', x + w - 70, y + 300, 0.33, C.Pose('creep_smile', t=3.1, turn=-0.25), detail=2, light=blue_rim)
+    cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), paint('#060a1c', 95))
+    # the officer at the door, exactly as he looks in the film, grinning into the lens
+    cv.save(); cv.rotate(-4, x + w / 2, y + 330)
+    C.draw_bust(pen, 'officer', x + w / 2, y + 330, 0.52, C.Pose('wide_grin', t=1.4), detail=2, light=blue_rim)
     cv.restore()
     # lens vignette
     cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=skia.GradientShader.MakeRadial(
@@ -244,6 +251,7 @@ def scene(cv, x, y, w, h):
 
 def main(out, line1='STAY', line2='INSIDE', tag='NOT POLICE'):
     os.makedirs(out, exist_ok=True)
+    set_render_size(1280 * S, 720 * S)
     surf = skia.Surface(1280 * S, 720 * S); cv = surf.getCanvas(); cv.scale(S, S)
     cv.drawRect(skia.Rect.MakeWH(1280, 720), paint('#ff1f2d'))
     # the command, centred over the red panel
