@@ -699,6 +699,13 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
             if vs2: c.line(_multi(vs2), c.lw * 0.15 * sp.get('vein_w', 1.0), '#c04a52', a_v * 0.8)
         if P.wet > 0 and det >= 1:
             c.fill(smooth([(X - rx, Y + r * 0.62), (X, Y + r * 0.85), (X + rx, Y + r * 0.62), (X, Y + r * 1.1)], True), '#a8c8f0', 120 * P.wet)
+        if sp.get('iris'):                           # optional glowing iris (thumbnail use; the film's eyes have none)
+            ir = r * sp.get('iris_r', 0.5)
+            c.glow(px, py, ir * 1.9, ir * 1.9, sp['iris'], 120)
+            c.radial(oval(px, py, ir * fs, ir), px - ir * 0.2, py - ir * 0.25, ir * 1.1,
+                     [(0, '#ff6070', 255), (0.55, sp['iris'], 255), (1, '#7d0614', 255)], sy=1.0)
+            c.line(oval(px, py, ir * fs, ir), c.lw * 0.32, '#4a0209', 255)
+            pr = ir * sp.get('iris_pupil', 0.36)
         c.fill(oval(px, py, pr * fs, pr), '#0b0b0e')
         cl = max(pr * 0.3, 1.6)
         c.fill(oval(px - pr * 0.38 * fs, py - pr * 0.38, cl * fs, cl), '#f4f4f2')
