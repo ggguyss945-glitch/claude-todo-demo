@@ -125,7 +125,7 @@ if a.worker < 0:
     if max(codes) != 0: sys.exit(max(codes))
     lst = os.path.join(out, 'slices.txt')
     with open(lst, 'w') as fh:
-        for w in range(a.workers): fh.write(f"file '{os.path.join(out, f'slice_{w:02d}.mp4')}'\n")
+        for w in range(a.workers): fh.write(f"file '{os.path.abspath(os.path.join(out, f'slice_{w:02d}.mp4'))}'\n")
     pic = os.path.join(out, 'picture.mp4')
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', pic], check=True)
     print('[render]', pic, flush=True)
