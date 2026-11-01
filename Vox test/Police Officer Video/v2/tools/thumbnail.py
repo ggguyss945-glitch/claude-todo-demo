@@ -42,6 +42,9 @@ def ov(cx, cy, rx, ry=None):
     p.addOval(skia.Rect.MakeLTRB(cx - rx, cy - ry, cx + rx, cy + ry)); return p
 
 
+def minus(a, b): return skia.Op(a, b, skia.PathOp.kDifference_PathOp)
+
+
 def rr(x, y, w, h, r):
     p = skia.Path(); p.addRRect(skia.RRect.MakeRectXY(skia.Rect.MakeXYWH(x, y, w, h), r, r)); return p
 
@@ -101,64 +104,69 @@ def officer(cv, cx, cy, sc, dim=0.0):
     cv.drawPath(ov(-176, 330, 12), paint('#c9952a'))
     shp(cv, rr(206, 236, 52, 82, 12), '#17181e', lw)                                          # shoulder radio
     cv.drawPath(ov(232, 258, 8), paint('#ff2b2b')); glow(cv, 232, 258, 26, '#ff2b2b', 170)
-    # ears and head
+    # head: smooth, pale, cool grey-white (the reference girl's skin), soft shading only at the edges
+    skin_l, skin_e = '#f3f2f1', '#cfcbcd'
     for s in (-1, 1):
-        shp(cv, ov(s * 148, 28, 24, 38), skin, lw)
-        cv.drawPath(ov(s * 148, 30, 10, 20), paint(shade))
-    head = P([(-146, -40), (-152, 70, -128, 140), (-96, 196, 0, 200), (96, 196, 128, 140), (152, 70, 146, -40),
-              (140, -150, 0, -158), (-140, -150, -146, -40)])
-    shp(cv, head, skin, lw)
-    clipped(cv, head, lambda: (cv.drawPath(P([(152, -60), (120, 80, 70, 210), (200, 210), (200, -60)]), paint(shade)),
-                               cv.drawPath(ov(0, 230, 150, 40), paint(shade))))
-    # dark sunken sockets
+        shp(cv, ov(s * 150, 26, 22, 36), '#e2dfdf', lw)
+        cv.drawPath(ov(s * 150, 28, 9, 19), paint('#c4bfc1'))
+    head = P([(-148, -50), (-154, 80, -122, 160), (-84, 214, 0, 218), (84, 214, 122, 160), (154, 80, 148, -50),
+              (142, -160, 0, -168), (-142, -160, -148, -50)])
+    cv.drawPath(head, skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial((0, 10), 210, [col(skin_l), col(skin_l), col(skin_e)], [0, 0.55, 1])))
+    clipped(cv, head, lambda: (cv.drawPath(ov(0, 250, 170, 60), paint('#b9b4b8', 120, blur=20)),
+                               cv.drawPath(P([(-150, -140), (-150, -60, -100, -56), (-40, -64), (-20, -150)]), paint('#2a2321')),
+                               cv.drawPath(P([(150, -140), (150, -60, 100, -56), (40, -64), (20, -150)]), paint('#2a2321'))))
+    cv.drawPath(head, paint(INK, stroke=lw))
+    # red glow on the skin around the eyes
     for s in (-1, 1):
-        cv.drawPath(ov(s * 62, 4, 66, 50), paint('#5a2a46', 150, blur=14))
-        cv.drawPath(ov(s * 62, 26, 50, 18), paint('#5a2a46', 120, blur=8))
-    # eyes: pink whites, glowing red irises
+        cv.drawCircle(s * 62, 4, 70, skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial(
+            (s * 62, 4), 70, [col('#ff2c3c', 190), col('#ff4a5a', 110), col('#ff4a5a', 0)], [0, 0.55, 1])))
+    # eyes: big, round, wide open, staring
     for s in (-1, 1):
-        ex, ey = s * 60, 0
-        glow(cv, ex, ey, 78, '#ff1a2a', 90)
-        eye = ov(ex, ey, 44, 33)
-        shp(cv, eye, '#ffe3e6', 5.5)
+        ex, ey = s * 62, 4
+        eye = ov(ex, ey, 41, 38)
+        cv.drawPath(eye, paint('#ffffff'))
         def inside(ex=ex, ey=ey):
-            cv.drawPath(ov(ex, ey, 44, 33), skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial(
-                (ex, ey), 46, [col('#ffffff', 0), col('#ff6a78', 150)])))
-            cv.drawPath(ov(ex, ey + 1, 22), paint('#ff1d2c'))
-            cv.drawPath(ov(ex, ey + 1, 22), paint('#8a0011', stroke=3))
-            cv.drawPath(ov(ex, ey + 1, 9), paint('#1a0205'))
-            cv.drawPath(ov(ex - 8, ey - 7, 5.5, 4.5), paint('#ffffff'))
+            cv.drawPath(ov(ex, ey, 41, 38), skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial(
+                (ex, ey), 42, [col('#ffffff', 0), col('#ffffff', 0), col('#ff8d9a', 200)], [0, 0.55, 1])))
+            cv.drawPath(ov(ex, ey + 2, 24), skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial(
+                (ex - 4, ey - 2), 26, [col('#ff5868'), col('#e3122a'), col('#a80a1d')], [0, 0.6, 1])))
+            cv.drawPath(ov(ex, ey + 2, 24), paint('#5e0410', stroke=3))
+            cv.drawPath(ov(ex, ey + 2, 8.5), paint('#120104'))
+            cv.drawPath(ov(ex - 8, ey - 7, 6, 5), paint('#ffffff'))
+            cv.drawPath(ov(ex + 7, ey + 10, 2.6), paint('#ffffff', 200))
         clipped(cv, eye, inside)
-        cv.drawPath(P([(ex - 46, ey - 4), (ex, ey - 40, ex + 46, ey - 4)], False), paint(INK, stroke=7))
-    # brows: thick, angry
+        cv.drawPath(eye, paint('#3a0c14', stroke=4))
+        cv.drawPath(P([(ex - 44, ey + 2), (ex - 40, ey - 42, ex + 2, ey - 42), (ex + 40, ey - 42, ex + 44, ey + 2)], False), paint(INK, stroke=8))
+        cv.drawPath(P([(ex - 34, ey + 30), (ex, ey + 46, ex + 34, ey + 30)], False), paint('#b2485a', 160, stroke=3))
+    # thin raised brows: far too friendly
     for s in (-1, 1):
-        shp(cv, P([(s * 116, -62), (s * 70, -66, s * 22, -36), (s * 26, -22), (s * 70, -46, s * 114, -44)]), INK, 2)
-    # nose
-    cv.drawPath(P([(-6, 46), (-16, 70, 0, 76)], False), paint(INK, stroke=4.5))
-    cv.drawPath(ov(-12, 80, 6, 4.5), paint(INK)); cv.drawPath(ov(12, 80, 6, 4.5), paint(INK))
-    # the grin: a crescent across the whole face, big even teeth, red gums
-    mouth = P([(-130, 104), (-66, 132, 0, 134), (66, 132, 130, 104), (112, 196, 0, 204), (-112, 196, -130, 104)])
-    cv.drawPath(mouth, paint('#3a0610'))
+        cv.drawPath(P([(s * 26, -60), (s * 62, -88, s * 104, -64)], False), paint('#2a2321', stroke=8))
+    # tiny nose
+    cv.drawPath(P([(-6, 66), (0, 72, 6, 66)], False), paint('#8c7f86', stroke=3.5))
+    cv.drawPath(ov(-10, 74, 5, 4), paint('#2a2224')); cv.drawPath(ov(10, 74, 5, 4), paint('#2a2224'))
+    # the smile: one wide clean crescent, two even rows of teeth, pink lips
+    mouth = P([(-132, 110), (-66, 138, 0, 140), (66, 138, 132, 110), (106, 196, 0, 204), (-106, 196, -132, 110)])
+    cv.drawPath(mouth, paint('#e66d7c', stroke=12))
+    cv.drawPath(mouth, paint('#4a0812'))
     def teeth():
-        cv.drawPath(P([(-140, 96), (0, 140, 140, 96), (140, 152), (0, 162, -140, 152)]), paint('#c42638'))      # upper gum
-        up = P([(-124, 108), (0, 146, 124, 108), (116, 158), (0, 170, -116, 158)])
-        lo = P([(-104, 166), (0, 178, 104, 166), (92, 190), (0, 206, -92, 190)])
+        up = P([(-140, 104), (0, 150, 140, 104), (136, 162), (0, 178, -136, 162)])
+        lo = P([(-120, 168), (0, 184, 120, 168), (110, 196), (0, 214, -110, 196)])
         for t in (up, lo):
-            cv.drawPath(t, paint('#ffffff'))
-        for k in range(-5, 6):
-            x = k * 22.5
-            cv.drawPath(P([(x, 132 - 0.0016 * x * x * 6), (x * 0.97, 166)], False), paint('#b9b4b8', stroke=2.6))
-            if abs(k) <= 4: cv.drawPath(P([(x * 0.86, 168), (x * 0.86, 204)], False), paint('#b9b4b8', stroke=2.6))
-        cv.drawPath(P([(-124, 160), (0, 172, 124, 160)], False), paint('#7a0e1c', stroke=4))
+            cv.drawPath(t, skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeLinear([(0, 120), (0, 210)], [col('#ffffff'), col('#ebe7ea')])))
+        for k in range(-6, 7):
+            x = k * 19.5
+            cv.drawPath(P([(x, 120), (x * 0.98, 170)], False), paint('#b8b1b8', stroke=2.4))
+            if abs(k) <= 5: cv.drawPath(P([(x * 0.9, 172), (x * 0.9, 210)], False), paint('#b8b1b8', stroke=2.4))
+        cv.drawPath(P([(-136, 166), (0, 182, 136, 166)], False), paint('#4a0812', stroke=5))
     clipped(cv, mouth, teeth)
-    cv.drawPath(mouth, paint(INK, stroke=6))
-    for s in (-1, 1):
-        cv.drawPath(P([(s * 132, 78), (s * 162, 110, s * 140, 150)], False), paint(INK, stroke=5))
-        cv.drawPath(ov(s * 100, 66, 30, 13), paint('#ff7b86', 80, blur=8))
-    cv.drawPath(P([(-30, 226), (0, 232, 30, 226)], False), paint('#b3a497', stroke=4))
+    cv.drawPath(mouth, paint('#5c0d1a', stroke=4.5))
+    for s in (-1, 1):                                                          # corners pushed into the cheeks
+        cv.drawPath(P([(s * 128, 92), (s * 150, 112, s * 138, 136)], False), paint('#9d8f97', stroke=4))
+        cv.drawPath(ov(s * 104, 82, 30, 14), paint('#ff8d9a', 70, blur=10))
     # police cap
     crown = P([(-168, -104), (-188, -226, -70, -250), (70, -266, 188, -232), (170, -104)])
-    shp(cv, crown, navy, lw)
-    clipped(cv, crown, lambda: cv.drawPath(P([(-150, -120), (-170, -220, -60, -236), (-10, -150)]), paint('#2b3d75')))
+    cv.drawPath(crown, skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeLinear([(0, -260), (0, -104)], [col('#2c4182'), col(navy)])))
+    cv.drawPath(crown, paint(INK, stroke=lw))
     shp(cv, rr(-172, -128, 344, 34, 9), '#0f1426', lw)
     cv.drawPath(P([(-160, -111), (160, -111)], False), paint('#e7bf55', stroke=5))
     shp(cv, P([(-170, -96), (0, -38, 170, -96), (158, -70), (0, -14, -158, -70)]), '#0a0c14', lw)
@@ -166,10 +174,12 @@ def officer(cv, cx, cy, sc, dim=0.0):
     shp(cv, star(0, -192, 40, 17), '#f2c14e', 4.5)
     shp(cv, ov(0, -192, 13), '#c9952a', 3)
     if dim:
-        cv.drawRect(skia.Rect.MakeLTRB(-400, -300, 400, 500), paint('#050814', int(255 * dim)))
-        for s in (-1, 1):                                                                    # eyes still glow in the dark
-            glow(cv, s * 60, 0, 60, '#ff1a2a', 150)
-            cv.drawPath(ov(s * 60, 1, 22), paint('#ff1d2c')); cv.drawPath(ov(s * 60, 1, 9), paint('#1a0205'))
+        cv.drawRect(skia.Rect.MakeLTRB(-400, -300, 400, 500), paint('#060a1c', int(255 * dim)))
+        for s in (-1, 1):                                                       # the eyes still burn in the dark
+            cv.drawCircle(s * 62, 4, 62, skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeRadial(
+                (s * 62, 4), 62, [col('#ff2c3c', 170), col('#ff2c3c', 0)])))
+            cv.drawPath(ov(s * 62, 6, 24), paint('#ff2234')); cv.drawPath(ov(s * 62, 6, 8.5), paint('#120104'))
+            cv.drawPath(ov(s * 62 - 8, -3, 5, 4), paint('#ffffff', 220))
     cv.restore()
 
 
@@ -177,17 +187,39 @@ def scene(cv, x, y, w, h):
     """The doorbell picture inside the frame."""
     cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=skia.GradientShader.MakeLinear(
         [(0, y), (0, y + h)], [col('#0a1230'), col('#1a2350'), col('#141a36')], [0, 0.55, 1])))
-    for k in range(40):                                                                      # stars
-        sx, sy = x + (k * 137.5) % w, y + 20 + (k * 71.3) % 160
+    rng = np.random.default_rng(7)
+    for k in range(26):                                                                      # stars
+        sx, sy = x + rng.uniform(10, w - 10), y + rng.uniform(70, 170)
         cv.drawCircle(sx, sy, 1.6 if k % 3 else 2.4, paint('#c9d4ff', 170))
-    # house roofs across the street
-    cv.drawPath(P([(x, y + 290), (x + 120, y + 200), (x + 240, y + 290), (x + 330, y + 230), (x + 440, y + 300),
-                   (x + 540, y + 210), (x + w, y + 270), (x + w, y + h), (x, y + h)]), paint('#0c1128'))
-    for wx, wy in ((x + 70, y + 300), (x + 170, y + 310), (x + 470, y + 320)):
-        cv.drawRect(skia.Rect.MakeXYWH(wx, wy, 28, 22), paint('#ffc86a', 220)); glow(cv, wx + 14, wy + 11, 40, '#ffc86a', 70)
-    # police lights behind them
-    glow(cv, x + 40, y + 360, 260, '#ff1830', 150)
-    glow(cv, x + w - 40, y + 360, 260, '#2a5cff', 160)
+    # moon
+    glow(cv, x + w - 90, y + 110, 90, '#ffe08a', 120)
+    cv.drawPath(minus(ov(x + w - 90, y + 110, 30), ov(x + w - 76, y + 100, 27)), paint('#ffd75e'))
+    # houses across the street, lit windows, bare trees, a street lamp
+    def house(hx, hy, hw, hh, roof, wall):
+        body_ = rr(hx, hy, hw, hh, 2)
+        cv.drawPath(P([(hx - 12, hy + 2), (hx + hw / 2, hy - roof), (hx + hw + 12, hy + 2)]), paint('#0a0e22'))
+        cv.drawPath(P([(hx - 12, hy + 2), (hx + hw / 2, hy - roof), (hx + hw + 12, hy + 2)]), paint('#20284c', stroke=3))
+        cv.drawPath(body_, paint(wall))
+        for wx in (hx + hw * 0.18, hx + hw * 0.62):
+            win = rr(wx, hy + hh * 0.28, hw * 0.2, hh * 0.3, 2)
+            cv.drawPath(win, paint('#ffc864')); cv.drawPath(win, paint('#0a0e22', stroke=2.5))
+            cv.drawPath(P([(wx + hw * 0.1, hy + hh * 0.28), (wx + hw * 0.1, hy + hh * 0.58)], False), paint('#0a0e22', stroke=2))
+            glow(cv, wx + hw * 0.1, hy + hh * 0.43, hw * 0.3, '#ffc864', 70)
+    for k, (tx, th) in enumerate(((x + 180, 190), (x + 372, 170))):
+        cv.drawPath(P([(tx, y + 300), (tx, y + 300 - th)], False), paint('#0b0f24', stroke=7))
+        for b_ in range(4):
+            a_ = -math.pi / 2 + (b_ - 1.5) * 0.45
+            cv.drawPath(P([(tx, y + 300 - th * (0.4 + 0.15 * b_)), (tx + 44 * math.cos(a_), y + 300 - th * (0.4 + 0.15 * b_) + 44 * math.sin(a_))], False),
+                        paint('#0b0f24', stroke=4))
+    house(x - 10, y + 170, 150, 110, 64, '#1b2347')
+    house(x + 205, y + 196, 130, 90, 54, '#18203f')
+    house(x + 400, y + 166, 160, 116, 66, '#1c2449')
+    cv.drawPath(P([(x + w - 30, y + 330), (x + w - 30, y + 200)], False), paint('#0b0f24', stroke=6))
+    glow(cv, x + w - 30, y + 204, 70, '#ffd27a', 120); cv.drawCircle(x + w - 30, y + 204, 8, paint('#fff2c8'))
+    cv.drawRect(skia.Rect.MakeXYWH(x, y + 322, w, h), paint('#121733'))
+    # patrol car light bar behind them, washing everything red and blue
+    glow(cv, x + 30, y + 330, 280, '#ff1830', 170)
+    glow(cv, x + w - 30, y + 330, 280, '#2a5cff', 180)
     # two more officers behind, in the dark
     officer(cv, x + 60, y + 300, 0.56, dim=0.42)
     officer(cv, x + w - 60, y + 300, 0.56, dim=0.42)
@@ -206,9 +238,8 @@ def main(out, line1='STAY', line2='INSIDE', tag='NOT POLICE'):
     cx = 336
     s1 = fit(line1, BLACK, 168, 600); s2 = fit(line2, BLACK, 168, 600)
     y1, y2 = 248, 400
-    text(cv, line1, cx + 5, y1 + 7, s1, '#8a0a14', blur=5, a=150)                         # soft drop shadow
-    text(cv, line1, cx, y1, s1, '#ffffff', blur=22, a=200)                                 # glow
-    text(cv, line1, cx, y1, s1, '#ffffff', blur=8, a=170)
+    text(cv, line1, cx + 4, y1 + 6, s1, '#7a0a14', blur=4, a=120)                         # soft drop shadow
+    text(cv, line1, cx, y1, s1, '#ffffff', blur=12, a=95)                                  # light glow
     text(cv, line1, cx, y1, s1, '#ffffff')
     text(cv, line2, cx + 4, y2 + 6, s2, '#8a0a14', blur=5, a=110)
     text(cv, line2, cx, y2, s2, INK)
@@ -233,7 +264,9 @@ def main(out, line1='STAY', line2='INSIDE', tag='NOT POLICE'):
     cv.drawCircle(ix + 32, iy + 38, 11, paint('#ff2b2b')); glow(cv, ix + 32, iy + 38, 24, '#ff2b2b', 130)
     text(cv, 'LIVE', ix + 52, iy + 49, 31, '#ffffff', XBOLD, 'left')
     text(cv, 'FRONT DOOR', ix + iw - 24, iy + 49, 27, '#ffffff', XBOLD, 'right')
-    text(cv, '12:36:14 AM', ix + 26, iy + ih - 28, 27, '#ffffff', XBOLD, 'left')
+    tsw = font(XBOLD, 27).measureText('12:36:14 AM')
+    cv.drawPath(rr(ix + 14, iy + ih - 64, tsw + 26, 44, 10), paint('#05060c', 205))
+    text(cv, '12:36:14 AM', ix + 27, iy + ih - 32, 27, '#ffffff', XBOLD, 'left')
     cv.restore()
     cv.drawPath(inner, paint(INK, stroke=4))
     # police shield, bottom right (like the fire-dept emblem in the reference)
