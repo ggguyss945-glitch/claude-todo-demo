@@ -683,11 +683,15 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
         if det >= 1 and P.bloodshot > 0.02:
             a_v = min(255.0, 150 * clamp(P.bloodshot) * sp.get('vein_a', 1.0))
             vs, vs2 = [], []
-            for k in range(int((6 if det >= 2 else 3) * sp.get('veins', 1.0))):
-                ang = (hash01(k, 7 + side) * 2 - 1) * PI
+            nv_ = int((6 if det >= 2 else 3) * sp.get('veins', 1.0)); vin = sp.get('vein_in', 0.42)
+            for k in range(nv_):
+                if sp.get('vein_even'):                  # spread evenly round the eye (thumbnail use)
+                    ang = (k + 0.35 * hash01(k, 7 + side)) * 2 * PI / nv_ + side * 0.4
+                else:
+                    ang = (hash01(k, 7 + side) * 2 - 1) * PI
                 x1, y1 = X + math.cos(ang) * rx * 1.02, Y + math.sin(ang) * r * 1.02
-                mx_, my_ = X + math.cos(ang + 0.3) * rx * 0.62, Y + math.sin(ang + 0.3) * r * 0.62
-                x2, y2 = X + math.cos(ang - 0.15) * rx * 0.42, Y + math.sin(ang - 0.15) * r * 0.42
+                mx_, my_ = X + math.cos(ang + 0.3) * rx * (vin + 0.2), Y + math.sin(ang + 0.3) * r * (vin + 0.2)
+                x2, y2 = X + math.cos(ang - 0.15) * rx * vin, Y + math.sin(ang - 0.15) * r * vin
                 vs.append(smooth([(x1, y1), (mx_, my_), (x2, y2)], False))
                 if det >= 2:
                     vs2.append(smooth([(mx_, my_), (mx_ + math.cos(ang + 1.4) * r * 0.2, my_ + math.sin(ang + 1.4) * r * 0.2)], False))

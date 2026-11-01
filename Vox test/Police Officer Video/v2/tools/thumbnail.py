@@ -250,8 +250,8 @@ def cast_fg(cv, x, y, w, h):
     """The officer at the door: the film's officer and grin, closer to the lens, whiter skin, redder eyes."""
     sp = C.CAST['officer']
     keep = dict(sp)
-    sp.update(skin='#e6dcd6', skin_sh='#bfb0ac', skin_dp='#6a5258', blush='#e3a2a8', eye_edge='#e0606e',
-              eye_glow='#ff2a3e', eye_glow_a=150, veins=2.0, vein_a=1.6, vein_w=1.35)
+    sp.update(skin='#e6dcd6', skin_sh='#bfb0ac', skin_dp='#6a5258', blush='#e3a2a8', eye_edge='#d9707c',
+              eye_glow='#ff2a3e', eye_glow_a=110, veins=1.34, vein_a=1.45, vein_w=1.15, vein_even=True, vein_in=0.62)
     try:
         cv.save(); cv.rotate(-4, x + w / 2, y + 336)
         C.draw_bust(Pen(cv), 'officer', x + w / 2, y + 336, 0.64, C.Pose('wide_grin', t=1.4, bloodshot=1.0), detail=2,
