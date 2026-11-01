@@ -6,7 +6,7 @@
 #   <out>/If_A_Police_Officer_Knocks_RU_dub.wav / .m4a       the Russian dub on the same timeline (YouTube audio track)
 # usage: deliver.sh <picture.mp4> <mix dir with mix_en.wav, mix_ru.wav> <out dir>
 set -e
-PIC=$1; MIX=$2; OUT=$3
+PIC=$(realpath "$1"); MIX=$(realpath "$2"); OUT=$(realpath -m "$3")
 mkdir -p "$OUT/parts"
 B=If_A_Police_Officer_Knocks
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
