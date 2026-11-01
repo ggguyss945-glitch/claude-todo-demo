@@ -666,9 +666,11 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     xs, ys = _circle_pts(X, Y, rx, r, 20)
     white = _pts_path(xs, ys)
     wc = '#ebe9e3' if P.pale < 0.5 else '#e3e3e1'
+    if sp.get('eye_glow'):                      # optional red glow on the skin around the eye (thumbnail use)
+        c.glow(X, Y + 2, rx * 1.75, r * 1.6, sp['eye_glow'], sp.get('eye_glow_a', 120))
     c.fill(white, wc)
     if det >= 1:
-        c.radial(white, X, Y + r * 0.15, r * 1.05, [(0, wc, 0), (0.62, wc, 0), (1, '#b9b0aa', 230)], sy=1.0)
+        c.radial(white, X, Y + r * 0.15, r * 1.05, [(0, wc, 0), (0.62, wc, 0), (1, sp.get('eye_edge', '#b9b0aa'), 230)], sy=1.0)
     # pupils
     lock = clamp(P.lock)
     lx = lerp(P.look_x, -math.sin(hm.yaw) * 0.85, lock)
@@ -679,9 +681,9 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     px = X + lx * reach * fs; py = Y + ly * reach
     with c.clip(white):
         if det >= 1 and P.bloodshot > 0.02:
-            a_v = 150 * clamp(P.bloodshot)
+            a_v = min(255.0, 150 * clamp(P.bloodshot) * sp.get('vein_a', 1.0))
             vs, vs2 = [], []
-            for k in range(6 if det >= 2 else 3):
+            for k in range(int((6 if det >= 2 else 3) * sp.get('veins', 1.0))):
                 ang = (hash01(k, 7 + side) * 2 - 1) * PI
                 x1, y1 = X + math.cos(ang) * rx * 1.02, Y + math.sin(ang) * r * 1.02
                 mx_, my_ = X + math.cos(ang + 0.3) * rx * 0.62, Y + math.sin(ang + 0.3) * r * 0.62
@@ -689,8 +691,8 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
                 vs.append(smooth([(x1, y1), (mx_, my_), (x2, y2)], False))
                 if det >= 2:
                     vs2.append(smooth([(mx_, my_), (mx_ + math.cos(ang + 1.4) * r * 0.2, my_ + math.sin(ang + 1.4) * r * 0.2)], False))
-            c.line(_multi(vs), c.lw * 0.22, '#b8424c', a_v)
-            if vs2: c.line(_multi(vs2), c.lw * 0.15, '#c04a52', a_v * 0.8)
+            c.line(_multi(vs), c.lw * 0.22 * sp.get('vein_w', 1.0), '#b8424c', a_v)
+            if vs2: c.line(_multi(vs2), c.lw * 0.15 * sp.get('vein_w', 1.0), '#c04a52', a_v * 0.8)
         if P.wet > 0 and det >= 1:
             c.fill(smooth([(X - rx, Y + r * 0.62), (X, Y + r * 0.85), (X + rx, Y + r * 0.62), (X, Y + r * 1.1)], True), '#a8c8f0', 120 * P.wet)
         c.fill(oval(px, py, pr * fs, pr), '#0b0b0e')

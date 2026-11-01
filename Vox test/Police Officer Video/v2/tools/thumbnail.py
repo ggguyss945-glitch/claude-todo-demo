@@ -233,20 +233,32 @@ def scene(cv, x, y, w, h):
     # patrol car light bar behind them, washing everything red and blue
     glow(cv, x + 30, y + 330, 280, '#ff1830', 170)
     glow(cv, x + w - 30, y + 330, 280, '#2a5cff', 180)
-    # the film's own cast: the double (left) and the second officer (right) behind, in the dark
+    # (the cast is drawn by cast_bg / cast_fg so the background can be blurred)
+
+
+
+def cast_bg(cv, x, y, w, h):
+    """The double and the second officer behind: drawn on the background layer, which is blurred."""
     pen = Pen(cv)
-    red_rim = dict(rim='#ff3048', rim_a=120, side=-1)
-    blue_rim = dict(rim='#5a86ff', rim_a=130, side=1)
-    C.draw_bust(pen, 'double', x + 70, y + 300, 0.33, C.Pose('wide_grin', t=2.0, turn=0.25), detail=2, light=red_rim)
-    C.draw_bust(pen, 'officer2', x + w - 70, y + 300, 0.33, C.Pose('creep_smile', t=3.1, turn=-0.25), detail=2, light=blue_rim)
-    cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), paint('#060a1c', 95))
-    # the officer at the door, exactly as he looks in the film, grinning into the lens
-    cv.save(); cv.rotate(-4, x + w / 2, y + 330)
-    C.draw_bust(pen, 'officer', x + w / 2, y + 330, 0.52, C.Pose('wide_grin', t=1.4), detail=2, light=blue_rim)
-    cv.restore()
-    # lens vignette
-    cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=skia.GradientShader.MakeRadial(
-        (x + w / 2, y + h / 2), h * 0.78, [col('#000000', 0), col('#000000', 0), col('#000000', 150)], [0, 0.6, 1])))
+    C.draw_bust(pen, 'double', x + 64, y + 300, 0.36, C.Pose('wide_grin', t=2.0, turn=0.25, bloodshot=0.8), detail=2,
+                light=dict(rim='#ff3048', rim_a=130, side=-1))
+    C.draw_bust(pen, 'officer2', x + w - 64, y + 300, 0.36, C.Pose('creep_smile', t=3.1, turn=-0.25, bloodshot=0.8), detail=2,
+                light=dict(rim='#5a86ff', rim_a=140, side=1))
+
+
+def cast_fg(cv, x, y, w, h):
+    """The officer at the door: the film's officer and grin, closer to the lens, whiter skin, redder eyes."""
+    sp = C.CAST['officer']
+    keep = dict(sp)
+    sp.update(skin='#e6dcd6', skin_sh='#bfb0ac', skin_dp='#6a5258', blush='#e3a2a8', eye_edge='#e0606e',
+              eye_glow='#ff2a3e', eye_glow_a=150, veins=2.0, vein_a=1.6, vein_w=1.35)
+    try:
+        cv.save(); cv.rotate(-4, x + w / 2, y + 336)
+        C.draw_bust(Pen(cv), 'officer', x + w / 2, y + 336, 0.64, C.Pose('wide_grin', t=1.4, bloodshot=1.0), detail=2,
+                    light=dict(rim='#5a86ff', rim_a=120, side=1))
+        cv.restore()
+    finally:
+        sp.clear(); sp.update(keep)
 
 
 def main(out, line1='STAY', line2='INSIDE', tag='NOT POLICE'):
@@ -269,10 +281,19 @@ def main(out, line1='STAY', line2='INSIDE', tag='NOT POLICE'):
     cv.drawPath(rr(fx + 6, fy + 6, fw - 12, fh - 12, 31), paint('#ffffff'))
     ix, iy, iw, ih = fx + 20, fy + 20, fw - 40, fh - 40
     inner = rr(ix, iy, iw, ih, 22)
+    bgs = skia.Surface(1280 * S, 720 * S); bc = bgs.getCanvas(); bc.scale(S, S)
+    scene(bc, ix, iy, iw, ih); cast_bg(bc, ix, iy, iw, ih)
+    bga = bgs.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)
+    bga = cv2.GaussianBlur(bga, (0, 0), 2.4 * S)
+    bga[..., :3] = (bga[..., :3].astype(np.float32) * 0.78).astype(np.uint8)
+    bgi = skia.Image.fromarray(np.ascontiguousarray(bga), colorType=skia.kRGBA_8888_ColorType)
     cv.save(); cv.clipPath(inner, doAntiAlias=True)
-    scene(cv, ix, iy, iw, ih)
+    cv.save(); cv.resetMatrix(); cv.drawImage(bgi, 0, 0); cv.restore()
+    cast_fg(cv, ix, iy, iw, ih)
+    cv.drawRect(skia.Rect.MakeXYWH(ix, iy, iw, ih), skia.Paint(Shader=skia.GradientShader.MakeRadial(
+        (ix + iw / 2, iy + ih / 2), ih * 0.8, [col('#000000', 0), col('#000000', 0), col('#000000', 120)], [0, 0.62, 1])))
     # face box with tag
-    bx, by, bw, bh = ix + iw / 2 - 138, iy + 252, 276, 254
+    bx, by, bw, bh = ix + iw / 2 - 160, iy + 262, 320, 300
     g = '#3cf26a'
     cv.drawRect(skia.Rect.MakeXYWH(bx, by, bw, bh), paint(g, 140, stroke=2.5))
     for (x0, y0, dx, dy) in ((bx, by, 1, 1), (bx + bw, by, -1, 1), (bx, by + bh, 1, -1), (bx + bw, by + bh, -1, -1)):
