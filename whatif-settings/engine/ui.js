@@ -356,44 +356,147 @@ export function confirm(o = {}, p) {
 }
 
 // ---------- Terms & Conditions ----------
+const thou = (n) => (typeof n === 'number' ? Math.round(n).toLocaleString('en-US') : String(n));
+/** wrap plain text into lines no wider than maxW at this size/font */
+export function wrapText(str, size, maxW, font = 'n800') {
+  const out = [];
+  let cur = '';
+  for (const wd of String(str).split(/\s+/)) {
+    const t = cur ? cur + ' ' + wd : wd;
+    if (cur && textW(t, size, font) > maxW) { out.push(cur); cur = wd; } else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+export const FINE_PRINT = {
+  head: 'SECTION 4,812 — RESETS',
+  items: [
+    ['4,812.1', 'Reality Settings changes the real thing. This is not a preview.'],
+    ['4,812.2', 'There is no undo button. There was one. It broke.'],
+    ['4,812.3', 'Pets, neighbours and the sun may be affected.'],
+    ['4,812.4', 'Too many changes may start a factory reset all by itself.'],
+    ['4,812.5', 'A reset can only be stopped by the loudest person in the house.', true],
+    ['4,812.6', 'Thank you for reading this far. Nobody ever does.'],
+  ],
+};
+/** termsPage({x, y, w, h, page, of, highlight, sheet}) - the readable fine-print page (4,812): numbered clauses, one
+ *  rule in bold with a yellow marker that sweeps across it as highlight goes 0..1. sheet:false draws text only. */
+export function termsPage(o = {}) {
+  const { x = 0, y = 0, w = 560, h = 480, page = '4,812', of = '4,812' } = o;
+  const d = new Defs(), hl = clamp(o.highlight ?? 1), pad = w * 0.055, items = o.items || FINE_PRINT.items;
+  // lay the clauses out at a font size that fits the sheet (auto-shrinks when the sheet is short)
+  const layout = (fs) => {
+    const numW = textW('4,812.0', fs, 'n900') + fs * 0.6, rows = [];
+    let ty = y + pad + fs * 1.1 + fs * 1.25;
+    for (const [num, body, rule] of items) {
+      const size = rule ? fs * 1.22 : fs, lh = size * 1.32;
+      const lines = wrapText(body, size, w - pad * 2 - numW, rule ? 'n900' : 'n800');
+      ty += lh * (rule ? 0.55 : 0.25);
+      rows.push({ num, rule, size, lh, lines, ty });
+      ty += lh * lines.length;
+    }
+    return { numW, rows, end: ty };
+  };
+  let fs = o.size || Math.max(12, w * 0.036), L = layout(fs);
+  for (let i = 0; i < 6 && L.end > y + h - pad - fs * 1.4; i++) { fs *= 0.92; L = layout(fs); }
+  let s = '';
+  if (o.sheet !== false) {
+    for (let i = 2; i >= 1; i--) s += path(rrPath(x + i * 6, y + i * 6, w, h, 18), { fill: shade('#E6EBF7', -0.04 * i), stroke: '#9AA6CC', strokeWidth: 2 });
+    s += path(rrPath(x, y, w, h, 18), { fill: d.lin(['#FFFFFF', '#EEF2FB']), stroke: '#9AA6CC', strokeWidth: 2.5 });
+  }
+  const hy = y + pad + fs * 1.1;
+  s += text(x + pad, hy, esc(FINE_PRINT.head), NUN(fs * 1.05, 900, '#3A4470', { letterSpacing: 0.5 }));
+  s += path(rrPath(x + pad, hy + fs * 0.45, w - pad * 2, 2.5, 1.2), { fill: '#C3CBE3' });
+  for (const { num, rule, size, lh, lines, ty } of L.rows) {
+    if (rule) {
+      // marker highlight, line by line, slightly tilted like a real marker stroke
+      lines.forEach((ln, i) => {
+        const k = clamp(hl * lines.length - i);
+        if (k <= 0) return;
+        const lw = textW(ln, size, 'n900') + size * 0.5;
+        s += path(`M${f(x + pad + L.numW - size * 0.25)} ${f(ty + lh * (i + 1) - size * 0.95)}l${f(lw * k)} ${f(-size * 0.06)}l0 ${f(size * 1.08)}l${f(-lw * k)} ${f(size * 0.06)}Z`, { fill: '#FFE14D', opacity: 0.9 });
+      });
+    }
+    s += text(x + pad, ty + lh * 0.9, esc(num), NUN(fs * 0.92, 900, rule ? '#C2361E' : '#7A84AA'));
+    lines.forEach((ln, i) => { s += text(x + pad + L.numW, ty + lh * (i + 0.9), esc(ln), NUN(size, rule ? 900 : 800, rule ? '#1E2547' : '#4A5480')); });
+  }
+  s += text(x + w / 2, y + h - pad * 0.8, rich(`Page {${page}|navy} of {${of}|navy}`, { navy: '#3A4470' }), NUN(fs * 0.9, 800, '#7A84AA', { textAnchor: 'middle' }));
+  return d + s;
+}
+
+/** terms({x,y,w,h,pages, page, flick, finePrint, highlight, sticker, checked, press}).
+ *  page: number shown in the footer ('Page {page} of {pages}'); flick 0..1 = one thumb flick through every page (sheets
+ *  fly off up-left, the text streaks, the counter races to the end unless page is given); finePrint shows the readable
+ *  page 4,812 (termsPage) with its marker highlight; sticker:false hides the 4,812 PAGES sticker. */
 export function terms(o = {}, p) {
   const { x = 120, y = 100, w = 660, h = 820, pages = '4,812' } = o;
   const d = new Defs(), R = rng(o.seed || 5);
+  const fk = clamp(o.flick ?? 0), flicking = fk > 0 && fk < 1;
+  const total = typeof pages === 'number' ? pages : +String(pages).replace(/,/g, '') || 4812;
+  const page = o.page ?? (o.flick !== undefined ? Math.max(1, Math.round(lerp(1, total, ease.inOutCubic(fk)))) : (o.finePrint ? total : 1));
   let s = glassCard(d, x, y, w, h, 44);
   s += g(iconTile('subtitles', 0, 0, 70, '#5C6B9E'), { transform: tr(x + 76, y + 78) });
   s += text(x + 130, y + 76, 'Terms &amp; Conditions', NUN(Math.min(44, (w - 170) / textW('Terms & Conditions', 1)), 900, '#FFFFFF'));
   s += text(x + 132, y + 112, rich('Reality {v1.0|orange} · read every page'), NUN(Math.min(25, (w - 170) / textW('Reality v1.0 · read every page', 1, 'n800')), 800, UI.sub));
   // paper sheet with fine print (stacked pages behind)
   const px = x + 40, py = y + 150, pw = w - 100, ph = h - 340;
-  for (let i = 3; i >= 1; i--) s += path(rrPath(px + i * 7, py + i * 7, pw, ph, 20), { fill: shade('#E6EBF7', -0.04 * i), stroke: '#9AA6CC', strokeWidth: 2 });
-  s += path(rrPath(px, py, pw, ph, 20), { fill: d.lin(['#FFFFFF', '#E9EEF9']), stroke: '#9AA6CC', strokeWidth: 2.5 });
-  s += text(px + 30, py + 50, 'SECTION 1.1.1 — DEFINITIONS', NUN(22, 900, '#3A4470'));
-  let ly = py + 78;
-  while (ly < py + ph - 26) {
-    const para = R() < 0.16;
-    if (para) { ly += 14; continue; }
-    const lw = (pw - 60) * (0.55 + R() * 0.45);
-    s += path(rrPath(px + 30, ly, lw, 8, 4), { fill: '#AEB7D3' });
-    ly += 20;
+  const paperClip = d.clip(path(rrPath(px - 4, py - 4, pw + 40, ph + 40, 22)));
+  if (o.finePrint) {
+    s += termsPage({ x: px, y: py, w: pw, h: ph, page: thou(page), of: thou(pages), highlight: o.highlight ?? 1 });
+  } else {
+    for (let i = 3; i >= 1; i--) s += path(rrPath(px + i * 7, py + i * 7, pw, ph, 20), { fill: shade('#E6EBF7', -0.04 * i), stroke: '#9AA6CC', strokeWidth: 2 });
+    s += path(rrPath(px, py, pw, ph, 20), { fill: d.lin(['#FFFFFF', '#E9EEF9']), stroke: '#9AA6CC', strokeWidth: 2.5 });
+    let body = text(px + 30, py + 50, page > 1 ? `SECTION ${thou(Math.ceil(page / 4))}.${(page % 9) + 1} — MORE RULES` : 'SECTION 1.1.1 — DEFINITIONS', NUN(22, 900, '#3A4470'));
+    let ly = py + 78;
+    while (ly < py + ph - 26) {
+      const para = R() < 0.16;
+      if (para) { ly += 14; continue; }
+      const lw = (pw - 60) * (0.55 + R() * 0.45);
+      body += path(rrPath(px + 30, ly, lw, 8, 4), { fill: '#AEB7D3' });
+      ly += 20;
+    }
+    if (flicking) {
+      // the page text smears vertically while the pages race past
+      const sm = Math.sin(Math.PI * fk);
+      s += g(body, { opacity: f((1 - sm * 0.75) * 100) / 100 });
+      for (let i = 0; i < 9; i++) s += path(rrPath(px + 30 + i * (pw - 60) / 9 + R() * 20, py + 30, 10 + R() * 18, ph - 60, 8), { fill: '#AEB7D3', opacity: f(sm * (0.25 + R() * 0.3) * 100) / 100 });
+    } else s += body;
   }
-  // scrollbar with a microscopic thumb (the joke: it's that long)
+  if (flicking) {
+    // sheets peel off the stack and fly up-left with a whoosh trail
+    let fly = '';
+    for (let j = 0; j < 6; j++) {
+      const u = clamp(fk * 1.9 - j * 0.16);
+      if (u <= 0 || u >= 1) continue;
+      const e = ease.inCubic(u), ex = px + pw / 2 - e * pw * 1.25, ey = py + ph / 2 - e * ph * 0.95, rot = -8 - 34 * e;
+      let sh = path(rrPath(-pw / 2, -ph / 2, pw, ph, 20), { fill: d.lin(['#FFFFFF', '#E3E9F6']), stroke: '#9AA6CC', strokeWidth: 2.5 });
+      for (let k = 0; k < 7; k++) sh += path(rrPath(-pw / 2 + 30, -ph / 2 + 50 + k * 26, (pw - 60) * (0.5 + ((j * 7 + k) % 5) * 0.1), 8, 4), { fill: '#C3CBE3' });
+      fly += g(sh, { transform: `translate(${f(ex)} ${f(ey)}) rotate(${f(rot)}) scale(${f((1 - e * 0.25) * 1000) / 1000} ${f((1 - e * 0.45) * 1000) / 1000})`, opacity: f((1 - e * e) * 100) / 100 });
+    }
+    const sm = Math.sin(Math.PI * fk);
+    for (let i = 0; i < 5; i++) fly += path(`M${f(px + pw * (0.2 + i * 0.17))} ${f(py + ph * 0.9)}Q${f(px + pw * (0.05 + i * 0.1))} ${f(py + ph * 0.35)} ${f(px - pw * 0.2 + i * 30)} ${f(py - ph * 0.15 - i * 20)}`, { fill: 'none', ...st('#FFFFFF', 7 - i), opacity: f(sm * 0.8 * 100) / 100 });
+    s += g(fly, { clipPath: paperClip }) + g(fly, { opacity: 0.25 });
+  }
+  // scrollbar with a microscopic thumb (the joke: it's that long); the thumb follows the page
   s += path(rrPath(x + w - 40, py, 12, ph, 6), { fill: '#070A1C', opacity: 0.6 });
-  s += path(rrPath(x + w - 40, py + 4, 12, 3, 1.5), { fill: UI.orangeHi });
+  s += path(rrPath(x + w - 40, py + 4 + (ph - 11) * clamp((page - 1) / Math.max(1, total - 1)), 12, 3, 1.5), { fill: UI.orangeHi });
   // the page-count sticker
-  const sx = x + w - 156, sy = py + ph * 0.6;
-  let stk = path(rrPath(-150, -78, 300, 156, 34), { fill: shade(UI.orange2, -0.18), transform: 'translate(0 8)' });
-  stk += path(rrPath(-150, -78, 300, 156, 34), { fill: d.lin(['#FFB070', UI.orange, UI.orange2]), stroke: '#FFFFFF', strokeWidth: 7 });
-  stk += path(rrPath(-150, -78, 300, 156, 34), { fill: 'none', stroke: ink(UI.orange), strokeWidth: 3 });
-  stk += text(0, 16, esc(pages), LIL(82, '#FFFFFF', { textAnchor: 'middle', stroke: ink(UI.orange), strokeWidth: 8, paintOrder: 'stroke', strokeLinejoin: 'round' }));
-  stk += text(0, 56, 'PAGES', NUN(30, 900, '#FFF2E0', { textAnchor: 'middle', letterSpacing: 4 }));
-  s += g(stk, { transform: `translate(${f(sx)} ${f(sy)}) rotate(-7)` });
+  if (o.sticker !== false && !o.finePrint) {
+    const sx = x + w - 156, sy = py + ph * 0.6;
+    let stk = path(rrPath(-150, -78, 300, 156, 34), { fill: shade(UI.orange2, -0.18), transform: 'translate(0 8)' });
+    stk += path(rrPath(-150, -78, 300, 156, 34), { fill: d.lin(['#FFB070', UI.orange, UI.orange2]), stroke: '#FFFFFF', strokeWidth: 7 });
+    stk += path(rrPath(-150, -78, 300, 156, 34), { fill: 'none', stroke: ink(UI.orange), strokeWidth: 3 });
+    stk += text(0, 16, esc(thou(pages)), LIL(82, '#FFFFFF', { textAnchor: 'middle', stroke: ink(UI.orange), strokeWidth: 8, paintOrder: 'stroke', strokeLinejoin: 'round' }));
+    stk += text(0, 56, 'PAGES', NUN(30, 900, '#FFF2E0', { textAnchor: 'middle', letterSpacing: 4 }));
+    s += g(stk, { transform: `translate(${f(sx)} ${f(sy)}) rotate(-7)` });
+  }
   // footer: page count + checkbox + agree button
   const fy = y + h - 170;
-  s += text(x + 44, fy + 30, rich(`Page {1|white} of {${pages}|orange}`), NUN(30, 900, UI.sub));
+  s += text(x + 44, fy + 30, rich(`Page {${thou(page)}|white} of {${thou(pages)}|orange}`), NUN(30, 900, UI.sub));
   s += path(rrPath(x + 44, fy + 58, 40, 40, 10), { fill: d.lin([UI.navy3, UI.navy2]), stroke: UI.rimHi, strokeWidth: 3 });
   if (o.checked) s += g(glyph('check', UI.green), { transform: tr(x + 64, fy + 78, 0.34) });
   s += text(x + 98, fy + 88, 'I have read all of it', NUN(28, 800, '#FFFFFF'));
-  s += button(x + w - 300, fy + 40, 256, 88, 'I AGREE', { tone: UI.orange, press: o.press || 0 });
+  s += button(x + w - 300, fy + 40, 256, 88, o.agreeLabel || 'I AGREE', { tone: o.agreeTone || UI.orange, press: o.press || 0 });
   return popIn(d + s, x + w / 2, y + h / 2, p, { bbox: { x, y, w, h, r: 44 } });
 }
 
@@ -456,7 +559,8 @@ export function install(o = {}, p) {
 }
 
 // ---------- corner countdown pill ----------
-/** timerPill({x,y,text,label,red,pulse}) - red flips to alarm red; pulse 0..1 swells the glow (drive it per tick) */
+/** timerPill({x,y,text,label,red,pulse,frac,shake}) - red flips to alarm red; pulse 0..1 swells the glow (drive it per
+ *  tick); frac 0..1 draws a draining ring round the clock disc (1:00 -> frac 1); shake {amp, t} rattles it (alarm). */
 export function timerPill(o = {}, p) {
   const { x = 60, y = 60, label = 'RESET IN', red = false } = o;
   const txt = o.text || '00:59', pulse = clamp(o.pulse || 0);
@@ -468,8 +572,17 @@ export function timerPill(o = {}, p) {
   const ix = x + 54, iy = y + h / 2;
   s += circle(ix, iy, 34, { fill: red ? '#FFFFFF' : d.lin([UI.orangeHi, UI.orange2]), stroke: red ? '#8E0F22' : ink(UI.orange), strokeWidth: 3 });
   s += g(glyph('clock', red ? '#C81E36' : '#FFFFFF'), { transform: tr(ix, iy, 0.5) });
+  if (o.frac !== undefined) {
+    const fr = clamp(o.frac);
+    s += circle(ix, iy, 41, { fill: 'none', stroke: red ? '#8E0F22' : '#070A1C', strokeWidth: 7, opacity: 0.55 });
+    if (fr > 0.003) s += path(arcPath(ix, iy, 41, 0, Math.min(359.9, fr * 360)), { fill: 'none', stroke: red ? '#FFFFFF' : UI.orangeHi, strokeWidth: 7, strokeLinecap: 'round' });
+  }
   s += text(x + 104, y + 36, esc(label), NUN(20, 900, red ? '#FFE3E3' : UI.sub, { letterSpacing: 2 }));
   s += text(x + 102, y + 88, esc(txt), LIL(62, red ? '#FFFFFF' : UI.orangeHi, red ? { stroke: '#8E0F22', strokeWidth: 6, paintOrder: 'stroke' } : {}));
+  if (o.shake) {
+    const sk = typeof o.shake === 'number' ? { amp: o.shake, t: 0 } : o.shake, t = sk.t || 0, A = sk.amp ?? 6;
+    s = g(s, { transform: `translate(${f(A * Math.sin(t * 2 * Math.PI * 23))} ${f(A * 0.3 * Math.sin(t * 2 * Math.PI * 31 + 1))}) rotate(${f(A * 0.35 * Math.sin(t * 2 * Math.PI * 19 + 2))} ${f(x + w / 2)} ${f(y + h / 2)})` });
+  }
   return popIn(d + s, x + w / 2, y + h / 2, p, { bbox: { x, y, w, h, r: h / 2 }, ringColor: red ? '#FFD0D0' : '#FFFFFF' });
 }
 
@@ -632,8 +745,13 @@ export const emojiBubbleSize = (o = {}) => { const size = o.size || 82, n = (o.e
 // ---------- DAY card (ours: a settings tile with a gear behind it and 7 progress pips) ----------
 export const DAY_COLORS = ['#25AEF2', '#8A5CF2', '#17C2A0', '#3D7FEA', '#FF5596', '#25BE66', '#E5303D'];
 export const DAY_ICONS = ['volume', 'gravity', 'subtitles', 'language', 'speed', 'parental', 'reset'];
-/** dayCard({cx,cy,day,total,color,icon,gearRot,scale}) */
+/** dayCard({cx,cy,day,total,color,icon,gearRot,scale,tilt, flip, next}).
+ *  flip 0..1 = split-flap turn from `day` to `next` (default day + 1): the top half of the old number folds down over
+ *  the hinge (0 -> .5), then the bottom half of the new one lands (.5 -> 1); header colour, sticker and pips switch at .5. */
 export function dayCard(o = {}, p) {
+  const fl = o.flip === undefined ? null : clamp(o.flip);
+  if (fl !== null && fl > 0 && fl < 1) return dayCardFlip(o, fl, p);
+  if (fl !== null && fl >= 1) return dayCard({ ...o, flip: undefined, day: o.next ?? (o.day || 1) + 1, color: o.nextColor, icon: o.nextIcon }, p);
   const { cx = 960, cy = 520, day = 1, total = 7 } = o;
   const color = o.color || DAY_COLORS[(day - 1) % 7], icon = o.icon || DAY_ICONS[(day - 1) % 7];
   const sc = o.scale || 1, d = new Defs();
@@ -656,12 +774,9 @@ export function dayCard(o = {}, p) {
   s += line(x + 14, y + 14 + hb, x + w - 14, y + 14 + hb, { stroke: ink(color), strokeWidth: 4 });
   s += text(x + 44, y + 14 + hb / 2 + 26, 'DAY', LIL(78, '#FFFFFF', { stroke: ink(color), strokeWidth: 9, paintOrder: 'stroke', strokeLinejoin: 'round', letterSpacing: 3 }));
   s += g(toggle({ x: 0, y: 0, w: 116, h: 62, k: o.toggleK ?? 1 }), { transform: tr(x + w - 160, y + 14 + hb / 2 - 31) });
-  // number with a chunky extrude
-  const nfs = 300, ny = y + 14 + hb + 262;
-  const num = String(day);
-  for (let i = 6; i >= 1; i--) s += text(0, ny + i * 2.2, esc(num), LIL(nfs, shade(UI.navy2, -0.06), { textAnchor: 'middle' }));
-  s += text(0, ny, esc(num), LIL(nfs, d.lin([UI.navy3, UI.navy1]), { textAnchor: 'middle', stroke: UI.navy0, strokeWidth: 4, paintOrder: 'stroke' }));
-  s += text(-4, ny - 8, esc(num), LIL(nfs, 'none', { textAnchor: 'middle', stroke: '#FFFFFF', strokeWidth: 3, opacity: 0.18 }));
+  // number with a chunky extrude (o.numberSvg lets the flip variant draw split halves instead)
+  if (o.numberSvg) s += o.numberSvg(d);
+  else s += dayNumber(d, String(day));
   // 7 pips
   const pw = 40, pg = 14, px0 = -((total * pw + (total - 1) * pg) / 2), py = y + h - 76;
   for (let i = 0; i < total; i++) {
@@ -677,15 +792,75 @@ export function dayCard(o = {}, p) {
   const inner = d + g(s, { transform: `translate(${f(cx)} ${f(cy)}) scale(${sc}) rotate(${f(o.tilt || 0)})` });
   return popIn(inner, cx, cy, p, { ring: 'circle', r: 300 * sc, ringGrow: 160 * sc, ringW: 18 });
 }
+/** the big day numeral with its chunky extrude, in card space (baseline y 134) */
+function dayNumber(d, num, ny = 134) {
+  const nfs = 300;
+  let s = '';
+  for (let i = 6; i >= 1; i--) s += text(0, ny + i * 2.2, esc(num), LIL(nfs, shade(UI.navy2, -0.06), { textAnchor: 'middle' }));
+  s += text(0, ny, esc(num), LIL(nfs, d.lin([UI.navy3, UI.navy1]), { textAnchor: 'middle', stroke: UI.navy0, strokeWidth: 4, paintOrder: 'stroke' }));
+  s += text(-4, ny - 8, esc(num), LIL(nfs, 'none', { textAnchor: 'middle', stroke: '#FFFFFF', strokeWidth: 3, opacity: 0.18 }));
+  return s;
+}
+// split-flap version of the card: see dayCard({flip})
+function dayCardFlip(o, fl, p) {
+  const cur = o.day || 1, nxt = o.next ?? cur + 1, late = fl >= 0.5;
+  const HY = 26, X0 = -216, X1 = 216, T0 = -128, B1 = 184;           // hinge y and the number panel (card space)
+  const numberSvg = (d) => {
+    const face = d.lin([[0, '#FFFFFF'], [1, '#E3E9F8']], [0, -256, 0, 256], 'userSpaceOnUse');
+    const top = d.clip(rect(X0, T0, X1 - X0, HY - T0)), bot = d.clip(rect(X0, HY, X1 - X0, B1 - HY));
+    const half = (num, clip, shadeK = 0) => g(rect(X0, T0, X1 - X0, B1 - T0, { fill: face }) + dayNumber(d, String(num)) +
+      (shadeK > 0.004 ? rect(X0, T0, X1 - X0, B1 - T0, { fill: '#1B2347', opacity: f(shadeK * 100) / 100 }) : ''), { clipPath: clip });
+    const k = Math.cos(Math.PI * fl);                                     // flap height factor: 1 -> 0 -> -1
+    const hinge = (inner, sy) => g(inner, { transform: `translate(0 ${HY}) scale(1 ${f(Math.max(0.001, Math.abs(sy)) * 1000) / 1000}) translate(0 ${-HY})` });
+    let s = half(nxt, top) + half(late ? nxt : cur, bot, late ? 0 : fl * 0.25);
+    s += late ? hinge(half(nxt, bot, (1 - fl) * 0.55), -k) : hinge(half(cur, top, fl * 0.6), k);
+    // the hinge: a thin gap with two side notches, like a split-flap tile
+    s += rect(X0, HY - 2, X1 - X0, 4, { fill: '#B9C3DE' }) + circle(X0 + 10, HY, 7, { fill: '#9AA6CC' }) + circle(X1 - 10, HY, 7, { fill: '#9AA6CC' });
+    return s;
+  };
+  const show = late ? nxt : cur;
+  return dayCard({ ...o, flip: undefined, day: show, color: late ? o.nextColor : o.color, icon: late ? o.nextIcon : o.icon, numberSvg }, p);
+}
 
 // ---------- name tag (handy for multiplayer gags: who has the app) ----------
+/** nameTag({cx, y, name, color}) - a floating player tag. variant: 'default' = the grey factory-reset luggage tag hung
+ *  on a string from (cx, y - string) for the Day 7 mannequins: {name: 'DEFAULT', sub: 'factory settings', string: 70,
+ *  swing: deg (pendulum angle, drive it per frame), flicker 0..1 (glitchy grey-out of the tag)} */
 export function nameTag(o = {}, p) {
+  if (o.variant === 'default') return defaultTag(o, p);
   const { cx = 0, y = 0, name = 'LilyRoar', color = '#FF6FB0' } = o;
   const w = textW(name, 34) + 50, h = 54, d = new Defs();
   let s = path(rrPath(cx - w / 2, y + 5, w, h, h / 2), { fill: '#060A1E', opacity: 0.5 });
   s += path(rrPath(cx - w / 2, y, w, h, h / 2), { fill: d.lin([UI.navy3, UI.navy1]), opacity: 0.92, stroke: color, strokeWidth: 3 });
   s += text(cx, y + 38, esc(name), NUN(34, 900, '#FFFFFF', { textAnchor: 'middle' }));
   return popIn(d + s, cx, y + h / 2, p, { bbox: { x: cx - w / 2, y, w, h, r: h / 2 }, ringGrow: 26 });
+}
+/** grey plastic luggage tag reading DEFAULT (see nameTag variant 'default'); (cx, y) = where the string is tied (the tag
+ *  hangs `string` px below it and swings about it); size scales the whole tag */
+export function defaultTag(o = {}, p) {
+  const { cx = 0, y = 0, name = 'DEFAULT', sub = 'factory settings', string = 70, swing = 0, size = 1 } = o;
+  const d = new Defs(), grey = '#C9CEDA', fs = 40;
+  const tw = Math.max(textW(name, fs, 'lil', 2) + 104, textW(sub, 21, 'n800', 1) + 56), th = sub ? 118 : 82;
+  const x = -tw / 2, ln = ink(grey, 0.36, 0.6);
+  let s = '';
+  // string to the anchor (above the tag)
+  s += path(`M0 ${f(-string)}Q6 ${f(-string * 0.5)} 0 0`, { fill: 'none', stroke: '#6E7690', strokeWidth: 3.5, strokeLinecap: 'round' });
+  // tag body: rounded rect with a clipped top making a pointed luggage-tag nose and a reinforced hole
+  const body = `M${f(x + 26)} 18L${f(-18)} 0H18L${f(-x - 26)} 18Q${f(-x)} 22 ${f(-x)} 40V${f(th - 18)}Q${f(-x)} ${f(th)} ${f(-x - 18)} ${f(th)}H${f(x + 18)}Q${f(x)} ${f(th)} ${f(x)} ${f(th - 18)}V40Q${f(x)} 22 ${f(x + 26)} 18Z`;
+  s += path(body, { fill: '#3A3F58', opacity: 0.35, transform: 'translate(0 6)' });
+  s += path(body, { fill: d.lin([shade(grey, 0.06), shade(grey, -0.06)]), stroke: ln, strokeWidth: 3.5, strokeLinejoin: 'round' });
+  s += path(rrPath(x + 18, 26, tw - 36, 7, 3.5), { fill: '#FFFFFF', opacity: 0.45 });
+  s += circle(0, 14, 8, { fill: '#8C93AA', stroke: ln, strokeWidth: 2.5 }) + circle(0, 14, 3.5, { fill: '#5A6078' });
+  s += g(glyph('reset', '#6E7690', grey), { transform: tr(x + 40, 60, 0.38) });
+  s += text(x + 70, 74, esc(name), LIL(fs, '#5A6078', { letterSpacing: 2 }));
+  if (sub) s += text(0, th - 18, esc(sub), NUN(21, 800, '#7A8098', { textAnchor: 'middle', letterSpacing: 1 }));
+  if (o.flicker) {
+    const k = clamp(o.flicker);
+    s += path(body, { fill: '#FFFFFF', opacity: f(k * 55) / 100 });
+    s += rect(x, 30 + (th - 40) * ((k * 7.3) % 1), tw, 6, { fill: '#33E8FF', opacity: f(k * 70) / 100 });
+  }
+  const inner = d + g(s, { transform: `translate(${f(cx)} ${f(y + string * size)}) scale(${size}) rotate(${f(swing)} 0 ${f(-string)})` });
+  return popIn(inner, cx, y + (string + 40) * size, p, { bbox: { x: cx + x * size, y: y + string * size, w: tw * size, h: th * size, r: 18 }, ringGrow: 24, ringColor: '#E3E7F0' });
 }
 
 /** tap ripple: a finger/cursor press ring on a button (p 0..1) */

@@ -5,7 +5,7 @@
 //   { w, h, layers: [{ name, depth, svg }], svg }   (svg = layers composed for cam {x,y})
 // and draws x from -480 to 2400 so the camera can pan +-400 px. Depth factors: sky 0.08, far 0.3, mid 0.75, near 1.0.
 import {
-  W, H, FONT, Defs, f, clamp, lerp, rng, shade, mix, ink, atmos, g, rect, circle, ellipse, line, poly, path, text, tr, st,
+  W, H, FONT, Defs, f, clamp, lerp, seg, ease, rng, shade, mix, ink, atmos, g, rect, circle, ellipse, line, poly, path, text, tr, st,
   rrPath, gearPath, starPts, glossTop, contact, textW, esc,
 } from './ui_style.js';
 import { glitch } from './fx.js';
@@ -266,25 +266,72 @@ function gearPattern(d, color, size = 90, op = 1) {
 // ======================================================================================
 // STREET (sunny day)
 // ======================================================================================
+// Ground lines and hook anchors (world px, depth 0.75 for the yard / houses, 1.0 for the sidewalk and road).
+// tiny: where Kevin's dog sits on Kevin's striped lawn; s0 = dog size, s1 = "the size of a house" (Kevin's house is
+// 354 px tall to the roof slab; a sitting Tiny is 236 * s tall). Insert him after 'mid' of street({split: true}) so the
+// KEEP OFF sign and the front-yard props ('yard') stay in front of him and the houses / hedges behind.
+// trees: the three street trees (draw one live with flipTree({...STREET.trees.kevin, angle}) and pass liveTree).
+export const STREET = {
+  base: 704, lawnY: 698, walkY: 806, curbY: 864, roadY: 880,
+  tiny: { x: 1372, y: 792, s0: 0.5, s1: 2.0, depth: 0.75 },
+  trees: {
+    left: { x: -60, base: 710, s: 1.05, seed: 4, leaf: '#4BC240' },
+    sam: { x: 560, base: 710, s: 1.1, seed: 5, leaf: '#47BE3E' },
+    kevin: { x: 1730, base: 710, s: 1.0, seed: 9, leaf: '#4BC240' },
+  },
+  samHouse: { x: 60, w: 410, base: 704, top: 276, cx: 265, cy: 500 },
+  kevinHouse: { x: 1120, w: 500, base: 704, top: 350, cx: 1370, cy: 540 },
+  samWindow: { x: 100, y: 494, w: 110, h: 96, cx: 155, cy: 542 },   // Sam's room (lit at night)
+  lamp: { x: 666, y: 368 },                                         // street-lamp bulb (near layer, depth 1)
+};
+
+// ---------- night grade by colour mapping (bible 3.1: a multiply of #3A4C70 at ~0.6, pulled toward violet) ----------
+// Every colour in a built layer string is mapped once at build time, so the night set stays plain vector (no blend
+// layers, bakes like the day set). Ids are renamed so a day and a night copy can share one frame.
+const NIGHT_MUL = [0x3A, 0x4C, 0x70].map((v) => v / 255), NIGHT_VIOLET = '#2C2862';
+export function nightColor(hex, k = 1) {
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const n = parseInt(h.slice(0, 6), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+  const m = c.map((v, i) => v * lerp(1, NIGHT_MUL[i], 0.66 * k));
+  const out = '#' + m.map((v) => Math.round(clamp(v) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+  return mix(out, NIGHT_VIOLET, 0.2 * k);
+}
+export function nightify(svg, k = 1, tag = 'n') {
+  if (!(k > 0)) return svg;
+  const memo = new Map();
+  return svg.replace(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])/g, (m) => { if (!memo.has(m)) memo.set(m, nightColor(m, k)); return memo.get(m); })
+    .replace(/id="([^"]+)"/g, `id="$1${tag}"`).replace(/url\(#([^)]+)\)/g, `url(#$1${tag})`);
+}
+
+/** Street of Pinewood. o: { sky: [top, mid, horizon], cam, split, liveTree, night }
+ *   split: true    the front-yard props (Sam's fence + gnome, bushes, the KEEP OFF sign, lawn twinkles) move from
+ *                  'mid' into a 'yard' layer (same depth 0.75) right after it, so a giant Tiny can sit between them
+ *   liveTree: 'left' | 'sam' | 'kevin'   leave that tree out of 'mid' (draw it per frame with flipTree)
+ *   night: 0..1    2:13 a.m.: violet night sky, moon and stars, colour-mapped houses, Sam's window lit (warm), the
+ *                  street lamp on, a soft 'light' layer (screen pools, live) and a night vignette ('grade') */
 export function street(o = {}) {
   const d = new Defs();
   const base = 704, lawnY = 698, walkY = 806, curbY = 864, roadY = 880;
+  const nk = clamp(o.night ?? 0);
   const sky = o.sky || ['#1E7BF6', '#3A97FA', '#8DCDFC'];
+  const live = o.liveTree;
   // --- sky (depth 0.08)
   let skyL = rect(X0, -200, SW, 940, { fill: d.lin([[0, sky[0]], [0.55, sky[1]], [1, sky[2]]], [0, -200, 0, 740], 'userSpaceOnUse') });
-  skyL += sun(d, 300, 150, 66);
+  if (nk < 1) skyL += nk > 0 ? g(sun(d, 300, 150, 66), { opacity: f((1 - nk) * 100) / 100 }) : sun(d, 300, 150, 66);
   skyL += cloud(d, -120, 190, 0.8, 11) + cloud(d, 760, 170, 0.95, 12) + cloud(d, 1330, 290, 0.65, 13) + cloud(d, 1840, 160, 0.9, 14) + cloud(d, 2300, 250, 0.75, 15) + cloud(d, 520, 360, 0.5, 16, { op: 0.9 });
   // --- far (depth 0.3): hazy hills, far rooftops, water tower; no outlines
   const hz = sky[2];
   let far = '';
   far += path(`M${X0} 600 Q 0 520 420 585 T 1240 570 T 2000 560 T ${X1} 590 V 760 H ${X0} Z`, { fill: d.lin([atmos('#5CC48A', hz, 0.55), atmos('#4FB47E', hz, 0.42)], 'v') });
-  const R = rng(7);
+  const R = rng(7), farWins = [];
   for (let i = 0; i < 26; i++) {
     const hx = X0 + 40 + i * 112 + R() * 30, hw = 70 + R() * 40, hh = 40 + R() * 26, hy = 640 + R() * 16;
     const col = atmos(['#F3B4A0', '#B9A7EE', '#9CC8F7', '#F8E19A', '#A9E3C8'][i % 5], hz, 0.5);
     far += rect(hx, hy - hh, hw, hh + 60, { fill: col });
     far += poly([[hx - 8, hy - hh + 1], [hx + hw / 2, hy - hh - hw * 0.32], [hx + hw + 8, hy - hh + 1]], { fill: atmos(['#E76A5E', '#6E58C8', '#4A78D8', '#3FA27E'][i % 4], hz, 0.5) });
     if (i % 2) far += circle(hx + hw + 18, hy - 10, 26 + R() * 10, { fill: atmos('#3FAF4A', hz, 0.48) });
+    farWins.push([hx, hy, hw, hh]);
   }
   // water tower with the town name
   const wt = atmos('#9DB4DA', hz, 0.35);
@@ -293,8 +340,9 @@ export function street(o = {}) {
   far += path('M1500 382 L1554 350 L1608 382 Z', { fill: atmos('#6F86B4', hz, 0.38) });
   far += text(1554, 446, 'PINEWOOD', { fontFamily: FONT.title, fontSize: 22, fill: atmos('#FFFFFF', hz, 0.15), textAnchor: 'middle', letterSpacing: 1 });
   far += path(`M${X0} 672 Q 300 640 700 668 T 1500 660 T ${X1} 664 V 760 H ${X0} Z`, { fill: atmos('#57C25A', hz, 0.3) });
-  // --- mid (depth 0.75): lawns, houses, trees, fences
-  let mid = '';
+  // --- mid (depth 0.75): lawns, houses, trees  |  yard (same depth): the props standing at the front of the lawns
+  let mid = '', yard = '';
+  const T = STREET.trees, treeAt = (k) => (live === k ? '' : tree(d, T[k].x, T[k].base, T[k].s, { seed: T[k].seed, leaf: T[k].leaf }));
   mid += rect(X0, lawnY, SW, walkY - lawnY + 10, { fill: d.lin(['#63D255', '#4CBF45']) });
   mid += rect(X0, lawnY, SW, 5, { fill: '#8BE07A', opacity: 0.8 });
   // lawn texture: soft darker tufts
@@ -302,15 +350,15 @@ export function street(o = {}) {
   for (let i = 0; i < 60; i++) { const tx = X0 + RL() * SW, ty = lawnY + 20 + RL() * 80; if (tx > 1050 && tx < 1700) continue; mid += path(`M${f(tx)} ${f(ty)}l6 -12l6 12l6 -9l5 9`, { fill: 'none', ...st('#42AE3E', 3), opacity: 0.6 }); }
   // houses, back to front
   mid += house(d, { x: -440, base, w: 330, h: 250, body: '#CDB8F4', roof: '#7558D4', door: '#FF8A5C', wins: [[40, 70, 90, 80], [200, 70, 90, 80]], chimney: true });
-  mid += tree(d, -60, base + 6, 1.05, { seed: 4 });
+  mid += treeAt('left');
   // Sam's house (the family): butter yellow, coral roof, teal door
   mid += house(d, { x: 60, base, w: 410, h: 280, body: '#FFE08F', roof: '#F0645A', door: '#2FA3A0', chimney: 'left', attic: true, doorAt: 300,
     wins: [[40, 70, 110, 96, '#FF9FB2'], [176, 70, 76, 96, '#8AD0FF']] });
-  mid += gnome(d, 236, walkY - 40);
-  mid += fence(d, 40, 500, walkY - 6, 66, '#FFFFFF');
-  mid += tree(d, 560, base + 6, 1.1, { seed: 5, leaf: '#47BE3E' });
+  yard += gnome(d, 236, walkY - 40);
+  yard += fence(d, 40, 500, walkY - 6, 66, '#FFFFFF');
+  mid += treeAt('sam');
   mid += house(d, { x: 640, base, w: 340, h: 250, body: '#9FD0FF', roof: '#3C62C8', door: '#FFC23D', chimney: true, doorAt: 260, wins: [[30, 64, 90, 90, '#FFFFFF'], [130, 64, 70, 90, '#FFFFFF']] });
-  mid += bush(d, 640, walkY - 4, 150, 64, '#3FAF4A') + bush(d, 860, walkY - 4, 120, 56, '#47B84C');
+  yard += bush(d, 640, walkY - 4, 150, 64, '#3FAF4A') + bush(d, 860, walkY - 4, 120, 56, '#47B84C');
   // Kevin's modern house + the perfect lawn
   const kx = 1120, kw = 500;
   const stripeW = 46;
@@ -324,12 +372,12 @@ export function street(o = {}) {
     wins: [[260, 44, 210, 92], [40, 44, 170, 92]], garage: [400 - 380, 210, 150] });
   // perfect cube hedges (Kevin trims them with a ruler)
   for (const hx of [405, 510]) mid += pbox(d, kx + hx - 10, base - 20, 92, 58, '#2FAE55', { r: 10, sw: SWM, glossOp: 0.35 });
-  mid += sign(d, kx - 20, walkY - 18, ['KEEP OFF', 'THE GRASS'], { w: 150, h: 76 });
+  yard += sign(d, kx - 20, walkY - 18, ['KEEP OFF', 'THE GRASS'], { w: 150, h: 76 });
   // twinkles over the perfect lawn
-  [[kx + 60, 760, 14], [kx + 250, 740, 10], [kx + 380, 782, 12], [kx + 520, 748, 9], [kx + 150, 790, 8]].forEach(([tx, ty, r]) => { mid += twinkle(tx, ty, r, '#FFFFFF', 0.95); });
-  mid += tree(d, 1730, base + 6, 1.0, { seed: 9, leaf: '#4BC240' });
+  [[kx + 60, 760, 14], [kx + 250, 740, 10], [kx + 380, 782, 12], [kx + 520, 748, 9], [kx + 150, 790, 8]].forEach(([tx, ty, r]) => { const tw = twinkle(tx, ty, r, '#FFFFFF', nk > 0 ? 0.95 * (1 - nk) : 0.95); if (o.split) mid += tw; else yard += tw; });
+  mid += treeAt('kevin');
   mid += house(d, { x: 1830, base, w: 380, h: 270, body: '#FFC4A6', roof: '#8C5BE0', door: '#3D7FEA', chimney: true, attic: true, doorAt: 80, wins: [[160, 70, 90, 90, '#FFE08A'], [270, 70, 90, 90, '#FFE08A']] });
-  mid += bush(d, 1990, walkY - 4, 200, 60, '#3FAF4A');
+  yard += bush(d, 1990, walkY - 4, 200, 60, '#3FAF4A');
   mid += house(d, { x: 2270, base, w: 300, h: 240, body: '#A9E8CF', roof: '#2E9C7A', wins: [[40, 60, 90, 80]] });
   // --- near (depth 1.0): sidewalk, curb, road, street props
   let near = '';
@@ -347,12 +395,140 @@ export function street(o = {}) {
   near += lamp(d, 600, walkY + 34);
   near += bin(d, -200, walkY + 40, '#2FAE55') + bin(d, -110, walkY + 40, '#3D7FEA');
   near += hydrant(d, 2120, walkY + 36);
+  if (nk > 0) return streetNight(d, { skyL, far, mid, yard, near, farWins }, nk, o);
   return finish(d, [
     { name: 'sky', depth: 0.08, svg: skyL },
     { name: 'far', depth: 0.3, svg: far },
-    { name: 'mid', depth: 0.75, svg: mid },
+    ...(o.split ? [{ name: 'mid', depth: 0.75, svg: mid }, { name: 'yard', depth: 0.75, svg: yard }] : [{ name: 'mid', depth: 0.75, svg: mid + yard }]),
     { name: 'near', depth: 1.0, svg: near },
   ], o);
+}
+
+/** the night street: map the day layers, then add what only exists at night (drawn in real colours) */
+function streetNight(d, L, k, o) {
+  const tag = 'n' + Math.round(k * 100);
+  const N = (s) => nightify(s, k, tag);
+  const dn = new Defs(); // night-only defs (not mapped)
+  const op = (v) => f(v * k * 100) / 100;
+  // sky: violet night gradient over the mapped day sky, stars, a moon with a halo
+  const M = STREET;
+  let sky = N(L.skyL);
+  sky += rect(X0, -200, SW, 940, { fill: dn.lin([[0, '#100F38'], [0.5, '#24236A'], [1, '#4A3F8E']], [0, -200, 0, 740], 'userSpaceOnUse'), opacity: op(1) });
+  const RS = rng(61);
+  for (let i = 0; i < 90; i++) {
+    const sx = X0 + RS() * SW, sy = -180 + RS() * 560, r = 2.5 + RS() * 6.5;
+    sky += RS() < 0.72 ? circle(sx, sy, r * 0.45, { fill: '#FFFFFF', opacity: op(0.35 + RS() * 0.45) }) : twinkle(sx, sy, r * 1.2, '#FFFFFF', op(0.55 + RS() * 0.45));
+  }
+  // clouds again, as dim violet shapes (the mapped day clouds sit under the night gradient)
+  for (const [cx, cy, s, seed] of [[-120, 190, 0.8, 11], [760, 170, 0.95, 12], [1330, 290, 0.65, 13], [1840, 160, 0.9, 14], [2300, 250, 0.75, 15]]) sky += g(cloud(dn, cx, cy, s, seed, { base: '#4A4890', under: '#2E2C6A' }), { opacity: op(0.45) });
+  const mx = 1560, my = 150;
+  sky += circle(mx, my, 260, { fill: dn.rad([[0, '#C9D4FF', 0.42], [0.4, '#B8C4FF', 0.14], [1, '#B8C4FF', 0]]), opacity: op(1) });
+  sky += g(path(`M${mx + 18} ${my - 64}A66 66 0 1 0 ${mx + 58} ${my + 44}A54 54 0 1 1 ${mx + 18} ${my - 64}Z`, { fill: dn.lin(['#FFFBE6', '#FFE9A6']), stroke: '#E8C978', strokeWidth: 2 }) +
+    path(`M${mx - 38} ${my - 30}A52 52 0 0 0 ${mx - 30} ${my + 32}`, { fill: 'none', ...st('#FFFFFF', 6), opacity: 0.6 }), { opacity: op(1) });
+  // far: a handful of lit windows in the sleeping town (most of Pinewood is asleep)
+  let far = N(L.far);
+  L.farWins.forEach(([hx, hy, hw, hh], i) => { if (i % 6 === 2) far += rect(hx + hw * 0.36, hy - hh + 14, 16, 14, { rx: 3, fill: '#FFD36A', opacity: op(0.9) }); });
+  // mid: Sam's window lit from inside (warm lamp + a cool phone flicker), curtains backlit; Kevin's security camera LED
+  let mid = N(L.mid);
+  const sw = M.samWindow, wx = sw.x, wy = sw.y, ww = sw.w, wh = sw.h;
+  let lit = path(rrPath(wx, wy, ww, wh, 5), { fill: dn.lin(['#FFF0C2', '#FFC56A', '#FF9F5A']) });
+  lit += ellipse(wx + ww * 0.55, wy + wh * 0.62, ww * 0.34, wh * 0.3, { fill: dn.rad([[0, '#D8F6FF', 0.85], [1, '#9FE0FF', 0]]) });
+  const cur = '#C0567E';
+  lit += path(`M${f(wx)} ${f(wy)}H${f(wx + ww * 0.24)}Q${f(wx + ww * 0.16)} ${f(wy + wh * 0.5)} ${f(wx + ww * 0.08)} ${f(wy + wh)}H${f(wx)}Z`, { fill: dn.lin([cur, shade(cur, -0.1)], 'h'), stroke: ink(cur), strokeWidth: 1.5 });
+  lit += path(`M${f(wx + ww)} ${f(wy)}H${f(wx + ww * 0.76)}Q${f(wx + ww * 0.84)} ${f(wy + wh * 0.5)} ${f(wx + ww * 0.92)} ${f(wy + wh)}H${f(wx + ww)}Z`, { fill: dn.lin([shade(cur, -0.1), cur], 'h'), stroke: ink(cur), strokeWidth: 1.5 });
+  const frameC = nightColor('#FFFFFF', k);
+  lit += rect(wx + ww / 2 - 3.5, wy, 7, wh, { fill: frameC }) + rect(wx, wy + wh / 2 - 3.5, ww, 7, { fill: frameC });
+  lit += poly([[wx + ww * 0.12, wy + wh], [wx + ww * 0.5, wy], [wx + ww * 0.68, wy], [wx + ww * 0.3, wy + wh]], { fill: '#FFFFFF', opacity: 0.22 });
+  mid += g(lit, { opacity: op(1) });
+  mid += circle(M.kevinHouse.x + 486, M.kevinHouse.top + 30, 5, { fill: '#FF3B4A', opacity: op(1) }) + circle(M.kevinHouse.x + 486, M.kevinHouse.top + 30, 14, { fill: dn.rad([[0, '#FF3B4A', 0.6], [1, '#FF3B4A', 0]]), opacity: op(1) });
+  const yard = N(L.yard);
+  // near: mapped props, the street lamp switched on (head, cone, pool on the sidewalk)
+  let near = N(L.near);
+  const lx = M.lamp.x, ly = M.lamp.y;
+  near += ellipse(lx, ly + 4, 18, 6, { fill: '#FFF4C4', opacity: op(1) });
+  near += poly([[lx - 20, ly + 8], [lx + 20, ly + 8], [lx + 190, M.walkY + 64], [lx - 190, M.walkY + 64]], { fill: dn.lin([[0, '#FFE9A8', 0.26], [0.7, '#FFE9A8', 0.06], [1, '#FFE9A8', 0]]), opacity: op(1) });
+  near += ellipse(lx, M.walkY + 44, 230, 40, { fill: dn.rad([[0, '#FFE6A0', 0.42], [0.6, '#FFE6A0', 0.14], [1, '#FFE6A0', 0]]), opacity: op(1) });
+  near += circle(lx, ly + 8, 120, { fill: dn.rad([[0, '#FFF0B8', 0.5], [0.3, '#FFE4A0', 0.16], [1, '#FFE4A0', 0]]), opacity: op(1) });
+  // light (screen pools, live, depth 0.75): the glow around Sam's window and its spill on the lawn and fence
+  let light = '';
+  light += circle(sw.cx, sw.cy, 170, { fill: dn.rad([[0, '#FFD98A', 0.5], [0.35, '#FFC46A', 0.2], [1, '#FFC46A', 0]]), style: 'mix-blend-mode:screen', opacity: op(1) });
+  light += ellipse(sw.cx + 10, M.walkY - 34, 200, 60, { fill: dn.rad([[0, '#FFD27A', 0.42], [0.55, '#FFD27A', 0.14], [1, '#FFD27A', 0]]), style: 'mix-blend-mode:screen', opacity: op(1) });
+  // grade: the night vignette (bible: vignette only on night / sky shots)
+  const grade = rect(-40, -40, W + 80, H + 80, { fill: dn.rad([[0.55, '#0C0A26', 0], [1, '#0C0A26', 0.5]], 0.5, 0.5, 0.75), opacity: op(1) });
+  const defs = nightify(String(d), k, tag) + String(dn);
+  return finish(defs, [
+    { name: 'sky', depth: 0.08, svg: sky },
+    { name: 'far', depth: 0.3, svg: far },
+    ...(o.split ? [{ name: 'mid', depth: 0.75, svg: mid }, { name: 'yard', depth: 0.75, svg: yard }] : [{ name: 'mid', depth: 0.75, svg: mid + yard }]),
+    { name: 'light', depth: 0.75, svg: light },
+    { name: 'near', depth: 1.0, svg: near },
+    { name: 'grade', depth: 0, svg: grade },
+  ], o);
+}
+
+/** A street tree that can flip upside down (S00-L002). Rotates about the point halfway up its above-ground height, so
+ *  at angle 180 it stands on its canopy exactly where it stood, roots in the air. Same look as tree() at angle 0.
+ *  o: { x, base, s, seed, leaf }  (STREET.trees.*) plus
+ *     angle   degrees, 0 upright .. 180 upside down (either sign)
+ *     hop     px the tree jumps up mid-flip (e.g. 120 * sin(pi * p))
+ *     roots   0..1 how far the roots are pulled out (default: grows with |angle| over the first 25 deg)
+ *     soil    seconds since the roots came up: clods of soil drop off the root ball and bounce on the lawn
+ *     ground  lawn y for the clods (default base)
+ *  Returns a self-contained string (own defs). Insert it at the tree's depth (0.75) after 'mid'. */
+export function flipTree(o = {}) {
+  const d = new Defs();
+  const { x = 1730, base = 710, s = 1, seed = 9, leaf = '#4BC240' } = o;
+  const ang = o.angle ?? 0, hop = o.hop ?? 0;
+  const roots = clamp(o.roots ?? Math.abs(ang) / 25);
+  const Htop = (150 + 70 + 30 + 86) * s; // canopy top above the base
+  const px = x, py = base - Htop / 2 - hop;
+  const trunk = '#9A6238', soilC = '#7A4E2E';
+  let rt = '';
+  if (roots > 0) {
+    // chunky toy roots: 5 tapered, rounded roots out of a soil root ball (they come out of the ground with the trunk)
+    const k = roots, R = rng(seed * 7 + 1), rc = shade(trunk, -0.02), rl = ink(trunk);
+    const taper = (x0, y0, x1, y1, bend, w0, w1) => {
+      const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+      const mx = (x0 + x1) / 2 + nx * bend, my = (y0 + y1) / 2 + ny * bend;
+      return `M${f(x0 + nx * w0)} ${f(y0 + ny * w0)}Q${f(mx + nx * (w0 + w1) / 2)} ${f(my + ny * (w0 + w1) / 2)} ${f(x1 + nx * w1)} ${f(y1 + ny * w1)}` +
+        `A${f(w1)} ${f(w1)} 0 0 1 ${f(x1 - nx * w1)} ${f(y1 - ny * w1)}Q${f(mx - nx * (w0 + w1) / 2)} ${f(my - ny * (w0 + w1) / 2)} ${f(x0 - nx * w0)} ${f(y0 - ny * w0)}Z`;
+    };
+    const roots5 = [[-88, 46, -14], [-44, 92, -10], [8, 104, 8], [52, 86, 12], [92, 40, 14]];
+    roots5.forEach(([tx, ty, bend], i) => {
+      const x1 = x + tx * s * k, y1 = base + 20 * s * k + ty * s * k;
+      const dd = taper(x + tx * 0.18 * s, base + 18 * s * k, x1, y1, bend * s, (i === 2 ? 15 : 13) * s, 4.5 * s);
+      rt += path(dd, { fill: d.lin([shade(rc, 0.05), shade(rc, -0.06)]), stroke: rl, strokeWidth: SWM * 0.9, strokeLinejoin: 'round' });
+      // a small side root
+      const sx = lerp(x + tx * 0.18 * s, x1, 0.55), sy = lerp(base + 18 * s * k, y1, 0.55), sd = tx >= 0 ? 1 : -1;
+      if (i !== 2) rt += path(taper(sx, sy, sx + sd * 30 * s * k, sy + 14 * s * k, -6 * s * sd, 6 * s, 2.5 * s), { fill: rc, stroke: rl, strokeWidth: 2.5, strokeLinejoin: 'round' });
+    });
+    // soil root ball hugging the root crown, a few crumbs, and a tuft of lawn still attached
+    rt += blob(d, [[x - 34 * s, base + 18 * s * k, 34 * s], [x + 30 * s, base + 20 * s * k, 32 * s], [x, base + 34 * s * k, 36 * s]], soilC, { sw: SWM, hiOp: 0.35, glossOp: 0.25 });
+    for (let i = 0; i < 7; i++) rt += circle(x + (R() - 0.5) * 80 * s, base + (12 + R() * 36) * s * k, (3.5 + R() * 4) * s, { fill: shade(soilC, -0.08), opacity: 0.85 });
+    for (const [gx, gr] of [[-40, -18], [-14, -6], [22, 10]]) rt += path(`M${f(x + gx * s)} ${f(base + 2 * s)}l${f(-4 * s)} ${f(-14 * s)}l${f(8 * s)} ${f(8 * s)}l${f(4 * s)} ${f(-16 * s)}l${f(5 * s)} ${f(17 * s)}`, { fill: 'none', ...st('#4CBF45', 5 * s), transform: `rotate(${gr} ${f(x + gx * s)} ${f(base)})` });
+  }
+  const body = rt + tree(d, x, base, s, { seed, leaf });
+  let out = contact(x, base + 4, (ang ? 90 : 0) * s, 12 * s, 0.22 * clamp(Math.abs(ang) / 40)); // ground shadow while it is off the ground
+  out += g(body, { transform: `translate(${f(px)} ${f(py)}) rotate(${f(ang)}) translate(${f(-x)} ${f(-(base - Htop / 2))})` });
+  // soil clods: fall from the upside-down root ball (closed form, one bounce, then rest)
+  if (o.soil > 0) {
+    const t = o.soil, gy = o.ground ?? base, R = rng(seed * 13 + 5), grav = 2600;
+    const a = (ang * Math.PI) / 180, rootY = -(Htop / 2 + 30 * s); // root ball, relative to the pivot, at angle 180 it is above
+    for (let i = 0; i < 14; i++) {
+      const t0 = R() * 0.5, tt = t - t0; const ox = (R() - 0.5) * 80 * s, r = (5 + R() * 9) * s, vx = (R() - 0.5) * 260;
+      if (tt <= 0) continue;
+      const sx = px + ox * Math.cos(a) - rootY * Math.sin(a), sy = py + ox * Math.sin(a) + rootY * Math.cos(a);
+      const tFall = Math.sqrt(Math.max(0, (2 * (gy - sy)) / grav));
+      let cx, cy;
+      if (tt < tFall) { cx = sx + vx * tt; cy = sy + 0.5 * grav * tt * tt; }
+      else {
+        const vb = grav * tFall * 0.28, tb = tt - tFall, tUp = (2 * vb) / grav;
+        cx = sx + vx * tFall + vx * 0.4 * Math.min(tb, tUp); cy = tb < tUp ? gy - (vb * tb - 0.5 * grav * tb * tb) : gy;
+      }
+      out += blob(d, [[cx, cy - r, r], [cx + r * 0.6, cy - r * 0.7, r * 0.7]], soilC, { sw: 2.5, gloss: false, hiOp: 0.3 });
+    }
+  }
+  return String(d) + out;
 }
 
 // ======================================================================================
@@ -362,9 +538,9 @@ export function bedroom(o = {}) {
   const d = new Defs();
   const floorY = 800, wainY = 600;
   const wall = '#4C3E84', wallLo = '#3E3373';
-  // --- far: the window view (night sky, moon, stars, sleeping houses)
+  // --- far: the window view (night sky, moon, stars, sleeping houses), padded 200 px around the hole for parallax
   const wx = 1250, wy = 110, ww = 470, wh = 420;
-  let far = '';
+  let far = viewPad(d, 0);
   far += rect(wx, wy, ww, wh, { fill: d.lin(['#141B4A', '#24306E', '#3A4690']) });
   const RS = rng(31);
   for (let i = 0; i < 26; i++) far += twinkle(wx + RS() * ww, wy + RS() * wh * 0.7, 3 + RS() * 6, '#FFFFFF', 0.5 + RS() * 0.5);
@@ -376,9 +552,12 @@ export function bedroom(o = {}) {
     far += rect(hx, hy, 80, 70, { fill: '#30387A' }) + poly([[hx - 8, hy], [hx + 40, hy - 30], [hx + 88, hy]], { fill: '#262C64' });
     far += rect(hx + 28, hy + 22, 22, 20, { fill: i === 2 ? '#FFD36A' : '#3E4890', rx: 3 });
   }
+  if (o.birds) far += branch(d, 0);
   // --- mid: the room shell and furniture
   let mid = '';
   const bHole = [[wx, wy, ww, wh, 4]];
+  mid += ceiling(d, wall);
+  mid += rect(X0, BEDROOM.ceilY, SW, -40 - BEDROOM.ceilY + 1, { fill: shade(wall, 0.02) }) + rect(X0, BEDROOM.ceilY, SW, -40 - BEDROOM.ceilY + 1, { fill: gearPattern(d, wall, 110) });
   mid += holed(X0, -40, SW, wainY + 40, bHole, { fill: d.lin([shade(wall, 0.02), wallLo]) });
   mid += holed(X0, -40, SW, wainY + 40, bHole, { fill: gearPattern(d, wall, 110) });
   mid += rect(X0, wainY, SW, floorY - wainY, { fill: d.lin(['#38488E', '#2E3C7C']) });
@@ -387,7 +566,8 @@ export function bedroom(o = {}) {
   mid += rect(X0, floorY - 24, SW, 24, { fill: '#5A6BB4' }) + rect(X0, floorY - 24, SW, 4, { fill: '#8A9AD8', opacity: 0.5 });
   // floor planks
   mid += rect(X0, floorY, SW, H - floorY + 40, { fill: d.lin(['#3A3468', '#2A2652']) });
-  for (let yy = floorY + 40, k = 0; yy < H + 40; yy += 46 + k * 8, k++) {
+  mid += rect(X0, H + 39, SW, BEDROOM.floorEnd - H - 39, { fill: '#2A2652' }); // floor under a wide framing
+  for (let yy = floorY + 40, k = 0; yy < BEDROOM.floorEnd; yy += 46 + k * 8, k++) {
     mid += rect(X0, yy, SW, 3, { fill: '#221E44', opacity: 0.7 });
     for (let xx = X0 + (k % 2) * 120; xx < X1; xx += 240) mid += rect(xx, yy - 46 - k * 6, 3, 46 + k * 6, { fill: '#221E44', opacity: 0.45 });
   }
@@ -444,10 +624,13 @@ export function bedroom(o = {}) {
   mid += pbox(d, bx + 12, bTop + 250, bw - 24, 60, '#DCE2FA', { r: 18, sw: SWM, glossOp: 0.3 });
   const bl = '#2F4FB8';
   const blanket = `M${bx - 4} ${bTop + 300}Q${bx + bw / 2} ${bTop + 272} ${bx + bw + 4} ${bTop + 300}L${bx + bw + 30} ${floorY + 90}Q${bx + bw / 2} ${floorY + 110} ${bx - 30} ${floorY + 90}Z`;
-  mid += path(blanket, { fill: d.lin([shade(bl, 0.05), shade(bl, -0.06)]), stroke: ink(bl), strokeWidth: SWM, strokeLinejoin: 'round' });
-  mid += g(rect(bx - 40, bTop + 260, bw + 80, 400, { fill: d.pattern(120, 100, path(gearPath(30, 30, 16, 11, 8, 0, 0.5), { fill: '#5A7AE0', opacity: 0.55 }) + circle(30, 30, 5, { fill: bl }) + twinkle(90, 76, 8, '#7F9CF0', 0.55)) }), { clipPath: d.clip(path(blanket)) });
-  mid += path(`M${bx + 10} ${bTop + 300}Q${bx + bw / 2} ${bTop + 274} ${bx + bw - 10} ${bTop + 300}`, { fill: 'none', ...st('#FFFFFF', 8), opacity: 0.3 });
-  mid += path(`M${bx + 20} ${bTop + 330}Q${bx + bw / 2} ${bTop + 306} ${bx + bw - 20} ${bTop + 330}`, { fill: 'none', ...st('#8FA8FF', 22), opacity: 0.5 });
+  const sit = o.blanket === 'sit';
+  if (!sit) {
+    mid += path(blanket, { fill: d.lin([shade(bl, 0.05), shade(bl, -0.06)]), stroke: ink(bl), strokeWidth: SWM, strokeLinejoin: 'round' });
+    mid += g(rect(bx - 40, bTop + 260, bw + 80, 400, { fill: d.pattern(120, 100, path(gearPath(30, 30, 16, 11, 8, 0, 0.5), { fill: '#5A7AE0', opacity: 0.55 }) + circle(30, 30, 5, { fill: bl }) + twinkle(90, 76, 8, '#7F9CF0', 0.55)) }), { clipPath: d.clip(path(blanket)) });
+    mid += path(`M${bx + 10} ${bTop + 300}Q${bx + bw / 2} ${bTop + 274} ${bx + bw - 10} ${bTop + 300}`, { fill: 'none', ...st('#FFFFFF', 8), opacity: 0.3 });
+    mid += path(`M${bx + 20} ${bTop + 330}Q${bx + bw / 2} ${bTop + 306} ${bx + bw - 20} ${bTop + 330}`, { fill: 'none', ...st('#8FA8FF', 22), opacity: 0.5 });
+  }
   // nightstand + alarm clock 2:13 (red glow)
   const nx = 220, ny = 640;
   mid += pbox(d, nx, ny, 210, 200, '#6A58B4', { r: 12, sw: SWM });
@@ -456,7 +639,7 @@ export function bedroom(o = {}) {
   mid += circle(nx + 105, ny - 40, 120, { fill: d.rad([[0, '#FF3B5C', 0.45], [1, '#FF3B5C', 0]]), style: 'mix-blend-mode:screen' });
   mid += pbox(d, nx + 34, ny - 86, 142, 86, '#3A2E6A', { r: 18, sw: SWN });
   mid += rect(nx + 50, ny - 72, 110, 54, { rx: 10, fill: '#160C24' });
-  mid += text(nx + 105, ny - 31, '2:13', { fontFamily: FONT.title, fontSize: 44, fill: '#FF4A5E', textAnchor: 'middle', filter: d.glow('#FF2A4A', 5, 0.9), letterSpacing: 2 });
+  mid += text(nx + 105, ny - 31, esc(o.clock ?? '2:13'), { fontFamily: FONT.title, fontSize: 44, fill: '#FF4A5E', textAnchor: 'middle', filter: d.glow('#FF2A4A', 5, 0.9), letterSpacing: 2 });
   mid += circle(nx + 160, ny - 92, 9, { fill: '#5A4A90', stroke: ink('#3A2E6A'), strokeWidth: 2 }) + circle(nx + 50, ny - 92, 9, { fill: '#5A4A90', stroke: ink('#3A2E6A'), strokeWidth: 2 });
   // headphones stand? -> a glass of water + headphones charging
   mid += pbox(d, nx + 6, ny - 52, 22, 52, '#9FD8FF', { r: 4, sw: 2, glossOp: 0.6 });
@@ -472,7 +655,8 @@ export function bedroom(o = {}) {
   light += poly([[wx + 10, wy + wh], [wx + ww - 10, wy + wh], [1840, 1080], [1100, 1080]], { fill: d.lin([[0, '#BFD2FF', 0.3], [1, '#BFD2FF', 0.04]]), style: 'mix-blend-mode:screen' });
   light += ellipse(1460, 960, 300, 62, { fill: d.rad([[0, '#D8E4FF', 0.45], [1, '#D8E4FF', 0]]), style: 'mix-blend-mode:screen' });
   const pgx = o.phone?.x ?? 830, pgy = o.phone?.y ?? 660;
-  light += circle(pgx, pgy, 360, { fill: d.rad([[0, '#BFF2FF', 0.62], [0.25, '#8FD8FF', 0.32], [1, '#6FB8FF', 0]]), style: 'mix-blend-mode:screen' });
+  const sunK = ease.inOutSine(seg(clamp(o.sun ?? 0), 0.15, 0.6));
+  const phone = sunK >= 1 ? '' : circle(pgx, pgy, 360, { fill: d.rad([[0, '#BFF2FF', 0.62], [0.25, '#8FD8FF', 0.32], [1, '#6FB8FF', 0]]), style: 'mix-blend-mode:screen', opacity: sunK > 0 ? f((1 - sunK) * 100) / 100 : undefined });
   // --- near: framing props on the floor (laundry, a ball, comics), darker as they are out of the light
   let near = '';
   near += path(`M-120 ${H + 20}Q-60 960 60 990Q150 940 240 1000Q300 1030 330 ${H + 20}Z`, { fill: d.lin(['#5A4FA0', '#3E3680']), stroke: ink('#3E3680'), strokeWidth: SWN, strokeLinejoin: 'round' });
@@ -483,13 +667,256 @@ export function bedroom(o = {}) {
   near += pbox(d, 2040, 1000, 220, 40, '#E5303D', { r: 6, sw: SWN }) + pbox(d, 2060, 966, 200, 36, '#25AEF2', { r: 6, sw: SWN });
   // night grade: a soft vignette (bible: vignette only on night POV/sky shots)
   const vig = rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.55, '#120C2E', 0], [1, '#120C2E', 0.5]], 0.5, 0.5, 0.75) });
-  return finish(d, [
+  const layers = [
     { name: 'far', depth: 0.3, svg: far },
     { name: 'mid', depth: 0.75, svg: mid },
+    ...(sit ? [{ name: 'blanket', depth: 0.75, svg: bedBlanket({ cx: o.blanketX, top: o.blanketTop }) }] : []),
     { name: 'light', depth: 0.75, svg: light },
+    { name: 'phone', depth: 0.75, svg: phone },
     { name: 'near', depth: 1.0, svg: near },
     { name: 'grade', depth: 0, svg: vig },
-  ], o);
+  ];
+  // birds on the branch outside (per-frame layer) and the sun flare (per-frame layers), baked in for stills
+  const sun = clamp(o.sun ?? 0);
+  const extra = [];
+  if (sun > 0) extra.push(...bedroomSun(sun));
+  if (o.birds) extra.push(...bedroomBirds(o.birds === true ? birdState(sun) : o.birds, sun)); // after windowSun
+  if (!extra.length) return finish(d, layers, o);
+  const out = [];
+  for (const l of layers) {
+    if (!(l.name === 'grade' && sun > 0)) out.push(l);
+    for (const e of extra) if (e.after === l.name) out.push(e);
+  }
+  return finish(d, out, o);
+}
+
+// ---------- bedroom anchors and per-frame pieces ----------
+// sam:     Sam sitting up in bed (bedroom({blanket: 'sit'})): toon('sam', {x, y, s, legs: false, pose: posePreset('bedSit')})
+//          inserted after 'mid' (the 'blanket' layer then covers him up to the chest). hipY = mattress line;
+//          y = hipY - toonHipY('sam') * s. chestY = where the blanket fold sits (blanketTop default).
+// ceilY:   underside of the ceiling (crown moulding); the wall runs up to it, the ceiling plane goes up to -1400.
+//          A default framing never shows it; zoom 0.7 (the widest that stays inside X0..X1) shows ~190 px of ceiling.
+//          floorEnd: the floor's far edge.
+// window:  the window hole; moon: centre / radius of the moon disc (the sun flares from here)
+// birds:   perch points [x, y(feet), dir] on the branch outside (depth 0.3), clock: the 2:13 display centre
+export const BEDROOM = {
+  sam: { x: 830, y: 926, s: 1.55, hipY: 740, chestY: 668, phone: [839, 647] },
+  ceilY: -70, floorEnd: 1600,
+  window: { x: 1250, y: 110, w: 470, h: 420 }, moon: { x: 1595, y: 220, r: 62 },
+  birds: [[1322, 400, 1], [1400, 400, 1], [1572, 395, -1]],
+  clock: { x: 325, y: 609 },
+  bed: { x: 470, w: 720, top: 470, mattressY: 720 },
+};
+const VIEW = BEDROOM.window, PAD = 220;
+
+/** the window view outside the original hole (sky, stars, hill, houses), u = 0 night .. 1 day */
+function viewPad(d, u) {
+  const { x: wx, y: wy, w: ww, h: wh } = VIEW;
+  const sky = [mix('#141B4A', '#3E9CFA', u), mix('#24306E', '#7CC6FC', u), mix('#3A4690', '#CFEFFF', u)];
+  let s = rect(wx - PAD, wy - PAD, ww + PAD * 2, wh + PAD * 2, { fill: d.lin([[0, sky[0]], [0.5, sky[1]], [1, sky[2]]], [0, wy, 0, wy + wh], 'userSpaceOnUse') });
+  const R = rng(37);
+  for (let i = 0; i < 40; i++) {
+    const x = wx - PAD + R() * (ww + PAD * 2), y = wy - PAD + R() * (wh * 0.7 + PAD), r = 3 + R() * 6, op = 0.5 + R() * 0.5;
+    if (x > wx && x < wx + ww && y > wy && y < wy + wh) continue;
+    if (u < 1) s += twinkle(x, y, r, '#FFFFFF', f(op * (1 - u) * 100) / 100);
+  }
+  s += path(`M${wx - PAD} ${wy + 320} Q ${wx - 100} ${wy + 300} ${wx} ${wy + 330} L ${wx} ${wy + wh + PAD} H ${wx - PAD} Z`, { fill: mix('#2A2F6A', '#5CC48A', u) });
+  s += path(`M${wx + ww} ${wy + 300} Q ${wx + ww + 120} ${wy + 280} ${wx + ww + PAD} ${wy + 310} V ${wy + wh + PAD} H ${wx + ww} Z`, { fill: mix('#2A2F6A', '#5CC48A', u) });
+  s += rect(wx - PAD, wy + wh, ww + PAD * 2, PAD, { fill: mix('#2A2F6A', '#5CC48A', u) });
+  for (const [hx, hy] of [[wx - 150, wy + 352], [wx + ww + 40, wy + 340]]) {
+    s += rect(hx, hy, 80, 70, { fill: mix('#30387A', '#B9A7EE', u) }) + poly([[hx - 8, hy], [hx + 40, hy - 30], [hx + 88, hy]], { fill: mix('#262C64', '#6E58C8', u) });
+    s += rect(hx + 28, hy + 22, 22, 20, { fill: mix('#3E4890', '#D6EEFF', u), rx: 3 });
+  }
+  return s;
+}
+/** the branch outside Sam's window the birds sleep on (enters from the right edge) */
+function branch(d, u) {
+  const { x: wx, y: wy, w: ww } = VIEW;
+  const bark = mix('#2B2550', '#9A6238', u), leaf = mix('#26305E', '#47BE3E', u);
+  const y0 = wy + 296;
+  const bp = `M${wx + ww + PAD} ${y0 - 14}C${wx + ww - 40} ${y0 - 2} ${wx + 300} ${y0 + 8} ${wx + 40} ${y0 + 4}`;
+  let s = path(bp, { fill: 'none', ...st(ink(bark, 0.25), 26) }) + path(bp, { fill: 'none', ...st(bark, 19) });
+  s += path(`M${wx + 40} ${y0 + 4}C${wx + 220} ${y0 + 4} ${wx + 330} ${y0} ${wx + ww - 20} ${y0 - 6}`, { fill: 'none', ...st('#FFFFFF', 4), opacity: 0.18 + 0.12 * u });
+  s += path(`M${wx + 210} ${y0 + 6}q-34 -40 -78 -52`, { fill: 'none', ...st(ink(bark, 0.25), 13) }) + path(`M${wx + 210} ${y0 + 6}q-34 -40 -78 -52`, { fill: 'none', ...st(bark, 8) });
+  for (const [lx, ly, r, a] of [[wx + 128, y0 - 50, 18, -30], [wx + 60, y0 - 8, 20, 20], [wx + 460, y0 - 30, 22, -10], [wx + 520, y0 + 8, 20, 30], [wx + 250, y0 - 14, 15, -50]]) {
+    s += g(ellipse(0, 0, r * 1.5, r * 0.75, { fill: d.lin([shade(leaf, 0.06), shade(leaf, -0.06)]), stroke: ink(leaf, 0.28), strokeWidth: 2.5 }) + path(`M${f(-r * 1.3)} 0H${f(r * 1.2)}`, { fill: 'none', ...st(shade(leaf, -0.08), 2) }), { transform: `translate(${f(lx)} ${f(ly)}) rotate(${a})` });
+  }
+  return s;
+}
+/** default bird state for a sun value: asleep at night, awake from 0.25, singing from 0.5 */
+export function birdState(sun = 0) {
+  return { awake: seg(sun, 0.22, 0.42), sing: seg(sun, 0.45, 0.6), flap: [0, sun > 0.45 ? 0.8 : 0, sun > 0.45 ? 0.35 : 0], notes: sun > 0.5 ? 0.6 : 0 };
+}
+/** birds layer for the bedroom window (depth 0.3, after 'far'). st: {awake, sing, flap: number | [per bird], notes, t} */
+export function bedroomBirds(stt = {}, sun = 0) {
+  const cols = [['#4FA8F0', '#FFE6C4'], ['#FFC23D', '#FFF2C8'], ['#F2645A', '#FFE0CC']];
+  let s = '';
+  BEDROOM.birds.forEach(([x, y, dir], i) => {
+    const fl = Array.isArray(stt.flap) ? stt.flap[i] ?? 0 : stt.flap ?? 0;
+    s += bird(x, y, fl, { s: 1.15, dir, color: cols[i % 3][0], belly: cols[i % 3][1], awake: stt.awake ?? 0, sing: (stt.sing ?? 0) * (i === 1 ? 0.6 : 1), notes: stt.notes ? stt.notes + i * 0.37 : 0, night: 1 - seg(sun, 0.1, 0.55), seed: i + 1 });
+  });
+  return [{ name: 'birds', after: 'far', depth: 0.3, svg: s }];
+}
+/** Toy songbird standing on a perch at (x, y) (feet). flap 0..1 raises the wing; o: { s, dir (1 faces right),
+ *  color, belly, awake 0..1 (eyes open, head up; 0 = puffed asleep with a Z), sing 0..1 (beak open), notes (seconds of
+ *  song: music notes drift up and fade, 0 = none), night 0..1 (colour-mapped like the night street), seed } */
+export function bird(x, y, flap = 0, o = {}) {
+  const d = new Defs();
+  const s = o.s ?? 1, dir = o.dir ?? 1, c = o.color || '#4FA8F0', belly = o.belly || '#FFE6C4';
+  const aw = clamp(o.awake ?? 1), sg = clamp(o.sing ?? 0), fl = clamp(flap);
+  const puff = 1 + 0.12 * (1 - aw);
+  const sw = 2.6;
+  let b = '';
+  // feet
+  b += path('M-6 -2v-8M6 -2v-8M-11 0h10M1 0h10', { fill: 'none', ...st('#E58A2E', 3) });
+  // tail
+  b += path('M-22 -26L-44 -30L-40 -18Z', { fill: d.grad(c), stroke: ink(c), strokeWidth: sw, strokeLinejoin: 'round', transform: `rotate(${f(-10 + 14 * aw)} -22 -24)` });
+  // body
+  b += ellipse(0, -26, 26 * puff, 21 * puff, { fill: d.lin([shade(c, 0.06), shade(c, -0.07)]), stroke: ink(c), strokeWidth: sw });
+  b += ellipse(6, -20, 17 * puff, 13 * puff, { fill: d.lin([shade(belly, 0.03), shade(belly, -0.05)]) });
+  // head (drops into the shoulders when asleep)
+  const hy = -50 + 8 * (1 - aw), hx = 12;
+  b += circle(hx, hy, 15, { fill: d.lin([shade(c, 0.07), shade(c, -0.05)]), stroke: ink(c), strokeWidth: sw });
+  b += path(`M${hx - 8} ${hy - 12}q4 -8 12 -6`, { fill: 'none', ...st(shade(c, 0.1), 3) }); // little crest
+  b += ellipse(hx - 4, hy - 6, 6, 3, { fill: '#FFFFFF', opacity: 0.45 });
+  // beak: closed wedge, opens with sing
+  const ba = 4 + 22 * sg;
+  b += g(poly([[0, -2], [14, 0], [0, 3]], { fill: d.grad('#FFB43D'), stroke: '#B0701A', strokeWidth: 1.6, strokeLinejoin: 'round' }), { transform: `translate(${hx + 12} ${hy + 2}) rotate(${f(-ba / 2)})` });
+  b += g(poly([[0, -2], [12, 0], [0, 3]], { fill: d.grad('#FF9A2A'), stroke: '#B0701A', strokeWidth: 1.6, strokeLinejoin: 'round' }), { transform: `translate(${hx + 12} ${hy + 3}) rotate(${f(ba / 2)})` });
+  // eye: closed arc when asleep, round with a highlight when awake
+  if (aw < 0.5) b += path(`M${hx + 1} ${hy - 1}q4 4 8 0`, { fill: 'none', ...st('#1A1215', 2.4) });
+  else b += circle(hx + 5, hy - 2, 3.6, { fill: '#1A1215' }) + circle(hx + 6.2, hy - 3.3, 1.2, { fill: '#FFFFFF' });
+  b += circle(hx + 3, hy + 6, 3.2, { fill: '#FF8FA0', opacity: 0.5 });
+  // wing: folded at 0, raised at 1
+  b += g(path('M0 0C10 -4 24 2 26 12C14 16 2 12 0 0Z', { fill: d.lin([shade(c, -0.02), shade(c, -0.1)]), stroke: ink(c), strokeWidth: sw, strokeLinejoin: 'round' }), { transform: `translate(-12 -34) rotate(${f(-8 - 80 * fl)})` });
+  let out = g(b, { transform: `translate(${f(x)} ${f(y)}) scale(${f(dir * s * 1000) / 1000} ${f(s * 1000) / 1000})` });
+  if (aw < 0.3 && !(o.notes > 0)) out += text(x + dir * 30 * s, y - 70 * s, 'z', { fontFamily: FONT.title, fontSize: 20 * s, fill: '#DDE4FF', opacity: f((1 - aw / 0.3) * 80) / 100 });
+  if (o.notes > 0) {
+    const R = rng(o.seed || 1);
+    for (let i = 0; i < 3; i++) {
+      const tt = (o.notes * 0.9 + i / 3) % 1, nx = x + dir * (26 + 30 * tt + 6 * Math.sin(tt * 9 + i)) * s, ny = y - (66 + 70 * tt) * s;
+      const nc = ['#FF5596', '#FFD43B', '#7FE0FF'][(i + (o.seed || 0)) % 3], op = f(Math.sin(Math.PI * tt) * 100) / 100;
+      out += g(path('M0 0V-20L12 -24V-4', { fill: 'none', ...st(ink(nc, 0.3), 3.4) }) + ellipse(-3, 0, 5.5, 4.2, { fill: nc, stroke: ink(nc, 0.3), strokeWidth: 2, transform: 'rotate(-20)' }) + (i % 2 ? ellipse(9, -4, 5.5, 4.2, { fill: nc, stroke: ink(nc, 0.3), strokeWidth: 2, transform: 'rotate(-20 9 -4)' }) : ''),
+        { transform: `translate(${f(nx)} ${f(ny)}) scale(${f(s * (0.8 + 0.3 * R()) * 1000) / 1000}) rotate(${f((R() - 0.5) * 30)})`, opacity: op });
+    }
+  }
+  const all = String(d) + out;
+  return o.night > 0 ? nightify(all, o.night * 0.85, 'b' + Math.round(o.night * 100)) : all;
+}
+
+/** the blanket for Sam sitting up in bed, drawn ABOVE him: covers the bed from the fold (chest height at cx) down over
+ *  the foot end. o: { cx = BEDROOM.sam.x, top = BEDROOM.sam.chestY } (raise top to his chin for "under the blanket") */
+export function bedBlanket(o = {}) {
+  const d = new Defs();
+  const { x: bx, w: bw, top: bTop } = BEDROOM.bed, floorY = 800;
+  const cx = o.cx ?? BEDROOM.sam.x, top = o.top ?? BEDROOM.sam.chestY, edge = bTop + 300;
+  const bl = '#2F4FB8', sheet = '#E8ECFF';
+  // top edge: flat at the mattress, rising in a soft dome over Sam's lap and chest
+  const L = bx - 4, Rr = bx + bw + 4, hw = 150;
+  const topEdge = `M${L} ${edge}C${f(cx - hw * 1.9)} ${f(edge - 6)} ${f(cx - hw * 1.25)} ${f(top + 6)} ${f(cx - hw * 0.55)} ${f(top)}C${f(cx - hw * 0.2)} ${f(top - 6)} ${f(cx + hw * 0.2)} ${f(top - 6)} ${f(cx + hw * 0.55)} ${f(top)}C${f(cx + hw * 1.25)} ${f(top + 6)} ${f(cx + hw * 1.9)} ${f(edge - 6)} ${Rr} ${edge}`;
+  const body = topEdge + `L${bx + bw + 30} ${floorY + 90}Q${bx + bw / 2} ${floorY + 110} ${bx - 30} ${floorY + 90}Z`;
+  let s = path(body, { fill: d.lin([shade(bl, 0.05), shade(bl, -0.06)]), stroke: ink(bl), strokeWidth: SWM, strokeLinejoin: 'round' });
+  s += g(rect(bx - 40, top - 20, bw + 80, floorY + 140 - top, { fill: d.pattern(120, 100, path(gearPath(30, 30, 16, 11, 8, 0, 0.5), { fill: '#5A7AE0', opacity: 0.55 }) + circle(30, 30, 5, { fill: bl }) + twinkle(90, 76, 8, '#7F9CF0', 0.55)) }), { clipPath: d.clip(path(body)) });
+  // the sheet turned over the fold, a soft knee bump highlight and the drape over the foot end
+  const fold = `M${f(cx - hw * 1.05)} ${f(top + 26)}C${f(cx - hw * 0.6)} ${f(top - 2)} ${f(cx + hw * 0.6)} ${f(top - 2)} ${f(cx + hw * 1.05)} ${f(top + 26)}`;
+  s += path(fold, { fill: 'none', ...st(ink(sheet), 30) }) + path(fold, { fill: 'none', ...st(sheet, 24) }) + path(fold, { fill: 'none', ...st('#FFFFFF', 6), opacity: 0.7, transform: 'translate(0 -6)' });
+  s += path(`M${f(cx - hw * 0.9)} ${f(edge + 30)}Q${f(cx)} ${f(edge - 20)} ${f(cx + hw * 0.9)} ${f(edge + 30)}`, { fill: 'none', ...st('#8FA8FF', 18), opacity: 0.45 });
+  s += path(`M${bx + 10} ${edge + 36}Q${bx + bw / 2} ${edge + 14} ${bx + bw - 10} ${edge + 36}`, { fill: 'none', ...st('#8FA8FF', 22), opacity: 0.35 });
+  s += path(`M${f(cx - hw * 0.5)} ${f(top + 46)}Q${f(cx)} ${f(top + 30)} ${f(cx + hw * 0.5)} ${f(top + 46)}`, { fill: 'none', ...st('#FFFFFF', 7), opacity: 0.25 });
+  return String(d) + s;
+}
+
+/** ceiling above the bedroom wall: crown moulding at ceilY, plank lines receding up, a dome light, glow stars */
+function ceiling(d, wall) {
+  const cy = BEDROOM.ceilY, top = -1400, c = shade(wall, -0.06);
+  let s = rect(X0, top, SW, cy - top, { fill: d.lin([[0, shade(c, -0.05)], [1, shade(c, 0.03)]], [0, top, 0, cy], 'userSpaceOnUse') });
+  for (let yy = cy - 34, k = 0; yy > top; yy -= 40 + k * 14, k++) s += rect(X0, yy, SW, 3, { fill: shade(c, -0.07), opacity: 0.7 });
+  for (let i = -9; i <= 9; i++) s += line(960 + i * 150, cy, 960 + i * 150 * 3.2, top, { stroke: shade(c, -0.06), strokeWidth: 3, opacity: 0.45 });
+  // glow-in-the-dark stars stuck to the ceiling
+  for (const [x, y, r, a] of [[260, cy - 120, 16, 10], [520, cy - 200, 12, -8], [1180, cy - 150, 18, 20], [1580, cy - 260, 14, 4], [-120, cy - 230, 13, -14], [2050, cy - 140, 15, 8]]) {
+    s += path(starPts(x, y, 5, r, r * 0.45, -90 + a).map((p, i) => (i ? 'L' : 'M') + f(p[0]) + ' ' + f(p[1])).join('') + 'Z', { fill: '#C8F5B0', stroke: '#7FBF6A', strokeWidth: 2, opacity: 0.8 });
+  }
+  // dome light (off)
+  s += ellipse(830, cy - 170, 120, 26, { fill: d.lin(['#E8ECFF', '#B9C2EC']), stroke: ink('#B9C2EC'), strokeWidth: SWM });
+  s += ellipse(830, cy - 176, 70, 8, { fill: '#FFFFFF', opacity: 0.45 });
+  // crown moulding
+  s += pbox(d, X0, cy - 8, SW, 26, shade(wall, 0.1), { r: 4, sw: SWM, glossOp: 0.3 });
+  return s;
+}
+
+/** The sun flare (S00-L020), sun 0..1: the moon in the window brightens, fills, then flares into a sun with rays;
+ *  the sky outside goes from night to day; the room goes from moonlit blue to warm daylight (0.5) and blows out to
+ *  warm white (1): screen-blended warm wash, god rays through the panes, light pools on the floor and bed, bloom.
+ *  Returns per-frame insert layers for cam.set: [{name, after, depth, svg}]. Use with skip: ['grade'] (the returned
+ *  'sunGrade' is the night vignette fading out). */
+export function bedroomSun(sun = 0, o = {}) {
+  sun = clamp(sun);
+  const d = new Defs();
+  const { x: wx, y: wy, w: ww, h: wh } = VIEW, M = BEDROOM.moon;
+  const u = ease.inOutSine(seg(sun, 0.12, 0.62));      // night -> day sky
+  const fe = ease.outCubic(seg(sun, 0.08, 0.5));          // moon fills into a disc
+  const fl = ease.inOutSine(seg(sun, 0.3, 0.85));         // flare: size, rays, halo
+  const blow = ease.inCubic(seg(sun, 0.55, 1));           // blow-out
+  // --- window view at state u (depth 0.3)
+  let v = viewPad(d, u);
+  const sky = [mix('#141B4A', '#3E9CFA', u), mix('#24306E', '#7CC6FC', u), mix('#3A4690', '#CFEFFF', u)];
+  v += rect(wx, wy, ww, wh, { fill: d.lin([[0, sky[0]], [0.5, sky[1]], [1, sky[2]]], [0, wy, 0, wy + wh], 'userSpaceOnUse') });
+  const RS = rng(31);
+  for (let i = 0; i < 26; i++) { const x = wx + RS() * ww, y = wy + RS() * wh * 0.7, r = 3 + RS() * 6, op = 0.5 + RS() * 0.5; if (u < 1) v += twinkle(x, y, r, '#FFFFFF', f(op * (1 - u) * 100) / 100); }
+  v += path(`M${wx} ${wy + 330} Q ${wx + 120} ${wy + 290} ${wx + 240} ${wy + 320} T ${wx + ww} ${wy + 300} V ${wy + wh} H ${wx} Z`, { fill: mix('#2A2F6A', '#5CC48A', u) });
+  const hb = ['#F3B4A0', '#B9A7EE', '#9CC8F7', '#F8E19A'], hr = ['#E76A5E', '#6E58C8', '#4A78D8', '#3FA27E'];
+  for (let i = 0; i < 4; i++) {
+    const hx = wx + 30 + i * 118, hy = wy + 345 + (i % 2) * 10;
+    v += rect(hx, hy, 80, 70, { fill: mix('#30387A', hb[i], u) }) + poly([[hx - 8, hy], [hx + 40, hy - 30], [hx + 88, hy]], { fill: mix('#262C64', hr[i], u) });
+    v += rect(hx + 28, hy + 22, 22, 20, { fill: i === 2 ? mix('#FFD36A', '#D6EEFF', u) : mix('#3E4890', '#D6EEFF', u), rx: 3 });
+  }
+  // moon -> sun
+  const r = M.r * (1 + 0.55 * fl), halo = lerp(130, 430, fl);
+  v += circle(M.x, M.y, halo, { fill: d.rad([[0, mix('#BFD0FF', '#FFF4C8', fe), lerp(0.55, 0.9, fl)], [0.4, mix('#BFD0FF', '#FFF0B0', fe), lerp(0.2, 0.5, fl)], [1, '#FFF0B0', 0]]) });
+  if (fl > 0) for (let i = 0; i < 12; i++) {
+    const a = (i * 30 + sun * 160) * Math.PI / 180, r0 = r * 1.3, r1 = r * (1.3 + 0.55 * fl);
+    v += line(M.x + Math.cos(a) * r0, M.y + Math.sin(a) * r0, M.x + Math.cos(a) * r1, M.y + Math.sin(a) * r1, { ...st('#FFF4C0', r * 0.14), opacity: f(fl * 90) / 100 });
+  }
+  const bite = d.raw('mk', `<mask id="__ID__" maskUnits="userSpaceOnUse" x="${M.x - 300}" y="${M.y - 300}" width="600" height="600"><rect x="${M.x - 300}" y="${M.y - 300}" width="600" height="600" fill="#fff"/><circle cx="${f(1626 + 90 * fe)}" cy="${f(210 - 20 * fe)}" r="${f(52.5 * (1 - fe))}" fill="#000"/></mask>`);
+  v += circle(M.x, M.y, r, { fill: d.lin([mix('#FFFBE6', '#FFFDF2', fe), mix('#FFE9A6', '#FFE36A', fe), mix('#FFE9A6', '#FFB92E', fl)]), mask: `url(#${bite})` });
+  v += circle(M.x - r * 0.25, M.y - r * 0.25, r * 0.45, { fill: '#FFFFFF', opacity: f(0.45 * fe * 100) / 100, mask: `url(#${bite})` });
+  v += circle(M.x, M.y, lerp(60, 340, blow), { fill: d.rad([[0, '#FFFFFF', 0.95], [0.5, '#FFFBEA', 0.7 * blow], [1, '#FFFBEA', 0]]), opacity: f(Math.max(fl * 0.5, blow) * 100) / 100 });
+  if (o.birds !== false) v += branch(d, u);
+  // --- room light (depth 0.75, over everything in the room)
+  const { x: X, y: Y } = { x: wx, y: wy };
+  let L = '';
+  const warm = ease.inOutSine(seg(sun, 0.15, 0.6));
+  // exposure: a colour-dodge ramp keeps the room's colours saturated while it brightens (0.5 = sunny), then clips it
+  // to white (1 = blown out, only the outlines survive). Frame-sized and never inside a glitch (Chromium caveat).
+  const ex = lerp(0, 0.36, warm) + 0.36 * blow;
+  if (ex > 0) L += rect(X0, BEDROOM.ceilY - 600, SW, BEDROOM.floorEnd - BEDROOM.ceilY + 600, { fill: `rgb(${Math.round(255 * ex)},${Math.round(212 * ex)},${Math.round(150 * ex)})`, style: 'mix-blend-mode:color-dodge' });
+  // golden sunlight falling in from the window side (screen keeps it warm over the purple room)
+  if (warm > 0) L += rect(X0, BEDROOM.ceilY - 600, SW, BEDROOM.floorEnd - BEDROOM.ceilY + 600, { fill: d.lin([[0, '#FFC05A', 0.62 * warm], [0.5, '#FFA040', 0.34 * warm], [1, '#FF9040', 0.12 * warm]], [M.x + 200, M.y - 200, M.x - 1500, M.y + 900], 'userSpaceOnUse'), style: 'mix-blend-mode:screen' });
+  // god rays: one shaft per pane, falling down-left from the sun outside the window (shafts pass the mullions)
+  const rays = clamp(fl * 1.2), panes = [[wx, wy, ww / 2 - 7, wh * 0.45], [wx + ww / 2 + 7, wy, ww / 2 - 7, wh * 0.45], [wx, wy + wh * 0.45 + 14, ww / 2 - 7, wh * 0.55 - 14], [wx + ww / 2 + 7, wy + wh * 0.45 + 14, ww / 2 - 7, wh * 0.55 - 14]];
+  if (rays > 0) {
+    const dx = -0.55, dy = 1, len = 980;
+    for (const [px, py, pw, ph] of panes) {
+      const q = [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]];
+      // the shaft = the pane swept along (dx, dy): its silhouette is the hull of the pane and the pane moved by len
+      L += poly([q[0], q[1], [q[2][0] + dx * len, q[2][1] + dy * len], [q[3][0] + dx * len, q[3][1] + dy * len]], { fill: d.lin([[0, '#FFE9A8', 0.6 * rays], [1, '#FFE9A8', 0]], [px, py, px + dx * len, py + dy * len], 'userSpaceOnUse'), style: 'mix-blend-mode:screen' });
+    }
+    // light pools: the panes projected on the floor, a warm patch on the bed
+    for (const [px, py, pw, ph] of panes) {
+      const fx = px + dx * (800 - py) * 0.62, fw = pw * 1.1;
+      L += path(rrPath(fx, 862 + (py - wy) * 0.28, fw, ph * 0.26, 14), { fill: d.rad([[0, '#FFF2C8', 0.55 * rays], [0.7, '#FFF2C8', 0.3 * rays], [1, '#FFF2C8', 0]]), style: 'mix-blend-mode:screen', transform: `skewX(-30) translate(${f(500)} 0)` });
+    }
+    L += ellipse(900, 780, 420, 120, { fill: d.rad([[0, '#FFF0C0', 0.5 * rays], [1, '#FFF0C0', 0]]), style: 'mix-blend-mode:screen' });
+  }
+  L += circle(M.x - 60, M.y + 120, lerp(260, 900, fl), { fill: d.rad([[0, '#FFFFFF', 0.8 * fl], [0.35, '#FFF4D0', 0.4 * fl], [1, '#FFF4D0', 0]]), style: 'mix-blend-mode:screen' });
+  // blow-out: warm white over the whole room
+  if (blow > 0) L += rect(X0, BEDROOM.ceilY - 600, SW, BEDROOM.floorEnd - BEDROOM.ceilY + 600, { fill: d.rad([[0, '#FFFFFF'], [0.6, '#FFF8E6'], [1, '#FFEFCF']], 0.62, 0.3, 0.8), opacity: f(blow * 0.55 * 100) / 100 });
+  const grade = sun < 1 ? rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.55, '#120C2E', 0], [1, '#120C2E', 0.5]], 0.5, 0.5, 0.75), opacity: f((1 - warm) * 100) / 100 }) : '';
+  return [
+    { name: 'windowSun', after: 'far', depth: 0.3, svg: String(d) + v },
+    { name: 'sunlight', after: 'near', depth: 0.75, svg: L },
+    { name: 'sunGrade', after: 'near', depth: 0, svg: grade },
+  ];
 }
 
 // ======================================================================================
@@ -768,18 +1195,21 @@ export function classroom(o = {}) {
 // STREET — DAY 7 "FACTORY RESET" chaos variant
 // ======================================================================================
 const MISSING = (d, size = 40) => d.pattern(size * 2, size * 2, rect(0, 0, size * 2, size * 2, { fill: '#121018' }) + rect(0, 0, size, size, { fill: '#FF2BD6' }) + rect(size, size, size, size, { fill: '#FF2BD6' }));
-export function streetReset(o = {}) {
-  const base = street({ ...o, cam: undefined, sky: ['#3A0614', '#7E0F22', '#C8202E'] });
+// Anchors for the Day 7 flash-forward (S00-L005): two mannequins (Mom, Dad) on the sidewalk in front of the family
+// house, feet y and scale for toon(..., {mannequin: 1}) inserted after 'near' (before 'grade', so the red tint hits
+// them too); pill = a clear screen box under the loading bar for the red countdown pill (1:00).
+export const RESET = { mom: { x: 800, y: 872, s: 1.04 }, dad: { x: 1120, y: 872, s: 1.04 }, pill: { x: 960, y: 420, w: 320, h: 84 }, bar: { x: -60, y: 60, w: 2040, h: 290 } };
+/** the loading-bar sky of the factory reset (per-frame: pct 0..100 and t move it). Returns a self-contained string. */
+export function resetSky(o = {}) {
   const d = new Defs();
-  const pct = o.pct ?? 87;
-  // replace the sky: a giant loading bar IS the sky
+  const pct = clamp(o.pct ?? 87, 0, 100);
   let sky = rect(X0, -200, SW, 940, { fill: d.lin([[0, '#26040E'], [0.5, '#5A0A1A'], [1, '#A8182A']], [0, -200, 0, 740], 'userSpaceOnUse') });
-  const barX = -60, barY = 60, barW = 2040, barH = 290, fillW = barW * pct / 100;
+  const { x: barX, y: barY, w: barW, h: barH } = RESET.bar, fillW = barW * pct / 100;
   sky += path(rrPath(barX - 16, barY - 16, barW + 32, barH + 32, 70), { fill: '#12020A', stroke: '#FF6A6A', strokeWidth: 6, opacity: 0.95 });
   sky += path(rrPath(barX, barY, barW, barH, 56), { fill: MISSING(d, 50), opacity: 0.55 });
   const stripes = d.pattern(120, 120, rect(0, 0, 120, 120, { fill: 'none' }) + path('M-30 120L60 0H120L30 120Z', { fill: '#FFFFFF', opacity: 0.16 }) + path('M90 120L180 0H240L150 120Z', { fill: '#FFFFFF', opacity: 0.16 }), `patternTransform="translate(${f(((o.t || 0) * 160) % 120)} 0)"`);
   // the filled part shows the remains of the old blue sky, de-rezzing into blocks at the leading edge
-  const fillClip = d.clip(path(rrPath(barX, barY, fillW, barH, 56)));
+  const fillClip = d.clip(path(rrPath(barX, barY, Math.max(1, fillW), barH, 56)));
   sky += g(rect(barX, barY, fillW, barH, { fill: d.lin(['#FF8A3D', '#FF3B3B', '#C8102E'], 'v') }) + rect(barX, barY, fillW, barH, { fill: stripes }) + rect(barX, barY + 18, fillW, 26, { fill: '#FFFFFF', opacity: 0.3 }), { clipPath: fillClip });
   const R = rng(77);
   for (let i = 0; i < 26; i++) {
@@ -787,8 +1217,32 @@ export function streetReset(o = {}) {
     sky += rect(bx, by, bs, bs, { fill: R() < 0.5 ? '#FF3B3B' : '#FF2BD6', opacity: 0.4 + R() * 0.5, stroke: '#12020A', strokeWidth: 2 });
   }
   sky += circle(barX + fillW, barY + barH / 2, 200, { fill: d.rad([[0, '#FFC890', 0.45], [1, '#FFC890', 0]]) });
-  sky += text(960, barY + 150, `FACTORY RESET  ${pct}%`, { fontFamily: FONT.title, fontSize: 118, fill: '#FFFFFF', textAnchor: 'middle', stroke: '#3A0410', strokeWidth: 16, paintOrder: 'stroke', strokeLinejoin: 'round', letterSpacing: 4 });
+  sky += text(960, barY + 150, `FACTORY RESET  ${Math.floor(pct)}%`, { fontFamily: FONT.title, fontSize: 118, fill: '#FFFFFF', textAnchor: 'middle', stroke: '#3A0410', strokeWidth: 16, paintOrder: 'stroke', strokeLinejoin: 'round', letterSpacing: 4 });
   sky += text(960, barY + 214, 'DO NOT TURN OFF REALITY', { fontFamily: FONT.ui, fontWeight: 900, fontSize: 40, fill: '#FFE0E0', textAnchor: 'middle', letterSpacing: 6, stroke: '#3A0410', strokeWidth: 8, paintOrder: 'stroke' });
+  return String(d) + sky;
+}
+/** the red emergency grade (per-frame: t turns the alarm beams; tint 0..1 scales the red wash and the beams) */
+export function resetGrade(o = {}) {
+  const d = new Defs();
+  const k = clamp(o.tint ?? 1), t = o.t || 0;
+  let grade = rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#6A6A78', 0], [0.2, '#6A6A78', 0.2 * k], [1, '#6A6A78', 0.24 * k]]) });
+  grade += rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#9A0E22', 0.0], [0.25, '#9A0E22', 0.3 * k], [1, '#7A0818', 0.38 * k]]) });
+  const beam = (cx, cy, ang, col) => g(poly([[0, 0], [1400, -130], [1400, 130]], { fill: d.lin([[0, col, 0.2 * k], [1, col, 0]], 'h') }), { transform: `translate(${cx} ${cy}) rotate(${ang})` });
+  grade += beam(-40, 40, 28 + t * 90, '#FF8A8A') + beam(1960, 40, 152 - t * 90, '#FF8A8A');
+  grade += rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.5, '#2A0008', 0], [1, '#2A0008', 0.65]], 0.5, 0.5, 0.75) });
+  return String(d) + grade;
+}
+/** Day 7 factory reset: the street with a loading-bar sky (o.pct 0..100), missing-texture patches, a wireframe
+ *  house, de-rezzed cubes and a red emergency grade (o.tint 0..1, default 1). o.t animates stripes, beams and the
+ *  glitch bands; o.glitch: false gives the clean layers. For per-frame animation keep this set static
+ *  (memoise streetReset({glitch: false})) and swap its 'sky' / 'grade' layers for resetSky({pct, t}) /
+ *  resetGrade({t, tint}) each frame (insert them, skip: ['sky', 'grade']); mannequins go at RESET.mom / RESET.dad. */
+export function streetReset(o = {}) {
+  const base = street({ ...o, cam: undefined, sky: ['#3A0614', '#7E0F22', '#C8202E'], split: false, night: 0, liveTree: undefined });
+  const d = new Defs();
+  const R = rng(77);
+  for (let i = 0; i < 26; i++) { R(); R(); R(); R(); R(); } // keep the debris below on the same random stream as before
+  const sky = resetSky(o);
   // far layer: re-tint toward the red sky, and lift blocks off the hills
   let far = base.layers[2].svg; // already hazed toward the red sky by street({ sky })
   for (let i = 0; i < 30; i++) { const bx = X0 + R() * SW, by = 380 + R() * 260, bs = 10 + R() * 26; far += rect(bx, by, bs, bs, { fill: R() < 0.3 ? '#FF2BD6' : '#C84860', opacity: 0.8 }); }
@@ -815,14 +1269,9 @@ export function streetReset(o = {}) {
   // cracks of void in the road
   near += path('M300 930L380 960L350 1000L460 1040L430 1090H260L300 1030L240 990Z', { fill: MISSING(d, 18), stroke: '#FF2BD6', strokeWidth: 3 });
   near += path('M1500 900L1620 930L1580 980L1700 1000L1660 1090H1480L1530 1010L1460 960Z', { fill: MISSING(d, 18), stroke: '#FF2BD6', strokeWidth: 3 });
-  // red alert grade: multiply wash + rotating alarm beams + vignette
   // red alert grade, all normal blending (blend modes inside the glitch's <use> copies are dropped by Chromium at 4K):
   // a grey veil knocks the saturation of the ground down, then a deep-red wash tints it, then rotating alarm beams.
-  let grade = rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#6A6A78', 0], [0.2, '#6A6A78', 0.2], [1, '#6A6A78', 0.24]]) });
-  grade += rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#9A0E22', 0.0], [0.25, '#9A0E22', 0.3], [1, '#7A0818', 0.38]]) });
-  const beam = (cx, cy, ang, col) => g(poly([[0, 0], [1400, -130], [1400, 130]], { fill: d.lin([[0, col, 0.2], [1, col, 0]], 'h') }), { transform: `translate(${cx} ${cy}) rotate(${ang})` });
-  grade += beam(-40, 40, 28 + (o.t || 0) * 90, '#FF8A8A') + beam(1960, 40, 152 - (o.t || 0) * 90, '#FF8A8A');
-  grade += rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.5, '#2A0008', 0], [1, '#2A0008', 0.65]], 0.5, 0.5, 0.75) });
+  const grade = resetGrade(o);
   const layers = [
     base.layers[0],
     { name: 'defs2', depth: 0, svg: String(d) },
@@ -840,4 +1289,9 @@ export function streetReset(o = {}) {
   return { w: W, h: H, layers, svg };
 }
 
-export const SETS = { street, bedroom, kitchen, classroom, streetReset };
+export const SETS = {
+  street, bedroom, kitchen, classroom, streetReset,
+  streetTiny: (o = {}) => street({ split: true, liveTree: 'kevin', ...o }),
+  streetNight: (o = {}) => street({ night: 1, split: true, ...o }),
+  bedroomSit: (o = {}) => bedroom({ blanket: 'sit', birds: true, ...o }),
+};

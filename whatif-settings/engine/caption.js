@@ -89,3 +89,66 @@ export function chunk(line, maxWords = 3) {
   if (cur.length) out.push(cur.join(' '));
   return out;
 }
+
+// ---------- word-timed captions (bible 1.9 / 3.6) ----------
+/** meaning dictionary for auto keyword colour (CAPS words in the script); unknown CAPS words default to yellow */
+export const KW_DICT = {
+  cyan: ['SETTINGS', 'SETTING', 'MENU', 'APP', 'PHONE', 'BRIGHTNESS', 'SLIDER', 'TOGGLE', 'GRAVITY', 'SUBTITLES', 'VOLUME', 'LANGUAGE', 'HISTORY', 'SCROLL'],
+  red: ['UNDO', 'RESET', 'FACTORY', 'DANGER', 'NO', 'MINUTE', 'COUNTDOWN', 'DEFAULT', 'STOP'],
+  green: ['AGREE', 'YES', 'ON', 'APPLIED', 'WELCOME', 'DONE'],
+  pink: ['DOG', 'CAT', 'BOUNCY', 'TINY', 'CUTE'],
+  orange: ['ONE', 'TAP', 'SLIDE', 'PRESS', 'DRAG', 'FLICK', 'UP', '412', 'TWO'],
+  purple: ['GLITCH', 'BUG', 'PATCH', 'DEV'],
+  yellow: ['REALITY', 'WORLD', 'SUN', 'PLANET', 'EARTH', 'MOON', 'REAL', 'LIFE', 'WHAT'],
+};
+const DICT = Object.fromEntries(Object.entries(KW_DICT).flatMap(([c, ws]) => ws.map((w) => [w, c])));
+/** wrap ALL-CAPS words (2+ letters, not "I") of plain text in {WORD|colour} markup by meaning; existing markup is kept.
+ *  extra = {WORD: colour} overrides for one line. */
+export function autoKeywords(s, extra = {}) {
+  return String(s).split(/(\{[^}]+\})/).map((part) => {
+    if (part.startsWith('{')) return part;
+    return part.replace(/\b[A-Z][A-Z0-9]+(?:'[A-Z]+)?\b/g, (m) => {
+      const key = m.replace(/'S$/, '').replace(/'/g, '');
+      return `{${m}|${extra[m] || extra[key] || DICT[key] || 'yellow'}}`;
+    });
+  }).join('');
+}
+const normTok = (s) => String(s).toLowerCase().replace(/\{([^|}]+)(\|[^}]+)?\}/g, '$1').replace(/[^a-z0-9']/g, '');
+/** captionsFromWords(words, {maxWords = 3, lead = 3 frames, fps = 60, tail = 0.25 s, markup, auto = true, mode, minFrames = 4})
+ *  -> [{t0, t1, markup, mode?}] in the words' time base. words: [{w, t0, t1}] (also {word, start, end}). markup: the
+ *  line's script text with {KEYWORD|colour} markup (else the words joined, with CAPS words auto-coloured when auto).
+ *  Chunks of 1-3 words break at punctuation and before keywords (chunk()); each shows `lead` frames before its first
+ *  word and holds until the next chunk; the last holds to its word end + tail. A chunk shorter than minFrames merges
+ *  into the next one so nothing flashes for a frame. mode 'type' entries get cps from the words' rate. */
+export function captionsFromWords(words, o = {}) {
+  const fps = o.fps ?? 60, lead = (o.lead ?? 3) / fps, tail = o.tail ?? 0.25, minDur = (o.minFrames ?? 4) / fps;
+  const ws = (words || []).map((w) => ({ w: w.w ?? w.word ?? w.text, t0: w.t0 ?? w.start, t1: w.t1 ?? w.end })).filter((w) => w.w !== undefined && Number.isFinite(w.t0));
+  if (!ws.length) return [];
+  ws.forEach((w, i) => { if (!Number.isFinite(w.t1)) w.t1 = i + 1 < ws.length ? ws[i + 1].t0 : w.t0 + 0.3; });
+  let src = o.markup ?? ws.map((w) => w.w).join(' ');
+  if (o.auto !== false && !/\{/.test(src)) src = autoKeywords(src);
+  const chunks = chunk(src, o.maxWords ?? 3);
+  const out = [];
+  let wi = 0;
+  for (const ch of chunks) {
+    const toks = (ch.match(/\{[^}]+\}|\S+/g) || []).map(normTok).filter(Boolean);
+    let first = Math.min(wi, ws.length - 1);
+    if (toks.length) for (let k = wi; k < Math.min(ws.length, wi + 4); k++) if (normTok(ws[k].w) === toks[0]) { first = k; break; }
+    const last = Math.min(ws.length - 1, first + Math.max(1, toks.length) - 1);
+    out.push({ t0: ws[first].t0 - lead, wEnd: ws[last].t1, markup: ch });
+    wi = last + 1;
+  }
+  // merge chunks that would be on screen for less than minFrames
+  for (let i = 0; i < out.length - 1; i++) {
+    if (out[i + 1].t0 - out[i].t0 < minDur && out.length > 1) {
+      out[i] = { t0: out[i].t0, wEnd: out[i + 1].wEnd, markup: out[i].markup + ' ' + out[i + 1].markup };
+      out.splice(i + 1, 1); i--;
+    }
+  }
+  return out.map((c, i) => {
+    const e = { t0: c.t0, t1: i + 1 < out.length ? out[i + 1].t0 : c.wEnd + tail, markup: c.markup };
+    if (o.mode) e.mode = o.mode;
+    if (o.mode === 'type') { const n = c.markup.replace(/\{([^|}]+)(\|[^}]+)?\}/g, '$1').length; e.cps = Math.max(18, Math.min(60, n / Math.max(0.15, c.wEnd - c.t0 - lead))); }
+    return e;
+  });
+}

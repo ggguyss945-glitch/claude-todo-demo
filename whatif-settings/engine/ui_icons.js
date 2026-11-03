@@ -84,6 +84,31 @@ const G = {
   bell: (c) => path('M0 -38C-20 -38 -28 -20 -28 -4V12L-36 22H36L28 12V-4C28 -20 20 -38 0 -38Z', { fill: c }) + circle(0, 30, 8, { fill: c }),
   play: (c) => path('M-20 -30L30 0L-20 30Z', { fill: c, ...st(c, 8) }),
   pause: (c) => R(-26, -30, 18, 60, 6, c) + R(8, -30, 18, 60, 6, c),
+  // ---- hook additions (S00) ----
+  dog: (c) => // Tiny-style puppy head: round head, two floppy ears, snout, nose
+    path('M-30 -26C-44 -30 -50 -10 -46 8C-44 20 -36 26 -30 22Z', { fill: c, ...st(c, 4) }) +
+    path('M30 -26C44 -30 50 -10 46 8C44 20 36 26 30 22Z', { fill: c, ...st(c, 4) }) +
+    circle(0, -2, 32, { fill: c }) + ellipse(0, 18, 20, 15, { fill: c }) +
+    circle(-12, -8, 5.5, { fill: 'var(--hole, #000)' }) + circle(12, -8, 5.5, { fill: 'var(--hole, #000)' }) +
+    ellipse(0, 10, 8, 6, { fill: 'var(--hole, #000)' }) + path('M0 15V22M-7 24Q0 28 7 24', { fill: 'none', stroke: 'var(--hole, #000)', strokeWidth: 3.5, strokeLinecap: 'round', opacity: 0.7 }),
+  dogSmall: (c) => `<g transform="scale(0.62) translate(0 26)">${G.dog(c)}</g>`,
+  tree: (c) => R(-7, 6, 14, 36, 6, c) + circle(0, -14, 24, { fill: c }) + circle(-20, 2, 17, { fill: c }) + circle(20, 2, 17, { fill: c }) +
+    path('M-36 40H36', { ...st(c, 7) }),
+  treeFlip: (c) => `<g transform="scale(1 -1)">${G.tree(c)}</g>`,
+  undo: (c) => path('M-20 -14H14C30 -14 40 -2 40 12C40 26 30 36 14 36H-14', { fill: 'none', ...st(c, 11) }) +
+    path('M-40 -14L-16 -34V6Z', { fill: c, ...st(c, 6) }),
+  history: (c) => path('M-30 -14A36 36 0 1 1 -32 14', { fill: 'none', ...st(c, 8) }) + path('M-44 -26L-28 -6L-14 -26Z', { fill: c, ...st(c, 4) }) +
+    path('M2 -18V2L16 12', { fill: 'none', ...st(c, 8) }),
+  doc: (c) => path('M-28 -40H12L30 -22V40H-28Z', { fill: c, ...st(c, 6) }) + path('M12 -40V-22H30', { fill: 'none', stroke: 'var(--hole, #000)', strokeWidth: 4, strokeLinejoin: 'round', opacity: 0.45 }) +
+    R(-18, -10, 36, 6, 3, 'var(--hole, #000)') + R(-18, 4, 36, 6, 3, 'var(--hole, #000)') + R(-18, 18, 24, 6, 3, 'var(--hole, #000)'),
+  bird: (c) => ellipse(-2, 6, 26, 20, { fill: c }) + circle(18, -12, 14, { fill: c }) + path('M30 -14L44 -9L30 -5Z', { fill: c, ...st(c, 3) }) +
+    path('M-24 2L-44 -10L-30 12Z', { fill: c, ...st(c, 3) }) + circle(21, -14, 3.5, { fill: 'var(--hole, #000)' }) +
+    path('M-10 4Q2 14 14 4', { fill: 'none', stroke: 'var(--hole, #000)', strokeWidth: 3.5, strokeLinecap: 'round', opacity: 0.5 }),
+  phone: (c) => path(rrPath(-22, -40, 44, 80, 11), { fill: 'none', ...st(c, 8) }) + R(-8, 26, 16, 6, 3, c),
+  battery: (c) => path(rrPath(-40, -20, 72, 40, 9), { fill: 'none', ...st(c, 6) }) + R(-33, -13, 50, 26, 5, c) + R(36, -8, 7, 16, 3, c),
+  signal: (c) => R(-36, 8, 14, 18, 3, c) + R(-16, -4, 14, 30, 3, c) + R(4, -16, 14, 42, 3, c) + R(24, -28, 14, 54, 3, c),
+  wifi: (c) => path('M-36 -8Q0 -38 36 -8', { fill: 'none', ...st(c, 8) }) + path('M-22 6Q0 -14 22 6', { fill: 'none', ...st(c, 8) }) + circle(0, 22, 7, { fill: c }),
+  size: (c) => path('M-34 34L34 -34M10 -34H34V-10M-34 10V34H-10', { fill: 'none', ...st(c, 9) }),
 };
 
 export const GLYPHS = Object.keys(G);

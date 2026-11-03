@@ -148,3 +148,142 @@ export function vignette(color = '#120C2E', strength = 0.45) {
   const d = new Defs();
   return d + rect(-100, -100, W + 200, H + 200, { fill: d.rad([[0.55, color, 0], [1, color, strength]], 0.5, 0.5, 0.75) });
 }
+
+// =====================================================================================================================
+// hook additions (S00): ripple boom, sun flare, white blow-out, cracked glass, scroll streaks, box blur
+// =====================================================================================================================
+const TAU = Math.PI * 2;
+const op2 = (v) => f(clamp(v) * 100) / 100;
+
+/** ripple({cx, cy, R, rings, color, squash, fill}, p) - the I AGREE sub-boom wave: `rings` concentric bands leave
+ *  (cx, cy) one after another (stagger .14 of p), each a thick soft band with a bright leading edge, out to radius R
+ *  (default: past the frame corners); squash < 1 flattens them into floor-plane ellipses. p 0..1 over ~0.8 s. */
+export function ripple(o = {}, p = 0) {
+  const { cx = 960, cy = 540, rings = 3, color = '#7CF0B0', squash = 1, fill = true } = o;
+  if (p <= 0 || p >= 1) return '';
+  const R = o.R ?? Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * 1.15;
+  let s = '';
+  for (let j = 0; j < rings; j++) {
+    const q = clamp((p - j * 0.14) / (1 - (rings - 1) * 0.14));
+    if (q <= 0 || q >= 1) continue;
+    const e = ease.outCubic(q), r = R * e, a = 1 - q;
+    const bw = lerp(120, 26, e);
+    if (fill && j === 0) s += ellipse(cx, cy, r, r * squash, { fill: color, opacity: op2(a * 0.12) });
+    s += ellipse(cx, cy, Math.max(0, r - bw * 0.5), Math.max(0, (r - bw * 0.5) * squash), { fill: 'none', stroke: color, strokeWidth: f(bw), opacity: op2(a * 0.28) });
+    s += ellipse(cx, cy, r, r * squash, { fill: 'none', stroke: '#FFFFFF', strokeWidth: f(lerp(14, 3, e)), opacity: op2(a * 0.9) });
+  }
+  return s;
+}
+
+/** sunFlare({cx, cy, r, k, t, rays, ghosts, color}) - the moon flaring into a sun: hot white core and yellow bloom
+ *  (radial gradients, no filters), 8 thin rotating spikes, a horizontal anamorphic streak, lens ghosts along the line
+ *  from the sun through the frame centre, plus godRays when rays:true. k 0..1 = intensity (scales everything). */
+export function sunFlare(o = {}) {
+  const { cx = 1500, cy = 260, r = 110, t = 0, color = '#FFE36A' } = o;
+  const k = clamp(o.k ?? 1);
+  if (k <= 0) return '';
+  const d = new Defs();
+  let s = '';
+  if (o.rays) s += godRays({ cx, cy, rot: t * 20, op: 0.45 * k, count: 22, a: color, b: '#FFFFFF' });
+  s += circle(cx, cy, r * (3.2 + 2.4 * k), { fill: d.rad([[0, '#FFFFFF', 0.95 * k], [0.18, color, 0.75 * k], [0.5, '#FFB21F', 0.25 * k], [1, '#FFB21F', 0]]) });
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU + t * 0.25 + (i % 2) * 0.12, L = r * (i % 2 ? 3.2 : 5.2) * (0.6 + 0.4 * k), wd = r * (i % 2 ? 0.09 : 0.14);
+    const ax = Math.cos(a), ay = Math.sin(a), nx = -ay, ny = ax;
+    s += poly([[cx + nx * wd, cy + ny * wd], [cx + ax * L, cy + ay * L], [cx - nx * wd, cy - ny * wd]], { fill: '#FFFFFF', opacity: op2(0.75 * k) });
+  }
+  s += ellipse(cx, cy, r * 9 * k, r * 0.16, { fill: d.rad([[0, '#FFFFFF', 0.9 * k], [0.4, color, 0.45 * k], [1, color, 0]]) });
+  s += circle(cx, cy, r, { fill: d.rad([[0, '#FFFFFF'], [0.7, '#FFFBE0'], [1, color]]) });
+  if (o.ghosts !== false) {
+    const vx = 960 - cx, vy = 540 - cy, ghosts = [[0.45, 0.35, '#B6FFB0'], [0.8, 0.18, '#FFB0E0'], [1.25, 0.55, '#B0E4FF'], [1.6, 0.25, '#FFE6A0']];
+    for (const [u, rr, c] of ghosts) {
+      const gx = cx + vx * u * 2, gy = cy + vy * u * 2, R6 = r * rr * 1.6;
+      const hex = [...Array(6)].map((_, i) => [gx + Math.cos((i / 6) * TAU + 0.3) * R6, gy + Math.sin((i / 6) * TAU + 0.3) * R6]);
+      s += poly(hex, { fill: c, opacity: op2(0.22 * k) }) + poly(hex, { fill: 'none', stroke: '#FFFFFF', strokeWidth: 3, opacity: op2(0.3 * k) });
+    }
+  }
+  return d + s;
+}
+
+/** whiteout({cx, cy, color, tint}, k) - the room blows out white: k 0..0.5 grows a bloom from (cx, cy), 0.5..1 fills
+ *  the frame; plain opacity (no blend modes), frame-sized. */
+export function whiteout(o = {}, k = 0) {
+  const { cx = 960, cy = 540, color = '#FFFFFF', tint = '#FFF4D6' } = o;
+  k = clamp(k);
+  if (k <= 0) return '';
+  const d = new Defs(), c = clamp(k * 2), e = clamp(k * 2 - 1);
+  const r = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * (0.35 + 0.9 * c);
+  return d + rect(-20, -20, W + 40, H + 40, { fill: d.rad([[0, color, c], [0.45, color, Math.max(e, c * 0.75)], [0.8, tint, Math.max(e, c * 0.35)], [1, tint, e]], cx, cy, r, 'userSpaceOnUse') });
+}
+
+/** crackedGlass({cx, cy, r, k, seed, box, color}) - a cracked-glass overlay: 10 jagged radial cracks from the impact
+ *  point plus two rings of connecting shards, each a dark line with a white glint; k 0..1 grows them outward (rings
+ *  after .35). box [x, y, w, h] clips it (e.g. a phone screen); no filters. */
+export function crackedGlass(o = {}) {
+  const { cx = 960, cy = 540, r = 900, seed = 3 } = o;
+  const k = clamp(o.k ?? 1);
+  if (k <= 0) return '';
+  const d = new Defs(), R = rng(seed), n = 10;
+  const rays = [];
+  for (let i = 0; i < n; i++) {
+    const a0 = (i / n) * TAU + (R() - 0.5) * 0.4, L = r * (0.55 + R() * 0.5), pts = [[cx, cy]];
+    const segs = 6;
+    for (let j = 1; j <= segs; j++) {
+      const u = j / segs, a = a0 + (R() - 0.5) * 0.22;
+      pts.push([cx + Math.cos(a) * L * u, cy + Math.sin(a) * L * u]);
+    }
+    rays.push({ pts, L });
+  }
+  const line2 = (P, kk, wd) => {
+    if (kk <= 0) return '';
+    let len = 0; for (let i = 1; i < P.length; i++) len += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+    const dash = `${f(len * kk)} ${f(len + 10)}`, dd = P.map((q, i) => (i ? 'L' : 'M') + f(q[0]) + ' ' + f(q[1])).join('');
+    return path(dd, { fill: 'none', stroke: '#0E1230', strokeWidth: wd * 2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.4, strokeDasharray: dash }) +
+      path(dd, { fill: 'none', stroke: o.color || '#FFFFFF', strokeWidth: wd, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.9, strokeDasharray: dash });
+  };
+  let s = '';
+  const kr = seg(k, 0, 0.7);
+  for (const ry of rays) s += line2(ry.pts, kr, 3.2);
+  for (const [ring, w0] of [[2, 2.6], [4, 2.2]]) {
+    const kk = seg(k, 0.35 + ring * 0.05, 0.85 + ring * 0.03);
+    if (kk <= 0) continue;
+    for (let i = 0; i < n; i++) {
+      if (R() < 0.25) continue;
+      const A = rays[i].pts[Math.min(ring, rays[i].pts.length - 1)], B = rays[(i + 1) % n].pts[Math.min(ring + (R() < 0.5 ? 1 : 0), rays[(i + 1) % n].pts.length - 1)];
+      const M = [(A[0] + B[0]) / 2 + (R() - 0.5) * 30, (A[1] + B[1]) / 2 + (R() - 0.5) * 30];
+      s += line2([A, M, B], kk, w0);
+    }
+  }
+  // impact point: a white star of splinters and a few chips
+  s += path(starPts(cx, cy, 7, r * 0.05, r * 0.015, 0, 0.5, seed).map((q, i) => (i ? 'L' : 'M') + f(q[0]) + ' ' + f(q[1])).join('') + 'Z', { fill: '#FFFFFF', opacity: op2(0.85 * seg(k, 0, 0.2)) });
+  if (o.box) {
+    const [bx, by, bw, bh] = o.box;
+    return d + g(s, { clipPath: d.clip(rect(bx, by, bw, bh)) });
+  }
+  return d + s;
+}
+
+/** scrollStreaks({x, y, w, h, speed, seed, t, color, dir}) - motion streaks for a fast UI scroll: vertical (dir 'v',
+ *  default) or horizontal light streaks inside the box, length and opacity from speed (px per frame, ~0 below 4). */
+export function scrollStreaks(o = {}) {
+  const { x = 0, y = 0, w = W, h = H, speed = 0, seed = 21, t = 0, color = '#FFFFFF', count = 14, dir = 'v' } = o;
+  const k = clamp((Math.abs(speed) - 4) / 36);
+  if (k <= 0) return '';
+  const R = rng(seed + Math.floor(t * 30)), d = new Defs();
+  let s = '';
+  for (let i = 0; i < count; i++) {
+    const L = (dir === 'v' ? h : w) * (0.15 + R() * 0.45) * (0.4 + 0.6 * k), wd = 3 + R() * 6;
+    if (dir === 'v') s += rect(x + R() * w, y + R() * (h - L), wd, L, { fill: color, opacity: op2(k * (0.15 + R() * 0.35)), rx: wd / 2 });
+    else s += rect(x + R() * (w - L), y + R() * h, L, wd, { fill: color, opacity: op2(k * (0.15 + R() * 0.35)), ry: wd / 2 });
+  }
+  return d + g(s, { clipPath: d.clip(rect(x, y, w, h)) });
+}
+
+/** boxBlur(svg, {x, y, w, h, sdx, sdy}) - a Gaussian (or directional) blur whose filter region is just the box, so its
+ *  cost stays small; never wrap it in fx.glitch() or a <use> copy (Chromium caveat). */
+export function boxBlur(svg, o = {}) {
+  const { x = 0, y = 0, w = W, h = H, sdx = 0, sdy = 8 } = o;
+  if (sdx < 0.3 && sdy < 0.3) return svg;
+  const d = new Defs();
+  const id = d.raw('bb', `<filter id="__ID__" filterUnits="userSpaceOnUse" x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${f(sdx)} ${f(sdy)}" edgeMode="duplicate"/></filter>`);
+  return d + g(svg, { filter: `url(#${id})` });
+}

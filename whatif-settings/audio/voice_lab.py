@@ -109,7 +109,7 @@ RECIPE = {
     'S00-L009': dict(approach='b_psola'), 'S00-L010': dict(approach='e_mid'), 'S00-L011': dict(approach='e_mid'), 'S00-L012': dict(approach='e_mid'),
     'S00-L013': dict(approach='e_mild'), 'S00-L014': dict(approach='e_strong'), 'S00-L015': dict(approach='b_psola'), 'S00-L016': dict(approach='b_psola'),
     'S00-L017': dict(approach='e_strong'), 'S00-L018': dict(approach='e_strong'), 'S00-L019': dict(approach='e_mid'), 'S00-L020': dict(approach='e_mid'),
-    'S00-L021': dict(approach='e_mid'), 'S00-L022': dict(approach='b_psola'), 'S00-L023': dict(approach='e_mild'), 'S01-L001': dict(approach='b_psola'),
+    'S00-L021': dict(approach='e_mid'), 'S00-L022': dict(approach='b_psola'), 'S00-L023': dict(approach='e_mild'), 'S01-L001': dict(approach='e_strong'),
 }
 
 VARIANTS = {'mild': dict(k=0.85, acc=0.75), 'mid': dict(k=1.0, acc=1.0), 'strong': dict(k=1.18, acc=1.3)}
@@ -121,7 +121,9 @@ class Engine:
     """Kokoro v1.0 ONNX with two edits made in memory: a per-token duration multiplier before rounding, and F0/energy
     curves that can be read (pred) or replaced (dec)."""
 
-    def __init__(self, threads=int(os.environ.get('VOICE_THREADS', '4'))):
+    def __init__(self, threads=int(os.environ.get('VOICE_THREADS', '1'))):
+        # 1 intra-op thread by default: onnxruntime's multi-thread sums differ in the last bits, which can flip the
+        # duration rounding, so takes are bit-reproducible only at a fixed thread count (the lab ran at 1)
         import onnx, onnxruntime as ort
         from onnx import helper, TensorProto
         from kokoro_onnx.tokenizer import Tokenizer
@@ -750,6 +752,13 @@ def strain(y, sr, drive=2.2, mix=0.35):
     return (y + mix * (s - x)).astype(np.float32)
 
 
+def praat_seed(seed=20261103):
+    """Praat's overlap-add places pulses in unvoiced stretches at random; a fixed seed makes PSOLA and 'Change gender'
+    reproducible (without it two renders of the same line differed by up to 0.3 in amplitude)."""
+    import parselmouth
+    parselmouth.praat.run(f'random_initializeWithSeedUnsafelyButPredictably ({int(seed)})')
+
+
 def formant_shift(y, sr, ratio):
     """Praat 'Change gender' with the pitch left alone: formants x ratio (shorter vocal tract)."""
     import parselmouth
@@ -757,6 +766,7 @@ def formant_shift(y, sr, ratio):
     if abs(ratio - 1) < 1e-3:
         return y
     snd = parselmouth.Sound(y.astype(np.float64), sampling_frequency=sr)
+    praat_seed()
     out = call(snd, 'Change gender', 90, 700, float(ratio), 0.0, 1.0, 1.0)   # 700 Hz ceiling: Sam's accents reach ~560 Hz
     z = out.values[0].astype(np.float32)
     return z[:len(y)] if len(z) >= len(y) else np.pad(z, (0, len(y) - len(z)))
@@ -883,6 +893,7 @@ def approach_b(E, role, tag, text, lid, method='psola', variant='mid'):
             call(dt, 'Add point', float(s0 + 1e-4), float(dm[k]))
             call(dt, 'Add point', float(s1 - 1e-4), float(dm[k]))
         call([manip, dt], 'Replace duration tier')
+        praat_seed()
         out = call(manip, 'Get resynthesis (overlap-add)')
         y = out.values[0].astype(np.float32)
     else:

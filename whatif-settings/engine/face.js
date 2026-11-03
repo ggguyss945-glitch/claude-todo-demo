@@ -318,6 +318,7 @@ export function morph(spec) {
   const second = k >= 0.5;
   const u = second ? (k - 0.5) / 0.5 : k / 0.5;
   const out = { ...(second ? B : A) };
+  if (isViseme(rest.mouth)) { out.mouth = rest.mouth; out.m = rest.m; delete out.mouthDX; delete out.mouthDY; delete out.mouthTilt; }   // lip-sync wins over both faces
   out.featK = second ? 0.3 + 0.7 * outBack(u) : 1 - 0.7 * u * u;
   out.browMix = { a: A.brows, b: B.brows, k: k < 0.15 ? 0 : k > 0.85 ? 1 : (k - 0.15) / 0.7, sa: A.browScale ?? 1, sb: B.browScale ?? 1 };
   const la = A.look || [0, 0], lb = B.look || [0, 0];

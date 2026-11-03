@@ -770,10 +770,10 @@ export const DOG_FACES = {
 const DOG_ACT = { shocked: { earL: 128, earR: 128 }, excited: { earL: 42, earR: 42 }, happy: { earL: 14, earR: 14 },
   confused: { earL: 70, earR: -4, head: 11 }, scared: { earL: -12, earR: -12 }, sad: { earL: -14, earR: -14 }, love: { earL: 30, earR: 30 } };
 const ellD = (cx, cy, rx, ry) => `M${f1(cx - rx)} ${f1(cy)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
-// a bone-shaped tag centred at 0,0 (w x h)
-function bonePath(w, h) {
-  const r = h * 0.36, x = w / 2 - r * 0.9, n = h * 0.2;
-  return `M${f1(-x)} ${f1(-n)}L${f1(x)} ${f1(-n)}A${f1(r)} ${f1(r)} 0 1 1 ${f1(x + r * 0.55)} ${f1(-n * 0.1)}A${f1(r)} ${f1(r)} 0 1 1 ${f1(x)} ${f1(n)}L${f1(-x)} ${f1(n)}A${f1(r)} ${f1(r)} 0 1 1 ${f1(-x - r * 0.55)} ${f1(n * 0.1)}A${f1(r)} ${f1(r)} 0 1 1 ${f1(-x)} ${f1(-n)}Z`;
+// a bone-shaped tag centred at 0,0 (w x h): shaft + four round knobs, as union shapes
+function boneShapes(w, h) {
+  const r = h * 0.3, x = w / 2 - r, sh = h * 0.46;
+  return [{ d: rrect(-x, -sh / 2, 2 * x, sh, sh * 0.3) }, ...[[-x, -1], [-x, 1], [x, -1], [x, 1]].map(([cx, sy]) => ({ d: ellD(cx, sy * h * 0.21, r, r) }))];
 }
 // floppy ear: root -> mid -> tip chain; a = lift (deg, 0 hangs down), out = screen side (-1 / 1)
 function dogEar(root, a, flop, out, len, wid, color, sw, inner) {
@@ -926,6 +926,8 @@ function buildDog(spec, o) {
       + path(spline(pts.slice(1, 4)), { fill: 'none', stroke: '#FFFFFF', strokeOpacity: 0.35, strokeWidth: 4, strokeLinecap: 'round' });
   }
   const tailFront = !sit && Math.abs(sb) < 0.2;          // standing, facing us: tail pokes up behind the body
+  // fur tufts on the bib at house size (between the front legs, under the tag)
+  if (lod >= 2.5 && sit && cb > 0.5) for (const [dx, dy] of [[-3, -66], [2, -56]]) over += path(`M${f1(X(30, 0) + dx - 3)} ${f1(dy)}q3 4 6 0`, { fill: 'none', stroke: tone(cream, -0.12), strokeWidth: 1.8, strokeLinecap: 'round' });
   let body = union(bodyShapes, fur, { sw, box: [-120, sit ? -140 : -130, 120, -20] });
   body += path(bodyShapes[sit ? bodyShapes.length - 1 : 0].d, { fill: shadeBand(fur, { at: 0.86, op: 0.35 }) });
   body += over + glossBox(-46, sit ? -132 : -120, 86, sit ? 110 : 64, { op: 0.28, top: false, sw: 4.4 });
@@ -941,13 +943,11 @@ function buildDog(spec, o) {
     if (lod >= 1.5) collar += path(`M${f1(cx - w / 2 + 6)} ${f1(collarY + 1)}Q${f1(cx)} ${f1(collarY + 16)} ${f1(cx + w / 2 - 6)} ${f1(collarY + 1)}`, { fill: 'none', stroke: '#FFFFFF', strokeOpacity: 0.55, strokeWidth: 1.6, strokeDasharray: '4 3', strokeLinecap: 'round' });
     const tx = cx + 6 * sb, ty = collarY + 26, tc = spec.tag;
     collar += circle(tx, ty - 9, 3.2, { fill: 'none', stroke: stroke(tc), strokeWidth: 2.4 });
-    collar += g(path(bonePath(34, 15), { fill: grad(tc, 'd', { up: 0.08, down: 0.1 }), stroke: stroke(tc), strokeWidth: f1(sw * 0.75), strokeLinejoin: 'round' })
-      + path('M-11 -3.2L5 -3.2', { stroke: '#FFFFFF', strokeOpacity: 0.7, strokeWidth: 2, strokeLinecap: 'round' })
-      + (lod >= 1.8 ? text(0, 3.3, 'TINY', { fontFamily: FONT_DISPLAY, fontSize: 9.4, fill: stroke(tc), textAnchor: 'middle', letterSpacing: 0.6 }) : ''),
+    collar += g(union(boneShapes(36, 17), tc, { sw: sw * 0.75, box: [-18, -9, 18, 9] })
+      + path('M-15.5 -5.4Q-14 -7.4 -11.6 -6.6', { fill: 'none', stroke: '#FFFFFF', strokeOpacity: 0.75, strokeWidth: 1.8, strokeLinecap: 'round' })
+      + (lod >= 1.8 ? text(0, 3.2, 'TINY', { fontFamily: FONT_DISPLAY, fontSize: 8.6, fill: stroke(tc), textAnchor: 'middle', letterSpacing: 0.5 }) : path('M-6 0L6 0', { stroke: tone(tc, -0.12), strokeWidth: 2, strokeLinecap: 'round' })),
     { transform: `translate(${f1(tx)} ${f1(ty)}) rotate(${f1(-pose.head * 0.4 + 4 * sb)}) scale(${f1(Math.max(0.6, Math.abs(cb) * 0.4 + 0.6))} 1)` });
   }
-  // fur tufts on the chest at house size
-  if (lod >= 2.5 && sit && cb > 0.3) for (const [dx, dy] of [[-8, -86], [6, -80], [-2, -70]]) collar += path(`M${f1(X(30, 0) + dx)} ${f1(dy)}q3 5 7 1`, { fill: 'none', stroke: tone(cream, -0.12), strokeWidth: 2, strokeLinecap: 'round' });
   // head
   const hd = spec.dims.head, hh = (100 * hd.h) / hd.w, head = { top: -hh / 2, bot: hh / 2, r: hd.r * 100 };
   const lsw = (sw * 100) / hd.w;
@@ -1070,7 +1070,7 @@ export function headPoint(id, [hx, hy], o = {}) {
 }
 // ---------- pose presets ----------
 // posePreset(name, id, o) -> a pose object (merge it, or use it as a pose key). Names:
-//   shrug       tiny shrug: shoulders up, palms out at the hips (the "...Ish." beat)
+//   shrug       tiny shrug: shoulders up, palms up and out (the "...Ish." beat); o.k 0..1 scales it
 //   shieldEyes  one hand flat over the brow like a visor (R hand; o.side 'L' for the other one)
 //   phoneUp     phone held up at chin height in the R hand (screen toward the face; use props {R: 'phoneBack'})
 //   phoneChest  phone at chest height, L hand steadying it; phoneLap: lowered to the lap. Tween up -> lap to lower it
@@ -1082,7 +1082,7 @@ export function posePreset(name, id = 'sam', o = {}) {
   const chestY = (k) => { const hy = headCenterY(spec); return hy + hd * 0.5 + spec.dims.torso.h * k; };
   const RB = (side, x, y, extra = {}) => { const r = reach(id, side, [x, y], { facing: f, elbow: extra.elbow }); return side === 'L' ? { armL: r.arm, foreL: r.fore } : { armR: r.arm, foreR: r.fore }; };
   switch (name) {
-    case 'shrug': return { shrug: 1, armL: 14, foreL: 100, armR: 14, foreR: 100, handL: 'flat', handR: 'flat', head: -4 };
+    case 'shrug': { const k = o.k ?? 1; return { shrug: k, armL: 8 + 6 * k, foreL: 100 * k, armR: 8 + 6 * k, foreR: 100 * k, handL: k > 0.3 ? 'flat' : 'open', handR: k > 0.3 ? 'flat' : 'open', head: -4 * k }; }
     case 'shieldEyes': {
       const sd = o.side === 'L' ? 'L' : 'R', sg = sd === 'L' ? -1 : 1;
       return { ...R(sd, [sg * 15, -12]), [sd === 'L' ? 'handL' : 'handR']: 'flat', ...(sd === 'R' ? { armL: 14, foreL: 18 } : { armR: 14, foreR: 18 }), head: -sg * 3 };
