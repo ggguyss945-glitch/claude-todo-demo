@@ -1,7 +1,7 @@
 {
  "root": "/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work/pov2/samples",
  "note": "Paths are relative to `root`. All free files are 48 kHz FLAC. Load with audio/library.py. Licences: CC0-1.0 needs nothing; CC-BY items need the line in ATTRIBUTION.md in the video description. Epidemic files: owner subscription, never commit or redistribute.",
- "built": "2026-10-30 11:53 UTC",
+ "built": "2026-11-03 09:39 UTC",
  "sources": {
   "vsco": {
    "licence": "CC0-1.0",
@@ -471,7 +471,7 @@
     "name": "heartbeat",
     "status": "epidemic + free layers",
     "epidemic": 2,
-    "free": 203,
+    "free": 9,
     "free_categories": [
      "score/percussion/body",
      "sfx/vocal"
@@ -14686,14 +14686,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl1_rr1.wav",
    "dur": 0.443,
@@ -14725,14 +14723,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl1_rr2.wav",
    "dur": 0.517,
@@ -14764,14 +14760,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl1_rr3.wav",
    "dur": 0.435,
@@ -14803,14 +14797,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl1_rr4.wav",
    "dur": 0.465,
@@ -14842,14 +14834,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl2_rr1.wav",
    "dur": 0.718,
@@ -14881,14 +14871,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl2_rr2.wav",
    "dur": 0.738,
@@ -14920,14 +14908,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl2_rr3.wav",
    "dur": 0.693,
@@ -14959,14 +14945,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_l_vl2_rr4.wav",
    "dur": 0.688,
@@ -14998,14 +14982,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl1_rr1.wav",
    "dur": 0.555,
@@ -15037,14 +15019,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl1_rr2.wav",
    "dur": 0.575,
@@ -15076,14 +15056,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl1_rr3.wav",
    "dur": 0.463,
@@ -15115,14 +15093,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl1_rr4.wav",
    "dur": 0.515,
@@ -15154,14 +15130,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl2_rr1.wav",
    "dur": 0.7,
@@ -15193,14 +15167,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl2_rr2.wav",
    "dur": 0.762,
@@ -15232,14 +15204,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl2_rr3.wav",
    "dur": 0.743,
@@ -15271,14 +15241,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellycenter_r_vl2_rr4.wav",
    "dur": 0.688,
@@ -15310,14 +15278,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl1_rr1.wav",
    "dur": 0.517,
@@ -15349,14 +15315,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl1_rr2.wav",
    "dur": 0.492,
@@ -15388,14 +15352,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl1_rr3.wav",
    "dur": 0.51,
@@ -15427,14 +15389,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl1_rr4.wav",
    "dur": 0.445,
@@ -15466,14 +15426,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr1.wav",
    "dur": 0.685,
@@ -15505,14 +15463,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr2.wav",
    "dur": 0.66,
@@ -15544,14 +15500,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr3.wav",
    "dur": 0.675,
@@ -15583,14 +15537,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr4.wav",
    "dur": 0.723,
@@ -15622,14 +15574,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr5.wav",
    "dur": 0.652,
@@ -15661,14 +15611,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_l_vl2_rr6.wav",
    "dur": 0.688,
@@ -15700,14 +15648,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl1_rr1.wav",
    "dur": 0.515,
@@ -15739,14 +15685,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl1_rr2.wav",
    "dur": 0.537,
@@ -15778,14 +15722,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl1_rr3.wav",
    "dur": 0.51,
@@ -15817,14 +15759,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl1_rr4.wav",
    "dur": 0.54,
@@ -15856,14 +15796,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr1.wav",
    "dur": 0.685,
@@ -15895,14 +15833,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr2.wav",
    "dur": 0.623,
@@ -15934,14 +15870,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr3.wav",
    "dur": 0.682,
@@ -15973,14 +15907,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr4.wav",
    "dur": 0.693,
@@ -16012,14 +15944,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr5.wav",
    "dur": 0.76,
@@ -16051,14 +15981,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/bellyside_r_vl2_rr6.wav",
    "dur": 0.657,
@@ -16090,14 +16018,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lin_rr1.wav",
    "dur": 0.352,
@@ -16129,14 +16055,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lin_rr2.wav",
    "dur": 0.333,
@@ -16168,14 +16092,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lin_rr3.wav",
    "dur": 0.343,
@@ -16207,14 +16129,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lin_rr4.wav",
    "dur": 0.37,
@@ -16246,14 +16166,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lout_rr1.wav",
    "dur": 0.362,
@@ -16285,14 +16203,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lout_rr2.wav",
    "dur": 0.708,
@@ -16324,14 +16240,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lout_rr3.wav",
    "dur": 0.333,
@@ -16363,14 +16277,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_lout_rr4.wav",
    "dur": 0.295,
@@ -16402,14 +16314,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rin_rr1.wav",
    "dur": 0.352,
@@ -16441,14 +16351,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rin_rr2.wav",
    "dur": 0.388,
@@ -16480,14 +16388,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rin_rr3.wav",
    "dur": 0.367,
@@ -16519,14 +16425,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rin_rr4.wav",
    "dur": 0.385,
@@ -16558,14 +16462,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rout_rr1.wav",
    "dur": 0.328,
@@ -16597,14 +16499,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rout_rr2.wav",
    "dur": 0.43,
@@ -16636,14 +16536,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rout_rr3.wav",
    "dur": 0.365,
@@ -16675,14 +16573,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/cheek_rout_rr4.wav",
    "dur": 0.37,
@@ -16714,14 +16610,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl1_rr1.wav",
    "dur": 0.535,
@@ -16753,14 +16647,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl1_rr2.wav",
    "dur": 0.522,
@@ -16792,14 +16684,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl1_rr3.wav",
    "dur": 0.49,
@@ -16831,14 +16721,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl1_rr4.wav",
    "dur": 0.537,
@@ -16870,14 +16758,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl2_rr1.wav",
    "dur": 0.693,
@@ -16909,14 +16795,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl2_rr2.wav",
    "dur": 0.672,
@@ -16948,14 +16832,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl2_rr3.wav",
    "dur": 0.713,
@@ -16987,14 +16869,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_l_vl2_rr4.wav",
    "dur": 0.693,
@@ -17026,14 +16906,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl1_rr1.wav",
    "dur": 0.535,
@@ -17065,14 +16943,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl1_rr2.wav",
    "dur": 0.562,
@@ -17104,14 +16980,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl1_rr3.wav",
    "dur": 0.48,
@@ -17143,14 +17017,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl1_rr4.wav",
    "dur": 0.468,
@@ -17182,14 +17054,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl2_rr1.wav",
    "dur": 0.733,
@@ -17221,14 +17091,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl2_rr2.wav",
    "dur": 0.718,
@@ -17260,14 +17128,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl2_rr3.wav",
    "dur": 0.75,
@@ -17299,14 +17165,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/chestside_r_vl2_rr4.wav",
    "dur": 0.675,
@@ -17338,10 +17202,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17377,10 +17240,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17416,10 +17278,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17455,10 +17316,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17494,10 +17354,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17533,10 +17392,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17572,10 +17430,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17611,10 +17468,9 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
+    "chest",
     "thump",
-    "heartbeat_layer",
-    "clap",
-    "stomp"
+    "heartbeat_layer"
    ],
    "serves": [
     "heartbeat"
@@ -17650,14 +17506,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl1_rr1.wav",
    "dur": 1.163,
@@ -17689,14 +17543,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl1_rr2.wav",
    "dur": 1.278,
@@ -17728,14 +17580,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl1_rr3.wav",
    "dur": 1.535,
@@ -17767,14 +17617,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl1_rr4.wav",
    "dur": 1.385,
@@ -17806,14 +17654,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr1.wav",
    "dur": 1.312,
@@ -17845,14 +17691,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr2.wav",
    "dur": 1.245,
@@ -17884,14 +17728,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr3.wav",
    "dur": 1.38,
@@ -17923,14 +17765,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr4.wav",
    "dur": 1.32,
@@ -17962,14 +17802,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr5.wav",
    "dur": 1.17,
@@ -18001,14 +17839,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/fingerclap_vl2_rr6.wav",
    "dur": 1.29,
@@ -18040,14 +17876,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl1_rr1.wav",
    "dur": 0.743,
@@ -18079,14 +17913,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl1_rr2.wav",
    "dur": 0.743,
@@ -18118,14 +17950,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl1_rr3.wav",
    "dur": 0.963,
@@ -18157,14 +17987,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl1_rr4.wav",
    "dur": 0.735,
@@ -18196,14 +18024,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr1.wav",
    "dur": 0.983,
@@ -18235,14 +18061,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr2.wav",
    "dur": 0.755,
@@ -18274,14 +18098,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr3.wav",
    "dur": 0.777,
@@ -18313,14 +18135,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr4.wav",
    "dur": 0.865,
@@ -18352,14 +18172,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr5.wav",
    "dur": 0.775,
@@ -18391,14 +18209,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_l_vl2_rr6.wav",
    "dur": 0.775,
@@ -18430,14 +18246,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl1_rr1.wav",
    "dur": 0.735,
@@ -18469,14 +18283,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl1_rr2.wav",
    "dur": 0.743,
@@ -18508,14 +18320,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl1_rr3.wav",
    "dur": 0.685,
@@ -18547,14 +18357,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl1_rr4.wav",
    "dur": 0.735,
@@ -18586,14 +18394,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr1.wav",
    "dur": 0.782,
@@ -18625,14 +18431,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr2.wav",
    "dur": 0.728,
@@ -18664,14 +18468,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr3.wav",
    "dur": 0.703,
@@ -18703,14 +18505,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr4.wav",
    "dur": 0.752,
@@ -18742,14 +18542,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr5.wav",
    "dur": 0.755,
@@ -18781,14 +18579,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/halfstomp_r_vl2_rr6.wav",
    "dur": 0.848,
@@ -18820,14 +18616,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl1_rr1.wav",
    "dur": 1.425,
@@ -18859,14 +18653,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl1_rr2.wav",
    "dur": 1.265,
@@ -18898,14 +18690,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl1_rr3.wav",
    "dur": 1.545,
@@ -18937,14 +18727,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl1_rr4.wav",
    "dur": 1.232,
@@ -18976,14 +18764,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr1.wav",
    "dur": 1.505,
@@ -19015,14 +18801,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr2.wav",
    "dur": 1.43,
@@ -19054,14 +18838,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr3.wav",
    "dur": 1.48,
@@ -19093,14 +18875,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr4.wav",
    "dur": 1.435,
@@ -19132,14 +18912,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr5.wav",
    "dur": 1.373,
@@ -19171,14 +18949,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/handclap_vl2_rr6.wav",
    "dur": 1.435,
@@ -19210,14 +18986,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl1_rr1.wav",
    "dur": 0.19,
@@ -19249,14 +19023,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl1_rr2.wav",
    "dur": 0.198,
@@ -19288,14 +19060,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl1_rr3.wav",
    "dur": 0.2,
@@ -19327,14 +19097,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl1_rr4.wav",
    "dur": 0.198,
@@ -19366,14 +19134,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr1.wav",
    "dur": 0.403,
@@ -19405,14 +19171,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr2.wav",
    "dur": 0.39,
@@ -19444,14 +19208,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr3.wav",
    "dur": 0.357,
@@ -19483,14 +19245,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr4.wav",
    "dur": 0.318,
@@ -19522,14 +19282,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr5.wav",
    "dur": 0.365,
@@ -19561,14 +19319,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/head_vl2_rr6.wav",
    "dur": 0.333,
@@ -19600,14 +19356,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl1_rr1.wav",
    "dur": 0.728,
@@ -19639,14 +19393,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl1_rr2.wav",
    "dur": 0.69,
@@ -19678,14 +19430,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl1_rr3.wav",
    "dur": 0.698,
@@ -19717,14 +19467,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl1_rr4.wav",
    "dur": 0.73,
@@ -19756,14 +19504,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr1.wav",
    "dur": 0.927,
@@ -19795,14 +19541,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr2.wav",
    "dur": 0.932,
@@ -19834,14 +19578,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr3.wav",
    "dur": 0.945,
@@ -19873,14 +19615,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr4.wav",
    "dur": 0.738,
@@ -19912,14 +19652,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr5.wav",
    "dur": 0.815,
@@ -19951,14 +19689,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_l_vl2_rr6.wav",
    "dur": 0.897,
@@ -19990,14 +19726,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl1_rr1.wav",
    "dur": 0.738,
@@ -20029,14 +19763,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl1_rr2.wav",
    "dur": 0.693,
@@ -20068,14 +19800,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl1_rr3.wav",
    "dur": 0.82,
@@ -20107,14 +19837,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl1_rr4.wav",
    "dur": 0.83,
@@ -20146,14 +19874,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr1.wav",
    "dur": 1.01,
@@ -20185,14 +19911,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr2.wav",
    "dur": 0.93,
@@ -20224,14 +19948,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr3.wav",
    "dur": 0.945,
@@ -20263,14 +19985,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr4.wav",
    "dur": 0.897,
@@ -20302,14 +20022,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr5.wav",
    "dur": 0.89,
@@ -20341,14 +20059,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/heel_r_vl2_rr6.wav",
    "dur": 0.943,
@@ -20380,14 +20096,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_l_rr1.wav",
    "dur": 0.91,
@@ -20419,14 +20133,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_l_rr2.wav",
    "dur": 0.87,
@@ -20458,14 +20170,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_l_rr3.wav",
    "dur": 0.9,
@@ -20497,14 +20207,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_l_rr4.wav",
    "dur": 0.825,
@@ -20536,14 +20244,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_r_rr1.wav",
    "dur": 0.845,
@@ -20575,14 +20281,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_r_rr2.wav",
    "dur": 0.902,
@@ -20614,14 +20318,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_r_rr3.wav",
    "dur": 0.964,
@@ -20653,14 +20355,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/pinkysnap_r_rr4.wav",
    "dur": 0.911,
@@ -20692,14 +20392,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl1_rr1.wav",
    "dur": 0.547,
@@ -20731,14 +20429,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl1_rr2.wav",
    "dur": 0.627,
@@ -20770,14 +20466,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl1_rr3.wav",
    "dur": 0.552,
@@ -20809,14 +20503,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl1_rr4.wav",
    "dur": 0.588,
@@ -20848,14 +20540,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl2_rr1.wav",
    "dur": 0.728,
@@ -20887,14 +20577,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl2_rr2.wav",
    "dur": 0.67,
@@ -20926,14 +20614,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl2_rr3.wav",
    "dur": 0.67,
@@ -20965,14 +20651,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_l_vl2_rr4.wav",
    "dur": 0.71,
@@ -21004,14 +20688,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl1_rr1.wav",
    "dur": 0.59,
@@ -21043,14 +20725,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl1_rr2.wav",
    "dur": 0.618,
@@ -21082,14 +20762,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl1_rr3.wav",
    "dur": 0.595,
@@ -21121,14 +20799,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl1_rr4.wav",
    "dur": 0.632,
@@ -21160,14 +20836,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl2_rr1.wav",
    "dur": 0.695,
@@ -21199,14 +20873,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl2_rr2.wav",
    "dur": 0.642,
@@ -21238,14 +20910,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl2_rr3.wav",
    "dur": 0.745,
@@ -21277,14 +20947,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/shoulderout_r_vl2_rr4.wav",
    "dur": 0.74,
@@ -21316,14 +20984,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr1.wav",
    "dur": 0.755,
@@ -21355,14 +21021,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr2.wav",
    "dur": 0.943,
@@ -21394,14 +21058,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr3.wav",
    "dur": 0.968,
@@ -21433,14 +21095,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr4.wav",
    "dur": 0.912,
@@ -21472,14 +21132,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr5.wav",
    "dur": 0.823,
@@ -21511,14 +21169,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_l_rr6.wav",
    "dur": 0.925,
@@ -21550,14 +21206,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr1.wav",
    "dur": 1.022,
@@ -21589,14 +21243,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr2.wav",
    "dur": 0.983,
@@ -21628,14 +21280,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr3.wav",
    "dur": 1.075,
@@ -21667,14 +21317,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr4.wav",
    "dur": 0.96,
@@ -21706,14 +21354,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr5.wav",
    "dur": 0.99,
@@ -21745,14 +21391,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/snap_r_rr6.wav",
    "dur": 0.995,
@@ -21784,14 +21428,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl1_rr1.wav",
    "dur": 0.943,
@@ -21823,14 +21465,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl1_rr2.wav",
    "dur": 1.01,
@@ -21862,14 +21502,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl1_rr3.wav",
    "dur": 0.873,
@@ -21901,14 +21539,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl1_rr4.wav",
    "dur": 1.04,
@@ -21940,14 +21576,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr1.wav",
    "dur": 1.015,
@@ -21979,14 +21613,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr2.wav",
    "dur": 1.015,
@@ -22018,14 +21650,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr3.wav",
    "dur": 0.96,
@@ -22057,14 +21687,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr4.wav",
    "dur": 1.042,
@@ -22096,14 +21724,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr5.wav",
    "dur": 1.022,
@@ -22135,14 +21761,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_l_vl2_rr6.wav",
    "dur": 1.05,
@@ -22174,14 +21798,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl1_rr1.wav",
    "dur": 1.147,
@@ -22213,14 +21835,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl1_rr2.wav",
    "dur": 1.032,
@@ -22252,14 +21872,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl1_rr3.wav",
    "dur": 1.012,
@@ -22291,14 +21909,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl1_rr4.wav",
    "dur": 0.978,
@@ -22330,14 +21946,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr1.wav",
    "dur": 1.008,
@@ -22369,14 +21983,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr2.wav",
    "dur": 1.018,
@@ -22408,14 +22020,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr3.wav",
    "dur": 1.048,
@@ -22447,14 +22057,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr4.wav",
    "dur": 0.985,
@@ -22486,14 +22094,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr5.wav",
    "dur": 1.035,
@@ -22525,14 +22131,12 @@
    "category": "score/percussion/body",
    "tags": [
     "body",
-    "thump",
-    "heartbeat_layer",
+    "percussion",
     "clap",
-    "stomp"
+    "stomp",
+    "slap"
    ],
-   "serves": [
-    "heartbeat"
-   ],
+   "serves": [],
    "source": "bodyperc",
    "orig": "sfz_body_percussion/Samples/body/stomp_r_vl2_rr6.wav",
    "dur": 1.08,
@@ -50343,7 +49947,7 @@
    "qc": [],
    "orig_sr": 44100,
    "midi": 67,
-   "f0_hz": 392.47,
+   "f0_hz": 392.48,
    "midi_est": 67.02,
    "vel": 2,
    "licence": "CC0-1.0",
