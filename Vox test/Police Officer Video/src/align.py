@@ -1,5 +1,5 @@
 """Find where every script line sits in the narrator's recordings, then fit the Russian dub into the English timeline.
-    python3 align.py <en.mp3> <ru.mp3> <parakeet dir> <whisper dir> <out dir>
+    python3 align.py <en.mp3> <ru.mp3 | -> <parakeet dir> <whisper dir | -> <out dir>   ('-' for RU: English timeline only)
 English: Parakeet word timestamps, matched word-by-word to the script.
 Russian: the recording is cut at pauses, each piece is transcribed with Whisper and matched to the Russian script text,
 and line starts inside a piece are placed by character position.
@@ -22,8 +22,8 @@ def load(path, sr):
     y, _ = librosa.load(path, sr=sr, mono=True); return y.astype(np.float32)
 
 
-en48, ru48 = load(EN, SR), load(RU, SR)
-en16, ru16 = load(EN, 16000), load(RU, 16000)
+en48, ru48 = load(EN, SR), (load(RU, SR) if RU != '-' else None)
+en16, ru16 = load(EN, 16000), (load(RU, 16000) if RU != '-' else None)
 
 # ------------------------------------------------------------------ English: word timestamps
 CACHE = os.path.join(OUT, 'asr_cache.json')
@@ -95,6 +95,16 @@ def line_bounds(times_first, times_last, y16, n):
 
 
 en_st, en_en = line_bounds(first, last, en16, len(LINES))
+
+if RU == '-':                                                  # English only (no Russian recording): timeline + vo_en, no dub
+    sf.write(os.path.join(OUT, 'vo_en.wav'), en48, SR, subtype='PCM_24')
+    tl = {'duration_en': round(len(en48) / SR, 3), 'lines': [], 'dub': []}
+    for k, l in enumerate(LINES):
+        tl['lines'].append({'i': k, 'who': l['who'], 'tag': l['tag'], 'fx': l['fx'], 'en': l['en'], 'ru': l['ru'],
+                            't': round(en_st[k], 3), 'end': round(en_en[k], 3), 'found_en': k in first, 'ru_src': None, 'found_ru': False})
+    json.dump(tl, open(os.path.join(OUT, 'timeline.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(cache, open(CACHE, 'w'), ensure_ascii=False)
+    print(f'English only: {sum(k in first for k in range(len(LINES)))}/{len(LINES)} lines located'); sys.exit(0)
 
 # ------------------------------------------------------------------ Russian: pause-split pieces, Whisper, character alignment
 wh = None if 'ru_texts' in cache else sherpa_onnx.OfflineRecognizer.from_whisper(encoder=f'{WH}/small-encoder.int8.onnx', decoder=f'{WH}/small-decoder.int8.onnx',
