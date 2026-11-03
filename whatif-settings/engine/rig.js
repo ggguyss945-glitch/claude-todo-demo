@@ -95,7 +95,7 @@ export function strands(list, head, yaw, color, spec) {
       if (a > -78 && a < 78 && hw > 0) cur.push([hw * Math.sin(a * D2R), y]); else if (cur.length) { segs.push(cur); cur = []; }
     }
     if (cur.length) segs.push(cur);
-    for (const sg of segs) if (sg.length > 2) out += path(spline(sg), { fill: 'none', stroke: s.dark ? tone(color, -0.09, 1.1) : tone(color, 0.075, 0.9), strokeWidth: s.w ?? 3.4, strokeLinecap: 'round', opacity: s.op ?? 0.95 });
+    for (const sg of segs) if (sg.length > 2) out += path(spline(sg), { fill: 'none', stroke: s.dark ? tone(color, -0.09, 1.1) : tone(color, 0.095, 0.88), strokeWidth: s.w ?? 4.2, strokeLinecap: 'round', opacity: s.op ?? 0.95 });
   }
   return out;
 }
@@ -119,12 +119,11 @@ export function mitten(wx, wy, dir, size, inner, kind, skin, sw) {
     if (kind === 'point') { const a = P(r * 0.9, r * 0.3), b = P(r * 2.2, r * 0.5); shapes.push({ d: capsule(a[0], a[1], b[0], b[1], r * 0.62) }); }
     if (kind === 'thumbs') { const a = P(r * 0.5, r * 0.55), b = P(r * 0.1, r * 1.55); shapes.push({ d: capsule(a[0], a[1], b[0], b[1], r * 0.6) }); }
   } else {
-    const c = P(r * 0.95, 0);
-    // palm: rounded mitten (slightly longer than wide)
-    const pts = [P(r * 0.1, -r * 0.78), P(r * 1.0, -r * 0.98), P(r * 1.9, -r * 0.55), P(r * 2.0, r * 0.25), P(r * 1.45, r * 0.85), P(r * 0.3, r * 0.82)];
-    shapes.push({ d: spline(pts, { closed: true, k: 0.2 }) });
-    if (kind !== 'flat') { const a = P(r * 0.55, r * 0.6), b = P(r * 1.05, r * 1.35); shapes.push({ d: capsule(a[0], a[1], b[0], b[1], r * 0.58) }); }
-    void c;
+    // palm: an ellipse a little longer than wide, along the forearm; thumb nub on the inner side
+    const c = P(r * 1.0, 0), pts = [];
+    for (let i = 0; i < 16; i++) { const t = (i / 16) * Math.PI * 2, al = Math.cos(t) * r * 1.04, pe = Math.sin(t) * r * 0.9; pts.push([c[0] + dx * al + nx * pe, c[1] + dy * al + ny * pe]); }
+    shapes.push({ d: spline(pts, { closed: true }) });
+    if (kind !== 'flat') { const a = P(r * 0.5, r * 0.7), b = P(r * 0.9, r * 1.22); shapes.push({ d: capsule(a[0], a[1], b[0], b[1], r * 0.56) }); }
   }
   const xs = shapes.length ? [wx - r * 3, wy - r * 3, wx + r * 3, wy + r * 3] : null;
   return union(shapes, skin, { sw, box: xs });
@@ -192,10 +191,17 @@ export function shoeCap(ax, ay, shoe, d, sw, yaw, u = [0, 1]) {
 }
 
 // ---------- head ----------
+// merge toon-level add-ons ({sweat, tears, blush, q, zzz, stars|dizzy, bump, hearts, ...}) into a face spec
+export function withAdd(faceSpec, add) {
+  if (!add || !Object.keys(add).length) return faceSpec;
+  const a = { ...add }; if (a.stars) { a.dizzy = a.stars; delete a.stars; }
+  if (!faceSpec || typeof faceSpec === 'string') return { preset: faceSpec || 'neutral', add: a };
+  return { ...faceSpec, add: { ...(faceSpec.add || {}), ...a } };
+}
 // draws head shape + face + hair in head-local units; returns markup placed by the caller
 export function headMarkup(spec, o) {
   const { yaw, faceSpec, look, sw, pose, add } = o;
-  const hd = spec.head;
+  const hd = spec.dims.head;
   const hh = (100 * hd.h) / hd.w, head = { top: -hh / 2, bot: hh / 2, r: hd.r * 100, a: 50 };
   const skin = spec.skin;
   const lsw = (sw * 100) / hd.w;                     // outline width in head units
@@ -204,11 +210,31 @@ export function headMarkup(spec, o) {
   if (spec.hair?.behind) back += spec.hair.behind(ctx);
   const hp = rrect(-50, head.top, 100, hh, head.r);
   let skull = path(hp, { fill: radial(skin, { cx: 0.36, cy: 0.34, r: 0.85 }), stroke: stroke(skin), strokeWidth: f1(lsw), strokeLinejoin: 'round' });
-  skull += path(hp, { fill: shadeBand(skin, { at: ctx.back ? 0.86 : 0.885, op: 0.5, dL: 0.07 }) });
-  skull += path(`M-41 ${f1(head.top + hh * 0.42)}L-41 ${f1(head.top + hh * 0.8)}`, { stroke: '#FFFFFF', strokeOpacity: 0.42, strokeWidth: 3.6, strokeLinecap: 'round', fill: 'none' });
-  if (spec.ears) skull = spec.ears(ctx) + skull;
-  const fopts = { yaw, skin, look, top: head.top - (spec.hair?.height ?? 10), ...(spec.faceOpts || {}) };
-  const f = drawFace(faceSpec, fopts);
+  skull += path(hp, { fill: shadeBand(skin, { at: ctx.back ? 0.86 : 0.875, op: 0.6, dL: 0.075 }) });
+  skull += path(`M-41 ${f1(head.top + hh * 0.42)}L-41 ${f1(head.top + hh * 0.8)}`, { stroke: '#FFFFFF', strokeOpacity: 0.55, strokeWidth: 4.2, strokeLinecap: 'round', fill: 'none' });
+  if (spec.ears === false) { /* no ears */ } else if (typeof spec.ears === 'function') skull = spec.ears(ctx) + skull;
+  else {
+    // small ears on the cylinder at u = +-1: behind the skull (peeking out) or on it when that side faces us
+    const ey = (spec.faceOpts?.eyeY ?? 6) + 5;
+    let behind = '', onTop = '';
+    for (const sd of [-1, 1]) {
+      const a = (sd * 90 + yaw) * D2R, z = Math.cos(a), x = 50 * Math.sin(a);
+      if (z < -0.35) continue;
+      if (z <= 0.2) {
+        const ox = x + Math.sign(x || sd) * 3;
+        behind += path(`M${f1(ox - 7.5)} ${f1(ey)}a7.5 10.5 0 1 0 15 0a7.5 10.5 0 1 0 -15 0Z`, { fill: grad(skin, 'd'), stroke: stroke(skin), strokeWidth: f1(lsw), strokeLinejoin: 'round' })
+          + path(`M${f1(ox + Math.sign(x || sd) * 1.5)} ${f1(ey - 5)}Q${f1(ox + Math.sign(x || sd) * 4)} ${f1(ey)} ${f1(ox + Math.sign(x || sd) * 1)} ${f1(ey + 5)}`, { fill: 'none', stroke: stroke(skin), strokeWidth: 2, strokeLinecap: 'round', opacity: 0.55 });
+      } else {
+        const k = Math.max(0.45, z);
+        onTop += g(path('M-6.5 -9.5Q4.5 -11.5 6.5 -2Q7.5 8 -1 10.5Q-5 11.5 -6.5 8Z', { fill: grad(skin, 'd'), stroke: stroke(skin), strokeWidth: f1(lsw), strokeLinejoin: 'round' })
+          + path('M-2.5 -5Q3 -5.5 3 0Q2.5 4.5 -1 5.5', { fill: 'none', stroke: stroke(skin), strokeWidth: 2, strokeLinecap: 'round', opacity: 0.55 }),
+        { transform: `translate(${f1(x)} ${f1(ey)}) scale(${f1(-sd * k)} 1)` });
+      }
+    }
+    skull = behind + skull + onTop;
+  }
+  const fopts = { yaw, skin, look, top: head.top - (spec.hair?.height ?? 10), headBox: head, ...(spec.faceOpts || {}) };
+  const f = drawFace(withAdd(faceSpec, add), fopts);
   if (spec.hair?.front) front += spec.hair.front(ctx);
   if (spec.headwear) over += spec.headwear(ctx, f);
   const preface = spec.faceUnder ? spec.faceUnder(ctx) : '';
@@ -229,15 +255,15 @@ export function buildFigure(spec, o = {}) {
   const hipY = ankleY - d.leg.len;
   const torsoBot = hipY + (d.torso.hipOverlap ?? 14);
   const torsoTop = torsoBot - d.torso.h;
-  const shoulderY = torsoTop + (d.torso.shoulder ?? 24);
+  const shoulderY = torsoTop + (d.torso.shoulder ?? 20);
   const neckY = torsoTop + (d.torso.neck ?? 6);
   const headCY = neckY - d.head.h / 2 + (d.head.sink ?? 0);
   const wt = d.torso.wt * kW, wb = d.torso.wb * kW;
   const tm = (x) => { const m = mapFeature((x / (d.torso.wt / 2)) * 50, yaw); return { x: (m.x / 50) * (wt / 2), k: m.k }; };
-  const ctx = { yaw, sn, cs, back, sideOn, sw, d, pose, torsoTop, torsoBot, shoulderY, neckY, hipY, wt, wb, tm, spec, kW, add: o.add || {} };
+  const ctx = { yaw, sn, cs, back, sideOn, sw, d, pose, torsoTop, torsoBot, shoulderY, neckY, hipY, wt, wb, tm, spec, kW, add: o.add || {}, props: { ...(spec.props || {}), ...(o.props || {}) } };
 
   // shoulders & hips placed on the rotating body
-  const shX = d.torso.wt / 2 - d.arm.w * 0.38, hipX = d.leg.hip;
+  const shX = d.torso.wt / 2 + d.arm.w * (d.arm.out ?? 0.02), hipX = d.leg.hip;
   const armL = { x: -shX * cs, z: shX * sn, sgn: 1, a: pose.armL, fore: pose.foreL, hand: pose.handL || spec.hands?.L || 'open', id: 'L' };
   const armR = { x: shX * cs, z: -shX * sn, sgn: -1, a: pose.armR, fore: pose.foreR, hand: pose.handR || spec.hands?.R || 'open', id: 'R' };
   const legLp = { x: -hipX * cs, z: hipX * sn, sgn: 1, a: pose.legL, id: 'L' };
@@ -252,7 +278,7 @@ export function buildFigure(spec, o = {}) {
     if (props[A.id] && spec.drawProp) { const pr = spec.drawProp(props[A.id], { hand: r.hand, wrist: r.wrist, dir: r.dir, side: A.id, sw, ctx }); pre = pr.behind || ''; post = pr.front || ''; }
     return pre + r.svg + post;
   };
-  const drawLeg = (Lg) => leg({ hx: Lg.x, hy: hipY, a: Lg.a, sgn: Lg.sgn, d: d.leg, pants: spec.pants.color, pantLen: spec.pants.len ?? 1, skin: spec.skin, sw, shoe: spec.shoes, yaw, sock: spec.pants.sock }).svg;
+  const drawLeg = (Lg) => leg({ hx: Lg.x, hy: hipY, a: Lg.a, sgn: Lg.sgn, d: d.leg, pants: spec.pants.color, pantLen: spec.pants.len ?? 1, skin: spec.skin, sw, shoe: { ...d.shoe, ...spec.shoes }, yaw, sock: spec.pants.sock }).svg;
 
   // ---- assemble (painter's order) ----
   let lower = '', upper = '', far = '', near = '';

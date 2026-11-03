@@ -69,12 +69,12 @@ const G = {
   moon: (c) => path('M10 -36A38 38 0 1 0 36 10A30 30 0 1 1 10 -36Z', { fill: c }),
   feather: (c) => path('M30 -38C-6 -36 -28 -6 -30 30L-36 40M-30 30C-2 30 22 8 30 -38', { fill: c, ...st(c, 6) }),
   weight: (c) => // the classic cartoon weight: a trapezoid with a ring on top
-    circle(0, -26, 11, { fill: 'none', ...st(c, 8) }) + path('M-22 -12H22L38 38H-38Z', { fill: c, ...st(c, 6) }) +
-    text(0, 26, 'T', { fill: 'var(--hole, #000)', fontFamily: FONT.title, fontSize: 34, textAnchor: 'middle', opacity: 0.8 }),
+    path('M-12 -14V-26Q-12 -36 0 -36Q12 -36 12 -26V-14', { fill: 'none', ...st(c, 7) }) + path('M-26 -14H26L42 36H-42Z', { fill: c, ...st(c, 6) }) +
+    text(0, 26, '1T', { fill: 'var(--hole, #000)', fontFamily: FONT.title, fontSize: 30, textAnchor: 'middle', opacity: 0.85 }),
   planet: (c) => circle(0, 0, 30, { fill: c }) + path('M-28 -9H28M-30 6H30', { fill: 'none', stroke: 'var(--hole, #000)', strokeWidth: 5, opacity: 0.45 }) +
     ellipse(0, 0, 48, 14, { fill: 'none', ...st(c, 6), transform: 'rotate(-18)' }),
   globe: (c) => circle(0, 0, 36, { fill: 'none', ...st(c, 8) }) + ellipse(0, 0, 15, 36, { fill: 'none', ...st(c, 6) }) + line(-36, 0, 36, 0, st(c, 6)),
-  bounce: (c) => circle(18, -22, 15, { fill: c }) + path('M-40 34Q-28 -16 -14 34Q-4 0 6 34', { fill: 'none', ...st(c, 6), strokeDasharray: '2 10' }) + rect(-44, 36, 88, 8, { rx: 4, fill: c }),
+  bounce: (c) => circle(26, -24, 15, { fill: c }) + path('M-38 30Q-26 -26 -10 30', { fill: 'none', ...st(c, 7) }) + path('M-4 30Q6 -8 16 18', { fill: 'none', ...st(c, 7), opacity: 0.85 }) + rect(-46, 34, 92, 9, { rx: 4.5, fill: c }),
   anvil: (c) => G.weight(c),
   turtle: (c) => path('M-30 10Q-30 -24 0 -24Q30 -24 30 10Z', { fill: c }) + circle(36, 0, 9, { fill: c }) + R(-26, 8, 12, 14, 5, c) + R(14, 8, 12, 14, 5, c),
   rabbit: (c) => ellipse(-8, -26, 7, 18, { fill: c }) + ellipse(8, -26, 7, 18, { fill: c }) + circle(0, 6, 26, { fill: c }),

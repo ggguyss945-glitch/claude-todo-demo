@@ -11,8 +11,11 @@ const mod = qs.get('mod'), arg = qs.get('arg');
 const want = ['900 60px Nunito', '800 60px Nunito', '700 60px Nunito', '600 60px Nunito', '60px "Lilita One"'];
 for (const f of want) { try { await document.fonts.load(f); } catch (e) {} }
 window.__fonts = want.filter((f) => ![...document.fonts].some((ff) => ff.status === 'loaded' && f.includes(ff.family.replace(/"/g, ''))));
-const { default: make } = await import(`./${mod}`);
-const { w, h, svg } = await make(arg);
+window.addEventListener('error', (e) => { window.__err = String(e.message); window.__ready = true; });
+let made;
+try { const { default: make } = await import(`./${mod}`); made = await make(arg); }
+catch (e) { window.__err = String(e && e.stack || e); window.__ready = true; throw e; }
+const { w, h, svg } = made;
 const stage = document.getElementById('stage');
 stage.style.width = w + 'px'; stage.style.height = h + 'px';
 stage.innerHTML = svg;

@@ -190,7 +190,7 @@ export function slider(o = {}, p) {
 
 // ---------- rows ----------
 /** default height of a row by kind */
-export const rowH = (r) => r.h || ({ slider: 262, sliderBare: 196, chips: 172 }[r.kind] || 104);
+export const rowH = (r) => r.h || ({ slider: 284, sliderBare: 222, chips: 172 }[r.kind] || 104);
 /** one settings row. kind: 'value' | 'toggle' | 'slider' (label + slider, bubble below the knob) | 'sliderBare'
  *  (slider only, bubble above) | 'chips' (preset choices: options [{label, icon}], pick index) | 'locked'.
  *  cat = key of CATS (or give icon/label/color). */
@@ -228,7 +228,7 @@ export function row(o = {}, p) {
   }
   if (kind === 'toggle') s += toggle({ x: x + w - 26 - 124, y: ty - 33, w: 124, h: 66, k: o.k ?? (o.on === false ? 0 : 1) });
   if (kind === 'slider') s += slider({ x: x + 24, y: y + 136, w: w - 48, v: o.v, iconL: o.iconL, iconR: o.iconR, bubble: o.bubble, stops: o.stops, bubbleK: o.bubbleK, bubbleBelow: true });
-  if (kind === 'sliderBare') s += slider({ x: x + 24, y: y + 112, w: w - 48, v: o.v, iconL: o.iconL, iconR: o.iconR, bubble: o.bubble, stops: o.stops, bubbleK: o.bubbleK });
+  if (kind === 'sliderBare') s += slider({ x: x + 24, y: y + 136, w: w - 48, v: o.v, iconL: o.iconL, iconR: o.iconR, bubble: o.bubble, stops: o.stops, bubbleK: o.bubbleK });
   if (kind === 'chips') s += chips({ x: x + 20, y: y + 20, w: w - 40, h: h - 40, options: o.options, pick: o.pick ?? 0, pickK: o.pickK });
   return popIn(d + s, x + w / 2, y + h / 2, p, { bbox: { x, y, w, h, r }, ringGrow: 34 });
 }
@@ -260,7 +260,7 @@ export function panel(o = {}, p) {
   const headH = 150, tabH = tabs ? 84 : 0, gap = 18;
   const rh = rowH;
   const rowsH = rows.reduce((a, r) => a + rh(r) + gap, 0);
-  const h = o.h || headH + tabH + rowsH + 26;
+  const h = o.h || headH + tabH + rowsH + 34;
   const d = new Defs();
   let s = glassCard(d, x, y, w, h, 46);
   // corner brackets: the "reality frame" accent
@@ -302,7 +302,7 @@ export function panel(o = {}, p) {
   return popIn(d + s, x + w / 2, y + h / 2, p, { bbox: { x, y, w, h, r: 46 } });
 }
 export function panelHeight(o) {
-  return o.h || 150 + (o.tabs ? 84 : 0) + (o.rows || []).reduce((a, r) => a + rowH(r) + 18, 0) + 26;
+  return o.h || 150 + (o.tabs ? 84 : 0) + (o.rows || []).reduce((a, r) => a + rowH(r) + 18, 0) + 34;
 }
 
 // ---------- toast ----------
@@ -672,7 +672,7 @@ export function dayCard(o = {}, p) {
     if (cur) s += path(rrPath(pxx + 7, py + 5, pw - 14, 6, 3), { fill: '#FFFFFF', opacity: 0.5 });
   }
   // corner sticker: today's setting
-  s += g(iconTile(icon, 0, 0, 120, color, { ring: 7 }), { transform: `translate(${f(x + w - 18)} ${f(y + 14 + hb + 30)}) rotate(12)` });
+  s += g(iconTile(icon, 0, 0, 112, color, { ring: 7 }), { transform: `translate(${f(x + 4)} ${f(y + 14 + hb + 150)}) rotate(-11)` });
   s += path(rrPath(x, y, w, h, R), { fill: 'none', stroke: '#070A1C', strokeWidth: 4 });
   const inner = d + g(s, { transform: `translate(${f(cx)} ${f(cy)}) scale(${sc}) rotate(${f(o.tilt || 0)})` });
   return popIn(inner, cx, cy, p, { ring: 'circle', r: 300 * sc, ringGrow: 160 * sc, ringW: 18 });

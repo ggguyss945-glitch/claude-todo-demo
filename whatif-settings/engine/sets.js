@@ -8,10 +8,11 @@ import {
   W, H, FONT, Defs, f, clamp, lerp, rng, shade, mix, ink, atmos, g, rect, circle, ellipse, line, poly, path, text, tr, st,
   rrPath, gearPath, starPts, glossTop, contact, textW, esc,
 } from './ui_style.js';
+import { glitch } from './fx.js';
 
 export const X0 = -480, X1 = 2400, SW = X1 - X0;
-const SWM = 2.2; // mid-layer outline width (buildings)
-const SWN = 3.2; // near-layer outline width (props)
+const SWM = 3.0; // mid-layer outline width (buildings) - reference ~2.5 px at 720p
+const SWN = 4.0; // near-layer outline width (props)
 
 // ---------- composition ----------
 export function compose(layers, cam = {}) {
@@ -23,6 +24,16 @@ export const wrap = (inner, w = W, h = H) => `<svg xmlns="http://www.w3.org/2000
 function finish(d, layers, o = {}) {
   const all = [{ name: 'defs', depth: 0, svg: String(d) }, ...layers];
   return { w: W, h: H, layers: all, svg: compose(all, o.cam) };
+}
+
+/** rectangle with rounded-rect holes (even-odd), so far layers show through walls */
+export function holed(x, y, w, h, holes, a = {}) {
+  // holes are clamped to the rectangle: with even-odd, any part of a hole outside it would be filled instead
+  const dd = `M${f(x)} ${f(y)}H${f(x + w)}V${f(y + h)}H${f(x)}Z` + holes.map(([hx, hy, hw, hh, hr = 6]) => {
+    const x0 = Math.max(hx, x), y0 = Math.max(hy, y), x1 = Math.min(hx + hw, x + w), y1 = Math.min(hy + hh, y + h);
+    return x1 > x0 && y1 > y0 ? rrPath(x0, y0, x1 - x0, y1 - y0, Math.min(hr, (y1 - y0) / 2)) : '';
+  }).join('');
+  return path(dd, { fillRule: 'evenodd', ...a });
 }
 
 // ---------- generic plastic shapes ----------
@@ -39,7 +50,7 @@ export function blob(d, lobes, fill, o = {}) {
   const flatY = o.flat; // flat bottom at y
   const grad = o.gradFill || d.lin([[0, shade(fill, o.up ?? 0.06)], [1, shade(fill, -(o.down ?? 0.07))]], [0, minY, 0, flatY ?? maxY], 'userSpaceOnUse');
   const shapes = (extra, fl) => lobes.map(([cx, cy, r]) => circle(cx, cy, r + extra, { fill: fl })).join('') +
-    (flatY !== undefined ? rect(Math.min(...lobes.map(([x, , r]) => x - r * 0.75)) - extra, Math.max(...lobes.map(([, y]) => y)) - extra, Math.max(...lobes.map(([x, , r]) => x + r * 0.75)) - Math.min(...lobes.map(([x, , r]) => x - r * 0.75)) + extra * 2, flatY - Math.max(...lobes.map(([, y]) => y)) + extra * 2, { fill: fl, rx: extra }) : '');
+    (flatY !== undefined ? rect(Math.min(...lobes.map(([x]) => x)) - extra, Math.max(...lobes.map(([, y]) => y)) - extra, Math.max(...lobes.map(([x]) => x)) - Math.min(...lobes.map(([x]) => x)) + extra * 2, flatY - Math.max(...lobes.map(([, y]) => y)) + extra * 2, { fill: fl, rx: extra }) : '');
   let s = '';
   const clipId = flatY !== undefined ? d.clip(rect(-5000, -5000, 15000, flatY + 5000 + sw)) : null;
   if (sw) s += shapes(sw / 2, o.stroke || ink(fill));
@@ -64,10 +75,10 @@ export function cloud(d, cx, cy, s = 1, seed = 1, o = {}) {
     const t = i / (n - 1), r = (52 + Math.sin(t * Math.PI) * 46 + R() * 14) * s;
     lobes.push([cx - w / 2 + t * w, cy - Math.sin(t * Math.PI) * 34 * s - r * 0.35, r]);
   }
-  const base = o.base || '#FFFFFF', under = o.under || '#C7DDF8';
+  const base = o.base || '#FFFFFF', under = o.under || '#B8D2F4';
   const flat = cy + 30 * s;
-  let out = blob(d, lobes.map(([x, y, r]) => [x, y + 8 * s, r]), under, { flat: flat + 6 * s, hi: false, gloss: false, up: 0, down: 0.02 });
-  out += blob(d, lobes, base, { flat, hi: false, gloss: false, up: 0, down: 0.03, gradFill: d.lin([[0, '#FFFFFF'], [0.7, mix(base, under, 0.15)], [1, mix(base, under, 0.55)]], [0, cy - 120 * s, 0, flat], 'userSpaceOnUse') });
+  let out = blob(d, lobes.map(([x, y, r]) => [x + 6 * s, y + 13 * s, r]), under, { flat: flat + 12 * s, hi: false, gloss: false, up: 0, down: 0.02 });
+  out += blob(d, lobes, base, { flat, hi: false, gloss: false, up: 0, down: 0.03, gradFill: d.lin([[0, '#FFFFFF'], [0.62, mix(base, under, 0.12)], [1, mix(base, under, 0.6)]], [0, cy - 120 * s, 0, flat], 'userSpaceOnUse') });
   out += lobes.slice(0, 3).map(([x, y, r]) => ellipse(x - r * 0.15, y - r * 0.35, r * 0.4, r * 0.18, { fill: '#FFFFFF', opacity: 0.9 })).join('');
   return g(out, { opacity: o.op ?? 1 });
 }
@@ -134,7 +145,7 @@ export function house(d, o) {
   // siding lines
   for (let yy = by + 26; yy < base - 8; yy += 26) s += rect(x + 3, yy, w - 6, 2, { fill: shade(body, -0.05), opacity: 0.5 });
   // foundation strip
-  s += pbox(d, x - 6, base - 18, w + 12, 18, o.base || '#B9B3C9', { r: 4, sw, gloss: false });
+  s += pbox(d, x - 6, base - 18, w + 12, 18, o.found || '#B9B3C9', { r: 4, sw, gloss: false });
   if (o.flatRoof) {
     s += pbox(d, x - ov, by - 34, w + ov * 2, 38, roof, { r: 8, sw, glossOp: 0.4 });
   } else {
@@ -262,7 +273,7 @@ export function street(o = {}) {
   // --- sky (depth 0.08)
   let skyL = rect(X0, -200, SW, 940, { fill: d.lin([[0, sky[0]], [0.55, sky[1]], [1, sky[2]]], [0, -200, 0, 740], 'userSpaceOnUse') });
   skyL += sun(d, 300, 150, 66);
-  skyL += cloud(d, -120, 170, 0.8, 11) + cloud(d, 720, 120, 1.0, 12) + cloud(d, 1330, 250, 0.7, 13) + cloud(d, 1820, 110, 0.95, 14) + cloud(d, 2280, 230, 0.75, 15) + cloud(d, 470, 330, 0.55, 16, { op: 0.9 });
+  skyL += cloud(d, -120, 190, 0.8, 11) + cloud(d, 760, 170, 0.95, 12) + cloud(d, 1330, 290, 0.65, 13) + cloud(d, 1840, 160, 0.9, 14) + cloud(d, 2300, 250, 0.75, 15) + cloud(d, 520, 360, 0.5, 16, { op: 0.9 });
   // --- far (depth 0.3): hazy hills, far rooftops, water tower; no outlines
   const hz = sky[2];
   let far = '';
@@ -294,11 +305,11 @@ export function street(o = {}) {
   mid += tree(d, -60, base + 6, 1.05, { seed: 4 });
   // Sam's house (the family): butter yellow, coral roof, teal door
   mid += house(d, { x: 60, base, w: 410, h: 280, body: '#FFE08F', roof: '#F0645A', door: '#2FA3A0', chimney: 'left', attic: true, doorAt: 300,
-    wins: [[40, 70, 110, 96, '#FF9FB2'], [40, 186, 110, 0], [176, 70, 76, 96, '#8AD0FF']] });
+    wins: [[40, 70, 110, 96, '#FF9FB2'], [176, 70, 76, 96, '#8AD0FF']] });
+  mid += gnome(d, 236, walkY - 40);
   mid += fence(d, 40, 500, walkY - 6, 66, '#FFFFFF');
-  mid += gnome(d, 150, walkY - 14);
   mid += tree(d, 560, base + 6, 1.1, { seed: 5, leaf: '#47BE3E' });
-  mid += house(d, { x: 640, base, w: 340, h: 250, body: '#9FD0FF', roof: '#3C62C8', door: '#FFC23D', chimney: true, doorAt: 250, wins: [[34, 64, 110, 90, '#FFFFFF']] });
+  mid += house(d, { x: 640, base, w: 340, h: 250, body: '#9FD0FF', roof: '#3C62C8', door: '#FFC23D', chimney: true, doorAt: 260, wins: [[30, 64, 90, 90, '#FFFFFF'], [130, 64, 70, 90, '#FFFFFF']] });
   mid += bush(d, 640, walkY - 4, 150, 64, '#3FAF4A') + bush(d, 860, walkY - 4, 120, 56, '#47B84C');
   // Kevin's modern house + the perfect lawn
   const kx = 1120, kw = 500;
@@ -309,11 +320,11 @@ export function street(o = {}) {
   mid += rect(kx - 70, lawnY, kw + 150, walkY - lawnY + 8, { fill: d.lin(['#5EE04E', '#45D23E']) });
   mid += g(stripes, { clipPath: lawnClip, opacity: 0.6 });
   mid += rect(kx - 70, walkY - 2, kw + 150, 8, { fill: '#E9EEF5', stroke: ink('#E9EEF5'), strokeWidth: 1.5 }); // crisp edging
-  mid += house(d, { x: kx, base, w: kw, h: 300, body: '#F3F6FA', roof: '#3A4766', door: '#3A4766', flatRoof: true, trim: '#FFFFFF', base: '#9AA6BE', doorAt: 400,
-    wins: [[40, 60, 200, 110], [270, 60, 80, 110]], garage: [36, 190, 92] });
+  mid += house(d, { x: kx, base, w: kw, h: 320, body: '#F3F6FA', roof: '#3A4766', door: '#3A4766', flatRoof: true, trim: '#FFFFFF', found: '#9AA6BE', doorAt: 330,
+    wins: [[260, 44, 210, 92], [40, 44, 170, 92]], garage: [400 - 380, 210, 150] });
   // perfect cube hedges (Kevin trims them with a ruler)
-  for (let i = 0; i < 4; i++) mid += pbox(d, kx + 20 + i * 118, base - 2 - 58 + 40, 92, 58, '#2FAE55', { r: 10, sw: SWM, glossOp: 0.35 });
-  mid += sign(d, kx + 430, walkY - 18, ['KEEP OFF', 'THE GRASS'], { w: 150, h: 76 });
+  for (const hx of [405, 510]) mid += pbox(d, kx + hx - 10, base - 20, 92, 58, '#2FAE55', { r: 10, sw: SWM, glossOp: 0.35 });
+  mid += sign(d, kx - 20, walkY - 18, ['KEEP OFF', 'THE GRASS'], { w: 150, h: 76 });
   // twinkles over the perfect lawn
   [[kx + 60, 760, 14], [kx + 250, 740, 10], [kx + 380, 782, 12], [kx + 520, 748, 9], [kx + 150, 790, 8]].forEach(([tx, ty, r]) => { mid += twinkle(tx, ty, r, '#FFFFFF', 0.95); });
   mid += tree(d, 1730, base + 6, 1.0, { seed: 9, leaf: '#4BC240' });
@@ -330,9 +341,10 @@ export function street(o = {}) {
   near += rect(X0, roadY, SW, H - roadY + 40, { fill: d.lin([[0, '#4E5468'], [0.1, '#585E74'], [1, '#474C5F']], [0, roadY, 0, H + 40], 'userSpaceOnUse') });
   near += rect(X0, roadY, SW, 8, { fill: '#363A4A', opacity: 0.7 });
   for (let xx = X0 + 30; xx < X1; xx += 240) near += path(rrPath(xx, 990, 130, 16, 8), { fill: '#FFD23F' }) + rect(xx + 10, 992, 110, 4, { rx: 2, fill: '#FFF1A8', opacity: 0.8 });
-  near += ellipse(330, 1046, 90, 18, { fill: '#3E4354' }) + ellipse(330, 1043, 76, 13, { fill: 'none', stroke: '#5E6478', strokeWidth: 3 });
+  near += rect(X0, 908, SW, 7, { fill: '#F2F5FA', opacity: 0.85 });
+  near += ellipse(330, 1046, 92, 19, { fill: d.lin(['#5A6076', '#3E4354']), stroke: '#2E3242', strokeWidth: 3 }) + ellipse(330, 1046, 70, 13, { fill: 'none', stroke: '#6A7088', strokeWidth: 3 }) + path('M272 1046H388M300 1037H360M300 1055H360', { ...st('#6A7088', 3) });
   near += mailbox(d, 470, walkY + 30, '#3D7FEA', 'SAM') + mailbox(d, 1660, walkY + 30, '#2B3550', 'KEVIN');
-  near += lamp(d, 880, walkY + 34);
+  near += lamp(d, 600, walkY + 34);
   near += bin(d, -200, walkY + 40, '#2FAE55') + bin(d, -110, walkY + 40, '#3D7FEA');
   near += hydrant(d, 2120, walkY + 36);
   return finish(d, [
@@ -366,8 +378,9 @@ export function bedroom(o = {}) {
   }
   // --- mid: the room shell and furniture
   let mid = '';
-  mid += rect(X0, -40, SW, wainY + 40, { fill: d.lin([shade(wall, 0.02), wallLo]) });
-  mid += rect(X0, -40, SW, wainY + 40, { fill: gearPattern(d, wall, 110) });
+  const bHole = [[wx, wy, ww, wh, 4]];
+  mid += holed(X0, -40, SW, wainY + 40, bHole, { fill: d.lin([shade(wall, 0.02), wallLo]) });
+  mid += holed(X0, -40, SW, wainY + 40, bHole, { fill: gearPattern(d, wall, 110) });
   mid += rect(X0, wainY, SW, floorY - wainY, { fill: d.lin(['#38488E', '#2E3C7C']) });
   for (let xx = X0; xx < X1; xx += 70) mid += rect(xx, wainY + 16, 4, floorY - wainY - 30, { fill: '#2A3670', opacity: 0.8 });
   mid += pbox(d, X0, wainY - 10, SW, 22, '#5A6BB4', { r: 4, sw: 0, glossOp: 0.3 });
@@ -469,7 +482,7 @@ export function bedroom(o = {}) {
   near += path('M1880 948L1856 982L1880 1008L1906 982Z M1820 1000L1846 990 M1940 1000L1914 990', { fill: '#3A3F6A', stroke: '#3A3F6A', strokeWidth: 3, strokeLinejoin: 'round' });
   near += pbox(d, 2040, 1000, 220, 40, '#E5303D', { r: 6, sw: SWN }) + pbox(d, 2060, 966, 200, 36, '#25AEF2', { r: 6, sw: SWN });
   // night grade: a soft vignette (bible: vignette only on night POV/sky shots)
-  const vig = rect(X0, -60, SW, H + 120, { fill: d.rad([[0.55, '#120C2E', 0], [1, '#120C2E', 0.5]], 0.5, 0.5, 0.75) });
+  const vig = rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.55, '#120C2E', 0], [1, '#120C2E', 0.5]], 0.5, 0.5, 0.75) });
   return finish(d, [
     { name: 'far', depth: 0.3, svg: far },
     { name: 'mid', depth: 0.75, svg: mid },
@@ -497,11 +510,12 @@ export function kitchen(o = {}) {
   far += fence(d, wx, wx + ww, wy + wh, 44, atmos('#FFFFFF', '#C8E8FF', 0.1), { sw: 1.2 });
   // --- mid: walls, tiles, cabinets, counters, fridge, appliances
   let mid = '';
-  mid += rect(X0, -40, SW, counterY + 40, { fill: d.lin([shade(wall, 0.01), shade(wall, -0.035)]) });
+  const kHole = [[wx, wy, ww, wh, 4]];
+  mid += holed(X0, -40, SW, counterY + 40, kHole, { fill: d.lin([shade(wall, 0.01), shade(wall, -0.035)]) });
   // backsplash tiles between the counter and the upper cabinets (mint)
   const tileTop = 380;
-  mid += rect(X0, tileTop, SW, counterY - tileTop, { fill: d.lin(['#CFF3E8', '#B8EADB']) });
-  mid += rect(X0, tileTop, SW, counterY - tileTop, { fill: d.pattern(64, 52, rect(0, 0, 64, 52, { fill: 'none', stroke: '#9FDCCB', strokeWidth: 3 }) + rect(5, 5, 22, 6, { rx: 3, fill: '#FFFFFF', opacity: 0.55 })) });
+  mid += holed(X0, tileTop, SW, counterY - tileTop, kHole, { fill: d.lin(['#CFF3E8', '#B8EADB']) });
+  mid += holed(X0, tileTop, SW, counterY - tileTop, kHole, { fill: d.pattern(64, 52, rect(0, 0, 64, 52, { fill: 'none', stroke: '#9FDCCB', strokeWidth: 3 }) + rect(5, 5, 22, 6, { rx: 3, fill: '#FFFFFF', opacity: 0.55 })) });
   // window frame & sill (cut into the tiles)
   mid += path(rrPath(wx - 18, wy - 18, ww + 36, wh + 36, 14), { fill: 'none', stroke: d.lin(['#FFFFFF', '#E6E9F2']), strokeWidth: 24 });
   mid += path(rrPath(wx - 30, wy - 30, ww + 60, wh + 60, 18), { fill: 'none', stroke: ink('#E6E9F2'), strokeWidth: SWM });
@@ -528,10 +542,10 @@ export function kitchen(o = {}) {
   };
   mid += upper(-460, 420) + upper(0, 460) + upper(1150, 300);
   // wall clock 7:30
-  mid += circle(1630, 190, 78, { fill: d.lin(['#FFFFFF', '#E8ECF4']), stroke: ink('#FF7A3D'), strokeWidth: 3 });
-  mid += circle(1630, 190, 78, { fill: 'none', stroke: '#FF7A3D', strokeWidth: 12 });
-  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; mid += circle(1630 + Math.sin(a) * 58, 190 - Math.cos(a) * 58, i % 3 ? 3 : 5, { fill: '#3A4470' }); }
-  mid += line(1630, 190, 1630, 240, st('#3A4470', 7)) + line(1630, 190, 1650, 160, st('#3A4470', 9)) + circle(1630, 190, 7, { fill: '#FF7A3D' });
+  mid += circle(1650, 160, 70, { fill: d.lin(['#FFFFFF', '#E8ECF4']), stroke: ink('#FF7A3D'), strokeWidth: 3 });
+  mid += circle(1650, 160, 70, { fill: 'none', stroke: '#FF7A3D', strokeWidth: 12 });
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; mid += circle(1650 + Math.sin(a) * 50, 160 - Math.cos(a) * 50, i % 3 ? 3 : 5, { fill: '#3A4470' }); }
+  mid += line(1650, 160, 1650, 204, st('#3A4470', 7)) + line(1650, 160, 1668, 134, st('#3A4470', 9)) + circle(1650, 160, 7, { fill: '#FF7A3D' });
   // lower cabinets + counter
   mid += rect(X0, counterY, SW, floorY - counterY, { fill: d.lin([shade(cab, 0.02), shade(cab, -0.07)]) });
   for (let xx = X0 + 10; xx < X1; xx += 190) {
@@ -563,7 +577,7 @@ export function kitchen(o = {}) {
   mid += circle(wx + ww + 90, counterY - 66, 28, { fill: d.grad('#F2443A'), stroke: ink('#F2443A'), strokeWidth: SWM }) + circle(wx + ww + 140, counterY - 70, 30, { fill: d.grad('#FFC23D'), stroke: ink('#FFC23D'), strokeWidth: SWM });
   mid += path(`M${wx + ww + 60} ${counterY - 80}Q${wx + ww + 120} ${counterY - 140} ${wx + ww + 180} ${counterY - 70}`, { fill: 'none', ...st(ink('#FFE066'), 22) }) + path(`M${wx + ww + 60} ${counterY - 80}Q${wx + ww + 120} ${counterY - 140} ${wx + ww + 180} ${counterY - 70}`, { fill: 'none', ...st('#FFE066', 16) });
   // fridge on the right with magnets, a drawing and Mom's label-maker labels
-  const fx = 1500, fy = 250, fw = 300, fh = floorY - fy;
+  const fx = 1500, fy = 300, fw = 300, fh = floorY - fy;
   mid += pbox(d, fx, fy, fw, fh, '#F4F7FC', { r: 30, sw: SWM, stroke: ink('#C9D2E2') });
   mid += rect(fx + 4, fy + 200, fw - 8, 5, { fill: '#C9D2E2' });
   mid += pbox(d, fx + fw - 40, fy + 60, 16, 110, '#C9D2E2', { r: 8, sw: 2 }) + pbox(d, fx + fw - 40, fy + 240, 16, 150, '#C9D2E2', { r: 8, sw: 2 });
@@ -648,8 +662,9 @@ export function classroom(o = {}) {
   }
   // --- mid
   let mid = '';
-  mid += rect(X0, -40, SW, wainY + 40, { fill: d.lin([shade(wall, 0.01), shade(wall, -0.04)]) });
-  mid += rect(X0, -40, SW, wainY + 40, { fill: d.pattern(96, 96, rect(0, 0, 48, 96, { fill: shade(wall, -0.012) })) });
+  const cHoles = wins.map(([x, y, w, h]) => [x, y, w, h, 4]);
+  mid += holed(X0, -40, SW, wainY + 40, cHoles, { fill: d.lin([shade(wall, 0.01), shade(wall, -0.04)]) });
+  mid += holed(X0, -40, SW, wainY + 40, cHoles, { fill: d.pattern(96, 96, rect(0, 0, 48, 96, { fill: shade(wall, -0.012) })) });
   mid += rect(X0, wainY, SW, floorY - wainY, { fill: d.lin(['#7FC7BE', '#5FB1A8']) });
   for (let xx = X0; xx < X1; xx += 90) mid += rect(xx, wainY + 20, 4, floorY - wainY - 36, { fill: '#4E9C94', opacity: 0.6 });
   mid += pbox(d, X0, wainY - 12, SW, 24, '#C98B57', { r: 5, sw: SWM });
@@ -662,7 +677,7 @@ export function classroom(o = {}) {
     mid += text(lx + 29, 88, letters[i] + letters[i].toLowerCase(), { fontFamily: FONT.title, fontSize: 30, fill: col, textAnchor: 'middle' });
   }
   // chalkboard with chalk writing
-  const cbx = 300, cby = 150, cbw = 940, cbh = 400;
+  const cbx = 350, cby = 150, cbw = 920, cbh = 400;
   mid += pbox(d, cbx - 26, cby - 26, cbw + 52, cbh + 52, '#C98B57', { r: 16, sw: SWM });
   mid += rect(cbx, cby, cbw, cbh, { rx: 8, fill: d.lin(['#2F7A5E', '#245F4A']) });
   mid += rect(cbx, cby, cbw, cbh, { rx: 8, fill: d.rad([[0, '#FFFFFF', 0.06], [1, '#FFFFFF', 0]], 0.3, 0.3, 0.7) });
@@ -691,13 +706,13 @@ export function classroom(o = {}) {
     mid += pbox(d, x - 36, y + h + 14, w + 72, 22, '#FFFFFF', { r: 6, sw: SWM, stroke: ink('#E6E9F2') });
   }
   // bulletin board on the left
-  mid += pbox(d, -360, 170, 560, 330, '#D69A62', { r: 12, sw: SWM });
-  mid += rect(-344, 186, 528, 298, { rx: 6, fill: d.lin(['#E9B98A', '#DFAA78']) });
-  const papers = [[-320, 210, 130, 160, '#FFFFFF', -4], [-170, 200, 140, 120, '#FFF3A8', 3], [-10, 220, 150, 170, '#FFFFFF', -2], [-160, 340, 120, 120, '#BFE6FF', 4], [-320, 390, 120, 80, '#FFD0E0', -3]];
+  mid += pbox(d, -420, 170, 700, 330, '#D69A62', { r: 12, sw: SWM });
+  mid += rect(-404, 186, 668, 298, { rx: 6, fill: d.lin(['#E9B98A', '#DFAA78']) });
+  const papers = [[-380, 210, 130, 160, '#FFFFFF', -4], [-200, 200, 120, 120, '#FFF3A8', 3], [40, 214, 120, 130, '#FFFFFF', -3], [-60, 330, 110, 110, '#BFE6FF', 4], [130, 360, 100, 80, '#FFD0E0', 5]];
   papers.forEach(([x, y, w, h, c, r], i) => {
     mid += g(pbox(d, 0, 0, w, h, c, { r: 4, sw: 1.5, gloss: false, stroke: '#B8A080' }) + rect(14, 20, w - 28, 8, { rx: 4, fill: '#B8C2D6' }) + rect(14, 36, w - 50, 8, { rx: 4, fill: '#B8C2D6' }) + circle(w / 2, 8, 8, { fill: ['#F0474E', '#25AEF2', '#25BE66', '#FFAE1F', '#8A5CF2'][i], stroke: '#00000033', strokeWidth: 1 }), { transform: `translate(${x} ${y}) rotate(${r})` });
   });
-  mid += g(path(starPts(0, 0, 5, 38, 16).map((p, i) => (i ? 'L' : 'M') + f(p[0]) + ' ' + f(p[1])).join('') + 'Z', { fill: d.grad('#FFC23D'), stroke: ink('#FFC23D'), strokeWidth: 2.5, strokeLinejoin: 'round' }), { transform: 'translate(110 420) rotate(8)' });
+  mid += g(path(starPts(0, 0, 5, 38, 16).map((p, i) => (i ? 'L' : 'M') + f(p[0]) + ' ' + f(p[1])).join('') + 'Z', { fill: d.grad('#FFC23D'), stroke: ink('#FFC23D'), strokeWidth: 2.5, strokeLinejoin: 'round' }), { transform: 'translate(70 440) rotate(8)' });
   // teacher's desk (mid layer, front-left) with apple, globe, books
   const dx = 120, dy = 640;
   mid += contact(dx + 300, floorY + 4, 330, 14, 0.22);
@@ -759,7 +774,7 @@ export function streetReset(o = {}) {
   const pct = o.pct ?? 87;
   // replace the sky: a giant loading bar IS the sky
   let sky = rect(X0, -200, SW, 940, { fill: d.lin([[0, '#26040E'], [0.5, '#5A0A1A'], [1, '#A8182A']], [0, -200, 0, 740], 'userSpaceOnUse') });
-  const barX = -60, barY = 120, barW = 2040, barH = 300, fillW = barW * pct / 100;
+  const barX = -60, barY = 60, barW = 2040, barH = 290, fillW = barW * pct / 100;
   sky += path(rrPath(barX - 16, barY - 16, barW + 32, barH + 32, 70), { fill: '#12020A', stroke: '#FF6A6A', strokeWidth: 6, opacity: 0.95 });
   sky += path(rrPath(barX, barY, barW, barH, 56), { fill: MISSING(d, 50), opacity: 0.55 });
   const stripes = d.pattern(120, 120, rect(0, 0, 120, 120, { fill: 'none' }) + path('M-30 120L60 0H120L30 120Z', { fill: '#FFFFFF', opacity: 0.16 }) + path('M90 120L180 0H240L150 120Z', { fill: '#FFFFFF', opacity: 0.16 }), `patternTransform="translate(${f(((o.t || 0) * 160) % 120)} 0)"`);
@@ -771,11 +786,11 @@ export function streetReset(o = {}) {
     const bx = barX + fillW - 10 + R() * 240, by = barY + R() * barH, bs = 20 + R() * 40;
     sky += rect(bx, by, bs, bs, { fill: R() < 0.5 ? '#FF3B3B' : '#FF2BD6', opacity: 0.4 + R() * 0.5, stroke: '#12020A', strokeWidth: 2 });
   }
-  sky += circle(barX + fillW, barY + barH / 2, 200, { fill: d.rad([[0, '#FFB070', 0.6], [1, '#FFB070', 0]]), style: 'mix-blend-mode:screen' });
-  sky += text(960, barY + barH / 2 + 46, `FACTORY RESET  ${pct}%`, { fontFamily: FONT.title, fontSize: 132, fill: '#FFFFFF', textAnchor: 'middle', stroke: '#3A0410', strokeWidth: 16, paintOrder: 'stroke', strokeLinejoin: 'round', letterSpacing: 4 });
-  sky += text(960, barY + barH + 80, 'Do not turn off reality', { fontFamily: FONT.ui, fontWeight: 900, fontSize: 44, fill: '#FFB0B0', textAnchor: 'middle', letterSpacing: 2 });
+  sky += circle(barX + fillW, barY + barH / 2, 200, { fill: d.rad([[0, '#FFC890', 0.45], [1, '#FFC890', 0]]) });
+  sky += text(960, barY + 150, `FACTORY RESET  ${pct}%`, { fontFamily: FONT.title, fontSize: 118, fill: '#FFFFFF', textAnchor: 'middle', stroke: '#3A0410', strokeWidth: 16, paintOrder: 'stroke', strokeLinejoin: 'round', letterSpacing: 4 });
+  sky += text(960, barY + 214, 'DO NOT TURN OFF REALITY', { fontFamily: FONT.ui, fontWeight: 900, fontSize: 40, fill: '#FFE0E0', textAnchor: 'middle', letterSpacing: 6, stroke: '#3A0410', strokeWidth: 8, paintOrder: 'stroke' });
   // far layer: re-tint toward the red sky, and lift blocks off the hills
-  let far = `<g style="filter:hue-rotate(-150deg) saturate(1.3) brightness(0.85)">${base.layers[2].svg}</g>`;
+  let far = base.layers[2].svg; // already hazed toward the red sky by street({ sky })
   for (let i = 0; i < 30; i++) { const bx = X0 + R() * SW, by = 380 + R() * 260, bs = 10 + R() * 26; far += rect(bx, by, bs, bs, { fill: R() < 0.3 ? '#FF2BD6' : '#C84860', opacity: 0.8 }); }
   // mid layer: houses with missing-texture patches, one house in wireframe, Kevin's lawn half-reset
   let mid = base.layers[3].svg;
@@ -801,10 +816,13 @@ export function streetReset(o = {}) {
   near += path('M300 930L380 960L350 1000L460 1040L430 1090H260L300 1030L240 990Z', { fill: MISSING(d, 18), stroke: '#FF2BD6', strokeWidth: 3 });
   near += path('M1500 900L1620 930L1580 980L1700 1000L1660 1090H1480L1530 1010L1460 960Z', { fill: MISSING(d, 18), stroke: '#FF2BD6', strokeWidth: 3 });
   // red alert grade: multiply wash + rotating alarm beams + vignette
-  let grade = rect(X0, -60, SW, H + 120, { fill: '#FF2A3A', opacity: 0.22, style: 'mix-blend-mode:multiply' });
-  const beam = (cx, cy, ang, col) => g(poly([[0, 0], [1400, -160], [1400, 160]], { fill: d.lin([[0, col, 0.4], [1, col, 0]], 'h') }), { transform: `translate(${cx} ${cy}) rotate(${ang})`, style: 'mix-blend-mode:screen' });
-  grade += beam(-40, 40, 28 + (o.t || 0) * 90, '#FF5A5A') + beam(1960, 40, 152 - (o.t || 0) * 90, '#FF5A5A');
-  grade += rect(X0, -60, SW, H + 120, { fill: d.rad([[0.5, '#2A0008', 0], [1, '#2A0008', 0.65]], 0.5, 0.5, 0.75) });
+  // red alert grade, all normal blending (blend modes inside the glitch's <use> copies are dropped by Chromium at 4K):
+  // a grey veil knocks the saturation of the ground down, then a deep-red wash tints it, then rotating alarm beams.
+  let grade = rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#6A6A78', 0], [0.2, '#6A6A78', 0.2], [1, '#6A6A78', 0.24]]) });
+  grade += rect(-40, 380, W + 80, H - 340, { fill: d.lin([[0, '#9A0E22', 0.0], [0.25, '#9A0E22', 0.3], [1, '#7A0818', 0.38]]) });
+  const beam = (cx, cy, ang, col) => g(poly([[0, 0], [1400, -130], [1400, 130]], { fill: d.lin([[0, col, 0.2], [1, col, 0]], 'h') }), { transform: `translate(${cx} ${cy}) rotate(${ang})` });
+  grade += beam(-40, 40, 28 + (o.t || 0) * 90, '#FF8A8A') + beam(1960, 40, 152 - (o.t || 0) * 90, '#FF8A8A');
+  grade += rect(-40, -40, W + 80, H + 80, { fill: d.rad([[0.5, '#2A0008', 0], [1, '#2A0008', 0.65]], 0.5, 0.5, 0.75) });
   const layers = [
     base.layers[0],
     { name: 'defs2', depth: 0, svg: String(d) },
@@ -814,7 +832,12 @@ export function streetReset(o = {}) {
     { name: 'near', depth: 1.0, svg: near },
     { name: 'grade', depth: 0, svg: grade },
   ];
-  return { w: W, h: H, layers, svg: compose(layers, o.cam), glitch: true };
+  // glitch slices over the composed frame (o.glitch: false to get the clean layers; o.t re-rolls the bands per frame)
+  // the grade is glitched together with the scene: each band copy then carries its own (correctly blended) grade.
+  // (Drawing blend-mode grade layers over the <use> copies instead gets dropped by Chromium at 4K.)
+  const content = compose(layers, o.cam);
+  const svg = o.glitch === false ? content : glitch(content, { seed: o.seed ?? 153, bands: o.bands ?? 6, amount: o.amount ?? 130, rgb: 9, t: o.t || 0 });
+  return { w: W, h: H, layers, svg };
 }
 
 export const SETS = { street, bedroom, kitchen, classroom, streetReset };

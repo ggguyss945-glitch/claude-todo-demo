@@ -95,7 +95,7 @@ const towardPurple = (h, deg) => { const d = ((PURPLE_H - h + 540) % 360) - 180;
 export function stroke(fill, dL = 0) {
   const { L, C, h } = oklch(fill);
   const c = Math.max(C * 0.9, 0.035);                         // greys and whites still get a tinted line
-  const hh = C < 0.03 ? 300 : towardPurple(h, 12);             // near-neutral fills borrow a cool violet line
+  const hh = C < 0.012 ? 300 : towardPurple(h, 12);            // only true neutrals borrow a cool violet line
   const LL = 0.30 + Math.max(0, L - 0.85) * 0.25 + dL;         // very light fills get a slightly lighter line
   return fromOklch(LL, Math.min(c, 0.13), hh);
 }

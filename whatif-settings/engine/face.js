@@ -221,6 +221,7 @@ const MOUTHS = {
     return filledMouth('M-12 -4Q-2 -6 12 -3Q11 5 0 5.5Q-11 5 -12 -4Z', '', { teeth: -2.8 })
       + path('M-3 2Q-4.5 13 2 13.5Q8 13 6 2Z', { fill: grad(t, 'd'), stroke: stroke(t), strokeWidth: LINE * 0.8, strokeLinejoin: 'round' }) + ln('M1.7 4.5L2 8.5', 1.4, stroke(t));
   },
+  ugh: () => filledMouth('M-13 -1Q-6 -6.5 1 -4.5Q8 -3 13.5 -7.5Q13 3.5 5 5Q-4 6.5 -13 -1Z', ln('M-11 -0.6Q0 -2.5 12 -4', 1.4), { teeth: 30 }),
   cry: () => filledMouth('M-14.5 3Q0 -9 14.5 3Q14 15 0 15Q-14 15 -14.5 3Z', '', { tongue: [0, 14, 8.5, 5], teeth: -3.6 }),
   evil: () => {
     const d = 'M-18 -6Q0 1 18 -6Q12 13 0 13Q-12 13 -18 -6Z';
@@ -229,7 +230,7 @@ const MOUTHS = {
   },
   // ---- visemes ----
   v_closed: () => ln('M-8.5 0Q0 2 8.5 0'),
-  v_small: () => filledMouth('M-6.5 0Q-6.5 -3.4 0 -3.4Q6.5 -3.4 6.5 0Q6.5 3.6 0 3.6Q-6.5 3.6 -6.5 0Z', '', { tongue: [0, 3.4, 3.4, 1.8] }),
+  v_small: () => filledMouth('M-7.5 0Q-7.5 -4.2 0 -4.2Q7.5 -4.2 7.5 0Q7.5 4.6 0 4.6Q-7.5 4.6 -7.5 0Z', '', { tongue: [0, 4.4, 4.2, 2.2], teeth: -2.6 }),
   v_E: ({ gap }) => filledMouth('M-12.5 -4.5Q0 -6 12.5 -4.5Q14 0.5 11 3.5Q0 5.5 -11 3.5Q-14 0.5 -12.5 -4.5Z', '', { teeth: -1.4, lower: 2.4, gap }),
   v_A: ({ gap }) => filledMouth('M-11.5 -6Q0 -7.5 11.5 -6Q12 8 0 13.5Q-12 8 -11.5 -6Z', '', { tongue: [0, 11.5, 7, 4.6], teeth: -3, gap }),
   v_O: () => filledMouth(ellipsePath(0, 1.5, 7, 8.8), '', { tongue: [0, 8.5, 4.6, 3] }),
@@ -259,7 +260,7 @@ export const PRESETS = {
   cry: { eyes: 'teary', brows: 'sad', mouth: 'cry', add: { tears: 1 } },
   sly: { eyes: 'half', lid: -0.1, tilt: 14, look: [5, 2], brows: 'angry', browScale: 0.6, mouth: 'smirk' },
   determined: { eyes: 'angry', lid: -0.42, tilt: 14, pupil: 0.46, brows: 'angry', mouth: 'grin' },
-  disgusted: { eyes: 'squint', brows: 'angry', mouth: 'blech', add: { gloom: 1 } },
+  disgusted: { eyes: 'squint', brows: 'skeptic', mouth: 'ugh', mouthDX: 2, add: { gloom: 1 } },
   dizzy: { eyes: 'spiral', brows: 'none', mouth: 'wavy', m: 0.8, add: { dizzy: 1 } },
   love: { eyes: 'heart', brows: 'raised', mouth: 'dOpen', m: 0.85, add: { hearts: 1, blush: 1 } },
   relieved: { eyes: 'closed', brows: 'soft', mouth: 'bigSmile', add: { sweat: 1, blush: 0.6 } },
@@ -323,6 +324,13 @@ export function face(spec, opts = {}) {
   let out = '', fx = '';
   if (back) return { face: '', fx: addons(e, { ...opts, top, eyeX, eyeY, yaw, mouthY, back: true }).fx };
 
+  // gloom: cool shade washing down from the hairline (disgust / dread), under the features
+  if (e.add?.gloom && opts.headBox) {
+    const hb = opts.headBox, gid = 'gloomshade';
+    addDef(gid, `<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4B3FA8" stop-opacity="0.5"/><stop offset="0.5" stop-color="#4B3FA8" stop-opacity="0.12"/><stop offset="0.62" stop-color="#4B3FA8" stop-opacity="0"/></linearGradient>`);
+    out += path(`M-50 ${f1(hb.top + hb.r)}A${hb.r} ${hb.r} 0 0 1 ${f1(-50 + hb.r)} ${f1(hb.top)}H${f1(50 - hb.r)}A${hb.r} ${hb.r} 0 0 1 50 ${f1(hb.top + hb.r)}V${f1(hb.bot - hb.r)}A${hb.r} ${hb.r} 0 0 1 ${f1(50 - hb.r)} ${f1(hb.bot)}H${f1(-50 + hb.r)}A${hb.r} ${hb.r} 0 0 1 -50 ${f1(hb.bot - hb.r)}Z`, { fill: `url(#${gid})` });
+    for (const x of [-30, -20, 20, 30]) out += path(`M${x} ${f1(eyeY - 2)}L${x} ${f1(eyeY + 6)}`, { stroke: '#4B3FA8', strokeWidth: 2.4, strokeLinecap: 'round', opacity: 0.0 });
+  }
   // blush & freckles first (under features)
   const cheekY = eyeY + 13;
   for (const s of [-1, 1]) {
@@ -402,26 +410,21 @@ function addons(e, o) {
     const v = (r) => path(`M${f1(-7)} ${f1(-2.2)}Q-2.2 -2.2 -2.2 -7`, { fill: 'none', stroke: sc, strokeWidth: 5.2, strokeLinecap: 'round', transform: `rotate(${r})` }) + path(`M${f1(-7)} ${f1(-2.2)}Q-2.2 -2.2 -2.2 -7`, { fill: 'none', stroke: c, strokeWidth: 2.8, strokeLinecap: 'round', transform: `rotate(${r})` });
     fx += g(v(0) + v(90) + v(180) + v(270), { transform: `translate(${x} ${y})` });
   }
-  if (A.gloom && !o.back) {
-    let s = '';
-    for (const [x, l] of [[-24, 12], [-14, 17], [-4, 14], [6, 18], [16, 13], [26, 10]]) s += path(`M${x} -42L${x} ${-42 + l}`, { stroke: '#6E5FB8', strokeWidth: 2.6, strokeLinecap: 'round', opacity: 0.5 });
-    face += s;
-  }
   if (A.shock) {
+    // emphasis ticks fanning out from the upper corners of the head
     let s = '';
-    for (const sd of [-1, 1]) for (const [a, l] of [[-30, 9], [0, 11], [30, 9]]) {
-      const t = (a * Math.PI) / 180, x0 = sd * 62, y0 = -14;
-      const ux = sd * Math.cos(t), uy = Math.sin(t);
-      s += path(`M${f1(x0 + ux * 3)} ${f1(y0 + uy * 3 * sd)}L${f1(x0 + ux * (3 + l))} ${f1(y0 + uy * (3 + l) * sd)}`, { stroke: '#2A2346', strokeWidth: 3.2, strokeLinecap: 'round', fill: 'none' });
+    for (const sd of [-1, 1]) for (const [ang, l] of [[-62, 11], [-34, 13], [-6, 10]]) {
+      const t = (ang * Math.PI) / 180, ux = sd * Math.cos(t), uy = Math.sin(t), x0 = sd * 46, y0 = top + 30;
+      s += path(`M${f1(x0 + ux * 16)} ${f1(y0 + uy * 16)}L${f1(x0 + ux * (16 + l))} ${f1(y0 + uy * (16 + l))}`, { stroke: '#2A2346', strokeWidth: 3.6, strokeLinecap: 'round', fill: 'none' });
     }
     fx += s;
   }
-  if (A.q) { fx += qMark(50, top + 4, 34, 12); if (A.q > 1) fx += qMark(68, top + 14, 24, 22); }
-  if (A.zzz) fx += zMark(44, top + 18, 18) + zMark(56, top + 2, 23) + zMark(70, top - 16, 28);
-  if (A.hearts) fx += smallHeart(52, top + 10, 0.75, 14) + smallHeart(-54, top + 18, 0.55, -16) + smallHeart(64, top + 36, 0.45, 24);
-  if (A.sparkle) fx += twinkle(-58, top + 22, 8) + twinkle(58, top + 12, 10) + twinkle(66, top + 34, 5) + twinkle(-48, top + 6, 4.5);
+  if (A.q) { fx += qMark(54, top + 30, 34, 12); if (A.q > 1) fx += qMark(70, top + 40, 24, 22); }
+  if (A.zzz) fx += zMark(46, top + 38, 17) + zMark(58, top + 25, 22) + zMark(71, top + 10, 26);
+  if (A.hearts) fx += smallHeart(54, top + 22, 0.75, 14) + smallHeart(-56, top + 30, 0.55, -16) + smallHeart(66, top + 46, 0.45, 24);
+  if (A.sparkle) fx += twinkle(-60, top + 34, 8) + twinkle(60, top + 24, 10) + twinkle(68, top + 46, 5) + twinkle(-50, top + 16, 4.5);
   if (A.dizzy) {
-    const cy = top - 2;
+    const cy = top + 16;
     fx += ellipse(0, cy, 40, 9, { fill: 'none', stroke: '#FFE27A', strokeWidth: 2.2, opacity: 0.8 });
     for (const [a, r] of [[200, 7], [290, 6], [20, 7.5], [110, 5.5]]) { const t = (a * Math.PI) / 180; fx += smallStar(Math.cos(t) * 40, cy + Math.sin(t) * 9, r, a / 3); }
   }

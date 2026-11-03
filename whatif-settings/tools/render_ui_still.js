@@ -21,6 +21,10 @@ const server = http.createServer((req, res) => {
   const q = `ui_still.html?mod=${encodeURIComponent(mod)}${arg ? '&arg=' + encodeURIComponent(arg) : ''}`;
   await page.goto(`http://127.0.0.1:${server.address().port}/engine/${q}`);
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
+  const err = await page.evaluate(() => window.__err);
+  if (err) { console.error('RENDER ERROR', err); await browser.close(); server.close(); process.exit(2); }
+  const box = await page.evaluate(() => { const r = document.getElementById('stage').getBoundingClientRect(); return { width: Math.ceil(r.width), height: Math.ceil(r.height) }; });
+  if (box.width > 1920 || box.height > 1080) { await page.setViewportSize(box); await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); }
   const fonts = await page.evaluate(() => window.__fonts);
   if (fonts && fonts.length) console.error('fonts missing:', fonts.join(', '));
   const ext = path.extname(out).toLowerCase();

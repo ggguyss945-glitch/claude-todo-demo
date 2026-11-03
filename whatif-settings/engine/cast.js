@@ -3,10 +3,10 @@
 //              pigL, pigR, pony, tail}, face: 'preset' | {eyes, brows, mouth, ...}, look:[dx,dy], add:{...}, props:{L, R} })
 // L / R are the screen-left / screen-right limbs in the front view. Angles in degrees: 0 hangs down, + swings
 // outward/up (180 = straight up); fore bends the forearm relative to the upper arm (+ continues outward).
-import { PAL, g, path, circle, ellipse, rect, text, grad, radial, shadeBand, stroke, tone, union, rrect, rtrap, capsule, taper,
+import { PAL, g, path, circle, ellipse, rect, text, grad, addDef, radial, shadeBand, stroke, tone, union, rrect, rtrap, capsule, taper,
   glossCapsule, glossBox, contactShadow, f1, spline, polyline, roundPoly, FONT_UI } from './style.js';
 import { face as drawFace, mapFeature, heartPath, starPath, PRESETS as FACE_PRESETS_CACHE } from './face.js';
-import { buildFigure, helmetPath, bandPaths, strands, wrapPoint, hairline, yawOf, headCenterY, figureHeight } from './rig.js';
+import { buildFigure, helmetPath, bandPaths, strands, wrapPoint, hairline, yawOf, headCenterY, figureHeight, withAdd } from './rig.js';
 
 const D2R = Math.PI / 180;
 const cosd = (a) => Math.cos(a * D2R), sind = (a) => Math.sin(a * D2R);
@@ -30,6 +30,15 @@ function puffShapes(cx, cy, r) {
 }
 const rotPt = ([x, y], [cx, cy], deg) => { const c = cosd(deg), s = sind(deg); return [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]; };
 
+function limbLobes(band, yaw, ys, r, t) {
+  const out = [];
+  for (const sd of [-1, 1]) {
+    const u = (sd * 90 - yaw) / 90, w = ((((u + 2) % 4) + 4) % 4) - 2;
+    if (!band.mask(w)) continue;
+    for (const y of ys) out.push({ d: `M${f1(sd * (50 + t - r * 0.55) - r)} ${f1(y)}a${f1(r)} ${f1(r)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(-2 * r)} 0Z` });
+  }
+  return out;
+}
 // ---------- props ----------
 function mug(hx, hy, side, sw, big = 1) {
   const w = 30 * big, h = 34 * big, inward = side === 'L' ? 1 : -1;
@@ -42,7 +51,7 @@ function mug(hx, hy, side, sw, big = 1) {
   s += ellipse(x + w / 2, y + 2, w / 2 - 2, 3.4 * big, { fill: '#7A4A2E', stroke: stroke(c), strokeWidth: f1(sw * 0.6) });
   const tc = '#3F6FD8';
   s += text(x + w / 2, y + h * 0.42, "WORLD'S", { fontFamily: FONT_UI, fontWeight: 800, fontSize: f1(5.2 * big), fill: tc, textAnchor: 'middle' })
-    + text(x + w / 2, y + h * 0.62, 'OKAYEST', { fontFamily: FONT_UI, fontWeight: 800, fontSize: f1(5.2 * big), fill: '#E2404A', textAnchor: 'middle' })
+    + text(x + w / 2, y + h * 0.62, 'BEST-ISH', { fontFamily: FONT_UI, fontWeight: 800, fontSize: f1(5.2 * big), fill: '#E2404A', textAnchor: 'middle' })
     + text(x + w / 2, y + h * 0.84, 'DAD', { fontFamily: FONT_UI, fontWeight: 800, fontSize: f1(7.2 * big), fill: tc, textAnchor: 'middle' });
   s += path(`M${f1(x + w * 0.16)} ${f1(y + h * 0.2)}L${f1(x + w * 0.16)} ${f1(y + h * 0.75)}`, { stroke: '#FFFFFF', strokeWidth: f1(2.4 * big), strokeLinecap: 'round', opacity: 0.9 });
   // steam
@@ -53,7 +62,7 @@ function blower(hx, hy, side, sw) {
   const out = side === 'L' ? -1 : 1, c = PAL.blower, dk = '#3A3F52';
   const bx = hx - 4 * out, by = hy + 6;
   // tube from the body toward the ground, outward
-  const t0 = [bx + out * 20, by + 34], t1 = [bx + out * 96, by + 92];
+  const t0 = [bx + out * 18, by + 36], t1 = [bx + out * 70, by + 100];
   let s = path(taper(t0[0], t0[1], t1[0], t1[1], 11, 7.5), { fill: grad('#E9EBF2', 'd'), stroke: stroke('#E9EBF2'), strokeWidth: f1(sw), strokeLinejoin: 'round' });
   s += path(capsule(t1[0] - out * 6, t1[1] - 4, t1[0] + out * 4, t1[1] + 3, 17), { fill: grad(dk, 'd'), stroke: stroke(dk), strokeWidth: f1(sw) });
   s += glossCapsule(t0[0], t0[1], t1[0], t1[1], 18, { op: 0.45, thin: false });
@@ -114,8 +123,8 @@ function ribBand(ctx, color, h = 11) {
 // ======================================================================
 const SAM_HAIR = {
   t: 4.5, crown: 5, height: 22,
-  tips: [[-2, 24], [-1.62, 26, 4], [-1.3, 22, 4], [-1.1, 14, 4], [-0.93, -2, 6, 0.8], [-0.72, -18, 8, 0.75], [-0.46, -22, 9, 0.7], [-0.17, -24, 9, 0.7],
-    [0.12, -22, 9, 0.7], [0.42, -21, 8, 0.7], [0.7, -14, 6, 0.8], [0.92, -2, 5], [1.1, 14, 4], [1.3, 22, 4], [1.62, 26, 4], [2, 24]],
+  tips: [[-2, 24], [-1.66, 27, 4], [-1.4, 22, 3], [-1.2, 8, 2], [-1.02, -3, 2], [-0.9, -7, 6, 0.8], [-0.7, -19, 10, 0.72], [-0.43, -21, 11, 0.68], [-0.14, -23, 11, 0.68],
+    [0.15, -21, 11, 0.68], [0.44, -20, 10, 0.7], [0.7, -15, 7, 0.8], [0.9, -7, 2], [1.02, -3, 2], [1.2, 8, 3], [1.4, 22, 4], [1.66, 27, 4], [2, 24]],
 };
 const SAM = {
   name: 'SAM', color: '#FF7A3D',
@@ -129,8 +138,8 @@ const SAM = {
     height: 26,
     front: hairFront(SAM_HAIR, PAL.samHair, (ctx) => {
       const cx = 4 * cosd(ctx.yaw) + 6 * sind(ctx.yaw);
-      return [{ d: `M${f1(cx - 9)} -52Q${f1(cx - 6)} -70 ${f1(cx + 13)} -77Q${f1(cx + 5)} -66 ${f1(cx + 9)} -51Z` }];
-    }, [{ y: -44, u0: -0.62, u1: 0.55, amp: 2.2, waves: 2.5 }, { y: -35, u0: -0.82, u1: 0.72, amp: 2.4, waves: 3 }, { follow: 7.5, u0: -0.85, u1: 0.8, amp: 0, dark: true, w: 3, op: 0.8 }]),
+      return [{ d: `M${f1(cx - 7)} -53Q${f1(cx - 5)} -66 ${f1(cx + 9)} -69Q${f1(cx + 3)} -62 ${f1(cx + 7)} -52Z` }];
+    }, [{ y: -46, u0: -0.58, u1: 0.5, amp: 2, waves: 2 }, { y: -38, u0: -0.76, u1: 0.68, amp: 2.2, waves: 2.5 }, { y: -30.5, u0: -0.7, u1: 0.62, amp: 1.6, waves: 3, dark: true, w: 3.2, op: 0.6 }]),
   },
   decor: {
     torso(ctx) {
@@ -144,19 +153,20 @@ const SAM = {
         s += path(`M${f1(-hw * 0.6)} ${f1(T + 14)}Q0 ${f1(T + 40)} ${f1(hw * 0.6)} ${f1(T + 14)}`, { fill: 'none', stroke: stroke(c), strokeWidth: f1(sw * 0.7), strokeLinecap: 'round', opacity: 0.6 });
         return s + ribBand(ctx, dk);
       }
-      // kangaroo pocket
+      // kangaroo pocket (front-only details drop out once they turn past ~55 degrees)
       const p = tm(0), pw = ctx.wt * 0.62 * Math.max(0.55, p.k), py0 = B - 44, py1 = B - 12;
+      if (p.k < 0.6) return s + ribBand(ctx, dk);
       s += path(roundPoly([[p.x - pw * 0.4, py0, 6], [p.x + pw * 0.4, py0, 6], [p.x + pw * 0.52, py1, 4], [p.x - pw * 0.52, py1, 4]]), { fill: grad(tone(c, -0.025), 'd'), stroke: stroke(c), strokeWidth: f1(sw * 0.8), strokeLinejoin: 'round' });
       s += path(`M${f1(p.x - pw * 0.4)} ${f1(py0 + 2)}Q${f1(p.x - pw * 0.5)} ${f1(py0 + 14)} ${f1(p.x - pw * 0.52)} ${f1(py1 - 2)}`, { fill: 'none', stroke: stroke(c), strokeWidth: f1(sw * 0.6), opacity: 0.5 });
       // gear logo
       const lg = tm(0);
-      s += g(gearPath(0, 0, 15, '#FFFFFF'), { transform: `translate(${f1(lg.x)} ${f1(T + 48)}) scale(${f1(Math.max(0.35, lg.k))} 1)` });
+      if (lg.k > 0.6) s += g(gearPath(0, 0, 14, '#FFFFFF'), { transform: `translate(${f1(lg.x)} ${f1(T + 60)}) scale(${f1(Math.max(0.35, lg.k))} 1)` });
       // drawstrings
       for (const sd of [-1, 1]) {
         const m = tm(sd * 11); if (m.k < 0.25) continue;
-        s += path(`M${f1(m.x)} ${f1(T + 6)}Q${f1(m.x + sd * 2)} ${f1(T + 20)} ${f1(m.x + sd * 1)} ${f1(T + 32)}`, { fill: 'none', stroke: stroke('#FFFFFF'), strokeWidth: f1(4.6 + sw), strokeLinecap: 'round' })
-          + path(`M${f1(m.x)} ${f1(T + 6)}Q${f1(m.x + sd * 2)} ${f1(T + 20)} ${f1(m.x + sd * 1)} ${f1(T + 32)}`, { fill: 'none', stroke: '#F4F5FA', strokeWidth: 4.6, strokeLinecap: 'round' })
-          + path(capsule(m.x + sd * 1, T + 30, m.x + sd * 1, T + 37, 6), { fill: '#9AA3BC', stroke: stroke('#9AA3BC'), strokeWidth: f1(sw * 0.6) });
+        s += path(`M${f1(m.x)} ${f1(T + 6)}Q${f1(m.x + sd * 2)} ${f1(T + 24)} ${f1(m.x + sd * 1)} ${f1(T + 38)}`, { fill: 'none', stroke: stroke('#FFFFFF'), strokeWidth: f1(4.6 + sw), strokeLinecap: 'round' })
+          + path(`M${f1(m.x)} ${f1(T + 6)}Q${f1(m.x + sd * 2)} ${f1(T + 24)} ${f1(m.x + sd * 1)} ${f1(T + 38)}`, { fill: 'none', stroke: '#F4F5FA', strokeWidth: 4.6, strokeLinecap: 'round' })
+          + path(capsule(m.x + sd * 1, T + 36, m.x + sd * 1, T + 43, 6), { fill: '#9AA3BC', stroke: stroke('#9AA3BC'), strokeWidth: f1(sw * 0.6) });
       }
       return s + ribBand(ctx, dk);
     },
@@ -167,24 +177,23 @@ const SAM = {
 };
 // headphones resting round the neck: cups either side of the chin; band behind the neck (seen from the back)
 function phonesLayer(ctx, front) {
-  const { torsoTop: T, sw, yaw, back } = ctx, c = PAL.phones, dk = '#C9561A';
+  const { torsoTop: T, sw, yaw, back } = ctx, c = PAL.phones, dk = '#C8541A';
+  if (!front) return '';
+  const band = (d, w) => path(d, { fill: 'none', stroke: stroke(c), strokeWidth: f1(w + sw * 2), strokeLinecap: 'round' }) + path(d, { fill: 'none', stroke: grad(c, 'v', { box: [-50, T, 50, T + 30] }), strokeWidth: f1(w), strokeLinecap: 'round' });
+  if (back) return band(`M-48 ${f1(T + 8)}Q0 ${f1(T - 10)} 48 ${f1(T + 8)}`, 9);
+  const cups = [-1, 1].map((sd) => { const a = (sd * 60 + yaw) * D2R; return { sd, x: 44 * Math.sin(a), z: Math.cos(a), k: Math.max(0.45, Math.abs(Math.cos(a)) * 0.5 + 0.5) }; });
+  const vis = cups.filter((cp) => cp.z > -0.15);
   let s = '';
-  if (back) {
-    if (!front) return '';
-    return path(`M-44 ${f1(T - 6)}Q0 ${f1(T + 10)} 44 ${f1(T - 6)}`, { fill: 'none', stroke: stroke(c), strokeWidth: f1(10 + sw * 2), strokeLinecap: 'round' })
-      + path(`M-44 ${f1(T - 6)}Q0 ${f1(T + 10)} 44 ${f1(T - 6)}`, { fill: 'none', stroke: grad(c, 'v', { box: [-44, T - 10, 44, T + 10] }), strokeWidth: 10, strokeLinecap: 'round' });
-  }
-  for (const sd of [-1, 1]) {
-    const a = (sd * 64 + yaw) * D2R, x = 46 * Math.sin(a), z = Math.cos(a);
-    if ((z > -0.05) !== front) continue;
-    const k = Math.max(0.42, Math.abs(Math.cos(a)) * 0.5 + 0.5);
-    const cy = T + 4;
+  // the band hangs in front, under the chin, like a necklace
+  if (vis.length === 2) s += band(`M${f1(cups[0].x)} ${f1(T + 12)}Q${f1((cups[0].x + cups[1].x) / 2)} ${f1(T + 38)} ${f1(cups[1].x)} ${f1(T + 12)}`, 8);
+  for (const cp of vis) {
+    const r = 15;
     s += g(
-      path(rrect(-15, -18, 30, 36, 13), { fill: grad(c, 'd'), stroke: stroke(c), strokeWidth: f1(sw), strokeLinejoin: 'round' })
-      + path(rrect(-9.5, -12, 19, 24, 8), { fill: grad(tone(c, 0.06), 'd'), stroke: stroke(c), strokeWidth: f1(sw * 0.6) })
-      + path('M-9 -12L-9 6', { stroke: '#FFFFFF', strokeOpacity: 0.5, strokeWidth: 3.2, strokeLinecap: 'round' })
-      + path(`M${sd * 13} -14Q${sd * 18} -26 ${sd * 14} -34`, { fill: 'none', stroke: dk, strokeWidth: 7, strokeLinecap: 'round' }),
-      { transform: `translate(${f1(x)} ${f1(cy)}) rotate(${f1(sd * 14)}) scale(${f1(k)} 1)` });
+      circle(0, 0, r, { fill: grad(c, 'd'), stroke: stroke(c), strokeWidth: f1(sw) })
+      + circle(0, 0, r * 0.62, { fill: grad(dk, 'd', { up: 0.02, down: 0.06 }), stroke: stroke(c), strokeWidth: f1(sw * 0.6) })
+      + circle(0, 0, r * 0.26, { fill: tone(c, 0.08) })
+      + path(`M${f1(-r * 0.62)} ${f1(-r * 0.42)}Q${f1(-r * 0.5)} ${f1(-r * 0.68)} ${f1(-r * 0.2)} ${f1(-r * 0.76)}`, { fill: 'none', stroke: '#FFFFFF', strokeOpacity: 0.6, strokeWidth: 3.2, strokeLinecap: 'round' }),
+      { transform: `translate(${f1(cp.x)} ${f1(T + 12)}) scale(${f1(cp.k)} 1)` });
   }
   return s;
 }
@@ -265,15 +274,15 @@ function momPony(ctx, front) {
   if ((z > 0.05) !== front) return '';
   const sn = Math.sin(yaw * D2R);
   const dir = Math.abs(sn) > 0.2 ? -Math.sign(sn) : (Math.cos(yaw * D2R) > 0 ? 1 : -1);
-  const ax = 48 * Math.sin(a) * 0.9, ay = -40;
+  const ax = 40 * Math.sin(a) * 0.9, ay = -50;
   const sp = (pose.pony || 0) * dir;
   const P = (x, y) => rotPt([ax + dir * x, ay + y], [ax, ay], sp);
-  const pts = [P(-2, -8), P(22, -22), P(48, -18), P(62, 4), P(62, 32), P(52, 56), P(44, 66), P(46, 46), P(42, 22), P(30, 6), P(8, 6)];
-  let s = union([{ d: spline(pts, { closed: true, sharp: new Set([6]) }) }], color, { sw, box: [ax - 70, ay - 30, ax + 70, ay + 70] });
-  const hl = [P(26, -12), P(46, -6), P(54, 14), P(52, 34)];
-  s += path(spline(hl), { fill: 'none', stroke: tone(color, 0.09), strokeWidth: 3.4, strokeLinecap: 'round' });
-  const sc = P(4, -1);
-  s += g(path(rrect(-8, -11, 16, 22, 7), { fill: grad('#FF6FAE', 'd'), stroke: stroke('#FF6FAE'), strokeWidth: f1(sw * 0.8) }), { transform: `translate(${f1(sc[0])} ${f1(sc[1])}) rotate(${f1(-30 * dir + sp)})` });
+  const pts = [P(6, -8), P(30, -22), P(58, -16), P(74, 6), P(76, 34), P(66, 58), P(52, 70), P(60, 50), P(62, 30), P(56, 10), P(40, -2), P(16, 4)];
+  let s = union([{ d: spline(pts, { closed: true, sharp: new Set([6]) }) }], color, { sw, box: [ax - 80, ay - 30, ax + 80, ay + 75] });
+  s += path(spline([P(30, -14), P(54, -8), P(66, 12), P(66, 36)]), { fill: 'none', stroke: tone(color, 0.09), strokeWidth: 3.4, strokeLinecap: 'round' });
+  s += path(spline([P(44, 4), P(56, 20), P(56, 42)]), { fill: 'none', stroke: tone(color, -0.08), strokeWidth: 2.6, strokeLinecap: 'round', opacity: 0.7 });
+  const sc = P(20, -12);
+  s += g(path(rrect(-9, -12, 18, 24, 8), { fill: grad('#FF6FAE', 'd'), stroke: stroke('#FF6FAE'), strokeWidth: f1(sw * 0.8) }) + path('M-4 -7L-4 6', { stroke: '#FFFFFF', strokeOpacity: 0.5, strokeWidth: 2.4, strokeLinecap: 'round' }), { transform: `translate(${f1(sc[0])} ${f1(sc[1])}) rotate(${f1(dir * 58 + sp)})` });
   return s;
 }
 const MOM = {
@@ -320,7 +329,7 @@ const MOM = {
       for (const sd of [-1, 1]) {
         const pm = tm(sd * 34); if (pm.k < 0.3) continue;
         const pw = 24 * pm.k, py = B - 40;
-        if (sd > 0) s += labeler(pm.x, py + 2, 'R', sw * 0.85);
+        if (sd > 0 && !Object.values(ctx.props || {}).includes('labeler')) s += labeler(pm.x, py + 2, 'R', sw * 0.85);
         s += path(rrect(pm.x - pw / 2, py, pw, 24, 5), { fill: grad(tone(c, -0.02), 'd'), stroke: stroke(c), strokeWidth: f1(sw * 0.8) });
       }
       return s + ribBand(ctx, tone(c, 0.05), 10);
@@ -329,13 +338,13 @@ const MOM = {
 };
 
 // ======================================================================
-// DAD — blue polo, side hair round a shiny bald top, thick moustache, WORLD'S OKAYEST DAD mug
+// DAD — blue polo, side hair round a shiny bald top, thick moustache, WORLD'S BEST-ISH DAD mug
 // ======================================================================
 const DAD_BAND = {
   t: 5,
-  top: [[-2, -34], [-1.2, -33], [-0.56, -22], [0.56, -22], [1.2, -33], [2, -34]],
-  bottom: [[-2, 24], [-1.3, 22], [-0.95, 10, 0], [-0.6, -2], [0.6, -2], [0.95, 10], [1.3, 22], [2, 24]],
-  mask: (u) => Math.abs(u) > 0.56,
+  top: [[-2, -20], [-1.5, -25], [-1.08, -30], [-0.78, -18], [-0.6, -8], [0.6, -8], [0.78, -18], [1.08, -30], [1.5, -25], [2, -20]],
+  bottom: [[-2, 18, 4], [-1.72, 20, 4], [-1.45, 18, 3], [-1.15, 12], [-0.95, 4], [-0.72, -4], [-0.6, -6], [0.6, -6], [0.72, -4], [0.95, 4], [1.15, 12], [1.45, 18, 3], [1.72, 20, 4], [2, 18]],
+  mask: (u) => Math.abs(u) > 0.6,
 };
 const DAD = {
   name: 'DAD', color: '#4A90E2',
@@ -350,7 +359,7 @@ const DAD = {
   hair: {
     height: 4,
     front(ctx) {
-      const shapes = bandPaths(DAD_BAND, ctx.head, ctx.yaw).map((d) => ({ d }));
+      const shapes = bandPaths(DAD_BAND, ctx.head, ctx.yaw).map((d) => ({ d })).concat(limbLobes(DAD_BAND, ctx.yaw, [-25, -12, 1], 8.5, 5));
       let s = shapes.length ? union(shapes, PAL.dadHair, { sw: ctx.sw, box: [-56, -40, 56, 26] }) : '';
       s += strands([{ y: -16, u0: 0.62, u1: 1.6, amp: 1.5, waves: 1.5, inset: 4 }, { y: -16, u0: -1.6, u1: -0.62, amp: 1.5, waves: 1.5, inset: 4 }], ctx.head, ctx.yaw, PAL.dadHair, { t: 5, crown: 0 });
       // shine on the bald top
@@ -402,10 +411,10 @@ const DAD = {
 // BRIGGS — mustard sweater vest, bow tie, round glasses, comb-over
 // ======================================================================
 const BRIGGS_BAND = {
-  t: 3.5,
-  top: [[-2, -30], [-1.2, -28], [-0.6, -18], [0.6, -18], [1.2, -28], [2, -30]],
-  bottom: [[-2, 22], [-1.3, 18], [-0.6, -2], [0.6, -2], [1.3, 18], [2, 22]],
-  mask: (u) => Math.abs(u) > 0.6,
+  t: 4,
+  top: [[-2, -16], [-1.5, -20], [-1.08, -25], [-0.82, -14], [-0.72, -8], [0.72, -8], [0.82, -14], [1.08, -25], [1.5, -20], [2, -16]],
+  bottom: [[-2, 14, 3], [-1.7, 16, 3], [-1.4, 13, 3], [-1.12, 8], [-0.9, -2], [-0.72, -4], [0.72, -4], [0.9, -2], [1.12, 8], [1.4, 13, 3], [1.7, 16, 3], [2, 14]],
+  mask: (u) => Math.abs(u) > 0.72,
 };
 const BRIGGS = {
   name: 'MR. BRIGGS', color: '#E0B03A',
@@ -420,14 +429,14 @@ const BRIGGS = {
     height: 8,
     front(ctx) {
       const lc = stroke(PAL.briggsHair);
-      const shapes = bandPaths(BRIGGS_BAND, ctx.head, ctx.yaw).map((d) => ({ d }));
+      const shapes = bandPaths(BRIGGS_BAND, ctx.head, ctx.yaw).map((d) => ({ d })).concat(limbLobes(BRIGGS_BAND, ctx.yaw, [-18, -8, 2], 7, 4));
       let s = shapes.length ? union(shapes, PAL.briggsHair, { sw: ctx.sw, box: [-56, -36, 56, 24] }) : '';
       // three comb-over strands across the bald top
-      const sy = sind(ctx.yaw) * 18;
-      for (const [y0, y1, lift] of [[-30, -40, -50], [-26, -36, -54], [-22, -31, -46]]) {
+      const sy = sind(ctx.yaw) * 8, kx = 0.5 + 0.5 * Math.abs(cosd(ctx.yaw));
+      for (const [y0, y1, lift] of [[-22, -44, -56], [-17, -33, -44], [-12, -22, -31]]) {
         if (ctx.back) break;
-        const d = `M${f1(-46 + sy)} ${y0}Q${f1(-6 + sy)} ${lift} ${f1(40 + sy)} ${y1}`;
-        s += path(d, { fill: 'none', stroke: lc, strokeWidth: f1(5 + ctx.sw * 2), strokeLinecap: 'round' }) + path(d, { fill: 'none', stroke: PAL.briggsHair, strokeWidth: 5, strokeLinecap: 'round' });
+        const d = `M${f1(-47 * kx + sy)} ${y0}Q${f1(-8 * kx + sy)} ${lift} ${f1(36 * kx + sy)} ${y1}`;
+        s += path(d, { fill: 'none', stroke: lc, strokeWidth: f1(3.2 + ctx.sw * 2), strokeLinecap: 'round' }) + path(d, { fill: 'none', stroke: PAL.briggsHair, strokeWidth: 3.2, strokeLinecap: 'round' });
       }
       const hx = -10 + 20 * sind(ctx.yaw);
       s += ellipse(hx, -41, 9, 3.4, { fill: '#FFFFFF', opacity: 0.45 });
@@ -497,18 +506,28 @@ const KEVIN = {
   pose: { armL: 10, foreL: -6 },
   hair: {
     height: 44,
-    front: hairFront(KEVIN_HAIR, PAL.kevinHair, (ctx) => {
-      const sx = 22 * sind(ctx.yaw), k = Math.max(0.5, Math.abs(cosd(ctx.yaw)) * 0.6 + 0.4);
+    front(ctx) {
+      const sx = 18 * sind(ctx.yaw), k = Math.max(0.55, Math.abs(cosd(ctx.yaw)) * 0.55 + 0.45);
       const P = (x, y) => [sx + x * k, y];
-      return [{ d: spline([P(-34, -44), P(-30, -66), P(-8, -84), P(22, -86), P(44, -74), P(40, -58), P(26, -52), P(36, -66), P(14, -72), P(-6, -62), P(-2, -46)], { closed: true, sharp: new Set([5, 7]) }) }];
-    }, [{ y: -44, u0: -0.55, u1: 0.5, amp: 1.6, waves: 2 }]),
+      const q = [P(-46, -44), P(-42, -64), P(-18, -86), P(-20, -70), P(8, -94), P(4, -74), P(38, -86), P(30, -66), P(48, -66), P(44, -46)];
+      const qd = spline(q, { closed: true, sharp: new Set([2, 3, 4, 5, 6, 7, 8]) });
+      const helm = helmetPath(KEVIN_HAIR, ctx.head, ctx.yaw);
+      let s = union([{ d: helm.d }, { d: qd }], PAL.kevinHair, { sw: ctx.sw, box: [-56, -96, 56, 10] });
+      // frosted tips: the top of the quiff fades to pale gold
+      const fid = 'kevfrost';
+      addDef(fid, `<linearGradient id="${fid}" gradientUnits="userSpaceOnUse" x1="0" y1="-58" x2="0" y2="-92"><stop offset="0" stop-color="#FFF2C6" stop-opacity="0"/><stop offset="0.55" stop-color="#FFF2C6" stop-opacity="0.75"/><stop offset="1" stop-color="#FFF8E2" stop-opacity="0.95"/></linearGradient>`);
+      s += path(qd, { fill: `url(#${fid})` });
+      s += path(spline([P(-30, -56), P(-14, -74), P(2, -82)]), { fill: 'none', stroke: tone(PAL.kevinHair, -0.1), strokeWidth: 2.6, strokeLinecap: 'round', opacity: 0.6 })
+        + path(spline([P(-6, -58), P(12, -72), P(26, -76)]), { fill: 'none', stroke: tone(PAL.kevinHair, -0.1), strokeWidth: 2.6, strokeLinecap: 'round', opacity: 0.6 });
+      s += strands([{ y: -44, u0: -0.5, u1: 0.45, amp: 1.4, waves: 2 }], ctx.head, ctx.yaw, PAL.kevinHair, KEVIN_HAIR);
+      return s;
+    },
   },
-  headwear(ctx) {
+  faceUnder(ctx) {
+    // tiny soul patch, under the mouth so open mouths cover it
     if (ctx.back) return '';
-    // frosted tips on the quiff
-    const sx = 22 * sind(ctx.yaw);
-    return path(`M${f1(sx - 4)} -80Q${f1(sx + 18)} -86 ${f1(sx + 36)} -76`, { fill: 'none', stroke: '#FFF1C2', strokeWidth: 5, strokeLinecap: 'round', opacity: 0.95 })
-      + path(`M${f1(sx - 18)} -64Q${f1(sx - 2)} -76 ${f1(sx + 16)} -74`, { fill: 'none', stroke: '#FFF1C2', strokeWidth: 3.4, strokeLinecap: 'round', opacity: 0.8 });
+    const mm = mapFeature(0, ctx.yaw);
+    return path(`M${f1(mm.x - 2.6)} 40.5L${f1(mm.x + 2.6)} 40.5L${f1(mm.x)} 45Z`, { fill: tone(PAL.kevinHair, -0.2), stroke: tone(PAL.kevinHair, -0.3), strokeWidth: 1.2, strokeLinejoin: 'round' });
   },
   faceOver(ctx, faceSpec) {
     if (ctx.back) return '';
@@ -530,9 +549,6 @@ const KEVIN = {
       s += g(lens, { transform: `translate(${f1(m.x)} ${f1(5 + drop)}) rotate(${f1(-sd * tilt)}) scale(${f1(m.k)} 1)` });
     }
     if (ms.length === 2) s += path(`M${f1(ms[0].x + 14 * ms[0].k)} ${f1(-2 + drop)}Q${f1((ms[0].x + ms[1].x) / 2)} ${f1(-6 + drop)} ${f1(ms[1].x - 14 * ms[1].k)} ${f1(-2 + drop)}`, { fill: 'none', stroke: fr, strokeWidth: 3.4, strokeLinecap: 'round' });
-    // tiny soul patch
-    const mm = mapFeature(0, ctx.yaw);
-    s += path(`M${f1(mm.x - 2.5)} 40L${f1(mm.x + 2.5)} 40L${f1(mm.x)} 44.5Z`, { fill: tone(PAL.kevinHair, -0.2), stroke: tone(PAL.kevinHair, -0.3), strokeWidth: 1.2, strokeLinejoin: 'round' });
     return s;
   },
   decor: {
@@ -641,7 +657,7 @@ function buildCat(spec, o) {
   const res = typeof fspec === 'string' ? { preset: fspec } : { ...fspec };
   const base = { ...(res.preset ? (FACE_PRESETS_CACHE[res.preset] || {}) : {}), ...res };
   if (mmap[base.mouth]) res.mouth = mmap[base.mouth];
-  const f = drawFace(res, { yaw, skin: fur, look: o.look, top: head.top - 26, ...spec.faceOpts });
+  const f = drawFace(withAdd(res, o.add), { yaw, skin: fur, look: o.look, top: head.top - 26, headBox: head, ...spec.faceOpts });
   hs += f.face;
   if (!back) {
     // whiskers
