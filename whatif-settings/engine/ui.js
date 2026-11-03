@@ -270,7 +270,7 @@ export function panel(o = {}, p) {
   // header
   s += logo(x + 86, y + 78, 50, { rot: o.logoRot || 0 });
   s += text(x + 154, y + 84, `REALITY <tspan fill="${UI.orange}">SETTINGS</tspan>`, LIL(54, '#FFFFFF', { letterSpacing: 1 }));
-  s += text(x + 156, y + 120, rich(o.subtitle || 'Signed in as {SAM|orange} · v7.0'), NUN(25, 800, UI.sub));
+  s += text(x + 156, y + 120, rich(o.subtitle || 'Signed in as {SAM|orange} · v1.1'), NUN(25, 800, UI.sub));
   const bx = x + w - 70, by = y + 78;
   s += circle(bx, by + 5, 32, { fill: '#070A1C', opacity: 0.7 });
   s += circle(bx, by, 32, { fill: d.lin([UI.navy3, UI.navy2]), stroke: '#070A1C', strokeWidth: 3 });
@@ -357,12 +357,12 @@ export function confirm(o = {}, p) {
 
 // ---------- Terms & Conditions ----------
 export function terms(o = {}, p) {
-  const { x = 120, y = 100, w = 660, h = 820, pages = '48,213' } = o;
+  const { x = 120, y = 100, w = 660, h = 820, pages = '4,812' } = o;
   const d = new Defs(), R = rng(o.seed || 5);
   let s = glassCard(d, x, y, w, h, 44);
   s += g(iconTile('subtitles', 0, 0, 70, '#5C6B9E'), { transform: tr(x + 76, y + 78) });
   s += text(x + 130, y + 76, 'Terms &amp; Conditions', NUN(Math.min(44, (w - 170) / textW('Terms & Conditions', 1)), 900, '#FFFFFF'));
-  s += text(x + 132, y + 112, rich('Reality {v7.0|orange} · read every page'), NUN(Math.min(25, (w - 170) / textW('Reality v7.0 · read every page', 1, 'n800')), 800, UI.sub));
+  s += text(x + 132, y + 112, rich('Reality {v1.0|orange} · read every page'), NUN(Math.min(25, (w - 170) / textW('Reality v1.0 · read every page', 1, 'n800')), 800, UI.sub));
   // paper sheet with fine print (stacked pages behind)
   const px = x + 40, py = y + 150, pw = w - 100, ph = h - 340;
   for (let i = 3; i >= 1; i--) s += path(rrPath(px + i * 7, py + i * 7, pw, ph, 20), { fill: shade('#E6EBF7', -0.04 * i), stroke: '#9AA6CC', strokeWidth: 2 });
@@ -400,7 +400,7 @@ export function terms(o = {}, p) {
 // ---------- Patch notes ----------
 const TAGS = { NEW: UI.green, FIXED: '#2FA8F0', REMOVED: UI.red, KNOWN: '#F2A51C', NERF: UI.purple, BUFF: UI.pink };
 export function patchNotes(o = {}, p) {
-  const { x = 120, y = 100, w = 720, version = '7.0.2' } = o;
+  const { x = 120, y = 100, w = 720, version = '1.1' } = o;
   const items = o.items || [
     { tag: 'NEW', text: 'Gravity slider ({Moon} → {Jupiter})' },
     { tag: 'FIXED', text: 'Mondays are now optional' },
@@ -435,7 +435,7 @@ export function patchNotes(o = {}, p) {
 // ---------- install / progress bar ----------
 /** install({x,y,w,label,v,t}) - t drives the stripe crawl (seconds) */
 export function install(o = {}, p) {
-  const { x = 520, y = 420, w = 880, label = 'Installing {Reality 7.0|orange}', sub = 'Downloading gravity…', eta = 'ETA 3 min' } = o;
+  const { x = 520, y = 420, w = 880, label = 'Installing {Reality 2.0|orange}', sub = 'Downloading gravity…', eta = 'ETA 3 min' } = o;
   const v = clamp(o.v ?? 0.62), t = o.t || 0, h = 220, d = new Defs();
   let s = glassCard(d, x, y, w, h, 44);
   s += g(glyph('download', UI.orangeHi), { transform: tr(x + 66, y + 66, 0.42) });

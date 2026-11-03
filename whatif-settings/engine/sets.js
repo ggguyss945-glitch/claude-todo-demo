@@ -631,7 +631,7 @@ export function kitchen(o = {}) {
   near += pbox(d, 1410, ty - 100, 100, 120, '#FFFFFF', { r: 14, sw: SWN, stroke: ink('#C9D2E2') });
   near += path(`M1510 ${ty - 76}Q1560 ${ty - 76} 1560 ${ty - 40}Q1560 ${ty - 6} 1510 ${ty - 10}`, { fill: 'none', ...st(ink('#C9D2E2'), 20) }) + path(`M1510 ${ty - 76}Q1560 ${ty - 76} 1560 ${ty - 40}Q1560 ${ty - 6} 1510 ${ty - 10}`, { fill: 'none', ...st('#FFFFFF', 13) });
   near += text(1460, ty - 62, "WORLD'S", { fontFamily: FONT.ui, fontWeight: 900, fontSize: 15, fill: '#4A90E2', textAnchor: 'middle' });
-  near += text(1460, ty - 40, 'OKAYEST', { fontFamily: FONT.title, fontSize: 21, fill: '#E5303D', textAnchor: 'middle' });
+  near += text(1460, ty - 40, 'BEST-ISH', { fontFamily: FONT.title, fontSize: 21, fill: '#E5303D', textAnchor: 'middle' });
   near += text(1460, ty - 20, 'DAD', { fontFamily: FONT.ui, fontWeight: 900, fontSize: 16, fill: '#4A90E2', textAnchor: 'middle' });
   // orange juice
   near += pbox(d, 820, ty - 140, 74, 160, '#DFF2FF', { r: 10, sw: SWN, glossOp: 0.7, stroke: ink('#9FC8E8') });

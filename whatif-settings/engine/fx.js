@@ -106,7 +106,7 @@ export function confetti(o = {}) {
     const vx = (R() - 0.5) * spread * 2, vy = -up * (0.5 + R() * 0.7), drag = 1 - Math.min(0.6, t * 0.35);
     const x = cx + vx * t * drag, y = cy + vy * t * drag + 0.5 * gravity * t * t * 0.55;
     const rot = (R() - 0.5) * 900 * t + R() * 360, flip = Math.cos(t * (8 + R() * 10) + R() * 6);
-    const c = colors[i % colors.length], kind = i % 7, sz = 12 + R() * 14;
+    const c = colors[i % colors.length], kind = i % 7, sz = (o.size ?? 22) * (0.7 + R() * 0.6);
     const fade = 1 - seg(t, 1.6, 2.4);
     if (fade <= 0) continue;
     let piece;

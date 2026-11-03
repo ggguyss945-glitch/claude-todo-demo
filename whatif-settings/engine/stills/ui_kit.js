@@ -39,9 +39,9 @@ export default () => {
   s += at(bx, 652, 0.8, U.changeNote({ x: 0, y: 0, user: 'LilyRoar', setting: 'GRAVITY', value: 'Bouncy', avatar: '#FF5FA8' }));
   s += at(bx, 742, 0.8, U.changeNote({ x: 0, y: 0, user: 'Kevin', setting: 'WEATHER', value: 'Rain', avatar: '#2FAE55', cat: 'weather' }));
   s += label(bx, 856, 'CONFIRMATION POP-UP');
-  s += at(bx, 940, 0.78, U.confirm({ cx: 400, cy: 220, w: 800, press: 0.6, hot: 'yes' }));
-  s += label(bx, 1296, 'POP-IN', 'p .12 → 1: overshoot + ring');
-  [0.12, 0.3, 0.45, 0.65, 1].forEach((p, i) => { s += U.muteBadge({ cx: bx + 60 + i * 126, cy: 1360, r: 40, label: '' }, p); });
+  s += at(bx, 930, 0.74, U.confirm({ cx: 400, cy: 220, w: 800, press: 0.6, hot: 'yes' }));
+  s += label(bx, 1316, 'POP-IN', 'p .12 → 1: overshoot + ring');
+  [0.12, 0.3, 0.45, 0.65, 1].forEach((p, i) => { s += U.muteBadge({ cx: bx + 60 + i * 126, cy: 1384, r: 38, label: '' }, p); });
   // column C
   const cx = 1330;
   s += label(cx, 46, 'TERMS &amp; CONDITIONS');

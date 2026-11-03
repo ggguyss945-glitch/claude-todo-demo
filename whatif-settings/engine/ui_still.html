@@ -1,14 +1,19 @@
 <!doctype html>
 <html><head><meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Lilita+One&display=block">
-<style>html,body{margin:0;background:#000}#stage{overflow:hidden;position:relative}svg{display:block}</style>
+<style>
+/* local fonts (assets/fonts, OFL) so renders never depend on the network */
+@font-face { font-family: 'Nunito'; font-weight: 700; src: url('../assets/fonts/nunito700.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 800; src: url('../assets/fonts/nunito800.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 900; src: url('../assets/fonts/nunito900.ttf') format('truetype'); }
+@font-face { font-family: 'Lilita One'; src: url('../assets/fonts/lilita.ttf') format('truetype'); }
+@font-face { font-family: 'Rubik'; font-weight: 800; src: url('../assets/fonts/rubik800.ttf') format('truetype'); }
+html,body{margin:0;background:#000}#stage{overflow:hidden;position:relative}svg{display:block}</style>
 </head><body><div id="stage"></div>
 <script type="module">
 // Draw one still: ?mod=<file>.js (relative to engine/) whose default export returns { w, h, svg }.
 const qs = new URLSearchParams(location.search);
 const mod = qs.get('mod'), arg = qs.get('arg');
-const want = ['900 60px Nunito', '800 60px Nunito', '700 60px Nunito', '600 60px Nunito', '60px "Lilita One"'];
+const want = ['900 60px Nunito', '800 60px Nunito', '700 60px Nunito', '60px "Lilita One"', '800 60px Rubik'];
 for (const f of want) { try { await document.fonts.load(f); } catch (e) {} }
 window.__fonts = want.filter((f) => ![...document.fonts].some((ff) => ff.status === 'loaded' && f.includes(ff.family.replace(/"/g, ''))));
 window.addEventListener('error', (e) => { window.__err = String(e.message); window.__ready = true; });
