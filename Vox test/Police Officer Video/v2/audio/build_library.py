@@ -3,7 +3,9 @@
     python3 -I build_library.py [--jobs 3] [--only SRC[,SRC]] [--no-epidemic]
 
 Reads the raw downloads in $S/pov2/dl/ (git sparse checkouts of GitHub-hosted libraries, see SOURCES; deleted after
-conversion, so a re-run reuses the QC cache in samples/_qc and the licence copies in samples/_licences), and writes:
+conversion, so a re-run reuses the QC cache in samples/_qc and the licence copies in samples/_licences; to restore
+them, e.g. after an environment reset, run shorts/fetch_library_sources.py, then this, then that script with --clean),
+and writes:
   - $S/pov2/samples/<category>/<src>__<name>.flac  48 kHz FLAC (24-bit for 24-bit/float sources, else 16-bit),
     source channel count kept (B-format and M-S impulse responses are decoded to L/R stereo).
   - v2/audio/catalog.json      every sample (free library + the owner's Epidemic files) with path, category, tags,
