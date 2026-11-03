@@ -1,0 +1,2955 @@
+{
+ "version": 1,
+ "note": "Builds shorts_spec.json + the timing tables for SHORTS_PLAN.md from one beat list per Short.\nRun: python3 -I gen_shorts.py <lines.py> <out_dir>\nDurations are ESTIMATES from word counts (narrator 2.9 w/s, characters 2.6 w/s); the assembler must re-time every beat\nfrom the real clip lengths in timeline.json (same order, same gaps) once the narration is back.",
+ "format": {
+  "w": 1080,
+  "h": 1920,
+  "fps": 60,
+  "render": "landscape design space 1920x1080 rendered at 3414x1920, 1080-px window cropped per shot (crop_cx in design px; window = 607.5 design px wide) or a native vertical camera if the engine gets one",
+  "loudness": "-14 LUFS integrated, LRA <= 2.5 LU, true peak <= -1 dBTP",
+  "music_under_voice_db": [
+   -11,
+   -8
+  ],
+  "captions": {
+   "font": "MontserratLC-900.ttf",
+   "fill": "#FFFFFF",
+   "outline": "#000000 at 12 % of cap height",
+   "shadow": "soft 0,6 px 35 %",
+   "cap_height_px": 92,
+   "centre_y_frac": 0.64,
+   "chunk_words": [
+    1,
+    2
+   ],
+   "chunk_s": [
+    0.25,
+    1.0
+   ],
+   "colours": {
+    "danger": "#FF2E2E",
+    "identity_you": "#FFC23D",
+    "police_radio": "#5AB0FF",
+    "mother": "#FF8FC2",
+    "green": "#3DDC84"
+   },
+   "punch": "keyword chunk scales 100 -> 118 -> 100 % over 4 frames"
+  },
+  "safe": {
+   "top_frac": 0.08,
+   "bottom_frac": 0.2,
+   "right_frac": 0.12
+  }
+ },
+ "new_lines": {
+  "S1-N1": {
+   "text": "If a cop knocks after midnight... don't prove you live there.",
+   "who": "N",
+   "optional": false
+  },
+  "S1-N2": {
+   "text": "Everyone who subscribes gets to keep their own face.",
+   "who": "N",
+   "optional": false
+  },
+  "S1-N3": {
+   "text": "Seven rules keep you alive. The full video is on the channel.",
+   "who": "N",
+   "optional": false
+  },
+  "S2-N1": {
+   "text": "Everyone who subscribes gets to keep their own voice.",
+   "who": "N",
+   "optional": false
+  },
+  "S2-N2": {
+   "text": "Where's your mother? Find out in the full video on the channel.",
+   "who": "N",
+   "optional": false
+  },
+  "S3-N1": {
+   "text": "Everyone who subscribes knows which one is real.",
+   "who": "N",
+   "optional": false
+  },
+  "S3-N2": {
+   "text": "Does she open the door? Watch the full video on the channel.",
+   "who": "N",
+   "optional": false
+  },
+  "S2-N0": {
+   "text": "This is your voice. On a police radio.",
+   "who": "N",
+   "optional": true,
+   "use": "A/B alternative hook: replaces beat 2 (L63) if the first upload's 3-second hold rate is weak"
+  },
+  "S3-N0": {
+   "text": "He knows everything about you. Almost.",
+   "who": "N",
+   "optional": true,
+   "use": "A/B alternative hook: said over frame 1 before L146"
+  }
+ },
+ "shorts": [
+  {
+   "id": "S1",
+   "slug": "the_other_gentleman",
+   "title": "A Cop Knocks At 12:36 AM... The Man In His Car Is YOU",
+   "angle": "The knock and the man in the back seat: a five-step identity match that ends with a stranger claiming your house in your voice.",
+   "hud": "Top centre: doorbell-style clock \"12:36 AM\" (ticks per minute every beat), under it an ID-scan meter \"MATCH 0%\" that climbs 20/40/60/80/99/100 on each clue.",
+   "music": {
+    "track": "from_hell_christoffer_moe_ditlevsen",
+    "start_in_track": 13.2,
+    "note": "Track section 13.2-53.2 is the quiet build (-14..-18 LUFS); the 53.2 s boundary (loud, -9.4) must land on \"It's yours.\" Slip the track start so it does. Alternate: a_massive_mist 0-68.7."
+   },
+   "loop": "The CTA ends on two knocks over black; a 8-frame REWIND glitch whips to frame 1, which opens on the same two knocks on the doorbell lens.",
+   "open_question": "Who is he, and which one of you does the officer believe? (The long video: rules 2-7 and the mother.)",
+   "est_duration": 54.29,
+   "words": 133,
+   "you_count": 13,
+   "shots": 26,
+   "beats": [
+    {
+     "n": 1,
+     "start": 0.0,
+     "voice_start": 0.25,
+     "end": 4.31,
+     "voice": {
+      "src": "new",
+      "id": "S1-N1",
+      "who": "N",
+      "fx": null,
+      "text": "If a cop knocks after midnight... don't prove you live there."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "door",
+       "framing": "ECU fisheye: officer's face fills 70 % of the frame, lens bulge, porch light behind; crop_cx on his nose",
+       "src": 0,
+       "acting": "lean_in (amount 1.3) + wide_grin, knk_at(0.0, n=2, side=0) on the lens with doorbell jolt",
+       "cam": "hand, snap 1.25 at first knock",
+       "new": true,
+       "t": 0.0
+      },
+      {
+       "at": 0.5,
+       "scene": "bust",
+       "framing": "officer ECU from below, bg porch with DOF, head tilt toward the lens",
+       "src": 12,
+       "acting": "creep_smile -> wide_grin on \"PROVE\"",
+       "cam": "snap 1.35 on \"PROVE\"",
+       "new": true,
+       "t": 2.16
+      }
+     ],
+     "overlays": [
+      "HUD clock 12:36 AM pops at 0.0",
+      "text slam \"KNOCK\" x2 synced to the knocks (0.2 s each)",
+      "on \"prove\": text slam centre 40 %: \"DON'T PROVE YOU LIVE THERE\", \"PROVE\" red, punch 130 %",
+      "captions: \"COP\" blue, \"MIDNIGHT\" red"
+     ],
+     "sfx": [
+      "0.00 knock_door n=2 spacing 0.28 space=close (lens hit, plastic rattle)",
+      "0.00 impact_hit -3 dB",
+      "impact_hit on \"prove\"",
+      "whoosh hard on the cut",
+      "ambience_night bed -24 dB throughout",
+      "police flash hum low"
+     ],
+     "music": [
+      "0.00 braam (designed_braam_braam_stinger) -6 dB",
+      "0.00 track in at -10 dB under the voice",
+      "hit on \"prove\""
+     ],
+     "caption_keywords": [
+      "COP",
+      "MIDNIGHT",
+      "PROVE"
+     ],
+     "note": "First word at 0.25 s; the premise is finished by about 3.5 s. No title card, no logo. This is the long video's title, said as a warning."
+    },
+    {
+     "n": 2,
+     "start": 4.31,
+     "voice_start": 4.31,
+     "end": 8.81,
+     "voice": {
+      "src": "line",
+      "i": 12,
+      "who": "O",
+      "fx": null,
+      "text": "We've had a report of an unauthorized person at this address.",
+      "full": "We've had a report of an unauthorized person at this address.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "officer medium-close, bodycam on chest visible, bg porch",
+       "src": 12,
+       "acting": "talk + polite smile that never reaches the eyes",
+       "cam": "push",
+       "new": false,
+       "t": 4.31
+      },
+      {
+       "at": 0.6,
+       "scene": "ins",
+       "framing": "insert: bodycam red REC dot ECU (draw on bust crop, push 4.5 %/s)",
+       "src": 14,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 7.01
+      }
+     ],
+     "overlays": [
+      "tag \"BODYCAM: REC\" red/white pop with ui_pop",
+      "caption \"UNAUTHORIZED\" red"
+     ],
+     "sfx": [
+      "bodycam_beep at the insert",
+      "police_radio_squelch -12 dB outside"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "UNAUTHORIZED"
+     ],
+     "note": null
+    },
+    {
+     "n": 3,
+     "start": 8.81,
+     "voice_start": 8.81,
+     "end": 11.15,
+     "voice": {
+      "src": "line",
+      "i": 13,
+      "who": "N",
+      "fx": null,
+      "text": "You tell him you live here.",
+      "full": "You tell him you live here.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hall",
+       "framing": "you behind the door, vertical crop on you, hand flat on the door",
+       "src": 13,
+       "acting": "you: nervous, glance at peephole",
+       "cam": "hand",
+       "new": false,
+       "t": 8.81
+      }
+     ],
+     "overlays": [
+      "speech-bubble tag \"I LIVE HERE.\" (unvoiced; it plants Short 2)"
+     ],
+     "sfx": [
+      "breath close",
+      "footsteps_wood_inside 1 step"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 4,
+     "start": 11.15,
+     "voice_start": 11.15,
+     "end": 13.73,
+     "voice": {
+      "src": "line",
+      "i": 18,
+      "who": "O",
+      "fx": null,
+      "text": "That's what the other gentleman said.",
+      "full": "That's what the other gentleman said.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "officer 3/4, head turned back to lens, bg car out of focus",
+       "src": 17,
+       "acting": "look_side to car then snap_turn to lens on \"OTHER\"",
+       "cam": "creep",
+       "new": false,
+       "t": 11.15
+      }
+     ],
+     "overlays": [
+      "caption \"OTHER\" red with punch 125 %"
+     ],
+     "sfx": [
+      "stinger light on \"other\""
+     ],
+     "music": [
+      "music thins for 0.4 s after the line"
+     ],
+     "caption_keywords": [
+      "OTHER"
+     ],
+     "note": null
+    },
+    {
+     "n": 5,
+     "start": 13.73,
+     "voice_start": 13.73,
+     "end": 17.79,
+     "voice": {
+      "src": "line",
+      "i": 19,
+      "who": "N",
+      "fx": null,
+      "text": "Only then do you notice someone sitting in the back seat.",
+      "full": "Only then do you notice someone sitting in the back seat.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "street",
+       "framing": "vertical crop on the patrol car at the curb, light bar strobing",
+       "src": 19,
+       "acting": null,
+       "cam": "fast push 1.0 -> 1.6 toward the rear window",
+       "new": false,
+       "t": 13.73
+      },
+      {
+       "at": 0.55,
+       "scene": "car",
+       "framing": "back-seat window: silhouette, head lowered, strobe across the glass",
+       "src": 19,
+       "acting": "double: down(), sway",
+       "cam": "creep",
+       "new": false,
+       "t": 15.97
+      }
+     ],
+     "overlays": [
+      "red motion box on the window + tag \"UNKNOWN\"",
+      "MATCH meter appears: \"MATCH 0%\""
+     ],
+     "sfx": [
+      "whoosh hard",
+      "car_idle -18 dB",
+      "ui_pop for meter"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "BACK SEAT"
+     ],
+     "note": null
+    },
+    {
+     "n": 6,
+     "start": 17.79,
+     "voice_start": 17.79,
+     "end": 21.51,
+     "voice": {
+      "src": "line",
+      "i": 22,
+      "who": "N",
+      "fx": null,
+      "text": "One thumb keeps rubbing the base of his ring finger.",
+      "full": "One thumb keeps rubbing the base of his ring finger.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hands",
+       "framing": "ECU lap: thumb rubbing the base of the ring finger, ring glint",
+       "src": 22,
+       "acting": "rubbing thumb loop 0.9 s",
+       "cam": "push 4.5 %/s",
+       "new": false,
+       "t": 17.79
+      }
+     ],
+     "overlays": [
+      "tag \"HABIT\" pinned to the thumb with leader line",
+      "MATCH 20%"
+     ],
+     "sfx": [
+      "ui_pop",
+      "fabric rub close -10 dB"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "RING FINGER"
+     ],
+     "note": null
+    },
+    {
+     "n": 7,
+     "start": 21.51,
+     "voice_start": 21.51,
+     "end": 24.2,
+     "voice": {
+      "src": "line",
+      "i": 23,
+      "who": "N",
+      "fx": null,
+      "text": "It's something you do when you're nervous.",
+      "full": "It's something you do when you're nervous.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hands",
+       "framing": "VERTICAL SPLIT: top half his hands in the car (strobe), bottom half your hands in the hall doing the same rub in sync",
+       "src": 23,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 21.51
+      }
+     ],
+     "overlays": [
+      "split line glitch at cut",
+      "labels \"HIM\" (top) / \"YOU\" (bottom)"
+     ],
+     "sfx": [
+      "heartbeat starts, 70 bpm, -14 dB"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "YOU"
+     ],
+     "note": null
+    },
+    {
+     "n": 8,
+     "start": 24.2,
+     "voice_start": 24.2,
+     "end": 27.22,
+     "voice": {
+      "src": "line",
+      "i": 43,
+      "who": "N",
+      "fx": null,
+      "text": "The card outside has the same missing piece.",
+      "full": "The card outside has the same missing piece.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "licence_window: card raised to the glass, chipped corner lit by strobe",
+       "src": 38,
+       "acting": "hold_up",
+       "cam": "push",
+       "new": false,
+       "t": 24.2
+      },
+      {
+       "at": 0.5,
+       "scene": "ins",
+       "framing": "licence: your card in your hand, same chip; match-cut on the corner position",
+       "src": 44,
+       "acting": null,
+       "cam": null,
+       "new": false,
+       "t": 25.71
+      }
+     ],
+     "overlays": [
+      "red circle on both corners",
+      "text slam \"SAME\" red",
+      "MATCH 40%"
+     ],
+     "sfx": [
+      "glass tap",
+      "card flick",
+      "impact_hit on match cut"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "SAME"
+     ],
+     "note": null
+    },
+    {
+     "n": 9,
+     "start": 27.22,
+     "voice_start": 27.22,
+     "end": 30.65,
+     "voice": {
+      "src": "new",
+      "id": "S1-N2",
+      "who": "N",
+      "fx": null,
+      "text": "Everyone who subscribes gets to keep their own face."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "car",
+       "framing": "back-seat window ECU: his palm slaps flat on the glass, fingers spread",
+       "src": 51,
+       "acting": "hand_on_glass + slow creep_smile behind the palm",
+       "cam": "hold",
+       "new": false,
+       "t": 27.22
+      }
+     ],
+     "overlays": [
+      "SUBSCRIBE button at 74 % height (above captions), cursor taps it in sync with the palm hitting the glass -> SUBSCRIBED + bell, 1.8 s",
+      "tag \"HIS FINGERS: SPREAD LIKE YOURS\""
+     ],
+     "sfx": [
+      "glass thump on the palm",
+      "ui click + soft bell on SUBSCRIBED"
+     ],
+     "music": [
+      "bed stays, -12 dB"
+     ],
+     "caption_keywords": [
+      "SUBSCRIBES",
+      "FACE"
+     ],
+     "note": "45-50 % of runtime. Whispered, fast, still in story; never pauses the picture."
+    },
+    {
+     "n": 10,
+     "start": 30.65,
+     "voice_start": 30.65,
+     "end": 33.23,
+     "voice": {
+      "src": "line",
+      "i": 112,
+      "who": "O",
+      "fx": null,
+      "text": "Perhaps this will clear things up.",
+      "full": "Perhaps this will clear things up.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "mail_slot: flap lifts, complaint sheet slides in (feed 0 -> 1), officer's fingertips",
+       "src": 111,
+       "acting": null,
+       "cam": "push",
+       "new": false,
+       "t": 30.65
+      },
+      {
+       "at": 0.6,
+       "scene": "hall",
+       "framing": "low angle from the floor: paper lands at your feet",
+       "src": 111,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 32.19
+      }
+     ],
+     "overlays": [
+      "caption \"CLEAR THINGS UP\" blue"
+     ],
+     "sfx": [
+      "mail_slot",
+      "paper slide",
+      "whoosh soft"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 11,
+     "start": 33.23,
+     "voice_start": 33.23,
+     "end": 35.56,
+     "voice": {
+      "src": "line",
+      "i": 117,
+      "who": "N",
+      "fx": null,
+      "text": "The clothes you're wearing right now.",
+      "full": "The clothes you're wearing right now.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hall",
+       "framing": "tilt down your body: the grey hoodie you're wearing; the complaint line \"WEARING: GREY HOODIE\" overlaid",
+       "src": 117,
+       "acting": null,
+       "cam": "tilt",
+       "new": false,
+       "t": 33.23
+      },
+      {
+       "at": 0.6,
+       "scene": "ins",
+       "framing": "complaint ECU",
+       "src": 117,
+       "acting": null,
+       "cam": null,
+       "new": false,
+       "t": 34.63
+      }
+     ],
+     "overlays": [
+      "complaint lines highlight in sequence on screen: \"HEIGHT: 5'11\"\" / \"HAIR: BROWN\" / \"WEARING: GREY HOODIE\" (MATCH 50 -> 60%)",
+      "caption \"RIGHT NOW\" red"
+     ],
+     "sfx": [
+      "impact_hit",
+      "heartbeat 90 bpm"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "RIGHT NOW"
+     ],
+     "note": null
+    },
+    {
+     "n": 12,
+     "start": 35.56,
+     "voice_start": 35.56,
+     "end": 39.2,
+     "voice": {
+      "src": "line",
+      "i": 119,
+      "who": "N",
+      "fx": null,
+      "text": "Then you look at the complainant's name.",
+      "full": "Then you look at the complainant's name.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "complaint_name: name field blurred, slow push 4.5 %/s",
+       "src": 119,
+       "acting": null,
+       "cam": "creep",
+       "new": false,
+       "t": 35.56
+      }
+     ],
+     "overlays": [
+      "field label \"COMPLAINANT:\" with blinking cursor"
+     ],
+     "sfx": [
+      "riser 3.0 s ending on \"It's yours\"",
+      "tinnitus fades in"
+     ],
+     "music": [
+      "music duck -18 dB"
+     ],
+     "caption_keywords": null,
+     "note": "TENSION GAP 1.1 s after this line: music out, only heartbeat + tinnitus + room_tone; the name un-blurs letter by letter (glitch)."
+    },
+    {
+     "n": 13,
+     "start": 39.2,
+     "voice_start": 39.2,
+     "end": 40.26,
+     "voice": {
+      "src": "line",
+      "i": 120,
+      "who": "N",
+      "fx": null,
+      "text": "It's yours.",
+      "full": "It's yours.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "complaint_name ECU: YOUR NAME + signature, the last-letter mistake circled",
+       "src": 120,
+       "acting": null,
+       "cam": "snap 1.4 on \"yours\"",
+       "new": false,
+       "t": 39.2
+      }
+     ],
+     "overlays": [
+      "text slam \"IT'S YOURS.\" red, full width",
+      "MATCH 80%",
+      "red flash 2 frames"
+     ],
+     "sfx": [
+      "braam (distorted_straight_e) + sub_drop",
+      "impact big"
+     ],
+     "music": [
+      "TRACK SECTION CHANGE here (from_hell 53.2 s, loud)"
+     ],
+     "caption_keywords": [
+      "YOURS"
+     ],
+     "note": "Twist A at about 70 % of runtime."
+    },
+    {
+     "n": 14,
+     "start": 40.26,
+     "voice_start": 40.26,
+     "end": 42.25,
+     "voice": {
+      "src": "line",
+      "i": 126,
+      "who": "N",
+      "fx": null,
+      "text": "light, you finally see his",
+      "full": "When he steps under the porch light, you finally see his face.",
+      "trim_words": [
+       7,
+       11
+      ]
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "peep",
+       "framing": "the man from the back seat walks up the path into the porch light, grey coat, loose thread at the cuff",
+       "src": 123,
+       "acting": "walk(from car, to door) then stop under the light, head rises",
+       "cam": "push",
+       "new": false,
+       "t": 40.26
+      }
+     ],
+     "overlays": [
+      "tag \"GREY COAT\" pinned (leader line)"
+     ],
+     "sfx": [
+      "car_door_close (pre-roll 0.5 s)",
+      "footsteps_porch x4",
+      "whoosh"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "FACE"
+     ],
+     "note": null
+    },
+    {
+     "n": 15,
+     "start": 42.25,
+     "voice_start": 42.25,
+     "end": 43.56,
+     "voice": {
+      "src": "line",
+      "i": 127,
+      "who": "N",
+      "fx": null,
+      "text": "It's almost yours.",
+      "full": "It's almost yours.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "double ECU, bg porch, impatient",
+       "src": 127,
+       "acting": "dead_stare -> creep_smile over 1.5 s",
+       "cam": "push",
+       "new": false,
+       "t": 42.25
+      }
+     ],
+     "overlays": [
+      "tags pop one by one: \"SCAR: WRONG SIDE\", \"RING: WRONG HAND\" (leader lines)",
+      "MATCH 99% glitches \"99% ... ERROR\""
+     ],
+     "sfx": [
+      "ui_pop x2",
+      "glitch"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "ALMOST"
+     ],
+     "note": null
+    },
+    {
+     "n": 16,
+     "start": 43.56,
+     "voice_start": 43.56,
+     "end": 44.53,
+     "voice": {
+      "src": "line",
+      "i": 132,
+      "who": "D",
+      "fx": null,
+      "text": "That's him,",
+      "full": "That's him,",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "door",
+       "framing": "doorbell fisheye: the double points straight at the lens, officer behind him",
+       "src": 132,
+       "acting": "pt(dx=0)",
+       "cam": "post-push",
+       "new": false,
+       "t": 43.56
+      }
+     ],
+     "overlays": [
+      "caption \"THAT'S HIM\" in quotes, amber"
+     ],
+     "sfx": [
+      "stinger"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 17,
+     "start": 44.53,
+     "voice_start": 44.53,
+     "end": 46.45,
+     "voice": {
+      "src": "line",
+      "i": 133,
+      "who": "N",
+      "fx": null,
+      "text": "he says in your voice.",
+      "full": "he says in your voice.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "wave",
+       "framing": "waveform panel, two rows \"YOU\" / \"HIM\" identical, bust double behind",
+       "src": 133,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 44.53
+      }
+     ],
+     "overlays": [
+      "\"MATCH 100%\" red stamp"
+     ],
+     "sfx": [
+      "radio_static short",
+      "ui_pop"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "YOUR VOICE"
+     ],
+     "note": null
+    },
+    {
+     "n": 18,
+     "start": 46.45,
+     "voice_start": 46.45,
+     "end": 49.18,
+     "voice": {
+      "src": "line",
+      "i": 134,
+      "who": "D",
+      "fx": null,
+      "text": "That's the man in my house.",
+      "full": "That's the man in my house.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "door",
+       "framing": "ECU fisheye: the double leans into the lens until his grin bulges; officer's head tilts behind",
+       "src": 134,
+       "acting": "lean_in 1.4 + wide_grin; officer head_tilt",
+       "cam": "snap 1.3",
+       "new": false,
+       "t": 46.45
+      }
+     ],
+     "overlays": [
+      "text slam \"THE MAN IN MY HOUSE\"",
+      "red flash"
+     ],
+     "sfx": [
+      "impact_hit",
+      "static burst 0.3 s"
+     ],
+     "music": [
+      "hit, then pad only"
+     ],
+     "caption_keywords": [
+      "MY HOUSE"
+     ],
+     "note": null
+    },
+    {
+     "n": 19,
+     "start": 49.18,
+     "voice_start": 49.18,
+     "end": 53.54,
+     "voice": {
+      "src": "new",
+      "id": "S1-N3",
+      "who": "N",
+      "fx": null,
+      "text": "Seven rules keep you alive. The full video is on the channel."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "rule",
+       "framing": "rule cards flick 1 -> 7 vertically (0.15 s each), stop on a card reading \"FULL VIDEO ON THE CHANNEL\"",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 49.18
+      }
+     ],
+     "overlays": [
+      "comments panel slides up for 1.2 s: \"Comment BACK SEAT if you'd keep the door shut\" (on screen only)",
+      "clock 12:41 AM"
+     ],
+     "sfx": [
+      "rule sting",
+      "card flick ticks x7"
+     ],
+     "music": [
+      "bed continues"
+     ],
+     "caption_keywords": [
+      "SEVEN RULES",
+      "FULL VIDEO"
+     ],
+     "note": null
+    },
+    {
+     "n": 20,
+     "start": 53.54,
+     "voice_start": null,
+     "end": 54.29,
+     "voice": null,
+     "shots": [
+      {
+       "at": 0,
+       "scene": "black",
+       "framing": "black, then 8-frame REWIND glitch to frame 1",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 53.54
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "knock_door n=2 (same sample as frame 1)",
+      "tape-rewind glitch"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "slug": "your_voice_on_the_radio",
+   "title": "The Police Radio Is Playing YOUR Voice...",
+   "angle": "The voice on the police radio: someone is learning to sound like you, then your mother's voice turns out to be a loop.",
+   "hud": "Top centre: \"PLAYBACK #1\" that ticks #1-#5 with a red REC dot, plus a live mini-waveform strip under it; clock 12:38 AM small beside it.",
+   "music": {
+    "track": "dark_forebodings_ethan_sloan",
+    "start_in_track": 6.0,
+    "note": "Constant dark pulse (215 bpm feel, A#). Its 46.2 s section boundary should land on the click (twist). Alternate: dark_tunnels 2.4-111."
+   },
+   "loop": "The last sound is the radio click; REWIND glitch to frame 1, which is the same click and squelch followed by \"I live here.\" The click \"before the sentence starts over\" literally restarts the Short.",
+   "open_question": "Where is your real mother, and why is her line busy? (The long video: the call, the officer who phoned her first, the knock at her door.)",
+   "est_duration": 53.75,
+   "words": 131,
+   "you_count": 9,
+   "shots": 27,
+   "beats": [
+    {
+     "n": 1,
+     "start": 0.0,
+     "voice_start": 0.25,
+     "end": 1.62,
+     "voice": {
+      "src": "line",
+      "i": 64,
+      "who": "Y",
+      "fx": "radio",
+      "text": "I live here.",
+      "full": "I live here.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "radio insert ECU on the officer's shoulder, red LED blinking, grille fills the frame",
+       "src": 64,
+       "acting": null,
+       "cam": "snap 1.2 on squelch then push",
+       "new": true,
+       "t": 0.0
+      }
+     ],
+     "overlays": [
+      "HUD \"PLAYBACK #1\" + REC dot",
+      "live waveform under the caption",
+      "caption in quotes \"I LIVE HERE.\" amber"
+     ],
+     "sfx": [
+      "0.00 police_radio_squelch close",
+      "0.00 radio_click"
+     ],
+     "music": [
+      "0.00 track in at -11 dB",
+      "sub hit at 0.0"
+     ],
+     "caption_keywords": [
+      "I LIVE HERE"
+     ],
+     "note": "Radio-voiced (fx radio, as in the long video). First word at 0.25 s."
+    },
+    {
+     "n": 2,
+     "start": 1.62,
+     "voice_start": 1.62,
+     "end": 4.65,
+     "voice": {
+      "src": "line",
+      "i": 63,
+      "who": "N",
+      "fx": null,
+      "text": "You'll hear your own voice coming through it.",
+      "full": "You'll hear your own voice coming through it.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hall",
+       "framing": "you inside, snap_turn toward the door, ECU on the eyes",
+       "src": 63,
+       "acting": "snap_turn + shock",
+       "cam": "snap 1.3 on \"own voice\"",
+       "new": false,
+       "t": 1.62
+      }
+     ],
+     "overlays": [
+      "text slam \"YOUR VOICE\" amber, 2 lines"
+     ],
+     "sfx": [
+      "whoosh hard",
+      "impact_hit on \"own voice\""
+     ],
+     "music": [],
+     "caption_keywords": [
+      "YOUR OWN VOICE"
+     ],
+     "note": null
+    },
+    {
+     "n": 3,
+     "start": 4.65,
+     "voice_start": 4.65,
+     "end": 6.25,
+     "voice": {
+      "src": "line",
+      "i": 66,
+      "who": "N",
+      "fx": null,
+      "text": "Then it plays again.",
+      "full": "Then it plays again.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "wave",
+       "framing": "waveform panel over the officer bust (left), PLAYBACK #2",
+       "src": 66,
+       "acting": null,
+       "cam": "hud_push",
+       "new": false,
+       "t": 4.65
+      }
+     ],
+     "overlays": [
+      "HUD PLAYBACK #2"
+     ],
+     "sfx": [
+      "radio_click",
+      "ui_pop"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 4,
+     "start": 6.25,
+     "voice_start": 6.25,
+     "end": 8.2,
+     "voice": {
+      "src": "line",
+      "i": 67,
+      "who": "N",
+      "fx": null,
+      "text": "This time, something is wrong.",
+      "full": "This time, something is wrong.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "peep",
+       "framing": "peephole: officer lifts the radio, head cocked",
+       "src": 67,
+       "acting": "radio + creep()",
+       "cam": "push",
+       "new": false,
+       "t": 6.25
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "radio_static -16 dB"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "WRONG"
+     ],
+     "note": null
+    },
+    {
+     "n": 5,
+     "start": 8.2,
+     "voice_start": 8.2,
+     "end": 11.22,
+     "voice": {
+      "src": "line",
+      "i": 68,
+      "who": "N",
+      "fx": null,
+      "text": "The pause between the words is too long.",
+      "full": "The pause between the words is too long.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "wave",
+       "framing": "waveform panel: gap between \"I\" and \"live\" stretched, red marker \"PAUSE TOO LONG\" flashing",
+       "src": 68,
+       "acting": null,
+       "cam": "snap 1.15",
+       "new": false,
+       "t": 8.2
+      }
+     ],
+     "overlays": [
+      "marker \"PAUSE TOO LONG\""
+     ],
+     "sfx": [
+      "ui_pop",
+      "glitch short"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "TOO LONG"
+     ],
+     "note": null
+    },
+    {
+     "n": 6,
+     "start": 11.22,
+     "voice_start": 11.22,
+     "end": 12.6,
+     "voice": {
+      "src": "line",
+      "i": 69,
+      "who": "Y",
+      "fx": "radio",
+      "text": "I... live here.",
+      "full": "I... live here.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "radio ECU, LED stutters with the pause",
+       "src": 69,
+       "acting": null,
+       "cam": null,
+       "new": false,
+       "t": 11.22
+      },
+      {
+       "at": 0.5,
+       "scene": "bust",
+       "framing": "you ECU, eyes wide",
+       "src": 69,
+       "acting": "fear",
+       "cam": null,
+       "new": false,
+       "t": 11.91
+      }
+     ],
+     "overlays": [
+      "caption \"I... LIVE HERE.\" with a visible stall"
+     ],
+     "sfx": [
+      "radio squelch",
+      "heartbeat starts"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 7,
+     "start": 12.6,
+     "voice_start": 12.6,
+     "end": 15.63,
+     "voice": {
+      "src": "line",
+      "i": 70,
+      "who": "N",
+      "fx": null,
+      "text": "see the man in the car leaning forward.",
+      "full": "Through the peephole, you'll see the man in the car leaning forward.",
+      "trim_words": [
+       5,
+       13
+      ]
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "street",
+       "framing": "vertical crop on patrol car, push to the rear window",
+       "src": 70,
+       "acting": null,
+       "cam": "fast",
+       "new": false,
+       "t": 12.6
+      },
+      {
+       "at": 0.45,
+       "scene": "car",
+       "framing": "back seat: the man leans forward out of the dark into the strobe",
+       "src": 70,
+       "acting": "lean_in toward the partition, wide eyes",
+       "cam": null,
+       "new": false,
+       "t": 13.96
+      }
+     ],
+     "overlays": [
+      "red motion box + tag \"BACK SEAT\""
+     ],
+     "sfx": [
+      "whoosh",
+      "car_idle"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "LEANING FORWARD"
+     ],
+     "note": null
+    },
+    {
+     "n": 8,
+     "start": 15.63,
+     "voice_start": 15.63,
+     "end": 17.28,
+     "voice": {
+      "src": "line",
+      "i": 71,
+      "who": "N",
+      "fx": null,
+      "text": "His lips are moving.",
+      "full": "His lips are moving.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "double ECU mouth (bg car), lips shaping \"I live here\" silently",
+       "src": 71,
+       "acting": "talk() with mouth only, dead_stare",
+       "cam": "creep",
+       "new": true,
+       "t": 15.63
+      }
+     ],
+     "overlays": [
+      "ghost caption \"i live here\" in small lowercase, lip-synced, 30 % opacity",
+      "tag \"PRACTISING\""
+     ],
+     "sfx": [
+      "whisper layer (crowd_whisper -20 dB)"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "LIPS"
+     ],
+     "note": null
+    },
+    {
+     "n": 9,
+     "start": 17.28,
+     "voice_start": 17.28,
+     "end": 17.86,
+     "voice": {
+      "src": "line",
+      "i": 73,
+      "who": "O",
+      "fx": null,
+      "text": "Again,",
+      "full": "Again,",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "officer radio_to_mouth, thumb on PTT",
+       "src": 72,
+       "acting": "radio + creep_smile",
+       "cam": "snap 1.2",
+       "new": false,
+       "t": 17.28
+      }
+     ],
+     "overlays": [
+      "HUD PLAYBACK #3"
+     ],
+     "sfx": [
+      "radio_click",
+      "squelch"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "AGAIN"
+     ],
+     "note": null
+    },
+    {
+     "n": 10,
+     "start": 17.86,
+     "voice_start": 17.86,
+     "end": 19.23,
+     "voice": {
+      "src": "line",
+      "i": 76,
+      "who": "Y",
+      "fx": "radio",
+      "text": "I live here.",
+      "full": "I live here.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "car",
+       "framing": "back seat ECU: his mouth moves IN SYNC with the radio voice",
+       "src": 75,
+       "acting": "talk on the radio timing",
+       "cam": null,
+       "new": false,
+       "t": 17.86
+      },
+      {
+       "at": 0.5,
+       "scene": "wave",
+       "framing": "two waveform rows \"YOU\" / \"BACK SEAT\" sliding into alignment",
+       "src": 76,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 18.55
+      }
+     ],
+     "overlays": [
+      "caption \"I LIVE HERE.\" amber"
+     ],
+     "sfx": [
+      "radio voice"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 11,
+     "start": 19.23,
+     "voice_start": 19.23,
+     "end": 21.23,
+     "voice": {
+      "src": "line",
+      "i": 77,
+      "who": "N",
+      "fx": null,
+      "text": "This time, it sounds right.",
+      "full": "This time, it sounds right.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "car",
+       "framing": "he sits back, slow creep_smile in the strobe",
+       "src": 77,
+       "acting": "creep_smile",
+       "cam": "push",
+       "new": false,
+       "t": 19.23
+      }
+     ],
+     "overlays": [
+      "\"MATCH 100%\" green stamp"
+     ],
+     "sfx": [
+      "braam washed -8 dB"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "RIGHT"
+     ],
+     "note": null
+    },
+    {
+     "n": 12,
+     "start": 21.23,
+     "voice_start": 21.23,
+     "end": 23.19,
+     "voice": {
+      "src": "line",
+      "i": 79,
+      "who": "O",
+      "fx": null,
+      "text": "Good. Now your name.",
+      "full": "Good. Now your name.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "door",
+       "framing": "fisheye: officer leans into the lens, head tilt, grin widens",
+       "src": 79,
+       "acting": "lean_in + head_tilt + wide_grin",
+       "cam": "snap 1.3 on \"name\"",
+       "new": false,
+       "t": 21.23
+      }
+     ],
+     "overlays": [
+      "text slam \"NOW YOUR NAME.\" red"
+     ],
+     "sfx": [
+      "impact_hit",
+      "static 0.2 s"
+     ],
+     "music": [
+      "drop to pad for 0.6 s"
+     ],
+     "caption_keywords": [
+      "YOUR NAME"
+     ],
+     "note": null
+    },
+    {
+     "n": 13,
+     "start": 23.19,
+     "voice_start": 23.19,
+     "end": 26.61,
+     "voice": {
+      "src": "new",
+      "id": "S2-N1",
+      "who": "N",
+      "fx": null,
+      "text": "Everyone who subscribes gets to keep their own voice."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hall",
+       "framing": "you press your hand over your mouth, back to the door",
+       "src": "NEW",
+       "acting": "hand_mouth + tremble",
+       "cam": "push",
+       "new": true,
+       "t": 23.19
+      }
+     ],
+     "overlays": [
+      "SUBSCRIBE button at 74 % height, pressed -> SUBSCRIBED + bell; waveform under it flattens to silence as it is pressed"
+     ],
+     "sfx": [
+      "ui click + bell",
+      "muffled breath"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "SUBSCRIBES",
+      "VOICE"
+     ],
+     "note": "45-50 % of runtime, whispered."
+    },
+    {
+     "n": 14,
+     "start": 26.61,
+     "voice_start": 26.61,
+     "end": 27.92,
+     "voice": {
+      "src": "line",
+      "i": 83,
+      "who": "N",
+      "fx": null,
+      "text": "It's your mother.",
+      "full": "It's your mother.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "radio ECU, new waveform row labelled \"MUM\" in pink",
+       "src": 83,
+       "acting": null,
+       "cam": "snap",
+       "new": false,
+       "t": 26.61
+      }
+     ],
+     "overlays": [
+      "HUD PLAYBACK #4"
+     ],
+     "sfx": [
+      "radio_static",
+      "radio_click"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "MOTHER"
+     ],
+     "note": null
+    },
+    {
+     "n": 15,
+     "start": 27.92,
+     "voice_start": 27.92,
+     "end": 31.26,
+     "voice": {
+      "src": "line",
+      "i": 85,
+      "who": "M",
+      "fx": "radio",
+      "text": "Have you found him? Is he all right?",
+      "full": "Have you found him? Is he all right?",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "peep",
+       "framing": "officer holds the radio up toward the peephole",
+       "src": 97,
+       "acting": "radio(side=1) lifted to the door",
+       "cam": "push",
+       "new": false,
+       "t": 27.92
+      },
+      {
+       "at": 0.55,
+       "scene": "mumroom",
+       "framing": "flash 0.4 s: mum's empty armchair, phone face down (foreshadow)",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 29.76
+      }
+     ],
+     "overlays": [
+      "caption in quotes, pink"
+     ],
+     "sfx": [
+      "radio fx on voice",
+      "room tone shift on the flash"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 16,
+     "start": 31.26,
+     "voice_start": 31.26,
+     "end": 34.64,
+     "voice": {
+      "src": "line",
+      "i": 88,
+      "who": "N",
+      "fx": null,
+      "text": "The small cough she never quite manages to clear.",
+      "full": "The small cough she never quite manages to clear.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "wave",
+       "framing": "waveform with a \"COUGH\" marker at a fixed spot",
+       "src": 88,
+       "acting": null,
+       "cam": "hud_push",
+       "new": false,
+       "t": 31.26
+      }
+     ],
+     "overlays": [
+      "marker \"COUGH\""
+     ],
+     "sfx": [
+      "ui_pop"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "COUGH"
+     ],
+     "note": null
+    },
+    {
+     "n": 17,
+     "start": 34.64,
+     "voice_start": 34.64,
+     "end": 36.92,
+     "voice": {
+      "src": "line",
+      "i": 98,
+      "who": "N",
+      "fx": null,
+      "text": "Your mother says your childhood nickname.",
+      "full": "Your mother says your childhood nickname.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "you ECU, eyes wet, hand moving to the lock",
+       "src": 98,
+       "acting": "sad -> tremble",
+       "cam": null,
+       "new": false,
+       "t": 34.64
+      }
+     ],
+     "overlays": [
+      "HUD PLAYBACK #5 (her second take)",
+      "caption shows the nickname as a bleeped bar \"████\""
+     ],
+     "sfx": [
+      "soft bleep tone under radio"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 18,
+     "start": 36.92,
+     "voice_start": 36.92,
+     "end": 42.04,
+     "voice": {
+      "src": "line",
+      "i": 100,
+      "who": "N",
+      "fx": null,
+      "text": "The second time, the cough comes in exactly the same place.",
+      "full": "The second time, the cough comes in exactly the same place.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "wave",
+       "framing": "two stacked copies of her sentence; the COUGH markers line up perfectly; red vertical line drops through both",
+       "src": 100,
+       "acting": null,
+       "cam": "snap 1.2",
+       "new": true,
+       "t": 36.92
+      }
+     ],
+     "overlays": [
+      "stamp \"IDENTICAL\" red",
+      "red flash"
+     ],
+     "sfx": [
+      "riser 2.5 s ending on the click",
+      "impact on \"same place\""
+     ],
+     "music": [
+      "music out after the line"
+     ],
+     "caption_keywords": [
+      "SAME PLACE"
+     ],
+     "note": "TENSION GAP 1.2 s: only radio hiss and heartbeat."
+    },
+    {
+     "n": 19,
+     "start": 42.04,
+     "voice_start": 42.04,
+     "end": 45.76,
+     "voice": {
+      "src": "line",
+      "i": 101,
+      "who": "N",
+      "fx": null,
+      "text": "You'll hear a quiet click before the sentence starts over.",
+      "full": "You'll hear a quiet click before the sentence starts over.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "radio ECU: the LED stops, a tiny \"click\", the waveform snaps back to the start with a loop icon",
+       "src": 101,
+       "acting": null,
+       "cam": "snap 1.4",
+       "new": true,
+       "t": 42.04
+      }
+     ],
+     "overlays": [
+      "text slam \"IT'S A RECORDING\" red",
+      "loop icon"
+     ],
+     "sfx": [
+      "radio_click loud, dry",
+      "braam + sub_drop"
+     ],
+     "music": [
+      "TRACK SECTION CHANGE here (46.2 s)"
+     ],
+     "caption_keywords": [
+      "CLICK",
+      "STARTS OVER"
+     ],
+     "note": "Twist at about 78-82 % of runtime."
+    },
+    {
+     "n": 20,
+     "start": 45.76,
+     "voice_start": 45.76,
+     "end": 46.75,
+     "voice": {
+      "src": "line",
+      "i": 103,
+      "who": "O",
+      "fx": null,
+      "text": "Poor reception.",
+      "full": "Poor reception.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "officer lowers the radio fast, smile gone -> dead_stare into the lens",
+       "src": 102,
+       "acting": "snap down + dead_stare",
+       "cam": "snap",
+       "new": false,
+       "t": 45.76
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "radio off clunk"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "RECEPTION"
+     ],
+     "note": null
+    },
+    {
+     "n": 21,
+     "start": 46.75,
+     "voice_start": 46.75,
+     "end": 48.74,
+     "voice": {
+      "src": "line",
+      "i": 105,
+      "who": "N",
+      "fx": null,
+      "text": "Her line will be busy.",
+      "full": "Her line will be busy.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "phone",
+       "framing": "phone UI: calling MUM -> BUSY, pushes in",
+       "src": 105,
+       "acting": null,
+       "cam": "hud_push",
+       "new": false,
+       "t": 46.75
+      }
+     ],
+     "overlays": [
+      "phone UI \"BUSY\""
+     ],
+     "sfx": [
+      "phone_busy tones x3"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "BUSY"
+     ],
+     "note": null
+    },
+    {
+     "n": 22,
+     "start": 48.74,
+     "voice_start": 48.74,
+     "end": 53.1,
+     "voice": {
+      "src": "new",
+      "id": "S2-N2",
+      "who": "N",
+      "fx": null,
+      "text": "Where's your mother? Find out in the full video on the channel."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "mumext",
+       "framing": "mum's house at night, one window lit, patrol-car strobe sweeps across it",
+       "src": "NEW",
+       "acting": null,
+       "cam": "push",
+       "new": true,
+       "t": 48.74
+      }
+     ],
+     "overlays": [
+      "card \"FULL VIDEO ON THE CHANNEL\" lower-middle",
+      "comments panel 1.2 s: \"Comment MUM if you'd hang up\" (on screen only)"
+     ],
+     "sfx": [
+      "busy tone continues under",
+      "car_pass"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "MOTHER",
+      "FULL VIDEO"
+     ],
+     "note": null
+    },
+    {
+     "n": 23,
+     "start": 53.1,
+     "voice_start": null,
+     "end": 53.75,
+     "voice": null,
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "radio ECU, LED blinks once -> REWIND glitch to frame 1",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 53.1
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "radio_click (same as frame 1)"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    }
+   ]
+  },
+  {
+   "id": "S3",
+   "slug": "never_correct_him",
+   "title": "Never Correct The Man Who Says He's You",
+   "angle": "The quiz on the porch: you stay silent, he fails, and then you learn who gave him the answers.",
+   "hud": "Top centre: \"QUESTION 1/5\" with a scoreboard \"HIM ✓ / YOU —\" (stamps per answer); clock 12:51 AM jumps to 1:14 AM at the phone call.",
+   "music": {
+    "track": "in_continuum_dream_cave",
+    "start_in_track": 12.0,
+    "note": "Quiet 92-bpm build (-14..-16), loud section from 50.4 s: land 50.4 on \"She tells you he called earlier.\" Alternate: tefu 0-89.7."
+   },
+   "loop": "Ends on the officer at mum's door, pen click, about to ask; REWIND glitch to frame 1 where the same officer asks \"What color are the kitchen tiles?\" - the quiz starts over, now with her.",
+   "open_question": "Does your mother open the door? (The long video answers it, plus rule 6 and the neighbour's keys.)",
+   "est_duration": 54.23,
+   "words": 132,
+   "you_count": 15,
+   "shots": 31,
+   "beats": [
+    {
+     "n": 1,
+     "start": 0.0,
+     "voice_start": 0.25,
+     "end": 2.76,
+     "voice": {
+      "src": "line",
+      "i": 146,
+      "who": "O",
+      "fx": null,
+      "text": "What color are the kitchen tiles?",
+      "full": "What color are the kitchen tiles?",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "peep",
+       "framing": "peephole ECU: officer with notebook and pen, face bulging toward the lens",
+       "src": 146,
+       "acting": "lean_in 1.2 + creep_smile",
+       "cam": "push 6 %/s",
+       "new": true,
+       "t": 0.0
+      }
+     ],
+     "overlays": [
+      "HUD \"QUESTION 1/5\"",
+      "caption \"KITCHEN TILES\" blue, in quotes"
+     ],
+     "sfx": [
+      "0.00 pen_click close",
+      "0.00 impact_hit soft"
+     ],
+     "music": [
+      "0.00 track in -11 dB",
+      "braam 0.0 -8 dB"
+     ],
+     "caption_keywords": [
+      "KITCHEN TILES"
+     ],
+     "note": "First word at 0.25 s."
+    },
+    {
+     "n": 2,
+     "start": 2.76,
+     "voice_start": 2.76,
+     "end": 3.34,
+     "voice": {
+      "src": "line",
+      "i": 148,
+      "who": "D",
+      "fx": null,
+      "text": "Green,",
+      "full": "Green,",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "double ECU, bg porch, answers instantly",
+       "src": 148,
+       "acting": "calm_smirk",
+       "cam": "snap 1.25",
+       "new": false,
+       "t": 2.76
+      }
+     ],
+     "overlays": [
+      "caption \"GREEN\" green",
+      "score \"HIM ✓\""
+     ],
+     "sfx": [
+      "ui_pop",
+      "whoosh"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "GREEN"
+     ],
+     "note": null
+    },
+    {
+     "n": 3,
+     "start": 3.34,
+     "voice_start": 3.34,
+     "end": 5.34,
+     "voice": {
+      "src": "line",
+      "i": 150,
+      "who": "N",
+      "fx": null,
+      "text": "Your kitchen tiles are blue.",
+      "full": "Your kitchen tiles are blue.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "kitchen",
+       "framing": "your kitchen, blue tiles, light from the hall",
+       "src": 150,
+       "acting": null,
+       "cam": "fast push",
+       "new": false,
+       "t": 3.34
+      },
+      {
+       "at": 0.5,
+       "scene": "ins",
+       "framing": "tiles insert ECU",
+       "src": 150,
+       "acting": null,
+       "cam": null,
+       "new": false,
+       "t": 4.34
+      }
+     ],
+     "overlays": [
+      "caption \"BLUE\" blue, punch 130 %"
+     ],
+     "sfx": [
+      "impact_hit",
+      "room_tone inside"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "BLUE"
+     ],
+     "note": null
+    },
+    {
+     "n": 4,
+     "start": 5.34,
+     "voice_start": 5.34,
+     "end": 8.37,
+     "voice": {
+      "src": "line",
+      "i": 142,
+      "who": "N",
+      "fx": null,
+      "text": "Don't correct anything the other man gets wrong.",
+      "full": "Don't correct anything the other man gets wrong.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "rule",
+       "framing": "RULE 5 card (speech bubble with a cross icon), vertical layout, officer swaying behind the blur",
+       "src": 141,
+       "acting": null,
+       "cam": "push",
+       "new": false,
+       "t": 5.34
+      }
+     ],
+     "overlays": [
+      "text slam \"DON'T CORRECT HIM\" red",
+      "red flash"
+     ],
+     "sfx": [
+      "rule sting"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "DON'T CORRECT"
+     ],
+     "note": null
+    },
+    {
+     "n": 5,
+     "start": 8.37,
+     "voice_start": 8.37,
+     "end": 12.08,
+     "voice": {
+      "src": "line",
+      "i": 143,
+      "who": "N",
+      "fx": null,
+      "text": "The officer will suggest asking you both a few questions.",
+      "full": "The officer will suggest asking you both a few questions.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "door",
+       "framing": "fisheye wide: officer and the man in your grey coat side by side; both snap their heads to the lens on \"both\"",
+       "src": 143,
+       "acting": "snap_turn x2 in unison",
+       "cam": "post-push",
+       "new": false,
+       "t": 8.37
+      }
+     ],
+     "overlays": [
+      "tags \"HIM\" and \"YOU?\" pinned"
+     ],
+     "sfx": [
+      "whoosh",
+      "stinger light"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "BOTH"
+     ],
+     "note": null
+    },
+    {
+     "n": 6,
+     "start": 12.08,
+     "voice_start": 12.08,
+     "end": 14.35,
+     "voice": {
+      "src": "line",
+      "i": 157,
+      "who": "N",
+      "fx": null,
+      "text": "The name of your first pet.",
+      "full": "The name of your first pet.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "photo insert: a dog in a frame (first pet)",
+       "src": 157,
+       "acting": null,
+       "cam": "snap 1.2",
+       "new": false,
+       "t": 12.08
+      },
+      {
+       "at": 0.5,
+       "scene": "bust",
+       "framing": "double answers, lips moving silently",
+       "src": 160,
+       "acting": "talk mouth only",
+       "cam": null,
+       "new": false,
+       "t": 13.22
+      }
+     ],
+     "overlays": [
+      "HUD QUESTION 2/5",
+      "score \"HIM ✓\""
+     ],
+     "sfx": [
+      "ui_pop",
+      "impact soft"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "FIRST PET"
+     ],
+     "note": null
+    },
+    {
+     "n": 7,
+     "start": 14.35,
+     "voice_start": 14.35,
+     "end": 16.28,
+     "voice": {
+      "src": "line",
+      "i": 158,
+      "who": "N",
+      "fx": null,
+      "text": "Where you went to school.",
+      "full": "Where you went to school.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "double, eyes flick to the officer before answering",
+       "src": 165,
+       "acting": "nervous_glance",
+       "cam": "snap",
+       "new": false,
+       "t": 14.35
+      }
+     ],
+     "overlays": [
+      "HUD QUESTION 3/5",
+      "score \"HIM ✓\"",
+      "tag \"HE CHECKS THE OFFICER\""
+     ],
+     "sfx": [
+      "ui_pop"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "SCHOOL"
+     ],
+     "note": null
+    },
+    {
+     "n": 8,
+     "start": 16.28,
+     "voice_start": 16.28,
+     "end": 19.31,
+     "voice": {
+      "src": "line",
+      "i": 159,
+      "who": "N",
+      "fx": null,
+      "text": "What your mother calls you when she's worried.",
+      "full": "What your mother calls you when she's worried.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "you ECU, sweat, lips pressed shut",
+       "src": 159,
+       "acting": "sweaty + m_press",
+       "cam": null,
+       "new": false,
+       "t": 16.28
+      },
+      {
+       "at": 0.6,
+       "scene": "mumroom",
+       "framing": "flash 0.3 s: your mother by her phone",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 18.09
+      }
+     ],
+     "overlays": [
+      "HUD QUESTION 4/5",
+      "score \"HIM ~\""
+     ],
+     "sfx": [
+      "heartbeat 80 bpm",
+      "phone vibrate faint on the flash"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "MOTHER",
+      "WORRIED"
+     ],
+     "note": null
+    },
+    {
+     "n": 9,
+     "start": 19.31,
+     "voice_start": 19.31,
+     "end": 19.97,
+     "voice": {
+      "src": "line",
+      "i": 162,
+      "who": "N",
+      "fx": null,
+      "text": "Don't.",
+      "full": "Don't.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "kitchen",
+       "framing": "ECU your hand gripping the table edge, knuckles white",
+       "src": 172,
+       "acting": null,
+       "cam": "snap 1.3",
+       "new": true,
+       "t": 19.31
+      }
+     ],
+     "overlays": [
+      "text slam \"DON'T.\" red"
+     ],
+     "sfx": [
+      "impact_hit"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "DON'T"
+     ],
+     "note": null
+    },
+    {
+     "n": 10,
+     "start": 19.97,
+     "voice_start": 19.97,
+     "end": 21.71,
+     "voice": {
+      "src": "line",
+      "i": 168,
+      "who": "O",
+      "fx": null,
+      "text": "Who took that picture?",
+      "full": "Who took that picture?",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "hall",
+       "framing": "push along the hallway to the framed photograph",
+       "src": 166,
+       "acting": null,
+       "cam": "push",
+       "new": false,
+       "t": 19.97
+      },
+      {
+       "at": 0.5,
+       "scene": "bust",
+       "framing": "officer, head tilt",
+       "src": 168,
+       "acting": "head_tilt + creep_smile",
+       "cam": null,
+       "new": false,
+       "t": 20.84
+      }
+     ],
+     "overlays": [
+      "HUD QUESTION 5/5",
+      "tag \"YOU NEVER MENTIONED IT\""
+     ],
+     "sfx": [
+      "stinger light",
+      "pen_click"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "PICTURE"
+     ],
+     "note": null
+    },
+    {
+     "n": 11,
+     "start": 21.71,
+     "voice_start": 21.71,
+     "end": 22.68,
+     "voice": {
+      "src": "line",
+      "i": 170,
+      "who": "D",
+      "fx": null,
+      "text": "My mother.",
+      "full": "My mother.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "double ECU, confident",
+       "src": 170,
+       "acting": "creep_smile",
+       "cam": null,
+       "new": false,
+       "t": 21.71
+      }
+     ],
+     "overlays": [
+      "score \"HIM ✗\" red stamp"
+     ],
+     "sfx": [
+      "buzzer-like low hit"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "MOTHER"
+     ],
+     "note": null
+    },
+    {
+     "n": 12,
+     "start": 22.68,
+     "voice_start": 22.68,
+     "end": 24.33,
+     "voice": {
+      "src": "line",
+      "i": 171,
+      "who": "N",
+      "fx": null,
+      "text": "It was your father.",
+      "full": "It was your father.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "photo insert, push; tag \"TAKEN BY: DAD\"",
+       "src": 171,
+       "acting": null,
+       "cam": "snap 1.2",
+       "new": false,
+       "t": 22.68
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "impact_hit"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "FATHER"
+     ],
+     "note": null
+    },
+    {
+     "n": 13,
+     "start": 24.33,
+     "voice_start": 24.33,
+     "end": 27.41,
+     "voice": {
+      "src": "new",
+      "id": "S3-N1",
+      "who": "N",
+      "fx": null,
+      "text": "Everyone who subscribes knows which one is real."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "bust",
+       "framing": "VERTICAL SPLIT: top the double, bottom you, same framing; the double's half glitches as the button is pressed",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 24.33
+      }
+     ],
+     "overlays": [
+      "score now \"HIM ✗\" vs \"YOU ✓ (silent)\"",
+      "SUBSCRIBE button on the split line (at 52 % height), pressed -> SUBSCRIBED + bell"
+     ],
+     "sfx": [
+      "ui click + bell",
+      "glitch"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "SUBSCRIBES",
+      "REAL"
+     ],
+     "note": "45-50 % of runtime."
+    },
+    {
+     "n": 14,
+     "start": 27.41,
+     "voice_start": 27.41,
+     "end": 31.63,
+     "voice": {
+      "src": "line",
+      "i": 174,
+      "who": "N",
+      "fx": null,
+      "text": "After a few seconds, he turns off his camera.",
+      "full": "After a few seconds, he turns off his camera.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "bodycam ECU, red REC dot goes out",
+       "src": 174,
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 27.41
+      },
+      {
+       "at": 0.45,
+       "scene": "bust",
+       "framing": "officer, smile drops to dead_stare",
+       "src": 174,
+       "acting": "dead_stare",
+       "cam": null,
+       "new": false,
+       "t": 29.31
+      },
+      {
+       "at": 0.75,
+       "scene": "bust",
+       "framing": "double looks worried",
+       "src": 177,
+       "acting": "nervous",
+       "cam": null,
+       "new": false,
+       "t": 30.57
+      }
+     ],
+     "overlays": [
+      "tag \"CAMERA OFF\""
+     ],
+     "sfx": [
+      "bodycam_beep (off tone)"
+     ],
+     "music": [
+      "music out after the line"
+     ],
+     "caption_keywords": [
+      "CAMERA"
+     ],
+     "note": "TENSION GAP 1.0 s: room tone, heartbeat, then a dial tone fades in."
+    },
+    {
+     "n": 15,
+     "start": 31.63,
+     "voice_start": 31.63,
+     "end": 33.92,
+     "voice": {
+      "src": "line",
+      "i": 220,
+      "who": "N",
+      "fx": null,
+      "text": "Then you try your mother again.",
+      "full": "Then you try your mother again.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "phone",
+       "framing": "phone UI: calling MUM -> connected, waveform live",
+       "src": 220,
+       "acting": null,
+       "cam": "hud_push",
+       "new": false,
+       "t": 31.63
+      }
+     ],
+     "overlays": [
+      "clock jumps to 1:14 AM"
+     ],
+     "sfx": [
+      "phone_ring 1x",
+      "phone_pickup"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 16,
+     "start": 33.92,
+     "voice_start": 33.92,
+     "end": 36.45,
+     "voice": {
+      "src": "line",
+      "i": 222,
+      "who": "M",
+      "fx": "phone",
+      "text": "Thank goodness. Are you all right?",
+      "full": "Thank goodness. Are you all right?",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "mumroom",
+       "framing": "mum answers in her armchair, relieved",
+       "src": 221,
+       "acting": "mum: sad -> polite",
+       "cam": "push",
+       "new": false,
+       "t": 33.92
+      }
+     ],
+     "overlays": [
+      "caption pink, in quotes"
+     ],
+     "sfx": [
+      "phone fx on voice"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 17,
+     "start": 36.45,
+     "voice_start": 36.45,
+     "end": 38.78,
+     "voice": {
+      "src": "line",
+      "i": 227,
+      "who": "N",
+      "fx": null,
+      "text": "She tells you he called earlier.",
+      "full": "She tells you he called earlier.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "mumroom",
+       "framing": "mum on the phone in her cardigan, lamp light",
+       "src": 227,
+       "acting": "mum: nervous",
+       "cam": "push",
+       "new": false,
+       "t": 36.45
+      }
+     ],
+     "overlays": [
+      "text slam \"HE CALLED HER\" red"
+     ],
+     "sfx": [
+      "braam + sub_drop"
+     ],
+     "music": [
+      "TRACK SECTION CHANGE here (in_continuum 50.4 s)"
+     ],
+     "caption_keywords": [
+      "CALLED",
+      "EARLIER"
+     ],
+     "note": "Twist starts here (about 67 %); it lands on \"The photograph your father took.\" (about 78 %)."
+    },
+    {
+     "n": 18,
+     "start": 38.78,
+     "voice_start": 38.78,
+     "end": 40.68,
+     "voice": {
+      "src": "line",
+      "i": 229,
+      "who": "N",
+      "fx": null,
+      "text": "He asked a few questions",
+      "full": "He asked a few questions to make sure he had the right family.",
+      "trim_words": [
+       1,
+       5
+      ]
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "notebook insert: the officer's handwriting fills in an ANSWER KEY",
+       "src": 229,
+       "acting": null,
+       "cam": "push",
+       "new": true,
+       "t": 38.78
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "pen scribble"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "QUESTIONS"
+     ],
+     "note": null
+    },
+    {
+     "n": 19,
+     "start": 40.68,
+     "voice_start": 40.68,
+     "end": 41.88,
+     "voice": {
+      "src": "line",
+      "i": 230,
+      "who": "N",
+      "fx": null,
+      "text": "Your first pet.",
+      "full": "Your first pet.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "notebook: \"FIRST PET ✓\"",
+       "src": 230,
+       "acting": null,
+       "cam": "snap",
+       "new": false,
+       "t": 40.68
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "impact"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 20,
+     "start": 41.88,
+     "voice_start": 41.88,
+     "end": 42.74,
+     "voice": {
+      "src": "line",
+      "i": 231,
+      "who": "N",
+      "fx": null,
+      "text": "Your school.",
+      "full": "Your school.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "notebook: \"SCHOOL ✓\"",
+       "src": 231,
+       "acting": null,
+       "cam": "snap",
+       "new": false,
+       "t": 41.88
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "impact"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    },
+    {
+     "n": 21,
+     "start": 42.74,
+     "voice_start": 42.74,
+     "end": 44.94,
+     "voice": {
+      "src": "line",
+      "i": 232,
+      "who": "N",
+      "fx": null,
+      "text": "The photograph your father took.",
+      "full": "The photograph your father took.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "ins",
+       "framing": "notebook: \"PHOTO: FATHER ✓\" underlined twice; flash cut to the double smiling",
+       "src": 232,
+       "acting": null,
+       "cam": "snap 1.4",
+       "new": false,
+       "t": 42.74
+      }
+     ],
+     "overlays": [
+      "text slam \"NOW HE KNOWS\" red",
+      "red flash"
+     ],
+     "sfx": [
+      "impact big",
+      "stinger"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "FATHER"
+     ],
+     "note": null
+    },
+    {
+     "n": 22,
+     "start": 44.94,
+     "voice_start": 44.94,
+     "end": 46.93,
+     "voice": {
+      "src": "line",
+      "i": 242,
+      "who": "N",
+      "fx": null,
+      "text": "There's knocking at her door.",
+      "full": "There's knocking at her door.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "mumext",
+       "framing": "mum's porch: the officer and the man in your coat; knock",
+       "src": 242,
+       "acting": "knk n=3",
+       "cam": "push",
+       "new": false,
+       "t": 44.94
+      }
+     ],
+     "overlays": [
+      "clock 1:16 AM"
+     ],
+     "sfx": [
+      "knock_door n=3 (through the phone, then real)",
+      "whoosh"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "HER DOOR"
+     ],
+     "note": null
+    },
+    {
+     "n": 23,
+     "start": 46.93,
+     "voice_start": 46.93,
+     "end": 49.22,
+     "voice": {
+      "src": "line",
+      "i": 249,
+      "who": "M",
+      "fx": "phone",
+      "text": "He looks just like you.",
+      "full": "He looks just like you.",
+      "trim_words": null
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "curtain",
+       "framing": "mum pulls the curtain: the double outside in the strobe looks up at her",
+       "src": 249,
+       "acting": "double: creep_smile -> wide_grin; mum: cry",
+       "cam": null,
+       "new": false,
+       "t": 46.93
+      }
+     ],
+     "overlays": [
+      "caption pink, in quotes"
+     ],
+     "sfx": [
+      "curtain rings scrape",
+      "phone fx on voice"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "JUST LIKE YOU"
+     ],
+     "note": null
+    },
+    {
+     "n": 24,
+     "start": 49.22,
+     "voice_start": 49.22,
+     "end": 53.58,
+     "voice": {
+      "src": "new",
+      "id": "S3-N2",
+      "who": "N",
+      "fx": null,
+      "text": "Does she open the door? Watch the full video on the channel."
+     },
+     "shots": [
+      {
+       "at": 0,
+       "scene": "mumext",
+       "framing": "ECU mum's door handle and lock, a key hovering, strobe across it",
+       "src": "NEW",
+       "acting": null,
+       "cam": "push",
+       "new": true,
+       "t": 49.22
+      }
+     ],
+     "overlays": [
+      "card \"FULL VIDEO ON THE CHANNEL\"",
+      "comments panel 1.2 s: \"Comment BLUE if you stayed silent\" (on screen only)"
+     ],
+     "sfx": [
+      "key jingle faint"
+     ],
+     "music": [],
+     "caption_keywords": [
+      "OPEN",
+      "FULL VIDEO"
+     ],
+     "note": null
+    },
+    {
+     "n": 25,
+     "start": 53.58,
+     "voice_start": null,
+     "end": 54.23,
+     "voice": null,
+     "shots": [
+      {
+       "at": 0,
+       "scene": "peep",
+       "framing": "mum's peephole: the officer, notebook up -> REWIND glitch to frame 1",
+       "src": "NEW",
+       "acting": null,
+       "cam": null,
+       "new": true,
+       "t": 53.58
+      }
+     ],
+     "overlays": [],
+     "sfx": [
+      "pen_click (same as frame 1)"
+     ],
+     "music": [],
+     "caption_keywords": null,
+     "note": null
+    }
+   ]
+  }
+ ],
+ "assembly_rules": [
+  "Voice clips: cut each line from the English narration by timeline.json t/end (word slices by ASR word starts, 40 ms pre-roll, 60 ms tail, 5 ms fades). Keep the long video voice FX (radio/phone) on Y/M/O radio lines.",
+  "Re-time: place beats in order with the listed gap_after; shots keep their fraction of the beat. If the real total exceeds 56 s, first tighten gaps to 0.08 s (not the tension gap), then apply atempo up to 1.06 to narrator lines, then drop beats with fewest story duties (S1: L23; S2: L67; S3: L222). If under 48 s, lengthen the tension gap to 1.6 s and the end card to 2.5 s.",
+  "Every beat longer than 2.0 s gets an extra punch-in (110-125 %) or a cut at its middle so no frame is idle more than 0.8 s; target 35-50 hard cuts per Short.",
+  "Captions are word-synced from the ASR words (1-2 words per chunk); the caption_keywords get the accent colour and the punch.",
+  "Music runs 100 % of the time except the tension gap; duck 9 dB under the voice with 80 ms attack / 250 ms release; master -14 LUFS, LRA <= 2.5, TP <= -1 dBTP."
+ ]
+}
