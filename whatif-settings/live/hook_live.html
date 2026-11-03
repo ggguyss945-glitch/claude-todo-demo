@@ -1,0 +1,241 @@
+<title>Hook Production Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+/* Layout: the show's own REALITY SETTINGS app, one column of settings-style rows; summary (stage + render) first, detail below.
+   Single committed dark look: it is the app's navy panel UI. */
+:root {
+  --bg: #12142B;        /* app backdrop */
+  --panel: #1E2247;     /* card */
+  --panel-2: #262B58;   /* row */
+  --line: #343A72;      /* hairlines */
+  --fg: #F2F3FF;        /* text */
+  --sub: #A9AEDB;       /* secondary text */
+  --accent: #FF7A3D;    /* the show's orange */
+  --ok: #4BE58A;        /* done */
+  --work: #5AD6FF;      /* working */
+  --wait: #7C82B8;      /* waiting */
+  --warn: #FFC23D;      /* needs the owner */
+  --bad: #FF5A5F;       /* failed */
+  --display: 'Lilita One', 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  --ui: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-weight: 700; font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+header { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.gear { width: 64px; height: 64px; flex: none; }
+.titles { min-width: 0; flex: 1 1 260px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 5vw, 40px); line-height: 1.05; margin: 0; letter-spacing: .5px; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.crumb { color: var(--sub); margin-top: 4px; }
+.crumb b { color: #B993FF; }
+.updated { color: var(--sub); font-size: 13px; text-align: right; flex: none; }
+.updated span { display: block; color: var(--fg); font-size: 15px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--display); font-weight: 400; font-size: 22px; margin: 0; letter-spacing: .4px; }
+.card h2 small { font-family: var(--ui); font-weight: 800; font-size: 13px; color: var(--sub); margin-left: 8px; letter-spacing: 0; }
+.now { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.now p { margin: 0; flex: 1 1 280px; min-width: 0; font-size: 17px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-weight: 900; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; border: 2px solid currentColor; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.s-done { color: var(--ok); } .s-working { color: var(--work); } .s-waiting { color: var(--wait); } .s-needs-you { color: var(--warn); } .s-failed { color: var(--bad); }
+.s-working.pill::before { animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.bar { height: 14px; border-radius: 999px; background: #0C0E22; overflow: hidden; border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #FF9A5C, var(--accent)); border-radius: 999px; transition: width .6s ease; }
+.renderline { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--sub); font-variant-numeric: tabular-nums; }
+.renderline b { color: var(--fg); }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--panel-2); border-radius: 16px; padding: 10px 12px; }
+.ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-family: var(--display); font-size: 18px; color: #fff; }
+.row .name { font-weight: 900; font-size: 16px; }
+.row .note { color: var(--sub); font-size: 13.5px; overflow-wrap: anywhere; }
+video, .poster { width: 100%; border-radius: 16px; background: #000; display: block; aspect-ratio: 16 / 9; max-width: 100%; object-fit: contain; }
+.empty { border: 2px dashed var(--line); border-radius: 16px; padding: 28px 18px; text-align: center; color: var(--sub); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+figure { margin: 0; background: var(--panel-2); border-radius: 16px; overflow: hidden; display: grid; min-width: 0; }
+figure img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; background: #0C0E22; cursor: zoom-in; }
+figure figcaption { padding: 10px 12px; display: grid; gap: 2px; }
+figure figcaption b { font-size: 14.5px; }
+figure figcaption span { color: var(--sub); font-size: 13px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.shot { background: var(--panel-2); border-radius: 12px; padding: 8px 10px; border-left: 4px solid var(--wait); min-width: 0; }
+.shot b { font-family: var(--display); font-weight: 400; font-size: 15px; letter-spacing: .4px; margin-right: 6px; }
+.shot span { color: var(--sub); font-size: 12.5px; }
+.shot.done { border-left-color: var(--ok); } .shot.working { border-left-color: var(--work); }
+.music { display: grid; gap: 8px; }
+.cue { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; background: var(--panel-2); border-radius: 14px; padding: 10px 12px; }
+.cue b { font-size: 15px; } .cue span { color: var(--sub); font-size: 13px; } .cue em { font-style: normal; color: var(--accent); font-weight: 900; font-size: 13px; text-align: right; }
+.log { display: grid; gap: 6px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+.log div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.log time { color: var(--sub); font-variant-numeric: tabular-nums; }
+.lightbox { position: fixed; inset: 0; background: rgba(6, 7, 20, .92); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 20; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+button.linkish { all: unset; cursor: pointer; }
+button.linkish:focus-visible, figure img:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) { .updated { text-align: left; } .row { grid-template-columns: 36px minmax(0, 1fr); } .row .pill { grid-column: 2; justify-self: start; } }
+@media (prefers-reduced-motion: reduce) { .s-working.pill::before { animation: none; } .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <svg class="gear" viewBox="-50 -50 100 100" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9A5C"/><stop offset="1" stop-color="#E8582A"/></linearGradient></defs>
+      <circle r="46" fill="#1E2247" stroke="#FF7A3D" stroke-width="3"/>
+      <path fill="url(#g)" stroke="#B9421C" stroke-width="2.5" stroke-linejoin="round" d="M-6 -36h12l2 9 8 3 8-5 8 8-5 8 3 8 9 2v12l-9 2-3 8 5 8-8 8-8-5-8 3-2 9h-12l-2-9-8-3-8 5-8-8 5-8-3-8-9-2v-12l9-2 3-8-5-8 8-8 8 5 8-3z"/>
+      <circle r="11" fill="#1E2247" stroke="#B9421C" stroke-width="2.5"/>
+      <path d="M-22 -16a26 26 0 0 1 14-10" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".5"/>
+    </svg>
+    <div class="titles">
+      <h1>MAKING THE <em>HOOK</em></h1>
+      <div class="crumb">What If Real Life Had a SETTINGS MENU? › <b>first 60 seconds</b></div>
+    </div>
+    <div class="updated" aria-live="polite">Last update<span id="updated">waiting for the first update</span></div>
+  </header>
+
+  <section class="card" aria-labelledby="now-h">
+    <h2 id="now-h">Right now</h2>
+    <div class="now"><span id="stagePill" class="pill s-waiting">starting</span><p id="headline">The page fills in as soon as the first status arrives.</p></div>
+    <div id="renderBox" hidden>
+      <div class="bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100" id="barWrap"><i id="bar"></i></div>
+      <div class="renderline"><span>Frames <b id="frames">0 / 0</b></span><span id="rate"></span><span id="eta"></span></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="video-h">
+    <h2 id="video-h">The 60 seconds <small>2560×1440 · 60 fps</small></h2>
+    <div id="videoBox"><div class="empty">The finished minute plays here when the render and the mix are done. Until then, the newest frames and sheets show up below.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="pipe-h">
+    <h2 id="pipe-h">Pipeline</h2>
+    <div class="rows" id="stages"><div class="empty">No stages reported yet.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="gal-h">
+    <h2 id="gal-h">Latest pictures <small>tap to enlarge</small></h2>
+    <div class="gallery" id="gallery"><div class="empty">Sheets and test frames appear here as each builder finishes.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="shots-h">
+    <h2 id="shots-h">Shot board <small id="shotCount"></small></h2>
+    <div class="shots" id="shots"><div class="empty">The planned shots appear here.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="music-h">
+    <h2 id="music-h">Music picks <small>from your Epidemic downloads</small></h2>
+    <div class="music" id="music"><div class="empty">Music picks appear here.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="log-h">
+    <h2 id="log-h">Log</h2>
+    <div class="log" id="log"><div class="empty">Nothing logged yet.</div></div>
+  </section>
+</div>
+<div class="lightbox" id="lightbox" hidden><img id="lightImg" alt=""></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const STATE_LABEL = { done: 'Done', working: 'Working', waiting: 'Waiting', 'needs-you': 'Needs you', failed: 'Failed' };
+const ICON_COLOR = ['#25AEF2', '#8A5CF2', '#17C2A0', '#FF5596', '#3D7FEA', '#25BE66', '#FF7A3D', '#E5303D', '#FFAE1F', '#5C6B9E'];
+let lastUpdated = null, lastData = null;
+
+function ago(iso) {
+  if (!iso) return 'waiting for the first update';
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  const clock = new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (s < 60) return `just now · ${clock}`;
+  if (s < 3600) return `${Math.round(s / 60)} min ago · ${clock}`;
+  return `${Math.round(s / 3600)} h ago · ${clock}`;
+}
+function stateClass(st) { return 's-' + (STATE_LABEL[st] ? st : 'waiting'); }
+
+function render(d) {
+  lastData = d; lastUpdated = d.updated_at || null;
+  $('updated').textContent = ago(lastUpdated);
+  const st = d.stage || 'working';
+  $('stagePill').className = 'pill ' + stateClass(st);
+  $('stagePill').textContent = d.stage_label || STATE_LABEL[st] || st;
+  $('headline').textContent = d.headline || '';
+
+  const r = d.render;
+  if (r && r.total) {
+    $('renderBox').hidden = false;
+    const pct = Math.min(100, (100 * (r.done || 0)) / r.total);
+    $('bar').style.width = pct.toFixed(1) + '%';
+    $('barWrap').setAttribute('aria-valuenow', pct.toFixed(0));
+    $('frames').textContent = `${(r.done || 0).toLocaleString()} / ${r.total.toLocaleString()} (${pct.toFixed(0)}%)`;
+    $('rate').textContent = r.rate ? `${r.rate} frames/s` : '';
+    $('eta').textContent = r.eta_min != null ? `about ${r.eta_min} min left` : '';
+  } else $('renderBox').hidden = true;
+
+  if (d.video && d.video.url) {
+    const cur = $('videoBox').querySelector('video');
+    if (!cur || cur.dataset.src !== d.video.url) {
+      $('videoBox').innerHTML = `<video controls playsinline preload="metadata" data-src="${esc(d.video.url)}" ${d.video.poster ? `poster="${esc(d.video.poster)}"` : ''}><source src="${esc(d.video.url)}" type="video/mp4"></video>` +
+        (d.video.note ? `<p class="crumb">${esc(d.video.note)}</p>` : '');
+    }
+  } else if (d.preview && d.preview.video) {
+    const cur = $('videoBox').querySelector('video');
+    if (!cur || cur.dataset.src !== d.preview.video) {
+      $('videoBox').innerHTML = `<video controls playsinline muted loop preload="metadata" data-src="${esc(d.preview.video)}" ${d.preview.url ? `poster="${esc(d.preview.url)}"` : ''}><source src="${esc(d.preview.video)}" type="video/mp4"></video><p class="crumb">${esc(d.preview.title || 'Latest test')}</p>`;
+    }
+  } else if (d.preview && d.preview.url) {
+    $('videoBox').innerHTML = `<img class="poster" src="${esc(d.preview.url)}" alt="${esc(d.preview.title || 'Latest frame')}"><p class="crumb">${esc(d.preview.title || 'Latest frame')}</p>`;
+  }
+
+  const stages = d.stages || [];
+  if (stages.length) $('stages').innerHTML = stages.map((s, i) => `
+    <div class="row">
+      <div class="ico" style="background:${ICON_COLOR[i % ICON_COLOR.length]}">${i + 1}</div>
+      <div style="min-width:0"><div class="name">${esc(s.name)}</div><div class="note">${esc(s.note || '')}</div></div>
+      <span class="pill ${stateClass(s.state)}">${esc(STATE_LABEL[s.state] || s.state)}</span>
+    </div>`).join('');
+
+  const gal = d.gallery || [];
+  if (gal.length) $('gallery').innerHTML = gal.map((g) => `
+    <figure><img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" tabindex="0" data-full="${esc(g.url)}">
+      <figcaption><b>${esc(g.title)}</b><span>${esc(g.caption || '')}</span></figcaption></figure>`).join('');
+
+  const shots = d.shots || [];
+  if (shots.length) {
+    const done = shots.filter((s) => s.state === 'done').length;
+    $('shotCount').textContent = `${done} of ${shots.length} animated`;
+    $('shots').innerHTML = shots.map((s) => `<div class="shot ${s.state === 'done' ? 'done' : s.state === 'working' ? 'working' : ''}"><b>${esc(s.id)}</b><span>${esc(s.title)}</span></div>`).join('');
+  }
+
+  const music = d.music || [];
+  if (music.length) $('music').innerHTML = music.map((m) => `<div class="cue"><b>${esc(m.track)}</b><em>${esc(m.where)}</em><span style="grid-column:1/-1">${esc(m.why || '')}</span></div>`).join('');
+
+  const log = d.log || [];
+  if (log.length) $('log').innerHTML = log.slice().reverse().map((l) => `<div><time>${esc(l.t ? new Date(l.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')}</time><span>${esc(l.msg)}</span></div>`).join('');
+}
+
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('figure img');
+  if (img) { $('lightImg').src = img.dataset.full; $('lightImg').alt = img.alt; $('lightbox').hidden = false; return; }
+  if (e.target.closest('#lightbox')) $('lightbox').hidden = true;
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('lightbox').hidden = true;
+  if (e.key === 'Enter' && e.target.matches && e.target.matches('figure img')) e.target.click();
+});
+setInterval(() => { if (lastUpdated) $('updated').textContent = ago(lastUpdated); }, 30000);
+
+(async () => {
+  let db = null;
+  try { db = window.claude && (await window.claude.use('db')); } catch (e) { db = null; }
+  if (!db) { $('headline').textContent = 'Live updates are not available in this view. Open the page signed in to claude.ai to follow along.'; return; }
+  const ref = db.doc('live/status');
+  const listen = () => ref.onSnapshot((snap) => { if (snap.exists) render(snap.data() || {}); }, (err) => {
+    if (err && err.code === 'unavailable') setTimeout(listen, 5000);
+    else $('headline').textContent = 'Live updates stopped. Reload the page to reconnect.';
+  });
+  listen();
+})();
+</script>
