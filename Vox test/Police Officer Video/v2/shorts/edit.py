@@ -313,7 +313,7 @@ class Edit:
                 if tc < s.t0 + 0.5 or tc > s.t1 - 0.45 or any(abs(tc - b) < 0.2 for b in busy): continue
                 if s.cuts and tc - s.cuts[-1][0] < 0.6: continue
                 tight = (len(s.cuts) % 2 == 0)
-                s.cuts.append((round(tc, 3), 1.16 if tight else 1.0, (38 * side) if tight else 0.0, -26 if tight else 0.0))
+                s.cuts.append((round(tc, 3), 1.16 if tight else 1.0, (38 * side) if tight else 0.0, 12 if tight else 0.0))
                 side = -side
 
     @staticmethod

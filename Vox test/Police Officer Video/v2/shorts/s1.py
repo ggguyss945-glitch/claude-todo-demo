@@ -95,7 +95,7 @@ def stage(E):
 
     # ------------------------------------------------------------------ B5 the back seat
     E.shot(5, 0.0, E.sync(5), name='peep -> car')
-    E.ev('tag', 5, ('w', 'back'), text='UNKNOWN', x=vfx.SAFE_CX + 120, y=0.28 * VH, style='red', dur=1.3, size=44)
+    E.ev('tag', 5, ('w', 'sitting'), text='UNKNOWN', x=vfx.SAFE_CX + 120, y=0.28 * VH, style='red', dur=1.3, size=62)
     E.sfx(5, 0.3, 'car_idle', -18, kind='bed', space='street', dur=round(E.beat(6)['t1'] - E.t(5, 0.3), 2))
 
     # ------------------------------------------------------------------ B6 the habit

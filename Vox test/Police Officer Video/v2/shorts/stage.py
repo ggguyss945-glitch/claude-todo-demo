@@ -135,7 +135,9 @@ class VShot:
         return m, dx, dy
 
     def zoom(self, t):
-        base = (self.z or 1.0) * (1.0 + self.push * max(0.0, t - self.t0)) * self.cut_at(t)[0]
+        base0 = (self.z or 1.0) * (1.0 + self.push * max(0.0, t - self.t0))
+        base = base0 * self.cut_at(t)[0]
+        cap = max(base0 * 1.08, 1.6)                   # punches + re-frame cuts never crop a face down to one eye
         lev, prev, tp = 1.0, 1.0, None
         for (tt, l) in self.punches:
             if t >= tt: prev, lev, tp = lev, l, tt
@@ -143,8 +145,8 @@ class VShot:
             u = (t - tp) / 0.067
             if u < 1.0:
                 s = ease_out_back(clamp(u), 2.2)
-                return base * (prev + (lev - prev) * s)
-        return base * lev
+                return min(cap * 1.03, base * (prev + (lev - prev) * s))
+        return min(cap, base * lev)
 
 
 KIND_Z = {'door': 1.4, 'peep': 1.1, 'mumext': 1.15, 'hall': 1.05, 'kitchen': 1.05, 'mumroom': 1.05}
