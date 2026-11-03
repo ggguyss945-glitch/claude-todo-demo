@@ -422,8 +422,9 @@ def endcard(cv, u, question, sub='FULL VIDEO ON THE CHANNEL', hits=(), y=0.44 * 
         outlined(cv, q, 0, sz * 0.36, sz, '#ffffff' if uu < 0.034 else (WHITE if j < len(qs) - 1 else RED), 0.13, 'center', 0.5,
                  255, 900, 0.01, glow=(RED, 90, 16) if j == len(qs) - 1 else None)
         cv.restore()
-    if title:
-        text(cv, title, 0, h / 2 - 34, 800, 34, '#c9cfdc', 230 * clamp(u / 0.3), 0.04, 'center')
+    if title:   # kept inside the inner rule (w - 2 * 70), so it never touches the frame
+        tsz = min(34.0, 34.0 * (w - 140) / max(1.0, text_width(title, 800, 34, 0.04)))
+        text(cv, title, 0, h / 2 - 34, 800, tsz, '#c9cfdc', 230 * clamp(u / 0.3), 0.04, 'center')
     cv.restore()
     # arrow toward the related-video link under the Short
     if u >= 0.15:
