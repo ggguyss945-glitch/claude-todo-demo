@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+/* local fonts (assets/fonts, OFL) so renders never depend on the network */
+@font-face { font-family: 'Nunito'; font-weight: 700; src: url('../assets/fonts/nunito700.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 800; src: url('../assets/fonts/nunito800.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 900; src: url('../assets/fonts/nunito900.ttf') format('truetype'); }
+@font-face { font-family: 'Lilita One'; src: url('../assets/fonts/lilita.ttf') format('truetype'); }
+@font-face { font-family: 'Rubik'; font-weight: 800; src: url('../assets/fonts/rubik800.ttf') format('truetype'); }
+html,body{margin:0;background:#000;overflow:hidden}#stage{width:1920px;height:1080px;overflow:hidden;position:relative}svg{display:block}
+</style>
+</head><body><div id="stage"></div>
+<script type="module">
+// Engine v3 frame page. ?timeline=<url>&px=<W>x<H>&bake=0|1&scale=<output scale, for bake resolution>
+// Exposes window.renderAt(t) (draws the frame, resolves when it is ready to screenshot), window.svgAt(t) (the SVG
+// string, for determinism tests), window.__ready, window.__error, and the baker hooks (takeBakeJobs, bakeDone).
+import { frame, loadTimeline, ERRORS, registered, collectCues } from './anim/frame.js';
+import { installBaker } from './anim/bake.js';
+const q = new URLSearchParams(location.search);
+try {
+  if (q.get('bake') === '1') installBaker({ scale: +(q.get('scale') || 1) });
+  const want = ['900 60px Nunito', '800 60px Nunito', '700 60px Nunito', '60px "Lilita One"', '800 60px Rubik'];
+  for (const f of want) { try { await document.fonts.load(f); } catch (e) {} }
+  window.__fontsMissing = want.filter((f) => ![...document.fonts].some((ff) => ff.status === 'loaded' && f.includes(ff.family.replace(/"/g, ''))));
+  const T = await (await fetch(q.get('timeline') || '/timeline.json')).json();
+  await loadTimeline(T, (p) => import('./' + p));
+  window.__timeline = T;
+  const stage = document.getElementById('stage');
+  // ?px=2560x1440: draw the 1920x1080 design at that output size by CSS (faster than a device scale factor and
+  // pixel-equivalent to it); the renderer opens the page with a viewport of the same size and deviceScaleFactor 1
+  const px = (q.get('px') || '').split('x').map(Number);
+  if (px[0] > 0 && px[1] > 0) {
+    const st = document.createElement('style');
+    st.textContent = `#stage{width:${px[0]}px;height:${px[1]}px}#stage>svg{width:${px[0]}px;height:${px[1]}px}`;
+    document.head.appendChild(st);
+  }
+  window.svgAt = (t) => frame(T, t);
+  window.renderAt = async (t) => {
+    const n0 = ERRORS.length;
+    stage.innerHTML = frame(T, t);
+    const imgs = stage.querySelectorAll('image');
+    if (imgs.length) await Promise.all([...imgs].map((im) => (typeof im.decode === 'function' ? im.decode().catch(() => {}) : null)));
+    return ERRORS.length > n0 ? ERRORS.slice(n0).map((e) => `${e.shot || e.overlay} @${(+e.t).toFixed(3)}: ${e.msg}`).join('\n') : '';
+  };
+  window.cues = () => collectCues(T);
+  window.shotNames = () => registered();
+  window.__ready = true;
+} catch (e) { window.__error = String((e && e.stack) || e); window.__ready = true; }
+</script></body></html>

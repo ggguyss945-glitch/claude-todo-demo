@@ -1,0 +1,7 @@
+# licensed or large media stays out of git (Epidemic audio, voice takes, renders in progress)
+*.wav
+*.mp3
+*.m4a
+*.mp4
+*.zip
+__pycache__/

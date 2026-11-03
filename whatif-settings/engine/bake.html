@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'Nunito'; font-weight: 700; src: url('../assets/fonts/nunito700.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 800; src: url('../assets/fonts/nunito800.ttf') format('truetype'); }
+@font-face { font-family: 'Nunito'; font-weight: 900; src: url('../assets/fonts/nunito900.ttf') format('truetype'); }
+@font-face { font-family: 'Lilita One'; src: url('../assets/fonts/lilita.ttf') format('truetype'); }
+@font-face { font-family: 'Rubik'; font-weight: 800; src: url('../assets/fonts/rubik800.ttf') format('truetype'); }
+html,body{margin:0;background:transparent}#stage{overflow:hidden;position:relative}svg{display:block}
+</style>
+</head><body><div id="stage"></div>
+<script type="module">
+// Bake page for engine v3 (tools/render.js): paints one static layer at its own world box so it can be screenshotted
+// with a transparent background; the page's deviceScaleFactor sets the bitmap resolution.
+const want = ['900 60px Nunito', '800 60px Nunito', '700 60px Nunito', '60px "Lilita One"', '800 60px Rubik'];
+for (const f of want) { try { await document.fonts.load(f); } catch (e) {} }
+const stage = document.getElementById('stage');
+window.paint = (svg, b) => {
+  stage.style.width = b.w + 'px'; stage.style.height = b.h + 'px';
+  stage.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" width="${b.w}" height="${b.h}">${svg}</svg>`;
+  return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+};
+window.__ready = true;
+</script></body></html>
