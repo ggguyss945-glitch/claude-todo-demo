@@ -98,7 +98,8 @@ def stage(E):
     score(6, ('off', 0.1), him='YY')
     E.shot(7, 0.0, E.film(393.0), name='double glances')
     E.hud(7, 0.0, value='3/5')
-    E.ev('tag', 7, ('f', 0.35), text='HE CHECKS THE OFFICER', x=vfx.SAFE_CX, y=0.29 * VH, style='red', dur=1.1, size=40)
+    E.ev('tag', 7, ('f', 0.05), text='HE CHECKS THE OFFICER', x=vfx.SAFE_CX, y=0.29 * VH, style='red',
+         dur=E.beat(7)['t1'] - E.t(7, ('f', 0.05)) - 0.02, size=62)
     score(7, ('off', 0.05), him='YYY')
     b8 = E.beat(8)
     E.shot(8, 0.0, E.film(395.7), name='you sweating')

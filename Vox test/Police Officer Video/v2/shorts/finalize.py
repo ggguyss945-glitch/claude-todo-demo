@@ -17,7 +17,7 @@ import cv2
 
 S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
 NAMES = {1: 'Short1_The_Other_Gentleman', 2: 'Short2_Your_Voice_On_The_Radio', 3: 'Short3_Never_Correct_Him'}
-COVER = {1: ('slam', "IT'S YOURS."), 2: ('slam', "IT'S A\nRECORDING"), 3: ('label', 'HIM')}   # event that makes the cover frame
+COVER = {1: ('slam', "DON'T PROVE\nYOU LIVE THERE", 0.72), 2: ('slam', 'NOW YOUR\nNAME.'), 3: ('tag', 'RULE #5', 1.55)}   # event that makes the cover frame (+ seconds after it, default 0.12)
 
 
 def sh(cmd, **k):
@@ -123,9 +123,9 @@ def main():
         mux(pic, wav, dst, trim); eb = ebur128(dst)
     pr = probe(dst)
     # cover: 0.12 s after the cover event lands (the slam has settled), else the twist
-    kind, txt = COVER[A.short]
+    kind, txt, *off = COVER[A.short]
     ev = [e for e in T['events'] if e['type'] == kind and e.get('text') == txt]
-    tc = (ev[0]['t'] + 0.12) if ev else (rep.get('twist_t') or 1.0)
+    tc = (ev[0]['t'] + (off[0] if off else 0.12)) if ev else (rep.get('twist_t') or 1.0)
     cap = cv2.VideoCapture(pic)
     f = frame_at(cap, tc, pr['fps'])
     cv2.imwrite(base + '_cover.png', f)

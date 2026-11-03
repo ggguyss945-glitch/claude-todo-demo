@@ -260,7 +260,8 @@ def balance_hits(cues, dur, kt, lo=3, hi=6):
     return cues, notes
 
 
-OVER_SPEECH_DB = {'stinger': -8.0, 'impact_hit': -4.0, 'whoosh': -3.0}    # cue gain when it lands while the voice speaks
+OVER_SPEECH_DB = {'stinger': -8.0, 'impact_hit': -4.0, 'whoosh': -3.0,     # cue gain when it lands while the voice speaks
+                  'paper': -5.0, 'typing': -5.0, 'ui_pop': -3.0, 'knock_door': -2.0, 'phone_ring': -3.0}
 
 
 def render_sfx(cues, N, dur, kt, act=None):
@@ -623,14 +624,14 @@ def main():
     ap.add_argument('--out', default=None)
     ap.add_argument('--no-mux', action='store_true')
     ap.add_argument('--no-stems', action='store_true')
-    ap.add_argument('--under', type=float, default=None, help='music under the voice (dB, speech median; default 10, S1 13)')
+    ap.add_argument('--under', type=float, default=None, help='music under the voice (dB, speech median; default 10, S1 13, S3 12)')
     ap.add_argument('--duck', type=float, default=2.0, help='sidechain duck of the music under the voice (dB)')
     ap.add_argument('--music-cut', type=float, default=None, dest='mcut',
-                    help='voice-keyed 1-4.5 kHz cut on the music (dB; default 4, S1 6)')
+                    help='voice-keyed 1-4.5 kHz cut on the music (dB; default 4, S1 and S3 6)')
     A = ap.parse_args()
     # S1's track (From Hell) is dense in the voice band: 20 % of its speech frames had the music within 3 dB of the voice
     # at the default settings (S2: 8 %), so it sits 2 dB lower and gets a deeper voice-keyed 2-4 kHz dip
-    PER = {1: dict(under=13.0, mcut=6.0, scoop=-4.0)}.get(A.short, {})
+    PER = {1: dict(under=13.0, mcut=6.0, scoop=-4.0), 3: dict(under=12.0, mcut=6.0)}.get(A.short, {})
     if A.under is None: A.under = PER.get('under', 10.0)
     if A.mcut is None: A.mcut = PER.get('mcut', 4.0)
     T0 = time.time()
