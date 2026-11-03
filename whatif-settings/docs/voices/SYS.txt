@@ -1,0 +1,22 @@
+S00-L005	(calm) Factory reset in sixty seconds.
+S00-L007	(calm) Changes made: four hundred and twelve.
+S00-L018	(happy) Welcome to Reality Settings! All changes apply... for real.
+S02-L003	(happy) Patch notes. Version one point one.
+S02-L004	(calm) Rule one. Changes affect everyone within fifty meters.
+S02-L008	(calm) Rule two. There is no undo.
+S02-L010	(calm) Rule three. Everything resets at midnight.
+S02-L014	(happy) Update one point two. Rule three has been removed.
+S02-L016	(happy) Rule four. I can.
+S05-L003	(calm) Battery saver on. Lowering reality graphics.
+S06-L003	(happy) Kevin changed GRASS to: gold.
+S06-L005	(happy) LilyRoar changed GRAVITY to: bouncy.
+S06-L007	(calm) Mom turned on Parental Controls.
+S06-L018	(calm) Installing Reality two point oh.
+S07-L004	(calm) Factory reset in sixty seconds.
+S07-L011	(happy) Snooze is not available during a factory reset.
+S07-L013	(happy) Rule two.
+S07-L017	(calm) A reset can only be stopped by the loudest person in the house.
+S07-L022	(calm) Locked by Parental Controls.
+S07-L030	(calm) Five. Four. Three...
+S07-L032	(calm) Reset... cancelled.
+S08-L004	(happy) New app available. Reality Settings Two... now with TIME.

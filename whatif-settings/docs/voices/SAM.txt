@@ -1,0 +1,13 @@
+S00-L006	(nervous) Okay. In my defense... I only changed one thing.
+S00-L008	(embarrassed) ...Ish.
+S01-L019	(indifferent) ...You forgot my name.
+S02-L015	(angry) You can't just REMOVE a rule!
+S03-L021	(sad) Noooooo...
+S04-L006	(indifferent) Dad. You just said "duck bread."
+S04-L016	(scared) WHY?!
+S05-L017	(disgusted) Put it back. PUT IT BACK!
+S06-L010	(angry) I THOUGHT I WAS JUST TIRED!
+S07-L008	(determined) Okay. Cancel button. Where is the cancel button?!
+S07-L021	(panicked) Unmute! UNMUTE!
+S07-L025	(shouting) SKIP INTRO!
+S07-L038	(soft tone) ...You remembered my name.

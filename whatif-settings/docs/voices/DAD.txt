@@ -1,0 +1,13 @@
+S00-L022	(shouting) Who turned on the SUN?!
+S01-L018	(happy) Morning, champ!
+S01-L020	(nervous) Pfft. No. ...Steve!
+S01-L025	(panicked) WHY AM I SWIMMING?!
+S02-L022	(sad) Tell your mother... I loved her.
+S03-L010	(happy) Did I ever tell you about the summer of nineteen ninety—
+S03-L012	(happy) —and that is why I can never go back to the water park.
+S04-L007	(proud) And I stand by it.
+S05-L012	(indifferent) I don't want to talk about it.
+S06-L016	(relaxed) I always press later.
+S07-L024	(delighted) Oh! So a bicycle walks into a—
+S07-L026	(excited) —it was two tired!
+S07-L037	(soft tone) Good job, kiddo.
