@@ -17,12 +17,14 @@ export function visemeName(v) {
   return NAMES[k] || null;
 }
 
-/** normalise words from any of {w,t0,t1} | {w,t,e} | {word,start,end} | [w, t0, t1] */
+/** normalise words from any of {w,t0,t1} | {w,t,d} (audio/voice_lines.json: start + duration) | {w,t,e} |
+ *  {word,start,end} | [w, t0, t1] */
 export function normWords(words = [], offset = 0) {
   return words.map((x) => {
     if (Array.isArray(x)) return { w: String(x[0]), t0: +x[1] - offset, t1: +(x[2] ?? x[1] + 0.25) - offset };
     const w = x.w ?? x.word ?? x.text ?? '';
-    const t0 = +(x.t0 ?? x.t ?? x.start ?? 0), t1 = +(x.t1 ?? x.e ?? x.end ?? t0 + 0.25);
+    const t0 = +(x.t0 ?? x.t ?? x.start ?? 0);
+    const t1 = +(x.t1 ?? x.e ?? x.end ?? (x.d !== undefined ? t0 + +x.d : t0 + 0.25));
     return { w: String(w), t0: t0 - offset, t1: t1 - offset };
   }).filter((x) => Number.isFinite(x.t0)).sort((a, b) => a.t0 - b.t0);
 }

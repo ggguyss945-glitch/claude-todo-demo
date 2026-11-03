@@ -349,7 +349,7 @@ def pitch(y, sr, fmin=60, fmax=700, gate_db=-30.0):
 def pitch_stats(f0, hop=0.01):
     v = ~np.isnan(f0)
     if v.sum() < 8:
-        return {'f0_med': None, 'std_st': 0.0, 'range_st': 0.0, 'move_st': 0.0, 'tail_st': 0.0, 'voiced': round(float(v.mean()), 2), 'f0_jumps': 0}
+        return {'fry_tail': 0, 'f0_med': None, 'std_st': 0.0, 'range_st': 0.0, 'move_st': 0.0, 'tail_st': 0.0, 'voiced': round(float(v.mean()), 2), 'f0_jumps': 0}
     f = f0[v]
     med = float(np.median(f))
     st = 12 * np.log2(f / med)
@@ -366,7 +366,14 @@ def pitch_stats(f0, hop=0.01):
     d = np.abs(np.diff(12 * np.log2(f0 / med)))
     both = v[1:] & v[:-1]
     jumps = int(((d > 2.5) & (np.abs(d - 12) > 1.0) & both).sum())
-    return {'f0_med': round(med, 1), 'f0_p10': round(float(np.percentile(f, 10)), 1), 'f0_p90': round(float(np.percentile(f, 90)), 1),
+    # creaky / half-pitch tail: voiced frames under 0.62 x the median at the end of the last voiced stretch
+    fry = 0
+    for x in f[::-1]:
+        if x < 0.62 * med:
+            fry += 1
+        else:
+            break
+    return {'fry_tail': fry, 'f0_med': round(med, 1), 'f0_p10': round(float(np.percentile(f, 10)), 1), 'f0_p90': round(float(np.percentile(f, 90)), 1),
             'std_st': round(float(st.std()), 2), 'range_st': round(float(np.percentile(st, 90) - np.percentile(st, 10)), 2),
             'move_st': round(float(np.std(seg)), 2) if len(seg) > 2 else 0.0, 'tail_st': round(slope, 2),
             'voiced': round(float(v.mean()), 2), 'f0_jumps': jumps}

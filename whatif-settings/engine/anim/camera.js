@@ -13,17 +13,23 @@
 //   punch   [{t, k = 1.12, at: [sx, sy], in = 2 frames, settle = 0.25 s, keep = 0.03}]  punch-in on a stressed word:
 //           scale k about a screen point in 1-4 frames (outBack), settling back to 1 + keep over `settle`
 //   shake   [{t, amp = 22, decay = 0.08, freq = 28, rot = 0}]  trauma shake (A e^(-t/decay) noise)
-//   blur    'auto' (default): directional motion blur on fast moves (> 30 px/frame); false: crisp
+//   blur    'auto' (default): directional motion blur on fast pans (> 30 px/frame at the frame centre, measured over the
+//           frame's shutter [t - 1/fps, t]; blurK 0.25 x speed, max 64 px); false: crisp
+//   ghost   'auto' (default): 3-6 ghost copies on fast zooms/rolls (corners move > 25 px/frame more than the centre;
+//           wins over blur); a number forces
+//           that many; false: off. ghostShutter = 0.6 (frames covered by the copies)
 //
 // Output:
 //   cam.layer(svg, depth = 1)        wraps world content in the camera transform for that parallax depth
 //   cam.compose(layers)              [{svg, depth}] -> string, each layer at its depth (sets: sky .08, far .3, mid .75, near 1)
+//   cam.render(layers)               the same with the automatic blur / ghosting (cam.set uses it)
 //   cam.set(set, {insert, only, skip, bake, live})  draw a sets.js set {layers}; insert: [{after: 'mid', svg, depth = 1}]
 //                                    puts actors between layers; bake: 'kitchen' bakes every static layer (except `live`
 //                                    names, default ['light', 'grade']: screen-blended layers must stay vector) to a bitmap of what this shot sees, at the shot's max zoom (render.js bake=1)
 //   cam.screen(svg, {shake: true})   screen-locked layer (UI, stickers); shakes with the camera only if asked
 //   cam.toScreen([x, y], depth = 1)  world -> screen point;  cam.toWorld([sx, sy], depth = 1) the inverse
-//   cam.state                        {x, y, z, r, k, sx, sy, sr, vx, vy, speed (screen px/frame at depth 1)}
+//   cam.state                        {x, y, z, r, k, sx, sy, sr, vx, vy, speed (screen px/frame at depth 1), cornerSpeed,
+//                                    ghosts (copies used this frame), blur (directional blur on)}
 //   cam.maxZoom(depth = 1)           largest on-screen scale over the shot (for bake resolution)
 //   cam.visible(depth = 1)           world rect [x0, y0, x1, y1] covering everything visible over the shot
 import { FPS, clamp, lerp, track, isKeys, ease, noise1d, shake as shakeFn, hash } from './motion.js';
@@ -99,18 +105,45 @@ export function camera(t, o = {}) {
   };
   const full = (tt, d = 1) => M.mul(screenM(scr(tt)), worldM(base(tt), d));
   const b = base(t), s = scr(t);
-  // screen velocity of the frame centre at depth 1 (px per frame), from a centred difference
-  const p0 = M.apply(M.inv(full(t, 1)), [CX, CY]);
-  const pa = M.apply(full(t - 0.5 / fps, 1), p0), pb = M.apply(full(t + 0.5 / fps, 1), p0);
-  const vx = pb[0] - pa[0], vy = pb[1] - pa[1];
+  // motion over the shutter interval [t - 1 frame, t] of the world camera at depth 1 (punch-ins and shake excluded:
+  // they stay crisp). disp(P) = screen displacement of the world point now under screen point P.
+  const Wt = worldM(b, 1), Wp = worldM(base(t - 1 / fps), 1), invW = M.inv(Wt);
+  const disp = (P) => { const q = M.apply(Wp, M.apply(invW, P)); return [P[0] - q[0], P[1] - q[1]]; };
+  const [vx, vy] = disp([CX, CY]);
   const speed = Math.hypot(vx, vy);
-  const blurOn = o.blur !== false && speed > (o.blurMin ?? 30);
+  let cornerSpeed = 0, zoomPart = 0;       // fastest corner, and its motion beyond the centre's (zoom / roll)
+  for (const P of [[0, 0], [W, 0], [0, H], [W, H]]) {
+    const d = disp(P);
+    cornerSpeed = Math.max(cornerSpeed, Math.hypot(d[0], d[1]));
+    zoomPart = Math.max(zoomPart, Math.hypot(d[0] - vx, d[1] - vy));
+  }
+  const zoomFast = zoomPart > (o.ghostMin ?? 25);
+  const ghostN = o.ghost === false || !zoomFast ? 0
+    : typeof o.ghost === 'number' ? o.ghost : Math.max(3, Math.min(6, Math.round(cornerSpeed / 20)));
+  const blurOn = o.blur !== false && !ghostN && speed > (o.blurMin ?? 30);
   const cam = {
-    t, opts: o, state: { ...b, ...s, vx, vy, speed },
+    t, opts: o, state: { ...b, ...s, vx, vy, speed, cornerSpeed, zoomPart, ghosts: ghostN, blur: blurOn },
     matrix: (d = 1) => M.mul(screenM(s), worldM(b, d)),
     layer(svg, depth = 1) { return `<g transform="${M.str(cam.matrix(depth))}">${svg}</g>`; },
     compose(layers) {
       return layers.filter(Boolean).map((l) => (l.screen ? cam.screen(l.svg, l) : cam.layer(l.svg, l.depth ?? 1))).join('');
+    },
+    /** compose [{svg, depth, screen?}] with the automatic motion treatment: directional blur on fast pans (centre
+     *  > 30 px/frame) or, on fast zooms/rolls (frame corners > 25 px/frame), 3-6 ghost copies of the world spread
+     *  over the last 0.6 frame (opacity 1, 1/2, 1/3 ... = an equal average). Screen layers (defs) are drawn once. */
+    render(layers) {
+      const ls = layers.filter(Boolean);
+      if (!ghostN) return cam.blur(cam.compose(ls));
+      const scr = ls.filter((l) => l.screen).map((l) => cam.screen(l.svg, l)).join('');
+      const world = ls.filter((l) => !l.screen);
+      const sh = (o.ghostShutter ?? 0.6) / fps;
+      let out = scr;
+      for (let k = 0; k < ghostN; k++) {
+        const tt = t - sh * (1 - k / Math.max(1, ghostN - 1));        // oldest first, the current time last
+        const body = world.map((l) => `<g transform="${M.str(full(tt, l.depth ?? 1))}">${l.svg}</g>`).join('');
+        out += k === 0 ? body : `<g opacity="${r3(1 / (k + 1))}">${body}</g>`;
+      }
+      return out;
     },
     set(set, so = {}) {
       const ins = so.insert ? (Array.isArray(so.insert) ? so.insert : [so.insert]) : [];
@@ -124,7 +157,7 @@ export function camera(t, o = {}) {
         for (const i of ins) if (i.after === l.name) out.push({ svg: i.svg, depth: i.depth ?? 1, screen: i.screen });
       }
       for (const i of ins) if (!i.after || i.after === 'top') out.push({ svg: i.svg, depth: i.depth ?? 1, screen: i.screen });
-      return cam.blur(cam.compose(out));
+      return cam.render(out);
     },
     /** one set layer as a baked bitmap covering what this shot can see of it (needs ctx.cam, which passes bakeFn).
      *  key: a name for the set + its options; a function (layer) -> svg is also accepted for custom bakers. */
@@ -150,7 +183,7 @@ export function camera(t, o = {}) {
     /** directional motion blur for fast camera moves; wrap the composed world (never inside a <use>) */
     blur(svg) {
       if (!blurOn) return svg;
-      return motionBlur(svg, vx, vy, { k: o.blurK ?? 0.45, max: o.blurMax ?? 90, id: `cb${seed % 9973}` });
+      return motionBlur(svg, vx, vy, { k: o.blurK ?? 0.25, max: o.blurMax ?? 64, id: `cb${seed % 9973}` });
     },
     maxZoom(depth = 1, n = 24) {
       let m = 0;

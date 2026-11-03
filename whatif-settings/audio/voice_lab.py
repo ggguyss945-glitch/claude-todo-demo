@@ -86,7 +86,7 @@ DIRECTION = {
     'S00-L015': dict(say='in half a second!', stress={'half': 4.0, 'second': 1.5}, contour='x', wpm=185),
     'S00-L016': dict(say='and press I agree!', stress={'press': 1.0, 'I': 2.5, 'AGREE': 4.5}, len={'AGREE': 1.2}, contour='x'),
     'S00-L017': dict(stress={'Welcome': 2.5, 'Reality': 2.0, 'Settings': 1.5}, contour='x'),
-    'S00-L018': dict(carrier='Okay...', stress={'Prove': 1.0}, len={'Prove': 1.8}, contour='yawn'),
+    'S00-L018': dict(carrier='Okay...', stress={'Prove': 1.0}, len={'Prove': 1.4}, contour='yawn'),
     'S00-L019': dict(stress={'open': 2.0, 'Brightness': 4.0}, contour='x'),
     'S00-L020': dict(stress={'Slide': 1.5, 'up': 4.0, 'little': 2.0}, beat={'up': 0.3}, soft={'Just': -3, 'a': -3, 'little': -2}, contour='f'),
     'S00-L021': dict(say='Who turned on the sun?!', stress={'Who': 2.5, 'SUN': 5.0}, len={'SUN': 1.7}, contour='x'),
@@ -510,11 +510,12 @@ def plan(E, role, tag, text, lid=None, variant='mid', overrides=None, voice=None
             # Kokoro parks the pause inside the last phoneme before punctuation (a 0.6 s 's' or 'n'); clip it to a
             # normal length so the pause sits in the punctuation tokens, where we set it
             p_ = i - 1
-            while p_ > 0 and lay['chars'][p_] in 'ˈˌː':
+            while p_ > 0 and lay['chars'][p_] in 'ˈˌ':
                 p_ -= 1
             # (line-final obstruents keep their length: the model fades the ending inside it, and clipping it swallows
-            #  the last 's'/'z'; a final nasal or vowel is clipped so a raised F0 cannot turn it into a long hum)
-            if p_ > 0 and P1['dur'][p_] > 6 and not (is_final and lay['chars'][p_] not in VOWELS and lay['chars'][p_] not in 'mnŋlɹ'):
+            #  the last 's'/'z'; a final nasal or vowel is clipped so a raised F0 cannot turn it into a long hum.
+            #  The length mark 'ː' counts as vowel: Kokoro parked a 0.6 s pause in the 'ː' of "agree.")
+            if p_ > 0 and P1['dur'][p_] > 6 and not (is_final and lay['chars'][p_] not in VOWELS and lay['chars'][p_] not in 'mnŋlɹː'):
                 dm[p_] *= (8.0 if is_final else 5.0) / P1['dur'][p_]
             # the line-final punctuation keeps its predicted length: the decoder renders the last consonant partly in
             # those frames (shortening them loses the final 's' of "planet's"); the silence is trimmed when conforming
@@ -621,9 +622,25 @@ def plan(E, role, tag, text, lid=None, variant='mid', overrides=None, voice=None
     if fin and lay['chars'][fin[-1]] in 'szʃʒfvθðtdkpbg':
         sl = slice(fsp[fin[-1]][0], fsp[min(nt - 1, fin[-1] + 1)][1])
         N[sl] += R.get('crisp_final', 1.0) * uvm[sl]
+    # line-end fry: after the last vowel, voiced frames under 0.62 x the line median are a creaky ~100 Hz hum that
+    # the decoder renders inside a long final stop or after the vowel (in "Prove it." a 0.3 s hum inside the 't' read
+    # as an extra syllable, "Prove of it"; it also inflated the pitch sd to 7.6 st). They are unvoiced and 4 log-units
+    # quieter, so only the release noise is left.
+    lv = [i for i in fin if lay['chars'][i] in VOWELS or lay['chars'][i] == 'ː']
+    T_fry = 0
+    if lv and (f0 > 40).sum() > 3:
+        s0 = fsp[lv[-1]][1]
+        fm = float(np.median(f0[f0 > 40]))
+        mk = np.zeros(len(f0), bool)
+        mk[s0:] = True
+        mk &= (f0 > 10) & (f0 < 0.62 * fm)
+        f0[mk] = 0.0
+        N[mk] = N[mk] - 4.0
+        T_fry = int(mk.sum())
     T = Take()
     T.P, T.f0, T.N, T.lay, T.R, T.D, T.spans, T.stress_spans = P, f0, N, lay, R, D, spans, stress_spans
     T.role, T.tag, T.text, T.reg, T.speed, T.voice = role, tag, text, regname, speed, vspec
+    T.fry_fixed, T.n_carrier = T_fry, n_carrier
     # loudness plan (dB) per word, applied after rendering
     amp = []
     for wi, (fs, fe, a) in stress_spans.items():
@@ -758,7 +775,11 @@ def approach_a(E, role, tag, text, lid, split=False, voice=None):
     if not split:
         if T.cut:                              # carrier lines: same carrier, plain prosody
             P = E.predict(T.lay['ph'], vspec, speed)
-            return cut_carrier(eq(E.render(P), SR, R.get('eq', 'none')), T), P
+            # the cut is placed on the PLAIN durations (T.cut is on the designed ones, with the 0.6 s beat)
+            first = next((k for k in range(len(P['dur'])) if T.lay['tok_word'][k] >= T.n_carrier), None)
+            Tc = Take()
+            Tc.cut = max(0.0, float(np.sum(P['dur'][:first])) / DFPS - 0.06) if first is not None else T.cut
+            return cut_carrier(eq(E.render(P), SR, R.get('eq', 'none')), Tc), P
         P = E.predict(E.phonemize(say, lang), vspec, speed)
         return eq(E.render(P), SR, R.get('eq', 'none')), P
     parts = [p.strip() for p in re.split(r'(?<=\.\.\.)|(?<=[.!?])\s+', say) if p and p.strip()]
@@ -912,6 +933,8 @@ def score(met, role, reg, n_words, base=None):
         pen += 0.08 * max(0.0, (base['hnr_db'] - met['hnr_db']) - 1.5)
     if met.get('clipped', 0) > 0:
         pen += 0.5
+    # a creaky half-pitch tail after the last word (>= 9 frames = 90 ms) is a hum, not acting; it also inflates pitch sd
+    pen += 0.015 * max(0, met.get('fry_tail', 0) - 8)
     s['artifact_pen'] = round(pen, 3)
     expr = 0.55 * s['register'] + 0.45 * s['movement']
     total = 0.35 * expr + 0.30 * s['quality'] + 0.15 * s['rate'] + 0.20 * s['intel'] - pen
@@ -1046,6 +1069,23 @@ def run_lab(ids, approaches=None, out_json=None):
     write_table(lab)
     summarize(lab)
     print('lab done in %.0f s' % (time.time() - t_all))
+    return lab
+
+
+def reselect(lab_json=None):
+    """Score and pick again over a (merged) lab file: speaker embeddings of every stored candidate, select(), tables."""
+    lab_json = lab_json or os.path.join(LAB_DIR, 'lab.json')
+    lab = json.load(open(lab_json))
+    embs = {}
+    for lid, rec in lab.items():
+        for ap, c in rec['cands'].items():
+            if 'file' in c and os.path.exists(c['file']):
+                z, _ = VI.load(c['file'])
+                embs[(lid, ap)] = VI.embed(VI.resample(z, SR, 16000))
+    select(lab, embs)
+    json.dump(lab, open(lab_json, 'w'), indent=1, default=float)
+    write_table(lab)
+    summarize(lab)
     return lab
 
 
@@ -1437,6 +1477,9 @@ def main():
         os.makedirs(LAB_DIR, exist_ok=True)
         json.dump(merged, open(os.path.join(LAB_DIR, 'lab.json'), 'w'), indent=1, default=float)
         ids = ids or sorted(merged)
+        if not a.lab:
+            reselect()
+            print('merged and re-selected', len(merged), 'lines')
     if a.lab:
         run_lab(ids, [x for x in a.approaches.split(',') if x] or None, a.lab_json or None)
         if a.finalize:

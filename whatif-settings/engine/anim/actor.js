@@ -6,7 +6,8 @@
 //   x, y, s          position (feet, world px) and scale         numbers | track keys [[t, v, ease?], ...]
 //   facing           yaw: 'front' | 'tq-left' | ... | degrees   number/name | track keys (degrees) -> smooth turn
 //   pose             partial pose object | pose keys [[t, {armR: 150, foreR: 30}, ease?, dur?], ...]
-//                    pose keys are pose-to-pose: hold, then snap to the key over dur (default 6 frames, outBack)
+//                    pose keys are pose-to-pose: hold, then snap to the key over dur (default 6 frames, outBack);
+//                    anticPose(t, from, to) makes a wind-up + snap pair to splice in
 //   face             preset | {preset, eyes, mouth, ...} | step keys [[t, face, accent?], ...] (instant swaps,
 //                    each change gets a 3-frame squash accent; accent 0 on a key disables it, a number scales it)
 //   look / lookAt    pupil offset [dx, dy] (face units, about +-5) | a world point [x, y] to look at (any may be keys)
@@ -185,6 +186,20 @@ export function actorState(id, o = {}, t = 0, ctx = {}) {
     id, x, y, s, k, sx: sx * k, sy: sy * k, facing: facingOf(val(o.facing ?? 'front', t)), pose, face: e, look,
     add: stepOrVal(o.add, t), props: stepOrVal(o.props, t), talking, blink: bl, headY: y + toonHeadY(id) * s * sy * k,
   };
+}
+
+/** pose keys for an anticipated pose change: wind up opposite to the move (amt = 0.15 of it, over `wind` = 4 frames)
+ *  ending at t, then snap to `to` over `dur` = 6 frames (outBack) and hold. `from` is the pose before (numbers only
+ *  are wound up). Splice into pose keys: pose: [[0, P0], ...anticPose(1.2, P0, P1)] */
+export function anticPose(t, from = {}, to = {}, o = {}) {
+  const fps = o.fps ?? FPS, wind = (o.wind ?? 4) / fps, dur = (o.dur ?? 6) / fps, a = o.amt ?? 0.15;
+  const back = {};
+  for (const k of Object.keys(to)) {
+    if (typeof to[k] !== 'number') continue;
+    const f = typeof from[k] === 'number' ? from[k] : 0;
+    back[k] = f - (to[k] - f) * a;
+  }
+  return [[t - wind, back, 'outQuad', wind], [t, to, o.ease || 'outBack', dur]];
 }
 
 /** draw the actor. See the header for options. */

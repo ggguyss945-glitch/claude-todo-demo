@@ -39,7 +39,8 @@ export function drawCaptions(list, gt, o = {}) {
 
 /** build caption entries from one voice line. line: {start, words:[{w, t0, t1}] (relative to start), dur}
  *  markupText: the script text with {KEYWORD|colour} markup (optional; plain words are used otherwise).
- *  o: {lead frames = 3, tail s = 0.25, maxWords = 3, mode, y, fps} */
+ *  o: {lead frames = 3, tail s = 0.25, maxWords = 3, mode, y, fps, until (global s: no chunk outlives it, e.g. the
+ *  cut into a shot where nobody says it)} */
 export function captionsFromLine(line, markupText, o = {}) {
   const fps = o.fps ?? FPS, lead = (o.lead ?? 3) / fps, tail = o.tail ?? 0.25;
   const words = line.words || [];
@@ -58,6 +59,7 @@ export function captionsFromLine(line, markupText, o = {}) {
   }
   for (let i = 0; i < out.length; i++) {
     out[i].t1 = i + 1 < out.length ? out[i + 1].t0 : Math.max(out[i].wEnd + tail, line.start + (line.dur || 0));
+    if (o.until !== undefined) out[i].t1 = Math.min(out[i].t1, Math.max(out[i].t0 + 2 / fps, o.until));
     delete out[i].wEnd;
     if (out[i].mode === 'quote') out[i].quote = out.length === 1 ? 'both' : i === 0 ? 'open' : i === out.length - 1 ? 'close' : 'none';
     if (out[i].mode === undefined) delete out[i].mode;

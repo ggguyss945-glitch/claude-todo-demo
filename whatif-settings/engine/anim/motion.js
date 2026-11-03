@@ -11,6 +11,7 @@
 //   noise1d/noise2d   seeded smooth value noise in -1..1
 //   pop / popKw       UI and caption pop curves (0.6 -> 1.05 -> 1 in 3 frames; keyword 0.85 -> 1.16 -> 1 in 6 frames)
 //   squash(t, o)      damped squash-and-stretch pulse -> {sx, sy} (volume preserving)
+//   antic/holdKeys    anticipation keys for a number track (wind-up, travel, overshoot) and hold keys
 //   shake(t, events)  trauma shake: sum of A * exp(-dt/decay) * noise -> {x, y, r}
 //   hash(str)         32-bit FNV-1a, for seeds derived from names
 
@@ -308,6 +309,17 @@ export function shake(t, events = [], seed = 0) {
   }
   return { x, y, r };
 }
+
+// ---------- anticipation / holds ----------
+/** track keys for an anticipated move of a number (x, y, rotation...): hold `from` until t - wind, wind up opposite
+ *  to the move by amt (fraction of the move, default 0.12) over `wind` frames (default 4), then travel to `to` over
+ *  `dur` frames (default 8) with o.ease ('outBack'). Splice into a longer list: [...antic(1.2, 300, 900), [3, 900]]. */
+export function antic(t, from, to, o = {}) {
+  const fps = o.fps ?? FPS, wind = (o.wind ?? 4) / fps, dur = (o.dur ?? 8) / fps, a = o.amt ?? 0.12;
+  return [[t - wind, from], [t, from - (to - from) * a, 'outQuad'], [t + dur, to, o.ease || 'outBack']];
+}
+/** keys that hold value v from t0 to t1 (inclusive), for splicing holds into tracks */
+export const holdKeys = (t0, t1, v) => [[t0, v], [t1, v]];
 
 // ---------- misc ----------
 /** time remap for "lag"/stepped motion: holds of n frames (t - t mod hold) */

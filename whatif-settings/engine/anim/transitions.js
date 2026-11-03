@@ -6,8 +6,9 @@
 //   type         window around b          what it does
 //   cut          -                         hard cut (default)
 //   whip         [b - d/2, b + d/2]        both shots slide as one strip (bell-shaped velocity, easeInOutCubic) with
-//                d = 0.15-0.25 s           directional blur on the strip + white speed streaks; dir 'left'|'right'|'up'|'down'
-//                                          = direction the camera pans. blur:false gives crisp art + streaks only
+//                d = 0.15-0.25 s           directional blur on the strip (blurK 0.2 x px/frame, about a 250-degree shutter;
+//                                          max 64 px) + white speed streaks; dir 'left'|'right'|'up'|'down' = direction the
+//                                          camera pans; ease 'front' = front-loaded outQuart. blur:false: crisp art + streaks
 //   flash        [b - 2f, b + d]           white (or color) frame: ramps up over 2 frames, holds `hold` frames, decays
 //   glitch       [b - d/2, b + d/2]        2-frame RGB band slices re-rolled every 2 frames, A before b, B after
 //                                          (slices are re-drawn string copies, never <use>, so blend layers survive)
@@ -66,7 +67,7 @@ export const TRANSITIONS = {
     const dq = 1 / (fps * Math.max(1e-6, w1 - w0));
     const v = (shapeFn(clamp(q + dq / 2)) - shapeFn(clamp(q - dq / 2))) * span;
     let out = strip;
-    if (tr.blur !== false && v > 4) out = motionBlur(strip, -dx * v, -dy * v, { k: tr.blurK ?? 0.4, max: tr.blurMax ?? 110, id: 'whip' });
+    if (tr.blur !== false && v > 4) out = motionBlur(strip, -dx * v, -dy * v, { k: tr.blurK ?? 0.2, max: tr.blurMax ?? 64, id: 'whip' });
     const lineOp = clamp(v / 140) * (tr.lines ?? 0.85);
     if (lineOp > 0.02) {
       const ang = dx ? 0 : 90;
