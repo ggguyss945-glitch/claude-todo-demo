@@ -214,6 +214,8 @@ def slam(cv, u, s, c=RED, y=0.40 * VH, size=150, dur=0.9, rot=-3.0, x=SAFE_CX, o
     a = 255 if u < dur - 0.05 else 255 * clamp((dur - u) / 0.05)
     jx = 9 * noise1(u * 40, 3) * clamp(1 - u / 0.18)
     jy = 7 * noise1(u * 40, 4) * clamp(1 - u / 0.18)
+    half = min(x - 22, VW - 22 - x)                      # the overshoot frame never leaves the frame margins
+    sc = min(sc, 2 * half / max(1.0, max(ws) * k * (1 + abs(math.sin(math.radians(rot))) * 0.3)))
     cv.save(); cv.translate(x + jx, y + jy); cv.rotate(rot); cv.scale(sc * k, sc * k)
     lh = size * 1.02
     y0 = -lh * (len(lines) - 1) / 2 + size * 0.36
@@ -276,49 +278,68 @@ def _bell(pen, x, y, s, a, wig=0.0, c='#ffffff'):
     cv.restore()
 
 
-def subscribe(cv, u, y=0.74 * VH, x=SAFE_CX, label='SUBSCRIBE'):
-    """SUBSCRIBE press, u = seconds from the press (-0.45 pop-in .. 0 press .. 1.75 out): the button pops in with overshoot,
-    a hand cursor slides in and taps it (button squashes to 92 %), a ripple spreads, the button turns grey SUBSCRIBED,
-    the bell rings and pops out with a +1."""
-    if u < -0.45 or u > 1.75: return
+def subscribe(cv, u, y=0.50 * VH, x=SAFE_CX, label='SUBSCRIBE', hand='cursor', from_=None, lead=0.5):
+    """Big SUBSCRIBE button (720 x 184, 67 % of the width), u = seconds from the press (-0.5 pop-in .. 0 press .. 1.8 out):
+    pops in with an overshoot (from_ = (x, y) it flies out of, e.g. the finger that will press it), breathes, gets squashed
+    by the press (x 106 %, y 82 %) with a white impact ring and a rebound, flips to grey SUBSCRIBED + a check mark and a
+    ringing bell, then pops out. hand: 'cursor' (a hand cursor taps it) or None (the story action is the press: a palm,
+    a finger on a radio key or a bodycam)."""
+    lead = max(0.12, min(0.5, lead))                   # pop-in lead before the press (starts at the cut into the action)
+    if u < -lead or u > 1.8: return
     pen = Pen(cv)
-    ui = u + 0.45
-    s_in = ease_out_back(clamp(ui / 0.22), 2.4)
-    s_out = 1.0 - ease_out_cubic(clamp((u - 1.55) / 0.2))
-    press = 1.0 - 0.08 * math.sin(math.pi * clamp(u / 0.12)) if 0 <= u <= 0.12 else 1.0
-    sc = s_in * s_out * press
+    ui = u + lead
+    s_in = ease_out_back(clamp(ui / min(0.24, lead)), 2.6)
+    s_out = 1.0 - ease_out_cubic(clamp((u - 1.58) / 0.22))
+    breathe = 1.0 + 0.025 * math.sin(ui * 14.0) if u < 0 else 1.0
+    sx = sy = 1.0
+    if 0 <= u < 0.08:
+        q = math.sin(math.pi * u / 0.08); sx, sy = 1.0 + 0.06 * q, 1.0 - 0.18 * q
+    elif 0.08 <= u < 0.26:
+        q = math.sin(math.pi * (u - 0.08) / 0.18); sx, sy = 1.0 - 0.02 * q, 1.0 + 0.06 * q
+    sc = s_in * s_out * breathe
     if sc <= 0.01: return
     done = u >= 0.06
-    w, h = 560.0, 136.0
-    cv.save(); cv.translate(x, y); cv.scale(sc, sc)
+    w, h = 720.0, 184.0
+    cx, cy = x, y
+    if from_ is not None and ui < min(0.24, lead):        # flies out of the pressing hand / object
+        k = ease_out_cubic(clamp(ui / min(0.24, lead))); cx = from_[0] + (x - from_[0]) * k; cy = from_[1] + (y - from_[1]) * k
+    cv.save(); cv.translate(cx, cy); cv.scale(sc * sx, sc * sy)
     box = rrect(-w / 2, -h / 2, w, h, h / 2)
-    pen.shadow(box, 0, 12, 26, '#000000', 170)
-    pen.fill(box, '#2b2b2b' if done else YT_RED, 255)
-    if not done: pen.fill(rrect(-w / 2 + 6, -h / 2 + 6, w - 12, h * 0.42, h * 0.3), '#ffffff', 34)
+    pen.shadow(box, 0, 16, 34, '#000000', 190)
+    if not done:
+        pen.line(box, 22, YT_RED, 90, blur=18)
+    pen.fill(box, '#3a3a3a' if done else YT_RED, 255)
+    pen.fill(rrect(-w / 2 + 10, -h / 2 + 8, w - 20, h * 0.40, h * 0.3), '#ffffff', 22 if done else 46)
+    pen.line(box, 5, '#ffffff', 60 if done else 110)
     if done:
-        wig = 18 * math.sin((u - 0.06) * 34) * clamp(1 - (u - 0.06) / 0.6)
-        _bell(pen, -w / 2 + 76, -2, 1.45, 255, wig)
-        outlined(cv, 'SUBSCRIBED', 30, 22, 58, '#e8e8e8', 0.0, 'center', 0.0, 255, 900, 0.03)
+        wig = 20 * math.sin((u - 0.06) * 34) * clamp(1 - (u - 0.06) / 0.7)
+        _bell(pen, -w / 2 + 92, -4, 1.9, 255, wig)
+        outlined(cv, 'SUBSCRIBED', 38, 30, 80, '#eeeeee', 0.0, 'center', 0.0, 255, 900, 0.02)
+        ck = clamp((u - 0.1) / 0.14)
+        if ck > 0:
+            pen.seg((w / 2 - 70, 2), (w / 2 - 70 + 16 * ck, 2 + 16 * ck), 9, GREEN, 255)
+            if ck >= 1: pen.seg((w / 2 - 54, 18), (w / 2 - 22, -22), 9, GREEN, 255)
     else:
-        outlined(cv, label, 0, 23, 64, '#ffffff', 0.0, 'center', 0.0, 255, 900, 0.03)
+        pen.fill(oval(-w / 2 + 92, 0, 52), '#ffffff', 255)
+        pen.fill(poly([(-w / 2 + 76, -26), (-w / 2 + 76, 26), (-w / 2 + 118, 0)]), YT_RED, 255)
+        outlined(cv, label, 46, 32, 90, '#ffffff', 0.0, 'center', 0.0, 255, 900, 0.03)
     cv.restore()
-    if 0 <= u <= 0.5:                                  # ripple
-        r = 40 + 330 * ease_out_cubic(u / 0.5)
-        pen.line(oval(x + 120, y + 20, r, r * 0.55), 6, '#ffffff', 200 * (1 - u / 0.5))
-    if 0.08 <= u <= 1.4:                               # bell burst + "+1"
+    if 0 <= u <= 0.45:                                 # impact ring from the press
+        r = 60 + 420 * ease_out_cubic(u / 0.45)
+        pen.line(oval(x, y, r, r * 0.42), 10 * (1 - u / 0.45) + 2, '#ffffff', 230 * (1 - u / 0.45))
+    if 0.08 <= u <= 1.3:                               # bell burst
         k = clamp((u - 0.08) / 0.25)
-        for j in range(6):
-            ang = -math.pi / 2 + (j - 2.5) * 0.42
-            r0, r1 = 120 + 30 * k, 150 + 60 * k
-            bx, by = x - w / 2 * sc + 76, y - 10
-            pen.seg((bx + math.cos(ang) * r0 * 0.5, by + math.sin(ang) * r0 * 0.5), (bx + math.cos(ang) * r1 * 0.5, by + math.sin(ang) * r1 * 0.5),
-                    6, AMBER, 255 * (1 - clamp((u - 0.5) / 0.5)))
-    # hand cursor: slides in from the lower right, taps at u = 0, leaves
-    if -0.4 <= u <= 0.9:
-        if u < 0: k = ease_out_cubic(clamp((u + 0.4) / 0.38)); hx, hy = x + 120 + 260 * (1 - k), y + 40 + 300 * (1 - k)
-        else: k = ease_out_cubic(clamp((u - 0.35) / 0.5)); hx, hy = x + 120 + 300 * k, y + 40 + 340 * k
-        press_k = 0.9 if 0 <= u < 0.1 else 1.0
-        _hand_cursor(pen, hx, hy, 1.25 * press_k, 255 * (1 - clamp((u - 0.6) / 0.3)))
+        bx, by = x - w / 2 * sc + 92, y - 6
+        for j in range(7):
+            ang = -math.pi / 2 + (j - 3) * 0.40
+            r0, r1 = 70 + 26 * k, 96 + 70 * k
+            pen.seg((bx + math.cos(ang) * r0, by + math.sin(ang) * r0), (bx + math.cos(ang) * r1, by + math.sin(ang) * r1),
+                    7, AMBER, 255 * (1 - clamp((u - 0.55) / 0.5)))
+    if hand == 'cursor' and -0.4 <= u <= 0.9:          # hand cursor: slides in from the lower right, taps at u = 0, leaves
+        if u < 0: k = ease_out_cubic(clamp((u + 0.4) / 0.38)); hx, hy = x + 150 + 260 * (1 - k), y + 50 + 300 * (1 - k)
+        else: k = ease_out_cubic(clamp((u - 0.35) / 0.5)); hx, hy = x + 150 + 300 * k, y + 50 + 340 * k
+        press_k = 0.88 if 0 <= u < 0.1 else 1.0
+        _hand_cursor(pen, hx, hy, 1.5 * press_k, 255 * (1 - clamp((u - 0.6) / 0.3)))
 
 
 def _hand_cursor(pen, x, y, s, a):
@@ -336,58 +357,81 @@ def _hand_cursor(pen, x, y, s, a):
 
 
 # ==================================================================================================== end card + comments
-def endcard(cv, u, question, sub='FULL VIDEO ON THE CHANNEL', hits=(), y=0.42 * VH, dur=4.0, title=None):
-    """The long-video pointer. u = seconds since the card started. hits: seconds (relative) where the music hits: the
-    question lines slam in one per hit, 'FULL VIDEO' lands on the last; arrow bounces toward the related-video link."""
+def _yt_logo(pen, x, y, hgt, a=255):
+    w = hgt * 1.42
+    pen.fill(rrect(x - w / 2, y - hgt / 2, w, hgt, hgt * 0.26), YT_RED, a)
+    pen.fill(poly([(x - hgt * 0.17, y - hgt * 0.24), (x - hgt * 0.17, y + hgt * 0.24), (x + hgt * 0.25, y)]), '#ffffff', a)
+
+
+def endcard(cv, u, question, sub='FULL VIDEO ON THE CHANNEL', hits=(), y=0.44 * VH, dur=4.0, title=None, x=SAFE_CX):
+    """The long-video pointer over the moving story image. u = seconds since the card started.
+    From the first frame (0.14 s overshoot pop): the YouTube play logo + FULL VIDEO / ON THE CHANNEL (held to the end).
+    hits (relative seconds): the card punches (+7 %) on every hit; the question lines (split on '\n') slam in one per hit
+    from the second hit on (or all on the first if there is only one), at caption size or larger. A slow push-in (+5 %
+    over the card), a pulsing play logo and a bouncing arrow toward the related-video link under the Short."""
     if u < 0: return
     pen = Pen(cv)
-    a = 255
     qs = question.split('\n')
-    hits = list(hits) or [0.0, 0.35 * dur]
-    k_in = ease_out_back(clamp(u / 0.16), 1.8)
-    w, h = 900.0, 760.0
-    cx = SAFE_CX
-    cv.save(); cv.translate(cx, y); cv.scale(k_in, k_in)
-    box = rrect(-w / 2, -h / 2, w, h, 40)
-    pen.shadow(box, 0, 16, 40, '#000000', 200)
-    pen.fill(box, '#06080d', 228)
-    pen.line(box, 6, RED, 255)
-    pen.line(rrect(-w / 2 + 16, -h / 2 + 16, w - 32, h - 32, 30), 2, '#ff6b6b', 120)
-    # question lines (one per hit)
+    hits = sorted(hits) or [0.0, 0.4]
+    qh = hits[1:] if len(hits) > 1 else hits
+    w = 900.0
+    qsize = []
+    for q in qs:
+        sz = 138.0
+        sz = min(sz, (w - 90) / max(1.0, twidth(q, 1.0)))
+        qsize.append(sz)
+    qh_total = sum(sz * 1.04 for sz in qsize)
+    h = 300 + qh_total + (70 if title else 20)
+    k_in = ease_out_back(clamp(u / 0.14), 2.2)
+    punch = 1.0
+    for ht in hits:
+        d = u - ht
+        if 0 <= d < 0.2: punch = max(punch, 1.0 + 0.07 * math.sin(math.pi * min(1.0, d / 0.2)) * (1 - d / 0.2) * 2)
+    push = 1.0 + 0.05 * clamp(u / max(1.0, dur))
+    sc = k_in * punch * push
+    cv.save(); cv.translate(x, y); cv.scale(sc, sc)
+    box = rrect(-w / 2, -h / 2, w, h, 44)
+    pen.shadow(box, 0, 18, 44, '#000000', 170)
+    pen.fill(box, '#05070c', 150)
+    pen.line(box, 26, RED, 70 + 60 * max(0.0, punch - 1.0) / 0.07, blur=22)
+    pen.line(box, 8, RED, 255)
+    pen.line(rrect(-w / 2 + 18, -h / 2 + 18, w - 36, h - 36, 32), 2.5, '#ff8080', 110)
+    y0 = -h / 2
+    # FULL VIDEO line: there from the first frame
+    pul = 1.0 + 0.05 * math.sin(u * 7.5)
+    fw = twidth('FULL VIDEO', 104)
+    gx = -(fw + 170) / 2
+    cv.save(); cv.translate(gx + 66, y0 + 108); cv.scale(pul, pul)
+    _yt_logo(pen, 0, 0, 104)
+    cv.restore()
+    outlined(cv, 'FULL VIDEO', gx + 150, y0 + 108 + 37, 104, AMBER, 0.12, 'left', 0.45, 255, 900, 0.01)
+    outlined(cv, 'ON THE CHANNEL', 0, y0 + 230, 70, WHITE, 0.12, 'center', 0.45, 255, 900, 0.03)
+    dv = ease_out_cubic(clamp(u / 0.25))
+    pen.fill(rrect(-300 * dv, y0 + 268, 600 * dv, 6, 3), RED, 255)
+    # the open question, one line per hit
+    yy = y0 + 290
     for j, q in enumerate(qs):
-        ht = hits[min(j, len(hits) - 1)]
+        sz = qsize[j]; yy += sz * 1.04
+        ht = qh[min(j, len(qh) - 1)]
         uu = u - ht
         if uu < 0: continue
-        sc = 1.6 - 0.6 * ease_out_cubic(clamp(uu / 0.07))
-        size = 92 if len(q) < 12 else 78
-        kk = min(1.0, (w - 90) / max(1.0, twidth(q, size)))
-        cv.save(); cv.translate(0, -h / 2 + 150 + j * 108); cv.scale(sc * kk, sc * kk)
-        outlined(cv, q, 0, size * 0.36, size, '#ffffff' if j < len(qs) - 1 else RED, 0.12, 'center', 0.4, a)
-        cv.restore()
-    # divider + play button + FULL VIDEO line
-    hl = hits[-1] if len(hits) > len(qs) else hits[-1] + 0.45
-    uu = u - hl
-    if uu >= 0:
-        yy = -h / 2 + 150 + len(qs) * 108 + 10
-        pen.fill(rrect(-260 * clamp(uu / 0.2), yy, 520 * clamp(uu / 0.2), 6, 3), RED, a)
-        py = yy + 120
-        pr = 64 * ease_out_back(clamp(uu / 0.18), 2.5)
-        pen.fill(rrect(-pr * 1.45, py - pr, pr * 2.9, pr * 2, pr * 0.5), YT_RED, a)
-        pen.fill(poly([(-pr * 0.38, py - pr * 0.5), (-pr * 0.38, py + pr * 0.5), (pr * 0.5, py)]), '#ffffff', a)
-        pulse = 1.0 + 0.04 * math.sin(uu * 9.0)
-        cv.save(); cv.translate(0, py + 175); cv.scale(pulse, pulse)
-        for j, l in enumerate(sub.split('\n') if '\n' in sub else _split2(sub)):
-            outlined(cv, l, 0, j * 80, 76, AMBER if j == 0 else WHITE, 0.12, 'center', 0.4, a, 900, 0.02)
+        s2 = 1.65 - 0.65 * ease_out_cubic(clamp(uu / 0.0667))
+        lim = (w - 40) / max(1.0, twidth(q, sz))
+        s2 = min(s2, max(1.0, lim))
+        cv.save(); cv.translate(0, yy - sz * 0.36); cv.scale(s2, s2)
+        outlined(cv, q, 0, sz * 0.36, sz, '#ffffff' if uu < 0.034 else (WHITE if j < len(qs) - 1 else RED), 0.13, 'center', 0.5,
+                 255, 900, 0.01, glow=(RED, 90, 16) if j == len(qs) - 1 else None)
         cv.restore()
     if title:
-        text(cv, title, 0, h / 2 - 34, 800, 24, '#9aa3b8', 220 * clamp(u / 0.4), 0.06, 'center')
+        text(cv, title, 0, h / 2 - 34, 800, 34, '#c9cfdc', 230 * clamp(u / 0.3), 0.04, 'center')
     cv.restore()
     # arrow toward the related-video link under the Short
-    if uu >= 0.2:
-        bob = 18 * math.sin((uu - 0.2) * 8.0)
-        ay = y + h / 2 + 70 + bob
-        pen.fill(poly([(cx - 48, ay), (cx + 48, ay), (cx, ay + 60)]), AMBER, 255)
-        pen.fill(rrect(cx - 18, ay - 60, 36, 62, 6), AMBER, 255)
+    if u >= 0.15:
+        bob = 22 * math.sin((u - 0.15) * 8.0)
+        ay = y + h / 2 * sc + 60 + bob
+        a_ = 255 * clamp((u - 0.15) / 0.1)
+        pen.fill(rrect(x - 22, ay - 10, 44, 64, 8), AMBER, a_)
+        pen.fill(poly([(x - 62, ay + 50), (x + 62, ay + 50), (x, ay + 120)]), AMBER, a_)
 
 
 def _split2(s):
@@ -464,38 +508,67 @@ def notebook(cv, u, rows, x=SAFE_CX, y=0.40 * VH, w=780, title='ANSWER KEY', tic
     cv.restore()
 
 
-def complaint(cv, u, rows, hl=(), x=SAFE_CX, y=0.36 * VH, w=860, title='COMPLAINT  —  UNAUTHORIZED PERSON', blur_row=None,
+def complaint(cv, u, rows, hl=(), x=SAFE_CX, y=0.36 * VH, w=900, title='COMPLAINT  —  UNAUTHORIZED PERSON', blur_row=None,
               reveal=None):
-    """Complaint form: rows [(label, value)], hl = {row: seconds since its highlight}; blur_row = row index whose value is
-    blurred until `reveal` (0..1 letters shown)."""
+    """Complaint form: rows [(label, value)] (label 44 px over value 68 px, readable on a phone), hl = {row: seconds since
+    its highlight}; blur_row = row index whose value is blurred until `reveal` (0..1 letters shown)."""
     pen = Pen(cv)
     k = ease_out_back(clamp(u / 0.18), 1.6)
-    h = 150 + 92 * len(rows)
+    RH = 150
+    h = 120 + RH * len(rows)
     cv.save(); cv.translate(x, y); cv.rotate(1.5); cv.scale(k, k)
-    page = rrect(-w / 2, -h / 2, w, h, 10)
+    page = rrect(-w / 2, -h / 2, w, h, 12)
     pen.shadow(page, 0, 14, 30, '#000000', 190)
     pen.fill(page, '#f1efe9', 255)
     pen.texture(page, 'paper', 0.2, 'multiply', 1.0)
-    pen.fill(rrect(-w / 2, -h / 2, w, 84, 10), '#1c2a4a', 255)
-    text(cv, title, -w / 2 + 34, -h / 2 + 54, 900, 30, '#ffffff', 255, 0.06, 'left')
+    pen.fill(rrect(-w / 2, -h / 2, w, 92, 12), '#1c2a4a', 255)
+    text(cv, title.split('  ')[0], -w / 2 + 36, -h / 2 + 64, 900, 46, '#ffffff', 255, 0.08, 'left')
     for j, (lab, val) in enumerate(rows):
-        yy = -h / 2 + 150 + j * 92
+        yy = -h / 2 + 120 + j * RH
         hu = dict(hl).get(j)
         if hu is not None and hu >= 0:
             kk = ease_out_cubic(clamp(hu / 0.15))
-            pen.fill(rect(-w / 2 + 24, yy - 50, (w - 48) * kk, 72), '#ffd23d', 150)
-        text(cv, lab, -w / 2 + 40, yy, 800, 34, '#5a5f6e', 255, 0.06, 'left')
+            pen.fill(rect(-w / 2 + 20, yy + 6, (w - 40) * kk, RH - 12), '#ffd23d', 160)
+        text(cv, lab.rstrip(':'), -w / 2 + 40, yy + 50, 800, 44, '#5a5f6e', 255, 0.06, 'left')
+        vs = min(68.0, 68.0 * (w - 80) / max(1.0, text_width(val, 900, 68, 0.02)))
         if blur_row == j and reveal is not None and reveal < 1.0:
             n = int(len(val) * clamp(reveal))
             shown, hidden = val[:n], val[n:]
-            wsh = text(cv, shown, -w / 2 + 380, yy, 900, 42, '#c0161c', 255, 0.02, 'left') if shown else 0.0
+            wsh = text(cv, shown, -w / 2 + 40, yy + 126, 900, vs, '#c0161c', 255, 0.02, 'left') if shown else 0.0
             if hidden:
-                xx = -w / 2 + 380 + wsh
-                hw = text_width(hidden, 900, 42, 0.02)
-                pen.fill(rrect(xx, yy - 38, hw + 8, 48, 6), '#1a1a1a', 235)
+                xx = -w / 2 + 40 + wsh
+                hw = text_width(hidden, 900, vs, 0.02)
+                pen.fill(rrect(xx, yy + 126 - vs * 0.8, hw + 8, vs * 0.98, 8), '#1a1a1a', 235)
         else:
-            text(cv, val, -w / 2 + 380, yy, 900, 42, '#c0161c' if blur_row == j else '#16171c', 255, 0.02, 'left')
+            text(cv, val, -w / 2 + 40, yy + 126, 900, vs, '#c0161c' if blur_row == j else '#16171c', 255, 0.02, 'left')
     cv.restore()
+
+
+def callout(cv, u, x, y, r=90, label=None, c=RED, dur=1.2, lx=None, ly=None, size=64, to=None):
+    """Hand-drawn style ring around a detail (draws on over 0.18 s, overshooting its start like a marker stroke) + an
+    optional label with a leader line. to = (x1, y1): the ring follows the detail there over dur (camera push)."""
+    if u < 0 or u > dur: return
+    if to is not None:
+        q = clamp(u / max(1e-3, dur)); dx, dy = (to[0] - x) * q, (to[1] - y) * q
+        x, y = x + dx, y + dy
+        if lx is not None: lx += dx
+        if ly is not None: ly += dy
+    pen = Pen(cv)
+    a = 255 * clamp((dur - u) / 0.12)
+    k = ease_out_cubic(clamp(u / 0.18))
+    sw = 375.0 * k
+    p = skia.Path(); p.addArc(skia.Rect.MakeLTRB(x - r, y - r * 0.86, x + r, y + r * 0.86), -100, min(sw, 359.0))
+    if sw > 359.0:
+        p.addArc(skia.Rect.MakeLTRB(x - r * 1.06, y - r * 0.92, x + r * 1.06, y + r * 0.92), -100, sw - 359.0)
+    pen.line(p, 18, '#000000', a * 0.55)
+    pen.line(p, 11, c, a)
+    if label and u > 0.12:
+        lx = x if lx is None else lx; ly = (y - r - 90) if ly is None else ly
+        kk = ease_out_cubic(clamp((u - 0.12) / 0.12))
+        y0 = y - r * 0.86 if ly < y else y + r * 0.86
+        y1 = ly + 20 if ly < y else ly - size * 0.85
+        pen.seg((x, y0), (x + (lx - x) * kk, y0 + (y1 - y0) * kk), 6, c, a)
+        outlined(cv, label, lx, ly, size, WHITE, 0.14, 'center', 0.5, a * kk)
 
 
 def rule_card(cv, n, text_, u, y=0.40 * VH, type_dur=1.3):
@@ -570,7 +643,8 @@ def rewind_fx(img, k, seed=0, label=True):
 
 def rewind_label(cv, u):
     pen = Pen(cv)
-    a = 255 if (u * 12) % 1 < 0.7 else 150
-    pen.fill(poly([(130, 250), (130, 330), (75, 290)]), '#ffffff', a)
-    pen.fill(poly([(190, 250), (190, 330), (135, 290)]), '#ffffff', a)
-    text(cv, 'REWIND', 215, 318, 900, 84, '#ffffff', a, 0.08, 'left', 0.8)
+    a = 255 if (u * 14) % 1 < 0.7 else 170
+    x0, y0 = VW / 2 - 300, 0.22 * VH
+    pen.fill(poly([(x0 + 70, y0 - 50), (x0 + 70, y0 + 50), (x0, y0)]), '#ffffff', a)
+    pen.fill(poly([(x0 + 140, y0 - 50), (x0 + 140, y0 + 50), (x0 + 70, y0)]), '#ffffff', a)
+    outlined(cv, 'REWIND', x0 + 170, y0 + 38, 108, '#ffffff', 0.10, 'left', 0.6, a, 900, 0.06)

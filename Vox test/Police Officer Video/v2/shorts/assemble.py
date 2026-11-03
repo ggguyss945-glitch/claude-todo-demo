@@ -13,8 +13,9 @@ Outputs (DIR defaults to $S/pov2/shorts/S<n>[_preview]):
     cues_music.json  {duration, track, start_in_track, intensity [[t, 0..1]], events [{t, type, level, len?}], tension_gap}
     picture.mp4      1080x1920 / 60 fps (or 540x960 / 30 fps with --preview), libx264
     short.mp4        picture + the raw voice track
---with-new-lines: if $S/pov2/shorts_vo/<ID>.wav exist (S1-N2, S1-N3, S2-N1, S2-N2, S3-N1, S3-N2) they are inserted as the
-spoken subscribe and end calls (the re-timing makes room for them).
+New recordings: if $S/pov2/shorts_vo/<ID>.wav exist (S1-N2, S1-N3, S2-N1, S2-N2, S3-N1, S3-N2) they are inserted as the
+spoken subscribe and end calls (the re-timing makes room for them). This is automatic as soon as any of a Short's files
+exist (--with-new-lines forces it, --no-new-lines turns it off); the workers inherit the decision.
 Speed: 3 worker processes, each one contiguous slice; the landscape film frame is rendered at H*16/9 x H and cropped.
 """
 import argparse, importlib, json, os, subprocess, sys, time
@@ -34,7 +35,9 @@ ap.add_argument('--preview', action='store_true')
 ap.add_argument('--out', default=None)
 ap.add_argument('--workers', type=int, default=3)
 ap.add_argument('--worker', type=int, default=-1)
-ap.add_argument('--with-new-lines', action='store_true', dest='new_lines')
+ap.add_argument('--with-new-lines', action='store_true', dest='new_lines', help='use $S/pov2/shorts_vo/<ID>.wav (default: '
+                'automatic whenever any of this Short\'s recordings exist)')
+ap.add_argument('--no-new-lines', action='store_true', dest='no_new_lines', help='ignore the new recordings even if they exist')
 ap.add_argument('--stills', default=None)
 ap.add_argument('--sheet', action='store_true', help='contact sheet: one still per shot (mid-shot)')
 ap.add_argument('--no-render', action='store_true', dest='no_render')
@@ -42,6 +45,9 @@ ap.add_argument('--from_', type=float, default=None, dest='t0')
 ap.add_argument('--to', type=float, default=None)
 ap.add_argument('--crf', default=None)
 a = ap.parse_args()
+if not a.new_lines and not a.no_new_lines and a.worker < 0:          # auto: the owner's recordings are used as soon as they exist
+    _sid = 'S%d-' % a.short
+    a.new_lines = os.path.isdir(NEWVO) and any(f.startswith(_sid) and f.endswith('.wav') for f in os.listdir(NEWVO))
 
 if a.preview: W, H, FPS = 540, 960, 30
 else: W, H, FPS = 1080, 1920, 60
@@ -83,7 +89,8 @@ def write_meta(sp, V, E):
     T = E.T
     V.write(T, os.path.join(OUT, 'voice.wav'), dur=E.dur)
     shots = [dict(t0=round(s.t0, 3), t1=round(s.t1, 3), beat=s.beat, src=type(s.src).__name__,
-                  T0=round(getattr(s.src, 'T0', 0) or 0, 3), kind=getattr(s.src, 'kind_', None), punches=[(round(x, 3), y) for x, y in s.punches])
+                  T0=round(getattr(s.src, 'T0', 0) or 0, 3), kind=getattr(s.src, 'kind_', None), punches=[(round(x, 3), y) for x, y in s.punches],
+                  cuts=[list(c) for c in getattr(s, 'cuts', [])])
              for s in E.shots]
     tj = dict(short=SID, title=sp['title'], duration=round(E.dur, 3), fps=FPS, size=[W, H], beats=T['beats'], clips=T['clips'],
               words=E.words, chunks=E.chunks, shots=shots, events=[{k: v for k, v in e.items() if not callable(v)} for e in E.events],

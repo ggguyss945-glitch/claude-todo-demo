@@ -61,6 +61,8 @@ def build(E, sp, R=None):
         if any(abs(s.t0 - h) < 0.06 for h in hit_ts): continue
         hard = s.fx.get('hard_cut', False)
         sfx.append(_e(s.t0 - (0.05 if hard else 0.0), 'whoosh', -6 if hard else -12, 'transient', 'cut', kind_='hard' if hard else 'soft'))
+        for (tc, *_r) in getattr(s, 'cuts', []):
+            sfx.append(_e(tc - 0.03, 'whoosh', -15, 'transient', 'cut', kind_='soft'))
         for (tp, lev) in s.punches:
             key = any(abs(c.get('kt', -9) - tp) < 0.02 for c in E.chunks)
             if key: sfx.append(_e(tp, 'impact_hit', -9, 'transient', 'keyword zoom punch', size=0.55))
@@ -78,14 +80,17 @@ def build(E, sp, R=None):
         elif typ == 'glitch':
             sfx.append(_e(t, 'glitch', -6, 'transient', 'glitch', dur=round(e.get('dur', 0.15) + 0.1, 2), amount=0.8))
         elif typ == 'subscribe':
-            sfx.append(_e(t - 0.45, 'ui_pop', -4, 'transient', 'SUBSCRIBE button pops in'))
+            lead = max(0.12, min(0.5, e.get('lead', 0.5)))
+            sfx.append(_e(t - lead, 'ui_pop', -4, 'transient', 'SUBSCRIBE button pops in'))
+            sfx.append(_e(t - lead, 'whoosh', -10, 'transient', 'SUBSCRIBE button flies in', kind_='soft'))
             sfx.append(_e(t, 'pen_click', 0, 'hit', 'SUBSCRIBE press (click)', n=1))
+            sfx.append(_e(t, 'impact_hit', -8, 'hit', 'SUBSCRIBE press (body)', size=0.6))
             sfx.append(_e(t + 0.06, 'ui_pop', -2, 'transient', 'SUBSCRIBED + bell', kind_='bell'))
             sfx.append(_e(t + 1.55, 'whoosh', -14, 'transient', 'button out', kind_='soft'))
         elif typ == 'endcard':
-            sfx.append(_e(t, 'whoosh', -6, 'transient', 'end card in', kind_='hard'))
-            for h in e.get('hits', []):
-                sfx.append(_e(h, 'impact_hit', -1, 'hit', 'end card line', size=1.2))
+            sfx.append(_e(t - 0.06, 'whoosh', -6, 'transient', 'end card in', kind_='hard'))
+            for k, h in enumerate(e.get('hits', [])[:4]):   # card + FULL VIDEO, then one per question line (the tail
+                sfx.append(_e(h, 'impact_hit', -1 if k == 0 else -3, 'hit', 'end card line', size=1.2 if k == 0 else 1.0))
         elif typ == 'comments':
             sfx.append(_e(t, 'ui_pop', -5, 'transient', 'comments panel'))
             sfx.append(_e(t + 0.3, 'typing', -10, 'transient', 'comment typed', dur=0.5, cps=12))

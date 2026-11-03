@@ -12,6 +12,19 @@ from engine.core import clamp, ease_out_cubic, noise1, Pen, text, rrect, oval
 from engine import hud as H
 
 
+TAG_MIN = 62          # px at 1080 width: tags, bubbles and form rows stay readable on a phone
+TAG_MIN_DUR = 1.0     # s
+
+
+def normalise_events(events):
+    """Readability floor for the small inserts (critic: 42-46 px tags flashed for 0.9 s are unreadable on a phone)."""
+    for e in events:
+        if e['type'] in ('tag', 'bubble'):
+            e['size'] = max(TAG_MIN, e.get('size', 40))
+            e['dur'] = max(TAG_MIN_DUR, e.get('dur', 1.0))
+    return events
+
+
 class Overlay:
     def __init__(self, E):
         self.E = E
@@ -26,7 +39,12 @@ class Overlay:
         for k, c in enumerate(self.chunks):
             first.setdefault(c['clip'], k); last[c['clip']] = k
         self.first, self.last = first, last
-        self.nocap = [(e['t'], e['t'] + e.get('dur', 1.0)) for e in self.ev if e['type'] == 'nocap']
+        self.nocap = [(e['t'], e['t'] + e.get('dur', 1.0)) for e in self.ev if e['type'] in ('nocap', 'endcard')]
+        # a slam that shows the caption's own words hides that caption chunk (no doubled text)
+        from timing import _norm, SMALL
+        self._norm, self._small = _norm, SMALL
+        self.slam_words = [(e['t'] - 0.02, e['t'] + e.get('dur', 1.0), set(_norm(w) for w in e['text'].split()) - SMALL - {''})
+                           for e in self.ev if e['type'] == 'slam' and e.get('text')]
 
     # ---------------------------------------------------------------- HUD
     def hud_state(self, t):
@@ -61,6 +79,8 @@ class Overlay:
             if a <= t < b: return
         for k, c in enumerate(self.chunks):
             if c['t'] <= t < c['t1']:
+                cw = set(self._norm(w) for w in c['text'].split()) - self._small
+                if any(a <= t < b and (cw & ws) for a, b, ws in self.slam_words): return
                 who = self.clip_who[c['clip']]
                 ws = c['text'].split()
                 q = (who != 'N' and self.first.get(c['clip']) == k, who != 'N' and self.last.get(c['clip']) == k)
@@ -82,7 +102,7 @@ class Overlay:
             typ = e['type']
             dur = e.get('dur', 1.0)
             if typ == 'subscribe':
-                if -0.45 <= u <= 1.75: late.append(e)
+                if -0.5 <= u <= 1.8: late.append(e)
                 continue
             if u < 0 or u > dur: continue
             if typ in ('slam', 'stamp', 'tag', 'bubble', 'label', 'loop', 'ghost'): late.append(e); continue
@@ -130,7 +150,10 @@ class Overlay:
                 vfx.bodycam(cv, u, rec=not (off is not None and t >= off))
             elif typ == 'endcard':
                 vfx.endcard(cv, u, e['question'], e.get('sub', 'FULL VIDEO ON THE CHANNEL'), [h - e['t'] for h in e.get('hits', [])],
-                            y=e.get('y', 0.40 * vfx.VH), title=e.get('title'))
+                            y=e.get('y', 0.44 * vfx.VH), dur=dur, title=e.get('title'))
+            elif typ == 'callout':
+                vfx.callout(cv, u, e['x'], e['y'], e.get('r', 90), e.get('label'), e.get('c', vfx.RED), dur, e.get('lx'), e.get('ly'),
+                            e.get('size', 64), e.get('to'))
             elif typ == 'comments':
                 vfx.comments(cv, u, e['prompt'], e['word'], dur=dur, y=e.get('y', 0.30 * vfx.VH))
             elif typ == 'split_labels':
@@ -147,12 +170,15 @@ class Overlay:
                           e.get('rot', -9.0), dur)
             elif typ == 'tag':
                 vfx.tag(cv, u, e['text'], e.get('x', vfx.SAFE_CX), e.get('y', 0.30 * vfx.VH), e.get('style', 'red'), e.get('pin'),
-                        e.get('size', 40), hold=dur - 0.12)
+                        max(TAG_MIN, e.get('size', 40)), hold=dur - 0.12)
             elif typ == 'bubble':
-                H.speech_bubble(cv, e['lines'], e.get('x', vfx.SAFE_CX), e.get('y', 0.30 * vfx.VH), u, size=e.get('size', 44), fade=0.15)
+                H.speech_bubble(cv, e['lines'], e.get('x', vfx.SAFE_CX), e.get('y', 0.30 * vfx.VH), u, size=max(TAG_MIN, e.get('size', 44)),
+                                fade=0.15)
             elif typ == 'label':
                 a = 255 * clamp(u / 0.06) * clamp((dur - u) / 0.1)
-                vfx.outlined(cv, e['text'], e.get('x', vfx.SAFE_CX), e.get('y', 0.3 * vfx.VH), e.get('size', 70), e.get('c', vfx.WHITE),
+                sz = e.get('size', 70)
+                sz = min(sz, sz * 0.88 * vfx.VW / max(1.0, vfx.twidth(e['text'], sz)))     # never wider than the frame
+                vfx.outlined(cv, e['text'], e.get('x', vfx.SAFE_CX), e.get('y', 0.3 * vfx.VH), sz, e.get('c', vfx.WHITE),
                              0.12, e.get('align', 'center'), 0.4, a)
             elif typ == 'ghost':
                 a = 150 * clamp(u / 0.1) * clamp((dur - u) / 0.15)
@@ -161,7 +187,8 @@ class Overlay:
             elif typ == 'loop':
                 vfx.loop_icon(cv, u, y=e.get('y', 0.30 * vfx.VH))
             elif typ == 'subscribe':
-                vfx.subscribe(cv, u, y=e.get('y', 0.74 * vfx.VH))
+                vfx.subscribe(cv, u, y=e.get('y', 0.50 * vfx.VH), x=e.get('x', vfx.SAFE_CX), hand=e.get('hand', 'cursor'),
+                              from_=e.get('from_'), lead=e.get('lead', 0.5))
         self.draw_hud(cv, t, vs)
         self.draw_caption(cv, t)
         for e in self.ev:
@@ -188,6 +215,10 @@ class Post:
         return dx, dy
 
     def apply(self, img, t, i, vs):
+        for e in self.rewinds:                         # the REWIND glitch runs under the overlay: its label stays sharp
+            u = t - e['t']; d = e.get('dur', 0.14)
+            if 0 <= u <= d:
+                img = vfx.rewind_fx(img, 0.6 + 0.4 * math.sin(math.pi * u / d), seed=i * 7 + 1)
         for e in self.glitches:
             u = t - e['t']
             if 0 <= u <= e.get('dur', 0.15):
@@ -199,8 +230,4 @@ class Post:
         return img
 
     def final(self, img, t, i, vs):
-        for e in self.rewinds:
-            u = t - e['t']; d = e.get('dur', 0.14)
-            if 0 <= u <= d:
-                img = vfx.rewind_fx(img, 0.55 + 0.45 * math.sin(math.pi * u / d), seed=i * 7 + 1)
         return img

@@ -123,9 +123,19 @@ class VShot:
         self.punches = sorted(list(punches))           # [(t, level)] absolute zoom multipliers (step with overshoot)
         self.track, self.dy, self.fx, self.name, self.face, self.roll = track, dy, fx or {}, name, face, roll
         self.R = None
+        self.cuts = []                                 # [(t, zoom multiplier, dx, dy)] hard re-frame (jump) cuts
+
+    def cut_at(self, t):
+        """(zoom multiplier, dx, dy) of the hard re-frame cut in force at t (instant: it reads as a cut). A tight re-frame
+        on an already tight shot pulls back instead (no soft over-zoom)."""
+        m, dx, dy = 1.0, 0.0, 0.0
+        for (tc, zm, x, y) in self.cuts:
+            if t >= tc: m, dx, dy = zm, x, y
+        if m > 1.0 and (self.z or 1.0) >= 1.5: m = 1.0 / m
+        return m, dx, dy
 
     def zoom(self, t):
-        base = (self.z or 1.0) * (1.0 + self.push * max(0.0, t - self.t0))
+        base = (self.z or 1.0) * (1.0 + self.push * max(0.0, t - self.t0)) * self.cut_at(t)[0]
         lev, prev, tp = 1.0, 1.0, None
         for (tt, l) in self.punches:
             if t >= tt: prev, lev, tp = lev, l, tt
@@ -269,6 +279,8 @@ class Renderer:
         cx = fcx if cx is None else cx
         cy = fcy if cy is None else cy
         sx, sy = self.post.shake(t) if self.post else (0.0, 0.0)
+        if not isinstance(vs.src, SplitSrc):
+            _m, cdx, cdy = vs.cut_at(t); sx += cdx; sy += cdy
         return self.crop(img, cx + sx, cy + sy + vs.dy, z, out_w, out_h, vs.roll)
 
     # ---------------------------------------------------------------- frame

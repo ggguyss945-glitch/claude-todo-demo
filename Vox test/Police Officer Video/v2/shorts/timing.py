@@ -25,7 +25,8 @@ ALIGN = os.path.join(S, 'pov2', 'align')
 SR = 48000
 HOP = 0.01
 LEAD = 0.10
-PRE, TAIL, FADE = 0.04, 0.06, 0.005
+PRE, TAIL, FADE = 0.04, 0.03, 0.005
+SIL = -40.0                 # dBFS: below this a 10 ms frame is silence (room tone sits at about -46)
 
 _norm = lambda s: re.sub(r"[^a-z0-9]", '', s.lower())
 
@@ -125,32 +126,95 @@ class Voice:
         while f > int(lo / HOP) + 3 and db[min(f, len(db) - 1)] <= thr: f -= 1
         return (f + 1) * HOP
 
+    # ---------------------------------------------------------------- word boundaries (energy, absolute -40 dBFS)
+    def _boundary(self, tA, tB, prefer='late'):
+        """Speech end of the word that starts at tA and onset of the word that starts at tB (ASR starts can be 0.1 s late).
+        Returns (endA, onB, connected): endA = first frame of the first >= 30 ms run below -40 dBFS after tA + 0.08 s that is
+        not followed by more voiced speech (>= 3 frames above -27 dB) before onB; onB = first frame of the loud region
+        that holds tB. With no silence between them (connected speech) both are the deepest 10 ms valley before tB."""
+        db, _ = self.env()
+        F = lambda t: int(round(t / HOP))
+        n = len(db)
+        lo = min(F(tA + 0.08), n - 1); hi = min(F(tB + 0.04), n - 1)
+        if hi <= lo + 2:
+            return tB - 0.02, tB - 0.02, True
+        g = hi
+        if db[g] > SIL:
+            g0 = g
+            while g > lo and db[g - 1] > SIL and g0 - g < 28: g -= 1
+        else:
+            while g < min(F(tB + 0.30), n - 1) and db[g] <= SIL: g += 1
+        onB = g
+        e = None; k = lo
+        while k < onB:
+            if db[k] <= SIL and k + 2 < n and db[k + 1] <= SIL and db[k + 2] <= SIL:
+                rest = db[k:onB]
+                loud = np.convolve((rest > -27).astype(int), np.ones(3, int), 'valid')
+                if not (len(loud) and loud.max() >= 3):
+                    e = k; break
+                j = k + int(np.argmax(loud >= 3)) + 3          # skip past that voiced run and keep looking
+                k = max(k + 1, j); continue
+            k += 1
+        if e is None or onB - e < 3:
+            w0 = max(lo, F(tB - 0.35)); w1 = max(w0 + 1, hi)
+            seg = db[w0:w1]; ok = np.flatnonzero(seg <= seg.min() + 3.0)
+            v = w0 + int(ok[-1] if prefer == 'late' else ok[0])     # tail: keep the decay; head: keep the attack
+            return v * HOP + HOP / 2, v * HOP + HOP / 2, True
+        return e * HOP, onB * HOP, False
+
+    def _neighbours(self, src_i, lw, k0, k1):
+        """ASR start of the word before word k0 and after word k1 (crossing into the neighbouring lines)."""
+        if k0 > 0: tp = lw[k0 - 1][1]
+        elif src_i > 0: tp = self.line_words(src_i - 1)[-1][1]
+        else: tp = None
+        if k1 + 1 < len(lw): tn = lw[k1 + 1][1]
+        elif src_i + 1 < len(self.L): tn = self.line_words(src_i + 1)[0][1]
+        else: tn = None
+        if tp is not None and tp >= lw[k0][1] - 0.05: tp = None
+        if tn is not None and tn <= lw[k1][1] + 0.05: tn = None
+        return tp, tn
+
+    def _zc(self, t, rng=0.003):
+        """Nearest zero crossing of the source to t (within +-3 ms)."""
+        y = self.audio(); i = int(round(t * SR)); r = int(rng * SR)
+        a, b = max(1, i - r), min(len(y) - 1, i + r)
+        seg = y[a - 1:b]
+        z = np.nonzero(np.signbit(seg[:-1]) != np.signbit(seg[1:]))[0]
+        if not len(z): return t
+        j = a - 1 + z[np.argmin(np.abs(a - 1 + z - i))]
+        return j / SR
+
     def clip(self, i, words=None, alias=None, text=None):
+        """Cut on the real word boundaries: the head starts <= 40 ms before the first word's sound but never inside the
+        previous word; the tail keeps the last word's decay down to -40 dBFS + 30 ms and stops >= 20 ms before the next
+        word's sound (connected speech: cut in the deepest valley). Fades: 10 ms in, 20 ms out, on zero crossings."""
         l = self.L[i]
         src_i = alias if alias is not None else i
-        ls = self.L[src_i]
         lw = self.line_words(src_i)
+        k0, k1 = (words if words is not None else (0, len(lw) - 1))
+        sel = lw[k0:k1 + 1]
+        tp, tn = self._neighbours(src_i, lw, k0, k1)
+        if tp is not None:
+            endp, on, conn_a = self._boundary(tp, sel[0][1], 'early')
+            a = on if conn_a else max(on - PRE, endp + 0.015)
+        else:
+            on = self._onset(sel[0][1], sel[0][1] - 0.3); a = on - PRE; conn_a = False
+        if tn is not None:
+            off, onn, conn_b = self._boundary(sel[-1][1], tn)
+            b = off if conn_b else min(off + 0.03, onn - 0.02)
+        else:
+            off = self._offset(sel[-1][1] + 1.2, sel[-1][1] + 0.1); b = off + 0.03; conn_b = False
+        a, b = self._zc(a), self._zc(b)
+        on = max(on, a + 0.005); off = min(max(off, on + 0.1), b)
         if words is not None:
-            k0, k1 = words
-            sel = lw[k0:k1 + 1]
-            nxt = lw[k1 + 1][1] if k1 + 1 < len(lw) else ls['end']
-            on = self._onset(sel[0][1], (lw[k0 - 1][1] + 0.12) if k0 > 0 else ls['t'] - 0.15)
-            off = self._offset(nxt - 0.02 if k1 + 1 < len(lw) else ls['end'] + 0.05, sel[-1][1] + 0.1)
-            if k1 + 1 < len(lw): off = min(off, nxt - 0.03)
             txt = ' '.join(w for w, _ in sel)
         else:
-            sel = lw
-            on = self._onset(lw[0][1], ls['t'] - 0.15)
-            off = self._offset(ls['end'] + 0.05, lw[-1][1] + 0.1)
-            nxt_line = self.L[src_i + 1]['t'] if src_i + 1 < len(self.L) else off + 1
-            off = min(off, nxt_line - 0.02)
             txt = l['en'] if alias is None else (text or l['en'])
         if alias is not None and words is None:
             sel = [(w, sel[min(k, len(sel) - 1)][1]) for k, w in enumerate((text or l['en']).split())]
-        a = on - PRE; b = off + TAIL
-        if words is not None and k1 + 1 < len(lw): b = min(b, lw[k1 + 1][1] - 0.01)
         return Clip(i=i, src=src_i, who=l['who'], fx=l.get('fx'), text=(text or txt), a=a, b=b, on=on, off=off,
-                    words=[(w, t) for w, t in sel], line_text=l['en'], trim=list(words) if words else None)
+                    words=[(w, t) for w, t in sel], line_text=l['en'], trim=list(words) if words else None,
+                    fade_in=0.012 if conn_a else 0.008, fade_out=0.02)
 
     def new_clip(self, path, text, who='N', ident=None):
         """A newly recorded line (shorts_vo/<ID>.wav): energy-trimmed, words spread over the speech by character count."""
@@ -193,9 +257,10 @@ class Voice:
             seg = (self._load_new(c['wav']) if c.get('wav') else y)[a:b].copy()
             if c.get('tempo', 1.0) != 1.0:
                 seg = _tempo(seg, c['tempo'])
-            nf = int(FADE * SR)
-            if len(seg) > 2 * nf:
-                seg[:nf] *= np.linspace(0, 1, nf, dtype=np.float32); seg[-nf:] *= np.linspace(1, 0, nf, dtype=np.float32)
+            fi = int(c.get('fade_in', FADE) * SR); fo = int(c.get('fade_out', FADE) * SR)
+            if len(seg) > fi + fo + 2:
+                seg[:fi] *= (np.sin(np.linspace(0, np.pi / 2, fi)) ** 2).astype(np.float32)
+                seg[-fo:] *= (np.cos(np.linspace(0, np.pi / 2, fo)) ** 2).astype(np.float32)
             d = int(round(c['dst_a'] * SR))
             m = min(len(seg), n - d)
             if m > 0: out[d:d + m] += seg[:m]

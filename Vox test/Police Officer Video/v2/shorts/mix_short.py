@@ -23,7 +23,7 @@ Signal flow
            cut (the riser in the cues ends on it);
            post-gap segment: slipped so the track's loud section lands exactly on the twist; it re-enters with a
            0.1-0.3 s swell under the first word after the gap;
-           REWIND: the last 8 frames play the music reversed at 3x (tape rewind) into the loop.
+           REWIND: the last 10 frames (60 fps) play the music reversed at 3x (tape rewind) into the loop.
          HPF 30 Hz, low shelf -3 dB at 120 Hz, -3 dB at 300 Hz (phone playback, room for the voice) -> slow leveller
          (1 s loudness, 75 % toward the track's own median, -6..+9 dB) + the cue sheet's intensity curve (+-2 dB) ->
          voice-keyed bell cut (1-4.5 kHz, 4 dB) -> sidechain duck (--duck 2 dB, 80 / 250 ms) -> pre-hit dips (6 dB
@@ -199,7 +199,7 @@ def loop_plan(cues, rewind, dur):
     ends = [i for i, c in enumerate(cues) if c['name'] == prim and rw - 1.5 <= c['t'] <= rw + 0.01 and c['t'] > 1.0]
     added = False
     if ends:
-        te = max(cues[i]['t'] for i in ends)
+        te = min(cues[i]['t'] for i in ends)          # the end group's first hit (the copy must finish before the REWIND)
     else:
         te = rw - 0.12; added = True
     shift = te - cues[i0]['t']
@@ -260,7 +260,10 @@ def balance_hits(cues, dur, kt, lo=3, hi=6):
     return cues, notes
 
 
-def render_sfx(cues, N, dur, kt):
+OVER_SPEECH_DB = {'stinger': -8.0, 'impact_hit': -4.0, 'whoosh': -3.0}    # cue gain when it lands while the voice speaks
+
+
+def render_sfx(cues, N, dur, kt, act=None):
     SX.reset()
     buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits')}
     gap = kt['gap']
@@ -276,11 +279,17 @@ def render_sfx(cues, N, dur, kt):
     hit_times, big = [], []
     counts = {'hits': 0, 'events': 0, 'beds': 0}
     bed_levels = []
+    over_speech = []
     t0 = time.time()
 
     def put(c, y, pre, t):
         name = c['name']
-        y = y * np.float32(10 ** (float(c.get('gain_db', 0.0)) / 20))
+        g = float(c.get('gain_db', 0.0))
+        if act is not None and name in OVER_SPEECH_DB and not (kt['twist'] and abs(t - kt['twist']) < 0.15):
+            i0, i1 = int(max(0.0, t) * SR), int(min(dur, t + 0.45) * SR)
+            if i1 > i0 and float(act[i0:i1].mean()) > 0.3:
+                g += OVER_SPEECH_DB[name]; over_speech.append((round(t, 2), name))
+        y = y * np.float32(10 ** (g / 20))
         if c.get('pan'): y = SX.pan(y, float(c['pan']))
         b = 'beds' if c.get('kind') == 'bed' else 'hits' if (c.get('kind') == 'hit' or name in SX.HITS) else 'events'
         i = int(round((t - pre) * SR))
@@ -329,7 +338,8 @@ def render_sfx(cues, N, dur, kt):
             if c2['t'] < dur: put(c2, y, pre, c2['t'])
         loop_info = dict(motif=lp['prim'], at=round(lp['t_end'], 3), cues=len(lp['start']), replaced=len(lp['replace']),
                          added=lp['added'])
-    log('sfx rendered in %.1f s: %s; beds at plan level (LU rel voice): %s' % (time.time() - t0, counts, bed_levels))
+    log('sfx rendered in %.1f s: %s; beds at plan level (LU rel voice): %s; ducked under speech: %d' % (time.time() - t0, counts, bed_levels,
+                                                                                                 len(over_speech)))
     return buses, sorted(hit_times), sorted(big), counts, loop_info
 
 
@@ -613,9 +623,16 @@ def main():
     ap.add_argument('--out', default=None)
     ap.add_argument('--no-mux', action='store_true')
     ap.add_argument('--no-stems', action='store_true')
-    ap.add_argument('--under', type=float, default=10.0, help='music under the voice (dB, speech median)')
+    ap.add_argument('--under', type=float, default=None, help='music under the voice (dB, speech median; default 10, S1 13)')
     ap.add_argument('--duck', type=float, default=2.0, help='sidechain duck of the music under the voice (dB)')
+    ap.add_argument('--music-cut', type=float, default=None, dest='mcut',
+                    help='voice-keyed 1-4.5 kHz cut on the music (dB; default 4, S1 6)')
     A = ap.parse_args()
+    # S1's track (From Hell) is dense in the voice band: 20 % of its speech frames had the music within 3 dB of the voice
+    # at the default settings (S2: 8 %), so it sits 2 dB lower and gets a deeper voice-keyed 2-4 kHz dip
+    PER = {1: dict(under=13.0, mcut=6.0, scoop=-4.0)}.get(A.short, {})
+    if A.under is None: A.under = PER.get('under', 10.0)
+    if A.mcut is None: A.mcut = PER.get('mcut', 4.0)
     T0 = time.time()
     sid = 'S%d' % A.short
     out = A.out or A.ind
@@ -632,13 +649,15 @@ def main():
     # ---- SFX
     cues, hit_notes = balance_hits(cues, dur, kt)
     log('hit balance', hit_notes)
-    buses, hit_times, big, counts, loop_info = render_sfx(cues, N, dur, kt)
+    buses, hit_times, big, counts, loop_info = render_sfx(cues, N, dur, kt, act)
 
     # ---- music
     pm = plan_music(mc, kt, dur, sid)
     log('music', {k: pm[k] for k in ('slug', 'anchor', 'pre_start', 'segs')})
     M = render_track(pm, N, dur, kt)
     M = SX.eq(SX.hp(M, 30, 2), ('ls', 120, -3.0, 0.7), ('peak', 300, -3.0, 1.0))   # phone-first low end, room for the voice
+    if PER.get('scoop'):                                     # S1: a static scoop where From Hell's mids sit on the voice
+        M = SX.eq(M, ('peak', 650, PER['scoop'], 0.7), ('peak', 2600, PER['scoop'] * 0.75, 0.9))
     M, lev = level_track(M, mc, dur, kt['gap'])
     Mh, mh_done = music_hits(mc, cues, kt, N, dur, pm)
     log('music hits', mh_done)
@@ -647,7 +666,7 @@ def main():
     dips = [(h - 0.03, h, -6.0, 0.25, 0.08) for h in bigs if not (kt['gap'] and kt['gap'][0] - 0.3 < h < kt['gap'][1] + 1.2)]
     pre_dip = MX.gain_env(N, dips)
     duck = (10 ** (-A.duck * act / 20)).astype(np.float32)
-    M = MX.dyn_cut(M, act, 4.0) * (duck * pre_dip)[:, None]
+    M = MX.dyn_cut(M, act, A.mcut) * (duck * pre_dip)[:, None]
     # music gain: the track sits --under dB under the voice (speech median of 400 ms loudness)
     Lv = mom(V); Lm = mom(M); n = min(len(Lv), len(Lm))
     spk = Lv[:n] > SX.lufs_int(V) - 10
@@ -659,10 +678,10 @@ def main():
     for h in hit_times:
         i = int(h * SR); spare[max(0, i - int(0.01 * SR)):i + int(0.15 * SR)] = 0.0
     beds = MX.dyn_cut(buses['beds'], act, 4.0) * (duck * pre_dip)[:, None]
-    ev = MX.dyn_cut(buses['events'], act, 2.0) * (10 ** (-1.0 * act / 20)).astype(np.float32)[:, None]
+    ev = MX.dyn_cut(buses['events'], act, 3.0) * (10 ** (-1.0 * act / 20)).astype(np.float32)[:, None]
     hd = (10 ** (-4.0 * act_h * spare / 20)).astype(np.float32)[:, None]
-    hits = phone_body(buses['hits']) * hd * np.float32(10 ** (HIT_LIFT_DB / 20))
-    mh = phone_body(Mh) * hd * np.float32(10 ** (HIT_LIFT_DB / 20))
+    hits = MX.dyn_cut(phone_body(buses['hits']), act, 3.0) * hd * np.float32(10 ** (HIT_LIFT_DB / 20))
+    mh = MX.dyn_cut(phone_body(Mh), act, 3.0) * hd * np.float32(10 ** (HIT_LIFT_DB / 20))
     sfx_bus = SX.eq(SX.hp(beds + ev, 25, 2) + SX.hp(hits, 25, 2), ('ls', 50, -2.0, 0.7))
     mus_bus = M + mh
     bed = sfx_bus + mus_bus

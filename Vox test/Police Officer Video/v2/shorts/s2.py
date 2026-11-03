@@ -4,19 +4,30 @@ Voice changes from the plan (no new recordings):
   B10       line 76 is not in the recording -> the first take of "I live here." (line 64) plays again (it IS the recording)
   + 2.5     line 65 "It's the sentence you said when he first arrived."
   + 8.5     line 72 "The officer presses a button on his radio."
-  B13 subscribe (on screen only) rides line 54 "...don't give him a second recording." (hand over your mouth, the live
-            waveform flattens as the button is pressed)
+  B13 subscribe (on screen only) rides line 54 "...don't give him a second recording.": the officer's thumb keys his
+            shoulder radio to record you (the press), then your hand goes over your mouth and the live waveform flattens
   + 17.5    line 99 "Then she says it again."
   + 20.5    line 104 "Try calling her yourself."
   B22 end   line 106 "Try again, and it will still be busy." under the card WHERE IS YOUR MOTHER? / FULL VIDEO ON THE CHANNEL
-  B23       tail: radio insert, comments panel, the radio click (frame 1's sound), REWIND
+  B22-B23   the card from its first frame to the REWIND; tail 0.75 s: the radio click (frame 1's sound), REWIND 10 frames
+Frame 1 is the officer's grin at your door with the radio held up to the lens (a face, not the grille).
 HUD: PLAYBACK #1 -> #5 with a live waveform strip, clock 12:38 AM.
 """
-from film import P, DA, _A, ex, stare, smile, grin, tilt, lean, creep, hand_mouth, tremble, radio
+from film import P, DA, _A, ex, stare, smile, grin, tilt, lean, creep, hand_mouth, tremble, radio, hold_prop
 import vfx
 from vfx import RED, AMBER, BLUE, PINK, GREEN, WHITE, VH
 
-OFF, DBL, YOU = 'officer', 'double', 'you'
+OFF, DBL, YOU, MUM = 'officer', 'double', 'you', 'mum'
+RW = 10 / 60.0                       # REWIND: 10 frames at 60 fps back to frame 1
+T1 = 20.0                            # long time of the frame-1 door shot (no line runs there with talk=False)
+SUB_XY = (497, 1415)                 # SUBSCRIBE button centre (under the caption: his face fills the frame)
+MIC_XY = (980, 1150)                 # the shoulder mic his thumb keys (the button flies out of it)
+
+
+def door_radio(T, py=-80, z1=1.2):
+    """The officer at your door, grinning into the lens, holding his shoulder radio up to it (a face + the radio)."""
+    return dict(ppl=[P(OFF, at=DA(0.0, 0.8), act=_A(stare(-1), grin(-0.6), hold_prop('radio', -1.5, 1), lean(-1.0, 3.0, 0.8),
+                                                     creep(5, 4, None)), lean=True)], py=py, z1=z1)
 
 
 def voice(E):
@@ -32,7 +43,7 @@ def voice(E):
     if E.has_nl('S2-N1'): E.voice(13, [E.nl('S2-N1')], kw=['SUBSCRIBES', 'VOICE'])
     if E.has_nl('S2-N2'): E.voice(22, [E.nl('S2-N2')], kw=['MOTHER', 'FULL VIDEO'])
     E.B(19)['kw'] = ['CLICK']
-    E.tail(23, 1.3)
+    E.tail(23, 0.75)
     E.tension_after = 18
     E.tension = 1.2
     E.gap(1, 0.22); E.gap(9, 0.18); E.gap(10, 0.22); E.gap(20, 0.22)
@@ -41,7 +52,7 @@ def voice(E):
 def stage(E):
     hud0 = dict(title='PLAYBACK', accent=BLUE, wave=True, wave_c='#5AB0FF', clock='12:38 AM')
     # ------------------------------------------------------------------ B1 your voice on the shoulder radio
-    E.shot(1, 0.0, E.film(176.0), z=1.25, push=0.05, name='radio ECU')
+    E.shot(1, 0.0, E.custom('door', p=door_radio(T1), T=T1, talk=False), z=1.45, push=0.06, name='officer grins, radio up to the lens')
     E.hud(1, 0.0, value='#1', **hud0)
     E.sfx(1, 0.0, 'police_radio_squelch', -2, space='close', kind='hit', kind_='key')
     E.sfx(1, 0.02, 'radio_click', 0, space='close')
@@ -66,7 +77,7 @@ def stage(E):
     E.sfx(4, 0.1, 'radio_static', -16, space='outside', dur=1.5, amount=0.4)
     # ------------------------------------------------------------------ B5 the pause is too long
     b5 = E.beat(5)
-    E.shot(5, 0.0, E.film(188.5), name='radio insert bg')
+    E.shot(5, 0.0, E.film(186.3), name='peephole officer bg')
     E.ev('wave', 5, 0.0, title='PLAY 2  —  ANALYSIS', rows=[dict(label='I ... LIVE HERE', color='red', seed=9, live=False,
                                                                      marker=(0.22, 0.52, 'PAUSE TOO LONG'))],
          play=(b5['t0'], b5['t1']), dur=b5['t1'] - b5['t0'], y=0.22 * VH, h=330)
@@ -112,21 +123,29 @@ def stage(E):
     # ------------------------------------------------------------------ B12 now your name
     E.shot(12, 0.0, E.sync(12), name='officer: now your name')
     E.ev('slam', 12, ('w', 'now'), text='NOW YOUR\nNAME.', c=RED, y=0.34 * VH, size=160, dur=1.0, big=True, shake=True)
-    # ------------------------------------------------------------------ B13 hand over your mouth = SUBSCRIBE press
+    # ------------------------------------------------------------------ B13 his thumb keys the radio (records) = SUBSCRIBE press
     b13 = E.beat(13)
-    T13 = E.long(13, b13['t0'])
-    E.shot(13, 0.0, E.custom('bust', T=T13, talk=False, p=dict(who=YOU, bg='hall', cx=960, cy=560, scale=1.05,
-                                                               act=_A(ex('fear'), hand_mouth(0.15, 3.0), tremble(0.8)),
-                                                               cam=dict(mv='push', x=960, y=560, z=1.0, rate=0.04))),
-           name='hand over mouth')
-    press = E.t(13, 0.55)
-    E.ev('subscribe', None, press)
+    press = E.t(13, 0.45)
+    Tb = 40.0                                           # a quiet stretch of long time for the new officer bust
+    E.shot(13, 0.0, E.custom('bust', T=Tb, talk=False, p=dict(who=OFF, bg='porch', cx=960, cy=560, scale=1.05,
+                                                             act=_A(stare(-1), smile(0.0, 1.6, 0.7), radio(0.07, 1.1, 1)),
+                                                             cam=dict(mv='push', x=960, y=560, z=1.0, rate=0.05))),
+           name='officer keys the radio (records)', fx=dict(no_cuts=True))
+    E.ev('subscribe', None, press, y=SUB_XY[1], x=SUB_XY[0], hand=None, from_=MIC_XY, lead=0.45)
     E.flags['subscribe_t'] = round(press, 3)
+    E.ev('tag', None, press + 0.05, text='RECORDING', x=vfx.SAFE_CX + 250, y=0.21 * VH, style='red', dur=1.1, size=62)
+    T13 = E.long(13, press + 0.6)
+    E.shot(None, press + 0.6, E.custom('bust', T=T13, talk=False, p=dict(who=YOU, bg='hall', cx=960, cy=560, scale=1.05,
+                                                                          act=_A(ex('fear'), hand_mouth(-0.2, 3.0), tremble(0.8)),
+                                                                          cam=dict(mv='push', x=960, y=560, z=1.0, rate=0.04))),
+           name='hand over mouth')
+    E.shots[-1].beat = 13
     E.hud(None, press - 0.3, wave_amp=0.4, pop=False)
-    E.hud(None, press, wave_amp=0.0, pop=False)
-    E.sfx(13, 0.15, 'breath', -6, space='close', kind_='held', dur=1.6)
+    E.hud(None, press + 0.6, wave_amp=0.0, pop=False)
+    E.sfx(None, press + 0.6, 'breath', -6, space='close', kind_='held', dur=1.4)
     # ------------------------------------------------------------------ B14-B15 your mother on the radio
-    E.shot(14, 0.0, E.film(222.6), z=1.2, name='radio: mum')
+    E.shot(14, 0.0, E.custom('door', p=door_radio(30.0, py=-100, z1=1.25), T=30.0, talk=False), z=1.4, push=0.06,
+           name='officer holds the radio to your door: mum')
     E.hud(14, 0.0, value='#4', wave_amp=1.0, wave_c='#FF8FC2', accent=PINK)
     E.ev('tag', 14, ('w', 'mother'), text='MUM', x=vfx.SAFE_CX, y=0.27 * VH, style='white', dur=1.0, size=50)
     E.sfx(14, 0.0, 'radio_static', -12, space='outside', dur=0.8, amount=0.5)
@@ -145,18 +164,42 @@ def stage(E):
     E.ev('label', 17, ('w', 'nickname'), text='██████', x=vfx.SAFE_CX, y=0.30 * VH, size=110, c='#000000',
          dur=0.9)
     E.sfx(17, ('w', 'nickname'), 'bodycam_beep', -10, space='close', n=1)
-    E.shot(17.5, 0.0, E.film(223.4), z=1.3, name='radio again')
+    b175 = E.beat(17.5)
+    Tm = E.long(17.5, b175['t0'])
+    E.shot(17.5, 0.0, E.custom('bust', T=Tm, talk=False, p=dict(who=MUM, bg='mumroom', cx=960, cy=580, scale=1.1,
+                                                                  act=_A(ex('sad'), smile(0.1, 1.2, 0.35)),
+                                                                  cam=dict(mv='push', x=960, y=580, z=1.0, rate=0.05))),
+           z=1.05, name="mum's face (her voice again)")
+    E.ev('tag', 17.5, 0.15, text='MUM  ·  TAKE 2', x=vfx.SAFE_CX, y=0.24 * VH, style='white', dur=1.1, size=62)
     # ------------------------------------------------------------------ B18 the cough in exactly the same place + gap
     b18 = E.beat(18)
-    E.shot(18, 0.0, E.film(256.3), name='radio bg')
-    E.ev('panel_dim', 18, 0.0, k=0.3, dur=b18['t1'] - b18['t0'])
-    E.ev('wave', 18, 0.0, title='MUM  —  TAKE 1 / TAKE 2', rows=[dict(label='TAKE 1', color='#FF8FC2', seed=21, live=False,
-                                                                           marker=(0.62, 0.7, 'COUGH')),
-                                                                      dict(label='TAKE 2', color='#FF8FC2', seed=21, live=False,
-                                                                           marker=(0.62, 0.7, 'COUGH'))],
-         play=(b18['t0'], b18['off']), dur=b18['t1'] - b18['t0'], y=0.20 * VH, h=470, line=E.w(18, 'same'), line_x=0.66)
-    E.ev('stamp', 18, ('w', 'same'), text='IDENTICAL', c=RED, y=0.50 * VH, size=100, dur=b18['t1'] - E.w(18, 'same'))
-    E.ev('flash', 18, ('w', 'same'), c='#ff1010', k=0.4, dur=0.07)
+    tco, tex, tsa = E.w(18, 'cough'), E.w(18, 'exactly'), E.w(18, 'same')
+    E.shot(18, 0.0, E.film(223.4), z=1.3, name='radio: take 2 plays')
+    E.ev('wave', 18, 0.0, title='MUM  —  TAKE 1', rows=[dict(label='TAKE 1', color='#FF8FC2', seed=21, live=False, marker=(0.62, 0.7, 'COUGH'))],
+         play=(b18['t0'], tco), dur=tco - 0.05 - b18['t0'], y=0.20 * VH, h=330)
+    Tc = E.long(18, tco - 0.05)
+    E.shot(None, tco - 0.05, E.custom('bust', T=Tc, talk=False, p=dict(who=MUM, bg='mumroom', cx=960, cy=580, scale=1.25, ecu=True,
+                                                                         act=_A(ex('sad'), tremble(0.4)),
+                                                                         cam=dict(mv='push', x=960, y=600, z=1.0, rate=0.06))),
+           z=1.1, name='mum ECU: the cough')
+    E.shots[-1].beat = 18
+    E.ev('tag', None, tco + 0.05, text='*COUGH*', x=vfx.SAFE_CX, y=0.27 * VH, style='red', dur=1.0, size=66)
+    E.shot(None, tex - 0.05, E.film(256.3), name='radio bg: take 1 / take 2')
+    E.shots[-1].beat = 18
+    E.ev('panel_dim', None, tex - 0.05, k=0.3, dur=b18['off'] + 0.1 - tex)
+    E.ev('wave', None, tex - 0.05, title='MUM  —  TAKE 1 / TAKE 2', rows=[dict(label='TAKE 1', color='#FF8FC2', seed=21, live=False,
+                                                                                   marker=(0.62, 0.7, 'COUGH')),
+                                                                              dict(label='TAKE 2', color='#FF8FC2', seed=21, live=False,
+                                                                                   marker=(0.62, 0.7, 'COUGH'))],
+         play=(tex - 0.05, b18['off']), dur=b18['off'] + 0.1 - tex, y=0.20 * VH, h=470, line=tsa, line_x=0.66)
+    E.ev('stamp', None, tsa, text='IDENTICAL', c=RED, y=0.50 * VH, size=100, dur=b18['off'] + 0.1 - tsa)
+    E.ev('flash', None, tsa, c='#ff1010', k=0.4, dur=0.07)
+    Ty = E.long(18, b18['off'] + 0.1)
+    E.shot(None, b18['off'] + 0.1, E.custom('bust', T=Ty, talk=False, p=dict(who=YOU, bg='hall', cx=960, cy=600, scale=1.35, ecu=True,
+                                                                               act=_A(ex('fear'), tremble(1.0)),
+                                                                               cam=dict(mv='push', x=960, y=600, z=1.0, rate=0.08))),
+           z=1.05, name='your face in the silence')
+    E.shots[-1].beat = 18
     E.sfx(None, b18['off'] + 0.05, 'radio_static', -14, kind='bed', space='outside', dur=round(b18['t1'] - b18['off'], 2), amount=0.35)
     E.sfx(None, b18['off'] + 0.05, 'riser', -8, dur=round(b18['t1'] - b18['off'], 2))
     # ------------------------------------------------------------------ B19 the click: IT'S A RECORDING (twist)
@@ -180,25 +223,22 @@ def stage(E):
     E.ev('phone', 20.5, 0.0, states=[(b205['t0'], 'calling'), (E.w(21, 'will'), 'busy')], name='MUM',
          dur=b21['t1'] - b205['t0'], y=0.40 * VH)
     E.hud(20.5, 0.0, hide=True, pop=False)
-    # ------------------------------------------------------------------ B22 end card: WHERE IS YOUR MOTHER?
-    b22 = E.beat(22)
+    # ------------------------------------------------------------------ B22-B23 end card: WHERE IS YOUR MOTHER? (to the REWIND)
+    b22, b23 = E.beat(22), E.beat(23)
+    rw = E.dur - RW
     T22 = 576.0
     E.shot(22, 0.0, E.custom('mumext', T=T22, talk=False, p=dict(police=dict(mode='strobe'), window=1.0, ppl=None,
                                                                cam=dict(mv='push', x=1000, y=600, z=1.15, rate=0.04))),
-           name="her house at night")
-    E.ev('panel_dim', 22, 0.0, k=0.3, dur=b22['t1'] - b22['t0'] + 0.1)
-    hits = [b22['t0'] + 0.02, E.wf(22, 'and', 'find', frac=0.35) + 0.05, E.wf(22, 'busy', 'full', frac=0.65)]
-    E.ev('endcard', 22, 0.0, question='WHERE IS\nYOUR MOTHER?', hits=hits, dur=b22['t1'] - b22['t0'] + 0.02, y=0.39 * VH,
+           name="her house at night", fx=dict(no_cuts=True))
+    E.ev('panel_dim', 22, 0.0, k=0.3, dur=rw - b22['t0'])
+    tk = b23['t0'] + 0.1
+    hits = [b22['t0'] + 0.02, b22['t0'] + 0.5, b22['t0'] + 0.95, tk]
+    E.ev('endcard', 22, 0.0, question='WHERE IS\nYOUR MOTHER?', hits=hits, dur=rw - b22['t0'], y=0.47 * VH,
          title='IF A POLICE OFFICER KNOCKS AT MIDNIGHT...')
     E.flags['end_t'] = round(b22['t0'], 3)
-    E.sfx(22, 0.0, 'phone_busy', -10, space='phone', dur=round(b22['t1'] - b22['t0'], 2))
-    # ------------------------------------------------------------------ B23 tail: radio, comments, the click, REWIND
-    b23 = E.beat(23)
-    E.shot(23, 0.0, E.film(176.3), z=1.25, name='radio tail', fx=dict(no_fill=True, no_punch=True))
-    E.ev('panel_dim', 23, 0.0, k=0.55, dur=b23['t1'] - b23['t0'])
-    E.ev('comments', 23, 0.0, prompt='COMMENT "MUM"\nIF YOU\'D HANG UP', word='MUM', dur=b23['t1'] - b23['t0'] - 0.14, y=0.30 * VH)
-    rw = E.dur - 8 / 60.0
-    E.sfx(None, rw - 0.12, 'radio_click', 0, space='close', kind='hit')
-    E.shot(None, rw, E.film(176.0 - 8 / 60.0), z=1.25, push=0.05, name='rewind -> frame 1',
+    E.sfx(22, 0.0, 'phone_busy', -10, space='phone', dur=round(rw - b22['t0'], 2))
+    E.sfx(None, tk, 'radio_click', 0, space='close', kind='hit')
+    E.sfx(None, tk, 'impact_hit', -3, kind='hit', size=1.0)
+    E.shot(None, rw, E.custom('door', p=door_radio(T1), T=T1 - RW, talk=False), z=1.45, push=0.06, name='rewind -> frame 1',
            fx=dict(no_fill=True, no_punch=True, rewind=True))
-    E.ev('rewind', None, rw, dur=8 / 60.0)
+    E.ev('rewind', None, rw, dur=RW)
