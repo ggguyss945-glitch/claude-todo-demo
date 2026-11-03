@@ -98,7 +98,7 @@ Shot errors do not crash a render silently: the frame shows a magenta SHOT ERROR
 
 ## 3. Actors: `ctx.actor(id, o)`
 
-Cast ids: `sam lily mom dad pickles briggs kevin`. Every option may be a constant, a function of local `t`, or
+Cast ids: `sam lily mom dad pickles briggs kevin tiny`. Every option may be a constant, a function of local `t`, or
 keyframes `[[t, value, ease?], ...]` (eased segments, see `track()`), unless noted.
 
 | option | meaning |
@@ -117,6 +117,9 @@ keyframes `[[t, value, ease?], ...]` (eased segments, see `track()`), unless not
 | `lurch` | `[[t, k = 1.25], ...]` grow toward the lens in 2 frames, settle over 8 (shouted words) |
 | `ground` | floor y: draws a detached contact shadow that shrinks as the actor jumps |
 | `add`, `props` | toon add-ons `{sweat, tears, q, zzz, ...}` / props `{L: 'phone', R: null}`, constant or step keys |
+| `mannequin`, `tint`, `light`, `lod` | passed to `toon()` as top-level keys (cast.js): constant, function of `t` or track keys; numbers and `{color, k, from}` objects blend between keys (for a hard flicker use a function or doubled keys). Same output as putting them in `add:{}` |
+| `outfit`, `variant`, `legs` | passed to `toon()`: constant, function or step keys (hold until the next key), e.g. `outfit: 'pyjamas'`, `variant: 'default'`, `legs: false` |
+| `tailWag`, `tailHz` | Tiny only: idle tail wag added to `pose.wag` (amplitude, default 0.5 of a full -1..1 wag, scaled by `idle`; 0 = off) at `tailHz` (2.2 Hz, global time) |
 | `opacity`, `seed`, `shadow` | |
 
 `toon()` costs about 1 ms per character (pickles 0.3 ms), a set 1.5-4.5 ms to build (memoise it). A full frame
@@ -139,7 +142,7 @@ Screen centre shows world point `(960 + x, 540 + y)` at zoom `z`, roll `r` degre
 
 | method | |
 |---|---|
-| `cam.set(set, {insert, only, skip, bake, live})` | draw a sets.js set `{layers}` with per-depth parallax (sky .08, far .3, mid .75, light .75, near 1); `insert: [{after: 'mid', svg, depth = 1, screen?}]` puts actors between layers (`after: 'top'` or none = above all). Applies blur / ghosts |
+| `cam.set(set, {insert, only, skip, bake, live})` (with `bake`, layers named in `live`, default `LIVE_LAYERS` = `['light', 'phone', 'grade']`, stay vector) | draw a sets.js set `{layers}` with per-depth parallax (sky .08, far .3, mid .75, light .75, near 1); `insert: [{after: 'mid', svg, depth = 1, screen?}]` puts actors between layers (`after: 'top'` or none = above all). Applies blur / ghosts |
 | `cam.layer(svg, depth = 1)` | one world layer at a depth (no blur) |
 | `cam.render([{svg, depth, screen?}])` | compose your own layer list with the automatic blur / ghosts |
 | `cam.screen(svg, {shake})` | screen-locked layer above the world (UI, stickers); shakes only if asked |

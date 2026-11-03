@@ -25,7 +25,7 @@
 //   cam.render(layers)               the same with the automatic blur / ghosting (cam.set uses it)
 //   cam.set(set, {insert, only, skip, bake, live})  draw a sets.js set {layers}; insert: [{after: 'mid', svg, depth = 1}]
 //                                    puts actors between layers; bake: 'kitchen' bakes every static layer (except `live`
-//                                    names, default ['light', 'grade']: screen-blended layers must stay vector) to a bitmap of what this shot sees, at the shot's max zoom (render.js bake=1)
+//                                    names, default LIVE_LAYERS = ['light', 'phone', 'grade']: blend layers must stay vector) to a bitmap of what this shot sees, at the shot's max zoom (render.js bake=1)
 //   cam.screen(svg, {shake: true})   screen-locked layer (UI, stickers); shakes with the camera only if asked
 //   cam.toScreen([x, y], depth = 1)  world -> screen point;  cam.toWorld([sx, sy], depth = 1) the inverse
 //   cam.state                        {x, y, z, r, k, sx, sy, sr, vx, vy, speed (screen px/frame at depth 1), cornerSpeed,
@@ -35,6 +35,9 @@
 import { FPS, clamp, lerp, track, isKeys, ease, noise1d, shake as shakeFn, hash } from './motion.js';
 
 export const W = 1920, H = 1080, CX = W / 2, CY = H / 2;
+/** set layers that are never baked by cam.set(set, {bake}) unless {live} is given: screen/blend layers (street night
+ *  'light', bedroom 'phone' glow, hallway 'light') and grades must stay vector */
+export const LIVE_LAYERS = ['light', 'phone', 'grade'];
 const r6 = (n) => Math.round(n * 1e6) / 1e6, r3 = (n) => Math.round(n * 1000) / 1000;
 
 // ---------- 2D affine matrices [a, b, c, d, e, f] (x' = a x + c y + e, y' = b x + d y + f) ----------
@@ -153,7 +156,7 @@ export function camera(t, o = {}) {
         if (so.only && !so.only.includes(l.name) && l.name !== 'defs') continue;
         if (so.skip && so.skip.includes(l.name)) continue;
         if (l.name === 'defs') out.push({ svg: l.svg, depth: 0, screen: true, shake: false });
-        else out.push({ svg: so.bake && !(so.live || ['light', 'grade']).includes(l.name) ? cam.bakeLayer(so.bake, l, defsL) : l.svg, depth: l.depth });
+        else out.push({ svg: so.bake && !(so.live || LIVE_LAYERS).includes(l.name) ? cam.bakeLayer(so.bake, l, defsL) : l.svg, depth: l.depth });
         for (const i of ins) if (i.after === l.name) out.push({ svg: i.svg, depth: i.depth ?? 1, screen: i.screen });
       }
       for (const i of ins) if (!i.after || i.after === 'top') out.push({ svg: i.svg, depth: i.depth ?? 1, screen: i.screen });

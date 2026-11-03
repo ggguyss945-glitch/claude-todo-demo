@@ -21,6 +21,10 @@
 //   lurch            [[t, k = 1.25], ...]: grow toward the lens in 2 frames, settle over 8 (shouted words)
 //   overlap          true: forearms/hands lag the pose by 2 frames, hair/ponytail/pigtails/tail follow on springs
 //   ground           world y of the floor: draws a detached contact shadow that shrinks as the actor jumps
+//   mannequin, tint, light, lod     passed to toon() (cast.js): constant | function | track keys (numbers and
+//                    {color, k, from} objects blend between keys; a hard flicker = a function or doubled keys)
+//   outfit, variant, legs           passed to toon(): constant | function | step keys (hold until the next key)
+//   tailWag, tailHz  Tiny's idle wag amplitude (default 0.5, added to pose.wag; 0 = off) and rate (2.2 Hz)
 //   opacity, seed, shadow
 import { toon, toonHeadY } from '../cast.js';
 import { yawOf } from '../rig.js';
@@ -171,6 +175,8 @@ export function actorState(id, o = {}, t = 0, ctx = {}) {
     if (pose.pony !== undefined || id === 'mom') pose.pony = (pose.pony || 0) + g * (lat * 1.2 + drift);
     if (id === 'lily') { pose.pigL = (pose.pigL || 0) + g * (vert + lat + drift); pose.pigR = (pose.pigR || 0) + g * (vert - lat - drift); }
     if (id === 'pickles') pose.tail = (pose.tail || 0) + g * (lat * 0.8) + idle * 7 * Math.sin(2 * Math.PI * 0.35 * gt + ph(5));
+    // Tiny: a happy idle wag on top of any pose.wag (o.tailWag = amplitude, default 0.5 of a full -1..1 wag; 0 = off)
+    if (id === 'tiny') pose.wag = (pose.wag || 0) + idle * val(o.tailWag ?? 0.5, t) * Math.sin(2 * Math.PI * (o.tailHz ?? 2.2) * gt + ph(5));
   }
   // body squash: expression accent, squash pulses, lurch, breathing
   let sx = 1 - breathe * 0.5, sy = 1 + breathe;
@@ -182,11 +188,20 @@ export function actorState(id, o = {}, t = 0, ctx = {}) {
   if (o.squash) { const q = squashes(t, (typeof o.squash === 'function' ? o.squash(t) : o.squash) || [], o.squashOpts); sx *= q.sx; sy *= q.sy; }
   let k = 1;
   if (o.lurch) k = lurchK(t, o.lurch, fps);
+  // look options passed to toon() as top-level keys (cast.js also reads them from add:{}); only keys the shot set
+  const look2 = {};
+  for (const kk of TOON_TRACKED) if (o[kk] !== undefined) { const v = val(o[kk], t); if (v !== undefined) look2[kk] = v; }
+  for (const kk of TOON_STEPPED) if (o[kk] !== undefined) { const v = stepOrVal(o[kk], t); if (v !== undefined) look2[kk] = v; }
   return {
     id, x, y, s, k, sx: sx * k, sy: sy * k, facing: facingOf(val(o.facing ?? 'front', t)), pose, face: e, look,
     add: stepOrVal(o.add, t), props: stepOrVal(o.props, t), talking, blink: bl, headY: y + toonHeadY(id) * s * sy * k,
+    toonOpts: look2,
   };
 }
+// toon() look options: tracked = constant | function of t | track keys (numbers / {color, k} objects blend between
+// keys; for a hard flicker use a function or doubled keys); stepped = constant | function | step keys (hold until the key)
+const TOON_TRACKED = ['mannequin', 'tint', 'light', 'lod'];
+const TOON_STEPPED = ['outfit', 'variant', 'legs'];
 
 /** pose keys for an anticipated pose change: wind up opposite to the move (amt = 0.15 of it, over `wind` = 4 frames)
  *  ending at t, then snap to `to` over `dur` = 6 frames (outBack) and hold. `from` is the pose before (numbers only
@@ -208,7 +223,7 @@ export function actor(id, o = {}, t = 0, ctx = {}) {
   const ground = o.ground !== undefined ? val(o.ground, t) : null;
   const body = toon(id, {
     x: st.x, y: st.y, s: st.s, facing: st.facing, pose: st.pose, face: st.face, look: st.look || undefined,
-    add: st.add || undefined, props: st.props || undefined, shadow: ground !== null ? false : o.shadow,
+    add: st.add || undefined, props: st.props || undefined, shadow: ground !== null ? false : o.shadow, ...st.toonOpts,
   });
   let out = body;
   if (Math.abs(st.sx - 1) > 1e-4 || Math.abs(st.sy - 1) > 1e-4) {
