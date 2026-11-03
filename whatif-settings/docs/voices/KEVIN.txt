@@ -1,2 +1,3 @@
-S02-L007	(angry) MY LAWN!
-S03-L013	(confident) So this is a premium fertilizer blend—
+S02-L013	(angry) MY LAWN!
+S03-L023	(confident) So this is a premium fertilizer blend—
+S06-L006	(confident) Why do you think I wear sunglasses?

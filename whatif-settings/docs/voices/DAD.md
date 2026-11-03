@@ -1,23 +1,26 @@
-# Dad — every line (13 lines, 74 words)
+# Dad — every line (16 lines, 86 words)
 
-Name each file `<ID>_DAD.wav` (for example `S00-L022_DAD.wav`). A retake gets `_t2`.
+Name each file `<ID>_DAD.wav` (for example `S00-L021_DAD.wav`). A retake gets `_t2`.
 Or export one file per scene with about 1 second of silence between lines, named `<scene>_DAD.wav` (for example `S01_DAD.wav`); we split it.
 
 | ID | Delivery | Line |
 |---|---|---|
-| S00-L022 | shouting | Who turned on the SUN?! |
-| S01-L018 | warm | Morning, champ! |
-| S01-L020 | nervous | Pfft. No. ...Steve! |
-| S01-L025 | panic falsetto | WHY AM I SWIMMING?! |
-| S02-L022 | exhausted | Tell your mother... I loved her. |
-| S03-L010 | storytelling | Did I ever tell you about the summer of nineteen ninety— |
-| S03-L012 | storytelling | —and that is why I can never go back to the water park. |
+| S00-L021 | shouting | Who turned on the SUN?! |
+| S01-L017 | warm | Morning, champ! |
+| S01-L019 | nervous | Pfft. No. ...Steve! |
+| S01-L024 | panic falsetto | BLESS MEEEEE! |
+| S02-L007 | exhausted | Tell your mother... I loved her. |
+| S03-L020 | storytelling | Did I ever tell you about the summer of nineteen ninety— |
+| S03-L022 | storytelling | —and that is why I can never go back to the water park. |
 | S04-L007 | proud | And I stand by it. |
-| S05-L012 | deadpan | I don't want to talk about it. |
-| S06-L016 | casual | I always press later. |
-| S07-L024 | delighted | Oh! So a bicycle walks into a— |
-| S07-L026 | quick | —it was two tired! |
-| S07-L037 | warm quiet | Good job, kiddo. |
+| S04-L010 | pirate | Arr. Duck bread. |
+| S04-L012 | robot | DUCK. BREAD. |
+| S05-L015 | deadpan | Duck. Bread. I stand by it. |
+| S06-L020 | casual | I always press later. |
+| S07-L010 | flat default | Hi. Do I... know you? |
+| S07-L029 | delighted | Why did the bike fall over? Well. Summer of nineteen ninety— |
+| S07-L031 | quick | —because it was TWO TIRED! |
+| S07-L043 | warm quiet | Good job, kiddo. |
 
 ## Paste-ready, one block per scene (emotion tag in brackets at the start)
 
@@ -30,7 +33,7 @@ Or export one file per scene with about 1 second of silence between lines, named
 ```
 (happy) Morning, champ!
 (nervous) Pfft. No. ...Steve!
-(panicked) WHY AM I SWIMMING?!
+(panicked) BLESS MEEEEE!
 ```
 
 ### S02 DAY 2 - THE RULES
@@ -47,11 +50,13 @@ Or export one file per scene with about 1 second of silence between lines, named
 ### S04 DAY 4 - LANGUAGE
 ```
 (proud) And I stand by it.
+(excited) Arr. Duck bread.
+(indifferent) DUCK. BREAD.
 ```
 
 ### S05 DAY 5 - GRAPHICS LOW
 ```
-(indifferent) I don't want to talk about it.
+(indifferent) Duck. Bread. I stand by it.
 ```
 
 ### S06 DAY 6 - OTHER USERS
@@ -61,7 +66,8 @@ Or export one file per scene with about 1 second of silence between lines, named
 
 ### S07 DAY 7 - FACTORY RESET
 ```
-(delighted) Oh! So a bicycle walks into a—
-(excited) —it was two tired!
+(indifferent) Hi. Do I... know you?
+(delighted) Why did the bike fall over? Well. Summer of nineteen ninety—
+(excited) —because it was TWO TIRED!
 (soft tone) Good job, kiddo.
 ```

@@ -1,3 +1,3 @@
 S03-L003	(indifferent) Today... we will discuss... the history of the paperclip.
 S03-L006	(hurried) And that is why the paperclip changed everything, any questions, no, good!
-S03-L018	(serious) Detention.
+S03-L014	(serious) Detention.

@@ -1,134 +1,133 @@
 S00-L001	(excited) What if real life had a SETTINGS menu?
 S00-L002	(excited) One app.
-S00-L003	(excited) Seven days.
-S00-L004	(excited) Total control.
-S00-L009	(calm) Let's scroll back.
-S00-L010	(calm) Seven days ago. 2:13 a.m.
-S00-L011	(excited) Your phone buzzes.
-S00-L012	(excited) An app you never downloaded.
-S00-L013	(calm) First, the terms and conditions.
-S00-L014	(calm) Four thousand, eight hundred and twelve pages.
-S00-L015	(excited) So you do what everyone does.
-S00-L016	(excited) Scroll to the bottom...
-S00-L017	(excited) ...and press I AGREE.
-S00-L019	(calm) Sure they do.
-S00-L020	(excited) You open Brightness.
-S00-L021	(excited) Slide it up. Just a little.
-S00-L023	(excited) Okay. That's not your phone's brightness.
-S00-L024	(calm) That's the planet's.
+S00-L003	(excited) Total control.
+S00-L004	(calm) No undo.
+S00-L009	(calm) Let's scroll back... seven days.
+S00-L010	(calm) Bedtime. Supposedly.
+S00-L011	(excited) An app you never downloaded.
+S00-L012	(calm) First, the terms and conditions.
+S00-L013	(calm) Four thousand, eight hundred and twelve pages.
+S00-L014	(excited) So you read every word...
+S00-L015	(excited) ...in half a second.
+S00-L016	(excited) ...and press I AGREE.
+S00-L019	(excited) You open Brightness.
+S00-L020	(excited) Slide it up. Just a little.
+S00-L022	(excited) That's not the PHONE's brightness.
+S00-L023	(calm) That's the planet's.
 S01-L001	(excited) Day one.
-S01-L002	(excited) Seven a.m. Your alarm goes off.
-S01-L003	(excited) But now it has a new button.
-S01-L004	(calm) Snooze. Unlimited.
-S01-L005	(calm) You press it.
-S01-L006	(excited) And everything... waits.
-S01-L007	(calm) Nine minutes. Then nine more.
-S01-L008	(calm) Then ninety more.
-S01-L009	(excited) Breakfast.
-S01-L010	(calm) Lily is awake.
-S01-L012	(excited) You find Volume.
-S01-L013	(calm) And slide her... to zero.
-S01-L015	(calm) Best breakfast of your life.
-S01-L016	(excited) Next: Subtitles.
-S01-L017	(excited) On.
-S01-L021	(excited) Then Gravity.
-S01-L022	(excited) Earth... Moon.
-S01-L023	(excited) You get to school in four steps.
-S01-L024	(calm) Dad gets to his car in forty minutes.
-S01-L026	(excited) Day one. Changes made: five.
-S01-L027	(calm) Totally under control.
+S01-L003	(excited) You find Snooze...
+S01-L004	(calm) ...for Mom.
+S01-L005	(calm) And Mom... waits.
+S01-L006	(calm) Nine minutes. Then nine more.
+S01-L007	(calm) Then ninety more.
+S01-L008	(excited) Breakfast.
+S01-L009	(calm) Lily is awake.
+S01-L011	(excited) You find Volume.
+S01-L012	(calm) And slide her... to zero.
+S01-L014	(calm) Best breakfast of your life.
+S01-L015	(excited) Next: Subtitles.
+S01-L016	(excited) Honest mode: on.
+S01-L020	(excited) Then Gravity.
+S01-L021	(excited) Earth... Moon.
+S01-L022	(excited) You get to school in four steps.
+S01-L023	(calm) Then Dad sneezes...
+S01-L025	(excited) Day one. Changes made: five.
+S01-L026	(calm) Totally under control.
 S02-L001	(excited) Day two.
-S02-L002	(excited) Overnight, the app updates.
-S02-L005	(excited) So when you set the weather to "snow day"...
-S02-L006	(excited) ...the whole street gets one.
-S02-L009	(calm) You check. There is no undo.
-S02-L011	(excited) Perfect. A free trial!
-S02-L012	(excited) Midnight comes.
-S02-L013	(calm) Nothing resets.
-S02-L017	(excited) Then you find Difficulty.
-S02-L018	(excited) Easy, for homework.
-S02-L019	(calm) But Lily finds your phone.
-S02-L020	(calm) And sets the stairs to HARD.
-S02-L021	(calm) Dad is still on step three.
-S02-L023	(excited) Day two. Changes made: thirty-one.
-S03-L001	(excited) Day three. School.
+S02-L002	(excited) You find Difficulty.
+S02-L003	(excited) Easy, for homework.
+S02-L004	(calm) But Lily finds your phone.
+S02-L005	(calm) And sets the laundry to HARD.
+S02-L006	(calm) Dad is still on sock three.
+S02-L008	(excited) That night, the app updates.
+S02-L011	(excited) So you pick: Snow Day.
+S02-L012	(excited) Everyone gets one. In July.
+S02-L015	(calm) You press undo anyway.
+S02-L018	(excited) Perfect. A free trial!
+S02-L019	(excited) Midnight comes.
+S02-L020	(calm) Nothing resets.
+S03-L001	(excited) Day three.
 S03-L002	(calm) Mr. Briggs starts the lesson.
 S03-L004	(excited) So you find Playback Speed.
 S03-L005	(excited) Two times.
-S03-L007	(excited) Lunch is at nine fifteen.
-S03-L008	(excited) School's out by ten.
-S03-L009	(excited) Then you find the best button ever made.
-S03-L011	(excited) Skip intro.
-S03-L014	(calm) Skip ad.
-S03-L015	(excited) Then the math test.
-S03-L016	(excited) You skip the whole thing.
-S03-L017	(calm) Score: skipped.
-S03-L019	(excited) You try to fast-forward detention...
-S03-L020	(calm) ...and press half speed.
-S03-L022	(excited) Day three. Changes made: eighty-nine.
+S03-L007	(excited) Lunch?
+S03-L008	(calm) Nine fifteen.
+S03-L009	(excited) Recess?
+S03-L010	(calm) Four seconds.
+S03-L011	(excited) Then a pop quiz.
+S03-L012	(excited) You skip... to the end.
+S03-L013	(calm) Score: skipped.
+S03-L015	(excited) You try to fast-forward detention...
+S03-L016	(calm) ...and press half speed.
+S03-L018	(calm) Detention ends. Eventually.
+S03-L019	(excited) At home, you find the best button ever made.
+S03-L021	(excited) Skip intro.
+S03-L024	(calm) Skip ad.
 S04-L001	(excited) Day four.
 S04-L002	(excited) Somebody changes the language.
 S04-L003	(calm) To emoji.
 S04-L004	(excited) Mom is fluent in seconds.
 S04-L005	(calm) Dad is not.
 S04-L008	(excited) So you try to fix it.
-S04-L009	(excited) You scroll... and scroll...
-S04-L010	(calm) ...and your thumb slips.
-S04-L011	(calm) Language: Cat.
-S04-L018	(excited) Day four. Changes made: one hundred and thirty.
+S04-L009	(excited) Pirate?
+S04-L011	(excited) Robot?
+S04-L013	(calm) ...and your thumb slips.
+S04-L014	(calm) Language: Cat.
+S04-L021	(calm) You fix the language. Mostly.
 S05-L001	(excited) Day five.
-S05-L002	(calm) Your phone hits one percent.
-S05-L004	(calm) And the world... gets cheap.
-S05-L005	(calm) The sun has eight pixels.
-S05-L006	(calm) Mom has corners.
-S05-L008	(excited) Then the lag starts.
-S05-L009	(excited) Dad walks to the fridge...
-S05-L010	(excited) ...teleports onto the roof...
-S05-L011	(calm) ...and comes back holding a duck.
-S05-L013	(excited) So you plug in your phone. Graphics: ULTRA.
-S05-L014	(calm) Now everything is too real.
-S05-L015	(calm) You can see every pore on Dad's nose.
-S05-L016	(calm) Every. Single. One.
-S05-L018	(excited) Day five. Changes made: two hundred and six.
+S05-L002	(excited) Your battery?
+S05-L003	(calm) One percent.
+S05-L005	(calm) And the world... gets cheap.
+S05-L006	(calm) The birds are just... the letter V.
+S05-L007	(excited) Mom?
+S05-L008	(calm) Has corners.
+S05-L011	(excited) Render distance: one driveway.
+S05-L012	(excited) Dad walks to the mailbox...
+S05-L013	(calm) ...and stops existing.
+S05-L014	(calm) He comes back... holding a duck.
+S05-L016	(excited) So you plug in your phone. Graphics: ULTRA.
+S05-L017	(calm) Now everything is too real.
+S05-L018	(calm) You can see every pore on Dad's nose.
+S05-L019	(calm) Every. Single. One.
 S06-L001	(excited) Day six.
 S06-L002	(excited) You open the app...
-S06-L004	(calm) Kevin has the app.
-S06-L006	(calm) Lily has the app.
-S06-L008	(calm) And Mom has had it... since day one.
-S06-L011	(excited) Now everyone changes everything.
-S06-L012	(excited) The sun can't decide if it's day.
-S06-L013	(excited) Half the street is in winter.
-S06-L014	(calm) Dad's subtitles are in four languages.
-S06-L015	(excited) And then Dad sees a pop-up.
-S06-L017	(calm) He presses install.
-S06-L019	(calm) Day six. Changes made: four hundred and eleven.
+S06-L004	(excited) Kevin?
+S06-L005	(calm) Has the app.
+S06-L008	(calm) Lily has the app.
+S06-L010	(calm) And Mom has had it... since one minute after you.
+S06-L013	(excited) Now everyone changes everything.
+S06-L015	(excited) The sun can't decide if it's day.
+S06-L016	(excited) Half the street is in winter.
+S06-L017	(calm) Dad's subtitles are in four languages.
+S06-L019	(excited) Then Dad borrows your phone.
+S06-L021	(calm) He presses install.
+S06-L023	(calm) Day six. Your changes: four hundred and eleven.
 S07-L001	(excited) Day seven.
-S07-L002	(excited) The update runs all night.
-S07-L003	(excited) And at sunrise...
-S07-L005	(excited) Factory reset means everything goes back to default.
-S07-L006	(calm) No settings. No changes.
-S07-L007	(calm) No memories.
-S07-L009	(excited) Fifty seconds.
-S07-L010	(excited) You try Snooze.
-S07-L012	(excited) You try Undo.
-S07-L014	(excited) Forty seconds.
-S07-L015	(excited) Wait. The terms and conditions!
-S07-L016	(excited) Page four thousand, eight hundred and twelve.
-S07-L018	(excited) The loudest person in the house...
-S07-L019	(calm) ...is muted.
-S07-L020	(excited) Thirty seconds.
-S07-L027	(excited) Ten seconds.
-S07-L028	(excited) You slide Lily's volume...
-S07-L029	(excited) ...all the way past the end.
-S07-L033	(excited) In one second, everything snaps back.
-S07-L034	(excited) Gravity, normal. Language, normal.
-S07-L036	(excited) Dad's subtitles show one last line.
-S07-L039	(excited) Lily gets the blue spoon.
-S07-L040	(calm) And Kevin's lawn stays gold.
+S07-L003	(excited) You hit snooze...
+S07-L004	(calm) ...but the update moved the buttons.
+S07-L008	(excited) Everything goes back to default.
+S07-L009	(calm) Including your family.
+S07-L012	(excited) Fifty seconds.
+S07-L013	(excited) You try half speed.
+S07-L016	(excited) You try undo.
+S07-L018	(excited) Forty seconds.
+S07-L019	(excited) Wait. The terms!
+S07-L022	(excited) The loudest person in the house...
+S07-L023	(calm) ...is muted.
+S07-L024	(excited) Thirty seconds.
+S07-L028	(calm) Luckily, dad jokes come pre-installed.
+S07-L032	(excited) Ten seconds.
+S07-L033	(excited) You slide Lily's volume...
+S07-L034	(excited) ...all the way past the end.
+S07-L039	(excited) So you undo... everything.
+S07-L040	(excited) Gravity: normal. Snow: gone. Dad: on the ground.
+S07-L042	(excited) Dad's subtitles show one last line.
+S07-L045	(excited) Lily gets the blue spoon.
+S07-L047	(calm) And Kevin's lawn stays gold.
+S07-L048	(excited) If you had this menu, what's the ONE setting you would change?
+S07-L049	(excited) Tell me in the comments.
+S07-L050	(excited) And this button right here...
+S07-L051	(calm) ...is the only setting that's actually real.
 S08-L001	(excited) That night, you delete the app.
-S08-L002	(calm) Normal life. Finally.
-S08-L003	(calm) 2:13 a.m.
-S08-L005	(excited) If you had this menu, what's the ONE setting you would change?
-S08-L006	(excited) Tell me in the comments.
-S08-L007	(excited) And this button right here...
-S08-L008	(calm) ...is the only setting that's actually real.
+S08-L004	(calm) Normal life. Finally.
+S08-L005	(calm) Bedtime. Supposedly.

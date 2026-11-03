@@ -4,7 +4,7 @@
   "role": "N",
   "tag": "HYPE",
   "text": "What if real life had a SETTINGS menu?",
-  "pic": "Title card: a glossy gear spins in over the street; the title stamps word by word",
+  "pic": "Sam's thumb drags a DOG SIZE slider: the neighbour's dog grows to the size of a house",
   "id": "S00-L001"
  },
  {
@@ -12,38 +12,38 @@
   "role": "N",
   "tag": "HYPE",
   "text": "One app.",
-  "pic": "The gear app icon zooms at the lens",
+  "pic": "The gear app icon zooms at the lens; a second slider flips a tree upside down",
   "id": "S00-L002"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
-  "text": "Seven days.",
-  "pic": "Our DAY card flips 1 to 7",
+  "text": "Total control.",
+  "pic": "Our DAY card flips 1 to 7; sliders and toggles fan across the screen",
   "id": "S00-L003"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
-  "tag": "HYPE",
-  "text": "Total control.",
-  "pic": "A fan of sliders and toggles sweeps across the screen",
+  "tag": "DEADPAN",
+  "text": "No undo.",
+  "pic": "An UNDO button cracks and falls off the screen",
   "id": "S00-L004"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "SYS",
   "tag": "calm",
-  "text": "Factory reset in sixty seconds.",
-  "pic": "Flash-forward, Day 7: the sky is a loading bar, Dad floats past upside down, red countdown pill 1:00",
+  "text": "Factory reset in one minute.",
+  "pic": "Flash-forward, Day 7: the sky is a loading bar; Mom and Dad flicker into grey mannequins with DEFAULT tags; red countdown pill 1:00",
   "id": "S00-L005"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "SAM",
   "tag": "nervous",
-  "text": "Okay. In my defense... I only changed one thing.",
+  "text": "In my defense... I only changed ONE thing.",
   "pic": "Sam to camera, sweat drop growing",
   "id": "S00-L006"
  },
@@ -51,7 +51,7 @@
   "scene": "S00 COLD OPEN",
   "role": "SYS",
   "tag": "calm",
-  "text": "Changes made: four hundred and twelve.",
+  "text": "Changes made by you: four hundred and twelve.",
   "pic": "A counter rolls 1 to 412 beside his head",
   "id": "S00-L007"
  },
@@ -60,40 +60,32 @@
   "role": "SAM",
   "tag": "guilty",
   "text": "...Ish.",
-  "pic": "Tiny shrug, guilty half-lid eyes",
+  "pic": "Tiny shrug, guilty half-lid eyes [drop]",
   "id": "S00-L008"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Let's scroll back.",
-  "pic": "Our UNDO HISTORY panel: a list of 412 changes scrolls back at speed, day icons blurring past",
+  "text": "Let's scroll back... seven days.",
+  "pic": "Our UNDO HISTORY panel: 412 changes scroll back at speed, day icons blurring past",
   "id": "S00-L009"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Seven days ago. 2:13 a.m.",
-  "pic": "Sam's bedroom, moonlight, Sam asleep",
+  "text": "Bedtime. Supposedly.",
+  "pic": "Sam under his blanket at 2:13 a.m., phone glow on his face, moonlight",
   "id": "S00-L010"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
-  "text": "Your phone buzzes.",
-  "pic": "Phone on the nightstand rattles, screen glow on his face",
-  "id": "S00-L011"
- },
- {
-  "scene": "S00 COLD OPEN",
-  "role": "N",
-  "tag": "HYPE",
   "text": "An app you never downloaded.",
-  "pic": "A gear icon: SETTINGS - for real life",
-  "id": "S00-L012"
+  "pic": "The phone rattles; a gear icon: SETTINGS - for real life",
+  "id": "S00-L011"
  },
  {
   "scene": "S00 COLD OPEN",
@@ -101,7 +93,7 @@
   "tag": "DEADPAN",
   "text": "First, the terms and conditions.",
   "pic": "T&C card, page counter 1 / 4,812",
-  "id": "S00-L013"
+  "id": "S00-L012"
  },
  {
   "scene": "S00 COLD OPEN",
@@ -109,47 +101,47 @@
   "tag": "DEADPAN",
   "text": "Four thousand, eight hundred and twelve pages.",
   "pic": "Pages stack up past the ceiling",
+  "id": "S00-L013"
+ },
+ {
+  "scene": "S00 COLD OPEN",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "So you read every word...",
+  "pic": "Sam squints seriously at page one",
   "id": "S00-L014"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
-  "text": "So you do what everyone does.",
-  "pic": "Sam squints, thumb raised",
+  "text": "...in half a second.",
+  "pic": "One flick, whoosh; for 3 frames the fine print of page 4,812 is readable (the rule that saves Day 7)",
   "id": "S00-L015"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
-  "text": "Scroll to the bottom...",
-  "pic": "One flick: pages blur, whoosh",
-  "id": "S00-L016"
- },
- {
-  "scene": "S00 COLD OPEN",
-  "role": "N",
-  "tag": "HYPE",
   "text": "...and press I AGREE.",
-  "pic": "Big green button, press, ding",
-  "id": "S00-L017"
+  "pic": "Big green button; sub boom; a ripple spreads out: room, house, street",
+  "id": "S00-L016"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "SYS",
   "tag": "cheerful",
-  "text": "Welcome to Reality Settings! All changes apply... for real.",
-  "pic": "Toast slides in, gear glows",
-  "id": "S00-L018"
+  "text": "Welcome to Reality Settings!",
+  "pic": "Toast slides in, the gear glows",
+  "id": "S00-L017"
  },
  {
   "scene": "S00 COLD OPEN",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "Sure they do.",
-  "pic": "Sam rolls his eyes",
-  "id": "S00-L019"
+  "role": "SAM",
+  "tag": "yawning",
+  "text": "Prove it.",
+  "pic": "Sam mid-yawn, unimpressed",
+  "id": "S00-L018"
  },
  {
   "scene": "S00 COLD OPEN",
@@ -157,15 +149,15 @@
   "tag": "HYPE",
   "text": "You open Brightness.",
   "pic": "Brightness slider fills the screen",
-  "id": "S00-L020"
+  "id": "S00-L019"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
   "text": "Slide it up. Just a little.",
-  "pic": "The moon outside flares into a sun; the room blows out white; birds wake and sing",
-  "id": "S00-L021"
+  "pic": "The moon outside flares into a sun; the room blows out white; birds wake up and sing",
+  "id": "S00-L020"
  },
  {
   "scene": "S00 COLD OPEN",
@@ -173,23 +165,23 @@
   "tag": "shouting",
   "text": "Who turned on the SUN?!",
   "pic": "Down the hall, Dad in pyjamas, shielding his eyes",
-  "id": "S00-L022"
+  "id": "S00-L021"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "HYPE",
-  "text": "Okay. That's not your phone's brightness.",
+  "text": "That's not the PHONE's brightness.",
   "pic": "Sam slowly lowers the phone, star eyes fading to fear",
-  "id": "S00-L023"
+  "id": "S00-L022"
  },
  {
   "scene": "S00 COLD OPEN",
   "role": "N",
   "tag": "DEADPAN",
   "text": "That's the planet's.",
-  "pic": "Snap zoom out to space: one side of Earth glowing like a lamp",
-  "id": "S00-L024"
+  "pic": "Snap zoom out to space: one side of Earth glowing like a lamp [drop]",
+  "id": "S00-L023"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -201,43 +193,35 @@
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Seven a.m. Your alarm goes off.",
-  "pic": "Alarm clock jumping on the nightstand",
+  "role": "MOM",
+  "tag": "yelling",
+  "text": "SAM! UP! NOW!",
+  "pic": "Mom in the doorway, mid-yell, label maker in hand",
   "id": "S01-L002"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "HYPE",
-  "text": "But now it has a new button.",
-  "pic": "Alarm UI: STOP / SNOOZE (unlimited)",
+  "text": "You find Snooze...",
+  "pic": "SNOOZE (unlimited)",
   "id": "S01-L003"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Snooze. Unlimited.",
-  "pic": "Push in on the word unlimited",
+  "text": "...for Mom.",
+  "pic": "A target lock on Mom's head",
   "id": "S01-L004"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "You press it.",
-  "pic": "Tap; the whole world freezes: a bird stuck mid-air, Mom frozen mid-yell in the doorway",
+  "text": "And Mom... waits.",
+  "pic": "Tap: Mom freezes mid-yell; a fly freezes on her nose; Sam snuggles back into bed",
   "id": "S01-L005"
- },
- {
-  "scene": "S01 DAY 1 - JUST TESTING",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "And everything... waits.",
-  "pic": "Sam snuggles back into bed among frozen dust specks",
-  "id": "S01-L006"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -245,15 +229,15 @@
   "tag": "DEADPAN",
   "text": "Nine minutes. Then nine more.",
   "pic": "Snooze pill: 9:00, 9:00, 9:00",
-  "id": "S01-L007"
+  "id": "S01-L006"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
   "text": "Then ninety more.",
-  "pic": "Mom's frozen face, a fly frozen on her nose",
-  "id": "S01-L008"
+  "pic": "Mom still frozen, dust specks hanging in a sunbeam [drop]",
+  "id": "S01-L007"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -261,7 +245,7 @@
   "tag": "HYPE",
   "text": "Breakfast.",
   "pic": "Kitchen, morning light",
-  "id": "S01-L009"
+  "id": "S01-L008"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -269,7 +253,7 @@
   "tag": "DEADPAN",
   "text": "Lily is awake.",
   "pic": "Lily at the table, inhaling",
-  "id": "S01-L010"
+  "id": "S01-L009"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -277,7 +261,7 @@
   "tag": "shouting",
   "text": "I WANT THE BLUE SPOON!",
   "pic": "Glasses rattle, Pickles flattens his ears, Dad's moustache blows back",
-  "id": "S01-L011"
+  "id": "S01-L010"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -285,23 +269,23 @@
   "tag": "HYPE",
   "text": "You find Volume.",
   "pic": "Volume list: Dad, Mom, Lily, Pickles, Kevin next door",
-  "id": "S01-L012"
+  "id": "S01-L011"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
   "text": "And slide her... to zero.",
-  "pic": "A mute badge pops over Lily; she keeps screaming in silence; subtitle [muted]",
-  "id": "S01-L013"
+  "pic": "A mute badge pops over Lily; she keeps screaming silently; the music mutes with her [drop]",
+  "id": "S01-L012"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "MOM",
   "tag": "relieved",
   "text": "Why is it so... peaceful?",
-  "pic": "Mom sips tea, eyes closed, sparkles",
-  "id": "S01-L014"
+  "pic": "Mom sips tea, eyes closed, sparkles; Lily silently dancing on her chair",
+  "id": "S01-L013"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -309,23 +293,23 @@
   "tag": "DEADPAN",
   "text": "Best breakfast of your life.",
   "pic": "Sam eats cereal in slow, happy bliss",
-  "id": "S01-L015"
+  "id": "S01-L014"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "HYPE",
   "text": "Next: Subtitles.",
-  "pic": "Toggle flips ON with a click",
-  "id": "S01-L016"
+  "pic": "Toggle: SUBTITLES: HONEST",
+  "id": "S01-L015"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "HYPE",
-  "text": "On.",
-  "pic": "A subtitle bar appears under every person in the kitchen",
-  "id": "S01-L017"
+  "text": "Honest mode: on.",
+  "pic": "A boxed subtitle bar appears under every person (in-world style, not our captions)",
+  "id": "S01-L016"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -333,7 +317,7 @@
   "tag": "warm",
   "text": "Morning, champ!",
   "pic": "Dad's subtitle: [I forgot his name for a second]",
-  "id": "S01-L018"
+  "id": "S01-L017"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -341,15 +325,15 @@
   "tag": "deadpan",
   "text": "...You forgot my name.",
   "pic": "Sam stares; Dad sweats",
-  "id": "S01-L019"
+  "id": "S01-L018"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "DAD",
   "tag": "nervous",
   "text": "Pfft. No. ...Steve!",
-  "pic": "Subtitle: [guessed]",
-  "id": "S01-L020"
+  "pic": "Subtitle: [guessed] [drop]",
+  "id": "S01-L019"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -357,7 +341,7 @@
   "tag": "HYPE",
   "text": "Then Gravity.",
   "pic": "A planet dial: EARTH",
-  "id": "S01-L021"
+  "id": "S01-L020"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -365,7 +349,7 @@
   "tag": "HYPE",
   "text": "Earth... Moon.",
   "pic": "Click; Dad's coffee lifts out of his mug as a wobbling brown blob",
-  "id": "S01-L022"
+  "id": "S01-L021"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -373,23 +357,23 @@
   "tag": "HYPE",
   "text": "You get to school in four steps.",
   "pic": "Sam bounds over rooftops, one boing per step",
-  "id": "S01-L023"
+  "id": "S01-L022"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Dad gets to his car in forty minutes.",
-  "pic": "Dad swimming through the air, mug in hand, car drifting away",
-  "id": "S01-L024"
+  "text": "Then Dad sneezes...",
+  "pic": "Dad, nose twitching, on the front lawn",
+  "id": "S01-L023"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "DAD",
   "tag": "panic falsetto",
-  "text": "WHY AM I SWIMMING?!",
-  "pic": "Close-up, Dad flailing",
-  "id": "S01-L025"
+  "text": "BLESS MEEEEE!",
+  "pic": "Dad rockets up past the chimney (Doppler fade)",
+  "id": "S01-L024"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
@@ -397,15 +381,15 @@
   "tag": "HYPE",
   "text": "Day one. Changes made: five.",
   "pic": "Counter toast: 5",
-  "id": "S01-L026"
+  "id": "S01-L025"
  },
  {
   "scene": "S01 DAY 1 - JUST TESTING",
   "role": "N",
   "tag": "DEADPAN",
   "text": "Totally under control.",
-  "pic": "A goldfish floats past the window in its water ball",
-  "id": "S01-L027"
+  "pic": "Dad drifts past the window beside the goldfish in its floating water ball [drop]",
+  "id": "S01-L026"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
@@ -419,129 +403,9 @@
   "scene": "S02 DAY 2 - THE RULES",
   "role": "N",
   "tag": "HYPE",
-  "text": "Overnight, the app updates.",
-  "pic": "A PATCH NOTES card unrolls",
-  "id": "S02-L002"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "cheerful",
-  "text": "Patch notes. Version one point one.",
-  "pic": "Gear spins, confetti",
-  "id": "S02-L003"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "calm",
-  "text": "Rule one. Changes affect everyone within fifty meters.",
-  "pic": "A ring expands from Sam over the whole street",
-  "id": "S02-L004"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "So when you set the weather to \"snow day\"...",
-  "pic": "Weather picker: SNOW DAY",
-  "id": "S02-L005"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "...the whole street gets one.",
-  "pic": "Snow bursts over every house in July; kids cheer in shorts",
-  "id": "S02-L006"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "KEVIN",
-  "tag": "angry",
-  "text": "MY LAWN!",
-  "pic": "Kevin on his knees in the snow, leaf blower in hand",
-  "id": "S02-L007"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "calm",
-  "text": "Rule two. There is no undo.",
-  "pic": "An UNDO button greys out and crumbles",
-  "id": "S02-L008"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "You check. There is no undo.",
-  "pic": "Sam tapping an empty corner of the screen",
-  "id": "S02-L009"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "calm",
-  "text": "Rule three. Everything resets at midnight.",
-  "pic": "A midnight clock icon",
-  "id": "S02-L010"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Perfect. A free trial!",
-  "pic": "Sam punches the air",
-  "id": "S02-L011"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Midnight comes.",
-  "pic": "The family in pyjamas staring at the kitchen clock: 11:59... 12:00",
-  "id": "S02-L012"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "Nothing resets.",
-  "pic": "Lily still muted, Dad still floating, snow still falling",
-  "id": "S02-L013"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "cheerful",
-  "text": "Update one point two. Rule three has been removed.",
-  "pic": "A red REMOVED stamp slams on rule three",
-  "id": "S02-L014"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SAM",
-  "tag": "outraged",
-  "text": "You can't just REMOVE a rule!",
-  "pic": "Sam shouting at the phone, lurching at the lens",
-  "id": "S02-L015"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "SYS",
-  "tag": "cheerful",
-  "text": "Rule four. I can.",
-  "pic": "Rule four types itself, cursor blinking",
-  "id": "S02-L016"
- },
- {
-  "scene": "S02 DAY 2 - THE RULES",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Then you find Difficulty.",
+  "text": "You find Difficulty.",
   "pic": "Difficulty selector: EASY / NORMAL / HARD",
-  "id": "S02-L017"
+  "id": "S02-L002"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
@@ -549,53 +413,173 @@
   "tag": "HYPE",
   "text": "Easy, for homework.",
   "pic": "The pencil writes by itself; A+ stamps rain down",
-  "id": "S02-L018"
+  "id": "S02-L003"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
   "role": "N",
   "tag": "DEADPAN",
   "text": "But Lily finds your phone.",
-  "pic": "Lily, still muted, grins with the phone",
-  "id": "S02-L019"
+  "pic": "Lily, still muted (tiny grey subtitle: [i want the blue spoon]), grins with the phone",
+  "id": "S02-L004"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "And sets the stairs to HARD.",
-  "pic": "The stairs turn into a boss: health bar THE STAIRS",
-  "id": "S02-L020"
+  "text": "And sets the laundry to HARD.",
+  "pic": "The laundry pile turns into a boss: health bar LAUNDRY MOUNTAIN",
+  "id": "S02-L005"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Dad is still on step three.",
-  "pic": "Dad gripping the banister, health bar 12%",
-  "id": "S02-L021"
+  "text": "Dad is still on sock three.",
+  "pic": "Dad wrestling one sock, his own health bar at 12%",
+  "id": "S02-L006"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
   "role": "DAD",
   "tag": "exhausted",
   "text": "Tell your mother... I loved her.",
-  "pic": "Dad faints dramatically onto step three",
-  "id": "S02-L022"
+  "pic": "Dad faints dramatically into the laundry",
+  "id": "S02-L007"
  },
  {
   "scene": "S02 DAY 2 - THE RULES",
   "role": "N",
   "tag": "HYPE",
-  "text": "Day two. Changes made: thirty-one.",
-  "pic": "Counter toast: 31",
+  "text": "That night, the app updates.",
+  "pic": "A PATCH NOTES card unrolls (counter toast 31, silent)",
+  "id": "S02-L008"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Patch notes. Version one point one.",
+  "pic": "Gear spins, confetti",
+  "id": "S02-L009"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "calm",
+  "text": "Rule one. Your changes affect... everyone.",
+  "pic": "A ring expands from Sam over the whole town",
+  "id": "S02-L010"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "So you pick: Snow Day.",
+  "pic": "Weather picker: SNOW DAY",
+  "id": "S02-L011"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Everyone gets one. In July.",
+  "pic": "Snow bursts over every house; kids cheer in shorts",
+  "id": "S02-L012"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "KEVIN",
+  "tag": "angry",
+  "text": "MY LAWN!",
+  "pic": "Kevin on his knees in the snow, leaf blower in hand",
+  "id": "S02-L013"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "calm",
+  "text": "Rule two. There is no undo.",
+  "pic": "An UNDO button greys out and crumbles",
+  "id": "S02-L014"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "You press undo anyway.",
+  "pic": "Sam jabbing the empty spot",
+  "id": "S02-L015"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Did you mean: more snow?",
+  "pic": "A second drift buries Kevin up to his sunglasses [drop]",
+  "id": "S02-L016"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "calm",
+  "text": "Rule three. Everything resets at midnight.",
+  "pic": "A midnight clock icon",
+  "id": "S02-L017"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Perfect. A free trial!",
+  "pic": "Sam punches the air",
+  "id": "S02-L018"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Midnight comes.",
+  "pic": "The family in pyjamas staring at the kitchen clock: 11:59... 12:00",
+  "id": "S02-L019"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Nothing resets.",
+  "pic": "Lily still muted, snow still falling, homework still writing itself",
+  "id": "S02-L020"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Update one point two. Rule three has been removed.",
+  "pic": "A red REMOVED stamp slams on rule three",
+  "id": "S02-L021"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SAM",
+  "tag": "outraged",
+  "text": "You can't just REMOVE a rule!",
+  "pic": "Sam shouting at the phone, lurching at the lens",
+  "id": "S02-L022"
+ },
+ {
+  "scene": "S02 DAY 2 - THE RULES",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Rule four. I can.",
+  "pic": "Rule four types itself, cursor blinking [drop]",
   "id": "S02-L023"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Day three. School.",
+  "text": "Day three.",
   "pic": "DAY 3 card, then the classroom",
   "id": "S03-L001"
  },
@@ -628,7 +612,7 @@
   "role": "N",
   "tag": "HYPE",
   "text": "Two times.",
-  "pic": "2x: Briggs becomes a blur, chalk flying, the wall clock spinning",
+  "pic": "2x: Briggs becomes a blur, chalk flying, the wall clock spinning; the music plays at 2x too",
   "id": "S03-L005"
  },
  {
@@ -643,81 +627,49 @@
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Lunch is at nine fifteen.",
-  "pic": "Cafeteria clock 9:15, kids eating at double speed",
+  "text": "Lunch?",
+  "pic": "Cafeteria",
   "id": "S03-L007"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
-  "tag": "HYPE",
-  "text": "School's out by ten.",
-  "pic": "Kids blast out of the doors like a time-lapse",
+  "tag": "DEADPAN",
+  "text": "Nine fifteen.",
+  "pic": "Clock 9:15, kids eating at double speed",
   "id": "S03-L008"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Then you find the best button ever made.",
-  "pic": "A glowing button rises: SKIP INTRO",
+  "text": "Recess?",
+  "pic": "Playground",
   "id": "S03-L009"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
-  "role": "DAD",
-  "tag": "storytelling",
-  "text": "Did I ever tell you about the summer of nineteen ninety\u2014",
-  "pic": "Dad on the couch, starting a story",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Four seconds.",
+  "pic": "Kids blur across the playground and back",
   "id": "S03-L010"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Skip intro.",
-  "pic": "Tap, whoosh: Dad jumps forward",
+  "text": "Then a pop quiz.",
+  "pic": "A quiz paper slaps onto the desk",
   "id": "S03-L011"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
-  "role": "DAD",
-  "tag": "storytelling",
-  "text": "\u2014and that is why I can never go back to the water park.",
-  "pic": "Dad finishes, satisfied; Sam nods",
-  "id": "S03-L012"
- },
- {
-  "scene": "S03 DAY 3 - 2X SPEED",
-  "role": "KEVIN",
-  "tag": "smug",
-  "text": "So this is a premium fertilizer blend\u2014",
-  "pic": "Kevin leaning on the fence, sunglasses glinting",
-  "id": "S03-L013"
- },
- {
-  "scene": "S03 DAY 3 - 2X SPEED",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "Skip ad.",
-  "pic": "Tap: Kevin vanishes mid-sentence with a pop",
-  "id": "S03-L014"
- },
- {
-  "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Then the math test.",
-  "pic": "A test paper slaps onto the desk",
-  "id": "S03-L015"
- },
- {
-  "scene": "S03 DAY 3 - 2X SPEED",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "You skip the whole thing.",
+  "text": "You skip... to the end.",
   "pic": "The paper fast-forwards to the last page",
-  "id": "S03-L016"
+  "id": "S03-L012"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
@@ -725,15 +677,15 @@
   "tag": "DEADPAN",
   "text": "Score: skipped.",
   "pic": "A red SKIPPED stamp",
-  "id": "S03-L017"
+  "id": "S03-L013"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "BRIGGS",
   "tag": "stern",
   "text": "Detention.",
-  "pic": "Normal speed again; record scratch; his glasses flash",
-  "id": "S03-L018"
+  "pic": "Normal speed again; record scratch; his glasses flash [drop]",
+  "id": "S03-L014"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
@@ -741,15 +693,15 @@
   "tag": "HYPE",
   "text": "You try to fast-forward detention...",
   "pic": "Sam jabs the speed control",
-  "id": "S03-L019"
+  "id": "S03-L015"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "DEADPAN",
   "text": "...and press half speed.",
-  "pic": "0.5x: the clock hands crawl",
-  "id": "S03-L020"
+  "pic": "0.5x: the clock hands crawl; the music drags at half speed",
+  "id": "S03-L016"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
@@ -757,15 +709,63 @@
   "tag": "slow-motion despair",
   "text": "Noooooo...",
   "pic": "We slow this line down; Sam melts onto the desk in slow motion",
-  "id": "S03-L021"
+  "id": "S03-L017"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Detention ends. Eventually.",
+  "pic": "Sam walking home, aged, with a long beard of dust that falls off (counter toast 89, silent)",
+  "id": "S03-L018"
  },
  {
   "scene": "S03 DAY 3 - 2X SPEED",
   "role": "N",
   "tag": "HYPE",
-  "text": "Day three. Changes made: eighty-nine.",
-  "pic": "Counter toast: 89",
+  "text": "At home, you find the best button ever made.",
+  "pic": "A glowing button rises: SKIP INTRO",
+  "id": "S03-L019"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "DAD",
+  "tag": "storytelling",
+  "text": "Did I ever tell you about the summer of nineteen ninety\u2014",
+  "pic": "Dad on the couch, starting a story",
+  "id": "S03-L020"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Skip intro.",
+  "pic": "Tap, whoosh: Dad jumps forward",
+  "id": "S03-L021"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "DAD",
+  "tag": "storytelling",
+  "text": "\u2014and that is why I can never go back to the water park.",
+  "pic": "Dad finishes, satisfied; Sam nods",
   "id": "S03-L022"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "KEVIN",
+  "tag": "smug",
+  "text": "So this is a premium fertilizer blend\u2014",
+  "pic": "Kevin leaning on the fence, sunglasses glinting",
+  "id": "S03-L023"
+ },
+ {
+  "scene": "S03 DAY 3 - 2X SPEED",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Skip ad.",
+  "pic": "Tap: Kevin vanishes mid-sentence with a pop [drop]",
+  "id": "S03-L024"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -788,7 +788,7 @@
   "role": "N",
   "tag": "DEADPAN",
   "text": "To emoji.",
-  "pic": "Every speech bubble in town turns into emoji",
+  "pic": "Every speech bubble in town turns into our own emoji; Lily's bubble is twenty blue spoons",
   "id": "S04-L003"
  },
  {
@@ -820,7 +820,7 @@
   "role": "DAD",
   "tag": "proud",
   "text": "And I stand by it.",
-  "pic": "Dad crosses his arms",
+  "pic": "Dad crosses his arms [drop]",
   "id": "S04-L007"
  },
  {
@@ -835,9 +835,33 @@
   "scene": "S04 DAY 4 - LANGUAGE",
   "role": "N",
   "tag": "HYPE",
-  "text": "You scroll... and scroll...",
-  "pic": "Pirate, Dolphin, Robot, Medieval...",
+  "text": "Pirate?",
+  "pic": "Tap: PIRATE; Dad gets an eye patch",
   "id": "S04-L009"
+ },
+ {
+  "scene": "S04 DAY 4 - LANGUAGE",
+  "role": "DAD",
+  "tag": "pirate",
+  "text": "Arr. Duck bread.",
+  "pic": "Dad with eye patch",
+  "id": "S04-L010"
+ },
+ {
+  "scene": "S04 DAY 4 - LANGUAGE",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Robot?",
+  "pic": "Tap: ROBOT; Dad goes stiff, eyes square",
+  "id": "S04-L011"
+ },
+ {
+  "scene": "S04 DAY 4 - LANGUAGE",
+  "role": "DAD",
+  "tag": "robot",
+  "text": "DUCK. BREAD.",
+  "pic": "We add a robot filter",
+  "id": "S04-L012"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -845,7 +869,7 @@
   "tag": "DEADPAN",
   "text": "...and your thumb slips.",
   "pic": "Slow motion: the thumb lands on CAT",
-  "id": "S04-L010"
+  "id": "S04-L013"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -853,7 +877,7 @@
   "tag": "DEADPAN",
   "text": "Language: Cat.",
   "pic": "The whole town meows; then Pickles turns to camera",
-  "id": "S04-L011"
+  "id": "S04-L014"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -861,7 +885,7 @@
   "tag": "bored posh",
   "text": "Finally.",
   "pic": "Pickles, half-lidded, on the counter",
-  "id": "S04-L012"
+  "id": "S04-L015"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -869,7 +893,7 @@
   "tag": "bored posh",
   "text": "I have so many complaints.",
   "pic": "A scroll of complaints unrolls to the floor",
-  "id": "S04-L013"
+  "id": "S04-L016"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -877,7 +901,7 @@
   "tag": "bored posh",
   "text": "One. The food. Is beige.",
   "pic": "He pushes his bowl off the counter",
-  "id": "S04-L014"
+  "id": "S04-L017"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -885,7 +909,7 @@
   "tag": "bored posh",
   "text": "Two. I watch you sleep. Every night.",
   "pic": "Sam's face drains white",
-  "id": "S04-L015"
+  "id": "S04-L018"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
@@ -893,23 +917,23 @@
   "tag": "scared",
   "text": "WHY?!",
   "pic": "Sam lurches at the lens",
-  "id": "S04-L016"
+  "id": "S04-L019"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
   "role": "PICKLES",
   "tag": "bored posh",
   "text": "Three. That is none of your business.",
-  "pic": "Pickles licks one paw",
-  "id": "S04-L017"
+  "pic": "Pickles licks one paw [drop]",
+  "id": "S04-L020"
  },
  {
   "scene": "S04 DAY 4 - LANGUAGE",
   "role": "N",
-  "tag": "HYPE",
-  "text": "Day four. Changes made: one hundred and thirty.",
-  "pic": "Counter toast: 130",
-  "id": "S04-L018"
+  "tag": "DEADPAN",
+  "text": "You fix the language. Mostly.",
+  "pic": "Everyone speaks normally again; Pickles slowly turns to camera (counter toast 130, silent)",
+  "id": "S04-L021"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -922,42 +946,58 @@
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "N",
-  "tag": "DEADPAN",
-  "text": "Your phone hits one percent.",
-  "pic": "Battery icon blinking red",
+  "tag": "HYPE",
+  "text": "Your battery?",
+  "pic": "Phone in hand",
   "id": "S05-L002"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "One percent.",
+  "pic": "Battery icon blinking red",
+  "id": "S05-L003"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "SYS",
   "tag": "calm",
   "text": "Battery saver on. Lowering reality graphics.",
-  "pic": "A progress bar crawls down: ULTRA, HIGH, LOW",
-  "id": "S05-L003"
- },
- {
-  "scene": "S05 DAY 5 - GRAPHICS LOW",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "And the world... gets cheap.",
-  "pic": "Everything pixelates; trees become flat cardboard cut-outs",
+  "pic": "A slider crawls down: ULTRA, HIGH, LOW",
   "id": "S05-L004"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "The sun has eight pixels.",
-  "pic": "A blocky sun",
+  "text": "And the world... gets cheap.",
+  "pic": "Everything pixelates; trees become flat cardboard cut-outs; the music turns 8-bit",
   "id": "S05-L005"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Mom has corners.",
-  "pic": "Mom's head is an octagon",
+  "text": "The birds are just... the letter V.",
+  "pic": "Birds become little v shapes flapping",
   "id": "S05-L006"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Mom?",
+  "pic": "Kitchen",
+  "id": "S05-L007"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Has corners.",
+  "pic": "Mom's head is an octagon",
+  "id": "S05-L008"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -965,47 +1005,55 @@
   "tag": "offended",
   "text": "Do NOT look at me.",
   "pic": "Mom hiding her octagon face behind a pixel mug",
-  "id": "S05-L007"
- },
- {
-  "scene": "S05 DAY 5 - GRAPHICS LOW",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Then the lag starts.",
-  "pic": "The picture stutters",
-  "id": "S05-L008"
- },
- {
-  "scene": "S05 DAY 5 - GRAPHICS LOW",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Dad walks to the fridge...",
-  "pic": "Dad mid-step",
   "id": "S05-L009"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "...teleports onto the roof...",
-  "pic": "Dad on the roof, confused",
+  "role": "PICKLES",
+  "tag": "bored posh",
+  "text": "I look magnificent in any resolution.",
+  "pic": "Pickles, perfectly smooth, reading the terms at page 2,113 of 4,812 [drop]",
   "id": "S05-L010"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "N",
-  "tag": "DEADPAN",
-  "text": "...and comes back holding a duck.",
-  "pic": "Dad back in the kitchen holding a duck (callback: duck bread)",
+  "tag": "HYPE",
+  "text": "Render distance: one driveway.",
+  "pic": "A white wall of nothing past the end of the driveway",
   "id": "S05-L011"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Dad walks to the mailbox...",
+  "pic": "Dad strolling into the white",
+  "id": "S05-L012"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "...and stops existing.",
+  "pic": "He fades into the white mid-step",
+  "id": "S05-L013"
+ },
+ {
+  "scene": "S05 DAY 5 - GRAPHICS LOW",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "He comes back... holding a duck.",
+  "pic": "Dad walks back out of the white with a duck and a loaf of bread",
+  "id": "S05-L014"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "DAD",
   "tag": "deadpan",
-  "text": "I don't want to talk about it.",
-  "pic": "The duck quacks",
-  "id": "S05-L012"
+  "text": "Duck. Bread. I stand by it.",
+  "pic": "The duck quacks [drop]",
+  "id": "S05-L015"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -1013,7 +1061,7 @@
   "tag": "HYPE",
   "text": "So you plug in your phone. Graphics: ULTRA.",
   "pic": "Charging bolt, the slider slams to ULTRA",
-  "id": "S05-L013"
+  "id": "S05-L016"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -1021,7 +1069,7 @@
   "tag": "DEADPAN",
   "text": "Now everything is too real.",
   "pic": "Ultra-detailed close-ups: Pickles' eye, Lily's gap tooth gleaming",
-  "id": "S05-L014"
+  "id": "S05-L017"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -1029,7 +1077,7 @@
   "tag": "DEADPAN",
   "text": "You can see every pore on Dad's nose.",
   "pic": "A slow, horrifying push into Dad's nose",
-  "id": "S05-L015"
+  "id": "S05-L018"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
@@ -1037,23 +1085,15 @@
   "tag": "DEADPAN",
   "text": "Every. Single. One.",
   "pic": "Three snap zooms, closer each time",
-  "id": "S05-L016"
+  "id": "S05-L019"
  },
  {
   "scene": "S05 DAY 5 - GRAPHICS LOW",
   "role": "SAM",
   "tag": "disgusted",
   "text": "Put it back. PUT IT BACK!",
-  "pic": "Sam gagging, slamming the slider back to normal",
-  "id": "S05-L017"
- },
- {
-  "scene": "S05 DAY 5 - GRAPHICS LOW",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Day five. Changes made: two hundred and six.",
-  "pic": "Counter toast: 206",
-  "id": "S05-L018"
+  "pic": "Sam gagging, slamming the slider back to normal (counter toast 206, silent)",
+  "id": "S05-L020"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1082,10 +1122,26 @@
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
-  "tag": "DEADPAN",
-  "text": "Kevin has the app.",
-  "pic": "Kevin smug, phone in hand, sunglasses glint",
+  "tag": "HYPE",
+  "text": "Kevin?",
+  "pic": "Kevin on his golden lawn",
   "id": "S06-L004"
+ },
+ {
+  "scene": "S06 DAY 6 - OTHER USERS",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Has the app.",
+  "pic": "Kevin smug, phone in hand",
+  "id": "S06-L005"
+ },
+ {
+  "scene": "S06 DAY 6 - OTHER USERS",
+  "role": "KEVIN",
+  "tag": "smug",
+  "text": "Why do you think I wear sunglasses?",
+  "pic": "His sunglasses flare off the gold [drop]",
+  "id": "S06-L006"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1093,7 +1149,7 @@
   "tag": "cheerful",
   "text": "LilyRoar changed GRAVITY to: bouncy.",
   "pic": "The whole family bounces like rubber balls",
-  "id": "S06-L005"
+  "id": "S06-L007"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1101,7 +1157,7 @@
   "tag": "DEADPAN",
   "text": "Lily has the app.",
   "pic": "Lily bouncing, still muted, delighted",
-  "id": "S06-L006"
+  "id": "S06-L008"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1109,15 +1165,15 @@
   "tag": "calm",
   "text": "Mom turned on Parental Controls.",
   "pic": "All of Sam's settings grey out with locks: ASK A PARENT",
-  "id": "S06-L007"
+  "id": "S06-L009"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "And Mom has had it... since day one.",
-  "pic": "Flashback tint: Mom in her robe at 2:14 a.m., pressing I AGREE",
-  "id": "S06-L008"
+  "text": "And Mom has had it... since one minute after you.",
+  "pic": "Flashback tint: Mom in her robe at 2:14 a.m. pressing I AGREE; her change log: Lily volume LOCKED, Sam bedtime 8:00, Language: emoji",
+  "id": "S06-L010"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1125,15 +1181,15 @@
   "tag": "sweet smug",
   "text": "Who do you think set your bedtime to eight?",
   "pic": "Mom sips her tea",
-  "id": "S06-L009"
+  "id": "S06-L011"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "SAM",
   "tag": "outraged",
   "text": "I THOUGHT I WAS JUST TIRED!",
-  "pic": "Sam explodes, steam from his ears",
-  "id": "S06-L010"
+  "pic": "Sam explodes, steam from his ears [drop]",
+  "id": "S06-L012"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1141,7 +1197,15 @@
   "tag": "HYPE",
   "text": "Now everyone changes everything.",
   "pic": "Split screens multiplying",
-  "id": "S06-L011"
+  "id": "S06-L013"
+ },
+ {
+  "scene": "S06 DAY 6 - OTHER USERS",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Mr. Briggs set every channel to: paperclips.",
+  "pic": "Every TV in town shows a paperclip documentary",
+  "id": "S06-L014"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1149,7 +1213,7 @@
   "tag": "HYPE",
   "text": "The sun can't decide if it's day.",
   "pic": "Day and night strobing over the street",
-  "id": "S06-L012"
+  "id": "S06-L015"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1157,23 +1221,31 @@
   "tag": "HYPE",
   "text": "Half the street is in winter.",
   "pic": "A perfect line: snow on the left, summer on the right",
-  "id": "S06-L013"
+  "id": "S06-L016"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
   "tag": "DEADPAN",
   "text": "Dad's subtitles are in four languages.",
-  "pic": "Four stacked subtitle bars under Dad",
-  "id": "S06-L014"
+  "pic": "Four stacked bars under Dad: [Steve] [Esteban] [Stefan] [Stefano]",
+  "id": "S06-L017"
+ },
+ {
+  "scene": "S06 DAY 6 - OTHER USERS",
+  "role": "SYS",
+  "tag": "calm",
+  "text": "Reality storage... almost full.",
+  "pic": "The counter flashes red at 400",
+  "id": "S06-L018"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
   "tag": "HYPE",
-  "text": "And then Dad sees a pop-up.",
+  "text": "Then Dad borrows your phone.",
   "pic": "UPDATE AVAILABLE: Reality 2.0. [Later] [Install]",
-  "id": "S06-L015"
+  "id": "S06-L019"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1181,15 +1253,15 @@
   "tag": "casual",
   "text": "I always press later.",
   "pic": "Dad's thumb hovering",
-  "id": "S06-L016"
+  "id": "S06-L020"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
   "tag": "DEADPAN",
   "text": "He presses install.",
-  "pic": "Tap. Freeze frame. Sub boom.",
-  "id": "S06-L017"
+  "pic": "Tap. Freeze frame. Sub boom. [drop]",
+  "id": "S06-L021"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
@@ -1197,79 +1269,103 @@
   "tag": "calm",
   "text": "Installing Reality two point oh.",
   "pic": "The sky becomes a giant progress bar at 1%",
-  "id": "S06-L018"
+  "id": "S06-L022"
  },
  {
   "scene": "S06 DAY 6 - OTHER USERS",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "Day six. Changes made: four hundred and eleven.",
-  "pic": "Counter toast: 411",
-  "id": "S06-L019"
+  "text": "Day six. Your changes: four hundred and eleven.",
+  "pic": "Counter toast: 411, red, one slot left",
+  "id": "S06-L023"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
   "text": "Day seven.",
-  "pic": "DAY 7 card, red",
+  "pic": "DAY 7 card, red; the sky bar at 99%",
   "id": "S07-L001"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "The update runs all night.",
-  "pic": "The sky bar fills to 99%",
+  "role": "MOM",
+  "tag": "yelling",
+  "text": "SAM! UP! NOW!",
+  "pic": "The same shot and the same take as Day 1",
   "id": "S07-L002"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "And at sunrise...",
-  "pic": "The counter ticks 411 to 412",
+  "text": "You hit snooze...",
+  "pic": "Sam slaps the phone half asleep",
   "id": "S07-L003"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "...but the update moved the buttons.",
+  "pic": "The button under his thumb says FACTORY RESET; the counter ticks 411 to 412",
+  "id": "S07-L004"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "SYS",
   "tag": "calm",
-  "text": "Factory reset in sixty seconds.",
+  "text": "Factory reset in one minute.",
   "pic": "Same shot as the cold open; countdown pill 1:00",
-  "id": "S07-L004"
+  "id": "S07-L005"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Please do not turn off reality.",
+  "pic": "A spinning save icon in the corner of the sky",
+  "id": "S07-L006"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "SAM",
+  "tag": "defensive",
+  "text": "See? ONE thing.",
+  "pic": "Sam to camera, framed exactly like the cold open",
+  "id": "S07-L007"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "Factory reset means everything goes back to default.",
+  "text": "Everything goes back to default.",
   "pic": "Settings fly back to their default positions",
-  "id": "S07-L005"
+  "id": "S07-L008"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "No settings. No changes.",
-  "pic": "Icons wink out one by one",
-  "id": "S07-L006"
+  "text": "Including your family.",
+  "pic": "Dad turns grey and plastic, a DEFAULT tag on his shirt",
+  "id": "S07-L009"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "No memories.",
-  "pic": "The family photo on the wall fades to grey silhouettes",
-  "id": "S07-L007"
+  "role": "DAD",
+  "tag": "flat default",
+  "text": "Hi. Do I... know you?",
+  "pic": "Default Dad, blank smile, no moustache [drop]",
+  "id": "S07-L010"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "SAM",
   "tag": "determined",
-  "text": "Okay. Cancel button. Where is the cancel button?!",
+  "text": "Where's the CANCEL button?!",
   "pic": "Sam tearing through the menu",
-  "id": "S07-L008"
+  "id": "S07-L011"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1277,31 +1373,39 @@
   "tag": "HYPE",
   "text": "Fifty seconds.",
   "pic": "The dial pops: 50",
-  "id": "S07-L009"
+  "id": "S07-L012"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "You try Snooze.",
-  "pic": "Snooze button tap (callback)",
-  "id": "S07-L010"
+  "text": "You try half speed.",
+  "pic": "Speed control: 0.5x (callback)",
+  "id": "S07-L013"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "SYS",
+  "tag": "slowed",
+  "text": "Fooorty... fiiive...",
+  "pic": "We slow this line down; the dial creeps",
+  "id": "S07-L014"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "SYS",
   "tag": "cheerful",
-  "text": "Snooze is not available during a factory reset.",
-  "pic": "Error buzz",
-  "id": "S07-L011"
+  "text": "Nice try.",
+  "pic": "Back to full speed with a snap",
+  "id": "S07-L015"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "You try Undo.",
+  "text": "You try undo.",
   "pic": "Sam taps the empty corner again (callback)",
-  "id": "S07-L012"
+  "id": "S07-L016"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1309,7 +1413,7 @@
   "tag": "cheerful",
   "text": "Rule two.",
   "pic": "Rule two card flashes",
-  "id": "S07-L013"
+  "id": "S07-L017"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1317,31 +1421,31 @@
   "tag": "HYPE",
   "text": "Forty seconds.",
   "pic": "Dial: 40",
-  "id": "S07-L014"
+  "id": "S07-L018"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "Wait. The terms and conditions!",
+  "text": "Wait. The terms!",
   "pic": "Sam freezes, star eyes",
-  "id": "S07-L015"
+  "id": "S07-L019"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Page four thousand, eight hundred and twelve.",
-  "pic": "Super-fast scroll, then a zoom into the tiniest print",
-  "id": "S07-L016"
+  "role": "PICKLES",
+  "tag": "bored posh",
+  "text": "Page four thousand, eight hundred and twelve. Ahem.",
+  "pic": "Pickles closes the last page of the stack he has read all week",
+  "id": "S07-L020"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "SYS",
   "tag": "calm",
   "text": "A reset can only be stopped by the loudest person in the house.",
-  "pic": "The fine print enlarges to fill the screen",
-  "id": "S07-L017"
+  "pic": "The fine print from the cold-open flash fills the screen",
+  "id": "S07-L021"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1349,15 +1453,15 @@
   "tag": "HYPE",
   "text": "The loudest person in the house...",
   "pic": "Every head slowly turns toward Lily",
-  "id": "S07-L018"
+  "id": "S07-L022"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "DEADPAN",
   "text": "...is muted.",
-  "pic": "Lily, mute badge, waving. Music drops out.",
-  "id": "S07-L019"
+  "pic": "Lily, mute badge, waving [drop]",
+  "id": "S07-L023"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1365,7 +1469,7 @@
   "tag": "HYPE",
   "text": "Thirty seconds.",
   "pic": "Dial: 30, music slams back in",
-  "id": "S07-L020"
+  "id": "S07-L024"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1373,7 +1477,7 @@
   "tag": "panic",
   "text": "Unmute! UNMUTE!",
   "pic": "Sam grabs Lily's volume slider: it is locked",
-  "id": "S07-L021"
+  "id": "S07-L025"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1381,23 +1485,31 @@
   "tag": "calm",
   "text": "Locked by Parental Controls.",
   "pic": "Padlock clamps shut on the slider",
-  "id": "S07-L022"
+  "id": "S07-L026"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "MOM",
   "tag": "hurried",
   "text": "The password is your father's worst joke!",
-  "pic": "Mom pointing at Dad",
-  "id": "S07-L023"
+  "pic": "Mom slaps down a label: DAD'S WORST JOKE",
+  "id": "S07-L027"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "Luckily, dad jokes come pre-installed.",
+  "pic": "Default Dad blinks; his moustache pops back",
+  "id": "S07-L028"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "DAD",
   "tag": "delighted",
-  "text": "Oh! So a bicycle walks into a\u2014",
+  "text": "Why did the bike fall over? Well. Summer of nineteen ninety\u2014",
   "pic": "Dad settling in for a long story",
-  "id": "S07-L024"
+  "id": "S07-L029"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1405,15 +1517,15 @@
   "tag": "shouting",
   "text": "SKIP INTRO!",
   "pic": "Sam slams the SKIP INTRO button (callback)",
-  "id": "S07-L025"
+  "id": "S07-L030"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "DAD",
   "tag": "quick",
-  "text": "\u2014it was two tired!",
-  "pic": "The password field fills: TWO-TIRED, green check; Mom groans",
-  "id": "S07-L026"
+  "text": "\u2014because it was TWO TIRED!",
+  "pic": "Password field: a bike with two tyres, green check; Mom groans",
+  "id": "S07-L031"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1421,7 +1533,7 @@
   "tag": "HYPE",
   "text": "Ten seconds.",
   "pic": "The pill turns red: 0:10",
-  "id": "S07-L027"
+  "id": "S07-L032"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1429,7 +1541,7 @@
   "tag": "HYPE",
   "text": "You slide Lily's volume...",
   "pic": "The slider races past 100",
-  "id": "S07-L028"
+  "id": "S07-L033"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1437,7 +1549,7 @@
   "tag": "HYPE",
   "text": "...all the way past the end.",
   "pic": "It breaks through the frame of the slider: 200%",
-  "id": "S07-L029"
+  "id": "S07-L034"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1445,7 +1557,7 @@
   "tag": "calm",
   "text": "Five. Four. Three...",
   "pic": "Dial pops 5, 4, 3",
-  "id": "S07-L030"
+  "id": "S07-L035"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1453,31 +1565,39 @@
   "tag": "epic scream",
   "text": "I WANT THE BLUE SPOOOOON!",
   "pic": "Shockwave; the reset window shatters like glass (callback)",
-  "id": "S07-L031"
+  "id": "S07-L036"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "SYS",
   "tag": "calm",
   "text": "Reset... cancelled.",
-  "pic": "Shards drift down in silence; one tinkle",
-  "id": "S07-L032"
+  "pic": "Shards drift down in silence; one tinkle [drop]",
+  "id": "S07-L037"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "Undo... unlocked.",
+  "pic": "An UNDO button grows back where it broke off",
+  "id": "S07-L038"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "In one second, everything snaps back.",
-  "pic": "The sky, gravity and colours snap back to normal; Dad lands on his feet",
-  "id": "S07-L033"
+  "text": "So you undo... everything.",
+  "pic": "The UNDO HISTORY panel plays forward; the counter rolls 412 down to 0",
+  "id": "S07-L039"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "HYPE",
-  "text": "Gravity, normal. Language, normal.",
-  "pic": "The duck waddles out of frame",
-  "id": "S07-L034"
+  "text": "Gravity: normal. Snow: gone. Dad: on the ground.",
+  "pic": "Dad lands softly; the goldfish plops back into its bowl; the duck waddles off",
+  "id": "S07-L040"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1485,7 +1605,7 @@
   "tag": "sigh",
   "text": "Pity.",
   "pic": "Pickles' last word in English, then: meow",
-  "id": "S07-L035"
+  "id": "S07-L041"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1493,7 +1613,7 @@
   "tag": "HYPE",
   "text": "Dad's subtitles show one last line.",
   "pic": "Dad turns to Sam",
-  "id": "S07-L036"
+  "id": "S07-L042"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1501,7 +1621,7 @@
   "tag": "warm quiet",
   "text": "Good job, kiddo.",
   "pic": "Subtitle: [so proud of you, Sam]",
-  "id": "S07-L037"
+  "id": "S07-L043"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1509,7 +1629,7 @@
   "tag": "soft smile",
   "text": "...You remembered my name.",
   "pic": "Sam smiles, blush",
-  "id": "S07-L038"
+  "id": "S07-L044"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
@@ -1517,39 +1637,95 @@
   "tag": "HYPE",
   "text": "Lily gets the blue spoon.",
   "pic": "Lily holds the blue spoon up like a trophy",
-  "id": "S07-L039"
+  "id": "S07-L045"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "LILY",
+  "tag": "tiny whisper",
+  "text": "...thank you.",
+  "pic": "The loudest kid whispers; Sam blinks",
+  "id": "S07-L046"
  },
  {
   "scene": "S07 DAY 7 - FACTORY RESET",
   "role": "N",
   "tag": "DEADPAN",
   "text": "And Kevin's lawn stays gold.",
-  "pic": "Kevin hugging his golden lawn",
-  "id": "S07-L040"
+  "pic": "Kevin hugging his golden lawn [drop]",
+  "id": "S07-L047"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "If you had this menu, what's the ONE setting you would change?",
+  "pic": "A settings list with an empty row: YOUR IDEA",
+  "id": "S07-L048"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "Tell me in the comments.",
+  "pic": "Comment icon pops",
+  "id": "S07-L049"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "HYPE",
+  "text": "And this button right here...",
+  "pic": "An in-world toggle: SUBSCRIBE: OFF",
+  "id": "S07-L050"
+ },
+ {
+  "scene": "S07 DAY 7 - FACTORY RESET",
+  "role": "N",
+  "tag": "DEADPAN",
+  "text": "...is the only setting that's actually real.",
+  "pic": "The toggle flips ON with sparkles",
+  "id": "S07-L051"
  },
  {
   "scene": "S08 ENDING",
   "role": "N",
   "tag": "HYPE",
   "text": "That night, you delete the app.",
-  "pic": "UNINSTALL; are you sure; yes; the gear dissolves into sparkles",
+  "pic": "UNINSTALL; ARE YOU SURE?",
   "id": "S08-L001"
+ },
+ {
+  "scene": "S08 ENDING",
+  "role": "SYS",
+  "tag": "cheerful",
+  "text": "You can't just delete me!",
+  "pic": "The gear shakes",
+  "id": "S08-L002"
+ },
+ {
+  "scene": "S08 ENDING",
+  "role": "SAM",
+  "tag": "smug",
+  "text": "Rule four. I can.",
+  "pic": "Tap YES; the gear dissolves into sparkles",
+  "id": "S08-L003"
  },
  {
   "scene": "S08 ENDING",
   "role": "N",
   "tag": "DEADPAN",
   "text": "Normal life. Finally.",
-  "pic": "Sam in bed, smiling, eyes closing",
-  "id": "S08-L002"
+  "pic": "Sam in bed, smiling; Pickles at the foot of the bed, eyes wide open",
+  "id": "S08-L004"
  },
  {
   "scene": "S08 ENDING",
   "role": "N",
   "tag": "DEADPAN",
-  "text": "2:13 a.m.",
-  "pic": "The same bedroom shot as the cold open; the phone buzzes",
-  "id": "S08-L003"
+  "text": "Bedtime. Supposedly.",
+  "pic": "The same 2:13 a.m. shot as the cold open; the phone buzzes",
+  "id": "S08-L005"
  },
  {
   "scene": "S08 ENDING",
@@ -1557,38 +1733,14 @@
   "tag": "cheerful",
   "text": "New app available. Reality Settings Two... now with TIME.",
   "pic": "A clock-gear icon; I AGREE glowing; Sam's thumb hovers",
-  "id": "S08-L004"
- },
- {
-  "scene": "S08 ENDING",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "If you had this menu, what's the ONE setting you would change?",
-  "pic": "A settings list with an empty row: YOUR IDEA",
-  "id": "S08-L005"
- },
- {
-  "scene": "S08 ENDING",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "Tell me in the comments.",
-  "pic": "Comment icon pops",
   "id": "S08-L006"
  },
  {
   "scene": "S08 ENDING",
-  "role": "N",
-  "tag": "HYPE",
-  "text": "And this button right here...",
-  "pic": "An in-world toggle: SUBSCRIBE: OFF",
+  "role": "SAM",
+  "tag": "sly",
+  "text": "...Just ONE thing.",
+  "pic": "Ding. Black.",
   "id": "S08-L007"
- },
- {
-  "scene": "S08 ENDING",
-  "role": "N",
-  "tag": "DEADPAN",
-  "text": "...is the only setting that's actually real.",
-  "pic": "The toggle flips ON with sparkles",
-  "id": "S08-L008"
  }
 ]

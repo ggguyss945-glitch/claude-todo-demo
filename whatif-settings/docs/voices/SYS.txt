@@ -1,22 +1,29 @@
-S00-L005	(calm) Factory reset in sixty seconds.
-S00-L007	(calm) Changes made: four hundred and twelve.
-S00-L018	(happy) Welcome to Reality Settings! All changes apply... for real.
-S02-L003	(happy) Patch notes. Version one point one.
-S02-L004	(calm) Rule one. Changes affect everyone within fifty meters.
-S02-L008	(calm) Rule two. There is no undo.
-S02-L010	(calm) Rule three. Everything resets at midnight.
-S02-L014	(happy) Update one point two. Rule three has been removed.
-S02-L016	(happy) Rule four. I can.
-S05-L003	(calm) Battery saver on. Lowering reality graphics.
+S00-L005	(calm) Factory reset in one minute.
+S00-L007	(calm) Changes made by you: four hundred and twelve.
+S00-L017	(happy) Welcome to Reality Settings!
+S02-L009	(happy) Patch notes. Version one point one.
+S02-L010	(calm) Rule one. Your changes affect... everyone.
+S02-L014	(calm) Rule two. There is no undo.
+S02-L016	(happy) Did you mean: more snow?
+S02-L017	(calm) Rule three. Everything resets at midnight.
+S02-L021	(happy) Update one point two. Rule three has been removed.
+S02-L023	(happy) Rule four. I can.
+S05-L004	(calm) Battery saver on. Lowering reality graphics.
 S06-L003	(happy) Kevin changed GRASS to: gold.
-S06-L005	(happy) LilyRoar changed GRAVITY to: bouncy.
-S06-L007	(calm) Mom turned on Parental Controls.
-S06-L018	(calm) Installing Reality two point oh.
-S07-L004	(calm) Factory reset in sixty seconds.
-S07-L011	(happy) Snooze is not available during a factory reset.
-S07-L013	(happy) Rule two.
-S07-L017	(calm) A reset can only be stopped by the loudest person in the house.
-S07-L022	(calm) Locked by Parental Controls.
-S07-L030	(calm) Five. Four. Three...
-S07-L032	(calm) Reset... cancelled.
-S08-L004	(happy) New app available. Reality Settings Two... now with TIME.
+S06-L007	(happy) LilyRoar changed GRAVITY to: bouncy.
+S06-L009	(calm) Mom turned on Parental Controls.
+S06-L014	(happy) Mr. Briggs set every channel to: paperclips.
+S06-L018	(calm) Reality storage... almost full.
+S06-L022	(calm) Installing Reality two point oh.
+S07-L005	(calm) Factory reset in one minute.
+S07-L006	(happy) Please do not turn off reality.
+S07-L014	(calm) Fooorty... fiiive...
+S07-L015	(happy) Nice try.
+S07-L017	(happy) Rule two.
+S07-L021	(calm) A reset can only be stopped by the loudest person in the house.
+S07-L026	(calm) Locked by Parental Controls.
+S07-L035	(calm) Five. Four. Three...
+S07-L037	(calm) Reset... cancelled.
+S07-L038	(happy) Undo... unlocked.
+S08-L002	(happy) You can't just delete me!
+S08-L006	(happy) New app available. Reality Settings Two... now with TIME.

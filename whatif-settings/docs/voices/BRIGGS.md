@@ -7,7 +7,7 @@ Or export one file per scene with about 1 second of silence between lines, named
 |---|---|---|
 | S03-L003 | monotone | Today... we will discuss... the history of the paperclip. |
 | S03-L006 | fast | And that is why the paperclip changed everything, any questions, no, good! |
-| S03-L018 | stern | Detention. |
+| S03-L014 | stern | Detention. |
 
 ## Paste-ready, one block per scene (emotion tag in brackets at the start)
 

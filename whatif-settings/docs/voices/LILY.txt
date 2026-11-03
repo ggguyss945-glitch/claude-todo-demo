@@ -1,2 +1,3 @@
-S01-L011	(shouting) I WANT THE BLUE SPOON!
-S07-L031	(shouting) I WANT THE BLUE SPOOOOON!
+S01-L010	(shouting) I WANT THE BLUE SPOON!
+S07-L036	(shouting) I WANT THE BLUE SPOOOOON!
+S07-L046	(whispering) ...thank you.

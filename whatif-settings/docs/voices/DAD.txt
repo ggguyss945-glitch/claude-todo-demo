@@ -1,13 +1,16 @@
-S00-L022	(shouting) Who turned on the SUN?!
-S01-L018	(happy) Morning, champ!
-S01-L020	(nervous) Pfft. No. ...Steve!
-S01-L025	(panicked) WHY AM I SWIMMING?!
-S02-L022	(sad) Tell your mother... I loved her.
-S03-L010	(happy) Did I ever tell you about the summer of nineteen ninety—
-S03-L012	(happy) —and that is why I can never go back to the water park.
+S00-L021	(shouting) Who turned on the SUN?!
+S01-L017	(happy) Morning, champ!
+S01-L019	(nervous) Pfft. No. ...Steve!
+S01-L024	(panicked) BLESS MEEEEE!
+S02-L007	(sad) Tell your mother... I loved her.
+S03-L020	(happy) Did I ever tell you about the summer of nineteen ninety—
+S03-L022	(happy) —and that is why I can never go back to the water park.
 S04-L007	(proud) And I stand by it.
-S05-L012	(indifferent) I don't want to talk about it.
-S06-L016	(relaxed) I always press later.
-S07-L024	(delighted) Oh! So a bicycle walks into a—
-S07-L026	(excited) —it was two tired!
-S07-L037	(soft tone) Good job, kiddo.
+S04-L010	(excited) Arr. Duck bread.
+S04-L012	(indifferent) DUCK. BREAD.
+S05-L015	(indifferent) Duck. Bread. I stand by it.
+S06-L020	(relaxed) I always press later.
+S07-L010	(indifferent) Hi. Do I... know you?
+S07-L029	(delighted) Why did the bike fall over? Well. Summer of nineteen ninety—
+S07-L031	(excited) —because it was TWO TIRED!
+S07-L043	(soft tone) Good job, kiddo.

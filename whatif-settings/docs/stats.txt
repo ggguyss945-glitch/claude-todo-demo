@@ -1,10 +1,10 @@
-N        134 lines  595 words
-SYS       22 lines  131 words
-SAM       13 lines   56 words
-LILY       2 lines   10 words
-MOM        4 lines   26 words
-DAD       13 lines   74 words
-PICKLES    6 lines   26 words
+N        133 lines  529 words
+SYS       29 lines  151 words
+SAM       17 lines   63 words
+LILY       3 lines   12 words
+MOM        6 lines   32 words
+DAD       16 lines   86 words
+PICKLES    8 lines   40 words
 BRIGGS     3 lines   22 words
-KEVIN      2 lines    9 words
-TOTAL    199 lines  949 words, est 479 s of voice
+KEVIN      3 lines   16 words
+TOTAL    218 lines  951 words, est 491 s of voice

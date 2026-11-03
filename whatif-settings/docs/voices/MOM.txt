@@ -1,4 +1,6 @@
-S01-L014	(relaxed) Why is it so... peaceful?
-S05-L007	(disdainful) Do NOT look at me.
-S06-L009	(sarcastic) Who do you think set your bedtime to eight?
-S07-L023	(hurried) The password is your father's worst joke!
+S01-L002	(shouting) SAM! UP! NOW!
+S01-L013	(relaxed) Why is it so... peaceful?
+S05-L009	(disdainful) Do NOT look at me.
+S06-L011	(sarcastic) Who do you think set your bedtime to eight?
+S07-L002	(shouting) SAM! UP! NOW!
+S07-L027	(hurried) The password is your father's worst joke!
