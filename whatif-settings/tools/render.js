@@ -2,6 +2,7 @@
 //
 //   node tools/render.js <timeline.json> <out.mp4> [fps=60] [workers=4] [scale=1.3333333] [from=s] [to=s] [chunk=300] [k=v ...]
 //   node tools/render.js <timeline.json> <out_dir> times=1.2,3.4|times.json [scale=0.5] [ext=jpg|png]   (stills)
+//   node tools/render.js <timeline.json> <cues.json> cues=1                                         (SFX cue list)
 //
 // Video mode: Playwright workers (one browser context each) draw frames with engine/anim.html and save JPEG q95 into
 // <work>/frames_<k>/; as soon as a chunk of `chunk` frames is complete it is encoded to an H.264 segment
@@ -34,7 +35,7 @@ const stills = !!opt.times || !!opt.frames;
 const quality = +(opt.quality ?? 95), chunkN = +(opt.chunk ?? 300);
 const work = path.resolve(opt.work || (stills ? outPath : outPath.replace(/\.[a-z0-9]+$/i, '') + '.parts'));
 const bakeDir = path.join(work, 'bake');
-fs.mkdirSync(work, { recursive: true });
+if (!opt.cues) fs.mkdirSync(work, { recursive: true });
 
 // ---------- static server: project root + /timeline.json + /bake/* ----------
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.svg': 'image/svg+xml' };
@@ -53,13 +54,23 @@ const server = http.createServer((req, res) => {
 // ---------- helpers ----------
 const fname = (f) => `f_${String(f).padStart(6, '0')}.${stills && opt.ext === 'png' ? 'png' : 'jpg'}`;
 const writeAtomic = (file, buf) => { const tmp = file + '.tmp'; fs.writeFileSync(tmp, buf); fs.renameSync(tmp, file); };
+const children = new Set();
 function run(cmd, args, label) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    children.add(p);
     let err = ''; p.stderr.on('data', (d) => { err += d; });
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${label} failed (${code}): ${err.slice(-800)}`))));
+    p.on('close', (code) => { children.delete(p); code === 0 ? resolve() : reject(new Error(`${label} failed (${code}): ${err.slice(-800)}`)); });
   });
 }
+// stop cleanly on Ctrl-C / kill: no orphaned encoder keeps writing a segment that the next run (resume) re-encodes
+let onStop = () => {};
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => {
+  for (const c of children) { try { c.kill('SIGKILL'); } catch (e) { /* gone */ } }
+  try { onStop(); } catch (e) { /* best effort */ }
+  console.error(`\n${sig}: stopped; re-run the same command to resume`);
+  process.exit(130);
+});
 function encodeArgs(dir, f0, n, out) {
   const pix = opt.pix || 'yuv420p', ten = /10/.test(pix);
   return ['-n', '10', 'ffmpeg', '-y', '-loglevel', 'error', '-framerate', String(fps), '-start_number', String(f0), '-i', path.join(dir, 'f_%06d.jpg'), '-frames:v', String(n),
@@ -68,7 +79,19 @@ function encodeArgs(dir, f0, n, out) {
     '-pix_fmt', pix, '-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-r', String(fps), '-video_track_timescale', String(fps * 1000), out];
 }
 
+// cue export: node tools/render.js <timeline.json> <cues.json> cues=1  (no browser: frame.js runs in node; every shot
+// is drawn once with ctx.cue() recording -> [{t, cue, shot, ...}] in global seconds, sorted)
+async function exportCues() {
+  const { pathToFileURL } = require('url');
+  const F = await import(pathToFileURL(path.join(root, 'engine/anim/frame.js')).href);
+  await F.loadTimeline(T, (p) => import(pathToFileURL(path.join(root, 'engine', p)).href));
+  const cues = F.collectCues(T);
+  fs.writeFileSync(outPath, JSON.stringify(cues, null, 1));
+  console.log(`wrote ${cues.length} cues to ${outPath}${F.ERRORS.length ? ` (${F.ERRORS.length} shot errors)` : ''}`);
+}
+
 (async () => {
+  if (opt.cues) return exportCues();
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
   const base = `http://127.0.0.1:${port}`;
@@ -118,6 +141,7 @@ function encodeArgs(dir, f0, n, out) {
       out: stills ? work : path.resolve(outPath), started_at: new Date(t0).toISOString(), updated_at: new Date().toISOString() }, null, 1));
   };
   progress('start');
+  onStop = () => progress('stopped');
   console.log(`${stills ? 'stills' : 'video'}: ${totalFrames} frames to draw (${chunks.length} chunk(s), ${encoded} already encoded), ${workers} workers, ${Math.round(1920 * scale)}x${Math.round(1080 * scale)}, work ${work}`);
 
   // ---------- baking (optional) ----------

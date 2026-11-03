@@ -66,9 +66,13 @@ function labToRgbLinear([L, a, b]) {
     -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
     -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
 }
+// small memo caches (colour maths is pure; the cast asks for the same few hundred colours every frame)
+const memo = (cap = 20000) => { const m = new Map(); return { get: (k) => m.get(k), set: (k, v) => { if (m.size > cap) m.clear(); m.set(k, v); return v; } }; };
+const OK = memo(), TONE = memo(), LINE = memo();
 export function oklch(hex) {
+  const hit = OK.get(hex); if (hit) return hit;
   const [L, a, b] = rgbToLab(hexToRgb(hex));
-  return { L, C: Math.hypot(a, b), h: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360 };
+  return OK.set(hex, { L, C: Math.hypot(a, b), h: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360 });
 }
 // back to hex, reducing chroma until the colour is inside sRGB (keeps lightness and hue)
 export function fromOklch(L, C, h) {
@@ -81,8 +85,9 @@ export function fromOklch(L, C, h) {
 }
 // shift a colour: dL in OKLCH lightness, cMul chroma multiplier, dh hue degrees
 export function tone(hex, dL = 0, cMul = 1, dh = 0) {
+  const key = `${hex}|${dL}|${cMul}|${dh}`, hit = TONE.get(key); if (hit) return hit;
   const { L, C, h } = oklch(hex);
-  return fromOklch(L + dL, C * cMul, h + dh);
+  return TONE.set(key, fromOklch(L + dL, C * cMul, h + dh));
 }
 export function mix(a, b, t) {
   const A = rgbToLab(hexToRgb(a)), B = rgbToLab(hexToRgb(b));
@@ -93,6 +98,14 @@ const towardPurple = (h, deg) => { const d = ((PURPLE_H - h + 540) % 360) - 180;
 
 // tinted outline: the dark shade of the fill, never black. L 0.28-0.32, chroma x0.9, hue 12 deg toward purple.
 export function stroke(fill, dL = 0) {
+  const key = `${fill}|${dL}`, hit = LINE.get(key); if (hit) return hit;
+  const c = strokeRaw(fill, dL); LINE_COLORS.add(c);
+  return LINE.set(key, c);
+}
+// every outline colour stroke() has produced (FX maps use it to tell outlines from dark fills)
+export const LINE_COLORS = new Set();
+export const isLineColor = (c) => LINE_COLORS.has(c.toUpperCase()) || oklch(c).L < 0.25;
+function strokeRaw(fill, dL) {
   const { L, C, h } = oklch(fill);
   const c = Math.max(C * 0.9, 0.035);                         // greys and whites still get a tinted line
   const hh = C < 0.012 ? 300 : towardPurple(h, 12);            // only true neutrals borrow a cool violet line
@@ -117,11 +130,82 @@ export function addDef(id, svg) { if (!REG.has(id)) REG.set(id, svg); return id;
 const hkey = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 const r1 = (n) => Math.round(n * 10) / 10;
 
+
+// ---------- colour FX (palette remaps) ----------
+// A colour FX re-maps every colour a build emits (fills, strokes, gradient stops) through fx.map(hex). It is how a
+// character is graded into a scene (night tint, sun blow-out), turned into a grey mannequin, or rendered as a light
+// mask, with no blend modes or filters (those get dropped by Chromium inside <use> copies). Paint servers built while
+// an FX is active get their own ids, so graded and ungraded copies of a character can share one frame.
+//   withFx(fx, () => markup)   run a build under fx (nests: the inner fx runs first, then the outer)
+//   noFx(() => markup)         emissive bits (a phone screen, a glow) that must ignore the grade
+let FX = null;
+export const fxActive = () => FX;
+export function withFx(fx, build) {
+  if (!fx) return build();
+  const prev = FX;
+  FX = prev ? composeFx(prev, fx) : fx;
+  try { return build(); } finally { FX = prev; }
+}
+export function noFx(build) { const prev = FX; FX = null; try { return build(); } finally { FX = prev; } }
+export const fxColor = (c) => (FX && typeof c === 'string' && c[0] === '#' ? FX.map(c) : c);
+// raw def strings with literal colours: remap them and give the graded copy its own id
+export function fxDef(id, svg) {
+  if (!FX) { addDef(id, svg); return id; }
+  const nid = id + '_' + FX.key;
+  if (!REG.has(nid)) REG.set(nid, svg.split(`id="${id}"`).join(`id="${nid}"`).replace(/#[0-9A-Fa-f]{6}\b/g, (m) => FX.map(m)));
+  return nid;
+}
+const FXS = new Map();      // fx objects by key, so every frame reuses the same colour caches
+function cachedFx(key, fn) {
+  let fx = FXS.get(key); if (fx) return fx;
+  if (FXS.size > 4000) FXS.clear();
+  const m = new Map();
+  fx = { key, map: (c) => { let v = m.get(c); if (v === undefined) { v = fn(c.toUpperCase()); m.set(c, v); } return v; } };
+  FXS.set(key, fx); return fx;
+}
+export function composeFx(outer, inner) {
+  if (!outer) return inner; if (!inner) return outer;
+  return cachedFx(inner.key + '.' + outer.key, (c) => outer.map(inner.map(c)));
+}
+const lerpRgb = (a, b, t) => { const B = hexToRgb(b); return rgbToHex(hexToRgb(a).map((v, i) => v + (B[i] - v) * t)); };
+const hk = (n) => Math.round(n * 1000);
+// tint: grade toward a colour. mode 'multiply' (night, moonlight: c * color), 'screen' (blown-out light:
+// 1-(1-c)(1-color)) or 'mix' (straight lerp). Default: 'screen' for light colours (L > 0.8), else 'multiply'.
+export function fxTint(color, k = 0.5, mode = null) {
+  if (!color || !(k > 0)) return null;
+  const m = mode || (oklch(color).L > 0.8 ? 'screen' : 'multiply'), T = hexToRgb(color);
+  return cachedFx(`t${color.slice(1)}${hk(k)}${m[0]}`, (c) => {
+    const C = hexToRgb(c);
+    const tgt = m === 'multiply' ? C.map((v, i) => v * T[i]) : m === 'screen' ? C.map((v, i) => 1 - (1 - v) * (1 - T[i])) : T;
+    return rgbToHex(C.map((v, i) => v + (tgt[i] - v) * k));
+  });
+}
+// mannequin: smooth grey plastic. Lightness is compressed toward a light grey (parts stay distinguishable but
+// quiet), chroma goes to a faint cool grey, outlines stay dark, pure white gloss stays white. k blends 0..1.
+export const MANNEQUIN = { hue: 262, chroma: 0.012, mid: 0.79, spread: 0.3 };
+export function mannequinColor(c) {
+  const { L } = oklch(c);
+  if (L > 0.975) return c;
+  if (isLineColor(c)) return fromOklch(Math.min(L, 0.35) * 0.95 + 0.06, 0.02, 280);
+  return fromOklch(MANNEQUIN.mid + (L - MANNEQUIN.mid) * MANNEQUIN.spread, MANNEQUIN.chroma, MANNEQUIN.hue);
+}
+export function fxMannequin(k = 1) {
+  if (!(k > 0)) return null;
+  const kk = Math.min(1, k);
+  return cachedFx(`m${hk(kk)}`, (c) => (kk >= 1 ? mannequinColor(c) : lerpRgb(c, mannequinColor(c), kk)));
+}
+// light mask: white where light lands, grey on outlines (a little light), black on ink (pupils, brows, mouth lines
+// keep their contrast). Used by cast.toon({light}) as a luminance mask for a light-coloured overlay.
+export function fxLightMask() {
+  return cachedFx('L', (c) => { const { L } = oklch(c); return L < 0.25 ? '#000000' : isLineColor(c) ? '#555555' : '#FFFFFF'; });
+}
+
 // 2-stop gradient: top/top-left L +0.05, bottom/bottom-right L -0.07 (about 12% luminance spread).
 // dir: 'v' (sky, props), 'd' (character blocks, key light upper-left), 'h', or a number = light angle in degrees.
 // box: [x0,y0,x1,y1] for a userSpaceOnUse gradient (so several shapes share one continuous ramp), else bbox units.
 export function grad(fill, dir = 'd', { box = null, up = 0.05, down = 0.07 } = {}) {
-  const a = tone(fill, up, 0.97), b = tone(fill, -down, 1.05);
+  let a = tone(fill, up, 0.97), b = tone(fill, -down, 1.05);
+  if (FX) { a = FX.map(a); b = FX.map(b); }
   let v;
   if (dir === 'v') v = [0, 0, 0, 1];
   else if (dir === 'h') v = [0, 0, 1, 0];
@@ -132,27 +216,28 @@ export function grad(fill, dir = 'd', { box = null, up = 0.05, down = 0.07 } = {
     const [x0, y0, x1, y1] = box, w = x1 - x0, h = y1 - y0;
     coords = [x0 + v[0] * w, y0 + v[1] * h, x0 + v[2] * w, y0 + v[3] * h].map(r1); units = 'userSpaceOnUse';
   } else { coords = v.map((n) => Math.round(n * 1000) / 1000); units = 'objectBoundingBox'; }
-  const id = 'g' + hkey(`${fill}|${dir}|${coords}|${units}|${up}|${down}`);
+  const id = 'g' + hkey(`${fill}|${dir}|${coords}|${units}|${up}|${down}`) + (FX ? '_' + FX.key : '');
   addDef(id, `<linearGradient id="${id}" gradientUnits="${units}" x1="${coords[0]}" y1="${coords[1]}" x2="${coords[2]}" y2="${coords[3]}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`);
   return `url(#${id})`;
 }
 // 3-stop vertical ramp for skies and backdrops
 export function ramp(stops, dir = 'v') {
-  const id = 'r' + hkey(stops.join('|') + dir);
+  const id = 'r' + hkey(stops.join('|') + dir) + (FX ? '_' + FX.key : '');
   const [x2, y2] = dir === 'v' ? [0, 1] : [1, 0];
+  if (FX) stops = stops.map((c) => FX.map(c));
   addDef(id, `<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops.map((c, i) => `<stop offset="${i / (stops.length - 1)}" stop-color="${c}"/>`).join('')}</linearGradient>`);
   return `url(#${id})`;
 }
 // face / round-part radial: centre (upper-left of middle) L +0.03, rim L -0.05
 export function radial(fill, { cx = 0.4, cy = 0.36, r = 0.8, up = 0.03, down = 0.06 } = {}) {
-  const id = 'f' + hkey(`${fill}|${cx}|${cy}|${r}|${up}|${down}`);
-  addDef(id, `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" fx="${cx}" fy="${cy}"><stop offset="0" stop-color="${tone(fill, up, 0.95)}"/><stop offset="0.6" stop-color="${fill}"/><stop offset="1" stop-color="${tone(fill, -down, 1.06)}"/></radialGradient>`);
+  const id = 'f' + hkey(`${fill}|${cx}|${cy}|${r}|${up}|${down}`) + (FX ? '_' + FX.key : '');
+  if (!REG.has(id)) addDef(id, `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" fx="${cx}" fy="${cy}"><stop offset="0" stop-color="${fxColor(tone(fill, up, 0.95))}"/><stop offset="0.6" stop-color="${fxColor(fill)}"/><stop offset="1" stop-color="${fxColor(tone(fill, -down, 1.06))}"/></radialGradient>`);
   return `url(#${id})`;
 }
 // cel shade band along the side away from the key light (right edge): transparent, then a hard step
 export function shadeBand(fill, { at = 0.88, op = 0.55, dL = 0.075, dir = 'h' } = {}) {
-  const c = tone(fill, -dL, 1.1);
-  const id = 'b' + hkey(`${fill}|${at}|${op}|${dL}|${dir}`);
+  const c = fxColor(tone(fill, -dL, 1.1));
+  const id = 'b' + hkey(`${fill}|${at}|${op}|${dL}|${dir}`) + (FX ? '_' + FX.key : '');
   const [x2, y2] = dir === 'h' ? [1, 0] : [0, 1];
   addDef(id, `<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${c}" stop-opacity="0"/><stop offset="${at}" stop-color="${c}" stop-opacity="0"/><stop offset="${Math.min(1, at + 0.005)}" stop-color="${c}" stop-opacity="${op}"/><stop offset="1" stop-color="${c}" stop-opacity="${op}"/></linearGradient>`);
   return `url(#${id})`;
@@ -170,16 +255,25 @@ export function contactShadow(cx, cy, rx, ry, { op = 0.28, h = 0, color = '#2A23
 }
 // soft glow (screen) for light pools / studio key
 export function glowPaint(color, op = 0.6) {
-  const id = 'w' + hkey(color + op);
+  const id = 'w' + hkey(color + op) + (FX ? '_' + FX.key : '');
+  color = fxColor(color);
   addDef(id, `<radialGradient id="${id}"><stop offset="0" stop-color="${color}" stop-opacity="${op}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`);
   return `url(#${id})`;
 }
 
 // ---------- SVG primitives ----------
 export const f1 = r1;
+const KEBAB = new Map();
+const kebab = (k) => { let v = KEBAB.get(k); if (v === undefined) { v = k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()); KEBAB.set(k, v); } return v; };
 export function attrs(o) {
-  return Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== false)
-    .map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}="${v}"`).join(' ');
+  let out = '';
+  for (const k in o) {
+    let v = o[k];
+    if (v === undefined || v === null || v === false) continue;
+    if (FX && (k === 'fill' || k === 'stroke') && typeof v === 'string' && v[0] === '#') v = FX.map(v);
+    out += (out ? ' ' : '') + kebab(k) + '="' + v + '"';
+  }
+  return out;
 }
 export const g = (inner, a = {}) => `<g ${attrs(a)}>${inner}</g>`;
 export const path = (d, a = {}) => `<path ${attrs({ d, ...a })}/>`;

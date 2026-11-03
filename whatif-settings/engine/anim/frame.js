@@ -212,7 +212,9 @@ export function frame(T, gt, o = {}) {
     capY = T.shots[i]?.capY;
   }
   const ov = o.overlays === false ? '' : drawOverlays(T, gt);
-  const caps = o.captions === false ? '' : drawCaptions(T.captions, gt, { fps, capY });
+  // a caption keeps the y of the shot under its first word (it does not jump when it outlives a cut)
+  const capYAt = (tt) => T.shots[shotIndex(T, tt)]?.capY;
+  const caps = o.captions === false ? '' : drawCaptions(T.captions, gt, { fps, capY, capYAt });
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defsSvg()}<rect width="${W}" height="${H}" fill="${T.bg || '#000'}"/>${body}${ov}${caps}</svg>`;
 }
 
@@ -222,7 +224,7 @@ export function collectCues(T) {
   T.__collect = [];
   for (let i = 0; i < T.shots.length; i++) { resetDefs(); renderShot(T, i, T.shots[i].start + 0.0001); }
   const seen = new Set(), out = [];
-  for (const c of T.__collect.sort((a, b) => a.t - b.t)) { const k = `${c.cue}@${c.t.toFixed(3)}`; if (!seen.has(k)) { seen.add(k); out.push(c); } }
+  for (const c of T.__collect.sort((a, b) => a.t - b.t)) { c.t = Math.round(c.t * 1e4) / 1e4; const k = `${c.cue}@${c.t.toFixed(3)}`; if (!seen.has(k)) { seen.add(k); out.push(c); } }
   delete T.__collect;
   return out;
 }

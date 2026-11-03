@@ -109,18 +109,19 @@ export const TRANSITIONS = {
     const R0 = tr.rect || portal || [W * 0.35, H * 0.3, W * 0.3, H * 0.4, 24];
     const [x0, y0, w0, h0, rr = 24] = R0;
     const e = (tr.ease === 'expo' ? ease.inOutExpo : ease.inOutCubic)(q);
-    const S1 = Math.max(W / w0, H / h0);
-    const s = Math.exp(Math.log(S1) * e);                      // uniform scale of A, log-interpolated
+    // the portal rect R grows (each side log-interpolated) from the screen rect in A to exactly the frame, so B lands
+    // at 1:1 on the boundary whatever the portal's aspect; A is scaled uniformly so its portal tracks R
+    const rw = w0 * (W / w0) ** e, rh = h0 * (H / h0) ** e;
     const c0 = [x0 + w0 / 2, y0 + h0 / 2], c = [lerp(c0[0], CX, e), lerp(c0[1], CY, e)];
-    // A: scaled by s about its portal centre, which travels to the frame centre
+    const s = Math.sqrt((rw / w0) * (rh / h0));
     const aM = `translate(${r3(c[0])} ${r3(c[1])}) scale(${r3(s)}) translate(${r3(-c0[0])} ${r3(-c0[1])})`;
-    const rw = w0 * s, rh = h0 * s, rx = c[0] - rw / 2, ry = c[1] - rh / 2;
-    // B: 'cover' fit into the growing rect
+    const rx = c[0] - rw / 2, ry = c[1] - rh / 2;
+    // B: 'cover' fit into R (1 at the end)
     const bs = Math.max(rw / W, rh / H);
     const bM = `translate(${r3(c[0])} ${r3(c[1])}) scale(${r3(bs)}) translate(${-CX} ${-CY})`;
     const id = 'zt';
-    let out = `<g transform="${aM}">${A()}</g>`;
-    out += `<defs>${clipRect(id, rx, ry, rw, rh, rr * s * (1 - e))}</defs><g clip-path="url(#${id})"><g transform="${bM}">${B()}</g>`;
+    let out = e < 0.999 ? `<g transform="${aM}">${A()}</g>` : '';
+    out += `<defs>${clipRect(id, rx, ry, rw, rh, rr * (1 - e))}</defs><g clip-path="url(#${id})"><g transform="${bM}">${B()}</g>`;
     // screen glare fading as we go through the glass
     out += solid('#FFFFFF', (1 - e) * (tr.glare ?? 0.35)) + '</g>';
     return out;

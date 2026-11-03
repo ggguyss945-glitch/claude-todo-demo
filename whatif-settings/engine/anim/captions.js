@@ -5,12 +5,14 @@
 //           | 'scream' (shakes +-3 deg every frame) | 'quote' (curly quotes for in-world dialogue; quote: 'open' |
 //           'close' | 'both' (default) | 'none' says which side of a multi-chunk line this chunk carries)
 //   y       number (px) or 'mid' (72% H, default) | 'face' (86%) | 'pov' (92%); a shot can set its default with
-//           capY in the timeline (shot.capY) and the caption's own y wins.
+//           capY in the timeline (shot.capY; the shot under the caption's first word, t0 + 3 frames, decides, so a
+//           caption never jumps at a cut) and the caption's own y wins.
 // Pop-in: plain chunks 0.6 -> 1.05 -> 1 over 3 frames, keyword chunks 0.85 -> 1.16 -> 1 over 6 frames (caption.js).
 // captionsFromLine() builds entries from a voice line's word times: 1-3 word chunks (caption.chunk), each shown
 // `lead` frames (default 3) before its first word and held until the next chunk (or the line end + tail).
 import { caption, chunk, CAP_Y } from '../caption.js';
 import { FPS, clamp } from './motion.js';
+import { normWords } from './lipsync.js';
 
 const POPF = { plain: 3, kw: 6 };
 const norm = (s) => String(s).toLowerCase().replace(/\{([^|}]+)(\|[^}]+)?\}/g, '$1').replace(/[^a-z0-9']/g, '');
@@ -24,7 +26,7 @@ export function drawCaptions(list, gt, o = {}) {
     const kw = /\{/.test(c.markup);
     const n = c.popFrames ?? (kw ? POPF.kw : POPF.plain);
     const p = clamp(((gt - c.t0) * fps) / n);
-    const yv = c.y ?? o.capY ?? 'mid';
+    const yv = c.y ?? (o.capYAt ? o.capYAt(c.t0 + (c.lead ?? 3) / fps) : o.capY) ?? 'mid';
     const y = typeof yv === 'number' ? yv : CAP_Y[yv] ?? CAP_Y.mid;
     let markup = c.markup;
     if (c.mode === 'quote') { const q = c.quote || 'both'; markup = `${q === 'both' || q === 'open' ? '“' : ''}${markup}${q === 'both' || q === 'close' ? '”' : ''}`; }
@@ -43,7 +45,7 @@ export function drawCaptions(list, gt, o = {}) {
  *  cut into a shot where nobody says it)} */
 export function captionsFromLine(line, markupText, o = {}) {
   const fps = o.fps ?? FPS, lead = (o.lead ?? 3) / fps, tail = o.tail ?? 0.25;
-  const words = line.words || [];
+  const words = normWords(line.words || []);          // accepts {w,t0,t1} | {w,t,d} (voice_lines.json) | ...
   if (!words.length) return [];
   const chunks = chunk(markupText || words.map((w) => w.w).join(' '), o.maxWords ?? 3);
   // walk the chunks over the word list by normalised spelling (falls back to word counts)

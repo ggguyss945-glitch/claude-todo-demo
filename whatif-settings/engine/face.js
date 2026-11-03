@@ -3,7 +3,7 @@
 //   .face — features painted on the skin (drawn under the hair fringe and accessories)
 //   .fx   — add-ons that float over everything (sweat, ?, Z's, hearts, dizzy stars, bump)
 // Line weights are fixed in head units, so they scale with the head (eye ring ~1.7x the body outline).
-import { PAL, g, path, circle, ellipse, text, grad, stroke, tone, uid, addDef, f1, spline, FONT_DISPLAY } from './style.js';
+import { PAL, g, path, circle, ellipse, text, grad, stroke, tone, uid, addDef, fxDef, f1, spline, FONT_DISPLAY } from './style.js';
 
 const INK = PAL.ink;
 const RING = 4.1;      // eye ring width
@@ -169,10 +169,14 @@ const BROWS = {
   neutral: [0, 1.5, -1.6], worry: [-6.5, 2.5, -0.6], angry: [6.5, -3.5, 0.6], flat: [2.5, 2.5, 0], raised: [-6, -4, -3.2],
   sad: [-4, 4, 0.4], soft: [-3, 1.5, -1.2], none: null,
 };
+export function browSpec(type, side) {
+  if (Array.isArray(type)) return type;
+  if (type === 'skeptic') return side < 0 ? [-7.5, -5, -3.5] : [3, 2, 0];
+  if (type === 'skepticR') return side > 0 ? [-7.5, -5, -3.5] : [3, 2, 0];
+  return BROWS[type] || null;
+}
 function brow(type, side, { x, y, len = 16, k = 1, w = BROW, color = INK }) {
-  let spec = BROWS[type];
-  if (type === 'skeptic') spec = side < 0 ? [-7.5, -5, -3.5] : [3, 2, 0];
-  if (type === 'skepticR') spec = side > 0 ? [-7.5, -5, -3.5] : [3, 2, 0];
+  const spec = browSpec(type, side);
   if (!spec) return '';
   const [di, dout, arch] = spec, inX = x - side * len * 0.5 * k, outX = x + side * len * 0.5 * k;
   const mx = (inX + outX) / 2, my = y + (di + dout) / 2 + arch * 1.4;
@@ -228,7 +232,11 @@ const MOUTHS = {
     const teeth = 'M-16 -5.5L-12 1L-8 -2.6L-4 3L0 -2.2L4 3L8 -2.6L12 1L16 -5.5L16 -20L-16 -20Z';
     return filledMouth(d, path(teeth, { fill: PAL.teeth }), {});
   },
+  // ---- dog muzzle mouths (TINY) ----
+  dogW: () => ln('M-11 -2Q-5.5 5.5 0 -1Q5.5 5.5 11 -2'),
+  dogPant: ({ gap }) => filledMouth('M-14 -4Q-7 -1 0 -4Q7 -1 14 -4C14 7 8 14 0 14C-8 14 -14 7 -14 -4Z', '', { tongue: [0, 12, 9, 6], gap }),
   // ---- visemes ----
+  none: () => '',
   v_closed: () => ln('M-8.5 0Q0 2 8.5 0'),
   v_small: () => filledMouth('M-7.5 0Q-7.5 -4.2 0 -4.2Q7.5 -4.2 7.5 0Q7.5 4.6 0 4.6Q-7.5 4.6 -7.5 0Z', '', { tongue: [0, 4.4, 4.2, 2.2], teeth: -2.6 }),
   v_E: ({ gap }) => filledMouth('M-12.5 -4.5Q0 -6 12.5 -4.5Q14 0.5 11 3.5Q0 5.5 -11 3.5Q-14 0.5 -12.5 -4.5Z', '', { teeth: -1.4, lower: 2.4, gap }),
@@ -276,15 +284,45 @@ export const PRESETS = {
   yawn: { eyes: 'closed', brows: 'soft', mouth: 'yawn' },
   blep: { eyes: 'happy', brows: 'neutral', mouth: 'tongueOut' },
   talk: { eyes: 'bean', brows: 'neutral', mouth: 'v_A' },
+  // hook extras
+  squint: { eyes: 'squint', lid: -0.3, tilt: 6, lower: 0.38, pupil: 0.52, look: [0, 3], brows: 'angry', browScale: 0.55, mouth: 'set', m: 0.8 },
+  ish: { eyes: 'half', lid: 0.05, tilt: -8, look: [-5, 2.5], brows: 'worry', mouth: 'grimace', m: 0.62, add: { sweat: 1 } },
+  forcedGrin: { eyes: 'ring', pupil: 0.36, look: [0, 0], brows: 'worry', mouth: 'grin', m: 0.92, add: { sweat: 1 } },
+  shout: { eyes: 'strain', brows: 'angry', mouth: 'scream', m: 1.05, add: { shock: 1 } },
+  blank: { eyes: 'none', brows: 'none', mouth: 'none' },
 };
 export const SHEET_ORDER = ['neutral', 'happy', 'starstruck', 'shocked', 'deadpan', 'smug', 'scared', 'panic', 'angry', 'guilty', 'sleepy', 'confused',
   'scream', 'laugh', 'cry', 'sly', 'determined', 'disgusted', 'dizzy', 'love', 'relieved', 'nervous', 'bored', 'evil'];
 
+export const isViseme = (m) => typeof m === 'string' && m.startsWith('v_');
+// A face spec is a preset name or {preset?, eyes?, brows?, mouth?, ...overrides, add?}. A viseme mouth on top of an
+// expression keeps the expression's eyes / brows / add-ons but drops its mouth scale and offsets (m, mouthDX, mouthDY,
+// mouthTilt) unless the spec sets them itself, so every viseme has one size per character.
 export function resolve(spec) {
   if (!spec) return { ...PRESETS.neutral };
   if (typeof spec === 'string') return { ...(PRESETS[spec] || PRESETS.neutral) };
   const base = spec.preset ? PRESETS[spec.preset] || {} : {};
-  return { ...base, ...spec, add: { ...(base.add || {}), ...(spec.add || {}) } };
+  const out = { ...base, ...spec, add: { ...(base.add || {}), ...(spec.add || {}) } };
+  if (isViseme(spec.mouth) && !isViseme(base.mouth)) for (const k of ['m', 'mouthDX', 'mouthDY', 'mouthTilt']) if (spec[k] === undefined) delete out[k];
+  return out;
+}
+// ---------- face morph ----------
+// {preset: 'starstruck', to: 'scared', k} draws a clean shrink-swap-grow between two faces (no double features):
+// k 0..0.5 the first face's eyes and mouth shrink, k 0.5..1 the second face's pop open (outBack); brows and look
+// glide; add-ons switch at 0.5. k is clamped, so a shot can drive it straight from a time segment.
+const outBack = (x) => { const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+export function morph(spec) {
+  const k = Math.max(0, Math.min(1, +spec.k || 0));
+  const { to, k: _k, ...rest } = spec; void _k;
+  const A = resolve(rest), B = resolve(to);
+  const second = k >= 0.5;
+  const u = second ? (k - 0.5) / 0.5 : k / 0.5;
+  const out = { ...(second ? B : A) };
+  out.featK = second ? 0.3 + 0.7 * outBack(u) : 1 - 0.7 * u * u;
+  out.browMix = { a: A.brows, b: B.brows, k: k < 0.15 ? 0 : k > 0.85 ? 1 : (k - 0.15) / 0.7, sa: A.browScale ?? 1, sb: B.browScale ?? 1 };
+  const la = A.look || [0, 0], lb = B.look || [0, 0];
+  out.look = [la[0] + (lb[0] - la[0]) * k, la[1] + (lb[1] - la[1]) * k];
+  return out;
 }
 
 // ---------- add-ons ----------
@@ -308,11 +346,37 @@ function smallHeart(x, y, s, rot = 0) {
   return g(path(heartPath(s), { fill: grad(c, 'd'), stroke: stroke(c), strokeWidth: f1(2.4 * s), strokeLinejoin: 'round' }) + ellipse(-4.6 * s, -5 * s, 2.2 * s, 1.5 * s, { fill: '#FFFFFF', opacity: 0.85, transform: `rotate(-30 ${f1(-4.6 * s)} ${f1(-5 * s)})` }), { transform: `translate(${f1(x)} ${f1(y)}) rotate(${rot})` });
 }
 
+// hanging tongue (k = length 0..1.5) under any mouth: from the lower lip, a soft U with a centre crease
+function tongue(k, mouth) {
+  const t = PAL.tongue, y0 = mouth === 'dogPant' ? 9 : mouth === 'dogW' || mouth === 'cat' ? 1 : mouth === 'smile' ? 2.5 : 4;
+  const L = 6 + 12 * k, w = 6.4;
+  const d = `M${f1(-w)} ${f1(y0)}L${f1(-w)} ${f1(y0 + L - w)}A${f1(w)} ${f1(w)} 0 0 0 ${f1(w)} ${f1(y0 + L - w)}L${f1(w)} ${f1(y0)}Z`;
+  return path(d, { fill: grad(t, 'd'), stroke: stroke(t), strokeWidth: LINE * 0.8, strokeLinejoin: 'round' })
+    + ln(`M0 ${f1(y0 + 1.5)}L0 ${f1(y0 + L * 0.62)}`, 1.5, stroke(t)) + path(`M${f1(-w * 0.45)} ${f1(y0 + 3)}L${f1(-w * 0.45)} ${f1(y0 + L * 0.5)}`, { stroke: '#FFFFFF', strokeOpacity: 0.45, strokeWidth: 1.6, strokeLinecap: 'round', fill: 'none' });
+}
+// the mannequin's blank face: no features, just two soft eye sockets and a nose ridge moulded in the plastic
+export function blankFace(opts = {}) {
+  const yaw = opts.yaw || 0, eyeX = opts.eyeX ?? 19, eyeY = opts.eyeY ?? 5, skin = opts.skin || PAL.skinCool;
+  const side = Math.abs(yaw) > 75, back = Math.abs(yaw) > 120;
+  if (back) return '';
+  const dk = tone(skin, -0.07, 1.1);
+  let s = '';
+  for (const sd of [-1, 1]) {
+    const m = mapFeature(sd * eyeX, yaw); if (m.k < 0.25 || (side && sd * yaw > 0)) continue;
+    s += ellipse(m.x, eyeY + 1, 10.5 * m.k, 6.5, { fill: dk, opacity: 0.35 }) + ellipse(m.x - 2 * m.k, eyeY - 2.5, 6 * m.k, 2, { fill: '#FFFFFF', opacity: 0.35 });
+  }
+  const n = mapFeature(0, yaw), ny = ((opts.mouthY ?? 28) + eyeY) / 2 + 2;
+  s += path(`M${f1(n.x - 1.5)} ${f1(eyeY + 5)}Q${f1(n.x + 3.5 * Math.max(0.4, n.k) + yaw * 0.03)} ${f1(ny)} ${f1(n.x - 2)} ${f1(ny + 3)}`, { fill: 'none', stroke: dk, strokeOpacity: 0.55, strokeWidth: 2.4, strokeLinecap: 'round' });
+  s += path(`M${f1(n.x - 6 * n.k)} ${f1((opts.mouthY ?? 28) + 1)}Q${f1(n.x)} ${f1((opts.mouthY ?? 28) + 2.5)} ${f1(n.x + 6 * n.k)} ${f1((opts.mouthY ?? 28) + 1)}`, { fill: 'none', stroke: dk, strokeOpacity: 0.3, strokeWidth: 2.2, strokeLinecap: 'round' });
+  return s;
+}
+
 // ---------- the face ----------
 // opts: { yaw, skin, eyeX, eyeY, eyeR, browY, browLen, mouthY, mouthScale, gap, freckles, top (head top y for add-ons),
 //         look (override), browColor, cat }
 export function face(spec, opts = {}) {
-  const e = resolve(spec);
+  const e = spec && typeof spec === 'object' && spec.to ? morph(spec) : resolve(spec);
+  const featK = e.featK ?? 1;
   const yaw = opts.yaw || 0;
   const eyeX = opts.eyeX ?? 19, eyeY = opts.eyeY ?? 5, eyeR = (opts.eyeR ?? 12.4), browY = opts.browY ?? eyeY - 19.5;
   const mouthY = opts.mouthY ?? 28, mScale = (opts.mouthScale ?? 1) * (e.m ?? 1);
@@ -326,8 +390,8 @@ export function face(spec, opts = {}) {
 
   // gloom: cool shade washing down from the hairline (disgust / dread), under the features
   if (e.add?.gloom && opts.headBox) {
-    const hb = opts.headBox, gid = 'gloomshade';
-    addDef(gid, `<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4B3FA8" stop-opacity="0.5"/><stop offset="0.5" stop-color="#4B3FA8" stop-opacity="0.12"/><stop offset="0.62" stop-color="#4B3FA8" stop-opacity="0"/></linearGradient>`);
+    const hb = opts.headBox;
+    const gid = fxDef('gloomshade', `<linearGradient id="gloomshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4B3FA8" stop-opacity="0.5"/><stop offset="0.5" stop-color="#4B3FA8" stop-opacity="0.12"/><stop offset="0.62" stop-color="#4B3FA8" stop-opacity="0"/></linearGradient>`);
     out += path(`M-50 ${f1(hb.top + hb.r)}A${hb.r} ${hb.r} 0 0 1 ${f1(-50 + hb.r)} ${f1(hb.top)}H${f1(50 - hb.r)}A${hb.r} ${hb.r} 0 0 1 50 ${f1(hb.top + hb.r)}V${f1(hb.bot - hb.r)}A${hb.r} ${hb.r} 0 0 1 ${f1(50 - hb.r)} ${f1(hb.bot)}H${f1(-50 + hb.r)}A${hb.r} ${hb.r} 0 0 1 -50 ${f1(hb.bot - hb.r)}Z`, { fill: `url(#${gid})` });
     for (const x of [-30, -20, 20, 30]) out += path(`M${x} ${f1(eyeY - 2)}L${x} ${f1(eyeY + 6)}`, { stroke: '#4B3FA8', strokeWidth: 2.4, strokeLinecap: 'round', opacity: 0.0 });
   }
@@ -346,7 +410,7 @@ export function face(spec, opts = {}) {
     const type = per?.type || e.eyes;
     const m = mapFeature(s * eyeX, yaw);
     if (m.k < 0.2 || (side && s * yaw > 0)) continue;
-    const sc = per?.scale ?? 1, r = eyeR * sc;
+    const sc = per?.scale ?? 1, r = eyeR * sc * featK;
     const p = { look: [look[0] + yawLook, look[1]], pupil: e.pupil, lid: e.lid, tilt: e.tilt, lower: e.lower, lowerTilt: e.lowerTilt, ...(per || {}) };
     if (per?.look) p.look = [per.look[0] + yawLook, per.look[1]];
     let body = (EYES[type] || EYES.bean)(r, s, p);
@@ -358,12 +422,16 @@ export function face(spec, opts = {}) {
       body += ln(`M${f1(ax)} ${f1(ay)}L${f1(ax + s * 5.5)} ${f1(ay - 4.5)}`, 3) + ln(`M${f1(ax - s * 3)} ${f1(ay - 2.2)}L${f1(ax + s * 1)} ${f1(ay - 7.5)}`, 3);
     }
     out += g(body, { transform: `translate(${f1(m.x)} ${f1(eyeY)}) scale(${f1(Math.max(0.3, m.k) * 100) / 100} 1)` });
-    const bType = e.browOverride || e.brows;
-    const bs = e.browScale ?? 1;
+    let bType = e.browOverride || e.brows;
+    let bs = e.browScale ?? 1;
+    if (e.browMix) {
+      const M = e.browMix, a = browSpec(M.a, s), b = browSpec(M.b, s);
+      if (a && b) { bType = a.map((v, i) => v + (b[i] - v) * M.k); bs = M.sa + (M.sb - M.sa) * M.k; } else bType = M.k < 0.5 ? M.a : M.b;
+    }
     if (bType && bType !== 'none') {
       const bm = mapFeature(s * (eyeX + 1), yaw);
       const by = browY - (sc - 1) * eyeR * 0.9;
-      let bb = brow(bType, s, { x: 0, y: by, len: (opts.browLen ?? 16), k: 1, w: BROW, color: opts.browColor || INK });
+      let bb = brow(bType, s, { x: 0, y: by, len: (opts.browLen ?? 16), k: 1, w: (opts.browW ?? BROW), color: opts.browColor || INK });
       if (bs !== 1) bb = g(bb, { transform: `translate(0 ${f1(by)}) scale(1 ${bs}) translate(0 ${f1(-by)})` });
       out += g(bb, { transform: `translate(${f1(bm.x)} 0) scale(${f1(Math.max(0.3, bm.k) * 100) / 100} 1)` });
     }
@@ -374,12 +442,19 @@ export function face(spec, opts = {}) {
     const ny = mouthY - 8.5;
     out += g(path('M-4.6 -2.4Q0 -3.6 4.6 -2.4Q3.4 1.6 0 2.6Q-3.4 1.6 -4.6 -2.4Z', { fill: PAL.catNose, stroke: stroke(PAL.catNose), strokeWidth: 1.8, strokeLinejoin: 'round' }), { transform: `translate(${f1(m.x)} ${f1(ny)}) scale(${f1(Math.max(0.35, m.k))} 1)` });
   }
-  // mouth
+  // mouth (opts.mouthShift moves it sideways, e.g. onto a dog's muzzle in profile); optional hanging tongue
   {
     const m = mapFeature(0, yaw);
     const fn = MOUTHS[e.mouth] || MOUTHS.smile;
     const tilt = e.mouthTilt || 0;
-    out += g(fn({ gap: opts.gap }), { transform: `translate(${f1(m.x + (e.mouthDX || 0))} ${f1(mouthY + (e.mouthDY || 0))}) rotate(${tilt}) scale(${f1(mScale * Math.max(0.4, m.k) * 100) / 100} ${f1(mScale * 100) / 100})` });
+    const ms = mScale * (e.featK ? 0.5 + 0.5 * featK : 1);
+    let mo = fn({ gap: opts.gap });
+    const tg = opts.tongue ?? e.tongue ?? 0;
+    if (tg > 0 && e.mouth !== 'none') mo += tongue(tg, e.mouth);
+    // visemes keep a readable width in profile (expression mouths keep their original squeeze)
+    const vis = isViseme(e.mouth) && Math.abs(yaw) > 50;
+    const kx = vis ? Math.max(0.7, m.k) : Math.max(0.4, m.k), dx = vis ? -Math.sign(yaw) * (0.7 - Math.min(0.7, m.k)) * 9 : 0;
+    out += g(mo, { transform: `translate(${f1(m.x + dx + (e.mouthDX || 0) + (opts.mouthShift || 0))} ${f1(mouthY + (e.mouthDY || 0))}) rotate(${tilt}) scale(${f1(ms * kx * 100) / 100} ${f1(ms * 100) / 100})` });
   }
   const a = addons(e, { ...opts, top, eyeX, eyeY, eyeR, yaw, mouthY });
   return { face: out + a.face, fx: a.fx };
@@ -401,9 +476,12 @@ function addons(e, o) {
   }
   if (A.joy && !o.back) fx += sweatDrop(-o.eyeX - 17, o.eyeY - 2, 0.5, -60) + sweatDrop(o.eyeX + 17, o.eyeY - 2, 0.5, 60);
   if (A.sweat) {
-    const sx = o.back ? -36 : 38 + dir * 4;
-    fx += sweatDrop(sx, -22, 0.95, 14);
-    if (A.sweat > 1) fx += sweatDrop(-sx - 2, -14, 0.7, -14);
+    // sweatSize: overall scale (pop it 0 -> 1.2 -> 1 over 6 frames); sweatK 0..1: the drop slides 20 units down the
+    // temple and grows x1.4 (bible 3.2), so a line can 'grow' the drop by animating sweatK
+    const sk = Math.max(0, Math.min(1.5, A.sweatK ?? 0)), sz = (A.sweatSize ?? 1) * (1 + 0.4 * sk);
+    const sx = o.back ? -36 : 38 + dir * 4, sy = -22 + 20 * sk;
+    if (sz > 0.01) fx += sweatDrop(sx + 2 * sk, sy, 0.95 * sz, 14 - 6 * sk);
+    if (A.sweat > 1 && sz > 0.01) fx += sweatDrop(-sx - 2, -14 + 14 * sk, 0.7 * sz, -14);
   }
   if (A.vein) {
     const x = 33, y = -24, c = '#FF3B5C', sc = stroke(c);

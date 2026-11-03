@@ -45,7 +45,7 @@ VOWELS = set('aeiouyæɑɐɒɔəɘɛɜɞɪʊʌʏɤɯɵøœᵻɚɝAIOWYQɨ')
 ROLES = {
     'N':   {'voice': {'am_michael': 0.5, 'am_puck': 0.5}, 'alt': {'am_echo': 0.5, 'am_michael': 0.5}, 'lang': 'en-us'},
     'SYS': {'voice': 'af_nova', 'alt': 'af_alloy', 'lang': 'en-us'},
-    'SAM': {'voice': {'dec': {'af_sky': 0.7, 'am_puck': 0.3}, 'pro': 'af_sky'}, 'alt': 'af_sky', 'lang': 'en-us', 'formant': 1.0},
+    'SAM': {'voice': {'dec': {'af_sky': 0.7, 'am_puck': 0.3}, 'pro': 'af_sky'}, 'alt': 'af_sky', 'lang': 'en-us', 'formant': 1.12},
     'DAD': {'voice': 'am_eric', 'alt': 'am_onyx', 'lang': 'en-us'},
 }
 # register presets: hz = target median F0 of the intonation, k = contour exaggeration around the median,
@@ -57,9 +57,9 @@ REGS = {
     ('N', 'DEADPAN'):     dict(hz=112, k=0.55, acc=0.8, wpm=156, fall=2.0, rise=1.5, creak=0.3, micro=0.9, amp=0.5, eq='warm', pause=(0.48, 0.36, 0.20), decl=1.5),
     ('SYS', 'calm'):      dict(hz=200, k=0.60, acc=1.0, wpm=165, fall=2.0, rise=2.0, creak=0.5, micro=0.8, amp=0.8, eq='clean', pause=(0.40, 0.30, 0.22)),
     ('SYS', 'cheerful'):  dict(hz=238, k=1.25, acc=2.5, wpm=170, fall=3.0, rise=3.0, creak=0.6, micro=0.8, amp=1.5, eq='clean', pause=(0.40, 0.28, 0.18)),
-    ('SAM', 'nervous'):   dict(hz=280, k=1.50, acc=4.0, wpm=182, fall=0.0, rise=2.0, creak=0.8, micro=0.8, amp=2.0, eq='kid', pause=(0.40, 0.25, 0.15), tremor=0.25),
+    ('SAM', 'nervous'):   dict(hz=295, k=1.50, acc=4.0, wpm=182, fall=0.0, rise=2.0, creak=0.8, micro=0.8, amp=2.0, eq='kid', pause=(0.40, 0.25, 0.15), tremor=0.25),
     ('SAM', 'guilty'):    dict(hz=250, k=0.80, acc=1.0, wpm=120, fall=1.5, rise=1.0, creak=0.6, micro=0.8, amp=0.0, eq='kid', pause=(0.30, 0.25, 0.15)),
-    ('SAM', 'yawning'):   dict(hz=245, k=0.70, acc=1.0, wpm=105, fall=4.0, rise=1.0, creak=0.6, micro=0.6, amp=0.0, eq='kid', pause=(0.30, 0.25, 0.15)),
+    ('SAM', 'yawning'):   dict(hz=260, k=0.70, acc=1.0, wpm=105, fall=4.0, rise=1.0, creak=0.6, micro=0.6, amp=0.0, eq='kid', pause=(0.30, 0.25, 0.15)),
     ('SAM', 'default'):   dict(hz=275, k=1.20, acc=3.0, wpm=175, fall=2.0, rise=3.0, creak=0.8, micro=0.8, amp=1.5, eq='kid', pause=(0.40, 0.28, 0.15)),
     ('DAD', 'shouting'):  dict(hz=265, k=1.30, acc=4.0, wpm=150, fall=4.0, rise=3.0, creak=1.0, micro=0.7, amp=3.0, eq='shout', pause=(0.40, 0.28, 0.15), effort=1.0),
     ('DAD', 'default'):   dict(hz=108, k=0.70, acc=1.5, wpm=160, fall=2.0, rise=2.0, creak=0.3, micro=0.9, amp=1.0, eq='warm', pause=(0.45, 0.32, 0.18)),
@@ -76,7 +76,8 @@ DIRECTION = {
     'S00-L005': dict(stress={'reset': 0.8, 'one': 1.2}, contour='f'),
     'S00-L006': dict(stress={'defense': 2.0, 'ONE': 4.5, 'thing': 1.0}, len={'ONE': 1.3}, beat={'defense': 0.42}, contour='q', rise=2.0),
     'S00-L007': dict(stress={'you': 1.5, 'twelve': 1.0}, beat={'you': 0.28}, contour='f'),
-    'S00-L008': dict(say='ish.', carrier='Well...', stress={}, len={'Ish': 1.3}, contour='rf'),
+    # formant 1.0: Sam's x1.12 formant shift lost the lone "Ish" in ASR at every ratio tried (1.06, 1.12), see VOICE_LAB.md
+    'S00-L008': dict(say='ish.', carrier='Um...', stress={}, len={'Ish': 1.5}, contour='rf', formant=1.0),
     'S00-L009': dict(stress={'scroll': 0.8, 'seven': 0.8}, beat={'back': 0.45}, contour='f'),
     'S00-L010': dict(stress={'Bedtime': 0.8, 'Supposedly': 1.0}, beat={'Bedtime': 0.36}, contour='f'),
     'S00-L011': dict(stress={'app': 1.5, 'never': 4.0}, len={'never': 1.15}, contour='x'),
@@ -94,8 +95,22 @@ DIRECTION = {
     'S00-L023': dict(stress={"planet's": 0.8}, len={"planet's": 1.1}, contour='f', wpm=140),
     'S01-L001': dict(stress={'Day': 3.0, 'one': 4.0}, len={'one': 1.25}, contour='x', wpm=140),
 }
-# Chosen recipe per role/register (and per-line exceptions) after the lab, see docs/VOICE_LAB.md.
-RECIPE = {'default': dict(approach='e_mid')}
+# Chosen recipe after the lab (docs/VOICE_LAB.md section 5). Role/register defaults = the licence-clean approach with
+# the best mean lab score in that group; they are used for lines the lab has not seen (--scene). Hook lines keep the
+# lab's per-line pick (Kokoro, PSOLA and WORLD are deterministic, so --hook reproduces the chosen takes exactly).
+RECIPE = {
+    'default': dict(approach='e_mid'),
+    ('N', 'HYPE'): dict(approach='e_mid'), ('N', 'DEADPAN'): dict(approach='e_mild'),
+    ('SYS', 'calm'): dict(approach='e_mild'), ('SYS', 'cheerful'): dict(approach='e_strong'),
+    ('SAM', 'default'): dict(approach='b_psola'), ('DAD', 'default'): dict(approach='e_mid'),
+    # per-line picks of the hook lab (voice/lab/lab.json)
+    'S00-L001': dict(approach='e_mid'), 'S00-L002': dict(approach='e_mild'), 'S00-L003': dict(approach='e_mild'), 'S00-L004': dict(approach='e_mild'),
+    'S00-L005': dict(approach='e_mild'), 'S00-L006': dict(approach='b_world'), 'S00-L007': dict(approach='e_mild'), 'S00-L008': dict(approach='b_psola'),
+    'S00-L009': dict(approach='b_psola'), 'S00-L010': dict(approach='e_mid'), 'S00-L011': dict(approach='e_mid'), 'S00-L012': dict(approach='e_mid'),
+    'S00-L013': dict(approach='e_mild'), 'S00-L014': dict(approach='e_strong'), 'S00-L015': dict(approach='b_psola'), 'S00-L016': dict(approach='b_psola'),
+    'S00-L017': dict(approach='e_strong'), 'S00-L018': dict(approach='e_strong'), 'S00-L019': dict(approach='e_mid'), 'S00-L020': dict(approach='e_mid'),
+    'S00-L021': dict(approach='e_mid'), 'S00-L022': dict(approach='b_psola'), 'S00-L023': dict(approach='e_mild'), 'S01-L001': dict(approach='b_psola'),
+}
 
 VARIANTS = {'mild': dict(k=0.85, acc=0.75), 'mid': dict(k=1.0, acc=1.0), 'strong': dict(k=1.18, acc=1.3)}
 
@@ -349,6 +364,13 @@ def design_f0(f0, fps, spans, stress_spans, R, D, last_word_span, rng_seed=0, ac
     li = np.interp(np.arange(n), np.where(v)[0], lf[v])
     micro = li - ls
     m = np.median(ls[v])
+    if D.get('carrier') and active is not None:
+        # carrier lines: the register target applies to the line, not to the carrier phrase that is cut off (with the
+        # carrier in the median, "Ish" sat 4 st under Sam's register)
+        am = np.zeros(n, bool)
+        am[max(0, int(active[0])):min(n, int(active[1]))] = True
+        if (v & am).sum() >= 3:
+            m = np.median(ls[v & am])
     tgt = np.log2(R['hz'])
     base = tgt + R['k'] * (ls - m)
     # creak / low-dip lift: compress what falls more than 5 st below the target
@@ -635,7 +657,12 @@ def plan(E, role, tag, text, lid=None, variant='mid', overrides=None, voice=None
         mk[s0:] = True
         mk &= (f0 > 10) & (f0 < 0.62 * fm)
         f0[mk] = 0.0
-        N[mk] = N[mk] - 4.0
+        # inside a voiceless fricative the noise is the consonant: devoiced but kept at its level
+        fric = np.zeros(len(f0), bool)
+        for i in fin:
+            if lay['chars'][i] in 'sʃfθ':
+                fric[fsp[i][0]:fsp[i][1]] = True
+        N[mk & ~fric] = N[mk & ~fric] - 4.0
         T_fry = int(mk.sum())
     T = Take()
     T.P, T.f0, T.N, T.lay, T.R, T.D, T.spans, T.stress_spans = P, f0, N, lay, R, D, spans, stress_spans
@@ -694,6 +721,10 @@ def biquad(kind, f, sr, gain_db=0.0, q=0.707):
 
 
 def eq(y, sr, name):
+    return _eq(y, sr, name)
+
+
+def _eq(y, sr, name):
     from scipy.signal import lfilter
     chains = {
         'bright': [('hp', 70, 0, 0.7), ('ls', 180, 1.0, 0.7), ('peak', 3200, 2.5, 0.9), ('hs', 7000, 1.5, 0.7)],
@@ -726,14 +757,14 @@ def formant_shift(y, sr, ratio):
     if abs(ratio - 1) < 1e-3:
         return y
     snd = parselmouth.Sound(y.astype(np.float64), sampling_frequency=sr)
-    out = call(snd, 'Change gender', 75, 600, float(ratio), 0.0, 1.0, 1.0)
+    out = call(snd, 'Change gender', 90, 700, float(ratio), 0.0, 1.0, 1.0)   # 700 Hz ceiling: Sam's accents reach ~560 Hz
     z = out.values[0].astype(np.float32)
     return z[:len(y)] if len(z) >= len(y) else np.pad(z, (0, len(y) - len(z)))
 
 
 def finish(T, a):
     y = a * amp_env(len(a), SR, T.amp).astype(np.float32)
-    fr = ROLES[T.role].get('formant', 1.0)
+    fr = T.D.get('formant', ROLES[T.role].get('formant', 1.0))
     if fr != 1.0:
         y = formant_shift(y, SR, fr)
     if T.R.get('effort'):
@@ -768,6 +799,10 @@ def approach_a(E, role, tag, text, lid, split=False, voice=None):
     lang = ROLES[role]['lang']
     vspec = voice or ROLES[role]['voice']
     say = D['say']
+    fr = D.get('formant', ROLES[role].get('formant', 1.0))
+
+    def eq(y, sr, name):               # the role's timbre (formant shift) applies to the plain take too
+        return _eq(formant_shift(y, sr, fr) if fr != 1.0 else y, sr, name)
     if role == 'N' and not tag.upper().startswith('DEAD'):
         say = re.sub(r'\.$', '!', say)          # hype: end on '!' for more energy
     T = plan(E, role, tag, text, lid)
@@ -907,6 +942,9 @@ def score(met, role, reg, n_words, base=None):
     s = {}
     acc = met.get('word_acc', 0)
     s['intel'] = 1.0 if acc >= 0.999 else max(0.0, acc - 0.3)
+    if 'asr_hits' in met:             # 1-2 word lines: share of 6 perturbed decodes that are word-perfect
+        acc = met['asr_hits']
+        s['intel'] = met['asr_hits']
     f0 = met.get('f0_med') or 1.0
     R = REGS.get((role, reg)) or REGS.get((role, 'default'))
     tgt = R['hz']
@@ -943,7 +981,7 @@ def score(met, role, reg, n_words, base=None):
     if hype_like and n_words > 2 and sd < 2.0:
         s['gate'] = 'reject: hype pitch std < 2 st'
         total -= 1.0
-    if acc < 0.75:
+    if acc < (0.5 if 'asr_hits' in met else 0.75):
         s['gate'] = 'reject: ASR mismatch'
         total -= 1.0
     s['total'] = round(float(total), 4)
@@ -968,8 +1006,17 @@ FINAL_OK = {'a1', 'a2', 'b_psola', 'b_world', 'e_mild', 'e_mid', 'e_strong'}   #
 NATIVE_MARGIN = 0.05
 
 
-def _measure_cand(y, sr, text):
+def _short_hits(y, sr, text, role):
+    """Robust ASR hit rate of a 1-2 word line, measured on the conformed audio (what the final file will be)."""
+    _, nrm = VI.script_words(text)
+    yc, src = VI.conform(y, sr, role)
+    return VI.asr_robust(VI.resample(yc, src, 16000), nrm)
+
+
+def _measure_cand(y, sr, text, role=None):
     m, w, vis, emb = VI.measure(y, sr, text)
+    if 'asr_hits' in m and role:
+        m['asr_hits'] = _short_hits(y, sr, text, role)
     return m, emb
 
 
@@ -1015,7 +1062,7 @@ def run_lab(ids, approaches=None, out_json=None):
             path = os.path.join(LAB_DIR, lid, ap + '.wav')
             y = (y / max(1.0, np.abs(y).max() / 0.98)).astype(np.float32)   # measured as saved (float renders may exceed 1)
             save24(path, y)
-            m, emb = _measure_cand(y, SR, text)
+            m, emb = _measure_cand(y, SR, text, role)
             embs[(lid, ap)] = emb
             rec['cands'][ap] = {'file': path, 'metrics': m, 'secs': round(time.time() - t0, 1)}
             print(f"{lid} {ap:9s} f0 {m.get('f0_med')} sd {m.get('std_st')} wpm {m.get('wpm_voiced')} acc {m.get('word_acc')} "
@@ -1053,7 +1100,7 @@ def run_lab(ids, approaches=None, out_json=None):
                 continue
             path = os.path.join(LAB_DIR, lid, 'c_pocket.wav')
             save24(path, y)
-            m, emb = _measure_cand(y, SR, rec['text'])
+            m, emb = _measure_cand(y, SR, rec['text'], rec['role'])
             embs[(lid, 'c_pocket')] = emb
             rec['cands']['c_pocket'] = {'file': path, 'metrics': m, 'secs': round(time.time() - t0, 1)}
             print(f"{lid} c_pocket  f0 {m.get('f0_med')} sd {m.get('std_st')} wpm {m.get('wpm_voiced')} acc {m.get('word_acc')} mos {m.get('dnsmos_ovrl')} | {m.get('asr')}", flush=True)
@@ -1078,10 +1125,13 @@ def reselect(lab_json=None):
     lab = json.load(open(lab_json))
     embs = {}
     for lid, rec in lab.items():
+        short = len(VI.script_words(rec['text'])[1]) <= 2
         for ap, c in rec['cands'].items():
             if 'file' in c and os.path.exists(c['file']):
                 z, _ = VI.load(c['file'])
                 embs[(lid, ap)] = VI.embed(VI.resample(z, SR, 16000))
+                if short and 'metrics' in c and 'asr_hits_conf' not in c['metrics']:
+                    c['metrics']['asr_hits'] = c['metrics']['asr_hits_conf'] = _short_hits(z, SR, rec['text'], rec['role'])
     select(lab, embs)
     json.dump(lab, open(lab_json, 'w'), indent=1, default=float)
     write_table(lab)
@@ -1407,7 +1457,7 @@ def run_final(ids, E=None):
             print('skip (no recipe for role)', lid, role)
             continue
         reg = reg_for(role, tag)[1]
-        rc = RECIPE.get(lid, RECIPE.get((role, reg), RECIPE['default']))
+        rc = RECIPE.get(lid, RECIPE.get((role, reg), RECIPE.get((role, 'default'), RECIPE['default'])))
         ap = rc.get('approach', 'e_mid')
         if ap.startswith('e_'):
             y, T = approach_e(E, role, tag, text, lid, ap[2:])

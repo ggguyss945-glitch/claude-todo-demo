@@ -34,9 +34,10 @@ def grab_video(video, frames, fps, tmp, offset=0.0):
     paths = {}
     for f in sorted(set(frames)):
         p = os.path.join(tmp, f'v_{f:06d}.jpg')
-        t = max(0.0, f / fps - offset)
-        # accurate seek: -ss after -i decodes from the previous keyframe to the exact frame
-        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-ss', f'{t + 0.25 / fps:.4f}', '-frames:v', '1', '-q:v', '2', p], check=True)
+        t = max(0.0, f / fps - offset - 0.25 / fps)
+        # accurate input seek: decodes from the previous keyframe and returns the first frame with pts >= t, i.e.
+        # exactly frame f (the quarter-frame margin absorbs rounding; seeking past f/fps would return frame f + 1)
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-accurate_seek', '-ss', f'{t:.5f}', '-i', video, '-frames:v', '1', '-q:v', '2', p], check=True)
         if os.path.exists(p):
             paths[f] = p
     return paths

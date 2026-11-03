@@ -6,7 +6,7 @@
 // construction gives front, three-quarter, side and back views.
 import { PAL, g, path, circle, ellipse, rect, grad, radial, shadeBand, stroke, tone, union, solid, rrect, rtrap, capsule, taper,
   glossCapsule, glossBox, contactShadow, f1, spline, polyline, uid, addDef } from './style.js';
-import { face as drawFace, mapFeature } from './face.js';
+import { face as drawFace, mapFeature, blankFace } from './face.js';
 
 const D2R = Math.PI / 180;
 export const FACINGS = {
@@ -128,9 +128,24 @@ export function mitten(wx, wy, dir, size, inner, kind, skin, sw) {
   const xs = shapes.length ? [wx - r * 3, wy - r * 3, wx + r * 3, wy + r * 3] : null;
   return union(shapes, skin, { sw, box: xs });
 }
+// soft fabric stripes along a capsule segment (pyjamas): lines parallel to the axis, inside the capsule body
+export function segStripes(x1, y1, x2, y2, w, st, { from = 0, to = 1 } = {}) {
+  if (!st) return '';
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 0.001, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+  const r = w / 2, n = st.n ?? 3, lw = w * (st.w ?? 0.15);
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const o = (n === 1 ? 0 : -0.62 + (1.24 * i) / (n - 1)) * (r - lw * 0.6);
+    const inset = Math.sqrt(Math.max(0, r * r - o * o)) * 0.55 + lw * 0.5;
+    const a0 = Math.max(L * from, inset * (from <= 0 ? 1 : 0)), a1 = Math.min(L * to, L - inset * (to >= 1 ? 1 : 0));
+    if (a1 <= a0) continue;
+    out += path(`M${f1(x1 + ux * a0 + nx * o)} ${f1(y1 + uy * a0 + ny * o)}L${f1(x1 + ux * a1 + nx * o)} ${f1(y1 + uy * a1 + ny * o)}`, { stroke: st.color, strokeOpacity: st.op ?? 0.8, strokeWidth: f1(lw), strokeLinecap: 'round', fill: 'none' });
+  }
+  return out;
+}
 // arm chain. returns { svg, hand: [x,y], dir }
 export function arm(o) {
-  const { sx, sy, a, fore = 0, sgn, d, sleeve, skin, sw, handKind = 'open', sleeveLen = 1, cuff = null, sleeveW = 1.1 } = o;
+  const { sx, sy, a, fore = 0, sgn, d, sleeve, skin, sw, handKind = 'open', sleeveLen = 1, cuff = null, sleeveW = 1.1, stripes = null } = o;
   const u = dirDown(a, sgn), e = [sx + u[0] * d.up, sy + u[1] * d.up];
   const v = dirDown(a + fore, sgn), w = [e[0] + v[0] * d.fore, e[1] + v[1] * d.fore];
   const pad = d.w * 1.2, box = [Math.min(sx, e[0], w[0]) - pad, Math.min(sy, e[1], w[1]) - pad, Math.max(sx, e[0], w[0]) + pad, Math.max(sy, e[1], w[1]) + pad];
@@ -139,6 +154,7 @@ export function arm(o) {
   const hand = () => mitten(w[0] - v[0] * d.w * 0.15, w[1] - v[1] * d.w * 0.15, v, d.hand, -sgn, handKind, skin, sw);
   if (sleeve && sleeveLen >= 1) {
     svg += union(segs, sleeve, { sw, box });
+    if (stripes) svg += segStripes(sx, sy, e[0], e[1], d.w, stripes, { from: 0.12 }) + segStripes(e[0], e[1], w[0], w[1], d.w * 0.96, stripes, { to: 0.86 });
     svg += glossCapsule(sx, sy, e[0], e[1], d.w, { op: 0.34 }) + glossCapsule(e[0], e[1], w[0], w[1], d.w, { op: 0.3, thin: false });
     if (cuff) { const c0 = [w[0] - v[0] * d.w * 0.42, w[1] - v[1] * d.w * 0.42]; svg += path(capsule(c0[0], c0[1], w[0] - v[0] * 0.5, w[1] - v[1] * 0.5, d.w * 1.04), { fill: grad(cuff, 'd'), stroke: stroke(cuff), strokeWidth: f1(sw) }); }
     svg += hand();
@@ -156,13 +172,16 @@ export function arm(o) {
 }
 // leg with pants (full or shorts) and a shoe cap
 export function leg(o) {
-  const { hx, hy, a, sgn, d, pants, pantLen = 1, skin, sw, shoe, yaw = 0, sock = null, knee = 0 } = o;
+  const { hx, hy, a, sgn, d, pants, pantLen = 1, skin, sw, shoe, yaw = 0, sock = null, knee = 0, stripes = null, hem = null } = o;
   const u = dirDown(a, sgn);
   const L = d.len, ax = hx + u[0] * L, ay = hy + u[1] * L;
   const box = [Math.min(hx, ax) - d.w, hy - 4, Math.max(hx, ax) + d.w, ay + 4];
   let svg = '';
-  if (pantLen >= 1) svg += union([{ d: capsule(hx, hy, ax, ay, d.w) }], pants, { sw, box });
-  else {
+  if (pantLen >= 1) {
+    svg += union([{ d: capsule(hx, hy, ax, ay, d.w) }], pants, { sw, box });
+    if (stripes) svg += segStripes(hx, hy, ax, ay, d.w, stripes, { from: 0.05 });
+    if (hem) { const h0 = [hx + u[0] * (L - d.w * 0.62), hy + u[1] * (L - d.w * 0.62)]; svg += path(capsule(h0[0], h0[1], ax, ay - 1, d.w * 1.02), { fill: grad(hem, 'd'), stroke: stroke(hem), strokeWidth: f1(sw * 0.9) }); }
+  } else {
     svg += union([{ d: capsule(hx, hy, ax, ay, d.w * 0.86) }], skin, { sw, box });
     if (sock) { const s0 = [hx + u[0] * L * 0.8, hy + u[1] * L * 0.8]; svg += path(capsule(s0[0], s0[1], ax, ay, d.w * 0.9), { fill: grad(sock, 'd'), stroke: stroke(sock), strokeWidth: f1(sw) }); }
     const pe = [hx + u[0] * L * pantLen, hy + u[1] * L * pantLen];
@@ -200,7 +219,7 @@ export function withAdd(faceSpec, add) {
 }
 // draws head shape + face + hair in head-local units; returns markup placed by the caller
 export function headMarkup(spec, o) {
-  const { yaw, faceSpec, look, sw, pose, add } = o;
+  const { yaw, faceSpec, look, sw, pose, add, blank = 0 } = o;
   const hd = spec.dims.head;
   const hh = (100 * hd.h) / hd.w, head = { top: -hh / 2, bot: hh / 2, r: hd.r * 100, a: 50 };
   const skin = spec.skin;
@@ -238,7 +257,15 @@ export function headMarkup(spec, o) {
   if (spec.hair?.front) front += spec.hair.front(ctx);
   if (spec.headwear) over += spec.headwear(ctx, f);
   const preface = spec.faceUnder ? spec.faceUnder(ctx) : '';
-  return { svg: back + skull + preface + f.face + (spec.faceOver ? spec.faceOver(ctx, faceSpec) : '') + front + over, fx: f.fx, add };
+  // mannequin blend: the features fade out (gone by blank 0.75) while the moulded blank face fades in
+  let feat = preface + f.face;
+  if (blank > 0) {
+    const fo = 1 - Math.min(1, Math.max(0, (blank - 0.25) / 0.5)), bo = Math.min(1, Math.max(0, (blank - 0.35) / 0.5));
+    feat = (fo > 0.001 ? (fo < 0.999 ? g(feat, { opacity: f1(fo * 100) / 100 }) : feat) : '') + (bo > 0.001 ? g(blankFace(fopts), bo < 0.999 ? { opacity: f1(bo * 100) / 100 } : {}) : '');
+  }
+  // the floating add-ons (sweat, ?, sparkles) fade with the features: a mannequin does not sweat
+  const fxOut = blank > 0 ? (blank >= 0.75 ? '' : g(f.fx, { opacity: f1((1 - Math.max(0, (blank - 0.25) / 0.5)) * 100) / 100 })) : f.fx;
+  return { svg: back + skull + feat + (spec.faceOver ? spec.faceOver(ctx, faceSpec) : '') + front + over, fx: fxOut, add };
 }
 
 // ---------- the figure ----------
@@ -255,9 +282,10 @@ export function buildFigure(spec, o = {}) {
   const hipY = ankleY - d.leg.len;
   const torsoBot = hipY + (d.torso.hipOverlap ?? 14);
   const torsoTop = torsoBot - d.torso.h;
-  const shoulderY = torsoTop + (d.torso.shoulder ?? 20);
+  const shrug = Math.max(0, Math.min(1.3, pose.shrug || 0));          // 0..1: shoulders up, head sinks into them
+  const shoulderY = torsoTop + (d.torso.shoulder ?? 20) - 9 * shrug;
   const neckY = torsoTop + (d.torso.neck ?? 6);
-  const headCY = neckY - d.head.h / 2 + (d.head.sink ?? 0);
+  const headCY = neckY - d.head.h / 2 + (d.head.sink ?? 0) + 6 * shrug;
   const wt = d.torso.wt * kW, wb = d.torso.wb * kW;
   const tm = (x) => { const m = mapFeature((x / (d.torso.wt / 2)) * 50, yaw); return { x: (m.x / 50) * (wt / 2), k: m.k }; };
   const ctx = { yaw, sn, cs, back, sideOn, sw, d, pose, torsoTop, torsoBot, shoulderY, neckY, hipY, wt, wb, tm, spec, kW, add: o.add || {}, props: { ...(spec.props || {}), ...(o.props || {}) } };
@@ -273,19 +301,20 @@ export function buildFigure(spec, o = {}) {
 
   const props = { ...(spec.props || {}), ...(o.props || {}) };
   const drawArm = (A) => {
-    const r = arm({ sx: A.x, sy: shoulderY, a: A.a, fore: A.fore, sgn: A.sgn, d: d.arm, sleeve: spec.top.sleeve ? (spec.top.sleeveColor || spec.top.color) : null, skin: spec.skin, sw, handKind: props[A.id] ? (spec.propGrip?.[props[A.id]] || 'grip') : A.hand, sleeveLen: spec.top.sleeveLen ?? 1, cuff: spec.top.cuff, sleeveW: spec.top.sleeveW });
+    const r = arm({ sx: A.x, sy: shoulderY, a: A.a, fore: A.fore, sgn: A.sgn, d: d.arm, sleeve: spec.top.sleeve ? (spec.top.sleeveColor || spec.top.color) : null, skin: spec.skin, sw, handKind: props[A.id] ? (spec.propGrip?.[props[A.id]] || 'grip') : A.hand, sleeveLen: spec.top.sleeveLen ?? 1, cuff: spec.top.cuff, sleeveW: spec.top.sleeveW, stripes: spec.top.stripes });
     let pre = '', post = '';
     if (props[A.id] && spec.drawProp) { const pr = spec.drawProp(props[A.id], { hand: r.hand, wrist: r.wrist, dir: r.dir, side: A.id, sw, ctx }); pre = pr.behind || ''; post = pr.front || ''; }
     return pre + r.svg + post;
   };
-  const drawLeg = (Lg) => leg({ hx: Lg.x, hy: hipY, a: Lg.a, sgn: Lg.sgn, d: d.leg, pants: spec.pants.color, pantLen: spec.pants.len ?? 1, skin: spec.skin, sw, shoe: { ...d.shoe, ...spec.shoes }, yaw, sock: spec.pants.sock }).svg;
+  const drawLeg = (Lg) => leg({ hx: Lg.x, hy: hipY, a: Lg.a, sgn: Lg.sgn, d: d.leg, pants: spec.pants.color, pantLen: spec.pants.len ?? 1, skin: spec.skin, sw, shoe: { ...d.shoe, ...spec.shoes }, yaw, sock: spec.pants.sock, stripes: spec.pants.stripes, hem: spec.pants.hem }).svg;
 
   // ---- assemble (painter's order) ----
   let lower = '', upper = '', far = '', near = '';
   const legs = [legLp, legRp].sort((p, q) => p.z - q.z);
-  for (const Lg of legs) lower += drawLeg(Lg);
+  const withLegs = o.legs !== false;                          // legs: false -> waist up (in bed, behind a counter)
+  if (withLegs) for (const Lg of legs) lower += drawLeg(Lg);
   // pelvis bridges the legs so pants read as one garment
-  {
+  if (withLegs) {
     const pw = (hipX * 2 * aC + d.leg.w * 0.5 * aS) + d.leg.w, ph = d.torso.pelvis ?? 24;
     const px = -pw / 2, py = torsoBot - ph * 0.55;
     const pc = spec.pants.hip || spec.pants.color;
@@ -302,6 +331,7 @@ export function buildFigure(spec, o = {}) {
   let torso = '';
   if (spec.decor?.behindTorso) torso += spec.decor.behindTorso(ctx);
   torso += path(tp, { fill: grad(spec.top.color, 'd'), stroke: stroke(spec.top.color), strokeWidth: f1(sw), strokeLinejoin: 'round' });
+  if (spec.top.stripes) torso += torsoStripes(tp, spec.top.stripes, { torsoTop, torsoBot, wt, wb, tm, d });
   if (spec.decor?.torso) torso += spec.decor.torso(ctx);
   torso += path(tp, { fill: shadeBand(spec.top.color, { at: 0.88, op: 0.45, dL: 0.06 }) });
   torso += glossBox(-wt / 2, torsoTop, wt, d.torso.h, { op: 0.3, sw: sw * 1.3 });
@@ -309,7 +339,7 @@ export function buildFigure(spec, o = {}) {
 
   // head
   const hs = d.head.w / 100;
-  const hm = headMarkup(spec, { yaw, faceSpec: o.face, look: o.look, sw, pose, add: o.add });
+  const hm = headMarkup(spec, { yaw, faceSpec: o.face, look: o.look, sw, pose, add: o.add, blank: o.blank || 0 });
   const headG = g(hm.svg, { transform: `translate(0 ${f1(headCY)}) scale(${f1(hs * 1000) / 1000})` });
   const fxG = g(hm.fx, { transform: `translate(0 ${f1(headCY)}) scale(${f1(hs * 1000) / 1000})` });
   const headPivot = `rotate(${f1(pose.head)} 0 ${f1(neckY)})`;
@@ -320,18 +350,33 @@ export function buildFigure(spec, o = {}) {
   upper = far + torso + neck + g(headG, { transform: headPivot }) + neckFront + near + extra + g(fxG, { transform: headPivot });
   const upperG = g(upper, { transform: `translate(0 ${f1(pose.bob)}) rotate(${f1(pose.lean)} 0 ${f1(hipY)})` });
   const shadowW = (hipX + d.shoe.w * 0.55) * (aC + 0.6 * aS) * 1.25 + 10;
-  const shadow = o.shadow === false ? '' : contactShadow(0, 2, shadowW, 9 + d.shoe.w * 0.08, { op: 0.3 });
+  const shadow = o.shadow === false || !withLegs ? '' : contactShadow(0, 2, shadowW, 9 + d.shoe.w * 0.08, { op: 0.3 });
   const body = shadow + lower + upperG;
   const tx = `translate(${f1(o.x ?? 0)} ${f1(o.y ?? 0)}) scale(${f1(s * 1000) / 1000})`;
   return g(body, { transform: tx });
 }
 
+// vertical fabric stripes wrapped round the torso (they follow the yaw like the other front details), clipped to it
+function torsoStripes(tp, st, { torsoTop, torsoBot, wt, wb, tm, d }) {
+  const id = uid('ts');
+  addDef(id, `<clipPath id="${id}"><path d="${tp}"/></clipPath>`);
+  const gap = st.gap ?? 17, lw = st.wT ?? 5.2, hw = d.torso.wb / 2;
+  let out = '';
+  for (let x = -Math.floor(hw / gap) * gap; x <= hw; x += gap) {
+    const a = tm(x * (d.torso.wt / d.torso.wb)), b = tm(x);
+    if (a.k < 0.12 && b.k < 0.12) continue;
+    out += path(`M${f1(a.x)} ${f1(torsoTop - 2)}L${f1(b.x)} ${f1(torsoBot + 2)}`, { stroke: st.color, strokeOpacity: st.op ?? 0.8, strokeWidth: f1(lw * Math.max(0.35, (a.k + b.k) / 2)), fill: 'none' });
+  }
+  void wt; void wb;
+  return g(out, { clipPath: `url(#${id})` });
+}
 // height of a figure in body units (ground to top of hair), for layout
 export function figureHeight(spec) {
   const d = spec.dims; const ankleY = -d.shoe.h * 0.62, hipY = ankleY - d.leg.len, torsoBot = hipY + (d.torso.hipOverlap ?? 14), torsoTop = torsoBot - d.torso.h;
   const neckY = torsoTop + (d.torso.neck ?? 6);
   return -(neckY - d.head.h + (d.head.sink ?? 0)) + (spec.hair?.height ?? 8) * (d.head.w / 100);
 }
+export function hipYOf(spec) { const d = spec.dims; return -d.shoe.h * 0.62 - d.leg.len; }
 export function headCenterY(spec) {
   const d = spec.dims; const ankleY = -d.shoe.h * 0.62, hipY = ankleY - d.leg.len, torsoBot = hipY + (d.torso.hipOverlap ?? 14), torsoTop = torsoBot - d.torso.h;
   return torsoTop + (d.torso.neck ?? 6) - d.head.h / 2 + (d.head.sink ?? 0);

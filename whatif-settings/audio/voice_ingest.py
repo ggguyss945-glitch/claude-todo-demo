@@ -94,14 +94,15 @@ def trim_handles(y, sr, handle=HANDLE, rel_db=-50.0):
     on = np.where(d > np.max(d) + rel_db)[0]
     if not len(on):
         return y
-    s = max(0, int((on[0] * 0.005 - handle) * sr))
-    e = min(len(y), int(((on[-1] + 1) * 0.005 + handle) * sr))
-    out = y[s:e].copy()
+    s = int((on[0] * 0.005 - handle) * sr)
+    e = int(((on[-1] + 1) * 0.005 + handle) * sr)
+    out = y[max(0, s):min(len(y), e)].copy()
     f = int(0.004 * sr)
     if len(out) > 2 * f:
         out[:f] *= np.linspace(0, 1, f) ** 2
         out[-f:] *= np.linspace(1, 0, f) ** 2
-    return out
+    # sound that starts (or ends) closer to the file edge than the handle: pad with silence, so every take has the handle
+    return np.concatenate([np.zeros(max(0, -s), np.float32), out.astype(np.float32), np.zeros(max(0, e - len(y)), np.float32)])
 
 
 def limit(y, sr, ceil_db=PEAK_DB, look=0.0015, rel=0.06):
@@ -255,6 +256,19 @@ def asr(y16, lead=0.25):
         for k, p_ in enumerate(parts):
             out.append([p_, s + (e - s) * k / len(parts), s + (e - s) * (k + 1) / len(parts)])
     return r.text.strip(), out
+
+
+def asr_robust(y16, nrm, leads=(0.1, 0.25, 0.5), gains_db=(0.0, -6.0)):
+    """Share of ASR passes that are word-perfect when the same audio is decoded with different lead-in silences and
+    levels. One- and two-word lines ("Ish.", "Day one.") flip between readings on a single decode, so their
+    intelligibility is this hit rate rather than one coin flip."""
+    hits = []
+    for ld in leads:
+        for g in gains_db:
+            h, _ = asr((y16 * 10 ** (g / 20)).astype(np.float32), lead=ld)
+            a, _ = word_acc(nrm, hyp_norm(h.split()))
+            hits.append(a >= 0.999)
+    return round(float(np.mean(hits)), 3)
 
 
 def embed(y16):
@@ -516,16 +530,26 @@ def visemes(y, sr, words, dF=None, fps=FPS):
             changed = True
         if not changed:
             break
-    R = runs(lab)
-    for v, s, e in R:
-        if v is None or e - s <= 8:
-            continue
-        L = e - s
-        k = int(np.ceil(L / 6))
-        cuts = np.linspace(s, e, k + 1).round().astype(int)
-        for j in range(k):
-            if j % 2 == 1:
-                lab[cuts[j]:cuts[j + 1]] = partner[v]
+    # max hold 8 frames: a long run is cut into an odd number of 3-6 frame pieces that alternate with a partner shape
+    # (so the run starts and ends on its own shape and no partner piece can fuse with a neighbour into a >8 hold)
+    order = ['v_small', 'v_A', 'v_E', 'v_O', 'v_closed']
+    for _ in range(6):
+        R = runs(lab)
+        changed = False
+        for i, (v, s, e) in enumerate(R):
+            if v is None or e - s <= 8:
+                continue
+            prv = R[i - 1][0] if i > 0 else None
+            nxt = R[i + 1][0] if i + 1 < len(R) else None
+            alt = next(o for o in [partner[v]] + order if o not in (v, prv, nxt))
+            k = int(np.ceil((e - s) / 6))
+            k += (k % 2 == 0)
+            cuts = np.linspace(s, e, k + 1).round().astype(int)
+            for j in range(1, k, 2):
+                lab[cuts[j]:cuts[j + 1]] = alt
+            changed = True
+        if not changed:
+            break
     out = []
     prev = 'start'
     for f in range(n):
@@ -568,6 +592,8 @@ def measure(y, sr, text, role=None, words_override=None, want_emb=True, quick=Fa
            'speech_s': round(speech_s, 2), 'span_s': round(span, 2),
            'wpm_voiced': round(60 * len(nrm) / max(0.2, speech_s), 1),
            'wpm_span': round(60 * len(nrm) / max(0.2, span), 1), 'pauses': pauses}
+    if len(nrm) <= 2:
+        met['asr_hits'] = asr_robust(y16, nrm)
     met.update(ps)
     met['lufs'] = round(lufs(y, sr), 2)
     met['peak_dbfs'] = round(float(20 * np.log10(np.abs(y).max() + 1e-12)), 2)
