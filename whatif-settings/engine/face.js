@@ -341,7 +341,14 @@ export function face(spec, opts = {}) {
     const sc = per?.scale ?? 1, r = eyeR * sc;
     const p = { look: [look[0] + yawLook, look[1]], pupil: e.pupil, lid: e.lid, tilt: e.tilt, lower: e.lower, lowerTilt: e.lowerTilt, ...(per || {}) };
     if (per?.look) p.look = [per.look[0] + yawLook, per.look[1]];
-    const body = (EYES[type] || EYES.bean)(r, s, p);
+    let body = (EYES[type] || EYES.bean)(r, s, p);
+    if (opts.lashes && ['ring', 'bean', 'half', 'angry', 'pin', 'teary', 'squint'].includes(type)) {
+      // two flicks at the outer upper corner (sit on the lid line when lidded)
+      const rr = type === 'bean' ? r * 0.82 : type === 'pin' ? r * 1.08 : r;
+      const lidY = p.lid != null ? p.lid * rr : -Math.sqrt(0.5) * rr;
+      const ax = s * Math.sqrt(Math.max(0, rr * rr - lidY * lidY)), ay = lidY;
+      body += ln(`M${f1(ax)} ${f1(ay)}L${f1(ax + s * 5.5)} ${f1(ay - 4.5)}`, 3) + ln(`M${f1(ax - s * 3)} ${f1(ay - 2.2)}L${f1(ax + s * 1)} ${f1(ay - 7.5)}`, 3);
+    }
     out += g(body, { transform: `translate(${f1(m.x)} ${f1(eyeY)}) scale(${f1(Math.max(0.3, m.k) * 100) / 100} 1)` });
     const bType = e.browOverride || e.brows;
     const bs = e.browScale ?? 1;

@@ -5,7 +5,7 @@
 // outward/up (180 = straight up); fore bends the forearm relative to the upper arm (+ continues outward).
 import { PAL, g, path, circle, ellipse, rect, text, grad, radial, shadeBand, stroke, tone, union, rrect, rtrap, capsule, taper,
   glossCapsule, glossBox, contactShadow, f1, spline, polyline, roundPoly, FONT_UI } from './style.js';
-import { face as drawFace, mapFeature, heartPath, starPath } from './face.js';
+import { face as drawFace, mapFeature, heartPath, starPath, PRESETS as FACE_PRESETS_CACHE } from './face.js';
 import { buildFigure, helmetPath, bandPaths, strands, wrapPoint, hairline, yawOf, headCenterY, figureHeight } from './rig.js';
 
 const D2R = Math.PI / 180;
@@ -593,7 +593,7 @@ function buildCat(spec, o) {
     const front = back;
     const t = path(d, { fill: 'none', stroke: stroke(fur), strokeWidth: f1(19 + sw * 2), strokeLinecap: 'round' }) + path(d, { fill: 'none', stroke: grad(fur, 'd', { box: [base[0] - 60, -100, base[0] + 60, 0] }), strokeWidth: 19, strokeLinecap: 'round' })
       + path(spline([P(32, -10), P(46, -32), P(43, -60)]), { fill: 'none', stroke: '#FFFFFF', strokeOpacity: 0.35, strokeWidth: 4, strokeLinecap: 'round' });
-    if (front) body += ''; tail = t; void front;
+    tail = t; void front;
   }
   // body: pear with haunches
   const bshapes = [{ d: rtrap(0, -H, 0, wt, wb, 34, 26) }];
@@ -607,11 +607,8 @@ function buildCat(spec, o) {
     for (const sd of [-1, 1]) {
       const a = sd < 0 ? pose.armL : pose.armR;
       const mm = mapFeature(sd * 15, yaw); if (mm.k < 0.25) continue;
-      const x = mm.x * 0.62, y0 = -60, L = 50;
-      const ang = a * D2R * -sd;
-      const ex = x + Math.sin(ang) * L * (a ? -1 : 0) , ey = y0 + Math.cos(ang) * L;
-      const lx = a ? x + Math.sin(-sd * a * D2R) * -L : x, ly = a ? y0 + Math.cos(a * D2R) * L : y0 + L;
-      void ex; void ey;
+      const x = mm.x * 0.62, y0 = -60, L = 50, sg = sd < 0 ? 1 : -1;
+      const lx = x - sg * Math.sin(a * D2R) * L, ly = y0 + Math.cos(a * D2R) * L;
       body += union([{ d: capsule(x, y0, lx, ly - 6, 21) }], fur, { sw, box: [x - 12, y0, x + 12, ly] });
       body += union([{ d: `M${f1(lx - 13)} ${f1(ly - 6)}a13 9.5 0 1 0 26 0a13 9.5 0 1 0 -26 0Z` }, { d: capsule(lx, ly - 18, lx, ly - 8, 21) }], '#FFFFFF', { sw: sw * 0.95, box: [lx - 13, ly - 24, lx + 13, ly + 4] });
       body += path(`M${f1(lx - 3.5)} ${f1(ly - 1)}v-5M${f1(lx + 3.5)} ${f1(ly - 1)}v-5`, { stroke: stroke('#FFFFFF'), strokeWidth: 1.6, strokeLinecap: 'round', opacity: 0.7 });
@@ -664,7 +661,6 @@ function buildCat(spec, o) {
   const shadow = o.shadow === false ? '' : contactShadow(0, 2, wb * 0.62 + 10, 10, { op: 0.3 });
   return g(shadow + upper, { transform: `translate(${f1(o.x ?? 0)} ${f1(o.y ?? 0)}) scale(${f1(s * 1000) / 1000})` });
 }
-import { PRESETS as FACE_PRESETS_CACHE } from './face.js';
 
 // ---------- registry ----------
 for (const c of [SAM, LILY, MOM, DAD, BRIGGS, KEVIN]) c.drawProp = drawProp;

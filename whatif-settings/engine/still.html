@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'Lilita One'; src: url('../assets/fonts/lilita.ttf') format('truetype'); }
+@font-face { font-family: 'Rubik'; font-weight: 800; src: url('../assets/fonts/rubik800.ttf') format('truetype'); }
+html,body{margin:0;background:#000}#stage{overflow:hidden}svg{display:block}
+</style>
+</head><body><div id="stage"></div>
+<script type="module">
+// Draw one module: still.html?mod=sheets/<file>.js — its default export returns { w, h, svg }.
+// Fonts are local (assets/fonts), so renders never depend on the network.
+const q = new URLSearchParams(location.search);
+const mod = q.get('mod');
+try {
+  await Promise.all(['100px "Lilita One"', '800 40px Rubik'].map((f) => document.fonts.load(f)));
+  const { default: make } = await import(`./${mod}`);
+  const { w, h, svg } = await make(Object.fromEntries(q.entries()));
+  const stage = document.getElementById('stage');
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  stage.innerHTML = svg;
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  window.__ready = true;
+} catch (e) { window.__error = String(e && e.stack || e); }
+</script></body></html>
