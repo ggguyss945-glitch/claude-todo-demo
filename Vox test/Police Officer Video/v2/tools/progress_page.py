@@ -45,7 +45,7 @@ notes = ''.join(f'<li>{esc(n)}</li>' for n in st.get('notes', []))
 page = f'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Other Resident</title>
+<title>{esc(st.get("title", "The Other Resident"))}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
 <style>
@@ -78,10 +78,10 @@ figcaption{{font-size:13px;color:var(--muted);margin-top:6px}}
 .notes li{{color:var(--muted);margin-bottom:6px}} .notes{{padding-left:18px;margin:0}}
 </style>
 <main>
-<header><p class="eyebrow">House rules · rule-format horror · v2 rebuild</p>
-<h1>If a police officer knocks… <b>don't prove you live there</b></h1>
-<p class="sub">Script: "The Other Resident" · 11:37 · 2560×1440, 60 fps · about 41,860 frames</p></header>
-<section class="steps"><b>{st.get("steps_done", 0)} of {st.get("steps_total", 0)}</b><span>build steps done</span>
+<header><p class="eyebrow">{esc(st.get("eyebrow", "House rules · rule-format horror · v2 rebuild"))}</p>
+<h1>{esc(st.get("h1", "If a police officer knocks…"))} <b>{esc(st.get("h1b", "don't prove you live there"))}</b></h1>
+<p class="sub">{esc(st.get("sub", "Script: The Other Resident · 11:37 · 2560×1440, 60 fps · about 41,860 frames"))}</p></header>
+<section class="steps"><b>{st.get("steps_done", 0)} of {st.get("steps_total", 0)}</b><span>{esc(st.get("steps_label", "build steps done"))}</span>
 <span class="updated">Updated {esc(st["updated"])}</span></section>
 {render}
 <section><h2>Stages</h2><ol>{stages}</ol></section>
