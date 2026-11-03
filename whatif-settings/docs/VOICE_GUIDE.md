@@ -18,7 +18,7 @@ on a plan that allows commercial use. Send me the **4 test lines** first (one pe
 **Lines I process, so read them normally:** S03 Briggs's fast line (I speed it up), Sam's "Noooooo..." on Day 3 (I slow it down),
 SYS "Fooorty... fiiive..." on Day 7 (I slow it down), Dad's robot "DUCK. BREAD." (I add the robot effect), SYS lines (I add the filter).
 
-**Test lines (send these first):** `S00-L001_N`, `S00-L005_SYS`, `S00-L006_SAM`, `S01-L011_LILY`.
+**Test lines (send these first):** `S00-L001_N`, `S00-L005_SYS`, `S00-L006_SAM`, `S01-L010_LILY`.
 
 **Files:** WAV (or MP3 at 192 kbps+), no music, no effects, no speed-up.
 Either one file per line named `<ID>_<ROLE>.wav` (e.g. `S00-L006_SAM.wav`), or one file per role per scene with ~1 s of silence
