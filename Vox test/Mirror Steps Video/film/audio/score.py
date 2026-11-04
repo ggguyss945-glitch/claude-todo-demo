@@ -45,7 +45,8 @@ Mirror film (optional cue keys, written by audio/cues.py)
     arrangement: [{slug, s0, s1, off?, near?, fin?, fout?, gain_db?, cut?: 'hard'}]  the music map: which track plays
                  each film section (off None = fitted to the intensity curve); replaces the automatic track choice
     options:     {lament: false (no low-piano lament between motifs), slope: dB over intensity 0..1 (13.5),
-                 swell_db: tracks lift at a swell peak (7), layers: {bus: [[t, dB], ...]}} gain curves for
+                 swell_db: tracks lift at a swell peak (7), reentry_db: music back quieter after a silence (12),
+                 layers: {bus: [[t, dB], ...]}} gain curves for
                  the score's own buses (tracks, drones, pulse, melodic, strings_bed, strings_fx, hits), so score
                  layers play only where they help
     MIRROR_TRACKS: the ten mirror tracks with their varispeed (semitones) to D / A
@@ -1596,7 +1597,7 @@ class Score:
             self.gate = np.minimum(self.gate, g)
             gh = np.interp(tt, [t0 - 0.05, t0 + 0.2, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
             self.gate_hits = np.minimum(self.gate_hits, gh)
-            r = np.interp(tt, [t1 - 0.01, t1, t1 + 4.5], [0, -12.0, 0], left=0, right=0)
+            r = np.interp(tt, [t1 - 0.01, t1, t1 + 4.5], [0, -float(self.opts.get('reentry_db', 12.0)), 0], left=0, right=0)
             self.reentry = np.minimum(self.reentry, r)
         self.layer = {}                      # options.layers: {bus: [[t, dB], ...]} piecewise-linear gain curves
         for k, pts in (self.opts.get('layers') or {}).items():

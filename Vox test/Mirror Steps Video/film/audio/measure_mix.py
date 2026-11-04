@@ -70,6 +70,19 @@ def main():
                   {round(e['t'], 2) for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam')})
     sil = [e for e in mc['events'] if e['type'] == 'silence']
     R['hit_events_per_min'] = round(len(hits) / mins, 2)
+    # where the music is under voice - 25 LU: inside authored silences (+ the 4.5 s re-entry), before a hit, elsewhere
+    tt = np.arange(len(mm)) * hop
+    insil = np.zeros(len(mm), bool); prehit = np.zeros(len(mm), bool)
+    for e in sil:
+        insil |= (tt >= e['t'] - 0.2) & (tt <= e['t'] + e.get('len', 1.2) + 4.5)
+    for h in hits:
+        prehit |= (tt >= h - 1.0) & (tt <= h + 0.3)
+    under = mm <= -25
+    R['music_under_25LU_pct_by_cause'] = {'total': round(100 * float(under.mean()), 1),
+                                          'silence_and_reentry': round(100 * float((under & insil).mean()), 1),
+                                          'pre_hit': round(100 * float((under & prehit & ~insil).mean()), 1),
+                                          'other': round(100 * float((under & ~prehit & ~insil).mean()), 1)}
+    R['music_present_pct_outside_silences'] = round(100 * float((~under & ~insil).sum() / max(1, (~insil).sum())), 1)
     R['silences_per_min'] = round(len(sil) / mins, 2)
     R['one_shot_cues_per_min'] = round(sum(1 for c in sc if not c['params'].get('stream')) / mins, 1)
     # measured transients >= 4 dB (50 ms bed level jumps over the previous 0.5 s mean)

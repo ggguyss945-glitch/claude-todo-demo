@@ -21,8 +21,8 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
 Mirror film (cues from audio/cues.py; run from film/)
     python3 audio/cues.py [--events _work/align/film_events.json] --out _work/cues
     python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/cues _work/mix/final --langs en \
-        --out-name mix.wav --bed-rel -11.5 --bed-p50 -14 --music-lo -12.5 --music-hi -11.5 --hit-duck 3 --hit-dip 12 \
-        --score-hits-db 3 --lev-lo -7 --lev-hi 9 --tilt mirror --sub-boost 3      (= cues.MIX_ARGS)
+        --out-name mix.wav --bed-rel -11.5 --bed-p50 -14 --music-lo -12 --music-hi -11 --hit-duck 5 --hit-dip 12 \
+        --score-hits-db 3 --lev-lo -4.5 --lev-hi 9 --tilt mirror --sub-boost 3      (= cues.MIX_ARGS)
     python3 audio/measure_mix.py _work/mix/final --cues _work/cues
     - <cues>/voice_fx.json replaces the timeline's line fx: below, queen, queen_child, far, far_outside, phone,
       phone_child (mirror_fx(); reverb tails ring on past the line)
@@ -446,6 +446,20 @@ def short_term_rel(x, ref, win=0.4, hop=0.1):
     return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20) - ref
 
 
+def punch(y, amount=1.0):
+    """The film's biggest scares (cue params.punch): densify the hit (4:1 above peak - 12 dB, 6 ms attack lets the
+    transient through), lift its momentary loudness by up to 6 dB and cap its true peak at -1 dBTP, so the scare
+    reaches the references' mix momentary max (+9 to +11 LU over the integrated) without one sharp spike."""
+    if amount <= 0 or not len(y):
+        return y
+    L0 = SX.mom_max(y)
+    z = SX.compress(y, SX.db(SX.peak(y)) - 12.0, 4.0, 0.006, 0.18, knee=4.0)
+    z = SX.sat(z, 1.0 + 0.6 * amount)
+    z = z * np.float32(10 ** ((L0 + 6.0 * amount - SX.mom_max(z)) / 20))
+    z, _, _ = tp_limit(z, -1.0, look=0.003, rel=0.12)
+    return z.astype(np.float32)
+
+
 # ============================================================================ bed streams (mirror film)
 def render_streams(streams, beds, t0, dur):
     """Each stream key renders ONCE (continuous for its whole span; loop beds as one seamless loop tiled on the
@@ -546,7 +560,7 @@ def main():
     # ---------------- SFX
     SX.reset()
     buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits')}
-    hit_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []
+    hit_times = []; hit_depth = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []
     order = sorted(range(len(sfx_cues)), key=lambda k: (sfx_cues[k]['t'], k))
     tsfx = time.time()
     streams = {}                     # bed streams: one continuous render per key, gated per range (mirror film)
@@ -579,6 +593,8 @@ def main():
             log('SFX failed', name, c['t'], repr(e)[:160])
             raise
         y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
+        if params.get('punch'):
+            y = punch(y, float(params['punch']))
         if c.get('pan'):
             y = SX.pan(y, float(c['pan']))
         b = 'hits' if name in SX.HITS else 'beds' if name in SX.BEDS else 'events'
@@ -587,6 +603,7 @@ def main():
             counts[b] += 1
             if name in SX.HITS or name == 'knock_door' or c.get('hit'):
                 hit_times.append(tt)
+                hit_depth.append(A.hit_dip if float(c.get('gain_db', 0)) >= -6 else 0.5 * A.hit_dip)
     counts['streams'] = render_streams(streams, buses['beds'], t0, dur)
     log(f'sfx rendered in {time.time() - tsfx:.1f} s: {counts}' + (f', skipped {sorted(set(skipped))}' if skipped else ''))
 
@@ -624,9 +641,9 @@ def main():
     sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -9.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
     sil_b = sil + [(a - t0, b - t0, d, 0.3, 0.5) for a, b, d in mcues.get('bed_dips', [])]   # rule cards: beds dip
     mus_hits = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop', 'rule')]
-    dip = lambda ts: [(h - 0.05, h, -A.hit_dip, 0.4, 0.6) for h in ts]
-    autom = gain_env(N, dip(hit_times))
-    autom_b = gain_env(N, sil_b + dip(hit_times + mus_hits))
+    dip = lambda ts, ds: [(h - 0.05, h, -d, 0.4, 0.6) for h, d in zip(ts, ds)]     # small hits dip half as deep
+    autom = gain_env(N, dip(hit_times, hit_depth))
+    autom_b = gain_env(N, sil_b + dip(hit_times + mus_hits, hit_depth + [A.hit_dip] * len(mus_hits)))
     # score bus: corrective EQ toward the AUDIO_SPEC octave tilt (less 100-160 Hz mud), moderate width, leveler
     music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0),
                              tilt=TILT_MIRROR if A.tilt == 'mirror' else TILT, sub_boost=A.sub_boost)

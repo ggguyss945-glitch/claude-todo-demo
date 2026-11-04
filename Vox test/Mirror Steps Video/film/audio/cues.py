@@ -42,7 +42,7 @@ FILM = os.path.normpath(os.path.join(HERE, '..'))
 MUSIC_MAP = [
     dict(s0=0.0, s1=19.18, slug='don_t_look_belladonna_strings', near=0,
          why='hook: cold sustained horror strings (Eb->D), one huge hit, then grief'),
-    dict(s0=19.18, s1=88.66, slug='midnight_wanderer_luella_gren', near=0, gain_db=4.0,
+    dict(s0=19.18, s1=88.66, slug='midnight_wanderer_luella_gren', near=0, gain_db=8.0,
          why='arrival, the porch, sneaking past the caretaker: nocturnal walk (E->D), uneasy, light pulse'),
     dict(s0=88.66, s1=129.8, slug='irene_kevin_dailey', off=0.0,
          why='the steps and the game: Irene builds from silence (D minor) into the rule-1 card'),
@@ -52,11 +52,11 @@ MUSIC_MAP = [
          why='rule 2: the hand, the wish, "You have it": horror strings with stabs and drop-outs (Eb->D)'),
     dict(s0=269.24, s1=290.6, slug='irene_kevin_dailey', near=100,
          why='rule 3: the clock runs back, the queen\'s face: Irene\'s dense plateau'),
-    dict(s0=290.6, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=2.0,
+    dict(s0=290.6, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=3.5,
          why='the too-normal dawn: warm unpulsed D major (C#->D), still and clean'),
     dict(s0=350.38, s1=398.86, slug='sleep_forever_luella_gren', near=14,
          why='rule 4, the loop and "a little while": the lullaby figure (G#->A), the other side\'s music'),
-    dict(s0=398.86, s1=446.33, slug='end_of_rain_beyza', near=0, gain_db=3.0,
+    dict(s0=398.86, s1=446.33, slug='end_of_rain_beyza', near=0, gain_db=5.0,
          why='the morning he vanished: sad piano (A), the brothers\' theme'),
     dict(s0=446.33, s1=481.43, slug='impossible_theory_rachel_sandy', near=14,
          why='rule 5 urgency: Tess runs, the countdown: driving A minor'),
@@ -66,15 +66,15 @@ MUSIC_MAP = [
          why='20, the crate, the fake bell, the deepest silence, the real bell'),
     dict(s0=542.03, s1=628.7, slug='escalation_jon_bjork', off=0.0, cut='hard',
          why='rule 6 + 7 climax: pulsed build (C->D, 121 bpm) whose natural end lands as the glass goes dark'),
-    dict(s0=628.7, s1=677.39, slug='end_of_rain_beyza', near=100, gain_db=3.0,
+    dict(s0=628.7, s1=677.39, slug='end_of_rain_beyza', near=100, gain_db=5.0,
          why='relief and grief: the brothers\' theme again, "Hi, Mom"'),
     dict(s0=677.39, s1=700.0, slug='annihilated_blue_saga', near=68, fin=4.0,
          why='the phone face up: dark D rises to the last stinger; hard out at 698.62'),
 ]
 # score.py's own layers (dB curves per bus, piecewise-linear): only where they help the tracks
 DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
-MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--bed-rel', '-11.5', '--bed-p50', '-14', '--music-lo', '-12.5',
-            '--music-hi', '-11.5', '--hit-duck', '3', '--hit-dip', '12', '--score-hits-db', '3', '--lev-lo', '-7',
+MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--bed-rel', '-11.5', '--bed-p50', '-14', '--music-lo', '-12',
+            '--music-hi', '-11', '--hit-duck', '5', '--hit-dip', '12', '--score-hits-db', '3', '--lev-lo', '-4.5',
             '--lev-hi', '9', '--tilt', 'mirror', '--sub-boost', '3']
 
 
@@ -194,6 +194,10 @@ def main():
         cues.append(dict(id=cid, t=retime(c['t'], c['shot']), name=c['name'], gain_db=c.get('gain_db', 0),
                          pan=c.get('pan', 0.0), space=c.get('space'), params=p, hit=bool(c.get('hit')),
                          seed=h32(cid), shot=c['shot'], note=c.get('note', '')))
+    # the film's biggest scares: densified and lifted in mix.py (params.punch)
+    for c in cues:
+        if c['name'] in ('impact_hit', 'braam', 'stinger', 'sub_drop') and c['gain_db'] >= -1 and c['hit']:
+            c['params']['punch'] = 1.0 if c['gain_db'] >= 0 else 0.6
     # the queen's presence under her lines and her full faces (sound_plan: "the queen's presence")
     L = tl['lines']
     for i, fx in sp['voice_fx'].items():
@@ -267,7 +271,7 @@ def main():
     for a in arrangement:
         a.setdefault('off', None)
     mc = dict(duration=dur, intensity=M['intensity'], events=keep, arrangement=arrangement,
-              options={'lament': False, 'layers': layers, 'slope': 16.0, 'swell_db': 9.0}, bed_dips=dips,
+              options={'lament': False, 'layers': layers, 'slope': 16.0, 'swell_db': 9.0, 'reentry_db': 10.0}, bed_dips=dips,
               music_map=MUSIC_MAP)
     # ---------------- voice FX
     vfx = []

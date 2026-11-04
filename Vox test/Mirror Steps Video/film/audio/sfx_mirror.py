@@ -1118,6 +1118,21 @@ def r_moth_flutter(rng, sp, dur=1.2, **_):
     return y, 0.0, 0.0, False
 
 
+# ============================================================================================ hits
+def r_stinger(rng, sp, **_):
+    """Stinger: the Epidemic stingers first, short free stings only (no organ loops or 20 s stings), at most 6 s."""
+    E = [e for e in X.src('stinger', epi=True) + X.src(category='score/stingers')
+         if e['dur'] <= 10 and 'organ' not in e['id']]
+    e = E[int(rng.choice(len(E), p=X._epi_w(E, 2)))]
+    a = X.audio(e)[:X.n_(6.0)]
+    a = X.fade(X.pnorm(a), 0.002, min(2.0, len(a) / X.SR * 0.4))
+    S2 = X.pool('scrape', lambda: X.src(category='sfx/creaks_scrapes', tags=['scrape', 'bow_noise']), 'phrase', gap=0.2,
+                max_len=2.5, keep=-15)
+    sc = X.lp(S2.get(rng, rj=0.03, fo=0.3), 4000, 2) * 0.18
+    y = X.reverb(X._seq([(0, a), (0.01, sc)], 0.0), 'church', 0.2, 0.015, hpf=200)
+    return y, X.onset_s(y, -14), 0.0, True
+
+
 # ============================================================================================ install
 def install(mod):
     """Register this film's recipes, spaces and levels in the sfx module (called by sfx.py at import)."""
