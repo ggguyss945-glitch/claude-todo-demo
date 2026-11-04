@@ -205,6 +205,34 @@ def clock_theirs(t):
     return 3580.0 + ((t - 297.59) % 19.48)
 
 
+# ---------------------------------------------------------------------- gradient key normalisation (speed)
+# core caches one 256 px gradient image per distinct stop list; a stop alpha that changes every frame (pulses, motes, beams)
+# would rebuild that image per call. _R / _L move the overall level into the paint alpha and quantise the rest.
+def _qc(c):
+    r_, g_, b_ = rgb(c)
+    return '#%02x%02x%02x' % (min(255, int(round(r_ / 6.0)) * 6), min(255, int(round(g_ / 6.0)) * 6), min(255, int(round(b_ / 6.0)) * 6))
+
+
+def _norm(stops, a):
+    if not stops or isinstance(stops[0], str): return [_qc(c) for c in stops], a
+    m = max(float(st_[2]) if len(st_) > 2 else 255.0 for st_ in stops)
+    if m <= 0.5: return None, 0.0
+    out = [(round(float(st_[0]), 3), _qc(st_[1]), round((float(st_[2]) if len(st_) > 2 else 255.0) / m * 32) / 32 * 255) for st_ in stops]
+    return out, a * m / 255.0
+
+
+def _R(pen, path, cx, cy, r, stops, a=1.0, sy=1.0, blend='normal', clip=True):
+    st_, a = _norm(stops, a)
+    if st_ is None or a <= 0.002 or r <= 0: return
+    pen.radial(path, cx, cy, r, st_, a=min(1.0, a), sy=sy, blend=blend, clip=clip)
+
+
+def _L(pen, path, x0, y0, x1, y1, stops, a=1.0):
+    st_, a = _norm(stops, a)
+    if st_ is None or a <= 0.002: return
+    pen.linear(path, x0, y0, x1, y1, st_, a=min(1.0, a))
+
+
 # ====================================================================== small helpers
 def _h(i, seed=0):
     return float(hash01(abs(int(i)) * 2 + (1 if i < 0 else 0), abs(int(seed)) * 2 + (1 if seed < 0 else 0)))
@@ -268,49 +296,63 @@ def _ttext(pen, s, x, y, size, c, a=255, weight=800, spacing=0.0, align='center'
 _SPR = {}
 
 
-def _beam_sprite(ratio, soft):
-    """Cone image (premultiplied BGRA, 512 x 256): apex at the left edge, full width w1 at the right; alpha falls off
-    along the length and softly across the edges. ratio = w0 / w1."""
-    key = (round(ratio, 2), round(soft, 2))
+def _beam_sprite(r0, r1, soft, W):
+    """Cone + haze in one premultiplied BGRA image (W x W/2): apex at the left edge; r0 / r1 = the cone's half-width at the
+    apex / far end relative to the image half-height (the haze fills the rest). Sized close to its on-screen size so it
+    can be drawn with nearest sampling (a rotated linear-filtered upscale costs ~40 ms per beam at 2560)."""
+    key = (round(r0, 2), round(r1, 2), round(soft, 2), W)
     if key in _SPR: return _SPR[key]
-    W, H = 512, 256
+    H = W // 2
     u = (np.arange(W, dtype=np.float32) + 0.5) / W
     v = (np.arange(H, dtype=np.float32) + 0.5) / H * 2 - 1
     U, V = np.meshgrid(u, v)
-    hw = ratio + (1 - ratio) * U
-    d = np.abs(V) / np.maximum(hw, 1e-3)
-    across = np.clip(1.0 - d, 0, 1) ** (0.6 + soft) * np.exp(-1.8 * d * d)
     along = np.clip(U / 0.02, 0, 1) * (1 - U) ** 0.85 * (0.6 + 0.4 * np.exp(-U * 4))
-    a = np.clip(across * along * 1.6, 0, 1)
+    hw = r0 + (r1 - r0) * U
+    d = np.abs(V) / np.maximum(hw, 1e-3)
+    cone = np.clip(1.0 - d, 0, 1) ** (0.6 + soft) * np.exp(-1.8 * d * d)
+    hz_w = np.maximum(r0 * 2, (r1 * 1.7) * U + 1e-3)
+    dh = np.abs(V) / np.maximum(np.minimum(hz_w, 1.0), 1e-3)
+    haze = np.clip(1.0 - dh, 0, 1) ** 1.2 * np.exp(-1.8 * dh * dh)
+    a = np.clip((cone * 0.88 + haze * 0.36) * along, 0, 1)
     arr = np.zeros((H, W, 4), np.uint8)
-    r, g, b = rgb(CORE)
+    rr, gg, bb = rgb(CORE)
     arr[..., 3] = (a * 255).astype(np.uint8)
-    arr[..., 2] = (a * r).astype(np.uint8); arr[..., 1] = (a * g).astype(np.uint8); arr[..., 0] = (a * b).astype(np.uint8)
+    arr[..., 2] = (a * rr).astype(np.uint8); arr[..., 1] = (a * gg).astype(np.uint8); arr[..., 0] = (a * bb).astype(np.uint8)
     img = skia.Image.fromarray(np.ascontiguousarray(arr), skia.kBGRA_8888_ColorType, skia.kPremul_AlphaType)
+    if len(_SPR) > 48: _SPR.clear()
     _SPR[key] = (img, arr)
     return _SPR[key]
 
 
 _SLIN = skia.SamplingOptions(skia.FilterMode.kLinear)
+_SNEAR = skia.SamplingOptions(skia.FilterMode.kNearest)
 
 
 def draw_beam(pen, sx, sy, ax, ay, k=1.0, w0=26.0, spread=0.32, length=None, a=0.35, blend='plus', soft=0.4):
-    """Flashlight cone from (sx, sy) toward (ax, ay): core #fff2d6 at alpha a falling to 0 over its length."""
+    """Flashlight cone from (sx, sy) toward (ax, ay): core #fff2d6 at alpha a falling to 0 over its length, with a wider
+    faint haze around it (one image draw)."""
     if k <= 0.01: return
     dx, dy = ax - sx, ay - sy
     L = length or math.hypot(dx, dy) * 1.25
     ang = math.degrees(math.atan2(dy, dx))
     w1 = w0 + 2 * L * spread
-    img, _ = _beam_sprite(w0 / w1, soft)
+    wh = max(w1 * 1.7, w0 * 2)                       # image half-height covers the haze
     cv = pen.cv
+    cb = cv.getLocalClipBounds(); mw = cb.width() * 0.3
+    if not (cb.left() - mw < sx < cb.right() + mw and cb.top() - mw < sy < cb.bottom() + mw):
+        # source far off-frame (close-ups): only a broad wash of the beam is visible -> axis-aligned soft radial (fast)
+        mx, my = lerp(sx, ax, 0.62), lerp(sy, ay, 0.62)
+        rr = max(w1 * 0.55, 0.5 * math.hypot(ax - mx, ay - my) + w1 * 0.3)
+        _R(pen, None, mx, my, rr, [(0, CORE, 70), (0.5, CORE, 30), (1, CORE, 0)], a=a * k / 0.35, sy=0.75, clip=False)
+        return
+    m = cv.getTotalMatrix(); px_per = math.hypot(m.getScaleX(), m.getSkewY())
+    W = 256
+    while W < L * px_per and W < 2048: W *= 2
+    img, _ = _beam_sprite(w0 / 2 / (wh / 2) * 1.0, w1 / 2 / (wh / 2), soft, W)
     cv.save(); cv.translate(sx, sy); cv.rotate(ang)
-    p = skia.Paint(AntiAlias=False); p.setAlphaf(clamp(a * k / 0.35 * 0.55))
+    p = skia.Paint(AntiAlias=False); p.setAlphaf(clamp(a * k / 0.35 * 0.62))
     p.setBlendMode(skia.BlendMode.kPlus if blend == 'plus' else skia.BlendMode.kSrcOver)
-    cv.drawImageRect(img, skia.Rect.MakeWH(512, 256), skia.Rect.MakeLTRB(0, -w1 / 2, L, w1 / 2), _SLIN, p,
-                     skia.Canvas.kFast_SrcRectConstraint)
-    w2 = w0 * 2 + 2 * L * spread * 1.7                      # atmospheric haze around the cone
-    p.setAlphaf(clamp(a * k / 0.35 * 0.22))
-    cv.drawImageRect(img, skia.Rect.MakeWH(512, 256), skia.Rect.MakeLTRB(-L * 0.04, -w2 / 2, L * 1.1, w2 / 2), _SLIN, p,
+    cv.drawImageRect(img, skia.Rect.MakeWH(W, W // 2), skia.Rect.MakeLTRB(0, -wh / 2, L, wh / 2), _SNEAR if W >= L * px_per * 0.7 else _SLIN, p,
                      skia.Canvas.kFast_SrcRectConstraint)
     cv.restore()
 
@@ -318,19 +360,19 @@ def draw_beam(pen, sx, sy, ax, ay, k=1.0, w0=26.0, spread=0.32, length=None, a=0
 def hot_spot(pen, x, y, r, k=1.0, sy=0.8, c=FALL, core=CORE):
     """Pool of flashlight light on a surface: warm falloff, a hot core (draw with the beam)."""
     if k <= 0.01: return
-    pen.radial(None, x, y, r * 2.0, [(0, c, 46 * k), (0.5, c, 20 * k), (1, c, 0)], sy=sy, clip=False)
-    pen.radial(None, x, y, r, [(0, core, 105 * k), (0.55, c, 80 * k), (0.8, c, 52 * k), (1, c, 0)], sy=sy, clip=False)
-    pen.radial(None, x, y, r * 0.3, [(0, '#ffffff', 60 * k), (1, core, 0)], sy=sy, clip=False)
+    _R(pen, None, x, y, r * 2.0, [(0, c, 46 * k), (0.5, c, 20 * k), (1, c, 0)], sy=sy, clip=False)
+    _R(pen, None, x, y, r, [(0, core, 105 * k), (0.55, c, 80 * k), (0.8, c, 52 * k), (1, c, 0)], sy=sy, clip=False)
+    _R(pen, None, x, y, r * 0.3, [(0, '#ffffff', 60 * k), (1, core, 0)], sy=sy, clip=False)
 
 
 def lens_flare(pen, x, y, k=1.0, c=CORE, cx=960, cy=540):
     """Flashlight pointing near the lens: hot core, horizontal streak, ghosts mirrored through the frame centre."""
     if k <= 0.01: return
-    pen.radial(None, x, y, 260 * k, [(0, '#ffffff', 200 * k), (0.12, c, 150 * k), (0.4, c, 40 * k), (1, c, 0)], clip=False)
-    pen.radial(None, x, y, 900, [(0, c, 60 * k), (1, c, 0)], sy=0.018, clip=False)
+    _R(pen, None, x, y, 260 * k, [(0, '#ffffff', 200 * k), (0.12, c, 150 * k), (0.4, c, 40 * k), (1, c, 0)], clip=False)
+    _R(pen, None, x, y, 900, [(0, c, 60 * k), (1, c, 0)], sy=0.018, clip=False)
     for i, (f, r, cc) in enumerate(((0.5, 40, '#9fd0ff'), (0.9, 22, '#ffd0a0'), (1.35, 70, '#a0ffd0'), (1.7, 30, '#ffb0c0'))):
         gx, gy = x + (cx - x) * f * 2 * 0.5, y + (cy - y) * f * 2 * 0.5
-        pen.radial(None, gx, gy, r * 1.6, [(0, cc, 0), (0.7, cc, 38 * k), (1, cc, 0)], clip=False)
+        _R(pen, None, gx, gy, r * 1.6, [(0, cc, 0), (0.7, cc, 38 * k), (1, cc, 0)], clip=False)
 
 
 class Beam:
@@ -412,10 +454,10 @@ def motes(pen, t, box, n=90, seed=0, beam=None, c=CORE, amb=0.06, size=(1.4, 3.4
         a = min(255.0, alpha * k * tw)
         if h5 < bokeh:
             r = 9 + 10 * h1
-            pen.radial(None, x, y, r, [(0, c, a * 0.35), (0.7, c, a * 0.28), (1, c, 0)], clip=False)
+            _R(pen, None, x, y, r, [(0, c, a * 0.35), (0.7, c, a * 0.28), (1, c, 0)], clip=False)
         else:
             r = size[0] + (size[1] - size[0]) * h2
-            pen.radial(None, x, y, r * 1.8, [(0, c, a), (0.45, c, a * 0.7), (1, c, 0)], clip=False)
+            _R(pen, None, x, y, r * 1.8, [(0, c, a), (0.45, c, a * 0.7), (1, c, 0)], clip=False)
 
 
 def fireflies(pen, t, box, n=8, seed=0, c='#e4f59a'):
@@ -426,7 +468,7 @@ def fireflies(pen, t, box, n=8, seed=0, c='#e4f59a'):
         y = y0 + h2 * (y1 - y0) + 40 * noise1(t * 0.35 + i, seed + 3)
         b = max(0.0, math.sin(t * (0.9 + 0.8 * h3) * 2 + i * 2.1)) ** 3
         if b < 0.03: continue
-        pen.radial(None, x, y, 26, [(0, '#ffffff', 220 * b), (0.12, c, 200 * b), (0.4, c, 60 * b), (1, c, 0)], clip=False)
+        _R(pen, None, x, y, 26, [(0, '#ffffff', 220 * b), (0.12, c, 200 * b), (0.4, c, 60 * b), (1, c, 0)], clip=False)
 
 
 def mist(pen, t, y, x0, x1, h, n=7, seed=0, a=24, c='#a9bfd6', speed=14.0):
@@ -436,7 +478,7 @@ def mist(pen, t, y, x0, x1, h, n=7, seed=0, a=24, c='#a9bfd6', speed=14.0):
         w = (0.25 + 0.35 * _h(i, seed)) * W
         x = x0 + ((_h(i, seed + 1) * W + speed * (0.7 + 0.6 * _h(i, seed + 2)) * t) % (W + w)) - w / 2
         yy = y + (_h(i, seed + 3) - 0.5) * h * 0.6 + 6 * noise1(t * 0.2 + i, seed)
-        pen.radial(None, x, yy, w / 2, [(0, c, a), (0.6, c, a * 0.5), (1, c, 0)], sy=h / w, clip=False)
+        _R(pen, None, x, yy, w / 2, [(0, c, a), (0.6, c, a * 0.5), (1, c, 0)], sy=h / w, clip=False)
 
 
 def moths(pen, t, x, y, r=60.0, n=5, seed=0, c='#d9cbb0'):
@@ -457,7 +499,7 @@ def stars(pen, box, n, seed, ymax, c='#dfe8ff'):
         r = 0.8 + 1.8 * _h(i, seed + 2) ** 3
         a = 90 + 150 * _h(i, seed + 3)
         pen.fill(oval(x, y, r), c, a)
-        if r > 2.0: pen.radial(None, x, y, r * 5, [(0, c, 60), (1, c, 0)], clip=False)
+        if r > 2.0: _R(pen, None, x, y, r * 5, [(0, c, 60), (1, c, 0)], clip=False)
 
 
 def twinkle(pen, t, box, n, seed, ymax, c='#ffffff'):
@@ -466,15 +508,15 @@ def twinkle(pen, t, box, n, seed, ymax, c='#ffffff'):
         x = x0 + _h(i, seed) * (x1 - x0); y = y0 + _h(i, seed + 1) ** 1.6 * (ymax - y0)
         b = max(0.0, math.sin(t * (1.5 + 2 * _h(i, seed + 2)) + i)) ** 6
         if b > 0.05:
-            pen.radial(None, x, y, 9, [(0, c, 200 * b), (1, c, 0)], clip=False)
+            _R(pen, None, x, y, 9, [(0, c, 200 * b), (1, c, 0)], clip=False)
             pen.seg((x - 8 * b, y), (x + 8 * b, y), 1.0, c, int(150 * b)); pen.seg((x, y - 8 * b), (x, y + 8 * b), 1.0, c, int(150 * b))
 
 
 def moon(pen, x, y, r, c='#e9eefc'):
-    pen.radial(None, x, y, r * 9, [(0, MOON, 70), (0.25, MOON, 26), (1, MOON, 0)], clip=False)
-    pen.radial(None, x, y, r * 2.2, [(0, '#ffffff', 90), (1, MOON, 0)], clip=False)
+    _R(pen, None, x, y, r * 9, [(0, MOON, 70), (0.25, MOON, 26), (1, MOON, 0)], clip=False)
+    _R(pen, None, x, y, r * 2.2, [(0, '#ffffff', 90), (1, MOON, 0)], clip=False)
     d = oval(x, y, r)
-    pen.radial(d, x - r * 0.3, y - r * 0.3, r * 1.3, [(0, '#ffffff'), (0.7, c), (1, '#b9c4e6')])
+    _R(pen, d, x - r * 0.3, y - r * 0.3, r * 1.3, [(0, '#ffffff'), (0.7, c), (1, '#b9c4e6')])
     for (dx, dy, rr) in ((-0.3, -0.1, 0.22), (0.25, 0.3, 0.16), (0.1, -0.35, 0.1), (-0.05, 0.45, 0.12)):
         pen.fill(oval(x + dx * r, y + dy * r, rr * r), '#aab6d8', 120)
 
@@ -515,8 +557,8 @@ def boards(pen, box, c, horizontal=False, bw=70.0, seed=0, grain=0.5, seam='#050
         tone = mix(c, '#000000' if _h(i, seed) < 0.5 else '#ffffff', var * _h(i, seed + 1))
         if horizontal: r = rect(x0, y0 + i * bw, x1 - x0, bw)
         else: r = rect(x0 + i * bw, y0, bw, y1 - y0)
-        if horizontal: pen.linear(r, 0, y0 + i * bw, 0, y0 + (i + 1) * bw, [_lt(tone, 0.05), tone, _dk(tone, 0.12)])
-        else: pen.linear(r, x0 + i * bw, 0, x0 + (i + 1) * bw, 0, [_lt(tone, 0.04), tone, _dk(tone, 0.1)])
+        if horizontal: _L(pen, r, 0, y0 + i * bw, 0, y0 + (i + 1) * bw, [_lt(tone, 0.05), tone, _dk(tone, 0.12)])
+        else: _L(pen, r, x0 + i * bw, 0, x0 + (i + 1) * bw, 0, [_lt(tone, 0.04), tone, _dk(tone, 0.1)])
     pen.texture(path_all, 'wood', grain, 'overlay', 1.4 if horizontal else 1.4, 0 if horizontal else 90)
     for i in range(n + 1):
         if horizontal:
@@ -547,7 +589,7 @@ def boards(pen, box, c, horizontal=False, bw=70.0, seed=0, grain=0.5, seam='#050
 def floor_persp(pen, xl_n, xr_n, y_n, xl_f, xr_f, y_f, n, c0, c1, seed=0, grain=0.45, seam='#05080c', joints=True):
     """Perspective floorboards: near edge y_n from xl_n..xr_n, far edge y_f from xl_f..xr_f, n boards converging."""
     path = poly([(xl_f, y_f), (xr_f, y_f), (xr_n, y_n), (xl_n, y_n)])
-    pen.linear(path, 0, y_f, 0, y_n, [c0, c1])
+    _L(pen, path, 0, y_f, 0, y_n, [c0, c1])
     for i in range(n):
         u0, u1 = i / n, (i + 1) / n
         q = poly([(lerp(xl_f, xr_f, u0), y_f), (lerp(xl_f, xr_f, u1), y_f), (lerp(xl_n, xr_n, u1), y_n), (lerp(xl_n, xr_n, u0), y_n)])
@@ -593,7 +635,7 @@ def shaft(pen, pts, c=MOON, a=60, soft=3):
         k = 1 + 0.05 * i
         q = poly([(cx + (x - cx) * k, cy + (y - cy) * k) for x, y in pts])
         pen.fill(q, c, int(a / (soft + 1)))
-    pen.linear(poly(pts), pts[0][0], pts[0][1], pts[2][0], pts[2][1], [(0, c, a / 255.0 * 255 * 0.9), (1, c, 0)])
+    _L(pen, poly(pts), pts[0][0], pts[0][1], pts[2][0], pts[2][1], [(0, c, a / 255.0 * 255 * 0.9), (1, c, 0)])
 
 
 def grass(pen, x0, x1, y, h, n, seed, c, hi=None):
@@ -636,11 +678,11 @@ def treeline(pen, x0, x1, y, h, n, seed, c, rim=None, rim_a=0, jitter=0.45):
 def lantern(pen, x, y, s=1.0, k=1.0, glass='#ffd9a0', body='#3a4a3a', glow=True):
     """Battery camping lantern standing at (x, y = base)."""
     if glow and k > 0:
-        pen.radial(None, x, y - 60 * s, 520 * s, [(0, glass, 90 * k), (0.3, glass, 34 * k), (1, glass, 0)], clip=False)
+        _R(pen, None, x, y - 60 * s, 520 * s, [(0, glass, 90 * k), (0.3, glass, 34 * k), (1, glass, 0)], clip=False)
     base = rrect(x - 34 * s, y - 26 * s, 68 * s, 26 * s, 6 * s)
     pen.shape(base, body, 3 * s)
     g = rrect(x - 26 * s, y - 96 * s, 52 * s, 72 * s, 8 * s)
-    pen.radial(g, x, y - 60 * s, 60 * s, [(0, '#ffffff'), (0.5, glass), (1, _dk(glass, 0.2))] if k > 0.3 else [_dk(glass, 0.5), _dk(glass, 0.6)])
+    _R(pen, g, x, y - 60 * s, 60 * s, [(0, '#ffffff'), (0.5, glass), (1, _dk(glass, 0.2))] if k > 0.3 else [_dk(glass, 0.5), _dk(glass, 0.6)])
     for dx in (-14, 0, 14): pen.seg((x + dx * s, y - 96 * s), (x + dx * s, y - 26 * s), 2.2 * s, _dk(body, 0.2), 180)
     pen.line(g, 3 * s)
     top = rrect(x - 30 * s, y - 112 * s, 60 * s, 18 * s, 6 * s)
@@ -654,7 +696,7 @@ def wall_clock(pen, cx, cy, r, sec, jitter=0.0, face='#d9d4c6', rim='#3a3f46', h
     lw = lw or max(2.0, r * 0.05)
     pen.shadow(oval(cx, cy, r * 1.08), 6 * r / 44, 8 * r / 44, r * 0.18, '#000000', 120)
     pen.shape(oval(cx, cy, r * 1.08), rim, lw)
-    pen.radial(oval(cx, cy, r * 0.94), cx - r * 0.3, cy - r * 0.35, r * 1.4, [_lt(face, 0.1), face, _dk(face, 0.25)])
+    _R(pen, oval(cx, cy, r * 0.94), cx - r * 0.3, cy - r * 0.35, r * 1.4, [_lt(face, 0.1), face, _dk(face, 0.25)])
     for k in range(60):
         a = k * math.pi / 30
         r0 = 0.78 if k % 5 == 0 else 0.86
@@ -700,7 +742,7 @@ def mirror_frame(pen, x0, y0, x1, y1, fw, s=1.0, lit=0.0, c='#d8d4c8', wood='#8f
     fr = minus(outer, inner)
     base = mix(_dk(c, 0.62), c, lit) if night else c
     pen.shadow(outer, 10 * s, 14 * s, 20 * s, '#000000', 140)
-    pen.linear(fr, x0 - fw, 0, x1 + fw, 0, [_lt(base, 0.08), base, _dk(base, 0.25)])
+    _L(pen, fr, x0 - fw, 0, x1 + fw, 0, [_lt(base, 0.08), base, _dk(base, 0.25)])
     pen.texture(fr, 'wood', 0.3, 'overlay', 0.7 * s, 90)
     woodc = mix(_dk(wood, 0.55), wood, lit) if night else wood
     _clip(pen, fr)
@@ -724,7 +766,7 @@ def mirror_frame(pen, x0, y0, x1, y1, fw, s=1.0, lit=0.0, c='#d8d4c8', wood='#8f
 def glass(pen, path, box, base='#0c1520', refl='#1c2a38', seed=0, s=1.0, dust=0.1, silver=True):
     """Old mirror glass: dark reflective gradient, desilvering spots at the edges, a dust film and finger smudges."""
     x0, y0, x1, y1 = box
-    pen.linear(path, x0, y0, x1, y1, [_lt(refl, 0.08), refl, base, _dk(base, 0.3)])
+    _L(pen, path, x0, y0, x1, y1, [_lt(refl, 0.08), refl, base, _dk(base, 0.3)])
     _clip(pen, path)
     if silver:
         for i in range(int(22 + 30 * s ** 0.2)):
@@ -738,7 +780,7 @@ def glass(pen, path, box, base='#0c1520', refl='#1c2a38', seed=0, s=1.0, dust=0.
     dust_film(pen, path, int(255 * dust), seed=seed, scale=s)
     for i in range(5):
         px = x0 + (0.2 + 0.6 * _h(i, seed + 40)) * (x1 - x0); py = y0 + (0.2 + 0.6 * _h(i, seed + 41)) * (y1 - y0)
-        pen.radial(None, px, py, 46 * s, [(0, '#c8d2dc', 22), (0.6, '#c8d2dc', 10), (1, '#c8d2dc', 0)], sy=0.75, clip=False)
+        _R(pen, None, px, py, 46 * s, [(0, '#c8d2dc', 22), (0.6, '#c8d2dc', 10), (1, '#c8d2dc', 0)], sy=0.75, clip=False)
     _unclip(pen)
 
 
@@ -770,7 +812,7 @@ def _wax(pen, pts, w, a=1.0, glow=0.0, seed=0, crumbs=True):
 
 def _streaks(pen, x, y, L, fade, seed, w=120):
     """Lipstick dragged down the glass by cloth: a pink haze plus irregular tapering drags (no hard edges)."""
-    pen.radial(None, x, y + L * 0.35, max(80, L * 0.45), [(0, '#d0566a', 60 * fade), (1, '#d0566a', 0)], sy=1.4 * max(0.3, min(1.6, L / 260)), clip=False)
+    _R(pen, None, x, y + L * 0.35, max(80, L * 0.45), [(0, '#d0566a', 60 * fade), (1, '#d0566a', 0)], sy=1.4 * max(0.3, min(1.6, L / 260)), clip=False)
     for j in range(7):
         cx_ = x - w * 0.45 + w * 0.9 * _h(j, seed) + 8 * (_h(j, seed + 9) - 0.5)
         ln = L * (0.35 + 0.65 * _h(j, seed + 1))
@@ -797,7 +839,7 @@ def lipstick_steps(pen, t, drawn=7, partial=None, smear=None, glow=0.0, wipe=Non
     if erased:              # wiped clean: faint pink smudges where the treads were; maybe one last streak
         for k in range(7):
             x, y = STEP_XY[k]
-            pen.radial(None, x, y + 20, 110, [(0, '#c8606e', 36 * fade), (1, '#c8606e', 0)], sy=0.45, clip=False)
+            _R(pen, None, x, y + 20, 110, [(0, '#c8606e', 36 * fade), (1, '#c8606e', 0)], sy=0.45, clip=False)
             if k == 6 and last > 0.01:
                 _streaks(pen, x, y - 10, 260 * (0.4 + 0.6 * last), last, seed + 77, 70)
         cv.restore()
@@ -840,11 +882,11 @@ def eighth_line(pen, t, t_draw=None, dur=0.6, k=1.0, glow=1.0, rot=0.0, sc=1.0, 
     cv.save(); cv.translate(ox, oy); cv.scale(sc, sc); cv.translate(-ox, -oy)
     if rot: cv.rotate(rot, x + L / 2, y)
     x1 = x + L * u
-    pen.radial(None, x + L * u / 2, y, L * 0.75, [(0, GLOW, 70 * glow * k), (0.5, GLOW, 22 * glow * k), (1, GLOW, 0)], sy=0.22, clip=False)
+    _R(pen, None, x + L * u / 2, y, L * 0.75, [(0, GLOW, 70 * glow * k), (0.5, GLOW, 22 * glow * k), (1, GLOW, 0)], sy=0.22, clip=False)
     pen.seg((x, y), (x1, y), 10, GLOW, int(60 * k * glow))
     pen.seg((x, y), (x1, y), 6, RED, int(255 * k))
     pen.seg((x, y - 1.6), (x1, y - 1.6), 1.6, '#ff9aa8', int(170 * k))
-    if 0 < u < 1: pen.radial(None, x1, y, 22, [(0, '#ffd0d8', 230), (1, GLOW, 0)], clip=False)
+    if 0 < u < 1: _R(pen, None, x1, y, 22, [(0, '#ffd0d8', 230), (1, GLOW, 0)], clip=False)
     cv.restore()
 
 
@@ -864,7 +906,7 @@ def towel_cloth(pen, path, box, s=1.0, wet=0.0, seed=0, lit=1.0, stripes=True, b
     pen.texture(path, 'grunge', 0.25, 'multiply', 1.4 * s)
     for i in range(5):
         fx = x0 + (0.15 + 0.7 * _h(i, seed)) * (x1 - x0)
-        pen.linear(rect(fx - 30 * s, y0, 60 * s, y1 - y0), fx - 30 * s, 0, fx + 30 * s, 0,
+        _L(pen, rect(fx - 30 * s, y0, 60 * s, y1 - y0), fx - 30 * s, 0, fx + 30 * s, 0,
                    [(0, '#000000', 0), (0.5, '#000000', 60), (1, '#000000', 0)])
         pen.seg((fx + 12 * s, y0), (fx + 16 * s, y1), 3 * s, '#ffffff', 40)
     _unclip(pen)
@@ -879,11 +921,11 @@ def phone_prop(pen, cx, cy, w, h, rot=0.0, screen='dark', t=0.0, lit=0.6, red=0.
     pen.shadow(body, w * 0.03, w * 0.05, w * 0.06, '#000000', 160)
     pen.fill(body, '#22262c'); pen.line(body, max(2, w * 0.012), '#5a6068')
     scr = rrect(-w / 2 + w * 0.045, -h / 2 + w * 0.045, w * 0.91, h - w * 0.09, w * 0.09)
-    pen.linear(scr, -w / 2, -h / 2, w / 2, h / 2, ['#0e1218', '#05070a', '#0b0f14'])
+    _L(pen, scr, -w / 2, -h / 2, w / 2, h / 2, ['#0e1218', '#05070a', '#0b0f14'])
     _clip(pen, scr)
-    pen.linear(poly([(-w, -h * 0.2), (w, -h * 0.55), (w, -h * 0.45), (-w, -h * 0.08)]), 0, -h * 0.5, 0, 0,
+    _L(pen, poly([(-w, -h * 0.2), (w, -h * 0.55), (w, -h * 0.45), (-w, -h * 0.08)]), 0, -h * 0.5, 0, 0,
                [(0, '#ffffff', 0), (0.5, '#c8d6e6', 46 * lit), (1, '#ffffff', 0)])
-    if red > 0: pen.radial(None, w * 0.15, h * 0.1, w * 0.9, [(0, GLOW, 90 * red), (1, GLOW, 0)], clip=False)
+    if red > 0: _R(pen, None, w * 0.15, h * 0.1, w * 0.9, [(0, GLOW, 90 * red), (1, GLOW, 0)], clip=False)
     if dust:
         for i in range(int(60 * dust)):
             px, py = (-0.45 + 0.9 * _h(i, seed)) * w, (-0.45 + 0.9 * _h(i, seed + 1)) * h
@@ -943,7 +985,7 @@ def bunk(pen, x0, x1, y_floor, s=1.0, c='#3a4250', mat='#46505c', tick='#2c3440'
                 pen.fill(rect(xx, ya - 30 * s, 9 * s, yb - ya + 60 * s), tick, 200 if i % 3 else 255)
                 xx += 26 * s; i += 1
             pen.texture(m, 'fabric', 0.4, 'overlay', 0.8 * s)
-            pen.linear(m, 0, ya, 0, yb, [(0, '#ffffff', 30), (0.4, '#000000', 0), (1, '#000000', 90)])
+            _L(pen, m, 0, ya, 0, yb, [(0, '#ffffff', 30), (0.4, '#000000', 0), (1, '#000000', 90)])
             for i in range(3):
                 sx_ = lerp(x0, x1, 0.2 + 0.3 * i + 0.1 * _h(i, 4))
                 pen.fill(_blob(sx_, lerp(ya, yb, 0.5), 50 * s, 20 * s, 9, i, 0.35), '#6a5a3a', 50)
@@ -960,7 +1002,7 @@ def bunk(pen, x0, x1, y_floor, s=1.0, c='#3a4250', mat='#46505c', tick='#2c3440'
     ytop = (yr0 - 120 * s) if top else (ym0 - 90 * s)
     for xx in (x0, x1 - pw):
         post = rect(xx, ytop, pw, y_floor - ytop)
-        pen.linear(post, xx, 0, xx + pw, 0, [_lt(pc, 0.15 + 0.3 * lit), pc, _dk(pc, 0.3)])
+        _L(pen, post, xx, 0, xx + pw, 0, [_lt(pc, 0.15 + 0.3 * lit), pc, _dk(pc, 0.3)])
         pen.texture(post, 'wood', 0.35, 'overlay', 0.8 * s, 90)
         pen.line(post, 3.2 * s)
         pen.fill(rrect(xx - 3 * s, ytop - 10 * s, pw + 6 * s, 14 * s, 5 * s), _dk(pc, 0.1)); pen.line(rrect(xx - 3 * s, ytop - 10 * s, pw + 6 * s, 14 * s, 5 * s), 2.5 * s)
@@ -990,7 +1032,7 @@ def swimsuits(pen, x0, x1, y, t=0.0, s=1.0, sway=1.0, seed=4, drip=True):
                         (cx - ww * 0.32 + sw, y + hh)], True, 0.5)
         pen.fill(p, c); pen.texture(p, 'fabric', 0.35, 'overlay', 0.6 * s)
         pen.fill(p, '#000000', 40)
-        pen.linear(p, 0, y, 0, y + hh, [(0, '#000000', 0), (1, '#000000', 70)])
+        _L(pen, p, 0, y, 0, y + hh, [(0, '#000000', 0), (1, '#000000', 70)])
         pen.line(p, 2.6 * s)
         if drip:
             drops_fall(pen, t, cx + sw * 0.5, y + hh * 0.95, y + hh + 260 * s, 1.3 + 0.4 * _h(i, seed + 3), seed + i, '#e8eef4', 3.2 * s,
@@ -1029,7 +1071,7 @@ def candy(pen, x, y, s=1.0, rot=0.0, red='#d8323e', wrapper=True):
             pen.fill(tw, '#e8eef4', 110); pen.line(tw, 1.6, '#ffffff', 170)
             for j in range(3): pen.seg((sg * (24 + j * 8), -12 + j), (sg * (26 + j * 8), 12 - j), 1.0, '#ffffff', 150)
     b = oval(0, 0, 22, 17)
-    pen.radial(b, -7, -6, 30, ['#ff8a8a', red, '#7a0e18'])
+    _R(pen, b, -7, -6, 30, ['#ff8a8a', red, '#7a0e18'])
     pen.line(b, 2.2)
     pen.fill(oval(-8, -7, 6, 3.5), '#ffffff', 200)
     if wrapper: pen.fill(oval(0, 0, 25, 20), '#ffffff', 36)
@@ -1052,7 +1094,7 @@ def gingham(pen, path, box, c='#d8b54a', s=1.0, a=1.0, lit=1.0):
     n = 7
     for i in range(n):
         fx = lerp(x0, x1, (i + 0.5) / n)
-        pen.linear(rect(fx - step, y0, step * 2, y1 - y0), fx - step, 0, fx + step, 0,
+        _L(pen, rect(fx - step, y0, step * 2, y1 - y0), fx - step, 0, fx + step, 0,
                    [(0, '#6a5a3a', 0), (0.5, '#6a5a3a', 70), (1, '#6a5a3a', 0)])
     _unclip(pen)
     pen.line(path, 2.8 * s, LINE)
@@ -1072,10 +1114,10 @@ def bell(pen, cx, cy, s=1.0, swing=0.0, light=0.7, crack=True, lit_from=(-1, -1)
                    (cx + 96 * s, cy + 92 * s), (cx + 104 * s, cy + 112 * s), (cx - 104 * s, cy + 112 * s), (cx - 96 * s, cy + 92 * s),
                    (cx - 62 * s, cy - 10 * s), (cx - 50 * s, cy - 90 * s)], True, 0.55)
     dark, mid, hi = _dk(c, 0.62), mix(_dk(c, 0.4), c, light), mix(c, '#fff0c0', 0.5 * light)
-    pen.linear(body, cx - 104 * s, 0, cx + 104 * s, 0, [dark, mid, hi, mid, dark, _dk(dark, 0.4)])
+    _L(pen, body, cx - 104 * s, 0, cx + 104 * s, 0, [dark, mid, hi, mid, dark, _dk(dark, 0.4)])
     pen.texture(body, 'grunge', 0.35, 'multiply', 0.8 * s)
-    pen.radial(body, cx - 30 * s, cy + 10 * s, 70 * s, [(0, '#ffffff', 90 * light), (1, '#ffffff', 0)], sy=1.8)
-    if red: pen.linear(body, cx + 104 * s, 0, cx, 0, [(0, '#ff3a50', 150 * red), (1, '#ff3a50', 0)])
+    _R(pen, body, cx - 30 * s, cy + 10 * s, 70 * s, [(0, '#ffffff', 90 * light), (1, '#ffffff', 0)], sy=1.8)
+    if red: _L(pen, body, cx + 104 * s, 0, cx, 0, [(0, '#ff3a50', 150 * red), (1, '#ff3a50', 0)])
     pen.line(body, 3.6 * s)
     lip = smooth([(cx - 104 * s, cy + 112 * s), (cx + 104 * s, cy + 112 * s), (cx + 100 * s, cy + 126 * s), (cx - 100 * s, cy + 126 * s)], True, 0.5)
     pen.fill(lip, _dk(c, 0.5)); pen.line(lip, 3 * s)
@@ -1108,7 +1150,7 @@ def crate(pen, x0, y0, x1, y1, s=1.0, lit=0.5, c='#8a7550', broken=0.0, stencil=
             continue
         r = rect(x0, y0 + i * sh + 4 * s, x1 - x0, sh - 9 * s)
         tone = mix(base, '#ffffff' if _h(i, seed) > 0.5 else '#000000', 0.06)
-        pen.linear(r, 0, y0 + i * sh, 0, y0 + (i + 1) * sh, [_lt(tone, 0.08), tone, _dk(tone, 0.15)])
+        _L(pen, r, 0, y0 + i * sh, 0, y0 + (i + 1) * sh, [_lt(tone, 0.08), tone, _dk(tone, 0.15)])
         pen.texture(r, 'wood', 0.5, 'overlay', 0.9 * s)
         pen.line(r, 3 * s)
     if broken > 0:
@@ -1124,8 +1166,8 @@ def crate(pen, x0, y0, x1, y1, s=1.0, lit=0.5, c='#8a7550', broken=0.0, stencil=
         for yy in (y0 + 10 * s, y1 - 14 * s): pen.fill(oval(xx + 15 * s, yy, 3 * s), '#1a1a1a')
     if stencil and broken < 0.5:
         fs = (y1 - y0) * 0.12
-        _ttext(pen, 'SAVE FOR THE', (x0 + x1) / 2, y0 + sh * 1.55, fs * 0.9, '#20242a', 225, 900, fs * 0.08, worn=0.6, seed=seed)
-        _ttext(pen, 'MUSEUM', (x0 + x1) / 2, y0 + sh * 1.55 + fs * 1.15, fs * 1.25, '#20242a', 225, 900, fs * 0.14, worn=0.7, seed=seed + 1)
+        _ttext(pen, 'SAVE FOR THE', (x0 + x1) / 2, y0 + sh * 1.55, fs * 0.9, '#121418', 250, 900, fs * 0.08, worn=0.35, seed=seed)
+        _ttext(pen, 'MUSEUM', (x0 + x1) / 2, y0 + sh * 1.55 + fs * 1.15, fs * 1.25, '#121418', 250, 900, fs * 0.14, worn=0.4, seed=seed + 1)
     if tag:
         tx, ty = x1 - 70 * s, y0 + 20 * s
         pen.line(smooth([(tx - 40 * s, y0 - 4 * s), (tx - 20 * s, ty + 20 * s), (tx, ty + 34 * s)], False), 2.2 * s, '#d8d0c0')
@@ -1181,7 +1223,7 @@ def padlock(pen, x, y, s=1.0, lit=0.5, swing=0.0, open_=0.0, c='#8a8f96'):
     sh = smooth([(-22 * s, 40 * s - open_ * 30 * s), (-22 * s, 0), (0, -22 * s), (22 * s, 0), (22 * s, 40 * s)], False, 0.9)
     pen.line(sh, 15 * s, LINE); pen.line(sh, 10 * s, mix('#4a5058', '#c8ccd2', lit)); pen.line(sh, 3 * s, '#ffffff', int(100 * lit))
     b = rrect(-36 * s, 36 * s, 72 * s, 70 * s, 8 * s)
-    pen.linear(b, -36 * s, 0, 36 * s, 0, [_dk(c, 0.5), mix(_dk(c, 0.3), c, lit), _lt(c, 0.3 * lit), _dk(c, 0.4)])
+    _L(pen, b, -36 * s, 0, 36 * s, 0, [_dk(c, 0.5), mix(_dk(c, 0.3), c, lit), _lt(c, 0.3 * lit), _dk(c, 0.4)])
     for j in range(6): pen.seg((-36 * s, 44 * s + j * 10 * s), (36 * s, 44 * s + j * 10 * s), 1.2 * s, '#2a2e33', 160)
     pen.texture(b, 'grunge', 0.4, 'multiply', 0.5 * s)
     pen.fill(rrect(-8 * s, 64 * s, 16 * s, 26 * s, 6 * s), '#1a1c20')
@@ -1227,7 +1269,6 @@ def cabin_ext(pen, x, y, w, h, s=1.0, num=None, c='#22303c', roof='#121a22', tri
     ov = 30 * s; rh = h * 0.62
     rp = poly([(x0 - ov, wall_top + 8 * s), (x, wall_top - rh), (x1 + ov, wall_top + 8 * s)])
     gable = poly([(x0, wall_top), (x, wall_top - rh + 14 * s), (x1, wall_top)])
-    boards(pen, (x0, wall_top - rh, x1, wall_top), _dk(c, 0.1), False, 24 * s, seed + 1, 0.4, nails=False, lw=1.4 * s) if False else None
     pen.fill(gable, _dk(c, 0.12)); pen.texture(gable, 'wood', 0.4, 'overlay', 0.8 * s, 90)
     pen.line(gable, 2.5 * s)
     band = minus(rp, poly([(x0 - ov + 26 * s, wall_top + 8 * s), (x, wall_top - rh + 26 * s), (x1 + ov - 26 * s, wall_top + 8 * s)]))
@@ -1237,8 +1278,8 @@ def cabin_ext(pen, x, y, w, h, s=1.0, num=None, c='#22303c', roof='#121a22', tri
     if window:
         for wx in (x0 + w * 0.2, x1 - w * 0.2 - w * 0.18):
             wr = rect(wx, wall_top + h * 0.22, w * 0.18, h * 0.32)
-            if lit_win: pen.radial(wr, wx + w * 0.09, wall_top + h * 0.38, w * 0.2, ['#ffe0a0', '#b8864f'])
-            else: pen.linear(wr, 0, wall_top + h * 0.22, 0, wall_top + h * 0.54, ['#1a2633', '#0a0f16'] if not day else ['#dfe6ea', '#9aa8b2'])
+            if lit_win: _R(pen, wr, wx + w * 0.09, wall_top + h * 0.38, w * 0.2, ['#ffe0a0', '#b8864f'])
+            else: _L(pen, wr, 0, wall_top + h * 0.22, 0, wall_top + h * 0.54, ['#1a2633', '#0a0f16'] if not day else ['#dfe6ea', '#9aa8b2'])
             mesh(pen, (wx, wall_top + h * 0.22, wx + w * 0.18, wall_top + h * 0.54), 8 * s, '#8a9aa8', 60, 0.8 * s)
             pen.line(wr, 6 * s, trim); pen.line(wr, 2 * s)
             pen.fill(rect(wx - 6 * s, wall_top + h * 0.54, w * 0.18 + 12 * s, 7 * s), trim)
@@ -1285,12 +1326,12 @@ def _flash_k(st, var, ramp=0.06):
 def _night_sky(key, horizon=620, moon_xy=(1600, 160, 38), seed=1, top='#0b1822', mid='#152634', low='#2a4458'):
     def sky(pen, t):
         x0, y0, x1, y1 = FRAME
-        pen.linear(rect(x0 - 600, y0 - 400, x1 - x0 + 1200, horizon + 600 - y0), 0, y0, 0, horizon,
+        _L(pen, rect(x0 - 600, y0 - 400, x1 - x0 + 1200, horizon + 600 - y0), 0, y0, 0, horizon,
                    [(0, top, 255), (0.6, mid, 255), (1, low, 255)])
         stars(pen, (x0 - 600, y0 - 400, x1 + 600, horizon), 260, seed, horizon - 140)
         for (cx, cy, w, h) in ((380, 120, 900, 40), (1250, 70, 1000, 34), (2100, 200, 800, 30)):
-            pen.radial(None, cx, cy, w / 2, [(0, '#2a3e58', 110), (0.6, '#1c2c40', 60), (1, '#1c2c40', 0)], sy=h * 2 / w, clip=False)
-            pen.radial(None, cx + w * 0.1, cy - h * 0.3, w / 3, [(0, '#5a6e90', 50), (1, '#5a6e90', 0)], sy=h / w, clip=False)
+            _R(pen, None, cx, cy, w / 2, [(0, '#2a3e58', 110), (0.6, '#1c2c40', 60), (1, '#1c2c40', 0)], sy=h * 2 / w, clip=False)
+            _R(pen, None, cx + w * 0.1, cy - h * 0.3, w / 3, [(0, '#5a6e90', 50), (1, '#5a6e90', 0)], sy=h / w, clip=False)
         if moon_xy: moon(pen, *moon_xy)
     tw = _live(40, lambda pen, t: twinkle(pen, t, (FRAME[0] - 600, FRAME[1] - 400, FRAME[2] + 600, horizon), 26, seed + 5, horizon - 160), 'twinkle', blur=0)
     return [_cl(40, sky, 'sky', key + ':sky', (FRAME[0] - 700, FRAME[1] - 450, FRAME[2] + 700, horizon + 700)), tw]
@@ -1319,7 +1360,7 @@ def _sway_pines(depth, specs, c='#060d14', rim=MOON, rim_a=70, name='pines', amp
 
 def _gravel(pen, path, box, c='#2a3440', seed=0, n=260, s=1.0):
     x0, y0, x1, y1 = box
-    pen.linear(path, 0, y0, 0, y1, [_dk(c, 0.2), c, _lt(c, 0.05)])
+    _L(pen, path, 0, y0, 0, y1, [_dk(c, 0.2), c, _lt(c, 0.05)])
     pen.texture(path, 'asphalt', 0.5, 'overlay', 0.8 * s)
     _clip(pen, path)
     for i in range(n):
@@ -1369,14 +1410,14 @@ def _gate_world(key, st, var, t_on=None):
         # log posts and the arch
         for xx in (585, 1335):
             p = rect(xx - 34, 200, 68, 720)
-            pen.linear(p, xx - 34, 0, xx + 34, 0, ['#0e161e', '#26323c', '#3a4a58', '#1a242e'])
+            _L(pen, p, xx - 34, 0, xx + 34, 0, ['#0e161e', '#26323c', '#3a4a58', '#1a242e'])
             pen.texture(p, 'wood', 0.55, 'overlay', 1.0, 90)
             for yy in range(240, 900, 70): pen.seg((xx - 30, yy), (xx + 26, yy + 8), 1.5, '#0a0e12', 160)
             pen.line(p, 4)
             pen.seg((xx + 26, 210), (xx + 26, 910), 3, MOON, 80)
             pen.fill(oval(xx, 200, 34, 12), '#3a4652'); pen.line(oval(xx, 200, 34, 12), 3)
         beam_ = rect(520, 196, 900, 46)
-        pen.linear(beam_, 0, 196, 0, 242, ['#3a4a58', '#26323e', '#141c24']); pen.texture(beam_, 'wood', 0.5, 'overlay', 1.0); pen.line(beam_, 4)
+        _L(pen, beam_, 0, 196, 0, 242, ['#3a4a58', '#26323e', '#141c24']); pen.texture(beam_, 'wood', 0.5, 'overlay', 1.0); pen.line(beam_, 4)
         for xx in (700, 1220):
             pen.line(poly([(xx, 242), (xx + 8, 262)], False), 4, '#6a7480')
         sgn = rrect(560, 262, 800, 100, 10)
@@ -1409,7 +1450,7 @@ def _gate_world(key, st, var, t_on=None):
         for (zx, zy) in ((1444, 604), (1566, 604)): pen.seg((zx - 6, zy - 8), (zx + 6, zy + 8), 3, '#f0f0f0', 220)
         pen.fill(dn, '#000000', 60)
     def ground(pen, t):
-        pen.linear(rect(-900, 880, 3800, 700), 0, 880, 0, 1400, ['#152634', '#233b4c'])
+        _L(pen, rect(-900, 880, 3800, 700), 0, 880, 0, 1400, ['#152634', '#233b4c'])
         road = poly([(700, 895), (1240, 895), (1900, 1500), (40, 1500)])
         _gravel(pen, road, (40, 895, 1900, 1500), '#2e4050', 3, 320)
         for sg in (-1, 1):
@@ -1430,7 +1471,7 @@ def _v_gate_wide(var, st, shot):
     L = _night_sky(key, 600) + [_trees_far(key, 600, 14, 7, 300)]
     def camp(pen, t):
         # the lake sliver between trunks, the mess hall roof and a cabin behind the gate
-        pen.linear(rect(-900, 592, 1500, 28), 0, 592, 0, 620, ['#1c3448', '#0c1824'])
+        _L(pen, rect(-900, 592, 1500, 28), 0, 592, 0, 620, ['#1c3448', '#0c1824'])
         pen.shape(poly([(380, 620), (420, 560), (860, 560), (900, 620)]), '#0d1822', 2)
         pen.shape(rect(1100, 560, 200, 70), '#101c26', 2); pen.shape(poly([(1080, 562), (1200, 500), (1320, 562)]), '#0b141c', 2)
         pen.seg((1200, 500), (1080, 562), 2, MOON, 60)
@@ -1460,8 +1501,8 @@ def _v_gate_lock(var, st, shot):
     def bars(pen, t):
         for xx in (820, 1100):
             p = rect(xx - 30, -400, 60, 1900)
-            pen.linear(p, xx - 30, 0, xx + 30, 0, ['#1a222a', '#4a5866', '#7a8896', '#2a3440']); pen.line(p, 6)
-        pen.linear(rect(-500, 380, 2900, 50), 0, 380, 0, 430, ['#3a4652', '#1a222a']); pen.line(rect(-500, 380, 2900, 50), 6)
+            _L(pen, p, xx - 30, 0, xx + 30, 0, ['#1a222a', '#4a5866', '#7a8896', '#2a3440']); pen.line(p, 6)
+        _L(pen, rect(-500, 380, 2900, 50), 0, 380, 0, 430, ['#3a4652', '#1a222a']); pen.line(rect(-500, 380, 2900, 50), 6)
     L += [_cl(1.6, mesh_bg, 'mesh', 'gatelock:mesh'), _cl(1.15, bars, 'bars', 'gatelock:bars')]
     bl, b = _beam_layers(st, var, (1700, 1300), [(st.t0, 980, 600), (st.t1, 940, 620)], 1.0, 18, 5, spot=360, dust_box=(200, 0, 1800, 1100), n_dust=90, moth=6)
     L.append(_live(1.0, lambda pen, t: chain(pen, [(760, 300), (900, 420), (1050, 410), (1160, 300), (1120, 520), (960, 560)], 3.0,
@@ -1484,7 +1525,7 @@ def _v_gate_keys(var, st, shot):
 def _noah_photo(pen, x, y, w, h, faded=0.0, seed=1, polaroid=False):
     """Noah's school photo (gap-tooth grin, green sweatshirt) drawn with the cast's own bust."""
     r = rect(x, y, w, h)
-    pen.linear(r, x, y, x, y + h, ['#7a8c9c', '#5a6a7a'] if not polaroid else ['#9ab0c0', '#d8c8a0'])
+    _L(pen, r, x, y, x, y + h, ['#7a8c9c', '#5a6a7a'] if not polaroid else ['#9ab0c0', '#d8c8a0'])
     _clip(pen, r)
     try:
         import characters as C
@@ -1512,7 +1553,7 @@ def _v_gate_poster(var, st, shot):
         _clip(pen, pr)
         for i in range(6):   # rain stains
             sx = px + _h(i, 4) * pw
-            pen.linear(rect(sx - 20, py, 40 + 30 * _h(i, 5), ph), sx, 0, sx + 40, 0, [(0, '#7a7466', 0), (0.5, '#7a7466', 60), (1, '#7a7466', 0)])
+            _L(pen, rect(sx - 20, py, 40 + 30 * _h(i, 5), ph), sx, 0, sx + 40, 0, [(0, '#7a7466', 0), (0.5, '#7a7466', 60), (1, '#7a7466', 0)])
             pen.fill(_blob(sx, py + ph * (0.2 + 0.7 * _h(i, 6)), 40, 26, 9, i, 0.4), '#8a8270', 40)
         _unclip(pen)
         _tx(pen, 'MISSING', 960, 190, 900, 120, '#8a1c1c', 240, 6)
@@ -1539,7 +1580,7 @@ def _v_gate_notice(var, st, shot):
     def sign(pen, t):
         r = rect(560, 200, 800, 620)
         pen.shadow(r, 12, 18, 20, '#000000', 170)
-        pen.linear(r, 0, 200, 0, 820, ['#d8b84a', '#b8962e']); pen.texture(r, 'grunge', 0.45, 'multiply', 1.0)
+        _L(pen, r, 0, 200, 0, 820, ['#d8b84a', '#b8962e']); pen.texture(r, 'grunge', 0.45, 'multiply', 1.0)
         pen.fill(rect(560, 200, 800, 120), '#141414')
         _tx(pen, 'NOTICE OF DEMOLITION', 960, 280, 900, 52, '#d8b84a', 255, 2)
         _tx(pen, 'CABINS 5 - 7', 960, 440, 900, 92, '#141414', 245, 4)
@@ -1570,7 +1611,7 @@ def _v_path_aerial(var, st, shot):
         for (a, b) in (((600, 680), (1500, 470)), ((900, 640), (1200, 680)), ((1200, 680), (1650, 950)), ((600, 680), (300, 760))):
             pen.line(poly([a, b], False), 22, '#27333c'); pen.line(poly([a, b], False), 8, '#34424c')
         lake = _blob(-60, -40, 640, 380, 14, 8, 0.2)
-        pen.linear(lake, 0, -400, 0, 340, ['#0c1a2a', '#1c3248']); pen.line(lake, 4, '#030608')
+        _L(pen, lake, 0, -400, 0, 340, ['#0c1a2a', '#1c3248']); pen.line(lake, 4, '#030608')
         for (x, y, w, h, rot, n) in ((600, 640, 150, 100, -6, '5'), (900, 600, 150, 100, 4, '6'), (1200, 640, 150, 100, -3, '7'), (1500, 420, 330, 150, 2, '')):
             pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(rot)
             pen.fill(rect(-w / 2 + 14, -h / 2 + 18, w, h), '#000000', 120)
@@ -1592,7 +1633,7 @@ def _v_path_aerial(var, st, shot):
         k = 1.0 if t < 22.6 else max(0.0, 1 - (t - 22.6) / 0.12)
         if k <= 0: return
         for dy in (-12, 12):
-            pen.radial(None, 1700, 1008 + dy, 260, [(0, '#fff4d8', 130 * k), (0.4, '#fff0c8', 50 * k), (1, '#fff0c8', 0)], sy=0.35, clip=False)
+            _R(pen, None, 1700, 1008 + dy, 260, [(0, '#fff4d8', 130 * k), (0.4, '#fff0c8', 50 * k), (1, '#fff0c8', 0)], sy=0.35, clip=False)
             pen.fill(oval(1728, 1008 + dy, 6), '#ffffff', int(255 * k))
     fog = _live(0.8, lambda pen, t: mist(pen, t, 540, -800, 2800, 400, 8, 5, 22, '#8aa0bc', 18), 'fog', blur=0)
     return _sp('camp_path/aerial', [_cl(1.0, ground, 'ground', 'aerial:ground', (-700, -500, 2620, 1600)), lk,
@@ -1606,7 +1647,7 @@ def _v_path_cabins(var, st, shot):
         cabin_ext(pen, 300, 700, 360, 190, 0.7, '5', '#1f3040', '#0b1218', '#25323e', MOON, 50, seed=1)
         cabin_ext(pen, 740, 720, 420, 210, 0.8, '6', '#223444', '#0b1218', '#28343f', MOON, 60, seed=2)
     def near(pen, t):
-        pen.linear(rect(-900, 900, 3800, 700), 0, 900, 0, 1400, ['#152634', '#22384a'])
+        _L(pen, rect(-900, 900, 3800, 700), 0, 900, 0, 1400, ['#152634', '#22384a'])
         cabin_ext(pen, 1300, 940, 760, 400, 1.35, '7', '#2a3c4c', '#111c26', '#3a4a58', MOON, 90, hasp=True, tape=True, seed=3)
         grass(pen, -800, 2800, 945, 34, 260, 7, '#0e1c28', '#4a6480')
     def bucket(pen, t):
@@ -1630,18 +1671,18 @@ def _v_path_track(var, st, shot):
         for (x, n) in ((300, '5'), (1500, '6')): cabin_ext(pen, x, 690, 380, 190, 0.7, n, '#1f3040', '#0b1218', '#25323e', MOON, 50, seed=int(n))
         pen.shape(poly([(780, 700), (820, 620), (1180, 620), (1220, 700)]), '#0f1a22', 2)
     def path(pen, t):
-        pen.linear(rect(-900, 860, 3800, 700), 0, 860, 0, 1400, ['#101c26', '#1c2a34'])
+        _L(pen, rect(-900, 860, 3800, 700), 0, 860, 0, 1400, ['#101c26', '#1c2a34'])
         p = poly([(-900, 905), (2900, 905), (2900, 1010), (-900, 1010)])
         _gravel(pen, p, (-900, 905, 2900, 1010), '#2e4050', 5, 500)
         grass(pen, -900, 2900, 905, 36, 320, 8, '#0e1c28', '#4a6480')
     def fence(pen, t):
         for xx in range(-1000, 3000, 340):
             post = rect(xx, 760, 46, 520)
-            pen.linear(post, xx, 0, xx + 46, 0, ['#0a1016', '#1e2a34', '#2a3844']); pen.line(post, 4)
+            _L(pen, post, xx, 0, xx + 46, 0, ['#0a1016', '#1e2a34', '#2a3844']); pen.line(post, 4)
             pen.seg((xx + 40, 770), (xx + 40, 1280), 3, MOON, 70)
         for yy in (820, 960):
             r = rect(-1000, yy, 4000, 30)
-            pen.linear(r, 0, yy, 0, yy + 30, ['#2a3642', '#121a22']); pen.texture(r, 'wood', 0.5, 'overlay'); pen.line(r, 3)
+            _L(pen, r, 0, yy, 0, yy + 30, ['#2a3642', '#121a22']); pen.texture(r, 'wood', 0.5, 'overlay'); pen.line(r, 3)
     L += [_cl(4.0, mid, 'mid', 'track:mid'), _mist_layer(2.5, 720, a=24),
           _sway_pines(5.0, [(100, 700, 600, 51), (900, 690, 520, 52), (1800, 700, 640, 53)], '#0b1822', MOON, 50),
           _cl(1.0, path, 'path', 'track:path', (-1400, 600, 3300, 1500))]
@@ -1663,7 +1704,7 @@ def _lodge(pen, s=1.0, c='#2a3a48', lit=0.0, day=False, sign=True):
     pen.fill(rect(-500, 330, 2920, 60), '#000000', 120)
     for wx in (180, 520, 1320, 1660):
         wr = rect(wx, 420, 220, 170)
-        pen.linear(wr, 0, 420, 0, 590, ['#121c26', '#060a0e'] if not day else ['#c8d4d8', '#8a9aa2'])
+        _L(pen, wr, 0, 420, 0, 590, ['#121c26', '#060a0e'] if not day else ['#c8d4d8', '#8a9aa2'])
         mesh(pen, (wx, 420, wx + 220, 590), 10, '#8a9aa8', 40, 0.8)
         pen.seg((wx + 110, 420), (wx + 110, 590), 6, '#3a4652'); pen.line(wr, 9, '#3a4652'); pen.line(wr, 3)
     dr = rect(880, 380, 160, 300)
@@ -1677,14 +1718,14 @@ def _lodge(pen, s=1.0, c='#2a3a48', lit=0.0, day=False, sign=True):
         _ttext(pen, 'MESS HALL', 960, 308, 50, '#d8ccb0', 230, 900, 4, worn=0.7, seed=12)
     for xx in (-200, 300, 700, 1220, 1620, 2120):
         post = rect(xx, 330, 36, 470)
-        pen.linear(post, xx, 0, xx + 36, 0, ['#0c141a', '#26323c', '#3a4854']); pen.texture(post, 'wood', 0.5, 'overlay', 0.8, 90); pen.line(post, 3.5)
+        _L(pen, post, xx, 0, xx + 36, 0, ['#0c141a', '#26323c', '#3a4854']); pen.texture(post, 'wood', 0.5, 'overlay', 0.8, 90); pen.line(post, 3.5)
         pen.seg((xx + 32, 336), (xx + 32, 796), 2.5, MOON if not day else '#ffffff', 80)
     for k in range(4):   # stacked chairs left
         cx, cy = 420 + k * 6, 560 - k * 34
         pen.line(poly([(cx - 50, cy + 200), (cx - 40, cy), (cx + 40, cy), (cx + 50, cy + 200)], False), 6, '#3a4048')
         pen.shape(rect(cx - 52, cy + 80, 104, 14), '#4a525a', 2)
     floor = poly([(-500, 800), (2420, 800), (2600, 920), (-680, 920)])
-    pen.linear(floor, 0, 800, 0, 920, ['#22303a', '#2c3a44'] if not day else ['#a89e8a', '#c8bca0'])
+    _L(pen, floor, 0, 800, 0, 920, ['#22303a', '#2c3a44'] if not day else ['#a89e8a', '#c8bca0'])
     pen.texture(floor, 'wood', 0.5, 'overlay', 1.2)
     for i in range(30):
         x0_ = -500 + i * 100
@@ -1693,7 +1734,7 @@ def _lodge(pen, s=1.0, c='#2a3a48', lit=0.0, day=False, sign=True):
     for j in range(3):     # steps down to the path
         yy = 920 + j * 52
         st_ = rect(700 - j * 30, yy, 520 + j * 60, 52)
-        pen.linear(st_, 0, yy, 0, yy + 52, ['#2e3c46', '#16202a'] if not day else ['#c8bca0', '#8a806c']); pen.texture(st_, 'wood', 0.5, 'overlay'); pen.line(st_, 3)
+        _L(pen, st_, 0, yy, 0, yy + 52, ['#2e3c46', '#16202a'] if not day else ['#c8bca0', '#8a806c']); pen.texture(st_, 'wood', 0.5, 'overlay'); pen.line(st_, 3)
 
 
 @view('mess_porch', 'wide')
@@ -1730,7 +1771,7 @@ def _porch_bg_blur(key, day=False):
 @view('mess_porch', 'porch_low')
 def _v_porch_low(var, st, shot):
     def boards_low(pen, t):
-        pen.linear(rect(-900, -600, 3800, 1100), 0, -500, 0, 480, ['#0a1218', '#1a2832'])
+        _L(pen, rect(-900, -600, 3800, 1100), 0, -500, 0, 480, ['#0a1218', '#1a2832'])
         boards(pen, (-900, -200, 2820, 470), '#1e2a34', True, 40, 9, 0.5, nails=False)
         floor_persp(pen, -1600, 3500, 1500, 300, 1620, 470, 22, '#1a2630', '#3a4a56', 4)
     def crate_fg(pen, t):
@@ -1750,7 +1791,7 @@ def _v_porch_crate(var, st, shot):
 
 def _bell_interior(pen, t, lit=0.6, day=False):
     pen.fill(rect(-800, -500, 3500, 2100), '#06090c' if not day else '#3a3428')
-    pen.radial(None, 980, 640, 700, [(0, '#2a2418' if not day else '#8a7a58', 255), (1, '#06090c' if not day else '#3a3428', 255)], clip=False)
+    _R(pen, None, 980, 640, 700, [(0, '#2a2418' if not day else '#8a7a58', 255), (1, '#06090c' if not day else '#3a3428', 255)], clip=False)
     pen.fill(rect(-800, 820, 3500, 900), '#14100a' if not day else '#5a4c36')
     pen.texture(rect(-800, 820, 3500, 900), 'wood', 0.5, 'overlay', 1.4)
     for i in range(9):    # straw / packing
@@ -1766,7 +1807,7 @@ def _v_porch_slats(var, st, shot):
         for i in range(-3, 9):
             x0 = -700 + i * 420
             r = rect(x0, -600, 250, 2300)
-            pen.linear(r, x0, 0, x0 + 250, 0, ['#0e0b07', '#3a3022', '#5a4a34', '#1a140c']); pen.texture(r, 'wood', 0.6, 'overlay', 1.2, 90); pen.line(r, 6)
+            _L(pen, r, x0, 0, x0 + 250, 0, ['#0e0b07', '#3a3022', '#5a4a34', '#1a140c']); pen.texture(r, 'wood', 0.6, 'overlay', 1.2, 90); pen.line(r, 6)
     L = [_cl(1.3, lambda pen, t: _bell_interior(pen, t), 'interior', 'slats:in', (-800, -500, 2720, 1600)), _live(1.0, bell_l, 'bell', blur=0)]
     L += bl_ + [_cl(0.7, slats, 'slats', 'slats:slats', (-1600, -700, 3600, 1800))]
     return _sp('mess_porch/bell_slats', L, dict(bell=Anchor(980, 600, 1.0, 1)), beam=b)
@@ -1784,8 +1825,8 @@ def _bell_ecu_layers(key, st, var, t_strike=None, day=False, shot=None):
         if t_strike is None or t < t_strike - 0.02: return
         u = t - t_strike
         k = math.exp(-u * 7)
-        pen.radial(None, 1000, 600, 700, [(0, '#ffffff', 255 * k), (0.15, '#fff2d6', 200 * k), (1, '#fff2d6', 0)], clip=False)
-        pen.radial(None, 1000, 600, 1600, [(0, '#fff2d6', 120 * k), (1, '#fff2d6', 0)], sy=0.04, clip=False)
+        _R(pen, None, 1000, 600, 700, [(0, '#ffffff', 255 * k), (0.15, '#fff2d6', 200 * k), (1, '#fff2d6', 0)], clip=False)
+        _R(pen, None, 1000, 600, 1600, [(0, '#fff2d6', 120 * k), (1, '#fff2d6', 0)], sy=0.04, clip=False)
         for j in range(10):
             ang = 2 * math.pi * _h(j, 3); d = 900 * u * (0.5 + _h(j, 4))
             pen.fill(oval(1000 + math.cos(ang) * d, 600 + math.sin(ang) * d + 400 * u * u, 4), '#ffe8b0', int(255 * max(0, 1 - u * 2)))
@@ -1832,7 +1873,7 @@ def _v_porch_run(var, st, shot):
     def red_rim(pen, t):
         if var != 'bell_hit' or t < 534.4: return
         k = clamp((t - 534.4) / 0.8)
-        pen.radial(None, 1350, 860, 600, [(0, GLOW, 70 * k), (1, GLOW, 0)], sy=0.6, clip=False)
+        _R(pen, None, 1350, 860, 600, [(0, GLOW, 70 * k), (1, GLOW, 0)], sy=0.6, clip=False)
     L.append(_live(0.99, red_rim, 'red_rim', blur=0))
     an = dict(tess_crate=Anchor(820, 960, 1.0, 640), crate=Anchor(1050, 810, 1.0, 1))
     return _sp('mess_porch/porch_run', L, an, beam=b)
@@ -1843,7 +1884,7 @@ def _v_porch_boot(var, st, shot):
     tb = (st.sfx('wood_break') or st.sfx('crate_break') or [st.t0 + 0.3])[0]
     def boards_bg(pen, t):
         floor_persp(pen, -1800, 3700, 1500, -400, 2300, 200, 26, '#121c24', '#34424e', 6)
-        pen.linear(rect(-900, -700, 3800, 900), 0, -700, 0, 200, ['#04070a', '#0e161c'])
+        _L(pen, rect(-900, -700, 3800, 900), 0, -700, 0, 200, ['#04070a', '#0e161c'])
     def slats(pen, t):
         u = max(0.0, t - tb)
         for i in range(4):
@@ -1854,7 +1895,7 @@ def _v_porch_boot(var, st, shot):
                     pen.shape(rect(-sgn * 0 - (500 if sgn < 0 else 0), -55, 500, 110), '#6a5838', 4); pen.cv.restore()
                 continue
             r = rect(-300, y0, 2500, 120)
-            pen.linear(r, 0, y0, 0, y0 + 120, ['#7a6844', '#5a4a30', '#3a2e1c']); pen.texture(r, 'wood', 0.5, 'overlay', 1.4); pen.line(r, 5)
+            _L(pen, r, 0, y0, 0, y0 + 120, ['#7a6844', '#5a4a30', '#3a2e1c']); pen.texture(r, 'wood', 0.5, 'overlay', 1.4); pen.line(r, 5)
         for j in range(18):
             if t < tb: break
             ang = -math.pi * (0.05 + 0.9 * _h(j, 2)); v = 900 + 900 * _h(j, 3)
@@ -1872,7 +1913,7 @@ def _v_porch_boot(var, st, shot):
 def _v_caretaker(var, st, shot):
     L = _night_sky('care', 560, (420, 140, 30)) + [_trees_far('care', 560, 12, 71, 280)]
     def house(pen, t):
-        pen.linear(rect(-900, 760, 3800, 800), 0, 760, 0, 1300, ['#142432', '#22384a'])
+        _L(pen, rect(-900, 760, 3800, 800), 0, 760, 0, 1300, ['#142432', '#22384a'])
         x0, x1, yb = 880, 1520, 760
         boards(pen, (x0, 380, x1, yb), '#2a3440', True, 22, 4, 0.4, nails=False, lw=1.4, var=0.05)
         pen.line(rect(x0, 380, x1 - x0, yb - 380), 3)
@@ -1895,14 +1936,14 @@ def _v_caretaker(var, st, shot):
         k = 0.6 + 0.4 * (0.5 + 0.5 * noise1(t * 9, 3)) * (0.7 + 0.3 * math.sin(t * 23))
         blue = 0.5 + 0.5 * noise1(t * 4, 5)
         wr = rect(1180, 460, 160, 120)
-        pen.linear(wr, 0, 460, 0, 580, [mix('#ffcf8a', '#a8c8ff', blue * 0.7), mix('#c8864a', '#4a6ab8', blue * 0.6)], a=k)
+        _L(pen, wr, 0, 460, 0, 580, [mix('#ffcf8a', '#a8c8ff', blue * 0.7), mix('#c8864a', '#4a6ab8', blue * 0.6)], a=k)
         sway = 0.0
         if 70.32 - 0.1 <= t <= 71.6: sway = math.sin((t - 70.32) * 6) * math.exp(-(t - 70.32) * 2.5) * 22
         cur = smooth([(1180, 460), (1250, 460), (1246 + sway, 520), (1252 + sway * 1.3, 580), (1180, 580)], True, 0.5)
         pen.fill(cur, '#c8a070'); pen.fill(cur, '#000000', 60); pen.line(cur, 2)
         pen.line(wr, 8, '#3a4652'); pen.line(wr, 2.5); pen.seg((1260, 460), (1260, 580), 5, '#3a4652')
-        pen.radial(None, 1260, 520, 380, [(0, mix('#ffcf8a', '#8ab0ff', blue * 0.6), 60 * k), (1, '#8ab0ff', 0)], sy=0.7, clip=False)
-        pen.radial(None, 1260, 790, 260, [(0, mix('#ffcf8a', '#8ab0ff', blue * 0.6), 40 * k), (1, '#8ab0ff', 0)], sy=0.25, clip=False)
+        _R(pen, None, 1260, 520, 380, [(0, mix('#ffcf8a', '#8ab0ff', blue * 0.6), 60 * k), (1, '#8ab0ff', 0)], sy=0.7, clip=False)
+        _R(pen, None, 1260, 790, 260, [(0, mix('#ffcf8a', '#8ab0ff', blue * 0.6), 40 * k), (1, '#8ab0ff', 0)], sy=0.25, clip=False)
     def fg(pen, t):
         for (x, y, r, sd) in ((-100, 1200, 420, 1), (300, 1250, 300, 2), (2050, 1200, 460, 3)):
             pen.fill(_blob(x, y, r, r * 0.7, 14, sd, 0.3), '#020507')
@@ -1952,12 +1993,48 @@ def build(set_name, view_name, var=None, shot=None, props=None, t0=None):
     if isinstance(dd, dict): sp.focus, sp.dof = dd.get('focus', 1.0), dd.get('dof', 6.75)
     elif dd is not None: sp.dof = float(dd)
     modes = [c.get('mode') for c in shot.get('chars', [])]
-    if modes and all(m in ('bust', 'hands') for m in modes) and not sp.info.get('insert'):
+    bg_views = ('floor_end', 'doorway', 'wide', 'two_shot', 'noah_ms', 'doorway_back', 'queen_bunk', 'cabin_door', 'porch_run')
+    if modes and not sp.info.get('insert') and (all(m == 'bust' for m in modes) or
+                                                (all(m in ('bust', 'hands') for m in modes) and view_name in bg_views)):
         push_back(sp, 2.6)
         if shot.get('dof') is None: sp.dof = 6.75
+    fit_bounds(sp, shot)
     vfx = _var_fx(var, shot); own = sp._fx
     sp._fx = (lambda t: dict(vfx(t), **(own(t) if own else {})))
     sp.info.setdefault('st', st); sp.info['var'] = var
+    return sp
+
+
+def fit_bounds(sp, shot, margin=60.0):
+    """Shrink every cached layer's bake rect to what this shot's camera can see of it (keys, shake, hits, roll), and key
+    the cache by that rect. Without this, full-size bounds baked at push-in densities blow the engine's cache budget
+    (700 MB) and layers re-bake every frame."""
+    cam = (shot or {}).get('cam') or {}
+    ks = cam.get('keys') or []
+    if not ks: return sp
+    samples = []
+    for a, b in zip(ks, ks[1:] + ks[-1:]):
+        for u in (0.0, 0.5):
+            samples.append((lerp(a[1], b[1], u), lerp(a[2], b[2], u), max(0.3, a[3] * (b[3] / a[3]) ** u), abs(lerp(a[4] if len(a) > 4 else 0, b[4] if len(b) > 4 else 0, u))))
+    sh = float(cam.get('shake') or 0.0) * 3.0 + max([h[1] for h in (cam.get('hit') or [])] + [0.0]) * 1.5
+    for l in sp:
+        if not l.cache or callable(l.depth): continue
+        d, ref = float(l.depth), float(l.ref_depth)
+        xs, ys = [], []
+        for (cx, cy, z, roll) in samples:
+            dc = max(0.05, d - (1.0 - 1.0 / z))
+            hw, hh = 960.0 * dc / ref, 540.0 * dc / ref
+            if roll:
+                rr = math.radians(roll); hw, hh = hw * math.cos(rr) + hh * math.sin(rr), hh * math.cos(rr) + hw * math.sin(rr)
+            px, py = 960.0 + (cx - 960.0) / ref, 540.0 + (cy - 540.0) / ref
+            m = (margin + sh) / ref
+            xs += [px - hw * 1.04 - m, px + hw * 1.04 + m]; ys += [py - hh * 1.04 - m, py + hh * 1.04 + m]
+        b0 = l.bounds
+        nb = (max(b0[0], math.floor(min(xs) / 32) * 32), max(b0[1], math.floor(min(ys) / 32) * 32),
+              min(b0[2], math.ceil(max(xs) / 32) * 32), min(b0[3], math.ceil(max(ys) / 32) * 32))
+        if nb[2] <= nb[0] or nb[3] <= nb[1]: continue
+        l.bounds = nb
+        if isinstance(l.cache, str): l.cache = '%s@%d,%d,%d,%d' % ((l.cache,) + tuple(int(v) for v in nb))
     return sp
 
 
@@ -1998,7 +2075,7 @@ def _v_path_path(var, st, shot):
         _lodge(pen); crate(pen, 1080, 700, 1290, 830, 0.55, 0.4)
         pen.cv.restore()
     def ground(pen, t):
-        pen.linear(rect(-900, 640, 3800, 900), 0, 640, 0, 1300, ['#142432', '#22384a'])
+        _L(pen, rect(-900, 640, 3800, 900), 0, 640, 0, 1300, ['#142432', '#22384a'])
         p = poly([(860, 680), (1060, 680), (1500, 1400), (420, 1400)])
         _gravel(pen, p, (420, 680, 1500, 1400), '#2e4050', 6, 300)
         grass(pen, -900, 2900, 690, 28, 300, 10, '#0e1c28', '#4a6480')
@@ -2010,7 +2087,7 @@ def _v_path_path(var, st, shot):
             pen.fill(r, '#000000', 120)
         for xx in (230, 1630):
             jamb = rect(xx, -600, 60, 2300)
-            pen.linear(jamb, xx, 0, xx + 60, 0, ['#1a242e', '#34424e', '#1a242e']); pen.texture(jamb, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(jamb, 5)
+            _L(pen, jamb, xx, 0, xx + 60, 0, ['#1a242e', '#34424e', '#1a242e']); pen.texture(jamb, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(jamb, 5)
         pen.fill(rect(-900, 1180, 3800, 600), '#0a1016'); pen.texture(rect(-900, 1180, 3800, 600), 'wood', 0.5, 'overlay', 1.2)
         pen.seg((-900, 1180), (2820, 1180), 4, MOON, 90)
     L += [_cl(3.2, lodge_far, 'lodge', 'ppath:lodge', (-400, 200, 2320, 1000)), _mist_layer(2.0, 700, a=24),
@@ -2075,7 +2152,7 @@ def _steps_state(st, var, t):
     elif er:
         kw['wipe'] = lerp(120, 1100, prog(t, er[0], er[1]))
         kw['fade'] = 1.0 - 0.6 * prog(t, er[0], er[1] + 0.6)
-    elif var == 'red' and st.v('mirror', t) == 'mirror_again' and st.t0 > 620.0 - 1e-3:
+    elif (var == 'red' and st.v('mirror', t) == 'mirror_again' and st.t0 > 620.0 - 1e-3) or (var == 'dark' and st.t0 > 620.0):
         kw['erased'] = True; kw['fade'] = 1.0          # after the wipe: faint smudges, and the last streak thinning (S284)
         kw['last'] = (1.0 - prog(t, st.t0 + 0.2, st.t1)) if st.t0 < 621.0 else 0.0
     return kw
@@ -2087,7 +2164,7 @@ def _reflection(pen, t, var, st, beam=None):
     big = rect(x0 - 500, y0 - 400, x1 - x0 + 1000, y1 - y0 + 800)
     if var in ('queen', 'void', 'red', 'dark') or (var == 'flash' and st.v('mirror', t) == 'tilted'):
         base = ['#05070c', '#080c14', '#0b0d14']
-        pen.linear(big, 0, y0, 0, y1, base)
+        _L(pen, big, 0, y0, 0, y1, base)
         # the stairwell falling away inside the glass: faint treads converging under the 8th step
         for j in range(12):
             u = j / 12.0
@@ -2096,20 +2173,20 @@ def _reflection(pen, t, var, st, beam=None):
             pen.seg((575 - w, yy), (575 + w * 0.6, yy), 3 * (1 - u) + 0.8, '#3a1a24', int(150 * (1 - u)))
         red = 1.0 if var != 'dark' else 1.0
         if var == 'red': red = 1.6 + 0.4 * math.sin(t * 2.4)
-        pen.radial(None, 575, 900, 520, [(0, GLOW, 70 * red), (0.4, '#5a0e1e', 60 * red), (1, '#000000', 0)], sy=0.6, clip=False)
+        _R(pen, None, 575, 900, 520, [(0, GLOW, 70 * red), (0.4, '#5a0e1e', 60 * red), (1, '#000000', 0)], sy=0.6, clip=False)
         return
     if var == 'old_cabin':
         _old_cabin_refl(pen, t, st)
         return
     # ours at night: the dark cabin behind the viewer, Tess's lamp reflected
-    pen.linear(big, 0, y0, 0, y1, ['#142232', '#1c2e3e', '#24384a', '#121c26'])
+    _L(pen, big, 0, y0, 0, y1, ['#142232', '#1c2e3e', '#24384a', '#121c26'])
     for (bx, bw_) in ((360, 360), (1180, 420)):
         pen.fill(rect(bx, 60, bw_, 900), '#070c12', 200)
         pen.fill(rect(bx, 540, bw_, 70), '#22303c', 160)
         pen.fill(rect(bx, 250, bw_, 40), '#1a2632', 150)
     wr = rect(820, 140, 300, 240)
-    pen.linear(wr, 0, 140, 0, 380, ['#3a5068', '#1c2c3c']); pen.seg((970, 140), (970, 380), 12, '#0a1018'); pen.line(wr, 14, '#0a1018')
-    pen.radial(None, 970, 260, 420, [(0, MOON, 40), (1, MOON, 0)], clip=False)
+    _L(pen, wr, 0, 140, 0, 380, ['#3a5068', '#1c2c3c']); pen.seg((970, 140), (970, 380), 12, '#0a1018'); pen.line(wr, 14, '#0a1018')
+    _R(pen, None, 970, 260, 420, [(0, MOON, 40), (1, MOON, 0)], clip=False)
 
 
 def _old_cabin_refl(pen, t, st, floor_view=False, part='all'):
@@ -2117,10 +2194,10 @@ def _old_cabin_refl(pen, t, st, floor_view=False, part='all'):
     top-bunk rail, the door swinging in, wet footprints appearing to Noah's bunk (times from the shot's wet_footstep cues)."""
     x0, y0, x1, y1 = PANE
     if part in ('all', 'static'):
-        pen.linear(rect(x0 - 500, y0 - 400, x1 - x0 + 1000, y1 - y0 + 800), 0, 100, 0, 1200, ['#c8c8c4', '#e2e0da', '#b4b6b4'])
+        _L(pen, rect(x0 - 500, y0 - 400, x1 - x0 + 1000, y1 - y0 + 800), 0, 100, 0, 1200, ['#bcbcb8', '#d2d0ca', '#a4a6a4'])
         boards(pen, (-200, -600, 2200, 860), '#c6c4bc', False, 74, 31, 0.35, seam='#8f9394', seam_a=140, nails=False, hi='#f2f0ea')
-        floor_persp(pen, -900, 2900, 1700, -200, 2200, 860, 22, '#a6a8a6', '#c8c6c0', 7, seam='#7f8b94')
-        pen.linear(rect(860, 300, 230, 560), 0, 300, 0, 860, ['#fbf6e6', '#e8e2cc'])
+        floor_persp(pen, -900, 2900, 1700, -200, 2200, 860, 22, '#969896', '#b8b6b0', 7, seam='#6f7b84')
+        _L(pen, rect(860, 300, 230, 560), 0, 300, 0, 860, ['#fbf6e6', '#e8e2cc'])
         pen.line(rect(860, 300, 230, 560), 8, '#7f8b94')
         bunk(pen, 160, 760, 900, 1.0, '#9a9a94', '#7f8b94', '#6a7680', True, True, '#7f8b94', lit=0.5, y_mat=(690, 780), y_top=(400, 440), posts_c='#a8a8a2')
         bunk(pen, 1180, 1900, 900, 1.0, '#9a9a94', '#7f8b94', '#6a7680', True, True, '#5a7a8a', lit=0.5, y_mat=(690, 780), y_top=(400, 440), posts_c='#a8a8a2')
@@ -2131,19 +2208,19 @@ def _old_cabin_refl(pen, t, st, floor_view=False, part='all'):
         sw = ease_out_cubic(prog(t, c['t'], c['t'] + 1.6))
     if st.v('mirror', t) == 'tilted' and not st.sfx('door_creak') and st.t0 >= 163.5: sw = 1.0
     dr = rect(860, 300, 230, 560)
-    if sw <= 0.05: pen.linear(dr, 0, 300, 0, 860, ['#8a8e90', '#7a7e80'])
+    if sw <= 0.05: _L(pen, dr, 0, 300, 0, 860, ['#8a8e90', '#7a7e80'])
     if sw > 0.05:
-        pen.radial(None, 975, 900, 500, [(0, '#fff6dc', 140 * sw), (1, '#fff6dc', 0)], sy=0.3, clip=False)
+        _R(pen, None, 975, 900, 500, [(0, '#fff6dc', 140 * sw), (1, '#fff6dc', 0)], sy=0.3, clip=False)
         shaft(pen, [(860, 860), (1090, 860), (1300, 1500), (700, 1500)], '#fff6dc', int(90 * sw))
     dw = 230 * (1 - 0.82 * sw)
     door = poly([(860, 300), (860 + dw, 300 - 30 * sw), (860 + dw, 860 + 30 * sw), (860, 860)])
-    pen.fill(door, '#9aa0a0'); pen.linear(door, 860, 0, 1090, 0, [(0, '#ffffff', 40), (1, '#000000', 40)]); pen.line(door, 3.5, '#4a4e50')
+    pen.fill(door, '#9aa0a0'); _L(pen, door, 860, 0, 1090, 0, [(0, '#ffffff', 40), (1, '#000000', 40)]); pen.line(door, 3.5, '#4a4e50')
     dipk = 0.0
     fp = st.sfx_cues('wet_footstep')
     if fp and t >= fp[-1]['t']: dipk = ease_out_cubic(prog(t, fp[-1]['t'], fp[-1]['t'] + 0.8))
     if st.t0 >= 172.2: dipk = max(dipk, ease_in_out(prog(t, st.t0 + 0.3, st.t0 + 1.2)))
     if dipk > 0.01:      # the mattress dips by itself: a shadow pressing into the blanket
-        pen.radial(None, 1500, 700, 150, [(0, '#3a4650', 120 * dipk), (1, '#3a4650', 0)], sy=0.3, clip=False)
+        _R(pen, None, 1500, 700, 150, [(0, '#3a4650', 120 * dipk), (1, '#3a4650', 0)], sy=0.3, clip=False)
         pen.line(smooth([(1380, 690), (1500, 690 + 24 * dipk), (1620, 690)], False), 4, '#4a5660', int(200 * dipk))
     swimsuits(pen, 1230, 1840, 440, t, 1.0, 1.0, 4, True)
     # wet footprints: door -> Noah's bunk
@@ -2152,7 +2229,7 @@ def _old_cabin_refl(pen, t, st, floor_view=False, part='all'):
         if t >= tp:
             k = ease_out_cubic(prog(t, tp, tp + 0.18))
             footprint(pen, x, y, 0.9 + 0.5 * (y - 860) / 800, kind, ang, k, left, '#6f7d88')
-            if t - tp < 0.5: pen.radial(None, x, y, 60, [(0, '#ffffff', 90 * (1 - (t - tp) / 0.5)), (1, '#ffffff', 0)], sy=0.4, clip=False)
+            if t - tp < 0.5: _R(pen, None, x, y, 60, [(0, '#ffffff', 90 * (1 - (t - tp) / 0.5)), (1, '#ffffff', 0)], sy=0.4, clip=False)
 
 
 def _footprint_track(st):
@@ -2225,7 +2302,7 @@ def mirror_layers(key, st, var, shot, M=(960.0, 580.0, 1.0), tilt=0.0, wall=None
         mirror_xf(pen, M, tilt)
         pp = _pane_path()
         x0, y0, x1, y1 = PANE
-        pen.linear(pp, x0, y0, x1, y1, [(0, '#9fb6d8', 26), (0.45, '#ffffff', 10), (0.55, '#ffffff', 22), (1, '#9fb6d8', 8)])
+        _L(pen, pp, x0, y0, x1, y1, [(0, '#9fb6d8', 26), (0.45, '#ffffff', 10), (0.55, '#ffffff', 22), (1, '#9fb6d8', 8)])
         _clip(pen, pp)
         for i in range(70):
             e = i % 4; u = _h(i, 3)
@@ -2238,7 +2315,7 @@ def mirror_layers(key, st, var, shot, M=(960.0, 580.0, 1.0), tilt=0.0, wall=None
         pen.texture(pp, 'grunge', 0.16, 'screen', 1.6)
         for i in range(6):
             px = 450 + _h(i, 40) * 1000; py = 200 + _h(i, 41) * 800
-            pen.radial(None, px, py, 70, [(0, '#c8d2dc', 26), (0.6, '#c8d2dc', 10), (1, '#c8d2dc', 0)], sy=0.6, clip=False)
+            _R(pen, None, px, py, 70, [(0, '#c8d2dc', 26), (0.6, '#c8d2dc', 10), (1, '#c8d2dc', 0)], sy=0.6, clip=False)
             for j in range(5): pen.line(oval(px + 6 * j, py + 3 * j, 22 + 7 * j, 30 + 7 * j), 1.2, '#c8d2dc', 22)
         _unclip(pen)
         pen.cv.restore()
@@ -2253,7 +2330,7 @@ def mirror_layers(key, st, var, shot, M=(960.0, 580.0, 1.0), tilt=0.0, wall=None
             k = ease_out_cubic(prog(t, tfog, tfog + 0.4)) * (1 - prog(t, tfog + 0.8, tfog + 2.5))
             if k <= 0: return
             mirror_xf(pen, M, tilt)
-            pen.radial(None, 700, 760, 260, [(0, '#dfe6ee', 120 * k), (0.6, '#dfe6ee', 60 * k), (1, '#dfe6ee', 0)], sy=0.8, clip=False)
+            _R(pen, None, 700, 760, 260, [(0, '#dfe6ee', 120 * k), (0.6, '#dfe6ee', 60 * k), (1, '#dfe6ee', 0)], sy=0.8, clip=False)
             pen.cv.restore()
         L.append(_live(0.99, fog, 'fog_breath', blur=0))
     # lipstick on the glass
@@ -2287,10 +2364,10 @@ def _cabin7_back(pen, t, lit=0.5, door_hole=None):
     """Back wall (x 60..1860, y 200..860), window hole x 780..1100 y 300..560 (outside drawn by another layer), cubbies with
     the NOAH label, clock nail, ceiling rafters, side walls, floorboards with a smooth unbroken dust film."""
     wall = '#25394a'
-    pen.linear(rect(-900, -700, 3800, 2600), 0, -700, 0, 1600, ['#05090d', '#0e1820'])
+    _L(pen, rect(-900, -700, 3800, 2600), 0, -700, 0, 1600, ['#05090d', '#0e1820'])
     # ceiling
     ceil = poly([(-900, -700), (2820, -700), (1860, 200), (60, 200)])
-    pen.linear(ceil, 0, -700, 0, 200, ['#070c11', '#141f28']); pen.texture(ceil, 'wood', 0.35, 'overlay', 1.2)
+    _L(pen, ceil, 0, -700, 0, 200, ['#070c11', '#141f28']); pen.texture(ceil, 'wood', 0.35, 'overlay', 1.2)
     for i in range(9):
         u = i / 8
         pen.line(poly([(lerp(-900, 2820, u), -700), (lerp(60, 1860, u), 200)], False), 26, '#0a1016')
@@ -2298,15 +2375,15 @@ def _cabin7_back(pen, t, lit=0.5, door_hole=None):
     # side walls
     for (pts, a) in (([(-900, -700), (60, 200), (60, 860), (-900, 1600)], 0), ([(1860, 200), (2820, -700), (2820, 1600), (1860, 860)], 1)):
         p = poly(pts)
-        pen.linear(p, pts[0][0], 0, pts[1][0], 0, ['#0c141b', '#18242f'] if a == 0 else ['#18242f', '#0c141b'])
+        _L(pen, p, pts[0][0], 0, pts[1][0], 0, ['#0c141b', '#18242f'] if a == 0 else ['#18242f', '#0c141b'])
         pen.texture(p, 'wood', 0.4, 'overlay', 1.2, 90)
         for j in range(14):
             u = j / 13
             xa = lerp(pts[0][0], pts[1][0], u); ya0 = lerp(pts[0][1], pts[1][1], u); ya1 = lerp(pts[3][1], pts[2][1], u)
             pen.seg((xa, ya0), (xa, ya1), 2, '#05080b', 170)
     boards(pen, (60, 200, 1860, 860), wall, False, 64, 5, 0.5, var=0.12)
-    pen.linear(rect(60, 200, 1800, 660), 0, 200, 0, 860, [(0, '#000000', 90), (0.4, '#000000', 0), (1, '#000000', 60)])
-    pen.linear(rect(60, 200, 1800, 660), 60, 0, 1860, 0, [(0, '#000000', 110), (0.2, '#000000', 0), (0.8, '#000000', 0), (1, '#000000', 110)])
+    _L(pen, rect(60, 200, 1800, 660), 0, 200, 0, 860, [(0, '#000000', 90), (0.4, '#000000', 0), (1, '#000000', 60)])
+    _L(pen, rect(60, 200, 1800, 660), 60, 0, 1860, 0, [(0, '#000000', 110), (0.2, '#000000', 0), (0.8, '#000000', 0), (1, '#000000', 110)])
     pen.fill(rect(60, 840, 1800, 22), '#121a22'); pen.seg((60, 840), (1860, 840), 2, '#3a4a58', 120)
     # window hole + trim + sill
     hole = rect(780, 300, 320, 260)
@@ -2314,7 +2391,7 @@ def _cabin7_back(pen, t, lit=0.5, door_hole=None):
     pen.line(rect(770, 290, 340, 280), 22, '#2c3a46'); pen.line(rect(758, 278, 364, 304), 4)
     pen.seg((940, 300), (940, 560), 10, '#2c3a46'); pen.seg((780, 430), (1100, 430), 10, '#2c3a46')
     sill = rect(748, 556, 384, 26)
-    pen.linear(sill, 0, 556, 0, 582, ['#4a5a68', '#26323e']); pen.texture(sill, 'wood', 0.5, 'overlay'); pen.line(sill, 3)
+    _L(pen, sill, 0, 556, 0, 582, ['#4a5a68', '#26323e']); pen.texture(sill, 'wood', 0.5, 'overlay'); pen.line(sill, 3)
     dust_film(pen, rect(748, 556, 384, 8), 60)
     # cubbies
     for r_ in range(3):
@@ -2330,7 +2407,7 @@ def _cabin7_back(pen, t, lit=0.5, door_hole=None):
     # floor with an even, unbroken dust film
     fl = floor_persp(pen, -900, 2820, 1600, 60, 1860, 860, 26, '#1f2f3c', '#35495c', 9)
     pen.texture(fl, 'grunge', 0.22, 'screen', 1.8)
-    pen.linear(fl, 0, 860, 0, 1600, [(0, '#8a98a6', 26), (1, '#8a98a6', 10)])
+    _L(pen, fl, 0, 860, 0, 1600, [(0, '#8a98a6', 26), (1, '#8a98a6', 10)])
 
 
 def _cabin7_bunks(pen, t, lit=0.4, mirror_under=True):
@@ -2343,15 +2420,15 @@ def _cabin7_bunks(pen, t, lit=0.4, mirror_under=True):
 
 def _window_out(pen, t, day=False):
     """Night outside Cabin 7's window: sky, moon glow, pines (static)."""
-    pen.linear(rect(700, 220, 480, 420), 0, 220, 0, 560, ['#1a3048', '#2a4560', '#203648'])
+    _L(pen, rect(700, 220, 480, 420), 0, 220, 0, 560, ['#1a3048', '#2a4560', '#203648'])
     stars(pen, (700, 220, 1180, 420), 30, 5, 400)
-    pen.radial(None, 1060, 300, 300, [(0, MOON, 90), (1, MOON, 0)], clip=False)
+    _R(pen, None, 1060, 300, 300, [(0, MOON, 90), (1, MOON, 0)], clip=False)
     treeline(pen, 640, 1240, 560, 200, 6, 13, '#0b1822', MOON, 60)
 
 
 def _moon_shafts(pen, t):
     shaft(pen, [(780, 300), (1100, 300), (1500, 1300), (700, 1300)], MOON, 46, 4)
-    pen.radial(None, 1040, 1060, 360, [(0, MOON, 40), (1, MOON, 0)], sy=0.3, clip=False)
+    _R(pen, None, 1040, 1060, 360, [(0, MOON, 40), (1, MOON, 0)], sy=0.3, clip=False)
 
 
 def _cabin_light_layers(key, var, st, t_grow=None):
@@ -2361,18 +2438,18 @@ def _cabin_light_layers(key, var, st, t_grow=None):
     dx, dy = CAB_MIRROR[0], CAB_MIRROR[1]
     if var == 'doorway_glow':
         def glow(pen, t):
-            pen.radial(None, dx, dy, 900, [(0, '#fff3dc', 150), (0.25, '#f3e3c4', 70), (1, '#f3e3c4', 0)], sy=0.75, clip=False)
+            _R(pen, None, dx, dy, 900, [(0, '#fff3dc', 150), (0.25, '#f3e3c4', 70), (1, '#f3e3c4', 0)], sy=0.75, clip=False)
             shaft(pen, [(dx - 70, dy + 190), (dx + 70, dy + 190), (dx + 520, 1400), (dx - 560, 1400)], '#fff0d0', 70, 5)
             for j in range(7):
                 a0 = -0.9 + j * 0.3
-                pen.linear(poly([(dx, dy), (dx + 1600 * math.cos(a0 + 1.57) - 30, dy + 1600 * math.sin(a0 + 1.57)),
+                _L(pen, poly([(dx, dy), (dx + 1600 * math.cos(a0 + 1.57) - 30, dy + 1600 * math.sin(a0 + 1.57)),
                                  (dx + 1600 * math.cos(a0 + 1.57) + 30, dy + 1600 * math.sin(a0 + 1.57))]), dx, dy, dx, dy + 900,
                            [(0, '#fff6e4', 40), (1, '#fff6e4', 0)])
         grow = (lambda t: ease_in_out(prog(t, t_grow, t_grow + 2.2))) if t_grow else 1.0
         L.append(_cl(1.12, glow, 'doorway_light', key + ':dglow', NEAR, alpha=grow))
     if var == 'red':
         def redg(pen, t):
-            pen.radial(None, dx, dy, 1100, [(0, GLOW, 120), (0.3, RED, 60), (1, RED, 0)], sy=0.7, clip=False)
+            _R(pen, None, dx, dy, 1100, [(0, GLOW, 120), (0.3, RED, 60), (1, RED, 0)], sy=0.7, clip=False)
             shaft(pen, [(dx - 70, dy + 190), (dx + 70, dy + 190), (dx + 520, 1400), (dx - 560, 1400)], RED, 60, 4)
         L.append(_cl(1.12, redg, 'red_light', key + ':red', NEAR, alpha=lambda t: 0.75 + 0.25 * math.sin(t * 2.0)))
     return L
@@ -2401,8 +2478,8 @@ def _v_cab_wide(var, st, shot):
         if ds == 'open' or m == 'gone':
             x0, y0, x1, y1 = dx_ = (1118, 470, 1262, 860)
             hole = poly([(x0, y0), (x1, y0 + 4), (x1 - 3, y1), (x0 + 2, y1)])
-            pen.linear(hole, 0, y0, 0, y1, ['#f6f2e8', '#e2ded2'] if var != 'red' else ['#ff8a96', '#c63449'])
-            pen.radial(hole, 1190, 700, 160, [(0, '#ffffff', 200), (1, '#ffffff', 0)])
+            _L(pen, hole, 0, y0, 0, y1, ['#f6f2e8', '#e2ded2'] if var != 'red' else ['#ff8a96', '#c63449'])
+            _R(pen, hole, 1190, 700, 160, [(0, '#ffffff', 200), (1, '#ffffff', 0)])
             for i in range(10):
                 yy = lerp(y0, y1, i / 9)
                 pen.seg((x0 - 4 - 8 * _h(i, 3), yy), (x0 + 4, yy + 20), 3, '#6a5a44', 200)
@@ -2438,10 +2515,10 @@ def _v_cab_wide(var, st, shot):
 def _flashlight_on_floor(pen, x, y, s=1.0):
     body = rrect(x - 90 * s, y - 16 * s, 150 * s, 32 * s, 12 * s)
     pen.shadow(body, 6 * s, 10 * s, 10 * s, '#000000', 160)
-    pen.linear(body, 0, y - 16 * s, 0, y + 16 * s, ['#5a626a', '#2a3036', '#14181c']); pen.line(body, 3 * s)
+    _L(pen, body, 0, y - 16 * s, 0, y + 16 * s, ['#5a626a', '#2a3036', '#14181c']); pen.line(body, 3 * s)
     hd = rrect(x + 50 * s, y - 24 * s, 46 * s, 48 * s, 8 * s)
-    pen.linear(hd, 0, y - 24 * s, 0, y + 24 * s, ['#6a727a', '#3a4046']); pen.line(hd, 3 * s)
-    pen.fill(oval(x + 96 * s, y, 8 * s, 22 * s), '#fff8ee'); pen.radial(None, x + 100 * s, y, 70 * s, [(0, '#ffffff', 220), (1, CORE, 0)], clip=False)
+    _L(pen, hd, 0, y - 24 * s, 0, y + 24 * s, ['#6a727a', '#3a4046']); pen.line(hd, 3 * s)
+    pen.fill(oval(x + 96 * s, y, 8 * s, 22 * s), '#fff8ee'); _R(pen, None, x + 100 * s, y, 70 * s, [(0, '#ffffff', 220), (1, CORE, 0)], clip=False)
 
 
 # ====================================================================== mirror (close-ups of the glass)
@@ -2461,7 +2538,7 @@ def _mirror_wall(pen, t):
     """The back wall around the leaning mirror, in mirror_cu framing (boards ~3.7x the wide scale)."""
     boards(pen, (-1400, -1000, 3300, 1300), '#24384a', False, 230, 15, 0.6, lw=5)
     pen.fill(rect(-1400, -1000, 4700, 2300), '#000000', 70)
-    pen.radial(None, 960, 580, 1500, [(0, '#2a3e4e', 90), (1, '#2a3e4e', 0)], clip=False)
+    _R(pen, None, 960, 580, 1500, [(0, '#2a3e4e', 90), (1, '#2a3e4e', 0)], clip=False)
     pen.fill(rect(-1400, 1180, 4700, 900), '#141e28')
 
 
@@ -2488,12 +2565,12 @@ def _v_mirror_cu(var, st, shot):
     def glare(pen, t):
         sx, sy, ax, ay, k = b.at(t)
         if k <= 0.01: return
-        pen.radial(None, ax, ay, 300, [(0, '#ffffff', 120 * k), (0.15, CORE, 90 * k), (0.5, FALL, 30 * k), (1, FALL, 0)], sy=0.85, clip=False)
-        pen.radial(None, ax, ay, 700, [(0, CORE, 50 * k), (1, CORE, 0)], sy=0.06, clip=False)
+        _R(pen, None, ax, ay, 300, [(0, '#ffffff', 120 * k), (0.15, CORE, 90 * k), (0.5, FALL, 30 * k), (1, FALL, 0)], sy=0.85, clip=False)
+        _R(pen, None, ax, ay, 700, [(0, CORE, 50 * k), (1, CORE, 0)], sy=0.06, clip=False)
     L.append(_live(0.99, glare, 'glare', blur=0))
     L.append(_live(0.9, lambda pen, t: motes(pen, t, (-200, -100, 2100, 1200), 110, 53, b, amb=0.05 if var != 'dark' else 0.0), 'dust', blur=0))
     if var == 'red':
-        L.append(_live(0.98, lambda pen, t: pen.radial(None, 575, 860, 1100, [(0, GLOW, 50 + 20 * math.sin(t * 2.4)), (1, GLOW, 0)], sy=0.7, clip=False),
+        L.append(_live(0.98, lambda pen, t: _R(pen, None, 575, 860, 1100, [(0, GLOW, 50 + 20 * math.sin(t * 2.4)), (1, GLOW, 0)], sy=0.7, clip=False),
                        'red_glow', blur=0))
     if var == 'wipe' or (st.ev('erase') and vname == 'mirror_cu') or (var == 'red' and vname == 'mirror_cu' and st.t0 >= 619.9):
         L.append(_live(0.97, lambda pen, t: _towel_wipe(pen, t, st, var), 'towel', blur=0))
@@ -2555,9 +2632,9 @@ def _v_old_floor(var, st, shot):
             pen.cv.restore()
         return d
     def sheen(pen, t):
-        pen.linear(rect(-600, -400, 3100, 1900), -600, -400, 2500, 1500, [(0, '#ffffff', 0), (0.45, '#ffffff', 26), (0.5, '#ffffff', 8), (1, '#ffffff', 0)])
+        _L(pen, rect(-600, -400, 3100, 1900), -600, -400, 2500, 1500, [(0, '#ffffff', 0), (0.45, '#ffffff', 26), (0.5, '#ffffff', 8), (1, '#ffffff', 0)])
         pen.texture(rect(-600, -400, 3100, 1900), 'grunge', 0.1, 'screen', 2.0)
-        pen.radial(None, 960, 540, 1500, [(0, '#000000', 0), (0.6, '#000000', 0), (1, '#05070c', 220)], sy=0.6, clip=False)
+        _R(pen, None, 960, 540, 1500, [(0, '#000000', 0), (0.6, '#000000', 0), (1, '#05070c', 220)], sy=0.6, clip=False)
     L = [_cl(1.6, floor_part('static'), 'old_floor', 'ocf:static', NEAR), _live(1.6, floor_part('dynamic'), 'old_floor_live', blur=0),
          _cl(1.0, sheen, 'glass_sheen', 'ocf:sheen', NEAR)]
     return _sp('mirror/old_cabin_floor', L, {})
@@ -2575,23 +2652,23 @@ def _cabin7_all(pen, t, under=False, mirror='none', doorway=None):
     """The whole static room in one draw (outside, back wall, moon shafts, bunks): backgrounds for inserts."""
     _window_out(pen, t); _cabin7_back(pen, t); _moon_shafts(pen, t); _cabin7_bunks(pen, t, 0.4, under)
     if doorway == 'glass':
-        pen.linear(rect(1118, 470, 144, 390), 0, 470, 0, 860, ['#0e141c', '#05080c']); pen.line(rect(1118, 470, 144, 390), 4, '#2a2e33')
+        _L(pen, rect(1118, 470, 144, 390), 0, 470, 0, 860, ['#0e141c', '#05080c']); pen.line(rect(1118, 470, 144, 390), 4, '#2a2e33')
     elif doorway in ('open', 'glow'):
-        pen.linear(rect(1118, 470, 144, 390), 0, 470, 0, 860, ['#f6f2e8', '#d8d4c8'])
+        _L(pen, rect(1118, 470, 144, 390), 0, 470, 0, 860, ['#f6f2e8', '#d8d4c8'])
     elif mirror in ('held_upright', 'tilted'):
         pen.fill(rect(1110, 470, 160, 400), '#d8d4c8', 120); pen.fill(rect(1124, 484, 132, 372), '#121c26')
 
 
-def _light_over(var, key, cx=960, cy=540):
+def _light_over(var, key, cx=960, cy=540, depth=2.9):
     """Variant light washes for close views (kept cheap: cached radials with animated alpha)."""
     if var == 'doorway_glow':
-        return [_cl(2.9, lambda pen, t: pen.radial(None, cx + 300, cy - 100, 1300, [(0, '#fff3dc', 110), (0.5, '#f3e3c4', 40), (1, '#f3e3c4', 0)], clip=False),
+        return [_cl(depth, lambda pen, t: _R(pen, None, cx + 300, cy - 100, 1300, [(0, '#fff3dc', 110), (0.5, '#f3e3c4', 40), (1, '#f3e3c4', 0)], clip=False),
                     'glow', key + ':glow', NEAR)]
     if var == 'red':
-        return [_cl(2.9, lambda pen, t: pen.radial(None, cx + 200, cy - 100, 1400, [(0, GLOW, 120), (0.5, RED, 50), (1, RED, 0)], clip=False),
+        return [_cl(depth, lambda pen, t: _R(pen, None, cx + 200, cy - 100, 1400, [(0, GLOW, 120), (0.5, RED, 50), (1, RED, 0)], clip=False),
                     'red_light', key + ':red', NEAR, alpha=lambda t: 0.75 + 0.25 * math.sin(t * 2.0))]
     if var == 'phone_glow':
-        return [_cl(2.9, lambda pen, t: pen.radial(None, cx, cy + 100, 900, [(0, GLOW, 40), (1, GLOW, 0)], clip=False), 'phone_red', key + ':pred', NEAR,
+        return [_cl(depth, lambda pen, t: _R(pen, None, cx, cy + 100, 900, [(0, GLOW, 40), (1, GLOW, 0)], clip=False), 'phone_red', key + ':pred', NEAR,
                     alpha=lambda t: 0.6 + 0.4 * math.sin(t * 1.3))]
     return []
 
@@ -2603,9 +2680,9 @@ def _insert_bg(key, var, st, cx, cy, m=2.4, doorway=None, depth=3.0):
     L = [_cl(depth, fn, 'room_bg', '%s:bg:%s' % (key, dw), NEAR)]
     L += _light_over(var, key)
     if var in ('flash', 'flash_low', 'doorway_glow'):
-        L.append(_live(2.5, lambda pen, t: hot_spot(pen, 960 + 260 * noise1(t * 0.4, 3), 500 + 120 * noise1(t * 0.3, 4), 520, 0.6 * _flash_k(st, var)(t)), 'beam_spill'))
+        L.append(_live(2.5, lambda pen, t: hot_spot(pen, 960 + 260 * noise1(t * 0.4, 3), 500 + 120 * noise1(t * 0.3, 4), 520, 0.6 * _flash_k(st, var)(t)), 'beam_spill', blur=0))
     if var in ('after', 'phone_glow'):
-        L.append(_cl(2.5, lambda pen, t: pen.radial(None, 960, 900, 1300, [(0, CORE, 60), (1, CORE, 0)], sy=0.25, clip=False), 'floor_beam', key + ':fb', NEAR))
+        L.append(_cl(2.5, lambda pen, t: _R(pen, None, 960, 900, 1300, [(0, CORE, 60), (1, CORE, 0)], sy=0.25, clip=False), 'floor_beam', key + ':fb', NEAR))
     return L
 
 
@@ -2620,12 +2697,12 @@ def _v_cab_door(var, st, shot):
         pen.fill(rect(-900, -600, 3800, 2300), '#0a1016')
         boards(pen, (-900, 100, 2820, 900), '#22364a', False, 80, 21, 0.5)
         floor_persp(pen, -1500, 3400, 1600, -300, 2200, 900, 26, '#1a2834', '#34485a', 13)
-        pen.linear(poly([(-900, -600), (2820, -600), (2200, 100), (-300, 100)]), 0, -600, 0, 100, ['#05090d', '#121c26'])
+        _L(pen, poly([(-900, -600), (2820, -600), (2200, 100), (-300, 100)]), 0, -600, 0, 100, ['#05090d', '#121c26'])
         bunk(pen, -700, 420, 980, 1.15, '#2e3a46', '#3e4c5a', '#28323e', True, False, y_mat=(760, 860), y_top=(450, 500))
         bunk(pen, 1520, 2700, 980, 1.15, '#2e3a46', '#3e4c5a', '#28323e', True, False, y_mat=(760, 860), y_top=(450, 500))
         pc = skia.Paint(AntiAlias=True); pc.setBlendMode(skia.BlendMode.kClear); pen.cv.drawPath(rect(800, 220, 320, 690), pc)
     def outside(pen, t):
-        pen.linear(rect(780, 200, 360, 720), 0, 200, 0, 900, ['#1a3048', '#2a4560', '#1c2c3a'])
+        _L(pen, rect(780, 200, 360, 720), 0, 200, 0, 900, ['#1a3048', '#2a4560', '#1c2c3a'])
         treeline(pen, 700, 1220, 700, 260, 4, 17, '#0b1822', MOON, 80)
         pen.fill(rect(780, 700, 360, 220), '#22384a'); grass(pen, 780, 1140, 702, 20, 30, 3, '#0e1c28', '#4a6480')
     def door(pen, t):
@@ -2637,12 +2714,12 @@ def _v_cab_door(var, st, shot):
         d = poly([(800, 220), (800 - ext + 0 + w * 0 + (w if u < 0.5 else 0) * 0, 220), (800, 220)])
         dp = poly([(800, 220), (800 + w - ext, 220 - 40 * u), (800 + w - ext, 910 + 60 * u), (800, 910)]) if u < 0.98 else None
         if dp is not None:
-            pen.linear(dp, 800, 0, 800 + w, 0, ['#26323c', '#3a4854'])
+            _L(pen, dp, 800, 0, 800 + w, 0, ['#26323c', '#3a4854'])
             pen.texture(dp, 'wood', 0.5, 'overlay', 0.9, 90); pen.line(dp, 4)
             pen.fill(oval(800 + w * 0.85 - ext, 560, 6 + 4 * u), '#8a8a80')
         pen.line(rect(790, 210, 340, 710), 18, '#2c3a46'); pen.line(rect(780, 200, 360, 730), 4)
         if u > 0.05:
-            pen.linear(poly([(800 + w, 910), (1120, 910), (1500, 1500), (700, 1500)]), 0, 910, 0, 1500, [(0, MOON, 70 * u), (1, MOON, 0)])
+            _L(pen, poly([(800 + w, 910), (1120, 910), (1500, 1500), (700, 1500)]), 0, 910, 0, 1500, [(0, MOON, 70 * u), (1, MOON, 0)])
     L = [_cl(6.0, outside, 'outside', 'cdoor:out', (600, 100, 1300, 1000)), _cl(1.2, wall, 'room', 'cdoor:room', NEAR),
          _live(1.18, door, 'door', blur=0)]
     kf = _flash_k(st, var)
@@ -2658,7 +2735,7 @@ def _v_cab_under(var, st, shot):
     def floor(pen, t):
         pen.fill(rect(-900, -600, 3800, 2300), '#06090d')
         floor_persp(pen, -1900, 3800, 1500, 200, 1700, 560, 30, '#1a2a38', '#3e566c', 17)
-        pen.linear(rect(-900, 560, 3800, 1000), 0, 560, 0, 1500, [(0, '#000000', 120), (0.5, '#000000', 20), (1, '#000000', 0)])
+        _L(pen, rect(-900, 560, 3800, 1000), 0, 560, 0, 1500, [(0, '#000000', 120), (0.5, '#000000', 20), (1, '#000000', 0)])
         for (x, y, r) in ((300, 640, 60), (1500, 620, 50), (1750, 900, 80)):
             pen.fill(_blob(x, y, r, r * 0.4, 12, int(x), 0.5), '#5a6470', 140)
         pen.line(smooth([(1650, 560), (1780, 470), (1900, 560)], False), 1.2, '#9aa6b2', 90)
@@ -2675,7 +2752,7 @@ def _v_cab_under(var, st, shot):
         for i in range(-6, 16):
             x0 = -1400 + i * 260
             r = rect(x0, -700, 200, 840)
-            pen.linear(r, x0, 0, x0 + 200, 0, ['#1a2430', '#34424e', '#1a2430']); pen.texture(r, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(r, 4)
+            _L(pen, r, x0, 0, x0 + 200, 0, ['#1a2430', '#34424e', '#1a2430']); pen.texture(r, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(r, 4)
         pen.fill(rect(-1400, 120, 4800, 40), '#05080b')
         for x in (-200, 2100):
             pen.shape(rect(x, -700, 120, 2400), '#1a2430', 4)
@@ -2741,7 +2818,7 @@ def _v_cab_two(var, st, shot):
     def mirror_edge(pen, t):     # the mirror in profile at the right edge, glowing with the beam's reflection
         x = 1840
         pen.fill(poly([(x, 120), (x + 60, 100), (x + 90, 1200), (x + 20, 1220)]), '#c8c4b8'); pen.line(poly([(x, 120), (x + 60, 100), (x + 90, 1200), (x + 20, 1220)]), 5)
-        pen.radial(None, x - 40, 560, 600, [(0, CORE, 70 * kf(t)), (1, CORE, 0)], sy=0.9, clip=False)
+        _R(pen, None, x - 40, 560, 600, [(0, CORE, 70 * kf(t)), (1, CORE, 0)], sy=0.9, clip=False)
     L += [_live(1.05, mirror_edge, 'mirror_edge', blur=0), b.layer(1.0), _motes_layer(0.95, (200, 100, 1900, 1100), 90, 83, b, amb=0.12)]
     an = dict(you_mirror=Anchor(640, 1100, 1.0, 860), tess_mirror=Anchor(1340, 1110, 1.0, 840))
     return _sp('cabin_now/two_shot', L, an, beam=b, dof=4.0)
@@ -2750,19 +2827,19 @@ def _v_cab_two(var, st, shot):
 @view('cabin_now', 'sill')
 def _v_cab_sill(var, st, shot):
     def win(pen, t):
-        pen.linear(rect(-600, -500, 3200, 1100), 0, -500, 0, 580, ['#122236', '#2a4560', '#22384c'])
+        _L(pen, rect(-600, -500, 3200, 1100), 0, -500, 0, 580, ['#122236', '#2a4560', '#22384c'])
         stars(pen, (-600, -500, 2600, 300), 60, 9, 300)
-        pen.radial(None, 1500, 0, 600, [(0, MOON, 110), (1, MOON, 0)], clip=False)
+        _R(pen, None, 1500, 0, 600, [(0, MOON, 110), (1, MOON, 0)], clip=False)
         treeline(pen, -600, 2600, 580, 380, 10, 23, '#0b1822', MOON, 70)
     def sill(pen, t):
         pen.line(rect(-200, -300, 2320, 880), 60, '#2c3a46'); pen.seg((960, -300), (960, 560), 40, '#2c3a46')
         mesh(pen, (-200, -300, 2120, 580), 26, '#8a9aa8', 55, 1.2, torn=(1450, 200, 260))
         pen.line(_blob(1450, 200, 262, 210, 11, 5, 0.45), 2.5, '#8a9aa8', 120)
         top = poly([(-500, 580), (2420, 580), (2620, 700), (-700, 700)])
-        pen.linear(top, 0, 580, 0, 700, ['#3e4e5c', '#56687a']); pen.texture(top, 'wood', 0.6, 'overlay', 1.6)
+        _L(pen, top, 0, 580, 0, 700, ['#3e4e5c', '#56687a']); pen.texture(top, 'wood', 0.6, 'overlay', 1.6)
         dust_film(pen, top, 90)
         front = rect(-700, 700, 3320, 90)
-        pen.linear(front, 0, 700, 0, 790, ['#2a3846', '#141c24']); pen.line(front, 4)
+        _L(pen, front, 0, 700, 0, 790, ['#2a3846', '#141c24']); pen.line(front, 4)
         boards(pen, (-700, 790, 2620, 1500), '#1c2c3a', False, 150, 25, 0.5)
         for i in range(40):
             x = -400 + _h(i, 3) * 2800; pen.fill(oval(x, 590 + 100 * _h(i, 4), 2 + 4 * _h(i, 5), 1.5 + 2 * _h(i, 6)), '#9aa6b2', 120)
@@ -2774,7 +2851,7 @@ def _v_cab_sill(var, st, shot):
             pen.cv.save(); pen.cv.translate(960, 630 - drop); pen.cv.scale(1.0, 0.42)
             phone_prop(pen, 0, 0, 300, 600, 8, lit=0.8, red=red, dust=0.5)
             pen.cv.restore()
-            pen.radial(None, 1010, 610, 40, [(0, '#ff6070', 200), (1, GLOW, 0)], clip=False)
+            _R(pen, None, 1010, 610, 40, [(0, '#ff6070', 200), (1, GLOW, 0)], clip=False)
     kf = _flash_k(st, var)
     b = Beam(aim_fn((-300, 200), [(st.t0, 900, 640), (st.t1, 1000, 640)], kf, 10, 87), spot=420, spot_sy=0.35, a=0.2)
     L = [_cl(5.0, win, 'outside', 'sill:out', (-800, -700, 2800, 700)), _cl(1.0, sill, 'sill', 'sill:sill', NEAR),
@@ -2799,7 +2876,8 @@ def _v_cab_insert(var, st, shot):
         L.append(b.layer(1.6))
     c = {'red': '#ff9aa8', 'doorway_glow': '#fff6e4'}.get(var, CORE)
     L.append(_live(0.92, lambda pen, t: motes(pen, t, (-100, -100, 2000, 1200), 70, 93, b, c, 0.16), 'dust', blur=0))
-    return _sp('cabin_now/' + vname, L, dict(hands=Anchor(960, 600, 1.0, 420)), dof=6.75, beam=b, info=dict(insert=True))
+    return _sp('cabin_now/' + vname, L, dict(hands=Anchor(960, 600, 1.0, 420), noah_floor=Anchor(820, 1240, 1.0, 900, 'seated, over the shoulder')),
+               dof=6.75, beam=b, info=dict(insert=True))
 
 
 @view('cabin_now', 'palm')
@@ -2822,10 +2900,10 @@ def _v_cab_palm(var, st, shot):
         else:
             px, py, ang = 960, 760, 0.0
             hand = smooth([(700, 1300), (660, 700), (760, 420), (1160, 420), (1260, 700), (1220, 1300)], True, 0.7)
-            pen.radial(hand, 900, 640, 600, ['#d8bcaa', '#c0a28e', '#9e8072']); pen.line(hand, 8)
+            _R(pen, hand, 900, 640, 600, ['#d8bcaa', '#c0a28e', '#9e8072']); pen.line(hand, 8)
         # the twist wrapper's imprint, pressed red into the palm
         pen.cv.save(); pen.cv.translate(px, py); pen.cv.rotate(ang - 18)
-        pen.radial(None, 0, 0, 150, [(0, '#c8505a', 110), (0.6, '#c8505a', 60), (1, '#c8505a', 0)], sy=0.75, clip=False)
+        _R(pen, None, 0, 0, 150, [(0, '#c8505a', 110), (0.6, '#c8505a', 60), (1, '#c8505a', 0)], sy=0.75, clip=False)
         pen.line(oval(0, 0, 70, 52), 5, '#a8323e', 170)
         for sg in (-1, 1):
             for j in range(4):
@@ -2868,41 +2946,55 @@ def _v_cab_towel_over(var, st, shot):
         if td is None or t < td: return
         k = prog(t, td, td + 1.0)
         mirror_xf(pen, M)
-        pen.linear(_pane_path(FW), 0, PANE[1], 0, PANE[3], ['#05070a', '#0a0e12'])
-        pen.radial(None, 960, 600, 1400, [(0, '#f6f0e0', 60 * k), (1, '#f6f0e0', 0)], sy=1.6, clip=False)
+        _L(pen, _pane_path(FW), 0, PANE[1], 0, PANE[3], ['#05070a', '#0a0e12'])
+        _R(pen, None, 960, 600, 1400, [(0, '#f6f0e0', 60 * k), (1, '#f6f0e0', 0)], sy=1.6, clip=False)
         pen.cv.restore()
-    def towel(pen, t):
+    def towel(pen, t, part='all'):
         drop = 0.0
         if td is not None and t >= td: drop = 2200 * (t - td) ** 2 * 1.8
+        if part == 'body' and drop > 0: return
+        if part == 'bumps' and drop > 0: part = 'all'
         mirror_xf(pen, M)
         pen.cv.translate(0, drop / M[2])
-        x0, y0, x1, y1 = PANE[0] - FW - 60, PANE[1] - FW - 140, PANE[2] + FW + 60, PANE[3] + FW + 260
+        x0, y0, x1, y1 = PANE[0] - FW - 520, PANE[1] - FW - 140, PANE[2] + FW + 520, PANE[3] + FW + 260
         pts = [(x0 + 40, y0 + 120), (960, y0), (x1 - 40, y0 + 120), (x1 + 30, y1), (960, y1 + 60), (x0 - 30, y1)]
         p = smooth(pts, True, 0.45)
-        pen.shadow(p, 30, 40, 60, '#000000', 160)
-        towel_cloth(pen, p, (x0 - 40, y0, x1 + 40, y1 + 60), 3.2, 0, 17, 0.55)
-        for j in range(6):
-            fx = x0 + 160 + j * (x1 - x0 - 320) / 5
-            pen.line(smooth([(fx, y0 + 140), (fx + 30, (y0 + y1) / 2), (fx - 20, y1)], False), 26, '#000000', 50)
-        pr = st.events.get('press_fn')
+        if part in ('all', 'body'):
+            pen.shadow(p, 30, 40, 60, '#000000', 160)
+            towel_cloth(pen, p, (x0 - 40, y0, x1 + 40, y1 + 60), 3.2, 0, 17, 0.55)
+            for j in range(6):
+                fx = x0 + 160 + j * (x1 - x0 - 320) / 5
+                pen.line(smooth([(fx, y0 + 140), (fx + 30, (y0 + y1) / 2), (fx - 20, y1)], False), 26, '#000000', 50)
+        if part == 'body':
+            pen.cv.restore(); return
         tips = []
-        for c in st.sfx_cues('cloth_press'):
-            k = ease_out_cubic(prog(t, c['t'] - 0.15, c['t'] + 0.35))
-            if k > 0:
-                for j in range(5):
-                    tips.append((760 + j * 110 + 30 * math.sin(j), 520 - 60 * abs(j - 2) + 20 * j, k))
+        pf = info.get('press')
+        if callable(pf): tips = [(x, y, k) for (x, y, k) in pf(t)]
+        else:
+            hx, hy, hs = 960.0, 520.0, 380.0
+            for c in shot.get('chars', []):
+                if c.get('who') == 'queen' and isinstance(c.get('at'), list): hx, hy, hs = c['at'][:3]
+            for c in st.sfx_cues('cloth_press'):
+                k = ease_out_cubic(prog(t, c['t'] - 0.15, c['t'] + 0.35))
+                if k > 0:
+                    for j in range(5):
+                        tips.append((hx + (j - 2) * hs * 0.14, hy - hs * 0.45 + abs(j - 2) * hs * 0.06 + (hs * 0.1 if j == 0 else 0), k))
+        tips = [((x - M[0]) / M[2] + MPIV[0], (y - M[1]) / M[2] + MPIV[1], k) for (x, y, k) in tips]
         for (tx_, ty_, k) in tips:   # fingertips straining the terry toward the lens
-            g = 140 * k
-            pen.radial(None, tx_, ty_, g * 1.6, [(0, '#ffffff', 70 * k), (0.5, '#ffffff', 30 * k), (1, '#000000', 0)], clip=False)
-            pen.radial(None, tx_ + g * 0.4, ty_ + g * 0.6, g * 1.6, [(0, '#000000', 90 * k), (1, '#000000', 0)], clip=False)
+            g = 70 * k / M[2]
+            _R(pen, None, tx_, ty_, g * 1.6, [(0, '#ffffff', 70 * k), (0.5, '#ffffff', 30 * k), (1, '#000000', 0)], clip=False)
+            _R(pen, None, tx_ + g * 0.4, ty_ + g * 0.6, g * 1.6, [(0, '#000000', 90 * k), (1, '#000000', 0)], clip=False)
             for i in range(4):
                 pen.line(smooth([(tx_ - g * 1.6, ty_ - g * (1.2 - i * 0.8)), (tx_, ty_ - g * 0.3 * (i - 1.5)), (tx_ + g * 1.6, ty_ - g * (1.2 - i * 0.8))], False),
-                         4, '#000000', int(60 * k))
+                         4 / M[2], '#000000', int(60 * k))
         pen.cv.restore()
     kf = _flash_k(st, var)
     b = Beam(aim_fn((2300, 900), [(st.t0, 960, 520), (st.t1, 1000, 560)], kf, 12, 101), spot=420, a=0.2)
-    L = [_cl(1.15, wall, 'wall', 'tover:wall', NEAR), _live(1.08, behind, 'behind', blur=0), _live(1.0, towel, 'towel', blur=0),
-         b.layer(0.98)]
+    info = dict(mirror_xf=M, press=None)
+    L = [_cl(1.15, wall, 'wall', 'tover:wall', NEAR), _live(1.08, behind, 'behind', blur=0),
+         _cl(0.985, lambda pen, t: towel(pen, -1.0, 'body'), 'towel', 'tover:towel', NEAR,
+             alpha=(lambda t: 1.0 if (td is None or t < td) else 0.0)),
+         _live(0.984, lambda pen, t: towel(pen, t, 'bumps'), 'towel_live', blur=0), b.layer(0.98)]
     if td is not None:
         def burst(pen, t):
             if t < td + 0.45: return
@@ -2911,10 +3003,10 @@ def _v_cab_towel_over(var, st, shot):
                 ang = math.pi * (1.05 + 0.9 * _h(j, 3)); v = 200 + 400 * _h(j, 4)
                 x = 960 + math.cos(ang) * v * u * 1.5 + (_h(j, 5) - 0.5) * 800
                 y = 1120 + math.sin(ang) * v * u - 30 * u
-                pen.radial(None, x, y, 30 + 60 * u, [(0, '#aab4be', 90 * max(0, 1 - u)), (1, '#aab4be', 0)], clip=False)
+                _R(pen, None, x, y, 30 + 60 * u, [(0, '#aab4be', 90 * max(0, 1 - u)), (1, '#aab4be', 0)], clip=False)
         L.append(_live(0.95, burst, 'dust_burst', blur=0))
     L.append(_motes_layer(0.9, (0, 0, 1920, 1080), 80, 103, b))
-    return _sp('cabin_now/towel_over', L, dict(press=Anchor(960, 520, 1.0, 380)), beam=b, info=dict(mirror_xf=M, tips_default=True))
+    return _sp('cabin_now/towel_over', L, dict(press=Anchor(960, 520, 1.0, 380)), beam=b, info=info)
 
 
 @view('cabin_now', 'clock')
@@ -2935,10 +3027,10 @@ def _v_cab_clock(var, st, shot):
 def _v_cab_dust_floor(var, st, shot):
     def floor(pen, t):
         pen.fill(rect(-900, -700, 3800, 2400), '#05080c')
-        pen.linear(rect(-900, -700, 3800, 1000), 0, -700, 0, 300, ['#05080c', '#16222e'])
+        _L(pen, rect(-900, -700, 3800, 1000), 0, -700, 0, 300, ['#05080c', '#16222e'])
         fl = floor_persp(pen, -2600, 4500, 1500, 500, 1420, 300, 30, '#1a2834', '#3a4e60', 19)
         pen.texture(fl, 'grunge', 0.35, 'screen', 2.4)
-        pen.linear(fl, 0, 300, 0, 1500, [(0, '#9aa8b6', 40), (1, '#9aa8b6', 18)])
+        _L(pen, fl, 0, 300, 0, 1500, [(0, '#9aa8b6', 40), (1, '#9aa8b6', 18)])
         for x in (620, 1300): pen.shape(rect(x, 140, 26, 170), '#1a2430', 3)
         pen.fill(rect(560, 100, 820, 60), '#141c24'); pen.line(rect(560, 100, 820, 60), 3)
     kf = _flash_k(st, 'flash')
@@ -2951,12 +3043,13 @@ def _bunk_under(pen, t, dy=0.0):
     pen.fill(rect(-900, -700, 3800, 2400), '#05080c')
     pen.cv.save(); pen.cv.translate(0, dy)
     under = poly([(-900, -700), (2820, -700), (2820, 300), (-900, 380)])
-    pen.fill(under, '#121a22')
+    _L(pen, under, 0, -700, 0, 380, ['#0e141a', '#2a3644'])
     for i in range(-4, 18):
         x = -900 + i * 220
-        pen.shape(poly([(x, -700), (x + 150, -700), (x + 150, 330 - i * 4), (x, 334 - i * 4)]), '#26323e', 4)
+        sl = poly([(x, -700), (x + 150, -700), (x + 150, 330 - i * 4), (x, 334 - i * 4)])
+        _L(pen, sl, x, 0, x + 150, 0, ['#2a3644', '#3e4c5a', '#222c38']); pen.texture(sl, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(sl, 4)
     rail = poly([(-900, 360), (2820, 290), (2820, 380), (-900, 470)])
-    pen.linear(rail, 0, 300, 0, 470, ['#3a4854', '#1a242e']); pen.texture(rail, 'wood', 0.5, 'overlay', 1.2); pen.line(rail, 5)
+    _L(pen, rail, 0, 300, 0, 470, ['#3a4854', '#1a242e']); pen.texture(rail, 'wood', 0.5, 'overlay', 1.2); pen.line(rail, 5)
     pen.shape(rect(1500, -700, 140, 2200), '#1e2a34', 5)
     pen.cv.restore()
     boards(pen, (-900, 470, 2820, 1100), '#1c2c3a', False, 180, 115, 0.5)
@@ -2980,11 +3073,11 @@ def _v_cab_bunk(var, st, shot):
             x = -200 + _h(j, 3) * 2300
             y = 340 + (60 + 200 * _h(j, 4)) * u + 40 * u * u + 30 * noise1(t * 0.5 + j, 5)
             a = 180 * max(0.0, 1 - u / 4.0) * (0.4 + 0.6 * _h(j, 6))
-            if y < 1200: pen.radial(None, x + 20 * noise1(t + j, 7), y, 3 + 5 * _h(j, 8), [(0, '#ffb0b8' if var == 'red' else '#cfd8e0', a), (1, '#ffb0b8', 0)], clip=False)
+            if y < 1200: _R(pen, None, x + 20 * noise1(t + j, 7), y, 3 + 5 * _h(j, 8), [(0, '#ffb0b8' if var == 'red' else '#cfd8e0', a), (1, '#ffb0b8', 0)], clip=False)
         if u < 0.4:
             k = 1 - u / 0.4
-            pen.radial(None, 960, 380, 900, [(0, '#c8b0b0', 120 * k), (1, '#c8b0b0', 0)], sy=0.35, clip=False)
-    L = [_live(1.0, bunk_l, 'bunk', blur=0)] + _light_over(var, 'bunkh') + [_live(0.95, dust, 'dust_burst', blur=0),
+            _R(pen, None, 960, 380, 900, [(0, '#c8b0b0', 120 * k), (1, '#c8b0b0', 0)], sy=0.35, clip=False)
+    L = [_live(1.0, bunk_l, 'bunk', blur=0)] + _light_over(var, 'bunkh', 960, 300, 0.97) + [_live(0.95, dust, 'dust_burst', blur=0),
          _motes_layer(0.9, (0, 0, 1920, 1080), 60, 119, None, '#ff9aa8' if var == 'red' else CORE, 0.12, fall=20)]
     return _sp('cabin_now/' + shot.get('view', 'bunk_hit'), L, {})
 
@@ -3002,8 +3095,8 @@ def _v_cab_floor_low(var, st, shot):
         for j in range(60):
             ang = math.pi * (1.0 + _h(j, 3)); v = 300 + 600 * _h(j, 4)
             x = 960 + math.cos(ang) * v * u + 40 * noise1(t + j, 3); y = 1000 + math.sin(ang) * v * u * 0.5 + 60 * u * u
-            pen.radial(None, x, y, 20 + 60 * u, [(0, '#d0a8b0', 100 * max(0, 1 - u / 1.4)), (1, '#d0a8b0', 0)], clip=False)
-    L = [_cl(1.2, floor, 'floor', 'flow:floor', NEAR)] + _light_over(var, 'flow') + [_live(0.95, burst, 'dust_burst', blur=0),
+            _R(pen, None, x, y, 20 + 60 * u, [(0, '#d0a8b0', 100 * max(0, 1 - u / 1.4)), (1, '#d0a8b0', 0)], clip=False)
+    L = [_cl(1.2, floor, 'floor', 'flow:floor', NEAR)] + _light_over(var, 'flow', 960, 500, 0.97) + [_live(0.95, burst, 'dust_burst', blur=0),
          _motes_layer(0.9, (0, 0, 1920, 1080), 60, 127, None, '#ff9aa8', 0.12)]
     return _sp('cabin_now/floor_low', L, dict(you_floor=Anchor(960, 1000, 1.0, 640)))
 
@@ -3019,11 +3112,11 @@ PM = dict(PT, wall='#d8c8aa', wall2='#c8b696', seam='#9a8466', floor0='#bfa888',
 
 def _dawn_outside(pen, t, P=PT, x0=380, y0=230, x1=860, y1=590, far=True):
     """Morning outside the dawn cabin window: pale sky, lawn, misty pines, the mess hall far away."""
-    pen.linear(rect(x0, y0, x1 - x0, y1 - y0), 0, y0, 0, y1, [P['sky0'], P['sky1'], _lt(P['lawn'], 0.2)])
-    pen.radial(None, (x0 + x1) / 2 + 80, y0 + 60, 360, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
+    _L(pen, rect(x0, y0, x1 - x0, y1 - y0), 0, y0, 0, y1, [P['sky0'], P['sky1'], _lt(P['lawn'], 0.2)])
+    _R(pen, None, (x0 + x1) / 2 + 80, y0 + 60, 360, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
     treeline(pen, x0 - 100, x1 + 100, y0 + (y1 - y0) * 0.62, (y1 - y0) * 0.5, 7, 41, P['pine2'])
     pen.fill(rect(x0, y0 + (y1 - y0) * 0.62, x1 - x0, (y1 - y0) * 0.4), P['lawn'])
-    pen.radial(None, (x0 + x1) / 2, y0 + (y1 - y0) * 0.6, (x1 - x0) * 0.7, [(0, '#ffffff', 90), (1, '#ffffff', 0)], sy=0.25, clip=False)
+    _R(pen, None, (x0 + x1) / 2, y0 + (y1 - y0) * 0.6, (x1 - x0) * 0.7, [(0, '#ffffff', 90), (1, '#ffffff', 0)], sy=0.25, clip=False)
 
 
 def _dawn_room(pen, t, P=PT, curtains=True, lantern_k=1.0, towel=True, shoe=True, swim=True, clock=False, made=True):
@@ -3032,24 +3125,24 @@ def _dawn_room(pen, t, P=PT, curtains=True, lantern_k=1.0, towel=True, shoe=True
     floor (620, 900), the other shoe (1000, 940). Clean, still, evenly lit."""
     pen.fill(rect(-900, -700, 3800, 2400), _dk(P['wall'], 0.15))
     ceil = poly([(-900, -700), (2820, -700), (2000, 150), (-200, 150)])
-    pen.linear(ceil, 0, -700, 0, 150, [_dk(P['wall'], 0.3), _dk(P['wall'], 0.12)])
+    _L(pen, ceil, 0, -700, 0, 150, [_dk(P['wall'], 0.3), _dk(P['wall'], 0.12)])
     for i in range(9):
         u = i / 8; pen.line(poly([(lerp(-900, 2820, u), -700), (lerp(-200, 2000, u), 150)], False), 22, _dk(P['wall'], 0.35))
     boards(pen, (-200, 150, 2000, 860), P['wall'], False, 66, 131, 0.3, seam=P['seam'], seam_a=150, var=0.05, nails=False, hi=P['trim'])
     for (pts, a) in (([(-900, -700), (-200, 150), (-200, 860), (-900, 1600)], 0), ([(2000, 150), (2820, -700), (2820, 1600), (2000, 860)], 1)):
         p = poly(pts)
-        pen.linear(p, pts[0][0], 0, pts[1][0], 0, [_dk(P['wall2'], 0.12), P['wall2']] if a == 0 else [P['wall2'], _dk(P['wall2'], 0.15)])
+        _L(pen, p, pts[0][0], 0, pts[1][0], 0, [_dk(P['wall2'], 0.12), P['wall2']] if a == 0 else [P['wall2'], _dk(P['wall2'], 0.15)])
         pen.texture(p, 'wood', 0.25, 'overlay', 1.2, 90)
     pen.fill(rect(-200, 840, 2200, 22), _dk(P['wall'], 0.25))
     fl = floor_persp(pen, -1500, 3400, 1600, -200, 2000, 860, 26, P['floor0'], P['floor1'], 133, seam=P['shadow'])
-    pen.radial(None, 620, 1000, 700, [(0, '#ffffff', 60), (1, '#ffffff', 0)], sy=0.35, clip=False)
+    _R(pen, None, 620, 1000, 700, [(0, '#ffffff', 60), (1, '#ffffff', 0)], sy=0.35, clip=False)
     # window
     hole = rect(420, 260, 400, 300)
     _dawn_outside(pen, t, P, 420, 260, 820, 560)
     pen.line(rect(410, 250, 420, 320), 22, P['trim']); pen.line(rect(398, 238, 444, 344), 4)
     pen.seg((620, 260), (620, 560), 10, P['trim']); pen.seg((420, 410), (820, 410), 10, P['trim'])
     sill = rect(388, 556, 464, 26)
-    pen.linear(sill, 0, 556, 0, 582, [P['trim'], _dk(P['trim'], 0.15)]); pen.line(sill, 3)
+    _L(pen, sill, 0, 556, 0, 582, [P['trim'], _dk(P['trim'], 0.15)]); pen.line(sill, 3)
     if curtains:
         for (cx0, cx1) in ((340, 470), (770, 900)):
             cp = smooth([(cx0, 232), (cx1, 232), (cx1 - 6, 600), (cx0 + 8, 610)], True, 0.25)
@@ -3077,7 +3170,7 @@ def sneaker(pen, x, y, s=1.0, rot=0.0, c='#efefec', lace='#f8f8f8', loose=True):
     sole = smooth([(-120, 10), (130, 10), (140, -4), (120, -18), (-110, -18), (-130, -6)], True, 0.6)
     up = smooth([(-110, -16), (-100, -70), (-40, -86), (20, -70), (70, -52), (120, -30), (124, -16)], True, 0.7)
     pen.shadow(sole, 6, 10, 12, '#000000', 90)
-    pen.fill(up, c); pen.linear(up, 0, -86, 0, -16, [(0, '#ffffff', 80), (1, '#000000', 40)]); pen.line(up, 4)
+    pen.fill(up, c); _L(pen, up, 0, -86, 0, -16, [(0, '#ffffff', 80), (1, '#000000', 40)]); pen.line(up, 4)
     pen.fill(sole, '#d8d4c8'); pen.line(sole, 4)
     pen.fill(smooth([(-60, -76), (10, -64), (6, -40), (-50, -46)], True, 0.5), '#2a2e36')
     for j in range(4): pen.seg((-40 + j * 16, -70 + j * 4), (-20 + j * 16, -58 + j * 4), 4, lace)
@@ -3088,7 +3181,7 @@ def sneaker(pen, x, y, s=1.0, rot=0.0, c='#efefec', lace='#f8f8f8', loose=True):
 
 def _queen_cool(key, cx, cy, r=400, k=1.0):
     """dawn_queen: the light cools and drains near her (400 px radial)."""
-    return _cl(0.99, lambda pen, t: pen.radial(None, cx, cy, r * 1.6, [(0, '#5a6878', 120 * k), (0.5, '#7a8898', 60 * k), (1, '#7a8898', 0)], clip=False),
+    return _cl(0.99, lambda pen, t: _R(pen, None, cx, cy, r * 1.6, [(0, '#5a6878', 120 * k), (0.5, '#7a8898', 60 * k), (1, '#7a8898', 0)], clip=False),
                'queen_cool', key, NEAR)
 
 
@@ -3106,9 +3199,9 @@ def _drop_draw(pen, t, st, x=620, y_hang=700, y_towel=900, y_frame=580):
             return
     if v == 'hanging':
         wob = 2 * math.sin(t * 3.1)
-        pen.radial(None, x, y_hang, 60, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
+        _R(pen, None, x, y_hang, 60, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
         d = _drop_path(x, y_hang + wob, 10, 1.15)
-        pen.fill(d, '#dfe8ee', 235); pen.radial(d, x - 3, y_hang - 4 + wob, 12, [(0, '#ffffff'), (1, '#9aaab4')])
+        pen.fill(d, '#dfe8ee', 235); _R(pen, d, x - 3, y_hang - 4 + wob, 12, [(0, '#ffffff'), (1, '#9aaab4')])
         pen.fill(oval(x - 3.5, y_hang - 5 + wob, 2.6), '#ffffff', 255); pen.line(d, 1.6, '#6a7a86', 200)
         return
     tf = st.ev('drop_fall')
@@ -3139,7 +3232,7 @@ def _v_dawn_wide(var, st, shot):
         if not dip_t and st.v('queen', t) != 'bunk': return
         k = ease_out_cubic(prog(t, dip_t[0], dip_t[0] + 1.2)) if dip_t else 1.0
         pen.fill(oval(1420, 712, 150, 14 * k), '#000000', int(70 * k))
-        pen.linear(rect(1280, 690, 280, 40), 0, 690, 0, 730, [(0, '#3a4650', 90 * k), (1, '#3a4650', 0)])
+        _L(pen, rect(1280, 690, 280, 40), 0, 690, 0, 730, [(0, '#3a4650', 90 * k), (1, '#3a4650', 0)])
     L.append(_live(1.0, dip, 'dip', blur=0))
     L.append(_live(1.0, lambda pen, t: sneaker(pen, 1000, 940, 0.8), 'shoe', blur=0))
     if var == 'dawn_queen': L.append(_queen_cool(key + ':qc', 1440, 760))
@@ -3157,7 +3250,7 @@ def _dawn_bg(key, var, st, cx, cy, m, depth=3.0, P=PT, queen_at=None):
                  'shaft', key + ':sh', NEAR))
     if var == 'dawn_queen': L.append(_queen_cool(key + ':qc', *(queen_at or (960, 560)), 520, 1.0))
     if var == 'dawn_break':
-        L.append(_live(depth * 0.9, lambda pen, t: pen.radial(None, 700 + (700 - cx) * (m - 1), 540, 900,
+        L.append(_live(depth * 0.9, lambda pen, t: _R(pen, None, 700 + (700 - cx) * (m - 1), 540, 900,
                                                                [(0, '#ffd9a0', 60 * (1 if _h(int(t * 15), 3) > 0.25 else 0.1)), (1, '#ffd9a0', 0)], clip=False),
                        'lantern_stutter'))
     L.append(_live(0.92, lambda pen, t: motes(pen, t, (-100, -100, 2000, 1200), 30, 143, None, '#ffffff', 0.12, speed=(2, 6)), 'dust', blur=0))
@@ -3175,7 +3268,7 @@ def _v_dawn_cu(var, st, shot):
             floor_persp(pen, -1800, 3700, 1500, -300, 2200, 640, 22, PT['floor0'], PT['floor1'], 147, seam=PT['shadow'])
             r = rect(-600, 300, 3100, 140); pen.fill(r, PT['blanket']); pen.texture(r, 'fabric', 0.5, 'overlay', 1.4); pen.line(r, 5)
             pen.fill(rect(-600, 440, 3100, 50), _dk(PT['wood'], 0.1)); pen.line(rect(-600, 440, 3100, 50), 5)
-            pen.radial(None, 600, 700, 1100, [(0, '#ffffff', 80), (1, '#ffffff', 0)], sy=0.5, clip=False)
+            _R(pen, None, 600, 700, 1100, [(0, '#ffffff', 80), (1, '#ffffff', 0)], sy=0.5, clip=False)
         L = [_cl(1.3, edge, 'floor', 'knot:edge', NEAR)] + L[-1:]
     return _sp('cabin_dawn/' + vname, L, {}, dof=6.75, info=dict(insert=True))
 
@@ -3185,18 +3278,18 @@ def _v_dawn_towel(var, st, shot):
     def floor(pen, t):
         boards(pen, (-700, -500, 2620, 420), PT['wall'], False, 150, 151, 0.3, seam=PT['seam'], seam_a=140, nails=False, hi=PT['trim'])
         floor_persp(pen, -2200, 4100, 1600, -500, 2400, 420, 22, PT['floor0'], PT['floor1'], 153, seam=PT['shadow'])
-        pen.linear(rect(-700, -500, 3300, 120), 0, -500, 0, -380, [PT['trim'], _dk(PT['trim'], 0.2)])
+        _L(pen, rect(-700, -500, 3300, 120), 0, -500, 0, -380, [PT['trim'], _dk(PT['trim'], 0.2)])
         per = [(260 + i * 180, 600 - 30 * math.sin(i)) for i in range(9)] + [(1700, 760), (1740, 900)] + \
               [(1700 - i * 180, 980 + 25 * math.sin(i * 1.7)) for i in range(9)] + [(240, 820)]
         tw = smooth([(x + 26 * (_h(i, 29) - 0.5), y + 30 * (_h(i, 31) - 0.5)) for i, (x, y) in enumerate(per)], True, 0.6)
         pen.shadow(tw, 14, 20, 26, '#000000', 70)
         towel_cloth(pen, tw, (230, 560, 1720, 1000), 2.4, 0.7, 23, 1.0)
         for (fx, w_) in ((560, 90), (980, 140), (1380, 100)):     # soft fold shadows and highlights
-            pen.linear(rect(fx - w_, 560, 2 * w_, 450), fx - w_, 0, fx + w_, 0, [(0, '#000000', 0), (0.55, '#000000', 70), (0.75, '#ffffff', 40), (1, '#ffffff', 0)])
+            _L(pen, rect(fx - w_, 560, 2 * w_, 450), fx - w_, 0, fx + w_, 0, [(0, '#000000', 0), (0.55, '#000000', 70), (0.75, '#ffffff', 40), (1, '#ffffff', 0)])
         corner = poly([(1660, 760), (1720, 900), (1560, 860)]); pen.fill(corner, '#e0a060'); pen.line(corner, 4)
         pen.fill(oval(980, 1000, 760, 40), '#5a6670', 50)
         pen.fill(oval(960, 990, 700, 50), _dk(PT['floor0'], 0.3), 100)
-        pen.radial(None, 960, 760, 1200, [(0, '#ffffff', 70), (1, '#ffffff', 0)], sy=0.5, clip=False)
+        _R(pen, None, 960, 760, 1200, [(0, '#ffffff', 70), (1, '#ffffff', 0)], sy=0.5, clip=False)
     def drop(pen, t):
         _drop_draw(pen, t, st, 960, 330, 720, -420)
     L = [_cl(1.2, floor, 'towel', 'dtowel:floor', NEAR), _live(1.0, drop, 'drop', blur=0),
@@ -3213,7 +3306,7 @@ def _v_dawn_shoe(var, st, shot):
         for j in range(5): pen.line(smooth([(-900, 0 + j * 60), (960, 40 + j * 60), (2820, -10 + j * 60)], False), 10, '#000000', 40)
         pen.fill(rect(-900, 220, 3800, 80), _dk(PT['wood'], 0.1)); pen.line(rect(-900, 220, 3800, 80), 6)
         floor_persp(pen, -2400, 4300, 1600, -800, 2700, 300, 22, PT['floor0'], PT['floor1'], 161, seam=PT['shadow'])
-        pen.radial(None, 700, 700, 1300, [(0, '#ffffff', 70), (1, '#ffffff', 0)], sy=0.5, clip=False)
+        _R(pen, None, 700, 700, 1300, [(0, '#ffffff', 70), (1, '#ffffff', 0)], sy=0.5, clip=False)
     L = []
     if vname == 'shoe':
         L = [_cl(1.2, floor, 'floor', 'dshoe:floor', NEAR), _live(1.0, lambda pen, t: sneaker(pen, 1060, 780, 2.6, -4), 'shoe', blur=0)]
@@ -3229,12 +3322,12 @@ def _v_dawn_shoe(var, st, shot):
             for j in range(8):
                 y0 = 380 + j * 110
                 pen.line(smooth([(-900, y0), (600, y0 + 30 * k), (1100, y0 + 90 * k * math.exp(-j * 0.2)), (1600, y0 + 30 * k), (2820, y0)], False), 8, '#000000', int(30 + 50 * k))
-            pen.radial(None, 1100, 360 + 60 * k, 600, [(0, '#000000', 90 * k), (1, '#000000', 0)], sy=0.4, clip=False)
+            _R(pen, None, 1100, 360 + 60 * k, 600, [(0, '#000000', 90 * k), (1, '#000000', 0)], sy=0.4, clip=False)
             sat = ease_in_out(prog(t, dip_t + 0.4, dip_t + 2.0))
             if sat > 0:      # black satin spreading over the blanket
                 sp_ = smooth([(1100 - 700 * sat, 380), (1100, 300 + 60 * k), (1100 + 600 * sat, 400), (1100 + 500 * sat, 560 + 200 * sat), (1100, 600 + 260 * sat),
                               (1100 - 620 * sat, 540 + 180 * sat)], True, 0.7)
-                pen.fill(sp_, '#0b0d14'); pen.linear(sp_, 1100 - 700 * sat, 0, 1100 + 600 * sat, 0, [(0, '#3a3e4a', 0), (0.45, '#5a5e6e', 120), (0.55, '#c63449', 60), (1, '#3a3e4a', 0)])
+                pen.fill(sp_, '#0b0d14'); _L(pen, sp_, 1100 - 700 * sat, 0, 1100 + 600 * sat, 0, [(0, '#3a3e4a', 0), (0.45, '#5a5e6e', 120), (0.55, '#c63449', 60), (1, '#3a3e4a', 0)])
             sneaker(pen, 400, 260, 1.6, 6)
         L = [_live(1.0, mat, 'mattress', blur=0), _queen_cool('ddip:qc', 1100, 400, 600, 1.0 if var == 'dawn_queen' else 0.4)]
     L.append(_live(0.95, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 20, 163, None, '#ffffff', 0.12, speed=(1.5, 4)), 'dust', blur=0))
@@ -3245,7 +3338,7 @@ def _v_dawn_shoe(var, st, shot):
 def _v_dawn_clock(var, st, shot):
     def wall(pen, t):
         boards(pen, (-700, -500, 2620, 1600), PT['wall'], False, 300, 171, 0.3, seam=PT['seam'], seam_a=150, nails=False, hi=PT['trim'], lw=5)
-        pen.radial(None, 600, 200, 1600, [(0, '#ffffff', 90), (1, '#ffffff', 0)], clip=False)
+        _R(pen, None, 600, 200, 1600, [(0, '#ffffff', 90), (1, '#ffffff', 0)], clip=False)
     snap = st.ev('clock_dawn')
     def clk(pen, t):
         s, j = _clock_sec(t, st, 'theirs')
@@ -3281,12 +3374,12 @@ def _v_dawn_window_out(var, st, shot):
     if spits and die is None: die = spits[-1] + 0.72
     fake = st.change_t('bell', 'fake_ringing') or (st.ev('fake_bell')[0] if isinstance(st.ev('fake_bell'), list) else None)
     def outside(pen, t):
-        pen.linear(rect(-900, -700, 3800, 1400), 0, -700, 0, 640, [PT['sky0'], '#e2e8e8', PT['sky1']])
-        pen.radial(None, 700, 100, 1300, [(0, '#ffffff', 90), (1, '#ffffff', 0)], clip=False)
+        _L(pen, rect(-900, -700, 3800, 1400), 0, -700, 0, 640, [PT['sky0'], '#e2e8e8', PT['sky1']])
+        _R(pen, None, 700, 100, 1300, [(0, '#ffffff', 90), (1, '#ffffff', 0)], clip=False)
         treeline(pen, -900, 2900, 640, 300, 22, 181, PT['pine2'])
         mist(pen, 0, 600, -900, 2900, 140, 8, 3, 60, '#f4f6f6', 0)
         pen.fill(rect(-900, 640, 3800, 900), PT['lawn'])
-        pen.linear(rect(-900, 640, 3800, 900), 0, 640, 0, 1400, [(0, '#ffffff', 60), (1, PT['lawn2'], 255)])
+        _L(pen, rect(-900, 640, 3800, 900), 0, 640, 0, 1400, [(0, '#ffffff', 60), (1, PT['lawn2'], 255)])
         p = poly([(1180, 700), (1300, 700), (1700, 1400), (900, 1400)])
         pen.fill(p, '#c4bca8'); pen.texture(p, 'asphalt', 0.3, 'overlay')
         # the mess hall far away with its bell on the porch
@@ -3322,7 +3415,7 @@ def _v_dawn_doorway_back(var, st, shot):
     def wall(pen, t):
         boards(pen, (-900, -500, 2820, 900), PT['wall'], False, 74, 191, 0.3, seam=PT['seam'], seam_a=150, nails=False, hi=PT['trim'])
         floor_persp(pen, -2000, 3900, 1600, -900, 2820, 900, 26, PT['floor0'], PT['floor1'], 193, seam=PT['shadow'])
-        pen.radial(None, 300, 300, 1400, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
+        _R(pen, None, 300, 300, 1400, [(0, '#ffffff', 80), (1, '#ffffff', 0)], clip=False)
         pc = skia.Paint(AntiAlias=True); pc.setBlendMode(skia.BlendMode.kClear)
         hole = poly([(840, 220), (1080, 226), (1076, 900), (844, 900)])
         pen.cv.drawPath(hole, pc)
@@ -3332,7 +3425,7 @@ def _v_dawn_doorway_back(var, st, shot):
         pen.line(hole, 4, '#3a2e22')
         bunk(pen, 1500, 2500, 980, 1.1, PT['wood'], PT['mat'], PT['tick'], True, True, PT['blanket'], 0.6, (740, 840), (430, 470), posts_c=PT['post'])
     def dark(pen, t):
-        pen.linear(rect(700, 150, 520, 800), 0, 150, 0, 950, ['#0a1622', '#14263a', '#0c1824'])
+        _L(pen, rect(700, 150, 520, 800), 0, 150, 0, 950, ['#0a1622', '#14263a', '#0c1824'])
         _zoom(lambda p, tt: _cabin7_back(p, tt), 1190, 665, 1.2, 960, 560)(pen, t)
         pen.fill(rect(-900, -700, 3800, 2400), '#05090e', 120)
     frozen = st.v('drop', st.t0) == 'hanging' or 'perfectly steady' in shot.get('frame', '') or 'frozen' in shot.get('frame', '')
@@ -3340,7 +3433,7 @@ def _v_dawn_doorway_back(var, st, shot):
     b = Beam(aim_fn((930, 600), [(st.t0, 640, 1060)], kf, 0.0 if frozen else 6.0, 197), w0=26, spread=0.22, spot=220, spot_sy=0.35, a=0.3)
     L = [_cl(2.5, dark, 'our_side', 'dback:dark', (600, 100, 1320, 1000)), _cl(1.0, wall, 'wall', 'dback:wall', NEAR), b.layer(0.98),
          _live(0.95, lambda pen, t: motes(pen, t, (300, 450, 1100, 1150), 90, 199, b, '#fff2d6', 0.03), 'dust', blur=0)]
-    if var == 'dawn_break': L.append(_live(0.97, lambda pen, t: pen.radial(None, 960, 560, 700, [(0, GLOW, 50), (1, GLOW, 0)], sy=1.2, clip=False), 'red_leak'))
+    if var == 'dawn_break': L.append(_live(0.97, lambda pen, t: _R(pen, None, 960, 560, 700, [(0, GLOW, 50), (1, GLOW, 0)], sy=1.2, clip=False), 'red_leak'))
     an = dict(tess_in_doorway=Anchor(960, 900, 1.05, 640), doorway=Anchor(960, 560, 1.0, 1))
     return _sp('cabin_dawn/doorway_back', L, an, beam=b)
 
@@ -3349,7 +3442,7 @@ def _v_dawn_doorway_back(var, st, shot):
 def _doorway_glimpse(pen, t, red=0.0):
     """The pale dawn cabin seen through the doorway (drawn big; the doorway hole frames it)."""
     _zoom(lambda p, tt: (_dawn_room(p, tt, PT, shoe=False), lantern(p, 700, 556, 0.62, 1.0, PT['lantern'], '#6a7a6a')), 980, 560, 0.9, 960, 600)(pen, t)
-    pen.radial(None, 960, 560, 700, [(0, '#ffffff', 120), (1, '#ffffff', 0)], clip=False)
+    _R(pen, None, 960, 560, 700, [(0, '#ffffff', 120), (1, '#ffffff', 0)], clip=False)
 
 
 @view('cabin_now', 'doorway')
@@ -3372,17 +3465,17 @@ def _v_cab_doorway(var, st, shot):
         towel_cloth(pen, tw, (820, 870, 1200, 975), 0.7, 0, 25, 0.6)
     def spill(pen, t):
         k = 0.92 + 0.08 * noise1(t * 0.7, 3)
-        pen.radial(None, 960, 600, 1000, [(0, '#fff6e4', 110 * k), (0.3, '#f3e3c4', 50 * k), (1, '#f3e3c4', 0)], sy=0.8, clip=False)
+        _R(pen, None, 960, 600, 1000, [(0, '#fff6e4', 110 * k), (0.3, '#f3e3c4', 50 * k), (1, '#f3e3c4', 0)], sy=0.8, clip=False)
         shaft(pen, [(864, 892), (1058, 894), (1700, 1500), (200, 1500)], '#fff2dc', int(80 * k), 5)
         for j in range(9):
             a0 = math.radians(-60 + j * 15 + 3 * math.sin(t * 0.4 + j))
             ex, ey = 960 + 1900 * math.sin(a0), 600 + 1900 * math.cos(a0) * 0.7
-            pen.linear(poly([(960 - 30, 600), (960 + 30, 600), (ex + 60, ey), (ex - 60, ey)]), 960, 600, ex, ey,
+            _L(pen, poly([(960 - 30, 600), (960 + 30, 600), (ex + 60, ey), (ex - 60, ey)]), 960, 600, ex, ey,
                        [(0, '#fff6e4', 34 * k), (1, '#fff6e4', 0)])
     L = [_cl(2.6, _doorway_glimpse, 'other_cabin', 'cdw:glimpse', (500, 100, 1420, 1100)),
          _cl(1.15, back, 'wall', 'cdw:wall', NEAR), _cl(1.12, spill, 'spill', 'cdw:spill', NEAR)]
     if var == 'red':
-        L.append(_cl(1.1, lambda pen, t: (pen.radial(None, 960, 600, 1400, [(0, '#000000', 0), (0.25, GLOW, 70), (0.7, RED, 60), (1, RED, 0)], sy=0.8, clip=False),
+        L.append(_cl(1.1, lambda pen, t: (_R(pen, None, 960, 600, 1400, [(0, '#000000', 0), (0.25, GLOW, 70), (0.7, RED, 60), (1, RED, 0)], sy=0.8, clip=False),
                                          pen.fill(rect(-900, -700, 3800, 2400), '#3a0610', 70)), 'red_light', 'cdw:red', NEAR,
                      alpha=lambda t: 0.75 + 0.25 * math.sin(t * 2.0)))
     gb = Beam(lambda t: (960, 560, 960, 1300, 1.0), w0=200, spread=0.5, spot=0)
@@ -3403,8 +3496,8 @@ def _v_cab_floor_end(var, st, shot):
         _zoom(lambda p, tt: (_window_out(p, tt), _cabin7_back(p, tt), _moon_shafts(p, tt), _cabin7_bunks(p, tt, 0.4, False)), zc[0], zc[1], m)(pen, t)
         gx0, gy0 = 960 + (1118 - zc[0]) * m, 540 + (470 - zc[1]) * m
         g = rect(gx0, gy0, 144 * m, 390 * m)
-        pen.linear(g, 0, gy0, 0, gy0 + 390 * m, ['#121a24', '#06090d']); pen.texture(g, 'grunge', 0.2, 'screen', 1.2)
-        pen.linear(g, gx0, gy0, gx0 + 144 * m, gy0 + 390 * m, [(0, '#ffffff', 0), (0.5, '#9fb6d8', 30), (1, '#ffffff', 0)])
+        _L(pen, g, 0, gy0, 0, gy0 + 390 * m, ['#121a24', '#06090d']); pen.texture(g, 'grunge', 0.2, 'screen', 1.2)
+        _L(pen, g, gx0, gy0, gx0 + 144 * m, gy0 + 390 * m, [(0, '#ffffff', 0), (0.5, '#9fb6d8', 30), (1, '#ffffff', 0)])
         pen.line(g, 6, '#2a2e33')
         for i in range(12):
             yy = gy0 + i * 390 * m / 11
@@ -3417,7 +3510,7 @@ def _v_cab_floor_end(var, st, shot):
          _live(0.94, lambda pen, t: motes(pen, t, (200, 600, 1900, 1150), 100, 221, b2, CORE, 0.04), 'dust', blur=0)]
     if var == 'phone_glow':
         px, py = 960 + (1060 - zc[0]) * m, 540 + (556 - zc[1]) * m
-        L.append(_live(1.12, lambda pen, t: pen.radial(None, px, py, 220, [(0, GLOW, 90 + 40 * math.sin(t * 1.3)), (1, GLOW, 0)], clip=False), 'phone_red'))
+        L.append(_live(1.12, lambda pen, t: _R(pen, None, px, py, 220, [(0, GLOW, 90 + 40 * math.sin(t * 1.3)), (1, GLOW, 0)], clip=False), 'phone_red'))
     an = dict(noah_floor=Anchor(1060, 960, 1.0, 520, 'seated'), you_floor=Anchor(700, 975, 1.0, 560, 'seated'),
               tess_floor_end=Anchor(1500, 1000, 1.0, 640))
     return _sp('cabin_now/floor_end', L, an, beam=b2)
@@ -3462,10 +3555,10 @@ def _v_cab_phone(var, st, shot):
         if tsteps is None or t < tsteps: return
         u = ease_out_cubic(prog(t, tsteps + 0.2, tsteps + 0.8))
         x, y = cx + (STEP_XY[6][0] - 950) * 0.2, cy - 40 + (STEP_XY[6][1] - 540) * 0.2
-        pen.radial(None, x, y, 40, [(0, GLOW, 80 * u), (1, GLOW, 0)], sy=0.3, clip=False)
+        _R(pen, None, x, y, 40, [(0, GLOW, 80 * u), (1, GLOW, 0)], sy=0.3, clip=False)
         pen.seg((x - 13, y), (x - 13 + 26 * u, y), 2.6, RED, int(255 * u))
     L += [_live(1.0, phone, 'phone', blur=0), _live(1.04, bottom_step, 'bottom_step', blur=0),
-          _live(0.95, lambda pen, t: pen.radial(None, cx - 60, cy - 160, 260, [(0, '#c8d6e6', 30), (1, '#c8d6e6', 0)], sy=0.5, clip=False), 'glint')]
+          _live(0.95, lambda pen, t: _R(pen, None, cx - 60, cy - 160, 260, [(0, '#c8d6e6', 30), (1, '#c8d6e6', 0)], sy=0.5, clip=False), 'glint')]
     an = dict(screen=Anchor(cx, cy, 1.04, 1), bottom_step=Anchor(cx + (STEP_XY[6][0] - 950) * 0.2, cy - 40 + (STEP_XY[6][1] - 540) * 0.2, 1.04, 1))
     return _sp('cabin_now/phone_screen', L, an, dof=6.75, info=dict(screen=scr, insert=True))
 
@@ -3501,14 +3594,14 @@ def _stairs_draw(pen, t, ylo, yhi, red=1.0, noah_patch=False):
         if not (ylo <= y0 < yhi): continue
         rise = (y0 - y1) * 0.42
         top = poly([(960 - w0, y0 - rise), (960 + w0, y0 - rise), (960 + w1, y1), (960 - w1, y1)])
-        pen.linear(top, 0, y1, 0, y0, ['#242c3c', '#3a4256'])
+        _L(pen, top, 0, y1, 0, y0, ['#242c3c', '#3a4256'])
         pen.texture(top, 'grunge', 0.25, 'overlay', 1.0)
         face = rect(960 - w0, y0 - rise, 2 * w0, rise)
-        pen.linear(face, 0, y0 - rise, 0, y0, ['#141a26', '#0c1018'])
+        _L(pen, face, 0, y0 - rise, 0, y0, ['#141a26', '#0c1018'])
         k = red * clamp(0.15 + 0.85 * (y0 - 420) / 900)
         pen.seg((960 - w0, y0 - rise), (960 + w0, y0 - rise), max(1.5, 5 * w0 / 1500), GLOW, int(60 * k))
         pen.seg((960 - w0, y0 - rise), (960 + w0, y0 - rise), max(1.0, 2.4 * w0 / 1500), RED, int(230 * k))
-        pen.radial(None, 960, y0 - rise, w0, [(0, GLOW, 26 * k), (1, GLOW, 0)], sy=0.05, clip=False)
+        _R(pen, None, 960, y0 - rise, w0, [(0, GLOW, 26 * k), (1, GLOW, 0)], sy=0.05, clip=False)
     # the railing on the left
     if ylo < 600:
         pts = [(960 - w * 1.02, y - (y - 380) * 0.55 - 260 * (w / 1500)) for (y, w) in _stairs_geom(y_end=780 if noah_patch else 420)]
@@ -3516,8 +3609,8 @@ def _stairs_draw(pen, t, ylo, yhi, red=1.0, noah_patch=False):
         for (y, w), (px, py) in zip(tr, pts):
             pen.seg((960 - w * 1.02, y - (y - 380) * 0.3), (px, py), max(2, 10 * w / 1500), '#10131c')
     if noah_patch:
-        pen.radial(None, 960, 770, 360, [(0, '#e7e5e0', 170), (0.4, '#ccccc9', 70), (1, '#ccccc9', 0)], sy=0.45, clip=False)
-        pen.radial(None, 960, 500, 420, [(0, '#dfe8ea', 40), (1, '#dfe8ea', 0)], sy=1.3, clip=False)
+        _R(pen, None, 960, 770, 360, [(0, '#e7e5e0', 170), (0.4, '#ccccc9', 70), (1, '#ccccc9', 0)], sy=0.45, clip=False)
+        _R(pen, None, 960, 500, 420, [(0, '#dfe8ea', 40), (1, '#dfe8ea', 0)], sy=1.3, clip=False)
 
 
 def _scratches(pen, t, box, n=120, seed=0, a=70):
@@ -3534,18 +3627,18 @@ def _scratches(pen, t, box, n=120, seed=0, a=70):
 @view('mirror_world', 'stairs')
 def _v_mw_stairs(var, st, shot):
     noah = var == 'void_noah'
-    L = [_cl(30, lambda pen, t: pen.linear(rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1200, ['#04060c', '#0b111c', '#101624', '#0a0e16']), 'void', 'mw:void',
+    L = [_cl(30, lambda pen, t: _L(pen, rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1200, ['#04060c', '#0b111c', '#101624', '#0a0e16']), 'void', 'mw:void',
              (-2000, -1500, 4000, 2600))]
     L += [_cl(6.0, lambda pen, t: _stairs_draw(pen, t, 0, 760, 0.8, noah), 'stairs_far', 'mw:far:%s' % noah, (-600, -200, 2520, 1200)),
           _cl(2.0, lambda pen, t: _stairs_draw(pen, t, 760, 1000, 1.0, noah), 'stairs_mid', 'mw:mid:%s' % noah, (-1200, 200, 3120, 1400)),
           _cl(0.8, lambda pen, t: _stairs_draw(pen, t, 1000, 1700, 1.0, noah), 'stairs_near', 'mw:near:%s' % noah, (-2600, 400, 4520, 2000)),
-          _cl(5.0, lambda pen, t: pen.radial(None, 960, 420, 560, [(0, '#000000', 255), (0.3, '#000000', 190), (1, '#000000', 0)], sy=0.5, clip=False),
+          _cl(5.0, lambda pen, t: _R(pen, None, 960, 420, 560, [(0, '#000000', 255), (0.3, '#000000', 190), (1, '#000000', 0)], sy=0.5, clip=False),
               'depth_dark', 'mw:dd:%s' % noah, (-600, -400, 2520, 1300), alpha=0.0 if noah else 1.0)]
     L.append(_live(1.6, lambda pen, t: _scratches(pen, t, (100, 780, 1820, 1300), 170, 231, 110), 'scratches', blur=0))
-    L.append(_cl(12, lambda pen, t: pen.radial(None, 960, 200, 1300, [(0, '#3a4458', 70), (1, '#3a4458', 0)], sy=0.7, clip=False), 'cold_light', 'mw:cold', (-1200, -800, 3100, 1400)))
+    L.append(_cl(12, lambda pen, t: _R(pen, None, 960, 200, 1300, [(0, '#3a4458', 70), (1, '#3a4458', 0)], sy=0.7, clip=False), 'cold_light', 'mw:cold', (-1200, -800, 3100, 1400)))
     L.append(_live(2.5, lambda pen, t: motes(pen, t, (300, 200, 1600, 1100), 50, 233, None, '#cdd4d5', 0.12, fall=10, speed=(3, 8)), 'falling_dust', blur=0))
     breath = (lambda t: 0.8 + 0.2 * math.sin(t * 1.4))
-    L.append(_live(7.5, lambda pen, t: pen.radial(None, 960, 760, 260, [(0, '#e7e5e0' if noah else '#8a2030', (60 if noah else 30) * breath(t)), (1, '#000000', 0)],
+    L.append(_live(7.5, lambda pen, t: _R(pen, None, 960, 760, 260, [(0, '#e7e5e0' if noah else '#8a2030', (60 if noah else 30) * breath(t)), (1, '#000000', 0)],
                                                   sy=0.6, clip=False), 'far_glow', blur=0))
     an = dict(queen_back=Anchor(1240, 1100, 0.72, 1000), noah_far=Anchor(960, 760, 8.0, 150), landing=Anchor(960, 780, 6.0, 1))
     return _sp('mirror_world/stairs', L, an)
@@ -3559,11 +3652,11 @@ def _v_mw_railing(var, st, shot):
             x = -700 + i * 120
             yt = 150 + (x + 800) * 180 / 3500
             b = rect(x - 16, yt, 32, 1400)
-            pen.linear(b, x - 16, 0, x + 16, 0, ['#10141c', '#3a3e4c', '#141820']); pen.line(b, 3, '#05060a')
+            _L(pen, b, x - 16, 0, x + 16, 0, ['#10141c', '#3a3e4c', '#141820']); pen.line(b, 3, '#05060a')
             pen.seg((x + 10, yt + 10), (x + 10, yt + 1300), 1.5, '#cdd4d5', 50)
         pen.line(poly([(-800, 980), (2700, 1100)], False), 30, '#10131c')
-    L = [_cl(30, lambda pen, t: pen.linear(rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1300, ['#060810', '#101622', '#1e0a12']), 'void', 'mwr:void', (-2000, -1500, 4000, 2600)),
-         _live(8, lambda pen, t: pen.radial(None, 960, 1300, 1400, [(0, GLOW, 50 + 15 * math.sin(t * 1.2)), (1, GLOW, 0)], sy=0.5, clip=False), 'under_glow'),
+    L = [_cl(30, lambda pen, t: _L(pen, rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1300, ['#060810', '#101622', '#1e0a12']), 'void', 'mwr:void', (-2000, -1500, 4000, 2600)),
+         _live(8, lambda pen, t: _R(pen, None, 960, 1300, 1400, [(0, GLOW, 50 + 15 * math.sin(t * 1.2)), (1, GLOW, 0)], sy=0.5, clip=False), 'under_glow'),
          _cl(1.0, bal, 'railing', 'mwr:bal', NEAR),
          _live(1.2, lambda pen, t: _scratches(pen, t, (-200, 200, 2100, 1100), 60, 241, 40), 'scratches', blur=0),
          _live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 40, 243, None, '#cdd4d5', 0.1, fall=8, speed=(3, 8)), 'dust', blur=0)]
@@ -3574,25 +3667,25 @@ def _v_mw_railing(var, st, shot):
 def _v_mw_feet(var, st, shot):
     red = 1.8 if var == 'red' else 1.0
     def treads(pen, t):
-        pen.linear(rect(-900, -700, 3800, 2400), 0, -700, 0, 1600, ['#020306', VOID, '#05070c'])
+        _L(pen, rect(-900, -700, 3800, 2400), 0, -700, 0, 1600, ['#020306', VOID, '#05070c'])
         for (yt, ye, rb) in ((300, 560, 700), (700, 860, 1100), (1100, 1180, 1500)):
             top = poly([(-900, yt), (2820, yt), (2820, ye), (-900, ye)])
-            pen.linear(top, 0, yt, 0, ye, ['#141a26', '#262c3a']); pen.texture(top, 'grunge', 0.2, 'overlay', 1.2)
+            _L(pen, top, 0, yt, 0, ye, ['#141a26', '#262c3a']); pen.texture(top, 'grunge', 0.2, 'overlay', 1.2)
             pen.fill(rect(-900, ye, 3800, rb - ye), '#05070c')
             pen.seg((-900, ye), (2820, ye), 14, GLOW, int(50 * red)); pen.seg((-900, ye), (2820, ye), 5, RED, int(min(255, 220 * red)))
-            pen.radial(None, 960, ye, 1500, [(0, GLOW, 40 * red), (1, GLOW, 0)], sy=0.08, clip=False)
+            _R(pen, None, 960, ye, 1500, [(0, GLOW, 40 * red), (1, GLOW, 0)], sy=0.08, clip=False)
     L = [_cl(1.1, treads, 'treads', 'mwf:treads:%s' % var, NEAR), _live(1.05, lambda pen, t: _scratches(pen, t, (-300, 300, 2200, 1100), 120, 251, 60), 'scratches', blur=0),
          _live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 40, 253, None, '#cdd4d5', 0.1, fall=6, speed=(3, 8)), 'dust', blur=0)]
     if var == 'red':
-        L.append(_live(1.0, lambda pen, t: pen.radial(None, 1040, 860, 900, [(0, GLOW, 40 + 20 * math.sin(t * 3)), (1, GLOW, 0)], sy=0.4, clip=False), 'red_pulse'))
+        L.append(_live(1.0, lambda pen, t: _R(pen, None, 1040, 860, 900, [(0, GLOW, 40 + 20 * math.sin(t * 3)), (1, GLOW, 0)], sy=0.4, clip=False), 'red_pulse'))
     return _sp('mirror_world/feet', L, dict(your_step=Anchor(880, 560, 1.0, 600), her_step=Anchor(1040, 860, 1.0, 700)))
 
 
 @view('mirror_world', 'dress')
 def _v_mw_dress(var, st, shot):
-    L = [_cl(30, lambda pen, t: pen.linear(rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1300, ['#060810', '#101622', '#1e0a12']), 'void', 'mwd:void', (-2000, -1500, 4000, 2600)),
+    L = [_cl(30, lambda pen, t: _L(pen, rect(-2000, -1500, 6000, 4000), 0, -200, 0, 1300, ['#060810', '#101622', '#1e0a12']), 'void', 'mwd:void', (-2000, -1500, 4000, 2600)),
          _cl(3.0, lambda pen, t: _stairs_draw(pen, t, 860, 1600, 0.7), 'stairs', 'mwd:stairs', (-1200, 300, 3120, 2000)),
-         _live(2.5, lambda pen, t: pen.radial(None, 960, 1200, 1100, [(0, GLOW, 46 + 14 * math.sin(t * 1.6)), (1, GLOW, 0)], sy=0.5, clip=False), 'under_glow'),
+         _live(2.5, lambda pen, t: _R(pen, None, 960, 1200, 1100, [(0, GLOW, 46 + 14 * math.sin(t * 1.6)), (1, GLOW, 0)], sy=0.5, clip=False), 'under_glow'),
          _live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 40, 261, None, '#cdd4d5', 0.1, fall=6, speed=(3, 8)), 'dust', blur=0)]
     return _sp('mirror_world/dress', L, {})
 
@@ -3606,12 +3699,12 @@ def _v_mw_eye(var, st, shot):
         flare = math.exp(-((t - t0 - 0.12) / 0.1) ** 2) * 1.0 + 0.35
         r = 150 * (1.15 - 0.3 * u)
         q = int(t * 60) // 3
-        pen.radial(None, 960, 540, r * 6, [(0, GLOW, 90 * flare), (0.3, RED, 40 * flare), (1, RED, 0)], clip=False)
+        _R(pen, None, 960, 540, r * 6, [(0, GLOW, 90 * flare), (0.3, RED, 40 * flare), (1, RED, 0)], clip=False)
         lid = smooth([(960 - r * 3.2, 540), (960, 540 - r * 1.25), (960 + r * 3.2, 540), (960, 540 + r * 1.1)], True, 0.8)
         pen.fill(lid, '#1a1c22')
         pen.fill(oval(960, 540, r * 2.1, r * 1.05), '#cdd4d5', 60)
         iris = oval(960, 540, r)
-        pen.radial(iris, 960, 540, r, ['#ff5a6a', RED, '#5a0a16'])
+        _R(pen, iris, 960, 540, r, ['#ff5a6a', RED, '#5a0a16'])
         for i in range(18):
             a = 2 * math.pi * i / 18
             pen.seg((960 + math.cos(a) * r * 0.25, 540 + math.sin(a) * r * 0.25), (960 + math.cos(a) * r * 0.95, 540 + math.sin(a) * r * 0.95), 2, '#2a0408', 160)
@@ -3633,8 +3726,8 @@ MN = dict(bg='#1a1c2a', bg2='#24263a', lamp='#e8b878', wood='#4a3e3a', wood2='#2
 
 
 def _day_sky(pen, y_h=560, P=MD, sun=(1500, 120)):
-    pen.linear(rect(-900, -700, 3800, y_h + 700), 0, -700, 0, y_h, [P['sky1'], P['sky0'], _lt(P['sky0'], 0.3)])
-    pen.radial(None, sun[0], sun[1], 900, [(0, '#fff8ea', 120), (0.3, P['hi'], 50), (1, P['hi'], 0)], clip=False)
+    _L(pen, rect(-900, -700, 3800, y_h + 700), 0, -700, 0, y_h, [P['sky1'], P['sky0'], _lt(P['sky0'], 0.3)])
+    _R(pen, None, sun[0], sun[1], 900, [(0, '#fff8ea', 120), (0.3, P['hi'], 50), (1, P['hi'], 0)], clip=False)
 
 
 def _mem_layers(L, fog=False, seed=0, c='#fff4dc'):
@@ -3653,9 +3746,9 @@ def _mem_lodge(pen, t):
 def _v_mem_dock(var, st, shot):
     def scene(pen, t):
         _day_sky(pen, 520); treeline(pen, -900, 2900, 520, 200, 26, 321, MD['pine'])
-        pen.linear(rect(-900, 520, 3800, 1100), 0, 520, 0, 1300, [MD['water'], MD['water2']])
+        _L(pen, rect(-900, 520, 3800, 1100), 0, 520, 0, 1300, [MD['water'], MD['water2']])
         dock = poly([(760, 560), (1060, 560), (1700, 1500), (200, 1500)])
-        pen.linear(dock, 0, 560, 0, 1500, [MD['wood'], _lt(MD['wood'], 0.15)]); pen.texture(dock, 'wood', 0.4, 'overlay', 1.2, 90)
+        _L(pen, dock, 0, 560, 0, 1500, [MD['wood'], _lt(MD['wood'], 0.15)]); pen.texture(dock, 'wood', 0.4, 'overlay', 1.2, 90)
         for i in range(1, 12):
             u = (i / 12) ** 1.7; y = lerp(560, 1500, u); pen.seg((lerp(760, 200, u), y), (lerp(1060, 1700, u), y), 2 + 4 * u, MD['wood2'], 180)
         pen.line(dock, 4)
@@ -3678,7 +3771,7 @@ def _v_mem_pocket(var, st, shot):
         pen.fill(smooth([(380, 420), (960, 330), (1540, 420), (1400, 560), (960, 520), (520, 560)], True, 0.7), '#173a1e')
         pen.dashed(smooth([(330, 1300), (450, 430), (960, 350), (1470, 430), (1590, 1300)], False, 0.8), 5, '#8ac08e', 180, 16, 10)
         _tx(pen, 'CEDAR LAKE', 960, 900, 900, 120, '#e6e0c8', 200, 10)
-        pen.radial(None, 700, 300, 1400, [(0, '#fff4dc', 110), (1, '#fff4dc', 0)], clip=False)
+        _R(pen, None, 700, 300, 1400, [(0, '#fff4dc', 110), (1, '#fff4dc', 0)], clip=False)
     return _sp('memory/pocket', _mem_layers([_cl(1.0, f, 'sweatshirt', 'mpocket', NEAR)], seed=2), dict(pocket=Anchor(960, 450, 1.0, 1)))
 
 
@@ -3709,7 +3802,7 @@ def _v_mem_sprinkler(var, st, shot):
     def scene(pen, t):
         _day_sky(pen, 560); treeline(pen, -900, 2900, 560, 240, 24, 331, MD['pine2'])
         for (x, n) in ((300, '5'), (900, '6'), (1550, '7')): cabin_ext(pen, x, 640, 420, 200, 0.75, n, '#b8a080', '#7a6a58', '#e8dcc0', '#ffffff', 60, seed=int(n), day=True)
-        pen.linear(rect(-900, 640, 3800, 900), 0, 640, 0, 1400, [MD['lawn'], MD['lawn2']])
+        _L(pen, rect(-900, 640, 3800, 900), 0, 640, 0, 1400, [MD['lawn'], MD['lawn2']])
         grass(pen, -900, 2900, 1100, 40, 260, 333, MD['lawn2'], '#ffffff')
     def spray(pen, t):
         x, y = 960, 900
@@ -3738,7 +3831,7 @@ def _mem_night_room(pen, t):
     pen.fill(rect(-900, -700, 3800, 2400), MN['bg'])
     boards(pen, (-900, -300, 2820, 900), MN['bg2'], False, 120, 341, 0.4)
     floor_persp(pen, -2000, 3900, 1600, -900, 2820, 900, 24, '#2a2630', '#3a3440', 343)
-    pen.radial(None, 1500, 500, 1300, [(0, MN['lamp'], 110), (0.4, MN['lamp'], 40), (1, MN['lamp'], 0)], clip=False)
+    _R(pen, None, 1500, 500, 1300, [(0, MN['lamp'], 110), (0.4, MN['lamp'], 40), (1, MN['lamp'], 0)], clip=False)
 
 
 @view('memory', 'bunk_night', 'kids_game')
@@ -3766,23 +3859,23 @@ def _v_mem_watch(var, st, shot):
     tw = st.ev('watch')
     tchg = tw[0] if isinstance(tw, list) and tw else st.t0 + 1.5
     def watch(pen, t):
-        _mem_night_room(pen, t)
         strap = rrect(-400, 380, 2700, 320, 60); pen.fill(strap, '#2a2a30'); pen.texture(strap, 'grunge', 0.3, 'overlay')
         for i in range(14): pen.seg((-300 + i * 200, 400), (-300 + i * 200, 680), 3, '#18181c')
         case = rrect(620, 250, 680, 580, 90)
         pen.shadow(case, 10, 20, 30, '#000000', 160)
-        pen.linear(case, 620, 250, 1300, 830, ['#5a5e66', '#2a2c32', '#121316']); pen.line(case, 7)
+        _L(pen, case, 620, 250, 1300, 830, ['#5a5e66', '#2a2c32', '#121316']); pen.line(case, 7)
         for (bx, by) in ((600, 400), (600, 680), (1320, 400), (1320, 680)): pen.shape(rect(bx - 20, by - 30, 40, 60), '#3a3c44', 4)
         lcd = rrect(720, 360, 480, 360, 26)
-        pen.linear(lcd, 0, 360, 0, 720, ['#b8c4a0', '#9aa884']); pen.line(lcd, 5)
+        _L(pen, lcd, 0, 360, 0, 720, ['#b8c4a0', '#9aa884']); pen.line(lcd, 5)
         hhmm = '6:45' if t < tchg else '4:45'
         blink = (t >= tchg and int((t - tchg) * 4) % 2 == 0 and t < tchg + 1.2)
         _tx(pen, 'ALM', 960, 450, 800, 60, '#2a3020', 230, 8)
         if not blink: _tx(pen, hhmm, 960, 640, 800, 170, '#1e2418', 240, 4)
         pen.fill(rrect(700, 340, 520, 30, 14), '#ffffff', 50)
         _tx(pen, 'MODE', 960, 300, 700, 26, '#c8c8c8', 160, 3)
-        pen.radial(None, 960, 540, 900, [(0, MN['lamp'], 70), (1, MN['lamp'], 0)], clip=False)
-    return _sp('memory/watch_cu', _mem_layers([_live(1.0, watch, 'watch', blur=0)], seed=7, c=MN['lamp']), dict(buttons=Anchor(1320, 400, 1.0, 1)))
+        _R(pen, None, 960, 540, 900, [(0, MN['lamp'], 70), (1, MN['lamp'], 0)], clip=False)
+    return _sp('memory/watch_cu', _mem_layers([_cl(1.3, _mem_night_room, 'room', 'mwatch:room', NEAR), _live(1.0, watch, 'watch', blur=0)], seed=7, c=MN['lamp']),
+               dict(buttons=Anchor(1320, 400, 1.0, 1)))
 
 
 @view('memory', 'lipstick_game', 'card_queen')
@@ -3791,8 +3884,8 @@ def _v_mem_lipstick(var, st, shot):
     def glass_l(pen, t):
         pen.fill(rect(-900, -700, 3800, 2400), '#0e1018')
         mirror_frame(pen, 300, -400, 1620, 1500, 88, 4.0, 0.9, night=False)
-        pen.linear(rect(300, -400, 1320, 1900), 0, -400, 0, 1500, ['#2a2c3a', '#1a1c28', '#2a2630'])
-        pen.radial(None, 960, 1250, 1100, [(0, MN['lamp'], 140), (0.5, MN['lamp'], 50), (1, MN['lamp'], 0)], clip=False)
+        _L(pen, rect(300, -400, 1320, 1900), 0, -400, 0, 1500, ['#2a2c3a', '#1a1c28', '#2a2630'])
+        _R(pen, None, 960, 1250, 1100, [(0, MN['lamp'], 140), (0.5, MN['lamp'], 50), (1, MN['lamp'], 0)], clip=False)
     def steps_l(pen, t):
         u = prog(t, st.t0 + 0.1, st.t1)
         n = 3 + int(u * 4.999)
@@ -3831,16 +3924,16 @@ def _v_mem_grin(var, st, shot):
     vname = shot.get('view')
     if vname == 'grin_ecu':
         def bg(pen, t):
-            _day_sky(pen, 520); treeline(pen, -900, 2900, 520, 260, 26, 351, MD['pine']); pen.linear(rect(-900, 520, 3800, 1100), 0, 520, 0, 1300, [MD['water'], MD['water2']])
+            _day_sky(pen, 520); treeline(pen, -900, 2900, 520, 260, 26, 351, MD['pine']); _L(pen, rect(-900, 520, 3800, 1100), 0, 520, 0, 1300, [MD['water'], MD['water2']])
         return _sp('memory/grin_ecu', _mem_layers([_cl(3.0, bg, 'bg', 'mgrin', NEAR)], seed=9), {}, dof=6.75, info=dict(insert=True))
     def pol(pen, t):
         boards(pen, (-900, -700, 2820, 1800), '#8a7258', True, 140, 353, 0.6)
-        pen.radial(None, 900, 400, 1400, [(0, '#fff4dc', 120), (1, '#fff4dc', 0)], clip=False)
+        _R(pen, None, 900, 400, 1400, [(0, '#fff4dc', 120), (1, '#fff4dc', 0)], clip=False)
         pen.cv.save(); pen.cv.translate(960, 540); pen.cv.rotate(-4)
         fr = rect(-380, -420, 760, 860)
-        pen.shadow(fr, 14, 22, 30, '#000000', 160); pen.fill(fr, '#efe8dc'); pen.texture(fr, 'paper', 0.5, 'overlay'); pen.line(fr, 4)
+        pen.shadow(fr, 14, 22, 30, '#000000', 160); pen.fill(fr, '#d6cfc2'); pen.texture(fr, 'paper', 0.5, 'overlay'); pen.line(fr, 4)
         ph = rect(-330, -370, 660, 640)
-        pen.linear(ph, 0, -370, 0, 270, ['#b8cad0', '#d8d0b0'])
+        _L(pen, ph, 0, -370, 0, 270, ['#b8cad0', '#d8d0b0'])
         _clip(pen, ph)
         car = smooth([(-340, 150), (-320, 40), (-180, 0), (-80, -70), (150, -70), (260, 10), (340, 40), (340, 150)], True, 0.4)
         pen.fill(car, '#6a3a3a'); pen.line(car, 4); pen.fill(rect(-60, -50, 180, 50), '#a8c0c8'); pen.line(rect(-60, -50, 180, 50), 3)
@@ -3866,11 +3959,11 @@ def _v_mem_grin(var, st, shot):
 def _mess_inside(pen, t, P=MD):
     pen.fill(rect(-900, -700, 3800, 2400), '#d4c6a8')
     boards(pen, (-900, -200, 2820, 760), '#bca484', False, 110, 361, 0.4)
-    for wx in (100, 700, 1300): pen.linear(rect(wx, 0, 420, 420), 0, 0, 0, 420, ['#ece6d6', '#d8d0c0']); pen.line(rect(wx, 0, 420, 420), 14, '#a08868')
+    for wx in (100, 700, 1300): _L(pen, rect(wx, 0, 420, 420), 0, 0, 0, 420, ['#ece6d6', '#d8d0c0']); pen.line(rect(wx, 0, 420, 420), 14, '#a08868')
     floor_persp(pen, -2000, 3900, 1600, -900, 2820, 760, 24, '#b8a080', '#d8c0a0', 363)
     for (y, w) in ((820, 1400), (980, 1900)):
         pen.shape(rect(960 - w / 2, y, w, 40), '#a88a64', 4); pen.shape(rect(960 - w / 2, y + 40, w, 16), '#8a6a4a', 3)
-    pen.radial(None, 900, 200, 1600, [(0, '#fff8ea', 80), (1, '#fff8ea', 0)], clip=False)
+    _R(pen, None, 900, 200, 1600, [(0, '#fff8ea', 80), (1, '#fff8ea', 0)], clip=False)
 
 
 @view('memory', 'bench', 'breakfast_table')
@@ -3880,8 +3973,8 @@ def _v_mem_bench(var, st, shot):
     if vname == 'breakfast_table':
         def table(pen, t):
             tb = poly([(-900, 860), (2820, 860), (2820, 1600), (-900, 1600)])
-            pen.linear(tb, 0, 860, 0, 1600, ['#b08a60', '#8a6a48']); pen.texture(tb, 'wood', 0.5, 'overlay', 1.4); pen.line(tb, 5)
-            pen.fill(oval(960, 980, 330, 90), '#f4f0e8'); pen.line(oval(960, 980, 330, 90), 5); pen.line(oval(960, 975, 260, 66), 3, '#c8c0b0')
+            _L(pen, tb, 0, 860, 0, 1600, ['#b08a60', '#8a6a48']); pen.texture(tb, 'wood', 0.5, 'overlay', 1.4); pen.line(tb, 5)
+            pen.fill(oval(960, 980, 330, 90), '#dcd8ce'); pen.line(oval(960, 980, 330, 90), 5); pen.line(oval(960, 975, 260, 66), 3, '#c8c0b0')
             for j in range(4):
                 pen.fill(oval(960, 960 - j * 22, 220 - j * 8, 52), '#d8a050'); pen.line(oval(960, 960 - j * 22, 220 - j * 8, 52), 3, '#8a5a20')
             pen.fill(_blob(960, 880, 60, 24, 9, 3, 0.3), '#f6e6a0'); pen.fill(smooth([(900, 870), (1040, 880), (1080, 960), (1000, 920)], True, 0.7), '#8a4a18', 200)
@@ -3895,7 +3988,7 @@ def _v_mem_night_window(var, st, shot):
     def win(pen, t):
         pen.fill(rect(-900, -700, 3800, 2400), MN['bg2'])
         boards(pen, (-900, -700, 2820, 1800), MN['bg2'], False, 140, 371, 0.4)
-        pen.linear(rect(500, 120, 920, 640), 0, 120, 0, 760, ['#0a0c18', '#16182a']); stars(pen, (500, 120, 1420, 500), 40, 9, 460)
+        _L(pen, rect(500, 120, 920, 640), 0, 120, 0, 760, ['#0a0c18', '#16182a']); stars(pen, (500, 120, 1420, 500), 40, 9, 460)
         treeline(pen, 400, 1500, 760, 260, 6, 373, '#0a0c14')
         pen.line(rect(490, 110, 940, 660), 30, '#5a4a40'); pen.seg((960, 120), (960, 760), 16, '#5a4a40')
         pen.fill(rect(440, 760, 1040, 40), '#6a5a4a'); pen.line(rect(440, 760, 1040, 40), 4)
@@ -3910,7 +4003,7 @@ def _v_mem_night_window(var, st, shot):
 def _v_mem_search(var, st, shot):
     vname = shot.get('view')
     def scene(pen, t):
-        pen.linear(rect(-900, -700, 3800, 2400), 0, -700, 0, 1300, ['#d4dcdc', '#c8d2d4', '#b4c0c0'])
+        _L(pen, rect(-900, -700, 3800, 2400), 0, -700, 0, 1300, ['#d4dcdc', '#c8d2d4', '#b4c0c0'])
         for (d, a, c) in ((0, 520, '#a4b4b4'), (1, 600, '#8c9e9e'), (2, 700, '#788a88')):
             treeline(pen, -900, 2900, a + 160, 420 + 80 * d, 18, 381 + d, c)
             mist(pen, 0, a + 140, -900, 2900, 240, 9, 5 + d, 46, '#dfe8ea', 0)
@@ -3938,14 +4031,14 @@ def _v_mem_kitchen(var, st, shot):
             for j in range(10): pen.fill(rect(-900 + i * 130, -200 + j * 90, 126, 86), '#dcdcd6' if (i + j) % 2 else '#d0d2ce')
         pen.shape(rect(-900, 640, 3800, 60), '#b8bcbc', 4)
         pen.shape(rect(-900, 700, 3800, 900), '#8a9090', 4)
-        gr = rect(200, 560, 760, 80); pen.linear(gr, 0, 560, 0, 640, ['#4a4c50', '#2a2c30']); pen.line(gr, 5)
+        gr = rect(200, 560, 760, 80); _L(pen, gr, 0, 560, 0, 640, ['#4a4c50', '#2a2c30']); pen.line(gr, 5)
         bowl = smooth([(1100, 640), (1120, 540), (1400, 540), (1420, 640)], True, 0.5); pen.fill(bowl, '#d8d4c8'); pen.line(bowl, 5)
         pen.fill(oval(1260, 548, 150, 20), '#f0dca0')
         perc = smooth([(1560, 640), (1540, 380), (1600, 300), (1700, 300), (1760, 380), (1740, 640)], True, 0.6)
-        pen.linear(perc, 1540, 0, 1760, 0, ['#8a9096', '#e0e4e8', '#6a7076']); pen.line(perc, 5); pen.shape(oval(1650, 290, 30, 14), '#3a3a3a', 3)
+        _L(pen, perc, 1540, 0, 1760, 0, ['#8a9096', '#e0e4e8', '#6a7076']); pen.line(perc, 5); pen.shape(oval(1650, 290, 30, 14), '#3a3a3a', 3)
         pen.shape(rect(600, 120, 20, 80), '#5a5a5a', 3)
         bell(pen, 610, 330, 0.5, 0.0, 1.0, True, rope=True, bracket=False, t=0.0)
-        pen.radial(None, 700, 100, 1500, [(0, '#fff8ea', 70), (1, '#fff8ea', 0)], clip=False)
+        _R(pen, None, 700, 100, 1500, [(0, '#fff8ea', 70), (1, '#fff8ea', 0)], clip=False)
     L = _mem_layers([_cl(1.0, k, 'kitchen', 'mkit', NEAR)], fog=True, seed=14)
     return _sp('memory/kitchen', L, {})
 
@@ -3959,10 +4052,10 @@ def _v_mem_buses(var, st, shot):
             bx, by = x, 860
             body = rrect(bx, by - 380 * s, 1100 * s, 380 * s, 30 * s)
             pen.shadow(body, 16, 20, 20, '#000000', 90)
-            pen.linear(body, 0, by - 380 * s, 0, by, ['#f2c03a', '#d89a1a']); pen.line(body, 5)
+            _L(pen, body, 0, by - 380 * s, 0, by, ['#f2c03a', '#d89a1a']); pen.line(body, 5)
             for i in range(7):
                 w = rect(bx + 60 * s + i * 140 * s, by - 330 * s, 110 * s, 110 * s)
-                pen.linear(w, 0, by - 330 * s, 0, by - 220 * s, ['#e8f0f0', '#a8b8bc']); pen.line(w, 4)
+                _L(pen, w, 0, by - 330 * s, 0, by - 220 * s, ['#e8f0f0', '#a8b8bc']); pen.line(w, 4)
             pen.fill(rect(bx, by - 200 * s, 1100 * s, 20 * s), '#1a1a1a')
             _tx(pen, 'SCHOOL BUS', bx + 550 * s, by - 160 * s, 900, 40 * s, '#1a1a1a', 220, 4)
             for wx in (bx + 200 * s, bx + 880 * s): pen.shape(oval(wx, by, 70 * s), '#1a1a1e', 5)
@@ -3977,7 +4070,7 @@ def _v_mem_gate_close(var, st, shot):
     def bg(pen, t):
         _day_sky(pen, 600); treeline(pen, -900, 2900, 600, 320, 24, 401, MD['pine2']); pen.fill(rect(-900, 600, 3800, 900), MD['path'])
         for xx in (585, 1335):
-            p = rect(xx - 34, 200, 68, 720); pen.linear(p, xx - 34, 0, xx + 34, 0, ['#7a6a58', '#a8947a', '#6a5a48']); pen.line(p, 4)
+            p = rect(xx - 34, 200, 68, 720); _L(pen, p, xx - 34, 0, xx + 34, 0, ['#7a6a58', '#a8947a', '#6a5a48']); pen.line(p, 4)
         sgn = rrect(560, 262, 800, 100, 10); pen.fill(sgn, '#8a7050'); pen.line(sgn, 4)
         _tx(pen, 'CAMP CEDAR LAKE', 960, 330, 900, 58, '#f6ecd0', 240, 6)
     def gate(pen, t):

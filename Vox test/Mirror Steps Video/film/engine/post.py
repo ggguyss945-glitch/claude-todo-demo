@@ -51,21 +51,21 @@ GRADES = {
                        vignette=0.45, grain=0.8),
 }
 
-# Mirror film presets (PLAN.md section 1). Per-frame parts (dawn_break red leak + flicker) come from sets SetPiece.fx(t).
+# Mirror film presets (PLAN.md section 1; exposure added on camp_night / mirror_world / dawn_normal to hit the plan's measured luma targets). Per-frame parts (dawn_break red leak + flicker) come from sets SetPiece.fx(t).
 _MF = dict(
-    camp_night=dict(contrast=1.12, pivot=0.2, gamma=0.94, sat=0.9, wb=(0.88, 0.98, 1.10), floor='#06101a', bloom=1.0,
+    camp_night=dict(exposure=0.95, contrast=1.12, pivot=0.2, gamma=0.94, sat=0.9, wb=(0.88, 0.98, 1.10), floor='#06101a', bloom=1.0,
                     vignette=0.35, grain=0.0),
     cabin_flash=dict(contrast=1.1, gamma=0.95, sat=0.85, wb=(0.94, 0.99, 1.08), floor='#070d14', bloom=0.9, vignette=0.32,
                      grain=0.0),
-    mirror_world=dict(contrast=1.15, gamma=0.88, sat=0.9, floor='#04060c', bloom=1.4, bloom_r=20.0, vignette=0.3, grain=0.0),
-    dawn_normal=dict(contrast=0.95, pivot=0.3, gamma=1.05, sat=0.7, wb=(1.03, 1.0, 0.96), floor='#3d3d40', bloom=0.3,
+    mirror_world=dict(exposure=0.75, contrast=1.15, gamma=0.88, sat=0.9, floor='#04060c', bloom=1.4, bloom_r=20.0, vignette=0.3, grain=0.0),
+    dawn_normal=dict(exposure=0.25, contrast=0.95, pivot=0.3, gamma=1.05, sat=0.7, wb=(1.03, 1.0, 0.96), floor='#3d3d40', bloom=0.3,
                      vignette=0.67, grain=0.0),
     climax_red=dict(contrast=1.08, gamma=0.9, sat=1.25, wb=(1.08, 0.92, 0.94), floor='#0c0408', bloom=1.0, bloom_thr=228,
                     vignette=0.32, grain=0.0),
     memory=dict(contrast=0.85, gamma=1.08, sat=0.6, wb=(1.06, 1.0, 0.9), floor='#2c2824', bloom=1.5, bloom_thr=220,
                 vignette=0.45, soft=1.0, grain=0.0),
 )
-_MF['camp_night_run'] = dict(_MF['camp_night'], exposure=0.1, bloom=1.2)
+_MF['camp_night_run'] = dict(_MF['camp_night'], exposure=1.05, bloom=1.2)
 _MF['cabin_doorway'] = dict(_MF['cabin_flash'], wb=(1.0, 0.99, 1.0), bloom=1.1)
 _MF['cabin_after'] = dict(_MF['cabin_flash'], exposure=-0.1, sat=0.8)
 _MF['mirror_old_cabin'] = dict(_MF['cabin_flash'], exposure=0.2, vignette=0.4)
