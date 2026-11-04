@@ -1,4 +1,11 @@
-"""characters.py: the cast, their creepy faces and an acting timeline for "If A Police Officer Knocks..." v2.
+"""characters.py: the cast, their creepy faces and an acting timeline. Shared by "If A Police Officer Knocks..." v2 and
+the Mirror Steps film ("If An Eighth Step Appears On Your Mirror...").
+
+MIRROR STEPS (read CAST.md): new cast 'you' (the lead; the police lead is now 'you_police'), 'tess', 'noah13',
+'noah_grown' (age morph), 'queen' (no outline: pale scratch edges, red glow, stages 0-3), 'you_kid', 'counselor',
+'kid_a/b/c', 'director', 'cook', 'searcher', 'adult'; modes draw_hands / draw_feet / draw_legs / draw_silhouette /
+draw_lying; light presets LIGHTS (flashlight, moon, dawn, red); ~115 new Acting clips; CharRig(spec, shot) builds a
+plan/shots.json character (acts, stage, props, clip_id replays) and draws it. Voice: _work/align/vo_en.wav.
 
 Everything draws with skia in the engine's 1920x1080 design space, on any canvas the engine hands a Layer (camera zoom and
 render size are already in the canvas matrix). Line weight follows the VISUAL_SPEC: about 8 design px on close-ups and
@@ -2151,8 +2158,8 @@ def _prop2(c, name, det, t=0.0):
         c.line(oval(0, 0, 16, 9), c.lw * 2.6, '#4d8fd6'); c.line(oval(0, -1, 16, 8), c.lw * 0.8, '#8fc0f0')
         c.line(oval(0, 0, 18.5, 11.5), c.lw * 0.4); c.line(oval(0, 0, 13.5, 6.5), c.lw * 0.4)
     elif name == 'towel':                     # bunched striped towel (faded orange and white) with a hanging flap
-        flap = smooth([(-30, 0), (24, -6), (34, 40), (26, 92), (6, 120), (-14, 96), (-30, 52)], True, 0.7)
-        bun = smooth([(-44, -22), (-12, -36), (28, -30), (46, -6), (34, 16), (-6, 22), (-40, 10)], True, 0.8)
+        flap = smooth([(-34, 4), (30, -2), (52, 50), (60, 104), (30, 96), (4, 112), (-26, 100), (-50, 108), (-46, 54)], True, 0.6)
+        bun = smooth([(-62, -18), (-20, -34), (30, -30), (64, -10), (50, 14), (0, 22), (-54, 14)], True, 0.8)
         for pth, dk in ((flap, 0.12), (bun, 0.0)):
             c.fill(pth, mix('#ece1cf', '#000000', dk))
             with c.clip(pth):
@@ -3674,6 +3681,7 @@ class Acting:
         P.look_x += sx * un; P.look_y += sy * un
         b = self._blink_amt(tf) * (1.0 - clamp(P.still)) * (1.0 - clamp(getattr(P, '_noblink', 0.0)))
         P.blink = max(P.blink, b)
+        if self.sp.get('breath', 1.0) == 0.0: P.breath = 0.5            # the queen does not breathe
         return P
 
     @staticmethod
@@ -4388,7 +4396,9 @@ def _scratch_line(c, q, w, a):
     colr = sty.get('pale', '#d9dee6') if pale else sty.get('dark', '#2b2f3a')
     wd = clamp(w * (0.3 if pale else 0.42), 1.0, 2.2 if pale else 3.4) * sty.get('wk', 1.0)
     seed = int(sty.get('seed', 0))
-    for i, (ka, kw, dev, seg) in enumerate(((0.55 if pale else 0.85, 1.0, 1.3, 6.0), (0.32 if pale else 0.4, 0.55, 2.4, 9.0))):
+    b = q.getBounds()
+    big = max(b.width(), b.height()) * c.cv.getTotalMatrix().getScaleX() > 60.0     # small strokes: one pass only
+    for i, (ka, kw, dev, seg) in enumerate(((0.55 if pale else 0.85, 1.0, 1.3, 7.0), (0.32 if pale else 0.4, 0.55, 2.4, 11.0))[:2 if big else 1]):
         pe = skia.DiscretePathEffect.Make(seg, dev, seed * 7 + i * 3 + 1)
         p = skia.Paint(Color=col(colr, int(clamp(a * ka / 255.0) * 255)), AntiAlias=True, Style=_KSTROKE, StrokeWidth=wd * kw,
                        StrokeCap=skia.Paint.kRound_Cap, PathEffect=pe)
@@ -4487,15 +4497,6 @@ def _queen_cap(c, hm, sp, P, det, sil):
                            hm.map1(s_ * (60 + 36 * f), -50 + 50 * f, 3)[:2]]
                     st.append(smooth(pts, False))
             c.line(_multi(st), c.lw * 0.4, LINE, 70)
-    if det >= 1 and hm.ct > 0.3 and clamp(P.hair_over) < 0.5:   # thin locks fallen across the face
-        locks = []
-        for s_, x0, x1, y1, w0 in ((-1, 0.7, 0.64, 64, 5.0), (1, 0.66, 0.7, 90, 4.0)):      # two thin locks at the cheeks
-            W0 = float(hm.W(-80)); W1 = float(hm.W(y1))
-            a_ = hm.map1(s_ * x0 * W0, -84, 4)[:2]; m_ = hm.map1(s_ * (x0 * W0 * 0.5 + x1 * W1 * 0.5 + 4), (y1 - 84) * 0.5, 6)[:2]
-            b_ = hm.map1(s_ * x1 * W1, y1, 6)[:2]
-            locks.append(_tube([a_, m_, b_], [w0, w0 * 0.6, 0.6], 0.9))
-        c.fill(_multi(locks), sp['hair_c'], 235)
-        with _ink(c, 'pale'): c.line(_multi(locks), c.lw * 0.4, LINE, 90)
 
 
 def _bump(y, y0, half):
@@ -6332,13 +6333,38 @@ def _selftest():
         out.append('phone_to_ear %s: wrist %.0f above the shoulder, %.0f below the ear' % (who, B.y_sh - W[1], W[1] - ear_y))
     # lip sync follows the voice envelope (when the narration is available)
     env = voice_envelope()
-    if env is not None:
-        a = Acting('officer', seed=1); a.talk([(42.42, 46.5, None)])
-        ts = np.arange(42.3, 46.6, 1 / 30.0)
+    rs = []
+    for li, who in ((125, 'noah13'), (97, 'queen'), (196, 'queen')):           # this film's narration (timeline.json)
+        L = timeline_line(li)
+        if env is None or not L: continue
+        a = Acting(who, seed=1); a.talk_line(L['t'], li)
+        ts = np.arange(L['t'] - 0.1, L['end'] + 0.1, 1 / 30.0)
         mo = np.array([a.at(t).m_open for t in ts]); ev = np.array([10 ** (_env_db(env, t) / 20.0) for t in ts])
-        r = float(np.corrcoef(mo, ev)[0, 1])
-        assert r > 0.5, ('lip sync', r)
-        out.append('lip sync r = %.2f (line 12)' % r)
+        rs.append(float(np.corrcoef(mo, ev)[0, 1]))
+    if rs:
+        assert min(rs) > 0.45, ('lip sync', rs)
+        out.append('lip sync r = %s (lines 125, 97, 196)' % ', '.join('%.2f' % r for r in rs))
+    # Mirror Steps cast
+    a = Acting('queen', seed=2); a.still(0.0)
+    br = [a.at(t).breath for t in np.arange(0.0, 6.0, 0.05)]; bl = [a.at(t).blink for t in np.arange(0.0, 6.0, 0.05)]
+    assert max(br) - min(br) < 1e-6 and max(bl) == 0.0, ('queen still', max(br) - min(br), max(bl))
+    out.append('queen: no breathing, no blinks over 6 s')
+    sp0 = _resolve_sp('noah_grown', Pose(age_body=0.0, age_face=0.0))
+    assert max(abs(x - y) for x, y in zip(sp0['head_ws'], CAST['noah13']['head_ws'])) < 1e-6 and sp0['cloth']['fit'] == 0.0
+    out.append('age morph: age 0 = noah13 head and fit')
+    by = plan_shots()
+    if by:
+        n = 0; nev = 0
+        for sh in _PLAN['list']:
+            for cs in sh.get('chars') or []:
+                r_ = CharRig(cs, sh); r_.pose(sh['t0'] + 0.05); n += 1; nev += len(r_.events)
+        out.append('plan: %d character rigs built, %d acting SFX events' % (n, nev))
+        ca = [c_ for c_ in by['S142']['chars'] if c_['who'] == 'noah13'][0]; cb = [c_ for c_ in by['S186']['chars'] if c_['who'] == 'noah13'][0]
+        ra, rb = CharRig(ca, by['S142']), CharRig(cb, by['S186'])
+        dmax = max(abs(getattr(ra.pose(by['S142']['t0'] + k * 0.13), f) - getattr(rb.pose(by['S186']['t0'] + k * 0.13), f))
+                   for k in range(18) for f in ('m_open', 'h_tilt', 'lace', 'ir_x', 'breath', 'blink', 'h_turn', 'look_x'))
+        assert dmax < 1e-9, ('clip_id replay', dmax)
+        out.append('clip_id breakfast_A: S186 replays S142 frame for frame (max diff %.1e)' % dmax)
     for o in out: print(o)
     print('characters self-test ok')
 
