@@ -44,7 +44,7 @@ MUSIC_MAP = [
          why='hook: cold sustained horror strings (Eb->D), one huge hit, then grief'),
     dict(s0=19.18, s1=88.66, slug='midnight_wanderer_luella_gren', near=0, gain_db=8.0,
          why='arrival, the porch, sneaking past the caretaker: nocturnal walk (E->D), uneasy, light pulse'),
-    dict(s0=88.66, s1=129.8, slug='irene_kevin_dailey', off=0.0,
+    dict(s0=88.66, s1=129.8, slug='irene_kevin_dailey', off=6.0, gain_db=4.0,
          why='the steps and the game: Irene builds from silence (D minor) into the rule-1 card'),
     dict(s0=129.8, s1=203.53, slug='annihilated_blue_saga', near=20,
          why='rule 1, inside the glass: dark D ambient; its D-major middle under the too-normal reflection'),
@@ -52,7 +52,7 @@ MUSIC_MAP = [
          why='rule 2: the hand, the wish, "You have it": horror strings with stabs and drop-outs (Eb->D)'),
     dict(s0=269.24, s1=290.6, slug='irene_kevin_dailey', near=100,
          why='rule 3: the clock runs back, the queen\'s face: Irene\'s dense plateau'),
-    dict(s0=290.6, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=3.5,
+    dict(s0=290.6, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=6.0,
          why='the too-normal dawn: warm unpulsed D major (C#->D), still and clean'),
     dict(s0=350.38, s1=398.86, slug='sleep_forever_luella_gren', near=14,
          why='rule 4, the loop and "a little while": the lullaby figure (G#->A), the other side\'s music'),
@@ -247,6 +247,10 @@ def main():
             byid[e['id']].update(e)
         else:
             ev.append(dict(e))
+    for ht in FE.get('hits', []):                       # picture hit times snap the music hits too
+        for e in ev:
+            if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and abs(e['t'] - ht) <= 0.25:
+                e['t'] = float(ht)
     layers = {k: [list(p) for p in v] for k, v in LAYERS.items()}
     keep = []
     for e in ev:
@@ -271,7 +275,7 @@ def main():
     for a in arrangement:
         a.setdefault('off', None)
     mc = dict(duration=dur, intensity=M['intensity'], events=keep, arrangement=arrangement,
-              options={'lament': False, 'layers': layers, 'slope': 16.0, 'swell_db': 9.0, 'reentry_db': 10.0}, bed_dips=dips,
+              options={'lament': False, 'layers': layers, 'slope': 16.0, 'swell_db': 9.0, 'reentry_db': 7.0}, bed_dips=dips,
               music_map=MUSIC_MAP)
     # ---------------- voice FX
     vfx = []
