@@ -201,7 +201,7 @@ CAST = {
         scar=0, ring=0, part=0, lashes=1.4, earrings=True,
         body=dict(sh=114, ch=110, wa=90, hip=104, arm=(44, 36), leg=(58, 46), neck=41, hand=0.88),
         cloth=dict(_POLICE, shirt='#22304d', shirt_hi='#38496f')),
-    'you': dict(
+    'you_police': dict(                                 # the police film's 'you' (renamed: 'you' is the Mirror Steps lead)
         outfit='hoodie', hat=None, hair='messy', sex='m', hh=178.0,
         head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 50, 74, 91, 97, 96, 86, 69, 47, 24, 0],
         eye_dx=43, eye_y=-8, eye_r=20, pupil=1.0, brow_th=9.5, nose_len=22, mouth_y=58, mouth_w=22,
@@ -234,6 +234,105 @@ CAST = {
 }
 CAST['officer2']['skin'] = '#cdb3a6'
 
+# ------------------------------------------------------------------------------------------- Mirror Steps cast
+_HYS = [-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120]
+CAST.update({
+    'you': dict(                                    # 27, looks like their dad: squarer jaw, stubble, receding temples
+        outfit='jacket', hat=None, hair='short_r', sex='m', hh=176.0, new=True,
+        head_ys=_HYS, head_ws=[0, 52, 76, 93, 99, 99, 94, 84, 66, 37, 0],
+        eye_dx=42, eye_y=-10, eye_r=18.5, eye_h=0.74, pupil=1.0, iris_h='#5b3b28', fear_eyes=0.14, brow_th=10.5,
+        nose_len=25, mouth_y=53, mouth_w=23,
+        skin='#c9aa98', skin_sh='#97786c', skin_dp='#634c4b', blush='#d39488', lip='#a2706a', stubble='#4a3c33', stub=0.6,
+        stub_dots=1.0, forehead=0.35, hair_c='#382821', brow_c='#2a1f1a', bags=0.6, age=0.45, blink_rate=0.33, lock=0.0,
+        micro=1.0, breath=1.0, scar=0, ring=0, part=1, lashes=0.0, talk=0.95,
+        body=dict(sh=122, ch=118, wa=108, hip=106, arm=(55, 46), leg=(60, 50), neck=47, hand=1.0),
+        cloth=dict(top='#4a5038', top_sh='#33382a', top_hi='#626a4c', collar='#6b5a3e', collar_sh='#4d3f2a',
+                   shirt='#7d8287', shirt_sh='#5d6166', trousers='#2a3347', trousers_sh='#1a2030', shoes='#4a3426',
+                   shoes_sh='#2e2018', button='#2a2c22')),
+    'tess': dict(                                   # practical and brave: auburn low ponytail, freckles, orange shell
+        outfit='shell', hat=None, hair='pony', sex='f', hh=178.0, new=True,
+        head_ys=_HYS, head_ws=[0, 50, 73, 89, 94, 92, 84, 68, 47, 24, 0],
+        eye_dx=41, eye_y=-8, eye_r=18.5, eye_h=0.78, pupil=1.0, iris_h='#5d6b3c', fear_eyes=0.14, brow_th=9.5,
+        brow_level=0.6, nose_len=21, mouth_y=52, mouth_w=19,
+        skin='#d7b6a3', skin_sh='#a8836f', skin_dp='#6e4f4a', blush='#e09a8c', lip='#b26f6b', stubble=None, stub=0, lips=0.32,
+        freckles='#b9785c', hair_c='#6b3a26', brow_c='#4a2617', bags=0.35, age=0.2, blink_rate=0.36, lock=0.0, micro=1.0,
+        breath=1.0, scar=0, ring=0, part=0, lashes=0.9, talk=0.85,
+        body=dict(sh=110, ch=106, wa=92, hip=104, arm=(47, 38), leg=(56, 46), neck=40, hand=0.9),
+        cloth=dict(top='#9a4a2e', top_sh='#6e321e', top_hi='#b8603e', zip='#2a2422', trousers='#3b3f45',
+                   trousers_sh='#282b30', shoes='#3a2c22', shoes_sh='#251c16', lace='#b8a88a')),
+    'noah13': dict(                                 # 13 forever: cowlick, freckles, gap teeth, green sweatshirt, one shoe
+        outfit='sweatshirt', hat=None, hair='mop', sex='m', hh=182.0, new=True, kid=True,
+        head_ys=_HYS, head_ws=[0, 54, 79, 96, 101, 100, 92, 77, 55, 29, 0],
+        eye_dx=42, eye_y=-4, eye_r=20.0, eye_h=0.86, pupil=1.0, iris_h='#6a4228', fear_eyes=0.12, brow_th=8.0,
+        nose_len=17, mouth_y=52, mouth_w=19, gap=6.0, tooth_w=12.0,
+        skin='#d2b3a0', skin_sh='#a3826f', skin_dp='#6e5048', blush='#e39e8d', lip='#b97a72', stubble=None, stub=0,
+        freckles='#b07a62', hair_c='#4a3226', brow_c='#3a271c', bags=0.2, age=0.0, blink_rate=0.3, lock=0.0, micro=0.8,
+        breath=1.0, scar=0, ring=0, part=1, lashes=0.0, talk=0.9, tape=-1,
+        body=dict(sh=102, ch=98, wa=92, hip=92, arm=(44, 36), leg=(50, 41), neck=35, hand=0.88),
+        cloth=dict(top='#3f6b45', top_sh='#2b4c31', top_hi='#57875c', print='#dcd9cc', trousers='#4c5a72',
+                   trousers_sh='#3a465c', plaid='#3a465c', plaid2='#66748c', shoes='#e3ded2', shoes_sh='#b0aa9c',
+                   lace='#f2efe6', sole='#cfc8b8', fit=0.0, bare='R')),
+    'noah_grown': dict(                             # the same face at 27: longer jaw, stubble, the gap stays; shirt too small
+        outfit='sweatshirt', hat=None, hair='mop', sex='m', hh=172.0, new=True,
+        head_ys=_HYS, head_ws=[0, 51, 75, 92, 98, 98, 93, 83, 64, 35, 0],
+        eye_dx=42, eye_y=-13, eye_r=18.5, eye_h=0.76, pupil=1.0, iris_h='#6a4228', fear_eyes=0.14, brow_th=9.5,
+        nose_len=24, mouth_y=55, mouth_w=22, gap=6.0, tooth_w=12.5,
+        skin='#cdae9b', skin_sh='#9a7b6c', skin_dp='#644a47', blush='#d99586', lip='#ac746d', stubble='#4a3a30', stub=0.8,
+        stub_dots=1.0, freckles='#a87a64', freckle_k=0.45, hair_c='#45301f', brow_c='#352419', bags=0.85, age=0.5,
+        blink_rate=0.34, lock=0.0, micro=1.0, breath=1.0, scar=0, ring=0, part=1, lashes=0.0, talk=0.95, tape=0,
+        body=dict(sh=132, ch=128, wa=114, hip=110, arm=(58, 49), leg=(62, 52), neck=51, hand=1.25),
+        cloth=dict(top='#3f6b45', top_sh='#2b4c31', top_hi='#57875c', print='#dcd9cc', trousers='#4c5a72',
+                   trousers_sh='#3a465c', plaid='#3a465c', plaid2='#66748c', shoes='#e3ded2', shoes_sh='#b0aa9c',
+                   lace='#f2efe6', sole='#cfc8b8', fit=1.0, bare='LR', jacket='#4a5038', jacket_sh='#33382a',
+                   collar='#6b5a3e')),
+    'queen': dict(                                  # the Queen of Spades: no outline, pale scratch edges, red glow
+        outfit='dress', hat=None, hair='long', sex='f', hh=150.0, new=True, entity=True,
+        head_ys=_HYS, head_ws=[0, 45, 67, 82, 86, 83, 75, 59, 39, 17, 0],
+        eye_dx=40, eye_y=-10, eye_r=23.0, eye_h=1.0, pupil=0.3, iris='#c63449', iris_r=0.36, iris_pupil=0.34,
+        iris_glow=170, brow_th=5.0, nose_len=22, mouth_y=54, mouth_w=21, grin_w=44.0, tooth_w=9.0, teeth_max=18,
+        teeth_sep=True, lips=1.0, lip='#c63449', lip_glow='#ff4060', vein_a=1.5, veins=1.6,
+        skin='#cfd5da', skin_sh='#8e97a3', skin_dp='#4e5664', blush='#cfd5da', blush_k=0.0, stubble=None, stub=0,
+        eye_edge='#8e97a3', hair_c='#06070b', brow_c='#0b0c10', bags=1.35, age=0.4, blink_rate=0.0, lock=1.0, micro=0.0,
+        breath=0.0, scar=0, ring=0, part=0, lashes=1.1, talk=0.8,
+        body=dict(sh=104, ch=96, wa=78, hip=98, arm=(38, 30), leg=(48, 38), neck=30, hand=1.0, fingers=1.4, neck_extra=42),
+        cloth=dict(top='#0b0d14', top_sh='#05060a', top_hi='#1c2130', sheen='#2a3144', scratch='#d9dee6',
+                   trousers='#0b0d14', trousers_sh='#05060a', shoes=None, toe='#3a404c')),
+    'you_kid': dict(                                # you at 10-11: big eyes, striped tee, shorts, sneakers
+        outfit='tee', hat=None, hair='mop', sex='m', hh=196.0, new=True, kid=True,
+        head_ys=_HYS, head_ws=[0, 55, 80, 97, 102, 101, 92, 76, 53, 27, 0],
+        eye_dx=42, eye_y=-2, eye_r=21.5, eye_h=0.9, pupil=1.0, iris_h='#5b3b28', fear_eyes=0.12, brow_th=8.0,
+        nose_len=15, mouth_y=52, mouth_w=18,
+        skin='#d6b7a4', skin_sh='#a88673', skin_dp='#6e5048', blush='#e8a294', lip='#bd7f76', stubble=None, stub=0,
+        hair_c='#382821', brow_c='#2d211c', bags=0.0, age=0.0, blink_rate=0.35, lock=0.0, micro=1.0, breath=1.0,
+        scar=0, ring=0, part=-1, lashes=0.0, talk=0.9,
+        body=dict(sh=94, ch=90, wa=86, hip=86, arm=(40, 33), leg=(46, 38), neck=33, hand=0.86),
+        cloth=dict(top='#5a7fa8', top_sh='#3f5e82', top_hi='#7698c0', stripe='#e8e4da', trousers='#5c5a4e',
+                   trousers_sh='#43413a', shoes='#d9d4c8', shoes_sh='#a8a296', legs='#d6b7a4', shorts=True)),
+    'counselor': dict(                              # memory extra: teen camp staff, teal tee, whistle lanyard
+        outfit='tee', hat=None, hair='short', sex='m', hh=180.0, new=True,
+        head_ys=_HYS, head_ws=[0, 51, 75, 92, 97, 96, 88, 72, 50, 26, 0],
+        eye_dx=42, eye_y=-6, eye_r=19.0, eye_h=0.82, pupil=1.0, iris_h='#4a3424', fear_eyes=0.12, brow_th=8.5,
+        nose_len=20, mouth_y=52, mouth_w=20,
+        skin='#c7a28c', skin_sh='#977462', skin_dp='#5e4440', blush='#d8927f', lip='#a86d63', stubble=None, stub=0,
+        hair_c='#2b2420', brow_c='#241c18', bags=0.2, age=0.1, blink_rate=0.33, lock=0.0, micro=1.0, breath=1.0,
+        scar=0, ring=0, part=1, lashes=0.0, lanyard=True,
+        body=dict(sh=112, ch=108, wa=98, hip=98, arm=(48, 40), leg=(54, 44), neck=42, hand=0.95),
+        cloth=dict(top='#3f7f86', top_sh='#2c5c61', top_hi='#58a0a6', stripe=None, trousers='#6b6450',
+                   trousers_sh='#4d4838', shoes='#2a2a2c', shoes_sh='#151516', legs='#c7a28c', shorts=True)),
+})
+for _k, _v in (('kid_a', ('#b04a3a', '#7a3024', '#c8644e', '#c49a7c', '#6a4a30')), ('kid_b', ('#e0b040', '#a88020', '#f0c860', '#a87e62', '#2a1e18')),
+               ('kid_c', ('#4a7a5a', '#31573e', '#62967a', '#d8b8a2', '#8a6a3a'))):
+    _d = dict(CAST['you_kid']); _d['cloth'] = dict(_d['cloth'], top=_v[0], top_sh=_v[1], top_hi=_v[2], stripe=None, legs=_v[3])
+    _d['skin'] = _v[3]; _d['hair_c'] = _v[4]; _d['part'] = 1 if _k == 'kid_b' else -1
+    CAST[_k] = _d
+for _k, _top, _hat in (('director', '#5d6a50', 'camp'), ('cook', '#e9e6df', None), ('searcher', '#3b4048', None), ('adult', '#4b5563', None)):
+    _d = dict(CAST['counselor']); _d['cloth'] = dict(_d['cloth'], top=_top, top_sh=mix(_top, '#000000', 0.28), top_hi=mix(_top, '#ffffff', 0.18),
+                                                      shorts=False, trousers='#2f3440', trousers_sh='#1f232c')
+    _d['lanyard'] = False; _d['apron'] = _k == 'cook'; _d['camp_cap'] = _hat == 'camp'; _d['kid'] = False
+    CAST[_k] = _d
+NEW_CAST = ('you', 'tess', 'noah13', 'noah_grown', 'queen', 'you_kid', 'counselor', 'kid_a', 'kid_b', 'kid_c', 'director',
+            'cook', 'searcher', 'adult')
+
 # ====================================================================================================== pose
 POSE_DEFAULTS = dict(
     # placement / body (body units: 1000 = feet to crown)
@@ -259,8 +358,19 @@ POSE_DEFAULTS = dict(
     # v2.1: idle-life scale (creepy drift / re-settles / weight shifts / micro twitches), phone-to-ear arm weights,
     # per-hand size (fist punch toward the lens)
     life=1.0, hl_ear=0.0, hr_ear=0.0, hl_scale=1.0, hr_scale=1.0, specs=1.0,
+    # Mirror Steps: queen lipstick smear, Noah's age morph (body / face 0..1) and grown-face flash, hand shake, tape
+    # (1 on the fingers, slip 0..1 = the fingers slide out of the ring), hair over the queen's face, leg/foot offsets
+    # (body units: lift, fwd, out; point = toe angle; toes = curl), lying, kneel, jacket on noah_grown, insert hands
+    smear=0.0, age_body=1.0, age_face=1.0, face_flash=0.0, hshake=0.0, tape=1.0, tape_slip=0.0, tape_peel=0.0,
+    hair_over=0.0, eye_gap=0.0, fl_up=0.0, fl_fwd=0.0, fl_out=0.0, fr_up=0.0, fr_fwd=0.0, fr_out=0.0, fl_point=0.0,
+    fr_point=0.0, toes=0.0, kneel=0.0, jacket_on=0.0, collar_pull=0.0, cuff_up=0.0, sleep=0.0, candy=0.0, glow=1.0,
+    # hands inserts (mode 'hands'): per hand offset (units of the insert size), angle (deg, 180 = fingers up),
+    # visibility 0..1 (slides in along the arm), press on glass, finger curl
+    ir_x=0.0, ir_y=0.0, ir_a=180.0, ir_v=1.0, ir_press=0.0, ir_curl=0.0, il_x=-0.55, il_y=0.1, il_a=180.0, il_v=0.0,
+    il_press=0.0, il_curl=0.0, ins_k=1.0, lace=0.0, wipe=0.0,
 )
-POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None)
+POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None, ir_shape='relaxed', il_shape='relaxed',
+                     ir_prop=None, il_prop=None, base_prop=None)
 
 
 class Pose:
@@ -329,6 +439,42 @@ EXPR = {
     'sad': dict(brow_sad=0.85, smile=-0.45, pupil=0.95, eye_open=0.8, h_nod=0.08, wet=0.5),
     'suspicious': dict(squint=0.5, brow_angry=0.45, brow_asym=0.7, smile=0.12, m_side=-0.7, pupil=0.8, look_x=-0.35),
     'sweaty': dict(sweat=1.0, brow_sad=0.55, wide=0.3, smile=-0.2, tremble=0.35, pupil=0.7, m_press=0.4),
+    # ---------------------------------------------------------------- Mirror Steps (people read as real and grieving)
+    'grief': dict(brow_sad=0.95, brow_up=0.12, smile=-0.38, eye_open=0.74, wet=0.9, h_nod=0.1, m_press=0.25, tremble=0.18,
+                  blush=0.35),
+    'dread': dict(brow_sad=0.6, brow_up=0.4, wide=0.4, pupil=0.62, m_press=0.45, smile=-0.32, sweat=0.35, tremble=0.3),
+    'tense': dict(brow_angry=0.35, brow_sad=0.3, squint=0.15, m_press=0.6, smile=-0.22, pupil=0.82),
+    'tempted': dict(eye_open=0.6, look_y=0.38, brow_sad=0.5, smile=0.2, m_open=0.05, wet=0.65, h_nod=0.12, blush=0.3),
+    'resolve': dict(brow_angry=0.6, brow_sad=0.12, squint=0.22, m_press=0.7, smile=-0.18, pupil=0.85, h_nod=0.05),
+    'wonder': dict(brow_up=0.6, wide=0.18, m_open=0.15, m_round=0.45, pupil=1.1, wet=0.35),
+    'relief_cry': dict(tears=0.9, smile=0.42, teeth=0.3, brow_sad=0.85, wet=1.0, squint=0.28, m_open=0.12, blush=0.6, tremble=0.3),
+    'brave': dict(brow_angry=0.22, m_press=0.38, squint=0.1, smile=0.04, pupil=0.92),
+    'recognise': dict(brow_up=0.45, wide=0.15, smile=0.22, m_open=0.08, pupil=1.0),
+    'half_smile': dict(smile=0.42, m_side=0.55, brow_up=0.12, squint=0.12, brow_asym=0.25),
+    'puzzled': dict(brow_asym=0.85, brow_angry=0.25, squint=0.2, m_side=-0.5, smile=-0.06, h_tilt=6.0),
+    'calm_kid': dict(smile=0.1, eye_open=0.86, brow_up=0.04, pupil=1.0, m_press=0.1),
+    'grin_kid': dict(smile=0.8, teeth=0.75, squint=0.28, brow_up=0.22, blush=0.5),
+    'laugh': dict(smile=0.9, teeth=0.9, m_open=0.34, squint=0.55, brow_up=0.32, blush=0.7),
+    'listening': dict(brow_up=0.28, look_y=-0.22, m_open=0.04, pupil=1.0, h_tilt=5.0),
+    'relief': dict(smile=0.5, teeth=0.4, brow_sad=0.42, wet=0.7, eye_open=0.86, blush=0.4),
+    'shy': dict(smile=0.32, look_y=0.42, look_x=-0.3, eye_open=0.78, blush=0.7, h_nod=0.1),
+    'sleep': dict(eye_open=0.0, m_open=0.05, smile=0.0, h_nod=0.04, sleep=1.0),
+    'strain': dict(brow_angry=0.6, brow_sad=0.5, squint=0.55, teeth=0.9, m_wide=0.6, m_open=0.12, smile=-0.3, tremble=0.55),
+    'worried': dict(brow_sad=0.72, brow_up=0.22, smile=-0.26, m_press=0.3, pupil=0.95),
+    'hopeful': dict(brow_up=0.32, brow_sad=0.45, smile=0.26, wet=0.75, eye_open=0.95, pupil=1.05),
+    'shaken': dict(brow_sad=0.72, wide=0.42, pupil=0.66, tremble=0.6, m_open=0.1, wet=0.65, pale=0.25, sweat=0.3),
+    'happy': dict(smile=0.7, teeth=0.6, squint=0.22, brow_up=0.15, blush=0.4),
+    'sly': dict(smile=0.45, m_side=0.65, squint=0.35, brow_asym=0.55, look_x=0.3),
+    'sure': dict(smile=0.25, brow_up=0.2, h_nod=-0.05, m_press=0.22),
+    'giggle': dict(smile=0.82, teeth=0.7, squint=0.45, m_open=0.15, blush=0.6),
+    # the queen: dead eyes, red mouth, no blinks; her people-expressions are not human
+    'queen_still': dict(pupil=0.3, lock=1.0, still=1.0, m_press=0.15, eye_open=1.0, bloodshot=0.45),
+    'queen_stare': dict(wide=0.65, pupil=0.25, bloodshot=0.85, lock=1.0, still=1.0, brow_up=0.15),
+    'queen_soft': dict(smile=0.58, m_press=0.3, eye_open=0.68, pupil=0.3, lock=1.0, still=1.0, bloodshot=0.35),
+    'queen_call': dict(m_open=1.0, m_round=0.62, wide=0.65, pupil=0.24, lock=1.0, still=1.0, bloodshot=0.8, brow_up=0.4),
+    'queen_grin': dict(smile=1.0, grin=1.0, teeth=1.0, gums=0.25, m_open=0.18, wide=0.75, pupil=0.24, bloodshot=1.0,
+                       lock=1.0, still=1.0, smear=1.0, brow_up=0.3),
+    'queen_blank': dict(pupil=0.24, eye_open=1.0, wide=0.3, smile=0.0, m_press=0.0, still=1.0, lock=1.0, bloodshot=0.6),
 }
 
 
@@ -390,10 +536,11 @@ def _snap_axis(m, cx, cy, tol=0.105):
 class Ctx:
     """Local drawing frame: geometry in local units goes through matrix M onto the (axis-aligned) engine canvas, so the
     engine's fast gradient paths keep working even when a head is tilted. lw = outline width in local units."""
-    __slots__ = ('pen', 'cv', 'M', 's', 'lw', 'm6', 'det')
+    __slots__ = ('pen', 'cv', 'M', 's', 'lw', 'm6', 'det', 'sty')
 
-    def __init__(self, pen, M, lw):
+    def __init__(self, pen, M, lw, sty=None):
         self.pen, self.cv, self.M = pen, pen.cv, M
+        self.sty = sty                       # None, or the queen's scratch-line style (see _scratch_line)
         a, b, c, d = M.getScaleX(), M.getSkewX(), M.getSkewY(), M.getScaleY()
         self.det = a * d - b * c
         self.s = math.sqrt(abs(self.det)) or 1e-6
@@ -406,7 +553,7 @@ class Ctx:
         sy = sx if sy is None else sy
         if sx != 1.0 or sy != 1.0: m.preScale(sx, sy)
         k = math.sqrt(abs(sx * sy)) or 1e-6
-        return Ctx(self.pen, m, self.lw / k)
+        return Ctx(self.pen, m, self.lw / k, self.sty)
 
     def P(self, path):
         q = skia.Path(path); q.transform(self.M); return q
@@ -419,11 +566,14 @@ class Ctx:
         if a > 0.5: self.pen.fill(self.P(path), c, a)
 
     def line(self, path, w=None, c=LINE, a=255, cap='round'):
-        if a > 0.5: self.pen.line(self.P(path), (self.lw if w is None else w) * self.s, c, a, cap)
+        if a <= 0.5: return
+        if self.sty is not None and c == LINE: _scratch_line(self, self.P(path), (self.lw if w is None else w) * self.s, a); return
+        self.pen.line(self.P(path), (self.lw if w is None else w) * self.s, c, a, cap)
 
     def shape(self, path, c, w=None, lc=LINE, a=255):
         q = self.P(path)
         self.pen.fill(q, c, a)
+        if self.sty is not None and lc == LINE: _scratch_line(self, q, (self.lw if w is None else w) * self.s, a); return
         self.pen.line(q, (self.lw if w is None else w) * self.s, lc, a)
 
     def _shade_path(self, path, img, m, a):
@@ -640,10 +790,12 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     X, Y, V = hm.map1(ex0, ey0, 2.0)
     if V < 0.12: return None
     fs = hm.sx(ex0, ey0)
-    r = sp['eye_r'] * (1.0 + 0.16 * P.wide) * (1.0 + 0.04 * P.brow_up)
+    fw = clamp(P.wide * 1.25)
+    r = sp['eye_r'] * (1.0 + (0.16 + sp.get('fear_eyes', 0.0)) * P.wide) * (1.0 + 0.04 * P.brow_up)
     asym = P.brow_asym * 0.0
     op = clamp(P.eye_open * (1.0 - P.blink) * (1.0 - 0.45 * P.squint) + 0.18 * P.wide * (1 - P.blink), 0, 1.25)
-    rx = r * fs
+    rx = r * fs * (1.0 + 0.1 * (1.0 - fw) * (1.0 - sp.get('eye_h', 1.0)) * 2.0)
+    r = r * lerp(sp.get('eye_h', 1.0), 1.0, fw)          # new cast: almond at rest, white discs in fear (REF rule 9)
     # sockets and bags (under everything else of the eye)
     c.glow(X, Y + 2, rx * 1.9, r * 1.7, sp['skin_dp'], 46 + 34 * P.wide + 30 * sp['bags'])
     bags = sp['bags']
@@ -699,9 +851,16 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
             if vs2: c.line(_multi(vs2), c.lw * 0.15 * sp.get('vein_w', 1.0), '#c04a52', a_v * 0.8)
         if P.wet > 0 and det >= 1:
             c.fill(smooth([(X - rx, Y + r * 0.62), (X, Y + r * 0.85), (X + rx, Y + r * 0.62), (X, Y + r * 1.1)], True), '#a8c8f0', 120 * P.wet)
+        if sp.get('iris_h') and det >= 1 and not sp.get('iris'):   # human iris (new cast): shrinks toward a dot in fear
+            ir = r * lerp(0.6, 0.34, fw) * (0.75 + 0.25 * clamp(P.pupil * 1.4))
+            ic = sp['iris_h']
+            c.radial(oval(px, py, ir * fs, ir), px - ir * 0.25, py - ir * 0.3, ir * 1.15,
+                     [(0, mix(ic, '#ffffff', 0.25), 255), (0.6, ic, 255), (1, mix(ic, '#000000', 0.55), 255)], sy=1.0)
+            c.line(oval(px, py, ir * fs, ir), c.lw * 0.28, mix(ic, '#000000', 0.7), 230)
+            pr = min(pr, ir * 0.62)
         if sp.get('iris'):                           # optional glowing iris (thumbnail use; the film's eyes have none)
             ir = r * sp.get('iris_r', 0.5)
-            c.glow(px, py, ir * 1.9, ir * 1.9, sp['iris'], 120)
+            c.glow(px, py, ir * 1.9, ir * 1.9, sp['iris'], sp.get('iris_glow', 120))
             c.radial(oval(px, py, ir * fs, ir), px - ir * 0.2, py - ir * 0.25, ir * 1.1,
                      [(0, '#ff6070', 255), (0.55, sp['iris'], 255), (1, '#7d0614', 255)], sy=1.0)
             c.line(oval(px, py, ir * fs, ir), c.lw * 0.32, '#4a0209', 255)
@@ -793,7 +952,7 @@ def _mouth_geom(sp, P, t):
     """Mouth contour in front coords: returns (upper pts, lower pts, corner y, half width, open height)."""
     my = sp['mouth_y']
     o, wd, rd, sm, g = clamp(P.m_open), P.m_wide, clamp(P.m_round), clamp(P.smile, -1, 1), clamp(P.grin)
-    hw = sp['mouth_w'] * (1.0 + 0.32 * wd - 0.48 * rd + 0.12 * o) + 10.0 * max(sm, 0) + 54.0 * g
+    hw = sp['mouth_w'] * (1.0 + 0.32 * wd - 0.48 * rd + 0.12 * o) + 10.0 * max(sm, 0) + sp.get('grin_w', 54.0) * g
     hw = max(hw, 8.0)
     cy = my - 12.0 * sm - 15.0 * g - 3 * o * (1 - rd)
     side_lift = 9.0 * P.m_side
@@ -849,7 +1008,11 @@ def _mouth(c, hm, sp, P, det, t, skin, sh):
             X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
             if V.min() > 0.05: c.line(_pts_path(X, Y, False), c.lw * 0.45, sp['skin_dp'], 160 * (g - 0.25) / 0.75)
     lipk = sp.get('lips', 0.0)
-    if lipk > 0 and det >= 1:                                         # coloured lips (officer2, mum)
+    if sp.get('lip_glow'):                                            # queen: the lipstick red carries the widest glow
+        gx, gy, gv = hm.map1(0, (cly + cry) * 0.5 + oh * 0.4, 8.0)
+        if gv > 0: c.glow(gx, gy, hw * 1.9 + 30, oh * 0.8 + 34, sp['lip_glow'], 70 + 40 * clamp(g))
+        if g > 0.3 and det >= 1 and P.smear > 0.01: _lip_smear(c, hm, sp, P, hw, cly, cry, oh)
+    if lipk > 0 and det >= 1:                                         # coloured lips (officer2, mum, queen)
         top_ = [(x, y - 5.5 * (1 - abs(x) / (hw + 1e-6)) ** 0.6 - 1.0) for x, y in up_d]
         bot_ = [(x, y + 8.5 * (1 - abs(x) / (hw + 1e-6)) ** 0.7 + 1.0) for x, y in lo_d]
         TX, TY, _ = hm.map([p[0] for p in top_], [p[1] for p in top_], 7.0)
@@ -908,8 +1071,10 @@ def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
     x0, x1 = float(X[0]), float(X[-1])
     span = x1 - x0
     if span < 4: return
-    n = int(clamp(round(abs(span) / (13.0 if det >= 1 else 18.0)), 4, 16))
+    n = int(clamp(round(abs(span) / (sp.get('tooth_w', 13.0) if det >= 1 else 18.0)), 4, sp.get('teeth_max', 16)))
     if n % 2: n += 1
+    if sp.get('teeth_sep') and det >= 1:
+        return _teeth_sep(c, X, Y, th, direction, n, P, hw)
     edges = np.linspace(0, 1, n + 1)
     # front teeth wider: warp positions toward the centre
     edges = 0.5 + (edges - 0.5) * (0.82 + 0.18 * np.abs(edges - 0.5) * 2)
@@ -946,6 +1111,53 @@ def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
         h = th * (1.0 - 0.38 * (abs(i / n - 0.5) * 2) ** 2) * 0.95
         seps.append(poly([(ex[i], ya - direction * 2), (ex[i] + (0.6 if ex[i] < (x0 + x1) / 2 else -0.6), ya + direction * h)], False))
     c.line(_multi(seps), c.lw * (0.42 if det >= 1 else 0.5))
+    if sp.get('gap') and direction > 0 and det >= 1:                 # Noah: a gap between the two front teeth
+        xm = (x0 + x1) / 2; ym = float(np.interp(xm, X if x1 > x0 else X[::-1], Y if x1 > x0 else Y[::-1]))
+        gw = sp['gap'] * 0.5
+        c.fill(poly([(xm - gw, ym - 3), (xm + gw, ym - 3), (xm + gw * 0.8, ym + th * 0.98), (xm - gw * 0.8, ym + th * 0.98)]), '#2a0e11')
+        c.line(_multi([poly([(xm - gw, ym - 2), (xm - gw * 0.8, ym + th * 0.95)], False),
+                       poly([(xm + gw, ym - 2), (xm + gw * 0.8, ym + th * 0.95)], False)]), c.lw * 0.4)
+
+
+def _teeth_sep(c, X, Y, th, direction, n, P, hw):
+    """Queen: a row of small SEPARATE teeth (dark gaps between them, slightly uneven, long and narrow)."""
+    X = np.asarray(X); Y = np.asarray(Y)
+    x0, x1 = float(X[0]), float(X[-1]); span = x1 - x0
+    edges = np.linspace(0, 1, n + 1)
+    ex = x0 + edges * span
+    ey = np.interp(ex, X if x1 > x0 else X[::-1], Y if x1 > x0 else Y[::-1])
+    teeth = []
+    for i in range(n):
+        xa, xb = ex[i], ex[i + 1]
+        ya, yb = ey[i], ey[i + 1]
+        w = abs(xb - xa); g = w * 0.16
+        cen = abs((i + 0.5) / n - 0.5) * 2
+        h = th * (1.08 - 0.42 * cen ** 2) * (0.85 + 0.3 * hash01(i, 91 + direction))
+        lo, hi = (min(xa, xb) + g, max(xa, xb) - g)
+        yt = (ya + yb) / 2 - direction * 2.5
+        tip = yt + direction * h
+        tilt = (hash01(i, 97) - 0.5) * w * 0.35
+        teeth.append(smooth([(lo, yt), (hi, yt), (hi + tilt * 0.3, yt + direction * h * 0.7), ((lo + hi) / 2 + tilt, tip),
+                             (lo + tilt * 0.3, yt + direction * h * 0.7)], True, 0.55))
+    allp = _multi(teeth)
+    c.fill(allp, '#e9e5da')
+    c.grad(allp, x0, 0, x1, 0, [(0, '#8a8676', 255), (0.25, '#e9e5da', 0), (0.75, '#e9e5da', 0), (1, '#8a8676', 255)])
+    ym = float(np.mean(ey))
+    c.grad(allp, 0, ym, 0, ym + direction * th, [(0, '#e9e5da', 0), (1, '#b8b2a0', 200)])
+    c.line(allp, c.lw * 0.32)
+
+
+def _lip_smear(c, hm, sp, P, hw, cly, cry, oh):
+    """Lipstick smeared from the grin's corners up the cheeks (queen, stage 3): tapered red strokes with a glow."""
+    k = clamp(P.smear)
+    for s_, cy_ in ((-1, cly), (1, cry)):
+        pts = [(s_ * (hw - 4), cy_ + 2), (s_ * (hw + 10), cy_ - 14 * k), (s_ * (hw + 16), cy_ - 30 * k), (s_ * (hw + 14), cy_ - 44 * k)]
+        X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 6.0)
+        if V.min() < 0.05: continue
+        path = _tube(list(zip(X.tolist(), Y.tolist())), [15.0, 12.0, 8.0, 2.0], 0.9)
+        c.glow(float(X[1]), float(Y[1]), 30, 30, sp.get('lip_glow', '#ff4060'), 60 * k)
+        c.fill(path, sp['lip'], 175 * k)
+        c.fill(_tube(list(zip((X + s_ * 3).tolist(), (Y + 2).tolist())), [7.0, 5.0, 3.0, 1.0], 0.9), mix(sp['lip'], '#000000', 0.35), 120 * k)
 
 
 def _jaw_y(sp, x):
@@ -1027,7 +1239,7 @@ def _wrinkles(c, hm, sp, P, det, sh):
     ey = sp['eye_y']; r = sp['eye_r']
     lw = c.lw * 0.35
     lift = P.brow_up + 0.6 * P.brow_sad + 0.3 * P.wide
-    a_f = clamp((lift - 0.3) / 0.5)
+    a_f = clamp(max((lift - 0.3) / 0.5, sp.get('forehead', 0.0)))
     if a_f > 0.03 and det >= 1:
         folds = []
         for k, yy in enumerate((-60, -49, -39)):
@@ -1083,7 +1295,18 @@ def _stubble(c, hm, sp, det, sil):
            (-24, my - 16), (-60, my - 6)]
     X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 1.0)
     reg = inter(_pts_path(X, Y, True, 0.8), sil)
-    c.fill(reg, sp['stubble'], 26 * a)
+    c.fill(reg, sp['stubble'], 26 * a * (1.6 if sp.get('stub_dots') else 1.0))
+    if sp.get('stub_dots') and det >= 2:                       # short stubble: fine dots (one path, one draw call)
+        dots = skia.Path()
+        for k in range(150):
+            u, v = hash01(k, 301), hash01(k, 302)
+            x0 = (u * 2 - 1) * 84; y0 = my - 6 + v * (118 - my + 6)
+            if y0 < my + 4 and abs(x0) < 30: continue
+            w = float(np.interp(y0, sp['head_ys'], sp['head_ws'])) * 0.96
+            if abs(x0) > w or (y0 < 40 and abs(x0) < 0.62 * w): continue
+            X1, Y1, V1 = hm.map1(x0, y0, 1.0)
+            if V1 > 0.15: dots.addCircle(X1, Y1, 0.9 + 0.5 * hash01(k, 303))
+        c.fill(inter(dots, sil), sp['stubble'], 90 * a)
 
 
 def _hair_region(c, hm, sp, P, det, sil, t):
@@ -1100,6 +1323,29 @@ def _hair_region(c, hm, sp, P, det, sil, t):
             a = np.abs(ph)
             return np.interp(a, [0, 0.55, 0.95, 1.3, 1.7, 2.3, PI], [-74, -72, -50, -6, 4, 26, 36])
         grow = 6.0
+    elif style == 'short_r':                      # short, receding at the temples (you: looks like dad)
+        def yf(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.4, 0.72, 1.02, 1.25, 1.62, 2.3, PI], [-82, -80, -92, -66, -32, -22, 12, 30]) + \
+                3.0 * np.sin(ph * 7.0 + part)
+        grow = 6.0
+    elif style == 'pony':                         # pulled back to a low ponytail, side part, wisps at the temples
+        def yf(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.5, 1.0, 1.3, 1.65, 2.2, PI], [-80, -78, -58, -6, 8, 34, 46]) + 4.0 * np.clip(ph, 0, 0.4)
+        grow = 4.0
+    elif style == 'long':                         # queen: centre parting, hair hangs past the cheeks (see _queen_*)
+        def yf(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.35, 0.75, 1.0, 1.3, PI], [-92, -86, -40, 30, 130, 130])
+        grow = 7.0
+    elif style == 'mop':                          # kid mop (Noah, kid-you): full, fringe on the brow, crown cowlick
+        def yf(ph):
+            a = np.abs(ph)
+            fr = -60.0 + 7.0 * np.sin(ph * 3.4 + part) + 6.0 * part * np.clip(ph * part, 0, 1)
+            return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.2, PI], [-56, -18, -8, 30, 50])) + \
+                (1 - np.interp(a, [0, 1.0, 1.3], [0, 0, 1])) * fr
+        grow = 13.0
     elif style == 'messy':
         def yf(ph):
             a = np.abs(ph)
@@ -1123,19 +1369,47 @@ def _hair_region(c, hm, sp, P, det, sil, t):
         vol = _cloud(hm, grow, 14, 11.0)
     elif style == 'messy':
         vol = _bumpy(hm, grow, 9, 9.0, -128.0, 40.0, spiky=True, seed=part)
+    elif style == 'mop':
+        vol = _bumpy(hm, grow, 11, 10.0, -132.0, 46.0, spiky=True, seed=part + 2)
+    elif style == 'short_r':
+        vol = _bumpy(hm, grow, 13, 4.0, -126.0, 30.0, spiky=True, seed=part + 5)
+    elif style == 'long':
+        vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.4, y_bot=120)
     hair = inter(union(vol, sil), region)
+    if style == 'long':
+        c.fill(hair, hc)
+        with c.clip(hair):
+            c.radial(None, -20, -110, 120, [(0, sp['cloth'].get('sheen', '#2a3144'), 150), (0.6, hc, 0), (1, hc, 0)], clip=False)
+        c.line(hair, c.lw)
+        if det >= 1:                                  # centre parting
+            X0, Y0, V0 = hm.map1(0, -118, 2); X1, Y1, V1 = hm.map1(0, -88, 4)
+            if V1 > 0: c.line(poly([(X0, Y0), (X1, Y1)], False), c.lw * 0.6)
+        return
     c.fill(hair, hc)
     with c.clip(hair):
         c.radial(None, -30, -90, 175, [(0, hhi, 120), (0.5, hc, 0), (1, hsh, 200)], clip=False)
-        if det >= 1 and style in ('messy', 'short', 'bun'):
+        if style == 'mop' and det >= 1:               # crown cowlick: a tuft that sticks up against the grain
+            X0, Y0, V0 = hm.map1(18 * part, -116, -20)
+            c.fill(smooth([(X0 - 14, Y0 + 8), (X0 - 4, Y0 - 26), (X0 + 10, Y0 - 34), (X0 + 4, Y0 - 12), (X0 + 16, Y0 + 6)], True, 0.7), hc)
+        if det >= 1 and style in ('pony',):
+            for k in range(6 if det >= 2 else 3):     # combed back toward the tie
+                x_ = -60 + k * 24
+                c.line(smooth([(x_, -84), (x_ * 0.8, -104), (x_ * 0.4, -118)], False), c.lw * 0.3, hsh, 150)
+        if det >= 1 and style in ('messy', 'short', 'bun', 'mop', 'short_r'):
             for k in range(7 if det >= 2 else 4):
                 x_ = -70 + k * 22 + 6 * part
                 c.line(smooth([(x_, -112), (x_ + 10 * part + 6, -92), (x_ + 4 + 8 * part, -70)], False), c.lw * 0.3, hsh, 150)
         if style == 'curly':
             _curls(c, hm, det, hc, hsh, hhi)
+    if style == 'mop' and det >= 1:
+        X0, Y0, V0 = hm.map1(18 * part, -116, -20)
+        cw = smooth([(X0 - 14, Y0 + 8), (X0 - 4, Y0 - 26), (X0 + 10, Y0 - 34), (X0 + 4, Y0 - 12), (X0 + 16, Y0 + 6)], True, 0.7)
+        c.fill(cw, hc); c.line(minus(cw, hair), c.lw * 0.8)
     c.line(hair, c.lw)
-    if style == 'bun':
-        pass
+    if style == 'pony' and det >= 1 and abs(hm.st) < 0.6:  # two loose wisps at the temples
+        for s_ in (-1, 1):
+            X, Y, V = hm.map([s_ * 70, s_ * 80, s_ * 78], [-40, -4, 30], 2.0)
+            if V.min() > 0.05: c.line(_pts_path(X, Y, False), c.lw * 0.45, hc, 230)
 
 
 def _bumpy(hm, grow, n, amp, ytop, ybot, spiky=False, seed=0):
@@ -1299,6 +1573,7 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     face_v = hm.map1(0, 0)[2]
     cl = sp['cloth']
     # behind-head things
+    if sp['hair'] == 'pony' and (abs(hm.st) > 0.25 or hm.ct < 0): _ponytail(c, hm, sp, P, det, t)
     if sp['hair'] == 'bun':
         bx, by, bv = hm.map1(0, -40, -150)
         if bv < 0.2 or abs(hm.st) > 0.2:
@@ -1318,7 +1593,8 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     if face_v > -0.3:
         for side in (-1, 1):
             bx_, by_, bv_ = hm.map1(side * 56, sp['eye_y'] + 36, 2)
-            if bv_ > 0.1: c.glow(bx_, by_, 24 * hm.sx(side * 56, sp['eye_y'] + 36), 13, sp['blush'], 90 + 80 * P.blush)
+            if bv_ > 0.1: c.glow(bx_, by_, 24 * hm.sx(side * 56, sp['eye_y'] + 36), 13, sp['blush'], (90 + 80 * P.blush) * sp.get('blush_k', 1.0))
+    if sp.get('freckles') and det >= 1 and face_v > -0.2: _freckles(c, hm, sp)
     _stubble(c, hm, sp, det, sil)
     c.radial(inter(sil, rect(-150, 70, 300, 120)), hm.st * 30, 128, 90, [(0, dp, 90), (0.5, dp, 45), (1, dp, 0)], sy=22 / 90.0)
     if light and light.get('rim'):
@@ -1332,20 +1608,22 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             if sp['scar']: _scar(c, hm, sp, sp['scar'], det)
             for side in (-1, 1):
                 eyes[side] = _eye(c, hm, sp, P, side, det, t, skin, sh)
-            if sp['hair'] != 'messy':
+            if sp['hair'] not in ('messy', 'mop', 'long'):
                 for side in (-1, 1):
                     _brow(c, hm, sp, P, side, eyes.get(side))
             _tears(c, hm, sp, P, t, det, eyes)
             _sweat(c, hm, sp, P, t, det)
-    c.line(sil, c.lw)
+    with _ink(c, 'pale'):
+        c.line(sil, c.lw)
     if face_v > -0.35:
         _nose(c, hm, sp, P, det, skin, sh)
     if sp['hair']:
         if sp['hat'] != 'cap' or True:
             _hair_region(c, hm, sp, P, det, sil, t)
-        if sp['hair'] == 'messy' and face_v > -0.35:          # v2.1: brows over the fringe so fear/scream angles read
+        if sp['hair'] in ('messy', 'mop', 'long') and face_v > -0.35:   # v2.1: brows over the fringe so fear angles read
             for side in (-1, 1):
                 _brow(c, hm, sp, P, side, eyes.get(side))
+        if sp['hair'] == 'long': _queen_face_hair(c, hm, sp, P, det, t)
     for side in (-1, 1):
         if -side * hm.st >= 0.25: _ear(c, hm, sp, side, skin, sh, det)
     if sp.get('glasses') and face_v > -0.2 and getattr(P, 'specs', 1.0) > 0.5:
@@ -2414,9 +2692,10 @@ def draw_head(pen, who, cx, cy, size, pose=None, detail=2, light=None, t=None):
     """Head only. size = crown-to-chin height in design px, (cx, cy) = head centre."""
     P = _as_pose(pose); t = P.t if t is None else t
     s = size / 240.0
-    c = Ctx(pen, skia.Matrix(), _lw_for(size)).sub(cx, cy, P.h_tilt, s)
+    sp = _resolve_sp(who, P)
+    c = Ctx(pen, skia.Matrix(), _lw_for(size), _sty_for(sp, t)).sub(cx, cy, P.h_tilt, s)
     yaw = (P.turn + P.h_turn) * PI / 2; pitch = P.h_nod * 0.6
-    return draw_head_local(c, who, P, yaw, pitch, detail, t, light)
+    return draw_head_local(c, who, P, yaw, pitch, detail, t, light, _head_sp(who, sp, P))
 
 
 def draw_hand(pen, who, x, y, size, shape='open', angle=0.0, side=1, pose=None, detail=2):
@@ -2603,9 +2882,10 @@ def _onset_vis(c):
 
 
 # ------------------------------------------------------------------ voice envelope + word timing (lip sync, v2.1)
-_SCR = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
-VOICE_WAV = os.environ.get('POV2_VOICE_WAV', os.path.join(_SCR, 'pov2', 'align', 'vo_en.wav'))
-VOICE_WORDS = os.environ.get('POV2_VOICE_WORDS', os.path.join(_SCR, 'pov2', 'align', 'asr_cache.json'))
+_SCR = os.path.join(_HERE, '_work')                    # Mirror Steps film: work dir (align/, cache/)
+VOICE_WAV = os.environ.get('MS_VOICE_WAV', os.path.join(_SCR, 'align', 'vo_en.wav'))
+VOICE_WORDS = os.environ.get('MS_VOICE_WORDS', os.path.join(_SCR, 'align', 'asr_cache.json'))
+TIMELINE = os.environ.get('MS_TIMELINE', os.path.join(_SCR, 'align', 'timeline.json'))
 ENV_FPS = 100.0
 _VENV, _VWORDS = {}, {}
 
@@ -2618,7 +2898,7 @@ def voice_envelope(path=None):
     env = None
     try:
         st = os.stat(path)
-        cdir = os.path.join(_SCR, 'pov2', 'cache')
+        cdir = os.path.join(_SCR, 'cache')
         cache = os.path.join(cdir, 'vo_env_%d_%d.npy' % (st.st_size, int(st.st_mtime)))
         if os.path.exists(cache):
             env = np.load(cache)
@@ -3470,6 +3750,198 @@ class Acting:
         return keys
 
 
+# ====================================================================================================== Mirror Steps: faces
+_KSTROKE = skia.Paint.kStroke_Style
+
+
+def _scratch_line(c, q, w, a):
+    """The queen's drawing language: no outline. Every LINE stroke becomes thin jittered scratch lines (2 passes),
+    pale #d9dee6 on her dark shapes (ink 'pale') or a dark etched grey on her pale face (ink 'dark'). The jitter seed
+    comes from the frame number // 3 (re-jittered every 3 frames)."""
+    sty = c.sty
+    pale = sty.get('ink', 'pale') == 'pale'
+    colr = sty.get('pale', '#d9dee6') if pale else sty.get('dark', '#2b2f3a')
+    wd = clamp(w * (0.3 if pale else 0.42), 1.0, 2.2 if pale else 3.4) * sty.get('wk', 1.0)
+    seed = int(sty.get('seed', 0))
+    for i, (ka, kw, dev, seg) in enumerate(((0.55 if pale else 0.85, 1.0, 1.3, 6.0), (0.32 if pale else 0.4, 0.55, 2.4, 9.0))):
+        pe = skia.DiscretePathEffect.Make(seg, dev, seed * 7 + i * 3 + 1)
+        p = skia.Paint(Color=col(colr, int(clamp(a * ka / 255.0) * 255)), AntiAlias=True, Style=_KSTROKE, StrokeWidth=wd * kw,
+                       StrokeCap=skia.Paint.kRound_Cap, PathEffect=pe)
+        c.cv.drawPath(q, p)
+
+
+@contextmanager
+def _ink(c, ink):
+    """Switch the scratch ink (pale/dark) for a block (no-op for outlined characters)."""
+    if c.sty is None:
+        yield; return
+    old = c.sty.get('ink'); c.sty['ink'] = ink
+    try: yield
+    finally: c.sty['ink'] = old
+
+
+def _freckles(c, hm, sp):
+    k = sp.get('freckle_k', 1.0)
+    p = skia.Path()
+    for i in range(30):
+        u = hash01(i, 401); v = hash01(i, 402)
+        side = -1 if i % 2 else 1
+        x0 = side * (6 + u * 56); y0 = sp['eye_y'] + 24 + v * 22 - 0.12 * abs(x0)
+        X, Y, V = hm.map1(x0, y0, 2.0)
+        if V > 0.2: p.addCircle(X, Y, 1.3 + 1.4 * hash01(i, 403))
+    c.fill(p, sp['freckles'], 140 * k)
+
+
+def _ponytail(c, hm, sp, P, det, t):
+    """Tess's low ponytail at the nape, swinging with lagged motion (drawn behind the skull)."""
+    w = float(hm.W(70.0))
+    X0, Y0, V0 = hm.map1(0, 72, -(hm.DF + hm.DB) * w * 0.92)
+    side = 1.0 if hm.st < 0 else -1.0
+    sw = 16.0 * P.sec_x
+    X0 += side * 8
+    pts = [(X0 - 13, Y0 - 6), (X0 + 13, Y0 - 6), (X0 + 19 + sw * 0.4, Y0 + 50), (X0 + 10 + sw, Y0 + 120), (X0 + 2 + sw * 1.3, Y0 + 168),
+           (X0 - 8 + sw, Y0 + 116), (X0 - 17 + sw * 0.4, Y0 + 48)]
+    tail = smooth(pts, True, 0.8)
+    hc = sp['hair_c']
+    c.fill(tail, hc)
+    c.grad(tail, X0 - 18, 0, X0 + 18, 0, [(0, mix(hc, '#ffffff', 0.2), 120), (0.5, hc, 0), (1, mix(hc, '#000000', 0.4), 170)])
+    if det >= 1:
+        c.line(smooth([(X0 - 4, Y0 + 10), (X0 + sw * 0.5, Y0 + 80), (X0 + 2 + sw * 1.1, Y0 + 150)], False), c.lw * 0.3, mix(hc, '#000000', 0.4), 160)
+    c.line(tail, c.lw)
+    c.shape(rrect(X0 - 12, Y0 - 4, 24, 9, 4), '#1d1a1c', c.lw * 0.5)
+
+
+def _bump(y, y0, half):
+    return float(np.exp(-((y - y0) / half) ** 2))
+
+
+def _queen_face_hair(c, hm, sp, P, det, t):
+    """The queen's long straight black hair (head-local coords, drawn after the face): two curtains from the centre
+    parting past the cheeks and down over the shoulders to the waist. hair_over 0..1 closes them over the face;
+    eye_gap opens a slit for one eye (stage 1); m_gap parts them round the red mouth (stage 2 'mouth_only')."""
+    if hm.ct < -0.3: return                                  # back view: _queen_back_hair covers it
+    ho = clamp(P.hair_over); eg = clamp(P.eye_gap); mg = clamp(getattr(P, 'm_gap', 0.0))
+    sway = 10.0 * P.sec_x + 4.0 * getattr(P, 'hem', 0.0)
+    ys = np.linspace(-96, 520, 40)
+    halves = []
+    for side in (-1, 1):
+        outer, inner = [], []
+        for y in ys:
+            yc = min(y, 112.0)
+            w = float(hm.W(yc)) if y < 116 else float(hm.W(112.0)) * 0.9
+            xl, xr = hm.extent(w + 6.0)
+            cx = hm.map1(0, yc, 6.0)[0] if y < 116 else hm.map1(0, 110, 6.0)[0]
+            edge = xr if side > 0 else xl
+            below = max(0.0, y - 80.0)
+            spread = 10.0 + 0.16 * below + 4.0 * math.sin(y * 0.045 + side)
+            xo = edge + side * spread + (sway * (below / 440.0) if below > 0 else 0.0)
+            d = (18.0 + 10.0 * clamp((y + 60) / 120.0)) if y < 112 else (34.0 + 0.05 * below)
+            xi_rest = edge - side * d
+            xi = lerp(xi_rest, cx + side * 1.5, ho if y < 150 else ho * clamp(1.0 - (y - 150) / 140.0) * 0.6)
+            if side > 0: xi += eg * (sp['eye_dx'] + sp['eye_r'] * 1.5) * _bump(y, sp['eye_y'], 30.0)
+            xi += side * mg * (sp['mouth_w'] + 14.0) * _bump(y, sp['mouth_y'] + 6, 26.0)
+            if side > 0: xi = min(max(xi, cx + 1.0), xo - 4) if True else xi
+            else: xi = max(min(xi, cx - 1.0), xo + 4)
+            yy = y if y < 116 else 116.0 + (y - 116.0)
+            outer.append((xo, yy - 6.0 * (1 - clamp((y + 96) / 30.0)))); inner.append((xi, yy))
+        tip = (outer[-1][0] * 0.6 + inner[-1][0] * 0.4, ys[-1] + 16)
+        pts = [(hm.map1(0, -100, 4)[0], -100.0)] + outer + [tip] + inner[::-1]
+        halves.append(smooth(pts, True, 0.7))
+    hc = sp['hair_c']
+    for h in halves:
+        c.fill(h, hc)
+    allh = _multi(halves)
+    c.radial(allh, -16, -70, 210, [(0, sp['cloth'].get('sheen', '#2a3144'), 120), (0.5, hc, 0), (1, hc, 0)], sy=1.6)
+    if det >= 1:                                              # strands: long pale scratches (queen) / dark lines
+        strands = []
+        for side in (-1, 1):
+            for k in range(5 if det >= 2 else 3):
+                f = (k + 0.5) / 5.0
+                xs_, ys_ = [], []
+                for y in np.linspace(-70 + 20 * k, 480 - 30 * k, 8):
+                    yc = min(y, 112.0)
+                    w = float(hm.W(yc)) if y < 116 else float(hm.W(112.0)) * 0.9
+                    xl, xr = hm.extent(w + 6.0)
+                    edge = xr if side > 0 else xl
+                    below = max(0.0, y - 80.0)
+                    xs_.append(edge + side * (6.0 + 0.1 * below) - side * f * (22.0 + 0.05 * below) * (1 - ho) - side * f * ho * 70 + sway * below / 440.0)
+                    ys_.append(y)
+                strands.append(_pts_path(np.array(xs_), np.array(ys_), False))
+        with _ink(c, 'pale'):
+            c.line(_multi(strands), c.lw * 0.5, LINE, 140)
+    with _ink(c, 'pale'):
+        for h in halves: c.line(h, c.lw)
+
+
+def _queen_back_hair(c, sp, B, P, det, t):
+    """Back view: one black sheet of hair from the crown to the waist, edges scratched pale."""
+    pv = B.p3(0, B.yc - 22 + P.h_dy, 0)
+    hs = sp['hh'] / 240.0 * pv[2]
+    hx, hy = pv[0] + P.h_dx, pv[1] - (sp['hh'] / 2 - 22) * pv[2]
+    w0 = 92 * hs; sway = 8.0 * P.sec_x + 5.0 * getattr(P, 'hem', 0.0)
+    yw = B.p3(0, B.y_wa + 40, 0)[1]
+    pts = [(hx - w0, hy - 40 * hs), (hx, hy - 128 * hs), (hx + w0, hy - 40 * hs), (hx + w0 * 1.05, hy + 60 * hs),
+           (hx + w0 * 1.12 + sway * 0.5, (hy + yw) / 2), (hx + w0 * 0.95 + sway, yw), (hx + sway, yw + 24), (hx - w0 * 0.95 + sway, yw),
+           (hx - w0 * 1.12 + sway * 0.5, (hy + yw) / 2), (hx - w0 * 1.05, hy + 60 * hs)]
+    sheet = smooth(pts, True, 0.8)
+    hc = sp['hair_c']
+    c.fill(sheet, hc)
+    c.radial(sheet, hx - 20 * hs, hy - 80 * hs, 160 * hs, [(0, sp['cloth'].get('sheen', '#2a3144'), 140), (1, hc, 0)], sy=1.4)
+    if det >= 1:
+        st = []
+        for k in range(-3, 4):
+            x0 = hx + k * w0 * 0.28
+            st.append(smooth([(x0, hy - 60 * hs), (x0 + k * 3 * hs + sway * 0.3, (hy + yw) / 2), (x0 + k * 6 * hs + sway, yw - 6)], False))
+        with _ink(c, 'pale'):
+            c.line(_multi(st), c.lw * 0.5, LINE, 130)
+    with _ink(c, 'pale'):
+        c.line(sheet, c.lw)
+
+
+_SPC = {}
+
+
+def _resolve_sp(who, P):
+    """CAST entry for a character at this pose: noah_grown morphs from noah13 (pose.age_body / age_face 0..1) - head
+    shape, jaw, eyes, stubble and body widths are interpolated (cached per 1/20 step)."""
+    sp = CAST[who]
+    if who != 'noah_grown': return sp
+    ab = round(clamp(P.age_body) * 20) / 20.0; af = round(clamp(P.age_face) * 20) / 20.0
+    if ab >= 1.0 and af >= 1.0: return sp
+    key = (who, ab, af)
+    if key in _SPC: return _SPC[key]
+    a, b = CAST['noah13'], sp
+    d = dict(b)
+    for k in ('eye_dx', 'eye_y', 'eye_r', 'eye_h', 'brow_th', 'nose_len', 'mouth_y', 'mouth_w', 'stub', 'bags', 'age',
+              'freckle_k', 'hh', 'fear_eyes'):
+        va = a.get(k, 1.0 if k == 'freckle_k' else 0.0); vb = b.get(k, 1.0 if k == 'freckle_k' else 0.0)
+        kk = ab if k == 'hh' else af
+        d[k] = va + (vb - va) * kk
+    d['head_ws'] = [x + (y - x) * af for x, y in zip(a['head_ws'], b['head_ws'])]
+    for k in ('skin', 'skin_sh', 'skin_dp', 'lip', 'hair_c'): d[k] = mix(a[k], b[k], af)
+    if af < 0.35: d['stubble'] = None
+    d['body'] = {k: (tuple(x + (y - x) * ab for x, y in zip(a['body'][k], b['body'][k])) if isinstance(b['body'][k], tuple)
+                     else a['body'][k] + (b['body'][k] - a['body'][k]) * ab) for k in b['body']}
+    d['cloth'] = dict(b['cloth'], fit=ab, bare='R' if ab < 0.5 else 'LR')
+    d['tape'] = -1 if ab < 0.25 else 0
+    if len(_SPC) > 200: _SPC.clear()
+    _SPC[key] = d
+    return d
+
+
+def _head_sp(who, sp, P):
+    """Head profile: noah13 flashes grown Noah's face while pose.face_flash > 0.5 (S165)."""
+    if who == 'noah13' and P.face_flash > 0.5: return CAST['noah_grown']
+    return sp
+
+
+def _sty_for(sp, t):
+    """Scratch style for the entity (queen), re-jittered every 3 frames at 60 fps; None for the people."""
+    if not sp.get('entity'): return None
+    return dict(seed=int(math.floor((t or 0.0) * 60.0 + 1e-6)) // 3, ink='dark', pale=sp['cloth'].get('scratch', '#d9dee6'),
+                dark='#262a35')
+
+
 # ====================================================================================================== HUD phone hand
 def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve='#34443f'):
     """Drop-in for engine.hud._hand(pen, w, h, skin, a, front): a hand holding the phone in phone coords (the phone spans
@@ -3525,7 +3997,7 @@ def _selftest():
         P0 = a.at(-0.3); assert abs(P0.turn + P0.h_turn - 0.9) < 0.12, ('pre-snap yaw', P0.turn + P0.h_turn)
         out.append('snap order %d: yaw %.3f at snap+0.5 s, %.2f before' % (order, yaw, P0.turn + P0.h_turn))
     # blinks: shut (>0.5) for at most 2 frames at 30 fps
-    a = Acting('you', seed=1)
+    a = Acting('you_police', seed=1)
     ts = np.arange(0, 40, 1 / 240.0); b = np.array([a._blink_amt(t) for t in ts]) > 0.5
     runs, r = [], 0
     for v in b:
@@ -3534,7 +4006,7 @@ def _selftest():
     assert runs and max(runs) / 240.0 <= 0.067, ('blink', max(runs) / 240.0)
     out.append('blinks: %d, longest shut %.0f ms' % (len(runs), 1000 * max(runs) / 240.0))
     # phone at the ear: wrist ends up near the ear, not past the shoulder (no spike)
-    for who in ('mum', 'you', 'officer'):
+    for who in ('mum', 'you_police', 'officer', 'you', 'tess'):
         a = Acting(who, seed=2); a.phone_to_ear(0.0, None, side=1)
         P = a.at(1.0); B = Body(CAST[who], P)
         S, E, W = _arm_data(CAST[who], B, P, 1)

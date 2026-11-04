@@ -1,6 +1,10 @@
 """Query and load the recorded sample library (free CC0/CC-BY files + the owner's Epidemic files).
 
 Built by audio/build_library.py; the catalogue is audio/catalog.json, the audio lives under $S/pov2/samples/.
+Mirror film: audio/catalog_epidemic_mirror.json (audio/epidemic_catalog.py over film/_work/samples/epidemic) is loaded
+FIRST: its SFX become entries with id 'mx__<slug>', category 'epidemic_mirror/sfx', source 'epidemic', film 'mirror',
+absolute paths, and they come before every other entry, so pick()/entries() and sfx.py's pools prefer them. When the
+folder holds files the catalogue does not list, a warning names the rebuild command (MIRROR_REBUILD).
 
 Public API
     entries(**filters) -> list[dict]       filter by any of: category (exact or prefix ending in '/'), serves (a required
@@ -13,6 +17,7 @@ Public API
                                            pitch shift still needed; vel picks the closest velocity layer
     pick(serves=None, category=None, n=1, seed=0, **filters) -> list[dict]   deterministic random choice (variations)
     coverage() -> dict                     the coverage table (required SFX names, score layers)
+    mirror(*keywords, serves=None) -> list  the mirror film's Epidemic entries by slug keywords
     ROOT, SR
 
 Entry fields: id, path (relative to ROOT), category, tags, serves, source, licence, source_url, upstream_url, author,
@@ -29,12 +34,52 @@ _CAT = None
 _BY_ID = None
 
 
+MIRROR_CAT = os.path.join(HERE, 'catalog_epidemic_mirror.json')
+MIRROR_DIR = os.path.normpath(os.path.join(HERE, '..', '_work', 'samples', 'epidemic'))
+MIRROR_REBUILD = ('python3 audio/epidemic_catalog.py _work/samples/epidemic audio/catalog_epidemic_mirror.json '
+                  '--film mirror   (run from film/)')
+
+
+def mirror_entries():
+    """The mirror film's Epidemic SFX as library entries (empty when the catalogue is missing)."""
+    if not os.path.exists(MIRROR_CAT):
+        return []
+    m = json.load(open(MIRROR_CAT))
+    out = []
+    for e in m.get('sfx', []):
+        if not os.path.exists(e['path']):
+            continue
+        out.append({'id': 'mx__' + e['slug'], 'path': e['path'], 'category': 'epidemic_mirror/sfx', 'tags': e['tags'],
+                    'serves': e['serves'], 'source': 'epidemic', 'licence': 'Epidemic Sound (owner subscription)',
+                    'attribution': None, 'dur': e['dur'], 'sr': e['sr'], 'channels': e['channels'], 'peak_db': e['peak_db'],
+                    'lufs': e['lufs'], 'floor_db': e['floor_db'], 'policy': 'as_supplied', 'qc': [], 'film': 'mirror',
+                    'slug': e['slug'], 'centroid_hz': e.get('centroid_hz')})
+    try:                                                  # new downloads not catalogued yet: say so once
+        listed = {os.path.basename(e['path']) for e in m.get('sfx', []) + m.get('music', [])}
+        new = [f for k in ('sfx', 'music') if os.path.isdir(os.path.join(MIRROR_DIR, k))
+               for f in os.listdir(os.path.join(MIRROR_DIR, k)) if f.lower().endswith('.wav') and f not in listed]
+        if new:
+            import sys
+            print(f'[library] {len(new)} Epidemic file(s) in {MIRROR_DIR} are not catalogued yet (e.g. {new[0]!r}); '
+                  f'rebuild: {MIRROR_REBUILD}', file=sys.stderr)
+    except OSError:
+        pass
+    return out
+
+
 def _cat():
     global _CAT, _BY_ID
     if _CAT is None:
         _CAT = json.load(open(os.path.join(HERE, 'catalog.json')))
+        _CAT['samples'] = mirror_entries() + _CAT['samples']
         _BY_ID = {e['id']: e for e in _CAT['samples']}
     return _CAT
+
+
+def mirror(*kw, serves=None):
+    """Mirror-film Epidemic entries whose slug contains every keyword in kw (and that serve `serves`, if given)."""
+    return [e for e in _cat()['samples'] if e.get('film') == 'mirror' and all(k in e['slug'] for k in kw)
+            and (serves is None or serves in e['serves'])]
 
 
 ROOT = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work/pov2/samples'
