@@ -1,4 +1,6 @@
-"""Find red alert tags ("RUN FAST", "DON'T WAIT"...) at 6 fps: solid red rectangles (fill >= 0.6, aspect >= 2.2)
+"""NOTE: these references draw command tags as red TEXT in a dark box, so this solid-box finder only catches filled red
+pills (the diver TODAY 2:00 PM pill, the hazmat rule-card header bars). Command-tag timing is in ui_timing_ref.py.
+Find solid red rectangles at 6 fps (fill >= 0.6, aspect >= 2.2)
 with bright text inside. Usage: python3 -I tags.py <data_dir> <name>. Prints events (start, duration, box x/y/w/h as
 fractions of the frame) and writes <data_dir>/tags_<name>.json."""
 import sys, json, numpy as np, cv2

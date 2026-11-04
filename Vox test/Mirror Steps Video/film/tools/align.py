@@ -126,7 +126,8 @@ def line_bounds(times_first, times_last, y16, n, db=None):
     if db is None:
         env = librosa.feature.rms(y=y16, frame_length=400, hop_length=160)[0]; db = 20 * np.log10(env + 1e-6)
     thr = np.percentile(db, 90) - 30        # speech vs pause: sentence-final words fall to -30 dB below the voice, pauses lie under it
-    thr_end = thr + 4                        # ends: breaths in the pauses sit at -26..-32 dB below the voice, final syllables above
+    thr_end = thr                            # ends use the same level: a higher one cut soft final consonants ("cabins" lost its s);
+                                             # a breath counted into the line's tail is harmless (lip-sync shuts the mouth below -40 dBFS)
     st, en, lw = [None] * n, [None] * n, [None] * n
     for i in range(n):
         if i in times_first: st[i], lw[i] = times_first[i] - 0.06, times_last[i]
