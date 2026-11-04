@@ -33,9 +33,9 @@ python3 render.py --workers 3                             # -> _work/picture/pic
 - Progress: `_work/picture/progress_00.json` ... `_02.json` (`{done, total, fps}`); `python3 tools/progress_page.py _work
   _work/page/index.html` turns them into the counter page (it also reads `_work/status.json`).
 - Resume: finished slices leave `slice_NN.mp4.done` and are skipped on a re-run. Delete `_work/picture/` to start over.
-- Measured speed: mean 0.24 s per warm frame per process at 2560x1440 (median 0.22, all 317 shots), so about
-  42,000 x 0.24 / 3 = 56 min of frames, plus about 10 min of first-frame cache bakes and encoding: plan on 75-90 min
-  on this machine when it is otherwise idle.
+- Measured speed: mean 0.24 s per warm frame per process at 2560x1440 (median 0.22, all 317 shots; heaviest shot
+  S253 0.43 s). The 5 s end-to-end test (601-606 s, the red climax, 3 workers) ran at 3.2-3.8 frames/s per worker, about
+  10.4 frames/s in total, so the full 42,000 frames take about 70 min; plan on 75-90 min with encoding and the concat.
 - Add `--audio _work/mix/final/mix.wav` to also write `_work/picture/film.mp4` with the final mix muxed in.
 
 ## 3. Final mix, synced to the picture
@@ -68,7 +68,9 @@ The picture is kept.
   their anchor depth, busts / hands at 1.0) + `make_cam(shot)` (plan keys, linear pushes extrapolated 0.5 s each way,
   snaps, hits, handheld for shake >= 8, a 2 %/s post push on inserts and UI).
 - Fixes on top of the plan: rule cards keep the neighbouring shot's cast breathing behind the blur; S055 gets you and
-  Tess at the mirror (`EXTRA_CHARS`); the old-cabin footprints carry over from shot to shot; hands in Tess's beam get a
+  Tess at the mirror, S259 / S260 get grown Noah rising into the bunk and staring at his hands (`EXTRA_CHARS`); grown
+  Noah sits on the floor in S058 / S289 / S290 / S304 as the narration says (`PATCH_ACTS`); the old-cabin footprints
+  carry over from shot to shot; hands in Tess's beam get a
   warm key (`HAND_FLASH`); the cast is dimmed under the night grades that lift the sets by about a stop (otherwise skin
   blows out); Tess's beam starts at her flashlight hand in body shots (`Beam.override`); the S070 dress glint.
 - Transitions: `glitch` (2 frames of static and RGB split), `white` (3-frame flash), `dissolve` (0.3 s centred on the

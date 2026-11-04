@@ -70,6 +70,10 @@ EXTRA_CHARS = {'S055': [dict(who='you', at='you_mirror', mode='body', view='q_ri
                              acts=[[573.54, 'stand_hit', {'what': 'bunk'}], [573.62, 'expr', {'name': 'shock'}]])],
                'S260': [dict(who='noah_grown', at=[1260, 1400, 1300, 1.0], mode='body', view='q_left', expr='fear',
                              acts=[[574.6, 'look_at_hands', {}]])]}
+# acts added to plan cast entries: grown Noah is "sitting on the floor" in the ending (the plan left him standing)
+FLOOR_SIT = [[-1.0, 'sit', {}]]
+PATCH_ACTS = {('S058', 'noah_grown'): FLOOR_SIT, ('S289', 'noah_grown'): FLOOR_SIT, ('S290', 'noah_grown'): FLOOR_SIT,
+              ('S304', 'noah_grown'): FLOOR_SIT}
 HAND_FLASH = dict(rim='#fff2d6', rim_a=120, side=-1, key=0.18)
 
 
@@ -241,6 +245,10 @@ class Film:
             except KeyError as e:
                 _warn((sh['id'], 'at'), 'anchor %s: %s' % (sh['id'], e)); continue
             spec2['at'] = at
+            pa = PATCH_ACTS.get((sh['id'], spec2['who']))
+            if pa and spec2.get('mode') == 'body' and len(at) > 2:      # seat on the boards: drop by the shin length
+                at = [at[0], at[1] + 0.26 * at[2]] + list(at[2:]); spec2['at'] = at
+            if pa: spec2['acts'] = [[sh['t0'] + a_[0] if a_[0] < 0 else a_[0]] + list(a_[1:]) for a_ in pa] + list(spec2.get('acts') or [])
             if spec2.get('mode') in ('hands', 'feet') and not spec2.get('light') and spec2['who'] != 'queen' \
                     and sh['side'] in ('ours', 'mirror') and sh['t0'] < 534.4 \
                     and str(s2['props'].get('flashlight', '')).startswith('tess_on'):

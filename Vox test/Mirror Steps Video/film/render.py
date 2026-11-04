@@ -133,7 +133,7 @@ if a.worker < 0:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', pic], check=True)
     print('[render]', pic, flush=True)
     if a.audio:
-        mux(pic, a.audio, os.path.join(out, a.name), 0.0, None)
+        mux(pic, a.audio, os.path.join(out, a.name), a.t0, (end - a.t0) if (a.t0 > 0 or a.to is not None) else None)
         print('[render]', os.path.join(out, a.name), flush=True)
     sys.exit(0)
 
