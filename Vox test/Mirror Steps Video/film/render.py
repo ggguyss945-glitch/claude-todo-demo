@@ -1,13 +1,15 @@
-"""v2 picture renderer: stills, test clips and the full worker/slice render.
+"""Picture renderer for the mirror film (film.py): stills, test clips and the full worker/slice render.
 
     python3 render.py --stills 12.5,40,61.2 [--size 960x540]          -> <out>/still_0012.50.jpg ...
     python3 render.py --clip 30 36 --size 960x540 [--audio mix.wav]   -> <out>/clip_0030.00_0036.00.mp4
     python3 render.py [--workers 3] [--from_ 0 --to T] [--audio mix_en.wav]
         full render at 2560x1440 / 60 fps: contiguous slices per worker process, libx264 crf 16 preset faster (identical
         settings, so they join with a stream copy) -> <out>/picture.mp4 (+ <out>/film.mp4 with the audio muxed in).
-Options: --timeline (default $S/pov2/align/timeline.json), --out (default $S/pov2/picture for full, $S/pov2/tests/render
+Options: --timeline (default _work/align/timeline.json), --out (default _work/picture for full, _work/tests/render
 otherwise), --fps 60, --film film|demo (default: film.py if it exists, else engine/demo.py's DemoFilm), --crf, --preset,
---threads (OpenCV threads per process; full-mode workers default to 1).
+--threads (OpenCV threads per process; full-mode workers default to 1), --name (muxed file name, default film.mp4).
+Low-res preview: python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out _work/preview
+                 --audio _work/mix/draft/mix.wav --name preview.mp4
 Workers write <out>/progress_NN.json ({done, total, fps}) for tools/progress_page.py; finished slices get a .done marker and
 are skipped on a re-run, so an interrupted render resumes.
 The film contract: Film(timeline_dict).frame(t, i) -> uint8 RGB at the engine render size (set before Film is built);
@@ -19,10 +21,10 @@ import cv2
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
+S = os.path.join(HERE, '_work')
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--timeline', default=os.path.join(S, 'pov2', 'align', 'timeline.json'))
+ap.add_argument('--timeline', default=os.path.join(S, 'align', 'timeline.json'))
 ap.add_argument('--out', default=None)
 ap.add_argument('--size', default='2560x1440')
 ap.add_argument('--fps', type=int, default=60)
@@ -37,11 +39,12 @@ ap.add_argument('--to', type=float, default=None)
 ap.add_argument('--crf', default='16')
 ap.add_argument('--preset', default='faster')
 ap.add_argument('--threads', type=int, default=None)
+ap.add_argument('--name', default='film.mp4')
 a = ap.parse_args()
 
 W, H = (int(v) for v in a.size.lower().split('x'))
 full_mode = a.stills is None and a.clip is None
-out = a.out or os.path.join(S, 'pov2', 'picture' if full_mode else os.path.join('tests', 'render'))
+out = a.out or os.path.join(S, 'picture' if full_mode else os.path.join('tests', 'render'))
 os.makedirs(out, exist_ok=True)
 threads = a.threads if a.threads is not None else (1 if (full_mode and a.worker >= 0) else None)
 if threads is not None: cv2.setNumThreads(threads)
@@ -130,8 +133,8 @@ if a.worker < 0:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', pic], check=True)
     print('[render]', pic, flush=True)
     if a.audio:
-        mux(pic, a.audio, os.path.join(out, 'film.mp4'), 0.0, None)
-        print('[render]', os.path.join(out, 'film.mp4'), flush=True)
+        mux(pic, a.audio, os.path.join(out, a.name), 0.0, None)
+        print('[render]', os.path.join(out, a.name), flush=True)
     sys.exit(0)
 
 # ------------------------------------------------------------------ full: one worker = one contiguous slice
