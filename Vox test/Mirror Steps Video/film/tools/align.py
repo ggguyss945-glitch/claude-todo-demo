@@ -172,9 +172,9 @@ en_st, en_en = line_bounds(first, last, en16, len(LINES), DB)
 
 def write_table(path):
     with open(path, 'w') as fh:
-        fh.write(f"{'i':>3}  {'t':>8}  {'end':>8}  who  {'tag':<11} {'q':>4}  text\n")
+        fh.write(f"{'i':>3}  {'t':>8}  {'end':>8}  who  {'tag':<12} text\n")
         for k, l in enumerate(LINES):
-            fh.write(f"{k:>3}  {en_st[k]:8.2f}  {en_en[k]:8.2f}  {l['who']:<3}  {(l['tag'] or ''):<11} {QUAL[k]:4.2f}  {l['en']}\n")
+            fh.write(f"{k:>3}  {en_st[k]:8.2f}  {en_en[k]:8.2f}  {l['who']:<3}  {(l['tag'] or ''):<12} {l['en']}\n")
 
 
 def line_entry(k, l):
