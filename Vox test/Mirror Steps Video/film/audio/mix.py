@@ -18,6 +18,21 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
     mix_report.json               measured loudness, levels relative to the voice, events per minute, limiter use,
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
+Mirror film (cues from audio/cues.py; run from film/)
+    python3 audio/cues.py [--events _work/align/film_events.json] --out _work/cues
+    python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/cues _work/mix/final --langs en \
+        --out-name mix.wav --bed-rel -11.5 --bed-p50 -14 --music-lo -12.5 --music-hi -11.5 --hit-duck 3 --hit-dip 12 \
+        --score-hits-db 3 --lev-lo -7 --lev-hi 9 --tilt mirror --sub-boost 3      (= cues.MIX_ARGS)
+    python3 audio/measure_mix.py _work/mix/final --cues _work/cues
+    - <cues>/voice_fx.json replaces the timeline's line fx: below, queen, queen_child, far, far_outside, phone,
+      phone_child (mirror_fx(); reverb tails ring on past the line)
+    - sfx cues with params.stream are bed streams: one continuous render per key, gated per range (render_streams);
+      loop beds (params.loop) are one seamless loop tiled on the film's loop clock (params.phase0)
+    - params.loop_id: rendered once per (name, loop_id, space, params) and reused identically (the time loops)
+    - cues with hit=true get the pre-hit bed dip like the HITS names; music_cues.bed_dips dip the SFX beds (rule cards)
+    - music_cues.duration is the exact output length (700.0 s); --music-lo/--music-hi pin the music as heard
+    - vo_ru may be '-' with --langs en
+
 Signal flow
     voice  -> v1 radio/phone line FX (kept from ../src/mix.py; radio drive 1.8; each processed line loudness-matched
               to the dry line, radio -2 LU, phone -1, phone_far -2) -> -14 LUFS -> 2.5:1 compression on the loudest
@@ -65,7 +80,8 @@ def band(x, lo, hi, order=4):
     return signal.sosfilt(signal.butter(order, [lo, hi], 'bandpass', fs=SR, output='sos'), x).astype(np.float32)
 
 
-LINE_FX_LU = {'radio': -2.0, 'phone': -1.0, 'phone_far': -2.0}   # processed line vs the same line dry (K-weighted)
+LINE_FX_LU = {'radio': -2.0, 'phone': -1.0, 'phone_far': -2.0,   # processed line vs the same line dry (K-weighted)
+              'below': -2.0, 'queen': 0.0, 'queen_child': 0.0, 'far': -3.0, 'far_outside': -3.0, 'phone_child': -1.0}
 
 
 def radio_fx(x):
@@ -79,20 +95,79 @@ def phone_fx(x, far=False):
     return y * 1.05
 
 
+# ---- mirror film line FX (sound_plan.voice_fx): mono voice in, mono out (reverb tails run past the line)
+def _ir_mono(name):
+    import sfx_mirror as XM
+    h = XM.ir_glass() if name == 'glass' else XM.ir_cabin() if name == 'cabin' else SX.ir(name)
+    return h.mean(1).astype(np.float32)
+
+
+def _rev(x, name, wet, tail=1.2):
+    h = _ir_mono(name)[:int(tail * SR)]
+    h = h * np.float32(np.linspace(1, 0, len(h)) ** 2)
+    w = signal.oaconvolve(x, h)[:len(x) + len(h)].astype(np.float32)
+    y = np.zeros(len(w), np.float32); y[:len(x)] = x
+    return y + w * np.float32(wet)
+
+
+def whisper_of(x, seed=3):
+    """Channel vocoder: the line's spectral envelope on noise (the same words, whispered)."""
+    import librosa
+    S = librosa.stft(x, n_fft=1024, hop_length=256)
+    env = uniform_filter1d(np.abs(S), size=7, axis=0)
+    N = librosa.stft(np.random.default_rng(seed).standard_normal(len(x)).astype(np.float32), n_fft=1024, hop_length=256)
+    return librosa.istft(env * N / (np.abs(N) + 1e-9), hop_length=256, length=len(x)).astype(np.float32)
+
+
+def _match(y, ref, rel_db):
+    a, b = SX.lufs_int(y), SX.lufs_int(ref)
+    return y * np.float32(10 ** ((b + rel_db - a) / 20)) if a > -70 and b > -70 else y
+
+
+def mirror_fx(x, kind):
+    if kind == 'below':          # Noah under the stairs: low-pass 3.5 kHz, dark short room
+        return _rev(SX.lp(x, 3500, 2), 'cabin', 0.35, 0.8)
+    if kind in ('queen', 'queen_child'):
+        import librosa
+        wh = _match(whisper_of(x), x, -16.0)
+        lay = x + wh
+        if kind == 'queen':      # an octave-down whisper double at -18 dB
+            dn = librosa.effects.pitch_shift(x, sr=SR, n_steps=-12).astype(np.float32)
+            lay = lay + _match(whisper_of(dn, 5), x, -18.0)
+        return _rev(_rev(lay, 'glass', 0.22, 0.8), 'hall', 0.12, 1.2)
+    if kind == 'far':            # Tess through the doorway
+        return _rev(SX.lp(x, 5000, 2), 'cabin', 0.3, 0.5)
+    if kind == 'far_outside':    # Tess on the porch: exterior slap
+        y = SX.lp(SX.hp(x, 150, 2), 6000, 2)
+        sl = np.zeros(len(y) + int(0.07 * SR), np.float32); sl[int(0.07 * SR):] = y * 0.3
+        sl[:len(y)] += y
+        return _rev(sl, 'forest', 0.3, 1.0)
+    if kind == 'phone_child':    # phone band + the queen's glass + a slight bit crush
+        y = phone_fx(x)
+        q = np.float32(np.abs(y).max() / 48 + 1e-9); y = np.round(y / q) * q
+        return _rev(y, 'glass', 0.2, 0.9)
+    return None
+
+
 def apply_line_fx(vo, spans):
-    """spans: list of (start s, end s, kind). Replace those stretches of the voice with the processed version."""
+    """spans: list of (start s, end s, kind). Replace those stretches of the voice with the processed version; reverb
+    tails of the mirror kinds are added after the span."""
     out = vo.copy()
     for a, b, kind in spans:
         i0, i1 = max(0, int((a - 0.05) * SR)), min(len(vo), int((b + 0.15) * SR))
         seg = vo[i0:i1]
         if len(seg) < 100: continue
-        y = radio_fx(seg) if kind == 'radio' else phone_fx(seg, kind == 'phone_far')
+        y = radio_fx(seg) if kind == 'radio' else (mirror_fx(seg, kind) if kind in LINE_FX_LU and kind not in
+                                                   ('phone', 'phone_far') else phone_fx(seg, kind == 'phone_far'))
         # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
         Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
         if Ls > -70 and Ly > -70:
             y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(kind, -1.0) - Ly) / 20))
         f = int(0.01 * SR); w = np.ones(len(seg), np.float32); w[:f] = np.linspace(0, 1, f); w[-f:] = np.linspace(1, 0, f)
         out[i0:i1] = seg * (1 - w) + y[:len(seg)] * w
+        if len(y) > len(seg):                                # the processed tail rings on after the line
+            tail = y[len(seg):len(seg) + max(0, len(out) - i1)]
+            out[i1:i1 + len(tail)] += tail
     return out
 
 
@@ -104,16 +179,18 @@ def load_vo(path, n):
     return y
 
 
-def voice_tracks(tl, vo_en, vo_ru, n_full, langs):
+def voice_tracks(tl, vo_en, vo_ru, n_full, langs, vfx=None):
     L = tl['lines']
     en_spans = [(l['t'], l['end'], l['fx']) for l in L if l.get('fx') and l.get('found_en', True)]
+    if vfx is not None:                                   # cues/voice_fx.json (the mirror film) replaces line fx
+        en_spans = [(v['t'], v['end'], v['fx']) for v in vfx]
     ru_start = {}
     for g in tl.get('dub', []):
         i, j = g['lines']; ru_start[i] = g['ru_start']
     ru_spans = []
     for l in L:
         if not l.get('fx'): continue
-        a = ru_start.get(l['i'], l['t']); d = l['ru_src'][1] - l['ru_src'][0] if 'ru_src' in l else l['end'] - l['t']
+        a = ru_start.get(l['i'], l['t']); d = l['ru_src'][1] - l['ru_src'][0] if l.get('ru_src') else l['end'] - l['t']
         ru_spans.append((a, a + max(0.4, d), l['fx']))
     out = {}
     if 'en' in langs: out['en'] = apply_line_fx(load_vo(vo_en, n_full), en_spans)
@@ -292,9 +369,10 @@ def voice_chain(v, plr=11.0):
 
 
 TILT = {63: 8.0, 125: 3.0, 250: 4.0, 500: 4.0, 2000: -7.0, 4000: -10.0, 8000: -14.0}   # AUDIO_SPEC sec. 2, rel 1 kHz
+TILT_MIRROR = {63: 10.0, 125: 7.0, 250: 3.0, 500: 2.0, 2000: -4.0, 4000: -9.0, 8000: -15.0}   # REF_MIRROR sec. 7
 
 
-def match_tilt(m, amount=0.8, lo=-6.0, hi=2.0, probe=None):
+def match_tilt(m, amount=0.8, lo=-6.0, hi=2.0, probe=None, tilt=None, sub_boost=0.0):
     """Bounded auto-EQ for the score bus: measures its octave levels (rel 1 kHz) and moves them `amount` of the way
     toward the reference tilt with one-octave peaking bells, each limited to lo..hi dB (cuts only from 2 kHz up, so
     the score never brightens into the voice band). `probe`: the same music after
@@ -306,12 +384,13 @@ def match_tilt(m, amount=0.8, lo=-6.0, hi=2.0, probe=None):
     lev = lambda c: 10 * np.log10(P[(f >= c / 1.414) & (f < c * 1.414)].sum() + 1e-30)
     ref = lev(1000)
     # the 63 Hz bell only cuts (critic: the score is sub-heavy, 36 % sub vs 28 %, and a +2 dB boost ate limiter headroom)
-    corr = {c: float(np.clip(amount * (t - (lev(c) - ref)), lo, hi if 63 < c < 2000 else 0.0)) for c, t in TILT.items()}
+    corr = {c: float(np.clip(amount * (t - (lev(c) - ref)), lo, hi if 63 < c < 2000 else sub_boost if c == 63 else 0.0))
+            for c, t in (tilt or TILT).items()}
     bands = [('peak', c, g, 1.41) for c, g in corr.items() if abs(g) > 0.3]
     return (SX.eq(m, *bands) if bands else m), {c: round(g, 1) for c, g in corr.items()}
 
 
-def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5):
+def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5):  # noqa: E501 (args: --lev-lo/--lev-hi)
     """Slow two-way leveler for the score bus (non-causal 2 s smoothing, so no pumping): passages more than 4.5 LU
     under the score's own median are lifted (70%, at most +9 dB), passages more than 6.5 LU over it are compressed 2:1.
     Near-silence (< median - 30 LU) and the authored silences (plus 4 s after, where the music must come back quieter)
@@ -367,6 +446,52 @@ def short_term_rel(x, ref, win=0.4, hop=0.1):
     return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20) - ref
 
 
+# ============================================================================ bed streams (mirror film)
+def render_streams(streams, beds, t0, dur):
+    """Each stream key renders ONCE (continuous for its whole span; loop beds as one seamless loop tiled on the
+    film's loop clock: sample(t) = loop[(t - phase0) mod period]) and is gated into the beds bus per range with
+    short fades, the range's gain and optional low-pass."""
+    N = len(beds); n = 0
+    for key, cs in streams.items():
+        cs = sorted(cs, key=lambda c: c['t'])
+        vis = [c for c in cs if c['t'] < t0 + dur + 0.5 and c['t'] + c['params']['dur'] > t0 - 0.5]
+        if not vis:
+            continue
+        c0 = cs[0]; p = dict(c0['params'])
+        base = {k: v for k, v in p.items() if k not in ('stream', 'dur', 'lp', 'fade', 'phase0')}
+        span0 = min(c['t'] for c in vis); span1 = max(c['t'] + c['params']['dur'] for c in vis)
+        if base.get('loop'):
+            P = float(base['loop'])
+            y, _ = SX.render_event(c0['name'], seed=int(c0.get('seed', 0)), space=c0.get('space'), **dict(base, dur=P))
+            L = int(round(P * SR))
+            if len(y) > L:                                # circular: the reverb tail wraps into the loop's head
+                tl_ = y[L:2 * L]; y = y[:L].copy(); y[:len(tl_)] += tl_
+            idx = (np.arange(int((span0 - 0.2) * SR), int((span1 + 0.2) * SR)) - int(round(float(p.get('phase0', 0)) * SR)))
+            y = y[np.mod(idx, len(y))]
+            s0 = span0 - 0.2
+        else:
+            y, _ = SX.render_event(c0['name'], seed=int(c0.get('seed', 0)), space=c0.get('space'),
+                                   **dict(base, dur=span1 - span0 + 0.6))
+            s0 = span0 - 0.1
+        for c in vis:
+            a, b = c['t'], c['t'] + c['params']['dur']
+            fd = float(c['params'].get('fade', 0.04))
+            i0 = max(0, int((a - fd - s0) * SR)); i1 = min(len(y), int((b + fd - s0) * SR))
+            if i1 <= i0:
+                continue
+            seg = y[i0:i1].copy()
+            if c['params'].get('lp'):
+                seg = SX.lp(seg, float(c['params']['lp']), 2)
+            w = np.ones(len(seg), np.float32); f = max(1, int(2 * fd * SR))
+            f = min(f, len(seg) // 2)
+            w[:f] = np.sin(np.linspace(0, np.pi / 2, f)) ** 2; w[-f:] = np.cos(np.linspace(0, np.pi / 2, f)) ** 2
+            seg *= (w * np.float32(10 ** (float(c.get('gain_db', 0)) / 20)))[:, None]
+            SX.place(beds, seg, int(round((s0 + i0 / SR - t0) * SR)))
+            n += 1
+        del y
+    return n
+
+
 # ============================================================================ main
 def main():
     if len(sys.argv) == 4 and sys.argv[1] == '--check':          # mix.py --check <cues dir> <out dir>
@@ -383,6 +508,16 @@ def main():
     ap.add_argument('--no-stems', action='store_true')
     ap.add_argument('--voice-plr', type=float, default=11.5)
     ap.add_argument('--music-width', type=float, default=0.7)
+    ap.add_argument('--out-name', default=None, help='file name of the mix (default mix_<lang>.wav)')
+    ap.add_argument('--music-lo', type=float, default=-17.0, help='music (as heard) integrated, min LU rel voice')
+    ap.add_argument('--music-hi', type=float, default=-10.0, help='music (as heard) integrated, max LU rel voice')
+    ap.add_argument('--hit-duck', type=float, default=HIT_DUCK_DB, help='hits bus duck under the voice (dB)')
+    ap.add_argument('--hit-dip', type=float, default=8.0, help='bed dip before each hit (dB)')
+    ap.add_argument('--score-hits-db', type=float, default=0.0, help='gain on the score hits stem (dB)')
+    ap.add_argument('--lev-lo', type=float, default=-4.5, help='music leveler: lift passages under median + this')
+    ap.add_argument('--lev-hi', type=float, default=6.5, help='music leveler: compress passages over median + this')
+    ap.add_argument('--tilt', default='audio_spec', choices=['audio_spec', 'mirror'], help='score bus target tilt')
+    ap.add_argument('--sub-boost', type=float, default=0.0, help='max 63 Hz boost of the tilt EQ (dB)')
     A = ap.parse_args()
     T0 = time.time()
     langs = [s for s in A.langs.split(',') if s]
@@ -392,14 +527,15 @@ def main():
     mpath = os.path.join(A.cues, 'music_cues.json')
     mcues = json.load(open(mpath)) if os.path.exists(mpath) else {'duration': tl['duration_en'] + 2.5, 'intensity': [],
                                                                   'events': []}
-    full = max(tl['duration_en'] + 2.5, float(mcues.get('duration') or 0))
+    full = float(mcues.get('duration') or 0) or tl['duration_en'] + 2.5     # the film's exact length when given
     t0 = A.t0; t1 = min(full, A.t1) if A.t1 else full
     dur = t1 - t0; N = int(round(dur * SR)); i0 = int(round(t0 * SR))
     log(f'window {t0:.1f}-{t1:.1f} s ({dur:.1f} s), {len(sfx_cues)} sfx cues, langs {langs}')
 
     # ---------------- voice
     nfull = int(round(full * SR)) + SR
-    vo = voice_tracks(tl, A.vo_en, A.vo_ru, nfull, langs)
+    vpath = os.path.join(A.cues, 'voice_fx.json')
+    vo = voice_tracks(tl, A.vo_en, A.vo_ru, nfull, langs, json.load(open(vpath)) if os.path.exists(vpath) else None)
     vstats = {}
     for k in vo:
         v = vo[k][i0:i0 + N]; v = np.pad(v, (0, N - len(v)))
@@ -413,8 +549,12 @@ def main():
     hit_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []
     order = sorted(range(len(sfx_cues)), key=lambda k: (sfx_cues[k]['t'], k))
     tsfx = time.time()
+    streams = {}                     # bed streams: one continuous render per key, gated per range (mirror film)
+    loops = {}                       # loop_id: one render, reused identically
     for rank, k in enumerate(order):
         c = sfx_cues[k]; name = c['name']
+        if (c.get('params') or {}).get('stream'):
+            streams.setdefault(c['params']['stream'], []).append(c); continue
         if name not in SX.RECIPES:
             skipped.append(name); continue
         params = dict(c.get('params') or {})
@@ -427,7 +567,14 @@ def main():
         if tt > dur + 0.5 or tt + max(dur_hint, 30.0) < 0:
             continue
         try:
-            y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
+            lk = (name, str(params.get('loop_id')), space, json.dumps(params, sort_keys=True)) if params.get('loop_id') else None
+            if lk and lk in loops:
+                y, pre = loops[lk]
+            else:
+                sd = int(c.get('seed', rank)) if not lk else int.from_bytes(name.encode()[:3] + str(params['loop_id']).encode()[:3], 'big') % 99991
+                y, pre = SX.render_event(name, seed=sd, space=space, **params)
+                if lk:
+                    loops[lk] = (y, pre)
         except Exception as e:                  # a failed cue is a silent hole in the film: stop, never skip
             log('SFX failed', name, c['t'], repr(e)[:160])
             raise
@@ -438,8 +585,9 @@ def main():
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
         if 0 <= tt <= dur:
             counts[b] += 1
-            if name in SX.HITS or name == 'knock_door':
+            if name in SX.HITS or name == 'knock_door' or c.get('hit'):
                 hit_times.append(tt)
+    counts['streams'] = render_streams(streams, buses['beds'], t0, dur)
     log(f'sfx rendered in {time.time() - tsfx:.1f} s: {counts}' + (f', skipped {sorted(set(skipped))}' if skipped else ''))
 
     # ---------------- music
@@ -462,7 +610,7 @@ def main():
     for k in list(stems):
         s = fit(stems.pop(k), npre + N)[npre:]
         if k == 'hits':
-            mhits += s                       # music hits: never ducked or EQ'd
+            mhits += s * np.float32(10 ** (A.score_hits_db / 20))   # music hits: never EQ'd
         else:
             music += s
         del s
@@ -474,15 +622,17 @@ def main():
     # score.py already applies silences and pre-hit ducks for its own events; the placeholder does silences only.
     # So: music gets pre-hit dips for SFX-cue hits; SFX beds get silences + dips for every hit.
     sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -9.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
+    sil_b = sil + [(a - t0, b - t0, d, 0.3, 0.5) for a, b, d in mcues.get('bed_dips', [])]   # rule cards: beds dip
     mus_hits = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop', 'rule')]
-    dip = lambda ts: [(h - 0.05, h, -8.0, 0.4, 0.6) for h in ts]
+    dip = lambda ts: [(h - 0.05, h, -A.hit_dip, 0.4, 0.6) for h in ts]
     autom = gain_env(N, dip(hit_times))
-    autom_b = gain_env(N, sil + dip(hit_times + mus_hits))
+    autom_b = gain_env(N, sil_b + dip(hit_times + mus_hits))
     # score bus: corrective EQ toward the AUDIO_SPEC octave tilt (less 100-160 Hz mud), moderate width, leveler
-    music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0))
+    music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0),
+                             tilt=TILT_MIRROR if A.tilt == 'mirror' else TILT, sub_boost=A.sub_boost)
     log('score tilt EQ (dB):', tilt)
     music = SX.width(music, A.music_width); mhits = SX.width(mhits, min(1.0, A.music_width + 0.2))
-    music, lev = level_music(music, [(a, b) for a, b, *_ in sil])
+    music, lev = level_music(music, [(a, b) for a, b, *_ in sil], lo_rel=A.lev_lo, hi_rel=A.lev_hi)
     log(f'music leveler: gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / {np.percentile(lev, 50):+.1f} / {np.percentile(lev, 95):+.1f} dB')
     n_sil = sum(1 for e in mc['events'] if e['type'] == 'silence' and 0 <= e['t'] <= dur)
 
@@ -499,7 +649,7 @@ def main():
 
     def bed_for(act, gm, act_h):
         dm = (10 ** (-DUCK_DB * act / 20)).astype(np.float32)
-        hd = (10 ** (-HIT_DUCK_DB * act_h * spare / 20)).astype(np.float32)
+        hd = (10 ** (-A.hit_duck * act_h * spare / 20)).astype(np.float32)
         m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
         m += mhits * (hd * np.float32(gm))[:, None]
         s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
@@ -535,8 +685,8 @@ def main():
     # measured before the ducks, which with the 4.5 dB duck pulled the whole bed 2 dB under the target)
     _b, _m, _s, _g = bed_for(act_key, gm, acth_key); del _b, _s
     Lm = SX.lufs_int(_m) - Lv; del _m
-    if Lm < -17: gm *= 10 ** ((-17 - Lm) / 20)
-    if Lm > -10: gm *= 10 ** ((-10 - Lm) / 20)
+    if Lm < A.music_lo: gm *= 10 ** ((A.music_lo - Lm) / 20)
+    if Lm > A.music_hi: gm *= 10 ** ((A.music_hi - Lm) / 20)
 
     report = {'cues_sha1': cue_hashes(A.cues), 'window': [t0, t1], 'score': score_src,
               'music_gain_db': round(20 * np.log10(gm), 2),
@@ -563,7 +713,8 @@ def main():
             gdb += TARGET - Lo
         del mix
         g = np.float32(10 ** (gdb / 20))
-        sf.write(os.path.join(A.out, f'mix_{lang}.wav'), y, SR, subtype='PCM_24'); del y
+        sf.write(os.path.join(A.out, A.out_name if A.out_name and len(langs) == 1 else f'mix_{lang}.wav'), y, SR,
+                 subtype='PCM_24'); del y
         # loudness is measured unscaled and shifted by the master gain (no full-length temporaries)
         Lv0 = SX.lufs_int(vst); Lvv = Lv0 + gdb
         vb = short_term_rel(vst, Lv0); bb = short_term_rel(bed, Lv0)

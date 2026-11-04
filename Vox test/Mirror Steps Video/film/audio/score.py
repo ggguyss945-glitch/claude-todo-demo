@@ -1,4 +1,4 @@
-"""score.py: the music for "If A Police Officer Knocks..." v2, rendered from music_cues.json.
+"""score.py: the music (police film v2 and the mirror film), rendered from music_cues.json.
 
 Public API
     render(cues, duration=None, *, seed=None, normalize=True, progress=None) -> dict[str, np.ndarray]
@@ -41,6 +41,15 @@ Public API
     CLI: python score.py music_cues.json out_dir [--duration D] -> out_dir/score_<stem>.wav (32-bit float),
          score_sum.wav, score_plan.json
 
+Mirror film (optional cue keys, written by audio/cues.py)
+    arrangement: [{slug, s0, s1, off?, near?, fin?, fout?, gain_db?, cut?: 'hard'}]  the music map: which track plays
+                 each film section (off None = fitted to the intensity curve); replaces the automatic track choice
+    options:     {lament: false (no low-piano lament between motifs), slope: dB over intensity 0..1 (13.5),
+                 swell_db: tracks lift at a swell peak (7), layers: {bus: [[t, dB], ...]}} gain curves for
+                 the score's own buses (tracks, drones, pulse, melodic, strings_bed, strings_fx, hits), so score
+                 layers play only where they help
+    MIRROR_TRACKS: the ten mirror tracks with their varispeed (semitones) to D / A
+
 Event semantics (t in seconds, level 0..1, default 0.7)
     hit, stinger, braam (len = hold, default 3.5 s), sub_drop: start at t (transients sample-aligned to t);
     riser: ends at t (len default 6 s; when a hit lands on t the riser stops 0.16-0.25 s early: a breath before
@@ -74,8 +83,8 @@ SR = 48000
 STEMS = ('tracks', 'drones', 'pulse', 'melodic', 'strings', 'hits')
 REF_LUFS = -28.0
 NOM = -20.0                      # every sample is normalised to this momentary-max loudness before gains
-S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
-CACHE = os.path.join(S, 'pov2', 'cache', 'score')
+S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'     # read-only (police film)
+CACHE = os.path.normpath(os.path.join(HERE, '..', '_work', 'cache', 'score'))  # this film's cache
 CR = 100                         # control rate for gain curves (Hz)
 SLOPE = 13.5                     # bed level change (dB) from intensity 0 to 1 (v2.1: 9 -> 13.5, the bed breathes)
 PC = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
@@ -89,6 +98,20 @@ TRACKS = {
     'in_continuum_dream_cave': 0,                # D minor
     'tefu_sayuri_hayashi_egnell': 0,             # D major (false comfort)
 }
+# the mirror film's tracks (catalog_epidemic_mirror.json; key = Krumhansl-Kessler + bass root, measured)
+MIRROR_TRACKS = {
+    'annihilated_blue_saga': 0,                  # D (dark ambient drone, D pedal)
+    'come_closer_belladonna_strings': -1,        # D# minor -> D minor (horror strings, stabs and drop-outs)
+    'don_t_look_belladonna_strings': -1,         # D# minor -> D minor (sustained horror strings)
+    'end_of_rain_beyza': 0,                      # A major (sad piano; the brothers' theme)
+    'escalation_jon_bjork': 2,                   # C minor -> D minor (pulsed tension build, 108 -> 121 bpm)
+    'impossible_theory_rachel_sandy': 0,         # A minor (driving urgency)
+    'irene_kevin_dailey': 0,                     # D minor (slow build from silence)
+    'midnight_wanderer_luella_gren': -2,         # E minor -> D minor (nocturnal walk)
+    'sleep_forever_luella_gren': 1,              # G# -> A (lullaby figure: the other side)
+    'when_the_sun_sets_anna_landstrom': 1,       # C# major -> D major (warm, unpulsed: the too-normal dawn)
+}
+TRACKS.update(MIRROR_TRACKS)
 KEYPREF = {2: 0.0, 9: 0.05, 5: 0.45, 10: 0.45, 7: 0.6, 0: 0.7}   # cost by root pitch class: D, A, F, Bb, G, C
 KEY_W = 2.0                      # weight of the key cost (v2.1: 0.2 -> 0.6, every section lands on D or A)
 OTHER_KEY = 3.0                  # cost of any other root (Eb, Ab, B, E, F#, C#: the semitone / tritone clashes)
@@ -215,6 +238,9 @@ class Bank:
         epi = json.load(open(os.path.join(HERE, 'catalog_epidemic.json')))
         self.epi_sfx = {e['slug']: e for e in epi['sfx']}
         self.epi_music = {e['slug']: e for e in epi['music']}
+        mp = os.path.join(HERE, 'catalog_epidemic_mirror.json')         # the mirror film's tracks (used first)
+        if os.path.exists(mp):
+            self.epi_music.update({e['slug']: e for e in json.load(open(mp))['music'] if os.path.exists(e['path'])})
         self._cats = {}
 
     def get(self, key):
@@ -461,16 +487,27 @@ def _bass_salience(y, nwin, hop=2.0, win=1 << 17):
     return out
 
 
-def _track_info(bank):
-    """Per-track features on a 2 s grid after varispeed: loudness (rel own integrated), centroid, bass root, mode."""
+def _track_info(bank, slugs=None):
+    """Per-track features on a 2 s grid after varispeed: loudness (rel own integrated), centroid, bass root, mode.
+    slugs: the tracks to analyse (default: every TRACKS entry present in the bank); cached per track."""
     os.makedirs(CACHE, exist_ok=True)
-    sig = hashlib.md5(json.dumps(TRACKS, sort_keys=True).encode()).hexdigest()[:8]
-    p = os.path.join(CACHE, f'tracks_v4_{sig}.json')
-    if os.path.exists(p):
-        return json.load(open(p))
+    slugs = sorted(slugs or [k for k in TRACKS if k in bank.epi_music])
+    info = {}
+    for slug in slugs:
+        sig = hashlib.md5(json.dumps([slug, TRACKS[slug], FIXED_KEY.get(slug)]).encode()).hexdigest()[:8]
+        p = os.path.join(CACHE, f'track_v5_{slug[:40]}_{sig}.json')
+        if os.path.exists(p):
+            info[slug] = json.load(open(p))
+        else:
+            info[slug] = _analyse_track(bank, slug)
+            json.dump(info[slug], open(p, 'w'))
+    return info
+
+
+def _analyse_track(bank, slug):
     import librosa
     info = {}
-    for slug in TRACKS:
+    for slug in [slug]:
         y = _track_audio(bank, slug)
         dur = len(y) / SR
         m = y.mean(1)
@@ -509,8 +546,7 @@ def _track_info(bank):
             M3 = [max(a_, b_) * 2 + 1e-3 for a_, b_ in zip(m3, M3)] if FIXED_KEY[slug][1] > 0 else M3
             chs = [[v * (3 if i == (FIXED_KEY[slug][0] + 4) % 12 else 1) for i, v in enumerate(c)] for c in chs]
         info[slug] = dict(dur=dur, L2=L2, C2=C2, root=rr, mode=modes, m3=m3, M3=M3, chroma=chs, lufs=integrated(y))
-    json.dump(info, open(p, 'w'))
-    return info
+    return info[slug]
 
 
 # ---------------------------------------------------------------------------------------------- arrangement plan
@@ -520,12 +556,56 @@ def _arousal(L2, C2):
     return 0.65 * l + 0.35 * c
 
 
+def _fit_offset(v, s0, s1, I, used, near=None):
+    """Best start offset (1 s grid) of a track for film section s0..s1: arousal (loudness + brightness) against the
+    intensity curve, avoiding material already used, optionally pulled toward `near` seconds."""
+    ln = s1 - s0
+    tk = np.arange(s0, s1, 2.0)
+    Ik = I[np.minimum((tk * CR).astype(int), len(I) - 1)]
+    a = _arousal(v['L2'], v['C2']); nwin = len(a)
+    room = v['dur'] - 1.0
+    best = None
+    for o in (np.arange(0, max(0.0, room - ln) + 1e-6, 1.0) if room >= ln else np.array([0.0])):
+        idx = np.minimum(((o + tk - s0) / 2).astype(int), nwin - 1)
+        cost = float(np.mean((a[idx] - Ik) ** 2))
+        cost += REUSE_W * sum(max(0, min(o + ln, u1) - max(o, u0)) for u0, u1 in used) / max(ln, 1)
+        if near is not None:
+            cost += 0.002 * abs(o - near)
+        if best is None or cost < best[0]:
+            best = (cost, float(o))
+    return best[1]
+
+
 def plan(cues, duration=None, bank=None):
+    """The arrangement. cues['arrangement'] (optional): [{slug, s0, s1, off?: seconds or None (fit), near?: seconds}]
+    gives the track per film section explicitly (the mirror film's music map); otherwise sections are found at rule /
+    scene events and tracks chosen by cost (police film)."""
     dur = float(duration or cues.get('duration') or 60.0)
     bank = bank or Bank()
-    info = _track_info(bank)
     ev = _events(cues)
     I = _intensity(cues, dur)
+    arr = cues.get('arrangement')
+    if arr:
+        info = _track_info(bank, {a['slug'] for a in arr})
+        ends = [e['t'] for e in ev if e['type'] == 'end']
+        t_end = min(ends) if ends else dur
+        used = {k: [] for k in info}
+        segs = []
+        for a in sorted(arr, key=lambda a: a['s0']):
+            s0, s1 = float(a['s0']), min(dur, float(a['s1']))
+            if s1 <= s0:
+                continue
+            v = info[a['slug']]
+            o = a.get('off')
+            o = _fit_offset(v, s0, s1, I, used[a['slug']], a.get('near')) if o is None else float(o)
+            used[a['slug']].append((o, o + s1 - s0))
+            sg = dict(slug=a['slug'], s0=s0, s1=s1, off=o)
+            for k in ('fin', 'fout', 'gain_db', 'cut'):
+                if k in a:
+                    sg[k] = a[k]
+            segs.append(sg)
+        return _plan_tail(ev, segs, info, dur, t_end)
+    info = _track_info(bank)
     # section boundaries: rule cards, scenes, end
     b = [0.0] + [e['t'] for e in ev if e['type'] in ('rule', 'scene') and 4 < e['t'] < dur - 8]
     ends = [e['t'] for e in ev if e['type'] == 'end']
@@ -591,6 +671,10 @@ def plan(cues, duration=None, bank=None):
         prev = slug
         v = info[slug]
         prev_root = int(v['root'][min(int((o + ln - 1.0) / 2), len(v['root']) - 1)])
+    return _plan_tail(ev, segs, info, dur, t_end)
+
+
+def _plan_tail(ev, segs, info, dur, t_end):
     # boundary kinds: a silence starting within 2.5 s before the boundary -> switch inside the silence
     for k in range(1, len(segs)):
         bt = segs[k]['s0']
@@ -643,7 +727,7 @@ def plan(cues, duration=None, bank=None):
             continue
         bt = segs[k]['s0']
         r0, r1 = _key_at(out, bt - 1.0)[0], _key_at(out, bt + 0.5)[0]
-        if (r1 - r0) % 12 in CLASH:          # no crossfade between clashing keys: a hard switch on the rule sting
+        if (r1 - r0) % 12 in CLASH or segs[k].get('cut') == 'hard':   # clashing keys / asked: a hard switch
             segs[k]['via_silence'] = (bt - 0.35, bt + 0.05)
             segs[k]['switch'] = 'sting'
     return dict(duration=dur, sections=segs, keys=out, t_end=t_end)
@@ -683,6 +767,9 @@ class Score:
         self.t_end = self.plan['t_end']
         self.bus = {k: Bus(self.n) for k in ('tracks', 'drones', 'pulse', 'melodic', 'strings_bed', 'strings_fx', 'hits')}
         self.motif_count = 0
+        self.opts = dict(cues.get('options') or {})
+        self.slope = float(self.opts.get('slope', SLOPE))            # bed dB from intensity 0 to 1
+        self.swell_db = float(self.opts.get('swell_db', 7.0))         # tracks lift at a swell's peak
         self._ents = {}
         self.end_t1 = self.dur
         # control curves (dB), CR rate
@@ -700,14 +787,14 @@ class Score:
 
     def bed_db(self, t):
         """Nominal level (LUFS) of the bed at time t, before normalisation."""
-        return REF_LUFS + SLOPE * (self.i_at(t, True) - 0.45)
+        return REF_LUFS + self.slope * (self.i_at(t, True) - 0.45)
 
     def g_at(self, t, rel):
         return float(db(self.bed_db(t) - NOM + rel))
 
     def curve_bed(self):
         tt = np.arange(self.nc) / CR
-        return REF_LUFS + SLOPE * (self.Is[np.minimum((tt * CR).astype(int), len(self.Is) - 1)] - 0.45) - NOM
+        return REF_LUFS + self.slope * (self.Is[np.minimum((tt * CR).astype(int), len(self.Is) - 1)] - 0.45) - NOM
 
     def to_audio(self, cdb):
         """dB control curve -> linear per-sample gain (float32), computed in chunks to keep memory low."""
@@ -789,7 +876,7 @@ class Score:
     # ----------------------------------------------------------------------------------------- tracks
     def render_tracks(self):
         bus = self.bus['tracks']
-        info = _track_info(self.bank)
+        info = _track_info(self.bank, {sg['slug'] for sg in self.plan['sections']})
         Ib = self.curve_bed()
         segs = self.plan['sections']
         for k, sg in enumerate(segs):
@@ -803,6 +890,8 @@ class Score:
                 a, fin = sg['via_silence'][1] - 0.05, 0.1
             else:
                 a, fin = s0 - 0.6, 2.6
+            if 'fin' in sg and not sg.get('via_silence'):
+                a, fin = s0 - 0.25 * sg['fin'], sg['fin']
             nxt = segs[k + 1] if k + 1 < len(segs) else None
             if nxt is None:
                 b, fout = min(self.dur, self.t_end + 14), 3.0
@@ -810,6 +899,10 @@ class Score:
                 b, fout = nxt['via_silence'][0] + 0.15, 0.15
             else:
                 b, fout = nxt['s0'] + 2.4, 3.0
+                if 'fin' in nxt:
+                    b, fout = nxt['s0'] + 0.75 * nxt['fin'], nxt['fin']
+            if 'fout' in sg and nxt is not None and not nxt.get('via_silence'):
+                b, fout = nxt['s0'] + 0.75 * sg['fout'], sg['fout']
             a = max(0.0, a)
             src_a = off + (a - s0)
             if src_a < 0:
@@ -835,7 +928,7 @@ class Score:
             l2 = np.asarray(v['L2']) - v['lufs']
             l2s = _smooth(l2, 2)
             li = np.interp(tau / 2.0, np.arange(len(l2s)), l2s)
-            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - FLATTEN * li - 1.5
+            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - FLATTEN * li - 1.5 + float(sg.get('gain_db', 0.0))
             gc = np.clip(gc, -30, 10)
             x = np.arange(len(seg)) * (CR / SR)
             g = db(np.interp(x, np.arange(len(gc)), gc)).astype(np.float32)
@@ -1024,6 +1117,8 @@ class Score:
         # doubled by a low string (celli) so the line moves over the drone
         lament = [0, -2, -4, -5, -4, -5, 3, 2, 0, 1, 0, -2, -4, -5, -7, -5]
         t, k = 4.0, 0
+        if not self.opts.get('lament', True):            # the mirror film: the Epidemic tracks carry the melody
+            t = self.t_end
         sils = [(e['t'] - 0.5, e['t'] + e['len'] + 0.3) for e in self.ev if e['type'] == 'silence']
         while t < self.t_end - 2:
             I = self.i_at(t, True)
@@ -1503,6 +1598,10 @@ class Score:
             self.gate_hits = np.minimum(self.gate_hits, gh)
             r = np.interp(tt, [t1 - 0.01, t1, t1 + 4.5], [0, -12.0, 0], left=0, right=0)
             self.reentry = np.minimum(self.reentry, r)
+        self.layer = {}                      # options.layers: {bus: [[t, dB], ...]} piecewise-linear gain curves
+        for k, pts in (self.opts.get('layers') or {}).items():
+            pts = sorted((float(a), float(b)) for a, b in pts)
+            self.layer[k] = np.interp(tt, [p[0] for p in pts], [p[1] for p in pts])
         for e in self.ev:
             if e['type'] == 'end':           # everything but the cadence fades out under it
                 i0 = int(e['t'] * CR)
@@ -1542,12 +1641,15 @@ class Score:
         # pre-reverb automation (ducks, re-entry, swell breathing, end fade); silences are gated after the reverb
         # v2.1: swells lift the whole bed (tracks +7, drones +3, string bed +4 dB at the peak; was tracks +4 only), so
         # the bed breathes in ~13 s rises of 8-12 LU like the references
-        pre = {'tracks': self.duck + self.reentry + 7.0 * self.swell + self.endfade,
+        pre = {'tracks': self.duck + self.reentry + self.swell_db * self.swell + self.endfade,
                'drones': self.duck + self.reentry + 3.0 * self.swell + self.endfade,
                'pulse': self.duck + self.reentry + self.endfade,
                'strings_bed': self.duck + self.reentry + 4.0 * self.swell + self.endfade,
                'melodic': np.maximum(self.duck, -8.0) + self.endfade,
                'strings_fx': self.endfade, 'hits': self.endfade}
+        for k, c in self.layer.items():
+            if k in pre:
+                pre[k] = pre[k] + c
         for k, c in pre.items():
             if not np.any(c):
                 continue
