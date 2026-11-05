@@ -125,5 +125,103 @@ def main(out, line1='WIPE', line2='IT', tag='STEP 8'):
     print('written', out)
 
 
+
+
+# ==================================================================================================== reference layout
+# The channel references (RUN NOW / DON'T MOVE / NEVER OPEN ...): the villain big, front-on and centred in a clean
+# white-bordered frame, glowing red eyes, the scared victims behind, the title's command on the red panel.
+def bust(cv, who, cx, cy, sc, expr, t=1.0, light=None, build=None):
+    a = C.Acting(who, seed=5, height=700.0, expr=expr); a._at = (cx, cy, sc)
+    if build: build(a)
+    Pz = a.at(t); Pz.t = t
+    C.draw_mode(Pen(cv), who, 'bust', [cx, cy, sc], Pz, light=light or 'moon', main='r')
+
+
+def cabin(cv, x, y, w, h):
+    """Cabin 7 at night behind her: plank wall, a moonlit window, the wall mirror with the lipstick steps, a red glow."""
+    cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=skia.GradientShader.MakeLinear(
+        [(0, y), (0, y + h)], [col('#26304a'), col('#161c2c'), col('#0b0e16')], [0, 0.55, 1])))
+    for k in range(12):
+        px = x + k * w / 11.0
+        cv.drawLine(px, y, px, y + h, paint('#0a0d15', 150, stroke=3))
+    # moonlit window, upper right
+    wx, wy = x + w - 150, y + 30
+    cv.drawRect(skia.Rect.MakeXYWH(wx, wy, 130, 150), paint('#9fb6e0'))
+    glow(cv, wx + 65, wy + 75, 150, '#9fc0ff', 70)
+    cv.drawLine(wx + 65, wy, wx + 65, wy + 150, paint('#1a2236', stroke=8))
+    cv.drawLine(wx, wy + 75, wx + 130, wy + 75, paint('#1a2236', stroke=8))
+    cv.drawRect(skia.Rect.MakeXYWH(wx, wy, 130, 150), paint('#1a2236', stroke=10))
+    # the wall mirror with seven lipstick steps and the glowing eighth, upper left
+    mx, my, mw, mh = x + 30, y + 34, 120, 150
+    cv.drawRect(skia.Rect.MakeXYWH(mx - 10, my - 10, mw + 20, mh + 20), paint('#3a2414'))
+    cv.drawRect(skia.Rect.MakeXYWH(mx, my, mw, mh), skia.Paint(Shader=skia.GradientShader.MakeLinear(
+        [(mx, my), (mx + mw, my + mh)], [col('#2b3346'), col('#0e1119')])))
+    lipstick_steps(cv, mx + 16, my + mh - 30, 12, 15, 7, a=255, lw=4.5)
+    e8 = P([(mx + 10, my + mh - 13), (mx + 34, my + mh - 13)], False)
+    cv.drawPath(e8, paint('#ff1030', 230, stroke=18, blur=6)); cv.drawPath(e8, paint('#ffe4e8', 255, stroke=3))
+    # red light behind her
+    glow(cv, x + w / 2, y + h * 0.42, w * 0.55, '#ff1838', 120)
+
+
+def victims(cv, x, y, w, h):
+    """Noah (13) and Tess behind her, scared (background layer: blurred and dimmed with the cabin)."""
+    bust(cv, 'noah13', x + 66, y + 330, 0.27, 'scream', light=dict(rim='#ff4060', rim_a=120, side=1))
+    bust(cv, 'tess', x + w - 66, y + 340, 0.27, 'fear', light=dict(rim='#ff4060', rim_a=120, side=-1))
+
+
+def main_ref(out, line1="DON'T", line2='WISH'):
+    os.makedirs(out, exist_ok=True)
+    set_render_size(1280 * S, 720 * S)
+    surf = skia.Surface(1280 * S, 720 * S); cv = surf.getCanvas(); cv.scale(S, S)
+    cv.drawRect(skia.Rect.MakeWH(1280, 720), paint('#ff1f2d'))
+    # the command: white over black, filling the panel
+    cx = 336
+    s1 = fit(line1, BLACK, 200, 590); s2 = fit(line2, BLACK, 200, 590)
+    y1, y2 = 250, 420
+    text(cv, line1, cx + 4, y1 + 6, s1, '#7a0a14', blur=4, a=110)
+    text(cv, line1, cx, y1, s1, '#ffffff')
+    text(cv, line2, cx + 4, y2 + 6, s2, '#8a0a14', blur=5, a=100)
+    text(cv, line2, cx, y2, s2, INK)
+    # clean frame: dark outline, white border, the picture
+    fx, fy, fw, fh = 682, 12, 586, 696
+    cv.drawPath(rr(fx, fy, fw, fh, 22), paint(INK))
+    cv.drawPath(rr(fx + 5, fy + 5, fw - 10, fh - 10, 18), paint('#ffffff'))
+    ix, iy, iw, ih = fx + 14, fy + 14, fw - 28, fh - 28
+    inner = rr(ix, iy, iw, ih, 12)
+    bgs = skia.Surface(1280 * S, 720 * S); bc = bgs.getCanvas(); bc.scale(S, S)
+    cabin(bc, ix, iy, iw, ih); victims(bc, ix, iy, iw, ih)
+    bga = bgs.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)
+    bga = cv2.GaussianBlur(bga, (0, 0), 1.1 * S)
+    bga[..., :3] = (bga[..., :3].astype(np.float32) * 0.82).astype(np.uint8)
+    bgi = skia.Image.fromarray(np.ascontiguousarray(bga), colorType=skia.kRGBA_8888_ColorType)
+    cv.save(); cv.clipPath(inner, doAntiAlias=True)
+    cv.save(); cv.resetMatrix(); cv.drawImage(bgi, 0, 0); cv.restore()
+    sp = C.CAST['queen']; keep = dict(sp)
+    sp.update(iris='#ff1a30', iris_r=0.5, iris_pupil=0.30, iris_glow=255, eye_glow='#ff2a3e', eye_glow_a=170)
+    try:
+        def qb(a):
+            _queen_build(3)(a); a.expr('queen_grin', 0)
+        bust(cv, 'queen', ix + iw / 2, iy + 318, 0.68, 'queen_grin', light=dict(rim='#ff4060', rim_a=170, side=-1, key=-0.1),
+             build=qb)
+    finally:
+        sp.clear(); sp.update(keep)
+    cv.drawRect(skia.Rect.MakeXYWH(ix, iy, iw, ih), skia.Paint(Shader=skia.GradientShader.MakeRadial(
+        (ix + iw / 2, iy + ih * 0.45), ih * 0.85, [col('#000000', 0), col('#000000', 0), col('#000000', 110)], [0, 0.66, 1])))
+    cv.restore()
+    cv.drawPath(inner, paint(INK, stroke=3))
+    # the arrow: from under the command, down and round, up into her face
+    arrow = P([(300, 470), (304, 610, 440, 618), (580, 626, 720, 500)], False)
+    cv.drawPath(arrow, paint(INK, stroke=46)); cv.drawPath(arrow, paint('#ffffff', stroke=30))
+    head = P([(828, 406), (694, 446), (772, 540)])
+    cv.drawPath(head, paint(INK, stroke=16)); cv.drawPath(head, paint('#ffffff'))
+    arr = surf.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3]
+    bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(os.path.join(out, 'thumbnail_4k.png'), bgr)
+    cv2.imwrite(os.path.join(out, 'thumbnail_1280.jpg'), cv2.resize(bgr, (1280, 720), interpolation=cv2.INTER_AREA),
+                [cv2.IMWRITE_JPEG_QUALITY, 95])
+    print('written', out)
+
+
 if __name__ == '__main__':
-    main(sys.argv[1], *sys.argv[2:5])
+    if len(sys.argv) > 2 and sys.argv[2] == '--ref': main_ref(sys.argv[1], *sys.argv[3:5])
+    else: main(sys.argv[1], *sys.argv[2:5])
