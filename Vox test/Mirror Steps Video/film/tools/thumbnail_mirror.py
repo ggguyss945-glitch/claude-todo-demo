@@ -137,6 +137,10 @@ def bust(cv, who, cx, cy, sc, expr, t=1.0, light=None, build=None):
     C.draw_mode(Pen(cv), who, 'bust', [cx, cy, sc], Pz, light=light or 'moon', main='r')
 
 
+V = dict(mirror=(30, 34, 120, 150, 12, 15, 4.5), window=(150, 30), noah=(66, 330, 0.27), tess=(66, 340, 0.27), queen=(318, 0.68))
+V1 = dict(mirror=(40, 70, 150, 190, 16, 20, 5.0), window=(170, 60), noah=(92, 440, 0.30), tess=(92, 430, 0.30), queen=(300, 0.80))
+
+
 def cabin(cv, x, y, w, h):
     """Cabin 7 at night behind her: plank wall, a moonlit window, the wall mirror with the lipstick steps, a red glow."""
     cv.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=skia.GradientShader.MakeLinear(
@@ -145,19 +149,20 @@ def cabin(cv, x, y, w, h):
         px = x + k * w / 11.0
         cv.drawLine(px, y, px, y + h, paint('#0a0d15', 150, stroke=3))
     # moonlit window, upper right
-    wx, wy = x + w - 150, y + 30
+    wx, wy = x + w - V['window'][0], y + V['window'][1]
     cv.drawRect(skia.Rect.MakeXYWH(wx, wy, 130, 150), paint('#9fb6e0'))
     glow(cv, wx + 65, wy + 75, 150, '#9fc0ff', 70)
     cv.drawLine(wx + 65, wy, wx + 65, wy + 150, paint('#1a2236', stroke=8))
     cv.drawLine(wx, wy + 75, wx + 130, wy + 75, paint('#1a2236', stroke=8))
     cv.drawRect(skia.Rect.MakeXYWH(wx, wy, 130, 150), paint('#1a2236', stroke=10))
     # the wall mirror with seven lipstick steps and the glowing eighth, upper left
-    mx, my, mw, mh = x + 30, y + 34, 120, 150
+    mx, my, mw, mh = x + V['mirror'][0], y + V['mirror'][1], V['mirror'][2], V['mirror'][3]
     cv.drawRect(skia.Rect.MakeXYWH(mx - 10, my - 10, mw + 20, mh + 20), paint('#3a2414'))
     cv.drawRect(skia.Rect.MakeXYWH(mx, my, mw, mh), skia.Paint(Shader=skia.GradientShader.MakeLinear(
         [(mx, my), (mx + mw, my + mh)], [col('#2b3346'), col('#0e1119')])))
-    lipstick_steps(cv, mx + 16, my + mh - 30, 12, 15, 7, a=255, lw=4.5)
-    e8 = P([(mx + 10, my + mh - 13), (mx + 34, my + mh - 13)], False)
+    sw_, sh_, lw_ = V['mirror'][4:]
+    lipstick_steps(cv, mx + sw_ + 4 * (sw_ > 12), my + mh - 34 + 4 * (sw_ <= 12), sw_, sh_, 7, a=255, lw=lw_)
+    e8 = P([(mx + 14 - 4 * (sw_ <= 12), my + mh - 14 + (sw_ <= 12)), (mx + 44 - 10 * (sw_ <= 12), my + mh - 14 + (sw_ <= 12))], False)
     cv.drawPath(e8, paint('#ff1030', 230, stroke=18, blur=6)); cv.drawPath(e8, paint('#ffe4e8', 255, stroke=3))
     # red light behind her
     glow(cv, x + w / 2, y + h * 0.42, w * 0.55, '#ff1838', 120)
@@ -165,8 +170,8 @@ def cabin(cv, x, y, w, h):
 
 def victims(cv, x, y, w, h):
     """Noah (13) and Tess behind her, scared (background layer: blurred and dimmed with the cabin)."""
-    bust(cv, 'noah13', x + 66, y + 330, 0.27, 'scream', light=dict(rim='#ff4060', rim_a=120, side=1))
-    bust(cv, 'tess', x + w - 66, y + 340, 0.27, 'fear', light=dict(rim='#ff4060', rim_a=120, side=-1))
+    bust(cv, 'noah13', x + V['noah'][0], y + V['noah'][1], V['noah'][2], 'scream', light=dict(rim='#ff4060', rim_a=120, side=1))
+    bust(cv, 'tess', x + w - V['tess'][0], y + V['tess'][1], V['tess'][2], 'fear', light=dict(rim='#ff4060', rim_a=120, side=-1))
 
 
 def main_ref(out, line1="DON'T", line2='WISH'):
@@ -201,7 +206,7 @@ def main_ref(out, line1="DON'T", line2='WISH'):
     try:
         def qb(a):
             _queen_build(3)(a); a.expr('queen_grin', 0)
-        bust(cv, 'queen', ix + iw / 2, iy + 318, 0.68, 'queen_grin', light=dict(rim='#ff4060', rim_a=170, side=-1, key=-0.1),
+        bust(cv, 'queen', ix + iw / 2, iy + V['queen'][0], V['queen'][1], 'queen_grin', light=dict(rim='#ff4060', rim_a=170, side=-1, key=-0.1),
              build=qb)
     finally:
         sp.clear(); sp.update(keep)
@@ -223,5 +228,7 @@ def main_ref(out, line1="DON'T", line2='WISH'):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 2 and sys.argv[2] == '--ref': main_ref(sys.argv[1], *sys.argv[3:5])
+    if len(sys.argv) > 2 and sys.argv[2] in ('--ref', '--ref1'):
+        if sys.argv[2] == '--ref1': V.update(V1)
+        main_ref(sys.argv[1], *sys.argv[3:5])
     else: main(sys.argv[1], *sys.argv[2:5])
