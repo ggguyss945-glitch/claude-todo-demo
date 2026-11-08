@@ -130,14 +130,16 @@ function shading(F, o = {}) {
   }
   if (isLeg(F) && F.inner) { const ag = g.createLinearGradient(0, 0, 0, 0.7); ag.addColorStop(0, rgba('#1a0814', 0.25)); ag.addColorStop(1, rgba('#1a0814', 0)); g.fillStyle = ag; g.fillRect(-1, 0, F.w + 2, 0.7); }
   // soft diagonal folds (alpha 0.15-0.25)
-  const r = F.rng, n = o.folds ?? (isTorso(F) ? 5 : 3);
+  const r = F.rng, n = o.folds ?? (isTorso(F) ? 4 : 2);
+  g.save(); g.filter = `blur(${Math.round(F.ppu * 0.018)}px)`;
   for (let i = 0; i < n; i++) {
     const x = r() * F.w, y = 0.3 + r() * (F.h - 0.6), L = 0.25 + r() * 0.35, a = (isArm(F) || isLeg(F) ? 0.15 : 0.6) * (r() < 0.5 ? -1 : 1) + (r() - 0.5) * 0.4;
-    for (const [dx, col, al] of [[0, '#1a0814', 0.12 + r() * 0.1], [0.025, '#ffffff', 0.06]]) {
-      g.strokeStyle = rgba(col, al); g.lineWidth = 0.03 + r() * 0.02; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(x + dx, y); g.quadraticCurveTo(x + Math.sin(a) * L * 0.5 + 0.04 + dx, y + L * 0.5, x + Math.sin(a) * L + dx, y + Math.cos(a) * L); g.stroke();
+    for (const [dx, col, al] of [[0, '#1a0814', 0.13 + r() * 0.08], [0.035, '#ffffff', 0.05]]) {
+      g.strokeStyle = rgba(col, al); g.lineWidth = 0.04 + r() * 0.02; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x + dx, y); g.quadraticCurveTo(x + Math.sin(a) * L * 0.5 + 0.02 + dx, y + L * 0.5, x + Math.sin(a) * L + dx, y + Math.cos(a) * L); g.stroke();
     }
   }
+  g.restore();
 }
 
 // ---------------- shirts ----------------
@@ -315,7 +317,7 @@ export const OUTFITS = {
   grandpaFlashback: { shirt: { style: 'cardigan', color: '#7a4a2a', trim: '#5e381f', buttons: '#d8c09a', inner: { color: '#efe6d2', buttons: '#ffffff' } },
     pants: { style: 'trousers', color: '#5c5a48', belt: '#2a1a10', shoes: { style: 'slippers', color: '#8a2a2a', pattern: { type: 'tartan', color: '#1f3a2a', color2: '#e8c05a', period: 0.22 }, h: 0.26 } } },
   grandmaCardigan: { shirt: { style: 'cardigan', color: '#c86f93', trim: '#a8587a', buttons: '#f4ead8', open: true, necklace: '#f3eee6', inner: { color: '#f4efe8', pattern: { type: 'floral', color: '#b9a2e0', color2: '#f2cf6a', density: 12, size: 0.05 }, collar: true } },
-    pants: { style: 'skirt', color: '#6e5a8c', skirtLen: 1.25, stockings: '#e2b9a0', shoes: { style: 'slippers', color: '#b05a7a', h: 0.24 } } },
+    pants: { style: 'skirt', color: '#6e5a8c', skirtLen: 1.42, stockings: '#e2b9a0', shoes: { style: 'slippers', color: '#b05a7a', h: 0.24 } } },
   momSweater: { shirt: { style: 'sweater', color: '#5e8c5a', trim: '#4c7448' }, pants: { style: 'jeans', color: '#4a5a86', shoes: { style: 'shoes', color: '#2a2024' } } },
   dadPlaid: { shirt: { style: 'shirt', color: '#a8231e', pattern: { type: 'plaid', color: '#1a0c10', period: 0.36, alpha: 0.62 }, buttons: '#2a1a1a' }, pants: { style: 'jeans', color: '#3a4060', shoes: { style: 'shoes', color: '#4a3020' } } },
   plainKid: { shirt: { style: 'tee', color: '#2d8a05' }, pants: { style: 'trousers', color: '#1e1e26', shoes: { style: 'sneakers', color: '#1e1e26', color2: '#ffffff' } } },

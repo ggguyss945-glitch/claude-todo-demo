@@ -10,7 +10,7 @@ import { THREE, moonTex, persistTree, STUD } from './kitlib.js';
 // Gradient stops are [elevation -1..1, '#hex'] (texture colour, before the grade).
 export const SKIES = {
   // TF galaxy night: black zenith, deep-violet horizon, magenta/purple nebula wisps, dense small stars. Sky luma 0-10 graded.
-  galaxy: { stops: [[-1, '#000000'], [-0.02, '#0a0722'], [0.08, '#07051a'], [0.4, '#030110'], [1, '#000002']], stars: 3200, nebula: 0.3, nebulaColors: ['#46134d', '#3a2988'], seed: 21 },
+  galaxy: { stops: [[-1, '#000000'], [-0.02, '#0a0722'], [0.06, '#060418'], [0.22, '#020108'], [0.5, '#000001'], [1, '#000000']], stars: 3200, nebula: 0.28, nebulaColors: ['#46134d', '#3a2988'], seed: 21 },
   // AW/PN void: pure black with small grey-white stars (no nebula).
   void: { stops: [[-1, '#000000'], [0, '#020208'], [1, '#000000']], stars: 2600, nebula: 0, seed: 22 },
   // PN dusk (cool): teal-grey zenith to brown-orange horizon.

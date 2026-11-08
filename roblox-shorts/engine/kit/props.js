@@ -89,8 +89,8 @@ const _tulipCup = (() => { let g = null; return () => g || (g = new THREE.LatheG
 const _fixedRng = makeRng(7);
 export function addTulip(P, x, z, { color = '#d8283a', h = 1.05, lean = [0, 0], r = _fixedRng } = {}) {
   P.cyl('stem', 0.035, 0.045, h, 5, [x + lean[0] * h * 0.5, h / 2, z + lean[1] * h * 0.5], [lean[1], 0, -lean[0]]);
-  P.add('tulip:' + color, _tulipCup().clone(), [x + lean[0] * h, h - 0.05, z + lean[1] * h], [0, r() * PI, 0], [1.25, 1.25, 1.25]);
-  for (const s of [-1, 1]) P.add('stem:#356d2c', new THREE.SphereGeometry(1, 6, 4), [x + s * 0.12, 0.32, z], [0, r() * PI, s * 0.35], [0.1, 0.42, 0.035]);
+  P.add('tulip:' + color, _tulipCup().clone(), [x + lean[0] * h, h - 0.05, z + lean[1] * h], [0, r() * PI, 0], [1.05, 1.05, 1.05]);
+  for (const s of [-1, 1]) P.add('stem:#356d2c', new THREE.SphereGeometry(1, 6, 4), [x + s * 0.1, 0.25, z], [0, r() * PI, s * 0.35], [0.09, 0.32, 0.03]);
 }
 // Daisy / small lawn flower (white petals, yellow centre): 0.35 tall, cheap.
 export function addDaisy(P, x, z, { color = '#f4f0ea', centre = '#f2c230', r = _fixedRng } = {}) {
@@ -110,7 +110,7 @@ export function addFlowerbed(P, { length = 12, depth = 3, colors = ['#d8283a', '
   for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
     const x = -length / 2 + 0.5 + ((length - 1) * (i + 0.5 * (j % 2))) / cols + (r() - 0.5) * 0.25; const z = -depth / 2 + 0.5 + ((depth - 1) * (j + 0.5)) / rows + (r() - 0.5) * 0.25;
     if (x > length / 2 - 0.3 || gaps.some(([gx, gz, gr]) => (x - gx) ** 2 + (z - gz) ** 2 < gr * gr)) continue;
-    P.push(trs([0, 0.35, 0])); addTulip(P, x, z, { color: pick(r, colors), h: 0.85 + r() * 0.4, lean: [(r() - 0.5) * 0.12, (r() - 0.5) * 0.12], r }); P.pop();
+    P.push(trs([0, 0.35, 0])); addTulip(P, x, z, { color: pick(r, colors), h: 0.55 + r() * 0.3, lean: [(r() - 0.5) * 0.12, (r() - 0.5) * 0.12], r }); P.pop();
   }
   for (let b = 0; b < bushes; b++) { const x = bushes === 1 ? length / 2 - 1.8 : -length / 2 + 1.4 + ((length - 2.8) * b) / (bushes - 1); P.push(trs([x, 0.3, -depth * 0.1])); addBush(P, { radius: 1.2 + r() * 0.3, color: bushColor, blossom, seed: seed * 7 + b }); P.pop(); }
 }
@@ -151,22 +151,25 @@ export function addLeafyTree(P, { height = 20, seed = 1, color = '#2f5e2a' } = {
 
 // Grass blades for close-ups: one InstancedMesh of tapered, bent blades with per-instance colour (studs).
 // area [w, d] centred at origin; avoid: [[x, z, r], ...] circles kept clear (paths, flowerbeds, the gnome's feet).
-export function grassBlades({ area = [16, 12], count = 6000, height = [0.3, 0.7], color = '#4f9a3e', dark = '#2a5a24', light = '#86c062', seed = 1, avoid = [] } = {}) {
+export function grassBlades({ area = [16, 12], count = 6000, height = [0.18, 0.42], color = '#4f8a44', dark = '#3b6e33', light = '#76a860', seed = 1, avoid = [], feather = 0.7 } = {}) {
   const key = 'blades' + JSON.stringify(arguments[0] || {}); if (_bladeCache.has(key)) return _bladeCache.get(key).clone();
   const g = new THREE.BufferGeometry();
   // 2-segment blade: base width 0.08, tip at y = 1, bent forward along +z by the instance rotation
-  const P = [-0.05, 0, 0, 0.05, 0, 0, -0.03, 0.5, 0.06, 0.03, 0.5, 0.06, 0, 1, 0.2];
-  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4]);
-  g.setAttribute('color', new THREE.Float32BufferAttribute([0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 1.15, 1.15, 1.15], 3)); g.computeVertexNormals();
-  const n = g.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0.25); // up-facing normals: blades shade like the lawn, not like cards
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide });
+  // both windings (FrontSide): a DoubleSide material would flip the normal on back faces and render them black
+  const P = [-0.032, 0, 0, 0.032, 0, 0, -0.02, 0.5, 0.06, 0.02, 0.5, 0.06, 0, 1, 0.2];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4, 0, 2, 1, 1, 2, 3, 2, 4, 3]);
+  g.setAttribute('color', new THREE.Float32BufferAttribute([0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 1.12, 1.12, 1.12], 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(Array.from({ length: 5 }, () => [0, 0.97, 0.24]).flat(), 3)); // up-facing: blades shade like the lawn
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
   const im = new THREE.InstancedMesh(g, mat, count); im.name = 'grassBlades';
   const r = makeRng(hash32('blades', seed)); const m = new THREE.Matrix4(); const c = new THREE.Color(); const C = [new THREE.Color(dark), new THREE.Color(color), new THREE.Color(light)];
   let k = 0, tries = 0;
   while (k < count && tries < count * 4) {
     tries++; const x = (r() - 0.5) * area[0], z = (r() - 0.5) * area[1];
     if (avoid.some(([ax, az, ar]) => (x - ax) ** 2 + (z - az) ** 2 < ar * ar)) continue;
-    const h = height[0] + (height[1] - height[0]) * r() * r(); const w = 0.8 + r() * 0.8;
+    // feathered squircle patch: density and blade height fall off toward the edge (no visible patch border)
+    const e = Math.pow(Math.pow(Math.abs((2 * x) / area[0]), 4) + Math.pow(Math.abs((2 * z) / area[1]), 4), 0.25); const keep = 1 - Math.min(1, Math.max(0, (e - feather) / (1 - feather))); if (r() > keep * keep) continue;
+    const h = (height[0] + (height[1] - height[0]) * r() * r()) * (0.45 + 0.55 * keep); const w = 0.8 + r() * 0.8;
     m.compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromEuler(new THREE.Euler((r() - 0.5) * 0.5, r() * PI * 2, (r() - 0.5) * 0.4, 'YXZ')), new THREE.Vector3(w, h, w));
     im.setMatrixAt(k, m); const t = r(); c.copy(t < 0.5 ? C[0] : C[1]).lerp(t < 0.5 ? C[1] : C[2], t < 0.5 ? t * 2 : (t - 0.5) * 2); im.setColorAt(k, c); k++;
   }
@@ -185,11 +188,13 @@ export function addSteppingStones(P, pts, { size = 1.6, step = 2.2, seed = 1 } =
       const u = d / L, x = ax + (bx - ax) * u + (r() - 0.5) * 0.3, z = az + (bz - az) * u + (r() - 0.5) * 0.3; const rad = size / 2 * (0.85 + r() * 0.3);
       const g = new THREE.CylinderGeometry(1, 1.04, 1, 9); const p = g.attributes.position; const jit = Array.from({ length: 10 }, () => 0.82 + r() * 0.3);
       for (let k = 0; k < p.count; k++) { const a = Math.atan2(p.getZ(k), p.getX(k)); const rr = Math.hypot(p.getX(k), p.getZ(k)); if (rr > 0.01) { const j = jit[Math.round(((a + PI) / (2 * PI)) * 9) % 9]; p.setX(k, p.getX(k) * j); p.setZ(k, p.getZ(k) * j * 0.85); } }
-      g.computeVertexNormals(); g.scale(rad, 0.22, rad); g.rotateY(r() * PI); g.translate(x, 0.08, z); planarUV(g, 3); P.add('flag:#a39d94', g);
+      g.computeVertexNormals(); g.scale(rad, 0.16, rad); g.rotateY(r() * PI); g.translate(x, 0.02, z); planarUV(g, 3); P.add('flag:#8f8981', g);
       carry = d + step - L;
     }
   }
 }
+// Worn dirt patch on a lawn: flat decal (dirt texture, soft noisy alpha edge). size in studs.
+export function addDirtPatch(P, x, z, { size = 3, seed = 1, rot = 0 } = {}) { P.add('dirtPatch', planarUV(new THREE.PlaneGeometry(size, size * 0.7).rotateX(-PI / 2), 4), [x, 0.015 + (seed % 7) * 0.002, z], [0, rot, 0]); }
 // Wall lantern (porch light): black box lantern on a bracket; glass emissive (separate Mesh, returned).
 export function addWallLantern(P, { glassKey = 'emissive:#ffc98a:3' } = {}) {
   const k = 'black:#16161a';
@@ -209,12 +214,23 @@ export function addRockingChair(P, { color = '#7a4a28' } = {}) {
   // rockers: arcs of short boxes in the y-z plane (centre of curvature above the chair)
   for (const s of [-1, 1]) { const R = 4.6, cy = R + 0.12, n = 6, a0 = -0.38, a1 = 0.38; for (let i = 0; i < n; i++) { const a = a0 + ((a1 - a0) * (i + 0.5)) / n; P.box(k, 0.2, 0.22, (2 * R * (a1 - a0)) / n / 2 + 0.05, [s * 0.95, cy - R * Math.cos(a), 0.1 + R * Math.sin(a)], [-a, 0, 0]); } }
 }
-// Striped deck chair (EP01 frame 1 / epilogue): wood frame, striped canvas sling.
-export function addDeckChair(P, { stripes = ['#e8e2d6', '#3f74c8'], frame = '#a9733e' } = {}) {
-  const k = 'wood:' + frame;
-  for (const s of [-1, 1]) { P.box(k, 0.18, 0.18, 4.6, [s * 1.1, 1.3, 0.2], [0.5, 0, 0]); P.box(k, 0.18, 0.18, 3.6, [s * 1.0, 1.6, -0.6], [-0.95, 0, 0]); P.box(k, 0.16, 0.16, 2.0, [s * 1.12, 1.9, 0.8], [0, 0, 0]); }
-  P.box(k, 2.4, 0.18, 0.18, [0, 0.12, 2.0]); P.box(k, 2.2, 0.18, 0.18, [0, 3.0, -1.6]);
-  const n = 7; for (let i = 0; i < n; i++) P.box('plastic:' + stripes[i % 2], 2.0 / n, 0.06, 4.2, [-1.0 + (i + 0.5) * (2.0 / n), 1.75, 0.0], [0.62, 0, 0]);
+// Striped deck chair (EP01 frame 1 / epilogue): folding wood frame + striped canvas sling. Faces +Z (sitter looks +Z).
+// Seat low point ~1.1 studs, back top 3.7: an R6 avatar (5.2) or a 2-stud gnome both read sitting in it.
+export function addDeckChair(P, { stripes = ['#ece4d4', '#3f74c8'], frame = '#a9733e', n = 7 } = {}) {
+  const k = 'wood:' + frame, W = 1.15;
+  for (const s of [-1, 1]) {
+    P.bar(k, [s * W, 0, 1.6], [s * W, 3.7, -1.6], 0.2, 0.16);          // main side rails (front foot -> back top)
+    P.bar(k, [s * (W - 0.22), 0, -2.0], [s * (W - 0.22), 1.75, 0.25], 0.18, 0.14); // rear legs
+    P.bar(k, [s * W, 1.35, 0.95], [s * W, 1.25, 0.15], 0.16, 0.12);     // seat-front bracket
+  }
+  P.bar(k, [-W - 0.1, 0.25, 1.38], [W + 0.1, 0.25, 1.38], 0.16, 0.16); P.bar(k, [-W - 0.1, 3.62, -1.5], [W + 0.1, 3.62, -1.5], 0.18, 0.18);
+  P.bar(k, [-W, 1.38, 0.95], [W, 1.38, 0.95], 0.16, 0.16); P.bar(k, [-W + 0.2, 0.15, -1.95], [W - 0.2, 0.15, -1.95], 0.14, 0.14);
+  // sling: back panel (top bar -> sag point) and seat panel (sag point -> front bar), striped across X
+  const top = [3.5, -1.42], sag = [1.05, 0.05], front = [1.32, 0.9]; const sw = (2 * W - 0.2) / n;
+  for (let i = 0; i < n; i++) {
+    const x = -W + 0.1 + (i + 0.5) * sw, key = 'plastic:' + stripes[i % stripes.length];
+    P.bar(key, [x, top[0], top[1]], [x, sag[0], sag[1]], sw + 0.01, 0.06); P.bar(key, [x, sag[0], sag[1]], [x, front[0], front[1]], sw + 0.01, 0.06);
+  }
 }
 // Hose reel with a green coiled hose.
 export function addHoseReel(P, { color = '#2f8a3a' } = {}) {

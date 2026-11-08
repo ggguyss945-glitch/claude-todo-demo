@@ -9,7 +9,7 @@
 // Layout (studs): road along X, centre z = 0, top y = -0.4; kerbs to y = 0; sidewalks 6 wide; side A lots front line at
 // z = -zFront (houses face +Z), side B mirrored (houses face -Z). Lot frame: origin at the property line (fence) centre,
 // +Z toward the street, house front wall at z = -lawnDepth.
-import { THREE, Parts, M, texMat, plaqueTex, prismGeo, boxUV, trs, makeRng, hash32, persistTree, pick, range, shade, STUD } from './kitlib.js';
+import { THREE, Parts, M, texMat, plaqueTex, prismGeo, boxUV, trs, makeRng, hash32, persistTree, pick, range, shade, STUD, glowSpriteMat, poolMat, decalQuad } from './kitlib.js';
 import * as P_ from './props.js';
 
 const PI = Math.PI;
@@ -101,7 +101,7 @@ export function addHouse(P, o = {}) {
   }
   // door
   const dx = H.doorX; texMat('plaque:' + H.number, plaqueTex(H.number));
-  P.add('door:' + H.doorColor, new THREE.PlaneGeometry(4, 7.5), [dx, F + 3.75, 0.1]); P.box('doorEdge:' + H.doorColor, 4.1, 7.6, 0.2, [dx, F + 3.8, 0.0]);
+  P.add('door:' + H.doorColor, new THREE.PlaneGeometry(4, 7.5), [dx, F + 3.75, 0.13]); P.box('doorEdge:' + H.doorColor, 4.1, 7.6, 0.16, [dx, F + 3.8, 0.0]);
   P.box(tk, 0.65, 8.3, 0.4, [dx - 2.35, F + 4.15, 0.2]); P.box(tk, 0.65, 8.3, 0.4, [dx + 2.35, F + 4.15, 0.2]); P.box(tk, 6.0, 0.75, 0.5, [dx, F + 8.3, 0.25]);
   P.add('brass', new THREE.SphereGeometry(0.2, 10, 8), [dx + 1.45, F + 3.6, 0.32]); P.box('brass', 0.3, 0.9, 0.08, [dx + 1.45, F + 3.6, 0.15]);
   P.add('plaque:' + H.number, new THREE.PlaneGeometry(1.2, 0.9), [dx + 3.6, F + 6.2, 0.12]); P.box('black:#1d3a2c', 1.3, 1.0, 0.1, [dx + 3.6, F + 6.2, 0.05]);
@@ -115,12 +115,16 @@ export function addHouse(P, o = {}) {
     const porchTop = Math.min(F + 9.6, wallTop - 0.3), beamY = porchTop - 1.7;
     P.box('porch:' + H.deck, pw, 0.5, pd, [pcx, F - 0.25, pd / 2]); P.box('stone:#8d857b', pw - 0.2, F - 0.5, pd - 0.3, [pcx, (F - 0.5) / 2, pd / 2 - 0.1]);
     P.box(tk, pw + 0.1, 0.35, 0.3, [pcx, F - 0.2, pd + 0.05]);
-    const nCol = H.porch === 'full' ? Math.max(2, Math.round(pw / 7) + 1) : 2; const colXs = [];
-    for (let i = 0; i < nCol; i++) colXs.push(px0 + 0.6 + ((pw - 1.2) * i) / (nCol - 1));
+    // columns: porch corners + both sides of the step opening, then fill gaps wider than ~9 studs
+    let colXs = [px0 + 0.6, px1 - 0.6];
+    if (H.porch === 'full') { const a = dx - stepW / 2 - 0.9, b = dx + stepW / 2 + 0.9; if (a > px0 + 3) colXs.push(a); if (b < px1 - 3) colXs.push(b); }
+    colXs.sort((p, q) => p - q);
+    for (let i = 0; i < colXs.length - 1; i++) { const gap = colXs[i + 1] - colXs[i]; if (gap > 9.5 && H.porch === 'full') { const k = Math.round(gap / 7); for (let j = 1; j < k; j++) colXs.push(colXs[i] + (gap * j) / k); } }
+    colXs.sort((p, q) => p - q);
     for (const x of colXs) { P.box(tk, 1.25, 0.6, 1.25, [x, F + 0.3, pd - 0.65]); P.box(tk, 0.85, beamY - F - 1.1, 0.85, [x, (F + 0.6 + beamY - 0.5) / 2, pd - 0.65]); P.box(tk, 1.25, 0.5, 1.25, [x, beamY - 0.25, pd - 0.65]); }
     P.box(tk, pw, 1.0, 1.0, [pcx, beamY + 0.5, pd - 0.65]);
     for (const x of [px0 + 0.6, px1 - 0.6]) P.box(tk, 0.9, 1.0, pd, [x, beamY + 0.5, pd / 2]);
-    P.box(tk, pw, 0.2, pd, [pcx, beamY + 1.0, pd / 2]); // ceiling
+    P.box('plaster:#e9e6df', pw, 0.2, pd, [pcx, beamY + 1.0, pd / 2]); // ceiling
     if (H.porch === 'full') { // shed roof from the wall to the beam
       const L = Math.hypot(pd + 1.0, porchTop - (beamY + 1.0)), b = Math.atan2(porchTop - (beamY + 1.0), pd + 1.0);
       P.box(roofKey, pw + 1.2, 0.45, L, [pcx, (porchTop + beamY + 1.0) / 2 + 0.3, (pd + 1.0) / 2], [b, 0, 0]);
@@ -169,6 +173,8 @@ export function addLot(P, o = {}, house = {}) {
   const toLot = (p) => [p[0] + hx, p[1], p[2] + hz];
   info.extras.forEach((m) => out.extras.push(m)); // already in the lot frame (built with P's transform stack)
   out.lanterns = info.lanterns; out.house = info;
+  for (const lp of info.lanterns) { const h = new THREE.Sprite(glowSpriteMat('lantern', { color: '#ffc98a', intensity: 1.2, opacity: 0.55 })); h.scale.set(2.6, 2.6, 1); h.position.set(...lp); h.name = 'lanternHalo'; out.extras.push(h); }
+  for (const w of info.windows) if (w.lit && w.face === 'front') { const h = new THREE.Sprite(glowSpriteMat('window:' + w.tone, { color: w.tone === 'pink' ? '#f7a8d0' : '#ffcf90', intensity: 0.8, opacity: 0.16, falloff: 1.8 })); h.scale.set(8.5, 9.5, 1); h.position.set(w.x + hx, w.y, hz + 0.7); h.name = 'winGlow'; out.extras.push(h); }
   out.windows = info.windows.map((w) => ({ face: w.face, lit: w.lit, tone: w.tone, pos: w.face === 'front' ? toLot([w.x, w.y, 0.1]) : toLot([(w.face === 'left' ? -1 : 1) * (info.H.width / 2 + 0.1), w.y, w.x]) }));
   const doorX = hx + info.porch.stepX, stepsZ = hz + info.porch.stepsEnd;
   // fence + gate (aligned with the path)
@@ -180,7 +186,7 @@ export function addLot(P, o = {}, house = {}) {
   // flowerbeds under the front ground-floor windows that are not behind a porch
   const beds = [];
   if (L.beds) for (const w of info.windows.filter((w) => w.face === 'front' && w.y < info.F + 10)) {
-    const x = hx + w.x; if (info.porch.depth > 0 && x > hx + info.porch.x0 - 1 && x < hx + info.porch.x1 + 1) continue;
+    const x = hx + w.x; if (info.porch.depth > 0 && x > hx + info.porch.x0 && x < hx + info.porch.x1) continue;
     const len = 9, dep = 3.2, bz = hz + info.porch.depth * 0 + 0.6 + dep / 2;
     P.push(trs([x, 0, bz]));
     if (L.detail === 'low') { P.box('dirt', len, 0.3, dep, [0, 0.15, 0]); P_.addBush(P, { radius: 1.4, seed: L.seed * 5 + beds.length, blossom: pick(r, PALETTE.blossom), blossoms: 10 }); }
@@ -202,6 +208,8 @@ export function addLot(P, o = {}, house = {}) {
     else if (e && e.board) { P.push(trs([gateX - 6.5, 0, -2.2])); out.extras.push(P_.addAgentBoard(P, e.board)); P.pop(); }
     else if (e && e.sign) { P.push(trs([gateX + 7, 0, -2.0])); out.extras.push(P_.addPostSign(P, e.sign)); P.pop(); }
   }
+  // worn dirt patches on the lawn (VISUAL_BIBLE §4.3 'lawn with dirt patches')
+  for (let i = 0; i < (L.detail === 'low' ? 1 : 3); i++) { const x = (r() - 0.5) * (L.lotW - 6), z = hz * (0.25 + 0.6 * r()); if (Math.abs(x - gateX) < 2.5) continue; P_.addDirtPatch(P, x, z, { size: 2 + r() * 2.5, seed: i + 1, rot: r() * PI }); }
   // back-yard pines (dark silhouettes against the sky)
   for (let i = 0; i < L.backTrees; i++) { P.push(trs([hx + (r() - 0.5) * L.lotW * 0.8, 0, hz - info.H.depth - 6 - r() * 10])); P_.addPine(P, { height: 24 + r() * 8, seed: L.seed * 13 + i }); P.pop(); }
   // hero close-up detail: blades and daisies are added by the street builder (instanced); record the area
@@ -209,7 +217,8 @@ export function addLot(P, o = {}, house = {}) {
   const S = (name, kind, x, y, z, yaw, extra = {}) => out.slots.push({ name, kind, local: [x, y, z], yaw, ...extra });
   beds.forEach((b, i) => S('bed' + i, 'gnome', b.x + (i ? 0.8 : -0.8), 0.35, b.z - 0.2, PI, { onBed: true, window: i }));
   beds.forEach((b, i) => S('bedFront' + i, 'gnome', b.x, 0, b.z + b.dep / 2 + 1.3, PI, { window: i }));
-  const lawnSpots = [[-L.lotW * 0.27, hz * 0.45], [L.lotW * 0.24, hz * 0.55], [gateX - 3.2, -3.2], [L.lotW * 0.3, -4.5]];
+  // lawn spots stay within ~8 studs of the path so they fit a 9:16 frame (43 deg horizontal at 70 deg vertical)
+  const lawnSpots = [[gateX - 4.5, hz * 0.45], [gateX + 4.5, hz * 0.62], [gateX - 2.8, -4.2], [gateX + 3.5, -6.5]];
   lawnSpots.forEach(([x, z], i) => S('lawn' + i, 'gnome', x, 0, z, PI + (r() - 0.5) * 0.08));
   S('porchDoor', 'char', doorX, info.F, hz + 2.4, 0); S('porchSteps', 'char', doorX, 0, stepsZ + 1.2, 0);
   S('porchSide', 'char', hx + (info.porch.x0 + info.porch.x1) / 2 + (info.porch.x1 - info.porch.x0) * 0.3, info.F, hz + info.porch.depth * 0.55, 0.3);
@@ -261,7 +270,7 @@ function streetFactory(o) {
   }
   for (let x = -L / 2 + 4; x < L / 2; x += 8) G.box('line:#e8b422', 3, 0.04, 0.32, [x, -0.38, 0]);
   for (const s of [-1, 1]) for (let x = -L / 2 + 6; x < L / 2; x += 12) G.box('asphalt:#3a3a42', 0.15, 0.03, 0.6, [x, -0.385, s * (o.roadW / 2 - 0.4)]); // gutter seams
-  root.add(persistTree(G.build(M, { name: 'ground' })));
+  root.add(persistTree(G.build(M, { name: 'ground', receive: true })));
   // ---- lots
   const sides = o.sideB ? ['A', 'B'] : ['A'];
   for (const side of sides) for (let i = 0; i < n; i++) {
@@ -271,7 +280,7 @@ function streetFactory(o) {
     const ov = o.houses[id] || {}; const heroOv = isHero ? o.hero : {};
     const house = { ...st.house, ...(ov.house || {}), ...(heroOv.house || {}) }; const lot = { ...st.lot, ...(ov.lot || {}), ...(heroOv.lot || {}), detail, seed: hash32(o.seed, id) % 10007, lotW: o.lotW, lawnDepth: o.lawnDepth };
     const P = new Parts(); const info = addLot(P, lot, house);
-    const g = persistTree(P.build(M, { name: 'lot_' + id })); info.extras.forEach((e) => { persistTree(e); g.add(e); });
+    const g = persistTree(P.build(M, { name: 'lot_' + id, cast: true, receive: true })); // shadows only cost when a preset adds a shadowed sun (dusk/dawn/day) info.extras.forEach((e) => { persistTree(e); g.add(e); });
     g.children.forEach((c) => { if (c.name === 'gate') c.name = 'gate_' + id; if (c.name === 'lanternGlass') c.name = 'lantern_' + id; });
     const yaw = side === 'A' ? 0 : PI, ox = xLot(i), oz = side === 'A' ? -zFront : zFront; g.position.set(ox, 0, oz); g.rotation.y = yaw; root.add(g);
     const toW = (p) => { const c = Math.cos(yaw), s = Math.sin(yaw); return [(ox + p[0] * c + p[2] * s) * STUD, p[1] * STUD, (oz - p[0] * s + p[2] * c) * STUD]; };
@@ -281,25 +290,32 @@ function streetFactory(o) {
     meta.lots.push({ id, side, index: i, origin: toW([0, 0, 0]), yaw, houseFront: toW([0, 0, -o.lawnDepth]), door: toW([info.doorX, info.F, -o.lawnDepth + 0.3]), steps: toW([info.doorX, 0, info.stepsZ]), gate: toW([info.gateX, 0, -0.4]), deckY: info.F * STUD, ridge: info.ridge * STUD, beds: info.beds.map((b) => ({ pos: toW([b.x, 0.35, b.z]), len: b.len * STUD, dep: b.dep * STUD })), hero: isHero });
     // hero close-up detail: instanced grass blades + daisies around the first bed and the path
     if (isHero && o.hero.closeup) {
-      const b = info.beds[0] || { x: info.doorX - 8, z: -o.lawnDepth + 2.2, len: 9, dep: 3.2 };
-      const cx = b.x + 2, cz = b.z + 6.5;
-      const blades = P_.grassBlades({ area: [26, 16], count: 9000, seed: hash32(o.seed, 'blades') % 997 });
+      // blades over the whole front lawn of the hero lot (fence to house), feathered at the edges
+      const cx = 0, cz = -o.lawnDepth / 2;
+      const blades = P_.grassBlades({ area: [o.lotW + 2, o.lawnDepth + 2], count: 19000, seed: hash32(o.seed, 'blades') % 997, feather: 0.8 });
       const bl = new THREE.Group(); bl.add(blades); bl.position.set(cx, 0, cz); bl.name = 'heroBlades';
       // keep blades off the flowerbeds, the path and the house
       cullBlades(blades, (x, z) => { const wx = x + cx, wz = z + cz; return info.beds.some((bb) => Math.abs(wx - bb.x) < bb.len / 2 + 0.5 && Math.abs(wz - bb.z) < bb.dep / 2 + 0.5) || (Math.abs(wx - info.gateX) < 1.6 && wz > info.stepsZ) || wz < -o.lawnDepth + 0.3; });
       g.add(bl);
       const D = new Parts(); const dr = makeRng(hash32(o.seed, 'daisy'));
-      for (let k = 0; k < 70; k++) { const x = cx + (dr() - 0.5) * 26, z = cz + (dr() - 0.5) * 16; if (info.beds.some((bb) => Math.abs(x - bb.x) < bb.len / 2 + 0.6 && Math.abs(z - bb.z) < bb.dep / 2 + 0.6) || z < -o.lawnDepth + 0.5 || Math.abs(x - info.gateX) < 2) continue; P_.addDaisy(D, x, z, { r: dr, color: dr() < 0.8 ? '#f4f0ea' : '#f2c230' }); }
+      for (let k = 0; k < 90; k++) { const x = cx + (dr() - 0.5) * (o.lotW - 4), z = cz + (dr() - 0.5) * (o.lawnDepth - 3); if (info.beds.some((bb) => Math.abs(x - bb.x) < bb.len / 2 + 0.6 && Math.abs(z - bb.z) < bb.dep / 2 + 0.6) || z < -o.lawnDepth + 0.5 || Math.abs(x - info.gateX) < 2) continue; P_.addDaisy(D, x, z, { r: dr, color: dr() < 0.8 ? '#f4f0ea' : '#f2c230' }); }
       g.add(persistTree(D.build(M, { name: 'heroDaisies' })));
     }
   }
   // ---- street lamps (black Victorian), staggered on both sides; glass + halo + pool kept per lamp for light cascades
   let li = 0;
   for (const side of ['A', 'B']) {
-    const z = (side === 'A' ? -1 : 1) * (o.roadW / 2 + 1.6); const off = side === 'A' ? o.lotW / 2 - 4 : o.lampSpacing / 2 + o.lotW / 2 - 4;
-    for (let x = -L / 2 + 20 + (off % o.lampSpacing); x < L / 2 - 20; x += o.lampSpacing) {
-      const LP = new Parts(); const res = P_.addStreetLamp(LP, { height: o.lampHeight }); const lg = persistTree(LP.build(M, { name: 'lamp_' + li }));
+    const z = (side === 'A' ? -1 : 1) * (o.roadW / 2 + 1.6);
+    // one lamp per lot boundary on each side (PN rows), nudged off the fence posts; extended past the lots
+    const xs = []; for (let x = xLot(0) - o.lotW / 2; x <= L / 2 - 10; x += o.lampSpacing) xs.push(x); for (let x = xLot(0) - o.lotW / 2 - o.lampSpacing; x >= -L / 2 + 10; x -= o.lampSpacing) xs.push(x);
+    for (const x0 of xs.sort((a, b) => a - b)) { const x = x0 + (side === 'A' ? 1.5 : -1.5);
+      const LP = new Parts(); const res = P_.addStreetLamp(LP, { height: o.lampHeight }); const lg = persistTree(LP.build(M, { name: 'lamp_' + li, cast: true }));
       res.glass.forEach((m) => lg.add(persistTree(m)));
+      for (const hd of res.heads) { const h = new THREE.Sprite(glowSpriteMat('lamp', { color: '#ffc27a', intensity: 1.1, opacity: 0.6 })); h.scale.set(3.6, 3.6, 1); h.position.set(...hd); h.name = 'lampHalo'; lg.add(h); }
+      { const R = 7.5, kz = 1.0; // pool: sidewalk piece (y 0) + road piece (y -0.4), split at the kerb edge (local +Z = road)
+        const pool = new THREE.Group(); pool.name = 'lampPool';
+        pool.add(new THREE.Mesh(decalQuad(-R, R, -R, kz, 0.03, R), poolMat('lamp'))); pool.add(new THREE.Mesh(decalQuad(-R, R, kz + 0.6, R, -0.37, R), poolMat('lamp')));
+        pool.children.forEach((m) => { m.renderOrder = 2; }); lg.add(pool); }
       lg.position.set(x, 0, z); lg.rotation.y = side === 'A' ? 0 : PI; root.add(lg);
       const head = [x * STUD, (res.lightPos[1]) * STUD, z * STUD];
       meta.lamps.push({ name: 'lamp_' + li, side, pos: [x * STUD, 0, z * STUD], head: head.map((v) => +v.toFixed(4)) }); li++;
@@ -328,32 +344,36 @@ function heroViews(h, meta, o) {
   const [ox, , oz] = h.origin, [dx, dy, dz] = h.door, bed = h.beds[0];
   const v = (pos, target, fov) => ({ pos: pos.map((x) => +x.toFixed(3)), target: target.map((x) => +x.toFixed(3)), fov });
   const views = {
-    // high wide along the street, gnomes on the lawns in the foreground (PN #2 / TF #93 feel)
-    streetWide: v([ox + 26 * S, 26 * S, oz + dirZ * 30 * S], [ox - 40 * S, 3 * S, oz - dirZ * 22 * S], 60),
-    // eye-level wide of the hero lawn from the sidewalk
-    lawn: v([ox + 4 * S, 6.5 * S, oz + dirZ * 7 * S], [dx - 2 * S, 7 * S, dz + dirZ * 3 * S], 70),
-    // on the porch, toward the door (character slot porchDoor)
-    porch: v([dx + 7.5 * S, h.deckY + 5.2 * S, dz + dirZ * 7.5 * S], [dx - 1 * S, h.deckY + 4.2 * S, dz], 70),
-    // from the porch out to the street: gnomes facing the camera, fence, lamps, houses across
-    porchOut: v([dx - 2 * S, h.deckY + 4.8 * S, dz + dirZ * 1.5 * S], [dx + 4 * S, 3 * S, oz + dirZ * 10 * S], 70),
+    // 3/4 wide along the front lawns from the sidewalk: gnome backs in the foreground, the houses they face, lamps
+    streetWide: v([ox + 16 * S, 9 * S, oz + dirZ * 2.5 * S], [ox - 30 * S, -2 * S, oz - dirZ * 12 * S], 62),
+    // high aerial along the street (TF #93 / PN #2): establishing, lamps marching to the vanishing point
+    streetHigh: v([ox + 40 * S, 34 * S, oz + dirZ * 26 * S], [ox - 40 * S, 0, oz - dirZ * 8 * S], 60),
+    // eye-level wide of the hero lawn from the sidewalk, over the fence
+    lawn: v([dx + 0.3 * S, 8 * S, oz + dirZ * 3 * S], [dx - 0.3 * S, 3.2 * S, dz + dirZ * 7 * S], 70),
+    // on the porch, along it toward the door (character slot porchDoor)
+    porch: v([dx + 7 * S, h.deckY + 5.0 * S, dz + dirZ * 4.6 * S], [dx - 1.0 * S, h.deckY + 3.6 * S, dz + dirZ * 1.2 * S], 70),
+    // from the doorway out to the street: gnomes facing the camera, fence, lamps, houses across
+    porchOut: v([dx - 1.0 * S, h.deckY + 4.6 * S, dz + dirZ * 1.6 * S], [dx + 1 * S, 0.5 * S, oz - dirZ * 4 * S], 70),
   };
   if (bed) {
-    const [bx, by, bz] = bed.pos;
-    // lawn close-up at gnome eye level (1.4 studs) behind the grandpa slot: bed, wall, lit window above
-    views.gnomeCU = v([bx + 3.5 * S, 2.2 * S, bz + dirZ * 7.5 * S], [bx - 0.6 * S, 2.6 * S, bz - dirZ * 0.2 * S], 60);
-    // reverse: the gnome's face, the lawn, fence and street behind
-    views.gnomeFace = v([bx - 0.8 * S, 2.0 * S, bz - dirZ * 1.0 * S], [bx - 0.6 * S, 1.5 * S, bz + dirZ * 3 * S], 70);
+    const [bx, by, bz] = bed.pos; const gx = bx - 0.8 * S; // grandpa slot (bed0) sits 0.8 stud left of the bed centre
+    // lawn close-up behind/beside the grandpa slot at gnome eye level: bed, tulips, wall, lit window above
+    views.gnomeCU = v([gx + 1.8 * S, 1.9 * S, bz + dirZ * 4.6 * S], [gx - 0.2 * S, 2.7 * S, bz - dirZ * 1.0 * S], 60);
+    // reverse: the gnome's face (camera between the gnome and the wall), the lawn, fence and street behind
+    views.gnomeFace = v([gx + 0.4 * S, 1.9 * S, bz - dirZ * 1.25 * S], [gx, 1.5 * S, bz + dirZ * 2.5 * S], 70);
+    // low ground-level wide of the lawn toward the house (gnome eye level 1.4)
+    views.lawnLow = v([gx + 6 * S, 1.4 * S, bz + dirZ * 13 * S], [gx - 1 * S, 3.2 * S, bz], 70);
   }
   return views;
 }
 
 // ------------------------------------------------------------------ convenience sets
 // A single lawn (hero lot + its neighbours + the street and the houses across): cheaper than a full street.
-export function buildLot(ctx, o = {}) { return buildStreet(ctx, { lotsPerSide: 3, extend: 120, ...o, hero: { side: 'A', index: 1, ...(o.hero || {}) } }); }
+export function buildLot(ctx, o = {}) { return buildStreet(ctx, { lotsPerSide: 3, extend: 120, ...o, hero: { side: 'A', index: 1, ...(o.hero || {}), house: { width: 26, ...(o.hero?.house || {}) } } }); }
 // Lawn close-up set: the hero lot with grass blades, daisies, dense tulips, stepping stones, porch steps and a lit
 // bedroom window over the grandpa bed; the rest of the street is there for reverse angles.
 export function buildLawnCloseup(ctx, o = {}) {
-  return buildStreet(ctx, { lotsPerSide: 3, extend: 120, ...o, hero: { side: 'A', index: 1, closeup: true, house: { lit: [1, 1, 0, 1], foundation: 1.0, sill: 1.6, porch: 'center', ...(o.hero?.house || {}) }, ...(o.hero || {}) } });
+  return buildStreet(ctx, { lotsPerSide: 3, extend: 120, ...o, hero: { side: 'A', index: 1, closeup: true, ...(o.hero || {}), house: { width: 26, lit: [1, 1, 0, 1], foundation: 1.0, sill: 1.6, porch: 'center', porchWidth: 11, ...(o.hero?.house || {}) } } });
 }
 
 // ------------------------------------------------------------------ helpers for shots

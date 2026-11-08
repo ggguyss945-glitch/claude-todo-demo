@@ -183,6 +183,14 @@ export function signTex(lines = ['FOR SALE'], header = '', { bg = '#f6f3ee', ink
     for (const l of lines) { fit(l, Math.round(lh * 0.72)); g.fillStyle = ink; g.fillText(l, W / 2, y); y += lh; }
   });
 }
+// Irregular soft blob (alpha map, 0..1 UV): worn lawn patches.
+export function blobAlphaTex() {
+  return canvasTex('blobAlpha', 128, 128, (g, W, H) => {
+    const id = g.createImageData(W, H); const n = fbm(128, 4, 4, 31);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const dx = (x - W / 2) / (W / 2), dy = (y - H / 2) / (H / 2); const d = Math.hypot(dx, dy) + (n[y * 128 + x] - 0.5) * 0.7; const a = clamp01((0.85 - d) / 0.3); const i = (y * W + x) * 4; id.data[i] = id.data[i + 1] = id.data[i + 2] = a * 255; id.data[i + 3] = 255; }
+    g.putImageData(id, 0, 0);
+  }, { srgb: false });
+}
 // Soft ring sprite (bursts, ripples).
 export function ringTex() {
   return canvasTex('ring', 256, 256, (g, W, H) => {
@@ -244,7 +252,8 @@ export function planarUV(g, tile = 4, axis = 'y') {
 export function scaleUV(g, su, sv) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv); return g; }
 
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
-export function trs(pos = [0, 0, 0], rot = [0, 0, 0], scl = [1, 1, 1]) {
+export function trs(pos, rot, scl) {
+  pos = pos || [0, 0, 0]; rot = rot || [0, 0, 0]; scl = scl ?? [1, 1, 1];
   _e.set(rot[0] || 0, rot[1] || 0, rot[2] || 0, 'YXZ'); _q.setFromEuler(_e);
   const s = typeof scl === 'number' ? [scl, scl, scl] : scl; return new THREE.Matrix4().compose(_v.set(pos[0], pos[1], pos[2]), _q, _s.set(s[0], s[1], s[2]));
 }
@@ -262,6 +271,12 @@ export class Parts {
   }
   // box(key, w, h, d, pos, rot, {tile, bevel}): a box with world-tiled UVs (tile defaults to the material's tile).
   box(key, w, h, d, pos, rot, o = {}) { return this.add(key, boxUV(w, h, d, o.tile ?? tileOf(key), o.bevel ?? 0), pos, rot); }
+  // bar(key, a, b, w, t): a box of cross-section w x t from point a to point b (frames, rails, legs).
+  bar(key, a, b, w, t, o = {}) {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A); const L = d.length();
+    const g = boxUV(w, t, L, o.tile ?? tileOf(key), o.bevel ?? 0); g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize()));
+    g.translate((A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2); return this.add(key, g);
+  }
   cyl(key, rTop, rBot, h, seg, pos, rot, o = {}) { const g = new THREE.CylinderGeometry(rTop, rBot, h, seg, 1, !!o.open); scaleUV(g, (2 * Math.PI * Math.max(rTop, rBot)) / (o.tile ?? tileOf(key)), h / (o.tile ?? tileOf(key))); return this.add(key, g, pos, rot, o.scale); }
   // Merge into a Group (one Mesh per key). mats: fn(key) -> Material. shadows: {cast, receive}.
   build(mats = M, { cast = false, receive = false, name = 'parts' } = {}) {
@@ -309,7 +324,7 @@ export function M(key) {
     case 'porch': case 'deck': m = std({ ...TX.woodPlanks({ color: a || '#a8743a', planks: 8, joints: 2, gloss: 0.4, seed: 4 }).mat, roughness: 0.62 }); break;
     case 'wood': m = std({ ...TX.woodPlanks({ color: a || '#7a4a2a', planks: 5, joints: 1, gloss: 0.45, seed: 6 }).mat, roughness: 0.65 }); break;
     case 'trim': m = std({ ...TX.woodPlanks({ color: a || '#efeee9', gapColor: a || '#efeee9', planks: 4, joints: 0, gap: 0.0, grain: 0.35, variation: 0.03, seed: 7, normal: 0.6 }).mat, roughness: 0.55 }); break;
-    case 'grass': case 'lawn': m = std({ ...TX.grass({ color: a || '#4a8a3c', dark: b || '#2b5a27', light: c || '#7ab45a', seed: 3, blades: 11000, normal: 2.2 }).mat, roughness: 1 }); break;
+    case 'grass': case 'lawn': m = std({ ...TX.grass({ color: a || '#5c9550', dark: b || '#386334', light: c || '#86b46c', seed: 3, blades: 11000, normal: 2.2 }).mat, roughness: 1 }); break;
     case 'dirt': m = std({ ...TX.dirt({ color: a || '#5a3a26', dark: '#2e1c10', seed: 2 }).mat, roughness: 0.97 }); break;
     case 'concrete': m = std({ ...TX.concrete({ color: a || '#aaa8a2', mottle: 0.1, seams: 1, seamColor: '#6c6a66', seed: 3 }).mat, roughness: 0.85 }); break;
     case 'kerb': m = std({ ...TX.concrete({ color: a || '#b5b3ad', mottle: 0.08, seams: 0, seed: 4 }).mat, roughness: 0.82 }); break;
@@ -336,12 +351,32 @@ export function M(key) {
     case 'tulip': m = std({ color: a || '#d8283a', roughness: 0.45, emissive: a || '#d8283a', emissiveIntensity: 0.04 }); break;
     case 'stem': m = std({ color: a || '#3f7a32', roughness: 0.6 }); break;
     case 'basic': m = persist(new THREE.MeshBasicMaterial({ color: a || '#ffffff' })); break;
+    case 'dirtPatch': m = std({ ...TX.dirt({ color: '#5e4430', dark: '#33231a', seed: 5 }).mat, roughness: 0.97, alphaMap: blobAlphaTex(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); delete m.roughnessMap; break;
     default: m = std({ color: a || '#ff00ff' });
   }
   m.name = key; _mats.set(key, m); return m;
 }
 // A material built from a texture with a custom key (signs, plaques). Cached.
 export function texMat(key, map, o = {}) { if (_mats.has(key)) return _mats.get(key); const m = std({ map, roughness: 0.6, ...o }); m.name = key; _mats.set(key, m); return m; }
+
+// Additive glow sprite material (halos on lamps, lanterns, windows). Cached by key; shared, never mutate.
+export function glowSpriteMat(key, { color = '#ffd9a0', intensity = 1, opacity = 0.5, falloff = 2.4 } = {}) {
+  const k = 'glowSprite:' + key; if (_mats.has(k)) return _mats.get(k);
+  const m = persist(new THREE.SpriteMaterial({ map: TX.radialGlow({ falloff }), color: new THREE.Color(color).multiplyScalar(intensity), opacity, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true }));
+  m.name = k; _mats.set(k, m); return m;
+}
+// Additive ground-decal material (light pools).
+export function poolMat(key, { color = '#ffb870', opacity = 0.32, falloff = 1.6 } = {}) {
+  const k = 'pool:' + key; if (_mats.has(k)) return _mats.get(k);
+  const m = persist(new THREE.MeshBasicMaterial({ map: TX.radialGlow({ falloff }), color, opacity, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+  m.name = k; _mats.set(k, m); return m;
+}
+// Flat quad on the XZ plane covering [x0,x1]x[z0,z1] at height y, UVs of a radial decal of radius R centred at (cx, cz).
+export function decalQuad(x0, x1, z0, z1, y, R, cx = 0, cz = 0) {
+  const P = [x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1]; const U = []; for (let i = 0; i < 4; i++) U.push((P[i * 3] - cx + R) / (2 * R), (P[i * 3 + 2] - cz + R) / (2 * R));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], 3)); g.setIndex([0, 2, 1, 0, 3, 2]); return g;
+}
 
 // ------------------------------------------------------------------ small utils
 // Seeded variation helpers.

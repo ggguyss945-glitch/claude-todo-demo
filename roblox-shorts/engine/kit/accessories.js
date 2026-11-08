@@ -14,12 +14,12 @@ function strandMap(color) { // lengthwise streaks along v (clump and cap UVs run
   return cached(keyOf('strandMap', color), () => {
     const W = 256, H = 256, c = canvas(W, H), g = c.getContext('2d'), r = makeRng(hash32('strand', color));
     g.fillStyle = color; g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 90; i++) { const x = r() * W, w = 1 + r() * 4, dark = r() < 0.55; g.fillStyle = rgba(dark ? shade(color, 0.62) : shade(color, 1.35), 0.12 + r() * 0.22); g.fillRect(x, 0, w, H); g.fillRect(x - W, 0, w, H); }
+    for (let i = 0; i < 90; i++) { const x = r() * W, w = 1 + r() * 4, dark = r() < 0.55; g.fillStyle = rgba(dark ? shade(color, 0.66) : shade(color, 1.18), 0.1 + r() * 0.16); g.fillRect(x, 0, w, H); g.fillRect(x - W, 0, w, H); }
     const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, rgba('#ffffff', 0.08)); gr.addColorStop(0.6, rgba('#000000', 0)); gr.addColorStop(1, rgba('#000000', 0.18)); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     return canvasTex(c, { wrap: true });
   });
 }
-export const hairMat = (color, rough = 0.46) => cached(keyOf('hairMat', color, rough), () => new THREE.MeshStandardMaterial({ color: '#ffffff', map: strandMap(color), roughness: rough, metalness: 0 }));
+export const hairMat = (color, rough = 0.46) => cached(keyOf('hairMat', color, rough), () => new THREE.MeshStandardMaterial({ color: '#ffffff', map: strandMap(color), roughness: rough, metalness: 0, side: THREE.DoubleSide }));
 const plainMat = (color, rough = 0.5, extra = {}) => cached(keyOf('accMat', color, rough, extra), () => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, ...extra }));
 const metalMat = (color) => cached(keyOf('accMetal', color), () => new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.85 }));
 
@@ -31,6 +31,24 @@ function place(geo, pos, rot = [0, 0, 0], scale = [1, 1, 1]) {
 const merge = (list) => { const g = mergeGeometries(list.map((x) => { const y = x.index ? x.toNonIndexed() : x; for (const k of Object.keys(y.attributes)) if (!['position', 'normal', 'uv'].includes(k)) y.deleteAttribute(k); return y; })); g.computeBoundingSphere(); return g; };
 // cap shell over the head top (sphere segment), squashed to hug the drum
 function capGeo(R = 0.68, theta = 0.52, sy = 0.8, seg = 40) { return new THREE.SphereGeometry(R, seg, Math.round(seg * 0.5), 0, Math.PI * 2, 0, Math.PI * theta); }
+// Hair cap that hugs the R6 drum head: points on the head profile (arc length s from the crown) pushed out along the
+// profile normal by `thick`, with a hairline height that varies around the head (front / side / back, head-local y).
+function drumPoint(s) { const f = 0.25, flat = 0.35, arcL = Math.PI / 2 * f; if (s <= flat) return [s, 0.6, 0, 1]; if (s <= flat + arcL) { const a = (s - flat) / f; return [0.35 + Math.sin(a) * f, 0.35 + Math.cos(a) * f, Math.sin(a), Math.cos(a)]; } return [0.6, 0.35 - (s - flat - arcL), 1, 0]; }
+const sOfY = (y) => (y >= 0.35 ? 0.35 + Math.acos(clamp((y - 0.35) / 0.25, -1, 1)) * 0.25 : 0.35 + Math.PI / 8 + (0.35 - y));
+export function hairCapGeo({ front = 0.34, side = 0.02, back = -0.28, thick = 0.075, lump = 0.25, seed = 1, segU = 64, segV = 22, flatTop = 0 } = {}) {
+  const sf = sOfY(front), ss = sOfY(side), sb = sOfY(back), r = makeRng(seed), ph = [r() * 6, r() * 6, r() * 6];
+  const pos = [], uv = [], idx = [];
+  for (let j = 0; j <= segV; j++) for (let i = 0; i <= segU; i++) {
+    const t = j / segV, phi = (i / segU) * Math.PI * 2, c = Math.cos(phi), smax = c >= 0 ? ss + (sf - ss) * Math.pow(c, 0.8) : ss + (sb - ss) * Math.pow(-c, 0.8);
+    const [rr, y, nr, ny] = drumPoint(t * smax);
+    const n = 1 + lump * (0.5 * Math.sin(phi * 3 + ph[0] + t * 2) + 0.3 * Math.sin(phi * 7 + ph[1]) + 0.2 * Math.sin(phi * 13 + ph[2] + t * 4));
+    const o = thick * n * (0.3 + 0.7 * (1 - Math.pow(t, 6))) * (1 - flatTop * (1 - t));
+    pos.push((rr + nr * o) * Math.sin(phi), y + ny * o, (rr + nr * o) * Math.cos(phi)); uv.push(i / segU, 1 - t);
+  }
+  for (let j = 0; j < segV; j++) for (let i = 0; i < segU; i++) { const a = j * (segU + 1) + i, b = a + segU + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
 // a clump pointing in direction (yaw, pitch) from an anchor; tip length L
 function clumpAt(anchor, yaw, pitch, R, L, bend = 0, curl = 0, seg = 14, roll = 0) {
   // clumpGeo tail runs along -y; rotate so -y points along the requested direction
@@ -42,7 +60,7 @@ function clumpAt(anchor, yaw, pitch, R, L, bend = 0, curl = 0, seg = 14, roll = 
 const HAIRS = {
   // EP01 hero: one big asymmetric spiky silhouette that reads from behind at 30 px (bible §2.4)
   messy(r) {
-    const L = [place(capGeo(0.665, 0.5, 1, 40), [0, 0.12, -0.03], [-0.18, 0, 0], [1.02, 0.82, 1.04])];
+    const L = [hairCapGeo({ front: 0.36, side: 0.08, back: -0.25, thick: 0.08, lump: 0.35, seed: 3 })];
     for (let i = 0; i < 18; i++) { // ring of downward/outward clumps around sides + back (skip the face)
       const a = (i / 18) * Math.PI * 2 + 0.17; const front = Math.cos(a) > 0.55; if (front) continue;
       const x = Math.sin(a) * 0.6, z = Math.cos(a) * 0.6;
@@ -57,7 +75,7 @@ const HAIRS = {
     return L;
   },
   short(r) {
-    const L = [place(capGeo(0.655, 0.47, 1, 40), [0, 0.14, -0.02], [-0.14, 0, 0], [1.02, 0.78, 1.04])];
+    const L = [hairCapGeo({ front: 0.4, side: 0.12, back: -0.16, thick: 0.065, lump: 0.2, seed: 4 })];
     for (let i = 0; i < 6; i++) { const x = -0.34 + i * 0.14; L.push(clumpAt([x, 0.52, 0.4], 0.5, Math.PI * 0.16, 0.13, 0.2, 0.3, 0)); }
     for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; if (Math.cos(a) > 0.5) continue; L.push(clumpAt([Math.sin(a) * 0.6, 0.3, Math.cos(a) * 0.6], a, Math.PI * 0.28, 0.13, 0.2, 0, 0)); }
     return L;
@@ -75,18 +93,17 @@ const HAIRS = {
     for (let i = 0; i < 3; i++) L.push(clumpAt([(r() - 0.5) * 0.3, 0.6, -0.1 + r() * 0.2], r() * 6, Math.PI * 0.5, 0.05, 0.22, 0.2, 0)); // a few wisps on top
     return L;
   },
-  // Grandma: waved cap + a round bun at the top-back + soft side waves over the ears
+  // Grandma: smooth combed cap (hairline high at the front, low at the nape), soft side volume over the ears, a round
+  // bun at the top-back with a wrap
   bun(r) {
-    const L = [place(capGeo(0.675, 0.56, 1, 44), [0, 0.1, -0.03], [-0.12, 0, 0], [1.02, 0.86, 1.05])];
-    for (let i = 0; i < 8; i++) { const a = -Math.PI * 0.42 + (i / 7) * Math.PI * 0.84; L.push(clumpAt([Math.sin(a) * 0.52, 0.5, Math.cos(a) * 0.52], a + Math.PI, Math.PI * 0.42, 0.14, 0.28, 0.15 * Math.sign(a), 0)); } // waves swept back from the face
-    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) L.push(clumpAt([s * 0.64, 0.12 - k * 0.1, 0.12 - k * 0.14], s * Math.PI * 0.5, Math.PI * 0.15, 0.15, 0.16, 0, 0)); // side waves over the ears
-    const bun = new THREE.SphereGeometry(0.34, 32, 20); L.push(place(bun, [0, 0.66, -0.36], [0.4, 0, 0], [1, 0.82, 1]));
-    const wrap = new THREE.TorusGeometry(0.3, 0.07, 10, 36); L.push(place(wrap, [0, 0.6, -0.33], [Math.PI / 2 + 0.4, 0, 0], [1, 1, 1]));
-    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; L.push(clumpAt([Math.sin(a) * 0.22, 0.86, -0.36 + Math.cos(a) * 0.2], a, Math.PI * 0.3, 0.1, 0.14, 0.2, 0)); }
+    const L = [hairCapGeo({ front: 0.33, side: 0.0, back: -0.26, thick: 0.085, lump: 0.12, seed: 5 })];
+    for (const s of [-1, 1]) L.push(place(new THREE.SphereGeometry(0.3, 28, 20), [s * 0.55, 0.12, -0.12], [0, 0, s * 0.2], [0.62, 0.95, 1.15]));
+    L.push(place(new THREE.SphereGeometry(0.33, 32, 22), [0, 0.7, -0.32], [0.5, 0, 0], [1, 0.84, 1]));
+    L.push(place(new THREE.TorusGeometry(0.29, 0.06, 10, 40), [0, 0.62, -0.29], [Math.PI / 2 + 0.5, 0, 0], [1, 1, 1]));
     return L;
   },
   bob(r) {
-    const L = [place(capGeo(0.68, 0.55, 1, 44), [0, 0.1, -0.02], [-0.1, 0, 0], [1.03, 0.85, 1.05])];
+    const L = [hairCapGeo({ front: 0.34, side: -0.32, back: -0.36, thick: 0.09, lump: 0.15, seed: 6 })];
     for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; if (Math.cos(a) > 0.62) continue; L.push(clumpAt([Math.sin(a) * 0.64, 0.3, Math.cos(a) * 0.64], a, Math.PI * 0.08, 0.2, 0.4 + r() * 0.06, 0, 0.08)); }
     for (let i = 0; i < 5; i++) L.push(clumpAt([-0.36 + i * 0.18, 0.52, 0.42], 0.3, Math.PI * 0.2, 0.15, 0.28, 0.2, 0));
     return L;
@@ -153,8 +170,8 @@ export function hatGroup({ style = 'fishing', color = '#6f7342', band = null, lu
 
 // ---------------- moustache (3D walrus) ----------------
 export const moustacheGeo = (seed = 2) => cached(keyOf('moustacheGeo', seed), () => {
-  const r = makeRng(seed), L = [];
-  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) L.push(clumpAt([s * (0.05 + k * 0.1), -0.09 - k * 0.012, 0.64 - k * 0.035], s * (0.5 + k * 0.25), Math.PI * (0.2 + k * 0.05), 0.11 - k * 0.008, 0.18 + k * 0.04, s * 0.2, 0.1));
+  const L = [place(new THREE.SphereGeometry(0.09, 20, 14), [0, -0.135, 0.625], [0, 0, 0], [1.35, 0.8, 0.9])];
+  for (const s of [-1, 1]) for (let k = 0; k < 3; k++) L.push(clumpAt([s * (0.06 + k * 0.085), -0.14 - k * 0.014, 0.635 - k * 0.035], s * (0.65 + k * 0.32), Math.PI * (0.24 + k * 0.06), 0.085 - k * 0.012, 0.13 + k * 0.035, s * 0.2, 0.06));
   return merge(L);
 });
 
