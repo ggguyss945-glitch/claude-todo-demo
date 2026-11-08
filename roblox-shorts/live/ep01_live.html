@@ -1,0 +1,210 @@
+<title>Never Move Grandpa Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+/* Layout: one column, summary first (now + video), then the pipeline, pictures, shot board and log.
+   Single committed look: a moonlit night lawn (deep violet ground, lantern-gold accent), the episode's own world. */
+:root {
+  --bg: #120E24;        /* night sky */
+  --panel: #1C1736;     /* card */
+  --panel-2: #251F45;   /* row */
+  --line: #362E63;      /* hairlines */
+  --fg: #F4F0FF;        /* text */
+  --sub: #ADA6D6;       /* secondary */
+  --accent: #FFC85A;    /* lantern gold */
+  --moon: #CFC6FF;      /* moonlight */
+  --ok: #6EE7A0;        /* done */
+  --work: #7CC8FF;      /* working */
+  --wait: #827BB3;      /* waiting */
+  --warn: #FFB36B;      /* needs the owner */
+  --bad: #FF6B7A;       /* failed */
+  --display: 'Fredoka', 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  --ui: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-weight: 700; font-size: 15px; line-height: 1.45; }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(1200px 500px at 85% -10%, rgba(207,198,255,.12), transparent 60%); }
+.wrap { max-width: 960px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; position: relative; z-index: 1; }
+header { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.gnome { width: 62px; height: 62px; flex: none; }
+.titles { min-width: 0; flex: 1 1 260px; }
+.eyebrow { color: var(--moon); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 900; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 40px); line-height: 1.05; margin: 2px 0 0; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.crumb { color: var(--sub); margin-top: 4px; }
+.updated { color: var(--sub); font-size: 13px; text-align: right; flex: none; }
+.updated span { display: block; color: var(--fg); font-size: 15px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; }
+.card h2 small { font-family: var(--ui); font-weight: 800; font-size: 13px; color: var(--sub); margin-left: 8px; }
+.now { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.now p { margin: 0; flex: 1 1 280px; min-width: 0; font-size: 17px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-weight: 900; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; border: 2px solid currentColor; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.s-done { color: var(--ok); } .s-working { color: var(--work); } .s-waiting { color: var(--wait); } .s-needs-you { color: var(--warn); } .s-failed { color: var(--bad); }
+.s-working.pill::before { animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.bar { height: 14px; border-radius: 999px; background: #0B0818; overflow: hidden; border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #FFDE8F, var(--accent)); border-radius: 999px; transition: width .6s ease; }
+.renderline { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--sub); font-variant-numeric: tabular-nums; }
+.renderline b { color: var(--fg); }
+.media { display: grid; gap: 10px; justify-items: center; }
+video, .poster { width: min(100%, 380px); border-radius: 18px; background: #000; display: block; aspect-ratio: 9 / 16; object-fit: contain; border: 1px solid var(--line); }
+.media p { margin: 0; color: var(--sub); text-align: center; max-width: 60ch; }
+.empty { border: 2px dashed var(--line); border-radius: 16px; padding: 28px 18px; text-align: center; color: var(--sub); }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--panel-2); border-radius: 16px; padding: 10px 12px; }
+.ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-family: var(--display); font-size: 18px; color: #1A1430; font-weight: 700; }
+.row .name { font-weight: 900; font-size: 16px; }
+.row .note { color: var(--sub); font-size: 13.5px; overflow-wrap: anywhere; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+figure { margin: 0; background: var(--panel-2); border-radius: 16px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+figure img { width: 100%; display: block; aspect-ratio: 9 / 16; object-fit: cover; background: #0B0818; cursor: zoom-in; }
+figure.wide img { aspect-ratio: 16 / 10; }
+figure figcaption { padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+figure figcaption b { font-size: 14.5px; }
+figure figcaption span { color: var(--sub); font-size: 13px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.shot { background: var(--panel-2); border-radius: 12px; padding: 8px 10px; border-left: 4px solid var(--wait); min-width: 0; }
+.shot b { font-family: var(--display); font-weight: 600; font-size: 15px; margin-right: 6px; }
+.shot span { color: var(--sub); font-size: 12.5px; }
+.shot.done { border-left-color: var(--ok); } .shot.working { border-left-color: var(--work); }
+.log { display: grid; gap: 6px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+.log div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.log time { color: var(--sub); font-variant-numeric: tabular-nums; }
+.lightbox { position: fixed; inset: 0; background: rgba(8, 6, 18, .94); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 20; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+figure img:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) { .updated { text-align: left; } .row { grid-template-columns: 36px minmax(0, 1fr); } .row .pill { grid-column: 2; justify-self: start; } }
+@media (prefers-reduced-motion: reduce) { .s-working.pill::before { animation: none; } .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <svg class="gnome" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="31" fill="#1C1736" stroke="#362E63" stroke-width="2"/>
+      <path d="M32 6 L46 34 H18 Z" fill="#E5484D" stroke="#9E2A33" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="32" cy="37" r="8" fill="#F2C9A8"/>
+      <path d="M20 40 Q32 62 44 40 Q38 46 32 45 Q26 46 20 40 Z" fill="#F4F0FF" stroke="#C8C2E8" stroke-width="1.5"/>
+      <circle cx="29" cy="36" r="1.6" fill="#1A1430"/><circle cx="35" cy="36" r="1.6" fill="#1A1430"/>
+      <circle cx="50" cy="44" r="4" fill="#FFC85A"/><circle cx="50" cy="44" r="8" fill="#FFC85A" opacity=".25"/>
+    </svg>
+    <div class="titles">
+      <div class="eyebrow">Roblox shorts · Episode 1</div>
+      <h1>Never Move <em>Grandpa</em></h1>
+      <div class="crumb">"In this world, grandparents don't die, they turn into garden gnomes." · 1080×1920 · 60 fps · 1:53</div>
+    </div>
+    <div class="updated" aria-live="polite">Last update<span id="updated">waiting for the first update</span></div>
+  </header>
+
+  <section class="card" aria-labelledby="now-h">
+    <h2 id="now-h">Right now</h2>
+    <div class="now"><span id="stagePill" class="pill s-waiting">starting</span><p id="headline">The page fills in as soon as the first status arrives.</p></div>
+    <div id="renderBox" hidden>
+      <div class="bar" role="progressbar" aria-label="Render progress" aria-valuemin="0" aria-valuemax="100" id="barWrap"><i id="bar"></i></div>
+      <div class="renderline"><span>Frames <b id="frames">0 / 0</b></span><span id="rate"></span><span id="eta"></span></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="video-h">
+    <h2 id="video-h">The video <small>first a 5-second test, then the full episode</small></h2>
+    <div class="media" id="videoBox"><div class="empty">The 5-second test plays here when it is rendered, so you can approve the look before the full episode.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="pipe-h">
+    <h2 id="pipe-h">Pipeline</h2>
+    <div class="rows" id="stages"><div class="empty">No stages reported yet.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="gal-h">
+    <h2 id="gal-h">Latest pictures <small>tap to enlarge</small></h2>
+    <div class="gallery" id="gallery"><div class="empty">Test frames, characters and sets appear here as they are built.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="shots-h">
+    <h2 id="shots-h">Shot board <small id="shotCount"></small></h2>
+    <div class="shots" id="shots"><div class="empty">The shots planned against your voice-over appear here after the 5-second test is approved.</div></div>
+  </section>
+
+  <section class="card" aria-labelledby="log-h">
+    <h2 id="log-h">Log</h2>
+    <div class="log" id="log"><div class="empty">Nothing logged yet.</div></div>
+  </section>
+</div>
+<div class="lightbox" id="lightbox" hidden><img id="lightImg" alt=""></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LABEL = { done: 'Done', working: 'Working', waiting: 'Waiting', 'needs-you': 'Needs you', failed: 'Failed' };
+const ICON = ['#CFC6FF', '#7CC8FF', '#FFC85A', '#6EE7A0', '#FF9BC8', '#B9A4FF', '#FFB36B', '#8EE3E0', '#F7A8A8', '#C9E77C', '#E4C1FF', '#9FB8FF'];
+let lastUpdated = null;
+const cls = (st) => 's-' + (LABEL[st] ? st : 'waiting');
+function ago(iso) {
+  if (!iso) return 'waiting for the first update';
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  const clock = new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (s < 60) return `just now · ${clock}`;
+  if (s < 3600) return `${Math.round(s / 60)} min ago · ${clock}`;
+  return `${Math.round(s / 3600)} h ago · ${clock}`;
+}
+function media(m) {
+  const box = $('videoBox'), cur = box.querySelector('video');
+  if (m.video) {
+    if (!cur || cur.dataset.src !== m.video) box.innerHTML = `<video controls playsinline preload="metadata" data-src="${esc(m.video)}" ${m.poster ? `poster="${esc(m.poster)}"` : ''}><source src="${esc(m.video)}" type="video/mp4"></video><p>${esc(m.title || '')}</p>`;
+  } else if (m.poster) box.innerHTML = `<img class="poster" src="${esc(m.poster)}" alt="${esc(m.title || 'Latest frame')}"><p>${esc(m.title || '')}</p>`;
+}
+function render(d) {
+  lastUpdated = d.updated_at || null; $('updated').textContent = ago(lastUpdated);
+  const st = d.stage || 'working';
+  $('stagePill').className = 'pill ' + cls(st); $('stagePill').textContent = d.stage_label || LABEL[st] || st;
+  $('headline').textContent = d.headline || '';
+  const r = d.render;
+  if (r && r.total) {
+    $('renderBox').hidden = false;
+    const pct = Math.min(100, (100 * (r.done || 0)) / r.total);
+    $('bar').style.width = pct.toFixed(1) + '%'; $('barWrap').setAttribute('aria-valuenow', pct.toFixed(0));
+    $('frames').textContent = `${(r.done || 0).toLocaleString()} / ${r.total.toLocaleString()} (${pct.toFixed(0)}%)`;
+    $('rate').textContent = r.rate ? `${r.rate} frames/s` : ''; $('eta').textContent = r.eta_min != null ? `about ${r.eta_min} min left` : '';
+  } else $('renderBox').hidden = true;
+  if (d.media) media(d.media);
+  const stages = d.stages || [];
+  if (stages.length) $('stages').innerHTML = stages.map((s, i) => `
+    <div class="row"><div class="ico" style="background:${ICON[i % ICON.length]}">${i + 1}</div>
+      <div style="min-width:0"><div class="name">${esc(s.name)}</div><div class="note">${esc(s.note || '')}</div></div>
+      <span class="pill ${cls(s.state)}">${esc(LABEL[s.state] || s.state)}</span></div>`).join('');
+  const gal = d.gallery || [];
+  if (gal.length) $('gallery').innerHTML = gal.map((g) => `<figure class="${g.wide ? 'wide' : ''}"><img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" tabindex="0" data-full="${esc(g.url)}"><figcaption><b>${esc(g.title)}</b><span>${esc(g.caption || '')}</span></figcaption></figure>`).join('');
+  const shots = d.shots || [];
+  if (shots.length) {
+    $('shotCount').textContent = `${shots.filter((s) => s.state === 'done').length} of ${shots.length} done`;
+    $('shots').innerHTML = shots.map((s) => `<div class="shot ${s.state === 'done' ? 'done' : s.state === 'working' ? 'working' : ''}"><b>${esc(s.id)}</b><span>${esc(s.title)}</span></div>`).join('');
+  }
+  const log = d.log || [];
+  if (log.length) $('log').innerHTML = log.slice().reverse().map((l) => `<div><time>${esc(l.t ? new Date(l.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')}</time><span>${esc(l.msg)}</span></div>`).join('');
+}
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('figure img');
+  if (img) { $('lightImg').src = img.dataset.full; $('lightImg').alt = img.alt; $('lightbox').hidden = false; return; }
+  if (e.target.closest('#lightbox')) $('lightbox').hidden = true;
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('lightbox').hidden = true;
+  if (e.key === 'Enter' && e.target.matches && e.target.matches('figure img')) e.target.click();
+});
+setInterval(() => { if (lastUpdated) $('updated').textContent = ago(lastUpdated); }, 30000);
+(async () => {
+  let db = null;
+  try { db = window.claude && (await window.claude.use('db')); } catch (e) { db = null; }
+  if (!db) { $('headline').textContent = 'Live updates are not available in this view. Open the page signed in to claude.ai to follow along.'; return; }
+  const ref = db.doc('live/status');
+  const listen = () => ref.onSnapshot((snap) => { if (snap.exists) render(snap.data() || {}); }, (err) => {
+    if (err && err.code === 'unavailable') setTimeout(listen, 5000);
+    else $('headline').textContent = 'Live updates stopped. Reload the page to reconnect.';
+  });
+  listen();
+})();
+</script>
