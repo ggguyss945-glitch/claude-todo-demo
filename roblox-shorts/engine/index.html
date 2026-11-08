@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Roblox Shorts Engine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html,body{margin:0;background:#000;color:#ccc;font:12px monospace}canvas{display:block;max-height:100vh;width:auto;margin:0 auto}#hud{position:fixed;left:6px;top:6px}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head><body><canvas id="c"></canvas><div id="hud"></div>
+<script type="module">
+// Headless API (tools/render.js):  await ENGINE.init({episode, timeline, quality, profile}) -> info
+//                                  await ENGINE.frame(i, {upload, type, quality}) -> {timings, bytes}
+// Manual preview in a browser:     /engine/index.html?ep=/engine/episodes/_demo.js&t=1.5[&quality=draft]
+import { Engine } from './core/engine.js';
+const canvas = document.getElementById('c');
+let engine = null;
+window.ENGINE = {
+  async init(opts = {}) {
+    engine = new Engine({ canvas, quality: opts.quality || 'final', profile: !!opts.profile });
+    window.__engine = engine;
+    return engine.load({ episode: opts.episode, timeline: opts.timeline });
+  },
+  // Render frame i; encode in-page; POST the bytes to `upload` (binary, no base64) or return a data URL.
+  async frame(i, { upload, type = 'jpeg', quality = 0.92, dataUrl = false } = {}) {
+    const tm = await engine.renderFrame(i);
+    const c0 = performance.now();
+    const blob = await engine.capture(type, quality);
+    tm.encode = performance.now() - c0;
+    let out = null;
+    if (upload) { const u0 = performance.now(); const r = await fetch(upload, { method: 'POST', body: blob }); if (!r.ok) throw new Error('upload failed ' + r.status); tm.upload = performance.now() - u0; }
+    else if (dataUrl) out = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+    tm.bytes = blob.size;
+    return { timings: tm, dataUrl: out };
+  },
+  info() { return engine && engine.info(); },
+};
+window.__ready = true;
+const q = new URLSearchParams(location.search);
+if (q.get('ep') || q.get('timeline')) {
+  const info = await window.ENGINE.init({ episode: q.get('ep'), timeline: q.get('timeline'), quality: q.get('quality') || 'draft' });
+  const t = parseFloat(q.get('t') || '0'); const tm = await engine.renderFrame(Math.round(t * info.fps));
+  document.getElementById('hud').textContent = `${info.name} t=${t}s shot=${tm.shot} ${tm.total.toFixed(0)}ms`;
+}
+</script></body></html>
