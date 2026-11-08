@@ -74,7 +74,7 @@ export function makeLantern({ lit = true, power = 1, lights = true } = {}) {
 export function makeGnome(o = {}) {
   const P = Object.assign({ hat: '#c4212b', coat: '#2f58c4', belt: '#4a2614', boots: '#3a2015', skin: '#f2b097', nose: '#ef8f7e', cheek: '#ee7d84',
     beard: true, beardColor: '#f4f0e8', glasses: false, hair: false, iris: '#3c6fb4', lod: 1, lantern: { lit: true, power: 1 }, seed: 1, hatBend: 0.32,
-    lidDrop: 0.32, gaze: null, smile: false, glossy: 0.8 }, o);
+    lidDrop: -0.45, gaze: null, smile: false, glossy: 0.8, handR: [0.4, 0.92, 0.45], handL: [-0.44, 0.52, 0.2] }, o);
   const G = new THREE.Group(); G.name = 'gnome';
   const S = P.lod >= 1 ? 1 : 0.55, seg = (n) => Math.max(8, Math.round(n * S));
   const ceramic = (c, rough = 0.42, cc = P.glossy) => phys(c, { roughness: rough, clearcoat: cc, clearcoatRoughness: 0.18 });
@@ -84,7 +84,7 @@ export function makeGnome(o = {}) {
   // boots
   for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(1, seg(28), seg(18)), bootM, s * 0.21, 0.12, 0.08, { parent: G, scale: [0.2, 0.14, 0.3] });
   // coat body (lathe)
-  const prof = [[0, 0.1], [0.5, 0.1], [0.56, 0.16], [0.53, 0.24], [0.5, 0.45], [0.48, 0.7], [0.44, 0.88], [0.36, 1.0], [0.22, 1.08], [0, 1.1]].map(([r, y]) => new THREE.Vector2(r, y));
+  const prof = [[0, 0.1], [0.5, 0.1], [0.56, 0.16], [0.54, 0.28], [0.51, 0.48], [0.46, 0.68], [0.39, 0.84], [0.3, 0.97], [0.2, 1.05], [0, 1.1]].map(([r, y]) => new THREE.Vector2(r, y));
   const body = new THREE.LatheGeometry(prof, seg(48)); body.computeVertexNormals();
   mesh(body, coatM, 0, 0, 0, { parent: G });
   mesh(new THREE.TorusGeometry(0.535, 0.03, 10, seg(48)), ceramic(shade(P.coat, 0.7), 0.5), 0, 0.165, 0, { parent: G, rot: [Math.PI / 2, 0, 0] }); // hem roll
@@ -100,7 +100,7 @@ export function makeGnome(o = {}) {
     const hm = mesh(new THREE.SphereGeometry(0.12, seg(18), seg(12)), skinM, hand.x, hand.y, hand.z, { parent: G }); hm.scale.set(1, 1.05, 0.95);
     return hm;
   };
-  const handR = new THREE.Vector3(0.36, 0.86, 0.46), handL = new THREE.Vector3(-0.42, 0.5, 0.22);
+  const handR = new THREE.Vector3(...P.handR), handL = new THREE.Vector3(...P.handL);
   arm(1, handR); arm(-1, handL);
   if (P.lantern) { const L = makeLantern(P.lantern); L.position.set(handR.x + 0.02, handR.y - 0.5, handR.z + 0.06); G.add(L); G.userData.lantern = L;
     // bail wire from hand to lantern ring
@@ -108,14 +108,14 @@ export function makeGnome(o = {}) {
   // head
   const head = new THREE.Group(); head.position.set(0, 1.37, 0.03); G.add(head); G.userData.head = head;
   mesh(new THREE.SphereGeometry(0.42, seg(48), seg(36)), skinM, 0, 0, 0, { parent: head, scale: [1, 0.96, 0.94] });
-  for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.13, seg(20), seg(14)), ceramic(P.cheek, 0.5, P.glossy * 0.5), s * 0.22, -0.06, 0.3, { parent: head, scale: [1, 0.8, 0.62] });
-  mesh(new THREE.SphereGeometry(0.155, seg(32), seg(24)), ceramic(P.nose, 0.4, P.glossy * 0.7), 0, -0.04, 0.42, { parent: head, scale: [1, 0.92, 0.88] });
+  for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.13, seg(20), seg(14)), ceramic(P.cheek, 0.5, P.glossy * 0.5), s * 0.23, -0.07, 0.29, { parent: head, scale: [1, 0.8, 0.62] });
+  mesh(new THREE.SphereGeometry(0.155, seg(32), seg(24)), ceramic(P.nose, 0.4, P.glossy * 0.7), 0, -0.07, 0.42, { parent: head, scale: [1, 0.92, 0.88] });
   for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.06, seg(14), seg(10)), skinM, s * 0.405, -0.02, 0.0, { parent: head, scale: [0.6, 1.2, 0.9] }); // ears
   // eyes
   const eyeM = new THREE.MeshPhysicalMaterial({ map: eyeTexture(P.iris), roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03 });
   const eyes = [];
   for (const s of [-1, 1]) {
-    const e = new THREE.Group(); e.position.set(s * 0.145, 0.085, 0.33); head.add(e);
+    const e = new THREE.Group(); e.position.set(s * 0.15, 0.12, 0.33); head.add(e);
     const ball = mesh(new THREE.SphereGeometry(0.105, seg(40), seg(28)), eyeM, 0, 0, 0, { parent: e, cast: false });
     ball.userData.isEye = true; eyes.push(ball);
     // upper lid: a shell slightly larger than the ball, cut to the top part; rotated forward to drop over the eye
@@ -128,16 +128,16 @@ export function makeGnome(o = {}) {
   // brows: bushy clumps
   const browM = beardM;
   for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
-    const t = k / 3, b = mesh(clumpGeo(0.06 - t * 0.012, 0.11, s * 0.4, seg(14)), browM, s * (0.07 + t * 0.15), 0.21 - t * 0.02 + Math.sin(t * 3) * 0.015, 0.34 - t * 0.06, { parent: head });
+    const t = k / 3, b = mesh(clumpGeo(0.06 - t * 0.012, 0.11, s * 0.4, seg(14)), browM, s * (0.07 + t * 0.15), 0.265 - t * 0.02 + Math.sin(t * 3) * 0.015, 0.355 - t * 0.07, { parent: head });
     b.rotation.set(0.2, 0, s * (1.2 + t * 0.4));
   }
   if (P.smile) { const sm = new THREE.TorusGeometry(0.07, 0.014, 8, 20, Math.PI * 0.8); mesh(sm, ceramic('#a33a4a', 0.4), 0, -0.2, 0.37, { parent: head, rot: [0.2, 0, Math.PI * 1.1] }); }
   // beard + moustache
   if (P.beard) {
     const r = rng(P.seed * 7 + 3);
-    const rows = [ { y: -0.12, z: 0.27, W: 0.37, n: 7, L: 0.34, R: 0.11 }, { y: -0.3, z: 0.33, W: 0.33, n: 6, L: 0.4, R: 0.12 },
-                   { y: -0.5, z: 0.36, W: 0.25, n: 5, L: 0.36, R: 0.115 }, { y: -0.68, z: 0.36, W: 0.13, n: 3, L: 0.3, R: 0.1 } ];
-    mesh(new THREE.SphereGeometry(1, seg(32), seg(24)), beardM, 0, -0.42, 0.24, { parent: head, scale: [0.36, 0.42, 0.2] }); // core filler
+    const rows = [ { y: -0.16, z: 0.3, W: 0.36, n: 7, L: 0.32, R: 0.11 }, { y: -0.36, z: 0.37, W: 0.34, n: 6, L: 0.38, R: 0.12 },
+                   { y: -0.55, z: 0.45, W: 0.25, n: 5, L: 0.32, R: 0.115 }, { y: -0.72, z: 0.5, W: 0.12, n: 3, L: 0.24, R: 0.095 } ];
+    mesh(new THREE.SphereGeometry(1, seg(32), seg(24)), beardM, 0, -0.4, 0.28, { parent: head, scale: [0.34, 0.4, 0.2] }); // core filler
     for (const [ri, row] of rows.entries()) for (let i = 0; i < row.n; i++) {
       const th = row.n === 1 ? 0 : (i / (row.n - 1)) * 2 - 1, x = th * row.W + (r() - 0.5) * 0.03;
       const g = clumpGeo(row.R * (0.9 + r() * 0.2), row.L * (0.85 + r() * 0.3), -th * 0.35 + (r() - 0.5) * 0.25, seg(18));
@@ -146,8 +146,8 @@ export function makeGnome(o = {}) {
     }
     // moustache: two swooping lobes + curled tips
     for (const s of [-1, 1]) {
-      const m = mesh(clumpGeo(0.085, 0.2, 0, seg(18)), beardM, s * 0.09, -0.15, 0.44, { parent: head }); m.rotation.set(0.35, 0, s * 1.15);
-      const t = mesh(clumpGeo(0.05, 0.1, s * 0.6, seg(12)), beardM, s * 0.26, -0.24, 0.38, { parent: head }); t.rotation.set(0.3, 0, s * 0.3);
+      const m = mesh(clumpGeo(0.085, 0.2, 0, seg(18)), beardM, s * 0.09, -0.2, 0.45, { parent: head }); m.rotation.set(0.35, 0, s * 1.15);
+      const t = mesh(clumpGeo(0.05, 0.1, s * 0.6, seg(12)), beardM, s * 0.27, -0.28, 0.39, { parent: head }); t.rotation.set(0.3, 0, s * 0.3);
     }
     // side hair below hat
     for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { const m = mesh(clumpGeo(0.085, 0.2, s * 0.3, seg(14)), beardM, s * (0.36 - k * 0.02), 0.08 - k * 0.04, -0.1 - k * 0.12, { parent: head }); m.rotation.set(0, 0, s * 0.25); }
@@ -168,7 +168,7 @@ export function makeGnome(o = {}) {
     G.userData.glasses = gl;
   }
   // hat: tall cone with a soft droop toward the back, rolled brim
-  const hat = new THREE.Group(); hat.position.set(0, 0.14, -0.02); hat.rotation.x = -0.16; head.add(hat);
+  const hat = new THREE.Group(); hat.position.set(0, 0.25, -0.02); hat.rotation.x = -0.16; head.add(hat);
   const hp = []; const HH = P.hatH || 1.45;
   for (let i = 0; i <= 24; i++) { const t = i / 24; hp.push(new THREE.Vector2(0.47 * Math.pow(1 - t, 0.82) * (1 + 0.05 * Math.sin(t * 3.1)), t * HH)); }
   const hg = new THREE.LatheGeometry(hp, seg(56)), pp = hg.attributes.position;
@@ -180,7 +180,7 @@ export function makeGnome(o = {}) {
   mesh(new THREE.TorusGeometry(0.465, 0.045, 12, seg(56)), hatM, 0, 0.02, 0, { parent: hat, rot: [Math.PI / 2, 0, 0] });
   if (P.hatDots) { const dm = ceramic(P.hatDots, 0.4); const rr = rng(5); for (let i = 0; i < 14; i++) { const t = 0.1 + rr() * 0.6, a = rr() * 6.28, rad = 0.47 * Math.pow(1 - t, 0.82) * 1.01;
       const dz = -P.hatBend * t * t * t * HH; mesh(new THREE.SphereGeometry(0.035 * (1 - t * 0.6), 10, 8), dm, Math.cos(a) * rad + P.hatBend * 0.25 * t * t * t * HH, t * HH, Math.sin(a) * rad + dz, { parent: hat, scale: [1, 1, 0.4], rot: [0, -a + Math.PI / 2, 0] }); } }
-  G.userData.height = 1.37 + 0.14 + HH * 0.92;
+  G.userData.height = 1.37 + 0.25 + HH * 0.92;
   return G;
 }
 function shade(hex, k) { const c = new THREE.Color(hex); c.multiplyScalar(k); return '#' + c.getHexString(); }
@@ -258,7 +258,7 @@ export function makeKid(o = {}) {
   mesh(band, faceM, 0, 0.02, 0, { parent: head, cast: false });
   // messy hair accessory: cap + tufts (smooth UGC style)
   const hairM = phys(P.hair, { roughness: 0.5, clearcoat: 0.25, bumpMap: strandBump(), bumpScale: 0.8 });
-  mesh(new THREE.SphereGeometry(0.69, 40, 24, 0, Math.PI * 2, 0, Math.PI * 0.52), hairM, 0, 0.2, -0.03, { parent: head, scale: [1, 0.95, 1] });
+  mesh(new THREE.SphereGeometry(0.69, 40, 24, 0, Math.PI * 2, 0, Math.PI * 0.52), hairM, 0, 0.2, -0.03, { parent: head, scale: [1, 0.95, 1], rot: [-0.35, 0, 0] });
   const r = rng(12);
   for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, front = Math.cos(a - Math.PI / 2) > 0.6; // skip the face front
     const tilt = 0.5 + r() * 0.5, R = 0.17 + r() * 0.05, L = 0.32 + r() * 0.15;

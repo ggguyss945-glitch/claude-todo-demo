@@ -6,7 +6,7 @@ This file is numbers plus what they mean for our Three.js render. The look itsel
 - **Data (scratch, not in the repo):** `/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/rbx/metrics/`
   - `<video>.json` (TF/AW/PN/CG: `tooth_fairies.json` ...) has the final cut list, the shot stats and a **per-shot table** with camera, subject, colour and a 6-colour palette for every shot. It also holds the caption and cut-to-word stats.
   - `effects.json` holds vignette, bloom, grain, DOF and chromatic aberration. `audio.json` holds loudness, music, SFX and pace. `looks.json` holds shot colour clusters.
-  - `cuts_summary.json` scores PySceneDetect. `sd_<video>.csv/.json` are the raw PySceneDetect outputs.
+  - `cuts_summary.json` scores PySceneDetect. `sd_<video>.csv/.json` are the raw PySceneDetect outputs. `events.json` lists the glitch and flash transitions and the cut-list corrections.
   - The scripts are in `py/`:
     - `sd.py`: PySceneDetect.
     - `pass1.py`: per-frame diff, caption mask, DIS optical flow, colour.
@@ -332,9 +332,9 @@ There is **no chromatic aberration**. The only RGB split anywhere is CG's glitch
 | Editor shake hit | 0 | 0 | 1 (21.93 s) plus an opening spin-in (0-0.12 s) | 0 |
 | Dissolves or fades | 0 | 0 | 0 | 0 |
 
-The cut detector also flags content that only looks like an effect:
-- Glitch-like flags caused by striped content (gate barrier, railings, picture frames): TF 1, AW 13, PN 12, CG 20. All were rejected on frames.
-- Flash flags caused by cuts into bright scenes: TF 5. All were rejected.
+The effect detectors also flag content that only looks like an effect:
+- Glitch-like flags caused by striped content (gate barrier, railings, picture frames): TF 1, AW 13, PN 12, CG 20. A sample of about 30 was viewed and all were content, not glitch.
+- Flash flags caused by hard cuts into bright scenes or fog: TF 5, PN 1, CG 1. 4 were viewed and none was a flash.
 
 For our render: TF style uses **hard cuts only**. Keep the glitch and white-flash cuts for a horror-escalation act if we ever want the CG feel.
 
