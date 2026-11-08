@@ -9,10 +9,13 @@ import * as THREE from 'three';
 import * as sets from '../kit/sets.js';
 import * as K from '../kit/chars.js';
 import { makeRng, hash32 } from '../core/random.js';
+import { springStep } from '../core/anim.js';
 
 const S = sets.STUD;                 // 1 stud = 0.32 m
 const DEG = Math.PI / 180;
 const TL = await (await fetch(new URL('../../episodes/ep01/test5_timeline.json', import.meta.url))).json();
+// Owner option (not boarded): render `engine/episodes/ep01_test5.js?lantern=1` to light Grandpa's lantern at 3.75 s in s05.
+const LANTERN_ALT = new URL(import.meta.url).searchParams.get('lantern') === '1';
 const SHOT_START = Object.fromEntries(TL.shots.map((s) => [s.shot, s.start]));
 const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -113,6 +116,8 @@ function buildSwing(ctx, H) {
 // front windows lit, the swing to the right of the door in front of the right window, wall lanterns either side of the door.
 const PORCH_HOUSE = { type: 'bungalow', wall: 'siding', wallColor: '#cdb79c', roofColor: '#3b3440', doorColor: '#6b1f1a', shutterColor: '#3b4347', porch: 'full', porchDepth: 11, offsetX: 0, lit: [1, 1, 0, 1], curtain: '#b84a5a', number: '14', planters: false, seed: 77 };
 const SWING_X = 7.6, SWING_Z = 2.4, SEAT_X = 2.0; // studs from the door (x) and the front wall (z)
+// Porch grade: the kit's `porch` preset (cool street grade) warmed toward TF's night interiors (TF 123.0 s: hi #ceaace, R-B ~0).
+const PORCH_POST = { grade: { temperature: -9, tint: 12, saturation: 0.98, contrast: 1.02, shadows: '#3a1640', shadowsAmount: 0.3, highlights: '#e2c8f6', highlightsAmount: 0.22, outBlack: '#070108', outWhite: '#ddcaf6' } };
 function swingSway(T) { return 2.5 * Math.sin(2 * Math.PI * 0.45 * T + 0.6); } // degrees, episode time (continuous over cuts)
 
 function porchScene(ctx, { gnomes = false } = {}) {
@@ -143,10 +148,9 @@ function seatPoint(P, x, y, z) { return P.C.clone().add(new THREE.Vector3(x * S,
 function headWorld(avatar) { avatar.updateWorldMatrix(true, true); const h = avatar.getObjectByName('head'); return h.getWorldPosition(new THREE.Vector3()); }
 function updateSwing(P, T, jolt = null) {
   let rx = swingSway(T), dy = 0;
-  if (jolt) { const u = T - jolt.T0; if (u >= 0) { rx += jolt.amp * Math.exp(-2.2 * u) * Math.sin(2 * Math.PI * 1.1 * u); dy = -jolt.dip * (1 - springOne(u, 3, 0.35)); } }
+  if (jolt) { const u = T - jolt.T0; if (u >= 0) { rx += jolt.amp * Math.exp(-2.2 * u) * Math.sin(2 * Math.PI * 1.1 * u); dy = -jolt.dip * (1 - springStep(u, 3, 0.35)); } }
   P.swing.pivot.rotation.x = rx * DEG; P.swing.pivot.position.y = P.H + dy;
 }
-function springOne(u, f, z) { if (u <= 0) return 0; const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * u) * (Math.cos(wd * u) + (z / Math.sqrt(1 - z * z)) * Math.sin(wd * u)); }
 
 // ------------------------------------------------------------------ street gnomes (s01)
 // Every lot on side A gets Grandpa-style family gnomes in its flowerbed and on its lawn, all facing their house (slot
@@ -210,7 +214,7 @@ const BUILDERS = {
       const tgt = P.C.clone().add(new THREE.Vector3(0, 3.85 * S, 0.3 * S));
       const pos = P.C.clone().add(new THREE.Vector3(Math.sin(yaw) * R, 4.65 * S, Math.cos(yaw) * R + 0.3 * S));
       ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov });
-      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: tgt.toArray(), cd: 1.6, color: '#ffe0c8' } });
+      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: tgt.toArray(), cd: 1.6, color: '#ffe0c8' }, postOpts: PORCH_POST });
       ctx.camera.push(p.camera.move.Z).truck(p.camera.drift.truck_studs * S);
       ctx.shared.fx = sets.sparkles(ctx, { center: [tgt.x, tgt.y + 0.1, tgt.z + 0.5], size: [2.6, 1.6, 1.2], count: p.fx.sparkles.count, px: p.fx.sparkles.px, seed: 's02' }); ctx.add(ctx.shared.fx);
     },
@@ -227,13 +231,13 @@ const BUILDERS = {
       const tgt = head.clone().add(new THREE.Vector3(0, -0.42 * S, 0));
       const pos = head.clone().add(new THREE.Vector3(Math.sin(yaw) * R, 0.05 * S, Math.cos(yaw) * R));
       ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov });
-      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: head.toArray(), cd: 1.2, color: '#ffe0c8' } });
+      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: head.toArray(), cd: 1.2, color: '#ffe0c8' }, postOpts: PORCH_POST });
       ctx.camera.push(p.camera.move.Z).rollBy(p.camera.roll.deg[1] - p.camera.roll.deg[0]);
       // glint on her right lens rim (character's right = -x), frame 104 ("die")
       const gl = P.gm.getObjectByName('glasses'); P.gm.updateWorldMatrix(true, true);
       const lens = gl ? gl.localToWorld(new THREE.Vector3(-0.28, 0.15, 0.69)) : head.clone();
       ctx.shared.glintLocal = gl ? new THREE.Vector3(-0.28, 0.15, 0.69) : null;
-      ctx.shared.glint = starGlint(ctx, { pos: lens, t0: evT(ctx, 'die') ?? 0.25, peak: 150, rot: 25 }); // 150 px sprite = a ~110 px visible star ctx.add(ctx.shared.glint);
+      ctx.shared.glint = starGlint(ctx, { pos: lens, t0: evT(ctx, 'die') ?? 0.25, peak: 150, rot: 25 }); ctx.add(ctx.shared.glint); // 150 px sprite = a ~110 px visible star
       ctx.shared.fx = sets.sparkles(ctx, { center: [head.x + 0.1, head.y + 0.05, head.z + 0.25], size: [1.1, 1.0, 0.5], count: p.fx.sparkles.count, px: p.fx.sparkles.px, seed: 's03' }); ctx.add(ctx.shared.fx);
     },
     update(ctx, t) {
@@ -253,7 +257,7 @@ const BUILDERS = {
       const tgt = P.C.clone().add(new THREE.Vector3(0, 3.2 * S, 0.3 * S));
       const pos = P.C.clone().add(new THREE.Vector3(Math.sin(yaw) * R, 2.4 * S, Math.cos(yaw) * R + 0.3 * S));
       ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov });
-      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: tgt.toArray(), cd: 1.6, color: '#ffe0c8' } });
+      ctx.shared.rig = sets.porchGlow(ctx, { set: P.set, subject: { pos: tgt.toArray(), cd: 1.6, color: '#ffe0c8' }, postOpts: PORCH_POST });
       ctx.camera.push(p.camera.move.Z);
       const tb = evT(ctx, 'turn') ?? 0.1333; ctx.shared.tb = tb; ctx.shared.Tb = ctx.shot.start + tb;
       const chest = (x) => seatPoint(P, x, 3.2, 0.9).toArray();
@@ -285,7 +289,7 @@ const BUILDERS = {
       const p = ctx.params;
       const set = sets.buildLawnCloseup(ctx, { seed: 'ep01' }); ctx.add(set);
       const id = set.userData.lots.find((l) => l.hero).id; const sl = sets.slot(set, id + '.bed0');
-      const g = K.makeGnome('grandpa', { lantern: p.lanternLit ? 1 : 0, lanternLight: p.lanternLit ? 0.9 : false }); sets.place(g, sl); ctx.add(g);
+      const g = K.makeGnome('grandpa', { lantern: 0, lanternLight: p.lanternLit ? 0.9 : false }); sets.place(g, sl); ctx.add(g);
       ctx.add(sets.contactShadow(ctx, { pos: sl.pos, radius: 0.24, opacity: 0.45 }));
       // the rest of the family's lawn gnomes: they face the house too, so they stare at the lens
       let k = 0; for (const n of ['lawn0', 'lawn2', 'bedFront1']) { const s = sets.slot(set, id + '.' + n); if (!s) continue; const f = K.makeFamilyGnome(2 + k++, { lantern: 0 }); sets.place(f, s); ctx.add(f); }
@@ -324,6 +328,6 @@ export default {
   name: 'ep01_test5', fps: TL.fps, width: TL.width || 1080, height: TL.height || 1920, seed: 'ep01-test5', duration: TL.duration,
   quality: { shadows: 'off' },
   post: sets.postPreset('night'),
-  shots: TL.shots.map((e) => ({ name: e.name, start: e.start, end: e.end, params: e.params, ...BUILDERS[e.shot] })),
+  shots: TL.shots.map((e) => ({ name: e.name, start: e.start, end: e.end, params: LANTERN_ALT && e.shot === 'gnome_hero' ? { ...e.params, lanternLit: true } : e.params, ...BUILDERS[e.shot] })),
 };
 export { BUILDERS as builders, TL as timeline };
