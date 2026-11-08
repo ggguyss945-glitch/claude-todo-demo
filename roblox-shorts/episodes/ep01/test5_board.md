@@ -153,3 +153,26 @@ turn · into · garden · gnomes.
    episode returns to sparse.
 7. **The silent tail of 1.6 s** exists only because the test is 5 s long. In the episode, line 02 starts at 3.59 s and
    s05 would end there.
+
+## Revision 2 (after test5_review.md)
+
+The timeline JSON is the source of truth; these are the board changes made by the fix pass.
+
+- **s01** opens on a bright ECU of a neighbour's gnome (purple dotted hat) seen from its house side, then snaps back
+  (0.8 outExpo + 0.2 outQuad, half done in 0.1 s, roll -15 to 0, +10% push on top) to a porch-out view of the hero lawn:
+  four gnomes face the lens (= their house), then the gate, the street and the houses across. The sky crane is gone.
+- **s02** is shot from the front-left (yaw -36, 8.5 studs, deck + 5.0) over a white spindle rail that hides the seated
+  legs. The rail exists in this shot only. The couple turn 8.6 degrees toward each other.
+- **s03** holds the swing still so the push reads. Grandma's lens glass and temple arms are hidden.
+- **s04** is a centred low MS at yaw -6 and 7 studs. Grandma and Grandpa swap to gnomes on f134 under a one-frame
+  white-pink flash and two small cartoon puffs. The burst has streaks, fat sparkles, a ring and a core. The camera
+  punches in +22% over 0.15 s, and the grade turns to the warm magic look over 8 frames. The gnomes stand together at
+  x +-1.05, scaled 1.35 and turned 15 degrees to each other.
+- **s05** ends at f225, where the caption "gnomes" ends. It is extreme low (0.55 stud), 20 degrees to 3/4 and 26
+  degrees up, with the lantern in frame and still unlit. A warm window key (3.4 cd) and a cool rim light it, with the
+  TF moon by the hat. Roll is +10.
+- **s06 (new, f226-299)** is the silent tail: a low wide from behind a lawn gnome, with Grandpa in his bed under the lit
+  window and the family staring at the house, on a slow -10% pull. It replaces the 1.6 s static hold. The mix lifts the
+  crickets +4 dB after the voice and adds a soft air swell on the cut (`scratchpad/rbx/test5/sound_tools/mix_test5_v3.py`).
+- **Porch look:** a warm face key and cool fill, amber windows at 1.4, wine curtains, lit wall lanterns, long-board
+  deck, and a side table with a teacup and knitting basket.
