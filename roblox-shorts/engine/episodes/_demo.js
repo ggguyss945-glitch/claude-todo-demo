@@ -27,6 +27,7 @@ function buildAvatar() {
   face.position.set(0, 0.6 * S, 0.601 * S); head.add(face);
   const limb = (x, y, m, name) => { const g = new THREE.Group(); g.name = name; g.position.set(x * S, y * S, 0); const o = mesh(box(1, 2, 1), m); o.position.y = -1 * S; g.add(o); root.add(g); return g; };
   const armL = limb(-1.5, 4, skin, 'armL'), armR = limb(1.5, 4, skin, 'armR'), legL = limb(-0.5, 2, pants, 'legL'), legR = limb(0.5, 2, pants, 'legR');
+  armR.children[0].castShadow = false; // the lantern hangs from this arm: don't let it shadow the torso
   root.userData.parts = { torso, head, armL, armR, legL, legR };
   return root;
 }
@@ -83,9 +84,9 @@ function buildSet(ctx) {
 // Shared light rig + post look for both shots.
 function nightRig(ctx) {
   const { scene, lights } = ctx;
-  ctx.add(lights.hemi('#7d7fe0', '#2b1d3a', 0.55));
-  ctx.add(lights.sun({ color: '#9aa4ff', intensity: 0.9, pos: [-6, 9, 5], target: [0, 0, -1], size: 6, mapSize: 2048, radius: 4, bias: -0.0005, normalBias: 0.03 }));
-  ctx.setFog({ color: '#1d1b45', density: 0.045, height: { base: 0, falloff: 2.2, density: 0.35, color: '#6c6cc0', max: 0.85 } });
+  ctx.add(lights.hemi('#8f8ff0', '#3a2448', 1.1));
+  ctx.add(lights.sun({ color: '#aab2ff', intensity: 1.7, pos: [-5, 8, 6], target: [0, 0, -1], size: 6, mapSize: 2048, radius: 4, bias: -0.0005, normalBias: 0.03 }));
+  ctx.setFog({ color: '#1d1b45', density: 0.04, height: { base: 0, falloff: 3.0, density: 0.16, color: '#6c6cc0', max: 0.55 } });
   ctx.post.set({
     toneMapping: 'aces', exposure: 1.15,
     bloom: { enabled: true, strength: 0.55, radius: 0.62, threshold: 1.1, knee: 0.6 },
@@ -102,14 +103,14 @@ function posePlaceholder(av, t, rng) {
   const breath = Math.sin(t * 2 * Math.PI * 0.28);
   P.torso.scale.set(1 + breath * 0.008, 1 + breath * 0.012, 1 + breath * 0.008);
   P.head.rotation.y = 0.25 * Math.sin(t * 0.6) - 0.1; P.head.rotation.x = -0.05;
-  P.armR.rotation.set(-1.05 + Math.sin(t * 1.3) * 0.02, 0, 0.08); P.armL.rotation.set(0.05, 0, -0.06);
+  P.armR.rotation.set(-0.42 + Math.sin(t * 1.3) * 0.015, 0, 0.06); P.armL.rotation.set(0.05, 0, -0.06);
 }
 
 function sparkles(ctx, n, center, spread) {
   const g = new THREE.Group(); const map = ctx.tex.sparkle({ points: 6, sharpness: 16 }); const rng = ctx.rng.fork('spark');
   for (let i = 0; i < n; i++) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map, color: rng() < 0.5 ? '#e9dcff' : '#ffe2c4', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    s.userData = { p: new THREE.Vector3(center[0] + (rng() - 0.5) * spread[0], center[1] + (rng() - 0.5) * spread[1], center[2] + (rng() - 0.5) * spread[2]), ph: rng() * 6.28, sp: 0.6 + rng() * 0.8, sz: 0.05 + rng() * 0.07, dr: new THREE.Vector3((rng() - 0.5) * 0.12, 0.05 + rng() * 0.1, (rng() - 0.5) * 0.1) };
+    s.userData = { p: new THREE.Vector3(center[0] + (rng() - 0.5) * spread[0], center[1] + (rng() - 0.5) * spread[1], center[2] + (rng() - 0.5) * spread[2]), ph: rng() * 6.28, sp: 0.6 + rng() * 0.8, sz: 0.035 + rng() * 0.04, dr: new THREE.Vector3((rng() - 0.5) * 0.12, 0.05 + rng() * 0.1, (rng() - 0.5) * 0.1) };
     g.add(s);
   }
   g.userData.update = (t) => g.children.forEach((s) => { const d = s.userData; s.position.copy(d.p).addScaledVector(d.dr, t); const tw = 0.5 + 0.5 * Math.sin(t * d.sp * 3 + d.ph); s.scale.setScalar(d.sz * (0.6 + 0.6 * tw)); s.material.opacity = 0.35 + 0.65 * tw; s.material.rotation = d.ph + t * 0.3; });
@@ -120,8 +121,8 @@ function stage(ctx) {
   ctx.add(ctx.instance('lawnSet', buildSet));
   nightRig(ctx);
   const av = buildAvatar(); av.position.set(0, 0, 0); av.rotation.y = 0.35; ctx.add(av);
-  const lantern = buildLantern(ctx); av.userData.parts.armR.add(lantern); lantern.position.set(0, -2.05 * S, 0.02); lantern.rotation.x = 1.05;
-  const sp = sparkles(ctx, 14, [0, 1.2, 0.3], [3, 1.6, 2]); ctx.add(sp);
+  const lantern = buildLantern(ctx); av.userData.parts.armR.add(lantern); lantern.position.set(0, -2.0 * S - 0.12, 0.0); lantern.rotation.x = 0.42;
+  const sp = sparkles(ctx, 10, [0.2, 1.1, 0.6], [2.6, 1.4, 1.6]); ctx.add(sp);
   return { av, lantern, sp };
 }
 
@@ -147,7 +148,7 @@ export default {
       name: 'close_low', start: 2.4, end: 4.0,
       build(ctx) {
         ctx.shared.demo = stage(ctx);
-        ctx.camera.set({ pos: [-0.45, 0.85, 1.55], target: [0.12, 1.25, 0], fov: 38 })
+        ctx.camera.set({ pos: [1.0, 0.55, 2.35], target: [0.26, 1.06, 0.05], fov: 40 })
           .push(0.19, { mode: 'zoom' }).orbit(-6).handheld({ rot: 0.2, pos: 0.004, freq: 0.5 }).shake({ t0: 0.0, dur: 0.35, rot: 0.6, pos: 0.006, freq: 16 });
         ctx.camera.focus(ctx.shared.demo.lantern);
         ctx.post.set({ dof: { aperture: 20, maxBlur: 26 }, bloom: { strength: 0.7 } });

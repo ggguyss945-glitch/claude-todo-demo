@@ -9,16 +9,20 @@ import * as tex from './textures.js';
 import { makeRng, hash32, seedMathRandom } from './random.js';
 
 // Global quality presets (render.js `quality=`). Shots set their own `quality` on top; the preset caps it.
+// scale = output resolution factor; renderScale = 3D scene render-target factor (multiplies the shot's own
+// post.renderScale); msaa = scene MSAA samples (SwiftShader: 2x costs the same as 4x).
 export const QUALITY = {
-  final: { scale: 1, msaa: 4, aa: 'msaa', shadowScale: 1, dofQuality: null },
-  draft: { scale: 1, msaa: 0, aa: 'fxaa', shadowScale: 0.5, dofQuality: 'low' },
-  preview: { scale: 0.5, msaa: 0, aa: 'fxaa', shadowScale: 0.5, dofQuality: 'low' },
+  final: { scale: 1, renderScale: 1, msaa: 4, aa: 'msaa', shadowScale: 1, dofQuality: null },
+  balanced: { scale: 1, renderScale: 0.85, msaa: 4, aa: 'msaa', shadowScale: 1, dofQuality: null },
+  fast: { scale: 1, renderScale: 0.75, msaa: 4, aa: 'msaa', shadowScale: 1, dofQuality: null },
+  draft: { scale: 1, renderScale: 0.75, msaa: 0, aa: 'fxaa', shadowScale: 0.5, dofQuality: 'low' },
+  preview: { scale: 0.5, renderScale: 1, msaa: 0, aa: 'fxaa', shadowScale: 0.5, dofQuality: 'low' },
 };
 const DEFAULT_SHOT_QUALITY = { shadows: 'pcfsoft' };
 
 export class Engine {
-  constructor({ canvas, quality = 'final', profile = false } = {}) {
-    this.canvas = canvas; this.preset = QUALITY[quality] || QUALITY.final; this.qualityName = quality; this.profile = profile;
+  constructor({ canvas, quality = 'final', profile = false, overrides = {} } = {}) {
+    this.canvas = canvas; this.preset = { ...(QUALITY[quality] || QUALITY.final), ...overrides }; this.qualityName = quality; this.profile = profile;
     this.cache = new Map(); this.shared = {};
     this.current = null; // { entry, idx, scene, ctx }
   }
@@ -114,6 +118,7 @@ export class Engine {
     const P = this.preset; const pp = this.post.params;
     if (P.aa !== 'msaa') { pp.aa = P.aa; } else if (q.msaa != null) pp.msaaSamples = q.msaa; else pp.msaaSamples = Math.min(pp.msaaSamples, P.msaa);
     if (P.dofQuality) pp.dof.quality = P.dofQuality;
+    pp.renderScale = (pp.renderScale || 1) * (P.renderScale ?? 1);
     applyQuality(this.renderer, scene, q);
     const ss = (q.shadowScale ?? 1) * (P.shadowScale ?? 1);
     if (ss !== 1) scene.traverse((o) => { if (o.isLight && o.castShadow && !o.userData._ss) { o.shadow.mapSize.multiplyScalar(ss).floor(); o.userData._ss = true; } });

@@ -17,13 +17,17 @@ export function defaultPostParams() {
     exposure: 1,
     aa: 'msaa', // 'msaa' (scene MSAA x msaaSamples) | 'fxaa' | 'msaa+fxaa' | 'none'
     msaaSamples: 4,
+    // Scene render-target scale (1 = native 1080x1920). 0.75 renders the 3D scene at 810x1440 and upsamples in the
+    // uber pass: ~45% less shading time; post effects still run at output resolution.
+    renderScale: 1,
     dither: true,
     // Bloom on highlights (soft threshold). strength = mix amount, radius 0..1 = halo size (scatter), threshold in
     // linear HDR units (1.0 = white before tone mapping), knee = threshold softness.
-    bloom: { enabled: false, strength: 0.4, radius: 0.6, threshold: 0.9, knee: 0.5, levels: 6, tint: '#ffffff' },
+    // start: 'quarter' (fast, default) or 'half' (crisper small halos, ~3x the cost).
+    bloom: { enabled: false, strength: 0.4, radius: 0.6, threshold: 0.9, knee: 0.5, levels: 6, start: 'quarter', tint: '#ffffff' },
     // "Dreamy" diffusion / Pro-Mist glow: a wide blur of the whole image (threshold 0) blended over it.
     // mode 'screen' (display space, Orton-like), 'add' (linear light), 'mix' (soft-focus haze).
-    glow: { enabled: false, amount: 0.2, radius: 0.75, threshold: 0.0, knee: 0.5, levels: 6, mode: 'screen', tint: '#ffffff' },
+    glow: { enabled: false, amount: 0.2, radius: 0.75, threshold: 0.0, knee: 0.5, levels: 6, start: 'quarter', mode: 'screen', tint: '#ffffff' },
     // Depth of field. focus: 'auto' (ShotCamera focus) or metres. aperture = blur in px (1080-wide) for objects at
     // infinity; maxBlur clamps near blur (px). range = in-focus band half-width (m). quality: 'low'|'med'|'high'.
     dof: { enabled: false, focus: 'auto', aperture: 14, maxBlur: 24, range: 0.0, quality: 'med' },
@@ -51,7 +55,8 @@ export function defaultPostParams() {
     grain: { enabled: false, amount: 0.035, size: 1.6, colored: 0.2 },
     // God rays: radial blur of bright pixels away from `source` (world [x,y,z] / Vector3 / Object3D, or screen
     // {screen:[u,v]} with v up). skyOnly uses the depth buffer so only the sky/background emits.
-    godrays: { enabled: false, source: [0, 10, -50], threshold: 0.8, strength: 0.6, density: 0.9, decay: 0.96, weight: 0.35, samples: 40, skyOnly: false, tint: '#ffffff' },
+    // strength 1 ~ streaks as bright as the average masked source along the ray; weight is an extra multiplier.
+    godrays: { enabled: false, source: [0, 10, -50], threshold: 0.8, strength: 0.6, density: 0.9, decay: 0.96, weight: 1, samples: 40, skyOnly: false, tint: '#ffffff' },
     // Editor-style blur: directional (px, 1080-wide) and/or radial zoom (fraction), used for shake hits / whips.
     blur: { enabled: false, dir: [0, 0], zoom: 0, center: [0.5, 0.5], samples: 10 },
     // Transitions (display space): fade mixes toward colour, flash adds colour (screen blend).
@@ -132,27 +137,33 @@ void main(){
   gl_FragColor = vec4(mix(texture2D(tHigh, vUv).rgb, s, uScatter), 1.0);
 }`;
 
-// Single-pass gather DOF at half resolution (after Dennis Gustafsson, "Bokeh depth of field in a single pass").
-const DOF_FS = /* glsl */`
+// DOF pre-pass (half res): rgb = colour, a = signed circle of confusion in half-res px (+ far, - near).
+const COC_FS = /* glsl */`
 #include <packing>
-uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uPx; // full-res px size in uv
-uniform float uNear, uFar, uFocus, uAperture, uMaxBlur, uBand;
+uniform sampler2D tColor; uniform sampler2D tDepth; uniform float uNear, uFar, uFocus, uAperture, uMaxBlur, uBand;
 varying vec2 vUv;
-float viewZ(vec2 uv){ return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar); }
-float coc(float z){ float d = 1.0 - uFocus / z; float s = sign(d); d = max(abs(d) - uBand, 0.0); return clamp(s * d * uAperture, -uMaxBlur, uMaxBlur); }
+void main(){
+  float z = -perspectiveDepthToViewZ(texture2D(tDepth, vUv).x, uNear, uFar);
+  float d = 1.0 - uFocus / z; float s = sign(d); d = max(abs(d) - uBand, 0.0);
+  gl_FragColor = vec4(texture2D(tColor, vUv).rgb, clamp(s * d * uAperture, -uMaxBlur, uMaxBlur));
+}`;
+// Gather DOF on the packed half-res texture (after Dennis Gustafsson, "Bokeh depth of field in a single pass").
+// One texture fetch per tap; background taps are clamped so they never bleed onto sharper foreground.
+const DOF_FS = /* glsl */`
+uniform sampler2D tSrc; uniform vec2 uPx; uniform float uMaxBlur;
+varying vec2 vUv;
 const float GOLDEN = 2.39996323;
 void main(){
-  float cz = viewZ(vUv); float cs = abs(coc(cz));
-  vec3 col = texture2D(tColor, vUv).rgb; float tot = 1.0; float cover = cs;
+  vec4 c0 = texture2D(tSrc, vUv); float cc = c0.a; float cs = abs(cc);
+  vec3 col = c0.rgb; float tot = 1.0; float cover = cs;
   float r = RAD_SCALE; float ang = 0.0;
   for (int i = 0; i < MAX_TAPS; i++) {
     if (r >= uMaxBlur) break;
-    vec2 tc = vUv + vec2(cos(ang), sin(ang)) * uPx * r;
-    vec3 sc = texture2D(tColor, tc).rgb; float sz = viewZ(tc); float ss = abs(coc(sz));
-    if (sz > cz) ss = clamp(ss, 0.0, cs * 2.0);
+    vec4 s = texture2D(tSrc, vUv + vec2(cos(ang), sin(ang)) * uPx * r);
+    float ss = abs(s.a); if (s.a > cc) ss = min(ss, cs * 2.0);
     float m = smoothstep(r - 0.5 * RAD_SCALE, r + 0.5 * RAD_SCALE, ss);
-    if (sz < cz) cover = max(cover, m * ss);
-    col += mix(col / tot, sc, m); tot += 1.0;
+    if (s.a < cc) cover = max(cover, m * ss);
+    col += mix(col / tot, s.rgb, m); tot += 1.0;
     r += RAD_SCALE * RAD_SCALE / r; ang += GOLDEN;
   }
   gl_FragColor = vec4(col / tot, cover);
@@ -185,7 +196,7 @@ const UBER_FS = /* glsl */`
 #include <tonemapping_pars_fragment>
 uniform sampler2D tScene; uniform sampler2D tDepth; uniform sampler2D tDof; uniform sampler2D tBloom; uniform sampler2D tGlow; uniform sampler2D tRays;
 uniform vec2 uRes; uniform float uAspect; uniform float uExposure;
-uniform float uNear, uFar, uFocus, uAperture, uMaxBlur, uBand;
+uniform float uNear, uFar, uFocus, uAperture, uMaxBlur, uBand, uDofScale;
 uniform float uBloomStrength; uniform vec3 uBloomTint;
 uniform float uGlowAmount; uniform vec3 uGlowTint;
 uniform float uRayStrength; uniform vec3 uRayTint;
@@ -213,7 +224,7 @@ vec3 sceneAt(vec2 uv){
   float z = -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar);
   float d = 1.0 - uFocus / z; d = max(abs(d) - uBand, 0.0) * uAperture;
   vec4 b = texture2D(tDof, uv);
-  float a = smoothstep(0.6, 2.0, max(min(d, uMaxBlur), b.a * 2.0));
+  float a = smoothstep(0.6, 2.0, max(min(d, uMaxBlur), b.a * uDofScale));
   c = mix(c, b.rgb, a);
   #endif
   return c;
@@ -282,17 +293,21 @@ void main(){
   col = toneMap(col);
   col = toDisplay(col);
   #if defined(USE_GLOW) && GLOW_MODE == 0
-  { vec3 gd = toDisplay(toneMap(g)); col = 1.0 - (1.0 - col) * (1.0 - gd * uGlowAmount); }
+  { vec3 ge = g * uExposure; vec3 gd = sqrt(ge / (1.0 + ge)); col = 1.0 - (1.0 - col) * (1.0 - gd * uGlowAmount); }
   #endif
   #ifdef USE_GRADE
   col = uGain * (col + uLift * (1.0 - col)) + uOffset;
+  #ifdef USE_GAMMA
   col = pow(max(col, vec3(0.0)), 1.0 / uGamma);
+  #endif
   col = (col - uGradeA.y) * uGradeA.x + uGradeA.y;
   float l = luma(col);
   col = mix(vec3(l), col, uGradeA.z);
   if (uGradeA.w != 0.0) { float mx = max(col.r, max(col.g, col.b)), mn = min(col.r, min(col.g, col.b)); float sat = mx - mn; col = mix(vec3(l), col, 1.0 + uGradeA.w * (1.0 - sat)); }
   col = clamp(col, 0.0, 1.0);
+  #ifdef USE_SPLIT
   { float t = clamp(luma(col) + uBalance, 0.0, 1.0); col = softLight(col, mix(vec3(0.5), uShadowsTint, 1.0 - t)); col = softLight(col, mix(vec3(0.5), uHighlightsTint, t)); }
+  #endif
   col = uOutBlack + col * (uOutWhite - uOutBlack);
   #endif
   #ifdef USE_VIGNETTE
@@ -323,14 +338,15 @@ export class Post {
     const mk = (fs, uniforms, defines = {}) => new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: fs, uniforms, defines, depthTest: false, depthWrite: false, toneMapped: false });
     this.mDown = mk(DOWN_FS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uThresh: { value: new THREE.Vector4() } });
     this.mUp = mk(UP_FS, { tLow: { value: null }, tHigh: { value: null }, uTexel: { value: new THREE.Vector2() }, uScatter: { value: 0.6 } });
-    this.mDof = mk(DOF_FS, { tColor: { value: null }, tDepth: { value: null }, uPx: { value: new THREE.Vector2() }, uNear: { value: 0.1 }, uFar: { value: 100 }, uFocus: { value: 5 }, uAperture: { value: 10 }, uMaxBlur: { value: 12 }, uBand: { value: 0 } }, { RAD_SCALE: '1.0', MAX_TAPS: 64 });
+    this.mCoc = mk(COC_FS, { tColor: { value: null }, tDepth: { value: null }, uNear: { value: 0.1 }, uFar: { value: 100 }, uFocus: { value: 5 }, uAperture: { value: 10 }, uMaxBlur: { value: 12 }, uBand: { value: 0 } });
+    this.mDof = mk(DOF_FS, { tSrc: { value: null }, uPx: { value: new THREE.Vector2() }, uMaxBlur: { value: 12 } }, { RAD_SCALE: '1.35', MAX_TAPS: 64 });
     this.mRayMask = mk(RAYMASK_FS, { tColor: { value: null }, tDepth: { value: null }, uThreshold: { value: 1 }, uSkyOnly: { value: 0 } });
     this.mRayBlur = mk(RAYBLUR_FS, { tSrc: { value: null }, uLight: { value: new THREE.Vector2(0.5, 0.5) }, uDensity: { value: 0.9 }, uDecay: { value: 0.96 }, uWeight: { value: 0.3 } }, { SAMPLES: 40 });
     const U = (v) => ({ value: v });
     this.mUber = mk(UBER_FS, {
       tScene: U(null), tDepth: U(null), tDof: U(null), tBloom: U(null), tGlow: U(null), tRays: U(null),
       uRes: U(new THREE.Vector2(width, height)), uAspect: U(width / height), uExposure: U(1),
-      uNear: U(0.1), uFar: U(100), uFocus: U(5), uAperture: U(10), uMaxBlur: U(20), uBand: U(0),
+      uNear: U(0.1), uFar: U(100), uFocus: U(5), uAperture: U(10), uMaxBlur: U(20), uBand: U(0), uDofScale: U(2),
       uBloomStrength: U(0), uBloomTint: U(new THREE.Vector3(1, 1, 1)), uGlowAmount: U(0), uGlowTint: U(new THREE.Vector3(1, 1, 1)),
       uRayStrength: U(0), uRayTint: U(new THREE.Vector3(1, 1, 1)), uLensK: U(new THREE.Vector3(0, 0, 1)), uChroma: U(0),
       uBlurDir: U(new THREE.Vector2()), uBlurZoom: U(0), uBlurCenter: U(new THREE.Vector2(0.5, 0.5)), uWB: U(new THREE.Matrix3()),
@@ -365,16 +381,17 @@ export class Post {
   _pass(material, target) { this.quad.material = material; this.r.setRenderTarget(target); this.quad.render(this.r); }
   _t(label) { if (!this.timings) return; const gl = this.r.getContext(); gl.finish(); const now = performance.now(); this.timings[label] = (this.timings[label] || 0) + (now - this._last); this._last = now; }
 
-  // Downsample/upsample pyramid from `src` (full-res HDR). Returns the half-res result texture.
-  _pyramid(name, src, p) {
-    const W = this.W, H = this.H; const levels = Math.max(1, Math.min(8, p.levels | 0));
+  // Downsample/upsample pyramid from render target `srcRT`. start 'quarter' skips the half-res level (the first pass
+  // box-filters 4x4 source texels). Returns the top (largest) upsampled level's texture.
+  _pyramid(name, srcRT, p) {
+    const levels = Math.max(1, Math.min(8, p.levels | 0)); const quarter = p.start !== 'half';
     const downs = [];
-    let w = W, h = H, input = src;
+    let w = srcRT.width, h = srcRT.height, input = srcRT.texture;
     for (let i = 0; i < levels; i++) {
-      const iw = w, ih = h; w = Math.max(1, Math.ceil(w / 2)); h = Math.max(1, Math.ceil(h / 2));
+      const iw = w, ih = h; const f = i === 0 && quarter ? 4 : 2; w = Math.max(1, Math.ceil(w / f)); h = Math.max(1, Math.ceil(h / f));
       const rt = this._rt(`${name}_d${i}`, w, h, {});
-      const m = this.mDown; m.uniforms.tSrc.value = input; m.uniforms.uTexel.value.set(0.5 / iw * 2, 0.5 / ih * 2);
-      m.uniforms.uThresh.value.set(p.threshold || 0, p.knee ?? 0.5, i === 0 && (p.threshold > 0) ? 1 : 0, i === 0 ? 1 : 0);
+      const m = this.mDown; m.uniforms.tSrc.value = input; m.uniforms.uTexel.value.set(1 / iw, 1 / ih);
+      m.uniforms.uThresh.value.set(p.threshold || 0, p.knee ?? 0.5, i === 0 && p.threshold > 0 ? 1 : 0, i === 0 ? 1 : 0);
       this._pass(m, rt); downs.push(rt); input = rt.texture;
     }
     let low = downs[levels - 1].texture;
@@ -393,7 +410,8 @@ export class Post {
     if (this.timings) { r.getContext().finish(); this._last = performance.now(); }
     const aa = P.aa || 'none'; const msaa = aa.includes('msaa') ? P.msaaSamples | 0 : 0;
     const needDepth = !!(P.dof.enabled || (P.godrays.enabled && P.godrays.skyOnly));
-    const sceneRT = this._rt('scene', W, H, { samples: msaa, depth: needDepth, depthBuffer: true });
+    const rs = Math.min(1, Math.max(0.25, P.renderScale || 1)); const SW = Math.round(W * rs), SH = Math.round(H * rs);
+    const sceneRT = this._rt('scene', SW, SH, { samples: msaa, depth: needDepth, depthBuffer: true });
     const prevAuto = r.autoClear; r.autoClear = true;
     r.setRenderTarget(sceneRT); r.render(scene, camera);
     this._t('scene');
@@ -401,36 +419,36 @@ export class Post {
     u.tScene.value = sceneRT.texture; u.tDepth.value = sceneRT.depthTexture || null;
     u.uNear.value = camera.near; u.uFar.value = camera.far;
 
-    // DOF
+    // DOF: CoC pre-pass + gather, both at half of the scene resolution
     if (P.dof.enabled) {
       const d = P.dof; const focus = d.focus === 'auto' || d.focus == null ? focusDistance : d.focus;
-      const k = W / 1080; const hw = Math.ceil(W / 2), hh = Math.ceil(H / 2);
-      const rt = this._rt('dof', hw, hh, {});
+      const k = W / 1080; const hw = Math.ceil(SW / 2), hh = Math.ceil(SH / 2); const hk = hw / W; // full-res px -> half-scene px
+      const band = d.range > 0 ? Math.abs(1 - focus / (focus + d.range)) : 0;
+      const coc = this._rt('dof_coc', hw, hh, {}), out = this._rt('dof', hw, hh, {});
+      const mc = this.mCoc.uniforms; mc.tColor.value = sceneRT.texture; mc.tDepth.value = sceneRT.depthTexture; mc.uNear.value = camera.near; mc.uFar.value = camera.far;
+      mc.uFocus.value = focus; mc.uAperture.value = d.aperture * k * hk; mc.uMaxBlur.value = d.maxBlur * k * hk; mc.uBand.value = band;
+      this._pass(this.mCoc, coc);
       const m = this.mDof; const rad = d.quality === 'high' ? '0.9' : d.quality === 'low' ? '2.0' : '1.35';
       if (m.defines.RAD_SCALE !== rad) { m.defines.RAD_SCALE = rad; m.needsUpdate = true; }
-      m.uniforms.tColor.value = sceneRT.texture; m.uniforms.tDepth.value = sceneRT.depthTexture;
-      m.uniforms.uPx.value.set(2 / W, 2 / H); // gather radius in half-res px
-      m.uniforms.uNear.value = camera.near; m.uniforms.uFar.value = camera.far; m.uniforms.uFocus.value = focus;
-      m.uniforms.uAperture.value = d.aperture * k / 2; m.uniforms.uMaxBlur.value = d.maxBlur * k / 2;
-      const band = d.range > 0 ? Math.abs(1 - focus / (focus + d.range)) : 0; m.uniforms.uBand.value = band;
-      this._pass(m, rt);
-      u.tDof.value = rt.texture; u.uFocus.value = focus; u.uAperture.value = d.aperture * k; u.uMaxBlur.value = d.maxBlur * k; u.uBand.value = band;
+      m.uniforms.tSrc.value = coc.texture; m.uniforms.uPx.value.set(1 / hw, 1 / hh); m.uniforms.uMaxBlur.value = d.maxBlur * k * hk;
+      this._pass(m, out);
+      u.tDof.value = out.texture; u.uFocus.value = focus; u.uAperture.value = d.aperture * k; u.uMaxBlur.value = d.maxBlur * k; u.uBand.value = band; u.uDofScale.value = 1 / hk;
       defs.USE_DOF = 1; this._t('dof');
     }
     // bloom
     if (P.bloom.enabled && P.bloom.strength > 0) {
-      u.tBloom.value = this._pyramid('bloom', sceneRT.texture, P.bloom); u.uBloomStrength.value = P.bloom.strength;
+      u.tBloom.value = this._pyramid('bloom', sceneRT, P.bloom); u.uBloomStrength.value = P.bloom.strength;
       const c = lin(P.bloom.tint); u.uBloomTint.value.set(c.r, c.g, c.b); defs.USE_BLOOM = 1; this._t('bloom');
     }
     // glow / diffusion
     if (P.glow.enabled && P.glow.amount > 0) {
-      u.tGlow.value = this._pyramid('glow', sceneRT.texture, P.glow); u.uGlowAmount.value = P.glow.amount;
+      u.tGlow.value = this._pyramid('glow', sceneRT, P.glow); u.uGlowAmount.value = P.glow.amount;
       const c = lin(P.glow.tint); u.uGlowTint.value.set(c.r, c.g, c.b);
       defs.USE_GLOW = 1; defs.GLOW_MODE = P.glow.mode === 'add' ? 1 : P.glow.mode === 'mix' ? 2 : 0; this._t('glow');
     }
     // god rays
     if (P.godrays.enabled && P.godrays.strength > 0) {
-      const g = P.godrays; const qw = Math.ceil(W / 4), qh = Math.ceil(H / 4);
+      const g = P.godrays; const qw = Math.ceil(SW / 4), qh = Math.ceil(SH / 4);
       let lu = 0.5, lv = 0.5, visible = 1;
       if (g.source && g.source.screen) { lu = g.source.screen[0]; lv = g.source.screen[1]; }
       else {
@@ -442,9 +460,9 @@ export class Post {
       const wantDepth = g.skyOnly && sceneRT.depthTexture ? 1 : 0; if ((mm.defines.USE_DEPTH ? 1 : 0) !== wantDepth) { if (wantDepth) mm.defines.USE_DEPTH = 1; else delete mm.defines.USE_DEPTH; mm.needsUpdate = true; }
       this._pass(mm, mask);
       const mb = this.mRayBlur; const n = Math.max(8, Math.min(96, g.samples | 0)); if (mb.defines.SAMPLES !== n) { mb.defines.SAMPLES = n; mb.needsUpdate = true; }
-      // pass 1: long streaks (energy-normalised, x weight*8); pass 2: fills the gaps between pass-1 taps
+      // pass 1: long streaks (energy-normalised x weight); pass 2: fills the gaps between pass-1 taps
       const norm = (1 - Math.pow(g.decay, n)) / (1 - g.decay + 1e-6);
-      mb.uniforms.uLight.value.set(lu, lv); mb.uniforms.uDecay.value = g.decay; mb.uniforms.uWeight.value = (g.weight * 8) / norm;
+      mb.uniforms.uLight.value.set(lu, lv); mb.uniforms.uDecay.value = g.decay; mb.uniforms.uWeight.value = g.weight / norm;
       mb.uniforms.tSrc.value = mask.texture; mb.uniforms.uDensity.value = g.density; this._pass(mb, a);
       mb.uniforms.tSrc.value = a.texture; mb.uniforms.uDensity.value = g.density / n; mb.uniforms.uDecay.value = 1; mb.uniforms.uWeight.value = 1 / n; this._pass(mb, b);
       u.tRays.value = b.texture; u.uRayStrength.value = g.strength * visible; const c = lin(g.tint); u.uRayTint.value.set(c.r, c.g, c.b);
@@ -465,6 +483,8 @@ export class Post {
     u.uWB.value = G.enabled && (G.temperature || G.tint) ? whiteBalance(G.temperature, G.tint) : u.uWB.value.identity();
     if (G.enabled) {
       defs.USE_GRADE = 1;
+      if (rgb(G.gamma).some((v) => v !== 1)) defs.USE_GAMMA = 1;
+      if (G.shadowsAmount > 0 || G.highlightsAmount > 0) defs.USE_SPLIT = 1;
       u.uLift.value.copy(vec3(rgb(G.lift))); u.uGamma.value.copy(vec3(rgb(G.gamma))); u.uGain.value.copy(vec3(rgb(G.gain))); u.uOffset.value.copy(vec3(rgb(G.offset)));
       u.uGradeA.value.set(G.contrast, G.pivot, G.saturation, G.vibrance || 0);
       const st = rgb(G.shadows), ht = rgb(G.highlights);

@@ -13,7 +13,7 @@ const canvas = document.getElementById('c');
 let engine = null;
 window.ENGINE = {
   async init(opts = {}) {
-    engine = new Engine({ canvas, quality: opts.quality || 'final', profile: !!opts.profile });
+    engine = new Engine({ canvas, quality: opts.quality || 'final', profile: !!opts.profile, overrides: opts.overrides || {} });
     window.__engine = engine;
     return engine.load({ episode: opts.episode, timeline: opts.timeline });
   },

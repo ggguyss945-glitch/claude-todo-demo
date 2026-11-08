@@ -5,7 +5,8 @@
 //     from=0 to=<end>      seconds to render (frame range [from*fps, to*fps))
 //     workers=2            parallel renderers;  mode=browsers (one Chromium per worker, default) | pages (one browser)
 //     chunk=300            frames per x264 segment (frames are deleted once their segment is encoded)
-//     quality=final        final | draft | preview (preview = half resolution)
+//     quality=final        final (scene 1080x1920 MSAA) | balanced (scene x0.85) | fast (x0.75) | draft (x0.75 FXAA)
+//                          | preview (540x960 output);  rs=0.9 overrides the scene render scale
 //     jpegq=92 crf=16 preset=medium gop=120
 //     times=0.5,1.2        stills mode: render these times (s) to <out>/still_<t>.jpg (out = a directory)
 //     sheet=1              also write a contact sheet (<out>.sheet.jpg for videos, <out>/sheet.jpg for stills)
@@ -56,7 +57,7 @@ class Worker {
     await this.page.goto(`${this.o.base}/engine/index.html`);
     await this.page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
     await this.page.evaluate(() => { document.getElementById('c').style.display = 'none'; });
-    this.info = await this.page.evaluate((o) => window.ENGINE.init(o), { episode: this.o.episode, timeline: this.o.timeline, quality: this.o.quality, profile: this.o.profile });
+    this.info = await this.page.evaluate((o) => window.ENGINE.init(o), { episode: this.o.episode, timeline: this.o.timeline, quality: this.o.quality, profile: this.o.profile, overrides: this.o.overrides });
     return this.info;
   }
   async render(i, upload) {
@@ -73,7 +74,7 @@ class Worker {
 function ffmpegEncode(framesDir, a, n, fps, segPath, o) {
   return new Promise((resolve, reject) => {
     const args = ['-y', '-v', 'error', '-framerate', String(fps), '-start_number', String(a), '-i', path.join(framesDir, '%06d.jpg'), '-frames:v', String(n),
-      '-vf', 'scale=in_color_matrix=bt601:in_range=full:out_color_matrix=bt709:out_range=tv:flags=bicubic,format=yuv420p',
+      '-vf', 'scale=in_color_matrix=bt601:in_range=full:out_color_matrix=bt709:out_range=tv:flags=bicubic+accurate_rnd+full_chroma_int,format=yuv420p',
       '-c:v', 'libx264', '-preset', o.preset, '-crf', String(o.crf), '-g', String(o.gop), '-pix_fmt', 'yuv420p',
       '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-movflags', '+faststart', segPath + '.tmp.mp4'];
     const p = spawn('nice', ['-n', '5', 'ffmpeg', ...args], { stdio: ['ignore', 'ignore', 'pipe'] }); let err = '';
@@ -85,7 +86,7 @@ function ffmpegEncode(framesDir, a, n, fps, segPath, o) {
 function contactSheetVideo(video, out, cols = 6, rows = 3) {
   const dur = parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', video]).stdout.toString());
   const n = cols * rows; const fpsSel = n / Math.max(0.1, dur);
-  spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', video, '-vf', `fps=${fpsSel.toFixed(5)},scale=270:-2,tile=${cols}x${rows}:padding=4:color=0x101014`, '-frames:v', '1', '-q:v', '3', out]);
+  spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', video, '-vf', `fps=${fpsSel.toFixed(5)},scale=270:-2:in_color_matrix=bt709:in_range=tv:out_range=pc:flags=bicubic+accurate_rnd+full_chroma_int,format=rgb24,tile=${cols}x${rows}:padding=4:color=0x101014`, '-frames:v', '1', '-q:v', '3', out]);
   return out;
 }
 function contactSheetImages(files, out, cols = 4) {
@@ -107,6 +108,7 @@ async function main() {
   const isTimeline = input.endsWith('.json');
   const o = {
     episode: isTimeline ? null : rel, timeline: isTimeline ? rel : null, quality: kv.quality || 'final', profile: kv.profile === '1',
+    overrides: kv.rs ? { renderScale: +kv.rs } : {},
     jpegq: +(kv.jpegq || 92), crf: +(kv.crf || 16), preset: kv.preset || 'medium', gop: +(kv.gop || 120),
   };
   const W = +(kv.workers || 2), chunk = +(kv.chunk || 300), mode = kv.mode || 'browsers';
@@ -115,7 +117,7 @@ async function main() {
 
   // frame sink: name is "<dir-key>/<file>" resolved against registered dirs
   const sinks = {};
-  const srv = await startServer((name, buf) => { const [key, file] = name.split('/'); const dir = sinks[key]; if (!dir) throw new Error('no sink ' + key); fs.writeFileSync(path.join(dir, file), buf); });
+  const srv = await startServer((name, buf) => { const [key, file] = name.split('/'); const dir = sinks[key]; if (!dir) throw new Error('no sink ' + key); const f = path.join(dir, file); fs.writeFileSync(f + '.part', buf); fs.renameSync(f + '.part', f); });
   o.base = `http://127.0.0.1:${srv.address().port}`;
 
   const t0 = Date.now();
