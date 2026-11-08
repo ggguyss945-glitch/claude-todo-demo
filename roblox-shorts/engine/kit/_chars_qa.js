@@ -132,8 +132,9 @@ const SHEETS = {
     nightLawn(ctx, { hemi: 1.4, exposure: 1.1 });
     const a = kit.makeCharacter('grandpa'); a.position.set(-1.05, 0, -0.2); a.rotation.y = 0.3; ctx.add(a);
     const gs = [kit.makeGnome('grandpa', { lantern: 1 }), kit.makePlasticGnome(), ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => kit.makeFamilyGnome(i))];
-    gs.forEach((g, i) => { const row = i < 5 ? 0 : 1, col = i < 5 ? i : i - 5; g.position.set(-0.45 + col * 0.42 + row * 0.2, 0, row * -0.75 + 0.2); g.rotation.y = 0.1 - col * 0.06; ctx.add(g); if (i === 0) kit.setLantern(g, 1); });
-    look(ctx, [-0.05, 1.0, 8.6], [-0.05, 0.62, 0], 30);
+    gs.forEach((g, i) => { const row = Math.floor(i / 4), col = i % 4; g.position.set(-0.4 + col * 0.38 + (row % 2) * 0.19, 0, 0.35 - row * 0.62); g.rotation.y = 0.1 - col * 0.05; ctx.add(g); if (i === 0) kit.setLantern(g, 1); });
+    a.position.set(-0.85, 0, -0.3);
+    look(ctx, [0.05, 1.2, 7.4], [0.05, 0.55, 0], 30);
   },
   cast(ctx) {
     nightLawn(ctx, { hemi: 1.3, exposure: 1.08 });

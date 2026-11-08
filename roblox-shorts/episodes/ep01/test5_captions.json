@@ -1,0 +1,170 @@
+{
+ "version": 1,
+ "fps": 60,
+ "duration": 5.0,
+ "width": 1080,
+ "height": 1920,
+ "source": "scratchpad/rbx/ep01/voice_asr.json words 0-10, onsets refined on the waveform (see onset_note)",
+ "rule": "one word at a time; swap 1 frame before the word onset (the first word is up from frame 0); hold until the next word; the last word holds to 0.35 s after the last voice sample (3.415 s), so the silent hero hold ends clean (set hold_last_to_end to keep it to 5.0 s)",
+ "hold_last_to_end": false,
+ "style": {
+  "font": "Montserrat ExtraBold (800); offline fallback DejaVu Sans Bold (/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf)",
+  "size_px": 96,
+  "cap_height_px": 69,
+  "fill": "#ffffff",
+  "stroke": {
+   "color": "#000000",
+   "outside_px": 5,
+   "canvas_lineWidth": 10,
+   "lineJoin": "round",
+   "order": "strokeText then fillText"
+  },
+  "shadow": {
+   "color": "rgba(0,0,0,0.9)",
+   "offset": [
+    5,
+    5
+   ],
+   "blur_px": 9
+  },
+  "x": 540,
+  "baseline_y": 1385,
+  "align": "center",
+  "case": "lower case except \"I\" and names; punctuation stripped (apostrophes kept)",
+  "animation": "none"
+ },
+ "words": [
+  {
+   "i": 0,
+   "text": "in",
+   "asr": "In",
+   "asr_t": 0.16,
+   "onset": 0.24,
+   "f0": 0,
+   "f1": 23,
+   "start": 0.0,
+   "end": 0.383333,
+   "onset_note": "voicing starts 0.235-0.245"
+  },
+  {
+   "i": 1,
+   "text": "this",
+   "asr": "this",
+   "asr_t": 0.4,
+   "onset": 0.395,
+   "f0": 23,
+   "f1": 33,
+   "start": 0.383333,
+   "end": 0.55,
+   "onset_note": "dental fricative after the dip at 0.395"
+  },
+  {
+   "i": 2,
+   "text": "world",
+   "asr": "world,",
+   "asr_t": 0.56,
+   "onset": 0.572,
+   "f0": 33,
+   "f1": 55,
+   "start": 0.55,
+   "end": 0.916667,
+   "onset_note": "/s/ of \"this\" ends 0.565, /w/ voicing 0.575"
+  },
+  {
+   "i": 3,
+   "text": "grandparents",
+   "asr": "grandparents",
+   "asr_t": 0.88,
+   "onset": 0.94,
+   "f0": 55,
+   "f1": 89,
+   "start": 0.916667,
+   "end": 1.483333,
+   "onset_note": "silence 0.89-0.935, /g/ burst 0.940"
+  },
+  {
+   "i": 4,
+   "text": "don't",
+   "asr": "don't",
+   "asr_t": 1.52,
+   "onset": 1.5,
+   "f0": 89,
+   "f1": 103,
+   "start": 1.483333,
+   "end": 1.716667,
+   "onset_note": "closure 1.47-1.495, /d/ voice bar 1.500, burst 1.515"
+  },
+  {
+   "i": 5,
+   "text": "die",
+   "asr": "die.",
+   "asr_t": 1.76,
+   "onset": 1.738,
+   "f0": 103,
+   "f1": 126,
+   "start": 1.716667,
+   "end": 2.1,
+   "onset_note": "closure 1.715-1.735, /d/ burst 1.740"
+  },
+  {
+   "i": 6,
+   "text": "they",
+   "asr": "They",
+   "asr_t": 2.08,
+   "onset": 2.118,
+   "f0": 126,
+   "f1": 133,
+   "start": 2.1,
+   "end": 2.216667,
+   "onset_note": "\"die\" creak ends 2.115, /dh/ 2.120"
+  },
+  {
+   "i": 7,
+   "text": "turn",
+   "asr": "turn",
+   "asr_t": 2.24,
+   "onset": 2.228,
+   "f0": 133,
+   "f1": 143,
+   "start": 2.216667,
+   "end": 2.383333,
+   "onset_note": "closure 2.215-2.225, /t/ burst 2.230"
+  },
+  {
+   "i": 8,
+   "text": "into",
+   "asr": "into",
+   "asr_t": 2.4,
+   "onset": 2.4,
+   "f0": 143,
+   "f1": 157,
+   "start": 2.383333,
+   "end": 2.616667,
+   "onset_note": "no boundary after the /n/ of \"turn\"; ASR value kept (the /t/ of \"into\" bursts at 2.52)"
+  },
+  {
+   "i": 9,
+   "text": "garden",
+   "asr": "garden",
+   "asr_t": 2.64,
+   "onset": 2.63,
+   "f0": 157,
+   "f1": 175,
+   "start": 2.616667,
+   "end": 2.916667,
+   "onset_note": "/g/ voice bar from 2.58, burst 2.655; midpoint used (ASR 2.64)"
+  },
+  {
+   "i": 10,
+   "text": "gnomes",
+   "asr": "gnomes.",
+   "asr_t": 2.96,
+   "onset": 2.94,
+   "f0": 175,
+   "f1": 226,
+   "start": 2.916667,
+   "end": 3.766667,
+   "onset_note": "\"garden\" /n/ runs into \"gnomes\" /n/: no boundary; /d/ burst 2.87 + schwa-n gives about 2.94 (ASR 2.96)"
+  }
+ ]
+}

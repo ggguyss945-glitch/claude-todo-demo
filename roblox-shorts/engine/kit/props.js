@@ -313,12 +313,36 @@ export function addCar(P, { color = '#e6e6ea', seed = 1 } = {}) {
   P.box('metal:#7a7c84', 6.0, 0.4, 0.3, [0, 1.0, 6.8]); P.box('metal:#7a7c84', 6.0, 0.4, 0.3, [0, 1.0, -6.8]);
 }
 
+// Cardboard moving box with a marker label on its front (e.g. 'BALCONY GNOME', 'THEO'). size [w, h, d] studs.
+export function addCardboardBox(P, { size = [2.4, 2, 2.4], label = '', tape = true } = {}) {
+  const [w, h, d] = size; P.box('wood:#b4844f', w, h, d, [0, h / 2, 0], null, { bevel: 0.03 });
+  if (tape) P.box('plastic:#c9a874', w * 0.25, 0.02, d + 0.02, [0, h + 0.005, 0]);
+  if (label) { const key = 'boxLabel:' + label; texMat(key, signTex([label], '', { bg: '#c8996a', ink: '#1a1410', w: 512, h: 256 }), { roughness: 0.85 }); P.add(key, new THREE.PlaneGeometry(w * 0.86, h * 0.45), [0, h * 0.55, d / 2 + 0.012]); }
+}
+// Moving truck (EP01 §4.3): cab + 24 x 9 x 10 box with an open back, ramp, boxes inside. Front = +Z, back opening at -Z.
+export function addMovingTruck(P, { color = '#e8e6e0', stripe = '#d0402a', boxes = ['BALCONY GNOME', 'THEO', 'KITCHEN', ''] } = {}) {
+  const L = 24, W = 9, H = 10, y0 = 2.2, k = 'plaster:' + color; // fine micro-texture: no flat untextured parts (§4.1)
+  P.box(k, W, 0.4, L, [0, y0 + 0.2, 0]); P.box(k, 0.3, H, L, [-W / 2 + 0.15, y0 + H / 2, 0]); P.box(k, 0.3, H, L, [W / 2 - 0.15, y0 + H / 2, 0]);
+  P.box(k, W, 0.3, L, [0, y0 + H - 0.15, 0]); P.box(k, W, H, 0.3, [0, y0 + H / 2, L / 2 - 0.15]);
+  for (const s of [-1, 1]) P.box('plastic:' + stripe, 0.05, 1.2, L - 1, [s * (W / 2 + 0.01), y0 + H * 0.62, 0]);
+  P.box('porch:#7a6a5a', W - 0.6, 0.1, L - 0.6, [0, y0 + 0.42, 0]); // plank floor inside
+  P.box(k, W - 0.4, 6.2, 7, [0, y0 + 3.4, L / 2 + 3.6], null, { bevel: 0.3 }); P.box('glassDark:#1a2034', W - 0.3, 2.4, 0.2, [0, y0 + 4.8, L / 2 + 7.05]);
+  for (const s of [-1, 1]) P.box('glassDark:#1a2034', 0.1, 2.2, 3.2, [s * (W / 2 - 0.15), y0 + 4.7, L / 2 + 4.8]);
+  for (const [z, n] of [[-L / 2 + 3.5, 2], [L / 2 - 4.5, 2], [L / 2 + 4.5, 2]]) for (const s of [-1, 1]) { P.cyl('black:#0e0e10', 1.6, 1.6, 1.2, 14, [s * (W / 2 - 0.4), 1.6, z], [0, 0, PI / 2]); P.cyl('metal:#9a9ca4', 0.8, 0.8, 1.24, 10, [s * (W / 2 - 0.4), 1.6, z], [0, 0, PI / 2]); void n; }
+  P.box('emissive:#fff2d0:1.2', 1.4, 0.6, 0.1, [-W / 2 + 1.2, y0 + 1.2, L / 2 + 7.1]); P.box('emissive:#fff2d0:1.2', 1.4, 0.6, 0.1, [W / 2 - 1.2, y0 + 1.2, L / 2 + 7.1]);
+  for (const s of [-1, 1]) P.box('emissive:#ff3020:0.8', 0.6, 1.2, 0.1, [s * (W / 2 - 0.6), y0 + 1.0, -L / 2 - 0.05]);
+  // ramp from the open back to the ground
+  const rl = Math.hypot(y0 + 0.4, 8); P.box('metal:#8a8c92', 4, 0.2, rl, [0, (y0 + 0.4) / 2, -L / 2 - 4], [-Math.atan2(y0 + 0.4, 8), 0, 0]);
+  // boxes inside, labels toward the open back (-Z)
+  boxes.forEach((lab, i) => { P.push(trs([(i % 2 ? 1.6 : -1.7), y0 + 0.45 + (i > 1 ? 2.05 : 0), -L / 2 + 3 + (i > 1 ? 0.3 : 0)], [0, PI, 0])); addCardboardBox(P, { label: lab }); P.pop(); });
+}
+
 // ------------------------------------------------------------------ registry for standalone building
 // prop(name, opts) -> Group in studs. Names: streetLamp mailbox picketFence bush pine leafyTree flowerbed steppingStones
-// wallLantern rockingChair deckChair hoseReel kennel hydrant trashBin potPlant dandelion agentBoard postSign car
+// wallLantern rockingChair deckChair hoseReel kennel hydrant trashBin potPlant dandelion agentBoard postSign car cardboardBox movingTruck
 export function prop(name, o = {}) {
   const P = new Parts(); let extra = [];
-  const F = { mailbox: addMailbox, bush: addBush, pine: addPine, leafyTree: addLeafyTree, flowerbed: addFlowerbed, rockingChair: addRockingChair, deckChair: addDeckChair, hoseReel: addHoseReel, kennel: addKennel, hydrant: addHydrant, trashBin: addTrashBin, potPlant: addPotPlant, dandelion: addDandelion, car: addCar };
+  const F = { mailbox: addMailbox, bush: addBush, pine: addPine, leafyTree: addLeafyTree, flowerbed: addFlowerbed, rockingChair: addRockingChair, deckChair: addDeckChair, hoseReel: addHoseReel, kennel: addKennel, hydrant: addHydrant, trashBin: addTrashBin, potPlant: addPotPlant, dandelion: addDandelion, car: addCar, cardboardBox: addCardboardBox, movingTruck: addMovingTruck };
   if (name === 'streetLamp') return streetLamp(o);
   if (name === 'picketFence') return picketFence(o);
   if (name === 'steppingStones') addSteppingStones(P, o.points || [[0, -4], [0, 4]], o);

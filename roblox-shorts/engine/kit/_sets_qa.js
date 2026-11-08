@@ -1,5 +1,6 @@
 // QA board for the suburb night kit: one shot per set, rendered as stills (1 s each).
-//   node tools/render.js engine/kit/_sets_qa.js <outdir> times=0.5,1.5,2.5,3.5,4.5 quality=final
+//   node tools/render.js engine/kit/_sets_qa.js <outdir> times=0.5,1.5,2.5,3.5,4.5,6.5,7.45,8.5,9.5 quality=final
+// (street, lawn, porch, closeup, porchOut, [5.5 plan: debug top-down of every slot], dusk, magic, dawn, props board)
 // Stand-in characters come from the look-dev kit (lookdev/js/chars.js): gnomes normalised to 2.0 studs (VISUAL_BIBLE
 // §2.6), an R6 kid at 5.2 studs. Every street gnome stands on a lawn slot facing its house (back to the street).
 import * as THREE from 'three';
@@ -120,6 +121,17 @@ export default {
       const set = kit.buildStreet(ctx, { seed: 'ep01', lotsPerSide: 6, hero: { side: 'A', index: 2 } }); ctx.add(set); streetGnomes(ctx, set, { all: ['A2', 'A1', 'A0'] });
       const v = set.userData.views.streetWide; ctx.camera.set(v).push(0.19);
       kit.dawn(ctx, { set, target: [v.target[0] + 3, 0, v.target[2]] }); ctx.shared.fx = { update() {} };
+    }, update: () => {} },
+    // 10. Props board (debug): moving truck (open back, ramp, labelled boxes), sign, agent board, kennel, car, hydrant.
+    { name: 'props', start: 9, end: 10, build(ctx) {
+      const set = kit.buildLot(ctx, { seed: 'ep01' }); ctx.add(set); const L = kit.lot(set, set.userData.lots.find((l) => l.hero).id);
+      const at = (name, o, x, z, yaw = 0) => { const p = kit.props.prop(name, o); p.scale.setScalar(S); const w = new THREE.Group(); w.add(p); w.position.set(L.origin[0] + x, 0, z); w.rotation.y = yaw; ctx.add(w); return w; };
+      at('movingTruck', {}, 6.5, -1.7, Math.PI / 2);
+      at('postSign', { lines: ['KEEP OFF', 'THE LAWN', 'AFTER DARK'], header: 'NOTICE' }, -2.6, L.origin[2] - 1.2, 0.3);
+      at('agentBoard', { lines: ['COMES WITH', 'ANCESTORS'], header: 'FOR SALE' }, -0.6, L.origin[2] - 1.0, 0);
+      at('kennel', {}, -3.2, L.origin[2] - 4.5, 0.5); at('hydrant', {}, -4.2, L.origin[2] + 1.6); at('car', {}, -9, 1.6, Math.PI / 2);
+      ctx.camera.set({ pos: [L.origin[0] - 3.2, 2.4, 3.4], target: [L.origin[0] + 1.2, 1.0, -3.6], fov: 70 });
+      kit.nightStreet(ctx, { set }); ctx.shared.fx = { update() {} };
     }, update: () => {} },
   ],
 };

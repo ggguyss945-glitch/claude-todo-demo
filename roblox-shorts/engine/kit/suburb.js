@@ -164,7 +164,7 @@ export function addHouse(P, o = {}) {
 // ------------------------------------------------------------------ lot (front garden)
 // Lot frame: origin at the property line centre (fence), +Z = street; house front at z = -lawnDepth.
 // detail: 'hero' (grass blades + daisies around the hero bed, dense tulips), 'full', 'low' (no tulips, fewer props).
-export const LOT_DEFAULTS = { lotW: 36, lawnDepth: 22, detail: 'full', fence: true, path: 'stones', beds: 'windows', mailbox: true, extras: [], seed: 1, gnomes: 2, backTrees: 1 };
+export const LOT_DEFAULTS = { lotW: 36, lawnDepth: 22, detail: 'full', fence: true, path: 'stones', beds: 'windows', mailbox: true, extras: [], seed: 1, backTrees: 1 };
 export function addLot(P, o = {}, house = {}) {
   const L = { ...LOT_DEFAULTS, ...o }; const r = makeRng(hash32('lot', L.seed)); const out = { slots: [], extras: [], lanterns: [], windows: [] };
   const hz = -L.lawnDepth; const hx = house.offsetX ?? 0;

@@ -1,0 +1,418 @@
+{
+ "episode": "test5.js",
+ "fps": 60,
+ "duration": 5.0,
+ "width": 1080,
+ "height": 1920,
+ "note": "EP01 5-second look test (line 01). Builders: an object map in episodes/ep01/test5.js keyed by \"shot\". Times are frame-snapped (frame = round(t*60)). Board: test5_board.md.",
+ "audio": {
+  "mix": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/rbx/test5/sound/test5_mix.wav",
+  "offset": 0.0
+ },
+ "captions": "test5_captions.json",
+ "shots": [
+  {
+   "name": "s01",
+   "shot": "sky_to_street",
+   "start": 0.0,
+   "end": 0.916667,
+   "params": {
+    "beat": "the world: a night suburb, a gnome on every lawn, every gnome facing its house",
+    "type": "opener (accent)",
+    "size": "sky -> WS",
+    "angle": "up at the sky -> high 3/4 along the lawns",
+    "fov": 62,
+    "set": {
+     "builder": "sets.buildStreet",
+     "seed": "ep01",
+     "lotsPerSide": 6,
+     "gnomes": "1-2 per lot on bed0 / bed1 / lawn0-3 slots (makeFamilyGnome variants, lod mid; Grandpa preset at A1.bed0), all facing their houses (slot yaw), lanterns UNLIT (level 0: plot plant, lit at 41.76 s in the episode)",
+     "lamps": "on",
+     "windows": "kit default (warm, one pink)"
+    },
+    "light": "nightStreet (P1)",
+    "post": "night",
+    "sky": {
+     "preset": "galaxy",
+     "moon": {
+      "style": "tf",
+      "note": "in frame 0, upper third, slightly left of centre"
+     }
+    },
+    "camera": {
+     "end": "set.userData.views.streetWide (pos/target/fov 62)",
+     "start": {
+      "relative_to": "streetWide",
+      "up_studs": 22,
+      "back_studs": 6,
+      "pitch_deg": 28,
+      "roll_deg": -9,
+      "note": "looks up into the galaxy sky + moon; roof ridges and pine tips only along the bottom edge"
+     },
+     "move": {
+      "type": "crane down + tilt down (accent)",
+      "ease": "outQuart",
+      "t0": 0.0,
+      "t1": 0.95,
+      "tilt_deg": -40.8,
+      "crane_studs": -22,
+      "dolly_studs": 6,
+      "roll_deg": [
+       -9,
+       0
+      ],
+      "peak_px_per_s": 5300,
+      "done_at_cut": 0.999,
+      "note": "frame 0 is already at full speed; 35% done at 0.1 s, 80% at 0.3 s"
+     },
+     "push": {
+      "Z": 0.1,
+      "mode": "fov",
+      "ease": "linear",
+      "note": "layered on the crane so the shot never settles"
+     }
+    },
+    "fx": {
+     "sparkles": {
+      "count": 8,
+      "px": [
+       40,
+       80
+      ],
+      "where": "over the near lawns"
+     }
+    },
+    "faces": null,
+    "events": [
+     {
+      "t": 0.0,
+      "frame": 0,
+      "what": "crane at full speed on frame 0",
+      "sfx": "W1 airy whoosh (peak 0.12 s) + A1 crickets bed starts"
+     }
+    ],
+    "frames": [
+     0,
+     54
+    ],
+    "dur": 0.9167,
+    "words": "In this world,"
+   }
+  },
+  {
+   "name": "s02",
+   "shot": "porch_couple",
+   "start": 0.916667,
+   "end": 1.483333,
+   "params": {
+    "beat": "grandparents: an old couple on a porch swing",
+    "type": "plain push",
+    "size": "MS two-shot",
+    "angle": "eye (seated heads)",
+    "fov": 70,
+    "set": {
+     "builder": "hero lot A1 porch, night (sets.buildLawnCloseup, or buildStreet hero house porch \"full\" if the swing does not fit the centre porch)",
+     "swing": "NEW PROP: slatted wooden bench 5.5 x 1.6 studs, seat top 1.5 above the deck, back 1.6 tall, two chains to the porch ceiling, painted white (#e9e4da) or the deck wood; fallback: two rockingChair props side by side",
+     "dressing": "front door, lit front window (warm) behind them, wall lantern lit, potted plant, porch rail, Grandpa-gnome NOT visible"
+    },
+    "cast": [
+     {
+      "who": "grandma",
+      "kit": "K.makeCharacter('grandma')",
+      "pose": "sit",
+      "seat": "swing left (frame left)",
+      "face": "neutral"
+     },
+     {
+      "who": "grandpa",
+      "kit": "K.makeCharacter('grandpa')",
+      "pose": "sit",
+      "seat": "swing right (frame right)",
+      "face": "neutral"
+     }
+    ],
+    "light": "porchGlow",
+    "post": "porch",
+    "camera": {
+     "pos": "swing centre + 9.5 studs along the swing facing rotated +28 deg (front-right), y = deck + 4.4 studs",
+     "target": "swing centre, y = deck + 3.4 studs (faces in the upper 30-40% of frame)",
+     "fov": 70,
+     "move": {
+      "type": "push",
+      "Z": 0.19,
+      "mode": "fov",
+      "ease": "linear"
+     },
+     "drift": {
+      "truck_studs": -0.15,
+      "note": "about 30 px/s"
+     }
+    },
+    "anim": {
+     "swing": "sway +-2.5 deg at 0.45 Hz about the chain pivots (riders rigid on the seat); humans hold the sit pose"
+    },
+    "fx": {
+     "sparkles": {
+      "count": 6,
+      "px": [
+       40,
+       70
+      ]
+     }
+    },
+    "faces": {
+     "grandma": "neutral",
+     "grandpa": "neutral"
+    },
+    "events": [],
+    "frames": [
+     55,
+     88
+    ],
+    "dur": 0.5667,
+    "words": "grandparents"
+   }
+  },
+  {
+   "name": "s03",
+   "shot": "grandma_cu",
+   "start": 1.483333,
+   "end": 2.1,
+   "params": {
+    "beat": "don't die: Grandma, perfectly content; her glasses glint on \"die\"",
+    "type": "reaction CU (plain push)",
+    "size": "CU",
+    "angle": "eye",
+    "fov": 70,
+    "set": {
+     "builder": "same porch as s02 (same swing, same light)",
+     "dressing": "lit window + wall lantern behind her shoulder, navy edge of Grandpa's cardigan at frame right"
+    },
+    "cast": [
+     {
+      "who": "grandma",
+      "pose": "sit (as s02)",
+      "face": "content (^^) from the cut, frame 89"
+     }
+    ],
+    "light": "porchGlow",
+    "post": "porch",
+    "camera": {
+     "pos": "Grandma's head centre + 3.2 studs along her facing rotated +20 deg (same side of the axis as s02), y = head centre + 0.05",
+     "target": "head centre - 0.35 studs (face in the upper 30-40%)",
+     "fov": 70,
+     "move": {
+      "type": "push",
+      "Z": 0.16,
+      "mode": "fov",
+      "ease": "linear"
+     },
+     "roll": {
+      "deg": [
+       0,
+       1.0
+      ],
+      "ease": "linear"
+     }
+    },
+    "fx": {
+     "glint": {
+      "frame": 104,
+      "t": 1.733333,
+      "what": "one big 4-point star glint on her right lens rim: tex.sparkle points 4, colour #f4ecff, 0 -> 110 px in 3 frames, back to 0 by +16 frames, rotation 0 -> 25 deg; no sound"
+     },
+     "sparkles": {
+      "count": 5,
+      "px": [
+       40,
+       60
+      ]
+     }
+    },
+    "faces": {
+     "grandma": "content"
+    },
+    "events": [
+     {
+      "t": 1.733333,
+      "frame": 104,
+      "word": "die",
+      "what": "glasses glint (4-point star)",
+      "sfx": null
+     }
+    ],
+    "frames": [
+     89,
+     125
+    ],
+    "dur": 0.6167,
+    "words": "don't die."
+   }
+  },
+  {
+   "name": "s04",
+   "shot": "poof_swing",
+   "start": 2.1,
+   "end": 2.916667,
+   "params": {
+    "beat": "they turn into: a sparkle burst on \"turn\", both snap into gnomes on the swing",
+    "type": "plain push + VFX burst",
+    "size": "MS",
+    "angle": "low",
+    "fov": 70,
+    "set": {
+     "builder": "same porch and swing as s02"
+    },
+    "cast": [
+     {
+      "who": "grandma",
+      "pose": "sit",
+      "face": "content",
+      "until_frame": 134
+     },
+     {
+      "who": "grandpa",
+      "pose": "sit",
+      "face": "content",
+      "until_frame": 134
+     },
+     {
+      "who": "grandma-gnome",
+      "kit": "K.makeGnome('grandma', { lantern: false })",
+      "from_frame": 134,
+      "place": "standing on the seat where Grandma sat, facing the camera"
+     },
+     {
+      "who": "grandpa-gnome",
+      "kit": "K.makeGnome('grandpa', { lantern: 0 })",
+      "from_frame": 134,
+      "place": "standing on the seat where Grandpa sat, unlit lantern in his right hand"
+     }
+    ],
+    "light": "porchGlow",
+    "post": "porch",
+    "camera": {
+     "pos": "swing centre + 8.5 studs along the swing facing rotated -20 deg (front-left: Grandma stays frame-left), y = deck + 2.4 studs",
+     "target": "swing centre, y = deck + 3.2 studs (looks slightly up)",
+     "fov": 70,
+     "move": {
+      "type": "push",
+      "Z": 0.2,
+      "mode": "fov",
+      "ease": "linear"
+     }
+    },
+    "anim": {
+     "swing": "sway +-2.5 deg at 0.45 Hz; at the snap the seat dips 0.15 stud and swings to +-5 deg (anim.springKeys, freq 3 Hz, zeta 0.35)",
+     "gnomes": "K.gnomeIdle micro sway; eyes open, gaze at the lens"
+    },
+    "fx": {
+     "magicDust": {
+      "from_t": 2.1,
+      "to_frame": 134,
+      "what": "gold + pink motes and 4-point pink twinkles swirling around the couple, density rising into the burst"
+     },
+     "burst": {
+      "frame": 134,
+      "t": 2.233333,
+      "what": "fx.burst per grandparent at chest height (deck + 3.2 studs): count 30, puff 12, corePx 520 (covers a torso), ring 40 -> 620 px, dur 0.35, colours #ffffff / #e9dcff / #ffe2c4 + a few #ffb0d8",
+      "swap": "humans hidden and gnomes shown on the burst frame (core brightest): the 1-frame pop is hidden by the burst"
+     },
+     "dust_after": "the puff motes settle until the cut"
+    },
+    "faces": {
+     "grandma": "content",
+     "grandpa": "content"
+    },
+    "events": [
+     {
+      "t": 2.233333,
+      "frame": 134,
+      "word": "turn",
+      "what": "sparkle burst + human -> gnome snap",
+      "sfx": "P1 poof (pop transient 2.240 s) over M1 shimmer swell (from 2.10, peak 2.30)"
+     }
+    ],
+    "frames": [
+     126,
+     174
+    ],
+    "dur": 0.8167,
+    "words": "They turn into garden"
+   }
+  },
+  {
+   "name": "s05",
+   "shot": "gnome_hero",
+   "start": 2.916667,
+   "end": 5.0,
+   "params": {
+    "beat": "garden GNOMES: the hero creature. Grandpa as a glazed gnome in his flowerbed, from below; silent hold after the line",
+    "type": "character intro (strong push)",
+    "size": "CU -> ECU",
+    "angle": "low (creature)",
+    "fov": 70,
+    "set": {
+     "builder": "sets.buildLawnCloseup (hero lot A1)",
+     "subject": "K.makeGnome('grandpa', { lantern: 0 }) at slot A1.bed0, facing the house (slot yaw)",
+     "dressing": "tulips around his boots, flowerbed edging; behind him (toward the street): lawn, picket fence and gate, a lamp post with halo, the houses across with lit windows, galaxy sky behind the hat tip"
+    },
+    "light": "nightLawn (P1 high-key) + warm window spill from the bedroom window above and behind the camera (practical #ffd9a0 about 2 cd) as the face key; subject lift on the face (about 0.6 cd warm)",
+    "post": "nightHigh",
+    "camera": {
+     "pos": "between the gnome and the house wall, 1.7 studs in front of his face, y = 0.9 studs (cull the wall/foundation for this shot if the camera would be inside it)",
+     "target": "his nose, y = 1.35 studs (pitch about +12 deg, looking up)",
+     "fov": 70,
+     "move": {
+      "type": "push",
+      "Z": 0.28,
+      "mode": "fov",
+      "ease": "linear",
+      "note": "character intro: push +28% over 2.08 s"
+     },
+     "drift": {
+      "crane_studs": 0.1
+     },
+     "roll": {
+      "deg": [
+       0,
+       1.2
+      ],
+      "ease": "linear"
+     }
+    },
+    "anim": {
+     "gnome": "K.gnomeIdle micro sway only; gaze up +10 deg (to the bedroom window above the camera); NO blink, NO head turn, lantern UNLIT (all three are plot devices for later)"
+    },
+    "fx": {
+     "sparkles": {
+      "count": 8,
+      "px": [
+       40,
+       80
+      ]
+     },
+     "magicDust": {
+      "count": 6,
+      "what": "a few gold motes still settling (carry-over from the burst)"
+     }
+    },
+    "faces": null,
+    "events": [
+     {
+      "t": 3.415,
+      "frame": 205,
+      "what": "voice ends (silence hold to 5.0 s: crickets + shimmer tail)",
+      "sfx": "M1 shimmer tail, A1 crickets"
+     }
+    ],
+    "frames": [
+     175,
+     299
+    ],
+    "dur": 2.0833,
+    "words": "gnomes."
+   }
+  }
+ ]
+}
