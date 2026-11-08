@@ -3,7 +3,7 @@
 //
 //   node tools/render.js <episode.js | timeline.json> <out.mp4> [key=value ...]
 //     from=0 to=<end>      seconds to render (frame range [from*fps, to*fps))
-//     workers=2            parallel renderers;  mode=browsers (one Chromium per worker, default) | pages (one browser)
+//     workers=3            parallel renderers (3 measured best on 4 vCPU);  mode=browsers (one Chromium per worker, default) | pages (one browser)
 //     chunk=300            frames per x264 segment (frames are deleted once their segment is encoded)
 //     quality=final        final (scene 1080x1920 MSAA) | balanced (scene x0.85) | fast (x0.75) | draft (x0.75 FXAA)
 //                          | preview (540x960 output);  rs=0.9 overrides the scene render scale
@@ -111,7 +111,7 @@ async function main() {
     overrides: kv.rs ? { renderScale: +kv.rs } : {},
     jpegq: +(kv.jpegq || 92), crf: +(kv.crf || 16), preset: kv.preset || 'medium', gop: +(kv.gop || 120),
   };
-  const W = +(kv.workers || 2), chunk = +(kv.chunk || 300), mode = kv.mode || 'browsers';
+  const W = +(kv.workers || 3), chunk = +(kv.chunk || 300), mode = kv.mode || 'browsers';
   const stills = kv.times ? kv.times.split(',').map(Number) : null;
   const bench = kv.bench ? +kv.bench : 0;
 

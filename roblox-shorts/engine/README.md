@@ -16,6 +16,7 @@ engine/
   core/scene.js         renderer, quality, fog + height fog, light helpers, disposal
   episodes/_demo.js     4 s demo (night lawn, avatar + lantern) - copy it as a template
   episodes/_demo.timeline.json  example timeline driving the demo's shot builders
+  episodes/_swatches.js  board of every procedural texture (render one still to preview texture params)
 tools/render.js         the renderer (stills, benchmark, resumable segmented video)
 tools/encode.py         mux voice-over, contact sheets, stills, concat, QC check
 ```
@@ -237,7 +238,7 @@ Per-pass cost in the demo at `final` (each pass measured on its own with a force
 | JPEG encode | 40 |
 
 Throughput by worker count (`fast`): 1 worker 571 ms/frame, 2 workers 482, 3 workers 459, 4 workers 461.
-`mode=pages` (one browser) gives no gain, because all pages share one GPU process. **Use `workers=3` (the default is 2).**
+`mode=pages` (one browser) gives no gain, because all pages share one GPU process. **`workers=3` is the default.**
 MSAA 2x costs the same as 4x. Point-light shadows are expensive (6 cube faces): use them sparingly, and prefer one
 shadowed sun or moon plus unshadowed practicals and fake blob or contact shadows.
 

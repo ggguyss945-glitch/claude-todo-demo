@@ -123,7 +123,7 @@ export const grass = (o = {}) => bundle('grass', { size: 512, seed: 1, color: '#
 });
 
 // Wood planks (boards run along U). planks = boards across the tile; joints = end joints per board per tile.
-export const woodPlanks = (o = {}) => bundle('wood', { size: 512, seed: 1, color: '#9f5a2e', variation: 0.25, planks: 5, joints: 1, gap: 0.012, gapColor: '#2a140a', grain: 1, rings: 9, gloss: 0.35, normal: 3, ...o }, (p) => {
+export const woodPlanks = (o = {}) => bundle('wood', { size: 512, seed: 1, color: '#9f5a2e', variation: 0.25, planks: 5, joints: 1, gap: 0.012, gapColor: '#2a140a', grain: 1, rings: 9, gloss: 0.35, normal: 1.6, ...o }, (p) => {
   const S = p.size, r = makeRng(p.seed); const base = hexRgb(p.color), gapC = hexRgb(p.gapColor);
   const grainN = stretchNoise(S, 4, 64, p.seed), fine = stretchNoise(S, 16, 256, p.seed + 3), warp = fbm(S, 4, 3, p.seed + 5);
   const rows = p.planks, rowH = S / rows; const gapPx = Math.max(1, p.gap * S);
@@ -143,7 +143,7 @@ export const woodPlanks = (o = {}) => bundle('wood', { size: 512, seed: 1, color
       let c = tone.map((v) => v * shade * (0.85 + 0.15 * bevel));
       if (inGap) c = gapC;
       rgb[i * 3] = c[0]; rgb[i * 3 + 1] = c[1]; rgb[i * 3 + 2] = c[2];
-      h[i] = inGap ? 0 : 0.6 + 0.4 * bevel + (g - 0.5) * 0.08 + streak * 0.1; rough[i] = inGap ? 1 : clamp01(p.gloss + (fine[i] - 0.5) * 0.2 + (1 - g) * 0.08);
+      h[i] = inGap ? 0.35 : 0.62 + 0.3 * Math.sqrt(bevel) + (g - 0.5) * 0.06 + streak * 0.08; rough[i] = inGap ? 1 : clamp01(p.gloss + (fine[i] - 0.5) * 0.2 + (1 - g) * 0.08);
     }
   }
   return { size: S, height: h, map: rgbTex(rgb, S), normalMap: dataTex(normalFromHeight(h, S, p.normal), S, false), roughnessMap: grayTex(rough, S) };
