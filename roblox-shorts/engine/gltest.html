@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+const W=1080,H=1920;
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(W,H); r.shadowMap.enabled=true; r.shadowMap.type=THREE.PCFSoftShadowMap;
+r.toneMapping=THREE.ACESFilmicToneMapping; document.body.appendChild(r.domElement);
+const gl=r.getContext(); const dbg=gl.getExtension('WEBGL_debug_renderer_info');
+window.__info={renderer: dbg?gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER), webgl2: r.capabilities.isWebGL2};
+const s=new THREE.Scene(); s.background=new THREE.Color('#2a1f4d'); s.fog=new THREE.Fog('#3b2c6b',8,40);
+const cam=new THREE.PerspectiveCamera(45,W/H,0.1,100); cam.position.set(0,3,9); cam.lookAt(0,2,0);
+s.add(new THREE.HemisphereLight('#c9b8ff','#3a2a55',0.9));
+const sun=new THREE.DirectionalLight('#ffe7c7',2.2); sun.position.set(4,8,5); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); s.add(sun);
+const g=new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshStandardMaterial({color:'#4f9e3b',roughness:0.9})); g.rotation.x=-Math.PI/2; g.receiveShadow=true; s.add(g);
+const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:0.45,metalness:0});
+const parts=[[0,1,0,1,1,0.5,'#2b6cd9'],[0,2.05,0,2,2,1,'#3cb371'],[-1.5,2.05,0,1,2,1,'#f2c27b'],[1.5,2.05,0,1,2,1,'#f2c27b'],[-0.5,0.05-0,0,1,2,1,'#2b4fa0'],[0.5,0.05,0,1,2,1,'#2b4fa0'],[0,3.6,0,1.2,1.2,1.2,'#f2c27b']];
+for(const [x,y,z,w,h,d,c] of parts){const m=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,4,0.08),mat(c)); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; s.add(m);}
+const lamp=new THREE.PointLight('#ffcf6b',8,10); lamp.position.set(2.5,1.5,2); s.add(lamp);
+const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.25,32,16), new THREE.MeshStandardMaterial({color:'#fff3c4',emissive:'#ffcf6b',emissiveIntensity:4})); bulb.position.copy(lamp.position); s.add(bulb);
+const comp=new EffectComposer(r); comp.addPass(new RenderPass(s,cam)); comp.addPass(new UnrealBloomPass(new THREE.Vector2(W,H),0.6,0.5,0.85)); comp.addPass(new OutputPass());
+window.renderAt=(t)=>{cam.position.x=Math.sin(t)*2; cam.lookAt(0,2,0); comp.render(); return true;};
+window.__ready=true;
+</script></body></html>
