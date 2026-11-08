@@ -280,7 +280,8 @@ function streetFactory(o) {
     const ov = o.houses[id] || {}; const heroOv = isHero ? o.hero : {};
     const house = { ...st.house, ...(ov.house || {}), ...(heroOv.house || {}) }; const lot = { ...st.lot, ...(ov.lot || {}), ...(heroOv.lot || {}), detail, seed: hash32(o.seed, id) % 10007, lotW: o.lotW, lawnDepth: o.lawnDepth };
     const P = new Parts(); const info = addLot(P, lot, house);
-    const g = persistTree(P.build(M, { name: 'lot_' + id, cast: true, receive: true })); // shadows only cost when a preset adds a shadowed sun (dusk/dawn/day) info.extras.forEach((e) => { persistTree(e); g.add(e); });
+    const g = persistTree(P.build(M, { name: 'lot_' + id, cast: true, receive: true })); // shadows only cost when a preset adds a shadowed sun (dusk/dawn/day)
+    info.extras.forEach((e) => { persistTree(e); g.add(e); }); // lantern glass + halos, window glows, gates, signs (was lost inside the comment above)
     g.children.forEach((c) => { if (c.name === 'gate') c.name = 'gate_' + id; if (c.name === 'lanternGlass') c.name = 'lantern_' + id; });
     const yaw = side === 'A' ? 0 : PI, ox = xLot(i), oz = side === 'A' ? -zFront : zFront; g.position.set(ox, 0, oz); g.rotation.y = yaw; root.add(g);
     const toW = (p) => { const c = Math.cos(yaw), s = Math.sin(yaw); return [(ox + p[0] * c + p[2] * s) * STUD, p[1] * STUD, (oz - p[0] * s + p[2] * c) * STUD]; };

@@ -5,11 +5,11 @@
  "width": 1080,
  "height": 1920,
  "source": "scratchpad/rbx/ep01/voice_asr.json words 0-10, onsets refined on the waveform (see onset_note)",
- "rule": "one word at a time; swap 1 frame before the word onset (the first word is up from frame 0); hold until the next word; the last word holds to 0.35 s after the last voice sample (3.415 s), so the silent hero hold ends clean (set hold_last_to_end to keep it to 5.0 s)",
+ "rule": "one word at a time; swap 1 frame before the word onset (the first word is up from frame 0); hold until the next word; the last word holds to 0.35 s after the last voice sample (3.415 s), which is also the cut to the silent tail shot s06 (set hold_last_to_end to keep it to 5.0 s)",
  "hold_last_to_end": false,
  "style": {
-  "font": "Montserrat ExtraBold (800); offline fallback DejaVu Sans Bold (/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf)",
-  "size_px": 96,
+  "font": "Montserrat ExtraBold (800); offline fallback Inter ExtraBold (/usr/share/fonts/opentype/inter/Inter-ExtraBold.otf), then DejaVu Sans Bold",
+  "size_px": 94,
   "cap_height_px": 69,
   "fill": "#ffffff",
   "stroke": {

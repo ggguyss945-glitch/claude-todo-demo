@@ -28,21 +28,26 @@ const smooth01 = (x) => { const u = Math.min(1, Math.max(0, x)); return u * u * 
 // (opacity 0.35-1, scale 0.6-1.2 on a 0.6-1.2 s sine with random phase), slow rotation. Outdoors use 6-12, indoors 8-20.
 // center/size: the box they live in (they wrap around inside it, fading at the wrap so nothing pops).
 // drift: metres/s (0.04-0.1 m/s reads as 20-60 px/s at 2-5 m with a 70° lens).
-export function sparkles(ctx, { center = [0, 1, 0], size = [3, 2, 2], count = 10, px = [40, 80], colors = ['#e9dcff', '#e9dcff', '#e9dcff', '#ffe2c4'], points = [6, 8], drift = [0.04, 0.1], brightness = 1.6, seed = 'sparkles', rotSpeed = 0.35 } = {}) {
+// sharpness/core shape the star texture (16/0.55 = thin hard asterisks; TF's soft fat snowflakes are about 7/0.75);
+// underlay > 0 adds a soft radialGlow under each glint (size = underlay x the glint, opacity = underlayOpacity).
+export function sparkles(ctx, { center = [0, 1, 0], size = [3, 2, 2], count = 10, px = [40, 80], colors = ['#e9dcff', '#e9dcff', '#e9dcff', '#ffe2c4'], points = [6, 8], drift = [0.04, 0.1], brightness = 1.6, seed = 'sparkles', rotSpeed = 0.35, sharpness = 16, core = 0.55, underlay = 0, underlayOpacity = 0.5, renderOrder = 0 } = {}) {
   const g = new THREE.Group(); g.name = 'sparkles'; const r = makeRng(hash32(seed, count, center.join(',')));
-  const maps = Object.fromEntries(points.map((p) => [p, ctx.tex.sparkle({ points: p, sharpness: 16, core: 0.55 })]));
+  const maps = Object.fromEntries(points.map((p) => [p, ctx.tex.sparkle({ points: p, sharpness, core })]));
+  const glowMap = underlay > 0 ? ctx.tex.radialGlow({ falloff: 2.0 }) : null; const glints = [];
   for (let i = 0; i < count; i++) {
-    const pts = points[i % points.length]; const s = pxSprite(addMat(maps[pts], hdr(colors[Math.floor(r() * colors.length)], brightness)));
+    const pts = points[i % points.length]; const col = colors[Math.floor(r() * colors.length)]; const s = pxSprite(addMat(maps[pts], hdr(col, brightness)));
     const ang = r() * Math.PI * 2, sp = drift[0] + (drift[1] - drift[0]) * r();
     s.userData.d = { p: [r(), r(), r()], v: [Math.cos(ang) * sp * 0.6, sp * (0.6 + 0.4 * r()), Math.sin(ang) * sp * 0.3], per: 0.6 + r() * 0.6, ph: r(), px: px[0] + (px[1] - px[0]) * r(), rot: r() * Math.PI, rs: (r() - 0.5) * rotSpeed * 2 };
-    g.add(s);
+    if (glowMap) { const u = pxSprite(addMat(glowMap, hdr(col, brightness * 0.6))); u.renderOrder = renderOrder; s.userData.under = u; g.add(u); }
+    s.renderOrder = renderOrder + 1; glints.push(s); g.add(s);
   }
   g.update = (t) => {
-    for (const s of g.children) {
+    for (const s of glints) {
       const d = s.userData.d; let edge = 1;
       for (let k = 0; k < 3; k++) { const u = fract(d.p[k] + (d.v[k] * t) / size[k]); edge = Math.min(edge, smooth01(u / 0.12), smooth01((1 - u) / 0.12)); s.position.setComponent(k, center[k] + (u - 0.5) * size[k]); }
       const tw = 0.5 + 0.5 * Math.sin(((t / d.per) + d.ph) * Math.PI * 2);
       s.userData.px = d.px * (0.6 + 0.6 * tw); s.material.opacity = (0.35 + 0.65 * tw) * edge; s.material.rotation = d.rot + d.rs * t;
+      const u = s.userData.under; if (u) { u.position.copy(s.position); u.userData.px = s.userData.px * underlay; u.material.opacity = s.material.opacity * underlayOpacity; }
     }
   };
   g.update(0); return g;
