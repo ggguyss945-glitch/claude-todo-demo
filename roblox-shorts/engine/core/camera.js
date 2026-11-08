@@ -2,14 +2,14 @@
 // dolly, pan, tilt, follow), handheld noise, decaying shake (3D and pixel-exact 2D), and DOF focus tracking.
 // All evaluation is a pure function of shot time t.
 import * as THREE from 'three';
-import { value, getEase, clamp, deg } from './anim.js';
+import { value, getEase, clamp, deg, Track } from './anim.js';
 import { fbm1 } from './random.js';
 
 const V = (v) => (v == null ? null : Array.isArray(v) && typeof v[0] === 'number' ? new THREE.Vector3(v[0], v[1], v[2]) : v);
 // Normalise a position/target spec: [x,y,z] | Vector3 | keys [[t,[x,y,z]|Vector3,ease], ...] | Track | fn(t)
 function vecSpec(s) {
   if (s == null) return null;
-  if (typeof s === 'function' || s.at) return s;
+  if (typeof s === 'function' || s instanceof Track) return s;
   if (Array.isArray(s) && Array.isArray(s[0])) return s.map((k) => [k[0], V(k[1]), k[2]]);
   return V(s);
 }
