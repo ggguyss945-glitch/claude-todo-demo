@@ -1,7 +1,11 @@
 // EP01 cast presets (R6 humans). The 5-second test uses GRANDPA, GRANDMA and the Grandpa gnome (gnome.js).
 //   makeCharacter('grandpa', { face: 'content' })  -> avatar root (metres unless units: 'stud')
-import { makeAvatar, SKIN } from './avatar.js';
-import { OUTFITS, HAIR } from './clothing.js';
+import { makeAvatar, SKIN, rig, setFace, setPose, POSES } from './avatar.js';
+import { OUTFITS, HAIR, PARTS, faceRects } from './clothing.js';
+import { hairMat, hairCapGeo, hatGroup } from './accessories.js';
+import { drawFace, FACE_RES } from './faces.js';
+import { THREE, cached, keyOf, mesh, group, canvas, canvasTex, makeRng, hash32, rgba, shade, clumpGeo, claimMat } from './util.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const CAST = {
   // Older styling: white hair (bald crown + puffy side tufts), 3D walrus moustache, soft grey brows, round gold glasses,
@@ -26,5 +30,5 @@ export const CAST = {
 };
 export function makeCharacter(name, extra = {}) {
   const c = CAST[name]; if (!c) throw new Error('unknown cast member ' + name);
-  return makeAvatar({ name, ...c, ...extra, faceOverlays: { ...(c.faceOverlays || {}), ...(extra.faceOverlays || {}) } });
+  return castAvatar({ name, ...c, ...extra, faceOverlays: { ...(c.faceOverlays || {}), ...(extra.faceOverlays || {}) } });
 }
