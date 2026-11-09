@@ -61,15 +61,14 @@ const DRAW = {
   determined(g) { baseEyes(g, 20, 34, 0, 4); seg(g, 162, 192, 222, 210, 11); seg(g, 350, 192, 290, 210, 11); arc(g, 256, 300, 50, 55, 125, 10); },
   sad(g) { baseEyes(g, 19, 33, 0, 6); seg(g, 166, 214, 222, 188, 11); seg(g, 346, 214, 290, 188, 11); arc(g, 256, 385, 45, 200, 340, 11); },
   worriedSmile(g) { baseEyes(g, 19, 33, 0, 6); seg(g, 166, 210, 222, 190, 10); seg(g, 346, 210, 290, 190, 10); arc(g, 256, 312, 46, 50, 130, 10); },
-  heartfelt(g) {
+  heartfelt(g) { // tender: open soft eyes (no lashes, the lid line clear of the iris), soft brows raised at the inner end, symmetric smile
     for (const x of [EL, ER]) {
-      oval(g, x, 248, 24, 26, LILAC); oval(g, x, 252, 12, 15, INK); oval(g, x - 6, 244, 4.5, 5, '#ffffff');
-      g.save(); g.beginPath(); g.ellipse(x, 248, 24, 26, 0, 0, Math.PI * 2); ln(g, 4); g.stroke(); g.restore();
-      // thick upper lid, slightly drooped (tender)
-      quad(g, x - 30, 236, x, 218, x + 30, 236, 10);
-      const s = x < 256 ? -1 : 1; seg(g, x + s * 30, 236, x + s * 40, 226, 5); seg(g, x + s * 22, 228, x + s * 30, 216, 5); seg(g, x + s * 12, 224, x + s * 16, 211, 5);
+      oval(g, x, 248, 24, 27, LILAC); oval(g, x, 252, 12, 15, INK); oval(g, x - 6, 243, 5, 5.5, '#ffffff'); oval(g, x + 7, 259, 2.5, 3, '#ffffff');
+      g.save(); g.beginPath(); g.ellipse(x, 248, 24, 27, 0, 0, Math.PI * 2); ln(g, 4); g.stroke(); g.restore();
+      quad(g, x - 28, 224, x, 204, x + 28, 224, 7);
+      const s = x < 256 ? -1 : 1; quad(g, x + s * 30, 190, x + s * 4, 178, x - s * 22, 170, 7);
     }
-    arc(g, 256, 312, 52, 40, 140, 10);
+    arc(g, 256, 304, 58, 45, 135, 10);
   },
   sleeping(g) {
     for (const x of [EL, ER]) { arc(g, x, 236, 25, 20, 160, 10); const s = x < 256 ? -1 : 1; seg(g, x + s * 22, 252, x + s * 30, 262, 5); seg(g, x + s * 8, 260, x + s * 10, 271, 5); }

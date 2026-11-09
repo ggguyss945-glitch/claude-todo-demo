@@ -36,7 +36,7 @@ const GP_GATE = [0.04, 0, -6.46];          // s29-s32: Grandpa's boots on the li
 const KNEEL_AT = [0, 0, -7.25];            // s31-s33: the hero kneels / stands on the path just inside the gate
 const HOLD_AT = [0, 0, -8.6];              // s34-s41: the hero holding Grandpa on the path, 2.2 m inside the gate
 const HOLD_OFF = [0, 0.1, 1.12];           // the held gnome in the hero's hips frame (studs): feet at 2.1 studs, the hands meet round his belly
-const HUG = { armLx: 58, armRx: 58, armLz: -36, armRz: -36, neckX: -8 };   // both arms round the gnome's belly (hands meet in front)
+const HUG = { armLx: 78, armRx: 78, armLz: -44, armRz: -44, neckX: -8 };   // both arms round the gnome's belly (hands meet in front)
 const STREET_HERO = [5.76, 0, -8.6];       // ep01Street: the same spot on our lot A3
 const CU_GRADE = { grade: { temperature: -6, tint: 6 } };   // close-ups keep warm skin / glaze inside the cool night (approved s05 numbers)
 const GOLD = { color: '#ff9e1c', width: 0.012, outer: 2.0, peak: 0.75, hold: 0.42 };   // the s15 gold on the gnome, kept saturated under the night grade
@@ -47,13 +47,18 @@ const evT = (ctx, k, fb) => C.evT(ctx, k, fb);
 // The house-style push from params.camera.move (mode 'fov' = the engine's 'zoom': no parallax).
 function basePush(ctx, o = {}) { const m = ctx.params.camera.move; ctx.camera.push(o.Z ?? m.Z ?? m.base_push ?? 0.19, { mode: m.mode === 'dolly' ? 'dolly' : 'zoom', t0: o.t0, t1: o.t1 }); }
 function paramRoll(ctx) { const r = ctx.params.camera.roll; if (r) ctx.camera.rollBy(r.deg[1] - r.deg[0]); }
-function sparks(ctx, center, size, count, seed, o = {}) { const f = sets.sparkles(ctx, SPK({ center, size, count, seed, ...o })); ctx.add(f); return f; }
+function sparks(ctx, center, size, count, seed, o = {}) { count = Math.round(Math.max(10, count * 1.8)); const f = sets.sparkles(ctx, SPK({ center, size, count, seed, ...o })); ctx.add(f); return f; }
 function nightLot(ctx, o = {}) { const H = SE.heroLot(ctx, { tod: 'night', bed: 'empty', truck: 'open', gate: 1.5, sold: -1, ...o }); ctx.add(H); return H; }
 // Night rig on a set (preset 'night' or 'nightHigh'), galaxy sky lifted for low cameras.
 function nightRig(ctx, set, preset = 'nightHigh', o = {}) {
-  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, ...rest } = o;
-  return f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, lift = true, ...rest } = o;
+  const L0 = sets.LIGHT[preset === 'night' ? 'night' : 'nightHigh']; if (lift) rest.hemiIntensity = (rest.hemiIntensity ?? L0.hemi[2]) * NIGHT_LIFT.hemi;
+  const rig = f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  if (lift) { const P = ctx.post.params; ctx.post.set({ exposure: P.exposure * NIGHT_LIFT.exp, grade: { saturation: (P.grade.saturation ?? 1) * NIGHT_LIFT.sat } }); }
+  return rig;
 }
+// Review fix: night exteriors were crushed and oversaturated against the approved s09 (QA gate mean 70-95, sat <= 0.6).
+const NIGHT_LIFT = { hemi: 1.3, exp: 1.15, sat: 0.86 };
 // Camera basis at t = 0 (after ctx.camera.set): position, forward, right.
 function camBasis(ctx) { ctx.camera.apply(0); const cam = ctx.cam; const pos = cam.position.clone(); const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion); return { pos, fwd, right }; }
 // Warm face key (bible: warm key on faces, cool set): a point light upper front-left of the subject as seen from the camera.
@@ -500,9 +505,10 @@ export const builders = {
       // high over our side's fence line from the far end of the street, looking back down it toward our lot: side A (ours) on the right,
       // next door (A4, dark) nearer than our lit lot, the parked truck beyond it (so it never hides our lot)
       // h 19 studs: at the board's 9 studs the picket fences hide every lawn gnome and its lantern from the road
-      const dir = -1; const h = 19 * S; const P0 = new THREE.Vector3(30.0, h, -6.0); const yw = 16 * DEG; const fwd = new THREE.Vector3(dir * Math.cos(yw), 0, -Math.sin(yw));
-      const L = 10; const look = P0.clone().addScaledVector(fwd, L); look.y = h - L * Math.tan(-c.pitch_deg * DEG);
-      const vTr = (c.drift.truck_studs * S) / 0.95; const xAt = (t) => dir * (0.25 * t + (t > tTr ? vTr * (t - tTr) : 0));
+      // review re-block: lower (12 studs) and nearer our side's lawns, steeper, so the lanterns read big and the truck move is felt
+      const dir = -1; const h = 14 * S; const P0 = new THREE.Vector3(29.0, h, -6.0); const yw = 17 * DEG; const fwd = new THREE.Vector3(dir * Math.cos(yw), 0, -Math.sin(yw));
+      const L = 10; const look = P0.clone().addScaledVector(fwd, L); look.y = h - L * Math.tan(27 * DEG);
+      const vTr = (c.drift.truck_studs * S) / 0.95; const xAt = (t) => dir * (0.6 * t + (t > tTr ? vTr * (t - tTr) : 0));
       ctx.camera.set({ pos: (t, o) => (o || new THREE.Vector3()).copy(P0).add(new THREE.Vector3(xAt(t), 0, 0)), target: (t, o) => (o || new THREE.Vector3()).copy(look).add(new THREE.Vector3(xAt(t), 0, 0)), fov: p.fov });
       basePush(ctx);
       nightRig(ctx, R, 'night', { low: false, lamp: { n: 4 } });
@@ -513,7 +519,7 @@ export const builders = {
       list.sort((a, b) => b.d - a.d); const n = list.length; const near = list.slice(-4); const far = list.slice(0, n - 4);
       const nearT = [tEv, tEv + 0.19, tEv + 0.38, tLit]; const r = makeRng(hash32('p2s40'));
       far.forEach((e, i) => { e.t0 = tEv + (0.45 * i) / Math.max(1, far.length - 1) + 0.02 * r(); }); near.forEach((e, i) => { e.t0 = nearT[i]; });
-      ctx.shared.cas = list.map((e) => { const fx = X.lanternLight(ctx, e.g, { t0: e.t0, ring: 2, ringOpts: { boost: 1.5, rimBoost: 2.6, rimA: 0.5 }, burst: near.includes(e), burstOpts: { count: 8, ringPx: [16, 110], corePx: 90, px: [20, 40] }, haloPx: 54, cd: 1.6, light: near.includes(e), seed: 's40' + e.slot }); ctx.add(fx.group); return fx; });
+      ctx.shared.cas = list.map((e) => { const nr = near.includes(e); const fx = X.lanternLight(ctx, e.g, { t0: e.t0, ring: 2.6, ringOpts: { boost: 1.5, rimBoost: 2.6, rimA: 0.5 }, burst: true, burstOpts: nr ? { count: 12, ringPx: [30, 260], corePx: 120, px: [26, 50] } : { count: 8, ringPx: [20, 150], corePx: 90, px: [22, 40] }, haloPx: 70, cd: 2.4, light: nr, seed: 's40' + e.slot }); ctx.add(fx.group); return fx; });
       ctx.shared.cues = list.map((e) => +(ctx.shot.start + e.t0).toFixed(3)).sort((a, b) => a - b);
       // mounds prowling on the dark lawns (amber eyes), backing off as each lantern lights
       const lots = R.userData.lots.filter((l) => ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'].includes(l.id)); const fields = [];

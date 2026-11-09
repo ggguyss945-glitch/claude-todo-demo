@@ -84,13 +84,13 @@ function dataTex(data, size, srgb, wrap = true) {
 // Size / variation presets for "dozens": scale = whole creature (1 = lawn mound 3 studs across); hue/tint per preset.
 export const MOLE_PRESETS = {
   lawn: { scale: 1 },                          // the standard lawn mound (3.0 x 0.75 studs)
-  small: { scale: 0.72, snout: '#ea96aa' },    // young ones in the crowd
-  runt: { scale: 0.58, snout: '#f0a2b4' },
-  old: { scale: 1.15, snout: '#d97f96', fur: '#2e2630' },
+  small: { scale: 0.72, snout: '#ec9a84' },    // young ones in the crowd
+  runt: { scale: 0.58, snout: '#f2a690' },
+  old: { scale: 1.15, snout: '#dc8a74', fur: '#2e2630' },
   big: { scale: 1.8 },                          // "BIG ones": the hero snout cheat (bible 2.6 #6)
   giant: { scale: 2.4 },                        // a monster-sized one for a single frame-filling shot
 };
-const MOLE_DEFAULTS = { scale: 1, seed: 1, lod: 'hero', mound: true, crumbs: true, blades: true, claws: true, body: true, snout: '#f6a2b0', fur: '#322c3a', eyeColor: '#ffa416', shadow: true };
+const MOLE_DEFAULTS = { scale: 1, seed: 1, lod: 'hero', mound: true, crumbs: true, blades: true, claws: true, body: true, snout: '#f2a088', fur: '#322c3a', eyeColor: '#ffa416', shadow: true };
 const LODS = { hero: { tub: 14, rad: 10, blades: 240, crumbs: 36, grid: 56 }, mid: { tub: 10, rad: 7, blades: 110, crumbs: 24, grid: 40 }, low: { tub: 6, rad: 5, blades: 0, crumbs: 12, grid: 24 } };
 
 // --- mound shape (studs, scale 1): an elongated dome 3.0 across x 0.75 high, the head pushes out at the front (+z)
@@ -225,7 +225,7 @@ export const reflectorTexture = () => cached('ep01ReflectorTex', () => {
 // --- materials (shared, cached; the eye material is per instance because its level animates)
 const furMat = (color) => cached(keyOf('ep01FurMat', color), () => { const T = furTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.45, 0.45), roughness: 0.72, sheen: 1, sheenRoughness: 0.36, sheenColor: new THREE.Color('#d0c8f4'), vertexColors: true }); });
 const fleshPlainMat = (color) => cached(keyOf('ep01FleshPlain', color), () => new THREE.MeshPhysicalMaterial({ color, roughness: 0.48, sheen: 0.6, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#6e2438'), clearcoat: 0.4, clearcoatRoughness: 0.3, vertexColors: true }));
-const fleshMat = (color) => cached(keyOf('ep01FleshMat', color), () => { const T = snoutTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.46, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#6e2438'), emissiveIntensity: 1, clearcoat: 0.45, clearcoatRoughness: 0.28, vertexColors: true }); });
+const fleshMat = (color) => cached(keyOf('ep01FleshMat', color), () => { const T = snoutTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.46, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#5a2018'), emissiveIntensity: 1, clearcoat: 0.45, clearcoatRoughness: 0.28, vertexColors: true }); });
 const discMat = (color) => cached(keyOf('ep01DiscMat', color), () => new THREE.MeshPhysicalMaterial({ color: mix(color, '#ffffff', 0.25), map: discTex(), normalMap: snoutTex().normal, normalScale: new THREE.Vector2(0.4, 0.4), roughness: 0.42, sheen: 0.6, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#401018'), clearcoat: 0.5, clearcoatRoughness: 0.25 }));
 const clawMat = () => cached('ep01ClawMat', () => new THREE.MeshPhysicalMaterial({ color: '#efe2c6', roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08, vertexColors: true }));
 const palmMat = () => cached('ep01PalmMat', () => new THREE.MeshPhysicalMaterial({ color: '#c98a90', map: snoutTex().map, normalMap: snoutTex().normal, normalScale: new THREE.Vector2(0.5, 0.5), roughness: 0.55, sheen: 0.5, sheenColor: new THREE.Color('#f0c0c8') }));
@@ -285,14 +285,14 @@ function tentacleLayout(seed) {
   const r = makeRng(hash32('moleRays', seed)), out = [];
   for (const s of [1, -1]) for (let k = 0; k < 11; k++) {
     const th = ((k + 0.5) / 11) * PI; // from top (0) to bottom (PI) on this side
-    let L = 0.3 + 0.04 * Math.sin((k / 10) * PI); if (k === 9) L = 0.24; if (k === 10) L = 0.15; L *= 0.9 + r() * 0.2;
-    out.push({ ang: [s * Math.sin(th), Math.cos(th)], L, root: 0.043 + (k === 10 ? -0.01 : 0) + (r() - 0.5) * 0.006, tilt: (14 + r() * 14) * DEG, ph: r() * 2 * PI, ph2: r() * 2 * PI, f: 2.2 + r() * 0.8, bias: (r() - 0.5) * 34 * DEG, side: (r() - 0.5) * 16 * DEG, rings: 9 + r() * 4 });
+    let L = 0.3 + 0.04 * Math.sin((k / 10) * PI); if (k === 9) L = 0.24; if (k === 10) L = 0.15; L *= (0.9 + r() * 0.2) * 0.7; // review: 30 % shorter
+    out.push({ ang: [s * Math.sin(th), Math.cos(th)], L, root: (0.043 + (k === 10 ? -0.01 : 0) + (r() - 0.5) * 0.006) * 1.5, tilt: (14 + r() * 14) * DEG, ph: r() * 2 * PI, ph2: r() * 2 * PI, f: 2.2 + r() * 0.8, bias: (r() - 0.5) * 34 * DEG, side: (r() - 0.5) * 16 * DEG, rings: 9 + r() * 4 });
   }
   return out;
 }
 function tentacleGeometry(lod) {
   const { tub: T, rad: R } = LODS[lod], perV = (T + 1) * (R + 1), N = 22, pos = new Float32Array(N * perV * 3), nor = new Float32Array(N * perV * 3), uv = new Float32Array(N * perV * 2), col = new Float32Array(N * perV * 3), idx = [];
-  for (let t = 0; t < N; t++) { const o = t * perV; for (let i = 0; i <= T; i++) for (let j = 0; j <= R; j++) { const k = o + i * (R + 1) + j; uv[k * 2] = j / R; uv[k * 2 + 1] = i / T; const v = 0.86 + 0.24 * (i / T); col[k * 3] = Math.min(1.12, v); col[k * 3 + 1] = Math.min(1.12, v * 1.02); col[k * 3 + 2] = Math.min(1.12, v * 1.03); }
+  for (let t = 0; t < N; t++) { const o = t * perV; for (let i = 0; i <= T; i++) for (let j = 0; j <= R; j++) { const k = o + i * (R + 1) + j; uv[k * 2] = j / R; uv[k * 2 + 1] = i / T; const u = Math.min(1, (i / T) * 1.6), v = 0.86 + 0.24 * (i / T); col[k * 3] = Math.min(1.12, v * (0.73 + 0.27 * u)); col[k * 3 + 1] = Math.min(1.12, v * (0.46 + 0.56 * u)); col[k * 3 + 2] = Math.min(1.12, v * (0.76 + 0.27 * u)); }
     for (let i = 0; i < T; i++) for (let j = 0; j < R; j++) { const a = o + i * (R + 1) + j, b = a + R + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx);
   g.boundingSphere = new THREE.Sphere(V3(0, 0, 0.2), 0.8); return g;
@@ -303,7 +303,7 @@ function writeTentacles(geo, layout, lod, { t = 0, open = 1, recoil = 0, sniff =
   const closed = 132 * DEG, opened = 30 * DEG;
   for (let q = 0; q < layout.length; q++) {
     const L0 = layout[q], o = q * perV; const [ax, ay] = L0.ang; _er.set(ax, ay, 0);
-    let th = lerp(closed, opened, open) + L0.bias * open; th += wriggle * 10 * DEG * Math.sin(2 * PI * L0.f * t + L0.ph) * (0.35 + 0.65 * sat(open));
+    let th = lerp(closed, opened, open) + L0.bias * open; th += wriggle * 18 * DEG * Math.sin(2 * PI * L0.f * t + L0.ph) * (0.35 + 0.65 * sat(open));
     th += recoil * 70 * DEG; th += sniff * 9 * DEG * Math.sin(2 * PI * 7.5 * t + L0.ph * 0.5);
     const psi = L0.side + wriggle * 7 * DEG * Math.sin(2 * PI * (L0.f * 0.63) * t + L0.ph2);
     const L = L0.L * (1 - 0.18 * recoil);
@@ -316,7 +316,7 @@ function writeTentacles(geo, layout, lod, { t = 0, open = 1, recoil = 0, sniff =
       if (Math.abs(th) < 1e-4) _C.set(rx + _d.x * s, ry + _d.y * s, _d.z * s);
       else { const kA = L / th; _C.set(rx + kA * (Math.sin(phi) * _d.x + (1 - Math.cos(phi)) * b2.x), ry + kA * (Math.sin(phi) * _d.y + (1 - Math.cos(phi)) * b2.y), kA * (Math.sin(phi) * _d.z + (1 - Math.cos(phi)) * b2.z)); }
       _N.copy(_d).multiplyScalar(-Math.sin(phi)).addScaledVector(b2, Math.cos(phi));
-      const tipR = 0.024; let rr = lerp(L0.root, tipR, Math.pow(uu, 0.8)) * (1 + 0.14 * Math.sin(uu * PI) + 0.06 * Math.sin(uu * L0.rings * 2 * PI) * (1 - uu)); const tipS = 0.86; if (uu > tipS) rr = tipR * Math.sqrt(Math.max(0, 1 - ((uu - tipS) / (1 - tipS)) ** 2)) + 0.002;
+      const tipR = 0.034; let rr = lerp(L0.root, tipR, Math.pow(uu, 0.8)) * (1 + 0.14 * Math.sin(uu * PI) + 0.06 * Math.sin(uu * L0.rings * 2 * PI) * (1 - uu)); const tipS = 0.86; if (uu > tipS) rr = tipR * Math.sqrt(Math.max(0, 1 - ((uu - tipS) / (1 - tipS)) ** 2)) + 0.002;
       if (i === T) rr = 0.0015;
       for (let j = 0; j <= R; j++) {
         const a = (j / R) * 2 * PI, ca = Math.cos(a), sa = Math.sin(a), k = (o + i * (R + 1) + j) * 3, fl = 0.93;
@@ -378,6 +378,8 @@ export function makeMole(opts = {}) {
   mesh(discGeo(), discMat(P.snout), { parent: sn, name: 'snoutDisc', pos: [0, 0, -0.035] });
   const tg = tentacleGeometry(lod); const tm = mesh(tg, fleshMat(P.snout), { parent: sn, name: 'tentacles' }); tg.userData.owner = tm.uuid; tm.frustumCulled = false;
   writeTentacles(tg, tentacleLayout(seed), lod, { t: 0, open: 1 });
+  { const nub = mesh(cached('ep01MoleNub', () => new THREE.SphereGeometry(0.075, 16, 12)), cached('ep01MoleNubMat', () => new THREE.MeshPhysicalMaterial({ color: '#c8606a', roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.2, emissive: new THREE.Color('#401014') })), { parent: sn, name: 'snoutNub', pos: [0, 0, 0.05] }); nub.scale.set(1, 0.85, 1.5);
+    for (const sx of [-1, 1]) mesh(cached('ep01MoleNostril', () => new THREE.SphereGeometry(0.018, 10, 8)), cached('ep01MoleNostrilMat', () => new THREE.MeshStandardMaterial({ color: '#2a0a10', roughness: 0.6 })), { parent: sn, name: 'snoutNostril', pos: [sx * 0.03, 0.005, 0.158] }); }
   const ef = eyeFrame(); const em = eyeMaterial(P.eyeColor); const q = new THREE.Quaternion();
   for (const [nm, s] of [['L', 1], ['R', -1]]) {
     const c = V3(ef.c.x * s, ef.c.y, ef.c.z), ax = V3(ef.axis.x * s, ef.axis.y, ef.axis.z); q.setFromUnitVectors(V3(0, 0, 1), ax);

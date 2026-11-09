@@ -628,7 +628,7 @@ export function truckCab(ctx, o = {}) {
     const P = new Parts(); const dk = 'plastic:#4a4656', W = 9;
     P.box(dk, W, 2.4, 2.6, [0, 3.0, -3.2], null, { bevel: 0.2 }); P.box(dk, W, 0.8, 1.4, [0, 4.4, -3.9], [-0.3, 0, 0], { bevel: 0.15 });
     P.box('plastic:#1a181e', 2.6, 1.2, 0.3, [-2.2, 4.05, -2.55], [-0.35, 0, 0], { bevel: 0.08 }); // instrument binnacle
-    for (const x of [-2.9, -1.5]) P.add('tex:clockFace', new THREE.CircleGeometry(0.45, 20), [x, 4.1, -2.38], [-0.35, 0, 0]);
+    for (const x of [-2.9, -1.5]) P.add('plastic:#2a2832', new THREE.CircleGeometry(0.45, 20), [x, 4.1, -2.38], [-0.35, 0, 0]); // plain gauges (a Roman dial read as a stray clock in s48)
     P.box('plastic:#24222a', 2.0, 0.9, 0.2, [0.0, 3.75, -1.95], [-0.2, 0, 0], { bevel: 0.05 }); // clock/radio panel right of the wheel
     for (let i = 0; i < 4; i++) P.cyl('metal:#7a7a84', 0.1, 0.1, 0.15, 10, [-0.6 + i * 0.4, 3.32, -1.82], [PI / 2 - 0.2, 0, 0]);
     P.box('plastic:#3a3640', W, 0.3, 11, [0, 0.15, 1.2]); P.box(dk, W, 1.9, 1.3, [0, 1.0, -2.6], null, { bevel: 0.1 }); P.box('rug:#2a2834', 3.2, 0.06, 2.6, [-2.2, 0.33, 0.2]); // floor, lower dash, a floor mat
@@ -685,7 +685,7 @@ export function bedroomNight(ctx, o = {}) {
   const rig = { lights: [], update: () => {} }; const H = o.set && o.set.ep01 ? o.set.ep01 : null;
   const A = H ? H.room : (o.room ? o.room.userData.anchors : null);
   rig.sky = makeSky(ctx, { preset: o.skyPreset || 'galaxy', moon: o.moonDisc ?? { az: -20, el: 28, size: 7, style: 'tf' } }); ctx.add(rig.sky);
-  rig.hemi = ctx.add(ctx.lights.hemi('#b9a8ff', '#5a2a4a', o.hemiIntensity ?? 1.8));
+  rig.hemi = ctx.add(ctx.lights.hemi('#b9a8ff', '#5a2a4a', Math.min(1.05, o.hemiIntensity ?? 1.0))); // review: night rooms read as day at 1.3-1.8; the lamp / nightlight are the sources
   rig.key = ctx.add(keyLight(ctx, { color: '#e8deff', intensity: o.key ?? 1.0, el: 45, side: 0.55 }));
   if (A) {
     if (A.lamp && o.lamp !== 0 && o.lamp !== false) { const p = new THREE.Vector3(...A.lamp); rig.lamp = ctx.add(ctx.lights.point({ color: '#ffe6c0', intensity: o.lamp ?? 4, pos: p.toArray(), decay: 2 })); rig.lights.push(rig.lamp); ctx.add(haloSprite(p, '#fff0d0', 0.8, 0.4)); }
@@ -695,7 +695,7 @@ export function bedroomNight(ctx, o = {}) {
     if (win && o.lanternOutside) { const lo = o.lanternOutside === true ? {} : o.lanternOutside; const p = lo.pos ? new THREE.Vector3(...lo.pos) : new THREE.Vector3(...win).addScaledVector(n, 1.0).add(new THREE.Vector3(0, -0.5, 0)); rig.lantern = ctx.add(ctx.lights.point({ color: '#ffb85c', intensity: lo.cd ?? 2, pos: p.toArray(), decay: 2 })); rig.lights.push(rig.lantern); }
   }
   if (H && H.theo) { H.theo.setInterior(true); H.theo.setGlass(o.glass || 'inside'); }
-  ctx.post.set(postPreset('bedroom', { exposure: 1.5, grade: { saturation: 0.92 }, ...(o.postOpts || {}) })); return rig; // calibrated on TF 24.0 / 40.2 s (stats.py)
+  ctx.post.set(postPreset('bedroom', { exposure: 1.5, grade: { saturation: 0.92, contrast: 1.05, outBlack: '#140507' }, ...(o.postOpts || {}) })); return rig; // calibrated on TF 24.0 / 40.2 s (stats.py)
 }
 // cabNight(ctx, { cab }) - s48: dashboard LED glow 1 cd #ff5040 + #ffd9a0 street spill through the windscreen, hemi
 // #8a90ff 0.6, post 'night'.

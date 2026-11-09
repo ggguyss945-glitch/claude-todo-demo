@@ -280,7 +280,7 @@ export function addAgentBoard(P, { lines = ['FOR SALE'], header = '', w = 4.2, h
   const k = 'trim:#f1efe9'; P.box(k, 0.35, 7.0, 0.35, [0, 3.5, 0]); P.box(k, w + 0.6, 0.3, 0.3, [w / 2 + 0.1, 6.7, 0]);
   for (const s of [0.4, w - 0.2]) P.box('black:#222', 0.06, 0.5, 0.06, [s, 6.35, 0]);
   const tex = signTex(lines, header, { w: 512, h: Math.round((512 * h) / w) }); const face = texMat('sign:' + header + '|' + lines.join('|'), tex), edge = M('trim:#f1efe9');
-  const g = boxUV(w, h, 0.12, 1); fixBoxFaceUV(g); const board = new THREE.Mesh(g, [edge, edge, edge, edge, face, face]);
+  const g = boxUV(w, h, 0.12, 1); fixBoxFaceUV(g); const board = new THREE.Mesh(g, [edge, edge, edge, edge, face, edge]); // back plain: seen from the house the text must not read mirrored
   board.position.set(w / 2 + 0.1, 6.1 - h / 2, 0).applyMatrix4(P.top); board.quaternion.setFromRotationMatrix(P.top); board.name = 'agentBoard';
   return board;
 }

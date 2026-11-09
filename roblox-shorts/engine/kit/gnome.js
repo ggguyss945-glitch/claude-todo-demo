@@ -49,7 +49,7 @@ export const GNOME_PRESETS = {
   narrator: { hat: { style: 'fishing', color: '#6f7342' }, coat: '#d9a52c', beard: 'walrus', beardColor: '#cfcbd2', seed: 4 },
   // Grandma: lavender hat, rose coat, apron, round glasses, grey curls, no beard (line 03 "wearing her GLASSES").
   grandma: { hat: { style: 'pointed', color: '#9b86d8', height: 1.0, bendSide: -0.3, bendBack: 0.16 }, coat: '#c86f93', beard: 'none', glasses: '#d4a64a', apron: '#f1e9da', hair: 'curls', cheek: '#f08a9a', mouth: 'smile', eyes: { iris: '#6a4fb0' }, seed: 2, crack: false },
-  plastic: { material: 'plastic', lod: 'low', hat: { style: 'pointed', color: '#ff2a1f', height: 1.02, bendSide: 0.12, bendBack: 0.06 }, coat: '#1f52ff', boots: '#2a1a12', beard: 'full', eyes: { style: 'dead' }, mouth: 'smile', crack: false, sticker: '$4.99', base: true, wear: 0 },
+  plastic: { material: 'plastic', lod: 'low', lantern: false, hat: { style: 'pointed', color: '#18c4bc', height: 1.02, bendSide: 0.12, bendBack: 0.06 }, coat: '#ffd21f', boots: '#2a1a12', beard: 'full', eyes: { style: 'dead' }, mouth: 'smile', crack: false, sticker: '$4.99', base: true, wear: 0 },
 };
 // Generic family gnomes for other lawns (6-8 variants): hat colours, coats, beards, glasses, aprons.
 export const FAMILY_GNOMES = [
@@ -420,7 +420,7 @@ function buildGnome(P) {
       const dg = merge(dl); bakeAO(dg, [], { dirt: false }); mesh(dg, dm, { parent: hatG }); }
   }
   // ---- sticker (plastic)
-  if (P.sticker) { const st = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), new THREE.MeshStandardMaterial({ map: stickerTexture(P.sticker), roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 })); st.position.set(0.12, P.base ? 0.04 : 0.2, P.base ? 0.505 : 0.43); st.rotation.set(-0.02, 0.22, -0.06); st.name = 'sticker'; body.add(st); }
+  if (P.sticker) { const st = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.15), new THREE.MeshStandardMaterial({ map: stickerTexture(P.sticker), roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 })); st.position.set(0.12, P.base ? 0.04 : 0.2, P.base ? 0.505 : 0.43); st.rotation.set(-0.02, 0.22, -0.06); st.name = 'sticker'; body.add(st); }
   // ---- lantern in the right hand
   if (P.lantern !== false) { const L = buildLantern({ plastic }); L.position.set(...A.lantern); body.add(L); }
   if (P.base) { for (const c of body.children) c.position.y += 0.07; add(xf(new THREE.CylinderGeometry(0.46, 0.5, 0.07, S(48)), [0, 0.035, 0.04]), ceramic(plastic ? '#3a9a2a' : '#5c7a3a', P), body, [], { name: 'base', dirt: false }); }

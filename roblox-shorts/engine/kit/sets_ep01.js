@@ -265,12 +265,16 @@ export function heroLot(ctx, o = {}) {
   const shadeOff = M('plastic:#e8e0cc'); const shadeOn = XM('tex:lampShade');
   const theo = {
     glass, haze, room, winGlow, lights: glowL, level: 0,
-    setLevel(k) { this.level = k; const ext = this.interior ? 0 : 1; if (glowL[0]) glowL[0].intensity = 12.0 * k * ext; if (glowL[1]) glowL[1].intensity = 1.6 * k * ext; for (const l of glowL) l.visible = l.intensity > 0; // invisible lights cost nothing hazeMat.opacity = (o.haze ?? 0.85) * k * ext; if (winGlow) winGlow.visible = k > 0.05;
+    setLevel(k) { this.level = k; const ext = this.interior ? 0 : 1; if (glowL[0]) glowL[0].intensity = 12.0 * k * ext; if (glowL[1]) glowL[1].intensity = 1.6 * k * ext; for (const l of glowL) l.visible = l.intensity > 0; // invisible lights cost nothing
+      // review fix (s46 'goes dark'): a dark window really goes dark from outside: haze and glow card off, near-black glass
+      const dark = k < 0.05 && !this.interior; hazeMat.visible = !dark; if (winGlow && (dark || this._wasDark)) winGlow.visible = !dark;
+      if (dark && !['day', 'photo'].includes(this._glass)) { glassMat.color.set('#0d0b22'); glassMat.opacity = 0.9; glassMat.emissiveIntensity = 0; } else if (this._wasDark && !dark) this.setGlass(this._glass || 'outside');
+      this._wasDark = dark;
       if (room) room.traverse((m) => { if (m.name === 'lampShade') m.material = k > 0.05 ? shadeOn : shadeOff; if (m.name === 'projStars') m.visible = k > 0.05; });
       const w = root.userData.windows && root.userData.windows.find((x) => x.lot === lotId && Math.abs(x.pos[0] - winW.pos[0]) < 0.05 && x.face === 'front'); if (w) w.lit = k > 0.05; },
     // interior shots: the exterior room glow (warm fill + glass haze) is switched off; bedroomNight() lights the room
     setInterior(on = true) { this.interior = on; this.setLevel(this.level); },
-    setGlass(mode = 'outside') { const G = { outside: ['#a8b0e8', 0.16, 0.05], inside: ['#1a1640', 0.42, 0.02], dark: ['#121528', 0.86, 0.06], day: ['#c8d4f0', 0.3, 0.08], photo: ['#d8e0f4', 0.12, 0.04] }[mode] || ['#a8b0e8', 0.16, 0.05]; glassMat.color.set(G[0]); glassMat.opacity = G[1]; glassMat.emissiveIntensity = G[2]; if (mode === 'inside') hazeMat.opacity = 0; },
+    setGlass(mode = 'outside') { this._glass = mode; const G = { outside: ['#a8b0e8', 0.16, 0.05], inside: ['#1a1640', 0.42, 0.02], dark: ['#121528', 0.86, 0.06], day: ['#c8d4f0', 0.3, 0.08], photo: ['#d8e0f4', 0.12, 0.04] }[mode] || ['#a8b0e8', 0.16, 0.05]; glassMat.color.set(G[0]); glassMat.opacity = G[1]; glassMat.emissiveIntensity = G[2]; if (mode === 'inside') hazeMat.opacity = 0; },
   };
   ep.theo = theo; ep.room = roomAnch; ep.setTheoWindow = (k) => theo.setLevel(k);
   // ---- dressing in the lot frame (studs)

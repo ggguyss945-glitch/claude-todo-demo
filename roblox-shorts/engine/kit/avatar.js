@@ -31,7 +31,9 @@ export function headProfile(scaleR = 1) {
   pts.push(new THREE.Vector2(0, h));
   return pts;
 }
-export const headGeo = () => cached('r6head', () => { const g = new THREE.LatheGeometry(headProfile(), 48); g.computeVertexNormals(); return g; });
+// phiStart = PI puts the lathe seam at the back of the head (-z); the lathe's own normals are kept (computeVertexNormals
+// split them at the seam and drew a hard shading line down the middle of every face).
+export const headGeo = () => cached('r6head', () => new THREE.LatheGeometry(headProfile(), 48, Math.PI));
 // Face band: a copy of the head lathe over the front 140 degrees, radius x1.004; UVs remapped so u spans the 140
 // degrees (u = 0.5 at the front) and v = height (v = 1 at the head top), matching the 512 face frame.
 export const FACE_ARC = 140;

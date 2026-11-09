@@ -182,20 +182,25 @@ export function inShotGrade(ctx, from = 'current', to = 'magic', t0 = 0, frames 
 // ring.edgeOf(pos) -> [x, z] rim point toward pos; ring.centerXZ(); ring.radius (metres) -> moleField.stopAt(i,
 // ring.centerXZ(), ring.radius); ring.setLevel(k); ring.update(t); ring.contains(pos).
 const RING_VS = `varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const RING_FS = `uniform float uR, uRim, uFall, uLevel, uTime, uBoost, uRimB, uInnerA, uRimA, uSeed, uMode; uniform vec3 uInner, uRimC; varying vec2 vP;
+const RING_FS = `uniform float uR, uRim, uFall, uLevel, uTime, uBoost, uRimB, uInnerA, uRimA, uSeed, uMode, uPoolA, uPoolR; uniform vec3 uInner, uRimC, uPool; varying vec2 vP;
 void main(){
   float d = length(vP); float ang = atan(vP.y, vP.x);
   float R = uR * (1.0 + 0.006 * sin(ang * 7.0 + uTime * 1.3 + uSeed) + 0.004 * sin(ang * 19.0 - uTime * 2.1));
-  float inner = (1.0 - smoothstep(R - uRim * 1.2, R - uRim * 0.35, d)) * (0.8 + 0.2 * smoothstep(0.0, R, d));
+  float inner = (1.0 - smoothstep(R - uRim * 1.2, R - uRim * 0.35, d)) * (0.5 + 0.5 * (1.0 - smoothstep(0.0, R, d)));
   float rx = (d - (R - uRim * 0.5)) / (uRim * 0.5);
   float rim = exp(-rx * rx * 1.8) * (0.86 + 0.14 * sin(ang * 13.0 - uTime * 1.8 + uSeed * 3.0));
   float o = d > R - uRim * 0.5 ? 0.55 * pow(1.0 - clamp((d - (R - uRim * 0.5)) / uFall, 0.0, 1.0), 2.2) : 0.0;
-  vec3 c = uMode < 0.5 ? uInner * (uBoost * (inner + o)) + uRimC * (uRimB * rim) : uInner * (uInnerA * (inner + o)) + uRimC * (uRimA * rim);
+  float pool = pow(clamp(1.0 - d / uPoolR, 0.0, 1.0), 1.7);
+  vec3 c = uMode < 0.5 ? uInner * (uBoost * (inner + o)) + uRimC * (uRimB * rim) : uInner * (uInnerA * (inner + o)) + uRimC * (uRimA * rim) + uPool * (uPoolA * pool);
   gl_FragColor = vec4(c * uLevel, 1.0);
 }`;
-export function lanternRing(ctx, { center = [0, 0, 0], follow = null, radius = 5, rim = 0.25, falloff = 0.6, inner = '#ff8a2a', boost = 1.7, rimColor = '#ffb04a', rimBoost = 3.0, rimA = 0.55, innerA = 0.06, level = 1, intensity = 1, glints = 0, y = null, seed = 'ring' } = {}) {
-  const R = radius * S, W = rim * S, F = falloff * S, half = R + F + W;
-  const mk = (mode) => { const u = { uR: { value: R }, uRim: { value: W }, uFall: { value: F }, uLevel: { value: level }, uTime: { value: 0 }, uBoost: { value: boost * intensity }, uRimB: { value: rimBoost * intensity }, uInnerA: { value: innerA * intensity }, uRimA: { value: rimA * intensity }, uSeed: { value: (hash32(seed) % 1000) / 100 }, uMode: { value: mode }, uInner: { value: new THREE.Color(inner) }, uRimC: { value: new THREE.Color(rimColor) } };
+// EP01 review fix: the multiplicative boost turned the grass to pale straw. The boost / rim numbers callers pass are scaled
+// down (RING_K) and an additive warm pool (pool colour, poolA, 1.25 R, centre-weighted) carries the light instead.
+const RING_K = { boost: 0.42, rimBoost: 0.55, rimA: 0.5 };
+export function lanternRing(ctx, { center = [0, 0, 0], follow = null, radius = 5, rim = 0.25, falloff = 1.6, inner = '#ff9a40', boost = 1.7, rimColor = '#ffb04a', rimBoost = 3.0, rimA = 0.55, innerA = 0.1, pool = '#ff8a30', poolA = 0.17, poolR = 1.25, level = 1, intensity = 1, glints = 0, y = null, seed = 'ring' } = {}) {
+  boost *= RING_K.boost; rimBoost *= RING_K.rimBoost; rimA *= RING_K.rimA;
+  const R = radius * S, W = rim * S, F = falloff * S, PR = R * poolR, half = Math.max(R + F + W, PR);
+  const mk = (mode) => { const u = { uR: { value: R }, uRim: { value: W }, uFall: { value: F }, uLevel: { value: level }, uTime: { value: 0 }, uBoost: { value: boost * intensity }, uRimB: { value: rimBoost * intensity }, uInnerA: { value: innerA * intensity }, uRimA: { value: rimA * intensity }, uSeed: { value: (hash32(seed) % 1000) / 100 }, uMode: { value: mode }, uInner: { value: new THREE.Color(inner) }, uRimC: { value: new THREE.Color(rimColor) }, uPool: { value: new THREE.Color(pool) }, uPoolA: { value: poolA * intensity }, uPoolR: { value: PR } };
     const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: RING_VS, fragmentShader: RING_FS, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); if (mode === 0) boostBlend(m); return m; };
   const geo = new THREE.PlaneGeometry(half * 2, half * 2); const mB = mk(0), mA = mk(1);
   const m = new THREE.Mesh(geo, mB); m.rotation.x = -PI / 2; m.renderOrder = 3; m.name = 'lanternRing';
@@ -227,6 +232,7 @@ export function lanternRing(ctx, { center = [0, 0, 0], follow = null, radius = 5
 // no shadow: it under-lights the face like the TF fairies), a light ring/pool on the ground following the lantern, and
 // a small gold burst on the light-up frame. levelFn overrides the light-up curve (FWOOM).
 export function lanternLight(ctx, gnome, { t0 = 0, level = 1, cd = 1.6, ring = 5, ringOpts = {}, burst = true, burstOpts = {}, haloPx = 64, haloColor = '#ff9a40', glassK = 2.4, flicker = true, levelFn = null, light = true, lightOffset = null, seed = 'lantern' } = {}) {
+  haloPx = Math.max(64, haloPx * 1.25); // review: every lit lantern gets a 60-90 px halo
   const grp = new THREE.Group(); grp.name = 'lanternLightFx';
   const L = gnome.getObjectByName('lantern'); if (!L) throw new Error('lanternLight: gnome has no lantern');
   let pl = L.getObjectByName('lanternLight'); const own = !pl && light;
@@ -246,11 +252,11 @@ export function lanternLight(ctx, gnome, { t0 = 0, level = 1, cd = 1.6, ring = 5
     const kh = L.getObjectByName('lanternHalo'); if (kh) { kh.scale.setScalar(0.9 * (1 + 0.1 * Math.min(3, Math.max(0, lv - 1)))); kh.material.opacity = 0.5 * Math.min(lv, 1.4) * h; }
     const gm = L.getObjectByName('lanternGlass'); if (gm && gm.material) { gm.material.emissiveIntensity = glassK * lv * fl; gm.material.emissive.set('#ff9a2a'); }
     const fm = L.getObjectByName('lanternFlame'); if (fm && fm.material && lv > 0) fm.material.color.set('#fff0c8').multiplyScalar(2.2 * Math.min(lv, 3));
-    if (own && pl) { pl.intensity = cd * lv * fl; pl.visible = lv > 0.001; if (pl.userData.off) pl.position.copy(glassPos()).add(pl.userData.off); }
+    if (own && pl) { pl.intensity = cd * (2 * Math.min(lv, 1) + Math.max(0, lv - 1)) * fl; pl.visible = lv > 0.001; if (pl.userData.off) pl.position.copy(glassPos()).add(pl.userData.off); }
     else if (pl) pl.userData.cd = pl.userData.cd ?? cd;
     worldOf(L.getObjectByName('lanternGlass') || L, p); halo.position.copy(p); core.position.copy(p);
     const k = Math.min(lv, 3) * h; halo.visible = core.visible = k > 0.002;
-    halo.material.opacity = 0.55 * Math.min(1, k) * fl; halo.userData.px = haloPx * (0.85 + 0.15 * Math.min(2, lv)); core.material.opacity = 0.8 * Math.min(1, k); core.userData.px = haloPx * 0.32 * (0.9 + 0.1 * Math.min(3, lv));
+    halo.material.opacity = 0.72 * Math.min(1, k) * fl; halo.userData.px = haloPx * (0.85 + 0.15 * Math.min(2, lv)); core.material.opacity = 0.8 * Math.min(1, k); core.userData.px = haloPx * 0.32 * (0.9 + 0.1 * Math.min(3, lv));
     if (rg) { rg.setLevel(Math.min(1.6, lv) * h * (0.94 + 0.06 * fl)); rg.update(t); }
     if (b) b.update(t);
   };
@@ -600,7 +606,8 @@ export function stickerTex(ctx, text = '$4.99') {
 }
 export function flutter(ctx, { text = '$4.99', tex = null, from, to, t0 = 0, dur = 0.4, size = 0.5, swing = 35, turns = 1.5, yaw = null, seed = 'flutter' } = {}) {
   const w = size * S, h = w * 0.5; const r = makeRng(hash32('flutter', seed)); const A = P3(from), B = P3(to); const yawF = yaw ?? (r() - 0.5) * 1.6;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex || stickerTex(ctx, text), roughness: 0.75, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 })); m.name = 'priceStickerFlutter'; m.renderOrder = 4;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex || stickerTex(ctx, text), roughness: 0.75, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: -2 })); m.name = 'priceStickerFlutter'; m.renderOrder = 4;
+  const back = new THREE.Mesh(m.geometry, new THREE.MeshStandardMaterial({ color: '#f4f0ea', roughness: 0.8, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: -2 })); back.rotation.y = PI; back.renderOrder = 4; m.add(back);
   const side = new THREE.Vector3(Math.cos(yawF), 0, -Math.sin(yawF)); const amp = 0.55 * w;
   m.update = (t) => {
     const u = (t - t0) / dur; m.visible = u >= 0; if (!m.visible) return; const k = clamp01(u); const ph = k * turns * 2 * PI;
@@ -651,7 +658,8 @@ export function gulp(ctx, { field = null, index = null, target = null, at = null
 // A glossy water drop wells at the lower lid for `swell` s, then slides down the cheek into the beard, leaving a wet
 // trail; a catchlight sprite keeps it readable at night. The path is ray-cast onto the face once (head-local, so it
 // follows head turns). Material: MeshPhysical, transmission-free (roughness 0.05, clearcoat 1).
-export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 0.6, swell = 0.15, size = 0.26, opacity = 0.42, seed = 'tear' } = {}) {
+export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 1.0, swell = 0.15, size = 0.5, opacity = 0.9, seed = 'tear' } = {}) {
+  size = Math.max(size, 0.5); opacity = Math.max(opacity, 0.9); dur = Math.max(dur, 1.0); // review: the tear must read over the white beard
   const head = gnome.getObjectByName('gnomeHead') || gnome; const ball = gnome.getObjectByName('ball' + eye); if (!ball) throw new Error('dewTear: no eye ' + eye);
   gnome.updateWorldMatrix(true, true);
   const hs = head.getWorldScale(new THREE.Vector3()).x; const bw = ball.getWorldPosition(new THREE.Vector3()); const e = head.worldToLocal(bw.clone());
@@ -666,9 +674,9 @@ export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 0.6, swell = 0.15
     const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : fwdW.clone(); const p = hit.point.clone().addScaledVector(n, er * size * 0.55); return head.worldToLocal(p);
   });
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-  const rD = er * size; const mat = new THREE.MeshPhysicalMaterial({ color: '#e6f2ff', roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity, emissive: '#1a2438', emissiveIntensity: 0.6, depthWrite: false });
+  const rD = er * size; const mat = new THREE.MeshPhysicalMaterial({ color: '#8fd0ff', roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity, emissive: '#2a6aa8', emissiveIntensity: 0.8, depthWrite: false });
   const drop = new THREE.Mesh(new THREE.SphereGeometry(rD, 20, 14), mat); drop.renderOrder = 9; drop.name = 'dewTear'; head.add(drop);
-  const TS = 48, RS = 6; const trailGeo = new THREE.TubeGeometry(curve, TS, rD * 0.32, RS, false); const trail = new THREE.Mesh(trailGeo, new THREE.MeshPhysicalMaterial({ color: '#d8e8ff', roughness: 0.04, clearcoat: 1, transparent: true, opacity: 0.55, emissive: '#4a5a7a', emissiveIntensity: 0.7, depthWrite: false })); trail.renderOrder = 8; head.add(trail);
+  const TS = 48, RS = 6; const trailGeo = new THREE.TubeGeometry(curve, TS, rD * 0.32, RS, false); const trail = new THREE.Mesh(trailGeo, new THREE.MeshPhysicalMaterial({ color: '#9ad4ff', roughness: 0.04, clearcoat: 1, transparent: true, opacity: 0.75, emissive: '#3a78b8', emissiveIntensity: 0.8, depthWrite: false })); trail.renderOrder = 8; head.add(trail);
   const glint = pxSprite(addSpriteMat(ctx.tex.sparkle({ points: 4, sharpness: 22, core: 0.7 }), '#ffffff', 1.8, { depthTest: false }), 10); glint.renderOrder = 31; const sheen = pxSprite(addSpriteMat(ctx.tex.radialGlow({ falloff: 2.0 }), '#dcecff', 0.9, { depthTest: true }), 26); sheen.renderOrder = 30; const grp = new THREE.Group(); grp.add(sheen, glint); grp.name = 'dewTearFx';
   const tmp = new THREE.Vector3();
   const update = (t) => {
@@ -680,7 +688,7 @@ export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 0.6, swell = 0.15
     const p = curve.getPointAt(Math.min(0.999, u)); const tg = curve.getTangentAt(Math.min(0.999, Math.max(0.001, u)));
     drop.position.copy(p); drop.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), tg.clone().normalize()); const el = a < swell ? 1 + 0.15 * (a / swell) : 1.25; drop.scale.set(sc, sc * el, sc);
     trail.geometry.setDrawRange(0, Math.floor(u * TS) * RS * 6);
-    head.localToWorld(tmp.copy(p).add(new THREE.Vector3(-0.3 * rD, 0.35 * rD, 0.5 * rD))); glint.position.copy(tmp); glint.userData.px = 15 + 6 * sc; glint.material.opacity = 0.95 * sc; glint.material.rotation = 0.4; head.localToWorld(tmp.copy(p)); sheen.position.copy(tmp); sheen.userData.px = 22 * sc + 8; sheen.material.opacity = 0.35 * sc;
+    head.localToWorld(tmp.copy(p).add(new THREE.Vector3(-0.3 * rD, 0.35 * rD, 0.5 * rD))); glint.position.copy(tmp); glint.userData.px = 32 + 10 * sc; glint.material.opacity = 0.95 * sc; glint.material.rotation = 0.4; head.localToWorld(tmp.copy(p)); sheen.position.copy(tmp); sheen.userData.px = 34 * sc + 10; sheen.material.opacity = 0.5 * sc;
   };
   update(-1); return { group: grp, update, drop, trail };
 }

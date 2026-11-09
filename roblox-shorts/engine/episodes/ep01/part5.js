@@ -62,14 +62,19 @@ const evT = (ctx, k, fb) => C.evT(ctx, k, fb);
 const epT = (ctx, sec) => (Math.round(sec * ctx.fps) - ctx.shot.f0) / ctx.fps;        // episode seconds -> shot seconds (frame-snapped)
 function basePush(ctx, o = {}) { const m = ctx.params.camera.move; ctx.camera.push(o.Z ?? m.Z ?? m.base_push ?? 0.19, { mode: (o.mode ?? m.mode) === 'dolly' ? 'dolly' : 'zoom', t0: o.t0, t1: o.t1 }); }
 function paramRoll(ctx) { const r = ctx.params.camera.roll; if (r) ctx.camera.rollBy(r.deg[1] - r.deg[0]); }
-function sparks(ctx, center, size, count, seed, o = {}) { const f = sets.sparkles(ctx, { ...C.SPARK, center: P3(center).toArray(), size, count, seed, ...o }); ctx.add(f); return f; }
+function sparks(ctx, center, size, count, seed, o = {}) { count = Math.round(Math.max(10, count * 1.8)); const f = sets.sparkles(ctx, { ...C.SPARK, center: P3(center).toArray(), size, count, seed, ...o }); ctx.add(f); return f; }
 function dew(ctx, center, size, count, seed) { return sparks(ctx, center, size, count, seed, { colors: DEW, px: [30, 50], drift: [0.01, 0.03], brightness: 1.5, underlay: 0 }); }
 function nightLot(ctx, o = {}) { const H = SE.heroLot(ctx, { tod: 'night', bed: 'hole', truck: 'open', gate: 1.5, sold: -1, lanterns: 1, ...o }); ctx.add(H); return H; }
 function dawnLot(ctx, o = {}) { const H = SE.heroLot(ctx, { tod: 'dawn', bed: 'hole', truck: 'open', truckOpts: { dome: false }, gate: 1.5, sold: -1, lanterns: 0.5, ...o }); ctx.add(H); return H; }
 function nightRig(ctx, set, preset = 'nightHigh', o = {}) {
-  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, ...rest } = o;
-  return f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, lift = true, ...rest } = o;
+  const L0 = sets.LIGHT[preset === 'night' ? 'night' : 'nightHigh']; if (lift) rest.hemiIntensity = (rest.hemiIntensity ?? L0.hemi[2]) * NIGHT_LIFT.hemi;
+  const rig = f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  if (lift) { const P = ctx.post.params; ctx.post.set({ exposure: P.exposure * NIGHT_LIFT.exp, grade: { saturation: (P.grade.saturation ?? 1) * NIGHT_LIFT.sat } }); }
+  return rig;
 }
+// Review fix: night exteriors were crushed and oversaturated against the approved s09 (QA gate mean 70-95, sat <= 0.6).
+const NIGHT_LIFT = { hemi: 1.3, exp: 1.15, sat: 0.86 };
 function camBasis(ctx) { ctx.camera.apply(0); const cam = ctx.cam; const pos = cam.position.clone(); const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion); const upv = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion); return { pos, fwd, right, up: upv }; }
 function warmKey(ctx, subject, { cd = 2.6, d = 0.8, color = '#ffc08a', side = 35, el = 35 } = {}) {
   const B = camBasis(ctx); const s = P3(subject); const back = B.fwd.clone().negate(); back.y = 0; back.normalize();
@@ -298,19 +303,19 @@ export const builders = {
       const eyes = C.eyesOf(g); const fwd = dirOf(GP_YAW); const lan = worldOf(g.getObjectByName('lantern'));
       const gl = new THREE.Vector3(-fwd.z, 0, fwd.x); const lanSide = Math.sign(lan.clone().sub(eyes).dot(gl)) || 1;
       const nose = eyes.clone().addScaledVector(fwd, 0.05 * S); nose.y -= 0.12 * S;
-      const dir = fwd.clone().applyAxisAngle(YAX, -lanSide * c.yaw_deg * DEG);
+      const dir = fwd.clone().applyAxisAngle(YAX, -lanSide * (c.yaw_deg - 10) * DEG);   // review: yaw -15 -> -25 so the lantern clears the beard
       const pos = nose.clone().addScaledVector(dir, c.dist_studs * S); pos.y = c.height_studs * S;
       const tgt = eyes.clone().lerp(lan, 0.3); const hd = Math.hypot(tgt.x - pos.x, tgt.z - pos.z); tgt.y = pos.y + hd * Math.tan(c.pitch_deg * DEG);
       ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov }); basePush(ctx);
-      clearPlants(H, [[pos.x, pos.z, 0.3], [lerp(pos.x, nose.x, 0.5), lerp(pos.z, nose.z, 0.5), 0.22]]);
+      clearPlants(H, [[pos.x, pos.z, 0.3], [lerp(pos.x, nose.x, 0.5), lerp(pos.z, nose.z, 0.5), 0.45]]);   // (0.22 left a white tulip over the lantern)
       const rig = nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 1, cd: 1.6, maxD: 10 }, postOpts: CU_GRADE });
       coolRim(ctx, eyes.toArray(), { intensity: 0.9 });
       warmKey(ctx, nose.toArray(), { cd: 0.9, d: 0.7, color: '#ffc8a0' });   // Theo's window spill from above-behind the lens
       const tF = evT(ctx, 0, 0.1), tFl = evT(ctx, 'flared', 1.15); Object.assign(ctx.shared, { tF, tFl });
-      const F = X.fwoom(ctx, { gnome: g, t0: tF, t2: tFl, rig, peak: 4.5, cd: [1.6, 7, 2.4], burst: false, wave: { sparkles: 40, height: 1.2 }, seed: 's77' }); ctx.add(F.group); ctx.shared.F = F;
+      const F = X.fwoom(ctx, { gnome: g, t0: tF, t2: tFl, rig, peak: 3.6, cd: [1.6, 4.2, 2.2], burst: false, wave: { sparkles: 40, height: 1.2 }, seed: 's77' }); ctx.add(F.group); ctx.shared.F = F; if (F.wave && F.wave.group) nearFade(F.wave.group, 0.7, 2.4);   // review: no milky wash / 1-frame snap as the wall passes the lens
       // the burst ring + motes (fwoom's own burst has a 420 px core that whites out a close-up: bible P3 "no white flash frames")
       const lp = worldOf(g.getObjectByName('lanternGlass') || g.getObjectByName('lantern'));
-      ctx.shared.b1 = sets.burst(ctx, { pos: lp.toArray(), t0: tF, dur: 0.4, count: 30, spread: 0.8, px: [34, 80], ringPx: [60, 900], ringColor: '#ffe6c0', colors: ['#ffffff', '#ffd27a', '#ff9ad5', '#fff2d8'], corePx: 220, brightness: 2.0, seed: 's77b1' }); ctx.add(ctx.shared.b1);
+      ctx.shared.b1 = sets.burst(ctx, { pos: lp.toArray(), t0: tF, dur: 0.4, count: 30, spread: 0.8, px: [34, 80], ringPx: [60, 520], ringColor: '#ffe6c0', colors: ['#ffffff', '#ffd27a', '#ff9ad5', '#fff2d8'], corePx: 90, brightness: 1.4, seed: 's77b1' }); ctx.add(ctx.shared.b1);
       ctx.shared.b2 = sets.burst(ctx, { pos: lp.toArray(), t0: tFl, dur: 0.35, count: 14, spread: 0.6, px: [28, 60], ringPx: [40, 520], ringColor: '#ffe6c0', colors: ['#ffd27a', '#ffe2a8', '#fff2d8'], corePx: 150, brightness: 1.8, seed: 's77b2' }); ctx.add(ctx.shared.b2);
       ctx.camera.shake({ t0: tF, dur: 0.4, rot: 0.35, pos: 0.004, px: 10, freq: 14, seed: 77 });
       ctx.shared.fam = familyLanterns(ctx, H);
@@ -342,7 +347,8 @@ export const builders = {
       const tgt = C0.clone().addScaledVector(look, 6 * S); tgt.y = camY + 6 * S * Math.tan(-3 * DEG);
       ctx.camera.set({ pos: C0.toArray(), target: tgt.toArray(), fov: p.fov }).truck(truck); basePush(ctx);
       clearPlants(H, [[C0.x, C0.z, 0.3], [CA.x, CA.z, 0.3], [C0.x + right.x * truck, C0.z + right.z * truck, 0.3]]);
-      ctx.shared.rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemiIntensity: 0.5, key: { intensity: 0.3 }, lamp: { n: 2 }, window: { n: 0 }, postOpts: { exposure: 0.95, glow: { amount: 0.06 } } });
+      ctx.shared.rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemi: ['#ffcdb8', '#5a2030', 1.2], key: { intensity: 0.3 }, lamp: { n: 2 }, window: { n: 0 }, postOpts: { exposure: 1.25, glow: { amount: 0.06 }, grade: { saturation: 0.85, highlights: '#ffdcc4' } } });   // review: P3 peach glow, not olive
+      ctx.shared.motes = sparks(ctx, C0.clone().addScaledVector(look, 1.6).setY(0.45), [2.4, 0.8, 1.6], 28, 's78m', { colors: ['#ffd27a', '#ff9ad5', '#fff2d8', '#ffb8e0'], px: [44, 80] });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.6, levelFn: (t) => fwoomLevelEp(ctx, t) });
       const ang = (w) => Math.atan2(w.z, w.x) / DEG; const aU = ang(u), aL = ang(look); const lo = Math.min(aU, aL) - 30, hi = Math.max(aU, aL) + 30;
       const W = X.lightWave(ctx, { center: Cn, t0: tW0, speed: 8, height: 2.0, width: 1.8, intensity: 1.7, sparkles: 120, sector: [lo, hi], light: 2.2, seed: 's78w' }); ctx.add(W.group); ctx.shared.W = W; nearFade(W.group, 0.7, 2.4);   // softer near the lens: no cream wash after the pass
@@ -350,7 +356,7 @@ export const builders = {
       for (const [fw, lat, sc] of [[2.2, -0.35, 1.0], [3.4, 0.45, 1.1], [4.6, -0.2, 1.0]]) { const q = CA.clone().addScaledVector(look, fw).addScaledVector(right, lat); const k = f.add({ at: [q.x, q.z], scale: sc, face: [Cn.x, Cn.z] }); f.eyes(k, -5, null); f.sink(k, tW0 + Math.hypot(q.x - Cn.x, q.z - Cn.z) / v, 0.5); }
       ctx.shared.f = f; ctx.shared.fam = familyLanterns(ctx, H);
     },
-    update(ctx, t) { const s = ctx.shared; s.f.update(t); s.GL.update(t); s.W.update(t); s.fam.update(t); K.gnomeIdle(s.g, t, { seed: 's78', amp: 0.3 }); },
+    update(ctx, t) { const s = ctx.shared; s.f.update(t); s.GL.update(t); s.W.update(t); s.fam.update(t); s.motes.update(t); K.gnomeIdle(s.g, t, { seed: 's78', amp: 0.3 }); },
   },
 
   // s79 "and every mound sank," (89.75-91.02) - top-down over the lawn beside Grandpa's bed (frame turned so the house is
@@ -367,7 +373,7 @@ export const builders = {
       const ctr = new THREE.Vector3(-4.35, 0, -11.05); const yw = (c.yaw_deg || 0) * DEG; const o = new THREE.Vector3(-0.01, 0, 0).applyAxisAngle(YAX, yw);
       ctx.camera.set({ pos: [ctr.x + o.x, c.height_studs * S, ctr.z + o.z], target: ctr.toArray(), fov: p.fov });
       basePush(ctx); ctx.camera.crane((c.drift && c.drift.crane_studs || 2) * S);
-      const rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, hemiIntensity: 0.7, key: { intensity: 0.3 }, lamp: { n: 0 }, postOpts: { exposure: 1.0, glow: { amount: 0.08 } } }); ctx.shared.rig = rig;
+      const rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, hemi: ['#ffcdb8', '#5a2030', 1.2], key: { intensity: 0.3 }, lamp: { n: 0 }, postOpts: { exposure: 1.25, glow: { amount: 0.08 }, grade: { saturation: 0.85, highlights: '#ffdcc4' } } }); ctx.shared.rig = rig;
       ctx.add(ctx.lights.sun({ color: '#ffc896', intensity: 2.6, pos: [GP[0] - 2, 2.2, GP[2] - 7], target: [ctr.x, 0, ctr.z], shadow: false }));
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.6, levelFn: (t) => fwoomLevelEp(ctx, t) });
       const v = 8 * S; const tM = evT(ctx, 'mound', 0.433); const r0 = 1.9; const tW0 = tM - r0 / v;
@@ -377,7 +383,7 @@ export const builders = {
         const x = Cn.x - Math.sin(a * DEG) * r, z = Cn.z + Math.cos(a * DEG) * r; const k = f.add({ at: [x, z], scale: sc, face: [Cn.x, Cn.z] }); f.eyes(k, -5, null); f.sink(k, tW0 + r / v, 0.45);
       });
       ctx.shared.f = f; ctx.shared.fam = familyLanterns(ctx, H, { level: 0.6 });
-      ctx.shared.fx = sparks(ctx, [ctr.x - 0.5, 0.6, ctr.z + 0.3], [3.6, 0.6, 2.2], 8, 's79', { px: [40, 70] });
+      ctx.shared.fx = sparks(ctx, [ctr.x - 0.5, 0.6, ctr.z + 0.3], [3.6, 0.6, 2.2], 24, 's79', { colors: ['#ffd27a', '#ff9ad5', '#fff2d8', '#ffb8e0'], px: [44, 80] });
     },
     update(ctx, t) { const s = ctx.shared; s.f.update(t); s.GL.update(t); s.W.update(t); s.fam.update(t); s.fx.update(t); },
   },
@@ -392,8 +398,8 @@ export const builders = {
       const cam = new THREE.Vector3(-1.95, c.height_studs * S, -11.35); const dirL = new THREE.Vector3(-1, 0, 0.42).normalize();
       const look = cam.clone().addScaledVector(dirL, c.dist_studs * S); look.y = cam.y + c.dist_studs * S * Math.tan(c.pitch_deg * DEG);
       ctx.camera.set({ pos: cam.toArray(), target: look.toArray(), fov: p.fov }); basePush(ctx);
-      const rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemiIntensity: 0.55, key: { intensity: 0.3 }, lamp: { n: 2 }, postOpts: { exposure: 0.95 } }); ctx.shared.rig = rig;
-      ctx.shared.A = sets.postPreset('magic', { exposure: 0.95 }); ctx.shared.Bp = sets.postPreset('nightHigh', { exposure: 1.0 });
+      const rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemi: ['#ffcdb8', '#5a2030', 1.2], key: { intensity: 0.3 }, lamp: { n: 2 }, postOpts: { exposure: 1.25, grade: { saturation: 0.85, highlights: '#ffdcc4' } } }); ctx.shared.rig = rig;
+      ctx.shared.A = sets.postPreset('magic', { exposure: 1.25, grade: { saturation: 0.85, highlights: '#ffdcc4' } }); ctx.shared.Bp = sets.postPreset('nightHigh', { exposure: 1.15 });
       ctx.shared.gb = C.gradeBlend(ctx.shared.A.grade, ctx.shared.Bp.grade);
       const side = new THREE.Vector3(dirL.z, 0, -dirL.x);   // screen-left
       const at = (fwd, lat) => cam.clone().addScaledVector(dirL, fwd).addScaledVector(side, lat);
@@ -403,13 +409,13 @@ export const builders = {
       pts.forEach(([fw, lat, sc], i) => { const q = at(fw, lat); const k = f.add({ at: [q.x, q.z], scale: sc, face: [cam.x, cam.z] }); f.eyes(k, -5, tOff[i]); f.sink(k, tOff[i] + 0.05, 0.55); });
       f.update(0); const items = []; pts.forEach((_, i) => { const e = X.fieldEyes(f, i); if (e) items.push({ L: e[0], R: e[1], t: tOff[i] }); });
       const Wk = X.winkOut(ctx, items, { px: 56 }); ctx.add(Wk.group); Object.assign(ctx.shared, { f, Wk });
-      ctx.shared.fx = sparks(ctx, at(1.2, 0).setY(0.5), [1.4, 0.5, 1.0], 5, 's80', { px: [36, 64] });
+      ctx.shared.fx = sparks(ctx, at(1.6, 0).setY(0.5), [2.0, 0.6, 1.4], 22, 's80', { colors: ['#ffd27a', '#ff9ad5', '#fff2d8', '#ffb8e0'], px: [44, 80] });
     },
     update(ctx, t) {
       const s = ctx.shared; s.f.update(t); s.Wk.update(t); s.fx.update(t);
-      const k = 0.6 * clamp01(t / ctx.shot.duration); const pp = ctx.post.params; s.gb(pp.grade, k); pp.exposure = lerp(s.A.exposure, s.Bp.exposure, k);
+      const k = 0.3 * clamp01(t / ctx.shot.duration); /* review: the magic holds (blend 1 -> 0.7) */ const pp = ctx.post.params; s.gb(pp.grade, k); pp.exposure = lerp(s.A.exposure, s.Bp.exposure, k);
       pp.bloom.strength = lerp(s.A.bloom.strength, s.Bp.bloom.strength, k); pp.bloom.threshold = lerp(s.A.bloom.threshold, s.Bp.bloom.threshold, k); if (pp.glow) pp.glow.amount = lerp(0.12, 0, k);
-      hemiTo(s.rig, ['#ffcdb8', '#5a2030', 0.55], ['#8a90ff', '#241a3a', 0.95], k);
+      hemiTo(s.rig, ['#ffcdb8', '#5a2030', 1.2], ['#8a90ff', '#241a3a', 1.2], k);
     },
   },
 
@@ -426,7 +432,7 @@ export const builders = {
       ctx.add(sets.contactShadow(ctx, { pos: [hp[0], 0.005, hp[2]], radius: 0.45, opacity: 0.35 }));
       ctx.camera.set(H.ep01.views.quietWide); basePush(ctx, { mode: 'dolly' });
       nightRig(ctx, H, 'nightHigh', { window: { n: 2, cd: 2.4, color: '#ffd9a0', maxD: 14 }, hemiIntensity: 1.1, postOpts: { exposure: 1.1 } });
-      ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.4 }); ctx.shared.fam = familyLanterns(ctx, H);
+      ctx.shared.GL = grandpaLantern(ctx, g, { cd: 2.0, haloPx: 80, level: 1 }); ctx.shared.fam = familyLanterns(ctx, H);   // review: the warm focal point of the wide
       ctx.shared.fx = sparks(ctx, up(GP, 4.6, -1.6, 2.2), [3.6, 2.4, 2.2], 8, 's81', { px: [40, 72] });   // over the bed and the window, clear of the hero's head
     },
     update(ctx, t) { const s = ctx.shared; s.GL.update(t); s.fam.update(t); s.fx.update(t); K.gnomeIdle(s.g, t, { seed: 's81', amp: 0.25 }); },

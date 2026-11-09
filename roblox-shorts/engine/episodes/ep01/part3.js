@@ -41,7 +41,7 @@ const WIN = [-2.413, 1.632, -13.312];       // Theo's window, outer glass centre
 const LOT_DOOR = [0, 0.32, -13.216];
 const ROOM_FLOOR = 0.32;                    // the bungalow floor (= the porch deck)
 const HOLD_OFF = [0, 0.1, 1.12];            // part2: the hugged gnome in the hero's hips frame (studs)
-const HUG = { armLx: 58, armRx: 58, armLz: -36, armRz: -36, neckX: -8 };   // part2: both arms round the gnome's belly
+const HUG = { armLx: 78, armRx: 78, armLz: -44, armRz: -44, neckX: -8 };   // part2: both arms round the gnome's belly
 const CRADLE = { armLx: 52, armRx: 52, armLz: -40, armRz: -40, neckX: -30 }; // s47: forearms round his belly, tipped back
 const TUCK_OFF = [1.38, 0.62, 0.62];        // Grandpa tucked under the hero's LEFT arm (hips frame, studs)
 const TUCK_ARM = { armLx: 30, armLz: 4 };   // the left arm pressing him to the hip
@@ -57,12 +57,17 @@ const evT = (ctx, k, fb) => { const v = C.evT(ctx, k, fb); return v == null ? v 
 // The house-style push from params.camera.move (mode 'fov' = the engine's 'zoom': no parallax).
 function basePush(ctx, o = {}) { const m = ctx.params.camera.move; ctx.camera.push(o.Z ?? m.Z ?? 0.19, { mode: m.mode === 'dolly' ? 'dolly' : 'zoom', t0: o.t0, t1: o.t1 }); }
 function paramRoll(ctx) { const r = ctx.params.camera.roll; if (r) ctx.camera.rollBy(r.deg[1] - r.deg[0]); }
-function sparks(ctx, center, size, count, seed, o = {}) { const f = sets.sparkles(ctx, SPK({ center, size, count, seed, ...o })); ctx.add(f); return f; }
+function sparks(ctx, center, size, count, seed, o = {}) { count = Math.round(Math.max(10, count * 1.8)); const f = sets.sparkles(ctx, SPK({ center, size, count, seed, ...o })); ctx.add(f); return f; }
 function nightLot(ctx, o = {}) { const H = SE.heroLot(ctx, { tod: 'night', bed: 'empty', truck: 'open', gate: 1.5, sold: -1, lanterns: 1, ...o }); ctx.add(H); return H; }
 function nightRig(ctx, set, preset = 'nightHigh', o = {}) {
-  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, ...rest } = o;
-  return f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  const f = preset === 'night' ? sets.nightStreet : sets.nightLawn; const { low, lift = true, ...rest } = o;
+  const L0 = sets.LIGHT[preset === 'night' ? 'night' : 'nightHigh']; if (lift) rest.hemiIntensity = (rest.hemiIntensity ?? L0.hemi[2]) * NIGHT_LIFT.hemi;
+  const rig = f(ctx, { set, skyPreset: low === false ? C.GALAXY : C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, ...rest });
+  if (lift) { const P = ctx.post.params; ctx.post.set({ exposure: P.exposure * NIGHT_LIFT.exp, grade: { saturation: (P.grade.saturation ?? 1) * NIGHT_LIFT.sat } }); }
+  return rig;
 }
+// Review fix: night exteriors were crushed and oversaturated against the approved s09 (QA gate mean 70-95, sat <= 0.6).
+const NIGHT_LIFT = { hemi: 1.3, exp: 1.15, sat: 0.86 };
 function camBasis(ctx) { ctx.camera.apply(0); const cam = ctx.cam; const pos = cam.position.clone(); const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion); return { pos, fwd, right }; }
 // Warm face key from upper front-left of the subject as seen from the camera (bible: warm key on faces, cool set).
 function warmKey(ctx, subject, { cd = 2.6, d = 0.8, color = '#ffc08a', side = 35, el = 35 } = {}) {
@@ -236,7 +241,7 @@ export const builders = {
       const GL = grandpaLantern(ctx, g); ctx.shared.GL = GL;
       const lit = E.gnomes.filter((e) => !e.plastic && e.g.getObjectByName('lantern'));
       lit.sort((a, b) => V3(a.pos).distanceTo(aim) - V3(b.pos).distanceTo(aim));
-      ctx.shared.lan = lit.map((e, i) => { const L = X.lanternLight(ctx, e.g, { t0: -1, ring: 4.5, ringOpts: { boost: 1.8, rimBoost: 3.4, rimA: 0.7 }, burst: false, haloPx: 52, cd: 1.6, light: i < 3, seed: 's43' + e.slot }); ctx.add(L.group); return L; });
+      ctx.shared.lan = lit.map((e, i) => { const L = X.lanternLight(ctx, e.g, { t0: -1, ring: 7, ringOpts: { boost: 1.8, rimBoost: 3.4, rimA: 0.7 }, burst: false, haloPx: 52, cd: 1.6, light: i < 3, seed: 's43' + e.slot }); ctx.add(L.group); return L; });
       // mounds prowling on every lawn, outside the pools; next door's lawn (the gap) has the most
       const r = makeRng(hash32('p3s43')); const fields = [];
       for (const l of R.userData.lots.filter((x) => x.side === 'A')) {
@@ -266,7 +271,7 @@ export const builders = {
       const face = worldOf(theo.getObjectByName('head')); const bp = worldOf(badge); const subj = face.clone().lerp(bp, 0.6);
       boardCam(ctx, subj, { ref: [0, 0, 1], yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, ground: ROOM_FLOOR, fov: p.fov });
       basePush(ctx); paramRoll(ctx);
-      I.bedroomNight(ctx, { set: H, lamp: 4, nightlight: 2.5, moon: true, lanternOutside: true }); ctx.post.params.exposure *= 0.86;
+      I.bedroomNight(ctx, { set: H, lamp: 3, nightlight: 2.0, moon: true, lanternOutside: true }); ctx.post.params.exposure *= 0.7; ctx.post.set({ grade: { contrast: 1.1 } });   // review: s44 read as day (mean 155)
       warmKey(ctx, face.toArray(), { cd: 0.9, d: 0.7, color: '#ffc8a8' });
       const gl = C.starGlint(ctx, { pos: bp.clone().add(new THREE.Vector3(0, 0.01, 0.02)), t0: evT(ctx, 'six', 1.23), peak: 90, rot: 20, color: '#ffe9b0' }); ctx.add(gl); ctx.shared.gl = gl;
       ctx.shared.fx = sparks(ctx, face.clone().add(new THREE.Vector3(0.25, 0.3, 0.2)).toArray(), [1.2, 0.8, 0.5], 9, 's44', { px: [40, 80] });
@@ -314,12 +319,14 @@ export const builders = {
       boardCam(ctx, subj, { ref: [0, 0, 1], yaw: -62, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, fov: p.fov });
       basePush(ctx); ctx.camera.truck(c.drift.truck_studs * S);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 } });
+      // review: the what-if is graded as imagined (cool, desaturated, vignette); s47 cuts back to the normal grade on "Leave"
+      ctx.post.set({ grade: { saturation: ctx.post.params.grade.saturation * 0.6, temperature: -30 }, vignette: { enabled: true, amount: 0.5, size: 0.42, softness: 0.6 } });
       // Theo's window spill on the bed / lawn (switched with the room)
       const spill = ctx.add(ctx.lights.point({ color: '#ffd9a0', intensity: 2.2, pos: up(WIN, -1.2, 0, 2.2), decay: 2 })); ctx.shared.spill = spill;
       ctx.shared.wd = X.windowDark(ctx, H, { t0: tDark });
       ctx.shared.GL = grandpaLantern(ctx, g); ctx.shared.fam = familyLanterns(ctx, H);
       // two mounds waiting outside the light on either side of the bed; from "Theo's" they glide to it, surge on "dark"
-      const f = CR.moleField(ctx, { center: [BED[0], BED[2] + 1.2], size: [22, 16], res: 112, seed: 's46', heads: 'snout' }); ctx.add(f.group);
+      const f = CR.moleField(ctx, { center: [BED[0], BED[2] + 1.2], size: [22, 16], res: 112, seed: 's46', heads: 'eyes' }); ctx.add(f.group);
       const A0 = [BED[0] + 0.55, BED[2] + 2.75], B0 = [BED[0] + 1.85, BED[2] + 0.75];
       const a = f.add({ at: A0, scale: 1.35, face: [BED[0], BED[2]] }), b = f.add({ at: B0, scale: 1.25, face: [BED[0], BED[2]] });
       f.travel(a, [A0, [BED[0] + 0.25, BED[2] + 0.75]], tTheo, 2.0); f.travel(b, [B0, [BED[0] + 0.62, BED[2] + 0.3]], tTheo + 0.08, 1.8); f.eyes(a, -5, null); f.eyes(b, -5, null);
@@ -374,12 +381,12 @@ export const builders = {
   truck_clock: {
     build(ctx) {
       const p = ctx.params, c = p.camera; const R = I.truckCab(ctx, { time: '11:52', note: 'LEAVE 6 AM' }); ctx.add(R); ctx.shared.R = R;
-      const A = R.userData.anchors; const subj = V3(A.led).lerp(V3(A.note), 0.33); subj.y += 0.02;
+      const A = R.userData.anchors; const subj = V3(A.led).lerp(V3(A.note), 0.55); subj.y += 0.02; // review: the note was cut by the left edge
       // fov 45, yaw -10, pitch -8 as boarded; the lens 1.9 m out (at the boarded 1.6 studs the 9:16 frame holds part of the LED alone)
       const d = new THREE.Vector3(0, 0, 1).applyAxisAngle(YAX, c.yaw_deg * DEG); const dist = 1.9;
       const pos = subj.clone().addScaledVector(d, dist); pos.y = subj.y + dist * Math.tan(-c.pitch_deg * DEG);
-      ctx.camera.set({ pos: pos.toArray(), target: subj.toArray(), fov: p.fov }); basePush(ctx);
-      I.cabNight(ctx, { cab: R });
+      ctx.camera.set({ pos: pos.toArray(), target: subj.toArray(), fov: 40 }); basePush(ctx, { Z: 0.15 });
+      I.cabNight(ctx, { cab: R, led: 2.5, street: 6.5, postOpts: { exposure: 1.85 } });
     },
     update(ctx, t) { ctx.shared.R.ep01.update(t, ctx.T); },
   },
@@ -405,27 +412,27 @@ export const builders = {
       const HP = [bx - 0.42, 0, bz + 0.74];
       const { hero, g } = heroWithGnome(ctx, { at: HP, yaw: Math.PI, face: 'determined', mode: 'tuck' }); ctx.shared.hero = hero; ctx.shared.g = g;
       const top = new THREE.Vector3(bx, by + CB.h, bz);
-      ctx.camera.set({ pos: [top.x + 0.22 + 0.001, by + c.height_studs * S + 0.55, top.z + 0.08], target: [top.x + 0.22, top.y, top.z + 0.08], fov: p.fov }); basePush(ctx);
+      ctx.camera.set({ pos: [top.x + 0.06 + 0.001, by + c.height_studs * S + 0.55 + 0.5 * S, top.z + 0.05], target: [top.x + 0.06, top.y, top.z + 0.05], fov: p.fov }); basePush(ctx); // review: box centred so the label reads
       nightRig(ctx, H, 'night', { lamp: { n: 2 }, low: false, postOpts: CU_GRADE });
       ctx.add(ctx.lights.point({ color: '#fff0d0', intensity: 2.2, pos: [bx - 0.9, by + 1.9, bz - 0.2], decay: 2 })); // the cargo dome's spill out of the open back
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.2, ring: 0 });
       const reach = { ...TUCK_ARM, bodyX: 14, armRx: 72, armRz: 4, neckX: -24 };     // fingers on the tape at the seam
       const rip = { ...reach, bodyX: 4, armRx: 50, armRz: 26 };                         // yank: back and out
-      const dig = { ...reach, bodyX: 26, armRx: 62, armRz: 2 };                         // down into the carton
+      const dig = { ...reach, bodyX: 14, armRx: 66, armRz: 2, neckX: -10 };   // (bodyX 26 put his hair into the top of frame)                         // down into the carton
       const lift = { ...TUCK_ARM, bodyX: 12, armRx: 112, armRz: 2, neckX: -6 };          // up toward the lens over the carton
       ctx.shared.pose = (t) => K.poseAt(t, [[0, reach], [tRip - 0.06, rip], [tRip + 0.25, dig], [tLift, lift]], 0.1);
       ctx.shared.fx = sparks(ctx, top.clone().add(new THREE.Vector3(0, 0.3, 0)).toArray(), [0.8, 0.3, 0.9], 6, 's49', { px: [40, 70] });
-      const pf = sets.burst(ctx, { pos: top.toArray(), t0: tRip, dur: 0.25, count: 10, spread: 0.3, px: [14, 30], ring: false, core: false, colors: ['#e8d8b8', '#d8c098', '#ffffff'], brightness: 1.2, gravity: -0.6, seed: 's49rip' }); ctx.add(pf); ctx.shared.pf = pf;
+      const pf = sets.burst(ctx, { pos: top.toArray(), t0: tRip - 0.02, dur: 0.32, count: 22, spread: 0.36, px: [22, 48], ring: false, core: false, colors: ['#e8d8b8', '#d8c098', '#ffffff'], brightness: 1.2, gravity: -0.6, seed: 's49rip' }); ctx.add(pf); ctx.shared.pf = pf;
     },
     update(ctx, t) {
       const s = ctx.shared; K.setPose(s.hero, s.pose(t)); s.GL.update(t); s.pf.update(t); s.fx.update(t);
       // flaps: taped shut, snap open on the rip (spring), outward 125 deg
-      const k = t < s.tRip ? 0 : springStep(t - s.tRip, 3.2, 0.42); for (const f of s.flaps) f.rotation.x = f.userData.sgn * 2.25 * k; s.tape.visible = t < s.tRip;
+      const ur = clamp01((t - s.tRip) / 0.1); const k = t < s.tRip ? 0 : outQuad(ur) + 0.06 * Math.sin(Math.PI * clamp01((t - s.tRip - 0.1) / 0.2)); for (const f of s.flaps) f.rotation.x = f.userData.sgn * 2.25 * k; s.tape.visible = t < s.tRip; // 6 frames, under the dust puff
       // the plastic gnome: in the box until "plastic", then pulled up into the hand and tipped face-up to the lens
       const pg = s.pg; const u = clamp01((t - s.tLift) / (8 / 60)); const e = outQuad(u);
       s.hero.updateWorldMatrix(true, true); const hand = K.handSocket(s.hero, 'R'); const hp = worldOf(hand).add(new THREE.Vector3(0, -0.03, -0.05));
       // in the box, standing (hat up to the lens); lifted: the base in his hand, tipped onto its back so the face looks up at us
-      pg.position.copy(s.inBox).lerp(hp, e); pg.rotation.set(-1.45 * e, Math.PI * 0.08 * (1 - e), -s.slope * (1 - e) + 0.12 * Math.sin(Math.PI * u), 'YXZ');
+      const above = s.inBox.clone().lerp(hp, 0.35); above.y = s.inBox.y + 0.32; pg.position.copy(s.inBox).lerp(above, e); pg.rotation.set(-0.55 * e, Math.PI * 0.08 * (1 - e), -s.slope * (1 - e) + 0.08 * Math.sin(Math.PI * u), 'YXZ'); // lifted up toward the lens, kept in frame
     },
   },
 
@@ -573,8 +580,8 @@ export const builders = {
       // lens behind him toward his feet (straight behind, his shoulder and draped arm sit right in front of the pane) and
       // at h 4.0 studs (from h 2 his side silhouette hides the glass; level with the eyes); aimed at the pane with the boarded pitch
       const face = worldOf(theo.getObjectByName('head')); const subj = [WIN[0] + 0.32, 0, face.z];
-      const { pos } = boardCam(ctx, subj, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: c.dist_studs, h: 4.0, pitch: c.pitch_deg, ground: ROOM_FLOOR, fov: p.fov });
-      { const hd = Math.hypot(WIN[0] - pos.x, WIN[2] - pos.z); ctx.camera.set({ pos: pos.toArray(), target: [WIN[0] - 0.06, pos.y + hd * Math.tan(c.pitch_deg * DEG), WIN[2]], fov: p.fov }); } basePush(ctx);
+      const { pos } = boardCam(ctx, subj, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: c.dist_studs + 1.5, h: 4.6, pitch: c.pitch_deg, ground: ROOM_FLOOR, fov: p.fov });
+      { const hd = Math.hypot(WIN[0] - pos.x, WIN[2] - pos.z); ctx.camera.set({ pos: pos.toArray(), target: [WIN[0] - 0.06, pos.y + hd * Math.tan(c.pitch_deg * DEG) - 0.35, WIN[2]], fov: p.fov }); } basePush(ctx);
       I.bedroomNight(ctx, { set: H, lamp: 3.5, nightlight: 2.5, moon: true, lanternOutside: false });
       // the mole outside, up against the glass (big: its eyes reach the pane), rising into view
       const m = CR.makeMole({ preset: 'old', scale: 1.3, seed: 31, lod: 'hero' }); m.rotation.y = Math.PI; ctx.add(m); ctx.shared.m = m;
@@ -586,12 +593,14 @@ export const builders = {
       const eL0 = worldOf(m.getObjectByName('eyeL')), eR0 = worldOf(m.getObjectByName('eyeR')); const eyeY = (eL0.y + eR0.y) / 2;
       const yUp = WIN[1] + 0.08 - eyeY; ctx.shared.yUp = yUp;
       const eL = eL0.clone().add(new THREE.Vector3(0, yUp, 0)), eR = eR0.clone().add(new THREE.Vector3(0, yUp, 0));
-      const fog = X.glassFog(ctx, E.theo.glass, { t0: tG, center: [WIN[0] + 0.05, eL.y - 0.12, -13.504 + 0.008], r1: 1.1, grow: 0.35, opacity: 0.5, eyes: [eL, eR], eyeGlow: 1.0, toward: pos }); ctx.add(fog.group); ctx.shared.fog = fog;
+      const fog = X.glassFog(ctx, E.theo.glass, { t0: tG, center: [WIN[0] + 0.05, eL.y - 0.12, -13.504 + 0.008], r1: 1.2, grow: 0.4, opacity: 0.95, eyes: [eL, eR], eyeGlow: 2.0, toward: pos }); ctx.add(fog.group); ctx.shared.fog = fog;
+      // review: the amber eyes must read through the glass: a 40 px warm halo on each (they rise with the mole)
+      ctx.shared.eh = [eL, eR].map((e) => { const h = C.pxSprite(C.addSpriteMat(ctx.tex.radialGlow({ falloff: 1.8 }), '#ffa416', 1.6), 44); h.position.copy(e).add(new THREE.Vector3(0, 0, 0.05)); h.renderOrder = 20; h.userData.p0 = h.position.clone(); ctx.add(h); return h; });
       ctx.add(ctx.lights.point({ color: '#ffb347', intensity: 0.8, pos: [mx, WIN[1] - 0.1, WIN[2] + 0.25], decay: 2 }));
       ctx.shared.fx = sparks(ctx, face.clone().add(new THREE.Vector3(0.2, 0.5, 0.3)).toArray(), [1.2, 0.8, 0.6], 6, 's55', { px: [36, 64] });
     },
     update(ctx, t) {
-      const s = ctx.shared; const m = s.m; const k = outQuad(clamp01((t + 0.22) / 0.3)); m.position.y = s.yUp * k - 0.25 * (1 - k);
+      const s = ctx.shared; const m = s.m; const k = outQuad(clamp01((t + 0.22) / 0.3)); m.position.y = s.yUp * k - 0.25 * (1 - k); for (const h of s.eh) { h.position.y = h.userData.p0.y + (m.position.y - s.yUp); h.material.opacity = 0.9 * k; }
       // the reflector eyes catch the room light (steady glint, a pulse with the breath on "glass"): the star snout hides the eye domes from the lens
       const fl = 0.45 + 0.55 * Math.exp(-Math.pow((t - s.tG - 0.06) / 0.09, 2));
       CR.setMole(m, { t, emerge: 0.7, open: 1, eyes: 1, flash: fl, rise: 1, look: [0, -10], sniff: t > s.tG - 0.05 && t < s.tG + 0.3 ? 1 : 0.3 }); s.fog.update(t); s.fx.update(t);

@@ -925,7 +925,11 @@ const NEW_BUILDERS = {
       ctx.camera.set({ pos: cp.toArray(), target: tgt.toArray(), fov: c.fov }).push(c.move.Z);
       // bible P2, with the hemisphere a notch down and the glass darker so the lawn reads as night through it
       ctx.shared.rig = I.bedroomNight(ctx, { set: H, lamp: 4, hemiIntensity: 1.45, lanternOutside: { pos: [E.x - 0.15, E.y + 0.5, E.z - 0.25], cd: 2.6 } });
-      H.ep01.theo.glass.material.opacity = 0.7;
+      H.ep01.theo.glass.material.opacity = 0.5; H.ep01.theo.glass.material.color.set('#2a2450');
+      // review: the lawn / fence through the glass read as overcast day; a night tint card hangs 0.6 m behind Grandpa (he
+      // stays lit by his lantern spill, everything beyond him drops toward night)
+      { const tint = new THREE.Mesh(new THREE.PlaneGeometry(9, 7), new THREE.MeshBasicMaterial({ color: '#0d0b2a', transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+        tint.position.set(R(0, 0, 0).x, R(0, 3.5, 0).y, E.z + 0.6); tint.renderOrder = 1; ctx.add(tint); }
       gazeAt(g, head);
       faceKey(ctx, head.clone().add(new THREE.Vector3(0, -0.15, 0)), { cd: 1.0, color: '#ffd9c0', d: 1.0 });
       ctx.shared.fx = sparks(ctx, cp.clone().lerp(tgt, 0.35), [1.6, 1.2, 1.0], 9, 's17');
@@ -934,7 +938,7 @@ const NEW_BUILDERS = {
     // he waves (+-15 deg at 2 Hz) with his NEAR arm (board: armR 160): from behind his left shoulder the right arm is hidden
     // by his head / off the frame edge, and an arm straight up points at this high lens; raised forward to the glass
     // (armLx 128) the hand reads against the upper panes, above Grandpa
-    update(ctx, t) { K.setPose(ctx.shared.hero, { armLx: 128, armLz: 8 + 15 * Math.sin(2 * Math.PI * 2 * t), neckX: -14, neckY: 8, neckZ: 4 }); K.gnomeIdle(ctx.shared.g, t, { seed: 'gpNight', amp: 0.3 }); ctx.shared.fx.update(t); },
+    update(ctx, t) { K.setPose(ctx.shared.hero, { armLx: 152, armLz: 10 + 18 * Math.sin(2 * Math.PI * 2 * t), neckX: -14, neckY: 8, neckZ: 4 });   /* review: a wave above the glass, not a knock */ K.gnomeIdle(ctx.shared.g, t, { seed: 'gpNight', amp: 0.3 }); ctx.shared.fx.update(t); },
   },
 
   // s18 "and he blinks." - close on Grandpa gnome from below (h 0.9, d 1.6, yaw -15, pitch 14), gaze up 20 at the lit
@@ -1089,7 +1093,9 @@ const NEW_BUILDERS = {
       const dot = sets.lightPool(ctx, { pos: [0, 0.03, 0], radius: 1.1 * S, color: '#ffe8c0', opacity: 0.85 }); ctx.add(dot);
       const dotGlow = sets.glow(ctx, { pos: [0, 0.1, 0], color: '#fff0d0', px: 46, opacity: 0.9 }); ctx.add(dotGlow);
       ctx.shared.rig = sepiaLight(ctx, H, { exposure: 1.2 });
-      ctx.shared.l = { curve, L, gp, fl, dot, dotGlow, u0: (kinkU + 0.62) % 1, v: 3.4 * S };
+      // s63 (the callback) ends on the spot where s64 starts him (0.467 s of walk before the kink): no teleport across the match cut
+      const u0 = ctx.shot.name === 's63' ? (kinkU + ((3.4 * S) * (ctx.shot.duration + 0.467)) / L) % 1 : (kinkU + 0.62) % 1;
+      ctx.shared.l = { curve, L, gp, fl, dot, dotGlow, u0, v: 3.4 * S };
     },
     update(ctx, t) {
       const l = ctx.shared.l; const u = (l.u0 - (l.v * t) / l.L + 1) % 1; const q = l.curve.getPointAt(u); const tan = l.curve.getTangentAt(u).negate();
