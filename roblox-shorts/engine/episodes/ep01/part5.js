@@ -160,8 +160,8 @@ function hideBoard(H) { const b = H.ep01.board; if (b) b.visible = false; }
 // from the merged lot mesh (geometry copied, as clearPlants).
 function removeBoard(H) {
   const b = H.ep01.board; if (!b) return; b.visible = false; const c = worldOf(b); const ax = new THREE.Vector3(1, 0, 0).applyQuaternion(b.getWorldQuaternion(new THREE.Quaternion())); ax.y = 0; ax.normalize();
-  const post = c.clone().addScaledVector(ax, -2.2 * S); const L = 2.45 * S;   // the post stands 2.2 studs left of the panel centre; the arm runs over the panel
-  clearPlants(H, [], { names: /^(trim|black)/, drop: (x, y, z) => { const dx = x - c.x, dz = z - c.z; const along = dx * ax.x + dz * ax.z, across = -dx * ax.z + dz * ax.x; return y < 7.3 * S && Math.abs(across) < 0.4 * S && Math.abs(along - (post.x - c.x) * ax.x - (post.z - c.z) * ax.z - 2.4 * S) < L; } });
+  // the post stands 2.2 studs left of the panel centre and the arm runs to 2.7 studs right of it: strip along -2.65..2.85
+  clearPlants(H, [], { names: /^(trim|black)/, drop: (x, y, z) => { const dx = x - c.x, dz = z - c.z; const along = dx * ax.x + dz * ax.z, across = -dx * ax.z + dz * ax.x; return y < 7.3 * S && Math.abs(across) < 0.4 * S && Math.abs(along - 0.1 * S) < 2.75 * S; } });
 }
 // The light wave's walls fade out within [d0, d1] m of the lens (a copy of fx_ep01's wall shader with a distance term), so
 // the wall can pass the lens at ground level without washing the whole frame.
@@ -320,14 +320,14 @@ export const builders = {
   },
 
   // s78 "light rolled across the lawn," (88.58-89.75) - ground level on the lawn, 1.9 m out from Grandpa's bed, looking
-  // out across the dark lawn toward the open gate, the truck at the kerb and the street: the FWOOM wall of gold light
-  // comes from behind-left (the bed), sweeps in from the left past the lens on "across" (89.13, f5348) and rolls on away
-  // over the lawn toward the fence, lighting the blades with sparkles kicked up at its front; the mounds in its path sink
-  // as it reaches them. The lens looks 58 deg off the wave's radius so the front crosses the frame left -> right (board
-  // screen direction), trucks right with it 5 studs (board 11: at that speed it outruns the wave) + push 12 % (fov). The
-  // wall fades within 2.4 m of the lens (no full-frame wash as it passes). The agent board (in the line of sight, seen
-  // from behind) is taken out of this shot. (The wave keeps its 8 studs/s; its start is
-  // re-timed so the pass lands on the word.)
+  // out across the dark lawn (family gnomes, three snout mounds) to the front fence and the houses across the way: the
+  // FWOOM wall of gold light comes from behind-left (the bed), sweeps in from the left past the lens on "across" (89.13,
+  // f5348) and rolls on away over the lawn toward the fence, lighting the blades with sparkles kicked up at its front; the
+  // mounds in its path sink as it reaches them. The lens looks 58 deg off the wave's radius so the front crosses the frame
+  // left -> right (board screen direction), trucks right with it 5 studs (board 11: at that speed it outruns the wave)
+  // + push 12 % (fov). The wall fades within 2.4 m of the lens (no full-frame wash as it passes). The agent board (in the
+  // line of sight, seen from behind) is taken out of this shot. (The wave keeps its 8 studs/s; its start is re-timed so
+  // the pass lands on the word.)
   light_rolls: {
     build(ctx) {
       const p = ctx.params; const H = nightLot(ctx); removeBoard(H); frontDoor(ctx, { light: 1.6, glow: 1.0 }); theoAsleep(ctx, H);
@@ -515,7 +515,8 @@ export const builders = {
       ctx.shared.rig = dawnLight(ctx, H); warmKey(ctx, [mid.x, 1.0, mid.z], { cd: 1.2, d: 1.2, color: '#ffd8c0' });
       // the pair is backlit by the low sun (the lens looks toward the street): a face key on the kneeling hero keeps his
       // skin the warm salmon of s84 (without it his face goes brown against Theo's)
-      { K.setPose(hero, { ...K.POSES.kneel, bodyX: 20 }); hero.updateWorldMatrix(true, true); const hh = worldOf(hero.getObjectByName('head')); warmKey(ctx, hh.toArray(), { cd: 0.9, d: 0.75, color: '#ffd2b0', side: 20, el: 25 }); }
+      { K.setPose(hero, { ...K.POSES.kneel, bodyX: 20 }); hero.updateWorldMatrix(true, true); const hh = worldOf(hero.getObjectByName('head')); const kl = warmKey(ctx, hh.toArray(), { cd: 1.0, d: 0.75, color: '#ffd2b0', side: 20, el: 25 });
+        ctx.shared.heroKey = { light: kl, off: kl.position.clone().sub(hh) }; }   // follows his head as he leans in (update)
       ctx.shared.dew = dew(ctx, [mid.x, 0.5, mid.z - 0.6], [1.6, 0.8, 1.0], 5, 's85dew');
     },
     update(ctx, t) {
@@ -526,6 +527,7 @@ export const builders = {
       const ua = outCubic((t - 0.12) / (16 / 60)); const pose = { ...K.POSES.kneel, armLx: 34, armLz: -6, armRz: 18, bodyX: 20 + 8 * ks, neckX: -4, neckY: -14 };
       s.hero.position.copy(s.hp).addScaledVector(s.f, 0.14 * ks);
       const reach = { ...pose }; solveArm(s.hero, reach, 'armRx', sh.y, { lo: 0, hi: 150, side: 'R' }); K.setPose(s.hero, K.mixPose(pose, reach, ua));
+      if (s.heroKey && s.heroKey.light && s.heroKey.light.position) { s.hero.updateMatrixWorld(true); s.heroKey.light.position.copy(worldOf(s.hero.getObjectByName('head'))).add(s.heroKey.off); }
       s.dew.update(t);
     },
   },
@@ -686,7 +688,7 @@ export const builders = {
     build(ctx) {
       const p = ctx.params, c = p.camera; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G);
       const old = oldOnBench(ctx, G, { face: 'content', pose: HOLD_POSE });
-      const pics = [photoTex(ctx, 52, { view: 'close' }).canvas, photoTex(ctx, 33, { view: 'bed' }).canvas, photoTex(ctx, 45, { theo: 'window' }).canvas];
+      const pics = [photoTex(ctx, 52, { view: 'close' }).canvas, photoTex(ctx, 33, { view: 'bed', theo: 'window' }).canvas, photoTex(ctx, 45, { theo: 'window' }).canvas];
       const caps = ['Grandpa', 'spring 33', 'spring 45'];
       const ts = [evT(ctx, 0, 0.517), evT(ctx, 1, 1.417)]; ctx.shared.ts = ts;
       const ph = livePhone(ctx, (g, t, W) => {
@@ -694,13 +696,13 @@ export const builders = {
         pics.forEach((pc, i) => { const x = 12 + (i - k) * W; if (x > W || x < -W) return; g.drawImage(pc, x, 150, W - 24, W - 24); g.fillStyle = '#c8c6d4'; g.font = '20px "DejaVu Sans", sans-serif'; g.textAlign = 'left'; g.fillText(caps[i], x + 6, 150 + W + 4); });
         for (let i = 0; i < 3; i++) { g.fillStyle = Math.round(k) === i ? '#f4f2f8' : '#5a5868'; g.beginPath(); g.arc(W / 2 - 24 + 24 * i, 640, 6, 0, Math.PI * 2); g.fill(); }
       });
-      // the hand holds the phone from below (phone raised 0.17 m over the hand, tilted to his eyes), so from over his left
+      // the hand holds the phone from below (phone raised 0.23 m over the hand, tilted to his eyes), so from over his left
       // shoulder the forearm block stays under the screen instead of crossing it (it hid half the photos)
       const LOW = { ...HOLD_POSE, armRx: 40, armRz: -18, neckX: -24 }; K.setPose(old, LOW);
-      ctx.add(ph); const hp = holdPhone(old, ph, { pose: LOW, lift: 0.17, out: 0.13 }); ctx.shared.ph = ph; ctx.shared.old = old;
+      ctx.add(ph); const hp = holdPhone(old, ph, { pose: LOW, lift: 0.23, out: 0.13 }); ctx.shared.ph = ph; ctx.shared.old = old;
       const back = new THREE.Vector3(0, 0, 1).applyAxisAngle(YAX, (c.yaw_deg - 180) * DEG); const cdir = back.clone().multiplyScalar(Math.cos(-c.pitch_deg * DEG)); cdir.y = Math.sin(-c.pitch_deg * DEG); cdir.normalize();
       // over his left shoulder (the phone is in his right hand: from the right the arm hides it), looking down past his cheek
-      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const sd = toE.clone().applyAxisAngle(YAX, 48 * DEG); if (sd.x > 0) sd.applyAxisAngle(YAX, -96 * DEG);
+      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const sd = toE.clone().applyAxisAngle(YAX, 56 * DEG); if (sd.x > 0) sd.applyAxisAngle(YAX, -112 * DEG);
       const cam = hp.center.clone().addScaledVector(sd, 0.92).add(new THREE.Vector3(0, 0.55, 0)); void cdir;
       ctx.camera.set({ pos: cam.toArray(), target: hp.center.toArray(), fov: p.fov }); basePush(ctx);
       ctx.shared.rig = G.ep01.light(ctx); warmKey(ctx, hp.hand.toArray(), { cd: 0.6, d: 0.6, color: '#ffd0a0' });
