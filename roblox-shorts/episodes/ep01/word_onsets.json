@@ -1,0 +1,3110 @@
+{
+"note": "EP01 voice word onsets. asr = voice_asr.json (80 ms grid); onset = refined on the 24 kHz waveform (2.5 ms log-energy rise nearest the ASR time, used when the dip before the word is >= 9 dB and within 90 ms of the ASR time, else the ASR time). Checked against the 11 hand-measured onsets of test5_board.md: confident words within 5 ms. Built by scratchpad/rbx/ep01/board_tools/onsets.py. Entries with \"manual\" were checked by hand on the 10 ms envelope (reason given).",
+"source": "scratchpad/rbx/ep01/voice_raw.wav (113.14 s, 24 kHz mono); last audible sample 112.95 s",
+"words": [
+{
+"i": 0,
+"w": "In",
+"asr": 0.16,
+"onset": 0.09,
+"conf": true
+},
+{
+"i": 1,
+"w": "this",
+"asr": 0.4,
+"onset": 0.4,
+"conf": true
+},
+{
+"i": 2,
+"w": "world,",
+"asr": 0.56,
+"onset": 0.575,
+"conf": true
+},
+{
+"i": 3,
+"w": "grandparents",
+"asr": 0.88,
+"onset": 0.935,
+"conf": true
+},
+{
+"i": 4,
+"w": "don't",
+"asr": 1.52,
+"onset": 1.498,
+"conf": true
+},
+{
+"i": 5,
+"w": "die.",
+"asr": 1.76,
+"onset": 1.735,
+"conf": true
+},
+{
+"i": 6,
+"w": "They",
+"asr": 2.08,
+"onset": 2.12,
+"conf": true
+},
+{
+"i": 7,
+"w": "turn",
+"asr": 2.24,
+"onset": 2.232,
+"conf": true
+},
+{
+"i": 8,
+"w": "into",
+"asr": 2.4,
+"onset": 2.4,
+"conf": false
+},
+{
+"i": 9,
+"w": "garden",
+"asr": 2.64,
+"onset": 2.655,
+"conf": true
+},
+{
+"i": 10,
+"w": "gnomes.",
+"asr": 2.96,
+"onset": 2.96,
+"conf": false
+},
+{
+"i": 11,
+"w": "First,",
+"asr": 3.6,
+"onset": 3.587,
+"conf": true
+},
+{
+"i": 12,
+"w": "your",
+"asr": 3.92,
+"onset": 3.895,
+"conf": true
+},
+{
+"i": 13,
+"w": "grandma",
+"asr": 4.0,
+"onset": 4.0,
+"conf": false
+},
+{
+"i": 14,
+"w": "gets",
+"asr": 4.48,
+"onset": 4.44,
+"conf": true,
+"manual": "/g/ burst at 4.44 after the closure from 4.38"
+},
+{
+"i": 15,
+"w": "shorter.",
+"asr": 4.64,
+"onset": 4.61,
+"conf": true,
+"manual": "/sh/ takes over from the /s/ of \"gets\" at 4.61 (spectral centroid 6.5 -> 5.2 kHz); vowel at 4.72"
+},
+{
+"i": 16,
+"w": "One",
+"asr": 5.12,
+"onset": 5.055,
+"conf": true
+},
+{
+"i": 17,
+"w": "morning,",
+"asr": 5.28,
+"onset": 5.28,
+"conf": false
+},
+{
+"i": 18,
+"w": "a",
+"asr": 5.6,
+"onset": 5.688,
+"conf": true
+},
+{
+"i": 19,
+"w": "gnome",
+"asr": 5.76,
+"onset": 5.678,
+"conf": true
+},
+{
+"i": 20,
+"w": "is",
+"asr": 6.08,
+"onset": 6.157,
+"conf": true
+},
+{
+"i": 21,
+"w": "wearing",
+"asr": 6.24,
+"onset": 6.157,
+"conf": true
+},
+{
+"i": 22,
+"w": "her",
+"asr": 6.48,
+"onset": 6.48,
+"conf": false
+},
+{
+"i": 23,
+"w": "glasses.",
+"asr": 6.64,
+"onset": 6.6,
+"conf": true,
+"manual": "/g/ burst at -40 ms"
+},
+{
+"i": 24,
+"w": "Nobody",
+"asr": 7.2,
+"onset": 7.175,
+"conf": true
+},
+{
+"i": 25,
+"w": "knows",
+"asr": 7.52,
+"onset": 7.52,
+"conf": false
+},
+{
+"i": 26,
+"w": "why",
+"asr": 7.68,
+"onset": 7.69,
+"conf": true
+},
+{
+"i": 27,
+"w": "they",
+"asr": 7.84,
+"onset": 7.845,
+"conf": true
+},
+{
+"i": 28,
+"w": "face",
+"asr": 8.0,
+"onset": 8.007,
+"conf": true
+},
+{
+"i": 29,
+"w": "the",
+"asr": 8.24,
+"onset": 8.222,
+"conf": true
+},
+{
+"i": 30,
+"w": "house.",
+"asr": 8.32,
+"onset": 8.32,
+"conf": false
+},
+{
+"i": 31,
+"w": "Houses",
+"asr": 8.8,
+"onset": 8.787,
+"conf": true
+},
+{
+"i": 32,
+"w": "here",
+"asr": 9.2,
+"onset": 9.172,
+"conf": true
+},
+{
+"i": 33,
+"w": "come",
+"asr": 9.36,
+"onset": 9.332,
+"conf": true
+},
+{
+"i": 34,
+"w": "with",
+"asr": 9.52,
+"onset": 9.575,
+"conf": true
+},
+{
+"i": 35,
+"w": "ancestors.",
+"asr": 9.68,
+"onset": 9.68,
+"conf": false
+},
+{
+"i": 36,
+"w": "You",
+"asr": 10.32,
+"onset": 10.342,
+"conf": true
+},
+{
+"i": 37,
+"w": "never",
+"asr": 10.48,
+"onset": 10.48,
+"conf": false
+},
+{
+"i": 38,
+"w": "step",
+"asr": 10.64,
+"onset": 10.6,
+"conf": true
+},
+{
+"i": 39,
+"w": "on",
+"asr": 10.88,
+"onset": 10.897,
+"conf": true
+},
+{
+"i": 40,
+"w": "a",
+"asr": 11.04,
+"onset": 11.04,
+"conf": false
+},
+{
+"i": 41,
+"w": "lawn",
+"asr": 11.12,
+"onset": 11.12,
+"conf": false
+},
+{
+"i": 42,
+"w": "after",
+"asr": 11.44,
+"onset": 11.527,
+"conf": true
+},
+{
+"i": 43,
+"w": "dark.",
+"asr": 11.68,
+"onset": 11.685,
+"conf": true
+},
+{
+"i": 44,
+"w": "Next",
+"asr": 12.16,
+"onset": 12.127,
+"conf": true
+},
+{
+"i": 45,
+"w": "door,",
+"asr": 12.4,
+"onset": 12.432,
+"conf": true
+},
+{
+"i": 46,
+"w": "the",
+"asr": 12.72,
+"onset": 12.75,
+"conf": true
+},
+{
+"i": 47,
+"w": "gnomes",
+"asr": 12.8,
+"onset": 12.75,
+"conf": true
+},
+{
+"i": 48,
+"w": "are",
+"asr": 13.12,
+"onset": 13.107,
+"conf": true
+},
+{
+"i": 49,
+"w": "plastic.",
+"asr": 13.28,
+"onset": 13.23,
+"conf": true
+},
+{
+"i": 50,
+"w": "Their",
+"asr": 13.76,
+"onset": 13.745,
+"conf": true,
+"manual": "/dh/ at -15 ms, vowel at 0; the automatic rise caught a click at -90"
+},
+{
+"i": 51,
+"w": "dog",
+"asr": 13.92,
+"onset": 13.897,
+"conf": true
+},
+{
+"i": 52,
+"w": "went",
+"asr": 14.16,
+"onset": 14.13,
+"conf": true
+},
+{
+"i": 53,
+"w": "down",
+"asr": 14.32,
+"onset": 14.287,
+"conf": true
+},
+{
+"i": 54,
+"w": "a",
+"asr": 14.48,
+"onset": 14.48,
+"conf": false
+},
+{
+"i": 55,
+"w": "hole.",
+"asr": 14.56,
+"onset": 14.595,
+"conf": true
+},
+{
+"i": 56,
+"w": "Your",
+"asr": 15.04,
+"onset": 15.03,
+"conf": true
+},
+{
+"i": 57,
+"w": "gnome",
+"asr": 15.2,
+"onset": 15.2,
+"conf": false
+},
+{
+"i": 58,
+"w": "can't",
+"asr": 15.52,
+"onset": 15.49,
+"conf": true
+},
+{
+"i": 59,
+"w": "walk",
+"asr": 15.76,
+"onset": 15.7,
+"conf": true
+},
+{
+"i": 60,
+"w": "out",
+"asr": 15.92,
+"onset": 15.922,
+"conf": true
+},
+{
+"i": 61,
+"w": "of",
+"asr": 16.08,
+"onset": 16.14,
+"conf": true
+},
+{
+"i": 62,
+"w": "its",
+"asr": 16.16,
+"onset": 16.218,
+"conf": true
+},
+{
+"i": 63,
+"w": "garden.",
+"asr": 16.32,
+"onset": 16.312,
+"conf": true
+},
+{
+"i": 64,
+"w": "Only",
+"asr": 16.8,
+"onset": 16.785,
+"conf": true
+},
+{
+"i": 65,
+"w": "family",
+"asr": 17.04,
+"onset": 17.033,
+"conf": true
+},
+{
+"i": 66,
+"w": "can",
+"asr": 17.36,
+"onset": 17.305,
+"conf": true
+},
+{
+"i": 67,
+"w": "carry",
+"asr": 17.44,
+"onset": 17.44,
+"conf": true
+},
+{
+"i": 68,
+"w": "it",
+"asr": 17.6,
+"onset": 17.6,
+"conf": false
+},
+{
+"i": 69,
+"w": "out.",
+"asr": 17.68,
+"onset": 17.728,
+"conf": true
+},
+{
+"i": 70,
+"w": "My",
+"asr": 17.92,
+"onset": 17.938,
+"conf": true
+},
+{
+"i": 71,
+"w": "grandpa",
+"asr": 18.08,
+"onset": 18.085,
+"conf": true
+},
+{
+"i": 72,
+"w": "turned",
+"asr": 18.48,
+"onset": 18.435,
+"conf": true
+},
+{
+"i": 73,
+"w": "last",
+"asr": 18.8,
+"onset": 18.855,
+"conf": true
+},
+{
+"i": 74,
+"w": "spring.",
+"asr": 18.96,
+"onset": 19.008,
+"conf": true
+},
+{
+"i": 75,
+"w": "I",
+"asr": 19.44,
+"onset": 19.37,
+"conf": true
+},
+{
+"i": 76,
+"w": "say",
+"asr": 19.52,
+"onset": 19.483,
+"conf": true
+},
+{
+"i": 77,
+"w": "goodnight.",
+"asr": 19.68,
+"onset": 19.68,
+"conf": false
+},
+{
+"i": 78,
+"w": "and",
+"asr": 20.23,
+"onset": 20.25,
+"conf": true
+},
+{
+"i": 79,
+"w": "he",
+"asr": 20.39,
+"onset": 20.39,
+"conf": false
+},
+{
+"i": 80,
+"w": "blinks.",
+"asr": 20.55,
+"onset": 20.558,
+"conf": true
+},
+{
+"i": 81,
+"w": "For",
+"asr": 21.03,
+"onset": 20.978,
+"conf": true
+},
+{
+"i": 82,
+"w": "sixty",
+"asr": 21.19,
+"onset": 21.248,
+"conf": true
+},
+{
+"i": 83,
+"w": "years",
+"asr": 21.51,
+"onset": 21.5,
+"conf": true
+},
+{
+"i": 84,
+"w": "he",
+"asr": 21.75,
+"onset": 21.783,
+"conf": true
+},
+{
+"i": 85,
+"w": "walked",
+"asr": 21.91,
+"onset": 21.895,
+"conf": true
+},
+{
+"i": 86,
+"w": "our",
+"asr": 22.15,
+"onset": 22.073,
+"conf": true
+},
+{
+"i": 87,
+"w": "lawn",
+"asr": 22.31,
+"onset": 22.31,
+"conf": false
+},
+{
+"i": 88,
+"w": "at",
+"asr": 22.55,
+"onset": 22.585,
+"conf": true
+},
+{
+"i": 89,
+"w": "nine,",
+"asr": 22.63,
+"onset": 22.585,
+"conf": true
+},
+{
+"i": 90,
+"w": "flashlight,",
+"asr": 23.03,
+"onset": 23.018,
+"conf": true
+},
+{
+"i": 91,
+"w": "slippers,",
+"asr": 23.67,
+"onset": 23.56,
+"conf": true,
+"manual": "/s/ frication from 23.56 after a -87 dB dip; ASR marked the vowel"
+},
+{
+"i": 92,
+"w": "one",
+"asr": 24.07,
+"onset": 24.008,
+"conf": true
+},
+{
+"i": 93,
+"w": "lap,",
+"asr": 24.23,
+"onset": 24.23,
+"conf": false
+},
+{
+"i": 94,
+"w": "checking",
+"asr": 24.63,
+"onset": 24.535,
+"conf": true,
+"manual": "/ch/ burst at -95 ms after a -135 dB dip"
+},
+{
+"i": 95,
+"w": "for",
+"asr": 24.87,
+"onset": 24.85,
+"conf": true
+},
+{
+"i": 96,
+"w": "moles,",
+"asr": 24.95,
+"onset": 24.95,
+"conf": false
+},
+{
+"i": 97,
+"w": "he'd",
+"asr": 25.43,
+"onset": 25.387,
+"conf": true
+},
+{
+"i": 98,
+"w": "say,",
+"asr": 25.67,
+"onset": 25.67,
+"conf": false
+},
+{
+"i": 99,
+"w": "big",
+"asr": 25.99,
+"onset": 25.975,
+"conf": true,
+"manual": "/b/ burst at -15 ms; the automatic rise caught the prevoicing"
+},
+{
+"i": 100,
+"w": "ones.",
+"asr": 26.15,
+"onset": 26.117,
+"conf": true
+},
+{
+"i": 101,
+"w": "Then,",
+"asr": 26.63,
+"onset": 26.562,
+"conf": true
+},
+{
+"i": 102,
+"w": "the",
+"asr": 26.87,
+"onset": 26.933,
+"conf": true
+},
+{
+"i": 103,
+"w": "night",
+"asr": 27.03,
+"onset": 27.03,
+"conf": false
+},
+{
+"i": 104,
+"w": "before",
+"asr": 27.19,
+"onset": 27.183,
+"conf": true
+},
+{
+"i": 105,
+"w": "we",
+"asr": 27.43,
+"onset": 27.413,
+"conf": true
+},
+{
+"i": 106,
+"w": "moved,",
+"asr": 27.51,
+"onset": 27.51,
+"conf": false
+},
+{
+"i": 107,
+"w": "at",
+"asr": 27.83,
+"onset": 27.812,
+"conf": true
+},
+{
+"i": 108,
+"w": "nine,",
+"asr": 27.99,
+"onset": 27.933,
+"conf": true
+},
+{
+"i": 109,
+"w": "his",
+"asr": 28.31,
+"onset": 28.273,
+"conf": true
+},
+{
+"i": 110,
+"w": "spot",
+"asr": 28.47,
+"onset": 28.453,
+"conf": true
+},
+{
+"i": 111,
+"w": "was",
+"asr": 28.71,
+"onset": 28.635,
+"conf": true
+},
+{
+"i": 112,
+"w": "empty",
+"asr": 28.87,
+"onset": 28.83,
+"conf": true
+},
+{
+"i": 113,
+"w": "So",
+"asr": 29.76,
+"onset": 29.753,
+"conf": true
+},
+{
+"i": 114,
+"w": "I",
+"asr": 30.0,
+"onset": 30.0,
+"conf": false
+},
+{
+"i": 115,
+"w": "ran",
+"asr": 30.08,
+"onset": 30.115,
+"conf": true
+},
+{
+"i": 116,
+"w": "out",
+"asr": 30.24,
+"onset": 30.24,
+"conf": false
+},
+{
+"i": 117,
+"w": "barefoot",
+"asr": 30.48,
+"onset": 30.483,
+"conf": true
+},
+{
+"i": 118,
+"w": "after",
+"asr": 30.96,
+"onset": 31.025,
+"conf": true
+},
+{
+"i": 119,
+"w": "dark.",
+"asr": 31.12,
+"onset": 31.12,
+"conf": false
+},
+{
+"i": 120,
+"w": "He",
+"asr": 31.52,
+"onset": 31.465,
+"conf": true
+},
+{
+"i": 121,
+"w": "was",
+"asr": 31.6,
+"onset": 31.518,
+"conf": true
+},
+{
+"i": 122,
+"w": "at",
+"asr": 31.76,
+"onset": 31.83,
+"conf": true
+},
+{
+"i": 123,
+"w": "the",
+"asr": 31.84,
+"onset": 31.828,
+"conf": true
+},
+{
+"i": 124,
+"w": "gate,",
+"asr": 31.92,
+"onset": 31.92,
+"conf": false
+},
+{
+"i": 125,
+"w": "facing",
+"asr": 32.24,
+"onset": 32.24,
+"conf": false
+},
+{
+"i": 126,
+"w": "the",
+"asr": 32.48,
+"onset": 32.48,
+"conf": false
+},
+{
+"i": 127,
+"w": "moving",
+"asr": 32.56,
+"onset": 32.56,
+"conf": false
+},
+{
+"i": 128,
+"w": "truck.",
+"asr": 32.88,
+"onset": 32.872,
+"conf": true
+},
+{
+"i": 129,
+"w": "He",
+"asr": 33.28,
+"onset": 33.217,
+"conf": true
+},
+{
+"i": 130,
+"w": "was",
+"asr": 33.36,
+"onset": 33.36,
+"conf": false
+},
+{
+"i": 131,
+"w": "trying",
+"asr": 33.52,
+"onset": 33.472,
+"conf": true
+},
+{
+"i": 132,
+"w": "to",
+"asr": 33.76,
+"onset": 33.76,
+"conf": true
+},
+{
+"i": 133,
+"w": "come",
+"asr": 33.84,
+"onset": 33.832,
+"conf": true
+},
+{
+"i": 134,
+"w": "with",
+"asr": 34.0,
+"onset": 34.0,
+"conf": false
+},
+{
+"i": 135,
+"w": "me.",
+"asr": 34.08,
+"onset": 34.117,
+"conf": true
+},
+{
+"i": 136,
+"w": "Come",
+"asr": 34.4,
+"onset": 34.362,
+"conf": true
+},
+{
+"i": 137,
+"w": "on",
+"asr": 34.56,
+"onset": 34.56,
+"conf": false
+},
+{
+"i": 138,
+"w": "then.",
+"asr": 34.72,
+"onset": 34.72,
+"conf": false
+},
+{
+"i": 139,
+"w": "I",
+"asr": 34.96,
+"onset": 34.947,
+"conf": true
+},
+{
+"i": 140,
+"w": "picked",
+"asr": 35.12,
+"onset": 35.087,
+"conf": true
+},
+{
+"i": 141,
+"w": "him",
+"asr": 35.28,
+"onset": 35.21,
+"conf": true
+},
+{
+"i": 142,
+"w": "up.",
+"asr": 35.44,
+"onset": 35.485,
+"conf": true
+},
+{
+"i": 143,
+"w": "Only",
+"asr": 35.68,
+"onset": 35.62,
+"conf": true,
+"manual": "vowel rise at -60 ms"
+},
+{
+"i": 144,
+"w": "family",
+"asr": 35.92,
+"onset": 35.987,
+"conf": true
+},
+{
+"i": 145,
+"w": "can.",
+"asr": 36.32,
+"onset": 36.37,
+"conf": true
+},
+{
+"i": 146,
+"w": "Then",
+"asr": 36.72,
+"onset": 36.715,
+"conf": true
+},
+{
+"i": 147,
+"w": "the",
+"asr": 36.88,
+"onset": 36.88,
+"conf": false
+},
+{
+"i": 148,
+"w": "lawn",
+"asr": 36.96,
+"onset": 36.96,
+"conf": false
+},
+{
+"i": 149,
+"w": "moved.",
+"asr": 37.28,
+"onset": 37.28,
+"conf": false
+},
+{
+"i": 150,
+"w": "Dozens",
+"asr": 37.68,
+"onset": 37.648,
+"conf": true
+},
+{
+"i": 151,
+"w": "of",
+"asr": 38.0,
+"onset": 37.982,
+"conf": true
+},
+{
+"i": 152,
+"w": "mounds,",
+"asr": 38.08,
+"onset": 38.08,
+"conf": false
+},
+{
+"i": 153,
+"w": "with",
+"asr": 38.56,
+"onset": 38.578,
+"conf": true
+},
+{
+"i": 154,
+"w": "eyes",
+"asr": 38.72,
+"onset": 38.717,
+"conf": true
+},
+{
+"i": 155,
+"w": "like",
+"asr": 38.96,
+"onset": 38.975,
+"conf": true
+},
+{
+"i": 156,
+"w": "bike",
+"asr": 39.12,
+"onset": 39.14,
+"conf": true
+},
+{
+"i": 157,
+"w": "reflectors.",
+"asr": 39.44,
+"onset": 39.39,
+"conf": true,
+"manual": "rise at -50 ms after the /k/ closure of \"bike\""
+},
+{
+"i": 158,
+"w": "Moles,",
+"asr": 39.92,
+"onset": 39.96,
+"conf": true
+},
+{
+"i": 159,
+"w": "big",
+"asr": 40.48,
+"onset": 40.453,
+"conf": true
+},
+{
+"i": 160,
+"w": "ones.",
+"asr": 40.64,
+"onset": 40.587,
+"conf": true
+},
+{
+"i": 161,
+"w": "Grandpa's",
+"asr": 40.96,
+"onset": 40.975,
+"conf": true
+},
+{
+"i": 162,
+"w": "lantern",
+"asr": 41.44,
+"onset": 41.44,
+"conf": false
+},
+{
+"i": 163,
+"w": "lit,",
+"asr": 41.76,
+"onset": 41.76,
+"conf": false
+},
+{
+"i": 164,
+"w": "and",
+"asr": 42.0,
+"onset": 41.965,
+"conf": true,
+"manual": "rise at -35 ms"
+},
+{
+"i": 165,
+"w": "they",
+"asr": 42.08,
+"onset": 42.08,
+"conf": false
+},
+{
+"i": 166,
+"w": "stopped",
+"asr": 42.24,
+"onset": 42.265,
+"conf": true
+},
+{
+"i": 167,
+"w": "at",
+"asr": 42.48,
+"onset": 42.447,
+"conf": true
+},
+{
+"i": 168,
+"w": "its",
+"asr": 42.64,
+"onset": 42.662,
+"conf": true
+},
+{
+"i": 169,
+"w": "edge.",
+"asr": 42.8,
+"onset": 42.745,
+"conf": true
+},
+{
+"i": 170,
+"w": "Down",
+"asr": 43.52,
+"onset": 43.515,
+"conf": true
+},
+{
+"i": 171,
+"w": "the",
+"asr": 43.76,
+"onset": 43.76,
+"conf": false
+},
+{
+"i": 172,
+"w": "street.",
+"asr": 43.92,
+"onset": 43.915,
+"conf": true
+},
+{
+"i": 173,
+"w": "Every",
+"asr": 44.58,
+"onset": 44.63,
+"conf": true,
+"manual": "vowel at +55 ms; the low-level energy before is breath"
+},
+{
+"i": 174,
+"w": "lantern",
+"asr": 44.82,
+"onset": 44.745,
+"conf": true
+},
+{
+"i": 175,
+"w": "lit,",
+"asr": 45.22,
+"onset": 45.22,
+"conf": false
+},
+{
+"i": 176,
+"w": "except",
+"asr": 45.54,
+"onset": 45.455,
+"conf": true,
+"manual": "vowel rise at -85 ms after a -143 dB dip"
+},
+{
+"i": 177,
+"w": "next",
+"asr": 45.78,
+"onset": 45.725,
+"conf": true
+},
+{
+"i": 178,
+"w": "door.",
+"asr": 46.02,
+"onset": 46.005,
+"conf": true
+},
+{
+"i": 179,
+"w": "Gnomes",
+"asr": 46.34,
+"onset": 46.32,
+"conf": true
+},
+{
+"i": 180,
+"w": "aren't",
+"asr": 46.66,
+"onset": 46.633,
+"conf": true
+},
+{
+"i": 181,
+"w": "decorations.",
+"asr": 46.98,
+"onset": 46.938,
+"conf": true
+},
+{
+"i": 182,
+"w": "They're",
+"asr": 47.62,
+"onset": 47.64,
+"conf": true
+},
+{
+"i": 183,
+"w": "the",
+"asr": 47.86,
+"onset": 47.86,
+"conf": true
+},
+{
+"i": 184,
+"w": "fence.",
+"asr": 48.02,
+"onset": 48.04,
+"conf": true
+},
+{
+"i": 185,
+"w": "The",
+"asr": 48.5,
+"onset": 48.532,
+"conf": true
+},
+{
+"i": 186,
+"w": "new",
+"asr": 48.66,
+"onset": 48.66,
+"conf": false
+},
+{
+"i": 187,
+"w": "family's",
+"asr": 48.82,
+"onset": 48.85,
+"conf": true
+},
+{
+"i": 188,
+"w": "boy,",
+"asr": 49.22,
+"onset": 49.227,
+"conf": true
+},
+{
+"i": 189,
+"w": "Theo",
+"asr": 49.46,
+"onset": 49.527,
+"conf": true
+},
+{
+"i": 190,
+"w": "Six,",
+"asr": 49.86,
+"onset": 49.745,
+"conf": true,
+"manual": "/s/ frication from -115 ms"
+},
+{
+"i": 191,
+"w": "was",
+"asr": 50.18,
+"onset": 50.167,
+"conf": true
+},
+{
+"i": 192,
+"w": "already",
+"asr": 50.34,
+"onset": 50.265,
+"conf": true
+},
+{
+"i": 193,
+"w": "asleep",
+"asr": 50.58,
+"onset": 50.58,
+"conf": false
+},
+{
+"i": 194,
+"w": "in",
+"asr": 50.9,
+"onset": 50.832,
+"conf": true
+},
+{
+"i": 195,
+"w": "my",
+"asr": 50.98,
+"onset": 50.98,
+"conf": false
+},
+{
+"i": 196,
+"w": "old",
+"asr": 51.14,
+"onset": 51.097,
+"conf": true
+},
+{
+"i": 197,
+"w": "room.",
+"asr": 51.3,
+"onset": 51.287,
+"conf": true
+},
+{
+"i": 198,
+"w": "Take",
+"asr": 51.62,
+"onset": 51.575,
+"conf": true
+},
+{
+"i": 199,
+"w": "Grandpa",
+"asr": 51.78,
+"onset": 51.758,
+"conf": true
+},
+{
+"i": 200,
+"w": "and",
+"asr": 52.18,
+"onset": 52.237,
+"conf": true
+},
+{
+"i": 201,
+"w": "Theo's",
+"asr": 52.34,
+"onset": 52.265,
+"conf": true,
+"manual": "rise at -75 ms after a -158 dB dip"
+},
+{
+"i": 202,
+"w": "window",
+"asr": 52.74,
+"onset": 52.74,
+"conf": false
+},
+{
+"i": 203,
+"w": "goes",
+"asr": 52.98,
+"onset": 52.98,
+"conf": false
+},
+{
+"i": 204,
+"w": "dark.",
+"asr": 53.14,
+"onset": 53.1,
+"conf": true
+},
+{
+"i": 205,
+"w": "Leave",
+"asr": 53.67,
+"onset": 53.695,
+"conf": true
+},
+{
+"i": 206,
+"w": "him",
+"asr": 53.91,
+"onset": 53.947,
+"conf": true
+},
+{
+"i": 207,
+"w": "and",
+"asr": 54.15,
+"onset": 54.122,
+"conf": true
+},
+{
+"i": 208,
+"w": "I",
+"asr": 54.23,
+"onset": 54.23,
+"conf": false
+},
+{
+"i": 209,
+"w": "never",
+"asr": 54.39,
+"onset": 54.465,
+"conf": true
+},
+{
+"i": 210,
+"w": "get",
+"asr": 54.55,
+"onset": 54.567,
+"conf": true
+},
+{
+"i": 211,
+"w": "another",
+"asr": 54.71,
+"onset": 54.633,
+"conf": true
+},
+{
+"i": 212,
+"w": "blink",
+"asr": 54.87,
+"onset": 54.935,
+"conf": true
+},
+{
+"i": 213,
+"w": "and",
+"asr": 55.27,
+"onset": 55.27,
+"conf": false
+},
+{
+"i": 214,
+"w": "the",
+"asr": 55.43,
+"onset": 55.455,
+"conf": true
+},
+{
+"i": 215,
+"w": "truck",
+"asr": 55.51,
+"onset": 55.455,
+"conf": true
+},
+{
+"i": 216,
+"w": "left",
+"asr": 55.75,
+"onset": 55.75,
+"conf": false
+},
+{
+"i": 217,
+"w": "at",
+"asr": 55.91,
+"onset": 55.877,
+"conf": true
+},
+{
+"i": 218,
+"w": "dawn,",
+"asr": 56.07,
+"onset": 56.07,
+"conf": false
+},
+{
+"i": 219,
+"w": "so",
+"asr": 56.39,
+"onset": 56.347,
+"conf": true
+},
+{
+"i": 220,
+"w": "I",
+"asr": 56.55,
+"onset": 56.467,
+"conf": true
+},
+{
+"i": 221,
+"w": "stood",
+"asr": 56.63,
+"onset": 56.63,
+"conf": false
+},
+{
+"i": 222,
+"w": "mom's",
+"asr": 56.87,
+"onset": 56.87,
+"conf": false
+},
+{
+"i": 223,
+"w": "plastic",
+"asr": 57.27,
+"onset": 57.19,
+"conf": true
+},
+{
+"i": 224,
+"w": "gnome",
+"asr": 57.59,
+"onset": 57.542,
+"conf": true
+},
+{
+"i": 225,
+"w": "under",
+"asr": 57.91,
+"onset": 57.887,
+"conf": true
+},
+{
+"i": 226,
+"w": "Theo's",
+"asr": 58.07,
+"onset": 58.137,
+"conf": true
+},
+{
+"i": 227,
+"w": "window.",
+"asr": 58.55,
+"onset": 58.572,
+"conf": true
+},
+{
+"i": 228,
+"w": "Gulp.",
+"asr": 58.87,
+"onset": 58.865,
+"conf": true
+},
+{
+"i": 229,
+"w": "Gone",
+"asr": 59.39,
+"onset": 59.33,
+"conf": true
+},
+{
+"i": 230,
+"w": "the",
+"asr": 59.71,
+"onset": 59.71,
+"conf": false
+},
+{
+"i": 231,
+"w": "mounds",
+"asr": 59.79,
+"onset": 59.79,
+"conf": false
+},
+{
+"i": 232,
+"w": "rolled",
+"asr": 60.11,
+"onset": 60.045,
+"conf": true
+},
+{
+"i": 233,
+"w": "closer",
+"asr": 60.35,
+"onset": 60.277,
+"conf": true
+},
+{
+"i": 234,
+"w": "to",
+"asr": 60.75,
+"onset": 60.74,
+"conf": true
+},
+{
+"i": 235,
+"w": "the",
+"asr": 60.91,
+"onset": 60.997,
+"conf": true
+},
+{
+"i": 236,
+"w": "flowers,",
+"asr": 60.99,
+"onset": 60.997,
+"conf": true
+},
+{
+"i": 237,
+"w": "to",
+"asr": 61.39,
+"onset": 61.392,
+"conf": true
+},
+{
+"i": 238,
+"w": "the",
+"asr": 61.55,
+"onset": 61.55,
+"conf": false
+},
+{
+"i": 239,
+"w": "bricks,",
+"asr": 61.63,
+"onset": 61.635,
+"conf": true
+},
+{
+"i": 240,
+"w": "to",
+"asr": 61.95,
+"onset": 61.935,
+"conf": true
+},
+{
+"i": 241,
+"w": "the",
+"asr": 62.11,
+"onset": 62.133,
+"conf": true
+},
+{
+"i": 242,
+"w": "glass.",
+"asr": 62.19,
+"onset": 62.133,
+"conf": true
+},
+{
+"i": 243,
+"w": "So",
+"asr": 62.59,
+"onset": 62.587,
+"conf": true
+},
+{
+"i": 244,
+"w": "I",
+"asr": 62.75,
+"onset": 62.665,
+"conf": true
+},
+{
+"i": 245,
+"w": "ran",
+"asr": 62.83,
+"onset": 62.855,
+"conf": true
+},
+{
+"i": 246,
+"w": "back",
+"asr": 63.07,
+"onset": 63.097,
+"conf": true
+},
+{
+"i": 247,
+"w": "and",
+"asr": 63.31,
+"onset": 63.302,
+"conf": true
+},
+{
+"i": 248,
+"w": "they",
+"asr": 63.39,
+"onset": 63.302,
+"conf": true
+},
+{
+"i": 249,
+"w": "backed",
+"asr": 63.55,
+"onset": 63.578,
+"conf": true
+},
+{
+"i": 250,
+"w": "off.",
+"asr": 63.79,
+"onset": 63.76,
+"conf": true
+},
+{
+"i": 251,
+"w": "Fine,",
+"asr": 64.03,
+"onset": 64.12,
+"conf": true,
+"manual": "/f/ of \"Fine\" after a -88 dB dip at 64.11 that ends the /f/ of \"off\"; vowel at 64.18"
+},
+{
+"i": 252,
+"w": "I'd",
+"asr": 64.35,
+"onset": 64.398,
+"conf": true
+},
+{
+"i": 253,
+"w": "stand",
+"asr": 64.51,
+"onset": 64.488,
+"conf": true
+},
+{
+"i": 254,
+"w": "guard",
+"asr": 64.75,
+"onset": 64.713,
+"conf": true
+},
+{
+"i": 255,
+"w": "till",
+"asr": 64.91,
+"onset": 64.898,
+"conf": true
+},
+{
+"i": 256,
+"w": "dawn.",
+"asr": 65.07,
+"onset": 65.085,
+"conf": true
+},
+{
+"i": 257,
+"w": "And",
+"asr": 65.47,
+"onset": 65.443,
+"conf": true
+},
+{
+"i": 258,
+"w": "tomorrow",
+"asr": 65.63,
+"onset": 65.56,
+"conf": true
+},
+{
+"i": 259,
+"w": "night,",
+"asr": 65.95,
+"onset": 65.95,
+"conf": false
+},
+{
+"i": 260,
+"w": "Grandpa",
+"asr": 66.27,
+"onset": 66.36,
+"conf": true,
+"manual": "silence until +80 ms after the ASR time; /g/ burst at +90"
+},
+{
+"i": 261,
+"w": "turned",
+"asr": 66.83,
+"onset": 66.755,
+"conf": true
+},
+{
+"i": 262,
+"w": "his",
+"asr": 66.99,
+"onset": 66.96,
+"conf": true
+},
+{
+"i": 263,
+"w": "head",
+"asr": 67.15,
+"onset": 67.11,
+"conf": true
+},
+{
+"i": 264,
+"w": "away",
+"asr": 67.47,
+"onset": 67.395,
+"conf": true,
+"manual": "rise at -75 ms after a -93 dB dip"
+},
+{
+"i": 265,
+"w": "from",
+"asr": 67.71,
+"onset": 67.738,
+"conf": true
+},
+{
+"i": 266,
+"w": "me",
+"asr": 67.87,
+"onset": 67.87,
+"conf": false
+},
+{
+"i": 267,
+"w": "toward",
+"asr": 68.11,
+"onset": 68.11,
+"conf": true
+},
+{
+"i": 268,
+"w": "my",
+"asr": 68.35,
+"onset": 68.312,
+"conf": true
+},
+{
+"i": 269,
+"w": "old",
+"asr": 68.51,
+"onset": 68.473,
+"conf": true
+},
+{
+"i": 270,
+"w": "window.",
+"asr": 68.67,
+"onset": 68.685,
+"conf": true
+},
+{
+"i": 271,
+"w": "Flashlight",
+"asr": 69.15,
+"onset": 69.078,
+"conf": true
+},
+{
+"i": 272,
+"w": "slippers,",
+"asr": 69.71,
+"onset": 69.623,
+"conf": true
+},
+{
+"i": 273,
+"w": "one",
+"asr": 70.35,
+"onset": 70.32,
+"conf": true
+},
+{
+"i": 274,
+"w": "lap",
+"asr": 70.59,
+"onset": 70.59,
+"conf": false
+},
+{
+"i": 275,
+"w": "and",
+"asr": 70.91,
+"onset": 70.92,
+"conf": true,
+"manual": "vowel at +10 ms; the automatic rise caught the /p/ release of \"lap\""
+},
+{
+"i": 276,
+"w": "one",
+"asr": 71.07,
+"onset": 71.07,
+"conf": false
+},
+{
+"i": 277,
+"w": "stop",
+"asr": 71.31,
+"onset": 71.375,
+"conf": true
+},
+{
+"i": 278,
+"w": "always",
+"asr": 71.79,
+"onset": 71.79,
+"conf": false
+},
+{
+"i": 279,
+"w": "under",
+"asr": 72.03,
+"onset": 72.062,
+"conf": true
+},
+{
+"i": 280,
+"w": "my",
+"asr": 72.27,
+"onset": 72.27,
+"conf": false
+},
+{
+"i": 281,
+"w": "window.",
+"asr": 72.35,
+"onset": 72.35,
+"conf": false
+},
+{
+"i": 282,
+"w": "Checking",
+"asr": 72.91,
+"onset": 72.855,
+"conf": true
+},
+{
+"i": 283,
+"w": "for",
+"asr": 73.15,
+"onset": 73.15,
+"conf": false
+},
+{
+"i": 284,
+"w": "moles?",
+"asr": 73.31,
+"onset": 73.245,
+"conf": true
+},
+{
+"i": 285,
+"w": "He",
+"asr": 74.03,
+"onset": 74.03,
+"conf": true
+},
+{
+"i": 286,
+"w": "was",
+"asr": 74.19,
+"onset": 74.19,
+"conf": false
+},
+{
+"i": 287,
+"w": "checking",
+"asr": 74.27,
+"onset": 74.303,
+"conf": true
+},
+{
+"i": 288,
+"w": "on",
+"asr": 74.59,
+"onset": 74.59,
+"conf": false
+},
+{
+"i": 289,
+"w": "me.",
+"asr": 74.67,
+"onset": 74.67,
+"conf": false
+},
+{
+"i": 290,
+"w": "Before",
+"asr": 74.99,
+"onset": 74.92,
+"conf": true
+},
+{
+"i": 291,
+"w": "me,",
+"asr": 75.23,
+"onset": 75.23,
+"conf": false
+},
+{
+"i": 292,
+"w": "he",
+"asr": 75.47,
+"onset": 75.47,
+"conf": true
+},
+{
+"i": 293,
+"w": "checked",
+"asr": 75.63,
+"onset": 75.627,
+"conf": true
+},
+{
+"i": 294,
+"w": "on",
+"asr": 75.87,
+"onset": 75.838,
+"conf": true
+},
+{
+"i": 295,
+"w": "dad.",
+"asr": 76.03,
+"onset": 76.068,
+"conf": true
+},
+{
+"i": 296,
+"w": "For",
+"asr": 76.43,
+"onset": 76.422,
+"conf": true
+},
+{
+"i": 297,
+"w": "60",
+"asr": 76.67,
+"onset": 76.67,
+"conf": false
+},
+{
+"i": 298,
+"w": "years,",
+"asr": 76.99,
+"onset": 76.988,
+"conf": true
+},
+{
+"i": 299,
+"w": "whoever",
+"asr": 77.39,
+"onset": 77.38,
+"conf": true
+},
+{
+"i": 300,
+"w": "was",
+"asr": 77.71,
+"onset": 77.623,
+"conf": true
+},
+{
+"i": 301,
+"w": "small",
+"asr": 77.87,
+"onset": 77.92,
+"conf": true
+},
+{
+"i": 302,
+"w": "in",
+"asr": 78.11,
+"onset": 78.11,
+"conf": false
+},
+{
+"i": 303,
+"w": "that",
+"asr": 78.27,
+"onset": 78.27,
+"conf": false
+},
+{
+"i": 304,
+"w": "room.",
+"asr": 78.35,
+"onset": 78.35,
+"conf": true
+},
+{
+"i": 305,
+"w": "That's",
+"asr": 78.67,
+"onset": 78.683,
+"conf": true
+},
+{
+"i": 306,
+"w": "why",
+"asr": 78.83,
+"onset": 78.82,
+"conf": true
+},
+{
+"i": 307,
+"w": "they",
+"asr": 78.99,
+"onset": 79.002,
+"conf": true
+},
+{
+"i": 308,
+"w": "faced",
+"asr": 79.15,
+"onset": 79.15,
+"conf": true
+},
+{
+"i": 309,
+"w": "the",
+"asr": 79.39,
+"onset": 79.35,
+"conf": true
+},
+{
+"i": 310,
+"w": "house.",
+"asr": 79.47,
+"onset": 79.47,
+"conf": false
+},
+{
+"i": 311,
+"w": "I",
+"asr": 79.79,
+"onset": 79.735,
+"conf": true
+},
+{
+"i": 312,
+"w": "wasn't",
+"asr": 79.87,
+"onset": 79.863,
+"conf": true
+},
+{
+"i": 313,
+"w": "small",
+"asr": 80.11,
+"onset": 80.08,
+"conf": true
+},
+{
+"i": 314,
+"w": "anymore.",
+"asr": 80.43,
+"onset": 80.43,
+"conf": false
+},
+{
+"i": 315,
+"w": "Theo",
+"asr": 80.96,
+"onset": 80.888,
+"conf": true
+},
+{
+"i": 316,
+"w": "was.",
+"asr": 81.36,
+"onset": 81.36,
+"conf": false
+},
+{
+"i": 317,
+"w": "I",
+"asr": 81.6,
+"onset": 81.638,
+"conf": true
+},
+{
+"i": 318,
+"w": "knelt",
+"asr": 81.68,
+"onset": 81.638,
+"conf": true
+},
+{
+"i": 319,
+"w": "in",
+"asr": 81.92,
+"onset": 81.918,
+"conf": true
+},
+{
+"i": 320,
+"w": "the",
+"asr": 82.08,
+"onset": 82.127,
+"conf": true
+},
+{
+"i": 321,
+"w": "flower",
+"asr": 82.16,
+"onset": 82.127,
+"conf": true
+},
+{
+"i": 322,
+"w": "bed.",
+"asr": 82.4,
+"onset": 82.418,
+"conf": true
+},
+{
+"i": 323,
+"w": "I",
+"asr": 82.72,
+"onset": 82.625,
+"conf": true,
+"manual": "rise at -95 ms after the pause"
+},
+{
+"i": 324,
+"w": "said",
+"asr": 82.8,
+"onset": 82.76,
+"conf": true
+},
+{
+"i": 325,
+"w": "good",
+"asr": 82.96,
+"onset": 82.988,
+"conf": true
+},
+{
+"i": 326,
+"w": "night",
+"asr": 83.12,
+"onset": 83.113,
+"conf": true
+},
+{
+"i": 327,
+"w": "and",
+"asr": 83.44,
+"onset": 83.42,
+"conf": true
+},
+{
+"i": 328,
+"w": "he",
+"asr": 83.52,
+"onset": 83.52,
+"conf": false
+},
+{
+"i": 329,
+"w": "blinked",
+"asr": 83.68,
+"onset": 83.68,
+"conf": true
+},
+{
+"i": 330,
+"w": "slowly,",
+"asr": 84.0,
+"onset": 84.0,
+"conf": false
+},
+{
+"i": 331,
+"w": "like",
+"asr": 84.4,
+"onset": 84.383,
+"conf": true
+},
+{
+"i": 332,
+"w": "he",
+"asr": 84.56,
+"onset": 84.517,
+"conf": true
+},
+{
+"i": 333,
+"w": "was",
+"asr": 84.64,
+"onset": 84.558,
+"conf": true
+},
+{
+"i": 334,
+"w": "sorry.",
+"asr": 84.8,
+"onset": 84.728,
+"conf": true
+},
+{
+"i": 335,
+"w": "I",
+"asr": 85.2,
+"onset": 85.195,
+"conf": true
+},
+{
+"i": 336,
+"w": "set",
+"asr": 85.36,
+"onset": 85.318,
+"conf": true
+},
+{
+"i": 337,
+"w": "him",
+"asr": 85.52,
+"onset": 85.495,
+"conf": true
+},
+{
+"i": 338,
+"w": "down",
+"asr": 85.68,
+"onset": 85.64,
+"conf": true
+},
+{
+"i": 339,
+"w": "and",
+"asr": 85.92,
+"onset": 85.948,
+"conf": true
+},
+{
+"i": 340,
+"w": "I",
+"asr": 86.08,
+"onset": 86.08,
+"conf": false
+},
+{
+"i": 341,
+"w": "let",
+"asr": 86.16,
+"onset": 86.16,
+"conf": false
+},
+{
+"i": 342,
+"w": "go.",
+"asr": 86.32,
+"onset": 86.288,
+"conf": true
+},
+{
+"i": 343,
+"w": "Boom",
+"asr": 86.87,
+"onset": 86.78,
+"conf": true,
+"manual": "FWOOM: /f/ frication from about -90 ms; the vowel (\"WOOM\") is at 86.86"
+},
+{
+"i": 344,
+"w": "His",
+"asr": 87.35,
+"onset": 87.345,
+"conf": true
+},
+{
+"i": 345,
+"w": "lantern",
+"asr": 87.59,
+"onset": 87.59,
+"conf": false
+},
+{
+"i": 346,
+"w": "flared.",
+"asr": 87.99,
+"onset": 87.92,
+"conf": true
+},
+{
+"i": 347,
+"w": "Light",
+"asr": 88.63,
+"onset": 88.6,
+"conf": true
+},
+{
+"i": 348,
+"w": "rolled",
+"asr": 88.87,
+"onset": 88.83,
+"conf": true
+},
+{
+"i": 349,
+"w": "across",
+"asr": 89.11,
+"onset": 89.133,
+"conf": true
+},
+{
+"i": 350,
+"w": "the",
+"asr": 89.35,
+"onset": 89.353,
+"conf": true
+},
+{
+"i": 351,
+"w": "lawn",
+"asr": 89.43,
+"onset": 89.353,
+"conf": true
+},
+{
+"i": 352,
+"w": "and",
+"asr": 89.83,
+"onset": 89.76,
+"conf": true
+},
+{
+"i": 353,
+"w": "every",
+"asr": 89.99,
+"onset": 89.925,
+"conf": true
+},
+{
+"i": 354,
+"w": "mound",
+"asr": 90.23,
+"onset": 90.178,
+"conf": true
+},
+{
+"i": 355,
+"w": "sank,",
+"asr": 90.71,
+"onset": 90.625,
+"conf": true
+},
+{
+"i": 356,
+"w": "eyes",
+"asr": 91.03,
+"onset": 91.035,
+"conf": true
+},
+{
+"i": 357,
+"w": "winking",
+"asr": 91.35,
+"onset": 91.29,
+"conf": true
+},
+{
+"i": 358,
+"w": "out",
+"asr": 91.67,
+"onset": 91.67,
+"conf": false
+},
+{
+"i": 359,
+"w": "pair",
+"asr": 91.83,
+"onset": 91.848,
+"conf": true
+},
+{
+"i": 360,
+"w": "by",
+"asr": 92.07,
+"onset": 92.083,
+"conf": true
+},
+{
+"i": 361,
+"w": "pair.",
+"asr": 92.23,
+"onset": 92.233,
+"conf": true
+},
+{
+"i": 362,
+"w": "Then",
+"asr": 92.55,
+"onset": 92.52,
+"conf": true
+},
+{
+"i": 363,
+"w": "he",
+"asr": 92.71,
+"onset": 92.743,
+"conf": true
+},
+{
+"i": 364,
+"w": "stood",
+"asr": 92.79,
+"onset": 92.743,
+"conf": true
+},
+{
+"i": 365,
+"w": "still,",
+"asr": 92.95,
+"onset": 92.94,
+"conf": true
+},
+{
+"i": 366,
+"w": "facing",
+"asr": 93.11,
+"onset": 93.163,
+"conf": true
+},
+{
+"i": 367,
+"w": "Theo's",
+"asr": 93.35,
+"onset": 93.282,
+"conf": true
+},
+{
+"i": 368,
+"w": "window.",
+"asr": 93.83,
+"onset": 93.83,
+"conf": false
+},
+{
+"i": 369,
+"w": "At",
+"asr": 94.15,
+"onset": 94.09,
+"conf": true,
+"manual": "vowel rise at -60 ms after a -100 dB dip"
+},
+{
+"i": 370,
+"w": "dawn",
+"asr": 94.31,
+"onset": 94.31,
+"conf": false
+},
+{
+"i": 371,
+"w": "Theo",
+"asr": 94.63,
+"onset": 94.657,
+"conf": true
+},
+{
+"i": 372,
+"w": "came",
+"asr": 94.95,
+"onset": 94.892,
+"conf": true
+},
+{
+"i": 373,
+"w": "out",
+"asr": 95.11,
+"onset": 95.11,
+"conf": false
+},
+{
+"i": 374,
+"w": "in",
+"asr": 95.27,
+"onset": 95.228,
+"conf": true
+},
+{
+"i": 375,
+"w": "his",
+"asr": 95.35,
+"onset": 95.35,
+"conf": false
+},
+{
+"i": 376,
+"w": "socks.",
+"asr": 95.51,
+"onset": 95.51,
+"conf": false
+},
+{
+"i": 377,
+"w": "Is",
+"asr": 95.91,
+"onset": 95.883,
+"conf": true
+},
+{
+"i": 378,
+"w": "he",
+"asr": 95.99,
+"onset": 95.99,
+"conf": false
+},
+{
+"i": 379,
+"w": "nice?",
+"asr": 96.23,
+"onset": 96.142,
+"conf": true
+},
+{
+"i": 380,
+"w": "The",
+"asr": 96.63,
+"onset": 96.627,
+"conf": true
+},
+{
+"i": 381,
+"w": "nicest?",
+"asr": 96.71,
+"onset": 96.627,
+"conf": true
+},
+{
+"i": 382,
+"w": "Say",
+"asr": 97.27,
+"onset": 97.23,
+"conf": true
+},
+{
+"i": 383,
+"w": "good",
+"asr": 97.43,
+"onset": 97.44,
+"conf": true
+},
+{
+"i": 384,
+"w": "night",
+"asr": 97.59,
+"onset": 97.528,
+"conf": true
+},
+{
+"i": 385,
+"w": "and",
+"asr": 97.83,
+"onset": 97.788,
+"conf": true
+},
+{
+"i": 386,
+"w": "he'll",
+"asr": 97.91,
+"onset": 97.91,
+"conf": false
+},
+{
+"i": 387,
+"w": "blink.",
+"asr": 98.15,
+"onset": 98.12,
+"conf": true
+},
+{
+"i": 388,
+"w": "Theo",
+"asr": 98.63,
+"onset": 98.6,
+"conf": true
+},
+{
+"i": 389,
+"w": "tried",
+"asr": 99.03,
+"onset": 98.998,
+"conf": true
+},
+{
+"i": 390,
+"w": "it,",
+"asr": 99.19,
+"onset": 99.19,
+"conf": false
+},
+{
+"i": 391,
+"w": "and",
+"asr": 99.35,
+"onset": 99.38,
+"conf": true
+},
+{
+"i": 392,
+"w": "Grandpa",
+"asr": 99.51,
+"onset": 99.51,
+"conf": false
+},
+{
+"i": 393,
+"w": "blinked.",
+"asr": 99.91,
+"onset": 99.89,
+"conf": true
+},
+{
+"i": 394,
+"w": "At",
+"asr": 100.31,
+"onset": 100.365,
+"conf": true
+},
+{
+"i": 395,
+"w": "Theo",
+"asr": 100.47,
+"onset": 100.47,
+"conf": false
+},
+{
+"i": 396,
+"w": "from",
+"asr": 100.87,
+"onset": 100.828,
+"conf": true
+},
+{
+"i": 397,
+"w": "the",
+"asr": 100.95,
+"onset": 100.95,
+"conf": false
+},
+{
+"i": 398,
+"w": "truck",
+"asr": 101.11,
+"onset": 101.025,
+"conf": true
+},
+{
+"i": 399,
+"w": "every",
+"asr": 101.43,
+"onset": 101.43,
+"conf": false
+},
+{
+"i": 400,
+"w": "gnome",
+"asr": 101.59,
+"onset": 101.52,
+"conf": true
+},
+{
+"i": 401,
+"w": "faced",
+"asr": 101.91,
+"onset": 101.945,
+"conf": true
+},
+{
+"i": 402,
+"w": "its",
+"asr": 102.15,
+"onset": 102.115,
+"conf": true
+},
+{
+"i": 403,
+"w": "house",
+"asr": 102.31,
+"onset": 102.31,
+"conf": false
+},
+{
+"i": 404,
+"w": "except",
+"asr": 102.63,
+"onset": 102.61,
+"conf": true
+},
+{
+"i": 405,
+"w": "one.",
+"asr": 102.95,
+"onset": 102.95,
+"conf": false
+},
+{
+"i": 406,
+"w": "Every",
+"asr": 103.51,
+"onset": 103.455,
+"conf": true,
+"manual": "vowel at -55 ms; the low-level energy before it is breath"
+},
+{
+"i": 407,
+"w": "spring",
+"asr": 103.75,
+"onset": 103.83,
+"conf": true
+},
+{
+"i": 408,
+"w": "for",
+"asr": 104.07,
+"onset": 104.068,
+"conf": true
+},
+{
+"i": 409,
+"w": "sixty",
+"asr": 104.23,
+"onset": 104.23,
+"conf": false
+},
+{
+"i": 410,
+"w": "years",
+"asr": 104.55,
+"onset": 104.468,
+"conf": true
+},
+{
+"i": 411,
+"w": "Theo",
+"asr": 104.95,
+"onset": 104.995,
+"conf": true
+},
+{
+"i": 412,
+"w": "sent",
+"asr": 105.43,
+"onset": 105.345,
+"conf": true
+},
+{
+"i": 413,
+"w": "me",
+"asr": 105.59,
+"onset": 105.545,
+"conf": true
+},
+{
+"i": 414,
+"w": "a",
+"asr": 105.67,
+"onset": 105.67,
+"conf": false
+},
+{
+"i": 415,
+"w": "photo.",
+"asr": 105.75,
+"onset": 105.815,
+"conf": true
+},
+{
+"i": 416,
+"w": "Grandpa,",
+"asr": 106.21,
+"onset": 106.255,
+"conf": true
+},
+{
+"i": 417,
+"w": "same",
+"asr": 106.85,
+"onset": 106.75,
+"conf": true,
+"manual": "/s/ from -100 ms; vowel at 106.85"
+},
+{
+"i": 418,
+"w": "flower",
+"asr": 107.09,
+"onset": 107.103,
+"conf": true
+},
+{
+"i": 419,
+"w": "bed,",
+"asr": 107.41,
+"onset": 107.4,
+"conf": true
+},
+{
+"i": 420,
+"w": "same",
+"asr": 107.73,
+"onset": 107.648,
+"conf": true
+},
+{
+"i": 421,
+"w": "window,",
+"asr": 107.89,
+"onset": 107.89,
+"conf": false
+},
+{
+"i": 422,
+"w": "always",
+"asr": 108.29,
+"onset": 108.275,
+"conf": true
+},
+{
+"i": 423,
+"w": "mid",
+"asr": 108.61,
+"onset": 108.568,
+"conf": true
+},
+{
+"i": 424,
+"w": "blink.",
+"asr": 108.85,
+"onset": 108.895,
+"conf": true
+},
+{
+"i": 425,
+"w": "I'm",
+"asr": 109.25,
+"onset": 109.165,
+"conf": true,
+"manual": "rise at -85 ms after a -73 dB dip"
+},
+{
+"i": 426,
+"w": "seventy",
+"asr": 109.41,
+"onset": 109.383,
+"conf": true
+},
+{
+"i": 427,
+"w": "one,",
+"asr": 109.73,
+"onset": 109.663,
+"conf": true
+},
+{
+"i": 428,
+"w": "and",
+"asr": 109.97,
+"onset": 109.983,
+"conf": true
+},
+{
+"i": 429,
+"w": "my",
+"asr": 110.13,
+"onset": 110.13,
+"conf": false
+},
+{
+"i": 430,
+"w": "granddaughter",
+"asr": 110.21,
+"onset": 110.225,
+"conf": true
+},
+{
+"i": 431,
+"w": "says",
+"asr": 110.77,
+"onset": 110.705,
+"conf": true
+},
+{
+"i": 432,
+"w": "I'm",
+"asr": 111.01,
+"onset": 110.99,
+"conf": true
+},
+{
+"i": 433,
+"w": "getting",
+"asr": 111.17,
+"onset": 111.127,
+"conf": true
+},
+{
+"i": 434,
+"w": "shorter.",
+"asr": 111.41,
+"onset": 111.323,
+"conf": true
+},
+{
+"i": 435,
+"w": "I've",
+"asr": 111.81,
+"onset": 111.808,
+"conf": true
+},
+{
+"i": 436,
+"w": "already",
+"asr": 112.05,
+"onset": 112.093,
+"conf": true
+},
+{
+"i": 437,
+"w": "picked",
+"asr": 112.29,
+"onset": 112.303,
+"conf": true
+},
+{
+"i": 438,
+"w": "my",
+"asr": 112.53,
+"onset": 112.455,
+"conf": true
+},
+{
+"i": 439,
+"w": "window.",
+"asr": 112.69,
+"onset": 112.69,
+"conf": false
+}
+]
+}
