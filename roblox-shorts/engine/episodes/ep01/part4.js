@@ -380,7 +380,7 @@ export const builders = {
       const P1 = new THREE.Vector3(WIN[0] - 0.65, c.move.to_h * S, kink.z + 3.6); const T1 = new THREE.Vector3(WIN[0] + 0.05, 0, WIN[2]); T1.y = P1.y + Math.hypot(T1.x - P1.x, T1.z - P1.z) * Math.tan((c.move.to_pitch ?? -4) * DEG);
       const cd = c.move.dur ?? 1.4; const roll0 = 4;
       ctx.camera.set({
-        pos: (t, o) => { const u = outCubic(t / cd); return (o || new THREE.Vector3()).copy(P0).lerp(P1, u).add(new THREE.Vector3(0, 0, 3 * S * Math.sin(Math.PI * clamp01(u)))); },   // review: the crane arcs 3 studs out over the lawn (it passed through the porch roof)
+        pos: (t, o) => { const u = outCubic(t / cd); return (o || new THREE.Vector3()).copy(P0).lerp(P1, u).add(new THREE.Vector3(-4 * S * Math.sin(Math.PI * clamp01(u)), 0, 6 * S * Math.sin(Math.PI * clamp01(u)))); },   // review: the crane arcs 3 studs out over the lawn (it passed through the porch roof)
         // the target slides from the ground point under the lens to the window; a small -z lead keeps "up" = the house
         target: (t, o) => { const u = outCubic(t / (cd * 0.75)); const q = (o || new THREE.Vector3()).copy(T0).lerp(T1, u); return q; },   // the aim settles on the window a little before the lens lands (mid-crane it would sweep the porch column)
         fov: (t) => lerp(fov0, v.fov, outCubic(t / cd)), roll: (t) => roll0 * (1 - outCubic(t / cd)) });
