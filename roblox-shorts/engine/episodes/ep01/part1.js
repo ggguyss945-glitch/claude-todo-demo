@@ -588,6 +588,10 @@ const NEW_BUILDERS = {
       if (p.camera.drift && p.camera.drift.crane_studs) ctx.camera.crane(p.camera.drift.crane_studs * S);
       ctx.shared.rig = I.interiorDay(ctx, { room: R });
       faceKey(ctx, [A.seat[0], A.seat[1] + 2.6 * S, A.seat[2] + 0.2], { cd: 1.2, color: '#ffd8b8', d: 1.2 });
+      // low warm fill from the lens side at lap height: the plum skirt / leg fronts face the lens and read as black boxes
+      // under the window key from above (test review defect 3); the lamp-warm fill keeps them plum
+      { const v = R.userData.views.armchairMS; const cp = W3(v.pos), st = W3(A.seat); const fp = st.clone().lerp(cp, 0.55); fp.y = st.y + 0.1; fp.addScaledVector(hflat(cp.clone().sub(st)).applyAxisAngle(Y_AX, Math.PI / 2), -0.35);
+        ctx.add(ctx.lights.point({ color: '#ffd6bc', intensity: short ? 2.2 : 2.6, pos: fp.toArray(), decay: 2 })); }
       ctx.shared.gm = gm; ctx.shared.pose = pose;
     },
     update(ctx, t) { K.setPose(ctx.shared.gm, { ...ctx.shared.pose, ...K.breath(t) }); },
@@ -605,24 +609,29 @@ const NEW_BUILDERS = {
       const L = set.userData.lots.find((l) => l.hero); const gate = W3(L.gate), steps = W3(L.steps);
       const toHouse = hflat(steps.clone().sub(gate)); const side = new THREE.Vector3(-toHouse.z, 0, toHouse.x);
       const gp = gate.clone().addScaledVector(toHouse, 3.0 * S).addScaledVector(side, -2.4 * S); gp.y = 0;
-      const g = K.makeGnome('grandma', { lantern: false, wear: 0.05 }); g.position.copy(gp); g.rotation.y = yawOf(toHouse); ctx.add(g); softenBeard(g);
-      ctx.add(sets.contactShadow(ctx, { pos: gp.toArray(), radius: 0.26, opacity: 0.4 }));
+      // scale cheated x1.35 (bible 2.6 #6): she is the subject of an MS at 6 studs, the kneeling kid must not dwarf her
+      const g = K.makeGnome('grandma', { lantern: false, wear: 0.05 }); g.scale.multiplyScalar(1.35); g.position.copy(gp); g.rotation.y = yawOf(toHouse); ctx.add(g); softenBeard(g);
+      ctx.add(sets.contactShadow(ctx, { pos: gp.toArray(), radius: 0.34, opacity: 0.4 }));
       // the glasses: tilt pivot = the bridge between the two rims (head-local), 8 deg until the event
       const gl = g.getObjectByName('gnomeGlasses'); const rims = gl.children.filter((m) => m.geometry && m.geometry.type === 'TorusGeometry');
       const piv = rims.reduce((a, m) => a.add(m.position), new THREE.Vector3()).multiplyScalar(1 / rims.length); ctx.shared.gl = { g: gl, piv };
       g.updateWorldMatrix(true, true); const eyes = eyesOf(g);
-      // camera: from her front, yaw 25 toward the path side, high (h 4.5, d 6, pitch -18)
-      const cam = boardCam(gp, c, { base: toHouse.toArray().map((v, i) => (i === 1 ? 0 : v)), aimY: 2.1 * S });
+      // camera: from her front, yaw 25 toward the path side, high (h 4.5, d 6, about 18 deg down), aimed just over her
+      // hat so her face sits a little under the centre and the kneeling kid's head in the upper third
+      const cam = boardCam(gp, c, { base: toHouse.toArray().map((v, i) => (i === 1 ? 0 : v)), aimY: eyes.y + 0.75 * S }); const camBase = { ...cam };
       ctx.camera.set(cam).push(c.move.Z).crane((c.drift?.crane_studs ?? 0) * S).rollBy(c.roll ? c.roll.deg[1] - c.roll.deg[0] : 0);
       const camP = W3(cam.pos); const toCam = hflat(camP.clone().sub(gp)); const camSide = Math.sign(toCam.dot(side)) || 1;
-      // the grandkid kneels at her side (away from the camera's side), facing her; armR (camera side) reaches the glasses
+      // the grandkid kneels BESIDE her on screen-left (same depth, 2.5 studs off the sight line), turned to her; his
+      // near arm (armR) reaches across to the glasses
       const kid = K.makeCharacter('grandkid', { face: faceOf(ctx, 1, 'content')[0] }); ctx.add(kid);
-      const kDir = side.clone().multiplyScalar(camSide); // from the gnome toward the kid, on the camera side but turned to face her
-      kid.position.copy(gp).addScaledVector(side, -camSide * 1.7 * S).addScaledVector(toHouse, -1.3 * S); kid.position.y = 0;
-      kid.rotation.y = yawOf(gp.clone().sub(kid.position)); void kDir;
+      const fwd = toCam.clone().negate(); const scrR = new THREE.Vector3(-fwd.z, 0, fwd.x); void camSide;
+      kid.position.copy(gp).addScaledVector(scrR, -2.5 * S).addScaledVector(fwd, 0.35 * S); kid.position.y = 0;
+      kid.rotation.y = yawOf(gp.clone().sub(kid.position));
       const lensW = gl.localToWorld(piv.clone()); const reachPt = lensW.clone().addScaledVector(hflat(kid.position.clone().sub(gp)), 0.06 * S);
-      const pReach = { bodyX: 10, legLx: -90, legRx: -90, lift: -1.45, armLx: 26, armLz: -6, armRz: -8, neckX: -10, neckY: -camSide * 8, armRx: 60 };
+      const pReach = { bodyX: 10, legLx: -90, legRx: -90, lift: -1.45, armLx: 26, armLz: -6, armRz: -8, neckX: -12, neckY: -18, armRx: 60 };   // head turned a little to the lens so his ^^ face reads
       reachTo(kid, 'R', pReach, 'armRx', reachPt, { lo: 10, hi: 150 });
+      // re-aim a third of the way toward the kid (after the reach solve placed him) so his head is inside the frame
+      { const tg = W3(camBase.target), kh = kid.position.clone(); kh.y = tg.y; const t2 = tg.clone().lerp(kh, 0.32); ctx.camera.set({ target: t2.toArray() }); }
       const pRest = { ...pReach, armRx: 22, armRz: -4 };
       ctx.shared.kid = kid; ctx.shared.kp = { pRest, pReach, t0: (6.30 * ctx.fps - ctx.shot.f0) / ctx.fps };
       // light: P4 dawn, sun low from across the street (rims + long shadows), warm fill on the faces
@@ -680,18 +689,38 @@ const NEW_BUILDERS = {
       const p = ctx.params; const c = p.camera;
       const T = SE.ep01Street(ctx, { tod: 'dusk' }); ctx.add(T); const L = T.userData.lots.find((l) => l.id === 'A2');
       const gate = W3(L.gate), steps = W3(L.steps); const toHouse = hflat(steps.clone().sub(gate)); const side = new THREE.Vector3(-toHouse.z, 0, toHouse.x);
-      // camera just inside the gateway (the pickets would hide a 1.6-stud lens), 7 studs from the kid's mid-hop, yaw -20
-      const camP = gate.clone().addScaledVector(toHouse, 0.5 * S).addScaledVector(side, 1.2 * S); camP.y = c.height_studs * S;
-      const yw = Math.abs(c.yaw_deg || 20) * DEG; const la = hflat(toHouse.clone().applyAxisAngle(Y_AX, yw)), lb = hflat(toHouse.clone().applyAxisAngle(Y_AX, -yw));
-      const look = la.dot(side) < 0 ? la : lb; const camR = new THREE.Vector3(-look.z, 0, look.x);
-      const tgt = camP.clone().addScaledVector(look, c.dist_studs * S); tgt.y = camP.y + c.dist_studs * S * Math.tan(c.pitch_deg * DEG);
+      // The kid hops up A2's path toward his porch: start 9 studs in (or earlier on a short path), end at the steps.
+      const Ls = steps.distanceTo(gate) / S; const hops = Math.ceil(ctx.shot.duration / 0.45); const k0 = Math.max(5.5, Math.min(9.0, Ls - 1.2 - hops * 1.45));
+      const kA = gate.clone().addScaledVector(toHouse, k0 * S).setY(1.6 * S), kB = kA.clone().addScaledVector(toHouse, hops * 1.45 * S);
+      // Camera: low (h 1.6, pitch +6, fov 70) on A2's lawn behind the pickets. "Curtains snap shut DOWN THE STREET, window by
+      // window" needs a look along the row of houses, so the board's yaw (-20 off the path, one window in view) is opened up:
+      // a deterministic search over lens spots on the lawn and yaws keeps >= 6 lit front windows in the END frame (after
+      // the +15 % push) with the kid in frame for the whole shot, as close as the windows allow (the board's d 7 gives one window).
+      T.updateMatrixWorld(true); const sc = T.scale.x || 1; const winsW = (T.userData.windows || []).filter((w) => w.lit && w.face === 'front').map((w) => W3(w.pos).divideScalar(sc).applyMatrix4(T.matrixWorld));
+      const pc = new THREE.PerspectiveCamera(c.fov, 1080 / 1920, 0.05, 400); const lim = 0.9 / (1 + c.move.Z);
+      const aim = (P, lk) => { const tt = P.clone().addScaledVector(lk, c.dist_studs * S); tt.y = P.y + c.dist_studs * S * Math.tan(c.pitch_deg * DEG); return tt; };
+      let best = null;
+      for (let a = 0.8; a <= 3.6; a += 1.4) for (let b = -17; b <= 17; b += 1) for (let yd = -85; yd <= 85; yd += 5) {
+        const P = gate.clone().addScaledVector(toHouse, a * S).addScaledVector(side, b * S); P.y = c.height_studs * S; const lk = hflat(toHouse.clone().applyAxisAngle(Y_AX, yd * DEG));
+        pc.position.copy(P); pc.lookAt(aim(P, lk)); pc.updateMatrixWorld(true);
+        const nw = winsW.filter((v) => { const q = v.clone().project(pc); return q.z < 1 && Math.abs(q.x) < lim && Math.abs(q.y) < lim; }).length;
+        const qa = kA.clone().project(pc), qb = kB.clone().project(pc); if (qa.z >= 1 || qb.z >= 1) continue;
+        if (Math.min(qa.x, qb.x) < -0.02 || Math.max(qa.x, qb.x) > 0.72 * lim || Math.max(Math.abs(qa.y), Math.abs(qb.y)) > 0.8 * lim) continue;   // right of the sign
+        const dk = P.distanceTo(kA.clone().lerp(kB, 0.5)) / S; if (dk < 7 || dk > 20) continue;
+        const sc2 = Math.min(nw, 6) * 10 - Math.max(0, dk - 9) * 2.2 - Math.abs(b) * 0.1 - Math.abs(qa.x + qb.x - 0.5) * 3;
+        if (!best || sc2 > best.sc) best = { sc: sc2, P, lk, nw, yd, a, b, dk };
+      }
+      if (!best) { const P = gate.clone().addScaledVector(toHouse, 0.5 * S).addScaledVector(side, 1.2 * S); P.y = c.height_studs * S; best = { P, lk: hflat(toHouse.clone().applyAxisAngle(Y_AX, -20 * DEG)), nw: 0 }; }
+      const camP = best.P, look = best.lk; const tgt = aim(camP, look);
+      console.warn(`[p1 s11] lens a ${best.a} b ${best.b} yaw ${best.yd} windows ${best.nw} kid ${best.dk && best.dk.toFixed(1)}`);
       ctx.camera.set({ pos: camP.toArray(), target: tgt.toArray(), fov: c.fov }).push(c.move.Z).truck((c.drift?.truck_studs ?? 0) * S);
-      // the sign: 5.6 studs out from the lens, left of centre, turned to the lens
-      ctx.camera.apply(0); const ray = new THREE.Vector3(-0.44, 0, 0.5).unproject(ctx.cam).sub(ctx.cam.position); ray.y = 0; ray.normalize();
-      const sg = keepOffSign(ctx, { postH: 4.4, w: 2.7, h: 2.1 }); sg.position.copy(camP).addScaledVector(ray, (6.6 * S) / Math.max(0.3, ray.dot(look))); sg.position.y = 0; sg.rotation.y = yawOf(look.clone().negate()) - 0.18; ctx.add(sg); void camR;
-      // the kid: hops up the path toward the porch (stride 1.5 studs per 0.45 s hop), from 4 studs inside the gate
+      // the sign: 6.6 studs out from the lens, left of centre, turned to the lens
+      ctx.camera.apply(0); const ray = new THREE.Vector3(-0.5, 0, 0.5).unproject(ctx.cam).sub(ctx.cam.position); ray.y = 0; ray.normalize();
+      const sg = keepOffSign(ctx, { postH: 4.4, w: 2.7, h: 2.1 }); sg.position.copy(camP).addScaledVector(ray, (6.6 * S) / Math.max(0.3, ray.dot(look))); sg.position.y = 0; sg.rotation.y = yawOf(look.clone().negate()) - 0.18; ctx.add(sg);
       const kid = K.makeCharacter('grandkid', { face: 'grin' }); kid.rotation.y = yawOf(toHouse); ctx.add(kid);
-      ctx.shared.kid = { av: kid, p0: gate.clone().addScaledVector(toHouse, 7.6 * S).setY(0), dir: toHouse, period: 0.45, stride: 1.45 * S };
+      ctx.shared.kid = { av: kid, p0: kA.clone().setY(0), dir: toHouse, period: 0.45, stride: 1.45 * S };
+      // a warm sunset fill that rides with him from the lens side (his back faces us; without it he is a black cut-out)
+      ctx.shared.kidKey = ctx.add(ctx.lights.point({ color: '#ffc6a0', intensity: 2.6, pos: [0, 0, 0], decay: 2 })); ctx.shared.kidKeyOff = hflat(camP.clone().sub(kA)).multiplyScalar(1.8 * S).add(new THREE.Vector3(0, 3.4 * S, 0));
       ctx.shared.rig = sets.dusk(ctx, { set: T, postOpts: { exposure: 2.0 } });
       ctx.shared.cur = X.curtainCascade(ctx, T, { t0: ev(ctx, 'dark', 1.352), n: 6, gap: 0.12 }); ctx.add(ctx.shared.cur.group);
       faceKey(ctx, sg.position.clone().add(new THREE.Vector3(0, 3.4 * S, 0)), { cd: 1.2, color: '#ffd2a8', d: 1.4 });
@@ -703,6 +732,7 @@ const NEW_BUILDERS = {
       k.av.position.copy(k.p0).addScaledVector(k.dir, along); k.av.position.y = hopY;
       const air = Math.sin(Math.PI * f);
       K.setPose(k.av, { armLz: 50 + 25 * air, armRz: 50 + 25 * air, armLx: 10, armRx: 10, legLx: 18 * air, legRx: -10 * air, bodyX: 6, neckX: -4 });
+      s.kidKey.position.copy(k.av.position).add(s.kidKeyOff);
       s.cur.update(t); s.fx.update(t);
     },
   },
@@ -765,7 +795,7 @@ const NEW_BUILDERS = {
   gate_bonk: {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
-      const H = SE.heroLot(ctx, { tod: 'night', gate: 1.45 }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
+      const H = SE.heroLot(ctx, { tod: 'night', gate: 1.45, board: false }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
       const g = K.makeFamilyGnome(0, { lantern: 0, lod: 'hero', wear: 0.12 }); softenBeard(g); g.rotation.y = 0; ctx.add(g);
       const cam = boardCam(G0, c); ctx.camera.set(cam).push(c.move.Z);
       const tb = ev(ctx, 'garden', 1.295);
@@ -794,7 +824,7 @@ const NEW_BUILDERS = {
   family_hands: {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
-      const H = SE.heroLot(ctx, { tod: 'night', gate: 1.45 }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
+      const H = SE.heroLot(ctx, { tod: 'night', gate: 1.45, board: false }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
       const dad = K.makeCharacter('dad', { face: 'content' }); ctx.add(dad);
       const g = K.makeFamilyGnome(0, { lantern: 0, lod: 'hero', wear: 0.12 }); softenBeard(g); ctx.add(g);
       const tf = ev(ctx, 'family', 0.267), to = ev(ctx, 'out', 0.962);
@@ -865,23 +895,35 @@ const NEW_BUILDERS = {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
       const H = SE.heroLot(ctx, { tod: 'night', board: false, theoRoom: { era: 'hero11', lit: true, curtains: 'open' } }); ctx.add(H);
-      const w = W3(H.ep01.spots.theoWindow); const g = H.ep01.gnomes.grandpa; const floorY = H.ep01.room.windowWorld ? W3(H.ep01.room.windowWorld).y - 4.1 * S : 0.32;
-      const hero = K.makeCharacter('hero', { face: 'grin' }); hero.position.set(w.x - 1.8 * S, floorY, w.z - 1.2 * S); hero.rotation.y = 0.12; ctx.add(hero);
-      const head = new THREE.Vector3(hero.position.x, floorY + 4.6 * S, hero.position.z);
-      // OTS from behind his left shoulder, high (Grandpa's hat tip is below the glass, so the lens looks steeply down past
-      // the shoulder); he waves his near (left) arm, which swings clear of the sight line to Grandpa
-      const B = W3(H.ep01.spots.bed0); const pos = new THREE.Vector3(w.x - 0.55 * S, floorY + 7.2 * S, w.z - 3.5 * S); const tgt = new THREE.Vector3(B.x + 0.3 * S, floorY + 1.6 * S, w.z + 2.6 * S); void c;
-      g.scale.multiplyScalar(1.2); g.position.z += 1.0 * S;   // per-shot cheat (bible 2.6 #6): his hat tip sits below the glass (2.4 vs 2.6 studs), so a bit bigger and 1 stud further out
-      ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: c.fov }).push(c.move.Z);
-      g.updateWorldMatrix(true, true); const ge = eyesOf(g);
-      ctx.shared.rig = I.bedroomNight(ctx, { set: H, lamp: 4, lanternOutside: { pos: [ge.x, ge.y + 0.45, ge.z - 0.22], cd: 2.4 } });
-      H.ep01.theo.glass.material.opacity = 0.56;   // the night outside reads darker than the lit room (bible P2)
-      hero.updateWorldMatrix(true, true); gazeAt(g, hero.getObjectByName('head').getWorldPosition(new THREE.Vector3()));
-      faceKey(ctx, head.clone().add(new THREE.Vector3(0, -0.1, 0)), { cd: 1.0, color: '#ffd9c0', d: 1.0 });
-      ctx.shared.fx = sparks(ctx, pos.clone().lerp(w, 0.55), [1.8, 1.2, 1.0], 9, 's17');
+      const g = H.ep01.gnomes.grandpa; const sill = W3(H.ep01.spots.theoSill); const v = H.ep01.views.room_otsWindow;
+      // room frame (studs; origin on the floor at the window wall, +z out through the glass): the sets owner's s17 view
+      // room_otsWindow sits at [1.5, 5.7, -4.8] in it (interiors.js), so its origin is recovered from that view
+      const O = W3(v.pos).sub(new THREE.Vector3(1.5 * S, 5.7 * S, -4.8 * S)); const R = (x, y, z) => O.clone().add(new THREE.Vector3(x * S, y * S, z * S));
+      // the hero at the glass, 1.4 studs left of the window centre (screen-right of the sight line to Grandpa), facing out
+      const hero = K.makeCharacter('hero', { face: 'grin' }); hero.position.copy(R(-1.1, 0, -0.95)); hero.rotation.y = 0; ctx.add(hero);
+      K.setPose(hero, { armRz: 160, neckX: -14 }); hero.updateWorldMatrix(true, true); const head = hero.getObjectByName('head').getWorldPosition(new THREE.Vector3());
+      const hand = K.handSocket(hero, 'R').getWorldPosition(new THREE.Vector3());
+      // OTS from behind his left shoulder, 4.6 studs back and above his head (h 7.4 instead of 4.9: from eye level the sill
+      // hides the flowerbed right under the glass, and at d 2.2 his R6 shoulders fill the frame)
+      const cp = R(1.5, 7.4, -5.6);
+      // Grandpa: x1.15 and, if needed, slid out from the wall until his eyes clear the sill from the lens (bible 2.6 #6)
+      g.scale.multiplyScalar(1.15); g.updateWorldMatrix(true, true); let E = eyesOf(g);
+      const hs = sill.y + 0.35 * S, a = sill.z - cp.z, need = cp.z + (cp.y - E.y) * a / Math.max(0.2, cp.y - hs);
+      if (E.z < need) { g.position.z += need - E.z; g.updateWorldMatrix(true, true); E = eyesOf(g); }
+      // aim: between Grandpa (lower left of the window view) and the waving hand, so the boy's head is on the right third
+      const tgt = E.clone().lerp(hand, 0.4);
+      ctx.camera.set({ pos: cp.toArray(), target: tgt.toArray(), fov: c.fov }).push(c.move.Z);
+      // bible P2, with the hemisphere a notch down and the glass darker so the lawn reads as night through it
+      ctx.shared.rig = I.bedroomNight(ctx, { set: H, lamp: 4, hemiIntensity: 1.45, lanternOutside: { pos: [E.x - 0.15, E.y + 0.5, E.z - 0.25], cd: 2.6 } });
+      H.ep01.theo.glass.material.opacity = 0.6;
+      gazeAt(g, head);
+      faceKey(ctx, head.clone().add(new THREE.Vector3(0, -0.15, 0)), { cd: 1.0, color: '#ffd9c0', d: 1.0 });
+      ctx.shared.fx = sparks(ctx, cp.clone().lerp(tgt, 0.35), [1.6, 1.2, 1.0], 9, 's17');
       ctx.shared.hero = hero; ctx.shared.g = g;
+      console.warn(`[p1 s17] gnome eyes ${E.toArray().map((x) => (x / S).toFixed(2))} need z ${(need / S).toFixed(2)} sill y ${(sill.y / S).toFixed(2)} cam ${cp.toArray().map((x) => (x / S).toFixed(2))}`);
     },
-    update(ctx, t) { K.setPose(ctx.shared.hero, { ...K.waveCycle(t, { amp: 15, freq: 2, arm: 'L' }), neckX: -16, neckY: -8 }); K.gnomeIdle(ctx.shared.g, t, { seed: 'gpNight', amp: 0.3 }); ctx.shared.fx.update(t); },
+    // he waves his right arm (board: armR 160, +-15 deg at 2 Hz) beside his head, looking down at Grandpa
+    update(ctx, t) { K.setPose(ctx.shared.hero, { ...K.waveCycle(t, { amp: 15, freq: 2, arm: 'R' }), neckX: -14, neckY: 6 }); K.gnomeIdle(ctx.shared.g, t, { seed: 'gpNight', amp: 0.3 }); ctx.shared.fx.update(t); },
   },
 
   // s18 "and he blinks." - close on Grandpa gnome from below (h 0.9, d 1.6, yaw -15, pitch 14), gaze up 20 at the lit
@@ -933,7 +975,7 @@ const NEW_BUILDERS = {
     },
     update(ctx, t) {
       const w = ctx.shared.w; const x = w.x0 + w.v * t; w.gp.position.set(x, 0, w.zW);
-      const wc = K.walkCycle(t, { period: 1.0, legs: 25, holdArms: true }); K.setPose(w.gp, { ...wc, armLx: -wc.legLx * 0.8, armRx: 40, armRz: 4, neckY: 6 });
+      const wc = K.walkCycle(t, { period: 1.0, legs: 25, holdArms: true }); K.setPose(w.gp, { ...wc, armLx: -wc.legLx * 0.8, armRx: 40, armRz: 4, neckY: -42, neckX: -4 });   // head turned to the lens: his face reads in a profile walk
       w.gp.updateMatrixWorld(true); CR.aimFlashlight(w.fl, new THREE.Vector3(x + 3.6 * S, 0, w.zW + 0.6 * S)); w.gp.updateMatrixWorld(true);
       CR.setFlashlight(w.fl, 1); w.Bm.update(t);
     },
@@ -953,7 +995,7 @@ const NEW_BUILDERS = {
       const hand = K.handSocket(gp, 'R').getWorldPosition(new THREE.Vector3());
       // yaw 60 measured from his facing direction (+x) round to his torch side: the hand in 3/4 profile, the beam running
       // screen-right down onto the grass; target a third of the way along the beam so the hand sits left of centre
-      const aimP = hand.clone().lerp(spot, 0.08); aimP.y = hand.y - 0.4 * S; const cam = boardCam(hand, { ...c, yaw_deg: 90 - c.yaw_deg, dist_studs: c.dist_studs + 1.2 }, { base: [0, 0, 1], aimY: aimP.y }); cam.target = [aimP.x, aimP.y, aimP.z];
+      const aimP = hand.clone().lerp(spot, 0.1); aimP.y = hand.y - 0.12 * S; /* the gripping arm end in frame, not just the torch */ const cam = boardCam(hand, { ...c, yaw_deg: 90 - c.yaw_deg, dist_studs: c.dist_studs + 1.2 }, { base: [0, 0, 1], aimY: aimP.y }); cam.target = [aimP.x, aimP.y, aimP.z];
       ctx.camera.set(cam).push(c.move.Z);
       const tc = ev(ctx, 'flashlight', 1 / 60);
       ctx.shared.rig = sepiaLight(ctx, H, { subject: { pos: hand.toArray(), cd: 0.6, color: '#ffe6c8' } });
@@ -974,19 +1016,23 @@ const NEW_BUILDERS = {
   fb_slippers: {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
-      const H = SE.heroLot(ctx, { tod: 'night', era: '2010s', keepOff: false }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
+      const H = SE.heroLot(ctx, { tod: 'night', era: '2010s', keepOff: false, gnomes: ['bedFront0', 'bedFront1'] }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
       const te = ev(ctx, 'slippers', 1 / 60); const tl = p.callback_of ? te : te + 5 / 60;    // landing time
       const period = 1.0, v = 3.4 * S;                                                          // studs/s, matching legs 25
       const xl = G0.x - 4.0 * S, zW = G0.z - 7.0 * S;                                          // where the body is at landing (on the grass, clear of the stones)
       const gp = K.makeCharacter('grandpa', { face: 'content' }); gp.rotation.y = Math.PI / 2; ctx.add(gp);
       const fl = CR.makeFlashlight({ on: 1, light: false }); CR.holdFlashlight(gp, fl, { axis: 'forward' });
       const foot = new THREE.Vector3(xl + 0.85 * S, 0, zW + 0.5 * S);                            // the near (right) slipper at landing
-      // low front-side 3/4 (50 deg off his walk, 4.6 studs, lens 0.55 studs up): both slippers and the shins in frame, the near one lands
-      const cam = boardCam(foot, { ...c, yaw_deg: 40, dist_studs: 4.6 + Math.max(0, ctx.shot.duration - tl - 0.33) * 3.4 * 0.75, height_studs: 0.55 }, { base: [0, 0, 1], aimY: 0.85 * S }); ctx.camera.set(cam).push(c.move.Z);
+      // ground level (h 0.4), 80 deg off his walk on the street side, following him (truck at his 3.4 studs/s): both
+      // slippers scissor in the lower middle over the wet grass, the near one lands on the event; 5 studs out so the two
+      // legs fit the 9:16 width at fov 45 (at the board's 2.4 one leg fills the frame as a grey box)
+      const cdir = new THREE.Vector3(Math.cos(c.yaw_deg * DEG), 0, Math.sin(c.yaw_deg * DEG)); const D = 5.0 * S;
+      const mid = (t, o) => (o || new THREE.Vector3()).set(xl + v * (t - tl) + 0.1 * S, 0, zW + 0.15 * S);
+      ctx.camera.set({ pos: (t, o) => mid(t, o).addScaledVector(cdir, D).setY((c.height_studs + 0.25) * S), target: (t, o) => mid(t, o).setY(0.62 * S), fov: c.fov }).push(c.move.Z);   // +0.25 stud: the slippers clear the near grass blades
       ctx.shared.rig = sepiaLight(ctx, H, { subject: { pos: [foot.x, 0.6 * S, foot.z], cd: 0.6, color: '#ffe6c8' } });
       const Bm = X.flashlightBeam(ctx, { torch: fl, t0: -1, length: 7, angle: 18, cd: 4, opacity: 0.14, motes: 4 }); ctx.add(Bm.group);
       const burst = sets.burst(ctx, { pos: [foot.x + 0.1 * S, 0.12 * S, foot.z + 0.1 * S], t0: tl, dur: 0.35, count: 12, spread: 0.35, px: [10, 26], ring: false, core: false, colors: ['#ffffff', '#fff2dc', '#ffe6c8'], brightness: 2.0, gravity: -0.6, seed: 's21dew' }); ctx.add(burst);
-      ctx.shared.dew = sparks(ctx, [foot.x + 1.0 * S, 0.05, foot.z], [1.4, 0.05, 0.9], 10, 's21dewg', { px: [12, 28], colors: ['#fff6e8', '#ffffff'], drift: [0.003, 0.01], brightness: 1.8 });
+      ctx.shared.dew = sparks(ctx, [foot.x + 0.6 * S, 0.05, foot.z + 0.4 * S], [2.4, 0.05, 1.2], 12, 's21dewg', { px: [12, 28], colors: ['#fff6e8', '#ffffff'], drift: [0.003, 0.01], brightness: 1.8 });
       ctx.shared.w = { gp, fl, Bm, burst, xl, zW, v, tl, period };
     },
     update(ctx, t) {
@@ -996,7 +1042,7 @@ const NEW_BUILDERS = {
       const sN = Math.abs(Math.sin(2 * Math.PI * ((t - w.tl) / w.period - 0.25)));
       const lift = -2 * (1 - Math.cos(25 * DEG)) * Math.pow(sN, 3);                             // the body settles as the front heel lands
       K.setPose(w.gp, { ...wc, armLx: -wc.legLx * 0.8, armRx: 40, armRz: 4, lift }); w.gp.updateMatrixWorld(true);
-      CR.aimFlashlight(w.fl, new THREE.Vector3(x + 3.0 * S, 0, w.zW + 0.4 * S)); w.gp.updateMatrixWorld(true);
+      CR.aimFlashlight(w.fl, new THREE.Vector3(x + 1.9 * S, 0, w.zW + 0.5 * S)); w.gp.updateMatrixWorld(true);   // the pool just ahead of the slippers
       CR.setFlashlight(w.fl, 1); w.Bm.update(t); w.burst.update(t); ctx.shared.dew.update(t);
     },
   },
@@ -1048,14 +1094,19 @@ const NEW_BUILDERS = {
       const H = SE.heroLot(ctx, { tod: 'night', era: '2010s', keepOff: false, gnomes: ['bedFront0', 'bedFront1'] }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
       const at = new THREE.Vector3(G0.x - 2.0 * S, 0, G0.z - 6.0 * S);
       const faces = faceOf(ctx, 0, 'talk'); const gp = K.makeCharacter('grandpa', { face: faces[0] }); gp.position.copy(at); gp.rotation.y = 0; ctx.add(gp);
-      K.setPose(gp, { armRx: 74, armRz: -24, armLx: 6, neckX: 4 }); gp.updateMatrixWorld(true);
+      // ghost-story torch: the right arm comes forward and in (armRz -36) so the hand sits centred just under the chin,
+      // 0.6 studs below it; the torch points up at his face (solve armRx for the height, Grandpa stays put)
+      const head = gp.getObjectByName('head'); gp.updateMatrixWorld(true); const face = head.getWorldPosition(new THREE.Vector3());
+      const pT = { armRx: 90, armRz: -36, armLx: 6, neckX: 6 }; reachTo(gp, 'R', pT, 'armRx', face.clone().add(new THREE.Vector3(0, -1.05 * S, 0)), { lo: 40, hi: 150, move: false }); K.setPose(gp, pT); gp.updateMatrixWorld(true);
       const fl = CR.makeFlashlight({ on: 1, light: false }); CR.holdFlashlight(gp, fl, { axis: 'forward' }); gp.updateMatrixWorld(true);
-      const head = gp.getObjectByName('head'); CR.aimFlashlight(fl, head.localToWorld(new THREE.Vector3(0, -0.25, 0.5))); gp.updateMatrixWorld(true);
-      const face = head.getWorldPosition(new THREE.Vector3());
-      const cam = boardCam([face.x, 0, face.z], c, { base: [0, 0, 1] }); ctx.camera.set(cam).push(c.move.Z).rollBy(c.roll ? c.roll.deg[1] - c.roll.deg[0] : 0);
-      ctx.shared.rig = sepiaLight(ctx, H, { hemiIntensity: 0.5, exposure: 0.95, key: { intensity: 0.5 }, window: { n: 1, cd: 1.2, color: '#ffd9a0', maxD: 14 } });
-      ctx.add(ctx.lights.point({ color: '#fff1d0', intensity: 1.5, pos: face.clone().add(new THREE.Vector3(-0.1 * S, -0.7 * S, 0.85 * S)).toArray(), decay: 2 }));
-      ctx.add(sets.glow(ctx, { pos: CR.flashlightRay(fl).origin.toArray(), color: '#fff2d8', px: 120, opacity: 0.55 }));
+      CR.aimFlashlight(fl, head.localToWorld(new THREE.Vector3(0, -0.1, 0.45))); gp.updateMatrixWorld(true);
+      // CU from below (h 3.9, pitch about +6): 3.4 studs to the head centre (2.8 to the face), target under the chin so
+      // the face sits in the upper 40 % with the glowing torch under it
+      const cam = boardCam([face.x, 0, face.z], { ...c, dist_studs: c.dist_studs + 0.6 }, { base: [0, 0, 1], aimY: face.y - 0.38 * S }); ctx.camera.set(cam).push(c.move.Z).rollBy(c.roll ? c.roll.deg[1] - c.roll.deg[0] : 0);
+      ctx.shared.rig = sepiaLight(ctx, H, { hemiIntensity: 0.26, exposure: 1.0, key: { intensity: 0.18 }, window: { n: 1, cd: 1.0, color: '#ffd9a0', maxD: 14 } });
+      // the under-light (board: point #fff1d0 2.5 cd): at the torch lens, under and in front of the chin
+      const lens = CR.flashlightRay(fl).origin; ctx.add(ctx.lights.point({ color: '#fff1d0', intensity: 2.5, pos: lens.clone().add(new THREE.Vector3(0, 0.05 * S, 0.12 * S)).toArray(), decay: 2 }));
+      ctx.add(sets.glow(ctx, { pos: lens.toArray(), color: '#fff2d8', px: 110, opacity: 0.6 }));
       ctx.shared.w = { gp, fl, faces, tw: ev(ctx, "he'd", 0.87) };
     },
     update(ctx, t) { const w = ctx.shared.w; K.setFaceEx(w.gp, t >= w.tw && w.faces[1] ? w.faces[1] : w.faces[0]); CR.setFlashlight(w.fl, 1, { cd: 0 }); },
@@ -1077,7 +1128,7 @@ const NEW_BUILDERS = {
     },
     update(ctx, t) {
       const w = ctx.shared.w; const u = outBack(t / (8 / 60), 1.9);
-      const P0 = { armLx: 30, armRx: 38, armLz: 6, armRz: 6, neckX: 0 }, P1 = { armLx: 8, armRx: 8, armLz: 80, armRz: 80, armLy: -40, armRy: -40, neckX: 6, neckZ: 3 };
+      const P0 = { armLx: 30, armRx: 38, armLz: 6, armRz: 6, neckX: 0 }, P1 = { armLx: 62, armRx: 62, armLz: 56, armRz: 56, neckX: 6, neckZ: 3 };   // "THIS big": arms out and forward, both hands inside the frame
       const P = {}; for (const k of new Set([...Object.keys(P0), ...Object.keys(P1)])) P[k] = lerp(P0[k] || 0, P1[k] || 0, u);
       K.setPose(w.gp, P); w.gp.updateMatrixWorld(true); CR.setFlashlight(w.fl, 1); w.Bm.update(t);
     },

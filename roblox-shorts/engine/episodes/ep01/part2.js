@@ -39,7 +39,8 @@ const HOLD_OFF = [0, 0.1, 1.12];           // the held gnome in the hero's hips 
 const HUG = { armLx: 58, armRx: 58, armLz: -36, armRz: -36, neckX: -8 };   // both arms round the gnome's belly (hands meet in front)
 const STREET_HERO = [5.76, 0, -8.6];       // ep01Street: the same spot on our lot A3
 const CU_GRADE = { grade: { temperature: -6, tint: 6 } };   // close-ups keep warm skin / glaze inside the cool night (approved s05 numbers)
-const GOLD = { color: '#ff9e1c', width: 0.012, outer: 2.0, peak: 0.75, hold: 0.42 };   // the s15 gold, kept saturated under the night grade
+const GOLD = { color: '#ff9e1c', width: 0.012, outer: 2.0, peak: 0.75, hold: 0.42 };   // the s15 gold on the gnome, kept saturated under the night grade
+const GOLD_ARMS = { color: '#ffb43a', width: 0.02, outer: 2.4, peak: 0.85, hold: 0.55 };  // s15's numbers for the grown-up's arms (part1 s15): a clear gold rim on the blocky sleeves
 
 // ------------------------------------------------------------------ helpers
 const evT = (ctx, k, fb) => C.evT(ctx, k, fb);
@@ -101,6 +102,13 @@ function lanternSwing(g, u, { amp = 12, freq = 1.4, decay = 1.0, phase = Math.PI
   L.rotation.z = a; L.rotation.x = 0.3 * a;
 }
 
+// The s15 gold callback on the hero's arms (s15 numbers) + the held gnome (thinner, so his small face stays readable).
+function goldPair(ctx, hero, g, { t0, sparkles }) {
+  const A = X.goldOutline(ctx, [hero.getObjectByName('armL'), hero.getObjectByName('armR')], { t0, sparkles: 0, seed: 'p2arms', ...GOLD_ARMS }); ctx.add(A.group);
+  const G = X.goldOutline(ctx, g, { t0, sparkles, ...GOLD }); ctx.add(G.group);
+  return { update: (t) => { A.update(t); G.update(t); } };
+}
+
 // ==================================================================================================================
 export const PART = 2;
 export const builders = {
@@ -160,10 +168,12 @@ export const builders = {
     build(ctx) {
       const p = ctx.params; const H = nightLot(ctx); ctx.shared.H = H;
       const tBang = evT(ctx, 'ran', 0.383), tFoot = evT(ctx, 'barefoot', 0.75); const T = ctx.shot.duration;
-      const door = frontDoor(ctx, LOT_DOOR, { k: (t) => (t < tBang ? 0 : springStep(t - tBang, 2.2, 0.38)) }); ctx.shared.door = door;
+      // a bang: the leaf flies open in ~3 frames (86 deg at +0.057 s), rebounds off its overshoot and settles at 100 deg, so it is
+      // clear of the doorway before the hero bursts out of the lit hall 2 frames later (he starts inside, behind the doorway)
+      const door = frontDoor(ctx, LOT_DOOR, { k: (t) => (t < tBang ? 0 : springStep(t - tBang, 5.0, 0.35)) }); ctx.shared.door = door;
       const hero = K.makeCharacter('heroBarefoot', { face: 'shock' }); ctx.add(hero); ctx.shared.hero = hero;
-      const z0 = -13.05, zFoot = -11.12, deck = 0.32; const v1 = (zFoot - z0) / Math.max(0.2, tFoot - tBang); const v2 = 4.7;
-      const run = (t) => { const u = t - tBang; if (u < 0) return { z: z0, y: deck }; if (t < tFoot) { const z = z0 + v1 * u; const k = clamp01((z + 11.75) / (11.75 + zFoot)); return { z, y: deck * (1 - k * k) + 0.18 * Math.sin(Math.PI * k) }; } return { z: zFoot + v2 * (t - tFoot), y: 0 }; };
+      const z0 = -13.62, zFoot = -11.12, deck = 0.32; const tGo = tBang + 0.03; const v1 = (zFoot - z0) / Math.max(0.2, tFoot - tGo); const v2 = 4.7;
+      const run = (t) => { const u = t - tGo; if (u < 0) return { z: z0, y: deck }; if (t < tFoot) { const z = z0 + v1 * u; const k = clamp01((z + 11.75) / (11.75 + zFoot)); return { z, y: deck * (1 - k * k) + 0.18 * Math.sin(Math.PI * k) }; } return { z: zFoot + v2 * (t - tFoot), y: 0 }; };
       ctx.shared.run = run; ctx.shared.tBang = tBang; ctx.shared.tFoot = tFoot;
       // boot-level tracking: back 9.5 studs over the shot (linear), a hair right of the path
       const zc0 = -7.45, zc1 = zc0 + p.camera.drift.dolly_back_studs * S; const h = p.camera.height_studs * S;
@@ -179,7 +189,7 @@ export const builders = {
     },
     update(ctx, t) {
       const s = ctx.shared; s.door.update(t); const r = s.run(t); const hero = s.hero; s.key.position.set(-0.45, 1.45, s.camZ(t) - 0.3);
-      hero.visible = t >= s.tBang - 1 / 60; hero.position.set(0, r.y, r.z); hero.rotation.y = 0;
+      hero.visible = t >= s.tBang; hero.position.set(0.06, r.y, r.z); hero.rotation.y = 0;
       K.setPose(hero, { ...K.runCycle(t, { period: 0.5, legs: 60, arms: 55, phase: 0.25 }), bodyX: 10, neckX: 4 });
       for (const b of s.spl) b.update(t); s.fx.update(t);
     },
@@ -247,7 +257,7 @@ export const builders = {
       const tgt = [KNEEL_AT[0], pos[1] + hd * Math.tan(c.pitch_deg * DEG), KNEEL_AT[2]];
       ctx.camera.set({ pos, target: tgt, fov: p.fov }); basePush(ctx);
       nightRig(ctx, H, 'night', { lamp: { n: 2 }, postOpts: CU_GRADE });
-      warmKey(ctx, [KNEEL_AT[0], 1.05, KNEEL_AT[2]], { cd: 5.0, d: 0.85 });
+      warmKey(ctx, [KNEEL_AT[0], 1.12, KNEEL_AT[2]], { cd: 12.0, d: 1.55, el: 30 });   // farther + stronger: an even key on face and hands (at 0.85 m the hands were 10x the face)
       ctx.shared.fx = sparks(ctx, [0, 0.8, KNEEL_AT[2] + 0.8], [1.6, 1.0, 0.9], 9, 's31');
     },
     update(ctx, t) { ctx.shared.fx.update(t); },
@@ -272,7 +282,7 @@ export const builders = {
       nightRig(ctx, H, 'night', { lamp: { n: 3 }, postOpts: CU_GRADE });
       warmKey(ctx, [0, 1.05, -7.1], { cd: 5.0, d: 1.0 });
       const PL = X.propertyLine(ctx, { a: [-0.66, -6.4], b: [0.66, -6.4] }); PL.part(tPick, [GP_GATE[0], 0.32, GP_GATE[2]]); ctx.add(PL.group); ctx.shared.PL = PL;
-      const GO = X.goldOutline(ctx, [hero.getObjectByName('armL'), hero.getObjectByName('armR'), g], { t0: tPick, sparkles: 6, ...GOLD });  ctx.add(GO.group); ctx.shared.GO = GO;
+      const GO = goldPair(ctx, hero, g, { t0: tPick, sparkles: 6 }); ctx.shared.GO = GO;
       ctx.shared.fx = sparks(ctx, [0, 1.0, -6.6], [1.6, 1.2, 1.0], 8, 's32');
       const kneelReach = { ...K.POSES.kneel, bodyX: 24, armLx: 68, armRx: 68, armLz: -14, armRz: -14, neckX: -4 };
       ctx.shared.pose = (t) => { if (t < tPick) return kneelReach; const ua = outQuad((t - tPick) / (8 / 60)); const ub = outQuad((t - tPick - 0.04) / 0.26);
@@ -296,7 +306,7 @@ export const builders = {
       ctx.camera.set({ pos: pos.toArray(), target: subj.toArray(), fov: p.fov }); basePush(ctx); paramRoll(ctx);
       nightRig(ctx, H, 'night', { lamp: { n: 2 }, low: false, postOpts: CU_GRADE });
       warmKey(ctx, subj.toArray(), { cd: 3.2, d: 0.75 });
-      const GO = X.goldOutline(ctx, [hero.getObjectByName('armL'), hero.getObjectByName('armR'), g], { t0: -0.06, sparkles: 8, ...GOLD }); ctx.add(GO.group); ctx.shared.GO = GO;
+      const GO = goldPair(ctx, hero, g, { t0: -0.06, sparkles: 8 }); ctx.shared.GO = GO;
     },
     update(ctx, t) { lanternSwing(ctx.shared.g, t, { amp: 12, decay: 0.9 }); ctx.shared.GO.update(t); },
   },
@@ -388,13 +398,17 @@ export const builders = {
       ctx.add(ctx.lights.point({ color: '#ffc27a', intensity: 1.6, pos: pos.clone().addScaledVector(dir, 1.2).add(new THREE.Vector3(0.2, 0.6, 0)).toArray(), decay: 2 }));
       const sw = ctx.add(ctx.lights.point({ color: '#fff0d0', intensity: 0, pos: pos.toArray(), decay: 2 })); ctx.shared.sweep = { sw, tR, base: pos.clone().addScaledVector(dir, 0.9).add(new THREE.Vector3(0, 0.25, 0)), side: new THREE.Vector3(-dir.z, 0, dir.x) };
       coolRim(ctx, ec.toArray(), { intensity: 0.7 });
-      ctx.shared.gl = [C.starGlint(ctx, { pos: eL.clone().addScaledVector(dir, 0.03), t0: tR, peak: 120, rot: 20, color: '#fff2d8' }), C.starGlint(ctx, { pos: eR.clone().addScaledVector(dir, 0.03), t0: tR + 0.05, peak: 105, rot: 35, color: '#fff2d8' })]; ctx.add(...ctx.shared.gl);
+      ctx.shared.gl = [C.starGlint(ctx, { pos: eL.clone().addScaledVector(dir, 0.03), t0: tR, peak: 250, rot: 20, color: '#fff2d8' }), C.starGlint(ctx, { pos: eR.clone().addScaledVector(dir, 0.03), t0: tR + 0.05, peak: 215, rot: 35, color: '#fff2d8' })]; ctx.add(...ctx.shared.gl);
+      const bl = ctx.post.params.bloom; ctx.shared.bloom0 = bl && bl.enabled ? bl.strength : null; ctx.post.set({ flash: { amount: 0, color: '#ffe2b0' } });
       ctx.shared.fx = sparks(ctx, ec.clone().lerp(pos, 0.4).add(new THREE.Vector3(0, 0.12, 0)).toArray(), [0.9, 0.5, 0.35], 6, 's36', { px: [40, 70] });
     },
     update(ctx, t) {
       const s = ctx.shared; CR.animateMole(s.m, t, { eyesOn: s.cue.eyesOn, flash: t < s.cue.flash + 0.245 ? s.cue.flash : null }); s.fx.update(t); s.gl.forEach((g) => g.update(t));
       const u = (t - s.sweep.tR) / 0.3; const k = u < 0 || u > 1 ? 0 : Math.sin(Math.PI * u); s.sweep.sw.intensity = 6 * k; s.sweep.sw.visible = k > 0;
       s.sweep.sw.position.copy(s.sweep.base).addScaledVector(s.sweep.side, lerp(-1.2, 1.2, clamp01(u)));
+      // the headlight catching the reflectors: a short bloom + warm screen flash peaking ~0.06 s after "reflectors"
+      const fu = (t - s.sweep.tR) / 0.25; const fk = fu < 0 || fu > 1 ? 0 : (fu < 0.25 ? fu / 0.25 : Math.pow(1 - (fu - 0.25) / 0.75, 2));
+      if (s.bloom0 != null) ctx.post.params.bloom.strength = s.bloom0 * (1 + 1.6 * fk); ctx.post.params.flash.amount = 0.1 * fk;
     },
   },
 
@@ -520,6 +534,10 @@ export const builders = {
   // s41 "except next door." (45.43-46.30) - next door's lawn, dark: the glossy plastic gnomes still facing the street with
   // their black plastic lanterns; on "door" a mound rolls under one and it tips into a hole (0 -> 70 deg, drops 1.5
   // studs). Night grade, temperature -24. Push 19 %.
+  // s12's view (sets_ep01 nextDoorNight = the day nextDoorMS at night). Next door is lot A2 at +X, so seen from the street
+  // with the plastics' faces our lot lies off frame LEFT, ~11 m away: the board's "our gold ring at frame right" only works
+  // from behind the row (tried: plastics cramped and overlapping at the bottom edge) and a gold spill on this lawn would
+  // break "next door stays dark", so the ring is left to s40's geography (see NOTES).
   nextdoor_dark: {
     build(ctx) {
       const H = nightLot(ctx, { lanterns: 1 }); const E = H.ep01; frontDoor(ctx, LOT_DOOR); const tD = evT(ctx, 'door', 0.572); ctx.shared.tD = tD;
