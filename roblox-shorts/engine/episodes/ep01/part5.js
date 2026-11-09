@@ -30,6 +30,7 @@ import * as SE from '../../kit/sets_ep01.js';
 import * as X from '../../kit/fx_ep01.js';
 import { doorTex } from '../../kit/kitlib.js';
 import { makeRng, hash32 } from '../../core/random.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as C from './common.js';
 
 const S = C.S, DEG = C.DEG, clamp01 = C.clamp01, smooth = C.smooth, outQuad = C.outQuad, outExpo = C.outExpo;
@@ -191,6 +192,86 @@ function mudCheekFace(ctx, face, overlays) {
 }
 function setFaceTex(av, tex) { const f = K.rig(av).face; if (!f) return; f.material = f.material.clone(); f.material.map = tex; }
 
+// ------------------------------------------------------------------ epilogue helpers (photos, phone, bench)
+// The yearly photo, staged on our lot in spring daylight `year` years after the move (the sets owner's photoTexture
+// recipe: heroLot day + year, Grandpa mossy by the year and looking back over his shoulder at the camera), with this
+// shot's choices: Theo at 6 + year on the lawn beside him or grey at the window, Theo's granddaughter waving in the
+// window, a thumbs-up, the mid-blink lids, and the view ('photo' = the yearly framing, 'close' = Grandpa close, 'bed' =
+// the flowerbed). stagePhoto puts it in a scene (live, s93); photoTex renders it once per worker to a canvas texture.
+function stagePhoto(ctx, year, o = {}) {
+  const H = SE.heroLot(ctx, { tod: 'day', year, era: 'now', board: false, keepOff: false, truck: false, bed: 'grandpa', nextDoor: false, theoRoom: { era: 'later', lit: false }, roomGlow: false, gnomes: ['lawn0', 'lawn1', 'bedFront1'], grandpa: { age: o.age ?? Math.min(0.9, 0.05 + 0.85 * year / 60) } });
+  sets.setWindows(H, 'off'); H.ep01.theo.setGlass('photo');
+  const g = H.ep01.gnomes.grandpa; K.setGnomeHead(g, o.headYaw ?? 150, 4, 0); K.setGnomeGaze(g, 0, 2); if (o.blink) K.setGnomeLids(g, o.blink);
+  const sp = H.ep01.spots; const bp = P3(sp.bed0); const w = P3(sp.theoWindow); const age = 6 + year; const people = [];
+  const th = K.theoAt(age, { face: o.face || 'grin' });
+  if (o.theo === 'window') { th.position.set(w.x + 0.12, 0.32, w.z - 1.15 * S); th.rotation.y = 0; K.setPose(th, { armRz: 18, armLz: 10, neckX: -6 }); }
+  else { th.position.set(bp.x - 2.7 * S, 0, bp.z + 2.7 * S); th.rotation.y = 0.18; K.setPose(th, o.thumbs ? { armRx: 128, armRz: 12, armLz: 6, neckY: 6 } : age < 13 ? { armRz: 150, neckZ: -4 } : { armRz: 25, armRx: -20, neckY: 8 }); }
+  people.push(th);
+  if (o.girl) { const girl = K.makeCharacter('theoGranddaughter', { face: 'openSmile' }); girl.position.set(w.x - 0.18, 0.32, w.z - 1.1 * S); girl.rotation.y = 0; K.setPose(girl, { ...K.POSES.wave, armRz: 158 }); people.push(girl); }
+  const B = bp; const views = { photo: { pos: up(B, 4.2, -1.7, 12.5), target: up(B, 3.2, -1.4, 0), fov: 45 }, close: { pos: up(B, 2.0, 0.6, 5.2), target: up(B, 1.0, 0.1, 0), fov: 40 }, bed: { pos: up(B, 4.2, -2.6, 7.6), target: up(B, 0.7, -0.6, 0), fov: 45 } };
+  return { H, g, people, view: views[o.view || 'photo'] };
+}
+function photoLights(scene, bp, win) {
+  scene.add(new THREE.HemisphereLight('#bcd4ff', '#5a4a30', 1.15)); const sun = new THREE.DirectionalLight('#fff3e0', 2.6); sun.position.set(bp.x - 14, 18, bp.z + 22); sun.target.position.copy(bp); scene.add(sun, sun.target);
+  const fill = new THREE.PointLight('#fff0e0', 2.5, 0, 2); fill.position.set(bp.x + 1.2, 1.6, bp.z + 2.6); scene.add(fill);
+  const bounce = new THREE.PointLight('#fff4e8', 3.0, 0, 2); bounce.position.copy(win).add(new THREE.Vector3(0.3, 0.4, -1.4)); scene.add(bounce);
+}
+const PHOTO_FS = `uniform sampler2D tDiffuse; uniform float exposure, warm, lift, sat; varying vec2 vUv;
+  vec3 aces(vec3 x){ const float a=2.51, b=0.03, c=2.43, d=0.59, e=0.14; return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0); }
+  void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb * exposure; c = aces(c); float l = dot(c, vec3(0.2126, 0.7152, 0.0722)); c = mix(vec3(l), c, sat); c += vec3(warm, warm * 0.4, -warm * 0.6);
+    c = lift * vec3(1.0, 0.92, 0.82) + c * (1.0 - lift); vec2 q = vUv - 0.5; c *= 1.0 - 0.22 * dot(q, q) * 2.0; c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)); gl_FragColor = vec4(c, 1.0); }`;
+function photoTex(ctx, year, o = {}) {
+  return ctx.cache('ep01p5:photo:' + year + ':' + JSON.stringify(o), () => {
+    const size = o.size || 512; const R = ctx.renderer; const scene = new THREE.Scene();
+    const st = stagePhoto(ctx, year, o); scene.add(st.H); st.people.forEach((x) => scene.add(x));
+    const sky = sets.sky(ctx, { preset: 'day' }); scene.add(sky); photoLights(scene, P3(st.H.ep01.spots.bed0), P3(st.H.ep01.spots.theoWindow));
+    const v = st.view; const cam = new THREE.PerspectiveCamera(v.fov, 1, 0.05, 900); cam.position.copy(P3(v.pos)); cam.lookAt(P3(v.target)); cam.updateMatrixWorld(true);
+    const rt = new THREE.WebGLRenderTarget(size, size, { type: THREE.HalfFloatType, samples: 4 }); const rt2 = new THREE.WebGLRenderTarget(size, size, { type: THREE.UnsignedByteType });
+    const prev = R.getRenderTarget(); const prevAuto = R.autoClear; const prevCol = R.getClearColor(new THREE.Color()); const prevA = R.getClearAlpha(); const prevSM = R.shadowMap.enabled;
+    R.shadowMap.enabled = false; R.autoClear = true; R.setClearColor('#000000', 1); R.setRenderTarget(rt); R.clear(); R.render(scene, cam);
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { tDiffuse: { value: rt.texture }, exposure: { value: 1.05 }, warm: { value: 0.05 }, lift: { value: 0.06 }, sat: { value: 0.9 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }', fragmentShader: PHOTO_FS, depthTest: false, depthWrite: false }));
+    q.frustumCulled = false; const qs = new THREE.Scene(); qs.add(q); R.setRenderTarget(rt2); R.render(qs, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+    const px = new Uint8Array(size * size * 4); R.readRenderTargetPixels(rt2, 0, 0, size, size, px);
+    R.setRenderTarget(prev); R.autoClear = prevAuto; R.setClearColor(prevCol, prevA); R.shadowMap.enabled = prevSM; rt.dispose(); rt2.dispose(); q.geometry.dispose(); q.material.dispose();
+    const c = document.createElement('canvas'); c.width = c.height = size; const g2 = c.getContext('2d'); const id = g2.createImageData(size, size);
+    for (let y = 0; y < size; y++) id.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+    g2.putImageData(id, 0, 0); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.userData.persistent = true;
+    return { texture: tex, canvas: c, year };
+  });
+}
+// The phone (1 x 2 studs, black rounded body) with a live screen: draw(g, t, W, H) repaints a 360 x 720 canvas each frame.
+function livePhone(ctx, draw) {
+  const body = ctx.cache('ep01p5:phoneBody', () => { const P = new sets.Parts(); P.add('black:#141418', new RoundedBoxGeometry(1.0, 2.0, 0.1, 4, 0.12)); P.box('metal:#3a3a44', 0.3, 0.06, 0.02, [0.2, 0.86, -0.06]); return sets.persistTree(P.build(sets.M, { name: 'phoneBody' })); });
+  const W = 360, Hh = 720; const c = document.createElement('canvas'); c.width = W; c.height = Hh; const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 1.84), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.15, 1.15, 1.15), fog: false })); screen.position.z = 0.053;
+  const inner = new THREE.Group(); inner.add(body.clone(), screen); inner.scale.setScalar(S); const root = new THREE.Group(); root.name = 'p5Phone'; root.add(inner);
+  root.update = (t) => { draw(g, t, W, Hh); tex.needsUpdate = true; }; return root;
+}
+function phoneChrome(g, W, title = 'Theo', sub = 'just now') {
+  g.fillStyle = '#0c0c10'; g.fillRect(0, 0, W, 720); g.textBaseline = 'middle';
+  g.fillStyle = '#f4f2f8'; g.font = 'bold 22px "DejaVu Sans", sans-serif'; g.textAlign = 'left'; g.fillText('9:41', 20, 26); g.textAlign = 'right'; g.fillText('100%', W - 20, 26);
+  g.fillStyle = '#d9a52c'; g.beginPath(); g.arc(44, 84, 22, 0, Math.PI * 2); g.fill(); g.fillStyle = '#0c0c10'; g.font = 'bold 24px "DejaVu Sans", sans-serif'; g.textAlign = 'center'; g.fillText(title[0], 44, 85);
+  g.fillStyle = '#f4f2f8'; g.textAlign = 'left'; g.font = 'bold 26px "DejaVu Sans", sans-serif'; g.fillText(title, 78, 76); g.fillStyle = '#9a98a8'; g.font = '19px "DejaVu Sans", sans-serif'; g.fillText(sub, 78, 102);
+  g.fillStyle = '#3a3846'; g.fillRect(W / 2 - 60, 700, 120, 5);
+}
+// The narrator at 71 on the garden bench (backGarden benchSeatL, facing the house); `hold`: the phone held up in his
+// right hand at chest height, screen to his eyes (returns the phone's world pose helpers).
+const OLD_SIT = { ...K.POSES.sit, armLx: 34, armLz: -10, armRx: 34, armRz: -10, neckX: -4 };
+function oldOnBench(ctx, G, { face = 'content', name = 'heroOld', pose = OLD_SIT, extra = {} } = {}) {
+  const A = G.userData.anchors; const old = K.makeCharacter(name, { face, ...extra }); old.position.set(A.benchSeatL[0], A.benchSeatL[1] - 1.5 * S, A.benchSeatL[2]); old.rotation.y = Math.PI;
+  if (name === 'heroOldShort') old.position.y += K.seatOffset(old, 1.5);
+  K.setPose(old, pose); ctx.add(old); old.updateWorldMatrix(true, true); return old;
+}
+const HOLD_POSE = { ...K.POSES.sit, armRx: 58, armRz: -16, armLx: 30, armLz: -8, neckX: -16 };
+function holdPhone(old, phone, { lift = 0.05, out = 0.07, pose = HOLD_POSE } = {}) {
+  K.setPose(old, pose); old.updateMatrixWorld(true); const hand = worldOf(K.handSocket(old, 'R')); const eyes = worldOf(old.getObjectByName('head')).add(new THREE.Vector3(0, 0.03, 0));
+  const toE = eyes.clone().sub(hand).normalize(); phone.position.copy(hand).add(new THREE.Vector3(0, lift, 0)).addScaledVector(toE, out); phone.lookAt(eyes); phone.updateMatrixWorld(true);
+  return { hand, eyes, center: phone.position.clone() };
+}
+// The Polaroid date in the s90 pile: Theo's age on each (7, 10, 16, 25, 40) = years 1, 4, 10, 19, 34 after the move.
+const PILE_YEARS = [1, 4, 10, 19, 34];
+
 // ==================================================================================================================
 export const PART = 5;
 export const builders = {
@@ -344,7 +425,7 @@ export const builders = {
   dawn_theo_out: {
     quality: { shadows: 'pcfsoft' },
     build(ctx) {
-      const p = ctx.params; const H = dawnLot(ctx); hideBoard(H);
+      const p = ctx.params; const H = dawnLot(ctx); hideBoard(H); const f0 = H.ep01.gnomes.family.lawn0; if (f0) f0.visible = false;   // it stands between the lens and the door here
       const g = grandpaAt(ctx, { lantern: 0.5 }); ctx.shared.g = g;
       const tC = evT(ctx, 'came', 0.833); ctx.shared.tC = tC;
       ctx.shared.door = frontDoor(ctx, { light: 1.0, glow: 0.75, open: (t) => 1.75 * outCubic((t - tC) / (14 / 60)) });
@@ -483,11 +564,13 @@ export const builders = {
       const T = SE.ep01Street(ctx, { tod: 'dawn', lanterns: 0.5, truck: 'leaving', truckOpts: { t0: epT(ctx, 100.37), accel: 4, vmax: 6, balconyBox: false, dome: false } }); ctx.add(T); ctx.shared.T = T;
       const gp = T.ep01.grandpa; const gpos = worldOf(gp);
       const theo = theoWithWhale('theo', { face: 'content' }); theo.position.set(gpos.x + 0.9, 0, gpos.z + 0.55); theo.rotation.y = 0.5; K.setPose(theo, { ...THEO_BASE, armRz: 130 }); ctx.add(theo); ctx.shared.theo = theo;
-      // the lens rides in the cargo bay (povCamera) but keeps our lot in view as the street recedes (aim between the road
-      // centre and Grandpa's bed, pitch -6), the box edges framing the opening
-      const pov = T.ep01.truck.ep01.povCamera({ height: c.height_studs, back: 4.0, pitch: c.pitch_deg, fov: p.fov, yaw: 0 });
-      const aimW = gpos.clone(); aimW.y = 0.9; const tmpV = new THREE.Vector3();
-      ctx.camera.set({ pos: pov.pos, target: (t, o) => { const pp = pov.pos(t, tmpV); const tg = pov.target(t, o || new THREE.Vector3()); const a = aimW.clone().sub(pp).normalize().multiplyScalar(20).add(pp); return tg.lerp(a, 0.55); }, fov: pov.fov }).handheld({ rot: 0.3, pos: 0.004, freq: 1.1, seed: 88 }); basePush(ctx, { mode: 'dolly' });
+      // the lens rides at the back edge of the cargo bay (povCamera, far side of the floor), looking out across the open back
+      // to our lawn as it falls behind: the door rail and the box stack frame the left; the street and the lawns recede
+      const pov = T.ep01.truck.ep01.povCamera({ height: 7.5, back: 0.9, side: 3.0, pitch: c.pitch_deg, fov: p.fov, yaw: 0 });   // 7.5 studs (board 6): the lawns read over the fences
+      const aimW = gpos.clone().add(new THREE.Vector3(0.6, 0.9, 1.0)); const tmpV = new THREE.Vector3();
+      const dirAt = (t) => { const pp = pov.pos(t, tmpV).clone(); const st = pov.target(t, new THREE.Vector3()).sub(pp).normalize(); const a = aimW.clone().sub(pp).normalize(); return { pp, d: st.lerp(a, 0.72).normalize() }; };
+      ctx.camera.set({ pos: pov.pos, target: (t, o) => { const { pp, d } = dirAt(t); return (o || new THREE.Vector3()).copy(pp).addScaledVector(d, 3.0); }, fov: pov.fov })
+        .handheld({ rot: 0.3, pos: 0.004, freq: 1.1, seed: 88 }); basePush(ctx, { mode: 'dolly' });
       ctx.shared.rig = sets.dawn(ctx, { set: T, sun: { az: 92, el: 9 }, postOpts: { exposure: 1.6 } });
     },
     update(ctx, t) { const s = ctx.shared; s.T.ep01.update(t); K.setPose(s.theo, { ...THEO_BASE, armRz: 130 + 14 * Math.sin(2 * Math.PI * 1.8 * t), neckX: 4 }); },
@@ -504,14 +587,195 @@ export const builders = {
       const g = grandpaAt(ctx, { lantern: 0.5 }); ctx.shared.g = g;
       // tele from the truck lane (12.8 m = 40 studs from him), over our picket fence
       const v0 = P3(H.ep01.views.fromTruckTele.pos); const gdir = v0.clone().sub(P3(GP)).setY(0).normalize(); const cam = P3(GP).addScaledVector(gdir, 40 * S).add(new THREE.Vector3(0.45, 0, 0)); cam.y = 8.5 * S; const v = { pos: cam.toArray() };   // 8.5 studs high (board 4): over the picket fence
-      const theo = theoWithWhale('theoSocks', { face: (p.cast[1] && p.cast[1].face) || 'content' }); theo.position.set(...T_STEP); theo.rotation.y = yawTo(T_STEP, cam.toArray()) - 0.3; K.setPose(theo, { ...THEO_BASE, armRz: 125 }); ctx.add(theo); ctx.shared.theo = theo;
-      const tgt = P3(GP).lerp(P3(T_STEP), 0.3); tgt.y = 0.7;
-      ctx.camera.set({ pos: v.pos, target: tgt.toArray(), fov: p.fov }); basePush(ctx);
+      const theo = theoWithWhale('theoSocks', { face: (p.cast[1] && p.cast[1].face) || 'content' }); const tp = [GP[0] - 0.75, 0, GP[2] + 0.62]; theo.position.set(...tp); theo.rotation.y = yawTo(tp, cam.toArray()) - 0.3; K.setPose(theo, { ...THEO_BASE, armRz: 125 }); ctx.add(theo); ctx.shared.theo = theo;   // beside him (he has stepped round to wave the truck off)
+      const tgt = P3(GP).lerp(P3(tp), 0.2); tgt.y = 0.7;
+      ctx.camera.set({ pos: v.pos, target: tgt.toArray(), fov: 16 }); basePush(ctx);   // fov 16 (board 25): a tele CU of the two of them
       ctx.shared.yawAt = Math.atan2(-gdir.x, -gdir.z) / DEG;   // head yaw that points his face at the lens (the gnome faces -Z)
       ctx.camera.custom((st, t) => { st.px[0] += 2.2 * Math.sin(t * 37.0) + 0.8 * Math.sin(t * 71.3 + 1.1); st.px[1] += 2.0 * Math.sin(t * 43.7 + 0.4) + 0.9 * Math.sin(t * 89.1); });
       ctx.shared.rig = dawnLight(ctx, H, { sun: { az: 150, el: 10 } });
       ctx.shared.tE = evT(ctx, 0, 0.45);
     },
     update(ctx, t) { const s = ctx.shared; K.setGnomeHead(s.g, K.gnomeHeadTurn(t, s.tE, 0.8, s.yawAt, 0), 2, 0); K.gnomeIdle(s.g, t, { seed: 's89', amp: 0.2 }); K.setPose(s.theo, { ...THEO_BASE, armRz: 125 + 12 * Math.sin(2 * Math.PI * 1.8 * t) }); },
+  },
+  // s90 "Every spring for 60 years," (103.43-104.98) - top-down on the teak garden table at dusk (backGarden tableTop):
+  // the first spring's Polaroid lies on the table; the next ones drop one by one onto the pile on "spring" / "sixty" /
+  // "years" / 104.75 (f6230, 6254, 6268, 6285), each the same gnome under the same window with Theo beside him, older in
+  // each (ages 7 -> 10, 16, 25, 40). Mug and reading glasses beside the pile. Push 22 % (fov) + roll -2 deg. The photos are
+  // rendered once per worker from the 3D set in spring daylight (fx_photo_look on the prints only).
+  polaroid_stack: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G); const A = G.userData.anchors;
+      const t0s = [-1, ...[0, 1, 2, 3].map((i) => evT(ctx, i, 0.4 + 0.3 * i) - 0.26)];   // land on the event frames (0.28 s fall)
+      const cards = PILE_YEARS.map((y) => X.polaroid(ctx, { photo: photoTex(ctx, y), date: X.photoDate(y), seed: y, curl: 0.1 }));
+      const D = X.polaroidDrop(ctx, cards, { at: A.pile, t0s, dur: 0.28, height: 0.45, seed: 's90' }); ctx.add(D); ctx.shared.D = D;
+      const v = G.userData.views.tableTop; ctx.camera.set({ pos: up(A.pile, 11.5, -0.3, 0.01), target: up(A.pile, 0, -0.3), fov: p.fov }); basePush(ctx); paramRoll(ctx); void v;
+      ctx.shared.rig = G.ep01.light(ctx);
+      ctx.shared.fx = sparks(ctx, up(A.pile, 2.0), [1.6, 0.6, 1.4], 4, 's90', { colors: ['#ffe2c4', '#fff0dc'], px: [36, 60] });
+    },
+    update(ctx, t) { ctx.shared.D.update(t); ctx.shared.fx.update(t); },
+  },
+
+  // s91 "Theo's sent me a photo." (104.98-106.23) - ECU of the phone screen -> pull back x2.5 (outExpo, 0.9 s) + a linear
+  // 6 % push after: the phone is in an old, freckled hand with a mustard cardigan cuff (the narrator at 71, first old
+  // image), over his right shoulder on the garden bench at dusk. On "sent" (105.35, f6321) the ping banner drops in and
+  // Theo's new photo slides up: the gnome mossy and faded under the window, Theo at 66 with a thumbs-up, his granddaughter
+  // waving from the window.
+  phone_reveal: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G);
+      const old = oldOnBench(ctx, G, { face: 'content', pose: HOLD_POSE });
+      const newP = photoTex(ctx, 60, { blink: 0.55, girl: true, thumbs: true }).canvas, oldP = photoTex(ctx, 59, {}).canvas;
+      const tS = evT(ctx, 'sent', 0.367); ctx.shared.tS = tS;
+      const ph = livePhone(ctx, (g, t, W) => {
+        phoneChrome(g, W, 'Theo', t < tS ? 'last spring' : 'just now'); const u = outCubic((t - tS) / 0.3); const y1 = lerp(720, 150, u), y0 = 150 - 560 * u;
+        g.drawImage(oldP, 12, y0, W - 24, W - 24); g.fillStyle = '#c8c6d4'; g.font = '20px "DejaVu Sans", sans-serif'; g.textAlign = 'left'; g.fillText('Grandpa, year 59', 18, y0 + W + 4);
+        if (t >= tS) { g.drawImage(newP, 12, y1, W - 24, W - 24); g.fillStyle = '#f4f2f8'; g.font = 'bold 22px "DejaVu Sans", sans-serif'; g.fillText('60 springs! ♥', 18, y1 + W + 4);
+          const b = outCubic((t - tS) / 0.15); g.fillStyle = 'rgba(58,56,70,0.95)'; g.fillRect(14, -70 + 128 * b, W - 28, 58); g.fillStyle = '#f4f2f8'; g.font = 'bold 20px "DejaVu Sans", sans-serif'; g.fillText('Theo sent a photo', 30, -41 + 128 * b); }
+      });
+      ctx.add(ph); const hp = holdPhone(old, ph); ctx.shared.ph = ph;
+      // over his right shoulder (his right = +X here, the bench faces -Z): the lens looks past his ear at the screen
+      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const cdir = toE.applyAxisAngle(YAX, 38 * DEG); if (cdir.x > 0) cdir.applyAxisAngle(YAX, -76 * DEG);   // past his left cheek (the phone arm is his right), 38 deg off the screen axis
+      const cam = hp.center.clone().addScaledVector(cdir, 0.85).add(new THREE.Vector3(0, 0.15, 0));
+      ctx.camera.set({ pos: cam.toArray(), target: hp.center.toArray(), fov: p.fov });
+      ctx.camera.custom((st, t) => { st.scale *= t < 0.9 ? lerp(2.5, 1, outExpo(t / 0.9)) : 1 + 0.06 * clamp01((t - 0.9) / (ctx.shot.duration - 0.9)); });
+      ctx.shared.rig = G.ep01.light(ctx); warmKey(ctx, hp.hand.toArray(), { cd: 0.6, d: 0.6, color: '#ffd0a0' });
+    },
+    update(ctx, t) { ctx.shared.ph.update(t); },
+  },
+
+  // s92 "Grandpa, same flowerbed, same window," (106.23-108.27) - over his shoulder, top-down onto the phone: his thumb
+  // swipes on "same" (106.75, f6405) and "same" (107.65, f6459), each new photo sliding in from the right in 8 frames:
+  // "Grandpa" (close, mossy), "same flowerbed" (another year's tulips), "same window" (another year's curtains, Theo grey
+  // at the window). h 4.6, d 1.4, yaw 200, pitch -35, fov 45, push 19 %.
+  phone_swipes: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params, c = p.camera; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G);
+      const old = oldOnBench(ctx, G, { face: 'content', pose: HOLD_POSE });
+      const pics = [photoTex(ctx, 52, { view: 'close' }).canvas, photoTex(ctx, 33, { view: 'bed' }).canvas, photoTex(ctx, 45, { theo: 'window' }).canvas];
+      const caps = ['Grandpa', 'spring 33', 'spring 45'];
+      const ts = [evT(ctx, 0, 0.517), evT(ctx, 1, 1.417)]; ctx.shared.ts = ts;
+      const ph = livePhone(ctx, (g, t, W) => {
+        phoneChrome(g, W, 'Theo', 'Photos'); let k = 0; for (const t0 of ts) { const u = (t - t0) * 60 / 8; k += u >= 1 ? 1 : u > 0 ? outCubic(u) : 0; }
+        pics.forEach((pc, i) => { const x = 12 + (i - k) * W; if (x > W || x < -W) return; g.drawImage(pc, x, 150, W - 24, W - 24); g.fillStyle = '#c8c6d4'; g.font = '20px "DejaVu Sans", sans-serif'; g.textAlign = 'left'; g.fillText(caps[i], x + 6, 150 + W + 4); });
+        for (let i = 0; i < 3; i++) { g.fillStyle = Math.round(k) === i ? '#f4f2f8' : '#5a5868'; g.beginPath(); g.arc(W / 2 - 24 + 24 * i, 640, 6, 0, Math.PI * 2); g.fill(); }
+      });
+      const LOW = { ...HOLD_POSE, armRx: 46, armRz: -18, neckX: -24 }; K.setPose(old, LOW);
+      ctx.add(ph); const hp = holdPhone(old, ph, { pose: LOW, lift: 0.04, out: 0.1 }); ctx.shared.ph = ph; ctx.shared.old = old;
+      const back = new THREE.Vector3(0, 0, 1).applyAxisAngle(YAX, (c.yaw_deg - 180) * DEG); const cdir = back.clone().multiplyScalar(Math.cos(-c.pitch_deg * DEG)); cdir.y = Math.sin(-c.pitch_deg * DEG); cdir.normalize();
+      // over his left shoulder (the phone is in his right hand: from the right the arm hides it), looking down past his cheek
+      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const sd = toE.clone().applyAxisAngle(YAX, 40 * DEG); if (sd.x > 0) sd.applyAxisAngle(YAX, -80 * DEG);
+      const cam = hp.center.clone().addScaledVector(sd, 0.92).add(new THREE.Vector3(0, 0.55, 0)); void cdir;
+      ctx.camera.set({ pos: cam.toArray(), target: hp.center.toArray(), fov: p.fov }); basePush(ctx);
+      ctx.shared.rig = G.ep01.light(ctx); warmKey(ctx, hp.hand.toArray(), { cd: 0.6, d: 0.6, color: '#ffd0a0' });
+      ctx.shared.p0 = ph.position.clone();
+    },
+    update(ctx, t) { const s = ctx.shared; s.ph.update(t); let d = 0; for (const t0 of s.ts) { const u = (t - t0) * 60 / 8; if (u > -1 && u < 2) d += 0.006 * Math.sin(Math.PI * clamp01((u + 1) / 3)); } s.ph.position.copy(s.p0).add(new THREE.Vector3(0, -d, 0)); },
+  },
+
+  // s93 "always mid-blink." (108.27-109.15) - the newest photo fills the frame: the spring lot 60 years on, rendered live
+  // in full resolution with the print look (day grade, lifted warm blacks): Grandpa mossy and faded, caught mid-blink (lids
+  // 0.55), looking back at the lens; Theo at 66 (bald, grey beard) giving a thumbs-up beside him; Theo's granddaughter in
+  // whale pyjamas waving from the window above. A white print border pushes out of frame with the 25 % push. Frozen (a photo).
+  photo_midblink: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params; const st = stagePhoto(ctx, 60, { blink: 0.55, girl: true, thumbs: true }); ctx.add(st.H); st.people.forEach((x) => ctx.add(x));
+      const bp = P3(st.H.ep01.spots.bed0); const pos = new THREE.Vector3(bp.x - 0.45, 0.95, bp.z + 3.7), tgt = new THREE.Vector3(bp.x - 0.42, 1.12, bp.z); ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov }); basePush(ctx);
+      SE.heroLight(ctx, st.H, { tod: 'day', postOpts: { exposure: 1.1, grade: { temperature: 8, saturation: 0.9, outBlack: '#2a2018', outWhite: '#f4ecdc' } } });
+      // the print border (camera-locked card at t = 0; the fov push carries it out of frame like a push into the print)
+      const B = camBasis(ctx); const d = 0.6, hh = 2 * d * Math.tan((p.fov / 2) * DEG), ww = hh * 9 / 16;
+      const cv = document.createElement('canvas'); cv.width = 540; cv.height = 960; const g = cv.getContext('2d'); g.fillStyle = '#f4f0e6'; g.fillRect(0, 0, 540, 960); g.clearRect(16, 16, 508, 860);
+      g.fillStyle = '#22307a'; g.globalAlpha = 0.85; g.font = 'italic 600 40px "DejaVu Serif", serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(X.photoDate(60), 270, 918);
+      const bt = new THREE.CanvasTexture(cv); bt.colorSpace = THREE.SRGBColorSpace;
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(ww, hh), new THREE.MeshBasicMaterial({ map: bt, transparent: true, depthTest: false, depthWrite: false, fog: false }));
+      card.position.copy(B.pos).addScaledVector(B.fwd, d); card.quaternion.copy(ctx.cam.quaternion); card.renderOrder = 60; ctx.add(card);
+    },
+    update() {},
+  },
+
+  // s94 "I'm 71," (109.15-109.97) - CU of the narrator at 71 on the garden bench (grey hair and moustache, mustard
+  // cardigan, olive fishing hat, freckles), the phone lowered in his hand, content; warm side sun. Base push 10 % +
+  // punch-in x1.5 in 0.5 s from "seventy" (109.38) + roll 10 deg over the shot. h 3.5 (his seated eye line), d 2.6, yaw -15.
+  old_reveal: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params, c = p.camera; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G);
+      const old = oldOnBench(ctx, G, { face: (p.cast[0] && p.cast[0].face) || 'content', pose: { ...OLD_SIT, armRx: 40, neckX: 2 } });
+      const head = worldOf(old.getObjectByName('head'));
+      boardCam(ctx, [head.x, 0, head.z], { ref: [0, 0, -1], yaw: c.yaw_deg, dist: c.dist_studs, h: head.y / S, pitch: 0, fov: p.fov, aimY: head.y + 0.03 });
+      const m = c.move; ctx.camera.push(m.base_push ?? 0.1); const tP = epT(ctx, 109.383);
+      ctx.camera.custom((st, t) => { st.scale *= 1 + ((m.x ?? 1.5) - 1) * clamp01((t - tP) / (m.dur ?? 0.5)); }); paramRoll(ctx);
+      ctx.shared.rig = G.ep01.light(ctx); warmKey(ctx, head.toArray(), { cd: 0.9, d: 1.0, color: '#ffc896' });
+      ctx.shared.old = old;
+    },
+    update(ctx, t) { K.setPose(ctx.shared.old, { ...OLD_SIT, armRx: 40, neckX: 2, ...K.breath(t) }); },
+  },
+
+  // s95 "and my granddaughter says I'm getting" (109.97-111.30) / s96 "shorter." (111.30-111.78) - the s06 composition at
+  // dusk (backGarden benchMS = the s06 numbers: h 3.6, d 7.5, yaw -15, pitch -4, push 18 %): the narrator on the bench,
+  // content; his granddaughter beside him, hands on hips (arms 30 out), frowning at him (sideGlance). s96 is the jump cut:
+  // he is smaller (heroOldShort x0.85, sleeves over his hands), feet dangling, face wonder.
+  bench_granddaughter: {
+    quality: { shadows: 'pcfsoft' },
+    build(ctx) {
+      const p = ctx.params; const short = p.phase === 'short'; const G = SE.backGarden(ctx, { tod: 'dusk' }); ctx.add(G); const A = G.userData.anchors;
+      const face = (p.cast[0] && p.cast[0].face) || (short ? 'wonder' : 'content');
+      const old = oldOnBench(ctx, G, short ? { face, name: 'heroOldShort', pose: { ...K.CAST_POSES.sitDangle, neckX: 6, neckY: -14 } } : { face, pose: { ...OLD_SIT, neckY: -12 } });
+      const gd = K.makeCharacter('granddaughter', { face: 'sideGlance' }); const gp = [A.benchSeatL[0] - 0.64, 0, A.benchSeatL[2] - 0.32]; gd.position.set(...gp); const vb = G.userData.views.benchMS; gd.rotation.y = lerp(yawTo(gp, A.benchSeatL), yawTo(gp, vb.pos), 0.45);
+      K.setPose(gd, { armLz: 30, armRz: 30, armLx: -10, armRx: -10, neckY: 10 }); ctx.add(gd); ctx.add(sets.contactShadow(ctx, { pos: [gp[0], 0.005, gp[2]], radius: 0.36, opacity: 0.35 }));
+      const ph = livePhone(ctx, (g, t, W) => { phoneChrome(g, W, 'Theo', 'just now'); }); ph.position.set(A.benchSeatL[0] - 0.42, A.benchSeatL[1] + 0.02, A.benchSeatL[2] + 0.05); ph.rotation.set(-Math.PI / 2, 0, 0.4); ph.update(0); ctx.add(ph);
+      { const vb = G.userData.views.benchMS; const tg = P3(vb.target).add(new THREE.Vector3(-0.22, 0, 0)); ctx.camera.set({ ...vb, target: tg.toArray() }); } basePush(ctx);   // aim 0.22 m toward her: both in frame
+      ctx.shared.rig = G.ep01.light(ctx); const head = worldOf(old.getObjectByName('head')); warmKey(ctx, head.toArray(), { cd: 1.2, d: 1.4, color: '#ffc896' });
+      Object.assign(ctx.shared, { old, short, face });
+    },
+    update(ctx, t) { const s = ctx.shared; if (!s.short) K.setPose(s.old, { ...OLD_SIT, neckY: -12, ...K.breath(t) }); },
+  },
+
+  // s97 "I've already picked my window." (111.78-113.30) - the loop shot. Reverse angle from the granddaughter's lit window
+  // at night: he lowers himself into the striped deck chair facing it (12 frames), facing the lens, the TF moon behind his
+  // hat (az -16, el 32 of the view); a long linear dolly push (x1.8 at the target, 2.24 -> 0.96 m from his face) ends on an
+  // ECU of his face at frame 0's gnome-face position and size (eyes centre at 54 % / 56.5 % of the frame, head ~60 % of
+  // the width) with frame 0's -15 deg roll; on "window" (112.69, f6761) the dandelion clock beside the chair releases its
+  // seeds, which drift up across him. Warm window spill 2.8 cd from behind the lens, galaxy sky, night grade (frame 0).
+  final_window: {
+    build(ctx) {
+      const p = ctx.params, c = p.camera; const G = SE.backGarden(ctx, { tod: 'night' }); ctx.add(G); const A = G.userData.anchors;
+      const old = K.makeCharacter('heroOld', { face: (p.cast[0] && p.cast[0].face) || 'content' }); old.rotation.y = Math.PI; ctx.add(old); ctx.shared.old = old;
+      const SITP = { ...K.POSES.sit, bodyX: -14, armLx: 26, armRx: 26, armLz: -8, armRz: -8, neckX: 6 }; ctx.shared.SITP = SITP;
+      const seatPos = new THREE.Vector3(A.chairSeat[0], A.chairSeat[1] - 1.75 * S, A.chairSeat[2]); const standPos = seatPos.clone().add(new THREE.Vector3(0, 1.75 * S - 0.02, -0.28)); standPos.y = 0;
+      Object.assign(ctx.shared, { seatPos, standPos, tS0: 0.05 });
+      old.position.copy(seatPos); K.setPose(old, SITP); old.updateMatrixWorld(true); const face = worldOf(old.getObjectByName('head')).add(new THREE.Vector3(0, 0.02, 0));
+      // start: 7 studs out at h 3.4, looking at him (pitch ~ +2); end: 0.96 m from the face, framed and rolled like frame 0
+      const camY = c.height_studs * S; const P0 = new THREE.Vector3(face.x, camY, face.z - c.dist_studs * S); const T0 = face.clone();
+      const P1 = new THREE.Vector3(face.x + 0.01, face.y + 0.02, face.z - 1.02); const dir = face.clone().sub(P1).normalize(); const rt = new THREE.Vector3().crossVectors(dir, YAX).normalize(); const upv = new THREE.Vector3().crossVectors(rt, dir);
+      const r = -15 * DEG; const ox = 0.031 * 2 * 1.02 * Math.tan(31 * DEG) * 9 / 16 * 2, oy = -0.058 * 2 * 1.02 * Math.tan(31 * DEG) * 2;   // face offset in the frame (m at the face)
+      const vx = ox * Math.cos(r) - oy * Math.sin(r), vy = ox * Math.sin(r) + oy * Math.cos(r);
+      const T1 = face.clone().addScaledVector(rt, -vx).addScaledVector(upv, -vy);
+      const L = (a, b, k) => a.clone().lerp(b, k); const dur = ctx.shot.duration;
+      ctx.camera.set({ pos: (t, o) => (o || new THREE.Vector3()).copy(L(P0, P1, clamp01(t / dur))), target: (t, o) => (o || new THREE.Vector3()).copy(L(T0, T1, clamp01(t / dur))), fov: p.fov, roll: (t) => -15 * clamp01(t / dur) });
+      const camYaw = Math.atan2(T0.x - P0.x, -(T0.z - P0.z)) / DEG;
+      ctx.shared.rig = G.ep01.light(ctx, { tod: 'night', windowCd: 2.8, moon: { az: camYaw - 16, el: 32, size: 8, style: 'tf' }, preset: { skyPreset: C.GALAXY, skyOpts: { intensity: 1.5 }, postOpts: sets.postPreset('night', {}) } });
+      // the frame-0 face key: warm spill from behind the lens, upper left of the end framing (s01: 2.8 cd at the lens)
+      ctx.add(ctx.lights.point({ color: '#ffc08a', intensity: 2.8, pos: P1.clone().addScaledVector(rt, -0.25).add(new THREE.Vector3(0, 0.3, 0)).addScaledVector(dir, 0.15).toArray(), decay: 2 }));
+      coolRim(ctx, face.toArray(), { intensity: 0.7 });
+      // the dandelion clock: its seed head goes on "window", the seeds puff and drift up across him
+      const tW = evT(ctx, 'window', 0.9); ctx.shared.tW = tW; const rel = G.ep01.release; const seedsMesh = []; if (rel) rel.traverse((m) => { if (m.isMesh && /tulip:#f6f2ea|plastic:#efeae0/.test(m.name)) seedsMesh.push(m); }); ctx.shared.seedsMesh = seedsMesh;
+      const relTop = P3(A.release); ctx.shared.puff = sets.burst(ctx, { pos: relTop.toArray(), t0: tW, dur: 0.5, count: 0, puff: 14, puffColor: '#f4f0ea', spread: 0.35, ring: false, core: false, gravity: 0.15, seed: 's97puff' }); ctx.add(ctx.shared.puff);
+      const r2 = makeRng(hash32('s97seeds')); const seedMat = C.addSpriteMat(ctx.tex.sparkle({ points: 6, sharpness: 10, core: 0.7 }), '#fff6ee', 1.6); const seeds = [];
+      for (let i = 0; i < 14; i++) { const sp = C.pxSprite(seedMat.clone(), 0); sp.renderOrder = 20; sp.userData.d = { v: new THREE.Vector3((face.x - relTop.x) * (0.25 + 0.5 * r2()) + (r2() - 0.5) * 0.3, 0.25 + 0.35 * r2(), (face.z - relTop.z) * 0.3 * r2() - 0.15 * r2()), ph: r2() * 6, px: 14 + 12 * r2() }; ctx.add(sp); seeds.push(sp); }
+      Object.assign(ctx.shared, { seeds, relTop });
+      ctx.shared.fx = sparks(ctx, face.clone().add(new THREE.Vector3(0, 0.15, -0.6)), [1.4, 1.0, 1.0], 9, 's97', { px: [40, 76] });
+    },
+    update(ctx, t) {
+      const s = ctx.shared; const u = outQuad((t - s.tS0) / (12 / 60)); const old = s.old;
+      old.position.copy(s.standPos).lerp(s.seatPos, u); K.setPose(old, K.mixPose({ neckX: 4, armLx: 10, armRx: 10 }, s.SITP, u));
+      for (const m of s.seedsMesh) m.visible = t < s.tW;
+      for (const sp of s.seeds) { const d = sp.userData.d; const a = t - s.tW; sp.visible = a > 0; if (!sp.visible) continue; const k = 1 - Math.exp(-a * 2.2);
+        sp.position.copy(s.relTop).addScaledVector(d.v, k * 1.6).add(new THREE.Vector3(0.03 * Math.sin(t * 3 + d.ph), 0.1 * a, 0)); sp.userData.px = d.px * (0.8 + 0.2 * Math.sin(t * 5 + d.ph)); sp.material.opacity = Math.min(1, a * 6) * 0.9; }
+      s.puff.update(t); s.fx.update(t);
+    },
   },
 };
