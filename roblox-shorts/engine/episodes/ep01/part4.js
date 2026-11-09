@@ -29,7 +29,6 @@ import * as I from '../../kit/interiors.js';
 import * as X from '../../kit/fx_ep01.js';
 import { doorTex } from '../../kit/kitlib.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { springStep } from '../../core/anim.js';
 import { makeRng, hash32 } from '../../core/random.js';
 import * as C from './common.js';
 
@@ -171,16 +170,8 @@ function kneelHold(ctx, { face = 'heartfelt', pose = KNEEL_HOLD } = {}) {
   return { hero, g, setHold, fwd: dirOf(KNEEL_YAW) };
 }
 // The agent board by the path: seen from the house side its back face shows the FOR SALE text mirrored (props.js,
-// sets README note); in the house-side close-ups (s58, s65) it is only a background blur, so it is hidden there.
+// sets README note); in the house-side close-ups (s58, s65, s71 through the glass) it is only background, so it is hidden.
 function hideBoard(H) { const b = H.ep01.board; if (b) b.visible = false; }
-// Moles waiting just outside the light (s57's mounds carried on): eye pairs lit, snouts wriggling. `back` = the
-// horizontal direction they sit in (from the lantern), spread over `angles` (rad), at radius R (m) from `center`.
-function waitingMoles(ctx, center, back, { angles = [-0.4, -0.15, 0.18, 0.42], R = 5 * S + 0.6, scales = [1.15, 1.3, 1.2, 1.1], seed = 'p4moles', res = 112 } = {}) {
-  const c = P3(center); const b = P3(back).setY(0).normalize(); const base = Math.atan2(b.x, b.z);
-  const f = CR.moleField(ctx, { center: [c.x + b.x * R, c.z + b.z * R], size: [30, 26], res, seed, heads: 'snout' }); ctx.add(f.group);
-  angles.forEach((a, i) => { const th = base + a; const at = [c.x + Math.sin(th) * R, c.z + Math.cos(th) * R]; const k = f.add({ at, scale: scales[i % scales.length], face: [c.x, c.z] }); f.travel(k, [at, [at[0] + 0.05 * Math.cos(i), at[1] + 0.04 * Math.sin(i)]], 0, 0.15); f.eyes(k, -5, null); });
-  return f;
-}
 // The sepia / B&W flashback night on the lot (part1's sepiaLight): the night-lawn preset, then the flashback grade.
 function flashbackLight(ctx, H, grade = 'sepia', o = {}) {
   const { exposure, ...rest } = o;
@@ -274,10 +265,11 @@ export const builders = {
       // the eye pairs, placed by casting rays through the open right third of the frame (NDC inside the end-of-push
       // frame) onto the lawn: 3-4.6 m behind him, well outside the 5-stud ring
       ctx.camera.apply(0); const ray = new THREE.Raycaster(); const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.26); const spots = [];
-      const famPos = Object.values(H.ep01.gnomes.family || {}).map((o) => worldOf(o));
-      for (const [nx, ny] of [[0.4, -0.26], [0.56, -0.34], [0.66, -0.22], [0.5, -0.42], [0.3, -0.38]]) { ray.setFromCamera(new THREE.Vector2(nx, ny), ctx.cam); const q = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, q)) { const d = q.clone().sub(B.pos).setY(0); const L = Math.min(d.length(), 5.2); const at = B.pos.clone().add(d.setLength(L)).setY(0); if (famPos.every((f) => Math.hypot(f.x - at.x, f.z - at.z) > 0.7) && spots.length < 3) spots.push(at); } }
+      // two pairs flanking the lit family gnome in the visible strip of lawn right of his head (initial NDC; the 25 %
+      // push keeps x <= 0.8 in frame), 4-5 m behind him
+      for (const [nx, ny] of [[0.46, -0.31], [0.76, -0.27]]) { ray.setFromCamera(new THREE.Vector2(nx, ny), ctx.cam); const q = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, q)) { const d = q.clone().sub(B.pos).setY(0); spots.push(B.pos.clone().add(d.setLength(Math.min(d.length(), 5.4))).setY(0)); } }
       const f = CR.moleField(ctx, { center: [lan.x + B.fwd.x * 3.2, lan.z + B.fwd.z * 3.2], size: [30, 26], res: 96, seed: 's58', heads: 'snout' }); ctx.add(f.group);
-      spots.forEach((q, i) => { const k = f.add({ at: [q.x, q.z], scale: [1.3, 1.15, 1.25][i], face: [B.pos.x, B.pos.z] }); f.eyes(k, -5, null); f.travel(k, [[q.x, q.z], [q.x + 0.04 * Math.cos(i), q.z + 0.04 * Math.sin(i)]], 0, 0.12); });
+      spots.forEach((q, i) => { const k = f.add({ at: [q.x, q.z], scale: [1.2, 1.1, 1.25][i], face: [B.pos.x, B.pos.z] }); f.eyes(k, -5, null); f.travel(k, [[q.x, q.z], [q.x + 0.04 * Math.cos(i), q.z + 0.04 * Math.sin(i)]], 0, 0.12); });
       ctx.shared.f = f;
       // the reflector eyes as small screen-constant amber glows on the kit's eye positions (at 4-5 m the lit eye domes
       // are a few pixels: the glow is what reads in the dark, like the references' eyes in the night)
@@ -332,10 +324,10 @@ export const builders = {
       const A0 = ge.clone().lerp(face, 0.55); const th = worldOf(theo.getObjectByName('head')); const A1 = th.clone().lerp(P3(WIN), 0.45);
       const ang = (v) => { const d = v.clone().sub(cp); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; };
       const [y0, p0] = ang(A0), [y1, p1] = ang(A1); let dy = y1 - y0; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
-      const tw = tOnset(ctx, TOWARD_ONSET); const wd = c.move.dur ?? 0.5; const rise = 0.42;   // the lens rises 0.42 m in the whip (Theo, asleep on the floor mattress, clears the sill)
+      const tw = tOnset(ctx, TOWARD_ONSET); const wd = c.move.dur ?? 0.5; const rise = 0.62;   // the lens rises 0.62 m in the whip (Theo, asleep on the floor mattress, clears the sill)
       // ... and swings 1.1 m right and 1 m toward the house during the whip: Theo sleeps at the room's left end, seen through the glass only from
       // right of the window centre (from the start position he is behind the frame's left edge)
-      const cp1 = new THREE.Vector3(WIN[0] + 0.15, cp.y + rise, GUARD[2] - 0.95);   // in front of the gnome's head (the path passes 0.3 m clear of it) const [y1b, p1b] = (() => { const d = A1.clone().sub(cp1); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; })();
+      const cp1 = new THREE.Vector3(WIN[0] + 0.15, cp.y + rise, GUARD[2] - 0.95); /* in front of the gnome's head: the path passes 0.3 m clear of it */ const [y1b, p1b] = (() => { const d = A1.clone().sub(cp1); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; })();
       let dyb = y1b - y0; while (dyb > Math.PI) dyb -= 2 * Math.PI; while (dyb < -Math.PI) dyb += 2 * Math.PI;
       Object.assign(ctx.shared, { tw, wd, dy: dyb, cp, A0, A1 }); void dy; void p1;
       const posAt = (t, o) => { const u = inOutSine((t - tw) / wd); return (o || new THREE.Vector3()).copy(cp).lerp(cp1, u); };
@@ -385,7 +377,7 @@ export const builders = {
       ctx.camera.set({
         pos: (t, o) => { const u = outCubic(t / cd); return (o || new THREE.Vector3()).copy(P0).lerp(P1, u); },
         // the target slides from the ground point under the lens to the window; a small -z lead keeps "up" = the house
-        target: (t, o) => { const u = outCubic(t / cd); const q = (o || new THREE.Vector3()).copy(T0).lerp(T1, u); return q; },
+        target: (t, o) => { const u = outCubic(t / (cd * 0.75)); const q = (o || new THREE.Vector3()).copy(T0).lerp(T1, u); return q; },   // the aim settles on the window a little before the lens lands (mid-crane it would sweep the porch column)
         fov: (t) => lerp(fov0, v.fov, outCubic(t / cd)), roll: (t) => roll0 * (1 - outCubic(t / cd)) });
       basePush(ctx, { Z: c.move.base_push ?? 0.1 });
       flashbackLight(ctx, H, 'sepia', { subject: { pos: [kink.x, 3.6 * S, kink.z], cd: 0.8, color: '#ffe6c8' }, exposure: 1.15 });
@@ -512,7 +504,7 @@ export const builders = {
   // h 2.2, d 4.0 (from the window), yaw 0, pitch 6, push 19 %. Bedroom grade.
   big_in_window: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true }); const R = roomFrame(H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true }); const R = roomFrame(H); hideBoard(H);
       // the hero outside right at the glass, Grandpa tucked under his left arm (in front of him he would be inside the
       // wall): his head and shoulders fill the window opening, the lantern at his side lights his face gold from below
       const HP = [WIN[0] + 0.12, BED[1], WIN[2] + 0.95 * S];
@@ -647,18 +639,19 @@ export const builders = {
       // placing pose is solved so the hands' midpoint sits at his belly (0.85 stud) over the soil, and the hero slides so
       // that point is the landing spot.
       const GRIP = 0.85 * S; const D = new THREE.Vector3(BED[0] + 0.38, BED[1], BED[2] + 0.3);   // front-right edge of the hole (the sticker between them)
-      const PL = { ...K.POSES.kneelPlace, armLz: -19, armRz: -19, neckX: -24 };   // hands on his sides
+      const PL = { ...K.POSES.kneelPlace, armLz: -24, armRz: -24, neckX: -24 };   // hands on his sides
       const mid = solveArm(hero, PL, 'armLx', D.y + GRIP, { lo: 20, hi: 140, both: 'armRx' });
       hero.position.x += D.x - mid.x; hero.position.z += D.z - mid.z; hero.updateMatrixWorld(true);
       const P0 = { ...PL, bodyX: 30, armLx: PL.armLx - 18, armRx: PL.armRx - 18, neckX: -20 };
-      const P2 = { ...PL, armLx: PL.armLx - 34, armRx: PL.armRx - 34, armLz: 18, armRz: 18, bodyX: 30, neckX: -18 };
+      const P2 = { ...PL, armLx: PL.armLx - 16, armRx: PL.armRx - 16, armLz: 8, armRz: 8, bodyX: 40, neckX: -20 };   // open and lift a little: the empty hands stay in frame
       Object.assign(ctx.shared, { PL, P0, P2, D, GRIP });
       ctx.add(sets.contactShadow(ctx, { pos: [hero.position.x, BED[1] + 0.005, hero.position.z], radius: 0.5, opacity: 0.35 }));
       const gs = sets.contactShadow(ctx, { pos: [D.x, BED[1] + 0.006, D.z], radius: 0.24, opacity: 0.45 }); ctx.add(gs); ctx.shared.gs = gs;
-      // the lens on the window side, slightly high, yaw -20 off the gnome's front: his face as he settles back in, the
-      // hands on his sides, the hero kneeling behind; in front of the sill, at the pane's height (1.05 m: Theo's window
-      // looking down), 2.0 studs out, so it looks down about 45 deg instead of 30.
-      boardCam(ctx, D, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: 2.0, h: (1.05 - BED[1]) / S, ground: BED[1], fov: p.fov, aimY: D.y + 0.3 }); basePush(ctx);
+      // the lens on the window side, slightly high, 20 deg off the gnome's front on the hole's side (the tulips on the
+      // other side hide his hands): his face as he settles back in, the hands on his sides, the hole and the $4.99 sticker,
+      // the hero kneeling behind. In front of the sill, at the pane's height (1.05 m: Theo's window looking down), 2.0
+      // studs out, so it looks down about 45 deg instead of 30; fov 62 (board 55) keeps both hands in the 9:16 width.
+      boardCam(ctx, D, { ref: [0, 0, -1], yaw: Math.abs(c.yaw_deg), dist: 2.0, h: (1.05 - BED[1]) / S, ground: BED[1], fov: p.fov + 7, aimY: D.y + 0.28 }); basePush(ctx);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 1, cd: 1.6, maxD: 10 }, postOpts: CU_GRADE });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.0 }); ctx.shared.fam = familyLanterns(ctx, H);
       // Theo's window spill from above-behind the lens (the gnome faces it) + a soft warm key on the hero's face
