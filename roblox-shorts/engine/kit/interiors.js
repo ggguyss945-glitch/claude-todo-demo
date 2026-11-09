@@ -54,7 +54,7 @@ export function XM(key) {
     case 'wp': m = new THREE.MeshStandardMaterial({ map: wallpaperTex(a, b), normalMap: TX.plaster({ color: '#808080', bump: 1, normal: 1.6, seed: 4 }).normalMap, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.9 }); break;
     case 'floor': m = new THREE.MeshStandardMaterial({ ...TX.woodPlanks({ color: a || '#9f3305', planks: 5, joints: 1, gap: 0.008, gapColor: '#3a1206', variation: 0.16, grain: 0.9, gloss: 0.7, seed: 8 }).mat, roughness: 0.32 }); break;
     case 'ceil': m = new THREE.MeshStandardMaterial({ ...TX.plaster({ color: a || '#b28dc0', mottle: 0.04, speckle: 0.03, seed: 5 }).mat, roughness: 0.95 }); break;
-    case 'fab': m = new THREE.MeshStandardMaterial({ ...TX.fabric({ color: a || '#a93298', threads: 64, contrast: 0.16, seed: 3 }).mat, roughness: 0.95 }); break;
+    case 'fab': m = new THREE.MeshStandardMaterial({ ...TX.fabric({ color: a || '#a93298', threads: 64, contrast: 0.16, seed: 3 }).mat, roughness: 0.95, side: THREE.DoubleSide }); break; // drapes are seen from both sides
     case 'rug': m = new THREE.MeshStandardMaterial({ ...TX.carpet({ color: a || '#e58fc2', seed: 6, fibre: 0.45 }).mat, roughness: 1 }); break;
     case 'glow': m = new THREE.MeshBasicMaterial({ color: new THREE.Color(a || '#fffee1').multiplyScalar(parseFloat(b || '2.5')), side: THREE.DoubleSide }); break;
     case 'gloss': m = new THREE.MeshStandardMaterial({ ...TX.woodPlanks({ color: a || '#efeee9', gapColor: a || '#efeee9', planks: 3, joints: 0, gap: 0, grain: 0.25, variation: 0.02, seed: 9, normal: 0.4 }).mat, roughness: 0.35 }); break;
@@ -344,12 +344,12 @@ function gloStarsGeo(n, area, seed) { // glow-in-the-dark star stickers (5-point
 // ------------------------------------------------------------------ THE OLD BEDROOM (room frame, studs)
 export const ROOM = { x0: -5.2, x1: 8.8, d: 12, h: 10, hole: [-2, 2, 1.6, 6.6], wallT: 0.6 };
 export const ROOM_ERAS = {
-  hero11: { wall: ['fabric', '#4958a0'], ceil: '#b28dc0', curtain: '#8a5aa0', bed: 'carved', bedAt: [-1.2, -7.85, -PI / 2], stickers: true, posters: ['rocket', 'dino', 'planets'], shelf: true, rug: '#e58fc2', nightstand: true, clock: true, toys: true },
-  theo: { wall: ['fabric', '#4958a0'], ceil: '#b28dc0', curtain: '#8a5aa0', bed: 'mattress', bedAt: [0.6, -4.3, 0], projector: true, boxes: true, ghosts: true, rug: null, nightstand: false, clock: true, lampOnBox: true, blanket: '#4f7ac8' },
-  hero5: { wall: ['fabric', '#4958a0'], ceil: '#b28dc0', curtain: '#8a5aa0', bed: 'small', bedAt: [0.6, -4.3, 0], stickers: true, posters: ['rocket', 'race'], shelf: true, rug: '#e58fc2', nightstand: true, clock: true, toys: true },
+  hero11: { wall: ['fabric', '#7486d4'], ceil: '#c8a8dc', curtain: '#8a5aa0', bed: 'carved', bedAt: [-1.2, -7.85, -PI / 2], stickers: true, posters: ['rocket', 'dino', 'planets'], shelf: true, rug: '#e58fc2', nightstand: true, clock: true, toys: true },
+  theo: { wall: ['fabric', '#7486d4'], ceil: '#c8a8dc', curtain: '#8a5aa0', bed: 'mattress', bedAt: [0.6, -4.3, 0], projector: true, boxes: true, ghosts: true, rug: null, nightstand: false, clock: true, lampOnBox: true, blanket: '#4f7ac8' },
+  hero5: { wall: ['fabric', '#7486d4'], ceil: '#c8a8dc', curtain: '#8a5aa0', bed: 'small', bedAt: [0.6, -4.3, 0], stickers: true, posters: ['rocket', 'race'], shelf: true, rug: '#e58fc2', nightstand: true, clock: true, toys: true },
   dad60s: { wall: ['stripe', '#c98a92'], ceil: '#ece0d4', curtain: '#e8dcc8', bed: 'iron', bedAt: [0.6, -4.3, 0], posters: ['race'], shelf: true, rug: '#8a6a5a', nightstand: true, clock: true, floor: '#7a3a1a' },
   cousin90s: { wall: ['floral', '#e8c75a'], ceil: '#f2e8d4', curtain: '#e88aa8', bed: 'bunk', bedAt: [1.0, -9.6, 0], posters: ['band', 'cat'], shelf: true, rug: '#7ac0d8', nightstand: true, clock: true, toys: true },
-  later: { wall: ['fabric', '#4958a0'], ceil: '#b28dc0', curtain: '#5a8ac0', bed: 'carved', bedAt: [-1.2, -7.85, -PI / 2], duvet: '#3a6ab8', stickers: false, posters: ['planets'], shelf: true, rug: '#7ac0d8', nightstand: true, clock: true },
+  later: { wall: ['fabric', '#7486d4'], ceil: '#c8a8dc', curtain: '#5a8ac0', bed: 'carved', bedAt: [-1.2, -7.85, -PI / 2], duvet: '#3a6ab8', stickers: false, posters: ['planets'], shelf: true, rug: '#7ac0d8', nightstand: true, clock: true },
 };
 function registerBedroomDecals() {
   decalMat('ticking', ctex('ticking', 256, 256, (g, W, H) => { g.fillStyle = '#ecebf2'; g.fillRect(0, 0, W, H); for (let x = 0; x < W; x += 32) { g.fillStyle = '#7a8ac8'; g.fillRect(x + 4, 0, 5, H); g.fillRect(x + 14, 0, 2, H); } for (let k = 0; k < 400; k++) { g.fillStyle = 'rgba(0,0,0,0.03)'; g.fillRect((k * 37) % W, (k * 91) % H, 8, 2); } }, { wrap: true }), { roughness: 0.9 });
@@ -369,7 +369,7 @@ export function bedroomRoom(ctx, o = {}) {
     const R = ROOM; const [hx0, hx1, hy0, hy1] = R.hole; const P = new Parts(); const r = makeRng(hash32('bedroom', era));
     const wall = `wp:${E.wall[0]}:${E.wall[1]}`;
     // shell (inward faces): floor, ceiling, back, sides, window wall with the hole
-    rect(P, 'floor:' + (E.floor || '#9f3305'), [0, 1, 0], [R.x0, R.x1], [0, 0], [-R.d, 0]);
+    rect(P, 'floor:' + (E.floor || '#9f3305'), [0, 1, 0], [R.x0, R.x1], [0.03, 0.03], [-R.d, 0]); // 0.03 above the foundation top (no z-fight)
     rect(P, 'ceil:' + E.ceil, [0, -1, 0], [R.x0, R.x1], [R.h, R.h], [-R.d, 0]);
     rect(P, wall, [0, 0, 1], [R.x0, R.x1], [0, R.h], [-R.d, -R.d]);
     rect(P, wall, [1, 0, 0], [R.x0, R.x0], [0, R.h], [-R.d, 0]); rect(P, wall, [-1, 0, 0], [R.x1, R.x1], [0, R.h], [-R.d, 0]);
@@ -421,11 +421,11 @@ export function bedroomRoom(ctx, o = {}) {
     // camera anchors (room-local studs; heroLot converts them to metres): pos, target, fov
     const s = A.sleeper;
     A.views = {
-      toWindow: { pos: [0.4, 3.0, -R.d + 2.6], target: [0, 3.6, 0], fov: 70 },                     // s66/s67: bed in the foreground, the window behind
+      toWindow: { pos: [3.2, 4.8, -R.d + 1.2], target: [-0.2, 2.8, 0], fov: 70 },                   // s66/s67: bed in the foreground, the window behind
       sleeperCU: { pos: [s.body[0] + 2.0, s.top + 0.9, s.body[2] - 3.4], target: [s.head[0] + 0.4, s.top + 0.4, s.head[2]], fov: 70 }, // s44 CU low
       fromBed: { pos: [0.2, 2.2, -R.d + 4.2], target: [0, 4.0, 0], fov: 70 },                      // s55 / s71: sleeper low in frame, window above
       sleeperHigh: { pos: [s.head[0] + 1.2, s.top + 3.2, s.head[2] - 1.0], target: [s.head[0], s.top + 0.3, s.head[2]], fov: 70 }, // s72 CU high
-      otsWindow: { pos: [1.2, 4.9, -2.6], target: [-0.4, 3.2, 3.0], fov: 70 },                    // s17 OTS: a figure at the window, the lawn below
+      otsWindow: { pos: [1.5, 5.7, -4.8], target: [-0.3, 3.0, 2.5], fov: 70 },                    // s17 OTS: a figure at the window (stand at z -1.2), the lawn below
     };
     root.userData.anchors = JSON.parse(JSON.stringify(A)); root.userData.era = era;
     return root;
@@ -583,7 +583,7 @@ export function hall(ctx, o = {}) {
     const ck = persistTree(clockMesh(1.0)); ck.position.set(-1.8, 9.2, dz + 0.14); inner.add(ck); setClock(ck, 8, 59, 59);
     const A = { clock: [-1.8, 9.2, dz + 0.3], door: [0, 3.75, dz], sleepingBag: [-1.9, 0.8, dz + 2.6], boxes: [2.4, 1.0, dz + 2.3], lamp: [0, H - 1.0, -4] };
     // s26: INS h 6.5, d 3.0, pitch -15, fov 50 (clock above, the bag and boxes below by the door)
-    A.views = { clockINS: { pos: [-0.6, 6.5, dz + 9.0], target: [-0.3, 4.2, dz], fov: 50 }, hallWide: { pos: [0, 5.2, Z1 - 1], target: [0, 3.5, dz], fov: 70 } };
+    A.views = { clockINS: { pos: [-0.6, 6.8, dz + 12.5], target: [-0.6, 5.5, dz], fov: 50 }, hallWide: { pos: [0, 5.2, Z1 - 1], target: [0, 3.5, dz], fov: 70 } };
     inner.userData.anchors = A; return inner;
   });
   const c = inner.clone(true); const root = wrapRoom(c, c.userData.anchors, 'hall'); root.userData.clock = c.getObjectByName('wallClock');
@@ -602,9 +602,9 @@ function sevenSegTex(text, colon = true) {
     g.fillStyle = '#0a0204'; g.fillRect(0, 0, W, H);
     const seg = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
     const dig = (x, d, on = true) => { const w = 34, h = 64, t = 8, y = 16; const S = { a: [x + t, y, w - 2 * t, t], b: [x + w - t, y + t, t, h / 2 - t], c: [x + w - t, y + h / 2, t, h / 2 - t], d: [x + t, y + h - t, w - 2 * t, t], e: [x, y + h / 2, t, h / 2 - t], f: [x, y + t, t, h / 2 - t], g: [x + t, y + h / 2 - t / 2, w - 2 * t, t] };
-      for (const k of 'abcdefg') { const lit = on && (seg[d] || '').includes(k); g.fillStyle = lit ? '#ff3a28' : 'rgba(255,58,40,0.08)'; g.fillRect(...S[k]); } };
+      for (const k of 'abcdefg') { const lit = on && (seg[d] || '').includes(k); g.fillStyle = lit ? '#ff2414' : 'rgba(255,40,24,0.08)'; g.fillRect(...S[k]); } };
     const [hh, mm] = text.split(':'); const xs = [20, 66, 140, 186]; [hh[0], hh[1], mm[0], mm[1]].forEach((d, i) => dig(xs[i], d, !(i === 0 && d === '0')));
-    if (colon) { g.fillStyle = '#ff3a28'; g.fillRect(118, 34, 9, 9); g.fillRect(118, 60, 9, 9); }
+    if (colon) { g.fillStyle = '#ff2414'; g.fillRect(118, 34, 9, 9); g.fillRect(118, 60, 9, 9); }
   });
 }
 function stickyTex(text = 'LEAVE 6 AM') {
@@ -625,32 +625,32 @@ function cabStreetTex() {
 }
 export function truckCab(ctx, o = {}) {
   const inner = ctx.cache('ep01:truckCab:' + JSON.stringify(o), () => {
-    const P = new Parts(); const dk = 'plastic:#2a2830', W = 9;
+    const P = new Parts(); const dk = 'plastic:#4a4656', W = 9;
     P.box(dk, W, 2.4, 2.6, [0, 3.0, -3.2], null, { bevel: 0.2 }); P.box(dk, W, 0.8, 1.4, [0, 4.4, -3.9], [-0.3, 0, 0], { bevel: 0.15 });
     P.box('plastic:#1a181e', 2.6, 1.2, 0.3, [-2.2, 4.05, -2.55], [-0.35, 0, 0], { bevel: 0.08 }); // instrument binnacle
     for (const x of [-2.9, -1.5]) P.add('tex:clockFace', new THREE.CircleGeometry(0.45, 20), [x, 4.1, -2.38], [-0.35, 0, 0]);
-    P.box('plastic:#1a181e', 2.2, 0.9, 0.2, [1.4, 3.75, -1.95], [-0.2, 0, 0], { bevel: 0.05 }); // clock/radio panel
-    for (let i = 0; i < 4; i++) P.cyl('metal:#5a5a62', 0.12, 0.12, 0.15, 10, [0.6 + i * 0.5, 3.35, -1.85], [PI / 2 - 0.2, 0, 0]);
-    P.box('plastic:#3a3640', W, 0.3, 4, [0, 0.15, -1]); // floor
+    P.box('plastic:#24222a', 2.0, 0.9, 0.2, [0.0, 3.75, -1.95], [-0.2, 0, 0], { bevel: 0.05 }); // clock/radio panel right of the wheel
+    for (let i = 0; i < 4; i++) P.cyl('metal:#7a7a84', 0.1, 0.1, 0.15, 10, [-0.6 + i * 0.4, 3.32, -1.82], [PI / 2 - 0.2, 0, 0]);
+    P.box('plastic:#3a3640', W, 0.3, 11, [0, 0.15, 1.2]); P.box(dk, W, 1.9, 1.3, [0, 1.0, -2.6], null, { bevel: 0.1 }); P.box('rug:#2a2834', 3.2, 0.06, 2.6, [-2.2, 0.33, 0.2]); // floor, lower dash, a floor mat
     // windscreen frame + glass + the street card beyond
     for (const s of [-1, 1]) P.box(dk, 0.5, 4.6, 0.5, [s * (W / 2 - 0.25), 6.6, -4.4], [0.25 * 0, 0, 0]); P.box(dk, W, 0.5, 0.6, [0, 9.0, -4.6]);
     P.add('tex:cabStreet', new THREE.PlaneGeometry(W * 2.6, 9), [0, 6.8, -14]); decalMat('cabStreet', cabStreetTex(), { basic: true, k: 0.75 }); decalMat('clockFace', clockFaceTex(), { roughness: 0.4 });
     // steering wheel (driver left), column
     P.push(trs([-2.2, 4.0, -1.6], [-1.05, 0, 0])); P.add('black:#16161a', new THREE.TorusGeometry(1.25, 0.14, 10, 36)); for (const a of [0, 2.1, 4.2]) P.bar('black:#16161a', [0, 0, 0], [Math.cos(a) * 1.2, Math.sin(a) * 1.2, 0], 0.18, 0.1); P.cyl('black:#16161a', 0.35, 0.35, 0.3, 16, [0, 0, 0], [PI / 2, 0, 0]);
-    P.add('tex:sticky', new THREE.PlaneGeometry(0.85, 0.85), [0.15, -0.55, 0.2], [0, 0, 0.12]); P.pop(); decalMat('sticky', stickyTex(o.note || 'LEAVE 6 AM'), { roughness: 0.8 });
+    P.add('tex:sticky', new THREE.PlaneGeometry(0.8, 0.8), [0.62, -0.18, 0.2], [0, 0, 0.12]); P.pop(); decalMat('sticky', stickyTex(o.note || 'LEAVE 6 AM'), { roughness: 0.8 });
     P.cyl('black:#16161a', 0.18, 0.2, 2.0, 10, [-2.2, 3.3, -2.3], [-1.05, 0, 0]);
     // seat backs (foreground, blurred out of frame), a coffee cup in the holder, a map
-    P.add('fab:#4a4a58', new RoundedBoxGeometry(3.4, 4.2, 1.0, 3, 0.3), [-2.2, 3.6, 3.6]); P.cyl('plastic:#f4f0ea', 0.22, 0.17, 0.5, 14, [0.6, 3.15, -1.5]); P.cyl('plastic:#3a2a1a', 0.23, 0.23, 0.06, 14, [0.6, 3.42, -1.5]);
+    P.cyl('plastic:#f4f0ea', 0.22, 0.17, 0.5, 14, [0.6, 3.15, -1.5]); P.cyl('plastic:#3a2a1a', 0.23, 0.23, 0.06, 14, [0.6, 3.42, -1.5]);
     P.add('tex:mapCard', new THREE.PlaneGeometry(1.6, 1.1), [3.0, 4.42, -3.6], [-PI / 2 + 0.3, 0, 0.2]); decalMat('mapCard', ctex('mapCard', 128, 96, (g, W2, H2) => { g.fillStyle = '#efe6cc'; g.fillRect(0, 0, W2, H2); g.strokeStyle = '#c8402a'; g.lineWidth = 3; g.beginPath(); g.moveTo(10, 80); g.bezierCurveTo(40, 20, 80, 70, 118, 14); g.stroke(); g.strokeStyle = '#5a8ac0'; g.lineWidth = 2; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(0, i * 16); g.lineTo(W2, i * 16 + 10); g.stroke(); } }), { roughness: 0.8 });
     const inner = new THREE.Group(); inner.name = 'truckCab'; inner.add(persistTree(P.build(XM, { name: 'cabMesh' })));
     // LED clock: two textures (colon on/off) swapped at 1 Hz
-    const led = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), decalMat('led:on:' + (o.time || '11:52'), sevenSegTex(o.time || '11:52', true), { basic: true, k: 2.2 }));
-    decalMat('led:off:' + (o.time || '11:52'), sevenSegTex(o.time || '11:52', false), { basic: true, k: 2.2 });
-    led.position.set(1.4, 3.78, -1.83); led.rotation.x = -0.2; led.name = 'ledClock'; inner.add(persistTree(led));
+    const led = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), decalMat('led:on:' + (o.time || '11:52'), sevenSegTex(o.time || '11:52', true), { basic: true, k: 1.5 }));
+    decalMat('led:off:' + (o.time || '11:52'), sevenSegTex(o.time || '11:52', false), { basic: true, k: 1.5 });
+    led.position.set(0.0, 3.8, -1.83); led.rotation.x = -0.2; led.name = 'ledClock'; inner.add(persistTree(led));
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(W - 1, 4.2), new THREE.MeshStandardMaterial({ color: '#202848', transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.3, depthWrite: false })); glass.position.set(0, 6.6, -4.45); glass.rotation.x = -0.25; inner.add(persistTree(glass));
-    const A = { led: [1.4, 3.78, -1.83], note: [-2.05, 3.5, -1.4], wheel: [-2.2, 4.0, -1.6], windscreen: [0, 6.6, -4.5] };
+    const A = { led: [0.0, 3.8, -1.83], note: [-1.6, 3.85, -1.45], wheel: [-2.2, 4.0, -1.6], windscreen: [0, 6.6, -4.5] };
     // s48: INS h 3.6, d 1.6, yaw -10, pitch -8, fov 45: the LED clock and the sticky note together
-    A.views = { clockINS: { pos: [0.2, 5.2, 2.6], target: [-0.2, 3.7, -1.7], fov: 45 }, ledECU: { pos: [1.6, 4.1, 0.2], target: [1.4, 3.78, -1.83], fov: 45 } };
+    A.views = { clockINS: { pos: [-0.6, 5.4, 4.0], target: [-0.6, 3.75, -1.7], fov: 50 }, ledECU: { pos: [0.1, 4.2, 0.4], target: [0.0, 3.8, -1.83], fov: 45 } };
     inner.userData.anchors = A; return inner;
   });
   const c = inner.clone(true); const root = wrapRoom(c, c.userData.anchors, 'truckCab');
@@ -685,7 +685,7 @@ export function bedroomNight(ctx, o = {}) {
   const rig = { lights: [], update: () => {} }; const H = o.set && o.set.ep01 ? o.set.ep01 : null;
   const A = H ? H.room : (o.room ? o.room.userData.anchors : null);
   rig.sky = makeSky(ctx, { preset: o.skyPreset || 'galaxy', moon: o.moonDisc ?? { az: -20, el: 28, size: 7, style: 'tf' } }); ctx.add(rig.sky);
-  rig.hemi = ctx.add(ctx.lights.hemi('#b9a8ff', '#5a2a4a', o.hemiIntensity ?? 1.3));
+  rig.hemi = ctx.add(ctx.lights.hemi('#b9a8ff', '#5a2a4a', o.hemiIntensity ?? 1.8));
   rig.key = ctx.add(keyLight(ctx, { color: '#e8deff', intensity: o.key ?? 1.0, el: 45, side: 0.55 }));
   if (A) {
     if (A.lamp && o.lamp !== 0 && o.lamp !== false) { const p = new THREE.Vector3(...A.lamp); rig.lamp = ctx.add(ctx.lights.point({ color: '#ffe6c0', intensity: o.lamp ?? 4, pos: p.toArray(), decay: 2 })); rig.lights.push(rig.lamp); ctx.add(haloSprite(p, '#fff0d0', 0.8, 0.4)); }
@@ -694,19 +694,19 @@ export function bedroomNight(ctx, o = {}) {
     if (win && o.moon !== false) { const w = new THREE.Vector3(...win); rig.moon = ctx.add(ctx.lights.sun({ color: '#9aa6ff', intensity: 0.4 * (o.key ?? 1.0) * (o.moonK ?? 1), pos: w.clone().addScaledVector(n, 12).add(new THREE.Vector3(0, 9, 0)).toArray(), target: w.clone().addScaledVector(n, -3).toArray(), shadow: false })); }
     if (win && o.lanternOutside) { const lo = o.lanternOutside === true ? {} : o.lanternOutside; const p = lo.pos ? new THREE.Vector3(...lo.pos) : new THREE.Vector3(...win).addScaledVector(n, 1.0).add(new THREE.Vector3(0, -0.5, 0)); rig.lantern = ctx.add(ctx.lights.point({ color: '#ffb85c', intensity: lo.cd ?? 2, pos: p.toArray(), decay: 2 })); rig.lights.push(rig.lantern); }
   }
-  if (H && H.setGlass) H.setGlass(o.glass || 'inside');
-  ctx.post.set(postPreset('bedroom', o.postOpts || {})); return rig;
+  if (H && H.theo) { H.theo.setInterior(true); H.theo.setGlass(o.glass || 'inside'); }
+  ctx.post.set(postPreset('bedroom', { exposure: 1.5, grade: { saturation: 0.92 }, ...(o.postOpts || {}) })); return rig; // calibrated on TF 24.0 / 40.2 s (stats.py)
 }
 // cabNight(ctx, { cab }) - s48: dashboard LED glow 1 cd #ff5040 + #ffd9a0 street spill through the windscreen, hemi
 // #8a90ff 0.6, post 'night'.
 export function cabNight(ctx, o = {}) {
   const rig = { lights: [], update: () => {} }; const A = o.cab ? o.cab.userData.anchors : null;
-  rig.hemi = ctx.add(ctx.lights.hemi('#8a90ff', '#2a1a3a', o.hemiIntensity ?? 0.6));
-  rig.key = ctx.add(keyLight(ctx, { color: '#b4b8ff', intensity: 0.6, el: 50, side: 0.5 }));
+  rig.hemi = ctx.add(ctx.lights.hemi('#8a90ff', '#3a2a4a', o.hemiIntensity ?? 1.6));
+  rig.key = ctx.add(keyLight(ctx, { color: '#b4b8ff', intensity: 0.9, el: 50, side: 0.5 }));
   if (A) {
     const led = new THREE.Vector3(...A.led); rig.lights.push(ctx.add(ctx.lights.point({ color: '#ff5040', intensity: o.led ?? 1, pos: led.clone().add(new THREE.Vector3(0, 0.1, 0.25)).toArray(), decay: 2 })));
-    const ws = new THREE.Vector3(...A.windscreen); rig.lights.push(ctx.add(ctx.lights.point({ color: '#ffd9a0', intensity: o.street ?? 2.2, pos: ws.clone().add(new THREE.Vector3(-0.6, 0.3, -1.2)).toArray(), decay: 2 })));
+    const ws = new THREE.Vector3(...A.windscreen); rig.lights.push(ctx.add(ctx.lights.point({ color: '#ffd9a0', intensity: o.street ?? 4.5, pos: ws.clone().add(new THREE.Vector3(-0.6, 0.3, -1.2)).toArray(), decay: 2 })));
   }
-  ctx.post.set(postPreset('night', { exposure: 1.15, ...(o.postOpts || {}) })); return rig;
+  ctx.post.set(postPreset('night', { exposure: 1.45, ...(o.postOpts || {}) })); return rig;
 }
 export { wrapRoom, clockMesh, addBed, addCurtains, addInnerWindowFrame, drapeGeo, duvetGeo, pillowGeo, addRug, addTeddy, addShelf, addNightstand, addLamp, addBoxes };

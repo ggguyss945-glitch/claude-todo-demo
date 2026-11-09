@@ -90,18 +90,20 @@ export const MOLE_PRESETS = {
   big: { scale: 1.8 },                          // "BIG ones": the hero snout cheat (bible 2.6 #6)
   giant: { scale: 2.4 },                        // a monster-sized one for a single frame-filling shot
 };
-const MOLE_DEFAULTS = { scale: 1, seed: 1, lod: 'hero', mound: true, crumbs: true, blades: true, claws: true, body: true, snout: '#e48aa0', fur: '#272029', eyeColor: '#ffb020', shadow: true };
-const LODS = { hero: { tub: 13, rad: 9, blades: 260, crumbs: 40, grid: 48 }, mid: { tub: 9, rad: 7, blades: 110, crumbs: 28, grid: 36 }, low: { tub: 6, rad: 5, blades: 0, crumbs: 14, grid: 24 } };
+const MOLE_DEFAULTS = { scale: 1, seed: 1, lod: 'hero', mound: true, crumbs: true, blades: true, claws: true, body: true, snout: '#f6a2b0', fur: '#322c3a', eyeColor: '#ffa416', shadow: true };
+const LODS = { hero: { tub: 14, rad: 10, blades: 240, crumbs: 36, grid: 56 }, mid: { tub: 10, rad: 7, blades: 110, crumbs: 24, grid: 40 }, low: { tub: 6, rad: 5, blades: 0, crumbs: 12, grid: 24 } };
 
 // --- mound shape (studs, scale 1): an elongated dome 3.0 across x 0.75 high, the head pushes out at the front (+z)
-const MOUND = { Rx: 1.42, Rz: 1.56, H: 0.75 };
-const HEAD_AT = { y: 0.2, z: 0.82 }; // head centre in mound space (emerge 0)
+const MOUND = { Rx: 1.42, Rz: 1.56, H: 0.82 };
+const HEAD_AT = { y: 0.12, z: 0.72 }; // head centre in mound space (emerge 0: the head stays under the turf, eyes + snout break it)
 function moundHeight(x, z, seed) {
   const r = Math.hypot(x / MOUND.Rx, z / MOUND.Rz); if (r >= 1) return 0;
   const lump = 1 + 0.14 * noise3(x * 1.6, 0.3, z * 1.6, seed) + 0.06 * noise3(x * 4.2, 1.7, z * 4.2, seed + 3);
   const crest = Math.pow(1 - r * r, 1.55) * (1 + 0.12 * Math.exp(-((z + 0.25) ** 2) * 2)); // crest a little behind the middle
   return MOUND.H * crest * lump;
 }
+// Eye centre in mound space at emerge 0 (from the head sculpt), used to cut the eye holes.
+const EYE_M = { get x() { return eyeFrame().c.x; }, get y() { return HEAD_AT.y + eyeFrame().c.y; }, get z() { return HEAD_AT.z + eyeFrame().c.z; } };
 // Crack polylines radiating from near the crest (avoid the front opening).
 function moundCracks(seed) {
   const r = makeRng(hash32('moleCracks', seed)), n = 3 + Math.floor(r() * 3), out = [];
@@ -160,16 +162,19 @@ function moundGeometry(seed, lod) {
       const r = Math.hypot(x / MOUND.Rx, z / MOUND.Rz);
       // cracks: a 3-5 split turf, wet soil inside, the lips a touch raised
       for (const c of cracks) for (let k = 1; k < c.pts.length; k++) { const [d, u] = distSeg(x, z, c.pts[k - 1][0], c.pts[k - 1][1], c.pts[k][0], c.pts[k][1]); const w = c.w * (1 - 0.55 * ((k - 1 + u) / (c.pts.length - 1))); if (d < w * 2.2) { const core = 1 - smooth(w * 0.45, w, d); s = Math.max(s, core * smooth(1.0, 0.75, r)); h += (core > 0 ? -0.06 * core : 0) + 0.018 * Math.exp(-(((d - w * 1.25) / (w * 0.5)) ** 2)) * smooth(1.0, 0.7, r); } }
-      // the front opening: soil ring round the head where it pushed out of the turf, turf pressed down inside it
-      const ex = x / 0.5, ez = (z - (HEAD_AT.z + 0.18)) / 0.5, e = Math.hypot(ex, ez);
-      if (e < 1.25) { s = Math.max(s, smooth(0.62, 0.85, e) * smooth(1.25, 1.02, e)); h = Math.min(h, lerp(0.16, h, smooth(0.7, 1.15, e))); }
+      // the front opening where the snout breaks the turf: a torn soil ring, turf pressed down inside it
+      const ex = x / 0.36, ez = (z - (HEAD_AT.z + 0.52)) / 0.3, e = Math.hypot(ex, ez);
+      if (e < 1.5) { s = Math.max(s, smooth(0.55, 0.9, e) * smooth(1.5, 1.05, e)); h = Math.min(h, lerp(0.1, h, smooth(0.75, 1.3, e))) + 0.035 * Math.exp(-(((e - 1.08) / 0.18) ** 2)); }
+      // eye holes: the reflectors sit in two round, soil-ringed holes in the turf
+      for (const sg of [1, -1]) { const d = Math.hypot(x - sg * EYE_M.x, z - EYE_M.z) / (EYE.r * 1.25); if (d < 1.9) { s = Math.max(s, smooth(0.7, 1.0, d) * smooth(1.9, 1.15, d)); h = Math.min(h, lerp(EYE_M.y - 0.03, h, smooth(0.85, 1.4, d))) + 0.03 * Math.exp(-(((d - 1.2) / 0.22) ** 2)); } }
       // torn rim: a broken soil band where the turf lifts off the lawn
       const rimN = 0.5 + 0.5 * noise3(x * 3.1, 2.2, z * 3.1, seed + 9); s = Math.max(s, smooth(0.8, 0.9, r) * smooth(1.0, 0.92, r) * smooth(0.45, 0.75, rimN) * 0.85);
       p.setY(i, Math.max(0, h)); soil[i] = s; alpha[i] = smooth(1.06, 0.93, r);
       const ao = (1 - 0.22 * smooth(0.7, 1.0, r)) * (1 - 0.35 * s); col[i * 3] = ao; col[i * 3 + 1] = ao; col[i * 3 + 2] = ao;
     }
     g.setAttribute('soil', new THREE.BufferAttribute(soil, 1)); g.setAttribute('turfAlpha', new THREE.BufferAttribute(alpha, 1)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.computeVertexNormals(); g.computeBoundingSphere(); g.userData.cracks = cracks; return g;
+    g.computeVertexNormals(); const nn = g.attributes.normal; for (let i = 0; i < n; i++) { const k = 0.62 + 0.38 * Math.pow(Math.max(0, nn.getY(i)), 1.5); col[i * 3] *= k; col[i * 3 + 1] *= k; col[i * 3 + 2] *= k; }
+    g.computeBoundingSphere(); g.userData.cracks = cracks; return g;
   });
 }
 
@@ -191,9 +196,10 @@ const snoutTex = () => cached('ep01SnoutTex', () => {
 // Nostril disc map (planar, clamp): two dark nostrils, a rosy centre, a darker rim.
 const discTex = () => cached('ep01DiscTex', () => {
   const N = 256, c = canvas(N), g = c.getContext('2d'); const gr = g.createRadialGradient(N / 2, N / 2, 4, N / 2, N / 2, N / 2);
-  gr.addColorStop(0, '#f6c0cc'); gr.addColorStop(0.55, '#ec9fb2'); gr.addColorStop(0.9, '#d77892'); gr.addColorStop(1, '#c86a84'); g.fillStyle = gr; g.fillRect(0, 0, N, N);
-  for (const s of [-1, 1]) { const x = N / 2 + s * N * 0.17, y = N * 0.5; const ng = g.createRadialGradient(x, y, 2, x, y, N * 0.09); ng.addColorStop(0, '#3a0c18'); ng.addColorStop(0.7, '#6a1e30'); ng.addColorStop(1, 'rgba(160,60,90,0)'); g.fillStyle = ng; g.beginPath(); g.ellipse(x, y, N * 0.085, N * 0.12, s * 0.35, 0, 2 * PI); g.fill(); }
-  g.strokeStyle = 'rgba(150,50,80,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(N / 2, N * 0.3); g.lineTo(N / 2, N * 0.7); g.stroke();
+  gr.addColorStop(0, '#f8c6d0'); gr.addColorStop(0.6, '#f0a8b8'); gr.addColorStop(1, '#ec9fb2'); g.fillStyle = gr; g.fillRect(0, 0, N, N);
+  // fleshy radial creases (they also break up any 'face' read), then two small slit nostrils close together
+  for (let k = 0; k < 22; k++) { const a = (k / 22) * 2 * PI; g.strokeStyle = 'rgba(150,50,80,0.28)'; g.lineWidth = 3; g.beginPath(); g.moveTo(N / 2 + Math.cos(a) * N * 0.16, N / 2 + Math.sin(a) * N * 0.16); g.lineTo(N / 2 + Math.cos(a) * N * 0.49, N / 2 + Math.sin(a) * N * 0.49); g.stroke(); }
+  for (const s of [-1, 1]) { const x = N / 2 + s * N * 0.06, y = N * 0.5; g.save(); g.translate(x, y); g.rotate(s * 0.25); const ng = g.createRadialGradient(0, 0, 1, 0, 0, N * 0.05); ng.addColorStop(0, '#4a1020'); ng.addColorStop(0.65, '#8a3048'); ng.addColorStop(1, 'rgba(200,100,130,0)'); g.fillStyle = ng; g.beginPath(); g.ellipse(0, 0, N * 0.016, N * 0.045, 0, 0, 2 * PI); g.fill(); g.restore(); }
   const r = makeRng(5); for (let i = 0; i < 260; i++) { const a = r() * 2 * PI, d = Math.sqrt(r()) * N * 0.48; g.fillStyle = rgba('#ffffff', 0.08 + r() * 0.12); g.beginPath(); g.arc(N / 2 + Math.cos(a) * d, N / 2 + Math.sin(a) * d, 1.2 + r() * 1.6, 0, 2 * PI); g.fill(); }
   return canvasTex(c, { srgb: true });
 });
@@ -217,8 +223,9 @@ export const reflectorTexture = () => cached('ep01ReflectorTex', () => {
 });
 
 // --- materials (shared, cached; the eye material is per instance because its level animates)
-const furMat = (color) => cached(keyOf('ep01FurMat', color), () => { const T = furTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.82, sheen: 1, sheenRoughness: 0.42, sheenColor: new THREE.Color('#a69ac4'), vertexColors: true }); });
-const fleshMat = (color) => cached(keyOf('ep01FleshMat', color), () => { const T = snoutTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.5, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#401018'), emissiveIntensity: 1, clearcoat: 0.35, clearcoatRoughness: 0.32, vertexColors: true }); });
+const furMat = (color) => cached(keyOf('ep01FurMat', color), () => { const T = furTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.45, 0.45), roughness: 0.72, sheen: 1, sheenRoughness: 0.36, sheenColor: new THREE.Color('#d0c8f4'), vertexColors: true }); });
+const fleshPlainMat = (color) => cached(keyOf('ep01FleshPlain', color), () => new THREE.MeshPhysicalMaterial({ color, roughness: 0.48, sheen: 0.6, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#6e2438'), clearcoat: 0.4, clearcoatRoughness: 0.3, vertexColors: true }));
+const fleshMat = (color) => cached(keyOf('ep01FleshMat', color), () => { const T = snoutTex(); return new THREE.MeshPhysicalMaterial({ color, map: T.map, normalMap: T.normal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.46, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#6e2438'), emissiveIntensity: 1, clearcoat: 0.45, clearcoatRoughness: 0.28, vertexColors: true }); });
 const discMat = (color) => cached(keyOf('ep01DiscMat', color), () => new THREE.MeshPhysicalMaterial({ color: mix(color, '#ffffff', 0.25), map: discTex(), normalMap: snoutTex().normal, normalScale: new THREE.Vector2(0.4, 0.4), roughness: 0.42, sheen: 0.6, sheenColor: new THREE.Color('#ffc0d0'), emissive: new THREE.Color('#401018'), clearcoat: 0.5, clearcoatRoughness: 0.25 }));
 const clawMat = () => cached('ep01ClawMat', () => new THREE.MeshPhysicalMaterial({ color: '#efe2c6', roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08, vertexColors: true }));
 const palmMat = () => cached('ep01PalmMat', () => new THREE.MeshPhysicalMaterial({ color: '#c98a90', map: snoutTex().map, normalMap: snoutTex().normal, normalScale: new THREE.Vector2(0.5, 0.5), roughness: 0.55, sheen: 0.5, sheenColor: new THREE.Color('#f0c0c8') }));
@@ -246,27 +253,28 @@ const headGeoMole = () => cached('ep01MoleHeadGeo', () => {
   for (let i = 0; i < p.count; i++) { // slight sculpt: brow ridges over the eyes, cheek pads, shading AO at the eye sockets and muzzle
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i); let k = 1;
     const dEye = Math.min(Math.hypot(x - c.x, y - c.y, z - c.z), Math.hypot(x + c.x, y - c.y, z - c.z));
-    k += 0.05 * Math.exp(-((dEye - 0.15) / 0.05) ** 2) * (y > c.y - 0.02 ? 1 : 0.3);
+    k += 0.05 * Math.exp(-(((dEye - 0.15) / 0.05) ** 2)) * (y > c.y - 0.02 ? 1 : 0.3);
     k += 0.03 * noise3(x * 6, y * 6, z * 6, 3);
-    p.setXYZ(i, x * k, y * k, z); const ao = 1 - 0.45 * Math.exp(-((dEye - 0.1) / 0.06) ** 2) - 0.2 * smooth(0.45, 0.6, z) * (1 - smooth(0.0, 0.1, Math.abs(y) + Math.abs(x) * 0.2));
+    p.setXYZ(i, x * k, y * k, z); const ao = 1 - 0.45 * Math.exp(-(((dEye - 0.1) / 0.06) ** 2)) - 0.2 * smooth(0.45, 0.6, z) * (1 - smooth(0.0, 0.1, Math.abs(y) + Math.abs(x) * 0.2));
     col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = sat(ao * (0.88 + 0.12 * sat(nm.getY(i) * 0.5 + 0.5)));
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return smoothNormals(g);
 });
 // Disc (nostril pad): a shallow dome; muzzle ring: fleshy collar between fur and disc.
-const discGeo = () => cached('ep01MoleDiscGeo', () => { const g = new THREE.SphereGeometry(0.135, 40, 16, 0, 2 * PI, 0, PI * 0.38); g.rotateX(PI / 2); g.scale(1, 1, 0.55); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, 0.5 + p.getX(i) / 0.27, 0.5 + p.getY(i) / 0.27); return g; });
-const muzzleGeo = () => cached('ep01MoleMuzzleGeo', () => { const g = zLathe([[0.172, -0.06], [0.178, -0.02], [0.17, 0.02], [0.152, 0.045], [0.135, 0.05]], 40, 1); const col = new Float32Array(g.attributes.position.count * 3).fill(0.95); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; });
+const discGeo = () => cached('ep01MoleDiscGeo', () => { const g = new THREE.SphereGeometry(0.192, 44, 18, 0, 2 * PI, 0, PI * 0.5); g.rotateX(PI / 2); g.scale(1, 1, 0.26); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, 0.5 + p.getX(i) / 0.36, 0.5 + p.getY(i) / 0.36); return g; });
+const muzzleGeo = () => cached('ep01MoleMuzzleGeo', () => { const g = zLathe([[0.172, -0.07], [0.19, -0.03], [0.185, 0.01], [0.168, 0.04], [0.15, 0.05]], 40, 1); const col = new Float32Array(g.attributes.position.count * 3).fill(0.95); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; });
 const eyeDomeGeo = () => cached('ep01MoleEyeGeo', () => { const g = new THREE.SphereGeometry(EYE.r, 40, 14, 0, 2 * PI, 0, PI * 0.5); g.rotateX(PI / 2); g.scale(1, 1, 0.5); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, 0.5 + p.getX(i) / (2 * EYE.r), 0.5 + p.getY(i) / (2 * EYE.r)); g.computeVertexNormals(); return g; });
 const eyeCapGeo = () => cached('ep01MoleEyeCapGeo', () => { const g = new THREE.SphereGeometry(EYE.r * 1.07, 32, 12, 0, 2 * PI, 0, PI * 0.5); g.rotateX(PI / 2); g.scale(1, 1, 0.62); return g; });
 const eyeLidGeo = () => cached('ep01MoleLidGeo', () => { const g = new THREE.TorusGeometry(EYE.r * 1.02, 0.03, 10, 40); const col = new Float32Array(g.attributes.position.count * 3).fill(0.7); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; });
 // Huge digging paw: broad palm turned outward + 5 long ivory claws (studs; paw-local: claws point +z, palm faces +x)
 const pawGeos = () => cached('ep01MolePawGeo', () => {
-  const palm = new THREE.SphereGeometry(1, 28, 20); xform(palm, [0, 0, 0.02], [0, 0, 0], [0.085, 0.2, 0.2]);
-  const wrist = zLathe([[0, -0.42], [0.13, -0.38], [0.15, -0.2], [0.13, -0.05], [0.1, 0.0], [0, 0.02]], 24, 1.2);
+  const palm = new THREE.SphereGeometry(1, 28, 20); xform(palm, [0, 0, 0.03], [0, 0, 0], [0.21, 0.075, 0.2]);
+  const wrist = zLathe([[0, -0.45], [0.14, -0.4], [0.16, -0.22], [0.15, -0.06], [0.12, 0.02], [0, 0.04]], 24, 0.75);
   const col = new Float32Array(wrist.attributes.position.count * 3).fill(0.85); wrist.setAttribute('color', new THREE.BufferAttribute(col, 3));
   const claws = [];
-  for (let k = 0; k < 5; k++) { const y = (k - 2) * 0.072, L = 0.24 + 0.06 * (1 - Math.abs(k - 2) / 2); const g = taperTube([[0, y, 0.12], [0.01, y * 1.1, 0.12 + L * 0.5], [-0.02, y * 1.18, 0.12 + L * 0.85], [-0.07, y * 1.2, 0.12 + L]], 0.034, 0.004, 10, 14); claws.push(g); }
-  const cg = mergeList(claws); const cc = new Float32Array(cg.attributes.position.count * 3); const cp = cg.attributes.position; for (let i = 0; i < cp.count; i++) { const v = 0.72 + 0.28 * smooth(0.1, 0.32, cp.getZ(i)); cc[i * 3] = cc[i * 3 + 1] = cc[i * 3 + 2] = v; } cg.setAttribute('color', new THREE.BufferAttribute(cc, 3));
+  for (let k = 0; k < 5; k++) { const a = (k - 2) * 0.24, x0 = (k - 2) * 0.075, L = 0.21 + 0.06 * (1 - Math.abs(k - 2) / 2); const dx = Math.sin(a), dz = Math.cos(a); const P0 = [x0, 0.0, 0.15];
+    const g = taperTube([P0, [x0 + dx * L * 0.45, 0.012, 0.15 + dz * L * 0.45], [x0 + dx * L * 0.8, -0.03, 0.15 + dz * L * 0.8], [x0 + dx * L, -0.1, 0.15 + dz * L * 0.95]], 0.04, 0.004, 10, 14); claws.push(g); }
+  const cg = mergeList(claws); const cc = new Float32Array(cg.attributes.position.count * 3); const cp = cg.attributes.position; for (let i = 0; i < cp.count; i++) { const v = 0.62 + 0.4 * smooth(0.16, 0.36, cp.getZ(i)); cc[i * 3] = v; cc[i * 3 + 1] = v * 0.97; cc[i * 3 + 2] = v * 0.92; } cg.setAttribute('color', new THREE.BufferAttribute(cc, 3));
   return { palm, wrist, claws: cg };
 });
 const bodyGeo = () => cached('ep01MoleBodyGeo', () => { const g = zLathe([[0, -1.2], [0.35, -1.12], [0.55, -0.9], [0.66, -0.55], [0.68, -0.2], [0.6, 0.12], [0.46, 0.32], [0, 0.42]], 40, 0.82); const col = new Float32Array(g.attributes.position.count * 3); const p = g.attributes.position, n = g.attributes.normal; for (let i = 0; i < p.count; i++) { const v = 0.8 + 0.2 * sat(n.getY(i) * 0.5 + 0.5); col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = v; } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g; });
@@ -277,8 +285,8 @@ function tentacleLayout(seed) {
   const r = makeRng(hash32('moleRays', seed)), out = [];
   for (const s of [1, -1]) for (let k = 0; k < 11; k++) {
     const th = ((k + 0.5) / 11) * PI; // from top (0) to bottom (PI) on this side
-    let L = 0.37 + 0.035 * Math.sin((k / 10) * PI); if (k === 9) L = 0.3; if (k === 10) L = 0.2; L *= 0.94 + r() * 0.12;
-    out.push({ ang: [s * Math.sin(th), Math.cos(th)], L, root: 0.034 + (k === 10 ? -0.008 : 0), tilt: (24 + r() * 8) * DEG, ph: r() * 2 * PI, ph2: r() * 2 * PI, f: 2.2 + r() * 0.8, bias: (r() - 0.5) * 8 * DEG });
+    let L = 0.3 + 0.04 * Math.sin((k / 10) * PI); if (k === 9) L = 0.24; if (k === 10) L = 0.15; L *= 0.9 + r() * 0.2;
+    out.push({ ang: [s * Math.sin(th), Math.cos(th)], L, root: 0.043 + (k === 10 ? -0.01 : 0) + (r() - 0.5) * 0.006, tilt: (14 + r() * 14) * DEG, ph: r() * 2 * PI, ph2: r() * 2 * PI, f: 2.2 + r() * 0.8, bias: (r() - 0.5) * 34 * DEG, side: (r() - 0.5) * 16 * DEG, rings: 9 + r() * 4 });
   }
   return out;
 }
@@ -291,13 +299,13 @@ function tentacleGeometry(lod) {
 }
 const _d = V3(), _b = V3(), _w = V3(), _er = V3(), _ez = V3(0, 0, 1), _C = V3(), _N = V3();
 function writeTentacles(geo, layout, lod, { t = 0, open = 1, recoil = 0, sniff = 0, wriggle = 1 }) {
-  const { tub: T, rad: R } = LODS[lod], perV = (T + 1) * (R + 1), P = geo.attributes.position.array, Nn = geo.attributes.normal.array, r0 = 0.118;
-  const closed = 128 * DEG, opened = -10 * DEG;
+  const { tub: T, rad: R } = LODS[lod], perV = (T + 1) * (R + 1), P = geo.attributes.position.array, Nn = geo.attributes.normal.array, r0 = 0.132;
+  const closed = 132 * DEG, opened = 30 * DEG;
   for (let q = 0; q < layout.length; q++) {
     const L0 = layout[q], o = q * perV; const [ax, ay] = L0.ang; _er.set(ax, ay, 0);
     let th = lerp(closed, opened, open) + L0.bias * open; th += wriggle * 10 * DEG * Math.sin(2 * PI * L0.f * t + L0.ph) * (0.35 + 0.65 * sat(open));
     th += recoil * 70 * DEG; th += sniff * 9 * DEG * Math.sin(2 * PI * 7.5 * t + L0.ph * 0.5);
-    const psi = wriggle * 7 * DEG * Math.sin(2 * PI * (L0.f * 0.63) * t + L0.ph2);
+    const psi = L0.side + wriggle * 7 * DEG * Math.sin(2 * PI * (L0.f * 0.63) * t + L0.ph2);
     const L = L0.L * (1 - 0.18 * recoil);
     _d.copy(_er).multiplyScalar(Math.cos(L0.tilt)).addScaledVector(_ez, Math.sin(L0.tilt)).normalize();
     _b.copy(_ez).multiplyScalar(Math.cos(L0.tilt)).addScaledVector(_er, -Math.sin(L0.tilt)).normalize();
@@ -308,10 +316,10 @@ function writeTentacles(geo, layout, lod, { t = 0, open = 1, recoil = 0, sniff =
       if (Math.abs(th) < 1e-4) _C.set(rx + _d.x * s, ry + _d.y * s, _d.z * s);
       else { const kA = L / th; _C.set(rx + kA * (Math.sin(phi) * _d.x + (1 - Math.cos(phi)) * b2.x), ry + kA * (Math.sin(phi) * _d.y + (1 - Math.cos(phi)) * b2.y), kA * (Math.sin(phi) * _d.z + (1 - Math.cos(phi)) * b2.z)); }
       _N.copy(_d).multiplyScalar(-Math.sin(phi)).addScaledVector(b2, Math.cos(phi));
-      let rr = lerp(L0.root, 0.013, Math.pow(uu, 0.9)) * (1 + 0.12 * Math.sin(uu * PI)); const tipS = 0.82; if (uu > tipS) rr = Math.max(0.002, 0.013 * Math.sqrt(Math.max(0, 1 - ((uu - tipS) / (1 - tipS)) ** 2)) + (rr - 0.013) * (1 - (uu - tipS) / (1 - tipS)));
+      const tipR = 0.024; let rr = lerp(L0.root, tipR, Math.pow(uu, 0.8)) * (1 + 0.14 * Math.sin(uu * PI) + 0.06 * Math.sin(uu * L0.rings * 2 * PI) * (1 - uu)); const tipS = 0.86; if (uu > tipS) rr = tipR * Math.sqrt(Math.max(0, 1 - ((uu - tipS) / (1 - tipS)) ** 2)) + 0.002;
       if (i === T) rr = 0.0015;
       for (let j = 0; j <= R; j++) {
-        const a = (j / R) * 2 * PI, ca = Math.cos(a), sa = Math.sin(a), k = (o + i * (R + 1) + j) * 3, fl = 0.78;
+        const a = (j / R) * 2 * PI, ca = Math.cos(a), sa = Math.sin(a), k = (o + i * (R + 1) + j) * 3, fl = 0.93;
         P[k] = _C.x + rr * (ca * _N.x * fl + sa * w2.x); P[k + 1] = _C.y + rr * (ca * _N.y * fl + sa * w2.y); P[k + 2] = _C.z + rr * (ca * _N.z * fl + sa * w2.z);
         let nx = ca * _N.x / fl + sa * w2.x, ny = ca * _N.y / fl + sa * w2.y, nz = ca * _N.z / fl + sa * w2.z; const l = Math.hypot(nx, ny, nz) || 1; Nn[k] = nx / l; Nn[k + 1] = ny / l; Nn[k + 2] = nz / l;
       }
@@ -324,7 +332,7 @@ function writeTentacles(geo, layout, lod, { t = 0, open = 1, recoil = 0, sniff =
 function crumbLayout(seed, n) { return cached(keyOf('ep01CrumbLayout', seed, n), () => crumbLayout0(seed, n)); }
 function crumbLayout0(seed, n) {
   const r = makeRng(hash32('moleCrumbs', seed)), out = [];
-  for (let i = 0; i < n; i++) { const a = r() * 2 * PI, rr = 0.84 + r() * 0.3; let x = Math.sin(a) * MOUND.Rx * rr, z = Math.cos(a) * MOUND.Rz * rr; if (z > 0.6 && Math.abs(x) < 0.7) { z += 0.25; } const s = 0.06 + r() * r() * 0.08 + (r() < 0.15 ? 0.04 : 0); out.push({ x, z, s, y: moundHeight(x, z, seed), rot: [r() * PI, r() * PI, r() * PI], delay: r() * 0.18, c: 0.75 + r() * 0.45, sx: (r() - 0.5) * 0.4, sz: (r() - 0.5) * 0.4 }); }
+  for (let i = 0; i < n; i++) { const a = r() * 2 * PI, rr = 0.84 + r() * 0.3; let x = Math.sin(a) * MOUND.Rx * rr, z = Math.cos(a) * MOUND.Rz * rr; if (z > 0.6 && Math.abs(x) < 0.7) { z += 0.25; } const s = 0.028 + r() * r() * 0.05 + (r() < 0.12 ? 0.025 : 0); out.push({ x, z, s, y: moundHeight(x, z, seed), rot: [r() * PI, r() * PI, r() * PI], delay: r() * 0.18, c: 0.75 + r() * 0.45, sx: (r() - 0.5) * 0.4, sz: (r() - 0.5) * 0.4 }); }
   return out;
 }
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = V3(), _s = V3();
@@ -364,10 +372,10 @@ export function makeMole(opts = {}) {
   }
   // upper body (emerge pivot): head + paws + chest
   const up = group('moleUpper', body, [0, HEAD_AT.y, HEAD_AT.z]);
-  const head = group('moleHead', up); mesh(headGeoMole(), fm, { parent: head, name: 'headFur' });
+  const head = group('moleHead', up); const hf = mesh(headGeoMole(), fm, { parent: head, name: 'headFur' }); hf.visible = P.headFur !== false;
   const sn = group('snout', head, [0, -0.02, 0.6]);
-  mesh(muzzleGeo(), fleshMat(P.snout), { parent: sn, name: 'snoutMuzzle', pos: [0, 0, -0.02] });
-  mesh(discGeo(), discMat(P.snout), { parent: sn, name: 'snoutDisc', pos: [0, 0, 0.004] });
+  mesh(muzzleGeo(), fleshPlainMat(P.snout), { parent: sn, name: 'snoutMuzzle', pos: [0, 0, -0.02] });
+  mesh(discGeo(), discMat(P.snout), { parent: sn, name: 'snoutDisc', pos: [0, 0, -0.035] });
   const tg = tentacleGeometry(lod); const tm = mesh(tg, fleshMat(P.snout), { parent: sn, name: 'tentacles' }); tg.userData.owner = tm.uuid; tm.frustumCulled = false;
   writeTentacles(tg, tentacleLayout(seed), lod, { t: 0, open: 1 });
   const ef = eyeFrame(); const em = eyeMaterial(P.eyeColor); const q = new THREE.Quaternion();
@@ -377,14 +385,14 @@ export function makeMole(opts = {}) {
     const d = mesh(eyeDomeGeo(), nm === 'L' ? em : eyeMaterial(P.eyeColor), { parent: eg, name: 'eyeDome' + nm, cast: false }); d.material.userData.owner = d.uuid; d.material.userData.eyeColor = P.eyeColor;
     mesh(eyeCapGeo(), capMat(), { parent: eg, name: 'eyeCap' + nm, cast: false, order: 3 });
     mesh(eyeLidGeo(), fm, { parent: eg, name: 'eyeLid' + nm, pos: [0, 0, 0.004], cast: false });
-    const halo = pxSprite(addMat(radialGlow({ falloff: 2.0 }), new THREE.Color(P.eyeColor).multiplyScalar(1.4), { opacity: 0 }), 20); halo.name = 'eyeHalo' + nm; halo.position.set(0, 0, 0.07); halo.renderOrder = 12; halo.userData.axis = true; eg.add(halo);
+    const halo = pxSprite(addMat(radialGlow({ falloff: 1.7 }), new THREE.Color(P.eyeColor).multiplyScalar(1.1), { opacity: 0 }), 20); halo.name = 'eyeHalo' + nm; halo.position.set(0, 0, 0.07); halo.renderOrder = 12; halo.userData.axis = true; eg.add(halo);
     const gl = pxSprite(addMat(sparkleTex({ points: 4, sharpness: 22, core: 0.6 }), new THREE.Color('#fff2cc').multiplyScalar(2.2), { opacity: 0 }), 0); gl.name = 'eyeGlint' + nm; gl.position.set(0, 0, 0.08); gl.renderOrder = 13; gl.visible = false; eg.add(gl);
   }
   if (P.claws) {
     const pg = pawGeos();
     for (const [nm, s] of [['L', 1], ['R', -1]]) {
-      const pw = group('paw' + nm, up, [s * 0.5, -0.12, 0.42]); pw.rotation.set(-0.35, s * 0.55, s * 0.5);
-      mesh(pg.wrist, fm, { parent: pw, name: 'pawWrist' + nm }); mesh(pg.palm, palmMat(), { parent: pw, name: 'pawPalm' + nm }); const cl = mesh(pg.claws, clawMat(), { parent: pw, name: 'pawClaws' + nm }); if (s < 0) cl.scale.y = -1;
+      const pw = group('paw' + nm, up, [s * 0.5, -0.12, 0.42]);
+      mesh(pg.wrist, fm, { parent: pw, name: 'pawWrist' + nm }); mesh(pg.palm, palmMat(), { parent: pw, name: 'pawPalm' + nm }); mesh(pg.claws, clawMat(), { parent: pw, name: 'pawClaws' + nm });
     }
   }
   if (P.body) mesh(bodyGeo(), fm, { parent: up, name: 'moleTorso', pos: [0, -0.18, -0.75] });
@@ -417,13 +425,17 @@ export function setMole(root, o = {}) {
   const sbl = root.getObjectByName('moleShadow'); if (sbl) { sbl.visible = rise > 0.02; sbl.scale.setScalar(Math.max(0.001, Math.min(1, rise))); }
   // upper body: emerge path + recoil + idle bob; sinks with the mound
   const up = root.getObjectByName('moleUpper');
-  const e = emerge; const ey = e < 0 ? lerp(HEAD_AT.y, HEAD_AT.y - 0.75, -e) : e < 0.5 ? lerp(HEAD_AT.y, HEAD_AT.y + 0.42, e / 0.5) : lerp(HEAD_AT.y + 0.42, HEAD_AT.y + 0.85, (e - 0.5) / 0.5);
-  const ez = e < 0 ? lerp(HEAD_AT.z, HEAD_AT.z - 0.35, -e) : e < 0.5 ? lerp(HEAD_AT.z, HEAD_AT.z + 0.12, e / 0.5) : lerp(HEAD_AT.z + 0.12, HEAD_AT.z + 0.32, (e - 0.5) / 0.5);
-  const sinkY = (1 - Math.min(1, rise)) * -0.7;
-  up.position.set(anim.wobble(t, seedPh + 3, 0.4, 0.015 * breathe), ey + sinkY + breathe * 0.012 * Math.sin(2 * PI * 0.65 * t + seedPh + 0.8) - 0.06 * recoil, ez - 0.16 * recoil);
-  up.rotation.set(-(look[1] + (e > 0 ? -12 * Math.min(1, e * 2) : 0) + 4 * recoil) * DEG + breathe * 0.02 * Math.sin(2 * PI * 0.5 * t + seedPh), (look[0] + breathe * 3 * anim.wobble(t, seedPh, 0.35, 1)) * DEG, breathe * 1.5 * DEG * Math.sin(2 * PI * 0.31 * t + seedPh));
-  for (const s of ['L', 'R']) { const pw = root.getObjectByName('paw' + s); if (!pw) continue; const sg = s === 'L' ? 1 : -1; const pe = sat((e - 0.1) / 0.4); pw.visible = e > 0.05; pw.position.set(sg * lerp(0.42, 0.62, pe), lerp(-0.42, -0.08, pe), lerp(0.3, 0.52, pe)); pw.rotation.set(lerp(-0.1, -0.55, pe) + 0.06 * Math.sin(2 * PI * 0.8 * t + (sg > 0 ? 0 : 1.7)) * pe, sg * lerp(0.3, 0.6, pe), sg * lerp(0.2, 0.75, pe)); }
-  const tor = root.getObjectByName('moleTorso'); if (tor) tor.visible = e > 0.55;
+  const e = emerge; const ey = e < 0 ? lerp(HEAD_AT.y, HEAD_AT.y - 0.7, -e) : e < 0.5 ? lerp(HEAD_AT.y, HEAD_AT.y + 0.38, e / 0.5) : lerp(HEAD_AT.y + 0.38, HEAD_AT.y + 0.78, (e - 0.5) / 0.5);
+  const ez = e < 0 ? lerp(HEAD_AT.z, HEAD_AT.z - 0.3, -e) : e < 0.5 ? lerp(HEAD_AT.z, HEAD_AT.z + 0.42, e / 0.5) : lerp(HEAD_AT.z + 0.42, HEAD_AT.z + 0.62, (e - 0.5) / 0.5);
+  const sinkY = (1 - Math.min(1, rise)) * -1.0;
+  up.position.set(anim.wobble(t, seedPh + 3, 0.4, 0.006 * breathe), ey + sinkY + breathe * 0.006 * Math.sin(2 * PI * 0.65 * t + seedPh + 0.8) - 0.04 * recoil, ez - 0.14 * recoil);
+  const ek = e > 0 ? Math.min(1, e * 2) : 0; up.rotation.set(-(look[1] * (0.3 + 0.7 * ek) + 10 * ek + 4 * recoil) * DEG + breathe * 0.012 * Math.sin(2 * PI * 0.5 * t + seedPh), (look[0] * (0.3 + 0.7 * ek) + breathe * (1 + 2 * ek) * anim.wobble(t, seedPh, 0.35, 1)) * DEG, breathe * (0.6 + 1.2 * ek) * DEG * Math.sin(2 * PI * 0.31 * t + seedPh));
+  for (const s of ['L', 'R']) { // paws: flat on the turf either side of the snout, claws hooked over the rim (peek); flex while out
+    const pw = root.getObjectByName('paw' + s); if (!pw) continue; const sg = s === 'L' ? 1 : -1; const pe = sat((e - 0.1) / 0.4), po = sat((e - 0.5) / 0.5); pw.visible = e > 0.12;
+    const flex = 0.08 * Math.sin(2 * PI * 0.9 * t + (sg > 0 ? 0 : 1.7));
+    pw.position.set(sg * lerp(0.36, 0.5, pe), lerp(-0.6, -0.34, pe) - 0.06 * po, lerp(0.05, 0.42, pe));
+    pw.rotation.set(lerp(-0.6, 0.18, pe) + flex * pe + 0.25 * po, sg * lerp(0.15, 0.42, pe), sg * lerp(0.05, 0.22, pe)); }
+  const tor = root.getObjectByName('moleTorso'); if (tor) tor.visible = e > 0.7;
   const sn = root.getObjectByName('snout'); if (sn) { sn.position.z = 0.6 - 0.05 * recoil + 0.012 * sniff * Math.sin(2 * PI * 7.5 * t); sn.scale.setScalar(1 - 0.06 * recoil); }
   writeTentacles(st.tm.geometry, st.layout, st.lod, { t, open, recoil, sniff, wriggle: o.wriggle ?? 1 });
   setMoleEyes(root, eyes, { flash, t });
@@ -432,8 +444,8 @@ export function setMole(root, o = {}) {
 // reflector flash (x2.5 emissive + a 4-point star glint per eye, the right eye trailing the left by 0.06 s).
 export function setMoleEyes(root, level = 1, { flash = 0, t = 0 } = {}) {
   for (const nm of ['L', 'R']) {
-    const d = root.getObjectByName('eyeDome' + nm); if (!d) continue; if (d.material.userData.owner !== d.uuid) { const c = d.material.userData.eyeColor || '#ffb020'; d.material = eyeMaterial(c); d.material.userData = { owner: d.uuid, eyeColor: c }; } d.material.emissiveIntensity = 4 * level * (1 + 1.5 * flash);
-    const h = root.getObjectByName('eyeHalo' + nm); if (h) { h.material = h.material.userData.owner === h.uuid ? h.material : Object.assign(h.material.clone(), { userData: { owner: h.uuid } }); h.material.opacity = 0.75 * level * (1 + 0.6 * flash); h.userData.px = 15 + 10 * level + 30 * flash; h.visible = level > 0.01; }
+    const d = root.getObjectByName('eyeDome' + nm); if (!d) continue; if (d.material.userData.owner !== d.uuid) { const c = d.material.userData.eyeColor || '#ffa416'; d.material = eyeMaterial(c); d.material.userData = { owner: d.uuid, eyeColor: c }; } d.material.emissiveIntensity = 3.2 * level * (1 + 1.6 * flash);
+    const h = root.getObjectByName('eyeHalo' + nm); if (h) { h.material = h.material.userData.owner === h.uuid ? h.material : Object.assign(h.material.clone(), { userData: { owner: h.uuid } }); h.material.opacity = 0.95 * level * (1 + 0.5 * flash); h.userData.px = 18 + 10 * level + 30 * flash; h.visible = level > 0.01; }
     const gl = root.getObjectByName('eyeGlint' + nm); if (gl) { const f = nm === 'L' ? flash : flash * (flash > 0 ? 0.85 : 0); gl.visible = f > 0.01; if (gl.visible) { gl.material = gl.material.userData.owner === gl.uuid ? gl.material : Object.assign(gl.material.clone(), { userData: { owner: gl.uuid } }); gl.material.opacity = Math.min(1, f * 1.4); gl.material.rotation = (nm === 'L' ? 0.2 : 0.5) + f * 0.6; gl.userData.px = 120 * f; } }
   }
 }
@@ -453,7 +465,8 @@ export function animateMole(m, t, cue = {}) {
   const sinkK = moleSink(t, cue.sink, cue.sinkDur ?? 0.5);
   const rise = moleRise(t, cue.rise, cue.riseDur ?? 0.5) * sinkK;
   let eyes = eyesOn(t, cue.eyesOn) * eyesOff(t, cue.eyesOff ?? (cue.sink != null ? cue.sink + 0.12 : null));
-  const em = cue.emerge ? anim.springKeys(t, cue.emerge, cue.emergeFreq ?? 2.4, 0.55) : 0;
+  // default: with an unfurl cue the head waits under the turf and pushes the snout out just before it opens ("the turf splits")
+  const em = cue.emerge ? anim.springKeys(t, cue.emerge, cue.emergeFreq ?? 2.4, 0.55) : cue.unfurl != null ? anim.springKeys(t, [[-1e3, -0.6], [cue.unfurl - 0.06, 0]], 3, 0.6) : 0;
   const sniff = cue.sniff ? anim.pulse(t, cue.sniff[0], 0.08, Math.max(0, cue.sniff[1] - cue.sniff[0] - 0.16), 0.08) : 0;
   setMole(m, { t, rise, open: moleUnfurl(t, cue.unfurl), recoil: moleRecoil(t, cue.recoil), sniff, emerge: em - (1 - sinkK) * 0.6, eyes, flash: reflectorFlash(t, cue.flash), look: cue.look, crumbs: cue.rise != null ? t - cue.rise : 99 });
 }
@@ -464,7 +477,7 @@ export function animateMole(m, t, cue = {}) {
 // moleField(ctx, { center: [x, z] (m, world), size: [w, d] (studs), yaw (rad), res (128 hero lawn / 64 neighbour), seed,
 //                  heads: 'snout' | 'eyes' | false (what rides at each bulge front), lod: 'mid', height: [0.6, 0.9] })
 // Every API call registers an event at build time; update(t) evaluates everything as a pure function of t.
-//   const i = f.add({ at: [x, z], scale, height, head })      a mole (index); positions in world metres
+//   const i = f.add({ at: [x, z], scale, height, head, face: [x, z] | yaw })   a mole (index); world metres; face = point it looks at
 //   f.rise(i, t0, dur=0.5)      mound pushes up, soil crumbs pop             f.sink(i, t0, dur=0.5)   deflate + turf settles
 //   f.travel(i, path, t0, speed=3)  path [[x,z],...] world m, speed studs/s (Catmull)   f.stopAt(i, [x,z], radius m)
 //   f.swallow(i, target, t0, { depth })  GULP: turf rises round target like a closing mouth, target sinks 6 frames, seals
@@ -487,10 +500,11 @@ export function moleField(ctx, o = {}) {
   const hRange = o.height || [0.6, 0.9];
   const F = {
     group: G, moles, turf,
-    add({ at = [0, 0], scale = 1, height = null, head = o.heads ?? 'snout', seed = null } = {}) {
+    add({ at = [0, 0], scale = 1, height = null, head = o.heads ?? 'snout', seed = null, face = null, yaw: wy = null } = {}) {
       const i = moles.length, r = makeRng(hash32('fieldMole', fseed, i)); const p = toLocal(at);
-      const m = { i, at: p, scale, height: height ?? lerp(hRange[0], hRange[1], r()), ph: r() * 6.28, path: null, t0: 0, speed: 3, rise: null, sink: null, stop: null, eyesOn: null, eyesOff: null, recoil: null, head: null };
-      if (head) { const hm = makeMole({ scale: scale * 0.85, seed: seed ?? 100 + i, lod: o.lod || 'mid', mound: false, claws: false, body: false, shadow: false }); hm.name = 'fieldMole' + i; if (head === 'eyes') { const sn = hm.getObjectByName('snout'); sn.visible = false; } G.add(hm); m.head = hm; }
+      let h0 = [0, 1]; if (face) { const q = toLocal(face); const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1; h0 = [(q[0] - p[0]) / l, (q[1] - p[1]) / l]; } else if (wy != null) { h0 = [Math.sin(wy - yaw), Math.cos(wy - yaw)]; }
+      const m = { i, at: p, h0, scale, height: height ?? lerp(hRange[0], hRange[1], r()), ph: r() * 6.28, path: null, t0: 0, speed: 3, rise: null, sink: null, stop: null, eyesOn: null, eyesOff: null, recoil: null, head: null };
+      if (head) { const hm = makeMole({ scale: scale * 0.85, seed: seed ?? 100 + i, lod: o.lod || 'mid', mound: false, claws: false, body: false, shadow: false, headFur: false }); hm.name = 'fieldMole' + i; if (head === 'eyes') { const sn = hm.getObjectByName('snout'); sn.visible = false; } G.add(hm); m.head = hm; }
       moles.push(m); return i;
     },
     rise(i, t0, dur = 0.5) { moles[i].rise = [t0, dur]; return F; },
@@ -507,7 +521,7 @@ export function moleField(ctx, o = {}) {
   };
   // mole kinematics (field studs): position, heading, height factor, state flags
   function stateAt(m, t) {
-    let x = m.at[0], z = m.at[1], hx = 0, hz = 1, moving = false, stopped = false, tStop = null;
+    let x = m.at[0], z = m.at[1], hx = m.h0[0], hz = m.h0[1], moving = false, stopped = false, tStop = null;
     if (m.path) { let s = Math.max(0, Math.min(m.len, m.speed * (t - m.t0))); if (m.sStop != null) { tStop = m.t0 + m.sStop / m.speed; if (s >= m.sStop) { s = m.sStop; stopped = true; } } moving = t > m.t0 && s < m.len && !stopped; const u = Math.max(0, Math.min(1, s / m.len)); const q = m.path.getPointAt(u), tg = m.path.getTangentAt(Math.min(0.999, Math.max(0.001, u))); x = q.x; z = q.z; hx = tg.x; hz = tg.z; const l = Math.hypot(hx, hz) || 1; hx /= l; hz /= l; }
     let hk = 1;
     for (const pb of pushes) { if (t < pb.t0) continue; const u = anim.ease.outCubic(Math.min(1, (t - pb.t0) / pb.dur)); const vx = x - pb.c[0], vz = z - pb.c[1], d = Math.hypot(vx, vz) || 1e-3; if (d < pb.r1 + 1.5) { const target = Math.max(d, pb.r1 + Math.max(0, d - pb.r0) * 0.5 + 0.4 * m.scale); const nd = lerp(d, target, u); x = pb.c[0] + (vx / d) * nd; z = pb.c[1] + (vz / d) * nd; hk *= 1 - 0.35 * Math.sin(PI * Math.min(1, u)); if (u < 1) { hx = vx / d; hz = vz / d; } } }
@@ -541,24 +555,34 @@ export function moleField(ctx, o = {}) {
     }
     for (const sw of swallows) { // GULP
       const u = t - sw.t0; if (u < -0.02) { if (sw.obj) { sw.obj.position.y = sw.y0; sw.obj.visible = true; } continue; }
+      // lips rise round the target (0-0.12 s), close over it like a mouth (0.12-0.24 s), then the dome deflates to a low seal
       const R = sw.R; let ringR, ringH, bump;
-      if (u < 0.12) { const a = Math.max(0, u + 0.02) / 0.14; ringR = R * 1.15; ringH = 0.95 * anim.ease.outQuad(a); bump = 0; }
-      else if (u < 0.24) { const a = (u - 0.12) / 0.12; ringR = R * 1.15 * (1 - anim.ease.inQuad(a)); ringH = 0.95; bump = 0.25 * a; }
-      else { const a = Math.min(1, (u - 0.24) / 0.5); ringR = 0; ringH = 0; bump = (0.95 + 0.25) * (1 - a) * 0.55 + 0.12 + 0.06 * Math.exp(-(u - 0.24) * 5) * Math.sin((u - 0.24) * 24); }
-      const [cx, cz] = sw.c; const Rr = 2.4 * R; const i0 = Math.max(0, Math.floor((cx - Rr - x0) / dx)), i1 = Math.min(nx, Math.ceil((cx + Rr - x0) / dx)), j0 = Math.max(0, Math.floor((cz - Rr - z0) / dz)), j1 = Math.min(nz, Math.ceil((cz + Rr - z0) / dz));
-      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * (nx + 1) + i; const d = Math.hypot(x0 + i * dx - cx, z0 + j * dz - cz); if (ringH > 0) H[k] += ringH * Math.exp(-(((d - ringR) / (0.32 * R)) ** 2)); if (bump > 0) H[k] += bump * Math.exp(-((d / (0.75 * R)) ** 2)); }
+      if (u < 0.12) { const a = Math.max(0, u + 0.02) / 0.14; ringR = R * 1.1; ringH = 0.72 * anim.ease.outQuad(a); bump = 0.05 * a; }
+      else if (u < 0.24) { const a = (u - 0.12) / 0.12; ringR = R * (1.1 - 0.85 * anim.ease.inQuad(a)); ringH = 0.72 * (1 - 0.6 * a); bump = 0.05 + 0.4 * a; }
+      else { const v = u - 0.24; ringR = R * 0.25; ringH = 0.29 * Math.exp(-v * 14); bump = 0.14 + 0.31 * Math.exp(-v * 5.5) + 0.05 * Math.exp(-v * 5) * Math.sin(v * 24); }
+      const [cx, cz] = sw.c; const Rr = 2.6 * R; const i0 = Math.max(0, Math.floor((cx - Rr - x0) / dx)), i1 = Math.min(nx, Math.ceil((cx + Rr - x0) / dx)), j0 = Math.max(0, Math.floor((cz - Rr - z0) / dz)), j1 = Math.min(nz, Math.ceil((cz + Rr - z0) / dz));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * (nx + 1) + i; const d = Math.hypot(x0 + i * dx - cx, z0 + j * dz - cz); if (ringH > 0) H[k] += ringH * Math.exp(-(((d - ringR) / (0.5 * R)) ** 2)) * (d < ringR ? 0.85 : 1); if (bump > 0) H[k] += bump * Math.exp(-((d / (0.95 * R)) ** 2)); }
       if (sw.obj) { const a = sat((u - 0.1) / (6 / 60)); sw.obj.position.y = sw.y0 - sw.depth * anim.ease.inQuad(a); sw.obj.visible = a < 0.999; }
     }
     const pa = geo.attributes.position, na = geo.attributes.normal;
-    for (let k = 0; k < NV; k++) { const h = Math.max(H[k], R2[k]); H[k] = h; pa.setY(k, h); alpha[k] = smooth(0.006, 0.05, h); const hn = h / 0.75; soil[k] = smooth(0.42, 0.7, hn) * smooth(0.86, 0.95, crackN[k]) + 0.0; col[k * 3] = col[k * 3 + 1] = col[k * 3 + 2] = 1 - 0.3 * soil[k]; }
-    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const k = j * (nx + 1) + i; const hl = H[j * (nx + 1) + Math.max(0, i - 1)], hr = H[j * (nx + 1) + Math.min(nx, i + 1)], hd = H[Math.max(0, j - 1) * (nx + 1) + i], hu = H[Math.min(nz, j + 1) * (nx + 1) + i]; let ux = -(hr - hl) / (2 * dx), uz = -(hu - hd) / (2 * dz); const l = Math.hypot(ux, 1, uz); na.setXYZ(k, ux / l, 1 / l, uz / l); }
+    for (let k = 0; k < NV; k++) { const h = Math.max(H[k], R2[k]); H[k] = h; pa.setY(k, h); alpha[k] = smooth(0.006, 0.05, h); }
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const k = j * (nx + 1) + i; const hl = H[j * (nx + 1) + Math.max(0, i - 1)], hr = H[j * (nx + 1) + Math.min(nx, i + 1)], hd = H[Math.max(0, j - 1) * (nx + 1) + i], hu = H[Math.min(nz, j + 1) * (nx + 1) + i];
+      const ux = -(hr - hl) / (2 * dx), uz = -(hu - hd) / (2 * dz); const l = Math.hypot(ux, 1, uz); na.setXYZ(k, ux / l, 1 / l, uz / l);
+      const slope = Math.hypot(ux, uz), hn = H[k] / 0.75;
+      soil[k] = Math.min(1, smooth(0.42, 0.7, hn) * smooth(0.86, 0.95, crackN[k]) + 0.75 * smooth(0.55, 1.1, slope) * smooth(0.72, 0.93, crackN[k]));
+      const c = (1 - 0.45 * smooth(0.1, 0.8, slope)) * (1 + 0.14 * smooth(0.3, 0.8, hn) * (1 - smooth(0.1, 0.5, slope))) * (1 - 0.3 * soil[k]); col[k * 3] = col[k * 3 + 1] = col[k * 3 + 2] = c;
+    }
     pa.needsUpdate = true; na.needsUpdate = true; geo.attributes.soil.needsUpdate = true; geo.attributes.turfAlpha.needsUpdate = true; geo.attributes.color.needsUpdate = true;
     // heads ride at the bulge fronts
     for (const m of moles) {
-      if (!m.head) continue; const s = m.state; const sc = m.scale; const fx = s.x + s.hx * 0.62 * sc, fz = s.z + s.hz * 0.62 * sc;
-      const ix = Math.round((fx - x0) / dx), iz = Math.round((fz - z0) / dz), hh = (ix >= 0 && iz >= 0 && ix <= nx && iz <= nz) ? H[iz * (nx + 1) + ix] : 0;
+      // the head rides just inside the bulge front: eyes level with the turf, the star nose out at the foot of the slope
+      if (!m.head) continue; const s = m.state; const sc = m.scale; const hs = sc * 0.85, ef = eyeFrame(); const fx = s.x + s.hx * 0.35 * sc, fz = s.z + s.hz * 0.35 * sc;
+      const Hat = (x, z) => { const ix = Math.round((x - x0) / dx), iz = Math.round((z - z0) / dz); return ix >= 0 && iz >= 0 && ix <= nx && iz <= nz ? H[iz * (nx + 1) + ix] : 0; };
+      const he = Hat(fx + s.hx * ef.c.z * hs, fz + s.hz * ef.c.z * hs), hsn = Hat(fx + s.hx * 0.6 * hs, fz + s.hz * 0.6 * hs);
+      let ry = he + 0.015 - (HEAD_AT.y + ef.c.y) * hs; const snoutY = ry + (HEAD_AT.y - 0.02) * hs; if (snoutY < hsn + 0.06 * sc) ry += hsn + 0.06 * sc - snoutY;
       const k = s.k; m.head.visible = k > 0.05;
-      m.head.position.set((fx - s.hx * HEAD_AT.z * sc * 0.85) * STUD, (hh - 0.16 * sc - HEAD_AT.y * sc * 0.85 - (1 - Math.min(1, k)) * 0.6 * sc) * STUD, (fz - s.hz * HEAD_AT.z * sc * 0.85) * STUD);
+      m.head.position.set((fx - s.hx * HEAD_AT.z * hs) * STUD, (ry - (1 - Math.min(1, k)) * 0.7 * sc) * STUD, (fz - s.hz * HEAD_AT.z * hs) * STUD);
       m.head.rotation.y = Math.atan2(s.hx, s.hz);
       const rec = Math.max(m.recoil != null ? moleRecoil(t, m.recoil) : 0, s.stopped ? moleRecoil(t, s.tStop) : 0);
       const ev = eyesOn(t, m.eyesOn) * eyesOff(t, m.eyesOff ?? (m.sink ? m.sink[0] + 0.1 : null));
@@ -686,7 +710,8 @@ export function dogAt(root, t, { pose = 'stand', chew = pose === 'chew', wag = 1
 // ==================================================================================================================
 //  THEO'S STUFFED WHALE (grey-blue plush)
 // ==================================================================================================================
-const WHALE_PROF = [[0, -0.64], [0.06, -0.63], [0.075, -0.58], [0.11, -0.5], [0.18, -0.36], [0.26, -0.18], [0.32, 0.0], [0.355, 0.15], [0.36, 0.3], [0.34, 0.44], [0.3, 0.54], [0.22, 0.63], [0.12, 0.685], [0, 0.7]];
+const WHALE_PROF = [[0, -0.66], [0.05, -0.645], [0.07, -0.57], [0.105, -0.46], [0.16, -0.32], [0.23, -0.16], [0.3, 0.02], [0.35, 0.2], [0.372, 0.35], [0.36, 0.48], [0.315, 0.58], [0.23, 0.655], [0.12, 0.69], [0, 0.7]];
+const whaleBend = (z) => (z < -0.12 ? 0.23 * Math.pow((-z - 0.12) / 0.54, 2) : 0); // the tail curls up
 function whaleTexture(color, belly) {
   return cached(keyOf('ep01WhaleTex', color, belly), () => {
     const W = 512, Hh = 512, c = canvas(W, Hh), g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, W, Hh);
@@ -711,14 +736,18 @@ export function stuffedWhale(opts = {}) {
       fin: new THREE.MeshPhysicalMaterial({ color: shade(P.color, 0.88), normalMap: F.normalMap, normalScale: new THREE.Vector2(0.2, 0.2), roughness: 0.92, sheen: 0.6, sheenColor: new THREE.Color(mix(P.color, '#ffffff', 0.5)) }),
       eye: new THREE.MeshPhysicalMaterial({ color: '#141418', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 }), spout: new THREE.MeshPhysicalMaterial({ color: '#cfe4f4', roughness: 0.8, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }) }; });
   const root = makeRoot('whale', P.units); const k = P.length / 1.4; const w = group('whaleBody', root); w.scale.setScalar(k);
-  const geo = cached('ep01WhaleGeo', () => { const g = new THREE.LatheGeometry(WHALE_PROF.map(([r, y]) => new THREE.Vector2(r, y)), 48); g.rotateX(PI / 2); g.rotateZ(PI); g.scale(1, 0.84, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i), y = p.getY(i); if (y < 0) p.setY(i, y * (1 - 0.15 * smooth(-0.3, 0.4, z))); } return smoothNormals(g); });
+  const geo = cached('ep01WhaleGeo2', () => { const g = new THREE.LatheGeometry(WHALE_PROF.map(([r, y]) => new THREE.Vector2(r, y)), 56, 0, 2 * PI); g.rotateX(PI / 2); g.rotateZ(PI); g.scale(1, 0.86, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i), y = p.getY(i); p.setY(i, (y < 0 ? y * (1 - 0.14 * smooth(-0.3, 0.4, z)) : y) + whaleBend(z)); } return smoothNormals(g); });
   mesh(geo, Mt.body, { parent: w, name: 'whaleMesh' });
-  const finG = cached('ep01WhaleFin', () => { const g = new THREE.SphereGeometry(1, 24, 14); g.scale(0.07, 0.035, 0.16); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i); p.setX(i, p.getX(i) * (1 - 0.4 * smooth(-0.16, 0.16, -z))); } g.computeVertexNormals(); return g; });
-  for (const s of [1, -1]) { const f = mesh(finG, Mt.fin, { parent: w, name: 'whaleFin' + (s > 0 ? 'L' : 'R'), pos: [s * 0.33, -0.12, 0.18] }); f.rotation.set(0.4, s * 0.5, s * -0.65); f.scale.set(1.5, 1, 1.3); }
-  const flukeG = cached('ep01WhaleFluke', () => { const g = new THREE.SphereGeometry(1, 24, 12); g.scale(0.17, 0.03, 0.09); g.translate(0.14, 0, 0); g.computeVertexNormals(); return g; });
-  for (const s of [1, -1]) { const f = mesh(flukeG, Mt.fin, { parent: w, name: 'whaleFluke' + (s > 0 ? 'L' : 'R'), pos: [0, 0.02, -0.62] }); f.rotation.set(-0.1, s > 0 ? -0.35 + PI : 0.35, 0); if (s > 0) f.rotation.y = PI + 0.35; }
-  const eg = cached('ep01WhaleEye', () => { const g = new THREE.SphereGeometry(0.048, 18, 12); g.scale(1, 1, 0.55); return g; });
-  for (const s of [1, -1]) { const e = mesh(eg, Mt.eye, { parent: w, name: 'whaleEye' + (s > 0 ? 'L' : 'R'), pos: [s * 0.262, 0.06, 0.43] }); e.rotation.y = s * 1.1; }
+  const finG = cached('ep01WhaleFin2', () => { const g = new THREE.SphereGeometry(1, 24, 14); g.scale(0.075, 0.032, 0.17); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i); p.setX(i, p.getX(i) * (1 - 0.45 * smooth(-0.17, 0.17, -z))); } g.translate(0, 0, -0.1); g.computeVertexNormals(); return g; });
+  for (const s of [1, -1]) { const f = mesh(finG, Mt.fin, { parent: w, name: 'whaleFin' + (s > 0 ? 'L' : 'R'), pos: [s * 0.3, -0.16, 0.26] }); f.rotation.set(0.35, s * 0.55, s * -0.75); f.scale.set(1.5, 1, 1.4); }
+  const flukeG = cached('ep01WhaleFluke2', () => { const g = new THREE.SphereGeometry(1, 24, 12); g.scale(0.19, 0.032, 0.095); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, p.getZ(i) - 0.06 * Math.pow(Math.max(0, x / 0.19), 2)); } g.translate(0.15, 0, 0); g.computeVertexNormals(); return g; });
+  const tail = group('whaleTail', w, [0, whaleBend(-0.62) + 0.01, -0.62]); tail.rotation.x = -0.5;
+  for (const s of [1, -1]) { const f = mesh(flukeG, Mt.fin, { parent: tail, name: 'whaleFluke' + (s > 0 ? 'L' : 'R') }); f.rotation.set(0, s > 0 ? -0.4 : PI + 0.4, s * 0.12); }
+  const eg = cached('ep01WhaleEye2', () => { const g = new THREE.SphereGeometry(0.058, 20, 14); g.scale(1, 1, 0.55); return g; });
+  const hl = cached('ep01WhaleEyeHi', () => new THREE.SphereGeometry(0.016, 10, 8)); const hm = cached('ep01WhaleEyeHiM', () => new THREE.MeshBasicMaterial({ color: '#f4f2ff' }));
+  for (const s of [1, -1]) { const e = group('whaleEye' + (s > 0 ? 'L' : 'R'), w, [s * 0.335, 0.1, 0.43]); e.rotation.y = s * 1.15; mesh(eg, Mt.eye, { parent: e, name: 'whaleEyeBall' }); mesh(hl, hm, { parent: e, name: 'whaleEyeHi', pos: [-0.012 * s, 0.02, 0.03], cast: false }); }
+  const spout = cached('ep01WhaleSpout', () => { const L = []; for (let k = 0; k < 4; k++) { const a = (k / 4) * 2 * PI; const c = new THREE.SphereGeometry(0.045, 12, 10); c.scale(0.7, 1.5, 0.7); c.rotateZ(Math.sin(a) * 0.5); c.rotateX(Math.cos(a) * 0.5); c.translate(Math.sin(a) * 0.03, 0.06, Math.cos(a) * 0.03); L.push(c); } const st = new THREE.CylinderGeometry(0.02, 0.025, 0.08, 10); st.translate(0, 0.0, 0); L.push(st); return mergeList(L); });
+  mesh(spout, Mt.spout, { parent: w, name: 'whaleSpout', pos: [0, 0.31, 0.28], rot: [-0.25, 0, 0] });
   return root;
 }
 // Attach the whale to an avatar: 'hug' (across the chest, both arms round it: use pose 'hug' / 'carry'), 'hand'
@@ -736,11 +765,11 @@ export function holdWhale(avatar, whale, mode = 'hug') {
 // ==================================================================================================================
 //  GRANDPA'S FLASHLIGHT
 // ==================================================================================================================
-// makeFlashlight({ on, light: true | cd, angle }) -> root (studs inside a group; metres root). Beam along local -y when
+// makeFlashlight({ on, light: true | cd (18), angle (22 deg) }) -> root (studs inside a group; metres root). Beam along local -y when
 // held (holdFlashlight parents it to the hand socket so the beam runs down the arm, the Roblox tool grip: arm raised =
 // beam forward, arm down = beam at the lawn). Parts: torchBody, torchHead, torchLens, torchGlow, torchLight (SpotLight).
 export function makeFlashlight(opts = {}) {
-  const P = { on: 0, light: true, cd: 6, angle: 22, color: '#fff1d0', ...opts };
+  const P = { on: 0, light: true, cd: 18, angle: 22, color: '#fff1d0', ...opts };
   const Mt = cached('ep01TorchMats', () => {
     const N = 128, c = canvas(N, N), g = c.getContext('2d'); g.fillStyle = '#b8261e'; g.fillRect(0, 0, N, N); for (let y = 0; y < N; y += 16) { g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(0, y, N, 5); g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(0, y + 6, N, 3); }
     const tex = canvasTex(c, { wrap: true }); tex.repeat.set(3, 1);
@@ -777,6 +806,14 @@ export function holdFlashlight(avatar, torch, { side = 'R', axis = 'arm' } = {})
   if (axis === 'arm') torch.rotation.set(PI / 2, 0, 0); else torch.rotation.set(0, 0, 0);
   const tb = torch.getObjectByName('torch'); tb.position.set(0, 0, axis === 'arm' ? 0.05 : 0.12);
   hs.add(torch); return torch;
+}
+// Aim a held flashlight at a world point (e.g. up at the chin for the ghost-story face, or at a spot on the lawn):
+// rotates the torch inside the hand socket so its beam points there. Call after setPose (pure: same pose -> same aim).
+export function aimFlashlight(torch, worldPoint) {
+  const par = torch.parent; if (!par) return torch; par.updateWorldMatrix(true, false); torch.updateWorldMatrix(false, false);
+  const from = torch.getWorldPosition(V3()), dir = V3(...(worldPoint.isVector3 ? worldPoint.toArray() : worldPoint)).sub(from).normalize();
+  const qp = new THREE.Quaternion(); par.getWorldQuaternion(qp); const qw = new THREE.Quaternion().setFromUnitVectors(V3(0, 0, 1), dir);
+  torch.quaternion.copy(qp.invert().multiply(qw)); const tb = torch.getObjectByName('torch'); if (tb) tb.position.set(0, 0, 0.1); return torch;
 }
 // World-space beam origin + direction (for fx beams / pools): call after the scene's matrices are updated.
 export function flashlightRay(torch) { const lens = torch.getObjectByName('torchLens'); lens.updateWorldMatrix(true, false); const o = lens.getWorldPosition(V3()); const d = V3(0, 0, 1).transformDirection(lens.matrixWorld); return { origin: o, dir: d }; }
