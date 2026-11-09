@@ -141,11 +141,11 @@ const fwoomLevelEp = (ctx, t, o = {}) => X.fwoomLevel(t, epT(ctx, FWOOM_T0), { b
 function theoWithWhale(name = 'theo', o = {}) { const th = K.makeCharacter(name, o); const wh = CR.stuffedWhale(); CR.holdWhale(th, wh, 'underArm'); return th; }
 // Remove the flowerbed's tulips / stems / daisies (merged per colour in the set) within horizontal circles [[x, z, r], ...]
 // (world m) round a low lens, so a camera in the bed sees past them. Geometry is copied (the set template is shared).
-function clearPlants(root, circles, { names = /^(tulip:|stem)/ } = {}) {
-  root.updateMatrixWorld(true); const v = new THREE.Vector3();
+function clearPlants(root, circles, { names = /^(tulip:|stem)/, drop = null } = {}) {
+  root.updateMatrixWorld(true); const v = new THREE.Vector3(); const out = drop || ((cx, cy, cz) => circles.some(([x, z, r]) => Math.hypot(cx - x, cz - z) < r));
   root.traverse((m) => {
     if (!m.isMesh || !names.test(m.name)) return; const g0 = m.geometry; const g = g0.index ? g0.toNonIndexed() : g0; const pa = g.attributes.position; const n = pa.count / 3; const keep = [];
-    for (let i = 0; i < n; i++) { let cx = 0, cz = 0; for (let k = 0; k < 3; k++) { v.fromBufferAttribute(pa, i * 3 + k).applyMatrix4(m.matrixWorld); cx += v.x / 3; cz += v.z / 3; } if (!circles.some(([x, z, r]) => Math.hypot(cx - x, cz - z) < r)) keep.push(i); }
+    for (let i = 0; i < n; i++) { let cx = 0, cy = 0, cz = 0; for (let k = 0; k < 3; k++) { v.fromBufferAttribute(pa, i * 3 + k).applyMatrix4(m.matrixWorld); cx += v.x / 3; cy += v.y / 3; cz += v.z / 3; } if (!out(cx, cy, cz)) keep.push(i); }
     if (keep.length === n) { if (g !== g0) g.dispose(); return; }
     const ng = new THREE.BufferGeometry();
     for (const [name, at] of Object.entries(g.attributes)) { const sz = at.itemSize, src = at.array; const arr = new src.constructor(keep.length * 3 * sz); keep.forEach((tri, j) => arr.set(src.subarray(tri * 3 * sz, tri * 3 * sz + 3 * sz), j * 3 * sz)); ng.setAttribute(name, new THREE.BufferAttribute(arr, sz, at.normalized)); }
@@ -154,6 +154,15 @@ function clearPlants(root, circles, { names = /^(tulip:|stem)/ } = {}) {
 }
 // The agent board by the path: its back face shows the text mirrored (props.js); hidden in shots that see it from the house side (as part4).
 function hideBoard(H) { const b = H.ep01.board; if (b) b.visible = false; }
+// ... or keep it and blank its back face (box material 5 = -Z, the house side): a sign's back is plain, and hiding the
+// panel leaves its post and arm standing bare (they are merged into the lot).
+// ... or take the whole board out of a shot that never needs it: the panel hidden and its post + arm triangles stripped
+// from the merged lot mesh (geometry copied, as clearPlants).
+function removeBoard(H) {
+  const b = H.ep01.board; if (!b) return; b.visible = false; const c = worldOf(b); const ax = new THREE.Vector3(1, 0, 0).applyQuaternion(b.getWorldQuaternion(new THREE.Quaternion())); ax.y = 0; ax.normalize();
+  const post = c.clone().addScaledVector(ax, -2.2 * S); const L = 2.45 * S;   // the post stands 2.2 studs left of the panel centre; the arm runs over the panel
+  clearPlants(H, [], { names: /^(trim|black)/, drop: (x, y, z) => { const dx = x - c.x, dz = z - c.z; const along = dx * ax.x + dz * ax.z, across = -dx * ax.z + dz * ax.x; return y < 7.3 * S && Math.abs(across) < 0.4 * S && Math.abs(along - (post.x - c.x) * ax.x - (post.z - c.z) * ax.z - 2.4 * S) < L; } });
+}
 // The light wave's walls fade out within [d0, d1] m of the lens (a copy of fx_ep01's wall shader with a distance term), so
 // the wall can pass the lens at ground level without washing the whole frame.
 function nearFade(group, d0 = 0.5, d1 = 1.4) {
@@ -310,30 +319,35 @@ export const builders = {
     update(ctx, t) { const s = ctx.shared; K.gnomeIdle(s.g, t, { seed: 's77', amp: 0.3 }); lanternSwing(s.g, t - s.tF, { amp: 6, decay: 1.4 }); s.F.update(t); s.b1.update(t); s.b2.update(t); s.fam.update(t); s.fx.update(t); },
   },
 
-  // s78 "light rolled across the lawn," (88.58-89.75) - ground level on the lawn: the FWOOM wall of gold light rolls out
-  // from Grandpa's bed (behind-left) and sweeps left -> right across the frame, lighting the blades, sparkles kicked up at
-  // its front, and overtakes the lens on "across" (89.13, f5348). The camera trucks right with it (11 studs over the shot,
-  // ~9 studs/s, its path at 55 deg to the wave's radius so the wave, at 8 studs/s, still overtakes it) + push 12 % (fov).
-  // The wall fades within 1.4 m of the lens (no full-frame wash as it passes). Two mounds in its path sink as it reaches
-  // them. (The wave keeps its 8 studs/s; its start is re-timed for this angle so the pass lands on the word.)
+  // s78 "light rolled across the lawn," (88.58-89.75) - ground level on the lawn, 1.9 m out from Grandpa's bed, looking
+  // out across the dark lawn toward the open gate, the truck at the kerb and the street: the FWOOM wall of gold light
+  // comes from behind-left (the bed), sweeps in from the left past the lens on "across" (89.13, f5348) and rolls on away
+  // over the lawn toward the fence, lighting the blades with sparkles kicked up at its front; the mounds in its path sink
+  // as it reaches them. The lens looks 58 deg off the wave's radius so the front crosses the frame left -> right (board
+  // screen direction), trucks right with it 5 studs (board 11: at that speed it outruns the wave) + push 12 % (fov). The
+  // wall fades within 2.4 m of the lens (no full-frame wash as it passes). The agent board (in the line of sight, seen
+  // from behind) is taken out of this shot. (The wave keeps its 8 studs/s; its start is
+  // re-timed so the pass lands on the word.)
   light_rolls: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); hideBoard(H); frontDoor(ctx, { light: 1.6, glow: 1.0 }); theoAsleep(ctx, H);
+      const p = ctx.params; const H = nightLot(ctx); removeBoard(H); frontDoor(ctx, { light: 1.6, glow: 1.0 }); theoAsleep(ctx, H);
       const g = grandpaAt(ctx, { lantern: 1 }); ctx.shared.g = g;
       const lan = worldOf(g.getObjectByName('lantern')); const Cn = new THREE.Vector3(lan.x, 0, lan.z);
-      const v = 8 * S; const tA = evT(ctx, 'across', 0.55); const dur = ctx.shot.duration; const truck = (c.drift && c.drift.truck_studs ? c.drift.truck_studs : 11) * S;
-      const u = new THREE.Vector3(0.55, 0, 0.835).normalize(); const camY = 1.4 * S; /* 1.4 studs (board 0.5): just over the blades, so the lit band on the grass reads */ const CA = Cn.clone().addScaledVector(u, 3.9); CA.y = camY;
-      let right = u.clone().applyAxisAngle(YAX, -55 * DEG); let look = new THREE.Vector3(right.z, 0, -right.x);
-      if (look.dot(Cn.clone().sub(CA)) < 0) { right = u.clone().applyAxisAngle(YAX, 55 * DEG); look = new THREE.Vector3(right.z, 0, -right.x); }
-      const C0 = CA.clone().addScaledVector(right, -truck * tA / dur); const tW0 = tA - 3.9 / v;
-      const tgt = C0.clone().addScaledVector(look, c.dist_studs * S); tgt.y = camY + c.dist_studs * S * Math.tan(-5 * DEG);
+      const v = 8 * S; const tA = evT(ctx, 'across', 0.55); const dur = ctx.shot.duration; const truck = 5 * S; const r0 = 1.9;
+      const u = new THREE.Vector3(-0.45, 0, 0.89).normalize(); const camY = 1.4 * S; /* 1.4 studs (board 0.5): just over the blades, so the lit band on the grass reads */
+      let look = u.clone().applyAxisAngle(YAX, 58 * DEG); let right = new THREE.Vector3(-look.z, 0, look.x);
+      if (right.dot(u) < 0) { look = u.clone().applyAxisAngle(YAX, -58 * DEG); right = new THREE.Vector3(-look.z, 0, look.x); }   // the source must sit behind-LEFT: the front then sweeps left -> right
+      const CA = Cn.clone().addScaledVector(u, r0); CA.y = camY; const C0 = CA.clone().addScaledVector(right, -truck * tA / dur);
+      const rA = Math.hypot(CA.x - Cn.x, CA.z - Cn.z); const tW0 = tA - rA / v;
+      const tgt = C0.clone().addScaledVector(look, 6 * S); tgt.y = camY + 6 * S * Math.tan(-3 * DEG);
       ctx.camera.set({ pos: C0.toArray(), target: tgt.toArray(), fov: p.fov }).truck(truck); basePush(ctx);
-      clearPlants(H, [[C0.x, C0.z, 0.25], [CA.x, CA.z, 0.25]]);
-      ctx.shared.rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemiIntensity: 0.5, key: { intensity: 0.3 }, lamp: { n: 0 }, window: { n: 0 }, postOpts: { exposure: 0.95, glow: { amount: 0.06 } } });
+      clearPlants(H, [[C0.x, C0.z, 0.3], [CA.x, CA.z, 0.3], [C0.x + right.x * truck, C0.z + right.z * truck, 0.3]]);
+      ctx.shared.rig = sets.magicGlow(ctx, { set: H, skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.6 }, hemiIntensity: 0.5, key: { intensity: 0.3 }, lamp: { n: 2 }, window: { n: 0 }, postOpts: { exposure: 0.95, glow: { amount: 0.06 } } });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.6, levelFn: (t) => fwoomLevelEp(ctx, t) });
-      const W = X.lightWave(ctx, { center: Cn, t0: tW0, speed: 8, height: 2.2, width: 1.8, intensity: 2.2, sparkles: 110, sector: 'camera', light: 4.0, seed: 's78w' }); ctx.add(W.group); ctx.shared.W = W; nearFade(W.group, 0.4, 1.2);
-      const f = CR.moleField(ctx, { center: [CA.x, CA.z], size: [22, 22], res: 72, seed: 's78f', heads: 'snout' }); ctx.add(f.group);
-      for (const [fw, lat, sc] of [[2.0, -0.2, 1.0], [3.2, 0.9, 1.1]]) { const q = CA.clone().addScaledVector(look, fw).addScaledVector(right, lat); const k = f.add({ at: [q.x, q.z], scale: sc, face: [Cn.x, Cn.z] }); f.eyes(k, -5, null); f.sink(k, tW0 + Math.hypot(q.x - Cn.x, q.z - Cn.z) / v, 0.5); }
+      const ang = (w) => Math.atan2(w.z, w.x) / DEG; const aU = ang(u), aL = ang(look); const lo = Math.min(aU, aL) - 30, hi = Math.max(aU, aL) + 30;
+      const W = X.lightWave(ctx, { center: Cn, t0: tW0, speed: 8, height: 2.0, width: 1.8, intensity: 1.7, sparkles: 120, sector: [lo, hi], light: 2.2, seed: 's78w' }); ctx.add(W.group); ctx.shared.W = W; nearFade(W.group, 0.7, 2.4);   // softer near the lens: no cream wash after the pass
+      const f = CR.moleField(ctx, { center: [CA.x + look.x * 3, CA.z + look.z * 3], size: [22, 22], res: 72, seed: 's78f', heads: 'snout' }); ctx.add(f.group);
+      for (const [fw, lat, sc] of [[2.2, -0.35, 1.0], [3.4, 0.45, 1.1], [4.6, -0.2, 1.0]]) { const q = CA.clone().addScaledVector(look, fw).addScaledVector(right, lat); const k = f.add({ at: [q.x, q.z], scale: sc, face: [Cn.x, Cn.z] }); f.eyes(k, -5, null); f.sink(k, tW0 + Math.hypot(q.x - Cn.x, q.z - Cn.z) / v, 0.5); }
       ctx.shared.f = f; ctx.shared.fam = familyLanterns(ctx, H);
     },
     update(ctx, t) { const s = ctx.shared; s.f.update(t); s.GL.update(t); s.W.update(t); s.fam.update(t); K.gnomeIdle(s.g, t, { seed: 's78', amp: 0.3 }); },
@@ -413,7 +427,7 @@ export const builders = {
       ctx.camera.set(H.ep01.views.quietWide); basePush(ctx, { mode: 'dolly' });
       nightRig(ctx, H, 'nightHigh', { window: { n: 2, cd: 2.4, color: '#ffd9a0', maxD: 14 }, hemiIntensity: 1.1, postOpts: { exposure: 1.1 } });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.4 }); ctx.shared.fam = familyLanterns(ctx, H);
-      ctx.shared.fx = sparks(ctx, up(GP, 3.5, 2, 6), [4.5, 2.2, 3.0], 9, 's81', { px: [44, 80] });
+      ctx.shared.fx = sparks(ctx, up(GP, 4.6, -1.6, 2.2), [3.6, 2.4, 2.2], 8, 's81', { px: [40, 72] });   // over the bed and the window, clear of the hero's head
     },
     update(ctx, t) { const s = ctx.shared; s.GL.update(t); s.fam.update(t); s.fx.update(t); K.gnomeIdle(s.g, t, { seed: 's81', amp: 0.25 }); },
   },
@@ -499,6 +513,9 @@ export const builders = {
       boardCam(ctx, [mid.x, 0, mid.z], { ref: f.toArray(), yaw: 20, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, fov: p.fov }); basePush(ctx);
       const B = camBasis(ctx); clearPlants(H, [[B.pos.x, B.pos.z, 0.4]]);
       ctx.shared.rig = dawnLight(ctx, H); warmKey(ctx, [mid.x, 1.0, mid.z], { cd: 1.2, d: 1.2, color: '#ffd8c0' });
+      // the pair is backlit by the low sun (the lens looks toward the street): a face key on the kneeling hero keeps his
+      // skin the warm salmon of s84 (without it his face goes brown against Theo's)
+      { K.setPose(hero, { ...K.POSES.kneel, bodyX: 20 }); hero.updateWorldMatrix(true, true); const hh = worldOf(hero.getObjectByName('head')); warmKey(ctx, hh.toArray(), { cd: 0.9, d: 0.75, color: '#ffd2b0', side: 20, el: 25 }); }
       ctx.shared.dew = dew(ctx, [mid.x, 0.5, mid.z - 0.6], [1.6, 0.8, 1.0], 5, 's85dew');
     },
     update(ctx, t) {
@@ -523,19 +540,21 @@ export const builders = {
       const g = grandpaAt(ctx, { lantern: 0.5 }); ctx.shared.g = g; const eyes = C.eyesOf(g);
       const theo = theoWithWhale('theoSocks', { face: (p.cast[1] && p.cast[1].face) || 'content' }); theo.position.set(...T_STEP); theo.rotation.y = yawTo(T_STEP, GP); ctx.add(theo); ctx.shared.theo = theo;
       ctx.add(sets.contactShadow(ctx, { pos: [T_STEP[0], 0.005, T_STEP[2]], radius: 0.36, opacity: 0.35 }));
-      const toT = P3(T_STEP).sub(P3(GP)).setY(0).normalize(); const cdir = toT.clone().negate().applyAxisAngle(YAX, 24 * DEG);
+      // orbit 34 deg off his facing axis (was 24): Theo then stands clear of the hat, so his waving arm reads
+      const toT = P3(T_STEP).sub(P3(GP)).setY(0).normalize(); const cdir = toT.clone().negate().applyAxisAngle(YAX, 34 * DEG);
       const cam = P3(eyes).addScaledVector(cdir, c.dist_studs * S); cam.y = BED[1] + c.height_studs * S;
-      const th = worldOf(theo.getObjectByName('head')); const aim = P3(eyes).lerp(th, 0.62); const hd = Math.hypot(aim.x - cam.x, aim.z - cam.z); aim.y = cam.y + hd * Math.tan(c.pitch_deg * DEG) + 0.08;
+      const th = worldOf(theo.getObjectByName('head')); const aim = P3(eyes).lerp(th, 0.56); const hd = Math.hypot(aim.x - cam.x, aim.z - cam.z); aim.y = cam.y + hd * Math.tan(c.pitch_deg * DEG) + 0.08;
       ctx.camera.set({ pos: cam.toArray(), target: aim.toArray(), fov: p.fov }); basePush(ctx);
       clearPlants(H, [[cam.x, cam.z, 0.32], [lerp(cam.x, eyes.x, 0.5), lerp(cam.z, eyes.z, 0.5), 0.2]]);
       K.setGnomeHead(g, 10, 4, 0); g.updateWorldMatrix(true, true);
       { const B = camBasis(ctx); C.gazeAt(g, B.pos.clone().addScaledVector(B.right, 0.55).add(new THREE.Vector3(0, 0.18, 0))); }   // eyes rolled to screen-right, toward Theo
       ctx.shared.rig = dawnLight(ctx, H); warmKey(ctx, eyes.toArray(), { cd: 0.7, d: 0.6, color: '#ffd8c0' });
+      warmKey(ctx, th.toArray(), { cd: 1.1, d: 0.9, color: '#ffd2b0', side: 25, el: 25 });   // Theo is backlit by the low sun: keep his skin s83/s87's salmon
       const tB = evT(ctx, 'blinked', 1.3); ctx.shared.tB = tB; const T = X.blinkTik(ctx, g, { t0: tB, frames: 2 }); ctx.add(T.group); ctx.shared.T = T;
     },
     update(ctx, t) {
       const s = ctx.shared; K.setGnomeLids(s.g, K.gnomeBlink(t, [s.tB], { frames: 2 })); s.T.update(t); K.gnomeIdle(s.g, t, { seed: 's86', amp: 0.2 });
-      K.setPose(s.theo, { ...THEO_BASE, armRz: 112 + 9 * Math.sin(2 * Math.PI * 2 * t), armRx: 18, neckX: -4, neckZ: -3 });
+      K.setPose(s.theo, { ...THEO_BASE, armRz: 128 + 11 * Math.sin(2 * Math.PI * 2 * t), armRx: 14, neckX: -4, neckZ: -3 });
     },
   },
 
@@ -561,16 +580,27 @@ export const builders = {
     quality: { shadows: 'pcfsoft' },
     build(ctx) {
       const p = ctx.params, c = p.camera;
-      const T = SE.ep01Street(ctx, { tod: 'dawn', lanterns: 0.5, truck: 'leaving', truckOpts: { t0: epT(ctx, 100.37), accel: 4, vmax: 6, balconyBox: false, dome: false } }); ctx.add(T); ctx.shared.T = T;
+      // our street at sunrise, the truck pulling away from our kerb (ENGINE 100.37: 4 studs/s^2 to 6 studs/s). Our lawn
+      // carries its six family gnomes of every heroLot shot (s06 layout, bedFront0 shifted to the path) instead of the
+      // street's two, all facing the house; next door's plastic gnomes (they face the street) are left out of this shot so
+      // every gnome in it faces its house.
+      const T = SE.ep01Street(ctx, { tod: 'dawn', lanterns: 0.5, truck: 'leaving', skip: ['A4.bed0', 'A4.lawn0', 'A4.lawn3', 'A3.lawn2', 'A3.lawn3'], truckOpts: { t0: epT(ctx, 100.37), accel: 4, vmax: 6, balconyBox: false, dome: false } }); ctx.add(T); ctx.shared.T = T;
+      const POINTED = [0, 1, 2, 3, 4, 5, 7];
+      ['bedFront0', 'lawn0', 'lawn1', 'lawn2', 'lawn3', 'bedFront1'].forEach((n, k) => {
+        const s0 = sets.slot(T.ep01.set, 'A3.' + n); if (!s0) return; const s = { ...s0, pos: s0.pos.slice() }; if (n === 'bedFront0') s.pos[0] += 1.5 * S;
+        const f = K.makeFamilyGnome(POINTED[(2 + k) % POINTED.length], { lantern: 0.5, lod: 'mid' }); sets.place(f, s); ctx.add(f); ctx.add(sets.contactShadow(ctx, { pos: s.pos, radius: 0.26, opacity: 0.4 }));
+      });
       const gp = T.ep01.grandpa; const gpos = worldOf(gp);
-      const theo = theoWithWhale('theo', { face: 'content' }); theo.position.set(gpos.x + 0.9, 0, gpos.z + 0.55); theo.rotation.y = 0.5; K.setPose(theo, { ...THEO_BASE, armRz: 130 }); ctx.add(theo); ctx.shared.theo = theo;
-      // the lens rides at the back edge of the cargo bay (povCamera, far side of the floor), looking out across the open back
-      // to our lawn as it falls behind: the door rail and the box stack frame the left; the street and the lawns recede
-      const pov = T.ep01.truck.ep01.povCamera({ height: 7.5, back: 0.9, side: 3.0, pitch: c.pitch_deg, fov: p.fov, yaw: 0 });   // 7.5 studs (board 6): the lawns read over the fences
-      const aimW = gpos.clone().add(new THREE.Vector3(0.6, 0.9, 1.0)); const tmpV = new THREE.Vector3();
-      const dirAt = (t) => { const pp = pov.pos(t, tmpV).clone(); const st = pov.target(t, new THREE.Vector3()).sub(pp).normalize(); const a = aimW.clone().sub(pp).normalize(); return { pp, d: st.lerp(a, 0.72).normalize() }; };
-      ctx.camera.set({ pos: pov.pos, target: (t, o) => { const { pp, d } = dirAt(t); return (o || new THREE.Vector3()).copy(pp).addScaledVector(d, 3.0); }, fov: pov.fov })
-        .handheld({ rot: 0.3, pos: 0.004, freq: 1.1, seed: 88 }); basePush(ctx, { mode: 'dolly' });
+      const theo = theoWithWhale('theo', { face: 'content' }); theo.position.set(gpos.x - 0.85, 0, gpos.z + 0.6); theo.rotation.y = 0.6; K.setPose(theo, { ...THEO_BASE, armRz: 130 }); ctx.add(theo); ctx.shared.theo = theo;   // at Grandpa's street-side left: both read from the truck
+      // the lens stands in the cargo bay near the open back on the road side (povCamera), looking back out of the opening
+      // toward our lawn (yaw 60): the house-side door rail frames the left, the roof edge the top, the bay floor the bottom;
+      // as the truck pulls away our lawn recedes with every gnome's back to us (each faces its house), Theo small beside
+      // Grandpa. h 9.5 studs (board 6: from 6 the picket fence hides the lawn gnomes), fov 60 (board 70: gnomes too small).
+      const pov = T.ep01.truck.ep01.povCamera({ height: 9.5, back: 2.0, side: 3.2, pitch: -14, fov: 60, yaw: 60 });
+      ctx.camera.set({ pos: pov.pos, target: pov.target, fov: pov.fov }).handheld({ rot: 0.3, pos: 0.004, freq: 1.1, seed: 88 }); basePush(ctx, { mode: 'dolly' });
+      // Grandpa alone has his head turned round after the truck (s89 opens on that look): tiny here, the reveal is s89's
+      { const cm = pov.pos(ctx.shot.duration * 0.7, new THREE.Vector3()); const d = cm.sub(gpos).setY(0).normalize(); const ry = gp.rotation.y;
+        const lx = d.x * Math.cos(ry) - d.z * Math.sin(ry), lz = d.x * Math.sin(ry) + d.z * Math.cos(ry); K.setGnomeHead(gp, Math.atan2(lx, lz) / DEG, 2, 0); }
       ctx.shared.rig = sets.dawn(ctx, { set: T, sun: { az: 92, el: 9 }, postOpts: { exposure: 1.6 } });
     },
     update(ctx, t) { const s = ctx.shared; s.T.ep01.update(t); K.setPose(s.theo, { ...THEO_BASE, armRz: 130 + 14 * Math.sin(2 * Math.PI * 1.8 * t), neckX: 4 }); },
@@ -588,11 +618,13 @@ export const builders = {
       // tele from the truck lane (12.8 m = 40 studs from him), over our picket fence
       const v0 = P3(H.ep01.views.fromTruckTele.pos); const gdir = v0.clone().sub(P3(GP)).setY(0).normalize(); const cam = P3(GP).addScaledVector(gdir, 40 * S).add(new THREE.Vector3(0.45, 0, 0)); cam.y = 8.5 * S; const v = { pos: cam.toArray() };   // 8.5 studs high (board 4): over the picket fence
       const theo = theoWithWhale('theoSocks', { face: (p.cast[1] && p.cast[1].face) || 'content' }); const tp = [GP[0] - 0.75, 0, GP[2] + 0.62]; theo.position.set(...tp); theo.rotation.y = yawTo(tp, cam.toArray()) - 0.3; K.setPose(theo, { ...THEO_BASE, armRz: 125 }); ctx.add(theo); ctx.shared.theo = theo;   // beside him (he has stepped round to wave the truck off)
-      const tgt = P3(GP).lerp(P3(tp), 0.2); tgt.y = 0.7;
-      ctx.camera.set({ pos: v.pos, target: tgt.toArray(), fov: 16 }); basePush(ctx);   // fov 16 (board 25): a tele CU of the two of them
+      const tgt = P3(GP).lerp(P3(tp), 0.4); tgt.y = 0.74;
+      ctx.camera.set({ pos: v.pos, target: tgt.toArray(), fov: 11 }); basePush(ctx);   // fov 11 (board 25): a tele CU on Grandpa, Theo at the left edge beside him
       ctx.shared.yawAt = Math.atan2(-gdir.x, -gdir.z) / DEG;   // head yaw that points his face at the lens (the gnome faces -Z)
       ctx.camera.custom((st, t) => { st.px[0] += 2.2 * Math.sin(t * 37.0) + 0.8 * Math.sin(t * 71.3 + 1.1); st.px[1] += 2.0 * Math.sin(t * 43.7 + 0.4) + 0.9 * Math.sin(t * 89.1); });
       ctx.shared.rig = dawnLight(ctx, H, { sun: { az: 150, el: 10 } });
+      { K.setPose(theo, { ...THEO_BASE, armRz: 125 }); theo.updateWorldMatrix(true, true); const th = worldOf(theo.getObjectByName('head')); warmKey(ctx, th.toArray(), { cd: 1.4, d: 1.1, color: '#ffd2b0', side: 20, el: 25 }); }
+      warmKey(ctx, C.eyesOf(g).toArray(), { cd: 0.7, d: 0.7, color: '#ffd2b0', side: 15, el: 30 });   // his turned face, lit for the look at the lens
       ctx.shared.tE = evT(ctx, 0, 0.45);
     },
     update(ctx, t) { const s = ctx.shared; K.setGnomeHead(s.g, K.gnomeHeadTurn(t, s.tE, 0.8, s.yawAt, 0), 2, 0); K.gnomeIdle(s.g, t, { seed: 's89', amp: 0.2 }); K.setPose(s.theo, { ...THEO_BASE, armRz: 125 + 12 * Math.sin(2 * Math.PI * 1.8 * t) }); },
@@ -662,11 +694,13 @@ export const builders = {
         pics.forEach((pc, i) => { const x = 12 + (i - k) * W; if (x > W || x < -W) return; g.drawImage(pc, x, 150, W - 24, W - 24); g.fillStyle = '#c8c6d4'; g.font = '20px "DejaVu Sans", sans-serif'; g.textAlign = 'left'; g.fillText(caps[i], x + 6, 150 + W + 4); });
         for (let i = 0; i < 3; i++) { g.fillStyle = Math.round(k) === i ? '#f4f2f8' : '#5a5868'; g.beginPath(); g.arc(W / 2 - 24 + 24 * i, 640, 6, 0, Math.PI * 2); g.fill(); }
       });
-      const LOW = { ...HOLD_POSE, armRx: 46, armRz: -18, neckX: -24 }; K.setPose(old, LOW);
-      ctx.add(ph); const hp = holdPhone(old, ph, { pose: LOW, lift: 0.04, out: 0.1 }); ctx.shared.ph = ph; ctx.shared.old = old;
+      // the hand holds the phone from below (phone raised 0.17 m over the hand, tilted to his eyes), so from over his left
+      // shoulder the forearm block stays under the screen instead of crossing it (it hid half the photos)
+      const LOW = { ...HOLD_POSE, armRx: 40, armRz: -18, neckX: -24 }; K.setPose(old, LOW);
+      ctx.add(ph); const hp = holdPhone(old, ph, { pose: LOW, lift: 0.17, out: 0.13 }); ctx.shared.ph = ph; ctx.shared.old = old;
       const back = new THREE.Vector3(0, 0, 1).applyAxisAngle(YAX, (c.yaw_deg - 180) * DEG); const cdir = back.clone().multiplyScalar(Math.cos(-c.pitch_deg * DEG)); cdir.y = Math.sin(-c.pitch_deg * DEG); cdir.normalize();
       // over his left shoulder (the phone is in his right hand: from the right the arm hides it), looking down past his cheek
-      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const sd = toE.clone().applyAxisAngle(YAX, 40 * DEG); if (sd.x > 0) sd.applyAxisAngle(YAX, -80 * DEG);
+      const toE = hp.eyes.clone().sub(hp.center); toE.y = 0; toE.normalize(); const sd = toE.clone().applyAxisAngle(YAX, 48 * DEG); if (sd.x > 0) sd.applyAxisAngle(YAX, -96 * DEG);
       const cam = hp.center.clone().addScaledVector(sd, 0.92).add(new THREE.Vector3(0, 0.55, 0)); void cdir;
       ctx.camera.set({ pos: cam.toArray(), target: hp.center.toArray(), fov: p.fov }); basePush(ctx);
       ctx.shared.rig = G.ep01.light(ctx); warmKey(ctx, hp.hand.toArray(), { cd: 0.6, d: 0.6, color: '#ffd0a0' });
