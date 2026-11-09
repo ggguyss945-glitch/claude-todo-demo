@@ -42,7 +42,7 @@ const LOT_DOOR = [0, 0.32, -13.216];
 const ROOM_FLOOR = 0.32;                    // the bungalow floor (= the porch deck)
 const HOLD_OFF = [0, 0.1, 1.12];            // part2: the hugged gnome in the hero's hips frame (studs)
 const HUG = { armLx: 58, armRx: 58, armLz: -36, armRz: -36, neckX: -8 };   // part2: both arms round the gnome's belly
-const CRADLE = { armLx: 66, armRx: 66, armLz: -22, armRz: -22, neckX: -30 }; // s47: held a little further out, tipped back
+const CRADLE = { armLx: 52, armRx: 52, armLz: -40, armRz: -40, neckX: -30 }; // s47: forearms round his belly, tipped back
 const TUCK_OFF = [1.38, 0.62, 0.62];        // Grandpa tucked under the hero's LEFT arm (hips frame, studs)
 const TUCK_ARM = { armLx: 30, armLz: 4 };   // the left arm pressing him to the hip
 const STREET_HERO = [5.76, 0, -8.6];        // part2: the hero on our path in ep01Street (lot A3)
@@ -152,6 +152,35 @@ function tulipCluster(ctx, spots, { seed = 'tul' } = {}) {
   return out;
 }
 
+// Mom's BALCONY GNOME box as a real open carton (the kit's box is a solid block, so nothing could come out of it): kraft
+// walls and floor, two top flaps hinged on the +-Z edges (they open left / right in the s49 top-down frame) carrying the
+// printed label, packing tape over the seam. Metres; origin at the floor centre. flaps[i].userData.sgn = opening sign.
+function balconyCarton(ctx, { w = 0.7, d = 0.62, h = 0.6, th = 0.012 } = {}) {
+  const mats = ctx.cache('p3:cartonMats', () => ({ out: new THREE.MeshStandardMaterial({ color: '#c99760', roughness: 0.82 }), inn: new THREE.MeshStandardMaterial({ color: '#8f6238', roughness: 0.9 }),
+    tape: new THREE.MeshStandardMaterial({ color: '#d9b77e', roughness: 0.32 }),
+    label: (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d');
+      g.fillStyle = '#c99760'; g.fillRect(0, 0, 512, 512); for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(90,60,30,${0.04 + 0.05 * ((i * 37) % 7) / 7})`; g.fillRect((i * 97) % 512, (i * 53) % 512, 3 + (i % 5), 1 + (i % 3)); }
+      g.fillStyle = '#1e1a18'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 84px "DejaVu Sans", sans-serif'; g.fillText('BALCONY', 256, 190); g.fillText('GNOME', 256, 290);
+      g.strokeStyle = '#c8241c'; g.lineWidth = 8; g.strokeRect(150, 368, 212, 64); g.fillStyle = '#c8241c'; g.font = 'bold 40px "DejaVu Sans", sans-serif'; g.fillText('FRAGILE', 256, 402);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.userData.persistent = true; return new THREE.MeshStandardMaterial({ map: t, roughness: 0.8 }); })() }));
+  const g = new THREE.Group(); g.name = 'balconyCarton';
+  const box = (sx, sy, sz, x, y, z, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); b.position.set(x, y, z); g.add(b); return b; };
+  box(d, th, w, 0, th / 2, 0, [mats.out, mats.out, mats.inn, mats.out, mats.out, mats.out]);
+  for (const sz of [-1, 1]) box(d, h, th, 0, h / 2, sz * (w / 2 - th / 2), sz > 0 ? [mats.out, mats.out, mats.out, mats.out, mats.out, mats.inn] : [mats.out, mats.out, mats.out, mats.out, mats.inn, mats.out]);
+  for (const sx of [-1, 1]) box(th, h, w - 2 * th, sx * (d / 2 - th / 2), h / 2, 0, sx > 0 ? [mats.out, mats.inn, mats.out, mats.out, mats.out, mats.out] : [mats.inn, mats.out, mats.out, mats.out, mats.out, mats.out]);
+  const flaps = [];
+  for (const sz of [1, -1]) {
+    const hinge = new THREE.Group(); hinge.position.set(0, h, sz * w / 2); g.add(hinge); hinge.userData.sgn = sz;
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(d, th, w / 2), [mats.out, mats.out, mats.out, mats.inn, mats.out, mats.out]); fl.position.set(0, th / 2, -sz * w / 4); hinge.add(fl);
+    // the printed label, half on each flap (image: text right = -Z, text up = -X)
+    const pg = new THREE.PlaneGeometry(w / 2, d); const uv = pg.attributes.uv; const u0 = sz > 0 ? 0 : 0.5; for (let i = 0; i < uv.count; i++) uv.setX(i, u0 + uv.getX(i) * 0.5);
+    const lab = new THREE.Mesh(pg, mats.label); lab.rotation.set(-Math.PI / 2, Math.PI / 2, 0, 'YXZ'); lab.position.set(0, th + 0.001, -sz * w / 4); hinge.add(lab);
+    flaps.push(hinge);
+  }
+  const tape = box(d + 0.02, 0.004, 0.07, 0, h + th + 0.003, 0, mats.tape);
+  return { group: g, flaps, tape, h };
+}
+
 // ==================================================================================================================
 export const PART = 3;
 export const builders = {
@@ -164,7 +193,7 @@ export const builders = {
       const p = ctx.params, c = p.camera; const T = ctx.shot.duration;
       const R = SE.ep01Street(ctx, { tod: 'night', lanterns: 1, truck: 'open', skip: ['A3.bed0', 'A2.lawn3'] }); ctx.add(R);
       const P = [-4.64, 0, -8.352];                     // A2.lawn3 (the neighbour's lawn left of ours), facing its house (-Z)
-      const g = K.makeFamilyGnome(4, { lantern: 1, lanternLight: 2.5 }); g.position.set(...P); g.rotation.y = Math.PI + 0.12; ctx.add(g); ctx.shared.g = g;
+      const g = K.makeFamilyGnome(4, { lantern: 1, lanternLight: 0.9 }); /* boarded 2.5 cd: at 0.2 m it washes the beard and coat out (QA v4/v5) */ g.position.set(...P); g.rotation.y = Math.PI + 0.12; ctx.add(g); ctx.shared.g = g;
       ctx.add(sets.contactShadow(ctx, { pos: [P[0], 0.005, P[2]], radius: 0.24, opacity: 0.4 }));
       K.setGnomeGaze(g, -4, 4); g.updateWorldMatrix(true, true); const eyes = C.eyesOf(g);
       const fwd = new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y));
@@ -172,7 +201,7 @@ export const builders = {
       basePush(ctx); paramRoll(ctx);
       nightRig(ctx, R, 'nightHigh', { lamp: { n: 3 }, postOpts: CU_GRADE });
       coolRim(ctx, eyes.toArray(), { intensity: 0.9 });
-      ctx.add(ctx.lights.point({ color: '#ff9a40', intensity: 1.4, pos: eyes.clone().addScaledVector(fwd, 0.16).add(new THREE.Vector3(0, -0.2, 0)).toArray(), decay: 2 }));   // the lantern key from below (TF fairies)
+      ctx.add(ctx.lights.point({ color: '#ff9a40', intensity: 0.45, pos: eyes.clone().addScaledVector(fwd, 0.38).add(new THREE.Vector3(0, -0.24, 0)).toArray(), decay: 2 }));   // the lantern key from below (TF fairies)
       const L = X.lanternLight(ctx, g, { t0: -1, ring: 2, ringOpts: { boost: 1.6, rimBoost: 2.8 }, burst: false, haloPx: 70, seed: 's42' }); ctx.add(L.group); ctx.shared.L = L;
       // the mound: from the street side it noses to the rim of the 2-stud pool (snout recoils on the rim), then backs off
       const B = camBasis(ctx); const fh = B.fwd.clone().setY(0).normalize(); const rh = B.right.clone().setY(0).normalize();
@@ -345,7 +374,7 @@ export const builders = {
   truck_clock: {
     build(ctx) {
       const p = ctx.params, c = p.camera; const R = I.truckCab(ctx, { time: '11:52', note: 'LEAVE 6 AM' }); ctx.add(R); ctx.shared.R = R;
-      const A = R.userData.anchors; const subj = V3(A.led).lerp(V3(A.note), 0.4); subj.y += 0.02;
+      const A = R.userData.anchors; const subj = V3(A.led).lerp(V3(A.note), 0.33); subj.y += 0.02;
       // fov 45, yaw -10, pitch -8 as boarded; the lens 1.9 m out (at the boarded 1.6 studs the 9:16 frame holds part of the LED alone)
       const d = new THREE.Vector3(0, 0, 1).applyAxisAngle(YAX, c.yaw_deg * DEG); const dist = 1.9;
       const pos = subj.clone().addScaledVector(d, dist); pos.y = subj.y + dist * Math.tan(-c.pitch_deg * DEG);
@@ -364,30 +393,26 @@ export const builders = {
       const p = ctx.params, c = p.camera; const H = nightLot(ctx); frontDoor(ctx); const E = H.ep01;
       const tRip = evT(ctx, 'stood', 0.297), tLift = evT(ctx, 'plastic', 0.857); Object.assign(ctx.shared, { tRip, tLift });
       // the box: off the stack and down on the ramp (the ramp falls from x -2.56 (0.83 m) to x 0 along z -2.53, 18 deg)
-      const bb = E.truck.ep01.balconyBox; const slope = Math.atan2(0.832, 2.56);
-      const bx = -1.05, bz = -2.528, by = 0.832 * (-bx / 2.56) + 0.035; bb.parent.remove(bb);
+      E.truck.ep01.balconyBox.visible = false; const slope = Math.atan2(0.832, 2.56);
+      const bx = -1.05, bz = -2.528, by = 0.832 * (-bx / 2.56) + 0.012;
       const boxG = new THREE.Group(); boxG.position.set(bx, by, bz); boxG.rotation.z = -slope; ctx.add(boxG);
-      const boxS = new THREE.Group(); boxS.scale.setScalar(S * 0.85); boxS.rotation.y = Math.PI / 2; boxG.add(boxS); bb.position.set(0, 0, 0); bb.rotation.set(0, 0, 0); boxS.add(bb);
-      const fl = bb.getObjectByName('flapL'), fr = bb.getObjectByName('flapR'); ctx.shared.flaps = [fl, fr];
-      // packing tape across the seam (tears on "stood")
-      const tapeM = new THREE.MeshStandardMaterial({ color: '#c9a874', roughness: 0.35, metalness: 0 });
-      const tape = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 2.64), tapeM); tape.position.set(0, 2.24, 0); bb.add(tape); ctx.shared.tape = tape;
-      // Mom's plastic gnome standing in the box
+      const CB = balconyCarton(ctx); boxG.add(CB.group); ctx.shared.flaps = CB.flaps; ctx.shared.tape = CB.tape;
+      // Mom's plastic gnome standing in the carton
       const pg = plasticGnome(); ctx.add(pg); ctx.shared.pg = pg;
-      boxG.updateMatrixWorld(true); const inBox = new THREE.Vector3(0, 0.06 * S, 0).applyMatrix4(boxG.matrixWorld);
-      ctx.shared.inBox = inBox;
+      boxG.updateMatrixWorld(true); const inBox = new THREE.Vector3(0, 0.014, 0).applyMatrix4(boxG.matrixWorld);
+      ctx.shared.inBox = inBox; ctx.shared.slope = slope;
       // the hero on the road beside the ramp (street side, +Z), facing it; Grandpa under the left arm
-      const HP = [bx - 0.42, 0, bz + 1.02];
+      const HP = [bx - 0.42, 0, bz + 0.74];
       const { hero, g } = heroWithGnome(ctx, { at: HP, yaw: Math.PI, face: 'determined', mode: 'tuck' }); ctx.shared.hero = hero; ctx.shared.g = g;
-      const top = new THREE.Vector3(bx, by + 2.2 * S * 0.85, bz);
-      ctx.camera.set({ pos: [top.x + 0.001, by + c.height_studs * S + 0.55, top.z + 0.06], target: [top.x, top.y, top.z + 0.06], fov: p.fov }); basePush(ctx);
+      const top = new THREE.Vector3(bx, by + CB.h, bz);
+      ctx.camera.set({ pos: [top.x + 0.22 + 0.001, by + c.height_studs * S + 0.55, top.z + 0.08], target: [top.x + 0.22, top.y, top.z + 0.08], fov: p.fov }); basePush(ctx);
       nightRig(ctx, H, 'night', { lamp: { n: 2 }, low: false, postOpts: CU_GRADE });
       ctx.add(ctx.lights.point({ color: '#fff0d0', intensity: 2.2, pos: [bx - 0.9, by + 1.9, bz - 0.2], decay: 2 })); // the cargo dome's spill out of the open back
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.2, ring: 0 });
-      const reach = { ...TUCK_ARM, bodyX: 16, armRx: 84, armRz: 4, neckX: -24 };     // fingers on the tape end at the near edge
-      const rip = { ...reach, bodyX: 6, armRx: 58, armRz: 24 };                         // yank: back and out
-      const dig = { ...reach, bodyX: 30, armRx: 78, armRz: 2 };                         // into the box
-      const lift = { ...TUCK_ARM, bodyX: 24, armRx: 92, armRz: 2, neckX: -10 };          // up toward the lens over the box
+      const reach = { ...TUCK_ARM, bodyX: 14, armRx: 72, armRz: 4, neckX: -24 };     // fingers on the tape at the seam
+      const rip = { ...reach, bodyX: 4, armRx: 50, armRz: 26 };                         // yank: back and out
+      const dig = { ...reach, bodyX: 26, armRx: 62, armRz: 2 };                         // down into the carton
+      const lift = { ...TUCK_ARM, bodyX: 12, armRx: 112, armRz: 2, neckX: -6 };          // up toward the lens over the carton
       ctx.shared.pose = (t) => K.poseAt(t, [[0, reach], [tRip - 0.06, rip], [tRip + 0.25, dig], [tLift, lift]], 0.1);
       ctx.shared.fx = sparks(ctx, top.clone().add(new THREE.Vector3(0, 0.3, 0)).toArray(), [0.8, 0.3, 0.9], 6, 's49', { px: [40, 70] });
       const pf = sets.burst(ctx, { pos: top.toArray(), t0: tRip, dur: 0.25, count: 10, spread: 0.3, px: [14, 30], ring: false, core: false, colors: ['#e8d8b8', '#d8c098', '#ffffff'], brightness: 1.2, gravity: -0.6, seed: 's49rip' }); ctx.add(pf); ctx.shared.pf = pf;
@@ -395,12 +420,12 @@ export const builders = {
     update(ctx, t) {
       const s = ctx.shared; K.setPose(s.hero, s.pose(t)); s.GL.update(t); s.pf.update(t); s.fx.update(t);
       // flaps: taped shut, snap open on the rip (spring), outward 125 deg
-      const k = t < s.tRip ? 0 : springStep(t - s.tRip, 3.2, 0.42); s.flaps[0].rotation.z = 2.18 * k; s.flaps[1].rotation.z = -2.18 * k; s.tape.visible = t < s.tRip;
+      const k = t < s.tRip ? 0 : springStep(t - s.tRip, 3.2, 0.42); for (const f of s.flaps) f.rotation.x = f.userData.sgn * 2.25 * k; s.tape.visible = t < s.tRip;
       // the plastic gnome: in the box until "plastic", then pulled up into the hand and tipped face-up to the lens
       const pg = s.pg; const u = clamp01((t - s.tLift) / (8 / 60)); const e = outQuad(u);
       s.hero.updateWorldMatrix(true, true); const hand = K.handSocket(s.hero, 'R'); const hp = worldOf(hand).add(new THREE.Vector3(0, -0.03, -0.05));
       // in the box, standing (hat up to the lens); lifted: the base in his hand, tipped onto its back so the face looks up at us
-      pg.position.copy(s.inBox).lerp(hp, e); pg.rotation.set(-1.45 * e, Math.PI * 0.08 * (1 - e), 0.12 * Math.sin(Math.PI * u), 'YXZ');
+      pg.position.copy(s.inBox).lerp(hp, e); pg.rotation.set(-1.45 * e, Math.PI * 0.08 * (1 - e), -s.slope * (1 - e) + 0.12 * Math.sin(Math.PI * u), 'YXZ');
     },
   },
 
@@ -487,19 +512,19 @@ export const builders = {
       const p = ctx.params, c = p.camera; const H = nightLot(ctx, { bed: 'hole' }); frontDoor(ctx); theoAsleep(ctx, H);
       const tF = evT(ctx, 'flowers', 0.283); ctx.shared.tF = tF;
       const F0 = [BED[0] + 0.5, BED[1], -12.3]; // the bed's front tulip row right of Grandpa's spot (left of it the lens sits in the bush)
-      const { pos } = boardCam(ctx, F0, { ref: [0, 0, 1], yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, ground: BED[1], fov: p.fov }); basePush(ctx);
+      const { pos } = boardCam(ctx, F0, { ref: [0, 0, 1], yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, ground: BED[1] - 0.07, fov: p.fov }); basePush(ctx);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 1 }, window: { n: 1, cd: 2.6, maxD: 10 }, postOpts: CU_GRADE });
       const fwd = V3(F0).sub(pos).setY(0).normalize(); const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const at = (a, b) => V3(F0).addScaledVector(side, a).addScaledVector(fwd, b);
-      const m1 = CR.makeMole({ preset: 'small', seed: 21, lod: 'hero' }); m1.position.copy(at(-0.16, 0.05)); m1.position.y = BED[1] - 0.02; m1.rotation.y = Math.atan2(-fwd.x, -fwd.z) + 0.5; ctx.add(m1);
-      const m2 = CR.makeMole({ preset: 'runt', seed: 23, lod: 'hero' }); m2.position.copy(at(0.22, 0.28)); m2.position.y = BED[1] - 0.02; m2.rotation.y = Math.atan2(-fwd.x, -fwd.z) - 0.4; ctx.add(m2);
-      ctx.shared.m = [m1, m2]; ctx.shared.cue = [{ unfurl: -0.2, sniff: [0.0, tF + 0.35], eyesOn: -1 }, { unfurl: 0.02, sniff: [0.1, tF + 0.4], eyesOn: -1 }];
+      const m1 = CR.makeMole({ preset: 'small', seed: 21, lod: 'hero' }); m1.position.copy(at(-0.12, 0.3)); m1.position.y = BED[1] - 0.02; m1.rotation.y = Math.atan2(-fwd.x, -fwd.z) + 0.5; ctx.add(m1);
+      const m2 = CR.makeMole({ preset: 'runt', seed: 23, lod: 'hero' }); m2.position.copy(at(0.2, 0.45)); m2.position.y = BED[1] - 0.02; m2.rotation.y = Math.atan2(-fwd.x, -fwd.z) - 0.4; ctx.add(m2);
+      ctx.shared.m = [m1, m2]; ctx.shared.cue = [{ unfurl: -0.2, sniff: [0.0, tF + 0.35], eyesOn: -1, emerge: [[0, 0.3]] }, { unfurl: 0.02, sniff: [0.1, tF + 0.4], eyesOn: -1, emerge: [[0, 0.25]] }];
       const T = []; const add = (a, b, ci, h) => { const q = at(a, b); T.push([q.x, BED[1], q.z, ci, h]); };
       add(0.03, 0.12, 0, 1.15); add(0.12, 0.3, 1, 1.0); add(-0.24, 0.32, 3, 1.2); add(0.3, 0.18, 2, 1.1); add(-0.05, 0.5, 1, 1.25); add(-0.34, 0.1, 2, 0.95);
       ctx.shared.tul = tulipCluster(ctx, T, { seed: 's53' });
       coolRim(ctx, F0, { intensity: 0.8 });
       ctx.add(ctx.lights.point({ color: '#ffd9a0', intensity: 2.4, pos: up(WIN, -1.2, 0.8, 1.2), decay: 2 })); warmKey(ctx, up(F0, 0.6), { cd: 0.8, d: 0.6, color: '#ffc8a0' });
-      ctx.shared.sb = X.soilBurst(ctx, { pos: at(-0.16, 0.05).setY(BED[1] + 0.03).toArray(), t0: -0.1, count: 10, spread: 0.4, apex: 0.3, puffs: 0 }); ctx.add(ctx.shared.sb.group);
+      ctx.shared.sb = X.soilBurst(ctx, { pos: at(-0.12, 0.3).setY(BED[1] + 0.03).toArray(), t0: -0.1, count: 10, spread: 0.4, apex: 0.3, puffs: 0 }); ctx.add(ctx.shared.sb.group);
     },
     update(ctx, t) {
       const s = ctx.shared; s.m.forEach((m, i) => CR.animateMole(m, t, s.cue[i]));
@@ -543,24 +568,31 @@ export const builders = {
     build(ctx) {
       const p = ctx.params, c = p.camera; const H = nightLot(ctx, { bed: 'hole' }); const { theo } = theoAsleep(ctx, H); const E = H.ep01;
       const tG = evT(ctx, 'glass', 0.217); ctx.shared.tG = tG;
-      const face = worldOf(theo.getObjectByName('head')); const subj = [WIN[0], 0, face.z];
-      const { pos } = boardCam(ctx, subj, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: c.dist_studs, h: 3.2, pitch: c.pitch_deg, ground: ROOM_FLOOR, fov: p.fov }); basePush(ctx);
+      // lens behind him toward his feet (straight behind, his shoulder and draped arm sit right in front of the pane) and
+      // at h 4.0 studs (from h 2 his side silhouette hides the glass; level with the eyes); aimed at the pane with the boarded pitch
+      const face = worldOf(theo.getObjectByName('head')); const subj = [WIN[0] + 0.32, 0, face.z];
+      const { pos } = boardCam(ctx, subj, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: c.dist_studs, h: 4.0, pitch: c.pitch_deg, ground: ROOM_FLOOR, fov: p.fov });
+      { const hd = Math.hypot(WIN[0] - pos.x, WIN[2] - pos.z); ctx.camera.set({ pos: pos.toArray(), target: [WIN[0] - 0.06, pos.y + hd * Math.tan(c.pitch_deg * DEG), WIN[2]], fov: p.fov }); } basePush(ctx);
       I.bedroomNight(ctx, { set: H, lamp: 3.5, nightlight: 2.5, moon: true, lanternOutside: false });
       // the mole outside, up against the glass (big: its eyes reach the pane), rising into view
-      const m = CR.makeMole({ preset: 'big', seed: 31, lod: 'hero' }); m.rotation.y = Math.PI; ctx.add(m); ctx.shared.m = m;
+      const m = CR.makeMole({ preset: 'old', scale: 1.3, seed: 31, lod: 'hero' }); m.rotation.y = Math.PI; ctx.add(m); ctx.shared.m = m;
       for (const n of ['mound', 'moleShadow']) { const o = m.getObjectByName(n); if (o) o.visible = false; }
-      const mx = WIN[0] + 0.1, mz = WIN[2] + 0.42; ctx.shared.mp = [mx, mz];
-      CR.setMole(m, { emerge: 0.7, open: 1, eyes: 1, rise: 1, look: [0, -22] }); m.position.set(mx, 0.0, mz); m.updateWorldMatrix(true, true);
+      const mx = WIN[0] - 0.05; let mz = WIN[2] + 0.6;
+      CR.setMole(m, { emerge: 0.7, open: 1, eyes: 1, rise: 1, look: [0, -10] }); m.position.set(mx, 0.0, mz); m.updateWorldMatrix(true, true);
+      // the snout disc stops 6 cm outside the outer glass (it poked through the pane and hid the fog)
+      { const bb = new THREE.Box3().setFromObject(m.getObjectByName('snout')); mz += (WIN[2] + 0.06) - bb.min.z; m.position.z = mz; m.updateWorldMatrix(true, true); }
       const eL0 = worldOf(m.getObjectByName('eyeL')), eR0 = worldOf(m.getObjectByName('eyeR')); const eyeY = (eL0.y + eR0.y) / 2;
-      const yUp = WIN[1] - 0.12 - eyeY; ctx.shared.yUp = yUp;
+      const yUp = WIN[1] + 0.08 - eyeY; ctx.shared.yUp = yUp;
       const eL = eL0.clone().add(new THREE.Vector3(0, yUp, 0)), eR = eR0.clone().add(new THREE.Vector3(0, yUp, 0));
-      const fog = X.glassFog(ctx, E.theo.glass, { t0: tG, center: [WIN[0] + 0.05, eL.y - 0.1, -13.504 + 0.008], r1: 1.1, grow: 0.35, opacity: 0.75, eyes: [eL, eR], toward: pos }); ctx.add(fog.group); ctx.shared.fog = fog;
+      const fog = X.glassFog(ctx, E.theo.glass, { t0: tG, center: [WIN[0] + 0.05, eL.y - 0.12, -13.504 + 0.008], r1: 1.1, grow: 0.35, opacity: 0.5, eyes: [eL, eR], eyeGlow: 1.0, toward: pos }); ctx.add(fog.group); ctx.shared.fog = fog;
       ctx.add(ctx.lights.point({ color: '#ffb347', intensity: 0.8, pos: [mx, WIN[1] - 0.1, WIN[2] + 0.25], decay: 2 }));
       ctx.shared.fx = sparks(ctx, face.clone().add(new THREE.Vector3(0.2, 0.5, 0.3)).toArray(), [1.2, 0.8, 0.6], 6, 's55', { px: [36, 64] });
     },
     update(ctx, t) {
-      const s = ctx.shared; const m = s.m; const k = outQuad(clamp01((t + 0.1) / 0.32)); m.position.y = s.yUp * k - 0.25 * (1 - k);
-      CR.setMole(m, { t, emerge: 0.7, open: 1, eyes: 1, rise: 1, look: [0, -22], sniff: t > s.tG - 0.05 && t < s.tG + 0.3 ? 1 : 0.3 }); s.fog.update(t); s.fx.update(t);
+      const s = ctx.shared; const m = s.m; const k = outQuad(clamp01((t + 0.22) / 0.3)); m.position.y = s.yUp * k - 0.25 * (1 - k);
+      // the reflector eyes catch the room light (steady glint, a pulse with the breath on "glass"): the star snout hides the eye domes from the lens
+      const fl = 0.45 + 0.55 * Math.exp(-Math.pow((t - s.tG - 0.06) / 0.09, 2));
+      CR.setMole(m, { t, emerge: 0.7, open: 1, eyes: 1, flash: fl, rise: 1, look: [0, -10], sniff: t > s.tG - 0.05 && t < s.tG + 0.3 ? 1 : 0.3 }); s.fog.update(t); s.fx.update(t);
     },
   },
 
@@ -608,7 +640,7 @@ export const builders = {
   // at the rim of the light. Push 19 %.
   stand_guard: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx, { bed: 'hole' }); frontDoor(ctx); const E = H.ep01;
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx, { bed: 'hole' }); frontDoor(ctx); const E = H.ep01; E.truck.ep01.balconyBox.visible = false;
       const HP = new THREE.Vector3(BED[0] + 0.25, 0, BED[2] + 1.72); const tb = V3(E.spots.truckBack);
       const axis = HP.clone().sub(tb).setY(0).normalize();                  // truck -> hero -> camera
       const { hero, g } = heroWithGnome(ctx, { at: HP.toArray(), face: p.cast[0].face || 'angry' }); ctx.shared.hero = hero; ctx.shared.g = g;
