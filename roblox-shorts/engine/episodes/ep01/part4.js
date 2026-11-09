@@ -28,6 +28,7 @@ import * as SE from '../../kit/sets_ep01.js';
 import * as I from '../../kit/interiors.js';
 import * as X from '../../kit/fx_ep01.js';
 import { doorTex } from '../../kit/kitlib.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { springStep } from '../../core/anim.js';
 import { makeRng, hash32 } from '../../core/random.js';
 import * as C from './common.js';
@@ -123,8 +124,8 @@ function roomFrame(H) { const v = H.ep01.views.room_toWindow; const O = P3(v.pos
 // part3's Theo); 'up' = on the back with the face tilted `tilt` deg toward `toward` (seen from inside the room).
 const SLEEP_POSE = { armLx: 78, armRx: 70, armLz: -16, armRz: -10, legLx: 42, legRx: 26, neckX: -6 };
 const BACK_POSE = { armLx: 10, armRx: 10, armLz: 6, armRz: 6, legLx: 4, legRx: -4, neckX: 0 };
-function sleeper(ctx, H, name, { sc = 0.75, lie = 'side', toward = null, tilt = 50, lift = 0.1, pose = null, whale = false, slide = 0 } = {}) {
-  const A = H.ep01.room.sleeper; const av = K.makeCharacter(name, { face: 'sleeping' });
+function sleeper(ctx, H, name, { sc = 0.75, lie = 'side', toward = null, tilt = 50, lift = 0.1, pose = null, whale = false, slide = 0, anchor = null } = {}) {
+  const A = anchor || H.ep01.room.sleeper; const av = K.makeCharacter(name, { face: 'sleeping' });
   if (whale) CR.holdWhale(av, CR.stuffedWhale(), 'asleep');
   K.setPose(av, pose || (lie === 'side' ? SLEEP_POSE : BACK_POSE));
   const yAx = V3(A.head).sub(V3(A.body)).setY(0).normalize(); let zAx;
@@ -139,12 +140,14 @@ function sleeper(ctx, H, name, { sc = 0.75, lie = 'side', toward = null, tilt = 
 }
 // part3's Theo asleep on the bare mattress, on his side facing the window, curled round the whale.
 const MATTRESS_TOP = 0.66;
-function theoAsleep(ctx, H) {
+function theoAsleep(ctx, H, { blanket = false } = {}) {
   const A = H.ep01.room.sleeper; const theo = K.makeCharacter('theo', { face: 'sleeping' }); const sc = 0.85;
   const wh = CR.stuffedWhale(); CR.holdWhale(theo, wh, 'asleep'); K.setPose(theo, SLEEP_POSE);
   const yAx = V3(A.head).sub(V3(A.body)).setY(0).normalize(); const zAx = new THREE.Vector3(0, 0, 1); const xAx = new THREE.Vector3().crossVectors(yAx, zAx).normalize();
   theo.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAx, yAx, zAx));
   theo.position.copy(V3(A.head)).addScaledVector(yAx, -4.6 * S * sc); theo.position.y = MATTRESS_TOP + 1.0 * S * sc; theo.position.z -= 0.05;
+  // s69-s76: he has pulled his blue blanket up to his chest (the bare pyjama boxes read as crates from the room's back)
+  if (blanket) { const bl = new THREE.Mesh(ctx.cache('ep01p4:blanketGeo2', () => { const g = new RoundedBoxGeometry(2.7, 3.0, 1.9, 3, 0.55); g.userData.persistent = true; return g; }), I.XM('fab:#4f7ac8')); bl.position.set(-0.05, 1.1, 0.05); bl.name = 'p4Blanket'; theo.add(bl); }
   ctx.add(theo); theo.updateWorldMatrix(true, true); return { theo, whale: wh };
 }
 // The guard hold (s58-s60, s65): the hero on the s57 spot, Grandpa against his chest facing him (looking up at him).
@@ -167,6 +170,9 @@ function kneelHold(ctx, { face = 'heartfelt', pose = KNEEL_HOLD } = {}) {
   ctx.add(sets.contactShadow(ctx, { pos: [KNEEL_AT[0], KNEEL_AT[1] + 0.005, KNEEL_AT[2]], radius: 0.5, opacity: 0.35 }));
   return { hero, g, setHold, fwd: dirOf(KNEEL_YAW) };
 }
+// The agent board by the path: seen from the house side its back face shows the FOR SALE text mirrored (props.js,
+// sets README note); in the house-side close-ups (s58, s65) it is only a background blur, so it is hidden there.
+function hideBoard(H) { const b = H.ep01.board; if (b) b.visible = false; }
 // Moles waiting just outside the light (s57's mounds carried on): eye pairs lit, snouts wriggling. `back` = the
 // horizontal direction they sit in (from the lantern), spread over `angles` (rad), at radius R (m) from `center`.
 function waitingMoles(ctx, center, back, { angles = [-0.4, -0.15, 0.18, 0.42], R = 5 * S + 0.6, scales = [1.15, 1.3, 1.2, 1.1], seed = 'p4moles', res = 112 } = {}) {
@@ -181,18 +187,24 @@ function flashbackLight(ctx, H, grade = 'sepia', o = {}) {
   const rig = H.ep01.light(ctx, { skyPreset: C.GALAXY_LOW, skyOpts: { intensity: 1.4 }, window: { n: 2, cd: 2.4, color: '#ffd9a0', maxD: 14 }, ...rest });
   ctx.post.set(sets.postPreset(grade, { exposure: exposure ?? 1.12 })); return rig;
 }
-// Light-boost decals (X.boostBlend: dst x (1 + src)) need the falloff in RGB, not alpha: a soft radial spot and a soft
-// band (a bright stripe along u, soft across v and at both ends), black outside.
+// Light decals (additive; X.boostBlend 'boost' mode: dst x (1 + src)) with the falloff in RGB, not alpha: a soft radial
+// spot and a soft band (a bright stripe along u, soft across v and at both ends), black outside.
 function boostTex(ctx, kind) {
-  return ctx.cache('ep01p4:boostTex:' + kind, () => {
+  return ctx.cache('ep01p4:boostTex2:' + kind, () => {
     const W = 256, Hh = kind === 'band' ? 128 : 256; const c = document.createElement('canvas'); c.width = W; c.height = Hh; const g = c.getContext('2d');
     g.fillStyle = '#000'; g.fillRect(0, 0, W, Hh);
-    if (kind === 'band') { const img = g.getImageData(0, 0, W, Hh); for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) { const v = Math.abs(y / (Hh - 1) * 2 - 1), u = Math.abs(x / (W - 1) * 2 - 1); const k = Math.pow(Math.max(0, 1 - v), 1.6) * Math.pow(Math.max(0, 1 - u * u), 1.2); const i = (y * W + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * k); img.data[i + 3] = 255; } g.putImageData(img, 0, 0); }
+    if (kind === 'band') { const img = g.getImageData(0, 0, W, Hh); for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) { const v = Math.abs(y / (Hh - 1) * 2 - 1), u = Math.abs(x / (W - 1) * 2 - 1); const sv = Math.min(1, Math.max(0, (1 - v) / 0.55)); const k = sv * sv * (3 - 2 * sv) * Math.pow(Math.max(0, 1 - Math.pow(u, 4)), 1.2); const i = (y * W + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * k); img.data[i + 3] = 255; } g.putImageData(img, 0, 0); }
     else { const gr = g.createRadialGradient(W / 2, Hh / 2, 0, W / 2, Hh / 2, W / 2); gr.addColorStop(0, '#fff'); gr.addColorStop(0.35, '#9a9a9a'); gr.addColorStop(0.7, '#262626'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, 0, W, Hh); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.userData.persistent = true; return t;
   });
 }
-function boostDecal(ctx, kind, color, k, w, h) { const m = X.boostBlend(new THREE.MeshBasicMaterial({ map: boostTex(ctx, kind), color: new THREE.Color(color).multiplyScalar(k), fog: false })); const q = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); q.renderOrder = 8; return q; }
+function boostDecal(ctx, kind, color, k, w, h, { mode = 'add' } = {}) {
+  // 'tint': a warm glaze (normal blending, the falloff as alphaMap, k = opacity): reads on bright skin, where an additive
+  // stripe vanishes in the tone curve
+  const m = mode === 'tint' ? new THREE.MeshBasicMaterial({ alphaMap: boostTex(ctx, kind), color: new THREE.Color(color), opacity: k, fog: false, transparent: true, depthWrite: false })
+    : new THREE.MeshBasicMaterial({ map: boostTex(ctx, kind), color: new THREE.Color(color).multiplyScalar(k), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  if (mode === 'boost') X.boostBlend(m); const q = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); q.renderOrder = 8; return q;
+}
 // Solve one pose key (bisection) so a hand socket (or the midpoint of both) reaches the target height y (world m).
 function solveArm(av, pose, key, y, { lo = -20, hi = 170, both = null, side = 'R' } = {}) {
   const hand = () => { K.setPose(av, pose); av.updateMatrixWorld(true); if (both) return worldOf(K.handSocket(av, 'L')).add(worldOf(K.handSocket(av, 'R'))).multiplyScalar(0.5); return worldOf(K.handSocket(av, side)); };
@@ -248,24 +260,35 @@ export const builders = {
     build(ctx) {
       const p = ctx.params, c = p.camera; const H = nightLot(ctx); frontDoor(ctx); theoAsleep(ctx, H);
       const { hero, g, head, fwd } = guardHold(ctx, { face: p.cast[0].face || 'sad', pose: { ...HUG, neckX: -12 } }); ctx.shared.g = g; ctx.shared.hero = hero;
+      hideBoard(H);
       // the lens 0.6 stud above the board's 4.6 and 4 deg down: from eye level his shoulders hide every eye pair behind him
-      boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs + 0.6, pitch: c.pitch_deg - 4, fov: p.fov }); basePush(ctx);
+      // and his face framed left of centre (target 0.09 m right): his hair spikes fill the frame width when centred
+      const bc = boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs + 0.6, pitch: c.pitch_deg - 4, fov: p.fov });
+      { const B0 = camBasis(ctx); ctx.camera.set({ target: bc.tgt.clone().addScaledVector(B0.right, 0.09).toArray() }); } basePush(ctx);
       C.gazeAt(g, head);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 }, postOpts: CU_GRADE });
       coolRim(ctx, head.toArray(), { intensity: 0.9 });
       const B = camBasis(ctx); const lan = worldOf(g.getObjectByName('lantern')); const off = B.pos.clone().sub(lan).multiplyScalar(0.45).add(new THREE.Vector3(0, -0.05, 0));
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 0.55, lightOffset: off.toArray() }); ctx.shared.fam = familyLanterns(ctx, H);
       warmKey(ctx, head.toArray(), { cd: 0.5, d: 0.9, color: '#ffc8a0' });
-      // the eye pairs, placed by casting rays through the gaps beside his head (NDC inside the end-of-push frame) onto
-      // the lawn: 3-4 m behind him, well outside the 5-stud ring
+      // the eye pairs, placed by casting rays through the open right third of the frame (NDC inside the end-of-push
+      // frame) onto the lawn: 3-4.6 m behind him, well outside the 5-stud ring
       ctx.camera.apply(0); const ray = new THREE.Raycaster(); const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.26); const spots = [];
-      for (const [nx, ny] of [[-0.7, -0.3], [-0.62, -0.38], [0.66, -0.33], [0.74, -0.26]]) { ray.setFromCamera(new THREE.Vector2(nx, ny), ctx.cam); const q = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, q)) { const d = q.clone().sub(B.pos).setY(0); const L = Math.min(d.length(), 4.6); spots.push(B.pos.clone().add(d.setLength(L)).setY(0)); } }
+      const famPos = Object.values(H.ep01.gnomes.family || {}).map((o) => worldOf(o));
+      for (const [nx, ny] of [[0.4, -0.26], [0.56, -0.34], [0.66, -0.22], [0.5, -0.42], [0.3, -0.38]]) { ray.setFromCamera(new THREE.Vector2(nx, ny), ctx.cam); const q = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, q)) { const d = q.clone().sub(B.pos).setY(0); const L = Math.min(d.length(), 5.2); const at = B.pos.clone().add(d.setLength(L)).setY(0); if (famPos.every((f) => Math.hypot(f.x - at.x, f.z - at.z) > 0.7) && spots.length < 3) spots.push(at); } }
       const f = CR.moleField(ctx, { center: [lan.x + B.fwd.x * 3.2, lan.z + B.fwd.z * 3.2], size: [30, 26], res: 96, seed: 's58', heads: 'snout' }); ctx.add(f.group);
-      spots.forEach((q, i) => { const k = f.add({ at: [q.x, q.z], scale: [1.25, 1.1, 1.2, 1.15][i], face: [lan.x, lan.z] }); f.eyes(k, -5, null); f.travel(k, [[q.x, q.z], [q.x + 0.04 * Math.cos(i), q.z + 0.04 * Math.sin(i)]], 0, 0.12); });
+      spots.forEach((q, i) => { const k = f.add({ at: [q.x, q.z], scale: [1.3, 1.15, 1.25][i], face: [B.pos.x, B.pos.z] }); f.eyes(k, -5, null); f.travel(k, [[q.x, q.z], [q.x + 0.04 * Math.cos(i), q.z + 0.04 * Math.sin(i)]], 0, 0.12); });
       ctx.shared.f = f;
+      // the reflector eyes as small screen-constant amber glows on the kit's eye positions (at 4-5 m the lit eye domes
+      // are a few pixels: the glow is what reads in the dark, like the references' eyes in the night)
+      const eyeMat = () => C.addSpriteMat(ctx.tex.radialGlow({ falloff: 2.0 }), '#ffae2a', 2.4, { depthTest: true });
+      ctx.shared.eyeGlow = spots.map(() => [0, 1].map(() => { const sp = C.pxSprite(eyeMat(), 15); sp.renderOrder = 14; ctx.add(sp); return sp; }));
       ctx.shared.fx = sparks(ctx, head.clone().lerp(B.pos, 0.4), [0.9, 0.7, 0.4], 6, 's58', { px: [40, 70] });
     },
-    update(ctx, t) { const s = ctx.shared; lanternSwing(s.g, t + 2.8, { amp: 8, decay: 0.8 }); K.gnomeIdle(s.g, t, { seed: 's58', amp: 0.2 }); s.GL.update(t); s.fam.update(t); s.f.update(t); s.fx.update(t); },
+    update(ctx, t) {
+      const s = ctx.shared; lanternSwing(s.g, t + 2.8, { amp: 8, decay: 0.8 }); K.gnomeIdle(s.g, t, { seed: 's58', amp: 0.2 }); s.GL.update(t); s.fam.update(t); s.f.update(t); s.fx.update(t);
+      s.eyeGlow.forEach((pair, i) => { const e = X.fieldEyes(s.f, i); if (!e) return; pair.forEach((sp, j) => { if (e[j]) { sp.position.copy(e[j]); sp.material.opacity = 0.85 + 0.15 * Math.sin(2 * Math.PI * 0.7 * t + i * 2.1); } }); });
+    },
   },
 
   // s59 "Grandpa turned his head," (66.35-67.38) - low CU on the gnome in his arms (we see the back of his head, the
@@ -309,11 +332,16 @@ export const builders = {
       const A0 = ge.clone().lerp(face, 0.55); const th = worldOf(theo.getObjectByName('head')); const A1 = th.clone().lerp(P3(WIN), 0.45);
       const ang = (v) => { const d = v.clone().sub(cp); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; };
       const [y0, p0] = ang(A0), [y1, p1] = ang(A1); let dy = y1 - y0; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
-      const tw = tOnset(ctx, TOWARD_ONSET); const wd = c.move.dur ?? 0.5; const rise = 0.22;   // the lens rises 0.22 m in the whip (Theo clears the sill)
-      Object.assign(ctx.shared, { tw, wd, dy, cp, A0, A1 });
+      const tw = tOnset(ctx, TOWARD_ONSET); const wd = c.move.dur ?? 0.5; const rise = 0.42;   // the lens rises 0.42 m in the whip (Theo, asleep on the floor mattress, clears the sill)
+      // ... and swings 1.1 m right and 1 m toward the house during the whip: Theo sleeps at the room's left end, seen through the glass only from
+      // right of the window centre (from the start position he is behind the frame's left edge)
+      const cp1 = new THREE.Vector3(WIN[0] + 0.15, cp.y + rise, GUARD[2] - 0.95);   // in front of the gnome's head (the path passes 0.3 m clear of it) const [y1b, p1b] = (() => { const d = A1.clone().sub(cp1); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; })();
+      let dyb = y1b - y0; while (dyb > Math.PI) dyb -= 2 * Math.PI; while (dyb < -Math.PI) dyb += 2 * Math.PI;
+      Object.assign(ctx.shared, { tw, wd, dy: dyb, cp, A0, A1 }); void dy; void p1;
+      const posAt = (t, o) => { const u = inOutSine((t - tw) / wd); return (o || new THREE.Vector3()).copy(cp).lerp(cp1, u); };
       ctx.camera.set({
-        pos: (t, o) => { const u = inOutSine((t - tw) / wd); return (o || new THREE.Vector3()).copy(cp).add(new THREE.Vector3(0, rise * u, 0)); },
-        target: (t, o) => { const u = inOutSine((t - tw) / wd); const yy = y0 + dy * u, pp = lerp(p0, p1, u); const q = (o || new THREE.Vector3()).set(Math.sin(yy) * Math.cos(pp), Math.sin(pp), Math.cos(yy) * Math.cos(pp)).multiplyScalar(2.0); return q.add(cp).add(new THREE.Vector3(0, rise * u, 0)); },
+        pos: posAt,
+        target: (t, o) => { const u = inOutSine((t - tw) / wd); const yy = y0 + dyb * u, pp = lerp(p0, p1b, u); const q = (o || new THREE.Vector3()).set(Math.sin(yy) * Math.cos(pp), Math.sin(pp), Math.cos(yy) * Math.cos(pp)).multiplyScalar(2.0); return q.add(posAt(t)); },
         fov: p.fov });
       basePush(ctx, { Z: c.move.base_push ?? 0.12 });
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 1, cd: 2.0, maxD: 10 }, postOpts: CU_GRADE });
@@ -350,9 +378,9 @@ export const builders = {
       const sh = sets.contactShadow(ctx, { pos: [kink.x, 0.006, kink.z], radius: 0.4, opacity: 0.35 }); ctx.add(sh);
       // camera: s63's last framing (lapTop, zoomed 1.15, rolled 4 deg) -> behind Grandpa at 4.6 studs, pitch -4
       const P0 = P3(v.pos), T0 = P3(v.target); const fov0 = 2 * Math.atan(Math.tan((v.fov / 2) * DEG) / 1.15) / DEG;
-      // end: MS behind him at 4.6 studs, 3 m back and 0.6 m left of the window, so he stands right of the glass and the
+      // end: MS behind him at 4.6 studs, 3.6 m back and 0.65 m left of the window, so he stands right of the glass and the
       // sleeping boy (head at the left end of the bed) reads past his shoulder
-      const P1 = new THREE.Vector3(WIN[0] - 0.6, c.move.to_h * S, kink.z + 3.0); const T1 = new THREE.Vector3(WIN[0] + 0.05, 0, WIN[2]); T1.y = P1.y + Math.hypot(T1.x - P1.x, T1.z - P1.z) * Math.tan((c.move.to_pitch ?? -4) * DEG);
+      const P1 = new THREE.Vector3(WIN[0] - 0.65, c.move.to_h * S, kink.z + 3.6); const T1 = new THREE.Vector3(WIN[0] + 0.05, 0, WIN[2]); T1.y = P1.y + Math.hypot(T1.x - P1.x, T1.z - P1.z) * Math.tan((c.move.to_pitch ?? -4) * DEG);
       const cd = c.move.dur ?? 1.4; const roll0 = 4;
       ctx.camera.set({
         pos: (t, o) => { const u = outCubic(t / cd); return (o || new THREE.Vector3()).copy(P0).lerp(P1, u); },
@@ -386,10 +414,8 @@ export const builders = {
     build(ctx) {
       const p = ctx.params, c = p.camera; const H = nightLot(ctx); frontDoor(ctx); theoAsleep(ctx, H);
       const { hero, g, head, fwd } = guardHold(ctx, { face: p.cast[0].face || 'wetEyes', headYaw: 150, headPitch: 10, pose: { ...HUG, neckX: -6 } }); ctx.shared.g = g; ctx.shared.hero = hero;
-      // Grandpa a little higher and to the hero's right in his arms, so his turned face shows at frame bottom-left
-      // without his hat crossing the hero's mouth; the lens 0.3 stud lower and 6 deg down to include it
-      g.position.set(-0.55, HOLD_OFF[1] + 0.3, HOLD_OFF[2]); g.rotation.y = Math.PI + 0.25; hero.updateWorldMatrix(true, true);
-      boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs - 0.3, pitch: c.pitch_deg - 6, fov: p.fov }); basePush(ctx); paramRoll(ctx);
+      hideBoard(H);
+      boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, fov: p.fov }); basePush(ctx); paramRoll(ctx);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 }, postOpts: CU_GRADE });
       coolRim(ctx, head.toArray(), { intensity: 1.0 });
       const B = camBasis(ctx); const lan = worldOf(g.getObjectByName('lantern'));
@@ -423,10 +449,13 @@ export const builders = {
     build(ctx) {
       const p = ctx.params, c = p.camera; const now = p.phase === 'now' || !p.era;
       const H = now ? nightLot(ctx) : SE.heroLot(ctx, { tod: 'night', era: p.era || '1990s', keepOff: true }); if (!now) ctx.add(H);
-      if (now) theoAsleep(ctx, H); else sleeper(ctx, H, 'cousinKid', { sc: 0.75, lie: 'side', lift: 0.15 });
-      // yaw -20, not +20: the porch column stands 2.6 studs right of this window (sets README: outside views at yaw <= 0);
-      // h 4.0: the board's 2.5 puts the lens under the line through the sill to Theo's mattress
-      boardCam(ctx, [WIN[0], 0, WIN[2]], { ref: [0, 0, 1], yaw: -Math.abs(c.yaw_deg), dist: c.dist_studs + 0.6, h: 4.0, pitch: c.pitch_deg, fov: p.fov, aimY: WIN[1] - 0.1 }); basePush(ctx);
+      // the 1990s girl on the LOWER bunk: on the top one the window's horizontal muntin crosses her face from outside
+      const R = roomFrame(H);
+      if (now) theoAsleep(ctx, H, { blanket: true }); else sleeper(ctx, H, 'cousinKid', { sc: 0.75, lie: 'side', lift: 0.15, anchor: { head: R(-1.4, 2.1, -9.6).toArray(), body: R(1.2, 1.95, -9.6).toArray(), top: 1.65 } });
+      // yaw 12 (board 20): the sleepers lie at the room's left end, so only a lens right of centre sees them through the
+      // glass, but at 20 the porch column (2.6 studs right of the window) fills the right of the frame. h 4.0: the board's
+      // 2.5 puts the lens under the line through the sill to Theo's floor mattress
+      boardCam(ctx, [WIN[0], 0, WIN[2]], { ref: [0, 0, 1], yaw: Math.min(12, c.yaw_deg), dist: c.dist_studs + 0.6, h: 4.0, pitch: c.pitch_deg, fov: p.fov, aimY: WIN[1] - 0.12 }); basePush(ctx);
       const B = camBasis(ctx);
       // the light source just outside frame left (Grandpa's torch / the hero's lantern), 1.0 m up, 0.9 m out from the wall
       const halfW = Math.tan((p.fov / 2) * DEG) * 9 / 16; const src = B.pos.clone().addScaledVector(B.fwd, 1.6).addScaledVector(B.right, -1.6 * halfW * 1.25); src.y = now ? 0.95 : 1.15;
@@ -436,14 +465,14 @@ export const builders = {
         const L = ctx.add(ctx.lights.point({ color: '#ffb85c', intensity: 3.2, pos: src.toArray(), decay: 2 })); ctx.shared.L = L;
         const ring = X.lanternRing(ctx, { center: [src.x, 0, src.z], radius: 5, y: 0, seed: 's69ring' }); ctx.add(ring.group); ctx.shared.ring = ring;
         // the gold lantern light on the glass: a warm sheen over the lower-left panes (light-boost, so it tints the glass)
-        const gq = boostDecal(ctx, 'spot', '#ff9a3a', 0.9, 1.5, 1.3); gq.position.copy(P3(WIN).add(new THREE.Vector3(-0.3, -0.25, 0.03))); ctx.add(gq);
+        const gq = boostDecal(ctx, 'spot', '#ffa040', 0.5, 1.2, 1.0, { mode: 'tint' }); gq.material.color.multiplyScalar(1.6); gq.position.copy(P3(WIN).add(new THREE.Vector3(-0.32, -0.3, 0.04))); ctx.add(gq);
         ctx.shared.fam = familyLanterns(ctx, H);
       } else {
         flashbackLight(ctx, H, 'sepia', { window: { n: 0 }, exposure: 1.15 });
         const dir = sill.clone().sub(src).normalize();
-        const Bm = X.flashlightBeam(ctx, { origin: src, dir, length: src.distanceTo(sill) + 0.5, angle: 10, cd: 16, opacity: 0.32, motes: 8, ground: 0 }); ctx.add(Bm.group); ctx.shared.Bm = Bm;
+        const Bm = X.flashlightBeam(ctx, { origin: src, dir, length: src.distanceTo(sill) + 0.5, angle: 10, cd: 16, opacity: 0.5, motes: 8, ground: 0 }); ctx.add(Bm.group); ctx.shared.Bm = Bm;
         // the torch spot lying across the sill and the lower glass
-        const sq = boostDecal(ctx, 'spot', '#fff0d0', 1.4, 1.1, 0.55); sq.position.copy(sill).add(new THREE.Vector3(0, 0.12, 0.02)); sq.rotation.z = 0.12; ctx.add(sq);
+        const sq = boostDecal(ctx, 'spot', '#fff2d8', 0.6, 1.0, 0.5, { mode: 'tint' }); sq.material.color.multiplyScalar(1.7); sq.position.copy(sill).add(new THREE.Vector3(0, 0.12, 0.05)); sq.rotation.z = 0.12; ctx.add(sq);
       }
       ctx.add(ctx.lights.point({ color: '#ffd9b0', intensity: 1.4, pos: up(WIN, -0.3, 0.4, -2.0), decay: 2 }));   // the room light on the sleeper
       ctx.shared.fx = sparks(ctx, P3(WIN).add(new THREE.Vector3(0.2, -0.5, 1.0)), [2.0, 1.4, 1.0], 7, 'p4decades' + (now ? 'n' : 'o'), { px: [40, 72] });
@@ -457,7 +486,7 @@ export const builders = {
   lawn_stare_lit: {
     build(ctx) {
       const p = ctx.params; const c = { near_slot: 'bedFront0', back_studs: 3.0, side_studs: -1.6, height_studs: 1.4, look_ahead_studs: 0, look_side_studs: 0, aim_studs: 3.0, moon_az: -8, moon_el: 30, ...p.camera };
-      const H = nightLot(ctx, { shiftBedFront0: false }); frontDoor(ctx); theoAsleep(ctx, H); const set = H; const id = 'A1';   // the s09 layout (bedFront0 unshifted)
+      const H = nightLot(ctx, { shiftBedFront0: false }); frontDoor(ctx); theoAsleep(ctx, H, { blanket: true }); const set = H; const id = 'A1';   // the s09 layout (bedFront0 unshifted)
       const sl = sets.slot(set, id + '.bed0'); const fwd = new THREE.Vector3(Math.sin(sl.yaw), 0, Math.cos(sl.yaw)); const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const base = V3(sl.pos); const near = V3(sets.slot(set, id + '.' + c.near_slot).pos);
       const pos = near.clone().addScaledVector(fwd, -c.back_studs * S).addScaledVector(side, c.side_studs * S); pos.y = c.height_studs * S;
@@ -466,9 +495,10 @@ export const builders = {
       const camYaw = Math.atan2(tgt.x - pos.x, -(tgt.z - pos.z)) / DEG;
       nightRig(ctx, H, 'nightHigh', { window: { n: 2, cd: 2.4, color: '#ffd9a0', maxD: 14 }, hemiIntensity: 1.05, moon: { az: camYaw + c.moon_az, el: c.moon_el, size: 9, style: 'tf' }, skyOpts: { intensity: 1.6 }, postOpts: { exposure: 1.1, grade: { temperature: -10, tint: 6 } } });
       // the hero in Grandpa's spot (beside the hole, a little right so the sleeping shape shows past his shoulder), back to us
-      const HP = [base.x + 0.5, BED[1], base.z + 0.1];
-      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(...HP); hero.rotation.y = sl.yaw; K.setPose(hero, { ...HUG, neckX: 10 }); ctx.add(hero);
-      const g = K.makeGnome('grandpa', { units: 'stud', lantern: 1, wear: 0.12 }); C.softenBeard(g); hero.getObjectByName('hips').add(g); g.position.set(...HOLD_OFF); hero.updateWorldMatrix(true, true);
+      const HP = [base.x + 0.5, BED[1], base.z - 0.08];
+      // Grandpa tucked under his left arm (the lens side), facing the house like every gnome, his lantern lit at the hip
+      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(...HP); hero.rotation.y = sl.yaw; K.setPose(hero, { armLx: 30, armLz: 4, armRx: 4, neckX: 12 }); ctx.add(hero);
+      const g = K.makeGnome('grandpa', { units: 'stud', lantern: 1, wear: 0.12 }); C.softenBeard(g); hero.getObjectByName('hips').add(g); g.position.set(1.38, 0.62, 0.62); g.rotation.set(0.12, 0.25, -0.16); hero.updateWorldMatrix(true, true);
       ctx.add(sets.contactShadow(ctx, { pos: [HP[0], HP[1] + 0.005, HP[2]], radius: 0.42, opacity: 0.35 }));
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.2 }); ctx.shared.fam = familyLanterns(ctx, H); ctx.shared.g = g;
       ctx.shared.fx = sparks(ctx, pos.clone().lerp(base, 0.35).setY(0.7), [3.5, 1.4, 2.5], (p.fx && p.fx.sparkles && p.fx.sparkles.count) || 8, 's70');
@@ -482,7 +512,7 @@ export const builders = {
   // h 2.2, d 4.0 (from the window), yaw 0, pitch 6, push 19 %. Bedroom grade.
   big_in_window: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H); const R = roomFrame(H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true }); const R = roomFrame(H);
       // the hero outside right at the glass, Grandpa tucked under his left arm (in front of him he would be inside the
       // wall): his head and shoulders fill the window opening, the lantern at his side lights his face gold from below
       const HP = [WIN[0] + 0.12, BED[1], WIN[2] + 0.95 * S];
@@ -493,7 +523,7 @@ export const builders = {
       // the lens from the back of the room over the mattress (TF 40.2 grammar: bed in the foreground, the figure in the
       // window): Theo small and asleep at the bottom, the window and the big boy filling it above. (The board's d 4.0
       // sits over Theo: from there he is either behind the lens or a giant foreground body.)
-      const cp = R(-0.2, 4.7, -10.2); const tg = R(-0.35, 3.55, 0);
+      const cp = R(-0.9, 5.4, -8.8); const tg = R(-0.6, 3.85, 0);
       ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: p.fov }); basePush(ctx);
       const lan = worldOf(g.getObjectByName('lantern'));
       I.bedroomNight(ctx, { set: H, lamp: 3.0, nightlight: 2.2, moon: true, lanternOutside: { pos: lan.clone().add(new THREE.Vector3(0, 0.15, -0.25)).toArray(), cd: 1.8 } });
@@ -508,20 +538,22 @@ export const builders = {
   // the glass. h 3.0, d 1.6, yaw 10, pitch -45, push 18 %. Bedroom grade.
   theo_lantern_cheek: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); const { theo } = theoAsleep(ctx, H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); const { theo } = theoAsleep(ctx, H, { blanket: true });
       const head = worldOf(theo.getObjectByName('head'));
       // d 2.4 (board 1.6): at 1.6 studs the sideways head overfills the frame and the band has nowhere to go
       boardCam(ctx, head.clone().setY(0), { ref: [0, 0, 1], yaw: c.yaw_deg, dist: c.dist_studs + 0.8, h: c.height_studs + 0.3, ground: ROOM_FLOOR, fov: p.fov, aimY: head.y - 0.02 }); basePush(ctx);
-      I.bedroomNight(ctx, { set: H, lamp: 2.6, nightlight: 2.0, moon: true, lanternOutside: { cd: 1.2 } });
+      // the room a notch darker than s71 (lamp 1.8, hemi 1.3, exposure 1.3): the warm band has to read against the face
+      I.bedroomNight(ctx, { set: H, lamp: 1.8, nightlight: 1.4, hemiIntensity: 1.3, moon: true, lanternOutside: { cd: 1.2 }, postOpts: { exposure: 1.3, grade: { saturation: 0.92 } } });
       // the band of gold lantern light across his cheek: a narrow warm spot through the glass + a soft light-boost stripe
       // lying over the cheek and the pillow (facing the lens, diagonal), flickering with the lantern
-      const src = new THREE.Vector3(WIN[0] + 0.35, 1.05, WIN[2] + 0.55); const sp = ctx.lights.spot({ color: '#ffb44a', intensity: 6, pos: src.toArray(), target: head.toArray(), angle: 5 * DEG, penumbra: 0.6, decay: 2 }); ctx.add(sp);
-      const B = camBasis(ctx); const band = boostDecal(ctx, 'band', '#ff9a30', 1.5, 0.62, 0.11);
-      band.position.copy(head).add(new THREE.Vector3(0, 0.03, 0.17)).addScaledVector(B.fwd, -0.05); band.lookAt(B.pos); band.rotateZ(-28 * DEG); ctx.add(band);
+      const src = new THREE.Vector3(WIN[0] + 0.35, 1.05, WIN[2] + 0.55); const sp = ctx.lights.spot({ color: '#ffb44a', intensity: 14, pos: src.toArray(), target: head.toArray(), angle: 4 * DEG, penumbra: 0.6, decay: 2 }); ctx.add(sp);
+      const B = camBasis(ctx); const band = boostDecal(ctx, 'band', '#ff9a38', 0.62, 0.5, 0.085, { mode: 'tint' }); band.material.color.multiplyScalar(1.45);
+      band.material.depthTest = false; band.renderOrder = 20;
+      band.position.copy(head).add(new THREE.Vector3(0, 0.02, 0.1)).addScaledVector(B.fwd, -0.22).addScaledVector(B.up, -0.035); band.lookAt(B.pos); band.rotateZ(-28 * DEG); ctx.add(band);
       ctx.shared.fx = sparks(ctx, head.clone().lerp(B.pos, 0.4), [0.8, 0.5, 0.6], 9, 's72', { px: [40, 70] });
-      Object.assign(ctx.shared, { sp, band, k0: 6 });
+      Object.assign(ctx.shared, { sp, band, k0: 14 });
     },
-    update(ctx, t) { const s = ctx.shared; const f = K.lanternFlicker(t, 'p4s72'); s.sp.intensity = s.k0 * f; s.band.material.color.set('#ff9a30').multiplyScalar(1.5 * f); s.fx.update(t); },
+    update(ctx, t) { const s = ctx.shared; const f = K.lanternFlicker(t, 'p4s72'); s.sp.intensity = s.k0 * f; s.band.material.opacity = 0.62 * (0.88 + 0.12 * f); s.fx.update(t); },
   },
 
   // s73 "I knelt in the flowerbed." (81.62-82.60) - MS from the lawn (kneelLow: h 2.2, d 7, yaw -30, pitch 4): he kneels in
@@ -529,7 +561,7 @@ export const builders = {
   // kneel snaps in 10 frames on "knelt", then holds through the pause. Push 16 %.
   knelt_bed: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); frontDoor(ctx); theoAsleep(ctx, H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); frontDoor(ctx); theoAsleep(ctx, H, { blanket: true });
       const { hero, g, setHold } = kneelHold(ctx, { face: p.cast[0].face || 'heartfelt' }); ctx.shared.hero = hero; ctx.shared.g = g; ctx.shared.setHold = setHold;
       boardCam(ctx, [BED[0] + 0.25, 0, BED[2] + 0.2], { ref: [0, 0, 1], yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, pitch: c.pitch_deg, fov: p.fov, aimY: 1.02 }); basePush(ctx);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 1, cd: 2.4, maxD: 10 }, postOpts: CU_GRADE });
@@ -553,8 +585,8 @@ export const builders = {
   // hands, tender (heartfelt). h 3.4, d 2.0, yaw -10, pitch 0, push 20 %.
   hero_goodnight: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H);
-      const P74 = { ...KNEEL_HOLD, bodyX: 6, neckX: -12 }; ctx.shared.P74 = P74;
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true });
+      const P74 = { ...KNEEL_HOLD, bodyX: 6, neckX: -17 }; ctx.shared.P74 = P74;
       const { hero, g, fwd } = kneelHold(ctx, { face: p.cast[0].face || 'heartfelt', pose: P74 }); ctx.shared.g = g; ctx.shared.hero = hero; ctx.shared.setHold = null;
       const head = worldOf(hero.getObjectByName('head')); C.gazeAt(g, head); K.setGnomeHead(g, 0, 16, 0);
       // eye level with the kneeling face (the board's h 3.4 is a standing-height number; kneeling, his eyes are lower)
@@ -574,7 +606,7 @@ export const builders = {
   // TIK glint; on "sorry" the lids settle to 0.3. Lantern under-light, cool rim, magic dust. h 2.5, d 1.3, push 28 %.
   slow_blink: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true });
       const { hero, g, fwd } = kneelHold(ctx, { pose: { ...KNEEL_HOLD, neckX: -24 } }); ctx.shared.g = g;
       const head = worldOf(hero.getObjectByName('head')); K.setGnomeHead(g, 0, 14, 0); g.updateWorldMatrix(true, true);
       const eyes = C.eyesOf(g);
@@ -583,7 +615,7 @@ export const builders = {
       hero.traverse((o) => { if (/hood/i.test(o.name)) o.visible = false; });
       boardCam(ctx, eyes.clone().setY(0), { ref: fwd.clone().negate().toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs, ground: BED[1], fov: p.fov, aimY: eyes.y - 0.015 }); basePush(ctx);
       // gaze at the hero = just above the lens (his face is right above it): at his real head the irises roll up under the lids
-      { const B0 = camBasis(ctx); C.gazeAt(g, B0.pos.clone().add(new THREE.Vector3(0, 0.08, 0))); } void head;
+      { const B0 = camBasis(ctx); C.gazeAt(g, B0.pos.clone().add(new THREE.Vector3(0, 0.02, 0))); } void head;
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 }, postOpts: CU_GRADE });
       coolRim(ctx, eyes.toArray(), { intensity: 1.0 });
       const lan = worldOf(g.getObjectByName('lantern'));
@@ -595,7 +627,7 @@ export const builders = {
       const B = camBasis(ctx); ctx.shared.fx = sparks(ctx, eyes.clone().lerp(B.pos, 0.35), [0.6, 0.45, 0.3], 7, 's75', { px: [40, 72] });
     },
     update(ctx, t) {
-      const s = ctx.shared; const b = K.gnomeBlink(t, [s.tb], { frames: 4, slow: true }); const settle = t < s.ts ? 0 : 0.3 * smooth((t - s.ts) / 0.22);
+      const s = ctx.shared; const b = K.gnomeBlink(t, [s.tb], { frames: 4, slow: true }); const settle = t < s.ts ? 0 : 0.22 * smooth((t - s.ts) / 0.22);   // board 0.3: on these lid shells 0.3 already hides the irises
       K.setGnomeLids(s.g, Math.max(b, settle)); s.T.update(t);
       lanternSwing(s.g, t + 2.8, { amp: 5, decay: 0.8 }); K.gnomeIdle(s.g, t, { seed: 's75', amp: 0.2 }); s.GL.update(t); s.fam.update(t); s.md.update(t); s.fx.update(t);
     },
@@ -606,16 +638,16 @@ export const builders = {
   // 8 frames: empty hands in lantern light. h 2.0, d 2.2, yaw -20, pitch -30, fov 55, push 20 %.
   set_down_let_go: {
     build(ctx) {
-      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H);
+      const p = ctx.params, c = p.camera; const H = nightLot(ctx); theoAsleep(ctx, H, { blanket: true });
       const tT = evT(ctx, 'him', 0.317), tG = evT(ctx, 'go', 1.1); Object.assign(ctx.shared, { tT, tG });
       // he has turned to the house to set Grandpa down in front of him, on the right edge of the hole, facing the window
-      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(BED[0] + 0.42, BED[1], BED[2] + 0.6); hero.rotation.y = Math.PI; ctx.add(hero); ctx.shared.hero = hero;
+      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(BED[0] + 0.38, BED[1], BED[2] + 0.85); hero.rotation.y = Math.PI; ctx.add(hero); ctx.shared.hero = hero;
       const g = K.makeGnome('grandpa', { lantern: 1, wear: 0.12 }); C.softenBeard(g); g.rotation.y = H.ep01.spots.bed0Yaw ?? Math.PI; ctx.add(g); ctx.shared.g = g;
       // poses: holding him up (start) -> placing (touch, on "him") -> hands open and lift away (8 frames on "go"). The
       // placing pose is solved so the hands' midpoint sits at his belly (0.85 stud) over the soil, and the hero slides so
       // that point is the landing spot.
-      const GRIP = 0.85 * S; const D = new THREE.Vector3(BED[0] + 0.42, BED[1], BED[2] - 0.04);
-      const PL = { ...K.POSES.kneelPlace, armLz: -22, armRz: -22, neckX: -24 };
+      const GRIP = 0.85 * S; const D = new THREE.Vector3(BED[0] + 0.38, BED[1], BED[2] + 0.3);   // front-right edge of the hole (the sticker between them)
+      const PL = { ...K.POSES.kneelPlace, armLz: -19, armRz: -19, neckX: -24 };   // hands on his sides
       const mid = solveArm(hero, PL, 'armLx', D.y + GRIP, { lo: 20, hi: 140, both: 'armRx' });
       hero.position.x += D.x - mid.x; hero.position.z += D.z - mid.z; hero.updateMatrixWorld(true);
       const P0 = { ...PL, bodyX: 30, armLx: PL.armLx - 18, armRx: PL.armRx - 18, neckX: -20 };
@@ -623,9 +655,10 @@ export const builders = {
       Object.assign(ctx.shared, { PL, P0, P2, D, GRIP });
       ctx.add(sets.contactShadow(ctx, { pos: [hero.position.x, BED[1] + 0.005, hero.position.z], radius: 0.5, opacity: 0.35 }));
       const gs = sets.contactShadow(ctx, { pos: [D.x, BED[1] + 0.006, D.z], radius: 0.24, opacity: 0.45 }); ctx.add(gs); ctx.shared.gs = gs;
-      // the lens on the window side, slightly high (yaw -20 off the gnome's front, pitch -30): his face as he settles back
-      // in, the hands round him, the hero behind. d 1.8 (board 2.2): 2.2 studs puts the lens inside the wall under the sill.
-      boardCam(ctx, D, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: 1.8, h: c.height_studs, ground: BED[1], pitch: c.pitch_deg, fov: p.fov, aimY: D.y + 0.27 }); basePush(ctx);
+      // the lens on the window side, slightly high, yaw -20 off the gnome's front: his face as he settles back in, the
+      // hands on his sides, the hero kneeling behind; in front of the sill, at the pane's height (1.05 m: Theo's window
+      // looking down), 2.0 studs out, so it looks down about 45 deg instead of 30.
+      boardCam(ctx, D, { ref: [0, 0, -1], yaw: c.yaw_deg, dist: 2.0, h: (1.05 - BED[1]) / S, ground: BED[1], fov: p.fov, aimY: D.y + 0.3 }); basePush(ctx);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 1, cd: 1.6, maxD: 10 }, postOpts: CU_GRADE });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.0 }); ctx.shared.fam = familyLanterns(ctx, H);
       // Theo's window spill from above-behind the lens (the gnome faces it) + a soft warm key on the hero's face
@@ -652,9 +685,9 @@ function mirrorPair(ctx, { era, kid, gp, grade }) {
   const p = ctx.params, c = p.camera; const H = SE.heroLot(ctx, { tod: 'night', era, keepOff: false }); ctx.add(H); const R = roomFrame(H);
   // the lens: the sets owner's room_toWindow set-up (4.8 studs up, 10.8 back, from the bed's foot side): at the board's
   // h 3 / d 6 the lens sits over the bed and the sleeper's body fills the frame and hides the window
-  const cp = R(1.5, 4.8, -10.8); const tg = R(-0.4, 3.9, 0);
+  const cp = R(0.8, 4.9, -10.8); const tg = R(-0.9, 3.8, 0);
   ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: p.fov }); basePush(ctx);
-  const av = sleeper(ctx, H, kid, { sc: 0.75, lie: 'up', toward: cp, tilt: 30, lift: 0.05 });
+  const av = sleeper(ctx, H, kid, { sc: 0.75, lie: 'up', toward: cp, tilt: 28, lift: -0.32, pose: { armLz: 8, armRz: 8, armLx: 4, armRx: 4 } });   // tucked in: the duvet covers the body, the head on the pillow
   const { gp: g, fl } = grandpaAtGlass(ctx, gp, { face: (p.cast[1] && p.cast[1].face) || 'heartfelt' });
   I.bedroomNight(ctx, { set: H, lamp: 3.2, nightlight: 0, moon: true, lanternOutside: false });
   ctx.post.set(sets.postPreset(grade, { exposure: 1.3 }));

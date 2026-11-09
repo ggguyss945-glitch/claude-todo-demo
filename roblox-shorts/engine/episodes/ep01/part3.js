@@ -479,6 +479,8 @@ export const builders = {
       const st = [BED[0] + 1.05, BED[2] - 0.32]; const k = f.add({ at: st, scale: 1.1, face: [BED[0], BED[2]] }); f.travel(k, [st, [BED[0] + 0.05, BED[2] - 0.02]], tG - 0.42, (1.1 / S) / 0.42); f.eyes(k, -5, null);
       const Bc = camBasis(ctx); const toC = Bc.pos.clone().sub(V3(BED)).setY(0).normalize(); const land = V3(BED).addScaledVector(toC, 0.42).addScaledVector(Bc.right, 0.04); land.y = BED[1] + 0.006;
       const G = X.gulp(ctx, { field: f, index: k, target: pg, t0: tG, sticker: { t0: tGone, dur: 0.4, to: land }, seed: 's51' }); ctx.add(G.group); ctx.shared.G = G; ctx.shared.f = f;
+      // the sticker's underside faces this low lens while it flutters and read as a black slab: let its print glow a little
+      if (G.sticker && G.sticker.material) { const sm = G.sticker.material.clone(); sm.emissive = new THREE.Color('#ffffff'); sm.emissiveMap = sm.map; sm.emissiveIntensity = 0.45; G.sticker.material = sm; }
       ctx.shared.fx = sparks(ctx, up(BED, 1.5, 0.3, 0.8), [1.0, 0.7, 0.5], 5, 's51', { px: [36, 60] });
     },
     update(ctx, t) { const s = ctx.shared; s.f.update(t); s.G.update(t); s.fx.update(t); },
@@ -495,7 +497,7 @@ export const builders = {
       ctx.shared.fam = familyLanterns(ctx, H); ctx.add(ctx.lights.point({ color: '#ffd2a0', intensity: 3.0, pos: up(WIN, -2.0, 0, 1.6), decay: 2 }));
       const f = CR.moleField(ctx, { center: [BED[0], (pos.z + BED[2]) / 2], size: [14, 16], res: 128, seed: 's52', heads: 'eyes' }); ctx.add(f.group);
       // the mounds wait (breathing) until "rolled", then roll at 3 studs/s toward the bed
-      const lanes = [[-0.32, 1.45, 0.85], [0.42, 1.75, 0.95], [-0.7, 2.2, 1.0], [0.08, 2.6, 0.9], [0.68, 2.4, 0.85]]; ctx.shared.f = f;
+      const lanes = [[-0.45, 1.05, 0.95], [0.48, 1.3, 1.05], [-0.7, 2.0, 1.0], [0.08, 2.5, 0.95], [0.72, 2.25, 0.9]]; ctx.shared.f = f;
       lanes.forEach(([dx, d0, sc], i) => { const st = [pos.x + dx, pos.z - d0]; const en = [BED[0] + dx * 0.4, BED[2] + 0.75]; const k = f.add({ at: st, scale: sc }); f.travel(k, [st, en], tR + 0.03 * i, 3); f.eyes(k, -5, null); });
       const mc = X.moundCrumbs(ctx, f, { pops: false, rate: 16 }); ctx.add(mc.group); ctx.shared.mc = mc;
       ctx.shared.fx = sparks(ctx, up(BED, 1.6, 0, 3.5), [2.2, 1.0, 2.0], 6, 's52', { px: [36, 64] });
