@@ -1,0 +1,88 @@
+{
+ "note": "Multi-hit SFX times (episode s) the picture should match (or copy into cue_times_override.json {CUE: {times: [...]}} to move the sound to the picture).",
+ "cues": {
+  "HOPS": {
+   "shot": "s14",
+   "times": [
+    15.252,
+    15.472,
+    15.692,
+    15.912,
+    16.132
+   ],
+   "in_profile": false
+  },
+  "FEET_WET@s28": {
+   "shot": "s28",
+   "times": [
+    30.483,
+    30.733,
+    30.983,
+    31.233
+   ],
+   "in_profile": true
+  },
+  "TINKS": {
+   "shot": "s40",
+   "times": [
+    44.63,
+    44.8187,
+    45.0055,
+    45.22
+   ],
+   "in_profile": true
+  },
+  "STEP_WET@s62": {
+   "shot": "s62",
+   "times": [
+    69.623,
+    70.063,
+    70.503,
+    70.943,
+    71.375
+   ],
+   "in_profile": false
+  },
+  "DEFLATE": {
+   "shot": "s79",
+   "times": [
+    90.178,
+    90.328,
+    90.478,
+    90.628,
+    90.778,
+    90.928
+   ],
+   "in_profile": true
+  },
+  "BLIPS": {
+   "shot": "s80",
+   "times": [
+    91.29,
+    91.67,
+    91.848,
+    92.083,
+    92.233
+   ],
+   "in_profile": true
+  },
+  "DROPS": {
+   "shot": "s90",
+   "times": [
+    103.83,
+    104.23,
+    104.468,
+    104.75
+   ],
+   "in_profile": false
+  },
+  "SWIPE": {
+   "shot": "s92",
+   "times": [
+    106.75,
+    107.648
+   ],
+   "in_profile": false
+  }
+ }
+}

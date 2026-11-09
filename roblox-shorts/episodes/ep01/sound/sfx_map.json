@@ -1,0 +1,2369 @@
+{
+ "version": 1,
+ "sr": 48000,
+ "note": "EP01 sound catalog: every SFX cue name of ASSETS.md / board.md -> a source (an extracted Epidemic file with in/out,",
+ "roots": {
+  "sfx": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/rbx/ep01/sound/sfx",
+  "previews": "/tmp/claude-0/-home-user-claude-todo-demo/353ac1d9-152b-55bb-bdf1-0625e0fc6a83/scratchpad/rbx/ep01/sound/cues"
+ },
+ "level_modes": {
+  "win": "BS.1770 integrated over [start+a, start+b] of the placed clip (approved test method)",
+  "mmax": "max momentary loudness (400 ms K-weighted, 10 ms hop) of the clip",
+  "band_peak": "max 100 ms RMS in a band, dBFS (the sub-boom: 25-110 Hz)"
+ },
+ "cues": {
+  "W1": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s01"
+   ],
+   "what": "opener snap pull-back from the gnome ECU: airy whoosh, peak 0.12 s",
+   "source": {
+    "type": "file",
+    "file": "ES_Swooshes, Whoosh, Airy, Short - Epidemic Sound.mp3",
+    "in": 11.090000000000002,
+    "out": 12.55
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": 0.02,
+   "fout": 0.25,
+   "hp": 200,
+   "lp": 9000,
+   "verb": null,
+   "target": {
+    "lufs": -26.0,
+    "mode": "win",
+    "win": [
+     0.0,
+     0.5
+    ]
+   },
+   "measured_lufs": -18.52,
+   "gain_db": -7.48,
+   "clip_s": 1.431,
+   "peak_after_gain_dbfs": -9.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": true
+  },
+  "M1": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s04",
+    "s05"
+   ],
+   "what": "transformation shimmer: swell from the cut to s04 (2.10), peak 2.30; in the episode its sparkle tail fades by 3.95 s (cut to the interior at 3.567)",
+   "source": {
+    "type": "file",
+    "file": "ES_Magic, Shimmer, Christmas, Sparkle, Magic, Shimmer Dust - Epidemic Sound.mp3",
+    "in": 2.2,
+    "out": 4.05
+   },
+   "sync": 0.0,
+   "offset": -0.13333299999999992,
+   "fin": 0.04,
+   "fout": 0.45,
+   "hp": 1500,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "lufs": -28.0,
+    "mode": "win",
+    "win": [
+     0.0,
+     1.0
+    ]
+   },
+   "measured_lufs": -16.37,
+   "gain_db": -11.63,
+   "clip_s": 1.834,
+   "peak_after_gain_dbfs": -17.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": true
+  },
+  "P1": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": "M1",
+   "shots": [
+    "s04"
+   ],
+   "what": "the snap: soft poof, pop transient on 2.240 s (frame 134 + 7 ms)",
+   "source": {
+    "type": "file",
+    "file": "ES_Cartoon, Pop, Vanish - Epidemic Sound.mp3",
+    "in": 0.1,
+    "out": 0.42
+   },
+   "sync": 0.135,
+   "offset": 0.0066670000000002005,
+   "fin": 0.012,
+   "fout": 0.05,
+   "hp": 180,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "lufs": -33.0,
+    "mode": "win",
+    "win": [
+     -0.005,
+     0.395
+    ]
+   },
+   "measured_lufs": -22.72,
+   "gain_db": -10.28,
+   "clip_s": 0.285,
+   "peak_after_gain_dbfs": -15.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": true
+  },
+  "T_GLINT": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s08"
+   ],
+   "what": "glasses snap level + star glint on the lens",
+   "source": {
+    "type": "synth",
+    "design": "t_glint",
+    "fn": "synth.py"
+   },
+   "sync": 0.002,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -32.0
+   },
+   "measured_lufs": -11.91,
+   "gain_db": -20.09,
+   "clip_s": 0.495,
+   "peak_after_gain_dbfs": -21.1,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "CURTAIN": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s11"
+   ],
+   "what": "curtains snap shut on 6 windows, 0.12 s apart",
+   "source": {
+    "type": "synth",
+    "design": "curtain",
+    "fn": "synth.py"
+   },
+   "sync": 0.08,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": 6000,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -33.0
+   },
+   "measured_lufs": -12.6,
+   "gain_db": -20.4,
+   "clip_s": 0.854,
+   "peak_after_gain_dbfs": -21.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "SQUEAK": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s12"
+   ],
+   "what": "the dog bites the plastic hat (squash 15 % for 6 frames)",
+   "source": {
+    "type": "synth",
+    "design": "squeak",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -8.33,
+   "gain_db": -18.67,
+   "clip_s": 0.261,
+   "peak_after_gain_dbfs": -19.7,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 7,
+   "approved_test": false
+  },
+  "CHAIN_TUG": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s13"
+   ],
+   "what": "lead clink + tug toward the hole",
+   "source": {
+    "type": "synth",
+    "design": "chain_tug",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -31.0
+   },
+   "measured_lufs": -12.0,
+   "gain_db": -19.0,
+   "clip_s": 0.201,
+   "peak_after_gain_dbfs": -20.0,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "HOPS": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s14"
+   ],
+   "what": "the family gnome toddles down its path in small hops (times estimated, sync to part1 gate_bonk when built)",
+   "source": {
+    "type": "synth",
+    "design": "hops",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -33.0
+   },
+   "measured_lufs": -16.45,
+   "gain_db": -16.55,
+   "clip_s": 0.96,
+   "peak_after_gain_dbfs": -17.6,
+   "rule": {
+    "kind": "hops"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "BONK": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s14"
+   ],
+   "what": "bonk on the invisible line: ripple rings + 12 sparkles + shake",
+   "source": {
+    "type": "synth",
+    "design": "bonk",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -24.0
+   },
+   "measured_lufs": -14.61,
+   "gain_db": -9.39,
+   "clip_s": 0.959,
+   "peak_after_gain_dbfs": -10.4,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "SHIMMER_S": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": {
+    "s32": "CLINK"
+   },
+   "shots": [
+    "s15",
+    "s32"
+   ],
+   "what": "gold shimmer: the curtain parts / the gold ripple along the line",
+   "source": {
+    "type": "synth",
+    "design": "shimmer_s",
+    "fn": "synth.py"
+   },
+   "sync": 0.02,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -6.65,
+   "gain_db": -23.35,
+   "clip_s": 0.995,
+   "peak_after_gain_dbfs": -24.3,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 12,
+   "approved_test": false
+  },
+  "LATCH": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s15"
+   ],
+   "what": "gate leaf swings shut (6 frames) and latches",
+   "source": {
+    "type": "file",
+    "file": "ES_Doors, Hardware, Latch, Lock - Epidemic Sound.mp3",
+    "in": 0.27,
+    "out": 0.74
+   },
+   "sync": 0.062,
+   "offset": 0.1,
+   "fin": 0.003,
+   "fout": 0.15,
+   "hp": 150,
+   "lp": 12000,
+   "verb": [
+    "night",
+    0.08
+   ],
+   "target": {
+    "mode": "mmax",
+    "lufs": -26.0
+   },
+   "measured_lufs": -20.4,
+   "gain_db": -5.6,
+   "clip_s": 0.755,
+   "peak_after_gain_dbfs": -6.9,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "TOK": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s16"
+   ],
+   "what": "Dad taps the hat (tip wobbles +-6 deg)",
+   "source": {
+    "type": "synth",
+    "design": "tok",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -18.57,
+   "gain_db": -11.43,
+   "clip_s": 0.239,
+   "peak_after_gain_dbfs": -12.4,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 13,
+   "approved_test": false
+  },
+  "TIK": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s18",
+    "s86"
+   ],
+   "what": "the gnome blinks (2-frame decal swap)",
+   "source": {
+    "type": "synth",
+    "design": "tik",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -16.21,
+   "gain_db": -10.79,
+   "clip_s": 0.24,
+   "peak_after_gain_dbfs": -11.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "CLICK_TORCH": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s20",
+    "s61"
+   ],
+   "what": "flashlight on (1 frame) + beam",
+   "source": {
+    "type": "file",
+    "file": "ES_Mechanical, Click, Button, Switch On, Off - Epidemic Sound.mp3",
+    "in": 1.135,
+    "out": 1.3
+   },
+   "sync": 0.016999999999999904,
+   "offset": 0.0,
+   "fin": 0.002,
+   "fout": 0.06,
+   "hp": 300,
+   "lp": null,
+   "verb": [
+    "night",
+    0.05
+   ],
+   "target": {
+    "mode": "mmax",
+    "lufs": -31.0
+   },
+   "measured_lufs": -31.76,
+   "gain_db": 0.76,
+   "clip_s": 0.516,
+   "peak_after_gain_dbfs": -6.6,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "STEP_WET": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s21",
+    "s62",
+    "s64"
+   ],
+   "what": "Grandpa's slipper lands on the wet lawn (s62-s64: his lap, steps every 0.44 s until he stops at 71.375 s)",
+   "source": {
+    "type": "synth",
+    "design": "walk",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": 6000,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -18.65,
+   "gain_db": -11.35,
+   "clip_s": 1.863,
+   "peak_after_gain_dbfs": -12.5,
+   "rule": {
+    "kind": "steps"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": 11,
+   "approved_test": false
+  },
+  "SLAP_STICKER": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s25"
+   ],
+   "what": "SOLD sticker slaps on (scale 1.3 -> 1 in 4 frames)",
+   "source": {
+    "type": "synth",
+    "design": "slap_sticker",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.05,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -23.48,
+   "gain_db": -3.52,
+   "clip_s": 0.628,
+   "peak_after_gain_dbfs": -4.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "TICK_CLOCK": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s26"
+   ],
+   "what": "minute hand ticks to 12 (2-frame snap + 3-frame wobble)",
+   "source": {
+    "type": "file",
+    "file": "ES_Clocks, Tick, Old Wall Clock, Ticking - Epidemic Sound.mp3",
+    "in": 4.49,
+    "out": 4.95
+   },
+   "sync": 0.017999999999999794,
+   "offset": 0.0,
+   "fin": 0.002,
+   "fout": 0.2,
+   "hp": 200,
+   "lp": null,
+   "verb": [
+    "hall",
+    0.25
+   ],
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -28.37,
+   "gain_db": 0.37,
+   "clip_s": 0.658,
+   "peak_after_gain_dbfs": -7.1,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 4,
+   "approved_test": false
+  },
+  "DOOR_BANG": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s28"
+   ],
+   "what": "the front door bangs open (heard from the lawn)",
+   "source": {
+    "type": "file",
+    "file": "ES_Doors, Wood, Slam Shut - Epidemic Sound.mp3",
+    "in": 0.0,
+    "out": 0.9
+   },
+   "sync": 0.032,
+   "offset": 0.0,
+   "fin": 0.002,
+   "fout": 0.25,
+   "hp": 70,
+   "lp": null,
+   "verb": [
+    "night",
+    0.12
+   ],
+   "target": {
+    "mode": "mmax",
+    "lufs": -23.0
+   },
+   "measured_lufs": -14.09,
+   "gain_db": -8.91,
+   "clip_s": 0.905,
+   "peak_after_gain_dbfs": -4.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "FEET_WET": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": {
+    "s28": "DOOR_BANG"
+   },
+   "shots": [
+    "s28",
+    "s56"
+   ],
+   "what": "bare feet on wet grass: s28 every 0.25 s from 30.483 to the cut; s56 feet plant in the bed",
+   "source": {
+    "type": "synth",
+    "design": "feet_wet",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -17.71,
+   "gain_db": -10.29,
+   "clip_s": 1.43,
+   "peak_after_gain_dbfs": -11.3,
+   "rule": {
+    "kind": "feet"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": 10,
+   "approved_test": false
+  },
+  "CLINK": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s32"
+   ],
+   "what": "he picks Grandpa up: ceramic clink",
+   "source": {
+    "type": "file",
+    "file": "ES_Food & Drink, Glassware, Mug, Coffee, Down On Table 01 - Epidemic Sound.mp3",
+    "in": 0.19,
+    "out": 0.55
+   },
+   "sync": 0.015999999999999986,
+   "offset": 0.0,
+   "fin": 0.002,
+   "fout": 0.12,
+   "hp": 600,
+   "lp": null,
+   "verb": [
+    "night",
+    0.06
+   ],
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -24.52,
+   "gain_db": -2.48,
+   "clip_s": 0.728,
+   "peak_after_gain_dbfs": -9.9,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "CREAK_LANTERN": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s33"
+   ],
+   "what": "the lantern wire handle creaks as he lifts it",
+   "source": {
+    "type": "synth",
+    "design": "creak_lantern",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -33.0
+   },
+   "measured_lufs": -15.29,
+   "gain_db": -17.71,
+   "clip_s": 0.297,
+   "peak_after_gain_dbfs": -18.7,
+   "rule": {
+    "kind": "shot_start",
+    "after": 0.3
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "SUBBOOM": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s34",
+    "s35",
+    "s36"
+   ],
+   "what": "\"the lawn MOVED\": whoosh into a sub-boom, low rumble to 39.5 s",
+   "source": {
+    "type": "layers",
+    "layers": [
+     {
+      "file": "ES_Swooshes, Whoosh, Airy, Short - Epidemic Sound.mp3",
+      "in": 1.4,
+      "out": 2.1,
+      "at": -0.32,
+      "gain_db": -9.0,
+      "hp": 150,
+      "lp": 8000
+     },
+     {
+      "file": "ES_Designed, Boom, Cinematic Booms, Clean Impact, Sub Bass 05 - Epidemic Sound.mp3",
+      "in": 0.0,
+      "out": 3.6,
+      "at": 0.0,
+      "gain_db": 5.0,
+      "hp": null,
+      "lp": null
+     },
+     {
+      "design": "rumble_tail",
+      "at": 0.02,
+      "gain_db": -9.0,
+      "hp": null,
+      "lp": null
+     }
+    ]
+   },
+   "sync": 0.32,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "lufs": -15.0,
+    "mode": "band_peak",
+    "band": [
+     25,
+     110
+    ]
+   },
+   "measured_lufs": -6.93,
+   "gain_db": -8.07,
+   "clip_s": 3.901,
+   "peak_after_gain_dbfs": -9.4,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "CRUMBLE": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": "SUBBOOM",
+   "shots": [
+    "s35",
+    "s51"
+   ],
+   "what": "mounds rise staggered, crumbs popping off their tops",
+   "source": {
+    "type": "synth",
+    "design": "crumble_rise",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -29.0
+   },
+   "measured_lufs": -16.99,
+   "gain_db": -12.01,
+   "clip_s": 0.937,
+   "peak_after_gain_dbfs": -13.0,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 1,
+   "approved_test": false
+  },
+  "PLINK": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": "SUBBOOM",
+   "shots": [
+    "s36"
+   ],
+   "what": "two amber reflector eyes light up (0 -> 1 in 3 frames)",
+   "source": {
+    "type": "synth",
+    "design": "plink",
+    "fn": "synth.py"
+   },
+   "sync": 0.002,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -10.07,
+   "gain_db": -17.93,
+   "clip_s": 0.54,
+   "peak_after_gain_dbfs": -18.9,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 2,
+   "approved_test": false
+  },
+  "FLASH": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": "SUBBOOM",
+   "shots": [
+    "s36"
+   ],
+   "what": "\"reflectors\": the light sweep flashes them (star glint, 0.25 s)",
+   "source": {
+    "type": "synth",
+    "design": "reflector_flash",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -11.77,
+   "gain_db": -18.23,
+   "clip_s": 0.492,
+   "peak_after_gain_dbfs": -19.2,
+   "rule": null,
+   "variants": null,
+   "extra_event": {
+    "shot": "s36",
+    "word": "reflectors"
+   },
+   "rank": 2,
+   "approved_test": false
+  },
+  "SNIFF": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s37",
+    "s53"
+   ],
+   "what": "snout unfurls and tests the air (s37); tulips shake, snouts wriggle (s53)",
+   "source": {
+    "type": "synth",
+    "design": "sniff",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -26.0
+   },
+   "measured_lufs": -11.58,
+   "gain_db": -14.42,
+   "clip_s": 1.338,
+   "peak_after_gain_dbfs": -15.4,
+   "rule": null,
+   "variants": {
+    "s53": "sniff_wriggle"
+   },
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "SNIFF_BIG": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": "SNIFF",
+   "shots": [
+    "s37"
+   ],
+   "what": "\"BIG ones\": the big snout rises with a snort",
+   "source": {
+    "type": "synth",
+    "design": "sniff_big",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -25.0
+   },
+   "measured_lufs": -13.53,
+   "gain_db": -11.47,
+   "clip_s": 1.217,
+   "peak_after_gain_dbfs": -12.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": {
+    "shot": "s37",
+    "word": "big"
+   },
+   "rank": null,
+   "approved_test": false
+  },
+  "TINK_WHOOSH": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s38"
+   ],
+   "what": "Grandpa's lantern lights: 0 -> 1 in 3 frames, warm pool",
+   "source": {
+    "type": "synth",
+    "design": "tink_whoosh",
+    "fn": "synth.py"
+   },
+   "sync": 0.12,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -23.0
+   },
+   "measured_lufs": -6.54,
+   "gain_db": -16.46,
+   "clip_s": 1.7,
+   "peak_after_gain_dbfs": -17.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "FIP": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s39"
+   ],
+   "what": "snouts recoil at the rim of the light (0.15 s spring)",
+   "source": {
+    "type": "synth",
+    "design": "fip",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -10.88,
+   "gain_db": -17.12,
+   "clip_s": 0.87,
+   "peak_after_gain_dbfs": -18.1,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 3,
+   "approved_test": false
+  },
+  "TINKS": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s40"
+   ],
+   "what": "\"Every lantern lit\": cascade toward the camera, 0.15-0.3 s apart, the nearest on \"lit\"",
+   "source": {
+    "type": "synth",
+    "design": "tinks",
+    "fn": "synth.py"
+   },
+   "sync": 0.12,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -23.0
+   },
+   "measured_lufs": -5.85,
+   "gain_db": -17.15,
+   "clip_s": 2.363,
+   "peak_after_gain_dbfs": -18.1,
+   "rule": {
+    "kind": "cascade"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "CLATTER": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s41"
+   ],
+   "what": "next door's plastic gnome tips into a hole",
+   "source": {
+    "type": "synth",
+    "design": "clatter",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -26.0
+   },
+   "measured_lufs": -13.5,
+   "gain_db": -12.5,
+   "clip_s": 1.243,
+   "peak_after_gain_dbfs": -13.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 1,
+   "approved_test": false
+  },
+  "RUMBLE_FAR": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s43"
+   ],
+   "what": "mounds prowl outside the fence of light: distant rumble",
+   "source": {
+    "type": "synth",
+    "design": "rumble_far",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -34.0
+   },
+   "measured_lufs": -15.92,
+   "gain_db": -18.08,
+   "clip_s": 0.898,
+   "peak_after_gain_dbfs": -19.1,
+   "rule": {
+    "kind": "shot_start",
+    "after": 0.05
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "THUD_LOW": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s46"
+   ],
+   "what": "Theo's window goes dark (1 frame) + the mounds surge",
+   "source": {
+    "type": "synth",
+    "design": "thud_low",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -24.0
+   },
+   "measured_lufs": -8.24,
+   "gain_db": -15.76,
+   "clip_s": 1.562,
+   "peak_after_gain_dbfs": -16.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 1,
+   "approved_test": false
+  },
+  "RIP": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s49"
+   ],
+   "what": "packing tape rips off the box",
+   "source": {
+    "type": "synth",
+    "design": "rip",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -10.87,
+   "gain_db": -17.13,
+   "clip_s": 0.404,
+   "peak_after_gain_dbfs": -18.1,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "THUNK_PLASTIC": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s50"
+   ],
+   "what": "Mom's plastic gnome thunks into the soil",
+   "source": {
+    "type": "synth",
+    "design": "thunk_plastic",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -20.7,
+   "gain_db": -6.3,
+   "clip_s": 0.73,
+   "peak_after_gain_dbfs": -7.3,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 6,
+   "approved_test": false
+  },
+  "GULP": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s51"
+   ],
+   "what": "GULP: the turf closes over the plastic gnome like a mouth, seals, burps crumbs",
+   "source": {
+    "type": "synth",
+    "design": "gulp",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -21.0
+   },
+   "measured_lufs": -10.24,
+   "gain_db": -10.76,
+   "clip_s": 1.13,
+   "peak_after_gain_dbfs": -11.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "FLUTTER": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s51"
+   ],
+   "what": "the $4.99 price sticker flutters down (0.4 s)",
+   "source": {
+    "type": "synth",
+    "design": "flutter",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -34.0
+   },
+   "measured_lufs": -19.24,
+   "gain_db": -14.76,
+   "clip_s": 0.481,
+   "peak_after_gain_dbfs": -15.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "RUMBLE_ROLL": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s52"
+   ],
+   "what": "the mounds roll toward the flowerbed (3 studs/s)",
+   "source": {
+    "type": "synth",
+    "design": "rumble_roll",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": 0.15,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -26.0
+   },
+   "measured_lufs": -14.4,
+   "gain_db": -11.6,
+   "clip_s": 1.389,
+   "peak_after_gain_dbfs": -12.6,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 5,
+   "approved_test": false
+  },
+  "BRICK": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s54"
+   ],
+   "what": "an edging brick tips out (10 deg)",
+   "source": {
+    "type": "synth",
+    "design": "brick",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -20.09,
+   "gain_db": -9.91,
+   "clip_s": 0.704,
+   "peak_after_gain_dbfs": -10.9,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "BREATH": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s55"
+   ],
+   "what": "fog blooms on Theo's pane (0.35 s), heard from inside",
+   "source": {
+    "type": "synth",
+    "design": "breath",
+    "fn": "synth.py"
+   },
+   "sync": 0.16,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -13.0,
+   "gain_db": -15.0,
+   "clip_s": 0.882,
+   "peak_after_gain_dbfs": -16.0,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 8,
+   "approved_test": false
+  },
+  "TIDE": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s56"
+   ],
+   "what": "\"backed off\": the light pushes the mounds back 3 studs in 0.5 s",
+   "source": {
+    "type": "synth",
+    "design": "tide",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -25.0
+   },
+   "measured_lufs": -13.32,
+   "gain_db": -11.68,
+   "clip_s": 0.889,
+   "peak_after_gain_dbfs": -12.7,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 2,
+   "approved_test": false
+  },
+  "SNIFF_FAR": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s58"
+   ],
+   "what": "distant sniffing at the ring edge",
+   "source": {
+    "type": "synth",
+    "design": "sniff",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": 3000,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -34.0
+   },
+   "measured_lufs": -13.97,
+   "gain_db": -20.03,
+   "clip_s": 1.358,
+   "peak_after_gain_dbfs": -24.0,
+   "rule": {
+    "kind": "shot_start",
+    "after": 0.2
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "GRIND": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s59"
+   ],
+   "what": "the ceramic head grinds round 150 deg in stepped jerks (0.8 s inOutSine)",
+   "source": {
+    "type": "synth",
+    "design": "grind",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -23.0
+   },
+   "measured_lufs": -13.17,
+   "gain_db": -9.83,
+   "clip_s": 1.362,
+   "peak_after_gain_dbfs": -10.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "KNEEL": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s73"
+   ],
+   "what": "he kneels in the soil",
+   "source": {
+    "type": "synth",
+    "design": "kneel",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -30.0
+   },
+   "measured_lufs": -15.29,
+   "gain_db": -14.71,
+   "clip_s": 0.412,
+   "peak_after_gain_dbfs": -15.7,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "TIK_SLOW": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s75"
+   ],
+   "what": "slow blink (4 frames), lids settle low: \"like he was sorry\"",
+   "source": {
+    "type": "synth",
+    "design": "tik_slow",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -14.41,
+   "gain_db": -13.59,
+   "clip_s": 0.53,
+   "peak_after_gain_dbfs": -14.6,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "SET_DOWN": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s76"
+   ],
+   "what": "the gnome touches the soil",
+   "source": {
+    "type": "synth",
+    "design": "set_down",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -19.14,
+   "gain_db": -8.86,
+   "clip_s": 0.299,
+   "peak_after_gain_dbfs": -9.9,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 4,
+   "approved_test": false
+  },
+  "FWOOM": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s77",
+    "s78"
+   ],
+   "what": "FWOOM: lantern 8 -> 50 cd in 0.15 s, burst + streaks, grade to magic; second pulse on \"flared\" (+1.06 s)",
+   "source": {
+    "type": "synth",
+    "design": "fwoom",
+    "fn": "synth.py"
+   },
+   "sync": 0.28,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -18.0
+   },
+   "measured_lufs": -11.15,
+   "gain_db": -6.85,
+   "clip_s": 2.754,
+   "peak_after_gain_dbfs": -7.8,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "PASS": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": "FWOOM",
+   "shots": [
+    "s78"
+   ],
+   "what": "the wall of light passes the lens",
+   "source": {
+    "type": "file",
+    "file": "ES_Swooshes, Whoosh, Long Reverbs - Epidemic Sound.mp3",
+    "in": 0.25,
+    "out": 2.6
+   },
+   "sync": 0.8380000000000001,
+   "offset": 0.0,
+   "fin": 0.1,
+   "fout": 0.8,
+   "hp": 180,
+   "lp": 10000,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -26.0
+   },
+   "measured_lufs": -28.42,
+   "gain_db": 2.42,
+   "clip_s": 2.331,
+   "peak_after_gain_dbfs": -15.5,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 1,
+   "approved_test": false
+  },
+  "DEFLATE": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s79"
+   ],
+   "what": "every mound sinks, staggered 0.15 s, following the ring",
+   "source": {
+    "type": "synth",
+    "design": "deflate",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -24.0
+   },
+   "measured_lufs": -13.88,
+   "gain_db": -10.12,
+   "clip_s": 1.494,
+   "peak_after_gain_dbfs": -11.1,
+   "rule": {
+    "kind": "deflate",
+    "n": 6,
+    "gap": 0.15
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "BLIPS": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s80"
+   ],
+   "what": "five eye pairs wink out, one blip per pair, each a step lower",
+   "source": {
+    "type": "synth",
+    "design": "blips",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -28.0
+   },
+   "measured_lufs": -13.47,
+   "gain_db": -14.53,
+   "clip_s": 1.627,
+   "peak_after_gain_dbfs": -15.5,
+   "rule": {
+    "kind": "shot_events"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "DOOR_CREAK": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s82"
+   ],
+   "what": "the front door opens at dawn (14 frames)",
+   "source": {
+    "type": "synth",
+    "design": "door_creak",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -29.0
+   },
+   "measured_lufs": -15.01,
+   "gain_db": -13.99,
+   "clip_s": 1.247,
+   "peak_after_gain_dbfs": -15.0,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 9,
+   "approved_test": false
+  },
+  "ENGINE": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s87",
+    "s88",
+    "s89"
+   ],
+   "what": "the truck starts off-screen (100.37), pulls away, fades before the pause",
+   "source": {
+    "type": "synth",
+    "design": "engine",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.5
+   },
+   "measured_lufs": -11.71,
+   "gain_db": -15.79,
+   "clip_s": 3.315,
+   "peak_after_gain_dbfs": -16.8,
+   "rule": {
+    "kind": "shot_at"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "RATTLE": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": "ENGINE",
+   "shots": [
+    "s88"
+   ],
+   "what": "boxes knocking in the truck as it pulls away",
+   "source": {
+    "type": "synth",
+    "design": "rattle",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -32.0
+   },
+   "measured_lufs": -19.15,
+   "gain_db": -12.85,
+   "clip_s": 1.638,
+   "peak_after_gain_dbfs": -13.8,
+   "rule": {
+    "kind": "shot_start",
+    "after": 0.05
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": 3,
+   "approved_test": false
+  },
+  "GRIND_SOFT": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s89"
+   ],
+   "what": "far: the head turns back to the window (0.8 s), seen from the truck",
+   "source": {
+    "type": "synth",
+    "design": "grind_soft",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -31.0
+   },
+   "measured_lufs": -11.72,
+   "gain_db": -19.28,
+   "clip_s": 1.454,
+   "peak_after_gain_dbfs": -20.3,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "DROPS": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s90"
+   ],
+   "what": "Polaroids drop one by one onto the pile",
+   "source": {
+    "type": "synth",
+    "design": "drops",
+    "fn": "synth.py"
+   },
+   "sync": 0.04,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -31.0
+   },
+   "measured_lufs": -23.92,
+   "gain_db": -7.08,
+   "clip_s": 1.505,
+   "peak_after_gain_dbfs": -8.1,
+   "rule": {
+    "kind": "shot_events"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": 6,
+   "approved_test": false
+  },
+  "PING": {
+   "kind": "hit",
+   "prio": 2,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s91"
+   ],
+   "what": "message ping, the photo slides up",
+   "source": {
+    "type": "file",
+    "file": "ES_User Interface, Alert, Notifications, Notification, Ping, Gentle - Epidemic Sound.mp3",
+    "in": 0.0,
+    "out": 0.8
+   },
+   "sync": 0.012,
+   "offset": 0.0,
+   "fin": 0.001,
+   "fout": 0.2,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -27.0
+   },
+   "measured_lufs": -31.06,
+   "gain_db": 4.06,
+   "clip_s": 0.743,
+   "peak_after_gain_dbfs": -22.2,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": 5,
+   "approved_test": false
+  },
+  "SWIPE": {
+   "kind": "hit",
+   "prio": 3,
+   "primary": false,
+   "layer_of": null,
+   "shots": [
+    "s92"
+   ],
+   "what": "swipes to the flowerbed photo, then the window photo (8 frames)",
+   "source": {
+    "type": "file",
+    "file": "ES_Swooshes, Swish, Stick, Fast Swipe Through Air 01 - Epidemic Sound.mp3",
+    "in": 0.0,
+    "out": 0.19
+   },
+   "sync": 0.068,
+   "offset": 0.06,
+   "fin": 0.005,
+   "fout": 0.06,
+   "hp": 1200,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -33.0
+   },
+   "measured_lufs": -35.43,
+   "gain_db": 2.43,
+   "clip_s": 0.179,
+   "peak_after_gain_dbfs": -14.5,
+   "rule": {
+    "kind": "shot_events"
+   },
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  },
+  "POOF_SOFT": {
+   "kind": "hit",
+   "prio": 1,
+   "primary": true,
+   "layer_of": null,
+   "shots": [
+    "s97"
+   ],
+   "what": "the dandelion clock releases its seeds (burst puff 14)",
+   "source": {
+    "type": "synth",
+    "design": "poof_soft",
+    "fn": "synth.py"
+   },
+   "sync": 0.0,
+   "offset": 0.0,
+   "fin": null,
+   "fout": null,
+   "hp": null,
+   "lp": null,
+   "verb": null,
+   "target": {
+    "mode": "mmax",
+    "lufs": -29.0
+   },
+   "measured_lufs": -12.9,
+   "gain_db": -16.1,
+   "clip_s": 0.496,
+   "peak_after_gain_dbfs": -17.1,
+   "rule": null,
+   "variants": null,
+   "extra_event": null,
+   "rank": null,
+   "approved_test": false
+  }
+ },
+ "beds": {
+  "A_NIGHT": {
+   "kind": "bed",
+   "what": "crickets, suburban night (the test A1), HPF 250 Hz (no traffic rumble)",
+   "gain_db": -2.09,
+   "lufs_10s": -33.18,
+   "loop": {
+    "file": "ES_Ambience, Suburban, Field With Crickets, Distant Traffic, Night 01 - Epidemic Sound.mp3",
+    "in": 22.5,
+    "period_s": 28.325,
+    "xfade_s": 2.0,
+    "phase_s": 9.5
+   },
+   "hp": 250,
+   "calib": {
+    "a": 32.0,
+    "b": 37.0,
+    "fin": 0.06,
+    "fout": 0.15,
+    "lufs": -33.0
+   }
+  },
+  "A_NIGHT_OLD": {
+   "kind": "bed",
+   "what": "sepia flashback night: A_NIGHT low-passed 6 kHz",
+   "gain_db": -3.59,
+   "lufs_10s": -35.3,
+   "base": "A_NIGHT",
+   "lp": 6000
+  },
+  "A_NIGHT_BW": {
+   "kind": "bed",
+   "what": "1960s B&W: A_NIGHT low-passed 4 kHz",
+   "gain_db": -4.59,
+   "lufs_10s": -38.23,
+   "base": "A_NIGHT",
+   "lp": 4000
+  },
+  "A_NIGHT_CAB": {
+   "kind": "bed",
+   "what": "the night through the closed truck cab: crickets low-passed 2.2 kHz, far",
+   "gain_db": 1.97,
+   "lufs_10s": -42.34,
+   "base": "A_NIGHT",
+   "lp": 2200,
+   "lufs": -42.0
+  },
+  "A_DAWN": {
+   "kind": "bed",
+   "what": "light dawn chorus (calm part of the Texas yard take)",
+   "gain_db": 0.2,
+   "lufs_10s": -32.98,
+   "loop": {
+    "file": "ES_Ambience, Suburban, Neighborhood, Morning, Large Residential Yard, Bird Activity, Summer, Texas, USA - Epidemic Sound.mp3",
+    "in": 3.0,
+    "period_s": 21.0,
+    "xfade_s": 2.0,
+    "phase_s": 0.0
+   },
+   "hp": 200,
+   "lp": 10000,
+   "lufs": -33.0
+  },
+  "A_DAY": {
+   "kind": "bed",
+   "what": "day suburb: busier birds + a distant mower",
+   "gain_db": -2.14,
+   "lufs_10s": -32.29,
+   "loop": {
+    "file": "ES_Ambience, Suburban, Neighborhood, Morning, Large Residential Yard, Bird Activity, Summer, Texas, USA - Epidemic Sound.mp3",
+    "in": 62.0,
+    "period_s": 19.0,
+    "xfade_s": 2.0,
+    "phase_s": 0.0
+   },
+   "hp": 150,
+   "add": [
+    {
+     "design": "mower",
+     "rel_db": -15.0
+    }
+   ],
+   "lufs": -32.5
+  },
+  "A_DUSK": {
+   "kind": "bed",
+   "what": "evening birds settling (sparser part, low-passed) + the first crickets",
+   "gain_db": -0.42,
+   "lufs_10s": -33.82,
+   "loop": {
+    "file": "ES_Ambience, Suburban, Neighborhood, Morning, Large Residential Yard, Bird Activity, Summer, Texas, USA - Epidemic Sound.mp3",
+    "in": 84.0,
+    "period_s": 25.0,
+    "xfade_s": 2.0,
+    "phase_s": 0.0
+   },
+   "hp": 200,
+   "lp": 6500,
+   "add": [
+    {
+     "bed": "A_NIGHT",
+     "rel_db": -8.0
+    }
+   ],
+   "lufs": -34.0
+  },
+  "A_ROOM": {
+   "kind": "bed",
+   "what": "bedroom at night: room tone, a far wall clock, crickets through the glass",
+   "gain_db": -26.06,
+   "lufs_10s": -40.15,
+   "synth": "room_tone",
+   "add": [
+    {
+     "loop": {
+      "file": "ES_Clocks, Tick, Old Wall Clock, Ticking - Epidemic Sound.mp3",
+      "a": 10.0,
+      "L": 40.0,
+      "x": 0.2
+     },
+     "hp": 300,
+     "lp": 2500,
+     "rel_db": -12.0
+    },
+    {
+     "bed": "A_NIGHT",
+     "lp": 1600,
+     "rel_db": -6.0
+    }
+   ],
+   "lufs": -40.0
+  },
+  "A_ROOM_DAY": {
+   "kind": "bed",
+   "what": "Grandma's room by day: room tone, the clock, birds through the window",
+   "gain_db": -25.66,
+   "lufs_10s": -38.8,
+   "synth": "room_tone",
+   "add": [
+    {
+     "loop": {
+      "file": "ES_Clocks, Tick, Old Wall Clock, Ticking - Epidemic Sound.mp3",
+      "a": 10.0,
+      "L": 40.0,
+      "x": 0.2
+     },
+     "hp": 300,
+     "lp": 2500,
+     "rel_db": -12.0
+    },
+    {
+     "bed": "A_DAY",
+     "lp": 2500,
+     "rel_db": -4.0
+    }
+   ],
+   "lufs": -39.0
+  },
+  "A_ROOM_OLD": {
+   "kind": "bed",
+   "what": "the room in a flashback: A_ROOM low-passed 5 kHz",
+   "gain_db": -27.06,
+   "lufs_10s": -41.46,
+   "base": "A_ROOM",
+   "lp": 5000
+  },
+  "A_HALL": {
+   "kind": "bed",
+   "what": "the hall at nine: room tone with the wall clock close",
+   "gain_db": -24.17,
+   "lufs_10s": -36.19,
+   "synth": "room_tone",
+   "add": [
+    {
+     "loop": {
+      "file": "ES_Clocks, Tick, Old Wall Clock, Ticking - Epidemic Sound.mp3",
+      "a": 10.0,
+      "L": 40.0,
+      "x": 0.2
+     },
+     "hp": 200,
+     "rel_db": -3.0,
+     "verb": [
+      "hall",
+      0.3
+     ]
+    }
+   ],
+   "lufs": -36.0
+  }
+ },
+ "aliases": {
+  "GRIND (soft)": "GRIND_SOFT",
+  "SNIFF (distant)": "SNIFF_FAR",
+  "distant rumble": "RUMBLE_FAR",
+  "A1": null,
+  "MUSIC": null
+ }
+}

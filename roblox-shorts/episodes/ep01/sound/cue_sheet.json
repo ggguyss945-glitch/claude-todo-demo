@@ -1,0 +1,623 @@
+{
+ "profile": "bible",
+ "note": "Resolved SFX placements (mix.py). t = picture event (s), start/end = clip span.",
+ "cues": [
+  {
+   "cue": "W1",
+   "t": 0.0,
+   "times": null,
+   "start": 0.0,
+   "end": 1.431,
+   "shot": "s01",
+   "word": null,
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -7.48,
+   "why": "event: snap pull-back at full speed on frame 0"
+  },
+  {
+   "cue": "P1",
+   "t": 2.2333,
+   "times": null,
+   "start": 2.105,
+   "end": 2.3896,
+   "shot": "s04",
+   "word": "turn",
+   "prio": 1,
+   "layer_of": "M1",
+   "gain_db": -10.28,
+   "why": "event: sparkle burst + human -> gnome snap"
+  },
+  {
+   "cue": "M1",
+   "t": 2.2333,
+   "times": null,
+   "start": 2.1,
+   "end": 3.9341,
+   "shot": "s04",
+   "word": "turn",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -11.63,
+   "why": "event: sparkle burst + human -> gnome snap"
+  },
+  {
+   "cue": "BONK",
+   "t": 16.312,
+   "times": null,
+   "start": 16.312,
+   "end": 17.2709,
+   "shot": "s14",
+   "word": "garden",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -9.39,
+   "why": "event: bonk: ripple rings + 12-sparkle burst + shake 4 px 0.3 s"
+  },
+  {
+   "cue": "LATCH",
+   "t": 17.728,
+   "times": null,
+   "start": 17.766,
+   "end": 18.5212,
+   "shot": "s15",
+   "word": "out",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -5.6,
+   "why": "event: gate leaf swings shut (6 frames) and latches"
+  },
+  {
+   "cue": "TIK",
+   "t": 20.558,
+   "times": null,
+   "start": 20.558,
+   "end": 20.798,
+   "shot": "s18",
+   "word": "blinks",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -10.79,
+   "why": "event: blink, 2 frames (K.gnomeBlink)"
+  },
+  {
+   "cue": "CLICK_TORCH",
+   "t": 23.018,
+   "times": null,
+   "start": 23.001,
+   "end": 23.5165,
+   "shot": "s20",
+   "word": "flashlight",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": 0.76,
+   "why": "event: flashlight on (1 frame) + beam"
+  },
+  {
+   "cue": "SLAP_STICKER",
+   "t": 27.51,
+   "times": null,
+   "start": 27.56,
+   "end": 28.1879,
+   "shot": "s25",
+   "word": "moved",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -3.52,
+   "why": "event: SOLD sticker slaps on (scale 1.3 -> 1 in 4 frames)"
+  },
+  {
+   "cue": "DOOR_BANG",
+   "t": 30.115,
+   "times": null,
+   "start": 30.083,
+   "end": 30.9885,
+   "shot": "s28",
+   "word": "ran",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -8.91,
+   "why": "event: door bangs open"
+  },
+  {
+   "cue": "FEET_WET",
+   "t": 30.483,
+   "times": [
+    30.483,
+    30.733,
+    30.983,
+    31.233
+   ],
+   "start": 30.483,
+   "end": 31.9126,
+   "shot": "s28",
+   "word": "barefoot",
+   "prio": 2,
+   "layer_of": "DOOR_BANG",
+   "gain_db": -10.29,
+   "why": "event: first bare foot lands, then every 0.25 s"
+  },
+  {
+   "cue": "CLINK",
+   "t": 35.087,
+   "times": null,
+   "start": 35.071,
+   "end": 35.7994,
+   "shot": "s32",
+   "word": "picked",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -2.48,
+   "why": "event: lift + gold ripple along the line + 6 gold sparkles"
+  },
+  {
+   "cue": "SHIMMER_S",
+   "t": 35.087,
+   "times": null,
+   "start": 35.067,
+   "end": 36.0617,
+   "shot": "s32",
+   "word": null,
+   "prio": 2,
+   "layer_of": "CLINK",
+   "gain_db": -23.35,
+   "why": "shot cue: SHIMMER_S"
+  },
+  {
+   "cue": "SUBBOOM",
+   "t": 37.28,
+   "times": null,
+   "start": 36.96,
+   "end": 40.8615,
+   "shot": "s34",
+   "word": "moved",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -8.07,
+   "why": "event: the bulge surges 0.8 stud + shake"
+  },
+  {
+   "cue": "CRUMBLE",
+   "t": 38.08,
+   "times": null,
+   "start": 38.08,
+   "end": 39.0172,
+   "shot": "s35",
+   "word": "mounds",
+   "prio": 2,
+   "layer_of": "SUBBOOM",
+   "gain_db": -12.01,
+   "why": "event: mounds rise staggered 0.05-0.15 s apart"
+  },
+  {
+   "cue": "PLINK",
+   "t": 38.717,
+   "times": null,
+   "start": 38.715,
+   "end": 39.2546,
+   "shot": "s36",
+   "word": "eyes",
+   "prio": 2,
+   "layer_of": "SUBBOOM",
+   "gain_db": -17.93,
+   "why": "event: eyes on (0 -> 1 in 3 frames)"
+  },
+  {
+   "cue": "FLASH",
+   "t": 39.39,
+   "times": null,
+   "start": 39.39,
+   "end": 39.8816,
+   "shot": "s36",
+   "word": "reflectors",
+   "prio": 2,
+   "layer_of": "SUBBOOM",
+   "gain_db": -18.23,
+   "why": "extra event: reflector flash (star glint sweep, 0.25 s)"
+  },
+  {
+   "cue": "SNIFF",
+   "t": 39.96,
+   "times": null,
+   "start": 39.96,
+   "end": 41.2982,
+   "shot": "s37",
+   "word": "moles",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -14.42,
+   "why": "event: turf tears, snout 1 unfurls (0.3 s outBack)"
+  },
+  {
+   "cue": "SNIFF_BIG",
+   "t": 40.453,
+   "times": null,
+   "start": 40.453,
+   "end": 41.6705,
+   "shot": "s37",
+   "word": "big",
+   "prio": 1,
+   "layer_of": "SNIFF",
+   "gain_db": -11.47,
+   "why": "extra event: snout 2 (scale 1.8) rises + punch-in"
+  },
+  {
+   "cue": "TINK_WHOOSH",
+   "t": 41.76,
+   "times": null,
+   "start": 41.64,
+   "end": 43.34,
+   "shot": "s38",
+   "word": "lit",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -16.46,
+   "why": "event: lantern 0 -> 1 in 3 frames (overshoot 1.5), halo 0.2 s; grade warms ov"
+  },
+  {
+   "cue": "TINKS",
+   "t": 44.63,
+   "times": [
+    44.63,
+    44.8187,
+    45.0055,
+    45.22
+   ],
+   "start": 44.51,
+   "end": 46.8799,
+   "shot": "s40",
+   "word": "every",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -17.15,
+   "why": "event: lantern cascade starts (12 lanterns, 0.15-0.3 s apart, toward camera)"
+  },
+  {
+   "cue": "GULP",
+   "t": 58.865,
+   "times": null,
+   "start": 58.865,
+   "end": 59.9948,
+   "shot": "s51",
+   "word": "gulp",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -10.76,
+   "why": "event: swallow (moleField.swallow) + soil burst"
+  },
+  {
+   "cue": "SNIFF",
+   "t": 60.997,
+   "times": null,
+   "start": 60.997,
+   "end": 62.318,
+   "shot": "s53",
+   "word": "flowers",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -14.42,
+   "why": "event: tulips shake, snouts wriggle"
+  },
+  {
+   "cue": "GRIND",
+   "t": 66.55,
+   "times": null,
+   "start": 66.55,
+   "end": 67.9119,
+   "shot": "s59",
+   "word": null,
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -9.83,
+   "why": "event: head turn starts (0.8 s inOutSine, ends 0.1 s before the cut)"
+  },
+  {
+   "cue": "CLICK_TORCH",
+   "t": 69.078,
+   "times": null,
+   "start": 69.061,
+   "end": 69.5765,
+   "shot": "s61",
+   "word": "flashlight",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": 0.76,
+   "why": "event: flashlight on"
+  },
+  {
+   "cue": "TIK_SLOW",
+   "t": 83.68,
+   "times": null,
+   "start": 83.68,
+   "end": 84.21,
+   "shot": "s75",
+   "word": "blinked",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -13.59,
+   "why": "event: slow blink (K.gnomeBlink frames 4, slow)"
+  },
+  {
+   "cue": "FWOOM",
+   "t": 86.86,
+   "times": null,
+   "start": 86.58,
+   "end": 89.3338,
+   "shot": "s77",
+   "word": null,
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -6.85,
+   "why": "event: FWOOM (on the vowel): lantern 8 -> 50 cd in 0.15 s, emissive x25, burs"
+  },
+  {
+   "cue": "PASS",
+   "t": 89.133,
+   "times": null,
+   "start": 88.295,
+   "end": 90.6259,
+   "shot": "s78",
+   "word": "across",
+   "prio": 2,
+   "layer_of": "FWOOM",
+   "gain_db": 2.42,
+   "why": "event: the wave passes the lens"
+  },
+  {
+   "cue": "DEFLATE",
+   "t": 90.178,
+   "times": [
+    90.178,
+    90.328,
+    90.478,
+    90.628,
+    90.778,
+    90.928
+   ],
+   "start": 90.178,
+   "end": 91.6722,
+   "shot": "s79",
+   "word": "mound",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -10.12,
+   "why": "event: mounds sink, staggered 0.15 s, following the ring"
+  },
+  {
+   "cue": "BLIPS",
+   "t": 91.29,
+   "times": [
+    91.29,
+    91.67,
+    91.848,
+    92.083,
+    92.233
+   ],
+   "start": 91.29,
+   "end": 92.9172,
+   "shot": "s80",
+   "word": "winking",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -14.53,
+   "why": "event: pair 1 out"
+  },
+  {
+   "cue": "TIK",
+   "t": 99.89,
+   "times": null,
+   "start": 99.89,
+   "end": 100.13,
+   "shot": "s86",
+   "word": "blinked",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -10.79,
+   "why": "event: blink, 2 frames"
+  },
+  {
+   "cue": "ENGINE",
+   "t": 100.37,
+   "times": null,
+   "start": 100.37,
+   "end": 103.6852,
+   "shot": "s87",
+   "word": null,
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -15.79,
+   "why": "shot cue: ENGINE starts (off-screen) at 100.37"
+  },
+  {
+   "cue": "RATTLE",
+   "t": 100.8667,
+   "times": null,
+   "start": 100.8667,
+   "end": 102.5047,
+   "shot": "s88",
+   "word": null,
+   "prio": 2,
+   "layer_of": "ENGINE",
+   "gain_db": -12.85,
+   "why": "shot cue: ENGINE, RATTLE, A_DAWN"
+  },
+  {
+   "cue": "GRIND_SOFT",
+   "t": 103.05,
+   "times": null,
+   "start": 103.05,
+   "end": 104.5041,
+   "shot": "s89",
+   "word": null,
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -19.28,
+   "why": "event: head turns back to the window (0.8 s)"
+  },
+  {
+   "cue": "POOF_SOFT",
+   "t": 112.69,
+   "times": null,
+   "start": 112.69,
+   "end": 113.1863,
+   "shot": "s97",
+   "word": "window",
+   "prio": 1,
+   "layer_of": null,
+   "gain_db": -16.1,
+   "why": "event: dandelion seeds lift (burst puff 14)"
+  }
+ ],
+ "dropped_by_profile": [
+  {
+   "cue": "T_GLINT",
+   "t": 6.6,
+   "shot": "s08"
+  },
+  {
+   "cue": "CURTAIN",
+   "t": 11.685,
+   "shot": "s11"
+  },
+  {
+   "cue": "SQUEAK",
+   "t": 13.23,
+   "shot": "s12"
+  },
+  {
+   "cue": "CHAIN_TUG",
+   "t": 14.595,
+   "shot": "s13"
+  },
+  {
+   "cue": "HOPS",
+   "t": 15.252,
+   "shot": "s14"
+  },
+  {
+   "cue": "SHIMMER_S",
+   "t": 17.033,
+   "shot": "s15"
+  },
+  {
+   "cue": "TOK",
+   "t": 18.085,
+   "shot": "s16"
+  },
+  {
+   "cue": "STEP_WET",
+   "t": 23.56,
+   "shot": "s21"
+  },
+  {
+   "cue": "TICK_CLOCK",
+   "t": 27.933,
+   "shot": "s26"
+  },
+  {
+   "cue": "CREAK_LANTERN",
+   "t": 35.9,
+   "shot": "s33"
+  },
+  {
+   "cue": "FIP",
+   "t": 42.745,
+   "shot": "s39"
+  },
+  {
+   "cue": "CLATTER",
+   "t": 46.005,
+   "shot": "s41"
+  },
+  {
+   "cue": "RUMBLE_FAR",
+   "t": 47.666667,
+   "shot": "s43"
+  },
+  {
+   "cue": "THUD_LOW",
+   "t": 53.1,
+   "shot": "s46"
+  },
+  {
+   "cue": "RIP",
+   "t": 56.63,
+   "shot": "s49"
+  },
+  {
+   "cue": "THUNK_PLASTIC",
+   "t": 57.887,
+   "shot": "s50"
+  },
+  {
+   "cue": "FLUTTER",
+   "t": 59.33,
+   "shot": "s51"
+  },
+  {
+   "cue": "RUMBLE_ROLL",
+   "t": 60.045,
+   "shot": "s52"
+  },
+  {
+   "cue": "BRICK",
+   "t": 61.635,
+   "shot": "s54"
+  },
+  {
+   "cue": "BREATH",
+   "t": 62.133,
+   "shot": "s55"
+  },
+  {
+   "cue": "FEET_WET",
+   "t": 63.097,
+   "shot": "s56"
+  },
+  {
+   "cue": "TIDE",
+   "t": 63.578,
+   "shot": "s56"
+  },
+  {
+   "cue": "SNIFF_FAR",
+   "t": 65.63333300000001,
+   "shot": "s58"
+  },
+  {
+   "cue": "STEP_WET",
+   "t": 69.623,
+   "shot": "s62"
+  },
+  {
+   "cue": "KNEEL",
+   "t": 81.638,
+   "shot": "s73"
+  },
+  {
+   "cue": "SET_DOWN",
+   "t": 85.495,
+   "shot": "s76"
+  },
+  {
+   "cue": "DOOR_CREAK",
+   "t": 94.892,
+   "shot": "s82"
+  },
+  {
+   "cue": "DROPS",
+   "t": 103.83,
+   "shot": "s90"
+  },
+  {
+   "cue": "PING",
+   "t": 105.345,
+   "shot": "s91"
+  },
+  {
+   "cue": "SWIPE",
+   "t": 106.75,
+   "shot": "s92"
+  }
+ ]
+}

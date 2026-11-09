@@ -300,3 +300,216 @@ per worker (cached after), render ~0.5-0.7 s per frame; each photo texture is a 
 - The room is 10 studs tall (the bungalow storey), not the bible's 12-13: it lives inside the approved house.
 - Theo's window from outside reads pink-warm (lit room + glass haze), close to but not identical with the approved
   emissive window of s05/s09 (stats above); `haze`/`roomLevel` tune it per shot.
+
+## SOUND (EP01 full episode) - `episodes/ep01/sound/`
+
+Sound library + mixer for the whole 113.30 s episode: the owner's VO on top, every SFX cue of `ASSETS.md` / `board.md`
+at its picture event, ambience beds per shot, 48 kHz stereo out. Python only (numpy/scipy/soundfile/pyloudnorm, ffmpeg
+for mp3 decode); every procedural sound is seeded (`crc32` of a string), so every run is bit-identical.
+Run everything with `python3 -I` from anywhere (scripts add their own folder to `sys.path`).
+
+```bash
+S=roblox-shorts/episodes/ep01/sound; R=<scratch>/rbx
+python3 -I $S/catalog.py                     # render + measure every cue -> sfx_map.json (gains), previews <scratch>/ep01/sound/cues/*.wav
+python3 -I $S/mix.py                         # full mix (profile 'bible') -> <scratch>/ep01/sound/out/ep01_mix.wav + stems + report
+python3 -I $S/mix.py --range 0 5 --compare $R/test5/sound/test5_mix.wav    # the 5-s test check
+python3 -I $S/mix.py --profile standard|full|primary --out DIR [--no-stems] [--music MUSIC.wav]
+python3 -I $S/qa.py STEMS_DIR OUT_DIR --test ... --refs $R/ref60 --refstems $R/metrics/audio/stems   # 1080x1920 QA sheets
+python3 -I $S/synth.py [OUT_DIR] [design ...]  # write the procedural designs as WAVs
+```
+
+### Files
+| File | What |
+|---|---|
+| `synth.py` | 48 procedural designs (`DESIGNS` dict + parametric functions): `tik(slow)`, `ceramic_tok`, `plink`, `reflector_flash`, `lantern_light` (tink-whoosh), `lantern_cascade(times)`, `rumble(dur, move)`, `squeak/chitter/fip` (mole squeaks), `sniff(size)`, `gulp`, `fwoom`, `breath_glass`, `step_wet/feet_run/walk(times)`, `rip`, `flutter`, `plastic_knock/thunk_plastic/clatter`, `deflate(n, gap)`, `blips(times)`, `engine(crank)`, `rattle`, `photo_drop(times)`, `creak/door_creak/lantern_creak`, `grind(soft)`, `kneel`, `set_down`, `squeak_toy`, `chain_tug`, `hops(times)`, `bonk`, `poof_soft`, `ripple_shimmer`, `thud_low`, `tide`, `brick`, `slap_sticker`, `curtains`, `room_tone`, `mower`; helpers `verb(x, 'night'|'room'|'hall')`, `tine(f)` (music-box tine), `Lib` (read-only access to the extracted Epidemic files) |
+| `catalog.py` | `CUES` (58 cues) and `BEDS` (11 beds): source, in/out, sync, offset, filters, fades, reverb, target level, priority, layer, placement rule. `render_cue(cid, times, shot)`, `bed(name, t0, t1)`, `momentary()`, `band_peak()` |
+| `sfx_map.json` | Generated catalog: every cue -> `source` (`file` + `in`/`out` s, `synth` design, or `layers`), `sync`, `offset`, `hp`/`lp`, `fin`/`fout`, `target`, `measured_lufs`, **`gain_db`**, `prio`, `layer_of`, `rule`; every bed -> loop `in`/`period_s`/`xfade_s`/`phase_s`, filters, **`gain_db`**, 10 s loudness |
+| `mix.py` | Resolver (timeline events -> placements), voice leveler, SFX bus + ducker, beds, master limiter, report |
+| `cue_sheet.json` | Every resolved placement of the last full mix: `cue, t (picture event), times, start/end (clip span), shot, word, prio, layer_of, gain_db` + what the profile left out |
+| `cue_times.json` | Multi-hit times the picture should match: HOPS s14, FEET_WET s28, TINKS s40, STEP_WET s62-s64, DEFLATE s79, BLIPS s80, DROPS s90, SWIPE s92 |
+| `music_cues.json` | Voice pauses; `planned: true` = the board's 4 pauses (28.87-29.72 "empty", 48.44 "fence", 82.58 "flower bed", 103.12-103.455 before "Every spring"): drop the owner's music there |
+| `qa.py` | QA sheets (spectrogram stills of sound) |
+
+### How a cue is placed
+- Cue names come from the timeline: each event's `sfx` string and each shot's `sfx_cues` are tokenised
+  (`GRIND (soft)` -> `GRIND_SOFT`, `SNIFF (distant)` -> `SNIFF_FAR`, `distant rumble` -> `RUMBLE_FAR`; bed tokens and
+  tails such as `M1 tail`, `FWOOM tail`, `ENGINE fades` are skipped). Extra picture events without an `sfx` string are
+  hooked by word: `FLASH` on s36 "reflectors", `SNIFF_BIG` on s37 "big".
+- Clip start = event `t` + `offset` - `sync` (`sync` = the transient / whoosh peak inside the trimmed clip). E.g. LATCH
+  lands 0.10 s after "out" (the gate swings 6 frames), TINK_WHOOSH starts 0.12 s early so its swell peaks on the light-up,
+  FWOOM starts 0.28 s early and its hit lands on 86.86 (the vowel), the second pulse on "flared" (+1.06 s).
+- Multi-hit rules: `shot_events` (BLIPS, DROPS, SWIPE: one hit per later event in the shot), `cascade` (TINKS: seeded
+  0.15-0.3 s gaps from "every" fitted to end on the "lit" event), `feet` (every 0.25 s to the cut; s56 = a 2-step plant),
+  `steps` (s62: every 0.44 s until the s64 "stop" event), `deflate` (6 x 0.15 s), `hops` (5 x 0.22 s ending 0.18 s
+  before the bonk), `shot_start`, `shot_at` ("at 100.37").
+- To move a sound onto the picture: write `episodes/ep01/sound/cue_times_override.json` = `{"TINKS": {"times": [...]}, ...}`
+  and re-run `mix.py` (the first time becomes the cue time).
+
+### Levels (the approved test's method)
+- **Voice**: 24 -> 48 kHz (exact 2x polyphase), HPF 60 Hz, dual-mono. Phrase leveler: sentences merged to >= 2.5 s
+  groups (31 groups), each set to **-16 LUFS** (gated), clamped to the whole-take gain +-3 dB (+2.87 dB), gain changes
+  only in the gaps. Group 0 is measured on the test's window 0.20-3.42 s -> +3.236 dB, exactly the test's.
+- **Cues**: `gain_db` brings each cue to its target: `mmax` (max 400 ms momentary loudness, LUFS), `win` (the test's
+  integrated-over-window method, W1/M1/P1) or `band_peak` (SUBBOOM: 25-110 Hz 100 ms peak -15 dBFS = +3.9 dB over the
+  mix RMS, like TF 40.85; CG is +10.6). Typical targets: small foley -27..-33, creature/medium -24..-28, signature hits
+  TINK_WHOOSH/TINKS -23, GULP -21, FWOOM -18 (its 5-14 kHz air sits +4.7 dB over the voice's own top end while it rings).
+- **Ducker**: the non-approved SFX bus is ducked only between 200 Hz and 5 kHz (sub and sparkle untouched) when its
+  300-4000 Hz band comes within 12 dB of the voice's (150 ms voice hold, 10 ms attack + look-ahead, 150 ms release,
+  max 10 dB). The approved test cues (W1, M1, P1) are not ducked (they are the approved balance).
+- **Beds** (one per shot, 30 ms equal-gain crossfades on the cuts, no crossfade inside a run of the same bed; the source
+  position is absolute episode time, so a bed that returns continues where it would be):
+  `A_NIGHT` crickets (test A1: file 32-37 s at t 0, HPF 250, -2.09 dB, -33 LUFS; loop period 113.30/4 so the last frame
+  continues seamlessly into frame 0), `A_NIGHT_OLD` (sepia, LPF 6 k), `A_NIGHT_BW`, `A_NIGHT_CAB` (s48), `A_DAWN` -33,
+  `A_DAY` -32.5 (+ distant mower), `A_DUSK` -34 (+ first crickets), `A_ROOM` -40 (room tone + far wall clock + crickets
+  through the glass), `A_ROOM_DAY` (s06-s07, birds through the window), `A_ROOM_OLD` (s66-s67), `A_HALL` (s26, the clock
+  close). Automation: s27 silence beat (night -14 dB from 28.87 until the door-bang cut), s97 dusk -> night (crickets at
+  the opening level on the last frame).
+- **Master**: sum, 10 ms end fade, true-peak limiter -1.2 dBTP (the test's). No music: the owner adds it ~8 LU under the
+  voice (-24 LUFS) and drops it in the planned pauses (`music_cues.json`; `--music` previews that).
+
+### Profiles (density)
+`bible` (default) = the board's 22 primary cues (24 cue IDs with SNIFF_BIG and GRIND_SOFT) + the layers that belong to a primary event (CRUMBLE, PLINK, FLASH
+under SUBBOOM; FEET_WET under DOOR_BANG; SHIMMER_S under CLINK; PASS under FWOOM; RATTLE under ENGINE; SNIFF_BIG):
+25 events = 13.2 per minute (bible 8.2: 6-12; the board's primary list already sits at the top). `standard` adds p2
+sweeteners by rank (CLATTER, THUD_LOW, TIDE, FIP, SET_DOWN, RUMBLE_ROLL, PING, ...) while no sweetener has more than
+9 events within +-15 s (~20/min). `full` = all 64 placements (29/min). Every cue, sweetener or not, is in the library.
+
+### Result (default mix, `<scratch>/ep01/sound/out/ep01_mix.wav`)
+Mix -15.97 LUFS integrated, LRA 1.3 LU, -1.20 dBTP (limiter max 1.9 dB, on the voice's own plosive peaks, as in the
+test); voice -16.1 LUFS, short-term p5/p50/p95 -17.0/-16.2/-15.6; SFX -25.0, beds -33.8 LUFS. Voice over SFX+bed in
+the 300-4000 Hz band inside words: median 23.8 dB, p5 10.4 dB (4.6 % of word frames under 10 dB, all 10-50 ms where a
+hit lands on its own naming word, by design). Last voice 112.92 s, end 113.30 s.
+**5-second test**: 0-3.40 s of the episode mix nulls against `test5_mix.wav` at -86 dB (max sample difference 7e-5,
+the 24-bit floor); W1/M1/P1/A1 gains -7.48/-11.63/-10.28/-2.09 dB, identical. From 3.40 s the episode continues
+("First, your grandma gets shorter" at 3.59, the cut to Grandma's room at 3.567 with its room bed); M1's sparkle tail
+now fades out by 3.95 s instead of running to 5.0; the test-only W2 swell and crickets lift are not used.
+
+QA stills (1080x1920): `<scratch>/ep01/assets/sound/qa_cues_01..10.jpg` (every cue of the full profile in its mix
+context), `qa_refs.jpg` (SUBBOOM vs TF 40.85 / CG 72.24, FWOOM vs TF 111.0, tines vs AW "Tink, tink", GRIND vs AW
+door creak), `qa_test5_vs_episode.jpg`, `qa_overview.jpg` (loudness timeline with cues, cuts and planned pauses).
+
+### Notes and requests to other owners (sound)
+- Picture owners: please match (or send back) the multi-hit times in `cue_times.json`. In particular **TINKS (part 2,
+  s40)**: the board asks for 12 lanterns 0.15-0.3 s apart *and* the nearest on "lit" at 45.22 s (0.59 s after "every"),
+  which cannot both hold. The sound plays 4 near tinks (44.63, 44.82, 45.01, 45.22) over a faint dense twinkle of 8 far
+  lanterns. When the s40 builder exists, write `fx_ep01.lanternCascade(...).cues[].t` (+ the shot start, episode
+  seconds) into `cue_times_override.json` as `{"TINKS": {"times": [...]}}` and re-run `mix.py`.
+- HOPS (s14) times are estimated (5 hops before the bonk), and HOPS is optional (`full` only).
+- GULP is built around the picture's swallow: lips 0-0.12 s, closure "bloop" + sub at 0.12-0.35 s, crumb burp at
+  0.38-0.5 s (59.245-59.365, in the gap before "Gone").
+- GRIND follows the s59 turn exactly (0.8 s inOutSine from 66.55, 20 Hz stepped jerks = 3 frames); its loudest point is
+  mid-turn, 66.95 s.
+- Every source file the library uses was extracted from the owner's two Epidemic zips into
+  `<scratch>/ep01/sound/sfx/` (42 files, incl. 6 from the nested "UI Buttons" zip); read as data only.
+
+## EFFECTS (EP01 full episode) - `kit/fx_ep01.js`
+
+```js
+import * as X from '../../kit/fx_ep01.js';
+build(ctx)  { /* set the camera first (some effects read it at t = 0) */ const L = X.lanternLight(ctx, g, { t0: evT(ctx, 'lit') }); ctx.add(L.group); }
+update(ctx, t) { /* pose gnome / hero / field first */ L.update(t); }
+```
+Conventions: world **metres**; sizes the ASSETS spec gives in studs are taken in **studs** (`radius: 5` = 5 studs); `px` =
+output pixels of the 1080x1920 frame (screen-constant sprites). Every effect is a pure function of shot time `t` (no state
+between frames); anything that needs this frame's camera (streak directions, catchlight glints) is placed in
+`onBeforeRender`, because the engine applies the camera after `update()`. Each call returns `{ group, update(t), cues }`
+(or an Object3D with `.update`); `cues` = `[{ t, kind }]` in shot seconds for the sound mix. Ground light uses a
+**light-boost blend** (`X.boostBlend(mat)`: dst x (1 + c)) so warm light lights the lawn texture instead of an additive wash
+that the cool night grade turns grey. QA: `node tools/render.js engine/kit/_fx_ep01_qa.js <dir> times=... workers=2
+quality=final` (20 shots, shot i = [2i, 2i+2), names in the file); stills + reference comparisons (`cmp_0*.jpg`):
+`<scratch>/rbx/ep01/assets/effects/`.
+
+### Lantern light-up, ring, street cascade (`fx_lantern_ring`, `fx_lantern_cascade`; s38-s43, s45-s46, s50, s56-s58, s69-s81)
+- `X.lanternLight(ctx, gnome, { t0, level: 1, cd: 1.6, ring: 5, ringOpts, burst: true, haloPx: 64, glassK: 2.4,
+  lightOffset: null, levelFn: null })` -> `{ group, update, ring, light, level(t), cues }`. Bible 3.2 light-up via
+  `K.lanternLightUp` (3 frames + 6-frame overshoot, halo 0.2 s) + flicker; the glass is re-driven at x2.4 emissive (the kit's
+  x6 clips to lavender-white under the night grade), a screen halo (15-30 px core), an unshadowed point light at the glass
+  (the TF under-light on the face), a small gold burst, and the ring. Uses the gnome's own `lanternLight` if it has one.
+  Held lanterns (s38): `cd: 0.9, lightOffset: [m]` moves the light 0.3-0.4 m out of the beard (else it blows the face out).
+  Pair with `X.inShotGrade(ctx, 'current', 'magic', t0, 8, 0.6)` for s38's "grade warms to 60 % magic".
+- `X.lanternRing(ctx, { center | follow, radius: 5, rim: 0.25, falloff: 0.6, inner: '#ff8a2a', boost: 1.7, rimColor:
+  '#ffb04a', rimBoost: 3.0, rimA: 0.55, innerA: 0.06, glints: 0 })` -> Mesh with `.group`, `update(t)`, `setLevel(k)`,
+  `radius` (m), `center`, `centerXZ()`, `edgeOf(pos)` -> `[x, z]`, `edgeVec(pos)`, `contains(pos)`. `follow` = Object3D or
+  `(t) => Object3D` (slides with the hero, s46). Moles stop at it: `field.stopAt(i, ring.centerXZ(), ring.radius)`
+  (checked in QA shot 1: they halt and recoil on the rim). Street gnomes use `radius: 2`.
+- `X.lanternCascade(ctx, gnomes, { t0, order: 'toward camera', gap: [0.15, 0.3], skip: ['A4'], preLit: ['A3'], ring: 2,
+  lights: 4, cd: 1.6 })` -> `{ group, items, cues, update }`; `gnomes` = `S.ep01Street(...).ep01.gnomes` (plastic ones are
+  skipped) or Object3Ds. Seeded gaps; only the `lights` nearest the camera get a real point light; one `tink` cue each.
+
+### FWOOM (`fx_fwoom` EXTEND; s77-s81)
+- `X.fwoom(ctx, { gnome, t0, t2 (second pulse, "flared"), field, moles: 'all', speed: 8, stagger: 0.04, sinkDur: 0.5,
+  rig, grade: 'magic', frames: 8, hemi, peak: 6, cd: [2.2, 11, 3], ring: 5, wave: {} })` -> `{ group, update, cues, wave,
+  lantern, level(t) }`: lantern flare (glass, halos, ring), burst ring + streaks + gold/pink motes, grade to magic over 8
+  frames (+ rig.hemi to P3), a `lightWave` from the bed, and `field.sink(i, ...)` for every mole as the front reaches it
+  (eyes wink out 0.12 s later inside creatures.js); one `blip` cue per mole.
+- `X.fwoomLevel(t, t0, { base, peak, end, t2, peak2, shape: 'flash' | 'sine' })` the lantern curve alone.
+- `X.lightWave(ctx, { center, t0, speed: 8, height: 1.0, width: 1.4, maxR: 40, core, trail, sparkles: 60, sector:
+  'camera', light: 2.5 })` -> `{ group, update, radiusAt(t), speed }`: additive ring wall (gold front, pink trail, fades at
+  grazing angles), a light-boost band + crisp line on the grass, sparkles kicked up at the front, a 2.5 cd point light
+  riding the front toward the camera (lights the blades it passes). s78: put the camera beside the wave's path.
+- `X.winkOut(ctx, [{ L, R, t }], { px: 46 })` the blip glint on each eye as a pair goes dark (s80); `X.fieldEyes(field, i)`
+  -> `[L, R]` world positions; schedule the eyes themselves with `field.eyes(i, tOn, tOff)` at the same t.
+- `X.inShotGrade(ctx, from = 'current' | preset, to, t0, frames = 8, amount = 1, { rig, hemi })` -> `update(t)` (grade,
+  exposure, bloom, glow, hemi); `X.gradeBlend(A, B)`; promoted, look-identical `X.starGlint`, `X.streaks`, `X.poofCloud`.
+
+### Soil, GULP, mounds, sticker (`fx_soil`, `fx_sticker`; s34, s35, s37, s51)
+- `X.soilBurst(ctx, { pos, t0, count: 24, spread: 0.9, apex: 0.6, dur: 0.4, size: [0.022, 0.05], y0, puffs: 3, rest }
+  | { bursts: [...] })`: instanced crumbs on parabolas (tumble, rest, shrink away) + soft dust puffs.
+- `X.moundCrumbs(ctx, field, { moles: 'all', rate: 16, life: 0.5, pops: true })`: crumbs flicked off travelling bulge
+  fronts + a pop when a mound rises (reads the field's travel / rise plans; call after `field.update(t)`).
+  `X.moleAt(field, i, t)` / `X.moleWorld(field, i, t)` = a mole's planned position.
+- `X.gulp(ctx, { field, index, target, t0, depth: 2.2, radius: 0.85, swallow: true, wobble: 8, sticker: {} | null })`:
+  calls `field.swallow` (pass `swallow: false` if the shot already did), dark throat inside the lips, jerky wobble while the
+  gnome is pulled down, crumbs as the lips rise, a dirt puff + crumb burp on the seal (t0 + 0.24) and a second small burp;
+  the `$4.99` sticker flutters down at t0 + 0.47 and lands toward the camera, outside the seal. Without `field` it builds and
+  updates its own small mole field. Ground = the target's base height (the flowerbed soil is raised).
+- `X.flutter(ctx, { text: '$4.99', from, to, t0, dur: 0.4, size: 0.5, swing: 35 })`; `X.stickerTex(ctx, text)`.
+
+### Gate, gold, tear, beam, curtains, fog, window (`fx_property_line`, `fx_gold_outline`, `fx_tear`, `fx_beam`, `fx_curtains`, `fx_glass_fog`, `fx_window_dark`)
+- `X.propertyLine(ctx, { a, b, height: 2.6, opacity: 0.06 })` -> `{ group, update, bonk(t0, at), part(t0, at) }`: lavender-
+  gold streak curtain drifting up + gold ground line; `bonk` = 3 ripple rings (0.45 s, 0 -> 2 studs) + flash + 12-sparkle
+  burst (add `ctx.camera.shake({ t0, dur: 0.3, px: 4 })`); `part` = the curtain opens in a gold flash, 10 gold sparkles and
+  a gold pulse running along the line (s32's ripple).
+- `X.goldOutline(ctx, [armL, armR, gnome], { t0, color: '#ffb43a', width: 0.02, peak: 0.9, hold: 0.5, t1, sparkles: 8 })`:
+  inverted hull on smoothed normals (no cracks on R6 boxes), crisp rim + soft halo, 0 -> 0.9 -> 0.5, gold sparkles.
+- `X.dewTear(ctx, gnome, { eye: 'L', t0, dur: 0.6, swell: 0.15 })`: the path is ray-cast onto the face once (head-local, so
+  it follows head turns); glossy drop + sheen + catchlight, wet trail into the beard.
+- `X.flashlightBeam(ctx, { torch | origin + dir, length: 9, angle: 14, t0, t1, cd: 4, opacity: 0.18 })` -> `{ group,
+  update, on(t0) }`: soft additive cone, elongated ground spot, unshadowed SpotLight, motes. With `C.makeFlashlight` use
+  `{ light: false }` on the torch (or `light: false` here) so the lawn is not lit twice.
+- `X.curtainCascade(ctx, set, { t0, gap: 0.12, n: 6, color: '#7a2a3a', frames: 4, inView: true })`: lit front windows in
+  the camera view, nearest first; backlit wine panels slide shut in 4 frames between glass and muntins, window glow x0.6.
+- `X.glassFog(ctx, pane, { t0, center, r1: 0.9, grow: 0.35, opacity: 0.7, eyes: [L, R] })` (pane = `H.ep01.theo.glass`).
+- `X.windowState(win, level)` / `X.windowDark(ctx, H, { t0, t1 })` (Theo's window via `ep01.theo.setLevel`, 1 frame).
+
+### Accents, dawn, photos (s18, s75, s86, s82-s85, s90, s93)
+- `X.blinkTik(ctx, gnome, { t0, frames: 2, slow: false, px: 58 })` -> `{ group, update, tReopen, cues }`: the [TIK] glint on
+  both catchlights as the lids reopen (second eye 1 frame later); same t0 as `K.gnomeBlink(t, [t0])`.
+- `X.dawnSweep(ctx, { from, to, t0, dur: 1.4, width: 5, intensity: 1.6, shade: 0.3, sun: rig.key, ramp: [0.45, 1],
+  hemi: rig.hemi, glints: 10 })` -> `{ group, update, k(t) }`: warm band over the ground (ground ahead stays in blue shade),
+  the sun / hemi ramp up with it (lights blades, props, people), dew glints wake as it passes.
+- `X.photoLook(ctx, canvas | texture, { lift: '#2a2420', warm: 8, sat: 0.85, vignette: 0.28, grain: 1 })` -> `{ canvas,
+  texture }` (photo textures only, never the frame); `X.polaroid(ctx, { photo: S.photoTexture(ctx, year), date:
+  X.photoDate(year), curl: 0.12, w: 3.5, h: 4.2 })` -> Group (front +Z, `userData.size`): paper frame with grain, the look,
+  blue ballpoint date, curl (bow + one lifted corner), dark back; `X.polaroidDrop(ctx, cards, { at, t0s, dur: 0.28 })`
+  (s90 pile with contact shadows); `X.polaroidSlide(card, { t0, dur: 0.3, from, spin })` (s93 insert).
+
+### Decisions / deviations (effects)
+- Determinism: stills are bit-identical with 1 or 2 workers in any order (checked by md5 on FWOOM, GULP, light wave, bonk).
+  No other kit file was edited; the approved shots s01-s05 / s09 do not import fx_ep01.js.
+- **Light values**: FWOOM uses the bible's curve shape at 2.2 -> 11 -> 3 cd (the bible's 8 -> 50 -> 10 put a 1 m close-up at
+  p50 217; QA now p50 106 after the flash, 72 later); the visual level falls fast (0.32 s exponential) instead of 1.5 s
+  inOutSine, which kept the frame white for 0.6 s. Held lantern 0.9 cd, offset from the beard.
+- **Ring numbers**: the ASSETS spec's additive 0.22 / 0.55 washed the lawn grey under the night grade; the ring is a light
+  boost (x2.7 warm interior, x4 rim) + a thin additive rim. Colours are more saturated than the spec for the same reason.
+- **Dawn sweep** is a ground band + sun ramp, not a moving shadow edge: the street set's lawn takes no sun shadows (a test
+  cube casts none on it, even with `receiveShadow` forced). Ground bands (ring, wave band, dawn) sit under the grass-blade
+  geometry, so they read from above and at medium height; at ground level the wave's wall and riding light carry it.
+- `photoLook` / `polaroid` take the sets owner's `S.photoTexture` canvases; the print look is applied on a copy.
+
+### Requests to other owners (effects)
+- Sets: if a shot needs real sun shadows on the lawn (dawn sweep as a shadow edge), make the street lawn `receiveShadow`.
+- Creatures: field heads with `heads: 'eyes'` read small at 6-10 studs; s80 may want `scale: 0.9-1.0` eye pairs closer to
+  the lens. `winkOut` glints are placed from `fieldEyes(field, i)` after `field.update(t)`.
+- Part builders: build effects after `ctx.camera.set(...)` (cascade order, curtains in view, glass-fog side, wave sparkle
+  sector and gulp sticker landing read the camera at t = 0).

@@ -1,0 +1,61 @@
+{
+ "note": "Voice pauses (s). planned=true: the board's 4 planned pauses; drop the owner's music bed there (about 8 LU under the voice elsewhere, no ducking).",
+ "pauses": [
+  {
+   "t0": 28.87,
+   "t1": 29.72,
+   "dur": 0.85,
+   "after": " empty So I ran out barefoot after dark.",
+   "planned": true
+  },
+  {
+   "t0": 43.09,
+   "t1": 43.515,
+   "dur": 0.425,
+   "after": "ntern lit, and they stopped at its edge.",
+   "planned": false
+  },
+  {
+   "t0": 44.21,
+   "t1": 44.63,
+   "dur": 0.42,
+   "after": "Down the street.",
+   "planned": false
+  },
+  {
+   "t0": 48.44,
+   "t1": 48.532,
+   "dur": 0.092,
+   "after": "They're the fence.",
+   "planned": true
+  },
+  {
+   "t0": 53.43,
+   "t1": 53.695,
+   "dur": 0.265,
+   "after": "ake Grandpa and Theo's window goes dark.",
+   "planned": false
+  },
+  {
+   "t0": 82.58,
+   "t1": 82.625,
+   "dur": 0.045,
+   "after": "I knelt in the flower bed.",
+   "planned": true
+  },
+  {
+   "t0": 88.31,
+   "t1": 88.6,
+   "dur": 0.29,
+   "after": "Boom His lantern flared.",
+   "planned": false
+  },
+  {
+   "t0": 103.12,
+   "t1": 103.455,
+   "dur": 0.335,
+   "after": " every gnome faced its house except one.",
+   "planned": true
+  }
+ ]
+}
