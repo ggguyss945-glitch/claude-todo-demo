@@ -177,45 +177,6 @@
    "why": "event: the bulge surges 0.8 stud + shake"
   },
   {
-   "cue": "CRUMBLE",
-   "t": 38.08,
-   "times": null,
-   "start": 38.08,
-   "end": 39.0172,
-   "shot": "s35",
-   "word": "mounds",
-   "prio": 2,
-   "layer_of": "SUBBOOM",
-   "gain_db": -12.01,
-   "why": "event: mounds rise staggered 0.05-0.15 s apart"
-  },
-  {
-   "cue": "PLINK",
-   "t": 38.717,
-   "times": null,
-   "start": 38.715,
-   "end": 39.2546,
-   "shot": "s36",
-   "word": "eyes",
-   "prio": 2,
-   "layer_of": "SUBBOOM",
-   "gain_db": -17.93,
-   "why": "event: eyes on (0 -> 1 in 3 frames)"
-  },
-  {
-   "cue": "FLASH",
-   "t": 39.39,
-   "times": null,
-   "start": 39.39,
-   "end": 39.8816,
-   "shot": "s36",
-   "word": "reflectors",
-   "prio": 2,
-   "layer_of": "SUBBOOM",
-   "gain_db": -18.23,
-   "why": "extra event: reflector flash (star glint sweep, 0.25 s)"
-  },
-  {
    "cue": "SNIFF",
    "t": 39.96,
    "times": null,
@@ -227,19 +188,6 @@
    "layer_of": null,
    "gain_db": -14.42,
    "why": "event: turf tears, snout 1 unfurls (0.3 s outBack)"
-  },
-  {
-   "cue": "SNIFF_BIG",
-   "t": 40.453,
-   "times": null,
-   "start": 40.453,
-   "end": 41.6705,
-   "shot": "s37",
-   "word": "big",
-   "prio": 1,
-   "layer_of": "SNIFF",
-   "gain_db": -11.47,
-   "why": "extra event: snout 2 (scale 1.8) rises + punch-in"
   },
   {
    "cue": "TINK_WHOOSH",
@@ -273,6 +221,19 @@
    "why": "event: lantern cascade starts (12 lanterns, 0.15-0.3 s apart, toward camera)"
   },
   {
+   "cue": "THUD_LOW",
+   "t": 53.1,
+   "times": null,
+   "start": 53.1,
+   "end": 54.6624,
+   "shot": "s46",
+   "word": "dark",
+   "prio": 2,
+   "layer_of": null,
+   "gain_db": -15.76,
+   "why": "review: restored"
+  },
+  {
    "cue": "GULP",
    "t": 58.865,
    "times": null,
@@ -284,19 +245,6 @@
    "layer_of": null,
    "gain_db": -10.76,
    "why": "event: swallow (moleField.swallow) + soil burst"
-  },
-  {
-   "cue": "SNIFF",
-   "t": 60.997,
-   "times": null,
-   "start": 60.997,
-   "end": 62.318,
-   "shot": "s53",
-   "word": "flowers",
-   "prio": 1,
-   "layer_of": null,
-   "gain_db": -14.42,
-   "why": "event: tulips shake, snouts wriggle"
   },
   {
    "cue": "GRIND",
@@ -368,11 +316,8 @@
    "t": 90.178,
    "times": [
     90.178,
-    90.328,
     90.478,
-    90.628,
-    90.778,
-    90.928
+    90.778
    ],
    "start": 90.178,
    "end": 91.6722,
@@ -427,45 +372,6 @@
    "layer_of": null,
    "gain_db": -15.79,
    "why": "shot cue: ENGINE starts (off-screen) at 100.37"
-  },
-  {
-   "cue": "RATTLE",
-   "t": 100.8667,
-   "times": null,
-   "start": 100.8667,
-   "end": 102.5047,
-   "shot": "s88",
-   "word": null,
-   "prio": 2,
-   "layer_of": "ENGINE",
-   "gain_db": -12.85,
-   "why": "shot cue: ENGINE, RATTLE, A_DAWN"
-  },
-  {
-   "cue": "GRIND_SOFT",
-   "t": 103.05,
-   "times": null,
-   "start": 103.05,
-   "end": 104.5041,
-   "shot": "s89",
-   "word": null,
-   "prio": 1,
-   "layer_of": null,
-   "gain_db": -19.28,
-   "why": "event: head turns back to the window (0.8 s)"
-  },
-  {
-   "cue": "POOF_SOFT",
-   "t": 112.69,
-   "times": null,
-   "start": 112.69,
-   "end": 113.1863,
-   "shot": "s97",
-   "word": "window",
-   "prio": 1,
-   "layer_of": null,
-   "gain_db": -16.1,
-   "why": "event: dandelion seeds lift (burst puff 14)"
   }
  ],
  "dropped_by_profile": [
@@ -533,11 +439,6 @@
    "cue": "RUMBLE_FAR",
    "t": 47.666667,
    "shot": "s43"
-  },
-  {
-   "cue": "THUD_LOW",
-   "t": 53.1,
-   "shot": "s46"
   },
   {
    "cue": "RIP",
@@ -618,6 +519,46 @@
    "cue": "SWIPE",
    "t": 106.75,
    "shot": "s92"
+  },
+  {
+   "cue": "CRUMBLE",
+   "t": 38.08,
+   "shot": "s35"
+  },
+  {
+   "cue": "PLINK",
+   "t": 38.717,
+   "shot": "s36"
+  },
+  {
+   "cue": "FLASH",
+   "t": 39.39,
+   "shot": "s36"
+  },
+  {
+   "cue": "SNIFF_BIG",
+   "t": 40.453,
+   "shot": "s37"
+  },
+  {
+   "cue": "SNIFF",
+   "t": 60.997,
+   "shot": "s53"
+  },
+  {
+   "cue": "RATTLE",
+   "t": 100.86666699999999,
+   "shot": "s88"
+  },
+  {
+   "cue": "GRIND_SOFT",
+   "t": 103.05,
+   "shot": "s89"
+  },
+  {
+   "cue": "POOF_SOFT",
+   "t": 112.69,
+   "shot": "s97"
   }
  ]
 }

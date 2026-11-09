@@ -70,6 +70,7 @@ def voice_track(path, words, n_total):
     assert vsr == 24000, vsr
     v = resample_poly(v24, 2, 1)
     v = sosfilt(butter(2, 60, 'hp', fs=SR, output='sos'), v)
+    i0, i1 = int(43.5850 * SR), int(43.5890 * SR); v[i0:i1] = np.linspace(v[i0 - 1], v[i1], i1 - i0)   # review: mouth click before 'Down'
     v = np.pad(v, (0, max(0, n_total - len(v))))[:n_total]
     st = np.stack([v, v], 1)
     hop = SR // 100; k = len(v) // hop
@@ -218,6 +219,26 @@ def resolve_cues(tl, profile='bible', cap_per_30s=9, override_times=None):
     return keep, dropped
 
 
+# Review fixes (EP01 first-cut review, sound): trim the SFX density toward the bible's 6-12 events/min (drop the listed
+# layers and sweeteners, DEFLATE 6 -> 3 hits), and restore THUD_LOW on "dark" (s46, f3186: the window snapping off).
+REVIEW_DROP = {'CRUMBLE', 'PLINK', 'FLASH', 'SNIFF_BIG', 'RATTLE', 'GRIND_SOFT', 'POOF_SOFT'}
+REVIEW_DROP_AT = {('SNIFF', 's53')}
+REVIEW_RESTORE = {('THUD_LOW', 's46')}
+HOT_DUCK = {'TINK_WHOOSH', 'TINKS', 'GRIND', 'FWOOM'}          # transients on stressed words: duck harder (15 dB margin, 14 dB max)
+
+
+def review_cue_edits(P, dropped):
+    keep, drop = [], list(dropped)
+    for q in P:
+        if q['cue'] in REVIEW_DROP or (q['cue'], q['shot']) in REVIEW_DROP_AT: q['why'] = 'review: dropped (density)'; drop.append(q); continue
+        if q['cue'] == 'DEFLATE' and q.get('times') and len(q['times']) > 3: q['times'] = q['times'][::2][:3]; q['n'] = len(q['times'])
+        keep.append(q)
+    for q in list(drop):
+        if (q['cue'], q['shot']) in REVIEW_RESTORE: drop.remove(q); q['why'] = 'review: restored'; keep.append(q)
+    keep.sort(key=lambda q: q['t'])
+    return keep, drop
+
+
 def place_cue(bus, q, gmap, t_lo, t_hi):
     """Render placement q and add it to bus (which covers episode time [t_lo, t_hi))."""
     clip, sync, c = C.render_cue(q['cue'], q.get('times'), q['shot'])
@@ -228,6 +249,10 @@ def place_cue(bus, q, gmap, t_lo, t_hi):
     q['start'] = round(start, 4); q['end'] = round(start + len(clip) / SR, 4); q['gain_db'] = g
     i = int(round((start - t_lo) * SR))
     x = clip * 10 ** (g / 20)
+    if q['cue'] == 'SUBBOOM':   # review: the rumble tail sat over the voice to 40 s; keep the hit, -6 dB from 37.9 s, out by 39.5 s
+        tt = start + np.arange(len(x)) / SR
+        env = np.where(tt < 37.9, 1.0, 10 ** (-6 / 20) * np.clip((39.5 - tt) / (39.5 - 37.9), 0, 1) ** 1.5)
+        x = sosfilt(butter(2, 35, 'hp', fs=SR, output='sos'), x, axis=0) * env[:, None]
     if i < 0: x = x[-i:]; i = 0
     j = min(len(bus), i + len(x))
     if j > i: bus[i:j] += x[:j - i]
@@ -252,12 +277,26 @@ def bed_for_shot(p):
     return 'A_NIGHT'
 
 
+_BED_L = {}
+
+
+def bed_match_db(name):
+    """Review: bed levels jumped 5-10.5 dB at cuts. Each bed is pulled to within +-3 dB of the median bed loudness."""
+    if not _BED_L:
+        for nm in ('A_NIGHT', 'A_ROOM', 'A_ROOM_DAY', 'A_ROOM_OLD', 'A_NIGHT_OLD', 'A_NIGHT_BW', 'A_DAWN', 'A_DUSK', 'A_DAY', 'A_HALL', 'A_NIGHT_CAB'):
+            try: y = C.bed(nm, 10.0, 16.0); _BED_L[nm] = meter.integrated_loudness(y)
+            except Exception: pass
+    if name not in _BED_L: return 0.0
+    med = float(np.median([v for v in _BED_L.values() if np.isfinite(v)])); L = _BED_L[name]
+    return float(np.clip(med - L, -12, 12) - np.clip(med - L, -3, 3))
+
+
 def bed_envelopes(tl, n, t_lo):
     """Per-bed gain envelopes over [t_lo, t_lo + n/SR): 1 inside its shots, 30 ms raised-cosine crossfades at the cuts,
     plus the automation the board asks for (s27 silence beat, s97 dusk -> night into the loop)."""
     env = {}; sched = []
     t = t_lo + np.arange(n) / SR
-    X = 0.015
+    X = 0.10      # review: 200 ms crossfades at bed changes (30 ms read as switches on headphones)
     for s in tl['shots']:
         b = bed_for_shot(s['params']); sched.append((s['params']['id'], s['start'], s['end'], b))
     def ramp(t, a, b):   # 0 before a, 1 after b
@@ -284,7 +323,7 @@ def bed_envelopes(tl, n, t_lo):
         m = re.search(r'near-silence from (\d+\.\d+)', cues)
         if m and 'A_NIGHT' in env:
             a = float(m.group(1)); b = s['end']
-            dip = 1 - (1 - 10 ** (-14 / 20)) * ramp(t, a, a + 0.3) * (1 - ramp(t, b - 0.02, b))
+            dip = 1 - (1 - 10 ** (-9 / 20)) * ramp(t, a, a + 0.3) * (1 - ramp(t, b - 0.02, b))
             env['A_NIGHT'] *= dip
     return env, sched
 
@@ -392,13 +431,15 @@ def main(argv=None):
     ovr = os.path.join(HERE, 'cue_times_override.json')
     ovr = json.load(open(ovr)) if os.path.isfile(ovr) else None
     P, dropped = resolve_cues(tl, a.profile, a.cap, ovr)
-    sfx_app = np.zeros((n, 2)); sfx = np.zeros((n, 2))
+    P, dropped = review_cue_edits(P, dropped)
+    sfx_app = np.zeros((n, 2)); sfx = np.zeros((n, 2)); sfx_hot = np.zeros((n, 2))
     for q in P:
         clip_len_guess = 4.0
         if q['t'] + 4.0 < t_lo or q['t'] - 1.0 > t_hi: continue
-        place_cue(sfx_app if gmap[q['cue']].get('approved_test') else sfx, q, gmap, t_lo, t_hi)
+        place_cue(sfx_app if gmap[q['cue']].get('approved_test') else (sfx_hot if q['cue'] in HOT_DUCK else sfx), q, gmap, t_lo, t_hi)
     sfx, dk = duck(sfx, voice)
-    sfx_all = sfx + sfx_app
+    sfx_hot, dk_hot = duck(sfx_hot, voice, margin=15.0, max_gr=14.0); dk['hot_bus'] = dk_hot
+    sfx_all = sfx + sfx_hot + sfx_app
 
     # ---- beds
     env, sched = bed_envelopes(tl, n, t_lo)
@@ -408,6 +449,7 @@ def main(argv=None):
         if not len(nz): continue
         i0, i1 = nz[0], nz[-1] + 1
         y = C.bed(name, t_lo + i0 / SR, t_lo + i1 / SR)
+        y = y * 10 ** (bed_match_db(name) / 20)
         m = min(len(y), i1 - i0)
         beds[i0:i0 + m] += y[:m] * e[i0:i0 + m, None]
 

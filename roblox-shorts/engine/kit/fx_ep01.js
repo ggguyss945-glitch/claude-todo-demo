@@ -658,7 +658,7 @@ export function gulp(ctx, { field = null, index = null, target = null, at = null
 // A glossy water drop wells at the lower lid for `swell` s, then slides down the cheek into the beard, leaving a wet
 // trail; a catchlight sprite keeps it readable at night. The path is ray-cast onto the face once (head-local, so it
 // follows head turns). Material: MeshPhysical, transmission-free (roughness 0.05, clearcoat 1).
-export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 1.0, swell = 0.15, size = 0.5, opacity = 0.9, seed = 'tear' } = {}) {
+export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 1.0, swell = 0.15, size = 0.5, opacity = 0.9, spread = 1, seed = 'tear' } = {}) {
   size = Math.max(size, 0.5); opacity = Math.max(opacity, 0.9); dur = Math.max(dur, 1.0); // review: the tear must read over the white beard
   const head = gnome.getObjectByName('gnomeHead') || gnome; const ball = gnome.getObjectByName('ball' + eye); if (!ball) throw new Error('dewTear: no eye ' + eye);
   gnome.updateWorldMatrix(true, true);
@@ -669,8 +669,8 @@ export function dewTear(ctx, gnome, { eye = 'L', t0 = 0, dur = 1.0, swell = 0.15
   const rc = new THREE.Raycaster(); const fwdW = new THREE.Vector3(0, 0, 1).transformDirection(head.matrixWorld).normalize();
   const offs = [[0.05, -1.08], [0.18, -1.45], [0.3, -1.95], [0.42, -2.55], [0.5, -3.2], [0.55, -3.9]];
   const pts = offs.map(([dx, dy]) => {
-    const l = new THREE.Vector3(e.x + sgn * dx * er, e.y + dy * er, e.z + 4 * er); const o = head.localToWorld(l.clone()); rc.set(o, fwdW.clone().negate()); const hit = rc.intersectObjects(meshes, false)[0];
-    if (!hit) return new THREE.Vector3(e.x + sgn * dx * er, e.y + dy * er, e.z + er * 0.6);
+    const l = new THREE.Vector3(e.x + sgn * dx * spread * er, e.y + dy * er, e.z + 4 * er); const o = head.localToWorld(l.clone()); rc.set(o, fwdW.clone().negate()); const hit = rc.intersectObjects(meshes, false)[0];
+    if (!hit) return new THREE.Vector3(e.x + sgn * dx * spread * er, e.y + dy * er, e.z + er * 0.6);
     const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : fwdW.clone(); const p = hit.point.clone().addScaledVector(n, er * size * 0.55); return head.worldToLocal(p);
   });
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');

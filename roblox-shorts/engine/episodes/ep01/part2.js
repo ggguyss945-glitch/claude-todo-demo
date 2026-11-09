@@ -130,8 +130,12 @@ export const builders = {
       const theo = K.makeCharacter('theo', { face: 'wonder' }); K.addBadge6(theo); const wh = CR.stuffedWhale(); CR.holdWhale(theo, wh, 'hug');
       const TH = [-2.35, 0, -5.98]; theo.position.set(...TH); theo.rotation.y = Math.PI - 0.55; K.setPose(theo, { ...K.POSES.hug, neckY: 30, neckX: 2 }); ctx.add(theo);
       ctx.add(sets.contactShadow(ctx, { pos: [TH[0], 0.005, TH[2]], radius: 0.28, opacity: 0.35 }));
-      const cp = new THREE.Vector3(3.0, 2.3, 5.6); const ang = 22 * DEG; const tg = cp.clone().add(new THREE.Vector3(-Math.sin(ang) * 14, -14 * Math.tan(3.5 * DEG), -Math.cos(ang) * 14));
-      ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: p.fov }); basePush(ctx); ctx.camera.truck(c.drift.truck_studs * S);
+      // review re-frame: low (2.5 studs) and long (fov 42), aimed between the board and Theo so the slap, the truck and Theo
+      // read big; a x1.25 punch-in lands on "moved" (the sticker >= 250 px)
+      const bd = V3(sp.board); const tg = bd.clone().lerp(new THREE.Vector3(...TH), 0.4); tg.y = 1.05;
+      const dh = new THREE.Vector3(3.0 - tg.x, 0, 5.6 - tg.z).normalize(); const cp = tg.clone().addScaledVector(dh, 10.5); cp.y = 2.5 * S;
+      ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: 42 }); basePush(ctx, { Z: 0.06 }); ctx.camera.truck(c.drift.truck_studs * S);
+      ctx.camera.push(0.25, { t0: tSold - 0.03, t1: tSold + 0.12, ease: 'outExpo' });
       ctx.shared.rig = SE.heroLight(ctx, H, {});
       const g = E.gnomes.grandpa; if (g) { K.setGnomeGaze(g, 0, 4); ctx.shared.g = g; }
       ctx.shared.fx = sparks(ctx, up(sp.board, 0.6, 1.0, 2.5), [5.0, 2.4, 3.0], 6, 's25', { px: [45, 75] });
@@ -216,7 +220,7 @@ export const builders = {
       const tbc = tb.clone().add(new THREE.Vector3(0, 0.25, 0)); const head = eyes.clone().add(new THREE.Vector3(0, 0.06, 0));
       const az = (q) => Math.atan2(q.x - pos.x, q.z - pos.z), el = (q) => Math.atan2(q.y - pos.y, Math.hypot(q.x - pos.x, q.z - pos.z));
       let a0 = az(head), a1 = az(tbc); if (a1 - a0 > Math.PI) a1 -= 2 * Math.PI; if (a0 - a1 > Math.PI) a1 += 2 * Math.PI;
-      const ya = a0 + 0.43 * (a1 - a0), pa = 0.5 * (el(head) + el(tbc)) + 2 * DEG;
+      const ya = a0 + 0.47 * (a1 - a0), pa = 0.5 * (el(head) + el(tbc)) - 4 * DEG;   // review: panned toward the open truck back, less sky
       const look = pos.clone().add(new THREE.Vector3(Math.sin(ya) * Math.cos(pa), Math.sin(pa), Math.cos(ya) * Math.cos(pa)));
       ctx.camera.set({ pos: pos.toArray(), target: look.toArray(), fov: p.fov }); basePush(ctx); ctx.camera.crane(c.drift.crane_studs * S);
       nightRig(ctx, H, 'night', { lamp: { n: 3 }, postOpts: CU_GRADE });
@@ -244,7 +248,7 @@ export const builders = {
       ctx.camera.set({ pos: pos.toArray(), target: tgt.toArray(), fov: p.fov }); basePush(ctx); paramRoll(ctx);
       nightRig(ctx, H, 'night', { lamp: { n: 2 }, skyOpts: { intensity: 1.8 }, postOpts: CU_GRADE });
       warmKey(ctx, nose.toArray(), { cd: 2.2, d: 0.75 }); coolRim(ctx, nose.toArray(), { intensity: 0.9 });
-      const T = X.dewTear(ctx, g, { eye: 'L', t0: evT(ctx, 'with', 0.8), dur: 0.6, swell: 0.15, size: 0.34, opacity: 0.6 }); ctx.add(T.group); ctx.shared.T = T;
+      const T = X.dewTear(ctx, g, { eye: 'L', t0: evT(ctx, 'with', 0.8) - 0.15, dur: 0.6, swell: 0.15, size: 0.5, opacity: 0.9, spread: 0.3 }); ctx.add(T.group); ctx.shared.T = T;   // review: big blue-white drop on the bare cheek, inner path
       ctx.shared.fx = sparks(ctx, nose.clone().lerp(pos, 0.45).toArray(), [0.9, 0.8, 0.3], 8, 's30', { drift: [0.02, 0.05] });
     },
     update(ctx, t) { K.gnomeIdle(ctx.shared.g, t, { seed: 's30', amp: 0.3 }); ctx.shared.T.update(t); ctx.shared.fx.update(t); },
@@ -548,7 +552,7 @@ export const builders = {
     build(ctx) {
       const H = nightLot(ctx, { lanterns: 1 }); const E = H.ep01; frontDoor(ctx, LOT_DOOR); const tD = evT(ctx, 'door', 0.572); ctx.shared.tD = tD;
       const { g } = heroWithGnome(ctx, { at: HOLD_AT, face: 'wonder', gnome: { lantern: 1 } }); const GL = X.lanternLight(ctx, g, { t0: -1, ring: 5, burst: false, cd: 1.6 }); ctx.add(GL.group); ctx.shared.GL = GL;
-      ctx.camera.set(E.views.nextDoorNight); basePush(ctx);
+      { const v = E.views.nextDoorNight; ctx.camera.set({ ...v, pos: [v.pos[0], v.pos[1] + 2 * S, v.pos[2]], target: [v.target[0], v.target[1] - 0.2, v.target[2]] }); } basePush(ctx);   /* review: plastics above the caption band */
       nightRig(ctx, H, 'night', { low: false, lamp: { n: 3 }, postOpts: { grade: { temperature: -24 } } });
       const pg = E.nextDoor.gnomes[1]; ctx.shared.pg = pg; const P = pg.position.clone(); ctx.shared.P = P;
       const f = CR.moleField(ctx, { center: [P.x, P.z + 0.6], size: [20, 14], res: 96, seed: 's41', heads: 'eyes' }); ctx.add(f.group);
