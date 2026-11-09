@@ -663,15 +663,18 @@ const NEW_BUILDERS = {
     quality: { shadows: 'pcfsoft' },
     build(ctx) {
       const p = ctx.params; const c = p.camera;
-      const H = SE.heroLot(ctx, { tod: 'day', gnomes: ['bedFront0', 'bedFront1', 'lawn0', 'lawn3'] }); ctx.add(H); const sp = H.ep01.spots;
+      const H = SE.heroLot(ctx, { tod: 'day', gnomes: ['bedFront0', 'bedFront1'] }); ctx.add(H); const sp = H.ep01.spots;   // only the bed gnomes: the two agents are the lawn's
       const B = W3(sp.board); const textY = B.y - 1.0 * S;           // board 3.1-6.1 studs; the third line sits ~1 stud under its centre
       // The board stands 4.6 studs behind the pickets, so a d-9 camera is outside the fence: it looks in through the open
       // gateway (leaf hidden), 2.6 studs out on the sidewalk, h 4.8, at the COMES WITH ANCESTORS line (yaw ~37 instead of 10).
       const G = W3(sp.gate); if (H.ep01.gate) H.ep01.gate.visible = false;
       const cam = { pos: [G.x + 1.5 * S, c.height_studs * S, G.z + 2.6 * S], target: [B.x, textY, B.z], fov: c.fov }; ctx.camera.set(cam).push(c.move.Z).truck((c.drift?.truck_studs ?? 0) * S);
-      const toCam = hflat(W3(cam.pos).sub(B)); const side = new THREE.Vector3(-toCam.z, 0, toCam.x);
-      const ag = [[-1, 1], [1, 3]].map(([s, v]) => { const f = K.makeFamilyGnome(v, { lantern: 0, wear: 0.1 }); f.position.copy(B).addScaledVector(side, s < 0 ? -0.55 * S : 1.6 * S).addScaledVector(toCam, s < 0 ? 1.0 * S : 1.6 * S); f.position.y = 0;
-        f.rotation.y = yawOf(toCam) - s * 20 * DEG; ctx.add(f); ctx.add(sets.contactShadow(ctx, { pos: f.position.toArray(), radius: 0.26, opacity: 0.35 })); return f; });
+      const toCam = hflat(W3(cam.pos).sub(B));
+      // the two "agents" stand where the END frame (after the +26 % push) has them either side of the board, in the lower
+      // third under its two bottom corners: rays through those screen points down to the lawn (no guessing in studs)
+      ctx.camera.apply(0); const zEnd = 1 + c.move.Z; const onLawn = (nx, ny) => { const o = ctx.cam.position.clone(); const d = new THREE.Vector3(nx / zEnd, ny / zEnd, 0.5).unproject(ctx.cam).sub(o).normalize(); return o.addScaledVector(d, -o.y / d.y); };
+      const ag = [[-1, 1, -0.4, -0.66], [1, 3, 0.5, -0.62]].map(([s, v, nx, ny]) => { const f = K.makeFamilyGnome(v, { lantern: 0, wear: 0.1 }); f.position.copy(onLawn(nx, ny)); f.position.y = 0;
+        f.rotation.y = yawOf(hflat(W3(cam.pos).sub(f.position))) - s * 20 * DEG; ctx.add(f); ctx.add(sets.contactShadow(ctx, { pos: f.position.toArray(), radius: 0.26, opacity: 0.35 })); return f; });
       ctx.shared.rig = SE.heroLight(ctx, H);
       ag.forEach((f) => { f.updateWorldMatrix(true, true); });
       faceKey(ctx, eyesOf(ag[0]).lerp(eyesOf(ag[1]), 0.5), { cd: 1.5, color: '#fff0dc', d: 1.6 });
@@ -862,15 +865,19 @@ const NEW_BUILDERS = {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
       const H = SE.heroLot(ctx, { tod: 'day', board: false }); ctx.add(H); const sp = H.ep01.spots; const B = W3(sp.bed0); const g = H.ep01.gnomes.grandpa;
+      g.scale.multiplyScalar(1.3);   // scale cheat (bible 2.6 #6): his hat is what gets tapped, it must read next to the kneeling boy
       // yaw -35 instead of +35: the porch column 2.6 studs right of the window fills a +35 view (sets README)
       const cam = boardCam(B, { ...c, yaw_deg: -Math.abs(c.yaw_deg) }); const camP = W3(cam.pos);
       ctx.camera.set(cam).push(c.move.Z).rollBy(c.roll ? c.roll.deg[1] - c.roll.deg[0] : 0);
-      g.updateWorldMatrix(true, true); const hat = g.getObjectByName('gnomeHat'); const hb = new THREE.Box3().setFromObject(hat); const tip = new THREE.Vector3((hb.min.x + hb.max.x) / 2, hb.max.y - 0.03, (hb.min.z + hb.max.z) / 2);
+      g.updateWorldMatrix(true, true); const hat = g.getObjectByName('gnomeHat');
+      // the real tip: the highest hat vertex in world space (the hat is bent, its bounding-box centre is not the tip)
+      const tip = new THREE.Vector3(0, -1e9, 0); { const v = new THREE.Vector3(); hat.traverse((m) => { if (!m.isMesh || !m.geometry.attributes.position) return; const P = m.geometry.attributes.position; for (let i = 0; i < P.count; i += 1) { v.fromBufferAttribute(P, i).applyMatrix4(m.matrixWorld); if (v.y > tip.y) tip.copy(v); } }); } tip.y -= 0.02;
       // the hero kneels on the lawn edge of the bed, to the gnome's left on screen, turned toward it and a little to the lens
       const toCam = hflat(camP.clone().sub(B)); const camR = new THREE.Vector3(-toCam.z, 0, toCam.x);   // screen-right
       ctx.camera.set({ target: W3(cam.target).addScaledVector(camR, -0.9 * S).toArray() });
       const hero = K.makeCharacter('hero', { face: faceOf(ctx, 0, 'grin')[0] }); ctx.add(hero);
       hero.position.copy(B).addScaledVector(camR, -2.1 * S).addScaledVector(toCam, 0.9 * S); hero.position.y = 0; hero.rotation.y = yawOf(B.clone().sub(hero.position)) + 0.5;
+      // turned 0.5 rad toward the lens so his grin reads; the right arm reaches across to the true hat tip
       const pTap = { bodyX: 18, legLx: -90, legRx: -90, lift: -1.45, armLx: 24, armLz: -8, armRz: -10, neckX: -4, neckY: 22, armRx: 90 };
       reachTo(hero, 'R', pTap, 'armRx', tip.clone().add(new THREE.Vector3(0, 0.02, 0)), { lo: 30, hi: 175 });
       ctx.shared.hero = hero; ctx.shared.pTap = pTap; ctx.shared.te = ev(ctx, 'grandpa', 0.168);
@@ -1009,7 +1016,7 @@ const NEW_BUILDERS = {
     },
     update(ctx, t) {
       const f = ctx.shared.f; const on = t >= f.tc ? 1 : 0; CR.setFlashlight(f.fl, on); f.Bm.update(t);
-      const k = on ? clamp01((t - f.tc) / 0.12) : 0; f.Bm.cone.material.uniforms.uA.value = 0.2 * 2.4 * (0.4 + 0.6 * k);
+      const k = on ? clamp01((t - f.tc) / 0.12) : 0; f.Bm.cone.material.uniforms.uA.value = on ? 0.2 * 2.4 * (0.4 + 0.6 * k) : 0;   // dark before the click frame
       ctx.shared.dew.visible = on > 0; ctx.shared.dew.update(t); ctx.shared.dew.children.forEach((s) => { s.material.opacity *= k; });
     },
   },
@@ -1058,9 +1065,12 @@ const NEW_BUILDERS = {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
       const H = SE.heroLot(ctx, { tod: 'night', era: '2010s', keepOff: true }); ctx.add(H); const sp = H.ep01.spots; const v = H.ep01.views.lapTop;
+      // the sets owner's lapTop view as is (part 4's s64 cranes down from it into the kink). bed0's window is left of
+      // centre in it, so the kink sits upper LEFT of centre (board note: upper right; sliding the view to move it shows
+      // the end of the house instead of a house edge along the top)
       ctx.camera.set(v).push(c.move.Z).rollBy(c.roll ? c.roll.deg[1] - c.roll.deg[0] : 0);
       // the loop in lot-plane metres: an oval round the middle of the lawn, a dent toward the house under bed0's window
-      const ctr0 = W3(v.target); ctr0.y = 0; const B = W3(sp.bed0); const ctr = ctr0.clone(); ctr.x = lerp(ctr0.x, B.x, 0.22);
+      const ctr0 = W3(v.target); ctr0.y = 0; const B = W3(sp.bed0); const ctr = ctr0.clone(); ctr.x = lerp(ctr0.x, B.x, 0.12);
       const rx = 5.9 * S, rz = 6.0 * S; const cz = ctr0.z + 0.4 * S;
       const pts3 = []; const N = 96;
       for (let i = 0; i < N; i++) {
@@ -1069,7 +1079,7 @@ const NEW_BUILDERS = {
       }
       const curve = new THREE.CatmullRomCurve3(pts3, true, 'catmullrom', 0.5);
       const ext = 18 * S; const toUV = (q) => [(q.x - (ctr.x - ext)) / (2 * ext), (q.z - (cz - ext)) / (2 * ext)];
-      const tex = lapTexture(ctx, 'v1', curve.getSpacedPoints(160).map(toUV));
+      const tex = lapTexture(ctx, 'v3', curve.getSpacedPoints(160).map(toUV));
       const plane = new THREE.Mesh(new THREE.PlaneGeometry(2 * ext, 2 * ext), new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
       plane.rotation.x = -Math.PI / 2; plane.position.set(ctr.x, 0.02, cz); plane.renderOrder = 2; ctx.add(plane);
       // tiny Grandpa walking the loop (clockwise seen from above), his beam spot 1.4 studs ahead
@@ -1122,17 +1132,17 @@ const NEW_BUILDERS = {
     build(ctx) {
       const p = ctx.params; const c = p.camera;
       const H = SE.heroLot(ctx, { tod: 'night', era: '2010s', keepOff: false, gnomes: ['bedFront0', 'bedFront1', 'lawn3'] }); ctx.add(H); const sp = H.ep01.spots; const G0 = W3(sp.gate); G0.y = 0;
-      const at = new THREE.Vector3(G0.x - 2.0 * S, 0, G0.z - 6.0 * S);
+      const at = new THREE.Vector3(G0.x - 2.0 * S, 0, G0.z - 6.8 * S);   // 0.8 studs further up the lawn than s23: the lens backs off with him and stays inside the pickets
       const gp = K.makeCharacter('grandpa', { face: faceOf(ctx, 0, 'wonder')[0] }); gp.position.copy(at); gp.rotation.y = 0; ctx.add(gp);
       const fl = CR.makeFlashlight({ on: 1, light: false }); CR.holdFlashlight(gp, fl, { axis: 'arm' });
-      const cam = boardCam([at.x, 0, at.z], c, { base: [0, 0, 1] }); ctx.camera.set(cam).push(c.move.Z);
+      const cam = boardCam([at.x, 0, at.z], { ...c, dist_studs: c.dist_studs + 0.8 }, { base: [0, 0, 1] }); ctx.camera.set(cam).push(c.move.Z);   // d +0.8: both hands stay inside the 9:16 frame at the end of the push
       ctx.shared.rig = sepiaLight(ctx, H, { subject: { pos: [at.x, 4.4 * S, at.z], cd: 1.4, color: '#ffe6c8' } });
       const Bm = X.flashlightBeam(ctx, { torch: fl, t0: -1, length: 8, angle: 16, cd: 3, opacity: 0.16 }); ctx.add(Bm.group);
       ctx.shared.w = { gp, fl, Bm };
     },
     update(ctx, t) {
       const w = ctx.shared.w; const u = outBack(t / (8 / 60), 1.9);
-      const P0 = { armLx: 30, armRx: 38, armLz: 6, armRz: 6, neckX: 0 }, P1 = { armLx: 62, armRx: 62, armLz: 56, armRz: 56, neckX: 6, neckZ: 3 };   // "THIS big": arms out and forward, both hands inside the frame
+      const P0 = { armLx: 30, armRx: 38, armLz: 6, armRz: 6, neckX: 0 }, P1 = { armLx: 76, armRx: 76, armLz: 40, armRz: 40, neckX: 6, neckZ: 3 };   // "THIS big": arms out and forward, both hands inside the frame
       const P = {}; for (const k of new Set([...Object.keys(P0), ...Object.keys(P1)])) P[k] = lerp(P0[k] || 0, P1[k] || 0, u);
       K.setPose(w.gp, P); w.gp.updateMatrixWorld(true); CR.setFlashlight(w.fl, 1); w.Bm.update(t);
     },
