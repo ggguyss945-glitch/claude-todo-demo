@@ -242,6 +242,16 @@ class Scene3:
         if it.force_dist is not None: return it.force_dist
         return cam.dist(xf.p(it.centre))
 
+    def _band_dist(self, it, cam, xf):
+        """Distance used to pick an item's band: planes go by their FARTHEST corner (a wall or floor strip belongs with
+        what stands in front of it, never in front of it), everything else by its centre."""
+        if it.force_dist is not None: return it.force_dist
+        if it.kind == 'plane':
+            O, U, V, w, h, draw, two, unit = it.data
+            cs = [O, O + U * (w * unit), O + V * (h * unit), O + U * (w * unit) + V * (h * unit)]
+            return max(cam.dist(xf.p(c)) for c in cs)
+        return cam.dist(xf.p(it.centre))
+
     def render(self, pen, cam, xf=ID, band=None, tags=None, skip=None, clip_poly=None):
         """Draw the items (optionally only those with band[0] <= dist < band[1], or whose tag is in `tags`)."""
         cv = pen.cv
@@ -250,7 +260,9 @@ class Scene3:
             if tags is not None and it.tag not in tags: continue
             if skip is not None and it.tag in skip: continue
             d = self._dist(it, cam, xf)
-            if band is not None and not ((band[0] <= d or band[0] <= -1e8) and d < band[1]): continue
+            if band is not None:
+                db = self._band_dist(it, cam, xf)
+                if not ((band[0] <= db or band[0] <= -1e8) and db < band[1]): continue
             L.append((d - it.order, it))
         L.sort(key=lambda x: -x[0])
         if clip_poly is not None:
@@ -307,10 +319,10 @@ class Scene3:
             dmin, dmax, name = b[0], b[1], b[2]
             ld = b[3] if len(b) > 3 else None
             if ld is None:
-                ds = [self._dist(it, cam, xf) for it in self.items if dmin <= self._dist(it, cam, xf) < dmax
+                ds = [self._band_dist(it, cam, xf) for it in self.items if dmin <= self._band_dist(it, cam, xf) < dmax
                       and (tags is None or it.tag in tags)]
                 ld = (np.median(ds) / d0) if ds else max(0.3, (dmin + min(dmax, dmin * 2 + 1)) / 2 / d0)
-            ld = float(max(0.25, ld))
+            ld = float(max(0.55, ld))          # near bands never below 0.55: a plan dolly (zoom 1.1-1.3) must not blow them up
             bb = bounds or ((-420, -280, 2340, 1360) if ld >= 0.95 else (-900, -560, 2820, 1640))
 
             def draw(pen, t, dmin=dmin, dmax=dmax):

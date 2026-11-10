@@ -104,6 +104,22 @@ _NUM = re.compile(r'(?<![\d:])(\d+\.\d+)')
 def _times(s): return [float(x) for x in _NUM.findall(str(s))]
 
 
+_SOUND_PLAN = []
+
+
+def _plan_cues(t0, t1):
+    """v2: the shots carry no `sfx`; set animations timed to sound cues (sprinkler spits, wet footsteps, the door creak,
+    cloth presses, the towel drop, lipstick smears, glass wipes ...) read plan/sound_plan.json for the shot's window."""
+    if not _SOUND_PLAN:
+        import json as _j, os as _o
+        p = _o.path.join(_o.path.dirname(_o.path.abspath(__file__)), 'plan', 'sound_plan.json')
+        try:
+            _SOUND_PLAN.extend(sorted(_j.load(open(p)).get('sfx', []), key=lambda c: c['t']))
+        except Exception:
+            _SOUND_PLAN.append({'t': -1e9, 'name': '_none'})
+    return [c for c in _SOUND_PLAN if t0 - 1.0 <= c['t'] <= t1 + 0.5]
+
+
 class St:
     """Prop states of one shot as functions of film time t (from shots.json props + changes_in_shot + the shot's sfx).
     v(key, t) -> state; since(key, t) -> seconds since it took that state (1e3 if from before the shot);
@@ -117,7 +133,8 @@ class St:
         self.raw = {k: v for k, v in p.items() if k != 'changes_in_shot'}
         self.events = {}
         self._sfx = {}
-        for c in shot.get('sfx', []):
+        cues = shot.get('sfx') or _plan_cues(self.t0, self.t1)
+        for c in cues:
             self._sfx.setdefault(c['name'], []).append(c)
         base, ch = {}, []
         for k, v in self.raw.items():
@@ -2000,7 +2017,12 @@ def build(set_name, view_name, var=None, shot=None, props=None, t0=None):
         if shot.get('dof') is None: sp.dof = 6.75
     fit_bounds(sp, shot)
     vfx = _var_fx(var, shot); own = sp._fx
-    sp._fx = (lambda t: dict(vfx(t), **(own(t) if own else {})))
+    world = shot.get('world') or sp.info.get('world')
+    arc = getattr(sets_v2, 'arc_fx', None) if 'sets_v2' in globals() else None
+    if arc is None:
+        sp._fx = (lambda t: dict(vfx(t), **(own(t) if own else {})))
+    else:
+        sp._fx = (lambda t: dict(arc(t, world), **dict(vfx(t), **(own(t) if own else {}))))
     sp.info.setdefault('st', st); sp.info['var'] = var
     return sp
 
