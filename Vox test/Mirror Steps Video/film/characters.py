@@ -6502,8 +6502,9 @@ def _q_eye(c, hm, P, side, st, det, lw):
             c.line(_multi(vs), lw * 0.18, QV['vein'], 200 * red)
         ic = mix(QV['iris'], QV['iris_red'], red)
         if red > 0.02: c.glow(IX, IY, ir * 2.2 * ifs, ir * 2.2, QV['iris_red'], 150 * red)
-        c.radial(oval(IX, IY, ir * ifs, ir), IX - ir * 0.2 * ifs, IY - ir * 0.25, ir * 1.1,
-                 [(0, mix(ic, '#ffffff', 0.3 + 0.25 * red), 255), (0.55, ic, 255), (1, mix(ic, '#000000', 0.6), 255)])
+        c.radial(oval(IX, IY, ir * ifs, ir), IX, IY + ir * 0.15, ir * 1.05,
+                 [(0, mix(ic, '#000000', 0.2), 255), (0.3, ic, 255), (0.62, mix(ic, '#a49ac0', 0.45 * (1 - red)) if red < 0.5 else mix(ic, '#ff8090', 0.3), 255),
+                  (0.88, ic, 255), (1, mix(ic, '#000000', 0.6), 255)])
         c.line(oval(IX, IY, ir * ifs, ir), lw * 0.2, mix(ic, '#000000', 0.7), 230)
         pr = ir * lerp(0.46, 0.15, st['pin'])
         c.fill(oval(IX, IY, pr * ifs, pr), '#050407')
@@ -6670,7 +6671,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
         c.line(inner, lw * 0.32, QV['lip_line'], 230)
     # ---- S4: the jaw drops into a tall glossy void with Noah13's face in it
     if voidk > 0.01:
-        vw = lerp(26.0, 37.0, voidk); vt = lerp(my, 57.0, voidk); vb = lerp(my + 4.0, 114.0, voidk)
+        vw = lerp(26.0, 44.0, voidk); vt = lerp(my, 50.0, voidk); vb = lerp(my + 4.0, 115.0, voidk)
         vp = [(0.0, vt - 1.0), (vw * 0.62, vt + 0.5), (vw * 0.98, vt + (vb - vt) * 0.32), (vw * 0.92, vt + (vb - vt) * 0.7), (vw * 0.5, vb - 2.0),
               (0.0, vb), (-vw * 0.5, vb - 2.0), (-vw * 0.92, vt + (vb - vt) * 0.7), (-vw * 0.98, vt + (vb - vt) * 0.32), (-vw * 0.62, vt + 0.5)]
         VQ, _ = _qm(hm, vp, 3.0)
@@ -7070,9 +7071,9 @@ def _q_skirt(c, B, P, det, t, lw, QL):
     knee_y = -520.0 + B.bob + lerp(220.0, 6.0, u) - B.bob * (1.0 - u) * 0.0
     knee_y = lerp(-300.0, -520.0 + B.bob + 10.0, u)
     knee_z = 245.0 * u
-    lv.append((0.0, knee_y, knee_z * 0.98, lerp(118.0, 82.0, u), lerp(108.0, 70.0, u), True, None))
-    hem_z = lerp(0.0, 238.0, u)
-    hw = lerp(146.0, 124.0, u)
+    lv.append((0.0, knee_y, knee_z * 0.98, lerp(118.0, 98.0, u), lerp(108.0, 66.0, u), True, None))
+    hem_z = lerp(0.0, 300.0, u)
+    hw = lerp(146.0, 104.0, u)
     lv.append((sway, -2.0, hem_z, hw, hw * 0.92, True, hw * 0.92 * (1.0 + 0.45 * (1.0 - u))))
     E = []
     for cx, cy, cz, w, d, fl, db in lv:
@@ -7102,6 +7103,16 @@ def _q_skirt(c, B, P, det, t, lw, QL):
                 fl.append(smooth([(top[0], top[1]), (mx_, lerp(top[1], bot[1], 0.55)), (bot[0], bot[1] - 6.0)], False))
             c.line(_multi(fl), lw * 0.4, QV['satin_sh'], 190)
             c.line(_multi([moved_path(f_, 3.0, 0) for f_ in fl[::2]]), lw * 0.3, QV['satin_hi'], 60)
+    if u > 0.25 and det >= 1:                                # seated: two knees under the satin, a crease across the lap
+        ka = clamp((u - 0.25) / 0.5)
+        for s_ in (-1, 1):
+            X, Y, Z = _q_proj_floor(B, s_ * 34.0, knee_y - 6.0, knee_z + 40.0)
+            c.glow(X, Y, 30.0, 16.0, QV['satin_hi'], 150 * ka)
+        X0, Y0, s0, _z = B.p3(-58.0, -548.0, 30.0); X1, Y1, s1, _z = B.p3(58.0, -548.0, 30.0)
+        Xm, Ym, Zm = _q_proj_floor(B, 0.0, knee_y - 4.0, knee_z * 0.55)
+        c.line(smooth([(X0, Y0 + 8), (Xm, Ym + 12.0 * ka), (X1, Y1 + 8)], False), lw * 0.55, QV['satin_sh'], 230 * ka)
+        Xk, Yk, Zk = _q_proj_floor(B, 0.0, knee_y + 18.0, knee_z + 60.0)
+        c.line(smooth([(Xk - 70, Yk - 4), (Xk, Yk + 6), (Xk + 70, Yk - 4)], False), lw * 0.5, QV['satin_sh'], 200 * ka)
     c.line(sk, lw, QV['line'])
     # the hem border along the visible front of the hem
     hem = E[-1]
@@ -7131,7 +7142,7 @@ def _q_feet_peek(c, B, P, det, lw, E):
     """Bare ash-white toes under the front of the hem (standing or seated), long, with black nails."""
     if B.ct < -0.3: return
     u = clamp(P.sit)
-    hw = lerp(146.0, 124.0, u); hz = lerp(0.0, 238.0, u)
+    hw = lerp(146.0, 104.0, u); hz = lerp(0.0, 300.0, u)
     for s_ in (-1, 1):
         x0 = s_ * 26.0
         zf = hz + math.sqrt(max(0.0, 1.0 - (x0 / hw) ** 2)) * hw * 0.92
@@ -7160,14 +7171,14 @@ def _q_collar(c, B, P, det, lw, which='all'):
     sp = CAST['queen']
     yc = B.y_sh - 4.0
     r0 = 26.0
-    r1 = (yc - (B.yc - sp['hh'] * 0.5)) * 1.12
+    r1 = (yc - (B.yc - sp['hh'] * 0.5)) * 1.22
     tilt = math.radians(18.0)
     zc = -16.0
 
     def fp(r, a):                                          # point on the fan plane: angle a from vertical, radius r
         x = r * math.sin(a); up = r * math.cos(a)
         return B.p3(x, yc - up * math.cos(tilt), zc - up * math.sin(tilt))
-    angs = [(k - 4) / 4.0 * math.radians(64.0) for k in range(9)]
+    angs = [(k - 4) / 4.0 * math.radians(56.0) for k in range(9)]
     ribs = [(fp(r0, a), fp(r1, a)) for a in angs]
     top = []
     for k in range(9):
@@ -7468,7 +7479,7 @@ def _q_tint(pen, light, bounds):
     if L.get('under') == '#3a1018' or L.get('tint') == '#ff6a78':
         cv = pen.cv
         cv.saveLayer(skia.Rect.MakeLTRB(*bounds), skia.Paint(ColorFilter=skia.ColorFilters.Matrix(
-            [1.04, 0, 0, 0, 0.02, 0, 0.9, 0, 0, 0, 0, 0, 0.92, 0, 0, 0, 0, 0, 1, 0])))
+            [1.0, 0, 0, 0, 0.0, 0, 0.97, 0, 0, 0, 0, 0, 0.975, 0, 0, 0, 0, 0, 1, 0])))
         try: yield
         finally: cv.restore()
     else:
@@ -7513,12 +7524,14 @@ def queen_hands(pen, x, y, size, P, detail=2, light=None, t=None, main='r'):
         c.line(slv, c.lw, QV['line'])
         shape = getattr(P, pre + 'shape'); press = getattr(P, pre + 'press')
         if shape in ('mitt', None): shape = 'relaxed'
-        _hand2(c, wx, wy, k, ang, side, shape, detail, look, press, t)
         nx, ny = fy_, -fx_
         w_ = aw * 0.62
         pt = poly([(wx + nx * w_ + ax * size * 0.12, wy + ny * w_ + ay * size * 0.12), (wx + fx_ * 24 * k, wy + fy_ * 24 * k),
                    (wx - nx * w_ + ax * size * 0.12, wy - ny * w_ + ay * size * 0.12)])
-        c.fill(pt, QV['satin']); c.line(pt, c.lw * 0.8, QV['line'])
+        palm = shape in ('flat', 'palm')
+        if palm: c.fill(pt, QV['satin']); c.line(pt, c.lw * 0.8, QV['line'])
+        _hand2(c, wx, wy, k, ang, side, shape, detail, look, press, t)
+        if not palm: c.fill(pt, QV['satin']); c.line(pt, c.lw * 0.8, QV['line'])
         tip = _hpt(wx, wy, ang, k, (-side) * 3.9 * 0.0 - side * 0.0, 30.4 + 32.9 * 1.35 + 5.0)
         out['tip'][nm] = tip; out['wrist'][nm] = (wx, wy)
     return out
@@ -7585,25 +7598,29 @@ def queen_feet(pen, x, y, size, P, detail=2, light=None, t=None):
             fc.fill(nl, QV['nail'], 245)
             b = nl.getBounds(); fc.fill(oval(b.centerX() - b.width() * 0.15, b.centerY() - b.height() * 0.15, b.width() * 0.16, b.height() * 0.14), QV['nail_hi'], 180)
         fc.line(outline, lw * 0.9, QV['line'])
-        if hem_on:                                           # the satin hem over the ankle with the playing-card border
-            sw = 0.04 * getattr(P, 'hem', 0.0) + 0.02 * P.sec_x
-            xs = np.linspace(-0.62, 0.62, 17)
-            hem_y = -0.5
-            hp = [(float(xx) + sw, hem_y + 0.022 * math.sin(xx * 9.0 + 1.3) + 0.03 * (abs(xx) > 0.4)) for xx in xs]
-            hem = smooth([(-0.62, -2.4), (0.62, -2.4)] + hp[::-1], True, 0.5)
-            fc.fill(hem, QV['satin'])
-            fc.grad(hem, -0.6, 0, 0.6, 0, [(0, QV['satin_sh'], 220), (0.35, QV['satin_sheen'], 220), (0.45, QV['satin_hi'], 140), (0.6, QV['satin'], 0),
-                                          (1, QV['satin_sh'], 220)])
-            fc.fill(_crescent(hem, -0.02, 0), QL['rim'], QL['rim_a'] * 0.5)
-            fc.line(_multi([smooth([(q_ * 0.14, -2.0), (q_ * 0.15 + sw, hem_y + 0.01)], False) for q_ in (-4, -2, -1, 1, 3)]), lw * 0.4, QV['satin_sh'], 200)
-            b0 = [(px_, py_ - 0.025) for px_, py_ in hp]; b1 = [(px_, py_ - 0.13) for px_, py_ in hp]
-            fc.line(smooth(b0, False), lw * 0.5, QV['hem_red']); fc.line(smooth(b1, False), lw * 0.5, QV['hem_red'])
-            pp = skia.Path()
-            for k in range(1, len(hp) - 1, 2):
-                pp.addPath(_q_spade(hp[k][0], hp[k][1] - 0.078, 0.06, 0.052))
-            fc.fill(pp, QV['pip'])
-            fc.line(smooth(hp, False), lw, QV['line'])
         out['r' if side < 0 else 'l'] = (fx, fy)
+    if hem_on and out:                                     # one satin hem over both ankles, the playing-card border
+        xs_ = [v[0] for v in out.values()]
+        hx0 = (min(xs_) + max(xs_)) / 2.0 - 0.06 * size; hy0 = y
+        fc = c.sub(hx0, hy0, 0.0, size)
+        lw = fc.lw
+        sw = 0.04 * getattr(P, 'hem', 0.0) + 0.02 * P.sec_x
+        xs = np.linspace(-0.82, 0.82, 23)
+        hem_y = -0.5
+        hp = [(float(xx) + sw, hem_y + 0.022 * math.sin(xx * 9.0 + 1.3) + 0.035 * (abs(xx) > 0.55)) for xx in xs]
+        hem = smooth([(-0.82, -2.4), (0.82, -2.4)] + hp[::-1], True, 0.5)
+        fc.fill(hem, QV['satin'])
+        fc.grad(hem, -0.8, 0, 0.8, 0, [(0, QV['satin_sh'], 220), (0.32, QV['satin_sheen'], 220), (0.42, QV['satin_hi'], 140), (0.58, QV['satin'], 0),
+                                      (1, QV['satin_sh'], 220)])
+        fc.fill(_crescent(hem, -0.02, 0), QL['rim'], QL['rim_a'] * 0.5)
+        fc.line(_multi([smooth([(q_ * 0.14, -2.0), (q_ * 0.15 + sw, hem_y + 0.01)], False) for q_ in (-5, -3, -2, 1, 3, 5)]), lw * 0.4, QV['satin_sh'], 200)
+        b0 = [(px_, py_ - 0.025) for px_, py_ in hp]; b1 = [(px_, py_ - 0.13) for px_, py_ in hp]
+        fc.line(smooth(b0, False), lw * 0.5, QV['hem_red']); fc.line(smooth(b1, False), lw * 0.5, QV['hem_red'])
+        pp = skia.Path()
+        for k in range(1, len(hp) - 1, 2):
+            pp.addPath(_q_spade(hp[k][0], hp[k][1] - 0.078, 0.06, 0.052))
+        fc.fill(pp, QV['pip'])
+        fc.line(smooth(hp, False), lw, QV['line'])
     return out
 
 
