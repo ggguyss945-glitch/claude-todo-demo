@@ -211,7 +211,7 @@ def _mk_strips(sc, O, U, V, w, h, draw, n, along_t=True, order=0, name='', tag=N
             def d(pen, ww, hh, t0=t0, h_=h):
                 pen.cv.translate(0, -t0); draw(pen, w, h_)
             sc.plane(O + V * (t0 / 100), U, V, w, t1 - t0, d, order, '%s%d' % (name, i), tag, two_sided,
-                     centre=O + V * (tc / 100) + U * (w / 200))
+                     centre=O + V * (tc / 100) + U * (w / 200), readable=False)
         else:
             s0, s1 = max(0.0, w * (i / n - ov)), min(w, w * ((i + 1) / n + ov))
             scn = w * (i + 0.5) / n
@@ -219,7 +219,7 @@ def _mk_strips(sc, O, U, V, w, h, draw, n, along_t=True, order=0, name='', tag=N
             def d(pen, ww, hh, s0=s0, w_=w):
                 pen.cv.translate(-s0, 0); draw(pen, w_, h)
             sc.plane(O + U * (s0 / 100), U, V, s1 - s0, h, d, order, '%s%d' % (name, i), tag, two_sided,
-                     centre=O + U * (scn / 100) + V * (h / 200))
+                     centre=O + U * (scn / 100) + V * (h / 200), readable=False)
 
 
 def _obox(sc, P0, P1, w, h, faces, order=0, name='', tag=None, up=(0, 1, 0)):
@@ -306,7 +306,7 @@ def cabin_scene(cx, parts=('shell', 'props')):
             pen.cv.clipPath(_doorway_hole_cm(DROP), skia.ClipOp.kDifference, True)
         back_wall(pen, w, h)
 
-    sc.plane((0, HR, D), (1, 0, 0), (0, -1, 0), W * 100, HR * 100, back_wall_holed, -100, 'back_wall', wall_tag)
+    sc.plane((0, HR, D), (1, 0, 0), (0, -1, 0), W * 100, HR * 100, back_wall_holed, -100, 'back_wall', wall_tag, readable=False)
 
     def side_wall(pen, w, h, left=True):
         def lit(pen, w, h):
@@ -336,7 +336,7 @@ def cabin_scene(cx, parts=('shell', 'props')):
             pen.fill(r_, P['wood']); pen.line(r_, 0.8, P['outline'], 160)
         if cx.now:
             _sign_text(pen, 'EXIT', (x0 + x1) / 2, yt - 16, 7, '#d9e0ff', 900, 200)
-    sc.plane((W, HR, 0), (-1, 0, 0), (0, -1, 0), W * 100, HR * 100, front_wall, -100, 'front_wall', wall_tag)
+    sc.plane((W, HR, 0), (-1, 0, 0), (0, -1, 0), W * 100, HR * 100, front_wall, -100, 'front_wall', wall_tag, readable=False)
 
     # floor (strips along z): origin (0, 0, 0), U +x, V +z
     def floor(pen, w, h):
@@ -434,8 +434,8 @@ def _cabin_lights(sc, cx):
             sc.light((2.66, 0.75, 6.0), '#ffc070', 85, 1.0, name='doorway_gold')
             sc.light((2.66, 0.1, 5.3), '#ffb060', 60, 0.8, name='doorway_floor')
         if var == 'red':
-            sc.light((2.66, 0.8, 6.0), '#ff2d55', 120, 0.8, name='red_pour')
-            sc.light((2.66, 0.05, 5.0), '#ff2d55', 80, 0.65, name='red_floor')
+            sc.light((2.66, 0.8, 6.0), '#ff2d55', 75, 0.75, name='red_pour')
+            sc.light((2.66, 0.05, 5.0), '#ff2d55', 50, 0.6, name='red_floor')
             sc.light((2.8, 2.4, 3.0), '#9a4ab0', 70, 2.6, name='magenta_fill')
         if var in ('after', 'phone_glow'):
             sc.light((2.3, 0.18, 3.3), '#ffd58a', 140, 1.0, name='flashlight_floor')
@@ -449,7 +449,7 @@ def _cabin_lights(sc, cx):
         sc.light((2.8, 2.3, 3.0), '#ffcf8a', 55 * sun, 3.0, name='warm_fill')
         sc.light((2.66, 2.6, D - 0.2), '#9fa8ff', 55, 0.7, name='doorway_blue')
         if var == 'dawn_break':
-            sc.light((2.66, 2.4, 5.6), '#ff3b5c', 90, 1.6, name='red_leak')
+            sc.light((2.66, 2.4, 5.6), '#ff3b5c', 45, 1.3, name='red_leak')
 
 
 def _outside_front(sc, cx):
@@ -852,7 +852,7 @@ def mirror_plane(tilt=0.0):
     O = v3(MIR[0], yt, D - 0.02)
     V = norm(v3(0, -yt, -(MIR_LEAN - 0.02)))
     U = v3(1, 0, 0)
-    n = norm(np.cross(V, U))           # pointing into the room (-z, a little up)
+    n = norm(np.cross(U, V))           # pointing into the room (-z, a little up)
     w, h = (MIR[1] - MIR[0]) * 100, MIR_H * 100
     if tilt:
         a = math.radians(-tilt)
@@ -1906,8 +1906,8 @@ def stairs_view(vname, var, st, shot):
 def _stairs_lights(sc, var, dstate):
     red = var == 'red'
     sc.light((0.0, 1.2, -0.3), '#9fa8ff' if not red else '#c2185b', 90 if not dstate.startswith('navy') else 30, 1.0, name='moon_top')
-    sc.light((0.0, -1.5, 2.6), '#ffcf8a' if not red else '#ff2d55', 150, 1.3, name='gold_bottom')
-    sc.light((0.6, -0.6, 1.0), '#c63449' if not red else '#ff2d55', 60 if not red else 110, 1.4, name='red_edge_fill')
+    sc.light((0.0, -1.5, 2.6), '#ffcf8a' if not red else '#e8608a', 120, 1.2, name='gold_bottom')
+    sc.light((0.6, -0.6, 1.0), '#c63449' if not red else '#ff2d55', 30 if not red else 50, 1.2, name='red_edge_fill')
 
 
 def _doorway_top(sc, var, st, dstate):
@@ -2184,14 +2184,18 @@ def inner_world_layers(kind, cam, d0, st, var, tilt=0.0, key=''):
         # our moonlight from above
         _R(pen, None, 960, -300, 1400, [(0, S['moon'], 70), (1, S['moon'], 0)], sy=0.6, clip=False)
 
+    gq = [(Hm @ np.array([x, y, 1.0])) for (x, y) in ((575, 930), (960, 200), (960, 1400))]
+    gp = [(p[0] / p[2], p[1] / p[2]) for p in gq]
+    kpx = math.hypot(gp[1][0] - gp[2][0], gp[1][1] - gp[2][1]) / 1200.0          # design px per mirror-local px
+
     def alive(pen, t):
-        pen.cv.concat(M)
         br = 0.7 + 0.3 * math.sin(t * 2 * math.pi / 2.4)
-        _R(pen, None, 575, 930, 520, [(0, S['glow'], 70 * br), (0.5, S['glow'], 24 * br), (1, S['glow'], 0)], sy=0.35, clip=False)
+        ex, ey = gp[0]
+        _R(pen, None, ex, ey, 520 * kpx, [(0, S['glow'], 70 * br), (0.5, S['glow'], 24 * br), (1, S['glow'], 0)], sy=0.35, clip=False)
         for i in range(4):
-            yy = 200 + i * 330 + 40 * math.sin(t * 0.35 + i)
-            xx = 300 + ((t * 40 + i * 400) % 1600)
-            _R(pen, None, xx, yy, 600, [(0, S['fog'], 70), (1, S['fog'], 0)], sy=0.2, clip=False)
+            yy = gp[1][1] + (gp[2][1] - gp[1][1]) * (i + 0.5) / 4 + 30 * kpx * math.sin(t * 0.35 + i)
+            xx = gp[1][0] - 700 * kpx + ((t * 40 + i * 400) % 1600) * kpx
+            _R(pen, None, xx, yy, 600 * kpx, [(0, S['fog'], 70), (1, S['fog'], 0)], sy=0.2, clip=False)
     return [Layer(dep, static, 'inner_%s' % kind, cache='v2:inner:%s:%s' % (kind, key), bounds=(-700, -500, 2620, 1580)),
             _live(dep * 0.995, alive, 'inner_fog', blur=None),
             _live(dep * 0.99, lambda pen, t: motes(pen, t, (-100, -100, 2020, 1180), 46, 711, None, '#e8dcff', 0.12, fall=10,
@@ -2233,6 +2237,8 @@ def mirror_view(vname, var, st, shot):
     # light: the beam on the glass (night), the steps, the 8th line
     if var in ('night', 'red') and vname not in ('towel_over',):
         live, b = _ours_light(cx, cam, xf, d0, st, 'm_' + vname, info, beam=(var == 'night'))
+        for l in live:
+            if l.name in ('beam', 'dust'): l.alpha = 0.45      # close on the glass the lamp's haze must not wash it out
         L += [l for l in live if l.name not in ('lipstick',)]
     L.append(steps_live(cam, xf, d0, st, 'red' if var == 'red' else var, tilt=tilt))
     if vname == 'towel_over':
@@ -2267,32 +2273,42 @@ def towel_over_layers(cam, xf, d0, st, tilt):
     drop_t = st.ev('towel_drop')
     if drop_t is None:
         cues = st.sfx('towel_drop'); drop_t = cues[0] if cues else None
-    presses = st.sfx('cloth_press')
+    presses_t = st.sfx('cloth_press')
     Hm, _ = cam.H(xf.p(O + n * 0.03 - U * 0.05 - V * 0.04), xf.d(U), xf.d(V), 0.01)
     from engine.room3d import _skmat
     M = _skmat(Hm)
     tw, th = w + 10, h * 0.92
 
-    def draw(pen, t):
-        u = 0.0 if drop_t is None else ease_in_cubic(prog(t, drop_t, drop_t + 0.35))
-        if u >= 1.0: return
+    def body(pen, t, fall=0.0):
         pen.cv.save(); pen.cv.concat(M)
-        pen.cv.translate(0, u * h * 1.1)
+        pen.cv.translate(0, fall * h * 1.1)
         outline = smooth([(0, 2), (tw * 0.5, -3), (tw, 2), (tw + 3, th * 0.6), (tw - 2, th), (tw * 0.7, th + 8), (tw * 0.35, th + 3), (-2, th + 6),
                           (-4, th * 0.5)], True, 0.7)
         towel_cloth(pen, outline, (0, 0, tw, th), 0.22, 0.0, 7, 0.75, True, '#e0a060', '#efe6d6')
         for i in range(4):
             fx = tw * (0.15 + 0.23 * i)
             _L(pen, rect(fx - 4, 0, 8, th), fx - 4, 0, fx + 4, 0, [(0, '#000000', 0), (0.5, '#000000', 60), (1, '#000000', 0)])
-        for j, tp in enumerate(presses):
+        pen.cv.restore()
+
+    def presses(pen, t):
+        if drop_t is not None and t >= drop_t: return
+        pen.cv.save(); pen.cv.concat(M)
+        for j, tp in enumerate(presses_t):
             k = clamp(1.0 - abs(t - tp - 0.25) / 0.6)
             if k <= 0: continue
             for f in range(5):
                 px, py = tw * (0.3 + 0.1 * f), th * (0.32 + 0.03 * abs(f - 2))
-                _R(pen, None, px, py, 4.5, [(0, '#ffffff', 90 * k), (0.6, '#000000', 50 * k), (1, '#000000', 0)], clip=False)
-                _R(pen, None, px, py - 1, 2.5, [(0, '#c63449', 150 * k), (1, '#c63449', 0)], clip=False)
+                # bounded paths: under the perspective matrix an unbounded radial shades the whole canvas (0.7 s a frame)
+                _R(pen, oval(px, py, 4.6), px, py, 4.5, [(0, '#ffffff', 90 * k), (0.6, '#000000', 50 * k), (1, '#000000', 0)])
+                _R(pen, oval(px, py - 1, 2.6), px, py - 1, 2.5, [(0, '#c63449', 150 * k), (1, '#c63449', 0)])
         pen.cv.restore()
-    return [_live(dep, draw, 'towel', blur=None)]
+
+    def falling(pen, t):
+        if drop_t is None or not (drop_t <= t < drop_t + 0.4): return
+        body(pen, t, ease_in_cubic(prog(t, drop_t, drop_t + 0.35)))
+    still = Layer(dep, body, 'towel', cache='v2:towel_over:%d' % int(st.t0 * 10), bounds=FRAME,
+                  alpha=(lambda t: 0.0 if (drop_t is not None and t >= drop_t) else 1.0))
+    return [still, _live(dep * 0.999, presses, 'towel_press', blur=None), _live(dep * 0.998, falling, 'towel_fall', blur=None)]
 
 
 def _reg_mirror(vname):
@@ -2363,8 +2379,8 @@ def relit(sp, mode, key):
         if l.cache:
             l.relight = fn
             l.cache = '%s:rl_%s' % (l.cache if isinstance(l.cache, str) else 'uid%d' % l._uid, mode)
-        elif l.name in ('pines', 'trees', 'pines_near', 'sway', 'curtain'):
-            l.relight = fn; l.lift = True
+        elif l.name in ('pines', 'trees', 'pines_near', 'sway') and mode == 'night':
+            l.tint = ('#8a90ff', 0.35)        # live swaying pines: a cheap cool lift (a per-frame relight costs ~0.3 s at 2560)
     return sp
 
 
@@ -3372,6 +3388,12 @@ def arc_fx(t, world=None):
     """Per-frame post trims for the light arc (merged into every v2 SetPiece's fx): a slow climb of the red in the THEIRS
     break (534.7-560), the climax pulse (560-628, period 1.2 s), nothing elsewhere (the worlds carry the arc)."""
     d = {}
+    if t < 140.0 and world == 'ours':
+        d['exposure'] = 0.36                       # tenths 1-2: night is coloured and readable (luma 95-110)
+    if 350.0 <= t < 420.0 and world in ('theirs', 'theirs_break'):
+        d['exposure'] = -0.06
+    if 420.0 <= t < 490.0 and world in ('theirs', 'theirs_break'):
+        d['exposure'] = -0.3                       # tenth 7: the gold cools near her (120-135)
     if 534.7 <= t < 560.0 and world in ('theirs', 'theirs_break'):
         d['red'] = 0.08 + 0.12 * clamp((t - 534.7) / 25.0)
     if 560.0 <= t < 628.2 and world in ('climax', 'ours', 'stairs'):

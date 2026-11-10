@@ -191,12 +191,14 @@ class Scene3:
         return self
 
     # ---- building
-    def plane(self, O, U, V, w, h, draw, order=0, name='', tag=None, two_sided=True, unit=0.01, centre=None, dist=None):
+    def plane(self, O, U, V, w, h, draw, order=0, name='', tag=None, two_sided=True, unit=0.01, centre=None, dist=None,
+              readable=True):
         """A rectangle w x h (in `unit` m, default cm) at origin O spanned by unit axes U (s) and V (t); draw(pen, w, h)
-        paints it in plane coords. two_sided=False culls it when seen from behind (normal = U x V)."""
+        paints it in plane coords. two_sided=False culls it when seen from behind (normal = U x V). readable=False: under
+        a layout flip the content is mirrored with the room (walls with holes, floors with pools); True keeps text readable."""
         O, U, V = v3(O), norm(U), norm(V)
         c = O + U * (w * unit / 2) + V * (h * unit / 2) if centre is None else v3(centre)
-        self.items.append(Item('plane', (O, U, V, w, h, draw, two_sided, unit), c, order, name, tag, dist))
+        self.items.append(Item('plane', (O, U, V, w, h, draw, two_sided, unit, readable), c, order, name, tag, dist))
         return self
 
     def quad(self, pts, c, a=255, line=None, lw=None, order=0, name='', tag=None, two_sided=True, dist=None):
@@ -247,7 +249,7 @@ class Scene3:
         what stands in front of it, never in front of it), everything else by its centre."""
         if it.force_dist is not None: return it.force_dist
         if it.kind == 'plane':
-            O, U, V, w, h, draw, two, unit = it.data
+            O, U, V, w, h, draw, two, unit, _r = it.data
             cs = [O, O + U * (w * unit), O + V * (h * unit), O + U * (w * unit) + V * (h * unit)]
             return max(cam.dist(xf.p(c)) for c in cs)
         return cam.dist(xf.p(it.centre))
@@ -274,8 +276,8 @@ class Scene3:
     def _draw(self, pen, cam, xf, it):
         k = it.kind
         if k == 'plane':
-            O, U, V, w, h, draw, two, unit = it.data
-            draw_plane(pen, cam, xf, O, U, V, w, h, draw, two, unit, self.lights)
+            O, U, V, w, h, draw, two, unit, readable = it.data
+            draw_plane(pen, cam, xf, O, U, V, w, h, draw, two, unit, self.lights, readable)
         elif k == 'quad':
             pts, c, a, line, lw, two = it.data
             P = [xf.p(p) for p in pts]
@@ -304,12 +306,12 @@ class Scene3:
                 cen = Ow + xf.d(U) * w / 200 + xf.d(V) * h / 200
                 if np.dot(n, cam.C - cen) <= 1e-9: continue
                 if callable(f):
-                    draw_plane(pen, cam, xf, O, U, V, w, h, f, True, 0.01, self.lights)
+                    draw_plane(pen, cam, xf, O, U, V, w, h, f, True, 0.01, self.lights, False)
                 else:
                     def fl(p, ww, hh, f=f):
                         r = rect(0, 0, ww, hh); p.fill(r, f)
                         if line: p.line(r, lw or 1.2, line)
-                    draw_plane(pen, cam, xf, O, U, V, w, h, fl, True, 0.01, self.lights)
+                    draw_plane(pen, cam, xf, O, U, V, w, h, fl, True, 0.01, self.lights, False)
 
     def layers(self, cam, d0, bands, key, xf=ID, bounds=None, dims=None, tags=None, skip=None, blur=None, cache_res=1.0):
         """Cached engine Layers, one per band (dmin, dmax, name[, layer_depth]): layer depth = band mid distance / d0 unless
@@ -389,17 +391,17 @@ def _apply_lights(pen, O, U, V, w, h, lights, unit, viewer):
         R = wid * 3.0
         if s_ + R < 0 or s_ - R > w or t_ + R < 0 or t_ - R > h: continue
         stops = [(0.0, c, aa), (0.12, c, aa * 0.86), (0.33, c, aa * 0.5), (0.6, c, aa * 0.18), (1.0, c, 0)]
-        pen.radial(rect(0, 0, w, h), s_, t_, R, stops, blend=blend, clip=True)
+        pen.radial(rect(0, 0, w, h), s_, t_, R, stops, blend='normal' if blend == 'screen' else blend, clip=True)
 
 
-def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lights=None):
+def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lights=None, readable=True):
     """Draw a w x h plane (plane units, default cm) through its homography; content clipped to the part in front of the
     camera. With a layout-flipping transform the plane's U axis is turned back so text stays readable. `lights` (model
     space) are washed over the content."""
     O = v3(O); U = v3(U); V = v3(V)
     O0, U0, V0 = O, U, V
     Ow, Uw, Vw = xf.p(O), xf.d(U), xf.d(V)
-    if xf.layout_flip and xf.mirrors:
+    if xf.layout_flip and xf.mirrors and readable:
         # keep content readable: draw from the other end along the flipped axis
         if abs(Uw[0]) > 0.5 or (abs(Uw[0]) <= 0.5 and abs(Vw[0]) <= 0.5):
             Ow = Ow + Uw * (w * unit); Uw = -Uw
@@ -424,16 +426,22 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
     cv.concat(_skmat(Hm))
     cv.clipPath(poly(vis), skia.ClipOp.kIntersect, True)
     lw = pen.lw
+    if lights:
+        # the light washes must only touch what this plane drew (a frame plane must not wash the glass inside it):
+        # content in its own layer, the washes composited onto it with src-atop
+        cv.saveLayer(None, None)
     draw(pen, w, h)
     if lights:
+        cv.saveLayer(None, skia.Paint(BlendMode=skia.BlendMode.kSrcATop))
         # lights live in model space: express them in this plane's (model) frame before the layout flip
         Lm = lights
-        if xf.layout_flip and xf.mirrors:
+        if xf.layout_flip and xf.mirrors and readable:
             Om, Um, Vm = Ow, Uw, Vw
             Lm = [(xf.p(P), c, a, r, b, nm) for (P, c, a, r, b, nm) in lights]
             _apply_lights(pen, Om, Um, Vm, w, h, Lm, unit, cam.C)
         else:
             _apply_lights(pen, O0, U0, V0, w, h, lights, unit, xf_inv_point(xf, cam.C))
+        cv.restore(); cv.restore()
     pen.lw = lw
     cv.restore()
 
