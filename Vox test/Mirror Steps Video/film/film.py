@@ -59,9 +59,14 @@ EVENTS = os.path.join(WORK, 'align', 'film_events.json')
 FPS = 60
 DISSOLVE = 0.30                       # centred on the cut
 SEPIA_WIPE = 0.20                     # the paper wipe into / out of a memory, from the cut
+POST_RATE = 0.014                     # uniform post push per second on every shot (see make_cam)
 H._hand = CH.hud_phone_hand           # the cast's hand on the phone UI
 _ERR = set()
 
+# exposure trims (stops) by world and film time, on top of sets_v2.arc_fx: the first preview measured tenths 1-2 at luma
+# p50 84 / 91 (target 95-110) and the last at 87 (90-100)
+SAT_LIFT = 1.06
+LIGHT_TRIM = {'ours': [(0.0, 140.0, 0.22)], 'stairs': [(0.0, 140.0, 0.15)], 'ending': [(629.0, 700.0, 0.12)]}
 WORLD_GRADE = {'ours': 'night_v2', 'stairs': 'stairs_v2', 'theirs': 'dawn_v2', 'theirs_break': 'dawn_break_v2',
                'memory': 'memory_sepia', 'climax': 'climax_v2', 'ending': 'ending_v2', 'ui': 'phone_dark', 'black': 'neutral'}
 
@@ -97,6 +102,13 @@ def make_cam(sh, idx, t_shift=0.0):
         s = c['snap']; cam.snap(float(s[0]) + t_shift, float(s[1]) if len(s) > 1 else 1.25, float(s[2]) if len(s) > 2 else 0.1)
     for h in c.get('hit') or []:
         cam.hit(float(h[0]) + t_shift, float(h[1]) * 0.75, 0.32, 13.0)
+    # a uniform post push on top of the dolly: the dolly scales the far layers less than the nominal rate (parallax), so
+    # the measured push was half the plan's (1.8 against 3 %/s); pull-outs get the matching post pull
+    if sh.get('side') != 'black' and POST_RATE > 0:
+        a, b = sh['t0'] - 0.5 + t_shift, sh['t1'] + 0.5 + t_shift
+        zz = (1.0 + POST_RATE) ** (b - a)
+        if c.get('move') in ('pull', 'reveal'): cam.post_push(a, b, zz, 1.0, ease='lin')
+        else: cam.post_push(a, b, 1.0, zz, ease='lin')
     return cam
 
 
@@ -232,7 +244,13 @@ def _glass_pair(film, sh):
             dict(who='you', mode='bust', view='q_left', expr='dread', acts=[], reflection=True, _glass_rel=[0.64, 0.23, 0.095])]
 
 
-EXTRA_CHARS = {'S281': _knot_echo, 'S067': _glass_pair, 'S078': _glass_pair}
+def _tape_off(film, sh):
+    """S361 (error 5): the empty blue tape loop slides off the lengthened fingers and drops."""
+    return [dict(who='noah13', mode='hands', view='front', expr='neutral', tape=True, at=[960, 470, 600],
+                 acts=[[sh['t0'] - 1.7, 'age', {'part': 'hand', 'dur': 1.6}], [sh['t0'] + 0.15, 'slip_tape', {'dur': 0.6}]])]
+
+
+EXTRA_CHARS = {'S281': _knot_echo, 'S067': _glass_pair, 'S078': _glass_pair, 'S361': _tape_off}
 
 
 # ==================================================================================================== staging the cast
@@ -241,7 +259,9 @@ SEAT = {        # per-shot overrides: {(shot id, who): {spec keys}} (from the sh
     ('S232', 'tess'): {'at': 'tess_doorway', 'scale': 0.9}, ('S295', 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
     # H1: she leans out of the doorway at the mirror spot, half in our blue, half in their gold (the doorway behind her)
     ('S190', 'queen'): {'at': [985, 610, 0.74]},
-    ('S173', 'queen'): {'skip': True},      # the set presses her fingertips through the towel; the loose arm read as a club
+    ('S173', 'queen'): {'skip': True},
+    # he rises into the top rail (error 6): big enough that his shoulder meets the rail
+    ('S372', 'noah_grown'): {'at': [960, 1230, 1000]}, ('S373', 'noah_grown'): {'at': [960, 1230, 1040]},      # the set presses her fingertips through the towel; the loose arm read as a club
 }
 FLOOR_SETS = ('cabin_now', 'cabin_dawn', 'mirror', 'memory')
 # standing heights (m) for the room3d views (CAST.md: the queen 1.12x the adults, grown Noah 1.08x you, Noah13 ~0.8x)
@@ -554,9 +574,16 @@ class Film:
         sh = B.sh; u = t - sh['t0']
         if B.post is not None and 'bloom' not in fx:              # people's close-ups: half bloom (white fear eyes glowed)
             fx['bloom'] = B.post
+        if 'sat' not in fx and sh.get('world') != 'climax':           # colourfulness p50 measured 44 (target >= 45);
+            fx['sat'] = SAT_LIFT                                       # the climax keeps its red share (19 % lifted)
+        tr_ = LIGHT_TRIM.get(sh.get('world'))                      # the light arc, measured on the preview (DIRECTION 2.1)
+        if tr_:
+            for (a_, b_, ev) in tr_:
+                if a_ <= t < b_: fx['exposure'] = fx.get('exposure', 0.0) + ev
         tr = sh['tr']
         if tr == 'glitch' and u < 2.0 / FPS + 1e-6:
             fx['glitch'] = 0.95; fx['static'] = max(fx.get('static', 0.0), 0.5)
+            fx['white'] = max(fx.get('white', 0.0), 0.5)          # a hard pop of light on the stinger frame
         elif tr == 'white' and u < 3.0 / FPS + 1e-6:
             fx['white'] = max(fx.get('white', 0.0), 0.9 * (1.0 - u / (3.5 / FPS)))
         for e in sh.get('fx_post') or []:
