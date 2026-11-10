@@ -3555,7 +3555,8 @@ def _v_cab_phone(var, st, shot):
     cx, cy, w, h = PHONE
     L = _insert_bg('phone', var, st, 700, 1000, 2.0)
     tw = (st.sfx('glass_wipe') or [None])[0]
-    tsteps = st.change_t('phone', 'screen_steps') or (st.t0 - 10 if st.v('phone', st.t0) == 'screen_steps' else None)
+    tsteps = st.change_t('phone', 'screen_steps') or (st.t0 - 10 if str(st.v('phone', st.t0)) in
+                                                      ('screen_steps', 'screen_eighth', 'screen_queen', 'screen_face') else None)
     scr = rrect(cx - w / 2 + w * 0.045, cy - h / 2 + w * 0.045, w * 0.91, h - w * 0.09, w * 0.09)
     def phone(pen, t):
         dust = 1.0
