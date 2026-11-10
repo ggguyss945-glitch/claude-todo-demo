@@ -259,7 +259,7 @@ export const builders = {
       hideBoard(H);
       // the lens 0.6 stud above the board's 4.6 and 4 deg down: from eye level his shoulders hide every eye pair behind him
       // and his face framed left of centre (target 0.09 m right): his hair spikes fill the frame width when centred
-      const bc = boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs + 0.6, pitch: c.pitch_deg - 10, fov: p.fov }); // review: -6 deg more so his eyes clear the caption band
+      const bc = boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: c.height_studs + 0.2, pitch: c.pitch_deg - 22, fov: p.fov }); // review v2: eyes at y 0.35-0.45, the caption band on his chin (v1 -10 left the eyes at y 0.66)
       { const B0 = camBasis(ctx); ctx.camera.set({ target: bc.tgt.clone().addScaledVector(B0.right, 0.09).toArray() }); } basePush(ctx);
       C.gazeAt(g, head);
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 }, postOpts: CU_GRADE });
@@ -332,7 +332,7 @@ export const builders = {
       const tw = tOnset(ctx, TOWARD_ONSET); const wd = c.move.dur ?? 0.5; const rise = 0.62;   // the lens rises 0.62 m in the whip (Theo, asleep on the floor mattress, clears the sill)
       // ... and swings 1.1 m right and 1 m toward the house during the whip: Theo sleeps at the room's left end, seen through the glass only from
       // right of the window centre (from the start position he is behind the frame's left edge)
-      const cp1 = new THREE.Vector3(WIN[0] + 0.15, cp.y + rise, GUARD[2] - 0.95); /* in front of the gnome's head: the path passes 0.3 m clear of it */ const [y1b, p1b] = (() => { const d = A1.clone().sub(cp1); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; })();
+      const cp1 = new THREE.Vector3(WIN[0] + 0.35, cp.y + rise, GUARD[2] - 0.95); /* review v2: 0.2 m further right, so the centre muntin parallaxes off Theo (his sleeping face reads between the left curtain and the muntin; -0.12 or +0.5 hide him behind the curtain) */ /* in front of the gnome's head: the path passes 0.3 m clear of it */ const [y1b, p1b] = (() => { const d = A1.clone().sub(cp1); return [Math.atan2(d.x, d.z), Math.atan2(d.y, Math.hypot(d.x, d.z))]; })();
       let dyb = y1b - y0; while (dyb > Math.PI) dyb -= 2 * Math.PI; while (dyb < -Math.PI) dyb += 2 * Math.PI;
       Object.assign(ctx.shared, { tw, wd, dy: dyb, cp, A0, A1 }); void dy; void p1;
       const posAt = (t, o) => { const u = inOutSine((t - tw) / wd); return (o || new THREE.Vector3()).copy(cp).lerp(cp1, u); };
@@ -495,10 +495,10 @@ export const builders = {
       const camYaw = Math.atan2(tgt.x - pos.x, -(tgt.z - pos.z)) / DEG;
       nightRig(ctx, H, 'nightHigh', { window: { n: 2, cd: 2.4, color: '#ffd9a0', maxD: 14 }, hemiIntensity: 1.05, moon: { az: camYaw + c.moon_az, el: c.moon_el, size: 9, style: 'tf' }, skyOpts: { intensity: 1.6 }, postOpts: { exposure: 1.1, grade: { temperature: -10, tint: 6 } } });
       // the hero in Grandpa's spot (beside the hole, a little right so the sleeping shape shows past his shoulder), back to us
-      const HP = [base.x + 0.5 + 1.0 * S, BED[1], base.z - 0.08];   // review: 1 stud off the window axis so the lit window reads past him
+      const HP = [base.x + 0.5 + 1.0 * S, BED[1], base.z - 0.08]; const S70_TURN = -0.3;   // review: 1 stud off the window axis so the lit window reads past him
       // Grandpa tucked under his left arm (the lens side), facing the house like every gnome, his lantern lit at the hip
-      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(...HP); hero.rotation.y = sl.yaw; K.setPose(hero, { armLx: 30, armLz: 4, armRx: 4, neckX: 12 }); ctx.add(hero);
-      const g = K.makeGnome('grandpa', { units: 'stud', lantern: 1, wear: 0.12 }); C.softenBeard(g); hero.getObjectByName('hips').add(g); g.position.set(1.38, 0.62, 0.62); g.rotation.set(0.12, 0.25, -0.16); hero.updateWorldMatrix(true, true);
+      const hero = K.makeCharacter('heroBarefoot', { face: 'heartfelt' }); hero.position.set(...HP); hero.rotation.y = sl.yaw + S70_TURN; K.setPose(hero, { armLx: 12, armLz: 6, armRx: 4, neckX: 12 }); ctx.add(hero);
+      const g = K.makeGnome('grandpa', { units: 'stud', lantern: 1, wear: 0.12 }); C.softenBeard(g); hero.getObjectByName('hips').add(g); g.position.set(2.35, 0.6, 0.25); g.rotation.set(0.05, 0.25 - S70_TURN, -0.06); hero.updateWorldMatrix(true, true);   // review v2: at his hip outside the arm, so Grandpa and his lit lantern read from behind (inside the arm the sleeve hid him)
       ctx.add(sets.contactShadow(ctx, { pos: [HP[0], HP[1] + 0.005, HP[2]], radius: 0.42, opacity: 0.35 }));
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 2.0 }); ctx.shared.fam = familyLanterns(ctx, H); ctx.shared.g = g;
       warmKey(ctx, worldOf(hero.getObjectByName('head')).toArray(), { cd: 1.2, d: 0.9, color: '#ffb870', side: -40, el: 10 });   // his lantern lights him: no black silhouette
@@ -524,8 +524,8 @@ export const builders = {
       // the lens from the back of the room over the mattress (TF 40.2 grammar: bed in the foreground, the figure in the
       // window): Theo small and asleep at the bottom, the window and the big boy filling it above. (The board's d 4.0
       // sits over Theo: from there he is either behind the lens or a giant foreground body.)
-      const cp = R(-0.8, 4.6, -5.6); const tg = R(-0.6, 3.5, 0);   // review: nearer the glass, his face big in the pane (eyes ~y 0.35)
-      ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: p.fov }); basePush(ctx);
+      const cp = R(0.1, 4.6, -4.4); const tg = R(0.3, 3.75, 0);   // review v2: 1.2 studs nearer the glass and fov 70 -> 54, so his face is big in the pane (v1: about 0.3 of the frame width)
+      ctx.camera.set({ pos: cp.toArray(), target: tg.toArray(), fov: 54 }); basePush(ctx);
       const lan = worldOf(g.getObjectByName('lantern'));
       I.bedroomNight(ctx, { set: H, lamp: 3.0, nightlight: 2.2, moon: true, lanternOutside: { pos: lan.clone().add(new THREE.Vector3(0, 0.15, -0.25)).toArray(), cd: 1.8 } });
       ctx.shared.GL = grandpaLantern(ctx, g, { cd: 1.2, ring: 0, lightOffset: face.clone().sub(lan).multiplyScalar(0.4).add(new THREE.Vector3(0, 0, 0.15)).toArray() });
@@ -591,7 +591,7 @@ export const builders = {
       const { hero, g, fwd } = kneelHold(ctx, { face: p.cast[0].face || 'heartfelt', pose: P74 }); ctx.shared.g = g; ctx.shared.hero = hero; ctx.shared.setHold = null;
       const head = worldOf(hero.getObjectByName('head')); C.gazeAt(g, head); K.setGnomeHead(g, 0, 16, 0);
       // eye level with the kneeling face (the board's h 3.4 is a standing-height number; kneeling, his eyes are lower)
-      boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: (head.y - BED[1]) / S + 0.15, ground: BED[1], pitch: c.pitch_deg - 10, fov: p.fov }); basePush(ctx); // review: eyes out of the caption band
+      boardCam(ctx, head.clone().setY(0), { ref: fwd.toArray(), yaw: c.yaw_deg, dist: c.dist_studs, h: (head.y - BED[1]) / S + 0.15, ground: BED[1], pitch: c.pitch_deg - 18, fov: p.fov }); basePush(ctx); // review v2: eyes at y ~0.4, the caption under the smile (v1 -10 left them at 0.54)
       nightRig(ctx, H, 'nightHigh', { lamp: { n: 2 }, window: { n: 0 }, postOpts: CU_GRADE });
       coolRim(ctx, head.toArray(), { intensity: 1.0 });
       const B = camBasis(ctx); const lan = worldOf(g.getObjectByName('lantern'));
