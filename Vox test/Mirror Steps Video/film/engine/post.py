@@ -79,15 +79,15 @@ GRADES.update(_MF)
 # cast keeps its own values: no dimming of characters under the night grade). Per-tenth light arc and the dawn_break
 # flicker / red leak come from sets SetPiece.fx(t) (sets_v2.arc_fx).
 _V2 = dict(
-    night_v2=dict(exposure=0.0, contrast=1.32, pivot=0.33, gamma=1.0, shoulder=0.4, sat=1.15, wb=(0.92, 0.95, 1.12),
+    night_v2=dict(exposure=0.0, contrast=1.32, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.15, wb=(0.92, 0.95, 1.12),
                   floor='#151632', bloom=1.2, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
-    stairs_v2=dict(exposure=0.0, contrast=1.3, pivot=0.3, gamma=1.0, shoulder=0.4, sat=1.25, wb=(1.04, 0.92, 1.1),
+    stairs_v2=dict(exposure=0.0, contrast=1.3, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.25, wb=(1.04, 0.92, 1.1),
                    floor='#140a1e', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
     dawn_v2=dict(exposure=0.0, contrast=1.26, pivot=0.52, gamma=1.0, shoulder=0.45, sat=1.2, wb=(1.06, 1.0, 0.9), floor='#5a4030',
                  bloom=0.8, bloom_thr=232, bloom_r=14.0, vignette=0.6, grain=0.0),
-    climax_v2=dict(exposure=0.0, contrast=1.3, pivot=0.28, gamma=1.0, shoulder=0.4, sat=1.2, wb=(1.04, 0.9, 1.04),
+    climax_v2=dict(exposure=0.12, contrast=1.3, pivot=0.2, gamma=1.0, shoulder=0.4, sat=1.2, wb=(1.04, 0.9, 1.04),
                    floor='#1a0610', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
-    ending_v2=dict(exposure=0.0, contrast=1.3, pivot=0.33, gamma=1.0, shoulder=0.4, sat=1.1, wb=(0.95, 0.96, 1.08),
+    ending_v2=dict(exposure=0.0, contrast=1.3, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.1, wb=(0.95, 0.96, 1.08),
                    floor='#141530', bloom=1.1, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
     memory_sepia=dict(exposure=0.0, contrast=1.12, pivot=0.5, gamma=1.0, shoulder=0.5, sat=0.6, mono=0.25, tint='#d8b088',
                       wb=(1.04, 0.98, 0.88), floor='#2e2218', bloom=0.6, bloom_thr=236, bloom_r=18.0, vignette=0.6,

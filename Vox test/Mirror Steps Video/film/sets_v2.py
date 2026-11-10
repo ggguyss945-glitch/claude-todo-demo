@@ -1030,9 +1030,9 @@ SPAL = {
     'stairs': dict(tread='#4a2c66', tread_lt='#6a4a8e', riser='#2c1a3e', edge='#c63449', glow='#ff4060', wall='#3a2450',
                    wall_dk='#22142e', wall_lt='#5a3a7a', fog='#4a2c62', spill='#ffcf8a', moon='#9fa8ff', floor='#e8b070',
                    floor_dk='#c08048', rail='#2e1a3e', rail_lt='#6a4a8a', outline='#0e0612', gold_room='#ffd08a'),
-    'red': dict(tread='#3e1238', tread_lt='#5e1e54', riser='#20081c', edge='#ff2d55', glow='#ff4060', wall='#4a1a48',
-                wall_dk='#20081c', wall_lt='#6e2a66', fog='#4e1646', spill='#ff4a5a', moon='#c2185b', floor='#8a3a4a',
-                floor_dk='#4a1a2a', rail='#300a2a', rail_lt='#7e2a6a', outline='#0e0208', gold_room='#ff6a5a'),
+    'red': dict(tread='#4e1a4c', tread_lt='#6e2a6a', riser='#26082a', edge='#ff2d55', glow='#ff4060', wall='#5e2a5e',
+                wall_dk='#26082a', wall_lt='#82388a', fog='#5a1e5a', spill='#e85a8a', moon='#c2185b', floor='#6a3a6a',
+                floor_dk='#3a1a3a', rail='#300a2e', rail_lt='#8a3a8a', outline='#0e0208', gold_room='#e8608a'),
 }
 ST_W = 0.90         # stair width
 ST_T = 0.25         # tread depth (the ours-side shaft)
@@ -3083,7 +3083,7 @@ def bokeh_discs(palette, seed=0, n=12, depth=4.0, alpha=1.0, name='bokeh'):
     return _live(depth, draw, name, blur=0)
 
 
-def bokeh_from(sp, palette, seed=0, blur=16.0, dim=0.12, n=12):
+def bokeh_from(sp, palette, seed=0, blur=16.0, dim=0.04, n=12):
     """Turn a set into a bokeh plate: every set layer far behind (blurred, a little dimmed), plus drifting discs."""
     out = []
     for l in sp:
