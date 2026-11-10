@@ -4,8 +4,73 @@ The police film's API is kept: `draw`, `draw_bust`, `draw_head`, `draw_hand`, `d
 The police cast still renders. Its lead was renamed **`you_police`**, because `you` is now this film's lead.
 Everything is drawn in the 1920x1080 design space.
 
-Sheets are in `_work/cast/cast_{you,tess,noah13,noah_grown,queen,queen_scary,memory}.png`. Regenerate them with
-`python3 tools/cast_sheets.py [name...]`. Run the self-test with `python3 characters.py --selftest`.
+**v2 (DIRECTION_V2 §3).** The Queen of Spades is redrawn from scratch (section 0 below), the Mirror cast's hands are a
+new hand system, and the people got the §3.7 upgrades. v2 sheets are in `_work/cast_v2/`:
+`queen_sheet.png`, `queen_thumbnail_test.png`, `queen_vs_references.jpg`, `queen_plan_v2.png` (every Queen entry of
+`plan/shots.json`), `you_sheet.png`, `tess_sheet.png`, `noah13_sheet.png`, `noah_grown_sheet.png`, `hands_sheet.png`,
+and the gate G1 stills `gate_0284.5.jpg`, `gate_0532.2.jpg`, `gate_0605.8.jpg`, `gate_0606.4.jpg` (`gate_stills.jpg`).
+Regenerate: `python3 tools/cast_v2_sheets.py [queen thumb compare plan_queen you tess noah13 noah_grown hands]` and
+`python3 tools/queen_gate_stills.py --extra` (restages the v1 shots of those times in the real film pipeline).
+The v1 sheets (`_work/cast/`, `tools/cast_sheets.py`) still run. Self-test: `python3 characters.py --selftest`.
+
+## 0. The Queen of Spades v2 (DIRECTION_V2 §3)
+
+A playing-card queen drawn as a real, regal woman in the cast's language: an outline in plum `#2b1a2a` at 0.75x the cast
+weight, inner features `#4a2c3a`. All of her is drawn by the `queen_*` functions (section "Queen of Spades v2" in
+`characters.py`); `draw`, `draw_bust`, `draw_head`, `draw_hands`, `draw_feet` and `draw_silhouette` route to them.
+
+- **Body.** 1.12x an adult (give her `at` height = 1.12 x the adults' in the shot), head 1/7.5 of her height (`hh` 133),
+  long neck, narrow shoulders, cinched waist, arms to mid-thigh, fingers 1.35x. She never breathes or blinks.
+- **Four-shape silhouette.** A crown of 5 black spade points on a silver band (centre 0.22 H, then 0.16, 0.12); a black
+  lace fan collar standing behind the neck to ear height with 9 ribs and a white lace edge; waist-length straight hair
+  from a centre parting (sheen band, dark strands, light highlights, a parting line, two loose strands over her left cheek
+  that never move); a bell gown to the floor (hem 1.6x the shoulders, a train behind) with a playing-card border of white
+  spade pips between two red lines, a spade brooch with a red stone at the throat, 9 silver buttons.
+- **Face (S1).** Long oval 1.38:1, porcelain `#ece6e8` with one cool shade, no blush, highlights at luma >= 200
+  (measured p99.5 244 OURS / 244 THEIRS / 239 CLIMAX); almond eyes 0.18 W with grey-violet irises, two highlights, a heavy
+  tapered black upper lid with a wing and 5 lashes, no lower lid line; thin arched brows; a two-curve nose; full lipstick
+  lips `#c63449` with a lip line and one gloss stroke; **a black spade beauty mark** under her left eye.
+- **Hands.** Porcelain, outlined, knuckle creases, long black almond nails with a sheen, the right index and middle
+  fingertips smudged lipstick red (with crumbs). The satin sleeve ends in a point over the back of the hand.
+- **Feet.** Bare, narrow, an arch, tendons, toes 1.2x long, black toenails, ash-white with lavender shade; the hem with
+  the pip border brushes the ankles (feet insert, and `view='pov'` / spec `pov: true` from above for H7).
+- **Her light.** Cool key from below the front, a red rim `#ff3b5c` on the far side (the plan's queen light dict
+  `{key_c, key_from, rim, rim_a, bloom, drain_px}` is read: its `rim`/`rim_a` are hers). Extra keys for special shots:
+  `qrim`, `qrim_a`, `qrim2` (a second rim on the near side) and `qsplit=(colour_far, colour_near)` (half one world's
+  light, half the other's: H1 in the doorway). The CLIMAX `red` preset reddens her dress and hair a little, never her
+  face.
+- **Speed (2560x1440).** Full-frame bust about 53 ms (S3c), full body at 900 px about 32 ms.
+
+### Stages (plan field `stage`: `S0 S1 S2 S3a S3b S3c OFF S4`; v1 ints 0-3 map to S0, S1, S2, S3c)
+Every stage is a set of continuous pose numbers (`QSTAGES`, `queen_stage(name)`), so a change is a 2-frame snap or a
+draw-on: `q_hide` (S0: the hair closes over the face), `q_draw` (the lipstick stair smile), `q_pin` (pinpoint pupils),
+`q_split` (S3a: the drawing splits into a grin of 2 x 14 flat human teeth, gums, the lips stretched round it; the lower
+edge talks), `q_red` (S3b: red irises with a bloom halo, pink veined whites), `q_full` (S3c: 4 cheek folds a side, 3
+porcelain cracks, 2 glossy black mascara tears per eye with drip bulbs, going behind the open mouth), `q_off` (OFF: the
+grin drops to a pressed flat line, the steps stay as scars, the red eyes stay), `q_void` (S4: the face below the eyes
+stretches 1.35x into a tall glossy void with 6 upper teeth; **Noah13's face floats inside** at 40 % of its width,
+lip-synced on the queen's `m_open`, band-glitched by `q_glitch`), `q_widen` (the grin widens), `q_nface` (the phone:
+Noah13's face occupying her bust, pixel-sorting into hers as it falls 1 -> 0).
+Plan spec: `stage` (or `queen: {stage: ...}`), `face: 'hidden'` / `face_hidden: true` (S0 hair), `seated: true`.
+
+### Her acts (`acts: [t, name, args]`)
+| act | what |
+|---|---|
+| `stage {to, dur, draw_on}` | move every q_* to a stage over dur (0.033 = 2 frames) |
+| `split_open` / `smile_split {dur}` | S3a on "back" (479.24) |
+| `eyes_red`, `full_face`, `smile_off {dur}` | S3b on "better", S3c, OFF in 2 frames (533.68) |
+| `jaw_drop {dur, glitch}`, `void_talk {line, inner, pixel_sort}` | S4 at 589.6; void_talk also lip-syncs the line (249) on Noah's face |
+| `draw_smile {dur}` | the stair smile draws itself on |
+| `head_snap {deg=130, dur=0.18}` | the head turns; **the hair lags 0.4 s** (`q_hair`), then settles within 60 deg of the body |
+| `turn_to_lens` / `head_to_lens {dur=0.25}` | the snap to the lens, eyes locked |
+| `talk {line}` | lip-sync on her lips (lines 97, 110, 196: r = 0.88, 0.88, 0.81); a red glow marks her voice |
+| `lean_out {dur}` | H1: in from the doorway side, the face growing a little |
+| `rise {dy}` | bust: rises dy px into frame; body: straightens out of a stoop |
+| `sit_beside` / `glide_sit {to, dur=1.2}` | H2: one eased 1.2 s glide to `to` and the sit, no bob |
+| `pat`, `press_through_cloth`, `fingers_curl {amount}`, `reach_shoulder` | hands |
+| `climb {steps_per_s}`, `climb_step`, `slide_rail {dx}`, `step_up`, `lift_foot {to}`, `toes_curl` | stairs and feet; body mode shows the lifted bare foot under a raised hem |
+| `grin_widen {amount}`, `call_silent`, `drift`, `still`, `hem_sway`, `pixel_sort_in {dur}` | |
+She always drifts (tilt about 0.5 deg/s, lean, hem sway): never pixel-identical between frames.
 
 ## 1. The easy path: plan specs → rigs
 
@@ -21,12 +86,17 @@ rig.pose(t)                             # the Pose (e.g. P.beam, P.beam_dx, P.fr
 
 **Inputs**
 - Every `mode`, every `expr` and every act in the plan (`acts`: `[t, name, args]`) is wired up. The self-test builds
-  all 264 character entries.
+  all 428 character entries of the v2 plan. An act that fails is skipped with one stderr line (never a crash); a body
+  whose `at[2]` is under 10 (a bust-style scale) is reported on stderr.
+- Plan names: `kids` -> `kid_a`, `extras` -> `searcher`, `mom` -> `mum` (hands / arm only); `tess_kid` is a cast entry.
+- `clip_id` may sit on the spec or (v2 plans) in an act's args (`talk {line, clip_id}`): the rig replays the first
+  shot carrying it frame for frame (`breakfast_A`: S278 replays S214, max difference 0).
 - `at` may be an anchor name, such as `noah_bunk`, `queen_bunk`, `tess_gate`, `noah_floor`, `bunk_sleep`,
   `kid_bunk`, `search_line` or `adult_legs`. Resolve it in `sets.py` and pass `at=[...]`; `rig.draw` raises on a
   string.
 - `at` formats per mode:
-  - `body`, `legs` and `silhouette`: `[x, y_feet, height(, depth)]`.
+  - `body`, `legs` and `silhouette`: `[x, y_feet, height(, depth)]` (height in design px; the queen 1.12x the adults,
+    grown Noah 1.08x yours, Noah13 about 0.8x).
   - `bust`: `[cx, cy, scale]`. `scale` 1 means a 600 px head.
   - `hands` and `feet`: `[x, y, size]`. For `hands`, `size` is the hand length; for `feet`, it is the shin-and-foot
     height.
@@ -48,8 +118,8 @@ rig.pose(t)                             # the Pose (e.g. P.beam, P.beam_dx, P.fr
 - Your left hand is a fist from 323.65 to 651.
 
 **Queen stages and faces**
-- `stage` 0, 1, 2 and 3 and `face` `hidden` or `mouth_only` set `hair_over`, `eye_gap` and `m_gap`.
-- Queen feet shots that have a `toes_curl` act show a single foot seen from above, with no hem.
+- See section 0. `stage` is a name (`S0`..`S4`, `OFF`) or a v1 int; the v1 `hair_over` / `eye_gap` / `m_gap` fields are
+  no longer drawn.
 
 **Replays (`clip_id`)**
 - A rig with a `clip_id` replays its origin shot frame for frame:
@@ -94,15 +164,40 @@ rig.pose(t)                             # the Pose (e.g. P.beam, P.beam_dx, P.fr
 | `tess` | Auburn hair: a side-swept fringe and a low ponytail brought over her left shoulder. Freckles, level brows, small mouth with muted lips. Burnt-orange rain shell (zip, stand collar, nylon sheen), grey cargo pants, boots. Holds the flashlight. Blinks last 1-2 frames. |
 | `noah13` | Kid proportions: head about 1/5.5 of his height. Messy mop with a crown cowlick, freckles, warm skin. **Gap between the front teeth** whenever the teeth show (smiles, talk). Green CEDAR LAKE sweatshirt with a kangaroo pocket, plaid pyjama pants, one white sneaker (left) with a loose lace, the right foot bare. **Blue tape** on the right middle, ring and little fingers, with a lifting edge (`tape`, `tape_peel`, `tape_slip`). |
 | `noah_grown` | The same face at 27: longer jaw, stubble, bags, wet eyes, the gap teeth. Hands 1.25x. The sweatshirt is two sizes too small: the hem is above the waistband (a skin band shows), the cuffs sit halfway up the forearms and there are stretch lines. Pyjamas end mid-shin and both feet are bare. `jacket_on` drapes your jacket over his shoulders. **Age morph:** `age_body` and `age_face` (0 to 1) interpolate everything from `noah13`. |
-| `queen` | Drawn in a different language: **no outline**. Edges are pale `#d9dee6` scratch lines and the face features are dark etched scratches, re-jittered every 3 frames (`seed = frame // 3`). Long neck (+42 body units), fingers 1.4x long, toes too long, pale blue-grey skin, sunken sockets, red irises with a glow, pinpoint pupils, veins. Lipstick `#c63449` carries the widest glow (`#ff4060`). Straight black hair from a centre parting hangs with gravity whatever the head tilt. Black high-collar satin dress to the floor with a sheen. Bare feet with tendons and cold dark toe tips. She never breathes or blinks; `life` is 0. |
+| `queen` | **v2, section 0.** (The v1 scratch-line queen and its shark-tooth mask are retired.) |
 | `you_kid` | You at 10-11: big head and eyes, mop hair, blue/white striped tee, shorts, sneakers. |
+| `tess_kid` | Tess at 10: auburn ponytail, freckles, orange tee, shorts (memory, the barefoot run). |
 | `counselor` | Teen in a teal camp-staff tee with a whistle lanyard. |
 | `kid_a`, `kid_b`, `kid_c` | Kid variants. The plan's `kids` maps to `kid_a`. |
 | `director`, `cook`, `searcher`, `adult` | Extras. The plan's `extras` maps to `searcher` (`WHO_ALIAS`). The cook has an apron. |
 | `officer`, `officer2`, `double`, `mum`, `you_police` | The police film's cast, unchanged. Mom's phone avatar is `mum`. |
 
-**Fear eyes (REF rule 9).** The new people have almond eyes at rest (`eye_h`). These become white discs as
-`pose.wide` rises, and the iris shrinks to a dot (`fear_eyes`).
+**Eyes (v2).** The new people have almond eyes at rest (`eye_h`; Noah13 0.74) with a real iris (`iris_k` of the eye:
+a dark limbal ring, a lighter ring round a 0.42 pupil, fibres at CU) and **two highlights** (0.3 and 0.12 of the iris).
+Fear (REF rule 9): the eyes become white discs as `pose.wide` rises and the iris shrinks toward 0.3 (`fear_eyes`).
+`fear_wide` caps it: grown Noah (`fear_wide` 0.35, `fear_eyes` 0) keeps **brown, human eyes** in fear (no possessed
+discs).
+
+**People upgrades (DIRECTION_V2 3.7).**
+- **You:** every POV hand wears the olive canvas sleeve `#4a5038` with the stitched cuff band `#33382a` (hands inserts and
+  the phone UI hand, `POV_SLEEVE`); the back of your head (turn 2) has hair to the nape; the **left candy fist** from
+  323.65 s draws the red wrapper twisting out of both ends of the fist (body, bust and inserts); kneel is a real kneel
+  (one knee down, the other foot planted), reach / recoil / yanked_back read in 3/4 views (their motion is toward the lens).
+- **Tess:** `run` is a run cycle (0.27 s per step, flight, knees high, arms pumping, the beam hand swinging, lean);
+  `reach_grab {foreshortened}` and `grab_collar` drive a **foreshortened orange arm** in the hands insert (`ir_fore`,
+  coming from the doorway above) and `base_prop 'collar'` (your corduroy collar under her fist).
+- **Noah13:** almond eyes with two highlights; **the gap teeth show on every line he speaks** (`talk_line`); seated on a
+  bunk his feet stay on the floor when the mattress top is about 0.25 x his height above `y_feet`; **one tape design**
+  (`draw_tape` = `_tape_on`): middle, ring and little fingers bound together in two blue bands `#4d8fd6` with sheen
+  `#8fc0f0`, the edge lifting on the little-finger side, in every mode (open, palm, fist, grip, point); `tape_slip`
+  slides the bands off.
+- **Grown Noah:** brown eyes, a longer, squarer adult face (heavier brows, darker stubble, forehead lines); the age
+  morph (`age {part: face|arms}`, H5) interpolates all of it from Noah13 and reads across 2.7 s.
+- **Hands (all of the Mirror cast):** the v2 hand system `_hand2` (section "hands v2"): views `back`, `3q`, `palm`;
+  shapes `open`, `relaxed`, `pat`, `flat`, `palm`, `claw`, `reach`, `point`, `pinch`, `fist`, `grip` (`mitt` now draws
+  `relaxed`); palm, knuckle line, tapered 3-phalanx fingers that foreshorten when curled, thumb with the thenar,
+  knuckle creases, nails, tendons, palm lines and pads, per-character skin and proportions (kids smaller, grown Noah
+  1.25x). The police cast keeps its own hands.
 
 **Grief reads human.** Brows go up at the inner ends, the lids are heavy, the eyes wet, the mouth pressed and
 trembling, and tears stop at the jaw.
@@ -113,12 +208,9 @@ trembling, and tears stop at the jaw.
   - `brave`, `recognise`, `half_smile`, `puzzled`;
   - `calm_kid`, `grin_kid`, `laugh`, `listening`, `relief`, `shy`, `sleep`, `strain`, `worried`;
   - `hopeful`, `shaken`, `happy`, `sly`, `sure`, `giggle`.
-- **The queen:**
-  - `queen_still`, `queen_stare`;
-  - `queen_soft`: a closed red smile with dead eyes;
-  - `queen_call`: the jaw past natural;
-  - `queen_grin`: a 0.8-width grin, 2 rows of 18 small separate teeth, lipstick smeared up the cheeks;
-  - `queen_blank`.
+- **The queen (v2):** her face comes from the stage. `queen_still`, `queen_stare`, `queen_soft`, `queen_grin`,
+  `queen_blank`, `queen_full`, `queen_drawn`, `queen_grin_red`, `queen_off`, `queen_void` only lock the eyes and
+  still her; `queen_call` opens the mouth (calling).
 - **Kept from the police film:** `neutral`, `fear`, `shock`, `shout`, `scream`, `sad`, `angry` and the rest.
 
 ## 4. Acting clips (`Acting` methods; times are film seconds)
@@ -145,7 +237,7 @@ The clips marked **(SFX)** return events, using the names in `plan/sound_plan.js
   `shift_weight`, `squeeze_through`, `step_over`, `step_through` (SFX bare_foot_step), `fall_through`.
 - `walk` (police film). For gravel, the bridge renames the SFX to `footsteps_gravel`.
 
-**The queen**
+**The queen** (v2 list in section 0)
 - `still`: no breath, no blinks.
 - `head_snap(t, deg=130, dur=0.18)`: overrides the head yaw and holds; a back view shows the face over the shoulder.
 - `smile_off(t)`: the smile goes in 2 frames to `queen_blank`.
@@ -159,6 +251,7 @@ The clips marked **(SFX)** return events, using the names in `plan/sound_plan.js
 - `hem_sway`: the hem moves while she does not.
 
 **Tess**
+- `run` (v2 run cycle), `reach_grab {foreshortened}`, `hang_open {prop}` (the padlock on the hasp), `fade_out`.
 - `flashlight(t, aim, sweep, on, raise_)`: `pose.beam` and `pose.beam_dx` tell the sets where the beam points; the
   lens is at the right hand.
 - `jingle`, `unlock`, `pull_chain`, `finger_to_lips`, `set_down` and `pick_up` (phone), `rub_fingers`.
@@ -169,6 +262,7 @@ The clips marked **(SFX)** return events, using the names in `plan/sound_plan.js
 - `wipe_glass(t, strokes, dir, sleeve, prop)`: `pose.wipe` is the stroke progress.
 
 **You**
+- `open_hand` (the palm already open: candy and mark), `give {prop}` (passes the phone), `step_down` (a boot onto tread 1).
 - `unwrap`.
 - `grip_frame(t, tremble, fail_open)`: the fingers twitch open and clamp back.
 - `tilt_frame(t, angle)`: sets `pose.frame_tilt`.
@@ -178,6 +272,7 @@ The clips marked **(SFX)** return events, using the names in `plan/sound_plan.js
 - `rub_thumb`, `reach(t, to)`, `slide_out`, `give_jacket`, `yanked_back`.
 
 **Noah**
+- `shrug`; `tie_loop`'s `phase` may be a name (`'loop_reset'` = the start of the cycle).
 - `tie_loop(t, period=2.4, phase)`: the same knot. In the insert, two hands hold the lace over the sneaker; in a body
   shot he sits on the bunk with his left foot up. The cycle is deterministic.
 - `draw_step`: the lipstick stroke.
@@ -194,6 +289,7 @@ The clips marked **(SFX)** return events, using the names in `plan/sound_plan.js
 - `phone_to_ear` (police film).
 
 **Memory**
+- `whisper` (the kids' dare), `wrap_tape` (Mom's hands winding the tape), `write` (an officer's notebook).
 - `wake_up`, `wake_squint`, `press_button` (watch_beep), `pull_socks`, `drop_prop`, `ring_bell`, `dare`,
   `hand_over_mouth`, `call_out`.
 
@@ -221,6 +317,11 @@ hot spot on the figure), `under` (a colour lighting from below), `tint` and `tin
 
 ## 7. Speed (2560x1440, one process, best of 6, shared machine)
 
+v2: the queen's full-frame bust about 53 ms (S3c, 1.15 scale), her full body at 900 px about 32 ms; people's busts
+23-37 ms. `Ctx.glow` now caches one gradient image per colour and puts the (animated) alpha on the paint (no cache
+misses for animated glows, same pixels).
+
+
 | what | time |
 |---|---|
 | full body at 900 px tall | 21-23 ms |
@@ -244,3 +345,11 @@ hot spot on the figure), `under` (a colour lighting from below), `tint` and `tin
 
 **The beam**
 - Use `pose.beam` and `pose.beam_dx` from `rig.pose(t)`, and `info['hands'][-1]` for the lens.
+
+**For the assembler (v2)**
+- `pose.alpha` < 1 fades a character (`fade_out`); `draw_mode` handles it.
+- film.py does not dim the queen under bright grades (`rig.who != 'queen'`), so with the v1 doorway / climax grades her
+  face blooms toward white (see `gate_0606.4.jpg`); keep her the brightest value but cap it (luma about 230-245).
+- Queen in the phone: draw her bust inside the screen clip; `pixel_sort_in` at 697.95 handles Noah13's face -> hers.
+- H7 (605.2): you `feet` with `pov: true` (boots from above) and the queen `feet` `view: 'pov'` (her foot on the tread
+  below, toes at you, the pip hem); the tilt up to her face is a `bust` (or a `body` with a real height, see the report).

@@ -233,7 +233,7 @@ def X(at, typ, world, sv, var, frame, camera, **kw):
     side = kw.pop('side', None)
     if side is None:
         side = WORLD_SIDE[world]
-        if set_ == 'mirror' and world in ('ours', 'climax', 'ending'): side = 'mirror'
+        if set_ == 'mirror': side = 'mirror'                  # the glass seen from our side (the look follows the world inside it)
         if world == 'climax' and set_ in ('stairs',): side = 'stairs'
         if world == 'climax' and set_ in ('cabin_dawn',): side = 'theirs'
     return S(at, set_, view, var, side, typ, frame, camera, world=world, **kw)

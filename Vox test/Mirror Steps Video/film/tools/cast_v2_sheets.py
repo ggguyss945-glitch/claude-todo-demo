@@ -104,15 +104,43 @@ def qbody(stage='S1', h=980, x=960, y=1050, **kw):
     return fn
 
 
-def actor(who, setup, mode, at, t, light='auto', view=None, **pose):
-    """A frame of an Acting clip: setup(a) adds the clips; mode body / bust / hands / feet."""
+def actor(who, setup, mode, at, t, light='auto', view=None, main='r', under=None, **pose):
+    """A frame of an Acting clip: setup(a) adds the clips; mode body / bust / hands / feet (view 'pov' for feet from
+    above). under(pen) draws a prop under the figure (a bunk edge, a tread)."""
     def fn(pen, bg):
-        a = C.Acting(who, seed=5, height=at[2] if mode == 'body' else 700.0)
+        a = C.Acting(who, seed=5, height=at[2] if mode in ('body', 'legs') else 700.0)
         setup(a)
         P = a.at(t); P.t = t
         for k, v in pose.items(): setattr(P, k, v)
         L = LIGHT[bg] if light == 'auto' else light
-        C.draw_mode(pen, who, mode, at, P, light=L, main=pose.get('_main', 'r') if '_main' in pose else 'r')
+        if under: under(pen)
+        C.draw_mode(pen, who, mode, at, P, light=L, view=view, main=main)
+    return fn
+
+
+def bunk(y=830, x0=380, x1=1540):
+    """A plain bunk edge for the seated poses (mattress top at y)."""
+    def fn(pen):
+        from engine.core import rect
+        pen.fill(rect(x0, y, x1 - x0, 46), '#8a6a4a'); pen.fill(rect(x0, y + 46, x1 - x0, 1080 - y), '#5a4430')
+        pen.line(rect(x0, y, x1 - x0, 46), 4.0)
+    return fn
+
+
+def pbust(who, expr='neutral', scale=0.62, cx=960, cy=560, light='auto', **kw):
+    def fn(pen, bg):
+        P = C.Pose(expr if expr in C.EXPR else 'neutral'); P.t = 1.0
+        for k, v in kw.items(): setattr(P, k, v)
+        C.draw_bust(pen, who, cx, cy, scale, P, light=LIGHT[bg] if light == 'auto' else light, t=1.0)
+    return fn
+
+
+def pbody(who, expr='neutral', h=900, x=960, y=1050, light='auto', under=None, **kw):
+    def fn(pen, bg):
+        P = C.Pose(expr if expr in C.EXPR else 'neutral'); P.t = 1.0
+        for k, v in kw.items(): setattr(P, k, v)
+        if under: under(pen)
+        C.draw(pen, who, x, y, h, P, light=LIGHT[bg] if light == 'auto' else light, t=1.0)
     return fn
 
 
@@ -254,8 +282,8 @@ def compare_sheet():
     surf = skia.Surface(1920, 540); cv = surf.getCanvas()
     for i, (st, bg, kw) in enumerate((('S1', 'ours', {}), ('S2', 'ours', {}), ('S3c', 'theirs', dict(m_open=0.15)), ('S4', 'climax', dict(m_open=0.45)))):
         cv.save(); cv.translate(i * 480, 0); cv.clipRect(skia.Rect.MakeWH(478, 540)); plate(cv, 480, 540, bg, i)
-        cv.scale(480 / 1920.0, 540 / 1080.0)
-        C.draw_bust(Pen(cv), 'queen', 960, 600, 1.0, qpose(st, **kw), light=LIGHT[bg], t=1.0)
+        cv.scale(0.5, 0.5); cv.translate(-480.0, 0.0)
+        C.draw_bust(Pen(cv), 'queen', 960, 560, 0.95, qpose(st, **kw), light=LIGHT[bg], t=1.0)
         cv.restore()
     ours = cv2.cvtColor(surf.makeImageSnapshot().toarray(), cv2.COLOR_BGRA2BGR)
     W = max([r.shape[1] for r in rows] + [1920])
@@ -265,7 +293,156 @@ def compare_sheet():
     print(os.path.join(OUT, 'queen_vs_references.jpg'))
 
 
-SHEETS = {'queen': queen_sheet, 'thumb': thumb_sheet, 'compare': compare_sheet}
+# ------------------------------------------------------------------ the people
+def you_sheet():
+    S = Sheet('YOU (you), 27: olive canvas jacket, corduroy collar, Dad jaw, stubble (DIRECTION_V2 3.7: POV sleeve, back of the head, candy fist, poses)', cols=4)
+    S.add('bust front (OURS)', pbust('you', 'dread', 1.0, cy=600), 'ours', (2, 2))
+    S.add('the back of your head (OTS, ~10 % of shots)', pbust('you', 'neutral', 1.0, cy=600, turn=2.0), 'theirs', (2, 2))
+    for ex, bg in (('grief', 'ours'), ('tempted', 'theirs'), ('fear', 'climax'), ('relief_cry', 'ours')):
+        S.add('expr ' + ex, pbust('you', ex, 0.6), bg)
+    S.add('kneel at the mirror (91 s)', actor('you', lambda a: (a.set(-1e9, None, 0.01, turn=0.5), a.kneel(1.0), a.grip_frame(1.4)), 'body',
+                                              [960, 1050, 900], 2.2), 'ours')
+    S.add('reach (586.3 s)', actor('you', lambda a: (a.set(-1e9, None, 0.01, turn=0.5), a.reach(1.0, side=1)), 'body', [960, 1050, 900], 1.8), 'climax')
+    S.add('recoil (fall_back)', actor('you', lambda a: (a.set(-1e9, None, 0.01, turn=-0.5), a.fall_back(1.0)), 'body', [1100, 1050, 900], 1.5), 'climax')
+    S.add('half-turned to the dip, candy fist (493 s)', actor('you', lambda a: (a.set(-1e9, None, 0.01, turn=-0.5, sit=0.5), a.expr('tempted', 0)),
+                                                         'body', [960, 1050, 900], 493.6, under=bunk(800)), 'theirs')
+    S.add('left candy fist in the body (323.65-649 s)', actor('you', lambda a: a.set(-1e9, None, 0.01, hl_shape='fist', candy=1.0, turn=0.25),
+                                                              'body', [960, 1330, 1050], 400.0), 'theirs')
+    S.add('yanked back by the collar (608.97)', actor('you', lambda a: (a.set(-1e9, None, 0.01, turn=-0.6), a.yanked_back(1.0)), 'body',
+                                                      [1100, 1050, 900], 1.25), 'climax')
+    S.add('POV: touch the top step (olive sleeve)', actor('you', lambda a: a.touch_glass(1.0), 'hands', [960, 560, 520], 1.4), 'ours')
+    S.add('POV: the nail clicks (143.29)', actor('you', lambda a: a.nail_tap(1.0), 'hands', [960, 560, 520], 1.02), 'ours')
+    S.add('POV: hands on the frame (208 s)', actor('you', lambda a: a.grip_frame(1.0), 'hands', [960, 600, 460], 1.4), 'ours')
+    S.add('POV: wipe the glass, towel (618.5)', actor('you', lambda a: a.wipe_glass(1.0, prop='towel'), 'hands', [960, 560, 520], 1.3), 'climax')
+    S.add('the candy taken (323.0)', actor('you', lambda a: a.take(1.0), 'hands', [960, 600, 520], 1.2, main='r'), 'theirs')
+    S.add('the fist closes (323.65), wrapper twists out', actor('you', lambda a: a.fist(1.0), 'hands', [960, 600, 520], 1.6), 'theirs')
+    S.add('505.9 white knuckles round the wrapper', actor('you', lambda a: a.fist(1.0, squeeze=0.8), 'hands', [960, 600, 520], 2.0), 'climax')
+    S.add('645 the fist will not open', actor('you', lambda a: a.fist(1.0, fail_open=True, tremble=0.4), 'hands', [960, 600, 520], 1.75), 'ours')
+    S.add('651 the palm: the candy and its mark', actor('you', lambda a: a.open_fist(1.0), 'hands', [960, 600, 520], 2.8), 'ours')
+    S.add('H7 POV: your boots on the tread (from above)', actor('you', lambda a: None, 'feet', [960, 640, 520], 1.0, view='pov'), 'stairs')
+    def phone(pen, bg):
+        from engine.core import rrect
+        pen.cv.save(); pen.cv.translate(960, 560)
+        C.hud_phone_hand(pen, 300, 600, front=False)
+        pen.fill(rrect(-150, -300, 300, 600, 36), '#111318'); pen.fill(rrect(-138, -286, 276, 572, 28), '#1d2a44')
+        C.hud_phone_hand(pen, 300, 600, front=True)
+        pen.cv.restore()
+    S.add('phone UI hand: the olive sleeve, stitched cuff', phone, 'ours')
+    S.render(os.path.join(OUT, 'you_sheet.png'))
+
+
+def tess_sheet():
+    S = Sheet('TESS (tess): burnt-orange shell, auburn ponytail, freckles, the flashlight (DIRECTION_V2 3.7: run, reach, grab, collar yank)', cols=4)
+    S.add('bust 3/4 (flashlight)', pbust('tess', 'brave', 1.0, cy=600, turn=-0.5, light='flashlight'), 'ours', (2, 2))
+    S.add('"Forty-five!" (349.8 s)', pbust('tess', 'shout', 1.0, cy=600), 'stairs', (2, 2))
+    def run(a): a.set(-1e9, None, 0.01, hr_prop='flashlight', hr_shape='grip', beam=1.0); a.run(450.0, 900.0, 470.0)
+    for t in (451.0, 451.135, 451.27, 451.405):
+        S.add('run cycle 0.27 s/step  t=%.3f' % t, actor('tess', run, 'body', [700, 1050, 860], t, dx=0.0), 'ours')
+    S.add('551.6 reach and grab (foreshortened)', actor('tess', lambda a: a.set(-1e9, None, 0.01, ir_fore=1.0, ir_shape='grip', ir_a=10.0, ir_y=-0.2),
+                                                   'hands', [960, 560, 360], 1.0), 'ours')
+    for t, nm in ((608.88, 'the arm shoots out of the doorway'), (608.99, 'the fist closes on the collar (608.97)'), (609.25, 'the whip pull')):
+        S.add('collar yank: ' + nm, actor('tess', lambda a: a.grab_collar(608.8), 'hands', [960, 560, 300], t), 'climax')
+    S.add('finger to her lips (67.7 s)', actor('tess', lambda a: a.finger_to_lips(1.0), 'bust', [960, 560, 0.6], 1.6), 'ours')
+    S.add('strikes the bell with the padlock (535.36)', actor('tess', lambda a: a.strike(1.0), 'body', [960, 1050, 860], 1.12), 'climax')
+    S.add('kicks the crate apart (508.4)', actor('tess', lambda a: a.kick(1.0), 'body', [960, 1050, 860], 1.1), 'ours')
+    S.add('flashlight aimed down the stairs', actor('tess', lambda a: a.flashlight(1.0, aim='floor'), 'body', [960, 1050, 860], 2.0, view='q_left'), 'stairs')
+    for ex, bg in (('tense', 'ours'), ('fear', 'climax'), ('puzzled', 'ours'), ('worried', 'ours')):
+        S.add('expr ' + ex, pbust('tess', ex, 0.6), bg)
+    S.render(os.path.join(OUT, 'tess_sheet.png'))
+
+
+def noah13_sheet():
+    S = Sheet('NOAH AT 13 (noah13): almond eyes with two highlights, gap teeth on every line, one shoe, the tape, seated kid scale (DIRECTION_V2 3.7)', cols=4)
+    S.add('CU: almond eyes, two highlights (THEIRS)', pbust('noah13', 'calm_kid', 1.25, cy=620, look_y=-0.25), 'theirs', (2, 2))
+    def tk(a): a.talk_line(318.61, 125)
+    S.add('"What are they making for breakfast?" (gap teeth)', actor('noah13', tk, 'bust', [960, 620, 1.25], 319.32), 'theirs', (2, 2))
+    S.add('look up: the gap-tooth smile', actor('noah13', lambda a: a.look_up(1.0), 'bust', [960, 560, 0.62], 1.5), 'theirs')
+    S.add('"Finally" (541.8 s)', pbust('noah13', 'relief', 0.62), 'theirs')
+    S.add('innocent: "Since you went to get Mom"', pbust('noah13', 'listening', 0.62), 'theirs')
+    S.add('memory (sepia, no grade)', pbust('noah13', 'laugh', 0.62, light=None), 'memory')
+    S.add('seated on the bunk, feet on the floor (306 s)', actor('noah13', lambda a: (a.sit(0.0), a.tie_loop(0.5)), 'body', [960, 1050, 640], 1.5,
+                                                          under=bunk(868)), 'theirs')
+    S.add('seated 3/4, the knot loop', actor('noah13', lambda a: (a.set(-1e9, None, 0.01, turn=0.5), a.sit(0.0), a.tie_loop(0.5)), 'body',
+                                             [960, 1050, 640], 2.2, under=bunk(868)), 'theirs')
+    S.add('scoots over (468.5 s)', actor('noah13', lambda a: (a.sit(0.0), a.scoot(1.0)), 'body', [960, 1050, 640], 1.3, under=bunk(868)), 'theirs')
+    S.add('covers his ears (582.1, earlier loop)', actor('noah13', lambda a: a.cover_ears(1.0), 'bust', [960, 560, 0.6], 1.8), 'theirs')
+    S.add('the taped hand (one tape design)', actor('noah13', lambda a: a.set(-1e9, None, 0.01, ir_shape='open'), 'hands', [960, 600, 520], 1.0), 'theirs')
+    S.add('3/4 hand through the railing (211.7)', actor('noah13', lambda a: a.reach_through(1.0), 'hands', [960, 600, 520], 1.8), 'stairs')
+    S.add('picks at the tape (222.3)', actor('noah13', lambda a: a.peel_tape(1.0), 'hands', [960, 600, 520], 1.6), 'theirs')
+    S.add('holds out a candy (320.4)', actor('noah13', lambda a: a.hold_out(1.0), 'hands', [960, 600, 520], 1.8), 'theirs')
+    S.add('fist (taped)', actor('noah13', lambda a: a.set(-1e9, None, 0.01, ir_shape='fist'), 'hands', [960, 600, 520], 1.0), 'theirs')
+    S.add('the knot (tie_loop insert)', actor('noah13', lambda a: a.tie_loop(1.0), 'hands', [960, 520, 380], 1.6), 'theirs')
+    S.add('hand_jerk: out of yours (356.7)', actor('noah13', lambda a: a.hand_jerk(1.0), 'hands', [960, 600, 520], 1.02), 'theirs')
+    S.add('one sneaker, one bare foot', actor('noah13', lambda a: None, 'feet', [1040, 900, 760], 1.0), 'theirs')
+    S.render(os.path.join(OUT, 'noah13_sheet.png'))
+
+
+def noah_grown_sheet():
+    S = Sheet('NOAH GROWN (noah_grown): brown human eyes (not possessed), the visible 13 -> 27 morph (H5), adult scale (DIRECTION_V2 3.7)', cols=4)
+    def morph(a): a.age(562.5, 565.2, part='face', start=0.0); a.age(562.5, 565.2, part='arms', start=0.0); a.expr('shaken', 562.0)
+    for t in (562.4, 563.3, 564.2, 565.2):
+        S.add('H5 morph 13 -> 27  t=%.1f' % t, actor('noah_grown', morph, 'bust', [960, 560, 0.75], t), 'climax')
+    S.add('"Hi, Mom" (661.6, H9)', pbust('noah_grown', 'relief_cry', 1.0, cy=600), 'ours', (2, 2))
+    S.add('fear: brown eyes, human (580 s)', pbust('noah_grown', 'fear', 1.0, cy=600), 'climax', (2, 2))
+    S.add('covers his ears (579 s)', actor('noah_grown', lambda a: a.cover_ears(1.0), 'bust', [960, 560, 0.62], 1.8), 'climax')
+    S.add('stares at his hands (567.9)', actor('noah_grown', lambda a: a.look_at_hands(1.0), 'bust', [960, 520, 0.55], 2.0), 'climax')
+    S.add('hits his shoulder on the bunk (573.5)', actor('noah_grown', lambda a: a.stand_hit(1.0), 'body', [960, 1050, 900], 1.3), 'climax')
+    S.add('ending: on the floor, your jacket (635 s)', actor('noah_grown', lambda a: (a.sit(0.0), a.set(-1e9, None, 0.01, jacket_on=1.0)), 'body',
+                                                          [960, 1290, 960], 1.0), 'ours')
+    S.add('big shaking hands (567.9)', actor('noah_grown', lambda a: a.set(-1e9, None, 0.01, ir_shape='open', il_v=1.0, il_shape='open', hshake=0.7, il_x=-0.9),
+                                              'hands', [1100, 600, 460], 1.0), 'climax')
+    S.add('554.6 the tape slips off lengthening fingers', actor('noah_grown', lambda a: (a.set(-1e9, None, 0.01, tape=1.0, ir_shape='open'), a.slip_tape(1.0)),
+                                                              'hands', [960, 600, 460], 1.9), 'climax')
+    S.add('cuffs ride up the forearms (557.5)', actor('noah_grown', lambda a: a.set(-1e9, None, 0.01, ir_shape='relaxed', cuff_up=0.8), 'hands',
+                                                      [960, 600, 460], 1.0), 'climax')
+    S.add('holds the corduroy collar (636 s)', actor('noah_grown', lambda a: a.hold_collar(1.0), 'bust', [960, 560, 0.6], 2.0), 'ours')
+    S.render(os.path.join(OUT, 'noah_grown_sheet.png'))
+
+
+def hands_sheet():
+    """The v2 hand system (DIRECTION_V2 3.7): back, three-quarter and palm views x open, point, fist, grip, pinch; skin per character."""
+    S = Sheet('HANDS v2: one system for the cast (no mittens): views x shapes, knuckle creases, nails, thumb, wrist and cuff, per-character skin', cols=5)
+    for view in ('back', '3q', 'palm'):
+        for shape in ('open', 'point', 'fist', 'grip', 'pinch'):
+            def fn(pen, bg, view=view, shape=shape):
+                sp = C.CAST['you']
+                look = C._hand2_look(sp, sp['skin'], sp['skin_sh']); look['view'] = view
+                c = C.Ctx(pen, C.skia.Matrix(), C._lw_for(1800.0))
+                C._hand2(c, 960, 960, 11.0, 180.0, -1, shape, 2, look, 0.0, 1.0)
+            S.add('%s  %s' % (view, shape), fn, 'grey')
+    for who, bg in (('you', 'ours'), ('tess', 'ours'), ('noah13', 'theirs'), ('noah_grown', 'climax'), ('queen', 'stairs')):
+        S.add('%s: open hand' % who, actor(who, lambda a: a.set(-1e9, None, 0.01, ir_shape='open'), 'hands', [960, 600, 560], 1.0), bg)
+    S.render(os.path.join(OUT, 'hands_sheet.png'))
+
+
+SHEETS = {'queen': queen_sheet, 'thumb': thumb_sheet, 'compare': compare_sheet, 'you': you_sheet, 'tess': tess_sheet,
+          'noah13': noah13_sheet, 'noah_grown': noah_grown_sheet, 'hands': hands_sheet}
+
+
+
+def plan_queen_sheet():
+    """Every Queen entry of the current plan/shots.json drawn alone at its `at`, at the shot's mid time (or its first
+    act), on its world's plate: the ladder as the shot list stages it."""
+    import json
+    sh = json.load(open(os.path.join(FILM, 'plan', 'shots.json')))['shots']
+    S = Sheet('plan/shots.json: the Queen in every shot (character only, at the plan `at`, mid-shot / first act + 0.25 s)', cols=6, cw=320, ch=180)
+    wmap = {'ours': 'ours', 'theirs': 'theirs', 'theirs_break': 'theirs', 'stairs': 'stairs', 'climax': 'climax', 'memory': 'memory', 'card': 'stairs',
+            'ui': 'grey', 'mirror': 'stairs'}
+    for s in sh:
+        for c in s.get('chars') or []:
+            if c['who'] != 'queen': continue
+            acts = [a[0] for a in c.get('acts') or [] if a[0] > s['t0']]
+            t = min(s['t1'] - 0.02, (acts[0] + 0.25) if acts else (s['t0'] + s['t1']) / 2)
+            at = c['at'] if not isinstance(c['at'], str) else [960, 1000, 800]
+            def fn(pen, bg, c=c, s=s, t=t, at=at):
+                r = C.CharRig(dict(c, at=at), s)
+                r.draw(pen, t)
+            S.add('%s %.1f %s %s %s' % (s['id'], t, c.get('stage'), c.get('mode'), (s.get('frame') or '')[:22]), fn, wmap.get(s.get('world'), 'ours'))
+    S.render(os.path.join(OUT, 'queen_plan_v2.png'))
+
+
+SHEETS['plan_queen'] = plan_queen_sheet
+
 
 if __name__ == '__main__':
     names = sys.argv[1:] or list(SHEETS)

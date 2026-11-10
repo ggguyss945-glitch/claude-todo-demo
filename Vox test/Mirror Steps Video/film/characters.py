@@ -2,7 +2,8 @@
 the Mirror Steps film ("If An Eighth Step Appears On Your Mirror...").
 
 MIRROR STEPS (read CAST.md): new cast 'you' (the lead; the police lead is now 'you_police'), 'tess', 'noah13',
-'noah_grown' (age morph), 'queen' (no outline: pale scratch edges, red glow, stages 0-3), 'you_kid', 'counselor',
+'noah_grown' (age morph), 'queen' (v2, DIRECTION_V2 3: a playing-card queen in the cast language, stages S0-S4 as q_*
+pose numbers, drawn by the queen_* functions), 'you_kid', 'tess_kid', 'counselor',
 'kid_a/b/c', 'director', 'cook', 'searcher', 'adult'; modes draw_hands / draw_feet / draw_legs / draw_silhouette /
 draw_lying; light presets LIGHTS (flashlight, moon, dawn, red); ~115 new Acting clips; CharRig(spec, shot) builds a
 plan/shots.json character (acts, stage, props, clip_id replays) and draws it. Voice: _work/align/vo_en.wav.
@@ -270,7 +271,7 @@ CAST.update({
     'noah13': dict(                                 # 13 forever: cowlick, freckles, gap teeth, green sweatshirt, one shoe
         outfit='sweatshirt', hat=None, hair='mop', sex='m', hh=182.0, new=True, kid=True,
         head_ys=_HYS, head_ws=[0, 54, 79, 96, 101, 100, 92, 77, 55, 29, 0],
-        eye_dx=42, eye_y=-4, eye_r=20.0, eye_h=0.86, pupil=1.0, iris_h='#6a4228', fear_eyes=0.12, brow_th=8.0,
+        eye_dx=42, eye_y=-4, eye_r=20.0, eye_h=0.74, pupil=1.0, iris_h='#6a4228', iris_k=0.7, fear_eyes=0.12, brow_th=8.0,
         nose_len=17, mouth_y=52, mouth_w=19, gap=6.0, tooth_w=12.0,
         skin='#d2b3a0', skin_sh='#a3826f', skin_dp='#6e5048', blush='#e39e8d', lip='#b97a72', stubble=None, stub=0,
         freckles='#b07a62', hair_c='#4a3226', brow_c='#3a271c', bags=0.2, age=0.0, blink_rate=0.3, lock=0.0, micro=0.8,
@@ -281,11 +282,11 @@ CAST.update({
                    lace='#f2efe6', sole='#cfc8b8', fit=0.0, bare='R')),
     'noah_grown': dict(                             # the same face at 27: longer jaw, stubble, the gap stays; shirt too small
         outfit='sweatshirt', hat=None, hair='mop', sex='m', hh=172.0, new=True,
-        head_ys=_HYS, head_ws=[0, 49, 72, 88, 92, 90, 85, 74, 56, 30, 0],
-        eye_dx=42, eye_y=-13, eye_r=18.5, eye_h=0.76, pupil=1.0, iris_h='#6a4228', fear_eyes=0.14, brow_th=9.5,
-        nose_len=24, mouth_y=55, mouth_w=22, gap=6.0, tooth_w=12.5,
-        skin='#cdae9b', skin_sh='#9a7b6c', skin_dp='#644a47', blush='#d99586', lip='#ac746d', stubble='#4a3a30', stub=0.62,
-        stub_dots=1.0, freckles='#a87a64', freckle_k=0.45, hair_c='#45301f', brow_c='#352419', bags=0.75, age=0.5,
+        head_ys=_HYS, head_ws=[0, 46, 67, 82, 85, 84, 82, 77, 64, 40, 0],
+        eye_dx=42, eye_y=-13, eye_r=18.5, eye_h=0.74, pupil=1.0, iris_h='#5e3a22', iris_k=0.7, fear_eyes=0.0, fear_wide=0.35,
+        brow_th=11.5, nose_len=26, mouth_y=57, mouth_w=23, gap=6.0, tooth_w=12.5,
+        skin='#cdae9b', skin_sh='#9a7b6c', skin_dp='#644a47', blush='#d99586', lip='#ac746d', stubble='#3e3028', stub=0.85,
+        stub_dots=1.0, freckles='#a87a64', freckle_k=0.3, hair_c='#45301f', brow_c='#2e1f15', bags=0.75, age=0.7, forehead=0.3,
         blink_rate=0.34, lock=0.0, micro=1.0, breath=1.0, scar=0, ring=0, part=1, lashes=0.0, talk=0.95, tape=0,
         body=dict(sh=132, ch=128, wa=114, hip=110, arm=(58, 49), leg=(62, 52), neck=51, hand=1.25),
         cloth=dict(top='#3f6b45', top_sh='#2b4c31', top_hi='#57875c', print='#dcd9cc', trousers='#4c5a72',
@@ -336,7 +337,10 @@ for _k, _top, _hat in (('director', '#5d6a50', 'camp'), ('cook', '#e9e6df', None
                                                       shorts=False, trousers='#2f3440', trousers_sh='#1f232c')
     _d['lanyard'] = False; _d['apron'] = _k == 'cook'; _d['camp_cap'] = _hat == 'camp'; _d['kid'] = False
     CAST[_k] = _d
-NEW_CAST = ('you', 'tess', 'noah13', 'noah_grown', 'queen', 'you_kid', 'counselor', 'kid_a', 'kid_b', 'kid_c', 'director',
+_d = dict(CAST['you_kid']); _d['cloth'] = dict(_d['cloth'], top='#c0662e', top_sh='#8a4520', top_hi='#d88050', stripe=None)
+_d.update(hair='pony', sex='f', hair_c='#7a4128', brow_c='#4a2617', freckles='#b9785c', lashes=1.2, part=0, skin='#dcbca8')
+CAST['tess_kid'] = _d                                  # memory: Tess at 10 (the barefoot run, 458.8 s)
+NEW_CAST = ('you', 'tess', 'noah13', 'noah_grown', 'queen', 'you_kid', 'tess_kid', 'counselor', 'kid_a', 'kid_b', 'kid_c', 'director',
             'cook', 'searcher', 'adult')
 
 # ====================================================================================================== pose
@@ -379,7 +383,7 @@ POSE_DEFAULTS = dict(
     # teeth), red (S3b eyes), full (S3c folds, cracks, tears), off (the smile goes off), void (S4 jaw void), pin
     # (pinpoint pupils), noah (his face in the void), glitch; q_hair = lagged hair yaw (turn units) when q_hair_set
     q_hide=0.0, q_draw=0.0, q_split=0.0, q_red=0.0, q_full=0.0, q_off=0.0, q_void=0.0, q_pin=0.0, q_noah=1.0, q_glitch=0.0,
-    q_hair=0.0, q_hair_set=0.0, wrapper=0.0,
+    q_hair=0.0, q_hair_set=0.0, wrapper=0.0, run=0.0, ir_fore=0.0, q_widen=0.0, q_nface=0.0, alpha=1.0,
 )
 POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None, ir_shape='relaxed', il_shape='relaxed',
                      ir_prop=None, il_prop=None, base_prop=None)
@@ -486,6 +490,8 @@ EXPR = {
     'queen_call': dict(m_open=1.0, m_round=0.4, lock=1.0, still=1.0),
     'queen_grin': dict(lock=1.0, still=1.0),
     'queen_blank': dict(lock=1.0, still=1.0),
+    'queen_full': dict(lock=1.0, still=1.0), 'queen_drawn': dict(lock=1.0, still=1.0), 'queen_grin_red': dict(lock=1.0, still=1.0),
+    'queen_off': dict(lock=1.0, still=1.0), 'queen_void': dict(lock=1.0, still=1.0),
 }
 
 
@@ -603,7 +609,8 @@ class Ctx:
         self._shade_path(path, _gimg('r', stops), m, a)
 
     def glow(self, cx, cy, rx, ry, c, a):
-        if a > 0.5: self.radial(None, cx, cy, rx, [(0, c, a), (0.5, c, a * 0.5), (1, c, 0)], sy=ry / rx, clip=False)
+        # one cached full-alpha image per colour; the (animated) alpha goes on the paint: same pixels, no cache misses
+        if a > 0.5: self.radial(None, cx, cy, rx, [(0, c, 255), (0.5, c, 127.5), (1, c, 0)], sy=ry / rx, a=min(1.0, a / 255.0), clip=False)
 
     def grad(self, path, x0, y0, x1, y1, stops, a=1.0):
         """Linear gradient between two local points (clamped beyond them)."""
@@ -801,8 +808,8 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     X, Y, V = hm.map1(ex0, ey0, 2.0)
     if V < 0.12: return None
     fs = hm.sx(ex0, ey0)
-    fw = clamp(P.wide * 1.25)
-    r = sp['eye_r'] * (1.0 + (0.16 + sp.get('fear_eyes', 0.0)) * P.wide) * (1.0 + 0.04 * P.brow_up)
+    fw = clamp(P.wide * 1.25) * sp.get('fear_wide', 1.0)
+    r = sp['eye_r'] * (1.0 + (0.16 + sp.get('fear_eyes', 0.0)) * P.wide * sp.get('fear_wide', 1.0)) * (1.0 + 0.04 * P.brow_up)
     asym = P.brow_asym * 0.0
     op = clamp(P.eye_open * (1.0 - P.blink) * (1.0 - 0.45 * P.squint) + 0.18 * P.wide * (1 - P.blink), 0, 1.25)
     rx = r * fs * (1.0 + 0.1 * (1.0 - fw) * (1.0 - sp.get('eye_h', 1.0)) * 2.0)
@@ -864,12 +871,19 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
         if P.wet > 0 and det >= 1:
             c.fill(smooth([(X - rx, Y + r * 0.62), (X, Y + r * 0.85), (X + rx, Y + r * 0.62), (X, Y + r * 1.1)], True), '#a8c8f0', 120 * P.wet)
         if sp.get('iris_h') and det >= 1 and not sp.get('iris'):   # human iris (new cast): shrinks toward a dot in fear
-            ir = r * lerp(0.6, 0.34, fw) * (0.75 + 0.25 * clamp(P.pupil * 1.4))
+            ir = r * lerp(sp.get('iris_k', 0.66), 0.3, fw) * (0.8 + 0.2 * clamp(P.pupil * 1.4))
             ic = sp['iris_h']
-            c.radial(oval(px, py, ir * fs, ir), px - ir * 0.25, py - ir * 0.3, ir * 1.15,
-                     [(0, mix(ic, '#ffffff', 0.25), 255), (0.6, ic, 255), (1, mix(ic, '#000000', 0.55), 255)], sy=1.0)
-            c.line(oval(px, py, ir * fs, ir), c.lw * 0.28, mix(ic, '#000000', 0.7), 230)
-            pr = min(pr, ir * 0.62)
+            # v2: a real iris: dark limbal ring, a lighter ring round the pupil, radial fibres; pupil 0.42 of the iris
+            c.radial(oval(px, py, ir * fs, ir), px, py + ir * 0.1, ir * 1.02,
+                     [(0, mix(ic, '#000000', 0.3), 255), (0.38, mix(ic, '#e8c49a', 0.38), 255), (0.7, ic, 255), (0.9, mix(ic, '#000000', 0.35), 255),
+                      (1, mix(ic, '#000000', 0.6), 255)], sy=1.0)
+            if det >= 2:
+                fib = [poly([(px + math.cos(a_) * ir * 0.45 * fs, py + math.sin(a_) * ir * 0.45), (px + math.cos(a_) * ir * 0.85 * fs, py + math.sin(a_) * ir * 0.85)], False)
+                       for a_ in np.linspace(0, 2 * PI, 14, endpoint=False)]
+                c.line(_multi(fib), c.lw * 0.12, mix(ic, '#000000', 0.45), 110)
+            c.line(oval(px, py, ir * fs, ir), c.lw * 0.18, mix(ic, '#000000', 0.7), 210)
+            pr = min(pr, ir * 0.42)
+            sp_hl = True
         if sp.get('iris'):                           # optional glowing iris (thumbnail use; the film's eyes have none)
             ir = r * sp.get('iris_r', 0.5)
             c.glow(px, py, ir * 1.9, ir * 1.9, sp['iris'], sp.get('iris_glow', 120))
@@ -878,9 +892,14 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
             c.line(oval(px, py, ir * fs, ir), c.lw * 0.32, '#4a0209', 255)
             pr = ir * sp.get('iris_pupil', 0.36)
         c.fill(oval(px, py, pr * fs, pr), '#0b0b0e')
-        cl = max(pr * 0.3, 1.6)
-        c.fill(oval(px - pr * 0.38 * fs, py - pr * 0.38, cl * fs, cl), '#f4f4f2')
-        if det >= 2: c.fill(oval(px + pr * 0.35 * fs, py + pr * 0.3, cl * 0.45 * fs, cl * 0.45), '#f4f4f2', 200)
+        if sp.get('iris_h') and det >= 1 and not sp.get('iris'):   # two highlights on the iris (0.3 and 0.12 of it)
+            irr = r * lerp(sp.get('iris_k', 0.66), 0.3, fw) * (0.8 + 0.2 * clamp(P.pupil * 1.4))
+            c.fill(oval(px - irr * 0.36 * fs, py - irr * 0.38, irr * 0.3 * fs, irr * 0.3), '#fbfaf6')
+            c.fill(oval(px + irr * 0.38 * fs, py + irr * 0.34, irr * 0.12 * fs, irr * 0.12), '#fbfaf6', 220)
+        else:
+            cl = max(pr * 0.3, 1.6)
+            c.fill(oval(px - pr * 0.38 * fs, py - pr * 0.38, cl * fs, cl), '#f4f4f2')
+            if det >= 2: c.fill(oval(px + pr * 0.35 * fs, py + pr * 0.3, cl * 0.45 * fs, cl * 0.45), '#f4f4f2', 200)
         # upper lid
         lid_y = Y - r + (1.0 - min(op, 1.0)) * 2.0 * r
         if op < 0.99:
@@ -1345,7 +1364,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     elif style == 'short_r':                      # short, receding at the temples (you: looks like dad)
         def yf(ph):
             a = np.abs(ph)
-            return np.interp(a, [0, 0.12, 0.42, 0.74, 1.02, 1.25, 1.62, 2.3, PI], [-80, -84, -86, -100, -74, -46, -30, 10, 30]) + \
+            return np.interp(a, [0, 0.12, 0.42, 0.74, 1.02, 1.25, 1.62, 2.3, 2.8, PI], [-80, -84, -86, -100, -74, -46, -30, 22, 60, 72]) + \
                 2.5 * np.sin(ph * 7.0 + part)
         grow = 4.0
     elif style == 'pony':                         # pulled back to a low ponytail, side part, wisps at the temples
@@ -1399,7 +1418,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     elif style == 'pony':
         vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.6, y_bot=60)
     elif style == 'short_r':
-        vol = _bumpy(hm, grow, 13, 4.0, -126.0, 30.0, spiky=True, seed=part + 5)
+        vol = _bumpy(hm, grow, 13, 4.0, -126.0, 30.0 + 44.0 * clamp(-hm.ct * 1.4), spiky=True, seed=part + 5)
     elif style == 'long':
         vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.4, y_bot=120)
     hair = inter(union(vol, sil), region)
@@ -1713,7 +1732,7 @@ class Body:
         self.L = P.lean * 0.62 + P.hunch * 0.22
         self.cL, self.sL = math.cos(self.L), math.sin(self.L)
         self.sit = clamp(P.sit)
-        self.hip_drop = 170.0 * self.sit + P.crouch * 120
+        self.hip_drop = 170.0 * self.sit + P.crouch * 120 + 150.0 * clamp(getattr(P, 'kneel', 0.0))
         self.y0c = -620.0
         self.tilt = math.radians(P.tilt)
         self.ctl, self.stl = math.cos(self.tilt), math.sin(self.tilt)
@@ -1721,13 +1740,14 @@ class Body:
         self.chest_k = bk
         # walk: phases and the hip drop that keeps the stance foot on the ground
         self.walk = clamp(P.walk_amt)
+        self.run = clamp(getattr(P, 'run', 0.0))
         self.ph = P.walk_ph * 2 * PI
-        self.stride = 230.0 * self.walk
+        self.stride = 230.0 * self.walk * (1.0 + 0.75 * self.run)
         drop = 0.0
         for sd in (-1, 1):
             f = self.foot_fwd(sd)
             if self.foot_lift(sd) < 1: drop = max(drop, math.sqrt(384.0 ** 2 + f * f) - 384.0)
-        self.bob = P.bob + drop + 5.0 * self.walk * math.cos(2 * self.ph) + self.hip_drop
+        self.bob = P.bob + drop + 5.0 * self.walk * math.cos(2 * self.ph) + self.hip_drop - 20.0 * self.run * max(0.0, math.cos(2 * self.ph))
 
     # ---- walk helpers (side: -1 = character's right leg, +1 = left)
     def leg_phase(self, side):
@@ -1737,7 +1757,7 @@ class Body:
         return self.stride / 2 * math.cos(self.leg_phase(side))
 
     def foot_lift(self, side):
-        return max(0.0, -math.sin(self.leg_phase(side))) * 62.0 * self.walk
+        return max(0.0, -math.sin(self.leg_phase(side))) * 62.0 * self.walk * (1.0 + 2.2 * self.run)
 
     # ---- projection
     def p3(self, x, y, z=0.0, upper=True):
@@ -1973,7 +1993,12 @@ def _ring_band(hc, ring, det, t=0.0, lw=None):
         rc.fill(oval(-hw * 0.38, 0.0, 1.0 + 0.5 * g, 0.55), '#fffbe8', 190 + 60 * g)
 
 
-def _draw_hand(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring=False, press=0.0, t=0.0):
+def _draw_hand(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring=False, press=0.0, t=0.0, wrapper=False):
+    if sp.get('new') and not sp.get('v2'):                     # DIRECTION_V2 3.7: the Mirror cast's hands are the v2 hand system
+        look = _hand2_look(sp, skin, sh)
+        if wrapper: look['wrapper'] = True
+        _hand2(c, x, y, scale * sp['body'].get('hand', 1.0), angle, side, shape, det, look, press, t)
+        return
     if shape == 'pinch': shape = 'point'
     hc = c.sub(x, y, angle, scale * sp['body'].get('hand', 1.0))
     G = _hand_cached(shape, side, round(press, 1), sp['body'].get('fingers', 1.0))
@@ -2852,34 +2877,73 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
             _prop(pc, prop, det, t)
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
     else:
-        _draw_hand(c, sp, hand_shape, wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
+        _draw_hand(c, sp, hand_shape, wx, wy, hs, hang, side, det, skin, sh, ring, press, t,
+                   wrapper=(side > 0 and hand_shape == 'fist' and getattr(P, 'candy', 0.0) > 0.5))
     if sp.get('tape') == side and getattr(P, 'tape', 1.0) > 0.02 and det >= 1:
-        _tape_on(c, wx, wy, hs * sp['body'].get('hand', 1.0), hang, side, P, hand_shape if not prop else 'grip')
+        _tape_on(c, wx, wy, hs * sp['body'].get('hand', 1.0), hang, side, P, hand_shape if not prop else 'grip', sp)
 
 
-def _tape_on(c, x, y, scale, angle, side, P, shape):
-    """Blue medical tape round Noah's middle, ring and little fingers (right hand), the edge lifting; tape_slip slides
-    the ring toward the fingertips (the fingers slip out of it), tape_peel lifts the flap."""
+def _tape_on(c, x, y, scale, angle, side, P, shape, sp=None):
+    """THE tape design (DIRECTION_V2 1.3 / 3.7; draw_tape): blue medical tape (#4d8fd6, sheen #8fc0f0) wrapping Noah's
+    middle, ring and little fingers together in two bands, the edge lifting on the little-finger side. One function for
+    every mode (body arms, hands inserts, fists, grips). tape_slip slides the bands toward the fingertips and off (the
+    fingers slip out), tape_peel lifts the flap."""
+    sp = sp or CAST['noah13']
     hc = c.sub(x, y, angle, scale)
     th = -side
     slip = clamp(getattr(P, 'tape_slip', 0.0)); peel = clamp(getattr(P, 'tape_peel', 0.0))
     a = 255 * clamp(P.tape) * (1.0 - clamp((slip - 0.7) / 0.3))
     if a < 2: return
-    if shape in ('fist', 'point', 'grip'):
-        x0, x1, y0, y1 = th * 12.0, th * -16.0, 18.0 + 6 * slip, 32.0 + 6 * slip
+    lw = hc.lw
+    bands = []                                         # each band: (outline pts, flap anchor, flap dir)
+    if shape in ('fist', 'grip', 'point'):
+        if shape == 'grip':
+            for xx in (0.3, 0.58):
+                x0 = th * 15.0 - th * 33.0 * xx
+                bands.append(([(x0 - 2.8, 13.0), (x0 + 2.8, 13.0), (x0 + 2.8, 39.5 + 6 * slip), (x0 - 2.8, 39.5 + 6 * slip)], (x0, 39.5), (0.0, 1.0)))
+        else:
+            xa, xb = th * (3.4 + 4.7), th * (-11.8 - 4.0)
+            for yy in (27.0 + 6 * slip, 34.5 + 6 * slip):
+                lo, hi = min(xa, xb), max(xa, xb)
+                bands.append(([(lo, yy - 2.6), (hi, yy - 2.6), (hi, yy + 2.6), (lo, yy + 2.6)], (xb, yy), (-th * 1.0, 0.0)))
     else:
-        x0, x1, y0, y1 = th * 9.5, th * -20.5, 38.0 + 30 * slip, 50.0 + 30 * slip
-    lo, hi = min(x0, x1), max(x0, x1)
-    band = rrect(lo, y0, hi - lo, y1 - y0, 3.0)
-    hc.fill(band, '#4d8fd6', a)
-    hc.grad(band, 0, y0, 0, y1, [(0, '#8fc0f0', 0.85 * a / 255), (0.45, '#4d8fd6', 0), (1, '#2f6aaa', 0.8 * a / 255)])
-    hc.line(_multi([poly([(th * 4.8 + k * th * -9.6, y0 + 1), (th * 4.8 + k * th * -9.6, y1 - 1)], False) for k in range(3)]),
-            hc.lw * 0.3, '#2f6aaa', 0.8 * a)
-    fx = x1
-    flap = poly([(fx, y0 + 1), (fx - th * 3, y0 - 4 - 9 * peel), (fx + th * 6, y0 - 2 - 6 * peel), (fx + th * 5, y0 + 3)])
-    hc.fill(flap, '#8fc0f0', a)
-    hc.line(band, hc.lw * 0.45, LINE, a)
-    hc.line(flap, hc.lw * 0.35, LINE, a)
+        look = _hand2_look(sp, '#000000', '#000000')
+        G = _hand2_geom(shape if shape not in ('mitt',) else 'relaxed', side, look['fk'], look['fw'], 'short', 0.0, look.get('bound', False))
+        fs = G['fingers'][1:4]
+        for j, f0 in ((1, 0.62), (2, 0.42)):
+            pts = []
+            for k, (fp_, ws, cu) in enumerate(fs):
+                jj = min(j, len(fp_) - 1)
+                p0, p1 = fp_[jj - 1], fp_[jj]
+                L_ = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) or 1.0
+                f = clamp(f0 + slip * 1.2)
+                cx_, cy_ = p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f
+                ux, uy = (p1[0] - p0[0]) / L_, (p1[1] - p0[1]) / L_
+                pts.append((cx_, cy_, ux, uy, ws[jj] * 0.55))
+            h = 2.7
+            (mx, my, mux, muy, mw), (lx, ly, lux, luy, lw_) = pts[0], pts[2]
+            nx, ny = -muy, mux                                   # across the fingers, from the middle toward the little finger
+            if (lx - mx) * nx + (ly - my) * ny < 0: nx, ny = -nx, -ny
+            ux, uy = (mux + lux) * 0.5, (muy + luy) * 0.5
+            A = (mx - nx * mw, my - ny * mw); Bp = (lx + nx * lw_, ly + ny * lw_)
+            Mid = pts[1]
+            outline = [(A[0] - ux * h, A[1] - uy * h), (Mid[0] - ux * h, Mid[1] - uy * h + 0.4), (Bp[0] - ux * h, Bp[1] - uy * h),
+                       (Bp[0] + ux * h, Bp[1] + uy * h), (Mid[0] + ux * h, Mid[1] + uy * h + 0.4), (A[0] + ux * h, A[1] + uy * h)]
+            bands.append((outline, Bp, (nx, ny)))
+    for i, (pts, anchor, (dx_, dy_)) in enumerate(bands):
+        band = smooth(pts, True, 0.35)
+        hc.fill(band, '#4d8fd6', a)
+        bb = band.getBounds()
+        hc.grad(band, 0, bb.top(), 0, bb.bottom(), [(0, '#8fc0f0', 0.8 * a / 255), (0.45, '#4d8fd6', 0), (1, '#2f6aaa', 0.75 * a / 255)])
+        hc.line(band, lw * 0.4, LINE, a)
+        if i == len(bands) - 1:                          # the lifting edge on the little-finger side
+            ax_, ay_ = anchor
+            fl = poly([(ax_, ay_ - 2.4), (ax_ + dx_ * (3.5 + 3.0 * peel) - dy_ * (2.5 + 5.0 * peel), ay_ + dy_ * (3.5 + 3.0 * peel) - 1.5 - 6.0 * peel),
+                       (ax_ + dx_ * (5.0 + 2.0 * peel), ay_ + dy_ * (5.0 + 2.0 * peel) + 1.5), (ax_, ay_ + 2.4)])
+            hc.fill(fl, '#8fc0f0', a); hc.line(fl, lw * 0.32, LINE, a)
+
+
+draw_tape = _tape_on
 
 
 def _bare_side(sp, side):
@@ -2917,7 +2981,8 @@ def _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec, feet_only=False):
         fwd = B.foot_fwd(side) + B.sit * 210.0 + fwd_
         lift = B.foot_lift(side) + up_
         ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance) + side * out_, -38.0 - lift, fwd])
-        if kn > 0 and side < 0: ank = ank + np.array([0.0, 0.0, -170.0 * kn])
+        if kn > 0 and side < 0: ank = ank + np.array([0.0, -10.0 * kn, -230.0 * kn])
+        if kn > 0 and side > 0: ank = ank + np.array([0.0, 0.0, 150.0 * kn])
         hipw = hip.copy()
         K, A = _ik(hipw + np.array([0, B.bob, 0]), ank, 206.0, 180.0, np.array([0.08 * side, -0.15, 1.0]))
         order.append((B.p3(*(hipw + np.array([0, 0, 0])), upper=False), B.p3(K[0], K[1] - B.bob, K[2], upper=False),
@@ -4633,12 +4698,12 @@ def _resolve_sp(who, P):
     a, b = CAST['noah13'], sp
     d = dict(b)
     for k in ('eye_dx', 'eye_y', 'eye_r', 'eye_h', 'brow_th', 'nose_len', 'mouth_y', 'mouth_w', 'stub', 'bags', 'age',
-              'freckle_k', 'hh', 'fear_eyes'):
+              'freckle_k', 'hh', 'fear_eyes', 'forehead'):
         va = a.get(k, 1.0 if k == 'freckle_k' else 0.0); vb = b.get(k, 1.0 if k == 'freckle_k' else 0.0)
         kk = ab if k == 'hh' else af
         d[k] = va + (vb - va) * kk
     d['head_ws'] = [x + (y - x) * af for x, y in zip(a['head_ws'], b['head_ws'])]
-    for k in ('skin', 'skin_sh', 'skin_dp', 'lip', 'hair_c'): d[k] = mix(a[k], b[k], af)
+    for k in ('skin', 'skin_sh', 'skin_dp', 'lip', 'hair_c', 'brow_c'): d[k] = mix(a[k], b[k], af)
     if af < 0.35: d['stubble'] = None
     d['body'] = {k: (tuple(x + (y - x) * ab for x, y in zip(a['body'][k], b['body'][k])) if isinstance(b['body'][k], tuple)
                      else a['body'][k] + (b['body'][k] - a['body'][k]) * ab) for k in b['body']}
@@ -4713,6 +4778,18 @@ def draw_hands(pen, who, x, y, size, pose=None, detail=2, light=None, t=None, ma
             _prop2(c.sub(x - size * 0.12, y + size * 0.28, 90.0, size / 42.0), bp, det, t)
         elif bp in ('padlock', 'towel', 'tape_ring'):
             _prop2(c.sub(x - size * 0.2, y + size * 0.35, 0, size / 60.0), bp, det, t)
+        elif bp == 'collar':                              # your corduroy collar under Tess's fist (608.97), the olive shoulder below
+            cc = CAST['you']['cloth']
+            sh_ = smooth([(x - size * 2.2, y + size * 2.0), (x - size * 1.6, y + size * 0.55), (x + size * 1.6, y + size * 0.35), (x + size * 2.4, y + size * 2.0)], True, 0.7)
+            c.fill(sh_, cc['top']); _cloth_shade(c, sh_, cc['top_sh'], 170, 1.0, size * 0.15); c.line(sh_, c.lw)
+            col_ = smooth([(x - size * 1.5, y + size * 0.62), (x - size * 0.2, y - size * 0.1), (x + size * 1.5, y + size * 0.42),
+                           (x + size * 1.3, y + size * 0.85), (x - size * 0.1, y + size * 0.4), (x - size * 1.3, y + size * 1.0)], True, 0.7)
+            c.fill(col_, cc['collar']); _cloth_shade(c, col_, cc['collar_sh'], 170, 1.0, size * 0.08)
+            if det >= 1:                                   # corduroy wales
+                wl = [smooth([(x - size * (1.35 - 0.12 * k), y + size * (0.66 + 0.3 * (k % 2 == 7))), (x - size * 0.15 + size * 0.08 * k, y + size * (0.02 + 0.045 * k)),
+                              (x + size * (1.4 - 0.1 * k), y + size * (0.46 + 0.04 * k))], False) for k in range(0, 8)]
+                c.line(_multi(wl), c.lw * 0.3, cc['collar_sh'], 200)
+            c.line(col_, c.lw)
         order = [('l', 1), ('r', -1)] if main == 'r' else [('l', -1), ('r', 1)]
         for nm, side in order:
             pre = 'i' + nm + '_'
@@ -4727,19 +4804,33 @@ def draw_hands(pen, who, x, y, size, pose=None, detail=2, light=None, t=None, ma
             ax, ay = -fx_, -fy_
             aw = 0.4 * size / max(0.7, hk) * (1.12 if sp['body'].get('hand', 1.0) > 1.1 else 1.0)
             if sp.get('kid'): aw *= 0.86
-            end = (wx + ax * size * 3.4, wy + ay * size * 3.4)
-            arm = _tube([(wx + ax * size * 0.1, wy + ay * size * 0.1), end], [aw, aw * 1.25])
+            fore = clamp(getattr(P, 'ir_fore', 0.0)) if nm == 'r' else 0.0
+            end = (wx + ax * size * lerp(3.4, 1.25, fore), wy + ay * size * lerp(3.4, 1.25, fore))
+            if fore > 0.01:                       # foreshortened: the arm comes at the lens from far away (the doorway above)
+                ea = math.atan2(ay, ax) + math.radians(28.0) * fore
+                up_end = (end[0] + math.cos(ea) * size * 2.6, end[1] + math.sin(ea) * size * 2.6)
+                ua = _tube([end, up_end], [aw * lerp(1.25, 0.78, fore) * 1.3, aw * lerp(1.25, 0.55, fore) * 1.3])
+                c.fill(ua, slv); _cloth_shade(c, ua, slv_sh, 170, 1.0, aw * 0.15)
+                c.line(ua, c.lw * 0.8)
+            arm = _tube([(wx + ax * size * 0.1, wy + ay * size * 0.1), end], [aw, aw * lerp(1.25, 0.8, fore)])
             c.fill(arm, skin); _cloth_shade(c, arm, sh, 120, 1.0, aw * 0.12)
             with _ink(c, 'dark'): c.line(arm, c.lw)
             cut = 0.32 + 0.5 * clamp(getattr(P, 'cuff_up', 0.0)) + 0.45 * sp['cloth'].get('fit', 0.0) * (sp['outfit'] == 'sweatshirt')
             cx0, cy0 = wx + ax * size * cut, wy + ay * size * cut
-            slv_p = _tube([(cx0, cy0), end], [aw * 1.32, aw * 1.5])
+            slv_p = _tube([(cx0, cy0), end], [aw * 1.32, aw * lerp(1.5, 1.02, fore)])
             c.fill(slv_p, slv); _cloth_shade(c, slv_p, slv_sh, 170, 1.0, aw * 0.2)
             if sp['outfit'] == 'dress': c.glow(cx0 + ax * size * 0.8, cy0 + ay * size * 0.8, aw * 0.3, size * 0.6, sp['cloth']['sheen'], 120)
             with _ink(c, 'pale'): c.line(slv_p, c.lw)
             if sp['outfit'] != 'dress':
-                cuff = _tube([(cx0, cy0), (cx0 + ax * size * 0.14, cy0 + ay * size * 0.14)], [aw * 1.36, aw * 1.38])
-                c.fill(cuff, mix(slv, '#000000', 0.12)); c.line(cuff, c.lw * 0.8)
+                ex0, ey0 = cx0 + ax * size * 0.14, cy0 + ay * size * 0.14
+                cuff = smooth([(cx0 - ay * aw * 0.68, cy0 + ax * aw * 0.68), (cx0 + ay * aw * 0.68, cy0 - ax * aw * 0.68),
+                               (ex0 + ay * aw * 0.7, ey0 - ax * aw * 0.7), (ex0 - ay * aw * 0.7, ey0 + ax * aw * 0.7)], True, 0.25)
+                c.fill(cuff, sp['cloth'].get('top_sh', '#33382a') if sp['outfit'] == 'jacket' else mix(slv, '#000000', 0.12)); c.line(cuff, c.lw * 0.8)
+                if sp['outfit'] == 'jacket' and det >= 1:      # DIRECTION_V2 3.7: the stitched cuff band (olive #4a5038 / #33382a)
+                    for q_ in (0.25, 0.85):
+                        sx0, sy0 = cx0 + ax * size * 0.14 * q_, cy0 + ay * size * 0.14 * q_
+                        c.pen.dashed(c.P(poly([(sx0 - ay * aw * 0.62, sy0 + ax * aw * 0.62), (sx0 + ay * aw * 0.62, sy0 - ax * aw * 0.62)], False)),
+                                     max(1.0, c.lw * 0.3 * c.s), '#8a8f6a', 220, on=5.0 * c.s, off=4.0 * c.s)
                 if sp['outfit'] == 'jacket' and det >= 1:
                     c.line(_multi([poly([(cx0 + ax * size * 0.07 - ay * aw * 0.5 * q, cy0 + ay * size * 0.07 + ax * aw * 0.5 * q),
                                          (cx0 + ax * size * 0.07 - ay * aw * 0.5 * q + ax * 4, cy0 + ay * size * 0.07 + ax * aw * 0.5 * q + ay * 4)], False)
@@ -4765,9 +4856,11 @@ def draw_hands(pen, who, x, y, size, pose=None, detail=2, light=None, t=None, ma
                     _draw_hand(c, sp, 'grip' if shape not in ('pinch', 'point') else 'point', wx, wy, hs, ang, side, det, skin, sh, False, press, t)
                 out['prop'][nm] = (ppx, ppy)
             else:
-                _draw_hand(c, sp, shape, wx, wy, hs, ang, side, det, skin, sh, False, press, t)
+                _draw_hand(c, sp, shape, wx, wy, hs, ang, side, det, skin, sh, False, press, t,
+                           wrapper=(shape == 'fist' and getattr(P, 'candy', 0.0) > 0.5 and (nm == main)))
             if sp.get('tape') == side and getattr(P, 'tape', 1.0) > 0.02:
-                _tape_on(c, wx, wy, hs * hk, ang, side, P, shape if not prop else 'grip')
+                _tape_on(c, wx, wy, hs * hk, ang, side, P, ('flat' if shape in ('flat', 'open', 'palm') else shape) if not prop or shape in ('flat', 'open', 'palm')
+                         else ('point' if shape in ('pinch', 'point') else 'grip'), sp)
             if nm == 'r' and P.base_prop == 'candy_palm':
                 _prop2(c.sub(wx + fx_ * 26 * k, wy + fy_ * 26 * k, ang + 90.0, k * 0.85 * clamp(P.palm_open * 1.6)), 'candy_red', det, t)
             out['tip'][nm] = _hand_tip(wx, wy, ang, k, shape, side, sp['body'].get('fingers', 1.0))
@@ -4888,6 +4981,100 @@ def draw_feet(pen, who, x, y, size, pose=None, detail=2, light=None, t=None):
     return out
 
 
+def draw_feet_pov(pen, who, x, y, size, pose=None, detail=2, light=None, t=None):
+    """Feet seen from above (mode 'feet', view 'pov'; DIRECTION_V2 H7): (x, y) = the centre between the feet, size = foot
+    length in design px. People: boots / sneakers / bare feet with the trouser hems at the near (bottom) edge, toes
+    pointing up the frame (away). The queen: her bare feet on the tread below, toes pointing DOWN the frame (at you),
+    black nails, the satin hem with the spade-pip border round the ankles; toes curl over the tread edge (pose.toes)."""
+    P = _as_pose(pose); t = P.t if t is None else t
+    sp = _resolve_sp(who, P); cl = sp['cloth']
+    q = who == 'queen'
+    c = Ctx(pen, skia.Matrix(), _lw_for(size * 1.4) * (0.75 if q else 1.0), None)
+    ln = QV['line'] if q else LINE
+    out = {}
+    curl = clamp(P.toes)
+    for side, vis in ((-1, getattr(P, 'ft_r', 1.0)), (1, getattr(P, 'ft_l', 1.0))):
+        if vis <= 0.01: continue
+        # the character's right foot is on screen left when they face you (queen), screen left from behind (you)
+        sx = side * (0.21 if q else -0.21)
+        lift = getattr(P, 'fr_up' if side < 0 else 'fl_up', 0.0)
+        fc = c.sub(x + sx * size, y - lift * size * 0.5, 0.0, size * (1.0 + 0.25 * lift))
+        lw = fc.lw
+        d = 1.0 if q else -1.0                               # toes toward +y (queen, at you) or -y (yours, away)
+        med = -side * (1.0 if q else -1.0)                   # the big toe on the inner side
+        if q or _bare_side(sp, side) or sp['outfit'] == 'dress':
+            sk = QV['foot'] if q else sp['skin']; sh = QV['foot_sh'] if q else sp['skin_sh']
+            tl = 0.5 - 0.04 * curl
+            pts = [(-0.085, -0.5), (0.085, -0.5), (0.11, -0.3), (0.12 + 0.03 * med, -0.05), (0.17 + 0.02 * med, 0.2), (0.17, tl - 0.12),
+                   (0.0, tl), (-0.17, tl - 0.12), (-0.17 + 0.02 * med, 0.2), (-0.12 + 0.03 * med, -0.05), (-0.11, -0.3)]
+            ft = smooth([(px_, py_ * d) for px_, py_ in pts], True, 0.75)
+            fc.fill(ft, sk)
+            fc.grad(ft, 0, -0.5 * d, 0, 0.5 * d, [(0, sh, 180), (0.35, sk, 0), (0.85, sk, 0), (1, sh, 160)])
+            fc.fill(_crescent(ft, 0.03 * med, 0), sh, 120)
+            if q: fc.fill(_crescent(ft, -0.02 * med, 0), _ql(light)['rim'], 110)
+            if detail >= 1:
+                tnd = [smooth([(med * 0.02 * k, -0.2 * d), (med * (0.03 + 0.045 * k), 0.06 * d), (med * (0.04 + 0.06 * k), 0.24 * d)], False)
+                       for k in (0.0, 1.5)]
+                fc.line(_multi(tnd), lw * 0.28, QV['skin_dp'] if q else sp['skin_dp'], 90)
+            # toes at the front: the big toe on the inner side, longer (1.2x) for her
+            tk = 1.2 if q else 1.0
+            for i in range(4, -1, -1):                       # little toe first, the big toe on top
+                f = i / 4.0
+                tx = med * lerp(0.105, -0.125, f); r_ = lerp(0.05, 0.027, f)
+                L_ = r_ * (2.3 if i == 0 else 2.0) * tk * (1.0 - 0.22 * curl)
+                ty = (tl - 0.06 - 0.05 * f ** 1.4) * d
+                toe = rrect(tx - r_, ty - L_ * 0.5, 2 * r_, L_, r_)
+                fc.fill(toe, sk); fc.fill(_crescent(toe, 0.01 * med, 0), sh, 120); fc.line(toe, lw * 0.38, ln)
+                nh = L_ * 0.48
+                nl = rrect(tx - r_ * 0.62, ty + d * L_ * 0.5 - (nh + r_ * 0.25 if d > 0 else -r_ * 0.25), r_ * 1.24, nh, r_ * 0.6)
+                fc.fill(nl, QV['nail'] if q else mix(sk, '#ffffff', 0.45), 245)
+                if q: fc.fill(oval(tx - r_ * 0.25, ty + d * L_ * 0.28, r_ * 0.16, nh * 0.22), QV['nail_hi'], 180)
+            fc.line(ft, lw * 0.9, ln)
+            if q and curl > 0.05:                            # the tread edge the toes curl over
+                fc.line(poly([(-0.3, (tl - 0.06) * d), (0.3, (tl - 0.06) * d)], False), lw * 0.3, '#ff4060', 160 * curl)
+        else:
+            kind = 'boot' if sp['outfit'] in ('jacket', 'shell') else 'sneaker'
+            shc = cl.get('shoes') or '#4a3426'; shs = cl.get('shoes_sh', mix(shc, '#000000', 0.3))
+            pts = [(-0.15, 0.42), (0.15, 0.42), (0.16 + 0.02 * med, 0.0), (0.18 + 0.02 * med, -0.25), (0.13, -0.47), (0.0, -0.53),
+                   (-0.13, -0.47), (-0.18 + 0.02 * med, -0.25), (-0.16 + 0.02 * med, 0.0)]
+            sole = smooth([(px_ * 1.08, py_ * 1.03) for px_, py_ in pts], True, 0.75)
+            fc.fill(sole, '#1f1712' if kind == 'boot' else cl.get('sole', '#cfc8b8')); fc.line(sole, lw * 0.8, ln)
+            bt = smooth(pts, True, 0.75)
+            fc.fill(bt, shc)
+            fc.grad(bt, 0, -0.5, 0, 0.4, [(0, mix(shc, '#ffffff', 0.18), 200), (0.3, shc, 0), (1, shs, 200)])
+            fc.fill(_crescent(bt, -0.03 * med, 0), shs, 150)
+            fc.glow(0.02, -0.36, 0.07, 0.05, '#ffffff', 60)
+            if detail >= 1:
+                lc = '#2a2018' if kind == 'boot' else cl.get('lace', '#d8cfb8')
+                lz = [poly([(-0.07, 0.05 - k * 0.08), (0.07, 0.01 - k * 0.08)], False) for k in range(4)] + \
+                     [poly([(0.07, 0.05 - k * 0.08), (-0.07, 0.01 - k * 0.08)], False) for k in range(4)]
+                fc.line(_multi(lz), lw * 0.45, lc)
+                fc.line(smooth([(-0.15, -0.3), (0.0, -0.36), (0.15, -0.3)], False), lw * 0.35, shs, 200)       # toe-cap seam
+            fc.line(bt, lw, ln)
+            pc = cl.get('trousers', '#2a3347')                  # the trouser hem at the near edge
+            leg = smooth([(-0.2, 0.9), (0.2, 0.9), (0.2, 0.3), (0.0, 0.32), (-0.2, 0.3)], True, 0.5)
+            fc.fill(leg, pc); fc.fill(_crescent(leg, -0.04, 0), cl.get('trousers_sh', mix(pc, '#000000', 0.3)), 160)
+            fc.line(leg, lw, ln)
+        out['r' if side < 0 else 'l'] = c.pt(x + sx * size, y)
+    if q and getattr(P, 'ft_hem', 1.0) >= 0.5:               # her hem round the ankles, rising out of frame toward you
+        fc = c.sub(x, y, 0.0, size)
+        lw = fc.lw
+        sw = 0.02 * getattr(P, 'hem', 0.0)
+        xs = np.linspace(-0.62, 0.62, 21)
+        hp = [(float(xx) + sw, -0.3 + 0.03 * math.sin(xx * 10.0 + 0.7) - 0.05 * (1.0 - (xx / 0.62) ** 2)) for xx in xs]
+        hem = smooth([(-0.62, -2.0), (0.62, -2.0)] + hp[::-1], True, 0.5)
+        fc.fill(hem, QV['satin'])
+        fc.grad(hem, -0.6, 0, 0.6, 0, [(0, QV['satin_sh'], 220), (0.35, QV['satin_sheen'], 220), (0.45, QV['satin_hi'], 140), (0.6, QV['satin'], 0),
+                                      (1, QV['satin_sh'], 220)])
+        b0 = [(px_, py_ - 0.03) for px_, py_ in hp]; b1 = [(px_, py_ - 0.14) for px_, py_ in hp]
+        fc.line(smooth(b0, False), lw * 0.5, QV['hem_red']); fc.line(smooth(b1, False), lw * 0.5, QV['hem_red'])
+        pp = skia.Path()
+        for k in range(1, len(hp) - 1, 2): pp.addPath(_q_spade(hp[k][0], hp[k][1] - 0.085, 0.065, 0.056))
+        fc.fill(pp, QV['pip'])
+        fc.line(smooth(hp, False), lw, ln)
+    return out
+
+
 def _mirror_x(path):
     q = skia.Path(path); m = skia.Matrix(); m.setScale(-1, 1); q.transform(m); return q
 
@@ -4985,8 +5172,12 @@ class _MirrorClips:
 
     # -------------------------------------------------------------- speech and faces
     def talk_line(self, t0, line=None, intensity=1.0):
-        """Lip-sync one timeline.json line (talk(line=i) in the plan) on the real voice envelope."""
+        """Lip-sync one timeline.json line (talk(line=i) in the plan) on the real voice envelope. Noah (13 and grown)
+        shows his gap teeth on every spoken line (DIRECTION_V2 3.7)."""
         L = timeline_line(line)
+        if self.who in ('noah13', 'noah_grown') and L and L.get('end'):
+            t_a, t_b = L['t'], L['end']
+            self._add(t_a - 0.1, t_b + 0.3, lambda P, t: setattr(P, 'teeth', max(P.teeth, 0.75 * _env(t, t_a - 0.08, t_b + 0.05, 0.08, 0.2))))
         if L and L.get('end'):
             return self.talk([(L['t'], L['end'], L.get('en'))], intensity=intensity)
         return self.talk([(t0, t0 + 1.2, None)], intensity=intensity, env=None, words=None)
@@ -5141,18 +5332,25 @@ class _MirrorClips:
         self._add(t0, None, fn)
         return [self._ev2(t0 + dur * 0.5, 'bare_foot_step', -4.0), self._ev2(t0 + dur * 0.9, 'footsteps_wood_inside', -6.0, n=1)]
 
-    def run(self, t0, to=None, t1=None, x_from=None, surface='porch'):
+    def run(self, t0, to=None, t1=None, x_from=None, surface='porch', step=0.27):
+        """A run cycle (DIRECTION_V2 3.7): 0.27 s per step, a flight phase, knees high, the body leaning in, the arms
+        pumping at 90 deg elbows opposite the legs (the flashlight beam swings with the right hand), the ponytail lagging."""
         x_from = 0.0 if x_from is None else x_from
         t1 = t0 + 1.2 if t1 is None else t1
         to = x_from + 0.8 * self.height if to is None else to
         ev = self.walk(t0, t1, x_from, to, surface=surface, ramp=0.15)
         def fn(P, t):
             w = _wnd(t, t0, t1, 0.2, 0.3)
-            P.lean += 0.22 * w
-            for side in (-1, 1): self._arm(P, side, w * 0.8, 30.0, 220.0, 60.0 * math.cos(P.walk_ph * 2 * PI + (0 if side > 0 else PI)), 'fist', up=0.0)
-        self._add(t0, t1 + 0.3, fn)
-        for e in ev: e['name'] = 'footsteps_run'
-        return ev
+            ph = (t - t0) / (2.0 * step)
+            P.walk_ph = lerp(P.walk_ph, ph, w); P.run = max(P.run, w); P.walk_amt = max(P.walk_amt, w)
+            P.lean += 0.3 * w
+            for side in (-1, 1):
+                sw = math.cos(2 * PI * ph + (0.0 if side > 0 else PI))
+                self._arm(P, side, w * 0.9, 34.0, 150.0 - 30.0 * sw, 150.0 * sw, 'fist' if not getattr(P, 'hr_prop' if side < 0 else 'hl_prop') else None, up=0.0)
+            P.h_nod += 0.04 * w * math.sin(4 * PI * ph)
+        self._add(t0, t1 + 0.3, fn, real=True)
+        n = int((t1 - t0) / step)
+        return [self._ev(t0 + step * (k + 0.5), 'footsteps_run', -2.0, foot='L' if k % 2 else 'R') for k in range(n)]
 
     def sneak(self, t0, t1):
         return self.set(t0, t1, 0.4, crouch=0.25, lean=0.18, hunch=0.4)
@@ -5341,6 +5539,168 @@ class _MirrorClips:
             P.h_turn *= 1.0 - u; P.turn *= 1.0 - u * 0.6; P.h_tilt *= 1.0 - 0.7 * u; P.lock = max(P.lock, u)
         return self._add(t0 - 0.01, None, fn, late=True, real=True)
 
+    # -------------------------------------------------------------- v2 plan vocabulary (plan/shotlist.py act names)
+    def grin_widen(self, t0, amount=0.2, dur=0.6):
+        """S3c: the grin widens a little more (H7, 606.2; the flash-forward at 0.0)."""
+        return self._add(t0, None, lambda P, t: setattr(P, 'q_widen', max(P.q_widen, amount * ease_in_out(prog(t, t0, t0 + dur)) * 2.5)), real=True)
+
+    def drift(self, t0, t1=None, amount=1.0):
+        """Her slow drift made explicit (it is always on): a slightly larger tilt and lean wander, never pixel-identical."""
+        sd = self.seed * 7 + 91
+        def fn(P, t):
+            P.h_tilt += 1.6 * amount * noise1(t * 0.18, sd); P.lean += 0.01 * amount * noise1(t * 0.11, sd + 1)
+            P.hem += 0.3 * amount * math.sin(t * 1.1)
+        return self._add(t0, t1, fn, real=True)
+
+    def slide_rail(self, t0, dx=60.0, dur=0.8):
+        """She glides along the stair railing, her red-fingertip hand on the rail (dx in design px)."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            P.dx += dx * u
+            self._arm(P, 1, 1.0, 70.0, 240.0, 60.0, 'relaxed', up=0.0)
+        return self._add(t0, None, fn)
+
+    def fingers_curl(self, t0, amount=0.3, dur=0.8):
+        """Hands insert: her long fingers curl slowly (no other motion)."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur)) * amount
+            self._ins(P, 'r', 1.0, shape='claw' if u > 0.18 else 'relaxed', a=lerp(P.ir_a, 175.0, 0.3))
+        return self._add(t0, None, fn)
+
+    def rise(self, t0, dy=None, dur=0.9):
+        """Something pale rises into the frame (bust: dy design px, default -40) / she straightens up out of the
+        window corner (body: from a slight stoop, default 6 % of her height)."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            d = dy if dy is not None else -0.06 * self.height
+            P.dy += d * u - d; P.hunch += 0.3 * (1.0 - u)
+        return self._add(t0 - 0.01, None, fn)
+
+    def lean_out(self, t0, dur=0.6, dist=160.0):
+        """H1: she leans out of the doorway into the light (bust): in from the frame side, the face growing a little."""
+        def fn(P, t):
+            u = ease_out_cubic(prog(t, t0, t0 + dur))
+            P.dx += dist * (1.0 - u); P.approach = max(P.approach, 0.18 * u); P.h_tilt -= 7.0 * (1.0 - u)
+        return self._add(t0 - 0.01, None, fn)
+
+    def glide_sit(self, t0, to=None, dur=1.2, bob=0.0):
+        """H2: one smooth eased 1.2 s glide from where she stands to the bunk (`to` = [x, y_feet, h] design px), the
+        bend at the hip and the sit at the end; no bob, the hair stays put."""
+        to = to if isinstance(to, (list, tuple)) and len(to) >= 2 else None
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            if to is not None and getattr(self, '_at', None):
+                ax, ay, ah = self._at
+                P.dx += (to[0] - ax) * u; P.dy += (to[1] - ay) * u
+            P.sit = max(P.sit, ease_in_out(prog(t, t0 + dur * 0.35, t0 + dur)))
+            for side in (-1, 1): self._arm(P, side, ease_in_out(prog(t, t0 + dur * 0.5, t0 + dur)), -40.0, 290.0, 150.0, 'relaxed', up=0.0)
+        self._add(t0, None, fn, real=True)
+        return [self._ev2(t0 + dur, 'bed_creak', -10.0, kind='slow')]
+
+    def smile_split(self, t0, dur=0.25):
+        """S3a on "back" (479.24): the drawn stair smile splits open into the grin of teeth."""
+        return self.stage(t0, 'S3a', dur)
+
+    def turn_to_lens(self, t0, dur=0.25):
+        """She turns her face to the lens (531.9; snap mode, 0.25 s), the eyes locked."""
+        return self.head_to_lens(t0, dur=dur)
+
+    def climb_step(self, t0, to=None, dur=0.9, rise=0.1, run=0.13, dirx=1.0):
+        """One tread up the stairs (body): the hem lifts, a bare foot steps, she rises by one tread."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            P.dx += dirx * run * self.height * u; P.dy -= rise * self.height * u
+            P.fr_up += 0.25 * math.sin(PI * u); P.hem += 0.6 * math.sin(PI * u)
+        self._add(t0, None, fn)
+        return [self._ev2(t0 + dur * 0.7, 'bare_foot_step', -8.0)]
+
+    def void_talk(self, t0, line=None, inner='noah13', pixel_sort=True, dur=0.3):
+        """S4: the jaw drops into the void and Noah13's face inside speaks the line (his voice: line 249), glitching."""
+        ev = self.jaw_drop(t0, dur, 1.0 if pixel_sort else 0.0)
+        if line is not None: self.talk_line(t0, line)
+        else: self.talk_silent(t0, 1.0, 0.35)
+        return ev
+
+    def reach_shoulder(self, t0, dur=0.7, side=1):
+        """H7: her long hand rises toward your shoulder (at the lens), fingers curling."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            self._arm(P, side, u, 40.0, 60.0, 380.0, 'claw' if u > 0.5 else 'reach', up=0.7)
+            self._ins(P, 'r', u, shape='claw', a=160.0, y=-0.3 * (1 - u))
+            P.ins_k = max(P.ins_k, 1.0 + 0.3 * u)
+        return self._add(t0, None, fn)
+
+    def pixel_sort_in(self, t0, dur=0.3):
+        """The phone (697.95): Noah13's face (speaking line 299) pixel-sorts into her S3c face looking into the lens."""
+        def fn(P, t):
+            P.q_nface = 1.0 - prog(t, t0, t0 + dur); P.q_glitch = max(P.q_glitch, math.sin(PI * prog(t, t0 - 0.05, t0 + dur + 0.05)))
+            P.lock = 1.0
+        self._add(-INF, None, fn, real=True)
+        return [self._ev2(t0, 'glitch', -8.0, kind='pixel')]
+
+    def hang_open(self, t0, prop='padlock', dur=1.0):
+        """Tess unhooks the padlock and hangs it open on the hasp (71.6 s)."""
+        return self.unlock(t0, prop, dur)
+
+    def whisper(self, t0, dur=0.7):
+        """A whispered name (the kids' dare): the whisper face and soft mouth motion."""
+        self.expr('whisper', t0, t0 + dur, 0.15)
+        return self.talk_silent(t0, dur, 0.35)
+
+    def shrug(self, t0, dur=0.7):
+        def fn(P, t):
+            w = math.sin(PI * prog(t, t0, t0 + dur))
+            P.shrug += 0.9 * w; P.brow_up += 0.3 * w
+            for side in (-1, 1): self._arm(P, side, w, 70.0, 230.0, 90.0, 'open', up=0.0)
+        return self._add(t0, t0 + dur + 0.2, fn)
+
+    def wrap_tape(self, t0, dur=1.6):
+        """Mom's hands wind the blue tape round three small fingers (memory insert, 218.2 s)."""
+        def fn(P, t):
+            ph = (t - t0) * 2.6
+            self._ins(P, 'r', 1.0, shape='pinch', a=200.0, x=0.12 * math.cos(ph * 2 * PI), y=0.08 * math.sin(ph * 2 * PI))
+            P.base_prop = 'tape_ring'
+        return self._add(t0, t0 + dur, fn)
+
+    def step_down(self, t0, dur=0.5):
+        """Your boot comes down on tread 1 (feet insert; in the POV view it lowers into place)."""
+        def fn(P, t):
+            u = ease_out_cubic(prog(t - 0.0, t0 - 0.2, t0 + dur - 0.2))
+            P.fr_up += 0.3 * (1.0 - u); P.fr_fwd += 0.1 * (1.0 - u)
+        self._add(t0 - 0.5, None, fn)
+        return [self._ev2(t0 + dur * 0.6, 'footsteps_wood_inside', -6.0, n=1)]
+
+    def write(self, t0, dur=1.2):
+        """An officer writes in his notebook (memory)."""
+        return self.hold_up('notebook', t0, t0 + dur, -1)
+
+    def reach_grab(self, t0, foreshortened=True, dur=0.25):
+        """Tess's orange arm comes at the lens out of the doorway (foreshortened) and the hand closes (551.9, 608.3)."""
+        def fn(P, t):
+            u = ease_out_cubic(prog(t, t0, t0 + dur))
+            if foreshortened: P.ir_fore = max(P.ir_fore, u)
+            self._ins(P, 'r', 1.0, shape='fist' if u > 0.75 else 'claw', a=lerp(-25.0, 6.0, u), y=lerp(-1.3, 0.0, u))
+            self._arm(P, -1, u, -40.0, 60.0, 380.0, 'grip', up=0.3)
+        self._add(t0 - 0.05, None, fn)
+        return [self._ev2(t0 + dur, 'cloth_grab', -4.0)]
+
+    def open_hand(self, t0, dur=0.01):
+        """The palm already open: the red candy on it and the wrapper's mark beside it (651.1)."""
+        def fn(P, t):
+            self._ins(P, 'r', 1.0, shape='flat', a=180.0); P.palm_open = 1.0; P.base_prop = 'candy_palm'; P.candy = 1.0
+        return self._add(t0 - 0.01, None, fn)
+
+    def give(self, t0, prop='phone', dur=0.8):
+        """Your hand passes the phone across to his (659.7): held out, then released and drawn back."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur * 0.6)); r = ease_in_out(prog(t, t0 + dur * 0.6, t0 + dur))
+            self._ins(P, 'r', 1.0, shape='grip' if r < 0.3 else 'relaxed', prop=prop if r < 0.3 else None, x=0.4 * u - 0.6 * r, a=150.0)
+        return self._add(t0, None, fn)
+
+    def fade_out(self, t0, dur=0.5):
+        """The character fades away (Tess's reflection in the phone glass, 696.1)."""
+        return self._add(t0, None, lambda P, t: setattr(P, 'alpha', min(getattr(P, 'alpha', 1.0), 1.0 - ease_in_out(prog(t, t0, t0 + dur)))), real=True)
+
     def sit_beside(self, t0, dur=1.2):
         """One smooth inhuman motion from standing to sitting (1.2 s eased glide): no weight, no bob, the head
         travels on a straight line, the hair stays put."""
@@ -5489,6 +5849,9 @@ class _MirrorClips:
             u = ease_out_cubic(prog(t, t0, t0 + dur)); p = ease_in_out(prog(t, t0 + dur, t0 + dur + pull))
             self._arm(P, -1, u, -60.0, -60.0 + 40.0 * p, 360.0 - 220.0 * p, 'grip', up=0.4)
             P.lean += 0.15 * u - 0.3 * p; P.brow_angry = max(P.brow_angry, 0.6 * u)
+            # hands insert: the orange arm shoots down out of the doorway (foreshortened), the fist closes on the collar
+            P.ir_fore = max(P.ir_fore, u); P.base_prop = 'collar'
+            self._ins(P, 'r', 1.0, shape='fist' if u > 0.7 else 'claw', a=lerp(-30.0, 8.0, u), x=0.1 - 0.15 * p, y=lerp(-1.4, 0.05, u) - 1.1 * p)
         self._add(t0, None, fn)
         return [self._ev2(t0 + dur, 'jacket_cloth', -2.0), self._ev2(t0 + dur + 0.05, 'cloth_grab', -4.0)]
 
@@ -5780,7 +6143,10 @@ class _MirrorClips:
     def tie_loop(self, t0, period=2.4, phase=0.0, t1=None):
         """Noah ties the same knot over and over: a fixed 2.4 s cycle that always starts from the same phase (same t0 +
         phase -> frame-identical replay). The loop forms (lace 0 -> 1) and slips undone at the end of each cycle.
-        Insert: both hands over the sneaker with the lace (base_prop 'shoe'); body: leaning over his foot."""
+        Insert: both hands over the sneaker with the lace (base_prop 'shoe'); body: leaning over his foot. A named phase
+        (the plan's 'loop_reset') is the start of the cycle."""
+        if not isinstance(phase, (int, float)): phase = 0.0
+        if not isinstance(period, (int, float)): period = 2.4
         def fn(P, t):
             w = _wnd(t, t0 - 0.3, t1, 0.3, 0.4)
             if w <= 0: return
@@ -6107,14 +6473,14 @@ def _h2_chain(bx, by, ang, lens, curl, bend=0.0):
     return pts
 
 
-def _hand2_geom(shape, side, fk=1.0, fw=1.0, nail='short', press=0.0):
+def _hand2_geom(shape, side, fk=1.0, fw=1.0, nail='short', press=0.0, bound=False, view='back'):
     """Geometry of one hand (cached): dict(union, parts, fingers=[(pts, widths)], nails, creases, tendons, palm_lines,
     pads, tip_pts, thumb). Palm view shapes ('flat', 'palm') mirror the thumb side."""
-    key = (shape, side, round(fk, 2), round(fw, 2), nail, round(press, 1))
+    key = (shape, side, round(fk, 2), round(fw, 2), nail, round(press, 1), bound, view)
     G = _H2C.get(key)
     if G is not None: return G
     th = -side
-    palm_view = shape in ('flat', 'palm')
+    palm_view = shape in ('flat', 'palm') or view == 'palm'
     if palm_view: th = -th
     spread, curls, tmode = _H2_SHAPES.get(shape, _H2_SHAPES['relaxed'])
     sq = 1.0 + 0.05 * press
@@ -6127,7 +6493,9 @@ def _hand2_geom(shape, side, fk=1.0, fw=1.0, nail='short', press=0.0):
         cu = curls[k]
         L_ = tuple(l_ * fk for l_ in lens)
         w = w * fw * sq
-        pts = _h2_chain(th * kx * sq, ky, th * spl * spread, L_, cu, -th * spl * 0.1)
+        spr = min(spread, 0.3) if (bound and k >= 1) else spread
+        kx_ = kx * (0.93 if (bound and k >= 2) else 1.0)
+        pts = _h2_chain(th * kx_ * sq, ky, th * (spl - (0.04 if (bound and k == 1) else 0.0)) * spr, L_, cu, -th * spl * 0.1)
         ws = [w, w * 0.93, w * 0.85, w * 0.74]
         if cu > 0.8:                                   # folded into the palm: the knuckle and the proximal phalanx only
             pts = pts[:2]; ws = [w * 1.02, w * 0.98]
@@ -6211,21 +6579,26 @@ def _hand2_geom(shape, side, fk=1.0, fw=1.0, nail='short', press=0.0):
     return G
 
 
-def _hand2(c, x, y, scale, angle, side, shape, det, look, press=0.0, t=0.0):
+def _hand2(c, x, y, scale, angle, side, shape, det, look, press=0.0, t=0.0, view=None):
     """Draw one v2 hand on Ctx c at wrist (x, y), rotated angle deg (0 = fingers down), scale ~ size / 66.
     look: skin, sh (shade), dp (creases), line (outline colour), lw_k, fk / fw (finger length / width), nail
     ('short' | 'almond'), nail_c, nail_hi, red_tips (finger indices smudged with lipstick: 0 index .. 3 little),
     knuckles (bool). Returns the Ctx of the hand (hand coords)."""
     if shape == 'mitt': shape = 'relaxed'
+    view = view or look.get('view', 'back')
     if shape == 'grip' or shape == 'fist':
-        return _hand2_fist(c, x, y, scale, angle, side, shape, det, look, press, t)
-    hc = c.sub(x, y, angle, scale)
-    G = _hand2_geom(shape, side, look.get('fk', 1.0), look.get('fw', 1.0), look.get('nail', 'short'), press)
+        return _hand2_fist(c, x, y, scale * (0.8 if view == '3q' else 1.0), angle, side, shape, det, look, press, t)
+    # views: 'back' (the back of the hand), 'palm', '3q' (three-quarter: the hand turned on its side, narrower)
+    hc = c.sub(x, y, angle, scale * (0.66 if view == '3q' else 1.0), scale) if view == '3q' else c.sub(x, y, angle, scale)
+    G = _hand2_geom(shape, side, look.get('fk', 1.0), look.get('fw', 1.0), look.get('nail', 'short'), press, look.get('bound', False),
+                    'palm' if view == 'palm' else 'back')
     skin, sh, dp = look['skin'], look['sh'], look['dp']
     ln = look.get('line', LINE); lw = hc.lw * look.get('lw_k', 1.0)
     U = G['union']
     hc.fill(U, skin)
     hc.fill(G['shade'], sh, 140)
+    if view == '3q':                                   # the turned hand: the near edge (thumb side) in light, the far side shaded
+        hc.fill(_crescent(U, G['th'] * 7.0, 0.0), sh, 170)
     if det >= 1:                                       # soft shade where the fingers meet the hand, a lit knuckle line
         hc.radial(U, -G['th'] * 6.0, 30.0, 26.0, [(0, sh, 0), (0.55, sh, 0), (1, sh, 70)], sy=0.7)
         if G['seps'] is not None: hc.line(G['seps'], lw * 0.42, ln, 150)
@@ -6298,13 +6671,15 @@ def _hand2_fist(c, x, y, scale, angle, side, shape, det, look, press=0.0, t=0.0)
                 hc.line(smooth([(xk - w * 0.34, 27.5), (xk, 25.5), (xk + w * 0.34, 27.5)], False), lw * 0.28, dp, 170)     # knuckle
             for r, xk, w, k in mids:                     # nails peeking under the folded fingers
                 hc.fill(rrect(xk - w * 0.3, 41.0 - 3 * sqz - abs(k - 1.5) * 0.6, w * 0.6, 3.6, 1.6), look.get('nail_c') or mix(skin, '#ffffff', 0.4), 230)
-        if look.get('wrapper'):                          # the red twist between the ring and little fingers
-            wx_, wy_ = -th * 8.0, 40.0
-            tw = poly([(wx_ - th * 1.0, wy_ - 2.0), (wx_ - th * 7.5, wy_ + 7.0), (wx_ - th * 3.0, wy_ + 9.5), (wx_ - th * 9.0, wy_ + 13.0),
-                       (wx_ + th * 1.8, wy_ + 4.0)])
-            hc.fill(tw, '#d42a3c'); hc.fill(_crescent(tw, th * 1.2, 0.8), '#8a1222', 170)
-            hc.line(tw, lw * 0.45, ln)
-            hc.line(poly([(wx_ - th * 2.5, wy_ + 4.0), (wx_ - th * 6.5, wy_ + 9.5)], False), lw * 0.25, '#ffb0b8', 200)
+        if look.get('wrapper'):                          # the red cinnamon-candy wrapper: twists out of both ends of the fist
+            for (wx_, wy_, dx_, dy_) in ((-th * 13.0, 41.0, -th * 1.0, 0.75), (th * 14.0, 4.0, th * 1.0, -0.55)):
+                ex_, ey_ = wx_ + dx_ * 9.0, wy_ + dy_ * 9.0
+                nx_, ny_ = -dy_, dx_
+                tw = poly([(wx_ - nx_ * 2.0, wy_ - ny_ * 2.0), (ex_ - nx_ * 6.5, ey_ - ny_ * 6.5), (ex_ + dx_ * 2.0, ey_ + dy_ * 2.0),
+                           (ex_ + nx_ * 6.5, ey_ + ny_ * 6.5), (wx_ + nx_ * 2.0, wy_ + ny_ * 2.0)])
+                hc.fill(tw, '#d42a3c'); hc.fill(_crescent(tw, th * 1.0, 0.8), '#8a1222', 170)
+                hc.line(tw, lw * 0.45, ln)
+                hc.line(poly([(lerp(wx_, ex_, 0.4) - nx_ * 1.5, lerp(wy_, ey_, 0.4) - ny_ * 1.5), (ex_ - nx_ * 4.0, ey_ - ny_ * 4.0)], False), lw * 0.25, '#ffb0b8', 210)
         hc.fill(thumb, skin); hc.fill(_crescent(thumb, 0, -2.5), sh, 120)
         hc.line(thumb, lw * 0.6, ln, 230)
         if det >= 1:
@@ -6342,7 +6717,8 @@ def _hand2_look(sp, skin, sh):
     """Hand look for a cast entry (people): finger proportions by age, natural nails."""
     kid = sp.get('kid')
     return dict(skin=skin, sh=sh, dp=sp.get('skin_dp', '#6b4c46'), line=LINE, lw_k=1.0, fk=sp['body'].get('fingers', 1.0) * (0.94 if kid else 1.0),
-                fw=0.94 if kid else (1.08 if sp['body'].get('hand', 1.0) > 1.1 else 1.0), nail='short', nail_c=mix(skin, '#ffffff', 0.45))
+                fw=0.94 if kid else (1.08 if sp['body'].get('hand', 1.0) > 1.1 else 1.0), nail='short', nail_c=mix(skin, '#ffffff', 0.45),
+                bound=bool(sp.get('tape')))
 
 
 # ====================================================================================================== Queen of Spades v2
@@ -6422,8 +6798,11 @@ def _ql(light):
     L = _light_dict(light) or {}
     red = bool(L.get('tint') == '#ff6a78' or L.get('under') == '#3a1018')
     side = float(L.get('side', -1.0)) or -1.0
-    return dict(rim='#ff2d55' if red else QV['rim'], rim_a=220.0 if red else 150.0, side=side, red=red,
-                flash=L.get('flash'), dawn=float(L.get('sat', 1.0)) < 0.99, glow=1.0)
+    own = bool(L.get('key_from'))                       # the plan's queen light: its rim is hers
+    return dict(rim=L.get('qrim') or (L.get('rim') if own else None) or ('#ff2d55' if red else QV['rim']),
+                rim_a=220.0 if red else float(L.get('qrim_a', L.get('rim_a', 150.0) if own else 150.0)), side=side,
+                red=red, flash=L.get('flash'), dawn=float(L.get('sat', 1.0)) < 0.99, glow=1.0, rim2=L.get('qrim2'),
+                split=L.get('qsplit'))
 
 
 # ---------------------------------------------------------------------------------------------- the head
@@ -6602,7 +6981,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
     if sp_open > 0.01 and voidk < 0.99:
         top = [(-60.0, 33.2), (-60.0, 42.8), (-48.6, 42.8), (-48.6, 52.4), (-37.3, 52.4), (-37.3, 62.0), (-26.0, 62.0), (-13.0, 61.2),
                (0.0, 60.8), (13.0, 61.2), (26.0, 62.0), (37.3, 62.0), (37.3, 52.4), (48.6, 52.4), (48.6, 42.8), (60.0, 42.8), (60.0, 33.2)]
-        drop = 92.0 + 16.0 * clamp(P.m_open)
+        drop = 92.0 + 16.0 * clamp(P.m_open) + 10.0 * clamp(getattr(P, 'q_widen', 0.0))
 
         def ytop(x):
             ax = abs(x)
@@ -6676,6 +7055,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
               (0.0, vb), (-vw * 0.5, vb - 2.0), (-vw * 0.92, vt + (vb - vt) * 0.7), (-vw * 0.98, vt + (vb - vt) * 0.32), (-vw * 0.62, vt + 0.5)]
         VQ, _ = _qm(hm, vp, 3.0)
         vpath = smooth(VQ, True, 0.85)
+        _Q_GRIN[0] = vpath
         lipr = [(x * 1.12 + (0.0 if x == 0 else 1.5 * (1 if x > 0 else -1)), vt + (y - vt) * 1.04 + (y > (vt + vb) / 2) * 2.5) for x, y in vp]
         RQ, _ = _qm(hm, lipr, 3.0)
         c.fill(smooth(RQ, True, 0.85), QV['lip'])
@@ -7015,7 +7395,11 @@ def _q_head(c, P, yaw, pitch, det, t, light=None, crown=True):
         X, Y, v = hm.map1(0.0, -58.0, 4.0)
         if v > 0: c.glow(X, Y, 22.0, 12.0, QV['skin_hi'], 120)
     c.fill(_crescent(sil, -QL['side'] * 6.0, 2.0), QV['skin_sh'], 120)
+    if QL.get('split'):                                     # half in one world's light, half in the other's (H1, the doorway)
+        g0, g1 = QL['split']
+        c.grad(sil, -100.0 * QL['side'], 0, 100.0 * QL['side'], 0, [(0, g1, 70), (0.42, g1, 0), (0.58, g0, 0), (1, g0, 80)])
     c.fill(_crescent(sil, QL['side'] * 4.5, 1.0), QL['rim'], QL['rim_a'] * 0.85)
+    if QL.get('rim2'): c.fill(_crescent(sil, -QL['side'] * 4.0, 1.0), QL['rim2'], QL['rim_a'] * 0.6)
     if face_v > -0.35:
         with (c.clip(hm.silhouette(grow=1.5)) if abs(hm.st) > 0.2 else _noop()):
             eyes = {}
@@ -7138,12 +7522,42 @@ def _q_skirt(c, B, P, det, t, lw, QL):
     return E
 
 
+def _q_foot_lifted(c, B, P, det, lw, QL):
+    """Body mode: her right foot lifted out of the hem (lift_foot, step_up), the hem raised over the ankle."""
+    up = max(0.0, P.fr_up)
+    if up < 0.02: return
+    L = up * 430.0
+    d = 1.0 if B.st >= -0.05 else -1.0
+    X, Y, Z = _q_proj_floor(B, -26.0, -L, 150.0 + 60.0 * up)
+    fk = max(0.45, abs(B.st) * 1.2 + 0.25)
+    fc = c.sub(X, Y, math.degrees(P.fr_point) * d * 0.6, 220.0)
+    fc.M.preScale(fk, 1.0); fc = Ctx(c.pen, fc.M, fc.lw, None)
+    shin = _tube([(0.0, -0.9), (0.0, -0.36)], [0.11, 0.1])
+    fc.fill(shin, QV['foot']); fc.fill(_crescent(shin, 0.02 * d, 0), QV['foot_sh'], 150); fc.line(shin, fc.lw * 0.9, QV['line'])
+    outline, toes, lines = _q_foot_paths(d, clamp(P.toes))
+    fc.fill(outline, QV['foot']); fc.fill(_crescent(outline, -0.025 * d, -0.02), QV['foot_sh'], 130)
+    fc.fill(_crescent(outline, 0.02 * d, 0.0), QL['rim'], QL['rim_a'] * 0.5)
+    for q, nl in toes:
+        fc.fill(q, QV['foot']); fc.line(q, fc.lw * 0.4, QV['line']); fc.fill(nl, QV['nail'], 245)
+    fc.line(outline, fc.lw * 0.9, QV['line'])
+    # the hem lifted over the shin: a satin drape with the red border
+    kx, ky = X, Y - 0.74 * 220.0
+    hx0, hy0 = kx - 86.0, ky + 46.0; hx1, hy1 = kx + 48.0 * d, ky + 14.0
+    if d < 0: hx0, hx1 = kx + 86.0, kx - 48.0
+    flap = smooth([(hx0, hy0 - 190.0), (kx, ky - 120.0), (hx1, hy1 - 40.0), (hx1, hy1), (kx, ky + 26.0), (hx0, hy0)], True, 0.7)
+    c.fill(flap, QV['satin']); c.grad(flap, hx0, 0, hx1, 0, [(0, QV['satin_sh'], 220), (0.45, QV['satin_sheen'], 200), (1, QV['satin'], 0)])
+    hem = smooth([(hx0 - 4.0, hy0), (kx + 10.0, ky + 42.0), (hx1 + 6.0, hy1)], False)
+    c.line(hem, lw * 0.5, QV['hem_red'])
+    c.line(flap, lw, QV['line'])
+
+
 def _q_feet_peek(c, B, P, det, lw, E):
     """Bare ash-white toes under the front of the hem (standing or seated), long, with black nails."""
     if B.ct < -0.3: return
     u = clamp(P.sit)
     hw = lerp(146.0, 104.0, u); hz = lerp(0.0, 300.0, u)
     for s_ in (-1, 1):
+        if s_ < 0 and P.fr_up > 0.02: continue
         x0 = s_ * 26.0
         zf = hz + math.sqrt(max(0.0, 1.0 - (x0 / hw) ** 2)) * hw * 0.92
         X, Y, Z = _q_proj_floor(B, x0, -2.0, zf)
@@ -7162,6 +7576,25 @@ def _q_feet_peek(c, B, P, det, lw, E):
                 r_ = 2.1 if k == (0 if s_ < 0 else 4) else 1.5
                 nl.addOval(skia.Rect.MakeLTRB(xx - r_, yy - r_ * 0.75, xx + r_, yy + r_ * 0.75))
             c.fill(nl, QV['nail'], 240)
+
+
+_LACE = []
+
+
+def _lace_tile():
+    """A 12 px lace-net tile (diagonal mesh with a dot at each crossing), drawn as a repeating shader in design px."""
+    if not _LACE:
+        n = 12
+        arr = np.zeros((n, n, 4), np.uint8)
+        sf = surface_for_tile = skia.Surface.MakeRasterDirect(skia.ImageInfo.Make(n, n, skia.kBGRA_8888_ColorType, skia.kPremul_AlphaType), arr)
+        cv = sf.getCanvas()
+        p = skia.Paint(AntiAlias=True, Color=col('#4e4866', 255), Style=skia.Paint.kStroke_Style, StrokeWidth=0.9)
+        for o in (-n, 0, n):
+            cv.drawLine(o, 0, o + n, n, p); cv.drawLine(o + n, 0, o, n, p)
+        cv.drawCircle(n / 2, n / 2, 1.1, skia.Paint(AntiAlias=True, Color=col('#5e5878', 255)))
+        del cv, sf
+        _LACE.append((skia.Image.fromarray(np.ascontiguousarray(arr), skia.kBGRA_8888_ColorType, skia.kPremul_AlphaType), arr))
+    return _LACE[0][0]
 
 
 def _q_collar(c, B, P, det, lw, which='all'):
@@ -7193,20 +7626,14 @@ def _q_collar(c, B, P, det, lw, which='all'):
         bb = fan.getBounds()
         cx0, cy0 = ribs[4][0][0], ribs[4][0][1]
         c.radial(fan, cx0, cy0, r1 * 1.1, [(0, QV['lace'], 0), (0.7, '#1d1a2a', 120), (0.95, '#2a2640', 200), (1, '#2a2640', 200)])
-        if det >= 1:                                       # the lace: concentric scallop rows and a fine net
+        if det >= 1:                                       # the lace: concentric scallop rows and a fine net (cached tile)
             rows = []
             for rr in (0.55, 0.72, 0.87):
                 q_ = [fp(r1 * rr, a) for a in np.linspace(angs[0], angs[-1], 33)]
                 rows.append(smooth([(x, y) for x, y, *_ in q_], False))
             c.line(_multi(rows), max(0.7, lw * 0.22), '#4a4562', 150)
-            net = []
-            step = max(4.0, 6.0 / max(c.s, 0.2))
-            x = bb.left() - bb.height()
-            while x < bb.right():
-                net.append(poly([(x, bb.bottom()), (x + bb.height() * 0.6, bb.top())], False))
-                net.append(poly([(x + bb.height() * 0.6, bb.bottom()), (x, bb.top())], False))
-                x += step
-            c.line(_multi(net), max(0.5, 0.7 / max(c.s, 0.2)), '#3e3a52', 70)
+            c.cv.drawPath(c.P(fan), skia.Paint(AntiAlias=True, Shader=_lace_tile().makeShader(skia.TileMode.kRepeat, skia.TileMode.kRepeat, _LINS),
+                                                Alphaf=0.55))
         c.line(_multi([poly([(b_[0], b_[1]), (t_[0], t_[1])], False) for b_, t_ in ribs]), lw * 0.5, QV['lace_rib'], 240)
     edge = smooth(top, False, 0.55)
     c.line(edge, lw * 1.2, QV['line'])
@@ -7304,10 +7731,11 @@ def _q_bodice(c, B, P, det, t, lw, QL, back):
 def _q_neck(c, B, P, det, lw, QL, back):
     sp = CAST['queen']
     nb = B.p3(0, B.y_sh - 4.0, 0); nt = B.p3(0, B.yc - 16.0 + P.h_dy, 0)
-    nw = 17.5
+    nw = 14.5
     neck = _tube([(nb[0], nb[1]), (nt[0] + P.h_dx * 0.5, nt[1])], [nw * 2 * nb[2], nw * 1.9 * nt[2]])
     c.fill(neck, QV['skin'])
-    c.grad(neck, 0, nt[1], 0, nb[1], [(0, QV['skin_sh'], 255), (0.45, QV['skin_sh'], 120), (1, QV['skin'], 0)])
+    c.grad(neck, nb[0] - nw, 0, nb[0] + nw, 0, [(0, QV['skin_sh'], 230), (0.3, QV['skin'], 0), (0.7, QV['skin'], 0), (1, QV['skin_sh'], 230)])
+    c.grad(neck, 0, nt[1], 0, nb[1], [(0, '#a89cb4', 255), (0.35, QV['skin_sh'], 150), (0.7, QV['skin'], 0)])
     c.fill(_crescent(neck, QL['side'] * 2.5, 0), QL['rim'], QL['rim_a'] * 0.6)
     c.line(neck, lw * 0.9, QV['line'])
     # the high band and the spade brooch at the throat
@@ -7420,6 +7848,7 @@ def _q_figure(c, P, det, t, light=None, upper_only=False):
     if not upper_only:
         E = _q_skirt(c, B, P, det, t, lw, QL)
         _q_feet_peek(c, B, P, det, lw, E)
+        _q_foot_lifted(c, B, P, det, lw, QL)
     _q_bodice(c, B, P, det, t, lw, QL, back_view)
     _q_neck(c, B, P, det, lw, QL, back_view)
     if back_view: _q_collar(c, B, P, det, lw)
@@ -7467,9 +7896,42 @@ def queen_bust(pen, cx, cy, scale, P, detail=None, light=None, t=None):
     yh = -1000 + sp['hh'] / 2
     ty = cy + 60.0 * scale * clamp(P.approach)
     det = _auto_detail(pen, head_px) if detail is None else detail
+    cx = cx + P.dx; ty = ty + P.dy
+    nf = clamp(getattr(P, 'q_nface', 0.0))
+    if nf > 0.001:                                         # the phone: Noah13's face, pixel-sorting into hers
+        return _q_nface_bust(pen, cx, ty, scale, P, det, light, t, nf)
     c = Ctx(pen, skia.Matrix(), _lw_for(head_px), None).sub(cx, ty - yh * s, 0.0, s)
     with _q_tint(pen, light, (cx - head_px * 2.2, ty - head_px * 1.0, cx + head_px * 2.2, ty + head_px * 3.4)):
         return _q_figure(c, P, det, t, light, upper_only=True)
+
+
+def _q_nface_bust(pen, cx, ty, scale, P, det, light, t, nf):
+    """Noah13's face (talking, his voice) occupying her bust; while nf falls 1 -> 0 horizontal bands switch to her S3c
+    face, the switching bands smeared sideways (pixel sort)."""
+    sp = CAST['queen']; s = 600.0 * scale / sp['hh']; yh = -1000 + sp['hh'] / 2
+    fr = int(math.floor(t * 60.0 + 1e-6))
+    nb = 18; H_ = 600.0 * scale * 2.6; top = ty - 600.0 * scale * 1.1
+    P2 = Pose('calm_kid'); P2.t = t
+    for k in ('m_open', 'm_round', 'm_wide', 'teeth'): setattr(P2, k, getattr(P, k))
+    P2.teeth = max(P2.teeth, 0.6); P2.lock = 1.0; P2.wide = 0.15
+    cv = pen.cv
+    info = None
+    for b in range(nb):
+        y0 = top + H_ * b / nb; y1 = y0 + H_ / nb + 0.5
+        her = hash01(b * 13 + 7, 921) > nf
+        off = (hash01(b + fr // 2, 923) - 0.5) * 120.0 * scale * math.sin(PI * nf) if abs(nf - 0.5) < 0.49 else 0.0
+        cv.save(); cv.clipRect(skia.Rect.MakeLTRB(-1e5, y0, 1e5, y1)); cv.translate(off, 0)
+        try:
+            if her:
+                c = Ctx(pen, skia.Matrix(), _lw_for(600.0 * scale), None).sub(cx, ty - yh * s, 0.0, s)
+                B = _q_figure(c, P, det, t, light, upper_only=True); info = info or B
+            else:
+                draw_bust(pen, 'noah13', cx, ty + 30.0 * scale, scale * 1.15, P2, detail=det, light=dict(rim='#ff4060', rim_a=90, side=1, key=-0.1), t=t)
+        finally:
+            cv.restore()
+    if info is None:
+        info = Body(sp, P); info.info = dict(head=(cx, ty), head_px=600.0 * scale, roll=0.0, hands={})
+    return info
 
 
 @contextmanager
@@ -7627,7 +8089,7 @@ def queen_feet(pen, x, y, size, P, detail=2, light=None, t=None):
 # ====================================================================================================== Mirror Steps: shot specs -> rigs
 PLAN_SHOTS = os.environ.get('MS_SHOTS', os.path.join(_HERE, 'plan', 'shots.json'))
 _PLAN = {}
-WHO_ALIAS = {'kids': 'kid_a', 'extras': 'searcher'}
+WHO_ALIAS = {'kids': 'kid_a', 'extras': 'searcher', 'mom': 'mum'}
 CLIP_ORIGIN = {'loop_reset': 'S137'}           # clip_id -> origin shot id when it is not the first shot carrying the id
 _SIG = {                                       # how each plan act maps onto a clip: (method, positional arg names)
     'expr': ('expr', ('name',)), 'hold_up': ('hold_up', ('prop',)), 'talk': ('talk_line', ()), 'look': ('look_at', ()),
@@ -7649,14 +8111,25 @@ def plan_shots():
     return _PLAN['by_id']
 
 
+def _spec_clip_id(c):
+    """A char spec's clip_id: the spec field, or (v2 plans) the clip_id argument of one of its acts."""
+    if c.get('clip_id'): return c['clip_id']
+    for a in c.get('acts') or []:
+        if len(a) > 2 and isinstance(a[2], dict) and a[2].get('clip_id'): return a[2]['clip_id']
+    return None
+
+
 def _clip_origin(clip_id, who):
-    """(shot, spec) whose acting a clip_id replays: CLIP_ORIGIN[clip_id] or the first shot carrying the id."""
+    """(shot, spec) whose acting a clip_id replays: CLIP_ORIGIN[clip_id] (when that shot has the character) or the
+    first shot carrying the id."""
     by = plan_shots()
     sid = CLIP_ORIGIN.get(clip_id)
-    cands = [by[sid]] if sid in by else [s for s in _PLAN.get('list', []) if any(c.get('clip_id') == clip_id for c in s.get('chars') or [])]
+    cands = []
+    if sid in by and any(c.get('who') == who for c in by[sid].get('chars') or []): cands = [by[sid]]
+    if not cands: cands = [s for s in _PLAN.get('list', []) if any(_spec_clip_id(c) == clip_id for c in s.get('chars') or [])]
     for s in cands:
         for c in s.get('chars') or []:
-            if c.get('who') == who: return s, c
+            if c.get('who') == who and (s is not cands[0] or _spec_clip_id(c) in (None, clip_id)): return s, c
     return None, None
 
 
@@ -7686,7 +8159,7 @@ class CharRig:
         self.mode = spec.get('mode', 'body')
         self.t_shift = 0.0
         src_shot, src_spec = self.shot, spec
-        cid = spec.get('clip_id')
+        cid = _spec_clip_id(spec)
         if cid:
             o_shot, o_spec = _clip_origin(cid, spec['who'])
             if o_shot is not None and o_shot.get('id') != self.shot.get('id'):
@@ -7708,7 +8181,13 @@ class CharRig:
         if isinstance(at, str): raise ValueError('resolve anchor %r first (sets.py anchors)' % at)
         if light == 'auto': light = self.spec.get('light') or default_light(self.shot, self.who, t)
         P = self.pose(t)
-        return draw_mode(pen, self.who, self.mode, at, P, light=light, detail=detail, view=self.spec.get('view'), main=main or self._main(t))
+        view = 'pov' if (self.mode == 'feet' and (self.spec.get('pov') or self.spec.get('view') == 'pov')) else self.spec.get('view')
+        if self.mode in ('body', 'legs', 'silhouette') and len(at) > 2 and float(at[2]) < 10.0:
+            k_ = (self.shot.get('id'), self.who, 'at')
+            if k_ not in _ACT_WARN:
+                _ACT_WARN.add(k_); sys.stderr.write('characters: %s %s mode %s has at[2]=%s (a height in design px is expected)\n'
+                                                   % (k_[0], self.who, self.mode, at[2]))
+        return draw_mode(pen, self.who, self.mode, at, P, light=light, detail=detail, view=view, main=main or self._main(t))
 
     def _main(self, t):
         if self.who == 'you' and self.mode == 'hands' and 323.6 <= t <= 651.0:
@@ -7723,7 +8202,15 @@ def json_dumps(x):
 
 
 def draw_mode(pen, who, mode, at, P, light=None, detail=None, view=None, main='r'):
-    """Draw a character in a plan mode (body | bust | hands | feet | legs | silhouette | lying) at the plan's `at`."""
+    """Draw a character in a plan mode (body | bust | hands | feet | legs | silhouette | lying) at the plan's `at`.
+    pose.alpha < 1 fades the whole character (fade_out)."""
+    a_ = clamp(getattr(P, 'alpha', 1.0))
+    if a_ < 0.999:
+        if a_ <= 0.004: return {}
+        pen.cv.saveLayer(None, skia.Paint(Alphaf=float(a_)))
+        P.alpha = 1.0
+        try: return draw_mode(pen, who, mode, at, P, light, detail, view, main)
+        finally: P.alpha = a_; pen.cv.restore()
     at = list(at)
     if mode == 'body':
         B = draw(pen, who, at[0], at[1], at[2], P, detail, light, P.t)
@@ -7734,6 +8221,7 @@ def draw_mode(pen, who, mode, at, P, light=None, detail=None, view=None, main='r
     if mode == 'hands':
         return draw_hands(pen, who, at[0], at[1], at[2] * P.ins_k, P, 2 if detail is None else detail, light, P.t, main=main)
     if mode == 'feet':
+        if view == 'pov': return draw_feet_pov(pen, who, at[0], at[1], at[2], P, 2 if detail is None else detail, light, P.t)
         return draw_feet(pen, who, at[0], at[1], at[2], P, 2 if detail is None else detail, light, P.t)
     if mode == 'legs':
         B = draw_legs(pen, who, at[0], at[1], at[2], P, detail, light, P.t)
@@ -7745,6 +8233,9 @@ def draw_mode(pen, who, mode, at, P, light=None, detail=None, view=None, main='r
         B = draw_lying(pen, who, at[0], at[1], at[2], P, detail, light, P.t, hang_arm=(who == 'noah13'))
         return dict(B.info, B=B)
     raise ValueError(mode)
+
+
+_ACT_WARN = set()
 
 
 def build_acting(spec, shot=None, seed=0, who=None):
@@ -7771,7 +8262,8 @@ def build_acting(spec, shot=None, seed=0, who=None):
         q = spec.get('queen') if isinstance(spec.get('queen'), dict) else {}
         st = q.get('stage', spec.get('stage', 'S1')); face = spec.get('face')
         d = queen_stage(st)
-        if face in ('hidden',): d['q_hide'] = 1.0
+        if face in ('hidden',) or spec.get('face_hidden'): d['q_hide'] = 1.0
+        if spec.get('seated'): d['sit'] = 1.0
         if spec.get('mode') == 'feet' and any(x_[1] == 'toes_curl' for x_ in spec.get('acts') or []) and str(st) not in ('S3c', 'S4', '3'):
             d['ft_hem'] = 0.0; d['ft_l'] = 0.0
         a.set(-INF, None, 0.01, **d)
@@ -7793,7 +8285,13 @@ def build_acting(spec, shot=None, seed=0, who=None):
     # ---- the acts
     for act in spec.get('acts') or []:
         t = float(act[0]); name = act[1]; args = dict(act[2]) if len(act) > 2 and act[2] else {}
-        r = _apply_act(a, who, spec, shot, t, name, args, t1s)
+        try:
+            r = _apply_act(a, who, spec, shot, t, name, args, t1s)
+        except Exception as e:                                # a bad act never kills the rig (the plan is edited in parallel)
+            r = None
+            k_ = (shot.get('id'), who, name)
+            if k_ not in _ACT_WARN:
+                _ACT_WARN.add(k_); sys.stderr.write('characters: act %s %s %s skipped: %r\n' % (k_ + (e,)))
         if isinstance(r, list): evs.extend(r)
     return a, evs
 
@@ -7828,7 +8326,9 @@ def _apply_act(a, who, spec, shot, t, name, args, t_end):
     if name == 'point':
         return a.point(t, t + args.get('dur', 1.2), args.get('side', -1))
     if name == 'turn':
-        to = args.get('to', 0.0); to = VIEWS.get(to, to) if isinstance(to, str) else to
+        to = args.get('to', 0.0)
+        if isinstance(to, str):                                 # a view name, or a named target (the door is behind her)
+            to = VIEWS.get(to, {'door': 2.0, 'away': 2.0, 'lens': 0.0, 'camera': 0.0, 'you': 0.0, 'left': -1.0, 'right': 1.0}.get(to, 0.5))
         return a.turn(t, float(to), args.get('dur', 0.6))
     if name == 'snap_turn':
         frm = args.get('frm', 1.0); to = args.get('to', 0.0)
@@ -7873,7 +8373,10 @@ def _apply_act(a, who, spec, shot, t, name, args, t_end):
 
 
 # ====================================================================================================== HUD phone hand
-def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve='#34443f'):
+POV_SLEEVE = ('#4a5038', '#33382a')              # your olive canvas sleeve and its stitched cuff band (every POV hand)
+
+
+def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve=None):
     """Drop-in for engine.hud._hand(pen, w, h, skin, a, front): a hand holding the phone in phone coords (the phone spans
     -w/2..w/2, -h/2..h/2). front=False draws the palm, wrist and hoodie cuff behind the phone; front=True the four
     fingertips wrapping the right edge and the thumb over the left edge. Install: hud._hand = characters.hud_phone_hand."""
@@ -7887,8 +8390,11 @@ def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve='#34443
         body = union(palm, wrist)
         c.fill(body, skin, a); c.fill(_crescent(body, -w * 0.07, -h * 0.02), sh, 150 * k); c.line(body, lw, LINE, a)
         c.line(smooth([(-w * 0.42, h * 0.46), (-w * 0.2, h * 0.6), (w * 0.05, h * 0.62)], False), lw * 0.45, dp, 160 * k)
+        sleeve = sleeve or POV_SLEEVE[0]
         cuff = rrect(-w * 0.5, h * 0.92, w * 1.02, h * 0.5, 36)
-        c.fill(cuff, sleeve, a); c.fill(_crescent(cuff, -w * 0.08, 0), mix(sleeve, '#000000', 0.35), 160 * k); c.line(cuff, lw, LINE, a)
+        c.fill(cuff, sleeve, a); c.fill(_crescent(cuff, -w * 0.08, 0), mix(sleeve, '#000000', 0.35), 160 * k)
+        if sleeve == POV_SLEEVE[0]: c.fill(rrect(-w * 0.5, h * 0.92, w * 1.02, h * 0.12, 18), POV_SLEEVE[1], a)
+        c.line(cuff, lw, LINE, a)
         c.line(_multi([poly([(-w * 0.4 + i * w * 0.1, h * 0.95), (-w * 0.4 + i * w * 0.1, h * 1.05)], False) for i in range(9)]),
                lw * 0.4, LINE, 150 * k)
         return
@@ -7946,7 +8452,7 @@ def _selftest():
     # lip sync follows the voice envelope (when the narration is available)
     env = voice_envelope()
     rs = []
-    for li, who in ((125, 'noah13'), (97, 'queen'), (196, 'queen')):           # this film's narration (timeline.json)
+    for li, who in ((125, 'noah13'), (97, 'queen'), (196, 'queen'), (110, 'queen')):   # this film's narration (timeline.json)
         L = timeline_line(li)
         if env is None or not L: continue
         a = Acting(who, seed=1); a.talk_line(L['t'], li)
@@ -7955,12 +8461,23 @@ def _selftest():
         rs.append(float(np.corrcoef(mo, ev)[0, 1]))
     if rs:
         assert min(rs) > 0.45, ('lip sync', rs)
-        out.append('lip sync r = %s (lines 125, 97, 196)' % ', '.join('%.2f' % r for r in rs))
+        out.append('lip sync r = %s (lines 125, 97, 196, 110)' % ', '.join('%.2f' % r for r in rs))
     # Mirror Steps cast
     a = Acting('queen', seed=2); a.still(0.0)
     br = [a.at(t).breath for t in np.arange(0.0, 6.0, 0.05)]; bl = [a.at(t).blink for t in np.arange(0.0, 6.0, 0.05)]
     assert max(br) - min(br) < 1e-6 and max(bl) == 0.0, ('queen still', max(br) - min(br), max(bl))
     out.append('queen: no breathing, no blinks over 6 s')
+    # Queen v2: the stage ladder is cumulative; the head snap is done in 0.18 s while the hair lags 0.4 s
+    order = ['S1', 'S2', 'S3a', 'S3b', 'S3c']
+    for a_, b_ in zip(order[:-1], order[1:]):
+        A, B_ = queen_stage(a_), queen_stage(b_)
+        assert all(B_[k] >= A[k] for k in A if k != 'q_hide'), ('stage ladder', a_, b_)
+    assert queen_stage(3) == queen_stage('S3c') and queen_stage('S4')['q_void'] == 1.0
+    a = Acting('queen', seed=2); a.head_snap(10.0, 130, 0.18)
+    P1 = a.at(10.2); P2 = a.at(10.3)
+    assert abs(P1.h_turn - 130 / 90.0) < 0.15 and abs(P1.q_hair) < 0.05 and abs(P2.q_hair) < 0.05, ('head snap', P1.h_turn, P1.q_hair)
+    assert abs(a.at(10.75).q_hair - 130 / 90.0) < 0.15, ('hair settles', a.at(10.75).q_hair)
+    out.append('queen v2: stage ladder S1 < S2 < S3a < S3b < S3c, head snap 130 deg in 0.18 s, the hair 0.4 s behind')
     sp0 = _resolve_sp('noah_grown', Pose(age_body=0.0, age_face=0.0))
     assert max(abs(x - y) for x, y in zip(sp0['head_ws'], CAST['noah13']['head_ws'])) < 1e-6 and sp0['cloth']['fit'] == 0.0
     out.append('age morph: age 0 = noah13 head and fit')
@@ -7971,12 +8488,18 @@ def _selftest():
             for cs in sh.get('chars') or []:
                 r_ = CharRig(cs, sh); r_.pose(sh['t0'] + 0.05); n += 1; nev += len(r_.events)
         out.append('plan: %d character rigs built, %d acting SFX events' % (n, nev))
-        ca = [c_ for c_ in by['S142']['chars'] if c_['who'] == 'noah13'][0]; cb = [c_ for c_ in by['S186']['chars'] if c_['who'] == 'noah13'][0]
-        ra, rb = CharRig(ca, by['S142']), CharRig(cb, by['S186'])
-        dmax = max(abs(getattr(ra.pose(by['S142']['t0'] + k * 0.13), f) - getattr(rb.pose(by['S186']['t0'] + k * 0.13), f))
-                   for k in range(18) for f in ('m_open', 'h_tilt', 'lace', 'ir_x', 'breath', 'blink', 'h_turn', 'look_x'))
-        assert dmax < 1e-9, ('clip_id replay', dmax)
-        out.append('clip_id breakfast_A: S186 replays S142 frame for frame (max diff %.1e)' % dmax)
+        pairs = {}
+        for sh in _PLAN['list']:
+            for cs in sh.get('chars') or []:
+                if _spec_clip_id(cs) and cs['who'] == 'noah13': pairs.setdefault(_spec_clip_id(cs), []).append((sh, cs))
+        for cid, lst in pairs.items():
+            if len(lst) < 2 or cid in CLIP_ORIGIN: continue
+            (sa, ca), (sb, cb) = lst[0], lst[1]
+            ra, rb = CharRig(ca, sa), CharRig(cb, sb)
+            dmax = max(abs(getattr(ra.pose(sa['t0'] + k * 0.13), f) - getattr(rb.pose(sb['t0'] + k * 0.13), f))
+                       for k in range(18) for f in ('m_open', 'h_tilt', 'lace', 'ir_x', 'breath', 'blink', 'h_turn', 'look_x'))
+            assert dmax < 1e-9, ('clip_id replay', cid, dmax)
+            out.append('clip_id %s: %s replays %s frame for frame (max diff %.1e)' % (cid, sb['id'], sa['id'], dmax))
     for o in out: print(o)
     print('characters self-test ok')
 
