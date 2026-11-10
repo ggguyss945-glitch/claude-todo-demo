@@ -300,7 +300,7 @@ CAST.update({
         skin='#ece6e8', skin_sh='#c3b8c9', skin_dp='#9a8aa4', blush='#ece6e8', blush_k=0.0, stubble=None, stub=0,
         hair_c='#0d0b14', brow_c='#0b0910', bags=0.0, sockets=0.0, age=0.3, blink_rate=0.0, lock=1.0, micro=0.0,
         breath=0.0, scar=0, ring=0, part=0, lashes=1.0, talk=0.8,
-        body=dict(sh=88, ch=72, wa=50, hip=66, arm=(34, 21), leg=(48, 38), neck=17.5, hand=1.0, fingers=1.35, neck_extra=22),
+        body=dict(sh=88, ch=72, wa=50, hip=66, arm=(34, 21), leg=(48, 38), neck=17.5, hand=1.0, fingers=1.35, neck_extra=11),
         cloth=dict(top='#0f0d16', top_sh='#07060b', top_hi='#2a2638', sheen='#2a2638', scratch='#d9dee6',
                    trousers='#0f0d16', trousers_sh='#07060b', shoes=None, toe='#121018')),
     'you_kid': dict(                                # you at 10-11: big eyes, striped tee, shorts, sneakers
@@ -3688,6 +3688,11 @@ class Acting:
         b = self._blink_amt(tf) * (1.0 - clamp(P.still)) * (1.0 - clamp(getattr(P, '_noblink', 0.0)))
         P.blink = max(P.blink, b)
         if self.sp.get('breath', 1.0) == 0.0: P.breath = 0.5            # the queen does not breathe
+        if self.who == 'queen':                                           # v2 slow drift: tilt ~0.5 deg/s, lean, hem sway
+            P.h_tilt += 3.2 * noise1(t * 0.13, sd + 71)
+            P.lean += 0.014 * noise1(t * 0.09, sd + 72)
+            P.hem += 0.45 * math.sin(t * 0.9 + sd)
+            P.blink = 0.0
         return P
 
     @staticmethod
@@ -3742,6 +3747,9 @@ class Acting:
             (a.dx - P.dx) * 0.012 + (a.sway - P.sway) * 0.05 + (a.tilt - P.tilt) * 0.05
         P.sec_x = clamp(v, -1.5, 1.5)
         P.sec_y = clamp((a.lean - P.lean) * 2.0 + (a.bob - P.bob) * 0.02, -1, 1)
+        if self.who == 'queen':                                           # her hair lags 0.4 s behind any head move
+            L_ = self._raw(t - 0.4)
+            P.q_hair = L_.turn + L_.h_turn; P.q_hair_set = 1.0
         return P
 
     __call__ = at
@@ -5279,6 +5287,7 @@ class _MirrorClips:
             for k_ in ('smile', 'grin', 'teeth', 'gums', 'smear', 'm_open'):
                 setattr(P, k_, getattr(P, k_) * (1.0 - u))
             P.mix(EXPR['queen_blank'], u)
+            P.q_off = max(P.q_off, u)
         return self._add(t0 - 0.01, None, fn, late=True, real=True)
 
     def call_silent(self, t0, dur=1.2):
@@ -5289,8 +5298,53 @@ class _MirrorClips:
             P.mix(EXPR['queen_call'], w * u); P.h_nod -= 0.12 * u * w; P.m_open = max(P.m_open, 1.0 * u * w)
         return self._add(t0, t0 + dur + 0.4, fn)
 
-    def sit_beside(self, t0, dur=0.5):
-        """One smooth inhuman motion from standing to sitting: no weight, no bob, the head travels on a straight line."""
+    def stage(self, t0, to='S3a', dur=0.08, draw_on=False):
+        """Queen v2: change stage at t0 (DIRECTION_V2 3.3). Every q_* parameter moves to the target stage over dur
+        (0.033 = a 2-frame snap); draw_on=True draws the lipstick steps on instead (q_draw 0 -> 1 over dur)."""
+        tgt = queen_stage(to)
+        def fn(P, t):
+            u = prog(t, t0, t0 + max(dur, 1e-3))
+            if u <= 0: return
+            for k_, v in tgt.items():
+                if draw_on and k_ == 'q_draw': v = v * u
+                setattr(P, k_, lerp(getattr(P, k_), v, 1.0 if (draw_on and k_ == 'q_draw') else u))
+        return self._add(t0 - 0.01, None, fn, late=True, real=True)
+
+    def split_open(self, t0, dur=0.12):
+        """S3a: the drawn smile splits open into the grin of teeth (on "back", 479.24)."""
+        return self.stage(t0, 'S3a', dur)
+
+    def eyes_red(self, t0, dur=0.2):
+        """S3b: the irises turn red (on "better", 496.8)."""
+        return self.stage(t0, 'S3b', dur)
+
+    def full_face(self, t0, dur=0.25):
+        """S3c: folds, cracks and black tears join the grin and the red eyes (531.7)."""
+        return self.stage(t0, 'S3c', dur)
+
+    def jaw_drop(self, t0, dur=0.3, glitch=1.0):
+        """S4: the jaw drops into a void, the face below the eyes stretches 1.35x, Noah13's face glitches inside it."""
+        self.stage(t0, 'S4', dur)
+        def fn(P, t):
+            if t >= t0: P.q_glitch = max(P.q_glitch, glitch * (0.6 + 0.4 * (hash01(int(t * 20), 919) > 0.5)))
+        self._add(t0, None, fn, late=True, real=True)
+        return [self._ev2(t0, 'glitch', -10.0, kind='pixel')]
+
+    def draw_smile(self, t0, dur=0.9):
+        """S2 drawn on camera: the lipstick steps draw themselves up her cheeks."""
+        return self.stage(t0, 'S2', dur, draw_on=True)
+
+    def head_to_lens(self, t0, deg=None, dur=0.25):
+        """Her head tilts / turns to the lens in 0.25 s (snap mode), then holds; eyes locked."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            P.h_turn *= 1.0 - u; P.turn *= 1.0 - u * 0.6; P.h_tilt *= 1.0 - 0.7 * u; P.lock = max(P.lock, u)
+        return self._add(t0 - 0.01, None, fn, late=True, real=True)
+
+    def sit_beside(self, t0, dur=1.2):
+        """One smooth inhuman motion from standing to sitting (1.2 s eased glide): no weight, no bob, the head
+        travels on a straight line, the hair stays put."""
+        if self.who == 'queen': dur = max(dur, 1.2)
         def fn(P, t):
             u = ease_in_out(prog(t, t0, t0 + dur))
             P.sit = max(P.sit, u); P.h_dy -= 0.0
@@ -6326,9 +6380,10 @@ def queen_stage(stage):
 
 
 _QSP = dict(head_ys=_HYS, head_ws=[0, 38, 58, 76, 84, 87, 77, 57, 35, 16, 0])
-_Q_EYE = dict(dx=34.8, y=-10.0, hw=14.8, hh=7.8)      # 0.40 W apart, 0.17 W wide, 0.065 H tall, line at 0.46 H
+_Q_EYE = dict(dx=34.8, y=-10.0, hw=15.8, hh=8.6)      # 0.40 W apart, 0.17 W wide, 0.065 H tall, line at 0.46 H
 _Q_MOUTH_Y = 62.0
 _Q_LIP_HW = 26.0                                          # 0.30 W
+_Q_GRIN = [None]                                          # the open grin's outline this frame (tears go behind it)
 _Q_STEPS = [(26.0, 62.0), (37.3, 62.0), (37.3, 52.4), (48.6, 52.4), (48.6, 42.8), (60.0, 42.8), (60.0, 33.2)]   # tread 0.065 W, rise 0.04 H
 
 
@@ -6512,8 +6567,9 @@ def _q_spade(cx, cy, h, w=None, up=True):
     """A spade pip of height h centred on (cx, cy) (tip up)."""
     w = w if w is not None else h * 0.86
     s = -1.0 if up else 1.0
-    pts = [(0.0, -0.5), (0.18, -0.3), (0.42, -0.08), (0.5, 0.1), (0.4, 0.26), (0.2, 0.28), (0.07, 0.17), (0.13, 0.5), (-0.13, 0.5),
-           (-0.07, 0.17), (-0.2, 0.28), (-0.4, 0.26), (-0.5, 0.1), (-0.42, -0.08), (-0.18, -0.3)]
+    pts = [(0.0, -0.5), (0.1, -0.38), (0.26, -0.21), (0.42, -0.05), (0.5, 0.1), (0.45, 0.22), (0.32, 0.27), (0.18, 0.24), (0.07, 0.16),
+           (0.1, 0.38), (0.2, 0.5), (-0.2, 0.5), (-0.1, 0.38), (-0.07, 0.16), (-0.18, 0.24), (-0.32, 0.27), (-0.45, 0.22), (-0.5, 0.1),
+           (-0.42, -0.05), (-0.26, -0.21), (-0.1, -0.38)]
     return smooth([(cx + x * w, cy + (y if up else -y) * h) for x, y in pts], True, 0.55)
 
 
@@ -6522,6 +6578,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
     jaw void with Noah13 inside (S4). The real lips talk on P.m_open; the drawing never moves."""
     o = clamp(P.m_open) * (1.0 - st['void'])
     my = _Q_MOUTH_Y
+    _Q_GRIN[0] = None
     sp_open = st['open']
     voidk = st['void']
     # ---- the lip shapes (closed lips; they part when she speaks)
@@ -6561,6 +6618,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
             bot.append((float(x), yt + max(0.0, yb_full - yt) * sp_open))
         TQ, _ = _qm(hm, top, 3.0); BQ, _ = _qm(hm, bot, 3.0)
         inner = poly(TQ + BQ[1:-1], True)
+        _Q_GRIN[0] = inner
         c.fill(inner, QV['mouth'])
         cx_, cy_, _ = hm.map1(0.0, (60.0 + drop) * 0.5, 2.0)
         c.glow(cx_, cy_ + 4, 46.0 * hm.sx(0, 70), 22.0, '#000000', 170 * sp_open)
@@ -6753,12 +6811,14 @@ def _q_face_extras(c, hm, P, st, det, lw):
             n = max(2, int(len(Q_) * clamp(full * 1.15)))
             Q_ = Q_[:n]
             path = smooth(Q_, False)
-            c.pen.line(c.P(path), 3.0 * c.s, QV['tear'], a, 'round')
-            hl = [(x_ - 0.7, y_) for x_, y_ in Q_[1:-1]]
-            if len(hl) > 1: c.pen.line(c.P(smooth(hl, False)), 0.9 * c.s, QV['tear_hi'], a * 0.8, 'round')
+            with (c.clip(_Q_GRIN[0], diff=True) if _Q_GRIN[0] is not None else _noop()):
+                c.pen.line(c.P(path), 4.4 * c.s, QV['tear'], a, 'round')
+                hl = [(x_ - 1.0, y_) for x_, y_ in Q_[1:-1]]
+                if len(hl) > 1: c.pen.line(c.P(smooth(hl, False)), 1.1 * c.s, QV['tear_hi'], a * 0.85, 'round')
             ex, ey = Q_[-1]
-            c.fill(oval(ex, ey + 1.6, 2.6, 3.3), QV['tear'], a)
-            c.fill(oval(ex - 0.8, ey + 0.6, 0.8, 1.0), '#c8c4dc', a * 0.8)
+            c.fill(smooth([(ex - 3.4, ey + 2.5), (ex, ey - 2.0), (ex + 3.4, ey + 2.5), (ex + 2.2, ey + 6.4), (ex, ey + 7.2), (ex - 2.2, ey + 6.4)], True, 0.8),
+                   QV['tear'], a)
+            c.fill(oval(ex - 1.0, ey + 2.6, 0.9, 1.3), '#c8c4dc', a * 0.8)
 
 
 def _q_ring_pt(hm, phi, y0, grow):
@@ -6791,7 +6851,7 @@ def _q_crown(c, hm, det, t, lw, which):
         vis = [p for p in P_ if p[2] > -0.05]
         if len(vis) > 2:
             vis.sort(key=lambda p: p[0])
-            top = [(p[0], p[1] - 2.8) for p in vis]; bot = [(p[0], p[1] + 2.8) for p in vis[::-1]]
+            top = [(p[0], p[1] - 3.6) for p in vis]; bot = [(p[0], p[1] + 3.6) for p in vis[::-1]]
             band = smooth(top + bot, True, 0.5)
             c.fill(band, QV['silver'])
             bb = band.getBounds()
@@ -6800,12 +6860,13 @@ def _q_crown(c, hm, det, t, lw, which):
     for v, X, Y, phi, h in items:
         if (which == 'front') != (v > -0.05): continue
         fsx = max(0.28, abs(math.cos(phi) * hm.ct - math.sin(phi) * hm.st))
-        w = h * 0.5 * fsx
-        pip_h = min(h * 0.62, 30.0)
-        pts = [(0.0, -1.0), (0.17, -0.86), (0.4, -0.72), (0.5, -0.6), (0.44, -0.5), (0.24, -0.47), (0.1, -0.5), (0.13, -0.38),
-               (0.07, -0.2), (0.12, -0.05), (0.2, 0.0), (-0.2, 0.0), (-0.12, -0.05), (-0.07, -0.2), (-0.13, -0.38), (-0.1, -0.5),
-               (-0.24, -0.47), (-0.44, -0.5), (-0.5, -0.6), (-0.4, -0.72), (-0.17, -0.86)]
-        sp_ = smooth([(X + x * w * 2.0, Y - 1.5 + y * h) for x, y in pts], True, 0.5)
+        pip_h = h * 0.74
+        pw = pip_h * 0.9
+        pip = _q_spade(0.0, -h + pip_h * 0.5, pip_h, pw)
+        stem = poly([(-pw * 0.09, -h + pip_h * 0.85), (pw * 0.09, -h + pip_h * 0.85), (pw * 0.18, 0.0), (-pw * 0.18, 0.0)])
+        sp_ = union(pip, stem) or pip
+        m = skia.Matrix(); m.setScale(fsx, 1.0); m.postTranslate(X, Y - 1.5); sp_.transform(m)
+        w = pw * 0.5 * fsx
         c.fill(sp_, QV['black'] if v > -0.05 else '#06050a')
         if v > -0.05:
             c.line(smooth([(X + 0.1 * w, Y - h * 0.95), (X + 0.62 * w, Y - h * 0.82), (X + 0.92 * w, Y - h * 0.64)], False), lw * 0.26, QV['silver_hi'], 230)
@@ -6840,7 +6901,7 @@ def _q_hair_region(hm, hide, grow=10.0, y_bot=150.0):
         L.append((xl, yy)); R.append((xr, yy))
     vol = smooth(R + L[::-1], True, 0.8)
     face_v = hm.map1(0, 0)[2]
-    if face_v < -0.05: return vol, None
+    if face_v < -0.05 or hide > 0.97: return vol, None
     # the face window (front surface coords): parting, hairline, along the cheeks inside the curtains, round the jaw
     hk = clamp(hide)
     win = [(0.0, -84.0), (16.0, -79.0), (36.0, -68.0), (55.0, -48.0), (67.0, -22.0), (72.0, 8.0), (72.0, 40.0), (68.0, 70.0),
@@ -6849,12 +6910,22 @@ def _q_hair_region(hm, hide, grow=10.0, y_bot=150.0):
     for s_ in (1, -1):
         seq = win if s_ > 0 else win[::-1]
         for x, y in seq:
-            xx = s_ * x * (1.0 - hk * (0.92 if y > -70 else 0.5))
+            xx = s_ * x * (1.0 - hk * (1.0 if y > -70 else 0.5))
             pts.append((xx, y))
     # drop the duplicated parting point
     pts = pts[:len(win)] + pts[len(win) + 1:]
     W_, _ = _qm(hm, [(x, min(y, 118.0)) for x, y in pts], 4.0)
     W_ = [(x, y + (max(0.0, py - 118.0))) for (x, y), (px, py) in zip(W_, pts)]
+    kf = clamp((abs(hm.st) - 0.6) / 0.3)                     # turned: the far curtain goes behind the face profile
+    if kf > 0:
+        out = []
+        for (x, y), (px, py) in zip(W_, pts):
+            if px * hm.st > 0:
+                xl_, xr_ = hm.extent(float(hm.W(min(max(py, -120.0), 120.0))) + 24.0)
+                lim = xr_ if hm.st > 0 else xl_
+                x = lerp(x, max(x, lim) if hm.st > 0 else min(x, lim), kf)
+            out.append((x, y))
+        W_ = out
     window = smooth(W_, True, 0.75)
     return vol, window
 
@@ -6870,7 +6941,7 @@ def _q_hair_front(c, hm, P, st, det, t, lw):
     with c.clip(hair):
         # sheen band at 30 % of the length: a ring of blue-violet light round the crown
         ph = np.linspace(-PI * 0.95, PI * 0.95, 40)
-        band = [p for p in (_q_ring_pt(hm, float(q), -66.0, 9.0) for q in ph) if p[2] > -0.1]
+        band = [(p[0], p[1] + 14.0 * (1.0 - math.cos(q)), p[2]) for q, p in ((q, _q_ring_pt(hm, float(q), -70.0, 9.0)) for q in ph) if p[2] > -0.1]
         if len(band) > 2:
             band.sort(key=lambda p: p[0])
             bp = poly([(p[0], p[1]) for p in band], False)
@@ -6899,7 +6970,9 @@ def _q_hair_front(c, hm, P, st, det, t, lw):
             if face_v > 0.0:
                 X0, Y0, _ = hm.map1(0, -124.0, 10.0); X1, Y1, _ = hm.map1(0, -86.0, 6.0)
                 c.line(poly([(X0, Y0), (X1, Y1)], False), lw * 0.28, QV['parting'], 210)
-    c.line(hair, lw * 0.75, QV['line'])
+    yb_ = float(hm.J(120.0)) * hm.cp + 22.0
+    with c.clip(rect(-600.0, -600.0, 1200.0, 600.0 + yb_)):
+        c.line(hair, lw * 0.75, QV['line'])
     # two loose strands across her left cheek (they never move)
     face_v = hm.map1(0, 0)[2]
     if face_v > 0.05 and st['hide'] < 0.5 and det >= 1:
@@ -7087,14 +7160,14 @@ def _q_collar(c, B, P, det, lw, which='all'):
     sp = CAST['queen']
     yc = B.y_sh - 4.0
     r0 = 26.0
-    r1 = (yc - (B.yc - sp['hh'] * 0.5)) * 1.02
-    tilt = math.radians(24.0)
+    r1 = (yc - (B.yc - sp['hh'] * 0.5)) * 1.12
+    tilt = math.radians(18.0)
     zc = -16.0
 
     def fp(r, a):                                          # point on the fan plane: angle a from vertical, radius r
         x = r * math.sin(a); up = r * math.cos(a)
         return B.p3(x, yc - up * math.cos(tilt), zc - up * math.sin(tilt))
-    angs = [(k - 4) / 4.0 * math.radians(84.0) for k in range(9)]
+    angs = [(k - 4) / 4.0 * math.radians(64.0) for k in range(9)]
     ribs = [(fp(r0, a), fp(r1, a)) for a in angs]
     top = []
     for k in range(9):
@@ -7226,8 +7299,6 @@ def _q_neck(c, B, P, det, lw, QL, back):
     c.grad(neck, 0, nt[1], 0, nb[1], [(0, QV['skin_sh'], 255), (0.45, QV['skin_sh'], 120), (1, QV['skin'], 0)])
     c.fill(_crescent(neck, QL['side'] * 2.5, 0), QL['rim'], QL['rim_a'] * 0.6)
     c.line(neck, lw * 0.9, QV['line'])
-    if not back and det >= 1:
-        c.line(smooth([(nb[0] - 6, nb[1] - 30), (nb[0] - 3, nb[1] - 14), (nb[0] - 5, nb[1] - 4)], False), lw * 0.22, QV['inner'], 90)
     # the high band and the spade brooch at the throat
     band = _q_hull_path(_q_ell(B, 0.0, B.y_sh - 8.0, 0.0, 21.0, 18.0) + _q_ell(B, 0.0, B.y_sh + 8.0, 0.0, 25.0, 21.0))
     c.fill(band, QV['satin']); c.grad(band, nb[0] - 25, 0, nb[0] + 25, 0, [(0, QV['satin_sheen'], 180), (0.5, QV['satin'], 0), (1, QV['satin_sh'], 160)])
@@ -7320,6 +7391,9 @@ def _q_figure(c, P, det, t, light=None, upper_only=False):
     head_yaw = (P.turn + P.h_turn) * PI / 2
     hy_ = getattr(P, 'q_hair', None)
     hair_yaw = (hy_ * PI / 2) if (hy_ is not None and getattr(P, 'q_hair_set', 0.0) > 0.5) else head_yaw
+    body_yaw = P.turn * PI / 2                              # the fall hangs from the shoulders: within 60 deg of the body
+    dyaw = (hair_yaw - body_yaw + PI) % (2 * PI) - PI
+    hair_yaw = body_yaw + clamp(dyaw, -PI / 3, PI / 3)
     hair_back = math.cos(hair_yaw) < 0.0
     # arms behind the body
     arm_z = {}
@@ -7677,12 +7751,12 @@ def build_acting(spec, shot=None, seed=0, who=None):
     evs = []
     # ---- defaults from the cast and the prop states
     if who == 'queen':
-        st = int(spec.get('stage', 3)); face = spec.get('face')
-        d = dict(hair_over=0.0, eye_gap=0.0, m_gap=0.0)
-        if st <= 2 or face in ('hidden', 'mouth_only'): d['hair_over'] = 1.0
-        if st == 1: d['eye_gap'] = 1.0
-        if face == 'mouth_only' or (st == 2 and spec.get('crop') == 'mouth'): d['m_gap'] = 1.0
-        if spec.get('mode') == 'feet' and any(x_[1] == 'toes_curl' for x_ in spec.get('acts') or []): d['ft_hem'] = 0.0; d['ft_l'] = 0.0
+        q = spec.get('queen') if isinstance(spec.get('queen'), dict) else {}
+        st = q.get('stage', spec.get('stage', 'S1')); face = spec.get('face')
+        d = queen_stage(st)
+        if face in ('hidden',): d['q_hide'] = 1.0
+        if spec.get('mode') == 'feet' and any(x_[1] == 'toes_curl' for x_ in spec.get('acts') or []) and str(st) not in ('S3c', 'S4', '3'):
+            d['ft_hem'] = 0.0; d['ft_l'] = 0.0
         a.set(-INF, None, 0.01, **d)
         a.life(-INF, None, 0.0)
     if who == 'tess':

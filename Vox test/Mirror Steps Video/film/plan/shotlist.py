@@ -1,20 +1,26 @@
-"""plan/shotlist.py: the director's shot list for "If An Eighth Step Appears On Your Mirror... WIPE THE GLASS CLEAN".
+"""plan/shotlist.py (v2): the director's shot list for "If The Queen Of Spades Appears In Your Mirror... DON'T MAKE A WISH".
 
-Read PLAN.md first: it defines the cast, the sets and their views (with the design-space layout each view must keep),
-the lighting variants, the acting clips and the HUD devices that these entries name. make_plan.py resolves this table
-into plan/shots.json and plan/sound_plan.json; validate.py checks them.
+The contract is DIRECTION_V2.md; PLAN_V2.md documents every field this table produces (make_plan.py -> shots.json) and maps
+the 33 v1 errors to the shots that fix them. v1's list is kept in plan/v1/shotlist_v1.py.
 
 Conventions
-- Every shot starts at a cut time built from the timeline (T, Wc, RULE) and ends where the next starts.
-- cam() moves: push (2.8 %/s), creep (1 %/s, grief), fast (6 %/s), pull (-3 %/s), reveal (fast pull-out reveal),
-  drift (push + 27 design px/s pan), track (60 px/s follow), hand (handheld 15 px/s + 1.5 %/s), crane, tilt (roll), orbit,
-  move (explicit x1, y1, z1). x, y = design point at frame centre (depth-1 plane); z = zoom. snap=(t, k) optical punch-in,
-  hit=[(t, amp_px)] camera jolt, shake= handheld amplitude override.
-- chars: C(who, at, view, expr, acts, mode). at = anchor name of the view, or [x, y_feet, height(, depth)] for bodies,
-  [cx, cy, scale] for busts, [x, y, size] for hands. mode body | bust | hands | silhouette | photo.
+- Every shot starts at a cut time built from the timeline (T, Wc, w) and ends where the next starts. The picture leads the
+  voice by 0.17 s on clause starts; action cuts sit on the action (the hit, the snap, the drop).
+- X(t0, typ, world, 'set/view', var, frame, cam, **kw). typ: EWS WS SEC (wides) | MS OTS 2S (mids) | MCU CU ECU (faces only)
+  | INSERT DOC DIAGRAM SPLIT UI TYPE MONTAGE (inserts) | POV (your hands or feet in frame) | CARD BLACK.
+- world: ours stairs theirs theirs_break memory climax ending ui card black (the look; side follows).
+- cam: P(r) push r %/s, SIL() the 1.5 %/s silence push, FA(r) fast push, PU(r) pull, RV(r) reveal pull, DR drift, TR track,
+  HH handheld, CRN crane, ORB orbit, WH whip, TL tilt. x, y = design point at frame centre; z = zoom; snap=(t, k) punch-in;
+  hit=[(t, px)] camera jolt; roll = dutch degrees.
+- chars: bust/body/hands/feet/Q helpers below (C() underneath). Q(stage, ...) is the Queen at a ladder stage.
+- q=dict(stage, step, size, where, framing, wrong): the Queen's ladder entry for this appearance (DIRECTION_V2 2.4).
+- hold='H1'..'H10' (the only shots over 2.5 s with the cards and the time card); reuse=<time of the earlier shot> (setup
+  reuse, resolved to an id); errfix=[n] (section 6 numbers); device=dict(kind, id, what) (inserts / documents / diagrams that
+  teach a noun or a mechanism, counted per minute); teaser='RULE 2' (flash-forwards); split / plate / montage (see PLAN_V2.md).
 - STATE(t, ...) changes the running prop state; every shot gets the state at its t0 plus the changes inside it.
 """
-from dsl import (S, cam, C, A, fx, M, tag, label, redx, R, t, e, w, T, Wc, LINES, DUR)
+from dsl import (S, X, cam, C, A, fx, M, tag, label, redx, R, t, e, w, w0, T, Wc, LINES, DUR, chip, teaser, kinetic, typebeat,
+                 giant, diagram, doc, count_pop, stamp, highlight, mapins, level_guide, rings, eye_line, dials)
 
 STATES = []
 
@@ -23,1228 +29,1719 @@ def STATE(at, **kw):
     STATES.append((at, kw))
 
 
+# ================================================================================================= shorthand
+def P(r=3.0, **k): return cam('push', rate=r / 100.0, **k)
+def SIL(r=1.5, **k): return cam('push', rate=r / 100.0, silence=True, **k)
+def FA(r=7.0, **k): return cam('fast', rate=r / 100.0, **k)
+def PU(r=3.0, **k): return cam('pull', rate=-r / 100.0, **k)
+def RV(r=8.0, **k): return cam('reveal', rate=-r / 100.0, **k)
+def DR(r=2.0, dx=30, **k): return cam('drift', rate=r / 100.0, dx=dx, **k)
+def TR(dx=70, r=1.0, **k): return cam('track', rate=r / 100.0, dx=dx, **k)
+def HH(r=2.5, shake=18, **k): return cam('hand', rate=r / 100.0, shake=shake, **k)
+def CRN(dy=-25, r=2.5, **k): return cam('crane', rate=r / 100.0, dy=dy, **k)
+def ORB(dx=30, r=2.0, **k): return cam('orbit', rate=r / 100.0, dx=dx, **k)
+def TL(dy=-90, r=2.0, **k): return cam('tilt', rate=r / 100.0, dy=dy, **k)
+def WH(x1, y1, z1=1.1, **k): return cam('whip', x1=x1, y1=y1, z1=z1, **k)
+
+
+# lights (the cast is lit by its world; DIRECTION_V2 1.2, 3.6)
+L_OURS = dict(rim='#9fa8ff', rim_a=80, side=1, key=-0.15, flash='tess', world='ours')
+L_BEAM = dict(rim='#ffd58a', rim_a=110, side=-1, key=0.1, flash='tess', world='ours')
+L_GOLD = dict(rim='#ffe2a8', rim_a=100, side=-1, key=0.35, world='theirs')
+L_STAIRS = dict(rim='#9fa8ff', rim_a=70, side=1, key=-0.05, under='#ffcf8a', world='stairs')
+L_RED = dict(rim='#ff3b5c', rim_a=150, side=-1, key=-0.2, world='climax')
+L_MEM = dict(rim='#f1e2c4', rim_a=60, side=1, key=0.2, world='memory')
+L_PHONE = dict(rim='#9fa8ff', rim_a=60, side=1, key=-0.3, under='#bcd2ff', world='ours')
+L_END = dict(rim='#9fa8ff', rim_a=80, side=1, key=-0.1, under='#f0a84e', world='ending')
+L_QUEEN = dict(key_c='#e8ecff', key_from='below_front', rim='#ff3b5c', rim_a=140, bloom=1.5, drain_px=450)
+
+
+def bust(who, x=960, y=560, s=1.0, view='q_left', expr='neutral', acts=(), light=None, **ex):
+    return C(who, [x, y, s], view, expr, acts, mode='bust', light=light, **ex)
+
+
+def body(who, x, yf, h, view='front', expr='neutral', acts=(), d=None, **ex):
+    return C(who, [x, yf, h] + ([d] if d else []), view, expr, acts, mode='body', **ex)
+
+
+def hands(who, x=960, y=560, size=460, acts=(), view='front', **ex):
+    return C(who, [x, y, size], view, 'neutral', acts, mode='hands', **ex)
+
+
+def feet(who, x=960, y=900, size=900, acts=(), view='front', **ex):
+    return C(who, [x, y, size], view, 'neutral', acts, mode='feet', **ex)
+
+
+def Q(stage, at, mode='bust', acts=(), view='front', expr=None, **ex):
+    ex.setdefault('light', L_QUEEN)
+    return C('queen', at, view, expr or {'S0': 'queen_still', 'S1': 'queen_soft', 'S2': 'queen_drawn', 'S3a': 'queen_grin',
+                                         'S3b': 'queen_grin_red', 'S3c': 'queen_full', 'OFF': 'queen_off', 'S4': 'queen_void'}[stage],
+             acts, mode=mode, stage=stage, **ex)
+
+
+def POVH(acts, x=960, y=600, size=520, **ex):
+    """Your POV hand: the consistent olive sleeve (#4a5038, stitched cuff #33382a), DIRECTION_V2 3.7."""
+    return C('you', [x, y, size], 'front', 'neutral', acts, mode='hands', pov=True, sleeve='olive', **ex)
+
+
+def Fist(x=960, y=620, size=460, acts=(), **ex):
+    """Your LEFT candy fist (323.65-649 s): white knuckles, the red wrapper twist always visible between the fingers."""
+    return C('you', [x, y, size], 'front', 'neutral', [A(R(0), 'fist', hand='left', candy=True)] + list(acts), mode='hands',
+             hand='left', fist=True, **ex)
+
+
+def DEV(kind, did, what): return dict(kind=kind, id=did, what=what)
+
+
+# the rule cards (times unchanged: 0.45 s before "Rule", cut 0.15 s after the sentence; DIRECTION_V2 5.3)
 RULE_TEXT = {
-    1: "Count the steps with your *finger*.",
+    1: "*Count the steps* with your finger.",
     2: "If you see her face, *keep your wishes to yourself*.",
     3: "*Leave somebody* on your side of the glass.",
-    4: "Ask what he *wished for*.",
+    4: "Ask *what he wished for*.",
     5: "Ring the *real* bell.",
     6: "Let him go *first*.",
-    7: "*Cover* anything else that can *reflect* the stairs.",
+    7: "*Cover* anything else that can reflect the stairs.",
 }
+RULE_CMD = {1: 'COUNT THE STEPS', 2: 'KEEP YOUR WISHES TO YOURSELF', 3: 'LEAVE SOMEBODY', 4: 'WHAT HE WISHED FOR', 5: 'REAL',
+            6: 'FIRST', 7: 'COVER'}
 RULE_LINES = {1: (47, 48), 2: (78, 79), 3: (104, 105), 4: (138, 139), 5: (181, 182), 6: (225, 226), 7: (259, 260)}
-RULE_BG = {1: ('cabin_now', 'mirror_ots', 'flash'), 2: ('mirror', 'mirror_cu', 'queen'), 3: ('cabin_now', 'doorway', 'doorway_glow'),
-           4: ('cabin_dawn', 'wide', 'dawn'), 5: ('cabin_dawn', 'wide', 'dawn_queen'), 6: ('cabin_dawn', 'doorway_back', 'dawn_break'),
-           7: ('cabin_now', 'doorway', 'red')}
+RULE_BG = {1: ('cabin_now', 'ots_mirror', 'night', 'ours'), 2: ('mirror', 'glass_wide', 'night', 'ours'),
+           3: ('cabin_now', 'master', 'doorway_glow', 'ours'), 4: ('cabin_dawn', 'master', 'dawn', 'theirs'),
+           5: ('cabin_dawn', 'reverse', 'dawn_queen', 'theirs'), 6: ('cabin_dawn', 'master', 'dawn_break', 'theirs_break'),
+           7: ('cabin_now', 'dutch_low', 'red', 'climax')}
+CARD_QUEEN = {1: dict(size=0.09, pose='tiny figure on the bottom step', stage='S0'),
+              2: dict(size=0.16, pose='head turned toward the lens', stage='S1'),
+              3: dict(size=0.25, pose='standing in gold doorway light', stage='S1'),
+              4: dict(size=0.30, pose='seated, hands in her lap', stage='S2'),
+              5: dict(size=0.45, pose='the S2 drawn smile', stage='S2'),
+              6: dict(size=0.65, pose='red eyes', stage='S3b'),
+              7: dict(size=0.90, pose='the S3c face filling the glass', stage='S3c')}
+CARD_GLASS = {1: 'clean silver', 2: 'clean silver', 3: 'gold reflection', 4: 'gold reflection', 5: 'a hairline crack',
+              6: 'three cracks, 30 % red tint', 7: 'graded red, steps glowing'}
 
 
 def card_times(n):
     li, ti = RULE_LINES[n]
-    t0 = round(w(li, 'Rule') - 0.45, 3)
-    return t0, round(e(ti) + 0.15, 3)
+    return round(w(li, 'Rule') - 0.45, 3), round(e(ti) + 0.15, 3)
 
 
 def RULE(n):
-    """Rule card shot: a lipstick-on-glass card (PLAN.md 'Rule cards'). Appears 0.45 s before 'Rule', title +1.0 s,
-    statement written word by word in sync with the narration, finger-wipe exit, cut 0.15 s after the sentence."""
+    """The rule card is the mirror itself (DIRECTION_V2 5.3): static glitch (2 frames), the orange-striped towel whips up and
+    out (0.30 s), the mirror card settles (62 % of W, -2 deg, 4 % overshoot in 0.13 s); RULE is written in lipstick by a
+    visible bullet tip at t0 + 0.45 in 0.35 s, the numeral stamps in at 1.6x -> 1.0 in 0.13 s throwing crumbs; the statement
+    writes word-synced in off-white grease pencil, the command in lipstick red with an underline swipe at the sentence end;
+    a masking-tape label NOAH'S · CABIN 7 on the frame's top edge; the 7-step progress staircase bottom right with step n
+    filled; her reflection behind the words, closer each card; the glass degrades; LIKE / SUBSCRIBE with a cursor on 1-2;
+    finger-wipe exit at the sentence end, carried 0.2 s over the next shot."""
     li, ti = RULE_LINES[n]
     t0, t1 = card_times(n)
     words = [[wd, tt] for wd, tt in LINES[ti]['words'] if tt is not None]
     bg = RULE_BG[n]
-    hud = [dict(t=t0, type='rule_card', n=n, text=RULE_TEXT[n], title='RULE ' + ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN'][n - 1],
-                appear=t0, glitch=[t0, round(t0 + 2 / 60, 3)], title_at=round(t0 + 1.0, 3), words=words,
-                wipe_out=round(e(ti) + 0.0, 3), end=t1, steps_progress=n, captions=False)]
-    if n <= 2: hud.append(dict(t=round(t0 + 1.2, 3), type='like_sub', hold=round(t1 - t0 - 1.4, 2)))
-    sfx = [fx(t0, 'glitch', -4, 'dry', 'card in: 2-frame static', dur=0.12, amount=0.8),
-           fx(t0, 'glass_resonance', -2, 'close', 'card lands: the pane rings, the riser peaks here', hit=True),
-           fx(round(t0 + 1.0, 3), 'lipstick_draw', -6, 'close', 'title RULE N written in lipstick (2 strokes)', strokes=2),
-           fx(round(words[0][1], 3), 'glass_wipe', -14, 'close', 'statement written on (soft finger squeaks per word)', n=len(words), soft=True),
-           fx(round(e(ti) - 0.05, 3), 'glass_wipe', -5, 'close', 'finger-wipe exit smear', strokes=1)]
+    hud = [dict(t=t0, type='rule_card', n=n, text=RULE_TEXT[n], command=RULE_CMD[n],
+                title='RULE ' + ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN'][n - 1],
+                appear=t0, glitch=[t0, round(t0 + 2 / 60, 3)], towel_whip=[t0, round(t0 + 0.30, 3)],
+                card=dict(width_w=0.62, rot=-2.0, overshoot=0.04, settle=0.13),
+                rule_write=[round(t0 + 0.45, 3), round(t0 + 0.80, 3)], numeral_stamp=dict(t=round(t0 + 0.80, 3), scale0=1.6, settle=0.13, crumbs=True),
+                title_at=round(t0 + 0.45, 3), words=words, underline_at=round(e(ti) - 0.12, 3),
+                tape_label="NOAH'S · CABIN 7", steps_progress=n, reflection=CARD_QUEEN[n], glass=CARD_GLASS[n],
+                wipe_out=round(e(ti), 3), wipe_carry=0.2, end=t1, captions=False)]
+    if n <= 2:
+        hud.append(dict(t=round(t0 + 1.2, 3), type='like_sub', hold=round(t1 - t0 - 1.4, 2), cursor=True,
+                        clicks=['like', 'subscribe', 'bell']))
     mus = [M(t0, 'riser', 0.9, 5.0, 'ends ON the card (+13 LU over 5 s, peak at voice level)'), M(t0, 'rule', 0.95, None, 'rule sting'),
            M(round(t0 + 0.6, 3), 'swell', 0.6, 4.5, 'decay under the card')]
-    S(t0, 'rule_mirror', 'card', bg[2], 'card', 'CARD',
-      'mirror pane card ~35 %% of frame, flashlight-lit silver, over the blurred live set %s/%s' % bg[:2],
-      cam('push', x=960, y=540, z=1.0, rate=0.02),
-      bg=dict(set=bg[0], view=bg[1], var=bg[2], post=dict(blur=6, dim=0.35)), hud=hud, sfx=sfx, mus=mus, tr='glitch', captions=False,
-      energy='card slides up and settles (0.17 s), lipstick title pops, words write on, dust drifts in the flashlight across the pane, '
-             'background figures keep moving under the blur, camera pushes 2 %/s')
+    X(t0, 'CARD', 'card', 'rule_mirror/card', bg[2],
+      'the rule card is the mirror: towel whips off, RULE in lipstick, numeral %d stamps in; her reflection %d %% of the glass '
+      '(%s); glass: %s; over the live plate %s/%s blurred 8, dimmed 30 %%' % (n, CARD_QUEEN[n]['size'] * 100, CARD_QUEEN[n]['pose'],
+                                                                         CARD_GLASS[n], bg[0], bg[1]),
+      P(2), bg=dict(set=bg[0], view=bg[1], var=bg[2], world=bg[3], post=dict(blur=8, dim=0.30)), hud=hud, mus=mus, tr='glitch',
+      captions=False, card=n,
+      q=dict(stage=CARD_QUEEN[n]['stage'], size=CARD_QUEEN[n]['size'], where='reflection behind the card words',
+             framing='card %d' % n, wrong=CARD_QUEEN[n]['pose']),
+      energy='towel whip off, lipstick bullet writing, numeral stamp with crumbs, words writing on, her reflection drifting '
+             'closer 2 px/s behind the words, plate figures moving under the blur, camera push 2 %/s')
     return t1
 
 
-# ---------------------------------------------------------------- shared shorthand
-P = lambda **k: cam('push', **k)
-CR = lambda **k: cam('creep', **k)
-FA = lambda **k: cam('fast', **k)                    # default 8 %/s
-PU = lambda **k: cam('pull', **k)
-RV = lambda **k: cam('reveal', **k)
-DR = lambda **k: cam('drift', **k)
-TR = lambda **k: cam('track', **k)
-HH = lambda **k: cam('hand', **k)
-FLASH = dict(rim='#9fb6ff', rim_a=70, side=1, key=-0.25, flash='tess')          # moon rim + Tess's beam
-DAWN = dict(rim='#f3e2c0', rim_a=90, side=-1, key=0.35)                          # pale window key from screen left
-RED = dict(rim='#ff4060', rim_a=150, side=-1, key=-0.2)                          # lipstick-red spill from the glass
-
 # =================================================================================================================
-# INITIAL PROP STATE (make_plan.py starts from this)
-STATE(0.0, steps_drawn=7, steps_smeared=0, eighth='none', mirror='hook_glass', towel='wrapped', flashlight='off', candy='none',
-      bell='crate', tape='on', shoe='one_on_lace_loose', phone='tess_pocket', doorway='none', jacket='you', sweatshirt='fits',
-      clock='running', sprinkler='off', drop='none', lantern='on', queen='absent')
+# INITIAL PROP STATE (make_plan.py starts from this; PLAN_V2.md "Props")
+STATE(0.0, steps_drawn=7, eighth='present', smeared=0, erased=0, mirror='hook_glass', doorway='none', towel='wrapped',
+      flashlight='off', fist='none', candy='none', tape='on', shoe='left_on_lace_loose', jacket='you', padlock='hasp_locked',
+      keys='tess_pocket', gate_padlock='locked', phone='tess_pocket', your_phone='pocket', bell='crate', drop='none',
+      sprinkler='off', clock='running', queen='hook_flash', noah='theirs_bunk', tess='with_you', you='ours')
 
-# ================================================================ HOOK 0 - 19.18 (lines 0-6)
-S(0.0, 'mirror', 'mirror_cu', 'flash', 'mirror', 'ECU',
-  'glass fills frame, staircase drawn lower-left to upper-right; a small hand with three blue-taped fingers (in shadow) '
-  'finishes the top steps in lipstick', P(x=1060, y=420, z=1.05, rate=0.03),
-  chars=[C('noah13', [1180, 330, 260], 'front', 'neutral', [A(0.56, 'draw_step', step=2), A(0.88, 'draw_step', step=1),
-                                                         A(1.2, 'withdraw')], mode='hands', note='taped hand only, no face')],
-  props=dict(steps_drawn='5 -> 7 (drawn on at 0.56 and 0.88)'),
-  sfx=[fx(0.56, 'lipstick_draw', -4, 'close', 'stroke step 6'), fx(0.88, 'lipstick_draw', -4, 'close', 'stroke step 7 (top)'),
-       fx(0.05, 'ambience_mirror', -6, 'close', 'glass room tone in')],
-  mus=[M(0.0, 'drone', 0.55, None, 'D drone with Eb rub fades up from 0'), M(0.3, 'motif', 0.4, 4, 'music-box: the bell motif D-F-E-A, detuned')],
-  energy='lipstick tip moving, crumbs falling, flashlight hot-spot sliding 40 px/s across the glass, push 3 %/s')
-S(Wc(1, 'and'), 'mirror', 'mirror_cu', 'flash', 'mirror', 'CU', 'whole staircase; below the bottom step a clean thin line draws itself',
-  PU(x=880, y=620, z=1.18, rate=-0.03),
-  props=dict(eighth='drawing at %.2f (0.6 s, left to right, no hand)' % w(1, 'eighth')),
-  hud=[label(w(1, 'eighth') + 0.2, '8TH STEP', [510, 860], dx=-40, dy=-150)],
-  sfx=[fx(w(1, 'eighth'), 'lipstick_draw', -8, 'close', 'the 8th line draws itself: thinner, glassy, too clean', clean=True),
-       fx(w(1, 'eighth'), 'sub_drop', -8, 'dry', 'soft sub under the line', hit=True)],
-  energy='the line drawing itself, slow pull-out 3 %/s, dust in the beam')
-STATE(w(1, 'eighth'), eighth='present')
-S(Wc(1, 'wipe') - 0.07, 'mirror', 'mirror_cu', 'wipe', 'mirror', 'CU', 'a towel slams across the glass and wipes top-down: red streaks',
-  FA(x=960, y=540, z=1.0, rate=0.07, hit=[(3.92, 14)]),
-  chars=[C('you', [960, 300, 520], 'front', 'fear', [A(3.92, 'wipe_glass', strokes=2, dir='down')], mode='hands')],
-  hud=[tag(3.85, 'WIPE THE GLASS', 960, 120, 'cmd', 1.25)],
-  sfx=[fx(3.92, 'impact_hit', 0, 'dry', 'BIGGEST HIT OF THE OPENING (top-3 loudest bed moment)', hit=True, size=1.4),
-       fx(3.92, 'braam', -3, 'dry', 'braam under the tag', hit=True, key='d'),
-       fx(3.95, 'glass_wipe', -2, 'close', 'towel squeal down the glass', strokes=2),
-       fx(3.85, 'whoosh', -6, 'dry', 'tag whoosh in', kind='hard')],
-  mus=[M(3.92, 'hit', 1.0), M(3.4, 'silence', 0.0, 0.45, 'bed out 0.45 s before the hit')],
-  energy='towel smearing the steps, red streaks running, camera jolt on the hit, fast push 7 %/s')
-S(Wc(2, "don't"), 'mirror_world', 'stairs', 'void', 'mirror', 'WS', 'looking DOWN the staircase from the top step into black; '
-  'a pale head is rising from far below', P(x=960, y=470, z=1.0, rate=0.05, dy=30),
-  chars=[C('queen', [960, 640, 120, 6.0], 'front', 'queen_still', [A(R(0), 'climb', steps_per_s=0.8)], mode='silhouette', stage=0)],
-  hud=[tag(5.55, "DON'T WAIT", 960, 120, 'cmd', 1.1), redx(6.05, 960, 600, 160, 0.9)],
-  sfx=[fx(5.6, 'ui_pop', -6, 'dry', 'tag pop'), fx(6.05, 'stinger', -6, 'dry', 'red X strokes', hit=True),
-       fx(5.9, 'bare_foot_step', -16, 'mirror', 'far below, a step')],
-  energy='dolly down the stairs 5 %/s, the figure rising, red X drawing on')
-S(Wc(2, 'coming', off=-0.0), 'mirror_world', 'feet', 'void', 'mirror', 'ECU', 'low on the treads: a pale bare foot comes up out of the dark '
-  'onto a red-edged step (first tease of the queen)', cam('crane', x=960, y=760, z=1.15, dy=-40, rate=0.03),
-  chars=[C('queen', [960, 900, 900], 'front', 'queen_still', [A(7.2, 'step_up', foot='right')], mode='feet', stage=0)],
-  sfx=[fx(7.36, 'bare_foot_step', -4, 'mirror', 'wet slap on the tread', hit=True), fx(7.36, 'sub_drop', -10, 'dry', 'low thump under the step')],
-  energy='the foot rising and landing, hem of the black dress swaying, crane up 40 px/s')
-S(T(3), 'mirror_world', 'stairs', 'void_noah', 'mirror', 'WS', 'far down the staircase a small boy in a green sweatshirt stands '
-  'in a patch of pale dawn light, looking up', CR(x=960, y=600, z=1.1, rate=0.02, dy=12),
-  chars=[C('noah13', [960, 760, 150, 8.0], 'front', 'calm_kid', [A(9.68, 'look_up')], mode='body')],
-  energy='slow creep down, dust motes drifting through the dawn patch, the light breathing')
-S(T(4), 'mirror_world', 'stairs', 'void_noah', 'mirror', 'ECU', 'profile of Noah\'s lips in pale light, the gap in his front teeth; '
-  'a breath fogs nothing', FA(x=1000, y=560, z=1.2, rate=0.07),
-  chars=[C('noah13', [1000, 560, 1.6], 'profile_right', 'calm_kid', [A(10.72, 'talk_silent', dur=1.4)], mode='bust')],
-  hud=[tag(10.67, 'LISTEN', 960, 120, 'cmd', 1.2)],
-  sfx=[fx(10.67, 'ui_pop', -6, 'dry', 'tag pop', hit=True), fx(10.9, 'tinnitus', -22, 'dry', 'thin whistle tone (his gap-tooth whistle)', dur=1.6)],
-  energy='push 4 %/s on the lips, light flickering on the cheek')
-S(T(5), 'camp_gate', 'poster', 'moon_flash', 'ours', 'INSERT', 'MISSING poster on the notice board: Noah\'s school photo (gap-tooth grin, '
-  'green sweatshirt); a flashlight beam slides across it', CR(x=960, y=470, z=1.05, rate=0.015),
-  hud=[], sfx=[fx(T(5) + 0.1, 'ambience_camp_night', -8, 'outside', 'night bed in (crickets, frogs, pines)', dur=7)],
-  mus=[M(T(5), 'dip', 0.3, 5.5, 'bed dips under the premise line'), M(T(5) + 0.3, 'motif', 0.45, 5, 'music-box bell motif, slow')],
-  energy='the beam sweeping left to right 120 px/s and reaching the photo on "fourteen", paper edges fluttering, slow push 1.5 %/s')
-S(Wc(6, 'when'), 'cabin_dawn', 'noah_ms', 'dawn', 'theirs', 'MS', 'Noah at 13 on the bottom bunk at dawn, three-quarter back, one shoe on, '
-  'tying the same knot', CR(x=960, y=600, z=1.0, rate=0.012),
-  chars=[C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4), A(w(6, 'breakfast'), 'head_lift', amount=0.3)])],
-  sfx=[fx(R(0.1), 'ambience_dawn', -10, 'inside', 'dawn chorus loop (identical every 19.48 s)', dur=3.3),
-       fx(R(0.3), 'lace_pull', -12, 'close', 'shoelace loop', n=2)],
-  energy='hands tying in a loop, curtains perfectly still (wrong), lantern glow breathing, creep 1.2 %/s')
+# ================================================================ HOOK 0 - 19.26 (lines 0-6): 20 shots, 24 cuts by 30 s
+X(0.0, 'ECU', 'climax', 'stairs/queen_ecu', 'red',
+  'FLASH-FORWARD (605 s): the Queen at S3c inside the glass, face 120 % of H, the chipped white frame edge on the left; red '
+  'teaser border, chip RULE 6; she is looking into the lens', FA(9, x=960, y=500, z=1.15),
+  chars=[Q('S3c', [980, 520, 1.25], acts=[A(R(0), 'grin_widen', amount=0.2), A(R(0.05), 'stare')])],
+  hud=[teaser(0.0, 'RULE 6'), chip(0.0, 'RULE 6', 'teaser')], teaser='RULE 6', tr='cut',
+  q=dict(stage='S3c', size=1.2, where='glass (flash-forward of 605 s)', framing='ECU', wrong='(teaser)'),
+  fx_post=[dict(t=0.36, glitch=0.9, static=0.5, dur=0.06)],
+  energy='grin widening 3 px/frame, red pulse, fast push 9 %/s, glitch out at 0.36')
+STATE(0.42, queen='absent')
+X(0.42, 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'a taped kid hand (green CEDAR LAKE cuff, the one blue tape design: middle, ring and little fingers, two bands, lifting edge) '
+  'draws steps 6 and 7 in lipstick on the glass; the flashlight hot spot blooms on the silvering; a faint reflection of the '
+  'hand moves the opposite way (it is glass)', P(3.5, x=1060, y=420, z=1.05),
+  chars=[hands('noah13', 1160, 360, 300, [A(0.56, 'draw_step', step=6), A(0.88, 'draw_step', step=7), A(1.5, 'withdraw')],
+               tape=True, reflection=True, note='kid hand only, no face')],
+  props=dict(steps_drawn='5 -> 7 (drawn at 0.56 and 0.88)'), tr='glitch', errfix=[14, 33],
+  device=DEV('insert', 'lipstick', 'lipstick steps drawn on a mirror (it reflects: the hand, the hot spot)'),
+  energy='lipstick tip moving, crumbs falling, hot spot sliding 40 px/s, the reflected hand mirroring, push 3.5 %/s')
+X(1.90, 'WS', 'ours', 'mirror/glass_wide', 'night',
+  'the whole mirror leaning on the back wall of Cabin 7, white chipped frame, the seven steps; numerals 1-7 pop beside the steps '
+  '(0.08 s each); your reflection dim behind the drawing', P(3, x=960, y=540, z=1.0),
+  hud=[count_pop(1.95 + 0.08 * k, k + 1, 1230 - 52 * k, 300 + 70 * k) for k in range(7)],
+  device=DEV('diagram', 'D2', 'count the steps: 1-7 pop beside the drawn steps'), errfix=[33],
+  energy='numerals popping, dust in the beam, push 3 %/s')
+X(2.56, 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'below the bottom step a thick glowing red line draws itself in 0.6 s, too clean; label 8TH STEP', P(4, x=880, y=640, z=1.15),
+  hud=[label(2.95, '8TH STEP', [700, 760], dx=-60, dy=-150)], tr='white',
+  props=dict(eighth='drawing 2.56-3.16 (no hand)'), device=DEV('insert', '8th', 'the eighth line appears by itself'),
+  energy='the line drawing itself with a glow, push 4 %/s')
+X(3.28, 'INSERT', 'stairs', 'stairs/treads', 'stairs',
+  'inside the glass: a pale bare foot with black toenails sets down on the red line (anatomical: arch, tendon, long toes; the '
+  'satin hem with spade pips brushes the ankle)', P(5, x=960, y=760, z=1.2),
+  chars=[Q('S0', [960, 900, 900], mode='feet', acts=[A(3.4, 'step_up', foot='right')])],
+  q=dict(stage='S0', size=0.15, where='glass, on the eighth line', framing='foot 15 %', wrong='somebody is there'),
+  energy='the foot lowering and settling, hem swaying 3 px, red edge glow breathing, push 5 %/s')
+X(Wc(1, 'wipe'), 'TYPE', 'ours', 'type/kinetic', 'night',
+  'KINETIC TITLE over the darkened, blurred mirror: WIPE THE GLASS in white (Montserrat 900, cap 9 % H) with an elliptical ring '
+  'flash at 3.92; CLEAN. in lipstick red at 4.80 with a 3-frame RGB split and a lipstick underline swipe; out with a towel-wipe smear',
+  P(4), plate=dict(set='mirror', view='glass_cu', var='night', post=dict(blur=10, dim=0.55)),
+  hud=[kinetic(3.75, [dict(t=3.92, text='WIPE THE GLASS', color='#ffffff', size_h=0.09, fx='ring_flash'),
+                      dict(t=4.80, text='CLEAN.', color='#c63449', size_h=0.09, fx='rgb_split_3f', underline=True)],
+               out=dict(t=5.30, fx='towel_smear')), typebeat(3.75, 1, 'WIPE THE GLASS CLEAN.')],
+  hit=True, energy='ring flash expanding, letters slamming, RGB split, push 4 %/s, smear out')
+X(Wc(2, "don't", off=-0.03), 'POV', 'ours', 'mirror/glass_cu', 'night',
+  'POV: your olive sleeve wipes the towel across the glass, leaving red streaks', FA(6, x=960, y=540, z=1.05),
+  chars=[POVH([A(5.45, 'wipe_glass', strokes=2, dir='down', towel=True)])],
+  props=dict(smeared='streaked'), energy='towel dragging red streaks, fast push 6 %/s')
+X(Wc(2, 'see', off=-0.1), 'INSERT', 'stairs', 'mirror/through', 'stairs',
+  'through a gap in the smear: a tall figure three steps down the stairs inside the glass, climbing; RED X (1 of 4) over her',
+  P(5, x=960, y=520, z=1.1),
+  chars=[Q('S0', [960, 760, 300, 5.0], mode='body', view='q_left', acts=[A(R(0), 'climb', steps_per_s=0.8)])],
+  hud=[redx(6.05, 960, 560, 170, 0.55, n=1)],
+  q=dict(stage='S0', size=0.18, where='glass, three steps down', framing='figure 18 %', wrong='she is coming'),
+  energy='red streaks dripping across the lens, the figure rising one tread, push 5 %/s')
+X(Wc(2, 'coming', off=-0.19), 'WS', 'stairs', 'stairs/low', 'stairs',
+  'low angle up the plum stairs: her silhouette climbing, the spade crown glinting, the white mirror frame at the top',
+  CRN(dy=-30, r=3, x=960, y=600, z=1.05),
+  chars=[Q('S0', [960, 820, 520, 3.0], mode='body', view='back', acts=[A(R(0), 'climb', steps_per_s=0.8)])],
+  q=dict(stage='S0', size=0.18, where='the stairs', framing='figure 18 % (low angle)', wrong=''),
+  energy='fog bands drifting, red edge glow breathing (2.4 s), crown glint, crane up 30 px/s')
+X(7.36, 'INSERT', 'stairs', 'stairs/railing', 'stairs',
+  'her porcelain hand with lipstick-red index and middle fingertips slides up the stair railing, black almond nails',
+  P(5, x=1000, y=520, z=1.2),
+  chars=[Q('S0', [1000, 520, 520], mode='hands', acts=[A(R(0), 'slide_rail', dx=60)])],
+  energy='the hand gliding up the rail 60 px/s, dust falling through the gold from below, push 5 %/s')
+X(T(3), 'WS', 'stairs', 'stairs/down', 'stairs',
+  'from the top of the stairs looking down: eight red-edged treads in one-point perspective; at the bottom a gold rectangle '
+  'with small Noah13 sitting on his bunk, face up, lit', SIL(2, x=960, y=600, z=1.05),
+  chars=[body('noah13', 960, 860, 140, 'front', 'calm_kid', [A(9.6, 'look_up')], d=8.0)],
+  energy='fog sliding, gold light breathing at the bottom, dust falling, slow push 2 %/s')
+X(Wc(3, 'there', off=-0.0), 'CU', 'ours', 'cabin_now/bokeh', 'night',
+  'CU of you (olive jacket, stubble) leaning in, wet eyes, the beam on your cheek; blue-violet bokeh with warm beam discs',
+  P(3, x=960, y=520, z=1.05), chars=[bust('you', 960, 560, 1.0, 'q_right', 'grief', [A(R(0.1), 'lean_in', amount=0.3)], light=L_BEAM)],
+  dof=dict(focus=1.0, dof=6.75), energy='bokeh discs drifting 5 px/s, a tear forming, push 3 %/s')
+X(Wc(4, 'listen'), 'INSERT', 'ours', 'cabin_now/towel_over', 'night',
+  'FLASH-FORWARD (253 s): five long fingertips press through the towel toward the lens, lipstick red bleeding through the cloth',
+  FA(8), chars=[Q('S1', [960, 520, 700], mode='hands', acts=[A(R(0), 'press_through_cloth', depth=1.0)])],
+  hud=[teaser(Wc(4, 'listen'), 'RULE 2'), chip(Wc(4, 'listen'), 'RULE 2', 'teaser')], teaser='RULE 2', tr='glitch',
+  energy='cloth stretching toward the lens, fast push 8 %/s')
+X(11.20, 'INSERT', 'ours', 'mess_porch/bell_hit', 'bell_hit',
+  'FLASH-FORWARD (535 s): the padlock strikes the cracked bell, spark and white flash', FA(9, hit=[(11.45, 12)]),
+  chars=[hands('tess', 900, 520, 520, [A(11.42, 'strike', prop='padlock')], sleeve='orange')],
+  hud=[teaser(11.20, 'RULE 5'), chip(11.20, 'RULE 5', 'teaser')], teaser='RULE 5', tr='glitch',
+  fx_post=[dict(t=11.45, white=0.8, dur=0.05)], energy='swing, contact, spark, fast push 9 %/s')
+X(11.88, 'INSERT', 'climax', 'mirror/glass_cu', 'red',
+  'FLASH-FORWARD (625 s): her bare foot hangs over a step that has been wiped away, red pulsing', P(5, x=960, y=640, z=1.2),
+  chars=[Q('S3c', [960, 880, 820], mode='feet', acts=[A(R(0), 'lift_foot', hang=True)])],
+  hud=[teaser(11.88, 'RULE 7'), chip(11.88, 'RULE 7', 'teaser')], teaser='RULE 7', tr='glitch',
+  fx_post=[dict(t=12.70, glitch=0.9, static=0.5, dur=0.08)], energy='the foot trembling in the air, red pulse 1.2 s, push 5 %/s, glitch out')
+X(T(5), 'DOC', 'ours', 'camp_gate/poster', 'night',
+  'MISSING poster on the gate board: NOAH, 13, gap-tooth school photo, green sweatshirt, rain-stained; the beam slides across it',
+  P(4, x=960, y=480, z=1.05), tr='cut',
+  hud=[doc(T(5), 'poster', 'MISSING · NOAH BRENNAN, 13 · LAST SEEN JULY 18 · CAMP CEDAR LAKE')],
+  device=DEV('doc', 'poster', 'the MISSING poster: Noah, 13'),
+  energy='the beam sweeping 120 px/s, the torn corner fluttering, push 4 %/s')
+X(Wc(5, 'fourteen'), 'DOC', 'ours', 'camp_gate/poster', 'night',
+  'a red rubber stamp 14 YEARS slams onto the poster with a camera hit (type beat 2)', P(3, x=960, y=500, z=1.15, hit=[(14.78, 10)]),
+  hud=[stamp(14.72, '14 YEARS', 960, 520, '#c0392b', -4, 0.18), typebeat(14.72, 2, '14 YEARS')],
+  energy='stamp slam, paper shudder, ink spreading, push 3 %/s')
+X(Wc(6, 'when'), 'WS', 'theirs', 'cabin_dawn/master', 'dawn',
+  'THEIRS master wide: Cabin 7 flipped and golden, frozen; the stairs rise along the back wall to the raised doorway in the white '
+  'frame; Noah13 on his bunk at the foot of the stairs, one white sneaker (left), right foot bare; curtains held at 12 deg',
+  DR(2, dx=24, x=960, y=540, z=1.0), tr='glint',
+  chars=[body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)],
+  chip='THE OTHER SIDE · 6:59 AM', errfix=[31],
+  energy='the knot loop, motes twinkling in place, the camera drifting 24 px/s; nothing else moves (wrong)')
+X(Wc(6, 'still'), 'INSERT', 'theirs', 'cabin_dawn/clock', 'dawn',
+  'D7 the loop clock: 6:59:59 snaps back to 6:59:40 with the rewind glitch; chip LOOP with a circular arrow',
+  P(5, x=960, y=500, z=1.2), tr='cut',
+  hud=[diagram(17.60, 'D7', 'loop clock: the second hand reaches :59 and snaps back to :40', hold=0.6), chip(17.62, 'LOOP', 'loop')],
+  fx_post=[dict(t=17.95, glitch=0.8, dur=0.2, rewind=1.0)],
+  device=DEV('diagram', 'D7', 'the loop clock 6:59:59 -> :40'), energy='second hand sweeping then scrubbing back, push 5 %/s')
+X(Wc(6, 'for'), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn',
+  'CU of Noah13 looking up with the gap-tooth smile (almond eyes, two highlights); gold bokeh', P(4, x=960, y=520, z=1.05),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'grin_kid', [A(R(0.1), 'look_up'), A(R(0.4), 'smile')], light=L_GOLD)],
+  dof=dict(focus=1.0, dof=6.75), energy='gold bokeh drifting, the smile, push 4 %/s; hard cut to the time card')
 
-# ================================================================ ARRIVAL 19.18 - 54.34 (lines 7-18)
-S(T(7, 0.03), 'camp_gate', 'wide', 'moon', 'ours', 'WS', 'the camp gate at night: arch sign CAMP CEDAR LAKE, chained gate, pines, moon, mist, fireflies; '
-  'time card top-left', cam('crane', x=960, y=470, z=1.0, dy=18, rate=0.025),
-  hud=[dict(t=w(7, "it's"), type='time_card', icon='clock', day='FRIDAY', time='11:57 PM', sub='CAMP CEDAR LAKE  ·  DEMOLITION TOMORROW',
-            flip_at=w(7, '11:57'), hold=2.6, x=110, y=170)],
-  sfx=[fx(w(7, "it's"), 'ui_pop', -5, 'dry', 'time card in'), fx(w(7, '11:57'), 'clock_tick', -10, 'dry', 'digits flip', dur=0.6),
-       fx(R(0.2), 'owl', -18, 'outside', 'far owl', dist=2)],
-  mus=[M(T(7), 'swell', 0.45, 6, 'low strings in under the card')],
-  energy='crane down 18 px/s + push, mist bands drifting, fireflies blinking and crossing, pines swaying')
-STATE(T(7), clock='running', eighth='none', mirror='not_found', steps_drawn=7, steps_smeared=0, towel='wrapped', queen='absent')   # the hook was a flash-forward: reset to the present
-S(T(8), 'camp_path', 'aerial', 'moon', 'ours', 'EWS', 'high over the camp: three cabins, the mess hall, the lake with the moon in it, an excavator parked, '
-  'your car\'s headlights at the gate; two tiny figures', RV(x=980, y=560, z=1.25, rate=-0.08),
-  energy='pull-out reveal 8 %/s, headlights switching off at 22.6 s, lake shimmer, fireflies')
-S(Wc(8, 'where'), 'camp_path', 'cabins_row', 'moon', 'ours', 'MS', 'CABIN 7: number plaque, door with a padlocked hasp, a faded strip of old search tape on the rail',
-  P(x=1300, y=500, z=1.05, rate=0.035),
-  hud=[label(w(8, 'brother') + 0.1, 'CABIN 7', [1300, 380], dx=150, dy=-80)],
-  sfx=[fx(R(0.4), 'gate_chain', -18, 'outside', 'the old search tape flutters (cloth flap)', kind='tape_flutter')],
-  energy='push 3.5 %/s, the tape strip fluttering, moths at the door lamp (dead bulb), mist')
-S(T(9), 'camp_path', 'cabins_row', 'moon', 'ours', 'WS', 'the excavator bucket in foreground silhouette, the three cabins behind',
-  DR(x=900, y=520, z=1.0, dx=30), sfx=[fx(R(0.3), 'excavator_creak', -16, 'outside', 'cooling metal tick of the parked machine')],
-  energy='parallax drift: bucket (depth 0.6) slides past the cabins (depth 3), fireflies, mist')
-S(Wc(9, 'demolition'), 'camp_gate', 'notice', 'moon_flash', 'ours', 'INSERT', 'NOTICE OF DEMOLITION zip-tied to the fence: CABINS 5 - 7 · SATURDAY 7:00 AM',
-  P(x=960, y=520, z=1.02, rate=0.03),
-  sfx=[fx(R(0.2), 'gate_chain', -14, 'outside', 'fence rattles in a gust', kind='fence'), fx(R(0.1), 'paper', -14, 'outside', 'sign flapping')],
-  energy='flashlight beam crossing the sign, the zip-tied sheet flapping, push 3 %/s')
-S(Wc(9, 'last'), 'camp_path', 'cabins_row', 'moon', 'ours', 'WS', 'low angle: three dark cabins in a row under the moon', DR(x=1000, y=560, z=1.02, dx=-30),
-  energy='drift left, clouds sliding over the moon, fireflies, grass swaying')
-S(T(10), 'camp_gate', 'wide', 'moon_flash', 'ours', 'MS', 'Tess steps into frame and clicks her flashlight on; the beam sweeps to the gate; she lifts the key ring',
-  P(x=900, y=560, z=1.15, rate=0.025),
-  chars=[C('tess', 'tess_gate', 'q_right', 'brave', [A(w(10, 'tess'), 'flashlight', on=True, aim='gate', sweep=0.6),
-                                                     A(w(10, 'keys'), 'hold_up', prop='keys', side=-1), A(R(0.3), 'look', x=1100, y=480)])],
-  props=dict(flashlight='tess_on at %.2f' % w(10, 'tess')),
-  sfx=[fx(w(10, 'tess'), 'flashlight_click', -6, 'close', 'switch on'), fx(w(10, 'keys'), 'key_in_lock', -8, 'close', 'key ring jingle', jingle=True),
-       fx(R(0.1), 'footsteps_gravel', -10, 'outside', 'Tess steps in', n=2)],
-  energy='beam sweeping across the gate, keys swinging, Tess turning, push 2.5 %/s')
-STATE(w(10, 'tess'), flashlight='tess_on')
-S(T(11), 'camp_gate', 'wide', 'moon_flash', 'ours', 'MCU', 'You (first look): olive work jacket, stubble, your dad\'s face; you look past camera at the cabins',
-  CR(x=960, y=520, z=1.0, rate=0.012),
-  chars=[C('you', [960, 560, 0.9], 'q_left', 'grief', [A(R(0.4), 'look', x=600, y=500), A(R(-0.6), 'blink')], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), energy='fireflies drifting behind in the blur, beam spill moving on the cheek, a blink, creep 1.2 %/s')
-S(Wc(12, 'mom'), 'memory', 'dock', 'memory_day', 'memory', 'MS', 'memory: Noah at 13 on the lake dock in the green sweatshirt, grinning (gap teeth), water glitter',
-  P(x=960, y=520, z=1.02, rate=0.015), tr='dissolve',
-  chars=[C('noah13', [960, 960, 640], 'front', 'calm_kid', [A(R(0.2), 'laugh', dur=1.2), A(R(1.2), 'wave')])],
-  sfx=[fx(R(0.1), 'ambience_memory', -12, 'memory', 'summer morning, lake lapping, far kids', dur=2.6)],
-  mus=[M(R(0), 'motif', 0.4, 3, 'music-box motif warm')],
-  energy='water glitter crawling, sweatshirt drawstrings swinging, laugh, slow push')
-S(T(13), 'camp_gate', 'poster', 'moon_flash', 'ours', 'INSERT', 'poster ECU: LAST SEEN WEARING A GREEN SWEATSHIRT', P(x=980, y=720, z=1.35, rate=0.03),
-  energy='beam drifting down the text, torn corner flapping, push 3 %/s')
-S(T(14), 'camp_path', 'path_track', 'moon_flash', 'ours', 'MS', 'you and Tess walk along the fence toward the gate; you look down at your hands',
-  TR(x=960, y=540, z=1.05, dx=55),
-  chars=[C('you', [1040, 960, 620], 'profile_right', 'grief', [A(R(0), 'walk', to=1400, surface='gravel'), A(w(14, 'one'), 'head_down', amount=0.5)]),
-         C('tess', [780, 960, 590], 'profile_right', 'brave', [A(R(0), 'walk', to=1150, surface='gravel'), A(R(0), 'flashlight', aim='ahead')])],
-  sfx=[fx(R(0.0), 'footsteps_gravel', -8, 'outside', 'two walkers on gravel', dur=3.5, n=2)],
-  energy='side track 55 px/s, walk cycles, fence posts sliding past in the foreground (depth 0.6), beam bobbing')
-S(T(15), 'camp_gate', 'lock_cu', 'moon_flash', 'ours', 'ECU', 'Tess\'s hands at the padlock and chain, flashlight tucked under her arm; your phone buzzes in your pocket',
-  P(x=960, y=560, z=1.0, rate=0.035),
-  chars=[C('tess', [960, 560, 300], 'front', 'brave', [A(w(15, 'unlocking'), 'unlock', prop='padlock'), A(w(15, 'gate'), 'pull_chain')], mode='hands')],
-  sfx=[fx(w(15, 'texts'), 'phone_vibrate', -6, 'close', 'your pocket buzzes', n=2), fx(w(15, 'unlocking'), 'key_in_lock', -3, 'close', 'key in the padlock'),
-       fx(w(15, 'gate'), 'padlock', -2, 'close', 'padlock pops open', hit=True), fx(w(15, 'gate') + 0.25, 'gate_chain', -3, 'close', 'chain slides through the bars')],
-  energy='hands working the key, chain sliding out, beam wobbling, push 3.5 %/s')
-STATE(w(15, 'gate'), phone='tess_pocket')
-S(T(16), 'ui', 'text', 'phone', 'ui', 'UI', 'your phone in your hand: MOM thread; bubble "Check the pocket." then typing dots, then the second bubble',
-  HH(x=960, y=560, z=1.0, rate=0.015),
-  hud=[dict(t=t(16), type='phone', state='message', name='MOM', bubbles=[dict(t=t(16), text='Check the pocket.'),
-        dict(t=t(17), text='He always had one of those cinnamon candies in there.', typing_from=e(16) + 0.05)], x=960, y=560, scale=1.0)],
-  sfx=[fx(t(16), 'phone_message', -4, 'close', 'message tone'), fx(e(16) + 0.05, 'typing', -16, 'close', 'typing dots (soft)', dur=0.5, cps=6),
-       fx(t(17), 'phone_message', -6, 'close', 'second message tone')],
-  energy='phone held in hand with handheld drift, bubbles sliding up, typing dots pulsing, the blurred gate behind with the beam moving')
-S(Wc(17, 'cinnamon'), 'memory', 'pocket', 'memory_day', 'memory', 'INSERT', 'memory: a kid\'s hand pulls a red cinnamon candy in a twist wrapper out of the green sweatshirt pocket',
-  P(x=960, y=560, z=1.05, rate=0.03), tr='dissolve',
-  chars=[C('noah13', [960, 620, 360], 'front', 'calm_kid', [A(R(0.2), 'pull_from_pocket', prop='candy_red')], mode='hands')],
-  sfx=[fx(R(0.35), 'candy_wrapper', -4, 'memory', 'wrapper crinkle')],
-  energy='hand pulling the candy out, cellophane catching light, push 3 %/s')
-S(T(18), 'camp_gate', 'wide', 'moon_flash', 'ours', 'CU', 'you reading the phone, its glow under your chin, eyes wet', CR(x=960, y=520, z=1.0, rate=0.01),
-  chars=[C('you', [960, 560, 1.0], 'q_left', 'grief', [A(w(18, 'pockets'), 'swallow'), A(R(1.0), 'blink')], mode='bust',
-           light=dict(rim='#9fb6ff', rim_a=60, side=1, key=-0.3, under='#bcd2ff'))],
-  dof=dict(focus=1.0, dof=6.75), energy='screen glow flickering as the text scrolls, fireflies in the blurred bg, gate swinging open behind, creep 1 %/s')
+# ================================================================ ARRIVAL 19.26 - 54.46 (lines 7-18): 22 shots
+STATE(19.26, queen='absent', mirror='wrapped', steps_drawn=7, eighth='none', smeared=0, noah='unseen')
+X(T(7), 'EWS', 'ours', 'camp_gate/aerial', 'night',
+  'the camp aerial relit blue-violet: the lake with the moon, Cabins 5-7 in a row with orange X marks (Cabin 7 nearest the path), '
+  'the mess hall across the path with its porch, the gate, the caretaker\'s warm window, your car at the gate; TIME CARD',
+  RV(5, x=980, y=560, z=1.2), tr='glint',
+  hud=[dict(t=w(7, "it's"), type='time_card', icon='clock', day='FRIDAY', time='11:57 PM',
+            sub='CAMP CEDAR LAKE  ·  DEMOLITION TOMORROW', flip_at=w(7, '11:57'), hold=2.8, x=110, y=170)],
+  device=DEV('doc', 'time_card', 'FRIDAY 11:57 PM · CAMP CEDAR LAKE · DEMOLITION TOMORROW'), time_card=True,
+  energy='reveal pull-out 5 %/s, lake shimmer, mist, fireflies, the car\'s headlights on')
+X(22.46, 'WS', 'ours', 'camp_gate/wide', 'night',
+  'the gate wide (v1 set, relit): you and Tess small by the car, the MISSING poster on the board; the headlights go off at 22.6',
+  CRN(dy=18, r=2.5, x=960, y=480, z=1.0),
+  chars=[body('you', 760, 900, 300, 'q_right', 'grief', [A(R(0.3), 'walk', to=880, surface='gravel')]),
+         body('tess', 600, 900, 290, 'q_right', 'brave', [A(R(0), 'walk', to=700, surface='gravel')])],
+  props=dict(car='headlights off at 22.6'), energy='headlights switching off, mist bands, fireflies, pines swaying, crane down')
+X(Wc(9, 'tomorrow'), 'DOC', 'ours', 'camp_gate/notice', 'night',
+  'NOTICE OF DEMOLITION zip-tied to the fence: CABINS 5-7 · SAT 7:00 AM; the beam crosses it, SAT 7:00 AM underlined',
+  P(3, x=960, y=520, z=1.02),
+  hud=[doc(25.0, 'notice', 'NOTICE OF DEMOLITION · CABINS 5-7 · SAT 7:00 AM', marks=[dict(t=26.4, what='underline', text='SAT 7:00 AM')])],
+  device=DEV('doc', 'notice', 'the demolition notice: Cabins 5-7, Saturday 7:00 AM'),
+  energy='the sheet flapping, the beam crossing, push 3 %/s')
+X(Wc(9, 'is'), 'WS', 'ours', 'camp_path/cabins_row', 'night',
+  'low wide: three dark cabins in a row with orange spray-paint X marks, the excavator parked by the nearest',
+  DR(2, dx=-30, x=1000, y=560, z=1.02), energy='parallax drift: the bucket slides past the cabins, clouds over the moon, fireflies')
+X(Wc(9, 'cabins'), 'MS', 'ours', 'camp_path/cabin7_door', 'night',
+  'Cabin 7 (nearest the path): the number plaque, the door with its padlock on the hasp, old search tape on the rail; label CABIN 7',
+  P(4, x=1250, y=500, z=1.05), hud=[label(28.95, 'CABIN 7', [1250, 380], dx=150, dy=-80)],
+  device=DEV('insert', 'cabin7', 'Cabin 7 is this one: plaque, padlock on the hasp'), errfix=[32],
+  energy='search tape fluttering, moths at the dead lamp, push 4 %/s')
+X(30.00, 'MS', 'ours', 'camp_gate/wide', 'night',
+  'Tess at the gate lifts the carabiner of keys into the beam', P(3, x=900, y=560, z=1.15),
+  chars=[body('tess', 900, 1000, 640, 'q_right', 'brave', [A(w(10, 'tess'), 'flashlight', on=True, aim='gate'),
+                                                         A(w(10, 'keys') - 0.3, 'hold_up', prop='keys', side=-1)])],
+  props=dict(flashlight='tess_on at 30.95', keys='lifted'), energy='beam sweeping, keys swinging, push 3 %/s')
+STATE(30.95, flashlight='tess_on', keys='tess_hand')
+X(Wc(10, 'keys'), 'INSERT', 'ours', 'camp_gate/keys_cu', 'night',
+  'the key ring swings into CU: padlock keys, the carabiner and a CABIN 7 key tag', FA(7, x=960, y=540, z=1.2),
+  chars=[hands('tess', 960, 520, 380, [A(R(0), 'jingle', prop='keys')], sleeve='orange')], errfix=[13],
+  device=DEV('insert', 'keys', 'Tess has the keys: the CABIN 7 tag'), energy='keys swinging and glinting, fast push 7 %/s')
+X(T(11), '2S', 'ours', 'camp_gate/wide', 'night',
+  'you and Tess at the gate; she glances at you, half a smile', P(3, x=960, y=540, z=1.1),
+  chars=[body('you', 1140, 1000, 640, 'q_left', 'grief', [A(R(0.4), 'look', x=800, y=420)]),
+         body('tess', 780, 1000, 620, 'q_right', 'half_smile', [A(R(0.2), 'look', x=1140, y=420)])],
+  energy='beam spill moving, fireflies behind, push 3 %/s')
+X(T(12), 'DOC', 'ours', 'camp_gate/poster_ecu', 'night',
+  'the poster photo: Noah in the green CEDAR LAKE sweatshirt', P(3, x=960, y=500, z=1.2),
+  hud=[doc(T(12), 'poster', 'photo: Noah in the green sweatshirt')], energy='the beam drifting down the photo, push 3 %/s')
+X(Wc(12, 'the', n=0), 'DOC', 'ours', 'camp_gate/poster_ecu', 'night',
+  'ECU of the poster line LAST SEEN WEARING A GREEN SWEATSHIRT; a yellow highlighter swipes it (evidence device)',
+  P(4, x=980, y=720, z=1.35), hud=[highlight(35.60, 'LAST SEEN WEARING A GREEN SWEATSHIRT', 560, 690, 1400, 760)],
+  device=DEV('doc', 'poster_line', 'LAST SEEN WEARING A GREEN SWEATSHIRT (highlighted)'),
+  energy='highlighter swipe, paper fluttering, push 4 %/s')
+X(T(13), 'WS', 'memory', 'memory/dock', 'sepia_day',
+  'memory: Noah13 on the lake dock in the green CEDAR LAKE sweatshirt, laughing; stamp 14 YEARS AGO', P(2.5, x=960, y=520, z=1.02),
+  tr='sepia', chars=[body('noah13', 960, 960, 640, 'front', 'laugh', [A(R(0.2), 'laugh', dur=1.2)])],
+  energy='water glitter, the hood strings swinging, gate weave, push 2.5 %/s')
+X(Wc(13, 'he'), 'WS', 'memory', 'memory/night_window', 'sepia_night',
+  'memory, the night he vanished: Cabin 7\'s window from outside at night, a boy\'s silhouette in the sweatshirt at the glass (no face)',
+  P(2.5), energy='lantern flicker behind him, moths, push 2.5 %/s')
+X(T(14), 'CU', 'ours', 'camp_gate/bokeh', 'night',
+  'CU of you, resolved, jaw set', P(3, x=960, y=520, z=1.05), tr='sepia',
+  chars=[bust('you', 960, 560, 1.0, 'q_left', 'resolve', [A(R(0.5), 'blink')], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
+  energy='bokeh drift, a breath, push 3 %/s')
+X(Wc(14, 'bring', n=0), 'OTS', 'ours', 'camp_gate/fence_track', 'night',
+  'OTS following Tess along the fence toward the gate, her beam bobbing ahead', TR(dx=60, r=1.5),
+  chars=[body('tess', 1100, 980, 560, 'back', 'brave', [A(R(0), 'walk', to=1400, surface='gravel')]),
+         body('you', 520, 1100, 820, 'back', 'neutral', [A(R(0), 'walk', to=700, surface='gravel')], ots=True)],
+  energy='track 60 px/s, fence posts sliding past in the foreground, beam bobbing')
+X(Wc(14, "you'd"), 'WS', 'ours', 'camp_gate/wide', 'night',
+  'wide: the two of you reach the chained gate; Tess hands the flashlight to you while she finds the key',
+  P(2.5, x=960, y=520, z=1.0),
+  chars=[body('tess', 900, 880, 330, 'q_right', 'brave', [A(R(0.3), 'pick_up', prop='keys')]),
+         body('you', 1080, 880, 340, 'q_left', 'neutral', [])], energy='beam swinging over the chain, fireflies, push 2.5 %/s')
+X(T(15), 'INSERT', 'ours', 'camp_gate/lock_cu', 'night',
+  'the key goes into the gate padlock; the chain slides through the bars', P(4, x=960, y=560, z=1.0),
+  chars=[hands('tess', 960, 560, 320, [A(w(15, 'unlocking'), 'unlock', prop='gate_padlock'), A(w(15, 'gate'), 'pull_chain')], sleeve='orange')],
+  props=dict(gate_padlock='open at 45.75'), energy='hands working the key, chain sliding, beam wobble, push 4 %/s')
+STATE(45.75, gate_padlock='open')
+X(Wc(15, 'tess'), 'MS', 'ours', 'camp_gate/wide', 'night',
+  'your phone buzzes: you pull it from your jacket pocket, its glow under your chin', HH(2, shake=8, x=960, y=560, z=1.1),
+  chars=[body('you', 960, 1080, 700, 'q_left', 'neutral', [A(w(15, 'texts') + 0.2, 'pick_up', prop='phone', side=1)], light=L_PHONE)],
+  props=dict(your_phone='hand'), energy='phone glow flickering on, handheld')
+STATE(44.4, your_phone='hand')
+X(T(16), 'UI', 'ui', 'ui/text', 'phone',
+  'your phone: MOM thread, bubble "Check the pocket." (text-fit checked)', HH(1.5, shake=6),
+  hud=[dict(t=t(16), type='phone', state='message', name='MOM', bubbles=[dict(t=t(16), text='Check the pocket.')], x=960, y=560, scale=1.0,
+            fit=True)], errfix=[23], device=DEV('ui', 'texts', "Mom's texts"),
+  energy='bubble sliding up, the blurred gate behind with the beam moving, handheld')
+X(T(17), 'UI', 'ui', 'ui/text', 'phone',
+  'typing dots, then the second bubble "He always had one of those cinnamon candies in there."', HH(1.5, shake=6),
+  hud=[dict(t=T(17), type='phone', state='message', name='MOM', bubbles=[dict(t=t(16), text='Check the pocket.'),
+        dict(t=t(17), text='He always had one of those cinnamon candies in there.', typing_from=e(16) + 0.05)], x=960, y=560, scale=1.0, fit=True)],
+  energy='typing dots pulsing, bubble sliding up')
+X(Wc(17, 'cinnamon', off=-0.05), 'UI', 'ui', 'ui/text', 'phone',
+  'push in on the bubble: the words cinnamon candies', FA(6, x=1040, y=600, z=1.25),
+  hud=[dict(t=48.9, type='phone', state='message', name='MOM', bubbles=[dict(t=t(16), text='Check the pocket.'),
+        dict(t=t(17), text='He always had one of those cinnamon candies in there.')], x=960, y=560, scale=1.0, fit=True, focus='cinnamon candies')],
+  energy='fast push 6 %/s on the words')
+X(T(18), 'INSERT', 'memory', 'memory/pocket', 'sepia_day',
+  'memory insert: the green sweatshirt\'s kangaroo pocket, a kid hand pulls out red cinnamon candies in red twist wrappers (plants the candy)',
+  P(3, x=960, y=560, z=1.05), tr='sepia',
+  chars=[hands('noah13', 960, 620, 360, [A(R(0.2), 'pull_from_pocket', prop='candy_red')])],
+  device=DEV('insert', 'candy', 'red cinnamon candies in red twist wrappers'), energy='hand pulling the candy, cellophane glinting, push 3 %/s')
+X(Wc(18, 'what'), 'CU', 'ours', 'camp_gate/bokeh', 'night',
+  'CU of you reading the phone, eyes wet; blue-violet bokeh', P(2.5, x=960, y=520, z=1.0), tr='sepia',
+  chars=[bust('you', 960, 560, 1.0, 'q_left', 'grief', [A(w(18, 'pockets'), 'swallow')], light=L_PHONE)], dof=dict(focus=1.0, dof=6.75),
+  energy='screen glow flicker, bokeh drift, a swallow, push 2.5 %/s')
 
-# ================================================================ PORCH AND BELL 54.34 - 67.49 (lines 19-23)
-S(T(19), 'mess_porch', 'wide', 'moon_flash', 'ours', 'WS', 'the mess hall lodge and its porch: screen door, MESS HALL sign, wind chimes; you two come up the steps',
-  PU(x=960, y=520, z=1.15, rate=-0.04, dx=-20),
-  chars=[C('tess', 'tess_steps', 'back', 'brave', [A(R(0), 'walk', to='porch_mid', surface='porch'), A(R(0), 'flashlight', aim='porch')]),
-         C('you', 'you_steps', 'back', 'neutral', [A(R(0.3), 'walk', to='porch_left', surface='porch')])],
-  sfx=[fx(R(0.1), 'footsteps_porch', -8, 'outside', 'up the porch steps', n=3, creak=0.6), fx(R(0), 'wind_chimes', -14, 'outside', 'porch chimes', dur=1.6)],
-  energy='chimes swinging, beam crawling over the screen door, walkers climbing, drift')
-S(T(20), 'mess_porch', 'porch_low', 'moon_flash', 'ours', 'MS', 'low angle on the boards: Tess\'s boot steps over a slatted crate in the foreground',
-  P(x=1100, y=700, z=1.1, rate=0.03),
-  chars=[C('tess', [1150, 1000, 700], 'profile_left', 'brave', [A(w(20, 'over'), 'step_over', height=0.4)], mode='legs')],
-  sfx=[fx(w(20, 'over'), 'footsteps_porch', -4, 'close', 'boot lands on boards', n=1), fx(w(20, 'over') - 0.15, 'crate_creak', -10, 'close', 'crate creaks as the boot clears it')],
-  energy='boot passing over the crate close to lens, dust lifting from the slats')
-S(Wc(20, 'marked'), 'mess_porch', 'crate_cu', 'moon_flash', 'ours', 'INSERT', 'stencil SAVE FOR THE MUSEUM on the crate; a museum tag on string',
-  P(x=960, y=540, z=1.0, rate=0.03), sfx=[fx(R(0.2), 'paper', -16, 'close', 'tag on string flips', dur=0.4)],
-  energy='beam sliding across the stencil, the tag swinging, push 3 %/s')
-S(T(21), 'mess_porch', 'bell_slats', 'moon_flash', 'ours', 'CU', 'dolly along the slats: the beam finds the brass breakfast bell inside',
-  TR(x=760, y=560, z=1.1, dx=70),
-  sfx=[fx(w(21, 'breakfast'), 'bell_cracked', -24, 'close', 'the bell murmurs as the crate is nudged (sympathetic ring, no strike)', strike='touch')],
-  energy='slats sliding past in the foreground (depth 0.7) with parallax, the bell revealed, brass glints')
-STATE(w(21, 'bell'), bell='crate_seen')
-S(T(22), 'mess_porch', 'bell_ecu', 'moon_flash', 'ours', 'ECU', 'the crack in the bell\'s rim, lit by the beam', P(x=980, y=600, z=1.2, rate=0.04),
-  hud=[label(w(22, 'crack'), 'THE CRACK', [1020, 690], dx=170, dy=-110)],
-  sfx=[fx(w(22, 'crack'), 'ui_pop', -9, 'dry', 'label pop')],
-  energy='push 4 %/s along the rim, the hot-spot gliding over the brass')
-S(Wc(23, 'counselor'), 'memory', 'porch_steps', 'memory_day', 'memory', 'MS', 'memory: a counselor\'s hands drop the bell on the porch boards; '
-  'you (10) and Noah (13) watch from the steps', P(x=960, y=600, z=1.05, rate=0.025), tr='dissolve',
-  chars=[C('counselor', [1150, 980, 700], 'front', 'shock', [A(w(23, 'dropped') - 0.2, 'drop_prop', prop='bell')], mode='legs'),
-         C('you_kid', [640, 1010, 420], 'q_right', 'shock', [A(w(23, 'dropped'), 'flinch')]),
-         C('noah13', [820, 1010, 500], 'q_right', 'calm_kid', [A(w(23, 'dropped') + 0.2, 'laugh', dur=0.8)])],
-  sfx=[fx(w(23, 'dropped'), 'bell_cracked', -6, 'memory', 'THE REAL BELL SOUND PLANTED: clean note + thin rattle (memory-filtered)', strike='drop', hit=True)],
-  energy='bell falling and bouncing, kids flinching and laughing, warm dust in sunlight')
+# ================================================================ PORCH 54.46 - 67.59 (lines 19-23): 9 shots
+X(T(19), 'WS', 'ours', 'mess_porch/high_wide', 'night',
+  'HIGH WIDE from the mess-hall porch: the porch in the foreground, the SAVE FOR THE MUSEUM crate right of the screen door, '
+  'Cabin 7\'s door across the path (40 m); you two climb the steps', CRN(dy=20, r=2, x=960, y=520, z=1.05),
+  chars=[body('tess', 820, 900, 300, 'back', 'brave', [A(R(0), 'walk', to=900, surface='porch'), A(R(0), 'flashlight', aim='porch')]),
+         body('you', 680, 920, 310, 'back', 'neutral', [A(R(0.3), 'walk', to=760, surface='porch')])],
+  setup='PORCH_HIGH', energy='chimes swinging, the beam crawling over the screen door, walkers climbing, crane')
+X(T(20), 'WS', 'ours', 'mess_porch/porch_low', 'night',
+  'low angle on the boards: Tess\'s boot steps over the crate', P(3.5, x=960, y=640, z=1.1),
+  chars=[C('tess', [900, 760, 700], 'profile_left', 'brave', [A(w(20, 'over'), 'step_over', prop='crate')], mode='legs')],
+  energy='boot crossing the frame, beam spill, push 3.5 %/s')
+X(Wc(20, 'crate'), 'DOC', 'ours', 'mess_porch/crate_cu', 'night',
+  'insert: the stencil SAVE FOR THE MUSEUM on the slats and a paper museum tag on string', P(3, x=960, y=540, z=1.05),
+  hud=[doc(57.3, 'stencil', 'SAVE FOR THE MUSEUM', marks=[dict(t=58.3, what='tag_flip', text='CEDAR LAKE HISTORICAL SOC.')])],
+  device=DEV('doc', 'crate', 'the crate: SAVE FOR THE MUSEUM'), energy='tag flipping on its string, beam crossing, push 3 %/s')
+X(T(21), 'INSERT', 'ours', 'mess_porch/slats', 'night',
+  'push between the slats: the beam finds brass in the dark', FA(5, x=980, y=560, z=1.1),
+  energy='slats sliding past the lens, the beam finding metal, push 5 %/s')
+X(Wc(21, 'you'), 'INSERT', 'ours', 'mess_porch/bell_ecu', 'night',
+  'the old brass breakfast bell in the crate, lit by the beam', P(3, x=960, y=540, z=1.15),
+  device=DEV('insert', 'bell', 'the old breakfast bell'), energy='dust in the beam, the brass glinting, push 3 %/s')
+X(Wc(21, 'breakfast'), 'INSERT', 'ours', 'mess_porch/bell_ecu', 'night',
+  'the bell turns a little as the crate settles: the rim comes toward the light', P(4, x=1000, y=600, z=1.3),
+  energy='bell rocking slightly, beam glint sliding, push 4 %/s')
+X(T(22), 'INSERT', 'ours', 'mess_porch/bell_ecu', 'night',
+  'ECU of the rim: the crack; label THE CRACK', P(4, x=1040, y=640, z=1.6), hud=[label(64.05, 'THE CRACK', [1040, 660], dx=180, dy=-110)],
+  device=DEV('insert', 'crack', 'the crack in the rim'), energy='glint crawling along the crack, push 4 %/s')
+X(T(23), 'WS', 'memory', 'memory/porch_drop', 'sepia_day',
+  'memory: a counselor drops the bell on the porch steps; kid-you and Noah flinch at the sound', P(3, x=960, y=540, z=1.0), tr='sepia',
+  chars=[body('counselor', 1000, 900, 420, 'front', 'shock', [A(w(23, 'dropped'), 'drop_prop', prop='bell')]),
+         body('you_kid', 640, 940, 300, 'q_right', 'shock', [A(w(23, 'dropped') + 0.1, 'flinch')]),
+         body('noah13', 760, 940, 330, 'q_right', 'shock', [A(w(23, 'dropped') + 0.1, 'flinch')])],
+  energy='the bell falling and bouncing, kids flinching, gate weave')
+X(Wc(23, 'it'), 'DIAGRAM', 'memory', 'memory/bell_ecu', 'sepia_day',
+  'D8 planted: the bell rings on the boards; a clean white ring, then a jagged red rattle squiggle (the real bell has a rattle)',
+  P(3, x=960, y=540, z=1.15),
+  hud=[rings(66.20, 'clean', 960, 520, 3, 0.8), rings(66.80, 'rattle', 960, 520, 3, 0.8),
+       diagram(66.15, 'D8', 'sound rings: a clean ring, then a ring plus a jagged rattle squiggle (the cracked bell)', hold=1.4)],
+  device=DEV('diagram', 'D8', 'the cracked bell rings twice: clean, then a rattle'),
+  energy='rings expanding, the bell rim vibrating, push 3 %/s')
 
-# ================================================================ CARETAKER AND CABIN 67.49 - 88.66 (lines 24-30)
-S(T(24), 'camp_path', 'path_track', 'moon_flash', 'ours', 'MCU', 'Tess turns back to you and holds a finger to her lips', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('tess', [960, 560, 0.95], 'q_right', 'tense', [A(w(24, 'finger') - 0.2, 'finger_to_lips', t1=w(24, 'as') + 0.6), A(R(0.1), 'nervous_glance', n=1)], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), sfx=[fx(w(24, 'lips'), 'breath', -12, 'close', 'a held "shh" breath', kind='held', dur=0.6)],
-  energy='finger rising to lips, eyes darting to the house, beam swaying low')
-S(Wc(24, 'as'), 'caretaker', 'wide', 'tv', 'ours', 'WS', 'the caretaker\'s house across the path, one window lit with TV flicker; '
-  'you two pass in the foreground as silhouettes', TR(x=960, y=520, z=1.0, dx=45),
-  chars=[C('tess', [700, 1060, 760, 0.6], 'profile_right', 'tense', [A(R(0), 'walk', to=1500, surface='gravel', sneak=True)], mode='silhouette'),
-         C('you', [420, 1070, 790, 0.6], 'profile_right', 'tense', [A(R(0), 'walk', to=1250, surface='gravel', sneak=True)], mode='silhouette')],
-  sfx=[fx(R(0), 'footsteps_gravel', -14, 'outside', 'sneaking steps', dur=2.0, n=2, soft=True), fx(R(0), 'tv_through_wall', -18, 'outside', 'TV murmur behind glass', dur=2.0)],
-  energy='TV flicker blue on the window, curtain sways once at %.2f, silhouettes crossing, track 45 px/s' % w(24, "caretaker's"))
-S(T(25), 'cabin_now', 'cabin_door', 'flash', 'ours', 'MS', 'inside Cabin 7: the door creaks open, Tess\'s beam leads in and sweeps the dusty bunks',
-  P(x=960, y=520, z=1.0, rate=0.04),
-  chars=[C('tess', [520, 1060, 720, 0.8], 'back', 'tense', [A(R(0.1), 'flashlight', aim='sweep', sweep=(300, 1600), dur=1.2)], mode='silhouette')],
-  sfx=[fx(R(0.05), 'door_creak', -3, 'inside', 'cabin door', slow=1.2), fx(R(0.1), 'room_tone', -10, 'inside', 'dusty cabin tone in', dur=6)],
-  energy='beam sweeping across bunks, dust exploding into the beam, door swinging')
-STATE(T(25), mirror='wrapped_under_bunk')
-S(Wc(25, 'mirror'), 'cabin_now', 'under_bunk', 'flash', 'ours', 'CU', 'low angle under Noah\'s bunk: a flat shape wrapped in a faded striped towel; your hand slides it out',
-  P(x=980, y=740, z=1.05, rate=0.03, dx=-10),
-  chars=[C('you', [700, 760, 300], 'front', 'neutral', [A(w(25, 'under'), 'reach', to=(980, 760)), A(w(25, 'bunk') + 0.1, 'slide_out')], mode='hands')],
-  sfx=[fx(w(25, 'under') + 0.2, 'mirror_handle', -4, 'close', 'frame scrapes on floorboards', kind='scrape')],
-  energy='the bundle sliding toward camera, dust rolling off it, the beam jittering')
-S(T(26), 'cabin_now', 'towel_label', 'flash', 'ours', 'INSERT', 'the towel: faded orange-and-white stripes, a laundry tag with NOAH in marker; your thumb rubs it',
-  CR(x=960, y=560, z=1.08, rate=0.012),
-  chars=[C('you', [980, 640, 360], 'front', 'grief', [A(R(0.2), 'rub_thumb', n=2)], mode='hands')],
-  sfx=[fx(R(0.2), 'towel_cloth', -14, 'close', 'thumb on terry cloth', kind='rub')],
-  energy='thumb rubbing, cloth fibres catching the beam, creep')
-S(T(27), 'memory', 'sprinkler_lawn', 'memory_day', 'memory', 'WS', 'memory: Noah runs through the sprinkler holding the towel out, catching the spray',
-  TR(x=900, y=560, z=1.0, dx=70), tr='dissolve',
-  chars=[C('noah13', [800, 960, 560], 'profile_right', 'laugh', [A(R(0), 'run', to=1300), A(R(0.4), 'laugh', dur=1.6)])],
-  sfx=[fx(R(0.1), 'sprinkler_spit', -8, 'memory', 'sprinkler arcs (memory)', n=3, rhythm='tick'), fx(R(0.5), 'footsteps_gravel', -12, 'memory', 'bare feet on wet grass', dur=1.6, wet=True)],
-  energy='spray arcs sweeping, the towel billowing, running, water glitter')
-S(T(28), 'memory', 'cabin_morning', 'memory_day', 'memory', 'MS', 'memory: Noah wrings the towel over kid-you asleep on the pillow; you squint awake',
-  P(x=960, y=600, z=1.05, rate=0.03),
-  chars=[C('noah13', [1150, 980, 640], 'q_left', 'laugh', [A(w(28, 'wring'), 'wring', prop='towel')]),
-         C('you_kid', [760, 820, 300], 'profile_right', 'sleep', [A(w(28, 'pillow') + 0.3, 'wake_squint')], mode='lying')],
-  sfx=[fx(w(28, 'wring') + 0.1, 'water_drip', -6, 'memory', 'water pours from the twisted towel', kind='pour', dur=1.0), fx(w(28, 'when'), 'bed_creak', -12, 'memory', 'bunk creak as you squirm')],
-  energy='water drops falling in sunbeams, the towel twisting, kid squirming')
-S(T(29), 'memory', 'bunk_night', 'memory_night', 'memory', 'MS', 'memory, the night before: Noah asleep on his bunk, his wrist with a digital watch hanging off the edge',
-  P(x=900, y=620, z=1.05, rate=0.03),
-  chars=[C('noah13', 'bunk_sleep', 'front', 'sleep', [A(R(0), 'breathe_sleep')], mode='lying')],
-  sfx=[fx(R(0.1), 'ambience_camp_night', -12, 'memory', 'crickets through the window (memory)', dur=2)],
-  energy='moths around a lantern, sleeping breath, curtain moving in the night breeze')
-S(T(30), 'memory', 'watch_cu', 'memory_night', 'memory', 'ECU', 'kid fingers press the buttons of Noah\'s watch: ALM 6:45 becomes ALM 4:45',
-  P(x=960, y=560, z=1.1, rate=0.035),
-  chars=[C('you_kid', [960, 640, 300], 'front', 'sly', [A(w(30, 'changing'), 'press_button', n=2), A(w(30, 'alarm'), 'press_button', n=2)], mode='hands')],
-  props=dict(watch='ALM 6:45 -> 4:45 at %.2f' % w(30, 'alarm')),
-  sfx=[fx(w(30, 'changing'), 'watch_beep', -8, 'memory', 'button chirps', n=2), fx(w(30, 'alarm'), 'watch_beep', -8, 'memory', 'button chirps', n=2)],
-  energy='digits flipping, tiny fingers pressing, LCD backlight blinking green')
+# ================================================================ CARETAKER AND CABIN 7 67.59 - 88.70 (lines 24-30): 14 shots
+X(T(24), 'CU', 'ours', 'camp_path/bokeh', 'night', 'CU of Tess, finger to her lips', P(3, x=960, y=520, z=1.05),
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'tense', [A(w(24, 'finger'), 'finger_to_lips')], light=L_BEAM)],
+  dof=dict(focus=1.0, dof=6.75), energy='bokeh drift, the finger rising, push 3 %/s')
+X(Wc(24, 'as'), 'WS', 'ours', 'caretaker/wide', 'night',
+  'the caretaker\'s house: warm window #ffb84d with TV flicker, the curtain sways at 70.32; your two silhouettes cross in the foreground',
+  TR(dx=40, r=1.0), chars=[body('tess', 700, 1060, 700, 'profile_right', 'tense', [A(R(0), 'walk', to=1300, surface='gravel', soft=True)]),
+                          body('you', 520, 1080, 720, 'profile_right', 'tense', [A(R(0), 'walk', to=1100, surface='gravel', soft=True)])],
+  energy='TV flicker, the curtain sway at 70.32, silhouettes crossing, track 40 px/s')
+X(T(25), 'MS', 'ours', 'cabin_now/door', 'night',
+  'Cabin 7\'s door: Tess unhooks the padlock and hangs it open on the hasp; the beam leads in', P(4, x=960, y=540, z=1.05),
+  chars=[hands('tess', 960, 560, 420, [A(R(0.1), 'unlock', prop='padlock'), A(R(0.5), 'hang_open', prop='padlock')], sleeve='orange')],
+  props=dict(padlock='hasp_open at 71.9'), errfix=[32], device=DEV('insert', 'padlock', 'the padlock on Cabin 7\'s hasp'),
+  energy='padlock swinging on the hasp, the door creaking in, beam leading, push 4 %/s')
+STATE(71.9, padlock='hasp_open')
+X(Wc(25, 'you'), 'WS', 'ours', 'cabin_now/master', 'night',
+  'CABIN 7 MASTER WIDE (high, from the door): left bunk, wall clock, window with torn screen and sill, the mirror spot (empty '
+  'wall), Noah\'s bunk along the right wall with the NOAH cubby; moon shafts and the warm beam pool; you two enter',
+  P(3, x=960, y=540, z=1.0), setup='C7_MASTER', chip='CABIN 7 · {ours}',
+  chars=[body('tess', 760, 980, 380, 'back', 'tense', [A(R(0), 'walk', to=900, surface='wood'), A(R(0), 'flashlight', aim='room', sweep=0.6)]),
+         body('you', 1080, 1000, 400, 'back', 'neutral', [A(R(0.2), 'walk', to=1180, surface='wood')])],
+  energy='beam sweeping the room, dust in the shafts, moths, push 3 %/s')
+X(Wc(25, 'wrapped'), 'INSERT', 'ours', 'cabin_now/cubby', 'night',
+  'the NOAH cubby, empty: masking-tape label NOAH, a cobweb, no sweatshirt (you looked; it is not here)', P(4, x=960, y=520, z=1.1),
+  errfix=[28], device=DEV('insert', 'cubby', 'the NOAH cubby is empty: no sweatshirt'), energy='the beam passing, cobweb stirring, push 4 %/s')
+X(Wc(25, 'in'), 'WS', 'ours', 'cabin_now/under_bunk', 'night',
+  'floor-level under Noah\'s bunk, slats overhead: a towel-wrapped bundle in the beam; your hand pulls it out',
+  P(3, x=960, y=600, z=1.05),
+  chars=[hands('you', 1200, 640, 400, [A(w(25, 'bunk'), 'reach'), A(R(-0.4), 'pull_hand', prop='bundle')], sleeve='olive')],
+  energy='dust drifting through slats, the bundle scraping out, push 3 %/s')
+X(T(26), 'INSERT', 'ours', 'cabin_now/towel_label', 'night',
+  'the striped towel\'s laundry label in marker: NOAH', P(4, x=960, y=540, z=1.15),
+  device=DEV('insert', 'towel', 'Noah\'s towel (label NOAH)'), energy='thumb brushing the terry loops, push 4 %/s')
+X(T(27), 'WS', 'memory', 'memory/sprinkler_lawn', 'sepia_day',
+  'memory: the lawn sprinkler arcs; Noah runs through it holding the striped towel out', P(2.5), tr='sepia',
+  chars=[body('noah13', 900, 900, 360, 'profile_right', 'laugh', [A(R(0), 'run', to=1200)])],
+  energy='sprinkler arcs, Noah running, sun flare, gate weave')
+X(Wc(27, 'sprinkler'), 'MS', 'memory', 'memory/sprinkler_lawn', 'sepia_day',
+  'memory: the towel catches the water, soaking', P(3.5, x=960, y=520, z=1.1),
+  chars=[body('noah13', 960, 1000, 640, 'front', 'grin_kid', [A(R(0), 'hold_up', prop='towel')])],
+  energy='water pelting the towel, droplets flying, push 3.5 %/s')
+X(T(28), 'WS', 'memory', 'memory/bunk_morning', 'sepia_morning',
+  'memory: Noah wrings the towel over kid-you\'s pillow in the bottom bunk', P(2.5, x=960, y=560, z=1.0),
+  chars=[body('noah13', 1080, 940, 420, 'q_left', 'grin_kid', [A(w(28, 'wring'), 'wring', prop='towel')]),
+         C('you_kid', [760, 760, 0.8], 'front', 'sleep', [A(w(28, 'pillow'), 'wake_squint')], mode='lying')],
+  energy='water pouring, kid stirring, gate weave, push')
+X(Wc(28, 'when'), 'CU', 'memory', 'memory/bunk_morning', 'sepia_morning',
+  'memory: kid-you squeals under the water, Noah laughing behind', FA(5, x=960, y=520, z=1.1),
+  chars=[bust('you_kid', 960, 560, 1.0, 'front', 'laugh', [A(R(0.1), 'flinch')], light=L_MEM)],
+  energy='water splashing, squeal, fast push 5 %/s')
+X(T(29), 'WS', 'memory', 'memory/bunk_night', 'sepia_night',
+  'memory, night: Noah asleep in the top bunk, his arm with the digital watch hanging over the edge', P(2.5),
+  chars=[C('noah13', [960, 520, 1.0], 'front', 'sleep', [A(R(0), 'breathe_sleep')], mode='lying', watch=True)],
+  energy='moonlight crawling, breathing, gate weave, push')
+X(T(30), 'MS', 'memory', 'memory/bunk_night', 'sepia_night',
+  'memory: kid-you on tiptoe reaching for the hanging watch arm, grinning', P(3.5, x=980, y=520, z=1.1),
+  chars=[body('you_kid', 900, 1060, 720, 'q_right', 'sly', [A(R(0.2), 'reach')])], energy='tiptoe, the arm swaying, push 3.5 %/s')
+X(Wc(30, 'changing'), 'INSERT', 'memory', 'memory/watch_cu', 'sepia_night',
+  'the watch LCD fills 70 % of the frame; the finger presses the button BESIDE the digits (never over them); ALM 6:45 flips '
+  'to 4:45 with a highlight', P(2.5, x=960, y=540, z=1.0), errfix=[24],
+  chars=[hands('you_kid', 1380, 700, 360, [A(w(30, 'changing'), 'press_button'), A(w(30, 'alarm'), 'press_button')])],
+  hud=[diagram(87.30, 'watch', 'ALM 6:45 -> 4:45 (the digits flip, highlighted)', hold=1.2)],
+  device=DEV('insert', 'watch', 'the alarm changed: 6:45 -> 4:45'), energy='digits flipping, button chirps, push 2.5 %/s')
 
-# ================================================================ STEPS AND THE GAME 88.66 - 120.98 (lines 31-42)
-S(T(31), 'cabin_now', 'mirror_ots', 'flash', 'ours', 'OTS', 'present: you peel the towel back; the beam hits the glass: seven red steps',
-  PU(x=960, y=520, z=1.2, rate=-0.03),
-  chars=[C('you', 'you_mirror', 'back', 'neutral', [A(R(0.0), 'unwrap', prop='towel'), A(w(31, 'seven'), 'freeze', t1=R(-0.1))]),
-         C('tess', 'tess_mirror', 'q_left', 'tense', [A(R(0), 'flashlight', aim='mirror')])],
-  props=dict(mirror='unwrapped, upright against the back wall', towel='held in your left hand'),
-  sfx=[fx(R(0.1), 'towel_cloth', -6, 'close', 'towel peeled off', kind='pull'), fx(w(31, 'seven'), 'glass_resonance', -10, 'close', 'glass hum as the light hits', hit=True)],
-  mus=[M(w(31, 'seven'), 'braam', 0.45, None, 'soft low braam on the reveal')],
-  energy='towel falling away, beam blooming on the glass, pull-out reveal 3 %/s')
-STATE(T(31) + 0.4, mirror='held_upright', towel='held')
-S(T(32), 'cabin_now', 'two_shot', 'flash', 'ours', 'MCU', 'Tess remembers: eyes widen, a nervous half-smile, beam under her face', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('tess', [960, 560, 0.95], 'q_left', 'recognise', [A(w(32, 'remembers'), 'expr', name='recognise'), A(w(32, 'game'), 'half_smile')], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), energy='beam flutter on her face, dust in front, push')
-S(T(33), 'memory', 'lipstick_game', 'memory_night', 'memory', 'CU', 'memory: kid hands draw a staircase on a mirror with a cherry lipstick, flashlights under chins',
-  PU(x=960, y=540, z=1.3, rate=-0.05), tr='dissolve',
-  chars=[C('kids', [960, 600, 360], 'front', 'giggle', [A(w(33, 'staircase'), 'draw_step', step='zigzag')], mode='hands')],
-  sfx=[fx(w(33, 'staircase'), 'lipstick_draw', -6, 'memory', 'lipstick zigzag', strokes=3), fx(R(0.2), 'kids_far', -14, 'memory', 'giggles under blankets')],
-  energy='lipstick moving, flashlight beams wobbling, giggling heads bobbing')
-S(T(34), 'memory', 'card_queen', 'memory_night', 'memory', 'INSERT', 'the Queen of Spades playing card propped against the mirror base',
-  P(x=960, y=560, z=1.0, rate=0.03),
-  sfx=[fx(w(34, 'three') + i * 0.28, 'crowd_whisper', -14, 'memory', 'whispered call %d of 3' % (i + 1), dur=0.3, density=2) for i in range(3)],
-  energy='flashlight beam trembling on the card, the card\'s red lips catching light, push')
-S(T(35), 'mirror', 'mirror_cu', 'flash', 'mirror', 'CU', 'tilt up the drawn staircase from the bottom step to the top; a faint red glow at the top',
-  cam('crane', x=760, y=780, z=1.15, dx=55, dy=-60, rate=0.02),
-  sfx=[fx(w(35, 'top'), 'whoosh', -12, 'dry', 'soft rising whoosh to the top step', kind='soft')],
-  energy='camera climbing the steps diagonally, the glow pulsing at the top')
-S(T(36), 'memory', 'kids_game', 'memory_night', 'memory', 'MS', 'memory: two kids in sleeping bags dare each other; one claps a hand over the other\'s mouth, laughing',
-  PU(x=960, y=580, z=1.2, rate=-0.04),
-  chars=[C('kids', [960, 900, 520], 'front', 'giggle', [A(w(36, 'dare'), 'dare'), A(w(36, 'twice'), 'hand_over_mouth')])],
-  sfx=[fx(w(36, 'twice'), 'kids_far', -12, 'memory', 'muffled laugh', dur=1.0)],
-  energy='kids wriggling, flashlight under the chin bobbing, shadows huge on the wall')
-S(T(37), 'cabin_now', 'two_shot', 'flash', 'ours', '2S', 'present: you and Tess kneel at the mirror; her weak laugh dies, you do not smile',
-  P(x=960, y=560, z=1.05, rate=0.025),
-  chars=[C('tess', 'tess_mirror', 'q_left', 'half_smile', [A(w(37, 'joke'), 'laugh_dies')]), C('you', 'you_mirror', 'q_right', 'grief', [A(R(0.5), 'look', x=1200, y=500)])],
-  energy='beam swaying, dust, the laugh fading into stillness, push')
-S(T(38), 'cabin_now', 'two_shot', 'flash', 'ours', 'MS', 'profile: Tess raises the flashlight onto the glass; glare blooms toward the lens', P(x=1000, y=520, z=1.0, rate=0.03, dx=-15),
-  chars=[C('tess', 'tess_mirror', 'profile_right', 'tense', [A(w(38, 'shines'), 'flashlight', aim='mirror', raise_=True)])],
-  sfx=[fx(w(38, 'flashlight'), 'cloth_grab', -16, 'close', 'jacket rustle as she raises the light')],
-  energy='beam swinging up, flare bloom crossing the lens on "flashlight", dust swirl')
-S(T(39), 'cabin_now', 'sill', 'flash', 'ours', 'INSERT', 'Tess sets her phone face up on the dusty windowsill; its black glass catches a tiny red glint (plant)',
-  P(x=960, y=600, z=1.05, rate=0.03),
-  chars=[C('tess', [900, 560, 320], 'front', 'neutral', [A(w(39, 'phone'), 'set_down', prop='phone', face_up=True)], mode='hands')],
-  props=dict(phone='sill_face_up at %.2f (stays there until 674.4)' % w(39, 'phone')),
-  sfx=[fx(w(39, 'phone'), 'phone_handle', -6, 'close', 'phone set down on wood', kind='set_down')],
-  energy='hand withdrawing, dust puffing off the sill, moonlight shafts, red glint sliding in the phone glass')
-STATE(w(39, 'phone'), phone='sill_face_up')
-S(T(40), 'mirror', 'mirror_cu', 'flash', 'mirror', 'CU', 'Tess\'s thumb brushes the bottom step', P(x=700, y=760, z=1.2, rate=0.03),
-  chars=[C('tess', [760, 800, 340], 'front', 'tense', [A(w(40, 'brushes'), 'smear', step=7, length=0.6)], mode='hands')],
-  sfx=[fx(w(40, 'thumb'), 'lipstick_smear', -4, 'close', 'waxy squeak under the thumb')],
-  energy='thumb dragging, wax smearing, beam glare moving')
-S(T(41), 'cabin_now', 'fingertip', 'flash', 'ours', 'ECU', 'red lipstick crumbs on Tess\'s thumb pad; she rubs them between finger and thumb and they fall glinting',
-  CR(x=960, y=540, z=1.1, rate=0.012),
-  chars=[C('tess', [960, 600, 420], 'front', 'neutral', [A(w(41, 'crumbs'), 'rub_fingers', n=3)], mode='hands')],
-  sfx=[fx(w(41, 'crumbs'), 'lipstick_smear', -16, 'close', 'tiny crumbly rub', kind='crumb')],
-  energy='crumbs falling through the beam, fingers rubbing, creep')
-S(T(42), 'mirror', 'mirror_cu', 'flash', 'mirror', 'CU', 'a fresh red line draws itself beneath the bottom step: perfectly straight, too clean',
-  P(x=620, y=820, z=1.15, rate=0.035),
-  props=dict(eighth='redrawn fresh at %.2f (0.6 s, left to right)' % w(42, 'line')),
-  hud=[label(w(42, 'appears'), '8TH STEP', [510, 860], dx=-60, dy=-140)],
-  sfx=[fx(w(42, 'line'), 'lipstick_draw', -4, 'close', 'the line drawing itself (glassy, clean)', clean=True),
-       fx(w(42, 'line'), 'impact_hit', -2, 'dry', 'HIT on the eighth step', hit=True, size=1.1), fx(w(42, 'line'), 'glass_resonance', -6, 'close', 'glass ring tail', hit=True)],
-  mus=[M(w(42, 'line') - 1.25, 'silence', 0.0, 1.2, 'bed out under "Then a fresh red line", ends in the hit'), M(w(42, 'line'), 'hit', 0.9)],
-  energy='the line drawing on, camera pushing 3.5 %/s and jolting on the hit, dust swirling in the beam')
-STATE(w(42, 'line'), eighth='present')
+# ================================================================ THE STEPS AND THE GAME 88.70 - 121.06 (lines 31-42): 22 shots
+STATE(88.9, mirror='glass', towel='floor_beside', eighth='none')
+X(T(31), 'WS', 'ours', 'cabin_now/profile', 'night',
+  'profile along the back wall: you pull the towel off; the mirror stands on the floor against the back wall at the mirror spot '
+  '(between the window and Noah\'s bunk); in the glass: your and Tess\'s reflections and the beam hot spot',
+  P(3, x=960, y=540, z=1.0), setup='C7_PROFILE',
+  chars=[body('you', 760, 980, 430, 'profile_right', 'neutral', [A(R(0.1), 'unwrap', prop='towel')]),
+         body('tess', 520, 980, 420, 'profile_right', 'tense', [A(R(0), 'flashlight', aim='mirror')])],
+  props=dict(mirror='unwrapped at 89.0'), errfix=[33], energy='the towel sliding off, the hot spot blooming, dust, push 3 %/s')
+X(Wc(31, 'drawn'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'the glass: seven waxy red steps; the frame edge on the left; your reflection behind them; the hot spot', P(3.5, x=980, y=520, z=1.1),
+  errfix=[33], energy='hot spot sliding, crumbs glinting, push 3.5 %/s')
+X(T(32), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of Tess: she recognises it', P(3, x=960, y=520, z=1.05),
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'recognise', [A(R(0.3), 'expr', name='recognise')], light=L_BEAM)],
+  dof=dict(focus=1.0, dof=6.75), energy='eyes narrowing, bokeh drift, push 3 %/s')
+X(T(33), 'WS', 'memory', 'memory/lantern_game', 'sepia_night',
+  'memory, night by lantern in Cabin 7: kids in sleeping bags watch a kid draw steps on this mirror', P(2.5), tr='sepia',
+  chars=[C('kids', [960, 900, 420], 'front', 'giggle', [A(R(0), 'dare')], mode='body'),
+         hands('noah13', 1200, 420, 300, [A(R(0.2), 'draw_step', step=3)])],
+  energy='lantern flicker, the lipstick moving, gate weave')
+X(T(34), 'DOC', 'memory', 'memory/card_queen', 'sepia_night',
+  'a vintage Queen of Spades playing card: the court-card queen wears her signature: spade crown, fan collar, spade beauty mark',
+  P(4, x=960, y=500, z=1.1), hud=[doc(95.3, 'card', 'QUEEN OF SPADES (court card)')],
+  device=DEV('doc', 'card', 'the Queen of Spades playing card (plants the crown, collar, beauty mark)'),
+  energy='the card turning in the lantern light, push 4 %/s')
+X(Wc(34, 'three'), 'INSERT', 'memory', 'memory/kids_mouths', 'sepia_night',
+  'three kids\' mouths in a row whisper her name; 1 · 2 · 3 pop', FA(5),
+  hud=[count_pop(97.03, 1, 600, 400), count_pop(97.31, 2, 960, 400), count_pop(97.59, 3, 1320, 400)],
+  energy='mouths whispering one after another, numerals popping')
+X(T(35), 'DIAGRAM', 'ours', 'mirror/glass_cu', 'night',
+  'D1 the game, drawn on the glass in white chalk lines: steps numbered 1 (top) to 7, a tiny dark figure below step 7, a dotted '
+  'arrow climbing', P(2.5, x=960, y=540, z=1.0),
+  hud=[diagram(97.95, 'D1', 'steps numbered 1 (top) .. 7; a tiny figure below step 7; a dotted arrow climbs', hold=2.8, build=True)],
+  device=DEV('diagram', 'D1', 'the game: she climbs from the bottom to WISH at the top'), energy='chalk lines drawing on, the dotted arrow advancing')
+X(Wc(35, 'she', n=1), 'DIAGRAM', 'ours', 'mirror/glass_cu', 'night',
+  'D1: the arrow reaches the top: WISH with a star', P(4, x=1060, y=380, z=1.2),
+  hud=[diagram(99.30, 'D1', 'WISH with a star at the top (step 1)', hold=1.4)], energy='the star sparkling, push 4 %/s')
+X(T(36), 'WS', 'memory', 'memory/kids_game', 'sepia_night',
+  'memory: kids in sleeping bags dare each other, flashlights under chins', P(2.5),
+  chars=[C('kids', [960, 900, 460], 'front', 'giggle', [A(R(0), 'dare')], mode='body')], energy='flashlights wobbling, giggles')
+X(Wc(36, 'dare'), 'WS', 'memory', 'memory/kids_game', 'sepia_night',
+  'two speech balloons QUEEN OF SPADES... QUEEN OF SPADES...; a third balloon, empty', P(3, x=960, y=500, z=1.05),
+  hud=[dict(t=102.6, type='balloon', text='QUEEN OF SPADES...', x=620, y=300), dict(t=103.3, type='balloon', text='QUEEN OF SPADES...', x=1000, y=260),
+       dict(t=103.9, type='balloon', text='', x=1380, y=300, empty=True)],
+  energy='balloons popping in, the third empty one wobbling')
+X(T(37), 'MS', 'memory', 'memory/kids_game', 'sepia_night', 'the kids laughing', P(3.5),
+  chars=[C('kids', [960, 1000, 640], 'front', 'giggle', [A(R(0), 'laugh')], mode='body')], energy='laughing, flashlights bobbing')
+X(Wc(37, 'supposed'), 'CU', 'memory', 'memory/kids_game', 'sepia_night',
+  'Noah13 not laughing: he looks at the glass', P(4, x=960, y=520, z=1.1),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_right', 'worried', [A(R(0.2), 'look', x=1400, y=480)], light=L_MEM)],
+  energy='his eyes sliding to the mirror, push 4 %/s')
+X(T(38), 'WS', 'ours', 'cabin_now/three_q', 'night',
+  'three-quarter from the left bunk: Tess raises the flashlight at the glass; you kneel at the mirror',
+  P(3, x=960, y=540, z=1.0), tr='sepia',
+  chars=[body('tess', 820, 980, 440, 'q_right', 'tense', [A(R(0.3), 'flashlight', aim='mirror')]),
+         body('you', 1140, 980, 330, 'q_right', 'neutral', [], kneel=True)],
+  energy='the beam swinging up onto the glass, dust, push 3 %/s')
+X(Wc(38, 'on'), 'WS', 'ours', 'mirror/glass_wide', 'night',
+  'the mirror in the beam: the hot spot blooms; your two reflections; the steps glow', P(3.5, x=960, y=540, z=1.05),
+  energy='hot spot flaring, dust motes in the beam, push 3.5 %/s')
+X(T(39), 'INSERT', 'ours', 'cabin_now/sill', 'night',
+  'insert: Tess sets her phone FACE UP on the windowsill; its black glass reflects the moon and the window (it is a mirror too); hold',
+  SIL(1.8, x=960, y=560, z=1.1),
+  chars=[hands('tess', 960, 520, 340, [A(w(39, 'phone'), 'set_down', prop='phone')], sleeve='orange')],
+  props=dict(phone='sill_face_up at 110.71'), device=DEV('insert', 'phone', 'the phone face up on the sill (a mirror too)'),
+  energy='the phone laid down, the moon sliding across its glass, slow push 1.8 %/s')
+STATE(110.71, phone='sill_face_up')
+X(T(40), 'MS', 'ours', 'mirror/glass_wide', 'night',
+  'Tess kneels and brushes her thumb toward the lipstick', P(3, x=960, y=560, z=1.1),
+  chars=[body('tess', 760, 1060, 620, 'q_right', 'tense', [A(w(40, 'brushes'), 'rub_thumb', at=(1200, 600))])], energy='kneeling, the thumb reaching')
+X(Wc(40, 'over'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'ECU: the thumb smears the bottom step', P(4, x=960, y=560, z=1.3),
+  chars=[hands('tess', 960, 560, 440, [A(w(40, 'lipstick'), 'smear')], sleeve='orange')], energy='waxy smear, push 4 %/s')
+X(T(41), 'INSERT', 'ours', 'cabin_now/hands', 'night', 'ECU: little red crumbs on her skin', P(4, x=960, y=540, z=1.3),
+  chars=[hands('tess', 960, 560, 520, [A(R(0.2), 'rub_fingers')], sleeve='orange')], energy='crumbs falling, push 4 %/s')
+X(Wc(41, 'come'), 'CU', 'ours', 'cabin_now/bokeh', 'night',
+  'CU of Tess rubbing the crumbs between her fingers, looking at you', P(3, x=960, y=520, z=1.05),
+  chars=[bust('tess', 960, 560, 1.0, 'q_left', 'puzzled', [A(R(0.2), 'look', x=600, y=500)], light=L_BEAM)],
+  dof=dict(focus=1.0, dof=6.75), energy='fingers rubbing, bokeh drift, push 3 %/s')
+X(T(42), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'silence; slow push on the bottom step: clean glass below it', SIL(1.5, x=900, y=660, z=1.2),
+  energy='the hot spot trembling, a crumb falling, slow push 1.5 %/s (silence)')
+X(Wc(42, 'line'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'the eighth line draws itself below the bottom step; label 8TH STEP', P(3, x=900, y=660, z=1.3, snap=(118.87, 1.08)), tr='white',
+  hud=[label(119.2, '8TH STEP', [900, 700], dx=-60, dy=-150)], props=dict(eighth='drawing 118.87-119.47'),
+  device=DEV('insert', '8th', 'a fresh red line appears beneath the bottom step'),
+  energy='the line drawing itself, punch-in 1.08x on the hit')
+STATE(118.87, eighth='present')
+X(119.90, '2S', 'ours', 'cabin_now/ots_mirror', 'night',
+  'you and Tess react: you lean back, Tess\'s hand to her mouth; the line glowing in the glass between you',
+  FA(5, x=960, y=540, z=1.05),
+  chars=[body('you', 1180, 1060, 640, 'q_left', 'fear', [A(119.95, 'flinch')]), body('tess', 760, 1060, 620, 'q_right', 'fear', [A(119.95, 'hand_to_mouth')])],
+  energy='both flinching, beam lurching, fast push 5 %/s')
 
-# ================================================================ SEVEN RULES 120.98 - 129.80 (lines 43-46)
-S(T(43), 'cabin_now', 'wide', 'flash', 'ours', 'WS', 'fast pull back from the glass to the whole cabin: you and Tess tiny at the mirror; punch-in on "seven"',
-  RV(x=1150, y=620, z=1.6, rate=-0.12, snap=(w(43, 'seven'), 1.25)),
-  hud=[tag(w(43, 'seven'), '7 RULES', 960, 120, 'white', 1.6)],
-  sfx=[fx(w(43, 'seven'), 'impact_hit', -3, 'dry', 'punch-in hit', hit=True, size=1.0), fx(R(0.05), 'whoosh', -8, 'dry', 'pull-back whoosh', kind='soft')],
-  mus=[M(w(43, 'seven'), 'hit', 0.8), M(w(43, 'seven') + 0.1, 'riser', 0.5, 7.0, 'long slow rise toward rule 1 begins (peaks on the card)')],
-  energy='fast pull-out reveal, punch-in x1.25, the beam swinging as Tess looks round')
-S(T(44), 'mirror', 'mirror_cu', 'flash', 'mirror', 'ECU', 'the fourth step from the top, glinting; punch-in on "fourth"', P(x=950, y=540, z=1.4, rate=0.03, snap=(w(44, 'fourth'), 1.25)),
-  sfx=[fx(w(44, 'fourth'), 'stinger', -5, 'dry', 'stinger on the punch-in', hit=True)],
-  energy='push, punch-in x1.25 on the stinger, wax glint sliding')
-S(T(45), 'cabin_dawn', 'knot_cu', 'dawn', 'theirs', 'ECU', 'teaser: a taped hand ties a shoelace in pale dawn light, the knot half tied', P(x=960, y=600, z=1.1, rate=0.025),
-  chars=[C('noah13', [960, 640, 400], 'front', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], mode='hands')],
-  sfx=[fx(R(0.3), 'lace_pull', -10, 'close', 'lace pull', n=2)], energy='hands looping the lace, a drop falling past in the background')
-S(T(46), 'cabin_now', 'floor_end', 'after', 'ours', 'MS', 'teaser: a shadowed man on the cabin floor in a too-small green sweatshirt, cuffs halfway up his arms, hands shaking',
-  P(x=1060, y=760, z=1.1, rate=0.035),
-  chars=[C('noah_grown', 'noah_floor', 'front', 'shaken', [A(R(0), 'tremble', amount=0.8), A(R(0.6), 'look_at_hands')], light=dict(rim='#9fb6ff', rim_a=90, side=1, key=-0.6), face='hidden')],
-  sfx=[fx(R(0.4), 'breath', -12, 'close', 'shaky breathing', kind='nervous', dur=2)],
-  energy='hands trembling, beam lying across the floor, dust, push 3.5 %/s')
+# ================================================================ SEVEN RULES 121.06 - 129.80 (lines 43-46): 5 shots
+X(T(43), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'the seven steps light up 1-7 like a progress bar (type beat 3 builds)', P(3, x=960, y=540, z=1.05),
+  hud=[count_pop(121.15 + 0.12 * k, k + 1, 1230 - 52 * k, 300 + 70 * k, '#ff4060') for k in range(7)],
+  energy='steps lighting one after another, push 3 %/s')
+X(Wc(43, 'there'), 'TYPE', 'ours', 'type/beat', 'night', 'type beat 3: 7 RULES slams over the glowing steps', P(4),
+  plate=dict(set='mirror', view='glass_cu', var='night', post=dict(blur=8, dim=0.45)),
+  hud=[typebeat(122.40, 3, '7 RULES', size_h=0.2)], energy='slam with overshoot, push 4 %/s')
+X(T(44), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'step 4 circles itself in lipstick: RULE 4', FA(6, x=1080, y=500, z=1.3), hud=[dict(t=124.40, type='circle', text='RULE 4', x=1080, y=500, color='#c63449')],
+  energy='lipstick circle drawing, fast push 6 %/s')
+X(T(45), 'INSERT', 'ours', 'cabin_now/hands', 'night',
+  'FLASH-FORWARD TONIGHT: big adult forearms in green CEDAR LAKE cuffs halfway up the arm, shaking', FA(7, x=960, y=540, z=1.1),
+  chars=[hands('noah_grown', 960, 560, 560, [A(R(0), 'tremble', amount=0.5)], cuffs='halfway')],
+  hud=[teaser(T(45), 'TONIGHT'), chip(T(45), 'TONIGHT', 'teaser')], teaser='TONIGHT', tr='glitch',
+  energy='hands trembling, the cuffs straining, fast push 7 %/s')
+X(T(46), 'DOC', 'ours', 'camp_gate/poster_ecu', 'night',
+  'the poster\'s highlighted sweatshirt line again [R 35.6], then the glitch into card 1', P(4, x=980, y=720, z=1.4), reuse=35.6, tr='glitch',
+  energy='highlight glowing, push 4 %/s')
 
-# ================================================================ RULE 1 129.80 - 203.53 (lines 47-77)
-c1 = RULE(1)
-STATE(c1, flashlight='tess_on')
-S(c1, 'mirror', 'mirror_cu', 'flash', 'mirror', 'ECU', 'your fingertip touches the top step', P(x=1280, y=320, z=1.3, rate=0.03),
-  chars=[C('you', [1350, 360, 380], 'front', 'neutral', [A(w(49, 'top'), 'touch_glass', at=(1280, 300))], mode='hands')],
-  sfx=[fx(w(49, 'top'), 'glass_tap', -10, 'close', 'fingertip on the wax (soft)')], energy='finger approaching, the beam glare on the glass, push')
-S(T(50), 'mirror', 'mirror_cu', 'flash', 'mirror', 'ECU', 'the lipstick smears under your finger', FA(x=1240, y=330, z=1.45, rate=0.08),
-  chars=[C('you', [1300, 380, 400], 'front', 'neutral', [A(w(50, 'smears') - 0.2, 'smear', step=1, length=0.5)], mode='hands')],
-  props=dict(steps_smeared='0 -> 1'), sfx=[fx(w(50, 'smears') - 0.2, 'lipstick_smear', -2, 'close', 'smear 1')],
-  energy='smear dragging, wax ridges, fast push')
-STATE(w(50, 'smears'), steps_smeared=1)
-S(T(51), 'mirror', 'mirror_cu', 'flash', 'mirror', 'CU', 'side angle: the finger moves down to the next step and the next, smearing', DR(x=1100, y=420, z=1.2, dx=-50, dy=40),
-  chars=[C('you', [1200, 420, 360], 'front', 'neutral', [A(w(51, 'next') - 0.2, 'smear', step=2, length=0.35), A(R(-0.35), 'smear', step=3, length=0.3)], mode='hands')],
-  props=dict(steps_smeared='1 -> 3'), sfx=[fx(w(51, 'next') - 0.2, 'lipstick_smear', -4, 'close', 'smear 2'), fx(R(-0.35), 'lipstick_smear', -5, 'close', 'smear 3')],
-  energy='finger travelling down the staircase, camera following diagonally')
-STATE(e(51), steps_smeared=7)
-S(T(52), 'cabin_now', 'fingertip', 'flash', 'ours', 'ECU', 'seven little red marks stacked on your fingertip; it trembles; pull back to the hand and the smeared glass behind', PU(x=960, y=540, z=1.4, rate=-0.06),
-  chars=[C('you', [960, 620, 440], 'front', 'fear', [A(R(0), 'tremble', amount=0.4)], mode='hands')],
-  props=dict(steps_smeared=7, fingertip='seven red marks'), sfx=[fx(R(0.3), 'breath', -14, 'close', 'breath in', kind='held')],
-  energy='fingertip trembling, wax glinting, push 3 %/s')
-S(T(53), 'mirror', 'mirror_cu', 'flash', 'mirror', 'ECU', 'low on the glass: your finger reaches the eighth line; it does not smear; the nail clicks; punch-in',
-  P(x=560, y=850, z=1.35, rate=0.03, snap=(w(53, 'clicks'), 1.3)),
-  chars=[C('you', [640, 860, 400], 'front', 'fear', [A(w(53, 'eighth'), 'touch_glass', at=(560, 860)), A(w(53, 'clicks'), 'nail_tap')], mode='hands')],
-  hud=[label(w(53, 'clicks') + 0.12, 'CLEAN GLASS', [560, 860], dx=160, dy=-130, hold=0.85)],
-  sfx=[fx(w(53, 'clicks'), 'nail_click_glass', 0, 'close', 'THE CLICK: crisp nail on clean glass (reused identically at 690.2)', hit=True),
-       fx(w(53, 'clicks'), 'glass_resonance', -8, 'close', 'thin glass ring', hit=True)],
-  mus=[M(w(53, 'clicks') - 1.2, 'silence', 0.0, 1.15, 'bed out 1.2 s, ends in the click'), M(w(53, 'clicks'), 'stinger', 0.6)],
-  energy='finger sliding down then stopping dead, punch-in x1.3 on the click, the line not smearing (parallax shows it is behind the glass)')
-S(T(54), 'cabin_now', 'mirror_ots', 'flash', 'ours', 'OTS', 'you tilt the mirror frame', cam('tilt', x=960, y=520, z=1.1, rate=0.03, roll=-4),
-  chars=[C('you', 'you_mirror', 'back', 'fear', [A(w(54, 'tilt'), 'tilt_frame', angle=-12, dur=0.8)])],
-  props=dict(mirror='tilted -12 deg'), sfx=[fx(w(54, 'tilt'), 'mirror_handle', -6, 'close', 'wood frame creak as it tilts', kind='creak')],
-  energy='mirror rotating, beam reflection swinging across the wall, camera roll -4')
-STATE(w(54, 'tilt') + 0.8, mirror='tilted')
-S(T(55), 'mirror', 'queen_step_tilt', 'flash', 'mirror', 'CU', 'in the glass the seven steps tilt with the frame, the eighth line stays LEVEL', cam('tilt', x=760, y=760, z=1.2, rate=0.03, roll0=-12, roll=-14),
-  energy='the frame and the drawn steps rotated while the 8th line holds level: camera roll keeps going, beam glare sliding')
-S(T(56), 'mirror', 'queen_step_tilt', 'queen', 'mirror', 'CU', 'closer: a small black figure stands on the eighth step, perfectly level while everything tilts around her (queen stage 0: back, hair, dress)',
-  P(x=575, y=760, z=1.6, rate=0.04),
-  chars=[C('queen', [575, 860, 230, 1.04], 'back', 'queen_still', [A(R(0), 'still')], mode='body', stage=0)],
-  props=dict(queen='on the eighth step'),
-  sfx=[fx(w(56, 'woman'), 'braam', -5, 'dry', 'low braam on the woman', hit=True, key='d'), fx(w(56, 'woman'), 'ambience_mirror', -8, 'mirror', 'glass world tone swells', dur=4)],
-  mus=[M(w(56, 'woman'), 'braam', 0.7)],
-  energy='push 4 %/s on her, her hair stirring with no wind, the rest of the image still tilted')
-STATE(w(56, 'woman'), queen='eighth_step')
-S(T(57), 'mirror_world', 'dress', 'void', 'mirror', 'ECU', 'her black satin dress: a lipstick-red glint crawling along the folds', DR(x=960, y=600, z=1.2, dx=-25, dy=20),
-  chars=[C('queen', [960, 1500, 1800], 'back', 'queen_still', [A(R(0), 'hem_sway')], mode='body', stage=0)],
-  sfx=[fx(R(0.1), 'cloth_press', -16, 'mirror', 'satin rustle (too close)', kind='satin')], energy='red glint crawling, hem swaying with no wind, drift')
-S(Wc(57, 'looking'), 'mirror_world', 'stairs', 'void', 'mirror', 'OTS', 'over her shoulder (inside the glass world): she looks down a staircase into nothing',
-  CR(x=980, y=560, z=1.05, rate=0.02),
-  chars=[C('queen', [1260, 1150, 1100, 0.7], 'back', 'queen_still', [A(R(0), 'still')], mode='silhouette', stage=0)],
-  energy='creep down the stairs 2 %/s, pale scratch-lines shimmering on the treads, dust falling into the dark')
-S(T(58), 'mirror', 'old_cabin_refl', 'old_cabin', 'mirror', 'WS', 'pull out from her to the whole reflection: the cabin as it was (pale, clean, bunks made) framed by our dark glass',
-  RV(x=760, y=760, z=1.9, rate=-0.10),
-  sfx=[fx(w(58, 'cabin'), 'whoosh', -12, 'dry', 'reveal pull', kind='soft'), fx(w(58, 'glass'), 'ambience_dawn', -18, 'mirror', 'the old cabin heard through glass (muffled birds)', dur=3)],
-  mus=[M(w(58, 'glass'), 'swell', 0.45, 6, 'warm detuned pad: the too-normal world')],
-  energy='fast pull-out reveal, palette blooming from dark to pale inside the frame')
-S(T(59), 'mirror', 'old_cabin_refl', 'old_cabin', 'mirror', 'CU', 'in the reflection: a row of damp swimsuits on the top-bunk rail, dripping', TR(x=800, y=420, z=1.4, dx=60),
-  sfx=[fx(w(59, 'swimsuits') + 0.5, 'water_drip', -12, 'mirror', 'drip (through glass)', n=2), fx(w(59, 'rail'), 'water_drip', -12, 'mirror', 'drip', n=1)],
-  energy='track along the rail, drops falling from the suits, suits swaying slightly')
-S(T(60), 'mirror', 'old_cabin_refl', 'old_cabin', 'mirror', 'MS', 'in the reflection the cabin door swings in; daylight; no one there', P(x=960, y=480, z=1.3, rate=0.03),
-  sfx=[fx(w(60, 'walked'), 'screen_door', -10, 'mirror', 'screen door spring and slap (muffled)')],
-  energy='door swinging, light sweeping across the floor, push')
-S(T(61), 'mirror', 'old_cabin_floor', 'old_cabin', 'mirror', 'CU', 'low on the reflected floorboards: two sets of wet footprints appear one by one toward the bunk', TR(x=760, y=700, z=1.2, dx=60),
-  props=dict(footprints='appearing every 0.42 s from %.2f' % w(61, 'footprints')),
-  sfx=[fx(round(w(61, 'footprints') + 0.42 * k, 3), 'wet_footstep', -9, 'mirror', 'print %d' % (k + 1), bare=(k % 2 == 0)) for k in range(4)],
-  mus=[M(w(61, 'footprints') - 1.2, 'silence', 0.0, 1.2, 'silence; the first wet print ends it')],
-  energy='prints appearing in rhythm with a wet sound each, track follows them')
-S(T(62), 'mirror', 'old_cabin_floor', 'old_cabin', 'mirror', 'ECU', 'the bare prints: five toes, wet sheen', P(x=900, y=640, z=1.5, rate=0.03),
-  sfx=[fx(w(62, 'bare'), 'wet_footstep', -7, 'mirror', 'bare print', bare=True), fx(w(62, 'feet') + 0.3, 'wet_footstep', -8, 'mirror', 'bare print', bare=True)],
-  energy='new prints appearing, water glinting, push')
-S(T(63), 'mirror', 'old_cabin_floor', 'old_cabin', 'mirror', 'CU', 'the other trail: a shoe print, then a bare foot, shoe, bare...', TR(x=700, y=680, z=1.3, dx=70),
-  sfx=[fx(w(63, 'shoe'), 'wet_footstep', -7, 'mirror', 'shoe print', bare=False), fx(w(63, 'bare'), 'wet_footstep', -7, 'mirror', 'bare print', bare=True),
-       fx(w(63, 'foot') + 0.4, 'wet_footstep', -9, 'mirror', 'shoe print', bare=False)],
-  energy='alternating prints appearing, track')
-S(T(64), 'mirror', 'old_cabin_refl', 'old_cabin', 'mirror', 'MS', 'the trail ends at Noah\'s bunk in the reflection: empty bunk, a dip in the mattress', P(x=1150, y=620, z=1.25, rate=0.03),
-  sfx=[fx(w(64, 'bunk'), 'bed_creak', -16, 'mirror', 'the empty bunk creaks')], energy='the last print appearing at the bunk, mattress dipping by itself')
-S(T(65), 'cabin_now', 'wide', 'flash_low', 'ours', 'WS', 'our side: Tess angles the flashlight toward the floor; the cone sweeps from the mirror down', PU(x=980, y=600, z=1.25, rate=-0.04, dx=-20),
-  chars=[C('tess', 'tess_mirror', 'q_left', 'tense', [A(w(65, 'angles'), 'flashlight', aim='floor', sweep=0.8)]), C('you', 'you_mirror', 'q_right', 'fear', [A(R(0), 'grip_frame')])],
-  sfx=[fx(w(65, 'angles'), 'cloth_grab', -16, 'close', 'sleeve rustle')], energy='beam sweeping down, dust, drift')
-S(T(66), 'cabin_now', 'dust_floor', 'flash_low', 'ours', 'LOW', 'grazing angle over the floor: dust smooth and unbroken from the door to the bed', TR(x=760, y=640, z=1.15, dx=40),
-  energy='beam raking the dust, motes lifting and settling, slow track along the floor (no prints)')
-S(T(67), 'mirror_world', 'stairs', 'void', 'mirror', 'WS', 'past the woman down the dark stairs; something pale far below', CR(x=960, y=560, z=1.1, rate=0.02),
-  chars=[C('queen', [1240, 1100, 1000, 0.72], 'back', 'queen_still', [A(R(0), 'still')], mode='silhouette', stage=0)],
-  mus=[M(e(67) - 1.2, 'silence', 0.0, 1.2, 'bed out before the boy\'s voice')], energy='creep, faint glow breathing far below')
-S(T(68), 'mirror_world', 'stairs', 'void_noah', 'mirror', 'CU', 'far below in the dark stairwell a small hand in a green cuff rests on the railing', P(x=900, y=760, z=1.4, rate=0.035),
-  chars=[C('noah13', [900, 780, 160], 'front', 'calm_kid', [A(R(0.4), 'tap_rail', n=2)], mode='hands')],
-  sfx=[fx(w(68, 'did'), 'sub_drop', -12, 'dry', 'low pressure under the voice', hit=True)], voice_fx='below',
-  energy='the small hand tapping the rail, dust falling, push 3.5 %/s')
-S(T(69), 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'you: fear eyes, then they soften with recognition', P(x=960, y=520, z=1.05, rate=0.03),
-  chars=[C('you', [960, 560, 1.0], 'q_left', 'fear', [A(w(69, 'immediately'), 'expr', name='grief', fade=0.6)], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), energy='eyes swapping from fear discs to wet grief, beam flutter, push')
-S(T(70), 'ui', 'voicemail', 'phone', 'ui', 'UI', 'your phone: VOICEMAIL list, entry NOAH · 0:09 · JUL 18 (14 years old)', HH(x=960, y=560, z=1.0, rate=0.015),
+# ================================================================ RULE 1 (card 129.80-133.56)
+RULE(1)
+X(card_times(1)[1], 'WS', 'ours', 'cabin_now/profile', 'night',
+  're-establishing wide: you kneel at the mirror, Tess beside you with the beam on the glass', P(3, x=960, y=540, z=1.0), reuse=88.7, tr='smear',
+  chars=[body('you', 900, 980, 330, 'profile_right', 'tense', [A(R(0.2), 'reach')], kneel=True),
+         body('tess', 600, 980, 430, 'profile_right', 'tense', [A(R(0), 'flashlight', aim='mirror')])],
+  energy='your hand rising to the glass, dust in the beam, push 3 %/s')
+X(Wc(49, 'top'), 'POV', 'ours', 'mirror/glass_cu', 'night',
+  'POV olive sleeve: your fingertip touches the top step; the lipstick smears; numeral 1 pops beside it', P(3, x=1100, y=360, z=1.15),
+  chars=[POVH([A(w(49, 'step'), 'touch_glass', at=(1230, 300))], 1300, 520)], hud=[count_pop(134.95, 1, 1300, 300)],
+  props=dict(smeared='1 at 134.95'), device=DEV('diagram', 'D2', 'counting: a numeral pops beside each smeared step'),
+  energy='finger smearing wax, push 3 %/s')
+X(T(50), 'INSERT', 'ours', 'mirror/glass_cu', 'night', 'ECU: the lipstick smears under the fingertip', P(4, x=1230, y=320, z=1.5),
+  energy='wax dragging, crumbs, push 4 %/s')
+X(T(51), 'POV', 'ours', 'mirror/glass_cu', 'night', 'POV: the next step smears: 2, then 3, 4, 5 pop as the finger descends',
+  P(3, x=1060, y=460, z=1.1), chars=[POVH([A(137.6, 'touch_glass', at=(1178, 370)), A(138.0, 'touch_glass', at=(1126, 440)),
+                                        A(138.3, 'touch_glass', at=(1074, 510)), A(138.6, 'touch_glass', at=(1022, 580))], 1200, 640)],
+  hud=[count_pop(137.55, 2, 1250, 370), count_pop(137.95, 3, 1198, 440), count_pop(138.30, 4, 1146, 510), count_pop(138.62, 5, 1094, 580)],
+  props=dict(smeared='2-5 by 138.6'), energy='the finger descending step by step, numerals popping')
+X(T(52), 'POV', 'ours', 'mirror/glass_cu', 'night', 'POV: steps 6 and 7 smear; the numerals 1-7 stand beside the smeared steps (D2)',
+  P(3, x=1000, y=540, z=1.05), chars=[POVH([A(139.0, 'touch_glass', at=(970, 650)), A(139.5, 'touch_glass', at=(918, 720))], 1100, 800)],
+  hud=[count_pop(139.05, 6, 1042, 650), count_pop(139.55, 7, 990, 720)], energy='the last smears, all seven numerals glowing')
+STATE(139.6, smeared=7)
+X(Wc(52, 'come'), 'INSERT', 'ours', 'cabin_now/hands', 'night',
+  'fingertip insert: seven red marks on your fingertip, counted', P(4, x=960, y=540, z=1.3),
+  chars=[POVH([A(R(0.1), 'rub_thumb')], 960, 600, 560)], device=DEV('insert', 'fingertip', 'seven red marks on your finger'),
+  energy='thumb rubbing the marks, push 4 %/s')
+X(T(53), 'POV', 'ours', 'mirror/glass_cu', 'night', 'POV: the finger moves below step 7 and rests on the eighth line: no smear',
+  P(3, x=900, y=720, z=1.2), chars=[POVH([A(w(53, 'eighth'), 'touch_glass', at=(860, 790))], 980, 900)],
+  energy='the finger sliding down, the line glowing, push 3 %/s')
+X(Wc(53, 'your'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
+  'the nail on the eighth line: CLICK at 143.29 with a camera hit and a white flash; label CLEAN GLASS', SIL(1.5, x=860, y=790, z=1.45, hit=[(143.29, 10)]),
+  chars=[POVH([A(143.29, 'nail_tap')], 920, 860, 480)], hud=[label(143.40, 'CLEAN GLASS', [860, 790], dx=200, dy=-120)],
+  fx_post=[dict(t=143.29, white=0.85, dur=0.05)], energy='silence push, then the click jolt')
+X(Wc(53, 'against'), 'DIAGRAM', 'ours', 'diagram/side_view', 'night',
+  'D3 side view: the glass plane edge-on, the seven drawn steps ON it, the eighth step BEHIND it, a dashed line between',
+  P(2.5), plate=dict(set='mirror', view='glass_cu', var='night', post=dict(blur=10, dim=0.5)),
+  hud=[diagram(143.65, 'D3', 'side view: glass plane; steps 1-7 drawn on the glass; step 8 behind the glass (dashed)', hold=1.5)],
+  device=DEV('diagram', 'D3', 'the eighth step is behind the glass'), energy='lines drawing on, the 8th step sliding back behind the plane')
+X(T(54), '2S', 'ours', 'cabin_now/ots_mirror', 'night', 'you tilt the mirror frame with both hands; Tess steadies the beam',
+  P(3, x=960, y=540, z=1.05), chars=[body('you', 1100, 1040, 600, 'back', 'tense', [A(w(54, 'tilt'), 'tilt_frame', deg=-13)], kneel=True),
+                                    body('tess', 700, 1040, 620, 'q_right', 'tense', [])],
+  energy='frame tilting, the reflection swinging, push 3 %/s')
+X(T(55), 'INSERT', 'ours', 'mirror/glass_tilt', 'night',
+  'the frame and the drawing at -13 deg; the eighth line stays level, a dashed level guide across it', P(3, x=960, y=600, z=1.1),
+  hud=[level_guide(146.6, 680, -13.0, 1.6)], props=dict(mirror='tilted -13'), energy='frame settling at -13, the line rock steady')
+X(T(56), 'WS', 'stairs', 'mirror/queen_glass', 'stairs',
+  'she stands on the eighth line inside the glass, back three-quarters, lit: 25 % of frame height; crown glint, fan collar, '
+  'waist-length hair; perfectly level in a tilted frame', P(4, x=960, y=600, z=1.05, roll=-13),
+  chars=[Q('S0', [980, 880, 270, 1.04], mode='body', view='back', acts=[A(R(0), 'drift')])],
+  q=dict(stage='S0', step=8, size=0.25, where='glass, step 8', framing='WS 25 %', wrong='stands level in a tilted world'),
+  energy='the hem swaying 3 px, crown glint, frame tilted around her, push 4 %/s')
+STATE(148.23, queen='glass_step8')
+X(T(57), 'MS', 'stairs', 'mirror/queen_glass', 'stairs',
+  'MS of the dress: black satin sheen, the hem border of white spade pips between red lines', P(3.5, x=960, y=700, z=1.2),
+  chars=[Q('S0', [960, 1100, 900], mode='body', view='back', acts=[A(R(0), 'hem_sway')])], energy='satin sheen sliding, hem swaying')
+X(Wc(57, 'looking'), 'CU', 'stairs', 'mirror/queen_glass', 'stairs',
+  'CU of her bowed head: the face hidden by straight black hair, the crown of spades', P(4, x=960, y=420, z=1.3),
+  chars=[Q('S0', [960, 480, 1.1], view='back', acts=[A(R(0), 'still')])], setup='Q_BOWED',
+  q=dict(stage='S0', step=8, size=0.45, where='glass, step 8', framing='CU of the bowed head', wrong=''),
+  energy='hair sheen shifting, crown glint, push 4 %/s')
+X(Wc(57, 'something'), 'INSERT', 'stairs', 'mirror/queen_glass', 'stairs',
+  'her hand at her side: porcelain, black almond nails, the index and middle fingertips smudged lipstick red', P(4, x=960, y=600, z=1.4),
+  chars=[Q('S0', [960, 600, 560], mode='hands', acts=[A(R(0), 'fingers_curl', amount=0.2)])], energy='fingers curling slowly')
+X(T(58), 'INSERT', 'ours', 'mirror/through', 'stairs',
+  'push past her shoulder into the glass: behind her the reflection opens up, gold', FA(6, x=1060, y=520, z=1.2),
+  chars=[Q('S0', [700, 600, 1.4], view='back', acts=[A(R(0), 'still')])], energy='fast push past her into the gold')
+X(Wc(58, 'cabin'), 'WS', 'theirs', 'cabin_dawn/top_stairs', 'dawn',
+  'THEIRS from the top of the stairs: the gold, mirror-flipped Cabin 7 below, frozen; chip THE OTHER SIDE · 6:59 AM',
+  P(2.5, x=960, y=600, z=1.0), tr='glint', chip='THE OTHER SIDE · 6:59 AM', errfix=[31],
+  energy='motes twinkling in place, curtains frozen at 12 deg, push 2.5 %/s')
+X(T(59), 'WS', 'theirs', 'cabin_dawn/swimsuits', 'dawn',
+  'a row of damp swimsuits (teal, coral, violet, lemon) over the top rail', DR(2, dx=26),
+  device=DEV('insert', 'swimsuits', 'damp swimsuits on the rail'), energy='one drip each, drifting camera')
+X(Wc(59, 'hanging'), 'INSERT', 'theirs', 'cabin_dawn/swimsuits', 'dawn', 'ECU: a single drip falls from a swimsuit strap',
+  P(4, x=960, y=520, z=1.3), energy='the drip falling, push 4 %/s')
+X(T(60), 'WS', 'theirs', 'cabin_dawn/door_wash', 'dawn', 'the wash-house door swings in: wet morning light on the boards',
+  P(3), device=DEV('insert', 'wash_door', 'someone came in from the wash house'), energy='the door swinging in, light sliding over the floor')
+X(Wc(60, 'from'), 'INSERT', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'floor level at the door: water spreading over the sill',
+  P(3.5, x=960, y=640, z=1.1), energy='water creeping, push 3.5 %/s')
+X(T(61), 'WS', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'high angle on the floor: two sets of wet footprints appear on the cues, one per 0.42 s',
+  P(2.5), props=dict(prints='appearing 165.52-173.68'), energy='prints appearing one by one')
+X(Wc(61, 'appear', off=-0.3), 'WS', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'closer: the prints lead toward Noah\'s bunk',
+  P(3, x=1000, y=600, z=1.1), energy='prints appearing toward the bunk, push 3 %/s')
+X(T(62), 'INSERT', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'ECU: the bare prints (long toes)', P(4, x=960, y=600, z=1.3),
+  energy='a print forming, water sheen')
+X(T(63), 'INSERT', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'ECU: a sneaker print', P(4, x=960, y=600, z=1.3), energy='a print forming')
+X(Wc(63, 'then'), 'INSERT', 'theirs', 'cabin_dawn/floor_prints', 'dawn', 'then a bare foot print after the sneaker print',
+  P(4, x=960, y=600, z=1.3), energy='a print forming')
+X(T(64), 'INSERT', 'theirs', 'cabin_dawn/floor_prints', 'dawn',
+  'held insert: the shoe-then-bare trail to Noah\'s bunk; label ONE SHOE', P(3, x=980, y=560, z=1.1),
+  hud=[label(172.8, 'ONE SHOE', [1100, 620], dx=170, dy=-110)], device=DEV('insert', 'one_shoe', 'one shoe, then a bare foot: ONE SHOE'),
+  energy='the trail glinting, push 3 %/s')
+X(T(65), 'MS', 'ours', 'cabin_now/ots_mirror', 'night', 'OURS: Tess angles the flashlight toward the floor', P(3), tr='glint',
+  chars=[body('tess', 900, 1060, 640, 'q_right', 'tense', [A(w(65, 'angles'), 'flashlight', aim='floor')])], energy='the beam swinging down')
+X(Wc(65, 'toward'), 'INSERT', 'ours', 'cabin_now/floor_cu', 'night', 'the beam pool slides over our dusty floorboards',
+  P(3, x=960, y=620, z=1.1), energy='beam pool sliding, dust lifting')
+X(T(66), 'SPLIT', 'ours', 'split/floors', 'night',
+  'D4 split: THEIR FLOOR (wet prints, chip 6:59 AM · 14 YEARS AGO) | OUR FLOOR (smooth dust in the beam, chip 11:59 PM · TONIGHT)',
+  P(2),
+  split=dict(panels=[dict(set='cabin_dawn', view='floor_prints', var='dawn', world='theirs', label='THEIR FLOOR', chip='6:59 AM · 14 YEARS AGO'),
+                     dict(set='cabin_now', view='floor_cu', var='night', world='ours', label='OUR FLOOR', chip='{ours} · TONIGHT')]),
+  hud=[diagram(176.70, 'D4', 'split: THEIR FLOOR (wet prints) | OUR FLOOR (smooth dust)', hold=1.6)],
+  device=DEV('diagram', 'D4', 'two times: their floor has prints, ours is untouched'), energy='prints glinting left, dust drifting right')
+X(Wc(66, 'smooth'), 'INSERT', 'ours', 'cabin_now/floor_cu', 'night',
+  'OUR FLOOR: the smooth dust film from the door to the bed, the beam sweeping along it', DR(1.5, dx=40, x=960, y=620, z=1.05),
+  energy='the beam travelling along untouched dust')
+X(T(67), 'WS', 'stairs', 'stairs/down', 'stairs',
+  'the stairs from the top: at the bottom, Noah13 on his bunk by the railing, face up, a speech glow (silence)', SIL(1.5, x=960, y=600, z=1.1),
+  chars=[body('noah13', 960, 860, 160, 'front', 'calm_kid', [A(R(0.5), 'look_up')], d=8.0, seated=True)], tr='glint',
+  energy='fog sliding, the red edges breathing, slow push 1.5 %/s')
+X(T(68), 'CU', 'theirs', 'mirror/through', 'dawn',
+  'CU of Noah13 through the glass (glints on the glass), gap teeth, lip-sync: "Did they ring it yet?"', P(3, x=960, y=520, z=1.05),
+  chars=[bust('noah13', 960, 560, 1.0, 'front', 'calm_kid', [A(t(68), 'talk', line=68)], light=L_GOLD, through_glass=True)],
+  dof=dict(focus=1.0, dof=6.75), voice_fx='below', energy='lip-sync, glass glints sliding, push 3 %/s')
+X(T(69), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of you, eyes wet: you know the voice', P(3), tr='glint',
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'fear', [A(w(69, 'immediately'), 'expr', name='grief', fade=0.6)], light=L_BEAM)],
+  dof=dict(focus=1.0, dof=6.75), energy='fear melting into grief, bokeh drift, push 3 %/s')
+X(T(70), 'UI', 'ui', 'ui/voicemail', 'phone', 'your phone: VOICEMAIL list, NOAH · 0:09 · JUL 18', HH(1.5, shake=6),
   hud=[dict(t=T(70), type='phone', state='voicemail_list', name='NOAH', items=['NOAH  ·  0:09  ·  JUL 18', 'MOM  ·  0:31', 'MOM  ·  1:02'], x=960, y=560)],
-  sfx=[fx(w(70, 'voicemail'), 'ui_pop', -10, 'close', 'tap on the entry')], energy='thumb scrolling, list sliding, handheld')
-S(Wc(71, 'noah'), 'ui', 'voicemail', 'phone', 'ui', 'UI', 'voicemail playing: waveform panel NOAH, the play head moving', P(x=960, y=540, z=1.0, rate=0.025),
-  hud=[dict(t=Wc(71, 'noah'), type='phone', state='voicemail', name='NOAH', timer='0:0%d' % 3, waveform=dict(seed=7, progress='live'), x=960, y=560)],
-  sfx=[fx(R(0.1), 'radio_static', -26, 'phone', 'faint phone-line hiss of the old message', dur=2.6, amount=0.2)],
-  energy='waveform bars moving, play head sliding, push 2.5 %/s')
-S(T(72), 'cabin_now', 'mirror_ots', 'flash', 'ours', 'MCU', 'you close to the glass; the old cabin glows in it', CR(x=980, y=520, z=1.15, rate=0.012),
-  chars=[C('you', [800, 600, 0.9], 'q_right', 'grief', [A(R(0.4), 'lean_in', amount=0.3)], mode='bust', light=dict(rim='#e7e5e0', rim_a=80, side=1, key=-0.2))],
-  dof=dict(focus=1.0, dof=6.75), energy='pale reflection light shifting on your face, creep')
-S(T(73), 'memory', 'grin_ecu', 'memory_day', 'memory', 'ECU', 'memory: Noah\'s grin, the gap in his front teeth, a whistle on the "s"', P(x=960, y=600, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 520, 1.5], 'front', 'grin_kid', [A(w(73, 'whistle'), 'whistle_s')], mode='bust')],
-  sfx=[fx(w(73, 'whistle'), 'tinnitus', -24, 'memory', 'tiny whistle tone through the gap', dur=0.5)], energy='grin widening, push 3 %/s, sunlight flicker')
-S(T(74), 'cabin_now', 'mirror_ots', 'flash', 'ours', 'OTS', 'you lean toward the glass; your breath fogs a patch', FA(x=960, y=500, z=1.1, rate=0.10),
-  chars=[C('you', 'you_mirror', 'back', 'grief', [A(w(74, 'lean'), 'lean_in', amount=0.8, dur=0.6)])],
-  props=dict(mirror='fog patch blooms at %.2f' % (w(74, 'closer') + 0.2)), sfx=[fx(w(74, 'closer'), 'breath', -10, 'close', 'breath on glass', kind='held', dur=0.8)],
-  energy='camera pushing with your lean 6 %/s, the fog bloom spreading on the glass')
-S(T(75), 'mirror', 'queen_step_tilt', 'queen', 'mirror', 'CU', 'queen stage 1: in the glass her head turns too far (130 deg) toward you; one eye catches the beam: pinpoint pupil, red iris',
-  FA(x=575, y=680, z=1.9, rate=0.08),
-  chars=[C('queen', [575, 860, 230, 1.04], 'back', 'queen_still', [A(w(75, 'turns'), 'head_snap', deg=130, dur=0.18)], mode='body', stage=1)],
-  props=dict(queen='head turned to you'),
-  sfx=[fx(w(75, 'turns'), 'impact_hit', -1, 'dry', 'HIT on the head turn', hit=True, size=1.2), fx(w(75, 'turns'), 'cloth_press', -10, 'mirror', 'neck creak / satin', kind='creak')],
-  mus=[M(w(75, 'turns') - 1.15, 'silence', 0.0, 1.15, 'silence before the turn (REF rule 11)'), M(w(75, 'turns'), 'hit', 1.0)],
-  energy='head snapping round on the hit, push 5 %/s, the eye glint flaring')
-STATE(w(75, 'turns'), queen='turned_to_you')
-S(T(76), 'mirror_world', 'stairs', 'void', 'mirror', 'OTS', 'from behind her again: her face now turned away from the stairs, toward the glass (toward you)', DR(x=980, y=560, z=1.1, dx=-25),
-  chars=[C('queen', [1240, 1100, 1000, 0.72], 'q_right', 'queen_still', [A(R(0), 'still')], mode='silhouette', stage=1)],
-  sfx=[fx(199.40, 'glitch', -16, 'dry', 'header clock rolls over midnight (tiny glitch)', dur=0.1, amount=0.3)],
-  energy='drift, her hair moving with no wind, header clock rolling over 00:00:00 at 199.40')
-S(T(77), 'mirror', 'queen_face', 'queen', 'mirror', 'ECU', 'through strands of black hair: one eye locked on the lens (no blink), red lips just visible; punch-in on "listening"',
-  P(x=960, y=500, z=1.2, rate=0.03, snap=(w(77, 'listening'), 1.25)),
-  chars=[C('queen', [960, 560, 1.4], 'front', 'queen_stare', [A(R(0), 'stare')], mode='bust', stage=1)],
-  sfx=[fx(w(77, 'listening'), 'braam', -4, 'dry', 'braam on the punch-in', hit=True, key='d')], mus=[M(w(77, 'listening'), 'braam', 0.8)],
-  energy='punch-in x1.25, hair strands drifting over the eye, the eye never moving')
+  props=dict(your_phone='voicemail'), device=DEV('doc', 'voicemail', 'the 14-year-old voicemail from Noah'), energy='thumb scrolling, handheld')
+X(T(71), 'UI', 'ui', 'ui/voicemail', 'phone', 'the voicemail plays: waveform NOAH, the play head moving', P(2.5),
+  hud=[dict(t=T(71), type='phone', state='voicemail', name='NOAH', timer='0:03', waveform=dict(seed=7, progress='live'), x=960, y=560)],
+  energy='waveform bars moving, play head sliding')
+X(Wc(71, 'changing'), 'MS', 'memory', 'memory/office_phone', 'sepia_day',
+  'memory: Noah at the camp office payphone, laughing, holding up his watch ("you brat")', P(3), tr='sepia',
+  chars=[body('noah13', 960, 1040, 640, 'q_right', 'laugh', [A(R(0), 'laugh'), A(R(0.3), 'hold_up', prop='watch', side=-1)])],
+  energy='laughing, the cord swinging')
+X(T(72), 'CU', 'theirs', 'mirror/through', 'dawn', 'CU of Noah13 through the glass, talking to himself, the same boy',
+  P(3, x=960, y=520, z=1.08), chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(R(0.2), 'talk_silent', dur=1.2)], light=L_GOLD, through_glass=True)],
+  dof=dict(focus=1.0, dof=6.75), energy='lips moving, glass glints, push 3 %/s')
+X(T(73), 'ECU', 'theirs', 'mirror/through', 'dawn', 'ECU of Noah13\'s gap teeth with a whistle curl', P(4, x=960, y=600, z=1.25),
+  chars=[bust('noah13', 960, 520, 1.7, 'front', 'grin_kid', [A(R(0), 'whistle_s')], light=L_GOLD)], energy='whistle curl particles, push 4 %/s')
+X(195.00, 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of you smiling through tears', P(2.5), tr='glint',
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'relief_cry', [A(R(0.2), 'tears', amount=0.8)], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
+  energy='a tear running, push 2.5 %/s')
+X(T(74), 'INSERT', 'ours', 'mirror/glass_cu', 'night', 'your breath fogs the glass', SIL(1.5, x=960, y=520, z=1.15),
+  chars=[bust('you', 780, 600, 1.1, 'profile_right', 'grief', [A(R(0.1), 'lean_in', amount=0.4)], light=L_BEAM, reflection=True)],
+  energy='fog blooming on the glass, slow push (silence)')
+X(T(75), 'MS', 'stairs', 'mirror/queen_glass', 'stairs', 'MS of the back of her head in the glass (silence)', SIL(1.5, x=960, y=460, z=1.1),
+  chars=[Q('S0', [960, 560, 1.0], view='back', acts=[A(R(0), 'still')])], energy='hair sheen, slow push (silence)')
+X(198.15, 'MS', 'stairs', 'mirror/queen_glass', 'stairs',
+  'the head snaps 130 deg in 0.18 s while the hair stays put (whip, white flash)', WH(1040, 460, 1.2), tr='white',
+  chars=[Q('S1', [960, 560, 1.0], view='back', acts=[A(198.15, 'head_snap', deg=130, dur=0.18, hair_lag=0.4)])],
+  q=dict(stage='S1', step=8, size=0.45, where='glass, step 8', framing='MS', wrong='head turns 130 deg, the hair does not follow'),
+  energy='the snap, whip pan, hair hanging wrong')
+X(198.55, 'CU', 'stairs', 'mirror/queen_glass', 'stairs',
+  'CU: the calm, beautiful face, eyes into the lens; no blink; the spade beauty mark', P(3, x=960, y=500, z=1.1),
+  chars=[Q('S1', [960, 540, 1.1], acts=[A(R(0), 'stare'), A(R(0.2), 'drift')])],
+  q=dict(stage='S1', step=8, size=0.45, where='glass, step 8', framing='CU face 45 %', wrong='looks into the lens (1 of 3)'),
+  energy='hair settling too fast, her stillness against the drifting dust, push 3 %/s')
+STATE(198.15, queen='glass_step8_turned')
+X(T(76), 'CU', 'stairs', 'mirror/queen_glass', 'stairs', '[R 152.3] her bowed head, a second ago, listening down the stairs', P(3, x=960, y=420, z=1.3),
+  chars=[Q('S0', [960, 480, 1.1], view='back', acts=[A(R(0), 'still')])], reuse=152.4, energy='push 3 %/s, the crown glint')
+X(Wc(76, 'she'), 'WS', 'stairs', 'stairs/down', 'stairs',
+  'the stairs from above: her head bent toward Noah13 talking at the bottom (the listening line)', P(2.5, x=960, y=620, z=1.05),
+  chars=[Q('S0', [960, 760, 360, 3.0], mode='body', view='back', acts=[A(R(0), 'head_tilt', deg=10)]),
+         body('noah13', 960, 880, 140, 'front', 'calm_kid', [A(R(0), 'talk_silent', dur=1.5)], d=8.0, seated=True)],
+  energy='fog drifting, Noah talking, push 2.5 %/s')
+X(T(77), 'SPLIT', 'stairs', 'split/eyes', 'stairs',
+  'D5 eye line: her unblinking eye (left) beside your eye (right), joined by a dashed red line; then the glitch into card 2',
+  P(4), split=dict(panels=[dict(set='mirror', view='queen_glass', var='stairs', world='stairs', subject='queen eye ECU'),
+                           dict(set='cabin_now', view='bokeh', var='night', world='ours', subject='your eye ECU')]),
+  chars=[Q('S1', [480, 540, 2.6], acts=[A(R(0), 'stare')]), bust('you', 1440, 540, 2.6, 'front', 'fear', [A(R(0.4), 'blink')], light=L_BEAM)],
+  hud=[eye_line(202.40, [560, 520], [1360, 520], 1.1), diagram(202.35, 'D5', 'her eye -> your eye (dashed red line)', hold=1.1)],
+  q=dict(stage='S1', step=8, size=1.0, where='glass', framing='ECU of the eye', wrong='no blink'),
+  device=DEV('diagram', 'D5', 'she is now listening to YOU: the eye line'), energy='the dashed line drawing, your blink, her none')
 
-# ================================================================ RULE 2 203.53 - 269.24 (lines 78-103)
-c2 = RULE(2)
-S(c2, 'cabin_now', 'two_shot', 'flash', 'ours', '2S', 'Tess grabs your shoulder, urgent: put it down', HH(x=960, y=540, z=1.05, rate=0.02),
-  chars=[C('tess', 'tess_mirror', 'q_right', 'fear', [A(w(80, 'tells'), 'grab_shoulder', side=-1), A(w(80, 'down'), 'point', side=-1)]),
-         C('you', 'you_mirror', 'q_left', 'fear', [A(R(0), 'grip_frame', tremble=0.6)])],
-  sfx=[fx(w(80, 'tells'), 'cloth_grab', -8, 'close', 'hand on your jacket')], energy='handheld, Tess shaking you, beam swinging wild')
-S(T(81), 'cabin_now', 'hands', 'flash', 'ours', 'ECU', 'your hands on the mirror frame: the fingers will not open; knuckles white', FA(x=960, y=560, z=1.2, rate=0.10),
-  chars=[C('you', [960, 600, 420], 'front', 'fear', [A(w(81, 'try'), 'grip_frame', tremble=1.0, fail_open=True)], mode='hands')],
-  sfx=[fx(w(81, 'try'), 'mirror_handle', -10, 'close', 'frame creaks in your grip', kind='creak')], energy='fingers straining and trembling, fast push')
-S(T(82), 'mirror_world', 'railing', 'void', 'mirror', 'WS', 'in the glass, behind the woman: balusters of a stair railing; a small hand slides through between two of them',
-  PU(x=980, y=560, z=1.25, rate=-0.03),
-  chars=[C('noah13', [980, 600, 260], 'front', 'calm_kid', [A(w(82, 'hand'), 'reach_through', dir='up')], mode='hands'),
-         C('queen', [1500, 1000, 820, 0.8], 'back', 'queen_still', [A(R(0), 'still')], mode='silhouette', stage=1)],
-  props=dict(queen='on the step, hand through the railing behind her'),
-  sfx=[fx(w(82, 'hand'), 'stinger', -8, 'dry', 'soft stinger on the hand', hit=True)], energy='the hand emerging, pull-out 3 %/s, the queen\'s hem swaying')
-S(T(83), 'mirror_world', 'railing', 'void', 'mirror', 'ECU', 'three fingers taped together with blue medical tape', P(x=980, y=580, z=1.6, rate=0.028),
-  chars=[C('noah13', [980, 600, 520], 'front', 'calm_kid', [A(R(0.3), 'fingers_flex')], mode='hands')],
-  hud=[label(w(83, 'blue'), 'BLUE MEDICAL TAPE', [990, 560], dx=180, dy=-140)], sfx=[fx(w(83, 'blue'), 'ui_pop', -10, 'dry', 'label pop')],
-  energy='fingers flexing, tape sheen moving, push')
-S(T(84), 'memory', 'polaroid', 'memory_day', 'memory', 'INSERT', 'a faded polaroid: Noah by the family car proudly holding up his taped fingers', P(x=960, y=540, z=1.0, rate=0.025),
-  sfx=[fx(R(0.1), 'paper', -14, 'close', 'polaroid edge', dur=0.4)], energy='polaroid drifting and rotating 2 deg, flashlight sweep across its gloss')
-S(Wc(84, 'shut'), 'memory', 'polaroid', 'memory_day', 'memory', 'ECU', 'inside the polaroid: the car door beside his hand', P(x=1080, y=520, z=1.6, rate=0.035),
-  sfx=[fx(w(84, 'car'), 'car_door_close', -10, 'memory', 'a car door slams (memory, filtered)', hit=True)], energy='push into the photo, a flash of the door swinging closed')
-S(T(85), 'mirror_world', 'railing', 'void', 'mirror', 'ECU', 'his thumbnail picks at the edge of the tape', P(x=990, y=580, z=1.8, rate=0.03),
-  chars=[C('noah13', [990, 600, 560], 'front', 'calm_kid', [A(w(85, 'picks'), 'peel_tape', n=3)], mode='hands')],
-  props=dict(tape='picking'), sfx=[fx(w(85, 'picks') + 0.3 * k, 'tape_peel', -9, 'mirror', 'tape edge pick %d' % (k + 1)) for k in range(3)],
-  energy='thumbnail picking in a 0.3 s rhythm, tape edge lifting')
-S(T(86), 'memory', 'bench', 'memory_day', 'memory', 'MS', 'memory: Noah on a mess hall bench picking at his tape, looking down, trying to start a sentence', P(x=960, y=560, z=1.05, rate=0.02),
-  chars=[C('noah13', [960, 980, 640], 'front', 'shy', [A(R(0), 'peel_tape', n=4), A(R(1.0), 'mouth_open_close')])],
-  sfx=[fx(R(0.2), 'kids_far', -18, 'memory', 'mess hall chatter far')], energy='picking, a fly crossing, sun dust, slow push')
-S(Wc(87, 'and'), 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'you, tears welling', CR(x=960, y=520, z=1.1, rate=0.01),
-  chars=[C('you', [960, 560, 1.05], 'q_left', 'grief', [A(R(0.5), 'tears', amount=0.6)], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  energy='a tear forming and running, beam flicker, creep 1 %/s')
-S(T(88), 'cabin_now', 'two_shot', 'flash', 'ours', 'MCU', 'Tess, scared, glancing at the door; the flashlight beam trembles', HH(x=960, y=520, z=1.05, rate=0.02),
-  chars=[C('tess', [960, 560, 0.95], 'q_right', 'fear', [A(R(0), 'nervous_glance', n=2), A(R(0), 'tremble', amount=0.5)], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), energy='handheld, beam jitter, eyes darting')
-S(T(89), 'cabin_now', 'two_shot', 'flash', 'ours', 'MCU', 'you turn to tell her; your mouth works but nothing comes', P(x=940, y=520, z=1.05, rate=0.025),
-  chars=[C('you', [940, 560, 0.95], 'q_right', 'grief', [A(R(0.2), 'talk_silent', dur=1.6)], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  energy='mouth trembling, beam swaying, push')
-S(Wc(90, 'was'), 'memory', 'night_window', 'memory_night', 'memory', 'MS', 'memory: Noah at the cabin window at night, moths swarming the lantern; he starts to shut it',
-  P(x=960, y=520, z=1.05, rate=0.03), tr='dissolve',
-  chars=[C('noah13', [960, 1000, 640], 'back', 'neutral', [A(w(90, 'shut'), 'reach', to=(960, 380)), A(w(91, 'bugs'), 'swat')])],
-  sfx=[fx(w(91, 'bugs'), 'moth_flutter', -12, 'memory', 'moths at the lantern', dur=1.2), fx(w(90, 'window'), 'window_slide', -10, 'memory', 'window sash slides down')],
-  energy='moths swirling the lantern, window sliding, curtain lifting')
-S(T(92), 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'you say it (lip-sync): "I wish I\'d had one more minute with him"; red X over your mouth', P(x=960, y=540, z=1.1, rate=0.025),
-  chars=[C('you', [960, 560, 1.05], 'q_right', 'grief', [A(t(92), 'talk', line=92), A(R(-0.5), 'tears', amount=0.8)], mode='bust', light=FLASH)],
-  dof=dict(focus=1.0, dof=6.75), hud=[redx(w(92, 'wish'), 960, 760, 130, 1.0), tag(w(92, 'wish') + 0.05, 'KEEP IT TO YOURSELF', 960, 120, 'cmd', 1.2)],
-  sfx=[fx(w(92, 'wish'), 'stinger', -6, 'dry', 'red X stroke', hit=True)], energy='mouth talking, tears, red X drawing on, push')
-S(T(94), 'cabin_now', 'two_shot', 'flash', 'ours', '2S', 'you looking at Tess; her face falls', P(x=960, y=540, z=1.05, rate=0.02),
-  chars=[C('you', 'you_mirror', 'q_right', 'grief', [A(R(0), 'look', x=600, y=500)]), C('tess', 'tess_mirror', 'q_left', 'sad', [A(w(94, 'tess'), 'expr', name='sad')])],
-  energy='Tess\'s face falling, beam lowering, push')
-S(T(95), 'cabin_now', 'mirror_ots', 'flash', 'ours', 'CU', 'three-quarter profile, the old cabin\'s pale glow behind you in the glass', CR(x=920, y=520, z=1.1, rate=0.012),
-  chars=[C('you', [900, 580, 1.0], 'profile_left', 'grief', [A(R(0.4), 'head_down', amount=0.3)], mode='bust', light=dict(rim='#e7e5e0', rim_a=90, side=1, key=-0.3))],
-  dof=dict(focus=1.0, dof=6.75), energy='creep, the glass glow shifting behind')
-S(T(96), 'mirror', 'mirror_cu', 'queen', 'mirror', 'CU', 'the glass: the small woman on the eighth step, now facing out; pull back until she is tiny in the frame', PU(x=575, y=720, z=1.9, rate=-0.06),
-  chars=[C('queen', [575, 860, 230, 1.04], 'front', 'queen_still', [A(R(0), 'still')], mode='body', stage=1)],
-  mus=[M(w(97, 'you') - 1.4, 'silence', 0.0, 1.4, 'silence into "You have it"')], energy='push, her hair lifting slowly, glass dust drifting')
-S(T(97), 'mirror', 'queen_mouth', 'queen', 'mirror', 'ECU', 'her red lips in the dark glass say "You have it" (first time she speaks): too many small teeth', P(x=960, y=560, z=1.3, rate=0.04),
-  chars=[C('queen', [960, 470, 1.8], 'front', 'queen_soft', [A(t(97), 'talk', line=97)], mode='bust', stage=2, crop='mouth')],
-  sfx=[fx(w(97, 'you'), 'sub_drop', -2, 'dry', 'HIT: sub boom + glass resonance on her first word', hit=True), fx(w(97, 'you'), 'glass_resonance', -6, 'mirror', 'glass ring', hit=True)],
-  voice_fx='queen', mus=[M(w(97, 'you'), 'hit', 0.9)], energy='lips moving, lipstick sheen sliding, push 4 %/s')
-S(T(98), 'cabin_now', 'wide', 'flash', 'ours', 'MS', 'handheld: Tess snatches the towel from your hand and throws it over the glass', HH(x=1000, y=560, z=1.15, rate=0.03, shake=22),
-  chars=[C('tess', 'tess_mirror', 'q_right', 'fear', [A(w(98, 'snatches'), 'snatch', prop='towel'), A(w(98, 'throws'), 'throw', prop='towel', at='mirror')]),
-         C('you', 'you_mirror', 'q_left', 'fear', [A(w(98, 'snatches'), 'flinch')])],
-  props=dict(towel='snatched at %.2f, thrown over the mirror at %.2f' % (w(98, 'snatches'), w(98, 'throws'))),
-  sfx=[fx(w(98, 'snatches'), 'towel_cloth', -3, 'close', 'snatch', kind='snatch'), fx(w(98, 'throws'), 'towel_cloth', -2, 'close', 'throw / flap', kind='flap'),
-       fx(w(98, 'throws'), 'whoosh', -6, 'dry', 'hard whoosh with the throw', kind='hard'), fx(w(98, 'glass'), 'mirror_handle', -8, 'close', 'towel slaps the frame', kind='bump')],
-  energy='handheld 22 px/s, towel flying across frame, beam whipping around')
-STATE(w(98, 'throws'), towel='over_mirror', mirror='towel_over')
-S(T(99), 'cabin_now', 'towel_over', 'flash', 'ours', 'CU', 'the towel draped over the mirror; five long fingertips press out through the cloth', P(x=960, y=520, z=1.1, rate=0.05),
-  chars=[C('queen', [960, 520, 380], 'front', 'queen_still', [A(w(99, 'fingers'), 'press_through_cloth', depth=0.7)], mode='hands', stage=2)],
-  sfx=[fx(w(99, 'fingers'), 'cloth_press', -2, 'close', 'cloth stretching over fingertips', kind='stretch', hit=True), fx(w(99, 'fingers'), 'stinger', -4, 'dry', 'stinger', hit=True)],
-  mus=[M(w(99, 'fingers'), 'stinger', 0.85)], energy='fingertips pushing the terry cloth out toward the lens, push 5 %/s')
-S(T(100), 'cabin_now', 'towel_over', 'flash', 'ours', 'MS', 'the towel drops straight down as if the mirror has fallen away', P(x=960, y=560, z=1.0, rate=0.03),
-  props=dict(towel='drops at %.2f to the floor' % w(100, 'drops')), mus=[M(w(100, 'drops') - 1.15, 'silence', 0.0, 1.15, 'silence; ends in the drop')],
-  sfx=[fx(w(100, 'drops'), 'towel_drop', -3, 'close', 'towel falls straight down, soft thump'), fx(w(100, 'drops'), 'sub_drop', -6, 'dry', 'drop', hit=True)],
-  energy='the towel falling in one piece, dust blown up from the floor')
-STATE(w(100, 'drops'), towel='floor', mirror='gone', doorway='open')
-S(Wc(100, 'as'), 'cabin_now', 'wide', 'doorway_glow', 'ours', 'WS', 'pull back: the towel on the floor, no mirror, warm pale light growing on the wall', RV(x=1180, y=650, z=1.5, rate=-0.08),
-  chars=[C('tess', 'tess_mirror', 'q_right', 'shock', [A(R(0), 'step_back')]), C('you', 'you_mirror', 'q_left', 'shock', [A(R(0), 'stand_up')])],
-  energy='reveal pull-out, the glow blooming, dust swirling into the new light')
-S(T(101), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'MS', 'a narrow doorway in the wall exactly where the mirror stood: pale dawn light pours out onto the dusty floor', RV(x=960, y=520, z=1.4, rate=-0.06),
-  sfx=[fx(w(101, 'doorway'), 'braam', -4, 'dry', 'warm dissonant braam on the doorway', hit=True, key='d'), fx(w(101, 'doorway'), 'ambience_dawn', -16, 'outside', 'birds heard through the doorway', dur=8)],
-  mus=[M(w(101, 'doorway'), 'braam', 0.8)], energy='pull-out reveal, light rays with dust pouring through the doorway')
-S(T(102), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'CU', 'pale haze drifting through the doorway into the dark cabin', P(x=960, y=480, z=1.25, rate=0.025),
-  sfx=[fx(w(102, 'kitchen'), 'kitchen_far', -16, 'far', 'distant camp kitchen: clinks, a griddle', dur=3)],
-  energy='haze curling through the gap, particles drifting, push')
-S(T(103), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'MS', 'through the doorway: a glimpse of the other cabin, pale and clean', P(x=960, y=500, z=1.35, rate=0.015),
-  sfx=[fx(w(103, 'coffee'), 'coffee_percolator', -14, 'far', 'percolator bubbling far away', dur=2)], energy='slow push toward the doorway, haze drifting')
-
-# ================================================================ RULE 3 269.24 - 350.38 (lines 104-137)
-c3 = RULE(3)
-S(c3, 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'MS', 'you squeeze one shoulder into the narrow doorway; the jacket scrapes the frame', TR(x=960, y=520, z=1.2, dx=-40),
-  chars=[C('you', 'you_doorway', 'profile_right', 'fear', [A(R(0.3), 'squeeze_through', amount=0.4)])],
-  sfx=[fx(w(106, 'shoulders'), 'jacket_cloth', -6, 'close', 'canvas jacket scraping the frame', kind='scrape')], energy='you edging in, light spilling over your shoulder, track')
-S(T(107), 'cabin_now', 'sleeve', 'doorway_glow', 'ours', 'ECU', 'Tess\'s hand grabs your jacket sleeve', FA(x=960, y=560, z=1.2, rate=0.10, snap=(w(107, 'catches'), 1.15)),
-  chars=[C('tess', [900, 560, 420], 'front', 'fear', [A(w(107, 'catches'), 'grab', what='sleeve')], mode='hands')],
-  sfx=[fx(w(107, 'catches'), 'cloth_grab', -2, 'close', 'sleeve grab', hit=True)], energy='hand snapping shut on the canvas, punch-in')
-S(T(108), 'cabin_now', 'clock', 'flash', 'ours', 'INSERT', 'the cabin wall clock; the second hand jerks BACKWARD and keeps stepping back', P(x=960, y=540, z=1.0, rate=0.03),
-  props=dict(clock='second hand ticks forward, then jerks backward at %.2f' % w(108, 'jerks')),
-  sfx=[fx(R(0.1), 'clock_tick', -6, 'inside', 'ticking forward', dur=w(108, 'jerks') - T(108) - 0.1),
-       fx(w(108, 'jerks'), 'clock_tick_backward', -2, 'inside', 'TOCK reversed, then reverse ticks', hit=True, n=4)],
-  mus=[M(w(108, 'jerks'), 'stinger', 0.6)], energy='second hand moving, then jerking back; header clock runs backward 279.06-281.90')
-STATE(w(108, 'jerks'), clock='backward')
-S(T(109), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'MS', 'at the edge of the pale doorway a black-dressed figure stands just inside the other cabin, half hidden', CR(x=980, y=500, z=1.25, rate=0.015),
-  chars=[C('queen', [1080, 900, 600, 1.6], 'front', 'queen_still', [A(R(0), 'still')], mode='body', stage=2)],
-  props=dict(queen='in the doorway (other side)'), mus=[M(T(109) + 0.1, 'silence', 0.0, 1.2, 'silence before the face')],
-  energy='haze drifting across her, creep')
-STATE(T(109), clock='running', queen='doorway')
-S(T(110), 'cabin_dawn', 'queen_face', 'dawn_queen', 'theirs', 'CU', 'FULL CREEPY FACE 1: huge whites, pinpoint pupils, red irises, too-wide toothy grin, lipstick smeared up the cheeks; '
-  'head tilts beyond natural', P(x=960, y=500, z=1.0, rate=0.03, shake=4),
-  chars=[C('queen', [960, 520, 1.15], 'front', 'queen_grin', [A(t(110), 'talk', line=110), A(w(110, 'both'), 'head_tilt', angle=28, dur=1.2)], mode='bust', stage=3)],
-  sfx=[fx(w(110, "there's"), 'stinger', 0, 'dry', 'BIG STINGER: the first full face', hit=True), fx(w(110, "there's"), 'braam', -3, 'dry', 'braam layer', hit=True, key='d')],
-  voice_fx='queen', mus=[M(w(110, "there's"), 'stinger', 1.0), M(w(110, "there's") + 0.1, 'pulse_on', 0.4, None, 'slow heartbeat pulse starts')],
-  energy='grin talking through teeth, head tilting past natural, eyes locked, slow push with micro handheld')
-S(T(111), 'cabin_now', 'doorway', 'doorway_glow', 'ours', '2S', 'over the doorway: you turn back to Tess', P(x=900, y=520, z=1.1, rate=0.025),
-  chars=[C('you', 'you_doorway', 'q_left', 'resolve', [A(w(111, 'tess'), 'turn', to=-0.5)]), C('tess', 'tess_doorway', 'q_right', 'fear', [])],
-  hud=[tag(w(111, 'stay'), 'STAY', 760, 140, 'cmd', 1.0)], sfx=[fx(w(111, 'stay'), 'ui_pop', -6, 'dry', 'tag pop', hit=True)],
-  energy='you turning, Tess clutching the flashlight, haze, push')
-S(T(112), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'MCU', 'Tess nods, flashlight steadying; her lips start the count; the counter pill appears: 60', P(x=960, y=520, z=1.1, rate=0.025),
-  chars=[C('tess', [960, 560, 0.95], 'q_right', 'resolve', [A(w(112, 'count'), 'nod'), A(w(112, 'sixty'), 'talk_silent', dur=1.0)], mode='bust', light=dict(rim='#e7d9b8', rim_a=110, side=-1, key=-0.1))],
-  dof=dict(focus=1.0, dof=6.75), hud=[dict(t=w(112, 'sixty'), type='counter_in', value=60)],
-  sfx=[fx(w(112, 'sixty'), 'countdown_tick', -4, 'dry', 'counter appears: 60', hit=True)], energy='nod, flashlight beam settling still, push')
-S(T(113), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'POV', 'you step through: the camera passes through the doorway into the light (white flash 3 frames into the next shot)',
-  FA(x=960, y=520, z=1.2, rate=0.15),
-  sfx=[fx(w(113, 'step'), 'whoosh', -3, 'dry', 'pressure whoosh through the doorway', kind='hard'), fx(w(113, 'through'), 'sub_drop', -6, 'dry', 'ear-pressure drop', hit=True)],
-  energy='fast dolly through the doorway 15 %/s, light blooming to white')
-STATE(w(113, 'through'), side='theirs')
-S(T(114), 'cabin_dawn', 'window', 'dawn', 'theirs', 'MS', 'the other cabin: yellow gingham curtains, perfectly still', DR(x=700, y=420, z=1.05, dx=27), tr='white',
-  sfx=[fx(R(0.05), 'ambience_dawn', -8, 'inside', 'dawn bed: birds loop, lantern hum, stillness', dur=4)],
-  mus=[M(R(0), 'swell', 0.35, 8, 'too-normal pad: warm, detuned, unpulsed'), M(R(0), 'pulse_off', 0.0)], energy='drift, curtains utterly still, sunlight dust (very slow) only in the window shaft')
-S(T(115), 'cabin_dawn', 'window', 'dawn', 'theirs', 'CU', 'an old battery lantern glowing on the windowsill; the camera pushes past it to the window: almost light outside, pale blue going peach behind the pines',
-  cam('move', x=700, y=560, z=1.3, x1=820, y1=420, z1=1.5),
-  sfx=[fx(w(115, 'lantern'), 'lantern_hum', -14, 'close', 'battery lantern hum', dur=2)], energy='lantern glow pulsing faintly, push past it to the window where the sky brightens and lawn mist drifts')
-S(T(117), 'cabin_dawn', 'window_out', 'dawn', 'theirs', 'MS', 'the sprinkler on the lawn comes on, spits twice, dies', P(x=900, y=700, z=1.25, rate=0.03),
-  props=dict(sprinkler='on %.2f, spits %.2f / %.2f, dies %.2f' % (w(117, 'on'), w(117, 'spits'), w(117, 'twice'), w(117, 'dies'))),
-  sfx=[fx(w(117, 'on'), 'sprinkler_spit', -8, 'outside', 'valve hiss on'), fx(w(117, 'spits'), 'sprinkler_spit', -4, 'outside', 'spit 1 (reused identically at 415.75)', loop_id='A'),
-       fx(w(117, 'twice'), 'sprinkler_spit', -4, 'outside', 'spit 2 (reused at 416.23)', loop_id='B'), fx(w(117, 'dies'), 'sprinkler_spit', -12, 'outside', 'gurgle and die', kind='die')],
-  energy='two spray arcs sweeping and falling, droplets glittering, then stillness')
-S(T(118), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you in the pale light, wonder and grief', CR(x=960, y=520, z=1.05, rate=0.012),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'wonder', [A(R(0.5), 'look', x=600, y=420)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  energy='dawn light warming across your face, creep')
-S(T(119), 'cabin_dawn', 'window', 'dawn', 'theirs', 'MS', 'the bottom bunk under the window: a damp patch on the mattress, the window open a crack', P(x=760, y=640, z=1.1, rate=0.028),
-  energy='curtain hem lifting once in a draught, push, drip from the frame')
-S(T(120), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'MS', 'pull out from one sneaker to Noah sitting on the bunk with one shoe on (13, green sweatshirt, pajama pants)', RV(x=1060, y=880, z=1.9, rate=-0.08),
-  chars=[C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  hud=[label(w(120, 'shoe'), 'ONE SHOE', [1080, 920], dx=170, dy=-120)], sfx=[fx(w(120, 'shoe'), 'ui_pop', -10, 'dry', 'label pop'), fx(R(0.3), 'lace_pull', -12, 'close', 'lace', n=2)],
-  mus=[M(w(120, 'noah'), 'motif', 0.5, 5, 'music-box motif: Noah')], energy='reveal pull-out, hands tying the loop')
-S(T(121), 'cabin_dawn', 'noah_ms', 'dawn', 'theirs', 'MS', 'Noah looks up and says your name (no sound: narrated), like he expected you an hour ago', P(x=960, y=560, z=1.05, rate=0.025),
-  chars=[C('noah13', 'noah_bunk', 'front', 'calm_kid', [A(w(121, 'looks'), 'look_up'), A(w(121, 'name') - 0.15, 'talk_silent', dur=0.5), A(w(121, 'expected'), 'smile', amount=0.7)])],
-  energy='head lifting, gap-tooth smile, lantern glow on him, push')
-S(T(122), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'his smile fades as he gets a good look at you; head tilts', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('noah13', [960, 540, 1.0], 'front', 'puzzled', [A(w(122, 'good'), 'expr', name='puzzled'), A(w(122, 'look'), 'head_tilt', angle=10, dur=0.8)], mode='bust', light=DAWN)],
-  dof=dict(focus=1.0, dof=6.75), energy='smile fading, tilt, push')
-S(T(123), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'Noah: "Why do you look like Dad?" (lip-sync)', P(x=960, y=520, z=1.15, rate=0.025),
-  chars=[C('noah13', [960, 540, 1.05], 'front', 'puzzled', [A(t(123), 'talk', line=123)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  energy='talking, brows working, push')
-S(T(124), 'cabin_dawn', 'knot_cu', 'dawn', 'theirs', 'CU', 'he looks down at his shoe; his hands go back to the lace', P(x=960, y=600, z=1.1, rate=0.03),
-  chars=[C('noah13', [960, 640, 400], 'front', 'calm_kid', [A(w(124, 'down'), 'tie_loop', period=2.4)], mode='hands')], sfx=[fx(w(124, 'shoe'), 'lace_pull', -10, 'close', 'lace', n=2)],
-  energy='the loop starts (exact same cycle every time it is seen)')
-S(T(125), 'cabin_dawn', 'noah_ms', 'dawn', 'theirs', 'MS', 'Noah, not looking up: "What are they making for breakfast?" (this exact acting clip is replayed at 419.46)', P(x=960, y=600, z=1.05, rate=0.025),
-  chars=[C('noah13', 'noah_bunk', 'front', 'calm_kid', [A(t(125), 'talk', line=125), A(R(0), 'tie_loop', period=2.4)], clip_id='breakfast_A')],
-  energy='tying while talking, push')
-S(T(126), 'cabin_dawn', 'candy', 'dawn', 'theirs', 'INSERT', 'his taped hand holds out a red cinnamon candy in a clear twist wrapper', P(x=960, y=580, z=1.1, rate=0.03),
-  chars=[C('noah13', [900, 600, 420], 'front', 'calm_kid', [A(w(126, 'holds'), 'hold_out', prop='candy_red')], mode='hands')],
-  props=dict(candy='held out by Noah'), sfx=[fx(w(126, 'cinnamon'), 'candy_wrapper', -6, 'close', 'wrapper crinkle')], energy='hand extending into frame, wrapper glinting')
-STATE(w(126, 'holds'), candy='held_out')
-S(T(127), 'cabin_dawn', 'candy', 'dawn', 'theirs', 'ECU', 'your adult hand takes it from his small taped one and closes into a fist around it (the wrapper is warm)', cam('move', x=960, y=560, z=1.3, x1=1060, y1=580, z1=1.4),
-  chars=[C('you', [1100, 520, 440], 'front', 'grief', [A(w(127, 'take'), 'take', prop='candy_red'), A(w(128, 'wrapper'), 'fist', slow=True)], mode='hands'),
-         C('noah13', [880, 620, 420], 'front', 'calm_kid', [A(w(128, 'the'), 'withdraw')], mode='hands')],
-  sfx=[fx(w(127, 'take'), 'candy_wrapper', -6, 'close', 'crinkle as it changes hands'), fx(w(128, 'warm'), 'candy_wrapper', -12, 'close', 'crinkle in the fist')],
-  energy='hands meeting, candy passing, his hand withdrawing, your fingers curling slowly; drift-push')
-STATE(w(127, 'take'), candy='your_fist')
-S(T(129), 'memory', 'dock', 'memory_day', 'memory', 'MS', 'memory: on the dock Noah picks the red ones out of a bag of mixed candies and drops them in kid-you\'s palm', P(x=960, y=560, z=1.05, rate=0.02), tr='dissolve',
-  chars=[C('noah13', [1100, 980, 600], 'q_left', 'calm_kid', [A(w(129, 'gave'), 'hold_out', prop='candy_red')]), C('you_kid', [760, 1000, 440], 'q_right', 'happy', [A(w(129, 'red'), 'take', prop='candy_red')])],
-  sfx=[fx(w(129, 'gave'), 'candy_wrapper', -10, 'memory', 'bag rustle'), fx(R(0.1), 'ambience_memory', -14, 'memory', 'lake lapping, gulls', dur=3)],
-  mus=[M(R(0), 'motif', 0.45, 4, 'music-box motif, tender')], energy='water glitter, hands passing candy, gentle push')
-S(T(130), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'present: Noah, a faint smile, looking down at the lace', CR(x=960, y=540, z=1.1, rate=0.01),
-  chars=[C('noah13', [960, 560, 1.0], 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  energy='creep, his shoulders moving with the knot')
-S(T(131), 'cabin_dawn', 'towel', 'dawn', 'theirs', 'CU', 'a wet towel on the floor under the window; drips tap onto it from the frame', P(x=960, y=620, z=1.05, rate=0.03),
-  props=dict(drop='falling drips'), sfx=[fx(w(131, 'taps'), 'water_drip', -6, 'close', 'drip 1'), fx(w(131, 'towel'), 'water_drip', -7, 'close', 'drip 2')],
-  energy='drops falling into frame and soaking in, push')
-S(T(132), 'cabin_dawn', 'towel', 'dawn', 'theirs', 'ECU', 'a drop comes UP off the towel and hangs in midair, glinting and turning slowly', cam('orbit', x=960, y=520, z=1.3, dx=30, rate=0.02, roll=2),
-  props=dict(drop='rises %.2f, hangs from %.2f' % (w(132, 'up'), w(132, 'hangs'))),
-  sfx=[fx(w(132, 'up'), 'drop_reverse', -4, 'close', 'reversed drip as it rises', hit=True), fx(w(132, 'hangs'), 'tinnitus', -18, 'dry', 'thin stopped-time tone', dur=3)],
-  mus=[M(w(132, 'up'), 'stinger', 0.45)], energy='the drop rising and hanging, slow orbit around it, light refracting through it')
-STATE(w(132, 'hangs'), drop='hanging')
-S(T(133), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'MS', 'looking back at the doorway: Tess in the dark cabin, frozen, flashlight beam perfectly steady', CR(x=960, y=540, z=1.05, rate=0.01, dx=8),
-  chars=[C('tess', 'tess_in_doorway', 'front', 'resolve', [A(R(0), 'freeze', t1=R(-0.01))], light=FLASH)],
-  mus=[M(w(133, 'perfectly') - 0.2, 'silence', 0.0, 1.2, 'time stopped: music out, only the thin tone')],
-  energy='Tess dead still (subject frozen), camera drifting 1 %/s, dust in the beam is the only motion')
-S(T(134), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'ECU', 'the beam crossing the doorway, dust drifting through it', P(x=960, y=470, z=1.6, rate=0.02),
-  energy='dust motes drifting through the beam, slow push')
-S(T(135), 'cabin_dawn', 'towel', 'dawn', 'theirs', 'ECU', 'over here, the same drop falls again onto the towel (identical sound: the loop)', P(x=960, y=560, z=1.3, rate=0.03),
-  props=dict(drop='falls again at %.2f' % w(135, 'falls')),
-  sfx=[fx(w(135, 'falls'), 'water_drip', -3, 'close', 'THE SAME drip sample as 332.37 (loop)', hit=True, loop_id='drip')],
-  energy='the drop falling and splashing, push')
-STATE(w(135, 'falls'), drop='falling')
-S(T(136), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'MS', 'in the doorway Tess\'s lips move; the beam stays steady', P(x=960, y=520, z=1.15, rate=0.025),
-  chars=[C('tess', 'tess_in_doorway', 'front', 'resolve', [A(w(136, 'calls'), 'talk_silent', dur=0.6)], light=FLASH)], energy='push, dust in the beam')
-S(T(137), 'cabin_now', 'doorway', 'doorway_glow', 'ours', 'CU', 'Tess shouts through the doorway: "Forty-five." The counter pulses to 45', P(x=960, y=520, z=1.15, rate=0.04, hit=[(t(137), 8)]),
-  chars=[C('tess', [960, 560, 1.0], 'q_right', 'shout', [A(t(137), 'talk', line=137)], mode='bust', light=dict(rim='#e7d9b8', rim_a=110, side=-1, key=-0.1))],
-  dof=dict(focus=1.0, dof=6.75), hud=[dict(t=t(137), type='counter_call', value=45)],
-  sfx=[fx(t(137), 'countdown_tick', 0, 'dry', 'counter 45 (big tick)', hit=True)], voice_fx='far', energy='shout, counter pulse, camera jolt')
-
-# ================================================================ RULE 4 350.38 - 446.33 (lines 138-180)
-c4 = RULE(4)
-S(c4, 'cabin_dawn', 'wide', 'dawn', 'theirs', 'MS', 'you take Noah\'s hand and pull him toward the doorway', TR(x=1060, y=600, z=1.1, dx=-60),
-  chars=[C('you', [1300, 1000, 680], 'profile_left', 'resolve', [A(w(140, 'take'), 'take_hand'), A(w(140, 'pull'), 'pull_hand', to='doorway')]),
-         C('noah13', 'noah_bunk', 'q_right', 'calm_kid', [A(w(140, 'pull'), 'pulled_along', to=820)])],
-  sfx=[fx(w(140, 'pull'), 'footsteps_wood_inside', -8, 'inside', 'two pairs of steps (one shoe, one bare)', n=3), fx(w(140, 'take'), 'cloth_grab', -12, 'close', 'hand grab')],
-  energy='walking toward the doorway, track left, light swinging')
-S(T(141), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'MS', 'at the threshold his hand jerks out of yours', HH(x=960, y=560, z=1.1, rate=0.03),
-  chars=[C('noah13', [900, 980, 600], 'profile_right', 'calm_kid', [A(w(141, 'jerks'), 'hand_jerk', dir='back')]), C('you', [1150, 1000, 700], 'profile_left', 'shock', [A(w(141, 'jerks'), 'flinch')])],
-  sfx=[fx(w(141, 'jerks'), 'whoosh', -4, 'dry', 'reverse whoosh: the snap back', kind='hard'), fx(w(141, 'jerks'), 'impact_hit', -4, 'dry', 'hit', hit=True)],
-  mus=[M(w(141, 'jerks') - 1.2, 'silence', 0.0, 1.2, 'silence into the jerk')],
-  energy='hand snapping away, handheld jolt')
-S(T(142), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'MS', 'hard jump: Noah is back on the bunk in exactly the same pose and framing as at 305.72', P(x=1060, y=760, z=1.2, rate=0.028),
-  chars=[C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4, phase=0)], clip_id='loop_reset')],
-  sfx=[fx(R(0.0), 'drop_reverse', -10, 'dry', 'suck-back', hit=True)], energy='the loop pose, hands tying, push')
-S(T(143), 'cabin_dawn', 'knot_cu', 'dawn', 'theirs', 'ECU', 'the same knot, half tied', P(x=960, y=620, z=1.2, rate=0.03),
-  chars=[C('noah13', [960, 640, 420], 'front', 'calm_kid', [A(R(0), 'tie_loop', period=2.4, phase=0)], mode='hands')],
-  hud=[label(w(143, 'knot'), 'SAME KNOT', [960, 660], dx=170, dy=-120)], sfx=[fx(w(143, 'knot'), 'ui_pop', -10, 'dry', 'label'), fx(R(0.2), 'lace_pull', -10, 'close', 'lace', n=2)],
-  energy='hands looping, push')
-S(T(144), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'MS', 'handheld: you pull again, harder', HH(x=1000, y=600, z=1.15, rate=0.03, shake=20),
-  chars=[C('you', [1250, 1000, 700], 'profile_left', 'resolve', [A(w(144, 'pull'), 'pull_hand', force=1.4)]), C('noah13', 'noah_bunk', 'q_right', 'calm_kid', [A(w(144, 'pull'), 'pulled_along')])],
-  sfx=[fx(w(144, 'pull'), 'bed_creak', -6, 'close', 'bunk creaks as he is dragged up')], energy='handheld 20 px/s, bodies straining')
-S(T(145), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'his face as you pull: strained', HH(x=960, y=540, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 560, 1.0], 'q_right', 'strain', [A(R(0), 'pulled_along')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='handheld, head jerking with the pull')
-S(T(146), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'for half a second his face is the grown man\'s (two 2-frame flickers, then held 0.5 s) and back', FA(x=960, y=520, z=1.2, rate=0.08, snap=(w(146, 'looks'), 1.2)),
-  chars=[C('noah13', [960, 560, 1.0], 'q_right', 'strain', [A(w(146, 'looks'), 'face_flash', to='noah_grown', dur=0.5, flicker=2)], mode='bust', light=DAWN)],
-  dof=dict(focus=1.0, dof=6.75), fx_post=[dict(t=w(146, 'looks'), static=0.6, dur=0.07), dict(t=w(146, 'looks') + 0.5, static=0.4, dur=0.05)],
-  sfx=[fx(w(146, 'looks'), 'glitch', -4, 'dry', 'static on the face swap', dur=0.15, amount=0.8), fx(w(146, 'looks'), 'impact_hit', -2, 'dry', 'hit', hit=True)],
-  mus=[M(w(146, 'looks'), 'hit', 0.85)], energy='face swap flicker, punch-in, static flash')
-S(T(147), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'thirteen again, calm, as if nothing happened', CR(x=960, y=540, z=1.1, rate=0.01),
-  chars=[C('noah13', [960, 560, 1.0], 'front', 'calm_kid', [A(R(0.2), 'blink')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='creep, blink')
-S(T(148), 'cabin_dawn', 'wide', 'dawn', 'theirs', '2S', 'you sit on the bunk across from him', PU(x=1060, y=640, z=1.25, rate=-0.04),
-  chars=[C('you', 'you_bunk', 'q_right', 'grief', [A(w(148, 'sitting'), 'sit', dur=0.6)]), C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  sfx=[fx(w(148, 'sitting'), 'bed_creak', -5, 'close', 'mattress creak as you sit')], energy='sitting down, the mattress dipping, push')
-S(T(149), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'Noah: "That I wanted to stay until the breakfast bell," (lip-sync)', P(x=960, y=540, z=1.05, rate=0.025),
-  chars=[C('noah13', [960, 560, 1.0], 'q_left', 'calm_kid', [A(t(149), 'talk', line=149)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='talking, push')
-S(T(151), 'cabin_dawn', 'noah_ms', 'dawn', 'theirs', 'MS', 'Noah, grinning: "I was gonna run to the bus in my pajamas." Pajama pants visible', P(x=960, y=620, z=1.0, rate=0.025),
-  chars=[C('noah13', 'noah_bunk', 'front', 'grin_kid', [A(t(151), 'talk', line=151), A(w(151, 'pajamas'), 'pat_knees')])], energy='talking, patting his pajama knees, push')
-S(Wc(152, 'thought'), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', '"I thought it\'d be funny." Gap-tooth grin', P(x=960, y=540, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 560, 1.05], 'front', 'grin_kid', [A(t(152), 'talk', line=152)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='grin, push')
-S(T(153), 'cabin_dawn', 'queen_bunk', 'dawn', 'theirs', 'MS', 'the empty space beside Noah on the mattress: it dips by itself, as if someone is sitting there', P(x=1300, y=700, z=1.15, rate=0.03),
-  chars=[C('noah13', 'noah_bunk', 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  props=dict(mattress='dip pressing down by itself'), sfx=[fx(w(153, 'sitting'), 'bed_creak', -10, 'close', 'creak with no one there')],
-  energy='the dip pressing in, push, curtains still')
-S(Wc(154, 'because'), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'Noah, worried: he is scared he will miss the bus', CR(x=960, y=540, z=1.1, rate=0.012),
-  chars=[C('noah13', [960, 560, 1.0], 'q_left', 'worried', [A(w(154, 'scared'), 'look', x=500, y=380)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  energy='eyes going to the window, creep')
-S(T(155), 'cabin_dawn', 'clock', 'dawn', 'theirs', 'INSERT', 'the dawn cabin\'s wall clock at 6:59: the second hand approaches 12 and snaps back to 40', P(x=960, y=540, z=1.0, rate=0.03),
-  props=dict(clock_dawn='6:59:50 -> snaps back to 6:59:40 at %.2f' % w(155, 'go')),
-  sfx=[fx(R(0.05), 'clock_tick', -8, 'inside', 'ticks', dur=w(155, 'go') - T(155) - 0.1), fx(w(155, 'go'), 'clock_tick_backward', -4, 'inside', 'snap back', hit=True, n=1)],
-  energy='second hand ticking then snapping back')
-S(T(156), 'cabin_dawn', 'queen_bunk', 'dawn_queen', 'theirs', 'MS', 'at the frame edge, in shadow, a black dress seated beside Noah; a long pale hand rests on the blanket', P(x=1180, y=660, z=1.1, rate=0.025),
-  chars=[C('queen', 'queen_bunk', 'q_left', 'queen_soft', [A(R(0), 'still')], mode='body', stage=2, face='hidden'), C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  props=dict(queen='beside Noah (glimpse)'), sfx=[fx(w(156, 'while'), 'crowd_whisper', -18, 'close', 'a whisper under "a little while"', dur=1.0, density=1)],
-  mus=[M(w(156, "there's"), 'silence', 0.0, 1.2, 'silence under her promise; only the whisper')],
-  energy='the pale light cooling around her, push, Noah tying')
-S(T(157), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you watching Noah, asking', CR(x=960, y=520, z=1.05, rate=0.012),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'grief', [A(w(157, 'ask'), 'talk_silent', dur=1.2)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='creep, a slow blink')
-S(T(158), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'Noah, plainly: "Since you went to get Mom,"', P(x=960, y=540, z=1.1, rate=0.03),
-  chars=[C('noah13', [960, 560, 1.0], 'front', 'calm_kid', [A(t(158), 'talk', line=158)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(w(158, 'mom'), 'sub_drop', -10, 'dry', 'soft low hit on "Mom"', hit=True)], energy='talking, push')
-S(T(160), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you: shock (fear eyes)', FA(x=960, y=520, z=1.1, rate=0.08),
-  chars=[C('you', [960, 560, 1.0], 'front', 'shock', [A(w(160, 'never'), 'expr', name='shock')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  mus=[M(w(160, 'never') - 0.1, 'silence', 0.0, 1.2, 'silence, ends on the cut into the memory')], energy='eyes snapping wide, fast push')
-S(T(161), 'memory', 'cabin_morning', 'memory_morning', 'memory', 'MS', 'memory, the morning he vanished: kid-you wakes in the bottom bunk, light overexposed', P(x=900, y=620, z=1.05, rate=0.025), tr='white',
-  chars=[C('you_kid', 'kid_bunk', 'front', 'sleep', [A(w(161, 'woke'), 'wake_up')], mode='lying')],
-  sfx=[fx(R(0.05), 'ambience_memory', -10, 'memory', 'morning: birds, far voices', dur=4.5)], mus=[M(R(0), 'swell', 0.4, 8, 'memory pad, bleached')],
-  energy='bleached light blooming, kid sitting up, curtains blowing in')
-S(T(162), 'memory', 'cabin_morning', 'memory_morning', 'memory', 'INSERT', 'the wet towel on the floor, a puddle around it', P(x=960, y=700, z=1.1, rate=0.03),
-  sfx=[fx(R(0.3), 'water_drip', -10, 'memory', 'drip into the puddle')], energy='puddle ripples, push')
-S(T(163), 'memory', 'search_pines', 'memory_morning', 'memory', 'WS', 'through the window: counselors in the morning mist calling his name, flashlights in daylight', DR(x=960, y=520, z=1.0, dx=30),
-  chars=[C('extras', 'search_line', 'front', 'shout', [A(w(163, 'yelling'), 'call_out')], mode='silhouette')],
-  sfx=[fx(w(163, 'yelling'), 'voices_calling_far', -10, 'memory', 'distant voices calling a name (no words intelligible)', dur=2.5)],
-  energy='figures moving through mist, flashlight beams waving, drift')
-S(T(164), 'memory', 'porch_steps', 'memory_morning', 'memory', 'MS', 'kid-you on the mess hall steps among adult legs; he keeps nodding', P(x=960, y=620, z=1.05, rate=0.025),
-  chars=[C('you_kid', [960, 1000, 420], 'front', 'sure', [A(R(0.2), 'nod', n=3)]), C('extras', 'adult_legs', 'front', 'neutral', [A(R(0), 'shift_weight')], mode='legs')],
-  sfx=[fx(R(0.2), 'footsteps_porch', -14, 'memory', 'adults shuffling', dur=2.5, n=4)], energy='legs shifting around him, nodding, push')
-S(T(165), 'memory', 'porch_steps', 'memory_morning', 'memory', 'CU', 'kid-you, certain: he\'ll be back for breakfast', CR(x=960, y=540, z=1.1, rate=0.012),
-  chars=[C('you_kid', [960, 560, 1.0], 'front', 'sure', [A(w(165, 'breakfast'), 'smile', amount=0.4)], mode='bust')], energy='creep, morning light flicker')
-S(T(166), 'memory', 'breakfast_table', 'memory_day', 'memory', 'MS', 'memory: Noah grinning over a plate of pancakes in the mess hall', CR(x=960, y=560, z=1.05, rate=0.012),
-  chars=[C('noah13', [960, 980, 620], 'front', 'grin_kid', [A(R(0.3), 'eat'), A(R(1.4), 'laugh', dur=0.8)])],
-  sfx=[fx(R(0.3), 'kids_far', -16, 'memory', 'mess hall clatter'), fx(R(0.6), 'spoon_drop', -20, 'memory', 'cutlery clink', kind='clink')],
-  mus=[M(R(0), 'motif', 0.4, 3, 'music-box motif, warm')], energy='steam rising, fork moving, laugh, creep')
-S(T(167), 'cabin_dawn', 'window_out', 'dawn', 'theirs', 'MS', 'present, through the window: the sprinkler spits twice (the same two spits)', P(x=900, y=700, z=1.25, rate=0.03), tr='white',
-  sfx=[fx(w(167, 'spits'), 'sprinkler_spit', -4, 'outside', 'SAME spit 1 as 298.87', loop_id='A'), fx(w(167, 'twice'), 'sprinkler_spit', -4, 'outside', 'SAME spit 2 as 299.27', loop_id='B')],
-  energy='identical spray arcs (same animation as 297.43)')
-S(T(168), 'cabin_dawn', 'knot_cu', 'dawn', 'theirs', 'ECU', 'Noah reaches for his loose shoelace (same motion as 316.52)', P(x=960, y=620, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 640, 420], 'front', 'calm_kid', [A(w(168, 'reaches'), 'tie_loop', period=2.4, phase=0)], mode='hands')], sfx=[fx(w(168, 'shoelace'), 'lace_pull', -10, 'close', 'lace', n=2)],
-  energy='hands reaching and looping')
-S(T(169), 'cabin_dawn', 'noah_ms', 'dawn', 'theirs', 'MS', 'Noah asks again: "What are they making for breakfast?" (EXACT replay of clip breakfast_A, same framing)', P(x=960, y=600, z=1.05, rate=0.025),
-  chars=[C('noah13', 'noah_bunk', 'front', 'calm_kid', [A(t(169), 'talk', line=169), A(R(0), 'tie_loop', period=2.4)], clip_id='breakfast_A')],
-  energy='the same animation as 318.36, push')
-S(T(171), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you realise; the header clock snaps back to 06:59:40', P(x=960, y=520, z=1.05, rate=0.03),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'dread', [A(w(171, 'asked'), 'expr', name='dread')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  mus=[M(w(171, 'you'), 'silence', 0.0, 1.2, 'silence: the loop sinks in')], energy='face falling, push')
-S(T(172), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'WS', 'slow pull out: Noah tiny on the bunk in the pale, still cabin', PU(x=1060, y=700, z=1.35, rate=-0.025),
-  chars=[C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])], energy='pull-out, hands tying, dust in the window shaft')
-S(T(173), 'cabin_dawn', 'knot_cu', 'dawn', 'theirs', 'ECU', 'the shoe half tied, the loop again', P(x=960, y=620, z=1.15, rate=0.028),
-  chars=[C('noah13', [960, 640, 420], 'front', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], mode='hands')], sfx=[fx(R(0.3), 'lace_pull', -12, 'close', 'lace', n=2)],
-  energy='looping hands')
-S(Wc(173, 'waiting'), 'cabin_dawn', 'noah_cu', 'dawn', 'theirs', 'CU', 'Noah\'s head lifts toward the window: listening for a bell', CR(x=960, y=540, z=1.1, rate=0.012),
-  chars=[C('noah13', [960, 560, 1.0], 'q_left', 'listening', [A(w(173, 'hear'), 'look', x=420, y=380)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  energy='head turning slowly, creep')
-S(T(174), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you, knowing why', CR(x=960, y=520, z=1.05, rate=0.012),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'grief', [A(R(0.4), 'head_down', amount=0.3)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='creep')
-S(T(175), 'memory', 'search_pines', 'memory_morning', 'memory', 'WS', 'memory: the camp director with a clipboard waving people toward the pines', PU(x=960, y=560, z=1.2, rate=-0.05), tr='white',
-  chars=[C('extras', 'director', 'front', 'shout', [A(R(0.2), 'wave', n=2)], mode='silhouette')],
-  sfx=[fx(R(0.2), 'voices_calling_far', -14, 'memory', 'far calling', dur=1.5)], energy='waving arm, mist, push')
-S(T(176), 'memory', 'kitchen_staff', 'memory_morning', 'memory', 'WS', 'kitchen staff in white aprons hurry out of the mess hall into the misty pines', TR(x=900, y=540, z=1.0, dx=60),
-  chars=[C('extras', 'kitchen_line', 'profile_right', 'neutral', [A(R(0), 'walk', to=1600, surface='gravel')], mode='silhouette')],
-  sfx=[fx(R(0.2), 'screen_door', -12, 'memory', 'screen door slap'), fx(R(0.5), 'footsteps_gravel', -14, 'memory', 'hurrying steps', dur=2.5, n=4)],
-  energy='figures crossing frame, aprons flapping, track')
-S(T(177), 'memory', 'kitchen', 'memory_morning', 'memory', 'MS', 'the empty kitchen: griddle switched off, batter bowl, the percolator; the bell on its hook, unrung', P(x=960, y=540, z=1.05, rate=0.03),
-  sfx=[fx(R(0.2), 'coffee_percolator', -12, 'memory', 'percolator gurgling to a stop', dur=1.2)], energy='steam fading, push')
-S(T(178), 'memory', 'buses', 'memory_day', 'memory', 'WS', 'noon: yellow buses at the gate, kids boarding with duffels; kid-you at a window looking back', PU(x=960, y=540, z=1.2, rate=-0.04, dx=-30),
-  chars=[C('you_kid', 'bus_window', 'q_right', 'sad', [A(R(0.4), 'hand_on_glass')], mode='bust')],
-  sfx=[fx(R(0.1), 'bus_door', -10, 'memory', 'bus door hiss and engine idle', dur=2.5)], energy='kids filing on, bus idling and shaking, drift')
-S(T(179), 'memory', 'gate_close', 'memory_day', 'memory', 'MS', 'the gate swings shut, the chain is pulled through, the padlock snaps (dissolve back toward present)', P(x=960, y=600, z=1.05, rate=0.03), tr='dissolve',
-  sfx=[fx(w(179, 'last'), 'gate_creak', -6, 'memory', 'gate swings shut'), fx(w(179, 'camp'), 'gate_chain', -6, 'memory', 'chain pulled through'), fx(w(179, 'opened'), 'padlock', -4, 'memory', 'padlock snaps', hit=True)],
-  energy='gate swinging, chain rattling, push')
-S(T(180), 'memory', 'storage_shed', 'memory_day', 'memory', 'MS', 'the bell lowered into the crate in a storage shed; the lid comes down', P(x=960, y=600, z=1.05, rate=0.03),
-  sfx=[fx(w(180, 'bell'), 'bell_cracked', -14, 'memory', 'bell knocks the crate side: faint note + rattle', strike='touch'), fx(w(180, 'storage'), 'crate_creak', -6, 'memory', 'lid thumps down', hit=True)],
-  energy='hands lowering the bell, lid closing, dust in the shed light')
-
-# ================================================================ RULE 5 446.33 - 542.03 (lines 181-224)
-c5 = RULE(5)
-S(c5, 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you shout toward the doorway (mouth only, narrated)', HH(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('you', [960, 560, 1.0], 'profile_left', 'shout', [A(w(183, 'shout'), 'shout_silent', dur=1.2)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  mus=[M(c5, 'pulse_on', 0.5, None, 'urgency pulse in (slow, low)')], energy='handheld, shouting')
-S(T(184), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'MS', 'Tess in the doorway hears you; her beam wavers for the first time', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('tess', 'tess_in_doorway', 'front', 'tense', [A(w(184, 'crate'), 'flinch')], light=FLASH)], energy='beam wavering, push')
-S(T(185), 'cabin_now', 'cabin_door', 'flash', 'ours', 'MS', 'our side: Tess looks over her shoulder at the open cabin door; moonlit path beyond', PU(x=960, y=520, z=1.2, rate=-0.04),
-  chars=[C('tess', [760, 1000, 680], 'back', 'tense', [A(w(185, 'looks'), 'turn', to=1.5, dur=0.5)])], energy='turning, the beam swinging toward the door')
-S(T(186), 'camp_path', 'path', 'moon', 'ours', 'WS', 'from the cabin door: the mess hall porch just across the path', P(x=1200, y=520, z=1.0, rate=0.04),
-  sfx=[fx(R(0.1), 'ambience_camp_night', -6, 'outside', 'night bed', dur=2)], energy='push 4 %/s, fireflies, mist')
-S(T(187), 'memory', 'path_run', 'memory_day', 'memory', 'WS', 'memory: two barefoot kids racing across the path to the porch, splashing a puddle', TR(x=900, y=600, z=1.0, dx=90),
-  chars=[C('noah13', [800, 980, 560], 'profile_right', 'laugh', [A(R(0), 'run', to=1500)]), C('you_kid', [600, 990, 420], 'profile_right', 'laugh', [A(R(0), 'run', to=1300)])],
-  sfx=[fx(R(0.1), 'footsteps_gravel', -10, 'memory', 'bare feet running', dur=2, n=8, wet=True), fx(R(0.5), 'kids_far', -14, 'memory', 'laugh')],
-  energy='running, splashes, fast track 90 px/s')
-S(T(188), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you shout "Go," (lip-sync)', FA(x=960, y=520, z=1.15, rate=0.08),
-  chars=[C('you', [960, 560, 1.0], 'profile_left', 'shout', [A(t(188), 'talk', line=188)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  hud=[tag(t(188) - 0.02, 'GO', 960, 120, 'cmd', 1.0)], sfx=[fx(t(188), 'ui_pop', -5, 'dry', 'tag', hit=True)], energy='shout, fast push')
-S(T(190), 'cabin_dawn', 'doorway_back', 'dawn', 'theirs', 'MS', 'the doorway empty now: no Tess, no beam; her footsteps run away', P(x=960, y=500, z=1.15, rate=0.03),
-  props=dict(flashlight='with Tess on the porch'), sfx=[fx(w(190, 'footsteps'), 'footsteps_run', -6, 'far', 'Tess running, receding', dur=1.8, approach=-1)],
-  energy='the dark rectangle, dust settling in the space where the beam was')
-STATE(w(190, 'footsteps'), flashlight='tess_running')
-S(T(191), 'cabin_dawn', 'queen_bunk', 'dawn_queen', 'theirs', 'MS', 'the woman in the black dress sits down on the bunk beside Noah (full figure, human size, hair over her face); the pale light cools around her', RV(x=1300, y=600, z=1.5, rate=-0.08),
-  chars=[C('queen', [1420, 960, 760], 'front', 'queen_still', [A(w(191, 'sits'), 'sit_beside', dur=0.5)], mode='body', stage=2, face='hidden'),
-         C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  props=dict(queen='sitting beside Noah'), sfx=[fx(w(191, 'sits'), 'bed_creak', -3, 'close', 'mattress takes her weight', hit=True), fx(w(191, 'dress'), 'cloth_press', -10, 'close', 'satin settling', kind='satin')],
-  mus=[M(w(191, 'sits') - 1.2, 'silence', 0.0, 1.2, 'silence; ends on her weight in the mattress'), M(w(191, 'sits'), 'braam', 0.6)], energy='her sitting in one smooth inhuman motion, colour draining near her, push')
-STATE(w(191, 'sits'), queen='bunk')
-S(T(192), 'cabin_dawn', 'queen_bunk', 'dawn_queen', 'theirs', '2S', 'Noah scoots over to make room without looking up', P(x=1250, y=640, z=1.15, rate=0.03),
-  chars=[C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(w(192, 'scoots'), 'scoot', dx=-60), A(R(0), 'tie_loop', period=2.4)]), C('queen', 'queen_bunk', 'front', 'queen_still', [A(R(0), 'still')], mode='body', stage=2, face='hidden')],
-  sfx=[fx(w(192, 'scoots'), 'bed_creak', -5, 'close', 'scoot creak')], energy='scoot, the queen motionless, push')
-S(T(193), 'cabin_dawn', 'knot_cu', 'dawn_queen', 'theirs', 'ECU', 'his hands keep tying (habit)', P(x=960, y=620, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 640, 420], 'front', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], mode='hands')], energy='hands looping')
-S(T(194), 'cabin_dawn', 'queen_bust', 'dawn_queen', 'theirs', 'CU', 'the queen: hair over her face, only the red mouth smiling softly, motherly', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('queen', [960, 540, 1.0], 'front', 'queen_soft', [A(R(0), 'still')], mode='bust', stage=2, face='mouth_only')],
-  sfx=[fx(R(0.3), 'crowd_whisper', -20, 'close', 'breathy presence', dur=1.2, density=1)], energy='hair strands lifting, the smile not moving, creep')
-S(T(195), 'cabin_dawn', 'mattress_dip', 'dawn_queen', 'theirs', 'INSERT', 'her long pale hand pats the empty space beside Noah (the dip where you used to sit)', P(x=960, y=600, z=1.1, rate=0.03),
-  chars=[C('queen', [960, 620, 440], 'front', 'queen_soft', [A(w(195, 'pats'), 'pat', n=2, spacing=0.32)], mode='hands', stage=2)],
-  sfx=[fx(w(195, 'pats'), 'bed_creak', -10, 'close', 'pat 1', kind='pat'), fx(w(195, 'pats') + 0.32, 'bed_creak', -10, 'close', 'pat 2', kind='pat')], energy='hand patting, the mattress dipping')
-S(T(196), 'cabin_dawn', 'queen_face', 'dawn_queen', 'theirs', 'CU', 'FULL CREEPY FACE 2: "I can put you back the way he remembers you," (lip-sync, Noah blurred beside her)', P(x=960, y=500, z=1.0, rate=0.03, roll=3),
-  chars=[C('queen', [960, 520, 1.15], 'front', 'queen_grin', [A(t(196), 'talk', line=196), A(w(196, 'remembers'), 'head_tilt', angle=22, dur=1.0)], mode='bust', stage=3)],
-  dof=dict(focus=1.0, dof=6.75), sfx=[fx(w(196, 'i'), 'stinger', -1, 'dry', 'STINGER: full face 2', hit=True)], voice_fx='queen',
-  mus=[M(w(196, 'i'), 'stinger', 0.95), M(w(196, 'i'), 'pulse_off', 0.0)], energy='grin talking, slow roll 3 deg, push')
-S(T(198), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you catch yourself looking down at the mattress', CR(x=960, y=520, z=1.05, rate=0.01),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'tempted', [A(w(198, 'looking'), 'look', x=900, y=800)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75),
-  mus=[M(T(198), 'dip', 0.2, 18, 'temptation: bed drops to about -18 LU, no pulse, music-box only')], energy='eyes drifting down, creep')
-S(T(199), 'cabin_dawn', 'mattress_dip', 'dawn', 'theirs', 'INSERT', 'the little dip in the mattress, warm light on it', CR(x=960, y=600, z=1.1, rate=0.01), energy='creep, dust in the warm shaft')
-S(T(200), 'memory', 'cabin_morning', 'memory_day', 'memory', 'MS', 'memory: kid-you sitting in that dip pulling on socks; Noah tying his shoes beside you', P(x=960, y=600, z=1.05, rate=0.02), tr='dissolve',
-  chars=[C('you_kid', 'kid_sit_dip', 'front', 'happy', [A(R(0.2), 'pull_socks')]), C('noah13', 'noah_bunk', 'q_left', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)])],
-  sfx=[fx(R(0.3), 'cloth_grab', -16, 'memory', 'sock pulled on', kind='sock')], mus=[M(R(0), 'motif', 0.4, 3)], energy='socks, laces, warm push')
-S(T(201), 'cabin_dawn', 'wide', 'dawn', 'theirs', 'WS', 'the warm quiet cabin: lantern, curtains, the sprinkler idle outside; you small on the bunk edge', PU(x=980, y=560, z=1.2, rate=-0.025, dx=10),
-  chars=[C('you', 'you_bunk', 'q_right', 'tempted', [A(w(202, 'understand'), 'head_down', amount=0.2)])], energy='slow pull-out (loneliness), lantern breathing, dust in the window shaft')
-S(T(203), 'cabin_dawn', 'mattress_dip', 'dawn', 'theirs', 'INSERT', 'the dip again: red X over the empty space', P(x=960, y=600, z=1.15, rate=0.03),
-  hud=[redx(w(203, 'sit'), 960, 600, 180, 1.2), tag(w(203, 'sit') + 0.05, "DON'T SIT DOWN", 960, 120, 'cmd', 1.3)], sfx=[fx(w(203, 'sit'), 'stinger', -6, 'dry', 'red X', hit=True)],
-  energy='red X strokes, push')
-S(T(204), 'cabin_dawn', 'queen_bunk', 'dawn_queen', 'theirs', 'CU', 'you in tears; the queen soft-focused behind, smiling', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('you', [880, 560, 1.0], 'q_right', 'grief', [A(R(0.3), 'tears', amount=1.0)], mode='bust', light=DAWN), C('queen', [1450, 500, 0.8], 'front', 'queen_soft', [A(R(0), 'still')], mode='bust', stage=2, depth=2.2)],
-  dof=dict(focus=1.0, dof=6.75), energy='tears running, her blurred shape not moving, creep')
-S(T(205), 'mess_porch', 'porch_run', 'run', 'ours', 'MS', 'our side, the porch at night: Tess at the crate, flashlight swinging, yelling back toward the cabin', HH(x=960, y=560, z=1.05, rate=0.03, shake=20),
-  chars=[C('tess', 'tess_crate', 'q_right', 'shout', [A(w(205, 'yells'), 'shout_silent', dur=0.6), A(R(0), 'flashlight', aim='wild')])],
-  sfx=[fx(R(0.05), 'ambience_camp_night', -6, 'outside', 'night bed', dur=2), fx(R(0.2), 'breath', -8, 'close', 'Tess panting', kind='panting', dur=1.8)], energy='handheld 20 px/s, beam swinging wildly')
-S(T(206), 'mess_porch', 'porch_run', 'run', 'ours', 'CU', 'Tess: "Twenty!" The counter pops to 20', FA(x=960, y=520, z=1.15, rate=0.08, hit=[(t(206), 10)]),
-  chars=[C('tess', [960, 560, 1.0], 'front', 'shout', [A(t(206), 'talk', line=206)], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  hud=[dict(t=t(206), type='counter_call', value=20)], sfx=[fx(t(206), 'countdown_tick', 0, 'dry', 'counter 20 (big tick)', hit=True)], voice_fx='far_outside',
-  energy='shout, counter pop, camera jolt')
-S(T(207), 'cabin_dawn', 'candy', 'dawn_queen', 'theirs', 'INSERT', 'Noah holds out another cinnamon candy', P(x=960, y=580, z=1.1, rate=0.03),
-  chars=[C('noah13', [900, 600, 420], 'front', 'calm_kid', [A(w(207, 'holds'), 'hold_out', prop='candy_red')], mode='hands')],
-  props=dict(candy='second one offered; first still in your fist'), sfx=[fx(w(207, 'cinnamon'), 'candy_wrapper', -6, 'close', 'crinkle')], energy='hand extending')
-S(T(208), 'cabin_dawn', 'candy', 'dawn_queen', 'theirs', 'ECU', 'your fist tightening around the first one', P(x=960, y=560, z=1.2, rate=0.03),
-  chars=[C('you', [960, 600, 440], 'front', 'resolve', [A(w(208, 'feel'), 'fist', squeeze=1.0)], mode='hands')], sfx=[fx(w(208, 'fist'), 'candy_wrapper', -8, 'close', 'crushed crinkle')], energy='knuckles whitening')
-S(T(209), 'mess_porch', 'porch_run', 'run', 'ours', 'MS', 'Tess winds up and kicks the crate: the first slat cracks', HH(x=1080, y=700, z=1.1, rate=0.03, shake=24),
-  chars=[C('tess', 'tess_crate', 'profile_left', 'angry', [A(R(0.1), 'wind_up'), A(w(209, 'kicking'), 'kick')])],
-  props=dict(bell='crate broken open at %.2f' % w(209, 'apart')),
-  sfx=[fx(w(209, 'kicking'), 'crate_break', -2, 'close', 'kick 1', hit=True), fx(w(209, 'box'), 'crate_break', -2, 'close', 'kick 2'), fx(w(209, 'apart'), 'crate_break', 0, 'close', 'kick 3: slats split', hit=True),
-       fx(w(209, 'apart') + 0.3, 'bell_cracked', -14, 'close', 'bell rolls on the boards', strike='roll')],
-  energy='kicks, splinters flying across frame, beam strobing, handheld 24 px/s')
-STATE(w(209, 'apart'), bell='crate_broken')
-S(T(210), 'cabin_dawn', 'window_out', 'dawn', 'theirs', 'WS', 'through the dawn window, far across the old camp: the mess hall bell swings by itself and rings PERFECTLY; pull back from the bell to the window frame', RV(x=1420, y=600, z=2.2, rate=-0.10),
-  props=dict(fake_bell='swings at %.2f, no ringer' % w(210, 'bell')),
-  sfx=[fx(w(210, 'bell'), 'bell_clean', -2, 'far', 'THE FAKE: one perfect clean note, long beautiful reverb, NO rattle', hit=True)],
-  mus=[M(w(210, 'bell') - 0.6, 'silence', 0.0, 0.6, 'clear space for the bell'), M(w(210, 'bell'), 'swell', 0.5, 4)], energy='bell swinging far away, mist, push 3.5 %/s')
-STATE(w(210, 'bell'), bell='fake_ringing')
-S(T(211), 'cabin_dawn', 'shoe', 'dawn_queen', 'theirs', 'INSERT', 'Noah\'s hand reaches for his other shoe beside the bed', P(x=960, y=640, z=1.1, rate=0.03),
-  chars=[C('noah13', [860, 560, 420], 'front', 'calm_kid', [A(w(211, 'reaches'), 'reach', to='shoe')], mode='hands')], props=dict(shoe='reaching_other'),
-  sfx=[fx(w(211, 'shoe'), 'cloth_grab', -14, 'close', 'lace touched', kind='lace')], energy='hand reaching down')
-S(T(212), 'cabin_dawn', 'wide', 'dawn_queen', 'theirs', 'CU', 'you nearly tell him to hurry: mouth opens', P(x=960, y=520, z=1.05, rate=0.03),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'tempted', [A(w(212, 'tell'), 'mouth_open_close')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='push')
-S(T(213), 'memory', 'bell_ecu', 'memory_day', 'memory', 'ECU', 'memory: the crack in the old breakfast bell (callback to 62.76)', P(x=980, y=600, z=1.25, rate=0.04), tr='dissolve',
-  energy='sunlight gliding over the brass, push 4 %/s')
-S(T(214), 'memory', 'bell_ring_porch', 'memory_day', 'memory', 'MS', 'memory: a counselor rings the bell on the porch in the morning, rope swinging', P(x=960, y=540, z=1.05, rate=0.03),
-  chars=[C('counselor', [1100, 980, 680], 'front', 'neutral', [A(w(214, 'rang'), 'ring_bell')])], energy='rope swinging, bell swinging, push')
-S(T(215), 'memory', 'bell_ecu', 'memory_day', 'memory', 'ECU', 'the bell vibrating on a clean note', P(x=960, y=560, z=1.3, rate=0.03),
-  sfx=[fx(w(215, 'clean'), 'bell_cracked', -8, 'memory', 'the clean note only (first half of the real bell)', part='note')], energy='rim vibrating, push')
-S(Wc(216, 'then'), 'memory', 'bell_ecu', 'memory_day', 'memory', 'ECU', 'slow-motion: the crack rattling', P(x=1020, y=640, z=1.6, rate=0.03),
-  sfx=[fx(w(216, 'rattle'), 'bell_cracked', -6, 'memory', 'the thin rattle (second half)', part='rattle')], energy='the crack edges buzzing, push')
-S(Wc(216, 'somebody'), 'memory', 'breakfast_table', 'memory_day', 'memory', 'INSERT', 'a spoon dropped on a mess hall table, bouncing', P(x=960, y=600, z=1.2, rate=0.03),
-  sfx=[fx(w(216, 'dropped') + 0.15, 'spoon_drop', -4, 'memory', 'spoon clatter')], energy='spoon falling and bouncing')
-S(T(217), 'cabin_dawn', 'window_out', 'dawn', 'theirs', 'MS', 'the fake bell still swinging, ringing perfectly; red X over it', P(x=1420, y=600, z=1.6, rate=0.03),
-  hud=[redx(w(217, 'perfect'), 960, 520, 200, 1.1), tag(w(217, 'perfect') + 0.05, 'NO RATTLE', 960, 120, 'cmd', 1.3)],
-  sfx=[fx(R(0.2), 'bell_clean', -10, 'far', 'perfect bell tail'), fx(w(217, 'perfect'), 'stinger', -5, 'dry', 'red X', hit=True)], energy='swinging bell, red X')
-S(T(218), 'cabin_dawn', 'queen_bunk', 'dawn_queen', 'theirs', 'CU', 'the queen\'s head snaps toward you, the grin still on', P(x=1300, y=520, z=1.2, rate=0.03),
-  chars=[C('queen', [1300, 560, 0.95], 'front', 'queen_grin', [A(w(218, 'looks'), 'head_snap', deg=45, dur=0.12)], mode='bust', stage=3)],
-  sfx=[fx(w(218, 'looks'), 'whoosh', -10, 'dry', 'snap', kind='hard')], energy='head snap, push')
-S(T(219), 'cabin_dawn', 'queen_face', 'dawn_queen', 'theirs', 'ECU', 'the smile goes off her face in 2 frames: dead blank', P(x=960, y=520, z=1.25, rate=0.02),
-  chars=[C('queen', [960, 540, 1.3], 'front', 'queen_grin', [A(w(219, 'goes'), 'smile_off', dur=2 / 60)], mode='bust', stage=3)],
-  mus=[M(w(219, 'smile') - 0.1, 'silence', 0.0, 1.75, 'the deepest silence so far; ends on the real bell hit')],
-  energy='the smile snapping off, then her face perfectly still, slow push (red share starts rising here)')
-S(T(220), 'mess_porch', 'porch_run', 'bell_hit', 'ours', 'MS', 'Tess swings the padlock and hits the REAL bell', HH(x=1000, y=600, z=1.1, rate=0.04, shake=18, hit=[(w(220, 'hits'), 16)]),
-  chars=[C('tess', 'tess_crate', 'profile_left', 'angry', [A(w(220, 'hits') - 0.25, 'strike', prop='padlock', target='bell')])],
-  props=dict(bell='struck at %.2f' % w(220, 'hits')),
-  sfx=[fx(w(220, 'hits'), 'bell_cracked', 2, 'close', 'THE REAL BELL: clean note + thin rattle, loudest hit of the section', strike='padlock', hit=True),
-       fx(w(220, 'hits'), 'impact_hit', -4, 'dry', 'impact layer', hit=True)],
-  mus=[M(w(220, 'hits'), 'hit', 1.0)], energy='padlock swing, bell jolting, beam flare, camera jolt 16 px')
-STATE(w(220, 'hits'), bell='rattle', clock_theirs='07:00:00')
-S(T(221), 'mess_porch', 'bell_ecu', 'bell_hit', 'ours', 'ECU', 'the crack rattling', P(x=1020, y=640, z=1.5, rate=0.04),
-  sfx=[fx(w(221, 'rattle'), 'bell_cracked', -6, 'close', 'rattle tail continues', part='rattle')], energy='rim buzzing, push')
-S(T(222), 'cabin_dawn', 'knot_cu', 'dawn_break', 'theirs', 'ECU', 'the lace drops from his fingers (the loop breaks); the dawn light flickers', P(x=960, y=620, z=1.15, rate=0.03),
-  chars=[C('noah13', [960, 640, 420], 'front', 'calm_kid', [A(w(222, 'drops'), 'drop_lace')], mode='hands')], props=dict(shoe='lace dropped'),
-  fx_post=[dict(t=w(222, 'drops'), exposure=-0.4, dur=0.12)], sfx=[fx(w(222, 'drops'), 'lace_pull', -10, 'close', 'lace falls'), fx(w(222, 'shoelace'), 'glitch', -12, 'dry', 'header clock 07:00:00', dur=0.1)],
-  energy='lace falling, light flicker')
-S(T(223), 'cabin_dawn', 'noah_cu', 'dawn_break', 'theirs', 'CU', 'Noah, relieved: "Finally," (lip-sync)', P(x=960, y=540, z=1.1, rate=0.03),
-  chars=[C('noah13', [960, 560, 1.0], 'front', 'relief', [A(t(223), 'talk', line=223)], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='smile, push')
-
-# ================================================================ RULE 6 542.03 - 609.48 (lines 225-258)
-c6 = RULE(6)
-S(c6, 'cabin_dawn', 'wide', 'dawn_break', 'theirs', 'MS', 'handheld: you shove Noah toward the opening', HH(x=1000, y=600, z=1.1, rate=0.04, shake=24),
-  chars=[C('you', [1200, 1000, 700], 'profile_left', 'resolve', [A(w(227, 'shove'), 'shove')]), C('noah13', [960, 990, 600], 'profile_left', 'calm_kid', [A(w(227, 'shove'), 'stumble', to='doorway')])],
-  hud=[tag(w(227, 'shove'), 'HIM FIRST', 960, 120, 'cmd', 1.1)], sfx=[fx(w(227, 'shove'), 'whoosh', -4, 'dry', 'shove', kind='hard'), fx(w(227, 'shove'), 'footsteps_wood_inside', -6, 'inside', 'stumbling steps', n=3)],
-  mus=[M(c6 + 0.2, 'pulse_on', 0.7, None, 'climax pulse')], energy='shove, stumble, handheld 24 px/s')
-S(T(228), 'cabin_dawn', 'doorway_back', 'dawn_break', 'theirs', 'ECU', 'low: his bare foot crosses the threshold into the dark side', P(x=960, y=860, z=1.4, rate=0.04),
-  chars=[C('noah13', [960, 900, 700], 'profile_right', 'calm_kid', [A(w(228, 'foot'), 'step_through', foot='bare')], mode='feet')],
-  sfx=[fx(w(228, 'foot'), 'bare_foot_step', -6, 'close', 'bare foot on dusty boards'), fx(w(228, 'through'), 'sub_drop', -8, 'dry', 'pressure', hit=True)], energy='foot crossing the light boundary')
-S(T(229), 'cabin_dawn', 'doorway_back', 'dawn_break', 'theirs', 'MS', 'the foot stays; the doorway frame shudders', HH(x=960, y=560, z=1.15, rate=0.03, shake=14),
-  sfx=[fx(w(229, 'stays'), 'wood_thud', -6, 'close', 'the wall creaks and shudders')], energy='frame shuddering, dust shaking loose')
-S(T(230), 'cabin_now', 'doorway', 'red', 'ours', 'MS', 'our side: Tess, back and out of breath, grabs Noah\'s arm through the doorway', HH(x=960, y=540, z=1.1, rate=0.03, shake=18),
-  chars=[C('tess', 'tess_doorway', 'q_right', 'fear', [A(w(230, 'grabs'), 'grab', what='arm')], light=RED), C('noah13', [1000, 980, 560], 'profile_left', 'strain', [], mode='body', note='half through the doorway')],
-  sfx=[fx(w(230, 'grabs'), 'cloth_grab', -2, 'close', 'grab', hit=True), fx(R(0), 'breath', -8, 'close', 'Tess panting', kind='panting', dur=1.8)], energy='grab, handheld, red spill from the doorway')
-STATE(w(230, 'grabs'), flashlight='tess_on')
-S(T(231), 'cabin_now', 'doorway', 'red', 'ours', 'CU', 'Noah yelps: half in pale light, half in red', FA(x=960, y=520, z=1.15, rate=0.08),
-  chars=[C('noah13', [960, 560, 1.0], 'profile_left', 'scream', [A(w(231, 'yelps'), 'flinch')], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(w(231, 'yelps'), 'impact_hit', -6, 'dry', 'hit', hit=True)], energy='flinch, fast push')
-S(T(232), 'cabin_now', 'doorway', 'red', 'ours', 'ECU', 'his taped fingers slip out of the blue tape; the empty tape ring stays in Tess\'s grip', P(x=960, y=560, z=1.4, rate=0.04),
-  chars=[C('noah13', [960, 580, 460], 'front', 'strain', [A(w(232, 'slipped'), 'slip_tape')], mode='hands')], props=dict(tape='slipped off at %.2f' % w(232, 'slipped')),
-  sfx=[fx(w(232, 'slipped'), 'tape_peel', -4, 'close', 'tape slipping off in one go')], energy='fingers sliding out, the tape ring left behind')
-STATE(w(232, 'slipped'), tape='slipped')
-S(T(233), 'cabin_now', 'wide', 'red', 'ours', 'MS', 'Tess pulls him into the room; they fall back onto the boards', cam('reveal', x=1060, y=640, z=1.45, rate=-0.12, shake=22),
-  chars=[C('tess', 'tess_mirror', 'q_right', 'fear', [A(w(233, 'pulls'), 'yank'), A(w(233, 'room'), 'fall_back')], light=RED), C('noah13', 'doorway_mid', 'profile_left', 'scream', [A(w(233, 'into'), 'fall_through')], light=RED)],
-  sfx=[fx(w(233, 'room') + 0.1, 'body_fall', -2, 'close', 'two bodies hit the floor', hit=True)], energy='falling bodies, dust burst, handheld')
-STATE(w(233, 'room'), sweatshirt='too_small')
-S(T(234), 'cabin_now', 'cuffs', 'red', 'ours', 'ECU', 'the sweatshirt cuffs ride up his forearms as the arms lengthen (aging over 1.5 s)', P(x=960, y=560, z=1.2, rate=0.035),
-  chars=[C('noah_grown', [960, 600, 460], 'front', 'shaken', [A(R(0), 'age', t1=R(1.5), part='arms')], mode='hands')],
-  sfx=[fx(R(0.1), 'cloth_press', -6, 'close', 'cotton stretching, seams creaking', kind='stretch', dur=1.5)], energy='arms growing, cuffs sliding up, push')
-S(T(235), 'cabin_now', 'wide', 'red', 'ours', 'CU', 'his face mid-change: jaw lengthening, stubble coming in; his voice cracks on your name (mouth only)', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('noah_grown', [960, 560, 1.0], 'front', 'shaken', [A(R(0), 'age', t1=R(-0.2), part='face', start=0.4), A(w(235, 'name'), 'talk_silent', dur=0.5)], mode='bust', light=RED)],
-  dof=dict(focus=1.0, dof=6.75), sfx=[fx(w(235, 'cracks'), 'glitch', -16, 'dry', 'tiny crack in the room tone', dur=0.1, amount=0.3)], energy='face morphing, push')
-S(T(236), 'cabin_now', 'wide', 'red', 'ours', 'CU', 'grown Noah, complete: about 27, gap teeth still there', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('noah_grown', [960, 560, 1.0], 'front', 'shaken', [A(w(236, 'drops'), 'talk_silent', dur=0.8)], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75),
-  mus=[M(w(236, 'drops'), 'sub_drop', 0.6, None, 'the drone drops an octave with his voice')], energy='breathing hard, creep')
-S(T(237), 'cabin_now', 'hands', 'red', 'ours', 'OTS', 'over his shoulder: he stares at his hands', P(x=960, y=620, z=1.1, rate=0.03),
-  chars=[C('noah_grown', 'noah_floor', 'back', 'shaken', [A(R(0), 'look_at_hands')])], energy='hands turning over, push')
-S(T(238), 'cabin_now', 'hands', 'red', 'ours', 'ECU', 'his big shaking hands beside yours: bigger', P(x=960, y=560, z=1.2, rate=0.03),
-  chars=[C('noah_grown', [880, 600, 520], 'front', 'shaken', [A(R(0), 'tremble', amount=1.0)], mode='hands'), C('you', [1120, 620, 440], 'front', 'neutral', [], mode='hands')],
-  sfx=[fx(R(0.2), 'breath', -10, 'close', 'his shaky breath', kind='nervous', dur=2)], energy='tremble, push')
-S(T(239), 'cabin_now', 'wide', 'red', 'ours', 'MS', 'he stands and hits his shoulder on the top bunk', HH(x=1100, y=520, z=1.05, rate=0.03, hit=[(w(239, 'shoulder'), 12)]),
-  chars=[C('noah_grown', 'noah_stand', 'q_left', 'shaken', [A(w(239, 'stands'), 'stand_up'), A(w(239, 'shoulder'), 'stand_hit', what='bunk')])],
-  sfx=[fx(w(239, 'shoulder'), 'wood_thud', 0, 'close', 'shoulder into the bunk + bunk rattle', hit=True)], energy='standing, impact, bunk rattling, dust falling')
-S(T(240), 'cabin_now', 'bunk_low', 'red', 'ours', 'LOW', 'low angle: the top bunk at his shoulder height; dust drifting down from the hit', CR(x=960, y=480, z=1.1, rate=0.015),
-  energy='dust falling through the red light, the bunk still swaying')
-S(T(241), 'cabin_now', 'doorway', 'red', 'ours', 'MS', 'from our side through the doorway: you in the pale light, and behind you the queen standing, mouth open, calling his name (no voice)', P(x=960, y=500, z=1.2, rate=0.03),
-  chars=[C('you', [960, 960, 560, 1.4], 'back', 'fear', [A(R(0), 'grip_frame')]), C('queen', [1100, 900, 660, 2.2], 'front', 'queen_call', [A(w(241, 'calls'), 'call_silent', dur=1.4)], mode='body', stage=3)],
-  sfx=[fx(w(241, 'calls'), 'crowd_whisper', -10, 'mirror', 'a reverberant breath shaped like a name (no words)', dur=1.4, density=1)], energy='her mouth opening wide, push')
-S(T(242), 'cabin_now', 'wide', 'red', 'ours', 'CU', 'grown Noah covers his ears fast', FA(x=960, y=520, z=1.15, rate=0.08),
-  chars=[C('noah_grown', [960, 560, 1.0], 'front', 'fear', [A(w(242, 'covers'), 'cover_ears', dur=0.15)], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(w(242, 'covers'), 'cloth_grab', -6, 'close', 'hands slap over ears')], energy='hands snapping to ears')
-S(T(243), 'cabin_now', 'wide', 'red', 'ours', 'ECU', 'grown Noah rocking, eyes shut tight', HH(x=960, y=540, z=1.2, rate=0.02),
-  chars=[C('noah_grown', [960, 560, 1.15], 'front', 'fear', [A(R(0), 'rock', period=0.9)], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75), energy='rocking, handheld')
-S(T(244), 'cabin_dawn', 'queen_face', 'dawn_break', 'theirs', 'CU', 'the queen in the doorway light, head tilted, calling silently (entity language)', P(x=960, y=500, z=1.1, rate=0.03),
-  chars=[C('queen', [960, 520, 1.0], 'front', 'queen_call', [A(R(0), 'head_tilt', angle=24, dur=1.5)], mode='bust', stage=3)], energy='tilt, hair floating, push')
-S(T(245), 'cabin_now', 'doorway', 'red', 'ours', 'CU', 'Tess shouts: "Five!" The counter pops to 5', FA(x=960, y=520, z=1.15, rate=0.10, hit=[(t(246), 10)]),
-  chars=[C('tess', [960, 560, 1.0], 'q_right', 'shout', [A(t(246), 'talk', line=246)], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75),
-  hud=[dict(t=t(246), type='counter_call', value=5)], sfx=[fx(t(246), 'countdown_tick', 0, 'dry', 'counter 5 (big tick)', hit=True)], energy='shout, counter pop')
-S(T(247), 'cabin_dawn', 'doorway_back', 'dawn_break', 'theirs', 'POV', 'your hand reaches for the doorway frame', HH(x=960, y=560, z=1.1, rate=0.04),
-  chars=[C('you', [1000, 640, 440], 'front', 'fear', [A(w(247, 'reach'), 'reach', to='doorway')], mode='hands')], sfx=[fx(w(247, 'doorway'), 'mirror_handle', -10, 'close', 'hand on the frame', kind='bump')],
-  mus=[M(e(248) - 1.0, 'silence', 0.0, 1.0, 'silence before "Wait"')], energy='hand stretching, handheld')
-S(T(248), 'cabin_dawn', 'doorway_back', 'dawn_break', 'theirs', 'OTS', 'over your shoulder toward the doorway: Tess and grown Noah in the dark beyond', P(x=960, y=520, z=1.15, rate=0.03),
-  chars=[C('you', [700, 1100, 900, 0.7], 'back', 'fear', [A(R(0), 'freeze')], mode='silhouette')], energy='push, red flicker beyond')
-S(T(249), 'cabin_dawn', 'queen_mouth', 'dawn_break', 'theirs', 'ECU', 'her mouth speaking in Noah\'s 13-year-old voice: "Wait, he forgot his shoe."', P(x=960, y=560, z=1.3, rate=0.03),
-  chars=[C('queen', [960, 470, 1.8], 'front', 'queen_soft', [A(t(249), 'talk', line=249)], mode='bust', stage=3, crop='mouth')],
-  sfx=[fx(w(249, 'wait'), 'impact_hit', -2, 'dry', 'hit on "Wait" after the silence', hit=True)], voice_fx='queen_child', mus=[M(w(249, 'wait'), 'hit', 0.9)],
+# ================================================================ RULE 2 (card 203.53-208.32)
+RULE(2)
+X(card_times(2)[1], 'WS', 'ours', 'cabin_now/master', 'night',
+  're-establishing wide [R C7 master]: you kneel at the mirror; Tess behind you tells you to put it down', P(3), reuse=72.31, tr='smear',
+  chars=[body('you', 1060, 760, 300, 'back', 'tense', [], kneel=True), body('tess', 820, 900, 380, 'q_right', 'tense', [A(w(80, 'tells'), 'talk_silent', dur=1.2)])],
+  energy='beam wobble, dust, push 3 %/s')
+X(Wc(80, 'mirror'), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of Tess: "put it down"', P(3),
+  chars=[bust('tess', 960, 560, 1.0, 'q_left', 'fear', [A(R(0), 'talk_silent', dur=0.6)], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
+  energy='talking, bokeh drift')
+X(T(81), 'POV', 'ours', 'mirror/glass_wide', 'night', 'POV: your hands on the frame; the fingers twitch open and clamp back',
+  P(3.5, x=960, y=600, z=1.05), chars=[POVH([A(w(81, 'try'), 'grip_frame', fail=True)], 960, 760, 760, both=True)],
+  energy='fingers twitching, the frame trembling, push 3.5 %/s')
+X(T(82), 'WS', 'stairs', 'mirror/queen_glass', 'stairs',
+  'mirror wide: she is on STEP 7 (1.25x her 148 s size), facing you', P(3, x=960, y=560, z=1.0),
+  chars=[Q('S1', [960, 860, 340, 1.04], mode='body', acts=[A(R(0), 'drift')])],
+  q=dict(stage='S1', step=7, size=0.32, where='glass, step 7', framing='WS 32 %', wrong='she climbs while nobody watches'),
+  energy='her drift, the red edges breathing, push 3 %/s')
+STATE(211.49, queen='glass_step7')
+X(Wc(82, 'railing'), 'MS', 'stairs', 'stairs/railing', 'stairs',
+  'behind her, at the foot of the stairs, a small hand pokes through the balusters of the stair railing (Noah\'s bunk is right there)',
+  P(4, x=1100, y=600, z=1.15), chars=[Q('S1', [600, 900, 520, 1.04], mode='body', view='back', acts=[A(R(0), 'still')]),
+                                      hands('noah13', 1180, 640, 300, [A(R(0.2), 'reach_through', through='railing')], tape=True)],
+  errfix=[31], energy='the hand reaching through, push 4 %/s')
+X(T(83), 'INSERT', 'stairs', 'stairs/railing', 'stairs',
+  'ECU of the taped hand: middle, ring and little fingers wrapped together, two bands, a lifting edge; label BLUE MEDICAL TAPE',
+  P(4, x=960, y=540, z=1.3), chars=[hands('noah13', 960, 560, 520, [A(R(0), 'fingers_flex')], tape=True)],
+  hud=[label(216.9, 'BLUE MEDICAL TAPE', [960, 520], dx=180, dy=-140)], errfix=[14],
+  device=DEV('insert', 'tape', 'three fingers taped with blue medical tape'), energy='fingers flexing, tape sheen, push 4 %/s')
+X(Wc(83, 'blue'), 'INSERT', 'stairs', 'stairs/railing', 'stairs', 'closer: the lifting edge of the tape on the little-finger side',
+  P(4, x=1040, y=520, z=1.6), chars=[hands('noah13', 960, 560, 700, [A(R(0), 'fingers_flex')], tape=True)], energy='the edge lifting, push 4 %/s')
+X(T(84), 'INSERT', 'memory', 'memory/tape_wrap', 'sepia_day',
+  'memory: Mom\'s hands (no face) wrap blue tape around three small fingers at the kitchen table', P(3), tr='sepia',
+  chars=[hands('mom', 900, 520, 420, [A(R(0.1), 'wrap_tape')]), hands('noah13', 1040, 600, 360, [A(R(0), 'flinch')], tape=True)],
+  energy='tape wrapping, a sniffle')
+X(Wc(84, 'after'), 'WS', 'memory', 'memory/car_door', 'sepia_day',
+  'memory: the family car; the door slams on a small hand; kid Noah crying', P(3),
+  chars=[body('noah13', 960, 960, 520, 'q_right', 'scream', [A(221.42, 'flinch')])], energy='the door swinging shut, crying')
+X(Wc(84, 'car'), 'DOC', 'memory', 'memory/polaroid', 'sepia_day',
+  'the polaroid: Noah by the family car holding up the taped fingers', P(3, x=960, y=540, z=1.05),
+  hud=[doc(221.3, 'polaroid', 'NOAH · JUNE (taped fingers)')], device=DEV('doc', 'polaroid', 'the tape polaroid'),
+  energy='polaroid edge curling, push 3 %/s')
+X(T(85), 'INSERT', 'stairs', 'stairs/railing', 'stairs', 'ECU: his thumbnail picks at the tape edge', P(3.5, x=960, y=540, z=1.4), tr='sepia',
+  chars=[hands('noah13', 960, 560, 600, [A(222.46, 'peel_tape'), A(222.76, 'peel_tape'), A(223.06, 'peel_tape')], tape=True)],
+  energy='thumbnail picking, push 3.5 %/s')
+X(Wc(86, 'had'), 'MS', 'memory', 'memory/bench', 'sepia_day', 'memory: Noah on the bench by the lake picking at the tape, about to speak',
+  P(3), tr='sepia', chars=[body('noah13', 960, 1040, 640, 'q_left', 'shy', [A(R(0), 'peel_tape'), A(R(0.8), 'mouth_open')])],
+  energy='lake glitter, picking')
+X(228.0, 'INSERT', 'stairs', 'stairs/railing', 'stairs',
+  'back through the glass: the small taped hand still picking at the rail (he has something to say)', P(3, x=960, y=560, z=1.2), tr='sepia',
+  chars=[hands('noah13', 960, 560, 460, [A(R(0), 'peel_tape')], tape=True)], energy='picking, fog')
+X(T(88), 'MS', 'ours', 'cabin_now/ots_mirror', 'night',
+  'Tess tugs your shoulder; in the glass behind you, she is on STEP 6', P(3),
+  chars=[body('tess', 760, 1060, 640, 'q_right', 'fear', [A(w(88, 'tells'), 'grab_shoulder')]),
+         body('you', 1100, 1060, 620, 'back', 'grief', [], kneel=True), Q('S1', [1500, 700, 220, 1.04], mode='body', acts=[A(R(0), 'drift')])],
+  q=dict(stage='S1', step=6, size=0.40, where='glass, step 6', framing='background, 40 %', wrong='closer again'),
+  energy='the tug, her drift in the glass, push 3 %/s')
+STATE(230.0, queen='glass_step6')
+X(T(89), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of you: "the last thing you said to Noah..."', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_left', 'grief', [A(R(0), 'talk_silent', dur=1.4)], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
   energy='lips moving, push')
-S(T(250), 'cabin_dawn', 'wide', 'dawn_break', 'theirs', 'CU', 'you, frozen', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('you', [960, 560, 1.0], 'front', 'fear', [A(R(0), 'freeze', t1=R(-0.1))], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='creep, the light flickering')
-S(T(251), 'cabin_now', 'wide', 'red', 'ours', 'CU', 'grown Noah looks up with dread', P(x=960, y=520, z=1.1, rate=0.03),
-  chars=[C('noah_grown', [960, 560, 1.0], 'front', 'fear', [A(R(0.2), 'look_up')], mode='bust', light=RED)], dof=dict(focus=1.0, dof=6.75), energy='look up, push')
-S(T(252), 'cabin_dawn', 'wide', 'dawn_break', 'theirs', 'MS', 'you turn back toward the dawn cabin', HH(x=960, y=560, z=1.1, rate=0.03),
-  chars=[C('you', [960, 1000, 680], 'back', 'fear', [A(w(252, 'turn'), 'snap_turn', frm=2, to=0)])],
-  hud=[tag(w(252, 'you') - 0.05, "DON'T TURN AROUND", 960, 120, 'cmd', 1.3)], sfx=[fx(w(252, 'turn'), 'whoosh', -6, 'dry', 'turn', kind='soft'), fx(w(252, 'you'), 'ui_pop', -6, 'dry', 'tag', hit=True)],
-  energy='the turn, handheld')
-S(T(253), 'cabin_dawn', 'wide', 'dawn_break', 'theirs', 'WS', 'your POV: the empty bunk, the dip', PU(x=1100, y=640, z=1.25, rate=-0.03),
-  mus=[M(T(253), 'dip', 0.25, 4, 'time stretches: the bed thins')], energy='creep, light flickering')
-S(T(254), 'memory', 'night_window', 'memory_night', 'memory', 'MS', 'memory flash: Noah at 13 at the night window turns to say something; his mouth opens; cut before a word', P(x=960, y=520, z=1.1, rate=0.03), tr='white',
-  chars=[C('noah13', [960, 1000, 640], 'q_right', 'neutral', [A(w(254, 'said'), 'turn', to=0.5), A(w(254, 'you') - 0.1, 'mouth_open')])], energy='turn, moths, push')
-S(T(255), 'cabin_dawn', 'wide', 'dawn_break', 'theirs', 'MS', 'your body turns fully, before you can think', HH(x=960, y=560, z=1.1, rate=0.03),
-  chars=[C('you', [960, 1000, 680], 'front', 'fear', [A(w(255, 'turns'), 'turn', to=0)])], sfx=[fx(w(255, 'turns'), 'jacket_cloth', -10, 'close', 'jacket swish')], energy='turning, handheld')
-S(T(256), 'cabin_dawn', 'shoe', 'dawn_break', 'theirs', 'INSERT', 'the other shoe beside the bed, lace loose; red X over it', P(x=960, y=640, z=1.15, rate=0.03),
-  hud=[redx(w(256, 'shoe'), 960, 640, 170, 1.0)], sfx=[fx(w(256, 'shoe'), 'stinger', -6, 'dry', 'red X', hit=True)], props=dict(shoe='left behind'), energy='push, red X')
-S(T(257), 'mirror_world', 'feet', 'red', 'mirror', 'ECU', 'BIGGEST SCARE: you look down: you stand on a red-edged step, and her pale bare foot is on the step just below yours', P(x=960, y=700, z=1.15, rate=0.03, snap=(w(257, 'bare'), 1.4)),
-  chars=[C('you', [880, 560, 600], 'front', 'fear', [], mode='feet'), C('queen', [1040, 900, 700], 'front', 'queen_still', [A(w(257, 'bare'), 'toes_curl')], mode='feet', stage=3)],
-  props=dict(queen='on the step below yours'),
-  sfx=[fx(w(257, 'bare'), 'impact_hit', 2, 'dry', 'THE BIGGEST HIT OF THE FILM (mix momentary max +10 LU)', hit=True, size=1.5), fx(w(257, 'bare'), 'braam', 0, 'dry', 'braam', hit=True, key='d'),
-       fx(w(257, 'bare') + 0.1, 'bare_foot_step', -8, 'mirror', 'wet foot settling on the step')],
-  mus=[M(w(257, 'bare') - 1.3, 'silence', 0.0, 1.3, 'silence into the biggest hit'), M(w(257, 'bare'), 'hit', 1.0)], energy='punch-in x1.4, toes curling, step edges glowing red')
-STATE(w(257, 'bare'), queen='step_below')
-S(T(258), 'cabin_now', 'doorway', 'red', 'ours', 'MS', 'Tess\'s arm reaches through the doorway, grabs your collar and yanks; whip pull back', cam('whip', x=960, y=520, z=1.2, x1=760, y1=560, z1=0.95),
-  chars=[C('tess', 'tess_doorway', 'profile_right', 'angry', [A(w(258, 'collar'), 'grab_collar'), A(w(258, 'pulls'), 'yank')], light=RED), C('you', 'you_doorway', 'back', 'fear', [A(w(258, 'pulls'), 'yanked_back')])],
-  sfx=[fx(w(258, 'collar'), 'cloth_grab', 0, 'close', 'collar grabbed', hit=True), fx(w(258, 'pulls'), 'whoosh', -2, 'dry', 'yank', kind='hard')],
-  fx_post=[dict(t=w(258, 'pulls'), white=0.5, dur=0.08)], energy='grab, yank, whip pan, white flash')
-STATE(w(258, 'pulls'), side='ours', doorway='closing')
+X(Wc(89, 'said'), 'MS', 'stairs', 'mirror/queen_glass', 'stairs', 'the glass behind you: she is on STEP 5, nobody watching',
+  P(3, x=960, y=520, z=1.1), chars=[Q('S1', [960, 820, 420, 1.04], mode='body', acts=[A(R(0), 'drift')])],
+  q=dict(stage='S1', step=5, size=0.45, where='glass, step 5', framing='MS', wrong='she climbs while nobody watches'),
+  energy='her drift, the hot spot sliding')
+STATE(233.76, queen='glass_step5')
+X(T(90), 'WS', 'memory', 'memory/night_window', 'sepia_night',
+  'memory, night: kid-you grumbling at Noah by the open window: shut the window', P(2.5), tr='sepia',
+  chars=[body('you_kid', 700, 940, 360, 'q_right', 'sad', [A(R(0), 'talk_silent', dur=1.0)]), body('noah13', 1200, 940, 380, 'q_left', 'shy', [])],
+  energy='lantern flicker, moths')
+X(T(91), 'INSERT', 'memory', 'memory/night_window', 'sepia_night', 'bugs and moths crowding the lantern', P(3.5),
+  energy='moths fluttering, lantern flicker')
+X(T(92), 'CU', 'ours', 'cabin_now/bokeh', 'night',
+  'CU of you speaking (lip-sync): "I wish I\'d had one more minute with him"; RED X (2 of 4) over your mouth on "wish"; tag KEEP IT TO YOURSELF',
+  P(3), chars=[bust('you', 960, 560, 1.0, 'q_left', 'grief', [A(t(92), 'talk', line=92)], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
+  hud=[redx(238.17, 960, 690, 150, 0.9, n=2), tag(238.25, 'KEEP IT TO YOURSELF', 960, 150, 'lipstick', 1.0)], tr='sepia',
+  energy='talking, the X drawing on, push 3 %/s')
+X(Wc(92, 'one'), 'ECU', 'stairs', 'mirror/queen_glass', 'stairs', 'ECU of her eyes in the glass, STEP 4, no blink',
+  P(4, x=960, y=480, z=1.6), chars=[Q('S1', [960, 520, 2.0], acts=[A(R(0), 'stare')])],
+  q=dict(stage='S1', step=4, size=1.0, where='glass, step 4', framing='ECU of the eyes', wrong='she heard it'),
+  energy='eyes locked, the irises glinting, push 4 %/s')
+STATE(239.2, queen='glass_step4')
+X(T(93), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of you finishing the wish', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_left', 'grief', [A(R(0), 'swallow')], light=L_BEAM)], energy='a swallow')
+X(T(94), '2S', 'ours', 'cabin_now/three_q', 'night', '2-shot: you facing Tess, the mirror behind you', P(3),
+  chars=[body('you', 1060, 1040, 600, 'q_left', 'grief', [A(R(0), 'look', x=760, y=440)]), body('tess', 760, 1040, 590, 'q_right', 'sad', [])],
+  energy='the beam between you, push 3 %/s')
+X(T(95), 'MS', 'memory', 'memory/kitchen_15', 'sepia_day', 'memory flash: you at 15 at the kitchen table saying it', FA(5), tr='sepia',
+  chars=[body('you', 960, 1040, 560, 'q_left', 'grief', [A(R(0), 'talk_silent', dur=0.6)], age=15)], energy='flash, fast push')
+X(Wc(95, 'hundred'), 'MS', 'memory', 'memory/car_20', 'sepia_day', 'memory flash: you at 20 in a car saying it', FA(5),
+  chars=[body('you', 960, 1040, 560, 'q_right', 'grief', [A(R(0), 'talk_silent', dur=0.6)], age=20)], energy='flash, fast push')
+X(Wc(95, 'before'), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of Tess: she has heard it a hundred times', P(3), tr='sepia',
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'sad', [A(R(0), 'nod')], light=L_BEAM)], energy='a small nod')
+X(T(96), 'OTS', 'ours', 'mirror/reflection', 'night',
+  'OTS on your reflection in the glass; behind its shoulder something pale rises (step 3)', SIL(1.5, x=1000, y=500, z=1.1),
+  chars=[bust('you', 760, 640, 1.3, 'back', 'grief', [], light=L_BEAM), Q('S1', [1180, 480, 0.6], acts=[A(R(0), 'rise', dy=-30)], in_glass=True)],
+  q=dict(stage='S1', step=3, size=0.25, where='glass, step 3', framing='behind your reflection', wrong='rising'),
+  energy='slow push (silence), her face rising')
+STATE(245.26, queen='glass_step3')
+X(246.99, 'OTS', 'ours', 'mirror/reflection', 'night',
+  'tighter: her face right behind your reflection\'s shoulder (STEP 2), pale, lit; push', SIL(2.0, x=1100, y=480, z=1.25),
+  chars=[bust('you', 760, 640, 1.3, 'back', 'grief', [], light=L_BEAM), Q('S1', [1160, 460, 0.9], acts=[A(R(0), 'still')], in_glass=True)],
+  q=dict(stage='S1', step=2, size=0.35, where='glass, step 2', framing='face behind your reflection 35 %', wrong='right behind you'),
+  energy='slow push in the silence')
+STATE(247.0, queen='glass_step2')
+X(T(97), 'CU', 'stairs', 'mirror/queen_glass', 'stairs',
+  'CU in the glass: "You have it." lip-sync, a thin red glow on the mouth while she speaks', P(3, x=960, y=520, z=1.15, snap=(248.39, 1.08)),
+  tr='white', chars=[Q('S1', [960, 560, 1.2], acts=[A(t(97), 'talk_line', line=97, glow=True)])],
+  q=dict(stage='S1', step=1, size=0.70, where='glass, the top', framing='CU face 70 %', wrong='she speaks'),
+  errfix=[20], energy='lips moving, red glow, punch-in')
+STATE(248.3, queen='glass_top')
+X(T(98), 'MS', 'ours', 'cabin_now/ots_mirror', 'night', 'Tess snatches the towel (motion blur)', HH(3, shake=20),
+  chars=[body('tess', 900, 1060, 640, 'q_right', 'fear', [A(w(98, 'snatches'), 'snatch', prop='towel')])],
+  props=dict(towel='tess_hands at 249.67'), energy='snatch blur, handheld')
+STATE(249.67, towel='tess_hands')
+X(Wc(98, 'throws'), 'INSERT', 'ours', 'cabin_now/towel_fly', 'night', 'the towel flies at the lens', WH(1240, 520, 1.25),
+  energy='terry cloth filling the frame, whip with motion blur')
+X(Wc(98, 'glass'), 'MS', 'ours', 'cabin_now/ots_mirror', 'night', 'the towel drapes over the mirror; the beam swings off it', HH(2.5, shake=16),
+  chars=[body('tess', 760, 1060, 640, 'q_right', 'fear', [A(R(0), 'step_back')])], props=dict(towel='over_glass at 251.75'),
+  energy='towel settling, beam swinging')
+STATE(251.75, towel='over_glass', mirror='towel_over')
+X(T(99), 'MS', 'ours', 'mirror/towel_over', 'night', 'the draped towel, still; Tess backing away', P(2.5),
+  chars=[body('tess', 700, 1060, 600, 'q_right', 'fear', [A(R(0), 'step_back')])], energy='breathing, the towel still')
+X(Wc(99, 'fingers'), 'INSERT', 'ours', 'mirror/towel_over', 'night',
+  'five long fingertips push the cloth toward the lens, lipstick red bleeding through the terry at the tips (towel layer bounds checked)',
+  FA(6, x=960, y=500, z=1.3), chars=[Q('S1', [960, 520, 700], mode='hands', acts=[A(R(0), 'press_through_cloth', depth=1.0, red_bleed=True)])],
+  q=dict(stage='S1', where='through the towel', framing='fingers to the lens', wrong='red bleeds through the cloth'), errfix=[22],
+  energy='cloth stretching toward camera, fast push 6 %/s')
+X(T(100), 'MS', 'ours', 'mirror/towel_over', 'night', 'silence: the towel hanging on the frame', SIL(1.5),
+  energy='slow push in the silence, a thread trembling')
+X(256.87, 'WS', 'ours', 'cabin_now/profile', 'night',
+  'the towel falls flat onto the floor: NO GLASS behind it; dust burst; camera hit; held wide', P(2, hit=[(256.87, 12)]), tr='white',
+  props=dict(mirror='doorway at 256.87', towel='floor_flat'), reuse=88.7, errfix=[22],
+  energy='towel dropping, dust bursting and settling, camera hit')
+STATE(256.87, mirror='doorway', doorway='gold', towel='floor_flat', queen='absent')
+X(Wc(100, 'mirror'), 'WS', 'ours', 'cabin_now/floor_cu', 'night',
+  'low: the towel lying flat, dust settling, the empty frame above glowing faintly gold', P(2.5, x=960, y=600, z=1.05),
+  energy='dust settling, gold haze creeping out')
+X(T(101), 'WS', 'ours', 'cabin_now/master', 'doorway_glow',
+  'master wide [R 72.3]: the doorway at the mirror spot, inside the same white chipped frame, gold haze', P(3), reuse=72.31,
+  chars=[body('you', 1060, 760, 300, 'back', 'shock', [], kneel=True), body('tess', 800, 900, 380, 'q_right', 'fear', [])],
+  energy='gold rays, dust, push 3 %/s')
+X(Wc(101, 'reflection'), 'MS', 'ours', 'cabin_now/doorway', 'doorway_glow',
+  'MS of the doorway: the white chipped frame around a raw splintered opening, gold haze and rays', P(3.5, x=960, y=520, z=1.05),
+  energy='rays shimmering, haze curling, push 3.5 %/s')
+STATE(260.4, towel='tess_hands')
+X(T(102), 'POV', 'ours', 'cabin_now/doorway_down', 'doorway_glow',
+  'POV down through the doorway: eight red-edged steps descending in one-point perspective to gold light; your hands on the frame',
+  P(3, x=960, y=600, z=1.05), chars=[POVH([A(R(0), 'grip_frame')], 960, 900, 700, both=True)],
+  device=DEV('insert', 'stairs', 'the doorway leads down a staircase'), energy='red edges breathing, gold light pulsing below')
+X(Wc(102, 'smell'), 'MS', 'ours', 'cabin_now/doorway', 'doorway_glow', 'gold steam wisps curl out of the doorway (the smell, visible)',
+  P(3), energy='steam wisps curling 20 px/s')
+X(T(103), 'INSERT', 'memory', 'memory/percolator', 'sepia_morning', 'memory-morning insert: a percolator bubbling on the camp stove',
+  P(3), tr='sepia', energy='coffee bubbling in the glass knob, steam')
+X(Wc(103, 'started'), 'CU', 'ours', 'cabin_now/bokeh', 'doorway_glow', 'CU of Tess sniffing, afraid; gold on her face', P(3), tr='sepia',
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'fear', [A(R(0.2), 'expr', name='fear')], light=L_GOLD)], dof=dict(focus=1.0, dof=6.75),
+  energy='nostrils flaring, steam drifting past, push 3 %/s')
 
-# ================================================================ RULE 7 609.48 - 628.94 (lines 259-267)
-c7 = RULE(7)
-S(c7, 'cabin_now', 'floor_low', 'red', 'ours', 'LOW', 'you hit the floor; dust bursts', HH(x=960, y=640, z=1.1, rate=0.04, hit=[(w(261, 'hit'), 16)]),
-  chars=[C('you', [960, 1000, 640], 'profile_right', 'fear', [A(w(261, 'hit'), 'fall_back')])], sfx=[fx(w(261, 'hit'), 'body_fall', 0, 'close', 'you land on the boards', hit=True)],
-  energy='impact, dust burst, camera jolt')
-STATE(w(261, 'hit'), mirror='mirror_again', doorway='glass')
-S(T(262), 'cabin_now', 'hands', 'red', 'ours', 'CU', 'Tess shoves the towel into your hands', FA(x=960, y=560, z=1.1, rate=0.08),
-  chars=[C('tess', [800, 520, 440], 'front', 'angry', [A(w(262, 'shoves'), 'shove', prop='towel')], mode='hands'), C('you', [1100, 620, 440], 'front', 'fear', [A(w(262, 'hands'), 'take', prop='towel')], mode='hands')],
-  props=dict(towel='in your hands'), sfx=[fx(w(262, 'shoves'), 'towel_cloth', -3, 'close', 'towel shoved', kind='snatch')], energy='towel thrust in, fast push')
-STATE(w(262, 'shoves'), towel='in_hands')
-S(T(263), 'mirror', 'mirror_cu', 'red', 'mirror', 'CU', 'the doorway is a mirror again, the steps glowing red on it; you wipe from the top down', P(x=960, y=480, z=1.05, rate=0.04),
-  chars=[C('you', [1200, 300, 460], 'front', 'fear', [A(w(263, 'wipe'), 'wipe_glass', strokes=3, dir='down')], mode='hands')],
-  props=dict(steps_drawn='7 glowing, erased top-down 618.73-620.0'),
-  hud=[tag(w(263, 'top'), 'TOP DOWN', 960, 120, 'cmd', 1.1)],
-  sfx=[fx(w(263, 'wipe'), 'glass_wipe', 0, 'close', 'wipe 1'), fx(w(263, 'top'), 'glass_wipe', 0, 'close', 'wipe 2'), fx(w(263, 'down'), 'glass_wipe', -1, 'close', 'wipe 3'), fx(w(263, 'top'), 'ui_pop', -8, 'dry', 'tag')],
-  energy='towel strokes wiping red streaks downward, push')
-S(T(264), 'mirror', 'mirror_cu', 'red', 'mirror', 'ECU', 'the last streak of red on the glass, the towel moving across it', TR(x=760, y=760, z=1.4, dx=-50),
-  sfx=[fx(w(264, 'streak'), 'glass_wipe', -3, 'close', 'slow squeak')], energy='streak thinning under the towel, track')
-S(T(265), 'mirror', 'queen_step_tilt', 'red', 'mirror', 'CU', 'through the streak: the small woman lifts her bare foot toward a step you already erased (only a faint smudge)', P(x=760, y=700, z=1.5, rate=0.04),
-  chars=[C('queen', [700, 900, 300, 1.04], 'q_right', 'queen_grin', [A(w(265, 'lift'), 'lift_foot', to='erased_step', dur=2.0)], mode='body', stage=3)],
-  props=dict(queen='lifting her foot toward an erased step'), sfx=[fx(w(265, 'lift'), 'cloth_press', -10, 'mirror', 'satin', kind='satin')], energy='foot rising in slow motion, push')
-S(T(266), 'mirror', 'queen_step_tilt', 'red', 'mirror', 'ECU', 'her foot hangs over clean glass, toes curling, no step to land on', CR(x=720, y=760, z=1.9, rate=0.015),
-  chars=[C('queen', [700, 900, 300, 1.04], 'q_right', 'queen_grin', [A(R(0), 'toes_curl')], mode='feet', stage=3)],
-  sfx=[fx(R(0.2), 'tinnitus', -16, 'dry', 'held tone', dur=1.3)], mus=[M(w(266, 'hangs'), 'silence', 0.0, 1.3, 'silence while the foot hangs')], energy='toes curling, creep')
-S(T(267), 'mirror', 'mirror_cu', 'dark', 'mirror', 'CU', 'the glass goes dark: the red and the reflection are sucked out to black', P(x=960, y=540, z=1.1, rate=0.03),
-  props=dict(mirror='dark at %.2f' % w(267, 'goes')),
-  sfx=[fx(w(267, 'goes'), 'sub_drop', 0, 'dry', 'the glass goes dark', hit=True), fx(w(267, 'goes'), 'glass_resonance', -4, 'close', 'glass thump and cut-off', hit=True)],
-  mus=[M(w(267, 'goes'), 'hit', 0.9), M(w(267, 'dark') + 0.2, 'silence', 0.0, 0.6, 'out to near silence; room tone only')], energy='light draining out of the glass in 0.3 s, push')
-STATE(w(267, 'goes'), mirror='dark', queen='absent')
-
-# ================================================================ ENDING 628.94 - 698.62, tail to the end (lines 268-299)
-S(T(268), 'cabin_now', 'floor_end', 'after', 'ours', 'WS', 'moonlight back; Tess\'s flashlight on the floor throwing a beam across the dust; grown Noah sits on the floor in the too-small sweatshirt', PU(x=1000, y=700, z=1.2, rate=-0.012),
-  chars=[C('noah_grown', 'noah_floor', 'front', 'shaken', [A(R(0), 'tremble', amount=0.4)]), C('tess', 'tess_floor_end', 'q_left', 'sad', [A(R(0.5), 'kneel')])],
-  sfx=[fx(R(0.05), 'room_tone', -8, 'inside', 'cabin tone, crickets outside again', dur=4), fx(R(0.05), 'ambience_camp_night', -14, 'outside', 'crickets through the walls', dur=4)],
-  mus=[M(T(268), 'swell', 0.3, 10, 'ending theme: low strings and piano, unpulsed, D')], energy='slow pull-out, dust settling in the floor beam, his breathing')
-STATE(T(268), flashlight='tess_floor')
-S(T(269), 'cabin_now', 'floor_end', 'after', 'ours', '2S', 'you beside him (he is bigger, older); you take off your jacket and put it around his shoulders', P(x=980, y=620, z=1.1, rate=0.02),
-  chars=[C('you', 'you_floor', 'q_right', 'grief', [A(w(270, 'give'), 'give_jacket')]), C('noah_grown', 'noah_floor', 'q_left', 'shaken', [])],
-  props=dict(jacket='you -> Noah at %.2f' % w(270, 'jacket')), sfx=[fx(w(270, 'give'), 'jacket_cloth', -5, 'close', 'jacket off and around')], energy='jacket swinging round')
-STATE(w(270, 'jacket'), jacket='noah')
-S(T(271), 'cabin_now', 'floor_end', 'after', 'ours', 'CU', 'grown Noah holds the jacket by the collar and asks about Mom (mouth only)', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('noah_grown', [960, 560, 1.0], 'front', 'hopeful', [A(w(271, 'holds'), 'hold_collar'), A(w(271, 'asks'), 'talk_silent', dur=1.2)], mode='bust', light=dict(rim='#9fb6ff', rim_a=80, side=1, key=-0.3))],
-  dof=dict(focus=1.0, dof=6.75), energy='hands on collar, creep')
-S(T(272), 'cabin_now', 'clock', 'after', 'ours', 'INSERT', 'the cabin clock running forward again: just after midnight', P(x=960, y=540, z=1.0, rate=0.025),
-  sfx=[fx(R(0.05), 'clock_tick', -10, 'inside', 'ticking forward', dur=1.4)], energy='second hand moving forward')
-S(T(274), 'cabin_now', 'floor_end', 'after', 'ours', 'CU', 'you, crying and smiling', CR(x=960, y=520, z=1.05, rate=0.01),
-  chars=[C('you', [960, 560, 1.0], 'q_left', 'relief_cry', [A(R(0.3), 'tears', amount=0.8)], mode='bust', light=dict(rim='#9fb6ff', rim_a=70, side=1, key=-0.3))], dof=dict(focus=1.0, dof=6.75),
-  energy='tears, creep')
-S(T(275), 'cabin_now', 'hands', 'after', 'ours', 'ECU', 'your left fist will not open; fingers trembling', P(x=960, y=560, z=1.15, rate=0.025),
-  chars=[C('you', [960, 600, 460], 'front', 'neutral', [A(w(275, 'fingers'), 'fist', fail_open=True, tremble=0.8)], mode='hands')], energy='fingers straining, push')
-S(T(276), 'cabin_now', 'hands', 'after', 'ours', 'ECU', 'the fist opens slowly: the red candy', CR(x=960, y=560, z=1.2, rate=0.012),
-  chars=[C('you', [960, 600, 460], 'front', 'neutral', [A(R(0.4), 'open_fist', dur=1.4)], mode='hands')], sfx=[fx(R(0.6), 'candy_wrapper', -8, 'close', 'crinkle as the hand opens')],
-  props=dict(candy='palm'), energy='fingers uncurling, creep')
-STATE(T(276), candy='palm')
-S(T(277), 'cabin_now', 'palm', 'after', 'ours', 'INSERT', 'the twist wrapper\'s imprint pressed red into your palm', P(x=960, y=560, z=1.2, rate=0.025),
-  sfx=[fx(w(277, 'palm'), 'candy_wrapper', -14, 'close', 'candy rolls in the palm')], energy='candy rolling, push')
-S(T(278), 'ui', 'call', 'phone', 'ui', 'UI', 'calling MOM: one ring, then connected', HH(x=960, y=560, z=1.0, rate=0.015),
-  hud=[dict(t=T(278), type='phone', state='calling', name='MOM', x=960, y=560), dict(t=w(278, 'up'), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), x=960, y=560)],
-  sfx=[fx(T(278) + 0.1, 'phone_ring', -8, 'phone', 'one ring-back', kind='ringback', n=1), fx(w(278, 'up'), 'phone_pickup', -6, 'phone', 'pickup click')], energy='call UI animating, handheld')
-S(T(279), 'ui', 'call', 'phone', 'ui', 'UI', 'connected, Mom\'s live waveform: "Did you find the sweatshirt?"', P(x=960, y=560, z=1.02, rate=0.02),
-  hud=[dict(t=T(279), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=True, follow_line=279), x=960, y=560)], energy='waveform bars moving with her voice')
-S(T(280), 'cabin_now', 'floor_end', 'after', 'ours', 'INSERT', 'grown Noah\'s big hand held out for the phone, still shaking', P(x=960, y=560, z=1.1, rate=0.025),
-  chars=[C('noah_grown', [960, 600, 460], 'front', 'hopeful', [A(w(280, 'holds'), 'hand_out'), A(R(0), 'tremble', amount=0.4)], mode='hands')], energy='hand reaching, tremble')
-S(T(281), 'cabin_now', 'floor_end', 'after', 'ours', 'CU', 'grown Noah, phone at his ear: "Hi, Mom." (lip-sync; the emotional peak)', CR(x=960, y=520, z=1.1, rate=0.012),
-  chars=[C('noah_grown', [960, 560, 1.0], 'q_left', 'relief_cry', [A(R(0), 'phone_to_ear', side=1), A(t(282), 'talk', line=282)], mode='bust', light=dict(rim='#9fb6ff', rim_a=80, side=1, key=-0.3))],
-  dof=dict(focus=1.0, dof=6.75), mus=[M(t(282), 'swell', 0.55, 3, 'the one warm swell')], energy='tears, creep')
-S(round(e(282) + 0.02, 3), 'ui', 'call', 'phone', 'ui', 'UI', 'the waveform flat: silence on the line', CR(x=960, y=560, z=1.04, rate=0.01),
-  hud=[dict(t=R(0), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=False, flat=True), x=960, y=560)],
-  mus=[M(t(283), 'silence', 0.0, 1.3, 'a true pause: music out, room tone only')], energy='timer counting, flat line breathing slightly')
-S(T(284), 'cabin_now', 'floor_end', 'after', 'ours', 'ECU', 'grown Noah says it again, softer (mouth only)', CR(x=960, y=540, z=1.2, rate=0.01),
-  chars=[C('noah_grown', [960, 560, 1.15], 'q_left', 'relief_cry', [A(w(284, 'says'), 'talk_silent', dur=0.8)], mode='bust', light=dict(rim='#9fb6ff', rim_a=80, side=1, key=-0.3))], energy='creep, tear running')
-S(T(285), 'ui', 'call', 'phone', 'ui', 'UI', 'the waveform spikes with the chair scrape', P(x=960, y=560, z=1.04, rate=0.02),
-  hud=[dict(t=T(285), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=True, spike_at=w(285, 'chair')), x=960, y=560)],
-  sfx=[fx(w(285, 'chair'), 'chair_scrape', -4, 'phone', 'her chair scrapes back (through the phone)', hit=True)], energy='spike, push')
-S(T(286), 'cabin_now', 'floor_end', 'after', 'ours', '2S', 'you and grown Noah share the phone', CR(x=960, y=600, z=1.1, rate=0.012),
-  chars=[C('you', 'you_floor', 'q_right', 'relief_cry', []), C('noah_grown', 'noah_floor', 'q_left', 'hopeful', [A(R(0), 'phone_to_ear', side=1), A(w(287, 'looks'), 'look', x=1300, y=520, lost=True)])],
-  energy='creep; he turns to you for help on "He looks at you", beam on the floor')
-S(T(288), 'cabin_now', 'floor_end', 'after', 'ours', 'CU', 'you: what do you tell him', PU(x=960, y=520, z=1.2, rate=-0.03),
-  chars=[C('you', [960, 560, 1.0], 'q_left', 'grief', [A(R(1.0), 'swallow')], mode='bust', light=dict(rim='#9fb6ff', rim_a=70, side=1, key=-0.3))], dof=dict(focus=1.0, dof=6.75), energy='creep')
-S(T(289), 'cabin_now', 'sill', 'after', 'ours', 'MS', 'behind you, Tess picks up her phone from the windowsill', P(x=960, y=580, z=1.05, rate=0.03),
-  chars=[C('tess', [960, 560, 340], 'front', 'neutral', [A(w(289, 'picks'), 'pick_up', prop='phone')], mode='hands')],
-  sfx=[fx(w(289, 'picks'), 'phone_handle', -6, 'close', 'phone lifted off the wood', kind='pick_up')], energy='hand lifting the phone, dust trail')
-STATE(w(289, 'picks'), phone='tess_hand')
-S(T(290), 'cabin_now', 'phone_screen', 'after', 'ours', 'INSERT', 'the phone in her hand, face up: red X', P(x=960, y=560, z=1.1, rate=0.03),
-  hud=[redx(w(290, 'face'), 960, 560, 180, 1.1), tag(w(290, 'face') + 0.05, 'FACE UP', 960, 120, 'cmd', 1.2)], sfx=[fx(w(290, 'face'), 'stinger', -5, 'dry', 'red X', hit=True)],
-  mus=[M(w(290, 'face'), 'riser', 0.6, 8, 'the last rise begins (peaks at 697)')], energy='push, red X')
-S(T(291), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'her sleeve wipes dust off the dark screen', P(x=960, y=560, z=1.2, rate=0.03),
-  chars=[C('tess', [960, 560, 520], 'front', 'neutral', [A(w(291, 'wipes'), 'wipe_glass', strokes=2, sleeve=True)], mode='hands')],
-  sfx=[fx(w(291, 'wipes'), 'glass_wipe', -6, 'close', 'sleeve on glass', sleeve=True)], energy='sleeve swiping, dust lifting')
-S(T(292), 'cabin_now', 'floor_end', 'after', 'ours', 'CU', 'Tess, puzzled, holding out the phone: "Did you get lipstick on this?" (lip-sync)', P(x=960, y=520, z=1.1, rate=0.025),
-  chars=[C('tess', [960, 560, 1.0], 'q_right', 'puzzled', [A(t(292), 'talk', line=292), A(R(0), 'hold_up', prop='phone', side=-1)], mode='bust', light=dict(rim='#9fb6ff', rim_a=70, side=1, key=-0.3))],
-  dof=dict(focus=1.0, dof=6.75), energy='talking, push')
-S(T(294), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'seven tiny red lipstick steps on the dark screen', P(x=960, y=560, z=1.2, rate=0.04),
-  props=dict(phone='screen_steps: 7 tiny steps'), sfx=[fx(w(294, 'seven'), 'glass_resonance', -12, 'close', 'faint glass hum', hit=True)], energy='push 4 %/s, the steps catching the floor beam')
-STATE(w(294, 'seven'), phone='screen_steps')
-S(T(295), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'your finger approaches the bottom step', P(x=900, y=640, z=1.35, rate=0.03),
-  chars=[C('you', [1000, 720, 420], 'front', 'fear', [A(w(295, 'touch'), 'touch_glass', at=(900, 660))], mode='hands')],
-  mus=[M(w(295, 'touch') + 0.1, 'silence', 0.0, 1.8, 'silence into the click')], energy='finger closing in, push')
-S(T(296), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'the nail clicks on clean glass (the bottom step is on the other side); punch-in', P(x=900, y=660, z=1.5, rate=0.03, snap=(w(296, 'clicks'), 1.3)),
-  chars=[C('you', [980, 720, 460], 'front', 'fear', [A(w(296, 'clicks'), 'nail_tap')], mode='hands')],
-  sfx=[fx(w(296, 'clicks'), 'nail_click_glass', 0, 'close', 'THE SAME click sample as 143.29', hit=True), fx(w(296, 'clicks'), 'glass_resonance', -6, 'close', 'ring', hit=True)],
-  mus=[M(w(296, 'clicks'), 'stinger', 0.8)], energy='punch-in x1.3 on the click')
-S(T(297), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'CU', 'the phone in Tess\'s hand from above; deep in the dark glass, faint, a tiny black figure on the bottom step', P(x=960, y=560, z=1.1, rate=0.04),
-  chars=[C('queen', [900, 660, 60, 1.04], 'front', 'queen_still', [A(R(0), 'still')], mode='body', stage=3, note='tiny, inside the phone glass')],
-  props=dict(queen='phone'), energy='push 4 %/s, the figure barely there, the beam glinting')
-STATE(T(297), queen='phone')
-S(T(298), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'closer on the screen: the figure is there', FA(x=900, y=640, z=1.6, rate=0.08), energy='fast push')
-S(T(299), 'cabin_now', 'phone_screen', 'phone_glow', 'ours', 'ECU', 'FULL CREEPY FACE 3 fills the phone screen: "Can I have one more minute?" in Noah\'s voice; hard cut to black on the last word', P(x=960, y=520, z=1.0, rate=0.04),
-  chars=[C('queen', [960, 520, 1.1], 'front', 'queen_grin', [A(t(299), 'talk', line=299)], mode='bust', stage=3, inside='phone_screen')],
-  sfx=[fx(w(299, 'can'), 'stinger', 0, 'dry', 'final stinger', hit=True), fx(w(299, 'can'), 'braam', -2, 'dry', 'final braam', hit=True, key='d')], voice_fx='phone_child',
-  mus=[M(w(299, 'can'), 'stinger', 1.0)], energy='grin talking, push')
-S(round(e(299) + 0.04, 3), 'black', 'black', 'black', 'black', 'BLACK', 'black', cam('push', x=960, y=540, z=1.0, rate=0.0), tr='black', captions=False,
-  sfx=[fx(round(e(299) + 0.3, 3), 'bell_clean', -14, 'far', 'in the black: one faint, perfect, wrong bell note (the queen\'s bell); decays to nothing')],
-  mus=[M(round(e(299) + 0.04, 3), 'end', 0.0, None, 'everything out except the hit tails and the faint bell')], energy='black (tail)')
-
-# ================================================================ SHORT CUTS: impact and reaction inserts under 1 s (REF: 11-14 % of shots < 1 s)
-# Each one splits a longer shot on an action word; SFX authored on the longer shot are re-homed to whichever shot contains them.
-S(7.50, 'mirror_world', 'eye', 'void', 'mirror', 'ECU', 'a flash of a red iris with a pinpoint pupil in the dark (queen tease, stage 0)', FA(x=960, y=520, z=1.3, rate=0.12),
-  sfx=[fx(7.52, 'stinger', -6, 'dry', 'eye flash', hit=True)], energy='the eye glint flaring and shrinking, fast push 12 %/s')
-S(Wc(10, 'keys', off=-0.1), 'camp_gate', 'keys_cu', 'moon_flash', 'ours', 'ECU', 'the key ring swinging in Tess\'s hand: padlock key, carabiner, a CABIN 7 tag',
-  FA(x=960, y=540, z=1.2, rate=0.10), chars=[C('tess', [960, 520, 380], 'front', 'brave', [A(w(10, 'keys'), 'jingle', prop='keys')], mode='hands')],
-  energy='keys swinging and glinting in the beam, fast push')
-S(119.90, 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'Tess: fear eyes (white discs, pinpoint pupils), a hand rising to her mouth', FA(x=960, y=520, z=1.1, rate=0.10),
-  chars=[C('tess', [960, 560, 1.0], 'q_left', 'fear', [A(119.95, 'hand_to_mouth')], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(119.95, 'breath', -8, 'close', 'sharp gasp', kind='gasp')], energy='hand to mouth, beam shaking, fast push')
-S(144.25, 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'you: fear eyes, the fingertip still raised', FA(x=960, y=520, z=1.1, rate=0.10),
-  chars=[C('you', [960, 560, 1.0], 'q_right', 'fear', [A(144.3, 'flinch')], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(144.3, 'breath', -10, 'close', 'held breath', kind='held', dur=0.6)], energy='flinch, fast push')
-S(Wc(56, 'on', off=0.0), 'mirror_world', 'feet', 'void', 'mirror', 'ECU', 'her bare heel and black hem standing on the clean red line (the eighth step)', P(x=960, y=760, z=1.3, rate=0.05),
-  chars=[C('queen', [960, 900, 900], 'back', 'queen_still', [A(R(0), 'still')], mode='feet', stage=0)], energy='hem stirring, red line glinting, push 5 %/s')
-S(198.55, 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'Tess flinches back from the glass, hand over her mouth', FA(x=960, y=520, z=1.1, rate=0.10),
-  chars=[C('tess', [960, 560, 1.0], 'q_left', 'fear', [A(198.6, 'flinch'), A(198.7, 'hand_to_mouth')], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75),
-  sfx=[fx(198.62, 'breath', -8, 'close', 'gasp', kind='gasp')], energy='flinch, beam lurching')
-S(round(e(92) - 0.05, 3), 'cabin_now', 'two_shot', 'flash', 'ours', 'CU', 'Tess hears the wish; her eyes go to the glass', FA(x=960, y=520, z=1.1, rate=0.08),
-  chars=[C('tess', [960, 560, 1.0], 'q_left', 'fear', [A(R(0.1), 'look', x=1300, y=500)], mode='bust', light=FLASH)], dof=dict(focus=1.0, dof=6.75), energy='eyes snapping to the mirror')
-S(250.80, 'cabin_now', 'towel_fly', 'flash', 'ours', 'ECU', 'the towel flies at the lens (whip)', cam('whip', x=960, y=540, z=1.1, x1=1240, y1=520, z1=1.25),
-  energy='terry cloth filling the frame, whip pan with motion blur')
-S(251.60, 'cabin_now', 'mirror_ots', 'flash', 'ours', 'MS', 'the towel lands over the mirror; the beam swings off it', HH(x=960, y=520, z=1.1, rate=0.03, shake=20),
-  chars=[C('tess', 'tess_mirror', 'q_right', 'fear', [A(R(0), 'step_back')])], energy='towel settling, beam swinging, handheld')
-S(Wc(99, 'through', off=-0.05), 'cabin_now', 'towel_over', 'flash', 'ours', 'ECU', 'the fingertips straining the terry loops toward the lens', FA(x=960, y=500, z=1.5, rate=0.10),
-  chars=[C('queen', [960, 520, 700], 'front', 'queen_still', [A(R(0), 'press_through_cloth', depth=1.0)], mode='hands', stage=2)],
-  sfx=[fx(R(0.1), 'cloth_press', -6, 'close', 'loops stretching', kind='stretch')], energy='cloth stretching toward camera, fast push')
-S(281.55, 'cabin_now', 'clock', 'flash', 'ours', 'ECU', 'ECU: the second hand stepping backward, tick by tick', FA(x=1000, y=420, z=1.8, rate=0.10),
+# ================================================================ RULE 3 (card 269.24-273.35)
+RULE(3)
+X(card_times(3)[1], 'WS', 'ours', 'cabin_now/master', 'doorway_glow',
+  're-establishing wide: you go to the gold doorway; Tess behind you', P(3), reuse=72.31, tr='smear',
+  chars=[body('you', 1060, 780, 320, 'back', 'resolve', [A(R(0), 'walk', to=1100, surface='wood')]), body('tess', 820, 900, 380, 'q_right', 'fear', [])],
+  energy='rays, dust, walking, push 3 %/s')
+X(Wc(106, 'wide'), 'MS', 'ours', 'cabin_now/doorway', 'doorway_glow',
+  'you sideways in the doorway, your shoulders against the chipped frame', P(3, x=960, y=520, z=1.05),
+  chars=[body('you', 960, 1060, 640, 'profile_right', 'tense', [A(R(0.3), 'squeeze_through')])], energy='jacket scraping the frame, gold rays')
+X(T(107), 'INSERT', 'ours', 'cabin_now/hands', 'doorway_glow', 'insert: an orange cuff grabs your olive sleeve', FA(5),
+  chars=[hands('tess', 900, 520, 480, [A(w(107, 'catches'), 'grab')], sleeve='orange'), hands('you', 1080, 560, 460, [], sleeve='olive')],
+  energy='the grab, fast push')
+X(T(108), 'WS', 'ours', 'cabin_now/reverse', 'doorway_glow',
+  'wide: Tess in the foreground holding your sleeve, the back-wall clock behind her', P(3),
+  chars=[body('tess', 760, 1040, 620, 'q_right', 'fear', [A(R(0), 'grab')]), body('you', 1180, 980, 520, 'profile_left', 'tense', [])],
+  energy='gold spill on the wall, push 3 %/s')
+X(Wc(108, 'cabin'), 'INSERT', 'ours', 'cabin_now/clock', 'doorway_glow',
+  'clock insert: the second hand jerks back three ticks with the rewind glitch', FA(5, x=1000, y=440, z=1.6),
+  fx_post=[dict(t=281.69, glitch=0.6, rewind=1.0, dur=0.2)], device=DEV('insert', 'clock_back', 'our clock jerks backward'),
   energy='second hand stepping back, fast push')
-S(337.0, 'cabin_dawn', 'towel', 'dawn', 'theirs', 'ECU', 'the hanging drop: the room reflected upside-down inside it', cam('orbit', x=960, y=480, z=2.0, dx=25, rate=0.02, roll=3),
-  energy='slow orbit around the still drop, highlights crawling')
-S(346.70, 'cabin_dawn', 'towel', 'dawn', 'theirs', 'ECU', 'the splash on the towel', FA(x=960, y=600, z=1.6, rate=0.08), energy='splash crown, fast push')
-S(358.30, 'cabin_dawn', 'hands_jerk', 'dawn', 'theirs', 'ECU', 'your hand and his small taped hand tear apart', FA(x=960, y=540, z=1.3, rate=0.12),
-  chars=[C('noah13', [880, 560, 420], 'front', 'calm_kid', [A(w(141, 'jerks'), 'hand_jerk', dir='back')], mode='hands'), C('you', [1080, 560, 440], 'front', 'shock', [], mode='hands')],
-  energy='hands snapping apart, fast push')
-S(358.95, 'cabin_dawn', 'wide', 'dawn', 'theirs', 'CU', 'you: shock, your empty hand still out', P(x=960, y=520, z=1.1, rate=0.05),
-  chars=[C('you', [960, 560, 1.0], 'q_left', 'shock', [A(R(0), 'stare')], mode='bust', light=DAWN)], dof=dict(focus=1.0, dof=6.75), energy='push 5 %/s')
-S(466.40, 'cabin_dawn', 'mattress_dip', 'dawn_queen', 'theirs', 'ECU', 'the mattress sinks under her; black satin spreads over the blanket beside Noah\'s shoe', FA(x=960, y=600, z=1.2, rate=0.10),
-  chars=[C('queen', [960, 640, 520], 'front', 'queen_still', [A(w(191, 'sits'), 'sit_beside', dur=0.5)], mode='hands', stage=2, note='skirt and hand only')],
-  energy='fabric spreading, mattress sinking, fast push')
-S(480.55, 'cabin_dawn', 'queen_face', 'dawn_queen', 'theirs', 'ECU', 'ECU of her red irises and pinpoint pupils, unblinking', FA(x=960, y=470, z=1.6, rate=0.10),
-  chars=[C('queen', [960, 520, 1.15], 'front', 'queen_grin', [A(R(0), 'stare')], mode='bust', stage=3)], energy='eyes locked, red glow pulsing, fast push')
-S(509.10, 'mess_porch', 'boot_ecu', 'run', 'ours', 'ECU', 'Tess\'s boot smashes a slat', HH(x=960, y=600, z=1.2, rate=0.10, shake=26),
-  chars=[C('tess', [960, 640, 600], 'profile_left', 'angry', [A(w(209, 'box'), 'kick')], mode='legs')], energy='boot impact, splinters at the lens')
-S(509.95, 'mess_porch', 'porch_run', 'run', 'ours', 'MS', 'the crate splits apart; the bell rolls out onto the boards', HH(x=1080, y=700, z=1.1, rate=0.03, shake=24),
-  chars=[C('tess', 'tess_crate', 'profile_left', 'angry', [A(w(209, 'apart'), 'kick')])], energy='slats flying, bell rolling, beam strobing')
-S(535.30, 'mess_porch', 'bell_ecu', 'bell_hit', 'ours', 'ECU', 'the padlock strikes the bell rim: a spark of flashlight glare', FA(x=1000, y=600, z=1.4, rate=0.12, hit=[(w(220, 'hits'), 18)]),
-  energy='impact, the rim jumping, glare flare')
-S(535.95, 'mess_porch', 'porch_run', 'bell_hit', 'ours', 'WS', 'Tess with the ringing bell, its rim still shaking; the dark camp behind', PU(x=1000, y=600, z=1.3, rate=-0.05),
-  chars=[C('tess', 'tess_crate', 'profile_left', 'angry', [A(R(0), 'hold_up', prop='padlock', side=-1)])], energy='bell vibrating, pull-out, beam on the bell')
-S(Wc(235, 'name', off=-0.1), 'cabin_now', 'wide', 'red', 'ours', 'ECU', 'his mouth on your name: the gap teeth, a stubble shadow spreading', FA(x=960, y=600, z=1.5, rate=0.10),
-  chars=[C('noah_grown', [960, 480, 1.6], 'front', 'shaken', [A(R(0), 'age', t1=R(-0.05), part='stubble', start=0.6)], mode='bust', light=RED)], energy='stubble spreading, fast push')
-S(573.40, 'cabin_now', 'bunk_hit', 'red', 'ours', 'ECU', 'his shoulder slams into the top bunk; the frame jumps, dust bursts', HH(x=960, y=480, z=1.3, rate=0.10, hit=[(w(239, 'shoulder'), 14)]),
-  energy='impact, the bunk jumping, dust burst')
-S(605.95, 'cabin_dawn', 'you_face', 'dawn_break', 'theirs', 'ECU', 'your face: terror, mouth open, no sound', FA(x=960, y=520, z=1.3, rate=0.12),
-  chars=[C('you', [960, 560, 1.3], 'front', 'scream', [A(R(0), 'freeze')], mode='bust', light=RED)], energy='fast push 12 %/s, red light flickering on the face')
-S(606.75, 'mirror_world', 'feet', 'red', 'mirror', 'ECU', 'her toes curl over the edge of the step below yours', P(x=1040, y=860, z=1.5, rate=0.05),
-  chars=[C('queen', [1040, 900, 900], 'front', 'queen_still', [A(R(0), 'toes_curl')], mode='feet', stage=3)], energy='toes curling, step edge glowing')
-S(628.55, 'black', 'black', 'black', 'black', 'BLACK', 'pure black for 0.4 s after the glass goes dark', cam('push', x=960, y=540, z=1.0, rate=0.0), tr='black', captions=False,
-  energy='black (the sub-drop tail)')
-S(690.95, 'cabin_now', 'floor_end', 'phone_glow', 'ours', 'ECU', 'your face over the phone: the click sinks in', FA(x=960, y=520, z=1.2, rate=0.08),
-  chars=[C('you', [960, 560, 1.1], 'front', 'fear', [A(R(0), 'stare')], mode='bust', light=dict(rim='#ff4060', rim_a=60, side=-1, key=-0.4, under='#3a1018'))], energy='fast push, the phone\'s faint red under your chin')
+X(T(109), 'MS', 'ours', 'cabin_now/doorway', 'doorway_glow',
+  'silence: the gold doorway; something rises at its lower edge', SIL(1.5, x=960, y=600, z=1.05),
+  energy='slow push in the silence, a pale shape rising at the edge')
+X(T(110), 'CU', 'ours', 'cabin_now/doorway', 'doorway_glow',
+  'HOLD H1: she leans out of the doorway, half in blue, half in gold. The lipstick smile is drawn past her lips in 3 little steps '
+  'up each cheek; her lips speak ("There\'s time for both of you") but the drawing does not move; pupils pinpoint; her red-fingertip '
+  'hand on the white frame', P(4, x=960, y=520, z=1.05), hold='H1', tr='white',
+  chars=[Q('S2', [960, 560, 1.15], acts=[A(283.62, 'lean_out', dur=0.6), A(t(110), 'talk_line', line=110, glow=True)])],
+  q=dict(stage='S2', size=0.55, where='the doorway at the mirror spot', framing='CU face 55 %', wrong='the drawn stair-smile; pinpoint pupils'),
+  errfix=[19, 20, 26], energy='she leans into the light, lips talking, the drawing still, push 4 %/s')
+STATE(283.62, queen='doorway')
+X(286.20, '2S', 'ours', 'cabin_now/doorway', 'doorway_glow', '2-shot: your hand on Tess\'s shoulder; she plants her feet at the threshold',
+  P(3), chars=[body('you', 1100, 1060, 640, 'q_left', 'resolve', [A(R(0), 'grab_shoulder')]), body('tess', 780, 1060, 620, 'q_right', 'fear', [A(R(0.3), 'nod')])],
+  energy='hand on shoulder, push 3 %/s')
+STATE(286.2, queen='absent')
+X(T(112), 'CU', 'ours', 'cabin_now/bokeh', 'doorway_glow', 'CU of Tess nodding', P(3),
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'resolve', [A(R(0.3), 'nod')], light=L_GOLD)], dof=dict(focus=1.0, dof=6.75), energy='a nod')
+X(Wc(112, 'sixty'), 'TYPE', 'ours', 'type/giant', 'doorway_glow', 'giant 60 flies into the ring badge TESS 60 (type beat 4)', P(4),
+  plate=dict(set='cabin_now', view='bokeh', var='doorway_glow', post=dict(blur=8, dim=0.4)), hud=[giant(289.19, 60)],
+  energy='numeral slam, fly to the badge')
+X(T(113), 'POV', 'stairs', 'stairs/treads', 'stairs', 'POV: your boot on tread 1', P(5, x=960, y=700, z=1.1),
+  chars=[C('you', [960, 900, 900], 'front', 'neutral', [A(290.1, 'step_down')], mode='feet', pov=True)], tr='glint',
+  energy='boot lowering onto the red edge, fast')
+STATE(290.0, you='stairs')
+X(Wc(113, 'step'), 'SEC', 'stairs', 'stairs/section', 'stairs',
+  'THE SECTION [setup]: Cabin 7 upper left in blue night, the white frame, 8 red treads stepping down to the right, the gold cabin '
+  'lower right; your small figure going down', P(2), setup='SECTION',
+  chars=[body('you', 760, 520, 90, 'profile_right', 'tense', [A(R(0), 'walk', to=840, stairs=True)])],
+  device=DEV('diagram', 'section', 'the crossing is a place: blue cabin, stairs, gold cabin'), energy='your small figure stepping down')
+X(T(114), 'OTS', 'stairs', 'stairs/ots_climb', 'stairs', 'OTS on the stairs: our blue cabin above, gold below; you go down',
+  P(4, x=960, y=600, z=1.05), chars=[body('you', 760, 1200, 900, 'back', 'tense', [A(R(0), 'walk', stairs=True, dir='down')], ots=True)],
+  energy='fog bands, the gold rising, push 4 %/s')
+X(291.30, 'WS', 'theirs', 'cabin_dawn/master', 'dawn',
+  'THEIRS MASTER WIDE from the cabin door: the stairs along the back wall up to the doorway (Tess small in it), Noah\'s bunk at their foot, '
+  'the window, curtains frozen at 12 deg; everything mirror-flipped from 72.3 s', P(2.5), tr='glint', setup='THEIRS_MASTER',
+  chip='THE OTHER SIDE · 6:59 AM', errfix=[31],
+  chars=[body('you', 1500, 520, 230, 'front', 'tense', [A(R(0), 'walk', stairs=True, dir='down')], d=2.0),
+         body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True),
+         body('tess', 1640, 360, 120, 'front', 'fear', [A(R(0), 'flashlight', aim='stairs')], d=4.0)],
+  energy='motes twinkling, the knot loop, you descending, push 2.5 %/s')
+STATE(291.3, you='theirs')
+X(T(115), 'INSERT', 'theirs', 'cabin_dawn/lantern', 'dawn', 'insert: the old battery lantern glowing on the sill', P(3.5),
+  device=DEV('insert', 'lantern', 'the battery lantern'), energy='lantern glow breathing, push 3.5 %/s')
+X(Wc(115, 'glows'), 'MS', 'theirs', 'cabin_dawn/window', 'dawn', 'the lantern on the sill beside the frozen gingham curtain', P(3),
+  energy='glow, motes twinkling')
+X(T(116), 'WS', 'theirs', 'cabin_dawn/window', 'dawn', 'window wide: a peach sky, the frozen lawn', P(2.5), energy='sky gradient, motes')
+X(T(117), 'WS', 'theirs', 'cabin_dawn/window_out', 'dawn',
+  'LOOP A: through the window: the sprinkler comes on, spits twice (298.87, 299.27) (this exact animation returns at 414.6)',
+  P(2.5), setup='SPRINKLER', loop='A', energy='the sprinkler arcs (loop A, frame-identical)')
+X(Wc(117, 'and'), 'INSERT', 'theirs', 'cabin_dawn/window_out', 'dawn', 'the sprinkler dies; its last water beads hang frozen in the air',
+  P(4, x=960, y=600, z=1.2), energy='beads hanging, push 4 %/s')
+X(T(118), 'WS', 'memory', 'memory/open_window', 'sepia_day',
+  'memory: water through the open window onto the bottom bunk', P(3), tr='sepia', energy='water arcing in, gate weave')
+X(T(119), 'MS', 'memory', 'memory/open_window', 'sepia_day', 'memory: kid-you yelps, soaked in the bottom bunk', P(4),
+  chars=[body('you_kid', 960, 980, 520, 'front', 'shock', [A(R(0.2), 'flinch')])], energy='splash, yelp')
+X(Wc(119, 'if'), 'MS', 'memory', 'memory/open_window', 'sepia_day', 'memory: Noah leaving the window open, grinning', P(3),
+  chars=[body('noah13', 960, 1040, 620, 'q_left', 'grin_kid', [A(R(0.2), 'smile')])], energy='grin, curtains flapping')
+X(T(120), 'WS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn',
+  'wide on the bunk: Noah at correct seated kid scale, feet on the floor, white sneaker on his left foot, right foot bare, the other shoe '
+  'beside the bed', P(3), tr='sepia', setup='NOAH_BUNK', errfix=[21],
+  chars=[body('noah13', 960, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)],
+  energy='the knot loop, motes, push 3 %/s')
+X(Wc(120, 'with'), 'INSERT', 'theirs', 'cabin_dawn/shoe', 'dawn', 'his feet: one white sneaker, one bare foot; label ONE SHOE', P(3.5),
+  chars=[feet('noah13', 960, 800, 700, [A(R(0), 'still')], shoe='left')], hud=[label(307.9, 'ONE SHOE', [1100, 760], dx=160, dy=-120)],
+  energy='push 3.5 %/s')
+X(T(121), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn',
+  'CU: Noah looks up and says your name (silently), gap-tooth smile, almond eyes', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'grin_kid', [A(w(121, 'looks'), 'look_up'), A(w(121, 'says'), 'talk_silent', dur=1.0)], light=L_GOLD)],
+  dof=dict(focus=1.0, dof=6.75), energy='looking up, talking, push 3 %/s')
+X(Wc(121, 'like'), 'OTS', 'theirs', 'cabin_dawn/ots_noah', 'dawn', 'reverse OTS past Noah to you: you stand in the gold room, unsure',
+  P(3), chars=[body('noah13', 600, 1200, 760, 'back', 'calm_kid', [], seated=True, ots=True), body('you', 1180, 980, 560, 'q_left', 'wonder', [])],
+  energy='gold light on you, push')
+X(T(122), 'MCU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'MCU: his eyes travel over your face', P(3),
+  chars=[bust('noah13', 960, 580, 0.9, 'q_left', 'puzzled', [A(R(0.3), 'look', x=1100, y=420), A(R(1.0), 'head_tilt')], light=L_GOLD)],
+  energy='eyes moving, push 3 %/s')
+X(T(123), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah: "Why do you look like Dad?" (gap teeth visible)', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'puzzled', [A(t(123), 'talk', line=123)], light=L_GOLD)], energy='lip-sync')
+X(Wc(123, 'dad'), 'DOC', 'memory', 'memory/dad_photo', 'sepia_day', 'a sepia family photo: Dad with your square jaw and stubble',
+  P(5), hud=[doc(315.95, 'photo', 'DAD (your jaw, your stubble)')], device=DEV('doc', 'dad_photo', 'you look like Dad'),
+  energy='photo push 5 %/s')
+X(T(124), 'INSERT', 'theirs', 'cabin_dawn/knot', 'dawn', 'knot insert: the lace half tied', P(3.5), tr='sepia',
+  chars=[hands('noah13', 960, 600, 480, [A(R(0), 'tie_loop', period=2.4)], tape=True)], setup='KNOT', energy='the knot loop')
+X(T(125), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'LOOP B: "What are they making for breakfast?" (breakfast_A, replayed frame for frame at 419.7)',
+  P(2.5), setup='BREAKFAST_A', loop='B',
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(t(125), 'talk', line=125, clip_id='breakfast_A')], light=L_GOLD)],
+  energy='lip-sync (loop B)')
+X(T(126), 'INSERT', 'theirs', 'cabin_dawn/hands', 'dawn', 'insert: the taped hand holds out a cinnamon candy in a red twist wrapper', P(3.5),
+  chars=[hands('noah13', 960, 560, 480, [A(w(126, 'holds'), 'hold_out', prop='candy_red')], tape=True)], energy='the candy offered')
+X(Wc(126, 'without'), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'MS: Noah holds it out without looking up, eyes on the knot', P(3),
+  chars=[body('noah13', 960, 1000, 600, 'q_right', 'calm_kid', [A(R(0), 'hold_out', prop='candy_red')], seated=True)], energy='hand held out')
+X(T(127), 'POV', 'theirs', 'cabin_dawn/hands', 'dawn', 'POV: your olive cuff takes the candy; your LEFT hand closes into a fist at 323.65',
+  FA(5), chars=[POVH([A(323.5, 'take', prop='candy_red'), A(323.65, 'fist', hand='left', candy=True)], 1040, 620, 520, hand='left'),
+               hands('noah13', 860, 560, 380, [], tape=True)],
+  props=dict(fist='candy_fist from 323.65'), errfix=[3], energy='the take, the fist closing')
+STATE(323.65, fist='candy_fist', candy='fist')
+X(T(128), 'INSERT', 'theirs', 'cabin_dawn/hands', 'dawn', 'ECU of your left fist, the red wrapper twist poking out between the fingers',
+  P(3), chars=[Fist(960, 620, 560)], device=DEV('insert', 'fist', 'the candy in your fist (it stays there to 649 s)'), errfix=[3],
+  energy='knuckles tightening, push 3 %/s')
+X(T(129), 'MS', 'memory', 'memory/red_candy', 'sepia_day', 'memory: Noah gives kid-you the red one', P(3), tr='sepia',
+  chars=[body('noah13', 860, 1040, 600, 'q_right', 'grin_kid', [A(R(0.2), 'hold_out', prop='candy_red')]), body('you_kid', 1160, 1040, 520, 'q_left', 'happy', [A(R(0.6), 'take')])],
+  energy='hand-off, gate weave')
+X(Wc(129, 'red'), 'INSERT', 'memory', 'memory/red_candy', 'sepia_day', 'memory: he keeps a yellow one', P(4),
+  chars=[hands('noah13', 960, 560, 460, [A(R(0), 'hold_up', prop='candy_yellow')])], energy='yellow wrapper glinting')
+X(T(130), 'CU', 'memory', 'memory/red_candy', 'sepia_day', 'memory CU: Noah unwraps the yellow one, eyes on your red one',
+  P(3), chars=[bust('noah13', 960, 560, 1.0, 'q_right', 'shy', [A(R(0.2), 'look', x=1300, y=600)], light=L_MEM)], energy='unwrapping')
+X(T(131), 'WS', 'theirs', 'cabin_dawn/towel_floor', 'dawn', 'floor-level across the towel under the window: drips tap onto it',
+  P(2.5, x=960, y=620, z=1.0), tr='sepia', setup='TOWEL_FLOOR', energy='drips falling (332.37, 333.33)')
+X(Wc(131, 'under'), 'INSERT', 'theirs', 'cabin_dawn/towel_floor', 'dawn', 'the wet towel and a little puddle', P(3.5, x=960, y=640, z=1.2),
+  energy='puddle trembling')
+X(T(132), 'INSERT', 'theirs', 'cabin_dawn/towel_floor', 'dawn', 'a drop comes UP off the towel', P(4, x=960, y=560, z=1.35),
+  props=dict(drop='rising 335.25-337.09'), energy='a drop rising backward')
+X(Wc(132, 'and', n=0), 'INSERT', 'theirs', 'cabin_dawn/towel_floor', 'dawn',
+  'the drop hangs in mid-air with the room drawn upside down inside it; hold', ORB(dx=20, r=2, x=960, y=480, z=1.8),
+  device=DEV('insert', 'drop', 'a drop hangs in the air (time is stuck)'), energy='slow orbit around the still drop, highlights crawling')
+STATE(337.09, drop='hanging')
+X(T(133), 'WS', 'theirs', 'cabin_dawn/reverse', 'dawn',
+  'REVERSE [setup] from the bunk up the stairs: Tess in the doorway at the top, mid-gesture, her beam steady down the steps',
+  P(2.5), setup='THEIRS_REVERSE', chars=[body('tess', 1500, 360, 160, 'front', 'fear', [A(R(0), 'freeze')], d=4.0)],
+  energy='the beam perfectly still (wrong), motes twinkling, push')
+X(Wc(133, 'is'), 'MS', 'theirs', 'cabin_dawn/reverse', 'dawn', 'closer on Tess frozen mid-gesture in the doorway', P(3.5, x=1460, y=380, z=1.6),
+  chars=[body('tess', 1500, 560, 380, 'front', 'fear', [A(R(0), 'freeze')], d=4.0)], energy='push, nothing moves up there')
+X(Wc(133, 'steady'), 'INSERT', 'theirs', 'cabin_dawn/reverse', 'dawn', 'ECU: the beam, steady, dust in it barely moving', P(3, x=1200, y=520, z=2.0),
+  energy='dust crawling 1 px/s')
+X(T(134), 'SEC', 'stairs', 'stairs/section', 'stairs',
+  'D6 [R section]: two clock dials: OUR SIDE, dust crawling at 1 px/s, chip {ours} | THEIR SIDE, the drop falling again, chip 6:59:4x · LOOP',
+  P(1.5), reuse=290.2,
+  hud=[dials(343.0, dict(label='OUR SIDE', chip='{ours}', rate='crawling'), dict(label='THEIR SIDE', chip='6:59:4x · LOOP', rate='looping')),
+       diagram(342.95, 'D6', 'time split: our side crawls, their side loops', hold=2.1)],
+  device=DEV('diagram', 'D6', 'our time crawls, their time loops'), energy='the dials: ours creeping, theirs spinning back')
+X(T(135), 'INSERT', 'theirs', 'cabin_dawn/towel_floor', 'dawn', 'THEIRS: the same drop falls again', P(4, x=960, y=500, z=1.5),
+  energy='the drop falling (loop)')
+X(Wc(135, 'falls'), 'INSERT', 'theirs', 'cabin_dawn/towel_floor', 'dawn', 'the splash on the towel (the same sample as 332.37); chip LOOP',
+  FA(6, x=960, y=600, z=1.6), hud=[chip(346.83, 'LOOP', 'loop')], energy='splash crown')
+X(T(136), 'WS', 'theirs', 'cabin_dawn/reverse', 'dawn', 'Tess small at the top of the stairs, calling down', P(3), reuse=338.76,
+  chars=[body('tess', 1500, 360, 160, 'front', 'shout', [A(w(136, 'calls'), 'shout_silent')], d=4.0)], energy='her call, push')
+X(T(137), 'TYPE', 'theirs', 'type/giant', 'dawn', 'giant 45 into the badge', P(4),
+  plate=dict(set='cabin_dawn', view='reverse', var='dawn', post=dict(blur=8, dim=0.4)), hud=[giant(349.79, 45)], energy='numeral slam')
+
+# ================================================================ RULE 4 (card 350.38-353.53)
+RULE(4)
+X(card_times(4)[1], 'WS', 'theirs', 'cabin_dawn/master', 'dawn',
+  're-establishing side wide: you take Noah\'s hand and lead him to the foot of the stairs', TR(dx=40, r=1.5), reuse=291.3, tr='smear', setup='LEAD_STAIRS',
+  chars=[body('you', 900, 860, 420, 'profile_right', 'resolve', [A(w(140, 'take'), 'take_hand'), A(w(140, 'pull'), 'walk', to=1200)]),
+         body('noah13', 700, 860, 330, 'profile_right', 'calm_kid', [A(w(140, 'pull'), 'pulled_along')])],
+  energy='walking, track 40 px/s')
+X(Wc(140, 'toward'), 'INSERT', 'theirs', 'cabin_dawn/master', 'dawn', 'their feet at the bottom tread: one sneaker, one bare foot, your boots',
+  P(4, x=1200, y=820, z=1.6), chars=[feet('noah13', 1100, 880, 600, [A(R(0), 'step_through')], shoe='left'), feet('you', 1300, 880, 640, [])],
+  setup='TREAD_FEET', energy='feet reaching the step')
+X(T(141), 'MS', 'theirs', 'cabin_dawn/master', 'dawn', 'MS at the stairs: his hand pulls in yours as he reaches the bottom tread', P(3),
+  chars=[body('noah13', 860, 1060, 560, 'profile_right', 'strain', [A(R(0), 'pulled_along')]), body('you', 1160, 1060, 640, 'profile_right', 'resolve', [])],
+  energy='strain, push')
+X(Wc(141, 'jerks'), 'INSERT', 'theirs', 'cabin_dawn/hands_jerk', 'dawn', 'his hand snaps out of yours in 2 frames', FA(10),
+  chars=[hands('noah13', 880, 560, 420, [A(358.43, 'hand_jerk', dir='back')], tape=True), hands('you', 1080, 560, 440, [], sleeve='olive')],
+  fx_post=[dict(t=358.43, glitch=0.5, dur=0.06)], energy='hands snapping apart')
+X(359.0, 'POV', 'theirs', 'cabin_dawn/hands', 'dawn', 'POV of your empty hand', P(4), chars=[POVH([A(R(0), 'freeze')], 960, 620, 560, hand='right')],
+  energy='fingers closing on nothing')
+X(T(142), 'WS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'rewind glitch; wide [R 305.9]: Noah back on the bunk in the identical pose (loop_reset)',
+  P(2.5), reuse=305.94, tr='rewind', chars=[body('noah13', 960, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4, phase='loop_reset')], seated=True)],
+  energy='rewind tear, the knot loop resumes')
+X(Wc(142, 'one'), 'INSERT', 'theirs', 'cabin_dawn/shoe', 'dawn', 'his feet: one shoe on', P(3.5), reuse=307.54,
+  chars=[feet('noah13', 960, 800, 700, [], shoe='left')], energy='push')
+X(T(143), 'INSERT', 'theirs', 'cabin_dawn/knot', 'dawn', 'the knot, half tied; label SAME KNOT', P(3.5), reuse=316.58,
+  chars=[hands('noah13', 960, 600, 480, [A(R(0), 'tie_loop', period=2.4)], tape=True)], hud=[label(362.8, 'SAME KNOT', [960, 600], dx=180, dy=-120)],
+  device=DEV('insert', 'same_knot', 'the same knot, half tied: SAME KNOT'), energy='the knot loop')
+X(T(144), 'WS', 'theirs', 'cabin_dawn/master', 'dawn', 'the same framing as 353.5, shorter: you pull again', TR(dx=40, r=1.5), reuse=353.53,
+  chars=[body('you', 900, 860, 420, 'profile_right', 'resolve', [A(w(144, 'pull'), 'walk', to=1200)]),
+         body('noah13', 700, 860, 330, 'profile_right', 'calm_kid', [A(w(144, 'pull'), 'pulled_along')])], energy='pulling')
+X(T(145), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU at the stairs: you watch his face', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'tense', [A(R(0.4), 'stare')], light=L_GOLD)], energy='watching')
+X(T(146), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah13 straining at the bottom tread', P(4),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'strain', [A(R(0), 'expr', name='strain')], light=L_GOLD)], energy='straining')
+X(Wc(146, 'looks'), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'the face flickers to grown Noah (0.5 s), brown eyes', FA(8), tr='white',
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'shaken', [A(R(0), 'face_flash')], light=L_GOLD)], energy='flicker, hit')
+X(368.34, 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you: shock', P(4),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'shock', [], light=L_GOLD)], energy='shock')
+X(T(147), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah13: thirteen again, puzzled', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'puzzled', [A(R(0.3), 'blink')], light=L_GOLD)], energy='a blink')
+X(T(148), 'WS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn',
+  'wide 2-shot: you sit at the foot end of the bunk; THE DIP by Noah\'s left hip stays empty', P(2.5), reuse=305.94,
+  chars=[body('you', 1260, 900, 440, 'q_left', 'grief', [A(w(148, 'sitting'), 'sit')], seated=True),
+         body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)],
+  energy='the bunk creaking, push')
+X(Wc(148, 'you'), 'OTS', 'theirs', 'cabin_dawn/ots_noah', 'dawn', 'OTS over you on Noah: you ask what he said to the woman', P(3),
+  chars=[body('you', 600, 1200, 760, 'back', 'grief', [], seated=True, ots=True), body('noah13', 1200, 1000, 560, 'q_left', 'calm_kid', [A(R(0.6), 'look_up')], seated=True)],
+  energy='push')
+X(T(149), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah: "That I wanted to stay until the breakfast bell" (lip-sync)', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(t(149), 'talk', line=149)], light=L_GOLD)], energy='lip-sync, push')
+X(Wc(149, 'the', n=0), 'INSERT', 'memory', 'memory/watch_cu', 'sepia_night',
+  'FLASHBACK chip 14 YEARS AGO · 4:45 AM: the watch alarm flashing 4:45 (your prank woke him)', FA(5), tr='sepia',
+  chip='14 YEARS AGO · 4:45 AM',
+  hud=[diagram(376.3, 'watch', 'ALM 4:45 flashing', hold=0.8)], energy='LCD flashing, beeping')
+X(377.10, 'WS', 'memory', 'memory/flash_445', 'sepia_night',
+  'THE KEY MEMORY: Noah13 alone at this mirror at 4:45 AM in pajamas, lipstick in hand, the steps drawn; a pale hand rests on the '
+  'INSIDE of the glass', P(3), device=DEV('insert', 'wish', 'Noah made the wish at 4:45 AM (his alarm woke him)'),
+  chars=[body('noah13', 860, 980, 560, 'q_right', 'calm_kid', [A(R(0.2), 'draw_step', step=7)], pajamas=True)],
+  energy='lantern flicker, the pale hand pressing from inside')
+X(Wc(151, 'run'), 'WS', 'memory', 'memory/bus_run', 'sepia_morning',
+  'memory (his plan): Noah in pajamas sprinting toward a yellow bus, laughing', TR(dx=80, r=1.0),
+  chars=[body('noah13', 900, 960, 420, 'profile_right', 'laugh', [A(R(0), 'run', to=1300)], pajamas=True)], energy='running, track 80 px/s')
+X(T(152), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah13 grinning: "I thought it\'d be funny"', P(3), tr='sepia',
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'grin_kid', [A(t(152), 'talk', line=152)], light=L_GOLD)], energy='lip-sync, grin')
+X(T(153), 'WS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'wide [R 305.9]: SHE IS SITTING ON THE BUNK BESIDE NOAH, S2, perfectly still, head tilted to him; the gold drains around her',
+  P(2.5), reuse=305.94, setup='QUEEN_BUNK',
+  chars=[Q('S2', [1160, 900, 520, 1.0], mode='body', acts=[A(R(0), 'head_tilt', deg=12), A(R(0), 'drift')], seated=True),
+         body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)],
+  q=dict(stage='S2', size=0.30, where='on the bunk beside Noah', framing='WS 30 %', wrong='she was here all along'),
+  energy='the knot loop; her drift only; colour draining near her')
+STATE(382.16, queen='bunk')
+X(T(154), 'MS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'MS: Noah glances at the window (the bus); her red-fingertip hand rests near his', P(3),
+  chars=[body('noah13', 860, 1060, 620, 'q_right', 'worried', [A(R(0.2), 'look', x=1600, y=380)], seated=True),
+         Q('S2', [1240, 760, 420], mode='hands', acts=[A(R(0), 'still')])], energy='glance, push')
+X(T(155), 'INSERT', 'theirs', 'cabin_dawn/clock', 'dawn', 'D7 the clock: 6:59:5x climbing to :59', P(4, x=960, y=500, z=1.2), reuse=17.58,
+  hud=[diagram(386.7, 'D7', 'the clock climbs 6:59:5x -> :59', hold=1.6)], device=DEV('diagram', 'D7', 'the loop clock'),
+  energy='second hand sweeping')
+X(Wc(155, 'go'), 'INSERT', 'theirs', 'cabin_dawn/clock', 'dawn', 'the clock snaps back to :40 (rewind glitch); chip LOOP with a circular arrow',
+  P(4, x=960, y=500, z=1.3), tr='rewind', hud=[chip(388.6, 'LOOP', 'loop')], energy='rewind scrub')
+X(Wc(156, 'still'), '2S', 'theirs', 'cabin_dawn/queen_3s', 'dawn_queen',
+  '2-shot: Noah asks; across the room in the window corner she answers with soft lips (S2, soft focus): "there\'s still a little while"',
+  P(3), setup='QUEEN_CORNER',
+  chars=[body('noah13', 760, 1000, 560, 'q_right', 'worried', [A(R(0), 'talk_silent', dur=0.8)], seated=True),
+         Q('S2', [1600, 760, 380, 3.0], mode='body', acts=[A(R(0.3), 'talk_silent', dur=1.0)], soft_focus=True)],
+  q=dict(stage='S2', size=0.20, where='the window corner, background', framing='soft focus 20 %', wrong='she watches'),
+  energy='her soft lips, Noah nodding')
+STATE(389.84, queen='window_corner')
+X(T(157), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you: how long has he known her?', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'tense', [A(R(0), 'talk_silent', dur=1.2)], light=L_GOLD)], energy='asking')
+X(Wc(157, 'known'), 'MCU', 'theirs', 'cabin_dawn/ots_noah', 'dawn',
+  'Noah thinking; behind him in the window corner the queen, soft, standing', P(2.5),
+  chars=[bust('noah13', 900, 580, 0.9, 'q_left', 'puzzled', [A(R(0.4), 'head_tilt')], light=L_GOLD),
+         Q('S2', [1560, 760, 320, 3.0], mode='body', acts=[A(R(0), 'drift')], soft_focus=True)],
+  q=dict(stage='S2', size=0.18, where='the window corner, background', framing='soft focus', wrong=''), energy='thinking')
+X(T(158), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah, innocent: "Since you went to get Mom"', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(t(158), 'talk', line=158)], light=L_GOLD)], energy='lip-sync')
+X(T(159), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'Noah tilts his head, waiting for you', P(3),
+  chars=[body('noah13', 960, 1040, 600, 'q_left', 'calm_kid', [A(R(0), 'head_tilt')], seated=True)], energy='waiting')
+X(T(160), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you stunned; silence', SIL(1.5),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'shock', [A(R(0), 'freeze')], light=L_GOLD)], energy='slow push in the silence')
+X(T(161), 'MS', 'memory', 'memory/wake', 'sepia_morning', 'memory-morning: kid-you wakes in the bottom bunk and squints', P(3), tr='sepia',
+  chars=[C('you_kid', [960, 620, 0.9], 'front', 'sleep', [A(R(0.2), 'wake_up'), A(R(0.6), 'wake_squint')], mode='lying')], energy='waking')
+X(Wc(161, 'bunk'), 'WS', 'memory', 'memory/wake', 'sepia_morning', 'the bunk above: empty, the blanket thrown back', P(3),
+  energy='morning light, a curtain moving')
+X(T(162), 'INSERT', 'memory', 'memory/towel_wet', 'sepia_morning', 'insert: the same striped towel on the floor, wet', P(3.5),
+  device=DEV('insert', 'towel_wet', 'the wet towel on the floor that morning'), energy='water sheen, push')
+X(T(163), 'WS', 'memory', 'memory/search_window', 'sepia_morning',
+  'through the window: counselors with flashlights in the mist; a balloon NOAH!', P(3),
+  hud=[dict(t=404.0, type='balloon', text='NOAH!', x=1100, y=320)], energy='flashlights sweeping, mist')
+X(Wc(163, 'yelling'), 'WS', 'memory', 'memory/search_pines', 'sepia_morning', 'flashlights in the pines, mist', DR(2, dx=30),
+  energy='beams crossing, drift')
+X(T(164), 'WS', 'memory', 'memory/legs', 'sepia_morning', 'kid-you among adult legs on the porch', P(2.5),
+  chars=[body('you_kid', 960, 980, 420, 'front', 'sure', [A(R(0.4), 'talk_silent', dur=1.0)]), C('extras', [960, 1000, 900], 'front', 'neutral', [A(R(0), 'shift_weight')], mode='legs')],
+  energy='legs shifting')
+X(Wc(164, 'grown-up'), 'MS', 'memory', 'memory/officer', 'sepia_morning', 'an officer with a notebook bends to listen', P(3),
+  chars=[body('extras', 960, 1060, 660, 'q_left', 'neutral', [A(R(0), 'write')], role='officer')], energy='writing')
+X(T(165), 'WS', 'memory', 'memory/legs', 'sepia_morning', 'kid-you pointing at the mess hall: back for breakfast', P(2.5),
+  chars=[body('you_kid', 900, 980, 440, 'profile_right', 'sure', [A(R(0.3), 'point', x=1600, y=500)])], energy='pointing')
+X(T(166), 'MS', 'memory', 'memory/breakfast_table', 'sepia_day', 'memory: Noah at the breakfast table stuffing pancakes', P(3),
+  chars=[body('noah13', 960, 1060, 620, 'front', 'grin_kid', [A(R(0), 'eat')])], energy='eating')
+X(Wc(166, 'when'), 'WS', 'memory', 'memory/breakfast_table', 'sepia_day',
+  'kid-you laughing across the table; the breakfast bell on its hook behind them', P(2.5),
+  chars=[body('you_kid', 700, 1000, 460, 'q_right', 'laugh', [A(R(0), 'laugh')]), body('noah13', 1200, 1000, 500, 'q_left', 'grin_kid', [A(R(0), 'eat')])],
+  energy='laughing, steam from the pancakes')
+X(T(167), 'WS', 'theirs', 'cabin_dawn/window_out', 'dawn',
+  'LOOP A again [R 297.4]: THEIRS window, the identical sprinkler animation; chip AGAIN with a circular arrow', P(2.5), reuse=297.42,
+  tr='rewind', loop='A', hud=[chip(414.4, '↺ AGAIN', 'loop')], energy='sprinkler arcs, frame-identical')
+X(T(168), 'INSERT', 'theirs', 'cabin_dawn/knot', 'dawn', 'Noah reaches for his loose shoelace', P(3.5), reuse=316.58,
+  chars=[hands('noah13', 960, 600, 480, [A(w(168, 'reaches'), 'reach', prop='lace')], tape=True)], energy='the reach')
+X(Wc(168, 'shoelace'), 'INSERT', 'theirs', 'cabin_dawn/knot', 'dawn', 'the knot, half tied, again', P(3.5),
+  chars=[hands('noah13', 960, 600, 480, [A(R(0), 'tie_loop', period=2.4)], tape=True)], energy='the knot loop')
+X(T(169), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'LOOP B [R 318.4]: breakfast_A, frame-identical', P(2.5), reuse=318.42, loop='B',
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(t(169), 'talk', line=169, clip_id='breakfast_A')], light=L_GOLD)],
+  energy='lip-sync (loop B replay)')
+X(T(170), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you hearing it again', P(4),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'dread', [], light=L_GOLD)], energy='dread')
+X(Wc(171, 'asked'), 'SPLIT', 'theirs', 'split/twins', 'dawn',
+  'split: the two identical CUs side by side, both chipped 6:59:45 AM', P(2),
+  split=dict(panels=[dict(set='cabin_dawn', view='bokeh', var='dawn', world='theirs', chip='6:59:45 AM', src_t=318.42),
+                     dict(set='cabin_dawn', view='bokeh', var='dawn', world='theirs', chip='6:59:45 AM', src_t=419.52)]),
+  hud=[diagram(422.4, 'loop_split', 'the same question, frame for frame: 6:59:45 AM | 6:59:45 AM', hold=2.3)],
+  device=DEV('diagram', 'loop_split', 'the same moment twice'), energy='both mouths moving in perfect sync')
+X(T(172), 'INSERT', 'theirs', 'cabin_dawn/knot', 'dawn', 'ECU of the knot; type beat 14 YEARS echoes the hook stamp', P(2), reuse=316.58,
+  hud=[stamp(426.1, '14 YEARS', 960, 520, '#c0392b', -4, 0.14), typebeat(426.1, 2, '14 YEARS', echo=True)], energy='slow pull begins')
+X(T(173), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'pull-out: Noah tying the knot', PU(3),
+  chars=[body('noah13', 960, 1000, 580, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)], energy='pull-out 3 %/s')
+X(Wc(173, 'half'), 'WS', 'theirs', 'cabin_dawn/master', 'dawn',
+  'pull-out to the wide: Noah small in the frozen gold; she stands in the far window corner, soft focus', PU(3), reuse=291.3,
+  chars=[body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True),
+         Q('S2', [1560, 700, 300, 3.0], mode='body', acts=[A(R(0), 'drift')], soft_focus=True)],
+  q=dict(stage='S2', size=0.15, where='the window corner, background', framing='soft focus 15 %', wrong='threat in the background'),
+  energy='pull-out, the knot loop')
+X(T(174), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you: you know why he never heard it', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'grief', [A(R(0.6), 'swallow')], light=L_GOLD)], energy='a swallow')
+X(T(175), 'MS', 'memory', 'memory/director', 'sepia_morning', 'memory: the director with a clipboard on the mess-hall porch', P(3), tr='sepia',
+  chars=[body('extras', 960, 1060, 640, 'q_left', 'shout', [A(R(0), 'call_out')], role='director')], energy='calling out')
+X(T(176), 'WS', 'memory', 'memory/kitchen_staff', 'sepia_morning', 'the director waves cooks in white aprons out of the kitchen', P(2.5),
+  chars=[C('extras', [960, 980, 520], 'front', 'neutral', [A(R(0), 'walk')], mode='body', role='cooks')], energy='cooks filing out')
+X(Wc(176, 'out'), 'WS', 'memory', 'memory/search_pines', 'sepia_morning', 'the cooks with flashlights into the pines', DR(2, dx=30),
+  chars=[C('extras', [960, 900, 360], 'back', 'neutral', [A(R(0), 'walk')], mode='body', role='cooks')], energy='walking off, mist')
+X(T(177), 'DOC', 'memory', 'memory/menu_board', 'sepia_morning',
+  'the menu chalkboard JULY 19 · BREAKFAST 7:00 · PANCAKES with CANCELED chalked across and a red stamp', P(3),
+  hud=[doc(438.0, 'menu', 'JULY 19 · BREAKFAST 7:00 · PANCAKES', marks=[dict(t=438.7, what='chalk', text='CANCELED'), dict(t=438.95, what='stamp', text='CANCELED')]),
+       stamp(438.95, 'CANCELED', 980, 560, '#b8342c', -6, 0.14)], errfix=[30],
+  device=DEV('doc', 'menu', 'Breakfast was canceled'), energy='chalk scraping, the stamp slam')
+X(T(178), 'WS', 'memory', 'memory/buses', 'sepia_day', 'yellow buses in a line; kids\' faces in the windows; chip 12:00 PM', P(2.5),
+  hud=[chip(439.5, '12:00 PM', 'memory')], energy='buses idling, hands at windows')
+X(Wc(178, 'everyone'), 'CU', 'memory', 'memory/bus_window', 'sepia_day', 'kid-you\'s face in a bus window looking back at the cabins', P(3),
+  chars=[bust('you_kid', 960, 560, 1.0, 'q_right', 'sad', [], light=L_MEM)], energy='the bus pulling away, reflections sliding')
+X(T(179), 'WS', 'memory', 'memory/gate_close', 'sepia_day', 'the gate chained [R the gate, sepia]', P(2.5), reuse=22.46,
+  energy='the chain pulled through, the padlock snapping')
+X(Wc(179, 'camp'), 'DOC', 'memory', 'memory/gate_close', 'sepia_day', 'a sign CAMP CLOSED hung on the gate', P(3),
+  hud=[doc(443.6, 'sign', 'CAMP CLOSED')], energy='the sign swinging')
+X(T(180), 'INSERT', 'memory', 'memory/crate_bell', 'sepia_day',
+  'the bell lowered into the SAVE FOR THE MUSEUM crate and the lid shut (callback to 56.1)', P(3), reuse=57.18,
+  device=DEV('insert', 'crate_bell', 'the bell went into the crate'), energy='lowering, lid thump')
+
+# ================================================================ RULE 5 (card 446.33-449.74)
+RULE(5)
+X(card_times(5)[1], 'WS', 'theirs', 'cabin_dawn/reverse', 'dawn',
+  're-establishing wide [R reverse], low angle up the stairs: you shout up to Tess in the doorway; D10 map inset top left',
+  HH(2, shake=15), reuse=338.76, tr='smear',
+  chars=[body('you', 760, 1060, 560, 'back', 'shout', [A(R(0), 'shout_silent')]), body('tess', 1500, 400, 170, 'front', 'fear', [], d=4.0)],
+  hud=[mapins(449.80, 2.0, [['CABIN 7', 60, 180], ['PATH', 180, 140], ['MESS HALL · CRATE', 300, 80]], dot=[[449.8, 60, 180]])],
+  device=DEV('diagram', 'D10', 'the map: Cabin 7 -> the path -> the mess hall crate'), energy='handheld, shouting')
+X(T(184), 'MS', 'theirs', 'cabin_dawn/reverse', 'dawn', 'Tess in the doorway at the top, hearing you; the map inset finishes',
+  HH(2.5, shake=15, x=1480, y=420, z=1.5),
+  chars=[body('tess', 1500, 600, 420, 'front', 'fear', [A(R(0.3), 'nod')], d=4.0)], energy='handheld')
+X(T(185), 'MS', 'ours', 'cabin_now/doorway', 'doorway_glow', 'OURS: Tess turns toward Cabin 7\'s front door', HH(2, shake=15), tr='glint',
+  chars=[body('tess', 960, 1060, 640, 'q_left', 'fear', [A(w(185, 'looks'), 'turn', to='door')])], energy='the turn, handheld')
+X(Wc(185, 'open'), 'POV', 'ours', 'cabin_now/reverse', 'doorway_glow', 'POV Tess: the open cabin door; the path and the porch beyond',
+  HH(2, shake=15), energy='handheld, the beam on the doorway')
+X(T(186), 'WS', 'ours', 'mess_porch/high_wide', 'night', 'the HIGH WIDE [R 54.6]: the porch across the path from Cabin 7\'s door', P(2.5), reuse=54.46,
+  energy='mist on the path, push')
+X(T(187), 'WS', 'memory', 'memory/run_barefoot', 'sepia_day', 'memory: kid-you and kid-Tess running barefoot across the path', TR(dx=80, r=1.0), tr='sepia',
+  chars=[body('you_kid', 900, 960, 420, 'profile_right', 'laugh', [A(R(0), 'run', to=1300)]), body('tess_kid', 700, 960, 400, 'profile_right', 'laugh', [A(R(0), 'run', to=1100)])],
+  energy='running, track 80 px/s')
+X(T(188), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you shouting "Go!"', HH(3, shake=18), tr='sepia',
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'shout', [A(t(188), 'talk', line=188)], light=L_GOLD)], energy='the shout')
+X(T(189), 'MS', 'ours', 'cabin_now/master', 'doorway_glow', 'OURS: Tess spins and runs for the cabin door, beam swinging', HH(3, shake=20), tr='glint',
+  chars=[body('tess', 960, 900, 420, 'q_left', 'fear', [A(R(0), 'run', to=520)])], energy='run cycle, beam swinging')
+X(462.59, 'INSERT', 'ours', 'cabin_now/door', 'night', 'insert: her hand yanks the padlock off the hasp', FA(8),
+  chars=[hands('tess', 960, 560, 420, [A(462.9, 'yank', prop='padlock')], sleeve='orange')], errfix=[32], energy='the yank')
+STATE(462.9, padlock='tess_hand', flashlight='tess_running', tess='porch', towel='tess_shoulder')
+X(463.03, 'WS', 'ours', 'camp_path/path_run', 'night', 'Tess runs out the door with the beam into the night; Cabin 7 goes dark blue behind her',
+  HH(2.5, shake=22), chars=[body('tess', 960, 900, 360, 'back', 'fear', [A(R(0), 'run', to=1300)])], energy='run cycle, beam receding')
+X(463.89, 'WS', 'theirs', 'cabin_dawn/reverse', 'dawn',
+  'THEIRS: the doorway at the top goes DARK NAVY, no beam; the empty corner by the window', SIL(1.5), reuse=338.76, tr='glint', errfix=[10],
+  props=dict(doorway='navy_dark at 463.89'), energy='silence push, the empty window corner')
+STATE(463.89, doorway='navy_dark')
+X(T(191), 'WS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'HOLD H2: she rises from the window corner (where she has stood since 389 s) and in one smooth 1.2 s glide, with no bob, bends at '
+  'the hip and sits beside Noah; the mattress dips; her hair stays put', P(3), hold='H2', reuse=382.16,
+  chars=[Q('S2', [1600, 760, 380, 2.0], mode='body', acts=[A(465.0, 'rise'), A(466.10, 'glide_sit', to=[1160, 900, 520], dur=1.2, bob=0)]),
+         body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True)],
+  q=dict(stage='S2', size=0.35, where='rises from the corner, sits on the bunk', framing='WS 35 %', wrong='the inhuman sit'),
+  errfix=[1], energy='the glide, the mattress dipping, the knot loop')
+STATE(467.3, queen='bunk')
+X(T(192), 'MS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'MS: Noah scoots 40 px over without his eyes leaving the knot', P(3),
+  chars=[body('noah13', 860, 1060, 600, 'q_right', 'calm_kid', [A(w(192, 'scoots'), 'scoot', dx=-40)], seated=True),
+         Q('S2', [1300, 1060, 640], mode='body', acts=[A(R(0), 'still')], seated=True)], errfix=[1], energy='the scoot')
+X(Wc(192, 'without'), 'INSERT', 'theirs_break', 'cabin_dawn/dip_low', 'dawn_queen', 'insert: black satin spreading into the dip', P(4),
+  energy='satin settling')
+X(T(193), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah, blank, eyes on the knot: he\'s done it before', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'listening', [], light=L_GOLD)], energy='stillness, push')
+X(T(194), 'CU', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen', 'CU of her, S2, the drawn smile; her lips move: another minute?', P(3.5),
+  chars=[Q('S2', [960, 560, 1.1], acts=[A(R(0.1), 'talk_silent', dur=1.6, glow=True)])],
+  q=dict(stage='S2', size=0.50, where='on the bunk', framing='CU 50 %', wrong=''), energy='lips moving, the drawing still')
+X(T(195), 'INSERT', 'theirs_break', 'cabin_dawn/dip_low', 'dawn_queen', 'insert: the red-fingertip hand pats the dip twice', P(3.5),
+  chars=[Q('S2', [960, 640, 520], mode='hands', acts=[A(476.04, 'pat'), A(476.36, 'pat')])], energy='two pats')
+X(478.03, 'CU', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'HOLD H3: CU push 5 %/s; on "back" (479.24) the drawn stair-smile SPLITS OPEN along the drawing into a grin of flat human teeth '
+  'climbing her cheeks; the lips keep talking ("I can put you back the way he remembers you")', P(5), hold='H3',
+  chars=[Q('S3a', [960, 560, 1.15], acts=[A(t(196), 'talk_line', line=196, glow=True), A(479.24, 'smile_split', dur=0.25)])],
+  q=dict(stage='S3a', size=0.70, where='on the bunk', framing='CU 70 %', wrong='the drawing opens into teeth'),
+  errfix=[20], energy='the split on the word, lips talking, push 5 %/s')
+X(481.13, 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you, tempted, eyes lowered; colour drains', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'tempted', [A(R(0.5), 'look', x=900, y=760)], light=L_GOLD)], energy='eyes lowering')
+X(T(199), 'INSERT', 'theirs', 'cabin_dawn/dip_low', 'dawn', 'insert of the dip in the mattress', P(3), energy='push')
+X(Wc(200, 'where'), 'MS', 'memory', 'memory/socks', 'sepia_morning', 'memory: kid-you on that spot pulling socks on', P(3), tr='sepia',
+  chars=[body('you_kid', 960, 1040, 560, 'front', 'happy', [A(R(0), 'pull_socks')], seated=True)], energy='pulling socks')
+X(T(201), 'WS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'WIDE: Noah tying the knot, the Queen beside him patting the dip, the beautiful gold room; you at the bunk\'s end, half-turned to the dip; slow push',
+  P(2), reuse=382.16, tr='sepia', errfix=[2],
+  chars=[body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop', period=2.4)], seated=True),
+         Q('S2', [1080, 900, 500, 1.0], mode='body', acts=[A(R(0.3), 'pat')], seated=True),
+         body('you', 1500, 920, 480, 'q_left', 'tempted', [A(R(0), 'look', x=1000, y=760)])],
+  q=dict(stage='S2', size=0.30, where='on the bunk', framing='WS', wrong=''), energy='the knot loop, the pat, slow push')
+X(T(202), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'MS: you half-turned toward the dip, gold on your face', P(3),
+  chars=[body('you', 960, 1060, 640, 'q_left', 'tempted', [A(R(0.4), 'lean_in', amount=0.2)])], energy='leaning')
+X(Wc(202, 'ask'), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah13 tying, content', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'calm_kid', [A(R(0), 'tie_loop')], light=L_GOLD)], energy='content')
+X(T(203), 'WS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'you begin to lower toward the dip; RED X (3 of 4) over the dip at 493.56; tag DON\'T SIT DOWN', P(3), reuse=382.16,
+  chars=[body('you', 1300, 940, 520, 'q_left', 'tempted', [A(R(0), 'sit', partial=0.4)]),
+         body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop')], seated=True),
+         Q('S2', [1040, 900, 500, 1.0], mode='body', acts=[A(R(0), 'still')], seated=True)],
+  hud=[redx(493.56, 1180, 840, 140, 0.8, n=3), tag(493.62, "DON'T SIT DOWN", 960, 150, 'lipstick', 1.0)], energy='lowering, the X')
+X(Wc(203, 'and'), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU you: your lips forming "leave it open"', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'grief', [A(R(0), 'talk_silent', dur=0.8)], light=L_GOLD)], energy='lips moving')
+X(Wc(203, 'window'), 'MS', 'memory', 'memory/night_window', 'sepia_night', 'memory flash: Noah at the open window smiling back', FA(5), tr='sepia',
+  chars=[body('noah13', 960, 1040, 620, 'q_left', 'grin_kid', [A(R(0), 'smile')])], energy='flash')
+X(T(204), 'OTS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen', 'OTS over your shoulder: her face behind you', P(3), tr='sepia',
+  chars=[bust('you', 640, 640, 1.3, 'back', 'tempted', [], light=L_GOLD), Q('S3a', [1220, 480, 0.8], acts=[A(R(0), 'drift')])],
+  q=dict(stage='S3a', size=0.40, where='over your shoulder', framing='OTS 40 %', wrong=''), energy='her drift closer 2 px/s')
+X(Wc(204, 'said'), 'OTS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen', 'closer: her irises turn RED on "better" (S3b)',
+  P(4, x=1220, y=480, z=1.25), chars=[bust('you', 640, 640, 1.3, 'back', 'tempted', [], light=L_GOLD),
+                                      Q('S3b', [1220, 480, 0.9], acts=[A(499.56, 'eyes_red', dur=0.3)])],
+  q=dict(stage='S3b', size=0.40, where='over your shoulder', framing='OTS 40 %', wrong='red irises'), energy='the eyes turning')
+X(T(205), 'WS', 'ours', 'mess_porch/porch_crate', 'night', 'OURS porch: Tess at the crate, beam swinging, the padlock in her hand', HH(2.5, shake=20), tr='glint',
+  chars=[body('tess', 960, 900, 420, 'profile_left', 'angry', [A(R(0), 'shout_silent')])], energy='handheld, beam swinging')
+STATE(500.03, tess='porch')
+X(Wc(205, 'yells'), 'CU', 'ours', 'mess_porch/bokeh', 'night', 'CU Tess yelling', HH(3, shake=18),
+  chars=[bust('tess', 960, 560, 1.0, 'q_left', 'shout', [A(t(206), 'talk', line=206)], light=L_BEAM)], energy='the yell')
+X(Wc(206, 'twenty', off=-0.17), 'TYPE', 'ours', 'type/giant', 'night', 'giant 20 into the badge', P(4),
+  plate=dict(set='mess_porch', view='porch_crate', var='night', post=dict(blur=8, dim=0.4)), hud=[giant(502.36, 20)], energy='numeral slam')
+X(T(207), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'Noah holds out another cinnamon candy', P(3), tr='glint',
+  chars=[body('noah13', 960, 1040, 600, 'q_right', 'calm_kid', [A(w(207, 'holds'), 'hold_out', prop='candy_red')], seated=True)], energy='offering')
+X(Wc(207, 'another'), 'INSERT', 'theirs', 'cabin_dawn/hands', 'dawn', 'insert: the second candy in the taped hand', P(3.5),
+  chars=[hands('noah13', 960, 560, 480, [A(R(0), 'hold_out', prop='candy_red')], tape=True)], energy='push')
+X(T(208), 'POV', 'theirs', 'cabin_dawn/hands', 'dawn', 'POV: your left fist, white knuckles, the wrapper twist between the fingers', P(3.5),
+  chars=[Fist(960, 640, 580, [A(R(0.3), 'tremble', amount=0.3)])], errfix=[3], energy='knuckles whitening')
+X(T(209), 'WS', 'ours', 'mess_porch/porch_crate', 'night', 'porch: Tess kicks the crate', HH(3, shake=24), tr='glint',
+  chars=[body('tess', 960, 900, 420, 'profile_left', 'angry', [A(509.24, 'kick')])], energy='the kick')
+X(Wc(209, 'kicking'), 'INSERT', 'ours', 'mess_porch/boot', 'night', 'ECU: her boot smashes a slat', HH(4, shake=26),
+  chars=[C('tess', [960, 640, 600], 'profile_left', 'angry', [A(509.72, 'kick')], mode='legs')], energy='splinters at the lens')
+X(509.95, 'WS', 'ours', 'mess_porch/porch_crate', 'night', 'the crate splits, splinters fly, the bell rolls out onto the boards; the padlock in her other hand',
+  HH(3, shake=24), chars=[body('tess', 960, 900, 420, 'profile_left', 'angry', [A(510.12, 'kick')])], props=dict(bell='on_boards at 510.4'),
+  energy='slats flying, the bell rolling')
+STATE(510.4, bell='porch_boards')
+X(T(210), 'WS', 'theirs', 'cabin_dawn/window_out', 'dawn', 'THEIRS through the window: across the frozen lawn, the far mess-hall porch', P(3), tr='glint',
+  energy='the frozen lawn, push')
+X(Wc(210, 'bell'), 'INSERT', 'theirs', 'cabin_dawn/far_porch', 'dawn',
+  'telephoto: a GLEAMING bell swinging by itself on the far porch, clean white rings', P(4), tr='white', errfix=[8],
+  hud=[rings(513.6, 'clean', 960, 480, 4, 1.0)], device=DEV('insert', 'fake_bell', 'a perfect bell rings by itself (the fake)'),
+  energy='the bell swinging, perfect rings')
+X(T(211), 'INSERT', 'theirs', 'cabin_dawn/shoe', 'dawn', 'insert: his hand goes to the other shoe', P(3.5),
+  chars=[hands('noah13', 960, 600, 460, [A(w(211, 'reaches'), 'reach', prop='shoe')], tape=True)], energy='reaching')
+X(T(212), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you, mouth opening to say hurry', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'tense', [A(R(0.3), 'mouth_open_close')], light=L_GOLD)], energy='mouth opening')
+X(T(213), 'INSERT', 'memory', 'memory/bell_ecu', 'sepia_day', 'memory [R 62.9]: the bell\'s cracked rim', P(4), reuse=62.87, tr='sepia',
+  energy='glint on the crack')
+X(519.90, 'WS', 'memory', 'memory/bell_ring_porch', 'sepia_day', 'memory: the counselor rings it on the porch', P(3),
+  chars=[body('counselor', 960, 960, 520, 'front', 'neutral', [A(R(0.3), 'ring_bell')])], energy='ringing')
+X(T(214), 'MS', 'memory', 'memory/bell_ring_porch', 'sepia_day', 'it always rang twice: kids at the table flinch at the rattle', P(3),
+  chars=[C('kids', [960, 1000, 520], 'front', 'giggle', [A(522.6, 'flinch')], mode='body')], energy='flinch')
+X(T(215), 'DIAGRAM', 'memory', 'memory/bell_ecu', 'sepia_day', 'D8: a clean ring', P(3), reuse=66.15,
+  hud=[rings(523.75, 'clean', 960, 520, 3, 1.0), diagram(523.6, 'D8', 'a clean note first', hold=1.2)],
+  device=DEV('diagram', 'D8', 'the real bell: a clean note, then a rattle'), energy='a ring expanding')
+X(T(216), 'DIAGRAM', 'memory', 'memory/bell_ecu', 'sepia_day', 'D8: then a jagged rattle squiggle', P(3),
+  hud=[rings(525.0, 'rattle', 960, 520, 3, 1.4)], energy='the squiggle shaking')
+X(Wc(216, 'that'), 'INSERT', 'memory', 'memory/spoon', 'sepia_day', 'insert: a spoon dropping on a table (the simile gets a shot)', P(3.5),
+  device=DEV('insert', 'spoon', 'like somebody dropped a spoon'), energy='the spoon falling and bouncing')
+X(T(217), 'INSERT', 'theirs', 'cabin_dawn/clock', 'dawn', 'the THEIRS clock at :59 snaps back to :40 at 529.5: the fake bell did not count',
+  P(4), reuse=17.58, tr='sepia', fx_post=[dict(t=529.5, glitch=0.8, rewind=1.0, dur=0.2)], hud=[chip(529.5, 'LOOP', 'loop')],
+  energy='second hand, rewind')
+X(Wc(217, 'was'), 'SPLIT', 'theirs', 'split/bells', 'dawn',
+  'split: THEIR BELL (smooth rings, red X mark) | OUR BELL (rings plus rattle, green tick)', P(2),
+  split=dict(panels=[dict(set='cabin_dawn', view='far_porch', var='dawn', world='theirs', label='THEIR BELL', mark='red_x'),
+                     dict(set='mess_porch', view='bell_ecu', var='night', world='ours', label='OUR BELL', mark='green_tick')]),
+  hud=[rings(530.6, 'clean', 480, 520, 3, 1.0), rings(530.6, 'rattle', 1440, 520, 3, 1.0),
+       diagram(530.5, 'D8', 'THEIR BELL: perfect (X) | OUR BELL: rattle (tick)', hold=1.1)], errfix=[8],
+  device=DEV('diagram', 'D8_split', 'the fake bell vs the real bell'), energy='rings pulsing on both sides')
+X(T(218), 'CU', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
+  'HOLD H4: her face turns to the lens (531.9): red glowing irises, veined whites, the full grin, cheek folds, porcelain cracks, black '
+  'tears; deepest silence at 533.2; at 533.68 the grin drops to a flat line in 2 frames; the lipstick steps stay on her cheeks like scars',
+  P(4), hold='H4',
+  chars=[Q('S3c', [960, 560, 1.2], acts=[A(531.9, 'turn_to_lens', dur=0.25), A(533.68, 'smile_off', frames=2)])],
+  q=dict(stage='S3c', size=0.80, where='on the bunk', framing='CU to ECU 80 %', wrong='the full face; then the smile goes off'),
+  errfix=[19], energy='the turn, the stare in the silence, the snap off')
+X(534.68, 'WS', 'ours', 'mess_porch/porch_crate', 'night', 'OURS porch: Tess winds up with the padlock (534.96)', HH(3, shake=22), tr='glint',
+  chars=[body('tess', 960, 900, 420, 'profile_left', 'angry', [A(534.96, 'wind_up', prop='padlock')])], errfix=[9], energy='the wind-up')
+X(535.36, 'INSERT', 'ours', 'mess_porch/bell_hit', 'bell_hit',
+  'CONTACT at 535.36: padlock on the rim, spark, 2-frame white flash, the rim vibrating (wobble lines), the crack rattling', FA(6, hit=[(535.36, 18)]),
+  tr='white', hud=[rings(535.40, 'broken', 960, 540, 4, 1.2)], errfix=[9], energy='impact, vibrating rim, jagged rings')
+STATE(535.36, bell='struck', padlock='struck')
+X(536.36, 'WS', 'climax', 'mess_porch/porch_crate', 'bell_hit',
+  'Tess with the ringing bell, jagged broken rings; red rim light begins: the climax red starts', PU(3),
+  chars=[body('tess', 960, 900, 420, 'profile_left', 'angry', [A(R(0), 'hold_up', prop='padlock', side=-1)])], energy='bell vibrating, pull-out')
+STATE(536.4, padlock='tess_hand')
+X(T(221), 'INSERT', 'theirs_break', 'cabin_dawn/clock', 'dawn_break',
+  'D9: THEIRS clock 6:59:59 -> 7:00:00 at 538.7; the second hand passes 12 and stops looping; big chip 7:00 AM (type beat 5)',
+  P(4), tr='glint', hud=[diagram(538.2, 'D9', 'the clock reaches 7:00:00 and stops looping', hold=1.0), typebeat(538.7, 5, '7:00 AM'),
+                         chip(538.7, '7:00 AM', 'theirs')], fx_post=[dict(t=538.7, white=0.6, dur=0.05)],
+  device=DEV('diagram', 'D9', 'the loop breaks: 7:00 AM'), energy='the hand passing 12, the gold flickering')
+STATE(538.7, clock='7:00')
+X(T(222), 'INSERT', 'theirs_break', 'cabin_dawn/knot', 'dawn_break', 'insert: the lace drops', P(3),
+  chars=[hands('noah13', 960, 600, 480, [A(w(222, 'drops'), 'drop_lace')], tape=True)], energy='the lace falling, gold stuttering')
+X(T(223), 'CU', 'theirs_break', 'cabin_dawn/bokeh', 'dawn_break', 'CU of Noah: "Finally"', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'relief', [A(t(223), 'talk', line=223)], light=L_GOLD)], energy='relief')
+
+# ================================================================ RULE 6 (card 542.03-545.22)
+RULE(6)
+X(card_times(6)[1], 'SEC', 'climax', 'stairs/section', 'red',
+  'THE SECTION [R]: you push Noah up the red steps toward the doorway; tag HIM FIRST', HH(2, shake=15), reuse=290.2, tr='smear',
+  chars=[body('you', 1100, 640, 90, 'profile_left', 'resolve', [A(R(0), 'shove')]), body('noah13', 980, 600, 80, 'profile_left', 'strain', [A(R(0), 'climb')])],
+  hud=[tag(545.40, 'HIM FIRST', 960, 150, 'lipstick', 1.0)], errfix=[11], energy='the shove, small figures climbing')
+STATE(545.3, noah='stairs', you='stairs')
+X(Wc(227, 'toward'), 'WS', 'ours', 'camp_path/path_run', 'night', 'cut-in: Tess sprinting back across the path to Cabin 7, beam swinging', HH(3, shake=22), tr='glint',
+  chars=[body('tess', 960, 900, 400, 'front', 'fear', [A(R(0), 'run', to=960)])], energy='run cycle, beam swinging')
+STATE(546.4, tess='cabin7_doorway', flashlight='tess_doorway')
+X(546.73, 'OTS', 'climax', 'stairs/ots_climb', 'red', 'Noah climbing the top treads toward the doorway, you behind him', HH(3, shake=20), tr='glint',
+  chars=[body('noah13', 960, 900, 600, 'back', 'strain', [A(R(0), 'climb')]), body('you', 760, 1200, 900, 'back', 'resolve', [], ots=True)],
+  energy='climbing, red edges')
+X(T(228), 'WS', 'climax', 'cabin_now/master', 'red',
+  'OURS, from Cabin 7: his bare foot comes out of the dark stairs through the doorway onto our floorboards', P(3), tr='glint', errfix=[11],
+  setup='C7_RED', energy='the foot stepping out, red spill')
+X(T(229), 'INSERT', 'climax', 'cabin_now/floor_cu', 'red',
+  'the same framing as 355.3 (feet at the step), the opposite outcome: the bare foot planted on our floorboard; it stays', P(3), reuse=355.3,
+  chars=[feet('noah13', 960, 860, 720, [A(R(0), 'still')])], energy='the foot holding')
+X(T(230), 'INSERT', 'climax', 'cabin_now/doorway', 'red',
+  'Tess\'s orange cuff, foreshortened, grabs his taped wrist from our side and pulls', HH(3, shake=18),
+  chars=[hands('tess', 900, 520, 620, [A(551.86, 'reach_grab', foreshortened=True)], sleeve='orange'), hands('noah13', 1100, 560, 480, [], tape=True)],
+  errfix=[7], energy='the grab, the pull')
+X(T(231), 'CU', 'climax', 'cabin_now/doorway', 'red', 'CU Noah13 yelps, half through the doorway', P(4),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'scream', [A(553.62, 'flinch')], light=L_RED)], energy='yelp')
+X(T(232), 'INSERT', 'climax', 'cabin_now/hands', 'red', 'ECU: the fingers lengthen inside the blue tape', P(3),
+  chars=[hands('noah13', 960, 560, 560, [A(R(0), 'age', part='hand', dur=1.6)], tape=True)], errfix=[5, 14], energy='fingers growing')
+X(555.93, 'INSERT', 'climax', 'cabin_now/floor_cu', 'red', 'the empty tape loop slips off and drops onto the floorboards', P(3.5),
+  props=dict(tape='off_loop at 556.3'), errfix=[5], energy='the loop falling')
+STATE(556.3, tape='off_loop_floor')
+X(T(233), 'WS', 'climax', 'cabin_now/master', 'red', 'Tess pulls him into the room; they fall back onto the floor', HH(3, shake=18), reuse=547.43,
+  chars=[body('tess', 900, 980, 460, 'q_right', 'fear', [A(R(0), 'yank'), A(559.24, 'fall_back')]), body('noah_grown', 1100, 980, 500, 'q_left', 'shaken', [A(559.24, 'stumble')])],
+  energy='the pull, the fall')
+STATE(559.0, noah='ours')
+X(T(234), 'INSERT', 'climax', 'cabin_now/hands', 'red', 'insert: the cuffs ride up adult forearms', P(3),
+  chars=[hands('noah_grown', 960, 560, 560, [A(R(0), 'age', part='forearm')], cuffs='riding_up')], errfix=[5], energy='cuffs sliding')
+X(Wc(234, 'halfway'), 'MS', 'climax', 'cabin_now/master', 'red', 'MS: a grown body in a kid\'s sweatshirt, cuffs halfway up', P(3, roll=6),
+  chars=[body('noah_grown', 960, 1060, 640, 'front', 'shaken', [A(R(0), 'tremble')], cuffs='halfway')], energy='trembling, dutch 6 deg')
+X(T(235), 'CU', 'climax', 'cabin_now/bokeh', 'red',
+  'HOLD H5: the face morphs from 13 to 27 on camera: the jaw lengthens, stubble fades in, brown eyes (never yellow)', P(4), hold='H5',
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'shaken', [A(562.45, 'age', t1=565.05, from_age=13, to_age=27), A(t(235), 'talk_silent', dur=1.2)], light=L_RED,
+              eyes='brown')], errfix=[18, 29], energy='the morph, push 4 %/s')
+X(T(236), 'CU', 'climax', 'stairs/bokeh', 'red', 'CU of you on the stairs below the doorway, staring up', P(3, roll=-6),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'shock', [A(R(0), 'stare')], light=L_RED)], energy='staring, dutch')
+X(Wc(236, 'barely'), 'ECU', 'climax', 'cabin_now/bokeh', 'red', 'ECU his mouth: the low voice; stubble', P(4),
+  chars=[bust('noah_grown', 960, 480, 1.6, 'front', 'shaken', [A(R(0), 'talk_silent', dur=1.0)], light=L_RED, eyes='brown')], energy='talking')
+X(T(237), 'MS', 'climax', 'cabin_now/master', 'red', 'MS: he stares at his raised hands', P(3, roll=6),
+  chars=[body('noah_grown', 960, 1060, 640, 'front', 'shaken', [A(R(0), 'look_at_hands')])], energy='staring at the hands')
+X(T(238), 'INSERT', 'climax', 'cabin_now/hands', 'red', 'insert: his big shaking hands beside your candy fist for scale', P(3),
+  chars=[hands('noah_grown', 860, 560, 620, [A(R(0), 'tremble', amount=0.6)]), Fist(1220, 640, 440)], energy='shaking')
+X(T(239), 'MS', 'climax', 'cabin_now/bunk_rail', 'red', 'MS: he rises', P(3),
+  chars=[body('noah_grown', 960, 1060, 600, 'q_left', 'shaken', [A(R(0), 'stand_up')])], energy='rising')
+X(Wc(239, 'shoulder'), 'MS', 'climax', 'cabin_now/bunk_rail', 'red',
+  'the top rail slams his shoulder (573.5): dust burst, the frame jumps, camera hit', HH(3, shake=20, hit=[(573.54, 16)]),
+  chars=[body('noah_grown', 960, 1060, 640, 'q_left', 'shaken', [A(573.54, 'stand_hit')])], errfix=[6], energy='impact, dust burst')
+X(T(240), 'WS', 'climax', 'cabin_now/dutch_low', 'red', 'wide: grown Noah hunched under the bunk he could walk under', P(3, roll=8),
+  chars=[body('noah_grown', 960, 960, 560, 'q_left', 'shaken', [A(R(0), 'rock')])], energy='hunched, red pulse, dutch 8 deg')
+X(T(241), 'OTS', 'theirs_break', 'cabin_dawn/master', 'dawn_break',
+  'THEIRS (dawn_break) behind you (OTS): she stands by the bunk calling his name, S3c face, mouth open', HH(2, shake=15), tr='glint',
+  chars=[bust('you', 600, 640, 1.3, 'back', 'fear', [], light=L_RED), Q('S3c', [1300, 900, 480, 2.0], mode='body', acts=[A(R(0), 'call_silent')])],
+  q=dict(stage='S3c', size=0.30, where='by the bunk, behind you', framing='WS 30 %', wrong='calling'), errfix=[27],
+  energy='gold stuttering, red leaking from the edges')
+STATE(576.25, queen='theirs_bunk_standing')
+X(T(242), 'MS', 'climax', 'cabin_now/master', 'red', 'OURS: grown Noah covers his ears, eyes squeezed', HH(2.5, shake=16), tr='glint',
+  chars=[body('noah_grown', 960, 1060, 640, 'front', 'fear', [A(w(242, 'covers'), 'cover_ears')], eyes='brown')], errfix=[29], energy='hands over ears')
+X(T(243), 'ECU', 'climax', 'cabin_now/bokeh', 'red', 'ECU his eyes squeezed shut', P(4),
+  chars=[bust('noah_grown', 960, 520, 1.6, 'front', 'fear', [A(R(0), 'cover_ears')], light=L_RED)], energy='squeezing')
+X(T(244), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', '0.6 s flash in the THEIRS look (frozen gold): Noah13 covering his ears on the bunk, an earlier loop',
+  FA(5), tr='glint', chars=[body('noah13', 960, 1000, 600, 'front', 'scream', [A(R(0), 'cover_ears')], seated=True)], energy='flash')
+X(582.53, 'MS', 'climax', 'cabin_now/master', 'red', 'back: grown Noah rocking, hands on his ears', HH(2.5, shake=16), tr='glint',
+  chars=[body('noah_grown', 960, 1060, 640, 'front', 'fear', [A(R(0), 'rock')])], energy='rocking')
+X(T(245), 'WS', 'climax', 'stairs/up', 'red', 'Tess at the top of the stairs in the doorway (from the stairs), red light, shouting', HH(3, shake=20),
+  chars=[body('tess', 960, 560, 360, 'front', 'shout', [A(R(0), 'shout_silent')], d=3.0)], energy='handheld, shouting')
+X(T(246), 'TYPE', 'climax', 'type/giant', 'red', 'giant 5', HH(2, shake=12),
+  plate=dict(set='stairs', view='up', var='red', post=dict(blur=8, dim=0.4)), hud=[giant(585.62, 5)], energy='numeral slam')
+X(T(247), 'SEC', 'climax', 'stairs/section', 'red', 'the section [R]: you climbing, three steps from the top', HH(2, shake=12), reuse=290.2,
+  chars=[body('you', 900, 560, 90, 'profile_left', 'fear', [A(R(0), 'climb')])], energy='climbing')
+STATE(586.28, you='stairs_top3')
+X(Wc(247, 'doorway'), 'POV', 'climax', 'stairs/up', 'red', 'POV from below: your hand reaching up toward Tess\'s light', HH(3, shake=18),
+  chars=[POVH([A(R(0), 'reach', up=True)], 960, 700, 620)], energy='reaching')
+X(T(248), 'WS', 'climax', 'stairs/low', 'red', 'low angle at the foot of the stairs: she steps onto tread 8 (silence)', SIL(1.5, roll=-8),
+  chars=[Q('S3c', [960, 900, 520, 2.0], mode='body', view='q_left', acts=[A(588.4, 'climb_step', to=8)])],
+  q=dict(stage='S3c', step=8, size=0.30, where='the foot of the stairs', framing='low WS', wrong='she follows'), errfix=[27],
+  energy='silence push, her foot on the tread')
+STATE(588.4, queen='stairs_tread8')
+X(Wc(249, 'wait'), 'CU', 'climax', 'stairs/low', 'red',
+  'HOLD H6: her jaw drops; the face below the eyes stretches 1.35x into a tall glossy void; Noah13\'s face glitches inside it, '
+  'lip-synced to his voice ("Wait, he forgot his shoe.")', P(4), hold='H6', tr='white',
+  chars=[Q('S4', [960, 520, 1.2], acts=[A(589.60, 'jaw_drop', stretch=1.35, dur=0.3), A(t(249), 'void_talk', line=249, inner='noah13', pixel_sort=True)])],
+  q=dict(stage='S4', size=0.75, where='the foot of the stairs', framing='low CU 75 %', wrong='the jaw void with Noah\'s voice'),
+  errfix=[12], energy='the jaw dropping, Noah\'s face glitching inside, push 4 %/s')
+X(591.58, 'ECU', 'climax', 'stairs/low', 'red', 'ECU of the void with Noah13\'s face and gap teeth inside', P(5),
+  chars=[Q('S4', [960, 560, 1.8], acts=[A(R(0), 'void_talk', inner='noah13', pixel_sort=True)])], errfix=[12], energy='pixel-sort crawling')
+X(T(251), 'ECU', 'climax', 'stairs/bokeh', 'red', 'your eyes widening', FA(6),
+  chars=[bust('you', 960, 520, 1.6, 'front', 'fear', [A(R(0.1), 'expr', name='fear')], light=L_RED)], energy='eyes widening')
+X(T(252), 'MS', 'climax', 'stairs/ots_climb', 'red', 'on the stairs, you turn with a 0.15 s whip; tag DON\'T TURN AROUND', WH(1300, 520, 1.15), tr='glitch',
+  chars=[body('you', 960, 1060, 640, 'q_left', 'fear', [A(594.93, 'snap_turn', dur=0.15)])], hud=[tag(594.95, "DON'T TURN AROUND", 960, 150, 'lipstick', 1.0)],
+  energy='whip pan on the turn')
+X(T(253), 'MS', 'memory', 'memory/night_window', 'sepia_night', 'memory: Noah13 at the night window mouthing words you never heard', P(3), tr='sepia',
+  chars=[body('noah13', 960, 1040, 620, 'q_left', 'shy', [A(R(0), 'talk_silent', dur=1.6)])], energy='lips moving, no sound')
+X(T(254), 'CU', 'memory', 'memory/night_window', 'sepia_night', 'memory CU: his mouth moving, no sound', P(3),
+  chars=[bust('noah13', 960, 560, 1.0, 'q_left', 'shy', [A(R(0), 'talk_silent', dur=2.0)], light=L_MEM)], energy='mouthing')
+X(T(255), 'MS', 'climax', 'stairs/ots_climb', 'red', 'your turn in slow motion on the stairs', P(2, roll=-8), tr='sepia',
+  chars=[body('you', 960, 1060, 640, 'q_left', 'fear', [A(R(0), 'turn', slow=0.3)])], energy='slow motion, red pulse')
+X(Wc(255, 'before'), 'SEC', 'climax', 'stairs/section', 'red', 'the section [R]: she is climbing behind you, two steps down', P(2), reuse=290.2,
+  chars=[body('you', 900, 540, 90, 'q_left', 'fear', []), Q('S3c', [840, 600, 100], mode='body', acts=[A(R(0), 'climb_step')])],
+  q=dict(stage='S3c', step=3, size=0.10, where='two steps below you (section)', framing='section', wrong='she follows'), energy='her small figure climbing')
+X(T(256), 'POV', 'climax', 'stairs/pov_down', 'red',
+  'POV from the stairs down into the red-lit gold cabin: the shoe beside the bed; label ONE SHOE echo (stairs background only)', SIL(1.5),
+  hud=[label(603.3, 'ONE SHOE', [1100, 900], dx=160, dy=-120)], errfix=[27], energy='silence push, red light flickering below')
+X(T(257), 'POV', 'climax', 'stairs/pov_down', 'red',
+  'HOLD H7: POV of your boots on a red-edged tread -> the next tread down holds HER FOOT (anatomical, ash-white, black nails, the satin '
+  'hem with spade pips), hit at 605.21 -> tilt up the dress to her S3c face 30 cm away, grin widening, a hand rising toward your shoulder',
+  TL(dy=-420, r=3, x=960, y=760, z=1.1, hit=[(605.21, 14)]), hold='H7', tr='cut',
+  chars=[C('you', [960, 980, 900], 'front', 'neutral', [], mode='feet', pov=True),
+         Q('S3c', [960, 760, 1.0], mode='body', acts=[A(605.21, 'step_up'), A(606.2, 'grin_widen'), A(606.6, 'reach_shoulder')])],
+  q=dict(stage='S3c', step='below yours', size=1.0, where='the step below yours', framing='POV, 100 %', wrong='30 cm away'),
+  errfix=[27], energy='the tilt up from her foot to her face, the hit')
+STATE(604.48, queen='step_below_yours')
+X(T(258), 'WS', 'climax', 'stairs/up', 'red', 'from the stairs side: Tess\'s orange arm shoots out of the doorway above', HH(3, shake=24),
+  chars=[hands('tess', 960, 380, 620, [A(608.3, 'reach_grab', foreshortened=True)], sleeve='orange')], errfix=[7], energy='the arm shooting down')
+X(608.97, 'INSERT', 'climax', 'stairs/up', 'red', 'her fist closes on your corduroy collar (608.97); whip pull; white flash; giant 0', WH(960, 200, 1.2, hit=[(608.97, 18)]),
+  tr='white', chars=[hands('tess', 960, 520, 620, [A(608.97, 'grab_collar'), A(609.1, 'yank')], sleeve='orange')], hud=[giant(608.97, 0, hold=0.4)],
+  errfix=[7], energy='the yank')
+STATE(609.3, you='ours_floor', queen='glass')
+
+# ================================================================ RULE 7 (card 609.48-614.71)
+RULE(7)
+X(card_times(7)[1], 'WS', 'climax', 'cabin_now/dutch_low', 'red',
+  'OURS, red: you slam onto the floorboards (dust, camera hit at 614.9); behind you the white frame holds glass again: silvering crawls in '
+  'from the edges in 0.3 s; the steps glow; her figure climbs', HH(2.5, shake=18, hit=[(614.9, 16)], roll=8), tr='white',
+  chars=[C('you', [960, 960, 0.9], 'q_left', 'fear', [A(614.9, 'fall_back')], mode='lying')], props=dict(mirror='glass returning 614.9-615.2'),
+  energy='the fall, dust, silvering crawling in, red pulse')
+STATE(614.9, mirror='glass', doorway='none', flashlight='floor')
+X(T(262), 'MS', 'climax', 'cabin_now/master', 'red', 'Tess thrusts the towel at you', HH(3, shake=18),
+  chars=[body('tess', 960, 1060, 640, 'q_left', 'fear', [A(w(262, 'shoves'), 'shove', prop='towel')])], energy='the thrust')
+X(Wc(262, 'towel'), 'INSERT', 'climax', 'cabin_now/hands', 'red', 'insert: the towel shoved into your hands', P(4),
+  chars=[hands('you', 960, 600, 560, [A(R(0), 'take', prop='towel')], sleeve='olive')], energy='grabbing the towel')
+STATE(617.8, towel='your_hands')
+X(T(263), 'POV', 'climax', 'mirror/glass_cu', 'red', 'POV olive sleeve: steps 1, 2, 3 erased top-down, each numeral ticking off; tag TOP DOWN',
+  HH(3, shake=14), chars=[POVH([A(618.73, 'wipe_glass', strokes=3, dir='down', towel=True)], 1000, 500)],
+  hud=[count_pop(618.75, 1, 1230, 300, erase=True), count_pop(619.37, 2, 1178, 370, erase=True), count_pop(619.69, 3, 1126, 440, erase=True),
+       tag(619.40, 'TOP DOWN', 960, 150, 'lipstick', 0.6)], props=dict(erased='1-3 by 619.7'), energy='wipe strokes')
+STATE(619.7, erased=3)
+X(620.00, 'POV', 'climax', 'mirror/glass_cu', 'red', 'POV: steps 4-7 wiped away, numerals ticking off', HH(3, shake=12),
+  chars=[POVH([A(620.1, 'wipe_glass', strokes=2, dir='down', towel=True)], 960, 640)],
+  hud=[count_pop(620.15 + 0.15 * k, 4 + k, 1074 - 52 * k, 510 + 70 * k, erase=True) for k in range(4)], energy='wipe strokes')
+STATE(620.8, erased=7)
+X(621.10, 'INSERT', 'climax', 'mirror/glass_cu', 'red', 'the glass nearly clean: one streak of red left', P(3), energy='the last streak, red pulse')
+X(T(265), 'WS', 'climax', 'mirror/through', 'red',
+  'HOLD H8: through the last streak, her full figure lit red on the lower steps, lifting her foot toward a step that is no longer there',
+  P(3), hold='H8', chars=[Q('S3c', [960, 900, 380, 2.0], mode='body', acts=[A(w(265, 'lift'), 'lift_foot', hang=True)])],
+  q=dict(stage='S3c', size=0.35, where='through the streak, the lower steps', framing='WS 35 %', wrong='the foot finds no step'),
+  energy='the foot rising, red pulse 1.2 s')
+X(T(266), 'INSERT', 'climax', 'mirror/through', 'red', 'ECU: the foot hanging over nothing, red pulsing', P(3),
+  chars=[Q('S3c', [960, 880, 820], mode='feet', acts=[A(R(0), 'lift_foot', hang=True)])], energy='the foot trembling')
+X(T(267), 'INSERT', 'climax', 'mirror/glass_cu', 'red', 'the glass goes black from the edges in at 628.18', P(2),
+  fx_post=[dict(t=628.18, glitch=0.6, dur=0.08)], props=dict(mirror='dark at 628.18'), energy='black closing in')
+STATE(628.18, mirror='dark', queen='absent')
+X(628.55, 'BLACK', 'black', 'black/black', 'black', 'pure black for 0.5 s', P(0), tr='black', captions=False, energy='black (the sub-drop tail)')
+
+# ================================================================ ENDING 629.05 - 700 (lines 268-299)
+STATE(629.0, towel='draped_over_mirror', mirror='covered')
+X(T(268), 'WS', 'ending', 'cabin_now/floor_wide', 'after',
+  'ENDING wide: grown Noah sitting on the floor at adult scale (1.08x your height); the flashlight on the floor rakes a warm pool; the towel '
+  'draped over the dark mirror; the phone on the sill with its red glint', P(2.5), setup='END_WIDE', tr='cut',
+  chars=[body('noah_grown', 900, 900, 480, 'q_right', 'shaken', [A(R(0), 'rock')], seated=True), body('you', 1300, 900, 440, 'q_left', 'grief', [], seated=True)],
+  energy='dust in the floor beam, breath, push')
+X(Wc(268, 'sweatshirt'), 'MS', 'ending', 'cabin_now/floor_wide', 'after', 'MS: the green sweatshirt two sizes too small', P(3),
+  chars=[body('noah_grown', 960, 1060, 640, 'front', 'shaken', [A(R(0), 'tremble')], cuffs='halfway')], energy='trembling')
+X(T(269), '2S', 'ending', 'cabin_now/floor_wide', 'after', '2-shot side by side: he is bigger than you', P(3),
+  chars=[body('noah_grown', 760, 1060, 640, 'q_right', 'shaken', [], seated=True), body('you', 1180, 1060, 590, 'q_left', 'grief', [], seated=True)],
+  energy='breathing')
+X(T(270), 'MS', 'ending', 'cabin_now/floor_wide', 'after', 'you drape your olive jacket on him', P(3),
+  chars=[body('you', 1100, 1060, 600, 'q_left', 'grief', [A(w(270, 'jacket'), 'give_jacket')]), body('noah_grown', 820, 1060, 640, 'q_right', 'shaken', [])],
+  props=dict(jacket='noah at 635.06'), energy='the jacket swinging around')
+STATE(635.06, jacket='noah')
+X(T(271), 'INSERT', 'ending', 'cabin_now/hands', 'after', 'insert: his big hand on the corduroy collar', P(3),
+  chars=[hands('noah_grown', 960, 560, 560, [A(R(0), 'hold_collar')])], energy='fingers on the collar')
+X(Wc(271, 'and'), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU grown Noah: is Mom still up?', P(3),
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'hopeful', [A(R(0), 'talk_silent', dur=1.2)], light=L_END, eyes='brown')], energy='asking')
+X(T(272), 'INSERT', 'ending', 'cabin_now/clock', 'after', 'the Cabin 7 clock: 12:07', P(3), chip='CABIN 7 · {ours}',
+  device=DEV('insert', 'clock_1207', 'just after midnight: 12:07'), energy='second hand ticking forward')
+X(T(273), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU of you: of course she is', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_left', 'grief', [A(R(0.4), 'swallow')], light=L_END)], energy='a sad smile')
+X(T(274), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU of you: you haven\'t called her', P(3),
+  chars=[bust('you', 960, 560, 1.0, 'q_right', 'grief', [], light=L_END)], energy='breath')
+X(Wc(274, "you're"), 'MS', 'ending', 'cabin_now/floor_wide', 'after', 'you reach for your phone with your right hand; the left still a fist', P(3),
+  chars=[body('you', 960, 1060, 640, 'q_left', 'grief', [A(R(0.2), 'reach', side=1)], fist='left')], energy='reaching')
+X(T(275), 'POV', 'ending', 'cabin_now/hands', 'after', 'POV: your left fist trembles and will not open', P(3),
+  chars=[Fist(960, 620, 560, [A(R(0), 'tremble', amount=0.8), A(646.9, 'fist', fail_open=True)])], errfix=[17], energy='straining')
+STATE(645.0, fist='trembling')
+X(Wc(275, 'your', n=1), 'POV', 'ending', 'cabin_now/hands', 'after', 'ECU: the fingers straining, still closed', P(3.5),
+  chars=[Fist(960, 620, 700, [A(R(0), 'tremble', amount=0.9)])], errfix=[17], energy='fingers fighting')
+X(T(276), 'POV', 'ending', 'cabin_now/hands', 'after', 'the palm opens slowly', P(2.5),
+  chars=[POVH([A(649.2, 'open_fist', dur=1.8)], 960, 620, 600, hand='left')], errfix=[17], energy='fingers uncurling')
+STATE(649.12, fist='opening')
+X(T(277), 'POV', 'ending', 'cabin_now/hands', 'after', 'the red candy lies in the open palm', P(3),
+  chars=[POVH([A(R(0), 'open_hand')], 960, 620, 640, hand='left', candy='palm')], errfix=[4], device=DEV('insert', 'candy_palm', 'the candy, kept'),
+  energy='the candy rolling slightly')
+STATE(651.11, fist='palm_candy', candy='palm')
+X(Wc(277, 'mark'), 'INSERT', 'ending', 'cabin_now/hands', 'after', 'the red wrapper mark pressed in the palm BESIDE the candy', P(3.5),
+  chars=[POVH([A(R(0), 'open_hand')], 960, 620, 720, hand='left', candy='palm', mark=True)], errfix=[4], energy='push')
+X(T(278), 'UI', 'ui', 'ui/call', 'phone', 'calling MOM: one ring', HH(1.5, shake=6),
+  hud=[dict(t=T(278), type='phone', state='calling', name='MOM', x=960, y=560)], props=dict(your_phone='call_mom'),
+  device=DEV('ui', 'call', 'the call to Mom'), energy='call UI pulsing')
+X(Wc(278, 'on'), 'UI', 'ui', 'ui/call', 'phone', 'connected', P(2),
+  hud=[dict(t=Wc(278, 'on'), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), x=960, y=560)], energy='timer running')
+X(T(279), 'UI', 'ui', 'ui/call', 'phone', 'Mom\'s live waveform: "Did you find the sweatshirt?"', P(2),
+  hud=[dict(t=T(279), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=True, follow_line=279), x=960, y=560)],
+  energy='waveform moving with her voice')
+X(T(280), 'INSERT', 'ending', 'cabin_now/hands', 'after', 'insert: his big hand held out for the phone, shaking', P(3),
+  chars=[hands('noah_grown', 960, 600, 460, [A(w(280, 'holds'), 'hand_out'), A(R(0), 'tremble', amount=0.4)])], energy='hand out')
+X(Wc(280, 'for'), 'INSERT', 'ending', 'cabin_now/hands', 'after', 'the phone passes from your hand to his', P(4),
+  chars=[hands('you', 1000, 560, 420, [A(R(0.1), 'give', prop='phone')], sleeve='olive'), hands('noah_grown', 860, 600, 480, [A(R(0.2), 'take', prop='phone')])],
+  props=dict(your_phone='noah_hand'), energy='hand-off')
+X(T(281), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU of grown Noah, phone at his ear: "Hi, Mom." (lip-sync)', P(2.5),
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'relief_cry', [A(R(0), 'phone_to_ear', side=1), A(t(282), 'talk', line=282)], light=L_END, eyes='brown')],
+  energy='tears, push')
+X(e(282) + 0.02, 'CU', 'ending', 'cabin_now/bokeh', 'after',
+  'HOLD H9: the long pause: Noah\'s CU with tears running; the call waveform (small, lower right) goes flat; he says it again, softer', SIL(1.5), hold='H9',
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'relief_cry', [A(R(0.3), 'tears', amount=1.0), A(w(284, 'says'), 'talk_silent', dur=0.8)], light=L_END, eyes='brown')],
+  hud=[dict(t=e(282) + 0.05, type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=False, flat=True), x=1600, y=860, scale=0.4, inset=True)],
+  energy='tears running, slow push in the pause')
+X(T(285), 'UI', 'ui', 'ui/call', 'phone', 'the waveform spikes with the chair scrape', P(2),
+  hud=[dict(t=T(285), type='phone', state='connected', name='MOM', timer_from=w(278, 'up'), waveform=dict(live=True, spike_at=w(285, 'chair')), x=960, y=560)],
+  energy='spike')
+X(T(286), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU of Noah: she asks where he is', P(3),
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_left', 'hopeful', [A(R(0), 'phone_to_ear', side=1)], light=L_END, eyes='brown')], energy='listening')
+X(T(287), 'CU', 'ending', 'cabin_now/bokeh', 'after', 'CU of Noah looking at you for help', P(3),
+  chars=[bust('noah_grown', 960, 560, 1.0, 'q_right', 'fear', [A(R(0.2), 'look', x=1400, y=520, lost=True)], light=L_END, eyes='brown')], energy='the look')
+X(T(288), 'WS', 'memory', 'memory/moms_car', 'sepia_day', 'memory: Mom\'s car at the gate, a waving arm from the window (no face)', P(3), tr='sepia',
+  energy='the arm waving, dust from the tyres')
+X(Wc(288, 'she'), 'MS', 'memory', 'memory/moms_car', 'sepia_day', 'memory: kid Noah waving back, a duffel at his feet', P(3),
+  chars=[body('noah13', 960, 1040, 620, 'front', 'grin_kid', [A(R(0), 'wave')])], energy='waving')
+X(T(289), 'WS', 'ending', 'cabin_now/master', 'phone_glow', 'wide [R 109.8]: behind you, Tess at the sill', P(2.5), reuse=109.82, tr='sepia',
+  chars=[body('tess', 1120, 820, 380, 'back', 'neutral', [A(R(0.3), 'walk', to=1180)]), body('you', 760, 960, 300, 'q_right', 'grief', [], seated=True),
+         body('noah_grown', 600, 960, 320, 'q_right', 'hopeful', [], seated=True)], energy='Tess crossing, push')
+X(Wc(289, 'picks'), 'MS', 'ending', 'cabin_now/sill', 'phone_glow', 'Tess picks up her phone from the windowsill', P(3),
+  chars=[hands('tess', 960, 560, 420, [A(674.43, 'pick_up', prop='phone')], sleeve='orange')], props=dict(phone='tess_hand at 674.43'),
+  errfix=[16], energy='lifting the phone, dust trail')
+STATE(674.43, phone='tess_hand')
+X(T(290), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'the phone face up in her palm, the red glint in its glass', P(3), errfix=[16],
+  energy='the glint pulsing')
+X(677.34, 'MONTAGE', 'ending', 'cabin_now/sill', 'night',
+  'RED X (4 of 4) + tag FACE UP over a 1.4 s montage of the phone face up on the sill at 112, 150, 284 and 546 s (0.35 s each), each with the red glint',
+  P(4), montage=[dict(t=677.34, src_t=112.0), dict(t=677.69, src_t=150.0), dict(t=678.04, src_t=284.0), dict(t=678.39, src_t=546.0)],
+  hud=[redx(677.39, 960, 560, 170, 1.2, n=4), tag(677.45, 'FACE UP', 960, 150, 'lipstick', 1.2)], errfix=[16],
+  device=DEV('doc', 'face_up', 'the phone lay face up the whole time (a mirror nobody covered)'), energy='tiles cutting, the X')
+X(Wc(291, 'off'), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'insert: the orange sleeve wipes the black glass; it reflects her face',
+  P(3), chars=[hands('tess', 960, 560, 520, [A(679.15, 'wipe_glass', strokes=2, sleeve=True)], sleeve='orange')], energy='sleeve swiping')
+X(680.50, 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'Tess\'s face reflected in the wiped black glass', P(3),
+  chars=[bust('tess', 960, 560, 0.9, 'front', 'puzzled', [], light=L_PHONE, reflection=True)], energy='reflection sliding')
+X(T(292), 'CU', 'ending', 'cabin_now/bokeh', 'phone_glow', 'CU of Tess, puzzled: "Did you get lipstick on this?" (lip-sync), holding it out', P(3),
+  chars=[bust('tess', 960, 560, 1.0, 'q_right', 'puzzled', [A(t(292), 'talk', line=292), A(R(0), 'hold_up', prop='phone', side=-1)], light=L_PHONE)],
+  energy='talking')
+X(T(293), 'MS', 'ending', 'cabin_now/floor_wide', 'phone_glow', 'she holds the phone toward you', P(3),
+  chars=[body('tess', 960, 1060, 640, 'q_left', 'puzzled', [A(R(0), 'hold_up', prop='phone')])], errfix=[16], energy='holding it out')
+X(T(294), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow',
+  'the phone (in Tess\'s hand) fills the frame: 7 tiny lipstick steps, already there; numerals 1-4 pop on "count"', P(3.5),
+  hud=[count_pop(685.31 + 0.12 * k, k + 1, 1100 - 40 * k, 360 + 60 * k, '#ffffff') for k in range(4)], props=dict(phone='screen_steps'),
+  errfix=[25], device=DEV('diagram', 'D2_phone', 'seven tiny steps on the phone screen'), energy='numerals popping')
+STATE(684.98, phone='screen_steps')
+X(Wc(294, 'steps'), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'numerals 5-7 pop', P(3.5),
+  hud=[count_pop(686.45 + 0.12 * k, k + 5, 940 - 40 * k, 600 + 60 * k, '#ffffff') for k in range(3)], energy='numerals popping')
+X(T(295), 'POV', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'your fingertip slides below step 7', P(3),
+  chars=[POVH([A(w(295, 'touch'), 'touch_glass', at=(860, 800))], 980, 900, 480)], energy='the finger descending')
+X(T(296), 'POV', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'silence: the fingertip on a clean red line under the glass: the eighth', SIL(1.5),
+  chars=[POVH([A(R(0), 'touch_glass', at=(860, 860))], 980, 940, 480)], errfix=[15], energy='silence push')
+X(w(296, 'clicks'), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow',
+  'CLICK at 690.19 (the same sample as 143.29) with a camera hit and white flash; CLEAN GLASS echo', P(3, hit=[(690.19, 10)], snap=(690.19, 1.25)), tr='white',
+  hud=[label(690.3, 'CLEAN GLASS', [860, 860], dx=200, dy=-120)], props=dict(phone='screen_eighth'), errfix=[15],
+  device=DEV('insert', 'eighth_phone', 'the eighth line on the phone'), energy='the click, punch-in 1.25x')
+STATE(690.19, phone='screen_eighth')
+X(T(297), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow',
+  'HOLD H10: push into the screen: on the 8th line the Queen\'s tiny figure (3 % of the frame), looking up, then one step higher', P(4), hold='H10',
+  chars=[Q('S3c', [900, 860, 32, 1.04], mode='body', acts=[A(R(0), 'look_up'), A(694.3, 'climb_step', to=7)], tiny=True)],
+  q=dict(stage='S3c', step=8, size=0.03, where='in the phone', framing='3 %', wrong='starting again'), energy='push 4 %/s into the screen')
+STATE(691.86, phone='screen_queen', queen='phone')
+X(T(298), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'Tess\'s face reflected in the glass, then gone', P(4),
+  chars=[bust('tess', 960, 560, 0.9, 'front', 'neutral', [A(R(0.5), 'fade_out')], light=L_PHONE, reflection=True)], energy='the reflection fading')
+X(T(299), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow',
+  'the screen: Noah13\'s face speaks "Can I have one more minute?" (lip-sync); on "minute?" (697.95) it pixel-sorts into her S3c face looking '
+  'into the lens; hard cut at 698.62', P(4),
+  chars=[bust('noah13', 960, 540, 1.0, 'front', 'calm_kid', [A(t(299), 'talk', line=299)], inside='phone_screen'),
+         Q('S3c', [960, 540, 1.0], acts=[A(697.95, 'pixel_sort_in', dur=0.3), A(698.1, 'stare')], inside='phone_screen')],
+  fx_post=[dict(t=697.95, glitch=0.9, pixel_sort=1.0, dur=0.3)], voice_fx='phone_child',
+  q=dict(stage='S3c', size=0.60, where='the phone', framing='60 %', wrong='looks into the lens (3 of 3)'), energy='lip-sync, pixel-sort')
+STATE(697.95, phone='screen_face')
+X(round(e(299) + 0.04, 3), 'BLACK', 'black', 'black/black', 'black',
+  'black: a faint perfect bell; type beat 6: DON\'T MAKE A WISH. fades in at 698.75, WISH in lipstick red', P(0), tr='black', captions=False,
+  hud=[typebeat(698.75, 6, "DON'T MAKE A WISH.", red_word='WISH', fade=0.4)], energy='the end card fading in')
