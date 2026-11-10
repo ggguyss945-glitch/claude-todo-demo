@@ -176,7 +176,7 @@ def _char_layer(rig, at, mode, store, sh, spec, sp):
             for _ in range(n): cv.restore()
     L_ = Layer(d, draw, 'char_' + rig.who, ref_depth=d)
     if refl:
-        L_.alpha = 0.42; L_.tint = ('#a9b6ff', 0.45)
+        L_.alpha = 0.34; L_.tint = ('#a9b6ff', 0.5)
     if spec.get('soft_focus'):
         L_.blur = 5.0
     return L_
@@ -228,8 +228,8 @@ def _knot_echo(film, sh):
 def _glass_pair(film, sh):
     """The mirror reads as glass (error 33): your and Tess's reflections stand in it, faint and cool (placed on the glass
     polygon in build: `_glass_rel` = [x, y, size] as fractions of the glass bbox)."""
-    return [dict(who='tess', mode='bust', view='q_right', expr='tense', acts=[], reflection=True, _glass_rel=[0.36, 0.34, 0.15]),
-            dict(who='you', mode='bust', view='q_left', expr='dread', acts=[], reflection=True, _glass_rel=[0.64, 0.31, 0.17])]
+    return [dict(who='tess', mode='bust', view='q_right', expr='tense', acts=[], reflection=True, _glass_rel=[0.36, 0.25, 0.085]),
+            dict(who='you', mode='bust', view='q_left', expr='dread', acts=[], reflection=True, _glass_rel=[0.64, 0.23, 0.095])]
 
 
 EXTRA_CHARS = {'S281': _knot_echo, 'S067': _glass_pair, 'S078': _glass_pair}
@@ -427,7 +427,8 @@ class Film:
         if sh['id'] in EXTRA_CHARS:
             chars = list(chars) + EXTRA_CHARS[sh['id']](self, sh)
         s2 = dict(sh, chars=chars) if chars is not sh['chars'] else sh
-        sp = ST.build_shot(s2)
+        s_set = dict(s2, chars=[c for c in chars if not c.get('_glass_rel')]) if any(c.get('_glass_rel') for c in chars) else s2
+        sp = ST.build_shot(s_set)
         B = Built(); B.sh, B.idx, B.sp = sh, k, sp
         layers = list(sp); rigs = []; subj = []
         for spec in chars:
@@ -438,7 +439,7 @@ class Film:
                 gx = [float(q[0]) for q in g]; gy = [float(q[1]) for q in g]
                 fx_, fy_, fs_ = spec2['_glass_rel']
                 gh = max(gy) - min(gy)
-                spec2['at'] = [min(gx) + fx_ * (max(gx) - min(gx)), min(gy) + fy_ * gh, fs_ * gh / 600.0 * 1.6]
+                spec2['at'] = [min(gx) + fx_ * (max(gx) - min(gx)), min(gy) + fy_ * gh, fs_ * gh / 600.0]
             ov = SEAT.get((sh['id'], spec2['who']))
             if ov and ov.get('skip'): continue
             if ov: spec2.update({k_: v_ for k_, v_ in ov.items() if k_ not in ('scale', 'skip')})
@@ -469,9 +470,17 @@ class Film:
                 _warn((sh['id'], spec['who'], 'rig'), 'rig failed %s %s: %r' % (sh['id'], spec['who'], e)); continue
             mode = spec2.get('mode', 'body')
             st_ = {} if (rig.who == 'tess' and mode == 'body') else None
+            if spec2.get('reflection') and sh['set'] == 'mirror':            # in the glass: behind the lipstick on it
+                try: spec2['_depth'] = float(sp.layer('lipstick').depth) + 0.001
+                except KeyError: pass
+            if spec2.get('reflection') and mode == 'hands':                 # the hand on the glass AND its reflection
+                real = dict(spec2, reflection=False); real.pop('_depth', None)
+                layers.append(_char_layer(rig, at, mode, None, sh, real, sp))
+                at = [float(at[0]) + 0.34 * float(at[2]), float(at[1]) - 0.04 * float(at[2])] + list(at[2:])
             L_ = _char_layer(rig, at, mode, st_, sh, spec2, sp)
             if st_ is not None: _hook_beam(sp, rig, at, L_, st_)
-            layers.append(L_); rigs.append(rig); subj.append((mode, L_))
+            layers.append(L_); rigs.append(rig)
+            if not spec2.get('reflection'): subj.append((mode, L_))
         layers += self._split_replays(sh)
         dl = ui_v2.doc_layer(sh)
         if dl is not None: layers.append(dl)
