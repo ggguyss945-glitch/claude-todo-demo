@@ -20,12 +20,18 @@ Everything comes from plan/shots.json (PLAN_V2.md):
     ending_v2, phone_dark); rule cards take the grade of their background world. The cast is never dimmed (the v2 grades
     do not lift exposure);
   - the cast: one characters.CharRig layer per chars[] entry (stages, acting clips on the word, lip-sync from the
-    timeline). Bodies are re-seated on the set's floor (`seat`: the plan's x, y are kept as the aim, the height and layer
-    depth come from the room's 3D camera, named anchors where the plan names a place); `reflection` entries are drawn
-    mirrored, cool and faint inside the glass, `in_glass` / `through_glass` / `inside` entries are clipped to the glass or
-    the phone screen, `soft_focus` entries are blurred;
+    timeline), staged on the set (`stage`: kneels and sits become clips, seated people on the other side sit on Noah's
+    mattress from the room's 3D camera, H2's glide ends in her seat, standing sizes kept within 0.75-1.33x of what the
+    room says at the feet, the section's figures on its treads, `SEAT` per-shot overrides, `EXTRA_CHARS` for the cast the
+    plan leaves out) and placed in depth (`place`: just in front of the room's distance band that holds their feet;
+    busts, hands, feet and OTS figures in front of the room; the DOF focus follows the subject). `reflection` entries
+    are drawn mirrored, cool and faint inside the glass (behind the lipstick), `in_glass` / `through_glass` / `inside`
+    entries are clipped to the glass or the phone screen, `soft_focus` entries are blurred;
   - the camera: the plan keys (pushes about 3 %/s, pull-outs, whips, dutch roll in the climax), snaps (punch-ins), hits,
-    handheld for shake >= 8;
+    handheld for shake >= 8, plus a uniform 1.4 %/s post push (pull on pull-outs) because the dolly's parallax scales
+    the far layers less than the nominal rate;
+  - the light: the set's arc_fx plus LIGHT_TRIM (tenths 1-2 and the ending measured dark on the preview), a 1.06
+    saturation lift outside the climax, half bloom on people's close-ups;
   - transitions: cut, glint (the 3-frame glass glint, ui_v2), white (3-frame flash), glitch (2 frames of static + RGB
     split), rewind (tear + back-scrub, ui_v2), sepia (a 0.2 s paper wipe into and out of the memories), smear (the card's
     finger-wipe carried over, ui_v2), black; in-shot fx_post white / glitch / static / rewind / pixel_sort;
@@ -223,6 +229,11 @@ def _hook_beam(sp, rig, at, layer, store):
         off = 0.07 * h
         return (hx + dx / L * off, hy + dy / L * off, ax, ay, k)
     B.override = ov
+
+
+class _NoSet:
+    """A set stand-in for stage() when only the acting matters (events)."""
+    info, anchors = {}, {}
 
 
 # ==================================================================================================== cast the plan leaves out
@@ -702,9 +713,13 @@ class Film:
         for k, sh in enumerate(self.shots):
             sid = sh['id']
             rigs_ = []
-            for spec in sh['chars'] or []:
+            chars_ = list(sh['chars'] or []) + (EXTRA_CHARS[sid](self, sh) if sid in EXTRA_CHARS else [])
+            for spec in chars_:
+                if spec.get('_glass_rel') or (SEAT.get((sid, spec['who'])) or {}).get('skip'): continue
                 try:
-                    rigs_.append(CH.CharRig(dict(spec, at=spec['at'] if not isinstance(spec.get('at'), str) else [960, 540, 600, 1.0]), sh))
+                    sp0 = dict(spec, at=spec['at'] if not isinstance(spec.get('at'), str) else [960, 540, 600, 1.0])
+                    sp0 = stage(_NoSet(), sp0, sh)                  # the same acting as the picture (no set geometry)
+                    rigs_.append(CH.CharRig(sp0, sh))
                 except Exception:
                     continue
             drop_walks(sid, [(e['name'], float(e['t'])) for r_ in rigs_ for e in r_.events
