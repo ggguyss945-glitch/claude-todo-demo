@@ -1614,7 +1614,8 @@ X(T(257), 'POV', 'climax', 'stairs/pov_down', 'red',
   'hem with spade pips), hit at 605.21 -> tilt up the dress to her S3c face 30 cm away, grin widening, a hand rising toward your shoulder',
   TL(dy=-420, r=3, x=960, y=760, z=1.1, hit=[(605.21, 14)]), hold='H7', tr='cut',
   chars=[C('you', [960, 980, 900], 'front', 'neutral', [], mode='feet', pov=True),
-         Q('S3c', [960, 760, 1.0], mode='body', acts=[A(605.21, 'step_up'), A(606.2, 'grin_widen'), A(606.6, 'reach_shoulder')])],
+         Q('S3c', [960, 300, 400], mode='feet', pov=True, acts=[A(605.17, 'fade_in', dur=0.05), A(605.21, 'toes_curl'), A(606.0, 'fade_out', dur=0.14)]),
+         Q('S3c', [960, 330, 1.35], mode='bust', acts=[A(605.96, 'fade_in', dur=0.14), A(606.2, 'grin_widen'), A(606.6, 'reach_shoulder')])],
   q=dict(stage='S3c', step='below yours', size=1.0, where='the step below yours', framing='POV, 100 %', wrong='30 cm away'),
   errfix=[27], energy='the tilt up from her foot to her face, the hit')
 STATE(604.48, queen='step_below_yours')

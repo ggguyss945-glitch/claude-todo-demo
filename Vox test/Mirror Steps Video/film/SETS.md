@@ -662,3 +662,14 @@ Measured luma p50 on the stills (960x540, cast included), against the targets:
   Single shots: `... sheet.jpg S119 S150@340.1`.
 - Benchmark: `OMP_NUM_THREADS=1 python3 tools/sets_bench.py --combos` (or a list of shot ids). It prints the first frame
   and the warm median and max per view.
+## Gate review changes (G1 + G2)
+
+- **Tess's beam reads in OURS wides.** `_ours_light` put the beam's source behind the camera, so `draw_beam` fell back to
+  its off-frame wash and the cone never showed. The source is now just off the lower-left corner (`cam.C + 0.9 fwd - 0.7
+  right - 0.45 up`), alpha 0.52, hot spot 230, and `beam_layers` adds a warm floor pool (`#f0a84e` / `#ffd58a`,
+  layer `beam_pool`) under the hot spot: the OURS signature "blue-violet night with a warm beam" is visible.
+- **Moon shafts** a little stronger in OURS (alpha 44, `after` 26).
+- Measured on plan shots with the cast (640x360): S055 master p50 101 / p95 184 / p95-p5 146 / std 48 (was 97 / 166 / 128
+  / 41); S177 doorway master p95 190, contrast 154.
+- **`dawn_queen_v2`** (engine/post.py): cooler white balance and a dark floor `#2e2428`, so her black satin and hair
+  stay black near her instead of brown.

@@ -26,7 +26,22 @@ PLATES = {  # top, bottom, bokeh discs (DIRECTION_V2 1.2 / 4.7)
     'memory': ('#f1e2c4', '#c9a878', ['#fff3dc', '#f1e2c4', '#e8d2a8']),
     'grey': ('#5a6070', '#3a3f4a', ['#7a8090', '#8a90a0', '#6a7080']),
 }
-LIGHT = {'ours': 'moon', 'theirs': 'dawn', 'stairs': None, 'climax': 'red', 'memory': None, 'grey': None}
+PLATES['theirs_q'] = PLATES['theirs']                      # THEIRS near the queen: graded dawn_queen_v2
+LIGHT = {'ours': 'moon', 'theirs': 'dawn', 'theirs_q': 'dawn', 'stairs': None, 'climax': 'red', 'memory': None, 'grey': None}
+# every cell goes through its world's v2 grade (engine/post.py, no vignette), so the sheets show the film's values; the
+# cast is drawn pre-grade (the Queen's porcelain only reads right graded). --raw skips it.
+GRADE = {'ours': 'night_v2', 'theirs': 'dawn_v2', 'theirs_q': 'dawn_queen_v2', 'stairs': 'stairs_v2', 'climax': 'climax_v2', 'memory': 'memory_sepia', 'grey': None}
+RAW = '--raw' in sys.argv
+if RAW: sys.argv.remove('--raw')
+
+
+def grade_bgr(img, key):
+    """img BGR u8 -> the world's v2 grade (LUT, colour matrix, small-feature bloom; no vignette)."""
+    if RAW or not GRADE.get(key): return img
+    from engine import post
+    g = post.get_grade(GRADE[key])
+    br = post.bloom_src(img, g.p['bloom_thr'])
+    return post.apply_grade(np.ascontiguousarray(img), g, {}, bright=br, skip_vignette=True)
 
 
 def plate(cv, w, h, key, seed=0):
@@ -66,6 +81,7 @@ class Sheet:
         text(cv, self.title, W / 2, 34, 800, 20, '#ffffff', 255)
         for i, n in enumerate(self.notes): text(cv, n, W / 2, 58 + 20 * i, 600, 13, '#c8c8d8', 255)
         t_all = time.time()
+        cells = []
         for r, c, label, fn, bg, sw, sh in place:
             x0, y0, w, h = c * self.cw, top + r * self.ch, self.cw * sw, self.ch * sh
             cv.save(); cv.translate(x0, y0); cv.clipRect(skia.Rect.MakeWH(w - 2, h - 2))
@@ -78,10 +94,17 @@ class Sheet:
                 cv.restore(); cv.save()
                 text(cv, 'ERR ' + repr(e)[:60], w / 2, h / 2, 700, 12, '#ff5050')
             cv.restore()
-            lc = '#101216' if bg in ('theirs', 'memory') else '#ffffff'
-            text(cv, label, 8, h - 10, 700, 13, lc, 230, align='left')
+            cells.append((x0, y0, w - 2, h - 2, bg, label))
             cv.restore()
-        surf.makeImageSnapshot().save(path, skia.kPNG)
+        arr = surf.makeImageSnapshot().toarray()
+        for x0, y0, w, h, bg, label in cells:
+            arr[y0:y0 + h, x0:x0 + w, :3] = grade_bgr(np.ascontiguousarray(arr[y0:y0 + h, x0:x0 + w, :3]), bg)
+        surf2 = skia.Surface(W, H); cv2_ = surf2.getCanvas()
+        cv2_.drawImage(skia.Image.fromarray(np.ascontiguousarray(arr), skia.kBGRA_8888_ColorType), 0, 0)
+        for x0, y0, w, h, bg, label in cells:
+            lc = '#101216' if bg in ('theirs', 'theirs_q', 'memory') else '#ffffff'
+            text(cv2_, label, x0 + 8, y0 + h - 8, 700, 13, lc, 230, align='left')
+        surf2.makeImageSnapshot().save(path, skia.kPNG)
         print('%s  %dx%d  %.1fs' % (path, W, H, time.time() - t_all))
 
 
@@ -151,7 +174,7 @@ def face_luma(stage, bg, scale=0.62):
     cv.save(); cv.scale(w / 1920.0, h / 1080.0)
     C.draw_bust(Pen(cv), 'queen', 960, 560, scale, qpose(stage), light=LIGHT[bg], t=1.0)
     cv.restore()
-    a = surf.makeImageSnapshot().toarray()[:, :, :3].astype(np.float32)
+    a = grade_bgr(np.ascontiguousarray(surf.makeImageSnapshot().toarray()[:, :, :3]), bg).astype(np.float32)
     lum = 0.299 * a[:, :, 2] + 0.587 * a[:, :, 1] + 0.114 * a[:, :, 0]
     # the face: centre box of the head (scale 0.62 -> head ~372 design px ~ 124 px at 640)
     cx, cy = w // 2, int(560 / 1080 * h)
@@ -171,17 +194,17 @@ def talk_r(line):
 # ------------------------------------------------------------------ the queen
 def queen_sheet():
     S = Sheet('THE QUEEN OF SPADES v2 (queen): a playing-card queen in the cast language; one face, stages S0-S4 (DIRECTION_V2 §3)', cols=4)
-    lum = {bg: face_luma('S1', bg) for bg in ('ours', 'theirs', 'climax')}
+    lum = {bg: face_luma('S1', bg) for bg in ('ours', 'theirs_q', 'climax')}
     rs = {li: talk_r(li) for li in (97, 110, 196)}
     S.notes.append('face highlight luma p99.5 (target >= 200): OURS %.0f | THEIRS %.0f | CLIMAX %.0f      talk_line r (target >= 0.8): '
-                   'line 97 %.2f | line 110 %.2f | line 196 %.2f' % (lum['ours'][0], lum['theirs'][0], lum['climax'][0], rs[97], rs[110], rs[196]))
+                   'line 97 %.2f | line 110 %.2f | line 196 %.2f' % (lum['ours'][0], lum['theirs_q'][0], lum['climax'][0], rs[97], rs[110], rs[196]))
     S.notes.append('signature: crown of 5 spade points on a silver band, fan collar, spade beauty mark, lipstick-red right index and middle '
                    'fingertips, spade-pip hem; she never blinks or breathes; outline plum #2b1a2a at 0.75x')
     S.add('S1 the calm face (OURS, 197.7 s)', qbust('S1', 1.15, cy=600), 'ours', (2, 2))
     S.add('S3c the full face (THEIRS, 531.7 s)', qbust('S3c', 1.15, cy=600, m_open=0.15), 'theirs', (2, 2))
     labels = {'S0': 'S0 hidden (3.3 s, 148.4 s)', 'S1': 'S1 calm, no blink', 'S2': 'S2 the drawn stair smile (283.7)', 'S3a': 'S3a it splits: flat teeth (479.2)',
               'S3b': 'S3b red eyes (496.8)', 'S3c': 'S3c folds, cracks, tears (531.7)', 'OFF': 'OFF the smile goes off (533.68)', 'S4': 'S4 the jaw void (589.6)'}
-    bgs = {'S0': 'stairs', 'S1': 'ours', 'S2': 'ours', 'S3a': 'theirs', 'S3b': 'theirs', 'S3c': 'theirs', 'OFF': 'theirs', 'S4': 'climax'}
+    bgs = {'S0': 'stairs', 'S1': 'ours', 'S2': 'ours', 'S3a': 'theirs_q', 'S3b': 'theirs_q', 'S3c': 'theirs_q', 'OFF': 'theirs_q', 'S4': 'climax'}
     for st in ('S0', 'S1', 'S2', 'S3a', 'S3b', 'S3c', 'OFF', 'S4'):
         kw = dict(m_open=0.45) if st == 'S4' else {}
         S.add('front  ' + labels[st], qbust(st, 0.66, cy=560, **kw), bgs[st])
@@ -200,7 +223,7 @@ def queen_sheet():
     def off(a):
         a.set(-1e9, None, 0.01, **C.queen_stage('S3c')); a.still(530.0); a.smile_off(533.68, 0.033)
     for t in (533.60, 533.69, 533.72, 534.2):
-        S.add('smile off  t=%.2f' % t, actor('queen', off, 'bust', [960, 560, 0.75], t), 'theirs')
+        S.add('smile off  t=%.2f' % t, actor('queen', off, 'bust', [960, 560, 0.75], t), 'theirs_q')
     def jaw(a):
         a.set(-1e9, None, 0.01, **C.queen_stage('OFF')); a.still(585.0); a.jaw_drop(589.6, 0.3); a.talk_line(589.6, 249)
     for t in (589.55, 589.75, 590.05, 590.9):
@@ -212,7 +235,7 @@ def queen_sheet():
     def s3talk(a):
         a.set(-1e9, None, 0.01, **C.queen_stage('S2')); a.still(476.0); a.talk_line(478.2, 196); a.split_open(479.24, 0.12)
     for t in (479.1, 479.4):
-        S.add('H3 on "back" the drawing splits  t=%.1f' % t, actor('queen', s3talk, 'bust', [960, 560, 0.9], t), 'theirs')
+        S.add('H3 on "back" the drawing splits  t=%.1f' % t, actor('queen', s3talk, 'bust', [960, 560, 0.9], t), 'theirs_q')
     # turnaround
     for turn, nm in ((0.0, 'front'), (0.5, '3/4 right'), (-0.5, '3/4 left'), (1.5, 'back 3/4'), (2.0, 'back (S0)')):
         S.add('turnaround %s  (1.12x adult, head 1/7.5)' % nm, qbody('S0' if turn == 2.0 else 'S1', h=1000, turn=turn), 'ours')
@@ -220,9 +243,9 @@ def queen_sheet():
     def sit(a):
         a.set(-1e9, None, 0.01, **C.queen_stage('S2')); a.still(460.0); a.sit_beside(465.4, 1.2)
     for t in (465.3, 466.0, 466.7):
-        S.add('H2 the sit: 1.2 s glide, no bob  t=%.1f' % t, actor('queen', sit, 'body', [960, 1050, 900], t), 'theirs')
+        S.add('H2 the sit: 1.2 s glide, no bob  t=%.1f' % t, actor('queen', sit, 'body', [960, 1050, 900], t), 'theirs_q')
     S.add('seated 3/4, patting the dip (488 s)', actor('queen', lambda a: (a.set(-1e9, None, 0.01, sit=1.0, turn=-0.5, **C.queen_stage('S3a')),
-                                                                         a.pat(488.0, 2, 0.32)), 'body', [960, 1050, 900], 488.1), 'theirs')
+                                                                         a.pat(488.0, 2, 0.32)), 'body', [960, 1050, 900], 488.1), 'theirs_q')
     S.add('calling (576.4 s, S3c)', actor('queen', lambda a: (a.set(-1e9, None, 0.01, **C.queen_stage('S3c')), a.call_silent(576.4, 1.4)),
                                         'bust', [960, 560, 0.7], 577.0), 'climax')
     S.add('climbing the stairs (S0, 6.1 s)', actor('queen', lambda a: (a.set(-1e9, None, 0.01, turn=-0.5, **C.queen_stage('S0')), a.climb(5.0, 0.8)),
@@ -231,7 +254,7 @@ def queen_sheet():
                                                                           a.lift_foot(622.9, 0.3, 2.0)), 'body', [960, 1050, 900], 624.5), 'climax')
     # hands and feet
     S.add('hand through the towel (252.5 s): the press', actor('queen', lambda a: a.press_through_cloth(253.8, 0.8), 'hands', [960, 560, 380], 254.8), 'ours')
-    S.add('the pat (475.8 s), red fingertips', actor('queen', lambda a: a.pat(476.0, 2, 0.32), 'hands', [960, 640, 440], 476.1), 'theirs')
+    S.add('the pat (475.8 s), red fingertips', actor('queen', lambda a: a.pat(476.0, 2, 0.32), 'hands', [960, 640, 440], 476.1), 'theirs_q')
     S.add('her hand on the doorway frame (H1)', actor('queen', lambda a: a.set(-1e9, None, 0.01, ir_shape='relaxed', ir_a=200.0),
                                                     'hands', [960, 600, 420], 1.0), 'ours')
     S.add('reaching for your shoulder (H7)', actor('queen', lambda a: a.set(-1e9, None, 0.01, ir_shape='claw', ir_a=160.0, ins_k=1.3),
@@ -246,7 +269,7 @@ def thumb_sheet():
     """The thumbnail test (DIRECTION_V2 3.1): at 160 px wide a stranger must read crown, collar, red lips, pale face."""
     big = os.path.join(OUT, '_thumb_big.png')
     S = Sheet('thumbnail test: each cell is rendered at 1920x1080 and shown at 160 px wide (crown, collar, red lips, pale face)', cols=4, cw=480, ch=270)
-    S.add('S3c bust', qbust('S3c', 0.62, cy=560, m_open=0.1), 'theirs')
+    S.add('S3c bust', qbust('S3c', 0.62, cy=560, m_open=0.1), 'theirs_q')
     S.add('S1 bust', qbust('S1', 0.62, cy=560), 'ours')
     S.add('full figure S1', qbody('S1', h=1000), 'ours')
     S.add('S4', qbust('S4', 0.62, cy=540, m_open=0.45), 'climax')
@@ -280,12 +303,14 @@ def compare_sheet():
         h = 540; im = cv2.resize(im, (int(im.shape[1] * h / im.shape[0]), h))
         rows.append(im[:, :min(im.shape[1], 1920)])
     surf = skia.Surface(1920, 540); cv = surf.getCanvas()
-    for i, (st, bg, kw) in enumerate((('S1', 'ours', {}), ('S2', 'ours', {}), ('S3c', 'theirs', dict(m_open=0.15)), ('S4', 'climax', dict(m_open=0.45)))):
+    for i, (st, bg, kw) in enumerate((('S1', 'ours', {}), ('S2', 'ours', {}), ('S3c', 'theirs_q', dict(m_open=0.15)), ('S4', 'climax', dict(m_open=0.45)))):
         cv.save(); cv.translate(i * 480, 0); cv.clipRect(skia.Rect.MakeWH(478, 540)); plate(cv, 480, 540, bg, i)
         cv.scale(0.5, 0.5); cv.translate(-480.0, 0.0)
         C.draw_bust(Pen(cv), 'queen', 960, 560, 0.95, qpose(st, **kw), light=LIGHT[bg], t=1.0)
         cv.restore()
     ours = cv2.cvtColor(surf.makeImageSnapshot().toarray(), cv2.COLOR_BGRA2BGR)
+    for i, bg in enumerate(('ours', 'ours', 'theirs_q', 'climax')):
+        ours[:, i * 480:i * 480 + 478] = grade_bgr(np.ascontiguousarray(ours[:, i * 480:i * 480 + 478]), bg)
     W = max([r.shape[1] for r in rows] + [1920])
     pad = lambda im: np.hstack([im, np.full((im.shape[0], W - im.shape[1], 3), 12, np.uint8)]) if im.shape[1] < W else im   # noqa: E731
     out = np.vstack([pad(ours)] + [pad(r) for r in rows])

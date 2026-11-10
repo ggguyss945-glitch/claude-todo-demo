@@ -93,7 +93,7 @@ _V2 = dict(
                       wb=(1.04, 0.98, 0.88), floor='#2e2218', bloom=0.6, bloom_thr=236, bloom_r=18.0, vignette=0.6,
                       grain=2.5, soft=0.8),
 )
-_V2['dawn_queen_v2'] = dict(_V2['dawn_v2'], sat=1.0, wb=(1.0, 0.99, 0.95), vignette=0.5)
+_V2['dawn_queen_v2'] = dict(_V2['dawn_v2'], sat=1.0, wb=(0.99, 0.99, 0.98), vignette=0.5, floor='#2e2428')   # cooler; her black stays black
 _V2['dawn_break_v2'] = dict(_V2['dawn_queen_v2'], contrast=1.1, sat=0.95)
 GRADES.update(_V2)
 

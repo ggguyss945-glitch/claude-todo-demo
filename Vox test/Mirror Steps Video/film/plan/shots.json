@@ -51137,14 +51137,54 @@
     },
     {
      "who": "queen",
-     "at": [960, 760, 1.0],
+     "at": [960, 300, 400],
      "view": "front",
      "expr": "queen_full",
      "acts": [
       [
+       605.17,
+       "fade_in",
+       {
+        "dur": 0.05
+       }
+      ],
+      [
        605.21,
-       "step_up",
+       "toes_curl",
        {}
+      ],
+      [
+       606.0,
+       "fade_out",
+       {
+        "dur": 0.14
+       }
+      ]
+     ],
+     "mode": "feet",
+     "stage": "S3c",
+     "pov": true,
+     "light": {
+      "key_c": "#e8ecff",
+      "key_from": "below_front",
+      "rim": "#ff3b5c",
+      "rim_a": 140,
+      "bloom": 1.5,
+      "drain_px": 450
+     }
+    },
+    {
+     "who": "queen",
+     "at": [960, 330, 1.35],
+     "view": "front",
+     "expr": "queen_full",
+     "acts": [
+      [
+       605.96,
+       "fade_in",
+       {
+        "dur": 0.14
+       }
       ],
       [
        606.2,
@@ -51157,7 +51197,7 @@
        {}
       ]
      ],
-     "mode": "body",
+     "mode": "bust",
      "stage": "S3c",
      "light": {
       "key_c": "#e8ecff",

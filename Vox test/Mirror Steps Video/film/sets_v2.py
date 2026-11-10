@@ -1389,6 +1389,11 @@ def beam_layers(cam, xf, d0, st, src, aims, seed=0, wobble=9.0, spread=0.26, spo
                           and len(aims[0]) == 2 and isinstance(aims[0][0], (int, float))) else aims
     dep = depth or sdep(cam, xf, d0, aim0, 0.006)
     L = [b.layer(dep, 'beam')]
+
+    def pool(pen, t, b=b):                                   # DIRECTION_V2 1.2: the beam's warm floor pool (#f0a84e / #ffd58a)
+        sx, sy, ax, ay, k = b.at(t)
+        if k > 0.01: hot_spot(pen, ax, ay, b.spot * 1.35, k * 0.75, 0.5, c='#f0a84e', core='#ffd58a')
+    L.append(_live(dep * 1.001, pool, 'beam_pool', blur=0))
     if n_dust:
         bx = dust_box or (min(s2[0], (a2 if isinstance(a2, tuple) else a2[0][1:])[0]) - 300, -100, 2100, 1200)
         L.append(_live(dep * 0.97, lambda pen, t: motes(pen, t, bx, n_dust, seed + 9, b, amb=0.05), 'dust', blur=0))
@@ -1574,7 +1579,7 @@ def _ours_light(cx, cam, xf, d0, st, vname, info, beam=True):
     P = cx.P
     var = cx.var
     if var in ('night', 'flash', 'doorway_glow', 'after', 'phone_glow'):
-        L += shaft_layer(cam, xf, d0, '%s:%s' % (vname, var), P, False, 30 if var != 'after' else 22)
+        L += shaft_layer(cam, xf, d0, '%s:%s' % (vname, var), P, False, 44 if var != 'after' else 26)
     if 'clock' in info and cam.dist(xf.p(info['clock'][0])) > 0.3:
         L.append(clock_live(cam, xf, d0, info, st, 'ours'))
     ms = cx.mirror_state
@@ -1584,9 +1589,9 @@ def _ours_light(cx, cam, xf, d0, st, vname, info, beam=True):
         # Tess stands beside or behind the camera: her lamp enters from the lower left, off frame (the assembler drives
         # the beam from her rig when she is in shot: sp.info['beam'].override)
         R = cam.R
-        src = cam.C + R[2] * 0.45 - R[0] * 0.6 - R[1] * 0.3
+        src = cam.C + R[2] * 0.9 - R[0] * 0.7 - R[1] * 0.45     # just off the lower-left corner: the cone crosses the frame
         bl, b = beam_layers(cam, xf, d0, st, src, [(t0, aim + v3(0.15, 0.1, 0)), (t0 + 1.2, aim + v3(-0.1, -0.05, 0)),
-                                                   (t0 + 2.6, aim + v3(0.08, 0.12, 0))], seed=int(t0) % 17)
+                                                   (t0 + 2.6, aim + v3(0.08, 0.12, 0))], seed=int(t0) % 17, a=0.52, spot=230)
         L += bl
     if ms in ('glass', 'dark') and cam.dist(xf.p(v3(2.66, 0.8, 6.3))) > 0.3:
         L.append(steps_live(cam, xf, d0, st, var))

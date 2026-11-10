@@ -5002,7 +5002,9 @@ def draw_feet_pov(pen, who, x, y, size, pose=None, detail=2, light=None, t=None)
         lw = fc.lw
         d = 1.0 if q else -1.0                               # toes toward +y (queen, at you) or -y (yours, away)
         med = -side * (1.0 if q else -1.0)                   # the big toe on the inner side
-        if q or _bare_side(sp, side) or sp['outfit'] == 'dress':
+        if q:                                                # her foot from above: a scalloped toe line, pale nails
+            _q_foot_top(fc, med, curl, lw, detail, light)
+        elif _bare_side(sp, side) or sp['outfit'] == 'dress':
             sk = QV['foot'] if q else sp['skin']; sh = QV['foot_sh'] if q else sp['skin_sh']
             tl = 0.5 - 0.04 * curl
             pts = [(-0.085, -0.5), (0.085, -0.5), (0.11, -0.3), (0.12 + 0.03 * med, -0.05), (0.17 + 0.02 * med, 0.2), (0.17, tl - 0.12),
@@ -5020,15 +5022,25 @@ def draw_feet_pov(pen, who, x, y, size, pose=None, detail=2, light=None, t=None)
             tk = 1.2 if q else 1.0
             for i in range(4, -1, -1):                       # little toe first, the big toe on top
                 f = i / 4.0
-                tx = med * lerp(0.105, -0.125, f); r_ = lerp(0.05, 0.027, f)
-                L_ = r_ * (2.3 if i == 0 else 2.0) * tk * (1.0 - 0.22 * curl)
+                tx = med * lerp(0.105, -0.125, f); r_ = lerp(0.05, 0.027, f) * (0.86 if q else 1.0)
+                L_ = r_ * ((3.0 if i == 0 else 2.7) if q else (2.3 if i == 0 else 2.0)) * tk * (1.0 - 0.22 * curl)
                 ty = (tl - 0.06 - 0.05 * f ** 1.4) * d
+                if q:                                        # long slim toes, splayed a little, a pale nail plate near the tip
+                    spl = math.radians(-med * (4.0 + 7.0 * f))
+                    toe = rrect(-r_, -L_ * 0.5, 2 * r_, L_, r_)
+                    nh = L_ * 0.4
+                    nl = rrect(-r_ * 0.66, L_ * 0.5 * d - (nh + r_ * 0.3 if d > 0 else -r_ * 0.3), r_ * 1.32, nh, r_ * 0.55)
+                    m = skia.Matrix(); m.setRotate(math.degrees(spl)); m.postTranslate(tx, ty)
+                    toe.transform(m); nl.transform(m)
+                    fc.fill(toe, sk); fc.fill(_crescent(toe, 0.012 * med, 0), sh, 150); fc.line(toe, lw * 0.36, ln)
+                    fc.fill(nl, QV['toenail'], 250); fc.line(nl, lw * 0.16, QV['toenail_edge'], 200)
+                    b = nl.getBounds(); fc.fill(oval(b.centerX() - b.width() * 0.12, b.centerY(), b.width() * 0.12, b.height() * 0.22), QV['toenail_hi'], 190)
+                    continue
                 toe = rrect(tx - r_, ty - L_ * 0.5, 2 * r_, L_, r_)
                 fc.fill(toe, sk); fc.fill(_crescent(toe, 0.01 * med, 0), sh, 120); fc.line(toe, lw * 0.38, ln)
                 nh = L_ * 0.48
                 nl = rrect(tx - r_ * 0.62, ty + d * L_ * 0.5 - (nh + r_ * 0.25 if d > 0 else -r_ * 0.25), r_ * 1.24, nh, r_ * 0.6)
-                fc.fill(nl, QV['nail'] if q else mix(sk, '#ffffff', 0.45), 245)
-                if q: fc.fill(oval(tx - r_ * 0.25, ty + d * L_ * 0.28, r_ * 0.16, nh * 0.22), QV['nail_hi'], 180)
+                fc.fill(nl, mix(sk, '#ffffff', 0.45), 245)
             fc.line(ft, lw * 0.9, ln)
             if q and curl > 0.05:                            # the tread edge the toes curl over
                 fc.line(poly([(-0.3, (tl - 0.06) * d), (0.3, (tl - 0.06) * d)], False), lw * 0.3, '#ff4060', 160 * curl)
@@ -5073,6 +5085,56 @@ def draw_feet_pov(pen, who, x, y, size, pose=None, detail=2, light=None, t=None)
         fc.fill(pp, QV['pip'])
         fc.line(smooth(hp, False), lw, ln)
     return out
+
+
+def _q_foot_top(fc, med, curl, lw, det, light):
+    """The queen's bare foot seen from above, toes toward the viewer (+y), foot length 1: a narrow foot widening to the
+    ball, five toes as one scalloped front edge (the big toe on the inner side `med`, longest; the second toe nearly as
+    long), short creases between the toes, tendons, and small pale cold nails. Ash-white with lavender shade."""
+    sk, sh = QV['foot'], QV['foot_sh']
+    tl = 0.5 - 0.05 * curl
+    spec = ((0.104, 0.047, tl + 0.02), (0.044, 0.034, tl + 0.012), (-0.012, 0.031, tl - 0.018), (-0.064, 0.028, tl - 0.052),
+            (-0.11, 0.025, tl - 0.09))
+    M = lambda x, y: (x * med, y)                                  # noqa: E731  canonical: the big toe at +x
+    pts = [M(-0.085, -0.5), M(-0.108, -0.3), M(-0.128, -0.05), M(-0.142, 0.18), M(-0.138, spec[4][2] - 0.07)]
+    notches = []
+    for i in range(4, -1, -1):
+        xc, r, yt = spec[i]
+        for a in np.linspace(PI * 0.98, PI * 0.02, 7):
+            pts.append(M(xc + math.cos(a) * r, yt - r * 1.25 + math.sin(a) * r * 1.25))
+        if i > 0:
+            xn = (xc + r + spec[i - 1][0] - spec[i - 1][1]) / 2.0
+            yn = min(yt, spec[i - 1][2]) - r * 1.45
+            pts.append(M(xn, yn)); notches.append((xn, yn, r))
+    pts += [M(0.156, spec[0][2] - 0.08), M(0.166, 0.18), M(0.122, -0.05), M(0.108, -0.3), M(0.085, -0.5)]
+    ft = smooth(pts, True, 0.55)
+    fc.fill(ft, sk)
+    fc.grad(ft, 0, -0.5, 0, 0.55, [(0, sh, 190), (0.35, sk, 0), (0.82, sk, 0), (1, sh, 120)])
+    fc.fill(_crescent(ft, 0.03 * med, 0), sh, 130)
+    fc.fill(_crescent(ft, -0.02 * med, 0), _ql(light)['rim'], 110)
+    if det >= 1:
+        tnd = [smooth([M(0.03 + 0.02 * k, -0.22), M(0.035 + 0.035 * k, 0.04), M(0.04 + 0.05 * k, 0.24)], False) for k in (0.0, 1.4, 2.6)]
+        fc.line(_multi(tnd), lw * 0.26, QV['skin_dp'], 95)
+        cr = [poly([M(xn, yn), M(xn + 0.004, yn - r * 1.6)], False) for xn, yn, r in notches]
+        fc.line(_multi(cr), lw * 0.3, QV['inner'], 170)
+        kn = [smooth([M(xc - r * 0.7, yt - r * 2.5), M(xc, yt - r * 2.75), M(xc + r * 0.7, yt - r * 2.5)], False) for xc, r, yt in spec[:3]]
+        fc.line(_multi(kn), lw * 0.2, QV['skin_dp'], 110)
+    fc.line(ft, lw * 0.9, QV['line'])
+    nl = skia.Path()
+    for xc, r, yt in spec:
+        w_, h_ = r * 0.62, r * 0.82
+        cx_, cy_ = M(xc, yt - r * 0.62)
+        nl.addPath(rrect(cx_ - w_, cy_ - h_, 2 * w_, 2 * h_, w_ * 0.8))
+    fc.fill(nl, QV['toenail'], 250)
+    if det >= 1:
+        fc.line(nl, lw * 0.16, QV['toenail_edge'], 210)
+        hl = skia.Path()
+        for xc, r, yt in spec[:3]:
+            cx_, cy_ = M(xc - r * 0.18, yt - r * 0.85)
+            hl.addOval(skia.Rect.MakeLTRB(cx_ - r * 0.1, cy_ - r * 0.22, cx_ + r * 0.1, cy_ + r * 0.22))
+        fc.fill(hl, QV['toenail_hi'], 200)
+    if curl > 0.05:                                                # the tread edge the toes curl over
+        fc.line(poly([(-0.3, tl - 0.06), (0.3, tl - 0.06)], False), lw * 0.3, '#ff4060', 160 * curl)
 
 
 def _mirror_x(path):
@@ -5696,6 +5758,10 @@ class _MirrorClips:
             u = ease_in_out(prog(t, t0, t0 + dur * 0.6)); r = ease_in_out(prog(t, t0 + dur * 0.6, t0 + dur))
             self._ins(P, 'r', 1.0, shape='grip' if r < 0.3 else 'relaxed', prop=prop if r < 0.3 else None, x=0.4 * u - 0.6 * r, a=150.0)
         return self._add(t0, None, fn)
+
+    def fade_in(self, t0, dur=0.12):
+        """The character is not drawn before t0, then fades in over dur (H7: her face arrives as the camera tilts up)."""
+        return self._add(-1e9, None, lambda P, t: setattr(P, 'alpha', min(getattr(P, 'alpha', 1.0), ease_in_out(prog(t, t0, t0 + dur)))), real=True)
 
     def fade_out(self, t0, dur=0.5):
         """The character fades away (Tess's reflection in the phone glass, 696.1)."""
@@ -6726,15 +6792,17 @@ def _hand2_look(sp, skin, sh):
 # her own head (long oval, almond eyes, full red lips, a spade beauty mark), a crown of spades, a fan collar, waist-length
 # hair with strands, a black satin gown with a spade-pip hem, porcelain hands with black almond nails and two lipstick-red
 # fingertips, bare ash-white feet. One face, one set of stage parameters on the Pose (q_*), stages S0..S4 (QSTAGES).
-QV = dict(line='#2b1a2a', inner='#4a2c3a', skin='#ece6e8', skin_sh='#c3b8c9', skin_dp='#9a8aa4', skin_hi='#fbf8ff',
+# Her values are PRE-GRADE: the v2 grades (contrast ~1.3, bloom over ~225) lift skin #d0c9d3 to the brief's porcelain
+# (~#ece6e8, luma ~220 after night_v2 / dawn_v2) and keep the modelling; the brief's #ece6e8 drawn raw blooms to white.
+QV = dict(line='#2b1a2a', inner='#4a2c3a', skin='#d0c9d3', skin_sh='#a89bb2', skin_dp='#8a7c97', skin_hi='#e9e5ee',
           lip='#c63449', lip_line='#7a1428', lip_gloss='#ff8a9a', lip_glow='#ff4060', scar='#8e1f30',
-          iris='#3b3346', iris_red='#e0213f', white='#f7f3f4', white_pink='#f2d4d8', vein='#c8263a', lid='#0b0910',
+          iris='#3b3346', iris_red='#e0213f', white='#e6e1e8', white_pink='#f2d4d8', vein='#c8263a', lid='#0b0910',
           hair='#0d0b14', hair_sheen='#2c2a4a', hair_dark='#050409', hair_hi='#4a4870', parting='#7c7898',
           silver='#c9ccd6', silver_dk='#6f7284', silver_hi='#f4f6ff', black='#0a0910',
           satin='#0f0d16', satin_sh='#07060b', satin_sheen='#2a2638', satin_hi='#4a4462', lace='#0b0910', lace_rib='#3b3550',
-          lace_edge='#ebe7f2', teeth='#f6f4ec', teeth_line='#b4aaa0', gum='#d8707e', mouth='#3a0d18', void0='#160308',
-          void1='#4a0a18', foot='#e3dde3', foot_sh='#b7aec2', nail='#121018', nail_hi='#7a7690', key='#e8ecff', rim='#ff3b5c',
-          tear='#09070d', tear_hi='#8a86a8', crack='#5a4a62', pip='#f4f1f6', hem_red='#c63449', stone='#c63449')
+          lace_edge='#ebe7f2', teeth='#e8e4da', teeth_line='#9c9288', gum='#d8707e', mouth='#3a0d18', void0='#160308',
+          void1='#4a0a18', foot='#d2ccd6', foot_sh='#a69db3', nail='#121018', nail_hi='#7a7690', key='#e8ecff', rim='#ff3b5c',
+          tear='#09070d', tear_hi='#8a86a8', toenail='#c6bccd', toenail_edge='#9a8ca8', toenail_hi='#ffffff', crack='#5a4a62', pip='#f4f1f6', hem_red='#c63449', stone='#c63449')
 # the stage ladder: every stage is a set of continuous parameters, so a stage change can be a 2-frame snap or a draw-on
 QSTAGES = {
     'S0': dict(q_hide=1.0, q_draw=0.0, q_split=0.0, q_red=0.0, q_full=0.0, q_off=0.0, q_void=0.0, q_pin=0.0),
@@ -6755,12 +6823,14 @@ def queen_stage(stage):
     return dict(QSTAGES.get(str(stage), QSTAGES['S1']))
 
 
-_QSP = dict(head_ys=_HYS, head_ws=[0, 38, 58, 76, 84, 87, 77, 57, 35, 16, 0])
-_Q_EYE = dict(dx=34.8, y=-10.0, hw=15.8, hh=8.6)      # 0.40 W apart, 0.17 W wide, 0.065 H tall, line at 0.46 H
-_Q_MOUTH_Y = 62.0
+_QSP = dict(head_ys=[-120, -114, -100, -70, -40, -10, 15, 42, 68, 88, 104, 114, 119, 120],
+            head_ws=[0, 38, 58, 75, 80, 84, 87, 80, 64, 46, 29, 16, 7, 0])    # high cheekbones, a jaw angle, a pointed chin
+_Q_EYE = dict(dx=35.0, y=-7.0, hw=17.2, hh=9.4)       # 0.40 W apart, ~0.19 W wide, the eye line at 0.47 H
+_Q_MOUTH_Y = 55.0                                         # the lip seam, close under the nose (base ~38)
 _Q_LIP_HW = 26.0                                          # 0.30 W
+_Q_NARROW = 0.88                                          # the head's width factor (a long elegant face)
 _Q_GRIN = [None]                                          # the open grin's outline this frame (tears go behind it)
-_Q_STEPS = [(26.0, 62.0), (37.3, 62.0), (37.3, 52.4), (48.6, 52.4), (48.6, 42.8), (60.0, 42.8), (60.0, 33.2)]   # tread 0.065 W, rise 0.04 H
+_Q_STEPS = [(26.0, 55.0), (37.3, 55.0), (37.3, 45.4), (48.6, 45.4), (48.6, 35.8), (60.0, 35.8), (60.0, 26.2)]   # tread 0.065 W, rise 0.04 H
 
 
 class _QHM(HeadMap):
@@ -6840,74 +6910,226 @@ def _q_partial(pts, f):
     return out
 
 
+def _q_soft(c, hm, pts, colr, a, blur, dz=1.5, k=0.85):
+    """A soft (blurred) shading shape in face coordinates (porcelain modelling, makeup, smudges)."""
+    if a < 1.0: return
+    Q_, v = _qm(hm, pts, dz)
+    if v < -0.25: return
+    c.pen.fill(c.P(smooth(Q_, True, k)), colr, min(255.0, a), max(0.5, blur * c.s))
+
+
+def _q_face_model(c, hm, st, QL, det):
+    """Porcelain modelling with a cool contour (DIRECTION_V2 3.2, no blush): temples, sockets, cheek hollows under high
+    cheekbones, the jaw and chin, the side of the nose; highlights on the cheekbones, the bridge, the brow and the chin.
+    The grin bunches the cheeks up (the hollows fill, the cheeks catch light); the full face sinks the sockets."""
+    sh = QV['skin_sh']; dp = QV['skin_dp']; hi = QV['skin_hi']
+    g = 1.0 + 0.4 * st['full']
+    op = st['open']
+    for s_ in (-1, 1):
+        _q_soft(c, hm, [(s_ * 92, -68), (s_ * 66, -60), (s_ * 58, -30), (s_ * 66, -4), (s_ * 94, -2)], sh, 150, 8)            # temple
+        _q_soft(c, hm, [(s_ * 11, -30), (s_ * 22, -31), (s_ * 22, -14), (s_ * 16, -1), (s_ * 9, -8)], sh, 135 * g, 4)        # socket by the bridge
+        _q_soft(c, hm, [(s_ * 46, -37), (s_ * 64, -33), (s_ * 64, -15), (s_ * 52, -20)], sh, 95 * g, 4)                      # under the brow end
+        _q_soft(c, hm, [(s_ * 94, 14), (s_ * 76, 24), (s_ * 58, 38), (s_ * 50, 46), (s_ * 58, 50), (s_ * 78, 40), (s_ * 96, 32)],
+                sh, 150 * (1.0 - 0.55 * op) * g, 5)                                                                           # cheek hollow
+        _q_soft(c, hm, [(s_ * 96, 56), (s_ * 80, 74), (s_ * 58, 97), (s_ * 34, 115), (s_ * 14, 123), (s_ * 40, 128), (s_ * 82, 104),
+                        (s_ * 100, 70)], dp, 140, 5)                                                                          # the jaw, under it
+        _q_soft(c, hm, [(s_ * 32, 7), (s_ * 54, -1), (s_ * 76, 5), (s_ * 68, 17), (s_ * 44, 19)], hi, 200, 5, 4.0)            # cheekbone light
+        if op > 0.02:                                                                                                         # bunched cheeks
+            _q_soft(c, hm, [(s_ * 52, 6), (s_ * 72, 4), (s_ * 84, 16), (s_ * 76, 28), (s_ * 60, 24)], hi, 150 * op, 5, 4.0)
+    _q_soft(c, hm, [(-10, -60), (10, -60), (14, -45), (0, -41), (-14, -45)], hi, 120, 7, 4.0)                                  # brow
+    _q_soft(c, hm, [(-12, 66), (12, 66), (14, 80), (0, 86), (-14, 80)], sh, 100 * (1.0 - op), 4)                               # under the lip
+    _q_soft(c, hm, [(-12, 96), (12, 96), (10, 108), (0, 112), (-10, 108)], hi, 170, 5, 3.0)                                    # chin light
+    _q_soft(c, hm, [(-7, 39), (7, 39), (8, 45), (0, 47), (-8, 45)], sh, 120, 2.5)                                              # under the nose
+    sd = 1.0 if hm.st >= 0.0 else -1.0
+    _q_soft(c, hm, [(sd * 6, -22), (sd * 12, -20), (sd * 14, 20), (sd * 15, 31), (sd * 8, 29), (sd * 6, 0)], sh, 125, 3, 8.0)   # nose side
+
+
+def _q_grin_shape(sp_open, mo, widen):
+    """The open grin in face coords: the top edge is the drawn stair smile (3 treads each side) plus the upper lip line,
+    the bottom a deep U down toward the chin. Returns (top, bot, ytop)."""
+    my = _Q_MOUTH_Y
+    stp = _Q_STEPS
+    top = [(-x, y) for x, y in stp[::-1]] + [(-13.0, my - 0.8), (0.0, my - 1.4), (13.0, my - 0.8)] + list(stp)
+    treads = [(stp[0][0], stp[1][0], stp[0][1]), (stp[2][0], stp[3][0], stp[2][1]), (stp[4][0], stp[5][0], stp[4][1])]
+    yc = stp[-1][1]
+
+    def ytop(x):
+        ax = abs(x)
+        if ax <= treads[0][0]: return my - 1.4 * (1.0 - (ax / treads[0][0]) ** 2)
+        for a_, b_, y_ in treads:
+            if ax <= b_: return y_
+        return yc
+    depth = 37.0 + 10.0 * clamp(mo) + 8.0 * clamp(widen)
+    xs = np.linspace(60.0, -60.0, 33)
+    bot = []
+    for x in xs:
+        u = abs(x) / 60.0
+        yb_full = yc + (my + depth - yc) * max(0.0, 1.0 - u ** 2.2) ** 0.55
+        yt = ytop(x) if abs(x) < 59.9 else yc
+        bot.append((float(x), yt + max(0.0, yb_full - yt) * sp_open))
+    return top, bot, ytop
+
+
+def _q_brush_steps(c, hm, pts, w, colr, a, det, seed, drawk=1.0, scar=0.0):
+    """The drawn stair smile as hand-drawn lipstick: each tread and riser its own waxy stroke, overshooting the corner a
+    little, a darker under-edge, a wax sheen, crumbs (the same brush as the mirror steps)."""
+    L = [math.hypot(b[0] - a_[0], b[1] - a_[1]) for a_, b in zip(pts[:-1], pts[1:])]
+    tot = sum(L) * clamp(drawk)
+    if tot < 0.5: return
+    segs, glo = [], []
+    for k, ((x0, y0), (x1, y1), l_) in enumerate(zip(pts[:-1], pts[1:], L)):
+        if tot <= 0: break
+        f = min(1.0, tot / (l_ or 1.0)); tot -= l_
+        dx, dy = (x1 - x0) / (l_ or 1.0), (y1 - y0) / (l_ or 1.0)
+        o0 = 1.0 + 0.8 * hash01(k, 731 + seed); o1 = 1.4 * hash01(k, 733 + seed) if f >= 0.999 else 0.0
+        wob = (hash01(k, 737 + seed) - 0.5) * 1.1
+        a0 = (x0 - dx * o0, y0 - dy * o0); a1 = (x0 + (x1 - x0) * f + dx * o1, y0 + (y1 - y0) * f + dy * o1)
+        m = ((a0[0] + a1[0]) / 2 - dy * wob, (a0[1] + a1[1]) / 2 + dx * wob)
+        Q_, v = _qm(hm, [a0, m, a1], 2.5)
+        if v < -0.15: continue
+        segs.append(smooth(Q_, False))
+        Q2, _ = _qm(hm, [(p[0], p[1] - w * 0.2) for p in (a0, m, a1)], 2.6)
+        glo.append(smooth(Q2, False))
+    if not segs: return
+    path = _multi(segs)
+    c.line(path, w * 1.22, mix(colr, '#000000', 0.45), a * 0.8, 'round')
+    c.line(path, w, colr, a, 'round')
+    if det >= 1:
+        if scar < 0.5: c.line(_multi(glo), w * 0.22, QV['lip_gloss'], 125 * (1 - scar), 'round')
+        crumbs = skia.Path()
+        for i in range(14):
+            k = int(hash01(i, 741 + seed) * len(pts[:-1])) % max(1, len(pts) - 1)
+            (x0, y0), (x1, y1) = pts[k], pts[k + 1]
+            u = hash01(i, 743 + seed)
+            nx, ny = -(y1 - y0), (x1 - x0); nl = math.hypot(nx, ny) or 1.0
+            o = (0.55 + 0.35 * hash01(i, 747 + seed)) * w * (1 if hash01(i, 749 + seed) > 0.5 else -1)
+            X, Y, v = hm.map1(x0 + (x1 - x0) * u + nx / nl * o, y0 + (y1 - y0) * u + ny / nl * o, 2.6)
+            if v > 0: crumbs.addCircle(X, Y, w * (0.07 + 0.09 * hash01(i, 751 + seed)) * hm.sx(x0, y0))
+        c.fill(crumbs, colr, a * 0.9)
+
+
+def _q_tear(c, hm, pts, full, seed):
+    """A black mascara tear: a glossy tapered tube with drips, a bulb at the end, a smudge where it left the lashes."""
+    Q_, v = _qm(hm, pts, 2.6)
+    if v < 0.05 or len(Q_) < 2: return
+    n = max(2, int(len(Q_) * clamp(full * 1.15)))
+    N0 = len(Q_); Q_ = Q_[:n]
+    k = hm.sx(pts[0][0], pts[0][1])
+    L, R = [], []
+    for i, (x, y) in enumerate(Q_):
+        u = i / max(1, len(Q_) - 1)
+        bulge = 0.9 if hash01(i, 761 + seed) > 0.78 else 0.0
+        w = (0.55 + 0.85 * u + 0.75 * bulge) * 0.5
+        a, b = Q_[max(0, i - 1)], Q_[min(len(Q_) - 1, i + 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]; ll = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / ll, dx / ll
+        L.append((x + nx * w * 2 * k, y + ny * w * 2)); R.append((x - nx * w * 2 * k, y - ny * w * 2))
+    tube = smooth(L + R[::-1], True, 0.6)
+    c.fill(tube, QV['tear'], 255 * full)
+    hl = [(x - 0.9, y) for x, y in Q_[1:-1]]
+    if len(hl) > 1: c.line(smooth(hl, False), 0.9, QV['tear_hi'], 200 * full, 'round')
+    ex, ey = Q_[-1]
+    if n == N0:
+        c.fill(smooth([(ex - 3.2 * k, ey + 1.5), (ex, ey - 2.0), (ex + 3.2 * k, ey + 1.5), (ex + 2.2 * k, ey + 5.6), (ex, ey + 6.6),
+                       (ex - 2.2 * k, ey + 5.6)], True, 0.8), QV['tear'], 255 * full)
+        c.fill(oval(ex - 1.0 * k, ey + 2.4, 0.9 * k, 1.3), '#c8c4dc', 210 * full)
+
+
 def _q_eye(c, hm, P, side, st, det, lw):
-    """Almond eye: grey-violet iris with two highlights, a heavy tapered black upper lid with a wing, 5 lashes at the
-    outer corner, no lower lid line. S2 pins the pupil; S3b reddens the iris (bloom) and veins pink whites."""
+    """Almond eye (~0.19 W): grey-violet iris with fibres and two highlights, a smoky plum lid, a heavy tapered black liner
+    with a wing, 5 curled lashes at the outer corner, a crease. S2 pins the pupil; S3b reddens the iris (bloom), pinks the
+    whites with branching veins and inflames the lower rim; S3c opens the lids wide (white all round) and sinks the eye."""
     E = _Q_EYE
     ex0, ey0 = side * E['dx'], E['y']
     X, Y, V = hm.map1(ex0, ey0, 2.0)
     if V < 0.12: return None
-    hw, hh = E['hw'], E['hh']
+    red = st['red']; full = st['full']
+    hw = E['hw']; hh = E['hh'] * (1.0 + 0.3 * full)
+    hu = hh * (0.8 + 0.2 * max(st['split'], red))            # calm (S1, S2): the upper lid rests on the iris, a hooded regal look
     fs = hm.sx(ex0, ey0)
-    up = [(ex0 - side * hw, ey0 + 1.2), (ex0 - side * hw * 0.55, ey0 - hh * 0.82), (ex0 + side * hw * 0.1, ey0 - hh * 1.08),
-          (ex0 + side * hw * 0.62, ey0 - hh * 0.78), (ex0 + side * hw * 1.02, ey0 - 2.2)]
-    lo = [(ex0 + side * hw * 1.02, ey0 - 2.2), (ex0 + side * hw * 0.55, ey0 + hh * 0.62), (ex0 - side * hw * 0.05, ey0 + hh * 0.86),
-          (ex0 - side * hw * 0.6, ey0 + hh * 0.56), (ex0 - side * hw, ey0 + 1.2)]
+    up = [(ex0 - side * hw, ey0 + 1.4), (ex0 - side * hw * 0.55, ey0 - hu * 0.84), (ex0 + side * hw * 0.12, ey0 - hu * 1.08),
+          (ex0 + side * hw * 0.64, ey0 - hu * 0.76), (ex0 + side * hw * 1.02, ey0 - 2.4)]
+    lo = [(ex0 + side * hw * 1.02, ey0 - 2.4), (ex0 + side * hw * 0.55, ey0 + hh * 0.64), (ex0 - side * hw * 0.05, ey0 + hh * 0.88),
+          (ex0 - side * hw * 0.6, ey0 + hh * 0.58), (ex0 - side * hw, ey0 + 1.4)]
     U_, _ = _qm(hm, up, 2.0); L_, _ = _qm(hm, lo, 2.0)
     eye = smooth(U_ + L_[1:-1], True, 0.75)
-    red = st['red']
-    # socket: a cool shade above the eye, the crease
-    c.glow(X, Y - hh * 0.9, hw * 1.6 * fs, hh * 1.7, QV['skin_sh'], 120)
+    # makeup: a smoky plum lid (regal), bruised once she goes wrong; S3b+ the sockets sink plum-grey under the eye
+    _q_soft(c, hm, [(ex0 - side * hw * 1.05, ey0 - 1.0), (ex0 - side * hw * 0.6, ey0 - E['hh'] * 1.9), (ex0 + side * hw * 0.2, ey0 - E['hh'] * 2.3),
+                    (ex0 + side * hw * 1.25, ey0 - E['hh'] * 1.35), (ex0 + side * hw * 1.5, ey0 - 4.5), (ex0 + side * hw, ey0 - 1.0)],
+            mix('#6a4a7a', '#4a1a30', red), 125 + 70 * full, 3.0, 2.0)
+    if full > 0.02 or red > 0.02:
+        _q_soft(c, hm, [(ex0 - side * hw * 0.9, ey0 + hh * 0.55), (ex0 + side * hw * 0.1, ey0 + hh * 0.95), (ex0 + side * hw * 1.05, ey0 + hh * 0.25),
+                        (ex0 + side * hw * 0.95, ey0 + hh * 1.7), (ex0 - side * hw * 0.1, ey0 + hh * 2.2), (ex0 - side * hw * 0.85, ey0 + hh * 1.45)],
+                '#5a3450', 150 * max(full, 0.55 * red), 3.0, 2.0)
     wc = mix(QV['white'], QV['white_pink'], red)
     if red > 0.02:
         c.glow(X, Y, hw * 3.2 * fs, hw * 2.6, QV['iris_red'], 70 * red)          # bloom halo, 1.6 eye widths
     c.fill(eye, wc)
     lock = clamp(P.lock)
     lx = lerp(P.look_x, -math.sin(hm.yaw) * 0.9, lock); ly = lerp(P.look_y, -math.sin(hm.pitch) * 0.9 - 0.04, lock)
-    ir = hh * 0.75
-    ix0 = ex0 + clamp(lx, -1, 1) * hw * 0.42; iy0 = ey0 - 0.6 + clamp(ly, -1, 1) * hh * 0.25
+    ir = E['hh'] * 0.78
+    ix0 = ex0 + clamp(lx, -1, 1) * hw * 0.42; iy0 = ey0 - 0.4 + clamp(ly, -1, 1) * hh * 0.22
     IX, IY, _ = hm.map1(ix0, iy0, 3.0)
     ifs = hm.sx(ix0, iy0)
     with c.clip(eye):
-        c.radial(eye, X, Y + hh * 0.2, hw * 1.05 * fs, [(0, wc, 0), (0.6, wc, 0), (1, mix(wc, '#9c8ea6', 0.5), 230)], sy=hh / hw / max(fs, 0.2) * 1.4)
-        if red > 0.02 and det >= 1:                                         # veins from the corners
-            vs = []
-            for k in range(5):
+        c.radial(eye, X, Y + hh * 0.2, hw * 1.05 * fs, [(0, wc, 0), (0.6, wc, 0), (1, mix(wc, '#9c8ea6' if red < 0.5 else '#c0506a', 0.55), 235)],
+                 sy=hh / hw / max(fs, 0.2) * 1.4)
+        if red > 0.02 and det >= 1:                                         # branching veins from both corners
+            vs, vs2 = [], []
+            for k in range(8):
                 s0 = -1 if k % 2 else 1
-                a0 = (hash01(k, 811 + side) - 0.5) * 0.9
-                bx, by = ex0 + s0 * side * hw * 0.98, ey0 - 0.5 + a0 * hh
-                pts = [(bx, by), (bx - s0 * side * hw * 0.25, by + a0 * 2.0), (bx - s0 * side * hw * 0.42, by + a0 * 4.0 - 1.0)]
-                Q_, _ = _qm(hm, pts, 2.2); vs.append(smooth(Q_, False))
-            c.line(_multi(vs), lw * 0.18, QV['vein'], 200 * red)
+                a0 = (hash01(k, 811 + side) - 0.5) * 1.4
+                bx, by = ex0 + s0 * side * hw * 1.02, ey0 - 0.5 + a0 * hh * 0.6
+                L0 = hw * (0.36 + 0.24 * hash01(k, 812 + side))
+                mid = (bx - s0 * side * L0 * 0.5, by + a0 * 2.6 + (hash01(k, 813) - 0.5) * 2.0)
+                end = (bx - s0 * side * L0, by + a0 * 4.6 + (hash01(k, 814) - 0.5) * 3.0)
+                Q_, _ = _qm(hm, [(bx, by), mid, end], 2.2); vs.append(smooth(Q_, False))
+                br = (mid[0] - s0 * side * L0 * 0.32, mid[1] + (1 if hash01(k, 815) > 0.5 else -1) * 3.4)
+                Q_, _ = _qm(hm, [mid, br], 2.2); vs2.append(poly(Q_, False))
+            c.line(_multi(vs), lw * 0.34, QV['vein'], 235 * red)
+            c.line(_multi(vs2), lw * 0.2, QV['vein'], 210 * red)
         ic = mix(QV['iris'], QV['iris_red'], red)
         if red > 0.02: c.glow(IX, IY, ir * 2.2 * ifs, ir * 2.2, QV['iris_red'], 150 * red)
         c.radial(oval(IX, IY, ir * ifs, ir), IX, IY + ir * 0.15, ir * 1.05,
                  [(0, mix(ic, '#000000', 0.2), 255), (0.3, ic, 255), (0.62, mix(ic, '#a49ac0', 0.45 * (1 - red)) if red < 0.5 else mix(ic, '#ff8090', 0.3), 255),
                   (0.88, ic, 255), (1, mix(ic, '#000000', 0.6), 255)])
-        c.line(oval(IX, IY, ir * ifs, ir), lw * 0.2, mix(ic, '#000000', 0.7), 230)
+        if det >= 1:                                                       # iris fibres
+            fb = []
+            for k in range(12):
+                a = 2 * PI * k / 12 + 0.3
+                fb.append(poly([(IX + math.cos(a) * ir * 0.4 * ifs, IY + math.sin(a) * ir * 0.4),
+                                (IX + math.cos(a) * ir * 0.84 * ifs, IY + math.sin(a) * ir * 0.84)], False))
+            c.line(_multi(fb), lw * 0.09, mix(ic, '#ffffff', 0.35), 110)
+        c.line(oval(IX, IY, ir * ifs, ir), lw * 0.22, mix(ic, '#000000', 0.7), 235)
         pr = ir * lerp(0.46, 0.15, st['pin'])
         c.fill(oval(IX, IY, pr * ifs, pr), '#050407')
-        c.fill(oval(IX - ir * 0.34 * ifs, IY - ir * 0.36, ir * 0.25 * ifs, ir * 0.25), '#ffffff', 245)       # two highlights
-        c.fill(oval(IX + ir * 0.36 * ifs, IY + ir * 0.3, ir * 0.1 * ifs, ir * 0.1), '#ffffff', 220)
-        c.fill(_crescent(eye, 0, 3.0), '#5a4a66', 55)                       # the lid's shadow on the eye
-    # heavy black upper lid: tapered to both ends, a small wing past the outer corner
-    wing = (ex0 + side * (hw * 1.02 + 5.0), ey0 - 5.4)
-    thick = [0.4, 1.4, 2.6, 3.2, 1.6]
+        c.fill(oval(IX - ir * 0.34 * ifs, IY - ir * 0.36, ir * 0.26 * ifs, ir * 0.26), '#ffffff', 245)       # two highlights
+        c.fill(oval(IX + ir * 0.36 * ifs, IY + ir * 0.3, ir * 0.11 * ifs, ir * 0.11), '#ffffff', 220)
+        c.fill(_crescent(eye, 0, 3.2 * (1.0 - 0.6 * full)), '#5a4a66', 75)                  # the lid's shadow on the eye
+    if red > 0.02 and det >= 1:                                             # an inflamed lower rim
+        Q_, _ = _qm(hm, lo[1:-1], 2.0)
+        c.line(smooth(Q_, False), lw * 0.34, '#c8263a', 210 * red)
+    # heavy black upper liner, tapered, a wing past the outer corner
+    wing = (ex0 + side * (hw * 1.02 + 6.5), ey0 - 6.6)
+    thick = [0.4, 1.6, 2.9, 3.5, 1.9]
     top_ = [(x_, y_ - th_) for (x_, y_), th_ in zip(up, thick)]
     LT, _ = _qm(hm, top_ + [wing], 2.4)
     lid = smooth(U_ + [LT[-1]] + LT[:-1][::-1], True, 0.6)
     c.fill(lid, QV['lid'])
-    if det >= 1:                                                            # 5 lashes at the outer corner
+    if det >= 1:                                                            # 5 curled lashes at the outer corner, a crease
         lsh = []
         for k in range(5):
-            f = 0.55 + k * 0.11
-            bx, by = lerp(up[2][0], wing[0], f), lerp(up[2][1] - 2.0, wing[1] + 1.0, f)
-            tx, ty = bx + side * (2.5 + k * 0.9), by - (4.6 - k * 0.45)
-            Q_, _ = _qm(hm, [(bx, by), (lerp(bx, tx, 0.6) - side * 0.4, lerp(by, ty, 0.6)), (tx, ty)], 2.6)
+            f = 0.48 + k * 0.12
+            bx, by = lerp(up[2][0], wing[0], f), lerp(up[2][1] - 2.6, wing[1] + 1.2, f)
+            L0 = 5.4 + k * 0.7
+            tx, ty = bx + side * (1.8 + k * 1.4), by - (L0 - k * 0.8)
+            Q_, _ = _qm(hm, [(bx, by), (lerp(bx, tx, 0.42) - side * 0.7, lerp(by, ty, 0.72)), (tx, ty)], 2.6)
             lsh.append(smooth(Q_, False))
-        c.line(_multi(lsh), lw * 0.24, QV['lid'], 255)
-        crease = [(ex0 - side * hw * 0.62, ey0 - hh * 1.35), (ex0 + side * hw * 0.1, ey0 - hh * 1.75), (ex0 + side * hw * 0.85, ey0 - hh * 1.3)]
-        Q_, _ = _qm(hm, crease, 2.0); c.line(smooth(Q_, False), lw * 0.24, QV['inner'], 150)
+        c.line(_multi(lsh), lw * 0.32, QV['lid'], 255)
+        crease = [(ex0 - side * hw * 0.7, ey0 - E['hh'] * 1.3), (ex0 + side * hw * 0.1, ey0 - E['hh'] * 1.75), (ex0 + side * hw * 0.92, ey0 - E['hh'] * 1.25)]
+        Q_, _ = _qm(hm, crease, 2.0); c.line(smooth(Q_, False), lw * 0.26, QV['inner'], 175)
+        Q_, _ = _qm(hm, [(ex0 + side * hw * 0.1, ey0 + hh * 0.97), (ex0 + side * hw * 0.62, ey0 + hh * 0.68), (ex0 + side * hw * 1.0, ey0 - 1.0)], 2.0)
+        c.line(smooth(Q_, False), lw * 0.2, QV['inner'], 85)                 # a faint lower lash shade on the outer half
     return (X, Y, hw * fs, hh)
 
 
@@ -6922,25 +7144,36 @@ def _q_brow(c, hm, side, lw):
 
 
 def _q_nose(c, hm, lw):
+    """A long fine nose in the cast's line: one bridge line on the shadow side, the alar wings, the tip, two nostrils and
+    a bridge highlight; turned, a profile wedge."""
     side = 1.0 if hm.st >= -0.02 else -1.0
     turned = abs(hm.st) > 0.34
     if not turned:
-        a = [(side * 3.0, 6.0), (side * 5.5, 22.0), (side * 7.5, 33.5)]
-        Q_, v = _qm(hm, a, 10.0)
-        if v > 0.0: c.line(smooth(Q_, False), lw * 0.3, QV['inner'], 170)
-        b = [(-7.5, 33.0), (-3.0, 37.0), (2.0, 37.6), (7.5, 34.0)]
-        Q_, v = _qm(hm, b, 14.0)
-        if v > 0.0: c.line(smooth(Q_, False), lw * 0.32, QV['inner'], 220)
+        sd = side if abs(hm.st) > 0.05 else 1.0
+        Q_, v = _qm(hm, [(sd * 9.5, -27.0), (sd * 7.0, -6.0), (sd * 7.5, 14.0), (sd * 10.0, 25.0)], 10.0)
+        if v > 0.0: c.line(smooth(Q_, False), lw * 0.24, QV['inner'], 125)
+        wings = []
         for s2 in (-1, 1):
-            nx, ny, nv = hm.map1(s2 * 5.0, 35.5, 12.0)
-            if nv > 0.1: c.fill(oval(nx, ny, 1.8 * hm.sx(s2 * 5.0, 35.5), 1.1), QV['inner'], 120)
-        hx, hy, hv = hm.map1(0.0, 20.0, 16.0)
-        if hv > 0: c.glow(hx - side * 1.0, hy, 3.0, 9.0, QV['skin_hi'], 150)
+            Q_, v = _qm(hm, [(s2 * 8.0, 25.0), (s2 * 11.8, 30.5), (s2 * 10.8, 35.5), (s2 * 6.4, 37.2)], 12.0)
+            if v > 0.0: wings.append(smooth(Q_, False))
+        if wings: c.line(_multi(wings), lw * 0.3, QV['inner'], 205)
+        Q_, v = _qm(hm, [(-3.6, 38.0), (0.0, 38.9), (3.6, 38.0)], 14.0)
+        if v > 0.0: c.line(smooth(Q_, False), lw * 0.28, QV['inner'], 170)
+        for s2 in (-1, 1):
+            nx, ny, nv = hm.map1(s2 * 5.0, 36.0, 12.0)
+            if nv > 0.1: c.fill(oval(nx, ny, 2.3 * hm.sx(s2 * 5.0, 36.0), 1.25), QV['inner'], 160)
+        hx, hy, hv = hm.map1(-sd * 1.2, 10.0, 16.0)
+        if hv > 0: c.glow(hx, hy, 2.6, 15.0, QV['skin_hi'], 175)
+        hx, hy, hv = hm.map1(0.0, 31.0, 16.0)
+        if hv > 0: c.glow(hx, hy, 4.6, 3.4, QV['skin_hi'], 205)
         return
-    X, Y, V = hm.map([0, 0, 0, 0], [-6.0, 24.0, 33.0, 38.0], np.array([4.0, 17.0, 16.0, 6.0]))
+    X, Y, V = hm.map([0, 0, 0, 0], [-8.0, 26.0, 34.5, 39.0], np.array([4.0, 17.0, 15.0, 6.0]))
     wedge = smooth([(X[0], Y[0]), (X[1], Y[1]), (X[2], Y[2]), (X[3] - side * 6, Y[3]), (X[0] - side * 8, Y[0] + 8)], True, 0.5)
     c.fill(wedge, QV['skin'])
     c.line(smooth([(X[0], Y[0]), (X[1], Y[1]), (X[2], Y[2]), (X[3] - side * 3, Y[3])], False), lw * 0.32, QV['inner'], 230)
+    wx, wy, wv = hm.map1(side * 9.0, 32.0, 10.0)
+    if wv > -0.4:
+        c.line(smooth([(wx - side * 2.0, wy - 5.0), (wx + side * 1.6, wy - 1.0), (wx - side * 0.4, wy + 3.6)], False), lw * 0.28, QV['inner'], 200)
 
 
 def _q_spade(cx, cy, h, w=None, up=True):
@@ -6954,103 +7187,103 @@ def _q_spade(cx, cy, h, w=None, up=True):
 
 
 def _q_mouth(c, hm, P, st, det, t, lw, L):
-    """Lips (S1), the drawn stair smile (S2), the split grin with flat human teeth (S3a), the flat line (OFF) and the
-    jaw void with Noah13 inside (S4). The real lips talk on P.m_open; the drawing never moves."""
+    """Lips (S1), the drawn stair smile (S2), the split grin with flat human teeth and exposed gums (S3a), the flat line
+    (OFF) and the jaw void with Noah13 inside (S4). The real lips talk on P.m_open; the drawing never moves."""
     o = clamp(P.m_open) * (1.0 - st['void'])
     my = _Q_MOUTH_Y
     _Q_GRIN[0] = None
     sp_open = st['open']
     voidk = st['void']
-    # ---- the lip shapes (closed lips; they part when she speaks)
     flat = st['off'] * (1.0 - voidk)
-    th_u = lerp(6.5, 2.2, flat); th_l = lerp(9.5, 2.6, flat)
-    gap = 15.0 * o
-    seam_u = [(-26.0, my), (-14.0, my - 0.4), (0.0, my + 0.2), (14.0, my - 0.4), (26.0, my)]
-    upper = [(-26.0, my), (-15.0, my - th_u * 0.9), (-5.0, my - th_u * 1.05), (0.0, my - th_u * 0.7), (5.0, my - th_u * 1.05),
-             (15.0, my - th_u * 0.9), (26.0, my)]
+    th_u = lerp(6.6, 2.2, flat); th_l = lerp(9.0, 2.6, flat)
+    gap = 14.0 * o
+    seam_u = [(-26.0, my), (-14.0, my - 0.4), (0.0, my + 0.3), (14.0, my - 0.4), (26.0, my)]
+    upper = [(-26.0, my), (-16.0, my - th_u * 0.85), (-5.5, my - th_u * 1.1), (0.0, my - th_u * 0.7), (5.5, my - th_u * 1.1),
+             (16.0, my - th_u * 0.85), (26.0, my)]
     seam_l = [(26.0, my), (14.0, my + gap * 0.8), (0.0, my + gap), (-14.0, my + gap * 0.8), (-26.0, my)]
-    lower = [(26.0, my), (16.0, my + gap * 0.8 + th_l * 0.75), (0.0, my + gap + th_l), (-16.0, my + gap * 0.8 + th_l * 0.75), (-26.0, my)]
-    # ---- the drawn smile (S2+): 3 lipstick steps up each cheek from the mouth corners
+    lower = [(26.0, my), (16.0, my + gap * 0.8 + th_l * 0.78), (0.0, my + gap + th_l), (-16.0, my + gap * 0.8 + th_l * 0.78), (-26.0, my)]
     drawk = st['draw']
-    steps = {}
-    for s_ in (-1, 1):
-        pts = [(s_ * x, y) for x, y in _Q_STEPS]
-        Q_, v = _qm(hm, pts, 2.5)
-        steps[s_] = (pts, Q_, v)
-    # ---- S3a grin: the mouth splits along the drawing
+    # ---- S3a: the mouth splits open along the drawing (a deep grin of flat human teeth, the gums exposed)
     if sp_open > 0.01 and voidk < 0.99:
-        top = [(-60.0, 33.2), (-60.0, 42.8), (-48.6, 42.8), (-48.6, 52.4), (-37.3, 52.4), (-37.3, 62.0), (-26.0, 62.0), (-13.0, 61.2),
-               (0.0, 60.8), (13.0, 61.2), (26.0, 62.0), (37.3, 62.0), (37.3, 52.4), (48.6, 52.4), (48.6, 42.8), (60.0, 42.8), (60.0, 33.2)]
-        drop = 92.0 + 16.0 * clamp(P.m_open) + 10.0 * clamp(getattr(P, 'q_widen', 0.0))
-
-        def ytop(x):
-            ax = abs(x)
-            if ax <= 26.0: return 60.8 + 1.2 * (ax / 26.0) ** 2
-            if ax <= 37.3: return 62.0
-            if ax <= 48.6: return 52.4
-            return 42.8
-        xs = np.linspace(60.0, -60.0, 25)
-        bot = []
-        for x in xs:
-            u = abs(x) / 60.0
-            yb_full = 33.2 + (drop - 33.2) * (1.0 - u ** 2.2) ** 0.55
-            yt = ytop(x) if abs(x) < 59.9 else 33.2
-            bot.append((float(x), yt + max(0.0, yb_full - yt) * sp_open))
+        top, bot, ytop = _q_grin_shape(sp_open, P.m_open, getattr(P, 'q_widen', 0.0))
         TQ, _ = _qm(hm, top, 3.0); BQ, _ = _qm(hm, bot, 3.0)
         inner = poly(TQ + BQ[1:-1], True)
         _Q_GRIN[0] = inner
+        g_ = clamp(sp_open * 1.5)
+        cx0, cy0, _ = hm.map1(0.0, my + 20.0, 2.0)
         c.fill(inner, QV['mouth'])
-        cx_, cy_, _ = hm.map1(0.0, (60.0 + drop) * 0.5, 2.0)
-        c.glow(cx_, cy_ + 4, 46.0 * hm.sx(0, 70), 22.0, '#000000', 170 * sp_open)
+        c.glow(cx0, cy0 + 4, 50.0 * hm.sx(0, my), 24.0, '#0a0206', 210 * sp_open)
         with c.clip(inner):
-            # upper gum and 14 flat human teeth hanging from the top edge: 8 across the lips, one on every tread
-            th_ = 11.5 * clamp(sp_open * 1.6)
-            gumq, _ = _qm(hm, [(x, y + 2.6) for x, y in top], 3.0)
-            c.line(poly(gumq, False), 6.0 * c.s / max(c.s, 1e-6), QV['gum'], 230)
-            tw = [5.0, 5.6, 6.2, 7.2, 7.2, 6.2, 5.6, 5.0]
-            sc = 50.0 / sum(tw)
-            xcur = -25.0; teeth = []
+            # the upper gum: a pink band along the stepped top edge (the lip pulled up off it)
+            gum_h = 3.6
+            gq, _ = _qm(hm, [(x, y + gum_h * 0.5) for x, y in top], 3.0)
+            c.line(poly(gq, False), gum_h * 2.4, QV['gum'], 245, 'butt')
+            c.line(poly([(x, y) for x, y in _qm(hm, [(x, y + gum_h * 1.15) for x, y in top], 3.0)[0]], False), lw * 0.18, '#a84858', 200)
+            # 14 upper teeth hanging from the gum: 8 across the lips, one on every tread (a staircase of teeth)
+            tw = [5.2, 6.0, 6.6, 7.6, 7.6, 6.6, 6.0, 5.2]; sc = 52.0 / sum(tw)
+            xcur = -26.0; teeth = []
             for w_ in tw:
-                w_ *= sc; teeth.append((xcur, xcur + w_, ytop(xcur + w_ / 2) + 2.0)); xcur += w_
+                w_ *= sc; teeth.append((xcur + 0.25, xcur + w_ - 0.25, 14.5)); xcur += w_
             for s_ in (-1, 1):
-                for (a_, b_, yy) in ((26.6, 36.8, 64.0), (37.8, 48.1, 54.4), (49.1, 59.5, 44.8)):
-                    xa, xb = (a_, b_) if s_ > 0 else (-b_, -a_)
-                    teeth.append((xa, xb, yy))
-            tp = skia.Path(); tl = []
-            for xa, xb, yy in teeth:
-                hgt = th_ * (0.85 if abs(xa + xb) > 70 else 1.0)
-                q, _v = _qm(hm, [(xa + 0.4, yy - 3.0), (xb - 0.4, yy - 3.0), (xb - 0.5, yy + hgt - 1.6), ((xa + xb) / 2, yy + hgt), (xa + 0.5, yy + hgt - 1.6)], 3.2)
-                pth = smooth(q, True, 0.35); tp.addPath(pth); tl.append(pth)
-            c.fill(tp, QV['teeth'])
-            c.line(tp, lw * 0.2, QV['teeth_line'], 230)
-            # lower row: 14 teeth standing on the bottom curve
-            arc = bot[2:-2]
+                for (a_, b_), ln_ in zip(((26.5, 37.0), (37.8, 48.3), (49.1, 59.4)), (12.0, 10.5, 9.0)):
+                    teeth.append(((a_, b_) if s_ > 0 else (-b_, -a_)) + (ln_,))
+            tp = skia.Path(); lows = {}
+            for xa, xb, ln_ in teeth:
+                xm = (xa + xb) / 2.0
+                y0 = ytop(xm) + gum_h * 0.9
+                hgt = ln_ * g_
+                lows[round(xm, 2)] = y0 + hgt
+                q, _v = _qm(hm, [(xa, y0 - 1.0), (xb, y0 - 1.0), (xb - 0.2, y0 + hgt - 1.8), (xb - 1.2, y0 + hgt), (xa + 1.2, y0 + hgt),
+                                 (xa + 0.2, y0 + hgt - 1.8)], 3.2)
+                tp.addPath(smooth(q, True, 0.3))
+            # 14 lower teeth standing on the bottom curve, their tops a dark gap below the upper row
+            arc = bot[3:-3]
             Ls = [0.0]
             for a_, b_ in zip(arc[:-1], arc[1:]): Ls.append(Ls[-1] + math.hypot(b_[0] - a_[0], b_[1] - a_[1]))
             tot = Ls[-1] or 1.0
             lp = skia.Path()
+            gap_t = 2.4 + 9.0 * clamp(P.m_open)
             for k in range(14):
-                d0, d1 = tot * (0.03 + 0.94 * k / 14.0), tot * (0.03 + 0.94 * (k + 0.92) / 14.0)
-                p0 = np.interp(d0, Ls, [p[0] for p in arc]), np.interp(d0, Ls, [p[1] for p in arc])
-                p1 = np.interp(d1, Ls, [p[0] for p in arc]), np.interp(d1, Ls, [p[1] for p in arc])
-                dx_, dy_ = p1[0] - p0[0], p1[1] - p0[1]; ll = math.hypot(dx_, dy_) or 1.0
-                nx, ny = dy_ / ll, -dx_ / ll                       # up, toward the inside
-                if ny > 0: nx, ny = -nx, -ny
-                hgt = 9.0 * clamp(sp_open * 1.6) * (0.8 + 0.2 * (1.0 - abs(k - 6.5) / 6.5))
-                q4 = [(p0[0] - nx * 2.4, p0[1] - ny * 2.4), (p1[0] - nx * 2.4, p1[1] - ny * 2.4), (p1[0] + nx * hgt * 0.9, p1[1] + ny * hgt * 0.9),
-                      ((p0[0] + p1[0]) / 2 + nx * hgt, (p0[1] + p1[1]) / 2 + ny * hgt), (p0[0] + nx * hgt * 0.9, p0[1] + ny * hgt * 0.9)]
-                q, _v = _qm(hm, q4, 3.2); lp.addPath(smooth(q, True, 0.35))
-            gq, _ = _qm(hm, [(x, y - 1.5) for x, y in arc], 3.0)
-            c.line(poly(gq, False), 5.0, QV['gum'], 220)
-            c.fill(lp, QV['teeth']); c.line(lp, lw * 0.2, QV['teeth_line'], 230)
-        # the lips stretched round the split: lower lip along the bottom edge, upper lip over the middle
-        lowlip = [(x, y + 1.0 + 4.5 * (1.0 - (abs(x) / 60.0) ** 2)) for x, y in bot[2:-2]]
+                d0, d1 = tot * (0.02 + 0.96 * k / 14.0), tot * (0.02 + 0.96 * (k + 0.9) / 14.0)
+                p0 = float(np.interp(d0, Ls, [p[0] for p in arc])), float(np.interp(d0, Ls, [p[1] for p in arc]))
+                p1 = float(np.interp(d1, Ls, [p[0] for p in arc])), float(np.interp(d1, Ls, [p[1] for p in arc]))
+                xm = (p0[0] + p1[0]) / 2.0; yb = (p0[1] + p1[1]) / 2.0 - 2.6
+                yt_up = ytop(xm) + gum_h * 0.9 + 12.0 * g_ * (1.0 - 0.25 * min(1.0, abs(xm) / 45.0))
+                hgt = min(11.0 * g_, max(0.0, yb - yt_up - gap_t))
+                if hgt < 1.0: continue
+                q, _v = _qm(hm, [(p0[0], p0[1] - 2.6), (p1[0], p1[1] - 2.6), (p1[0] + 0.1, yb - hgt + 1.6), (p1[0] - 1.0, yb - hgt),
+                                 (p0[0] + 1.0, yb - hgt), (p0[0] - 0.1, yb - hgt + 1.6)], 3.2)
+                lp.addPath(smooth(q, True, 0.3))
+            gq2, _ = _qm(hm, [(x, y - 1.6) for x, y in arc], 3.0)
+            c.line(poly(gq2, False), 5.5, QV['gum'], 235, 'butt')
+            allt = skia.Path(tp); allt.addPath(lp)
+            c.fill(allt, QV['teeth'])
+            Lx, Ly, _ = hm.map1(-60.0, my, 3.0); Rx, Ry, _ = hm.map1(60.0, my, 3.0)
+            c.grad(allt, Lx, Ly, Rx, Ry, [(0, '#8a7c72', 190), (0.2, '#d8d0c6', 90), (0.34, '#ffffff', 0), (0.66, '#ffffff', 0),
+                                          (0.8, '#d8d0c6', 90), (1, '#8a7c72', 190)])
+            c.fill(_crescent(tp, 0, 2.2), '#c8bcae', 120)              # the shade under the gum on each upper tooth
+            c.fill(_crescent(lp, 0, -1.8), '#c8bcae', 100)
+            c.line(allt, lw * 0.22, QV['teeth_line'], 235)
+            if det >= 1:                                                # a glint on the front teeth
+                gl = skia.Path()
+                for xa, xb, ln_ in teeth[2:6]:
+                    xm = (xa + xb) / 2.0; X, Y, v = hm.map1(xm - 1.2, ytop(xm) + gum_h + 3.0, 3.4)
+                    if v > 0: gl.addOval(skia.Rect.MakeLTRB(X - 0.9, Y - 2.4, X + 0.9, Y + 2.4))
+                c.fill(gl, '#ffffff', 200 * g_)
+        # the lips stretched round the split: a thin upper lip over the middle, the lower lip along the bottom edge
+        mid = [(x, y) for x, y in top if abs(x) <= 26.0]
+        UQ, _ = _qm(hm, mid + [(x, y - 3.4 * (1.0 - (abs(x) / 26.0) ** 2) - 0.6) for x, y in mid[::-1]], 3.0)
+        c.fill(smooth(UQ, True, 0.6), QV['lip'], 255)
+        lowlip = [(x, y + 0.8 + 2.6 * (1.0 - (abs(x) / 60.0) ** 2)) for x, y in bot[2:-2]]
         LQ, _ = _qm(hm, bot[2:-2] + lowlip[::-1], 3.0)
-        c.fill(smooth(LQ, True, 0.6), QV['lip'], 255)
-        c.line(inner, lw * 0.32, QV['lip_line'], 230)
+        lpth = smooth(LQ, True, 0.6)
+        c.fill(lpth, QV['lip'], 255)
+        BQ2, _ = _qm(hm, [(x, y + 0.5) for x, y in bot[3:-3]], 3.0)
+        c.line(smooth(BQ2, False), lw * 0.5, mix(QV['lip'], '#000000', 0.3), 150)
+        c.line(inner, lw * 0.34, QV['lip_line'], 235)
     # ---- S4: the jaw drops into a tall glossy void with Noah13's face in it
     if voidk > 0.01:
-        vw = lerp(26.0, 44.0, voidk); vt = lerp(my, 50.0, voidk); vb = lerp(my + 4.0, 115.0, voidk)
+        vw = lerp(26.0, 44.0, voidk); vt = lerp(my, my - 10.0, voidk); vb = lerp(my + 4.0, my + 56.0, voidk)
         vp = [(0.0, vt - 1.0), (vw * 0.62, vt + 0.5), (vw * 0.98, vt + (vb - vt) * 0.32), (vw * 0.92, vt + (vb - vt) * 0.7), (vw * 0.5, vb - 2.0),
               (0.0, vb), (-vw * 0.5, vb - 2.0), (-vw * 0.92, vt + (vb - vt) * 0.7), (-vw * 0.98, vt + (vb - vt) * 0.32), (-vw * 0.62, vt + 0.5)]
         VQ, _ = _qm(hm, vp, 3.0)
@@ -7085,35 +7318,31 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
                 ip = smooth(IQ, True, 0.8)
                 c.fill(ip, QV['mouth'], a_l)
                 with c.clip(ip):
-                    TQ, _ = _qm(hm, [(-12.0, my - 1.0), (12.0, my - 1.0), (11.0, my + 3.2), (-11.0, my + 3.2)], 5.0)
+                    TQ, _ = _qm(hm, [(-12.0, my - 1.0), (12.0, my - 1.0), (11.0, my + 3.4), (-11.0, my + 3.4)], 5.0)
                     c.fill(smooth(TQ, True, 0.5), QV['teeth'], a_l * clamp(o * 3.0))
             up_p = smooth(UQ, True, 0.75); lo_p = smooth(LQ, True, 0.75)
             lc = mix(QV['lip'], QV['scar'], 0.5 * flat)
             c.fill(up_p, lc, a_l); c.fill(lo_p, lc, a_l)
-            c.fill(_crescent(up_p, 0, 2.0), mix(lc, '#000000', 0.3), a_l * 0.6)
-            if det >= 1 and flat < 0.5:                     # one gloss stroke on the lower lip
-                GQ, _ = _qm(hm, [(-9.0, my + gap + th_l * 0.45), (-2.0, my + gap + th_l * 0.62), (6.0, my + gap + th_l * 0.5)], 7.0)
-                c.line(smooth(GQ, False), lw * 0.38, QV['lip_gloss'], a_l * 0.85)
+            c.fill(_crescent(up_p, 0, 2.2), mix(lc, '#000000', 0.32), a_l * 0.6)
+            c.fill(_crescent(lo_p, 0, -2.6), mix(lc, '#000000', 0.25), a_l * 0.45)
+            if det >= 1 and flat < 0.5:                     # gloss on the lower lip, a light on the cupid's bow
+                GQ, _ = _qm(hm, [(-9.0, my + gap + th_l * 0.42), (-2.0, my + gap + th_l * 0.6), (6.0, my + gap + th_l * 0.48)], 7.0)
+                c.line(smooth(GQ, False), lw * 0.4, QV['lip_gloss'], a_l * 0.9)
+                BQ, _ = _qm(hm, [(-6.5, my - th_u * 1.25), (0.0, my - th_u * 0.95), (6.5, my - th_u * 1.25)], 7.0)
+                c.line(smooth(BQ, False), lw * 0.22, QV['skin_hi'], a_l * 0.8)
             c.line(up_p, lw * 0.3, QV['lip_line'], a_l); c.line(lo_p, lw * 0.3, QV['lip_line'], a_l)
             SQ, _ = _qm(hm, seam_u, 6.0); c.line(smooth(SQ, False), lw * 0.34, QV['lip_line'], a_l)
-    # ---- the drawing itself (S2: drawn past the lips; S3a: it is the edge of the grin; OFF/S4: scars)
+    # ---- the drawing itself (S2: drawn past the lips; S3a: the edge of the grin; OFF/S4: scars)
     if drawk > 0.01:
         scar = max(st['off'], voidk)
         colr = mix(QV['lip'], QV['scar'], 0.55 * scar)
         for s_ in (-1, 1):
-            pts, Q_, v = steps[s_]
-            if v < -0.15: continue
-            part = _q_partial(Q_, drawk)
-            if len(part) < 2: continue
-            w_ = 4.4 * (1.0 - 0.25 * scar)
-            _q_brush(c, part, w_, colr, 255, crumbs=10 if det >= 1 else 0, seed=7 + s_, dark=mix(colr, '#000000', 0.45))
-            if det >= 1 and scar < 0.5:
-                gl = [(p[0], p[1] - w_ * 0.22) for p in part]
-                c.pen.line(c.P(poly(gl, False)), w_ * 0.22 * c.s, QV['lip_gloss'], 120, 'butt')
+            pts = [(s_ * x, y) for x, y in _Q_STEPS]
+            _q_brush_steps(c, hm, pts, 4.6 * (1.0 - 0.25 * scar), colr, 255, det, 7 + s_, drawk, scar)
     # her voice: a thin red glow on the mouth while she speaks
     if o > 0.03 or (sp_open > 0.3 and P.m_open > 0.03):
         gx, gy, gv = hm.map1(0.0, my + 6, 8.0)
-        if gv > 0: c.glow(gx, gy, 48.0 * hm.sx(0, my), 20.0, QV['lip_glow'], 90 * clamp(max(o, P.m_open) * 2.5))
+        if gv > 0: c.glow(gx, gy, 48.0 * hm.sx(0, my), 20.0, QV['lip_glow'], (90 - 40 * sp_open) * clamp(max(o, P.m_open) * 2.5))
 
 
 def _q_noah_in_void(c, hm, P, st, cx, cy, w, t, det):
@@ -7151,55 +7380,66 @@ def _q_noah_in_void(c, hm, P, st, cx, cy, w, t, det):
 
 
 def _q_face_extras(c, hm, P, st, det, lw):
-    """Beauty mark (always), S3c: cheek folds, porcelain cracks, black mascara tears with drip bulbs."""
-    # the signature: a black spade beauty mark under her left eye, on the cheekbone (0.035 H)
-    bx, by, bv = hm.map1(42.0, 16.0, 2.0)
+    """Beauty mark (always); the grin's cheek folds (S3a+, 4 a side in S3c) and the bunched skin under the eyes; S3c's
+    porcelain cracks and black mascara tears (2 an eye: one drips into the grin, one runs to the jaw)."""
+    bx, by, bv = hm.map1(44.0, 17.0, 2.0)
     if bv > 0.1:
-        fsx = hm.sx(42.0, 16.0)
+        fsx = hm.sx(44.0, 17.0)
         sp_ = _q_spade(0.0, 0.0, 8.4, 7.2)
         m = skia.Matrix(); m.setScale(fsx, 1.0); m.postTranslate(bx, by); sp_.transform(m)
         c.fill(sp_, QV['lid'])
-    full = st['full']
+    op = st['open']; full = st['full']
+    E = _Q_EYE
+    if op > 0.02 and det >= 1:                              # cheek folds round the grin corners
+        fl, fl2 = [], []
+        nf = 2 + int(round(2 * full))
+        for s_ in (-1, 1):
+            for k in range(nf):
+                pts = [(s_ * (56.0 + 2.0 * k), 14.0 - 4.0 * k), (s_ * (66.0 + 3.8 * k), 22.0 - 1.0 * k), (s_ * (70.0 + 4.0 * k), 38.0 + 3.0 * k),
+                       (s_ * (64.0 + 3.0 * k), 54.0 + 6.0 * k)]
+                Q_, v = _qm(hm, pts, 2.0)
+                if v > 0.05: (fl if k < 2 else fl2).append(smooth(Q_, False))
+            if full > 0.05:                                 # the cheeks push the lower lids up: two arcs under each eye
+                for k in range(2):
+                    yy = E['y'] + E['hh'] * 1.9 + 4.5 * k
+                    pts = [(s_ * (E['dx'] - 12.0), yy - 1.0), (s_ * (E['dx'] + 2.0), yy + 2.4), (s_ * (E['dx'] + 15.0), yy - 0.5)]
+                    Q_, v = _qm(hm, pts, 2.0)
+                    if v > 0.05: fl2.append(smooth(Q_, False))
+        if fl: c.line(_multi(fl), lw * 0.3, QV['inner'], 205 * op)
+        if fl2: c.line(_multi(fl2), lw * 0.24, QV['inner'], 175 * full)
     if full < 0.02: return
     a = 255 * full
-    if st['open'] > 0.05 and det >= 1:                      # cheek folds round the grin ends
-        fl = []
-        for s_ in (-1, 1):
-            for k in range(4):
-                pts = [(s_ * (62.0 + 3.6 * k), 50.0 + 2.0 * k), (s_ * (67.5 + 4.2 * k), 34.0 - 2.0 * k), (s_ * (66.0 + 4.6 * k), 16.0 - 5.0 * k)]
-                Q_, v = _qm(hm, pts, 2.0)
-                if v > 0.05: fl.append(smooth(Q_, False))
-        c.line(_multi(fl), lw * 0.26, QV['inner'], a * 0.75 * st['open'])
     if det >= 1:                                            # 3 short porcelain cracks: temples and jaw
         cr = []
         for pts in ([(-70.0, -52.0), (-63.0, -46.0), (-65.5, -40.0), (-56.0, -33.0)], [(-63.0, -46.0), (-58.0, -50.5)],
                     [(68.0, -58.0), (61.0, -51.0), (63.0, -45.5), (54.5, -40.0)],
-                    [(36.0, 104.0), (31.0, 97.0), (34.0, 92.0), (26.0, 85.0)]):
+                    [(40.0, 100.0), (34.0, 94.0), (37.0, 88.0), (29.0, 82.0)]):
             Q_, v = _qm(hm, pts, 2.0)
             if v > 0.05: cr.append(poly(Q_, False))
         if cr:
             m_ = _multi(cr)
             c.line(m_, lw * 0.26, QV['crack'], a)
             q = skia.Path(m_); q.offset(0.9, 0.9); c.line(q, lw * 0.16, '#ffffff', a * 0.55)
-    # 2 black mascara tears per eye: glossy tubes from the lower lid, drip bulbs at the jaw
+    _, _, ytop = _q_grin_shape(1.0, 0.0, 0.0)
+    with (c.clip(_Q_GRIN[0], diff=True) if _Q_GRIN[0] is not None else _noop()):     # the tears run behind the grin / void
+        _q_tears(c, hm, st, op, full, ytop)
+
+
+def _q_tears(c, hm, st, op, full, ytop):
+    E = _Q_EYE
     for s_ in (-1, 1):
-        for k, (dx_, end) in enumerate(((-3.5, 96.0), (5.5, 108.0))):
-            x0 = s_ * (_Q_EYE['dx'] + dx_ * s_ * -1 if False else _Q_EYE['dx']) + s_ * dx_
-            ys = np.linspace(-3.0, end, 10)
-            pts = [(x0 + s_ * (1.4 * math.sin(yy * 0.09 + k * 1.7) + 0.035 * (yy + 3.0)), float(yy)) for yy in ys]
-            Q_, v = _qm(hm, pts, 2.6)
-            if v < 0.05: continue
-            n = max(2, int(len(Q_) * clamp(full * 1.15)))
-            Q_ = Q_[:n]
-            path = smooth(Q_, False)
-            with (c.clip(_Q_GRIN[0], diff=True) if _Q_GRIN[0] is not None else _noop()):
-                c.pen.line(c.P(path), 4.4 * c.s, QV['tear'], a, 'round')
-                hl = [(x_ - 1.0, y_) for x_, y_ in Q_[1:-1]]
-                if len(hl) > 1: c.pen.line(c.P(smooth(hl, False)), 1.1 * c.s, QV['tear_hi'], a * 0.85, 'round')
-            ex, ey = Q_[-1]
-            c.fill(smooth([(ex - 3.4, ey + 2.5), (ex, ey - 2.0), (ex + 3.4, ey + 2.5), (ex + 2.2, ey + 6.4), (ex, ey + 7.2), (ex - 2.2, ey + 6.4)], True, 0.8),
-                   QV['tear'], a)
-            c.fill(oval(ex - 1.0, ey + 2.6, 0.9, 1.3), '#c8c4dc', a * 0.8)
+        x0 = s_ * (E['dx'] - 5.0); y0 = E['y'] + E['hh'] * 0.9
+        _q_soft(c, hm, [(x0 - 6, y0 - 1), (x0 + 6, y0 - 1), (x0 + 5, y0 + 9), (x0 - 4, y0 + 8)], '#2a2030', 120 * full, 2.5, 2.0)   # the smudge
+        y1 = (ytop(x0) - 1.0) if op > 0.3 else 98.0
+        ys = np.linspace(y0, y1, 12)
+        _q_tear(c, hm, [(x0 + s_ * (1.3 * math.sin(yy * 0.11) + 0.03 * (yy - y0)), float(yy)) for yy in ys], full, 3 + s_)
+        xo = s_ * (E['dx'] + 11.0)
+        path = [(xo, y0 - 1.0), (s_ * 56.0, 14.0), (s_ * 63.0, 26.0), (s_ * 64.0, 42.0), (s_ * 58.0, 62.0), (s_ * 45.0, 84.0)]
+        dense = []
+        for (xa, ya), (xb, yb) in zip(path[:-1], path[1:]):
+            for u in np.linspace(0, 1, 4, endpoint=False): dense.append((xa + (xb - xa) * u, ya + (yb - ya) * u))
+        dense.append(path[-1])
+        _q_tear(c, hm, dense, full, 9 + s_)
 
 
 def _q_ring_pt(hm, phi, y0, grow):
@@ -7285,8 +7525,9 @@ def _q_hair_region(hm, hide, grow=10.0, y_bot=150.0):
     if face_v < -0.05 or hide > 0.97: return vol, None
     # the face window (front surface coords): parting, hairline, along the cheeks inside the curtains, round the jaw
     hk = clamp(hide)
-    win = [(0.0, -84.0), (16.0, -79.0), (36.0, -68.0), (55.0, -48.0), (67.0, -22.0), (72.0, 8.0), (72.0, 40.0), (68.0, 70.0),
-           (64.0, 96.0), (60.0, 140.0), (58.0, 260.0)]
+    win = [(0.0, -77.0), (14.0, -74.0), (30.0, -66.0), (44.0, -53.0), (55.0, -36.0), (63.0, -16.0), (69.0, 8.0), (71.0, 28.0),
+           (68.0, 50.0), (61.0, 70.0), (53.0, 90.0), (48.0, 106.0), (47.0, 130.0), (48.0, 160.0), (50.0, 260.0)]
+    # the curtains sweep over the temples and close in along the jaw: the face shows as a long oval, widest at the cheekbones
     pts = []
     for s_ in (1, -1):
         seq = win if s_ > 0 else win[::-1]
@@ -7367,7 +7608,9 @@ def _q_hair_front(c, hm, P, st, det, t, lw):
 
 
 def _q_head(c, P, yaw, pitch, det, t, light=None, crown=True):
-    """The queen's head on Ctx c (head coords, crown -120 .. chin +120), all stages. Returns the head map."""
+    """The queen's head on Ctx c (head coords, crown -120 .. chin +120), all stages. Returns the head map. The head is
+    drawn 0.88x narrow, so the face that shows between the curtains reads as a long oval (1.35 : 1)."""
+    c = c.sub(0.0, 0.0, 0.0, _Q_NARROW, 1.0)
     st = _qst(P)
     QL = _ql(light)
     hm = _QHM(yaw, pitch, stretch=st['void'], jaw=5.0 * clamp(P.m_open) * (1.0 - st['open']))
@@ -7378,23 +7621,15 @@ def _q_head(c, P, yaw, pitch, det, t, light=None, crown=True):
     c.fill(vol, QV['hair'])
     c.line(vol, lw * 0.7, QV['line'])
     if crown: _q_crown(c, hm, det, t, lw, 'back')
-    sil = hm.silhouette(y_top=-120, y_bot=120)
-    # porcelain skin, lit from below the front (cool white key), one cool shade step, no blush
+    sil = hm.silhouette(y_top=-120, y_bot=120, n=40)
     bb = sil.getBounds()
-    c.grad(sil, 0, bb.top(), 0, bb.bottom(), [(0, '#ddd3df', 255), (0.42, QV['skin'], 255), (0.85, '#f4f0f6', 255), (1, '#f8f6fb', 255)])
+    # porcelain lit from below the front by a cool white key, then modelled with a cool contour (no blush)
+    c.grad(sil, 0, bb.top(), 0, bb.bottom(), [(0, mix(QV['skin'], QV['skin_sh'], 0.35), 255), (0.36, QV['skin'], 255),
+                                              (0.78, mix(QV['skin'], QV['skin_hi'], 0.45), 255), (1, mix(QV['skin'], QV['skin_sh'], 0.2), 255)])
     if face_v > -0.3:
-        for s_ in (-1, 1):                                  # under the cheekbones, temples, sockets
-            X, Y, v = hm.map1(s_ * 58.0, 36.0, 1.0)
-            if v > 0: c.sub(X, Y, -s_ * 38.0).glow(0, 0, 9.0 * hm.sx(s_ * 58, 36) + 2.0, 30.0, QV['skin_sh'], 85)
-            X, Y, v = hm.map1(s_ * 72.0, -40.0, 1.0)
-            if v > 0: c.glow(X, Y, 12.0, 24.0, QV['skin_sh'], 80)
-            X, Y, v = hm.map1(s_ * 50.0, 6.0, 4.0)          # highlight on the cheekbone (luma >= 200)
-            if v > 0: c.glow(X, Y, 16.0 * hm.sx(s_ * 50, 6), 8.0, QV['skin_hi'], 200)
-        X, Y, v = hm.map1(0.0, 100.0, 4.0)
-        if v > 0: c.glow(X, Y, 16.0, 9.0, QV['skin_hi'], 170)
-        X, Y, v = hm.map1(0.0, -58.0, 4.0)
-        if v > 0: c.glow(X, Y, 22.0, 12.0, QV['skin_hi'], 120)
-    c.fill(_crescent(sil, -QL['side'] * 6.0, 2.0), QV['skin_sh'], 120)
+        with c.clip(sil):
+            _q_face_model(c, hm, st, QL, det)
+    c.fill(_crescent(sil, -QL['side'] * 6.0, 2.0), QV['skin_sh'], 130)
     if QL.get('split'):                                     # half in one world's light, half in the other's (H1, the doorway)
         g0, g1 = QL['split']
         c.grad(sil, -100.0 * QL['side'], 0, 100.0 * QL['side'], 0, [(0, g1, 70), (0.42, g1, 0), (0.58, g0, 0), (1, g0, 80)])
@@ -7402,9 +7637,7 @@ def _q_head(c, P, yaw, pitch, det, t, light=None, crown=True):
     if QL.get('rim2'): c.fill(_crescent(sil, -QL['side'] * 4.0, 1.0), QL['rim2'], QL['rim_a'] * 0.6)
     if face_v > -0.35:
         with (c.clip(hm.silhouette(grow=1.5)) if abs(hm.st) > 0.2 else _noop()):
-            eyes = {}
-            for s_ in (-1, 1):
-                eyes[s_] = _q_eye(c, hm, P, s_, st, det, lw)
+            for s_ in (-1, 1): _q_eye(c, hm, P, s_, st, det, lw)
             for s_ in (-1, 1): _q_brow(c, hm, s_, lw)
             _q_mouth(c, hm, P, st, det, t, lw, QL)
             _q_face_extras(c, hm, P, st, det, lw)
@@ -7474,7 +7707,10 @@ def _q_skirt(c, B, P, det, t, lw, QL):
     # satin: soft diagonal sheen, a darker fall into the folds, the rim of her red light on the far side
     c.grad(sk, bb.left(), bb.top(), bb.right(), bb.bottom(), [(0, QV['satin'], 0), (0.28, QV['satin_sheen'], 230), (0.36, QV['satin_hi'], 150),
                                                              (0.45, QV['satin_sheen'], 120), (0.62, QV['satin'], 0), (1, QV['satin_sh'], 200)])
+    c.grad(sk, bb.left(), 0, bb.right(), 0, [(0, QV['satin_hi'], 0), (0.2, QV['satin_hi'], 0), (0.29, '#5a547e', 150), (0.37, QV['satin_hi'], 0),
+                                             (0.66, QV['satin_hi'], 0), (0.74, '#4a4468', 90), (0.8, QV['satin_hi'], 0), (1, QV['satin_hi'], 0)])
     c.fill(_crescent(sk, QL['side'] * 5.0, 0.0), QL['rim'], QL['rim_a'] * 0.55)
+    c.fill(_crescent(sk, -QL['side'] * 4.0, 0.0), '#9aa4e8', 80)          # the cool moon rim on the other side
     with c.clip(sk):                                         # folds: from the waist to the hem, swaying with the hem
         if det >= 1:
             fl = []
@@ -7485,8 +7721,8 @@ def _q_skirt(c, B, P, det, t, lw, QL):
                 if bot[2] < -20: continue
                 mx_ = lerp(top[0], bot[0], 0.55) + 4.0 * math.sin(k * 1.7 + t * 0.6)
                 fl.append(smooth([(top[0], top[1]), (mx_, lerp(top[1], bot[1], 0.55)), (bot[0], bot[1] - 6.0)], False))
-            c.line(_multi(fl), lw * 0.4, QV['satin_sh'], 190)
-            c.line(_multi([moved_path(f_, 3.0, 0) for f_ in fl[::2]]), lw * 0.3, QV['satin_hi'], 60)
+            c.line(_multi(fl), lw * 0.45, QV['satin_sh'], 200)
+            c.line(_multi([moved_path(f_, 4.0, 0) for f_ in fl[::2]]), lw * 0.6, '#6a6490', 120)
     if u > 0.25 and det >= 1:                                # seated: two knees under the satin, a crease across the lap
         ka = clamp((u - 0.25) / 0.5)
         for s_ in (-1, 1):
@@ -7503,22 +7739,22 @@ def _q_skirt(c, B, P, det, t, lw, QL):
     front = [p for p in hem if p[2] > -4.0]
     if len(front) > 3:
         front.sort(key=lambda p: p[0])
-        line0 = [(p[0], p[1] - 4.0) for p in front]
-        line1 = [(p[0], p[1] - 24.0) for p in front]
-        c.line(smooth(line0, False), lw * 0.5, QV['hem_red'], 255)
-        c.line(smooth(line1, False), lw * 0.5, QV['hem_red'], 255)
+        line0 = [(p[0], p[1] - 5.0) for p in front]
+        line1 = [(p[0], p[1] - 36.0) for p in front]
+        band = smooth(line0 + line1[::-1], True, 0.5)
+        c.fill(band, '#05040a', 200)
+        c.line(smooth(line0, False), lw * 0.75, QV['hem_red'], 255)
+        c.line(smooth(line1, False), lw * 0.75, QV['hem_red'], 255)
         xs = [p[0] for p in front]; ys = [p[1] for p in front]
         arc = 0.0; acc = [0.0]
         for i in range(1, len(front)): arc += math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]); acc.append(arc)
-        npx = arc * c.s
-        n = int(clamp(npx / 22.0, 5, 60))
+        n = int(clamp(arc / 27.0, 5, 40))                    # pips every ~27 body units: a white dotted band even in wides
         pp = skia.Path()
-        ph = (t * 0.0) % 1.0
         for k in range(n):
             d = arc * (k + 0.5) / n
-            X = float(np.interp(d, acc, xs)); Y = float(np.interp(d, acc, ys)) - 14.0
-            pp.addPath(_q_spade(X, Y, 11.0, 9.5))
-        c.fill(pp, QV['pip'], 245)
+            X = float(np.interp(d, acc, xs)); Y = float(np.interp(d, acc, ys)) - 20.5
+            pp.addPath(_q_spade(X, Y, 18.0, 15.0))
+        c.fill(pp, QV['pip'], 250)
     return E
 
 
@@ -7537,9 +7773,8 @@ def _q_foot_lifted(c, B, P, det, lw, QL):
     outline, toes, lines = _q_foot_paths(d, clamp(P.toes))
     fc.fill(outline, QV['foot']); fc.fill(_crescent(outline, -0.025 * d, -0.02), QV['foot_sh'], 130)
     fc.fill(_crescent(outline, 0.02 * d, 0.0), QL['rim'], QL['rim_a'] * 0.5)
-    for q, nl in toes:
-        fc.fill(q, QV['foot']); fc.line(q, fc.lw * 0.4, QV['line']); fc.fill(nl, QV['nail'], 245)
     fc.line(outline, fc.lw * 0.9, QV['line'])
+    _q_toe_draw(fc, toes, fc.lw, det)
     # the hem lifted over the shin: a satin drape with the red border
     kx, ky = X, Y - 0.74 * 220.0
     hx0, hy0 = kx - 86.0, ky + 46.0; hx1, hy1 = kx + 48.0 * d, ky + 14.0
@@ -7575,7 +7810,7 @@ def _q_feet_peek(c, B, P, det, lw, E):
                 xx = fx + (k - 2) * fw * 0.36 * (1 if s_ > 0 else -1); yy = Y + 2.6 - abs(k - 2) * 0.9 + (0.0 if k != (0 if s_ < 0 else 4) else -0.4)
                 r_ = 2.1 if k == (0 if s_ < 0 else 4) else 1.5
                 nl.addOval(skia.Rect.MakeLTRB(xx - r_, yy - r_ * 0.75, xx + r_, yy + r_ * 0.75))
-            c.fill(nl, QV['nail'], 240)
+            c.fill(nl, QV['toenail_edge'], 230)
 
 
 _LACE = []
@@ -7665,8 +7900,10 @@ def _q_arm(c, B, P, side, det, t, lw, QL):
     tp = _tube([(P2[0][0] - side * 4, P2[0][1] - 12)] + P2, [widths[0] * 1.08] + widths)
     c.fill(tp, QV['satin'])
     c.grad(tp, P2[0][0] - 20, 0, P2[0][0] + 20, 0, [(0, QV['satin_sheen'], 150), (0.5, QV['satin'], 0), (1, QV['satin_sh'], 150)])
-    c.glow((P2[1][0] + P2[2][0]) / 2, (P2[1][1] + P2[2][1]) / 2, 6.0, 40.0, QV['satin_hi'], 90)
+    c.glow((P2[1][0] + P2[2][0]) / 2, (P2[1][1] + P2[2][1]) / 2, 7.0, 46.0, '#5a547e', 150)
+    c.glow((P2[0][0] + P2[1][0]) / 2, (P2[0][1] + P2[1][1]) / 2, 7.0, 40.0, '#5a547e', 120)
     c.fill(_crescent(tp, QL['side'] * 4.0, 0), QL['rim'], QL['rim_a'] * 0.5)
+    c.fill(_crescent(tp, -QL['side'] * 3.5, 0), '#9aa4e8', 85)
     c.line(tp, lw, QV['line'])
     wx, wy = P2[2]
     ang = math.degrees(math.atan2(P2[2][1] - P2[1][1], P2[2][0] - P2[1][0])) - 90
@@ -7706,7 +7943,10 @@ def _q_bodice(c, B, P, det, t, lw, QL, back):
     c.grad(tor, bb.left(), bb.top(), bb.right(), bb.bottom(), [(0, QV['satin'], 0), (0.3, QV['satin_sheen'], 220), (0.38, QV['satin_hi'], 120),
                                                                (0.5, QV['satin'], 0), (1, QV['satin_sh'], 220)])
     c.fill(_crescent(tor, QL['side'] * 5.0, 0.0), QL['rim'], QL['rim_a'] * 0.55)
+    c.fill(_crescent(tor, -QL['side'] * 4.0, 0.0), '#9aa4e8', 80)
     c.line(tor, lw, QV['line'])
+    if not back:
+        _q_girdle(c, B, P, det, lw, lv)
     if not back and det >= 1:
         # bodice seams (princess lines) and the buttons
         sm = []
@@ -7726,6 +7966,71 @@ def _q_bodice(c, B, P, det, t, lw, QL, back):
             if Z > -5:
                 bt.addCircle(X, Y, 3.0); hi.addCircle(X - 0.9, Y - 0.9, 1.0)
         c.fill(bt, QV['silver']); c.line(bt, lw * 0.22, QV['line']); c.fill(hi, '#ffffff', 220)
+
+
+def _q_front(B, x, y, lv, extra=0.0):
+    """A point on the front surface of her bodice/skirt at body (x, y): projected (X, Y, Z)."""
+    ys_ = [l_[0] for l_ in lv]; o = np.argsort(ys_)
+    w = float(np.interp(y, [ys_[i] for i in o], [lv[i][1] for i in o])); d = float(np.interp(y, [ys_[i] for i in o], [lv[i][2] for i in o]))
+    z = d * math.sqrt(max(0.0, 1.0 - min(1.0, (x / max(w, 1.0)) ** 2))) + extra
+    X, Y, s_, Z = B.p3(x, y, z)
+    return X, Y, Z
+
+
+def _q_girdle(c, B, P, det, lw, lv):
+    """The gown's shape in one silver line (it reads in wides): a pointed stomacher edged in silver from the bust to
+    below the waist, a silver chain girdle round the waist with a spade clasp (red stone), and a pendant chain down the
+    front of the skirt to a spade at the knee (standing)."""
+    if B.ct < -0.1: return
+    sil, hi = QV['silver'], QV['silver_hi']
+    ys = np.linspace(B.y_sh + 46.0, -566.0, 9)
+    edge = []
+    for s_ in (-1, 1):
+        q = []
+        for y in ys:
+            u = (y - ys[0]) / (ys[-1] - ys[0])
+            x = s_ * 46.0 * (1.0 - u) ** 0.85
+            X, Y, Z = _q_front(B, x, y, lv, 1.0)
+            q.append((X, Y))
+        edge.append(q)
+    st_ = smooth(edge[0] + edge[1][::-1][1:], True, 0.6)
+    c.grad(st_, edge[0][0][0], 0, edge[1][0][0], 0, [(0, QV['satin_sheen'], 0), (0.35, '#3a3552', 160), (0.5, QV['satin_sheen'], 60), (1, QV['satin'], 0)])
+    c.line(smooth(edge[0], False), lw * 0.42, sil, 235); c.line(smooth(edge[1], False), lw * 0.42, sil, 235)
+    # the chain girdle (front half of the waist) and the clasp
+    wl = [lv_ for lv_ in lv if abs(lv_[0] + 600.0) < 1.0]
+    w0, d0 = (wl[0][1], wl[0][2]) if wl else (49.0, 34.0)
+    ring = []
+    for a in np.linspace(0.08, PI - 0.08, 17):
+        x = -math.cos(a) * w0 * 1.03; z = math.sin(a) * d0 * 1.03 + 1.0
+        X, Y, s_, Z = B.p3(x, -598.0 + 5.0 * math.sin(a), z)
+        if Z > -6: ring.append((X, Y))
+    if len(ring) > 2:
+        rp = smooth(ring, False)
+        c.line(rp, lw * 0.95, QV['line'], 255); c.line(rp, lw * 0.6, sil, 255)
+        if det >= 1:
+            dots = skia.Path()
+            for X, Y in ring[1:-1:2]: dots.addCircle(X, Y, lw * 0.22)
+            c.fill(dots, hi, 230)
+    X, Y, Z = _q_front(B, 0.0, -594.0, lv, 3.0)
+    if Z > -4:
+        br = _q_spade(X, Y + 2.0, 26.0, 22.0)
+        c.fill(br, sil); c.line(br, lw * 0.35, QV['line'])
+        c.fill(_q_spade(X, Y + 2.6, 15.0, 12.6), QV['stone']); c.fill(oval(X - 2.6, Y - 2.4, 1.6, 1.6), '#ffffff', 230)
+        c.glow(X, Y, 12.0, 12.0, QV['lip_glow'], 70)
+    if clamp(P.sit) < 0.3:                                   # the pendant chain down the front of the skirt
+        skv = [(-598.0, 49.0, 34.0), (-540.0, 70.0, 48.0), (-300.0, 118.0, 108.0), (-2.0, 146.0, 134.0)]
+        sway = 4.0 * P.sec_x + 3.0 * getattr(P, 'hem', 0.0)
+        ch = []
+        for y in np.linspace(-580.0, -350.0, 12):
+            u = (y + 580.0) / 230.0
+            X, Y, Z = _q_front(B, sway * u, y, skv, 2.0)
+            ch.append((X, Y))
+        cp = smooth(ch, False)
+        c.line(cp, lw * 0.75, QV['line'], 230); c.line(cp, lw * 0.42, sil, 240)
+        X, Y = ch[-1]
+        pd = _q_spade(X, Y + 14.0, 30.0, 25.0)
+        c.fill(pd, sil); c.line(pd, lw * 0.35, QV['line'])
+        c.fill(_q_spade(X - 1.5, Y + 11.0, 9.0, 7.0), hi, 220)
 
 
 def _q_neck(c, B, P, det, lw, QL, back):
@@ -8000,26 +8305,47 @@ def queen_hands(pen, x, y, size, P, detail=2, light=None, t=None, main='r'):
 
 
 def _q_foot_paths(d, toes_k):
-    """Her bare foot, low 3/4 view on a step, sole y=0, ankle at (0, -0.36), toes to +x*d: narrow, a high arch, toes
-    1.2x long. Returns (outline, toes=[(path, nail)], lines)."""
-    tx = 0.5 - 0.035 * toes_k
-    pts = [(0.05, -0.46), (0.06, -0.34), (0.13, -0.24), (0.22, -0.16), (0.31, -0.11), (0.39, -0.08), (tx - 0.03, -0.06 + 0.012 * toes_k),
-           (tx, -0.03 + 0.025 * toes_k), (tx - 0.01, 0.0 + 0.024 * toes_k), (0.4, 0.008), (0.3, 0.004), (0.22, -0.018), (0.12, -0.032),
-           (0.02, -0.01), (-0.07, 0.008), (-0.11, -0.016), (-0.12, -0.07), (-0.095, -0.18), (-0.065, -0.32), (-0.06, -0.46)]
+    """Her bare foot, low 3/4 view on a step, sole y=0, ankle at (0, -0.36), toes to +x*d: narrow, a high arch, long toes
+    (1.2x). Returns (outline, toes=[(toe path, nail path)] little toe first, lines). The toes are separate elongated
+    digits aligned with the foot (a slight downward curl with toes_k), each with a small pale nail plate on top."""
+    pts = [(0.05, -0.46), (0.06, -0.34), (0.13, -0.24), (0.22, -0.16), (0.3, -0.115), (0.36, -0.092), (0.405, -0.072), (0.425, -0.045),
+           (0.42, -0.012), (0.36, 0.004), (0.28, 0.003), (0.21, -0.016), (0.12, -0.03), (0.02, -0.01), (-0.07, 0.008), (-0.11, -0.016),
+           (-0.12, -0.07), (-0.095, -0.18), (-0.065, -0.32), (-0.06, -0.46)]
     outline = smooth([(px * d, py) for px, py in pts], True, 0.55)
     toes = []
-    for i, (u, r) in enumerate(((0.0, 1.0), (0.22, 0.78), (0.42, 0.7), (0.61, 0.62), (0.78, 0.54))[::-1]):
-        cx = tx - 0.03 - u * 0.15; cy = -0.03 - u * 0.055 + 0.024 * toes_k * (1 - u)
-        rx, ry = 0.043 * r, 0.025 * r
-        q = oval(0, 0, rx, ry); m = skia.Matrix(); m.setRotate(math.degrees((-0.3 - 0.6 * toes_k) * d)); m.postTranslate(cx * d, cy); q.transform(m)
-        nl = oval(0, 0, rx * 0.5, ry * 0.5); m2 = skia.Matrix(); m2.setRotate(math.degrees((-0.3 - 0.6 * toes_k) * d))
-        m2.postTranslate((cx + rx * 0.4) * d, cy - ry * 0.4); nl.transform(m2)
+    spec = ((0.0, 0.084, 0.03), (1.0, 0.07, 0.023), (2.0, 0.062, 0.021), (3.0, 0.054, 0.019), (4.0, 0.045, 0.017))
+    for i, L, r in spec[::-1]:
+        bx = 0.405 - 0.03 * i; by = -0.03 - 0.013 * i
+        a = 0.12 + 0.55 * toes_k + 0.04 * i
+        L *= 1.2 * (1.0 - 0.18 * toes_k)
+        ca, sa = math.cos(a), math.sin(a)
+        tx_, ty_ = bx + L * ca, by + L * sa
+        nx, ny = -sa, ca                                     # toward the sole
+        q = smooth([(bx - nx * r, by - ny * r), (tx_ - nx * r * 0.9 - ca * r * 0.1, ty_ - ny * r * 0.9 - sa * r * 0.1),
+                    (tx_ + ca * r * 0.55, ty_ + sa * r * 0.55), (tx_ + nx * r * 0.85, ty_ + ny * r * 0.85), (bx + nx * r, by + ny * r)], True, 0.7)
+        u0, u1 = 0.5, 0.97
+        nl = smooth([(bx + ca * L * u0 - nx * r * 0.85, by + sa * L * u0 - ny * r * 0.85),
+                     (bx + ca * L * u1 - nx * r * 0.7, by + sa * L * u1 - ny * r * 0.7),
+                     (bx + ca * L * u1 - nx * r * 0.05, by + sa * L * u1 - ny * r * 0.05),
+                     (bx + ca * L * u0 - nx * r * 0.25, by + sa * L * u0 - ny * r * 0.25)], True, 0.6)
+        m = skia.Matrix(); m.setScale(d, 1.0); q.transform(m); nl.transform(m)
         toes.append((q, nl))
     lines = [smooth([(0.04 * d, -0.3), (0.16 * d, -0.19), (0.3 * d, -0.1)], False),          # tendons on the top of the foot
              smooth([(0.02 * d, -0.26), (0.13 * d, -0.15), (0.25 * d, -0.075)], False),
              smooth([(-0.05 * d, -0.42), (-0.075 * d, -0.26), (-0.1 * d, -0.13)], False),    # Achilles
              smooth([(0.03 * d, -0.016), (0.12 * d, -0.045), (0.21 * d, -0.03)], False)]      # the arch, off the step
     return outline, toes, lines
+
+
+def _q_toe_draw(fc, toes, lw, det=2):
+    """Toes (little toe first, the big toe on top), each outlined thin, a shade under it, a pale cold nail with an edge."""
+    for q, nl in toes:
+        fc.fill(q, QV['foot']); fc.fill(_crescent(q, 0, -0.01), QV['foot_sh'], 170)
+        fc.line(q, lw * 0.42, QV['line'])
+        fc.fill(nl, QV['toenail'], 250)
+        if det >= 1:
+            fc.line(nl, lw * 0.18, QV['toenail_edge'], 200)
+            b = nl.getBounds(); fc.fill(oval(b.centerX(), b.top() + b.height() * 0.32, b.width() * 0.16, b.height() * 0.12), QV['toenail_hi'], 200)
 
 
 def queen_feet(pen, x, y, size, P, detail=2, light=None, t=None):
@@ -8054,12 +8380,8 @@ def queen_feet(pen, x, y, size, P, detail=2, light=None, t=None):
             fc.line(lines[2], lw * 0.3, QV['skin_dp'], 130)
             fc.line(lines[3], lw * 0.3, QV['skin_dp'], 110)
             fc.line(smooth([(-0.022, -0.33), (0.0, -0.356), (0.026, -0.33)], False), lw * 0.3, QV['skin_dp'], 150)
-        for q, nl in toes:
-            fc.fill(q, QV['foot']); fc.fill(_crescent(q, 0, -0.008), QV['foot_sh'], 150)
-            fc.line(q, lw * 0.4, QV['line'])
-            fc.fill(nl, QV['nail'], 245)
-            b = nl.getBounds(); fc.fill(oval(b.centerX() - b.width() * 0.15, b.centerY() - b.height() * 0.15, b.width() * 0.16, b.height() * 0.14), QV['nail_hi'], 180)
         fc.line(outline, lw * 0.9, QV['line'])
+        _q_toe_draw(fc, toes, lw, detail)
         out['r' if side < 0 else 'l'] = (fx, fy)
     if hem_on and out:                                     # one satin hem over both ankles, the playing-card border
         xs_ = [v[0] for v in out.values()]

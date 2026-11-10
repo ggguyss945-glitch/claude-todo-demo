@@ -26,14 +26,35 @@ weight, inner features `#4a2c3a`. All of her is drawn by the `queen_*` functions
   from a centre parting (sheen band, dark strands, light highlights, a parting line, two loose strands over her left cheek
   that never move); a bell gown to the floor (hem 1.6x the shoulders, a train behind) with a playing-card border of white
   spade pips between two red lines, a spade brooch with a red stone at the throat, 9 silver buttons.
-- **Face (S1).** Long oval 1.38:1, porcelain `#ece6e8` with one cool shade, no blush, highlights at luma >= 200
-  (measured p99.5 244 OURS / 244 THEIRS / 239 CLIMAX); almond eyes 0.18 W with grey-violet irises, two highlights, a heavy
-  tapered black upper lid with a wing and 5 lashes, no lower lid line; thin arched brows; a two-curve nose; full lipstick
-  lips `#c63449` with a lip line and one gloss stroke; **a black spade beauty mark** under her left eye.
+- **Face (S1, reworked at the gate).** A long oval: high cheekbones, a jaw angle and a pointed chin (`_QSP`), the head
+  drawn 0.88x narrow (`_Q_NARROW`), the curtains sweeping over the temples and closing in along the jaw so the face shows
+  widest at the cheekbones. Porcelain modelled with a cool contour (`_q_face_model`: temples, sockets, cheek hollows
+  under the cheekbones, the jaw, the nose side; light on the cheekbones, bridge, brow and chin), no blush. Almond eyes
+  ~0.19 W on the 0.47 H line: grey-violet irises with fibres and two highlights, a smoky plum lid, a heavy tapered liner
+  with a wing, 5 curled lashes, a crease; calm stages hood the iris a little. A long fine nose (bridge line, alar wings,
+  nostrils, highlight); full lipstick lips `#c63449` with a cupid's-bow light and gloss, the seam at y 55 close under the
+  nose; **a black spade beauty mark** under her left eye.
+- **Her values are pre-grade.** `QV` skin is `#d0c9d3` (shade `#a89bb2`, light `#e9e5ee`): the v2 grades (contrast ~1.3)
+  lift it to the brief's porcelain (~luma 215-235) with the modelling intact; the brief's `#ece6e8` drawn raw blew out to
+  white in the film. Face highlight p99.5 measured graded: 230 OURS / 240 THEIRS (dawn_queen_v2) / 232 CLIMAX.
+  `tools/cast_v2_sheets.py` grades every cell with its world's v2 preset (`--raw` to skip), so the sheets show film values.
+- **S3 (gate rework).** S3a: the stair drawing is the top edge of a deep grin (0.69 W, down toward the chin) with exposed
+  pink gums, 14 flat upper teeth hanging tread by tread (a staircase of teeth) and 14 lower teeth, a dark mouth, a thin
+  stretched lower lip, cheek folds round the corners. S3b: red irises with bloom, pink whites with 8 branching veins, an
+  inflamed lower rim, sunken plum sockets. S3c: lids wide (white round the iris), 4 folds a side plus bunched skin under
+  the eyes, 3 cracks, a mascara smudge and 2 glossy black tears an eye (one drips into the grin, one runs to the jaw).
+  The S2 drawing is hand-drawn lipstick (`_q_brush_steps`: each tread and riser its own waxy stroke overshooting the
+  corner, a darker under-edge, a sheen, crumbs).
 - **Hands.** Porcelain, outlined, knuckle creases, long black almond nails with a sheen, the right index and middle
   fingertips smudged lipstick red (with crumbs). The satin sleeve ends in a point over the back of the hand.
-- **Feet.** Bare, narrow, an arch, tendons, toes 1.2x long, black toenails, ash-white with lavender shade; the hem with
-  the pip border brushes the ankles (feet insert, and `view='pov'` / spec `pov: true` from above for H7).
+- **Feet (gate rework).** Bare, narrow, an arch, tendons; in 3/4 five elongated toes aligned with the foot (big toe in
+  front, the rest stepping back), from above (`view='pov'`, `_q_foot_top`) one scalloped toe line with creases. Nails are
+  small PALE cold plates (`QV['toenail']`, the black ovals read as eyes; one key to change back). The hem with the pip
+  border brushes the ankles.
+- **Gown (gate rework).** Satin sheen bands on the skirt and arms, a cool moon rim on the far side of skirt, bodice and
+  arms, a pointed stomacher edged in silver, a silver chain girdle with a spade clasp (red stone), a pendant chain to a
+  silver spade at the knee (standing), a wider hem band of white pips: the gown reads in wides and silhouettes.
+- **`fade_in(t0, dur)`** (new act): not drawn before t0, then fades in (H7: her face arrives as the camera tilts up).
 - **Her light.** Cool key from below the front, a red rim `#ff3b5c` on the far side (the plan's queen light dict
   `{key_c, key_from, rim, rim_a, bloom, drain_px}` is read: its `rim`/`rim_a` are hers). Extra keys for special shots:
   `qrim`, `qrim_a`, `qrim2` (a second rim on the near side) and `qsplit=(colour_far, colour_near)` (half one world's
