@@ -4147,3 +4147,7 @@ def _v_ui(var, st, shot):
         for l in L: l.dim = 0.3
     L.append(_live(0.9, lambda pen, tt: motes(pen, tt, (-100, -100, 2000, 1200), 50, 433, None, CORE, 0.12), 'dust', blur=0))
     return _sp('ui/' + shot.get('view', 'text'), L, {}, dof=6.75, info=dict(insert=True))
+
+
+# ====================================================================== v2 sets (DIRECTION_V2 section 4): engine/room3d.py rooms
+import sets_v2  # noqa: E402,F401  (registers the v2 views in VIEWS; see SETS.md)

@@ -75,6 +75,28 @@ _MF['memory_night'] = dict(_MF['memory'], exposure=-0.6, wb=(1.08, 0.98, 0.86))
 _MF['memory_morning'] = dict(_MF['memory'], exposure=0.25, sat=0.45, wb=(0.98, 1.0, 1.04))
 GRADES.update(_MF)
 
+# v2 presets (DIRECTION_V2 4.8). The sets are drawn at their target brightness, so these grades do NOT lift exposure (the
+# cast keeps its own values: no dimming of characters under the night grade). Per-tenth light arc and the dawn_break
+# flicker / red leak come from sets SetPiece.fx(t) (sets_v2.arc_fx).
+_V2 = dict(
+    night_v2=dict(exposure=0.0, contrast=1.06, pivot=0.3, gamma=1.0, shoulder=0.4, sat=1.15, wb=(0.92, 0.95, 1.12),
+                  floor='#151632', bloom=1.2, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
+    stairs_v2=dict(exposure=0.0, contrast=1.08, pivot=0.28, gamma=1.0, shoulder=0.4, sat=1.25, wb=(1.04, 0.92, 1.1),
+                   floor='#140a1e', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
+    dawn_v2=dict(exposure=0.0, contrast=1.04, pivot=0.35, gamma=1.0, shoulder=0.45, sat=1.2, wb=(1.06, 1.0, 0.9), floor='#5a4030',
+                 bloom=0.8, bloom_thr=232, bloom_r=14.0, vignette=0.6, grain=0.0),
+    climax_v2=dict(exposure=0.0, contrast=1.1, pivot=0.25, gamma=1.0, shoulder=0.4, sat=1.35, wb=(1.12, 0.88, 0.98),
+                   floor='#1a0610', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
+    ending_v2=dict(exposure=0.0, contrast=1.06, pivot=0.3, gamma=1.0, shoulder=0.4, sat=1.1, wb=(0.95, 0.96, 1.08),
+                   floor='#141530', bloom=1.1, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
+    memory_sepia=dict(exposure=0.0, contrast=0.92, pivot=0.3, gamma=1.02, shoulder=0.5, sat=0.62, mono=0.35, tint='#e8c890',
+                      wb=(1.06, 1.0, 0.86), floor='#3a2c20', bloom=1.3, bloom_thr=214, bloom_r=18.0, vignette=0.55,
+                      grain=2.5, soft=0.8),
+)
+_V2['dawn_queen_v2'] = dict(_V2['dawn_v2'], sat=1.0, wb=(1.0, 0.99, 0.95), vignette=0.5)
+_V2['dawn_break_v2'] = dict(_V2['dawn_queen_v2'], contrast=1.1, sat=0.95)
+GRADES.update(_V2)
+
 
 def _lerp_val(a, b, k):
     if isinstance(a, str): return core.mix(a, b, k)
