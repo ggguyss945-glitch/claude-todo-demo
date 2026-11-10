@@ -51,10 +51,10 @@ def _state(n, e):
 
 # ================================================================================================ the glass
 def _glass_palette(st):
-    return {'silver': ('#9aa6be', '#5c6884', '#2a3044', None),
-            'gold': ('#a89684', '#665660', '#2e2430', '#ffcf8a'),
-            'crack1': ('#a89684', '#665660', '#2e2430', '#ffcf8a'),
-            'crack3': ('#9a6a72', '#58303c', '#220c14', '#ff7a5a'),
+    return {'silver': ('#b8c4da', '#7884a0', '#3c445a', None),
+            'gold': ('#c4b09a', '#7e6c74', '#3a2e3a', '#ffcf8a'),
+            'crack1': ('#c0aa96', '#7a6670', '#382a36', '#ffcf8a'),
+            'crack3': ('#ac7c84', '#683a46', '#2a1018', '#ff7a5a'),
             'red': ('#9a3446', '#56101e', '#1e0208', '#ff3b5c')}[st]
 
 
@@ -129,8 +129,10 @@ def _queen_reflection(c, n, refl, st):
             P.turn = 1.5
         if n == 4:
             P.sit = 1.0
-            pen.fill(rect(x - h * 0.55, yf - h * 0.30, h * 1.1, h * 0.30), '#2a1838', 230)
-            c.drawLine(x - h * 0.55, yf - h * 0.30, x + h * 0.55, yf - h * 0.30, paint('#c63449', 230, 4))
+            ys = yf - h * 0.27                               # she sits on a tread: its nose strip under her
+            pen.linear(rect(x - h * 0.7, ys, h * 1.4, h * 0.27), 0, ys, 0, yf, ['#3a2450', '#22142e'], 0.9)
+            c.drawLine(x - h * 0.7, ys, x + h * 0.7, ys, paint('#ff4060', 90, 10))
+            c.drawLine(x - h * 0.7, ys, x + h * 0.7, ys, paint('#c63449', 240, 4))
             yf -= h * 0.02
         c.drawOval(skia.Rect.MakeLTRB(x - h * 0.22, yf - h * 0.03, x + h * 0.22, yf + h * 0.03), paint('#000000', 120, None, blur=h * 0.03))
         try:
@@ -171,7 +173,7 @@ def _glass_back(n, refl, st):
         # our room reflected: the window's moon shaft and a bunk rail, faint
         pen.fill(poly([(-GW / 2 + 60, -GH / 2), (-GW / 2 + 230, -GH / 2), (-GW / 2 + 120, GH / 2), (-GW / 2 - 60, GH / 2)]), '#9fb0ff', 16)
         c.restore()
-    dark = {'silver': 0.82, 'gold': 0.86, 'crack1': 0.84, 'crack3': 0.8, 'red': 0.85}[st]
+    dark = {'silver': 0.93, 'gold': 0.94, 'crack1': 0.92, 'crack3': 0.88, 'red': 0.9}[st]
     return sprite_post(('cardback', n, st), (-GW / 2, -GH / 2, GW / 2, GH / 2), draw, 0.75, _refl_post(dark))
 
 
@@ -201,7 +203,7 @@ def _glass_front(n, st, refl):
         x0, y0, x1, y1 = -GW / 2, -GH / 2, GW / 2, GH / 2
         g = rect(x0, y0, GW, GH)
         c.save(); c.clipPath(g, skia.ClipOp.kIntersect, True)
-        for j, (sx_, w_, a_) in enumerate(((-380, 110, 24), (-240, 40, 18), (280, 70, 16))):
+        for j, (sx_, w_, a_) in enumerate(((-380, 120, 40), (-240, 46, 30), (280, 80, 26))):
             band = poly([(sx_ + 160, y0 - 20), (sx_ + 160 + w_, y0 - 20), (sx_ - 240 + w_, y1 + 20), (sx_ - 240, y1 + 20)])
             pen.fill(band, '#ffffff', a_)
         pen.radial(g, 0, 0, 760, [(0, '#000000', 0), (0.6, '#000000', 0), (1, '#000000', 80)], sy=0.62)
@@ -329,7 +331,7 @@ def _layout(rc, e):
     return out, size, sp
 
 
-def _word_sprite(n, j, w, red, size, sp):
+def _word_sprite(n, j, w, red, size, sp, hot=False):
     ww = text_width(w, 900 if red else 800, size, sp)
 
     def draw(c):
@@ -338,7 +340,7 @@ def _word_sprite(n, j, w, red, size, sp):
         if red:
             c.drawPath(path, paint(LIP_GLOW, 60, None, blur=10))
             c.drawPath(path, paint(LIP_DK, 255, 4))
-            Pen(c).linear(path, 0, -size * 0.74, 0, 0, [(0, '#f04a62'), (0.55, '#d22e46'), (1, '#9a1a2e')])
+            Pen(c).linear(path, 0, -size * 0.74, 0, 0, [(0, '#ffe2e8'), (0.5, '#ff7a90'), (1, '#e0304c')] if hot else [(0, '#f04a62'), (0.55, '#d22e46'), (1, '#9a1a2e')])
             c.save(); c.clipPath(path, skia.ClipOp.kIntersect, True)
             for k in range(8):
                 yy = -size * 0.72 + k * size * 0.1
@@ -353,7 +355,7 @@ def _word_sprite(n, j, w, red, size, sp):
             c.save(); c.clipPath(path, skia.ClipOp.kIntersect, True)
             Pen(c).texture(rect(-10, -size, ww + 20, size * 1.3), 'grunge', 0.35, 'multiply', 0.9)
             c.restore()
-    return sprite(('cw', n, j, w, red), (-26, -size - 26, ww + 30, size * 0.4 + 26), draw, 1.0), ww
+    return sprite(('cw', n, j, w, red, hot), (-26, -size - 26, ww + 30, size * 0.4 + 26), draw, 1.0), ww
 
 
 def _words(cv, rc, e, t, n, wipe_clip=None):
@@ -363,7 +365,7 @@ def _words(cv, rc, e, t, n, wipe_clip=None):
     for d in lay:
         u = (t - d['t'] + 0.05) / d['dur']
         if u <= 0: continue
-        spr, ww = _word_sprite(n, d['j'], d['w'], d['red'], size, sp)
+        spr, ww = _word_sprite(n, d['j'], d['w'], d['red'], size, sp, hot=(n == 7))
         k = clamp(u)
         cv.save(); cv.translate(d['x'], d['y'])
         if k < 1:
@@ -398,11 +400,11 @@ def _title_layout(n):
     sc = Script('RULE', 0, 0, TITLE_SIZE, seed=40 + n, slant=0.07, track=0.26, wob=0.018)
     tw = sc.width
     numw = 0.62 * NUM_SIZE
-    total = tw + 42 + numw
+    total = tw + 80 + numw
     x0 = -total / 2
     yb = -150.0
     sc = Script('RULE', x0, yb, TITLE_SIZE, seed=40 + n, slant=0.07, track=0.26, wob=0.018)
-    nx = x0 + tw + 42 + numw / 2
+    nx = x0 + tw + 80 + numw / 2
     return sc, (nx, yb + 8)
 
 
@@ -467,6 +469,21 @@ def _towel(cv, k):
 
 
 # ================================================================================================ the card
+def _card_static(n, st, refl, tilt):
+    back = _glass_back(n, refl, st)
+    front = _glass_front(n, st, refl)
+    M = GW / 2 + FW + 90
+
+    def draw(c):
+        c.rotate(tilt)
+        soft_shadow(c, rect(-GW / 2 - FW, -GH / 2 - FW, GW + 2 * FW, GH + 2 * FW), 200, 40, 0, 26)
+        c.save(); c.clipPath(rect(-GW / 2, -GH / 2, GW, GH), skia.ClipOp.kIntersect, True)
+        blit(c, back, 255)
+        c.restore()
+        blit(c, front, 255)
+    return sprite(('cardstatic', n, st, round(tilt, 2)), (-M, -GH / 2 - FW - 110, M, GH / 2 + FW + 110), draw, 1.0)
+
+
 def _settle(u, dur=0.13, over=0.04):
     """Scale and y of the card settling after the towel's yank: 0.97 -> 1 + over (at 45 %) -> 1.0 in dur."""
     if u >= dur: return 1.0, 0.0
@@ -494,32 +511,32 @@ def rule_card(cv, rc, e, t, film=None):
     glow = 0.65 if st == 'red' else 0.0
     # dim vignette round the card (the plate is already blurred and dimmed by the shot's bg post)
     cv.drawRect(skia.Rect.MakeLTRB(0, 0, DW, DH), paint('#000000', 40))
-    cv.save(); cv.translate(CX, CY + dy); cv.rotate(tilt); cv.scale(s_ * drift * wscale, s_ * drift * wscale)
-    # IN the glass
+    S = s_ * drift * wscale
+    cv.save(); cv.translate(CX, CY + dy); cv.scale(S, S)
+    # the static card (shadow, IN-glass reflection, ON-glass sheen / cracks / staircase, frame, tape) as ONE sprite with the
+    # tilt baked in, blitted axis-aligned: a rotated full-card blit costs ~0.1 s per frame at 2560
+    blit(cv, _card_static(n, st, refl, tilt), 255)
+    # the flashlight hot spot sliding over the silvering (rotation-free blob: placed by hand, clipped to the tilted glass)
     gl = rect(-GW / 2, -GH / 2, GW, GH)
-    soft_shadow(cv, rect(-GW / 2 - FW, -GH / 2 - FW, GW + 2 * FW, GH + 2 * FW), 200, 40, 0, 26)
-    cv.save(); cv.clipPath(gl, skia.ClipOp.kIntersect, True)
-    back = _glass_back(n, refl, st)
-    ap = 1.0 + 0.012 * u                                       # she is never still: the reflection creeps closer
-    cv.save(); cv.translate(VP[0] * (1 - ap) * (0.0 if n >= 5 else 1.0), 0); cv.scale(ap, ap); blit(cv, back, 255); cv.restore()
-    # the flashlight hot spot sliding over the silvering, dust in it
+    m = skia.Matrix(); m.setRotate(tilt); glr = skia.Path(gl); glr.transform(m)
+    cv.save(); cv.clipPath(glr, skia.ClipOp.kIntersect, True)
     hx = -260 + 180 * math.sin(u * 0.55) + 60 * u; hy = -120 + 40 * math.sin(u * 0.8)
+    ca, sa = math.cos(math.radians(tilt)), math.sin(math.radians(tilt))
     spot = sprite(('cardspot2',), (-560, -450, 560, 450),
-                  lambda c: Pen(c).radial(None, 0, 0, 520, [(0, '#fff3d6', 70), (0.45, '#ffe6b8', 26), (1, '#ffffff', 0)], sy=0.8, clip=False), 0.4)
-    cv.save(); cv.translate(hx, hy); blit(cv, spot, 255, skia.BlendMode.kPlus); cv.restore()
-    p = skia.Path()
+                  lambda c: Pen(c).radial(None, 0, 0, 520, [(0, '#fff3d6', 70), (0.45, '#ffe6b8', 26), (1, '#ffffff', 0)], sy=0.8, clip=False), 0.25)
+    cv.save(); cv.translate(hx * ca - hy * sa, hx * sa + hy * ca); blit(cv, spot, 230); cv.restore()
+    if st == 'red':                                            # the climax pulse (1.2 s)
+        pr = 0.5 + 0.5 * math.sin(2 * math.pi * u / 1.2)
+        cv.drawPath(glr, paint('#ff2d55', 22 * pr))
+    cv.restore()
+    cv.rotate(tilt)
+    p = skia.Path()                                            # dust drifting in the beam
     for j in range(30):
         dx_ = -GW / 2 + ((hash01(j, 21) * GW + u * (14 + 20 * hash01(j, 22))) % GW)
         dy_ = -GH / 2 + ((hash01(j, 23) * GH - u * (6 + 10 * hash01(j, 24))) % GH)
         r = 1.4 + 1.6 * hash01(j, 25)
         p.addOval(skia.Rect.MakeLTRB(dx_ - r, dy_ - r, dx_ + r, dy_ + r))
     cv.drawPath(p, paint('#ffffff', 120))
-    cv.restore()
-    # ON the glass: sheen, dust, cracks, staircase, frame, tape
-    blit(cv, _glass_front(n, st, refl), 255)
-    if st == 'red':                                            # the climax pulse (1.2 s)
-        pr = 0.5 + 0.5 * math.sin(2 * math.pi * u / 1.2)
-        cv.drawRect(skia.Rect.MakeLTRB(-GW / 2, -GH / 2, GW / 2, GH / 2), paint('#ff2d55', 26 * pr, None, blend=skia.BlendMode.kPlus))
     # the writing (clipped by the exit wipe)
     wo = float(e.get('wipe_out', rc.get('sentence_end', cut - 0.2) + 0.15))
     wipe = clamp((t - wo) / max(0.05, cut - wo))
@@ -542,7 +559,9 @@ def rule_card(cv, rc, e, t, film=None):
         for j in range(9):                                     # the smeared residue behind the finger
             o = -40 - j * 42 - 30 * hash01(j, 4)
             c_ = '#e07a8c' if j % 3 else '#f6eef0'
-            cv.drawLine(wx + 120 + o, -GH * 0.6, wx - 120 + o, GH * 0.6, paint(c_, 46 - 3 * j, 18 + 16 * hash01(j, 3), blur=10))
+            ww_ = 18 + 16 * hash01(j, 3)
+            cv.drawLine(wx + 120 + o, -GH * 0.6, wx - 120 + o, GH * 0.6, paint(c_, 22 - 1.5 * j, ww_ * 1.8))
+            cv.drawLine(wx + 120 + o, -GH * 0.6, wx - 120 + o, GH * 0.6, paint(c_, 30 - 2 * j, ww_))
         fx, fy = wx + 10, 40                                   # the fingertip
         cv.drawOval(skia.Rect.MakeLTRB(fx - 34, fy - 60, fx + 34, fy + 60), paint('#e8b8a0', 140, None, blur=8))
         cv.restore()

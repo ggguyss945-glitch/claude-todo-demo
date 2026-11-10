@@ -112,9 +112,9 @@ def d1_game(cv, e, t, cs=None):
         cv.restore()
     kf = clamp((u - 0.5) / 0.15)                                   # the tiny figure below step 7
     if kf > 0:
-        fx, fy = P(560, 905)
+        fx, fy = P(560, 880)
         _tiny_queen(cv, fx, fy, 120 * sc, a * kf)
-        _chalk_label(cv, 'HER', fx - 8 * sc, fy + 52 * sc, 28 * sc, a * kf)
+        _chalk_label(cv, 'HER', fx - 110 * sc, fy - 40 * sc, 34 * sc, a * kf)
     ka = clamp((u - 0.7) / 0.7)                                    # the dotted arrow climbing
     if ka > 0:
         pts = [P(x - 80, y - 70) for (x, y) in [(640, 760), (690, 710)] + [(STEP_XY[k][0], STEP_XY[k][1]) for k in range(6, -1, -1)]]
@@ -145,9 +145,9 @@ def d3_side(cv, e, t):
     if u < 0 or u > hold + 0.3: return
     a = 255 * (1.0 - clamp((u - hold) / 0.2)) * clamp(u / 0.1)
     pen = Pen(cv)
-    gx, gy0, gy1 = 820.0, 170.0, 860.0
-    cv.drawRect(skia.Rect.MakeLTRB(0, 0, DW, DH), paint('#04050a', 150 * a / 255))
-    _panel(cv, 300, 90, 1620, 1000, a, '#0a0c16')
+    gx, gy0, gy1 = 820.0, 190.0, 830.0
+    cv.drawRect(skia.Rect.MakeLTRB(0, 0, DW, DH), paint('#04050a', 110 * a / 255))
+    _panel(cv, 300, 90, 1620, 920, a, '#0a0c16')
     _chalk_label(cv, 'SIDE VIEW', DW / 2, 150, 40, a)
     k0 = ease_out_cubic(clamp(u / 0.25))                           # the glass plane
     glass = rect(gx - 14, gy0, 28, (gy1 - gy0) * k0)
@@ -155,7 +155,7 @@ def d3_side(cv, e, t):
     cv.drawRect(skia.Rect.MakeLTRB(gx - 26, gy0 - 22, gx + 26, gy0), paint('#d8d4c8', a))
     if k0 >= 1: cv.drawRect(skia.Rect.MakeLTRB(gx - 26, gy1, gx + 26, gy1 + 22), paint('#d8d4c8', a))
     _chalk_label(cv, 'THE GLASS', gx, gy1 + 76, 38, a * k0)
-    marks = [gy0 + 70 + j * 78 for j in range(7)]                    # steps 1-7 drawn ON the glass (our side face)
+    marks = [gy0 + 60 + j * 72 for j in range(7)]                    # steps 1-7 drawn ON the glass (our side face)
     for j, my in enumerate(marks):
         kk = clamp((u - 0.25 - j * 0.04) / 0.08)
         if kk <= 0: continue
@@ -330,14 +330,15 @@ def sound_rings(cv, e, t, sh=None):
         r = 70 + 380 * ease_out_cubic(k)
         a = 255 * (1 - k) ** 1.2
         if kind == 'clean':
-            cv.drawCircle(x, y, r, paint('#ffffff', 0.35 * a, 16, blur=8))
+            cv.drawCircle(x, y, r, paint('#ffffff', 0.12 * a, 20))
+            cv.drawCircle(x, y, r, paint('#ffffff', 0.22 * a, 12))
             cv.drawCircle(x, y, r, paint('#ffffff', a, 6))
         elif kind == 'rattle':
             cv.drawCircle(x, y, r, paint('#ffffff', 0.8 * a, 5))
             if uj > 0.1:
                 r2 = max(40, r - 50)
                 pts = squiggle_ring(x, y, r2, 14, 30, uj * 3, seed=j)
-                cv.drawPath(poly(pts), paint('#ff2a40', 0.5 * a, 14, blur=6))
+                cv.drawPath(poly(pts), paint('#ff2a40', 0.25 * a, 14))
                 cv.drawPath(poly(pts), paint('#ff3048', a, 5))
         else:
             pts = squiggle_ring(x, y, r, 22, 18, j * 0.7, seed=j + 5)
@@ -436,8 +437,11 @@ def split_overlay(cv, sh, t):
     u = t - sh['t0']
     k = ease_out_cubic(clamp(u / 0.14))
     x = DW / 2
-    cv.drawLine(x, 0, x, DH * k, paint('#000000', 160, 22, blur=10))
-    cv.drawLine(x, 0, x, DH * k, paint('#ffffff', 235, 7))
+    for (ya, yb) in ((0, 928), (1004, DH)):                  # a gap where the caption sits
+        yb_ = min(yb, DH * k)
+        if yb_ <= ya: continue
+        cv.drawLine(x, ya, x, yb_, paint('#000000', 120, 22))
+        cv.drawLine(x, ya, x, yb_, paint('#ffffff', 235, 7))
     from ui_v2 import chip
     for j, p in enumerate(panels):
         cx = DW / 4 + j * DW / 2
@@ -495,9 +499,9 @@ def montage_overlay(cv, sh, t):
             sec = clock_ours(tl['src_t']) % 86400.0
             hh, mm = int(sec // 3600), int(sec // 60) % 60
             s = 'CABIN 7 · %d:%02d %s' % ((hh % 12) or 12, mm, 'AM' if hh < 12 else 'PM')
-            chip(cv, s, 'ours', 1.0, 44, DH - 150)
+            chip(cv, s, 'ours', 1.0, 44, DH - 190)
             for k in range(len(tiles)):                           # 4 tile ticks
-                cv.drawRoundRect(skia.Rect.MakeLTRB(44 + k * 34, DH - 108, 44 + k * 34 + 26, DH - 100), 3, 3,
+                cv.drawRoundRect(skia.Rect.MakeLTRB(44 + k * 34, DH - 152, 44 + k * 34 + 26, DH - 144), 3, 3,
                                  paint('#ffffff', 230 if k <= j else 70))
 
 
@@ -850,7 +854,7 @@ def draw_doc(pen, kind, t, sh=None, e=None):
             ks = 840.0 / text_width('LAST SEEN WEARING A GREEN SWEATSHIRT', 800, 28, 0.04)   # the line spans the plan's box
             cv.translate(960, 748); cv.scale(ks, ks); cv.translate(-960, -(90 + 800))
         else:                                                # the whole poster above the caption band
-            cv.translate(960, 70); cv.scale(0.86, 0.86); cv.translate(-960, -70)
+            cv.translate(960, 66); cv.scale(0.82, 0.82); cv.translate(-960, -70)
         x0, y0, w, h = 560.0, 90.0, 800.0, 980.0
         path = rect(x0, y0, w, h)
         _paper(pen, path, (x0, y0, x0 + w, y0 + h), pal, 4, rain=1.0)

@@ -22,11 +22,13 @@ from sets import (SetPiece, Anchor, St, Beam, VIEWS, view, _sp, _cl, _live, _R, 
                   _tx, _ttext, motes, fireflies, mist, moths, stars, twinkle, moon, pine, treeline, draw_beam, hot_spot,
                   aim_fn, wall_clock, lipstick_steps, eighth_line, towel_cloth, phone_prop, swimsuits, footprint, candy,
                   gingham, bell, crate, sprinkler, padlock, lantern, sneaker, _steps_state, _clock_sec, clock_ours,
-                  clock_theirs, FRAME, NEAR, STEP_XY, EIGHTH, PANE, FW, MPIV, RED, RED_HI, RED_DK, GLOW, CORE, FALL)
+                  clock_theirs, FRAME, NEAR, STEP_XY, EIGHTH, PANE, FW, MPIV, RED, RED_HI, RED_DK, GLOW, CORE, FALL, grass)
 from engine.core import (Pen, col, mix, rgb, poly, smooth, rect, rrect, oval, union, minus, moved, clamp, lerp, prog, ease,
                          ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, noise1, hash01, text, text_width, LINE)
 from engine.scene import Layer
 from engine.room3d import Cam3, Scene3, Xf, v3, norm, ID, clip_poly_near, draw_plane
+
+V1VIEWS = dict(VIEWS)          # the v1 views as they were before v2 registered over some names (aliases build on these)
 
 # v2 variants -> the 4.8 grade presets (a shot's own `grade` / `look` wins)
 S1.DEFAULT_GRADE.update({'night': 'night_v2', 'doorway_glow': 'night_v2', 'red': 'climax_v2', 'after': 'ending_v2',
@@ -78,6 +80,21 @@ PAL['red'] = dict(PAL['night'], wall='#57183d', wall_dk='#2e0a20', wall_lt='#8a2
                   paint='#d48aa6', paint_dk='#9a5070', metal='#a0607e', sky0='#2a0a2a', sky1='#5a1640', moon='#ff9ab4',
                   key='#ff2d55', warm='#ff5a7a', pool='#ff2d55', outline='#12030a', paper='#d8a0b4', tape='#c08070', red=1.0)
 PAL['after'] = dict(PAL['night'])
+# MEMORY (the real past, sepia paper): cream #f1e2c4, tan #c9a878, faded teal #6f9a96, faded orange #d08a52, dark #4a3a2c
+PAL['past_day'] = dict(PAL['theirs'], wall='#c9a878', wall_dk='#9a7a58', wall_lt='#e8d4ae', seam='#6a5038', rail='#b8946a',
+                       floor='#b89a70', floor_dk='#8a6a48', floor_lt='#dcc49a', floor_seam='#5a4430', dust='#f1e2c4',
+                       roof='#8a6a48', roof_dk='#6a5038', beam='#a07e58', beam_lt='#d8bc90',
+                       wood='#a88660', wood_dk='#7a5c3e', wood_lt='#d0b088', mat='#ece0c4', mat_st='#c9b08a', mat_dk='#b8a07a',
+                       paint='#f1e2c4', paint_dk='#d0bc98', metal='#a89a84', sky0='#e8d8b8', sky1='#f8eedc', moon='#fff8e8',
+                       key='#f8e8c8', warm='#fff0d0', pool='#f1e2c4', outline='#3a2c20', paper='#f6ead2', tape='#d8c49a',
+                       blanket1='#d08a52', blanket2='#6f9a96', swim=['#6f9a96', '#d08a52', '#a08a7a', '#d8c08a'], cubby_cols=['#6f9a96', '#d08a52', '#c9a878', '#8a7a6a', '#6f9a96', '#7a9a6a'])
+PAL['past_morning'] = dict(PAL['past_day'], wall='#c2a67e', floor='#b09470', sky0='#e0dcc8', sky1='#f0ead8', key='#eee6d0')
+PAL['past_night'] = dict(PAL['past_day'], wall='#6a5440', wall_dk='#4a3a2c', wall_lt='#9a7a58', seam='#2a2018', rail='#5a4634',
+                         floor='#5e4a38', floor_dk='#40322a', floor_lt='#8a6e52', floor_seam='#241a14', dust='#a08a6a',
+                         roof='#3a2e24', roof_dk='#2a2018', beam='#4a3a2c', beam_lt='#7a6046',
+                         wood='#7a5e44', wood_dk='#4e3a2a', wood_lt='#a08060', mat='#c9b08a', mat_st='#9a8060', mat_dk='#8a7050',
+                         paint='#d8c4a0', paint_dk='#a89070', sky0='#2a2420', sky1='#4a4036', moon='#f1e2c4', key='#d8c4a0',
+                         warm='#ffd9a0', pool='#ffd9a0', outline='#1a120c', paper='#d8c4a0')
 PAL['theirs_queen'] = dict(PAL['theirs'])
 PAL['theirs_break'] = dict(PAL['theirs'], wall='#c99a62', wall_dk='#9a6a3c', floor='#b88654', red=0.25)
 
@@ -150,8 +167,16 @@ class CabinCtx:
     def __init__(self, side, var, st=None, t=0.0):
         self.side, self.var, self.st, self.t = side, var, st, t
         self.P = PAL[VAR_PAL.get(var, 'night' if side == 'ours' else 'theirs')]
-        self.ours = side == "ours"
+        self.past = side == 'past'                  # memory: the real cabin 14 years ago (OURS layout, lived-in, sepia)
+        self.ours = side in ('ours', 'past')        # OURS geometry (not flipped), the mirror at the mirror spot
+        self.now = side == 'ours'                   # tonight: dust, the phone, the padlock, the demolition sticker
+        self.dressed = side in ('theirs', 'past')   # lived-in: made bunks, curtains, the lantern, full cubbies
+        self.dark = side == 'ours' or var in ('sepia_night',)
+        if self.past: self.P = PAL['past_' + {'sepia_night': 'night', 'sepia_morning': 'morning'}.get(var, 'day')]
         self.refl_scene = None
+        self.tilt = 0.0                 # the mirror's in-plane tilt (deg): -13 when you tilt it (146.3 s)
+        self.glass_mode = 'reflect'     # 'reflect' (the room in the glass) | 'clear' (the other side shows through)
+        self.refl_alpha = 0.2
 
     def prop(self, k, default=None):
         if self.st is None: return default
@@ -245,7 +270,7 @@ def cabin_scene(cx, parts=('shell', 'props')):
 
         def lit(pen, w, h):
             _vgrad(pen, w, h, [(0, P['wall_dk'], 255), (0.35, P['wall'], 0), (0.8, P['wall'], 0), (1, P['wall_dk'], 200)])
-            if ours:
+            if cx.now or (cx.past and cx.dark):
                 # moon glow around the window, darker gable corners
                 _pool(pen, (WIN[0] + WIN[1]) * 50, (HR - (WIN[2] + WIN[3]) / 2) * 100, 300, 230, P['key'], 95)
                 _pool(pen, (WIN[0] + WIN[1]) * 50, (HR - (WIN[2] + WIN[3]) / 2) * 100, 120, 110, '#c8d0ff', 60)
@@ -271,7 +296,7 @@ def cabin_scene(cx, parts=('shell', 'props')):
         pen.cv.clipPath(hole, skia.ClipOp.kDifference, True)
         if ours and mstate == 'doorway':
             pen.cv.clipPath(_doorway_hole_cm(), skia.ClipOp.kDifference, True)
-        if not ours:
+        if not ours:                                    # THEIRS only: the doorway 1.8 m up the back wall
             pen.cv.clipPath(_doorway_hole_cm(DROP), skia.ClipOp.kDifference, True)
         back_wall(pen, w, h)
 
@@ -303,9 +328,8 @@ def cabin_scene(cx, parts=('shell', 'props')):
         x0, x1 = (W - DOOR[1]) * 100, (W - DOOR[0]) * 100; yt = (HR - DOOR[2]) * 100
         for r_ in (rect(x0 - 9, yt - 9, 9, DOOR[2] * 100 + 9), rect(x1, yt - 9, 9, DOOR[2] * 100 + 9), rect(x0 - 9, yt - 9, x1 - x0 + 18, 9)):
             pen.fill(r_, P['wood']); pen.line(r_, 0.8, P['outline'], 160)
-        if ours:
-            # CABIN RULES card is on the left wall; here: hooks and an old fire-escape card
-            _sign_text(pen, 'EXIT', (x0 + x1) / 2, yt - 16, 7, '#d9e0ff' if ours else '#7a3a20', 900, 200)
+        if cx.now:
+            _sign_text(pen, 'EXIT', (x0 + x1) / 2, yt - 16, 7, '#d9e0ff', 900, 200)
     sc.plane((W, HR, 0), (-1, 0, 0), (0, -1, 0), W * 100, HR * 100, front_wall, -100, 'front_wall', wall_tag)
 
     # floor (strips along z): origin (0, 0, 0), U +x, V +z
@@ -335,11 +359,11 @@ def cabin_scene(cx, parts=('shell', 'props')):
             sh = rrect(a * 100 - 6, c * 100 - 6, (b - a) * 100 + 12, (d - c) * 100 + 12, 10)
             pen.fill(sh, '#000000', 60, blur=8)
             pen.fill(rrect(a * 100 + 4, c * 100 + 4, (b - a) * 100 - 8, (d - c) * 100 - 8, 6), '#000000', 70)
-        if ours:
+        if cx.now:
             pen.fill(rrect(10, 33, 100, 196, 8), '#000000', 70)          # mattress stack
             if cx.mirror_state not in ('absent',):
                 pen.fill(rrect(MIR[0] * 100 - 4, (D - MIR_LEAN - 0.04) * 100, (MIR[1] - MIR[0]) * 100 + 8, (MIR_LEAN + 0.04) * 100, 4), '#000000', 110)
-        if ours:
+        if cx.now or (cx.past and cx.dark):
             # the dust film: smooth, pale, thicker along the walls; scuffs only near the door
             pen.texture(r, 'grunge', 0.22, 'screen', 0.4)
             _hgrad(pen, w, h, [(0, P['dust'], 70), (0.15, P['dust'], 0), (0.85, P['dust'], 0), (1, P['dust'], 70)])
@@ -383,6 +407,14 @@ def _cabin_lights(sc, cx):
     """Point lights washed over every surface (model space = OURS coords; THEIRS flips with the room)."""
     P = cx.P; var = cx.var
     wx = (WIN[0] + WIN[1]) / 2
+    if cx.past:
+        if cx.dark:
+            sc.light((wx + 0.3, 1.1, D - 0.2), '#ffd9a0', 140, 1.1, name='lantern')
+            sc.light((2.8, 2.2, 3.2), '#8a6a48', 50, 2.6, name='ambient')
+        else:
+            sc.light((wx, 1.5, D - 0.3), '#fff2d8', 110, 1.3, name='window')
+            sc.light((2.8, 2.3, 3.0), '#f1e2c4', 60, 3.0, name='fill')
+        return
     if cx.ours:
         moon_a = 0.6 if var in ('after', 'phone_glow') else (0.35 if var == 'red' else 1.0)
         sc.light((wx, 1.45, D - 0.25), '#9fa8ff', 95 * moon_a, 1.1, name='moon_window')
@@ -420,7 +452,7 @@ def _outside_front(sc, cx):
     x0, x1, h = DOOR
 
     def scene(pen, w, h_):
-        if ours:
+        if cx.dark:
             _vgrad(pen, w, h_, [P['sky0'], P['sky1'], '#6a70b0'])
             for i in range(14):
                 pine(pen, w * (i + 0.4 * _h(i, 13)) / 13, h_ * 0.78, h_ * (0.35 + 0.3 * _h(i, 14)), i + 40, '#1a1f48', P['key'], 50, 0, 8, 0.4)
@@ -443,9 +475,9 @@ def _outside_front(sc, cx):
     sc.plane((x0 - 3.0, 5.5, -9.0), (1, 0, 0), (0, -1, 0), 900, 650, scene, -200, 'outside_front', 'shell')
 
     def ground(pen, w, h_):
-        pen.fill(rect(0, 0, w, h_), '#2c3060' if ours else '#c8b47a')
+        pen.fill(rect(0, 0, w, h_), P['floor_dk'] if cx.dark else '#c8b47a')
         pen.texture(rect(0, 0, w, h_), 'asphalt', 0.3, 'overlay', 0.3)
-        pen.fill(rect(w * 0.42, 0, w * 0.16, h_), '#3a3e70' if ours else '#d8c48a')
+        pen.fill(rect(w * 0.42, 0, w * 0.16, h_), P['floor'] if cx.dark else '#d8c48a')
     sc.plane((x0 - 3.0, -0.25, 0.0), (1, 0, 0), (0, 0, -1), 900, 900, ground, -190, 'ground_front', 'shell')
     # the porch step outside the door
     sc.box(x0 - 0.3, -0.25, -0.5, x1 + 0.3, -0.02, 0.0, dict(top=P['wood'], front=P['wood_dk'], all=P['wood_dk']), -150, 'step', 'shell',
@@ -540,11 +572,11 @@ def _bunk_frame(sc, P, x0, x1, z0, z1, made=False, ticking=True, noah=False, our
 def _cabin_props(sc, cx, info):
     P = cx.P; ours = cx.ours; t = cx.t
     # ---------------------------------------------------------------- bunks
-    _bunk_frame(sc, P, *LBUNK, made=not ours, ticking=True, noah=False, ours=ours, name='lbunk',
-                blanket='#3f6fa8' if not ours else '#5a6a4a', room_x=LBUNK[1] - 0.04)
-    _bunk_frame(sc, P, *NBUNK, made=not ours, ticking=True, noah=True, ours=ours, name='nbunk',
-                blanket='#c0563a' if not ours else '#5a6a4a')
-    if ours:
+    _bunk_frame(sc, P, *LBUNK, made=cx.dressed, ticking=True, noah=False, ours=ours, name='lbunk',
+                blanket=P.get('blanket2', '#3f6fa8'), room_x=LBUNK[1] - 0.04)
+    _bunk_frame(sc, P, *NBUNK, made=cx.dressed, ticking=True, noah=True, ours=ours, name='nbunk',
+                blanket=P.get('blanket1', '#c0563a'))
+    if cx.now:
         # N.B. carved in the front post, search tape round it
         x0, x1, z0, z1 = NBUNK
 
@@ -578,21 +610,21 @@ def _cabin_props(sc, cx, info):
         y = (cy1 - 0.035) if row == 0 else ((cy0 + cy1) / 2 - 0.035)
 
         def label(pen, w, h, nm=nm):
-            pen.fill(rect(0, 0, w, h), '#d8cc98' if not ours else _lt(P['tape'], 0.15), 240)
+            pen.fill(rect(0, 0, w, h), '#d8cc98' if cx.dressed else _lt(P['tape'], 0.15), 240)
             pen.line(rect(0, 0, w, h), 0.3, _dk(P['tape'], 0.4), 120)
             _sign_text(pen, nm, w / 2, h * 0.78, 3.6, '#2a2440', 800)
         sc.plane((W - 0.341, y, z + 0.06), (0, 0, -1), (0, -1, 0), 12, 4.6, label, 0.03, 'cubbylabel', 'cubby')
         # contents: theirs full (clothes, comics, a flashlight, a canteen); ours empty, dust (NOAH: a cobweb)
         yb = cy0 + 0.02 if row == 1 else (cy0 + cy1) / 2 + 0.01
         zc0 = cz0 + colm * cw + 0.03
-        if not ours:
-            cols = ['#3f8fa0', '#d84a4a', '#e0b84a', '#6a4fa8', '#4aa86a', '#2f8a3a']
+        if cx.dressed:
+            cols = P.get('cubby_cols', ['#3f8fa0', '#d84a4a', '#e0b84a', '#6a4fa8', '#4aa86a', '#2f8a3a'])
             sc.box(W - 0.3, yb, zc0, W - 0.04, yb + 0.12, zc0 + cw - 0.06, dict(all=cols[k], top=_lt(cols[k], 0.2), left=_lt(cols[k], 0.1)),
                    0.01, 'cubbyclothes', 'cubby', P['outline'], 0.6)
             if k % 2 == 0:
                 sc.box(W - 0.28, yb + 0.12, zc0 + 0.04, W - 0.06, yb + 0.15, zc0 + 0.24, dict(all='#f2e6c0', top='#e85a3a', left='#f4d040'),
                        0.01, 'comics', 'cubby', P['outline'], 0.5)
-        elif nm == 'NOAH':
+        elif nm == 'NOAH' and cx.now:
             def web(pen, w, h):
                 for i in range(7):
                     a = math.pi * 0.5 * i / 6
@@ -606,14 +638,14 @@ def _cabin_props(sc, cx, info):
     fr = P['paint']; frd = P['paint_dk']
 
     def outside(pen, w, h):
-        if ours:
-            _vgrad(pen, w, h, [P['sky0'], P['sky1'], '#7078b8'])
+        if cx.dark:
+            _vgrad(pen, w, h, [P['sky0'], P['sky1'], mix(P['sky1'], '#ffffff', 0.15)])
             moon_xy = (w * 0.62, h * 0.28)
             _R(pen, None, moon_xy[0], moon_xy[1], 160, [(0, P['moon'], 120), (0.3, P['moon'], 40), (1, P['moon'], 0)], clip=False)
             pen.fill(oval(moon_xy[0], moon_xy[1], 18), P['moon']); pen.fill(oval(moon_xy[0] + 5, moon_xy[1] - 4, 15), '#ffffff', 150)
             for i in range(9):
-                pine(pen, w * (i + 0.3 * _h(i, 3)) / 8, h * 0.98, h * (0.45 + 0.35 * _h(i, 4)), i, '#1a1f48', P['key'], 60, 0, 8, 0.4)
-            pen.fill(rect(0, h * 0.94, w, h * 0.06), '#141838')
+                pine(pen, w * (i + 0.3 * _h(i, 3)) / 8, h * 0.98, h * (0.45 + 0.35 * _h(i, 4)), i, _dk(P['sky0'], 0.4), P['key'], 60, 0, 8, 0.4)
+            pen.fill(rect(0, h * 0.94, w, h * 0.06), _dk(P['sky0'], 0.5))
         else:
             _vgrad(pen, w, h, [P['sky0'], P['sky1'], '#ffe2b8'])
             _R(pen, None, w * 0.4, h * 0.85, 300, [(0, '#fff2d0', 150), (1, '#fff2d0', 0)], sy=0.6, clip=False)
@@ -626,7 +658,7 @@ def _cabin_props(sc, cx, info):
     # glass: faint reflection sheen
     def wglass(pen, w, h):
         _L(pen, rect(0, 0, w, h), 0, 0, w, h, [(0, '#ffffff', 26), (0.4, '#ffffff', 0), (0.6, '#ffffff', 10), (1, '#ffffff', 0)])
-        if ours:   # the torn screen: mesh with a jagged hole and a curled flap
+        if cx.now:   # the torn screen: mesh with a jagged hole and a curled flap
             hole = _blob(w * 0.66, h * 0.35, w * 0.16, h * 0.14, 11, 5, 0.5)
             pen.cv.save(); pen.cv.clipPath(hole, skia.ClipOp.kDifference, True)
             for i in range(0, int(w) + 1, 2):
@@ -648,7 +680,7 @@ def _cabin_props(sc, cx, info):
            P['outline'], 0.8)
     # chipped paint flecks on the sill front
     info['sill'] = v3(xm, y0, D - 0.08)
-    if not ours:
+    if cx.dressed:
         # gingham curtains frozen at 12 degrees, the lantern on the sill
         for side in (0, 1):
             xa = x0 - 0.08 if side == 0 else x1 - 0.18
@@ -672,10 +704,10 @@ def _cabin_props(sc, cx, info):
 
     def clock_face(pen, w, h):
         r = w / 2
-        sec = 6 * 3600 + 59 * 60 + 40 if not ours else (23 * 3600 + 59 * 60 + 5)
+        sec = 6 * 3600 + 59 * 60 + 40 if cx.dressed else (23 * 3600 + 59 * 60 + 5)
         pen.fill(oval(r + 0.6, r + 1.2, r), '#000000', 90)
         pen.fill(oval(r, r, r), P['metal']); pen.line(oval(r, r, r), 0.7, P['outline'])
-        pen.fill(oval(r, r, r * 0.86), '#f2ecd8' if not ours else '#c6c8e4')
+        pen.fill(oval(r, r, r * 0.86), '#f2ecd8' if cx.dressed else '#c6c8e4')
         for k in range(60):
             a = k * math.pi / 30
             r0 = 0.72 if k % 5 == 0 else 0.8
@@ -684,27 +716,27 @@ def _cabin_props(sc, cx, info):
         for k in range(1, 13):
             a = k * math.pi / 6 - math.pi / 2
             _sign_text(pen, str(k), r + math.cos(a) * r * 0.58, r + math.sin(a) * r * 0.58 + 1.0, 2.6, '#2a2a3a', 800)
-        _sign_text(pen, 'CEDAR LAKE', r, r * 1.38, 1.6, '#5a4a3a' if not ours else '#4a4a6a', 800)
+        _sign_text(pen, 'CEDAR LAKE', r, r * 1.38, 1.6, '#5a4a3a' if cx.dressed else '#4a4a6a', 800)
     sc.plane((ckx - ckr, cky + ckr, D - 0.03), (1, 0, 0), (0, -1, 0), ckr * 200, ckr * 200, clock_face, -60, 'clock', 'clock')
     info['clock'] = (v3(ckx, cky, D - 0.035), ckr)
     # ---------------------------------------------------------------- left wall: CABIN RULES sign (front), pennant, calendar
     def rules(pen, w, h):
-        pen.fill(rect(0, 0, w, h), '#e8dcb8' if not ours else P['paper']); pen.line(rect(0, 0, w, h), 0.8, P['outline'])
+        pen.fill(rect(0, 0, w, h), '#e8dcb8' if cx.dressed else P['paper']); pen.line(rect(0, 0, w, h), 0.8, P['outline'])
         pen.texture(rect(0, 0, w, h), 'paper', 0.4, 'overlay', 0.15)
-        if ours: pen.texture(rect(0, 0, w, h), 'grunge', 0.35, 'multiply', 0.2)
-        _sign_text(pen, 'CABIN RULES', w / 2, 9, 5.2, '#2a3a6a' if ours else '#1a4a8a', 900)
+        if cx.now: pen.texture(rect(0, 0, w, h), 'grunge', 0.35, 'multiply', 0.2)
+        _sign_text(pen, 'CABIN RULES', w / 2, 9, 5.2, '#2a3a6a' if cx.now else '#1a4a8a', 900)
         pen.seg((6, 12), (w - 6, 12), 0.5, '#c0302a', 220)
         for i, s in enumerate(('LIGHTS OUT 9:30', 'NO FOOD IN CABINS', 'SHOES OFF', 'BE KIND')):
             _sign_text(pen, s, 6, 20 + i * 7.2, 3.6, '#2a2a3a', 700, 230, 0, 'left')
-        if not ours:
+        if cx.dressed:
             pen.fill(oval(w - 9, h - 9, 5), '#f0c030'); _sign_text(pen, ':)', w - 9, h - 7.5, 4.0, '#3a2a10', 900)
     sc.plane((0.003, 1.75, 0.9), (0, 0, 1), (0, -1, 0), 46, 54, rules, -50, 'rules', 'decor')
 
     def calendar(pen, w, h):
-        pen.fill(rect(0, 0, w, h), P['paper'] if ours else '#fbf6ea'); pen.line(rect(0, 0, w, h), 0.6, P['outline'])
-        _vgrad(pen, w, h * 0.42, ['#3a6aa0' if not ours else '#4a5a8e', '#6ab0c8' if not ours else '#6a78a8'])
+        pen.fill(rect(0, 0, w, h), P['paper'] if cx.now else '#fbf6ea'); pen.line(rect(0, 0, w, h), 0.6, P['outline'])
+        _vgrad(pen, w, h * 0.42, ['#3a6aa0' if cx.dressed else '#4a5a8e', '#6ab0c8' if cx.dressed else '#6a78a8'])
         for i in range(5):
-            pine(pen, w * (i + 0.5) / 5, h * 0.4, h * 0.22, i, '#2a4a3a' if not ours else '#2a2f5a', None, 0, 0, 6, 0.4)
+            pine(pen, w * (i + 0.5) / 5, h * 0.4, h * 0.22, i, '#2a4a3a' if cx.dressed else '#2a2f5a', None, 0, 0, 6, 0.4)
         _sign_text(pen, 'JULY', w / 2, h * 0.52, 4.6, '#c0302a', 900)
         for r_ in range(5):
             for c_ in range(7):
@@ -712,16 +744,16 @@ def _cabin_props(sc, cx, info):
                 pen.line(rect(gx, gy, (w - 6) / 7, h * 0.08), 0.15, '#6a6a7a', 160)
                 if r_ * 7 + c_ < 18: pen.seg((gx + 0.5, gy + 0.5), (gx + (w - 6) / 7 - 0.5, gy + h * 0.08 - 0.5), 0.3, '#c0302a', 150)
         if ours: pen.texture(rect(0, 0, w, h), 'grunge', 0.4, 'multiply', 0.2)
-    sc.plane((3.18, 1.82, D - 0.01), (1, 0, 0), (0, -1, 0), 30, 44, calendar, -50, 'calendar', 'decor')
+    if ours: sc.plane((3.18, 1.82, D - 0.01), (1, 0, 0), (0, -1, 0), 30, 44, calendar, -50, 'calendar', 'decor')
 
     def pennant(pen, w, h):
         tri = poly([(0, 0), (w, h * 0.5), (0, h)])
-        pen.fill(tri, '#3f7a4a' if not ours else '#3a5a6a'); pen.line(tri, 0.6, P['outline'])
-        _sign_text(pen, 'CEDAR LAKE', w * 0.38, h * 0.6, 4.2, '#f4f0e0' if not ours else '#c8cce8', 900)
+        pen.fill(tri, '#3f7a4a' if cx.dressed else '#3a5a6a'); pen.line(tri, 0.6, P['outline'])
+        _sign_text(pen, 'CEDAR LAKE', w * 0.38, h * 0.6, 4.2, '#f4f0e0' if cx.dressed else '#c8cce8', 900)
         pen.fill(rect(-2, -2, 3, h + 4), '#8a6a40')
-    sc.plane((3.7, 2.08, D - 0.01), (1, 0, 0), (0, -1, 0), 64, 24, pennant, -50, 'pennant', 'decor')
-    # ---------------------------------------------------------------- front-left: broom, mattress stack
-    for i in range(4):
+    if ours: sc.plane((3.7, 2.08, D - 0.01), (1, 0, 0), (0, -1, 0), 64, 24, pennant, -50, 'pennant', 'decor')
+    # ---------------------------------------------------------------- front-left: broom, mattress stack (tonight only)
+    for i in (range(4) if cx.now else ()):
         y = i * 0.15
         dx = 0.04 * math.sin(i * 1.7)
         sc.box(0.12 + dx, y, 0.35 + dx * 0.5, 1.02 + dx, y + 0.14, 2.25, dict(top=P['mat'] if i == 3 else P['mat_dk'], all=P['mat_dk'],
@@ -736,7 +768,7 @@ def _cabin_props(sc, cx, info):
         pa, pb = cam.pt(a), cam.pt(b)
         k = cam.px_per_m(b)
         pen.seg(pa, pb, max(0.8, 0.008 * k), P['outline'])
-        pen.fill(oval(pb[0], pb[1] + 0.045 * k, 0.035 * k, 0.045 * k), '#c8c8d8' if ours else '#fff8e0', 230)
+        pen.fill(oval(pb[0], pb[1] + 0.045 * k, 0.035 * k, 0.045 * k), '#c8c8d8' if cx.now else '#fff8e0', 230)
         pen.line(oval(pb[0], pb[1] + 0.045 * k, 0.035 * k, 0.045 * k), max(0.8, 0.006 * k), P['outline'])
         pen.fill(rect(pb[0] - 0.02 * k, pb[1] - 0.005 * k, 0.04 * k, 0.03 * k), P['metal'])
     sc.custom((W / 2, 2.2, 3.2), bulb, 0, 'bulb', 'decor')
@@ -752,7 +784,7 @@ def _cabin_props(sc, cx, info):
             a = -0.2 + 1.6 * i / 7
             pen.seg((x - 0.25 * k, y - 0.1 * k), (x - 0.25 * k + math.cos(a) * 0.4 * k, y - 0.1 * k + math.sin(a) * 0.4 * k), max(0.4, 0.002 * k),
                     '#d8dcff' if ours else '#fff6e0', 90)
-    sc.custom((0.7, 2.92, 6.0), nest, 0, 'nest', 'decor')
+    if cx.now: sc.custom((0.7, 2.92, 6.0), nest, 0, 'nest', 'decor')
     # ---------------------------------------------------------------- the mirror (OURS) / the bundle under Noah's bunk
     if ours:
         ms = cx.mirror_state
@@ -768,7 +800,7 @@ def _cabin_props(sc, cx, info):
             _mirror_model(sc, cx, info)
     # ---------------------------------------------------------------- the phone on the sill (from 110.71, OURS)
     ph = str(cx.prop('phone', 'tess_pocket'))
-    if ours and ph.startswith('sill'):
+    if cx.now and ph.startswith('sill'):
         red = 1.0 if 'red' in ph or cx.t >= 118.87 else 0.0
         xm_ = (x0 + x1) / 2
 
@@ -780,7 +812,7 @@ def _cabin_props(sc, cx, info):
         sc.plane((xm_ - 0.18, y0 + 0.003, D - 0.05), (1, 0, 0), (0, 0, -1), 7.4, 15, phone, -65, 'phone', 'window')
         info['phone'] = v3(xm_ - 0.14, y0 + 0.004, D - 0.12)
     # ---------------------------------------------------------------- THEIRS extras: swimsuits, drawings, duffel, polaroid, towel+drop, shoe
-    if not ours:
+    if cx.dressed:
         _theirs_props(sc, cx, info)
     # the door (open, swung in against the front wall) with the padlock hasp outside
     _door_model(sc, cx, info)
@@ -797,7 +829,7 @@ def _door_model(sc, cx, info):
         _planks(pen, w, h_, P, 15.0, 13, True, None, 0.8, 0.2, True, 0.2, P['wood'], P['wood_dk'], P['wood_lt'], P['seam'])
         for y in (15, h_ / 2, h_ - 15):
             pen.fill(rect(0, y - 6, w, 12), P['wood_dk'], 200); pen.line(rect(0, y - 6, w, 12), 0.6, P['outline'], 150)
-        if ours:
+        if cx.now:
             r = rect(w * 0.18, h_ * 0.26, w * 0.64, 26)
             pen.fill(r, '#ff7a1a'); pen.line(r, 0.6, '#3a1a08')
             _sign_text(pen, 'DEMOLITION', w / 2, h_ * 0.26 + 11, 6.4, '#1a0a04', 900)
@@ -808,31 +840,38 @@ def _door_model(sc, cx, info):
 
 
 # ====================================================================== the mirror (OURS), its reflection, the doorway
-def mirror_plane():
-    """(O, U, V, w_cm, h_cm, normal): the leaning mirror's front plane, origin at the frame's top-left."""
+def mirror_plane(tilt=0.0):
+    """(O, U, V, w_cm, h_cm, normal): the leaning mirror's front plane, origin at the frame's top-left; tilt (deg, the
+    v1 sense: negative = top to the left) turns it about its centre in its own plane."""
     yt = math.sqrt(MIR_H ** 2 - (MIR_LEAN - 0.02) ** 2)
     O = v3(MIR[0], yt, D - 0.02)
     V = norm(v3(0, -yt, -(MIR_LEAN - 0.02)))
     U = v3(1, 0, 0)
     n = norm(np.cross(V, U))           # pointing into the room (-z, a little up)
-    return O, U, V, (MIR[1] - MIR[0]) * 100, MIR_H * 100, n
+    w, h = (MIR[1] - MIR[0]) * 100, MIR_H * 100
+    if tilt:
+        a = math.radians(-tilt)
+        C = O + U * (w / 200) + V * (h / 200)
+        U2 = U * math.cos(a) + V * math.sin(a); V2 = -U * math.sin(a) + V * math.cos(a)
+        O = C - U2 * (w / 200) - V2 * (h / 200); U, V = U2, V2
+    return O, U, V, w, h, n
 
 
 MFW = 6.0          # frame width cm
 
 
-def mirror_glass_pts(grow=0.0):
+def mirror_glass_pts(grow=0.0, tilt=0.0):
     """3D corners of the glass (inside the frame)."""
-    O, U, V, w, h, n = mirror_plane()
+    O, U, V, w, h, n = mirror_plane(tilt)
     g = MFW - grow
     return [O + U * (g / 100) + V * (g / 100), O + U * ((w - g) / 100) + V * (g / 100), O + U * ((w - g) / 100) + V * ((h - g) / 100),
             O + U * (g / 100) + V * ((h - g) / 100)]
 
 
-def mirror_local_H(cam, xf=ID):
+def mirror_local_H(cam, xf=ID, tilt=0.0):
     """Homography: v1 mirror-local px (PANE 300..1620 x -1092..2252, the lipstick steps' space) -> design px for this
     camera. The pane maps onto the glass rectangle."""
-    O, U, V, w, h, n = mirror_plane()
+    O, U, V, w, h, n = mirror_plane(tilt)
     gx0, gy0 = MFW, MFW
     gw, gh = w - 2 * MFW, h - 2 * MFW
     px0, py0, px1, py1 = PANE
@@ -882,13 +921,16 @@ def _mirror_model(sc, cx, info):
     """The leaning mirror in Cabin 7: frame (white, chipped), glass with a true reflection of the room (reverse angle,
     darker), sheen, silvering spots, dust film. In the doorway state the glass is replaced by the opening onto the stairs."""
     P = cx.P
-    O, U, V, w, h, n = mirror_plane()
+    tilt = cx.tilt
+    O, U, V, w, h, n = mirror_plane(tilt)
+    O0, U0, V0, w0_, h0_, n0 = mirror_plane(0.0)
     ms = cx.mirror_state
     info['mirror_plane'] = (O, U, V, w, h, n)
-    info['glass3d'] = mirror_glass_pts()
+    info['glass3d'] = mirror_glass_pts(0.0, tilt)
+    gpts = mirror_glass_pts(0.6, tilt)
 
     def glass_item(pen, cam, xf):
-        pts = [xf.p(p) for p in mirror_glass_pts(0.6)]
+        pts = [xf.p(p) for p in gpts]
         q = clip_poly_near(cam, pts)
         if len(q) < 3: return
         gp = poly(q)
@@ -899,13 +941,27 @@ def _mirror_model(sc, cx, info):
         elif ms in ('glass', 'dark', 'towel', 'covered'):
             # true reflection of the room in the leaning glass (the mirror itself excluded)
             refl = cx.refl_scene
+            if cx.glass_mode == 'clear':
+                # the other side shows through: erase the glass in this layer (the inner world is a deeper layer);
+                # the room's reflection stays at 20 %
+                cv.drawPaint(skia.Paint(BlendMode=skia.BlendMode.kClear))
+                if refl is not None:
+                    cv.saveLayerAlpha(None, int(255 * cx.refl_alpha))
+                    xr = Xf.reflect_plane(O0, n0).then(xf)
+                    pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
+                    refl.render(pen, cam, xr, skip=('mirror',))
+                    pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a', 175)
+                    cv.restore()
+                draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01)
+                cv.restore()
+                return
             if refl is not None:
-                xr = Xf.reflect_plane(O + V * 0.0, n).then(xf)
+                xr = Xf.reflect_plane(O0, n0).then(xf)
                 pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
                 refl.render(pen, cam, xr, skip=('mirror',))
                 # the reflection is darker, cooler and a little green-grey (old silvering loses light)
-                pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a' if cx.ours else '#2a1a10', 175 if ms == 'glass' else 222)
-                pen.fill(rect(-4000, -4000, 9000, 9000), '#2a4050', 34)
+                pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a' if cx.now else _dk(P['outline'], 0.3), 200 if ms == 'glass' else 225)
+                pen.fill(rect(-4000, -4000, 9000, 9000), '#2a4050' if cx.now else P['wall_dk'], 30)
             draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01)
         cv.restore()
     sc.custom(O + U * (w / 200) + V * (h / 200), glass_item, -40, 'glass', 'mirror')
@@ -922,8 +978,9 @@ def _glass_surface(P, ms):
     """Sheen, silvering spots at the edges, the dust film and finger smudges on the glass (mirror plane cm)."""
     def g(pen, w, h):
         inner = rect(MFW, MFW, w - 2 * MFW, h - 2 * MFW)
-        _L(pen, inner, 0, 0, w, h * 0.5, [(0, '#ffffff', 0), (0.30, '#e8ecff', 0), (0.36, '#e8ecff', 70), (0.43, '#ffffff', 10),
-                                          (0.5, '#ffffff', 0), (0.58, '#e8ecff', 34), (0.62, '#ffffff', 0)])
+        _L(pen, inner, 0, 0, w, h * 0.42, [(0, '#ffffff', 0), (0.26, '#e8ecff', 0), (0.33, '#e8ecff', 95), (0.40, '#ffffff', 22),
+                                           (0.47, '#ffffff', 0), (0.55, '#e8ecff', 48), (0.6, '#ffffff', 0)])
+        _L(pen, inner, 0, h * 0.5, w, h * 0.95, [(0, '#ffffff', 0), (0.45, '#dfe6ff', 0), (0.5, '#dfe6ff', 40), (0.56, '#ffffff', 0)])
         # bevel: a thin bright line just inside the frame, darker on the lower right
         pen.line(rect(MFW + 0.6, MFW + 0.6, w - 2 * MFW - 1.2, h - 2 * MFW - 1.2), 0.5, '#dfe6ff', 150)
         pen.seg((w - MFW - 0.8, MFW + 1), (w - MFW - 0.8, h - MFW - 1), 0.5, '#000000', 160)
@@ -1075,13 +1132,15 @@ def stairs_scene(var='stairs', from_ours=False, bottom=True, tess=None, doorway_
     gw = (MIR[1] - MIR[0])
     def frame_in(pen, w, h):
         fr(pen, w, h)
-    sc.plane((-gw / 2, MIR_H - 0.06, 0.0), (1, 0, 0), (0, -1, 0), gw * 100, MIR_H * 100, _frame_hole(fr), 0.3, 'dframe', 'door')
+    sc.plane((gw / 2, MIR_H - 0.06, 0.0), (-1, 0, 0), (0, -1, 0), gw * 100, MIR_H * 100, _frame_hole(fr), 0.3, 'dframe', 'door',
+             two_sided=False)
     # wall around the doorway (seen from the stairs side): plum boards
     def dwall(pen, w, h):
-        hole = rect((hw + 0.6 - gw / 2) * 100, 30, gw * 100, MIR_H * 100)
+        hole = rect((hw + 0.6 - gw / 2) * 100, 30 - 6, gw * 100, MIR_H * 100)
         pen.cv.clipPath(hole, skia.ClipOp.kDifference, True)
         _planks(pen, w, h, dict(wall=S['wall_dk'], wall_dk=S['riser'], wall_lt=S['wall'], seam=S['outline']), 18.0, 23, True, None, 0.8)
-    sc.plane((-hw - 0.6, MIR_H + 0.24, 0.002), (1, 0, 0), (0, -1, 0), (ST_W + 1.2) * 100, (MIR_H + 0.5) * 100, dwall, 0.2, 'dwall', 'door')
+    sc.plane((hw + 0.6, MIR_H + 0.24, 0.002), (-1, 0, 0), (0, -1, 0), (ST_W + 1.2) * 100, (MIR_H + 0.5) * 100, dwall, 0.2, 'dwall', 'door',
+             two_sided=False)
     return sc
 
 
@@ -1102,7 +1161,7 @@ def _theirs_props(sc, cx, info):
     def suits(pen, w, h):
         xs = [10, 52, 94, 136]
         for i, x in enumerate(xs):
-            c = SWIM[i]
+            c = P.get('swim', SWIM)[i]
             if i % 2 == 0:      # a one-piece folded over the rail: straps, a scooped back, the fold
                 body = smooth([(x + 2, 0), (x + 26, 0), (x + 24, 14), (x + 28, 30), (x + 22, 42), (x + 14, 44), (x + 6, 42), (x, 30),
                                (x + 4, 14)], True, 0.7)
@@ -1171,7 +1230,7 @@ def _theirs_props(sc, cx, info):
     sc.box(lx0 + 0.3, B_LOW, lz0 + 0.5, lx0 + 0.42, B_LOW + 0.09, lz0 + 0.6, dict(all='#f2f0e8', top='#ffffff', front='#e8e4d8'), 0.01,
            'polaroid', 'bunk', P['outline'], 0.5)
     # the 8 stairs along the back wall up to the doorway (OURS coords: landing at the mirror spot, treads stepping down to +x)
-    _stairs_theirs(sc, cx, info)
+    if not cx.past: _stairs_theirs(sc, cx, info)
 
 
 def _stairs_theirs(sc, cx, info):
@@ -1374,14 +1433,14 @@ def clock_live(cam, xf, d0, info, st, side, name='clock_hands'):
     return _live(dep, draw, name, blur=None)
 
 
-def steps_live(cam, xf, d0, st, var, glow_extra=0.0, show_eighth=True, name='lipstick'):
+def steps_live(cam, xf, d0, st, var, glow_extra=0.0, show_eighth=True, name='lipstick', tilt=0.0):
     """The lipstick steps (and the 8th line behind the glass) on the mirror via the mirror-local homography."""
-    Hm = mirror_local_H(cam, xf)
+    Hm = mirror_local_H(cam, xf, tilt)
     from engine.room3d import _skmat
     M = _skmat(Hm)
-    O, U, V, w, h, n = mirror_plane()
+    O, U, V, w, h, n = mirror_plane(tilt)
     dep = sdep(cam, xf, d0, O + U * (w / 200) + V * (h / 200), 0.003)
-    glass_q = clip_poly_near(cam, [xf.p(p) for p in mirror_glass_pts(0.6)])
+    glass_q = clip_poly_near(cam, [xf.p(p) for p in mirror_glass_pts(0.6, tilt)])
 
     def draw(pen, t):
         if len(glass_q) < 3: return
@@ -1393,7 +1452,7 @@ def steps_live(cam, xf, d0, st, var, glow_extra=0.0, show_eighth=True, name='lip
         e = st.ev('eighth_draw')
         ev = str(st.v('eighth', t))
         if show_eighth and (e is not None or ev.startswith('present') or ev.startswith('drawn') or ev.startswith('glow')):
-            eighth_line(pen, t, e, 0.6, 1.0, 1.0)
+            eighth_line(pen, t, e, 0.6, 1.0, 1.0, rot=tilt)
         lipstick_steps(pen, t, **kw)
         cv.restore()
     return _live(dep, draw, name, blur=None)
@@ -1560,6 +1619,7 @@ def doorway_spill(cam, xf, d0, cx, st):
     k_px = cam.px_per_m(xf.p(v3(2.66, 0.8, 6.3)))
     dep = sdep(cam, xf, d0, v3(2.66, 0.8, 6.2), 0.005)
     steam = (not red) and st.t1 > 263.5 and st.t0 < 271.0
+    weak = cx.mirror_state != 'doorway'                 # the glass is back (614.9): the red glows through, no rays
 
     def draw(pen, t):
         pulse = (0.82 + 0.18 * math.sin(t * 2 * math.pi / 1.2)) if red else (0.9 + 0.1 * math.sin(t * 1.3))
@@ -1568,7 +1628,7 @@ def doorway_spill(cam, xf, d0, cx, st):
         fp = cam.pt(xf.p(v3(2.66, 0.0, 5.6)))
         _R(pen, None, fp[0], fp[1], 1.3 * k_px, [(0, c2, 110 * pulse), (0.5, c, 45 * pulse), (1, c, 0)], sy=0.35, clip=False)
         # rays fanning out of the opening
-        for i in range(6):
+        for i in range(6 if not weak else 0):
             a = -0.9 + 1.8 * i / 5 + 0.05 * math.sin(t * 0.7 + i)
             L_ = (1.6 + 0.6 * _h(i, 3)) * k_px
             w0 = 0.08 * k_px
@@ -1780,11 +1840,11 @@ for _vn in THEIRS_CAMS:
 # ====================================================================== the stairs (set 'stairs'): the crossing, inside the glass
 STAIRS_CAMS = {
     # name: (pos, look, fov, roll) in stairs-local coords (x across, y up from our floor, z down the stairs)   4.3 views
-    'down': ((0.0, 1.5, -0.75), (0.0, -1.65, 2.35), 64.0, 0.0),        # 1 down from our doorway
+    'down': ((0.0, 1.32, 0.12), (0.0, -1.7, 2.4), 70.0, 0.0),           # 1 down from our doorway
     'up': ((0.12, -1.2, 2.95), (0.0, 0.85, -0.1), 64.0, 0.0),          # 2 up from the dawn cabin to the doorway (Tess in it)
     'low': ((0.18, -1.5, 2.5), (0.0, 0.1, 0.35), 72.0, 0.0),           # low angle up the stairs
     'treads': ((0.02, -0.05, 0.3), (0.0, -0.7, 1.05), 62.0, 0.0),      # 4 feet on treads
-    'ots_climb_down': ((0.16, 0.95, -0.4), (0.0, -1.2, 1.8), 68.0, 0.0),   # 5 OTS going down (290.7)
+    'ots_climb_down': ((0.14, 0.8, 0.1), (0.0, -1.3, 1.9), 70.0, 0.0),    # 5 OTS going down (290.7)
     'ots_climb_up': ((0.12, -0.95, 2.15), (0.0, 0.55, -0.05), 68.0, 0.0),  # 5 OTS climbing (546-600)
     'pov_down': ((0.0, 0.15, 0.85), (0.0, -1.05, 1.75), 74.0, 0.0),    # 6 POV looking down at the step below
     'railing': ((1.55, -0.25, 1.05), (0.0, -0.65, 1.0), 60.0, 0.0),    # along the railing (the hand through the balusters)
@@ -1840,8 +1900,8 @@ def _doorway_top(sc, var, st, dstate):
             _vgrad(pen, w, h, ['#3a3d72', '#5a5fa8', '#454985'])
             for i in range(3): pen.fill(rect(0, 14 + i * 34, w, 5), '#2b2d57', 230)
             _R(pen, None, w * 0.55, h * 0.4, w, [(0, '#fff3d6', 90), (1, '#ffd58a', 0)], clip=False)
-    sc.plane((-gw / 2 + 0.06, MIR_H - 0.12, -0.05), (1, 0, 0), (0, -1, 0), (gw - 0.12) * 100, (MIR_H - 0.12) * 100, view_in, -10,
-             'dview', 'door')
+    sc.plane((gw / 2 - 0.06, MIR_H - 0.12, -0.05), (-1, 0, 0), (0, -1, 0), (gw - 0.12) * 100, (MIR_H - 0.12) * 100, view_in, -10,
+             'dview', 'door', two_sided=False)
 
 
 def _stairs_live(sc, cam, d0, st, var, key):
@@ -1891,3 +1951,1258 @@ def _reg_stairs(vname):
 
 for _vn in ('down', 'up', 'low', 'treads', 'ots_climb', 'pov_down', 'railing'):
     _reg_stairs(_vn)
+
+
+# ====================================================================== the section (the dollhouse cutaway, one fixed framing)
+SEC = dict(cab=(110, 150, 900, 540), sill=(900, 540), tread_w=68.0, tread_h=44.0, gold=(1410, 470, 1880, 960), gold_floor=892)
+
+
+def _sec_treads():
+    x0, y0 = SEC['sill']; tw, th = SEC['tread_w'], SEC['tread_h']
+    return [(x0 + (k - 1) * tw, y0 + k * th, tw) for k in range(1, N_STEPS + 1)]       # (x left, y top, width) for tread k
+
+
+def section_view(var, st, shot):
+    """The crossing as a cross-section: Cabin 7 upper left in blue night, the white frame in its back wall, eight red
+    treads stepping down to the right through the plum fog, the gold cabin lower right. Always this framing (setup reuse)."""
+    red = var == 'red'
+    S = SPAL['red' if red else 'stairs']
+    P = PAL['red' if red else 'night']; T = PAL['theirs_break' if red else 'theirs']
+    cx0, cy0, cx1, cy1 = SEC['cab']; gx0, gy0, gx1, gy1 = SEC['gold']; gf = SEC['gold_floor']
+
+    def void(pen, t):
+        _L(pen, rect(-900, -600, 3800, 2400), 0, -200, 0, 1300, [S['wall_dk'], S['fog'], mix(S['fog'], S['spill'], 0.3), S['riser']])
+        _R(pen, None, 1500, 900, 900, [(0, S['spill'], 90), (1, S['spill'], 0)], sy=0.5, clip=False)
+        _R(pen, None, 500, 300, 900, [(0, S['moon'], 50), (1, S['moon'], 0)], sy=0.6, clip=False)
+        for i in range(40):
+            x, y = _h(i, 3) * 2400 - 200, _h(i, 4) * 1300 - 100
+            pen.fill(oval(x, y, 1.5 + 3 * _h(i, 5)), '#ffffff', 30)
+
+    def cabin(pen, t):
+        # roof gable, walls in section (cut faces darker), interior blue, floor slab
+        roof = poly([(cx0 - 40, cy0 + 10), ((cx0 + cx1) / 2, cy0 - 120), (cx1 + 40, cy0 + 10)])
+        pen.fill(roof, P['roof_dk']); pen.line(roof, 4, P['outline'])
+        inside = rect(cx0, cy0, cx1 - cx0, cy1 - cy0)
+        _L(pen, inside, 0, cy0, 0, cy1, [P['wall_dk'], P['wall'], P['wall_lt']])
+        _planks(pen, cx1 - cx0, cy1 - cy0, P, 34.0, 7, True, None, 1.6, 0.18, False, 0.1) if False else None
+        for i in range(int((cx1 - cx0) / 34)):
+            pen.seg((cx0 + i * 34, cy0), (cx0 + i * 34, cy1), 2.0, P['seam'], 160)
+        # the window with the moon, the clock, the left bunk, a rafter line
+        wr = rect(cx0 + 300, cy0 + 120, 120, 110)
+        _L(pen, wr, 0, cy0 + 120, 0, cy0 + 230, [P['sky0'], P['sky1']]); pen.fill(oval(cx0 + 380, cy0 + 150, 12), P['moon'])
+        pen.line(wr, 6, P['paint']); pen.seg((cx0 + 360, cy0 + 120), (cx0 + 360, cy0 + 230), 4, P['paint'])
+        _R(pen, None, cx0 + 360, cy0 + 175, 260, [(0, P['key'], 60), (1, P['key'], 0)], clip=False)
+        pen.fill(oval(cx0 + 220, cy0 + 70, 20), P['metal']); pen.fill(oval(cx0 + 220, cy0 + 70, 16), '#c6c8e4')
+        pen.seg((cx0 + 220, cy0 + 70), (cx0 + 220, cy0 + 58), 2.5, '#1a1a24'); pen.seg((cx0 + 220, cy0 + 70), (cx0 + 230, cy0 + 72), 2.5, '#1a1a24')
+        for (bx, by, bw, bh) in ((cx0 + 30, cy1 - 230, 200, 18), (cx0 + 30, cy1 - 110, 200, 18)):
+            pen.fill(rect(bx, by, bw, bh), P['mat']); pen.line(rect(bx, by, bw, bh), 2.5, P['outline'])
+        for bx in (cx0 + 34, cx0 + 222):
+            pen.fill(rect(bx, cy1 - 260, 10, 260), P['wood']); pen.line(rect(bx, cy1 - 260, 10, 260), 2, P['outline'])
+        # floor slab cut (planks end-on) and the back wall cut with the doorway
+        slab = rect(cx0 - 40, cy1, cx1 - cx0 + 80, 30)
+        pen.fill(slab, P['floor_dk']); pen.line(slab, 3, P['outline'])
+        for i in range(0, int(cx1 - cx0 + 80), 22): pen.seg((cx0 - 40 + i, cy1 + 2), (cx0 - 40 + i, cy1 + 28), 1.5, P['outline'], 140)
+        wall = rect(cx1 - 6, cy0 - 10, 26, cy1 - cy0 + 40)
+        pen.fill(wall, P['wall_dk']); pen.line(wall, 3, P['outline'])
+        lw_ = rect(cx0 - 26, cy0 - 10, 26, cy1 - cy0 + 40)
+        pen.fill(lw_, P['wall_dk']); pen.line(lw_, 3, P['outline'])
+        # the doorway in the back wall: the white chipped frame (seen edge-on as a white band) and the dark opening
+        dh = 250
+        pen.fill(rect(cx1 - 6, cy1 - dh, 26, dh), '#1a0f26')
+        pen.fill(rect(cx1 - 14, cy1 - dh - 12, 12, dh + 12), '#e8e4d8'); pen.line(rect(cx1 - 14, cy1 - dh - 12, 12, dh + 12), 2, P['outline'])
+        pen.fill(rect(cx1 + 20, cy1 - dh - 12, 10, dh + 12), '#e8e4d8'); pen.line(rect(cx1 + 20, cy1 - dh - 12, 10, dh + 12), 2, P['outline'])
+        pen.fill(rect(cx1 - 14, cy1 - dh - 12, 44, 12), '#e8e4d8'); pen.line(rect(cx1 - 14, cy1 - dh - 12, 44, 12), 2, P['outline'])
+
+    def treads(pen, t):
+        for (x, y, w) in _sec_treads():
+            blk = rect(x, y, w + 2, gf - y + 6)
+            pen.fill(blk, mix(S['tread'], S['wall'], 0.4)); pen.line(blk, 2, S['outline'], 200)
+            top = rect(x, y, w + 2, 12)
+            pen.fill(top, S['tread_lt']); pen.fill(rect(x, y, w + 2, 4), S['edge'])
+            pen.line(top, 2.5, S['outline'])
+        # the railing on the room side (in section: balusters as lines in front)
+        tr = _sec_treads()
+        pts = [(x + 10, y - 70) for (x, y, w) in tr]
+        pen.line(poly([(SEC['sill'][0] + 10, SEC['sill'][1] - 70)] + pts, False), 6, S['rail_lt'])
+        for (x, y, w) in tr:
+            pen.seg((x + 10, y), (x + 10, y - 70), 3.5, S['rail_lt'])
+
+    def gold(pen, t):
+        inside = rect(gx0, gy0, gx1 - gx0, gf - gy0)
+        _L(pen, inside, 0, gy0, 0, gf, [T['wall_dk'], T['wall'], T['wall_lt']])
+        for i in range(int((gx1 - gx0) / 30)):
+            pen.seg((gx0 + i * 30, gy0), (gx0 + i * 30, gf), 1.8, T['seam'], 140)
+        # roof, window with the peach dawn, gingham, the clock 6:59, Noah's bunk at the foot of the stairs
+        roof = poly([(gx0 - 30, gy0 + 8), ((gx0 + gx1) / 2, gy0 - 90), (gx1 + 30, gy0 + 8)])
+        pen.fill(roof, T['roof_dk']); pen.line(roof, 4, T['outline'])
+        wr = rect(gx0 + 250, gy0 + 120, 110, 100)
+        _L(pen, wr, 0, gy0 + 120, 0, gy0 + 220, [T['sky0'], T['sky1']]); pen.line(wr, 6, T['paint'])
+        gingham(pen, rect(gx0 + 236, gy0 + 112, 30, 112), (gx0 + 236, gy0 + 112, gx0 + 266, gy0 + 224), '#e9c64a', 0.4)
+        _R(pen, None, gx0 + 305, gy0 + 170, 300, [(0, '#ffe2a8', 120), (1, '#ffe2a8', 0)], clip=False)
+        pen.fill(oval(gx0 + 400, gy0 + 70, 20), '#d8d0c0'); pen.fill(oval(gx0 + 400, gy0 + 70, 16), '#f2ecd8')
+        pen.seg((gx0 + 400, gy0 + 70), (gx0 + 396, gy0 + 58), 2.5, '#1a1a24'); pen.seg((gx0 + 400, gy0 + 70), (gx0 + 412, gy0 + 66), 2, '#1a1a24')
+        bx = gx0 + 60
+        pen.fill(rect(bx, gf - 120, 190, 22), '#c0563a'); pen.line(rect(bx, gf - 120, 190, 22), 2.5, T['outline'])
+        pen.fill(rect(bx, gf - 250, 190, 18), '#3f6fa8'); pen.line(rect(bx, gf - 250, 190, 18), 2.5, T['outline'])
+        for x in (bx, bx + 182):
+            pen.fill(rect(x, gf - 280, 10, 280), T['wood']); pen.line(rect(x, gf - 280, 10, 280), 2, T['outline'])
+        for i, c in enumerate(SWIM):
+            pen.fill(rrect(bx + 20 + i * 40, gf - 232, 26, 40, 8), c); pen.line(rrect(bx + 20 + i * 40, gf - 232, 26, 40, 8), 1.5, T['outline'])
+        slab = rect(gx0 - 20, gf, gx1 - gx0 + 40, 30)
+        pen.fill(slab, T['floor_dk']); pen.line(slab, 3, T['outline'])
+        wall = rect(gx1 - 6, gy0 - 10, 26, gf - gy0 + 40); pen.fill(wall, T['wall_dk']); pen.line(wall, 3, T['outline'])
+        if red:
+            pen.fill(inside, '#ff2d55', 60)
+
+    L = [_cl(30, void, 'void', 'v2sec:void:%s' % red, (-900, -600, 2900, 1800)),
+         _cl(1.05, gold, 'gold', 'v2sec:gold:%s' % red, (1200, 300, 2000, 1100)),
+         _cl(1.0, treads, 'treads', 'v2sec:treads:%s' % red, (800, 380, 1600, 1100)),
+         _cl(0.98, cabin, 'cabin', 'v2sec:cabin:%s' % red, (-100, -60, 1100, 640))]
+    edge_c = S['glow']
+
+    def live(pen, t):
+        br = 0.6 + 0.4 * math.sin(t * 2 * math.pi / 2.4)
+        if red:
+            pu = 0.8 + 0.2 * math.sin(t * 2 * math.pi / 1.2)
+            _R(pen, None, cx1, cy1 - 120, 460, [(0, '#ff2d55', 120 * pu), (1, '#ff2d55', 0)], clip=False)
+        for (x, y, w) in _sec_treads():
+            pen.seg((x, y + 2), (x + w, y + 2), 9, edge_c, int(60 * br)); pen.seg((x, y + 2), (x + w, y + 2), 3, '#ffb0bc', int(170 * br))
+        for i in range(4):
+            xx = (i * 500 + t * 18) % 2200 - 200
+            _R(pen, None, xx, 760 + 60 * math.sin(t * 0.4 + i), 460, [(0, S['fog'], 70), (1, S['fog'], 0)], sy=0.18, clip=False)
+    L.append(_live(0.97, live, 'sec_live', blur=0))
+    L.append(_live(0.96, lambda pen, t: motes(pen, t, (900, 420, 1500, 920), 30, 515, None, '#ffe8c8', 0.25, speed=(4, 9)), 'sec_dust', blur=0))
+    if not red and str(st.v('flashlight', st.t0)).startswith('tess'):
+        # Tess's beam in our cabin, pointed through the doorway down the stairs
+        b = Beam(lambda t: (cx1 - 120, cy1 - 150, SEC['sill'][0] + 300, SEC['sill'][1] + 200 + 10 * math.sin(t * 1.5),
+                            0.0 if str(st.v('flashlight', t)).startswith('tess_running') else 0.9), w0=14, spread=0.2, spot=60, a=0.3)
+        L.append(b.layer(0.95, 'beam'))
+    an = {'you_top': Anchor(SEC['sill'][0] - 40, SEC['sill'][1], 1.0, 150), 'tess_door': Anchor(SEC['cab'][2] - 120, SEC['cab'][3], 1.0, 150),
+          'noah_bunk': Anchor(gx0 + 150, gf - 98, 1.0, 120), 'gold_floor': Anchor(gx0 + 330, gf, 1.0, 150)}
+    for k, (x, y, w) in enumerate(_sec_treads(), 1):
+        an['tread%d' % k] = Anchor(x + w / 2, y, 1.0, 150)
+    return _sp('stairs/section', L, an, None, 1.0, 0.0, None, dict(world='stairs', section=SEC))
+
+
+@view('stairs', 'section')
+def _v_section(var, st, shot):
+    return section_view(var, st, shot)
+
+
+# ====================================================================== the mirror (set 'mirror'): it always reads as glass
+def _glass_frame_pt(u, v, tilt=0.0, off=0.0):
+    """A point on the mirror plane at fractions (u across the glass, v down it), pushed `off` m into the room."""
+    O, U, V, w, h, n = mirror_plane(tilt)
+    return O + U * (w / 100 * u) + V * (h / 100 * v) + n * off
+
+
+MIRROR_CAMS = {
+    # name: (u, v of the look point on the glass, distance into the room (m), (dx, dy) camera offset, fov)
+    'glass_cu': (0.56, 0.5, 0.62, (0.06, 0.08), 56.0),         # the steps, the left frame edge in shot
+    'glass_wide': (0.5, 0.5, 2.15, (0.0, 0.05), 52.0),         # the whole mirror on the back wall
+    'glass_tilt': (0.5, 0.5, 1.95, (0.0, 0.05), 54.0),
+    'queen_glass': (0.5, 0.52, 1.05, (0.02, 0.06), 56.0),      # she stands on the 8th line inside the glass
+    'reflection': (0.5, 0.42, 1.25, (0.22, 0.32), 52.0),       # OTS on your reflection
+    'through': (0.48, 0.5, 0.8, (0.05, 0.05), 56.0),           # the other side through the glass
+    'towel_over': (0.5, 0.5, 1.7, (0.15, 0.12), 54.0),
+}
+
+
+def mirror_cam(vname, tilt=0.0):
+    u, v, dist, (dx, dy), fov = MIRROR_CAMS[vname]
+    O, U, V, w, h, n = mirror_plane(0.0)
+    look = _glass_frame_pt(u, v)
+    pos = look + n * dist + v3(1, 0, 0) * dx + v3(0, 1, 0) * dy
+    return Cam3(pos, look=look, fov=fov)
+
+
+def inner_world_layers(kind, cam, d0, st, var, tilt=0.0, key=''):
+    """What is behind the glass when the other side shows through. kind: 'stairs' (the plum stairwell under the 8th
+    step, v1 coords via the glass homography, on a deeper layer for parallax), 'red' (the same in climax red),
+    'dawn' (THEIRS from the top of their stairs, gold and mirror-flipped)."""
+    O, U, V, w, h, n = mirror_plane(tilt)
+    gc = O + U * (w / 200) + V * (h / 200)
+    dg = cam.dist(gc)
+    dep = (dg + 1.4) / d0
+    if kind == 'dawn':
+        tcam = Cam3((2.93, 3.2, 6.05), look=(1.6, 0.4, 3.6), fov=62)
+        cx = CabinCtx('theirs', 'dawn', st, st.t0)
+        sc, info = cabin_scene(cx)
+        cx.refl_scene = sc
+        xf = Xf.flip_x(W)
+        lay = Layer(dep, lambda pen, t: (pen.fill(rect(-2000, -2000, 6000, 5000), '#c99660'), sc.render(pen, tcam, xf)), 'inner_dawn',
+                    cache='v2:inner_dawn:%s' % key, bounds=(-600, -400, 2520, 1480))
+        return [lay, _live(dep * 0.99, lambda pen, t: frozen_motes(pen, t, (200, 100, 1700, 1000), 50, 91), 'inner_motes', blur=0)]
+    red = kind == 'red'
+    S = SPAL['red' if red else 'stairs']
+    Hm = mirror_local_H(cam, ID, tilt)
+    from engine.room3d import _skmat
+    M = _skmat(Hm)
+
+    def static(pen, t):
+        pen.cv.concat(M)
+        x0, y0, x1, y1 = PANE
+        big = rect(x0 - 2600, y0 - 1600, x1 - x0 + 5200, y1 - y0 + 3200)
+        _L(pen, big, 0, y0, 0, y1, [S['wall_dk'], S['fog'], mix(S['fog'], S['spill'], 0.25), S['riser']])
+        # the stairwell falling away under the 8th step: treads converging, red edges, the gold at the bottom
+        for j in range(14):
+            u = j / 14.0
+            yy = 905 + 300 * u ** 0.75
+            wd = 520 * (1 - u) + 50
+            q = poly([(575 - wd, yy), (575 + wd * 0.7, yy), (575 + wd * 0.66, yy + 26 * (1 - u) + 4), (575 - wd * 0.95, yy + 26 * (1 - u) + 4)])
+            pen.fill(q, mix(S['tread'], S['tread_lt'], 0.3 * (1 - u)))
+            pen.seg((575 - wd, yy), (575 + wd * 0.7, yy), 5 * (1 - u) + 1.5, S['edge'], int(220 * (1 - 0.6 * u)))
+        _R(pen, None, 575, 1250, 420, [(0, S['spill'], 140), (1, S['spill'], 0)], sy=0.4, clip=False)
+        # the railing on the room side, receding
+        pts = [(575 - (520 * (1 - j / 14) + 50) - 30, 905 + 300 * (j / 14) ** 0.75 - 260 * (1 - j / 14) - 40) for j in range(15)]
+        pen.line(poly(pts, False), 10, S['rail_lt'], 200)
+        for j in range(0, 14, 2):
+            x, y = pts[j]; pen.seg((x, y), (x + 10, 905 + 300 * (j / 14) ** 0.75), 6 * (1 - j / 14) + 2, S['rail'], 230)
+        # our moonlight from above
+        _R(pen, None, 960, -300, 1400, [(0, S['moon'], 70), (1, S['moon'], 0)], sy=0.6, clip=False)
+
+    def alive(pen, t):
+        pen.cv.concat(M)
+        br = 0.7 + 0.3 * math.sin(t * 2 * math.pi / 2.4)
+        _R(pen, None, 575, 930, 520, [(0, S['glow'], 70 * br), (0.5, S['glow'], 24 * br), (1, S['glow'], 0)], sy=0.35, clip=False)
+        for i in range(4):
+            yy = 200 + i * 330 + 40 * math.sin(t * 0.35 + i)
+            xx = 300 + ((t * 40 + i * 400) % 1600)
+            _R(pen, None, xx, yy, 600, [(0, S['fog'], 70), (1, S['fog'], 0)], sy=0.2, clip=False)
+    return [Layer(dep, static, 'inner_%s' % kind, cache='v2:inner:%s:%s' % (kind, key), bounds=(-700, -500, 2620, 1580)),
+            _live(dep * 0.995, alive, 'inner_fog', blur=None),
+            _live(dep * 0.99, lambda pen, t: motes(pen, t, (-100, -100, 2020, 1180), 46, 711, None, '#e8dcff', 0.12, fall=10,
+                                                   speed=(3, 8)), 'inner_dust', blur=0)]
+
+
+def mirror_view(vname, var, st, shot):
+    var = var or 'night'
+    t0 = st.t0
+    pal_var = 'red' if var == 'red' else 'night'
+    cx = CabinCtx('ours', pal_var, st, t0)
+    mraw = str(st.raw.get('mirror', ''))
+    tilt = TILT_V2 if (vname == 'glass_tilt' or mraw.startswith('tilted')) else 0.0
+    cx.tilt = tilt
+    # what the glass shows
+    inner = None
+    if var in ('stairs',) or vname == 'queen_glass':
+        inner = 'stairs'
+    elif vname == 'through':
+        inner = 'dawn' if var == 'dawn' else ('red' if var == 'red' else 'stairs')
+    if inner:
+        cx.glass_mode = 'clear'; cx.refl_alpha = 0.2
+    cam = mirror_cam(vname, tilt)
+    O, U, V, w, h, n = mirror_plane(tilt)
+    gc = O + U * (w / 200) + V * (h / 200)
+    d0 = max(0.4, cam.dist(gc))
+    # mirror_state: towel views keep the towel; the mirror views show glass otherwise
+    if vname == 'towel_over':
+        st_m = 'towel'
+    else:
+        st_m = 'glass'
+    cx_ms = st_m
+    CabinCtx.mirror_state = property(lambda self, f=CabinCtx.mirror_state.fget: getattr(self, '_force_ms', None) or f(self))
+    cx._force_ms = cx_ms
+    bands = [(-1e9, d0 * 0.55, 'near', 0.5), (d0 * 0.55, 999.0, 'wall', 1.0)]
+    L, sc, info, xf = cabin_layers(cx, cam, 'mirror_' + vname + ':%s:%.0f' % (inner or 'refl', tilt), d0, bands)
+    if inner:
+        L += inner_world_layers(inner, cam, d0, st, var, tilt, '%s:%s:%.0f' % (vname, var, tilt))
+    # light: the beam on the glass (night), the steps, the 8th line
+    if var in ('night', 'red') and vname not in ('towel_over',):
+        live, b = _ours_light(cx, cam, xf, d0, st, 'm_' + vname, info, beam=(var == 'night'))
+        L += [l for l in live if l.name not in ('lipstick',)]
+    L.append(steps_live(cam, xf, d0, st, 'red' if var == 'red' else var, tilt=tilt))
+    if vname == 'towel_over':
+        L += towel_over_layers(cam, xf, d0, st, tilt)
+    # anchors: the 8th line, each drawn step, the Queen's spot behind the glass, the glass centre
+    Hm = mirror_local_H(cam, xf, tilt)
+    def mp(x, y):
+        p = Hm @ np.array([x, y, 1.0]); return p[0] / p[2], p[1] / p[2]
+    an = {}
+    sc_px = cam.px_per_m(gc) * (w - 2 * MFW) / 100 / (PANE[2] - PANE[0])       # design px per mirror-local px
+    ex, ey = mp(EIGHTH[0] + EIGHTH[2] / 2, EIGHTH[1])
+    an['eighth'] = Anchor(ex, ey, 1.04, 230 * sc_px * 4.2)
+    an['queen_step'] = Anchor(ex, ey, 1.04, 230 * sc_px * 4.2)
+    for k in range(7):
+        x, y = mp(*STEP_XY[k]); an['step%d' % (k + 1)] = Anchor(x, y, 1.0, 1)
+        sx_, sy_ = mp(STEP_XY[k][0] - 30, STEP_XY[k][1]); an['queen_on_step%d' % (k + 1)] = Anchor(sx_, sy_, 1.04, 230 * sc_px * 4.2 * 1.25 ** (7 - k))
+    gx, gy = cam.pt(gc); an['glass'] = Anchor(gx, gy, 1.0, cam.px_per_m(gc) * 1.48)
+    an['top_step'] = an['step1']; an['bottom_step'] = an['step7']
+    info_out = dict(info, cam3=cam, d0=d0, xf=xf, model=sc, world='ours' if not inner else ('theirs' if inner == 'dawn' else 'stairs'),
+                    glass=clip_poly_near(cam, [xf.p(p) for p in mirror_glass_pts(0.6, tilt)]), mirror_H=Hm, mirror_xf=None, tilt=tilt)
+    return _sp('mirror/' + vname, L, an, None, 1.0, 0.0, None, info_out, None)
+
+
+TILT_V2 = -13.0
+
+
+def towel_over_layers(cam, xf, d0, st, tilt):
+    """The orange-striped towel thrown over the glass: it drapes over the frame top, hangs in folds; fingertips press
+    through it (info['press'] or the plan's cloth_press cues); at towel_drop it falls flat."""
+    O, U, V, w, h, n = mirror_plane(tilt)
+    dep = sdep(cam, xf, d0, O + U * (w / 200) + V * (h / 200), 0.008)
+    drop_t = st.ev('towel_drop')
+    if drop_t is None:
+        cues = st.sfx('towel_drop'); drop_t = cues[0] if cues else None
+    presses = st.sfx('cloth_press')
+    Hm, _ = cam.H(xf.p(O + n * 0.03 - U * 0.05 - V * 0.04), xf.d(U), xf.d(V), 0.01)
+    from engine.room3d import _skmat
+    M = _skmat(Hm)
+    tw, th = w + 10, h * 0.92
+
+    def draw(pen, t):
+        u = 0.0 if drop_t is None else ease_in_cubic(prog(t, drop_t, drop_t + 0.35))
+        if u >= 1.0: return
+        pen.cv.save(); pen.cv.concat(M)
+        pen.cv.translate(0, u * h * 1.1)
+        outline = smooth([(0, 2), (tw * 0.5, -3), (tw, 2), (tw + 3, th * 0.6), (tw - 2, th), (tw * 0.7, th + 8), (tw * 0.35, th + 3), (-2, th + 6),
+                          (-4, th * 0.5)], True, 0.7)
+        towel_cloth(pen, outline, (0, 0, tw, th), 0.22, 0.0, 7, 0.75, True, '#e0a060', '#efe6d6')
+        for i in range(4):
+            fx = tw * (0.15 + 0.23 * i)
+            _L(pen, rect(fx - 4, 0, 8, th), fx - 4, 0, fx + 4, 0, [(0, '#000000', 0), (0.5, '#000000', 60), (1, '#000000', 0)])
+        for j, tp in enumerate(presses):
+            k = clamp(1.0 - abs(t - tp - 0.25) / 0.6)
+            if k <= 0: continue
+            for f in range(5):
+                px, py = tw * (0.3 + 0.1 * f), th * (0.32 + 0.03 * abs(f - 2))
+                _R(pen, None, px, py, 4.5, [(0, '#ffffff', 90 * k), (0.6, '#000000', 50 * k), (1, '#000000', 0)], clip=False)
+                _R(pen, None, px, py - 1, 2.5, [(0, '#c63449', 150 * k), (1, '#c63449', 0)], clip=False)
+        pen.cv.restore()
+    return [_live(dep, draw, 'towel', blur=None)]
+
+
+def _reg_mirror(vname):
+    @view('mirror', vname)
+    def _v(var, st, shot, vname=vname):
+        return mirror_view(vname, var, st, shot)
+    return _v
+
+
+for _vn in MIRROR_CAMS:
+    _reg_mirror(_vn)
+
+
+# ====================================================================== relighting v1 sets (exteriors, memories)
+def _unpre(arr):
+    a = arr[..., 3].astype(np.float32)
+    c = arr[..., :3].astype(np.float32) * (255.0 / np.maximum(a, 1.0))[..., None]
+    return a, c
+
+
+def _repre(arr, a, c):
+    arr[..., :3] = np.clip(c * (a / 255.0)[..., None], 0, 255).astype(np.uint8)
+
+
+def relight_night(arr):
+    """v1 navy night -> v2 OURS exterior (blue-violet, coloured, never black): luma lifted (p50 ~85-100), cool pixels rotated
+    toward #5a5fa8, warm practicals kept warm. Baked once per cache."""
+    a, c = _unpre(arr)
+    if not (a > 0).any(): return
+    B, G, R = c[..., 0], c[..., 1], c[..., 2]
+    L = 0.0722 * B + 0.7152 * G + 0.2126 * R
+    L2 = np.interp(L, [0, 15, 30, 55, 90, 150, 220, 255], [28, 58, 80, 104, 132, 178, 236, 255])
+    sc = c * (L2 / np.maximum(L, 1.0))[..., None]
+    tint = np.array([168.0, 95.0, 90.0])                        # #5a5fa8 in BGR
+    tl = 0.0722 * 168 + 0.7152 * 95 + 0.2126 * 90
+    tc = tint[None, None, :] * (L2 / tl)[..., None]
+    warm = (R > B + 18)
+    w = np.where(warm, 0.0, 0.5)[..., None]
+    _repre(arr, a, sc * (1 - w) + tc * w)
+
+
+_SEP = np.array([[74, 58, 44], [140, 108, 80], [201, 168, 120], [241, 226, 196], [252, 246, 232]], np.float64)   # RGB ramp
+
+
+def relight_sepia(arr):
+    """Memory: sepia paper (cream #f1e2c4, tan #c9a878, dark #4a3a2c) keeping 25 % of the original chroma (faded teal and
+    orange survive), luma 130-160 typical."""
+    a, c = _unpre(arr)
+    if not (a > 0).any(): return
+    B, G, R = c[..., 0], c[..., 1], c[..., 2]
+    L = 0.0722 * B + 0.7152 * G + 0.2126 * R
+    L2 = np.interp(L, [0, 40, 90, 150, 210, 255], [56, 92, 126, 156, 188, 212])
+    u = np.clip((L2 - 56) / (232 - 56), 0, 1) * 4
+    i0 = np.clip(np.floor(u).astype(int), 0, 3); f = (u - i0)[..., None]
+    ramp = _SEP[i0] * (1 - f) + _SEP[i0 + 1] * f                 # RGB
+    ramp = ramp[..., ::-1]                                       # BGR
+    orig = c * (L2 / np.maximum(L, 1.0))[..., None]
+    _repre(arr, a, ramp * 0.72 + orig * 0.28)
+
+
+RELIGHT = {'night': relight_night, 'sepia': relight_sepia}
+
+
+def relit(sp, mode, key):
+    """Apply a bake-time relight to every cached layer of a v1 SetPiece (and a lift to its dark live layers)."""
+    fn = RELIGHT[mode]
+    for l in sp:
+        if l.cache:
+            l.relight = fn
+            l.cache = '%s:rl_%s' % (l.cache if isinstance(l.cache, str) else 'uid%d' % l._uid, mode)
+        elif l.name in ('pines', 'trees', 'pines_near', 'sway', 'curtain'):
+            l.relight = fn; l.lift = True
+    return sp
+
+
+def v1_alias(set1, view1, var1, st, shot, mode, name, zoom=None, flip=False, extra=None):
+    """Build a v1 view (set1/view1/var1) for a v2 shot, relit (mode 'night' | 'sepia'), optionally zoomed about a point
+    (zoom=(cx, cy, k)) or flipped left-right."""
+    sh = dict(shot or {}); sh['set'], sh['view'], sh['var'] = set1, view1, var1
+    fn = V1VIEWS[(set1, view1)]
+    sp = fn(var1, st, sh)
+    sp.name = name
+    if zoom or flip:
+        zx, zy, zk = zoom if zoom else (960.0, 540.0, 1.0)
+        new = []
+        for l in sp:
+            d0 = l.draw
+
+            def dr(pen, t, d0=d0):
+                pen.cv.save(); pen.cv.translate(960, 540)
+                if flip: pen.cv.scale(-1, 1)
+                pen.cv.scale(zk, zk); pen.cv.translate(-zx, -zy)
+                d0(pen, t); pen.cv.restore()
+            l.draw = dr
+            if l.cache:
+                l.cache = '%s:z%.0f,%.0f,%.2f%s' % (l.cache, zx, zy, zk, ':f' if flip else '')
+                b = l.bounds
+                l.bounds = (min(b[0], -900), min(b[1], -560), max(b[2], 2820), max(b[3], 1640))
+            new.append(l)
+        for k_, an in list(sp.anchors.items()):
+            x = 960 + (an.x - zx) * zk; y = 540 + (an.y - zy) * zk
+            if flip: x = 1920 - x
+            sp.anchors[k_] = Anchor(x, y, an.depth, an.height * (zk if an.height > 2 else 1))
+    relit(sp, mode, name)
+    if extra: sp.extend([l for l in extra(sp, st) if l is not None])
+    sp.info = dict(sp.info, world='ours' if mode == 'night' else 'memory', v1=(set1, view1, var1))
+    return sp
+
+
+def _night_var(st, t=None):
+    return 'moon_flash' if any(_flash_on(st, tt) for tt in (st.t0, st.t1)) else 'moon'
+
+
+# ---------------------------------------------------------------------- warm practicals and life for the relit exteriors
+def warm_lights(pts, name='practicals', depth=3.0):
+    """Warm practical lights (x, y, r, colour) with a slow breath."""
+    def draw(pen, t):
+        for i, (x, y, r, c) in enumerate(pts):
+            b = 0.9 + 0.1 * math.sin(t * 1.7 + i)
+            _R(pen, None, x, y, r, [(0, c, 150 * b), (0.25, c, 60 * b), (1, c, 0)], clip=False)
+            pen.fill(oval(x, y, max(2.0, r * 0.05)), '#fff3d6', 230)
+    return _live(depth, draw, name, blur=0)
+
+
+def x_marks(pts, name='xmarks', depth=1.0):
+    """Orange spray-paint X marks on the condemned cabins."""
+    def draw(pen, t):
+        for (x, y, s_) in pts:
+            for (a, b) in (((-1, -1), (1, 1)), ((1, -1), (-1, 1))):
+                p = poly([(x + a[0] * 30 * s_, y + a[1] * 26 * s_), (x + b[0] * 30 * s_, y + b[1] * 26 * s_)], False)
+                pen.line(p, 9 * s_, '#ff7a1a', 225); pen.line(p, 13 * s_, '#ff7a1a', 60)
+    return _cl(depth, draw, name, 'v2xm:%s' % (','.join('%.0f' % p[0] for p in pts)), FRAME)
+
+
+def _ext(set1, view1, var1=None, zoom=None, flip=False, extra=None):
+    def fn(var, st, shot):
+        v1var = var1 or (_night_var(st) if var in ('night', None) else var)
+        return v1_alias(set1, view1, v1var, st, shot, 'night', '%s/%s' % (shot.get('set'), shot.get('view')), zoom, flip, extra)
+    return fn
+
+
+def _ff_layer(box=(100, 300, 1820, 900), n=10, seed=5, depth=2.0):
+    return _live(depth, lambda pen, t: fireflies(pen, t, box, n, seed), 'fireflies', blur=0)
+
+
+VIEWS[('camp_gate', 'wide')] = _ext('camp_gate', 'wide', extra=lambda sp, st: [_ff_layer()])
+VIEWS[('camp_gate', 'keys_cu')] = _ext('camp_gate', 'keys_cu')
+VIEWS[('camp_gate', 'notice')] = _ext('camp_gate', 'notice')
+VIEWS[('camp_gate', 'poster')] = _ext('camp_gate', 'poster')
+VIEWS[('camp_gate', 'poster_ecu')] = _ext('camp_gate', 'poster', zoom=(1000, 640, 2.2))
+VIEWS[('camp_gate', 'gate_reverse')] = _ext('camp_gate', 'wide', flip=True, zoom=(960, 600, 1.12), extra=lambda sp, st: [_ff_layer(seed=9)])
+VIEWS[('camp_gate', 'fence_track')] = _ext('camp_path', 'path_track', extra=lambda sp, st: [_ff_layer(seed=11)])
+VIEWS[('camp_gate', 'aerial')] = _ext('camp_path', 'aerial', 'moon',
+                                     extra=lambda sp, st: [x_marks([(600, 640, 0.7), (900, 600, 0.7), (1200, 640, 0.7)], depth=1.0),
+                                                           warm_lights([(1600, 360, 60, '#ffb84d'), (1390, 455, 40, '#ffb84d')], depth=1.0)])
+VIEWS[('camp_path', 'cabins_row')] = _ext('camp_path', 'cabins_row', 'moon', extra=lambda sp, st: [_ff_layer(seed=13)])
+VIEWS[('camp_path', 'path_run')] = _ext('camp_path', 'path_track', extra=lambda sp, st: [_ff_layer(seed=17)])
+VIEWS[('caretaker', 'wide')] = _ext('caretaker', 'wide', 'tv', extra=lambda sp, st: [_ff_layer(seed=19)])
+VIEWS[('mess_porch', 'bell_ecu')] = _ext('mess_porch', 'bell_ecu')
+VIEWS[('mess_porch', 'bell_hit')] = _ext('mess_porch', 'bell_ecu', 'bell_hit')
+VIEWS[('mess_porch', 'boot')] = _ext('mess_porch', 'boot_ecu', 'run')
+VIEWS[('mess_porch', 'crate_cu')] = _ext('mess_porch', 'crate_cu')
+VIEWS[('mess_porch', 'porch_low')] = _ext('mess_porch', 'porch_low')
+VIEWS[('mess_porch', 'wide')] = _ext('mess_porch', 'wide')
+
+
+@view('mess_porch', 'porch_crate')
+def _v_porch_crate2(var, st, shot):
+    v1var = 'bell_hit' if var == 'bell_hit' else 'run'
+    sp = v1_alias('mess_porch', 'porch_run', v1var, st, shot, 'night', 'mess_porch/porch_crate')
+    if var == 'bell_hit':
+        # the climax red begins at the strike: a red rim light from the right, pulsing
+        sp.append(_live(0.9, lambda pen, t: _R(pen, None, 1900, 500, 1100, [(0, '#ff2d55', 70 * (0.8 + 0.2 * math.sin(t * 5.2))),
+                                                                          (1, '#ff2d55', 0)], sy=0.9, clip=False), 'red_rim', blur=0))
+    return sp
+
+
+@view('mess_porch', 'high_wide')
+def _v_porch_high(var, st, shot):
+    """HIGH WIDE from the mess-hall porch toward Cabin 7's door (54.6 s and 453.6 s): the porch rail and boards in the
+    foreground, the SAVE FOR THE MUSEUM crate right of the screen door, the path, Cabin 7 across it."""
+    v1var = _night_var(st)
+    sh = dict(shot); sh['set'], sh['view'], sh['var'] = 'camp_path', 'cabins_row', 'moon'
+    bg = V1VIEWS[('camp_path', 'cabins_row')]('moon', st, sh)
+    L = []
+    for l in bg:
+        d0 = l.draw
+
+        def dr(pen, t, d0=d0):
+            pen.cv.save(); pen.cv.translate(960, 330); pen.cv.scale(0.78, 0.78); pen.cv.translate(-1150, -560); d0(pen, t); pen.cv.restore()
+        l.draw = dr
+        if l.cache: l.cache = '%s:hw' % l.cache
+        l.depth = (l.depth if not callable(l.depth) else 1.0) * 1.8; l.ref_depth = l.ref_depth * 1.8
+        L.append(l)
+
+    def porch(pen, t):
+        # boards of the porch (high, looking down and across), the rail posts, the screen door edge, the crate
+        P = PAL['night']
+        q = poly([(-900, 760), (2820, 760), (2820, 1640), (-900, 1640)])
+        pen.fill(q, P['floor'])
+        for i in range(-30, 60):
+            x = 960 + i * 60
+            pen.seg((960 + (x - 960) * 0.55, 760), (960 + (x - 960) * 1.6, 1640), 2.2, P['floor_seam'], 200)
+        pen.texture(q, 'wood', 0.22, 'overlay', 0.8, 90)
+        pen.fill(rect(-900, 740, 3720, 26), P['wood']); pen.line(rect(-900, 740, 3720, 26), 3, P['outline'])
+        for x in (-300, 380, 1060, 1740, 2420):
+            r = rect(x, 520, 34, 240); pen.fill(r, P['wood']); pen.line(r, 3, P['outline'])
+        pen.fill(rect(-900, 560, 3720, 22), P['wood_lt']); pen.line(rect(-900, 560, 3720, 22), 3, P['outline'])
+        # screen door edge at the right and the crate right of it
+        sd = rect(1180, -200, 130, 980); pen.fill(sd, P['wood_dk']); pen.line(sd, 4, P['outline'])
+        S1.mesh(pen, (1192, -180, 1298, 760), 14, '#8a8eb8', 70)
+        crate(pen, 1390, 840, 1760, 1070, 1.0, 0.5, '#8a7550', 0.0, True, True, 3, 1.0, True)
+    L += [_cl(0.75, porch, 'porch_fg', 'v2:porch_high', NEAR)]
+    L.append(warm_lights([(1500, 640, 90, '#ffb84d')], 'porch_lamp', 0.8))
+    L.append(_ff_layer((100, 300, 1820, 700), 8, 23, 1.8))
+    if any(_flash_on(st, tt) for tt in (st.t0, st.t1)):
+        b = Beam(aim_fn((1300, 900), (900, 520), 1.0, 8, 3), w0=20, spread=0.25, spot=80, a=0.3)
+        L.append(b.layer(1.2, 'beam'))
+    sp = _sp('mess_porch/high_wide', L, {'tess_porch': Anchor(1250, 1000, 0.75, 700), 'cabin7_door': Anchor(1063, 525, 1.8, 180),
+                                          'crate': Anchor(1575, 950, 0.75, 1)}, None)
+    for l in sp:
+        if l.cache and l.name != 'porch_fg':
+            l.relight = relight_night; l.cache = '%s:rl_night' % l.cache
+    sp.info['world'] = 'ours'
+    return sp
+
+
+@view('cabin_now', 'door')
+def _v_cab_door2(var, st, shot):
+    """Cabin 7's front door from outside: the board wall, the number plaque, the orange X, the DEMOLITION sticker, the
+    hasp with the padlock (locked, hanging open from 71.9 s, gone when Tess takes it at 463)."""
+    return cabin_front_view('door', var, st, shot)
+
+
+@view('camp_path', 'cabin7_door')
+def _v_cab7_door(var, st, shot):
+    return cabin_front_view('cabin7_door', var, st, shot)
+
+
+def cabin_front_view(vname, var, st, shot):
+    P = PAL['night']
+    pad = str(st.v('padlock', st.t0))
+
+    def wall(pen, t):
+        _L(pen, rect(-900, -600, 3800, 2400), 0, -600, 0, 400, [P['sky0'], P['sky1']])
+        for i in range(10):
+            pine(pen, -500 + i * 330, 60, 520 + 160 * _h(i, 2), i, '#1a1f48', P['key'], 60, 0, 9, 0.42)
+        # the cabin's front: boards, eave, the door, casing
+        fr = rect(-200, 0, 2320, 1300)
+        _planks(pen, 2320, 1300, P, 70.0, 31, True, lambda p, w, h: _vgrad(p, w, h, [(0, '#000000', 90), (0.4, '#000000', 0)]), 3.0,
+                0.25, True, 0.2) if False else None
+        pen.cv.save(); pen.cv.translate(-200, 0)
+        _planks(pen, 2320, 1300, P, 70.0, 31, True, None, 3.0, 0.25, True, 0.2)
+        pen.cv.restore()
+        pen.fill(rect(-260, -60, 2440, 70), P['roof_dk']); pen.line(rect(-260, -60, 2440, 70), 4, P['outline'])
+        door = rect(700, 180, 420, 920)
+        pen.fill(rect(670, 150, 480, 950), P['wood_dk']); pen.line(rect(670, 150, 480, 950), 4, P['outline'])
+        pen.cv.save(); pen.cv.translate(700, 180)
+        _planks(pen, 420, 920, P, 70.0, 37, True, None, 3.0, 0.25, True, 0.2, P['wood'], P['wood_dk'], P['wood_lt'], P['seam'])
+        pen.cv.restore()
+        pen.line(door, 4, P['outline'])
+        for y in (230, 620, 1010):
+            pen.fill(rect(700, y, 420, 40), P['wood_dk'], 220); pen.line(rect(700, y, 420, 40), 3, P['outline'], 180)
+        # DEMOLITION sticker and orange X
+        r = rect(760, 420, 300, 120); pen.fill(r, '#ff7a1a'); pen.line(r, 3, '#3a1a08')
+        _sign_text(pen, 'DEMOLITION', 910, 478, 44, '#1a0a04', 900)
+        _sign_text(pen, 'SAT 7:00 AM · KEEP OUT', 910, 520, 22, '#1a0a04', 800)
+        for (a, b) in (((1250, 260), (1520, 560)), ((1520, 260), (1250, 560))):
+            pen.line(poly([a, b], False), 26, '#ff7a1a', 220)
+        # the number plaque 7
+        pl = rrect(1240, 640, 150, 170, 14); pen.fill(pl, '#d8d4c8'); pen.line(pl, 4, P['outline'])
+        _sign_text(pen, '7', 1315, 780, 130, '#2a2440', 900)
+        _sign_text(pen, 'CABIN', 1315, 676, 26, '#2a2440', 900)
+        # old search tape tangled on the rail
+        pen.line(poly([(-200, 1180), (300, 1140), (520, 1190)], False), 18, P['tape'], 220)
+        # hasp on the jamb
+        pen.fill(rrect(640, 600, 70, 26, 6), P['metal']); pen.line(rrect(640, 600, 70, 26, 6), 3, P['outline'])
+        pen.fill(oval(674, 640, 16), P['metal']); pen.line(oval(674, 640, 16), 3, P['outline'])
+        # porch step and ground
+        pen.fill(rect(-900, 1100, 3800, 600), '#2c3060'); pen.fill(rect(500, 1100, 820, 60), P['wood']); pen.line(rect(500, 1100, 820, 60), 3, P['outline'])
+
+    def lock(pen, t):
+        v = str(st.v('padlock', t))
+        if v.startswith('tess_hand') or v.startswith('struck'): return
+        sw = 3.0 * math.sin(t * 2.2) if v.startswith('hasp_open') else 0.0
+        padlock(pen, 674, 700, 1.4, 0.6, sw, 1.0 if v.startswith('hasp_open') else 0.0)
+    L = [_cl(1.0, wall, 'front', 'v2:c7front', NEAR), _live(0.98, lock, 'padlock', blur=0),
+         _live(1.6, lambda pen, t: fireflies(pen, t, (-200, 0, 2100, 700), 6, 41), 'fireflies', blur=0),
+         _live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 30, 51, None, '#dfe4ff', 0.08), 'dust', blur=0)]
+    if any(_flash_on(st, tt) for tt in (st.t0, st.t1)):
+        b = Beam(aim_fn((300, 1300), [(st.t0, 700, 680), (st.t0 + 1.2, 880, 560)], 1.0, 8, 7), w0=24, spread=0.3, spot=150, a=0.35)
+        L.append(b.layer(0.95, 'beam'))
+    sp = _sp('cabin_now/' + vname, L, {'padlock': Anchor(674, 700, 0.98, 1), 'tess_door': Anchor(560, 1240, 0.8, 1100),
+                                        'door': Anchor(910, 1100, 1.0, 900)}, None)
+    sp.info['world'] = 'ours'
+    return sp
+
+
+# ====================================================================== the bells: the real cracked bell and the fake perfect one
+BRASS = '#c8963e'
+
+
+def brass_bell(pen, cx, cy, s=1.0, rot=0.0, light=0.8, crack=True, vib=0.0, t=0.0, red=0.0, gleam=0.0, mouth=0.35, c=BRASS,
+               clapper=0.0, patina=True, outline='#1d1408'):
+    """A cast brass camp breakfast bell (about 260 px tall at s=1, mouth down at rot 0, centred on its waist): crown loop,
+    shoulder, waist, flared sound bow, a thick lip with the mouth seen as an ellipse (the dark inside and the clapper),
+    engraved bands, speculars, verdigris, THE CRACK in the rim (crack=True), vib = ringing (rim wobble lines),
+    gleam = the fake bell's perfect shine."""
+    cv = pen.cv
+    cv.save(); cv.translate(cx, cy); cv.rotate(rot)
+    if vib: cv.translate(vib * 2.5 * s * math.sin(t * 95), 0)
+    k = s
+    dark, mid, hi = _dk(c, 0.62), mix(_dk(c, 0.35), c, light), mix(c, '#fff4d0', 0.55 * light + 0.35 * gleam)
+    # crown (the hanging loop) and the shoulder
+    loop = ring_path(0, -150 * k, 22 * k, 13 * k)
+    pen.fill(loop, mid); pen.line(loop, 3 * k, outline)
+    body = smooth([(-30 * k, -128 * k), (30 * k, -128 * k), (52 * k, -104 * k), (60 * k, -40 * k), (70 * k, 30 * k), (96 * k, 86 * k),
+                   (112 * k, 108 * k), (-112 * k, 108 * k), (-96 * k, 86 * k), (-70 * k, 30 * k), (-60 * k, -40 * k), (-52 * k, -104 * k)], True, 0.55)
+    _L(pen, body, -112 * k, 0, 112 * k, 0, [_dk(dark, 0.3), dark, mid, hi, mid, dark, _dk(dark, 0.45)])
+    if patina:
+        for i in range(9):
+            px, py = (-80 + 160 * _h(i, 71)) * k * 0.7, (-90 + 180 * _h(i, 72)) * k
+            pen.fill(_blob(px, py, (6 + 12 * _h(i, 73)) * k, (4 + 8 * _h(i, 74)) * k, 8, i, 0.4), '#4a7a5a', int(90 * (1 - gleam)))
+    pen.texture(body, 'grunge', 0.3 * (1 - gleam), 'multiply', 0.5 * k)
+    # speculars: a long vertical streak and a hot spot on the sound bow
+    _L(pen, body, -40 * k, 0, -10 * k, 0, [(0, '#ffffff', 0), (0.5, '#fff8e0', 110 * light + 100 * gleam), (1, '#ffffff', 0)])
+    _R(pen, body, -46 * k, 74 * k, 34 * k, [(0, '#ffffff', 150 * light + 100 * gleam), (1, '#ffffff', 0)], sy=0.7)
+    if red: _L(pen, body, 112 * k, 0, 0, 0, [(0, '#ff3a50', 170 * red), (1, '#ff3a50', 0)])
+    # engraved bands
+    for yy, hw in ((-96 * k, 50 * k), (-60 * k, 58 * k), (66 * k, 86 * k)):
+        pen.seg((-hw, yy), (hw, yy), 2.4 * k, _dk(c, 0.55), 200)
+        pen.seg((-hw, yy + 2.5 * k), (hw, yy + 2.5 * k), 1.2 * k, hi, 140)
+    pen.line(body, 4 * k, outline)
+    # the lip (thick rim) and the mouth ellipse: dark inside, the clapper
+    mw, mh = 112 * k, 112 * k * mouth
+    mo = oval(0, 112 * k, mw, mh)
+    pen.fill(mo, _dk(c, 0.5)); pen.line(mo, 3.5 * k, outline)
+    inner = oval(0, 112 * k + 3 * k, mw * 0.86, mh * 0.72)
+    _R(pen, inner, 0, 112 * k - mh * 0.3, mw, [(0, '#0e0904'), (1, '#2a1c0c')])
+    cl_x = clapper * 30 * k * math.sin(t * 9)
+    pen.fill(oval(cl_x, 112 * k + mh * 0.1, 12 * k, 12 * k), dark); pen.line(oval(cl_x, 112 * k + mh * 0.1, 12 * k, 12 * k), 2 * k, outline)
+    pen.line(oval(0, 112 * k, mw, mh), 2 * k, hi, 150)
+    if crack:
+        pts = [(40 * k, 112 * k + mh * 0.9), (44 * k, 100 * k), (37 * k, 86 * k), (46 * k, 70 * k), (40 * k, 52 * k), (44 * k, 40 * k)]
+        pen.line(poly(pts, False), 3.6 * k, '#0e0904', 240); pen.line(poly([(x + 1.6 * k, y) for x, y in pts], False), 1.2 * k, hi, 160)
+    if vib:
+        for j in range(3):
+            pen.line(oval(0, 112 * k, mw * (1.08 + 0.08 * j) + 6 * k * math.sin(t * 60 + j), mh * (1.2 + 0.2 * j)), 3 * k, '#fff2c8',
+                     int(150 * vib * (1 - j * 0.3)))
+    cv.restore()
+    return body
+
+
+def ring_path(cx, cy, r, w):
+    return minus(oval(cx, cy, r, r), oval(cx, cy, r - w, r - w))
+
+
+def _bell_plate(pen, day=False, sepia=False, boards=True):
+    P = PAL['night']
+    if sepia:
+        pen.fill(rect(-900, -560, 3800, 2300), '#c9a878')
+        for i in range(-10, 40): pen.seg((i * 90, -600), (i * 90 + 60, 1700), 6, '#8a6a48', 160)
+        pen.texture(rect(-900, -560, 3800, 2300), 'wood', 0.35, 'overlay', 1.2, 90)
+        return
+    # crate interior / porch boards at night, lit warm by the beam
+    pen.fill(rect(-900, -560, 3800, 2300), P['wood_dk'])
+    for i in range(-10, 40):
+        pen.fill(rect(i * 120, -600, 116, 2300), mix(P['wood'], P['wood_dk'], _h(i, 5)))
+        pen.seg((i * 120, -600), (i * 120, 1700), 5, P['outline'], 200)
+    pen.texture(rect(-900, -560, 3800, 2300), 'wood', 0.3, 'overlay', 1.4, 90)
+    for i in range(40):
+        x, y = _h(i, 81) * 2200 - 140, 700 + _h(i, 82) * 600
+        pen.seg((x, y), (x + 90 * (_h(i, 83) - 0.5), y - 40 * _h(i, 84)), 4, '#c8a860', 200)       # straw
+
+
+@view('mess_porch', 'bell_ecu')
+def _v_bell_ecu2(var, st, shot):
+    """The real bell in the crate: a cast brass bell lying in straw between the slats, the crack in its rim, the beam on it."""
+    def bg(pen, t): _bell_plate(pen)
+
+    def bl(pen, t):
+        brass_bell(pen, 980, 560, 2.3, -62, 0.85, True, 0.0, t, 0.0, 0.0, 0.42)
+
+    def slats(pen, t):
+        P = PAL['night']
+        for x in (-200, 1560):
+            r = rect(x, -600, 520, 2300); pen.fill(r, P['wood']); pen.line(r, 6, P['outline'])
+            pen.texture(r, 'wood', 0.3, 'overlay', 1.2, 90)
+    L = [_cl(2.2, bg, 'crate_in', 'v2:bellbg', (-900, -560, 2820, 1640)), _cl(1.0, bl, 'bell', 'v2:bell_crate', FRAME),
+         _cl(0.6, slats, 'slats', 'v2:bell_slats', NEAR)]
+    bl_, b = S1._beam_layers(st, var if var else 'moon_flash', (2300, -500), [(st.t0, 960, 560), (st.t1, 1060, 600)], 1.0, 8, 29,
+                             spot=420, dust_box=(0, 0, 1920, 1080), n_dust=50, a=0.22)
+    L += bl_
+    L.append(_live(0.9, lambda pen, t: _R(pen, None, 1000, 560, 520, [(0, '#ffd58a', 60), (1, '#ffd58a', 0)], clip=False), 'warm', blur=0))
+    sp = _sp('mess_porch/bell_ecu', L, {'crack': Anchor(1130, 640, 1.0, 1), 'bell': Anchor(980, 560, 1.0, 1)}, None, beam=b)
+    sp.info['world'] = 'ours'
+    return sp
+
+
+@view('mess_porch', 'bell_hit')
+def _v_bell_hit2(var, st, shot):
+    """CONTACT at 535.36: the bell on the porch boards, the padlock swung into the rim, the spark, a 2-frame white flash,
+    the rim vibrating (wobble lines), the crack rattling; red rim light begins (the climax)."""
+    ts = 535.36
+
+    def bg(pen, t): _bell_plate(pen)
+
+    def bl(pen, t):
+        vib = math.exp(-(t - ts) * 2.0) if t >= ts else 0.0
+        red = clamp((t - ts + 0.3) / 0.8) * 0.8
+        brass_bell(pen, 900, 560, 2.2, -8, 0.85, True, vib, t, red, 0.0, 0.42, clapper=vib)
+        # the padlock swinging in from the right on its shackle
+        u = clamp((t - (ts - 0.4)) / 0.4)
+        px = lerp(1900, 1210, ease_in_cubic(u)) + (40 * math.exp(-(t - ts) * 4) if t > ts else 0)
+        py = lerp(260, 760, ease_in_cubic(u))
+        padlock(pen, px, py, 3.0, 0.8, -30 * (1 - u), 1.0)
+        if vib > 0.05:
+            # the crack rattles: short jagged ticks along it
+            for j in range(5):
+                a = vib * (0.5 + 0.5 * math.sin(t * 70 + j))
+                pen.seg((990 + j * 3, 760 - j * 32), (1004 + j * 3, 750 - j * 32), 3, '#fff2c8', int(220 * a))
+
+    def flare(pen, t):
+        if t < ts - 0.02: return
+        u = t - ts
+        k = math.exp(-u * 7)
+        _R(pen, None, 1190, 770, 700, [(0, '#ffffff', 255 * k), (0.15, '#fff2d6', 200 * k), (1, '#fff2d6', 0)], clip=False)
+        _R(pen, None, 1190, 770, 1600, [(0, '#fff2d6', 120 * k), (1, '#fff2d6', 0)], sy=0.04, clip=False)
+        for j in range(14):
+            ang = 2 * math.pi * _h(j, 3); d = 900 * u * (0.5 + _h(j, 4))
+            pen.fill(oval(1190 + math.cos(ang) * d, 770 + math.sin(ang) * d + 400 * u * u, 5), '#ffe8b0', int(255 * max(0, 1 - u * 2)))
+    L = [_cl(2.2, bg, 'boards', 'v2:bellbg', (-900, -560, 2820, 1640)), _live(1.0, bl, 'bell', blur=0), _live(0.95, flare, 'strike_flare', blur=0),
+         _live(0.9, lambda pen, t: _R(pen, None, 1920, 400, 1200, [(0, '#ff2d55', 110 * clamp((t - ts) / 0.8)), (1, '#ff2d55', 0)],
+                                      clip=False), 'red_rim', blur=0)]
+    sp = _sp('mess_porch/bell_hit', L, {'contact': Anchor(1190, 770, 1.0, 1), 'bell': Anchor(900, 560, 1.0, 1)}, None)
+    sp.info['world'] = 'climax'
+    return sp
+
+
+@view('cabin_dawn', 'far_porch')
+def _v_far_porch(var, st, shot):
+    """Telephoto through THEIR window: across the frozen lawn, the mess-hall porch with a GLEAMING bell swinging by itself
+    (511.6-531.5 s): too perfect, clean rings (the rings are HUD)."""
+    T = PAL['theirs']
+    tb = st.ev('fake_bell')
+    t_on = 511.9
+
+    def bg(pen, t):
+        _L(pen, rect(-900, -560, 3800, 2300), 0, -400, 0, 700, [T['sky0'], T['sky1'], '#fff0d0'])
+        for i in range(12):
+            pine(pen, -600 + i * 300, 640, 520 + 200 * _h(i, 4), i, '#8a9a70', '#ffe6b0', 80, 0, 9, 0.42)
+        pen.fill(rect(-900, 640, 3800, 1100), '#a8b46a'); pen.texture(rect(-900, 640, 3800, 1100), 'grunge', 0.2, 'overlay', 1.0)
+        # the mess hall porch (gold morning): posts, roof, the bracket where the bell hangs
+        pen.fill(rect(300, 120, 1400, 560), '#d8a870'); pen.line(rect(300, 120, 1400, 560), 5, T['outline'])
+        for i in range(12): pen.seg((300 + i * 120, 120), (300 + i * 120, 680), 3, T['seam'], 160)
+        pen.fill(poly([(240, 130), (960, -160), (1760, 130)]), '#a9743f'); pen.line(poly([(240, 130), (960, -160), (1760, 130)]), 5, T['outline'])
+        _sign_text(pen, 'MESS HALL', 1000, 210, 64, '#4a2a10', 900)
+        for x in (360, 820, 1300, 1640):
+            pen.fill(rect(x, 230, 40, 460), '#c48f55'); pen.line(rect(x, 230, 40, 460), 4, T['outline'])
+        pen.fill(rect(300, 680, 1400, 50), '#a8763f'); pen.line(rect(300, 680, 1400, 50), 4, T['outline'])
+        pen.fill(rrect(860, 250, 200, 30, 8), '#3a3430'); pen.line(rrect(860, 250, 200, 30, 8), 4, T['outline'])
+
+    def bl(pen, t):
+        sw = 22 * math.sin((t - t_on) * 2 * math.pi / 0.9) * clamp((t - t_on) / 0.3) if t >= t_on else 0.0
+        brass_bell(pen, 960, 430, 1.05, sw, 1.0, False, 0.0, t, 0.0, 1.0, 0.3, c='#e0b050', patina=False)
+        # perfect gleam star
+        k = 0.6 + 0.4 * math.sin(t * 7)
+        _R(pen, None, 920, 400, 60, [(0, '#ffffff', 220 * k), (1, '#ffffff', 0)], clip=False)
+        pen.seg((920 - 40 * k, 400), (920 + 40 * k, 400), 2, '#ffffff', int(230 * k)); pen.seg((920, 400 - 40 * k), (920, 400 + 40 * k), 2, '#ffffff', int(230 * k))
+    L = [_cl(3.0, bg, 'far_porch', 'v2:far_porch', (-900, -560, 2820, 1640)), _live(2.95, bl, 'fake_bell', blur=0),
+         _live(1.5, lambda pen, t: frozen_motes(pen, t, (0, 0, 1920, 1080), 40, 61), 'motes', blur=0)]
+
+    def frame(pen, t):
+        # the window frame and gingham edges in the foreground (we look through THEIR window)
+        P = PAL['theirs']
+        for r in (rect(-900, -560, 860, 2300), rect(1980, -560, 900, 2300), rect(-900, -560, 3800, 300), rect(-900, 1000, 3800, 700)):
+            pen.fill(r, P['paint'])
+        pen.line(rect(-40, -260, 2020, 1260), 8, P['outline'])
+        gingham(pen, rect(-900, -560, 1000, 2300), (-900, -560, 100, 1740), '#e9c64a', 0.6)
+    L.append(_cl(0.5, frame, 'window_frame', 'v2:far_frame', NEAR, blur=6))
+    sp = _sp('cabin_dawn/far_porch', L, {'bell': Anchor(960, 430, 2.95, 1)}, None)
+    sp.info['world'] = 'theirs'
+    return sp
+
+
+@view('cabin_dawn', 'window_out')
+def _v_window_out2(var, st, shot):
+    """LOOP A through THEIR window: the frozen gold lawn, the sprinkler (the same arcs at 297.7 and 414.6: cue-timed),
+    the pines, and the far mess-hall porch with ITS BELL (the fake one swings by itself from 511.6)."""
+    T = PAL['theirs']
+    cues = st.sfx_cues('sprinkler_spit')
+    on = next((c['t'] for c in cues if not (c.get('params') or {}).get('loop_id') and (c.get('params') or {}).get('kind') != 'die'), None)
+    spits = [c['t'] for c in cues if (c.get('params') or {}).get('loop_id')]
+    die = next((c['t'] for c in cues if (c.get('params') or {}).get('kind') == 'die'), None)
+    if spits and on is None: on = spits[0] - 0.4
+    if spits and die is None: die = spits[-1] + 0.72
+    fake_on = 511.9
+
+    def outside(pen, t):
+        _L(pen, rect(-900, -700, 3800, 1400), 0, -700, 0, 640, [T['sky0'], '#ffd8b0', T['sky1']])
+        _R(pen, None, 600, 560, 900, [(0, '#fff2d0', 200), (1, '#fff2d0', 0)], sy=0.5, clip=False)
+        treeline(pen, -900, 2900, 640, 300, 22, 181, '#7e8c5a', '#ffe6b0', 80)
+        pen.fill(rect(-900, 640, 3800, 900), '#a8b45a')
+        _L(pen, rect(-900, 640, 3800, 900), 0, 640, 0, 1400, [(0, '#ffe6a0', 120), (1, '#7a9a40', 255)])
+        p = poly([(1180, 700), (1300, 700), (1700, 1400), (900, 1400)])
+        pen.fill(p, '#e0c08a'); pen.texture(p, 'asphalt', 0.25, 'overlay')
+        # the mess hall far off, gold in the low sun, its porch and the bell bracket
+        pen.fill(rect(1300, 520, 420, 150), '#d8a870'); pen.line(rect(1300, 520, 420, 150), 3, T['outline'])
+        pen.fill(poly([(1280, 524), (1510, 450), (1740, 524)]), '#a9743f'); pen.line(poly([(1280, 524), (1510, 450), (1740, 524)]), 3, T['outline'])
+        for x in (1320, 1440, 1580, 1700): pen.fill(rect(x, 560, 10, 110), '#c48f55')
+        pen.fill(rect(1300, 664, 420, 12), '#a8763f')
+        grass(pen, -900, 2900, 1080, 40, 200, 183, '#7a9a40', '#fff2c0')
+
+    def bell_far(pen, t):
+        sw = 24 * math.sin((t - fake_on) * 2 * math.pi / 0.9) * clamp((t - fake_on) / 0.3) if t >= fake_on else 0.0
+        brass_bell(pen, 1460, 600, 0.13, sw, 1.0, False, 0.0, t, 0.0, 1.0, 0.3, c='#e0b050', patina=False)
+        if t >= fake_on:
+            k = 0.6 + 0.4 * math.sin(t * 7)
+            _R(pen, None, 1455, 592, 26, [(0, '#ffffff', 230 * k), (1, '#ffffff', 0)], clip=False)
+
+    def spr(pen, t):
+        sprinkler(pen, 900, 760, t, spits, on, die, 0.9, '#f4fbff')
+
+    def frame(pen, t):
+        P = T
+        pen.fill(minus(rect(-900, -700, 3800, 2400), rect(160, 80, 1600, 920)), P['paint'])
+        pen.texture(minus(rect(-900, -700, 3800, 2400), rect(160, 80, 1600, 920)), 'wood', 0.2, 'overlay', 1.0, 90)
+        pen.line(rect(160, 80, 1600, 920), 10, _dk(P['paint'], 0.3)); pen.line(rect(140, 60, 1640, 960), 4, P['outline'])
+        pen.seg((960, 80), (960, 1000), 26, P['paint']); pen.line(rect(947, 80, 26, 920), 3, P['outline'])
+        pen.fill(rect(120, 990, 1680, 60), _dk(P['paint'], 0.08)); pen.line(rect(120, 990, 1680, 60), 4, P['outline'])
+        for (cx0, cx1, sk) in ((-200, 260, 1), (1660, 2120, -1)):         # gingham frozen at 12 degrees
+            cp = smooth([(cx0, 40), (cx1, 40), (cx1 - 10 + sk * 60, 1160), (cx0 + 10 + sk * 60, 1170)], True, 0.25)
+            gingham(pen, cp, (cx0, 40, cx1, 1170), '#e9c64a', 2.0)
+            pen.line(cp, 4, P['outline'], 200)
+        lantern(pen, 1500, 940, 1.1, 1.0, '#ffd9a0', '#3a4a3a', True)
+    L = [_cl(4.0, outside, 'outside', 'v2:wout:out', (-900, -700, 2820, 1500)), _live(3.6, bell_far, 'fake_bell', blur=0),
+         _live(3.0, spr, 'sprinkler', blur=0), _live(2.0, lambda pen, t: frozen_motes(pen, t, (160, 80, 1760, 1000), 40, 71), 'motes', blur=0),
+         _cl(1.0, frame, 'window_frame', 'v2:wout:frame', NEAR)]
+    sp = _sp('cabin_dawn/window_out', L, dict(sprinkler=Anchor(900, 760, 3.0, 1), bell_far=Anchor(1460, 600, 3.6, 1)), None)
+    sp.info['world'] = 'theirs'
+    return sp
+
+
+# ====================================================================== MEMORY (sepia paper): the past cabin in 3D + relit v1 memories
+PAST_CAMS = {
+    'bunk_morning': ((3.15, 1.15, 3.3), (5.0, 0.75, 5.3), 62.0),
+    'bunk_night': ((3.15, 1.25, 3.3), (5.0, 1.0, 5.3), 62.0),
+    'wake': ((4.05, 0.78, 4.1), (5.1, 0.55, 5.4), 52.0),
+    'towel_wet': ((2.9, 0.55, 3.3), (3.4, 0.0, 5.6), 62.0),
+    'socks': ((3.45, 0.95, 3.8), (4.85, 0.6, 5.0), 54.0),
+    'open_window': ((2.65, 1.15, 3.9), (1.45, 0.85, 6.2), 62.0),
+    'flash_445': ((3.25, 1.2, 4.15), (2.66, 0.85, 6.3), 62.0),
+    'lantern_game': ((3.7, 1.45, 3.1), (2.5, 0.55, 6.0), 66.0),
+    'kids_game': ((2.45, 1.3, 5.6), (3.4, 0.35, 2.0), 68.0),
+}
+
+
+def memory_gate_layer(seed=0):
+    """The film gate over a memory: rounded corners (radius 6 % of H), soft edge falloff, specks, a 1 px gate weave."""
+    def draw(pen, t):
+        fi = int(t * 24)
+        dx, dy = (_h(fi, seed) - 0.5) * 2.0, (_h(fi, seed + 1) - 0.5) * 2.0
+        cv = pen.cv
+        cv.save(); cv.translate(dx, dy)
+        r = 0.06 * 1080
+        hole = rrect(14, 10, 1892, 1060, r)
+        pen.fill(minus(rect(-200, -200, 2320, 1480), hole), '#120c08')
+        _L(pen, hole, 0, 0, 1920, 0, [(0, '#2a1c10', 90), (0.08, '#2a1c10', 0), (0.92, '#2a1c10', 0), (1, '#2a1c10', 90)])
+        for i in range(5):
+            if _h(fi * 7 + i, seed + 2) < 0.55:
+                x, y = _h(fi * 7 + i, seed + 3) * 1920, _h(fi * 7 + i, seed + 4) * 1080
+                rr = 1.2 + 3.0 * _h(fi * 7 + i, seed + 5)
+                pen.fill(_blob(x, y, rr, rr * 0.7, 7, fi + i, 0.4), '#1a1008' if _h(fi + i, 9) < 0.7 else '#fff6e0', 170)
+        if _h(fi, seed + 6) < 0.18:                                  # a hair / scratch now and then
+            x = _h(fi, seed + 7) * 1920
+            pen.seg((x, 0), (x + 6, 1080), 1.0, '#fff6e0', 70)
+        cv.restore()
+    return Layer(1.0, draw, 'memory_gate', screen=True, blur=0)
+
+
+def past_view(vname, var, st, shot):
+    var = var or 'sepia_day'
+    cx = CabinCtx('past', var, st, st.t0)
+    pos, look, fov = PAST_CAMS[vname]
+    cam = Cam3(pos, look=look, fov=fov)
+    d0 = max(0.8, cam.dist(v3(look)) * 0.8)
+    L, sc, info, xf = cabin_layers(cx, cam, 'past_' + vname, d0)
+    if cx.dark:
+        lp = cam.pt(v3(WIN[1] - 0.12, WIN[2] + 0.14, D - 0.08)); k = cam.px_per_m(v3(WIN[1] - 0.12, WIN[2], D - 0.08))
+        dep = sdep(cam, xf, d0, v3(WIN[1] - 0.12, WIN[2], D - 0.08), 0.003)
+        L.append(_live(dep, lambda pen, t: (_R(pen, None, lp[0], lp[1], 0.9 * k, [(0, '#ffd9a0', 120 * (0.9 + 0.1 * math.sin(t * 9))),
+                                                                              (1, '#ffd9a0', 0)], clip=False),
+                                           moths(pen, t, lp[0], lp[1], 0.25 * k, 5, 3, '#f1e2c4')), 'lantern', blur=0))
+    else:
+        L += shaft_layer(cam, xf, d0, 'past:%s:%s' % (vname, var), cx.P, True, 40)
+    L.append(_live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 40, 93, None, '#fff6e0', 0.14, speed=(4, 9)), 'motes', blur=0))
+    L.append(memory_gate_layer())
+    an = _ours_anchors(cam, xf, d0)
+    for nm, P_, hh in (('kid_bunk', (5.1, B_LOW, 5.3), 1.25), ('noah_top', (5.1, B_TOP, 5.3), 1.5), ('kid_floor', (3.4, 0, 4.6), 1.25),
+                       ('kids_floor', (3.2, 0, 4.0), 1.25), ('noah_mirror', (2.66, 0, 5.6), 1.5)):
+        if cam.dist(v3(P_)) > 0.2:
+            x, y, h, dep = cam.anchor(v3(P_), hh, d0); an[nm] = Anchor(x, y, dep, h)
+    return _sp('memory/' + vname, L, an, None, 1.0, 0.0, None, dict(info, cam3=cam, d0=d0, xf=xf, model=sc, world='memory'))
+
+
+def _reg_past(vname):
+    @view('memory', vname)
+    def _v(var, st, shot, vname=vname):
+        return past_view(vname, var, st, shot)
+    return _v
+
+
+for _vn in PAST_CAMS:
+    _reg_past(_vn)
+
+_MEMVAR = {'sepia_day': 'memory_day', 'sepia_night': 'memory_night', 'sepia_morning': 'memory_morning'}
+
+
+def _mem(view1, zoom=None, flip=False, extra=None):
+    def fn(var, st, shot):
+        v1var = _MEMVAR.get(var or 'sepia_day', 'memory_day')
+        sp = v1_alias('memory', view1, v1var, st, shot, 'sepia', 'memory/%s' % shot.get('view'), zoom, flip, extra)
+        for l in sp:                     # v1's cream mist / halation layers are live: tone them down under the sepia grade
+            if not l.cache and l.name in ('mist', 'halation', 'haze', 'fog', 'glow', 'sun', 'motes', 'light', 'mem_mist', 'mem_motes'):
+                l.alpha = 0.45
+        sp.append(memory_gate_layer())
+        return sp
+    return fn
+
+
+def _sepia_cl(draw, key, depth=1.0, bounds=NEAR):
+    l = Layer(depth, draw, key, cache='v2mem:' + key, bounds=bounds)
+    l.relight = relight_sepia
+    return l
+
+
+def _kitchen_props(sp, st):
+    """At least eight props in the kitchen memories (the v1 kitchen wall was bare): shelf with pots, ladles on hooks, a
+    coffee urn, mugs, a stack of plates, a wall clock, the pass-through counter, a fly swatter, a calendar."""
+    def draw(pen, t):
+        pen.fill(rect(-900, 760, 3800, 900), '#9a7a58'); pen.line(rect(-900, 760, 3800, 30), 4, '#3a2c20')
+        pen.fill(rect(-900, 760, 3800, 30), '#c9a878')
+        pen.fill(rect(120, 250, 700, 22), '#7a5c3e'); pen.line(rect(120, 250, 700, 22), 3, '#3a2c20')
+        for i, (x, w_, h_) in enumerate(((160, 120, 90), (320, 150, 120), (520, 110, 80), (660, 130, 100))):
+            pen.fill(rrect(x, 250 - h_, w_, h_, 10), '#a89a84'); pen.line(rrect(x, 250 - h_, w_, h_, 10), 3, '#3a2c20')
+            pen.fill(rect(x - 10, 250 - h_ - 8, w_ + 20, 10), '#7a6a5a')
+        for i in range(5):
+            x = 150 + i * 140
+            pen.seg((x, 330), (x, 470), 6, '#8a7a6a'); pen.fill(oval(x, 480, 26, 14), '#8a7a6a'); pen.line(oval(x, 480, 26, 14), 3, '#3a2c20')
+        pen.fill(rrect(1500, 430, 170, 330, 30), '#b0a090'); pen.line(rrect(1500, 430, 170, 330, 30), 4, '#3a2c20')
+        pen.fill(rect(1560, 620, 50, 30), '#4a3a2c'); _sign_text(pen, 'COFFEE', 1585, 520, 26, '#3a2c20', 900)
+        for i in range(4):
+            pen.fill(rrect(1000 + i * 80, 700, 60, 60, 8), ['#6f9a96', '#d08a52', '#f1e2c4', '#6f9a96'][i]); pen.line(rrect(1000 + i * 80, 700, 60, 60, 8), 3, '#3a2c20')
+        for i in range(6):
+            pen.fill(oval(1250, 740 - i * 12, 80, 16), '#f1e2c4'); pen.line(oval(1250, 740 - i * 12, 80, 16), 2, '#3a2c20')
+        pen.fill(oval(1760, 200, 70), '#e8d8b8'); pen.line(oval(1760, 200, 70), 5, '#3a2c20')
+        pen.seg((1760, 200), (1760, 150), 5, '#3a2c20'); pen.seg((1760, 200), (1800, 200), 5, '#3a2c20')
+        pen.fill(rect(900, 160, 150, 200), '#f6ead2'); pen.line(rect(900, 160, 150, 200), 3, '#3a2c20')
+        _sign_text(pen, 'JULY', 975, 200, 30, '#8a3a2a', 900)
+        pen.seg((1880, 300), (1840, 620), 6, '#7a5c3e'); pen.fill(rrect(1800, 230, 90, 90, 10), '#6f9a96', 200)
+    return [_sepia_cl(draw, 'kitchen_props', 0.9)]
+
+
+def _spoon_live(sp, st):
+    """The spoon drops on the table and bounces (the simile gets its shot)."""
+    t_drop = st.t0 + 0.2
+
+    def draw(pen, t):
+        u = t - t_drop
+        if u < 0: y = 300; rot = -20
+        else:
+            y = min(760, 300 + 2400 * u * u)
+            if 300 + 2400 * u * u >= 760:
+                ub = u - math.sqrt(460 / 2400.0)
+                y = 760 - 120 * abs(math.sin(ub * 9)) * math.exp(-ub * 5)
+            rot = -20 + 300 * min(u, 0.6)
+        pen.cv.save(); pen.cv.translate(960, y); pen.cv.rotate(rot)
+        pen.fill(oval(-90, 0, 46, 30), '#d8d0c0'); pen.line(oval(-90, 0, 46, 30), 4, '#3a2c20')
+        pen.fill(rrect(-50, -9, 220, 18, 9), '#d8d0c0'); pen.line(rrect(-50, -9, 220, 18, 9), 4, '#3a2c20')
+        pen.fill(oval(-100, -8, 18, 9), '#ffffff', 160)
+        pen.cv.restore()
+    return [_live(0.95, draw, 'spoon', blur=0)]
+
+
+def _car_overlay(sp, st):
+    def draw(pen, t):
+        body = rrect(1050, 600, 760, 300, 70)
+        pen.fill(rect(1080, 880, 700, 30), '#2a2018', 120)
+        pen.fill(body, '#8a7a6a'); pen.line(body, 5, '#3a2c20')
+        pen.fill(rrect(1150, 520, 520, 150, 50), '#7a6a5a'); pen.line(rrect(1150, 520, 520, 150, 50), 5, '#3a2c20')
+        pen.fill(rrect(1190, 545, 200, 110, 20), '#f1e2c4'); pen.fill(rrect(1420, 545, 220, 110, 20), '#e8d8b8')
+        for x in (1180, 1680): pen.fill(oval(x, 900, 70), '#2a2018'); pen.fill(oval(x, 900, 30), '#a89a84')
+        pen.fill(oval(1800, 720, 26, 18), '#fff6e0')
+    return [_sepia_cl(draw, 'moms_car', 0.95)]
+
+
+def _payphone(sp, st):
+    def draw(pen, t):
+        pen.fill(rrect(1380, 200, 260, 560, 20), '#7a6a5a'); pen.line(rrect(1380, 200, 260, 560, 20), 5, '#3a2c20')
+        pen.fill(rrect(1420, 260, 180, 120, 10), '#c9a878'); _sign_text(pen, 'PHONE', 1510, 330, 40, '#3a2c20', 900)
+        for r_ in range(4):
+            for c_ in range(3):
+                pen.fill(oval(1460 + c_ * 50, 450 + r_ * 50, 16), '#e8d8b8'); pen.line(oval(1460 + c_ * 50, 450 + r_ * 50, 16), 2, '#3a2c20')
+        pen.line(smooth([(1400, 420), (1300, 600), (1250, 760)], False), 8, '#3a2c20')
+    return [_sepia_cl(draw, 'payphone', 1.0)]
+
+
+def _percolator(sp, st):
+    def draw(pen, t):
+        pen.fill(rect(500, 760, 920, 60), '#4a3a2c'); pen.line(rect(500, 760, 920, 60), 4, '#1a120c')
+        pot = smooth([(850, 760), (1070, 760), (1040, 420), (880, 420)], True, 0.4)
+        pen.fill(pot, '#b0a090'); pen.line(pot, 5, '#3a2c20')
+        pen.fill(oval(960, 400, 60, 30), '#d8c8b0'); pen.line(oval(960, 400, 60, 30), 4, '#3a2c20')
+        pen.fill(oval(960, 375, 26, 26), '#f1e2c4'); pen.line(oval(960, 375, 26, 26), 4, '#3a2c20')
+        pen.line(smooth([(1060, 500), (1140, 520), (1120, 660), (1050, 680)], False), 14, '#3a2c20')
+        _R(pen, None, 960, 800, 200, [(0, '#ffb070', 160), (1, '#ffb070', 0)], sy=0.3, clip=False)
+
+    def bubble(pen, t):
+        k = 0.5 + 0.5 * math.sin(t * 14)
+        _R(pen, None, 960, 372, 22, [(0, '#ffffff', 160 * k), (1, '#ffffff', 0)], clip=False)
+        for i in range(4):
+            ph = (t * 0.5 + i * 0.25) % 1.0
+            _R(pen, None, 960 + 30 * math.sin(t + i), 340 - ph * 300, 30 + 50 * ph, [(0, '#fff6e0', 90 * (1 - ph)), (1, '#fff6e0', 0)],
+               sy=1.5, clip=False)
+    return [_sepia_cl(draw, 'percolator', 1.0), _live(0.98, bubble, 'perc_steam', blur=0)]
+
+
+for _vn, args in {
+        'dock': ('dock',), 'pocket': ('pocket',), 'red_candy': ('pocket',), 'porch_drop': ('porch_steps',),
+        'bell_ring_porch': ('bell_ring_porch',), 'sprinkler_lawn': ('sprinkler_lawn',), 'watch_cu': ('watch_cu',),
+        'card_queen': ('card_queen',), 'kids_mouths': ('kids_game',), 'bench': ('bench',), 'breakfast_table': ('breakfast_table',),
+        'night_window': ('night_window',), 'search_pines': ('search_pines',), 'search_window': ('search_pines',),
+        'kitchen_staff': ('kitchen_staff',), 'director': ('kitchen_staff',), 'buses': ('buses',), 'bus_window': ('buses', (1225, 600, 1.8)),
+        'gate_close': ('gate_close',), 'crate_bell': ('storage_shed',), 'run_barefoot': ('path_run',), 'bus_run': ('path_run',),
+        'legs': ('porch_steps',), 'officer': ('porch_steps',), 'polaroid': ('polaroid',), 'dad_photo': ('polaroid',),
+        'tape_wrap': ('polaroid',), 'car_door': ('polaroid',)}.items():
+    VIEWS[('memory', _vn)] = _mem(*args)
+VIEWS[('memory', 'menu_board')] = _mem('kitchen', extra=_kitchen_props)
+VIEWS[('memory', 'kitchen_15')] = _mem('kitchen', extra=_kitchen_props)
+VIEWS[('memory', 'office_phone')] = _mem('kitchen', extra=lambda sp, st: _kitchen_props(sp, st) + _payphone(sp, st))
+VIEWS[('memory', 'percolator')] = _mem('kitchen', extra=lambda sp, st: _kitchen_props(sp, st) + _percolator(sp, st))
+VIEWS[('memory', 'spoon')] = _mem('breakfast_table', extra=_spoon_live)
+VIEWS[('memory', 'moms_car')] = _mem('gate_close', extra=_car_overlay)
+VIEWS[('memory', 'car_20')] = _mem('gate_close', zoom=(1300, 600, 1.6), extra=_car_overlay)
+
+
+@view('memory', 'bell_ecu')
+def _v_mem_bell2(var, st, shot):
+    """D8 planted (and 523.4): the cracked bell ringing on the porch boards, sepia: the real bell, not a cone."""
+    def bg(pen, t): _bell_plate(pen, sepia=True)
+    ts = st.t0 + 0.25
+
+    def bl(pen, t):
+        vib = math.exp(-(t - ts) * 2.0) if t >= ts else 0.0
+        brass_bell(pen, 940, 560, 2.2, -10, 0.9, True, vib, t, 0.0, 0.0, 0.42, c='#c9a878', clapper=vib, outline='#3a2c20')
+    L = [_sepia_cl(bg, 'mem_bell_bg', 2.0, (-900, -560, 2820, 1640)), _live(1.0, bl, 'bell', blur=0),
+         _live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 30, 95, None, '#fff6e0', 0.14), 'motes', blur=0), memory_gate_layer()]
+    sp = _sp('memory/bell_ecu', L, {'bell': Anchor(940, 560, 1.0, 1), 'rim': Anchor(1120, 760, 1.0, 1)}, None)
+    sp.info['world'] = 'memory'
+    return sp
+
+
+# ====================================================================== bokeh plates (every CU / ECU sits on one: 4.7)
+BOKEH = {
+    'ours': ['#5a5fa8', '#7b80c8', '#7b80c8', '#5a5fa8', '#ffd58a', '#7b80c8', '#ffd58a'],
+    'ending': ['#5a5fa8', '#7b80c8', '#ffd58a', '#f0a84e', '#7b80c8'],
+    'theirs': ['#ffcf8a', '#f6b9a0', '#ffcf8a', '#ffe2a8'],
+    'climax': ['#c2185b', '#ff2d55', '#c2185b', '#ae3a6a'],
+    'stairs': ['#c63449', '#9fa8ff', '#ffcf8a', '#ff4060', '#6a4a8e'],
+    'memory': ['#f1e2c4', '#fff6e0'],
+}
+
+
+def bokeh_discs(palette, seed=0, n=12, depth=4.0, alpha=1.0, name='bokeh'):
+    """Out-of-focus light discs: diameter 45-165 design px, a little brighter than the surround (+22-38 luma), drifting
+    3-8 px/s and breathing; a faint brighter rim like a real lens."""
+    cols = BOKEH[palette]
+
+    def draw(pen, t):
+        for i in range(n):
+            r = 22 + 60 * _h(i, seed + 1)
+            sp_ = 3 + 5 * _h(i, seed + 2); ang = 6.283 * _h(i, seed + 3)
+            x = -100 + ((_h(i, seed + 4) * 2120 + math.cos(ang) * sp_ * t) % 2120)
+            y = -60 + ((_h(i, seed + 5) * 1200 + math.sin(ang) * sp_ * t) % 1200)
+            c = cols[i % len(cols)]
+            b = alpha * (0.75 + 0.25 * math.sin(t * (0.6 + 0.5 * _h(i, seed + 6)) + i))
+            _R(pen, None, x, y, r, [(0, c, 70 * b), (0.78, c, 84 * b), (0.9, c, 110 * b), (1, c, 0)], clip=False)
+    return _live(depth, draw, name, blur=0)
+
+
+def bokeh_from(sp, palette, seed=0, blur=16.0, dim=0.12, n=12):
+    """Turn a set into a bokeh plate: every set layer far behind (blurred, a little dimmed), plus drifting discs."""
+    out = []
+    for l in sp:
+        if l.name in ('beam', 'dust', 'moths', 'lipstick', 'glass_glint', 'clock_hands', 'drips', 'drop', 'edge_glow'): continue
+        if callable(l.depth): continue
+        l.blur = blur
+        if l.cache: l.dim = dim
+        l.depth = max(l.depth, 1.0) * 3.0; l.ref_depth = l.ref_depth * 3.0 if l.ref_depth >= 1.0 else 3.0 * max(1.0, l.depth / 3.0)
+        out.append(l)
+    out.append(bokeh_discs(palette, seed, n, 2.6))
+    sp2 = SetPiece(sp.name, out, {'face': Anchor(960, 560, 1.0, 1.0)}, sp.grade, 1.0, 6.75, None, sp._fx, dict(sp.info, insert=True, bokeh=palette))
+    return sp2
+
+
+def _pal_for(set_, var):
+    if var in ('red',): return 'climax'
+    if set_ == 'cabin_dawn': return 'theirs'
+    if set_ == 'stairs': return 'stairs'
+    if set_ == 'memory': return 'memory'
+    if var in ('after', 'phone_glow'): return 'ending'
+    return 'ours'
+
+
+@view('cabin_now', 'bokeh')
+def _v_bokeh_ours(var, st, shot):
+    views = ['three_q', 'reverse', 'master', 'profile']
+    vname = views[int(_h(int(float(shot.get('t0', 0)) * 10), 7) * len(views))]
+    base = ours_view(vname, var or 'night', st, shot)
+    return bokeh_from(base, _pal_for('cabin_now', var), int(st.t0))
+
+
+@view('cabin_dawn', 'bokeh')
+def _v_bokeh_theirs(var, st, shot):
+    views = ['bunk_2s', 'master', 'window', 'reverse']
+    vname = views[int(_h(int(float(shot.get('t0', 0)) * 10), 7) * len(views))]
+    base = theirs_view(vname, var or 'dawn', st, shot)
+    return bokeh_from(base, _pal_for('cabin_dawn', var), int(st.t0))
+
+
+@view('stairs', 'bokeh')
+def _v_bokeh_stairs(var, st, shot):
+    base = stairs_view('up' if st.t0 > 400 else 'low', var or 'stairs', st, shot)
+    return bokeh_from(base, _pal_for('stairs', var), int(st.t0))
+
+
+@view('stairs', 'queen_ecu')
+def _v_queen_ecu(var, st, shot):
+    base = stairs_view('low', var or 'red', st, shot)
+    sp = bokeh_from(base, _pal_for('stairs', var), 13, 20.0, 0.2, 14)
+    # the chipped white frame edge on the left (inside the glass, flash-forward of 605 s)
+    def edge(pen, t):
+        _frame_draw(PAL['night'])(pen, 0, 0) if False else None
+        r = rect(-200, -300, 150, 1700); pen.fill(r, '#e8e4d8'); pen.line(r, 6, LINE)
+        for i in range(8):
+            pen.fill(_blob(-60, 100 + i * 130, 14, 20, 8, i, 0.4), '#8f8a7e')
+    sp.append(_cl(0.9, edge, 'frame_edge', 'v2:qecu_edge', NEAR))
+    return sp
+
+
+def _bokeh_v1(set1, view1, pal):
+    def fn(var, st, shot):
+        base = v1_alias(set1, view1, _night_var(st), st, shot, 'night', '%s/bokeh' % shot.get('set'))
+        return bokeh_from(base, pal, int(st.t0))
+    return fn
+
+
+VIEWS[('camp_gate', 'bokeh')] = _bokeh_v1('camp_gate', 'wide', 'ours')
+VIEWS[('camp_path', 'bokeh')] = _bokeh_v1('camp_path', 'path_track', 'ours')
+VIEWS[('mess_porch', 'bokeh')] = _bokeh_v1('mess_porch', 'wide', 'ours')
+
+
+# ====================================================================== OURS inserts on the 3D model
+OURS_INSERTS = {
+    'clock': ((1.15, 2.05, 5.75), (1.15, 2.12, 6.4), 34.0),
+    'cubby': ((4.45, 2.15, 5.0), (5.45, 2.1, 5.85), 44.0),
+    'sill': ((1.82, 1.25, 5.62), (1.75, 0.96, 6.3), 42.0),
+    'hands': ((2.3, 1.05, 4.6), (2.66, 0.7, 6.3), 52.0),
+    'towel_label': None,
+}
+
+
+def _reg_ours_insert(vname):
+    @view('cabin_now', vname)
+    def _v(var, st, shot, vname=vname):
+        pos, look, fov = OURS_INSERTS[vname]
+        cam = Cam3(pos, look=look, fov=fov)
+        sp = ours_view(vname, var or 'night', st, shot, cam=cam, d0=max(0.4, cam.dist(v3(look))))
+        if vname == 'hands':           # a plate for the hand inserts: the room soft behind the hands
+            for l in sp:
+                if l.cache: l.blur = 10.0; l.dim = 0.1
+            sp.dof = 6.75
+            sp.info['insert'] = True
+        return sp
+    return _v
+
+
+for _vn in ('clock', 'cubby', 'sill', 'hands'):
+    _reg_ours_insert(_vn)
+VIEWS[('cabin_now', 'towel_label')] = _ext('cabin_now', 'towel_label', 'flash')
+VIEWS[('cabin_now', 'phone_screen')] = _ext('cabin_now', 'phone_screen', 'phone_glow')
+VIEWS[('cabin_now', 'towel_over')] = lambda var, st, shot: mirror_view('towel_over', 'night', st, shot)
+
+
+# ====================================================================== splits and plates
+def split_view(var, st, shot):
+    """Two panels side by side (D4 floors, D5 eyes, the loop twins, the bells): each panel is a full set view centred in
+    its half (the divider, labels and chips are HUD)."""
+    panels = (shot.get('split') or {}).get('panels') or []
+    L = []
+    an = {}
+    for side_i, pan in enumerate(panels[:2]):
+        sh2 = dict(shot); sh2['set'], sh2['view'], sh2['var'] = pan['set'], pan['view'], pan['var']
+        if pan.get('src_t') is not None:
+            dt = float(pan['src_t']) - float(shot['t0'])
+            sh2['t0'], sh2['t1'] = float(shot['t0']) + dt, float(shot['t1']) + dt
+        try:
+            sp = S1.build(pan['set'], pan['view'], pan['var'], sh2)
+        except Exception:
+            continue
+        ox = -480 if side_i == 0 else 480
+        dt_ = (float(pan['src_t']) - float(shot['t0'])) if pan.get('src_t') is not None else 0.0
+        for l in sp:
+            d0 = l.draw
+
+            def dr(pen, t, d0=d0, ox=ox, dt_=dt_, si=side_i):
+                cv = pen.cv
+                cv.save()
+                cv.clipRect(skia.Rect.MakeLTRB(-2000 if si == 0 else 960, -2000, 960 if si == 0 else 4000, 4000))
+                cv.translate(ox, 0)
+                d0(pen, t + dt_)
+                cv.restore()
+            l.draw = dr
+            if l.cache:
+                l.cache = '%s:split%d' % (l.cache if isinstance(l.cache, str) else 'u%d' % l._uid, side_i)
+                l.bounds = NEAR
+            L.append(l)
+        for k, a in sp.anchors.items():
+            an['%s_%s' % ('L' if side_i == 0 else 'R', k)] = Anchor(a.x / 1.0 + ox, a.y, a.depth, a.height)
+    sp = _sp('split/' + shot.get('view', 'x'), L, an, None)
+    sp.info['world'] = 'split'
+    return sp
+
+
+for _vn in ('bells', 'eyes', 'floors', 'twins'):
+    VIEWS[('split', _vn)] = split_view

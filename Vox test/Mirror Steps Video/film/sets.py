@@ -2051,7 +2051,16 @@ def push_back(sp, k=2.6, dim=0.25):
 
 
 def build_shot(shot):
-    """SetPiece for a plan/shots.json entry (rule cards build their live background set `bg`)."""
+    """SetPiece for a plan/shots.json entry (rule cards build their live background set `bg`; v2 TYPE / DIAGRAM shots their
+    blurred `plate`)."""
+    if shot['set'] in ('type', 'diagram') and shot.get('plate'):
+        pl = shot['plate']
+        s2 = dict(shot); s2['set'], s2['view'], s2['var'] = pl['set'], pl['view'], pl['var']
+        s2['grade'] = shot.get('grade')
+        sp = build(pl['set'], pl['view'], pl['var'], s2)
+        own = sp._fx; extra = pl.get('post', {})
+        sp._fx = (lambda t: dict(own(t), **extra))
+        return sp
     if shot['set'] == 'rule_mirror' and shot.get('bg'):
         bg = shot['bg']
         s2 = dict(shot); s2['set'], s2['view'], s2['var'] = bg['set'], bg['view'], bg['var']

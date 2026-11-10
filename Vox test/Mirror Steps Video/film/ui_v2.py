@@ -181,13 +181,15 @@ def _stamp_chip(cv, s, u, x, y, a):
     cx_, cy_ = x + w / 2, y + 2
     def draw(c_):
         b = rrect(-w / 2, -h / 2, w, h, 4)
+        c_.drawPath(rrect(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12, 8), paint('#000000', 80, None, blur=10))
+        c_.drawPath(b, paint('#f4e6c8', 60))
         c_.drawPath(b, paint(c, 235, 3.4)); c_.drawPath(rrect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 2), paint(c, 200, 1.4))
         text(c_, s, 0, size * 0.36, 900, size, c, 240, 0.12, 'center')
         for i in range(40):                                  # worn ink
             px, py = (hash01(i, 71) - 0.5) * w, (hash01(i, 72) - 0.5) * h
             r = 0.8 + 2.4 * hash01(i, 73) ** 2
             c_.drawCircle(px, py, r, paint('#000000', 255, None, blend=skia.BlendMode.kDstOut))
-    spr = sprite(('stampchip', s), (-w / 2 - 8, -h / 2 - 8, w / 2 + 8, h / 2 + 8), draw, 1.0)
+    spr = sprite(('stampchip', s), (-w / 2 - 22, -h / 2 - 22, w / 2 + 22, h / 2 + 22), draw, 1.0)
     cv.save(); cv.translate(cx_, cy_); cv.rotate(-4.0); cv.scale(sc, sc)
     blit(cv, spr, min(255.0, a * 1.15) * (0.4 + 0.6 * k))
     cv.restore()
@@ -300,37 +302,42 @@ def giant_number(cv, e, t, x=960, y=520):
     cx, cy = lerp(x, BADGE_X, kf), lerp(y, BADGE_Y, kf)
     sc = lerp(1.0, (BADGE_R * 0.9) / R, kf)
     slam = ease_out_back(clamp(u / 0.10), 2.0)
-    sc *= lerp(1.55, 1.0, slam)
+    nsc = lerp(1.55, 1.0, slam)                                   # the numeral slams; the ring only settles
+    sc *= lerp(0.92, 1.0, slam)
     a = 255 * clamp(u / 0.04)
     if u < 2.0 / FPS:                                         # the hit frame: a red-white flash on the whole frame
         cv.drawRect(skia.Rect.MakeLTRB(0, 0, DW, DH), paint('#ff2a3a', 60))
     tr = (hash01(int(u * 60), 9) - 0.5) * 6 * (1 - fly) if 0.1 < u < hold else 0.0
     cv.save(); cv.translate(cx + tr, cy); cv.scale(sc, sc)
     if fly < 0.98:
-        cv.drawCircle(0, 0, R + 40, paint('#000000', 0.32 * a * (1 - fly), None, blur=40))
+        disc = sprite(('giantdisc',), (-R - 140, -R - 140, R + 140, R + 140),
+                      lambda c: c.drawCircle(0, 0, R + 40, paint('#000000', 255, None, blur=40)), 0.35)
+        blit(cv, disc, 0.32 * a * (1 - fly))
     frac = clamp(v / 60.0)
     trk = skia.Path(); trk.addCircle(0, 0, R)
     dash = paint('#ffffff', 0.20 * a, 6); dash.setPathEffect(skia.DashPathEffect.Make([18, 14], u * 60))
     cv.drawPath(trk, dash)
     if frac > 0:
         arc = skia.Path(); arc.addArc(skia.Rect.MakeLTRB(-R, -R, R, R), -90, 360 * frac * ease_out_cubic(clamp(u / 0.2)))
-        cv.drawPath(arc, paint('#ff2a40', 0.55 * a, 34, blur=18))
+        cv.drawPath(arc, paint('#ff2a40', 0.16 * a, 44))
+        cv.drawPath(arc, paint('#ff2a40', 0.28 * a, 26))
         cv.drawPath(arc, paint('#ff3048', a, 12))
         cv.drawPath(arc, paint('#ffd0d6', 0.7 * a, 3))
     ring_k = clamp(u / 0.22)
     if ring_k < 1:                                           # shock ring
         cv.drawCircle(0, 0, R * (1.0 + 0.5 * ease_out_cubic(ring_k)), paint('#ffffff', 200 * (1 - ring_k) * a / 255, 10 * (1 - ring_k) + 1))
-    blit(cv, _giant_sprite(v), a)
+    cv.save(); cv.scale(nsc, nsc); blit(cv, _giant_sprite(v), a); cv.restore()
     if v == 0:
         fl = 0.5 + 0.5 * math.sin(u * 30)
-        cv.drawCircle(0, 0, R * 0.8, paint('#ff2030', 70 * fl * a / 255, None, blur=50))
+        glo = sprite(('giantglow',), (-R, -R, R, R), lambda c: c.drawCircle(0, 0, R * 0.8, paint('#ff2030', 255, None, blur=50)), 0.3)
+        blit(cv, glo, 70 * fl * a / 255)
     cv.restore()
     if fly > 0:                                              # trail
         for k in range(1, 4):
             kk = ease_in_cubic(clamp(fly - k * 0.12))
             if kk <= 0: continue
             tx, ty = lerp(x, BADGE_X, kk), lerp(y, BADGE_Y, kk)
-            cv.drawCircle(tx, ty, R * lerp(1.0, 0.12, kk) * 0.5, paint('#ff3048', 40 / k, None, blur=20))
+            cv.drawCircle(tx, ty, R * lerp(1.0, 0.12, kk) * 0.5, paint('#ff3048', 26 / k))
 
 
 # ==================================================================================================== command tags, red X, labels
@@ -375,6 +382,7 @@ def red_x(cv, x, y, r, u, hold):
     """The red X (4 in the film): ring draws in 0.09 s, two strokes, a 1-frame red flash; out in 0.1 s."""
     pen = Pen(cv)
     if u < 0: return
+    y = min(y, 925.0 - r)                                         # keep the X out of the caption band
     if u < 1.5 / FPS:
         cv.drawRect(skia.Rect.MakeLTRB(-50, -50, DW + 50, DH + 50), paint('#ff1020', 60))
     out = 1.0 - clamp((u - hold) / 0.1)
@@ -845,8 +853,9 @@ def like_sub(cv, e, t):
     u = t - e['t']; hold = float(e.get('hold', 2.0))
     if u < 0 or u > hold + 0.2: return
     a = 255 * ease_out_cubic(clamp(u / 0.2)) * (1.0 - clamp((u - hold) / 0.2))
-    x0, y0 = 70 - 40 * (1 - ease_out_cubic(clamp(u / 0.25))), 948
+    x0, y0 = 54 - 40 * (1 - ease_out_cubic(clamp(u / 0.25))), 926
     clk = (0.35, 0.85, 1.35)
+    cv.save(); cv.translate(x0, y0); cv.scale(1.3, 1.3); cv.translate(-x0, -y0)
     bar = rrect(x0, y0, 560, 68, 34)
     soft_shadow(cv, bar, 150 * a / 255, 14, 0, 6)
     cv.drawPath(bar, paint('#0e0f14', 0.88 * a)); cv.drawPath(bar, paint('#ffffff', 0.18 * a, 1.5))
@@ -885,6 +894,7 @@ def like_sub(cv, e, t):
     arrow = poly([(0, 0), (0, 40), (10, 31), (18, 47), (25, 44), (17, 28), (30, 28)])
     soft_shadow(cv, arrow, 120 * a / 255, 5, 2, 3)
     cv.drawPath(arrow, paint('#ffffff', a)); cv.drawPath(arrow, paint('#16171c', a, 2.5))
+    cv.restore()
     cv.restore()
 
 
@@ -1025,7 +1035,7 @@ class UI:
         return self.shots[j] if j >= 0 else None
 
     # ------------------------------------------------------------ main HUD
-    def hud(self, cv, t, sh, cs=None, film=None):
+    def hud(self, cv, t, sh, cs=None, film=None, captions=True, header_on=True):
         """Everything the shot's HUD asks for, in draw order: transition overlays, diagrams and marks, type, tags and
         X, chips, the badge, the header, the captions; the rule card and the kinetic title own the frame."""
         from ui_v2_card import rule_card
@@ -1099,8 +1109,8 @@ class UI:
             if e.get('rewind'): rewind_overlay(cv, t - e['t'], e.get('dur', 0.2))
         if sh.get('tr') == 'rewind': rewind_overlay(cv, u0, 0.2)
         # --- header + captions last
-        if card is None and kinetic is None and sh.get('side') != 'black': header(cv, sh, t)
-        if sh.get('captions', True) and card is None:
+        if header_on and card is None and kinetic is None and sh.get('side') != 'black': header(cv, sh, t)
+        if captions and sh.get('captions', True) and card is None:
             c = self.caption_at(t)
             if c: caption(cv, c['text'], caption_alpha(c, t))
 
@@ -1122,6 +1132,35 @@ class UI:
                     if p.get('fx') == 'rgb_split_3f' and 0 <= t - p['t'] < 3.0 / FPS:
                         img = rgb_split_img(img, img.shape[1] * 0.004)
         return img
+
+
+def split_compose(left, right, t=None, sh=None):
+    """SPLIT shots: join two full renders (RGB uint8, same size) into the two-panel picture: the centre half of each
+    panel's frame, left | right (the overlay - divider, labels, chips, marks - is drawn by UI.hud)."""
+    h, w = left.shape[:2]
+    q = w // 4
+    out = np.empty_like(left)
+    out[:, :w // 2] = left[:, q:q + w // 2]
+    out[:, w // 2:] = right[:, q:q + (w - w // 2)]
+    return out
+
+
+def split_panel_shot(sh, j):
+    """The j-th panel of a SPLIT shot as a shot dict sets.build_shot / the cast can render (set/view/var/world of the
+    panel, the rest of the shot kept; src_t panels replay that film time: render them at src_t + (t - t0))."""
+    p = sh['split']['panels'][j]
+    d = dict(sh, set=p['set'], view=p['view'], var=p.get('var', sh.get('var')), world=p.get('world', sh.get('world')))
+    d['split'] = None
+    return d
+
+
+def montage_source_t(sh, t):
+    """MONTAGE shots: the film time whose framing this tile shows (tiles [{t, src_t}]); None outside the tiles."""
+    tiles = sh.get('montage') or []
+    cur = None
+    for tl in tiles:
+        if t >= tl['t']: cur = tl
+    return None if cur is None else cur['src_t'] + (t - cur['t'])
 
 
 def doc_layer(sh):

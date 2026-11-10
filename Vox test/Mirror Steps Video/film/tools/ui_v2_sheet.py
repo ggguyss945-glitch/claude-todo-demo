@@ -36,7 +36,7 @@ class Renderer:
         self.UI = ui_v2.UI(self.F.P, self.F.tl)
         self.cache_k = None
 
-    def frame(self, t, sid=None, hud=True):
+    def frame(self, t, sid=None, hud=True, extra=None):
         F = self.F
         k = F.index[sid] if sid else F.idx_at(t)
         sh = F.shots[k]
@@ -61,7 +61,9 @@ class Renderer:
         if sh['set'] == 'rule_mirror':
             fx = dict(fx); fx['blur'] = 8; fx['dim'] = 0.3
         i = int(round(t * 60))
-        hf = (lambda cv, tt: self.UI.hud(cv, tt, sh, cs, F)) if hud else None
+        def hf(cv, tt):
+            if extra is not None: extra(cv, tt)
+            if hud: self.UI.hud(cv, tt, sh, cs, F)
         img = render_frame(B.layers, cs, t, i, focus=B.focus, dof=B.dof, lens=None, grade=B.grade, post=fx, hud=hf)
         return self.UI.frame_fx(img, t, sh, i), sh
 
@@ -93,10 +95,12 @@ def sheet(tiles, path, cols=4, title=''):
 
 def run_list(R, items, path, title, cols=4):
     tiles = []
-    for (t, sid, lab) in items:
+    for it in items:
+        t, sid, lab = it[:3]
+        extra = it[3] if len(it) > 3 else None
         t0 = time.time()
         try:
-            img, sh = R.frame(t, sid)
+            img, sh = R.frame(t, sid, extra=extra)
             tiles.append(tile(img, '%.2f  %s  %s' % (t, sh['id'], lab), words_at(R.F.L, t)))
         except Exception as e:
             import traceback; traceback.print_exc()
@@ -220,7 +224,19 @@ def G_phone(R):
     items = [(46.5, 'S038', 'texts'), (47.9, 'S039', 'texts 2 (text fit)'), (187.0, 'S127', 'voicemail list'),
              (189.0, 'S128', 'voicemail inset'), (654.4, 'S423', 'calling inset'), (657.5, 'S425', 'call, Mom\'s waveform'),
              (663.0, 'S428', 'flat waveform'), (665.8, 'S429', 'chair-scrape spike')]
-    run_list(R, items, os.path.join(OUT, 'phone.jpg'), 'PHONE UI (kept states, bubbles text-fitted)', 4)
+    import ui_v2_diag as D
+    from engine.core import Pen
+
+    def scr(steps, eighth, red=0.0):
+        def f(cv, tt):
+            Pen(cv)
+            cv.drawRoundRect(__import__('skia').Rect.MakeLTRB(960 - 330, 40, 960 + 330, 1040), 60, 60, D.paint('#1a1c22', 255))
+            D.phone_screen(Pen(cv), 960, 540, 600, 960, tt, 'steps', steps=steps, eighth=eighth, red=red)
+        return f
+    items += [(685.0, 'S442', "new state 'steps' (set side: phone_screen)", scr(1.0, 0.0)),
+              (690.3, 'S445', "'steps' + the 8th line", scr(1.0, 1.0, 0.3)),
+              (692.5, 'S446', "8th line glowing (H10 plate)", scr(1.0, 1.0, 0.6))]
+    run_list(R, items, os.path.join(OUT, 'phone.jpg'), 'PHONE UI (kept states, bubbles text-fitted) + the new screen state for the face-up phone', 4)
 
 
 def G_fx(R):

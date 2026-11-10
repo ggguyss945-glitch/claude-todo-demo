@@ -89,8 +89,8 @@ _V2 = dict(
                    floor='#1a0610', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
     ending_v2=dict(exposure=0.0, contrast=1.06, pivot=0.3, gamma=1.0, shoulder=0.4, sat=1.1, wb=(0.95, 0.96, 1.08),
                    floor='#141530', bloom=1.1, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
-    memory_sepia=dict(exposure=0.0, contrast=0.92, pivot=0.3, gamma=1.02, shoulder=0.5, sat=0.62, mono=0.35, tint='#e8c890',
-                      wb=(1.06, 1.0, 0.86), floor='#3a2c20', bloom=1.3, bloom_thr=214, bloom_r=18.0, vignette=0.55,
+    memory_sepia=dict(exposure=0.0, contrast=1.0, pivot=0.35, gamma=1.0, shoulder=0.5, sat=0.85, mono=0.2, tint='#d8b088',
+                      wb=(1.04, 0.98, 0.88), floor='#2e2218', bloom=0.6, bloom_thr=236, bloom_r=18.0, vignette=0.6,
                       grain=2.5, soft=0.8),
 )
 _V2['dawn_queen_v2'] = dict(_V2['dawn_v2'], sat=1.0, wb=(1.0, 0.99, 0.95), vignette=0.5)
