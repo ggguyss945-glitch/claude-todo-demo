@@ -185,8 +185,6 @@ def _cached(layer, density, gains=None):
         cv.scale(density, density); cv.translate(-x0, -y0)
         layer.draw(Pen(cv), layer.cache_t)
         del cv, s
-        rl = getattr(layer, 'relight', None)
-        if rl is not None: rl(arr)                    # a colour transform baked once into the cache (sets_v2 relights)
         e = _Entry(); e.arr = arr; e.img = image_from(arr); e.rects = _occupied_rects(arr[..., 3])
         e.density = density; e.bounds = layer.bounds; e.nbytes = arr.nbytes
         _store(key, e)
@@ -246,7 +244,7 @@ def _layer_paint(layer, t, ir_gain=None):
     if tint:
         c, k = tint; g = g * ((1 - k) + k * np.array(core.rgb(c)) / 255.0 * 1.6)
     if ir_gain is not None: g = g * ir_gain
-    has_g = np.abs(g - 1).max() > 1e-3 or getattr(layer, 'lift', None) is not None
+    has_g = np.abs(g - 1).max() > 1e-3
     paint = skia.Paint(AntiAlias=False)
     if a < 0.999: paint.setAlphaf(max(0.0, a))
     layer_paint = None
@@ -289,10 +287,6 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
         else:
             dc = d - delta
             if dc <= 0.02 * l.ref_depth: continue                        # passed the camera
-            # review round 2 (B12): a strong 2D dolly (zoom 1.6-1.9) took the camera to within a tenth of the near layers
-            # (hands, busts in front of the room at depth ~0.54): they swelled 5x and were swept off the frame in a second.
-            # The near layers keep at least 42 % of their distance (the far ones are untouched).
-            if d < 0.9 and dc < 0.42 * d: dc = 0.42 * d
             sL = F * l.ref_depth / dc
             a = sL * sd
             tx = (hx - sL * C0X - F * Cx / dc) * sd
@@ -361,9 +355,6 @@ def _draw_offscreen(cv, l, t, M, sw, sh, gains, paint):
     if gains is not None:
         sub = cv2.multiply(sub, (gains[2], gains[1], gains[0], 1.0))
         if max(gains) > 1: sub[..., :3] = np.minimum(sub[..., :3], sub[..., 3:4])
-    rl = getattr(l, 'relight', None)
-    if rl is not None and getattr(l, 'lift', None) is not None:
-        sub = np.ascontiguousarray(sub); rl(sub)
     sub = np.ascontiguousarray(sub)
     img = image_from(sub)
     cv.save(); cv.resetMatrix()

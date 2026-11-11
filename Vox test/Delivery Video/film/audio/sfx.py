@@ -1,5 +1,4 @@
-"""Sound effects (police film v2 names + the mirror film's names from audio/sfx_mirror.py): recorded, layered,
-perspective-processed, 48 kHz stereo float. The mirror film's recipes, spaces and levels are documented in sfx_mirror.py.
+"""Sound effects for "If A Police Officer Knocks..." v2: recorded, layered, perspective-processed, 48 kHz stereo float.
 
 Every sound is built from the recorded library (the owner's Epidemic files first, then the free CC0/CC-BY library in
 catalog.json via library.py), cut into single events ("grains") automatically, layered 2-3 deep (e.g. a knock =
@@ -63,9 +62,8 @@ import library as LIB
 
 SR = 48000
 REF = -14.0
-S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'     # read-only: the police film's samples
-W = os.path.normpath(os.path.join(HERE, '..', '_work'))                        # this film's work dir (gitignored)
-CACHE = os.path.join(W, 'cache', 'sfx')                                        # grain cache (never under the police dir)
+S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
+CACHE = os.path.join(S, 'pov2', 'cache', 'sfx')
 
 NAMES = ('knock_door', 'doorbell_chime', 'footsteps_porch', 'footsteps_wood_inside', 'car_pass', 'car_idle',
          'car_door_open', 'car_door_close', 'siren_far', 'police_radio_squelch', 'radio_click', 'radio_static',
@@ -1411,11 +1409,6 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
 def render(name, seed=0, space=None, level=0.0, **params):
     """Render one SFX as stereo float32 [n, 2] at 48 kHz (see module docstring for params)."""
     return render_event(name, seed, space, level, **params)[0]
-
-
-# the mirror film's names, spaces and level table (audio/sfx_mirror.py) are installed into this module
-import sfx_mirror as _MIRROR                                                     # noqa: E402
-_MIRROR.install(sys.modules[__name__])
 
 
 if __name__ == '__main__':

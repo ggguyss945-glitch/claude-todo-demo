@@ -51,52 +51,6 @@ GRADES = {
                        vignette=0.45, grain=0.8),
 }
 
-# Mirror film presets (PLAN.md section 1; exposure added on camp_night / mirror_world / dawn_normal to hit the plan's measured luma targets). Per-frame parts (dawn_break red leak + flicker) come from sets SetPiece.fx(t).
-_MF = dict(
-    camp_night=dict(exposure=0.95, contrast=1.12, pivot=0.2, gamma=0.94, sat=0.9, wb=(0.88, 0.98, 1.10), floor='#06101a', bloom=1.0,
-                    vignette=0.35, grain=0.0),
-    cabin_flash=dict(contrast=1.1, gamma=0.95, sat=0.85, wb=(0.94, 0.99, 1.08), floor='#070d14', bloom=0.9, vignette=0.32,
-                     grain=0.0),
-    mirror_world=dict(exposure=0.75, contrast=1.15, gamma=0.88, sat=0.9, floor='#04060c', bloom=1.4, bloom_r=20.0, vignette=0.3, grain=0.0),
-    dawn_normal=dict(exposure=0.25, contrast=0.95, pivot=0.3, gamma=1.05, sat=0.7, wb=(1.03, 1.0, 0.96), floor='#3d3d40', bloom=0.3,
-                     vignette=0.67, grain=0.0),
-    climax_red=dict(contrast=1.08, gamma=0.9, sat=1.25, wb=(1.08, 0.92, 0.94), floor='#0c0408', bloom=1.0, bloom_thr=228,
-                    vignette=0.32, grain=0.0),
-    memory=dict(contrast=0.85, gamma=1.08, sat=0.6, wb=(1.06, 1.0, 0.9), floor='#2c2824', bloom=1.5, bloom_thr=220,
-                vignette=0.45, soft=1.0, grain=0.0),
-)
-_MF['camp_night_run'] = dict(_MF['camp_night'], exposure=1.05, bloom=1.2)
-_MF['cabin_doorway'] = dict(_MF['cabin_flash'], wb=(1.0, 0.99, 1.0), bloom=1.1)
-_MF['cabin_after'] = dict(_MF['cabin_flash'], exposure=-0.1, sat=0.8)
-_MF['mirror_old_cabin'] = dict(_MF['cabin_flash'], exposure=0.2, vignette=0.4)
-_MF['dawn_queen'] = dict(_MF['dawn_normal'], sat=0.55, wb=(0.97, 1.0, 1.04), vignette=0.55)
-_MF['dawn_break'] = dict(_MF['dawn_queen'])
-_MF['memory_night'] = dict(_MF['memory'], exposure=-0.6, wb=(1.08, 0.98, 0.86))
-_MF['memory_morning'] = dict(_MF['memory'], exposure=0.25, sat=0.45, wb=(0.98, 1.0, 1.04))
-GRADES.update(_MF)
-
-# v2 presets (DIRECTION_V2 4.8). The sets are drawn at their target brightness, so these grades do NOT lift exposure (the
-# cast keeps its own values: no dimming of characters under the night grade). Per-tenth light arc and the dawn_break
-# flicker / red leak come from sets SetPiece.fx(t) (sets_v2.arc_fx).
-_V2 = dict(
-    night_v2=dict(exposure=0.0, contrast=1.32, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.15, wb=(0.92, 0.95, 1.12),
-                  floor='#151632', bloom=1.2, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
-    stairs_v2=dict(exposure=0.0, contrast=1.3, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.25, wb=(1.04, 0.92, 1.1),
-                   floor='#140a1e', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
-    dawn_v2=dict(exposure=0.0, contrast=1.26, pivot=0.52, gamma=1.0, shoulder=0.45, sat=1.2, wb=(1.06, 1.0, 0.9), floor='#5a4030',
-                 bloom=0.8, bloom_thr=232, bloom_r=14.0, vignette=0.6, grain=0.0),
-    climax_v2=dict(exposure=0.12, contrast=1.3, pivot=0.2, gamma=1.0, shoulder=0.4, sat=1.2, wb=(1.04, 0.9, 1.04),
-                   floor='#1a0610', bloom=1.4, bloom_thr=222, bloom_r=16.0, vignette=0.42, grain=0.0),
-    ending_v2=dict(exposure=0.0, contrast=1.3, pivot=0.24, gamma=1.0, shoulder=0.4, sat=1.1, wb=(0.95, 0.96, 1.08),
-                   floor='#141530', bloom=1.1, bloom_thr=228, bloom_r=14.0, vignette=0.45, grain=0.0),
-    memory_sepia=dict(exposure=0.0, contrast=1.12, pivot=0.5, gamma=1.0, shoulder=0.5, sat=0.6, mono=0.25, tint='#d8b088',
-                      wb=(1.04, 0.98, 0.88), floor='#2e2218', bloom=0.6, bloom_thr=236, bloom_r=18.0, vignette=0.6,
-                      grain=2.5, soft=0.8),
-)
-_V2['dawn_queen_v2'] = dict(_V2['dawn_v2'], sat=1.0, wb=(0.99, 0.99, 0.98), vignette=0.5, floor='#2e2428')   # cooler; her black stays black
-_V2['dawn_break_v2'] = dict(_V2['dawn_queen_v2'], contrast=1.1, sat=0.95)
-GRADES.update(_V2)
-
 
 def _lerp_val(a, b, k):
     if isinstance(a, str): return core.mix(a, b, k)
