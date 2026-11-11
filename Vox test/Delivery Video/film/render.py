@@ -1,12 +1,12 @@
-"""v2 picture renderer: stills, test clips and the full worker/slice render.
+"""Picture renderer (the police film's render.py, repointed to this film's work dir W): stills, test clips and the full worker/slice render.
 
     python3 render.py --stills 12.5,40,61.2 [--size 960x540]          -> <out>/still_0012.50.jpg ...
     python3 render.py --clip 30 36 --size 960x540 [--audio mix.wav]   -> <out>/clip_0030.00_0036.00.mp4
     python3 render.py [--workers 3] [--from_ 0 --to T] [--audio mix_en.wav]
         full render at 2560x1440 / 60 fps: contiguous slices per worker process, libx264 crf 16 preset faster (identical
         settings, so they join with a stream copy) -> <out>/picture.mp4 (+ <out>/film.mp4 with the audio muxed in).
-Options: --timeline (default $S/pov2/align/timeline.json), --out (default $S/pov2/picture for full, $S/pov2/tests/render
-otherwise), --fps 60, --film film|demo (default: film.py if it exists, else engine/demo.py's DemoFilm), --crf, --preset,
+Options: --timeline (default W/align/timeline.json), --out (default W/picture for full, W/tests/render otherwise; W = this
+film's work dir film/_work), --fps 60, --film film|demo (default: film.py if it exists, else engine/demo.py's DemoFilm), --crf, --preset,
 --threads (OpenCV threads per process; full-mode workers default to 1).
 Workers write <out>/progress_NN.json ({done, total, fps}) for tools/progress_page.py; finished slices get a .done marker and
 are skipped on a re-run, so an interrupted render resumes.
@@ -19,10 +19,10 @@ import cv2
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
+W = os.path.join(HERE, '_work')                       # this film's work dir (the delivery film)
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--timeline', default=os.path.join(S, 'pov2', 'align', 'timeline.json'))
+ap.add_argument('--timeline', default=os.path.join(W, 'align', 'timeline.json'))
 ap.add_argument('--out', default=None)
 ap.add_argument('--size', default='2560x1440')
 ap.add_argument('--fps', type=int, default=60)
@@ -39,15 +39,15 @@ ap.add_argument('--preset', default='faster')
 ap.add_argument('--threads', type=int, default=None)
 a = ap.parse_args()
 
-W, H = (int(v) for v in a.size.lower().split('x'))
+RW, RH = (int(v) for v in a.size.lower().split('x'))
 full_mode = a.stills is None and a.clip is None
-out = a.out or os.path.join(S, 'pov2', 'picture' if full_mode else os.path.join('tests', 'render'))
+out = a.out or os.path.join(W, 'picture' if full_mode else os.path.join('tests', 'render'))
 os.makedirs(out, exist_ok=True)
 threads = a.threads if a.threads is not None else (1 if (full_mode and a.worker >= 0) else None)
 if threads is not None: cv2.setNumThreads(threads)
 
 from engine.core import set_render_size                                   # noqa: E402
-set_render_size(W, H)
+set_render_size(RW, RH)
 
 
 def load_film():
@@ -95,7 +95,7 @@ if a.clip:
     c0, c1 = a.clip
     p = os.path.join(out, f'clip_{c0:07.2f}_{c1:07.2f}.mp4')
     tmp = p + '.video.mp4' if a.audio else p
-    enc = encoder(tmp, W, H, a.fps, 18 if W < 2000 else a.crf, a.preset, 4)
+    enc = encoder(tmp, RW, RH, a.fps, 18 if RW < 2000 else a.crf, a.preset, 4)
     f0, f1 = int(round(c0 * a.fps)), int(round(c1 * a.fps))
     ts = time.time()
     for fi in range(f0, f1):
@@ -130,7 +130,7 @@ if a.worker < 0:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', '-movflags', '+faststart', pic], check=True)
     print('[render]', pic, flush=True)
     if a.audio:
-        mux(pic, a.audio, os.path.join(out, 'film.mp4'), 0.0, None)
+        mux(pic, a.audio, os.path.join(out, 'film.mp4'), a.t0, (end - a.t0) if a.t0 > 0 or a.to is not None else None)   # partial range: audio from t0
         print('[render]', os.path.join(out, 'film.mp4'), flush=True)
     sys.exit(0)
 
@@ -141,7 +141,7 @@ f0 = a.worker * N // a.workers; f1 = (a.worker + 1) * N // a.workers
 seg = os.path.join(out, f'slice_{a.worker:02d}.mp4')
 prog = os.path.join(out, f'progress_{a.worker:02d}.json')
 if os.path.exists(seg + '.done'): sys.exit(0)
-enc = encoder(seg, W, H, a.fps, a.crf, a.preset, 2)
+enc = encoder(seg, RW, RH, a.fps, a.crf, a.preset, 2)
 t_start = time.time()
 for k, fi in enumerate(range(f0, f1)):
     t = a.t0 + fi / a.fps

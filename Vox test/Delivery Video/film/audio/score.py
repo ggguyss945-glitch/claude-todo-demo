@@ -1,11 +1,15 @@
-"""score.py: the music for "If A Police Officer Knocks..." v2, rendered from music_cues.json.
+"""score.py: the music for "If A Delivery Driver Rings Your Doorbell At 3 AM..." (the police film's v2 score engine),
+rendered from music_cues.json. The arrangement for this film is pinned by audio/music_plan.py (cues['track_map']).
 
 Public API
     render(cues, duration=None, *, seed=None, normalize=True, progress=None) -> dict[str, np.ndarray]
         cues: the music_cues.json dict (ARCHITECTURE.md): {duration, intensity: [[t, 0..1], ...],
               events: [{t, type, level?, len?}, ...]}.  duration (s) overrides cues['duration'].
         Returns float32 stereo stems [n, 2] at 48 kHz, n = round(duration * SR), keys = STEMS:
-          tracks   the six Epidemic tracks arranged to the film (the backbone): one track section per film section
+          tracks   the Epidemic tracks arranged to the film (the backbone): cues['track_map'] pins one track section
+                   per film section ([{t0, slug, off, flatten?}], off in seconds of the varispeed track, flatten =
+                   share of the track's own dynamics the gain automation evens out, default FLATTEN); without it, the police
+                   auto-arrangement: one track section per film section
                    (sections start at `rule` cards / `scene` events; longer than 120 s -> split at a silence), chosen
                    by fit of the track's loudness/brightness to the intensity curve, no reuse of material, D/A keys
                    preferred, the D-major track (Tefu) only for calm passages; 3 s equal-power crossfades (or a
@@ -34,6 +38,7 @@ Public API
         score sum (hits would pull the bed down). Silences, the end fade, pre-hit cuts (bed down 6-16 dB for
         0.35-1 s before each hit) and the post-silence re-entry (music back 12 dB quieter) are already applied;
         mix.py adds voice ducking (about 3 dB) and the final limiter.
+    Unknown event types are ignored with a warning (never a crash).
     plan(cues, duration=None) -> dict      the arrangement without audio: sections [{slug, s0, s1, off, via_silence}],
                                            keys [[t0, t1, root_pc, mode(+1 major / -1 minor)]], t_end
     STEMS, SR, REF_LUFS, TRACKS (varispeed table), FIXED_KEY
@@ -55,9 +60,9 @@ Keys: each film section takes the dominant bass root of its track material (harm
 window; a second key only for a modulation >= 20 s); every tonal layer (sub, drones, motif, lament, pulse,
 timpani tuning, braams) follows it, so the recorded layers never fight the track.
 
-Sources: Epidemic tracks/SFX (catalog_epidemic.json, owner's licence) and the free library (library.py:
+Sources: Epidemic tracks/SFX (catalog_epidemic_delivery.json: the delivery, police and mirror sets; owner's licence) and the free library (library.py:
 VSCO-2-CE CC0, Salamander CC-BY, Karoryfer Scary Piano, celesta, OpenAIR IRs CC-BY); synthesis only for the
-sub drone and sub booms. Track analysis is cached in $S/pov2/cache/score/.
+sub drone and sub booms. Track analysis is cached in W/cache/score/ (W = film/_work).
 """
 import os, sys, json, math, hashlib, time
 import numpy as np
@@ -74,20 +79,33 @@ SR = 48000
 STEMS = ('tracks', 'drones', 'pulse', 'melodic', 'strings', 'hits')
 REF_LUFS = -28.0
 NOM = -20.0                      # every sample is normalised to this momentary-max loudness before gains
-S = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
-CACHE = os.path.join(S, 'pov2', 'cache', 'score')
+W = os.path.normpath(os.path.join(HERE, '..', '_work'))   # this film's work dir
+S = W
+CACHE = os.path.join(W, 'cache', 'score')
 CR = 100                         # control rate for gain curves (Hz)
 SLOPE = 13.5                     # bed level change (dB) from intensity 0 to 1 (v2.1: 9 -> 13.5, the bed breathes)
 PC = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 # Epidemic tracks: varispeed (semitones, resampling = tape-style, no artefacts) so every track sits on D, A or G.
+# Delivery film: the 9 new tracks are the backbone, the police six stay available where they fit (keys from
+# audio/catalog_epidemic_delivery.json: Krumhansl key + lowest-octave chroma). The mirror set's tracks are catalogued
+# but not loaded here (memory); add them with a shift to use them.
 TRACKS = {
-    'a_massive_mist_ethan_sloan': -2,            # B minor  -> A minor
-    'dark_forebodings_ethan_sloan': 0,           # G minor (iv of D minor)
-    'dark_tunnels_ethan_sloan': -3,              # F minor  -> D minor (with Bb)
-    'from_hell_christoffer_moe_ditlevsen': -1,   # Bb minor -> A minor
-    'in_continuum_dream_cave': 0,                # D minor
-    'tefu_sayuri_hayashi_egnell': 0,             # D major (false comfort)
+    'are_you_alone_victor_lundberg': 0,          # D (bass D), dark sub drone that swells to one spike: open + sting
+    'the_logic_of_tyrants_hampus_naeselius': 1,  # bass C# (Krumhansl D# minor) -> D, dark low pulse
+    'afterthoughts_beyza': -3,                   # F minor  -> D minor, slow, no drums
+    'haunted_mind_etienne_roussel': 0,           # A minor, slow build, mid register, no drums
+    'goth_christmas_par': -4,                    # F# minor -> D minor, bells / lullaby, slowed 21 %: the memory theme
+    'code_of_violence_dian_shuai': 0,            # D minor, dark pulsing bass build
+    'turning_stones_stefan_ekstrom': 2,          # C minor  -> D minor, pure dark drone (99 % < 250 Hz)
+    'one_step_away_dian_shuai': 0,               # A (major), percussive build, the climax; drops at 132 s
+    'one_hampus_naeselius': 0,                   # G minor, percussive (alternate climax)
+    'a_massive_mist_ethan_sloan': -2,            # police: B minor  -> A minor
+    'dark_forebodings_ethan_sloan': 0,           # police: G minor (iv of D minor), flat dark drone
+    'dark_tunnels_ethan_sloan': -3,              # police: F minor  -> D minor (with Bb)
+    'from_hell_christoffer_moe_ditlevsen': -1,   # police: Bb minor -> A minor
+    'in_continuum_dream_cave': 0,                # police: D minor
+    'tefu_sayuri_hayashi_egnell': 0,             # police: D major (false comfort)
 }
 KEYPREF = {2: 0.0, 9: 0.05, 5: 0.45, 10: 0.45, 7: 0.6, 0: 0.7}   # cost by root pitch class: D, A, F, Bb, G, C
 KEY_W = 2.0                      # weight of the key cost (v2.1: 0.2 -> 0.6, every section lands on D or A)
@@ -98,6 +116,8 @@ REUSE_W = 1.2                    # cost of replaying the same track material (fr
 FIXED_KEY = {'tefu_sayuri_hayashi_egnell': (2, 1)}   # melodic bass: root detection unreliable; D pedal, major
 FLATTEN = 0.3                    # share of each track's own dynamics flattened by the gain automation (was 0.6-0.8)
 DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0}
+KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
+                'rule', 'end', 'scene')
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -212,7 +232,10 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        epi = json.load(open(os.path.join(HERE, 'catalog_epidemic.json')))
+        cp = os.path.join(HERE, 'catalog_epidemic_delivery.json')
+        if not os.path.exists(cp):
+            cp = os.path.join(HERE, 'catalog_epidemic.json')
+        epi = json.load(open(cp))
         self.epi_sfx = {e['slug']: e for e in epi['sfx']}
         self.epi_music = {e['slug']: e for e in epi['music']}
         self._cats = {}
@@ -552,6 +575,18 @@ def plan(cues, duration=None, bank=None):
             stack[:0] = [(a, cut), (cut, c)]
     used = {k: [] for k in info}
     segs, prev, prev_root = [], None, None
+    tm = [dict(x) for x in (cues.get('track_map') or []) if x.get('slug') in info and float(x.get('t0', 0)) < dur]
+    unknown = [x.get('slug') for x in (cues.get('track_map') or []) if x.get('slug') not in info]
+    if unknown:
+        print('[score] WARNING: track_map slugs not in TRACKS, ignored:', unknown, flush=True)
+    if tm:                                            # pinned arrangement (audio/music_plan.py)
+        tm.sort(key=lambda x: float(x['t0']))
+        tm[0]['t0'] = 0.0
+        for k, x in enumerate(tm):
+            s0 = float(x['t0']); s1 = float(tm[k + 1]['t0']) if k + 1 < len(tm) else dur
+            segs.append(dict(slug=x['slug'], s0=s0, s1=s1, off=float(x.get('off', 0.0)),
+                             flatten=float(x.get('flatten', FLATTEN))))
+        secs = []
     for si, (s0, s1) in enumerate(secs):
         ln = s1 - s0
         tk = np.arange(s0, s1, 2.0)
@@ -835,7 +870,7 @@ class Score:
             l2 = np.asarray(v['L2']) - v['lufs']
             l2s = _smooth(l2, 2)
             li = np.interp(tau / 2.0, np.arange(len(l2s)), l2s)
-            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - FLATTEN * li - 1.5
+            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - sg.get('flatten', FLATTEN) * li - 1.5
             gc = np.clip(gc, -30, 10)
             x = np.arange(len(seg)) * (CR / SR)
             g = db(np.interp(x, np.arange(len(gc)), gc)).astype(np.float32)
@@ -1529,6 +1564,8 @@ class Score:
                 self.render_swell(e)
             elif ty == 'rule':
                 self.render_rule(e)
+            elif ty not in KNOWN_EVENTS:
+                print(f'[score] WARNING: unknown music event type {ty!r} at {e["t"]:.2f} s: ignored', flush=True)
         self.log(f'events {time.time() - t00:.1f}s')
         self.render_melodic()
         self.log(f'melodic {time.time() - t00:.1f}s')

@@ -122,7 +122,8 @@ DELIVERY_NAMES = ('doorbell_dingdong', 'doorbell_cam_chime', 'phone_notify', 'bo
                   'box_drop', 'box_scrape', 'box_open', 'box_voice', 'tape_rip', 'hazard_ticks', 'van_door_slide',
                   'van_idle', 'van_pull_away', 'van_step', 'keys_drop', 'window_slide', 'curtain_flutter',
                   'cloth_rustle', 'touch_tap', 'stylus_scribble', 'camera_shutter', 'footsteps_stairs', 'footsteps_hall',
-                  'mom_breath', 'mom_sob', 'ambience_suburb', 'ambience_dawn', 'room_tone_house')
+                  'mom_breath', 'mom_sob', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'hazard_tick',
+                  'window_latch')
 NAMES = POLICE_NAMES + DELIVERY_NAMES
 
 # v2.1 (sound critic): foley raised so it reads over the music (footsteps -11 -> -7, typing -14 -> -9,
@@ -141,7 +142,7 @@ LEVEL_LU.update(doorbell_dingdong=-4, doorbell_cam_chime=-9, phone_notify=-10, b
                 van_door_slide=-8, van_idle=-24, van_pull_away=-11, van_step=-9, keys_drop=-4, window_slide=-7,
                 curtain_flutter=-15, cloth_rustle=-12, touch_tap=-12, stylus_scribble=-11, camera_shutter=-7,
                 footsteps_stairs=-8, footsteps_hall=-9, mom_breath=-10, mom_sob=-9, ambience_suburb=-25,
-                ambience_dawn=-26, room_tone_house=-31)
+                ambience_dawn=-26, room_tone_house=-31, hazard_tick=-10, window_latch=-7)
 SPACE_LU = dict(close=1.0, inside=0.0, outside=-7.0, doorbell_mic=-2.0, street=-6.0, phone=-4.0, radio=-3.0,
                 car=-2.0, dry=0.0, porch=-2.0, window=-8.0, upstairs=-9.0, box=-3.0, app=-3.0)
 SPACE_ALIAS = dict(hall='inside', hallway='inside', house='inside', interior='inside', indoors='inside', stairs='inside',
@@ -160,6 +161,7 @@ BEDS = ('ambience_night', 'room_tone', 'radio_static', 'car_idle', 'tinnitus', '
         'hazard_ticks', 'van_idle', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'box_voice')
 DUR_BEDS = ('breath', 'siren_far', 'typing', 'heartbeat', 'curtain_flutter', 'mom_breath', 'mom_sob')   # with dur
 TIMED = ('hazard_ticks',)
+BED_BUS = BEDS + ('hazard_tick',)          # mix.py routes these to the bed bus (no foley dip of the music per relay tick)
 HITS = ('impact_hit', 'stinger', 'braam', 'sub_drop')
 DEFAULT_SPACE = defaultdict(lambda: 'close', knock_door='inside', footsteps_porch='outside', car_pass='street',
                             car_idle='outside', car_door_open='street', car_door_close='street', siren_far='street',
@@ -175,7 +177,7 @@ DEFAULT_SPACE.update(doorbell_dingdong='inside', doorbell_cam_chime='close', pho
                      window_slide='close', curtain_flutter='close', cloth_rustle='close', touch_tap='close',
                      stylus_scribble='close', camera_shutter='doorbell_mic', footsteps_stairs='inside',
                      footsteps_hall='inside', mom_breath='close', mom_sob='close', ambience_suburb='outside',
-                     ambience_dawn='outside', room_tone_house='inside')
+                     ambience_dawn='outside', room_tone_house='inside', hazard_tick='street', window_latch='close')
 
 
 # ======================================================================================== basic DSP
@@ -656,9 +658,11 @@ def grains(e, mode='onset', gap=0.25, floor=-40.0, max_len=3.0, min_len=0.03, ke
             for a, b in runs:
                 out.append((max(0, a * hop - n_(0.004)), min(len(y), (b + 1) * hop + n_(0.03))))
     else:
-        import librosa
-        o = librosa.onset.onset_detect(y=y, sr=SR, hop_length=256, backtrack=True, units='samples',
-                                       wait=max(1, int(gap * SR / 256)), delta=0.08)
+        import librosa, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            o = librosa.onset.onset_detect(y=y, sr=SR, hop_length=256, backtrack=True, units='samples',
+                                           wait=max(1, int(gap * SR / 256)), delta=0.08)
         o = sorted(set(int(v) for v in o))
         for k, s0 in enumerate(o):
             nxt = o[k + 1] if k + 1 < len(o) else len(y)
@@ -936,19 +940,42 @@ def _steps(rng, key, entries_fn, n=None, dur=None, rate_=1.8, approach=0.0, crea
     return _seq(ev, 0.4)
 
 
-def r_footsteps_porch(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.3, weight=0.7, **_):
+def r_footsteps_porch(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.3, weight=0.7, foot=None, **_):
     y = _steps(rng, 'steps_porch', lambda: src('footsteps_porch', nothas=['civitas__footsteps']), n, dur, rate,
                approach, creak, weight)
+    if foot in ('L', 'R'):
+        y = pan(y, -0.08 if foot == 'L' else 0.08)
     return y, 0.0, 0.0, False
 
 
-def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.4, weight=0.6, **_):
-    y = _steps(rng, 'steps_wood', lambda: src('footsteps_wood_inside', nothas=['barn_reverberant']), n, dur, rate,
+def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.4, weight=0.6, stairs=False,
+                            run=False, slippers=False, foot=None, direction=None, **_):
+    """stairs=True: stair treads (direction 'up' / 'down' / None = level); run=True: faster and heavier;
+    slippers=True: soft scuffing slippers (mom); foot 'L' / 'R': one step of a walk (film.py cues every step)."""
+    if run:
+        rate, weight = rate * 1.5, max(weight, 0.85)
+    if stairs:
+        y = r_footsteps_stairs(rng, sp, direction=direction, n=n, dur=dur, rate=rate, weight=weight)[0]
+    elif slippers:
+        y = _steps(rng, 'steps_bare', lambda: src('footsteps_hall', has=['barefoot', 'creaky']), n, dur, rate, approach,
+                   creak * 0.5, 0.35)
+        y = lp(y, 2600, 2)
+        sc = bp(noise(len(y) / SR, int(rng.integers(1 << 30))), 1500, 5000, 2)[:len(y)] * \
+            np.abs(lp(mono(y), 30, 1)) * 3.0                     # the scuff follows each step
+        y = y + st(sc)
+    else:
+        y = _steps(rng, 'steps_wood', lambda: src('footsteps_wood_inside', nothas=['barn_reverberant']), n, dur, rate,
                approach, creak, weight)
+    if foot in ('L', 'R'):
+        y = pan(y, -0.08 if foot == 'L' else 0.08)
     return y, 0.0, 0.0, False
 
 
-def r_car_pass(rng, sp, dist=1.0, direction=1, dur=None, **_):
+def r_car_pass(rng, sp, dist=1.0, direction=1, dur=None, kind=None, **_):
+    if kind == 'away':                                  # the van pulls away from the curb: starts at t
+        return r_van_pull_away(rng, sp, dur=dur or 7.0)
+    if kind == 'arrive':                                # a vehicle draws up and stops: starts at t, settles by t + dur
+        return _arrive(rng, sp, dur or 5.0)
     E = src('car_pass'); e = E[int(rng.choice(len(E), p=_epi_w(E)))]
     y = audio(e); pk = env_peak_s(y, 0.5)
     pre = min(pk, (dur or 12) / 2); post = min(len(y) / SR - pk, (dur or 10) / 2)
@@ -964,7 +991,9 @@ def _epi_w(E, w=3.0):
     p = np.array([w if e['source'] == 'epidemic' else 1.0 for e in E]); return p / p.sum()
 
 
-def r_car_idle(rng, sp, dur=8.0, **_):
+def r_car_idle(rng, sp, dur=8.0, kind=None, **_):
+    if kind in ('diesel', 'van'):
+        return r_van_idle(rng, sp, dur=dur)
     E = src('car_idle'); e = E[int(rng.integers(len(E)))]
     y = excerpt(e, dur, rng)
     y = eq(y, ('ls', 90, 3, 0.7))
@@ -1175,7 +1204,16 @@ def r_lock_turn(rng, sp, **_):
     return _seq([(0, y), (on, th)], 0.05), on, 0.0, False
 
 
-def r_chain_lock(rng, sp, action='lock', **_):
+def r_chain_lock(rng, sp, action='lock', kind=None, **_):
+    if kind == 'rattle':                                # a hand on the chain: it swings and clinks, nothing locks
+        E = src('chain_lock', has=['security_chain', 'chains'])
+        e = _pick(rng, E); gs = grains(e, 'onset', gap=0.06, max_len=0.4, keep=-20)
+        ev = []; t = 0.0
+        for k in range(int(rng.integers(2, 4))):
+            a0, a1 = gs[int(rng.integers(len(gs)))]
+            g = fade(pnorm(audio(e)[a0:a1]), 0.002, 0.05) * rng.uniform(0.4, 0.9)
+            ev.append((t, rate(g, 1 + rng.uniform(-0.04, 0.04)))); t += rng.uniform(0.05, 0.14)
+        return _seq(ev, 0.1), 0.0, -3.0, False
     E = src('chain_lock', has=['chain_unlock' if action == 'unlock' else 'chain_lock'])
     y = fade(pnorm(audio(E[0])), 0.002, 0.05)
     y = rate(y, 1 + rng.uniform(-0.03, 0.03))
@@ -1355,7 +1393,13 @@ def r_glitch(rng, sp, dur=0.6, amount=0.7, **_):
     return fade(out, 0.002, 0.02), 0.0, 0.0, False
 
 
-def r_ui_pop(rng, sp, **_):
+def r_ui_pop(rng, sp, kind=None, **_):
+    if kind == 'speaker':                               # the doorbell camera's two-way speaker opening: tick + soft blip
+        c = hp(_click_pool().get(rng, rj=0.03), 900, 2)[:n_(0.05)] * 0.5
+        t = np.arange(n_(0.09)) / SR
+        bl = st(np.sin(2 * np.pi * 1320 * t) * np.exp(-t / 0.02) * 0.25 + np.sin(2 * np.pi * 1760 * t) * np.exp(-t / 0.015)
+                * 0.12 * (t > 0.045))
+        return _seq([(0, c), (0.004, fade(bl, 0.002, 0.01))], 0.02), 0.0, -3.0, False
     P = pool('ui', lambda: src('ui_pop', has=['notification', 'glass_ui', 'confirm', 'kenney_ui']), 'onset', gap=0.06,
              max_len=0.4, keep=-14)
     a = lp(P.get(rng, rj=0.03), 7000, 2) * 0.8
@@ -1601,7 +1645,9 @@ def _parse_pattern(p):
 
 
 def r_box_knock(rng, sp, n=1, pattern=None, gap=0.3, pause=0.72, strength=1.0, force=None, n_in_pattern=None,
-                group=None, **_):
+                group=None, on='porch', small=False, **_):
+    """on='porch' (the box standing on the porch), 'door' (the box leaning on the front door: the knock goes into the
+    door slab), 'vent' (heard through Lily's bedroom vent: a tinny duct); small=True: a child's knuckles."""
     pat = _parse_pattern(pattern)
     seq = []
     if pat:
@@ -1613,6 +1659,8 @@ def r_box_knock(rng, sp, n=1, pattern=None, gap=0.3, pause=0.72, strength=1.0, f
     else:
         seq = [(k * gap, 1.0 if k == 0 else 0.92) for k in range(max(1, int(n)))]
     f = float(np.clip(force if force is not None else 0.75 * float(strength), 0.1, 1.2))
+    if small:
+        f = min(f, 0.5)
     C, K = _carton_pool(), _wood_knock_pool()
     big = (n_in_pattern == 1 and group == 2)               # the lone third knock lands a little heavier
     ev = []
@@ -1623,11 +1671,25 @@ def r_box_knock(rng, sp, n=1, pattern=None, gap=0.3, pause=0.72, strength=1.0, f
         modes = np.array([58, 87, 124, 171, 236, 318]) * (1 + 0.02 * rng.standard_normal())
         body = modal(modes, [0.16, 0.12, 0.09, 0.07, 0.05, 0.035], [1, 0.8, 0.6, 0.45, 0.3, 0.18], 0.7,
                      int(rng.integers(1 << 30))) * v ** 1.5
-        thump = st(sub_boom(64, 38, 0.45, 0.0)) * 0.55 * v
+        thump = st(sub_boom(64, 38, 0.45, 0.0)) * 0.55 * v * (0.3 if small else 1.0)
         tt = np.arange(n_(0.06)) / SR
         rattle = bp(noise(0.06, int(rng.integers(1 << 30))), 900, 3200, 2) * np.exp(-tt / 0.012) * 0.08 * v
-        ev.append((t, _seq([(0, a), (0, kn), (0, st(pnorm(body, 0.6))), (0.002, thump), (0.004, st(rattle))], 0.2)))
-    return _seq(ev, 0.3), 0.002, 12 * np.log10(f / 0.75), False
+        lay = [(0, a), (0, kn), (0, st(pnorm(body, 0.6))), (0.002, thump), (0.004, st(rattle))]
+        if on == 'door':                                 # the box leans on the door: the slab rings with it
+            dm = np.array([88, 133, 181, 247, 338, 489]) * (1 + 0.03 * rng.standard_normal())
+            door = modal(dm, [0.2, 0.15, 0.12, 0.08, 0.06, 0.04], [1.0, 0.8, 0.65, 0.45, 0.35, 0.22], 0.6,
+                         int(rng.integers(1 << 30)))
+            lay.append((0.001, st(pnorm(door, 0.45)) * v))
+        x = _seq(lay, 0.2)
+        if small:
+            x = rate(x, 1.15)
+        if on == 'vent':                                 # a tinny sheet-metal duct between the rooms
+            m = mono(x); y2 = m.copy()
+            for d, g in ((0.0031, 0.55), (0.0047, 0.4), (0.0083, 0.3)):
+                k = n_(d); y2[k:] += m[:-k] * g
+            x = st(eq(bp(y2, 280, 2600, 2), ('peak', 1150, 6, 3.0), ('peak', 640, 4, 3.0)))
+        ev.append((t, x))
+    return _seq(ev, 0.3), 0.002, 12 * np.log10(f / 0.75) + (-3.0 if on == 'vent' else 0.0), False
 
 
 def r_box_tap(rng, sp, n=1, spacing=0.22, **_):
@@ -1717,7 +1779,9 @@ def r_box_voice(rng, sp, dur=4.0, **_):
     return fade(_seq(lay, 0.0)[:n], 0.3, 0.6), 0.0, 0.0, False
 
 
-def r_tape_rip(rng, sp, kind='rip', dur=None, **_):
+def r_tape_rip(rng, sp, kind='rip', dur=None, soft=False, **_):
+    if soft and kind == 'rip':
+        kind = 'peel'
     R = pool('tape_rip', lambda: src('tape_rip'), 'phrase', gap=0.15, max_len=2.5, keep=-14)
     if kind in ('rip', 'peel'):
         y = R.get(rng, rj=0.03, fo=0.06)
@@ -1757,7 +1821,8 @@ def r_hazard_ticks(rng, sp, dur=10.0, rate=1.25, duty=0.48, t_on=None, t_off=Non
     return y, 0.0, 0.0, False
 
 
-def r_van_door_slide(rng, sp, action='close', **_):
+def r_van_door_slide(rng, sp, action='close', kind=None, **_):
+    action = kind if kind in ('open', 'close') else action
     V = pool('van_slide', lambda: src('van_door_slide', has=['van_sliding']), 'phrase', gap=0.3, max_len=2.2, keep=-12)
     if action != 'open':
         y = V.get(rng, rj=0.02, fo=0.25)
@@ -1774,6 +1839,17 @@ def r_van_door_slide(rng, sp, action='close', **_):
     end = len(roll) / SR
     return _seq([(0, latch), (0.06, roll), (0.06 + end * 0.9, clunk),
                  (0.06 + end * 0.9, st(sub_boom(66, 40, 0.3, 0.0)) * 0.3)], 0.2), 0.0, 0.0, False
+
+
+def _arrive(rng, sp, dur=5.0):
+    """A vehicle draws up and stops: the approach half of a pass, braking (pitch and level fall), into the idle."""
+    P = src('car_pass'); cp = audio(_pick(rng, P)); pk = env_peak_s(cp, 0.5)
+    appr = cp[n_(max(0.0, pk - dur)):n_(pk)]
+    m = len(appr)
+    appr = _varispeed(appr, 1.0, 0.8, max(n_(0.5), m - n_(0.2))) * np.linspace(1.0, 0.6, max(n_(0.5), m - n_(0.2)))[:, None]
+    idle = r_van_idle(rng, sp, dur=3.0)[0] * (peak(appr) / (peak(r_van_idle(rng, sp, dur=3.0)[0]) + 1e-9)) * 0.5
+    y = _seq([(0, fade(appr, 1.0, 0.8)), (len(appr) / SR - 0.6, fade(idle, 0.6, 1.5))], 0.0)
+    return y, 0.0, 0.0, False
 
 
 def _diesel():
@@ -1827,7 +1903,15 @@ def r_van_step(rng, sp, **_):
     return _seq(lay, 0.1), onset_s(a, -14), 0.0, False
 
 
-def r_keys_drop(rng, sp, surface='bowl', rust=False, **_):
+def r_keys_drop(rng, sp, surface='bowl', rust=False, bowl=False, jingle=False, lift=False, **_):
+    """bowl=True = surface 'bowl'; jingle=True: the keys jingle in the hand first; lift=True: keys lifted (jingle only)."""
+    if lift:
+        J = pool('keys', lambda: src('key_in_lock', has=['keys_jingle_hand', 'keys_jingle']), 'phrase', gap=0.15,
+                 max_len=0.8, keep=-16)
+        y = J.get(rng, rj=0.03, fo=0.1)
+        return (lp(rate(y, 0.85), 4500, 2) if rust else y), 0.0, -4.0, False
+    if bowl:
+        surface = 'bowl'
     has = {'carpet': ['drop_on_carpet'], 'wood': ['drop_on_wood'], 'floor': ['drop_on_wood']}.get(surface,
                                                                                                ['house_keys_drop', 'drop_on_wood'])
     K = src('keys_drop', has=has) or src('keys_drop', has=['keys'])
@@ -1838,6 +1922,13 @@ def r_keys_drop(rng, sp, surface='bowl', rust=False, **_):
     if rust:
         k = lp(k, 4500, 2)
     lay = [(0, k)]
+    pre_j = 0.0
+    if jingle:
+        J = pool('keys', lambda: src('key_in_lock', has=['keys_jingle_hand', 'keys_jingle']), 'phrase', gap=0.15,
+                 max_len=0.8, keep=-16)
+        j = J.get(rng, rj=0.03, fo=0.1)[:n_(0.45)] * 0.35
+        pre_j = 0.35
+        lay = [(-pre_j, fade(j, 0.01, 0.12))] + lay
     if surface in ('bowl', 'ceramic', 'dish'):
         V = pool('vase_tap', lambda: src('keys_drop', has=['vase', 'glass_tap']), 'onset', gap=0.2, max_len=0.5, keep=-14)
         v = V.get(rng, rj=0.03, fo=0.15) * 0.45
@@ -1846,7 +1937,8 @@ def r_keys_drop(rng, sp, surface='bowl', rust=False, **_):
         thunk = st(modal([210, 450], [0.03, 0.02], [1, 0.5], 0.15, 3)) * 0.3
         settle = lp(k[n_(0.12):], 6000, 2) * 0.3
         lay += [(0.0, v), (0.0, ring), (0.0, thunk), (0.14, settle)]
-    return _seq(lay, 0.2), onset_s(k, -14), 0.0, False
+    lay = [(t + pre_j, x) for t, x in lay]
+    return _seq(lay, 0.2), pre_j + onset_s(k, -14), 0.0, False
 
 
 def r_window_slide(rng, sp, action='open', speed=1.0, **_):
@@ -1879,14 +1971,16 @@ def r_curtain_flutter(rng, sp, dur=4.0, wind=0.6, **_):
     return fade(y + air[:n], 0.3, 0.5), 0.0, 0.0, False
 
 
-def r_cloth_rustle(rng, sp, kind='rustle', **_):
+def r_cloth_rustle(rng, sp, kind='rustle', dur=None, **_):
+    if kind == 'curtain':
+        return r_curtain_flutter(rng, sp, dur=dur or 2.0)
     P = pool('cloth', lambda: src('cloth_rustle') + src(category='sfx/foley/cloth'), 'phrase', gap=0.15, max_len=1.0,
              keep=-18)
     g = P.get(rng, rj=0.05, fo=0.08)
     if kind == 'grab':
         g = fade(hp(g[:n_(0.25)], 150, 2), 0.002, 0.06)
     else:
-        g = fade(_fit(g, n_(min(0.8, max(0.3, len(g) / SR))), rng), 0.02, 0.1)
+        g = fade(_fit(g, n_(float(dur) if dur else min(0.8, max(0.3, len(g) / SR))), rng), 0.02, 0.1)
     return g, 0.0, 0.0, False
 
 
@@ -1894,7 +1988,7 @@ def r_touch_tap(rng, sp, n=1, spacing=0.25, **_):
     T = pool('touch', lambda: src('touch_tap'), 'onset', gap=0.08, max_len=0.12, keep=-24)
     ev = []
     for k in range(max(1, int(n))):
-        a = lp(T.get(rng, rj=0.05, tilt=0.5, fo=0.01), 6000, 2)
+        a = lp(hp(T.get(rng, rj=0.05, tilt=0.5, fo=0.01), 320, 2), 6000, 2)    # a fingertip on glass: no table thud
         ev.append((k * spacing * (1 + 0.08 * rng.standard_normal()), a * (1 if k == 0 else rng.uniform(0.7, 0.95))))
     return _seq(ev, 0.05), 0.0, 0.0, False
 
@@ -1935,13 +2029,14 @@ def _barefoot_pool():
 
 
 def r_footsteps_stairs(rng, sp, direction='up', n=None, dur=None, rate=1.5, weight=0.6, **_):
+    """direction 'up' (going away, duller), 'down' (coming nearer), None (level: no distance change)."""
     P = _barefoot_pool()
     C = pool('creak_short', lambda: src(category='sfx/creaks_scrapes', tags=['creak']), 'onset', gap=0.2, max_len=0.9)
     n = int(n or max(1, round((dur or 3.0) * rate)))
     ev = []; t = 0.0
     for k in range(n):
         prog = k / max(1, n - 1)
-        away = prog if direction == 'up' else 1 - prog
+        away = prog if direction == 'up' else (1 - prog if direction == 'down' else 0.15)
         gdb = -7.0 * away + rng.normal(0, 0.8) + (-1.0 if k % 2 else 0.0)
         g = lp(P.get(rng, rj=0.05, fo=0.04), 7000 * 2 ** (-1.3 * away), 1) * 10 ** (gdb / 20) * (0.6 + 0.6 * weight)
         tread = st(modal(np.array([96, 168, 255, 340]) * (1 + 0.04 * rng.standard_normal()), [0.07, 0.05, 0.04, 0.03],
@@ -2076,6 +2171,42 @@ def r_eye_flash(rng, sp, **_):
     return y, onset_s(y, -14), -3.0, True
 
 
+def r_hazard_tick(rng, sp, kind='on', **_):
+    """One relay click of the van's flashers (film.py cues every tick from sets.hazard_ticks()): 'on' tick / 'off' tock."""
+    E = src('hazard_ticks')
+    if kind == 'off':
+        P = _sub_pool('haz_off', E, 'onset', lambda k, m: k % 2 == 1, gap=0.15, max_len=0.25, keep=-12)
+    else:
+        P = _sub_pool('haz_on', E, 'onset', lambda k, m: k % 2 == 0, gap=0.15, max_len=0.25, keep=-12)
+    return P.get(rng, rj=0.004, tilt=0.4, fo=0.02, avoid=2) * (1.0 if kind != 'off' else 0.7), 0.0, \
+        (0.0 if kind != 'off' else -3.0), False
+
+
+def r_window_latch(rng, sp, **_):
+    """Checking a window: the hand tries the sash, the latch holds (a metal clack and a dull frame thud, no slide)."""
+    Lk = pool('lock', lambda: src('lock_turn', has=['deadbolt', 'mortise', 'frontdoorlock', 'metallatch', 'doorlockkey']),
+              'onset', gap=0.15, max_len=1.0, keep=-14)
+    a = hp(Lk.get(rng, rj=0.05)[:n_(0.12)], 600, 2) * 0.7
+    Wp = pool('window', lambda: src('window_slide', has=['windows_wood_sliding', 'greenhouse']), 'phrase', gap=0.3,
+              max_len=2.0, keep=-14)
+    w = Wp.get(rng, rj=0.04)
+    pk = n_(env_peak_s(w, 0.01))
+    jolt = lp(fade(w[max(0, pk - n_(0.01)):pk + n_(0.16)], 0.002, 0.08), 3500, 2) * 0.6
+    th = st(modal([150, 290, 520], [0.05, 0.03, 0.02], [1, 0.6, 0.3], 0.15, int(rng.integers(1 << 30)))) * 0.45
+    return _seq([(0, jolt), (0.005, th), (0.02, a), (0.21, jolt * 0.5), (0.215, th * 0.6)], 0.1), 0.0, 0.0, False
+
+
+def memory_fx(y, rng):
+    """21 years ago: duller, further, a slow tape wow, a little more room."""
+    y = eq(lp(hp(st(y), 120, 2), 4500, 2), ('hs', 2500, -3, 0.7))
+    n = len(y)
+    if n > n_(0.3):
+        r = 1 + 0.003 * np.sin(2 * np.pi * 0.6 * np.arange(n) / SR + rng.uniform(0, 6))
+        pos = np.minimum(np.cumsum(r) - r[0], n - 2); i = pos.astype(np.int64); f = (pos - i)[:, None]
+        y = (y[i] * (1 - f) + y[i + 1] * f).astype(np.float32)
+    return reverb(y, 'hall', 0.18, 0.01, hpf=200)
+
+
 # ---------------------------------------------------------------------------------------- names: aliases + fallbacks
 ALIASES = {
     'ding_dong': ('doorbell_dingdong', {}), 'doorbell': ('doorbell_dingdong', {}), 'doorbell_ring': ('doorbell_dingdong', {}),
@@ -2091,7 +2222,9 @@ ALIASES = {
     'box_flaps': ('box_open', {}), 'box_cut': ('tape_rip', {'kind': 'cut'}),
     'tape': ('tape_rip', {}), 'tape_cut': ('tape_rip', {'kind': 'cut'}), 'tape_peel': ('tape_rip', {'kind': 'peel'}),
     'hazard': ('hazard_ticks', {}), 'hazards': ('hazard_ticks', {}), 'hazard_lights': ('hazard_ticks', {}),
-    'hazard_tick': ('hazard_ticks', {}), 'indicator': ('hazard_ticks', {}),
+    'indicator': ('hazard_ticks', {}), 'hazard_bed': ('hazard_ticks', {}),
+    'text_notification': ('phone_notify', {}), 'app_notification': ('phone_notify', {}),
+    'window_check': ('window_latch', {}), 'latch': ('window_latch', {}),
     'van_door': ('van_door_slide', {}), 'sliding_door': ('van_door_slide', {}),
     'van_door_open': ('van_door_slide', {'action': 'open'}), 'van_door_close': ('van_door_slide', {'action': 'close'}),
     'van_drive_away': ('van_pull_away', {}), 'van_leave': ('van_pull_away', {}), 'van_depart': ('van_pull_away', {}),
@@ -2184,8 +2317,11 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
     sp = resolve_space(sp, name)
     h = int(hashlib.md5(f'{name}|{seed}'.encode()).hexdigest()[:8], 16)
     rng = np.random.default_rng(h)
+    memory = bool(params.pop('memory', False))
     y, pre, offs, spaced = RECIPES[name](rng, sp, **params)
     y = st(y)
+    if memory:                                            # 21 years ago (film.py: memory=True)
+        y = memory_fx(y, rng)
     if not spaced:
         y0 = len(y)
         y = globals()['space'](y, sp, seed)

@@ -119,8 +119,11 @@ def box_fx(x):
               ('ls', 120, 2.0, 0.7))
     w = SX.mono(SX.reverb(d, 'box', 0.5))[:len(x)]
     try:
-        import librosa
-        dn = librosa.effects.pitch_shift(x.astype(np.float32), sr=SR, n_steps=-3.0)
+        import librosa, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            dn = librosa.effects.pitch_shift(x.astype(np.float32), sr=SR, n_steps=-3.0)
+        dn = np.nan_to_num(dn)
         dn = SX.lp(dn, 1000, 2) * 0.2
         k = int(0.025 * SR); dd = np.zeros_like(w); dd[k:] = dn[:len(w) - k]
         w = w + dd
@@ -155,7 +158,9 @@ def apply_line_fx(vo, spans):
         i0, i1 = max(0, int((a - 0.05) * SR)), min(len(vo), int((b + 0.15) * SR))
         seg = vo[i0:i1]
         if len(seg) < 100: continue
-        y = fx(seg)
+        y = np.asarray(fx(seg), np.float32)
+        if len(y) < len(seg):                    # a reverb FX trims its silent tail: pad back to the segment
+            y = np.pad(y, (0, len(seg) - len(y)))
         # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
         Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
         if Ls > -70 and Ly > -70:
@@ -182,9 +187,10 @@ def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
     for g in tl.get('dub', []):
         i, j = g['lines']; ru_start[i] = g['ru_start']
     ru_spans = []
-    for l in L:
+    for l in (L if 'ru' in langs else []):
         if not fx_of(l): continue
-        a = ru_start.get(l['i'], l['t']); d = l['ru_src'][1] - l['ru_src'][0] if 'ru_src' in l else l['end'] - l['t']
+        a = ru_start.get(l['i'], l['t'])
+        d = l['ru_src'][1] - l['ru_src'][0] if l.get('ru_src') else l['end'] - l['t']
         ru_spans.append((a, a + max(0.4, d), fx_of(l)))
     out = {}
     if 'en' in langs: out['en'] = apply_line_fx(load_vo(vo_en, n_full), en_spans)
@@ -529,7 +535,7 @@ def main():
         y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
         if c.get('pan'):
             y = SX.pan(y, float(c['pan']))
-        b = 'hits' if name in SX.HITS else 'beds' if name in SX.BEDS else 'events'
+        b = 'hits' if name in SX.HITS else 'beds' if name in getattr(SX, 'BED_BUS', SX.BEDS) else 'events'
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
         if 0 <= tt <= dur:
             counts[b] += 1
