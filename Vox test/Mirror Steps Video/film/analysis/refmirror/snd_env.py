@@ -42,18 +42,23 @@ def bands(x, hop=0.1, win=0.4):
     out = []
     for lo, hi in BANDS:
         sos = signal.butter(4, [lo, hi], 'bandpass', fs=SR, output='sos')
-        y = signal.sosfilt(sos, m).astype(np.float32)
-        p = np.convolve(y * y, np.ones(int(win * SR)) / int(win * SR), 'same')[::int(hop * SR)]
+        y = signal.sosfilt(sos, m).astype(np.float64)
+        c = np.concatenate([[0.0], np.cumsum(y * y)]); w = int(win * SR); h = int(hop * SR)
+        i = np.arange(0, len(m), h); a = np.clip(i - w // 2, 0, len(m)); b = np.clip(i + w // 2, 0, len(m))
+        p = (c[b] - c[a]) / np.maximum(1, b - a)
         out.append(10 * np.log10(p + 1e-14))
     return np.array(out, np.float32)
 
 
 def flux(x, hop=0.01):
     """Positive spectral flux of the bed above 300 Hz (log magnitude), 100 Hz rate: the SFX / transient activity."""
-    m = x.mean(1)
-    f, t, Z = signal.stft(m, SR, nperseg=2048, noverlap=2048 - int(hop * SR))
-    A = np.log1p(1000 * np.abs(Z[f > 300]))
-    d = np.maximum(0, np.diff(A, axis=1)).mean(0)
+    m = x.mean(1).astype(np.float32); h = int(hop * SR); C = 60 * SR; out = []
+    for a in range(0, len(m), C):                        # 60 s chunks (the STFT of a whole film is > 1 GB)
+        seg = m[a:a + C]
+        f, t, Z = signal.stft(seg, SR, nperseg=2048, noverlap=2048 - h, boundary=None, padded=False)
+        A = np.log1p(1000 * np.abs(Z[f > 300]))
+        out.append(np.maximum(0, np.diff(A, axis=1)).mean(0)[:len(seg) // h])
+    d = np.concatenate(out)
     return np.concatenate([[0], d]).astype(np.float32)
 
 

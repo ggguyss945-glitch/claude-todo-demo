@@ -66,23 +66,59 @@ MUSIC_MAP = [
     dict(s0=628.7, s1=700.0, slug='end_of_rain_beyza', near=100, gain_db=5.0,
          why='relief and grief: the brothers\' theme, "Hi, Mom"; the drones rise under it to the phone; hard out at 698.62'),
 ]
-# the silences that stay real silences (critic M1: 23 scripted bed-outs, one every 30 s, became a formula); every other
-# plan silence becomes a -6 dB thinned dip of the score under the line and the hit rises out of the bed
-KEEP_SILENCES = (533.18, 603.91, 628.7, 661.64, 698.6)
-SIL_DIP_DB = -6.0
-# risers into the two biggest hits (critic M4): into the deepest silence before the real bell (535.36) and into the H7
-# silence before her foot (605.21)
+# ------------------------------------------------------------------------------------------------ sound v3: tension
+# Measured on the five references (voice and bed separated; analysis/refmirror/snd_env.py + snd_study.py, numbers in
+# README.md section 3): the bed is CONTINUOUS and steady under the narration (3 s short-term p10/50/90 about -17 / -13 /
+# -9 LU rel voice, bed loudness range 8-10 LU; v2 r1: -20.5 / -14.4 / -5.1, range 17.7), it rises in the narration's
+# pauses (-4 to -14; v2 r1 stayed at -15), it is dark and heavy (31-63 Hz +11 to +13 dB over 1 kHz; v2 r1 -1 to +3), its
+# drop-outs are short (0.4-0.6 s, 0-2 a minute; v2 r1 1.3 s, 2.8 a minute) and its hits are punctuation (2-5 a minute,
+# 2-7 LU under the voice, decaying in about 1.7 s) on a running bed, not after a hole. Tension is built by what plays
+# (drones, density, the hit on the turn), not by chopping the bed. So: one long breath per act (ARC below, steered by
+# mix.py), short drop-outs right before the turns, true silences only for the deepest moments, risers into the
+# reveals, and the rule card's shape (a hole just before it, the card's hit, the stamp, the new act's music).
+#
+# true silences (score out, room tone only), kept at their plan length: the click, time stopping, the deepest silence
+# before the real bell, the silence before her foot, the foot hanging, Mom's pause, the last click
+KEEP_SILENCES = (142.09, 341.53, 533.18, 603.91, 625.86, 628.7, 661.64, 688.05, 698.6)
+RESHAPE_SILENCE = {625.86: (626.4, 1.78)}   # the foot hangs: the whole "for a second", into "the glass goes dark"
+DROP_LEN = 0.5                     # every other plan silence that ends in a hit: a 0.5 s drop-out right before the hit
+DROP_AT = {181.58: 182.78, 397.51: 398.86}  # silences with no hit that end on a turn: the boy's voice, the memory cut
+SIL_DIP_DB = -5.0                  # the rest: a thinned dip of the score under the line (as review round 1)
+CARD_GAP = 0.6                     # rule cards: the riser stops this long before the card; a hole, then the card's hit
+# risers: into the two biggest hits (critic M4: the real bell 535.36 via the 533.18 silence, her foot 605.21 via the
+# 603.91 silence) and, v3, into the reveals the references build to (the head turn, "You have it", her face, her offer)
 EXTRA_MUSIC = [dict(t=526.4, type='riser', level=0.85, len=6.7, note='into the bell (via the 533.18 silence)'),
-               dict(t=598.3, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)')]
+               dict(t=598.3, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)'),
+               dict(t=197.65, type='riser', level=0.6, len=4.5, note='v3: lean closer -> the head turn (198.15)'),
+               dict(t=247.72, type='riser', level=0.65, len=5.0, note='v3: the wish -> "You have it" (248.22)'),
+               dict(t=283.27, type='riser', level=0.6, len=4.0, note='v3: "The queen says" -> her face (283.77)'),
+               dict(t=477.78, type='riser', level=0.55, len=4.5, note='v3: she pats the mattress -> her face (478.28)')]
+# swells: the references breathe about 1.8 times a minute (+8.5 LU over about 14 s); the plan had 44 (3.8 a minute,
+# +12 LU). Kept: the authored builds (level >= 0.55), not the card decays, at least 9 s apart
+SWELL_MIN_LEVEL = 0.55
+SWELL_GAP = 9.0
+# the act-by-act breath of the bed: music as heard under the narration (3 s short-term, LU rel the voice's integrated
+# loudness), steered by mix.py (--steer). References: -13 to -16 under speech; quiet passages are the dawn, the memory
+# and the ending, the loudest the climax (70-80 % of the film, as in the references' light and sound)
+ARC = [(0.0, -11.0), (12.4, -11.0), (13.2, -14.0), (19.0, -14.0), (22.0, -17.0), (66.0, -17.0), (71.0, -16.0),
+       (88.0, -15.0), (92.0, -16.5), (112.0, -15.0), (128.5, -11.5), (131.0, -13.0), (136.0, -14.5), (160.0, -14.5),
+       (181.0, -13.5), (196.5, -12.0), (204.5, -12.5), (230.0, -13.5), (245.0, -11.5), (262.0, -10.5), (268.5, -10.5),
+       (288.5, -10.0), (292.0, -18.0), (330.0, -18.0), (340.0, -15.0), (350.0, -13.0), (356.0, -12.5), (372.0, -13.0),
+       (380.0, -15.0), (397.0, -15.0), (400.0, -19.5), (440.0, -18.5), (446.5, -12.0), (464.0, -12.0), (470.0, -11.0),
+       (480.0, -10.0), (484.5, -16.0), (500.0, -16.0), (503.5, -13.0), (531.0, -10.0), (542.5, -11.0), (585.0, -9.0),
+       (600.0, -8.0), (611.0, -8.5), (625.0, -9.5), (631.0, -18.0), (676.0, -17.0), (690.0, -13.5), (698.6, -11.5),
+       (700.0, -11.5)]
 # score.py's own layers (dB curves per bus, piecewise-linear): only where they help the tracks
 DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
-# v2 review (critic M2): the v2 mix was squashed (LRA 2.4 against 4.2-5.4, limiter 6.1 dB) and the bed sat too low under the
-# narration (-14.3 against sibling -11.9): delivered at -16 LUFS (references -15.7 to -17.9) with the glue and limiter
-# eased, hits free to reach +8 LU, the bed 2-3 dB up and ducked less under the voice so it carries across the cuts
-MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--bed-rel', '-9.5', '--bed-p50', '-12', '--music-lo', '-10.5',
-            '--music-hi', '-9', '--hit-duck', '3', '--hit-dip', '9', '--score-hits-db', '6', '--lev-lo', '-3',
-            '--lev-hi', '9', '--tilt', 'mirror', '--sub-boost', '3', '--master-lufs', '-16', '--duck', '2.5', '--glue-max', '1.5',
-            '--voice-plr', '13']
+# v2 review (critic M2) delivered at -16 LUFS with the glue and limiter eased. Sound v3: back to -14 LUFS (true peak
+# <= -1 dBTP) with the act shape steered (--steer, the ARC above, replaces the two-way leveler that flattened it), the
+# bed up under the voice and rising in the pauses (--duck 4 with the arc 4 dB over it), a bass-weighted score bus
+# (--tilt v3: the references' 31-125 Hz weight, a cut at 500 Hz-1 kHz), the hits as punctuation (pre-hit suck-out 6 dB
+# on the hits that keep it), the voice chain unchanged
+MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--master-lufs', '-14', '--tp-max', '-1.0', '--steer', '0.85',
+            '--duck', '4', '--bed-rel', '-10.5', '--bed-p50', '-12.5', '--music-lo', '-15', '--music-hi', '-8',
+            '--hit-duck', '3', '--hit-dip', '6', '--score-hits-db', '4', '--tilt', 'v3', '--sub-boost', '6',
+            '--glue-max', '1.5', '--voice-plr', '13']
 
 
 def _gate(base, spans, depth, ramp=0.6):
@@ -94,15 +130,17 @@ def _gate(base, spans, depth, ramp=0.6):
 
 
 LAYERS = {
-    'drones': _gate(-5.0, [DAWN, MEMORY, WARM_END], -45.0),
+    # v3: the drones (the synth sub on the key root, contrabass and celli sustains) are the bed's floor under every act
+    # but the too-normal dawn, the bleached memory and the warm first half of the ending (references: 31-63 Hz +11 to
+    # +13 dB over 1 kHz in every window measured)
+    'drones': _gate(0.0, [DAWN, MEMORY, WARM_END], -45.0),
     'strings_bed': _gate(-12.0, [DAWN, MEMORY, WARM_END, (19.18, 88.66)], -45.0),
     'strings_fx': _gate(-5.0, [DAWN, MEMORY], -16.0),
     'melodic': [[0, -2.0], [720, -2.0]],
-    # critic M4: the bed builds steadily to its peak in the 70-80 % tenth (sibling) instead of peaking late and falling:
-    # the tracks ramp continuously from rule 5's card to the bell, hold through the climax and ease into the ending
-    'tracks': [[0.0, -1.0], [88.66, 0.0], [446.33, -2.0], [533.0, 2.5], [536.0, 2.5], [542.03, 1.0], [604.0, 2.5],
-               [628.7, 0.0], [677.39, 0.0], [698.0, 1.0], [720.0, 1.0]],
+    # the act shape is mix.py's arc steering (ARC); the tracks bus only keeps the r1 lift into the bell and the climax
+    'tracks': [[0.0, 0.0], [520.0, 0.0], [533.0, 1.5], [542.03, 1.0], [604.0, 1.5], [628.7, 0.0], [720.0, 0.0]],
 }
+SUB_DB = 6.0                       # v3: the synth sub drone (score.render_sub) 6 dB up: the references' sub weight
 END_T = 698.62                     # hard cut to black: everything but the hit tails out (the faint bell is an SFX)
 PULSE_KEEP = (283.0, 291.0)        # the only score pulse: the queen's face (the tracks carry the other pulses)
 
