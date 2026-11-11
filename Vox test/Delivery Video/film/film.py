@@ -64,7 +64,7 @@ Global look (glob_fx): per-family exposure, the last 35 % creeping into red_aler
 T_HZ_OFF, a second ramp over the last minute, scare flashes, fade in / out (the police film's global look). Measured
 (480x270, every 3 s): red pixels 4.5 % over the last 35 % (<= 0.6 % before), luma 39 vs 44 in the first 65 %.
 
-Measured (W/tests/film/): 254 shots, median 2.41 s (p10 1.37, p90 3.93); 2560x1440, one process, one OpenCV thread,
+Measured (W/tests/film/): 235 shots (fix 3), median 2.41 s (p10 1.36, p90 4.19), 644.22 s; before fix 3 (254 shots), 2560x1440, one process, one OpenCV thread,
 160 frames over 40 shots: 0.38 s/frame mean incl. cold caches, 0.28 s steady, heaviest shot 0.45 s steady; heaviest chosen
 shot (doorway 122) 0.54 s steady (shared machine with the mix running; police budget 0.6). Preview 640x360 / 30 fps with 2
 workers: see README.md.
@@ -297,6 +297,8 @@ class Film:
         shot_common(self, sh, spec)
         mv = (sh.p.get('cam') or {}).get('mv', 'push')
         if sh.p.get('handheld_hz') and isinstance(spec.cam, Cam): spec.cam.shake_hz = sh.p['handheld_hz']
+        if sh.kind != 'door' and sh.p.get('posts') and isinstance(spec.cam, Cam):   # chained pushes into the finished image
+            for q in sh.p['posts']: spec.cam.post_push(q[0], q[1], q[2], q[3], q[6] if len(q) > 6 else 'push', x=q[4], y=q[5])
         if (spec.lens is None and isinstance(spec.cam, Cam) and not spec.cam.posts and mv != 'pull'
                 and sh.kind not in ('rule', 'black') and not sh.p.get('no_ppush')):
             spec.cam.post_push(sh.t0, sh.t1, 1.0, (1.0 + GLOBAL_PPUSH) ** max(0.3, sh.d), ease='push')
@@ -1092,7 +1094,7 @@ def B_upstairs(F, sh):
             x = lerp(1560, 1075, u_in) + 150 * u_push + 260 * u_out
             y = lerp(1300, 600, u_in) + 40 * u_push + 520 * u_out
             sz = 430 * (1.0 - 0.18 * u_push)
-            cv = pen.cv; cv.saveLayer(None, None)
+            cv = pen.cv; cv.saveLayer(skia.Rect(x - sz * 1.2, y - sz * 1.4, x + sz * 1.2, y + sz * 1.4), None)   # bounded: cheap at 2560
             CH.draw_hand(pen, 'you', x, y, sz, 'open', 172.0 - 14 * u_push, -1)
             cv.drawPaint(skia.Paint(Color=skia.Color4f(0.06, 0.07, 0.16, 0.62), BlendMode=skia.BlendMode.kSrcATop))   # the dark hall
             cv.drawPaint(skia.Paint(Color=skia.Color4f(1.0, 0.94, 0.76, 0.16 * u_push), BlendMode=skia.BlendMode.kSrcATop))   # her glow
@@ -2492,8 +2494,9 @@ def plan(F):
     C(w(240, 'window') - 0.1, 'side', window_open=True, cam=dict(mv='push', x=960, y=520, z=1.0, rate=0.03))
     tpush = t(241) + 0.45
     C(T(241), 'upstairs', lily_door=lambda tt, t0=tpush: 0.07 + 0.83 * ease_in_out(clamp((tt - t0) / 1.1)), pov_push=tpush, dof=0.6,
-      cam=dict(mv='keys', shake=3.0, keys=[(T(241), 960, 531, 1.15, None, 1.25), (tpush, 960, 531, 1.4, 'in_out', 1.75),
-                                           (T(242), 960, 531, 1.6, 'lin', 2.05)]),
+      cam=dict(mv='keys', shake=3.0, keys=[(T(241), 960, 531, 1.15, None, 1.3), (tpush, 960, 531, 1.4, 'in_out', 1.3),
+                                           (T(242), 960, 531, 1.6, 'lin', 1.3)]),        # constant optical zoom: no re-bakes
+      posts=[(T(241), tpush, 1.0, 1.12, 0, 0, 'in_out'), (tpush, T(242), 1.0, 1.25, 0, 0, 'lin')],    # the push into the image
       sfx=[(tpush, 'door_creak', -2, 0, 'inside'), (tpush - 0.05, 'cloth_rustle', -10, 0.3, 'close')])
     # one continuous shot (fix 3): the door swings in on the open window, push to the black gap and the blowing curtains,
     # then pan down to the empty bed ("the window is wide open / the curtains are moving / her bed is empty")

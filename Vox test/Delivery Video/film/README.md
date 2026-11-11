@@ -22,17 +22,18 @@ All commands run from this folder (`Vox test/Delivery Video/film`). The work dir
 ```
 python3 film.py --list                    # every shot (index, start, length, kind) + count / median / p10 / p90
 python3 film.py --cues                    # cue sheets -> W/cues/sfx_cues.json, music_cues.json, shots.json
-python3 film.py --sheet W/tests/film/sheet_a --range 0 127 --cols 6 --tile 320     # mid-shot stills as contact sheets (frames at 960x540)
-python3 film.py --sheet W/tests/film/sheet_b --range 127 254 --cols 6 --tile 320
+python3 film.py --sheet W/tests/film/sheet_a --range 0 118 --cols 6 --tile 320     # mid-shot stills as contact sheets (frames at 960x540)
+python3 film.py --sheet W/tests/film/sheet_b --range 118 235 --cols 6 --tile 320
 python3 film.py --bench 40 --size 2560x1440 --threads 1                     # full-size speed, one process
-python3 film.py --bench 1 --shots 217,218,219,220,228,237,206,221,234,122,187 --size 2560x1440 --threads 1   # chosen shots
+python3 film.py --bench 1 --shots 13,17,45,51,78,189,199,200,204,208,218,229 --size 2560x1440 --threads 1   # chosen shots
 ```
-- 254 shots, median 2.41 s (p10 1.37, p90 3.93, shortest 0.58).
-- Contact sheets: `W/tests/film/sheet_a_00..03.jpg` (shots 0-126) and `sheet_b_00..03.jpg` (127-253), 36 shots a sheet, each tile labelled `index kind time`. Run the two halves as two processes (about 1.5 min each).
+- 235 shots, median 2.41 s (p10 1.36, p90 4.19, shortest 0.58), 21.9 cuts/min (fix 3 merged 19 needless same-setup cuts into
+  continuous moves; the police film runs 23.4).
+- Contact sheets: `W/tests/film/sheet_a_00..03.jpg` (shots 0-117) and `sheet_b_00..03.jpg` (118-234), 36 shots a sheet, each tile labelled `index kind time`. Run the two halves as two processes (about 1.5 min each). The fix-3 sheets are in `W/tests/fix3/sheets/`.
 - The bench writes `W/tests/film/speed_<size>.json` (or `speed_shots_<size>.json` with `--shots`).
 - `film.py --cues` writes:
-  - `sfx_cues.json`: `{t, name, gain_db, pan, space, params}` (742 events).
-  - `music_cues.json`: `{duration, intensity, events}` (121 events).
+  - `sfx_cues.json`: `{t, name, gain_db, pan, space, params}` (339 events: the hazard relay is one phase-locked bed now, not 400 ticks).
+  - `music_cues.json`: `{duration, intensity, events}` (115 events; `duration` = the picture's length, 644.22 s).
   - `shots.json`: the cut list, `{i, t0, t1, kind, space, loc, era, cut}`, for the sound team.
   - `music_cues_plan.json` in the same folder is the audio teammate's file; `--cues` does not touch it.
 
@@ -48,15 +49,24 @@ python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview --audio W/
 - **Full mode** splits the range into contiguous slices, one per worker process, each with one OpenCV thread. Each slice is encoded with libx264 at crf 16, preset faster, and the slices are joined with a stream copy. Workers pass absolute frame indices to the film (the same as stills), so a range render matches the full render frame for frame.
 - **Finished slices** get a `.done` marker. A re-run skips them, so delete the markers (and the slices) before rendering a changed film into the same `--out`.
 - **Audio**: `film.mp4` gets the audio padded to the picture's length (the last 2 s of black after the final line stay). For a partial range (`--from_ / --to`) the audio is muxed from `--from_`. Until the mix exists, use the voiceover `W/align/vo_en.wav`.
-- **The preview** is `W/preview/preview.mp4`: 640x360, 30 fps, 642.7 s, with the voiceover. It is `film.mp4` of the preview render renamed; the slices and `picture.mp4` were deleted.
+- **The film is 644.22 s**: the narration (640.72 s) + 3.5 s (fix 3 added 1.5 s of black after the last knock so the end
+  cadence rings out inside the picture). 38,653 frames at 60 fps.
+- **The preview** is `W/preview/preview.mp4` (640x360, 30 fps, 644.2 s, the voiceover) and `W/preview/preview_mix.mp4` (the same
+  picture with the final mix). The preview render was run with `--audio _work/mix/final/mix.wav`; its `film.mp4` became
+  `preview_mix.mp4`, the voiceover was muxed onto `picture.mp4` for `preview.mp4`, and the slices were deleted.
 - **The 5 s full-mode test** is `W/tests/render5_553.5-558.5_2560.mp4` (the app screen cutting to the 3:41 photo): 2560x1440, 60 fps, 300 frames, 3 workers, end to end in 51 s while the mix was running; its audio offset checks to 553.50 s.
 
 ## Speed (police budget: 0.6 s/frame at 2560x1440, one process, one OpenCV thread)
 - `film.py --bench 40` (160 frames over 40 shots, shared machine with the mix running): mean 0.38 s/frame including cold caches, 0.28 s steady. The heaviest shot is 0.45 s steady (shot 221, the full-screen app over the hall).
+- Fix 3, consecutive frames (every 3rd frame of the shot, cold caches included, one process): the door push with your hand
+  (199) 0.25 s, Lily's room window push (200) 0.25, the vent push (208) 0.21, the one-move 3:41 photo drawn live (204) 0.29,
+  the 3:11 clock push (78) 0.25. `--bench` samples 4 frames spread over a shot, so on the shots with an optical push
+  (`mv='keys'` with f > 1) every sample re-bakes a layer cache at a new density and reads 0.8-1.4 s: not what a render sees.
+  Keep optical zoom (f) changes small or constant on big cached sets (shot 199 holds f and pushes into the image instead).
 - The heaviest shots (`--bench 1 --shots ...`, steady): doorway 122 (memory, door open) 0.54 s, phone 221 0.44 s, doorway 234 0.39 s, keys 237 0.29 s, the 3:41 photo shots 0.16-0.19 s, the latch insert 0.15 s. The first frame of a shot can take up to 1.5-2.4 s while its static layers are baked.
 - The doorway's dolly is capped at 2 %/s: a faster optical zoom re-blurs its frame-sized walls every frame (0.74 s).
-- The photo shots bake their crop into one cached layer (`photo341_<crop>`), so the camera never zooms optically past about 1.3.
-- The full film is 38,560 frames at 60 fps. Three workers render it in about 1.5 h on a quiet machine.
+- The 3:41 photo is one shot drawn live (vector, sharp at any zoom, ~0.15 s a frame for the still itself); the old `comp=` crops still bake one cached layer each.
+- The full film is 38,653 frames at 60 fps. Three workers render it in about 1.5 h on a quiet machine.
 
 ## Sound: the final mix
 **Rebuild after any picture change** (about 7 min; `mix.py` peaks at 7 GB, so no render may run at the same time):
@@ -74,22 +84,66 @@ ffmpeg -v error -y -i _work/preview/preview.mp4 -i _work/mix/final/mix.wav -map 
 ```
 Full picture with the mix: `python3 render.py --workers 3 --audio _work/mix/final/mix.wav`. `python3 audio/mix.py --check _work/cues _work/mix/final` exits 1 when the mix is older than the cue sheets.
 
-**Outputs** in `W/mix/final/`: `mix.wav` (= `mix_en.wav`, 48 kHz 24-bit stereo, 643.22 s), `stems/{voice_en,music,sfx}.wav` (float, final gain, before the limiter), `mix_report.json`, `mix.log`, `measure.json` / `measure.txt`, `measure_cues.json` (every one-shot cue re-rendered and checked), `measure_plot.png` (loudness map: voice, music, SFX, silences, hits, rule cards). The preview with the mix is `W/preview/preview_mix.mp4` (640x360, 30 fps, 642.73 s, AAC 320k stereo).
+**Outputs** in `W/mix/final/`: `mix.wav` (= `mix_en.wav`, 48 kHz 24-bit stereo, 644.22 s = the picture's length exactly, with a
+1.5 s master fade to silence over the cut to black), `stems/{voice_en,music,sfx}.wav` (float, final gain, before the limiter), `mix_report.json`, `mix.log`, `measure.json` / `measure.txt`, `measure_cues.json` (every one-shot cue re-rendered and checked), `measure_plot.png` (loudness map: voice, music, SFX, silences, hits, rule cards). The preview with the mix is `W/preview/preview_mix.mp4` (640x360, 30 fps, 644.2 s, AAC 320k stereo).
 
 **Measured** (`measure_mix.py`, BS.1770 per-channel K-weighting; "rel voice" = against the voice stem's integrated loudness):
 
 | | result | target |
 |---|---|---|
-| Mix integrated / true peak | -14.03 LUFS / -1.70 dBTP (preview AAC: -14.0 / -1.5) | -14, <= -1.0 |
-| Voice vs mix | -0.05 LU | within 0.5 |
-| Voice minus bed (music + SFX) during speech, 400 ms blocks | p5 7.5 LU, median 17.5; under 3 LU in 1.3 % of speech, under 0 LU in 0.4 % (word onsets under swell peaks and reveal hits) | voice always clear |
-| Same in the 1-4 kHz intelligibility band | p5 10.7 dB, median 24.9 | |
-| Music outside the 21 authored silences (+4 s re-entry) | above voice -32 LU 100 %, above -26 LU 96.7 %; no holes | under the voice the whole time |
-| Silences | 21 (1.96/min), 17.4 dB deep (median) | 1.5/min, 15 dB |
-| Bed integrated / 3 s p10-p50-p90 / LRA | -13.8 LU / -21.7, -16.1, -11.0 / 12.2 LU | -13 +- 1 / p50 -16 / 13-14 |
-| Bed by quarter | -15.3 / -16.1 / -13.5 / -11.6 LU; loudest 10 s at 633 s | Q2 calmest, end loudest |
-| Bed spectrum < 250 Hz / 250 Hz-4 kHz / > 4 kHz | 71 / 28 / 0.7 % | 70 / 29 / <= 2 % |
-| Hits | 3.45/min; peak median -4.8 LU, max +3.2 LU rel voice | 3/min; +2 / +9 |
-| One-shot SFX cues checked | 275: 0 silent, 0 failed, 7 flags left (below) | |
+| Mix integrated / true peak | -14.03 LUFS / -1.70 dBTP | -14, <= -1.0 |
+| Voice vs mix | -0.06 LU | within 0.5 |
+| Voice minus bed (music + SFX) during speech, 400 ms blocks | p5 7.6 LU, median 17.1; under 3 LU in 1.0 % of speech, under 0 LU in 0.4 % | voice always clear |
+| Same in the 1-4 kHz intelligibility band | p5 11.0 dB, median 24.8 | |
+| Music outside the 20 silences | above voice -32 LU 100 %, above -26 LU 97.6 %; no holes | under the voice the whole time |
+| Silences | 20 (1.86/min), 18.2 dB deep (median), all >= 1.7 s, none at 376.9 / 436, one added at 136.4 | 1.5/min, 15 dB |
+| Bed integrated / 3 s p10-p50-p90 / LRA | -13.7 LU / -21.6, -16.0, -11.0 / 11.7 LU | -13 +- 1 / p50 -16 / 13-14 |
+| Bed by quarter | -15.2 / -15.8 / -13.5 / -11.7 LU; loudest 10 s at 633 s | Q2 calmest, end loudest |
+| Bed spectrum < 250 Hz / 250 Hz-4 kHz / > 4 kHz | 74 / 26 / 0.6 % | 70 / 29 / <= 2 % |
+| Hits | 3.07/min; peak median -4.8 LU, max +4.5 LU rel voice | 3/min; +2 / +9 |
+| The end | the last knock (640.04) lands in silence, the hit 0.15 s after it; the last 100 ms of the file -103 dBFS, last sample 0 | no chop |
+| One-shot SFX cues checked | 246: 0 silent, 0 failed, 8 flags left (below) | |
 
-**Cue flags left** (all looked at): the doorbell button click under its own ding-dong (37.0 s) and two doorbell-speaker clicks under the driver's first syllable (205.0, 347.1 s), all texture, three all-night box knocks in the hall that keep only 15-18 dB above 300 Hz (486-496 s; the knocks around them read), and the sunrise tape peel's transient 70 ms after its cue (no picture sync point; the cue was moved 70 ms earlier).
+**Cue flags left** (all looked at): the doorbell button click under its own ding-dong (37.0 s), a cloth rustle and the
+driver's last step on the porch under the voice (159.8, 469.1 s: texture; his steps fade away from the mic on purpose), three
+box knocks that keep only 15-16 dB above 300 Hz (417.5 outside; 490.4 and 495.3 in the hall, the all-night loop), and the
+sunrise tape cut / box flaps whose recorded transients sit 130 ms after the cue (no exact picture sync point).
+
+## Fix round 3 (picture and sound review of the first preview)
+Picture:
+- **Backs of heads**: the hair covers the skull down to the nape (`characters._nape`, `_hairline`) and a head turned more than
+  ~100 deg leaves out the jaw under the back hairline (`_nape_cut`): seen from behind you get hair, small ears and the neck,
+  never a pale 'face' oval (all from-behind shots and the 3:11 photo, which is drawn live from the cast).
+- **Lily's window**: the lower sash is up with a black night gap, the curtains blow into the room (`sets._curtain_billow`,
+  gusts lift the hem up to 30 % and swing the free edge across the gap); "wide open / curtains moving / bed empty" is one
+  shot: a push to the window (`KeyCam` optical zoom), then a pan down to the empty bed.
+- **The driver** is never pleasant: `DRIVER_STAGES` start at a fixed grin with a line of teeth and tiny pupils; he talks
+  through it (`talk` 0.72) and the bust tablet is held by his hand.
+- **The 3:41 photo**: he stands on the green wheelie bin under her window, the arm bent (reach solved on `hand_pos`), head
+  turned back over his shoulder into the flash; the four photo shots are ONE 12.7 s move over the live-drawn still
+  (`B_photo path=`), stamp top right, clear of faces and captions.
+- **Merged cuts** (19): the doorbell ring/feed (36-43 s), the order screen, the tablet insert (124-137 s, the letter draws
+  itself in on "isn't"), the timestamp zoom, the box look, the label tilt, the photo 3:11 / photo gone / app-updates / next
+  night phone shots (keyed phone `zkeys`), the window search, the van leaving through her window, the 3:41 photo.
+- **Motion**: lens shots on the deep sets (upstairs, side, hallback, lily) get a 2.8 %/s post push + drift and the upstairs a
+  nervous handheld; snap punch-ins are eased 0.24 s pushes; the run through the house is a running handheld follow
+  (`surface='inside_run'`), "open a crack" is a dark door with a bright slit, "you push the door open" is your hand.
+- **Story beats**: the app shows only the photo and "Return complete" until the reveal (`sig`), the box at the door is in the
+  doorbell lens with its label, the sting's label reads "Lily" in her hand, the van comes from down the street, the empty
+  box 21 years ago, the cut tape, sitting down next to mom, the phone glow at 3:07, the 3:39 clock on what Lily heard, the
+  open window from outside, terror (not drowsiness) on your face.
+- **Climax look**: from rule 7 (508 s) a faster ramp into red and dark, and the van's hazards wash the frame in blinking red
+  (`engine.post.Spill`) until they stop on "stop" (`T_HZ_OFF` 591.65). Red pixels: <= 0.6 % per tenth before, 4.5 % over the
+  last 35 %; luma 39 vs 44 in the first 65 % (12 % darker; the flash-lit photo and the sunrise keep it from 15 %).
+Sound:
+- The mix is the picture's length with a master fade; the score's end fade runs even when the cadence outlasts the film.
+- Knocks have their own bus: out of the foley-dip key and the pre-hit dips (only the first knock of a group dips 2 dB).
+- The payoff knocks are heard (640.04 in silence, the hit after it; 378.8 hit at 0.5, 0.3 s late, close knock +4 dB).
+- Risers peak on the reveal words (rings, empty, shine, wide, Lily); none into silences or doubling a card riser.
+- "Two, then one" at 489 is clean (the all-night loop leaves 1.2 s either side); the faster knocks group 0.16 / 0.33 s.
+- 21 years ago the box murmurs (`box_voice` + whispers), the van door slams on "shut" (+6 dB), the van arrival +6 dB.
+- The sunrise is heard (+15 dB, the open porch with birds from the door creak; no impact on the soft white cut).
+- One set of stair steps (mom in slippers on the stairs at -7), a running pace for the search (3.5 steps/s).
+- The diesel idles under every exterior van shot (a second layer on top of the indoor bed), the pull-away +4 dB.
+- The hazard relay is one phase-locked bed; tag pops are off in the hushed beats; the doorbell speaker clicks only when he
+  starts talking again; what Lily heard comes through her vent; the far knocks are 6 dB up.
