@@ -507,9 +507,16 @@ class CamPath3:
         self.shift = shift
         self._last = (None, None)
 
+    def _raw(self, u):
+        return np.array([mono_cubic(self.ts, self.vals[:, j], u) for j in range(self.vals.shape[1])])
+
     def state(self, t):
         u = self.warp(t)
-        return np.array([mono_cubic(self.ts, self.vals[:, j], u) for j in range(self.vals.shape[1])])
+        if len(self.ts) > 2 and self.ts[0] < u < self.ts[-1]:
+            if not hasattr(self, '_arc'):
+                self._arc = ArcBlend(self.ts, self._raw, (1.0, 1.0, 1.0, 1 / 35.0, 1 / 35.0, 1 / 30.0, 1 / 20.0))
+            u = self._arc(u)
+        return self._raw(u)
 
     def at(self, t):
         if self._last[0] == t: return self._last[1]
@@ -519,6 +526,31 @@ class CamPath3:
         return c
 
     __call__ = at
+
+
+class ArcBlend:
+    """Review round 2 (M20): no stop at a key. A per-channel monotone cubic has a zero tangent wherever a channel turns
+    (the camera passes the swimsuits and swings back: every channel slows at once and the move nearly stops). This
+    re-times the path: the path time u is moved so the travelled distance (metres of position, degrees of turn, fov ...
+    weighted into one measure) is a blend of the keyed timing and an even pace along the path. The camera still passes
+    through every key, near its time, but its speed never drops to zero inside the move (the eased ends stay the warp's)."""
+
+    def __init__(self, ts, fn, weights, lam=0.6, n=480):
+        self.t0, self.t1 = float(ts[0]), float(ts[-1])
+        us = np.linspace(self.t0, self.t1, n)
+        V = np.array([fn(u) for u in us])
+        w = np.asarray(weights, np.float64)[:V.shape[1]]
+        d = np.sqrt((((V[1:] - V[:-1]) * w) ** 2).sum(1))
+        S = np.concatenate([[0.0], np.cumsum(d)])
+        self.us, self.S, self.lam = us, S, float(lam)
+        self.ok = S[-1] > 1e-6
+
+    def __call__(self, u):
+        if not self.ok or u <= self.t0 or u >= self.t1: return u
+        Sk = float(np.interp(u, self.us, self.S))
+        Su = self.S[-1] * (u - self.t0) / (self.t1 - self.t0)
+        St = (1.0 - self.lam) * Sk + self.lam * Su
+        return float(np.interp(St, self.S, self.us))
 
 
 def mono_cubic(xs, ys, x):

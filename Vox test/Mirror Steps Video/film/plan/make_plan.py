@@ -228,7 +228,8 @@ NEW_V2_NAMES = set(NEW_V2)
 # ---------------------------------------------------------------- the v1 cues that the v2 picture no longer has, or moved
 # (v1 time, name) -> drop | new time. Cues of the old counter and the old rule cards are regenerated (see device_cues).
 SFX_DROP = [(5.60, 'ui_pop'), (7.52, 'stinger'), (10.67, 'ui_pop'), (125.48, 'lace_pull'), (287.27, 'ui_pop'), (461.10, 'ui_pop'),
-            (530.87, 'stinger'), (603.25, 'stinger')]
+            (530.87, 'stinger'), (603.25, 'stinger')] + \
+           [(t_, 'wet_footstep') for t_ in (165.52, 165.94, 166.36, 166.78, 168.72, 169.42, 170.4, 171.76, 172.16)]   # review round 2 (B1): shotlist.PRINTS
 SFX_MOVE = {(25.14, 'excavator_creak'): 27.30, (34.24, 'ambience_memory'): 36.65, (39.19, 'footsteps_gravel'): 40.40,
             (49.21, 'candy_wrapper'): 51.10, (122.87, 'impact_hit'): 122.87, (212.54, 'stinger'): 213.10, (218.15, 'paper'): 221.30,
             (221.42, 'car_door_close'): 220.40, (308.27, 'ui_pop'): 307.90, (362.99, 'ui_pop'): 362.80, (466.12, 'cloth_press'): 466.20,
@@ -710,6 +711,7 @@ def apply_merges(shots):
                 M_ = dict(M, chars=json.loads(json.dumps(cf_chars))) if run[-1]['t1'] > M['chars_from'] + 0.03 else dict(M, chars=[])
             o = _merge_run(run, pk, M_, c3, base=new[0]['chars'] if new else None)
             if M.get('drop_hud'): o['hud'] = [h for h in o['hud'] if h.get('type') not in M['drop_hud']]
+            if M.get('hud_add') and run is runs[0]: o['hud'] = list(o['hud']) + [dict(h) for h in M['hud_add']]
             if run is not runs[0]:
                 o['resumes'] = round(runs[0][0]['t0'], 3)            # the move resumes after a cutaway (same camera path)
                 if M.get('resume_tr'): o['tr'] = M['resume_tr']

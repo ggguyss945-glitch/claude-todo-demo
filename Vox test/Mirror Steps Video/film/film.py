@@ -114,8 +114,16 @@ class PathCam(Cam):
         self.kv = [[k[1] for k in self.keys], [k[2] for k in self.keys], [math.log(max(1e-3, k[3])) for k in self.keys],
                    [k[4] for k in self.keys]]
 
+    def _raw(self, u):
+        return np.array([_mono(self.kt, ch, u) for ch in self.kv])
+
     def _base(self, t):
         u = self.warp(t)
+        if len(self.kt) > 2 and self.kt[0] < u < self.kt[-1]:      # review round 2 (M20): no stop at a key (room3d.ArcBlend)
+            if not hasattr(self, '_arc'):
+                from engine.room3d import ArcBlend
+                self._arc = ArcBlend(self.kt, self._raw, (1 / 300.0, 1 / 300.0, 1 / 0.12, 1 / 6.0))
+            u = self._arc(u)
         x, y, lz, r = (_mono(self.kt, ch, u) for ch in self.kv)
         return x, y, math.exp(lz), r
 
@@ -802,7 +810,9 @@ class Film:
                 dep = place(sp, spec2, at, sh)
             except Exception as e:
                 dep = None; _warn((sh['id'], 'place'), 'place %s: %r' % (sh['id'], e))
-            if dep is not None and isinstance(at, (list, tuple)):
+            if dep is not None and isinstance(at, (list, tuple)) and not spec.get('_depth'):
+                # (an explicit _depth in the plan wins: review round 2, B12: the taped hand belongs at the railing's depth; in
+                # front of the whole room a 1.8x dolly blew it up and swept it off the frame)
                 if spec2.get('mode', 'body') in ('body', 'legs', 'silhouette'):
                     at = list(at[:3]) + [dep]
                 else:
@@ -824,7 +834,7 @@ class Film:
             L_ = _char_layer(rig, at, mode, st_, sh, spec2, sp)
             if st_ is not None: _hook_beam(sp, rig, at, L_, st_)
             layers.append(L_); rigs.append(rig)
-            if not spec2.get('reflection'): subj.append((mode, L_))
+            if not spec2.get('reflection') and not spec2.get('ots'): subj.append((mode, L_))   # an OTS shoulder is never the focus
         layers += self._split_replays(sh)
         dl = ui_v2.doc_layer(sh)
         if dl is not None: layers.append(dl)
@@ -902,6 +912,10 @@ class Film:
             mode = spec.get('mode', 'body')
             if wf is None:
                 at = spec['at']
+                if mode not in ('body', 'legs', 'silhouette') and not spec.get('_depth'):
+                    # review round 2: POV hands / feet / busts on screen ride in front of the room (at depth 1.0 they were
+                    # drawn behind the near band of a travelling shot: your finger vanished behind the glass)
+                    spec = dict(spec, _depth=0.32)
                 L.append(_char_layer(rig, at, mode, None, B.sh, spec, sp))
                 continue
             P = wf(t)
@@ -925,7 +939,7 @@ class Film:
             # one frame at 0.3 m: Tess's jacket filled the frame and vanished); the fade follows the camera's distance to the
             # nearest of the feet, the middle and the head, so it is as smooth as the camera move
             dnear = min(cam.dist(np.asarray(P, float) + np.array([0.0, fr_ * hm, 0.0])) for fr_ in (0.0, 0.55, 0.92))
-            nf = smoothstep(clamp((dnear - 0.32) / 0.55)) if spec.get('mode', 'body') in ('body', 'legs', 'silhouette') else 1.0
+            nf = smoothstep(clamp((dnear - 0.2) / 0.3)) if spec.get('mode', 'body') in ('body', 'legs', 'silhouette') else 1.0
             if nf <= 0.01: continue
             if dist < 0.35:
                 # feet behind the lens (she looms over you): place the figure by its middle, else by its head

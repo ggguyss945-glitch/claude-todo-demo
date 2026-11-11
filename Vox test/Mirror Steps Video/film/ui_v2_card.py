@@ -509,9 +509,14 @@ def rule_card(cv, rc, e, t, film=None):
     s_, dy = _settle(u, max(settle, 0.34), min(over, 0.015))      # a soft settle (the 0.13 s bounce read as a camera jerk)
     drift = 1.0 + 0.010 * u                                    # the card keeps moving
     glow = 0.65 if st == 'red' else 0.0
+    # review round 2 (M12): the card enters with the flow (the dolly into the mirror): it fades up and grows out of the
+    # depth over the flow's 0.28 s instead of appearing whole in one frame, and the towel is already flying when it shows
+    ent = ease_out_cubic(clamp(u / 0.28))
+    ent_layer = ent < 0.999
+    if ent_layer: cv.saveLayer(None, skia.Paint(Alphaf=float(ent)))
     # dim vignette round the card (the plate is already blurred and dimmed by the shot's bg post)
     cv.drawRect(skia.Rect.MakeLTRB(0, 0, DW, DH), paint('#000000', 40))
-    S = s_ * drift * wscale
+    S = s_ * drift * wscale * (0.82 + 0.18 * ent)
     cv.save(); cv.translate(CX, CY + dy); cv.scale(S, S)
     # the static card (shadow, IN-glass reflection, ON-glass sheen / cracks / staircase, frame, tape) as ONE sprite with the
     # tilt baked in, blitted axis-aligned: a rotated full-card blit costs ~0.1 s per frame at 2560
@@ -567,9 +572,10 @@ def rule_card(cv, rc, e, t, film=None):
         cv.restore()
     # the towel on top, whipped away
     tw_ = e.get('towel_whip') or [t0, t0 + 0.30]
-    kt = (t - tw_[0]) / max(0.05, tw_[1] - tw_[0])
+    kt = 0.42 + 0.58 * (t - tw_[0]) / max(0.05, tw_[1] - tw_[0])          # already moving at the first frame
     if kt < 1: _towel(cv, clamp(kt))
     cv.restore()
+    if ent_layer: cv.restore()
     if False:                                                  # v2's 2-frame static band at t0 (the card now enters on a flow)
         for j in range(6):
             yy = hash01(j + int(u * 60) * 7, 5) * DH

@@ -289,6 +289,10 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
         else:
             dc = d - delta
             if dc <= 0.02 * l.ref_depth: continue                        # passed the camera
+            # review round 2 (B12): a strong 2D dolly (zoom 1.6-1.9) took the camera to within a tenth of the near layers
+            # (hands, busts in front of the room at depth ~0.54): they swelled 5x and were swept off the frame in a second.
+            # The near layers keep at least 42 % of their distance (the far ones are untouched).
+            if d < 0.9 and dc < 0.42 * d: dc = 0.42 * d
             sL = F * l.ref_depth / dc
             a = sL * sd
             tx = (hx - sL * C0X - F * Cx / dc) * sd

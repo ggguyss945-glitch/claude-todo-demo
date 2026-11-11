@@ -703,7 +703,7 @@ def _cabin_props(sc, cx, info):
             V = norm(v3(math.sin(sway) * 0.0, -1.0, -math.tan(abs(sway)) * 0.6))
             sc.plane(O, U, V, 26, (y1 - y0 + 0.08) * 100 * 0.95, cur, 0.05, 'curtain', 'window')
         sc.box(x0 - 0.12, y1 + 0.08, D - 0.09, x1 + 0.12, y1 + 0.1, D - 0.07, dict(all='#8a6a40'), 0.04, 'rod', 'window')
-        info['lantern'] = v3(x1 - 0.12, y0, D - 0.08)
+        info['lantern'] = v3(x1 - 0.3, y0, D - 0.08)
     else:
         info['lantern'] = None
     # ---------------------------------------------------------------- the clock on the back wall
@@ -1203,14 +1203,15 @@ def _theirs_props(sc, cx, info):
         _R(pen, None, w * 0.55, h * 0.45, w * 0.3, [(0, '#5a3a20', 70), (1, '#5a3a20', 0)], sy=0.6, clip=False)
     sc.plane((wx0 - 0.05, 0.004, D - 0.25), (1, 0, 0), (0, 0, -1), 82, 52, towel, 0.04, 'towel', 'floorprops')
     info['towel'] = v3((wx0 + wx1) / 2, 0.01, D - 0.5)
-    info['drop'] = v3((wx0 + wx1) / 2 + 0.05, 0.62, D - 0.5)
+    info['drop'] = v3((wx0 + wx1) / 2 + 0.05, 0.36, D - 0.5)          # review round 2 (B19): hangs low enough to be in the floor views
     # the battery lantern on the sill
     def lantern_c(pen, cam, xf):
-        p = xf.p(v3(wx1 - 0.12, wy0, D - 0.08))
+        p = xf.p(v3(wx1 - 0.3, wy0, D - 0.08))              # review round 2 (M8): clear of the curtain
         if cam.dist(p) < 0.1: return
         x, y = cam.pt(p); k = cam.px_per_m(p)
-        lantern(pen, x, y - 0.12 * k, 0.0025 * k / 0.9, 1.0, '#ffd9a0', '#3a4a3a', True)
-    sc.custom((wx1 - 0.12, wy0 + 0.1, D - 0.08), lantern_c, -60, 'lantern', 'window')
+        # review round 2 (M8): standing ON the sill (y is the lantern's base; it was drawn 12 cm up, hanging in the window)
+        lantern(pen, x, y, 0.0025 * k / 0.9, 1.0, '#ffd9a0', '#3a4a3a', True)
+    sc.custom((wx1 - 0.3, wy0 + 0.1, D - 0.08), lantern_c, -60, 'lantern', 'window')
     # kids' drawings taped to the right wall above the bunk head (OURS coords -> THEIRS left wall)
     for i, (zz, yy, cc) in enumerate(((5.0, 1.62, '#3f8fe0'), (5.4, 1.72, '#e05a3a'), (5.8, 1.6, '#3ab05a'))):
         def drawing(pen, w, h, i=i, cc=cc):
@@ -1740,7 +1741,7 @@ THEIRS_CAMS = {
     'floor_prints': ((2.75, 0.5, 0.55), (1.25, 0.0, 3.1), 68.0, 0.0),        # low wide at the wash-house door
     'door_wash': ((2.9, 1.3, 3.9), (1.6, 1.05, 0.0), 66.0, 0.0),            # the wash-house door swings in
     'swimsuits': ((2.05, 1.75, 4.05), (0.9, 1.55, 5.25), 56.0, 0.0),        # the swimsuits on the top rail
-    'lantern': ((3.75, 1.2, 5.55), (3.95, 1.02, 6.35), 46.0, 0.0),          # insert: the lantern on the sill
+    'lantern': ((3.88, 1.22, 5.25), (3.72, 1.04, 6.33), 44.0, 0.0),            # insert: the lantern on the sill (review round 2, M8: on it)
     'clock': ((4.45, 2.02, 5.45), (4.45, 2.1, 6.4), 40.0, 0.0),             # insert: the clock 6:59
     'knot': ((1.35, 0.5, 4.25), (0.8, 0.08, 4.95), 46.0, 0.0),              # insert: the half-tied lace
     'shoe': ((1.55, 0.62, 3.95), (0.95, 0.04, 4.85), 52.0, 0.0),            # insert: one shoe on, the other beside the bed
@@ -1877,7 +1878,7 @@ def theirs_view(vname, var, st, shot, extra=None):
     L += _theirs_live(cx, cam, xf, d0, st, vname, info)
     if vname in ('floor_prints', 'overhead', 'master', 'door_wash', 'reverse', 'top_stairs', 'bunk_2s', 'queen_3s', 'towel_floor', 'shoe'):
         pl = prints_live(cam, xf, d0, st)
-        if pl is not None: L.append(pl)
+        if pl is not None: L += pl
     if vname == 'door_wash':
         L.append(door_wash_live(cam, d0, st))
     if (var or '') == 'dawn_break':
@@ -2888,7 +2889,7 @@ def _v_window_out2(var, st, shot):
             cp = smooth([(cx0, 40), (cx1, 40), (cx1 - 10 + sk * 60, 1160), (cx0 + 10 + sk * 60, 1170)], True, 0.25)
             gingham(pen, cp, (cx0, 40, cx1, 1170), '#e9c64a', 2.0)
             pen.line(cp, 4, P['outline'], 200)
-        lantern(pen, 1500, 940, 1.1, 1.0, '#ffd9a0', '#3a4a3a', True)
+        lantern(pen, 560, 960, 1.1, 1.0, '#ffd9a0', '#3a4a3a', True)     # review round 2 (M8): on the sill's left, as in every view
     L = [_cl(4.0, outside, 'outside', 'v2:wout:out', (-900, -700, 2820, 1500)), _live(3.6, bell_far, 'fake_bell', blur=0),
          _live(3.0, spr, 'sprinkler', blur=0), _live(2.0, lambda pen, t: frozen_motes(pen, t, (160, 80, 1760, 1000), 40, 71), 'motes', blur=0),
          _cl(1.0, frame, 'window_frame', 'v2:wout:frame', NEAR)]
@@ -3352,46 +3353,44 @@ def flashlight_floor_live(cam, xf, d0, st, var):
 
 
 def prints_live(cam, xf, d0, st):
-    """THEIRS: wet footprints appear on the wet_footstep cues (one per 0.42 s), two trails from the wash-house door to
-    Noah's bunk: a bare one and a shoe-then-bare one (THEIRS world coords)."""
-    # the prints run 165.52-173.68 (the plan's wet_footstep cues); after that both trails stay on the floor
-    cues = [c for c in S1._plan_cues(165.0, 174.0) if c['name'] == 'wet_footstep']
-    track = [(c['t'], 0, 0, 'bare' if (c.get('params') or {}).get('bare', True) else 'shoe', 0, i % 2 == 0) for i, c in enumerate(cues)]
-    if st.t1 < 165.0: track = []
-    if not track:
-        fp = str(st.raw.get('prints', ''))
-        import re
-        ts = [float(x) for x in re.findall(r'(\d+\.\d+)', fp)]
-        if ts: track = [(ts[0] + 0.42 * i, 0, 0, 'bare' if i % 2 == 0 else ('shoe' if i % 4 == 1 else 'bare'), 0, i % 2 == 0)
-                        for i in range(int((ts[-1] - ts[0]) / 0.42) + 1)]
-    if not track and str(st.raw.get('prints', '')) == '':
-        # the trails are already there after 173.68 (floor views later in the film)
-        if st.t0 > 173.7 and st.t0 < 545: track = [(0.0, 0, 0, 'bare' if i % 2 == 0 else ('shoe' if i % 4 == 1 else 'bare'), 0, i % 2 == 0) for i in range(16)]
+    """THEIRS: two trails of wet footprints from the wash-house door to Noah's bunk (THEIRS world coords). Review round 2 (B1):
+    each print appears on its own wet_footstep cue of the sound plan (params trail A / B, i, bare), 26 cm long, dark wet wood
+    with a sheen and a small splash glint as it lands; trail A is bare feet, trail B a shoe print then a bare foot. After the
+    walk (173.7 s) both trails stay on the floor, drying slowly."""
+    cues = [c for c in S1._plan_cues(163.0, 174.5) if c['name'] == 'wet_footstep' and (c.get('params') or {}).get('trail')]
+    if cues and st.t1 < 163.9: cues = []
+    track = [(float(c['t']), c['params']['trail'], int(c['params'].get('i', 0)), 'bare' if c['params'].get('bare', True) else 'shoe') for c in cues]
+    if not track and 173.7 < st.t0 < 545:
+        track = [(0.0, 'A', i, 'bare') for i in range(7)] + [(0.0, 'B', i, 'shoe' if i % 2 == 0 else 'bare') for i in range(7)]
     if not track: return None
-    a = v3(1.6, 0, 0.45); b = v3(1.05, 0, 4.45)
+    door, end = v3(1.62, 0, 0.2), v3(1.26, 0, 4.42)
+    dz = norm(end - door); side = v3(dz[2], 0, -dz[0])                        # across the trail
     pts = []
-    nb = ns = 0
-    for (tt, _, _, kind, _, left) in track:
-        bare_trail = kind == 'bare' and (nb <= ns)
-        i = nb if bare_trail else ns
-        if bare_trail: nb += 1
-        else: ns += 1
-        u = min(1.0, (i + 0.5) / 8.0)
-        P_ = a + (b - a) * u + v3(-0.12 if bare_trail else 0.12, 0, 0) + v3(0.05 * (1 if i % 2 else -1), 0, 0)
-        pts.append((tt, P_, kind, i % 2 == 0))
-    dep = sdep(cam, xf, d0, (a + b) / 2, 0.003)
+    for (tt, trail, i, kind) in track:
+        u = (i + 0.5) / 7.0
+        left = (i % 2 == 0)
+        P_ = door + (end - door) * u + side * ((-0.16 if trail == 'A' else 0.16) + (0.065 if left else -0.065))
+        pts.append((tt, P_, kind, left))
+    ang = math.degrees(math.atan2(dz[0], dz[2]))
+    out = []
+    for j, (tt, P_, kind, left) in enumerate(pts):
+        if cam.dist(P_) < 0.25: continue
 
-    def draw(pen, t):
-        for (tt, P_, kind, left) in pts:
-            if t < tt: continue
-            k = clamp((t - tt) / 0.12)
-            dry = 1.0 - 0.25 * clamp((t - tt) / 30.0)
+        def draw(pen, t, tt=tt, P_=P_, kind=kind, left=left):
+            if t < tt: return
+            k = clamp((t - tt) / 0.1)
+            dry = 1.0 - 0.3 * clamp((t - tt) / 40.0)
+            sp = clamp(1.0 - (t - tt) / 0.35)
 
-            def fp(p, w, h, kind=kind, left=left):
-                footprint(p, w / 2, h / 2, 0.42, kind, 0.0, k * dry, left, '#6e4e26', '#fff6dc')
-                footprint(p, w / 2, h / 2, 0.42, kind, 0.0, 0.6 * k * dry, left, '#5a3e1c', '#ffffff')
-            draw_plane(pen, cam, ID, P_ + v3(-0.15, 0.002, 0.2), (1, 0, 0), (0, 0, -1), 30, 40, fp, True, 0.01)
-    return _live(dep, draw, 'prints', blur=None)
+            def fp(p, w, h):
+                footprint(p, w / 2, h / 2, 0.28, kind, ang, k * dry, left, '#4a2e10', '#fff6dc')
+                footprint(p, w / 2, h / 2, 0.28, kind, ang, 0.45 * k * dry, left, '#3a2208', '#ffffff')
+                if sp > 0.01:                                                    # the splash as it lands
+                    p.fill(oval(w / 2, h / 2, 16 * (1.4 - sp)), '#fff6dc', int(120 * sp))
+            draw_plane(pen, cam, ID, P_ + v3(-0.17, 0.002, 0.22), (1, 0, 0), (0, 0, -1), 34, 44, fp, True, 0.01)
+        # each print on the floor band at its own distance (one layer at the trail's middle hid the prints in the near band)
+        out.append(_live(sdep(cam, xf, d0, P_, 0.003), draw, 'print%d' % j, blur=None))
+    return out or None
 
 
 def door_wash_live(cam, d0, st):

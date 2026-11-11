@@ -4088,14 +4088,14 @@ class Acting:
         name = {'card': 'paper', 'notebook': 'paper', 'photo': 'paper', 'radio': 'radio_click', 'phone': 'ui_pop', 'pen': 'pen_click'}.get(prop)
         return [self._ev(t0 + 0.1, name, -6.0)] if name else []
 
-    def hand_on_glass(self, t0, t1, side=1, reach=470.0):
+    def hand_on_glass(self, t0, t1, side=1, reach=470.0, down=-125.0):
         contact = t0 + 0.55
         def fn(P, t):
             w = _env(t, t0, t1, 0.55, 0.45, ease)
             if w <= 0: return
             pr = clamp((t - contact) / 0.12) * (1.0 - prog(t, t1, t1 + 0.15))
             slide = 4.0 * noise1(t * 0.8, self.seed + 21) * pr
-            self._arm(P, side, w, -(self.sp['body']['sh'] - 17) * 0.6, -125.0 + slide, reach, 'flat', up=1.0, press=pr)
+            self._arm(P, side, w, -(self.sp['body']['sh'] - 17) * 0.6, down + slide, reach, 'flat', up=1.0, press=pr)
             P.lean += 0.12 * w; P.h_nod -= 0.04 * w
         self._add(t0, t1 + 0.5, fn)
         return [self._ev(contact, 'knock_door', -12.0, n=1, soft=True)]
@@ -6382,7 +6382,8 @@ class _MirrorClips:
     def fingers_flex(self, t0, dur=1.2):
         def fn(P, t):
             u = prog(t, t0, t0 + dur)
-            P.ir_shape = 'open' if 0.25 < u < 0.7 else 'relaxed'; P.ir_a += 6.0 * math.sin(u * PI)
+            # review round 2: the fingers open and close through the in-between shapes (they swapped in one frame)
+            P.ir_shape = shape_mix('relaxed', 'open', math.sin(PI * u)); P.ir_a += 6.0 * math.sin(u * PI)
         return self._add(t0, t0 + dur, fn)
 
     def peel_tape(self, t0, n=3, period=0.45):
@@ -8778,13 +8779,15 @@ def _apply_act(a, who, spec, shot, t, name, args, t_end):
     if name == 'stare':
         return a.stare(t)
     if name in ('hand_on_glass',):
-        return a.hand_on_glass(t, t + args.get('dur', 1.5), args.get('side', 1))
+        return a.hand_on_glass(t, t + args.get('dur', 1.5), args.get('side', 1), args.get('reach', 470.0), args.get('down', -125.0))
     if name in ('nervous_glance',):
         return a.nervous_glance(t, args.get('n', 2))
     if name in ('phone_to_ear',):
         return a.phone_to_ear(t, None, args.get('side', 1))
     if name in ('blink', 'flinch'):
         return getattr(a, name)(t)
+    if name == 'pose':                    # review round 2: an eased pose target (e.g. lowering the flashlight arm), {p: {...}, t1, fade}
+        return a.set(t, args.get('t1'), args.get('fade', 0.45), **(args.get('p') or {}))
     if name == 'hide':                    # merged shots: a hand / foot entry that is not in this part of the move fades out
         return a.set(t, args.get('t1'), args.get('fade', 0.15), alpha=0.0)
     if name == 'hand_to_mouth':
