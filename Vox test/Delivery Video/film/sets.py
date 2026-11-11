@@ -94,7 +94,7 @@ Animated elements (functions of t)
 Notes: sets draw over sp.cover (doorbell: WIDE = x -1000..2920, y -600..1660). Cache keys are shared strings, so build
 a set once per shot (rebuilding per frame also works, just slower in Python). Call engine set_render_size first.
 """
-import math, os
+import bisect, math, os
 import numpy as np
 import skia
 from engine.core import (DW, DH, LINE, CFG, Pen, col, mix, rgb, poly, smooth, rect, rrect, oval, ring, union, inter, minus,
@@ -3890,15 +3890,15 @@ def build(name, **kw):
 # red / blue), the tall taped box, the hall with the stairs, upstairs, Lily's room, the side of the house, the memory
 # (21 years ago), sunrise at 6:12, inserts and the delivery-app screens on the police phone UI. See SETS.md.
 # ######################################################################################################################
-from engine import post as _post
+from engine import post as _epost
 
 # grades used by the delivery sets (registered by name so the director can say grade='dawn' / 'memory')
-_post.GRADES.setdefault('dawn', dict(exposure=0.45, contrast=1.02, pivot=0.25, gamma=1.06, sat=1.0, wb=(1.1, 1.0, 0.88),
+_epost.GRADES.setdefault('dawn', dict(exposure=0.45, contrast=1.02, pivot=0.25, gamma=1.06, sat=1.0, wb=(1.1, 1.0, 0.88),
                                      floor='#0e0a10', bloom=0.7, bloom_thr=234, vignette=0.42, grain=0.5, shoulder=0.5))
-_post.GRADES.setdefault('memory', dict(exposure=0.05, contrast=0.94, pivot=0.25, gamma=1.02, sat=0.3, mono=0.4, tint='#e2caa2',
+_epost.GRADES.setdefault('memory', dict(exposure=0.05, contrast=0.94, pivot=0.25, gamma=1.02, sat=0.3, mono=0.4, tint='#e2caa2',
                                        wb=(1.06, 1.0, 0.9), floor='#15110d', bloom=0.6, bloom_thr=236, vignette=0.3,
                                        grain=1.2, soft=1.2, shoulder=0.5))
-_post.GRADES.setdefault('nightlight', dict(contrast=1.0, pivot=0.25, gamma=0.98, sat=0.95, wb=(0.95, 0.98, 1.1), floor='#0a0b16',
+_epost.GRADES.setdefault('nightlight', dict(contrast=1.0, pivot=0.25, gamma=0.98, sat=0.95, wb=(0.95, 0.98, 1.1), floor='#0a0b16',
                                            bloom=0.7, bloom_thr=234, vignette=0.4, grain=0.6, shoulder=0.5))
 
 NL_NAVY, NL_AMBER, AMBER = '#26324c', '#cf8f2c', '#ffa31f'
@@ -4229,3 +4229,243 @@ def _dawn_wash(v, box, houses_D):
                    [(0, '#ffcf96', 90), (0.5, '#ffb07a', 34), (1, '#ffb07a', 0)], sy=0.5, clip=False)
         pen.linear(rect(x0, y0, x1 - x0, y1 - y0), x0, 0, x1, 0, [(0, '#3a4a7a', 50), (0.6, '#3a4a7a', 0)])
     return draw
+
+
+# ============================================================== the box (tall, narrow, wrapped in brown tape)
+BOX_W, BOX_D, BOX_H = 0.5, 0.42, 1.6        # metres: almost as tall as the driver
+_BAND_Y = (0.1, 0.33, 0.6, 0.86, 1.13, 1.4)  # tape wraps (height of the band centre, m): continuous round all faces
+
+
+def _tape_band(pen, path_fn, y0, y1, x0, x1, seed=0, cut=None):
+    """A strip of glossy brown packing tape between y0..y1 (face-local units) from x0..x1. cut = x of a knife cut."""
+    rng = np.random.default_rng(seed)
+    dy = (y1 - y0)
+    segs = [(x0, x1)] if cut is None else [(x0, cut - dy * 0.06), (cut + dy * 0.06, x1)]
+    for (a, b) in segs:
+        if b <= a: continue
+        band = poly([(a, y0 + dy * rng.uniform(-0.04, 0.04)), (b, y0 + dy * rng.uniform(-0.04, 0.04)), (b, y1), (a, y1)])
+        pen.fill(band, TAPE, 215)
+        pen.fill(rect(a, y0 + dy * 0.12, b - a, dy * 0.14), TAPE_HI, 60)
+        pen.fill(rect(a, y1 - dy * 0.1, b - a, dy * 0.1), '#4a2c12', 70)
+        for k in range(int((b - a) / (dy * 1.6)) + 1):                                  # wrinkles
+            xx = a + rng.uniform(0, 1) * (b - a)
+            pen.seg((xx, y0 + dy * 0.2), (xx + dy * rng.uniform(-0.4, 0.4), y1 - dy * 0.2), max(0.6, dy * 0.04), TAPE_HI, 55)
+    if cut is not None:                                                                # curled cut ends
+        for sd in (-1, 1):
+            cx = cut + sd * dy * 0.06
+            pen.fill(smooth([(cx, y0), (cx + sd * dy * 0.35, y0 - dy * 0.25), (cx + sd * dy * 0.5, y0 + dy * 0.5), (cx, y1)], True, 0.6), '#a8743a', 230)
+
+
+def _ship_label(pen, x, y, w, h, to=None, seed=0, a=255):
+    """NIGHTLINE shipping label (w x h, any units): FROM: RETURN, TO: blank line (or `to` in a child's hand), barcode,
+    SIGNATURE REQUIRED, WT 0.0 LB, SERVICE: EXCHANGE."""
+    cv = pen.cv
+    u = w / 100.0
+    lab = rrect(x, y, w, h, 1.2 * u)
+    pen.shadow(lab, 0.6 * u, 1.0 * u, 1.2 * u, '#000000', 90)
+    pen.fill(lab, '#ece8dc', a); pen.texture(lab, 'paper', 0.35, 'overlay', 0.4)
+    pen.fill(rect(x, y, w, 15 * u), '#16171c', a)
+    cv.save(); cv.translate(x + 4 * u, y + 11 * u)
+    _nl_logo(cv, pen, 0, 0, 5.2 * u, a, 0.0, tag=False, dark='#ece8dc', moon=NL_AMBER)
+    cv.restore()
+    text(cv, 'PRIORITY RETURN', x + w - 3 * u, y + 10 * u, 900, 5.2 * u, '#ece8dc', a, 0.06, 'right')
+    yy = y + 24 * u
+    _type(cv, 'FROM:', x + 4 * u, yy, 4.2 * u, '#3a3a3a', a, 'mono_b')
+    text(cv, 'RETURN', x + 20 * u, yy + 0.4 * u, 900, 6.4 * u, '#111111', a, 0.08, 'left')
+    yy += 13 * u
+    pen.seg((x + 3 * u, yy - 6 * u), (x + w - 3 * u, yy - 6 * u), 0.35 * u, '#5a5a5a', a)
+    _type(cv, 'TO:', x + 4 * u, yy + 3 * u, 4.2 * u, '#3a3a3a', a, 'mono_b')
+    pen.seg((x + 15 * u, yy + 4 * u), (x + w - 6 * u, yy + 4 * u), 0.6 * u, '#222222', a)
+    pen.seg((x + 15 * u, yy + 12 * u), (x + w - 6 * u, yy + 12 * u), 0.35 * u, '#8a8a8a', a)
+    if to: _hand_text(cv, to, x + 18 * u, yy + 2.5 * u, 9.5 * u, '#1d2a6a', a * 0.94, seed=4, slant=-0.1, weight=700, wobble=1.8)
+    yy += 20 * u
+    _type(cv, 'SERVICE: EXCHANGE   1 OF 1', x + 4 * u, yy, 3.6 * u, '#222222', a, 'mono_b')
+    _type(cv, 'WT 0.0 LB', x + w - 4 * u, yy, 3.6 * u, '#222222', a, 'mono_b', 'right')
+    yy += 3 * u
+    rng = np.random.default_rng(seed + 21)                                            # barcode
+    bx = x + 4 * u
+    bw_tot = w * 0.62
+    while bx < x + 4 * u + bw_tot:
+        ww = rng.choice([0.5, 0.9, 1.4]) * u
+        if rng.uniform() < 0.62: pen.fill(rect(bx, yy, ww, 17 * u), '#111111', a)
+        bx += ww + 0.45 * u
+    _type(cv, 'NL 0307 2104 1987', x + 4 * u, yy + 21.5 * u, 3.4 * u, '#222222', a, 'mono')
+    sr = rect(x + w * 0.7, yy, w * 0.27, 17 * u)
+    pen.fill(sr, '#111111', a)
+    text(cv, 'SIGNATURE', x + w * 0.835, yy + 7.6 * u, 900, 3.6 * u, '#ece8dc', a, 0.04)
+    text(cv, 'REQUIRED', x + w * 0.835, yy + 12.6 * u, 900, 3.6 * u, '#ece8dc', a, 0.04)
+    pen.line(lab, 0.3 * u, '#8a8478', a * 0.8)
+
+
+def _box_face(pen, W, H, face='near', state='taped', label=True, seed=3, shade=0.0, tod='night'):
+    """One face of the box in face-local millimetres (0..W across, 0..H top -> bottom). face: 'near'/'far' (W = width,
+    carries the label + SIGNATURE REQUIRED sticker when label=True), 'side' (W = depth: printed crescent, arrows)."""
+    cv = pen.cv
+    f = rect(0, 0, W, H)
+    top, bot = ('#c69a68', '#8a6038') if tod == 'dawn' else ('#b98a58', '#7e5632')
+    pen.linear(f, 0, 0, 0, H, [_darken(top, shade), _darken(mix(top, bot, 0.5), shade), _darken(bot, shade)])
+    pen.texture(f, 'paper', 0.45, 'overlay', 1.6)
+    pen.linear(f, 0, 0, W, 0, [(0, '#000000', 70), (0.12, '#000000', 0), (0.88, '#000000', 0), (1, '#000000', 80)])
+    rng = np.random.default_rng(seed)
+    for k in range(3):                                                                 # water stains
+        sx, sy = rng.uniform(0.15, 0.85) * W, rng.uniform(0.25, 0.95) * H
+        r_ = rng.uniform(0.12, 0.25) * W
+        st = _blob(sx, sy, r_, r_ * rng.uniform(0.6, 1.2), 10, seed + k, 0.3)
+        pen.fill(st, '#5a3a1c', 46); pen.line(st, 4, '#4a2e14', 50)
+    pen.linear(rect(0, H * 0.9, W, H * 0.1), 0, H * 0.9, 0, H, [(0, '#3a2410', 0), (1, '#3a2410', 120)])    # damp bottom
+    ink = '#1e1a16'
+    if face == 'side':
+        cx, cy, r_ = W * 0.5, H * 0.42, W * 0.28                                       # faded crescent stamp
+        pen.fill(minus(oval(cx, cy, r_), oval(cx + r_ * 0.42, cy - r_ * 0.18, r_ * 0.82)), ink, 70)
+        text(cv, 'NIGHTLINE', cx, cy + r_ * 1.5, 900, W * 0.11, ink, 70, 0.08)
+        for k, ax in enumerate((W * 0.3, W * 0.7)):                                   # THIS SIDE UP arrows
+            pen.fill(poly([(ax, H * 0.05), (ax + 22, H * 0.05 + 34), (ax + 8, H * 0.05 + 34), (ax + 8, H * 0.05 + 80),
+                           (ax - 8, H * 0.05 + 80), (ax - 8, H * 0.05 + 34), (ax - 22, H * 0.05 + 34)]), ink, 120)
+        text(cv, 'THIS SIDE UP', W * 0.5, H * 0.05 + 112, 800, W * 0.07, ink, 110, 0.08)
+        text(cv, 'KEEP UPRIGHT  •  DO NOT OPEN', W * 0.5, H * 0.66, 800, W * 0.045, ink, 90, 0.06)
+        # crossed straps over the wraps
+        for (a, b) in (((0, H * 0.2), (W, H * 0.48)), ((0, H * 0.48), (W, H * 0.2))):
+            pen.line(poly([a, b], False), 50, TAPE, 190); pen.line(poly([(a[0], a[1] - 18), (b[0], b[1] - 18)], False), 6, TAPE_HI, 60)
+    else:
+        if label:
+            _ship_label(pen, W * 0.5 - 185, H * 0.22, 370, 260, seed=seed)
+            stk = rect(W * 0.5 - 150, H * 0.22 + 290, 300, 70)
+            pen.fill(stk, '#c0161c', 235); pen.line(stk, 4, '#7a0a0e', 200)
+            text(cv, 'SIGNATURE REQUIRED', W * 0.5, H * 0.22 + 336, 900, 30, '#fff4ec', 240, 0.04)
+        for ax in (W * 0.2, W * 0.8):
+            pen.fill(poly([(ax, 40), (ax + 18, 68), (ax + 7, 68), (ax + 7, 104), (ax - 7, 104), (ax - 7, 68), (ax - 18, 68)]), ink, 120)
+    cut = W * 0.5 if state in ('cut', 'open') else None
+    for k, yb in enumerate(_BAND_Y):
+        yc = H - yb * 1000.0
+        _tape_band(pen, None, yc - 26, yc + 26, -2, W + 2, seed + k, cut if face != 'side' else (W * 0.9 if cut else None))
+    if face != 'side':                                                                 # vertical seam tape down the middle
+        x0, x1 = W * 0.5 - 26, W * 0.5 + 26
+        if cut is None:
+            pen.fill(rect(x0, -2, x1 - x0, H * 0.24), TAPE, 205); pen.fill(rect(x0 + 6, -2, 8, H * 0.24), TAPE_HI, 50)
+        else:
+            for sd in (-1, 1):
+                pen.fill(rect(W * 0.5 + (sd - 1) * 14 + (6 if sd > 0 else 0), -2, 22, H * 0.24), TAPE, 205)
+            pen.seg((W * 0.5, -2), (W * 0.5, H * 0.24), 5, '#1a0e06', 230)
+    pen.line(f, 5, '#3a2814', 220)
+
+
+def _face_matrix(W, H, tl, tr, br, bl):
+    m = skia.Matrix()
+    m.setPolyToPoly([skia.Point(0, 0), skia.Point(W, 0), skia.Point(W, H), skia.Point(0, H)],
+                    [skia.Point(*tl), skia.Point(*tr), skia.Point(*br), skia.Point(*bl)])
+    return m
+
+
+def _draw_face(pen, W, H, corners, fn):
+    cv = pen.cv
+    cv.save(); cv.concat(_face_matrix(W, H, *corners)); fn(pen); cv.restore()
+
+
+def _box3d(pen, v, X, Dn, w=BOX_W, d=BOX_D, h=BOX_H, state='taped', label='near', seed=3, tod='night', cover=WIDE, keys=False):
+    """The box standing on the floor (Y = 0) at lateral X, near face at depth Dn, in true perspective (faces mapped with
+    a projective matrix). label = which face carries the shipping label ('near' toward the camera, 'far' toward the
+    street). state 'taped' | 'cut' (knife cut down the seam) | 'open' (flaps up, cut tape hanging)."""
+    X0, X1, Db = X - w / 2, X + w / 2, Dn + d
+    Wm, Dm, Hm = w * 1000, d * 1000, h * 1000
+    p = v.p
+    gy = 0.0
+    sh = v.quad([(X0 - 0.06, gy, Dn - 0.05), (X1 + 0.06, gy, Dn - 0.05), (X1 + 0.08, gy, Db + 0.08), (X0 - 0.08, gy, Db + 0.08)])
+    pen.fill(sh, '#000000', 150, blur=6)
+    L = 0.24 * h / BOX_H * (d / BOX_D)
+    th = math.radians(28)
+    def flap(edge, out):                                     # edge: two (X, D) hinge points; out: (dX, dD) unit outward
+        (xa, da), (xb, db) = edge
+        ox, od = out
+        q = [(xa, h, da), (xb, h, db), (xb + ox * L * math.sin(th), h + L * math.cos(th), db + od * L * math.sin(th)),
+             (xa + ox * L * math.sin(th), h + L * math.cos(th), da + od * L * math.sin(th))]
+        return v.quad(q)
+    def flap_fill(path, k=0.0):
+        pen.fill(path, _darken('#a8784a', 0.25 + k)); pen.line(path, 3, '#3a2814', 200)
+    if state == 'open':
+        flap_fill(flap(((X0, Db), (X1, Db)), (0, 1)), 0.15)
+        flap_fill(flap(((X0, Dn), (X0, Db)), (-1, 0)), 0.2)
+        flap_fill(flap(((X1, Dn), (X1, Db)), (1, 0)), 0.1)
+    def side(Xs):
+        if Xs < 0:   # face on the camera's left: front (Dn) edge is further left
+            c = (p(Xs, h, Dn), p(Xs, h, Db), p(Xs, gy, Db), p(Xs, gy, Dn))
+        else:
+            c = (p(Xs, h, Db), p(Xs, h, Dn), p(Xs, gy, Dn), p(Xs, gy, Db))
+        return c
+    vis_side = X1 if X1 < 0 else (X0 if X0 > 0 else None)
+    if vis_side is not None:
+        c = side(vis_side)
+        _draw_face(pen, Dm, Hm, c, lambda pp: _box_face(pp, Dm, Hm, 'side', state, False, seed + 1, 0.3 if tod != 'dawn' else 0.15, tod))
+    nx0, ny0 = p(X0, h, Dn); nx1, ny1 = p(X1, gy, Dn)
+    if nx1 > cover[0] and nx0 < cover[2]:
+        _draw_face(pen, Wm, Hm, ((nx0, ny0), (nx1, ny0), (nx1, ny1), (nx0, ny1)),
+                   lambda pp: _box_face(pp, Wm, Hm, 'near', state, label == 'near', seed, 0.0, tod))
+    if h < v.cam_h:                                          # top face seen from above
+        top = v.quad([(X0, h, Dn), (X1, h, Dn), (X1, h, Db), (X0, h, Db)])
+        if state == 'open':
+            pen.fill(top, '#0c0805')
+            inner = v.quad([(X0 + 0.02, h, Dn + 0.02), (X1 - 0.02, h, Dn + 0.02), (X1 - 0.02, h, Db - 0.02), (X0 + 0.02, h, Db - 0.02)])
+            pen.linear(inner, 0, v.y(h, Db), 0, v.y(h, Dn), ['#2a1a0c', '#050302'])
+        else:
+            pen.fill(top, '#9a6c40'); pen.fill(inter(top, v.quad([(X - 0.03, h, Dn), (X + 0.03, h, Dn), (X + 0.03, h, Db), (X - 0.03, h, Db)])), TAPE, 220)
+        pen.line(top, 3, '#3a2814', 220)
+    if state == 'open':
+        flap_fill(flap(((X0, Dn), (X1, Dn)), (0, -1)), 0.0)
+        for (xx, dd) in ((X0 + 0.08, Dn), (X1 - 0.1, Dn)):                     # cut tape hanging off the flaps
+            a_ = p(xx, h + 0.02, dd); b_ = p(xx + 0.015, h - 0.16, dd - 0.01)
+            pen.line(smooth([a_, ((a_[0] + b_[0]) / 2 + 6, (a_[1] + b_[1]) / 2), b_], False), max(3, 0.05 * v.s(dd)), TAPE, 220)
+    # porch-lamp / dawn light falloff over the whole box
+    bb = _ubox(*[(min(q[0] for q in c_), min(q[1] for q in c_), max(q[0] for q in c_), max(q[1] for q in c_))
+                 for c_ in [((nx0, ny0), (nx1, ny1))] + ([side(vis_side)] if vis_side is not None else [])])
+    return bb
+
+
+def _box_spec(box):
+    """'door' | 'boots' | dict(at='door'|'boots'|(X, Dn), state, knock=f(t), label) -> normalised dict."""
+    b = dict(at=box) if isinstance(box, str) else dict(box)
+    at = b.get('at', 'door')
+    if at == 'door': b.setdefault('X', -1.0); b.setdefault('Dn', 0.06); b.setdefault('label', 'far')
+    elif at == 'boots': b.setdefault('X', 0.58); b.setdefault('Dn', 1.02); b.setdefault('label', 'near')
+    elif at == 'threshold': b.setdefault('X', -0.18); b.setdefault('Dn', 0.62); b.setdefault('label', 'far')
+    else: b['X'], b['Dn'] = at; b.setdefault('label', 'near')
+    b.setdefault('state', 'taped')
+    return b
+
+
+def _box_layers(v, box, tag, tod='night', cover=WIDE, light=None):
+    """Layer(s) for the box in a View-based set: the static artwork is one sprite (perspective faces drawn once), the
+    knock jolt (box['knock'] = f(t) -> 0..1, a decaying impulse) shoves it a few px and drops a puff of dust."""
+    b = _box_spec(box)
+    X, Dn = b['X'], b['Dn']
+    dep = max(0.2, Dn + (0.4 if Dn < 0.2 else 0.03))
+    key = ('box', tag, round(X, 3), round(Dn, 3), b['state'], b['label'], tod)
+    knock = b.get('knock')
+    bounds = [None]
+
+    def art(p_):
+        bounds[0] = _box3d(p_, v, X, Dn, state=b['state'], label=b['label'], tod=tod, cover=cover)
+    # bounds: a dry run of the projection (cheap; no drawing)
+    c = [v.p(X - BOX_W / 2, BOX_H + 0.4, Dn), v.p(X + BOX_W / 2, -0.05, Dn), v.p(X - BOX_W / 2, BOX_H + 0.4, Dn + BOX_D),
+         v.p(X + BOX_W / 2, -0.05, Dn + BOX_D)]
+    bx = (max(cover[0], min(q[0] for q in c) - 60), max(cover[1], min(q[1] for q in c) - 60),
+          min(cover[2], max(q[0] for q in c) + 60), min(cover[3] + 400, max(q[1] for q in c) + 60))
+
+    def draw(pen, t):
+        k = knock(t) if knock else 0.0
+        cv = pen.cv
+        if k > 0.01:
+            cv.save(); cv.translate(6.0 * k * math.sin(t * 61.0), -4.0 * k)
+        _sprite(pen, key, art, bx)
+        if k > 0.01:
+            cv.restore()
+            fx_, fy_ = v.p(X + BOX_W / 2, 0.02, Dn + 0.1)
+            pen.radial(None, fx_, fy_, 0.25 * v.s(Dn + 0.1), [(0, '#c8b8a0', 60 * k), (1, '#c8b8a0', 0)], sy=0.4, clip=False)
+    return [Layer(dep, draw, 'box')]
+
+
+def knock_pulse(times, decay=0.18):
+    """f(t) -> 0..1: a sharp decaying impulse at each knock time (two, a pause, one more: knock_pulse([t, t+.32, t+1.1]))."""
+    ts = sorted(times)
+    def f(t):
+        i = bisect.bisect_right(ts, t) - 1
+        return math.exp(-(t - ts[i]) / decay) if i >= 0 and t - ts[i] < 6 * decay else 0.0
+    return f
