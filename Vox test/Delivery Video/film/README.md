@@ -12,7 +12,7 @@ All commands run from this folder (`Vox test/Delivery Video/film`). The work dir
 | `sets.py` / `SETS.md` | Sets (porch / doorbell / peephole / street / hall / upstairs / Lily's room / side yard / doorway), inserts, the app phone, the 3:41 delivery photo (`photo_lily_scene`). |
 | `render.py` | Stills, test clips and the full worker/slice render (defaults to `W`). |
 | `engine/` | The 2.5D engine (camera, layers, lenses, grades, HUD). |
-| `audio/` | Sound pipeline (the audio teammate's). It reads `W/cues/*.json`. |
+| `audio/` | Sound pipeline. It reads `W/cues/*.json`. `audio/final_mix.sh` rebuilds the final mix after picture changes; `audio/measure_mix.py` measures it (see **Sound: the final mix**). |
 
 ## Inputs
 - `W/align/timeline.json`: line times for the 286 lines. `W/align/asr_cache.json`: word times. `W/align/vo_en.wav`: the voiceover, 48 kHz, 640.72 s. These are written by `tools/align.py`.
@@ -57,3 +57,39 @@ python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview --audio W/
 - The doorway's dolly is capped at 2 %/s: a faster optical zoom re-blurs its frame-sized walls every frame (0.74 s).
 - The photo shots bake their crop into one cached layer (`photo341_<crop>`), so the camera never zooms optically past about 1.3.
 - The full film is 38,560 frames at 60 fps. Three workers render it in about 1.5 h on a quiet machine.
+
+## Sound: the final mix
+**Rebuild after any picture change** (about 7 min; `mix.py` peaks at 7 GB, so no render may run at the same time):
+```
+bash audio/final_mix.sh                 # all five steps below; --no-preview skips step 5
+```
+which runs, from this folder:
+```
+python3 film.py --cues                                                                  # 1. cue sheets from the picture
+(cd audio && python3 mix.py ../_work/align/timeline.json ../_work/align/vo_en.wav - ../_work/cues ../_work/mix/final --langs en)   # 2. the police mix
+ln -f _work/mix/final/mix_en.wav _work/mix/final/mix.wav                                # 3. mix.wav (render.py / deliver.sh read mix_en.wav)
+python3 audio/measure_mix.py _work/mix/final --plot                                     # 4. measure + misfire list
+ffmpeg -v error -y -i _work/preview/preview.mp4 -i _work/mix/final/mix.wav -map 0:v -map 1:a -c:v copy \
+  -c:a aac -b:a 320k -ar 48000 -af apad -shortest -movflags +faststart _work/preview/preview_mix.mp4   # 5. onto the preview
+```
+Full picture with the mix: `python3 render.py --workers 3 --audio _work/mix/final/mix.wav`. `python3 audio/mix.py --check _work/cues _work/mix/final` exits 1 when the mix is older than the cue sheets.
+
+**Outputs** in `W/mix/final/`: `mix.wav` (= `mix_en.wav`, 48 kHz 24-bit stereo, 643.22 s), `stems/{voice_en,music,sfx}.wav` (float, final gain, before the limiter), `mix_report.json`, `mix.log`, `measure.json` / `measure.txt`, `measure_cues.json` (every one-shot cue re-rendered and checked), `measure_plot.png` (loudness map: voice, music, SFX, silences, hits, rule cards). The preview with the mix is `W/preview/preview_mix.mp4` (640x360, 30 fps, 642.73 s, AAC 320k stereo).
+
+**Measured** (`measure_mix.py`, BS.1770 per-channel K-weighting; "rel voice" = against the voice stem's integrated loudness):
+
+| | result | target |
+|---|---|---|
+| Mix integrated / true peak | -14.03 LUFS / -1.70 dBTP (preview AAC: -14.0 / -1.5) | -14, <= -1.0 |
+| Voice vs mix | -0.05 LU | within 0.5 |
+| Voice minus bed (music + SFX) during speech, 400 ms blocks | p5 7.5 LU, median 17.5; under 3 LU in 1.3 % of speech, under 0 LU in 0.4 % (word onsets under swell peaks and reveal hits) | voice always clear |
+| Same in the 1-4 kHz intelligibility band | p5 10.7 dB, median 24.9 | |
+| Music outside the 21 authored silences (+4 s re-entry) | above voice -32 LU 100 %, above -26 LU 96.7 %; no holes | under the voice the whole time |
+| Silences | 21 (1.96/min), 17.4 dB deep (median) | 1.5/min, 15 dB |
+| Bed integrated / 3 s p10-p50-p90 / LRA | -13.8 LU / -21.7, -16.1, -11.0 / 12.2 LU | -13 +- 1 / p50 -16 / 13-14 |
+| Bed by quarter | -15.3 / -16.1 / -13.5 / -11.6 LU; loudest 10 s at 633 s | Q2 calmest, end loudest |
+| Bed spectrum < 250 Hz / 250 Hz-4 kHz / > 4 kHz | 71 / 28 / 0.7 % | 70 / 29 / <= 2 % |
+| Hits | 3.45/min; peak median -4.8 LU, max +3.2 LU rel voice | 3/min; +2 / +9 |
+| One-shot SFX cues checked | 275: 0 silent, 0 failed, 7 flags left (below) | |
+
+**Cue flags left** (all looked at): the doorbell button click under its own ding-dong (37.0 s) and two doorbell-speaker clicks under the driver's first syllable (205.0, 347.1 s), all texture, three all-night box knocks in the hall that keep only 15-18 dB above 300 Hz (486-496 s; the knocks around them read), and the sunrise tape peel's transient 70 ms after its cue (no picture sync point; the cue was moved 70 ms earlier).
