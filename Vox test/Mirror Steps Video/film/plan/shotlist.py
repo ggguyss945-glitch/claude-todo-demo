@@ -23,10 +23,34 @@ from dsl import (S, X, SHOTS, cam, C, A, fx, M, tag, label, redx, R, t, e, w, w0
                  giant, diagram, doc, count_pop, stamp, highlight, mapins, level_guide, rings, eye_line, dials)
 
 STATES = []
+MERGES = []
 
 
 def STATE(at, **kw):
     STATES.append((at, kw))
+
+
+def MERGE(ta, tb, **kw):
+    """Flow over cut count (owner's v2 verdict, critic round 1): the shots starting in [ta, tb) become ONE continuous shot
+    whose camera passes through each old framing on one eased move (make_plan.apply_merges). Options: keep=[t0 of a
+    cutaway kept as a cut, the move resumes after it], path=[(t, x, y, z[, roll]), ...] (an explicit 2D move),
+    cam3=[[t, view | {view, pos, look, fov, dp, dl}], ...] (a travelling move through the 3D room), travel=True (views of a
+    non-room set as 3D keys, e.g. the mirror), flat=True (never travel: keep the first view), glide=[v0, v1, ramp] (the
+    speed at the ends), accel=[[t, factor, dur]] (an eased push acceleration on a beat), chars=[...] (the cast of the
+    merged shot, when the old shots' cast cannot simply be joined), frame='...', set_={field: value} (any shot field), tr,
+    join (how a place change inside the group joins: 'flow' travel dissolve by default), flow_at=[x, y] (where the
+    camera goes through on a flow), resume_tr, cutaway_tr."""
+    MERGES.append(dict(ta=float(ta), tb=float(tb), **kw))
+
+
+def FLAG(t0, **kw):
+    """Set fields on the shot that starts at t0 (e.g. match_action=True: the cut continues an action across the same set-up)."""
+    MERGES.append(dict(flag_t=float(t0), fields=kw))
+
+
+def DROP(t0):
+    """A shot the continuous move no longer needs: the shot before it runs on over its time (its cues and HUD move there)."""
+    MERGES.append(dict(drop_t=float(t0)))
 
 
 # ================================================================================================= shorthand
@@ -154,7 +178,7 @@ def RULE(n):
       'the rule card is the mirror: towel whips off, RULE in lipstick, numeral %d stamps in; her reflection %d %% of the glass '
       '(%s); glass: %s; over the live plate %s/%s blurred 8, dimmed 30 %%' % (n, CARD_QUEEN[n]['size'] * 100, CARD_QUEEN[n]['pose'],
                                                                          CARD_GLASS[n], bg[0], bg[1]),
-      P(2), bg=dict(set=bg[0], view=bg[1], var=bg[2], world=bg[3], post=dict(blur=8, dim=0.30)), hud=hud, tr='glitch',
+      P(2), bg=dict(set=bg[0], view=bg[1], var=bg[2], world=bg[3], post=dict(blur=8, dim=0.30)), hud=hud, tr='flow', flow=[960, 520],
       captions=False, card=n,
       q=dict(stage=CARD_QUEEN[n]['stage'], size=CARD_QUEEN[n]['size'], where='reflection behind the card words',
              framing='card %d' % n, wrong=CARD_QUEEN[n]['pose']),
@@ -593,7 +617,7 @@ X(T(42), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
   'silence; slow push on the bottom step: clean glass below it', SIL(1.5, x=900, y=660, z=1.2),
   energy='the hot spot trembling, a crumb falling, slow push 1.5 %/s (silence)')
 X(Wc(42, 'line'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
-  'the eighth line draws itself below the bottom step; label 8TH STEP', P(3, x=900, y=660, z=1.3, snap=(118.87, 1.08)), tr='white',
+  'the eighth line draws itself below the bottom step; label 8TH STEP', P(3, x=900, y=660, z=1.3, accel=[(118.87, 1.06, 0.6)]), tr='white',
   hud=[label(119.2, '8TH STEP', [900, 700], dx=-60, dy=-150)], props=dict(eighth='drawing 118.87-119.47'),
   device=DEV('insert', '8th', 'a fresh red line appears beneath the bottom step'),
   energy='the line drawing itself, punch-in 1.08x on the hit')
@@ -657,7 +681,7 @@ X(T(53), 'POV', 'ours', 'mirror/glass_cu', 'night', 'POV: the finger moves below
   P(3, x=900, y=720, z=1.2), chars=[POVH([A(w(53, 'eighth'), 'touch_glass', at=(860, 790))], 980, 900)],
   energy='the finger sliding down, the line glowing, push 3 %/s')
 X(Wc(53, 'your'), 'INSERT', 'ours', 'mirror/glass_cu', 'night',
-  'the nail on the eighth line: CLICK at 143.29 with a camera hit and a white flash; label CLEAN GLASS', SIL(1.5, x=860, y=790, z=1.45, hit=[(143.29, 10)]),
+  'the nail on the eighth line: CLICK at 143.29 with a camera hit and a white flash; label CLEAN GLASS', SIL(1.5, x=860, y=790, z=1.45, hit=[(143.29, 10)], snap=(143.29, 1.08)),
   chars=[POVH([A(143.29, 'nail_tap')], 920, 860, 480)], hud=[label(143.40, 'CLEAN GLASS', [860, 790], dx=200, dy=-120)],
   fx_post=[dict(t=143.29, white=0.85, dur=0.05)], energy='silence push, then the click jolt')
 X(Wc(53, 'against'), 'DIAGRAM', 'ours', 'diagram/side_view', 'night',
@@ -911,7 +935,7 @@ X(246.99, 'OTS', 'ours', 'mirror/reflection', 'night',
   energy='slow push in the silence')
 STATE(247.0, queen='glass_step2')
 X(T(97), 'CU', 'stairs', 'mirror/queen_glass', 'stairs',
-  'CU in the glass: "You have it." lip-sync, a thin red glow on the mouth while she speaks', P(3, x=960, y=520, z=1.15, snap=(248.39, 1.08)),
+  'CU in the glass: "You have it." lip-sync, a thin red glow on the mouth while she speaks', P(3, x=960, y=520, z=1.15, accel=[(248.39, 1.06, 0.6)]),
   tr='white', chars=[Q('S1', [960, 560, 1.2], acts=[A(t(97), 'talk_line', line=97, glow=True)])],
   q=dict(stage='S1', step=1, size=0.70, where='glass, the top', framing='CU face 70 %', wrong='she speaks'),
   errfix=[20], energy='lips moving, red glow, punch-in')
@@ -1368,7 +1392,7 @@ X(T(199), 'WS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', 'wide from the bunk end:
   P(3), chars=[body('noah13', 860, 900, 420, 'q_right', 'calm_kid', [A(R(0), 'tie_loop')], seated=True),
                Q('S3a', [600, 900, 500, 1.0], mode='body', acts=[A(R(0), 'still')], seated=True), body('you', 1460, 920, 470, 'q_left', 'tempted', [])],
   q=dict(stage='S3a', size=0.30, where='on the bunk', framing='WS', wrong=''), energy='the knot loop, push')
-X(Wc(200, 'where'), 'MS', 'memory', 'memory/socks', 'sepia_morning', 'memory: kid-you on that spot pulling socks on', P(3), tr='sepia',
+X(Wc(200, 'where', off=-0.06), 'MS', 'memory', 'memory/socks', 'sepia_morning', 'memory: kid-you on that spot pulling socks on', P(3), tr='sepia',
   chars=[body('you_kid', 960, 1040, 560, 'front', 'happy', [A(R(0), 'pull_socks')], seated=True)], energy='pulling socks')
 X(T(201), 'WS', 'theirs_break', 'cabin_dawn/queen_3s', 'dawn_queen',
   'WIDE: Noah tying the knot, the Queen beside him patting the dip, the beautiful gold room; you at the bunk\'s end, half-turned to the dip; slow push',
@@ -1866,3 +1890,206 @@ V2_SFX = [
     fx(678.39, 'glitch', -14, 'dry', 'montage tile cut', dur=0.04, amount=0.4),
     fx(694.30, 'bare_foot_step', -16, 'phone', 'the tiny figure in the phone climbs one step'),
 ]
+
+# ================================================================ FLOW (owner's v2 verdict + critic round 1, B1-B9)
+# The references cut about as often as v2 did; their smoothness comes from staying in one place, a few set-ups on one axis,
+# action that continues across cuts and transformations that happen inside the shot. v2 jumped between worlds every 3 s,
+# started every shot from rest and never travelled. These groups become ONE continuous move each (make_plan.apply_merges);
+# the cuts that stay are motivated (new information, a reaction, a reveal, a deliberate shock). Times are the old shots' t0.
+# --- HOOK
+MERGE(0.42, 3.28, cam3=[[0.42, 'glass_cu'], [2.1, 'glass_wide'], [3.28, {'view': 'glass_wide', 'dp': [-0.05, -0.12, 0.45]}]],
+      glide=[0.5, 0.7, 0.6], frame='the taped kid hand draws steps 6 and 7 on the glass; the camera pulls back to the whole mirror '
+      'as the numerals 1-7 pop; below the bottom step the eighth line draws itself (one move)')
+MERGE(5.40, 6.62, flat=True, set_=dict(view='through', var='stairs', world='stairs', side='mirror'),
+      path=[(5.40, 960, 560, 1.32), (6.05, 960, 545, 1.16), (6.62, 960, 530, 1.07)], glide=[0.7, 0.9, 0.3])
+MERGE(6.62, 9.99, frame='inside the glass: the camera cranes down the plum stairs past her climbing silhouette (crown glint, '
+      'her hand on the rail) to small Noah13 on his bunk at the bottom, face up, lit (one move)',
+      cam3=[[6.62, {'pos': (0.0, 1.45, -0.15), 'look': (0.0, -1.6, 2.3), 'fov': 70}],
+            [8.1, {'pos': (0.12, 1.1, 0.7), 'look': (0.0, -1.7, 2.5), 'fov': 68}],
+            [9.1, {'pos': (0.3, 0.55, 1.5), 'look': (0.0, -1.75, 2.75), 'fov': 66}],
+            [9.99, {'pos': (0.18, 0.15, 1.92), 'look': (0.0, -1.75, 2.7), 'fov': 60}]], glide=[0.8, 0.5, 0.6],
+      chars=[Q('S0', [960, 820, 520], mode='body', view='front', acts=[A(6.62, 'climb', steps_per_s=0.8), A(7.4, 'slide_rail', dx=60)],
+               w=[[6.62, 0.0, -1.2, 1.4], [9.99, 0.0, -1.0, 1.15]]),
+             body('noah13', 960, 860, 140, 'front', 'calm_kid', [A(9.6, 'look_up')], seated=True, w=[0.0, -1.8, 2.6])],
+      flow_at=[960, 540])
+MERGE(12.79, 16.06)
+MERGE(16.06, 19.26, cam3=[[16.06, 'master'], [17.75, {'pos': (2.55, 1.65, 2.9), 'look': (4.45, 1.95, 6.38), 'fov': 56}],
+                          [19.26, {'pos': (1.85, 1.05, 4.05), 'look': (1.15, 0.95, 5.35), 'fov': 46}]], glide=[0.45, 0.4, 0.7],
+      chars=[body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(16.06, 'tie_loop', period=2.4), A(18.32, 'look_up'), A(18.62, 'smile'),
+                                                                  A(18.5, 'expr', name='grin_kid')], seated=True)],
+      frame='THEIRS master: the camera glides in past the loop clock (6:59:59 snaps back to :40) to Noah13 on his bunk, who looks '
+            'up with the gap-tooth smile (one move)')
+# --- ARRIVAL
+MERGE(19.26, 24.94, flow_at=[960, 620])
+MERGE(27.10, 30.0, flow_at=[1250, 500])
+MERGE(30.0, 33.74, flat=True, drop=[('tess', 'hands')],
+      path=[(30.0, 900, 560, 1.15), (31.55, 920, 600, 1.55), (32.4, 930, 590, 1.5), (33.74, 900, 560, 1.12)], glide=[0.5, 0.5, 0.6])
+DROP(39.26)                                  # the same CU of you five times: two stay (33.74, 48.89)
+DROP(41.66)                                  # the reverse broke the axis; the follow runs on to the gate
+MERGE(40.38, 46.14, flow_at=[960, 560])
+DROP(44.22)
+MERGE(46.14, 48.89)
+DROP(52.94)
+# --- PORCH
+MERGE(54.46, 57.18, flow_at=[1180, 760])
+DROP(59.50)
+MERGE(57.18, 64.79, keep=[61.58], flow_at=[1100, 640])
+# --- CABIN
+MERGE(69.43, 72.31, flow_at=[1400, 600])
+MERGE(73.43, 75.91, cam3=[[73.43, {'pos': (4.35, 2.05, 4.95), 'look': (5.4, 2.1, 6.0), 'fov': 52}],
+                          [74.6, {'pos': (4.75, 0.8, 4.2), 'look': (5.2, 0.35, 6.0), 'fov': 62}],
+                          [75.91, 'under_bunk']], set_=dict(view='under_bunk'), glide=[0.5, 0.5, 0.6],
+      frame='the empty NOAH cubby (no sweatshirt); the camera cranes down the bunk to the floor: under it, a towel-wrapped bundle '
+            'in the beam; your hand pulls it out (one move)')
+MERGE(77.51, 80.07)
+MERGE(80.07, 83.58)
+MERGE(83.58, 86.46)
+# --- STEPS
+MERGE(88.70, 91.98, cam3=[[88.70, 'profile'], [91.98, {'view': 'ots_mirror', 'dp': [-0.15, 0.25, -0.35]}]], glide=[0.5, 0.5, 0.7],
+      frame='profile along the back wall: you pull the towel off and the camera dollies round to the whole mirror: seven waxy '
+            'red steps, your reflections behind them (one move)')
+MERGE(100.70, 105.58)
+MERGE(106.86, 109.82, cam3=[[106.86, 'three_q'], [109.82, {'view': 'ots_mirror', 'dp': [0.1, 0.3, -0.45]}]], glide=[0.5, 0.5, 0.7])
+MERGE(112.30, 117.50, cam3=[[112.30, 'profile'], [114.2, {'mview': 'glass_cu', 'dp': [0.35, 0.3, -0.55]}], [117.50, 'three_q']],
+      drop=[('tess', 'hands'), ('tess', 'bust')], glide=[0.5, 0.5, 0.7])
+MERGE(117.50, 119.90)
+# --- RULE 1
+DROP(140.55)
+MERGE(134.32, 142.56, keep=[135.36], flat=True)
+MERGE(148.23, 153.75)
+FLAG(155.99, tr='flow', flow=[960, 560])     # through her shoulder and the glass into THEIRS (the glint rides the flow)
+MERGE(155.99, 163.05, cam3=[[155.99, 'top_stairs'], [158.9, 'swimsuits'], [163.05, 'door_wash']], glide=[0.5, 0.5, 0.7])
+MERGE(163.05, 174.07, cam3=[[163.05, 'floor_prints'], [168.6, {'pos': (2.3, 0.85, 1.95), 'look': (1.1, 0.0, 3.95), 'fov': 66}],
+                            [174.07, {'pos': (1.85, 0.6, 3.35), 'look': (0.95, 0.15, 4.95), 'fov': 60}]], glide=[0.45, 0.5, 0.8],
+      frame='THEIRS, low at the wash-house door: one track along the wet footprints (bare, sneaker, bare) across the golden '
+            'floor to Noah\'s bunk (one move)')
+MERGE(174.07, 176.63, cam3=[[174.07, 'ots_mirror'], [176.63, {'view': 'ots_mirror', 'dp': [0.0, 0.35, -0.2], 'dl': [0.1, -0.85, -1.2]}]],
+      glide=[0.5, 0.5, 0.6])
+MERGE(186.30, 190.06)
+DROP(190.06)                                 # memory micro-flips (critic M14): the voicemail carries it
+MERGE(191.42, 195.00)
+MERGE(197.50, 200.46, accel=[[198.15, 1.12, 0.5]])
+# --- RULE 2
+MERGE(211.49, 216.77, flow_at=[960, 600])
+MERGE(234.80, 237.84)
+DROP(242.70)
+DROP(243.30)                                 # the 15 / 20 flashes (micro-flips)
+MERGE(245.26, 248.22)
+MERGE(249.10, 252.30)
+MERGE(252.30, 256.87)
+DROP(267.36)
+DROP(268.58)                                 # the steam wisps carry the smell to the card
+MERGE(258.46, 265.52, keep=[263.92], cam3=[[258.46, 'floor_cu'], [262.0, 'doorway'], [265.52, {'view': 'doorway', 'dp': [0.0, 0.0, 0.35]}]],
+      set_=dict(view='doorway'), glide=[0.5, 0.5, 0.7])
+# --- RULE 3
+MERGE(274.32, 278.80)
+MERGE(282.56, 286.20, set_=dict(hold='H1'))
+MERGE(289.74, 293.10, cam3=[[289.74, {'pos': (3.4, 3.05, 6.32), 'look': (2.0, 1.25, 5.75), 'fov': 70}],
+                            [290.9, {'pos': (2.6, 2.45, 6.2), 'look': (1.1, 0.55, 5.35), 'fov': 70}],
+                            [291.9, {'pos': (2.15, 1.9, 4.5), 'look': (1.15, 0.45, 5.6), 'fov': 72}],
+                            [293.10, {'view': 'master', 'dp': [0.1, -0.1, 1.4]}]], glide=[0.7, 0.4, 0.6],
+      set_=dict(set='cabin_dawn', view='master', var='dawn', world='theirs', side='theirs', type='WS'),
+      chars=[body('you', 960, 900, 300, 'back', 'tense', [A(289.85, 'stride', t1=292.6, steps_per_s=2.2), A(291.7, 'turn', to=0.5, dur=0.8)],
+                  w=[[289.74, 3.0, 1.8, 6.2], [290.05, 2.93, 1.6, 6.0], [291.6, 1.06, 0.2, 5.95], [292.2, 1.05, 0.0, 5.5],
+                     [293.10, 1.5, 0.0, 4.95]]),
+             body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(289.74, 'tie_loop', period=2.4)], seated=True),
+             body('tess', 1640, 360, 120, 'front', 'fear', [A(289.74, 'flashlight', aim='stairs')], w=[2.93, 1.8, 6.22])],
+      frame='THE CROSSING (one move): behind you from the doorway down the eight treads, the gold room opening below, the camera '
+            'swinging out into the THEIRS master as you reach the floor; Tess small in the doorway above; a glint at the threshold')
+MERGE(293.10, 300.78, keep=[294.30])
+MERGE(308.98, 321.94, keep=[310.50, 317.70])
+DROP(315.94)
+MERGE(323.24, 326.68)
+MERGE(331.80, 338.76, flat=True)
+MERGE(338.76, 342.12)
+MERGE(345.06, 347.62)
+# --- RULE 4
+MERGE(353.53, 358.26, cam3=[[353.53, 'master'], [358.26, {'pos': (2.05, 1.45, 2.55), 'look': (1.55, 0.85, 5.6), 'fov': 66}]],
+      glide=[0.45, 0.5, 0.8])
+DROP(365.14)
+MERGE(366.66, 371.14, keep=[368.34])
+DROP(391.20)
+MERGE(394.48, 397.20)
+MERGE(405.98, 411.34, keep=[408.20])
+MERGE(418.88, 421.52)
+MERGE(424.80, 431.36, glide=[0.4, 0.5, 0.9])
+# --- RULE 5
+MERGE(449.74, 453.41)
+MERGE(453.41, 456.37)
+DROP(462.59)
+DROP(460.93)                                 # the memory run (458.6) holds to Tess's run
+MERGE(461.71, 463.89, flow_at=[1000, 520])
+DROP(491.55)
+DROP(495.47)
+MERGE(487.87, 494.51, keep=[489.87])
+MERGE(496.67, 500.03)
+MERGE(508.19, 511.47, flow_at=[960, 700])
+MERGE(516.62, 519.90)
+# --- RULE 6
+DROP(549.43)
+DROP(552.25)
+DROP(553.29)
+DROP(555.93)
+MERGE(547.43, 562.41, keep=[554.33, 559.53], flat=True, set_=dict(view='doorway'),
+      drop=[('tess', 'hands'), ('noah13', 'hands'), ('noah_grown', 'hands')], glide=[0.5, 0.5, 0.8],
+      path=[(547.43, 960, 560, 1.0), (552.0, 960, 540, 1.06), (557.0, 960, 560, 1.03), (562.41, 960, 540, 1.1)])
+MERGE(572.09, 574.49)
+DROP(581.93)
+MERGE(578.73, 584.41, keep=[580.57])
+MERGE(586.28, 587.88, flow_at=[960, 540])
+MERGE(602.52, 607.36, cam3=[[602.52, 'pov_down'], [605.21, 'pov_down'],
+                            [606.3, {'view': 'pov_down', 'dl': [0.0, 1.35, -0.25], 'fov': 64}],
+                            [607.36, {'pos': (0.0, 0.2, 0.82), 'look': (0.0, 0.66, 1.42), 'fov': 54}]], glide=[0.4, 0.6, 0.5],
+      set_=dict(hold='H7'), snap=[605.21, 1.08, 0.1], drop_hud=['label'],
+      chars=[C('you', [960, 980, 900], 'front', 'neutral', [], mode='feet', pov=True, pin=True),
+             Q('S3c', [960, 900, 600], mode='body', view='front', acts=[A(605.17, 'fade_in', dur=0.05), A(606.2, 'grin_widen'),
+                                                                       A(606.6, 'reach_shoulder')], w=[0.0, -1.2, 1.4])],
+      frame='HOLD H7 (one shot): POV of your boots on a red-edged tread; the next tread down holds HER FOOT (605.21 hit); the '
+            'camera tilts up her dress to the S3c face looming over you')
+MERGE(607.36, 609.48, cam3=[[607.36, {'pos': (0.12, -1.0, 3.05), 'look': (0.0, 0.45, 0.1), 'fov': 64}],
+                            [608.9, {'pos': (0.1, -0.9, 2.85), 'look': (0.0, 0.6, 0.05), 'fov': 62}],
+                            [609.48, {'pos': (0.08, -0.75, 2.7), 'look': (0.0, 1.5, 0.1), 'fov': 60}]], glide=[0.5, 1.0, 0.5],
+      chars=[body('you', 960, 900, 600, 'back', 'fear', [A(607.4, 'climb', steps_per_s=1.2), A(609.05, 'flinch')],
+                  w=[[607.36, 0.0, -0.4, 0.37], [608.97, 0.0, -0.22, 0.17], [609.48, 0.0, 0.1, 0.0]]),
+             C('tess', [960, 380, 170], 'front', 'neutral', [A(608.3, 'reach_grab', foreshortened=True), A(608.97, 'grab_collar'),
+                                                           A(609.1, 'yank')], mode='hands', sleeve='orange', w=[0.04, 1.32, 0.12])],
+      frame='one low shot from below you on the stairs: the doorway above, Tess\'s orange arm shoots out, grabs your collar and '
+            'whips you up; white flash')
+MERGE(618.40, 621.25)
+MERGE(621.25, 625.53, flat=True, set_=dict(view='through'), path=[(621.25, 960, 560, 1.0), (623.4, 960, 600, 1.08), (625.53, 960, 640, 1.16)])
+# --- ENDING
+MERGE(629.05, 638.89, flat=True, cam3=[[629.05, 'floor_wide'], [634.0, {'pos': (1.6, 0.6, 1.75), 'look': (2.9, 0.45, 4.3), 'fov': 72}],
+                                       [638.89, {'pos': (2.3, 0.66, 1.6), 'look': (2.95, 0.45, 4.3), 'fov': 70}]],
+      glide=[0.4, 0.5, 1.0])
+MERGE(640.57, 643.37)
+MERGE(644.81, 652.39)
+MERGE(684.98, 695.62)
+# --- continuity pass 2 (validate.py): same-subject cuts on one set-up become one move; the rest are flagged
+FLAG(142.56, match_action=True)               # the finger runs on into the click
+FLAG(153.75, match_action=True)               # her hand opens on the glass (the same set-up, closer)
+FLAG(625.53, match_action=True)               # her foot lifts over the wiped step
+MERGE(224.60, 228.00)
+MERGE(300.78, 304.66)
+MERGE(326.68, 331.80)
+MERGE(382.16, 386.64)
+MERGE(398.96, 401.02)
+MERGE(411.34, 414.30)
+MERGE(442.29, 445.17)
+MERGE(464.59, 470.51, set_=dict(hold='H2'))
+MERGE(519.90, 523.42)
+MERGE(587.88, 592.92, set_=dict(hold='H6'))
+DROP(566.57)
+MERGE(595.56, 599.72)
+MERGE(660.39, 664.87, set_=dict(hold='H9'))
+MERGE(666.87, 669.75)
+MERGE(669.75, 673.06)
+MERGE(674.26, 677.34)
+MERGE(678.74, 682.18)
+# B4: the OTS at 372.5 is over YOUR shoulder (olive, standing) at Noah sitting on his bunk, the stairs behind him (the
+# ots_noah view put Noah's back in the foreground while Noah was also the subject)
+MERGE(372.50, 374.66, cam3=[[372.50, {'pos': (2.5, 1.5, 3.5), 'look': (1.15, 0.95, 5.4), 'fov': 50}],
+                            [374.66, {'pos': (2.4, 1.45, 3.65), 'look': (1.15, 0.95, 5.4), 'fov': 48}]], glide=[1.0, 1.0, 0.3],
+      set_=dict(view='bunk_2s', type='OTS'),
+      chars=[body('you', 960, 1200, 760, 'back', 'tense', [], w=[2.22, 0.0, 4.0]),
+             body('noah13', 1200, 1000, 560, 'q_left', 'calm_kid', [A(373.1, 'look_up')], seated=True)],
+      frame='OTS over your shoulder (olive jacket, standing): Noah13 on his bunk looks up at you, the stairs rising behind him')

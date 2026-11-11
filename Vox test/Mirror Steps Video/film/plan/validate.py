@@ -4,10 +4,15 @@
 
 Hard errors: gaps or overlaps between shots, first shot not at 0, last shot not at the film end, a narration line not covered,
 a shot shorter than 0.3 s, camera keys outside their shot, rule cards moved (DIRECTION_V2 5.3 table, +-0.05 s) or not 0.42-0.48 s
-before "Rule" / not cut 0.1-0.2 s after the sentence, a caption under a rule card, a shot over 2.5 s that is not one of the ten
-holds, a card or the time card, a hold missing or off its brief time, an error number 1-33 with no shot, an SFX name not declared,
-a cue outside the film, a shot without world / look / class / energy, a bad Queen stage.
-Targets (DIRECTION_V2 5.1, 5.5, 2.2-2.5, 1.2): printed as a table with PASS / MISS; any MISS also fails the run.
+before "Rule" / not cut 0.1-0.2 s after the sentence, a caption under a rule card, a hold missing or not covering its brief time,
+an error number 1-33 with no shot, an SFX name not declared, a cue outside the film, a shot without world / look / class /
+energy, a bad Queen stage, a travelling shot (cam3) on a set that has no 3D room.
+Targets: FLOW OVER CUT COUNT (the owner's v2 verdict; critic round 1). The old cut-rate targets (36-40 cuts/min, shot p50
+1.4-1.6 s, flash and punch-in rates) are gone: they are printed for information only. The checks are continuity checks:
+jump cuts (adjacent shots on the same set and view) <= 3 % of the cuts unless flagged match_action; world switches <= 6 in
+any 60 s outside the flagged parallel-action blocks (the porch / THEIRS cross-cut 500-537 s and the hook's teaser burst);
+no more than 2 consecutive close-ups on the bokeh plate; memory runs >= 2.5 s; snap punch-ins <= 3 in the film. Printed as a
+table with PASS / MISS; any MISS also fails the run.
 Warnings: acting / HUD / SFX times outside their own shot, the left-hand fist rule (323.65-649 s), the Queen ladder order.
 """
 import json, os, statistics, sys
@@ -47,11 +52,14 @@ STAGES = {'S0', 'S1', 'S2', 'S3a', 'S3b', 'S3c', 'OFF', 'S4', None}
 for s in shots:
     if s['dur'] < 0.3: err.append('%s too short (%.2f s)' % (s['id'], s['dur']))
     k = s['cam']['keys']
-    if k[0][0] < s['t0'] - 1e-3 or k[-1][0] > s['t1'] + 1e-3: err.append('%s camera keys outside the shot' % s['id'])
+    if (k[0][0] < s['t0'] - 1e-3 or k[-1][0] > s['t1'] + 1e-3) and s['cam'].get('move') != 'path':   # a path spans its group
+        err.append('%s camera keys outside the shot' % s['id'])
     for f in ('energy', 'world', 'look', 'cls'):
         if not s.get(f): err.append('%s has no %s' % (s['id'], f))
-    if s['dur'] > 2.5 + 1e-6 and not s.get('hold') and s['type'] != 'CARD' and not s.get('time_card'):
-        err.append('%s is %.2f s long (only the holds, the cards and the time card may pass 2.5 s)' % (s['id'], s['dur']))
+    if s['dur'] > 14.0 + 1e-6 and s['type'] != 'CARD':
+        warn.append('%s is %.2f s long' % (s['id'], s['dur']))
+    if s.get('cam3') and s['set'] not in ('cabin_now', 'cabin_dawn', 'stairs', 'mirror'):
+        err.append('%s travels (cam3) on %s, which has no 3D room' % (s['id'], s['set']))
     if s.get('queen') and s['queen'].get('stage') not in STAGES: err.append('%s queen stage %r' % (s['id'], s['queen']['stage']))
     for c in s['chars']:
         if c['who'] == 'queen' and c.get('stage') not in STAGES: err.append('%s queen char stage %r' % (s['id'], c.get('stage')))
@@ -81,8 +89,8 @@ for cap in D['captions']:
 for h in D['holds']:
     if not h['shot']: err.append('hold %s has no shot' % h['id']); continue
     a, b, ln = h['brief']
-    if abs(h['t0'] - a) > 0.25 or abs(h['t1'] - b) > 0.25 or abs(h['dur'] - ln) > 0.4:
-        err.append('hold %s at %.2f-%.2f (%.2f s), brief %.1f-%.1f (%.1f s)' % (h['id'], h['t0'], h['t1'], h['dur'], a, b, ln))
+    if h['t0'] > a + 0.25 or h['t1'] < b - 0.25:            # a hold may now sit inside a longer continuous shot
+        err.append('hold %s at %.2f-%.2f (%.2f s) does not cover its brief %.1f-%.1f (%.1f s)' % (h['id'], h['t0'], h['t1'], h['dur'], a, b, ln))
 held = [s for s in shots if s.get('hold')]
 if len(held) != 10: err.append('%d hold shots, want 10' % len(held))
 
@@ -167,47 +175,69 @@ tags = sum(1 for s in shots for h in s['hud'] if h['type'] == 'tag')
 labels = sum(1 for s in shots for h in s['hud'] if h['type'] == 'label')
 faces = [s for s in real if s['cls'] == 'face']
 
-print('TARGETS (DIRECTION_V2)  %d shots, %.2f min' % (len(shots), MIN))
-target('shots', len(shots), 430, 450, '%d')
-target('cuts per minute', cuts / MIN, 36, 40)
-target('cuts per minute, rule 6 (542-610 s)', cpm(542.03, 609.48), 40, 44)
-target('cuts per minute, ending (629-700 s)', cpm(629.0, 700.0), 34, 38, note='brief: 34-36')
-target('cuts in the first 30 s', first30, 22, 24, '%d')
-target('shot length p10 (s)', q(durs, .1), 0.55, 0.85, '%.2f', 'brief 0.65')
-target('shot length p50 (s)', statistics.median(durs), 1.4, 1.6, '%.2f', 'brief 1.5')
-target('shot length p90 (s)', q(durs, .9), 2.2, 2.6, '%.2f', 'brief 2.5')
-target('shots over 3 s (%)', 100 * len(over3) / len(shots), None, 4.0, '%.1f', 'holds, cards, time card only')
-target('cuts on a clause start (%)', 100 * len(clause) / cuts, 65, 75)
-target('picture lead on clause cuts, median (s)', statistics.median(leads), 0.12, 0.20, '%.2f', 'brief 0.15-0.17')
-target('wides (%)', 100 * cls.get('wide', 0) / n, 30, 35)
-target('MS / OTS / 2S (%)', 100 * cls.get('mid', 0) / n, 15, 20)
-target('faces (%)', 100 * cls.get('face', 0) / n, 25, 30)
-target('inserts, documents, diagrams, UI (%)', 100 * cls.get('insert', 0) / n, 18, 20)
-target('POV hands (%)', 100 * cls.get('pov', 0) / n, 4, 6, note='brief 5')
-target('inserts / documents / diagrams per minute', devices / MIN, 4, 6, '%.2f', 'shots carrying a device')
-target('setups reused: explicit [R] callbacks (%)', 100 * reuse_x / n, 8, None, '%.1f', 'plus same-angle wides/mids below')
-target('setups reused: wide/mid on an earlier angle (%)', 100 * reuse_angle / n, 25, None, '%.1f', 'brief about 30')
-target('push-in median (%/s)', statistics.median(push), 2.6, 3.6, '%.2f', 'brief about 3.0')
-target('push-in p75 (%/s)', q(push, .75), 4.0, 6.0, '%.2f', 'brief about 5.5')
-target('pull-outs (% of shots)', 100 * len(pulls) / n, 7, 13, '%.1f', 'brief about 10')
-target('near-static shots (%)', 100 * len(static) / n, None, 5.0)
-target('white flash / glitch cuts per minute', flash / MIN, 2, 3, '%.2f')
-target('punch-ins per minute', punch / MIN, 1, 2, '%.2f')
-target('side-switch glints', glints, 18, 22, '%d')
-target('re-establishing wide after each rule card', card_wide, len(after_card), len(after_card), '%d', 'of %d' % len(after_card))
-target('wide in the first 2 shots after a side switch', switch_wide, len(switch_blocks), len(switch_blocks), '%d', 'of %d blocks' % len(switch_blocks))
-target('holds (the only shots over 2.5 s)', len(held), 10, 10, '%d')
+# ---------------------------------------------------------------- continuity measures (the new direction)
+def wfam(s):
+    if s['type'] in ('CARD', 'BLACK'): return None
+    if s['world'] in ('theirs', 'theirs_break') or (s['world'] == 'climax' and s['side'] == 'theirs'): return 'theirs'
+    if s['world'] == 'memory': return 'memory'
+    if s['world'] == 'stairs' and s['set'] == 'stairs': return 'stairs'
+    return 'ours'
+PARALLEL = [(500.0, 537.5), (0.0, 16.06)]        # the porch / THEIRS cross-cut; the hook's flash-forward burst
+def parallel(tt): return any(a_ <= tt < b_ for a_, b_ in PARALLEL) or False
+switches, prevf = [], None
+for s in shots:
+    f = wfam(s)
+    if f is None: continue
+    if prevf is not None and f != prevf and not parallel(s['t0']) and not s.get('parallel') and not s.get('teaser'): switches.append(s['t0'])
+    prevf = f
+worst60, worst_at = 0, 0.0
+for t_ in switches:
+    nn = len([x for x in switches if t_ <= x < t_ + 60.0])
+    if nn > worst60: worst60, worst_at = nn, t_
+def subj(s):
+    return {c['who'] for c in s['chars'] if c.get('mode', 'body') in ('body', 'bust', 'legs', 'silhouette') and not c.get('reflection')}
+# a jump cut: the same set and view and the same people (or nobody) on both sides; a cut to the other person on the same
+# plate is a reverse (shot / reverse shot), not a jump; UI screens are excluded
+jumps = [(a_['id'], b_['id']) for a_, b_ in zip(shots, shots[1:]) if (a_['set'], a_['view']) == (b_['set'], b_['view'])
+         and a_['type'] not in ('CARD', 'BLACK') and not b_.get('match_action') and a_['set'] not in ('ui',)
+         and (subj(a_) & subj(b_) or not (subj(a_) or subj(b_)))]
+bok, run_, worst_bok, worst_bok_at = 0, 0, 0, ''
+for s in shots:
+    if s['view'] == 'bokeh' and s['cls'] == 'face':
+        run_ += 0 if s.get('resumes') else 1          # a close-up resuming its own move after a reaction is the same shot
+        if run_ > worst_bok: worst_bok, worst_bok_at = run_, s['id']
+    else: run_ = 0
+mem_runs, cur_ = [], None
+for s in shots:
+    if s['world'] == 'memory':
+        if cur_ is None: cur_ = [s['t0'], s['t1'], s['id']]
+        else: cur_[1] = s['t1']
+    else:
+        if cur_ is not None: mem_runs.append(cur_); cur_ = None
+short_mem = [(m[2], round(m[1] - m[0], 2)) for m in mem_runs if m[1] - m[0] < 2.5 - 1e-6]
+travelling = [s for s in shots if s.get('cam3')]
+merged = [s for s in shots if s.get('merged') and len(s['merged']) > 1]
+flows = [s for s in shots if s['tr'] == 'flow']
+
+print('TARGETS (flow over cut count)  %d shots, %.2f min' % (len(shots), MIN))
+target('jump cuts: adjacent shots on the same set and view (% of cuts)', 100 * len(jumps) / max(1, cuts), None, 3.0, '%.1f',
+       ', '.join('%s>%s' % j for j in jumps[:8]))
+target('world switches per minute (outside the parallel blocks)', len(switches) / MIN, None, 6.0, '%.1f',
+       'worst 60 s: %d from %.1f s' % (worst60, worst_at))
+target('consecutive close-ups on the bokeh plate (max)', worst_bok, None, 2, '%d', 'ending at %s' % worst_bok_at)
+target('memory runs shorter than 2.5 s', len(short_mem), None, 0, '%d', ', '.join('%s %.2f' % m for m in short_mem[:8]))
+target('snap punch-ins in the film', punch, None, 3, '%d', 'eased push accelerations on the other word beats')
+target('rule cards in place', len(cards), 7, 7, '%d')
+target('holds (H1-H10)', len(held), 10, 10, '%d')
 target('red X', xs, 4, 4, '%d')
 target('command tags', tags, 6, 6, '%d')
-target('labels with leader lines', labels, 8, None, '%d')
-target('captions', len(caps), 500, 520, '%d')
-target('caption length median (s)', statistics.median(cd), 1.1, 1.3, '%.2f', 'brief 1.2')
-target('caption words p10', q(cw, .1), 2, None, '%.0f', 'p90 %.0f; six-word captions %.0f %% (the 500-520 count needs some)' % (q(cw, .9), 100 * sum(1 for x in cw if x >= 6) / len(cw)))
-target('caption words max', max(cw), None, 6, '%d')
-target('captions changing within 0.2 s of a cut (%)', 100 * oncut / len(caps), 70, None)
 target('errors 1-33 mapped to shots', len([1 for v in D['errors'].values() if v['shots']]), 33, 33, '%d')
 target('lines covered', len(covered & {L['i'] for L in TL['lines']}), len(TL['lines']), len(TL['lines']), '%d')
 target('CU/ECU on a bokeh plate (%)', 100 * len([s for s in faces if s.get('bokeh')]) / max(1, len(faces)), 90, None, '%.0f', 'shots[].bokeh')
+print('INFO   cuts %d (%.1f /min), shot p10/p50/p90 %.2f / %.2f / %.2f s, merged shots %d (from %d), travelling shots (cam3) %d, '
+      'flow joins %d, world switches %d (%.1f /min), captions %d' % (
+          cuts, cuts / MIN, q(durs, .1), statistics.median(durs), q(durs, .9), len(merged), sum(len(s['merged']) for s in merged),
+          len(travelling), len(flows), len(switches), len(switches) / MIN, len(caps)))
 w = max(len(r[0]) for r in rows)
 for name, val, rng, ok, note in rows:
     print('  %-*s  %9s   %-13s %s  %s' % (w, name, val, rng, ok, note))

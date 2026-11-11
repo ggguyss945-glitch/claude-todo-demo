@@ -64,7 +64,10 @@ TIMELINE = os.path.join(WORK, 'align', 'timeline.json')
 EVENTS = os.path.join(WORK, 'align', 'film_events.json')
 FPS = 60
 DISSOLVE = 0.30                       # centred on the cut
-SEPIA_WIPE = 0.20                     # the paper wipe into / out of a memory, from the cut
+SEPIA_WIPE = 0.45                     # the paper dissolve into / out of a memory (0.2 s before the cut, 0.25 s after)
+FLOW = 0.50                           # the travel dissolve between two places (centred on the cut)
+# transition windows (before, after the cut) for the blended transitions
+TR_WIN = {'dissolve': (DISSOLVE / 2, DISSOLVE / 2), 'sepia': (0.20, 0.25), 'flow': (FLOW / 2, FLOW / 2)}
 POST_RATE = 0.014                     # uniform post push per second on every shot (see make_cam)
 H._hand = CH.hud_phone_hand           # the cast's hand on the phone UI
 _ERR = set()
@@ -127,6 +130,8 @@ def make_cam(sh, idx, t_shift=0.0):
     from engine.room3d import glide
     c = sh['cam']
     ks = [list(map(float, k)) + [0.0] * (5 - len(k)) for k in c['keys']]
+    if sh.get('cam3'):                     # a travelling shot: the move is the 3D camera's; the 2.5D camera stays home
+        ks = [[sh['t0'], 960.0, 540.0, 1.0, float(c['keys'][0][4]) if len(c['keys'][0]) > 4 else 0.0]]
     for k in ks: k[0] += t_shift
     ease_ = {'lin': 'lin', 'out': 'out', 'in_out': 'in_out', 'push': 'push', 'glide': 'glide'}.get(c.get('ease', 'lin'), 'lin')
     shake = float(c.get('shake', 2.0) or 0.0)
@@ -164,7 +169,7 @@ def make_cam(sh, idx, t_shift=0.0):
 
 # ==================================================================================================== built shot
 class Built:
-    __slots__ = ('sh', 'idx', 'sp', 'layers', 'cam', 'grade', 'focus', 'dof', 'rigs', 'post')
+    __slots__ = ('sh', 'idx', 'sp', 'layers', 'cam', 'grade', 'focus', 'dof', 'rigs', 'post', 'dyn')
 
     def fx(self, t):
         return self.sp.fx(t)
@@ -267,7 +272,15 @@ def _hook_beam(sp, rig, at, layer, store):
                 return r
         hands = (last[1] or {}).get('hands') or {}
         hp = hands.get(-1) or hands.get('-1')
+        # critic B8: the flare toggled to the default source on frames where the hand was not reported; it now stays on the
+        # last known hand, eased toward a new one (no jumps)
+        if hp: hp = (float(hp[0]), float(hp[1]))
+        else: hp = store.get('hp')
         if not hp: return r
+        prev = store.get('hp_s')
+        if prev is not None and abs(store.get('hp_t', t) - t) < 0.1:
+            hp = (prev[0] + (hp[0] - prev[0]) * 0.6, prev[1] + (hp[1] - prev[1]) * 0.6)
+        store['hp'] = hp; store['hp_s'] = hp; store['hp_t'] = t
         hx, hy = float(hp[0]), float(hp[1])
         dx, dy = ax - hx, ay - hy; L = math.hypot(dx, dy) or 1.0
         off = 0.07 * h
@@ -283,11 +296,13 @@ class _NoSet:
 # ==================================================================================================== cast the plan leaves out
 def _knot_echo(film, sh):
     """S281 (the ECU of the knot under the 14 YEARS echo): the same hands on the same half-tied lace as S241."""
-    src = film.shots[film.index['S241']]
+    src = film.shot_at(362.6)                       # the knot ECU of rule 4 (S241 in v2)
     out = []
     for c in src['chars']:
         c2 = json.loads(json.dumps(c))
         c2['acts'] = [[sh['t0'] - 0.4, a[1], a[2]] for a in c2.get('acts') or []]
+        if sh.get('cam3'):                     # the pull-out leaves the knot: the hands fade as the room opens
+            c2['acts'].append([sh['t0'] + 1.6, 'hide', {'fade': 0.35}])
         out.append(c2)
     return out
 
@@ -305,19 +320,75 @@ def _tape_off(film, sh):
                  acts=[[sh['t0'] - 1.7, 'age', {'part': 'hand', 'dur': 1.6}], [sh['t0'] + 0.15, 'slip_tape', {'dur': 0.6}]])]
 
 
-EXTRA_CHARS = {'S281': _knot_echo, 'S067': _glass_pair, 'S078': _glass_pair, 'S361': _tape_off}
+def _bunk_pair(film, sh):
+    """S258 (389, the THEIRS master as the loop resets): Noah on his bunk and the Queen in the window corner (critic B6:
+    the master showed neither)."""
+    return [dict(who='noah13', mode='body', view='q_right', expr='calm_kid', seated=True, at=[700, 860, 390],
+                 acts=[[sh['t0'], 'tie_loop', {'period': 2.4}]]),
+            dict(who='queen', mode='body', view='q_left', expr='queen_drawn', stage='S2', at=[1300, 760, 380],
+                 acts=[[sh['t0'], 'still', {}]], light=dict(key_c='#e8ecff', key_from='below_front', rim='#ff3b5c', rim_a=140))]
+
+
+def _towel_drop_pair(film, sh):
+    """256.9 (critic B5): the towel drops and there is no glass behind it: you and Tess stand in the profile, recoiling."""
+    return [dict(who='tess', mode='body', view='q_right', expr='fear', at='tess_beside', acts=[[sh['t0'] + 0.1, 'flinch', {}]]),
+            dict(who='you', mode='body', view='q_right', expr='fear', at='you_floor', acts=[[sh['t0'] + 0.15, 'flinch', {}]])]
+
+
+def _you_ots_mirror(film, sh):
+    """249.1-252.3 (critic B5): you stand at the mirror in the OTS (you were absent while Tess snatched the towel)."""
+    return [dict(who='you', mode='body', view='back', expr='fear', at=[1450, 1230, 1040], acts=[])]
+
+
+def _you_at_doorway(film, sh):
+    """282.6 (critic B5): you stay in front of the doorway (S185 had you in it; the next shot was empty): your shoulder at the
+    frame's left edge while it rises."""
+    return [dict(who='you', mode='body', view='back', expr='fear', at=[250, 1420, 1250], acts=[])]
+
+
+def _dip_pair(film, sh):
+    """470.5 (critic B5): the dip is not empty: her black satin settles beside Noah's knees (the bunk chart's seats)."""
+    return [dict(who='noah13', mode='body', view='q_right', expr='calm_kid', seated=True, at=[900, 900, 400],
+                 acts=[[sh['t0'], 'tie_loop', {'period': 2.4}]]),
+            dict(who='queen', mode='body', view='q_right', expr='queen_drawn', stage='S2', seated=True, at=[700, 900, 400],
+                 acts=[[sh['t0'], 'still', {}]], light=dict(key_c='#e8ecff', key_from='below_front', rim='#ff3b5c', rim_a=140))]
+
+
+# per-shot extras and overrides are keyed by a film time inside the shot (ids change when shots merge): _by_time()
+EXTRA_CHARS_T = {425.0: _knot_echo, 90.9: _glass_pair, 108.8: _glass_pair, 388.5: _bunk_pair, 257.0: _towel_drop_pair,
+                 250.0: _you_ots_mirror, 282.7: _you_at_doorway, 470.6: _dip_pair}
 
 
 # ==================================================================================================== staging the cast
-SEAT = {        # per-shot overrides: {(shot id, who): {spec keys}} (from the shot checks)
-    ('S226', 'tess'): {'at': 'tess_doorway', 'scale': 0.9}, ('S227', 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
-    ('S232', 'tess'): {'at': 'tess_doorway', 'scale': 0.9}, ('S295', 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
+SEAT_T = {      # per-shot overrides: {(a film time inside the shot, who): {spec keys}} (from the shot checks)
+    (338.8, 'tess'): {'at': 'tess_doorway', 'scale': 0.9}, (340.3, 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
+    (347.7, 'tess'): {'at': 'tess_doorway', 'scale': 0.9}, (449.8, 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
+    (451.3, 'tess'): {'at': 'tess_doorway', 'scale': 0.9},
+    # B9: back on our side Tess stands IN the doorway frame and turns to the front door (seen from behind her)
+    (453.5, 'tess'): {'at': [760, 1250, 1050], 'view': 'back'},
     # H1: she leans out of the doorway at the mirror spot, half in our blue, half in their gold (the doorway behind her)
-    ('S190', 'queen'): {'at': [985, 610, 0.74]},
-    ('S173', 'queen'): {'skip': True},
+    (283.7, 'queen'): {'at': [985, 610, 0.74]},
+    # the set presses her fingertips through the towel; the loose arm read as a club
+    (253.7, 'queen'): {'skip': True},
     # he rises into the top rail (error 6): big enough that his shoulder meets the rail
-    ('S372', 'noah_grown'): {'at': [960, 1230, 1000]}, ('S373', 'noah_grown'): {'at': [960, 1230, 1040]},      # the set presses her fingertips through the towel; the loose arm read as a club
+    (572.1, 'noah_grown'): {'at': [960, 1230, 1000]}, (573.4, 'noah_grown'): {'at': [960, 1230, 1040]},
 }
+SEAT, EXTRA_CHARS = {}, {}          # by shot id, filled from SEAT_T / EXTRA_CHARS_T for the plan in use (Film.__init__)
+
+
+def _by_time(shots):
+    """Re-key the time-keyed overrides by the ids of the plan in use."""
+    def sid_at(tt):
+        for s_ in shots:
+            if s_['t0'] <= tt < s_['t1']: return s_['id']
+        return None
+    SEAT.clear(); EXTRA_CHARS.clear()
+    for (tt, who), v in SEAT_T.items():
+        sid = sid_at(tt)
+        if sid: SEAT[(sid, who)] = v
+    for tt, fn in EXTRA_CHARS_T.items():
+        sid = sid_at(tt)
+        if sid: EXTRA_CHARS[sid] = fn
 FLOOR_SETS = ('cabin_now', 'cabin_dawn', 'mirror', 'memory')
 # standing heights (m) for the room3d views (CAST.md: the queen 1.12x the adults, grown Noah 1.08x you, Noah13 ~0.8x)
 HEIGHT_M = {'you': 1.76, 'tess': 1.68, 'noah13': 1.42, 'noah_grown': 1.90, 'queen': 1.97, 'you_kid': 1.30, 'kids': 1.30,
@@ -326,7 +397,22 @@ HEIGHT_M = {'you': 1.76, 'tess': 1.68, 'noah13': 1.42, 'noah_grown': 1.90, 'quee
 THEIRS_SEAT = {'noah13': 5.35, 'queen': 4.45, 'you': 4.3, 'noah_grown': 5.2}
 SEAT_VIEWS = ('queen_3s', 'master')   # views whose plan guesses miss the mattress (bunk_2s / ots_noah guesses read right)
 SEAT_X, FEET_X = 0.85, 1.24
-H2_START = (1.45, 0.0, 5.25)          # where she stands before the H2 glide (by the foot of the stairs, in frame)
+H2_START = (3.95, 0.0, 5.6)           # where she stands before the H2 glide: the window corner (DIRECTION_V2 372)
+QUEEN_CORNER = (3.95, 0.0, 5.6)
+YOU_FOOT = (1.72, 0.0, 3.92)          # you stand at the foot end of Noah's bunk
+
+
+def bunk_chart(who, t):
+    """One blocking chart for the THEIRS bunk, 382-500 s (critic B6): Noah sits on his mattress; the Queen sits beside him
+    (382.4-388.6, the first sight), stands in the window corner from 388.6, glides to his side in H2 (464.6-466.4) and sits
+    there; you stand at the foot end. The two of them never overlap. -> (world point, seated) or None."""
+    if not (382.0 <= t < 500.5): return None
+    if who == 'noah13': return (FEET_X, 0.0, THEIRS_SEAT['noah13']), True
+    if who == 'queen':
+        if t < 388.6 or t >= 466.4: return (FEET_X, 0.0, THEIRS_SEAT['queen']), True
+        return QUEEN_CORNER, False
+    if who == 'you': return YOU_FOOT, False
+    return None
 
 
 def _ray_floor(sp, x, y, yplane=0.0):
@@ -384,6 +470,18 @@ def stage(sp, spec, sh):
     if seated and s.get('view', 'front') == 'front':          # a straight-on sit reads as standing: turn three-quarter
         s['view'] = 'q_right'
     cam3 = sp.info.get('cam3')
+    ch_ = bunk_chart(who, sh['t0'] + 0.01) if (sh['set'] == 'cabin_dawn' and cam3 is not None and 'sit_beside' not in names) else None
+    if ch_ is not None and sh['view'] not in ('bokeh',):              # the bunk chart wins over the plan's guesses
+        a2 = _anchor_at(sp, ch_[0], who)
+        if a2 is not None:
+            seated = ch_[1]
+            s['seated'] = seated
+            if seated and who != 'queen' and not any(n in ('sit', 'sit_beside', 'glide_sit') for n in names):
+                acts.insert(0, [t_pre, 'sit', {}])
+            if not seated: acts[:] = [a for a in acts if a[1] not in ('sit',)]
+            if who == 'queen': s['view'] = 'q_right' if seated else 'q_left'
+            s['at'] = a2 + at[3:4]; s['acts'] = acts; s['_chart'] = True
+            return s
     if sh['set'] == 'cabin_dawn' and cam3 is not None and 'stairs_foot' in sp.anchors:
         B = ST.sets_v2.B_LOW
         if seated and s.get('view') != 'back' and who in THEIRS_SEAT and sh['view'] in SEAT_VIEWS:
@@ -458,6 +556,119 @@ def place(sp, spec, at, sh):
     return max(0.3, float(bands[i].depth) - 0.012)
 
 
+# ==================================================================================================== travelling shots (cam3)
+def _cam3_spec(set_, spec):
+    """A cam3 key -> (pos, look, fov, roll) in the set's world: a view name of the set (its plan camera), or a dict
+    {view?, pos?, look?, fov?, roll?, dp?, dl?} (dp / dl move the view's position / look point by metres)."""
+    import sets_v2 as S2
+    from engine.room3d import Cam3, v3
+    base = None
+    vname = spec if isinstance(spec, str) else spec.get('view')
+    if vname:
+        if set_ == 'cabin_now': base = S2.OURS_CAMS[vname]
+        elif set_ == 'cabin_dawn': base = S2.THEIRS_CAMS[vname]
+        elif set_ == 'stairs': base = S2.STAIRS_CAMS['ots_climb_down' if vname == 'ots_climb' else vname]
+        elif set_ == 'mirror':
+            c = S2.mirror_cam(vname); base = (tuple(c.C), tuple(c.C + c.R[2]), c.fov, 0.0)
+        else: raise KeyError('cam3 view %s/%s' % (set_, vname))
+    if isinstance(spec, dict) and spec.get('mview'):              # a mirror view's camera, in the cabin (OURS) model
+        c = S2.mirror_cam(spec['mview']); base = (tuple(c.C), tuple(c.C + c.R[2]), c.fov, 0.0)
+    pos, look, fov, roll = base if base is not None else (None, None, 70.0, 0.0)
+    if isinstance(spec, dict):
+        pos = spec.get('pos', pos); look = spec.get('look', look)
+        fov = spec.get('fov', fov); roll = spec.get('roll', roll)
+        if spec.get('dp'): pos = tuple(np.asarray(pos, float) + np.asarray(spec['dp'], float))
+        if spec.get('dl'): look = tuple(np.asarray(look, float) + np.asarray(spec['dl'], float))
+    return tuple(map(float, pos)), tuple(map(float, look)), float(fov), float(roll or 0.0)
+
+
+def campath_of(sh):
+    """The CamPath3 of a travelling shot: monotone cubic through the keys under a glide (alive at both cuts, no stops)."""
+    from engine.room3d import CamPath3, glide
+    c3 = sh['cam3']
+    keys = [(float(t),) + _cam3_spec(sh['set'], spec) for t, spec in c3['keys']]
+    g = list(c3.get('glide') or [])
+    v0, v1, ramp = (g + [0.45, 0.6, 0.8][len(g):])[:3]
+    return CamPath3(keys, warp=glide(keys[0][0], keys[-1][0], v0, v1, ramp))
+
+
+def _ray_floor_cam(cam3, x, y, yplane=0.0):
+    qx, qy = (x - cam3.cx) / cam3.f, -(y - cam3.cy) / cam3.f
+    dirv = cam3.R.T @ np.array([qx, qy, 1.0])
+    if abs(dirv[1]) < 1e-6: return None
+    s_ = (yplane - cam3.C[1]) / dirv[1]
+    if s_ <= 0.15: return None
+    return cam3.C + dirv * s_
+
+
+def _world_fn(sh, spec, sp0):
+    """Where a cast member stands in a travelling shot: f(t) -> world floor point, or None (busts, hands, feet and POV
+    entries keep their screen place). spec['w'] = [x, y, z] or keys [[t, x, y, z], ...] (a walk); a seat on Noah's bunk
+    (THEIRS); a named anchor of the set; else the plan's screen point cast onto the floor through the view it was
+    framed in (spec['_view'], default the shot's view)."""
+    import sets_v2 as S2
+    from engine.room3d import Cam3, mono_cubic
+    mode = spec.get('mode', 'body')
+    if mode not in ('body', 'legs', 'silhouette'):
+        # hands, busts and feet framed in a view (not POV): pinned to the glass (mirror) or to a plane at the subject's
+        # distance, so they stay put in the room while the camera travels (projected, and scaled by distance)
+        at = spec.get('at')
+        if (spec.get('pov') and not spec.get('pin')) or not isinstance(at, (list, tuple)) or len(at) < 3: return None
+        vname = spec.get('_view') or sh['view']
+        try:
+            pos, look, fov, roll = _cam3_spec(sh['set'], vname)
+        except KeyError:
+            return None
+        c0 = Cam3(pos, look=look, fov=fov, roll=roll)
+        if spec.get('w') is not None:                                  # pinned at a world point, at[2] = size seen from the view
+            P = np.asarray(spec['w'], float)
+            f = lambda t: P
+            f.plane = (max(0.05, c0.dist(P)), float(at[2]), list(at[3:]))
+            return f
+        qx, qy = (float(at[0]) - c0.cx) / c0.f, -(float(at[1]) - c0.cy) / c0.f
+        dirv = c0.R.T @ np.array([qx, qy, 1.0])
+        if sh['set'] == 'mirror':
+            O, U, V, w_, h_, n = S2.mirror_plane(0.0)
+            den = float(np.dot(dirv, n))
+            if abs(den) < 1e-6: return None
+            s_ = float(np.dot(O - c0.C, n)) / den
+        else:
+            s_ = float(sp0.info.get('d0') or 1.0)
+        if s_ <= 0.05: return None
+        P = c0.C + dirv * s_
+        dref = c0.dist(P)
+        f = lambda t: P
+        f.plane = (dref, float(at[2]), list(at[3:]))
+        return f
+    w = spec.get('w')
+    if w is not None:
+        if isinstance(w[0], (list, tuple)):
+            ts = [float(k[0]) for k in w]; cols = [[float(k[j]) for k in w] for j in (1, 2, 3)]
+            return lambda t: np.array([mono_cubic(ts, c, t) for c in cols])
+        P = np.asarray(w, float); return lambda t: P
+    who = spec['who']
+    ch_ = bunk_chart(who, sh['t0'] + 0.01) if sh['set'] == 'cabin_dawn' else None
+    if ch_ is not None:
+        P = np.asarray(ch_[0], float); return lambda t: P
+    if spec.get('seated') and sh['set'] == 'cabin_dawn' and who in THEIRS_SEAT:
+        P = np.array([FEET_X, 0.0, THEIRS_SEAT[who]]); return lambda t: P
+    at = spec.get('at')
+    pts = S2.OURS_PTS if sh['set'] in ('cabin_now', 'mirror') else (S2.THEIRS_PTS if sh['set'] == 'cabin_dawn' else {})
+    if isinstance(at, str):
+        if at in pts:
+            P = np.asarray(pts[at][0], float); return lambda t: P
+        return None
+    if not isinstance(at, (list, tuple)) or len(at) < 3 or sh['set'] not in ('cabin_now', 'cabin_dawn'): return None
+    vname = spec.get('_view') or sh['view']
+    try:
+        pos, look, fov, roll = _cam3_spec(sh['set'], vname)
+    except KeyError:
+        return None
+    P = _ray_floor_cam(Cam3(pos, look=look, fov=fov, roll=roll), float(at[0]), float(at[1]))
+    if P is None: return None
+    return lambda t: P
+
+
 # ==================================================================================================== the film
 class Film:
     def __init__(self, tl=None, plan_path=PLAN):
@@ -465,6 +676,7 @@ class Film:
         self.P = json.load(open(plan_path))
         self.shots = self.P['shots']
         self.index = {s['id']: k for k, s in enumerate(self.shots)}
+        _by_time(self.shots)
         self._starts = [s['t0'] for s in self.shots]
         self.duration = float(self.P['meta']['duration'])
         self.cards = {rc['n']: rc for rc in self.P['rule_cards']}
@@ -505,6 +717,9 @@ class Film:
         s_set = dict(s2, chars=[c for c in chars if not c.get('_glass_rel')]) if any(c.get('_glass_rel') for c in chars) else s2
         sp = ST.build_shot(s_set)
         B = Built(); B.sh, B.idx, B.sp = sh, k, sp
+        B.dyn = None
+        if sh.get('cam3'):
+            return self._build_dyn(B, k, sh, s2, s_set, chars, t_shift)
         layers = list(sp); rigs = []; subj = []
         for spec in chars:
             spec2 = dict(spec)
@@ -570,6 +785,95 @@ class Film:
             try: B.post = 0.5 * float(get_grade(B.grade).p['bloom'])
             except Exception: B.post = None
         return B
+
+    def _build_dyn(self, B, k, sh, s2, s_set, chars, t_shift=0.0):
+        """A travelling shot: the camera (CamPath3) moves through the 3D room; the view is rebuilt for every frame's camera
+        (sets_v2.MOVE) and the cast stands at world points (or walks along world keys), projected per frame."""
+        sp = B.sp
+        d0 = float(sp.info.get('d0') or 1.0)
+        B.dyn = dict(path=campath_of(sh), d0=d0, memo={}, s_set=s_set, chars=[])
+        for spec in chars:
+            spec2 = dict(spec)
+            if spec2.get('_glass_rel'): continue
+            ov = SEAT.get((sh['id'], spec2['who']))
+            if ov and ov.get('skip'): continue
+            if ov: spec2.update({k_: v_ for k_, v_ in ov.items() if k_ not in ('scale', 'skip')})
+            wf = _world_fn(sh, spec2, sp)
+            if wf is None:
+                try:
+                    at = ST.resolve_at(sp, spec2)
+                except KeyError:
+                    at = [960, 540, 600]
+                spec2['at'] = at
+                try: spec2 = stage(sp, spec2, sh)
+                except Exception as e: _warn((sh['id'], 'stage'), 'stage %s: %r' % (sh['id'], e))
+            else:
+                spec2['at'] = [960, 900, 600]
+                try: spec2 = stage(_NoSet(), spec2, sh)
+                except Exception as e: _warn((sh['id'], 'stage'), 'stage %s: %r' % (sh['id'], e))
+            try:
+                rig = CH.CharRig(spec2, s2)
+            except Exception as e:
+                _warn((sh['id'], spec['who'], 'rig'), 'rig failed %s %s: %r' % (sh['id'], spec['who'], e)); continue
+            hm = HEIGHT_M.get(spec2['who'], 1.74) * float((ov or {}).get('scale', 1.0))
+            B.dyn['chars'].append((rig, wf, hm, spec2))
+        B.layers, B.rigs = list(sp), [c[0] for c in B.dyn['chars']]
+        B.cam = make_cam(sh, k, t_shift)
+        B.grade, B.focus, B.dof = self.shot_grade(sh, sp), sp.focus, sp.dof
+        B.post = None
+        return B
+
+    def _dyn_layers(self, B, t):
+        """The layers of a travelling shot at film time t (see _build_dyn)."""
+        import sets_v2 as S2
+        D = B.dyn
+        cam = D['path'](t)
+        S2.MOVE = {'cam': cam, 'd0': D['d0'], 'memo': D['memo']}
+        try:
+            sp = ST.build_shot(D['s_set'])
+        finally:
+            S2.MOVE = None
+        L = list(sp)
+        for l in L: l.cache = False
+        bm = getattr(cam, '_bandmap', None) or []
+        d0 = D['d0']
+        for rig, wf, hm, spec in D['chars']:
+            mode = spec.get('mode', 'body')
+            if wf is None:
+                at = spec['at']
+                L.append(_char_layer(rig, at, mode, None, B.sh, spec, sp))
+                continue
+            P = wf(t)
+            dist = cam.dist(P)
+            pl = getattr(wf, 'plane', None)
+            if pl is not None:                                             # pinned to the glass / a plane: scale by distance
+                if dist < 0.08: continue
+                x, y = cam.pt(P)
+                at_ = [x, y, pl[1] * pl[0] / dist] + pl[2]
+                spec_ = dict(spec, _depth=0.58)
+                if spec.get('reflection') and B.sh['set'] == 'mirror':
+                    try: spec_['_depth'] = float(sp.layer('lipstick').depth) + 0.001
+                    except KeyError: pass
+                    if mode == 'hands':                                    # the hand on the glass AND its reflection
+                        real = dict(spec, reflection=False, _depth=0.58)
+                        L.append(_char_layer(rig, at_, mode, None, B.sh, real, sp))
+                        at_ = [float(at_[0]) + 0.34 * float(at_[2]), float(at_[1]) - 0.04 * float(at_[2])] + list(at_[2:])
+                L.append(_char_layer(rig, at_, mode, None, B.sh, spec_, sp))
+                continue
+            Pm = np.asarray(P, float) + np.array([0.0, 0.55 * hm, 0.0])
+            dm = cam.dist(Pm)
+            if dist < 0.35:
+                if dm < 0.3: continue                                      # the camera passes through / behind them
+                # feet behind the lens (she looms over you): place the figure by its middle
+                xm, ym = cam.pt(Pm); h = hm * cam.f / dm
+                x, y, dist = xm, ym + 0.55 * h, dm
+            else:
+                x, y, h, _ = cam.anchor(P, hm, d0)
+            dep = 1.0
+            for (a, b, ld) in bm:
+                if (a <= dist or a <= -1e8) and dist < b: dep = max(0.3, float(ld) - 0.012); break
+            L.append(_char_layer(rig, [x, y, h, dep], mode, None, B.sh, spec, sp))
+        return L
 
     def _split_replays(self, sh):
         """SPLIT panels that replay a film time (src_t, the loop twins): the cast of the source shot, drawn at
@@ -658,7 +962,8 @@ class Film:
         fx = self.fx_at(B, t if tr is None else tr, k)
         sh = self.shots[k]
         hf = (lambda cv, tt: self.UI.hud(cv, t, sh, cs, self)) if hud else None
-        img = render_frame(B.layers, cs, t if tr is None else tr, i, focus=B.focus, dof=B.dof, lens=None, grade=B.grade,
+        layers = self._dyn_layers(B, t if tr is None else tr) if B.dyn else B.layers
+        img = render_frame(layers, cs, t if tr is None else tr, i, focus=B.focus, dof=B.dof, lens=None, grade=B.grade,
                            post=fx, hud=hf)
         return img
 
@@ -673,26 +978,41 @@ class Film:
                 return self._render(k, t, i, hud, B=B, tr=src)
         return self._render(k, t, i, hud)
 
+    def _blend_ok(self, k):
+        """Shot k may blend with the shot before it (no blend out of a card, a black or into one)."""
+        sh = self.shots[k]
+        if k <= 0 or sh['tr'] not in TR_WIN: return False
+        if sh['tr'] == 'flow' and sh['side'] == 'card': return self.shots[k - 1]['side'] not in ('black', 'card')   # into the mirror
+        return self.shots[k - 1]['side'] not in ('black', 'card') and sh['side'] not in ('black', 'card')
+
     def frame(self, t, i=None):
         if i is None: i = int(round(t * FPS))
         k = self.idx_at(t); sh = self.shots[k]
-        other, u, kind = None, None, None
-        if sh['tr'] == 'dissolve' and k > 0 and t < sh['t0'] + DISSOLVE / 2:
-            other, u, kind = k - 1, 0.5 + (t - sh['t0']) / DISSOLVE, 'dissolve'
-        elif k + 1 < len(self.shots) and self.shots[k + 1]['tr'] == 'dissolve' and t >= sh['t1'] - DISSOLVE / 2:
-            other, u, kind = k + 1, 0.5 - (sh['t1'] - t) / DISSOLVE, 'dissolve'
-        elif sh['tr'] == 'sepia' and k > 0 and t < sh['t0'] + SEPIA_WIPE and self.shots[k - 1]['side'] not in ('black', 'card'):
-            other, u, kind = k - 1, (t - sh['t0']) / SEPIA_WIPE, 'sepia'
+        other, u, kind, kin = None, None, None, None
+        if self._blend_ok(k):
+            pre, post = TR_WIN[sh['tr']]
+            if t < sh['t0'] + post:
+                other, kind, kin = k - 1, sh['tr'], k
+                u = (t - (sh['t0'] - pre)) / (pre + post)
+        if other is None and k + 1 < len(self.shots) and self._blend_ok(k + 1):
+            nx = self.shots[k + 1]
+            pre, post = TR_WIN[nx['tr']]
+            if t >= sh['t1'] - pre:
+                other, kind, kin = k + 1, nx['tr'], k + 1
+                u = (t - (nx['t0'] - pre)) / (pre + post)
         if other is None:
             img = self._shot_frame(k, t, i)
         else:
+            u = clamp(u)
             a = self._shot_frame(min(k, other), t, i, hud=False)
             b = self._shot_frame(max(k, other), t, i, hud=False)
             if kind == 'dissolve':
-                w = ease_in_out(clamp(u))
+                w = ease_in_out(u)
                 img = cv2.addWeighted(a, 1.0 - w, b, w, 0.0)
+            elif kind == 'flow':
+                img = flow_blend(a, b, u, self.shots[kin].get('flow'))
             else:
-                img = sepia_wipe(a, b, clamp(u), sh['side'] == 'memory')
+                img = paper_dissolve(a, b, u, self.shots[kin]['side'] == 'memory')
             B = self.built(k)
             cs = B.cam.at(t)
             img = overlay_hud(img, lambda cv, tt: self.UI.hud(cv, t, sh, cs, self), t)
@@ -834,7 +1154,7 @@ class Film:
 _WIPE = {}
 
 
-def sepia_wipe(a, b, u, into_memory=True):
+def sepia_wipe(a, b, u, into_memory=True):          # v2's 0.2 s wipe (kept for reference; paper_dissolve replaced it)
     """The paper wipe: the new picture slides in behind a soft diagonal edge with a cream burn, left to right into a
     memory, right to left out of it, in SEPIA_WIPE seconds from the cut."""
     h, w = a.shape[:2]
@@ -850,6 +1170,46 @@ def sepia_wipe(a, b, u, into_memory=True):
     out = a.astype(np.float32) * (1 - m) + b.astype(np.float32) * m
     out += burn * np.array([255, 236, 196], np.float32) * 0.55
     return np.clip(out, 0, 255).astype(np.uint8)
+
+
+_PAPER = {}
+
+
+def paper_dissolve(a, b, u, into_memory=True):
+    """Into / out of a memory (0.45 s): the new picture soaks through the old like ink through paper (a soft, uneven
+    dissolve led by a low-frequency paper grain, sweeping left to right into a memory, right to left out of it) with a
+    faint cream burn on the soaking edge. No hard edge, no wipe line."""
+    h, w = a.shape[:2]
+    key = (w, h)
+    if key not in _PAPER:
+        rng = np.random.RandomState(7)
+        n = cv2.resize(rng.rand(9, 16).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+        n2 = cv2.resize(rng.rand(36, 64).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        g = xx / w + 0.12 * (yy / h - 0.5)
+        _PAPER[key] = (np.clip(0.55 * g + 0.3 * n + 0.15 * n2, 0, 1), np.clip(0.55 * (1 - g) + 0.3 * n + 0.15 * n2, 0, 1))
+    g = _PAPER[key][0 if into_memory else 1]
+    e = ease_in_out(u) * 1.5 - 0.25                 # the soaking front passes the whole frame
+    m = np.clip((e - g) / 0.22 + 0.5, 0.0, 1.0)
+    m = (m * m * (3 - 2 * m))[..., None]
+    burn = (np.exp(-((g - e) / 0.06) ** 2) * math.sin(math.pi * u))[..., None]
+    out = a.astype(np.float32) * (1 - m) + b.astype(np.float32) * m
+    out += burn * (np.array([255, 236, 196], np.float32) - out) * 0.28
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def flow_blend(a, b, u, focus=None):
+    """The travel dissolve (0.5 s) between two places on one move: the outgoing picture keeps travelling and accelerates
+    into the focus point (the glass, the doorway, the window: the camera goes through it) while the incoming shot, already
+    moving on its own keys, fades up under it."""
+    h, w = a.shape[:2]
+    fx, fy = (focus or (960.0, 540.0))[:2]
+    cx, cy = fx * w / DW, fy * h / DH
+    za = 1.0 + 0.45 * u ** 1.6
+    M = np.float32([[za, 0, cx * (1 - za)], [0, za, cy * (1 - za)]])
+    a2 = cv2.warpAffine(a, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    wgt = ease_in_out(clamp((u - 0.1) / 0.8))
+    return cv2.addWeighted(a2, 1.0 - wgt, b, wgt, 0.0)
 
 
 def overlay_hud(img, fn, t):

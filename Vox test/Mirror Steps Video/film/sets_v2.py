@@ -1325,14 +1325,40 @@ def _bands(d0, near=0.72, far=1.45):
     return [(-1e9, near * d0, 'near'), (near * d0, far * d0, 'mid'), (far * d0, 999.0, 'far')]
 
 
+# A travelling shot (film.py: a shot with `cam3` keys) rebuilds its view every frame with that frame's camera: film.py sets
+# MOVE = {'cam': Cam3, 'd0': float, 'memo': {}} around the build. The views then take MOVE's camera and d0, the room models
+# are built once per shot (memo) and drawn as live bands from baked plane textures (Scene3.live_bands), and every live
+# overlay (light shafts, the beam, the clock hands, the lipstick, the prints) is placed for that frame's camera.
+MOVE = None
+
+
+def _mv(cam, d0):
+    """The view's camera and d0, or the travelling shot's (MOVE)."""
+    if MOVE is None: return cam, d0
+    return MOVE['cam'], (MOVE.get('d0') or d0)
+
+
+def _memo(key, build):
+    if MOVE is None: return build()
+    m = MOVE.setdefault('memo', {})
+    if key not in m: m[key] = build()
+    return m[key]
+
+
 def cabin_layers(cx, cam, view_key, d0, bands=None, xf=None):
-    """Static cached layers of the cabin model for one camera: (layers, scene, info, xf)."""
-    sc, info = cabin_scene(cx)
+    """Static cached layers of the cabin model for one camera: (layers, scene, info, xf). In a travelling shot (MOVE) the
+    model is built once per shot and drawn live for the frame's camera."""
+    mk = ('cabin', cx.side, cx.var, _sig(cx), getattr(cx, 'glass_mode', None), getattr(cx, 'tilt', 0.0), getattr(cx, '_force_ms', None),
+          getattr(cx, 'refl_alpha', None))
+    sc, info = _memo(mk, lambda: cabin_scene(cx))
     cx.refl_scene = sc
     xf = xf if xf is not None else (ID if cx.ours else Xf.flip_x(W))
     key = 'v2:%s:%s:%s:%s' % (cx.side, view_key, cx.var, _sig(cx))
     bands = bands or _bands(d0)
-    L = sc.layers(cam, d0, bands, key, xf)
+    if MOVE is not None:
+        L = sc.live_bands(cam, d0, bands, xf, depths={0: 0.6, 1: 1.0, 2: 2.0} if len(bands) == 3 else {0: 0.5, 1: 1.0})
+    else:
+        L = sc.layers(cam, d0, bands, key, xf)
     bandmap(cam, bands, L)
     return L, sc, info, xf
 
@@ -1558,17 +1584,20 @@ OURS_CAMS = {
 
 def _ours_anchors(cam, xf, d0):
     A = {}
-    pts = {'tess_door': ((4.0, 0, 0.9), 1.68), 'you_door': ((3.6, 0, 1.3), 1.76), 'you_mirror': ((2.66, 0, 5.35), 1.76),
+    pts = OURS_PTS
+    for k, (P, h) in pts.items():
+        a = _anc(cam, xf, d0, P, h)
+        if cam.dist(xf.p(v3(P))) > 0.15: A[k] = a
+    return A
+
+
+OURS_PTS = {'tess_door': ((4.0, 0, 0.9), 1.68), 'you_door': ((3.6, 0, 1.3), 1.76), 'you_mirror': ((2.66, 0, 5.35), 1.76),
            'you_kneel': ((2.7, 0, 5.55), 1.76), 'tess_mirror': ((1.85, 0, 5.1), 1.68), 'tess_beside': ((3.35, 0, 5.0), 1.68),
            'tess_center': ((2.9, 0, 3.6), 1.68), 'noah_stand': ((3.8, 0, 4.6), 1.86), 'noah_floor': ((3.3, 0, 4.4), 1.86),
            'you_floor': ((2.4, 0, 4.1), 1.76), 'tess_sill': ((1.82, 0, 5.75), 1.68), 'noah_bunk_edge': ((4.6, 0, 5.2), 1.86),
            'doorway': ((2.665, 0, 6.2), 1.6), 'mirror': ((2.665, 0, 6.25), 1.6), 'sill': ((1.82, 0.95, 6.3), 0.2),
            'phone': ((1.68, 0.95, 6.28), 0.15), 'clock': ((CLOCK[0], CLOCK[1] - CLOCK[2], 6.38), 0.3),
            'cubby_noah': ((5.4, 2.0, 6.0), 0.3), 'bundle': ((5.0, 0.05, 5.5), 0.2)}
-    for k, (P, h) in pts.items():
-        a = _anc(cam, xf, d0, P, h)
-        if cam.dist(xf.p(v3(P))) > 0.15: A[k] = a
-    return A
 
 
 def _ours_light(cx, cam, xf, d0, st, vname, info, beam=True):
@@ -1667,9 +1696,9 @@ def doorway_spill(cam, xf, d0, cx, st):
 
 def ours_view(vname, var, st, shot, cam=None, d0=None, extra=None):
     cx = CabinCtx('ours', var or 'night', st, st.t0)
-    pos, look, fov, roll = OURS_CAMS[vname] if cam is None else (None, None, None, None)
-    cam = cam or Cam3(pos, look=look, fov=fov, roll=roll)
-    d0 = d0 or max(1.0, cam.dist(v3(2.66, 0.9, 6.0)))
+    pos, look, fov, roll = OURS_CAMS[vname] if (cam is None and MOVE is None) else (None, None, None, None)
+    cam = cam or (MOVE['cam'] if MOVE is not None else Cam3(pos, look=look, fov=fov, roll=roll))
+    d0 = d0 or (MOVE['d0'] if MOVE is not None else max(1.0, cam.dist(v3(2.66, 0.9, 6.0))))
     L, sc, info, xf = cabin_layers(cx, cam, vname, d0)
     live, b = _ours_light(cx, cam, xf, d0, st, vname, info)
     L += live
@@ -1722,19 +1751,22 @@ THEIRS_CAMS = {
 def _theirs_anchors(cam, xf, d0):
     """Anchors in THEIRS world coords (the model is flipped, so these are given directly in world x)."""
     A = {}
-    pts = {'noah_bunk': ((0.95, B_LOW, 5.15), 1.5), 'noah_seat': ((0.95, B_LOW, 5.15), 1.5), 'queen_bunk': ((0.95, B_LOW, 4.65), 1.92),
-           'you_bunk_end': ((1.0, B_LOW, 4.35), 1.76), 'you_stand': ((1.75, 0, 4.4), 1.76), 'you_room': ((2.3, 0, 3.6), 1.76),
-           'queen_corner': ((4.1, 0, 5.75), 1.92), 'tess_doorway': ((2.93, DROP, 6.22), 1.68), 'doorway': ((2.93, DROP, 6.3), 1.6),
-           'stairs_foot': ((1.25, 0, 5.4), 1.76), 'tread8': ((1.04, DROP - 1.6, 5.95), 1.76), 'tread1': ((2.93, DROP - 0.2, 5.95), 1.76),
-           'towel': ((3.78, 0.0, 5.9), 0.2), 'drop': ((3.83, 0.62, 5.9), 0.1), 'shoe': ((1.18, 0, 4.71), 0.12),
-           'dip': ((0.95, B_LOW, 4.75), 0.2), 'door_wash': ((1.6, 0, 0.1), 1.76), 'clock': ((4.45, 1.97, 6.38), 0.3),
-           'window': ((3.78, 1.42, 6.38), 0.95)}
+    pts = THEIRS_PTS
     for k, (P, h) in pts.items():
         p = v3(P)
         if cam.dist(p) > 0.15:
             x, y, hh, dep = cam.anchor(p, h, d0)
             A[k] = Anchor(x, y, dep, hh)
     return A
+
+
+THEIRS_PTS = {'noah_bunk': ((0.95, B_LOW, 5.15), 1.5), 'noah_seat': ((0.95, B_LOW, 5.15), 1.5), 'queen_bunk': ((0.95, B_LOW, 4.65), 1.92),
+           'you_bunk_end': ((1.0, B_LOW, 4.35), 1.76), 'you_stand': ((1.75, 0, 4.4), 1.76), 'you_room': ((2.3, 0, 3.6), 1.76),
+           'queen_corner': ((4.1, 0, 5.75), 1.92), 'tess_doorway': ((2.93, DROP, 6.22), 1.68), 'doorway': ((2.93, DROP, 6.3), 1.6),
+           'stairs_foot': ((1.25, 0, 5.4), 1.76), 'tread8': ((1.04, DROP - 1.6, 5.95), 1.76), 'tread1': ((2.93, DROP - 0.2, 5.95), 1.76),
+           'towel': ((3.78, 0.0, 5.9), 0.2), 'drop': ((3.83, 0.62, 5.9), 0.1), 'shoe': ((1.18, 0, 4.71), 0.12),
+           'dip': ((0.95, B_LOW, 4.75), 0.2), 'door_wash': ((1.6, 0, 0.1), 1.76), 'clock': ((4.45, 1.97, 6.38), 0.3),
+           'window': ((3.78, 1.42, 6.38), 0.95)}
 
 
 def frozen_motes(pen, t, box, n=60, seed=0, c='#fff6dc', a=200):
@@ -1839,7 +1871,7 @@ def theirs_view(vname, var, st, shot, extra=None):
     cx = CabinCtx('theirs', var or 'dawn', st, st.t0)
     pos, look, fov, roll = THEIRS_CAMS[vname]
     cam = Cam3(pos, look=look, fov=fov, roll=roll)
-    d0 = max(0.8, cam.dist(v3(1.3, 0.9, 5.2)))
+    cam, d0 = _mv(cam, max(0.8, cam.dist(v3(1.3, 0.9, 5.2))))
     L, sc, info, xf = cabin_layers(cx, cam, vname, d0)
     L += _theirs_live(cx, cam, xf, d0, st, vname, info)
     if vname in ('floor_prints', 'overhead', 'master', 'door_wash', 'reverse', 'top_stairs', 'bunk_2s', 'queen_3s', 'towel_floor', 'shoe'):
@@ -1887,12 +1919,19 @@ def stairs_view(vname, var, st, shot):
     pos, look, fov, roll = STAIRS_CAMS[key]
     cam = Cam3(pos, look=look, fov=fov, roll=roll)
     dstate = str(st.v('doorway', t0))
-    sc = stairs_scene('red' if var == 'red' else 'stairs')
-    _stairs_lights(sc, var, dstate)
-    _doorway_top(sc, var, st, dstate)
-    d0 = max(0.6, cam.dist(v3(0.0, -0.8, 1.2)))
+
+    def _build():
+        sc_ = stairs_scene('red' if var == 'red' else 'stairs')
+        _stairs_lights(sc_, var, dstate)
+        _doorway_top(sc_, var, st, dstate)
+        return sc_
+    sc = _memo(('stairs', var, dstate), _build)
+    cam, d0 = _mv(cam, max(0.6, cam.dist(v3(0.0, -0.8, 1.2))))
     bands = _bands(d0, 0.7, 1.5)
-    L = sc.layers(cam, d0, bands, 'v2:stairs:%s:%s:%s' % (key, var, dstate[:4]))
+    if MOVE is not None:
+        L = sc.live_bands(cam, d0, bands)
+    else:
+        L = sc.layers(cam, d0, bands, 'v2:stairs:%s:%s:%s' % (key, var, dstate[:4]))
     bandmap(cam, bands, L)
     L += _stairs_live(sc, cam, d0, st, var, key)
     an = {}
@@ -2226,7 +2265,7 @@ def mirror_view(vname, var, st, shot):
     cam = mirror_cam(vname, tilt)
     O, U, V, w, h, n = mirror_plane(tilt)
     gc = O + U * (w / 200) + V * (h / 200)
-    d0 = max(0.4, cam.dist(gc))
+    cam, d0 = _mv(cam, max(0.4, cam.dist(gc)))
     # mirror_state: towel views keep the towel; the mirror views show glass otherwise
     if vname == 'towel_over':
         st_m = 'towel'
@@ -2910,6 +2949,18 @@ def past_view(vname, var, st, shot):
     else:
         L += shaft_layer(cam, xf, d0, 'past:%s:%s' % (vname, var), cx.P, True, 40)
     L.append(_live(0.9, lambda pen, t: motes(pen, t, (0, 0, 1920, 1080), 40, 93, None, '#fff6e0', 0.14, speed=(4, 9)), 'motes', blur=0))
+    if vname == 'towel_wet':          # critic B5: the same striped towel lying wet between the bunks (it was missing)
+        q = [cam.pt(v3(p_)) for p_ in ((3.0, 0.01, 4.85), (3.85, 0.01, 4.7), (3.95, 0.01, 5.25), (3.05, 0.01, 5.45))]
+        bx = (min(p_[0] for p_ in q), min(p_[1] for p_ in q), max(p_[0] for p_ in q), max(p_[1] for p_ in q))
+        dep_t = sdep(cam, xf, d0, v3(3.45, 0.0, 5.05), 0.004)
+
+        def _towel(pen, t, q=q, bx=bx):
+            pth = smooth([q[0], ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2 + 6), q[1], q[2],
+                          ((q[2][0] + q[3][0]) / 2, (q[2][1] + q[3][1]) / 2 - 5), q[3]], True, 0.3)
+            pen.fill(moved(pth, 4, 7), '#000000', 70)
+            towel_cloth(pen, pth, bx, 1.0, wet=0.8, seed=4, lit=0.85)
+            pen.line(pth, 2.0, '#3a2a1a', 160)
+        L.append(_live(dep_t, _towel, 'towel_wet', blur=None))
     L.append(memory_gate_layer())
     an = _ours_anchors(cam, xf, d0)
     for nm, P_, hh in (('kid_bunk', (5.1, B_LOW, 5.3), 1.25), ('noah_top', (5.1, B_TOP, 5.3), 1.5), ('kid_floor', (3.4, 0, 4.6), 1.25),

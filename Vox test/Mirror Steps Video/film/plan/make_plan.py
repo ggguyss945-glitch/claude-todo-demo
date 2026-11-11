@@ -394,6 +394,16 @@ CAM_DEF = {'push': dict(rate=0.03), 'creep': dict(rate=0.015), 'fast': dict(rate
 def cam_keys(c, t0, t1):
     d = t1 - t0
     mv = c['mv']
+    if mv == 'path':                                   # a merged shot: one eased move through every key (film.py PathCam)
+        ks = [[round(float(k[0]), 3), round(float(k[1]), 1), round(float(k[2]), 1), round(float(k[3]), 4),
+               round(float(k[4]) if len(k) > 4 else 0.0, 2)] for k in c['keys']]
+        a, b = ks[0], ks[-1]
+        dd = max(1e-3, b[0] - a[0])
+        out = dict(move='path', keys=ks, ease='glide', glide=c.get('glide') or [0.45, 0.6, 0.8], shake=c.get('shake', 2.0),
+                   rate_pct_s=round((b[3] / a[3] - 1) / dd * 100, 2), pan_px_s=round(math.hypot(b[1] - a[1], b[2] - a[2]) / dd, 1))
+        for kk in ('hit', 'accel', 'snap'):
+            if kk in c: out[kk] = c[kk]
+        return out
     df = CAM_DEF[mv]
     x, y, z = c.get('x', 960), c.get('y', 540), c.get('z', 1.0)
     r0 = c.get('roll0', c.get('roll', 0.0))            # roll alone = a constant dutch angle (climax only)
@@ -418,6 +428,8 @@ def cam_keys(c, t0, t1):
     if 'snap' in c:
         st, k = c['snap']
         out['snap'] = [round(st, 3), k, 0.1]
+    if 'accel' in c:
+        out['accel'] = [[round(a[0], 3), a[1], a[2] if len(a) > 2 else 0.6] for a in c['accel']]
     if 'hit' in c:
         out['hit'] = [[round(a, 3), b] for a, b in c['hit']]
     return out
@@ -479,12 +491,240 @@ def chip_for(world, side, t0):
     return None                                                     # stairs, ui, card, black: no chip
 
 
+# =================================================================================================== merges (flow over cut count)
+ROOM_SETS = ('cabin_now', 'cabin_dawn', 'stairs')
+# the views of the 3D sets that are room cameras (sets_v2 OURS_CAMS / THEIRS_CAMS / STAIRS_CAMS / MIRROR_CAMS): only these
+# can be keys of a travelling move; a group through any other view (inserts, bokeh plates) joins by a flow instead
+CAM3_VIEWS = {'cabin_now': {'master', 'reverse', 'under_bunk', 'profile', 'overhead', 'ots_mirror', 'three_q', 'doorway_down',
+                            'dutch_low', 'floor_wide', 'doorway', 'bunk_rail', 'floor_cu'},
+              'cabin_dawn': {'master', 'reverse', 'window', 'towel_floor', 'bunk_2s', 'queen_3s', 'top_stairs', 'ots_noah', 'dip_low',
+                             'overhead', 'floor_prints', 'door_wash', 'swimsuits', 'lantern', 'clock', 'knot', 'shoe', 'hands', 'hands_jerk'},
+              'stairs': {'down', 'up', 'low', 'treads', 'ots_climb', 'pov_down', 'railing'},
+              'mirror': {'glass_cu', 'glass_wide', 'glass_tilt', 'queen_glass', 'reflection', 'through', 'towel_over'}}
+
+
+def _key_at(keys, tt):
+    """A 2-key plan move evaluated at tt (geometric zoom), as [tt, x, y, z, roll]."""
+    (a, b) = keys[0], keys[-1]
+    u = 0.0 if b[0] <= a[0] else min(1.0, max(0.0, (tt - a[0]) / (b[0] - a[0])))
+    return [tt, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, math.exp(math.log(a[3]) + (math.log(b[3]) - math.log(a[3])) * u),
+            a[4] + (b[4] - a[4]) * u]
+
+
+def _char_key(c, modes=False):
+    """One rig per person in a continuous shot (a person framed as a body in one old shot and as a bust in the next is
+    the same person: the first framing's rig stays and the camera moves); POV hands and reflections are separate."""
+    return (c['who'], c.get('mode', 'body') if modes else '', bool(c.get('pov')), bool(c.get('reflection')), bool(c.get('in_glass')))
+
+
+def _merge_run(run, path_keys, M, c3=None, base=None):
+    """One shot from a run of consecutive resolved shots: the first one's set-up, everyone's HUD, cues and acting, one
+    camera move (path_keys) or one travelling 3D move (c3)."""
+    first = run[0]
+    o = dict(first)
+    for key in ('hud', 'fx_post', 'sfx', 'mus', 'errfix'):
+        vals = []
+        for r in run: vals += list(r.get(key) or [])
+        if vals or key in first: o[key] = vals
+    chars, idx, span = [], {}, {}
+    if base is not None:                  # a piece that resumes the move after a cutaway: the same people where they were
+        for c in base:
+            if c.get('mode', 'body') in ('hands', 'feet') or c.get('pov'): continue
+            c = json.loads(json.dumps(c)); c['acts'] = [a for a in c.get('acts') or [] if a[1] != 'hide']
+            k = _char_key(c, M.get('keep_modes')); idx[k] = len(chars); chars.append(c); span[k] = [run[0]['t0'], run[-1]['t1']]
+    for r in run:
+        for c in r.get('chars') or []:
+            if (c['who'], c.get('mode', 'body')) in {tuple(x) for x in M.get('drop', ())}: continue
+            k = _char_key(c, M.get('keep_modes'))
+            sp_ = span.setdefault(k, [r['t0'], r['t1']]); sp_[1] = max(sp_[1], r['t1'])
+            if k in idx:
+                c0 = chars[idx[k]]
+                have = {(round(float(a[0]), 2), a[1]) for a in c0.get('acts') or []}
+                if c.get('expr') and c.get('expr') != c0.get('expr'):
+                    c0.setdefault('acts', []).append([round(r['t0'], 3), 'expr', {'name': c['expr'], 'fade': 0.4}])
+                for a in c.get('acts') or []:
+                    if (round(float(a[0]), 2), a[1]) not in have: c0.setdefault('acts', []).append(a)
+                c0['acts'].sort(key=lambda a: float(a[0]))
+            else:
+                c = json.loads(json.dumps(c))
+                if r is not first and c3 is not None and r['view'] != first['view']: c['_view'] = r['view']
+                idx[k] = len(chars); chars.append(c)
+    # hands, feet and POV entries that belong to only part of the merged time are hidden outside it (no floating hand)
+    T0, T1 = run[0]['t0'], run[-1]['t1']
+    for k, c in zip(list(idx.keys()), chars):
+        a_, b_ = span[k]
+        if c.get('mode', 'body') in ('hands', 'feet') or c.get('pov'):
+            if a_ > T0 + 0.05: c.setdefault('acts', []).insert(0, [round(T0 - 0.5, 3), 'hide', {'t1': round(a_ - 0.12, 3), 'fade': 0.12}])
+            if b_ < T1 - 0.05: c.setdefault('acts', []).append([round(b_ - 0.0, 3), 'hide', {'fade': 0.12}])
+    o['chars'] = M.get('chars', chars)
+    fr = []
+    for r in run:
+        if r['frame'] not in fr: fr.append(r['frame'])
+    o['frame'] = M.get('frame') or (' >> '.join(fr) if len(fr) > 1 else fr[0])
+    o['merged'] = [round(r['t0'], 3) for r in run]
+    if len(run) > 1 or path_keys is not None or c3 is not None:
+        c = dict(mv='path', keys=path_keys, glide=M.get('glide') or [0.45, 0.6, 0.8], shake=first['cam'].get('shake', 2.0))
+        for r in run:
+            for kk in ('hit',):
+                if r['cam'].get(kk): c.setdefault(kk, []).extend(r['cam'][kk])
+        for r in run:
+            if r['cam'].get('accel'): c.setdefault('accel', []).extend(r['cam']['accel'])
+            if r['cam'].get('snap') and abs(r['cam']['snap'][0] - 690.19) < 0.05: c['snap'] = r['cam']['snap']
+        if M.get('accel'): c.setdefault('accel', []).extend(M['accel'])
+        if M.get('snap'): c['snap'] = M['snap']
+        o['cam'] = c
+    if c3 is not None: o['cam3'] = c3
+    for kk in ('q', 'device', 'hold', 'teaser'):
+        if not o.get(kk):
+            for r in run:
+                if r.get(kk): o[kk] = r[kk]; break
+    for kk, v in (M.get('set_') or {}).items(): o[kk] = v
+    return o
+
+
+def apply_merges(shots):
+    """plan/shotlist.py MERGES: each group [ta, tb) of consecutive shots becomes one continuous shot (or a few, around
+    the cutaways it keeps). Its camera passes through the framing of every merged shot at that shot's middle (the
+    framings are moved with the cast so the merged shot frames what the old one did) on one monotone eased move; on the
+    3D sets a group whose views differ becomes a travelling shot (cam3: the room camera moves between the views). Groups
+    that change set are joined by the travel dissolve (tr flow) instead."""
+    for M in SL.MERGES:                                       # DROP: a shot the move no longer needs (the one before runs on)
+        if 'flag_t' in M:
+            for s_ in shots:
+                if abs(s_['t0'] - M['flag_t']) < 0.03: s_.update(M['fields'])
+            continue
+        if 'drop_t' not in M: continue
+        tgt = [s_ for s_ in shots if abs(s_['t0'] - M['drop_t']) < 0.03]
+        if not tgt:
+            print('DROP %.2f: no shot' % M['drop_t']); continue
+        s_ = tgt[0]; k = shots.index(s_)
+        if k > 0:
+            prev = shots[k - 1]
+            for key in ('hud', 'sfx', 'mus', 'fx_post'):
+                if s_.get(key) and key != 'hud': prev[key] = list(prev.get(key) or []) + list(s_[key])
+                elif s_.get(key):
+                    prev['hud'] = list(prev.get('hud') or []) + [h for h in s_['hud'] if h.get('type') not in ('label', 'tag', 'red_x', 'chip')]
+        shots.remove(s_)
+    for a, b in zip(shots, shots[1:]):
+        a['t1'] = b['t0']
+    todo = []
+    for M in sorted([m for m in SL.MERGES if 'ta' in m], key=lambda m: m['ta']):   # split where the place changes
+        grp = [s_ for s_ in shots if M['ta'] - 0.02 <= s_['t0'] < M['tb'] - 0.02]
+        if not grp:
+            print('MERGE %.2f-%.2f: no shots' % (M['ta'], M['tb'])); continue
+        keep = M.get('keep', ())
+        def place(s_):
+            if any(abs(s_['t0'] - k) < 0.03 for k in keep): return None
+            if M.get('cam3') or M.get('one'): return 'one'
+            if M.get('flat'): return s_['set']
+            if (s_['set'] in ROOM_SETS or M.get('travel')) and s_['view'] in CAM3_VIEWS.get(s_['set'], ()): return s_['set']
+            return (s_['set'], s_['view'])
+        seq = []
+        for s_ in grp:
+            p_ = place(s_)
+            if p_ is None: continue
+            if seq and seq[-1][0] == p_: seq[-1][1].append(s_)
+            else: seq.append([p_, [s_]])
+        places = [[p_, ss[0]] + ss[1:] for p_, ss in seq]
+        if len(places) <= 1:
+            todo.append(M); continue
+        for j, r in enumerate(places):
+            sub = dict(M, ta=r[1]['t0'], tb=places[j + 1][1]['t0'] if j + 1 < len(places) else M['tb'])
+            sub.pop('path', None); sub.pop('cam3', None) if j else None
+            if j:
+                sub['tr'] = M.get('join', 'flow')
+                if M.get('flow_at'): sub['set_'] = dict(sub.get('set_') or {}, flow=M['flow_at'])
+            todo.append(sub)
+    for M in todo:
+        ta, tb = M['ta'], M['tb']
+        grp = [s_ for s_ in shots if ta - 0.02 <= s_['t0'] < tb - 0.02]
+        if not grp: continue
+        keep = [k for k in M.get('keep', ())]
+        kept = [s_ for s_ in grp if any(abs(s_['t0'] - k) < 0.03 for k in keep)]
+        movers = [s_ for s_ in grp if s_ not in kept]
+        if not movers: continue
+        first = movers[0]
+        # 3D travel or 2D path
+        same_set = all(r['set'] == first['set'] for r in movers)
+        views = [r['view'] for r in movers]
+        c3 = None
+        if M.get('cam3'):
+            c3 = dict(keys=M['cam3'], glide=M.get('glide') or [0.45, 0.6, 0.8])
+        elif same_set and (first['set'] in ROOM_SETS or M.get('travel')) and len(set(views)) > 1 and not M.get('flat') \
+                and all(v in CAM3_VIEWS.get(first['set'], ()) for v in views):
+            ks = [[round(first['t0'], 3), views[0]]]
+            for r in movers[1:]:
+                ks.append([round((r['t0'] + r['t1']) / 2, 3), r['view']])
+            ks.append([round(movers[-1]['t1'], 3), views[-1]])
+            c3 = dict(keys=ks, glide=M.get('glide') or [0.45, 0.6, 0.8])
+        # the 2D path through every framing (the cast's place in the first shot is the reference)
+        if M.get('path'):
+            pk = [list(k) + [0.0] * (5 - len(k)) for k in M['path']]
+        else:
+            pk = []
+            ref = {}
+            for c in first.get('chars') or []:
+                if isinstance(c.get('at'), (list, tuple)) and len(c['at']) >= 3: ref.setdefault(c['who'], c['at'])
+            for j, r in enumerate(movers):
+                kk = cam_keys(r['cam'], r['t0'], r['t1'])['keys']
+                fx_, fy_, fs_ = 0.0, 0.0, 1.0
+                same_view = r['set'] == first['set'] and r['view'] == first['view']
+                if j and same_view:
+                    for c in r.get('chars') or []:
+                        a0 = ref.get(c['who'])
+                        if a0 is not None and isinstance(c.get('at'), (list, tuple)) and len(c['at']) >= 3 and c.get('mode') == \
+                                next((x.get('mode') for x in first['chars'] if x['who'] == c['who']), None):
+                            s1 = float(a0[2]) / max(1e-3, float(c['at'][2]))
+                            fx_, fy_, fs_ = (float(a0[0]), float(a0[1]), s1)
+                            bx, by = float(c['at'][0]), float(c['at'][1])
+                            break
+                def tf(k):
+                    if fs_ == 1.0 and fx_ == 0.0: return k
+                    return [k[0], fx_ + fs_ * (k[1] - bx), fy_ + fs_ * (k[2] - by), k[3] / fs_, k[4]]
+                if j == 0: pk.append(tf(_key_at(kk, r['t0'])))
+                if j and not same_view and c3 is None:
+                    continue
+                if len(movers) == 1: pk.append(tf(_key_at(kk, r['t1']))); break
+                if j: pk.append(tf(_key_at(kk, (r['t0'] + r['t1']) / 2)))
+                if j == len(movers) - 1: pk.append(tf(_key_at(kk, r['t1'])))
+            if c3 is not None:                                     # the room camera moves: the 2.5D camera stays home
+                pk = [[movers[0]['t0'], 960.0, 540.0, 1.0, 0.0], [movers[-1]['t1'], 960.0, 540.0, 1.0, 0.0]]
+        # pieces around the kept cutaways
+        runs, cur = [], []
+        for s_ in grp:
+            if s_ in kept:
+                if cur: runs.append(cur); cur = []
+            else: cur.append(s_)
+        if cur: runs.append(cur)
+        new = []
+        for run in runs:
+            o = _merge_run(run, pk, M, c3, base=new[0]['chars'] if new else None)
+            if M.get('drop_hud'): o['hud'] = [h for h in o['hud'] if h.get('type') not in M['drop_hud']]
+            if run is not runs[0]:
+                o['resumes'] = round(runs[0][0]['t0'], 3)            # the move resumes after a cutaway (same camera path)
+                if M.get('resume_tr'): o['tr'] = M['resume_tr']
+            new.append(o)
+        for kk in kept:
+            if M.get('cutaway_tr'): kk['tr'] = M['cutaway_tr']
+        if M.get('tr'): new[0]['tr'] = M['tr']
+        for s_ in grp:
+            if s_ not in kept: shots.remove(s_)
+        shots.extend(new)
+        shots.sort(key=lambda s_: s_['t0'])
+    for a, b in zip(shots, shots[1:]):
+        a['t1'] = b['t0']
+    shots[-1]['t1'] = END
+    return shots
+
+
 # =================================================================================================== build
 def build():
     shots = sorted(SHOTS, key=lambda s: s['t0'])
     for a, b in zip(shots, shots[1:]):
         a['t1'] = b['t0']
     shots[-1]['t1'] = END
+    shots = [resolve(s, round(s['t0'], 3), round(s['t1'], 3)) for s in shots]       # R() times against each shot as written
+    shots = apply_merges(shots)
     cards = [(s['t0'], s['t1']) for s in shots if s['side'] == 'card']
     cstarts = clause_starts()
     states = sorted(SL.STATES, key=lambda x: x[0])
@@ -536,7 +776,7 @@ def build():
                  tr=s.get('tr', 'cut'), intensity=round(lerp_curve(INTENSITY, (t0 + t1) / 2), 1), energy=s.get('energy', ''),
                  sfx=s.get('sfx', []), mus=s.get('mus', []), v1=v1_fallback(s))
         for key in ('voice_fx', 'fx_post', 'bg', 'note', 'hold', 'setup', 'errfix', 'device', 'teaser', 'split', 'plate', 'montage',
-                    'loop', 'card', 'time_card', 'past'):
+                    'loop', 'card', 'time_card', 'past', 'cam3', 'merged', 'flow', 'match_action', 'parallel', 'resumes'):
             if key in s: o[key] = s[key]
         if 'reuse' in s: o['reuse_t'] = s['reuse']
         if s.get('bg'):
@@ -622,12 +862,13 @@ def finish(out):
                     if isinstance(h[side_].get('chip'), str):
                         h[side_]['chip'] = h[side_]['chip'].replace('{ours}', ampm(ours_clock(max(o['t0'], CLOCK_T0))))
         o['frame'] = o['frame'].replace('{ours}', ampm(ours_clock(max(o['t0'], CLOCK_T0))))
-    # punch-ins
+    # the word beats (v2's 1.08x snap punch-ins read as jolts, critic M5): an eased push acceleration on the word instead;
+    # the only snaps left are the three hits (143.29 the click, 605.21 her foot, 690.19 the click again)
     for tt, kk, word in SL.PUNCHES:
         o = owner(tt)
-        if not o['cam'].get('snap'):
-            o['cam']['snap'] = [round(tt, 3), kk, 0.1]
-            o['cam']['snap_word'] = word
+        if o['cam'].get('snap') and abs(o['cam']['snap'][0] - tt) < 0.05: continue
+        o['cam'].setdefault('accel', []).append([round(tt, 3), round(1.0 + (kk - 1.0) * 0.6, 3), 0.7])
+        o['cam']['accel_word'] = word
 
 
 def rehome(out):

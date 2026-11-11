@@ -180,6 +180,11 @@ from engine.core import (CFG, LINE, col, mix, Pen, smooth, poly, rect, rrect, ov
                          tex, text)
 from engine.core import _ramp, _stops_key                                                   # noqa: E402
 
+
+def smoothstep(x):
+    x = 0.0 if x <= 0 else (1.0 if x >= 1 else x)
+    return x * x * (3.0 - 2.0 * x)
+
 PI = math.pi
 INF = float('inf')
 VIEWS = {'front': 0.0, 'q_right': 0.5, 'q_left': -0.5, 'profile_right': 1.0, 'profile_left': -1.0, 'back': 2.0}
@@ -2777,7 +2782,7 @@ def _arm_data(sp, B, P, side):
         ex = side * (hw * 1.0 + 9.0) * math.cos(hy) + P.h_dx
         ey = B.yc - hh / 2 + 3.0 * hh / 240.0 + P.h_dy
         cov = 0.0 if getattr(P, 'hl_prop' if side > 0 else 'hr_prop') else 1.0          # covering the ear: further out and up
-        He = np.array([ex + side * (4.0 + 0.3 * hw * cov), ey + (0.31 - 0.1 * cov) * hh, 26.0 - side * hw * 0.9 * math.sin(hy) - 20.0 * cov])
+        He = np.array([ex + side * (4.0 + 0.3 * hw * cov), ey + (0.47 - 0.1 * cov) * hh, 26.0 - side * hw * 0.9 * math.sin(hy) - 20.0 * cov])
         H = H + (He - H) * ear
         pole = pole + (np.array([side * 0.2, 1.0, 0.75]) - pole) * ear
     hk = getattr(P, 'hshake', 0.0)
@@ -2859,9 +2864,11 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     rot = getattr(P, 'hl_rot' if side > 0 else 'hr_rot')
     press = getattr(P, 'hl_press' if side > 0 else 'hr_press')
     ear = _ear_weight(P, side)
-    if ear > 0.5:
-        up, rot = 1.0, -side * 14.0 * B.ct
-        if not prop: rot = side * 22.0 * B.ct; hand_shape = 'relaxed'
+    if ear > 0.0:                                         # turned over the raise (it snapped at ear 0.5)
+        ee = smoothstep(clamp(ear))
+        up = up + (1.0 - up) * ee
+        rot = rot + ((-side * 14.0 * B.ct if prop else side * 22.0 * B.ct) - rot) * ee
+        if not prop and ear > 0.5: hand_shape = 'relaxed'
     hang = ang * (1 - up) + (180.0) * up + rot
     hs = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0) * getattr(P, 'hl_scale' if side > 0 else 'hr_scale', 1.0)
     ring = (sp['ring'] == side)
@@ -3133,8 +3140,11 @@ def _figure(c, who, P, det, t, light=None, upper_only=False, sp=None):
         S, E, Wr = _arm_data(sp, B, P, side)
         zs = B.p3(*S)[3]; zh = B.p3(*Wr)[3]
         arm_z[side] = (zs, zh)
-    behind = [s for s in (-1, 1) if arm_z[s][0] < -20 and arm_z[s][1] < 40]
-    front = [s for s in (-1, 1) if s not in behind]
+    # v2 review (critic B8): an arm crossing from behind the torso to in front of it no longer pops in one frame; over
+    # 30 design units of hand depth it is drawn behind AND, fading in, in front (a short cross-fade of the draw order)
+    fz = {s: (1.0 if arm_z[s][0] >= -20 else smoothstep(clamp((arm_z[s][1] - 25.0) / 30.0))) for s in (-1, 1)}
+    behind = [s for s in (-1, 1) if fz[s] < 1.0]
+    front = [s for s in (-1, 1) if fz[s] > 0.0]
     front.sort(key=lambda s: arm_z[s][1])
     back_view = B.ct < -0.15
     # hood behind the neck
@@ -3235,7 +3245,13 @@ def _figure(c, who, P, det, t, light=None, upper_only=False, sp=None):
     with _ink(c, 'dark'):
         draw_head_local(hc, who, P, yaw, P.h_nod * 0.6 + 0.0, det, t, light, _head_sp(who, sp, P))
     if sp['hair'] == 'long' and back_view and not head_front: _queen_back_hair(c, sp, B, P, det, t)
-    for side in front: _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
+    for side in front:
+        if fz[side] < 1.0:
+            c.pen.cv.saveLayerAlpha(None, int(255 * fz[side]))
+            _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
+            c.pen.cv.restore()
+        else:
+            _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
     B.info = dict(head=c.pt(hx, hy), head_px=hs * 240.0 * c.s, roll=head_rot, hands=B.hands)
     return B
 
@@ -4860,6 +4876,8 @@ def draw_hands(pen, who, x, y, size, pose=None, detail=2, light=None, t=None, ma
                                          (cx0 + ax * size * 0.07 - ay * aw * 0.5 * q + ax * 4, cy0 + ay * size * 0.07 + ax * aw * 0.5 * q + ay * 4)], False)
                                    for q in (-0.6, 0.6)]), c.lw * 0.4)
             shape = getattr(P, pre + 'shape'); prop = getattr(P, pre + 'prop'); press = getattr(P, pre + 'press')
+            if sp.get('tape') == side and getattr(P, 'tape', 1.0) > 0.5 and not prop and str(shape) in ('point', 'relaxed', 'reach', 'mitt'):
+                shape = 'open'     # critic M8: the index alone beside the folded taped bundle read as a raised middle finger
             if getattr(P, 'hshake', 0.0) > 0.01:
                 wx += 0.035 * size * P.hshake * noise1(t * 10.0, 51 + side); wy += 0.03 * size * P.hshake * noise1(t * 12.0, 53 + side)
             hs = k / hk
@@ -5650,7 +5668,7 @@ class _MirrorClips:
         """Hands insert: her long fingers curl slowly (no other motion)."""
         def fn(P, t):
             u = ease_in_out(prog(t, t0, t0 + dur)) * amount
-            self._ins(P, 'r', 1.0, shape='claw' if u > 0.18 else 'relaxed', a=lerp(P.ir_a, 175.0, 0.3))
+            self._ins(P, 'r', 1.0, shape=shape_mix('relaxed', 'claw', u / 0.36), a=lerp(P.ir_a, 175.0, 0.3))
         return self._add(t0, None, fn)
 
     def rise(self, t0, dy=None, dur=0.9):
@@ -6551,6 +6569,24 @@ _H2_SHAPES = {  # spread, curl per finger (index..little), thumb mode
 _H2C = {}
 
 
+def _h2_params(shape):
+    """(spread, curls, thumb) of a hand shape; 'mix:a:b:u' blends two shapes (u quantised to 1/16 by shape_mix): a pose
+    can now move between shapes over several frames instead of swapping in one (critic B8: the Queen's hand snapped)."""
+    if isinstance(shape, str) and shape.startswith('mix:'):
+        _, a, b, u = shape.split(':'); u = float(u)
+        sa, ca, ta = _H2_SHAPES.get(a, _H2_SHAPES['relaxed']); sb, cb, tb = _H2_SHAPES.get(b, _H2_SHAPES['relaxed'])
+        return (sa + (sb - sa) * u, tuple(x + (y - x) * u for x, y in zip(ca, cb)), ta if u < 0.5 else tb)
+    return _H2_SHAPES.get(shape, _H2_SHAPES['relaxed'])
+
+
+def shape_mix(a, b, u):
+    """A hand shape between a and b (u 0..1, quantised to 1/16 so the geometry caches stay small)."""
+    u = round(max(0.0, min(1.0, u)) * 16) / 16.0
+    if u <= 0: return a
+    if u >= 1: return b
+    return 'mix:%s:%s:%.4f' % (a, b, u)
+
+
 def _h2_chain(bx, by, ang, lens, curl, bend=0.0):
     """Finger centre line from the knuckle: each joint bends by curl (toward the palm, away from the viewer in the
     back view) so the phalanges foreshorten: projected length = L cos(cumulative bend)."""
@@ -6572,7 +6608,7 @@ def _hand2_geom(shape, side, fk=1.0, fw=1.0, nail='short', press=0.0, bound=Fals
     th = -side
     palm_view = shape in ('flat', 'palm') or view == 'palm'
     if palm_view: th = -th
-    spread, curls, tmode = _H2_SHAPES.get(shape, _H2_SHAPES['relaxed'])
+    spread, curls, tmode = _h2_params(shape)
     sq = 1.0 + 0.05 * press
     parts, fingers, nails, creases, tendons, pads, tips = [], [], [], [], [], [], []
     palm_pts = [(th * 12.6, -2.0), (th * 16.4, 9.0), (th * 17.6, 20.0), (th * 15.6, 28.6), (th * 8.0, 32.2), (-th * 0.5, 33.0),
@@ -8436,7 +8472,7 @@ def queen_feet(pen, x, y, size, P, detail=2, light=None, t=None):
 PLAN_SHOTS = os.environ.get('MS_SHOTS', os.path.join(_HERE, 'plan', 'shots.json'))
 _PLAN = {}
 WHO_ALIAS = {'kids': 'kid_a', 'extras': 'searcher', 'mom': 'mum'}
-CLIP_ORIGIN = {'loop_reset': 'S137'}           # clip_id -> origin shot id when it is not the first shot carrying the id
+CLIP_ORIGIN = {'loop_reset': 199.3}           # clip_id -> origin shot (by a film time inside it; ids change when shots merge)
 _SIG = {                                       # how each plan act maps onto a clip: (method, positional arg names)
     'expr': ('expr', ('name',)), 'hold_up': ('hold_up', ('prop',)), 'talk': ('talk_line', ()), 'look': ('look_at', ()),
     'walk': ('walk', ()), 'run': ('run', ()), 'tremble': ('tremble', ()), 'freeze': ('freeze', ()), 'sit': ('sit', ()),
@@ -8470,6 +8506,8 @@ def _clip_origin(clip_id, who):
     first shot carrying the id."""
     by = plan_shots()
     sid = CLIP_ORIGIN.get(clip_id)
+    if isinstance(sid, (int, float)):
+        sid = next((s['id'] for s in _PLAN.get('list', []) if s['t0'] <= sid < s['t1']), None)
     cands = []
     if sid in by and any(c.get('who') == who for c in by[sid].get('chars') or []): cands = [by[sid]]
     if not cands: cands = [s for s in _PLAN.get('list', []) if any(_spec_clip_id(c) == clip_id for c in s.get('chars') or [])]
@@ -8698,6 +8736,8 @@ def _apply_act(a, who, spec, shot, t, name, args, t_end):
         return a.phone_to_ear(t, None, args.get('side', 1))
     if name in ('blink', 'flinch'):
         return getattr(a, name)(t)
+    if name == 'hide':                    # merged shots: a hand / foot entry that is not in this part of the move fades out
+        return a.set(t, args.get('t1'), args.get('fade', 0.15), alpha=0.0)
     if name == 'hand_to_mouth':
         return a.hand_to_mouth(t, t + args.get('dur', 1.2))
     if name == 'wipe_glass' and who == 'you' and ('towel' in str(shot.get('frame', '')) or str((shot.get('props') or {}).get('towel')) in ('held', 'in_hands')):

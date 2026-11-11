@@ -1015,8 +1015,12 @@ class UI:
             for e in s.get('hud', []):
                 if e['type'] == 'giant_number':
                     giants.append(e['t'])
-                    end = e['t'] + float(e.get('hold', GIANT_HOLD)) + GIANT_FLY + 0.02 if int(e['value']) != 0 else s['t1']
-                    self.overlays.append((e['t'], end, e))
+                    # critic B8: the number ends with its shot (the 60 flew on over the boots of the next one): the hold
+                    # shortens so the flight into the badge lands before the cut
+                    room = s['t1'] - e['t'] - GIANT_FLY - 0.02
+                    e2 = dict(e, hold=max(0.12, min(float(e.get('hold', GIANT_HOLD)), room)))
+                    end = e['t'] + e2['hold'] + GIANT_FLY + 0.02 if int(e['value']) != 0 else s['t1']
+                    self.overlays.append((e['t'], min(end, s['t1']), e2))
         self.overlays.sort(key=lambda o: o[0])
         self.counter = Counter(plan['counter'], giants) if plan.get('counter') else None
         self.shots = plan.get('shots', [])

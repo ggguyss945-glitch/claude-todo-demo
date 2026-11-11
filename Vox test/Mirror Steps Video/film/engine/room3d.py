@@ -342,6 +342,25 @@ class Scene3:
         return out
 
 
+    def live_bands(self, cam, d0, bands, xf=ID, tags=None, skip=None, blur=None, tex=None, depths=None):
+        """Uncached band Layers for ONE frame's camera (a camera that travels through the room rebuilds its view every
+        frame): planes and box faces come from the baked textures in `tex` (a TexCache kept with the scene for the shot),
+        so a frame costs about one textured fill per surface. depths: fixed layer depths per band (stable draw order and
+        focus while the camera moves); default near 0.6, mid 1.0, far 2.0."""
+        if tex is None:
+            tex = getattr(self, 'tex', None)
+            if tex is None: tex = self.tex = TexCache()
+        out = []
+        dd = depths or {0: 0.6, 1: 1.0, 2: 2.0}
+        for j, b in enumerate(bands):
+            dmin, dmax, name = b[0], b[1], b[2]
+            ld = float(b[3]) if len(b) > 3 else float(dd.get(j, 1.0 + j))
+
+            def draw(pen, t, dmin=dmin, dmax=dmax):
+                self.render(pen, cam, xf, (dmin, dmax), tags, skip, tex=tex)
+            out.append(Layer(ld, draw, name, blur=blur))
+        return out
+
     def moving_layers(self, camfn, d0, bands, key, xf=ID, tags=None, skip=None, blur=None, span=None):
         """Live (uncached) Layers for a camera that moves: camfn(t) -> Cam3. One layer per band (dmin, dmax, name, depth):
         each frame every item goes to the band its distance from the camera of that frame falls in, and the planes are

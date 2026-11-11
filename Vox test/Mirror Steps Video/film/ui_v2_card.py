@@ -506,7 +506,7 @@ def rule_card(cv, rc, e, t, film=None):
     tilt = float(cd.get('rot', TILT))
     wscale = float(cd.get('width_w', 0.62)) * DW / (GW + 2 * FW)
     pen = Pen(cv)
-    s_, dy = _settle(u, settle, over)
+    s_, dy = _settle(u, max(settle, 0.34), min(over, 0.015))      # a soft settle (the 0.13 s bounce read as a camera jerk)
     drift = 1.0 + 0.010 * u                                    # the card keeps moving
     glow = 0.65 if st == 'red' else 0.0
     # dim vignette round the card (the plate is already blurred and dimmed by the shot's bg post)
@@ -570,7 +570,7 @@ def rule_card(cv, rc, e, t, film=None):
     kt = (t - tw_[0]) / max(0.05, tw_[1] - tw_[0])
     if kt < 1: _towel(cv, clamp(kt))
     cv.restore()
-    if u < 2.0 / 60:                                           # the 2-frame static glitch band at t0
+    if False:                                                  # v2's 2-frame static band at t0 (the card now enters on a flow)
         for j in range(6):
             yy = hash01(j + int(u * 60) * 7, 5) * DH
             cv.drawRect(skia.Rect.MakeLTRB(0, yy, DW, yy + 18 + 30 * hash01(j, 6)), paint('#ffffff', 50))
