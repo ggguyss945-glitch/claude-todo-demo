@@ -6902,7 +6902,7 @@
    "note": "red X",
    "hit": true,
    "origin": "v1",
-   "shot": "S289",
+   "shot": "S288",
    "exists": true
   },
   {
@@ -6915,7 +6915,7 @@
    "params": {
     "strokes": 1
    },
-   "shot": "S289",
+   "shot": "S288",
    "exists": false
   },
   {
@@ -6929,7 +6929,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S289",
+   "shot": "S288",
    "exists": true
   },
   {
@@ -6943,7 +6943,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S289",
+   "shot": "S288",
    "exists": true
   },
   {
@@ -6957,7 +6957,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S289",
+   "shot": "S288",
    "exists": true
   },
   {
@@ -6970,7 +6970,7 @@
     "sleeve": true
    },
    "origin": "v1",
-   "shot": "S290",
+   "shot": "S289",
    "exists": false
   },
   {
@@ -6983,7 +6983,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -6994,7 +6994,7 @@
    "note": "faint glass hum (v1 685.79 -> v2 685.31: re-timed to the new picture)",
    "hit": true,
    "origin": "v1",
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7007,7 +7007,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7020,7 +7020,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7033,7 +7033,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7046,7 +7046,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7059,7 +7059,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7072,7 +7072,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7082,7 +7082,7 @@
    "space": "dry",
    "note": "white flash in the shot",
    "origin": "device",
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7093,7 +7093,7 @@
    "note": "ring",
    "hit": true,
    "origin": "v1",
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7104,7 +7104,7 @@
    "note": "THE SAME click sample as 143.29",
    "hit": true,
    "origin": "v1",
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7114,7 +7114,7 @@
    "space": "dry",
    "note": "label CLEAN GLASS pops in",
    "origin": "device",
-   "shot": "S293",
+   "shot": "S292",
    "exists": true
   },
   {
@@ -7124,7 +7124,7 @@
    "space": "phone",
    "note": "the tiny figure in the phone climbs one step",
    "origin": "v2",
-   "shot": "S293",
+   "shot": "S292",
    "exists": false
   },
   {
@@ -7138,7 +7138,7 @@
     "key": "d"
    },
    "origin": "v1",
-   "shot": "S295",
+   "shot": "S294",
    "exists": true
   },
   {
@@ -7149,7 +7149,7 @@
    "note": "final stinger",
    "hit": true,
    "origin": "v1",
-   "shot": "S295",
+   "shot": "S294",
    "exists": true
   },
   {
@@ -7160,7 +7160,7 @@
    "note": "pixel-sort: Noah's face into hers",
    "origin": "device",
    "hit": true,
-   "shot": "S295",
+   "shot": "S294",
    "exists": false
   },
   {
@@ -7170,7 +7170,7 @@
    "space": "far",
    "note": "in the black: one faint, perfect, wrong bell note (the queen's bell); decays to nothing",
    "origin": "v1",
-   "shot": "S296",
+   "shot": "S295",
    "exists": false
   }
  ],
@@ -9079,7 +9079,7 @@
     "level": 0.6,
     "len": 8,
     "note": "the last rise begins (peaks at 697)",
-    "shot": "S289"
+    "shot": "S288"
    },
    {
     "t": 688.05,
@@ -9087,19 +9087,19 @@
     "level": 0.0,
     "len": 1.8,
     "note": "silence into the click",
-    "shot": "S293"
+    "shot": "S292"
    },
    {
     "t": 690.19,
     "type": "stinger",
     "level": 0.8,
-    "shot": "S293"
+    "shot": "S292"
    },
    {
     "t": 696.91,
     "type": "stinger",
     "level": 1.0,
-    "shot": "S295"
+    "shot": "S294"
    },
    {
     "t": 697.2,
@@ -9107,14 +9107,14 @@
     "level": 1.0,
     "len": 12.2,
     "note": "auto: intensity rise 7.0 -> 10.0",
-    "shot": "S295"
+    "shot": "S294"
    },
    {
     "t": 698.62,
     "type": "end",
     "level": 0.0,
     "note": "everything out except the hit tails and the faint bell",
-    "shot": "S296"
+    "shot": "S295"
    }
   ],
   "note": "sections, intensity and events are v1's (the music map in audio/cues.py is unchanged); events re-homed to v2 shots"

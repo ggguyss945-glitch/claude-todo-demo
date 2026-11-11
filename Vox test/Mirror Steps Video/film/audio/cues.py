@@ -120,13 +120,16 @@ SWELL_GAP = 9.0
 # the act-by-act breath of the bed: music as heard under the narration (3 s short-term, LU rel the voice's integrated
 # loudness), steered by mix.py (--steer). References: -13 to -16 under speech; quiet passages are the dawn, the memory
 # and the ending, the loudest the climax (70-80 % of the film, as in the references' light and sound)
+# review round 2 (critic M19): the climb is a real crescendo (-12.5 at 576 s, Noah grown and shaking, to -8.5 at her foot, 4 LU
+# over 27 s, the references' long builds); the builds into card 1 (112-128.5), card 3 (230-262) and the bell (503.5-531) were
+# already 3-3.5 LU
 ARC = [(0.0, -11.0), (12.4, -11.0), (13.2, -14.0), (19.0, -14.0), (22.0, -17.0), (66.0, -17.0), (71.0, -16.0),
        (88.0, -15.0), (92.0, -16.5), (112.0, -15.0), (128.5, -11.5), (131.0, -13.0), (136.0, -14.5), (160.0, -14.5),
        (181.0, -13.5), (196.5, -12.0), (204.5, -12.5), (230.0, -13.5), (245.0, -11.5), (262.0, -10.5), (268.5, -10.5),
        (288.5, -10.0), (292.0, -18.0), (330.0, -18.0), (340.0, -15.0), (350.0, -13.0), (356.0, -12.5), (372.0, -13.0),
        (380.0, -15.0), (397.0, -15.0), (400.0, -19.5), (440.0, -18.5), (446.5, -12.0), (464.0, -12.0), (470.0, -11.0),
-       (480.0, -10.0), (484.5, -16.0), (500.0, -16.0), (503.5, -13.0), (531.0, -10.0), (542.5, -11.0), (585.0, -9.5),
-       (603.0, -9.0), (611.0, -8.5), (625.0, -9.5), (631.0, -18.0), (676.0, -17.0), (690.0, -13.5), (698.6, -11.5),
+       (480.0, -10.0), (484.5, -16.0), (500.0, -16.0), (503.5, -13.0), (531.0, -10.0), (542.5, -11.0), (560.0, -12.0),
+       (576.0, -12.5), (603.0, -8.5), (611.0, -8.5), (625.0, -9.5), (631.0, -18.0), (676.0, -17.0), (690.0, -13.5), (698.6, -11.5),
        (700.0, -11.5)]
 # score.py's own layers (dB curves per bus, piecewise-linear): only where they help the tracks
 DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)

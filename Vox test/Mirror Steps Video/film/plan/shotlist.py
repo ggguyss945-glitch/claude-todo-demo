@@ -855,7 +855,8 @@ X(209.40, 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of Tess: "put it down"',
   chars=[bust('tess', 960, 560, 1.0, 'q_left', 'fear', [A(R(0), 'talk_silent', dur=0.6)], light=L_BEAM)], dof=dict(focus=1.0, dof=6.75),
   energy='talking, bokeh drift')
 X(T(81), 'POV', 'ours', 'mirror/glass_wide', 'night', 'POV: your hands on the frame; the fingers twitch open and clamp back',
-  P(3.5, x=960, y=600, z=1.05), chars=[POVH([A(w(81, 'try'), 'grip_frame', fail=True)], 960, 760, 760, both=True)],
+  P(3.5, x=960, y=600, z=1.05), chars=[POVH([A(w(81, 'try') - 0.9, 'grip_frame', fail=True)], 960, 760, 760, both=True)],   # m8: the hands grip from the
+  # first frame (they used to jump onto the frame in 0.15 s on "try"); the fail twitch's period (0.9 s) still lands on "try"
   energy='fingers twitching, the frame trembling, push 3.5 %/s')
 X(T(82), 'WS', 'stairs', 'mirror/queen_glass', 'stairs',
   'mirror wide: she is on STEP 7 (1.25x her 148 s size), facing you', P(3, x=960, y=560, z=1.0),
@@ -1600,7 +1601,7 @@ X(T(239), 'MS', 'climax', 'cabin_now/bunk_rail', 'red', 'MS: he rises', P(3),
   chars=[body('noah_grown', 960, 1060, 600, 'q_left', 'shaken', [A(R(0), 'stand_up')])], energy='rising')
 X(Wc(239, 'shoulder'), 'MS', 'climax', 'cabin_now/bunk_rail', 'red',
   'the top rail slams his shoulder (573.5): dust burst, the frame jumps, camera hit', HH(3, shake=20, hit=[(573.54, 16)]),
-  chars=[body('noah_grown', 960, 1060, 640, 'q_left', 'shaken', [A(573.54, 'stand_hit')])], errfix=[6], energy='impact, dust burst')
+  chars=[body('noah_grown', 960, 1060, 640, 'q_left', 'shaken', [A(573.54 - 0.35, 'stand_hit')])], errfix=[6], energy='impact, dust burst')   # m3: the act's hit lands 0.35 s after its start: on the camera hit
 X(T(240), 'WS', 'climax', 'cabin_now/dutch_low', 'red', 'wide: grown Noah hunched under the bunk he could walk under', P(3, roll=8),
   chars=[body('noah_grown', 960, 960, 560, 'q_left', 'shaken', [A(R(0), 'rock')])], energy='hunched, red pulse, dutch 8 deg')
 X(T(241), 'WS', 'theirs_break', 'cabin_dawn/master', 'dawn_break',
@@ -1683,7 +1684,8 @@ RULE(7)
 X(card_times(7)[1], 'WS', 'climax', 'cabin_now/dutch_low', 'red',
   'OURS, red: you slam onto the floorboards (dust, camera hit at 614.9); behind you the white frame holds glass again: silvering crawls in '
   'from the edges in 0.3 s; the steps glow; her figure climbs', HH(2.5, shake=18, hit=[(614.9, 16)], roll=8), tr='white',
-  chars=[C('you', [960, 900, 820], 'q_left', 'fear', [A(614.9, 'fall_back')], mode='lying')], props=dict(mirror='glass returning 614.9-615.2'),
+  chars=[C('you', [880, 930, 760], 'q_left', 'fear', [A(614.9, 'fall_back')], mode='lying', floor=True)],   # review round 2 (M11): on the floor, not in bed
+  props=dict(mirror='glass returning 614.9-615.2'),
   energy='the fall, dust, silvering crawling in, red pulse')
 STATE(614.9, mirror='glass', doorway='none', flashlight='floor')
 X(T(262), 'MS', 'climax', 'cabin_now/master', 'red', 'Tess shoves the towel into your hands; you clutch it', HH(3, shake=18, roll=6),
@@ -1818,12 +1820,13 @@ X(T(293), 'MS', 'ending', 'cabin_now/floor_wide', 'phone_glow', 'she holds the p
   chars=[body('tess', 960, 1060, 640, 'q_left', 'puzzled', [A(R(0), 'hold_up', prop='phone')])], errfix=[16], energy='holding it out')
 X(T(294), 'INSERT', 'ending', 'cabin_now/phone_screen', 'phone_glow',
   'the phone (in Tess\'s hand) fills the frame: 7 tiny lipstick steps, already there; numerals 1-4 pop on "count"', P(3.5),
-  hud=[count_pop(685.31 + 0.12 * k, k + 1, 1100 - 40 * k, 360 + 60 * k, '#ffffff') for k in range(4)], props=dict(phone='screen_steps'),
+  # review round 2 (M18): the count runs down a column beside the phone (the numerals sat on the tiny steps and hid them)
+  hud=[count_pop(685.31 + 0.12 * k, k + 1, 1175, 330 + 62 * k, '#ffffff') for k in range(4)], props=dict(phone='screen_steps'),
   errfix=[25], device=DEV('diagram', 'D2_phone', 'seven tiny steps on the phone screen'), energy='numerals popping')
 STATE(684.98, phone='screen_steps')
 X(Wc(294, 'steps'), 'POV', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'POV: the phone in Tess\'s hand held out to you; numerals 5-7 pop beside the tiny steps', P(3.5),
   chars=[hands('tess', 960, 640, 520, [A(R(0), 'hold_up', prop='phone')], sleeve='orange')],
-  hud=[count_pop(686.45 + 0.12 * k, k + 5, 940 - 40 * k, 600 + 60 * k, '#ffffff') for k in range(3)], energy='numerals popping')
+  hud=[count_pop(686.45 + 0.12 * k, k + 5, 1175, 578 + 62 * k, '#ffffff') for k in range(3)], energy='numerals popping')
 X(T(295), 'POV', 'ending', 'cabin_now/phone_screen', 'phone_glow', 'your fingertip slides below step 7', P(3),
   chars=[POVH([A(w(295, 'touch'), 'touch_glass', at=(860, 800))], 980, 900, 480)], energy='the finger descending')
 X(T(296), 'POV', 'ending', 'cabin_now/phone_screen', 'phone_glow',
@@ -1961,7 +1964,7 @@ MERGE(27.10, 30.0, flow_at=[1250, 500])
 FLAG(27.10, tr='pan', pan_dir=1.0)           # review round 2 (merge 1): from the notice on the fence the camera turns to the cabins
 FLAG(30.0, tr='pan', pan_dir=-1.0)           # and turns back to Tess at the gate with the keys (the place is shown, not jumped to)
 MERGE(30.0, 33.74, flat=True, drop=[('tess', 'hands')],
-      path=[(30.0, 900, 560, 1.15), (31.55, 920, 600, 1.55), (32.4, 930, 590, 1.5), (33.74, 900, 560, 1.12)], glide=[0.5, 0.5, 0.6])
+      path=[(30.0, 900, 560, 1.15), (31.55, 915, 590, 1.4), (33.74, 920, 590, 1.5)], glide=[0.5, 0.6, 0.6])   # review round 2: no yo-yo
 DROP(39.26)                                  # the same CU of you five times: two stay (33.74, 48.89)
 DROP(41.66)                                  # the reverse broke the axis; the follow runs on to the gate
 MERGE(40.38, 46.14, flow_at=[960, 560])
@@ -2005,9 +2008,9 @@ MERGE(72.31, 75.91, cam3=[[72.31, 'master'], [73.6, {'pos': (4.35, 1.25, 2.55), 
       chars=[body('tess', 760, 980, 380, 'back', 'tense', [A(72.0, 'stride', t1=73.3, steps_per_s=1.6), A(72.31, 'flashlight', aim='bunk', sweep=0.4)],
                   w=[[72.31, 3.05, 0.0, 1.95], [73.3, 3.15, 0.0, 2.75], [75.91, 3.16, 0.0, 2.8]]),
              body('you', 1080, 1000, 400, 'back', 'neutral', [A(72.1, 'stride', t1=73.6, steps_per_s=1.6), A(73.75, 'kneel')],
-                  w=[[72.31, 3.6, 0.0, 2.2], [73.6, 4.3, 0.0, 3.05], [75.91, 4.32, 0.0, 3.1]]),
+                  w=[[72.31, 3.6, 0.0, 2.2], [73.6, 3.95, 0.0, 3.8], [75.91, 3.97, 0.0, 3.85]]),   # kneels left of the camera's path
              hands('you', 1200, 640, 400, [A(71.0, 'hide', t1=74.95, fade=0.15), A(75.12, 'reach'), A(75.51, 'pull_hand', prop='bundle')],
-                   sleeve='olive', _view='under_bunk')])
+                   sleeve='olive', pov=True)])
 MERGE(77.51, 80.07)
 MERGE(80.07, 83.58)
 MERGE(83.58, 86.46)
@@ -2021,7 +2024,7 @@ MERGE(100.70, 105.58)
 # behind her right shoulder. The camera starts on the room from the left bunk, follows her phone to the sill (face up),
 # comes back down to her thumb on the bottom step and the crumbs on it, and settles low on the glass for the fresh line.
 MERGE(106.86, 119.90, cam3=[[106.86, 'three_q'],
-                            [110.6, {'pos': (1.25, 1.3, 3.75), 'look': (1.72, 0.95, 6.3), 'fov': 36}],
+                            [110.6, {'pos': (1.25, 1.3, 3.75), 'look': (1.72, 1.1, 6.3), 'fov': 38}],   # her head stays in frame
                             [113.6, {'pos': (2.0, 1.12, 3.78), 'look': (2.45, 0.8, 6.25), 'fov': 32}],
                             [116.4, {'pos': (2.3, 1.06, 3.8), 'look': (2.58, 0.78, 6.25), 'fov': 27}],
                             [119.90, {'pos': (2.5, 1.0, 3.82), 'look': (2.66, 0.76, 6.25), 'fov': 22}]],
@@ -2031,7 +2034,7 @@ MERGE(106.86, 119.90, cam3=[[106.86, 'three_q'],
                       'kneels and brushes her thumb over the bottom step; red crumbs on her thumb; the camera settles low on the glass '
                       'as a fresh red line draws itself below the bottom step; you stand behind her shoulder throughout'),
       chars=[body('tess', 820, 980, 440, 'back', 'tense',
-                  [A(106.86, 'turn', to=1.35, dur=0.05), A(107.16, 'flashlight', aim='mirror'),
+                  [A(106.86, 'turn', to=1.1, dur=0.05), A(107.16, 'flashlight', aim='mirror'),
                    A(110.15, 'reach', side=1, dur=0.6, t1=110.95), A(111.7, 'kneel', dur=0.7),
                    A(112.85, 'hand_on_glass', dur=1.4, side=1, down=60.0),
                    A(114.4, 'pose', p=dict(hr_out=40.0, hr_down=175.0, hr_fwd=110.0), fade=0.6),
@@ -2248,12 +2251,25 @@ MERGE(602.52, 609.48, one=True, set_=dict(set='stairs', view='pov_down', var='re
 MERGE(618.40, 621.25)
 MERGE(621.25, 625.53, flat=True, set_=dict(view='through'), path=[(621.25, 960, 560, 1.0), (623.4, 960, 600, 1.08), (625.53, 960, 640, 1.16)])
 # --- ENDING
-MERGE(629.05, 638.89, flat=True, cam3=[[629.05, 'floor_wide'], [634.0, {'pos': (1.35, 0.72, 1.8), 'look': (2.9, 0.45, 4.3), 'fov': 72}],
-                                       [638.89, {'pos': (1.75, 0.86, 1.66), 'look': (2.95, 0.45, 4.3), 'fov': 70}]],
-      glide=[0.4, 0.5, 1.0])
+# review round 2 (B2): grown Noah and you on the floor (kneeling back on your heels: the chair-sit pose floated half a metre up),
+# 0.6 m apart so the jacket passes in front without crossed arms; the camera keeps both heads in frame
+MERGE(629.05, 638.89, flat=True, cam3=[[629.05, {'pos': (1.0, 0.78, 1.75), 'look': (2.85, 0.72, 4.1), 'fov': 70}],
+                                       [634.0, {'pos': (1.25, 0.8, 1.9), 'look': (2.85, 0.7, 4.0), 'fov': 66}],
+                                       [638.89, {'pos': (1.45, 0.84, 2.0), 'look': (2.85, 0.76, 3.95), 'fov': 66}]],
+      glide=[0.4, 0.5, 1.0],
+      chars=[body('noah_grown', 900, 900, 480, 'q_right', 'shaken', [A(628.5, 'kneel', dur=0.3), A(629.05, 'rock'), A(630.81, 'tremble'),
+                                                                     A(635.61, 'expr', name='hopeful', fade=0.4), A(635.61, 'hold_collar'),
+                                                                     A(636.97, 'talk_silent', dur=1.2)], w=[2.55, 0.0, 4.05]),
+             body('you', 1300, 900, 440, 'q_left', 'grief', [A(628.5, 'kneel', dur=0.3), A(635.06, 'give_jacket')], w=[3.2, 0.0, 3.9])])
 MERGE(640.57, 643.37)
-MERGE(644.81, 652.39)
-MERGE(684.98, 695.62)
+# review round 2 (B18, M5): ONE hand, one monotone push: your left fist trembles and will not open (the fingers strain and clamp
+# back), then it opens slowly over 1.9 s to the red candy in the palm (one rig: the hand swapped rigs at 648.9 and popped open
+# at 649.6 and 651.0; the camera pushed 1.33x and back)
+MERGE(644.81, 652.39, path=[(644.81, 960, 560, 1.0), (648.9, 960, 575, 1.12), (652.39, 960, 590, 1.24)], glide=[0.5, 0.6, 0.7],
+      chars=[C('you', [960, 620, 600], 'front', 'neutral', [A(644.81, 'fist', hand='left', candy=True), A(644.81, 'tremble', amount=0.8),
+                                                          A(646.9, 'fist', fail_open=True, t1=649.1), A(649.12, 'open_fist', dur=1.99)],
+               mode='hands', pov=True, sleeve='olive', hand='left', fist=True)])
+MERGE(684.98, 695.62, drop=[('tess', 'hands')])   # review round 2 (M18): Tess's orange hand covered the tiny steps while you counted
 # --- continuity pass 2 (validate.py): same-subject cuts on one set-up become one move; the rest are flagged
 FLAG(142.56, match_action=True)               # the finger runs on into the click
 FLAG(153.75, match_action=True)               # her hand opens on the glass (the same set-up, closer)
@@ -2275,8 +2291,14 @@ MERGE(595.56, 599.72)
 MERGE(660.39, 664.87, set_=dict(hold='H9'))
 MERGE(666.87, 669.75)
 MERGE(669.75, 673.06)
-MERGE(674.26, 677.34)
-MERGE(678.74, 682.18)
+# review round 2 (merge 20, M13): ONE push on the phone in Tess's hands: she picks it up from the sill, it lies face up in her palm
+# (the red X, FACE UP), she wipes the dust off the glass with her sleeve (the 1.4 s montage of four flips is gone)
+MERGE(674.26, 682.18, flat=True, keep=[678.74, 680.5], path=[(674.26, 960, 560, 1.0), (678.74, 960, 540, 1.25)], glide=[0.5, 0.6, 0.7],
+      set_=dict(type='INSERT', montage=None, frame='Tess picks her phone up off the sill; it lies face up in her palm, the red glint in its '
+                                                    'glass (RED X 4 of 4, FACE UP); she wipes the dust off the dark glass with her sleeve (one push)'),
+      chars=[hands('tess', 960, 560, 420, [A(674.43, 'pick_up', prop='phone'), A(676.42, 'hold_up', prop='phone', face_up=True, dur=3.0)],
+                   sleeve='orange')])
+MERGE(678.74, 682.18)                        # the wipe on the black glass, then Tess's face reflected in it (the insert stays a cut)
 # B4: the OTS at 372.5 is over YOUR shoulder (olive, standing) at Noah sitting on his bunk, the stairs behind him (the
 # ots_noah view put Noah's back in the foreground while Noah was also the subject)
 MERGE(372.50, 374.66, cam3=[[372.50, {'pos': (2.9, 1.5, 2.6), 'look': (1.6, 0.9, 5.4), 'fov': 52}],

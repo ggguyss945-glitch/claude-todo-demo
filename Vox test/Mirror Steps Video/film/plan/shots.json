@@ -137,8 +137,8 @@
    "t0": 629.05,
    "t1": 700.0,
    "title": "Just after midnight: Hi, Mom; the phone",
-   "shots": 24,
-   "cuts_per_min": 20.3,
+   "shots": 23,
+   "cuts_per_min": 19.5,
    "intensity": [0.0, 9.5]
   }
  ],
@@ -363,7 +363,7 @@
    "id": "H10",
    "brief": [692.0, 695.7, 3.7],
    "what": "her tiny figure on the phone's 8th line, climbing one step",
-   "shot": "S293",
+   "shot": "S292",
    "t0": 684.98,
    "t1": 695.62,
    "dur": 10.64
@@ -859,7 +859,7 @@
    "on_screen": true
   },
   {
-   "shot": "S293",
+   "shot": "S292",
    "t0": 684.98,
    "stage": "S3c",
    "step": 8,
@@ -870,7 +870,7 @@
    "on_screen": true
   },
   {
-   "shot": "S295",
+   "shot": "S294",
    "t0": 696.74,
    "stage": "S3c",
    "size": 0.6,
@@ -1323,15 +1323,15 @@
    "what": "the call to Mom"
   },
   {
-   "shot": "S289",
-   "t0": 677.34,
-   "type": "MONTAGE",
+   "shot": "S288",
+   "t0": 674.26,
+   "type": "INSERT",
    "kind": "doc",
    "id": "face_up",
    "what": "the phone lay face up the whole time (a mirror nobody covered)"
   },
   {
-   "shot": "S293",
+   "shot": "S292",
    "t0": 684.98,
    "type": "INSERT",
    "kind": "diagram",
@@ -1398,11 +1398,11 @@
   },
   "15": {
    "error": "no 8th line on the phone",
-   "shots": ["S293"]
+   "shots": ["S292"]
   },
   "16": {
    "error": "the phone jumps from hand to floor",
-   "shots": ["S288", "S289", "S292"]
+   "shots": ["S288", "S291"]
   },
   "17": {
    "error": "fist, open, fist, open",
@@ -1438,7 +1438,7 @@
   },
   "25": {
    "error": "the phone steps appear late",
-   "shots": ["S293"]
+   "shots": ["S292"]
   },
   "26": {
    "error": "the face in the wrong world at 283.5",
@@ -7466,14 +7466,13 @@
    "cam": {
     "move": "path",
     "keys": [[30.0, 900.0, 560.0, 1.15, 0.0],
-     [31.55, 920.0, 600.0, 1.55, 0.0],
-     [32.4, 930.0, 590.0, 1.5, 0.0],
-     [33.74, 900.0, 560.0, 1.12, 0.0]],
+     [31.55, 915.0, 590.0, 1.4, 0.0],
+     [33.74, 920.0, 590.0, 1.5, 0.0]],
     "ease": "glide",
-    "glide": [0.5, 0.5, 0.6],
+    "glide": [0.5, 0.6, 0.6],
     "shake": 2.0,
-    "rate_pct_s": -0.7,
-    "pan_px_s": 0.0
+    "rate_pct_s": 8.14,
+    "pan_px_s": 9.6
    },
    "lens": null,
    "grade": "night_v2",
@@ -10033,8 +10032,8 @@
      ],
      "mode": "body",
      "w": [[72.31, 3.6, 0.0, 2.2],
-      [73.6, 4.3, 0.0, 3.05],
-      [75.91, 4.32, 0.0, 3.1]]
+      [73.6, 3.95, 0.0, 3.8],
+      [75.91, 3.97, 0.0, 3.85]]
     },
     {
      "who": "you",
@@ -10065,7 +10064,7 @@
      ],
      "mode": "hands",
      "sleeve": "olive",
-     "_view": "under_bunk"
+     "pov": true
     }
    ],
    "props": {
@@ -11823,7 +11822,7 @@
        106.86,
        "turn",
        {
-        "to": 1.35,
+        "to": 1.1,
         "dur": 0.05
        }
       ],
@@ -11993,8 +11992,8 @@
       110.6,
       {
        "pos": [1.25, 1.3, 3.75],
-       "look": [1.72, 0.95, 6.3],
-       "fov": 36
+       "look": [1.72, 1.1, 6.3],
+       "fov": 38
       }
      ],
      [
@@ -12201,7 +12200,7 @@
        106.86,
        "turn",
        {
-        "to": 1.35,
+        "to": 1.1,
         "dur": 0.05
        }
       ],
@@ -12383,8 +12382,8 @@
       110.6,
       {
        "pos": [1.25, 1.3, 3.75],
-       "look": [1.72, 0.95, 6.3],
-       "fov": 36
+       "look": [1.72, 1.1, 6.3],
+       "fov": 38
       }
      ],
      [
@@ -16995,7 +16994,7 @@
      "expr": "neutral",
      "acts": [
       [
-       210.7,
+       209.8,
        "grip_frame",
        {
         "fail": true
@@ -37031,7 +37030,7 @@
        {}
       ],
       [
-       573.54,
+       573.19,
        "stand_hit",
        {}
       ]
@@ -39406,7 +39405,7 @@
    "chars": [
     {
      "who": "you",
-     "at": [960, 900, 820],
+     "at": [880, 930, 760],
      "view": "q_left",
      "expr": "fear",
      "acts": [
@@ -39416,7 +39415,8 @@
        {}
       ]
      ],
-     "mode": "lying"
+     "mode": "lying",
+     "floor": true
     }
    ],
    "props": {
@@ -40312,6 +40312,13 @@
      "expr": "shaken",
      "acts": [
       [
+       628.5,
+       "kneel",
+       {
+        "dur": 0.3
+       }
+      ],
+      [
        629.05,
        "rock",
        {}
@@ -40336,14 +40343,6 @@
       ],
       [
        636.97,
-       "expr",
-       {
-        "name": "hopeful",
-        "fade": 0.4
-       }
-      ],
-      [
-       636.97,
        "talk_silent",
        {
         "dur": 1.2
@@ -40351,7 +40350,7 @@
       ]
      ],
      "mode": "body",
-     "seated": true
+     "w": [2.55, 0.0, 4.05]
     },
     {
      "who": "you",
@@ -40360,13 +40359,20 @@
      "expr": "grief",
      "acts": [
       [
+       628.5,
+       "kneel",
+       {
+        "dur": 0.3
+       }
+      ],
+      [
        635.06,
        "give_jacket",
        {}
       ]
      ],
      "mode": "body",
-     "seated": true
+     "w": [3.2, 0.0, 3.9]
     }
    ],
    "props": {
@@ -40427,21 +40433,28 @@
    "setup": "END_WIDE",
    "cam3": {
     "keys": [
-     [629.05, "floor_wide"],
+     [
+      629.05,
+      {
+       "pos": [1.0, 0.78, 1.75],
+       "look": [2.85, 0.72, 4.1],
+       "fov": 70
+      }
+     ],
      [
       634.0,
       {
-       "pos": [1.35, 0.72, 1.8],
-       "look": [2.9, 0.45, 4.3],
-       "fov": 72
+       "pos": [1.25, 0.8, 1.9],
+       "look": [2.85, 0.7, 4.0],
+       "fov": 66
       }
      ],
      [
       638.89,
       {
-       "pos": [1.75, 0.86, 1.66],
-       "look": [2.95, 0.45, 4.3],
-       "fov": 70
+       "pos": [1.45, 0.84, 2.0],
+       "look": [2.85, 0.76, 3.95],
+       "fov": 66
       }
      ]
     ],
@@ -40803,16 +40816,14 @@
    "frame": "POV: your left fist trembles and will not open >> ECU: the fingers straining, still closed >> the palm opens slowly >> the red candy lies in the open palm",
    "cam": {
     "move": "path",
-    "keys": [[644.81, 960.0, 540.0, 1.0, 0.0],
-     [647.8, 960.0, 556.0, 1.327, 0.0],
-     [650.03, 960.0, 545.3, 1.133, 0.0],
-     [651.75, 960.0, 550.0, 1.182, 0.0],
-     [652.39, 960.0, 550.0, 1.223, 0.0]],
+    "keys": [[644.81, 960.0, 560.0, 1.0, 0.0],
+     [648.9, 960.0, 575.0, 1.12, 0.0],
+     [652.39, 960.0, 590.0, 1.24, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 2.94,
-    "pan_px_s": 1.3
+    "rate_pct_s": 3.17,
+    "pan_px_s": 4.0
    },
    "lens": null,
    "grade": "ending_v2",
@@ -40820,7 +40831,7 @@
    "chars": [
     {
      "who": "you",
-     "at": [960, 620, 560],
+     "at": [960, 620, 600],
      "view": "front",
      "expr": "neutral",
      "acts": [
@@ -40840,70 +40851,26 @@
        }
       ],
       [
-       646.65,
-       "fist",
-       {
-        "hand": "left",
-        "candy": true
-       }
-      ],
-      [
-       646.65,
-       "tremble",
-       {
-        "amount": 0.9
-       }
-      ],
-      [
        646.9,
        "fist",
        {
-        "fail_open": true
+        "fail_open": true,
+        "t1": 649.1
        }
       ],
       [
-       648.95,
-       "hide",
-       {
-        "fade": 0.12
-       }
-      ]
-     ],
-     "mode": "hands",
-     "hand": "left",
-     "fist": true
-    },
-    {
-     "who": "you",
-     "at": [960, 620, 600],
-     "view": "front",
-     "expr": "neutral",
-     "acts": [
-      [
-       644.31,
-       "hide",
-       {
-        "t1": 648.83,
-        "fade": 0.12
-       }
-      ],
-      [
-       649.2,
+       649.12,
        "open_fist",
        {
-        "dur": 1.8
+        "dur": 1.99
        }
-      ],
-      [
-       651.11,
-       "open_hand",
-       {}
       ]
      ],
      "mode": "hands",
      "pov": true,
      "sleeve": "olive",
-     "hand": "left"
+     "hand": "left",
+     "fist": true
     }
    ],
    "props": {
@@ -42301,8 +42268,8 @@
   {
    "id": "S288",
    "t0": 674.26,
-   "t1": 677.34,
-   "dur": 3.08,
+   "t1": 678.74,
+   "dur": 4.48,
    "section": "ending",
    "lines": [289, 290],
    "cut_on_clause": false,
@@ -42313,19 +42280,18 @@
    "side": "ours",
    "world": "ending",
    "look": "ending_v2",
-   "type": "MS",
-   "cls": "mid",
-   "frame": "Tess picks up her phone from the windowsill >> MS: Tess turns from the sill holding the phone face up in her palm, the red glint in its glass",
+   "type": "INSERT",
+   "cls": "insert",
+   "frame": "Tess picks her phone up off the sill; it lies face up in her palm, the red glint in its glass (RED X 4 of 4, FACE UP); she wipes the dust off the dark glass with her sleeve (one push)",
    "cam": {
     "move": "path",
-    "keys": [[674.26, 960.0, 540.0, 1.0, 0.0],
-     [676.88, 960.0, 540.0, 1.014, 0.0],
-     [677.34, 960.0, 540.0, 1.028, 0.0]],
+    "keys": [[674.26, 960.0, 560.0, 1.0, 0.0],
+     [678.74, 960.0, 540.0, 1.25, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 0.91,
-    "pan_px_s": 0.0
+    "rate_pct_s": 5.58,
+    "pan_px_s": 4.5
    },
    "lens": null,
    "grade": "ending_v2",
@@ -42349,7 +42315,8 @@
        "hold_up",
        {
         "prop": "phone",
-        "face_up": true
+        "face_up": true,
+        "dur": 3.0
        }
       ]
      ],
@@ -42393,97 +42360,6 @@
      ]
     ]
    },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 7 OF 7",
-    "clock_mode": "ours",
-    "clock_at_t0": "00:07:49",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 6.0,
-   "energy": "lifting the phone, dust trail",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_now",
-    "view": "sill",
-    "var": "phone_glow",
-    "grade": "cabin_after"
-   },
-   "errfix": [16, 16],
-   "merged": [674.26, 676.42],
-   "queen": null,
-   "setup_reused": false,
-   "family": "ours",
-   "glint": false,
-   "chip": {
-    "text": "CABIN 7 · 12:07 AM",
-    "style": "ours",
-    "pop": false
-   },
-   "counter": null
-  },
-  {
-   "id": "S289",
-   "t0": 677.34,
-   "t1": 678.74,
-   "dur": 1.4,
-   "section": "ending",
-   "lines": [290],
-   "cut_on_clause": false,
-   "clause_offset": 0.75,
-   "set": "cabin_now",
-   "view": "sill",
-   "var": "night",
-   "side": "ours",
-   "world": "ending",
-   "look": "ending_v2",
-   "type": "MONTAGE",
-   "cls": "insert",
-   "frame": "RED X (4 of 4) + tag FACE UP over a 1.4 s montage of the phone face up on the sill at 112, 150, 284 and 546 s (0.35 s each), each with the red glint",
-   "cam": {
-    "move": "push",
-    "keys": [[677.34, 960, 540, 1.0, 0.0],
-     [678.74, 960.0, 540.0, 1.077, 0.0]],
-    "ease": "lin",
-    "shake": 2.0,
-    "rate_pct_s": 5.5,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "ending_v2",
-   "dof": null,
-   "chars": [],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 7,
-    "mirror": "covered",
-    "doorway": "none",
-    "towel": "draped_over_mirror",
-    "flashlight": "floor",
-    "fist": "palm_candy",
-    "candy": "palm",
-    "tape": "off_loop_floor",
-    "shoe": "left_on_lace_loose",
-    "jacket": "noah",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "tess_hand",
-    "your_phone": "noah_hand",
-    "bell": "struck",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "7:00",
-    "queen": "absent",
-    "noah": "ours",
-    "tess": "cabin7_doorway",
-    "you": "ours_floor"
-   },
    "hud": [
     {
      "t": 677.39,
@@ -42508,46 +42384,30 @@
    "header": {
     "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 7 OF 7",
     "clock_mode": "ours",
-    "clock_at_t0": "00:07:52",
+    "clock_at_t0": "00:07:49",
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 6.5,
-   "energy": "tiles cutting, the X",
+   "intensity": 6.2,
+   "energy": "lifting the phone, dust trail",
    "sfx": [],
    "mus": [],
    "v1": {
     "set": "cabin_now",
     "view": "sill",
-    "var": "flash",
-    "grade": "cabin_flash"
+    "var": "phone_glow",
+    "grade": "cabin_after"
    },
-   "errfix": [16],
+   "errfix": [16, 16, 16],
    "device": {
     "kind": "doc",
     "id": "face_up",
     "what": "the phone lay face up the whole time (a mirror nobody covered)"
    },
-   "montage": [
-    {
-     "t": 677.34,
-     "src_t": 112.0
-    },
-    {
-     "t": 677.69,
-     "src_t": 150.0
-    },
-    {
-     "t": 678.04,
-     "src_t": 284.0
-    },
-    {
-     "t": 678.39,
-     "src_t": 546.0
-    }
-   ],
+   "montage": null,
+   "merged": [674.26, 676.42, 677.34],
    "queen": null,
-   "setup_reused": true,
+   "setup_reused": false,
    "family": "ours",
    "glint": false,
    "chip": {
@@ -42558,7 +42418,7 @@
    "counter": null
   },
   {
-   "id": "S290",
+   "id": "S289",
    "t0": 678.74,
    "t1": 682.18,
    "dur": 3.44,
@@ -42693,7 +42553,7 @@
    "counter": null
   },
   {
-   "id": "S291",
+   "id": "S290",
    "t0": 682.18,
    "t1": 683.94,
    "dur": 1.76,
@@ -42823,7 +42683,7 @@
    "counter": null
   },
   {
-   "id": "S292",
+   "id": "S291",
    "t0": 683.94,
    "t1": 684.98,
    "dur": 1.04,
@@ -42930,7 +42790,7 @@
    "counter": null
   },
   {
-   "id": "S293",
+   "id": "S292",
    "t0": 684.98,
    "t1": 695.62,
    "dur": 10.64,
@@ -42967,38 +42827,6 @@
    "grade": "ending_v2",
    "dof": null,
    "chars": [
-    {
-     "who": "tess",
-     "at": [960, 640, 520],
-     "view": "front",
-     "expr": "neutral",
-     "acts": [
-      [
-       684.48,
-       "hide",
-       {
-        "t1": 686.14,
-        "fade": 0.12
-       }
-      ],
-      [
-       686.26,
-       "hold_up",
-       {
-        "prop": "phone"
-       }
-      ],
-      [
-       687.62,
-       "hide",
-       {
-        "fade": 0.12
-       }
-      ]
-     ],
-     "mode": "hands",
-     "sleeve": "orange"
-    },
     {
      "who": "you",
      "at": [980, 900, 480],
@@ -43124,8 +42952,8 @@
      "t": 685.31,
      "type": "count_pop",
      "n": 1,
-     "x": 1100,
-     "y": 360,
+     "x": 1175,
+     "y": 330,
      "color": "#ffffff",
      "erase": false
     },
@@ -43133,8 +42961,8 @@
      "t": 685.43,
      "type": "count_pop",
      "n": 2,
-     "x": 1060,
-     "y": 420,
+     "x": 1175,
+     "y": 392,
      "color": "#ffffff",
      "erase": false
     },
@@ -43142,8 +42970,8 @@
      "t": 685.55,
      "type": "count_pop",
      "n": 3,
-     "x": 1020,
-     "y": 480,
+     "x": 1175,
+     "y": 454,
      "color": "#ffffff",
      "erase": false
     },
@@ -43151,8 +42979,8 @@
      "t": 685.67,
      "type": "count_pop",
      "n": 4,
-     "x": 980,
-     "y": 540,
+     "x": 1175,
+     "y": 516,
      "color": "#ffffff",
      "erase": false
     },
@@ -43160,8 +42988,8 @@
      "t": 686.45,
      "type": "count_pop",
      "n": 5,
-     "x": 940,
-     "y": 600,
+     "x": 1175,
+     "y": 578,
      "color": "#ffffff",
      "erase": false
     },
@@ -43169,8 +42997,8 @@
      "t": 686.57,
      "type": "count_pop",
      "n": 6,
-     "x": 900,
-     "y": 660,
+     "x": 1175,
+     "y": 640,
      "color": "#ffffff",
      "erase": false
     },
@@ -43178,8 +43006,8 @@
      "t": 686.69,
      "type": "count_pop",
      "n": 7,
-     "x": 860,
-     "y": 720,
+     "x": 1175,
+     "y": 702,
      "color": "#ffffff",
      "erase": false
     },
@@ -43247,7 +43075,7 @@
    "counter": null
   },
   {
-   "id": "S294",
+   "id": "S293",
    "t0": 695.62,
    "t1": 696.74,
    "dur": 1.12,
@@ -43365,7 +43193,7 @@
    "counter": null
   },
   {
-   "id": "S295",
+   "id": "S294",
    "t0": 696.74,
    "t1": 698.62,
    "dur": 1.88,
@@ -43531,7 +43359,7 @@
    "counter": null
   },
   {
-   "id": "S296",
+   "id": "S295",
    "t0": 698.62,
    "t1": 700.0,
    "dur": 1.38,

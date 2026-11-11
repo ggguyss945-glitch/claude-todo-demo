@@ -940,7 +940,9 @@ class Film:
             # review round 2 (B8): a figure the camera passes close to fades out over the last half metre (it was culled in
             # one frame at 0.3 m: Tess's jacket filled the frame and vanished); the fade follows the camera's distance to the
             # nearest of the feet, the middle and the head, so it is as smooth as the camera move
-            dnear = min(cam.dist(np.asarray(P, float) + np.array([0.0, fr_ * hm, 0.0])) for fr_ in (0.0, 0.55, 0.92))
+            # (Euclidean distance: cam.dist is the depth along the view axis, negative for a head above a camera that looks
+            # steeply down, which culled her whole figure in H7)
+            dnear = min(float(np.linalg.norm(np.asarray(P, float) + np.array([0.0, fr_ * hm, 0.0]) - cam.C)) for fr_ in (0.0, 0.55, 0.92))
             nf = smoothstep(clamp((dnear - 0.2) / 0.3)) if spec.get('mode', 'body') in ('body', 'legs', 'silhouette') else 1.0
             if nf <= 0.01: continue
             if dist < 0.35:

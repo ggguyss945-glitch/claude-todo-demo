@@ -2604,8 +2604,8 @@ def _sweatshirt_front(c, sp, B, rows, P, det, t):
     nk, v = _surf_poly(B, rows, [(-b['neck'] - 10, yS - 26), (0, yS - 6), (b['neck'] + 10, yS - 26)], dz=4)
     if v > -0.2:
         c.line(smooth(nk, False), lw * 2.4, cl['top_sh']); c.line(smooth(nk, False), lw * 0.6)
-    # arc print
-    if det >= 1:
+    # arc print (grown Noah's at every detail level: the print is how he reads as Noah in the kid's sweatshirt)
+    if det >= 1 or fit > 0.5:
         txt = 'CEDAR LAKE'
         X, Y, vv, s_ = B.surf(0, yC - 6, 3, False, rows)
         if vv > 0.25:
@@ -2613,11 +2613,11 @@ def _sweatshirt_front(c, sp, B, rows, P, det, t):
             for i, ch in enumerate(txt):
                 u = (i - (len(txt) - 1) / 2) / (len(txt) - 1)
                 ang = u * 0.9
-                x0 = u * 118.0 * (1 + 0.12 * fit); y0 = yC - 8 - 24.0 * math.cos(ang) + 24.0
+                x0 = u * 118.0 * (1 + 0.3 * fit); y0 = yC - 8 - 24.0 * math.cos(ang) + 24.0   # stretched over the grown chest
                 Xc, Yc, vc, sc2 = B.surf(x0, y0, 3, False, rows)
                 if vc < 0.2 or ch == ' ': continue
                 c.cv.save(); c.cv.translate(*c.pt(Xc, Yc)); c.cv.rotate(math.degrees(ang * 0.8) + B.tilt * 57.3)
-                text(c.cv, ch, 0, 0, 800, 20 * sc2 * c.s * (1 - 0.15 * fit), cl['print'], 150)
+                text(c.cv, ch, 0, 0, 800, 20 * sc2 * c.s * (1 + 0.3 * fit), cl['print'], 150 + 90 * fit)   # m7: reads at MS
                 c.cv.restore()
             for k in (-1, 1):
                 X2, Y2, v2, s2 = B.surf(k * 44, yC + 24, 3, False, rows)
@@ -3751,9 +3751,10 @@ class Acting:
         i = _bisect.bisect_right(self._blinks, t) - 1
         if i < 0: return 0.0
         dt = t - self._blinks[i]
-        if dt < 0.017: return dt / 0.017
-        if dt < 0.05: return 1.0
-        if dt < 0.067: return 1.0 - (dt - 0.05) / 0.017
+        # review round 2 (m4): a blink closes over 3 frames and opens over 4 (at 60 fps the old 1-frame close read as a swap)
+        if dt < 0.05: return smoothstep(dt / 0.05)
+        if dt < 0.075: return 1.0
+        if dt < 0.14: return 1.0 - smoothstep((dt - 0.075) / 0.065)
         return 0.0
 
     def _saccade(self, t):
@@ -5228,7 +5229,7 @@ def draw_silhouette(pen, who, x, y_feet, height, pose=None, light=None, t=None, 
         finally: cv.restore()
 
 
-def draw_lying(pen, who, x, y, size, pose=None, detail=None, light=None, t=None, facing=1, blanket=None, hang_arm=False):
+def draw_lying(pen, who, x, y, size, pose=None, detail=None, light=None, t=None, facing=1, blanket=None, hang_arm=False, bed=True):
     """In a bunk (mode 'lying'): the figure on its back, head to screen left (facing=1) or right, head on a pillow, a
     sleeping bag / blanket over the body; (x, y) = body centre, size = body length (crown to feet) in design px.
     hang_arm: the right arm hangs off the bunk edge (Noah's watch wrist, S040)."""
@@ -5242,12 +5243,16 @@ def draw_lying(pen, who, x, y, size, pose=None, detail=None, light=None, t=None,
     bl = blanket or {'noah13': ('#3e5a7a', '#2c425c'), 'you_kid': ('#7a3a34', '#572822')}.get(who, ('#5a6a4a', '#3e4a32'))
     with _lit(pen, light, x - facing * size * 0.4, y, size * 0.5, (x, y + size * 0.2)) as l2:
         c0 = Ctx(pen, skia.Matrix(), _lw_for(sp['hh'] * s_), _sty_for(sp, t))
-        pill = smooth([(x - facing * size * 0.58, y - size * 0.1), (x - facing * size * 0.28, y - size * 0.12), (x - facing * size * 0.26, y + size * 0.1),
-                       (x - facing * size * 0.6, y + size * 0.1)], True, 0.8)
-        c0.fill(pill, '#e9e4da'); c0.fill(_crescent(pill, 0, -size * 0.03), '#b8b2a6', 160); c0.line(pill, c0.lw)
+        if bed:
+            pill = smooth([(x - facing * size * 0.58, y - size * 0.1), (x - facing * size * 0.28, y - size * 0.12), (x - facing * size * 0.26, y + size * 0.1),
+                           (x - facing * size * 0.6, y + size * 0.1)], True, 0.8)
+            c0.fill(pill, '#e9e4da'); c0.fill(_crescent(pill, 0, -size * 0.03), '#b8b2a6', 160); c0.line(pill, c0.lw)
+        else:                     # review round 2 (M11): sprawled on the floorboards: a contact shadow, no pillow, no blanket
+            c0.fill(oval(x, y + size * 0.1, size * 0.55, size * 0.08), '#000000', 70)
         c = c0.sub(x + facing * 500.0 * s_, y, rot, s_)
         P2 = P.copy(); P2.h_turn += 0.0
         B = _figure(c, who, P2, det, t, l2)
+        if not bed: return B
         # blanket from the chest to past the feet
         b = sp['body']
         br = (P.breath - 0.5) * 6.0
@@ -6090,7 +6095,7 @@ class _MirrorClips:
             if fail_open:
                 ph = ((t - t0) % 0.9) / 0.9
                 tw = math.sin(PI * clamp(ph / 0.35)) if ph < 0.35 else 0.0
-            sh_ = 'grip' if tw < 0.5 else 'relaxed'
+            sh_ = 'grip' if tw < 0.02 else 'xf:%.3f:grip:relaxed' % clamp(tw)       # review round 2: cross-faded, not swapped
             self._ins(P, 'r', w, x=0.42, y=0.0, a=135.0, shape=sh_, press=1.0)
             self._ins(P, 'l', w, v=1.0, x=-0.42, y=0.04, a=225.0, shape=sh_, press=1.0)
             for side in (-1, 1): self._arm(P, side, w, -20.0, 140.0, 260.0, 'grip', up=0.0, press=1.0)
@@ -6193,13 +6198,17 @@ class _MirrorClips:
         fingers twitch open and clamp shut again (they will not open)."""
         dur = 1.0 if slow else 0.25
         def fn(P, t):
+            if t < t0: return                       # review round 2: a second fist clip opened the hand 1.5 s before its start
             u = ease_in_out(prog(t, t0, t0 + dur))
             tw = 0.0
             if fail_open:
                 ph = ((t - t0) % 1.1) / 1.1
                 tw = math.sin(PI * clamp(ph / 0.3)) * 0.6 if ph < 0.3 else 0.0
             closed = u > 0.55 and tw < 0.4
-            self._ins(P, 'r', 1.0, shape='fist' if closed else 'relaxed', press=squeeze, prop=None if closed else P.ir_prop)
+            # review round 2 (B18): the fingers strain open and clamp back through a cross-fade to a loose curl (the fist swapped to
+            # an open hand and back in single frames every 1.1 s)
+            shp = ('fist' if tw < 0.02 else 'xf:%.3f:curl' % clamp(tw * 1.3)) if u > 0.55 else 'relaxed'
+            self._ins(P, 'r', 1.0, shape=shp, press=squeeze, prop=None if closed else P.ir_prop)
             P.hshake = max(P.hshake, tremble + 0.6 * squeeze)
             self._arm(P, -1, 1.0, -40.0, 200.0, 200.0, 'fist' if closed else 'relaxed', up=0.0)
             P.candy = 1.0
@@ -6748,11 +6757,13 @@ def _hand2(c, x, y, scale, angle, side, shape, det, look, press=0.0, t=0.0, view
     if isinstance(shape, str) and shape.startswith('xf:'):
         # review round 2 (B18): 'xf:<w>:<shape>' cross-fades the closed fist into another shape (the fist is its own
         # drawing, so a fist could only swap to an open hand in one frame)
-        _, w_, sb = shape.split(':', 2); w_ = clamp(float(w_))
+        parts = shape.split(':')
+        w_ = clamp(float(parts[1]))
+        sa, sb = ('fist', parts[2]) if len(parts) == 3 else (parts[2], parts[3])     # 'xf:w:b' (from the fist) or 'xf:w:a:b'
         cv = c.pen.cv
         if w_ < 0.999:
             cv.saveLayer(None, skia.Paint(Alphaf=float(1.0 - w_)))
-            _hand2(c, x, y, scale, angle, side, 'fist', det, look, press, t, view); cv.restore()
+            _hand2(c, x, y, scale, angle, side, sa, det, look, press, t, view); cv.restore()
         if w_ > 0.001:
             cv.saveLayer(None, skia.Paint(Alphaf=float(w_)))
             hc_ = _hand2(c, x, y, scale, angle, side, sb, det, look, press, t, view); cv.restore()
@@ -8614,6 +8625,7 @@ class CharRig:
         P = self.pose(t)
         if self.mode == 'lying':
             P._facing = int(self.spec.get('_facing', 1)); P._hang = bool(self.spec.get('hang_arm', self.spec.get('watch', True)))
+            P._bed = not self.spec.get('floor')
         view = 'pov' if (self.mode == 'feet' and (self.spec.get('pov') or self.spec.get('view') == 'pov')) else self.spec.get('view')
         if self.mode in ('body', 'legs', 'silhouette') and len(at) > 2 and float(at[2]) < 10.0:
             k_ = (self.shot.get('id'), self.who, 'at')
@@ -8664,7 +8676,7 @@ def draw_mode(pen, who, mode, at, P, light=None, detail=None, view=None, main='r
         return {}
     if mode == 'lying':
         B = draw_lying(pen, who, at[0], at[1], at[2], P, detail, light, P.t, facing=int(getattr(P, '_facing', 1) or 1),
-                       hang_arm=(who == 'noah13' and getattr(P, '_hang', True)))
+                       hang_arm=(who == 'noah13' and getattr(P, '_hang', True)), bed=bool(getattr(P, '_bed', True)))
         return dict(B.info, B=B)
     raise ValueError(mode)
 

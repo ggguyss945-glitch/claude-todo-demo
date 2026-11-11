@@ -14,6 +14,9 @@ any 60 s outside the flagged parallel-action blocks (the porch / THEIRS cross-cu
 no more than 2 consecutive close-ups on the bokeh plate; memory runs >= 2.5 s; snap punch-ins <= 3 in the film. Printed as a
 table with PASS / MISS; any MISS also fails the run.
 Warnings: acting / HUD / SFX times outside their own shot, the left-hand fist rule (323.65-649 s), the Queen ladder order.
+Review round 2 (critic round 2) continuity errors: the paper dissolve on every memory boundary and nowhere else; no legs / lying /
+disembodied hands in a wide unless the crop is real; a sit needs a seat (travelling shots of our cabin); no 2D zoom reversal over
+15 % (yo-yo); body heads inside the frame; an acting beat timed inside a cutaway of its own continuous move.
 """
 import json, os, statistics, sys
 
@@ -215,6 +218,66 @@ for s in shots:
     else:
         if cur_ is not None: mem_runs.append(cur_); cur_ = None
 short_mem = [(m[2], round(m[1] - m[0], 2)) for m in mem_runs if m[1] - m[0] < 2.5 - 1e-6]
+# ---------------------------------------------------------------- review round 2: continuity checks (critic round 2)
+BEATS = {'cover_ears', 'phone_to_ear', 'grab_collar', 'yank', 'reach_grab', 'open_fist', 'hand_on_glass', 'touch_glass', 'snatch',
+         'throw', 'step_over', 'step_through', 'pat', 'give_jacket', 'wipe_glass', 'pick_up', 'set_down', 'head_snap', 'jaw_drop',
+         'split_open', 'finger_to_lips', 'flinch', 'scoot', 'stand_hit', 'grab', 'grab_shoulder', 'shove', 'nail_tap'}
+rule_errs = []
+# 1. the paper dissolve on every memory boundary and nowhere else (cards, blacks and loop resets excepted)
+for a_, b_ in zip(shots, shots[1:]):
+    if a_['type'] in ('CARD', 'BLACK') or b_['type'] in ('CARD', 'BLACK') or b_['tr'] == 'rewind': continue
+    ma, mb = a_['world'] == 'memory', b_['world'] == 'memory'
+    if ma != mb and b_['tr'] != 'sepia': rule_errs.append('%s: memory boundary cut with %s, not the paper dissolve' % (b_['id'], b_['tr']))
+    if ma == mb and b_['tr'] == 'sepia': rule_errs.append('%s: paper dissolve between two %s shots' % (b_['id'], 'memory' if ma else 'present'))
+# 2. no legs / lying / disembodied hands in a wide unless the crop is real (POV, a lying figure laid on its mattress / floor)
+for s_ in shots:
+    if s_['type'] not in ('WS', 'EWS', 'SEC'): continue
+    for c in s_['chars']:
+        m_ = c.get('mode', 'body')
+        if m_ == 'legs' or (m_ == 'lying' and not (c.get('lie') or c.get('floor'))) or (m_ in ('hands', 'feet') and not c.get('pov')):
+            rule_errs.append('%s %s: %s mode in a %s' % (s_['id'], c['who'], m_, s_['type']))
+# 3. a sit needs a seat: seated people in a travelling shot of our cabin have no seat surface (they float in the chair pose)
+for s_ in shots:
+    if s_.get('cam3') and s_['set'] == 'cabin_now':
+        for c in s_['chars']:
+            if c.get('seated') and c.get('mode', 'body') == 'body': rule_errs.append('%s %s: seated with no seat (use kneel or a seat)' % (s_['id'], c['who']))
+# 4. camera moves without yo-yo: a 2D path whose zoom reverses by more than 15 %
+for s_ in shots:
+    ks = s_['cam'].get('keys') or []
+    if s_['cam'].get('move') != 'path' or len(ks) < 3: continue
+    zs = [float(k[3]) for k in ks]
+    hi, lo = zs[0], zs[0]
+    for z in zs[1:]:
+        if z < hi / 1.15 and hi > zs[0] * 1.03: rule_errs.append('%s: zoom pushes to %.2f and pulls back to %.2f' % (s_['id'], hi, z)); break
+        if z > lo * 1.15 and lo < zs[0] / 1.03: rule_errs.append('%s: zoom pulls to %.2f and pushes back to %.2f' % (s_['id'], lo, z)); break
+        hi, lo = max(hi, z), min(lo, z)
+# 5. heads inside the frame (2D shots; the room camera of travelling shots is checked on the renders)
+for s_ in shots:
+    if s_.get('cam3') or s_['type'] in ('CARD', 'UI', 'TYPE', 'DIAGRAM', 'SPLIT'): continue
+    ks = s_['cam'].get('keys') or []
+    if not ks: continue
+    for c in s_['chars']:
+        at_ = c.get('at')
+        if c.get('mode', 'body') != 'body' or not isinstance(at_, (list, tuple)) or len(at_) < 3 or c.get('ots') or c.get('path2d'): continue
+        head = float(at_[1]) - 0.95 * float(at_[2]) * (0.72 if c.get('seated') or c.get('kneel') else 1.0)
+        outs = [(head - float(k[2])) * float(k[3]) + 540 < -0.08 * 1080 for k in (ks[0], ks[-1])]
+        if all(outs): rule_errs.append('%s %s: head above the frame for the whole shot' % (s_['id'], c['who']))
+# 6. an acting beat timed inside a cutaway of its own continuous move is never seen
+groups = {}
+for s_ in shots:
+    g = s_.get('resumes')
+    if g is not None: groups.setdefault(round(g, 3), []).append(s_)
+for g, pieces in groups.items():
+    first = [s_ for s_ in shots if abs(s_['t0'] - g) < 1e-3]
+    pieces = first + pieces
+    spans = [(p_['t0'] - 0.3, p_['t1'] + 0.3) for p_ in pieces]
+    for p_ in pieces:
+        for c in p_['chars']:
+            for a_ in c.get('acts') or []:
+                if a_[1] in BEATS and not any(x0 <= float(a_[0]) <= x1 for x0, x1 in spans) and pieces[0]['t0'] < float(a_[0]) < pieces[-1]['t1']:
+                    rule_errs.append('%s %s %s at %.2f: inside a cutaway of its own move (never seen)' % (p_['id'], c['who'], a_[1], a_[0]))
+err += sorted(set(rule_errs))
+
 travelling = [s for s in shots if s.get('cam3')]
 merged = [s for s in shots if s.get('merged') and len(s['merged']) > 1]
 flows = [s for s in shots if s['tr'] == 'flow']

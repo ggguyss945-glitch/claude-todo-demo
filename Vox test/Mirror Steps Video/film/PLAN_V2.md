@@ -60,6 +60,34 @@ reaction counts once); memory runs >= 2.5 s; snap punch-ins <= 3; plus the cards
 Result: 449 -> 314 shots (72 merged shots made of 182 old ones, 23 travelling shots, 21 flow joins incl. the 7 card entries), median shot 1.8 s, jump cuts
 1.3 %, world switches 5.1 /min (v2: 11), every target met. Tables A1-A10 below are v2's and are kept for reference.
 
+### Review round 2 (critic round 2: the film still did not feel whole)
+
+The cut rate was no longer the problem (26.8 /min); broken story images, positions that changed between cuts and moves that
+popped were. The plan now (`plan/shotlist.py`, the FLOW block and the notes beside each fixed shot):
+
+- **20 more continuous moves** (the critic's merge list): the notice -> the cabins -> Tess with the keys as turns of the head
+  (`tr: pan`, film.py `pan_blend`, a 0.45 s whip pan; `pan_dir`); the gate -> the path -> the porch as a walk (a new path shot
+  at 53.3 s: figures move in depth on a 2D set with `path2d` keys [t, x, y_feet, h]) flowing into one porch shot where Tess steps
+  over the crate full figure; one tracking two-shot past the caretaker's house with a real "shh"; the master gliding down to
+  Noah's bunk and under it; one move at the glass (Tess kneels at the glass, you stand behind her shoulder; the crumbs CU is the
+  only cutaway); the top-step touch pushing into your eyeline; one monotone push onto the woman in the glass; one
+  over-the-shoulder set-up into the glass for Noah's voice (two kept CUs, the voicemail list); the lean that pushes through the
+  glass onto her turning head; one railing set-up for the taped hand, resumed after each memory; one slow push on you through
+  the wish; the two-shot pushing into Tess; the towel flying onto the glass (a flow) and one push; the Queen's CU tilting to her
+  patting hand; one three-shot on the bunk; the climb to his foot through the opening; H6 from the doorway with her behind you;
+  H7 from your eyes (boots, the shoe by the bed, her foot, her face, the yank); one push on the phone in Tess's hands.
+- **MERGE options added**: `one=True` (one shot whatever the sets; `set_` makes it one place), `hud_add`, `shake`, `arc`
+  (0: the 3D keys keep their exact times, e.g. a key on a hit), `drop_hud`; `set_` may carry `fx_post`, `montage=None`.
+- **Staging**: `lie` [[head], [feet]] lays a lying figure along its mattress (sized by the room camera), `floor` sprawls it on
+  the floorboards; `front` keeps a figure in front of the near band; an explicit `_depth` wins over the room placement;
+  `pose` is an eased pose target act; `hand_on_glass` takes `side`, `reach`, `down`.
+- **One memory grammar** (`make_plan.memory_transitions`): the paper dissolve on every memory boundary, nowhere else.
+- **Continuity checks** in `plan/validate.py` (errors): the memory grammar; no legs / lying / disembodied hands in a wide
+  unless the crop is real; a sit needs a seat in our cabin's travelling shots; no 2D zoom reversal over 15 % (yo-yo); body heads
+  inside the frame; an acting beat timed inside a cutaway of its own move.
+- Result: 314 -> 295 shots (25.2 cuts /min), 78 merged shots from 208 old ones, 24 travelling shots, 20 flow joins, jump cuts
+  1.0 %, world switches 5.0 /min, every check passes.
+
 **Status (v2, before review round 1): every target of DIRECTION_V2 5.1 / 5.5 / 2.2 / 1.2 that a plan can set is met (table A1).** The measures that only a
 render can prove (luma, colourfulness, subject motion share, frame energy, edge density) are not in the plan; the plan carries the
 intent per shot (`look`, `energy`, `cam`).

@@ -1,7 +1,7 @@
 # "If The Queen Of Spades Appears In Your Mirror... DON'T MAKE A WISH" (v2): build and delivery
 
 Everything runs from this folder (`film/`). Work files go to `_work/` (gitignored). The brief is `DIRECTION_V2.md`; the plan
-is `plan/shots.json` (314 shots after review round 1's flow pass: 449 written, merged into continuous moves, `PLAN_V2.md` section 0); the picture is assembled by `film.py` from `sets.py` + `sets_v2.py`
+is `plan/shots.json` (295 shots after review round 2's flow pass: 449 written, merged into continuous moves, `PLAN_V2.md` section 0); the picture is assembled by `film.py` from `sets.py` + `sets_v2.py`
 (SETS.md), `characters.py` (CAST.md) and `ui_v2*.py` (UI_V2.md) with the engine in `engine/`; the sound is built in
 `audio/` from `plan/sound_plan.json` plus the picture's own events.
 
@@ -21,6 +21,8 @@ python3 film.py --sheet _work/film_v2/chk S190@284.6 S306       # single shots, 
 python3 tools/film_v2_checks.py                                  # one labelled 720p still per v1 error (33) + errors_sheet.jpg
 python3 film.py --bench S001 S140 S233 S190                      # full-size s/frame (one OpenCV thread, as in a worker)
 python3 tools/shot_frames.py OUT.jpg S129 289.7-293.1 --n 5      # n frames across shots / spans (checks of continuous moves)
+python3 tools/at_times.py OUT.jpg 106.9:119.9:12 134.2 --cols 4  # frames at film times (A:B:N = N times), labelled shot/set/view
+python3 tools/view_try.py OUT.jpg S052 110.5 cabin_now/master     # a shot's moment in other set views (compare set-ups)
 python3 tools/dyn_flicker.py [ids]                               # flicker scan of the travelling (cam3) shots' room layers
 python3 tools/motion_metrics.py CLIP.mp4 T0 [--json OUT]         # the critic's 60 fps spike / jerk measure on a clip
 python3 render.py --stills 131.5,605.3 --size 960x540            # -> _work/tests/render/still_*.jpg
@@ -223,9 +225,21 @@ if wanted. The picture is kept.
   its visible polygon) and stands the cast at world points (`_world_fn`: `w`, named anchors, Noah's bunk seats, the plan's
   screen point cast onto the floor of the view it was framed in), nearer people in front of farther ones; hands and busts are
   pinned to the glass or a plane. One blocking chart for the THEIRS bunk 382-500 s (`bunk_chart`).
+- **Review round 2** (continuity and smoothness): 2D shots can move figures in depth (`path2d` [[t, x, y_feet, h], ...],
+  monotone cubic: the walk to the porch, the caretaker track, the climb); lying figures are laid along their mattress or the
+  floor from world points (`lie`, `floor`: no bed drawn); an explicit `_depth` wins over the room placement, `front` keeps a
+  figure in front of the near band; POV / disembodied hands in travelling shots sit in front of the room (depth 0.32);
+  a person or plane that the travelling camera comes near fades out over 0.2-0.5 m (Euclidean distance to the feet, hips and
+  head, never the view depth) instead of filling the lens; the 2D dolly is capped (`engine/scene.py`: a near layer's
+  distance never drops under 0.42 of its rest distance: the taped hand used to blow up). `CamPath3` re-times its keys with
+  `ArcBlend` (even travelled speed blended with the keyed timing, so a travelling shot never stops at a key; `arc: 0` in a
+  merge keeps exact key times for a hit). New transition `pan` (0.45 s whip pan, horizontal motion blur, `pan_dir`).
+  A plane with any corner nearer than the camera's near plane (5 cm) is filled from its baked texture through its visible
+  polygon (`engine/room3d.draw_plane`; the vector path through a nearly singular homography drew S072's floor dark for one
+  frame at 171.317). Grown Noah's CEDAR LAKE print is drawn at every detail level, stretched over his chest.
 - **Per-shot overrides** are keyed by a film time inside the shot (`SEAT_T`, `EXTRA_CHARS_T`, `REPLACE_CHARS_T`; shot ids
   change when shots merge); `characters.CLIP_ORIGIN` likewise.
-- **Transitions**: `cut`; `flow` (review round 1: 0.5 s travel dissolve between two places of one move, the outgoing
+- **Transitions**: `cut`; `pan` (review round 2, above); `flow` (review round 1: 0.5 s travel dissolve between two places of one move, the outgoing
   picture accelerating into the shot's `flow` point; the rule cards enter on it); `glint` (ui_v2); `white` (3-frame flash);
   `glitch` (2 frames of static, RGB split and a light pop); `rewind` (ui_v2 tear + back-scrub); `sepia` (review round 1: a 0.45 s
   paper dissolve, 0.2 s before the cut and 0.25 s after, `paper_dissolve`);

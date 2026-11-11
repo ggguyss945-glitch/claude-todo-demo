@@ -548,8 +548,8 @@ def diagram(cv, e, t, sh, cs=None):
             for yy in (-12, 12): cv.drawLine(-24, yy, 24, yy, paint('#ffffff', a, 8, cap='butt'))
             cv.drawLine(-16, 28, 16, -28, paint('#ffffff', a, 8))
             cv.restore()
-            _chalk_label(cv, 'WET PRINTS', DW / 4, DH - 190, 34, a * clamp((u - 0.5) / 0.15))
-            _chalk_label(cv, 'NO PRINTS', DW * 3 / 4, DH - 190, 34, a * clamp((u - 0.6) / 0.15))
+            _chalk_label(cv, 'WET PRINTS', DW / 4, DH - 285, 34, a * clamp((u - 0.5) / 0.15))
+            _chalk_label(cv, 'NO PRINTS', DW * 3 / 4, DH - 285, 34, a * clamp((u - 0.6) / 0.15))
     # D5 (eye_line), D6 (dials), D8 (sound_rings + split marks), loop_split (split_overlay) draw from their own entries
 
 

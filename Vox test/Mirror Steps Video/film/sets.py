@@ -1988,7 +1988,11 @@ def _var_fx(var, shot):
         d = {}
         if var == 'dawn_break':
             d['red'] = 0.15
-            d['exposure'] = -0.12 * max(0.0, noise1(t * 7.0, 5)) - (0.25 if _h(int(t * 12), 9) < 0.08 else 0.0)
+            # the bulb dips: one 1/12 s slot in twelve, eased in and out over the slot (review round 2, m5: a hard -0.25 step for
+            # 5 frames read as a pop on card 6 and the dawn_break shots)
+            u_ = t * 12.0
+            dip = 0.25 * math.sin(math.pi * (u_ - math.floor(u_))) if _h(int(u_), 9) < 0.08 else 0.0
+            d['exposure'] = -0.12 * max(0.0, noise1(t * 7.0, 5)) - dip
         for e in fxp:
             if e.get('t', -1) <= t < e.get('t', -1) + e.get('dur', 0.1):
                 for k, v in e.items():

@@ -745,7 +745,9 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
         # a plane that reaches behind the lens (the floor under a travelling camera) is always filled from its texture
         # through the visible polygon: vector content drawn through a perspective matrix that crosses the camera plane
         # came out black or missing for single frames
-        behind = any((Hm @ np.array([s_, t_, 1.0]))[2] <= 1e-6 for s_, t_ in ((0.0, 0.0), (w, 0.0), (w, h), (0.0, h)))
+        # (review round 2: "behind" = past the near plane, not past the lens: a corner a few mm in front of the lens left
+        # the homography nearly singular and the vector-drawn floor came out dark for one frame, S072 at 171.317)
+        behind = any((Hm @ np.array([s_, t_, 1.0]))[2] <= near for s_, t_ in ((0.0, 0.0), (w, 0.0), (w, h), (0.0, h)))
         if smooth or behind or key not in vec:
             def paint_fn(p):
                 lw_ = p.lw
