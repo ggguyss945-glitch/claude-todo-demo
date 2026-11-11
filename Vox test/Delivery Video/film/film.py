@@ -1533,7 +1533,7 @@ def shot_common(F, sh, spec):
                 sp_e = space if space not in ('radio',) else 'outside'
                 if e['name'] == 'doorbell_chime':                   # the chime rings inside the house; the button click on the mic
                     sh.sfx.append(_ev(e['t'], 'doorbell_chime', g, 0.0, 'inside', kind='ding_dong'))
-                    if sh.kind == 'door': sh.sfx.append(_ev(e['t'] - 0.05, 'ui_pop', -14, 0.0, 'doorbell_mic'))
+                    if sh.kind == 'door': sh.sfx.append(_ev(e['t'] - 0.05, 'ui_pop', -8, 0.0, 'doorbell_mic'))   # the button (-14: buried)
                     if p.get('era', 'now') != 'memory':             # and the doorbell app chimes on your phone
                         sh.sfx.append(_ev(e['t'] + 0.3, 'doorbell_cam_chime', g - 3, 0.0, 'close'))
                     continue
@@ -2369,7 +2369,7 @@ def plan(F):
     C(T(284), 'peep', ppl=[P(DR, at='driver_close', act=_A(stage(5), grin(-1), frz(0.1, 1.0)))], approach=False, cam=dict(mv='push', x=960, y=420, z=1.05, rate=0.04),
       music=[(t(284), 'silence', 0.0, 0.7)])
     C(w(285, 'one') - 0.12, 'box', cam=dict(mv='push', x=960, y=620, z=1.6, rate=0.07, roll=-3), music=[(w(285, 'one'), 'hit', 1.0), (e(285) + 0.3, 'end', 0.8, 3.0)])
-    C(e(285) + 0.28, 'black', cut='static', sfx=[(e(285) + 0.28, 'impact_hit', 4, 0, None, dict(size=1.5)),
+    C(e(285) + 0.28, 'black', cut='static', sfx=[(e(285) + 0.28, 'impact_hit', 6, 0, None, dict(size=1.5)),   # final mix: at the limiter's ceiling (+6 -> +2.5 LU)
                                                (e(285) + 0.28, 'sub_drop', 0, 0, None)])
 
     # ============================================================ global cues
