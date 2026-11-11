@@ -138,7 +138,9 @@ What changed (all in the pipeline, rebuilt from `film_events.json`):
   -16 to -11.5 into card 1, rule 2's wish -11.5 to -10.5, the too-normal dawn -18, the memory -19.5, the build to the
   bell -13 to -10, the climax -9.5 to -8.5, the ending -18 rising to -11.5 into the phone). `mix.py --steer 0.85`
   steers the score to it (median of the 1 s level over 5 s, held across holes, risers, silences and cards) and replaces
-  the two-way leveler, which lifted every quiet passage. The score's own intensity slope 16 -> 9 dB.
+  the two-way leveler, which lifted every quiet passage. The score's own intensity slope 16 -> 9 dB. Review round 2 (M19):
+  the climb is a crescendo: -11 at 542.5 s, -12 at 560, -12.5 at 576, then up to -8.5 at 603-611 and -9.5 at 625 s (it
+  dipped under the climb); `_work/mix/final_v2` predates this: rebuild it with the steps above.
 - Weight: the drones (synth sub on the key root, contrabass and celli) at 0 dB under every act but the dawn, the memory and
   the warm half of the ending (were -5), the sub +4 dB (`SUB_DB`), `--tilt v3` (the references' octave balance: 63 Hz up
   to +4 dB, a 1.4-1.9 dB cut at 250-500 Hz).
@@ -251,7 +253,29 @@ if wanted. The picture is kept.
   D1-D10, documents' marks, type beats, the kinetic title, the seven mirror rule cards, the phone, teasers), then
   `UI.frame_fx` (RGB split, rewind tear, pixel sort).
 
-## 6. Review round 1 measurements
+## 6. Review round 2 measurements
+- Plan (`plan/validate.py`): 314 -> 295 shots, 25.2 cuts/min; 78 merged shots from 208 old ones, 24 travelling shots, 20 flow
+  joins (+2 whip pans), jump cuts 1.0 %, world switches 5.0 /min; the continuity checks (memory grammar, legs / lying / loose
+  hands in wides, seats, 2D zoom yo-yo, heads in frame, beats inside their own cutaway) all pass.
+- Motion (the critic's own `m60.py` + `an60.py`, same rules, on 480x270 60 fps renders of the seven heaviest minutes,
+  `_work/review/v2_r2/motion_check_m{00,03,04,08,09,10,11}.mp4`; analyses in `_work/review/fix2/clips/an_*.json`, compared by
+  `_work/review/fix2/compare_motion.py`): spikes 138 -> 116, undesigned 73 -> 48, one-frame pops 41 -> 25, jerks 452 -> 365,
+  undesigned jerks 206 -> 126 (critic's whole-film counts for the same minutes -> now). Per minute, undesigned spikes:
+  0-1 9 -> 12 (the kinetic title's slams and the two new whip pans, which an60 does not know as transitions), 3-4 5 -> 1,
+  4-5 7 -> 7, 8-9 5 -> 3, 9-10 13 -> 7, 10-11 6 -> 0, 11-11.7 28 -> 18 (Tess's fast hand moves with the phone, continuous).
+- 960x540 60 fps clips of the changed moments (`_work/tests/r2`, `_work/tests/r2b`, `tools/motion_metrics.py`): the walk to the
+  porch, the caretaker track, the master to under the bunk, merge 5 (0 spikes), merge 6, the prints (the 171.317 floor pop
+  gone, 0 spikes), the OTS into the glass, H2 / H6 / the ending (0 spikes, 0 jerks), H7 (only the designed snap and flash).
+- Speed at 2560x1440, one OpenCV thread, 40 sequential frames mid-shot (as a worker renders): S052 0.48 s, S062 0.52 s, S273
+  0.54 s, S120 0.33 s a frame (`film.py --bench`, which samples 5 frames across a shot and so pays every texture bake:
+  S052 0.86, S120 0.85, S062 0.80, S273 0.65, S258 0.51, S200 0.45, S072 0.43, S038 0.41, S264 0.32, S080 0.28). The mirror's
+  reflection is drawn from baked textures (it was vector-drawn every frame), without rafters and cubbies, at half the band's
+  resolution in full-size frames; the glass surface is baked.
+- Preview: `_work/preview_v2/preview.mp4` (640x360, 30 fps, the final_v2 mix), contact sheets `contact_1fps_0.jpg` /
+  `contact_1fps_1.jpg`; round 1's preview kept as `preview_before_r2.mp4`. `tools/measure_preview.py`: 0 frozen frames,
+  subject-moving share 0.32, push p50 2.3 %/s, luma p50 by tenth 89 99 91 98 141 140 127 100 58 91.
+
+## 7. Review round 1 measurements
 - Plan (`plan/validate.py`): 449 -> 314 shots, 26.8 cuts/min, shot p50 1.84 s; 72 merged shots from 182 old ones, 23 travelling
   shots, 21 flow joins; jump cuts 1.3 % (v2 18.5 %), world switches 5.1 /min (v2 11), no memory run under 2.5 s, 3 snaps.
 - Motion (`tools/motion_metrics.py`, the critic's 60 fps rule) on the six most motion-heavy minutes
@@ -264,7 +288,7 @@ if wanted. The picture is kept.
 - Preview: `_work/preview_v2/preview.mp4` (640x360, 30 fps, the final_v2 mix), contact sheets `contact_1fps_0.jpg` (0-350 s)
   and `contact_1fps_1.jpg` (350-700 s); v2's preview kept as `preview_v2_before_r1.mp4`.
 
-## 7. Measured on the v2 preview before review round 1 (`_work/preview_v2/measure_preview.json`)
+## 8. Measured on the v2 preview before review round 1 (`_work/preview_v2/measure_preview.json`)
 | measure | v2 preview | brief |
 |---|---|---|
 | cuts / min, first 30 s | 39.0, 25 | 36-40, 22-24 |

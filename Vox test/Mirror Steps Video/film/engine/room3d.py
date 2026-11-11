@@ -728,7 +728,10 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
     cv = pen.cv
     if tex is not None and tkey is not None:
         from .core import CFG
-        need = _px_per_unit(Hm, vis) * CFG.k
+        # device px per plane unit: the canvas's own scale (a band rasterised at LIVE_BAND_RES, the 2D camera's zoom), not the
+        # frame's: CFG.k asked twice the density of half-resolution bands and sent telephoto planes to the slow vector path
+        m_ = cv.getTotalMatrix()
+        need = _px_per_unit(Hm, vis) * math.sqrt(abs(m_.getScaleX() * m_.getScaleY() - m_.getSkewX() * m_.getSkewY()))
         flip_r = bool(xf.layout_flip and xf.mirrors and readable)
         side = 1
         if lights:

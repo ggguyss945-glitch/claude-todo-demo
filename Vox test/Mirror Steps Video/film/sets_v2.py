@@ -26,7 +26,7 @@ from sets import (SetPiece, Anchor, St, Beam, VIEWS, view, _sp, _cl, _live, _R, 
 from engine.core import (Pen, col, mix, rgb, poly, smooth, rect, rrect, oval, union, minus, moved, clamp, lerp, prog, ease,
                          ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, noise1, hash01, text, text_width, LINE)
 from engine.scene import Layer
-from engine.room3d import Cam3, Scene3, Xf, v3, norm, ID, clip_poly_near, draw_plane
+from engine.room3d import Cam3, Scene3, Xf, v3, norm, ID, clip_poly_near, draw_plane, TexCache
 
 V1VIEWS = dict(VIEWS)          # the v1 views as they were before v2 registered over some names (aliases build on these)
 
@@ -922,6 +922,33 @@ def _frame_draw(P, lit=0.6, seed=3, doorway=False):
     return fr
 
 
+# what the leaning glass reflects: the room without the mirror, the small decor, the 96 rafter planes and the cubbies (review
+# round 2, speed: the reflection, darkened to a fifth, re-drew all 223 items each frame of a travelling shot, 0.5 s a frame)
+_REFL_SKIP = ('mirror', 'decor', 'beams', 'cubby')
+
+
+def _lowres(pen, fn, k=0.5):
+    """Draw fn(pen) through an offscreen surface at k x the canvas's pixels, scaled back up under the current clip (the
+    mirror's dim reflection: soft anyway, and its textured fills cost 0.4 s a frame at full size when the glass is large).
+    Small canvases (previews) draw directly."""
+    from engine.core import surface_for, image_from
+    cv = pen.cv
+    sz = cv.getBaseLayerSize(); W_, H_ = sz.width(), sz.height()
+    if W_ < 1200: fn(pen); return                   # (full-size frames draw the room bands at 1280 wide)
+    w2, h2 = max(2, int(W_ * k)), max(2, int(H_ * k))
+    arr = np.zeros((h2, w2, 4), np.uint8)
+    srf = surface_for(arr); c2 = srf.getCanvas()
+    c2.scale(w2 / W_, h2 / H_); c2.concat(cv.getTotalMatrix())
+    p2 = Pen(c2); p2.lw = getattr(pen, 'lw', 1.0)
+    fn(p2)
+    del c2, srf
+    img = image_from(arr)
+    cv.save(); cv.resetMatrix()
+    cv.drawImageRect(img, skia.Rect.MakeWH(w2, h2), skia.Rect.MakeWH(W_, H_), skia.SamplingOptions(skia.FilterMode.kLinear), None,
+                     skia.Canvas.kFast_SrcRectConstraint)
+    cv.restore()
+
+
 def _mirror_model(sc, cx, info):
     """The leaning mirror in Cabin 7: frame (white, chipped), glass with a true reflection of the room (reverse angle,
     darker), sheen, silvering spots, dust film. In the doorway state the glass is replaced by the opening onto the stairs."""
@@ -934,7 +961,16 @@ def _mirror_model(sc, cx, info):
     info['glass3d'] = mirror_glass_pts(0.0, tilt)
     gpts = mirror_glass_pts(0.6, tilt)
 
+    def _gtex():
+        # review round 2 (speed): the glass's sheen / spots / grunge are static: baked once per scene and mapped through the
+        # plane (vector-drawn through the homography every frame they cost 0.45 s a frame when the glass fills a telephoto)
+        t_ = getattr(sc, '_glass_tex', None)
+        if t_ is None: t_ = sc._glass_tex = TexCache()
+        return t_
+
     def glass_item(pen, cam, xf):
+        if cx.refl_scene is not None and getattr(cx.refl_scene, 'tex', None) is None:
+            cx.refl_scene.tex = TexCache()           # the reflected room from baked textures too (it was all vector-drawn)
         pts = [xf.p(p) for p in gpts]
         q = clip_poly_near(cam, pts)
         if len(q) < 3: return
@@ -953,21 +989,27 @@ def _mirror_model(sc, cx, info):
                 if refl is not None:
                     cv.saveLayerAlpha(None, int(255 * cx.refl_alpha))
                     xr = Xf.reflect_plane(O0, n0).then(xf)
-                    pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
-                    refl.render(pen, cam, xr, skip=('mirror', 'decor'), tex=getattr(refl, 'tex', None))
-                    pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a', 175)
+
+                    def rf(p_):
+                        p_.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
+                        refl.render(p_, cam, xr, skip=_REFL_SKIP, tex=getattr(refl, 'tex', None))
+                        p_.fill(rect(-4000, -4000, 9000, 9000), '#04061a', 175)
+                    _lowres(pen, rf)
                     cv.restore()
-                draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01)
+                draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01, tex=_gtex(), tkey=('glass', ms))
                 cv.restore()
                 return
             if refl is not None:
                 xr = Xf.reflect_plane(O0, n0).then(xf)
-                pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
-                refl.render(pen, cam, xr, skip=('mirror', 'decor'), tex=getattr(refl, 'tex', None))
-                # the reflection is darker, cooler and a little green-grey (old silvering loses light)
-                pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a' if cx.now else _dk(P['outline'], 0.3), 200 if ms == 'glass' else 225)
-                pen.fill(rect(-4000, -4000, 9000, 9000), '#2a4050' if cx.now else P['wall_dk'], 30)
-            draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01)
+
+                def rf(p_):
+                    p_.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
+                    refl.render(p_, cam, xr, skip=_REFL_SKIP, tex=getattr(refl, 'tex', None))
+                    # the reflection is darker, cooler and a little green-grey (old silvering loses light)
+                    p_.fill(rect(-4000, -4000, 9000, 9000), '#04061a' if cx.now else _dk(P['outline'], 0.3), 200 if ms == 'glass' else 225)
+                    p_.fill(rect(-4000, -4000, 9000, 9000), '#2a4050' if cx.now else P['wall_dk'], 30)
+                _lowres(pen, rf)
+            draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01, tex=_gtex(), tkey=('glass', ms))
         cv.restore()
     sc.custom(O + U * (w / 200) + V * (h / 200), glass_item, -40, 'glass', 'mirror')
     sc.plane(O, U, V, w, h, _frame_draw(P, doorway=(ms == 'doorway')), -39.9, 'mframe', 'mirror')

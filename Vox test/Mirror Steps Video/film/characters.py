@@ -6097,9 +6097,10 @@ class _MirrorClips:
             if fail_open:
                 ph = ((t - t0) % 0.9) / 0.9
                 tw = math.sin(PI * clamp(ph / 0.35)) if ph < 0.35 else 0.0
-            sh_ = 'grip' if tw < 0.02 else 'xf:%.3f:grip:relaxed' % clamp(tw)       # review round 2: cross-faded, not swapped
-            self._ins(P, 'r', w, x=0.42, y=0.0, a=135.0, shape=sh_, press=1.0)
-            self._ins(P, 'l', w, v=1.0, x=-0.42, y=0.04, a=225.0, shape=sh_, press=1.0)
+            # review round 2: the twitch lifts and turns the gripping hands (it used to swap or cross-fade the hand shape:
+            # a pop, then a double-exposed ghost hand; the grip and the open shapes are drawn differently)
+            self._ins(P, 'r', w, x=0.42, y=-0.05 * tw, a=135.0 - 12.0 * tw, shape='grip', press=1.0 - 0.6 * tw)
+            self._ins(P, 'l', w, v=1.0, x=-0.42, y=0.04 - 0.05 * tw, a=225.0 + 12.0 * tw, shape='grip', press=1.0 - 0.6 * tw)
             for side in (-1, 1): self._arm(P, side, w, -20.0, 140.0, 260.0, 'grip', up=0.0, press=1.0)
             P.brow_sad = max(P.brow_sad, 0.6 * w); P.m_press = max(P.m_press, 0.5 * w)
         return self._add(t0, None if t1 is None else t1 + 0.3, fn)
