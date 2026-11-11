@@ -48,7 +48,11 @@ python3 render.py --workers 3                             # -> _work/picture/pic
   frame costs 0.3-6 s while it bakes its cached layers. The 5 s end-to-end test (600-605 s, the red climax, 3 workers)
   ran at 2.8-2.9 frames/s per worker, about 8.7 frames/s in total: plan on 80-95 min for the 42,000 frames with the
   encode and the concat.
-- Add `--audio _work/mix/final/mix.wav` to also write `_work/picture/film.mp4` with the final mix muxed in.
+- Review round 1: the 23 travelling (cam3) shots (about 100 s of film) rebuild their room every frame; with the room bands
+  rasterised at half resolution (`room3d.LIVE_BAND_RES`) they measure 0.41-0.84 s per frame at 2560x1440 (median over each
+  shot: S156 0.41, S130 0.52, S291 0.61, S192 0.65, S046 0.84; the first frame of a shot 1.6-4.7 s while it bakes its plane
+  textures), against 0.19-0.49 s for the cached shots: budget about 15 min more for the full render.
+- Add `--audio _work/mix/final_v2/mix.wav` to also write `_work/picture/film.mp4` with the final mix muxed in.
 
 ## 3. Final mix, synced to the picture
 `film.py --events` writes `_work/align/film_events.json` (version 2): the actual cut times (with each shot's transition),
@@ -133,7 +137,20 @@ if wanted. The picture is kept.
   D1-D10, documents' marks, type beats, the kinetic title, the seven mirror rule cards, the phone, teasers), then
   `UI.frame_fx` (RGB split, rewind tear, pixel sort).
 
-## 6. Measured on the v2 preview (`_work/preview_v2/measure_preview.json`)
+## 6. Review round 1 measurements
+- Plan (`plan/validate.py`): 449 -> 314 shots, 26.8 cuts/min, shot p50 1.84 s; 72 merged shots from 182 old ones, 23 travelling
+  shots, 21 flow joins; jump cuts 1.3 % (v2 18.5 %), world switches 5.1 /min (v2 11), no memory run under 2.5 s, 3 snaps.
+- Motion (`tools/motion_metrics.py`, the critic's 60 fps rule) on the six most motion-heavy minutes
+  (`_work/review/v2_r1/motion_check_*.mp4`, 480x270 60 fps): 167 spikes and 469 jerks against the critic's 282 and 681 on v2;
+  what remains is mostly deliberate (glitches, white flashes, stamps, the loop rewinds, giant numbers) and the 0.45-0.5 s
+  transition blends. The travelling shots' room composite scans clean (`tools/dyn_flicker.py`).
+- Mix (`_work/mix/final_v2`): -16.05 LUFS, -1.7 dBTP, limiter max 5.6 dB (v2 6.1), glue p95 0.6 dB; the critic's envelope tool:
+  LRA 3.0 (v2 2.4, refs 4.2-5.4), momentary max +6.6 LU (v2 +5.3, refs +7.6-8.4), short-term p95 +1.6 (v2 +1.2, refs
+  +2.0-2.4); 618 one-shots (v2 776), UI / edit sounds about 220 -> 73, five real silences.
+- Preview: `_work/preview_v2/preview.mp4` (640x360, 30 fps, the final_v2 mix), contact sheets `contact_1fps_0.jpg` (0-350 s)
+  and `contact_1fps_1.jpg` (350-700 s); v2's preview kept as `preview_v2_before_r1.mp4`.
+
+## 7. Measured on the v2 preview before review round 1 (`_work/preview_v2/measure_preview.json`)
 | measure | v2 preview | brief |
 |---|---|---|
 | cuts / min, first 30 s | 39.0, 25 | 36-40, 22-24 |

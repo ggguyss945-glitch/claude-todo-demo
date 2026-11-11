@@ -352,12 +352,35 @@ class Scene3:
             if tex is None: tex = self.tex = TexCache()
         out = []
         dd = depths or {0: 0.6, 1: 1.0, 2: 2.0}
+        from .core import CFG, surface_for, image_from
+        k = LIVE_BAND_RES if CFG.rw > 1500 else 1.0
+
+        def draw_band(pen, t, dmin, dmax):
+            if k >= 0.999:
+                self.render(pen, cam, xf, (dmin, dmax), tags, skip, tex=tex); return
+            # full-size renders: the band is rasterised at LIVE_BAND_RES of the frame and scaled up (its surfaces are
+            # textured and soft anyway; the fill rate of six full-frame textured planes per frame was the cost)
+            cv = pen.cv
+            sz = cv.getBaseLayerSize(); W_, H_ = sz.width(), sz.height()
+            w2, h2 = max(2, int(W_ * k)), max(2, int(H_ * k))
+            arr = np.zeros((h2, w2, 4), np.uint8)
+            srf = surface_for(arr); c2 = srf.getCanvas()
+            c2.scale(w2 / W_, h2 / H_); c2.concat(cv.getTotalMatrix())
+            p2 = Pen(c2)
+            p2.lw = getattr(pen, 'lw', 1.0)
+            self.render(p2, cam, xf, (dmin, dmax), tags, skip, tex=tex)
+            del c2, srf
+            img = image_from(arr)
+            cv.save(); cv.resetMatrix()
+            cv.drawImageRect(img, skia.Rect.MakeWH(w2, h2), skia.Rect.MakeWH(W_, H_), skia.SamplingOptions(skia.FilterMode.kLinear), None,
+                             skia.Canvas.kFast_SrcRectConstraint)
+            cv.restore()
         for j, b in enumerate(bands):
             dmin, dmax, name = b[0], b[1], b[2]
             ld = float(b[3]) if len(b) > 3 else float(dd.get(j, 1.0 + j))
 
             def draw(pen, t, dmin=dmin, dmax=dmax):
-                self.render(pen, cam, xf, (dmin, dmax), tags, skip, tex=tex)
+                draw_band(pen, t, dmin, dmax)
             out.append(Layer(ld, draw, name, blur=blur))
         return out
 
@@ -554,6 +577,8 @@ def glide(t0, t1, v0=0.4, v1=0.4, ramp=0.7):
         return t0 + area(x) * D / A
     return warp
 
+
+LIVE_BAND_RES = 0.5          # travelling shots at full size: the room bands rasterise at half resolution (Scene3.live_bands)
 
 # projected coordinates are kept inside this design-px window (skia's rasteriser misbehaves past ~32k px)
 XLIM, YLIM = (-3200.0, 5120.0), (-2600.0, 3680.0)

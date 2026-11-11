@@ -954,7 +954,7 @@ def _mirror_model(sc, cx, info):
                     cv.saveLayerAlpha(None, int(255 * cx.refl_alpha))
                     xr = Xf.reflect_plane(O0, n0).then(xf)
                     pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
-                    refl.render(pen, cam, xr, skip=('mirror', 'decor'))
+                    refl.render(pen, cam, xr, skip=('mirror', 'decor'), tex=getattr(refl, 'tex', None))
                     pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a', 175)
                     cv.restore()
                 draw_plane(pen, cam, xf, O, U, V, w, h, _glass_surface(P, ms), True, 0.01)
@@ -963,7 +963,7 @@ def _mirror_model(sc, cx, info):
             if refl is not None:
                 xr = Xf.reflect_plane(O0, n0).then(xf)
                 pen.fill(rect(-4000, -4000, 9000, 9000), _dk(P['wall'], 0.45))
-                refl.render(pen, cam, xr, skip=('mirror', 'decor'))
+                refl.render(pen, cam, xr, skip=('mirror', 'decor'), tex=getattr(refl, 'tex', None))
                 # the reflection is darker, cooler and a little green-grey (old silvering loses light)
                 pen.fill(rect(-4000, -4000, 9000, 9000), '#04061a' if cx.now else _dk(P['outline'], 0.3), 200 if ms == 'glass' else 225)
                 pen.fill(rect(-4000, -4000, 9000, 9000), '#2a4050' if cx.now else P['wall_dk'], 30)
