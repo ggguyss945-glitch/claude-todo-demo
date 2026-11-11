@@ -1616,14 +1616,13 @@ class Score:
             out[k] *= (gh if k == 'hits' else gb)[:, None]
         del gb, gh
         # hard end: after the end cue's tail everything is silent (no stray tails past the film)
-        if ends:
-            i = int(min(self.dur, self.end_t1) * SR)
+        if ends:                                      # fix 3: the fade also runs when the cadence outlasts the film
+            i = min(int(min(self.dur, self.end_t1) * SR), self.n)
             fo = int(2.0 * SR)
             for k in out:
-                if i < self.n:
-                    a = max(0, i - fo)
-                    out[k][a:i] *= _fade(i - a, 'out')[:, None]
-                    out[k][i:] = 0
+                a = max(0, i - fo)
+                if i > a: out[k][a:i] *= _fade(i - a, 'out')[:, None]
+                out[k][i:] = 0
         if normalize:
             bed = out['tracks'].copy()
             for k in STEMS:

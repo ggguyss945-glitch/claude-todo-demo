@@ -523,7 +523,7 @@ def main():
                                                                   'events': []}
     if A.plan == 'auto':
         mcues = with_plan(mcues, tl)
-    full = max(tl['duration_en'] + 2.5, float(mcues.get('duration') or 0))
+    full = float(mcues.get('duration') or 0) or tl['duration_en'] + 2.5     # fix 3: exactly the picture's length (film.py)
     t0 = A.t0; t1 = min(full, A.t1) if A.t1 else full
     dur = t1 - t0; N = int(round(dur * SR)); i0 = int(round(t0 * SR))
     log(f'window {t0:.1f}-{t1:.1f} s ({dur:.1f} s), {len(sfx_cues)} sfx cues, langs {langs}')
@@ -543,8 +543,8 @@ def main():
 
     # ---------------- SFX
     SX.reset()
-    buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits')}
-    hit_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []; fallbacks = {}
+    buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits', 'knocks')}
+    hit_times = []; knock_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []; fallbacks = {}
     def fb(key, what):
         fallbacks.setdefault(key, {'what': what, 'n': 0})['n'] += 1
         if fallbacks[key]['n'] == 1: log('WARNING:', what)
@@ -587,12 +587,15 @@ def main():
         y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
         if c.get('pan'):
             y = SX.pan(y, float(c['pan']))
-        b = 'hits' if name in SX.HITS else 'beds' if name in getattr(SX, 'BED_BUS', SX.BEDS) else 'events'
+        knock = name in ('knock_door', 'box_knock')
+        b = 'hits' if name in SX.HITS else 'beds' if name in getattr(SX, 'BED_BUS', SX.BEDS) else 'knocks' if knock else 'events'
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
         if 0 <= tt <= dur:
-            counts[b] += 1
-            if name in SX.HITS or name in ('knock_door', 'box_knock'):
+            counts['events' if knock else b] += 1
+            if name in SX.HITS:
                 hit_times.append(tt)
+            elif knock:
+                knock_times.append(tt)
     log(f'sfx rendered in {time.time() - tsfx:.1f} s: {counts}' + (f', skipped {sorted(set(skipped))}' if skipped else ''))
 
     # ---------------- music
@@ -631,8 +634,11 @@ def main():
     sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -9.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
     mus_hits = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop', 'rule')]
     dip = lambda ts: [(h - 0.05, h, -8.0, 0.4, 0.6) for h in ts]
-    autom = gain_env(N, dip(hit_times))
-    autom_b = gain_env(N, sil + dip(hit_times + mus_hits))
+    kt = sorted(set(round(x, 3) for x in knock_times))
+    k_first = [x for i_, x in enumerate(kt) if i_ == 0 or x - kt[i_ - 1] > 1.5]          # the first knock of each group only
+    kdip = [(h - 0.05, h, -2.0, 0.25, 0.4) for h in k_first]
+    autom = gain_env(N, dip(hit_times) + kdip)
+    autom_b = gain_env(N, sil + dip(hit_times + mus_hits) + kdip)
     # score bus: corrective EQ toward the AUDIO_SPEC octave tilt (less 100-160 Hz mud), moderate width, leveler
     music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0))
     log('score tilt EQ (dB):', tilt)
@@ -642,6 +648,7 @@ def main():
     n_sil = sum(1 for e in mc['events'] if e['type'] == 'silence' and 0 <= e['t'] <= dur)
 
     foley_dip = (10 ** (-FOLEY_DIP_DB * event_activity(buses['events']) / 20)).astype(np.float32)
+    buses['events'] += buses.pop('knocks')        # knocks join the events bus after the foley-dip key is taken
     # the hit duck spares each hit's first 0.15 s (the transient lands on the cut), then takes the tail down under the line
     spare = np.ones(N, np.float32)
     for h in hit_times + mus_hits:
@@ -707,6 +714,9 @@ def main():
         bed, m_out, s_out, gr = bed_for(act, gm, act_h)
         vst = np.stack([v, v], 1)
         mix = vst + bed
+        if t1 >= full - 0.01:                     # fix 3: master fade to silence over the last 1.5 s (the cut to black)
+            nf = min(N, int(1.5 * SR))
+            mix[N - nf:] *= np.linspace(1.0, 0.0, nf, dtype=np.float32)[:, None] ** 2
         gdb = TARGET - SX.lufs_int(mix); ceiling = -1.7; y = None
         for it in range(6):
             y = None

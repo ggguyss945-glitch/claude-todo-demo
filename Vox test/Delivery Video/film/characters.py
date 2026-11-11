@@ -5054,12 +5054,19 @@ def draw_box(pen, x, y, h, st=None, t=0.0, detail=None, light=None, view=0.45, l
                     wx = (hash01(k, 61) - 0.5) * fw * 0.95; wy = -h * hash01(k, 62)
                     wr.append(poly([(wx, wy), (wx + 6 + 6 * hash01(k, 63), wy + 3)], False))
                 c.line(_multi(wr), c.lw * 0.25, thi, 110 * tape)
-            if cut > 0.01:                                       # the tape slit down the middle, edges lifting
-                c.line(poly([(0.005 * fw, -h), (0.005 * fw, -h + h * cut)], False), c.lw * 1.4, '#1a120b', 255)
-                for k, (yy, sl) in enumerate(bands):
+            if cut > 0.01:                                       # the tape slit down the middle: a dark open gap, edges curling
+                gw = 0.022 * fw * cut
+                gap = poly([(-gw, -h), (gw, -h), (gw * 0.7, -h + h * cut), (-gw * 0.7, -h + h * cut)])
+                c.fill(gap, '#0d0805', 255); c.line(gap, c.lw * 0.5, '#000000', 255)
+                for k, (yy, sl) in enumerate(bands):                 # every taped band: both cut ends lift and curl away
                     yc = yy * h
                     if -yc > h * (1 - cut): continue
-                    c.fill(poly([(0, yc - 0.02 * h), (0.08 * fw, yc - 0.035 * h), (0.06 * fw, yc), (0, yc + 0.018 * h)]), thi, 230)
+                    for sd_ in (-1, 1):
+                        flap = poly([(sd_ * gw, yc - 0.024 * h), (sd_ * (gw + 0.11 * fw), yc - 0.045 * h), (sd_ * (gw + 0.09 * fw), yc + 0.004 * h),
+                                     (sd_ * gw, yc + 0.022 * h)])
+                        c.fill(flap, thi, 240); c.line(flap, c.lw * 0.4, '#5a3a1a', 220)
+                        c.fill(poly([(sd_ * gw, yc + 0.022 * h), (sd_ * (gw + 0.09 * fw), yc + 0.004 * h), (sd_ * (gw + 0.07 * fw), yc + 0.03 * h)]),
+                               '#000000', 70)
     if label:
         lw_, lh_ = fw * 0.66, h * 0.17
         lc = c.sub(-lw_ * 0.48, -0.78 * h, -2.0)
