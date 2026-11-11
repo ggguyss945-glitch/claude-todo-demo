@@ -125,7 +125,7 @@ if a.worker < 0:
         procs.append(subprocess.Popen(cmd))
     codes = [p.wait() for p in procs]
     print('[render] workers done', codes, flush=True)
-    if max(codes) != 0: sys.exit(max(codes))
+    if any(c != 0 for c in codes): sys.exit(1)        # a worker killed by a signal returns a negative code: never join a short slice
     lst = os.path.join(out, 'slices.txt')
     with open(lst, 'w') as fh:
         for w in range(a.workers): fh.write(f"file '{os.path.abspath(os.path.join(out, f'slice_{w:02d}.mp4'))}'\n")
@@ -148,7 +148,7 @@ enc = encoder(seg, W, H, a.fps, a.crf, a.preset, 2)
 t_start = time.time()
 for k, fi in enumerate(range(f0, f1)):
     t = a.t0 + fi / a.fps
-    enc.stdin.write(np.ascontiguousarray(film.frame(t, fi)).tobytes())
+    enc.stdin.write(np.ascontiguousarray(film.frame(t, int(round(a.t0 * a.fps)) + fi)).tobytes())   # absolute frame index (range renders match a full render)
     if k % 120 == 0:
         el = time.time() - t_start; rate = (k + 1) / max(el, 1e-6)
         print(f'[w{a.worker}] {k}/{f1 - f0} frames  {rate:.2f} fps  eta {(f1 - f0 - k) / max(rate, 1e-6) / 60:.1f} min', flush=True)
