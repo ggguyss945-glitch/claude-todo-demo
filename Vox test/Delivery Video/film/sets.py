@@ -4704,8 +4704,11 @@ def _hall_doorway_layers(v, Db, dx, dy, dw, dh, door_c, th_fn, o, CH):
         if bs.get('at') in (None, 'door'): bs = dict(bs, at='threshold')
         L += _box_layers(ov, bs, tag, tod, cover)
     _shift_layers(L, Db)
+    for l in L:                                          # dynamic outside layers stay sharp (no per-frame DOF blur)
+        if not l.cache: l.blur = 0
     if tod == 'dawn':                                    # daylight outside vs the dark hall
-        for l in L: l.tint = ('#ffe9da', 0.95)
+        for l in L:
+            if l.name != 'box': l.tint = ('#ffe9da', 0.95)
     s = v.s(Db)
     art = _door_leaf_art(dw, dh, s, door_c)
 
