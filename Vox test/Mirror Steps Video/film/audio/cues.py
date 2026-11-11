@@ -81,18 +81,30 @@ MUSIC_MAP = [
 # before the real bell, the silence before her foot, the foot hanging, Mom's pause, the last click
 KEEP_SILENCES = (142.09, 341.53, 533.18, 603.91, 625.86, 628.7, 661.64, 688.05, 698.6)
 RESHAPE_SILENCE = {625.86: (626.4, 1.78)}   # the foot hangs: the whole "for a second", into "the glass goes dark"
-DROP_LEN = 0.5                     # every other plan silence that ends in a hit: a 0.5 s drop-out right before the hit
+DROP_LEN = 0.5                     # every other plan silence that ends in a hit: the score dips DROP_DB for the 0.5 s
+DROP_DB = -10.0                    # right before the hit (with the score's own pre-hit duck: a 14-18 dB hole)
 DROP_AT = {181.58: 182.78, 397.51: 398.86}  # silences with no hit that end on a turn: the boy's voice, the memory cut
 SIL_DIP_DB = -5.0                  # the rest: a thinned dip of the score under the line (as review round 1)
-CARD_GAP = 0.6                     # rule cards: the riser stops this long before the card; a hole, then the card's hit
+CARD_GAP = 0.6                     # rule cards: the riser stops this long before the card, the score dips DROP_DB, the
+                                   # card's hit (references: the bed 7 dB down 1-1.5 s before "Rule number", then the hit)
+CARD_RISER = 0.6                   # the cards' risers peak about 6-8 dB under the voice (v2 r1: 1 dB under, at level 0.9)
+PRE_DUCK = 0.6                     # score.py's pre-hit duck scaled (the references' hits land on a running bed: median
+                                   # suck-out 0.3-6.5 dB; the plan's 6-16 dB over 0.35-1 s before every hit chopped the bed)
 # risers: into the two biggest hits (critic M4: the real bell 535.36 via the 533.18 silence, her foot 605.21 via the
 # 603.91 silence) and, v3, into the reveals the references build to (the head turn, "You have it", her face, her offer)
-EXTRA_MUSIC = [dict(t=526.4, type='riser', level=0.85, len=6.7, note='into the bell (via the 533.18 silence)'),
-               dict(t=598.3, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)'),
+EXTRA_MUSIC = [dict(t=533.18, type='riser', level=0.85, len=6.7, note='into the bell (via the 533.18 silence)'),
+               dict(t=603.91, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)'),
+               dict(t=696.91, type='riser', level=0.8, len=5.5, note='v3: the phone\'s voice -> the last sting (696.91)'),
                dict(t=197.65, type='riser', level=0.6, len=4.5, note='v3: lean closer -> the head turn (198.15)'),
                dict(t=247.72, type='riser', level=0.65, len=5.0, note='v3: the wish -> "You have it" (248.22)'),
                dict(t=283.27, type='riser', level=0.6, len=4.0, note='v3: "The queen says" -> her face (283.77)'),
-               dict(t=477.78, type='riser', level=0.55, len=4.5, note='v3: she pats the mattress -> her face (478.28)')]
+               dict(t=477.78, type='riser', level=0.55, len=4.5, note='v3: she pats the mattress -> her face (478.28)'),
+               dict(t=477.6, type='silence', level=0.0, len=0.5, note='v3: the hole before her face (478.28)')]
+# plan silences that became holes before weaker hits: plain dips (she sits 466.52 lands on the running bed)
+NO_HOLE = (465.32,)
+# a riser ENDS at t (score.py); these plan risers were written with t = their start: (end, len)
+# (review round 1's two risers ended 5-7 s before their silences for the same reason; fixed above)
+RISER_FIX = {122.97: (129.2, 6.2), 677.39: (688.05, 10.6)}
 # swells: the references breathe about 1.8 times a minute (+8.5 LU over about 14 s); the plan had 44 (3.8 a minute,
 # +12 LU). Kept: the authored builds (level >= 0.55), not the card decays, at least 9 s apart
 SWELL_MIN_LEVEL = 0.55
@@ -269,11 +281,12 @@ def main():
             cues.append(n)
     drop = set(FE.get('drop', []))
     cues = [c for c in cues if c['id'] not in drop]
-    cues, n_cut = declutter(cues, shots)
     for ht in FE.get('hits', []):
         near = [c for c in cues if c.get('hit') and abs(c['t'] - ht) <= 0.25]
         for c in near:
             c['t'] = float(ht)
+    n_in = sum(1 for c in cues if not (c.get('params') or {}).get('stream'))
+    cues, n_cut, sfx_stat = sfx_v3(cues)
     # ---------------- beds
     beds = sp['beds']
     if new_shot:
@@ -302,30 +315,8 @@ def main():
             if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and abs(e['t'] - ht) <= 0.25:
                 e['t'] = float(ht)
     layers = {k: [list(p) for p in v] for k, v in LAYERS.items()}
-    keep = []
-    ev = ev + [dict(m, id='v2r1:%s:%.2f' % (m['type'], m['t'])) for m in EXTRA_MUSIC]
-    n_sil_dip = 0
-    for e in ev:
-        ty = e['type']
-        if ty == 'silence' and not any(abs(e['t'] - k) < 0.6 for k in KEEP_SILENCES):
-            a, b = e['t'], e['t'] + float(e.get('len', 1.2))       # a thinned dip, not a drop-out
-            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx', 'melodic'):
-                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
-                layers[bus] = _merge_dip(layers[bus], a, b, SIL_DIP_DB, ramp_in=0.35, ramp_out=0.6)
-            n_sil_dip += 1
-            continue
-        if ty in ('pulse_on', 'pulse_off') and not (PULSE_KEEP[0] <= e['t'] <= PULSE_KEEP[1]):
-            continue
-        if ty == 'dip':                               # bed dips: a gain curve on the score's sustained buses
-            depth = -(2.0 + 20.0 * (0.5 - float(e.get('level', 0.3))))
-            a, b = e['t'], e['t'] + float(e.get('len', 4.0))
-            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx'):
-                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
-                layers[bus] = _merge_dip(layers[bus], a, b, depth)
-            continue
-        if ty in ('drone', 'end'):
-            continue
-        keep.append(e)
+    ev = ev + [dict(m, id='v3:%s:%.2f' % (m['type'], m['t'])) for m in EXTRA_MUSIC]
+    keep, mstat, holes = music_v3(ev, layers, cues)
     for bus in ('tracks', 'drones', 'pulse', 'melodic', 'strings_bed', 'strings_fx'):    # hard cut to black
         layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
         layers[bus] = _merge_dip(layers[bus], END_T, 720.0, -80.0, ramp_in=0.06, ramp_out=0.0)
@@ -333,9 +324,13 @@ def main():
     arrangement = [{k: v for k, v in m.items() if k != 'why'} for m in MUSIC_MAP]
     for a in arrangement:
         a.setdefault('off', None)
+    # v3: the score's own intensity slope halved (16 -> 9 dB: the bed's range was 17.7 LU against the references' 8-10;
+    # the act shape is the ARC, steered in mix.py), swells lift the tracks 5 dB (was 9), the sub drone SUB_DB up
     mc = dict(duration=dur, intensity=M['intensity'], events=keep, arrangement=arrangement,
-              options={'lament': False, 'layers': layers, 'slope': 16.0, 'swell_db': 9.0, 'reentry_db': 7.0}, bed_dips=dips,
-              music_map=MUSIC_MAP)
+              options={'lament': False, 'layers': layers, 'slope': 9.0, 'swell_db': 5.0, 'reentry_db': 6.0,
+                       'sub_db': SUB_DB, 'preduck': PRE_DUCK}, bed_dips=dips, music_map=MUSIC_MAP, arc=[list(p) for p in ARC],
+              holes=holes)
+    n_sil_dip = mstat['dip']
     # ---------------- voice FX
     vfx = []
     for i, fx in sorted(sp['voice_fx'].items(), key=lambda x: int(x[0])):
@@ -357,52 +352,137 @@ def main():
                music_events=collections.Counter(e['type'] for e in keep),
                silences_per_min=round(sum(1 for e in keep if e['type'] == 'silence') / dur * 60, 2),
                names=collections.Counter(c['name'] for c in one), voice_fx=len(vfx), bed_dips=len(dips),
-               ui_sounds_cut=n_cut, silences_to_dips=n_sil_dip, kept_silences=list(KEEP_SILENCES))
+               sfx_cut=n_cut, one_shots_in=n_in, sfx_v3=sfx_stat, music_v3=mstat, silences_to_dips=n_sil_dip,
+               kept_silences=list(KEEP_SILENCES))
     json.dump(rep, open(os.path.join(A.out, 'cues_report.json'), 'w'), indent=1)
     print(f"cues: {rep['sfx_cues']} one-shots ({len(rep['names'])} names, {rep['hits']} hits = {rep['hits_per_min']}/min), "
           f"{len(streams)} bed ranges in {len(rep['stream_keys'])} streams, {len(keep)} music events, "
           f"{len(vfx)} voice FX lines -> {A.out}")
 
 
-# critic M3: 776 one-shots (66.5 /min), about 220 of them UI and edit ticks (ring_tick 61, diagram_pop 48, ui_pop 25,
-# glitch 24, glass_wipe 24, flash_hit 21, glint_whoosh 20): bright 1-5 kHz clicks over the voice. The story foley stays.
-UI_NAMES = ('ring_tick', 'diagram_pop', 'ui_pop', 'glitch', 'glass_wipe', 'flash_hit', 'glint_whoosh', 'chalk_draw',
-            'pixel_glitch', 'tape_rewind', 'whoosh')
-REAL_HITS = (3.93, 143.29, 535.36, 605.21, 690.19)
+# ------------------------------------------------------------------------------------------- sound v3: the SFX
+# The references' bed has 18-29 onsets a minute and 0-2 strong ones; v2 r1 had 38 and 5.7 (618 one-shots, 53 a minute;
+# critic M3 had cut v2's 776). Every action the story turns on stays on its frame; a repeated gesture keeps one sound
+# per gesture (the louder of a close pair); the HUD and the edit are left to the picture; the rule card keeps the
+# towel's whip in, the card's hit and the numeral's stamp (the lipstick write-ons, the settle thud, the cursor and the
+# statement squeaks go).
+SFX_DROP = {'ui_pop', 'diagram_pop', 'chalk_draw', 'glint_whoosh', 'pixel_glitch', 'flash_hit', 'highlighter_squeak',
+            'typing', 'glass_thud'}
+# name: (minimum spacing s between kept sounds of that name, quietest gain kept dB)
+THIN = {'lace_pull': (2.5, -99), 'candy_wrapper': (2.0, -99), 'tape_peel': (0.6, -99), 'glass_tap': (0.45, -99),
+        'cloth_press': (1.5, -12), 'cloth_grab': (1.0, -14), 'bed_creak': (1.0, -14), 'jacket_cloth': (1.5, -99),
+        'towel_cloth': (0.4, -15), 'flashlight_click': (10.0, -99), 'tape_rewind': (8.0, -99), 'glitch': (0.6, -99),
+        'whoosh': (3.0, -9), 'breath': (1.0, -99), 'water_drip': (0.3, -99), 'kids_far': (3.0, -99)}
+BREATH_KEEP = ('shh', 'held', 'gasp', 'shaky', 'panting', 'on glass')
+GLITCH_KEEP = (367.79, 589.65, 698.0)            # after the hook: the face swap, "Wait", the last frame (picture glitches)
+CARD_DEVICE = ('lipstick_draw', 'glass_wipe')    # device write-ons (the cards' RULE and statement, the tags)
 
 
-def declutter(cues, shots):
-    """Thin the UI / transition sounds (about 60 % go): no sound on glint cuts; ring_tick only on the giant-number beats;
-    one soft gesture per diagram; flash_hit only on the real hits; glitch only on the kept glitch cuts (the hook's
-    flash-forwards); card write-on wipes once per card; the rest of the UI pops thinned to one per shot, 4 dB softer.
-    Story foley (towels, glass, steps, bells, cloth, the phone, the lipstick) is never touched."""
-    giants = sorted(h['t'] for s in shots['shots'] for h in s['hud'] if h['type'] == 'giant_number')
-    diagrams = sorted(h['t'] for s in shots['shots'] for h in s['hud'] if h['type'] in ('diagram', 'dials', 'eye_line', 'sound_rings', 'map'))
-    out, seen, cut = [], set(), 0
-    for c in sorted(cues, key=lambda c: c['t']):
-        nm = c['name']
-        dev = c.get('origin') == 'device' or nm in ('glint_whoosh', 'ring_tick', 'diagram_pop', 'ui_pop', 'flash_hit')
-        if nm not in UI_NAMES or not dev:
+def sfx_v3(cues):
+    """The v3 SFX budget (rules above). Returns (cues, n dropped, {reason: n})."""
+    st = collections.Counter(); out = []; last = {}       # last[name] = (time, index in out) of the last kept
+    for c in sorted(cues, key=lambda c: (c['t'], -float(c.get('gain_db', 0)))):
+        nm = c['name']; t = c['t']; g = float(c.get('gain_db', 0)); p = c.get('params') or {}
+        if p.get('stream'):
             out.append(c); continue
-        t = c['t']; keep = True
-        if nm == 'glint_whoosh': keep = False
-        elif nm == 'ring_tick': keep = any(abs(t - g) < 0.35 for g in giants)
-        elif nm in ('diagram_pop', 'chalk_draw'):
-            d = min(diagrams, key=lambda x: abs(x - t)) if diagrams else None
-            k = ('diag', round(d, 2) if d is not None and abs(d - t) < 3.0 else int(t / 4.0))
-            keep = k not in seen and (d is not None and abs(d - t) < 3.0 or ('w', int(t / 4.0)) not in seen)
-            seen.add(k); seen.add(('w', int(t / 4.0)))
-            if keep: c['gain_db'] = round(float(c.get('gain_db', 0)) - 4.0, 1)
-        elif nm == 'flash_hit': keep = any(abs(t - h) < 0.2 for h in REAL_HITS)
-        elif nm in ('glitch', 'pixel_glitch'): keep = t < 13.0 or any(abs(t - h) < 0.2 for h in REAL_HITS)
-        elif nm == 'glass_wipe':
-            k = ('wipe', c.get('shot')); keep = k not in seen; seen.add(k)
-        else:
-            k = (nm, c.get('shot')); kw = (nm, int(t / 4.0)); keep = k not in seen and kw not in seen; seen.add(k); seen.add(kw)
-            if keep: c['gain_db'] = round(float(c.get('gain_db', 0)) - 4.0, 1)
-        if keep: out.append(c)
-        else: cut += 1
-    return out, cut
+        note = (c.get('note') or '').lower(); dev = c.get('origin') == 'device'
+        why = None
+        if nm in SFX_DROP:
+            why = 'ui'
+        elif nm in CARD_DEVICE and dev and t > 13.0:
+            why = 'card write-on'
+        elif nm == 'ring_tick' and dev and g < -6 and 'giant' not in note and 'calls' not in note:
+            why = 'ui'
+        elif nm == 'glitch' and t > 13.0 and not any(abs(t - k) < 0.3 for k in GLITCH_KEEP):
+            why = 'edit'
+        elif nm == 'breath' and g < -10 and not any(k in note for k in BREATH_KEEP):
+            why = 'faint'
+        elif nm in THIN:
+            gap, gmin = THIN[nm]
+            if g < gmin and not c.get('hit'):
+                why = 'faint'
+            elif nm in last and t - last[nm][0] < gap and not c.get('hit'):
+                k = last[nm][1]                        # a close pair: the clearly louder one stays
+                if g >= float(out[k].get('gain_db', 0)) + 3.0 and not out[k].get('hit'):
+                    out[k] = c; last[nm] = (t, k)
+                why = 'thinned'
+        if why:
+            st[why] += 1; continue
+        if nm == 'lipstick_stamp':                     # the card's stamp: the references' +3-5 LU 1-2 s after the card
+            c['gain_db'] = round(g + 2.0, 1)
+        elif nm == 'towel_whip':                       # the card's whoosh in, under the hole before it
+            c['gain_db'] = round(g - 2.0, 1)
+        elif nm == 'tape_rewind':                      # the loop resets: a device, softer
+            c['gain_db'] = round(g - 3.0, 1)
+        # the pre-hit suck-out (mix.py) only for the real hits: the HITS names, the card's hit, the story's struck sounds
+        if c.get('hit') and nm in ('lipstick_stamp', 'number_thump', 'rubber_stamp', 'ui_pop', 'cloth_grab', 'cloth_press',
+                                   'bed_creak', 'bare_foot_step', 'water_drip', 'crate_creak', 'wood_thud'):
+            c['hit'] = False; c.setdefault('params', {})['punct'] = True; st['hit flag off'] += 1
+        last[nm] = (t, len(out))
+        out.append(c)
+    n_cut = sum(v for k, v in st.items() if k != 'hit flag off')
+    return out, n_cut, dict(st)
+
+
+def music_v3(ev, layers, sfx):
+    """The v3 music events (rules at the top: KEEP_SILENCES, DROP_LEN, DROP_AT, SIL_DIP_DB, CARD_GAP, swells).
+    Returns (kept events, counts, holes [[t0, t1]]: the drop-outs and card holes, for mix.py's arc steering)."""
+    st = collections.Counter(); holes = []
+    hit_t = sorted({e['t'] for e in ev if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop')} |
+                   {c['t'] for c in sfx if c.get('hit') and not (c.get('params') or {}).get('stream')
+                    and float(c.get('gain_db', 0)) >= -6})
+    cards = sorted(e['t'] for e in ev if e['type'] == 'rule')
+    keep, last_swell = [], -99.0
+    for e in sorted(ev, key=lambda e: e['t']):
+        ty = e['type']; t = e['t']; note = e.get('note') or ''
+        if ty == 'silence':
+            ln = float(e.get('len', 1.2))
+            k = next((k for k in KEEP_SILENCES if abs(t - k) < 0.6), None)
+            if k is not None:
+                t, ln = RESHAPE_SILENCE.get(k, (t, ln))
+                keep.append(dict(e, t=t, len=ln, level=0.0)); st['silence'] += 1; continue
+            nh = [h for h in hit_t if t < h <= t + ln + 1.5 and not any(abs(t - x) < 0.6 for x in NO_HOLE)]
+            end = nh[0] if nh else next((v for kk, v in DROP_AT.items() if abs(t - kk) < 0.6), None)
+            if end is not None:                        # a short sharp hole right before the turn (score buses, not the
+                a, b, depth = end - DROP_LEN, end, DROP_DB  # reverb tails), the hit lands on the returning bed
+                st['drop-out'] += 1; holes.append([round(a, 3), round(b, 3)])
+            else:
+                a, b, depth = t, t + ln, SIL_DIP_DB    # a thinned dip under the line
+                st['dip'] += 1
+            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx', 'melodic', 'pulse'):
+                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
+                layers[bus] = _merge_dip(layers[bus], a, b, depth, ramp_in=0.12 if end else 0.35,
+                                         ramp_out=0.05 if end else 0.6)
+            continue
+        if ty == 'riser' and any(abs(t - k) < 0.05 for k in RISER_FIX):
+            t1, ln = RISER_FIX[min(RISER_FIX, key=lambda k: abs(t - k))]
+            keep.append(dict(e, t=t1, len=ln, note='v3: ends at %.2f' % t1)); st['riser end fixed'] += 1; continue
+        if ty == 'riser' and any(abs(t - c) < 0.05 for c in cards):
+            c = min(cards, key=lambda c: abs(t - c))   # the card's riser stops CARD_GAP early; the hole; the card's hit
+            keep.append(dict(e, t=round(c - CARD_GAP, 3), level=min(float(e.get('level', 0.7)), CARD_RISER),
+                             note='v3: stops before the card'))
+            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx', 'melodic', 'pulse'):
+                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
+                layers[bus] = _merge_dip(layers[bus], c - CARD_GAP, c - 0.02, DROP_DB, ramp_in=0.15, ramp_out=0.05)
+            st['card hole'] += 1; holes.append([round(c - CARD_GAP, 3), round(c, 3)]); continue
+        if ty == 'swell':
+            if 'decay under the card' in note or float(e.get('level', 0.7)) < SWELL_MIN_LEVEL or t - last_swell < SWELL_GAP:
+                st['swell cut'] += 1; continue
+            last_swell = t
+        if ty in ('pulse_on', 'pulse_off') and not (PULSE_KEEP[0] <= t <= PULSE_KEEP[1]):
+            continue
+        if ty == 'dip':                               # bed dips: a gain curve on the score's sustained buses
+            depth = -(2.0 + 20.0 * (0.5 - float(e.get('level', 0.3))))
+            a, b = t, t + float(e.get('len', 4.0))
+            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx'):
+                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
+                layers[bus] = _merge_dip(layers[bus], a, b, depth)
+            continue
+        if ty in ('drone', 'end'):
+            continue
+        keep.append(e)
+    st['swells kept'] = sum(1 for e in keep if e['type'] == 'swell')
+    return keep, dict(st), holes
 
 
 def _merge_dip(pts, a, b, depth, ramp_in=0.4, ramp_out=1.0):

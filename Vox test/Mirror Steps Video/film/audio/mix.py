@@ -370,6 +370,10 @@ def voice_chain(v, plr=11.0):
 
 TILT = {63: 8.0, 125: 3.0, 250: 4.0, 500: 4.0, 2000: -7.0, 4000: -10.0, 8000: -14.0}   # AUDIO_SPEC sec. 2, rel 1 kHz
 TILT_MIRROR = {63: 10.0, 125: 7.0, 250: 3.0, 500: 2.0, 2000: -4.0, 4000: -9.0, 8000: -15.0}   # REF_MIRROR sec. 7
+# mirror v3: the five references' separated beds (analysis/refmirror/snd_study.py): 63 Hz +11, 125 +8, 250 +3.5, 500 +1.5
+# dB over 1 kHz (v2 r1's score: +3.3 / +5.7 / +3.5 / +4.0); the voice band keeps AUDIO_SPEC's cuts
+TILT_V3 = {63: 11.0, 125: 8.0, 250: 3.5, 500: 1.5, 2000: -4.0, 4000: -8.0, 8000: -14.0}
+TILTS = {'audio_spec': TILT, 'mirror': TILT_MIRROR, 'v3': TILT_V3}
 
 
 def match_tilt(m, amount=0.8, lo=-6.0, hi=2.0, probe=None, tilt=None, sub_boost=0.0):
@@ -411,6 +415,33 @@ def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5)
     g = uniform_filter1d(g, size=int(2.0 / hop))
     gs = np.interp(np.arange(len(m)) / SR, tb, g).astype(np.float32)
     return m * (10 ** (gs / 20))[:, None], g
+
+
+def steer_music(m, arc, Lv, excl, duck_db=0.0, strength=0.85, lim=(-12.0, 9.0), hop=0.25):
+    """Mirror v3: steer the score bus to the act shape (music_cues.arc: [[t, LU]], the music as heard under the
+    narration, 3 s short-term rel the voice's integrated loudness Lv; the duck under the voice is added back, so the
+    target before it is arc + duck_db). The level is the median of the 1 s loudness over 5 s (hits, holes and swells
+    shorter than that pass through); the overall offset is applied in full, the act shape around it (strength x,
+    limited to lim dB) is held across excl spans
+    (silences and their re-entry, holes, risers, card hits) and smoothed over 3 s, so it never pumps. Replaces the
+    two-way leveler (which lifted every quiet passage and flattened the acts). Returns (music, gain dB at 1 / hop Hz)."""
+    from scipy.ndimage import median_filter
+    b = SX._blocks(m, 1.0, hop); l = -0.691 + 10 * np.log10(b + 1e-20) - Lv
+    tc = np.arange(len(l)) * hop + 0.5
+    lm = median_filter(l, size=int(5.0 / hop) | 1, mode='nearest')
+    a = np.asarray(arc, float)
+    target = np.interp(tc, a[:, 0], a[:, 1]) + duck_db
+    ok = lm > target - 35
+    for x0, x1 in excl:
+        ok &= ~((tc > x0) & (tc < x1))
+    d0 = target - lm
+    glob = float(np.median(d0[ok])) if ok.any() else 0.0      # the overall level first, then the act shape around it
+    d = glob + np.clip(d0 - glob, *lim) * strength
+    if ok.any():
+        d = np.interp(tc, tc[ok], d[ok])
+    d = uniform_filter1d(d, size=int(3.0 / hop))
+    g = np.interp(np.arange(len(m)) / SR, tc, d).astype(np.float32)
+    return m * (10 ** (g / 20))[:, None], d
 
 
 DUCK_DB = 4.5        # music + SFX beds under the voice (critic: 3 -> 4.5 dB, so the bed sits ~-13 LU under speech)
@@ -530,7 +561,10 @@ def main():
     ap.add_argument('--score-hits-db', type=float, default=0.0, help='gain on the score hits stem (dB)')
     ap.add_argument('--lev-lo', type=float, default=-4.5, help='music leveler: lift passages under median + this')
     ap.add_argument('--lev-hi', type=float, default=6.5, help='music leveler: compress passages over median + this')
-    ap.add_argument('--tilt', default='audio_spec', choices=['audio_spec', 'mirror'], help='score bus target tilt')
+    ap.add_argument('--tilt', default='audio_spec', choices=sorted(TILTS), help='score bus target tilt')
+    ap.add_argument('--steer', type=float, default=0.0, help='steer the score to music_cues.arc (strength 0..1; 0 = '
+                    'the two-way leveler)')
+    ap.add_argument('--tp-max', type=float, default=-1.5, help='true-peak ceiling of the delivered mix (dBTP)')
     ap.add_argument('--sub-boost', type=float, default=0.0, help='max 63 Hz boost of the tilt EQ (dB)')
     ap.add_argument('--master-lufs', type=float, default=TARGET, help='integrated loudness of the delivered mix (LUFS)')
     ap.add_argument('--duck', type=float, default=DUCK_DB, help='music + SFX beds under the voice (dB)')
@@ -623,6 +657,24 @@ def main():
                           [[p[0] - ts, p[1]] for p in mcues['intensity'] if 0 < p[0] - ts < sdur] + \
                           [[sdur, float(np.interp(t1, iv[:, 0], iv[:, 1]))]]
     mc['events'] = [dict(e, t=e['t'] - ts) for e in mcues.get('events', []) if 0 <= e['t'] - ts < sdur]
+    if ts > 0 and mcues.get('arrangement'):           # mirror film windows: the music map and the layer curves are in
+        try:                                          # film time; the fitted offsets are resolved on the whole film
+            import score as SC
+            arr = []
+            for sg in SC.plan(mcues, full)['sections']:
+                s0, s1 = sg['s0'] - ts, sg['s1'] - ts
+                if s1 <= 0.5 or s0 >= sdur:
+                    continue
+                a = {k: sg[k] for k in ('slug', 'off', 'fin', 'fout', 'gain_db', 'cut') if k in sg}
+                if s0 < 0:
+                    a['off'] = sg['off'] - s0; s0 = 0.0
+                a.update(s0=s0, s1=min(s1, sdur)); arr.append(a)
+            mc['arrangement'] = arr
+            op = dict(mc.get('options') or {})
+            op['layers'] = {k: [[p[0] - ts, p[1]] for p in v] for k, v in (op.get('layers') or {}).items()}
+            mc['options'] = op
+        except Exception as e:
+            log('window arrangement shift failed:', repr(e)[:200])
     tm = time.time()
     stems, score_src = score_stems(mc, sdur, A.fallback)
     stem_names = list(stems)
@@ -649,11 +701,22 @@ def main():
     autom_b = gain_env(N, sil_b + dip(hit_times + mus_hits, hit_depth + [A.hit_dip] * len(mus_hits)))
     # score bus: corrective EQ toward the AUDIO_SPEC octave tilt (less 100-160 Hz mud), moderate width, leveler
     music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0),
-                             tilt=TILT_MIRROR if A.tilt == 'mirror' else TILT, sub_boost=A.sub_boost)
+                             tilt=TILTS[A.tilt], sub_boost=A.sub_boost)
     log('score tilt EQ (dB):', tilt)
     music = SX.width(music, A.music_width); mhits = SX.width(mhits, min(1.0, A.music_width + 0.2))
-    music, lev = level_music(music, [(a, b) for a, b, *_ in sil], lo_rel=A.lev_lo, hi_rel=A.lev_hi)
-    log(f'music leveler: gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / {np.percentile(lev, 50):+.1f} / {np.percentile(lev, 95):+.1f} dB')
+    steer = A.steer > 0 and bool(mcues.get('arc'))
+    if steer:                                         # mirror v3: the act shape (cues.ARC), the leveler off
+        Lv_k = SX.lufs_int(key)
+        excl = [(a - 0.3, b + 3.0) for a, b, *_ in sil] + [(a - t0 - 0.3, b - t0 + 1.0) for a, b in mcues.get('holes', [])]
+        excl += [(e['t'] - float(e.get('len', 6.0)), e['t'] + 0.5) for e in mc['events'] if e['type'] == 'riser']
+        excl += [(e['t'] - 0.8, e['t'] + 2.5) for e in mc['events'] if e['type'] == 'rule']
+        arc = [[p[0] - t0, p[1]] for p in mcues['arc']]
+        music, lev = steer_music(music, arc, Lv_k, excl, duck_db=A.duck, strength=A.steer)
+        log(f'music steered to the arc (strength {A.steer}): gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / '
+            f'{np.percentile(lev, 50):+.1f} / {np.percentile(lev, 95):+.1f} dB')
+    else:
+        music, lev = level_music(music, [(a, b) for a, b, *_ in sil], lo_rel=A.lev_lo, hi_rel=A.lev_hi)
+        log(f'music leveler: gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / {np.percentile(lev, 50):+.1f} / {np.percentile(lev, 95):+.1f} dB')
     n_sil = sum(1 for e in mc['events'] if e['type'] == 'silence' and 0 <= e['t'] <= dur)
 
     foley_dip = (10 ** (-FOLEY_DIP_DB * event_activity(buses['events']) / 20)).astype(np.float32)
@@ -693,7 +756,9 @@ def main():
         return SX.lufs_int(b) - Lv, float(np.median(st3[st3 > -70])) - Lv if (st3 > -70).any() else -70.0
     Lm0 = SX.lufs_int(music + mhits)
     gm = 10 ** ((Lv + A.bed_rel - 1.0 - Lm0) / 20) if Lm0 > -70 else 1.0
-    for it in range(5):
+    if steer:
+        gm = 1.0                                      # the arc sets the level (absolute, rel the voice)
+    for it in range(0 if steer else 5):
         bed, _m, _s, gr = bed_for(act_key, gm, acth_key); del _m, _s
         Li, P50 = bstat(bed); del bed
         err = min(A.bed_p50 - P50, (A.bed_rel + 1.5) - Li)
@@ -722,13 +787,13 @@ def main():
         vst = np.stack([v, v], 1)
         mix = vst + bed
         MT = A.master_lufs
-        gdb = MT - SX.lufs_int(mix); ceiling = -1.7; y = None
+        gdb = MT - SX.lufs_int(mix); ceiling = A.tp_max - 0.2; y = None
         for it in range(6):
             y = None
             y, lim_db, lim_frac = tp_limit(mix * np.float32(10 ** (gdb / 20)), ceiling)
             Lo = SX.lufs_int(y); tp = true_peak(y)
-            if tp > -1.5 and it < 5:
-                ceiling -= (tp + 1.5) + 0.05; continue
+            if tp > A.tp_max and it < 5:
+                ceiling -= (tp - A.tp_max) + 0.05; continue
             if abs(Lo - MT) <= 0.1 or it == 5:
                 break
             gdb += MT - Lo

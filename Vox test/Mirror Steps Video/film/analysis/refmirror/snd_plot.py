@@ -40,6 +40,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('out'); ap.add_argument('t0', type=float); ap.add_argument('t1', type=float); ap.add_argument('src')
     ap.add_argument('--cues', default=os.path.join(W, 'cues')); ap.add_argument('--label', default='')
+    ap.add_argument('--offset', type=float, default=0.0, help='film time of the mix file\'s start (mix.py --t0 renders)')
     A = ap.parse_args()
     t0, t1 = A.t0, A.t1
     ours = A.src.startswith('ours')
@@ -48,8 +49,9 @@ def main():
         if not os.path.isabs(md):
             md = os.path.join(FILM, md)
         sd = os.path.join(md, 'stems')
-        v = rd(os.path.join(sd, 'voice_en.wav'), t0, t1); m = rd(os.path.join(sd, 'music.wav'), t0, t1)
-        s = rd(os.path.join(sd, 'sfx.wav'), t0, t1); bed = m + s
+        o = A.offset
+        v = rd(os.path.join(sd, 'voice_en.wav'), t0 - o, t1 - o); m = rd(os.path.join(sd, 'music.wav'), t0 - o, t1 - o)
+        s = rd(os.path.join(sd, 'sfx.wav'), t0 - o, t1 - o); bed = m + s
         Iv = json.load(open(os.path.join(md, 'mix_report.json')))['langs']['en']['voice_lufs']
         tracks = [(v, (150, 200, 255), 'voice', 1), (m, (240, 150, 60), 'music', 1), (s, (100, 220, 100), 'sfx', 1),
                   (bed, (255, 255, 255), 'bed', 2)]

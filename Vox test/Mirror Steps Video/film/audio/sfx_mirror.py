@@ -50,7 +50,8 @@ NEW_LEVEL_LU = dict(
     phone_handle=-8, phone_message=-8, screen_door=-8, spoon_drop=-6, sprinkler_spit=-8, tape_peel=-9, towel_cloth=-8,
     towel_drop=-6, voices_calling_far=-17, watch_beep=-12, water_drip=-8, wet_footstep=-8, window_slide=-9,
     wood_thud=-3, clock_tick=-8,
-    impact_hit=1, stinger=0, braam=-1, sub_drop=-2)          # hits: REF_MIRROR hit peak +3 / +10 LU over the voice
+    impact_hit=1, stinger=0, braam=-1, sub_drop=-2,          # hits: REF_MIRROR hit peak +3 / +10 LU over the voice
+    towel_whip=-8, lipstick_stamp=-1, number_thump=-3, ring_tick=-11, rubber_stamp=-4, tape_rewind=-9)   # v3: cards
 NEW_BEDS = ('ambience_camp_night', 'ambience_dawn', 'ambience_memory', 'ambience_mirror', 'lantern_hum', 'wind_chimes',
             'tv_through_wall', 'kitchen_far', 'coffee_percolator', 'queen_presence', 'kids_far', 'voices_calling_far')
 NEW_SPACES = dict(far=-8.0, mirror=-4.0, memory=-3.0, outside=-3.0, inside=0.0, close=1.0)
@@ -61,6 +62,7 @@ NEW_DEFAULT_SPACE = dict(ambience_camp_night='outside', ambience_dawn='inside', 
                          tv_through_wall='outside', kitchen_far='far', coffee_percolator='far', queen_presence='mirror',
                          wet_footstep='mirror', clock_tick='inside', clock_tick_backward='inside', lantern_hum='close')
 _PEAK = dict(impact_hit=-2.0, stinger=-2.0, braam=-2.5, sub_drop=-2.5, bell_cracked=-5.0, crate_break=-4.0, nail_click_glass=-5.0, wood_thud=-5.0, body_fall=-5.0,
+             lipstick_stamp=-3.0, number_thump=-4.0, rubber_stamp=-5.0, ring_tick=-10.0,
              clock_tick_backward=-5.0, bell_clean=-6.0, glass_resonance=-6.0)
 _CACHE = {}
 
@@ -1131,6 +1133,78 @@ def r_stinger(rng, sp, **_):
     sc = X.lp(S2.get(rng, rj=0.03, fo=0.3), 4000, 2) * 0.18
     y = X.reverb(X._seq([(0, a), (0.01, sc)], 0.0), 'church', 0.2, 0.015, hpf=200)
     return y, X.onset_s(y, -14), 0.0, True
+
+
+# ============================================================================================ v3: cards and devices
+# Sound v3: these six names are in the plan (the rule cards' choreography, the giant numbers, Tess's ring badge, the
+# stamps 14 YEARS / CANCELED, the loop resets) but had no recipe, so mix.py skipped them ("skipped [...]" in its log):
+# v2 and review round 1 delivered the seven cards without their stamp. The references put a stamp / swing / stitch
+# hit on every card, 1-2 s after it (+3 to +5.5 LU in the mix).
+def r_towel_whip(rng, sp, **_):
+    """The towel whips up off the mirror card: a towel flap through a short airy rise and fall."""
+    T = P('towel', E('cloth_flap', 'towel'), 'onset', gap=0.15, max_len=0.9, keep=-20)
+    a = X.rate(T.get(rng, rj=0.04, fo=0.15), rng.uniform(1.05, 1.2)) if E('cloth_flap', 'towel') else None
+    d = 0.5
+    nz = X.noise(d, int(rng.integers(1 << 30)))
+    sw = X.sweep_bp(nz, np.concatenate([np.geomspace(350, 2600, 24), np.geomspace(2600, 500, 24)]), q=1.5)
+    sw = X.st(sw * np.sin(np.linspace(0, np.pi, len(sw))) ** 2 * 0.45)
+    lay = [(0.0, sw)] + ([(0.06, a)] if a is not None else [])
+    return X.fade(X._seq(lay, 0.1), 0.003, 0.08), 0.0, 0.0, False
+
+
+def r_lipstick_stamp(rng, sp, **_):
+    """The numeral stamps into the glass: a dull knock in the pane, a waxy press and a low punch, in the glass room."""
+    T = P('jugtap', E('press_jug', 'tap') + E('glass_tap', 'small'), 'onset', gap=0.08, max_len=0.35, keep=-20)
+    k = X.lp(shift(T.get(rng, rj=0.0, tilt=0.0), -7), 3200, 2)
+    wax = stickslip(0.12, 90, 0.5, int(rng.integers(1 << 20)), 500, 2400) * env_exp(X.n_(0.12), 0.003, 0.05)[:, None]
+    punch = X.st(X.sub_boom(110, 46, 0.7, 0.12, int(rng.integers(1 << 20))))
+    y = X._seq([(0, k * 0.9), (0, wax * 0.5), (0.004, punch * 0.8)], 0.2)
+    y = conv(y, ir_glass(), 0.14)
+    y = X.reverb(y, 'hall', 0.18, 0.01, hpf=250)
+    return y, X.onset_s(y, -18), 0.0, False
+
+
+def r_number_thump(rng, sp, **_):
+    """A giant number slams in: a deep drum-like thump with a sub tail (Tess's count made physical)."""
+    B = X.pool('booms', lambda: X.src(category='score/percussion/bass_drum') + X.src(category='score/percussion/timpani'),
+               'phrase', gap=0.5, max_len=4.0, keep=-12)
+    b = X.lp(B.get(rng, rj=0.03, fo=0.4), 1800, 2)[:X.n_(1.2)]
+    sb = X.st(X.sub_boom(75, 36, 1.1, 0.15, int(rng.integers(1 << 20))))
+    y = X._seq([(0, b * 0.7), (X.onset_s(b, -14), sb * 0.8)], 0.1)
+    y = X.reverb(y, 'hall', 0.2, 0.01, hpf=200)
+    return X.fade(y, 0.001, 0.3), X.onset_s(y, -16), 0.0, False
+
+
+def r_ring_tick(rng, sp, **_):
+    """Tess's ring badge ticks to her count: one wall-clock tick, a little bright, with a short metal ring."""
+    T = _tick_pool()
+    tk = X.hp(T.get(rng, rj=0.0, tilt=0.0), 500, 2)
+    ring = X.st(X.modal([2100, 3350, 5200], [0.12, 0.08, 0.05], [1, 0.5, 0.25], 0.35, int(rng.integers(1 << 20)), 0.0005))
+    y = X._seq([(0, tk), (0, ring * 0.12)], 0.1)
+    return y, X.onset_s(y, -18), 0.0, False
+
+
+def r_rubber_stamp(rng, sp, **_):
+    """A rubber stamp slammed on paper (14 YEARS, CANCELED): a padded thud, the paper's slap, a short room."""
+    pk = thump(150, 70, 0.22, int(rng.integers(1 << 20)))
+    slap = burst(0.05, 600, 5000, 0.0005, 0.012, int(rng.integers(1 << 20)))
+    kn = wood_knock(rng, f=(180, 410, 760), dur=0.2, amp=(1, 0.4, 0.2))
+    y = X._seq([(0, pk * 0.9), (0, slap * 0.5), (0, kn * 0.4)], 0.1)
+    y = conv(y, ir_cabin(), 0.2)
+    return y, X.onset_s(y, -18), 0.0, False
+
+
+def r_tape_rewind(rng, sp, dur=0.6, **_):
+    """The loop resets: the room's last half second scrubbed backward, pitch falling like a stopped tape."""
+    d = float(dur)
+    nz = X.noise(d, int(rng.integers(1 << 30)))
+    f = np.geomspace(3800, 260, 48)
+    sc = X.sweep_bp(nz, f, q=2.4) * np.linspace(1.0, 0.3, len(nz))
+    t = np.arange(len(nz)) / X.SR
+    wob = np.sin(2 * np.pi * np.cumsum(140 * (1 - 0.8 * t / d) * (1 + 0.15 * np.sin(2 * np.pi * 9 * t))) / X.SR)
+    y = X.st((sc * 0.6 + wob * 0.12 * np.exp(-t / (d * 0.6))).astype(np.float32))
+    y = X.fade(X._seq([(0, y)], 0.05), 0.02, 0.08)
+    return wow(y, 2.5, 3.0, int(rng.integers(1 << 20))), 0.0, 0.0, False
 
 
 # ============================================================================================ install

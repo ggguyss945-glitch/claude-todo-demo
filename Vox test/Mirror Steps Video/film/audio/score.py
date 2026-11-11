@@ -45,6 +45,7 @@ Mirror film (optional cue keys, written by audio/cues.py)
     arrangement: [{slug, s0, s1, off?, near?, fin?, fout?, gain_db?, cut?: 'hard'}]  the music map: which track plays
                  each film section (off None = fitted to the intensity curve); replaces the automatic track choice
     options:     {lament: false (no low-piano lament between motifs), slope: dB over intensity 0..1 (13.5),
+                 sub_db: gain on the synth sub drone (0), preduck: scale of the pre-hit duck (1),
                  swell_db: tracks lift at a swell peak (7), reentry_db: music back quieter after a silence (12),
                  layers: {bus: [[t, dB], ...]}} gain curves for
                  the score's own buses (tracks, drones, pulse, melodic, strings_bed, strings_fx, hits), so score
@@ -1011,6 +1012,7 @@ class Score:
         f[f == 0] = f[f > 0][-1] if np.any(f > 0) else 36.7
         f = _smooth(f, int(0.8 * CR))
         amp_db = self.curve_bed() - 14.0 + 4.0 * (self.Is - 0.5) + 3.0 * self.swell      # v2.1: -3 dB (sub-heavy)
+        amp_db = amp_db + float(self.opts.get('sub_db', 0.0))     # mirror v3: the references' 31-63 Hz weight
         ph0 = 0.0
         step = 1 << 21
         sos = butter(4, 160, 'lowpass', fs=SR, output='sos')
@@ -1576,13 +1578,16 @@ class Score:
 
     # ----------------------------------------------------------------------------------------- automation
     def pre_duck(self, t, lv):
-        """Cut the bed just before a hit (>= 15 dB contrast), then let it recover under the tail."""
+        """Cut the bed just before a hit (>= 15 dB contrast), then let it recover under the tail. options.preduck (k,
+        default 1) scales it: depth (6 + 10 lv) k dB, lead (0.35 + 0.65 lv)(0.5 + 0.5 k) s, back by t + 0.6 + 1.6 k
+        (mirror v3: k 0.6, the references' hits land on a running bed)."""
         if lv < 0.3:
             return
-        depth = -(6 + 10 * lv)
+        k = float(self.opts.get('preduck', 1.0))
+        depth = -(6 + 10 * lv) * k
         tt = np.arange(self.nc) / CR
-        lead = 0.35 + 0.65 * lv                        # bigger hits get a longer suck-out before them
-        d = np.interp(tt, [t - lead - 0.3, t - lead, t + 0.05, t + 2.2], [0, depth, depth, 0], left=0, right=0)
+        lead = (0.35 + 0.65 * lv) * (0.5 + 0.5 * k)    # bigger hits get a longer suck-out before them
+        d = np.interp(tt, [t - lead - 0.3, t - lead, t + 0.05, t + 0.6 + 1.6 * k], [0, depth, depth, 0], left=0, right=0)
         self.duck = np.minimum(self.duck, d)
 
     def automation(self):
