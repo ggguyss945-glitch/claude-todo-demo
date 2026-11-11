@@ -20,5 +20,8 @@ ag = sorted([os.path.join(d, f) for f in os.listdir(d) if f.startswith('agent-')
 if ag: print('newest agent file age: %d min' % ((time.time() - os.path.getmtime(ag[-1])) / 60))
 PY
 ps -eo etimes,args | grep -E 'render.py|mix.py|film.py|ffmpeg|final_chain|deliver' | grep -v grep | cut -c1-120 | head -5
-for L in "$F"/final_*.log; do [ -f "$L" ] && { echo "== $(basename "$L")"; grep -E '^===' "$L" | tail -2; }; done
+L="$F/logs/final_chain.log"; [ -f "$L" ] && { echo "-- final chain (log age $(( ($(date +%s) - $(stat -c %Y "$L")) / 60 )) min):"; grep -E '^==' "$L" | tail -4; grep -E 'Error|Traceback|Killed|TOO SHORT' "$L" | tail -3; }
+for P in "$F"/picture/progress_*.json; do [ -f "$P" ] && echo "$(basename "$P") $(cat "$P")"; done
+pgrep -f "bash tools/final_chain[.]sh" >/dev/null && echo "final chain: RUNNING" || echo "final chain: not running"
+free -g | awk 'NR==2{print "mem used", $3, "GB of", $2}'
 df -h /home | tail -1 | awk '{print "disk free", $4}'

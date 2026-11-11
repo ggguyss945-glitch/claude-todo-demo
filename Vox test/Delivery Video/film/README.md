@@ -91,20 +91,20 @@ Full picture with the mix: `python3 render.py --workers 3 --audio _work/mix/fina
 **Outputs** in `W/mix/final/`: `mix.wav` (= `mix_en.wav`, 48 kHz 24-bit stereo, 644.22 s = the picture's length exactly, with a
 1.5 s master fade to silence over the cut to black), `stems/{voice_en,music,sfx}.wav` (float, final gain, before the limiter), `mix_report.json`, `mix.log`, `measure.json` / `measure.txt`, `measure_cues.json` (every one-shot cue re-rendered and checked), `measure_plot.png` (loudness map: voice, music, SFX, silences, hits, rule cards). The preview with the mix is `W/preview/preview_mix.mp4` (640x360, 30 fps, 644.2 s, AAC 320k stereo).
 
-**Measured** (`measure_mix.py`, BS.1770 per-channel K-weighting; "rel voice" = against the voice stem's integrated loudness):
+**Measured** (review 4 mix; `measure_mix.py`, BS.1770 per-channel K-weighting; "rel voice" = against the voice stem's integrated loudness):
 
 | | result | target |
 |---|---|---|
 | Mix integrated / true peak | -14.03 LUFS / -1.70 dBTP | -14, <= -1.0 |
-| Voice vs mix | -0.06 LU | within 0.5 |
-| Voice minus bed (music + SFX) during speech, 400 ms blocks | p5 7.6 LU, median 17.1; under 3 LU in 1.0 % of speech, under 0 LU in 0.4 % | voice always clear |
-| Same in the 1-4 kHz intelligibility band | p5 11.0 dB, median 24.8 | |
-| Music outside the 20 silences | above voice -32 LU 100 %, above -26 LU 97.6 %; no holes | under the voice the whole time |
+| Voice vs mix | -0.05 LU | within 0.5 |
+| Voice minus bed (music + SFX) during speech, 400 ms blocks | p5 7.8 LU, median 17.2; under 3 LU in 0.95 % of speech, under 0 LU in 0.33 % | voice always clear |
+| Same in the 1-4 kHz intelligibility band | p5 11.1 dB, median 24.8 | |
+| Music outside the 20 silences | above voice -32 LU 100 %, above -26 LU 96.9 %; no holes | under the voice the whole time |
 | Silences | 20 (1.86/min), 18.2 dB deep (median), all >= 1.7 s, none at 376.9 / 436, one added at 136.4 | 1.5/min, 15 dB |
-| Bed integrated / 3 s p10-p50-p90 / LRA | -13.7 LU / -21.6, -16.0, -11.0 / 11.7 LU | -13 +- 1 / p50 -16 / 13-14 |
-| Bed by quarter | -15.2 / -15.8 / -13.5 / -11.7 LU; loudest 10 s at 633 s | Q2 calmest, end loudest |
+| Bed integrated / 3 s p10-p50-p90 / LRA | -13.9 LU / -21.4, -16.1, -11.3 / 11.3 LU | -13 +- 1 / p50 -16 / 13-14 |
+| Bed by quarter | -15.3 / -16.0 / -13.7 / -11.9 LU; loudest 10 s at 633 s | Q2 calmest, end loudest |
 | Bed spectrum < 250 Hz / 250 Hz-4 kHz / > 4 kHz | 74 / 26 / 0.6 % | 70 / 29 / <= 2 % |
-| Hits | 3.07/min; peak median -4.8 LU, max +4.5 LU rel voice | 3/min; +2 / +9 |
+| Hits | 3.07/min; peak median -5.0 LU, max +4.5 LU rel voice | 3/min; +2 / +9 |
 | The end | the last knock (640.04) lands in silence, the hit 0.15 s after it; the last 100 ms of the file -103 dBFS, last sample 0 | no chop |
 | One-shot SFX cues checked | 246: 0 silent, 0 failed, 8 flags left (below) | |
 
@@ -169,3 +169,14 @@ loudness curves, `_work/review/snd/tools`). Evidence: `_work/review/v4/`. What c
 - **The red build** starts at 455 s (the box at the door): a faint blinking hazard wash ramps up to the rule-7 climax; the
   3:41 photo carries the hazard light frozen in it (static red spill, 0.3 stop darker).
 - **Sound**: the diesel idle layer on exterior shots +8 dB (-1 -> +7), the dawn porch bed +2 dB.
+
+Measured after this round (`_work/review/v4/`):
+- Picture: red pixels (hue red, S > 50 %, V > 25 %, 1 fps) 0.18 % at most per tenth in the first 65 %, 3.16 % over the last
+  35 % (2.54 % before this round), 4.0 % in the climax tenth and 6.1 % in the last; luma 38.9 vs 45.1 (13.7 % darker; the
+  spec asks ~15 %: the flash photo, the sunrise and the bright phone screens hold it up). Camera: a zoom + pan fit on the
+  textured pixels of frames 0.5 s apart finds every deep-set shot pushing 2.7-5.6 %/s (the plain median optical flow reads
+  ~0 on these dark sets, which is why the critic measured them as static); only 4 shots move under 1 %/s.
+- Sound (the sound critic's loudness curves): the bed on exterior / doorbell shots -26.5 LU vs -32.0 indoors (was -31.2 vs
+  -32.0); dawn -26.1 vs the night -28.2; the last knock in silence (music -50 LU), the hit after it; "faster" knocking
+  leaves the music alone (-18.6 vs -18.3 before); the five reveal risers peak -0.4..+0.2 s from their words; the memory box
+  voice -15 LU, van door -6 LU peak, van arrival -21.5 LU; the file ends at -103 dBFS on a 0 sample.
