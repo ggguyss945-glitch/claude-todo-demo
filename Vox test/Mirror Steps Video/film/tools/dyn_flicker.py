@@ -28,9 +28,13 @@ for sid in ids:
     ts = np.arange(sh['t0'] + 0.02, sh['t1'] - 0.02, 1.0 / a.fps)
     prev = {}; hist = {}; bad = []
     for t in ts:
-        for l in F._dyn_layers(B, float(t)):
-            if l.name not in BANDS: continue
-            im = draw(l, float(t))
+        Ls = sorted([l for l in F._dyn_layers(B, float(t)) if l.name in BANDS], key=lambda l: -float(l.depth))
+        arr = np.zeros((270, 480, 4), np.uint8); arr[..., 3] = 255
+        srf = surface_for(arr); cvs = srf.getCanvas(); cvs.scale(0.25, 0.25)
+        for l in Ls: l.draw(Pen(cvs), float(t))                      # the room composite (bands may trade items)
+        del cvs, srf
+        for nm, im in (('room', arr[..., :3].astype(np.float32)),):
+            l = type('L', (), {'name': nm})
             if l.name in prev:
                 d = float(np.abs(im - prev[l.name]).mean())
                 h = hist.setdefault(l.name, [])

@@ -644,9 +644,10 @@ X(T(45), 'INSERT', 'ours', 'cabin_now/hands', 'night',
   chars=[hands('noah_grown', 960, 560, 560, [A(R(0), 'tremble', amount=0.5)], cuffs='halfway')],
   hud=[teaser(T(45), 'TONIGHT'), chip(T(45), 'TONIGHT', 'teaser')], teaser='TONIGHT', tr='glitch',
   energy='hands trembling, the cuffs straining, fast push 7 %/s')
-X(T(46), 'WS', 'ours', 'camp_gate/wide', 'night',
-  'the gate wide in the night wind: the MISSING poster on the board, its highlighted sweatshirt line glowing [R 22.5]; then the glitch into card 1',
-  P(3, x=960, y=500, z=1.05), reuse=22.46, tr='glitch',
+X(T(46), 'DOC', 'ours', 'camp_gate/poster_ecu', 'night',
+  'ECU of the poster line LAST SEEN WEARING A GREEN SWEATSHIRT, the highlight glowing [R 35.3] (critic M7: no cut back out to the '
+  'night gate); the camera travels on into card 1',
+  P(3, x=960, y=500, z=1.05), reuse=35.34, tr='glitch',
   energy='highlight glowing, push 4 %/s')
 
 # ================================================================ RULE 1 (card 129.80-133.56)
