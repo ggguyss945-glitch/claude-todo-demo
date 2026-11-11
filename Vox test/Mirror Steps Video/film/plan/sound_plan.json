@@ -5886,7 +5886,7 @@
     "dur": 1.8
    },
    "origin": "v1",
-   "shot": "S253",
+   "shot": "S254",
    "exists": true
   },
   {
@@ -5897,7 +5897,7 @@
    "note": "grab",
    "hit": true,
    "origin": "v1",
-   "shot": "S253",
+   "shot": "S254",
    "exists": false
   },
   {
@@ -5907,7 +5907,7 @@
    "space": "dry",
    "note": "ring badge step 11 (tiny)",
    "origin": "device",
-   "shot": "S253",
+   "shot": "S254",
    "exists": false
   },
   {
@@ -5918,7 +5918,7 @@
    "note": "hit",
    "hit": true,
    "origin": "v1",
-   "shot": "S253",
+   "shot": "S254",
    "exists": true
   },
   {
@@ -5928,7 +5928,7 @@
    "space": "close",
    "note": "tape slipping off in one go",
    "origin": "v1",
-   "shot": "S254",
+   "shot": "S255",
    "exists": false
   },
   {
@@ -5938,7 +5938,7 @@
    "space": "dry",
    "note": "ring badge step 10 (tiny)",
    "origin": "device",
-   "shot": "S255",
+   "shot": "S256",
    "exists": false
   },
   {
@@ -5949,7 +5949,7 @@
    "note": "two bodies hit the floor",
    "hit": true,
    "origin": "v1",
-   "shot": "S255",
+   "shot": "S256",
    "exists": false
   },
   {
@@ -5963,7 +5963,7 @@
     "dur": 1.5
    },
    "origin": "v1",
-   "shot": "S256",
+   "shot": "S257",
    "exists": false
   },
   {
@@ -5977,7 +5977,7 @@
     "amount": 0.3
    },
    "origin": "v1",
-   "shot": "S258",
+   "shot": "S259",
    "exists": true
   },
   {
@@ -5987,7 +5987,7 @@
    "space": "dry",
    "note": "ring badge step 9 (tiny)",
    "origin": "device",
-   "shot": "S258",
+   "shot": "S259",
    "exists": false
   },
   {
@@ -5997,7 +5997,7 @@
    "space": "dry",
    "note": "ring badge step 8 (tiny)",
    "origin": "device",
-   "shot": "S260",
+   "shot": "S261",
    "exists": false
   },
   {
@@ -6011,7 +6011,7 @@
     "dur": 2
    },
    "origin": "v1",
-   "shot": "S261",
+   "shot": "S262",
    "exists": true
   },
   {
@@ -6022,7 +6022,7 @@
    "note": "shoulder into the bunk + bunk rattle",
    "hit": true,
    "origin": "v1",
-   "shot": "S263",
+   "shot": "S264",
    "exists": false
   },
   {
@@ -6032,7 +6032,7 @@
    "space": "dry",
    "note": "ring badge step 7 (tiny)",
    "origin": "device",
-   "shot": "S264",
+   "shot": "S265",
    "exists": false
   },
   {
@@ -6042,7 +6042,7 @@
    "space": "dry",
    "note": "side switch: glass glint (theirs_break)",
    "origin": "device",
-   "shot": "S265",
+   "shot": "S266",
    "exists": false
   },
   {
@@ -6056,7 +6056,7 @@
     "density": 1
    },
    "origin": "v1",
-   "shot": "S265",
+   "shot": "S266",
    "exists": true
   },
   {
@@ -6066,7 +6066,7 @@
    "space": "dry",
    "note": "side switch: glass glint (climax)",
    "origin": "device",
-   "shot": "S267",
+   "shot": "S268",
    "exists": false
   },
   {
@@ -6076,7 +6076,7 @@
    "space": "close",
    "note": "hands slap over ears",
    "origin": "v1",
-   "shot": "S267",
+   "shot": "S268",
    "exists": false
   },
   {
@@ -6086,7 +6086,7 @@
    "space": "dry",
    "note": "ring badge step 6 (tiny)",
    "origin": "device",
-   "shot": "S267",
+   "shot": "S268",
    "exists": false
   },
   {
@@ -6097,7 +6097,7 @@
    "note": "giant 5 slams in (type beat 4)",
    "origin": "device",
    "hit": true,
-   "shot": "S271",
+   "shot": "S272",
    "exists": false
   },
   {
@@ -6110,7 +6110,7 @@
    "params": {
     "kind": "call"
    },
-   "shot": "S271",
+   "shot": "S272",
    "exists": false
   },
   {
@@ -6123,7 +6123,7 @@
     "kind": "bump"
    },
    "origin": "v1",
-   "shot": "S273",
+   "shot": "S274",
    "exists": false
   },
   {
@@ -6133,7 +6133,7 @@
    "space": "mirror",
    "note": "her bare foot on tread 8 (just before the silence)",
    "origin": "v2",
-   "shot": "S274",
+   "shot": "S275",
    "exists": false
   },
   {
@@ -6144,7 +6144,7 @@
    "note": "hit on \"Wait\" after the silence",
    "hit": true,
    "origin": "v1",
-   "shot": "S274",
+   "shot": "S275",
    "exists": true
   },
   {
@@ -6154,7 +6154,7 @@
    "space": "dry",
    "note": "S4: Noah's face glitches inside the void",
    "origin": "device",
-   "shot": "S274",
+   "shot": "S275",
    "exists": false
   },
   {
@@ -6164,7 +6164,7 @@
    "space": "dry",
    "note": "ring badge step 4 (tiny)",
    "origin": "device",
-   "shot": "S274",
+   "shot": "S275",
    "exists": false
   },
   {
@@ -6178,7 +6178,7 @@
     "dur": 0.08,
     "amount": 0.7
    },
-   "shot": "S276",
+   "shot": "S277",
    "exists": true
   },
   {
@@ -6189,7 +6189,7 @@
    "note": "tag",
    "hit": true,
    "origin": "v1",
-   "shot": "S276",
+   "shot": "S277",
    "exists": true
   },
   {
@@ -6199,7 +6199,7 @@
    "space": "dry",
    "note": "ring badge step 3 (tiny)",
    "origin": "device",
-   "shot": "S276",
+   "shot": "S277",
    "exists": false
   },
   {
@@ -6212,7 +6212,7 @@
     "kind": "soft"
    },
    "origin": "v1",
-   "shot": "S276",
+   "shot": "S277",
    "exists": true
   },
   {
@@ -6222,7 +6222,7 @@
    "space": "dry",
    "note": "ring badge step 2 (tiny)",
    "origin": "device",
-   "shot": "S277",
+   "shot": "S278",
    "exists": false
   },
   {
@@ -6232,7 +6232,7 @@
    "space": "close",
    "note": "jacket swish",
    "origin": "v1",
-   "shot": "S278",
+   "shot": "S279",
    "exists": false
   },
   {
@@ -6242,7 +6242,7 @@
    "space": "dry",
    "note": "ring badge step 1 (tiny)",
    "origin": "device",
-   "shot": "S280",
+   "shot": "S281",
    "exists": false
   },
   {
@@ -6256,7 +6256,7 @@
     "key": "d"
    },
    "origin": "v1",
-   "shot": "S280",
+   "shot": "S281",
    "exists": true
   },
   {
@@ -6270,7 +6270,7 @@
     "size": 1.5
    },
    "origin": "v1",
-   "shot": "S280",
+   "shot": "S281",
    "exists": true
   },
   {
@@ -6280,7 +6280,7 @@
    "space": "mirror",
    "note": "wet foot settling on the step",
    "origin": "v1",
-   "shot": "S280",
+   "shot": "S281",
    "exists": false
   },
   {
@@ -6291,7 +6291,7 @@
    "note": "collar grabbed",
    "hit": true,
    "origin": "v1",
-   "shot": "S281",
+   "shot": "S282",
    "exists": false
   },
   {
@@ -6302,7 +6302,7 @@
    "note": "giant 0 slams in (type beat 4)",
    "origin": "device",
    "hit": true,
-   "shot": "S281",
+   "shot": "S282",
    "exists": false
   },
   {
@@ -6315,7 +6315,7 @@
    "params": {
     "kind": "call"
    },
-   "shot": "S281",
+   "shot": "S282",
    "exists": false
   },
   {
@@ -6326,7 +6326,7 @@
    "note": "card lands: the pane rings, the riser peaks here",
    "origin": "device",
    "hit": true,
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6340,7 +6340,7 @@
     "dur": 0.12,
     "amount": 0.8
    },
-   "shot": "S282",
+   "shot": "S283",
    "exists": true
   },
   {
@@ -6350,7 +6350,7 @@
    "space": "close",
    "note": "card 7: the towel whips up off the mirror card",
    "origin": "device",
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6363,7 +6363,7 @@
     "kind": "hard"
    },
    "origin": "v1",
-   "shot": "S282",
+   "shot": "S283",
    "exists": true
   },
   {
@@ -6373,7 +6373,7 @@
    "space": "close",
    "note": "the mirror card settles (4 % overshoot)",
    "origin": "device",
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6386,7 +6386,7 @@
    "params": {
     "strokes": 4
    },
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6397,7 +6397,7 @@
    "note": "the numeral 7 stamps in (+3-5 LU over the surround)",
    "origin": "device",
    "hit": true,
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6411,7 +6411,7 @@
     "n": 8,
     "soft": true
    },
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6424,7 +6424,7 @@
    "params": {
     "strokes": 1
    },
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6437,7 +6437,7 @@
    "params": {
     "strokes": 1
    },
-   "shot": "S282",
+   "shot": "S283",
    "exists": false
   },
   {
@@ -6447,7 +6447,7 @@
    "space": "dry",
    "note": "white flash cut",
    "origin": "device",
-   "shot": "S283",
+   "shot": "S284",
    "exists": false
   },
   {
@@ -6458,7 +6458,7 @@
    "note": "you land on the boards (v1 615.13 -> v2 614.90: re-timed to the new picture)",
    "hit": true,
    "origin": "v1",
-   "shot": "S283",
+   "shot": "S284",
    "exists": false
   },
   {
@@ -6471,7 +6471,7 @@
     "kind": "snatch"
    },
    "origin": "v1",
-   "shot": "S284",
+   "shot": "S285",
    "exists": false
   },
   {
@@ -6481,7 +6481,7 @@
    "space": "close",
    "note": "wipe 1",
    "origin": "v1",
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6494,7 +6494,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6507,7 +6507,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6517,7 +6517,7 @@
    "space": "close",
    "note": "wipe 2",
    "origin": "v1",
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6527,7 +6527,7 @@
    "space": "dry",
    "note": "tag (v1 619.37 -> v2 619.40: re-timed to the new picture)",
    "origin": "v1",
-   "shot": "S285",
+   "shot": "S286",
    "exists": true
   },
   {
@@ -6540,7 +6540,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6550,7 +6550,7 @@
    "space": "close",
    "note": "wipe 3",
    "origin": "v1",
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6563,7 +6563,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6576,7 +6576,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6589,7 +6589,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6602,7 +6602,7 @@
    "params": {
     "kind": "tick_off"
    },
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6612,7 +6612,7 @@
    "space": "close",
    "note": "slow squeak",
    "origin": "v1",
-   "shot": "S285",
+   "shot": "S286",
    "exists": false
   },
   {
@@ -6625,7 +6625,7 @@
     "kind": "satin"
    },
    "origin": "v1",
-   "shot": "S286",
+   "shot": "S287",
    "exists": false
   },
   {
@@ -6638,7 +6638,7 @@
     "dur": 1.3
    },
    "origin": "v1",
-   "shot": "S287",
+   "shot": "S288",
    "exists": true
   },
   {
@@ -6649,7 +6649,7 @@
    "note": "glass thump and cut-off",
    "hit": true,
    "origin": "v1",
-   "shot": "S288",
+   "shot": "S289",
    "exists": false
   },
   {
@@ -6660,7 +6660,7 @@
    "note": "the glass goes dark",
    "hit": true,
    "origin": "v1",
-   "shot": "S288",
+   "shot": "S289",
    "exists": true
   },
   {
@@ -6673,7 +6673,7 @@
     "dur": 4
    },
    "origin": "v1",
-   "shot": "S289",
+   "shot": "S290",
    "exists": false
   },
   {
@@ -6686,7 +6686,7 @@
     "dur": 4
    },
    "origin": "v1",
-   "shot": "S289",
+   "shot": "S290",
    "exists": true
   },
   {
@@ -6696,7 +6696,7 @@
    "space": "close",
    "note": "jacket off and around",
    "origin": "v1",
-   "shot": "S290",
+   "shot": "S291",
    "exists": false
   },
   {
@@ -6709,7 +6709,7 @@
     "dur": 1.4
    },
    "origin": "v1",
-   "shot": "S290",
+   "shot": "S291",
    "exists": true
   },
   {
@@ -6719,7 +6719,7 @@
    "space": "close",
    "note": "crinkle as the hand opens",
    "origin": "v1",
-   "shot": "S294",
+   "shot": "S295",
    "exists": false
   },
   {
@@ -6729,7 +6729,7 @@
    "space": "close",
    "note": "candy rolls in the palm",
    "origin": "v1",
-   "shot": "S295",
+   "shot": "S296",
    "exists": false
   },
   {
@@ -6743,7 +6743,7 @@
     "n": 1
    },
    "origin": "v1",
-   "shot": "S295",
+   "shot": "S296",
    "exists": true
   },
   {
@@ -6753,7 +6753,7 @@
    "space": "phone",
    "note": "pickup click",
    "origin": "v1",
-   "shot": "S297",
+   "shot": "S298",
    "exists": true
   },
   {
@@ -6764,7 +6764,7 @@
    "note": "her chair scrapes back (through the phone)",
    "hit": true,
    "origin": "v1",
-   "shot": "S301",
+   "shot": "S302",
    "exists": false
   },
   {
@@ -6777,7 +6777,7 @@
     "kind": "pick_up"
    },
    "origin": "v1",
-   "shot": "S305",
+   "shot": "S306",
    "exists": false
   },
   {
@@ -6788,7 +6788,7 @@
    "note": "red X",
    "hit": true,
    "origin": "v1",
-   "shot": "S306",
+   "shot": "S307",
    "exists": true
   },
   {
@@ -6801,7 +6801,7 @@
    "params": {
     "strokes": 1
    },
-   "shot": "S306",
+   "shot": "S307",
    "exists": false
   },
   {
@@ -6815,7 +6815,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S306",
+   "shot": "S307",
    "exists": true
   },
   {
@@ -6829,7 +6829,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S306",
+   "shot": "S307",
    "exists": true
   },
   {
@@ -6843,7 +6843,7 @@
     "amount": 0.4
    },
    "origin": "v2",
-   "shot": "S306",
+   "shot": "S307",
    "exists": true
   },
   {
@@ -6856,7 +6856,7 @@
     "sleeve": true
    },
    "origin": "v1",
-   "shot": "S307",
+   "shot": "S308",
    "exists": false
   },
   {
@@ -6869,7 +6869,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6880,7 +6880,7 @@
    "note": "faint glass hum (v1 685.79 -> v2 685.31: re-timed to the new picture)",
    "hit": true,
    "origin": "v1",
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6893,7 +6893,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6906,7 +6906,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6919,7 +6919,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6932,7 +6932,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6945,7 +6945,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6958,7 +6958,7 @@
    "params": {
     "kind": "pop"
    },
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6968,7 +6968,7 @@
    "space": "dry",
    "note": "white flash in the shot",
    "origin": "device",
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6979,7 +6979,7 @@
    "note": "ring",
    "hit": true,
    "origin": "v1",
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -6990,7 +6990,7 @@
    "note": "THE SAME click sample as 143.29",
    "hit": true,
    "origin": "v1",
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -7000,7 +7000,7 @@
    "space": "dry",
    "note": "label CLEAN GLASS pops in",
    "origin": "device",
-   "shot": "S310",
+   "shot": "S311",
    "exists": true
   },
   {
@@ -7010,7 +7010,7 @@
    "space": "phone",
    "note": "the tiny figure in the phone climbs one step",
    "origin": "v2",
-   "shot": "S310",
+   "shot": "S311",
    "exists": false
   },
   {
@@ -7024,7 +7024,7 @@
     "key": "d"
    },
    "origin": "v1",
-   "shot": "S312",
+   "shot": "S313",
    "exists": true
   },
   {
@@ -7035,7 +7035,7 @@
    "note": "final stinger",
    "hit": true,
    "origin": "v1",
-   "shot": "S312",
+   "shot": "S313",
    "exists": true
   },
   {
@@ -7046,7 +7046,7 @@
    "note": "pixel-sort: Noah's face into hers",
    "origin": "device",
    "hit": true,
-   "shot": "S312",
+   "shot": "S313",
    "exists": false
   },
   {
@@ -7056,7 +7056,7 @@
    "space": "far",
    "note": "in the black: one faint, perfect, wrong bell note (the queen's bell); decays to nothing",
    "origin": "v1",
-   "shot": "S313",
+   "shot": "S314",
    "exists": false
   }
  ],
@@ -8877,14 +8877,14 @@
     "level": 0.92,
     "len": 13.0,
     "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
-    "shot": "S255"
+    "shot": "S256"
    },
    {
     "t": 565.62,
     "type": "sub_drop",
     "level": 0.6,
     "note": "the drone drops an octave with his voice",
-    "shot": "S259"
+    "shot": "S260"
    },
    {
     "t": 585.56,
@@ -8892,7 +8892,7 @@
     "level": 1.0,
     "len": 13.0,
     "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
-    "shot": "S271"
+    "shot": "S272"
    },
    {
     "t": 588.6,
@@ -8900,13 +8900,13 @@
     "level": 0.0,
     "len": 1.0,
     "note": "silence before \"Wait\"",
-    "shot": "S274"
+    "shot": "S275"
    },
    {
     "t": 589.65,
     "type": "hit",
     "level": 0.9,
-    "shot": "S274"
+    "shot": "S275"
    },
    {
     "t": 595.46,
@@ -8914,7 +8914,7 @@
     "level": 0.25,
     "len": 4,
     "note": "time stretches: the bed thins",
-    "shot": "S276"
+    "shot": "S277"
    },
    {
     "t": 603.91,
@@ -8922,13 +8922,13 @@
     "level": 0.0,
     "len": 1.3,
     "note": "silence into the biggest hit",
-    "shot": "S280"
+    "shot": "S281"
    },
    {
     "t": 605.21,
     "type": "hit",
     "level": 1.0,
-    "shot": "S280"
+    "shot": "S281"
    },
    {
     "t": 607.3,
@@ -8936,7 +8936,7 @@
     "level": 1.0,
     "len": 11.3,
     "note": "auto: intensity rise 7.5 -> 10.0",
-    "shot": "S280"
+    "shot": "S281"
    },
    {
     "t": 609.48,
@@ -8944,14 +8944,14 @@
     "level": 0.9,
     "len": 5.0,
     "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
-    "shot": "S282"
+    "shot": "S283"
    },
    {
     "t": 609.48,
     "type": "rule",
     "level": 0.95,
     "note": "rule sting",
-    "shot": "S282"
+    "shot": "S283"
    },
    {
     "t": 610.08,
@@ -8959,7 +8959,7 @@
     "level": 0.6,
     "len": 4.5,
     "note": "decay under the card",
-    "shot": "S282"
+    "shot": "S283"
    },
    {
     "t": 625.86,
@@ -8967,13 +8967,13 @@
     "level": 0.0,
     "len": 1.3,
     "note": "silence while the foot hangs",
-    "shot": "S287"
+    "shot": "S288"
    },
    {
     "t": 628.18,
     "type": "hit",
     "level": 0.9,
-    "shot": "S288"
+    "shot": "S289"
    },
    {
     "t": 628.7,
@@ -8981,7 +8981,7 @@
     "level": 0.0,
     "len": 0.6,
     "note": "out to near silence; room tone only",
-    "shot": "S289"
+    "shot": "S290"
    },
    {
     "t": 628.94,
@@ -8989,7 +8989,7 @@
     "level": 0.3,
     "len": 10,
     "note": "ending theme: low strings and piano, unpulsed, D",
-    "shot": "S289"
+    "shot": "S290"
    },
    {
     "t": 644.94,
@@ -8997,7 +8997,7 @@
     "level": 0.36,
     "len": 13.0,
     "note": "breathing swell (+12 LU over 13 s) peaking on mid-gap",
-    "shot": "S294"
+    "shot": "S295"
    },
    {
     "t": 660.94,
@@ -9005,7 +9005,7 @@
     "level": 0.55,
     "len": 3,
     "note": "the one warm swell",
-    "shot": "S300"
+    "shot": "S301"
    },
    {
     "t": 661.64,
@@ -9013,7 +9013,7 @@
     "level": 0.0,
     "len": 1.3,
     "note": "a true pause: music out, room tone only",
-    "shot": "S300"
+    "shot": "S301"
    },
    {
     "t": 677.39,
@@ -9021,7 +9021,7 @@
     "level": 0.6,
     "len": 8,
     "note": "the last rise begins (peaks at 697)",
-    "shot": "S306"
+    "shot": "S307"
    },
    {
     "t": 688.05,
@@ -9029,19 +9029,19 @@
     "level": 0.0,
     "len": 1.8,
     "note": "silence into the click",
-    "shot": "S310"
+    "shot": "S311"
    },
    {
     "t": 690.19,
     "type": "stinger",
     "level": 0.8,
-    "shot": "S310"
+    "shot": "S311"
    },
    {
     "t": 696.91,
     "type": "stinger",
     "level": 1.0,
-    "shot": "S312"
+    "shot": "S313"
    },
    {
     "t": 697.2,
@@ -9049,14 +9049,14 @@
     "level": 1.0,
     "len": 12.2,
     "note": "auto: intensity rise 7.0 -> 10.0",
-    "shot": "S312"
+    "shot": "S313"
    },
    {
     "t": 698.62,
     "type": "end",
     "level": 0.0,
     "note": "everything out except the hit tails and the faint bell",
-    "shot": "S313"
+    "shot": "S314"
    }
   ],
   "note": "sections, intensity and events are v1's (the music map in audio/cues.py is unchanged); events re-homed to v2 shots"

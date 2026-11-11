@@ -1123,6 +1123,11 @@ def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
         xa, xb = ex[i], ex[i + 1]
         ya, yb = ey[i], ey[i + 1]
         centre = abs((i + 0.5) / n - 0.5) * 2
+        if sp.get('gap'):          # critic M9: Noah's front teeth are flat incisors (the pointed, longer pair read as fangs)
+            h = th * (1.0 - 0.22 * centre ** 2) * (0.96 + 0.06 * hash01(i, 31)) * (0.9 if centre < 0.3 else 1.0)
+            bot.append((xa, ya + direction * h * 0.99))
+            bot.append(((xa + xb) / 2, (ya + yb) / 2 + direction * h))
+            continue
         h = th * (1.0 - 0.38 * centre ** 2) * (0.92 + 0.12 * hash01(i, 31))
         bot.append((xa, ya + direction * h * 0.92))
         bot.append(((xa + xb) / 2, (ya + yb) / 2 + direction * h))
@@ -2784,6 +2789,8 @@ def _arm_data(sp, B, P, side):
         cov = 0.0 if getattr(P, 'hl_prop' if side > 0 else 'hr_prop') else 1.0          # covering the ear: further out and up
         He = np.array([ex + side * (4.0 + 0.3 * hw * cov), ey + (0.47 - 0.1 * cov) * hh, 26.0 - side * hw * 0.9 * math.sin(hy) - 20.0 * cov])
         H = H + (He - H) * ear
+        # v2 review (B8): on the way up the hand swings out round the jaw instead of crossing the face
+        H = H + np.array([side * (hw * 0.9 + 30.0), 0.0, -30.0]) * math.sin(math.pi * clamp(ear))
         pole = pole + (np.array([side * 0.2, 1.0, 0.75]) - pole) * ear
     hk = getattr(P, 'hshake', 0.0)
     if hk > 0.01:                                         # shaking hands (fear, grown Noah): 7-11 Hz tremor
@@ -4031,7 +4038,7 @@ class Acting:
         return [self._ev(clicks[0], 'radio_click', -3.0), self._ev(clicks[1], 'radio_click', -3.0),
                 self._ev(t1 + 0.02, 'police_radio_squelch', -9.0)]
 
-    def phone_to_ear(self, t0, t1=None, side=1, fade=0.5, tilt=6.0):
+    def phone_to_ear(self, t0, t1=None, side=1, fade=0.8, tilt=6.0):
         """Phone held to the ear (busts and full body): wrist just below the ear, elbow forward and down, the dark back of
         the phone along the cheek, the hand wrapped round it; the head leans into it. side +1 = character's left hand."""
         pre = 'hl_' if side > 0 else 'hr_'

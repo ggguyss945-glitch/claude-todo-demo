@@ -247,7 +247,7 @@ X(Wc(2, 'see', off=-0.1), 'WS', 'stairs', 'mirror/through', 'stairs',
   'through a gap in the smear: a tall figure three steps down the stairs inside the glass, climbing; RED X (1 of 4) over her',
   P(5, x=960, y=520, z=1.1),
   chars=[Q('S0', [960, 760, 300, 5.0], mode='body', view='q_left', acts=[A(R(0), 'climb', steps_per_s=0.8)])],
-  hud=[redx(6.05, 960, 560, 170, 0.55, n=1)],
+  hud=[redx(6.05, 1390, 330, 120, 0.55, n=1)],
   q=dict(stage='S0', size=0.18, where='glass, three steps down', framing='figure 18 %', wrong='she is coming'),
   energy='red streaks dripping across the lens, the figure rising one tread, push 5 %/s')
 X(6.62, 'WS', 'stairs', 'stairs/low', 'stairs',
@@ -549,7 +549,7 @@ X(T(32), 'CU', 'ours', 'cabin_now/bokeh', 'night', 'CU of Tess: she recognises i
 X(T(33), 'WS', 'memory', 'memory/lantern_game', 'sepia_night',
   'memory, night by lantern in Cabin 7: kids in sleeping bags watch a kid draw steps on this mirror', P(2.5), tr='sepia',
   chars=[C('kids', [960, 900, 420], 'front', 'giggle', [A(R(0), 'dare')], mode='body'),
-         hands('noah13', 1200, 420, 300, [A(R(0.2), 'draw_step', step=3)])],
+         hands('noah13', 1200, 420, 150, [A(R(0.2), 'draw_step', step=3)])],
   energy='lantern flicker, the lipstick moving, gate weave')
 X(T(34), 'DOC', 'memory', 'memory/card_queen', 'sepia_night',
   'a vintage Queen of Spades playing card: the court-card queen wears her signature: spade crown, fan collar, spade beauty mark',
@@ -844,7 +844,7 @@ STATE(211.49, queen='glass_step7')
 X(Wc(82, 'railing'), 'MS', 'stairs', 'stairs/railing', 'stairs',
   'behind her, at the foot of the stairs, a small hand pokes through the balusters of the stair railing (Noah\'s bunk is right there)',
   P(4, x=1100, y=600, z=1.15), chars=[Q('S1', [600, 900, 520, 1.04], mode='body', view='back', acts=[A(R(0), 'still')]),
-                                      hands('noah13', 1180, 640, 300, [A(R(0.2), 'reach_through', through='railing')], tape=True)],
+                                      hands('noah13', 1180, 680, 190, [A(R(0.2), 'reach_through', through='railing')], tape=True)],
   errfix=[31], energy='the hand reaching through, push 4 %/s')
 X(T(83), 'INSERT', 'stairs', 'stairs/railing', 'stairs',
   'ECU of the taped hand: middle, ring and little fingers wrapped together, two bands, a lifting edge; label BLUE MEDICAL TAPE',
@@ -878,7 +878,7 @@ X(Wc(86, 'had'), 'CU', 'memory', 'memory/bench', 'sepia_day', 'memory CU: Noah o
 X(228.0, 'WS', 'stairs', 'mirror/queen_glass', 'stairs',
   'back to the glass, wide: she still stands on step 7; behind her at the foot of the stairs the small taped hand picks at the railing',
   P(3, x=960, y=560, z=1.0), tr='sepia',
-  chars=[Q('S1', [900, 860, 340, 1.04], mode='body', acts=[A(R(0), 'drift')]), hands('noah13', 1260, 780, 200, [A(R(0), 'peel_tape')], tape=True)],
+  chars=[Q('S1', [900, 860, 340, 1.04], mode='body', acts=[A(R(0), 'drift')]), hands('noah13', 1260, 800, 90, [A(R(0), 'peel_tape')], tape=True)],
   q=dict(stage='S1', step=7, size=0.32, where='glass, step 7', framing='WS', wrong=''), energy='picking, fog, her drift')
 X(T(88), 'MS', 'ours', 'cabin_now/ots_mirror', 'night',
   'Tess tugs your shoulder; in the glass behind you, she is on STEP 6', P(3),
@@ -1249,7 +1249,7 @@ X(T(159), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU Noah tilts his head, w
 X(T(160), 'CU', 'theirs', 'cabin_dawn/bokeh', 'dawn', 'CU of you stunned; silence', SIL(1.5),
   chars=[bust('you', 960, 560, 1.0, 'q_right', 'shock', [A(R(0), 'freeze')], light=L_GOLD)], energy='slow push in the silence')
 X(T(161), 'CU', 'memory', 'memory/wake', 'sepia_morning', 'memory-morning CU: kid-you wakes in the bottom bunk and squints', P(3), tr='sepia',
-  chars=[bust('you_kid', 960, 600, 1.0, 'front', 'sleep', [A(R(0.2), 'wake_up'), A(R(0.6), 'wake_squint')], light=L_MEM, lying=True)], energy='waking')
+  chars=[bust('you_kid', 960, 600, 1.0, 'front', 'sleep', [A(R(0.2), 'wake_up')], light=L_MEM, lying=True)], energy='waking')
 X(400.34, 'WS', 'memory', 'memory/wake', 'sepia_morning', 'the bunk above: empty, the blanket thrown back', P(3),
   energy='morning light, a curtain moving')
 X(T(162), 'WS', 'memory', 'memory/towel_wet', 'sepia_morning', 'memory wide: the cabin floor between the bunks: the same striped towel lying wet', P(3),
@@ -1655,7 +1655,7 @@ RULE(7)
 X(card_times(7)[1], 'WS', 'climax', 'cabin_now/dutch_low', 'red',
   'OURS, red: you slam onto the floorboards (dust, camera hit at 614.9); behind you the white frame holds glass again: silvering crawls in '
   'from the edges in 0.3 s; the steps glow; her figure climbs', HH(2.5, shake=18, hit=[(614.9, 16)], roll=8), tr='white',
-  chars=[C('you', [960, 960, 0.9], 'q_left', 'fear', [A(614.9, 'fall_back')], mode='lying')], props=dict(mirror='glass returning 614.9-615.2'),
+  chars=[C('you', [960, 900, 820], 'q_left', 'fear', [A(614.9, 'fall_back')], mode='lying')], props=dict(mirror='glass returning 614.9-615.2'),
   energy='the fall, dust, silvering crawling in, red pulse')
 STATE(614.9, mirror='glass', doorway='none', flashlight='floor')
 X(T(262), 'MS', 'climax', 'cabin_now/master', 'red', 'Tess shoves the towel into your hands; you clutch it', HH(3, shake=18, roll=6),
@@ -1904,11 +1904,11 @@ MERGE(5.40, 6.62, flat=True, set_=dict(view='through', var='stairs', world='stai
       path=[(5.40, 960, 560, 1.32), (6.05, 960, 545, 1.16), (6.62, 960, 530, 1.07)], glide=[0.7, 0.9, 0.3])
 MERGE(6.62, 9.99, frame='inside the glass: the camera cranes down the plum stairs past her climbing silhouette (crown glint, '
       'her hand on the rail) to small Noah13 on his bunk at the bottom, face up, lit (one move)',
-      cam3=[[6.62, {'pos': (0.0, 1.45, -0.15), 'look': (0.0, -1.6, 2.3), 'fov': 70}],
-            [8.1, {'pos': (0.12, 1.1, 0.7), 'look': (0.0, -1.7, 2.5), 'fov': 68}],
-            [9.1, {'pos': (0.3, 0.55, 1.5), 'look': (0.0, -1.75, 2.75), 'fov': 66}],
-            [9.99, {'pos': (0.18, 0.15, 1.92), 'look': (0.0, -1.75, 2.7), 'fov': 60}]], glide=[0.8, 0.5, 0.6],
-      chars=[Q('S0', [960, 820, 520], mode='body', view='front', acts=[A(6.62, 'climb', steps_per_s=0.8), A(7.4, 'slide_rail', dx=60)],
+      cam3=[[6.62, {'pos': (0.0, 1.75, -0.55), 'look': (0.0, -1.45, 2.1), 'fov': 72}],
+            [8.3, {'pos': (0.0, 1.5, -0.15), 'look': (0.0, -1.6, 2.3), 'fov': 70}],
+            [9.99, {'pos': (0.0, 1.32, 0.12), 'look': (0.0, -1.75, 2.45), 'fov': 66}]], glide=[0.8, 0.5, 0.6],
+      chars=[Q('S0', [960, 820, 520], mode='body', view='front', acts=[A(6.62, 'climb', steps_per_s=0.8), A(7.4, 'slide_rail', dx=60),
+],
                w=[[6.62, 0.0, -1.2, 1.4], [9.99, 0.0, -1.0, 1.15]]),
              body('noah13', 960, 860, 140, 'front', 'calm_kid', [A(9.6, 'look_up')], seated=True, w=[0.0, -1.8, 2.6])],
       flow_at=[960, 540])
@@ -1946,10 +1946,12 @@ MERGE(80.07, 83.58)
 MERGE(83.58, 86.46)
 # --- STEPS
 MERGE(88.70, 91.98, cam3=[[88.70, 'profile'], [91.98, {'view': 'ots_mirror', 'dp': [-0.15, 0.25, -0.35]}]], glide=[0.5, 0.5, 0.7],
+      w={'you': [3.25, 0.0, 5.35], 'tess': [1.95, 0.0, 5.05]},
       frame='profile along the back wall: you pull the towel off and the camera dollies round to the whole mirror: seven waxy '
             'red steps, your reflections behind them (one move)')
 MERGE(100.70, 105.58)
-MERGE(106.86, 109.82, cam3=[[106.86, 'three_q'], [109.82, {'view': 'ots_mirror', 'dp': [0.1, 0.3, -0.45]}]], glide=[0.5, 0.5, 0.7])
+MERGE(106.86, 109.82, cam3=[[106.86, 'three_q'], [109.82, {'view': 'ots_mirror', 'dp': [0.1, 0.3, -0.45]}]], glide=[0.5, 0.5, 0.7],
+      w={'you': [3.15, 0.0, 5.55], 'tess': [1.9, 0.0, 5.0]})
 MERGE(112.30, 117.50, cam3=[[112.30, 'profile'], [114.2, {'mview': 'glass_cu', 'dp': [0.35, 0.3, -0.55]}], [117.50, 'three_q']],
       drop=[('tess', 'hands'), ('tess', 'bust')], glide=[0.5, 0.5, 0.7])
 MERGE(117.50, 119.90)
@@ -1993,7 +1995,7 @@ MERGE(289.74, 293.10, cam3=[[289.74, {'pos': (3.4, 3.05, 6.32), 'look': (2.0, 1.
                   w=[[289.74, 3.0, 1.8, 6.2], [290.05, 2.93, 1.6, 6.0], [291.6, 1.06, 0.2, 5.95], [292.2, 1.05, 0.0, 5.5],
                      [293.10, 1.5, 0.0, 4.95]]),
              body('noah13', 560, 760, 300, 'q_right', 'calm_kid', [A(289.74, 'tie_loop', period=2.4)], seated=True),
-             body('tess', 1640, 360, 120, 'front', 'fear', [A(289.74, 'flashlight', aim='stairs')], w=[2.93, 1.8, 6.22])],
+             body('tess', 1640, 360, 120, 'front', 'fear', [A(289.74, 'flashlight', aim='stairs')], w=[2.95, 1.8, 6.5])],
       frame='THE CROSSING (one move): behind you from the doorway down the eight treads, the gold room opening below, the camera '
             'swinging out into the THEIRS master as you reach the floor; Tess small in the doorway above; a glint at the threshold')
 MERGE(293.10, 300.78, keep=[294.30])
@@ -2030,7 +2032,7 @@ DROP(549.43)
 DROP(552.25)
 DROP(553.29)
 DROP(555.93)
-MERGE(547.43, 562.41, keep=[554.33, 559.53], flat=True, set_=dict(view='doorway'),
+MERGE(547.43, 562.41, keep=[551.29, 554.33, 559.53], flat=True, set_=dict(view='doorway'), chars_from=557.37,
       drop=[('tess', 'hands'), ('noah13', 'hands'), ('noah_grown', 'hands')], glide=[0.5, 0.5, 0.8],
       path=[(547.43, 960, 560, 1.0), (552.0, 960, 540, 1.06), (557.0, 960, 560, 1.03), (562.41, 960, 540, 1.1)])
 MERGE(572.09, 574.49)
@@ -2049,7 +2051,7 @@ MERGE(602.52, 607.36, cam3=[[602.52, 'pov_down'], [605.21, 'pov_down'],
 MERGE(607.36, 609.48, cam3=[[607.36, {'pos': (0.12, -1.0, 3.05), 'look': (0.0, 0.45, 0.1), 'fov': 64}],
                             [608.9, {'pos': (0.1, -0.9, 2.85), 'look': (0.0, 0.6, 0.05), 'fov': 62}],
                             [609.48, {'pos': (0.08, -0.75, 2.7), 'look': (0.0, 1.5, 0.1), 'fov': 60}]], glide=[0.5, 1.0, 0.5],
-      chars=[body('you', 960, 900, 600, 'back', 'fear', [A(607.4, 'climb', steps_per_s=1.2), A(609.05, 'flinch')],
+      chars=[body('you', 960, 900, 600, 'back', 'fear', [A(607.4, 'stride', t1=608.95, steps_per_s=1.6)],
                   w=[[607.36, 0.0, -0.4, 0.37], [608.97, 0.0, -0.22, 0.17], [609.48, 0.0, 0.1, 0.0]]),
              C('tess', [960, 380, 170], 'front', 'neutral', [A(608.3, 'reach_grab', foreshortened=True), A(608.97, 'grab_collar'),
                                                            A(609.1, 'yank')], mode='hands', sleeve='orange', w=[0.04, 1.32, 0.12])],
@@ -2058,8 +2060,8 @@ MERGE(607.36, 609.48, cam3=[[607.36, {'pos': (0.12, -1.0, 3.05), 'look': (0.0, 0
 MERGE(618.40, 621.25)
 MERGE(621.25, 625.53, flat=True, set_=dict(view='through'), path=[(621.25, 960, 560, 1.0), (623.4, 960, 600, 1.08), (625.53, 960, 640, 1.16)])
 # --- ENDING
-MERGE(629.05, 638.89, flat=True, cam3=[[629.05, 'floor_wide'], [634.0, {'pos': (1.6, 0.6, 1.75), 'look': (2.9, 0.45, 4.3), 'fov': 72}],
-                                       [638.89, {'pos': (2.3, 0.66, 1.6), 'look': (2.95, 0.45, 4.3), 'fov': 70}]],
+MERGE(629.05, 638.89, flat=True, cam3=[[629.05, 'floor_wide'], [634.0, {'pos': (1.35, 0.72, 1.8), 'look': (2.9, 0.45, 4.3), 'fov': 72}],
+                                       [638.89, {'pos': (1.75, 0.86, 1.66), 'look': (2.95, 0.45, 4.3), 'fov': 70}]],
       glide=[0.4, 0.5, 1.0])
 MERGE(640.57, 643.37)
 MERGE(644.81, 652.39)
@@ -2087,9 +2089,20 @@ MERGE(674.26, 677.34)
 MERGE(678.74, 682.18)
 # B4: the OTS at 372.5 is over YOUR shoulder (olive, standing) at Noah sitting on his bunk, the stairs behind him (the
 # ots_noah view put Noah's back in the foreground while Noah was also the subject)
-MERGE(372.50, 374.66, cam3=[[372.50, {'pos': (2.5, 1.5, 3.5), 'look': (1.15, 0.95, 5.4), 'fov': 50}],
-                            [374.66, {'pos': (2.4, 1.45, 3.65), 'look': (1.15, 0.95, 5.4), 'fov': 48}]], glide=[1.0, 1.0, 0.3],
+MERGE(372.50, 374.66, cam3=[[372.50, {'pos': (2.9, 1.5, 2.6), 'look': (1.6, 0.9, 5.4), 'fov': 52}],
+                            [374.66, {'pos': (2.82, 1.48, 2.75), 'look': (1.6, 0.9, 5.4), 'fov': 50}]], glide=[1.0, 1.0, 0.3],
       set_=dict(view='bunk_2s', type='OTS'),
-      chars=[body('you', 960, 1200, 760, 'back', 'tense', [], w=[2.22, 0.0, 4.0]),
+      chars=[body('you', 960, 1200, 760, 'back', 'tense', [], w=[2.6, 0.0, 4.0]),
              body('noah13', 1200, 1000, 560, 'q_left', 'calm_kid', [A(373.1, 'look_up')], seated=True)],
       frame='OTS over your shoulder (olive jacket, standing): Noah13 on his bunk looks up at you, the stairs rising behind him')
+# B6 / H2: one set-up that sees both the window corner and the bunk: she rises in the corner and glides 1.2 s to Noah's
+# side, sits, the mattress dips; the two never overlap (film.py bunk_chart)
+MERGE(464.59, 470.51, set_=dict(hold='H2'), glide=[1.0, 1.0, 0.5],
+      cam3=[[464.59, {'pos': (3.05, 1.42, 2.0), 'look': (2.3, 0.85, 5.5), 'fov': 74}],
+            [470.51, {'pos': (2.8, 1.35, 2.35), 'look': (1.9, 0.8, 5.4), 'fov': 70}]],
+      chars=[Q('S2', [1600, 760, 380], mode='body', view='q_left', acts=[A(465.0, 'rise'), A(466.1, 'glide_sit', dur=1.2), A(468.35, 'still')],
+               w=[[464.59, 3.95, 0.0, 5.6], [466.1, 3.95, 0.0, 5.6], [467.3, 1.24, 0.0, 4.45], [470.51, 1.24, 0.0, 4.45]]),
+             body('noah13', 760, 900, 420, 'q_right', 'calm_kid', [A(464.59, 'tie_loop', period=2.4), A(468.68, 'scoot')], seated=True)],
+      frame='HOLD H2 (one set-up): she rises from the window corner and in one smooth 1.2 s glide, with no bob, comes to Noah\'s '
+            'side and sits; the mattress dips; he scoots over without looking up')
+MERGE(696.74, 698.62, path=[(696.74, 960, 520, 1.5), (698.62, 960, 520, 1.72)], glide=[0.8, 1.0, 0.4])

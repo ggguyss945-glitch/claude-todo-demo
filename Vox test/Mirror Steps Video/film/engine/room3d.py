@@ -682,7 +682,13 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
         k_est = ent[1] if ent is not None else TexCache.TEX_PX * (unit / 0.01) * CFG.rw / 2560.0
         if ent is None and tex.need.get(tuple(tkey)) is not None:
             k_est = min(tex.need[tuple(tkey)] * 1.05, 4 * k_est)
-        if smooth or need <= TexCache.TEX_NEAR * k_est:
+        vec = tex.__dict__.setdefault('vec', set())             # sticky: a plane that came close stays vector drawn
+        if not smooth and need > TexCache.TEX_NEAR * k_est: vec.add(key)   # (flipping texture / vector flickered)
+        # a plane that reaches behind the lens (the floor under a travelling camera) is always filled from its texture
+        # through the visible polygon: vector content drawn through a perspective matrix that crosses the camera plane
+        # came out black or missing for single frames
+        behind = any((Hm @ np.array([s_, t_, 1.0]))[2] <= 1e-6 for s_, t_ in ((0.0, 0.0), (w, 0.0), (w, h), (0.0, h)))
+        if smooth or behind or key not in vec:
             def paint_fn(p):
                 lw_ = p.lw
                 if lights: p.cv.saveLayer(None, None)
@@ -697,11 +703,13 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
                     p.cv.restore(); p.cv.restore()
                 p.lw = lw_
             img, kk = tex.get(key, w, h, unit, paint_fn, smooth)
+            # the texture fills only the visible polygon (all of it in front of the lens): drawing the whole image rect
+            # through a perspective matrix whose far part lies behind the camera dropped or blackened near floor strips
+            sh_ = img.makeShader(skia.TileMode.kClamp, skia.TileMode.kClamp, _TEX_SAMPLING,
+                                 skia.Matrix.Scale(w / max(1, img.width()), h / max(1, img.height())))
             cv.save()
             cv.concat(_skmat(Hm))
-            cv.clipPath(poly(vis), skia.ClipOp.kIntersect, True)
-            cv.drawImageRect(img, skia.Rect.MakeWH(img.width(), img.height()), skia.Rect.MakeWH(w, h), _TEX_SAMPLING, None,
-                             skia.Canvas.kFast_SrcRectConstraint)
+            cv.drawPath(poly(vis), skia.Paint(Shader=sh_, AntiAlias=True))
             cv.restore()
             return
     cv.save()

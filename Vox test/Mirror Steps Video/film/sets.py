@@ -3899,7 +3899,7 @@ def _v_mem_watch(var, st, shot):
         for (bx, by) in ((600, 400), (600, 680), (1320, 400), (1320, 680)): pen.shape(rect(bx - 20, by - 30, 40, 60), '#3a3c44', 4)
         lcd = rrect(720, 360, 480, 360, 26)
         _L(pen, lcd, 0, 360, 0, 720, ['#b8c4a0', '#9aa884']); pen.line(lcd, 5)
-        hhmm = '6:45' if t < tchg else '4:45'
+        hhmm = '6:45' if (t < tchg and st.t0 < 300.0) else '4:45'     # critic M11: the 376 flashback shows the changed alarm
         blink = (t >= tchg and int((t - tchg) * 4) % 2 == 0 and t < tchg + 1.2)
         _tx(pen, 'ALM', 960, 450, 800, 60, '#2a3020', 230, 8)
         if not blink: _tx(pen, hhmm, 960, 640, 800, 170, '#1e2418', 240, 4)

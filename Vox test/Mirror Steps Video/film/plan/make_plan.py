@@ -557,6 +557,8 @@ def _merge_run(run, path_keys, M, c3=None, base=None):
             if a_ > T0 + 0.05: c.setdefault('acts', []).insert(0, [round(T0 - 0.5, 3), 'hide', {'t1': round(a_ - 0.12, 3), 'fade': 0.12}])
             if b_ < T1 - 0.05: c.setdefault('acts', []).append([round(b_ - 0.0, 3), 'hide', {'fade': 0.12}])
     o['chars'] = M.get('chars', chars)
+    for c in o['chars']:                      # world places for the travelling move (who -> [x, y, z])
+        if c['who'] in (M.get('w') or {}) and c.get('mode', 'body') == 'body': c['w'] = M['w'][c['who']]
     fr = []
     for r in run:
         if r['frame'] not in fr: fr.append(r['frame'])
@@ -602,8 +604,9 @@ def apply_merges(shots):
             prev = shots[k - 1]
             for key in ('hud', 'sfx', 'mus', 'fx_post'):
                 if s_.get(key) and key != 'hud': prev[key] = list(prev.get(key) or []) + list(s_[key])
-                elif s_.get(key):
-                    prev['hud'] = list(prev.get('hud') or []) + [h for h in s_['hud'] if h.get('type') not in ('label', 'tag', 'red_x', 'chip')]
+                elif s_.get(key):          # only the time-bound overlays carry over (a dropped document is dropped)
+                    prev['hud'] = list(prev.get('hud') or []) + [h for h in s_['hud'] if h.get('type') in
+                                                                 ('giant_number', 'count_pop', 'stamp', 'typebeat', 'rings')]
         shots.remove(s_)
     for a, b in zip(shots, shots[1:]):
         a['t1'] = b['t0']
@@ -641,6 +644,10 @@ def apply_merges(shots):
         if not grp: continue
         keep = [k for k in M.get('keep', ())]
         kept = [s_ for s_ in grp if any(abs(s_['t0'] - k) < 0.03 for k in keep)]
+        cf_chars = None
+        if M.get('chars_from') is not None:           # one cast from that shot on (the pieces from its time keep it)
+            src = [s_ for s_ in grp if abs(s_['t0'] - M['chars_from']) < 0.03]
+            if src: cf_chars = src[0]['chars']
         movers = [s_ for s_ in grp if s_ not in kept]
         if not movers: continue
         first = movers[0]
@@ -698,7 +705,10 @@ def apply_merges(shots):
         if cur: runs.append(cur)
         new = []
         for run in runs:
-            o = _merge_run(run, pk, M, c3, base=new[0]['chars'] if new else None)
+            M_ = M
+            if cf_chars is not None:
+                M_ = dict(M, chars=json.loads(json.dumps(cf_chars))) if run[-1]['t1'] > M['chars_from'] + 0.03 else dict(M, chars=[])
+            o = _merge_run(run, pk, M_, c3, base=new[0]['chars'] if new else None)
             if M.get('drop_hud'): o['hud'] = [h for h in o['hud'] if h.get('type') not in M['drop_hud']]
             if run is not runs[0]:
                 o['resumes'] = round(runs[0][0]['t0'], 3)            # the move resumes after a cutaway (same camera path)

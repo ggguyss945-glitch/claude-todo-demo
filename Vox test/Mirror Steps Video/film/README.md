@@ -1,7 +1,7 @@
 # "If The Queen Of Spades Appears In Your Mirror... DON'T MAKE A WISH" (v2): build and delivery
 
 Everything runs from this folder (`film/`). Work files go to `_work/` (gitignored). The brief is `DIRECTION_V2.md`; the plan
-is `plan/shots.json` (449 shots, `PLAN_V2.md`); the picture is assembled by `film.py` from `sets.py` + `sets_v2.py`
+is `plan/shots.json` (314 shots after review round 1's flow pass: 449 written, merged into continuous moves, `PLAN_V2.md` section 0); the picture is assembled by `film.py` from `sets.py` + `sets_v2.py`
 (SETS.md), `characters.py` (CAST.md) and `ui_v2*.py` (UI_V2.md) with the engine in `engine/`; the sound is built in
 `audio/` from `plan/sound_plan.json` plus the picture's own events.
 
@@ -20,6 +20,9 @@ python3 film.py --sheet _work/film_v2/sheets/s --part 2/2 --keep _work/film_v2/s
 python3 film.py --sheet _work/film_v2/chk S190@284.6 S306       # single shots, optional @time
 python3 tools/film_v2_checks.py                                  # one labelled 720p still per v1 error (33) + errors_sheet.jpg
 python3 film.py --bench S001 S140 S233 S190                      # full-size s/frame (one OpenCV thread, as in a worker)
+python3 tools/shot_frames.py OUT.jpg S129 289.7-293.1 --n 5      # n frames across shots / spans (checks of continuous moves)
+python3 tools/dyn_flicker.py [ids]                               # flicker scan of the travelling (cam3) shots' room layers
+python3 tools/motion_metrics.py CLIP.mp4 T0 [--json OUT]         # the critic's 60 fps spike / jerk measure on a clip
 python3 render.py --stills 131.5,605.3 --size 960x540            # -> _work/tests/render/still_*.jpg
 python3 render.py --clip 600 606 --size 960x540 --audio _work/mix/final/mix.wav
 ```
@@ -27,7 +30,7 @@ Low-res preview of the whole film with sound (8 min with 2 workers), then its me
 decoded frames are deleted afterwards unless `--keep`):
 ```
 python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out _work/preview_v2 \
-    --audio _work/mix/final/mix.wav --name preview.mp4
+    --audio _work/mix/final_v2/mix.wav --name preview.mp4
 python3 tools/measure_preview.py _work/preview_v2/preview.mp4    # -> _work/preview_v2/measure_preview.json
 ```
 
@@ -57,11 +60,19 @@ ui_v2 draws it. `actions` lists every action with its time for checking.
 ```
 python3 film.py --events
 python3 audio/cues.py --events _work/align/film_events.json --out _work/cues
-python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/cues _work/mix/final \
+python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/cues _work/mix/final_v2 \
     $(python3 -c "import sys;sys.path.insert(0,'audio');import cues;print(' '.join(cues.MIX_ARGS))")
-python3 audio/measure_mix.py _work/mix/final --cues _work/cues
+python3 audio/measure_mix.py _work/mix/final_v2 --cues _work/cues
 ```
 The mix takes about 10 min and 7 GB of memory: run it when no render is running.
+Review round 1 (critic M1-M4), in `audio/cues.py`: only five real silences stay (533.18 H4, 603.91 H7, 628.7 glass dark,
+661.64 Mom's pause, the end); the other plan silences are -6 dB thinned dips of the score (`KEEP_SILENCES`, `SIL_DIP_DB`);
+`declutter()` thins the UI / edit sounds (no glint whooshes, ring ticks only on the giant numbers, one soft gesture per
+diagram, flash hits only on the real hits, glitches only in the hook's flash-forwards; about 220 -> 73); the music map changes
+cue only on a card or on picture travel (one lullaby for rule 4, one build for rule 5 into the bell, one theme for the ending),
+the tracks bus ramps from rule 5's card to the bell and risers lead into the bell and her foot (`EXTRA_MUSIC`); `MIX_ARGS`
+deliver at -16 LUFS (`--master-lufs`), with the glue eased (`--glue-max 1.5`, ratio 1.5), a lighter duck under the voice
+(`--duck 2.5`), a louder bed (`--bed-rel -9.5 --bed-p50 -12`) and freer hits (`--hit-duck 3 --score-hits-db 6 --voice-plr 13`).
 
 ## 4. Deliver (English only)
 ```
@@ -102,10 +113,21 @@ if wanted. The picture is kept.
   `inside` entries are clipped; the tiny Queen of H10 stands on the phone's 8th line.
 - **SPLIT** panels that replay a film time (the loop twins) draw the source shot's cast in their half; **MONTAGE** tiles
   render the sill at each tile's source time (that moment's props, OURS or climax look).
-- **Camera**: plan keys (linear pushes extrapolated 0.5 s each way), snaps, hits, handheld for shake >= 8, and a uniform
-  1.4 %/s post push (pull on pull-outs; the dolly's parallax made the measured push half the plan's).
-- **Transitions**: `cut`; `glint` (ui_v2); `white` (3-frame flash); `glitch` (2 frames of static, RGB split and a light
-  pop); `rewind` (ui_v2 tear + back-scrub); `sepia` (a 0.2 s diagonal paper wipe with a cream burn, both shots rendered);
+- **Camera** (review round 1): merged shots move on one `PathCam` (monotone cubic through every key under a glide time warp:
+  alive at the cut, no stop at the keys, no jerk); two-key linear pushes are extrapolated 0.5 s each way; the word beats are
+  eased push accelerations (`cam.accel`); the only snaps are the hits at 143.29, 605.21 and 690.19; the uniform post push only
+  on the holds. **Travelling shots** (`cam3`): `campath_of(sh)` (room3d `CamPath3`) moves the 3D camera through the room;
+  `_dyn_layers` rebuilds the view for each frame's camera (`sets_v2.MOVE`; the room drawn as live bands from baked plane
+  textures, `Scene3.live_bands` / `TexCache`; a plane that reaches behind the lens is always filled from its texture through
+  its visible polygon) and stands the cast at world points (`_world_fn`: `w`, named anchors, Noah's bunk seats, the plan's
+  screen point cast onto the floor of the view it was framed in), nearer people in front of farther ones; hands and busts are
+  pinned to the glass or a plane. One blocking chart for the THEIRS bunk 382-500 s (`bunk_chart`).
+- **Per-shot overrides** are keyed by a film time inside the shot (`SEAT_T`, `EXTRA_CHARS_T`, `REPLACE_CHARS_T`; shot ids
+  change when shots merge); `characters.CLIP_ORIGIN` likewise.
+- **Transitions**: `cut`; `flow` (review round 1: 0.5 s travel dissolve between two places of one move, the outgoing
+  picture accelerating into the shot's `flow` point; the rule cards enter on it); `glint` (ui_v2); `white` (3-frame flash);
+  `glitch` (2 frames of static, RGB split and a light pop); `rewind` (ui_v2 tear + back-scrub); `sepia` (review round 1: a 0.45 s
+  paper dissolve, 0.2 s before the cut and 0.25 s after, `paper_dissolve`);
   `smear` (the card's wipe carried over, ui_v2); `black`; in-shot `fx_post` white / glitch / static / rewind / pixel_sort.
 - **HUD**: `ui_v2.UI.hud` (captions, header, chips, Tess's ring badge and giant numbers, tags, red X, labels, diagrams
   D1-D10, documents' marks, type beats, the kinetic title, the seven mirror rule cards, the phone, teasers), then

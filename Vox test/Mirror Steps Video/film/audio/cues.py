@@ -50,32 +50,39 @@ MUSIC_MAP = [
          why='rule 1, inside the glass: dark D ambient; its D-major middle under the too-normal reflection'),
     dict(s0=203.53, s1=269.24, slug='come_closer_belladonna_strings', near=40,
          why='rule 2: the hand, the wish, "You have it": horror strings with stabs and drop-outs (Eb->D)'),
-    dict(s0=269.24, s1=290.6, slug='irene_kevin_dailey', near=100,
+    dict(s0=269.24, s1=289.74, slug='irene_kevin_dailey', near=100,
          why='rule 3: the clock runs back, the queen\'s face: Irene\'s dense plateau'),
-    dict(s0=290.6, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=6.0,
-         why='the too-normal dawn: warm unpulsed D major (C#->D), still and clean'),
-    dict(s0=350.38, s1=398.86, slug='sleep_forever_luella_gren', near=14,
-         why='rule 4, the loop and "a little while": the lullaby figure (G#->A), the other side\'s music'),
-    dict(s0=398.86, s1=446.33, slug='end_of_rain_beyza', near=0, gain_db=5.0,
-         why='the morning he vanished: sad piano (A), the brothers\' theme'),
-    dict(s0=446.33, s1=481.43, slug='impossible_theory_rachel_sandy', near=14,
-         why='rule 5 urgency: Tess runs, the countdown: driving A minor'),
-    dict(s0=481.43, s1=499.9, slug='sleep_forever_luella_gren', near=84, fin=2.0, gain_db=2.0,
-         why='temptation: "the way he remembers you": the lullaby returns, low'),
-    dict(s0=499.9, s1=542.03, slug='impossible_theory_rachel_sandy', near=115, fin=2.0,
-         why='20, the crate, the fake bell, the deepest silence, the real bell'),
+    dict(s0=289.74, s1=350.38, slug='when_the_sun_sets_anna_landstrom', near=0, cut='hard', gain_db=6.0,
+         why='the crossing (picture travel) into the too-normal dawn: warm unpulsed D major (C#->D), still and clean'),
+    # v2 review (critic M4): one cue per act, changed only on a card or on picture travel; the mid-scene swaps at 398.9,
+    # 481.4 / 499.9 and 677.4 are gone (the lullaby carries rule 4 to its card, Impossible Theory carries rule 5 to the
+    # bell as one build, the brothers' theme carries the ending with the drones rising under it from 677.4)
+    dict(s0=350.38, s1=446.33, slug='sleep_forever_luella_gren', near=10,
+         why='rule 4, the loop, "a little while" and the morning he vanished: the lullaby figure (G#->A) to the card'),
+    dict(s0=446.33, s1=542.03, slug='impossible_theory_rachel_sandy', near=14,
+         why='rule 5: Tess runs, the countdown, the crate, the fake bell, the deepest silence, the real bell: one build'),
     dict(s0=542.03, s1=628.7, slug='escalation_jon_bjork', off=0.0, cut='hard',
          why='rule 6 + 7 climax: pulsed build (C->D, 121 bpm) whose natural end lands as the glass goes dark'),
-    dict(s0=628.7, s1=677.39, slug='end_of_rain_beyza', near=100, gain_db=5.0,
-         why='relief and grief: the brothers\' theme again, "Hi, Mom"'),
-    dict(s0=677.39, s1=700.0, slug='annihilated_blue_saga', near=68, fin=4.0,
-         why='the phone face up: dark D rises to the last stinger; hard out at 698.62'),
+    dict(s0=628.7, s1=700.0, slug='end_of_rain_beyza', near=100, gain_db=5.0,
+         why='relief and grief: the brothers\' theme, "Hi, Mom"; the drones rise under it to the phone; hard out at 698.62'),
 ]
+# the silences that stay real silences (critic M1: 23 scripted bed-outs, one every 30 s, became a formula); every other
+# plan silence becomes a -6 dB thinned dip of the score under the line and the hit rises out of the bed
+KEEP_SILENCES = (533.18, 603.91, 628.7, 661.64, 698.6)
+SIL_DIP_DB = -6.0
+# risers into the two biggest hits (critic M4): into the deepest silence before the real bell (535.36) and into the H7
+# silence before her foot (605.21)
+EXTRA_MUSIC = [dict(t=526.4, type='riser', level=0.85, len=6.7, note='into the bell (via the 533.18 silence)'),
+               dict(t=598.3, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)')]
 # score.py's own layers (dB curves per bus, piecewise-linear): only where they help the tracks
 DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
-MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--bed-rel', '-11.5', '--bed-p50', '-14', '--music-lo', '-12',
-            '--music-hi', '-11', '--hit-duck', '5', '--hit-dip', '12', '--score-hits-db', '3', '--lev-lo', '-4.5',
-            '--lev-hi', '9', '--tilt', 'mirror', '--sub-boost', '3']
+# v2 review (critic M2): the v2 mix was squashed (LRA 2.4 against 4.2-5.4, limiter 6.1 dB) and the bed sat too low under the
+# narration (-14.3 against sibling -11.9): delivered at -16 LUFS (references -15.7 to -17.9) with the glue and limiter
+# eased, hits free to reach +8 LU, the bed 2-3 dB up and ducked less under the voice so it carries across the cuts
+MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--bed-rel', '-9.5', '--bed-p50', '-12', '--music-lo', '-10.5',
+            '--music-hi', '-9', '--hit-duck', '3', '--hit-dip', '9', '--score-hits-db', '6', '--lev-lo', '-3',
+            '--lev-hi', '9', '--tilt', 'mirror', '--sub-boost', '3', '--master-lufs', '-16', '--duck', '2.5', '--glue-max', '1.5',
+            '--voice-plr', '13']
 
 
 def _gate(base, spans, depth, ramp=0.6):
@@ -87,10 +94,14 @@ def _gate(base, spans, depth, ramp=0.6):
 
 
 LAYERS = {
-    'drones': _gate(-5.0, [DAWN, MEMORY, WARM_END, (481.43, 499.9)], -45.0),
-    'strings_bed': _gate(-12.0, [DAWN, MEMORY, WARM_END, (481.43, 499.9), (19.18, 88.66)], -45.0),
+    'drones': _gate(-5.0, [DAWN, MEMORY, WARM_END], -45.0),
+    'strings_bed': _gate(-12.0, [DAWN, MEMORY, WARM_END, (19.18, 88.66)], -45.0),
     'strings_fx': _gate(-5.0, [DAWN, MEMORY], -16.0),
     'melodic': [[0, -2.0], [720, -2.0]],
+    # critic M4: the bed builds steadily to its peak in the 70-80 % tenth (sibling) instead of peaking late and falling:
+    # the tracks ramp continuously from rule 5's card to the bell, hold through the climax and ease into the ending
+    'tracks': [[0.0, -1.0], [88.66, 0.0], [446.33, -2.0], [533.0, 2.5], [536.0, 2.5], [542.03, 1.0], [604.0, 2.5],
+               [628.7, 0.0], [677.39, 0.0], [698.0, 1.0], [720.0, 1.0]],
 }
 END_T = 698.62                     # hard cut to black: everything but the hit tails out (the faint bell is an SFX)
 PULSE_KEEP = (283.0, 291.0)        # the only score pulse: the queen's face (the tracks carry the other pulses)
@@ -193,7 +204,7 @@ def main():
                 p['loop_id'] = lid
         cues.append(dict(id=cid, t=retime(c['t'], c['shot']), name=c['name'], gain_db=c.get('gain_db', 0),
                          pan=c.get('pan', 0.0), space=c.get('space'), params=p, hit=bool(c.get('hit')),
-                         seed=h32(cid), shot=c['shot'], note=c.get('note', '')))
+                         seed=h32(cid), shot=c['shot'], note=c.get('note', ''), origin=c.get('origin')))
     # the film's biggest scares: densified and lifted in mix.py (params.punch)
     for c in cues:
         if c['name'] in ('impact_hit', 'braam', 'stinger', 'sub_drop') and c['gain_db'] >= -1 and c['hit']:
@@ -220,6 +231,7 @@ def main():
             cues.append(n)
     drop = set(FE.get('drop', []))
     cues = [c for c in cues if c['id'] not in drop]
+    cues, n_cut = declutter(cues, shots)
     for ht in FE.get('hits', []):
         near = [c for c in cues if c.get('hit') and abs(c['t'] - ht) <= 0.25]
         for c in near:
@@ -253,8 +265,17 @@ def main():
                 e['t'] = float(ht)
     layers = {k: [list(p) for p in v] for k, v in LAYERS.items()}
     keep = []
+    ev = ev + [dict(m, id='v2r1:%s:%.2f' % (m['type'], m['t'])) for m in EXTRA_MUSIC]
+    n_sil_dip = 0
     for e in ev:
         ty = e['type']
+        if ty == 'silence' and not any(abs(e['t'] - k) < 0.6 for k in KEEP_SILENCES):
+            a, b = e['t'], e['t'] + float(e.get('len', 1.2))       # a thinned dip, not a drop-out
+            for bus in ('tracks', 'drones', 'strings_bed', 'strings_fx', 'melodic'):
+                layers.setdefault(bus, [[0, 0.0], [720, 0.0]])
+                layers[bus] = _merge_dip(layers[bus], a, b, SIL_DIP_DB, ramp_in=0.35, ramp_out=0.6)
+            n_sil_dip += 1
+            continue
         if ty in ('pulse_on', 'pulse_off') and not (PULSE_KEEP[0] <= e['t'] <= PULSE_KEEP[1]):
             continue
         if ty == 'dip':                               # bed dips: a gain curve on the score's sustained buses
@@ -297,11 +318,53 @@ def main():
                hits_per_min=round(sum(1 for c in one if c['hit']) / dur * 60, 2),
                music_events=collections.Counter(e['type'] for e in keep),
                silences_per_min=round(sum(1 for e in keep if e['type'] == 'silence') / dur * 60, 2),
-               names=collections.Counter(c['name'] for c in one), voice_fx=len(vfx), bed_dips=len(dips))
+               names=collections.Counter(c['name'] for c in one), voice_fx=len(vfx), bed_dips=len(dips),
+               ui_sounds_cut=n_cut, silences_to_dips=n_sil_dip, kept_silences=list(KEEP_SILENCES))
     json.dump(rep, open(os.path.join(A.out, 'cues_report.json'), 'w'), indent=1)
     print(f"cues: {rep['sfx_cues']} one-shots ({len(rep['names'])} names, {rep['hits']} hits = {rep['hits_per_min']}/min), "
           f"{len(streams)} bed ranges in {len(rep['stream_keys'])} streams, {len(keep)} music events, "
           f"{len(vfx)} voice FX lines -> {A.out}")
+
+
+# critic M3: 776 one-shots (66.5 /min), about 220 of them UI and edit ticks (ring_tick 61, diagram_pop 48, ui_pop 25,
+# glitch 24, glass_wipe 24, flash_hit 21, glint_whoosh 20): bright 1-5 kHz clicks over the voice. The story foley stays.
+UI_NAMES = ('ring_tick', 'diagram_pop', 'ui_pop', 'glitch', 'glass_wipe', 'flash_hit', 'glint_whoosh', 'chalk_draw',
+            'pixel_glitch', 'tape_rewind', 'whoosh')
+REAL_HITS = (3.93, 143.29, 535.36, 605.21, 690.19)
+
+
+def declutter(cues, shots):
+    """Thin the UI / transition sounds (about 60 % go): no sound on glint cuts; ring_tick only on the giant-number beats;
+    one soft gesture per diagram; flash_hit only on the real hits; glitch only on the kept glitch cuts (the hook's
+    flash-forwards); card write-on wipes once per card; the rest of the UI pops thinned to one per shot, 4 dB softer.
+    Story foley (towels, glass, steps, bells, cloth, the phone, the lipstick) is never touched."""
+    giants = sorted(h['t'] for s in shots['shots'] for h in s['hud'] if h['type'] == 'giant_number')
+    diagrams = sorted(h['t'] for s in shots['shots'] for h in s['hud'] if h['type'] in ('diagram', 'dials', 'eye_line', 'sound_rings', 'map'))
+    out, seen, cut = [], set(), 0
+    for c in sorted(cues, key=lambda c: c['t']):
+        nm = c['name']
+        dev = c.get('origin') == 'device' or nm in ('glint_whoosh', 'ring_tick', 'diagram_pop', 'ui_pop', 'flash_hit')
+        if nm not in UI_NAMES or not dev:
+            out.append(c); continue
+        t = c['t']; keep = True
+        if nm == 'glint_whoosh': keep = False
+        elif nm == 'ring_tick': keep = any(abs(t - g) < 0.35 for g in giants)
+        elif nm in ('diagram_pop', 'chalk_draw'):
+            d = min(diagrams, key=lambda x: abs(x - t)) if diagrams else None
+            k = ('diag', round(d, 2) if d is not None and abs(d - t) < 3.0 else int(t / 4.0))
+            keep = k not in seen and (d is not None and abs(d - t) < 3.0 or ('w', int(t / 4.0)) not in seen)
+            seen.add(k); seen.add(('w', int(t / 4.0)))
+            if keep: c['gain_db'] = round(float(c.get('gain_db', 0)) - 4.0, 1)
+        elif nm == 'flash_hit': keep = any(abs(t - h) < 0.2 for h in REAL_HITS)
+        elif nm in ('glitch', 'pixel_glitch'): keep = t < 13.0 or any(abs(t - h) < 0.2 for h in REAL_HITS)
+        elif nm == 'glass_wipe':
+            k = ('wipe', c.get('shot')); keep = k not in seen; seen.add(k)
+        else:
+            k = (nm, c.get('shot')); kw = (nm, int(t / 4.0)); keep = k not in seen and kw not in seen; seen.add(k); seen.add(kw)
+            if keep: c['gain_db'] = round(float(c.get('gain_db', 0)) - 4.0, 1)
+        if keep: out.append(c)
+        else: cut += 1
+    return out, cut
 
 
 def _merge_dip(pts, a, b, depth, ramp_in=0.4, ramp_out=1.0):

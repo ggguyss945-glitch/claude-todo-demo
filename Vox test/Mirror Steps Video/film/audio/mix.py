@@ -301,7 +301,7 @@ def gain_env(n, segs):
     return (10 ** (e / 20)).astype(np.float32)
 
 
-def glue(x, thr_rel=0.0, ratio=2.0):
+def glue(x, thr_rel=0.0, ratio=2.0, cap=3.0):
     """Slow RMS glue compressor on the bed bus (30 ms attack lets hit transients through). Threshold = p95 of the
     bed's 50 ms RMS + thr_rel; gain reduction capped at 3 dB."""
     p = (x[:, 0] * x[:, 0] + x[:, 1] * x[:, 1]) * 0.5
@@ -315,7 +315,7 @@ def glue(x, thr_rel=0.0, ratio=2.0):
     gr = np.where(over <= -knee / 2, 0, np.where(over >= knee / 2, over * (1 - 1 / ratio),
                                                  (1 - 1 / ratio) * (over + knee / 2) ** 2 / (2 * knee))).astype(np.float32)
     del over
-    gr = np.minimum(gr, 3.0)
+    gr = np.minimum(gr, cap)
     g = (10 ** (-gr / 20)).astype(np.float32)
     return x * g[:, None], float(np.percentile(gr[live], 95)), g
 
@@ -532,6 +532,9 @@ def main():
     ap.add_argument('--lev-hi', type=float, default=6.5, help='music leveler: compress passages over median + this')
     ap.add_argument('--tilt', default='audio_spec', choices=['audio_spec', 'mirror'], help='score bus target tilt')
     ap.add_argument('--sub-boost', type=float, default=0.0, help='max 63 Hz boost of the tilt EQ (dB)')
+    ap.add_argument('--master-lufs', type=float, default=TARGET, help='integrated loudness of the delivered mix (LUFS)')
+    ap.add_argument('--duck', type=float, default=DUCK_DB, help='music + SFX beds under the voice (dB)')
+    ap.add_argument('--glue-max', type=float, default=3.0, help='max gain reduction of the bed glue compressor (dB)')
     A = ap.parse_args()
     T0 = time.time()
     langs = [s for s in A.langs.split(',') if s]
@@ -665,7 +668,7 @@ def main():
             spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
 
     def bed_for(act, gm, act_h):
-        dm = (10 ** (-DUCK_DB * act / 20)).astype(np.float32)
+        dm = (10 ** (-A.duck * act / 20)).astype(np.float32)
         hd = (10 ** (-A.hit_duck * act_h * spare / 20)).astype(np.float32)
         m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
         m += mhits * (hd * np.float32(gm))[:, None]
@@ -673,7 +676,7 @@ def main():
         e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
         s += e; del e
         s += buses['hits'] * hd[:, None]; del hd
-        bed, gr, gg = glue(m + s)
+        bed, gr, gg = glue(m + s, ratio=1.5 if A.glue_max < 3.0 else 2.0, cap=A.glue_max)
         m *= gg[:, None]; s *= gg[:, None]
         return bed, m, s, gr
 
@@ -718,16 +721,17 @@ def main():
         bed, m_out, s_out, gr = bed_for(act, gm, act_h)
         vst = np.stack([v, v], 1)
         mix = vst + bed
-        gdb = TARGET - SX.lufs_int(mix); ceiling = -1.7; y = None
+        MT = A.master_lufs
+        gdb = MT - SX.lufs_int(mix); ceiling = -1.7; y = None
         for it in range(6):
             y = None
             y, lim_db, lim_frac = tp_limit(mix * np.float32(10 ** (gdb / 20)), ceiling)
             Lo = SX.lufs_int(y); tp = true_peak(y)
             if tp > -1.5 and it < 5:
                 ceiling -= (tp + 1.5) + 0.05; continue
-            if abs(Lo - TARGET) <= 0.1 or it == 5:
+            if abs(Lo - MT) <= 0.1 or it == 5:
                 break
-            gdb += TARGET - Lo
+            gdb += MT - Lo
         del mix
         g = np.float32(10 ** (gdb / 20))
         sf.write(os.path.join(A.out, A.out_name if A.out_name and len(langs) == 1 else f'mix_{lang}.wav'), y, SR,

@@ -244,6 +244,8 @@ def _char_layer(rig, at, mode, store, sh, spec, sp):
     L_ = Layer(d, draw, 'char_' + rig.who, ref_depth=d)
     if refl:
         L_.alpha = 0.34; L_.tint = ('#a9b6ff', 0.5)
+        if mode == 'hands':                  # critic M15: the hand's reflection read as a second, equally bright hand
+            L_.alpha = 0.18; L_.blur = 4.0
     if spec.get('soft_focus'):
         L_.blur = 5.0
     return L_
@@ -354,6 +356,23 @@ def _dip_pair(film, sh):
                  acts=[[sh['t0'], 'still', {}]], light=dict(key_c='#e8ecff', key_from='below_front', rim='#ff3b5c', rim_a=140))]
 
 
+def _ending_pair(film, sh):
+    """643.4 (critic B8): one ending blocking: you and grown Noah stay sitting on our floor (the floor_wide shot's cast),
+    you reach for your phone."""
+    src = film.shot_at(633.0)
+    out = []
+    for c in src['chars']:
+        c2 = {k: v for k, v in c.items() if k not in ('acts', 'clip_id')}
+        c2['acts'] = [a for a in (c.get('acts') or []) if a[1] in ('expr', 'sit', 'kneel')]
+        if c2['who'] == 'you': c2['acts'] = c2['acts'] + [[sh['t0'] + 0.2, 'reach', {'side': 1}]]
+        out.append(c2)
+    return out
+
+
+REPLACE_CHARS_T = {643.5: _ending_pair}      # shots whose cast is replaced (by a film time inside the shot)
+REPLACE_CHARS = {}
+
+
 # per-shot extras and overrides are keyed by a film time inside the shot (ids change when shots merge): _by_time()
 EXTRA_CHARS_T = {425.0: _knot_echo, 90.9: _glass_pair, 108.8: _glass_pair, 388.5: _bunk_pair, 257.0: _towel_drop_pair,
                  250.0: _you_ots_mirror, 282.7: _you_at_doorway, 470.6: _dip_pair}
@@ -382,7 +401,10 @@ def _by_time(shots):
         for s_ in shots:
             if s_['t0'] <= tt < s_['t1']: return s_['id']
         return None
-    SEAT.clear(); EXTRA_CHARS.clear()
+    SEAT.clear(); EXTRA_CHARS.clear(); REPLACE_CHARS.clear()
+    for tt, fn in REPLACE_CHARS_T.items():
+        sid = sid_at(tt)
+        if sid: REPLACE_CHARS[sid] = fn
     for (tt, who), v in SEAT_T.items():
         sid = sid_at(tt)
         if sid: SEAT[(sid, who)] = v
@@ -399,7 +421,7 @@ SEAT_VIEWS = ('queen_3s', 'master')   # views whose plan guesses miss the mattre
 SEAT_X, FEET_X = 0.85, 1.24
 H2_START = (3.95, 0.0, 5.6)           # where she stands before the H2 glide: the window corner (DIRECTION_V2 372)
 QUEEN_CORNER = (3.95, 0.0, 5.6)
-YOU_FOOT = (1.72, 0.0, 3.92)          # you stand at the foot end of Noah's bunk
+YOU_FOOT = (1.3, 0.0, 3.7)            # you stand at the foot end of Noah's bunk (left of them from every bunk angle)
 
 
 def bunk_chart(who, t):
@@ -409,7 +431,7 @@ def bunk_chart(who, t):
     if not (382.0 <= t < 500.5): return None
     if who == 'noah13': return (FEET_X, 0.0, THEIRS_SEAT['noah13']), True
     if who == 'queen':
-        if t < 388.6 or t >= 466.4: return (FEET_X, 0.0, THEIRS_SEAT['queen']), True
+        if t < 388.3 or t >= 466.4: return (FEET_X, 0.0, THEIRS_SEAT['queen']), True
         return QUEEN_CORNER, False
     if who == 'you': return YOU_FOOT, False
     return None
@@ -473,6 +495,8 @@ def stage(sp, spec, sh):
     ch_ = bunk_chart(who, sh['t0'] + 0.01) if (sh['set'] == 'cabin_dawn' and cam3 is not None and 'sit_beside' not in names) else None
     if ch_ is not None and sh['view'] not in ('bokeh',):              # the bunk chart wins over the plan's guesses
         a2 = _anchor_at(sp, ch_[0], who)
+        if a2 is None or a2[2] > 1.2 * DH:                              # the chart puts them behind / right at the lens
+            s['_skip'] = True; return s
         if a2 is not None:
             seated = ch_[1]
             s['seated'] = seated
@@ -711,6 +735,8 @@ class Film:
         chars = sh['chars']
         if sh['set'] == 'rule_mirror' and not chars:
             chars = _card_chars(self, sh)
+        if sh['id'] in REPLACE_CHARS:
+            chars = REPLACE_CHARS[sh['id']](self, sh)
         if sh['id'] in EXTRA_CHARS:
             chars = list(chars) + EXTRA_CHARS[sh['id']](self, sh)
         s2 = dict(sh, chars=chars) if chars is not sh['chars'] else sh
@@ -744,6 +770,7 @@ class Film:
                 spec2 = stage(sp, spec2, sh); at = spec2['at']
             except Exception as e:
                 _warn((sh['id'], 'stage'), 'stage %s: %r' % (sh['id'], e))
+            if spec2.get('_skip'): continue
             try:
                 dep = place(sp, spec2, at, sh)
             except Exception as e:
@@ -828,9 +855,16 @@ class Film:
         import sets_v2 as S2
         D = B.dyn
         cam = D['path'](t)
+        s_set = D['s_set']
+        ch = (s_set.get('props') or {}).get('changes_in_shot')
+        if ch:                                    # the props as they are at t (the towel comes off, the mirror appears)
+            pr = {k: v for k, v in s_set['props'].items() if k != 'changes_in_shot'}
+            for tt, kw in ch:
+                if tt <= t: pr.update(kw)
+            s_set = dict(s_set, props=pr)
         S2.MOVE = {'cam': cam, 'd0': D['d0'], 'memo': D['memo']}
         try:
-            sp = ST.build_shot(D['s_set'])
+            sp = ST.build_shot(s_set)
         finally:
             S2.MOVE = None
         L = list(sp)
@@ -860,18 +894,20 @@ class Film:
                         at_ = [float(at_[0]) + 0.34 * float(at_[2]), float(at_[1]) - 0.04 * float(at_[2])] + list(at_[2:])
                 L.append(_char_layer(rig, at_, mode, None, B.sh, spec_, sp))
                 continue
-            Pm = np.asarray(P, float) + np.array([0.0, 0.55 * hm, 0.0])
-            dm = cam.dist(Pm)
             if dist < 0.35:
+                # feet behind the lens (she looms over you): place the figure by its middle, else by its head
+                for fr in (0.55, 0.92):
+                    Pm = np.asarray(P, float) + np.array([0.0, fr * hm, 0.0])
+                    dm = cam.dist(Pm)
+                    if dm >= 0.3: break
                 if dm < 0.3: continue                                      # the camera passes through / behind them
-                # feet behind the lens (she looms over you): place the figure by its middle
                 xm, ym = cam.pt(Pm); h = hm * cam.f / dm
-                x, y, dist = xm, ym + 0.55 * h, dm
+                x, y, dist = xm, ym + fr * h, dm
             else:
                 x, y, h, _ = cam.anchor(P, hm, d0)
             dep = 1.0
-            for (a, b, ld) in bm:
-                if (a <= dist or a <= -1e8) and dist < b: dep = max(0.3, float(ld) - 0.012); break
+            for (a, b, ld) in bm:                 # in front of its band; nearer people in front of farther ones
+                if (a <= dist or a <= -1e8) and dist < b: dep = max(0.3, float(ld) - 0.02 + 0.0008 * min(dist, 10.0)); break
             L.append(_char_layer(rig, [x, y, h, dep], mode, None, B.sh, spec, sp))
         return L
 
