@@ -234,6 +234,57 @@ CAST = {
 }
 CAST['officer2']['skin'] = '#cdb3a6'
 
+# ---------------------------------------------------------------------------------------- delivery film cast
+# "If A Delivery Driver Rings Your Doorbell At 3 AM...": the Nightline driver (built on the officer's creepy face: locked
+# unblinking stare, ashen skin, deep bags; a fixed smile that widens in stages over the film, see DRIVER_ARC), mom (the
+# police mum's face in a robe, no glasses: she came down squinting), Lily (8, pajamas with moons), dad (memory, 21 years
+# younger than he would be now: flannel, moustache). 'you' is the police 'you' in socks (3 AM, at home).
+_NIGHTLINE = dict(shirt='#5b3f2b', shirt_sh='#3d2a1d', shirt_hi='#7c5b42', trousers='#46311f', trousers_sh='#2d1f15',
+                  cap='#4c3424', cap_sh='#301f15', bill='#3a281b', patch='#1b2236', patch_rim='#d9bb6a', moon='#e9cf7e',
+                  tag='#e6dfcc', tag_ink='#2a2420', shoes='#21170f', belt='#1d140d', buckle='#a3967c', top='#5b3f2b',
+                  top_sh='#3d2a1d', top_hi='#7c5b42')
+CAST['driver'] = dict(
+    outfit='courier', hat='courier', hair='short', sex='m', hh=178.0,
+    head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 53, 77, 90, 93, 91, 85, 73, 55, 31, 0],
+    eye_dx=42, eye_y=-10, eye_r=21.5, pupil=0.62, brow_th=9.5, nose_len=30, mouth_y=63, mouth_w=25,
+    skin='#c0b1aa', skin_sh='#8a7b7b', skin_dp='#554851', blush='#c39a9c', lip='#86696b', stubble='#575a64', stub=0.4,
+    hair_c='#2a221e', brow_c='#1c1717', bags=1.2, age=0.6, blink_rate=0.0, lock=1.0, micro=0.3, breath=0.6,
+    scar=0, ring=0, part=0, lashes=0.0, gaunt=1.0, grin_k=1.1, tooth_w=11.0, talk_lag=0.2, feet='boots',
+    body=dict(sh=124, ch=116, wa=100, hip=104, arm=(50, 40), leg=(60, 48), neck=45, hand=1.04),
+    cloth=dict(_NIGHTLINE))
+CAST['mom'] = dict(
+    outfit='robe', hat=None, hair='curly', sex='f', hh=188.0,
+    head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 52, 77, 94, 100, 99, 91, 76, 54, 28, 0],
+    eye_dx=42, eye_y=-6, eye_r=18.5, pupil=1.0, brow_th=7.5, nose_len=24, mouth_y=60, mouth_w=21,
+    skin='#c9ab9f', skin_sh='#96786f', skin_dp='#6a5153', blush='#de9c9c', lip='#a5716f', stubble=None, stub=0, lips=0.4,
+    hair_c='#8a817b', brow_c='#5e5550', bags=0.9, age=0.85, blink_rate=0.3, lock=0.0, micro=1.0, breath=1.0,
+    scar=0, ring=1, part=0, lashes=0.6, glasses=False, feet='slippers',
+    body=dict(sh=100, ch=106, wa=104, hip=110, arm=(44, 36), leg=(40, 33), neck=34, hand=0.85),
+    cloth=dict(top='#6e4a57', top_sh='#4b303b', top_hi='#8d6673', collar='#83606b', gown='#e0d6c6', gown_sh='#b9ad9a',
+               belt='#5a3c47', legs='#c4a598', shoes='#8e7f86', shoes_sh='#625660'))
+CAST['lily'] = dict(
+    outfit='pajamas', hat=None, hair='kid', sex='f', hh=236.0, child=True,
+    head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 58, 84, 98, 102, 102, 97, 85, 63, 34, 0],
+    eye_dx=40, eye_y=6, eye_r=22.5, pupil=1.45, brow_th=6.0, nose_len=13, mouth_y=64, mouth_w=16,
+    skin='#d6b6a6', skin_sh='#a8877b', skin_dp='#76595a', blush='#ee9f9b', lip='#bf8079', stubble=None, stub=0, lips=0.3,
+    hair_c='#6e4b33', brow_c='#5a3d2b', bags=0.1, age=0.0, blink_rate=0.3, lock=0.0, micro=0.9, breath=0.9,
+    scar=0, ring=0, part=1, lashes=1.0, feet='bare',
+    body=dict(sh=80, ch=80, wa=78, hip=82, arm=(34, 28), leg=(42, 34), neck=30, hand=0.74, arm_k=0.86),
+    cloth=dict(top='#8b84b8', top_sh='#625b8e', top_hi='#aaa3d4', trim='#d7d1ef', print_c='#f1e2a2', trousers='#8b84b8',
+               trousers_sh='#625b8e', legs='#d6b6a6', shoes='#d6b6a6', shoes_sh='#a8877b'))
+CAST['dad'] = dict(
+    outfit='flannel', hat=None, hair='messy', sex='m', hh=178.0,
+    head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 51, 75, 92, 98, 97, 88, 72, 50, 26, 0],
+    eye_dx=43, eye_y=-8, eye_r=19.5, pupil=1.0, brow_th=10.5, nose_len=24, mouth_y=60, mouth_w=22,
+    skin='#c7a693', skin_sh='#957465', skin_dp='#634b48', blush='#d99690', lip='#9c6d66', stubble='#4e4038', stub=0.45,
+    hair_c='#3a2a20', brow_c='#2c1f18', bags=0.5, age=0.45, blink_rate=0.3, lock=0.0, micro=0.9, breath=1.0,
+    scar=0, ring=1, part=-1, lashes=0.0, moustache='#3a2a20', feet='boots',
+    body=dict(sh=128, ch=124, wa=114, hip=110, arm=(56, 46), leg=(60, 50), neck=50, hand=1.04),
+    cloth=dict(top='#7b3a2d', top_sh='#53241c', top_hi='#9a5242', check='#2b1a16', check_hi='#c98a62', tee='#d9d2c4',
+               trousers='#3b4a66', trousers_sh='#263147', shoes='#3a2c22', shoes_sh='#241b15'))
+CAST['you']['feet'] = 'socks'                          # 3 AM at home: grey socks (the delivery photo shows them)
+CAST['you']['cloth'].update(socks='#8d8f96', socks_sh='#5f6169')
+
 # ====================================================================================================== pose
 POSE_DEFAULTS = dict(
     # placement / body (body units: 1000 = feet to crown)
@@ -259,8 +310,12 @@ POSE_DEFAULTS = dict(
     # v2.1: idle-life scale (creepy drift / re-settles / weight shifts / micro twitches), phone-to-ear arm weights,
     # per-hand size (fist punch toward the lens)
     life=1.0, hl_ear=0.0, hr_ear=0.0, hl_scale=1.0, hr_scale=1.0, specs=1.0,
+    # delivery film: eyeshine (animal eyes on the doorbell camera), sitting on the floor, tiptoe, a too-long arm
+    # (stretch 0.5 = 1.5x arm length), hand tremor (shake), tablet screen ink (signature progress) and camera flash
+    eyeshine=0.0, floor=0.0, tiptoe=0.0, hl_stretch=0.0, hr_stretch=0.0, hl_shake=0.0, hr_shake=0.0,
+    tablet_ink=1.0, tablet_flash=0.0,
 )
-POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None)
+POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None, tablet_screen='sign')
 
 
 class Pose:
@@ -598,6 +653,34 @@ class HeadMap:
         o = np.argsort(X)
         return X[o], Y[o]
 
+    def arc_phi(self, yfun, n=96):
+        """Like arc(), but the visible run of the curve in phi order (no sorting by x), so steep hairlines (bangs that
+        drop into side curtains) stay a clean, non-folding edge. Returns X, Y left to right."""
+        phis = np.linspace(-PI, PI, n, endpoint=False)
+        y0 = yfun(phis)
+        w = np.maximum(self.W(np.clip(y0, -120, 120)), 1.0)
+        c = np.cos(phis); s = np.sin(phis)
+        d = np.where(c > 0, self.DF, self.DB)
+        px = w * s; pz = d * w * c
+        y1 = self.J(y0) * self.cp + pz * self.spi
+        z1 = pz * self.cp - y0 * self.spi
+        X = px * self.ct + z1 * self.st
+        vis = (-s * d * self.st + c * self.ct) > -0.02
+        if not vis.any(): return np.array([]), np.array([])
+        if vis.all(): i0 = int(np.argmin(X))
+        else:
+            i0 = int(np.argmax(vis & ~np.roll(vis, 1)))        # start of a visible run
+        idx = (np.arange(n) + i0) % n
+        idx = idx[vis[idx]]
+        run = [idx[0]]
+        for j in idx[1:]:
+            if (j - run[-1]) % n != 1: break
+            run.append(j)
+        run = np.array(run)
+        X, Y = X[run], y1[run]
+        if X[0] > X[-1]: X, Y = X[::-1], Y[::-1]
+        return X, Y
+
 
 # ====================================================================================================== head drawing
 def _skin_cols(sp, P, light):
@@ -710,6 +793,12 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
         cl = max(pr * 0.3, 1.6)
         c.fill(oval(px - pr * 0.38 * fs, py - pr * 0.38, cl * fs, cl), '#f4f4f2')
         if det >= 2: c.fill(oval(px + pr * 0.35 * fs, py + pr * 0.3, cl * 0.45 * fs, cl * 0.45), '#f4f4f2', 200)
+        shine = clamp(getattr(P, 'eyeshine', 0.0))
+        if shine > 0.01:                         # delivery: eyeshine, the pupils catch the porch light like an animal's
+            sr = lerp(pr, r * 0.66, ease_out_cubic(shine))
+            c.fill(white, '#f6fffb', 120 * shine)
+            c.radial(oval(px, py, sr * fs, sr), px, py, sr, [(0, '#ffffff', 255), (0.5, '#f4fffb', 255), (0.82, '#c6f2e4', 245),
+                                                             (1, '#86d6c0', 220)], sy=1.0, a=shine)
         # upper lid
         lid_y = Y - r + (1.0 - min(op, 1.0)) * 2.0 * r
         if op < 0.99:
@@ -738,7 +827,7 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     # lower lash line
     if det >= 1:
         c.line(smooth([(X - rx * 0.7, Y + r * 0.86), (X, Y + r * 1.06), (X + rx * 0.7, Y + r * 0.86)], False), c.lw * 0.4, sp['skin_dp'], 120)
-    return (X, Y, r, fs)
+    return (X, Y, r, fs, px, py, op)
 
 
 def _brow(c, hm, sp, P, side, eyeinfo):
@@ -793,7 +882,7 @@ def _mouth_geom(sp, P, t):
     """Mouth contour in front coords: returns (upper pts, lower pts, corner y, half width, open height)."""
     my = sp['mouth_y']
     o, wd, rd, sm, g = clamp(P.m_open), P.m_wide, clamp(P.m_round), clamp(P.smile, -1, 1), clamp(P.grin)
-    hw = sp['mouth_w'] * (1.0 + 0.32 * wd - 0.48 * rd + 0.12 * o) + 10.0 * max(sm, 0) + 54.0 * g
+    hw = sp['mouth_w'] * (1.0 + 0.32 * wd - 0.48 * rd + 0.12 * o) + 10.0 * max(sm, 0) + 54.0 * g * sp.get('grin_k', 1.0)
     hw = max(hw, 8.0)
     cy = my - 12.0 * sm - 15.0 * g - 3 * o * (1 - rd)
     side_lift = 9.0 * P.m_side
@@ -908,7 +997,7 @@ def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
     x0, x1 = float(X[0]), float(X[-1])
     span = x1 - x0
     if span < 4: return
-    n = int(clamp(round(abs(span) / (13.0 if det >= 1 else 18.0)), 4, 16))
+    n = int(clamp(round(abs(span) / (sp.get('tooth_w', 13.0) if det >= 1 else 18.0)), 4, 20))
     if n % 2: n += 1
     edges = np.linspace(0, 1, n + 1)
     # front teeth wider: warp positions toward the centre
@@ -1107,20 +1196,31 @@ def _hair_region(c, hm, sp, P, det, sil, t):
             return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.2, PI], [-60, -24, -14, 26, 46])) + \
                 (1 - np.interp(a, [0, 1.0, 1.3], [0, 0, 1])) * fr
         grow = 9.0
+    elif style == 'kid':                                         # Lily: bob with straight bangs, hair framing the face
+        def yf(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.62, 0.86, 1.02, 1.2, PI], [-46, -50, -40, 30, 112, 112])
+        grow = 13.0
     else:  # curly
         def yf(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 0.9, 1.25, 1.55, 2.0, PI], [-58, -54, -20, -6, 30, 44])
         grow = 22.0
-    X, Y = hm.arc(yf, 44)
+    if style == 'kid':
+        X, Y = hm.arc_phi(yf, 120)
+    else:
+        X, Y = hm.arc(yf, 44)
     if len(X) < 3: return
-    order = np.argsort(X)
-    X, Y = X[order], Y[order]
+    if style != 'kid':
+        order = np.argsort(X)
+        X, Y = X[order], Y[order]
     top = -400.0
     region = poly([(float(X[0]) - 300, top)] + [(float(x), float(y)) for x, y in zip(X, Y)] + [(float(X[-1]) + 300, top)], True)
     vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.4, y_bot=70)
     if style == 'curly':
         vol = _cloud(hm, grow, 14, 11.0)
+    elif style == 'kid':
+        vol = union(hm.silhouette(grow=grow, y_top=-120 - grow * 0.5, y_bot=40), _kid_hang(hm, grow, 112.0))
     elif style == 'messy':
         vol = _bumpy(hm, grow, 9, 9.0, -128.0, 40.0, spiky=True, seed=part)
     hair = inter(union(vol, sil), region)
@@ -1133,7 +1233,25 @@ def _hair_region(c, hm, sp, P, det, sil, t):
                 c.line(smooth([(x_, -112), (x_ + 10 * part + 6, -92), (x_ + 4 + 8 * part, -70)], False), c.lw * 0.3, hsh, 150)
         if style == 'curly':
             _curls(c, hm, det, hc, hsh, hhi)
+        if style == 'kid' and det >= 1:
+            for k in range(-4, 5):
+                x_ = k * 21.0
+                c.line(smooth([(x_ * 0.6, -118), (x_ * 0.9, -86), (x_, -52)], False), c.lw * 0.3, hsh, 150)
+            for s_ in (-1, 1):
+                xl_, xr_ = hm.extent(float(hm.W(20.0)) + grow * 0.6)
+                xe = xr_ if s_ > 0 else xl_
+                c.line(smooth([(xe - s_ * 6, -10), (xe - s_ * 4, 40), (xe - s_ * 8, 104)], False), c.lw * 0.3, hsh, 150)
     c.line(hair, c.lw)
+    if style == 'kid' and hm.map1(0, -60)[2] > 0.0:              # a yellow star hair clip on her left
+        cx_, cy_, cv_ = hm.map1(46, -58, 16)
+        if cv_ > 0.05:
+            st_ = []
+            for k in range(10):
+                a_ = -PI / 2 + k * PI / 5; rr = 13 if k % 2 == 0 else 6
+                st_.append((cx_ + math.cos(a_) * rr * hm.sx(46, -58, 16), cy_ + math.sin(a_) * rr))
+            star = poly(st_)
+            c.fill(star, '#f0c843'); c.line(star, c.lw * 0.55)
+            if det >= 1: c.fill(oval(cx_ - 2, cy_ - 3, 2.4), '#fff4c4')
     if style == 'bun':
         pass
 
@@ -1290,6 +1408,124 @@ def _pearls(c, cx, cy, w, n, det, colr):
         if det >= 1: c.fill(oval(x - 2, y - 2, 2.2), '#ffffff', 220)
 
 
+def _kid_hang(hm, grow, y_bot):
+    """Straight hair hanging beside the face / behind the jaw down to y_bot (head units): a slab between the head's
+    extents at cheek height, slightly flared, with a rounded, uneven hem."""
+    w0 = float(hm.W(10.0)) + grow
+    xl, xr = hm.extent(w0)
+    xl2, xr2 = hm.extent(w0 + 8.0)
+    pts = [(xl, -30.0), (xr, -30.0), (xr2 + 2, y_bot - 14), (xr2 - 6, y_bot), ((xl2 + xr2) * 0.5 + 10, y_bot + 3),
+           ((xl2 + xr2) * 0.5 - 12, y_bot - 1), (xl2 + 6, y_bot + 2), (xl2 - 2, y_bot - 12)]
+    return smooth(pts, True, 0.6)
+
+
+def _kid_hair_back(c, hm, sp, P, det, t):
+    """Back mass of Lily's bob (behind the face and neck, over the shoulders), drawn before the skull."""
+    hc = sp['hair_c']; hsh = mix(hc, '#000000', 0.42)
+    sw = 4.0 * P.sec_x
+    back = union(hm.silhouette(grow=13.0, y_top=-126, y_bot=30), _kid_hang(hm, 15.0, 118.0 + 4.0 * abs(P.sec_x)))
+    if sw: back = moved_path(back, sw * 0.5, 0)
+    c.fill(back, hsh)
+    if det >= 1:
+        c.radial(back, 0, 40, 150, [(0, '#000000', 0), (0.7, '#000000', 40), (1, '#000000', 110)], sy=1.2)
+    c.line(back, c.lw)
+
+
+def _moustache(c, hm, sp, P, det):
+    """Dad's moustache: a full, soft brush above the upper lip that rides up with a smile."""
+    my = sp['mouth_y'] - 6.0 * clamp(P.smile, 0, 1) - 4.0 * clamp(P.grin)
+    w = sp['mouth_w'] + 14.0 + 8.0 * clamp(P.smile, 0, 1)
+    pts = [(-w, my + 2), (-w * 0.78, my - 11), (-w * 0.4, my - 18), (0, my - 15), (w * 0.4, my - 18), (w * 0.78, my - 11), (w, my + 2),
+           (w * 0.62, my - 4), (w * 0.3, my - 7), (0, my - 5), (-w * 0.3, my - 7), (-w * 0.62, my - 4)]
+    X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 12.0)
+    if V.mean() < 0.1: return
+    m = _pts_path(X, Y, True, 0.75)
+    col_ = sp['moustache']
+    c.fill(m, col_)
+    if det >= 1:
+        hs = []
+        for k in range(-5, 6):
+            x0 = k * w * 0.17
+            a, b, _ = hm.map1(x0, my - 13 + abs(k) * 1.2, 12.0)
+            a2, b2, _ = hm.map1(x0 * 1.12, my - 4 + abs(k) * 0.6, 12.0)
+            hs.append(poly([(a, b), (a2, b2)], False))
+        c.line(_multi(hs), c.lw * 0.3, mix(col_, '#000000', 0.45), 170)
+    c.line(m, c.lw * 0.6)
+
+
+def _cap_courier(c, hm, sp, P, det, cl, t, light=None):
+    """Nightline courier cap: a soft brown six-panel crown hugging the skull, a crescent-moon logo on the front panel and
+    a long curved bill that throws the eyes into shadow (their whites and any eyeshine read out of the dark)."""
+    brown, brown_sh = cl['cap'], cl['cap_sh']
+    grow = 6.0
+    def yf(ph):
+        a = np.abs(ph)
+        return np.interp(a, [0, 0.8, 1.4, 2.2, PI], [-63.0, -61.0, -52.0, -44.0, -42.0])
+    X, Y = hm.arc(yf, 40)
+    if len(X) < 3: return
+    region = poly([(float(X[0]) - 300, -420.0)] + [(float(x), float(y)) for x, y in zip(X, Y)] + [(float(X[-1]) + 300, -420.0)], True)
+    dome = inter(hm.silhouette(grow=grow, y_top=-132, y_bot=-20), region)
+    # bill geometry (in front of the forehead)
+    phis = np.linspace(-1.2, 1.2, 15)
+    vy0 = -62.0
+    w = float(hm.W(vy0)) + grow
+    vx_in = w * np.sin(phis)
+    dz_out = 58.0 * np.cos(phis) ** 1.2 + 3
+    X_in, Y_in, V_in = hm.map(vx_in, np.full_like(phis, vy0), grow * np.cos(phis))
+    X_out, Y_out, _ = hm.map(vx_in * 1.14, np.full_like(phis, vy0 + 4) + 27 * np.cos(phis) ** 0.9, grow + dz_out)
+    vis_v = float(V_in[len(V_in) // 2])
+    bill = _pts_path(np.concatenate([X_in, X_out[::-1]]), np.concatenate([Y_in, Y_out[::-1]]), True, 0.7)
+    bk = (light or {}).get('brim', 1.0) * (1.0 - 0.45 * clamp(P.approach))
+    if vis_v > -0.2 and bk > 0.01:                                # deep shadow of the bill over the eyes (light['brim'])
+        sy_ = float(np.max(Y_out)) - 2
+        c.grad(inter(hm.silhouette(), rect(-140, sy_ - 40, 280, 130)), 0, sy_ - 6, 0, sy_ + 58 + 30 * max(0.0, P.h_nod),
+               [(0, '#080605', min(255, 215 * bk)), (0.45, '#080605', min(255, 140 * bk)), (1, '#080605', 0)])
+    if vis_v <= 0:
+        bb_ = minus(bill, hm.silhouette(grow=grow))
+        c.fill(bb_, cl['bill']); c.line(bb_, c.lw)
+    c.fill(dome, brown)
+    c.radial(dome, -30 + hm.st * 30, -128, 150, [(0, mix(brown, '#ffffff', 0.18), 255), (0.5, brown, 255), (1, brown_sh, 255)], sy=0.8)
+    if det >= 1:
+        c.texture(dome, 'fabric', 0.1, 0.5)
+        seams = []
+        for ph in (-1.05, -0.35, 0.35, 1.05):
+            ys = np.linspace(-128.0, float(yf(np.array([ph]))[0]) - 2, 6)
+            ws_ = hm.W(np.clip(ys, -119.9, 119.9)) + grow
+            px_ = ws_ * math.sin(ph); pz_ = np.where(math.cos(ph) > 0, hm.DF, hm.DB) * ws_ * math.cos(ph)
+            y1 = hm.J(ys) * hm.cp + pz_ * hm.spi
+            z1 = pz_ * hm.cp - ys * hm.spi
+            Xs = px_ * hm.ct + z1 * hm.st
+            vis = (-math.sin(ph) * hm.st + math.cos(ph) * hm.ct)
+            if vis > 0.05: seams.append(_pts_path(Xs, y1, False))
+        if seams: c.line(_multi(seams), c.lw * 0.35, brown_sh, 200)
+        bx_, by_, bv_ = hm.map1(0, -128, grow)
+        if bv_ > -0.3: c.shape(oval(bx_, by_ + 2, 7, 5), brown, c.lw * 0.4)
+    # sweatband edge
+    c.line(_pts_path(X, Y, False), c.lw * 0.5, brown_sh, 220)
+    c.line(dome, c.lw)
+    # logo on the front panel: crescent moon in a ring
+    lx, ly, lv = hm.map1(0, -92, grow + 2)
+    if lv > 0.15:
+        fs = hm.sx(0, -92, grow + 2)
+        lc = c.sub(lx, ly, 0, fs, 1.0)
+        lc.fill(oval(0, 0, 15), cl['patch']); lc.line(oval(0, 0, 15), c.lw * 0.6, cl['patch_rim'])
+        moon = minus(oval(-1, 0, 9), oval(4, -3, 8))
+        lc.fill(moon, cl['moon'])
+        if det >= 1: lc.fill(oval(6, 5, 1.6), cl['moon'])
+    if vis_v > 0:
+        c.fill(bill, '#24180f')                                   # the underside, in its own shadow
+        with c.clip(bill):
+            hx = float(X_out[len(X_out) // 2])
+            c.grad(bill, 0, float(Y_in.mean()), 0, float(Y_out.max()), [(0, '#140d08', 255), (0.6, '#33241a', 255), (1, '#5a4130', 255)])
+            if det >= 1:
+                for f in (0.35, 0.62):                            # stitch rows on the brim
+                    c.line(_pts_path(X_in * (1 - f) + X_out * f, Y_in * (1 - f) + Y_out * f, False), c.lw * 0.3, '#4a3424', 170)
+        # the lit front rim of the brim
+        c.line(_pts_path(X_out, Y_out, False), c.lw * 1.6, cl['bill'])
+        c.line(_pts_path(X_out, Y_out - 1.5, False), c.lw * 0.5, mix(cl['bill'], '#ffffff', 0.25), 200)
+        c.line(bill, c.lw)
+
+
 def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     """Head in head units (crown -120 .. chin +120) on Ctx c (origin at the head centre). yaw/pitch in radians."""
     sp = sp or CAST[who]
@@ -1305,8 +1541,10 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             bun = oval(bx, by - 18, 34, 30)
             c.shape(bun, sp['hair_c'])
             if det >= 1: c.line(smooth([(bx - 20, by - 26), (bx, by - 36), (bx + 22, by - 22)], False), c.lw * 0.4, mix(sp['hair_c'], '#000000', 0.4))
+    if sp['hair'] == 'kid':
+        _kid_hair_back(c, hm, sp, P, det, t)
     for side in (-1, 1):
-        if -side * hm.st < 0.25: _ear(c, hm, sp, side, skin, sh, det)
+        if -side * hm.st < 0.25 and sp['hair'] != 'kid': _ear(c, hm, sp, side, skin, sh, det)
     # skull
     c.fill(sil, skin)
     # skin shading: every layer is drawn on a path inside the silhouette (no clip masks: they are slow at 2560)
@@ -1319,8 +1557,20 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         for side in (-1, 1):
             bx_, by_, bv_ = hm.map1(side * 56, sp['eye_y'] + 36, 2)
             if bv_ > 0.1: c.glow(bx_, by_, 24 * hm.sx(side * 56, sp['eye_y'] + 36), 13, sp['blush'], 90 + 80 * P.blush)
+    if sp.get('gaunt') and face_v > -0.3:                      # delivery driver: hollow cheeks under high cheekbones
+        g_ = sp['gaunt']
+        for side in (-1, 1):
+            hx_, hy_, hv_ = hm.map1(side * 66, 58, 2)
+            if hv_ > 0.05:
+                c.glow(hx_ + side * 4, hy_, 20 * hm.sx(side * 66, 58), 30, sh, 120 * g_)
+                bx_, by_, _ = hm.map1(side * 60, 22, 2)
+                c.glow(bx_, by_, 22 * hm.sx(side * 60, 22), 8, mix(skin, '#ffffff', 0.3), 60 * g_)
     _stubble(c, hm, sp, det, sil)
     c.radial(inter(sil, rect(-150, 70, 300, 120)), hm.st * 30, 128, 90, [(0, dp, 90), (0.5, dp, 45), (1, dp, 0)], sy=22 / 90.0)
+    if light and light.get('under'):                         # screen / tablet glow from below (uplight)
+        ua = light.get('under_a', 120)
+        c.grad(sil, 0, -125, 0, 40, [(0, '#07080d', 0.55 * ua), (1, '#07080d', 0)])
+        c.radial(sil, hm.st * 20, 150, 210, [(0, light['under'], ua), (0.55, light['under'], 0.45 * ua), (1, light['under'], 0)], sy=0.8)
     if light and light.get('rim'):
         rs = light.get('side', 1)
         c.fill(_crescent(sil, -rs * 7, 3), light['rim'], light.get('rim_a', 70))
@@ -1340,6 +1590,7 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     c.line(sil, c.lw)
     if face_v > -0.35:
         _nose(c, hm, sp, P, det, skin, sh)
+        if sp.get('moustache'): _moustache(c, hm, sp, P, det)
     if sp['hair']:
         if sp['hat'] != 'cap' or True:
             _hair_region(c, hm, sp, P, det, sil, t)
@@ -1352,6 +1603,18 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         _glasses(c, hm, sp, P, det, eyes, t)
     if sp['hat'] == 'cap':
         _cap(c, hm, sp, P, det, cl, t)
+    elif sp['hat'] == 'courier':
+        _cap_courier(c, hm, sp, P, det, cl, t, light)
+    shine = clamp(getattr(P, 'eyeshine', 0.0))
+    if shine > 0.01:                     # eyeshine sits over the brim shadow and blooms past the lids
+        for side, info in eyes.items():
+            if info is None or len(info) < 7 or info[6] < 0.2: continue
+            X_, Y_, r_, fs_, px_, py_, op_ = info
+            sr = lerp(r_ * 0.4 * sp['pupil'] * P.pupil, r_ * 0.66, ease_out_cubic(shine))
+            c.glow(px_, py_, r_ * 2.9 * fs_, r_ * 2.6, '#e6fff4', 150 * shine)
+            c.radial(oval(px_, py_, sr * fs_, sr), px_, py_, sr, [(0, '#ffffff', 255), (0.55, '#f4fffb', 255), (0.85, '#c6f2e4', 240),
+                                                                   (1, '#86d6c0', 220)], sy=1.0, a=shine)
+            c.glow(px_, py_, r_ * 1.15 * fs_, r_ * 1.05, '#ffffff', 210 * shine)
     return hm
 
 
@@ -1406,7 +1669,9 @@ class Body:
         self.L = P.lean * 0.62 + P.hunch * 0.22
         self.cL, self.sL = math.cos(self.L), math.sin(self.L)
         self.sit = clamp(P.sit)
-        self.hip_drop = 170.0 * self.sit + P.crouch * 120
+        self.floor = clamp(getattr(P, 'floor', 0.0))
+        self.tip = clamp(getattr(P, 'tiptoe', 0.0))
+        self.hip_drop = 170.0 * self.sit * (1.0 - self.floor) + P.crouch * 120 + 330.0 * self.floor - 34.0 * self.tip
         self.y0c = -620.0
         self.tilt = math.radians(P.tilt)
         self.ctl, self.stl = math.cos(self.tilt), math.sin(self.tilt)
@@ -1693,8 +1958,10 @@ def moved_path(p, dx, dy):
     q = skia.Path(p); q.offset(dx, dy); return q
 
 
-def _prop(c, name, det, t=0.0):
+def _prop(c, name, det, t=0.0, P=None):
     """Props in prop coords (centred, about 60-90 units tall), facing the camera."""
+    if name in ('tablet', 'tablet_back', 'stylus', 'keys_dad'):
+        _prop_delivery(c, name, det, t, P); return
     if name == 'card':
         r = rrect(-46, -30, 92, 60, 6)
         c.shape(r, '#e9e6dc'); c.fill(rrect(-46, -30, 92, 14, 6), '#3f5f9c'); c.fill(rect(-46, -22, 92, 6), '#3f5f9c')
@@ -1774,10 +2041,235 @@ def _prop(c, name, det, t=0.0):
         c.shape(rrect(-4, -54, 8, 16, 3), '#17181c', c.lw * 0.6)
 
 
-def draw_prop(pen, name, x, y, size=80.0, angle=0.0, detail=2, t=0.0):
-    """A prop facing the camera, centred at (x, y); size = its height in design px (default props are ~80 units)."""
+def draw_prop(pen, name, x, y, size=80.0, angle=0.0, detail=2, t=0.0, pose=None):
+    """A prop facing the camera, centred at (x, y); size = its height in design px (default props are ~80 units).
+    Delivery props: 'tablet' (screen to the viewer; pose.tablet_screen / tablet_ink / tablet_flash drive the screen),
+    'tablet_back', 'stylus', 'keys_dad' (dad's ring of keys on the bead keychain)."""
     c = Ctx(pen, skia.Matrix(), _lw_for(size * 2.2) * 0.8).sub(x, y, angle, size / 80.0)
-    _prop(c, name, detail, t)
+    _prop(c, name, detail, t, _as_pose(pose) if pose is not None else None)
+
+
+# ---------------------------------------------------------------------------------------------- delivery props
+# Handwriting as stroke lists in a unit box (y down). 'J' = the first letter of your name in your own cursive hand (the
+# stroke stops halfway); LILY = a child's print signature 'Lily.' (wobbly, uneven baseline).
+HAND_STROKES = {
+    'J': [[(0.06, 0.30), (0.20, 0.12), (0.45, 0.04), (0.72, 0.06), (0.86, 0.13), (0.80, 0.20), (0.66, 0.24), (0.60, 0.40),
+           (0.55, 0.62), (0.47, 0.84), (0.34, 0.97), (0.20, 0.95), (0.16, 0.84), (0.27, 0.72), (0.48, 0.62), (0.80, 0.55),
+           (1.02, 0.56)]],
+    'LILY': [[(0.02, 0.05), (0.04, 0.55), (0.05, 0.96), (0.38, 0.97)],
+             [(0.56, 0.48), (0.57, 0.97)], [(0.565, 0.28), (0.575, 0.30)],
+             [(0.80, 0.02), (0.79, 0.50), (0.81, 0.98)],
+             [(1.00, 0.46), (1.08, 0.70), (1.17, 0.88)], [(1.34, 0.45), (1.22, 0.80), (1.10, 1.18), (1.02, 1.30)],
+             [(1.50, 0.95), (1.515, 0.97)]],
+}
+
+
+def _strokes_path(strokes, x, y, sx, sy, ink=1.0, wobble=0.0, seed=0, t=0.0):
+    """Path of the handwriting strokes scaled into (x, y, sx, sy), cut at `ink` (0..1 of the total length).
+    Returns (path, end point or None)."""
+    segs = []
+    for si, st in enumerate(strokes):
+        pts = []
+        for k, (u, v) in enumerate(st):
+            if wobble:
+                u += wobble * 0.025 * noise1(k * 0.7 + si * 3.1, seed + 1)
+                v += wobble * 0.035 * noise1(k * 0.9 + si * 2.3, seed + 2) + wobble * 0.04 * math.sin(si * 1.7)
+            pts.append((x + u * sx, y + v * sy))
+        segs.append(pts)
+    lens = [sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(p_, p_[1:])) + 2.0 for p_ in segs]
+    total = sum(lens) or 1.0
+    left = clamp(ink) * total
+    path = skia.Path(); end = None
+    for pts, L in zip(segs, lens):
+        if left <= 0: break
+        if left >= L:
+            path.addPath(smooth(pts, False, 0.7) if len(pts) > 2 else poly(pts, False)); end = pts[-1]; left -= L
+            continue
+        out = [pts[0]]; acc = 0.0
+        for a, b in zip(pts, pts[1:]):
+            d = math.hypot(b[0] - a[0], b[1] - a[1])
+            if acc + d >= left:
+                f = (left - acc) / max(d, 1e-6); out.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)); break
+            out.append(b); acc += d
+        if len(out) >= 2: path.addPath(smooth(out, False, 0.7) if len(out) > 2 else poly(out, False)); end = out[-1]
+        left = 0
+    return path, end
+
+
+def _tablet_screen(c, x0, y0, w, h, screen='sign', ink=1.0, t=0.0, det=2, ts='3:09 AM', sig='initial', flash=0.0,
+                   name='', glitch=0.0):
+    """The Nightline handheld's screen in local coords (x0, y0, w, h). screen: 'sign' (signature request: sig None empty,
+    'initial' your first letter cut off at ink 0..1, 'lily' the child's 'Lily.'), 'sent' (green 'RETURN COMPLETE'),
+    'camera' (viewfinder), 'off' (dark glass), 'glow' (plain lit screen: far / small)."""
+    scr = rrect(x0, y0, w, h, 3)
+    if screen == 'off':
+        c.fill(scr, '#0b0d12'); c.grad(scr, x0, y0, x0 + w, y0 + h, [(0, '#2a2f3c', 200), (0.45, '#0b0d12', 0), (1, '#0b0d12', 0)])
+        c.line(scr, c.lw * 0.5); return
+    if screen == 'glow' or det < 1:
+        c.fill(scr, '#dfe9f2'); c.radial(scr, x0 + w * 0.5, y0 + h * 0.4, max(w, h) * 0.7, [(0, '#ffffff', 255), (1, '#9fb4c8', 255)])
+        c.fill(rect(x0, y0, w, h * 0.14), '#1b2236'); c.line(scr, c.lw * 0.5); return
+    if screen == 'camera':
+        c.fill(scr, '#121519'); c.radial(scr, x0 + w / 2, y0 + h / 2, max(w, h) * 0.7, [(0, '#3a3f48', 255), (1, '#0b0c10', 255)])
+        L = min(w, h) * 0.12
+        for (cx_, cy_, dx, dy) in ((x0 + 4, y0 + 4, 1, 1), (x0 + w - 4, y0 + 4, -1, 1), (x0 + 4, y0 + h - 4, 1, -1), (x0 + w - 4, y0 + h - 4, -1, -1)):
+            c.line(poly([(cx_ + dx * L, cy_), (cx_, cy_), (cx_, cy_ + dy * L)], False), c.lw * 0.5, '#ffffff', 220)
+        c.fill(oval(x0 + w / 2, y0 + h - 9, 5), '#ffffff', 230)
+        if flash > 0: c.fill(scr, '#ffffff', 255 * flash)
+        c.line(scr, c.lw * 0.5); return
+    bg = '#eef1f4'
+    c.fill(scr, bg)
+    hb = h * 0.13
+    c.fill(rrect(x0, y0, w, hb, 3), '#1b2236'); c.fill(rect(x0, y0 + hb * 0.5, w, hb * 0.5), '#1b2236')
+    c.fill(minus(oval(x0 + hb * 0.55, y0 + hb * 0.5, hb * 0.3), oval(x0 + hb * 0.68, y0 + hb * 0.4, hb * 0.27)), '#e9cf7e')
+    if det >= 2:
+        text(c.cv, 'NIGHTLINE', *c.pt(x0 + w * 0.56, y0 + hb * 0.68), 900, hb * 0.42 * c.s, '#e9cf7e', 255, 0.5, 'center')
+        text(c.cv, 'SIGNATURE REQUIRED', *c.pt(x0 + w / 2, y0 + hb + h * 0.075), 900, h * 0.05 * c.s, '#1b2236', 255, 0.3, 'center')
+        text(c.cv, 'FROM: RETURN', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.14), 800, h * 0.04 * c.s, '#53607a', 255, 0.3, 'left')
+        text(c.cv, ('TO: ' + name) if name else 'TO:', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.195), 800, h * 0.04 * c.s, '#53607a', 255, 0.3, 'left')
+    else:
+        for k, ww in enumerate((0.7, 0.45, 0.35)):
+            c.fill(rect(x0 + w * (0.5 - ww / 2 if k == 0 else 0.08), y0 + hb + h * (0.05 + 0.065 * k), w * ww, h * 0.03), '#8a94a8')
+    # signature box
+    bx, by, bw, bh = x0 + w * 0.07, y0 + h * 0.42, w * 0.86, h * 0.36
+    box = rrect(bx, by, bw, bh, 2)
+    c.fill(box, '#ffffff'); c.line(box, c.lw * 0.35, '#9aa4b6')
+    c.line(poly([(bx + bw * 0.08, by + bh * 0.8), (bx + bw * 0.92, by + bh * 0.8)], False), c.lw * 0.35, '#7b869b')
+    c.line(_multi([poly([(bx + bw * 0.06, by + bh * 0.6), (bx + bw * 0.12, by + bh * 0.72)], False),
+                   poly([(bx + bw * 0.12, by + bh * 0.6), (bx + bw * 0.06, by + bh * 0.72)], False)]), c.lw * 0.4, '#7b869b')
+    if sig == 'initial':
+        pth, end = _strokes_path(HAND_STROKES['J'], bx + bw * 0.2, by + bh * 0.05, bw * 0.34, bh * 0.82, 0.5 * ink, 0.3, 11, t)
+        c.line(pth, max(1.4, c.lw * 0.55), '#1a2a6c')
+        if end is not None and ink >= 0.999:
+            c.fill(oval(end[0], end[1], max(1.6, c.lw * 0.45)), '#1a2a6c')          # the pen stopped here (a blot)
+    elif sig == 'lily':
+        pth, end = _strokes_path(HAND_STROKES['LILY'], bx + bw * 0.2, by + bh * 0.12, bw * 0.38, bh * 0.56, ink, 1.0, 23, t)
+        c.line(pth, max(1.6, c.lw * 0.65), '#1a2a6c')
+    # timestamp + glitch bar
+    if det >= 2 and ts:
+        text(c.cv, ts, *c.pt(x0 + w * 0.93, y0 + h * 0.93), 800, h * 0.045 * c.s, '#53607a', 255, 0.2, 'right')
+    if glitch > 0.01:
+        gy = y0 + h * (0.2 + 0.6 * ((t * 7.3) % 1.0))
+        c.fill(rect(x0, gy, w, h * 0.03), '#ff2a3a', 120 * glitch); c.fill(rect(x0 + 3, gy + h * 0.03, w, h * 0.012), '#2af0ff', 90 * glitch)
+    if screen == 'sent':
+        c.fill(rect(x0, by - h * 0.04, w, h * 0.16), '#2f9a5a', 235)
+        if det >= 2: text(c.cv, 'RETURN COMPLETE', *c.pt(x0 + w / 2, by + h * 0.065), 900, h * 0.05 * c.s, '#ffffff', 255, 0.3, 'center')
+    if flash > 0: c.fill(scr, '#ffffff', 255 * flash)
+    c.line(scr, c.lw * 0.5)
+
+
+def _tablet_body(c, det, P=None, t=0.0, back=False, screen=None, **kw):
+    """Rugged courier handheld in prop units: 64 wide x 104 tall, centred. Front: bumper corners, screen, a row of keys
+    and a red scanner window on the top edge; a stylus on a coiled tether. Back: hand strap and a NIGHTLINE sticker."""
+    body = rrect(-32, -52, 64, 104, 10)
+    c.fill(body, '#25272d')
+    c.grad(body, -32, 0, 32, 0, [(0, '#3d4048', 255), (0.35, '#25272d', 255), (1, '#121317', 255)])
+    for sx_ in (-1, 1):
+        for sy_ in (-1, 1):
+            c.fill(rrect(sx_ * 32 - (14 if sx_ > 0 else 0), sy_ * 52 - (14 if sy_ > 0 else 0), 14, 14, 6), '#3a3c43')
+    c.fill(rrect(-12, -56, 24, 6, 2), '#7a1418'); c.glow(0, -54, 14, 4, '#ff3a3a', 60)
+    if back:
+        c.line(body, c.lw * 0.8)
+        strap = rrect(-24, -22, 48, 46, 8)
+        c.fill(strap, '#15161a'); c.line(strap, c.lw * 0.5)
+        if det >= 1:
+            c.line(_multi([poly([(-18, -16 + k * 9), (18, -16 + k * 9)], False) for k in range(5)]), c.lw * 0.25, '#2c2e35', 200)
+            c.fill(rrect(-16, 30, 32, 12, 2), '#1b2236'); c.fill(minus(oval(-9, 36, 4), oval(-7, 34, 3.6)), '#e9cf7e')
+        return
+    scr_kind = screen or (getattr(P, 'tablet_screen', 'sign') if P is not None else 'sign')
+    ink = getattr(P, 'tablet_ink', 1.0) if P is not None else kw.get('ink', 1.0)
+    flash = getattr(P, 'tablet_flash', 0.0) if P is not None else kw.get('flash', 0.0)
+    sig = kw.get('sig', 'initial' if scr_kind == 'sign' else ('lily' if scr_kind in ('lily', 'sent') else None))
+    if scr_kind == 'lily': scr_kind = 'sign'
+    _tablet_screen(c, -26, -44, 52, 66, scr_kind, ink, t, det, kw.get('ts', '3:09 AM'), sig, flash, kw.get('name', ''), kw.get('glitch', 0.0))
+    if scr_kind not in ('off',):
+        c.glow(0, -10, 46, 52, '#cfe2ff', 40)
+    for k in range(4):
+        kx = -21 + k * 14
+        c.fill(rrect(kx - 5, 29, 10, 7, 2), '#3c3f47'); c.line(rrect(kx - 5, 29, 10, 7, 2), c.lw * 0.25)
+    c.fill(rrect(-8, 40, 16, 6, 2), '#2f6a3a')
+    c.line(body, c.lw * 0.8)
+    if det >= 1:                                                   # stylus tether coiling off the right edge
+        coil = [oval(32 + 3 + 2.5 * math.sin(k * 0.9 + t), 20 + k * 6, 3.2, 2.0) for k in range(7)]
+        c.line(_multi(coil), c.lw * 0.35, '#5a5d66', 230)
+
+
+def _keyring(c, det, t=0.0, rust=0.0, n=4, spread=1.0, beads=True, jangle=0.0):
+    """Dad's ring of keys on the keychain you made him in second grade (pony beads and three letter cubes D-A-D on a
+    cord, a lumpy clay star). Prop units: the ring centred at (0, 0), about 90 units across. rust 0..1 (the box at
+    sunrise: orange-brown keys, faded beads, frayed cord). jangle adds a decaying swing (after a drop)."""
+    rcol = mix('#b8bcc4', '#8a4a22', rust); rsh = mix('#6c7078', '#4a2410', rust)
+    c.line(oval(0, 0, 15), c.lw * 2.0, LINE); c.line(oval(0, 0, 15), c.lw * 1.1, rcol)
+    keys = [('#c9a95a', 46, -0.55), ('#b8bcc4', 54, -0.15), ('#9aa0a8', 40, 0.25), ('#c9a95a', 34, 0.62)][:n]
+    sw = jangle * math.sin(t * 17.0) * math.exp(-0)
+    for k, (kc, L, a0) in enumerate(keys):
+        a_ = a0 * spread + 0.25 * sw * (1 if k % 2 else -1)
+        kc = mix(kc, '#7a3a18', rust * (0.75 + 0.25 * hash01(k, 3)))
+        kk = c.sub(math.sin(a_) * 15, math.cos(a_) * 15, -math.degrees(a_))
+        head = rrect(-11, 0, 22, 20, 7)
+        blade = poly([(-4.5, 18), (4.5, 18), (4.5, 18 + L * 0.85), (0, 18 + L), (-4.5, 18 + L * 0.85)])
+        kp = union(head, blade)
+        kk.fill(kp, kc)
+        kk.fill(_crescent(kp, 3, 0), mix(kc, '#000000', 0.35), 140)
+        if det >= 1:
+            for j in range(3): kk.fill(rect(4.5, 26 + j * L * 0.2, 4, 4), kc)
+            kk.fill(oval(0, 7, 3.5), '#20160f')
+            if rust > 0.05:
+                for j in range(5):
+                    kk.fill(oval((hash01(j + 9 * k, 5) - 0.5) * 8, 20 + hash01(j + 9 * k, 6) * L * 0.8, 2.2 + 2 * hash01(j, 7)),
+                            '#5a2a10', 160 * rust)
+        kk.line(kp, c.lw * 0.6)
+    if beads:                                                     # the keychain: cord, beads, D-A-D cubes, clay star
+        cordc = mix('#3a7bd5', '#7d7466', rust * 0.8)
+        a_ = 2.6 + 0.3 * sw
+        cx_, cy_ = math.sin(a_) * 15, math.cos(a_) * 15
+        pts = [(cx_, cy_), (cx_ - 14, cy_ + 18), (cx_ - 20, cy_ + 44), (cx_ - 16, cy_ + 70)]
+        c.line(smooth(pts, False), c.lw * 1.2, LINE); c.line(smooth(pts, False), c.lw * 0.6, cordc)
+        bead_cols = ['#e5483d', '#f2c230', '#3fb26b', '#3a7bd5', '#b14fd0']
+        for k in range(6):
+            u = (k + 0.6) / 7.0
+            bx = cx_ - 14 * u - 6 * u * u; by = cy_ + 70 * u
+            if k in (1, 2, 3):
+                cube = rrect(bx - 7, by - 7, 14, 14, 2.5)
+                c.fill(cube, mix('#f3efe6', '#b8a98c', rust)); c.line(cube, c.lw * 0.45)
+                if det >= 2:
+                    text(c.cv, 'DAD'[k - 1], *c.pt(bx, by + 4.0), 900, 10.5 * c.s, mix('#1d1f26', '#5a4a3a', rust), 255, 0, 'center')
+            else:
+                bc = mix(bead_cols[k % 5], '#8a7a66', rust * 0.7)
+                c.fill(oval(bx, by, 6.5), bc); c.line(oval(bx, by, 6.5), c.lw * 0.4)
+                if det >= 1: c.fill(oval(bx - 2, by - 2, 1.8), '#ffffff', 170 * (1 - rust))
+        sx_, sy_ = pts[-1][0], pts[-1][1] + 12
+        st_ = []
+        for k in range(10):
+            a2 = -PI / 2 + k * PI / 5 + 0.2; rr = 14 if k % 2 == 0 else 7
+            st_.append((sx_ + math.cos(a2) * rr * (1 + 0.12 * hash01(k, 8)), sy_ + math.sin(a2) * rr))
+        star = smooth(st_, True, 0.35)
+        c.fill(star, mix('#f08a3c', '#8a6a4a', rust)); c.line(star, c.lw * 0.6)
+        if det >= 1: c.fill(oval(sx_ - 3, sy_ - 2, 2.2), '#1d1f26', 200)
+
+
+def _prop_delivery(c, name, det, t=0.0, P=None):
+    if name == 'tablet': _tablet_body(c, det, P, t)
+    elif name == 'tablet_back': _tablet_body(c, det, P, t, back=True)
+    elif name == 'stylus':
+        c.shape(rrect(-4, -40, 8, 80, 3), '#2a2c33', c.lw * 0.6); c.fill(poly([(-4, 40), (4, 40), (0, 50)]), '#8a8f99')
+    elif name == 'keys_dad': _keyring(c.sub(0, -30, 0, 0.8), det, t)
+
+
+def draw_tablet(pen, cx, cy, size, screen='sign', sig=None, ink=1.0, t=0.0, ts='3:09 AM', flash=0.0, name='', glitch=0.0,
+                back=False, angle=0.0, detail=2):
+    """The Nightline handheld at any scale (insert: 'the tablet fills the frame'). size = device height in design px,
+    centred at (cx, cy). screen 'sign' | 'sent' | 'camera' | 'off' | 'glow'; sig None (empty line) | 'initial' (your first
+    letter, stroke stopping halfway: ink 0..1 animates the pen, the blot appears at 1) | 'lily' ('Lily.' in a child's
+    hand); ts = timestamp text (flicker it yourself: '3:09 AM' / '3:08 AM'); glitch 0..1 adds a torn scanline."""
+    c = Ctx(pen, skia.Matrix(), _lw_for(size * 1.4) * 0.85).sub(cx, cy, angle, size / 104.0)
+    if sig is None and screen == 'sign': sig = 'none'
+    _tablet_body(c, detail, None, t, back=back, screen=screen, sig=sig, ink=ink, ts=ts, flash=flash, name=name, glitch=glitch)
+
+
+def draw_keyring(pen, x, y, size, t=0.0, rust=0.0, angle=0.0, jangle=0.0, detail=2):
+    """Dad's keys on the second-grade bead keychain. size = overall height (ring to star) in design px; (x, y) = the ring."""
+    c = Ctx(pen, skia.Matrix(), _lw_for(size * 2.4) * 0.8).sub(x, y, angle, size / 110.0)
+    _keyring(c, detail, t, rust, jangle=jangle)
 
 
 # ---------------------------------------------------------------------------------------------- outfits
@@ -1787,6 +2279,12 @@ def _torso_rows(sp, B):
     ws = [b['neck'] + 16, b['sh'] * 0.84, b['sh'], b['ch'] * k, b['ch'] * 0.97 * k, b['wa'], b['hip'] * 0.98, b['hip']]
     if o == 'hoodie':
         ws = [b['neck'] + 22, b['sh'] * 0.86, b['sh'], b['ch'] * k, b['ch'] * k, b['wa'] + 6, b['hip'] + 6, b['hip'] + 4]
+    elif o == 'robe':                                     # thick terry: fuller chest and waist, belt cinch
+        ws = [b['neck'] + 24, b['sh'] * 0.9, b['sh'] + 4, b['ch'] * k + 6, b['ch'] * k + 4, b['wa'] + 2, b['hip'] + 8, b['hip'] + 10]
+    elif o == 'pajamas':                                  # loose, boxy kid's top
+        ws = [b['neck'] + 14, b['sh'] * 0.88, b['sh'] + 2, b['ch'] * k + 4, b['ch'] * k + 6, b['wa'] + 8, b['hip'] + 8, b['hip'] + 6]
+    elif o == 'flannel':
+        ws = [b['neck'] + 18, b['sh'] * 0.86, b['sh'], b['ch'] * k + 2, b['ch'] * k, b['wa'] + 4, b['hip'] + 2, b['hip']]
     ds = [w * f for w, f in zip(ws, [0.55, 0.52, 0.5, 0.56, 0.6, 0.6, 0.62, 0.64])]
     return ys, ws, ds
 
@@ -2072,12 +2570,232 @@ def _cardigan_front(c, sp, B, rows, P, det, t):
         if v > -0.2: c.line(poly(hem, False), lw * 0.4, LINE, 200)
 
 
+# ---------------------------------------------------------------------------------------------- delivery outfits
+def _courier_front(c, sp, B, rows, P, det, t):
+    """Nightline work shirt: pointed collar open at the throat (dark undershirt), button placket, two flap pockets, the
+    crescent-moon NIGHTLINE patch on his left chest and a cream name tag 'NO. 307' on the right (3:07)."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    ch = b['ch']; yS, yC, yB = B.y_sh, B.y_ch, B.y_belt
+    # undershirt in the open collar
+    vn, v = _surf_poly(B, rows, [(-22, yS - 26), (22, yS - 26), (0, yS + 22)], dz=3)
+    if v > 0.0: c.fill(poly(vn), '#2a2420'); c.line(poly(vn), lw * 0.4)
+    pts, v = _surf_poly(B, rows, [(0, yS + 22), (0, yB - 16)])
+    if v > 0.05:
+        c.line(poly(pts, False), lw * 0.5, mix(cl['shirt_sh'], '#000000', 0.4), 220)
+        for k in range(4):
+            X, Y, vv, s_ = B.surf(4, yC + 34 + k * 62, 2, False, rows)
+            if vv > 0.1: c.fill(oval(X, Y, 3.6 * s_), '#2a1d14'); c.fill(oval(X - 1, Y - 1, 1.3 * s_), '#9a7a5e')
+    for side in (-1, 1):
+        x0, x1 = side * 26, side * (ch * 0.72)
+        y0, y1 = yC - 40, yC + 36
+        pk, v = _surf_poly(B, rows, [(x0, y0 + 14), (x1, y0 + 14), (x1, y1), ((x0 + x1) / 2, y1 + 5), (x0, y1)])
+        if v > 0.05:
+            pp = poly(pk); c.fill(pp, cl['shirt_sh'], 80); c.line(pp, lw * 0.5, '#1e140c')
+            fl, _ = _surf_poly(B, rows, [(x0 - side * 2, y0), (x1 + side * 2, y0), (x1 + side * 2, y0 + 16), (x0 - side * 2, y0 + 16)])
+            c.fill(poly(fl), cl['shirt']); c.line(poly(fl), lw * 0.55, '#1e140c')
+            if det >= 1 and side < 0:                         # a pen clipped in his right pocket
+                X, Y, vv, s_ = B.surf(x0 + side * 14, y0 + 2, 4, False, rows)
+                c.fill(rrect(X - 3 * s_, Y - 26 * s_, 6 * s_, 30 * s_, 2 * s_), '#14161b'); c.line(rrect(X - 3 * s_, Y - 26 * s_, 6 * s_, 30 * s_, 2 * s_), lw * 0.35)
+                c.fill(rect(X + 1 * s_, Y - 24 * s_, 2 * s_, 16 * s_), '#b9bcc4')
+    for side in (-1, 1):
+        col_, v = _surf_poly(B, rows, [(side * 3, yS - 24), (side * (b['neck'] + 14), yS - 34), (side * (b['neck'] + 10), yS - 10), (side * 40, yS + 26)], dz=6)
+        if v > -0.2: cp = poly(col_); c.fill(cp, cl['shirt']); c.line(cp, lw * 0.6)
+    # NIGHTLINE patch (character's left = +x): navy, gold rim, crescent moon, lettering on close-ups
+    X, Y, v, s_ = B.surf(ch * 0.47, yC - 70, 7, False, rows)
+    if v > 0.1:
+        pc = c.sub(X, Y, 0, s_)
+        pat = rrect(-34, -15, 68, 30, 9)
+        pc.fill(pat, cl['patch']); pc.line(pat, lw * 1.0, cl['patch_rim']); pc.line(pat, lw * 0.35)
+        pc.fill(minus(oval(-21, 0, 10), oval(-17, -4, 9)), cl['moon'])
+        if det >= 2:
+            c.cv.save(); m = skia.Matrix(); m.preConcat(pc.M); c.cv.concat(m)
+            text(c.cv, 'NIGHTLINE', 8, 4, 900, 9.5, cl['moon'], 255, 0.6, 'center'); c.cv.restore()
+        elif det >= 1:
+            pc.fill(rect(-6, -2, 32, 4), cl['moon'], 200)
+    X, Y, v, s_ = B.surf(-ch * 0.47, yC - 68, 6, False, rows)
+    if v > 0.1:
+        tg = rrect(X - 27 * s_, Y - 9 * s_, 54 * s_, 18 * s_, 3 * s_)
+        c.fill(tg, cl['tag']); c.line(tg, lw * 0.45)
+        if det >= 2:
+            text(c.cv, 'NO. 307', X, Y + 4.2 * s_, 900, 11 * s_, cl['tag_ink'], 255, 0.6, 'center')
+        elif det >= 1:
+            c.fill(rect(X - 17 * s_, Y - 1.5 * s_, 34 * s_, 3 * s_), cl['tag_ink'], 200)
+
+
+def _courier_belt(c, sp, B, rows, P, det, back=False):
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yB = B.y_belt; w = b['hip'] * 0.98
+    top, bot = [], []
+    for k in range(13):
+        x0 = -w + 2 * w * k / 12
+        X, Y, v, s_ = B.surf(x0, yB - 11, 3, back, rows); top.append((X, Y))
+        X, Y, v, s_ = B.surf(x0, yB + 11, 3, back, rows); bot.append((X, Y))
+    band = smooth(top + bot[::-1], True, 0.4)
+    c.fill(band, cl['belt']); c.line(band, lw * 0.6)
+    if not back:
+        X, Y, v, s_ = B.surf(0, yB, 5, False, rows)
+        if v > 0.1:
+            bk = rrect(X - 13 * s_, Y - 11 * s_, 26 * s_, 22 * s_, 3 * s_)
+            c.fill(bk, cl['buckle']); c.line(bk, lw * 0.45)
+            c.fill(rrect(X - 7 * s_, Y - 5 * s_, 14 * s_, 10 * s_, 2 * s_), cl['belt'])
+        # a ring of keys on a carabiner at his right hip (it jingles when he walks)
+        X, Y, v, s_ = B.surf(-w * 0.62, yB + 4, 6, False, rows)
+        if v > 0.0 and det >= 1:
+            sw = 6.0 * P.sec_x
+            c.line(oval(X, Y + 8 * s_, 6 * s_, 9 * s_), lw * 0.7, '#9aa0a8')
+            for k in range(3):
+                a_ = math.radians(-20 + k * 22 + sw * 2)
+                kx, ky = X + math.sin(a_) * 20 * s_, Y + 16 * s_ + math.cos(a_) * 20 * s_
+                kp = poly([(X + math.sin(a_) * 8 * s_, Y + 16 * s_), (kx, ky)], False)
+                c.line(kp, lw * 0.9, LINE); c.line(kp, lw * 0.5, ('#c9ad62', '#aab0b8', '#8d939b')[k])
+
+
+def _robe_front(c, sp, B, rows, P, det, t):
+    """Mom's bathrobe: shawl collar wrapping left over right into a V that shows the cream nightgown with a lace edge."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC, yW = B.y_sh, B.y_ch, B.y_wa
+    gown, v = _surf_poly(B, rows, [(-34, yS - 26), (34, yS - 26), (10, yC + 70), (0, yC + 96), (-12, yC + 70)], dz=2)
+    if v > 0.05:
+        gp = smooth(gown, True, 0.25); c.fill(gp, cl['gown']); c.line(gp, lw * 0.5)
+        if det >= 1:
+            lace, _ = _surf_poly(B, rows, [(-30, yS - 14), (0, yS + 4), (30, yS - 14)], dz=3)
+            c.line(smooth(lace, False), lw * 1.6, cl['gown_sh'], 160)
+            c.line(smooth(lace, False), lw * 0.4, '#ffffff', 160)
+    for side in (1, -1):                                         # the right panel first, the left overlaps it
+        lp, v = _surf_poly(B, rows, [(side * 30, yS - 32), (side * (b['neck'] + 26), yS - 30), (side * (b['neck'] + 30), yS + 10),
+                                     (side * 30, yC + 40), (-side * 6, yW + 4), (-side * 18, yW + 4), (side * 6, yC + 60),
+                                     (side * 14, yS - 10)], dz=6 + (2 if side < 0 else 0))
+        if v > -0.2:
+            pp = smooth(lp, True, 0.35)
+            c.fill(pp, cl['collar']); c.fill(_crescent(pp, -side * 9, 0), cl['top_sh'], 110)
+            if det >= 1: c.texture(pp, 'fabric', 0.16, 0.6)
+            c.line(pp, lw * 0.75)
+    if det >= 1:
+        for k in (-1, 1):
+            pk, v = _surf_poly(B, rows, [(k * 46, yC + 70), (k * 92, yC + 70), (k * 92, yC + 112)], dz=2)
+            if v > 0.1: c.line(poly(pk, False), lw * 0.4, cl['top_sh'], 200)
+
+
+def _robe_skirt_front(c, sp, B, P, det, y_hem):
+    cl = sp['cloth']
+    X0, Y0, _, _ = B.p3(-8, B.y_wa + 20, 0, upper=True)
+    X1, Y1, _, _ = B.p3(-22, y_hem, 0, upper=False)
+    sw = P.sec_x * 10
+    c.line(smooth([(X0, Y0), ((X0 + X1) / 2 - 4, (Y0 + Y1) / 2), (X1 + sw, Y1)], False), c.lw * 0.8)
+    if det >= 1:
+        for k in (-1, 1):                                       # patch pocket
+            xp, yp, s_, _ = B.p3(k * 60, B.y_hip + 40, 30, upper=False)
+            pk = rrect(xp - 30 * s_, yp - 24 * s_, 60 * s_, 54 * s_, 8 * s_)
+            c.fill(pk, cl['top_sh'], 60); c.line(pk, c.lw * 0.5)
+            c.line(poly([(xp - 30 * s_, yp - 14 * s_), (xp + 30 * s_, yp - 14 * s_)], False), c.lw * 0.35, cl['top_sh'], 220)
+
+
+def _robe_belt(c, sp, B, rows, P, det, back, t):
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yB = B.y_wa + 12; w = b['wa'] + 6
+    top, bot = [], []
+    for k in range(11):
+        x0 = -w + 2 * w * k / 10
+        X, Y, v, s_ = B.surf(x0, yB - 12, 5, back, rows); top.append((X, Y))
+        X, Y, v, s_ = B.surf(x0, yB + 12, 5, back, rows); bot.append((X, Y))
+    band = smooth(top + bot[::-1], True, 0.4)
+    c.fill(band, cl['belt']); c.line(band, lw * 0.6)
+    if back: return
+    X, Y, v, s_ = B.surf(w * 0.55, yB, 9, False, rows)                 # knot at her left with two hanging tails
+    if v > 0.0:
+        sw = 10.0 * P.sec_x
+        for k, (dx, ln) in enumerate(((-6, 120), (10, 100))):
+            tail = _tube([(X + dx * s_, Y + 6 * s_), (X + (dx + sw * 0.4) * s_, Y + ln * 0.5 * s_), (X + (dx + sw) * s_, Y + ln * s_)],
+                         [20 * s_, 19 * s_, 18 * s_])
+            c.fill(tail, cl['belt']); c.fill(_crescent(tail, -5, 0), cl['top_sh'], 120); c.line(tail, lw * 0.6)
+        kn = oval(X, Y, 16 * s_, 13 * s_)
+        c.fill(kn, cl['belt']); c.line(kn, lw * 0.6)
+        if det >= 1: c.line(smooth([(X - 8 * s_, Y - 5 * s_), (X, Y + 2 * s_), (X + 7 * s_, Y - 6 * s_)], False), lw * 0.35, LINE, 160)
+
+
+def _pajama_front(c, sp, B, rows, P, det, t):
+    """Lily's pajama top: rounded collar with piping, a placket of four buttons."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    for side in (-1, 1):
+        cc, v = _surf_poly(B, rows, [(side * 2, yS - 22), (side * (b['neck'] + 10), yS - 30), (side * (b['neck'] + 16), yS - 6),
+                                     (side * 26, yS + 18), (side * 4, yS + 6)], dz=5)
+        if v > -0.2:
+            cp = smooth(cc, True, 0.7); c.fill(cp, cl['top_hi']); c.line(cp, lw * 1.2, cl['trim']); c.line(cp, lw * 0.5)
+    pts, v = _surf_poly(B, rows, [(0, yS + 8), (0, B.y_hip - 20)])
+    if v > 0.05:
+        c.line(poly(pts, False), lw * 1.3, cl['trim'], 220)
+        for k in range(4):
+            X, Y, vv, s_ = B.surf(0, yC - 20 + k * 52, 3, False, rows)
+            if vv > 0.1: c.fill(oval(X, Y, 5 * s_), '#f6f2ff'); c.line(oval(X, Y, 5 * s_), lw * 0.35)
+    hem, v = _surf_poly(B, rows, [(-b['hip'] - 6, B.y_hip - 12), (b['hip'] + 6, B.y_hip - 12)], dz=2)
+    if v > -0.2: c.line(poly(hem, False), lw * 1.2, cl['trim'], 220)
+
+
+def _moon_print(c, B, rows, cl, back):
+    """Small crescent moons and dots over the pajama top (fixed to the body surface)."""
+    ys, ws, ds = rows
+    ms, dots = [], []
+    for k in range(16):
+        x0 = (hash01(k, 51) * 2 - 1) * 0.86; y0 = ys[1] + (ys[-1] - ys[1]) * (0.08 + 0.86 * hash01(k, 52))
+        w = float(np.interp(y0, ys, ws))
+        X, Y, v, s_ = B.surf(x0 * w, y0, 2, back, rows)
+        if v < 0.1: continue
+        if k % 3 == 2: dots.append(oval(X, Y, 3.2 * s_))
+        else: ms.append(minus(oval(X, Y, 9 * s_), oval(X + 4.5 * s_, Y - 3 * s_, 8 * s_)))
+    if ms: c.fill(_multi(ms), cl['print_c'], 210)
+    if dots: c.fill(_multi(dots), '#ffffff', 170)
+
+
+def _plaid(c, path, cl, B, det):
+    """Flannel check: wide dark bands and thin light lines both ways, clipped to the garment path."""
+    bb = path.getBounds()
+    with c.clip(path):
+        x0, x1, y0, y1 = bb.left() - 40, bb.right() + 40, bb.top() - 40, bb.bottom() + 40
+        dk = []; lt = []
+        x = x0 - (x0 % 56.0)
+        while x < x1:
+            dk.append(rect(x, y0, 18, y1 - y0)); lt.append(poly([(x + 34, y0), (x + 34, y1)], False)); x += 56.0
+        y = y0 - (y0 % 56.0)
+        while y < y1:
+            dk.append(rect(x0, y, x1 - x0, 18)); lt.append(poly([(x0, y + 34), (x1, y + 34)], False)); y += 56.0
+        c.fill(_multi(dk), cl['check'], 85)
+        if det >= 1: c.line(_multi(lt), c.lw * 0.35, cl['check_hi'], 130)
+
+
+def _flannel_front(c, sp, B, rows, P, det, t):
+    """Dad's flannel shirt (21 years ago): white tee at the open collar, placket, two flap pockets."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    ch = b['ch']; yS, yC = B.y_sh, B.y_ch
+    vn, v = _surf_poly(B, rows, [(-26, yS - 26), (26, yS - 26), (0, yS + 30)], dz=3)
+    if v > 0.0: c.fill(poly(vn), cl['tee']); c.line(poly(vn), lw * 0.4)
+    pts, v = _surf_poly(B, rows, [(0, yS + 30), (0, B.y_hip - 20)])
+    if v > 0.05:
+        c.line(poly(pts, False), lw * 0.5, '#1c0e0b', 220)
+        for k in range(4):
+            X, Y, vv, s_ = B.surf(4, yC + 30 + k * 66, 2, False, rows)
+            if vv > 0.1: c.fill(oval(X, Y, 3.6 * s_), '#e8dfcf'); c.line(oval(X, Y, 3.6 * s_), lw * 0.3)
+    for side in (-1, 1):
+        x0, x1 = side * 30, side * (ch * 0.7)
+        y0, y1 = yC - 36, yC + 30
+        pk, v = _surf_poly(B, rows, [(x0, y0 + 14), (x1, y0 + 14), (x1, y1), (x0, y1)])
+        if v > 0.05:
+            c.line(poly(pk), lw * 0.5, '#1c0e0b')
+            fl, _ = _surf_poly(B, rows, [(x0 - side * 2, y0), (x1 + side * 2, y0), (x1 + side * 2, y0 + 16), (x0 - side * 2, y0 + 16)])
+            c.fill(poly(fl), cl['top_sh']); c.line(poly(fl), lw * 0.55, '#1c0e0b')
+        col_, v = _surf_poly(B, rows, [(side * 6, yS - 24), (side * (b['neck'] + 14), yS - 34), (side * (b['neck'] + 10), yS - 10), (side * 42, yS + 30)], dz=6)
+        if v > -0.2: cp = poly(col_); c.fill(cp, cl['top']); c.line(cp, lw * 0.6)
+
+
 # ---------------------------------------------------------------------------------------------- figure
 def _limb_cols(sp):
     cl = sp['cloth']; o = sp['outfit']
     if o == 'police': return cl['shirt'], cl['shirt_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
     if o == 'hoodie': return cl['top'], cl['top_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
     if o == 'coat': return cl['coat'], cl['coat_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
+    if o == 'courier': return cl['shirt'], cl['shirt_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
+    if o in ('pajamas', 'flannel'): return cl['top'], cl['top_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
+    if o == 'robe': return cl['top'], cl['top_sh'], cl['legs'], mix(cl['legs'], '#7a5a52', 0.35), cl['shoes']
     return cl['top'], cl['top_sh'], cl['legs'], mix(cl['legs'], '#000000', 0.25), cl['shoes']
 
 
@@ -2092,6 +2810,11 @@ def _arm_data(sp, B, P, side):
     if B.walk > 0:
         swing = -60.0 * B.walk * math.cos(B.leg_phase(-side))
     H = S + np.array([side * g('out'), g('down'), g('fwd') + swing])
+    shk = getattr(P, pre + 'shake', 0.0)
+    if shk > 0.01:                                       # delivery: a shaking hand (fear), 9-13 Hz
+        tt_ = P.t
+        H = H + np.array([5.0 * shk * math.sin(tt_ * 61.0) + 3.0 * shk * noise1(tt_ * 13.0, 5 + side),
+                          4.0 * shk * math.sin(tt_ * 73.0 + 1.3), 3.0 * shk * noise1(tt_ * 11.0, 9 + side)])
     pole = np.array([side * 0.75, 0.25, -0.65])
     kup = clamp((S[1] - H[1] - 10.0) / 60.0)            # v2.1: hand raised above the shoulder -> elbow down and out
     if kup > 0: pole = pole + (np.array([side * 0.7, 1.0, 0.25]) - pole) * kup
@@ -2106,7 +2829,8 @@ def _arm_data(sp, B, P, side):
         He = np.array([ex + side * 4.0, ey + 0.31 * hh, 26.0 - side * hw * 0.9 * math.sin(hy)])
         H = H + (He - H) * ear
         pole = pole + (np.array([side * 0.2, 1.0, 0.75]) - pole) * ear
-    E, Wp = _ik(S, H, 182.0, 166.0, pole)
+    ak = b.get('arm_k', 1.0) * (1.0 + max(0.0, getattr(P, pre + 'stretch', 0.0)))
+    E, Wp = _ik(S, H, 182.0 * ak, 166.0 * ak, pole)
     return S, E, Wp
 
 
@@ -2129,11 +2853,16 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     aw0, aw1 = b['arm']
     hz = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0)
     widths = [aw0 * pts[0][2], (aw0 + aw1) / 2 * max(pts[1][2], hz ** 0.5), aw1 * hz]
+    o = sp['outfit']
+    if o == 'robe': widths[2] *= 1.45; widths[1] *= 1.12          # wide terry sleeves
     # extend the sleeve top into the shoulder
     tp = _tube([(P2[0][0] - side * 4, P2[0][1] - 14)] + P2, [widths[0] * 1.05] + widths)
-    o = sp['outfit']
     c.fill(tp, sleeve)
     _cloth_shade(c, tp, sleeve_sh, 170, 1.0, 12 * pts[0][2])
+    if o == 'flannel':
+        _plaid(c, tp, sp['cloth'], None, det)
+    elif o == 'robe' and det >= 1:
+        with c.clip(tp): c.texture(tp, 'fabric', 0.12, 0.7)
     c.line(tp, c.lw)
     # elbow crease + cuff + patch
     if det >= 1:
@@ -2143,12 +2872,23 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     wx, wy = P2[2]
     ang = math.degrees(math.atan2(P2[2][1] - P2[1][1], P2[2][0] - P2[1][0])) - 90
     cuffc = sleeve_sh if o != 'hoodie' else mix(sleeve, '#000000', 0.15)
+    if o == 'pajamas': cuffc = sp['cloth']['trim']
+    elif o == 'robe': cuffc = sp['cloth']['collar']
     cuff = c.sub(wx, wy, ang, hz)
-    cw = aw1 * 0.55
-    cpath = rrect(-cw, -22, cw * 2, 22, 5)
+    cw = aw1 * (0.8 if o == 'robe' else 0.55)
+    cpath = rrect(-cw, -22, cw * 2, 22 if o != 'pajamas' else 14, 5)
     cuff.fill(cpath, cuffc); cuff.line(cpath, c.lw * 0.7 / hz)
     if o == 'hoodie' and det >= 1:
         cuff.line(_multi([poly([(k * cw / 4, -20), (k * cw / 4, -3)], False) for k in range(-3, 4)]), c.lw * 0.3 / hz, LINE, 140)
+    if o == 'courier':
+        # Nightline sleeve patch: navy shield, gold rim, crescent moon
+        ux, uy = P2[0][0] + (P2[1][0] - P2[0][0]) * 0.28, P2[0][1] + (P2[1][1] - P2[0][1]) * 0.28
+        if side * B.ct + 0.2 > 0 or abs(B.st) < 0.5:
+            pc = c.sub(ux + side * 6 * pts[0][2] * abs(B.ct), uy, 0, pts[0][2] * (0.45 + 0.55 * abs(B.ct)), pts[0][2])
+            cl = sp['cloth']
+            pat = rrect(-15, -14, 30, 28, 8)
+            pc.fill(pat, cl['patch']); pc.line(pat, c.lw * 0.8 / pts[0][2], cl['patch_rim']); pc.line(pat, c.lw * 0.3 / pts[0][2])
+            if det >= 1: pc.fill(minus(oval(-1, 0, 8), oval(3, -3, 7)), cl['moon'])
     if o == 'police':
         # shoulder patch on the upper arm, outer side
         ux, uy = P2[0][0] + (P2[1][0] - P2[0][0]) * 0.28, P2[0][1] + (P2[1][1] - P2[0][1]) * 0.28
@@ -2181,7 +2921,13 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
             _prop(pc, 'phone_back', det, t)
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
         else:
-            pc = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs, 0, hs * 1.15)
+            pk_ = 1.15 * (1.5 if prop in ('tablet', 'tablet_back') else 1.0)
+            off_ = 30 * (1.9 if prop in ('tablet', 'tablet_back') else 1.0)
+            pc = c.sub(wx + math.sin(math.radians(-hang)) * off_ * hs, wy + math.cos(math.radians(hang)) * off_ * hs, 0, hs * pk_)
+            if prop in ('tablet', 'tablet_back'):
+                _prop(pc, prop, det, t, P)
+                _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
+                return
             _prop(pc, prop, det, t)
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
     else:
@@ -2190,41 +2936,92 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
 
 def _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec):
     b = sp['body']
+    feet = sp.get('feet', 'shoes')
     order = []
+    fl, tip = B.floor, B.tip
     for side in (-1, 1):
         hip = np.array([side * b['hip'] * 0.46, B.y_hip + 8, 0.0])
-        fwd = B.foot_fwd(side) + B.sit * 210.0
+        fwd = B.foot_fwd(side) + B.sit * 210.0 * (1.0 - fl) + fl * (262.0 + 22.0 * side)
         lift = B.foot_lift(side)
-        ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance), -38.0 - lift, fwd])
+        ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance + 24 * fl), -38.0 - lift - 34.0 * tip, fwd])
         hipw = hip.copy(); hipw[1] -= 0  # legs do not lean
-        K, A = _ik(hipw + np.array([0, B.bob, 0]), ank, 206.0, 180.0, np.array([0.08 * side, -0.15, 1.0]))
+        pole = np.array([0.08 * side + 0.3 * side * fl, -0.15 - 0.85 * fl, 1.0])
+        K, A = _ik(hipw + np.array([0, B.bob, 0]), ank, 206.0, 180.0, pole)
         order.append((B.p3(*(hipw + np.array([0, 0, 0])), upper=False), B.p3(K[0], K[1] - B.bob, K[2], upper=False),
                       B.p3(A[0], A[1] - B.bob, A[2], upper=False), side, A))
     order.sort(key=lambda o: (o[0][3] + o[2][3]))
     lw0, lw1 = b['leg']
+    cl = sp['cloth']
     for hp, kp, ap, side, A in order:
         P2 = [(hp[0], hp[1]), (kp[0], kp[1]), (ap[0], ap[1])]
         widths = [lw0 * hp[2], (lw0 + lw1) / 2 * kp[2], lw1 * ap[2]]
         tp = _tube(P2, widths)
-        # shoe (convex hull of a box)
+        # shoe (convex hull of a box); boots are taller, bare feet / socks smaller and rounder
         ax, ay, az = A
         pts = []
-        for (hx, hz) in ((-22, -24), (22, -24), (-24, 58), (24, 58), (-18, 72), (18, 72)):
-            for hy in (0.0, -30.0 if hz < 40 else -22.0):
-                X, Y, s, Z = B.p3(ax + hx * B.ct + 0, -B.bob + ay + 38 + hy + (0 if True else 0), az + hz, upper=False) if False else \
-                    B.p3(ax + hx, ay + 38 + hy - B.bob, az + hz, upper=False)
+        box_ = {'boots': ((-23, -24), (23, -24), (-25, 60), (25, 60), (-19, 74), (19, 74)),
+                'bare': ((-17, -16), (17, -16), (-19, 52), (19, 52), (-14, 64), (14, 64)),
+                'socks': ((-19, -20), (19, -20), (-21, 54), (21, 54), (-15, 66), (15, 66)),
+                'slippers': ((-24, -24), (24, -24), (-26, 56), (26, 56), (-20, 70), (20, 70))}.get(
+            feet, ((-22, -24), (22, -24), (-24, 58), (24, 58), (-18, 72), (18, 72)))
+        top_h = {'boots': -46.0, 'bare': -22.0, 'socks': -26.0, 'slippers': -30.0}.get(feet, -30.0)
+        for (hx, hz) in box_:
+            for hy in (0.0, top_h if hz < 40 else top_h * 0.72):
+                toe = 34.0 * tip if hz > 40 else 0.0              # tiptoe: heel up, toes stay on the floor
+                X, Y, s, Z = B.p3(ax + hx, ay + 38 + hy - B.bob + toe, az + hz, upper=False)
                 pts.append((X, Y))
         shoe = smooth(_hull(pts), True, 0.6)
+        if feet in ('bare', 'socks') or sp['outfit'] == 'robe':     # ankles: skin / sock between hem and foot
+            pass
         c.fill(tp, legc)
         _cloth_shade(c, tp, legsh, 160, 1.0, 10)
+        if sp['outfit'] == 'pajamas' and det >= 1:
+            with c.clip(tp):
+                ms = []
+                for k in range(6):
+                    u = (k + 0.5) / 6.0
+                    x_ = P2[0][0] + (P2[2][0] - P2[0][0]) * u + (hash01(k, 3 + side) - 0.5) * widths[1] * 0.6
+                    y_ = P2[0][1] + (P2[2][1] - P2[0][1]) * u
+                    ms.append(minus(oval(x_, y_, 7), oval(x_ + 3.5, y_ - 2.5, 6)))
+                c.fill(_multi(ms), cl.get('print_c', '#f1e2a2'), 200)
         c.line(tp, c.lw)
-        if det >= 1 and sp['outfit'] in ('police', 'coat', 'hoodie'):
+        if det >= 1 and sp['outfit'] in ('police', 'coat', 'hoodie', 'courier', 'flannel'):
             c.line(smooth([((P2[0][0] + P2[1][0]) / 2, (P2[0][1] + P2[1][1]) / 2), P2[1], ((P2[1][0] + P2[2][0]) / 2, (P2[1][1] + P2[2][1]) / 2 + 10)], False),
                    c.lw * 0.35, LINE, 120)
-        c.fill(shoe, shoec)
         bb = shoe.getBounds()
+        if feet == 'bare':
+            skin = _skin_cols(sp, P, None)[0]
+            c.fill(shoe, skin); c.fill(_crescent(shoe, 6, -4), sp['skin_sh'], 120); c.line(shoe, c.lw)
+            if det >= 1:
+                for k in range(4):
+                    tx = bb.left() + bb.width() * (0.24 + 0.17 * k)
+                    c.line(smooth([(tx, bb.bottom() - 9), (tx + 1.5, bb.bottom() - 3), (tx + 3, bb.bottom() - 1)], False), c.lw * 0.4, sp['skin_dp'], 170)
+            continue
+        if feet == 'socks':
+            sc = cl.get('socks', '#8d8f96'); ssh = cl.get('socks_sh', mix(sc, '#000000', 0.3))
+            c.fill(shoe, sc); c.fill(_crescent(shoe, 7, -4), ssh, 150)
+            if det >= 1:
+                c.texture(shoe, 'fabric', 0.18, 0.5)
+                c.line(poly([(bb.left() + 5, bb.top() + 6), (bb.right() - 5, bb.top() + 6)], False), c.lw * 0.4, ssh, 200)
+            c.line(shoe, c.lw)
+            continue
+        if feet == 'slippers':
+            sc = cl.get('shoes', '#8e7f86'); ssh = cl.get('shoes_sh', mix(sc, '#000000', 0.3))
+            c.fill(shoe, sc); c.fill(_crescent(shoe, 6, -5), ssh, 150)
+            if det >= 1:
+                c.texture(shoe, 'fabric', 0.3, 0.35)
+                c.line(smooth([(bb.left() + 4, bb.top() + bb.height() * 0.45), (bb.centerX(), bb.top() + bb.height() * 0.3),
+                               (bb.right() - 4, bb.top() + bb.height() * 0.45)], False), c.lw * 0.5, ssh, 220)
+            c.line(shoe, c.lw)
+            continue
+        c.fill(shoe, shoec)
         c.glow(bb.centerX() - bb.width() * 0.18, bb.top() + bb.height() * 0.32, bb.width() * 0.3, bb.height() * 0.13, '#ffffff',
                70 if shoec in ('#0c0c0f', '#111113') else 40)
+        if feet == 'boots':
+            c.fill(rect(bb.left() - 2, bb.bottom() - 9, bb.width() + 4, 9), mix(shoec, '#000000', 0.45))
+            if det >= 1:
+                c.line(_multi([poly([(bb.centerX() - 8, bb.top() + 8 + k * 8), (bb.centerX() + 8, bb.top() + 12 + k * 8)], False)
+                               for k in range(3)]), c.lw * 0.35, '#8a7a62', 220)
         c.line(shoe, c.lw)
         if sp['outfit'] == 'hoodie' and det >= 1:
             c.line(poly([(bb.left() + 4, bb.bottom() - 7), (bb.right() - 4, bb.bottom() - 7)], False), c.lw * 0.5, '#8a8478')
@@ -2294,19 +3091,26 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     # hood behind the neck
     for side in behind: _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
     if not upper_only:
-        if o not in ('cardigan',):
+        if o not in ('cardigan', 'robe'):
             _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
             _pelvis(c, sp, B, rows, legc, legsh, det)
         else:
             _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
-    elif o not in ('coat',):
+    elif o not in ('coat', 'robe'):
         _pelvis(c, sp, B, rows, legc, legsh, det)
     torso, L, R = _torso_path(B, rows)
-    top = {'police': cl.get('shirt'), 'hoodie': cl.get('top'), 'coat': cl.get('coat'), 'cardigan': cl.get('top')}[o]
-    topsh = {'police': cl.get('shirt_sh'), 'hoodie': cl.get('top_sh'), 'coat': cl.get('coat_sh'), 'cardigan': cl.get('top_sh')}[o]
-    tophi = {'police': cl.get('shirt_hi'), 'hoodie': cl.get('top_hi'), 'coat': cl.get('coat_hi'), 'cardigan': cl.get('top_hi')}[o]
+    top = {'police': cl.get('shirt'), 'hoodie': cl.get('top'), 'coat': cl.get('coat'), 'cardigan': cl.get('top'),
+           'courier': cl.get('shirt')}.get(o, cl.get('top'))
+    topsh = {'police': cl.get('shirt_sh'), 'hoodie': cl.get('top_sh'), 'coat': cl.get('coat_sh'), 'cardigan': cl.get('top_sh'),
+             'courier': cl.get('shirt_sh')}.get(o, cl.get('top_sh'))
+    tophi = {'police': cl.get('shirt_hi'), 'hoodie': cl.get('top_hi'), 'coat': cl.get('coat_hi'), 'cardigan': cl.get('top_hi'),
+             'courier': cl.get('shirt_hi')}.get(o, cl.get('top_hi'))
     if o == 'cardigan' and not upper_only:
         _skirt(c, sp, B, det, B.y_wa + 10, -175, sp['body']['hip'] * 0.98, sp['body']['hip'] * 1.12, cl['skirt'], cl['skirt_sh'], t=t, P=P)
+    if o == 'robe' and not upper_only:
+        _skirt(c, sp, B, det, B.y_wa + 10, -205 + 150 * B.floor, sp['body']['hip'] * 1.04, sp['body']['hip'] * 1.2 + 60 * B.floor,
+               cl['top'], cl['top_sh'], t=t, P=P)
+        _robe_skirt_front(c, sp, B, P, det, -205 + 150 * B.floor)
     # neck (behind collar)
     nb = B.p3(0, B.y_sh - 34, 0); nt = B.p3(0, B.yc - 30, 0)
     nw = sp['body']['neck']
@@ -2328,7 +3132,9 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     c.grad(torso, L[3][0] - 10, 0, R[3][0] + 10, 0, [(0, tophi, 90), (0.35, top, 0), (0.7, topsh, 60), (1, topsh, 200)])
     with c.clip(torso):
         c.grad(rect(-400, B.y_wa - 10, 800, 300), 0, B.y_wa - 60, 0, B.y_hip, [(0, topsh, 0), (1, topsh, 140)])
-        if det >= 1: c.texture(torso, 'grunge', 0.07, 0.7)
+        if det >= 1: c.texture(torso, 'fabric' if o in ('robe', 'pajamas', 'flannel') else 'grunge', 0.1 if o == 'robe' else 0.07, 0.7)
+        if o == 'flannel' and det >= 0: _plaid(c, torso, cl, B, det)
+        if o == 'pajamas' and det >= 1: _moon_print(c, B, rows, cl, back_view)
         # armpit creases + blousing
         if det >= 1:
             for side in (-1, 1):
@@ -2336,7 +3142,7 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
                     p0 = B.surf(side * (sp['body']['ch'] * (0.78 - k * 0.1)), B.y_ch - 10 + k * 24, 1, back_view, rows)
                     p1 = B.surf(side * (sp['body']['ch'] * (0.5 - k * 0.08)), B.y_ch + 34 + k * 30, 1, back_view, rows)
                     c.line(smooth([(p0[0], p0[1]), ((p0[0] + p1[0]) / 2 + side * 4, (p0[1] + p1[1]) / 2), (p1[0], p1[1])], False), c.lw * 0.42, LINE, 130)
-            if o == 'police':
+            if o in ('police', 'courier'):
                 for k in range(-4, 5):
                     p0 = B.surf(k * 22, B.y_belt - 50, 1, back_view, rows); p1 = B.surf(k * 23 + 3, B.y_belt - 18, 1, back_view, rows)
                     if p0[2] > 0.1: c.line(smooth([(p0[0], p0[1]), (p1[0] + 2, (p0[1] + p1[1]) / 2), (p1[0], p1[1])], False), c.lw * 0.35, LINE, 110)
@@ -2349,11 +3155,17 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
         elif o == 'hoodie': _hoodie_front(c, sp, B, rows, P, det, t)
         elif o == 'coat': _coat_front(c, sp, B, rows, P, det, t)
         elif o == 'cardigan': _cardigan_front(c, sp, B, rows, P, det, t)
+        elif o == 'courier': _courier_front(c, sp, B, rows, P, det, t)
+        elif o == 'robe': _robe_front(c, sp, B, rows, P, det, t)
+        elif o == 'pajamas': _pajama_front(c, sp, B, rows, P, det, t)
+        elif o == 'flannel': _flannel_front(c, sp, B, rows, P, det, t)
     else:
         yy = B.y_sh + 30
         sm, v = _surf_poly(B, rows, [(-sp['body']['sh'] * 0.8, yy), (0, yy + 12), (sp['body']['sh'] * 0.8, yy)], back=True, dz=1)
         c.line(smooth(sm, False), c.lw * 0.4, LINE, 140)
     if o == 'police': _police_belt(c, sp, B, rows, P, det, back_view)
+    elif o == 'courier': _courier_belt(c, sp, B, rows, P, det, back_view)
+    elif o == 'robe': _robe_belt(c, sp, B, rows, P, det, back_view, t)
     # head
     pv = B.p3(0, B.yc - 22 + P.h_dy, 0)
     hs = sp['hh'] / 240.0 * pv[2] * P.h_scale
@@ -2603,22 +3415,22 @@ def _onset_vis(c):
 
 
 # ------------------------------------------------------------------ voice envelope + word timing (lip sync, v2.1)
-_SCR = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work'
-VOICE_WAV = os.environ.get('POV2_VOICE_WAV', os.path.join(_SCR, 'pov2', 'align', 'vo_en.wav'))
-VOICE_WORDS = os.environ.get('POV2_VOICE_WORDS', os.path.join(_SCR, 'pov2', 'align', 'asr_cache.json'))
+_SCR = os.path.join(_HERE, '_work')                      # this film's work dir W (Delivery Video/film/_work)
+VOICE_WAV = os.environ.get('POV2_VOICE_WAV', os.path.join(_SCR, 'align', 'vo_en.wav'))
+VOICE_WORDS = os.environ.get('POV2_VOICE_WORDS', os.path.join(_SCR, 'align', 'asr_cache.json'))
 ENV_FPS = 100.0
 _VENV, _VWORDS = {}, {}
 
 
 def voice_envelope(path=None):
     """RMS envelope of the voice track in dBFS at 100 fps (30 ms window), as float32 np array, or None if the file is
-    missing. Cached in memory and as .npy in $S/pov2/cache (keyed by size and mtime), so render workers load it in ms."""
+    missing. Cached in memory and as .npy in W/cache (keyed by size and mtime), so render workers load it in ms."""
     path = path or VOICE_WAV
     if path in _VENV: return _VENV[path]
     env = None
     try:
         st = os.stat(path)
-        cdir = os.path.join(_SCR, 'pov2', 'cache')
+        cdir = os.path.join(_SCR, 'cache')
         cache = os.path.join(cdir, 'vo_env_%d_%d.npy' % (st.st_size, int(st.st_mtime)))
         if os.path.exists(cache):
             env = np.load(cache)

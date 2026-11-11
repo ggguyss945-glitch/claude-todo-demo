@@ -898,11 +898,22 @@ def _spill_pair(depth, draw_geom, key, bounds, lights_fn, kr=0.55, kb=0.6, name=
 
 # ============================================================== the street world (shared by porch views)
 def _sky_draw(v, box, moon=(1560, 170, 34), seed=3, clouds=((420, 120, 760, 46), (1250, 60, 900, 40), (2250, 150, 700, 40)),
-              stars=300, glow='#2b2c58'):
+              stars=300, glow='#2b2c58', tod='night'):
+    """Night sky (police) or tod='dawn': 6:12 sunrise (deep blue overhead -> lilac -> peach -> a hot band at the horizon,
+    sun glow low on the right, pink-lit clouds, no stars, a faint daytime moon)."""
     x0, y0, x1, y1 = box
 
     def draw(pen, t):
         hz = v.h
+        if tod == 'dawn':
+            pen.linear(rect(x0, y0, x1 - x0, y1 - y0), 0, y0, 0, hz + 60,
+                       [(0, '#1d2a52'), (0.38, '#4a4f86'), (0.62, '#9a7fa6'), (0.82, '#e8a88a'), (0.95, '#ffd09a'), (1, '#ffe2b0')])
+            pen.radial(None, x0 + (x1 - x0) * 0.78, hz + 40, (x1 - x0) * 0.32, [(0, '#fff2cc', 230), (0.25, '#ffc888', 120),
+                                                                                  (1, '#ffb070', 0)], sy=0.55, clip=False)
+            if moon: pen.fill(oval(moon[0], moon[1], moon[2] * 0.8), '#e8e4f2', 70)
+            for i, (cx, cy, w, h) in enumerate(clouds):
+                _cloud(pen, cx, cy, w, h, seed + i, '#6a5a86', '#ffb898', 200)
+            return
         pen.linear(rect(x0, y0, x1 - x0, y1 - y0), 0, y0, 0, hz + 80,
                    [(0, '#02040a'), (0.45, '#07102a'), (0.8, '#142048'), (1, glow)])
         _stars(pen, (x0, y0, x1, y1), stars, seed, hz - 40)
@@ -938,8 +949,9 @@ def _far_draw(v, D, x_range, seed=5):
     return draw
 
 
-def _houses_draw(v, D, xs, seed=0, lamps=()):
-    """Row of houses facing the camera at depth D; xs = lateral centres (m)."""
+def _houses_draw(v, D, xs, seed=0, lamps=(), lit=None, porch_k=1.0):
+    """Row of houses facing the camera at depth D; xs = lateral centres (m). lit = f(i) -> window lit tuple (default: the
+    police film's 12:36 AM pattern); porch_k scales their porch lamps (0 = off, e.g. at dawn)."""
     def draw(pen, t):
         s = v.s(D); gy = v.gy(D)
         X0 = xs[0] - 12; X1 = xs[-1] + 12
@@ -950,8 +962,9 @@ def _houses_draw(v, D, xs, seed=0, lamps=()):
         pen.fill(rect(v.x(X0, D), gy - 2, v.x(X1, D) - v.x(X0, D), v.gy(6.1) - gy + 4), '#0d1414')
         for i, X in enumerate(xs):
             w = 9.5 + 2.5 * _h(i, seed); h = 3.0 + (0.4 if i % 3 == 1 else 0.0) + (2.6 if i % 4 == 2 else 0)
+            lt = lit(i) if lit else (1 if i % 2 == 0 else 0.8, 0 if i % 3 else 0.6, 0.9, 0)
             _house(pen, v, X, D, w, h, 2.2 + 0.6 * _h(i, seed + 1), seed=seed + i, storeys=2 if h > 5 else 1,
-                   lit=(1 if i % 2 == 0 else 0.8, 0 if i % 3 else 0.6, 0.9, 0), garage=(i % 3 == 2), number=str(141 + 2 * i) if i % 2 else None)
+                   lit=lt, garage=(i % 3 == 2), number=str(141 + 2 * i) if i % 2 else None, porch_lamp_k=porch_k)
             # walkway + bushes
             gx = v.x(X, D)
             pen.fill(poly([(gx - 0.5 * s, gy), (gx + 0.5 * s, gy), (gx + 0.6 * v.s(6.1), v.gy(6.1)), (gx - 0.6 * v.s(6.1), v.gy(6.1))]), '#262830')
@@ -1296,11 +1309,24 @@ def _car_layer_draw(v, D, car, lights_fn):
         else:
             x = v.x(X, D)
         y = v.gy(D)
+        kind = car.get('kind', 'patrol')
+        head = car.get('head', False); head = head(t) if callable(head) else head
+        brake = bool(st and st.moving and car['drive'][0] == 'in') or car.get('brake', False)
+        if kind == 'van':                                   # the NIGHTLINE DELIVERY van (delivery film)
+            hz = car['hazard_fn'](t) if car.get('hazard_fn') else 0.0
+            door = car.get('door', 0.0); door = door(t) if callable(door) else door
+            drv = car.get('driver', True); drv = drv(t) if callable(drv) else drv
+            fac = car.get('facing', 1)
+            if car.get('pool', True): _amber_pool(pen, x, y, s, hz, fac)
+            delivery_van(pen, x, y, VAN_LEN * s, t, fac, st.wheel if st else 0.0, st.bounce if st else 0.0,
+                         st.pitch if st else 0.0, hz, head, brake, drv, door, dash=car.get('dash', 1.0))
+            return
+        if kind == 'wagon':                                 # your parents' station wagon (memory, 21 years ago)
+            _wagon(pen, x, y, 4.9 * s, car.get('color', '#5a4a3a'), car.get('facing', 1))
+            return
         li = lights_fn(t)
         if car.get('pool', True): _police_pool(pen, x, y, s, li)
         doors = car['doors'](t) if callable(car.get('doors')) else car.get('doors')
-        head = car.get('head', False); head = head(t) if callable(head) else head
-        brake = bool(st and st.moving and car['drive'][0] == 'in') or car.get('brake', False)
         patrol_car(pen, x, y, 5.0 * s, t, car.get('facing', 1), st.wheel if st else 0.0, st.bounce if st else 0.0,
                    st.pitch if st else 0.0, li, head, brake, car.get('figures', ('driver', 'back')), doors)
     return draw
@@ -1327,27 +1353,39 @@ def _lights_fn(police):
 
 
 def _porch_world(name, v, box, car=None, police=True, lamp_X=-0.85, lamps=(-7.5, 11.0), moon=(1560, 170, 34),
-                 flick=None, moths=5, tree=(-4.8, 3.3), wind=1.0, mist=True, chair=True, houses_D=8.0, peephole=False):
+                 flick=None, moths=5, tree=(-4.8, 3.3), wind=1.0, mist=True, chair=True, houses_D=8.0, peephole=False,
+                 hazard=None, tod='night', windows=None):
+    """Shared porch world. Delivery-film extras (defaults keep the police film): hazard = f(t) -> 0..1 amber flashers of
+    the van (amber spill on the houses, the yard and the railing), tod 'night' | 'dawn' (6:12: lights off, sunrise sky,
+    warm sun wash), windows = f(i) -> lit tuple for the houses across (WINDOWS_3AM: nearly all dark)."""
     lf = _lights_fn(police)
-    fl = (lambda t: flicker(t, 3, 1.0, flick if flick != 'random' else None)) if flick else None
+    night = tod != 'dawn'
+    if car and hazard and car.get('kind') == 'van': car.setdefault('hazard_fn', hazard)
+    fl = (lambda t: flicker(t, 3, 1.0, flick if flick != 'random' else None)) if (flick and night) else None
     tag = name
     xr = (-40, 40)
     # static far field merged into one cached layer (sky, tree line, houses across, street lamps): parallax between them
     # is negligible, and one layer blits each pixel once
-    backdrop = _combine(_sky_draw(v, (box[0], box[1], box[2], v.gy(houses_D) + 30), moon), _far_draw(v, 22, (-90, 90)),
-                        _houses_draw(v, houses_D, [-33, -20, -7.5, 5.0, 17.5, 30.0]), _lamps_draw(v, 6.0, lamps))
+    backdrop = _combine(_sky_draw(v, (box[0], box[1], box[2], v.gy(houses_D) + 30), moon, tod=tod), _far_draw(v, 22, (-90, 90)),
+                        _houses_draw(v, houses_D, [-33, -20, -7.5, 5.0, 17.5, 30.0], lit=windows, porch_k=1.0 if night else 0.0),
+                        _lamps_draw(v, 6.0, lamps, 1.0 if night else 0.0))
     L = [
         _cl(houses_D + 1.0, backdrop, 'backdrop', _key(tag, 'backdrop'), (box[0], box[1], box[2], v.gy(4.4)), blur=0),
-        _cl(5.0, _combine(_street_draw(v, xr), _yard_draw(v)), 'ground', _key(tag, 'ground'),
+        _cl(5.0, _combine(_street_draw(v, xr), _yard_draw(v, lights=night)), 'ground', _key(tag, 'ground'),
             (box[0], min(v.gy(5.7) - 4, v.y(v.ground + 1.6, 4.2)), box[2], v.gy(2.0) + 70)),
         _cl(1.8, _porch_front_draw(v, lamp_x=lamp_X), 'porch_front', _key(tag, 'front'), (box[0], v.y(2.0, 1.8), box[2], v.gy(2.6) + 10)),
-        _cl(1.795, _lantern_glow_draw(v, lamp_X, 1.8), 'lantern_glow', _key(tag, 'lglow'), _lantern_glow_bounds(v, lamp_X, 1.8),
-            alpha=(lambda t: fl(t)) if fl else 1.0, blur=0),
-        Layer(1.79, _lantern_layer_draw(v, lamp_X, 1.8, 1.78, moths, 2, fl), 'lantern'),
-        _cl(1.3, _porch_floor_draw(v, pool=(0.0, 0.75, 2.0)), 'porch_floor', _key(tag, 'floor'), (box[0], v.y(0, 1.85) - 4, box[2], box[3])),
-        _cl(1.29, _pool_draw(v, [(lamp_X, 0, 1.75, 2.2, '#ffcf8f', 70)]), 'lamp_pool',
-            _key(tag, 'pool'), (box[0], v.y(0, 2.4), box[2], v.y(0, 1.2)), alpha=(lambda t: fl(t)) if fl else 1.0),
+        _cl(1.3, _porch_floor_draw(v, pool=(0.0, 0.75, 2.0) if night else None), 'porch_floor', _key(tag, 'floor'),
+            (box[0], v.y(0, 1.85) - 4, box[2], box[3])),
     ]
+    if night:
+        L += [_cl(1.795, _lantern_glow_draw(v, lamp_X, 1.8), 'lantern_glow', _key(tag, 'lglow'), _lantern_glow_bounds(v, lamp_X, 1.8),
+                  alpha=(lambda t: fl(t)) if fl else 1.0, blur=0),
+              Layer(1.79, _lantern_layer_draw(v, lamp_X, 1.8, 1.78, moths, 2, fl), 'lantern'),
+              _cl(1.29, _pool_draw(v, [(lamp_X, 0, 1.75, 2.2, '#ffcf8f', 70)]), 'lamp_pool',
+                  _key(tag, 'pool'), (box[0], v.y(0, 2.4), box[2], v.y(0, 1.2)), alpha=(lambda t: fl(t)) if fl else 1.0)]
+    else:
+        L += [Layer(1.79, _lantern_layer_draw(v, lamp_X, 1.8, 1.78, 0, 2, lambda t: 0.0), 'lantern'),
+              _cl(houses_D + 0.9, _dawn_wash(v, box, houses_D), 'sun_wash', _key(tag, 'sun'), box, blur=0)]
     if not peephole:
         L.append(_cl(0.9, _porch_sides_draw(v), 'porch_sides', _key(tag, 'sides'), box))
     if chair:
@@ -1374,23 +1412,47 @@ def _porch_world(name, v, box, car=None, police=True, lamp_X=-0.85, lamps=(-7.5,
             cx = v.x(car.get('X', 3.0) if car else 3.0, 4.6)
             pen.radial(None, cx, v.gy(3.6), 9 * v.s(3.6), [(0, c, 200), (0.6, c, 60), (1, c, 0)], sy=0.16, clip=False)
         L += _spill_pair(4.95, yard_geom, _key(tag, 'yspill'), (box[0], v.y(v.ground + 1.0, 4.2), box[2], v.gy(2.0) + 40), lf, 0.35, 0.4, 'yard_spill')
+    if hazard and car:                                  # the van's amber flashers light the street, the yard and the railing
+        cX = car.get('X', 3.0); cD = car.get('D', 4.85)
+        def h_house(pen, c):
+            s = v.s(houses_D)
+            for X in (cX - 10, cX + 4):
+                pen.radial(None, v.x(X, houses_D), v.gy(houses_D) - 1.8 * s, 7.5 * s, [(0, c, 255), (1, c, 0)], sy=0.42, clip=False)
+        L += _spill_one(houses_D + 0.95, h_house, _key(tag, 'hz_h', cX), (box[0], v.gy(houses_D) - 9.5 * v.s(houses_D), box[2], v.gy(houses_D) + 4),
+                        hazard, 0.3, 'houses_hazard')
+        def h_yard(pen, c):
+            for dX in (-2.6, 2.6):
+                cx = v.x(cX + dX, cD - 0.3)
+                pen.radial(None, cx, v.gy(cD - 0.4), 5.5 * v.s(cD), [(0, c, 220), (0.5, c, 70), (1, c, 0)], sy=0.2, clip=False)
+        L += _spill_one(4.95, h_yard, _key(tag, 'hz_y', cX), (box[0], v.y(v.ground + 1.4, 4.4), box[2], v.gy(2.0) + 40), hazard, 0.5, 'yard_hazard')
+        L += _spill_one(1.78, lambda pen, c: _porch_front_spill(v)(pen, c), _key(tag, 'hz_f'),
+                        (box[0], v.y(1.3, 1.8), box[2], v.gy(1.8) + 4), hazard, 0.22, 'porch_hazard')
     return L
 
 
 def porch_doorbell(car=True, police=True, car_X=4.0, flick='random', moths=6, wind=1.0, mist=True, drive_in=None,
-                   doors=None, figures=('driver', 'back'), ir=False):
+                   doors=None, figures=('driver', 'back'), ir=False, vehicle='patrol', van=None, hazard=True, box=None,
+                   tod='night', windows=None, era='now'):
     """Front porch seen by the doorbell camera beside the door (lens 'doorbell', grade 'night_blue' or 'doorbell_night').
     The officer stands at anchors['officer'] (depth 1.0, ~1.5 m from the lens). Behind him: white porch railing and steps,
     a post lantern with moths (flicker), the yard with path lights and mailbox, the patrol car at the curb (light bar ->
     police spill on the yard, railing and houses), the street, houses across, trees, sky with moon.
     drive_in = (t0, t1) makes the car arrive and brake; doors = f(t) -> {'rear': k}; police = False/True/dict(mode, speed,
-    t_on, t_off). ir=True suggests lens 'doorbell_ir'."""
+    t_on, t_off). ir=True suggests lens 'doorbell_ir'.
+    Delivery film: vehicle='van' (NIGHTLINE van at the curb, hazard = True | dict(rate, t_on, t_off, strength) | False;
+    van = dict(driver=True|f(t), door=0..1|f(t) sliding door, head, drive=('out'|'in'|'pass', t0, t1, X0, X1), dash)),
+    'wagon' (memory: the old station wagon) or None; box = 'door' | 'boots' | dict(at='door'|'boots'|(X, D), state=
+    'taped'|'cut'|'open', knock=f(t)->0..1, keys=bool); tod 'night' | 'dawn'; windows=WINDOWS_3AM. Use delivery_porch()."""
     v = View(405, 380, 1.45, ground=-0.72)
     car_d = None
     if car:
         car_d = dict(X=car_X, facing=1, figures=figures, doors=doors, D=4.85)
         if drive_in: car_d['drive'] = ('in', drive_in[0], drive_in[1], car_X - 18.0, car_X); car_d['head'] = lambda t: t < drive_in[1] + 1.0
-    L = _porch_world('pdb', v, WIDE, car_d, police, flick=flick, moths=moths, wind=wind, mist=mist)
+    if vehicle != 'patrol': car_d = _vehicle_spec(vehicle, car_X, 4.85, van, drive_in, era)
+    hz = _hazard_fn(hazard) if vehicle == 'van' else None
+    tag = 'pdb' if (vehicle == 'patrol' and tod == 'night' and windows is None) else 'pdb_%s_%s_%s%s' % (vehicle, tod, era, '_3am' if windows else '')
+    L = _porch_world(tag, v, WIDE, car_d, police, flick=flick, moths=moths, wind=wind, mist=mist, hazard=hz, tod=tod, windows=windows)
+    if box: L += _box_layers(v, box, tag, tod)
     anchors = {'officer': v.anchor(0.0, 1.0, note='on the porch, ~1.5 m from the lens'),
                'officer_close': v.anchor(0.0, 0.62, note='leaning toward the lens'),
                'officer2': v.anchor(-0.9, 1.25, note='second officer beside him'),
@@ -1401,33 +1463,44 @@ def porch_doorbell(car=True, police=True, car_X=4.0, flick='random', moths=6, wi
                'car_rear_door': v.anchor(car_X + 0.4, 4.4, Y=-0.72, note='beside the rear door of the car')}
     paths = {'car_to_porch': [anchors['car_rear_door'], anchors['gate'], anchors['path_mid'], anchors['steps'], anchors['double']]}
     pf = _lights_fn(police)
+    info = {'view': v, 'car_X': car_X, 'lights': pf}
+    if vehicle != 'patrol' or box or tod != 'night':
+        _delivery_anchors(v, anchors, paths, car_X, box)
+        info.update(hazard=hz or (lambda t: 0.0), box=_box_spec(box) if box else None)
+    grade = 'ir_night' if ir else ('dawn' if tod == 'dawn' else ('memory' if era == 'memory' else 'doorbell_night'))
     return SetPiece('porch_doorbell', L, anchors, paths, lens='doorbell_ir' if ir else 'doorbell',
-                    grade='ir_night' if ir else 'doorbell_night', focus=1.0, dof=0.0, cover=WIDE,
-                    fx=(lambda t: {'flash': police_flash(t, 0.1)}) if police else None,
-                    info={'view': v, 'car_X': car_X, 'lights': pf})
+                    grade=grade, focus=1.0, dof=0.0, cover=WIDE,
+                    fx=(lambda t: {'flash': police_flash(t, 0.1)}) if police else None, info=info)
 
 
 def porch_peephole(car=True, police=True, car_X=2.3, flick='random', moths=5, wind=1.0, mist=True, drive_in=None, doors=None,
-                   figures=('driver', 'back')):
+                   figures=('driver', 'back'), vehicle='patrol', van=None, hazard=True, tod='night', windows=None, era='now'):
     """The porch through the door's peephole (lens 'peephole', grade 'porch_warm'). Eye height 1.6 m; officer at
     anchors['officer'] (depth 1.0) fills ~45 % of the disc; anchors['officer_close'] (depth 0.62) ~70 %. Same world as
     porch_doorbell: railing, lantern + moths, path, patrol car at the curb with the second officer behind the wheel and
-    the man in the back seat, houses across, moon."""
+    the man in the back seat, houses across, moon. Delivery film: vehicle / van / hazard / tod / windows as porch_doorbell."""
     v = View(600, 560, 1.6, ground=-0.72)
     car_d = None
     if car:
         car_d = dict(X=car_X, facing=1, figures=figures, doors=doors, D=4.85)
         if drive_in: car_d['drive'] = ('in', drive_in[0], drive_in[1], car_X - 14.0, car_X); car_d['head'] = lambda t: t < drive_in[1] + 1.0
-    L = _porch_world('pph', v, PEEP, car_d, police, lamps=(-3.6, 6.2), moon=(1290, 150, 30), flick=flick, moths=moths, wind=wind,
-                     mist=mist, tree=(-3.6, 3.4), chair=False, peephole=True)
+    if vehicle != 'patrol': car_d = _vehicle_spec(vehicle, car_X, 4.85, van, drive_in, era)
+    hz = _hazard_fn(hazard) if vehicle == 'van' else None
+    tag = 'pph' if (vehicle == 'patrol' and tod == 'night' and windows is None) else 'pph_%s_%s_%s%s' % (vehicle, tod, era, '_3am' if windows else '')
+    L = _porch_world(tag, v, PEEP, car_d, police, lamps=(-3.6, 6.2), moon=(1290, 150, 30), flick=flick, moths=moths, wind=wind,
+                     mist=mist, tree=(-3.6, 3.4), chair=False, peephole=True, hazard=hz, tod=tod, windows=windows)
     anchors = {'officer': v.anchor(0.0, 1.0, note='under the porch light, ~1 m from the door'),
                'officer_close': v.anchor(0.0, 0.62, note='face bulging toward the lens'),
                'officer2': v.anchor(-0.7, 1.2), 'double': v.anchor(0.55, 1.1),
                'steps': v.anchor(0.0, 1.95), 'path_mid': v.anchor(0.0, 3.0, Y=-0.72), 'gate': v.anchor(0.0, 4.15, Y=-0.72),
                'car_rear_door': v.anchor(car_X + 0.4, 4.4, Y=-0.72)}
     paths = {'car_to_porch': [anchors['car_rear_door'], anchors['gate'], anchors['path_mid'], anchors['steps'], anchors['double']]}
-    return SetPiece('porch_peephole', L, anchors, paths, lens='peephole', grade='porch_warm', focus=1.0, dof=0.0, cover=PEEP,
-                    fx=(lambda t: {'flash': police_flash(t, 0.1)}) if police else None, info={'view': v, 'car_X': car_X, 'lights': _lights_fn(police)})
+    info = {'view': v, 'car_X': car_X, 'lights': _lights_fn(police)}
+    if vehicle != 'patrol' or tod != 'night':
+        _delivery_anchors(v, anchors, paths, car_X, None)
+        info['hazard'] = hz or (lambda t: 0.0)
+    return SetPiece('porch_peephole', L, anchors, paths, lens='peephole', grade='dawn' if tod == 'dawn' else 'porch_warm', focus=1.0, dof=0.0,
+                    cover=PEEP, fx=(lambda t: {'flash': police_flash(t, 0.1)}) if police else None, info=info)
 
 
 # ============================================================== street views (house 144, mother's cottage)
@@ -1696,13 +1769,15 @@ def _cottage_draw(v, X=0.0, D=2.0, w=9.0, window_lit=1.0, silhouette=False, numb
 
 
 def _street_world(tag, v, house_fn, porch_fn=None, car=None, police=True, neighbours=True, lamps=((-9.5, 1.8),), tree=(-6.5, 1.75),
-                  wind=1.0, moon=(1610, 120, 30), mist=True, fence=False, mailbox=1.4, number='144', house_D=2.2, extra=()):
+                  wind=1.0, moon=(1610, 120, 30), mist=True, fence=False, mailbox=1.4, number='144', house_D=2.2, extra=(),
+                  hazard=None, nb_lit=(0.9, 0, 0.7, 0)):
     lf = _lights_fn(police)
+    if car and hazard and car.get('kind') == 'van': car.setdefault('hazard_fn', hazard)
     box = FRAME
     def nb(pen, t):
         if not neighbours: return
         for i, X in enumerate((-17.5, 16.5)):
-            _house(pen, v, X, 2.45, 10.5, 3.2 + (2.6 if i else 0), 2.4, seed=3 + i, storeys=2 if i else 1, lit=(0.9, 0, 0.7, 0),
+            _house(pen, v, X, 2.45, 10.5, 3.2 + (2.6 if i else 0), 2.4, seed=3 + i, storeys=2 if i else 1, lit=nb_lit,
                    garage=(i == 0), number=('142', '146')[i])
         draw_tree(pen, v.x(10.5, 2.7), v.gy(2.7), 11 * v.s(2.7), 0.0, 23, 0.0, '#080b12', ('#4a5a88', 70), 5)
     backdrop = _combine(_sky_draw(v, (box[0], box[1], box[2], v.gy(6) + 20), moon, seed=9,
@@ -1739,6 +1814,18 @@ def _street_world(tag, v, house_fn, porch_fn=None, car=None, police=True, neighb
     if car:
         cd = car.get('D', 1.1)
         L.append(Layer(cd, _car_layer_draw(v, cd, car, lf), 'car'))
+    for k, ex in enumerate(extra):                       # more parked vehicles (e.g. the old wagon in the memory)
+        L.append(Layer(ex.get('D', 1.3), _car_layer_draw(v, ex.get('D', 1.3), ex, lf), 'car%d' % (k + 2)))
+    if hazard and car:
+        cX = car.get('X', 3.0)
+        def hh(pen, c):
+            s = v.s(house_D)
+            pen.radial(None, v.x(cX - 1.0, house_D), v.gy(house_D) - 1.2 * s, 7.5 * s, [(0, c, 255), (0.6, c, 90), (1, c, 0)], sy=0.45, clip=False)
+        L += _spill_one(house_D - 0.01, hh, _key(tag, 'hz_h', cX), (box[0], v.y(9.5, house_D), box[2], v.gy(house_D) + 4), hazard, 0.26, 'house_hazard')
+        def hl(pen, c):
+            for dX in (-2.7, 2.7):
+                pen.radial(None, v.x(cX + dX, 1.15), v.gy(1.12), 3.6 * v.s(1.3), [(0, c, 235), (0.5, c, 80), (1, c, 0)], sy=0.16, clip=False)
+        L += _spill_one(1.29, hl, _key(tag, 'hz_l', cX), (box[0], v.y(1.0, 2.0), box[2], v.gy(0.9)), hazard, 0.5, 'lawn_hazard')
     if police:
         def hg(pen, c):
             s = v.s(house_D)
@@ -1752,18 +1839,27 @@ def _street_world(tag, v, house_fn, porch_fn=None, car=None, police=True, neighb
 
 
 def street_wide(car=True, police=True, car_X=3.6, drive=None, doors=None, figures=('driver', 'back'), bedroom_lit=0.0,
-                living_lit=1.0, wind=1.0, mist=True, head=None):
+                living_lit=1.0, wind=1.0, mist=True, head=None, vehicle='patrol', van=None, hazard=True, era='now', upstairs_left=0.35):
     """House 144 seen from across the street: two-storey house with porch, white railing, lantern, number 144, mailbox,
     lawn and path, neighbours, street lamp, trees, moon; the patrol car at the curb in the foreground (depth 1.1).
     drive = ('in'|'out'|'pass', t0, t1, X0, X1) moves the car (wheels turn, body pitches); doors = f(t) -> {'rear': k}.
-    Anchors: officer on the porch, path points, car doors, the bedroom window (upstairs right)."""
+    Anchors: officer on the porch, path points, car doors, the bedroom window (upstairs right).
+    Delivery film: vehicle='van' (+ van=dict(driver, door, head, drive), hazard as porch_doorbell), era='memory' (21 years
+    ago: the old station wagon parked in front, a dark house, desaturated 'memory' grade). Use delivery_street()."""
     v = View(160, 600, 1.5)
     car_d = None
     if car:
         car_d = dict(X=car_X, facing=1, figures=figures, doors=doors, D=1.1)
         if drive: car_d['drive'] = drive; car_d['head'] = head if head is not None else (lambda t: True)
-    L = _street_world('swd', v, _house144_draw(v, bedroom_lit=bedroom_lit, living_lit=living_lit), _porch144_draw(v), car_d, police,
-                      wind=wind, mist=mist)
+    hz = None; extra = ()
+    if vehicle != 'patrol':
+        car_d = _vehicle_spec(vehicle, car_X, 1.1, dict(van or {}, drive=drive) if drive else van, None, era)
+        if vehicle == 'van': hz = _hazard_fn(hazard)
+        if era == 'memory': extra = (dict(kind='wagon', X=-5.6, D=1.28, facing=1, color='#6a5a44'),)
+    tag = 'swd' if vehicle == 'patrol' else 'swd_%s_%s_%.2f_%.2f_%.2f' % (vehicle, era, bedroom_lit, living_lit, upstairs_left)
+    L = _street_world(tag, v, _house144_draw(v, bedroom_lit=bedroom_lit, living_lit=living_lit, upstairs_left=upstairs_left),
+                      _porch144_draw(v), car_d, police, wind=wind, mist=mist, hazard=hz, extra=extra,
+                      nb_lit=(0.9, 0, 0.7, 0) if vehicle == 'patrol' else (0, 0, 0.35, 0))
     # lantern on the porch post (dynamic: flicker + moths)
     fl = lambda t: flicker(t, 5, 0.8)
     lv = View(160, 600, 1.5 - 0.72)
@@ -1779,8 +1875,14 @@ def street_wide(car=True, police=True, car_X=3.6, drive=None, doors=None, figure
     info = {'view': v, 'bedroom_window': (bx, by, 2.2), 'lights': _lights_fn(police)}
     paths = {'porch_to_car': [a['officer'], a['steps'], a['path_mid'], a['gate'], a['car_rear_door']],
              'car_to_porch': [a['car_rear_door'], a['gate'], a['path_mid'], a['steps'], a['double']]}
-    return SetPiece('street_wide', L, a, paths, lens=None, grade='night_blue', focus=1.1, dof=0.0, cover=FRAME,
-                    fx=(lambda t: {'flash': police_flash(t, 0.12)}) if police else None, info=info)
+    if vehicle != 'patrol':
+        a['driver'] = a['officer']; a['van_door'] = v.anchor(car_X + 0.2, 1.2, note='beside the van\'s sliding door')
+        a['van_cab'] = v.anchor(car_X - 1.3, 1.2, note='beside the van\'s cab door')
+        paths['porch_to_van'] = [a['officer'], a['steps'], a['path_mid'], a['gate'], a['van_cab']]
+        paths['van_to_porch'] = paths['porch_to_van'][::-1]
+        info['hazard'] = hz or (lambda t: 0.0)
+    return SetPiece('street_wide', L, a, paths, lens=None, grade='memory' if era == 'memory' else 'night_blue', focus=1.1, dof=0.0,
+                    cover=FRAME, fx=(lambda t: {'flash': police_flash(t, 0.12)}) if police else None, info=info)
 
 
 def mother_exterior(car=True, police=False, car_X=4.2, drive=None, doors=None, figures=('driver', 'back'), window_lit=1.0,
@@ -3779,3 +3881,351 @@ def build(name, **kw):
     """build('hallway', police=False) -> SetPiece; build('insert:licence', ...) -> insert composition."""
     if name.startswith('insert:'): return insert(name.split(':', 1)[1], **kw)
     return SETS[name](**kw)
+
+
+# ######################################################################################################################
+# DELIVERY FILM: "If A Delivery Driver Rings Your Doorbell At 3 AM... DON'T SIGN FOR IT"
+# The police film's world (house 144, porch, street, doorbell / peephole views, hallway, their lighting) re-dressed for
+# 3:07 AM: the NIGHTLINE DELIVERY van with blinking amber hazards replaces the patrol car (amber spill replaces the
+# red / blue), the tall taped box, the hall with the stairs, upstairs, Lily's room, the side of the house, the memory
+# (21 years ago), sunrise at 6:12, inserts and the delivery-app screens on the police phone UI. See SETS.md.
+# ######################################################################################################################
+from engine import post as _post
+
+# grades used by the delivery sets (registered by name so the director can say grade='dawn' / 'memory')
+_post.GRADES.setdefault('dawn', dict(exposure=0.45, contrast=1.02, pivot=0.25, gamma=1.06, sat=1.0, wb=(1.1, 1.0, 0.88),
+                                     floor='#0e0a10', bloom=0.7, bloom_thr=234, vignette=0.42, grain=0.5, shoulder=0.5))
+_post.GRADES.setdefault('memory', dict(exposure=0.05, contrast=0.94, pivot=0.25, gamma=1.02, sat=0.3, mono=0.4, tint='#e2caa2',
+                                       wb=(1.06, 1.0, 0.9), floor='#15110d', bloom=0.6, bloom_thr=236, vignette=0.3,
+                                       grain=1.2, soft=1.2, shoulder=0.5))
+_post.GRADES.setdefault('nightlight', dict(contrast=1.0, pivot=0.25, gamma=0.98, sat=0.95, wb=(0.95, 0.98, 1.1), floor='#0a0b16',
+                                           bloom=0.7, bloom_thr=234, vignette=0.4, grain=0.6, shoulder=0.5))
+
+NL_NAVY, NL_AMBER, AMBER = '#26324c', '#cf8f2c', '#ffa31f'
+TAPE, TAPE_HI, KRAFT, KRAFT_SH = '#8c5a2a', '#e0a564', '#b08155', '#6e4a2c'
+
+
+def WINDOWS_3AM(i):
+    """Houses across at 3 AM: every window dark except one dim bedroom (somebody else is awake)."""
+    return (0.0, 0.0, 0.42 if i == 3 else 0.0, 0.0)
+
+
+# ============================================================== hazard flashers
+def hazard(t, rate=1.25, t_on=None, t_off=None, duty=0.48):
+    """Van hazard flashers -> amber 0..1 at time t: a relay blink at `rate` Hz (duty = on fraction), incandescent attack
+    ~30 ms and decay ~70 ms. t_on / t_off switch them on / off (the phase restarts at t_on, so the first flash lands on it)."""
+    if t_on is not None and t < t_on: return 0.0
+    base = t_on if t_on is not None else 0.0
+    P = 1.0 / rate
+    if t_off is not None and t >= t_off:
+        u0 = (t_off - base) % P; on = duty * P
+        lvl = (1.0 - math.exp(-u0 / 0.03)) if u0 < on else 0.0
+        return lvl * math.exp(-(t - t_off) / 0.07)
+    u = (t - base) % P
+    on = duty * P
+    if u < on: return 1.0 - math.exp(-u / 0.03)
+    return (1.0 - math.exp(-on / 0.03)) * math.exp(-(u - on) / 0.07)
+
+
+def hazard_ticks(t0, t1, rate=1.25, t_on=None, t_off=None, duty=0.48):
+    """Relay tick times of the flasher between t0 and t1 -> [(t, 'on' | 'off')] (SFX: the hazard light ticks)."""
+    base = t_on if t_on is not None else 0.0
+    P = 1.0 / rate
+    k = math.floor((t0 - base) / P) - 1
+    out = []
+    while base + k * P <= t1:
+        a = base + k * P
+        for tt, kind in ((a, 'on'), (a + duty * P, 'off')):
+            if t0 <= tt < t1 and (t_on is None or tt >= t_on) and (t_off is None or tt < t_off): out.append((round(tt, 3), kind))
+        k += 1
+    return out
+
+
+def _hazard_fn(hz):
+    """hazard param -> f(t) -> 0..1. True = blinking from t=0, dict(rate, t_on, t_off, duty, strength), a callable, or
+    False / None = off."""
+    if not hz: return lambda t: 0.0
+    if callable(hz): return hz
+    p = dict(rate=1.25, t_on=None, t_off=None, duty=0.48, strength=1.0)
+    if isinstance(hz, dict): p.update(hz)
+    return lambda t: p['strength'] * hazard(t, p['rate'], p['t_on'], p['t_off'], p['duty'])
+
+
+def _spill_one(depth, draw_geom, key, bounds, fn, k=0.5, name='spill', c=AMBER):
+    """One cached light-spill layer whose alpha follows fn(t) (skipped entirely while the light is off)."""
+    def d(pen, t): draw_geom(pen, c)
+    return [Layer(depth, d, name, cache=key, bounds=bounds, alpha=lambda t: k * fn(t), blur=0)]
+
+
+def _amber_pool(pen, x, y, s, hz, facing=1):
+    """Amber light on the road under the van's front and rear corner flashers."""
+    if hz <= 0.03: return
+    F = 1 if facing > 0 else -1
+    for lx in (2.95, -2.95):
+        cx = x + F * lx * s
+        pen.radial(None, cx, y, min(2.6 * s, 420.0), [(0, AMBER, 130 * hz), (0.45, AMBER, 40 * hz), (1, AMBER, 0)], sy=0.16, clip=False)
+
+
+# ============================================================== the NIGHTLINE DELIVERY van
+VAN_LEN = 6.0                      # body length in metres (high-roof panel van, 2.55 m tall)
+_VAN_S = 200.0                     # sprite drawn at 200 px per metre
+
+
+def _nl_logo(cv, pen, x, y, s, a=255, fade=0.0, tag=True, dark=NL_NAVY, moon=NL_AMBER):
+    """NIGHTLINE DELIVERY wordmark: crescent moon cradling a small parcel + the name. (x, y) = left end of the baseline of
+    'NIGHTLINE', s = cap height in design px. fade 0..1 washes it toward the van white. Returns the width."""
+    k = 1.0 - 0.45 * fade
+    mx, my, mr = x + s * 0.55, y - s * 0.62, s * 0.78
+    cres = minus(oval(mx, my, mr), oval(mx + mr * 0.42, my - mr * 0.18, mr * 0.82))
+    pen.fill(cres, moon, a * k)
+    pen.fill(rrect(mx - mr * 0.1, my + mr * 0.05, mr * 0.62, mr * 0.5, mr * 0.06), dark, a * k)        # the parcel
+    pen.seg((mx + mr * 0.21, my + mr * 0.05), (mx + mr * 0.21, my + mr * 0.55), max(1.0, mr * 0.07), moon, a * k)
+    tx = x + s * 1.55
+    w = text(cv, 'NIGHTLINE', tx, y, 900, s * 1.32, dark, a * k, 0.04, 'left')
+    pen.fill(rect(tx, y + s * 0.18, w, s * 0.09), moon, a * k)
+    text(cv, 'DELIVERY', tx + w, y + s * 0.82, 800, s * 0.52, dark, a * k, 0.42, 'right')
+    if tag: text(cv, 'RETURNS  •  EXCHANGES  •  24 HR', tx + w, y + s * 1.42, 700, s * 0.26, dark, a * k * 0.8, 0.22, 'right')
+    return tx + w - x
+
+
+def _van_profile(s):
+    def P(a, b): return (a * s, -b * s)
+    pts = [(-2.95, 0.33), (-3.0, 0.42), (-3.0, 0.66), (-2.97, 0.76), (-2.95, 1.06), (-2.86, 1.15), (-2.24, 1.31), (-1.68, 2.26),
+           (-1.55, 2.47), (-1.35, 2.54), (2.82, 2.55), (2.94, 2.48), (2.97, 0.5), (3.0, 0.38), (2.97, 0.3), (-2.9, 0.3)]
+    body = smooth([P(*q) for q in pts], True, 0.12)
+    for wx in (-1.92, 1.8):
+        body = minus(body, oval(*P(wx, 0.36), 0.5 * s))
+    return body
+
+
+def _van_body(pen, s, facing, driver):
+    """Static artwork of the van (white high-roof panel van, faded NIGHTLINE DELIVERY lettering, grime, rust): one sprite."""
+    cv = pen.cv
+    cv.save()
+    if facing > 0: cv.scale(-1, 1)
+    lw = max(1.2, 0.035 * s)
+
+    def P(a, b): return (a * s, -b * s)
+    body = _van_profile(s)
+    pen.linear(body, 0, -2.55 * s, 0, -0.3 * s, ['#e2dfd5', '#d1cdc1', '#b3ae9f'])
+    pen.linear(rect(-3.1 * s, -2.6 * s, 6.2 * s, 0.12 * s), 0, -2.6 * s, 0, -2.45 * s, ['#a9a597', '#cdc9bd'])   # roof edge
+    cv.save(); cv.clipPath(body, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(-3.1 * s, -2.6 * s, 6.2 * s, 0.1 * s), '#9a9688', 160)
+    # beltline crease + shadow
+    pen.fill(rect(-2.9 * s, -1.06 * s, 5.85 * s, 0.035 * s), '#ffffff', 90)
+    pen.fill(rect(-2.9 * s, -1.02 * s, 5.85 * s, 0.05 * s), '#6a665c', 70)
+    # the logo (faded, chipped) across the sliding door and the cargo panel
+    cvt = cv; cvt.save()
+    if facing > 0: cvt.scale(-1, 1)
+    fx = -1 if facing > 0 else 1
+    lx0 = (-0.46 if fx > 0 else -2.86) * s
+    _nl_logo(cvt, pen, lx0, -1.52 * s, 0.32 * s, 205, 0.25)
+    cvt.restore()
+    rng = np.random.default_rng(11)
+    for _ in range(140):                                                     # chipped paint over the letters
+        cx_, cy_ = rng.uniform(-0.6, 2.9), rng.uniform(1.0, 2.15)
+        r_ = rng.uniform(0.008, 0.035)
+        pen.fill(oval(*P(cx_, cy_), r_ * s, r_ * s * rng.uniform(0.5, 1.0)), '#d6d2c6', 230)
+    pen.fill(rect(-0.6 * s, -2.2 * s, 3.6 * s, 1.3 * s), '#d8d4c8', 40)
+    # grime along the bottom, splash behind the wheels, rust
+    pen.linear(rect(-3.1 * s, -1.0 * s, 6.2 * s, 0.75 * s), 0, -1.0 * s, 0, -0.3 * s, [(0, '#4a3d2e', 0), (0.55, '#4a3d2e', 70), (1, '#3a2e22', 170)])
+    for wx in (-1.92, 1.8):
+        pen.radial(None, *P(wx + 0.62, 0.62), 0.55 * s, [(0, '#3a2e22', 120), (1, '#3a2e22', 0)], sy=0.7, clip=False)
+        for k in range(5):
+            rx = wx + (k - 2) * 0.17 + rng.uniform(-0.05, 0.05)
+            pen.line(poly([P(rx, 0.82 + rng.uniform(0, 0.1)), P(rx + 0.01, 0.62)], False), max(1.0, 0.018 * s), '#7a4a26', 120)
+        pen.radial(None, *P(wx, 0.86), 0.32 * s, [(0, '#7a4524', 110), (1, '#7a4524', 0)], sy=0.5, clip=False)
+    for (rx, ry) in ((-0.3, 0.55), (0.6, 0.48), (2.6, 0.6), (-2.5, 0.85)):
+        pen.fill(_blob(*P(rx, ry), 0.07 * s, 0.04 * s, 8, int(rx * 10) + 50), '#7a4524', 150)
+        pen.line(poly([P(rx, ry - 0.02), P(rx + 0.01, ry - 0.22)], False), max(1.0, 0.012 * s), '#7a4524', 100)
+    cv.restore()
+    # panel seams
+    sc = '#6e6a60'
+    cab = poly([P(-2.05, 0.42), P(-2.05, 1.36), P(-1.6, 2.24), P(-0.62, 2.24), P(-0.62, 0.42)])
+    pen.line(cab, lw * 0.6, sc, 220)
+    pen.line(rrect(-0.53 * s, -2.27 * s, 1.4 * s, 1.85 * s, 0.05 * s), lw * 0.6, sc, 220)             # sliding door
+    pen.seg(P(0.87, 1.52), P(2.75, 1.52), lw * 0.55, '#5a564e', 200)                                   # its track
+    pen.seg(P(2.88, 0.46), P(2.88, 2.48), lw * 0.5, sc, 180)
+    pen.seg(P(-2.05, 0.95), P(-2.86, 1.12), lw * 0.5, sc, 160)                                          # hood line
+    # windshield sliver, door window, dash glow, the driver (or his empty seat)
+    pen.fill(poly([P(-2.22, 1.3), P(-1.66, 2.26), P(-1.55, 2.26), P(-2.06, 1.37)]), '#141a26')
+    win = poly([P(-1.95, 1.44), P(-1.53, 2.13), P(-0.74, 2.13), P(-0.74, 1.44)])
+    pen.linear(win, 0, -2.13 * s, 0, -1.44 * s, ['#222c40', '#0b0e15'])
+    cv.save(); cv.clipPath(win, skia.ClipOp.kIntersect, True)
+    pen.radial(None, *P(-1.7, 1.44), 0.5 * s, [(0, '#7aa08a', 90), (1, '#7aa08a', 0)], sy=0.5, clip=False)    # dash glow
+    if driver:
+        hx, hy = -1.12, 1.84
+        sil = union(oval(*P(hx, hy), 0.13 * s, 0.16 * s), rrect(*P(hx - 0.3, 1.66), 0.62 * s, 0.4 * s, 0.12 * s))
+        cap = union(rrect(*P(hx - 0.15, 2.02), 0.3 * s, 0.12 * s, 0.05 * s), rrect(*P(hx - 0.3, 1.94), 0.24 * s, 0.05 * s, 0.02 * s))
+        pen.fill(union(sil, cap), '#030305', 250)
+        pen.fill(oval(*P(hx - 0.06, 1.86), 0.025 * s, 0.012 * s), '#d8e0e8', 40)                      # a glint where an eye is
+    else:
+        pen.fill(rrect(*P(-1.22, 1.98), 0.26 * s, 0.24 * s, 0.07 * s), '#07080b', 230)                 # empty headrest
+        pen.fill(rrect(*P(-1.32, 1.72), 0.44 * s, 0.3 * s, 0.08 * s), '#07080b', 230)
+    pen.fill(poly([P(-1.9, 1.44), P(-1.7, 1.44), P(-1.2, 2.13), P(-1.4, 2.13)]), '#9fb0d0', 34)        # glass streaks
+    pen.fill(poly([P(-1.1, 1.44), P(-1.03, 1.44), P(-0.75, 1.85), P(-0.75, 1.95)]), '#9fb0d0', 24)
+    cv.restore()
+    pen.line(win, lw * 0.8, '#05060a')
+    # handles, mirror, fuel door, step, bumpers, lamp housings
+    pen.fill(rrect(*P(-0.96, 1.29), 0.2 * s, 0.06 * s, 0.025 * s), '#4a4a48')
+    pen.fill(rrect(*P(-0.47, 1.34), 0.16 * s, 0.06 * s, 0.025 * s), '#4a4a48')
+    pen.seg(P(-2.02, 1.52), P(-2.22, 1.58), max(1.5, 0.04 * s), '#1e2024')
+    pen.shape(rrect(*P(-2.34, 1.88), 0.2 * s, 0.42 * s, 0.05 * s), '#24262b', lw * 0.6)
+    pen.line(oval(*P(1.35, 0.98), 0.09 * s), lw * 0.5, sc, 200)
+    pen.fill(rect(*P(-0.5, 0.36), 1.36 * s, 0.07 * s), '#1a1b1e')
+    pen.shape(rrect(*P(-3.04, 0.62), 0.42 * s, 0.32 * s, 0.06 * s), '#2e3034', lw * 0.6)
+    pen.shape(rrect(*P(2.72, 0.5), 0.33 * s, 0.22 * s, 0.05 * s), '#2e3034', lw * 0.6)
+    pen.line(body, lw, LINE)
+    for wx in (-1.92, 1.8):                                                  # dark wheel wells (wheels are live)
+        pen.fill(oval(*P(wx, 0.36), 0.49 * s), '#050607')
+    cv.restore()
+
+
+def _van_lamps(s):
+    """Lamp lenses in van-local metres: name -> (x0, y0, x1, y1)."""
+    return {'head': (-3.0, 0.82, -2.88, 1.02), 'f_amber': (-3.0, 0.68, -2.9, 0.8), 'f_side': (-2.82, 0.74, -2.62, 0.8),
+            'r_red': (2.9, 1.12, 2.99, 1.5), 'r_amber': (2.9, 0.86, 2.99, 1.12), 'r_white': (2.9, 0.62, 2.99, 0.86),
+            'r_side': (2.66, 0.6, 2.84, 0.66)}
+
+
+def delivery_van(pen, x, y, length, t=0.0, facing=1, wheel=0.0, bounce=0.0, pitch=0.0, hz=0.0, head=False, brake=False,
+                 driver=True, door=0.0, dash=1.0):
+    """The NIGHTLINE DELIVERY van in side view: white high-roof panel van, faded lettering, grime and rust. (x, y) = centre
+    between the wheels at ground level, length = body length in design px, facing +1 = nose right. hz = hazard flashers
+    0..1 (front / rear corner lamps, side markers + their glow; use hazard(t)); head / brake lamps; driver = silhouette
+    with his cap behind the wheel (False: the empty seat); door 0..1 slides the side door back (black cargo hold). The
+    body is a cached sprite; wheels, lamps and the door are live (~4 ms at 2560). Cab clearance lamps glow steadily."""
+    s = length / VAN_LEN
+    cv = pen.cv
+    F = 1 if facing > 0 else -1
+    pen.radial(None, x, y + 0.04 * s, 3.5 * s, [(0, '#000000', 190), (0.75, '#000000', 120), (1, '#000000', 0)], sy=0.09, clip=False)
+    cv.save(); cv.translate(x, y + bounce)
+    prot = (pitch if facing > 0 else -pitch) if pitch else 0.0
+    if prot: cv.rotate(round(prot / 0.25) * 0.25)
+    key = ('van', facing, bool(driver))
+    bnd = (-3.25 * _VAN_S, -2.75 * _VAN_S, 3.25 * _VAN_S, 0.1 * _VAN_S)
+
+    def body_fn(p): _van_body(p, _VAN_S, facing, bool(driver))
+    _sprite(pen, key, body_fn, bnd, scale=s / _VAN_S)
+    if door > 0.01:                                                          # sliding door rolls back along its track
+        dx = F * clamp(door) * 1.32 * s
+        xa, xb = sorted((F * -0.52 * s, F * 0.86 * s))
+        op = rect(xa, -2.27 * s, xb - xa, 1.86 * s)
+        pen.fill(op, '#020203')
+        pen.linear(op, 0, -2.27 * s, 0, -0.41 * s, [(0, '#1a1410', 120), (0.7, '#000000', 0), (1, '#2a2018', 90)])
+        pen.seg((xa + 0.25 * (xb - xa), -2.2 * s), (xa + 0.3 * (xb - xa), -0.6 * s), max(1.0, 0.03 * s), '#16120e', 255)   # a strap
+        cv.save(); cv.clipPath(moved(op, dx, 0), skia.ClipOp.kIntersect, True); cv.translate(dx, 0)
+        _sprite(pen, key, body_fn, bnd, scale=s / _VAN_S)
+        cv.restore()
+        pen.line(moved(op, dx, 0), max(1.2, 0.035 * s), LINE)
+    if facing > 0: cv.scale(-1, 1)
+    lw = max(1.2, 0.035 * s)
+
+    def R(b): return rrect(b[0] * s, -b[3] * s, (b[2] - b[0]) * s, (b[3] - b[1]) * s, 0.02 * s)
+    lm = _van_lamps(s)
+    pen.fill(R(lm['head']), mix('#8a8e94', '#fff8ee', 1.0 if head else 0.0))
+    pen.fill(R(lm['r_white']), '#c8c8c4' if not head else '#e8e8e4')
+    pen.fill(R(lm['r_red']), '#ff3a2a' if brake else '#6a1410')
+    for n in ('f_amber', 'r_amber', 'f_side', 'r_side'):
+        pen.fill(R(lm[n]), mix('#6a3e0e', '#ffd27a', hz))
+        if hz > 0.5: pen.fill(R(lm[n]), '#fff4d8', 255 * (hz - 0.5) * 2 * 0.8)
+        pen.line(R(lm[n]), lw * 0.4, LINE, 200)
+    for k in range(3):                                                       # cab clearance lamps (steady)
+        pen.fill(rrect((-1.4 + k * 0.17) * s, -2.6 * s, 0.09 * s, 0.05 * s, 0.02 * s), '#ffc060')
+    # wheels: steel rims, eight holes turning with the wheel
+    for wx in (-1.92, 1.8):
+        cx_, cy_ = wx * s, -0.36 * s
+        pen.fill(oval(cx_, cy_, 0.38 * s), '#08090b')
+        pen.fill(oval(cx_, cy_, 0.24 * s), '#6e7278')
+        pen.fill(oval(cx_, cy_, 0.19 * s), '#4e5258')
+        for k in range(8):
+            a = math.radians(-wheel + k * 45)
+            pen.fill(oval(cx_ + math.cos(a) * 0.14 * s, cy_ + math.sin(a) * 0.14 * s, 0.028 * s), '#1a1c20')
+        pen.fill(oval(cx_, cy_, 0.07 * s), '#9aa0a6'); pen.fill(oval(cx_ - 0.02 * s, cy_ - 0.02 * s, 0.025 * s), '#d0d4d8')
+        pen.line(oval(cx_, cy_, 0.38 * s), lw * 0.8, '#000000')
+    if hz > 0.05 and dash:                                                   # the hazard telltale blinking in the dark cab
+        pen.fill(poly([(-1.8 * s, -1.5 * s), (-1.74 * s, -1.6 * s), (-1.68 * s, -1.5 * s)]), '#ff5a3a', 200 * hz)
+    cv.restore()
+    yb = y + bounce
+    if hz > 0.03:                                                            # flasher glow (screen space)
+        for (lx_, ly_, r1) in ((-2.96, 0.74, 1.0), (2.95, 0.99, 1.0), (-2.72, 0.77, 0.55), (2.75, 0.63, 0.55)):
+            gx, gy = x + F * lx_ * s, yb - ly_ * s
+            pen.glow(gx, gy, min(0.75 * s * r1, 180.0), '#ffd27a', 210 * hz)
+            pen.glow(gx, gy, min(2.6 * s * r1, 420.0), AMBER, 80 * hz)
+    for k in range(3):
+        gx, gy = x + F * (-1.36 + k * 0.17) * s, yb - 2.58 * s
+        pen.glow(gx, gy, min(0.22 * s, 60.0), '#ffb040', 120)
+    if head:
+        hx_, hy_ = x + F * 2.96 * s, yb - 0.92 * s
+        pen.glow(hx_, hy_, 0.6 * s, '#fff1c8', 170)
+        L5 = 5.5 * s * F
+        beam = poly([(hx_, hy_ - 0.08 * s), (hx_ + L5, hy_ - 0.5 * s), (hx_ + L5, hy_ + 0.75 * s), (hx_, hy_ + 0.1 * s)])
+        pen.linear(beam, hx_, 0, hx_ + L5, 0, [(0, '#fff1c8', 110), (0.5, '#fff1c8', 36), (1, '#fff1c8', 0)])
+    if brake:
+        pen.glow(x - F * 2.95 * s, yb - 1.3 * s, 0.7 * s, '#ff3020', 160)
+
+
+def _wagon(pen, x, y, length, c='#6a5a44', facing=1):
+    """Your parents' 1990s station wagon (memory, 21 years ago): long roof, faux-wood side panel, chrome strip."""
+    s = length / 4.9
+    cv = pen.cv; cv.save(); cv.translate(x, y)
+    if facing > 0: cv.scale(-1, 1)
+
+    def P(a, b): return (a * s, -b * s)
+    pen.radial(None, 0, 0.03 * s, 2.8 * s, [(0, '#000000', 170), (1, '#000000', 0)], sy=0.08, clip=False)
+    body = smooth([P(-2.45, 0.35), P(-2.48, 0.72), P(-2.1, 0.86), P(-1.0, 0.92), P(-0.55, 1.36), P(2.2, 1.38), P(2.42, 1.3),
+                   P(2.46, 0.6), P(2.4, 0.32), P(2.0, 0.3), P(1.8, 0.56), P(1.0, 0.56), P(0.8, 0.3), P(-1.15, 0.3), P(-1.35, 0.56),
+                   P(-2.05, 0.56), P(-2.2, 0.3)], True, 0.18)
+    pen.fill(body, c)
+    pen.linear(inter(body, rect(-2.6 * s, -0.95 * s, 5.2 * s, 0.65 * s)), 0, -0.95 * s, 0, -0.3 * s, [_lighten(c, 0.12), _darken(c, 0.3)])
+    wood = inter(body, rect(-1.0 * s, -0.84 * s, 3.42 * s, 0.34 * s))
+    pen.fill(wood, '#6a4228'); pen.texture(wood, 'wood', 0.5, 'overlay', 0.8)
+    pen.line(wood, max(1.0, 0.02 * s), '#c8b890', 200)
+    gl = smooth([P(-0.92, 0.94), P(-0.5, 1.3), P(2.12, 1.31), P(2.3, 1.26), P(2.32, 0.94)], True, 0.12)
+    pen.linear(gl, 0, -1.3 * s, 0, -0.94 * s, ['#1e2638', '#090b10'])
+    for bx in (0.3, 1.25): pen.seg(P(bx, 0.94), P(bx, 1.31), max(1.5, 0.05 * s), c)
+    pen.shade(gl, poly([P(-0.6, 0.94), P(-0.45, 0.94), P(0.2, 1.4), P(0.05, 1.4)]), '#8ea2c8', 40)
+    for rx in (0.0, 0.9, 1.8): pen.seg(P(rx - 0.25, 1.42), P(rx + 0.25, 1.42), max(1.0, 0.03 * s), '#a8a8a0')   # roof rack
+    pen.seg(P(-0.3, 1.42), P(2.1, 1.42), max(1.0, 0.025 * s), '#8a8a84')
+    pen.seg(P(-2.3, 0.62), P(2.4, 0.62), max(1.0, 0.02 * s), '#c8c8c0', 150)
+    pen.line(body, max(1.2, 0.03 * s), LINE)
+    for wx in (-1.6, 1.4):
+        cx_, cy_ = P(wx, 0.32)
+        pen.fill(oval(cx_, cy_, 0.31 * s), '#08090b'); pen.fill(oval(cx_, cy_, 0.19 * s), '#8a8c90'); pen.fill(oval(cx_, cy_, 0.07 * s), '#c0c2c6')
+    pen.fill(smooth([P(2.36, 0.88), P(2.45, 0.86), P(2.45, 0.66), P(2.36, 0.67)], True, 0.4), '#5a1410')
+    pen.fill(smooth([P(-2.42, 0.8), P(-2.2, 0.82), P(-2.2, 0.7), P(-2.44, 0.68)], True, 0.4), '#7a7a72')
+    cv.restore()
+
+
+def _vehicle_spec(vehicle, X, D, van=None, drive_in=None, era='now'):
+    """Car dict for _car_layer_draw: vehicle 'van' (+ van options) | 'wagon' | None."""
+    if not vehicle: return None
+    if vehicle == 'wagon': return dict(kind='wagon', X=X, D=D, facing=1, color='#6a5a44')
+    o = dict(van or {})
+    d = dict(kind='van', X=X, D=D, facing=o.get('facing', 1), driver=o.get('driver', True), door=o.get('door', 0.0),
+             head=o.get('head', False), dash=o.get('dash', 1.0), pool=o.get('pool', True), brake=o.get('brake', False))
+    if o.get('drive'): d['drive'] = o['drive']
+    elif drive_in: d['drive'] = ('in', drive_in[0], drive_in[1], X - 18.0, X)
+    return d
+
+
+def _delivery_anchors(v, anchors, paths, car_X, box):
+    """Delivery-film anchors on the porch views: driver (= officer spots), box spots, van doors and the walk to the van."""
+    gy = v.ground
+    anchors['driver'] = anchors['officer']; anchors['driver_close'] = anchors['officer_close']
+    anchors['box_boots'] = v.anchor(0.58, 1.02, note='the box standing next to his boots')
+    anchors['box_door'] = v.anchor(-1.0, 0.46, note='the box against the front door (its street face)')
+    anchors['van_cab'] = v.anchor(car_X - 1.4, 4.4, Y=gy, note="beside the van's cab door (curb side)")
+    anchors['van_door'] = v.anchor(car_X + 0.2, 4.4, Y=gy, note="at the van's sliding door")
+    paths['porch_to_van'] = [anchors['officer'], anchors['steps'], anchors['path_mid'], anchors['gate'], anchors['van_cab']]
+    paths['van_to_porch'] = paths['porch_to_van'][::-1]
+
+
+def _dawn_wash(v, box, houses_D):
+    """6:12 AM: low sun from the right raking the houses across (warm), cool shade toward the left."""
+    def draw(pen, t):
+        x0, y0, x1, y1 = box
+        pen.radial(None, x1 - (x1 - x0) * 0.12, v.gy(houses_D) - 2.0 * v.s(houses_D), (x1 - x0) * 0.55,
+                   [(0, '#ffcf96', 90), (0.5, '#ffb07a', 34), (1, '#ffb07a', 0)], sy=0.5, clip=False)
+        pen.linear(rect(x0, y0, x1 - x0, y1 - y0), x0, 0, x1, 0, [(0, '#3a4a7a', 50), (0.6, '#3a4a7a', 0)])
+    return draw
