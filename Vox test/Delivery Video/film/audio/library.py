@@ -1,6 +1,13 @@
-"""Query and load the recorded sample library (free CC0/CC-BY files + the owner's Epidemic files).
+"""Query and load the recorded sample library (the owner's Epidemic files + free CC0/CC-BY files).
 
-Built by audio/build_library.py; the catalogue is audio/catalog.json, the audio lives under $S/pov2/samples/.
+Two catalogues, Epidemic first:
+    audio/catalog_epidemic_delivery.json   (audio/epidemic_catalog.py --delivery) the owner's Epidemic files for this
+        film: the new delivery set W/samples/epidemic, the police set W/samples/epidemic_police and the mirror set
+        W/samples/epidemic_mirror. Paths are absolute (through W/samples). These entries come FIRST in entries(), so
+        every pick and pool prefers them; they carry `set` and `serves` (sfx.py names, police + delivery).
+    audio/catalog.json   (audio/build_library.py) the shared free library; its audio stays where the catalogue says
+        (ROOT, the police project's samples folder, read only). Its own 'epidemic' rows (the police set, relative
+        paths) are dropped when the delivery catalogue is present (they are in it, with the same ids).
 
 Public API
     entries(**filters) -> list[dict]       filter by any of: category (exact or prefix ending in '/'), serves (a required
@@ -29,15 +36,39 @@ _CAT = None
 _BY_ID = None
 
 
+EPI_CATALOG = os.path.join(HERE, 'catalog_epidemic_delivery.json')
+
+
+def _epi_entries():
+    """The delivery Epidemic catalogue as library entries (empty if it has not been built)."""
+    if not os.path.exists(EPI_CATALOG):
+        return []
+    c = json.load(open(EPI_CATALOG))
+    out = []
+    for kind in ('sfx', 'music'):
+        for e in c.get(kind, []):
+            out.append({'id': e['slug'], 'path': e['path'], 'category': 'epidemic/' + kind,
+                        'tags': [w for w in e['slug'].split('_') if w], 'serves': list(e.get('serves', [])),
+                        'source': 'epidemic', 'set': e.get('set'), 'licence': 'Epidemic Sound (owner subscription)',
+                        'attribution': None, 'dur': e.get('dur'), 'sr': e.get('sr', SR), 'channels': 2,
+                        'peak_db': e.get('peak_db'), 'lufs': e.get('lufs'), 'policy': 'as_supplied', 'qc': []})
+    return out
+
+
 def _cat():
     global _CAT, _BY_ID
     if _CAT is None:
         _CAT = json.load(open(os.path.join(HERE, 'catalog.json')))
+        epi = _epi_entries()
+        if epi:
+            ids = {e['id'] for e in epi}
+            free = [e for e in _CAT['samples'] if e['source'] != 'epidemic' and e['id'] not in ids]
+            _CAT['samples'] = epi + free
         _BY_ID = {e['id']: e for e in _CAT['samples']}
     return _CAT
 
 
-ROOT = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work/pov2/samples'
+ROOT = '/home/user/claude-todo-demo/Vox test/Police Officer Video/v2/_work/pov2/samples'   # free library (read only)
 
 
 def entries(category=None, serves=None, tag=None, source=None, licence=None, policy=None, free_only=False, no_lossy=False,

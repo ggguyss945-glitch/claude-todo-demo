@@ -1,9 +1,11 @@
-"""Final mix for v2: narration (EN or the RU dub) with radio/phone voicing, the SFX from sfx_cues.json, and the score
+"""Final mix (police v2 pipeline, delivery film): narration with line voicing, the SFX from sfx_cues.json, and the score
 stems from music_cues.json, mixed to the reference measurements in analysis/AUDIO_SPEC.md.
 
 CLI
-    python3 mix.py <timeline.json> <vo_en.wav> <vo_ru_dub.wav> <cues dir> <out dir>
-                   [--t0 S --t1 S]  render only a window (tests)     [--langs en,ru]
+    python3 mix.py <timeline.json> <vo_en.wav> <vo_ru_dub.wav | -> <cues dir> <out dir>
+                   [--t0 S --t1 S]  render only a window (tests)     [--langs en]  (en,ru when a dub exists)
+                   [--strict]       stop on a failed SFX cue instead of falling back (see "Never crashes" below)
+                   [--who-fx X=hall,...]  voice FX for every line of a speaker that has no fx in the timeline
                    [--fallback]     force the placeholder drone instead of audio/score.py
                    [--bed-p50 -16]  target bed (music + SFX) 3 s short-term median, LU rel voice (true K-weighting)
                    [--bed-rel -13]  reference integrated bed level; the bed is capped at bed_rel + 1.5
@@ -17,6 +19,22 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   the EN ducking is baked into sfx/music)
     mix_report.json               measured loudness, levels relative to the voice, events per minute, limiter use,
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
+
+Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
+    doorbell   the driver through the doorbell camera's two-way audio, played by your phone: 230 Hz-6.8 kHz, camera
+               presence, porch slap-back, light compression and grit, a faint camera hiss (-1 LU)
+    box        a voice from INSIDE the cardboard box: dull (2.4 kHz), boxy cavity resonances (190 / 430 Hz), the tiny
+               carton IR, and a hollow double 3 semitones down, 25 ms late, under it (-1.5 LU)
+    phone      DRY: in this film 'phone' lines are app / notification text read by the narrator
+    phone_call the police film's phone line (was 'phone'); phone_far; radio (police film)
+    hall       a voice behind you in the hallway (short hall reverb, a little dull); not in the script's fx, offered for
+               the X lines ("Hey, buddy") via --who-fx X=hall or by setting fx in the timeline
+    any other fx -> dry, with a warning
+Never crashes on cue data: an SFX name is resolved by sfx.resolve() (aliases, then a keyword guess with a warning);
+    a name nothing fits is skipped with a warning; an unknown space falls back to the name's default space with a
+    warning; a cue whose recipe raises is retried with default params and space, then skipped with a warning (--strict
+    restores the police behaviour: stop). Every fallback is listed in mix_report.json `sfx_fallbacks`.
+    hazard_ticks (sfx.TIMED) gets cue_t = the cue's film time so the relay ticks lock to the drawn flashers.
 
 Signal flow
     voice  -> v1 radio/phone line FX (kept from ../src/mix.py; radio drive 1.8; each processed line loudness-matched
@@ -65,7 +83,8 @@ def band(x, lo, hi, order=4):
     return signal.sosfilt(signal.butter(order, [lo, hi], 'bandpass', fs=SR, output='sos'), x).astype(np.float32)
 
 
-LINE_FX_LU = {'radio': -2.0, 'phone': -1.0, 'phone_far': -2.0}   # processed line vs the same line dry (K-weighted)
+LINE_FX_LU = {'radio': -2.0, 'phone_call': -1.0, 'phone_far': -2.0, 'doorbell': -1.0, 'box': -1.5, 'hall': -1.0}
+# processed line vs the same line dry (K-weighted)
 
 
 def radio_fx(x):
@@ -79,14 +98,64 @@ def phone_fx(x, far=False):
     return y * 1.05
 
 
+def doorbell_fx(x):
+    """The driver through the doorbell camera (porch mic -> app -> phone speaker); stays intelligible."""
+    y = SX.lp(SX.hp(x, 230, 4), 6800, 4)
+    y = SX.eq(y, ('peak', 2700, 3.0, 1.1), ('peak', 900, -1.5, 1.0), ('peak', 350, 1.5, 1.0))
+    sl = np.zeros_like(y)                                   # porch slap-back (door, siding)
+    for d, g in ((0.011, 0.12), (0.019, 0.08), (0.033, 0.04)):
+        k = int(d * SR); sl[k:] += y[:-k] * g
+    y = y + SX.lp(sl, 3500, 2)
+    pk = float(np.abs(y).max()) + 1e-9
+    y = SX.compress(y, SX.db(pk) - 14, 3.0, 0.003, 0.08)
+    y = np.tanh(y / (np.abs(y).max() + 1e-9) * 1.4) / np.tanh(1.4) * pk
+    hiss = band(np.random.default_rng(3).normal(0, 1, len(y)).astype(np.float32), 2000, 8000) * pk * 0.004
+    return (y + hiss).astype(np.float32)
+
+
+def box_fx(x):
+    """A voice from inside the cardboard box: dull, boxy, close, with a hollow double a minor third down."""
+    d = SX.eq(SX.lp(x, 2400, 4), ('peak', 190, 5.0, 1.2), ('peak', 430, 3.0, 1.4), ('peak', 950, -3.0, 1.0),
+              ('ls', 120, 2.0, 0.7))
+    w = SX.mono(SX.reverb(d, 'box', 0.5))[:len(x)]
+    try:
+        import librosa
+        dn = librosa.effects.pitch_shift(x.astype(np.float32), sr=SR, n_steps=-3.0)
+        dn = SX.lp(dn, 1000, 2) * 0.2
+        k = int(0.025 * SR); dd = np.zeros_like(w); dd[k:] = dn[:len(w) - k]
+        w = w + dd
+    except Exception as e:                                  # the double is a garnish: never fail the line on it
+        log('box voice double skipped:', repr(e)[:80])
+    pk = float(np.abs(w).max()) + 1e-9
+    return (np.tanh(w / pk * 1.2) / np.tanh(1.2) * pk).astype(np.float32)
+
+
+def hall_fx(x):
+    """A voice behind you in the hallway."""
+    d = SX.eq(SX.lp(x, 7000, 2), ('hs', 3000, -2.5, 0.7))
+    return SX.mono(SX.reverb(d, 'hallway', 0.32))[:len(x)].astype(np.float32)
+
+
+LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: phone_fx(x, True), 'doorbell': doorbell_fx,
+           'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None}
+_FX_WARNED = set()
+
+
 def apply_line_fx(vo, spans):
     """spans: list of (start s, end s, kind). Replace those stretches of the voice with the processed version."""
     out = vo.copy()
     for a, b, kind in spans:
+        fx = LINE_FX.get(kind, 'unknown')
+        if fx == 'unknown':
+            if kind not in _FX_WARNED:
+                _FX_WARNED.add(kind); log(f'WARNING: unknown line fx {kind!r}: left dry')
+            continue
+        if fx is None:
+            continue
         i0, i1 = max(0, int((a - 0.05) * SR)), min(len(vo), int((b + 0.15) * SR))
         seg = vo[i0:i1]
         if len(seg) < 100: continue
-        y = radio_fx(seg) if kind == 'radio' else phone_fx(seg, kind == 'phone_far')
+        y = fx(seg)
         # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
         Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
         if Ls > -70 and Ly > -70:
@@ -104,17 +173,19 @@ def load_vo(path, n):
     return y
 
 
-def voice_tracks(tl, vo_en, vo_ru, n_full, langs):
+def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
     L = tl['lines']
-    en_spans = [(l['t'], l['end'], l['fx']) for l in L if l.get('fx') and l.get('found_en', True)]
+    who_fx = who_fx or {}
+    fx_of = lambda l: l.get('fx') or who_fx.get(l.get('who'))
+    en_spans = [(l['t'], l['end'], fx_of(l)) for l in L if fx_of(l) and l.get('found_en', True)]
     ru_start = {}
     for g in tl.get('dub', []):
         i, j = g['lines']; ru_start[i] = g['ru_start']
     ru_spans = []
     for l in L:
-        if not l.get('fx'): continue
+        if not fx_of(l): continue
         a = ru_start.get(l['i'], l['t']); d = l['ru_src'][1] - l['ru_src'][0] if 'ru_src' in l else l['end'] - l['t']
-        ru_spans.append((a, a + max(0.4, d), l['fx']))
+        ru_spans.append((a, a + max(0.4, d), fx_of(l)))
     out = {}
     if 'en' in langs: out['en'] = apply_line_fx(load_vo(vo_en, n_full), en_spans)
     if 'ru' in langs: out['ru'] = apply_line_fx(load_vo(vo_ru, n_full), ru_spans)
@@ -377,7 +448,9 @@ def main():
     ap.add_argument('timeline'); ap.add_argument('vo_en'); ap.add_argument('vo_ru'); ap.add_argument('cues')
     ap.add_argument('out')
     ap.add_argument('--t0', type=float, default=0.0); ap.add_argument('--t1', type=float, default=None)
-    ap.add_argument('--langs', default='en,ru'); ap.add_argument('--fallback', action='store_true')
+    ap.add_argument('--langs', default='en'); ap.add_argument('--fallback', action='store_true')
+    ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
+    ap.add_argument('--who-fx', default='', help='e.g. X=hall: line fx for a speaker whose lines have none')
     ap.add_argument('--bed-rel', type=float, default=-13.0, help='reference integrated bed level (report and cap)')
     ap.add_argument('--bed-p50', type=float, default=-16.0, help='target bed 3 s short-term median, LU rel voice')
     ap.add_argument('--no-stems', action='store_true')
@@ -399,7 +472,10 @@ def main():
 
     # ---------------- voice
     nfull = int(round(full * SR)) + SR
-    vo = voice_tracks(tl, A.vo_en, A.vo_ru, nfull, langs)
+    who_fx = dict(kv.split('=', 1) for kv in A.who_fx.split(',') if '=' in kv)
+    if 'ru' in langs and (A.vo_ru in ('-', '') or not os.path.exists(A.vo_ru)):
+        log('WARNING: no RU dub file; rendering en only'); langs = [l for l in langs if l != 'ru'] or ['en']
+    vo = voice_tracks(tl, A.vo_en, A.vo_ru, nfull, langs, who_fx)
     vstats = {}
     for k in vo:
         v = vo[k][i0:i0 + N]; v = np.pad(v, (0, N - len(v)))
@@ -410,16 +486,28 @@ def main():
     # ---------------- SFX
     SX.reset()
     buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits')}
-    hit_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []
+    hit_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []; fallbacks = {}
+    def fb(key, what):
+        fallbacks.setdefault(key, {'what': what, 'n': 0})['n'] += 1
+        if fallbacks[key]['n'] == 1: log('WARNING:', what)
     order = sorted(range(len(sfx_cues)), key=lambda k: (sfx_cues[k]['t'], k))
     tsfx = time.time()
     for rank, k in enumerate(order):
-        c = sfx_cues[k]; name = c['name']
-        if name not in SX.RECIPES:
-            skipped.append(name); continue
-        params = dict(c.get('params') or {})
+        c = sfx_cues[k]; name0 = c.get('name', '?')
+        name, params, note = SX.resolve(name0, c.get('params') or {})
+        if name is None:
+            skipped.append(name0); fb('name:' + str(name0), note); continue
+        if note and note != 'alias':
+            fb('name:' + str(name0), note)
         space = c.get('space') or params.pop('space', None)
         params.pop('space', None)
+        if space is not None:
+            sp2 = SX.resolve_space(space, name)
+            if sp2 != space and str(space).lower() not in SX.SPACE_ALIAS and str(space).lower() not in SX.SPACE_LU:
+                fb(f'space:{name}:{space}', f'unknown space {space!r} for {name!r}: using {sp2!r}')
+            space = sp2
+        if name in SX.TIMED:
+            params.setdefault('cue_t', float(c['t']))
         dur_hint = float(params.get('dur', 0) or 0)
         tt = float(c['t']) - t0
         if dur_hint and tt + dur_hint > dur + 2 and name in SX.BEDS:      # window renders: no need for the rest
@@ -428,9 +516,16 @@ def main():
             continue
         try:
             y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
-        except Exception as e:                  # a failed cue is a silent hole in the film: stop, never skip
+        except Exception as e:                  # police: stop. Here: retry with defaults, then skip (both reported)
             log('SFX failed', name, c['t'], repr(e)[:160])
-            raise
+            if A.strict:
+                raise
+            try:
+                keep = {kk: params[kk] for kk in ('dur', 'cue_t') if kk in params}
+                y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), **keep)
+                fb(f'retry:{name}', f'{name} failed with its params/space ({repr(e)[:80]}); rendered with defaults')
+            except Exception as e2:
+                skipped.append(name0); fb(f'fail:{name}', f'{name} failed twice ({repr(e2)[:80]}); skipped'); continue
         y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
         if c.get('pan'):
             y = SX.pan(y, float(c['pan']))
@@ -438,7 +533,7 @@ def main():
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
         if 0 <= tt <= dur:
             counts[b] += 1
-            if name in SX.HITS or name == 'knock_door':
+            if name in SX.HITS or name in ('knock_door', 'box_knock'):
                 hit_times.append(tt)
     log(f'sfx rendered in {time.time() - tsfx:.1f} s: {counts}' + (f', skipped {sorted(set(skipped))}' if skipped else ''))
 
@@ -540,7 +635,8 @@ def main():
 
     report = {'cues_sha1': cue_hashes(A.cues), 'window': [t0, t1], 'score': score_src,
               'music_gain_db': round(20 * np.log10(gm), 2),
-              'sfx_counts': counts, 'silences': n_sil, 'langs': {}}
+              'sfx_counts': counts, 'silences': n_sil, 'langs': {},
+              'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped))}
     stem_dir = os.path.join(A.out, 'stems'); os.makedirs(stem_dir, exist_ok=True)
     for lang in langs:
         v = vo[lang]

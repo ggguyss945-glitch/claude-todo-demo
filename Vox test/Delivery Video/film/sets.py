@@ -1,4 +1,5 @@
-"""sets.py: environments, animated set elements and props for "If A Police Officer Knocks..." v2.
+"""sets.py: environments, animated set elements and props for the police film ("If A Police Officer Knocks...") and
+the delivery film ("If A Delivery Driver Rings...", section at the end of this docstring).
 
 Every set is a builder returning a SetPiece: a list of engine Layers (depth-sorted by the engine) with real depth
 spacing for parallax, plus anchors where characters stand and the suggested lens / grade / focus / dof / post fx.
@@ -93,6 +94,24 @@ Animated elements (functions of t)
     flickering lanterns with moths, police spill (cached layers with animated alpha: skipped while dark).
 Notes: sets draw over sp.cover (doorbell: WIDE = x -1000..2920, y -600..1660). Cache keys are shared strings, so build
 a set once per shot (rebuilding per frame also works, just slower in Python). Call engine set_render_size first.
+
+DELIVERY FILM ("If A Delivery Driver Rings Your Doorbell At 3 AM... DON'T SIGN FOR IT"; full notes in SETS.md)
+The police builders above take extra keyword args whose defaults keep the police film unchanged:
+    porch_doorbell / porch_peephole(..., vehicle='patrol'|'van'|'wagon'|None, van=dict(driver, door, drive, head), hazard,
+        box, tod='night'|'dawn', windows, era='now'|'memory');  street_wide(..., vehicle, van, hazard, era, upstairs_left)
+    hallway(..., stairs=False, bowl='house', door_open=0 | f(t), outside=dict(tod, era, box, vehicle, van, hazard, car_X))
+Delivery builders (police off, 3:07 AM defaults; all registered in SETS / build()):
+    delivery_porch(view='doorbell'|'peephole', van, hazard=True, box=None|'door'|'boots'|dict(at, state, knock), ir, tod, era)
+    delivery_street(van, hazard, era)      delivery_hall(stairs, bowl, lamp, door_open, outside)
+    porch_doorway(tod='dawn'|'night', era, box, van, door_open)   memory_porch('doorway'|'street')   sunrise_porch('doorbell'|'doorway')
+    hall_back(bowl, upstairs, hazard)      upstairs_hall(lily_door, window_open, hall_light, mom_door)
+    lily_room(view='room'|'window', window_open, bed='sleeping'|'empty'|'made', hazard, drive)   side_yard(window_open, hazard)
+    phone_bg(bg)  + app_phone(cv, screen, t, x, y, scale) on the HUD (APP_SCREENS)
+    insert(name) with label, label_to, label_lily, tablet_sign, tablet_lily, key_bowl, key_bowl_dad, box_keys, van_seat,
+        hazard_switch (prop_kw / motion as before; tablet / box_inside / keyring come from characters.py)
+Timing helpers: hazard(t, rate, t_on, t_off) -> 0..1, hazard_ticks(t0, t1, ...) -> [(t, 'on'|'off')] (SFX), knock_pulse(times).
+Drawing: delivery_van(pen, x, y, length, t, facing, wheel, bounce, pitch, hz, head, brake, driver, door), WINDOWS_3AM,
+    doorway_camera(sp). Grades registered by name: 'dawn', 'memory', 'nightlight'.
 """
 import bisect, math, os
 import numpy as np
@@ -2579,7 +2598,7 @@ def hallway(police=True, lamp=1.0, porch_light=1.0, feet=None, chain=0.0, slot_o
     if opening:
         L += _hall_doorway_layers(v, Db, dx, dy, dw, dh, door_c, th_fn, outside or {}, CH)
         info['door_open'] = th_fn
-        info['doorway_cam'] = (dx + dw / 2, dy + dh * 0.52, 1.3, 1.75)        # (x, y, dolly zoom, optical factor)
+        info['doorway_cam'] = (dx + dw / 2, dy + dh * 0.52, 1.3, 1.0)         # (x, y, dolly zoom, optical factor)
         a['porch_out'] = v.anchor(0.1, Db + 0.9, note='on the porch just outside the doorway (seen through it)')
     return SetPiece('hallway', L, a, {}, lens='lens', grade='interior_dim', focus=Db, dof=2.5, cover=FRAME,
                     fx=(lambda t: {'flash': police_flash(t, 0.12)}) if police else None, info=info)
@@ -4733,7 +4752,7 @@ def _hall_doorway_layers(v, Db, dx, dy, dw, dh, door_c, th_fn, o, CH):
     lc = {'dawn': '#ffd8bc', 'memory': '#ffd49a', 'night': '#ffcf8f'}[kind]
 
     def spill(pen, t):
-        q = v.quad([(-0.46, 0.002, Db), (0.46, 0.002, Db), (0.95, 0.002, 0.95), (-0.75, 0.002, 0.95)])
+        q = v.quad([(-0.46, 0.002, Db), (0.46, 0.002, Db), (0.95, 0.002, Db * 0.47), (-0.75, 0.002, Db * 0.47)])
         pen.cv.save(); pen.cv.clipPath(q, skia.ClipOp.kIntersect, True)
         pen.radial(None, v.x(0, Db), v.gy(Db), 2.2 * v.s(Db), [(0, lc, 120), (0.5, lc, 50), (1, lc, 0)], sy=0.55, clip=False)
         pen.cv.restore()
@@ -6056,21 +6075,76 @@ def delivery_hall(stairs=True, bowl='house', lamp=0.0, porch_light=1.0, door_ope
                    outside=outside, coats=False, **kw)
 
 
-def porch_doorway(tod='dawn', era='now', box='door', van=None, hazard=True, door_open=0.92, lamp=0.0, car_X=2.2):
-    """The front door open onto the porch, seen from inside the hall: tod 'dawn' (6:12: your mother opens the door, the
-    box still on the porch, its tape cut: box=dict(state='open'); daylight pouring in), 'night' (3 AM, the box backlit at
-    the threshold, the van with hazards beyond), era 'memory' (21 years ago: dad on the porch signing, grade 'memory').
-    door_open 0..1 or f(t) animates the door swinging in. Push the camera to info['doorway_cam'] = (x, y, zoom) to frame
-    the doorway. van=False removes the van (dawn default)."""
+def porch_doorway(tod='dawn', era='now', box='door', van=None, hazard=True, door_open=0.92, car_X=2.2, wall='#3b3a48',
+                  door_c='#4f2c20', lamp_spill=0.0):
+    """The front door open onto the porch, from just inside the hall (camera 1.45 m from the door: the doorway fills the
+    frame height): the hall's damask wall and wainscot around the casing, the transom, the stairs' newel and first
+    balusters on the left, the door leaf swung in (door_open 0..1 or f(t) animates it), the porch world beyond with the
+    box at the threshold (backlit at night: a tall dark shape in the doorway) and the van.
+    tod 'dawn' (6:12: your mother opens the door; box=dict(state='open'), the tape cut; daylight pours in across the
+    floor; no van by default), 'night' (3 AM), era 'memory' (21 years ago, grade 'memory': dad goes out to sign).
+    Anchors: porch_out (just outside), threshold (inside, at the door), hall_near (beside the camera)."""
     if van is None: van = (tod != 'dawn')
     vehicle = 'van' if van else None
     bx = box if not (tod == 'dawn' and box == 'door') else dict(at='door', state='open')
-    sp = hallway(police=False, stairs=True, lamp=lamp, door_open=door_open, coats=False,
-                 outside=dict(tod=tod, era=era, box=bx, vehicle=vehicle, van=van if isinstance(van, dict) else None, hazard=hazard,
-                              car_X=car_X))
-    if era == 'memory': sp.grade = 'memory'
-    elif tod == 'dawn': sp.grade = Grade('interior_dim').lerp('dawn', 0.45)
-    return sp
+    v = View(620, 430, 1.5)
+    Db, Dn, HW, CH = 1.45, 0.4, 1.35, 2.5
+    box_ = FRAME
+    s_ = v.s(Db)
+    dw, dh = 0.92 * s_, 2.05 * s_
+    dx, dy = v.x(-0.46, Db), v.gy(Db) - dh
+    th_fn = door_open if callable(door_open) else (lambda t: float(door_open))
+
+    def front(pen, t):
+        wall_p = minus(v.quad([(-HW, 0, Db), (HW, 0, Db), (HW, CH, Db), (-HW, CH, Db)]), rect(dx, dy, dw, dh))
+        x0, y0 = v.p(-HW, CH, Db); x1, y1 = v.p(HW, 0, Db)
+        cv = pen.cv; cv.save(); cv.clipPath(wall_p, skia.ClipOp.kIntersect, True)
+        _wallpaper(pen, wall_p, (x0, y0, x1, y1), s_, wall, _darken(wall, 0.3), 'damask', 170)
+        pen.linear(wall_p, 0, y0, 0, y1, [(0, '#000000', 90), (0.5, '#000000', 0), (1, '#000000', 60)])
+        pen.linear(v.quad([(-HW, 0, Db), (HW, 0, Db), (HW, 0.9, Db), (-HW, 0.9, Db)]), 0, v.y(0.9, Db), 0, v.gy(Db), ['#2a2626', '#1c1919'])
+        for X0 in (-HW + 0.08, 0.6):
+            pen.line(v.quad([(X0, 0.14, Db), (X0 + 0.45, 0.14, Db), (X0 + 0.45, 0.78, Db), (X0, 0.78, Db)]), 3, '#0e0c0c', 200)
+        pen.fill(v.quad([(-HW, 0.88, Db), (HW, 0.88, Db), (HW, 0.94, Db), (-HW, 0.94, Db)]), '#4a4440')
+        pen.fill(v.quad([(-HW, 0, Db), (HW, 0, Db), (HW, 0.12, Db), (-HW, 0.12, Db)]), '#2e2a28')
+        cv.restore()
+        tx0, ty0 = v.p(-0.46, 2.36, Db); tx1, ty1 = v.p(0.46, 2.14, Db)                       # transom
+        pen.shape(rect(tx0 - 10, ty0 - 10, tx1 - tx0 + 20, ty1 - ty0 + 20), '#b8b0a0', 3)
+        lc = '#ffe6cc' if tod == 'dawn' else '#ffd9a0'
+        pen.radial(rect(tx0, ty0, tx1 - tx0, ty1 - ty0), (tx0 + tx1) / 2 - 60, ty1, (tx1 - tx0) * 0.7, [(0, lc), (1, mix('#141a28', lc, 0.5))])
+        for k in range(1, 4): pen.seg((tx0 + (tx1 - tx0) * k / 4, ty0), (tx0 + (tx1 - tx0) * k / 4, ty1), 5, '#b8b0a0')
+        tw = 0.09 * s_
+        pen.shape(minus(rect(dx - tw, dy - tw, dw + 2 * tw, dh + tw), rect(dx, dy, dw, dh)), '#b8b0a0', 2.5)
+        pen.fill(rect(dx, dy, 0.035 * s_, dh), '#6a5e50'); pen.fill(rect(dx + dw - 0.035 * s_, dy, 0.035 * s_, dh), '#8a7e6e')
+        pen.fill(rect(dx, dy, dw, 0.03 * s_), '#5a5044'); pen.fill(rect(dx, dy + dh - 0.02 * s_, dw, 0.02 * s_), '#8a7a5a')
+        sx_, sy_ = v.p(0.68, 1.25, Db)
+        pen.shape(rrect(sx_, sy_, 0.08 * s_, 0.12 * s_, 4), '#cfc8b8', 2.5); pen.fill(rect(sx_ + 0.03 * s_, sy_ + 0.035 * s_, 0.02 * s_, 0.05 * s_), '#9a9488')
+
+    def sides(pen, t):
+        _side_wall(pen, v, -HW, Db, Dn, 0, CH, wall, _darken(wall, 0.3), 'dots', 150, wains=0.9, wc='#2a2626')
+        _side_wall(pen, v, HW, Db, Dn, 0, CH, wall, _darken(wall, 0.3), 'dots', 150, wains=0.9, wc='#2a2626')
+        ceil = v.quad([(-HW, CH, Db), (HW, CH, Db), (HW, CH, Dn), (-HW, CH, Dn)])
+        pen.linear(ceil, 0, v.y(CH, Dn), 0, v.y(CH, Db), ['#08080b', '#1a1a20'])
+        _floorboards(pen, v, -HW, HW, Db, Dn, '#33261c', '#1a120c')
+        _rug(pen, v, -0.5, 0.5, Db - 0.06, Dn, '#4a1e22', '#1e0c0e', '#9a7a42')
+
+    def stairs(pen, t):
+        _hall_stairs_side(pen, v, -HW, -0.55, Db - 0.16, Dn, CH, wall, Dend=Dn + 0.02)
+
+    L = [_cl(Db, front, 'front_wall', _key('pdw', 'front', wall, tod), (v.x(-HW, Db) - 30, v.y(CH, Db) - 30, v.x(HW, Db) + 30, v.gy(Db) + 30)),
+         _cl(1.0, sides, 'walls', _key('pdw', 'sides', wall), box_),
+         _cl(0.8, stairs, 'stairs', _key('pdw', 'stairs', wall), (box_[0], box_[1], v.x(-0.3, Db), box_[3]))]
+    _exposure(L, 0.32, ('front_wall', 'walls', 'stairs'))
+    L += _hall_doorway_layers(v, Db, dx, dy, dw, dh, door_c, th_fn,
+                              dict(tod=tod, era=era, box=bx, vehicle=vehicle, van=van if isinstance(van, dict) else None, hazard=hazard,
+                                   car_X=car_X), CH)
+    if lamp_spill > 0.01:
+        L.append(Layer(0.9, lambda pen, t: pen.radial(None, box_[2], v.y(1.2, 0.9), 900, [(0, '#ffcf8f', 60 * lamp_spill), (1, '#ffcf8f', 0)],
+                                                      clip=False), 'lamp_spill', blur=0))
+    grade = 'memory' if era == 'memory' else (Grade('interior_dim').lerp('dawn', 0.45) if tod == 'dawn' else 'interior_dim')
+    a = {'porch_out': v.anchor(0.1, Db + 0.9, note='on the porch just outside the doorway (seen through it)'),
+         'threshold': v.anchor(0.05, Db - 0.25, note='inside, at the open door'), 'hall_near': v.anchor(0.55, 0.85, note='beside the camera')}
+    return SetPiece('porch_doorway', L, a, {}, lens=None, grade=grade, focus=Db, dof=1.2, cover=FRAME,
+                    info={'view': v, 'door_open': th_fn, 'door_rect': (dx, dy, dw, dh), 'hazard': _hazard_fn(hazard) if van else (lambda t: 0.0)})
 
 
 def memory_porch(view='doorway', **kw):
@@ -6104,11 +6178,13 @@ __all__ += ['delivery_porch', 'delivery_street', 'delivery_hall', 'porch_doorway
 
 
 def doorway_camera(sp, t0=0.0, t1=6.0, rate=0.02, shake=1.2):
-    """A camera framed on the open front doorway of hallway(door_open=...) / porch_doorway(): a slow dolly push from
-    info['doorway_cam'] plus the held optical punch-in (engine Cam.snap), so the doorway fills ~80 % of the frame height."""
+    """A slow dolly push toward the open front door of hallway(door_open=...) from info['doorway_cam'] (the far hall
+    view; for the doorway filling the frame use porch_doorway(), whose home camera frames it: an optical punch-in on the
+    frame-sized hall layers would blow the layer cache at 2560)."""
     from engine.camera import push_in as _push
-    x, y, z, f = sp.info['doorway_cam']
-    return _push(t0, t1, x, y, z, rate=rate, shake=shake).snap(t0 - 1.0, f, 0.001)
+    x, y, z, f = sp.info.get('doorway_cam', (960, 540, 1.0, 1.0))
+    c = _push(t0, t1, x, y, z, rate=rate, shake=shake)
+    return c.snap(t0 - 1.0, f, 0.001) if f > 1.0 else c
 
 
 __all__ += ['doorway_camera']
