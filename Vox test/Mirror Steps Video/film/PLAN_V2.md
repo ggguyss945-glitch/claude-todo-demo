@@ -85,6 +85,14 @@ popped were. The plan now (`plan/shotlist.py`, the FLOW block and the notes besi
 - **Continuity checks** in `plan/validate.py` (errors): the memory grammar; no legs / lying / disembodied hands in a wide
   unless the crop is real; a sit needs a seat in our cabin's travelling shots; no 2D zoom reversal over 15 % (yo-yo); body heads
   inside the frame; an acting beat timed inside a cutaway of its own move.
+- **Smoothness, root causes** (measured on 60 fps renders, frame by frame): a figure the travelling camera comes near fades over
+  0.2-0.5 m (Euclidean distance, never the view depth); a plane crossing the near plane is drawn from its texture (S072's floor
+  went dark for one frame); the 2D dolly is capped for near layers; `CamPath3` re-times its keys by travelled distance
+  (`ArcBlend`); the light arc's exposure / red trims ease over 1.2 s round their times (490.0, 560.0 stepped inside shots);
+  the dawn_break bulb dips and red-leak stutter ease slot to slot (card 6, m5); the phone face/back, the ear weight, the fist
+  and the hand shapes cross-fade instead of swapping; hands released from the ears swing out with no slope at the ends.
+- **Minors**: m1 the D4 labels sit clear of the caption; m3 the bunk rail hit lands on the camera hit (flinch + squint);
+  m5 above; m7 grown Noah's CEDAR LAKE print reads at every size; m8 the hands grip the frame from the first frame.
 - Result: 314 -> 295 shots (25.2 cuts /min), 78 merged shots from 208 old ones, 24 travelling shots, 20 flow joins, jump cuts
   1.0 %, world switches 5.0 /min, every check passes.
 

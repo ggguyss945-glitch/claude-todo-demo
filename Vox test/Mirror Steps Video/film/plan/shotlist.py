@@ -1617,7 +1617,7 @@ X(T(242), 'WS', 'climax', 'cabin_now/dutch_low', 'red', 'OURS, red wide: grown N
   chars=[body('noah_grown', 900, 960, 540, 'front', 'fear', [A(w(242, 'covers'), 'cover_ears')], eyes='brown', seated=True),
          body('tess', 1300, 960, 480, 'q_left', 'fear', [A(R(0.3), 'look', x=900, y=600)], kneel=True)], errfix=[29], energy='hands over ears, red pulse')
 X(T(243), 'ECU', 'climax', 'cabin_now/bokeh', 'red', 'ECU his eyes squeezed shut', P(4),
-  chars=[bust('noah_grown', 960, 520, 1.6, 'front', 'fear', [A(R(0), 'cover_ears')], light=L_RED)], energy='squeezing')
+  chars=[bust('noah_grown', 960, 520, 1.6, 'front', 'fear', [A(R(0), 'cover_ears', t1=584.6)], light=L_RED)], energy='squeezing')   # hands stay on his ears to the cut (they dropped out of frame at 582.18)
 X(T(244), 'MS', 'theirs', 'cabin_dawn/bunk_2s', 'dawn', '0.6 s flash in the THEIRS look (frozen gold): Noah13 covering his ears on the bunk, an earlier loop',
   FA(5), tr='glint', chars=[body('noah13', 960, 1000, 600, 'front', 'scream', [A(R(0), 'cover_ears')], seated=True)], energy='flash')
 X(582.53, 'MS', 'climax', 'cabin_now/master', 'red', 'back: grown Noah rocking, hands on his ears', HH(2.5, shake=16), tr='glint',

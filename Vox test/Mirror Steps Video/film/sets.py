@@ -1990,8 +1990,10 @@ def _var_fx(var, shot):
             d['red'] = 0.15
             # the bulb dips: one 1/12 s slot in twelve, eased in and out over the slot (review round 2, m5: a hard -0.25 step for
             # 5 frames read as a pop on card 6 and the dawn_break shots)
-            u_ = t * 12.0
-            dip = 0.25 * math.sin(math.pi * (u_ - math.floor(u_))) if _h(int(u_), 9) < 0.08 else 0.0
+            u_ = t * 12.0; i_ = int(math.floor(u_)); f_ = u_ - i_
+            on0 = 1.0 if _h(i_, 9) < 0.08 else 0.0; on1 = 1.0 if _h(i_ + 1, 9) < 0.08 else 0.0
+            f_ = f_ * f_ * (3.0 - 2.0 * f_)
+            dip = 0.25 * (on0 + (on1 - on0) * f_)               # each dip eases in over the slot before it and out after
             d['exposure'] = -0.12 * max(0.0, noise1(t * 7.0, 5)) - dip
         for e in fxp:
             if e.get('t', -1) <= t < e.get('t', -1) + e.get('dur', 0.1):

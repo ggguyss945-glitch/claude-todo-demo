@@ -2790,7 +2790,8 @@ def _arm_data(sp, B, P, side):
         He = np.array([ex + side * (4.0 + 0.3 * hw * cov), ey + (0.47 - 0.1 * cov) * hh, 26.0 - side * hw * 0.9 * math.sin(hy) - 20.0 * cov])
         H = H + (He - H) * ear
         # v2 review (B8): on the way up the hand swings out round the jaw instead of crossing the face
-        H = H + np.array([side * (hw * 0.9 + 30.0), 0.0, -30.0]) * math.sin(math.pi * clamp(ear))
+        # (sin^2: no slope at either end; sin made the hands jump off the ears in the first frame of a release, S254 582.18)
+        H = H + np.array([side * (hw * 0.9 + 30.0), 0.0, -30.0]) * math.sin(math.pi * clamp(ear)) ** 2
         pole = pole + (np.array([side * 0.2, 1.0, 0.75]) - pole) * ear
     hk = getattr(P, 'hshake', 0.0)
     if hk > 0.01:                                         # shaking hands (fear, grown Noah): 7-11 Hz tremor
@@ -2878,7 +2879,8 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
         ee = smoothstep(clamp(ear))
         up = up + (1.0 - up) * ee
         rot = rot + ((-side * 14.0 * B.ct if prop else side * 22.0 * B.ct) - rot) * ee
-        if not prop and ear > 0.5: hand_shape = 'relaxed'
+        if not prop and isinstance(hand_shape, str) and not hand_shape.startswith(('mix:', 'xf:')):
+            hand_shape = shape_mix(hand_shape, 'relaxed', smoothstep(clamp((ear - 0.35) / 0.3)))   # (it switched at 0.5)
     hang = ang * (1 - up) + (180.0) * up + rot
     hs = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0) * getattr(P, 'hl_scale' if side > 0 else 'hr_scale', 1.0)
     ring = (sp['ring'] == side)

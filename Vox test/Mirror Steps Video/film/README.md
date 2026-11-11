@@ -31,6 +31,7 @@ python3 render.py --clip 600 606 --size 960x540 --audio _work/mix/final/mix.wav
 Low-res preview of the whole film with sound (8 min with 2 workers), then its measurements against the brief (5 min; the
 decoded frames are deleted afterwards unless `--keep`):
 ```
+rm -f _work/preview_v2/slice_*                               # finished slices (.done) are reused, even if the code changed
 python3 render.py --size 640x360 --fps 30 --workers 2 --crf 23 --out _work/preview_v2 \
     --audio _work/mix/final_v2/mix.wav --name preview.mp4
 python3 tools/measure_preview.py _work/preview_v2/preview.mp4    # -> _work/preview_v2/measure_preview.json
@@ -236,7 +237,9 @@ if wanted. The picture is kept.
   merge keeps exact key times for a hit). New transition `pan` (0.45 s whip pan, horizontal motion blur, `pan_dir`).
   A plane with any corner nearer than the camera's near plane (5 cm) is filled from its baked texture through its visible
   polygon (`engine/room3d.draw_plane`; the vector path through a nearly singular homography drew S072's floor dark for one
-  frame at 171.317). Grown Noah's CEDAR LAKE print is drawn at every detail level, stretched over his chest.
+  frame at 171.317). Grown Noah's CEDAR LAKE print is drawn at every detail level, stretched over his chest. The light
+  arc's trims (`sets_v2.arc_fx`) ease over 1.2 s round their times, and the dawn_break bulb dips / red-leak stutter ease
+  slot to slot (they stepped: one-frame exposure pops inside shots).
 - **Per-shot overrides** are keyed by a film time inside the shot (`SEAT_T`, `EXTRA_CHARS_T`, `REPLACE_CHARS_T`; shot ids
   change when shots merge); `characters.CLIP_ORIGIN` likewise.
 - **Transitions**: `cut`; `pan` (review round 2, above); `flow` (review round 1: 0.5 s travel dissolve between two places of one move, the outgoing

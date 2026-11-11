@@ -3432,7 +3432,9 @@ def door_wash_live(cam, d0, st):
 def red_leak_layer(k0=1.0):
     """dawn_break (534.7-609.9): red leaks in from the frame edges (8-15 % of the frame), stuttering with the gold."""
     def draw(pen, t):
-        st_ = 0.75 + 0.25 * (1.0 if _h(int(t * 12), 17) > 0.2 else 0.3)
+        u_ = t * 12.0; i_ = int(math.floor(u_)); f_ = u_ - i_; f_ = f_ * f_ * (3.0 - 2.0 * f_)
+        a_ = 1.0 if _h(i_, 17) > 0.2 else 0.3; b_ = 1.0 if _h(i_ + 1, 17) > 0.2 else 0.3
+        st_ = 0.75 + 0.25 * (a_ + (b_ - a_) * f_)             # the stutter eased slot to slot (review round 2: it stepped)
         k = k0 * st_ * (0.85 + 0.15 * math.sin(t * 5.3))
         for (x0, y0, x1, y1) in ((0, 0, 260, 0), (1920, 0, 1660, 0), (0, 0, 0, 200), (0, 1080, 0, 880)):
             if y0 == y1:
@@ -3450,18 +3452,27 @@ ARC = [((0, 70), (95, 110), 0.5, 'night, warm memories'), ((70, 140), (95, 110),
        ((630, 700), (90, 100), 2.0, 'blue with a warm pool')]
 
 
+def _smst(x):
+    return x * x * (3.0 - 2.0 * x)
+
+
+def _arc_win(t, a, b, r=0.6):
+    """1 inside [a, b], 0 outside, eased over 2r s centred on each edge (review round 2: the arc's trims stepped at their
+    times, a one-frame exposure pop inside any shot that spans one: 490.0 in S207, the climax pulse's start at 560.0)."""
+    return _smst(clamp((t - (a - r)) / (2 * r))) * _smst(clamp(((b + r) - t) / (2 * r)))
+
+
 def arc_fx(t, world=None):
     """Per-frame post trims for the light arc (merged into every v2 SetPiece's fx): a slow climb of the red in the THEIRS
-    break (534.7-560), the climax pulse (560-628, period 1.2 s), nothing elsewhere (the worlds carry the arc)."""
+    break (534.7-560), the climax pulse (560-628, period 1.2 s), nothing elsewhere (the worlds carry the arc). Every trim
+    eases in and out over 1.2 s around its times."""
     d = {}
-    if t < 140.0 and world == 'ours':
-        d['exposure'] = 0.36                       # tenths 1-2: night is coloured and readable (luma 95-110)
-    if 350.0 <= t < 420.0 and world in ('theirs', 'theirs_break'):
-        d['exposure'] = -0.06
-    if 420.0 <= t < 490.0 and world in ('theirs', 'theirs_break'):
-        d['exposure'] = -0.3                       # tenth 7: the gold cools near her (120-135)
-    if 534.7 <= t < 560.0 and world in ('theirs', 'theirs_break'):
-        d['red'] = 0.08 + 0.12 * clamp((t - 534.7) / 25.0)
-    if 560.0 <= t < 628.2 and world in ('climax', 'ours', 'stairs'):
-        d['exposure'] = 0.06 * math.sin(t * 2 * math.pi / 1.2)
+    if world == 'ours' and t < 141.0:
+        d['exposure'] = 0.36 * _arc_win(t, -10.0, 140.0)  # tenths 1-2: night is coloured and readable (luma 95-110)
+    if world in ('theirs', 'theirs_break') and 349.0 <= t < 491.0:
+        d['exposure'] = -0.06 * _arc_win(t, 350.0, 420.0) - 0.3 * _arc_win(t, 420.0, 490.0)   # tenth 7: the gold cools near her
+    if world in ('theirs', 'theirs_break') and 534.0 <= t < 561.0:
+        d['red'] = (0.08 + 0.12 * clamp((t - 534.7) / 25.0)) * _arc_win(t, 534.7, 560.0)
+    if world in ('climax', 'ours', 'stairs') and 559.0 <= t < 629.0:
+        d['exposure'] = 0.06 * math.sin(t * 2 * math.pi / 1.2) * _arc_win(t, 560.0, 628.2)
     return d
