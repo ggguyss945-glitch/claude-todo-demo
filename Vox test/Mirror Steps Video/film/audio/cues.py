@@ -31,6 +31,14 @@ start offset to the intensity curve (loudness + brightness) unless `off` is give
 switches inside silences, and adds only the score layers asked for in LAYERS.
 
 Mix settings for this film (MIX_ARGS, measured on the draft): see audio/mix.py's docstring for the command.
+
+Sound v3 (the owner: "the SFX and music need some rework, taking inspiration from how the references build tension";
+measured in analysis/refmirror/snd_study.py, README.md section 3): sfx_v3() keeps every story action and thins the rest
+(SFX_DROP, THIN, the card's whip / hit / stamp only); music_v3() keeps nine true silences (KEEP_SILENCES), turns the
+plan's other silences into 0.5 s holes right before their hit (DROP_LEN, DROP_DB) or thinned dips, cuts a hole before
+each rule card (CARD_GAP), fixes the risers' end times (RISER_FIX) and adds risers into the reveals (EXTRA_MUSIC), keeps
+the swells that build (SWELL_*); music_cues.json carries the act shape (ARC, steered by mix.py --steer), the holes, the
+score options (slope 9, swell_db 5, sub_db SUB_DB, preduck PRE_DUCK) and MIX_ARGS deliver at -14 LUFS / -1 dBTP.
 """
 import argparse, json, os, re, sys, hashlib, collections
 
@@ -88,12 +96,12 @@ SIL_DIP_DB = -5.0                  # the rest: a thinned dip of the score under 
 CARD_GAP = 0.6                     # rule cards: the riser stops this long before the card, the score dips DROP_DB, the
                                    # card's hit (references: the bed 7 dB down 1-1.5 s before "Rule number", then the hit)
 CARD_RISER = 0.6                   # the cards' risers peak about 6-8 dB under the voice (v2 r1: 1 dB under, at level 0.9)
-PRE_DUCK = 0.6                     # score.py's pre-hit duck scaled (the references' hits land on a running bed: median
+PRE_DUCK = 0.7                     # score.py's pre-hit duck scaled (the references' hits land on a running bed: median
                                    # suck-out 0.3-6.5 dB; the plan's 6-16 dB over 0.35-1 s before every hit chopped the bed)
 # risers: into the two biggest hits (critic M4: the real bell 535.36 via the 533.18 silence, her foot 605.21 via the
 # 603.91 silence) and, v3, into the reveals the references build to (the head turn, "You have it", her face, her offer)
-EXTRA_MUSIC = [dict(t=533.18, type='riser', level=0.85, len=6.7, note='into the bell (via the 533.18 silence)'),
-               dict(t=603.91, type='riser', level=0.9, len=5.55, note='into her foot (via the 603.91 silence)'),
+EXTRA_MUSIC = [dict(t=533.18, type='riser', level=0.75, len=6.7, note='into the bell (via the 533.18 silence)'),
+               dict(t=603.91, type='riser', level=0.75, len=5.55, note='into her foot (via the 603.91 silence)'),
                dict(t=696.91, type='riser', level=0.8, len=5.5, note='v3: the phone\'s voice -> the last sting (696.91)'),
                dict(t=197.65, type='riser', level=0.6, len=4.5, note='v3: lean closer -> the head turn (198.15)'),
                dict(t=247.72, type='riser', level=0.65, len=5.0, note='v3: the wish -> "You have it" (248.22)'),
@@ -117,8 +125,8 @@ ARC = [(0.0, -11.0), (12.4, -11.0), (13.2, -14.0), (19.0, -14.0), (22.0, -17.0),
        (181.0, -13.5), (196.5, -12.0), (204.5, -12.5), (230.0, -13.5), (245.0, -11.5), (262.0, -10.5), (268.5, -10.5),
        (288.5, -10.0), (292.0, -18.0), (330.0, -18.0), (340.0, -15.0), (350.0, -13.0), (356.0, -12.5), (372.0, -13.0),
        (380.0, -15.0), (397.0, -15.0), (400.0, -19.5), (440.0, -18.5), (446.5, -12.0), (464.0, -12.0), (470.0, -11.0),
-       (480.0, -10.0), (484.5, -16.0), (500.0, -16.0), (503.5, -13.0), (531.0, -10.0), (542.5, -11.0), (585.0, -9.0),
-       (600.0, -8.0), (611.0, -8.5), (625.0, -9.5), (631.0, -18.0), (676.0, -17.0), (690.0, -13.5), (698.6, -11.5),
+       (480.0, -10.0), (484.5, -16.0), (500.0, -16.0), (503.5, -13.0), (531.0, -10.0), (542.5, -11.0), (585.0, -9.5),
+       (603.0, -9.0), (611.0, -8.5), (625.0, -9.5), (631.0, -18.0), (676.0, -17.0), (690.0, -13.5), (698.6, -11.5),
        (700.0, -11.5)]
 # score.py's own layers (dB curves per bus, piecewise-linear): only where they help the tracks
 DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
@@ -126,11 +134,15 @@ DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
 # <= -1 dBTP) with the act shape steered (--steer, the ARC above, replaces the two-way leveler that flattened it), the
 # bed up under the voice and rising in the pauses (--duck 4 with the arc 4 dB over it), a bass-weighted score bus
 # (--tilt v3: the references' 31-125 Hz weight, a cut at 500 Hz-1 kHz), the hits as punctuation (pre-hit suck-out 6 dB
-# on the hits that keep it), the voice chain unchanged
+# on the hits that keep it); the voice chain's own true-peak limiter back to v2's PLR range (12 dB; r1's 13 was set for
+# -16 LUFS and at -14 left every plosive to the master limiter, 1174 near-ceiling blocks against 71); the ambience
+# beds -3 dB and the foley -1.5 dB under the music (their chirps and rustles were half of the bed's 44 onsets a minute
+# against the references' 18); the bed bus limited to -4 dBTP before the voice joins (the hits' peaks had the master
+# limiter taking up to 6 dB, and the narration with them)
 MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--master-lufs', '-14', '--tp-max', '-1.0', '--steer', '0.85',
             '--duck', '4', '--bed-rel', '-10.5', '--bed-p50', '-12.5', '--music-lo', '-15', '--music-hi', '-8',
-            '--hit-duck', '3', '--hit-dip', '6', '--score-hits-db', '4', '--tilt', 'v3', '--sub-boost', '6',
-            '--glue-max', '1.5', '--voice-plr', '13']
+            '--hit-duck', '3', '--hit-dip', '6', '--score-hits-db', '4', '--tilt', 'v3', '--sub-boost', '4',
+            '--glue-max', '1.5', '--voice-plr', '12', '--beds-db', '-3', '--events-db', '-1.5', '--bed-ceiling', '-4']
 
 
 def _gate(base, spans, depth, ramp=0.6):
@@ -152,7 +164,8 @@ LAYERS = {
     # the act shape is mix.py's arc steering (ARC); the tracks bus only keeps the r1 lift into the bell and the climax
     'tracks': [[0.0, 0.0], [520.0, 0.0], [533.0, 1.5], [542.03, 1.0], [604.0, 1.5], [628.7, 0.0], [720.0, 0.0]],
 }
-SUB_DB = 6.0                       # v3: the synth sub drone (score.render_sub) 6 dB up: the references' sub weight
+SUB_DB = 4.0                       # v3: the synth sub drone (score.render_sub) 4 dB up: the references' sub weight
+                                   # (+6 with the tilt's +6 at 63 Hz kept the master limiter working all through the film)
 END_T = 698.62                     # hard cut to black: everything but the hit tails out (the faint bell is an SFX)
 PULSE_KEEP = (283.0, 291.0)        # the only score pulse: the queen's face (the tracks carry the other pulses)
 
@@ -369,7 +382,7 @@ def main():
 SFX_DROP = {'ui_pop', 'diagram_pop', 'chalk_draw', 'glint_whoosh', 'pixel_glitch', 'flash_hit', 'highlighter_squeak',
             'typing', 'glass_thud'}
 # name: (minimum spacing s between kept sounds of that name, quietest gain kept dB)
-THIN = {'lace_pull': (2.5, -99), 'candy_wrapper': (2.0, -99), 'tape_peel': (0.6, -99), 'glass_tap': (0.45, -99),
+THIN = {'lace_pull': (2.5, -99), 'candy_wrapper': (3.0, -99), 'tape_peel': (0.6, -99), 'glass_tap': (0.45, -99),
         'cloth_press': (1.5, -12), 'cloth_grab': (1.0, -14), 'bed_creak': (1.0, -14), 'jacket_cloth': (1.5, -99),
         'towel_cloth': (0.4, -15), 'flashlight_click': (10.0, -99), 'tape_rewind': (8.0, -99), 'glitch': (0.6, -99),
         'whoosh': (3.0, -9), 'breath': (1.0, -99), 'water_drip': (0.3, -99), 'kids_far': (3.0, -99)}

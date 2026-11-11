@@ -61,22 +61,88 @@ numbers, stamps, red X, tags, flashes, glitches, glints, rewinds, phone states, 
 ids (retimed where the picture differs), new cues where the plan has none, plan walk cues replaced by the picture's own
 footsteps (`drop`), and the picture's hit times (`hits`). The v2 plan already carries every HUD device cue at the time
 ui_v2 draws it. `actions` lists every action with its time for checking.
+Rebuild after any picture change (the same steps run in `_work/final_chain_v2.sh`; the mix takes about 6 min and 7 GB
+of memory: run it when no render is running):
 ```
-python3 film.py --events
+python3 film.py --events                                                  # only if the picture changed
 python3 audio/cues.py --events _work/align/film_events.json --out _work/cues
 python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/cues _work/mix/final_v2 \
     $(python3 -c "import sys;sys.path.insert(0,'audio');import cues;print(' '.join(cues.MIX_ARGS))")
 python3 audio/measure_mix.py _work/mix/final_v2 --cues _work/cues
+python3 analysis/refmirror/snd_env.py ours _work/review/snd_v3/env/ours_final.npz --stems _work/mix/final_v2
+python3 analysis/refmirror/snd_compare.py _work/review/snd_v3/env/ours_final.npz      # the table below, vs the references
 ```
-The mix takes about 10 min and 7 GB of memory: run it when no render is running.
-Review round 1 (critic M1-M4), in `audio/cues.py`: only five real silences stay (533.18 H4, 603.91 H7, 628.7 glass dark,
-661.64 Mom's pause, the end); the other plan silences are -6 dB thinned dips of the score (`KEEP_SILENCES`, `SIL_DIP_DB`);
-`declutter()` thins the UI / edit sounds (no glint whooshes, ring ticks only on the giant numbers, one soft gesture per
-diagram, flash hits only on the real hits, glitches only in the hook's flash-forwards; about 220 -> 73); the music map changes
-cue only on a card or on picture travel (one lullaby for rule 4, one build for rule 5 into the bell, one theme for the ending),
-the tracks bus ramps from rule 5's card to the bell and risers lead into the bell and her foot (`EXTRA_MUSIC`); `MIX_ARGS`
-deliver at -16 LUFS (`--master-lufs`), with the glue eased (`--glue-max 1.5`, ratio 1.5), a lighter duck under the voice
-(`--duck 2.5`), a louder bed (`--bed-rel -9.5 --bed-p50 -12`) and freer hits (`--hit-duck 3 --score-hits-db 6 --voice-plr 13`).
+The sound v3 test was built exactly so, from the current `film_events.json`, into its own folders (the final mix in
+`_work/mix/final_v2` is still review round 1's):
+```
+python3 audio/cues.py --events _work/align/film_events.json --out _work/mix/v3_test/cues
+python3 audio/mix.py _work/align/timeline.json _work/align/vo_en.wav - _work/mix/v3_test/cues _work/mix/v3_test \
+    $(python3 -c "import sys;sys.path.insert(0,'audio');import cues;print(' '.join(cues.MIX_ARGS))")
+python3 analysis/refmirror/snd_env.py ours_v3test _work/review/snd_v3/env/ours_v3test.npz --stems _work/mix/v3_test
+python3 analysis/refmirror/snd_compare.py _work/review/snd_v3/env/ours_v2r1.npz _work/review/snd_v3/env/ours_v3test.npz
+python3 tools/sound_ab.py _work/mix/final_v2 _work/mix/v3_test _work/mix/v3_test/excerpts --match-voice
+```
+- Quick checks: `mix.py ... --t0 S --t1 S` renders a window (the music map's fitted offsets and the layer curves are now
+  shifted into the window; before, the score failed in windows and mix.py fell back to its placeholder drone).
+- Plots: `python3 analysis/refmirror/snd_plot.py OUT.png T0 T1 ours:_work/mix/v3_test --cues _work/mix/v3_test/cues`
+  (voice / music / SFX levels rel the voice, cue ticks, music events, lines, bed spectrogram; `ref:<name>` for a
+  reference stretch). Study plots in `_work/review/snd_v3/plots/`.
+- The reference study (voice and bed separated with sherpa-onnx UVR MDX-NET Voc_FT): stadium whole, the other four in
+  stretches (`_work/review/snd_v3/ref/sep_win.sh`: hooks, cards, reveals, climaxes, 13 min in all; the whole films
+  were too heavy next to a render). `snd_env.py` (K-weighted loudness, bands, onsets) -> `snd_study.py` (per-film
+  numbers) -> `snd_compare.py` (pooled table). Envelopes in `_work/review/snd_v3/env*/`.
+
+### Sound v3: what the references do, and the rework
+The owner: the SFX and music need rework, taking inspiration from how the references build tension. Measured on the five
+references (separated beds), what builds their tension is not loudness and not cutting the bed:
+- **The bed is continuous and steady** under the narration: 3 s short-term p10 / p50 / p90 -17.4 / -13.0 / -9.1 LU rel
+  the voice, a loudness range of 9.3 LU; it **rises in the narration's pauses** (-14.2 under speech, -10.4 in pauses).
+  v2 r1 was choppy instead: -20.5 / -14.4 / -5.1, range 17.7 (24 silences or dips, 95 pre-hit suck-outs, 44 swells),
+  and it did not rise in pauses (-15.9 / -15.0).
+- **It is dark and heavy**: 87 % of its energy under 250 Hz, the 20-60 Hz band 8.8 dB and 60-250 Hz 6.5 dB over 250 Hz-1
+  kHz (v2 r1: 70 %, +1.7 / +2.0): sub drones, not mid-range pads.
+- **Hits are punctuation** on the running bed: 2.7 a minute, peak 4 LU under the voice, decay to -10 dB in 1.4 s, a
+  small suck-out before them (2.7 dB). **Drop-outs are short** (0.5 s, 1 a minute), right before a turn.
+- **Few SFX**: 18 bed onsets a minute, 0.6 strong ones (v2 r1: 38 and 5.7, from 618 one-shots).
+- **Rule cards**: the bed drops about 7 dB 1-1.5 s before "Rule number", the card's hit lands with the words, a second
+  peak 1.5-2 s later (the stamp / the number), then the new act's music.
+- **Their loudness range comes from the narrator**, not the bed: stadium's separated voice alone has LRA 5.4 (ours 2.4,
+  raw `vo_en.wav` 2.5); stadium's voice over our bed measures LRA 5.2, our voice over stadium's bed 2.3. Every mix peak
+  over +4.5 LU in the references is the narrator's emphasis after a pause (bed at -10 LU there). With our voice fixed,
+  the mix's range can only come from the bed, which the references keep steady: see the table.
+
+What changed (all in the pipeline, rebuilt from `film_events.json`):
+- `audio/cues.py` `sfx_v3()`: the HUD / edit sounds go (ui_pop, diagram_pop, chalk_draw, glint, flash_hit, glass_thud, the
+  cards' lipstick write-ons and statement squeaks, the header-clock glitches), repeated gestures keep one sound each
+  (`THIN`: lace, candy, tape, taps, cloth, creaks, flashlight, breaths, whooshes), faint breaths go; the cards keep the
+  towel's whip, the card's hit and the numeral's stamp (+2 dB); the pre-hit suck-out stays only on real hits (stamps,
+  thumps, foley lose the `hit` flag). One-shots in the cue sheet: 618 -> 468 (40 a minute; footsteps, keys, gate,
+  bells, the phone, the candy and the towel stay on their frames).
+- **Six plan sounds had no recipe and were never in the mix** (`mix.py` logged them as skipped): `towel_whip`,
+  `lipstick_stamp`, `number_thump`, `ring_tick`, `rubber_stamp`, `tape_rewind`, i.e. every rule card's stamp, the giant
+  numbers, Tess's count ticks, the 14 YEARS / CANCELED stamps and the loop resets. `audio/sfx_mirror.py` now has them.
+- `music_v3()`: nine true silences (`KEEP_SILENCES`: the click 142.09, time stopping 341.53, the deepest before the real
+  bell 533.18, before her foot 603.91, the foot hanging 626.4-628.18, the glass dark 628.7, Mom's pause 661.64, the last
+  click 688.05, the end); every other plan silence that ends in a hit becomes a 0.5 s hole right before it (`DROP_LEN`,
+  the score's buses -10 dB, reverb tails kept); the rest -5 dB dips. A 0.6 s hole before each rule card with its riser
+  stopping there (`CARD_GAP`, risers at level 0.6, were 0.9 and ended on the card). Risers into the head turn, "You have
+  it", her face (283.77, 478.28) and the last sting; the plan risers written with their start time and review round 1's
+  two risers (they ended 5-7 s before their silences) now end where they should (`RISER_FIX`). Swells 44 -> 25 (only the
+  builds, 9 s apart; tracks lift 5 dB at a swell, was 9). The score's pre-hit duck scaled 0.7 (`PRE_DUCK`).
+- The act shape: `ARC` (the music as heard under the narration, LU rel the voice, per act: hushed arrival -17, the game
+  -16 to -11.5 into card 1, rule 2's wish -11.5 to -10.5, the too-normal dawn -18, the memory -19.5, the build to the
+  bell -13 to -10, the climax -9.5 to -8.5, the ending -18 rising to -11.5 into the phone). `mix.py --steer 0.85`
+  steers the score to it (median of the 1 s level over 5 s, held across holes, risers, silences and cards) and replaces
+  the two-way leveler, which lifted every quiet passage. The score's own intensity slope 16 -> 9 dB.
+- Weight: the drones (synth sub on the key root, contrabass and celli) at 0 dB under every act but the dawn, the memory and
+  the warm half of the ending (were -5), the sub +4 dB (`SUB_DB`), `--tilt v3` (the references' octave balance: 63 Hz up
+  to +4 dB, a 1.4-1.9 dB cut at 250-500 Hz).
+- `MIX_ARGS`: -14 LUFS (`--master-lufs`, was -16), true peak <= -1 dBTP (`--tp-max -1.0`, measured -1.2), the bed up under
+  the voice and rising in the pauses (`--duck 4` with the arc 4 dB over it), the ambience beds -3 dB and the foley -1.5
+  dB under the music, the bed bus limited to -4 dBTP before the voice joins (`--bed-ceiling`: the big hits had the master
+  limiter take 6 dB and the narration with it), hits' punch +4 dB to -2.5 dBTP (was +6 to -1). The voice chain's own
+  true-peak limiter is back at v2's range (`--voice-plr 12`, r1 13: set for -16 LUFS, at -14 it left the plosives to the
+  master limiter). The narration itself, its timing and its line FX are unchanged.
 
 ## 4. Deliver (English only)
 ```

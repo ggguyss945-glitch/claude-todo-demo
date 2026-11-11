@@ -137,6 +137,9 @@ def study(d, name):
     P = 10 ** (Bb / 10)
     R['bed_low_share_pct'] = round(100 * float(P[:2].sum() / P.sum()), 1)
     R['bed_band_db_rel_mid'] = [round(float(10 * np.log10(P[k].mean() / P[2].mean())), 1) for k in range(len(P))]
+    if 'voice_B' in d:                                 # clarity: voice over bed in 1-4 kHz while the narration runs
+        vb = d['voice_B'].astype(float); k = min(vb.shape[1], Bb.shape[1], len(speech))
+        R['voice_over_bed_1_4k_speech_p10_p50'] = [pct((vb[3, :k] - Bb[3, :k])[speech[:k]], q) for q in (10, 50)]
     # rule cards: bed profile around "Rule number"
     rt = rule_times(name)
     dts = [-10, -6, -3, -1.5, -0.5, 0, 0.5, 1, 2, 3, 5, 8]

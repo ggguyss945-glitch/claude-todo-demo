@@ -86,7 +86,7 @@ def main():
     R = dict(name=A.name, dur=len(mix) / SR, I_mix=SX.lufs_int(mix), mix_M=lev(mix, 0.4), mix_S=lev(mix, 3.0))
     if voice is not None:
         voice = voice[a:b]
-        R.update(I_voice=SX.lufs_int(voice), voice_M=lev(voice, 0.4))
+        R.update(I_voice=SX.lufs_int(voice), voice_M=lev(voice, 0.4), voice_B=bands(voice))
     if bed is not None:
         bed = bed[a:b]
         R.update(bed_M=lev(bed, 0.4), bed_S=lev(bed, 3.0), bed_B=bands(bed), bed_F=flux(bed), I_bed=SX.lufs_int(bed))

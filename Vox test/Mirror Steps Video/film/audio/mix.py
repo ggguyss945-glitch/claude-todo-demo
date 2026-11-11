@@ -45,6 +45,9 @@ Signal flow
         - pre-hit dip: music and beds dip 8 dB over the 0.4 s before each SFX hit/stinger/braam/sub_drop/knock
           (score.py ducks its own hits; SFX beds also dip for the score's hits)
         - score bus: bounded auto tilt EQ toward the AUDIO_SPEC octave tilt, width 0.7, slow two-way leveler
+          (mirror v3: --tilt v3 = the references' bass weight; --steer replaces the leveler with steer_music(), which
+          steers the score to music_cues.arc, the act shape as heard under the voice, and the music gain solve below
+          is skipped: the arc is absolute; --tp-max sets the true-peak ceiling of the delivered mix)
         - dynamic bell cut at 1-4.5 kHz keyed by the voice (music/beds up to -5 dB, events -2 dB, hits 0)
         - sidechain duck from the voice envelope: music/beds -4.5 dB (0.25 s release), events -1.5 dB,
           hits (SFX hits bus + score hits stem) -6 dB (20 ms attack, 250 ms release), so reveal lines stay clear
@@ -477,6 +480,10 @@ def short_term_rel(x, ref, win=0.4, hop=0.1):
     return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20) - ref
 
 
+PUNCH_DB = 4.0       # mirror v3: the biggest scares' lift (was 6 dB: with the -14 LUFS master the limiter then took 6 dB
+PUNCH_TP = -2.5      # off 3.92 and 605.21 and pulled the narration down with them); their own true-peak cap (was -1)
+
+
 def punch(y, amount=1.0):
     """The film's biggest scares (cue params.punch): densify the hit (4:1 above peak - 12 dB, 6 ms attack lets the
     transient through), lift its momentary loudness by up to 6 dB and cap its true peak at -1 dBTP, so the scare
@@ -486,8 +493,8 @@ def punch(y, amount=1.0):
     L0 = SX.mom_max(y)
     z = SX.compress(y, SX.db(SX.peak(y)) - 12.0, 4.0, 0.006, 0.18, knee=4.0)
     z = SX.sat(z, 1.0 + 0.6 * amount)
-    z = z * np.float32(10 ** ((L0 + 6.0 * amount - SX.mom_max(z)) / 20))
-    z, _, _ = tp_limit(z, -1.0, look=0.003, rel=0.12)
+    z = z * np.float32(10 ** ((L0 + PUNCH_DB * amount - SX.mom_max(z)) / 20))
+    z, _, _ = tp_limit(z, PUNCH_TP, look=0.003, rel=0.12)
     return z.astype(np.float32)
 
 
@@ -565,6 +572,10 @@ def main():
     ap.add_argument('--steer', type=float, default=0.0, help='steer the score to music_cues.arc (strength 0..1; 0 = '
                     'the two-way leveler)')
     ap.add_argument('--tp-max', type=float, default=-1.5, help='true-peak ceiling of the delivered mix (dBTP)')
+    ap.add_argument('--beds-db', type=float, default=0.0, help='gain on the SFX beds bus (ambiences, room tones)')
+    ap.add_argument('--bed-ceiling', type=float, default=0.0, help='true-peak ceiling of the bed bus before the voice '
+                    'joins, dBTP at the delivered level (0 = off)')
+    ap.add_argument('--events-db', type=float, default=0.0, help='gain on the SFX events bus (foley)')
     ap.add_argument('--sub-boost', type=float, default=0.0, help='max 63 Hz boost of the tilt EQ (dB)')
     ap.add_argument('--master-lufs', type=float, default=TARGET, help='integrated loudness of the delivered mix (LUFS)')
     ap.add_argument('--duck', type=float, default=DUCK_DB, help='music + SFX beds under the voice (dB)')
@@ -735,11 +746,22 @@ def main():
         hd = (10 ** (-A.hit_duck * act_h * spare / 20)).astype(np.float32)
         m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
         m += mhits * (hd * np.float32(gm))[:, None]
-        s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
-        e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
+        s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b * np.float32(10 ** (A.beds_db / 20)))[:, None]; del dm
+        e = dyn_cut(buses['events'], act, 2.0)
+        e *= (10 ** ((A.events_db - 1.5 * act) / 20)).astype(np.float32)[:, None]
         s += e; del e
         s += buses['hits'] * hd[:, None]; del hd
         bed, gr, gg = glue(m + s, ratio=1.5 if A.glue_max < 3.0 else 2.0, cap=A.glue_max)
+        if A.bed_ceiling < 0:                         # mirror v3: the hits' peaks are limited on the bed bus, before the
+            ceil = 10 ** ((A.bed_ceiling - (A.master_lufs - TARGET)) / 20)   # voice joins: the master limiter no longer
+            pk = np.abs(bed).max(1)                   # pulls the narration down under every big hit
+            if float(pk.max()) > ceil:
+                bed2, _, _ = tp_limit(bed, A.bed_ceiling - (A.master_lufs - TARGET), look=0.004, rel=0.12)
+                gb = np.ones(len(bed), np.float32)
+                hot = pk > 1e-6
+                gb[hot] = np.minimum(1.0, np.abs(bed2).max(1)[hot] / pk[hot])
+                gb = minimum_filter1d(gb, size=int(0.004 * SR))
+                gg = gg * gb; bed = bed2; del bed2
         m *= gg[:, None]; s *= gg[:, None]
         return bed, m, s, gr
 
