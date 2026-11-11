@@ -1619,6 +1619,7 @@ def _ours_light(cx, cam, xf, d0, st, vname, info, beam=True):
         # the beam from her rig when she is in shot: sp.info['beam'].override)
         R = cam.R
         src = cam.C + R[2] * 0.9 - R[0] * 0.7 - R[1] * 0.45     # just off the lower-left corner: the cone crosses the frame
+        if src[1] < 0.35: src = src + v3(0.0, 0.35 - float(src[1]), 0.0)   # review round 2: a camera low at the floor put the lamp under the boards
         bl, b = beam_layers(cam, xf, d0, st, src, [(t0, aim + v3(0.15, 0.1, 0)), (t0 + 1.2, aim + v3(-0.1, -0.05, 0)),
                                                    (t0 + 2.6, aim + v3(0.08, 0.12, 0))], seed=int(t0) % 17, a=0.52, spot=230)
         L += bl
@@ -2899,7 +2900,7 @@ def _v_window_out2(var, st, shot):
 # ====================================================================== MEMORY (sepia paper): the past cabin in 3D + relit v1 memories
 PAST_CAMS = {
     'bunk_morning': ((3.15, 1.15, 3.3), (5.0, 0.75, 5.3), 62.0),
-    'bunk_night': ((3.15, 1.25, 3.3), (5.0, 1.0, 5.3), 62.0),
+    'bunk_night': ((3.2, 2.0, 3.25), (5.0, 1.12, 5.3), 64.0),      # review round 2 (B17): high enough to see Noah on the top bunk
     'wake': ((4.05, 0.78, 4.1), (5.1, 0.55, 5.4), 52.0),
     'towel_wet': ((2.9, 0.55, 3.3), (3.4, 0.0, 5.6), 62.0),
     'socks': ((3.45, 0.95, 3.8), (4.85, 0.6, 5.0), 54.0),

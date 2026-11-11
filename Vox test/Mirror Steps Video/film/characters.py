@@ -2805,6 +2805,9 @@ def _ear_weight(P, side):
     hand raised close to the shoulder: up > 0.5, fwd < 120, down < 60)."""
     pre = 'hl_' if side > 0 else 'hr_'
     ear = getattr(P, pre + 'ear', 0.0)
+    # review round 2 (B18): phone_to_ear drives the ear weight itself; the legacy rule jumped it to 1 half way up the raise
+    # (the phone snapped from the chest to the ear in one frame at 188.95, 660.95, 667.43)
+    if getattr(P, '_ear_drv_' + pre, False): return clamp(ear)
     if getattr(P, pre + 'prop') == 'phone' and getattr(P, pre + 'up') > 0.5 and getattr(P, pre + 'fwd') < 120 \
             and getattr(P, pre + 'down') < 60:
         ear = max(ear, 1.0)
@@ -2880,11 +2883,21 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     hs = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0) * getattr(P, 'hl_scale' if side > 0 else 'hr_scale', 1.0)
     ring = (sp['ring'] == side)
     if prop:
-        if ear > 0.5 and prop == 'phone':
-            # phone pressed to the ear: dark back of the phone along the cheek, the hand wrapped round it
-            pc = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs,
-                       side * 17.0 * B.ct, hs * 1.0)
-            _prop(pc, 'phone_back', det, t)
+        if ear > 0.35 and prop == 'phone':
+            # phone pressed to the ear: dark back of the phone along the cheek, the hand wrapped round it. Review round 2:
+            # the phone's face turns into its back over ear 0.35-0.65 (a cross-fade, it swapped in one frame at 0.5)
+            xk = smoothstep(clamp((ear - 0.35) / 0.3))
+            if xk < 0.999:
+                c.pen.cv.saveLayer(None, skia.Paint(Alphaf=float(1.0 - xk)))
+                pc0 = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs, 0, hs * 1.15)
+                _prop(pc0, prop, det, t)
+                c.pen.cv.restore()
+            if xk > 0.001:
+                c.pen.cv.saveLayer(None, skia.Paint(Alphaf=float(xk)))
+                pc = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs,
+                           side * 17.0 * B.ct * xk, hs * (1.15 - 0.15 * xk))
+                _prop(pc, 'phone_back', det, t)
+                c.pen.cv.restore()
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
         else:
             pc = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs, 0, hs * 1.15)
@@ -4047,6 +4060,7 @@ class Acting:
             if w <= 0: return
             self._arm(P, side, w, 0.0, -20.0, 40.0, 'grip', up=1.0, prop='phone')
             setattr(P, pre + 'ear', max(getattr(P, pre + 'ear'), w))
+            setattr(P, '_ear_drv_' + pre, True)
             P.h_tilt += tilt * side * w
             P.shrug += 0.08 * w
         return self._add(t0, None if t1 is None else t1 + fade, fn)
@@ -4906,7 +4920,7 @@ def draw_hands(pen, who, x, y, size, pose=None, detail=2, light=None, t=None, ma
                 out['prop'][nm] = (ppx, ppy)
             else:
                 _draw_hand(c, sp, shape, wx, wy, hs, ang, side, det, skin, sh, False, press, t,
-                           wrapper=(shape == 'fist' and getattr(P, 'candy', 0.0) > 0.5 and (nm == main)))
+                           wrapper=((shape == 'fist' or str(shape).startswith('xf:')) and getattr(P, 'candy', 0.0) > 0.5 and (nm == main)))
             if sp.get('tape') == side and getattr(P, 'tape', 1.0) > 0.02:
                 _tape_on(c, wx, wy, hs * hk, ang, side, P, ('flat' if shape in ('flat', 'open', 'palm') else shape) if not prop or shape in ('flat', 'open', 'palm')
                          else ('point' if shape in ('pinch', 'point') else 'grip'), sp)
@@ -5906,7 +5920,8 @@ class _MirrorClips:
         def fn(P, t):
             w = _wnd(t, t0, t1, 0.3, 0.35)
             out, down = self._mouth_target(0.0, side=side)
-            self._arm(P, side, w, out, down + 26.0, 80.0, 'point', up=1.0)
+            # review round 2 (M4): the index finger crosses the lips (it stopped at the chin and read as pointing sideways)
+            self._arm(P, side, w, out, down + 6.0, 80.0, 'point', up=1.0)
             P.m_press = max(P.m_press, 0.6 * w); P.brow_up += 0.2 * w
         return self._add(t0, None if t1 is None else t1 + 0.4, fn)
 
@@ -6192,13 +6207,23 @@ class _MirrorClips:
         return [self._ev2(t0 + dur * 0.6, 'candy_wrapper', -14.0, kind='crush')]
 
     def open_fist(self, t0, dur=1.4):
-        """The fist opens slowly, palm up: the red candy (its wrapper printed a mark in the palm)."""
+        """The fist opens slowly, palm up: the red candy (its wrapper printed a mark in the palm). Review round 2 (B18): no
+        swap: the fingers strain first (the first 30 %: a tremor, the fist loosens a little), the fist cross-fades into a
+        loose curl (30-42 %), then the fingers uncurl continuously to the flat palm (shape_mix curl -> flat)."""
         def fn(P, t):
-            u = ease_in_out(prog(t, t0, t0 + dur))
-            self._ins(P, 'r', 1.0, shape='fist' if u < 0.45 else 'flat', a=180.0 - 10.0 * u, prop=None)
-            if u >= 0.45: P.base_prop = 'candy_palm'
+            r = prog(t, t0, t0 + dur)
+            if r < 0.30:
+                shp = 'fist'
+                P.hshake = max(P.hshake, 0.6 * (1.0 - r / 0.3) + 0.25)
+            elif r < 0.42:
+                shp = 'xf:%.3f:curl' % ease_in_out((r - 0.30) / 0.12)
+            else:
+                shp = shape_mix('curl', 'flat', ease_in_out((r - 0.42) / 0.58))
+            u = ease_in_out(clamp((r - 0.30) / 0.70))
+            self._ins(P, 'r', 1.0, shape=shp, a=180.0 - 10.0 * u, prop=None)
+            if r >= 0.42: P.base_prop = 'candy_palm'
             P.palm_open = u
-            self._arm(P, -1, 1.0, -40.0, 200.0, 220.0, 'fist' if u < 0.45 else 'flat', up=0.0)
+            self._arm(P, -1, 1.0, -40.0, 200.0, 220.0, 'fist' if r < 0.42 else 'flat', up=0.0)
         self._add(t0, None, fn)
         return [self._ev2(t0 + dur * 0.5, 'candy_wrapper', -10.0, kind='open')]
 
@@ -6572,6 +6597,7 @@ _H2_SHAPES = {  # spread, curl per finger (index..little), thumb mode
     'claw': (1.05, (0.62, 0.58, 0.6, 0.66), 'out'), 'reach': (0.85, (0.32, 0.3, 0.34, 0.4), 'out'),
     'point': (0.4, (0.02, 1.0, 1.0, 1.0), 'across'), 'pinch': (0.45, (0.55, 0.62, 0.7, 0.78), 'pinch'),
     'flat': (1.35, (0.0, 0.0, 0.0, 0.0), 'flat'), 'palm': (0.9, (0.06, 0.06, 0.08, 0.1), 'flat'),
+    'curl': (0.3, (0.9, 0.92, 0.94, 0.96), 'along'),        # review round 2: a loose fist, the bridge from 'fist' to an open hand
 }
 _H2C = {}
 
@@ -6718,6 +6744,19 @@ def _hand2(c, x, y, scale, angle, side, shape, det, look, press=0.0, t=0.0, view
     ('short' | 'almond'), nail_c, nail_hi, red_tips (finger indices smudged with lipstick: 0 index .. 3 little),
     knuckles (bool). Returns the Ctx of the hand (hand coords)."""
     if shape == 'mitt': shape = 'relaxed'
+    if isinstance(shape, str) and shape.startswith('xf:'):
+        # review round 2 (B18): 'xf:<w>:<shape>' cross-fades the closed fist into another shape (the fist is its own
+        # drawing, so a fist could only swap to an open hand in one frame)
+        _, w_, sb = shape.split(':', 2); w_ = clamp(float(w_))
+        cv = c.pen.cv
+        if w_ < 0.999:
+            cv.saveLayer(None, skia.Paint(Alphaf=float(1.0 - w_)))
+            _hand2(c, x, y, scale, angle, side, 'fist', det, look, press, t, view); cv.restore()
+        if w_ > 0.001:
+            cv.saveLayer(None, skia.Paint(Alphaf=float(w_)))
+            hc_ = _hand2(c, x, y, scale, angle, side, sb, det, look, press, t, view); cv.restore()
+            return hc_
+        return c.sub(x, y, angle, scale)
     view = view or look.get('view', 'back')
     if shape == 'grip' or shape == 'fist':
         return _hand2_fist(c, x, y, scale * (0.8 if view == '3q' else 1.0), angle, side, shape, det, look, press, t)
@@ -8572,6 +8611,8 @@ class CharRig:
         if isinstance(at, str): raise ValueError('resolve anchor %r first (sets.py anchors)' % at)
         if light == 'auto': light = self.spec.get('light') or default_light(self.shot, self.who, t)
         P = self.pose(t)
+        if self.mode == 'lying':
+            P._facing = int(self.spec.get('_facing', 1)); P._hang = bool(self.spec.get('hang_arm', self.spec.get('watch', True)))
         view = 'pov' if (self.mode == 'feet' and (self.spec.get('pov') or self.spec.get('view') == 'pov')) else self.spec.get('view')
         if self.mode in ('body', 'legs', 'silhouette') and len(at) > 2 and float(at[2]) < 10.0:
             k_ = (self.shot.get('id'), self.who, 'at')
@@ -8621,7 +8662,8 @@ def draw_mode(pen, who, mode, at, P, light=None, detail=None, view=None, main='r
         draw_silhouette(pen, who, at[0], at[1], at[2], P, light, P.t)
         return {}
     if mode == 'lying':
-        B = draw_lying(pen, who, at[0], at[1], at[2], P, detail, light, P.t, hang_arm=(who == 'noah13'))
+        B = draw_lying(pen, who, at[0], at[1], at[2], P, detail, light, P.t, facing=int(getattr(P, '_facing', 1) or 1),
+                       hang_arm=(who == 'noah13' and getattr(P, '_hang', True)))
         return dict(B.info, B=B)
     raise ValueError(mode)
 
@@ -8736,7 +8778,7 @@ def _apply_act(a, who, spec, shot, t, name, args, t_end):
     if name == 'stare':
         return a.stare(t)
     if name in ('hand_on_glass',):
-        return a.hand_on_glass(t, t + args.get('dur', 1.5))
+        return a.hand_on_glass(t, t + args.get('dur', 1.5), args.get('side', 1))
     if name in ('nervous_glance',):
         return a.nervous_glance(t, args.get('n', 2))
     if name in ('phone_to_ear',):

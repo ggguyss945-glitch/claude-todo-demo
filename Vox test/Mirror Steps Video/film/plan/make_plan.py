@@ -786,7 +786,7 @@ def build():
                  tr=s.get('tr', 'cut'), intensity=round(lerp_curve(INTENSITY, (t0 + t1) / 2), 1), energy=s.get('energy', ''),
                  sfx=s.get('sfx', []), mus=s.get('mus', []), v1=v1_fallback(s))
         for key in ('voice_fx', 'fx_post', 'bg', 'note', 'hold', 'setup', 'errfix', 'device', 'teaser', 'split', 'plate', 'montage',
-                    'loop', 'card', 'time_card', 'past', 'cam3', 'merged', 'flow', 'match_action', 'parallel', 'resumes'):
+                    'loop', 'card', 'time_card', 'past', 'cam3', 'merged', 'flow', 'match_action', 'parallel', 'resumes', 'pan_dir'):
             if key in s: o[key] = s[key]
         if 'reuse' in s: o['reuse_t'] = s['reuse']
         if s.get('bg'):
@@ -800,9 +800,21 @@ def build():
                               plate='%s/%s blurred' % (s['set'], s['view']) if s['view'] != 'bokeh' else 'own', discs='45-165 px, +22-38 luma, drift 3-8 px/s')
             if o['dof'] is None and s['view'] not in ('phone_screen',): o['dof'] = dict(focus=1.0, dof=6.75)
         out.append(o)
+    memory_transitions(out)
     finish(out)
     rehome(out)
     return out, cards
+
+
+def memory_transitions(out):
+    """Review round 2 (M7): one grammar for memories. Every boundary into or out of a memory is the paper dissolve (sepia);
+    the paper dissolve is used nowhere else (a cut or the shot's own join instead). Exceptions: a rule card's entry (its
+    flow into the mirror) and the loop resets (rewind)."""
+    for a, b in zip(out, out[1:]):
+        ma, mb = a['world'] == 'memory', b['world'] == 'memory'
+        if a['type'] in ('CARD', 'BLACK') or b['type'] in ('CARD', 'BLACK') or b['tr'] == 'rewind': continue
+        if ma != mb: b['tr'] = 'sepia'
+        elif b['tr'] == 'sepia': b['tr'] = 'cut'
 
 
 def queen_entry(s, o):

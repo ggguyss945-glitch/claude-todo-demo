@@ -50,6 +50,7 @@ import cv2
 import skia
 from engine import hud as H
 from engine.core import (DW, DH, CFG, Pen, clamp, lerp, ease_in_out, hash01, noise1, surface_for)
+from characters import smoothstep
 from engine.camera import Cam
 from engine.post import GRADES, get_grade
 from engine.scene import Layer, render_frame
@@ -67,7 +68,8 @@ DISSOLVE = 0.30                       # centred on the cut
 SEPIA_WIPE = 0.45                     # the paper dissolve into / out of a memory (0.2 s before the cut, 0.25 s after)
 FLOW = 0.50                           # the travel dissolve between two places (centred on the cut)
 # transition windows (before, after the cut) for the blended transitions
-TR_WIN = {'dissolve': (DISSOLVE / 2, DISSOLVE / 2), 'sepia': (0.20, 0.25), 'flow': (FLOW / 2, FLOW / 2)}
+PAN = 0.45                            # the turn of the head between two places (a whip pan, centred on the cut)
+TR_WIN = {'dissolve': (DISSOLVE / 2, DISSOLVE / 2), 'sepia': (0.20, 0.25), 'flow': (FLOW / 2, FLOW / 2), 'pan': (PAN / 2, PAN / 2)}
 POST_RATE = 0.014                     # uniform post push per second on every shot (see make_cam)
 H._hand = CH.hud_phone_hand           # the cast's hand on the phone UI
 _ERR = set()
@@ -226,6 +228,17 @@ def _char_layer(rig, at, mode, store, sh, spec, sp):
     refl = bool(spec.get('reflection'))
     clip = _glass_path(sp) if (refl or spec.get('in_glass') or spec.get('through_glass') or spec.get('inside')) else None
     mx = float(at[0]) if isinstance(at, (list, tuple)) else DW / 2
+    atf = None
+    if spec.get('path2d') and isinstance(at, (list, tuple)):
+        # review round 2 (M2): a figure moving in depth on a 2D set (walking up the path, away from the camera): keys
+        # [[t, x, y_feet, h], ...] through a monotone cubic, the layer depth kept
+        from engine.room3d import mono_cubic
+        pk = sorted(spec['path2d'], key=lambda k_: float(k_[0]))
+        pts = [float(k_[0]) for k_ in pk]; cols = [[float(k_[j]) for k_ in pk] for j in (1, 2, 3)]
+        rest = list(at[3:])
+        def atf(t):
+            tt = min(max(t, pts[0]), pts[-1])
+            return [mono_cubic(pts, c_, tt) if len(pts) > 1 else c_[0] for c_ in cols] + rest
 
     def draw(pen, t):
         cv = pen.cv
@@ -235,7 +248,9 @@ def _char_layer(rig, at, mode, store, sh, spec, sp):
                 cv.save(); cv.clipPath(clip, skia.ClipOp.kIntersect, True); n += 1
             if refl:                                            # a reflection: mirrored about its own x
                 cv.save(); cv.translate(mx, 0); cv.scale(-1, 1); cv.translate(-mx, 0); n += 1
-            info = rig.draw(pen, t, at=at)
+            if spec.get('_rot') and isinstance(at, (list, tuple)):   # lying along a mattress seen at an angle
+                cv.save(); cv.rotate(float(spec['_rot']), float(at[0]), float(at[1])); n += 1
+            info = rig.draw(pen, t, at=atf(t) if atf is not None else at)
             if store is not None: store['last'] = (t, info)
         except Exception as e:                                  # never kill a render on one bad pose
             _warn((sh['id'], rig.who, type(e).__name__), 'char draw failed %s %s: %r' % (sh['id'], rig.who, e))
@@ -771,6 +786,18 @@ class Film:
             except Exception as e:
                 _warn((sh['id'], 'stage'), 'stage %s: %r' % (sh['id'], e))
             if spec2.get('_skip'): continue
+            if spec2.get('mode') == 'lying' and spec2.get('lie') and sp.info.get('cam3') is not None:
+                # review round 2 (B17): a person lying in a bunk of a room view: the body runs along the mattress (head end ->
+                # feet end, world points), sized by the room camera (the plan's at[2] was a scale, so nobody was drawn)
+                c3_ = sp.info['cam3']
+                Ph, Pf = (np.asarray(p_, float) for p_ in spec2['lie'])
+                if c3_.dist(Ph) > 0.2 and c3_.dist(Pf) > 0.2:
+                    (hx_, hy_), (fx_, fy_) = c3_.pt(Ph), c3_.pt(Pf)
+                    L_body = float(spec2.get('lie_k', 0.95)) * math.hypot(fx_ - hx_, fy_ - hy_)
+                    at = [(hx_ + fx_) / 2, (hy_ + fy_) / 2, L_body]
+                    spec2['_rot'] = math.degrees(math.atan2(fy_ - hy_, fx_ - hx_))
+                    if abs(spec2['_rot']) > 90: spec2['_rot'] -= 180.0 * (1 if spec2['_rot'] > 0 else -1); spec2['_facing'] = -1
+                    spec2['at'] = at
             try:
                 dep = place(sp, spec2, at, sh)
             except Exception as e:
@@ -894,6 +921,12 @@ class Film:
                         at_ = [float(at_[0]) + 0.34 * float(at_[2]), float(at_[1]) - 0.04 * float(at_[2])] + list(at_[2:])
                 L.append(_char_layer(rig, at_, mode, None, B.sh, spec_, sp))
                 continue
+            # review round 2 (B8): a figure the camera passes close to fades out over the last half metre (it was culled in
+            # one frame at 0.3 m: Tess's jacket filled the frame and vanished); the fade follows the camera's distance to the
+            # nearest of the feet, the middle and the head, so it is as smooth as the camera move
+            dnear = min(cam.dist(np.asarray(P, float) + np.array([0.0, fr_ * hm, 0.0])) for fr_ in (0.0, 0.55, 0.92))
+            nf = smoothstep(clamp((dnear - 0.32) / 0.55)) if spec.get('mode', 'body') in ('body', 'legs', 'silhouette') else 1.0
+            if nf <= 0.01: continue
             if dist < 0.35:
                 # feet behind the lens (she looms over you): place the figure by its middle, else by its head
                 for fr in (0.55, 0.92):
@@ -908,7 +941,9 @@ class Film:
             dep = 1.0
             for (a, b, ld) in bm:                 # in front of its band; nearer people in front of farther ones
                 if (a <= dist or a <= -1e8) and dist < b: dep = max(0.3, float(ld) - 0.02 + 0.0008 * min(dist, 10.0)); break
-            L.append(_char_layer(rig, [x, y, h, dep], mode, None, B.sh, spec, sp))
+            Lc = _char_layer(rig, [x, y, h, dep], mode, None, B.sh, spec, sp)
+            if nf < 0.999: Lc.alpha = float(Lc.alpha) * nf
+            L.append(Lc)
         return L
 
     def _split_replays(self, sh):
@@ -1047,6 +1082,8 @@ class Film:
                 img = cv2.addWeighted(a, 1.0 - w, b, w, 0.0)
             elif kind == 'flow':
                 img = flow_blend(a, b, u, self.shots[kin].get('flow'))
+            elif kind == 'pan':
+                img = pan_blend(a, b, u, float(self.shots[kin].get('pan_dir', 1.0)))
             else:
                 img = paper_dissolve(a, b, u, self.shots[kin]['side'] == 'memory')
             B = self.built(k)
@@ -1246,6 +1283,25 @@ def flow_blend(a, b, u, focus=None):
     a2 = cv2.warpAffine(a, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
     wgt = ease_in_out(clamp((u - 0.1) / 0.8))
     return cv2.addWeighted(a2, 1.0 - wgt, b, wgt, 0.0)
+
+
+def pan_blend(a, b, u, d=1.0):
+    """The turn between two places that stand side by side (review round 2, merge 1: the notice on the fence, the cabins beyond
+    it, back to Tess at the gate): a whip pan in 0.45 s. The outgoing picture slides out (d = +1: the camera turns right, the
+    picture moves left) and the incoming one slides in from the other side, both smeared along the pan by a motion blur that
+    peaks mid-turn; they cross-fade in the middle third."""
+    h, w = a.shape[:2]
+    e = ease_in_out(u)
+    off_a = -d * e * 0.55 * w
+    off_b = d * (1.0 - e) * 0.55 * w
+    speed = math.sin(math.pi * u)                         # the blur peaks mid-turn
+    k = int(round(speed * 0.09 * w)) | 1
+    def shift(img, off):
+        M = np.float32([[1, 0, off], [0, 1, 0]])
+        out = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        return cv2.blur(out, (k, 1)) if k > 2 else out
+    wgt = ease_in_out(clamp((u - 0.33) / 0.34))
+    return cv2.addWeighted(shift(a, off_a), 1.0 - wgt, shift(b, off_b), wgt, 0.0)
 
 
 def overlay_hud(img, fn, t):
