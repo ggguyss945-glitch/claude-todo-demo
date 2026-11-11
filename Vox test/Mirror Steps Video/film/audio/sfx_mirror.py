@@ -184,7 +184,7 @@ def space(y, kind, seed=0, wet=None):
         return y
     if kind == 'close':
         return conv(y, ir_cabin(), 0.09 if wet is None else wet, predelay=0.001)
-    if kind == 'inside':
+    if kind in ('inside', 'room'):                    # 'room' (footsteps on the cabin floor) = the cabin interior
         return conv(X.lp(y, 14000, 1), ir_cabin(), 0.32 if wet is None else wet)
     if kind == 'outside':
         return X.width(X.reverb(X.lp(y, 12000, 1), 'forest', 0.22 if wet is None else wet, 0.004, hpf=90), 0.85)
@@ -199,7 +199,11 @@ def space(y, kind, seed=0, wet=None):
         x = wow(X.lp(X.hp(y, 120, 2), 5000, 2), seed=seed)
         x = X.sat(x, 1.3)
         return X.width(X.reverb(x, 'hall', 0.32 if wet is None else wet, 0.015, hpf=200), 1.15)
-    return _POLICE_SPACE(y, kind, seed, wet)
+    try:
+        return _POLICE_SPACE(y, kind, seed, wet)
+    except KeyError:                                   # an unknown space never stops the mix: use the cabin interior
+        print('[sfx] unknown space %r: using inside' % (kind,), flush=True)
+        return conv(X.lp(y, 14000, 1), ir_cabin(), 0.32 if wet is None else wet)
 
 
 # ============================================================================================ beds
