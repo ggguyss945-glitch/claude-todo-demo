@@ -84,33 +84,77 @@ def _warn(key, msg):
 
 
 # ==================================================================================================== camera
+def _mono(xs, ys, x):
+    """Monotone cubic through (xs, ys) at x, extended linearly with the end tangents (dissolves render past the ends)."""
+    from engine.room3d import mono_cubic
+    if len(xs) == 1: return float(ys[0])
+    if x < xs[0] or x > xs[-1]:
+        j = 0 if x < xs[0] else len(xs) - 1
+        e = 1e-3 * max(1e-3, xs[-1] - xs[0])
+        x0 = xs[0] + e if j == 0 else xs[-1] - e
+        sl = (mono_cubic(xs, ys, x0) - ys[j]) / (x0 - xs[j])
+        return float(ys[j] + sl * (x - xs[j]))
+    return mono_cubic(xs, ys, x)
+
+
+class PathCam(Cam):
+    """A camera move through several keys as ONE move (merged shots, travelling moves): x, y, log zoom and roll follow a
+    monotone cubic through the keys (no overshoot, continuous speed, no stop at the keys) under a glide time warp (the
+    speed eases up from v0 of the cruise speed and down to v1 over `ramp` s: alive at the cut, no jerk inside)."""
+
+    def __init__(self, keys, warp, **kw):
+        super().__init__([tuple(k[:5]) for k in keys], ease='lin', **kw)
+        self.warp = warp
+        self.kt = [k[0] for k in self.keys]
+        self.kv = [[k[1] for k in self.keys], [k[2] for k in self.keys], [math.log(max(1e-3, k[3])) for k in self.keys],
+                   [k[4] for k in self.keys]]
+
+    def _base(self, t):
+        u = self.warp(t)
+        x, y, lz, r = (_mono(self.kt, ch, u) for ch in self.kv)
+        return x, y, math.exp(lz), r
+
+
 def make_cam(sh, idx, t_shift=0.0):
     """Cam from the plan keys. The plan's shake is a handheld amplitude: 2 = breathing tripod, 15-26 = nervous hand.
-    Linear pushes are extrapolated 0.5 s past both ends (wipes and dissolves never freeze); snaps, hits.
+    - ease 'glide' (merged shots, multi-key moves) or more than two keys: one PathCam move through every key (see PathCam);
+      cam['glide'] = [v0, v1, ramp] sets the speed at the ends;
+    - two-key linear pushes stay linear and are extrapolated 0.5 s past both ends (wipes and dissolves never freeze);
+    - snaps only where the plan keeps one (the three hits), `accel` = [t, factor, dur]: an eased push acceleration (an
+      optical zoom with an in-out ease, no jolt); hits;
+    - the uniform post push (POST_RATE) only on the holds (H1-H10): every other shot moves by its own keys.
     t_shift moves the whole move in time (MONTAGE tiles replay a framing at its source time)."""
+    from engine.room3d import glide
     c = sh['cam']
     ks = [list(map(float, k)) + [0.0] * (5 - len(k)) for k in c['keys']]
     for k in ks: k[0] += t_shift
-    ease_ = {'lin': 'lin', 'out': 'out', 'in_out': 'in_out', 'push': 'push'}.get(c.get('ease', 'lin'), 'lin')
-    if ease_ == 'lin' and len(ks) >= 2:
-        a, b = ks[0], ks[-1]; dt = max(1e-3, b[0] - a[0]); e = 0.5
-        rz = math.log(b[3] / a[3]) / dt
-        ks = [[a[0] - e, a[1] - (b[1] - a[1]) / dt * e, a[2] - (b[2] - a[2]) / dt * e, a[3] * math.exp(-rz * e), a[4]]] + ks + \
-             [[b[0] + e, b[1] + (b[1] - a[1]) / dt * e, b[2] + (b[2] - a[2]) / dt * e, b[3] * math.exp(rz * e), b[4]]]
-    elif len(ks) >= 2:
-        ks = [[ks[0][0] - 0.5] + ks[0][1:]] + ks + [[ks[-1][0] + 0.5] + ks[-1][1:]]
+    ease_ = {'lin': 'lin', 'out': 'out', 'in_out': 'in_out', 'push': 'push', 'glide': 'glide'}.get(c.get('ease', 'lin'), 'lin')
     shake = float(c.get('shake', 2.0) or 0.0)
     if shake >= 8: amp, hz, rs = shake * 0.45, 0.95, 0.22
     else: amp, hz, rs = max(1.6, shake), 0.6, 0.0
-    keys = [tuple(k[:5]) + ((ease_,) if j else ()) for j, k in enumerate(ks)]
-    cam = Cam(keys, ease=ease_, shake=amp, shake_hz=hz, seed=idx * 3 + 1, roll_shake=rs)
+    if ease_ == 'glide' or len(ks) > 2:
+        v0, v1, ramp = (list(c.get('glide') or []) + [0.45, 0.6, 0.8][len(c.get('glide') or []):])[:3]
+        a_, b_ = ks[0][0], ks[-1][0]
+        cam = PathCam(ks, glide(a_, b_, v0, v1, ramp), shake=amp, shake_hz=hz, seed=idx * 3 + 1, roll_shake=rs)
+    else:
+        if ease_ == 'lin' and len(ks) >= 2:
+            a, b = ks[0], ks[-1]; dt = max(1e-3, b[0] - a[0]); e = 0.5
+            rz = math.log(b[3] / a[3]) / dt
+            ks = [[a[0] - e, a[1] - (b[1] - a[1]) / dt * e, a[2] - (b[2] - a[2]) / dt * e, a[3] * math.exp(-rz * e), a[4]]] + ks + \
+                 [[b[0] + e, b[1] + (b[1] - a[1]) / dt * e, b[2] + (b[2] - a[2]) / dt * e, b[3] * math.exp(rz * e), b[4]]]
+        elif len(ks) >= 2:
+            ks = [[ks[0][0] - 0.5] + ks[0][1:]] + ks + [[ks[-1][0] + 0.5] + ks[-1][1:]]
+        keys = [tuple(k[:5]) + ((ease_,) if j else ()) for j, k in enumerate(ks)]
+        cam = Cam(keys, ease=ease_, shake=amp, shake_hz=hz, seed=idx * 3 + 1, roll_shake=rs)
     if c.get('snap'):
         s = c['snap']; cam.snap(float(s[0]) + t_shift, float(s[1]) if len(s) > 1 else 1.25, float(s[2]) if len(s) > 2 else 0.1)
+    for ac in c.get('accel') or []:
+        ta, fa, da = float(ac[0]) + t_shift, float(ac[1]), float(ac[2]) if len(ac) > 2 else 0.6
+        cam.post_push(ta - da * 0.35, ta + da * 0.65, 1.0, fa, ease='in_out')
     for h in c.get('hit') or []:
         cam.hit(float(h[0]) + t_shift, float(h[1]) * 0.75, 0.32, 13.0)
-    # a uniform post push on top of the dolly: the dolly scales the far layers less than the nominal rate (parallax), so
-    # the measured push was half the plan's (1.8 against 3 %/s); pull-outs get the matching post pull
-    if sh.get('side') != 'black' and POST_RATE > 0:
+    # the holds keep a slow post push on top of the dolly (the dolly scales the far layers less than the nominal rate)
+    if sh.get('hold') and sh.get('side') != 'black' and POST_RATE > 0:
         a, b = sh['t0'] - 0.5 + t_shift, sh['t1'] + 0.5 + t_shift
         zz = (1.0 + POST_RATE) ** (b - a)
         if c.get('move') in ('pull', 'reveal'): cam.post_push(a, b, zz, 1.0, ease='lin')

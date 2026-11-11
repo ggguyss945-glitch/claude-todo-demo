@@ -4118,6 +4118,30 @@ class Acting:
                                     pan=0.0, n=1, foot='L' if k % 2 else 'R'))
         return evs
 
+    def stride(self, t0, t1=None, steps_per_s=1.8, facing=None, ramp=0.35, bob=0.0, surface='inside'):
+        """A walk cycle in place: the legs, arms and bob of walking while the body is carried by the set (film.py moves
+        it through a 3D room on world keys). facing: the turn (view) to walk in, kept from the spec when None.
+        bob: extra vertical step (design units of the body height) per step, for treads. Heel strikes as events."""
+        t1 = t0 + 2.0 if t1 is None else t1
+        dur = max(0.2, t1 - t0)
+
+        def fn(P, t):
+            w = clamp(_env(t, t0, t1, ramp, ramp))
+            if w <= 0: return
+            P.walk_amt = max(P.walk_amt, w)
+            P.walk_ph = steps_per_s * 0.5 * (t - t0)
+            if facing is not None: P.turn = lerp(P.turn, float(facing), clamp(_env(t, t0 - 0.3, t1, 0.4, 0.4)))
+            P.lean += 0.04 * w
+            if bob: P.bob += bob * w * abs(math.sin(math.pi * steps_per_s * (t - t0)))
+        self._add(t0 - ramp, t1 + ramp, fn)
+        evs = []
+        k = 1
+        while t0 + k / steps_per_s < t1:
+            evs.append(self._ev(t0 + k / steps_per_s, 'footsteps_wood_inside' if surface == 'inside' else 'footsteps_porch', -4.0,
+                                pan=0.0, n=1, foot='L' if k % 2 else 'R'))
+            k += 1
+        return evs
+
     # ------------------------------------------------------------------ emotional beats
     def cry(self, t0, t1=None, smile=False, fade=1.2):
         d = EXPR['grin_cry' if smile else 'cry']

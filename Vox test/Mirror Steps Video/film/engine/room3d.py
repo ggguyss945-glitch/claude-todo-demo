@@ -27,7 +27,7 @@ import skia
 from .core import Pen, col, mix, poly, rect, clamp, lerp
 from .scene import Layer
 
-__all__ = ['Cam3', 'Scene3', 'Xf', 'v3', 'norm', 'ID']
+__all__ = ['Cam3', 'Scene3', 'Xf', 'v3', 'norm', 'ID', 'CamPath3', 'TexCache', 'glide', 'mono_cubic']
 
 DW, DH = 1920.0, 1080.0
 
@@ -254,30 +254,38 @@ class Scene3:
             return max(cam.dist(xf.p(c)) for c in cs)
         return cam.dist(xf.p(it.centre))
 
-    def render(self, pen, cam, xf=ID, band=None, tags=None, skip=None, clip_poly=None):
-        """Draw the items (optionally only those with band[0] <= dist < band[1], or whose tag is in `tags`)."""
+    def _dists(self, cam, xf):
+        """(dist, band_dist) of every item for this camera, memoised per camera object (a moving shot asks once per band)."""
+        memo = getattr(self, '_dmemo', None)
+        if memo is not None and memo[0] is cam and memo[1] is xf and memo[2] == len(self.items): return memo[3]
+        D = [(self._dist(it, cam, xf), self._band_dist(it, cam, xf)) for it in self.items]
+        self._dmemo = (cam, xf, len(self.items), D)
+        return D
+
+    def render(self, pen, cam, xf=ID, band=None, tags=None, skip=None, clip_poly=None, tex=None):
+        """Draw the items (optionally only those with band[0] <= dist < band[1], or whose tag is in `tags`). tex: a
+        TexCache: planes and box faces are drawn from baked textures (moving cameras) unless they come close."""
         cv = pen.cv
         L = []
-        for it in self.items:
+        D = self._dists(cam, xf)
+        for it, (d, db) in zip(self.items, D):
             if tags is not None and it.tag not in tags: continue
             if skip is not None and it.tag in skip: continue
-            d = self._dist(it, cam, xf)
             if band is not None:
-                db = self._band_dist(it, cam, xf)
                 if not ((band[0] <= db or band[0] <= -1e8) and db < band[1]): continue
             L.append((d - it.order, it))
         L.sort(key=lambda x: -x[0])
         if clip_poly is not None:
             cv.save(); cv.clipPath(poly(clip_poly), skia.ClipOp.kIntersect, True)
         for _, it in L:
-            self._draw(pen, cam, xf, it)
+            self._draw(pen, cam, xf, it, tex)
         if clip_poly is not None: cv.restore()
 
-    def _draw(self, pen, cam, xf, it):
+    def _draw(self, pen, cam, xf, it, tex=None):
         k = it.kind
         if k == 'plane':
             O, U, V, w, h, draw, two, unit, readable = it.data
-            draw_plane(pen, cam, xf, O, U, V, w, h, draw, two, unit, self.lights, readable)
+            draw_plane(pen, cam, xf, O, U, V, w, h, draw, two, unit, self.lights, readable, tex=tex, tkey=(id(it),))
         elif k == 'quad':
             pts, c, a, line, lw, two = it.data
             P = [xf.p(p) for p in pts]
@@ -306,12 +314,13 @@ class Scene3:
                 cen = Ow + xf.d(U) * w / 200 + xf.d(V) * h / 200
                 if np.dot(n, cam.C - cen) <= 1e-9: continue
                 if callable(f):
-                    draw_plane(pen, cam, xf, O, U, V, w, h, f, True, 0.01, self.lights, False)
+                    draw_plane(pen, cam, xf, O, U, V, w, h, f, True, 0.01, self.lights, False, tex=tex, tkey=(id(it), side))
                 else:
                     def fl(p, ww, hh, f=f):
                         r = rect(0, 0, ww, hh); p.fill(r, f)
                         if line: p.line(r, lw or 1.2, line)
-                    draw_plane(pen, cam, xf, O, U, V, w, h, fl, True, 0.01, self.lights, False)
+                    draw_plane(pen, cam, xf, O, U, V, w, h, fl, True, 0.01, self.lights, False, tex=tex, tkey=(id(it), side),
+                               smooth=not line)
 
     def layers(self, cam, d0, bands, key, xf=ID, bounds=None, dims=None, tags=None, skip=None, blur=None, cache_res=1.0):
         """Cached engine Layers, one per band (dmin, dmax, name[, layer_depth]): layer depth = band mid distance / d0 unless
@@ -331,6 +340,200 @@ class Scene3:
                 self.render(pen, cam, xf, (dmin, dmax), tags, skip)
             out.append(Layer(ld, draw, name, cache='%s:%s' % (key, name), bounds=bb, blur=blur, cache_res=cache_res))
         return out
+
+
+    def moving_layers(self, camfn, d0, bands, key, xf=ID, tags=None, skip=None, blur=None, span=None):
+        """Live (uncached) Layers for a camera that moves: camfn(t) -> Cam3. One layer per band (dmin, dmax, name, depth):
+        each frame every item goes to the band its distance from the camera of that frame falls in, and the planes are
+        drawn from baked textures (Scene3.tex) so a dolly, crane or track through the room costs about one textured fill
+        per surface. The 2.5D engine camera stays home on these shots: the move is the Cam3's. span=(t0, t1): the textures
+        are baked once at the largest density the move asks of each surface (no re-bake, so no sharpness pops)."""
+        if getattr(self, 'tex', None) is None: self.tex = TexCache()
+        if span is not None and not self.tex.need:
+            self.tex.prescan(self, camfn, xf, span)
+        out = []
+        for b in bands:
+            dmin, dmax, name = b[0], b[1], b[2]
+            ld = float(b[3]) if len(b) > 3 else float(max(0.55, (max(dmin, 0.0) + min(dmax, max(dmin, 0.0) * 2 + 1)) / 2 / d0))
+
+            def draw(pen, t, dmin=dmin, dmax=dmax):
+                self.render(pen, camfn(t), xf, (dmin, dmax), tags, skip, tex=self.tex)
+            out.append(Layer(ld, draw, name, blur=blur))
+        return out
+
+
+class TexCache(dict):
+    """Baked plane textures for moving cameras: key -> (skia.Image with mipmaps, texels per plane unit). The content of
+    a plane (and the light washes on it) does not depend on the camera, so it is drawn once and mapped through the
+    plane's homography every frame. TEX_PX: texels per cm at 2560 wide (scaled to the render size); planes that come
+    closer than TEX_NEAR x that density are drawn as vectors instead (crisp near surfaces)."""
+    TEX_PX = 4.0
+    TEX_NEAR = 8.0
+    MAX_SIDE = 6000
+    MAX_PIX = 6e6
+
+    def __init__(self):
+        super().__init__()
+        self.need = {}                 # tkey -> largest render px per plane unit over the move (prescan)
+
+    def prescan(self, scene, camfn, xf, span, n=14):
+        """Sample the move: the largest density every plane / box face is seen at (render px per plane unit)."""
+        from .core import CFG
+        t0, t1 = span
+        for j in range(n):
+            cam = camfn(t0 + (t1 - t0) * j / (n - 1))
+            for it in scene.items:
+                if it.kind == 'plane':
+                    O, U, V, w, h, draw, two, unit, readable = it.data
+                    g = plane_geom(cam, xf, O, U, V, w, h, two, unit, readable)
+                    if g is not None:
+                        k_ = (id(it),)
+                        self.need[k_] = max(self.need.get(k_, 0.0), _px_per_unit(g[0], g[1]) * CFG.k)
+                elif it.kind == 'box':
+                    spec, faces, allc, line, lw = it.data
+                    for side, (O, U, V, w, h, nrm) in spec.items():
+                        f = faces.get(side, allc)
+                        if f is None or w <= 0 or h <= 0: continue
+                        g = plane_geom(cam, xf, O, U, V, w, h, True, 0.01, False)
+                        if g is not None:
+                            k_ = (id(it), side)
+                            self.need[k_] = max(self.need.get(k_, 0.0), _px_per_unit(g[0], g[1]) * CFG.k)
+        self.need['_scanned'] = 1.0
+
+    def get(self, key, w, h, unit, paint_fn, smooth=False):
+        e = dict.get(self, key)
+        if e is not None: return e
+        from .core import CFG, surface_for, image_from
+        k = self.TEX_PX * (unit / 0.01) * CFG.rw / 2560.0
+        nd = self.need.get(key[:-2])
+        if nd is not None: k = max(0.5 * (unit / 0.01) * CFG.rw / 2560.0, min(nd * 1.05, 4 * k))   # what the move asks, up to 4x
+        if smooth: k = min(k, 0.9 * (unit / 0.01))        # flat colour + light washes: smooth gradients
+        k = min(k, self.MAX_SIDE / max(w, 1e-3), self.MAX_SIDE / max(h, 1e-3), math.sqrt(self.MAX_PIX / max(1e-3, w * h)))
+        tw, th = max(2, int(math.ceil(w * k))), max(2, int(math.ceil(h * k)))
+        arr = np.zeros((th, tw, 4), np.uint8)
+        srf = surface_for(arr); cv = srf.getCanvas()
+        cv.scale(tw / max(w, 1e-6), th / max(h, 1e-6))
+        paint_fn(Pen(cv))
+        del cv, srf
+        img = image_from(arr, copy=True).withDefaultMipmaps()
+        e = (img, k)
+        self[key] = e
+        return e
+
+
+_TEX_SAMPLING = skia.SamplingOptions(skia.FilterMode.kLinear, skia.MipmapMode.kLinear)
+
+
+def _px_per_unit(Hm, pts):
+    """Largest local scale (design px per plane unit) of homography Hm over the plane points pts."""
+    best = 0.0
+    for s, t in pts:
+        p = Hm @ np.array([s, t, 1.0])
+        w = p[2]
+        if abs(w) < 1e-9: continue
+        J = (Hm[:2, :2] * w - np.outer(p[:2], Hm[2, :2])) / (w * w)
+        best = max(best, math.sqrt(abs(J[0, 0] * J[1, 1] - J[0, 1] * J[1, 0])))
+    return best
+
+
+class CamPath3:
+    """A Cam3 that moves: keys [(t, pos, look, fov, roll)] (look a point; fov / roll may be None to keep the last).
+    Positions, yaw / pitch (from look), fov and roll are interpolated per channel with a monotone cubic through the keys
+    (no overshoot, continuous speed) under `warp` (a function film time -> path time, e.g. an eased glide). at(t) caches
+    the last Cam3."""
+
+    def __init__(self, keys, warp=None, shift=(0.0, 0.0)):
+        ks = sorted(keys, key=lambda k: k[0])
+        self.ts = [float(k[0]) for k in ks]
+        rows = []
+        prev_yaw = None
+        last_fov, last_roll = 70.0, 0.0
+        for k in ks:
+            pos = v3(k[1]); look = v3(k[2])
+            d = look - pos
+            yaw = math.degrees(math.atan2(d[0], d[2])); pitch = math.degrees(math.atan2(d[1], math.hypot(d[0], d[2])))
+            if prev_yaw is not None:                                    # unwrap: turn the short way
+                while yaw - prev_yaw > 180: yaw -= 360
+                while yaw - prev_yaw < -180: yaw += 360
+            prev_yaw = yaw
+            fov = float(k[3]) if len(k) > 3 and k[3] is not None else last_fov
+            roll = float(k[4]) if len(k) > 4 and k[4] is not None else last_roll
+            last_fov, last_roll = fov, roll
+            rows.append([pos[0], pos[1], pos[2], yaw, pitch, fov, roll])
+        self.vals = np.array(rows, np.float64)
+        self.warp = warp or (lambda t: t)
+        self.shift = shift
+        self._last = (None, None)
+
+    def state(self, t):
+        u = self.warp(t)
+        return np.array([mono_cubic(self.ts, self.vals[:, j], u) for j in range(self.vals.shape[1])])
+
+    def at(self, t):
+        if self._last[0] == t: return self._last[1]
+        v = self.state(t)
+        c = Cam3((v[0], v[1], v[2]), yaw=v[3], pitch=v[4], roll=v[6], fov=v[5], shift=self.shift)
+        self._last = (t, c)
+        return c
+
+    __call__ = at
+
+
+def mono_cubic(xs, ys, x):
+    """Monotone cubic Hermite (Fritsch-Carlson) through (xs, ys) evaluated at x; holds outside the range."""
+    n = len(xs)
+    if n == 1 or x <= xs[0]: return float(ys[0])
+    if x >= xs[-1]: return float(ys[-1])
+    i = max(0, min(n - 2, int(np.searchsorted(xs, x, side='right')) - 1))
+    h = [xs[j + 1] - xs[j] for j in range(n - 1)]
+    dl = [(ys[j + 1] - ys[j]) / max(1e-9, h[j]) for j in range(n - 1)]
+    def tan(j):
+        if j == 0: return dl[0] if n == 2 else _end_tan(h[0], h[1], dl[0], dl[1])
+        if j == n - 1: return dl[-1] if n == 2 else _end_tan(h[-1], h[-2], dl[-1], dl[-2])
+        if dl[j - 1] * dl[j] <= 0: return 0.0
+        w1, w2 = 2 * h[j] + h[j - 1], h[j] + 2 * h[j - 1]
+        return (w1 + w2) / (w1 / dl[j - 1] + w2 / dl[j])
+    m0, m1 = tan(i), tan(i + 1)
+    s = (x - xs[i]) / max(1e-9, h[i])
+    h00 = (1 + 2 * s) * (1 - s) ** 2; h10 = s * (1 - s) ** 2; h01 = s * s * (3 - 2 * s); h11 = s * s * (s - 1)
+    return float(h00 * ys[i] + h10 * h[i] * m0 + h01 * ys[i + 1] + h11 * h[i] * m1)
+
+
+def _end_tan(h0, h1, d0, d1):
+    m = ((2 * h0 + h1) * d0 - h0 * d1) / (h0 + h1)
+    if m * d0 <= 0: return 0.0
+    if d0 * d1 <= 0 and abs(m) > abs(3 * d0): return 3 * d0
+    return m
+
+
+def glide(t0, t1, v0=0.4, v1=0.4, ramp=0.7):
+    """Time warp for a move from t0 to t1 (returns path time): the speed starts at v0 of the cruise speed, eases up over
+    `ramp` s, cruises, and eases down to v1 at the end (v = 1: no ease at that end). A camera that is alive at the cut
+    and never snaps from rest; the eases are cosine ramps (no jerk)."""
+    D = max(1e-6, t1 - t0)
+    r = min(ramp, D / 3.0)
+
+    def area(x):            # integral of the unscaled speed from 0 to x
+        if x <= 0: return 0.0
+        a = 0.0
+        if r > 0:
+            xa = min(x, r)
+            a += v0 * xa + (1 - v0) * (xa / 2 - r / (2 * math.pi) * math.sin(math.pi * xa / r))
+        if x > r: a += min(x, D - r) - r
+        if x > D - r and r > 0:
+            xb = min(x, D) - (D - r)
+            # speed from 1 down to v1: 1 - (1 - v1) (1 - cos(pi xb / r)) / 2
+            a += xb - (1 - v1) * (xb / 2 - r / (2 * math.pi) * math.sin(math.pi * xb / r))
+        return a
+    A = area(D)
+    vend0, vend1 = v0 * D / A, v1 * D / A
+
+    def warp(t):
+        x = t - t0
+        if x < 0: return t0 + vend0 * x                 # extrapolate with the end speeds (dissolves render outside)
+        if x > D: return t1 + vend1 * (x - D)
+        return t0 + area(x) * D / A
+    return warp
 
 
 # projected coordinates are kept inside this design-px window (skia's rasteriser misbehaves past ~32k px)
@@ -394,10 +597,34 @@ def _apply_lights(pen, O, U, V, w, h, lights, unit, viewer):
         pen.radial(rect(0, 0, w, h), s_, t_, R, stops, blend='normal' if blend == 'screen' else blend, clip=True)
 
 
-def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lights=None, readable=True):
+def plane_geom(cam, xf, O, U, V, w, h, two_sided=True, unit=0.01, readable=True):
+    """(Hm, visible polygon in plane units) of a plane for this camera, or None when it is culled or out of view."""
+    O = v3(O); U = v3(U); V = v3(V)
+    Ow, Uw, Vw = xf.p(O), xf.d(U), xf.d(V)
+    if xf.layout_flip and xf.mirrors and readable:
+        if abs(Uw[0]) > 0.5 or (abs(Uw[0]) <= 0.5 and abs(Vw[0]) <= 0.5):
+            Ow = Ow + Uw * (w * unit); Uw = -Uw
+        else:
+            Ow = Ow + Vw * (h * unit); Vw = -Vw
+    n = np.cross(Uw, Vw)
+    if not two_sided and np.dot(n, cam.C - Ow) <= 0: return None
+    Hm, (a, b, c) = cam.H(Ow, Uw, Vw, unit)
+    vis = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)]
+    for fn in _frustum_fns(cam, a, b, c, cam.near):
+        vis = _clip_halfplane(vis, fn)
+        if len(vis) < 3: return None
+    pr = [Hm @ np.array([s, t, 1.0]) for s, t in vis]
+    xs = [p[0] / p[2] for p in pr]; ys = [p[1] / p[2] for p in pr]
+    if max(xs) < -400 or min(xs) > 2320 or max(ys) < -300 or min(ys) > 1380: return None
+    return Hm, vis
+
+
+def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lights=None, readable=True, tex=None, tkey=None,
+               smooth=False):
     """Draw a w x h plane (plane units, default cm) through its homography; content clipped to the part in front of the
     camera. With a layout-flipping transform the plane's U axis is turned back so text stays readable. `lights` (model
-    space) are washed over the content."""
+    space) are washed over the content. tex (a TexCache) + tkey: draw the plane from its baked texture when it is not
+    close to the camera."""
     O = v3(O); U = v3(U); V = v3(V)
     O0, U0, V0 = O, U, V
     Ow, Uw, Vw = xf.p(O), xf.d(U), xf.d(V)
@@ -422,6 +649,42 @@ def draw_plane(pen, cam, xf, O, U, V, w, h, draw, two_sided=True, unit=0.01, lig
     if max(xs) < -4000 or min(xs) > 6000 or max(ys) < -3000 or min(ys) > 4500:
         return
     cv = pen.cv
+    if tex is not None and tkey is not None:
+        from .core import CFG
+        need = _px_per_unit(Hm, vis) * CFG.k
+        flip_r = bool(xf.layout_flip and xf.mirrors and readable)
+        side = 1
+        if lights:
+            n0 = norm(np.cross(U0 if not flip_r else Uw, V0 if not flip_r else Vw))
+            vp = xf_inv_point(xf, cam.C) if not flip_r else cam.C
+            side = 1 if np.dot(vp - (O0 if not flip_r else Ow), n0) >= 0 else -1
+        key = tuple(tkey) + (side, flip_r)
+        ent = dict.get(tex, key)
+        k_est = ent[1] if ent is not None else TexCache.TEX_PX * (unit / 0.01) * CFG.rw / 2560.0
+        if ent is None and tex.need.get(tuple(tkey)) is not None:
+            k_est = min(tex.need[tuple(tkey)] * 1.05, 4 * k_est)
+        if smooth or need <= TexCache.TEX_NEAR * k_est:
+            def paint_fn(p):
+                lw_ = p.lw
+                if lights: p.cv.saveLayer(None, None)
+                draw(p, w, h)
+                if lights:
+                    p.cv.saveLayer(None, skia.Paint(BlendMode=skia.BlendMode.kSrcATop))
+                    if flip_r:
+                        Lm = [(xf.p(P), c, a, r, b, nm) for (P, c, a, r, b, nm) in lights]
+                        _apply_lights(p, Ow, Uw, Vw, w, h, Lm, unit, cam.C)
+                    else:
+                        _apply_lights(p, O0, U0, V0, w, h, lights, unit, xf_inv_point(xf, cam.C))
+                    p.cv.restore(); p.cv.restore()
+                p.lw = lw_
+            img, kk = tex.get(key, w, h, unit, paint_fn, smooth)
+            cv.save()
+            cv.concat(_skmat(Hm))
+            cv.clipPath(poly(vis), skia.ClipOp.kIntersect, True)
+            cv.drawImageRect(img, skia.Rect.MakeWH(img.width(), img.height()), skia.Rect.MakeWH(w, h), _TEX_SAMPLING, None,
+                             skia.Canvas.kFast_SrcRectConstraint)
+            cv.restore()
+            return
     cv.save()
     cv.concat(_skmat(Hm))
     cv.clipPath(poly(vis), skia.ClipOp.kIntersect, True)
