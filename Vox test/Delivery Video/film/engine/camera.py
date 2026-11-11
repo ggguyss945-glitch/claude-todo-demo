@@ -29,7 +29,7 @@ Shot helpers (all return a Cam; every one accepts shake=, seed=):
     handheld(cam=None, amount=3.0, hz=0.6, roll=0.0)        add handheld noise to a cam (roll>0 costs one extra warp per frame)
 """
 import math
-from .core import ease_fn, noise1, lerp, clamp, ease_out_back, ease_push, ease_out_cubic, DW, DH
+from .core import ease_fn, noise1, lerp, clamp, ease_out_back, ease_push, ease_out_cubic, ease_in_out, DW, DH
 
 
 class CamState:
@@ -62,6 +62,7 @@ class Cam:
         self.ease = ease
         self.shake, self.shake_hz, self.seed, self.roll_shake = shake, shake_hz, seed, roll_shake
         self.hits, self.snaps, self.posts = [], [], []
+        self.snap_back = True            # snap(): overshooting punch-in; False = a plain eased push over `dur`
 
     # ---- chainable extras
     def hit(self, t, amp=8.0, dur=0.35, hz=13.0):
@@ -108,7 +109,7 @@ class Cam:
         for (ts, factor, dur, until, back) in self.snaps:
             if t < ts: continue
             u = (t - ts) / max(1e-3, dur)
-            k = ease_out_back(min(1.0, u), 1.4)
+            k = ease_out_back(min(1.0, u), 1.4) if self.snap_back else ease_in_out(min(1.0, u))
             z = lerp(1.0, factor, k)
             if until is not None and t > until:
                 z = lerp(factor, 1.0, ease_out_cubic((t - until) / max(1e-3, back)))

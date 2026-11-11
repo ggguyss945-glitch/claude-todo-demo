@@ -281,7 +281,7 @@ CAST['driver'] = dict(
     eye_dx=42, eye_y=-10, eye_r=21.5, pupil=0.62, brow_th=9.5, nose_len=30, mouth_y=63, mouth_w=25,
     skin='#c0b1aa', skin_sh='#8a7b7b', skin_dp='#554851', blush='#c39a9c', lip='#86696b', stubble='#575a64', stub=0.4,
     hair_c='#2a221e', brow_c='#1c1717', bags=1.2, age=0.6, blink_rate=0.0, lock=1.0, micro=0.3, breath=0.6,
-    scar=0, ring=0, part=0, lashes=0.0, gaunt=1.0, grin_k=1.1, tooth_w=11.0, talk_lag=0.2, feet='boots', grin_lim=0.97,
+    scar=0, ring=0, part=0, lashes=0.0, gaunt=1.0, grin_k=1.1, tooth_w=11.0, talk_lag=0.2, talk=0.72, feet='boots', grin_lim=0.97,
     body=dict(sh=124, ch=116, wa=100, hip=104, arm=(50, 40), leg=(60, 48), neck=45, hand=1.04),
     cloth=dict(_NIGHTLINE))
 CAST['mom'] = dict(
@@ -1211,42 +1211,82 @@ def _stubble(c, hm, sp, det, sil):
     c.fill(reg, sp['stubble'], 26 * a)
 
 
-def _hair_region(c, hm, sp, P, det, sil, t):
-    style = sp['hair']; hc = sp['hair_c']
-    hsh = mix(hc, '#000000', 0.35); hhi = mix(hc, '#ffffff', 0.25)
-    part = sp['part']
+def _nape(ph):
+    """Back of the skull: the hair covers it down to the nape (behind the ears it drops to ~y 84, at the back ~y 96), so
+    a head seen from behind is hair over the whole skull, small ears and a neck strip (no pale 'face' oval)."""
+    return np.interp(np.abs(ph), [0.0, 1.66, 1.82, 2.1, PI], [-400.0, -400.0, 36.0, 84.0, 96.0])
+
+
+def _hairline(style, part):
+    """(yf(phi) -> hairline height round the head, grow) for a hair style."""
     if style == 'short':
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 1.05, 1.25, 1.62, 2.3, PI], [-74, -72, -30, -24, 12, 30])
         grow = 3.0
     elif style == 'crop':                                        # driver: short back and sides down to a low nape
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 1.05, 1.25, 1.62, 2.1, PI], [-74, -72, -26, -18, 40, 74])
         grow = 3.0
     elif style == 'bun':
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 0.55, 0.95, 1.3, 1.7, 2.3, PI], [-74, -72, -50, -6, 4, 26, 36])
         grow = 6.0
     elif style == 'messy':
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             fr = -70.0 + 6.0 * np.sin(ph * 3.0 + part) + 7.0 * part * np.clip(ph * part, 0, 1)
             return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.15, 2.6, PI], [-60, -24, -14, 50, 78, 88])) + \
                 (1 - np.interp(a, [0, 1.0, 1.3], [0, 0, 1])) * fr
         grow = 9.0
     elif style == 'kid':                                         # Lily: bob with straight bangs, hair framing the face
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 0.62, 0.86, 1.02, 1.2, PI], [-46, -50, -40, 30, 112, 112])
-        grow = 13.0
+        return yf0, 13.0
     else:  # curly
-        def yf(ph):
+        def yf0(ph):
             a = np.abs(ph)
             return np.interp(a, [0, 0.9, 1.25, 1.55, 2.0, 2.5, PI], [-58, -54, -20, -6, 40, 60, 66])
         grow = 22.0
+    return (lambda ph: np.maximum(yf0(ph), _nape(ph))), grow
+
+
+def _nape_cut(hm, sp):
+    """Seen from behind (yaw past ~100 deg): the part of the head silhouette below the back hairline is the jaw, which a
+    real head hides behind the skull and neck. Returns the region to leave out of the skull fill (the body's neck shows
+    there), or None."""
+    if not sp.get('hair') or sp['hair'] == 'kid' or -hm.ct < 0.2: return None
+    yf, _ = _hairline(sp['hair'], sp['part'])
+    phis = np.linspace(-PI, PI, 160, endpoint=False)
+    phis = phis[np.abs(phis) >= 1.8]
+    y0 = yf(phis)
+    w = np.maximum(hm.W(np.clip(y0, -120, 120)), 1.0)
+    c_, s_ = np.cos(phis), np.sin(phis)
+    px = w * s_; pz = hm.DB * w * c_
+    Y = hm.J(y0) * hm.cp + pz * hm.spi
+    z1 = pz * hm.cp - y0 * hm.spi
+    X = px * hm.ct + z1 * hm.st
+    vis = (-s_ * hm.DB * hm.st + c_ * hm.ct) > -0.02
+    if vis.sum() < 3: return None
+    X, Y = X[vis], Y[vis]
+    o = np.argsort(X); X, Y = X[o], Y[o]
+    Y = np.minimum(Y + 2.0, 118.0)
+    near_back = abs(hm.st) < 0.5
+    ext_l = 300.0 if (near_back or hm.st > 0) else 0.0
+    ext_r = 300.0 if (near_back or hm.st < 0) else 0.0
+    pts = [(float(X[0]) - ext_l, float(Y[0]) + (0.0 if ext_l else 400.0))] + [(float(x), float(y)) for x, y in zip(X, Y)] + \
+          [(float(X[-1]) + ext_r, float(Y[-1]) + (0.0 if ext_r else 400.0)), (float(X[-1]) + ext_r, 500.0), (float(X[0]) - ext_l, 500.0)]
+    return poly(pts, True)
+
+
+def _hair_region(c, hm, sp, P, det, sil, t):
+    style = sp['hair']; hc = sp['hair_c']
+    hsh = mix(hc, '#000000', 0.35); hhi = mix(hc, '#ffffff', 0.25)
+    part = sp['part']
+    yf, grow = _hairline(style, part)
     if style == 'kid':
         X, Y = hm.arc_phi(yf, 120)
     else:
@@ -1598,7 +1638,9 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     sp = sp or CAST[who]
     hm = HeadMap(sp, yaw, pitch, jaw=26.0 * clamp(P.m_open) + 5.0 * clamp(P.grin), cheek=clamp(P.grin + 0.4 * max(P.smile, 0.0)))
     skin, sh, dp = _skin_cols(sp, P, light)
-    sil = hm.silhouette()
+    sil_full = hm.silhouette()
+    cut = _nape_cut(hm, sp)
+    sil = minus(sil_full, cut) if cut is not None else sil_full
     face_v = hm.map1(0, 0)[2]
     cl = sp['cloth']
     # behind-head things
@@ -1619,6 +1661,8 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     c.radial(sil, lx * 0.5 + hm.st * 20, -30, 150, [(0, skin, 0), (0.62, skin, 0), (0.9, sh, 70), (1.0, sh, 135)], sy=1.15)
     ls = (light or {}).get('side', 1)
     c.fill(_crescent(sil, -ls * 30, 6), sh, 42)
+    if cut is not None:                                     # seen from behind: the cheek edge past the ear sits in shadow
+        c.fill(sil, sh, 110 * clamp((-hm.ct - 0.2) / 0.4))
     if det >= 2: c.texture(inter(sil, rect(-130, -78 if sp['hat'] else -125, 260, 260)), 'skin', 0.06, 0.32)
     if face_v > -0.3:
         for side in (-1, 1):
@@ -1660,7 +1704,7 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         if sp.get('moustache'): _moustache(c, hm, sp, P, det)
     if sp['hair']:
         if sp['hat'] != 'cap' or True:
-            _hair_region(c, hm, sp, P, det, sil, t)
+            _hair_region(c, hm, sp, P, det, sil_full, t)
         if sp['hair'] == 'messy' and face_v > -0.35:          # v2.1: brows over the fringe so fear/scream angles read
             for side in (-1, 1):
                 _brow(c, hm, sp, P, side, eyes.get(side))
@@ -3605,13 +3649,14 @@ def _env_db(env, t):
 # Every stage holds the same keys so stages blend cleanly. The eyes never smile (lock 1), the pupils shrink and the
 # whites grow as the smile widens. 'off' = "his face is perfectly still" (435.8 s).
 _STAGE_KEYS = ('smile', 'grin', 'teeth', 'gums', 'm_open', 'm_press', 'wide', 'pupil', 'bloodshot', 'brow_up', 'still', 'life')
-DRIVER_STAGES = {
-    0: dict(smile=0.10, grin=0.00, teeth=0.00, gums=0.0, m_open=0.00, m_press=0.20, wide=0.15, pupil=0.62, bloodshot=0.15, brow_up=0.05, still=0.30, life=1.0),
-    1: dict(smile=0.62, grin=0.05, teeth=0.00, gums=0.0, m_open=0.00, m_press=0.00, wide=0.20, pupil=0.60, bloodshot=0.20, brow_up=0.12, still=0.45, life=1.0),
-    2: dict(smile=0.85, grin=0.25, teeth=0.70, gums=0.0, m_open=0.00, m_press=0.00, wide=0.28, pupil=0.55, bloodshot=0.30, brow_up=0.20, still=0.55, life=1.0),
-    3: dict(smile=0.95, grin=0.45, teeth=0.95, gums=0.10, m_open=0.02, m_press=0.0, wide=0.38, pupil=0.50, bloodshot=0.40, brow_up=0.28, still=0.65, life=1.0),
-    4: dict(smile=1.00, grin=0.68, teeth=1.00, gums=0.35, m_open=0.04, m_press=0.0, wide=0.48, pupil=0.44, bloodshot=0.50, brow_up=0.38, still=0.70, life=1.0),
-    5: dict(smile=1.00, grin=1.15, teeth=1.00, gums=0.85, m_open=0.12, m_press=0.0, wide=0.60, pupil=0.36, bloodshot=0.65, brow_up=0.48, still=0.75, life=1.0),
+DRIVER_STAGES = {         # fix 3: never a pleasant smile: from the first frame a fixed, uncanny grin (wider than the eyes, a line
+    # of teeth, tiny pupils, no blinks) that only gets wider; the mouth talks through it (grin damps the jaw in talk())
+    0: dict(smile=0.55, grin=0.30, teeth=0.60, gums=0.0, m_open=0.00, m_press=0.00, wide=0.30, pupil=0.46, bloodshot=0.20, brow_up=0.00, still=0.50, life=1.0),
+    1: dict(smile=0.75, grin=0.42, teeth=0.85, gums=0.0, m_open=0.00, m_press=0.00, wide=0.34, pupil=0.43, bloodshot=0.25, brow_up=0.05, still=0.55, life=1.0),
+    2: dict(smile=0.88, grin=0.52, teeth=0.95, gums=0.05, m_open=0.00, m_press=0.00, wide=0.38, pupil=0.41, bloodshot=0.32, brow_up=0.12, still=0.60, life=1.0),
+    3: dict(smile=0.96, grin=0.64, teeth=1.00, gums=0.15, m_open=0.02, m_press=0.0, wide=0.45, pupil=0.38, bloodshot=0.42, brow_up=0.22, still=0.65, life=1.0),
+    4: dict(smile=1.00, grin=0.80, teeth=1.00, gums=0.40, m_open=0.04, m_press=0.0, wide=0.52, pupil=0.35, bloodshot=0.52, brow_up=0.32, still=0.70, life=1.0),
+    5: dict(smile=1.00, grin=1.15, teeth=1.00, gums=0.85, m_open=0.12, m_press=0.0, wide=0.60, pupil=0.32, bloodshot=0.65, brow_up=0.45, still=0.75, life=1.0),
     'off': dict(smile=0.0, grin=0.0, teeth=0.0, gums=0.0, m_open=0.0, m_press=0.55, wide=0.45, pupil=0.50, bloodshot=0.40, brow_up=0.10, still=1.0, life=0.12),
 }
 # (film time s, stage, transition s), from the delivery timeline tags: smile 66.24, 'Just finish it' ~139 (a minute before
@@ -4903,7 +4948,11 @@ def _label(c, x, y, w, h, det, to='', sender='RETURN', t=0.0):
     if det >= 2:
         text(c.cv, 'NIGHTLINE DELIVERY', *c.pt(x + w * 0.56, y + h * 0.14), 900, h * 0.1 * c.s, '#e9cf7e', 255, 0.04, 'center')
         text(c.cv, 'FROM:', *c.pt(x + w * 0.06, y + h * 0.36), 800, h * 0.085 * c.s, '#5a5a5a', 255, 0.03, 'left')
-        text(c.cv, sender, *c.pt(x + w * 0.3, y + h * 0.37), 900, h * 0.12 * c.s, '#1d1f26', 255, 0.06, 'left')
+        if sender.lower().startswith('lily'):                 # the next night: 'Lily' in a child's pencil, not print
+            pth, _ = _strokes_path(HAND_STROKES['LILY'], x + w * 0.3, y + h * 0.22, w * 0.26, h * 0.17, 1.0, 1.0, 5, t)
+            c.line(pth, max(1.4, c.lw * 0.6), '#3a56c8')
+        else:
+            text(c.cv, sender, *c.pt(x + w * 0.3, y + h * 0.37), 900, h * 0.12 * c.s, '#1d1f26', 255, 0.06, 'left')
         text(c.cv, 'TO:', *c.pt(x + w * 0.06, y + h * 0.58), 800, h * 0.085 * c.s, '#5a5a5a', 255, 0.03, 'left')
         if to:
             pth, _ = _strokes_path(HAND_STROKES['LILY'], x + w * 0.3, y + h * 0.43, w * 0.2, h * 0.16, 1.0, 1.0, 5, t)

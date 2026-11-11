@@ -2351,6 +2351,51 @@ def _curtain(pen, x, y, w, h, t, side=-1, c='#5a2a2a', sway=1.0, seed=0, open_=0
     pen.line(path, max(1.5, w * 0.01), LINE, 220)
 
 
+def curtain_gust(t, seed=0):
+    """0..1 gust strength of a night draught through an open window (slow swells with quicker flutters)."""
+    return clamp(0.5 + 0.42 * noise1(t * 0.55, seed + 70) + 0.22 * noise1(t * 1.7, seed + 71))
+
+
+def _curtain_billow(pen, x, y, w, h, t, side=-1, c='#9a7ab0', amt=1.0, seed=0, lit=None, folds=5):
+    """A curtain panel at an OPEN window, blown into the room: hung from (x, y), width w, height h, gathered on its outer
+    side (side -1 = the left panel, its free edge on the right). The draught lifts the hem (up to ~30 % of h), swings the
+    free edge across the opening and bellies the cloth toward the camera (a lit inner face shows on the bulge)."""
+    g = curtain_gust(t, seed) * amt
+    n = 14
+    top = [(x + w * i / n, y) for i in range(n + 1)]
+    bot = []
+    for i in range(n + 1):
+        u = i / n
+        fr = u if side < 0 else 1 - u                                   # 0 at the gathered edge, 1 at the free edge
+        lift = g * h * (0.08 + 0.26 * fr ** 1.3)
+        swing = -side * g * w * (0.15 + 0.55 * fr) + w * 0.12 * g * noise1(t * 1.6 + u * 1.2, seed + 5)
+        wave = 9.0 * g * math.sin(u * 3.0 * math.pi - t * 5.2 + seed) + 5.0 * noise1(t * 2.3 + u * 3.0, seed + 9)
+        bot.append((x + w * u + swing, y + h - lift + wave))
+    # the free edge bows inward (into the room) as the panel bellies
+    edge_i = n if side < 0 else 0
+    ex0, ey0 = top[edge_i]; ex1, ey1 = bot[edge_i]
+    belly = -side * g * w * 0.45
+    mid = [((ex0 + ex1) / 2 + belly + 4 * noise1(t * 1.9, seed + 11), (ey0 + ey1) / 2)]
+    if side < 0:
+        pts = top + mid + bot[::-1]
+    else:
+        pts = mid + top + bot[::-1]
+    path = smooth(pts, True, 0.55)
+    dk = _darken(c, 0.28)
+    pen.linear(path, x, 0, x + w, 0, [c, dk] * (folds // 2) + [c])
+    for i in range(1, folds):                                           # fold lines follow the blown hem
+        j = int(round(i / folds * n))
+        a_ = top[j]; b_ = bot[j]
+        cx_ = (a_[0] + b_[0]) / 2 + belly * 0.4 * (j / n if side < 0 else 1 - j / n)
+        pen.line(smooth([a_, (cx_, (a_[1] + b_[1]) / 2), b_], False), max(2, w * 0.012), _darken(c, 0.45), 170)
+    if g > 0.05:                                                        # the bulge catches the light: the cloth's inner face
+        bx = (ex0 + ex1) / 2 + belly * 0.6 - side * w * 0.18
+        by = (ey0 + ey1) / 2 + h * 0.08
+        pen.radial(path, bx, by, w * 0.9, [(0, _lighten(c, 0.35), 150 * min(1.0, g)), (1, _lighten(c, 0.35), 0)], sy=1.8)
+    if lit: pen.linear(path, x, 0, x + w, 0, [(0, lit[0], 0), (1, lit[0], lit[1])] if side < 0 else [(0, lit[0], lit[1]), (1, lit[0], 0)])
+    pen.line(path, max(1.5, w * 0.01), LINE, 220)
+
+
 def _outside_layers(tag, v, car, police, lf, lamps=(-6.0, 7.5), moon=(1300, 160, 30), tree=(-3.6, 3.3), wind=1.0, box=FRAME):
     """The street seen from inside the house (through a window): sky, houses across, lamps, road, yard, car."""
     backdrop = _combine(_sky_draw(v, (box[0], box[1], box[2], v.gy(8) + 30), moon, seed=21, clouds=((500, 160, 700, 40), (1500, 110, 700, 36))),
@@ -4299,7 +4344,7 @@ def _delivery_anchors(v, anchors, paths, car_X, box):
     gy = v.ground
     anchors['driver'] = anchors['officer']; anchors['driver_close'] = anchors['officer_close']
     anchors['box_boots'] = v.anchor(0.58, 1.02, note='the box standing next to his boots')
-    anchors['box_door'] = v.anchor(-1.12, 0.48, note='the box against the front door (its street face)')
+    anchors['box_door'] = v.anchor(-0.8, 0.84, note='the box against the front door (its street face)')
     anchors['van_cab'] = v.anchor(car_X - 1.4, 4.4, Y=gy, note="beside the van's cab door (curb side)")
     anchors['van_door'] = v.anchor(car_X + 0.2, 4.4, Y=gy, note="at the van's sliding door")
     paths['porch_to_van'] = [anchors['officer'], anchors['steps'], anchors['path_mid'], anchors['gate'], anchors['van_cab']]
@@ -4518,7 +4563,7 @@ def _box_spec(box):
     """'door' | 'boots' | dict(at='door'|'boots'|(X, Dn), state, knock=f(t), label) -> normalised dict."""
     b = dict(at=box) if isinstance(box, str) else dict(box)
     at = b.get('at', 'door')
-    if at == 'door': b.setdefault('X', -1.12); b.setdefault('Dn', 0.06); b.setdefault('label', 'far')
+    if at == 'door': b.setdefault('X', -0.8); b.setdefault('Dn', 0.42); b.setdefault('label', 'near')     # fix 3: in the lens, in focus, label to the camera
     elif at == 'boots': b.setdefault('X', 0.58); b.setdefault('Dn', 1.02); b.setdefault('label', 'near')
     elif at == 'threshold': b.setdefault('X', -0.18); b.setdefault('Dn', 0.62); b.setdefault('label', 'far'); b.setdefault('shade', 0.72)
     else: b['X'], b['Dn'] = at; b.setdefault('label', 'near')
@@ -5052,10 +5097,13 @@ def upstairs_hall(lily_door=0.07, window_open=True, hall_light=0.0, mom_door=0.0
         _sprite(pen, ('lily_door', round(s, 2)), lambda p_: _lily_door_face(p_, dw, dh, s), (0, 0, dw, dh))
         cv.restore()
         q = poly([tl, tr, br, bl])
+        pen.fill(q, '#04050c', 175 * (1 - clamp(th * 1.6)))                       # fix 3: the leaf in the dark hall's shadow
         if th > 0.005:
             pen.fill(q, '#000000', 80 * clamp(th * 3))
-            gx = tr[0]                                                            # the lit crack
-            pen.fill(poly([tr, (dx1, dy0), (dx1, dy1), br]), MOON_GLOW, 70 * (1 - th) ** 2)
+            gx = tr[0]                                                            # the lit crack: a thin bright slit
+            slit = poly([tr, (dx1, dy0), (dx1, dy1), br])
+            pen.fill(slit, MOON_GLOW, 235 * clamp(1.4 - th))
+            pen.glow((tr[0] + dx1) / 2, (dy0 + dy1) / 2, max(8.0, (dx1 - tr[0]) * 2.5), MOON_GLOW, 90 * clamp(1.4 - th))
         pen.line(q, 2.5, LINE, 230)
 
     def wedge(pen, t):                                     # the nightlight's glow across the floor through the gap
@@ -5192,12 +5240,20 @@ def lily_room(view='room', window_open=False, bed='sleeping', curtains=1.0, wind
         pen.fill(minus(v.quad([(-HW, 0, Db), (HW, 0, Db), (HW, 0.1, Db), (-HW, 0.1, Db)]), rect(0, 0, 0, 0)), '#2a2438')
         pen.line(rect(wx0 - 12, wy0 - 12, wx1 - wx0 + 24, wy1 - wy0 + 24), 22, '#d8d0e0'); pen.line(rect(wx0 - 24, wy0 - 24, wx1 - wx0 + 48, wy1 - wy0 + 48), 3, LINE)
         pen.fill(rect(wx0 - 40, wy1 + 12, wx1 - wx0 + 80, 18), '#d8d0e0'); pen.line(rect(wx0 - 40, wy1 + 12, wx1 - wx0 + 80, 18), 2, LINE)
-        if window_open:                                     # lower sash raised: the opening below, the sash pane above
-            my = wy0 + (wy1 - wy0) * 0.08
-            pen.fill(rect(wx0, wy0, wx1 - wx0, (wy1 - wy0) * 0.5), '#c9d6f0', 22)
-            pen.seg((wx0, wy0 + (wy1 - wy0) * 0.5), (wx1, wy0 + (wy1 - wy0) * 0.5), 14, '#d8d0e0')
-            pen.seg((wx0, wy0 + (wy1 - wy0) * 0.52), (wx1, wy0 + (wy1 - wy0) * 0.52), 3, LINE)
-            pen.seg(((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, wy0 + (wy1 - wy0) * 0.5), 8, '#d8d0e0')
+        if window_open:                                     # lower sash raised all the way: a black night gap below
+            gy = wy0 + (wy1 - wy0) * 0.46                   # the raised sash's bottom rail
+            gap = rect(wx0, gy, wx1 - wx0, wy1 - gy)
+            pen.linear(gap, 0, gy, 0, wy1, [(0, '#02030a', 225), (0.7, '#05070f', 205), (1, '#0a0f22', 190)])
+            pen.linear(rect(wx0, wy1 - 26, wx1 - wx0, 26), 0, wy1 - 26, 0, wy1, [(0, '#7a9ae0', 0), (1, '#7a9ae0', 70)])   # cold sill light
+            gl = rect(wx0, wy0, wx1 - wx0, gy - wy0)        # two sashes of glass overlapped above it
+            pen.fill(gl, '#b8c8ec', 46)
+            pen.fill(poly([(wx0 + 20, gy - 6), (wx0 + 62, gy - 6), (wx0 + 118, wy0 + 6), (wx0 + 76, wy0 + 6)]), '#e6eeff', 40)
+            pen.line(rect(wx0 + 5, wy0 + 5, wx1 - wx0 - 10, gy - wy0 - 5), 9, '#d8d0e0')
+            pen.seg(((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, gy), 8, '#d8d0e0')
+            pen.seg((wx0, gy), (wx1, gy), 16, '#d8d0e0'); pen.seg((wx0, gy + 8), (wx1, gy + 8), 3, LINE)
+            pen.seg((wx0 + 12, gy - 14), (wx1 - 12, gy - 14), 3, '#a89eb8')
+            for ex in (wx0 + 3, wx1 - 3):                    # the empty side tracks of the open sash
+                pen.seg((ex, gy + 10), (ex, wy1), 5, '#bdb4c8')
         else:
             pen.seg((wx0, (wy0 + wy1) / 2), (wx1, (wy0 + wy1) / 2), 12, '#d8d0e0'); pen.seg(((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, wy1), 8, '#d8d0e0')
             pen.fill(poly([(wx0, wy1 - 40), (wx0 + 60, wy1), (wx0 + 140, wy0), (wx0 + 80, wy0)]), '#c9d6f0', 20)
@@ -5209,8 +5265,12 @@ def lily_room(view='room', window_open=False, bed='sleeping', curtains=1.0, wind
         sp = 2.3 if window_open else 0.6
         cw = (wx1 - wx0) * 0.42
         for side, x_ in ((-1, wx0 - cw * 0.7), (1, wx1 - cw * 0.3)):
-            _curtain(pen, x_, wy0 - 44, cw, (wy1 - wy0) + 150, t * sp + (0 if side < 0 else 2.3), side, '#9a7ab0', k, 31 + side, folds=5,
-                     lit=(MOON_GLOW, 50) if side < 0 else None)
+            if window_open:                                  # the night air blows them into the room
+                _curtain_billow(pen, x_, wy0 - 44, cw, (wy1 - wy0) + 150, t, side, '#9a7ab0', curtains * wind, 31 + side,
+                                lit=(MOON_GLOW, 60) if side < 0 else ('#c8d6ff', 50))
+            else:
+                _curtain(pen, x_, wy0 - 44, cw, (wy1 - wy0) + 150, t * sp + (0 if side < 0 else 2.3), side, '#9a7ab0', k, 31 + side, folds=5,
+                         lit=(MOON_GLOW, 50) if side < 0 else None)
             cv = pen.cv; cv.save()
             cv.clipPath(rect(x_ - 20, wy0 - 44, cw + 40, (wy1 - wy0) + 220), skia.ClipOp.kIntersect, True)
             _glow_stars(pen, lambda r: (x_ + r.uniform(0.1, 0.9) * cw, wy0 + r.uniform(0, 1.0) * (wy1 - wy0 + 120), 7), 9, 40 + side, 120)
@@ -5865,13 +5925,32 @@ def photo_lily_scene():
         tip = ((wx0 + wx1) / 2 + 30, wy1 + 20)
     TAB = 70.0
     tx, ty = tip[0] + 0.12 * TAB, tip[1]                              # her fingertip lands on the signature box
-    DRH = 640.0
-    DP = CH.Pose(turn=2.0, h_turn=-1.3, lean=-0.1, hl_out=-60.0, hl_down=-330.0, hl_fwd=40.0, hl_up=1.0, hl_shape='grip',
-                 hr_out=10.0, hr_down=300.0, hr_fwd=10.0, smile=1.0, grin=1.0, teeth=1.0, lock=1.0, look_x=-0.6) if CH else None
+    # fix 3: the driver stands ON the wheelie bin against the wall under her window (1 m up), so a man of 1.8 m reaches the
+    # tablet with a bent arm (shoulder, elbow, a forearm of natural length): no stretched limbs, the geometry holds
+    vw = sp.info['view']
+    DD, BIN_Y = 3.08, 0.98                                             # his depth (just off the wall) and the bin lid height
+    DRH = 1.8 * vw.s(DD)
     gx, gy = tx, ty + 0.42 * TAB                                       # his grip under the tablet
-    if CH:
-        dw, _ = CH.hand_pos('driver', DP, 1, x=0, y_feet=0, height=DRH)
-        dx_, dy_ = gx - dw[0], gy - dw[1]
+    XD = (gx - 960.0) / vw.s(DD) + 0.36                                # his centre: right of the grip, the arm reaches up-left
+    dx_, dy_ = vw.p(XD, BIN_Y, DD)
+    DP = CH.Pose(turn=2.0, h_turn=-1.55, lean=-0.05, hl_out=40.0, hl_down=-200.0, hl_fwd=60.0, hl_up=0.0, hl_shape='grip',
+                 hr_out=14.0, hr_down=330.0, hr_fwd=24.0, smile=1.0, grin=1.0, teeth=1.0, lock=1.0, look_x=-0.6) if CH else None
+    if CH:                                                             # solve the reach (Gauss-Newton on out / down)
+        for _ in range(8):
+            w0, _t = CH.hand_pos('driver', DP, 1, x=dx_, y_feet=dy_, height=DRH)
+            ex_, ey_ = gx - w0[0], gy - w0[1]
+            if abs(ex_) + abs(ey_) < 0.5: break
+            J = []
+            for key in ('hl_out', 'hl_down'):
+                v0 = getattr(DP, key); setattr(DP, key, v0 + 5.0)
+                w1, _t = CH.hand_pos('driver', DP, 1, x=dx_, y_feet=dy_, height=DRH)
+                setattr(DP, key, v0)
+                J.append(((w1[0] - w0[0]) / 5.0, (w1[1] - w0[1]) / 5.0))
+            det = J[0][0] * J[1][1] - J[1][0] * J[0][1]
+            if abs(det) < 1e-9: break
+            d_out = (ex_ * J[1][1] - ey_ * J[1][0]) / det
+            d_down = (J[0][0] * ey_ - J[0][1] * ex_) / det
+            DP.hl_out += d_out; DP.hl_down += d_down
     lit = dict(rim='#e8f0ff', rim_a=150, side=1, key=-0.1)
 
     def window_in(pen, t):                                             # her room through the window (no curtain here)
@@ -5896,7 +5975,19 @@ def photo_lily_scene():
         CH.draw_bust(pen, 'lily', LB['cx'], LB['cy'], LB['scale'], LP, light=lit)
         cv.restore()
 
+    def wheelie_bin(pen):                                              # the green wheelie bin he climbed on (lid at 0.98 m)
+        bs = vw.s(DD + 0.05)
+        bx, by = vw.p(XD, 0.0, DD + 0.05); ty_ = vw.y(BIN_Y, DD + 0.05)
+        body = poly([(bx - 0.31 * bs, ty_ + 0.04 * bs), (bx + 0.31 * bs, ty_ + 0.04 * bs), (bx + 0.27 * bs, by), (bx - 0.27 * bs, by)])
+        pen.fill(body, '#1c3a2a'); pen.linear(body, bx - 0.31 * bs, 0, bx + 0.31 * bs, 0, [(0, '#000000', 70), (0.4, '#7fd0a0', 26), (1, '#000000', 110)])
+        for k in range(1, 4): pen.seg((bx - 0.28 * bs + k * 0.14 * bs, ty_ + 0.14 * bs), (bx - 0.25 * bs + k * 0.13 * bs, by - 0.08 * bs), 2.5, '#0e2016', 200)
+        pen.line(body, 3, LINE)
+        lid = rrect(bx - 0.35 * bs, ty_ - 0.02 * bs, 0.7 * bs, 0.08 * bs, 0.02 * bs)
+        pen.fill(lid, '#24483a'); pen.fill(rect(bx - 0.35 * bs, ty_ - 0.02 * bs, 0.7 * bs, 0.02 * bs), '#9ad8b4', 70); pen.line(lid, 3, LINE)
+        pen.radial(None, bx, ty_, 0.9 * bs, [(0, '#e8f0ff', 60), (1, '#e8f0ff', 0)], sy=0.5, clip=False)     # the flash on the lid
+
     def front(pen):
+        wheelie_bin(pen)
         pen.glow(tx, ty, TAB * 1.7, '#e8f0ff', 150)
         CH.draw(pen, 'driver', dx_, dy_, DRH, DP, light=dict(rim='#ffa31f', rim_a=150, side=1, key=-0.45))
         CH.draw_tablet(pen, tx, ty, TAB, screen='sign', sig='lily', ink=0.62, ts='3:41 AM', angle=-6)
@@ -5908,9 +5999,10 @@ def photo_lily_scene():
         _set_snapshot(pen, sp, 0, 0, 1920, 1080, (0, 0, 1920, 1080), figs, t=t, exclude=('lily_window',))
 
     def c169(x, y, w): return (x, y, x + w, y + w * 9.0 / 16.0)
-    crops = {'full': c169(440, 300, 1000), 'lily': c169(wx0 - 130, wy0 - 40, 420), 'arm': c169(tx - 330, ty - 120, 560),
+    hx_, hy_ = dx_, dy_ - DRH * 0.91                                   # his head (for framing the grin)
+    crops = {'full': c169(450, 440, 1060), 'lily': c169(wx0 - 130, wy0 - 40, 420), 'arm': c169(tx - 270, ty - 140, 520),
              'finger': c169(tx - 125, ty - 92, 250)}
-    sc = dict(draw=draw, crops=crops, tablet=(tx, ty), window=(wx0, wy0, wx1, wy1))
+    sc = dict(draw=draw, crops=crops, tablet=(tx, ty), window=(wx0, wy0, wx1, wy1), head=(hx_, hy_), driver_h=DRH)
     _PHOTO341['scene'] = sc
     return sc
 
@@ -5963,7 +6055,7 @@ def _notification(pen, cv, T, y, title, body, a, k=1.0, when='now'):
 
 
 def app_phone(cv, screen, t, x=960, y=560, scale=1.0, hand=True, skin='#c0aa9e', alpha=255, clock=None, sender=None,
-              photo_k=1.0, notify_k=None):
+              photo_k=1.0, notify_k=None, sig_k=1.0):
     """The delivery app on the police phone (same body, glass, hand hook engine.hud._hand, palette and fonts as
     hud.phone), drawn on the HUD canvas. screen (t = seconds since this screen appeared):
       'notify_delivered'  lock screen 3:07, banner 'Your package has been delivered.'
@@ -5973,7 +6065,9 @@ def app_phone(cv, screen, t, x=960, y=560, scale=1.0, hand=True, skin='#c0aa9e',
       'photo_gone'        the same item: 'No delivery photo on file.' (the photo never existed)
       'attempted'         Delivery attempted / Package left at door / Return pickup scheduled for 6:12 a.m. (tracker)
       'notify_return'     lock screen 3:41, banner 'Return complete.'
-      'photo_lily'        DELIVERY PHOTO 3:41 AM from below: Lily signing at her window; Signed by: 'Lily.' (child's hand)
+      'photo_lily'        DELIVERY PHOTO 3:41 AM from below: Lily signing at her window; Signed by: 'Lily.' (child's hand);
+                          sig_k 0 = only the photo and 'Return complete' (the name stays hidden until the narrator reads it),
+                          0..1 = the SIGNED BY row slides up with an empty signature line, 1 = the name written in
       'notify_on_way'     the next night, 3:07: 'Your package is on its way. Signature required.'
       'on_way'            ORDER DETAILS again: Recipient: This address, Sender: 'Lily' in a child's handwriting.
     clock overrides the status-bar / lock time; notify_k (0..1) slides the banner in (default: over the first 0.35 s)."""
@@ -6058,9 +6152,16 @@ def app_phone(cv, screen, t, x=960, y=560, scale=1.0, hand=True, skin='#c0aa9e',
                 cv.restore()
             yy = py + ph + 30
             if screen == 'photo_lily':
-                T('SIGNED BY', yy, 10, '#8a93ad', 700, 0.22)
-                _child_hand(pen, 'Lily.', -38, yy + 40, 30, a)
-                T('Return complete', yy + 72, 13, NL_AMBER, 800, 0.0)
+                rk = clamp(sig_k * 2.0)                                   # the SIGNED BY row comes in, then the name
+                if rk < 1:
+                    T('Return complete', yy + 6, 15, NL_AMBER, 800, 0.0, aa=1 - rk)
+                if rk > 0:
+                    cv.save(); cv.translate(0, 18 * (1 - ease_out_cubic(rk)))
+                    T('SIGNED BY', yy, 10, '#8a93ad', 700, 0.22, aa=rk)
+                    pen.seg((-70, yy + 46), (70, yy + 46), 1.5, '#4a5068', a * rk)
+                    if sig_k >= 0.999: _child_hand(pen, 'Lily.', -38, yy + 40, 30, a)
+                    T('Return complete', yy + 72, 13, NL_AMBER, 800, 0.0, aa=rk)
+                    cv.restore()
             else:
                 T('Proof of delivery', yy, 13, '#ffffff', 800, 0.0)
                 T('Front hallway  •  3:11 AM' if screen == 'photo_hall' else 'Photo removed', yy + 20, 12, '#8a93ad', 600, 0.0)

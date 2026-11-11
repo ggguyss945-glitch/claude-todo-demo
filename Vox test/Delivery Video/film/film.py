@@ -78,6 +78,7 @@ WORDS = os.path.join(ALIGN, 'asr_cache.json')
 FPS = 60
 LEAD = 0.10                      # cut a moment before the word
 GLOBAL_PPUSH = 0.02              # uniform post push (per second) added to every non-lens shot
+DEEP_SETS = ('upstairs', 'side', 'hallback', 'lily')        # lens shots on deep sets: they get their own post push (fix 3)
 WHO = {'D': 'driver', 'M': 'mom'}          # X = the voice in the box / behind you: no mouth on screen
 H._hand = CH.hud_phone_hand      # the character module's hand on the phone UI
 DOORBELL = get_lens('doorbell')
@@ -284,9 +285,18 @@ class Film:
         spec = BUILDERS[sh.kind](self, sh)
         shot_common(self, sh, spec)
         mv = (sh.p.get('cam') or {}).get('mv', 'push')
+        if sh.p.get('handheld_hz') and isinstance(spec.cam, Cam): spec.cam.shake_hz = sh.p['handheld_hz']
         if (spec.lens is None and isinstance(spec.cam, Cam) and not spec.cam.posts and mv != 'pull'
                 and sh.kind not in ('rule', 'black') and not sh.p.get('no_ppush')):
             spec.cam.post_push(sh.t0, sh.t1, 1.0, (1.0 + GLOBAL_PPUSH) ** max(0.3, sh.d), ease='push')
+        elif (sh.kind in DEEP_SETS and isinstance(spec.cam, Cam) and not spec.cam.posts and mv not in ('pull', 'keys')
+              and sh.p.get('view') != 'window' and not sh.p.get('no_ppush')):
+            # fix 3: these sets are 3-5 m deep, so a dolly push of 3 %/s moved their far wall < 1 %/s (shots read static):
+            # add a uniform 2.8 %/s push into the image with a slow lateral drift
+            sgn = 1 if sh.idx % 2 else -1
+            spec.cam.post_push(sh.t0, sh.t1, 1.0, 1.028 ** max(0.3, sh.d), ease='push', x=sgn * 9.0 * sh.d, y=-3.0 * sh.d)
+            if sh.kind == 'upstairs':
+                spec.cam.shake, spec.cam.shake_hz = max(spec.cam.shake, 3.4), 0.75
         if len(self._built) > 3: self._built.clear()
         self._built[sh.idx] = spec
         return spec
@@ -391,6 +401,25 @@ def shot_table(F):
 
 
 # ==================================================================================================== camera
+class KeyCam(Cam):
+    """Cam whose keys also carry an optical zoom f (no parallax): a deep set (Lily's room, 3.4 m to the window) can be
+    pushed right up to its far wall while the dolly part keeps the parallax. fkeys [(t, f, ease)] interpolate like the keys
+    (geometric, the same per-segment eases)."""
+    def __init__(self, keys, fkeys, **kw):
+        super().__init__(keys, **kw)
+        self.fkeys = sorted(fkeys, key=lambda k: k[0])
+
+    def _fz(self, t):
+        ks = self.fkeys; f = ks[0][1]
+        if t >= ks[-1][0]: f = ks[-1][1]
+        elif t > ks[0][0]:
+            for a, b in zip(ks, ks[1:]):
+                if a[0] <= t <= b[0]:
+                    u = ease_fn(b[2] or self.ease)((t - a[0]) / max(1e-9, b[0] - a[0]))
+                    f = math.exp(lerp(math.log(a[1]), math.log(b[1]), u)); break
+        return super()._fz(t) * f
+
+
 def push_rate(t):
     """Push-in speed grows toward the climaxes (reference median 2.3-2.8 %/s, p90 6-8 %/s)."""
     if t > 560: return 0.034
@@ -400,8 +429,11 @@ def push_rate(t):
 
 
 def mkcam(sh, mv='push', x=960, y=540, z=1.0, rate=None, dx=0.0, dy=0.0, shake=1.6, roll=0.0, x1=None, y1=None, z1=None,
-          snap=None, hit=None, opt=None, d=None):
-    """opt: constant optical zoom (no parallax; frames far layers); d: x, y (and x1, y1) are points on a layer at depth d."""
+          snap=None, hit=None, opt=None, d=None, keys=None):
+    """opt: constant optical zoom (no parallax; frames far layers); d: x, y (and x1, y1) are points on a layer at depth d.
+    mv='keys': one continuous move through keys=[(t, x, y, z[, ease])] (absolute film seconds; ease of the segment arriving
+    at the key, default 'in_out'; the first key's time may precede the shot), so a push, a hold-creep and a pan can live in
+    one shot instead of three cuts."""
     t0, t1 = sh.t0, sh.t1
     if d is not None:
         x, y = 960 + d * (x - 960), 540 + d * (y - 540)
@@ -421,13 +453,21 @@ def mkcam(sh, mv='push', x=960, y=540, z=1.0, rate=None, dx=0.0, dy=0.0, shake=1
     elif mv == 'move':                        # explicit start / end framing
         c = Cam([(t0, x, y, z, roll), (t1, x1 if x1 is not None else x, y1 if y1 is not None else y, z1 or z * (1 + r * sh.d), roll, 'push')],
                 shake=shake, seed=sh.idx)
+    elif mv == 'keys':                        # one continuous multi-key move (push -> creep -> pan ...)
+        ks, fk = [], []
+        for k in keys:
+            kx, ky = (960 + d * (k[1] - 960), 540 + d * (k[2] - 540)) if d is not None else (k[1], k[2])
+            ks.append((k[0], kx, ky, k[3], roll, k[4] if len(k) > 4 else None))
+            fk.append((k[0], k[5] if len(k) > 5 else 1.0, k[4] if len(k) > 4 else None))
+        c = KeyCam(ks, fk, shake=shake, seed=sh.idx)
     elif mv == 'hand':                        # nervous handheld + slow push
         c = push_in(t0, t1, x, y, z, rate=r * 0.8, drift=(dx, dy), shake=4.5, seed=sh.idx)
         c.shake_hz = 0.9
     else:
         c = hold(x, y, z, shake=shake, seed=sh.idx)
     if opt: c.snap(t0 - 30.0, opt, 0.001)
-    if snap: c.snap(snap[0], snap[1] if len(snap) > 1 else 1.25, 0.1)
+    if snap:                                  # fix 3: an eased 0.24 s push-in (was a 0.1 s overshooting pop: read as a jump cut)
+        c.snap_back = False; c.snap(snap[0], snap[1] if len(snap) > 1 else 1.25, 0.24)
     if hit:
         for h in (hit if isinstance(hit, (list, tuple)) else [hit]): c.hit(h, 7.0)
     return c
@@ -452,15 +492,21 @@ def acting(F, sh, who, act=None, seed=0, height=700.0, expr=None, talk=True, bli
 
 
 def _walk_legs(a, legs, surface='porch'):
-    """Walk cycle for one or more walks per actor (police film): legs [(t0, t1, units, facing)]; footstep events."""
+    """Walk cycle for one or more walks per actor (police film): legs [(t0, t1, units, facing)]; footstep events.
+    surface 'inside' / 'porch'; '<surface>_run' = a run (3.6 steps/s, ~0.28 s a step, leaning in); a '_quiet' suffix drops
+    the footstep events (a shot whose explicit run / stairs cue carries the steps)."""
     info = []
+    run = '_run' in surface
+    quiet = surface.endswith('_quiet')
+    base = surface.split('_')[0]
     for (t0, t1, units, face) in legs:
-        n = max(2, int(round((t1 - t0) * 1.9)))
+        n = max(2, int(round((t1 - t0) * (3.6 if run else 1.9))))
         cyc = n / 2.0
         info.append((t0, t1, cyc, face))
+        if quiet: continue
         for k in range(1, n + 1):
-            a._ev(t0 + (t1 - t0) * (k - 0.5) / n, 'footsteps_wood_inside' if surface == 'inside' else 'footsteps_porch', -4.0,
-                  pan=0.0, n=1, foot='L' if k % 2 else 'R')
+            a._ev(t0 + (t1 - t0) * (k - 0.5) / n, 'footsteps_wood_inside' if base == 'inside' else 'footsteps_porch', -2.0 if run else -4.0,
+                  pan=0.0, n=1, foot='L' if k % 2 else 'R', **({'run': True} if run else {}))
 
     def fn(P, t):
         for (t0, t1, cyc, face) in info:
@@ -468,6 +514,7 @@ def _walk_legs(a, legs, surface='porch'):
                 amt = ease_in_out(clamp((t - t0 + 0.15) / 0.3)) * ease_in_out(clamp((t1 + 0.15 - t) / 0.3))
                 w = ease_in_out(clamp((t - t0 + 0.4) / 0.4)) * ease_in_out(clamp((t1 + 0.45 - t) / 0.45))
                 P.walk_amt = max(P.walk_amt, amt)
+                if run: P.lean += 0.14 * amt
                 P.walk_ph = cyc * clamp((t - t0) / max(1e-3, t1 - t0))
                 P.turn = lerp(P.turn, face, w)
                 P.lean += 0.05 * amt
@@ -730,7 +777,8 @@ def B_door(F, sh):
     L, A = people(F, sh, sp, ppl, lt)
     if bx == 'boots':
         a = sp.anchors['box_boots']
-        L.append(box_layer(F, sh, a.x + p.get('box_dx', 0), a.y, a.height * 0.865, a.depth, -0.35, lambda t: box_light(t, hz)))
+        L.append(box_layer(F, sh, a.x + p.get('box_dx', 0), a.y, a.height * 0.865, a.depth, -0.35, lambda t: box_light(t, hz),
+                           sender=p.get('sender', 'RETURN')))
     if p.get('box_move'):                                         # he carries the box over to the front door
         L.append(_carried_box(F, sh, p['box_move'], hz))
     lens = DOORBELL_IR if p.get('ir') else DOORBELL
@@ -754,7 +802,10 @@ def B_door(F, sh):
         px, py = p.get('px', 0.0) * 0.3, p.get('py', -20.0) * 0.3
     cam = Cam([(sh.t0, 960, 540, 1.0)], shake=0.0, seed=sh.idx)
     if off: cam.post_push(sh.t0 - 20.0, sh.t0 - 19.99, 1.0, 1.0, 'lin', x=off[0], y=off[1])
-    cam.post_push(sh.t0, sh.t1, z0, z1, x=px, y=py)
+    if p.get('posts'):                    # merged shots: chained post pushes [(t0, t1, z0, z1, x, y[, ease])] (zooms multiply, offsets add)
+        for q in p['posts']: cam.post_push(q[0], q[1], q[2], q[3], q[6] if len(q) > 6 else 'push', x=q[4], y=q[5])
+    else:
+        cam.post_push(sh.t0, sh.t1, z0, z1, x=px, y=py)
     hits = list(p.get('hit') or [])
     if bx == 'boots' or (bx == 'door' and sh.t0 >= T_BOX_DOOR - 1):
         hits += [h for h in F.knocks_in(sh.t0, sh.t1)]
@@ -1003,6 +1054,23 @@ def B_upstairs(F, sh):
     ppl = list(p.get('ppl', []))
     for q in ppl: q.setdefault('surface', 'inside')
     L, A = people(F, sh, sp, ppl, moon_light)
+    if p.get('pov_push') is not None:                # fix 3: your hand comes up into frame and pushes her door open
+        tp = p['pov_push']
+
+        def pov(pen, t):
+            u_in = ease_out_cubic(clamp((t - (tp - 0.45)) / 0.45))
+            u_push = ease_in_out(clamp((t - tp) / 0.6))
+            u_out = ease_in_out(clamp((t - tp - 0.55) / 0.45))
+            if u_in <= 0 or u_out >= 1: return
+            x = lerp(1560, 1075, u_in) + 150 * u_push + 260 * u_out
+            y = lerp(1300, 600, u_in) + 40 * u_push + 520 * u_out
+            sz = 430 * (1.0 - 0.18 * u_push)
+            cv = pen.cv; cv.saveLayer(None, None)
+            CH.draw_hand(pen, 'you', x, y, sz, 'open', 172.0 - 14 * u_push, -1)
+            cv.drawPaint(skia.Paint(Color=skia.Color4f(0.06, 0.07, 0.16, 0.62), BlendMode=skia.BlendMode.kSrcATop))   # the dark hall
+            cv.drawPaint(skia.Paint(Color=skia.Color4f(1.0, 0.94, 0.76, 0.16 * u_push), BlendMode=skia.BlendMode.kSrcATop))   # her glow
+            cv.restore()
+        L.append(Layer(0.5, pov, 'pov_hand', blur=0, screen=True))
     cam = cam_from(F, sh, p.get('cam', dict(mv='push', x=960, y=560)))
     return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'nightlight'), p.get('focus', 4.6), p.get('dof', 2.0),
                 fx=lambda t: dict(sp.fx(t) or {}, **p.get('post', {})), hud=p.get('hud'))
@@ -1046,15 +1114,37 @@ def B_photo(F, sh):
     p = sh.p
     comp = p.get('comp', 'lily')
     sc = ST.photo_lily_scene()
-    x0, y0, x1, y1 = sc['crops'][comp]
-    k = DW / (x1 - x0)
+    if p.get('path'):                     # fix 3: ONE continuous move over the photo (full -> Lily -> the tablet and his grin ->
+        keys = p['path']                  # her finger): crop keys [(t, cx, cy, width, ease)] in photo design coords, drawn live
+        # (vector, sharp at any zoom; ~0.15 s/frame at 2560) instead of four cuts over a baked crop
 
-    def draw(pen, t):
-        cv = pen.cv
-        cv.save(); cv.scale(k, k); cv.translate(-x0, -y0)
-        sc['draw'](pen, 0.0)
-        cv.restore()
-    L = [Layer(1.0, draw, 'photo341', blur=0, cache='photo341_' + comp, bounds=(0, 0, DW, DH), cache_res=1.3)]
+        def crop_at(t):
+            if t <= keys[0][0]: k0 = keys[0]; return k0[1], k0[2], k0[3]
+            for a, b in zip(keys, keys[1:]):
+                if a[0] <= t <= b[0]:
+                    u = ease_fn(b[4] if len(b) > 4 and b[4] else 'in_out')((t - a[0]) / max(1e-9, b[0] - a[0]))
+                    return lerp(a[1], b[1], u), lerp(a[2], b[2], u), math.exp(lerp(math.log(a[3]), math.log(b[3]), u))
+            k1 = keys[-1]; return k1[1], k1[2], k1[3]
+
+        def draw(pen, t):
+            cx_, cy_, cw_ = crop_at(t)
+            k = DW / cw_
+            cv = pen.cv
+            cv.save(); cv.clipRect(skia.Rect(0, 0, DW, DH))
+            cv.scale(k, k); cv.translate(-(cx_ - cw_ / 2), -(cy_ - cw_ * 9.0 / 32.0))
+            sc['draw'](pen, 0.0)
+            cv.restore()
+        L = [Layer(1.0, draw, 'photo341', blur=0)]
+    else:
+        x0, y0, x1, y1 = sc['crops'][comp]
+        k = DW / (x1 - x0)
+
+        def draw(pen, t):
+            cv = pen.cv
+            cv.save(); cv.scale(k, k); cv.translate(-x0, -y0)
+            sc['draw'](pen, 0.0)
+            cv.restore()
+        L = [Layer(1.0, draw, 'photo341', blur=0, cache='photo341_' + comp, bounds=(0, 0, DW, DH), cache_res=1.3)]
 
     def flash(pen, t):
         pen.radial(None, 960, 600, 1300, [(0, '#ffffff', 40), (0.5, '#ffffff', 10), (1, '#000000', 120)], clip=False)
@@ -1063,6 +1153,7 @@ def B_photo(F, sh):
             'lily': dict(mv='push', x=960, y=500, z=1.0, rate=0.035),
             'arm': dict(mv='move', x=900, y=760, z=1.18, x1=1000, y1=420, z1=1.22),
             'finger': dict(mv='push', x=980, y=560, z=1.0, rate=0.03)}[comp]
+    if p.get('path'): dflt = dict(mv='hold', x=960, y=540, z=1.0, shake=1.2)
     cam = cam_from(F, sh, p.get('cam', dflt))
     t_in = sh.t0
 
@@ -1071,7 +1162,7 @@ def B_photo(F, sh):
         pen.line(rect(26, 26, DW - 52, DH - 52), 3, '#ffffff', 90)
         text(cv, 'DELIVERY PHOTO', 60, 74, 800, 22, '#ffffff', 210, 0.18, 'left', 0.8)
         text(cv, 'NIGHTLINE  /  PROOF OF DELIVERY', 60, 102, 700, 15, '#c9cfdc', 170, 0.18, 'left', 0.6)
-        text(cv, '3:41 AM', DW - 60, DH - 150, 800, 44, '#ff9a3a', 235, 0.06, 'right', 0.9)
+        text(cv, '3:41 AM', DW - 60, 90, 800, 40, '#ff9a3a', 235, 0.06, 'right', 0.9)          # top right: clear of faces / captions
         if p.get('hud'): p['hud'](cv, t)
 
     def fx(t):
@@ -1135,12 +1226,28 @@ def _post_push(cam, sh, rate):
     return cam
 
 
+def keyed(keys, t):
+    """Interpolate [(t, v1, v2, ...[, ease])] at t (holds outside; per-segment ease, default in_out). Returns a tuple."""
+    n = len(keys[0]) - 1
+    if isinstance(keys[0][-1], str): n -= 1
+    if t <= keys[0][0]: return tuple(keys[0][1:1 + n])
+    for a, b in zip(keys, keys[1:]):
+        if a[0] <= t <= b[0]:
+            e = b[1 + n] if len(b) > 1 + n else 'in_out'
+            u = ease_fn(e)((t - a[0]) / max(1e-9, b[0] - a[0]))
+            return tuple(lerp(a[1 + j], b[1 + j], u) for j in range(n))
+    return tuple(keys[-1][1:1 + n])
+
+
 def hud_push(sh, rate=0.03, cx=960, cy=540, dx=0.0, dy=0.0, shake=0.0, hz=0.9):
     """Canvas transform for HUD-drawn shots (phone UI, waveform panels): the graphic pushes in at `rate`/s, drifts and
-    shakes like a hand-held phone. Returns f(cv, t) -> restore()."""
+    shakes like a hand-held phone. cx / cy may be functions of t (a merged shot travels over the screen). Returns
+    f(cv, t) -> restore()."""
+    cx_, cy_ = cx, cy
     def apply(cv, t):
         u = clamp((t - sh.t0) / max(0.1, sh.d))
         k = (1.0 + rate) ** max(0.0, t - sh.t0 + 0.15)
+        cx, cy = (cx_(t), cy_(t)) if callable(cx_) else (cx_, cy_)
         ox = dx * (0.2 + 0.8 * u) + shake * noise1(t * hz, sh.idx * 7 + 1)
         oy = dy * (0.2 + 0.8 * u) + shake * 0.8 * noise1(t * hz * 1.13, sh.idx * 7 + 2)
         cv.save(); cv.translate(cx + ox, cy + oy); cv.rotate(0.35 * shake * noise1(t * hz * 0.7, sh.idx * 7 + 3) if shake else 0.0)
@@ -1249,10 +1356,15 @@ def B_phone(F, sh):
     if cd.get('mv', 'push') == 'push' and 'rate' not in cd: cd['rate'] = 0.045
     cd.setdefault('shake', 2.5)
     cam = cam_from(F, sh, cd)
-    sc = p.get('scale', 1.25) * (1.3 if p.get('full') else 1.0)
+    sc0 = p.get('scale', 1.25) * (1.3 if p.get('full') else 1.0)
     px_, py_ = p.get('x', 960), p.get('y', 560)
-    hp = hud_push(sh, p.get('prate', 0.04), p.get('zx', px_), p.get('zy', py_), p.get('pdx', -30 if sh.idx % 2 else 30), p.get('pdy', -12),
-                  shake=p.get('pshake', 5.0))
+    zk = p.get('zkeys')                   # merged shots: [(t, scale, zx, zy[, ease])] the phone comes up / the push travels
+    if zk:
+        hp = hud_push(sh, p.get('prate', 0.04), lambda t: keyed(zk, t)[1], lambda t: keyed(zk, t)[2], p.get('pdx', -30 if sh.idx % 2 else 30),
+                      p.get('pdy', -12), shake=p.get('pshake', 5.0))
+    else:
+        hp = hud_push(sh, p.get('prate', 0.04), p.get('zx', px_), p.get('zy', py_), p.get('pdx', -30 if sh.idx % 2 else 30), p.get('pdy', -12),
+                      shake=p.get('pshake', 5.0))
     snap = p.get('psnap')
 
     def hud(cv, t):
@@ -1260,10 +1372,13 @@ def B_phone(F, sh):
         for (tt, s_) in states:
             if t >= tt: st, ts = s_, tt
         restore = hp(cv, t)
-        if snap and t >= snap[0]:
-            k = 1 + (snap[1] - 1) * ease_out_cubic(clamp((t - snap[0]) / 0.1))
+        sc = keyed(zk, t)[0] if zk else sc0
+        if snap and t >= snap[0]:                 # fix 3: an eased 0.25 s push, not a 0.1 s pop (read as a jump cut)
+            k = 1 + (snap[1] - 1) * ease_in_out(clamp((t - snap[0]) / 0.25))
             cv.save(); cv.translate(snap[2], snap[3]); cv.scale(k, k); cv.translate(-snap[2], -snap[3])
-        ST.app_phone(cv, st, t - ts, x=px_, y=py_, scale=sc, photo_k=clamp((t - ts) / 0.6) if st.startswith('photo') else 1.0)
+        sg = p.get('sig', 1.0)
+        ST.app_phone(cv, st, t - ts, x=px_, y=py_, scale=sc, photo_k=clamp((t - ts) / 0.6) if st.startswith('photo') else 1.0,
+                     sig_k=sg(t) if callable(sg) else sg)
         if snap and t >= snap[0]: cv.restore()
         restore()
         if p.get('hud'): p['hud'](cv, t)
@@ -1849,7 +1964,7 @@ def down(d=-1.0, amt=1.0): return lambda a, s: a.head_down(s.t0 + d, None, amt)
 def back_view(): return lambda a, s: a.set(s.t0 - 2, None, 0.1, turn=2.0)
 def twitch(*ds): return lambda a, s: a.twitch([s.t0 + d for d in ds])
 def stage(n, d=-2.0): return lambda a, s: a.smile_stage(s.t0 + d, n)          # driver: hold a smile stage
-def carry(): return lambda a, s: a.carry_tablet()
+def carry(t1=None): return lambda a, s: a.carry_tablet(t1=t1)
 def tab_up(d=0.0, dur=None, screen='sign'): return lambda a, s: a.hold_tablet_up(s.t0 + d, s.t1 + 1 if dur is None else s.t0 + d + dur, 1, screen)
 def phone_look(d=-2.0): return lambda a, s: a.look_at_phone(s.t0 + d)
 def eyes_shut(d=0.0): return lambda a, s: a.set(s.t0 + d, None, 0.25, eye_open=0.12, squint=0.9, brow_sad=0.8)
@@ -1940,6 +2055,7 @@ def door_swing(t_open, dur=1.4, k0=0.0, k1=0.92):
 def plan(F):
     t, e, w, C = F.t, F.e, F.w, F.cut
     T = lambda i, off=0.0: F.t(i) - LEAD + off
+    DP = lambda x, y, d: (960 + d * (x - 960), 540 + d * (y - 540))      # camera point that centres (x, y) of a depth-d layer
     DR, Y, M, LI, DAD = 'driver', 'you', 'mom', 'lily', 'dad'
     G = F.globals
     B = F.boxa
@@ -1990,11 +2106,11 @@ def plan(F):
     C(w(10, 'phone') - 0.1, 'phone', states=[(w(10, 'lights'), 'notify_delivered')], full=True)
     C(T(12), 'bust', who=Y, bg='hall', act=_A(ex('suspicious'), phone_look()), light=phone_light, cam=dict(mv='push', x=960, y=560))
     C(T(13), 'hall', act=_A(ex('nervous'), back_view(), phone_look(-3)), cam=dict(mv='push', x=900, y=540, z=1.0, rate=0.03))
-    C(w(13, 'doorbell') - 0.3, 'door', ppl=[P(DR, at=DA(-0.2, 0.95), act=_A(stare(-1), carry(), lambda a, s: a.ring_bell(w(13, 'doorbell') - 0.1)))],
-      py=-40, z1=1.08, cut='glitch')
-    C(T(14), 'door', ppl=[P(DR, at=DA(-0.2, 1.0), act=_A(stare(-1), carry(), creep(3, 3, None)))], z0=1.0, z1=1.06, cut='glitch',
+    # fix 3: ring -> the feed comes live -> "a driver is standing under your porch light": one doorbell shot, one glitch
+    C(w(13, 'doorbell') - 0.3, 'door', ppl=[P(DR, at=DA(-0.2, 0.97), act=_A(stare(-1), carry(), lambda a, s: a.ring_bell(w(13, 'doorbell') - 0.1),
+                                                                     creep(4, 4, None)))],
+      cut='glitch', posts=[(w(13, 'doorbell') - 0.3, T(14), 1.0, 1.05, 0, -20), (T(14), T(16), 1.0, 1.14, 0, -60)],
       tags=[(t(14) + 0.3, 'FRONT DOOR  -  LIVE', 960, 170, 'red', 1.6)])
-    C(T(15), 'door', ppl=[P(DR, at=DA(-0.2, 1.0), act=_A(stare(-1), carry(), creep(4, 4, None)))], py=-80, z1=1.18)
     C(T(16), 'bust', who=DR, cx=960, cy=420, scale=0.9, act=_A(stare(-1), carry()), cam=dict(mv='move', x=960, y=760, z=1.2, y1=330, z1=1.4),
       tags=[(t(16) + 0.3, 'NIGHTLINE', -260, 120, 'white', 1.6, dict(at=(960 - 0.9 * 120, 360 + 0.9 * 420)))])
     C(T(18), 'door', ppl=[P(DR, path=(T(19) + 0.2, T(19) + 1.4, [DA(-0.2, 1.0), DA(-0.05, 0.8)]), act=_A(stare(-1), carry(), lean(1.5, 1.6, 0.6), creep(3, 3, None)),
@@ -2012,8 +2128,8 @@ def plan(F):
     C(T(28), 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), tilt(0.3, 10, 1.2), creep(3, 3, None)))], py=-80, z1=1.15)
     C(T(31), 'phone', states=[(t(31) + 0.2, 'order')], scale=1.2)
     C(T(32, 0.9), 'bust', who=Y, bg='hall', act=_A(ex('nervous'), phone_look()), light=phone_light, cam=dict(mv='push', x=960, y=560))
-    C(T(33), 'phone', states=[(t(31) + 0.2, 'order')], full=True, zx=960, zy=420, prate=0.05)
-    C(T(36), 'phone', states=[(t(31) + 0.2, 'order')], full=True, x=960, y=520, zx=960, zy=640, prate=0.07)
+    C(T(33), 'phone', states=[(t(31) + 0.2, 'order')], full=True, x=960, y=530, prate=0.06,
+      zkeys=[(T(33), 1.625, 960, 420), (t(35), 1.625, 960, 470), (t(36) + 0.6, 1.625, 960, 640), (T(37), 1.625, 960, 650, 'lin')])
     C(T(37), 'ins', name='label', cam=dict(mv='creep', x=900, y=480, z=1.35, snap=(t(37) + 0.05, 1.3)), hit=t(37) + 0.05,
       music=[(t(37) + 0.05, 'stinger', 0.85)])
     C(T(38), 'door', talk_btn=True, ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), lambda a, s: a.listen_tilt(t(38) + 1.0, e(38), 1, 14)))],
@@ -2034,12 +2150,13 @@ def plan(F):
     C(T(51, 0.7), 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), pt(0.3, 1.6, -1, 0.0), creep(5, 4, None)))], py=-70)
     C(T(52), 'door', ppl=[P(DR, at=DA(-0.1, 0.9), act=_A(stare(-1), tab_up(0.3), creep(3, 3, None)))], px=-40, py=-40, z1=1.35)
     C(T(53), 'peep', ppl=[P(DR, act=_A(stare(), tab_up(-1.0)))], cam=dict(mv='push', x=960, y=480, z=1.05))
-    C(T(54), 'ins', name='tablet_sign', kw=dict(sig='none'), cam=dict(mv='push', x=960, y=540, z=1.0, rate=0.04))
-    C(T(55), 'ins', name='tablet_sign', kw=lambda tt: dict(sig='initial', ink=1.0), cam=dict(mv='creep', x=930, y=560, z=1.15, snap=(w(55, "isn't"), 1.25)),
-      hit=w(55, "isn't"), music=[(w(55, "isn't"), 'stinger', 0.8)])
-    C(T(56), 'ins', name='tablet_sign', kw=dict(sig='initial', ink=1.0), cam=dict(mv='push', x=880, y=600, z=1.45, rate=0.04))
-    C(T(57), 'ins', name='tablet_sign', kw=dict(sig='initial', ink=1.0), cam=dict(mv='push', x=1010, y=640, z=2.1, rate=0.035),
-      tags=[(w(57, 'halfway'), 'STOPS HALFWAY', 960, 200, 'red', 1.8)])
+    # fix 3: one insert over 12.9 s: the empty-looking line -> it isn't empty (push) -> the first letter -> where the stroke stops
+    tsi = w(55, "isn't")
+    C(T(54), 'ins', name='tablet_sign', kw=lambda tt, t_=tsi - 0.35 - T(54): dict(sig='initial', ink=clamp((tt - t_) / 0.5)),   # tt: shot time
+      cam=dict(mv='keys', keys=[(T(54), 960, 540, 1.0), (tsi - 0.1, 950, 548, 1.08, 'push'), (tsi + 0.45, 930, 560, 1.32, 'in_out'),
+                                (t(56) + 0.4, 900, 590, 1.45, 'lin'), (w(56, 'handwriting'), 880, 600, 1.62, 'in_out'),
+                                (t(57) + 0.5, 990, 630, 1.95, 'in_out'), (T(58), 1010, 640, 2.15, 'lin')]),
+      hit=tsi, music=[(tsi, 'stinger', 0.8)], tags=[(w(57, 'halfway'), 'STOPS HALFWAY', 960, 200, 'red', 1.8)])
     C(T(58), 'door', ppl=[P(DR, at=DA(-0.1, 0.9), act=_A(stare(-1), tab_up(-0.5), lean(0.4, 1.4, 0.5), creep(6, 3, None)), lean=True)], py=-90)
     C(T(61), 'bust', who=Y, bg='hall', act=_A(ex('suspicious'), phone_look()), cam=dict(mv='push', x=960, y=560))
     C(T(62), 'bust', who=DR, ecu=True, cx=960, cy=420, scale=1.45, act=_A(stare(-1), lambda a, s: a.talk([(t(62) + 0.5, t(62) + 2.1, "it's easier when you finish it")])),
@@ -2052,27 +2169,28 @@ def plan(F):
       cam=dict(mv='creep', x=960, y=700, z=1.3))
     ts9 = _hms(3, 9, 0)
     F.ts_flicker = [(w(66, '309') - 0.02, ts9 + 41), (w(66, 'three', 0) - 0.02, ts9 + 42), (w(66, 'three', 1) - 0.02, ts9 - 17)]
-    C(T(65), 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), creep(3, 3, None)))], hud_follow=True, z0=1.0, z1=2.1,
-      px=640, py=-330)
-    C(w(66, '309') - 0.15, 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry()))], hud_follow=True, z0=2.6, z1=2.9, px=10, py=4, post_off=(600, -330),
+    C(T(65), 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), creep(3, 3, None)))], hud_follow=True,
+      posts=[(T(65), w(66, '309') - 0.1, 1.0, 2.6, 610, -332, 'in_out'), (w(66, '309') - 0.1, T(67), 1.0, 1.12, 0, 0, 'lin')],
       flicker=F.ts_flicker, post_fn=lambda t_: dict(glitch=0.7) if any(0 <= t_ - tf < 0.12 for tf, _ in F.ts_flicker) else {},
       music=[(w(66, 'three', 1), 'stinger', 0.7)], sfx=[(tf, 'glitch', -4, 0.4, 'close', dict(dur=0.15, amount=0.6)) for tf, _ in F.ts_flicker])
     C(T(67), 'ins', name='lock_inside', kw=dict(turn=0.0, chain=1.0), hand=False, cam=dict(mv='push', x=960, y=540, z=1.05, rate=0.04))
     C(T(68), 'bust', who=DR, cx=760, cy=590, scale=0.95, act=_A(stare(-1), tilt(0.4, 10, 1.2), creep(5, 3, None)), tablet=(1360, 690, 560),
       cam=dict(mv='push', x=1040, y=560, z=1.0),
       tags=[(w(68, 'key'), 'A KEY', 960, 200, 'red', 1.4), (t(69), "DON'T SIGN", 960, 150, 'alert')])
-    C(T(70), 'door', ppl=[P(DR, at=DA(-0.1, 0.92), act=_A(stare(-1), lambda a, s: a.hold_tablet_up(s.t0 - 2, t(70) + 0.7), carry(), creep(3, 3, None)))],
-      py=-60, z1=1.1)
-    C(T(71), 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), lambda a, s: a.look_at_box(t(71) + 0.2, w(71, 'back') - 0.1),
-                                                              lambda a, s: a.snap_turn(w(71, 'back'), None, 0.0, hold=0.1)))], py=-100, px=60, z1=1.25)
+    C(T(70), 'door', ppl=[P(DR, at=DA(-0.12, 0.93), act=_A(stare(-1), lambda a, s: a.hold_tablet_up(s.t0 - 2, t(70) + 0.7), carry(),
+                                                             lambda a, s: a.look_at_box(t(71) + 0.2, w(71, 'back') - 0.1),
+                                                             lambda a, s: a.snap_turn(w(71, 'back'), None, 0.0, hold=0.1)))],
+      posts=[(T(70), T(71), 1.0, 1.06, 0, -30), (T(71), T(72), 1.0, 1.18, 60, -70)])
     C(T(72), 'peep', ppl=[P(DR, act=_A(stare(), carry(), tilt(0.5, -12, 1.0)))], cam=dict(mv='push', x=960, y=480, z=1.05))
     C(w(74, 'right') - 0.15, 'bust', who=DR, scale=1.1, act=_A(stare(-1), tilt(0.2, 18, 1.2), creep(0, 3, None)), cam=dict(mv='push', x=960, y=520, rate=0.05))
 
     # ============================================================ RULE 2 (168.8 - 210.4): don't say anyone's name
     C(T(75), 'rule', n=2, bg='porch')
     C(e(76) + 1.0, 'ins', name='label', cam=dict(mv='push', x=960, y=540, z=1.0, rate=0.045))
-    C(T(79), 'door', ppl=[P(DR, at=DA(-0.1, 0.9), act=_A(stare(-1), carry(), pt(0.4, 1.6, -1, 0.0), lean(0.3, 2.0, 0.5), creep(6, 4, None)), lean=True)], py=-80)
-    C(T(80), 'door', ppl=[P(DR, at=DA(-0.05, 0.95), act=_A(stare(-1), lambda a, s: a.tilt_box(t(80) + 0.3, e(82) + 1.0, 1)))], px=140, py=40, z1=1.3)
+    C(T(79), 'door', ppl=[P(DR, path=(T(80) - 0.4, T(80) + 0.4, [DA(-0.1, 0.9), DA(-0.05, 0.95)]),
+                           act=_A(stare(-1), carry(T(80) + 0.2), pt(0.4, 1.6, -1, 0.0), lean(0.3, 2.0, 0.5), creep(6, 4, None),
+                                  lambda a, s: a.tilt_box(t(80) + 0.3, e(82) + 1.0, 1)), lean=True)],
+      posts=[(T(79), T(80), 1.0, 1.08, 0, -60), (T(80), T(81), 1.0, 1.2, 140, 80)])
     B.tilt(t(80) + 0.5, e(82) + 1.2, angle=-6.0, turn=0.7)
     C(T(81), 'ins', name='label_to', cam=dict(mv='push', x=960, y=560, z=1.0, rate=0.04))
     C(T(82), 'door', ppl=[P(DR, at=DA(-0.05, 0.95), act=_A(stare(-1), lambda a, s: a.tilt_box(s.t0 - 2, e(82) + 1.0, 1),
@@ -2090,9 +2208,9 @@ def plan(F):
 
     # ============================================================ RULE 3 (210.4 - 275.9): don't turn around
     C(T(98), 'rule', n=3, bg='hall')
-    C(T(100), 'phone', states=[(t(100) + 0.2, 'photo_hall')], scale=1.2, prate=0.08)
-    C(T(102), 'phone', states=[(t(100) + 0.2, 'photo_hall')], full=True, psnap=(t(102) + 0.05, 1.45, 960, 600), hit=t(102) + 0.05,
-      music=[(t(102) + 0.05, 'stinger', 0.85)])
+    C(T(100), 'phone', states=[(t(100) + 0.2, 'photo_hall')], prate=0.03, y=600,
+      zkeys=[(T(100), 1.2, 960, 560), (t(101) + 0.3, 1.45, 960, 560), (t(102) + 0.05, 1.75, 960, 470, 'in_out'), (T(103), 1.82, 960, 460, 'lin')],
+      hit=t(102) + 0.05, music=[(t(102) + 0.05, 'stinger', 0.85)])
     C(T(103), 'hall', act=_A(ex('nervous'), back_view(), phone_look(-3)), cam=dict(mv='creep', x=900, y=520, z=1.0), music=[(t(103), 'silence', 0.0, 0.8)])
     C(w(103, 'holding') - 0.1, 'bust', who=Y, bg='hall', act=_A(ex('fear'), phone_look(-2)), light=phone_light, cam=dict(mv='push', x=960, y=560))
     C(T(104), 'hallback', cam=dict(mv='push', x=920, y=600, z=1.0, rate=0.045), music=[(t(104), 'swell', 0.6, 6)])
@@ -2126,8 +2244,8 @@ def plan(F):
     C(T(118), 'bust', who=Y, bg='hall', act=_A(ex('fear'), eyes_shut(0.0), lambda a, s: a.talk([(s.t0 + 0.2, s.t1, 'one two three four five six seven')], intensity=0.35)),
       cam=dict(mv='push', x=960, y=560))
     C(T(119), 'hallback', cam=dict(mv='creep', x=920, y=560, z=1.0), music=[(t(119), 'silence', 0.0, 1.4)])
-    C(T(120), 'phone', states=[(w(120, 'gone') - 0.3, 'photo_gone')], scale=1.2, prate=0.05)
-    C(T(121), 'phone', states=[(t(120), 'photo_gone')], full=True, zx=960, zy=520, prate=0.06)
+    C(T(120), 'phone', states=[(T(120), 'photo_hall'), (w(120, 'gone') - 0.3, 'photo_gone')], prate=0.03, y=600,
+      zkeys=[(T(120), 1.2, 960, 560), (w(120, 'gone') + 0.2, 1.45, 960, 540), (T(122), 1.65, 960, 520, 'in_out')])
     C(T(122), 'hall', ppl=[], cam=dict(mv='push', x=520, y=420, z=1.15, rate=0.04),
       sfx=[(w(122, 'footsteps') + 0.2, 'footsteps_wood_inside', -6, -0.4, 'inside', dict(n=4, rate=1.6, stairs=True))])
 
@@ -2249,7 +2367,7 @@ def plan(F):
 
     # ============================================================ RULE 6 (455.5 - 510.8): don't bring it inside before sunrise
     C(T(204), 'rule', n=6, bg='door')
-    C(T(206), 'door', box=None, box_move=(T(206) + 0.25, T(206) + 1.75, (0.58, 1.02), (-1.0, 0.56)),
+    C(T(206), 'door', box=None, box_move=(T(206) + 0.25, T(206) + 1.75, (0.58, 1.02), (-0.8, 0.42)),
       ppl=[P(DR, path=[(T(206) + 0.2, T(206) + 1.7, [DA(-0.1, 0.95), DA(-0.62, 0.66)], -1.0)],
              act=_A(stare(-1), lambda a, s: a.reach(T(206), T(206) + 1.75, 1, 230, 40, 120, 'open'), lambda a, s: a.set_box_down(T(206) + 1.5, 1.4, 1)), k=0.5)],
       z0=1.0, z1=1.08, py=0)
@@ -2262,8 +2380,9 @@ def plan(F):
       py=0, z1=1.08,
       # the cab door (climb_in's own event lands after the cut to the app, where shot_common drops it)
       sfx=[(t(209) + 2.1 + 1.2 + 0.35, 'car_door_close', -3, 0.45, 'street')])
-    C(T(210), 'phone', states=[(t(210) + 0.15, 'attempted')], scale=1.2)
-    C(T(213), 'phone', states=[(t(210) + 0.15, 'attempted')], full=True, zx=960, zy=640, prate=0.06, tags=[(w(213, '6') + 0.1, '6:12 AM', 960, 170, 'red', 1.8)])
+    C(T(210), 'phone', states=[(t(210) + 0.15, 'attempted')], prate=0.03, y=560,
+      zkeys=[(T(210), 1.2, 960, 540), (t(212), 1.45, 960, 520), (t(213) + 0.3, 1.62, 960, 680, 'in_out'), (T(214), 1.7, 960, 700, 'lin')],
+      tags=[(w(213, '6') + 0.1, '6:12 AM', 960, 170, 'red', 1.8)])
     C(T(214), 'street', cam=dict(mv='push', x=960, y=480, z=1.0, rate=0.03), tags=[(t(214) + 0.4, 'SUNRISE  6:12', 960, 200, 'white', 1.8)])
     C(T(215), 'doorway', tod='night', cam=dict(mv='push', x=980, y=880, z=1.15, rate=0.04), tags=[(w(215, 'threshold'), 'THE THRESHOLD', 960, 200, 'red', 1.6)])
     C(T(216), 'door', box='door', ppl=[], px=-520, py=120, z0=1.25, z1=1.55)
@@ -2286,35 +2405,51 @@ def plan(F):
     C(T(229), 'door', box='door', ppl=[], py=-60, z1=1.15)
     C(T(230), 'side', window_open=False, ppl=[P(DR, at=('v', -2.2, 2.2), act=_A(stare(-1), turned(1.2)), shadow=0.88, talk=False, track=False)],
       cam=dict(mv='push', x=820, y=620, z=1.1, rate=0.04), music=[(t(230), 'hit', 0.55)])
-    C(T(231), 'hallback', ppl=[P(Y, path=(T(231), T(231) + 1.5, [('v', 0.1, 1.1), 'arch']), act=_A(ex('fear')), facing=2.0)],
-      cam=dict(mv='hand', x=900, y=560, z=1.0, rate=0.06))
+    C(T(231), 'hallback', ppl=[P(Y, path=(T(231) - 0.1, T(231) + 1.25, [('v', 0.1, 1.1), 'arch']), act=_A(ex('fear')), facing=2.0,
+                                 surface='inside_run')],
+      cam=dict(mv='keys', shake=7.0, keys=[(T(231), 900, 600, 1.0), (T(232), 1010, 470, 1.42, 'in')]), handheld_hz=1.7)
     C(T(232), 'kitchen', cam=dict(mv='fast', x=960, y=330, z=1.75), without=('headlights', 'police_spill', 'pendant_light', 'pendant'),
       tags=[(w(232, 'locked'), 'LOCKED', 960, 200, 'white', 0.9)], sfx=[(w(232, 'locked'), 'window_latch', -4, 0.2, 'inside')])
     C(T(233), 'living', cam=dict(mv='fast', x=960, y=480, z=1.1), tags=[(w(233, 'locked'), 'LOCKED', 960, 200, 'white', 0.9)],
       sfx=[(w(233, 'locked'), 'window_latch', -4, -0.2, 'inside')])
     C(T(234), 'latch', win='bath', t_lock=w(234, 'locked') - 0.05, tags=[(w(234, 'locked'), 'LOCKED', 960, 200, 'white', 0.9)])
-    C(T(235), 'hallback', ppl=[P(Y, path=(T(235), T(235) + 1.7, ['stairs_low', 'stairs_mid']), act=_A(ex('fear')), facing=2.0)],
-      cam=dict(mv='hand', x=1150, y=500, z=1.05, rate=0.06),
-      sfx=[(T(235) + 0.2, 'footsteps_wood_inside', -2, 0.3, 'inside', dict(n=5, rate=2.8, stairs=True, run=True))])
+    C(T(235), 'hallback', ppl=[P(Y, path=(T(235), T(235) + 1.5, ['stairs_low', 'stairs_mid']), act=_A(ex('fear')), facing=2.0,
+                                 surface='inside_run_quiet')],
+      cam=dict(mv='keys', shake=6.0, keys=[(T(235), 1100, 520, 1.05), (T(236), 1190, 430, 1.3, 'in_out')]), handheld_hz=1.5,
+      sfx=[(T(235) + 0.1, 'footsteps_wood_inside', -2, 0.3, 'inside', dict(n=5, rate=3.5, stairs=True, run=True))])
     C(T(236), 'latch', win='mom', t_lock=w(236, 'locked') - 0.05, tags=[(w(236, 'locked'), 'LOCKED', 960, 200, 'white', 0.9)])
     C(T(237), 'upstairs', lily_door=0.07, cam=dict(mv='move', x=960, y=560, z=1.0, x1=960, y1=520, z1=1.5), music=[(t(237), 'silence', 0.0, 1.0)])
     C(T(239), 'bust', who=LI, bg='lily', act=_A(lambda a, s: a.sleepy(s.t0 - 2), smile(0.4, 2.0, 0.3)), cam=dict(mv='push', x=960, y=560), music=[(t(239), 'motif', 0.5, 4)])
     C(T(240), 'lily', bed='sleeping', cam=dict(mv='push', x=820, y=620, z=1.05, rate=0.035))
     C(w(240, 'window') - 0.1, 'side', window_open=False, cam=dict(mv='push', x=960, y=520, z=1.0, rate=0.03))
-    C(T(241), 'upstairs', lily_door=lambda tt, t0=t(241) + 0.3: 0.07 + 0.83 * ease_in_out(clamp((tt - t0) / 1.0)),
-      cam=dict(mv='push', x=960, y=540, z=1.25, rate=0.05), sfx=[(t(241) + 0.3, 'door_creak', -2, 0, 'inside')])
-    C(T(242), 'lily', bed='empty', window_open=True, cam=dict(mv='move', x=1047, y=560, z=1.2, x1=1047, y1=540, z1=1.8), hit=w(242, 'wide'),
+    tpush = t(241) + 0.45
+    C(T(241), 'upstairs', lily_door=lambda tt, t0=tpush: 0.07 + 0.83 * ease_in_out(clamp((tt - t0) / 1.1)), pov_push=tpush,
+      cam=dict(mv='keys', shake=3.0, keys=[(T(241), 960, 531, 1.15, None, 1.25), (tpush, 960, 531, 1.4, 'in_out', 1.75),
+                                           (T(242), 960, 531, 1.6, 'lin', 2.05)]),
+      sfx=[(tpush, 'door_creak', -2, 0, 'inside'), (tpush - 0.05, 'cloth_rustle', -10, 0.3, 'close')])
+    # one continuous shot (fix 3): the door swings in on the open window, push to the black gap and the blowing curtains,
+    # then pan down to the empty bed ("the window is wide open / the curtains are moving / her bed is empty")
+    C(T(242), 'lily', bed='empty', window_open=True,
+      cam=dict(mv='keys', shake=2.2, keys=[(T(242), *DP(1000, 500, 3.4), 1.05, None, 1.0),
+                                           (w(242, 'open') + 0.25, *DP(1039, 470, 3.4), 1.4, 'push', 1.9),
+                                           (e(243) - 0.05, *DP(1039, 462, 3.4), 1.5, 'lin', 2.15),
+                                           (w(244, 'empty') + 0.45, *DP(690, 650, 2.0), 1.45, 'in_out', 1.6),
+                                           (w(244, 'still') + 0.3, *DP(700, 655, 2.0), 1.5, 'out', 1.7)]),
+      hit=w(242, 'wide'),
       sfx=[(t(243), 'cloth_rustle', -6, 0.2, 'inside', dict(kind='curtain', dur=1.2))],
       music=[(w(242, 'wide'), 'braam', 0.85)])
-    C(T(244), 'lily', bed='empty', window_open=True, cam=dict(mv='move', x=900, y=600, z=1.3, x1=720, y1=640, z1=1.8))
     C(w(244, 'still') - 0.1, 'bust', who=Y, bg='lily', act=_A(ex('shock')), light=moon_light, cam=dict(mv='fast', x=960, y=560))
     C(T(245), 'phone', bg='lily_room', states=[(w(245, 'buzzes'), 'notify_return')], full=True, pshake=9.0, psnap=(t(246) + 0.05, 1.4, 960, 470),
       hit=t(246) + 0.05, music=[(t(246), 'stinger', 0.85)])
     C(T(247), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], scale=1.2)
-    C(T(249), 'photo', comp='full', pop=True, tags=[(w(249, '3:41'), '3:41 AM', 960, 200, 'red', 1.4)])
-    C(T(250), 'photo', comp='lily', music=[(t(250), 'motif', 0.5, 4)])
-    C(T(251), 'photo', comp='arm')
-    C(T(252), 'photo', comp='finger')
+    ph = ST.photo_lily_scene()
+    (tbx, tby), (hdx, hdy) = ph['tablet'], ph['head']
+    wx0_, wy0_, wx1_, wy1_ = ph['window']
+    C(T(249), 'photo', pop=True, tags=[(w(249, '3:41'), '3:41 AM', 960, 200, 'red', 1.4)], music=[(t(250), 'motif', 0.5, 4)],
+      path=[(T(249), 975, 752, 1080), (e(249) - 0.2, 972, 728, 930, 'push'),                              # the whole photo
+            (w(250, 'leaning') + 0.25, (wx0_ + wx1_) / 2 + 2, wy0_ + 92, 440, 'in_out'), (t(251), (wx0_ + wx1_) / 2, wy0_ + 98, 405, 'lin'),
+            (w(251, 'tablet') + 0.3, (tbx + hdx) / 2, (tby + hdy) / 2 + 22, 540, 'in_out'), (t(252), (tbx + hdx) / 2, (tby + hdy) / 2 + 20, 505, 'lin'),
+            (w(252, 'finger') + 0.3, tbx, tby - 28, 255, 'in_out'), (T(253) + 0.1, tbx, tby - 30, 236, 'lin')])
     C(T(253), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], full=True, zx=960, zy=700, prate=0.07)
     C(t(254) - 0.15, 'ins', name='tablet_lily', cam=dict(mv='creep', x=960, y=600, z=1.2, snap=(t(254) + 0.02, 1.35)), hit=t(254) + 0.02,
       music=[(t(254) + 0.02, 'sub_drop', 1.0), (t(254) - 1.2, 'silence', 0.0, 1.15)], sfx=[(t(254) + 0.02, 'sub_drop', -2, 0, None)])
@@ -2328,10 +2463,10 @@ def plan(F):
     C(w(258, 'sign') - 0.2, 'photo', comp='lily', pop=True, cam=dict(mv='push', x=960, y=560, z=1.06, rate=0.04))
     C(T(260), 'bust', who=LI, bg='side', act=_A(lambda a, s: a.lean_out(s.t0 - 2, None, -1, reach_t=s.t0 + 0.6), smile(0.4, 1.6, 0.4)),
       cam=dict(mv='push', x=960, y=560))
-    C(T(261), 'lily', view='window', hz=dict(t_off=T_HZ_OFF), cam=dict(mv='push', x=780, y=480, z=1.2, rate=0.04),
+    C(T(261), 'lily', view='window', hz=dict(t_off=T_HZ_OFF), drive=('out', T_VAN_GO[0], T_VAN_GO[1], -9.0, 14.0),
+      cam=dict(mv='keys', keys=[(T(261), 780, 480, 1.18), (T_HZ_OFF + 0.6, 790, 480, 1.36, 'push'), (T(262) + 1.2, 800, 490, 1.42, 'lin'),
+                                (w(262, 'turns') - 0.1, 900, 500, 1.46, 'in_out')]),
       music=[(T_HZ_OFF, 'silence', 0.0, 1.4)])
-    C(T(262), 'lily', view='window', hz=dict(t_off=T_HZ_OFF), drive=('out', T_VAN_GO[0], T_VAN_GO[1], -9.0, 14.0),
-      cam=dict(mv='push', x=780, y=480, z=1.35, rate=0.03))
     C(w(262, 'turns') - 0.1, 'street', hazard=dict(t_off=T_HZ_OFF), drive=('out', T_VAN_GO[0], T_VAN_GO[1], 3.6, 26.0), cam=dict(mv='pull', x=960, y=560, z=1.0),
       music=[(w(262, 'gone'), 'hit', 0.5)])
 
@@ -2357,18 +2492,19 @@ def plan(F):
       music=[(t(274), 'silence', 0.0, 1.2)])
     C(w(274, 'phone') - 0.1, 'phone', states=[(w(274, 'lights'), 'notify_on_way')], full=True, pshake=8.0)
     C(T(276), 'bust', who=Y, bg='hall', act=_A(ex('fear'), phone_look(-2)), light=phone_light, cam=dict(mv='hand', x=960, y=560))
-    C(T(277), 'phone', states=[(t(277) + 0.2, 'on_way')], scale=1.2)
-    C(T(279), 'phone', states=[(t(277) + 0.2, 'on_way')], full=True, zx=960, zy=520, prate=0.06)
-    C(w(280, 'child') - 0.1, 'phone', states=[(t(277) + 0.2, 'on_way')], full=True, psnap=(w(280, 'lily') + 0.02, 1.5, 960, 620),
+    C(T(277), 'phone', states=[(t(277) + 0.2, 'on_way')], prate=0.03, y=560,
+      zkeys=[(T(277), 1.2, 960, 540), (t(278) + 0.2, 1.5, 960, 470), (t(279) + 0.6, 1.62, 960, 560, 'in_out'),
+             (w(280, 'child'), 1.62, 960, 600, 'lin'), (w(280, 'lily') + 0.02, 1.95, 960, 640, 'in_out'), (T(281), 2.02, 960, 645, 'lin')],
       hit=w(280, 'lily') + 0.02, music=[(w(280, 'lily'), 'stinger', 0.95)])
-    C(T(281), 'street', hazard=True, drive=('in', t(281) - 0.3, e(281) + 3.5, -9.0, 0.8), cam=dict(mv='push', x=760, y=600, z=1.5, rate=0.03),
+    # fix 3: "somewhere down the street": the van's hazards far down the block, turning in toward us (not parked at 144)
+    C(T(281), 'street', hazard=True, drive=('pass', t(281) - 0.6, e(281) + 0.6, -14.5, -6.6), cam=dict(mv='push', x=760, y=560, z=1.2, rate=0.03),
       music=[(t(281), 'riser', 0.7, 3.0)])
-    C(T(282), 'box', by=1360, view=-0.3, cam=dict(mv='push', x=960, y=760, z=1.4, rate=0.05))
-    C(T(283), 'door', box='boots', ppl=[P(DR, at=DA(-0.05, 0.9), act=_A(stage(5), grin(-1), lean(0.1, 0.8, 1.0), tilt(0.2, 16, 1.0)), lean=True, k=0.62)],
+    C(T(282), 'box', by=1360, view=-0.3, sender='Lily', cam=dict(mv='push', x=960, y=760, z=1.4, rate=0.05))
+    C(T(283), 'door', box='boots', sender='Lily', ppl=[P(DR, at=DA(-0.05, 0.9), act=_A(stage(5), grin(-1), lean(0.1, 0.8, 1.0), tilt(0.2, 16, 1.0)), lean=True, k=0.62)],
       py=-110, z1=1.12)
     C(T(284), 'peep', ppl=[P(DR, at='driver_close', act=_A(stage(5), grin(-1), frz(0.1, 1.0)))], approach=False, cam=dict(mv='push', x=960, y=420, z=1.05, rate=0.04),
       music=[(t(284), 'silence', 0.0, 0.7)])
-    C(w(285, 'one') - 0.12, 'box', cam=dict(mv='push', x=960, y=620, z=1.6, rate=0.07, roll=-3), music=[(w(285, 'one'), 'hit', 1.0), (e(285) + 0.3, 'end', 0.8, 3.0)])
+    C(w(285, 'one') - 0.12, 'box', sender='Lily', cam=dict(mv='push', x=960, y=620, z=1.6, rate=0.07, roll=-3), music=[(w(285, 'one'), 'hit', 1.0), (e(285) + 0.3, 'end', 0.8, 3.0)])
     C(e(285) + 0.28, 'black', cut='static', sfx=[(e(285) + 0.28, 'impact_hit', 6, 0, None, dict(size=1.5)),   # final mix: at the limiter's ceiling (+6 -> +2.5 LU)
                                                (e(285) + 0.28, 'sub_drop', 0, 0, None)])
 
