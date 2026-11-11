@@ -200,6 +200,21 @@ class Flash:
         return (r[..., None] * red + b[..., None] * blue).astype(np.float32)
 
 
+class Spill(Flash):
+    """A blinking coloured light washing in from one side of the frame (the delivery van's hazards in the climax):
+    strength 0..1 (already multiplied by the blink), side -1 = from the left / +1 = from the right, colour BGR 0..1."""
+
+    def __init__(self, strength=1.0, side=1.0, color=(0.10, 0.16, 1.0), reach=0.75):
+        self.strength, self.side, self.color, self.reach = strength, side, np.array(color, np.float32), reach
+
+    def field(self, w=64, h=36):
+        xs = (np.arange(w) + 0.5) / w; ys = (np.arange(h) + 0.5) / h
+        X, Y = np.meshgrid(xs, ys)
+        u = X if self.side > 0 else 1 - X
+        k = np.clip(1 - (1 - u) / self.reach, 0, 1) ** 1.6 * (0.75 + 0.25 * (1 - Y)) + 0.03
+        return (k[..., None] * self.color * self.strength).astype(np.float32)
+
+
 def police_flash(t, strength=1.0, speed=1.0, mode='sweep', side=0.0, width=0.35):
     return Flash(t, strength, speed, mode, side, width)
 

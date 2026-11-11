@@ -66,6 +66,7 @@ import numpy as np
 import skia
 from engine import *                                                    # noqa: F401,F403
 from engine import hud as H
+from engine import post as _epost
 from engine.core import DW, DH, clamp, lerp, ease_in_out, ease_out_cubic, noise1, hash01, prog
 import characters as CH
 import sets as ST
@@ -1780,12 +1781,20 @@ def glob_fx(F, sh, t, fx):
         # insert shots take half of it (police global look)
         k = clamp((t - 418.0) / 175.0)
         k2 = clamp((t - 590.0) / 50.0) if t < T_DAWN else clamp((t - 612.0) / 28.0)
+        # fix 3: rule 7 (the knocking stops, the search, Lily's photo) is the climax: from 508 s a second, faster ramp
+        # deeper into red and dark, and the van's hazards wash the house in blinking red until they stop (T_HZ_OFF)
+        k7 = clamp((t - 508.0) / 10.0) if t < T_DAWN else 0.0
         if k > 0:
-            ui = 0.5 if sh.kind in ('phone', 'wave', 'ins', 'hand', 'latch', 'photo') else 1.0
+            ui = 0.5 if sh.kind in ('phone', 'wave', 'ins', 'hand', 'latch') else 1.0      # the 3:41 photo takes the full ramp
             ext = sh.kind in ('door', 'street', 'peep', 'side', 'box') or sh.p.get('bg') in ('porch',)
-            fx['red'] = fx.get('red', 0.0) + ((0.42 + (0.18 if ext else 0.0)) * k + 0.28 * k2) * ui
-            fx['sat'] = fx.get('sat', 1.0) * (1 + (0.6 * k + 0.25 * k2) * ui)
-            fx['exposure'] = fx.get('exposure', 0.0) - (0.3 * k + 0.25 * k2) * ui
+            fx['red'] = fx.get('red', 0.0) + ((0.42 + (0.18 if ext else 0.0)) * k + 0.28 * k2 + 0.16 * k7) * ui
+            fx['sat'] = fx.get('sat', 1.0) * (1 + (0.6 * k + 0.25 * k2 + 0.2 * k7) * ui)
+            fx['exposure'] = fx.get('exposure', 0.0) - (0.42 * k + 0.3 * k2 + 0.8 * k7) * ui
+        if k7 > 0 and 'flash' not in fx:
+            hz = ST.hazard(t, t_off=T_HZ_OFF)
+            if hz > 0.01:
+                ui = 0.45 if sh.kind in ('phone', 'wave', 'ins', 'hand', 'latch', 'photo') else 1.0
+                fx['flash'] = _epost.Spill(0.55 * k7 * hz * ui, side=-1.0 if sh.idx % 2 else 1.0)
     if t > F.duration - 2.6: fx['fade'] = clamp((t - (F.duration - 2.6)) / 1.6)
     if t < 0.35: fx['fade'] = max(fx.get('fade', 0.0), 1 - t / 0.35)
 
@@ -2441,7 +2450,7 @@ def plan(F):
     C(w(244, 'still') - 0.1, 'bust', who=Y, bg='lily', act=_A(ex('shock')), light=moon_light, cam=dict(mv='fast', x=960, y=560))
     C(T(245), 'phone', bg='lily_room', states=[(w(245, 'buzzes'), 'notify_return')], full=True, pshake=9.0, psnap=(t(246) + 0.05, 1.4, 960, 470),
       hit=t(246) + 0.05, music=[(t(246), 'stinger', 0.85)])
-    C(T(247), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], scale=1.2)
+    C(T(247), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], scale=1.2, sig=0.0)    # the name stays hidden till 571 s
     ph = ST.photo_lily_scene()
     (tbx, tby), (hdx, hdy) = ph['tablet'], ph['head']
     wx0_, wy0_, wx1_, wy1_ = ph['window']
@@ -2450,7 +2459,8 @@ def plan(F):
             (w(250, 'leaning') + 0.25, (wx0_ + wx1_) / 2 + 2, wy0_ + 92, 440, 'in_out'), (t(251), (wx0_ + wx1_) / 2, wy0_ + 98, 405, 'lin'),
             (w(251, 'tablet') + 0.3, (tbx + hdx) / 2, (tby + hdy) / 2 + 22, 540, 'in_out'), (t(252), (tbx + hdx) / 2, (tby + hdy) / 2 + 20, 505, 'lin'),
             (w(252, 'finger') + 0.3, tbx, tby - 28, 255, 'in_out'), (T(253) + 0.1, tbx, tby - 30, 236, 'lin')])
-    C(T(253), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], full=True, zx=960, zy=700, prate=0.07)
+    C(T(253), 'phone', bg='lily_room', states=[(t(247) + 0.3, 'photo_lily')], full=True, zx=960, zy=700, prate=0.07,
+      sig=lambda tt, t0=w(253, 'signature'): 0.5 * clamp((tt - t0) / 0.6))          # the SIGNED BY row, its line still empty
     C(t(254) - 0.15, 'ins', name='tablet_lily', cam=dict(mv='creep', x=960, y=600, z=1.2, snap=(t(254) + 0.02, 1.35)), hit=t(254) + 0.02,
       music=[(t(254) + 0.02, 'sub_drop', 1.0), (t(254) - 1.2, 'silence', 0.0, 1.15)], sfx=[(t(254) + 0.02, 'sub_drop', -2, 0, None)])
     C(T(255), 'bust', who=LI, bg='lily', act=_A(lambda a, s: a.set(s.t0 - 1, None, 0.2, look_x=0.6, look_y=0.1, lock=1.0, wide=0.4)), cam=dict(mv='push', x=960, y=560))

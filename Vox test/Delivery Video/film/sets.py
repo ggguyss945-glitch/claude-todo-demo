@@ -6153,8 +6153,9 @@ def app_phone(cv, screen, t, x=960, y=560, scale=1.0, hand=True, skin='#c0aa9e',
             yy = py + ph + 30
             if screen == 'photo_lily':
                 rk = clamp(sig_k * 2.0)                                   # the SIGNED BY row comes in, then the name
-                if rk < 1:
-                    T('Return complete', yy + 6, 15, NL_AMBER, 800, 0.0, aa=1 - rk)
+                ko = clamp(rk * 2.0); rk = clamp(rk * 2.0 - 1.0)          # (the big 'Return complete' goes first)
+                if ko < 1:
+                    T('Return complete', yy + 6, 15, NL_AMBER, 800, 0.0, aa=1 - ko)
                 if rk > 0:
                     cv.save(); cv.translate(0, 18 * (1 - ease_out_cubic(rk)))
                     T('SIGNED BY', yy, 10, '#8a93ad', 700, 0.22, aa=rk)
