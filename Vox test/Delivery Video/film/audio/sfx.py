@@ -70,6 +70,8 @@ sets; free library and synthesis only as extra layers). Default space in bracket
                     or force (0..1.2) [outside]   a knuckle on cardboard from INSIDE the box: cardboard impact (top end
                     soaked up), muffled wood knock, box-panel modes 58-320 Hz, a low sub thump, a flap rattle.
                     characters.BoxActing emits one event per knock (n_in_pattern, group, strength): n=1 default.
+                    Tuned to read on a phone speaker: 5-10 dB of its loudness stays above 300 Hz in every space (the
+                    police door knock: 8-10 dB); the transient of the first knock lands on the cue time.
     box_tap         n=1, spacing=0.22 [doorbell_mic]   fingertip / nail on the label      box_creak  dur=0.6  [doorbell_mic]
     box_drop        -  [doorbell_mic]  set down on the mat     box_scrape  dur=0.8, surface='mat'|'concrete' [doorbell_mic]
     box_open        keys=False (rusted keys rattle inside) [close]      box_voice  dur=4 (BED under the box's lines:
@@ -96,6 +98,10 @@ sets; free library and synthesis only as extra layers). Default space in bracket
     window_latch    - [close]   a hand tries a locked window: latch clack + frame thud, twice (rule 7 montage)
     stinger         kind='eye_flash': short glassy flash for the driver's eyes on the doorbell camera
     knock_door      soft=True: a light palm / single soft knock
+    Small-speaker presence (measured: loudness left above 300 Hz): box sounds heard through the door ('outside') get
+    _door_presence (the knuckle / carton attack through the door gap), bare-foot stairs and hall steps _foot_presence;
+    footsteps_porch 'outside' gets _door_presence too. Layers of keys_drop (bowl ring), van_step and box_drop land on
+    the recorded impact, not on the grain start.
     Params film.py uses on police names: memory=True on ANY name (21 years ago: duller, tape wow, more room);
     car_pass kind='away' (= van_pull_away, starts at t) | 'arrive' (draws up and stops, starts at t);
     car_idle kind='diesel' (= van_idle); chain_lock kind='rattle'; cloth_rustle kind='curtain' (= curtain_flutter),
@@ -149,7 +155,7 @@ LEVEL_LU = dict(knock_door=-3, doorbell_chime=-6, footsteps_porch=-7, footsteps_
 LEVEL_LU.update(doorbell_dingdong=-4, doorbell_cam_chime=-9, phone_notify=-10, box_knock=-2, box_tap=-9, box_creak=-11,
                 box_drop=-6, box_scrape=-8, box_open=-6, box_voice=-24, tape_rip=-6, hazard_ticks=-22,
                 van_door_slide=-8, van_idle=-24, van_pull_away=-11, van_step=-9, keys_drop=-4, window_slide=-7,
-                curtain_flutter=-15, cloth_rustle=-12, touch_tap=-12, stylus_scribble=-11, camera_shutter=-7,
+                curtain_flutter=-18, cloth_rustle=-12, touch_tap=-12, stylus_scribble=-11, camera_shutter=-7,
                 footsteps_stairs=-8, footsteps_hall=-9, mom_breath=-10, mom_sob=-9, ambience_suburb=-25,
                 ambience_dawn=-26, room_tone_house=-31, hazard_tick=-10, window_latch=-7)
 SPACE_LU = dict(close=1.0, inside=0.0, outside=-7.0, doorbell_mic=-2.0, street=-6.0, phone=-4.0, radio=-3.0,
@@ -956,7 +962,7 @@ def r_footsteps_porch(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0
                approach, creak, weight)
     if foot in ('L', 'R'):
         y = pan(y, -0.08 if foot == 'L' else 0.08)
-    return y, 0.0, 0.0, False
+    return _door_presence(y, sp), 0.0, 0.0, False           # delivery film: the steps read through the door too
 
 
 def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.4, weight=0.6, stairs=False,
@@ -1636,6 +1642,13 @@ def r_phone_notify(rng, sp, kind='app', vibrate=True, **_):
     return _seq(ev, 0.1), 0.0, 0.0, False
 
 
+def _door_presence(x, sp):
+    """Box sounds heard through the closed front door ('outside'): the attack comes through the gap round the door,
+    so lift 750 Hz and take the low shelf down before the door filter; otherwise the door's 160 Hz boom buries the
+    event and it nearly vanishes on a phone speaker (measured: 13-24 dB less loudness above 300 Hz than at the source)."""
+    return eq(x, ('ls', 160, -4, 0.7), ('peak', 750, 6, 0.9)) if sp == 'outside' else x
+
+
 def _carton_pool():
     return pool('carton_hit', lambda: src('box_knock', has=['cardboard']), 'onset', gap=0.1, max_len=0.6, keep=-14)
 
@@ -1677,21 +1690,27 @@ def r_box_knock(rng, sp, n=1, pattern=None, gap=0.3, pause=0.72, strength=1.0, f
     ev = []
     for t, s in seq:
         v = float(np.clip(f * s * (1.08 if big else 1.0) * (1 + 0.05 * rng.standard_normal()), 0.05, 1.3))
-        a = lp(C.get(rng, rj=0.05), 2600, 2) * v ** 1.2   # knuckle into cardboard from inside: top end soaked up
-        kn = lp(K.get(rng, rj=0.04, fo=0.03)[:n_(0.25)], 1300, 2) * 0.45 * v
-        modes = np.array([58, 87, 124, 171, 236, 318]) * (1 + 0.02 * rng.standard_normal())
-        body = modal(modes, [0.16, 0.12, 0.09, 0.07, 0.05, 0.035], [1, 0.8, 0.6, 0.45, 0.3, 0.18], 0.7,
+        # v2 (measured on small speakers): the knock must read above 300 Hz, not only as a sub thump. The first
+        # version kept 12-21 dB less of its loudness above 300 Hz than the police door knock (8-9 dB), so on a phone
+        # the film's signature sound nearly vanished. Panel modes moved up to a tall carton's (90-600 Hz, was 58-318),
+        # knuckle and wood layers opened up, the sub thump kept but lowered.
+        a = lp(C.get(rng, rj=0.05), 3400, 2) * v ** 1.2   # knuckle into cardboard from inside: top end soaked up
+        ka = onset_s(a, -14)
+        kn = lp(K.get(rng, rj=0.04, fo=0.03)[:n_(0.25)], 2400, 2) * 0.8 * v
+        kn_t = max(0.0, ka - onset_s(kn, -14))
+        modes = np.array([92, 141, 197, 262, 338, 446, 590]) * (1 + 0.02 * rng.standard_normal())
+        body = modal(modes, [0.13, 0.1, 0.08, 0.06, 0.045, 0.035, 0.025], [0.8, 1.0, 0.85, 0.65, 0.5, 0.35, 0.22], 0.6,
                      int(rng.integers(1 << 30))) * v ** 1.5
-        thump = st(sub_boom(64, 38, 0.45, 0.0)) * 0.55 * v * (0.3 if small else 1.0)
+        thump = st(sub_boom(66, 40, 0.4, 0.0)) * 0.25 * v * (0.3 if small else 1.0)
         tt = np.arange(n_(0.06)) / SR
-        rattle = bp(noise(0.06, int(rng.integers(1 << 30))), 900, 3200, 2) * np.exp(-tt / 0.012) * 0.08 * v
-        lay = [(0, a), (0, kn), (0, st(pnorm(body, 0.6))), (0.002, thump), (0.004, st(rattle))]
+        rattle = bp(noise(0.06, int(rng.integers(1 << 30))), 900, 3200, 2) * np.exp(-tt / 0.012) * 0.1 * v
+        lay = [(0, a), (kn_t, kn), (ka, st(pnorm(body, 0.4))), (ka + 0.001, thump), (ka + 0.003, st(rattle))]
         if on == 'door':                                 # the box leans on the door: the slab rings with it
             dm = np.array([88, 133, 181, 247, 338, 489]) * (1 + 0.03 * rng.standard_normal())
             door = modal(dm, [0.2, 0.15, 0.12, 0.08, 0.06, 0.04], [1.0, 0.8, 0.65, 0.45, 0.35, 0.22], 0.6,
                          int(rng.integers(1 << 30)))
-            lay.append((0.001, st(pnorm(door, 0.45)) * v))
-        x = _seq(lay, 0.2)
+            lay.append((ka + 0.001, st(pnorm(door, 0.45)) * v))
+        x = _door_presence(_seq(lay, 0.2), sp)
         if small:
             x = rate(x, 1.15)
         if on == 'vent':                                 # a tinny sheet-metal duct between the rooms
@@ -1699,8 +1718,10 @@ def r_box_knock(rng, sp, n=1, pattern=None, gap=0.3, pause=0.72, strength=1.0, f
             for d, g in ((0.0031, 0.55), (0.0047, 0.4), (0.0083, 0.3)):
                 k = n_(d); y2[k:] += m[:-k] * g
             x = st(eq(bp(y2, 280, 2600, 2), ('peak', 1150, 6, 3.0), ('peak', 640, 4, 3.0)))
+        if not ev:
+            pre0 = ka / (1.15 if small else 1.0)           # the first knuckle's transient lands on the cue time
         ev.append((t, x))
-    return _seq(ev, 0.3), 0.002, 12 * np.log10(f / 0.75) + (-3.0 if on == 'vent' else 0.0), False
+    return _seq(ev, 0.3), pre0, 12 * np.log10(f / 0.75) + (-3.0 if on == 'vent' else 0.0), False
 
 
 def r_box_tap(rng, sp, n=1, spacing=0.22, **_):
@@ -1729,10 +1750,12 @@ def r_box_drop(rng, sp, **_):
     a = C.get(rng, rj=0.04)
     L = pool('carton_lid', lambda: src('box_drop', has=['lid']), 'onset', gap=0.1, max_len=0.6, keep=-14)
     b = lp(L.get(rng, rj=0.04), 3000, 2) * 0.5
-    th = st(sub_boom(72, 44, 0.35, 0.0)) * 0.5
-    tt = np.arange(n_(0.08)) / SR
-    mat = st(lp(noise(0.08, int(rng.integers(1 << 30))), 260, 2) * np.exp(-tt / 0.02)) * 0.5
-    return _seq([(0, a), (0.004, b), (0.002, th), (0, mat)], 0.2), onset_s(a, -14), 0.0, False
+    th = st(sub_boom(72, 44, 0.35, 0.0)) * 0.32           # (0.5 -> 0.32, mat 0.5 -> 0.3: the carton must read on a
+    tt = np.arange(n_(0.08)) / SR                          #  phone, not only as a thud)
+    mat = st(lp(noise(0.08, int(rng.integers(1 << 30))), 260, 2) * np.exp(-tt / 0.02)) * 0.3
+    hit = onset_s(a, -14)                               # the carton meets the mat: lid, thump and mat land together
+    y = _seq([(0, a), (max(0.0, hit - onset_s(b, -14)) + 0.004, b), (hit + 0.002, th), (hit, mat)], 0.2)
+    return _door_presence(y, sp), hit, 0.0, False
 
 
 def r_box_scrape(rng, sp, dur=0.8, surface='mat', **_):
@@ -1755,7 +1778,7 @@ def r_box_scrape(rng, sp, dur=0.8, surface='mat', **_):
         br = bp(np.convolve(imp, np.exp(-np.arange(n_(0.004)) / n_(0.0008)), 'same').astype(np.float32), 2200, 7000, 2)
         br *= np.sin(np.pi * np.clip(tt / max(tt[-1], 1e-3), 0, 1)) ** 0.5
         lay.append((0, st(br) * peak(a) * 0.5))
-    return fade(_seq(lay, 0.0)[:n], 0.04, 0.12), 0.0, 0.0, False
+    return _door_presence(fade(_seq(lay, 0.0)[:n], 0.04, 0.12), sp), 0.0, 0.0, False
 
 
 def r_box_open(rng, sp, keys=False, **_):
@@ -1902,16 +1925,17 @@ def r_van_step(rng, sp, **_):
     S_ = pool('steps_heavy', lambda: src('footsteps_porch', has=['heavy_up_on_porch']), 'onset', gap=0.18, max_len=0.7,
               keep=-16)
     a = S_.get(rng, rj=0.04, fo=0.05)
+    hit = onset_s(a, -14)                               # the boot lands: the step's boom, clang and creak follow it
     M = src(has=['metal_impact_large_sheet_clang'])
     lay = [(0, a)]
     if M:
         m = lp(fade(audio(M[0])[n_(0.15):n_(0.75)], 0.002, 0.3), 2500, 2)
-        lay.append((0.004, pnorm(m, 0.12)))
+        lay.append((hit + 0.004, pnorm(m, 0.12)))
     cr = rate(pool('creak_short', lambda: src(category='sfx/creaks_scrapes', tags=['creak']), 'onset', gap=0.2,
                    max_len=0.9).get(rng, rj=0.08), semis(-5))[:n_(0.5)] * 0.18
-    lay.append((0.05, lp(cr, 2200, 2)))
-    lay.append((0.0, st(sub_boom(60, 40, 0.3, 0.0)) * 0.3))
-    return _seq(lay, 0.1), onset_s(a, -14), 0.0, False
+    lay.append((hit + 0.05, lp(cr, 2200, 2)))
+    lay.append((hit, st(sub_boom(60, 40, 0.3, 0.0)) * 0.3))
+    return _seq(lay, 0.1), hit, 0.0, False
 
 
 def r_keys_drop(rng, sp, surface='bowl', rust=False, bowl=False, jingle=False, lift=False, **_):
@@ -1941,13 +1965,14 @@ def r_keys_drop(rng, sp, surface='bowl', rust=False, bowl=False, jingle=False, l
         pre_j = 0.35
         lay = [(-pre_j, fade(j, 0.01, 0.12))] + lay
     if surface in ('bowl', 'ceramic', 'dish'):
+        hit = onset_s(k, -14)                           # the keys' impact (the grain can start with a little jingle)
         V = pool('vase_tap', lambda: src('keys_drop', has=['vase', 'glass_tap']), 'onset', gap=0.2, max_len=0.5, keep=-14)
         v = V.get(rng, rj=0.03, fo=0.15) * 0.45
         modes = np.array([1180, 2870, 5100, 7650]) * (1 + 0.03 * rng.standard_normal())
         ring = st(modal(modes, [0.55, 0.3, 0.16, 0.08], [1, 0.55, 0.3, 0.12], 1.2, int(rng.integers(1 << 30)))) * 0.22
         thunk = st(modal([210, 450], [0.03, 0.02], [1, 0.5], 0.15, 3)) * 0.3
-        settle = lp(k[n_(0.12):], 6000, 2) * 0.3
-        lay += [(0.0, v), (0.0, ring), (0.0, thunk), (0.14, settle)]
+        settle = lp(k[n_(hit + 0.12):], 6000, 2) * 0.3
+        lay += [(max(0.0, hit - onset_s(v, -14)), v), (hit, ring), (hit, thunk), (hit + 0.14, settle)]
     lay = [(t + pre_j, x) for t, x in lay]
     return _seq(lay, 0.2), pre_j + onset_s(k, -14), 0.0, False
 
@@ -2034,6 +2059,12 @@ def r_camera_shutter(rng, sp, kind='tablet', **_):
     return _seq(lay, 0.05), 0.0, 0.0, False
 
 
+def _foot_presence(y):
+    """Socks / bare feet on wood are mostly thud: lift the heel-and-board click (1.2 kHz) and ease the 150 Hz boom so
+    the steps still read on a phone speaker (measured: 15-17 dB of their loudness was below 300 Hz)."""
+    return eq(y, ('ls', 150, -3.5, 0.7), ('peak', 1200, 5.0, 0.8))
+
+
 def _barefoot_pool():
     return pool('steps_bare', lambda: src('footsteps_hall', has=['barefoot', 'creaky']), 'onset', gap=0.18,
                 max_len=0.7, keep=-20)
@@ -2051,18 +2082,18 @@ def r_footsteps_stairs(rng, sp, direction='up', n=None, dur=None, rate=1.5, weig
         gdb = -7.0 * away + rng.normal(0, 0.8) + (-1.0 if k % 2 else 0.0)
         g = lp(P.get(rng, rj=0.05, fo=0.04), 7000 * 2 ** (-1.3 * away), 1) * 10 ** (gdb / 20) * (0.6 + 0.6 * weight)
         tread = st(modal(np.array([96, 168, 255, 340]) * (1 + 0.04 * rng.standard_normal()), [0.07, 0.05, 0.04, 0.03],
-                         [1, 0.7, 0.45, 0.3], 0.25, int(rng.integers(1 << 30)))) * 0.35 * 10 ** (gdb / 20) * weight
+                         [1, 0.7, 0.45, 0.3], 0.25, int(rng.integers(1 << 30)))) * 0.2 * 10 ** (gdb / 20) * weight
         ev += [(t, pan(g, 0.06 if k % 2 else -0.06)), (t + 0.004, tread)]
         if rng.uniform() < 0.35:
             ev.append((t + rng.uniform(0.03, 0.1), lp(C.get(rng, rj=0.1)[:n_(0.5)], 3000, 2) * 0.2 * 10 ** (gdb / 20)))
         t += (1.0 / rate) * (1 + 0.06 * rng.standard_normal())
-    return _seq(ev, 0.4), 0.0, 0.0, False
+    return _foot_presence(_seq(ev, 0.4)), 0.0, 0.0, False
 
 
 def r_footsteps_hall(rng, sp, n=None, dur=None, rate=1.7, approach=0.0, creak=0.35, weight=0.5, **_):
     y = _steps(rng, 'steps_bare', lambda: src('footsteps_hall', has=['barefoot', 'creaky']), n, dur, rate, approach,
                creak, weight)
-    return lp(y, 6500, 1), 0.0, 0.0, False
+    return _foot_presence(lp(y, 6500, 1)), 0.0, 0.0, False
 
 
 def _female_breaths():

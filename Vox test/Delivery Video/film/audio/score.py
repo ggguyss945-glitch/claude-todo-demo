@@ -1,5 +1,6 @@
 """score.py: the music for "If A Delivery Driver Rings Your Doorbell At 3 AM..." (the police film's v2 score engine),
-rendered from music_cues.json. The arrangement for this film is pinned by audio/music_plan.py (cues['track_map']).
+rendered from music_cues.json. The arrangement for this film is pinned by audio/music_plan.py (cues['track_map'];
+mix.py adds it when film.py's cue sheet has none).
 
 Public API
     render(cues, duration=None, *, seed=None, normalize=True, progress=None) -> dict[str, np.ndarray]
@@ -7,8 +8,9 @@ Public API
               events: [{t, type, level?, len?}, ...]}.  duration (s) overrides cues['duration'].
         Returns float32 stereo stems [n, 2] at 48 kHz, n = round(duration * SR), keys = STEMS:
           tracks   the Epidemic tracks arranged to the film (the backbone): cues['track_map'] pins one track section
-                   per film section ([{t0, slug, off, flatten?}], off in seconds of the varispeed track, flatten =
-                   share of the track's own dynamics the gain automation evens out, default FLATTEN); without it, the police
+                   per film section ([{t0, slug, off, flatten?, gain_db?}], off in seconds of the varispeed track,
+                   flatten = share of the track's own dynamics the gain automation evens out, default FLATTEN; gain_db =
+                   a level trim for that section's track, e.g. a sub-drone track that reads quiet); without it, the police
                    auto-arrangement: one track section per film section
                    (sections start at `rule` cards / `scene` events; longer than 120 s -> split at a silence), chosen
                    by fit of the track's loudness/brightness to the intensity curve, no reuse of material, D/A keys
@@ -585,7 +587,7 @@ def plan(cues, duration=None, bank=None):
         for k, x in enumerate(tm):
             s0 = float(x['t0']); s1 = float(tm[k + 1]['t0']) if k + 1 < len(tm) else dur
             segs.append(dict(slug=x['slug'], s0=s0, s1=s1, off=float(x.get('off', 0.0)),
-                             flatten=float(x.get('flatten', FLATTEN))))
+                             flatten=float(x.get('flatten', FLATTEN)), gain_db=float(x.get('gain_db', 0.0))))
         secs = []
     for si, (s0, s1) in enumerate(secs):
         ln = s1 - s0
@@ -870,7 +872,8 @@ class Score:
             l2 = np.asarray(v['L2']) - v['lufs']
             l2s = _smooth(l2, 2)
             li = np.interp(tau / 2.0, np.arange(len(l2s)), l2s)
-            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - sg.get('flatten', FLATTEN) * li - 1.5
+            gc = Ib[np.minimum((tt * CR).astype(int), len(Ib) - 1)] - sg.get('flatten', FLATTEN) * li - 1.5 + \
+                sg.get('gain_db', 0.0)
             gc = np.clip(gc, -30, 10)
             x = np.arange(len(seg)) * (CR / SR)
             g = db(np.interp(x, np.arange(len(gc)), gc)).astype(np.float32)

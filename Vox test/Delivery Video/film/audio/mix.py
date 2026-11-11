@@ -6,6 +6,10 @@ CLI
                    [--t0 S --t1 S]  render only a window (tests)     [--langs en]  (en,ru when a dub exists)
                    [--strict]       stop on a failed SFX cue instead of falling back (see "Never crashes" below)
                    [--who-fx X=hall,...]  voice FX for every line of a speaker that has no fx in the timeline
+                                    (default X=hall: the hallway voice; --who-fx '' turns it off)
+                   [--plan auto|off]  auto (default): a music_cues.json with no track_map gets the music map of
+                                    audio/music_plan.py (film.py writes none); a sheet with no events also gets the
+                                    plan's events and intensity. Windowed renders shift the map with the window.
                    [--fallback]     force the placeholder drone instead of audio/score.py
                    [--bed-p50 -16]  target bed (music + SFX) 3 s short-term median, LU rel voice (true K-weighting)
                    [--bed-rel -13]  reference integrated bed level; the bed is capped at bed_rel + 1.5
@@ -21,14 +25,15 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
-    doorbell   the driver through the doorbell camera's two-way audio, played by your phone: 230 Hz-6.8 kHz, camera
+    doorbell   the driver through the doorbell camera's two-way audio, played by your phone: 260 Hz-6 kHz, camera
                presence, porch slap-back, light compression and grit, a faint camera hiss (-1 LU)
     box        a voice from INSIDE the cardboard box: dull (2.4 kHz), boxy cavity resonances (190 / 430 Hz), the tiny
                carton IR, and a hollow double 3 semitones down, 25 ms late, under it (-1.5 LU)
     phone      DRY: in this film 'phone' lines are app / notification text read by the narrator
     phone_call the police film's phone line (was 'phone'); phone_far; radio (police film)
     hall       a voice behind you in the hallway (short hall reverb, a little dull); not in the script's fx, offered for
-               the X lines ("Hey, buddy") via --who-fx X=hall or by setting fx in the timeline
+               the X lines ("Hey, buddy"): mix.py's default --who-fx X=hall (lines with their own fx, the box
+               lines, keep it)
     any other fx -> dry, with a warning
 Never crashes on cue data: an SFX name is resolved by sfx.resolve() (aliases, then a keyword guess with a warning);
     a name nothing fits is skipped with a warning; an unknown space falls back to the name's default space with a
@@ -100,7 +105,7 @@ def phone_fx(x, far=False):
 
 def doorbell_fx(x):
     """The driver through the doorbell camera (porch mic -> app -> phone speaker); stays intelligible."""
-    y = SX.lp(SX.hp(x, 230, 4), 6800, 4)
+    y = SX.lp(SX.hp(x, 260, 4), 6000, 4)                  # a camera mic and a phone speaker: no chest, no air
     y = SX.eq(y, ('peak', 2700, 3.0, 1.1), ('peak', 900, -1.5, 1.0), ('peak', 350, 1.5, 1.0))
     sl = np.zeros_like(y)                                   # porch slap-back (door, siding)
     for d, g in ((0.011, 0.12), (0.019, 0.08), (0.033, 0.04)):
@@ -440,6 +445,46 @@ def stale(cues_dir, out_dir):
     return json.load(open(p)).get('cues_sha1') != cue_hashes(cues_dir)
 
 
+def with_plan(mcues, tl):
+    """The music map (audio/music_plan.py) for a cue sheet that has none: film.py writes intensity and events from the
+    picture but no track_map, so score.py would otherwise pick tracks by itself. A sheet with no events at all also
+    gets the plan's intensity curve and events. Never fails the mix: on any error the sheet is used as it is."""
+    if mcues.get('track_map'):
+        return mcues
+    try:
+        import music_plan as MP
+        lines = tl['lines']
+        out = dict(mcues)
+        out['track_map'] = MP.track_map(lines)
+        what = 'track_map'
+        if not mcues.get('events'):
+            out['events'] = MP.events(lines)
+            out['intensity'] = MP.intensity(lines, float(mcues.get('duration') or tl['duration_en'] + 2.5))
+            what += ' + events + intensity'
+        log(f'music plan: {what} from music_plan.py ({len(out["track_map"])} sections)')
+        return out
+    except Exception as e:
+        log('WARNING: music_plan.py failed (%s); score.py arranges the tracks itself' % repr(e)[:160])
+        return mcues
+
+
+def window_track_map(tm, ts, sdur):
+    """track_map in window time (film time - ts): a section already playing at ts starts at 0 with its track offset
+    advanced by the time it has played; sections that end before ts or start after the window are dropped."""
+    tm = sorted((dict(x) for x in tm), key=lambda x: float(x.get('t0', 0)))
+    out = []
+    for k, x in enumerate(tm):
+        a = float(x.get('t0', 0)); b = float(tm[k + 1]['t0']) if k + 1 < len(tm) else 1e12
+        if b <= ts or a - ts >= sdur:
+            continue
+        if a < ts:
+            x['off'] = float(x.get('off', 0.0)) + (ts - a); x['t0'] = 0.0
+        else:
+            x['t0'] = a - ts
+        out.append(x)
+    return out
+
+
 def short_term_rel(x, ref, win=0.4, hop=0.1):
     return -0.691 + 10 * np.log10(SX._blocks(x, win, hop) + 1e-20) - ref
 
@@ -456,7 +501,11 @@ def main():
     ap.add_argument('--t0', type=float, default=0.0); ap.add_argument('--t1', type=float, default=None)
     ap.add_argument('--langs', default='en'); ap.add_argument('--fallback', action='store_true')
     ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
-    ap.add_argument('--who-fx', default='', help='e.g. X=hall: line fx for a speaker whose lines have none')
+    ap.add_argument('--who-fx', default='X=hall',
+                    help='line fx for a speaker whose lines have none (default X=hall: the hallway voice); "" = off')
+    ap.add_argument('--plan', default='auto', choices=('auto', 'off'),
+                    help='auto: a music_cues.json without track_map gets music_plan.py\'s arrangement (and its '
+                         'intensity / events when the sheet has none); off: score.py arranges by itself')
     ap.add_argument('--bed-rel', type=float, default=-13.0, help='reference integrated bed level (report and cap)')
     ap.add_argument('--bed-p50', type=float, default=-16.0, help='target bed 3 s short-term median, LU rel voice')
     ap.add_argument('--no-stems', action='store_true')
@@ -467,10 +516,13 @@ def main():
     langs = [s for s in A.langs.split(',') if s]
     os.makedirs(A.out, exist_ok=True)
     tl = json.load(open(A.timeline))
+    hashes = cue_hashes(A.cues)               # taken now: film.py may rewrite the sheets while the mix runs
     sfx_cues = json.load(open(os.path.join(A.cues, 'sfx_cues.json')))
     mpath = os.path.join(A.cues, 'music_cues.json')
     mcues = json.load(open(mpath)) if os.path.exists(mpath) else {'duration': tl['duration_en'] + 2.5, 'intensity': [],
                                                                   'events': []}
+    if A.plan == 'auto':
+        mcues = with_plan(mcues, tl)
     full = max(tl['duration_en'] + 2.5, float(mcues.get('duration') or 0))
     t0 = A.t0; t1 = min(full, A.t1) if A.t1 else full
     dur = t1 - t0; N = int(round(dur * SR)); i0 = int(round(t0 * SR))
@@ -556,6 +608,8 @@ def main():
                           [[p[0] - ts, p[1]] for p in mcues['intensity'] if 0 < p[0] - ts < sdur] + \
                           [[sdur, float(np.interp(t1, iv[:, 0], iv[:, 1]))]]
     mc['events'] = [dict(e, t=e['t'] - ts) for e in mcues.get('events', []) if 0 <= e['t'] - ts < sdur]
+    if mcues.get('track_map'):
+        mc['track_map'] = window_track_map(mcues['track_map'], ts, sdur)
     tm = time.time()
     stems, score_src = score_stems(mc, sdur, A.fallback)
     stem_names = list(stems)
@@ -639,7 +693,7 @@ def main():
     if Lm < -17: gm *= 10 ** ((-17 - Lm) / 20)
     if Lm > -10: gm *= 10 ** ((-10 - Lm) / 20)
 
-    report = {'cues_sha1': cue_hashes(A.cues), 'window': [t0, t1], 'score': score_src,
+    report = {'cues_sha1': hashes, 'window': [t0, t1], 'score': score_src,
               'music_gain_db': round(20 * np.log10(gm), 2),
               'sfx_counts': counts, 'silences': n_sil, 'langs': {},
               'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped))}

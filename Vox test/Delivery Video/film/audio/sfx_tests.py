@@ -4,10 +4,15 @@
 
 Tests 1-7 put this film's SFX on the real narration (vo_en.wav at -14 LUFS, line voicing from mix.LINE_FX: the
 driver's 'doorbell' lines, the 'box' voice, X lines with 'hall') at the house levels (sfx.LEVEL_LU), no music, then a
-true-peak limiter at -1 dBTP. Test 8 runs the whole pipeline (mix.py: voice + SFX cue sheet + score.py with the
-music_plan.py map) on the ending, 588-641 s; its cue sheet includes an unknown SFX name and an unknown space on
-purpose (the mix must fall back with a warning, not crash). Each test writes <name>.wav and <name>.json (the cue
-list, levels and measurements).
+true-peak limiter at -1 dBTP. Test 8 runs the whole pipeline (mix.py: voice + SFX cue sheet + score.py) on the
+ending, 586-643 s: the music is the director's W/cues/music_cues.json with the music_plan.py map added by mix.py
+(--plan auto, shifted to the window), as the final mix will run it; its SFX sheet includes an unknown SFX name and an
+unknown space on purpose (the mix must fall back with a warning, not crash). Each test writes <name>.wav and
+<name>.json (the cue list, levels and measurements).
+Listening checks by measurement (tests 1-7, per one-shot cue, in <name>.json 'check'): transient_ms (the loudest
+transient vs the cue time; the picture's sync), phone_band_db (loudness left above 300 Hz: what a phone speaker
+plays), vs_voice_here_LU (the cue against the narration at that moment). measure.flags lists cues more than 40 ms
+off, thinner than -15 dB on a phone, or 20 LU under the voice.
 """
 import json, os, subprocess, sys, time
 import numpy as np, soundfile as sf
@@ -24,6 +29,9 @@ OUT = os.path.join(W, 'mix', 'tests')
 TL = os.path.join(W, 'align', 'timeline.json')
 VO = os.path.join(W, 'align', 'vo_en.wav')
 WHO_FX = {'X': 'hall'}            # tests voice the hallway X lines with 'hall' (box lines keep their 'box' fx)
+# no single transient to sync (breaths, cloth, a vibration motor ramping up, creaks, slides): not sync-checked
+SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutter', 'cloth_rustle', 'tinnitus', 'riser',
+              'whoosh', 'door_creak', 'box_creak', 'box_scrape', 'van_pull_away', 'window_slide', 'heartbeat')
 
 
 def ev(t, name, gain_db=0.0, space=None, pan=0.0, **params):
@@ -89,7 +97,7 @@ def t03_tablet_signature():
         ev(L(52, off=0.6), 'touch_tap', -2.0, space='app', n=2),    # he taps the tablet awake
         ev(L(55, off=0.2), 'stylus_scribble', 0.0, dur=1.1),        # the half-written initial (the picture's ink)
         ev(L(57, off=1.6), 'stylus_scribble', -3.0, space='app', dur=0.5),
-        ev(L(58, off=-0.2), 'touch_tap', -4.0, space='app'),
+        ev(L(58, off=-0.2), 'touch_tap', -2.0, space='app'),
         ev(L(60, off=1.4), 'camera_shutter', -2.0),                 # (a photo flash on the tablet)
         ev(L(56, off=0.2), 'heartbeat', -6.0, bpm=64, bpm_end=80, dur=8.0),
     ]
@@ -120,7 +128,7 @@ def t05_box_knocks_mar():
     out += [ev(L(170, off=1.0), 'mom_sob', -2.0, dur=2.5, intensity=0.6),
             ev(L(179, off=0.3), 'mom_breath', -1.0, kind='gasp'),
             ev(L(179, off=0.6), 'mom_breath', -4.0, kind='shaky', dur=2.0),
-            ev(L(174, off=-0.4), 'box_creak', -6.0, space='outside')]
+            ev(L(173, end=True, off=-0.15), 'box_creak', 3.0, space='outside', dur=0.8)]   # the box shifts: "Mar?"
     return a, b, out
 
 
@@ -201,6 +209,7 @@ def render_window(a, b, cues, who_fx=WHO_FX):
     bus = np.zeros((n, 2), np.float32)
     SX.reset()
     log = []
+    vm = -0.691 + 10 * np.log10(SX._blocks(SX.st(v), 0.4, 0.05) + 1e-20)     # the voice's momentary loudness
     for k, c in enumerate(sorted(cues, key=lambda c: c['t'])):
         name, params, note = SX.resolve(c['name'], c.get('params') or {})
         sp = c.get('space')
@@ -211,22 +220,43 @@ def render_window(a, b, cues, who_fx=WHO_FX):
         if c.get('pan'):
             y = SX.pan(y, c['pan'])
         SX.place(bus, y, int(round((c['t'] - a - pre) * SR)))
+        bed = name in SX.BEDS or (name in SX.DUR_BEDS and 'dur' in params)
         L_ = SX.lufs_int(y) if (name in SX.BEDS or name in SX.DUR_BEDS) else SX.mom_max(y)
-        log.append({'t': round(c['t'], 2), 'name': c['name'], 'resolved': name, 'space': sp or SX.DEFAULT_SPACE[name],
-                    'gain_db': c.get('gain_db', 0.0), 'params': c.get('params'), 'dur': round(len(y) / SR, 2),
-                    'loud_rel_voice_LU': round(L_ + 14.0, 1)})
+        ent = {'t': round(c['t'], 2), 'name': c['name'], 'resolved': name, 'space': sp or SX.DEFAULT_SPACE[name],
+               'gain_db': c.get('gain_db', 0.0), 'params': c.get('params'), 'dur': round(len(y) / SR, 2),
+               'loud_rel_voice_LU': round(L_ + 14.0, 1)}
+        if not bed:                                    # listening checks by measurement (one-shots)
+            j0 = max(0, int((c['t'] - a) / 0.05)); j1 = j0 + max(1, int(min(len(y) / SR - pre, 1.0) / 0.05))
+            Mm = SX.mom_max(y)
+            ent['check'] = {
+                'transient_ms': round(1000 * (SX.onset_s(y, -12) - pre)),           # loudest transient vs cue time
+                'phone_band_db': round(SX.mom_max(SX.hp(SX.hp(y, 300, 2), 300, 2)) - Mm, 1),   # left above 300 Hz
+                'vs_voice_here_LU': round(Mm - float(vm[j0:j1].max()), 1) if j0 < len(vm) else None}
+        log.append(ent)
     mixd = bus + np.stack([v, v], 1)
     y, gr, _f = MX.tp_limit(mixd, -1.0)
+    ck = [e for e in log if 'check' in e]
+    flags = [f"{e['t']} {e['resolved']}: " + ', '.join(
+        w for w, bad in ((f"transient {e['check']['transient_ms']} ms off the cue", abs(e['check']['transient_ms']) > 40
+                          and not (e.get('params') or {}).get('jingle') and e['resolved'] not in SLOW_ONSET),
+                         (f"{e['check']['phone_band_db']} dB above 300 Hz (thin on a phone)", e['check']['phone_band_db'] < -15),
+                         (f"{e['check']['vs_voice_here_LU']} LU under the voice there (masked)",
+                          (e['check']['vs_voice_here_LU'] or 0) < -20)) if bad)
+             for e in ck]
     return y, log, {'voice_lufs': round(SX.lufs_int(np.stack([v, v], 1)), 1), 'sfx_lufs': round(SX.lufs_int(bus), 1),
-                    'mix_lufs': round(SX.lufs_int(y), 1), 'true_peak': round(MX.true_peak(y), 1),
-                    'limiter_gr_db': round(gr, 1)}
+                    'mix_lufs': round(SX.lufs_int(y), 1), 'true_peak': round(float(MX.true_peak(y)), 1),
+                    'limiter_gr_db': round(gr, 1), 'flags': [f for f in flags if not f.endswith(': ')]}
 
 
 def run_test8():
     name = '08_ending_full_mix'
     cdir = os.path.join(OUT, 'cues_t8'); os.makedirs(cdir, exist_ok=True)
     json.dump(test8_cues(), open(os.path.join(cdir, 'sfx_cues.json'), 'w'), indent=0)
-    mc = MP.music_cues(LINES, TL_J['duration_en'] + 2.5)
+    film_mc = os.path.join(W, 'cues', 'music_cues.json')       # the director's picture-derived music cues
+    if os.path.exists(film_mc):
+        mc = json.load(open(film_mc)); mc.pop('track_map', None); msrc = 'film.py music_cues.json + mix.py --plan auto'
+    else:
+        mc = MP.music_cues(LINES, TL_J['duration_en'] + 2.5); msrc = 'music_plan.music_cues()'
     json.dump(mc, open(os.path.join(cdir, 'music_cues.json'), 'w'), indent=0)
     odir = os.path.join(OUT, 'mix_t8')
     cmd = [sys.executable, os.path.join(HERE, 'mix.py'), TL, VO, '-', cdir, odir, '--t0', '586', '--langs', 'en',
@@ -238,7 +268,8 @@ def run_test8():
         print(r.stdout[-3000:], r.stderr[-3000:]); raise SystemExit('test 8 failed')
     os.replace(os.path.join(odir, 'mix_en.wav'), os.path.join(OUT, name + '.wav'))
     rep = json.load(open(os.path.join(odir, 'mix_report.json')))
-    json.dump({'cues': os.path.join(cdir, 'sfx_cues.json'), 'report': rep, 'seconds': round(time.time() - t0, 1)},
+    json.dump({'cues': os.path.join(cdir, 'sfx_cues.json'), 'music': msrc, 'report': rep,
+               'seconds': round(time.time() - t0, 1)},
               open(os.path.join(OUT, name + '.json'), 'w'), indent=1)
     print(name, json.dumps(rep['langs']['en']), 'fallbacks:', rep.get('sfx_fallbacks'), 'skipped:', rep.get('sfx_skipped'))
 

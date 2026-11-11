@@ -10,6 +10,7 @@ script lines (so a re-alignment moves the events with the words), and writes mus
 Public API
     TRACK_MAP        [(anchor, slug, off, why)]   one track section per film section; off = seconds into the
                      varispeed track (score.TRACKS shift), chosen from the catalogue's loudness / brightness curves
+    FLATTEN, GAIN    per-track dynamics flattening and level trim (dB) passed to score.py in the track map
     INTENSITY        [(anchor, value)]            0..1 tension curve (score.py: bed level, layer thresholds)
     EVENTS           [(anchor, type, level, len)] music events (ARCHITECTURE.md music_cues types)
     resolve(anchor, lines) -> t                   'sN' = start of line N, 'eN' = end of line N, 'sN+0.3' offsets,
@@ -18,10 +19,12 @@ Public API
                      music_cues adds 'track_map' (score.py pins the arrangement with it)
     load_lines(timeline_path=None) -> (lines, duration)
 
-For film.py (the director owns the picture-derived cues): use these as the base and merge the picture's own events,
-e.g. in Film.cues():  import audio.music_plan as MP;  mus = MP.events(F.L) + picture events;
-music = {'duration': F.duration, 'intensity': MP.intensity(F.L, F.duration), 'events': mus,
-'track_map': MP.track_map(F.L)}. polish_cues() then retimes hits to the cuts as in the police film.
+How it reaches the mix: film.py (the director's) writes W/cues/music_cues.json from the picture (intensity curve,
+hits on the reveal cuts, silences, swells, rule stings) but no track_map. mix.py (--plan auto, the default) adds
+track_map(lines) from this module, so score.py plays this arrangement under the director's events; a cue sheet with
+no events at all also gets EVENTS and INTENSITY below. Windowed mixes (--t0) shift the map with the window. film.py
+may instead write 'track_map': MP.track_map(F.L) itself (mix.py then leaves it alone). EVENTS / INTENSITY here are
+the sound team's script-anchored plan of the same beats (the fallback and the reference for the director's cues).
 
 CLI: python3 music_plan.py [--timeline T] [--out W/cues/music_cues_plan.json] [--table]   (--table prints the map)
 """
@@ -50,7 +53,10 @@ TRACK_MAP = [
     ('s165', 'turning_stones_stefan_ekstrom', 75.0,
      'rule 5 (the box knocks, "Mar?", "Buddy?", faster): a pure dark drone (99 % < 250 Hz), no pulse to fight the knocks'),
     ('s204', 'afterthoughts_beyza', 0.0,
-     'rule 6 (the box left at the door, the night, 3:40, the empty seat): slow, sad, no drums'),
+     'rule 6 (the box left at the door, the app, sunrise at 6:12, the long wait): slow, sad, no drums'),
+    ('s221', 'one_hampus_naeselius', 0.0,
+     '"At 3:40, the knocking stops." (the switch sits inside the drop-out on that line): One\'s sparse dark intro '
+     '(-36 -> -26 LU, centroid 200-800 Hz) under "check every window" and the empty driver\'s seat, into the rule 7 card'),
     ('s227', 'one_step_away_dian_shuai', 45.0,
      'rule 7 (the run, Lily\'s room, the 3:41 photo, "Lily.", the van leaves): percussive build to the climax at '
      '93-132 s; its drop at 132.5 s lands on the sunrise (598 s)'),
@@ -201,7 +207,15 @@ def load_lines(timeline_path=None):
 # than the police six (Are You Alone? runs -34 .. -9 LU): measured on the full-film mix, their quiet stretches sat 25-30
 # LU under the voice (the music "present" only 40 % of the time in those sections), so they are evened out more.
 FLATTEN = {'are_you_alone_victor_lundberg': 0.6, 'haunted_mind_etienne_roussel': 0.55, 'afterthoughts_beyza': 0.55,
-           'goth_christmas_par': 0.55, 'the_logic_of_tyrants_hampus_naeselius': 0.45}
+           'goth_christmas_par': 0.55, 'the_logic_of_tyrants_hampus_naeselius': 0.45, 'one_hampus_naeselius': 0.5}
+
+
+# slug -> level trim (dB) of the track in its sections (score.py gain_db). Measured on the full-film check mix
+# (W/mix/tests/full_check, music alone, 3 s short-term rel voice): the police drone under rule 2 sat at p50 -23.8 LU
+# (above voice -20 LU only 17 % of the time: a sub drone reads quiet), the memory theme at -21, Haunted Mind -19.8,
+# the cold open -20.2, One's intro -21.3, while the builds sat at -14..-15.5. Q2 stays the calmest quarter.
+GAIN = {'dark_forebodings_ethan_sloan': 3.0, 'goth_christmas_par': 2.0, 'haunted_mind_etienne_roussel': 1.5,
+        'are_you_alone_victor_lundberg': 1.0, 'one_hampus_naeselius': 2.0}
 
 
 def track_map(lines):
@@ -210,6 +224,8 @@ def track_map(lines):
         x = {'t0': round(resolve(a, lines), 3), 'slug': s, 'off': float(o)}
         if s in FLATTEN:
             x['flatten'] = FLATTEN[s]
+        if GAIN.get(s):
+            x['gain_db'] = GAIN[s]
         out.append(x)
     return out
 

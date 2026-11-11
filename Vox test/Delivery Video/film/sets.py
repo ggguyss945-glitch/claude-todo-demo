@@ -5839,42 +5839,94 @@ def _photo_hall_art(p_, w, h):
     p_.radial(None, w * 0.5, h * 0.52, w * 0.6, [(0, '#c8d8ff', 70), (1, '#c8d8ff', 0)], clip=False)
 
 
-def _photo_lily_art(p_, w, h):
-    """3:41 AM, from below: Lily (8) leaning out of her open window in her pajamas, the driver (from behind, cap) holding
-    his glowing tablet up to her, her small finger on the screen."""
+_PHOTO341 = {}
+
+
+def photo_lily_scene():
+    """The 3:41 delivery photo as one scene, shared by the in-app thumbnail and the film's full-screen photo shots.
+    side_yard from the grass, flash-lit: Lily (8) in the open lower sash, leaning out on the sill, one small hand reaching a
+    short way out and down onto the tablet's signature box; the driver in the foreground from behind (cap, shoulders at
+    the bottom of the frame), his arm raised in a plain overhead reach, holding the glowing tablet up to her sill (the low
+    camera makes the reach read; no stretched limbs), his head turned over his shoulder so one eye and the grin catch the
+    flash. Returns dict(draw=fn(pen, t) in set design coords 1920x1080, crops={full, lily, arm, finger} (16:9 design rects),
+    tablet=(x, y), window=(x0, y0, x1, y1))."""
+    if 'scene' in _PHOTO341: return _PHOTO341['scene']
+    CH = _CH()
     sp = side_yard(window_open=True, hazard=lambda t: 1.0)
     wx0, wy0, wx1, wy1 = sp.info['window']
-    CH = _CH()
+    oy0 = wy0 + (wy1 - wy0) * 0.47                                     # the raised lower sash
+    LB = dict(cx=(wx0 + wx1) / 2 - 10, cy=oy0 + (wy1 - oy0) * 0.52, scale=0.1)
+    LP = CH.Pose(lean=0.35, h_nod=0.3, h_tilt=-6.0, hl_out=34.0, hl_down=78.0, hl_fwd=210.0, hl_shape='point',
+                 hr_out=20.0, hr_down=200.0, hr_fwd=120.0, hr_shape='open', brow_sad=0.25, brow_up=0.35, smile=0.12, pupil=1.15,
+                 look_x=0.55, look_y=0.85, lock=0.0) if CH else None
+    if CH:
+        _, tip = CH.hand_pos('lily', LP, 1, **LB)
+    else:
+        tip = ((wx0 + wx1) / 2 + 30, wy1 + 20)
+    TAB = 70.0
+    tx, ty = tip[0] + 0.12 * TAB, tip[1]                              # her fingertip lands on the signature box
+    DRH = 640.0
+    DP = CH.Pose(turn=2.0, h_turn=-1.3, lean=-0.1, hl_out=-60.0, hl_down=-330.0, hl_fwd=40.0, hl_up=1.0, hl_shape='grip',
+                 hr_out=10.0, hr_down=300.0, hr_fwd=10.0, smile=1.0, grin=1.0, teeth=1.0, lock=1.0, look_x=-0.6) if CH else None
+    gx, gy = tx, ty + 0.42 * TAB                                       # his grip under the tablet
+    if CH:
+        dw, _ = CH.hand_pos('driver', DP, 1, x=0, y_feet=0, height=DRH)
+        dx_, dy_ = gx - dw[0], gy - dw[1]
+    lit = dict(rim='#e8f0ff', rim_a=150, side=1, key=-0.1)
+
+    def window_in(pen, t):                                             # her room through the window (no curtain here)
+        q = rect(wx0, wy0, wx1 - wx0, wy1 - wy0)
+        pen.radial(q, (wx0 + wx1) / 2 - 30, wy1 - 20, (wx1 - wx0) * 0.95, [(0, '#fff0c8'), (0.55, '#b8a8a8'), (1, '#3a3450')])
+        pen.fill(rect(wx0, wy0, wx1 - wx0, (wy1 - wy0) * 0.35), '#4a3e5e', 150)
+        _glow_stars(pen, lambda r: (wx0 + r.uniform(0.1, 0.9) * (wx1 - wx0), wy0 + r.uniform(0.05, 0.3) * (wy1 - wy0), 5), 6, 13, 160)
+        pen.fill(rect(wx0, wy0, wx1 - wx0, oy0 - wy0), '#9aa6c8', 36)
+        for sd in (-1, 1):                                             # her curtains pushed to the jambs, lifting in the draught
+            x0 = wx0 if sd < 0 else wx1
+            cur = smooth([(x0, oy0), (x0 - sd * 0.16 * (wx1 - wx0), oy0), (x0 - sd * 0.12 * (wx1 - wx0), oy0 + (wy1 - oy0) * 0.6),
+                          (x0 - sd * 0.2 * (wx1 - wx0), wy1), (x0, wy1)], True, 0.6)
+            pen.fill(cur, '#b9a6d4', 230); pen.line(cur, 2, LINE, 200)
+        pen.radial(None, (wx0 + wx1) / 2, (wy0 + wy1) / 2, (wx1 - wx0) * 1.3, [(0, '#fff0c8', 46), (1, '#fff0c8', 0)], clip=False)
+
+    def sash(pen, t):                                                  # the raised lower sash, in front of her room
+        pen.seg((wx0, oy0), (wx1, oy0), 14, '#a8a294'); pen.seg((wx0, oy0 + 7), (wx1, oy0 + 7), 3, LINE)
 
     def lily(pen):
         cv = pen.cv
-        oy0 = wy0 + (wy1 - wy0) * 0.5                                                             # the open lower sash
-        hgt = (wy1 - wy0) * 1.75
-        fx_, fy_ = (wx0 + wx1) / 2 - 4, oy0 + hgt * 0.93
-        tx, ty = (wx0 + wx1) / 2 + (wx1 - wx0) * 0.55, wy1 + (wy1 - wy0) * 0.1                  # the tablet, right of the sill
-        pen.glow(tx, ty, (wx1 - wx0) * 0.9, '#e8f0ff', 130)
-        def her(pp):
-            if CH is None: pp.fill(oval(fx_, oy0 + hgt * 0.12, hgt * 0.1), '#2a2030'); return
-            try:
-                CH.draw(pp, 'lily', fx_, fy_, hgt, CH.Pose(lean=0.2, hl_down=40.0, hl_out=260.0, hl_fwd=160.0, hl_shape='point', expr='blank'),
-                        light=dict(rim='#e8f0ff', rim_a=150, side=1, key=-0.15))
-            except Exception:
-                pp.fill(oval(fx_, oy0 + hgt * 0.12, hgt * 0.1), '#2a2030')
-        cv.save(); cv.clipPath(rect(wx0, oy0, wx1 - wx0, wy1 - oy0 + 4), skia.ClipOp.kIntersect, True); her(pen); cv.restore()
-        cv.save(); cv.clipPath(rect((wx0 + wx1) / 2, oy0, (wx1 - wx0) * 1.2, wy1 - oy0 + 0.4 * (wy1 - wy0)), skia.ClipOp.kIntersect, True)
-        cv.clipPath(rect(wx0 - 40, oy0 - 400, wx1 - wx0 + 40, 400 + (wy1 - oy0) + 12), skia.ClipOp.kDifference, True)
-        her(pen); cv.restore()
+        cv.save(); cv.clipPath(rect(wx0, oy0 + 6, wx1 - wx0, wy1 + 14 - oy0 - 6), skia.ClipOp.kIntersect, True)
+        CH.draw_bust(pen, 'lily', LB['cx'], LB['cy'], LB['scale'], LP, light=lit)
+        cv.restore()
 
-    def driver(pen):
-        dx_, dy_ = (wx0 + wx1) / 2 + 170, 1500
-        if CH is not None:
-            try:
-                CH.draw(pen, 'driver', dx_, dy_, 820, CH.Pose(turn=2.0, hl_down=-300.0, hl_out=-160.0, hl_fwd=60.0, hl_prop='tablet', lean=-0.1),
-                        light=dict(rim='#ffa31f', rim_a=140, side=1, key=-0.5)); return
-            except Exception:
-                pass
-        pen.fill(union(oval(dx_, dy_ - 640, 60, 70), rrect(dx_ - 150, dy_ - 560, 300, 600, 80)), '#0a0a0e')
-    _set_snapshot(p_, sp, 0, 0, w, h, (610, 300, 1350, 1040), [(3.39, lily), (1.3, driver)])
+    def front(pen):
+        pen.glow(tx, ty, TAB * 1.7, '#e8f0ff', 150)
+        CH.draw(pen, 'driver', dx_, dy_, DRH, DP, light=dict(rim='#ffa31f', rim_a=150, side=1, key=-0.45))
+        CH.draw_tablet(pen, tx, ty, TAB, screen='sign', sig='lily', ink=0.62, ts='3:41 AM', angle=-6)
+        CH.draw_hand(pen, 'driver', gx, gy + 8, TAB * 0.5, 'grip', 180.0, 1)
+        CH.draw_arm(pen, 'lily', 1, LP, light=lit, **LB)
+
+    def draw(pen, t=0.0):
+        figs = [(3.391, lambda p_: window_in(p_, t)), (3.386, lily), (3.385, lambda p_: sash(p_, t))] + ([(1.0, front)] if CH else [])
+        _set_snapshot(pen, sp, 0, 0, 1920, 1080, (0, 0, 1920, 1080), figs, t=t, exclude=('lily_window',))
+
+    def c169(x, y, w): return (x, y, x + w, y + w * 9.0 / 16.0)
+    crops = {'full': c169(440, 300, 1000), 'lily': c169(wx0 - 130, wy0 - 40, 420), 'arm': c169(tx - 330, ty - 120, 560),
+             'finger': c169(tx - 125, ty - 92, 250)}
+    sc = dict(draw=draw, crops=crops, tablet=(tx, ty), window=(wx0, wy0, wx1, wy1))
+    _PHOTO341['scene'] = sc
+    return sc
+
+
+def _photo_lily_art(p_, w, h):
+    """3:41 AM, from below (photo_lily_scene, cropped for the app's photo box)."""
+    sc = photo_lily_scene()
+    x0, y0, x1, y1 = sc['crops']['full']
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    hw = (y1 - y0) / 2 * w / h if w / h < (x1 - x0) / (y1 - y0) else (x1 - x0) / 2
+    hh = hw * h / w
+    cv = p_.cv
+    cv.save(); cv.clipPath(rect(0, 0, w, h), skia.ClipOp.kIntersect, True)
+    cv.scale(w / (2 * hw), h / (2 * hh)); cv.translate(-(cx - hw), -(cy - hh))
+    sc['draw'](p_, 0.0)
+    cv.restore()
     p_.fill(rect(0, 0, w, h), '#ffffff', 26)                                                 # the flash
     p_.radial(None, w * 0.55, h * 0.45, w * 0.75, [(0, '#ffffff', 40), (0.6, '#000000', 0), (1, '#000000', 150)], clip=False)
 

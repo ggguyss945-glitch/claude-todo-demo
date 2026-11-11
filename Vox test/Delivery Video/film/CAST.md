@@ -111,3 +111,9 @@ The sheets are in `_work/cast/`. Regenerate them with `cd film && python3 tools/
 - **Speed** at 2560x1440 in one process: full body 12–22 ms; frame-filling bust 18–28 ms (officer 25 ms); frame-filling box ~45 ms; tablet insert 5 ms; keys bowl 5 ms; box inside 29 ms.
 - **Police regression:** officer, mum, double and officer2 are pixel-identical within run-to-run raster noise. The only change is that 'you' now wears socks.
 - **Paths:** `VOICE_WAV` and `VOICE_WORDS` now point at `W/align`. The envelope cache is in `W/cache`.
+
+
+## Later changes (film assembly)
+- The tablet's first letter (`sig='initial'`) now draws 68 % of the cursive J (stem and hook, then the ink blot), so it reads as a letter that stops halfway, not as a question mark.
+- Back views: the `messy` and `curly` hair now covers the back of the head down to the nape (before, a bare skin oval under a small hair cap read as a blank face in the hall shots seen from behind).
+- The 3:41 delivery photo no longer uses `reach_up(stretch)` or a long `lean_out` arm: it is `sets.photo_lily_scene()` with plain arm lengths (see SETS.md).

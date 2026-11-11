@@ -1234,7 +1234,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
         def yf(ph):
             a = np.abs(ph)
             fr = -70.0 + 6.0 * np.sin(ph * 3.0 + part) + 7.0 * part * np.clip(ph * part, 0, 1)
-            return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.2, PI], [-60, -24, -14, 26, 46])) + \
+            return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.15, 2.6, PI], [-60, -24, -14, 50, 78, 88])) + \
                 (1 - np.interp(a, [0, 1.0, 1.3], [0, 0, 1])) * fr
         grow = 9.0
     elif style == 'kid':                                         # Lily: bob with straight bangs, hair framing the face
@@ -1245,7 +1245,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     else:  # curly
         def yf(ph):
             a = np.abs(ph)
-            return np.interp(a, [0, 0.9, 1.25, 1.55, 2.0, PI], [-58, -54, -20, -6, 30, 44])
+            return np.interp(a, [0, 0.9, 1.25, 1.55, 2.0, 2.5, PI], [-58, -54, -20, -6, 40, 60, 66])
         grow = 22.0
     if style == 'kid':
         X, Y = hm.arc_phi(yf, 120)
@@ -1263,7 +1263,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     elif style == 'kid':
         vol = union(hm.silhouette(grow=grow, y_top=-120 - grow * 0.5, y_bot=40), _kid_hang(hm, grow, 112.0))
     elif style == 'messy':
-        vol = _bumpy(hm, grow, 9, 9.0, -128.0, 40.0, spiky=True, seed=part)
+        vol = _bumpy(hm, grow, 9, 9.0, -128.0, 94.0, spiky=True, seed=part)   # down to the nape (back views)
     hair = inter(union(vol, sil), region)
     c.fill(hair, hc)
     with c.clip(hair):
@@ -2204,7 +2204,7 @@ def _tablet_screen(c, x0, y0, w, h, screen='sign', ink=1.0, t=0.0, det=2, ts='3:
     c.line(_multi([poly([(bx + bw * 0.06, by + bh * 0.6), (bx + bw * 0.12, by + bh * 0.72)], False),
                    poly([(bx + bw * 0.12, by + bh * 0.6), (bx + bw * 0.06, by + bh * 0.72)], False)]), c.lw * 0.4, '#7b869b')
     if sig == 'initial':
-        pth, end = _strokes_path(HAND_STROKES['J'], bx + bw * 0.2, by + bh * 0.05, bw * 0.34, bh * 0.82, 0.5 * ink, 0.3, 11, t)
+        pth, end = _strokes_path(HAND_STROKES['J'], bx + bw * 0.2, by + bh * 0.05, bw * 0.34, bh * 0.82, 0.68 * ink, 0.3, 11, t)
         c.line(pth, max(1.4, c.lw * 0.55), '#1a2a6c')
         if end is not None and ink >= 0.999:
             c.fill(oval(end[0], end[1], max(1.6, c.lw * 0.45)), '#1a2a6c')          # the pen stopped here (a blot)

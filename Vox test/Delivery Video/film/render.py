@@ -147,7 +147,7 @@ enc = encoder(seg, RW, RH, a.fps, a.crf, a.preset, 2)
 t_start = time.time()
 for k, fi in enumerate(range(f0, f1)):
     t = a.t0 + fi / a.fps
-    enc.stdin.write(np.ascontiguousarray(film.frame(t, fi)).tobytes())
+    enc.stdin.write(np.ascontiguousarray(film.frame(t, int(round(t * a.fps)))).tobytes())     # absolute frame index (as stills)
     if k % 120 == 0:
         el = time.time() - t_start; rate = (k + 1) / max(el, 1e-6)
         print(f'[w{a.worker}] {k}/{f1 - f0} frames  {rate:.2f} fps  eta {(f1 - f0 - k) / max(rate, 1e-6) / 60:.1f} min', flush=True)

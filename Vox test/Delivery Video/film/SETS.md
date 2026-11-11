@@ -43,6 +43,7 @@ All builders are in `SETS` and `build()`.
 - `on_way` (sender "Lily" in a child's hand)
 
 The two in-app photos are rendered from the real sets plus the `characters.py` figures and cached once per size.
+The 3:41 photo is one shared scene, `photo_lily_scene()` (side_yard with Lily in the open lower sash, her hand a short way over the sill onto the tablet's signature box, the driver from behind in the foreground holding the tablet up to her sill and grinning back over his shoulder). It returns `draw(pen, t)` and the crops `full`, `lily`, `arm` and `finger`: the app thumbnail and the film's full-screen `photo` shots draw the same still, so they always match.
 
 ### Inserts
 Use them through `insert(name)`.
