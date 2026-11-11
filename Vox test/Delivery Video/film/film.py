@@ -803,7 +803,9 @@ def B_door(F, sh):
     px, py = p.get('px', 0.0), p.get('py', -40.0)
     off = p.get('post_off')
     fr = p.get('frame')
-    if fr in ('med', 'close') and A and off is None:              # frame the first person: chest (med) or face (close)
+    if fr in ('med', 'close') and A and off is None and not p.get('posts'):   # frame the first person: chest (med) or face (close)
+        # (not with merged 'posts': they set their own zoom, and this offset is sized for the 1.45 / 2.05 crop zoom, so
+        #  under a gentle ~1.1 posts zoom it aimed the doorbell lens above the porch plate and the lens mirrored the set)
         q0, lay0, a0 = A[0]
         bx, by, bw, bh = lay0._box(sh.t0 + 0.5 * sh.d)
         tx, ty = bx + bw / 2, by + bh * (0.36 if fr == 'med' else 0.1)
