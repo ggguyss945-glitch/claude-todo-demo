@@ -141,7 +141,7 @@ DAWN = (290.6, 350.38); MEMORY = (398.86, 446.33); WARM_END = (628.7, 677.39)
 # limiter taking up to 6 dB, and the narration with them)
 MIX_ARGS = ['--langs', 'en', '--out-name', 'mix.wav', '--master-lufs', '-14', '--tp-max', '-1.0', '--steer', '0.85',
             '--duck', '4', '--bed-rel', '-10.5', '--bed-p50', '-12.5', '--music-lo', '-15', '--music-hi', '-8',
-            '--hit-duck', '3', '--hit-dip', '6', '--score-hits-db', '4', '--tilt', 'v3', '--sub-boost', '4',
+            '--hit-duck', '3', '--hit-dip', '6', '--score-hits-db', '2', '--tilt', 'v3', '--sub-boost', '4',
             '--glue-max', '1.5', '--voice-plr', '12', '--beds-db', '-3', '--events-db', '-1.5', '--bed-ceiling', '-4']
 
 
@@ -495,6 +495,14 @@ def music_v3(ev, layers, sfx):
             continue
         keep.append(e)
     st['swells kept'] = sum(1 for e in keep if e['type'] == 'swell')
+    ch = [(c - CARD_GAP - 0.05, c - 0.02) for c in cards]   # nothing hits inside a card's hole (the 203.10 braam filled it)
+    n0 = len(keep)
+    keep = [e for e in keep if not (e['type'] in ('hit', 'braam', 'stinger', 'sub_drop') and any(a < e['t'] < b for a, b in ch))]
+    st['hits in card holes'] = n0 - len(keep)
+    for c in sfx:
+        if c['name'] in ('braam', 'impact_hit', 'stinger', 'sub_drop') and any(a < c['t'] < b for a, b in ch):
+            c['gain_db'] = -60.0; c['hit'] = False; c['note'] = 'v3: muted (inside a card hole) ' + (c.get('note') or '')
+            st['sfx hits in card holes'] += 1
     return keep, dict(st), holes
 
 

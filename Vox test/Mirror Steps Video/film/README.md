@@ -90,7 +90,9 @@ python3 tools/sound_ab.py _work/mix/final_v2 _work/mix/v3_test _work/mix/v3_test
 - The reference study (voice and bed separated with sherpa-onnx UVR MDX-NET Voc_FT): stadium whole, the other four in
   stretches (`_work/review/snd_v3/ref/sep_win.sh`: hooks, cards, reveals, climaxes, 13 min in all; the whole films
   were too heavy next to a render). `snd_env.py` (K-weighted loudness, bands, onsets) -> `snd_study.py` (per-film
-  numbers) -> `snd_compare.py` (pooled table). Envelopes in `_work/review/snd_v3/env*/`.
+  numbers) -> `snd_compare.py` (pooled table). Envelopes in `_work/review/snd_v3/env*/` (kept); the decoded reference
+  mixes and stadium's separated stems were deleted (2.2 GB; `ref/sep_all.sh` re-makes them, about 1 s per second of audio
+  on 2 threads); the stretches' stems stay in `_work/review/snd_v3/ref/win/<film>_<t0>/`.
 
 ### Sound v3: what the references do, and the rework
 The owner: the SFX and music need rework, taking inspiration from how the references build tension. Measured on the five
@@ -143,6 +145,35 @@ What changed (all in the pipeline, rebuilt from `film_events.json`):
   limiter take 6 dB and the narration with it), hits' punch +4 dB to -2.5 dBTP (was +6 to -1). The voice chain's own
   true-peak limiter is back at v2's range (`--voice-plr 12`, r1 13: set for -16 LUFS, at -14 it left the plosives to the
   master limiter). The narration itself, its timing and its line FX are unchanged.
+
+Measured (`snd_compare.py`; references: whole mixes for the mix rows, the separated stretches pooled for the bed rows;
+"rel voice" = LU relative to the narration's integrated loudness; v3 = `_work/mix/v3_test`):
+
+| measure | v2 r1 (`final_v2`) | v3 test | references |
+|---|---|---|---|
+| mix integrated / true peak | -16.05 LUFS / -1.7 dBTP | -14.04 LUFS / -1.2 dBTP | -14.4 .. -17.2 LUFS |
+| mix LRA (EBU-style) | 3.0 | 2.4 | 3.5 .. 5.6 (the narrator's own range, see above) |
+| mix momentary max over integrated | +5.3 | +4.9 (the narration's own peak; hits stay under it) | +6.5 .. +8.8 |
+| master limiter max / time over 1 dB | 5.6 dB / 0.35 % | 4.0 dB / 0.32 % | |
+| mix drop-outs a minute (critic's measure) | 1.71 | 0.86 | 0.14 .. 1.85 |
+| bed integrated, rel voice | -8.2 | -10.7 | -11.6 |
+| bed short-term p10 / p50 / p90 | -20.5 / -14.4 / -5.1 | -17.4 / -13.0 / -7.6 | -17.4 / -13.0 / -9.1 |
+| bed loudness range | 17.7 | 10.8 | 9.3 |
+| bed under speech / in pauses | -15.9 / -15.0 | -13.8 / -12.0 | -14.2 / -10.4 |
+| voice over bed at 1-4 kHz in speech, p10 / p50 | 7.4 / 23.7 dB | 9.8 / 23.4 dB | 9.2 / 20.8 dB |
+| bed swells a minute | 2.3 | 1.1 | 1.9 |
+| bed drop-outs a minute, length p50 | 2.8, 1.3 s | 1.5, 1.0 s (9 true silences of 1.15-1.8 s) | 1.0, 0.5 s |
+| rule card: bed at -0.5 / 0 / +0.5 / +2 s from "Rule" | -0.6 / -4.3 / -10.2 / -17.3 | -10.0 / -7.4 / -5.6 / -14.5 | -10.8 / -7.0 / -7.7 / -15.1 (stadium) |
+| bed onsets a minute (strong) | 38.1 (5.7) | 42.9 (6.1) | 18.4 (0.6) |
+| bed under 250 Hz; 20-60 / 60-250 Hz over 250 Hz-1 kHz | 70 %; +1.7 / +2.0 dB | 80 %; +4.4 / +3.5 dB | 87 %; +8.8 / +6.5 dB |
+
+Not met, and why: the mix's loudness range and momentary max (the references' come from their narrator: with our evenly
+read narration fixed, a steady bed gives 2.3-2.5 LU; review round 1's 3.0 came from a choppy bed peaking 5 LU under the
+voice, which the references never do; riding the narration -1.5 dB in the dawn / memory / ending and +1 dB in the climax
+would add about 1 LU, if the owner allows touching the voice's level); the bed's onsets (the cut UI sounds were quiet
+or never rendered; what remains is foley on the picture's actions, 84 footsteps, the ambience beds' birds and crickets
+and the music's own notes); the sub weight is half way (more ate the true-peak headroom at -14 LUFS).
+Before / after excerpts (voice-matched A/B, 10 moments): `_work/mix/v3_test/excerpts/` with `README.txt`.
 
 ## 4. Deliver (English only)
 ```
@@ -210,7 +241,7 @@ if wanted. The picture is kept.
   (`_work/review/v2_r1/motion_check_*.mp4`, 480x270 60 fps): 167 spikes and 469 jerks against the critic's 282 and 681 on v2;
   what remains is mostly deliberate (glitches, white flashes, stamps, the loop rewinds, giant numbers) and the 0.45-0.5 s
   transition blends. The travelling shots' room composite scans clean (`tools/dyn_flicker.py`).
-- Mix (`_work/mix/final_v2`): -16.05 LUFS, -1.7 dBTP, limiter max 5.6 dB (v2 6.1), glue p95 0.6 dB; the critic's envelope tool:
+- Mix (`_work/mix/final_v2`; sound v3's test and its numbers are in section 3): -16.05 LUFS, -1.7 dBTP, limiter max 5.6 dB (v2 6.1), glue p95 0.6 dB; the critic's envelope tool:
   LRA 3.0 (v2 2.4, refs 4.2-5.4), momentary max +6.6 LU (v2 +5.3, refs +7.6-8.4), short-term p95 +1.6 (v2 +1.2, refs
   +2.0-2.4); 618 one-shots (v2 776), UI / edit sounds about 220 -> 73, five real silences.
 - Preview: `_work/preview_v2/preview.mp4` (640x360, 30 fps, the final_v2 mix), contact sheets `contact_1fps_0.jpg` (0-350 s)

@@ -719,8 +719,8 @@ def main():
     if steer:                                         # mirror v3: the act shape (cues.ARC), the leveler off
         Lv_k = SX.lufs_int(key)
         excl = [(a - 0.3, b + 3.0) for a, b, *_ in sil] + [(a - t0 - 0.3, b - t0 + 1.0) for a, b in mcues.get('holes', [])]
-        excl += [(e['t'] - float(e.get('len', 6.0)), e['t'] + 0.5) for e in mc['events'] if e['type'] == 'riser']
-        excl += [(e['t'] - 0.8, e['t'] + 2.5) for e in mc['events'] if e['type'] == 'rule']
+        excl += [(e['t'] - 1.5, e['t'] + 0.5) for e in mc['events'] if e['type'] == 'riser']     # the riser's peak only
+        excl += [(e['t'] - 0.8, e['t'] + 1.5) for e in mc['events'] if e['type'] == 'rule']
         arc = [[p[0] - t0, p[1]] for p in mcues['arc']]
         music, lev = steer_music(music, arc, Lv_k, excl, duck_db=A.duck, strength=A.steer)
         log(f'music steered to the arc (strength {A.steer}): gain p5/p50/p95 {np.percentile(lev, 5):+.1f} / '
