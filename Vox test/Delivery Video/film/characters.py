@@ -1,4 +1,4 @@
-"""characters.py: the cast, their creepy faces and an acting timeline for "If A Police Officer Knocks..." v2.
+"""characters.py: the cast, their creepy faces and an acting timeline (police v2 cast + the delivery film cast).
 
 Everything draws with skia in the engine's 1920x1080 design space, on any canvas the engine hands a Layer (camera zoom and
 render size are already in the canvas matrix). Line weight follows the VISUAL_SPEC: about 8 design px on close-ups and
@@ -155,6 +155,38 @@ v2.1 additions (character fixer; everything above still works unchanged)
     drawn pale with a darker pressed rim (hand_on_glass).
     Self-test: python3 characters.py --selftest (snap override, blink length, phone at the ear, lip-sync correlation).
 
+Delivery film additions ("If A Delivery Driver Rings Your Doorbell At 3 AM..."; the police cast above still works)
+    Cast: 'driver' (Nightline courier: brown shirt, crescent NIGHTLINE patch, name tag NO. 307, brown cap with a long bill
+        whose shadow hides the eyes, work boots, keys on a carabiner; the officer's creepy face, gaunt, never blinks),
+        'mom' (the police mum in a robe, no glasses, slippers), 'lily' (8: big head, bob with bangs, star clip, moon-print
+        pajamas, bare feet), 'dad' (21 years ago: flannel, moustache), 'you' (now in socks). Times below are FILM time.
+    Driver smile: DRIVER_STAGES 0..5 + 'off'; DRIVER_ARC = [(t, stage, transition s)] applied under every clip (Acting
+        arc=None uses the cast's arc, arc=False switches it off); driver_stage(t) -> params; a.smile_stage(t0, stage, t1)
+        overrides a window; a.smile_arc(arc|None). talk(..., lag=None): the driver's mouth lags the voice 0.2 s.
+    Driver clips: carry_tablet(t0, t1, side) | hold_tablet_up(t0, t1, side, screen, height) | ring_bell(t0, side=0) ->
+        doorbell_chime | tap_label(t0, n, side, spacing, target) -> box_tap | tilt_box(t0, t1, side) -> box_creak |
+        lean_close(t0, dur, t1, tilt, side) | listen_tilt(t0, t1, side, angle) | slow_look_side(t0, dur, side, back) |
+        look_at_box(t0, t1, side) | set_box_down(t0, dur, side) -> box_drop, box_scrape | take_photo(t0, side) ->
+        camera_shutter (pose.tablet_flash) | walk_away(t0, t1) -> footsteps | climb_in(t0) -> van_step, car_door_close |
+        reach_up(t0, t1, side, prop, stretch, grow) (the too-long arm: stretch 1 = twice its length) |
+        eye_flash(t0, dur) -> stinger (pose.eyeshine: pupils shine white over the brim shadow) | reach(t0, t1, side, out,
+        down, fwd, shape) generic.
+    Family clips: mom squint_light, reach_chain -> chain_lock rattles, hands_over_mouth -> breath gasp, shaking_hand,
+        sit_floor; tremble(t0, t1, amp); Lily lean_out(t0, t1, side, reach_t) -> touch_tap, sleepy; dad sign -> touch_tap,
+        stylus_scribble, drop_keys -> keys_drop; you look_at_phone, catch_wrist -> cloth_rustle, hold_close, push_door ->
+        door_creak. escalate(a, t0, t1, kind) = the film's acting arc (driver twitches by act, none while his face is
+        still 435.8-446.4 s; FEAR_ARC tremble for you / mom).
+    Props: draw_box(pen, x, y, h, BoxActing.at(t), t, view, label, to, tape) + BoxActing (knock(t0) two-then-one ->
+        box_knock, knock_loop(t0, t1, period, accel), tilt, slide -> box_scrape, cut); draw_box_inside (sunrise, rusted
+        keys); draw_tablet(pen, cx, cy, size, screen 'sign'|'sent'|'camera'|'off'|'glow', sig None|'initial'|'lily', ink,
+        ts, glitch, flash); props 'tablet' / 'tablet_back' / 'stylus' / 'keys_dad' in hands (pose.tablet_screen,
+        tablet_ink, tablet_flash); draw_keys_bowl(pen, x, y, size, drop, hand) (KEYS_DROP_IMPACT); draw_keyring(rust).
+    Helpers: hand_pos(who, pose, side, x/y_feet/height | cx/cy/scale) -> (wrist, fingertip); draw_arm(...) draws one
+        arm alone (a figure clipped by a window sill with its reaching arm over the sill). light keys: under (screen /
+        tablet uplight colour) + under_a, brim (driver's bill shadow strength, default 1).
+    Pose fields: eyeshine, floor, tiptoe, hl_/hr_stretch, hl_/hr_shake, tablet_ink, tablet_flash, tablet_screen.
+    See CAST.md for the beat map and sheets (W/cast/*.jpg, tools/cast_sheets.py).
+
 Typical use in a shot
     a = Acting('officer', seed=7, height=700); a.stare(0); a.creep_smile(1.0, 3.5); ev = a.knock(0.4)
     Layer(a.depth(1.0), lambda pen, t: draw(pen, 'officer', 960, 905, 700, a.at(t), aim=(960, 470)), 'officer', ref_depth=1.0)
@@ -244,12 +276,12 @@ _NIGHTLINE = dict(shirt='#5b3f2b', shirt_sh='#3d2a1d', shirt_hi='#7c5b42', trous
                   tag='#e6dfcc', tag_ink='#2a2420', shoes='#21170f', belt='#1d140d', buckle='#a3967c', top='#5b3f2b',
                   top_sh='#3d2a1d', top_hi='#7c5b42')
 CAST['driver'] = dict(
-    outfit='courier', hat='courier', hair='short', sex='m', hh=178.0,
+    outfit='courier', hat='courier', hair='crop', sex='m', hh=178.0,
     head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120], head_ws=[0, 53, 77, 90, 93, 91, 85, 73, 55, 31, 0],
     eye_dx=42, eye_y=-10, eye_r=21.5, pupil=0.62, brow_th=9.5, nose_len=30, mouth_y=63, mouth_w=25,
     skin='#c0b1aa', skin_sh='#8a7b7b', skin_dp='#554851', blush='#c39a9c', lip='#86696b', stubble='#575a64', stub=0.4,
     hair_c='#2a221e', brow_c='#1c1717', bags=1.2, age=0.6, blink_rate=0.0, lock=1.0, micro=0.3, breath=0.6,
-    scar=0, ring=0, part=0, lashes=0.0, gaunt=1.0, grin_k=1.1, tooth_w=11.0, talk_lag=0.2, feet='boots',
+    scar=0, ring=0, part=0, lashes=0.0, gaunt=1.0, grin_k=1.1, tooth_w=11.0, talk_lag=0.2, feet='boots', grin_lim=0.97,
     body=dict(sh=124, ch=116, wa=100, hip=104, arm=(50, 40), leg=(60, 48), neck=45, hand=1.04),
     cloth=dict(_NIGHTLINE))
 CAST['mom'] = dict(
@@ -885,6 +917,10 @@ def _mouth_geom(sp, P, t):
     hw = sp['mouth_w'] * (1.0 + 0.32 * wd - 0.48 * rd + 0.12 * o) + 10.0 * max(sm, 0) + 54.0 * g * sp.get('grin_k', 1.0)
     hw = max(hw, 8.0)
     cy = my - 12.0 * sm - 15.0 * g - 3 * o * (1 - rd)
+    if sp.get('grin_lim'):                       # delivery: the grin saturates just inside the jaw line (never past it)
+        lim = sp['grin_lim'] * float(np.interp(cy, sp['head_ys'], sp['head_ws'])) * (1.0 + 0.05 * g)
+        k0 = 0.78 * lim
+        if hw > k0: hw = k0 + (hw - k0) * (lim - k0) / (hw - k0 + lim - k0)
     side_lift = 9.0 * P.m_side
     up_mid = my + 3.0 * g + 1.5 * max(sm, 0) - 5.0 * o * rd - 1.0 * o - 3.0 * min(sm, 0) * 0.3
     open_h = 42.0 * o * (1 + 0.2 * rd) + 31.0 * g + 4.0 * max(sm, 0) * clamp(P.teeth) * (1 - g)
@@ -1184,6 +1220,11 @@ def _hair_region(c, hm, sp, P, det, sil, t):
             a = np.abs(ph)
             return np.interp(a, [0, 1.05, 1.25, 1.62, 2.3, PI], [-74, -72, -30, -24, 12, 30])
         grow = 3.0
+    elif style == 'crop':                                        # driver: short back and sides down to a low nape
+        def yf(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 1.05, 1.25, 1.62, 2.1, PI], [-74, -72, -26, -18, 40, 74])
+        grow = 3.0
     elif style == 'bun':
         def yf(ph):
             a = np.abs(ph)
@@ -1227,7 +1268,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     c.fill(hair, hc)
     with c.clip(hair):
         c.radial(None, -30, -90, 175, [(0, hhi, 120), (0.5, hc, 0), (1, hsh, 200)], clip=False)
-        if det >= 1 and style in ('messy', 'short', 'bun'):
+        if det >= 1 and style in ('messy', 'short', 'bun', 'crop'):
             for k in range(7 if det >= 2 else 4):
                 x_ = -70 + k * 22 + 6 * part
                 c.line(smooth([(x_, -112), (x_ + 10 * part + 6, -92), (x_ + 4 + 8 * part, -70)], False), c.lw * 0.3, hsh, 150)
@@ -1453,6 +1494,20 @@ def _moustache(c, hm, sp, P, det):
     c.line(m, c.lw * 0.6)
 
 
+def _band_path(X0, Y0, X1, Y1):
+    """Union of the quads between two point rows (consistently wound, nonzero fill), so a strip that folds over itself
+    when seen edge-on (a cap brim in profile) still fills."""
+    p = skia.Path()
+    for i in range(len(X0) - 1):
+        q = [(X0[i], Y0[i]), (X0[i + 1], Y0[i + 1]), (X1[i + 1], Y1[i + 1]), (X1[i], Y1[i])]
+        a = sum(q[k][0] * q[(k + 1) % 4][1] - q[(k + 1) % 4][0] * q[k][1] for k in range(4))
+        if abs(a) < 1e-3: continue
+        if a < 0: q = q[::-1]
+        p.addPoly([skia.Point(float(x), float(y)) for x, y in q], True)
+    p.setFillType(skia.PathFillType.kWinding)
+    return skia.Op(p, skia.Path(), skia.PathOp.kUnion_PathOp) or p
+
+
 def _cap_courier(c, hm, sp, P, det, cl, t, light=None):
     """Nightline courier cap: a soft brown six-panel crown hugging the skull, a crescent-moon logo on the front panel and
     a long curved bill that throws the eyes into shadow (their whites and any eyeshine read out of the dark)."""
@@ -1475,15 +1530,27 @@ def _cap_courier(c, hm, sp, P, det, cl, t, light=None):
     X_out, Y_out, _ = hm.map(vx_in * 1.14, np.full_like(phis, vy0 + 4) + 27 * np.cos(phis) ** 0.9, grow + dz_out)
     vis_v = float(V_in[len(V_in) // 2])
     bill = _pts_path(np.concatenate([X_in, X_out[::-1]]), np.concatenate([Y_in, Y_out[::-1]]), True, 0.7)
+    if abs(hm.st) > 0.25: bill = _band_path(X_in, Y_in, X_out, Y_out)
     bk = (light or {}).get('brim', 1.0) * (1.0 - 0.45 * clamp(P.approach))
     if vis_v > -0.2 and bk > 0.01:                                # deep shadow of the bill over the eyes (light['brim'])
         sy_ = float(np.max(Y_out)) - 2
-        c.grad(inter(hm.silhouette(), rect(-140, sy_ - 40, 280, 130)), 0, sy_ - 6, 0, sy_ + 58 + 30 * max(0.0, P.h_nod),
+        fxs = np.linspace(-1.0, 1.0, 11)                          # only on the face front (not the temples / ears)
+        fy0, fy1 = -66.0, sy_ + 70.0
+        fw0, fw1 = float(hm.W(fy0)) * 0.98, float(hm.W(min(fy1, 110.0))) * 0.98
+        TX, TY, TV = hm.map(fxs * fw0, np.full(11, fy0), 2.0)
+        BX, BY, BV = hm.map(fxs[::-1] * fw1, np.full(11, fy1), 2.0)
+        face = _pts_path(np.concatenate([TX, BX]), np.concatenate([TY, BY]), True, 0.6)
+        c.grad(inter(inter(hm.silhouette(), face), rect(-140, sy_ - 40, 280, 130)), 0, sy_ - 6, 0, sy_ + 58 + 30 * max(0.0, P.h_nod),
                [(0, '#080605', min(255, 215 * bk)), (0.45, '#080605', min(255, 140 * bk)), (1, '#080605', 0)])
+    if abs(hm.st) > 0.25 and abs(hm.ct) < 0.97:                   # turned: the brim's thickness / top surface as a lit band
+        k_ = clamp((abs(hm.st) - 0.25) / 0.5)
+        top_ = union(_band_path(X_in, Y_in - 9 * k_, X_out, Y_out - 7 * k_), _band_path(X_out, Y_out - 7 * k_, X_out, Y_out))
+        top_ = union(top_, _band_path(X_in, Y_in - 9 * k_, X_in, Y_in))
+        if vis_v <= 0: top_ = minus(top_, hm.silhouette(grow=grow))
+        c.fill(top_, mix(cl['bill'], '#ffffff', 0.12)); c.line(top_, c.lw * 0.8)
     if vis_v <= 0:
         bb_ = minus(bill, hm.silhouette(grow=grow))
         c.fill(bb_, cl['bill']); c.line(bb_, c.lw)
-    c.fill(dome, brown)
     c.radial(dome, -30 + hm.st * 30, -128, 150, [(0, mix(brown, '#ffffff', 0.18), 255), (0.5, brown, 255), (1, brown_sh, 255)], sy=0.8)
     if det >= 1:
         c.texture(dome, 'fabric', 0.1, 0.5)
@@ -2122,10 +2189,10 @@ def _tablet_screen(c, x0, y0, w, h, screen='sign', ink=1.0, t=0.0, det=2, ts='3:
     c.fill(rrect(x0, y0, w, hb, 3), '#1b2236'); c.fill(rect(x0, y0 + hb * 0.5, w, hb * 0.5), '#1b2236')
     c.fill(minus(oval(x0 + hb * 0.55, y0 + hb * 0.5, hb * 0.3), oval(x0 + hb * 0.68, y0 + hb * 0.4, hb * 0.27)), '#e9cf7e')
     if det >= 2:
-        text(c.cv, 'NIGHTLINE', *c.pt(x0 + w * 0.56, y0 + hb * 0.68), 900, hb * 0.42 * c.s, '#e9cf7e', 255, 0.5, 'center')
-        text(c.cv, 'SIGNATURE REQUIRED', *c.pt(x0 + w / 2, y0 + hb + h * 0.075), 900, h * 0.05 * c.s, '#1b2236', 255, 0.3, 'center')
-        text(c.cv, 'FROM: RETURN', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.14), 800, h * 0.04 * c.s, '#53607a', 255, 0.3, 'left')
-        text(c.cv, ('TO: ' + name) if name else 'TO:', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.195), 800, h * 0.04 * c.s, '#53607a', 255, 0.3, 'left')
+        text(c.cv, 'NIGHTLINE', *c.pt(x0 + w * 0.56, y0 + hb * 0.68), 900, hb * 0.42 * c.s, '#e9cf7e', 255, 0.08, 'center')
+        text(c.cv, 'SIGNATURE REQUIRED', *c.pt(x0 + w / 2, y0 + hb + h * 0.075), 900, h * 0.05 * c.s, '#1b2236', 255, 0.03, 'center')
+        text(c.cv, 'FROM: RETURN', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.14), 800, h * 0.04 * c.s, '#53607a', 255, 0.04, 'left')
+        text(c.cv, ('TO: ' + name) if name else 'TO:', *c.pt(x0 + w * 0.08, y0 + hb + h * 0.195), 800, h * 0.04 * c.s, '#53607a', 255, 0.04, 'left')
     else:
         for k, ww in enumerate((0.7, 0.45, 0.35)):
             c.fill(rect(x0 + w * (0.5 - ww / 2 if k == 0 else 0.08), y0 + hb + h * (0.05 + 0.065 * k), w * ww, h * 0.03), '#8a94a8')
@@ -2146,13 +2213,13 @@ def _tablet_screen(c, x0, y0, w, h, screen='sign', ink=1.0, t=0.0, det=2, ts='3:
         c.line(pth, max(1.6, c.lw * 0.65), '#1a2a6c')
     # timestamp + glitch bar
     if det >= 2 and ts:
-        text(c.cv, ts, *c.pt(x0 + w * 0.93, y0 + h * 0.93), 800, h * 0.045 * c.s, '#53607a', 255, 0.2, 'right')
+        text(c.cv, ts, *c.pt(x0 + w * 0.93, y0 + h * 0.93), 800, h * 0.045 * c.s, '#53607a', 255, 0.03, 'right')
     if glitch > 0.01:
         gy = y0 + h * (0.2 + 0.6 * ((t * 7.3) % 1.0))
         c.fill(rect(x0, gy, w, h * 0.03), '#ff2a3a', 120 * glitch); c.fill(rect(x0 + 3, gy + h * 0.03, w, h * 0.012), '#2af0ff', 90 * glitch)
     if screen == 'sent':
         c.fill(rect(x0, by - h * 0.04, w, h * 0.16), '#2f9a5a', 235)
-        if det >= 2: text(c.cv, 'RETURN COMPLETE', *c.pt(x0 + w / 2, by + h * 0.065), 900, h * 0.05 * c.s, '#ffffff', 255, 0.3, 'center')
+        if det >= 2: text(c.cv, 'RETURN COMPLETE', *c.pt(x0 + w / 2, by + h * 0.065), 900, h * 0.05 * c.s, '#ffffff', 255, 0.04, 'center')
     if flash > 0: c.fill(scr, '#ffffff', 255 * flash)
     c.line(scr, c.lw * 0.5)
 
@@ -2174,6 +2241,11 @@ def _tablet_body(c, det, P=None, t=0.0, back=False, screen=None, **kw):
         if det >= 1:
             c.line(_multi([poly([(-18, -16 + k * 9), (18, -16 + k * 9)], False) for k in range(5)]), c.lw * 0.25, '#2c2e35', 200)
             c.fill(rrect(-16, 30, 32, 12, 2), '#1b2236'); c.fill(minus(oval(-9, 36, 4), oval(-7, 34, 3.6)), '#e9cf7e')
+        c.fill(rrect(-18, -46, 16, 12, 4), '#0d0e12'); c.fill(oval(-10, -40, 4.2), '#2a3446')     # back camera + flash
+        c.fill(oval(6, -40, 3.2), '#e8e2c8')
+        fl = getattr(P, 'tablet_flash', 0.0) if P is not None else kw.get('flash', 0.0)
+        if fl > 0.01:
+            c.glow(6, -40, 120, 120, '#ffffff', 230 * fl); c.glow(6, -40, 40, 40, '#ffffff', 255 * fl)
         return
     scr_kind = screen or (getattr(P, 'tablet_screen', 'sign') if P is not None else 'sign')
     ink = getattr(P, 'tablet_ink', 1.0) if P is not None else kw.get('ink', 1.0)
@@ -2189,8 +2261,13 @@ def _tablet_body(c, det, P=None, t=0.0, back=False, screen=None, **kw):
     c.fill(rrect(-8, 40, 16, 6, 2), '#2f6a3a')
     c.line(body, c.lw * 0.8)
     if det >= 1:                                                   # stylus tether coiling off the right edge
-        coil = [oval(32 + 3 + 2.5 * math.sin(k * 0.9 + t), 20 + k * 6, 3.2, 2.0) for k in range(7)]
-        c.line(_multi(coil), c.lw * 0.35, '#5a5d66', 230)
+        pts = []
+        for k in range(90):
+            u = k / 89.0
+            bx_ = 32 + 6 * u + 2.5 * math.sin(t * 1.3 + u * 3)
+            pts.append((bx_ + 3.2 * math.cos(u * 2 * PI * 11), 14 + 70 * u + 1.6 * math.sin(u * 2 * PI * 11)))
+        cp = smooth(pts, False, 0.6)
+        c.line(cp, c.lw * 0.7, LINE, 230); c.line(cp, c.lw * 0.35, '#5a5d66', 255)
 
 
 def _keyring(c, det, t=0.0, rust=0.0, n=4, spread=1.0, beads=True, jangle=0.0):
@@ -2609,7 +2686,7 @@ def _courier_front(c, sp, B, rows, P, det, t):
         pc.fill(minus(oval(-21, 0, 10), oval(-17, -4, 9)), cl['moon'])
         if det >= 2:
             c.cv.save(); m = skia.Matrix(); m.preConcat(pc.M); c.cv.concat(m)
-            text(c.cv, 'NIGHTLINE', 8, 4, 900, 9.5, cl['moon'], 255, 0.6, 'center'); c.cv.restore()
+            text(c.cv, 'NIGHTLINE', 8, 3.5, 900, 9.0, cl['moon'], 255, 0.06, 'center'); c.cv.restore()
         elif det >= 1:
             pc.fill(rect(-6, -2, 32, 4), cl['moon'], 200)
     X, Y, v, s_ = B.surf(-ch * 0.47, yC - 68, 6, False, rows)
@@ -2617,7 +2694,7 @@ def _courier_front(c, sp, B, rows, P, det, t):
         tg = rrect(X - 27 * s_, Y - 9 * s_, 54 * s_, 18 * s_, 3 * s_)
         c.fill(tg, cl['tag']); c.line(tg, lw * 0.45)
         if det >= 2:
-            text(c.cv, 'NO. 307', X, Y + 4.2 * s_, 900, 11 * s_, cl['tag_ink'], 255, 0.6, 'center')
+            text(c.cv, 'NO. 307', X, Y + 4.2 * s_, 900, 11 * s_, cl['tag_ink'], 255, 0.08, 'center')
         elif det >= 1:
             c.fill(rect(X - 17 * s_, Y - 1.5 * s_, 34 * s_, 3 * s_), cl['tag_ink'], 200)
 
@@ -2921,8 +2998,8 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
             _prop(pc, 'phone_back', det, t)
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
         else:
-            pk_ = 1.15 * (1.5 if prop in ('tablet', 'tablet_back') else 1.0)
-            off_ = 30 * (1.9 if prop in ('tablet', 'tablet_back') else 1.0)
+            pk_ = 1.15 * (1.28 if prop in ('tablet', 'tablet_back') else 1.0)
+            off_ = 30 * (2.6 if prop in ('tablet', 'tablet_back') else 1.0)      # tablet: the fingers wrap its near edge
             pc = c.sub(wx + math.sin(math.radians(-hang)) * off_ * hs, wy + math.cos(math.radians(hang)) * off_ * hs, 0, hs * pk_)
             if prop in ('tablet', 'tablet_back'):
                 _prop(pc, prop, det, t, P)
@@ -2966,7 +3043,7 @@ def _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec):
             feet, ((-22, -24), (22, -24), (-24, 58), (24, 58), (-18, 72), (18, 72)))
         top_h = {'boots': -46.0, 'bare': -22.0, 'socks': -26.0, 'slippers': -30.0}.get(feet, -30.0)
         for (hx, hz) in box_:
-            for hy in (0.0, top_h if hz < 40 else top_h * 0.72):
+            for hy in (0.0, top_h if hz < 40 else (top_h * 0.72 if feet != 'shoes' else -22.0)):
                 toe = 34.0 * tip if hz > 40 else 0.0              # tiptoe: heel up, toes stay on the floor
                 X, Y, s, Z = B.p3(ax + hx, ay + 38 + hy - B.bob + toe, az + hz, upper=False)
                 pts.append((X, Y))
@@ -3090,11 +3167,12 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     back_view = B.ct < -0.15
     # hood behind the neck
     for side in behind: _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
+    floor_late = B.floor > 0.5 and not upper_only          # sitting on the floor: knees up in front of the torso
     if not upper_only:
         if o not in ('cardigan', 'robe'):
-            _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
+            if not floor_late: _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
             _pelvis(c, sp, B, rows, legc, legsh, det)
-        else:
+        elif not floor_late:
             _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
     elif o not in ('coat', 'robe'):
         _pelvis(c, sp, B, rows, legc, legsh, det)
@@ -3166,6 +3244,7 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     if o == 'police': _police_belt(c, sp, B, rows, P, det, back_view)
     elif o == 'courier': _courier_belt(c, sp, B, rows, P, det, back_view)
     elif o == 'robe': _robe_belt(c, sp, B, rows, P, det, back_view, t)
+    if floor_late: _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
     # head
     pv = B.p3(0, B.yc - 22 + P.h_dy, 0)
     hs = sp['hh'] / 240.0 * pv[2] * P.h_scale
@@ -3220,6 +3299,52 @@ def draw_bust(pen, who, cx, cy, scale=1.0, pose=None, detail=None, light=None, t
     c = c0.sub(cx - 0 * s, ty - yh * s, 0.0, s)
     det = _auto_detail(pen, head_px) if detail is None else detail
     return _figure(c, who, P, det, t, light, upper_only=True)
+
+
+def draw_arm(pen, who, side=1, pose=None, x=None, y_feet=None, height=None, cx=None, cy=None, scale=None, light=None,
+             detail=None, t=None):
+    """Draw ONE arm (sleeve, cuff, hand and any held prop) exactly where draw() (x, y_feet, height) or draw_bust() (cx, cy,
+    scale) puts it. For a figure clipped by a window frame, a sill or a car door whose reaching arm must come over the
+    edge: draw the figure clipped, the sill, then draw_arm on top (Lily leaning out of her window to the tablet)."""
+    P = _as_pose(pose); t = P.t if t is None else t
+    sp = CAST[who]
+    if cx is not None:
+        k = 1.0 + 1.1 * clamp(P.approach)
+        head_px = 600.0 * (scale or 1.0) * k
+        s_ = head_px / sp['hh']
+        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(cx, cy + 60.0 * (scale or 1.0) * clamp(P.approach) - (-1000 + sp['hh'] / 2) * s_, 0.0, s_)
+    else:
+        s_ = height / 1000.0; head_px = sp['hh'] * s_
+        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(x + P.dx, y_feet + P.dy, 0.0, s_)
+    det = _auto_detail(pen, head_px) if detail is None else detail
+    B = Body(sp, P)
+    skin, skin_sh, _ = _skin_cols(sp, P, light)
+    sleeve, sleeve_sh = _limb_cols(sp)[:2]
+    _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
+
+
+def hand_pos(who, pose, side=1, x=None, y_feet=None, height=None, cx=None, cy=None, scale=None):
+    """Design-space (wrist, fingertip) of one hand as draw() (x, y_feet, height) or draw_bust() (cx, cy, scale) would place
+    it (no aim / approach slide). Use it to pin a prop or a second character to a hand, e.g. the tablet under Lily's
+    finger, or mom's wrist for 'you' to catch. side +1 = character's left hand."""
+    P = _as_pose(pose); sp = CAST[who]
+    B = Body(sp, P)
+    S, E, W = _arm_data(sp, B, P, side)
+    wx, wy, ws, _ = B.p3(*W)
+    ex, ey, _, _ = B.p3(*E)
+    L = math.hypot(wx - ex, wy - ey) or 1.0
+    fx, fy = wx + (wx - ex) / L * 60.0 * ws, wy + (wy - ey) / L * 60.0 * ws
+    up = getattr(P, ('hl_' if side > 0 else 'hr_') + 'up')
+    if up > 0.5: fx, fy = wx, wy - 60.0 * ws
+    if cx is not None:
+        k = 1.0 + 1.1 * clamp(P.approach)
+        s = 600.0 * (scale or 1.0) * k / sp['hh']
+        ty = cy + 60.0 * (scale or 1.0) * clamp(P.approach)
+        ox, oy = cx, ty - (-1000 + sp['hh'] / 2) * s
+    else:
+        s = height / 1000.0
+        ox, oy = x + P.dx, y_feet + P.dy
+    return (ox + wx * s, oy + wy * s), (ox + fx * s, oy + fy * s)
 
 
 def draw_head(pen, who, cx, cy, size, pose=None, detail=2, light=None, t=None):
@@ -3476,11 +3601,46 @@ def _env_db(env, t):
     return float(env[i] * (1 - u) + env[i + 1] * u)
 
 
+# ------------------------------------------------------------------ delivery: the driver's smile, stage by stage
+# Every stage holds the same keys so stages blend cleanly. The eyes never smile (lock 1), the pupils shrink and the
+# whites grow as the smile widens. 'off' = "his face is perfectly still" (435.8 s).
+_STAGE_KEYS = ('smile', 'grin', 'teeth', 'gums', 'm_open', 'm_press', 'wide', 'pupil', 'bloodshot', 'brow_up', 'still', 'life')
+DRIVER_STAGES = {
+    0: dict(smile=0.10, grin=0.00, teeth=0.00, gums=0.0, m_open=0.00, m_press=0.20, wide=0.15, pupil=0.62, bloodshot=0.15, brow_up=0.05, still=0.30, life=1.0),
+    1: dict(smile=0.62, grin=0.05, teeth=0.00, gums=0.0, m_open=0.00, m_press=0.00, wide=0.20, pupil=0.60, bloodshot=0.20, brow_up=0.12, still=0.45, life=1.0),
+    2: dict(smile=0.85, grin=0.25, teeth=0.70, gums=0.0, m_open=0.00, m_press=0.00, wide=0.28, pupil=0.55, bloodshot=0.30, brow_up=0.20, still=0.55, life=1.0),
+    3: dict(smile=0.95, grin=0.45, teeth=0.95, gums=0.10, m_open=0.02, m_press=0.0, wide=0.38, pupil=0.50, bloodshot=0.40, brow_up=0.28, still=0.65, life=1.0),
+    4: dict(smile=1.00, grin=0.68, teeth=1.00, gums=0.35, m_open=0.04, m_press=0.0, wide=0.48, pupil=0.44, bloodshot=0.50, brow_up=0.38, still=0.70, life=1.0),
+    5: dict(smile=1.00, grin=1.15, teeth=1.00, gums=0.85, m_open=0.12, m_press=0.0, wide=0.60, pupil=0.36, bloodshot=0.65, brow_up=0.48, still=0.75, life=1.0),
+    'off': dict(smile=0.0, grin=0.0, teeth=0.0, gums=0.0, m_open=0.0, m_press=0.55, wide=0.45, pupil=0.50, bloodshot=0.40, brow_up=0.10, still=1.0, life=0.12),
+}
+# (film time s, stage, transition s), from the delivery timeline tags: smile 66.24, 'Just finish it' ~139 (a minute before
+# 'wider' at 196.5), 'Who's the lucky one' 184.8, leans close 340.9, no_smile 435.8, wider2 446.4.
+DRIVER_ARC = [(-1e9, 0, 0.0), (66.24, 1, 1.8), (139.0, 2, 2.0), (184.82, 3, 2.2), (340.87, 4, 2.0), (435.84, 'off', 0.45),
+              (446.44, 5, 2.4)]
+CAST['driver']['arc'] = DRIVER_ARC
+
+
+def driver_stage(t, arc=None):
+    """Driver smile parameters at film time t (dict of _STAGE_KEYS), blending stage changes over their transition."""
+    arc = DRIVER_ARC if arc is None else arc
+    i = 0
+    for k, a in enumerate(arc):
+        if a[0] <= t: i = k
+    st = DRIVER_STAGES[arc[i][1]]
+    tr = arc[i][2] if len(arc[i]) > 2 else 1.5
+    if i == 0 or tr <= 0 or t >= arc[i][0] + tr: return dict(st)
+    pv = DRIVER_STAGES[arc[i - 1][1]]
+    u = ease_in_out((t - arc[i][0]) / tr)
+    return {k: pv[k] + (st[k] - pv[k]) * u for k in _STAGE_KEYS}
+
+
 class Acting:
     """Timeline of acting clips for one character. See the module docstring for the clip vocabulary."""
 
-    def __init__(self, who='officer', seed=0, height=700.0, expr='neutral', blink=None, life=1.0):
+    def __init__(self, who='officer', seed=0, height=700.0, expr='neutral', blink=None, life=1.0, arc=None):
         self.who, self.seed, self.height = who, int(seed), float(height)
+        self._arc = CAST[who].get('arc') if arc is None else (arc or None)   # driver: the smile arc in film time
         self.life_k = float(life)
         sp = CAST[who]
         self.sp = sp
@@ -3561,6 +3721,7 @@ class Acting:
         P = Pose()
         P.t = t
         P.mix(self.base); P.mix(EXPR[self.expr0])
+        if self._arc: P.mix(driver_stage(tf, self._arc), 1.0)
         sd = self.seed * 7 + 3
         # idle: breathing, micro head motion, sway, wandering eyes
         P.breath = 0.5 + 0.45 * math.sin(2 * PI * tf / 3.9 + sd) + 0.08 * noise1(tf * 0.4, sd)
@@ -3621,6 +3782,11 @@ class Acting:
             if fk > 0.05:
                 a_, h_, n_ = self._step(self._nv_t, self._nv_v, tf, 0.18)
                 P.h_tilt += a_ * fk; P.h_turn += h_ * fk; P.h_nod += n_ * fk
+        if self.sp.get('child') and lf > 0.01:          # Lily: a child is never still (slow sway, head drift, glances)
+            P.h_tilt += 5.0 * lf * noise1(tf * 0.27, sd + 41); P.sway += 5.0 * lf * noise1(tf * 0.22, sd + 42)
+            P.h_turn += 0.06 * lf * noise1(tf * 0.18, sd + 43); P.tilt += 1.2 * lf * noise1(tf * 0.2, sd + 44)
+            a_, h_, n_ = self._step(self._nv_t, self._nv_v, tf, 0.35, ease_in_out)
+            P.h_tilt += 0.6 * a_ * lf; P.h_turn += 0.5 * h_ * lf; P.h_nod += 0.5 * n_ * lf
         tr = clamp(P.tremble) * (0.0 if self.creepy else 1.0) * lf
         if tr > 0.12:
             P.h_dx += 0.5 * tr * noise1(tf * 10.0, sd + 31)
@@ -4139,15 +4305,377 @@ class Acting:
         """Scale the v2.1 idle life (drift, re-settles, weight shifts, micro twitches, shiver) over a window."""
         return self.set(t0, t1, fade, life=amount)
 
+    # ------------------------------------------------------------------ delivery film clips
+    def _shoulder_y(self):
+        return -1000.0 + self.sp['hh'] + 44.0 + 20.0                      # shoulder joint (body units, feet = 0)
+
+    def smile_stage(self, t0, stage, t1=None, fade=0.4):
+        """Driver: hold a smile stage (DRIVER_STAGES key) over a window, on top of the film-time arc."""
+        d = DRIVER_STAGES[stage]
+        return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
+
+    def smile_arc(self, arc=DRIVER_ARC):
+        """Set (or with None switch off) the film-time smile arc that sits under every clip (the driver has it by default)."""
+        self._arc = arc or None
+        return self
+
+    def eye_flash(self, t0, dur=0.5, peak=1.0):
+        """Eyeshine: the pupils catch the porch light and shine white like an animal's (rise 60 ms, hold, fall 150 ms).
+        Returns a 'stinger' event (params kind='eye_flash')."""
+        def fn(P, t):
+            if t < t0 or t > t0 + dur + 0.2: return
+            u = min(prog(t, t0, t0 + 0.06), 1.0 - prog(t, t0 + dur - 0.05, t0 + dur + 0.15))
+            P.eyeshine = max(P.eyeshine, peak * ease_out_cubic(u)); P.still = max(P.still, 0.9)
+        self._add(t0 - 0.1, t0 + dur + 0.3, fn, real=True)
+        return [self._ev(t0, 'stinger', -6.0, kind='eye_flash')]
+
+    def reach(self, t0, t1=None, side=1, out=200.0, down=60.0, fwd=150.0, shape='grip', up=0.0, fade=0.45, prop=None, rot=None):
+        """Generic reach: the hand goes to (out, down, fwd) body units from its shoulder (out away from the body, down from
+        the shoulder, fwd toward the character's front) and holds until t1 (None = for good)."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease)
+            if w > 0: self._arm(P, side, w, out, down, fwd, shape, up=up, prop=prop, rot=rot)
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def carry_tablet(self, t0=-1e9, t1=None, side=1, fade=0.4):
+        """Driver: the tablet held loosely at his side in one hand (its back to the lens)."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease) if t0 > -1e8 else (1.0 if t1 is None else _env(t, -1e9, t1, 0.0, fade))
+            if w <= 0: return
+            sw = 4.0 * noise1(t * 0.5, self.seed + 4)
+            self._arm(P, side, w, 22.0, 292.0 + sw, 46.0, 'grip', up=0.0, prop='tablet_back')
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def hold_tablet_up(self, t0, t1, side=1, screen='sign', height=0.0):
+        """Driver: raises the tablet to the lens, screen to the camera ("so you can see the empty line"); height > 0 lifts
+        it toward eye level (default: the top edge at his chin, so the grin and the stare stay above the screen).
+        pose.tablet_screen = screen while it is up. Returns a soft cloth rustle."""
+        b = self.sp['body']
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.55, 0.5, ease)
+            if w <= 0: return
+            bob = 3.0 * noise1(t * 1.1, self.seed + 9)
+            self._arm(P, side, w, -(b['sh'] - 17) * 0.55, 135.0 - 150.0 * height + bob, 330.0, 'grip', up=1.0, prop='tablet')
+            if w >= 0.5: P.tablet_screen = screen
+            P.h_nod += 0.03 * w; P.lock = lerp(P.lock, 1.0, w)
+        self._add(t0, t1 + 0.6, fn)
+        return [self._ev(t0 + 0.08, 'cloth_rustle', -12.0), self._ev(t1 + 0.05, 'cloth_rustle', -14.0)]
+
+    def ring_bell(self, t0, side=0.0, hand=None, hold=0.3):
+        """Rings the doorbell. side 0: the bell is the doorbell camera itself: the index finger comes AT the lens from
+        below (growing ~1.3x) and presses; side +-1: a button beside the door at shoulder height. Returns the
+        doorbell_chime event (params kind='ding_dong') at the press."""
+        hs = hand if hand is not None else (int(math.copysign(1, side)) if side else -1)
+        b = self.sp['body']
+        press = t0 + 0.45
+        def fn(P, t):
+            w = _env(t, t0, press + hold, 0.4, 0.4, ease)
+            if w <= 0: return
+            pk = math.exp(-((t - press) / 0.07) ** 2)
+            if side:
+                self._arm(P, hs, w, 300.0 * 0.82 + 20.0 * pk, -10.0, 70.0, 'point', up=0.1)
+                P.turn += 0.08 * side * w; P.h_turn -= 0.08 * side * w
+            else:                                   # the fingertip rises into the bottom of the doorbell frame, huge
+                k = ease_in_out(prog(t, t0, press))
+                self._arm(P, hs, w, 30.0 - (b['sh'] - 17), 150.0 - 40.0 * k, 360.0 + 60.0 * pk, 'point', up=0.95)
+                setattr(P, ('hl_' if hs > 0 else 'hr_') + 'scale', 1.0 + 1.5 * k * w + 0.25 * pk)
+                P.lean += 0.04 * w; P.h_nod += 0.06 * w
+            P.lock = lerp(P.lock, 1.0, w)
+        self._add(t0, press + hold + 0.5, fn)
+        return [self._ev(press, 'doorbell_chime', 0.0, kind='ding_dong', pan=0.0)]
+
+    def tap_label(self, t0, n=2, side=1, spacing=0.42, target=(250.0, 60.0, 80.0)):
+        """Driver: index finger taps the box's shipping label (the box stands beside him on `side`). Returns box_tap events."""
+        out, down, fwd = target
+        taps = [t0 + 0.55 + i * spacing for i in range(n)]
+        end = taps[-1] + 0.5
+        def fn(P, t):
+            w = _env(t, t0, end - 0.3, 0.45, 0.45, ease)
+            if w <= 0: return
+            pk = 0.0
+            for h in taps:
+                d = t - h
+                if -0.1 <= d < 0: pk = max(pk, ease_in_cubic(prog(d, -0.1, 0)))
+                elif 0 <= d < 0.16: pk = max(pk, 1.0 - ease_out_cubic(d / 0.16))
+            self._arm(P, side, w, out + 16.0 * pk, down, fwd, 'point', up=0.15)
+            P.turn += 0.12 * side * w; P.h_turn -= 0.1 * side * w; P.tilt += 1.5 * side * w
+        self._add(t0, end + 0.5, fn)
+        return [self._ev(h, 'box_tap', -8.0, pan=0.3 * side) for h in taps]
+
+    def tilt_box(self, t0, t1, side=1, reach=(210.0, -95.0, 40.0)):
+        """Driver: a hand on top of the box pulls it over so the label faces the camera (pair with BoxActing.tilt)."""
+        out, down, fwd = reach
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.45, 0.45, ease)
+            if w <= 0: return
+            u = ease_in_out(prog(t, t0 + 0.35, t0 + 1.0))
+            self._arm(P, side, w, out - 30.0 * u, down + 10.0 * u, fwd, 'open', up=0.5, rot=-side * 70.0)
+            P.tilt += 2.0 * side * w; P.turn += 0.1 * side * w; P.h_turn -= 0.1 * side * w
+        self._add(t0, t1 + 0.5, fn)
+        return [self._ev(t0 + 0.45, 'box_creak', -10.0, pan=0.3 * side)]
+
+    def lean_close(self, t0, dur=2.2, t1=None, tilt=7.0, side=1, amount=1.0):
+        """Driver: leans right up to the lens ("he's talking to her now"), head tilted, stare locked (lean_in + tilt)."""
+        self.lean_in(t0, dur, t1, amount)
+        self.head_tilt(t0 + 0.3, tilt * side, dur * 1.3, t1)
+        return self
+
+    def listen_tilt(self, t0, t1=None, side=1, angle=24.0, dur=1.7):
+        """Tilts his head like he's listening to a voice somewhere else; the eyes drift up and aside, everything stills."""
+        self.head_tilt(t0, angle * side, dur, t1)
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.8, 0.6)
+            if w <= 0: return
+            P.lock = lerp(P.lock, 0.35, w); P.look_x += 0.4 * side * w; P.look_y -= 0.25 * w
+            P.still = max(P.still, w)
+        return self._add(t0, None if t1 is None else t1 + 0.6, fn)
+
+    def slow_look_side(self, t0, dur=3.2, side=1, back=None, amount=0.85):
+        """His head turns slowly toward the side of the house (too slow, the body does not follow), eyes leading; at
+        `back` it snaps back to the lens (snap_turn)."""
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            if u <= 0: return
+            ue = ease_out_cubic(prog(t, t0 - 0.2, t0 + 0.4))
+            P.h_turn += amount * side * u; P.lock = lerp(P.lock, 0.0, ue)
+            P.look_x += 0.6 * side * ue; P.still = max(P.still, 1.0)
+        self._add(t0 - 0.3, None if back is None else back + 0.2, fn)
+        if back is not None: self.snap_turn(back, None, 0.0, hold=0.1)
+        return self
+
+    def look_at_box(self, t0, t1, side=1):
+        """Looks down at the box beside him (head nods and turns, eyes down), then back up at t1."""
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.5, 0.45, ease)
+            if w <= 0: return
+            P.h_nod += 0.42 * w; P.h_turn += 0.28 * side * w; P.lock = lerp(P.lock, 0.0, w)
+            P.look_y += 0.65 * w; P.look_x += 0.3 * side * w
+        return self._add(t0, t1 + 0.5, fn)
+
+    def set_box_down(self, t0, dur=1.8, side=1):
+        """Driver: takes the tall box by its sides, dips at the knees and stands it against the door. Returns box_drop
+        (soft thud) and box_scrape (across the welcome mat) events; pair with BoxActing.slide."""
+        b = self.sp['body']
+        def fn(P, t):
+            w = _env(t, t0, t0 + dur, 0.45, 0.5, ease)
+            if w <= 0: return
+            u = prog(t, t0, t0 + dur)
+            dip = math.sin(PI * clamp((u - 0.15) / 0.7))
+            P.turn += 0.32 * side * w; P.lean += 0.18 * dip * w; P.crouch += 0.45 * dip * w
+            self._arm(P, side, w, 170.0, 90.0 + 70.0 * dip, 150.0, 'open', up=0.0, rot=side * 70.0)
+            self._arm(P, -side, w, -(b['sh'] - 17) * 1.75, 200.0 + 60.0 * dip, 230.0, 'open', up=0.0, rot=-side * 60.0)
+            P.h_nod += 0.3 * dip * w; P.lock = lerp(P.lock, 0.0, dip * w)
+        self._add(t0, t0 + dur + 0.5, fn)
+        return [self._ev(t0 + dur * 0.62, 'box_drop', -4.0, pan=0.2 * side), self._ev(t0 + dur * 0.72, 'box_scrape', -6.0, dur=0.8)]
+
+    def take_photo(self, t0, side=1, dur=1.6):
+        """Driver: raises the tablet, its back camera toward the box / door, and takes a photo (the flash LED fires at us).
+        pose.tablet_flash pulses. Returns a camera_shutter event."""
+        b = self.sp['body']; snap = t0 + dur * 0.55
+        def fn(P, t):
+            w = _env(t, t0, t0 + dur, 0.45, 0.45, ease)
+            if w <= 0: return
+            self._arm(P, side, w, -(b['sh'] - 17) * 0.4, 120.0, 260.0, 'grip', up=1.0, prop='tablet_back')
+            P.tablet_flash = max(P.tablet_flash, math.exp(-((t - snap) / 0.05) ** 2))
+            P.h_nod += 0.18 * w; P.lock = lerp(P.lock, 0.0, w)
+        self._add(t0, t0 + dur + 0.5, fn)
+        return [self._ev(snap, 'camera_shutter', -4.0)]
+
+    def walk_away(self, t0, t1, surface='porch', cadence=1.9, turn_dur=0.5):
+        """Turns his back (0.5 s) and walks in place (the layer path moves him away). Returns footstep events."""
+        n = max(2, int(round((t1 - t0) * cadence)))
+        def fn(P, t):
+            w = ease_in_out(prog(t, t0 - turn_dur, t0))
+            P.turn = lerp(P.turn, 2.0, w)
+            amt = _env(t, t0, t1, 0.3, 0.3)
+            P.walk_amt = max(P.walk_amt, amt); P.walk_ph = (n / 2.0) * prog(t, t0, t1); P.lean += 0.05 * amt
+        self._add(t0 - turn_dur - 0.2, None, fn)
+        name = 'footsteps_wood_inside' if surface == 'inside' else 'footsteps_porch'
+        return [self._ev(t0 + (t1 - t0) * (k - 0.5) / n, name, -4.0, n=1, foot='L' if k % 2 else 'R') for k in range(1, n + 1)]
+
+    def climb_in(self, t0, dur=1.2):
+        """Steps up into the van cab (back view): knee up, lean in, the body rises. Returns a step and the cab door."""
+        def fn(P, t):
+            u = prog(t, t0, t0 + dur)
+            if u <= 0: return
+            k = math.sin(PI * clamp(u / 0.6))
+            P.walk_amt = max(P.walk_amt, 0.8 * k); P.walk_ph = 0.75
+            P.lean += 0.25 * ease_in_out(u); P.bob -= 70.0 * ease_in_out(clamp((u - 0.3) / 0.6))
+        self._add(t0, None, fn)
+        return [self._ev(t0 + dur * 0.45, 'van_step', -6.0), self._ev(t0 + dur + 0.35, 'car_door_close', -3.0)]
+
+    def reach_up(self, t0, t1=None, side=1, prop='tablet', stretch=0.0, grow=2.5, screen='sign', fade=0.6):
+        """Holds the tablet up overhead to a high window (on tiptoe, head back, looking up). stretch > 0 lets the arm grow
+        unnaturally long over `grow` seconds (1.0 = twice its length) to reach a second-floor sill."""
+        b = self.sp['body']
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease)
+            if w <= 0: return
+            st_ = stretch * ease_in_out(prog(t, t0 + 0.3, t0 + 0.3 + grow))
+            L = 348.0 * b.get('arm_k', 1.0) * (1.0 + st_)
+            setattr(P, ('hl_' if side > 0 else 'hr_') + 'stretch', st_ * w)
+            self._arm(P, side, w, 40.0, -0.97 * L, 50.0, 'grip', up=1.0, prop=prop, rot=0.0)
+            self._arm(P, -side, w * 0.8, 70.0, 250.0, 40.0, 'open', up=0.0)
+            if w >= 0.5: P.tablet_screen = screen
+            P.tiptoe = max(P.tiptoe, w); P.h_nod -= 0.38 * w; P.lock = lerp(P.lock, 0.0, w)
+            P.look_y -= 0.85 * w; P.tilt += 2.0 * side * w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    # --- mom
+    def squint_light(self, t0, t1=None, fade=0.6):
+        """Mom coming down the stairs: squinting at the light, half asleep."""
+        d = dict(squint=0.75, brow_angry=0.15, brow_sad=0.3, eye_open=0.8, pupil=0.95, smile=-0.1)
+        return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
+
+    def reach_chain(self, t0, t1=None, side=1, reach=(120.0, -110.0, 250.0), shake=0.7):
+        """Mom's hand goes up to the door chain (grip at head height toward the door) and shakes; let go at t1. Returns
+        chain rattles at the grab and the release."""
+        out, down, fwd = reach
+        grab = t0 + 0.6
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.55, 0.5, ease)
+            if w <= 0: return
+            self._arm(P, side, w, out, down, fwd, 'grip', up=1.0)
+            setattr(P, ('hl_' if side > 0 else 'hr_') + 'shake', max(getattr(P, ('hl_' if side > 0 else 'hr_') + 'shake'), shake * w))
+            P.lean += 0.08 * w; P.turn += 0.15 * side * w
+            P.lock = lerp(P.lock, 0.0, w); P.look_x += 0.5 * side * w; P.look_y -= 0.2 * w
+        self._add(t0, None if t1 is None else t1 + 0.5, fn)
+        ev = [self._ev(grab, 'chain_lock', -10.0, kind='rattle', pan=0.3 * side)]
+        if t1 is not None: ev.append(self._ev(t1 + 0.05, 'chain_lock', -14.0, kind='rattle', pan=0.3 * side))
+        return ev
+
+    def hands_over_mouth(self, t0, t1=None, fade=0.4, sob=True):
+        """Both hands pressed over her mouth (the box speaks with dad's voice): fingers up, one over the other, eyes wide
+        and wet, shoulders up."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease)
+            if w <= 0: return
+            for side, dx, dd in ((-1, 4.0, 26.0), (1, 16.0, 40.0)):
+                out, down = self._mouth_target(dx, side=side)
+                self._arm(P, side, w, out, down + dd, 74.0 + 6.0 * (side > 0), 'relaxed', up=1.0, rot=side * 10.0)
+            P.h_nod += 0.08 * w; P.shrug += 0.22 * w
+            P.wide = max(P.wide, 0.75 * w); P.brow_up = max(P.brow_up, 0.6 * w); P.brow_sad = max(P.brow_sad, 0.8 * w)
+            P.pupil = min(P.pupil, 1.0 - 0.45 * w); P.wet = max(P.wet, w); P.tears = max(P.tears, 0.6 * w * prog(t, t0 + 0.6, t0 + 2.5))
+        self._add(t0, None if t1 is None else t1 + fade, fn)
+        return [self._ev(t0 + 0.25, 'breath', -8.0, kind='gasp')]
+
+    def shaking_hand(self, t0, t1=None, side=1, amount=1.0, fade=0.3):
+        """A hand that will not stop shaking (pose hl_shake / hr_shake)."""
+        key = ('hl_' if side > 0 else 'hr_') + 'shake'
+        return self._add(t0, None if t1 is None else t1 + fade,
+                         lambda P, t: setattr(P, key, max(getattr(P, key), amount * _env(t, t0, t1, fade, fade))))
+
+    def sit_floor(self, t0, t1=None, fade=1.0):
+        """Sits on the hallway floor with her back to the wall, knees up, hands on the knees."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            P.floor = max(P.floor, w)
+            for side in (-1, 1):
+                self._arm(P, side, w, -10.0, 300.0, 250.0, 'relaxed', up=0.0)
+            P.h_nod += 0.1 * w; P.shrug += 0.1 * w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def tremble(self, t0, t1=None, amp=1.0):
+        """Fear tremble: fast head jitter (8-12 Hz), shoulder shiver, nervous blink bursts (the film's police tremble)."""
+        def fn(P, t):
+            if t < t0 or (t1 is not None and t > t1): return
+            P.h_dx += 1.2 * amp * math.sin(t * 61.0) + 0.8 * amp * noise1(t * 9.0, self.seed + 77)
+            P.h_tilt += 0.9 * amp * math.sin(t * 47.0 + 1.0)
+            P.shrug += 0.04 * amp * (1 + math.sin(t * 23.0))
+            P.jitter = max(P.jitter, 0.35 * amp)
+        self._add(t0 - 0.5, None if t1 is None else t1 + 0.5, fn, real=True)
+        if self.blink_rate > 0:
+            k = t0 + 0.35; end = t1 if t1 is not None else t0 + 30.0
+            while k < end - 0.3:
+                nb = 2 + int(hash01(int(k * 10), self.seed) * 3)
+                self.blink_burst(k, nb, 0.12 * nb)
+                k += 1.1 + 0.8 * float(hash01(int(k * 7), self.seed + 3))
+        return self
+
+    # --- Lily
+    def lean_out(self, t0, t1=None, side=-1, reach_t=None, amount=1.0, fade=0.8):
+        """Lily leans out of her open window toward someone below, one small hand reaching down to touch the tablet at
+        reach_t (returns a touch_tap event there). Head bowed to look down, innocent."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease)
+            if w <= 0: return
+            P.lean += 0.5 * amount * w; P.h_nod += 0.32 * w
+            k = ease_in_out(prog(t, reach_t - 0.6, reach_t)) if reach_t is not None else 0.6
+            self._arm(P, side, w, 50.0, 230.0 + 40.0 * k, 200.0 + 60.0 * k, 'point', up=0.0)
+            self._arm(P, -side, w, 10.0, 190.0, 110.0, 'open', up=0.0, rot=side * 30.0)   # the other hand on the sill
+            P.mix(dict(brow_sad=0.35, brow_up=0.25, smile=0.12, pupil=1.1, lock=0.0, look_y=0.6), 0.8 * w)
+        self._add(t0, None if t1 is None else t1 + fade, fn)
+        return [self._ev(reach_t, 'touch_tap', -10.0)] if reach_t is not None else []
+
+    def sleepy(self, t0, t1=None, fade=0.6):
+        d = dict(eye_open=0.6, brow_up=0.32, brow_sad=0.3, smile=0.1, pupil=1.15, h_nod=0.07)
+        return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
+
+    # --- dad (memory)
+    def sign(self, t0, t1, side=-1):
+        """Signs on a tablet held in front of him with a stylus: small scribbling hand, head bowed over it. Returns a
+        touch_tap and a stylus_scribble (params dur)."""
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.45, 0.4, ease)
+            if w <= 0: return
+            sc = _env(t, t0 + 0.5, t1 - 0.2, 0.1, 0.1)
+            dx = 14.0 * math.sin(t * 23.0) * sc; dy = 6.0 * math.sin(t * 31.0 + 1.0) * sc
+            self._arm(P, side, w, -60.0 + dx, 170.0 + dy, 220.0, 'grip', up=0.6, prop='stylus')
+            P.h_nod += 0.4 * w; P.lock = lerp(P.lock, 0.0, w); P.look_y += 0.75 * w
+        self._add(t0, t1 + 0.5, fn)
+        return [self._ev(t0 + 0.5, 'touch_tap', -10.0), self._ev(t0 + 0.55, 'stylus_scribble', -12.0, dur=max(0.2, t1 - t0 - 0.75))]
+
+    def drop_keys(self, t0, side=1, release=0.6):
+        """The keys in his hand go out over the bowl on the side table and drop at t0 + release (draw_keys_bowl with
+        drop = t - (t0 + release)). Returns the keys_drop event at the impact (KEYS_DROP_IMPACT after release)."""
+        tr = t0 + release
+        def fn(P, t):
+            w = _env(t, t0, tr + 0.3, 0.4, 0.5, ease)
+            if w <= 0: return
+            held = t < tr
+            self._arm(P, side, w, 90.0, 190.0, 190.0, 'grip' if held else 'open', up=0.0, prop='keys_dad' if held else None)
+            P.h_nod += 0.15 * w; P.h_turn += 0.15 * side * w
+        self._add(t0, tr + 1.0, fn)
+        return [self._ev(tr + KEYS_DROP_IMPACT, 'keys_drop', -3.0, surface='bowl')]
+
+    # --- you
+    def look_at_phone(self, t0, t1=None, side=1, fade=0.45):
+        """Phone held in front of the chest, screen to the face, head bowed (light=dict(under='#bcd2ff') for its glow)."""
+        b = self.sp['body']
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, ease)
+            if w <= 0: return
+            self._arm(P, side, w, -(b['sh'] - 17) * 0.45, 150.0, 190.0, 'grip', up=1.0, prop='phone_back')
+            P.h_nod += 0.28 * w; P.lock = lerp(P.lock, 0.0, w); P.look_y += 0.7 * w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def catch_wrist(self, t0, t1=None, side=1, reach=(200.0, -40.0, 200.0)):
+        """Grabs someone's wrist (mom's hand on the chain): a quick reach that grips and holds. Returns a cloth grab."""
+        self.reach(t0, t1, side, *reach, shape='grip', up=0.7, fade=0.22)
+        return [self._ev(t0 + 0.2, 'cloth_rustle', -8.0, kind='grab')]
+
+    def hold_close(self, t0, t1=None, side=1):
+        """An arm round the person beside him (holding mom while the box talks)."""
+        return self.reach(t0, t1, side, 120.0, 20.0, 160.0, 'relaxed', up=0.0, fade=0.6)
+
+    def push_door(self, t0, side=1):
+        """Pushes a door open with a flat hand. Returns door_creak."""
+        self.reach(t0, t0 + 1.0, side, 30.0, 40.0, 300.0, 'flat', up=1.0, fade=0.3)
+        return [self._ev(t0 + 0.35, 'door_creak', -6.0)]
+
     # ------------------------------------------------------------------ speech
-    def talk(self, intervals, text=None, intensity=1.0, env='auto', words='auto', lead=0.02):
+    def talk(self, intervals, text=None, intensity=1.0, env='auto', words='auto', lead=0.02, lag=None):
         """Mouth shapes for speech. intervals: [(t0, t1)] or [(t0, t1, text)]; text applies to a single interval.
         v2.1: the mouth opening follows the real voice: env='auto' samples the vo_en.wav RMS envelope (shut below
         -40 dBFS, opening rising with the level, normalised per line); words='auto' places each word's visemes inside its
         own ASR window (asr_cache en_words), so shapes land on the right syllables. env=None / words=None fall back to
         evenly spread syllables. During a grin the jaw drops on top of the grin (talks through the teeth); during
-        shout/scream (m_open >= 0.5) the opening modulates around the base."""
+        shout/scream (m_open >= 0.5) the opening modulates around the base.
+        Delivery: lag (s) delays the whole mouth behind the voice ("the words come first, the lips catch up"); None = the
+        cast default (driver 0.2 s, everyone else 0)."""
         intensity = intensity * self.sp.get('talk', 1.0)
+        lag = self.sp.get('talk_lag', 0.0) if lag is None else float(lag)
         E = voice_envelope() if (isinstance(env, str) and env == 'auto') else env
         W = voice_words() if (isinstance(words, str) and words == 'auto') else (words or [])
         wt = [w_[1] for w_ in W]
@@ -4211,6 +4739,8 @@ class Acting:
             P.teeth = max(P.teeth, te * 0.8)
             P.m_press = max(P.m_press, pr)
             P.h_nod += 0.035 * acc; P.brow_up += 0.12 * acc
+        if lag:
+            return self._add(lo - 0.2 + lag, hi + 0.3 + lag, lambda P, t: fn(P, t - lag))
         return self._add(lo - 0.2, hi + 0.3, fn)
 
     def talk_lines(self, lines, who='O', intensity=1.0):
@@ -4282,6 +4812,333 @@ class Acting:
         return keys
 
 
+# ====================================================================================================== delivery props
+KEYS_DROP_IMPACT = 0.24          # s from the release to the keys hitting the bowl (draw_keys_bowl / Acting.drop_keys)
+
+
+class BoxActing:
+    """Timeline of the box (it is a prop, but it acts): knocks from inside that jolt it two-then-one, the driver tilting it
+    so the label faces the camera, sliding it across the mat, the tape cut at sunrise.
+        b = BoxActing(seed); ev = b.knock(t0)                    # two knocks, a pause, one more (dad's knock)
+        ev = b.knock_loop(t0, t1, period=2.4, accel=0.25)        # 'two, then one' over and over, getting faster
+        b.tilt(t0, t1, turn=0.6); ev = b.slide(t0, 0.8, dx=-60); b.cut(t)
+        draw_box(pen, x, y, h, b.at(t), t=t)
+    Events: box_knock (params n_in_pattern, strength; space should be 'outside' or 'doorbell_mic'), box_scrape."""
+
+    def __init__(self, seed=0):
+        self.seed = int(seed)
+        self.hits = []               # (t, strength)
+        self.tilts = []              # (t0, t1, angle, turn)
+        self.slides = []             # (t0, dur, dx)
+        self.cut_t = None
+        self.events = []
+
+    def _ev(self, t, name, gain_db=0.0, pan=0.0, **params):
+        e = dict(t=round(float(t), 4), name=name, gain_db=gain_db, pan=pan, params=params, who='box')
+        self.events.append(e); return e
+
+    def knock(self, t0, pattern=(2, 1), gap=0.3, pause=0.72, strength=1.0):
+        """Knocks from inside: groups separated by `pause` (default two, a pause, one). Returns box_knock events."""
+        ev = []; t = t0
+        for gi, n in enumerate(pattern):
+            for k in range(n):
+                st = strength * (1.0 if k == 0 else 0.92)
+                self.hits.append((t, st))
+                ev.append(self._ev(t, 'box_knock', 0.0 if gi == 0 and k == 0 else -1.0, n_in_pattern=k + 1, group=gi + 1,
+                                   strength=st))
+                t += gap
+            t += pause - gap
+        return ev
+
+    def knock_loop(self, t0, t1, period=2.4, accel=0.0, strength=1.0, gap=0.3, pause=0.72):
+        """'Two, then one' repeated from t0 to t1; accel 0..0.6 shrinks the period (and the gaps) every cycle."""
+        ev = []; t = t0; k = 1.0
+        while t < t1:
+            ev += self.knock(t, (2, 1), gap * k, pause * k, strength)
+            t += period * k; k *= (1.0 - accel * 0.25)
+            k = max(k, 0.35)
+        return ev
+
+    def tilt(self, t0, t1, angle=7.0, turn=0.6, dur=0.7):
+        """Tipped over by angle deg (screen rotation: negative = the top leans to screen left, toward a driver standing on the
+        box's left) and turned so the label faces the camera (turn 0..1 of the side view)."""
+        self.tilts.append((t0, t1, angle, turn, dur)); return self
+
+    def slide(self, t0, dur=0.8, dx=-60.0):
+        """Scraped across the welcome mat by dx design px (at the drawn height). Returns a box_scrape event."""
+        self.slides.append((t0, dur, dx))
+        return [self._ev(t0, 'box_scrape', -4.0, dur=dur)]
+
+    def cut(self, t):
+        self.cut_t = t; return self
+
+    def at(self, t):
+        """State dict for draw_box: jolt (rotation deg), bulge 0..1, dx, dy, tilt, turn, cut 0..1."""
+        rot = 0.0; bulge = 0.0; dx = 0.0; dy = 0.0
+        for (h, st) in self.hits:
+            tau = t - h
+            if -0.03 <= tau < 1.2:
+                if tau < 0: bulge = max(bulge, st * 0.5 * (1 + tau / 0.03)); continue
+                env_ = math.exp(-tau * 7.5)
+                bulge = max(bulge, st * math.exp(-tau * 11.0))
+                rot += st * 1.4 * env_ * math.sin(tau * 38.0 + 0.6) * (1 if hash01(int(h * 10), self.seed) > 0.5 else -1)
+                dy -= st * 4.0 * math.exp(-tau * 18.0)
+        tl = 0.0; tn = 0.0
+        for (t0, t1, ang, turn, dur) in self.tilts:
+            w = _env(t, t0, t1, dur, dur, ease_in_out)
+            tl += ang * w; tn += turn * w
+        for (t0, dur, d) in self.slides:
+            u = prog(t, t0, t0 + dur)
+            dx += d * (u * u * (3 - 2 * u)) + (1.2 * math.sin(t * 60.0) if 0 < u < 1 else 0.0)
+        cut = 0.0 if self.cut_t is None else ease_out_cubic(prog(t, self.cut_t, self.cut_t + 0.6))
+        return dict(rot=rot + tl, bulge=clamp(bulge), dx=dx, dy=dy, turn=tn, cut=cut)
+
+
+def _label(c, x, y, w, h, det, to='', sender='RETURN', t=0.0):
+    """The shipping label (box-local coords, top-left x, y)."""
+    lab = rect(x, y, w, h)
+    c.fill(lab, '#efece2'); c.grad(lab, x, y, x + w, y + h, [(0, '#ffffff', 60), (1, '#c9c2b0', 90)])
+    c.fill(rect(x, y, w, h * 0.2), '#1b2236')
+    c.fill(minus(oval(x + h * 0.11, y + h * 0.1, h * 0.065), oval(x + h * 0.14, y + h * 0.075, h * 0.058)), '#e9cf7e')
+    if det >= 2:
+        text(c.cv, 'NIGHTLINE DELIVERY', *c.pt(x + w * 0.56, y + h * 0.14), 900, h * 0.1 * c.s, '#e9cf7e', 255, 0.04, 'center')
+        text(c.cv, 'FROM:', *c.pt(x + w * 0.06, y + h * 0.36), 800, h * 0.085 * c.s, '#5a5a5a', 255, 0.03, 'left')
+        text(c.cv, sender, *c.pt(x + w * 0.3, y + h * 0.37), 900, h * 0.12 * c.s, '#1d1f26', 255, 0.06, 'left')
+        text(c.cv, 'TO:', *c.pt(x + w * 0.06, y + h * 0.58), 800, h * 0.085 * c.s, '#5a5a5a', 255, 0.03, 'left')
+        if to:
+            pth, _ = _strokes_path(HAND_STROKES['LILY'], x + w * 0.3, y + h * 0.43, w * 0.2, h * 0.16, 1.0, 1.0, 5, t)
+            c.line(pth, max(1.2, c.lw * 0.5), '#1a2a6c')
+        else:
+            c.line(poly([(x + w * 0.27, y + h * 0.6), (x + w * 0.93, y + h * 0.6)], False), c.lw * 0.3, '#5a5a5a')
+        c.fill(rrect(x + w * 0.58, y + h * 0.66, w * 0.38, h * 0.1, 2), '#b3262c', 230)
+        text(c.cv, 'SIGNATURE REQUIRED', *c.pt(x + w * 0.77, y + h * 0.745), 900, h * 0.05 * c.s, '#ffffff', 255, 0.01, 'center')
+    else:
+        for k, (yy, ww) in enumerate(((0.33, 0.55), (0.55, 0.7))):
+            c.fill(rect(x + w * 0.06, y + h * yy, w * ww, h * 0.07), '#55545a', 220)
+        c.fill(rect(x + w * 0.58, y + h * 0.66, w * 0.38, h * 0.1), '#b3262c', 230)
+    bars = []
+    for k in range(26):
+        if hash01(k, 77) > 0.35:
+            bx = x + w * 0.06 + k * w * 0.019
+            bars.append(rect(bx, y + h * 0.8, w * (0.009 + 0.008 * hash01(k, 78)), h * 0.15))
+    c.fill(_multi(bars), '#1d1f26')
+    c.line(lab, c.lw * 0.45)
+
+
+def draw_box(pen, x, y, h, st=None, t=0.0, detail=None, light=None, view=0.45, label=True, to='', sender='RETURN',
+             shadow=True, tape=1.0):
+    """The tall narrow box from the porch: kraft cardboard almost as tall as the driver (1.6 m), mummified in brown packing
+    tape, a Nightline shipping label (FROM: RETURN, the TO line blank). (x, y) = bottom centre on the floor, h = height in
+    design px. st = BoxActing.at(t) (or a dict: rot, bulge, dx, dy, turn, cut). view 0..1 shows the right side face
+    (doorbell angle), st['turn'] turns the label toward the camera. A knock from inside bulges the front at chest height
+    with creases and jolts the whole box; cut 0..1 slits every tape band down the middle (sunrise). light = dict(key='#ffd9a0'
+    warm porch light from above (default), rim=..., k=0..1)."""
+    st = st or {}
+    W = 0.36 * h; D = 0.27 * h
+    view = clamp(view - 0.6 * st.get('turn', 0.0), -1, 1)
+    fw = W * (1.0 - 0.12 * abs(view)); sd = D * view * 0.7
+    det = detail if detail is not None else _auto_detail(pen, h * 0.4)
+    c = Ctx(pen, skia.Matrix(), _lw_for(h * 0.45) * 0.9)
+    lt = light or {}
+    key = lt.get('key', '#ffd9a0'); kk = lt.get('k', 0.55)
+    if shadow:
+        c.glow(x + st.get('dx', 0) + sd * 0.5, y + 4, fw * 0.95 + abs(sd), h * 0.05, '#000000', 170)
+    c = c.sub(x + st.get('dx', 0.0), y + st.get('dy', 0.0), st.get('rot', 0.0))
+    b = st.get('bulge', 0.0); by = -0.62 * h
+    # faces: front (x -fw/2..fw/2, y -h..0) and side (toward +x if view > 0)
+    bw = fw * 0.075 * b
+    def edge(xe, sgn):
+        return [(xe, 0.0), (xe + sgn * bw * 0.3, by + h * 0.18), (xe + sgn * bw, by), (xe + sgn * bw * 0.3, by - h * 0.16), (xe, -h)]
+    L = edge(-fw / 2, -1); R = edge(fw / 2, 1)
+    front = smooth(R + L[::-1], True, 0.35)
+    kraft, kraft_sh, kraft_dk = '#a8804f', '#7d5c37', '#5c4127'
+    if abs(sd) > 1:
+        xe = fw / 2 if sd > 0 else -fw / 2
+        side = poly([(xe, 0), (xe + sd, -0.05 * abs(sd)), (xe + sd, -h - 0.05 * abs(sd)), (xe, -h)])
+        c.fill(side, kraft_sh); c.grad(side, 0, -h, 0, 0, [(0, key, 40 * kk), (1, '#000000', 90)])
+        if det >= 1: c.texture(side, 'paper', 0.12, 0.8)
+    c.fill(front, kraft)
+    c.grad(front, 0, -h, 0, 0, [(0, mix(kraft, key, 0.25 * kk), 255), (0.55, kraft, 0), (1, kraft_dk, 200)])
+    if det >= 1:
+        c.texture(front, 'paper', 0.14, 0.9)
+        c.line(poly([(-fw / 2 + 6, -h + 0.06 * h), (fw / 2 - 6, -h + 0.06 * h)], False), c.lw * 0.35, kraft_dk, 150)   # flap seam
+    if b > 0.02:                                              # knock bulge: a lit dome pushed out from inside, a dark ring, creases
+        c.radial(front, 0, by + fw * 0.06, fw * 0.62, [(0, '#000000', 0), (0.55, '#000000', 0), (0.78, '#2a1a0c', 150 * b), (1, '#2a1a0c', 0)], sy=1.3)
+        c.radial(front, -fw * 0.05, by - fw * 0.06, fw * 0.5, [(0, '#f6d9a8', 230 * b), (0.5, '#e8c48e', 120 * b), (1, kraft, 0)], sy=1.25)
+        if det >= 1:
+            cr = []
+            for k in range(7):
+                a_ = k * 2 * PI / 7 + 0.4
+                r0, r1 = fw * 0.16, fw * (0.3 + 0.08 * hash01(k, 3))
+                cr.append(smooth([(math.cos(a_) * r0, by + math.sin(a_) * r0 * 1.2),
+                                  (math.cos(a_ + 0.12) * (r0 + r1) / 2, by + math.sin(a_ + 0.12) * (r0 + r1) / 2 * 1.2),
+                                  (math.cos(a_) * r1, by + math.sin(a_) * r1 * 1.2)], False))
+            c.line(_multi(cr), c.lw * 0.7, kraft_dk, 240 * b)
+    # tape: wrapped bands (front + side), a vertical band, two diagonals
+    if tape > 0:
+        tc, th_, thi = '#8e5f2b', '#6a4520', '#d9a865'
+        bands = [(-0.93, 0.0), (-0.81, 0.02), (-0.66, -0.03), (-0.49, 0.025), (-0.33, -0.02), (-0.18, 0.03), (-0.06, -0.01)]
+        cut = st.get('cut', 0.0)
+        fills, lines, hi = [], [], []
+        for k, (yy, sl) in enumerate(bands):
+            yc = yy * h; tw = 0.045 * h
+            pts = [(-fw / 2 - 1, yc - tw / 2 - sl * fw / 2), (fw / 2 + 1, yc - tw / 2 + sl * fw / 2),
+                   (fw / 2 + 1, yc + tw / 2 + sl * fw / 2), (-fw / 2 - 1, yc + tw / 2 - sl * fw / 2)]
+            fills.append(poly(pts))
+            hi.append(poly([(-fw / 2, yc - tw * 0.18 - sl * fw / 2), (fw / 2, yc - tw * 0.18 + sl * fw / 2)], False))
+            if abs(sd) > 1:
+                xe = fw / 2 if sd > 0 else -fw / 2; s_ = 1 if sd > 0 else -1
+                y0 = yc + s_ * sl * fw / 2
+                fills.append(poly([(xe, y0 - tw / 2), (xe + sd, y0 - tw / 2 - 0.05 * abs(sd)), (xe + sd, y0 + tw / 2 - 0.05 * abs(sd)), (xe, y0 + tw / 2)]))
+        vb = poly([(-0.06 * fw, -h - 1), (0.06 * fw, -h - 1), (0.07 * fw, 1), (-0.05 * fw, 1)])
+        fills.append(vb); hi.append(poly([(-0.02 * fw, -h), (-0.01 * fw, 0)], False))
+        for sgn in (-1, 1):
+            fills.append(poly([(sgn * fw * 0.5, -0.9 * h), (sgn * fw * 0.5, -0.84 * h), (-sgn * fw * 0.5, -0.4 * h), (-sgn * fw * 0.5, -0.46 * h)]))
+        tp = _multi(fills)
+        with c.clip(union(front, side) if abs(sd) > 1 else front):
+            c.fill(tp, tc, 235 * tape)
+            c.line(tp, c.lw * 0.3, th_, 200 * tape)
+            c.line(_multi(hi), c.lw * 0.45, thi, 150 * tape)
+            if det >= 1:
+                wr = []
+                for k in range(24):
+                    wx = (hash01(k, 61) - 0.5) * fw * 0.95; wy = -h * hash01(k, 62)
+                    wr.append(poly([(wx, wy), (wx + 6 + 6 * hash01(k, 63), wy + 3)], False))
+                c.line(_multi(wr), c.lw * 0.25, thi, 110 * tape)
+            if cut > 0.01:                                       # the tape slit down the middle, edges lifting
+                c.line(poly([(0.005 * fw, -h), (0.005 * fw, -h + h * cut)], False), c.lw * 1.4, '#1a120b', 255)
+                for k, (yy, sl) in enumerate(bands):
+                    yc = yy * h
+                    if -yc > h * (1 - cut): continue
+                    c.fill(poly([(0, yc - 0.02 * h), (0.08 * fw, yc - 0.035 * h), (0.06 * fw, yc), (0, yc + 0.018 * h)]), thi, 230)
+    if label:
+        lw_, lh_ = fw * 0.66, h * 0.17
+        lc = c.sub(-lw_ * 0.48, -0.78 * h, -2.0)
+        _label(lc, 0, 0, lw_, lh_, det, to, sender, t)
+    if abs(sd) > 1:
+        xe = fw / 2 if sd > 0 else -fw / 2
+        c.line(poly([(xe, 0), (xe + sd, -0.05 * abs(sd)), (xe + sd, -h - 0.05 * abs(sd)), (xe, -h)]), c.lw)
+    if lt.get('rim'):
+        c.fill(_crescent(front, -9 * lt.get('side', 1), 0), lt['rim'], lt.get('rim_a', 70))
+    c.line(front, c.lw)
+
+
+def draw_box_inside(pen, cx, cy, size, t=0.0, flaps=1.0, keys=True, rust=1.0, light=None, detail=2):
+    """Insert: looking down into the opened box at sunrise. The tall box is a deep dark well (walls converging to the
+    bottom), the four flaps folded out with cut tape strands, and at the bottom only dad's rusted keys on the
+    second-grade keychain, catching a sliver of morning light. size = width of the opening in design px."""
+    lt = light or {}
+    sun = lt.get('key', '#ffcf8f')
+    c = Ctx(pen, skia.Matrix(), _lw_for(size * 0.9) * 0.9).sub(cx, cy, 0.0, size / 400.0)
+    ow, oh = 200.0, 150.0; iw, ih = 92.0, 68.0
+    # flaps (open outward)
+    fl = clamp(flaps)
+    flp = [poly([(-ow, -oh), (ow, -oh), (ow * 0.92, -oh - 120 * fl), (-ow * 0.92, -oh - 120 * fl)]),
+           poly([(-ow, oh), (ow, oh), (ow * 0.92, oh + 120 * fl), (-ow * 0.92, oh + 120 * fl)]),
+           poly([(-ow, -oh), (-ow, oh), (-ow - 110 * fl, oh * 0.9), (-ow - 110 * fl, -oh * 0.9)]),
+           poly([(ow, -oh), (ow, oh), (ow + 110 * fl, oh * 0.9), (ow + 110 * fl, -oh * 0.9)])]
+    for k, f in enumerate(flp):
+        c.fill(f, ('#9c7647', '#8c693f', '#a17a4a', '#7f5f39')[k]); c.texture(f, 'paper', 0.14, 0.9); c.line(f, c.lw)
+    for k in range(6):                                         # cut tape strands hanging off the flap edges
+        sx_ = -ow * 0.15 + k * 14 - 30
+        c.fill(poly([(sx_, -oh - 2), (sx_ + 12, -oh - 2), (sx_ + 16 + 6 * hash01(k, 2), -oh - 34 - 20 * hash01(k, 3)), (sx_ + 2, -oh - 26)]),
+               '#8e5f2b', 230)
+        c.fill(poly([(sx_ + 6, oh + 2), (sx_ + 18, oh + 2), (sx_ + 20, oh + 30 + 18 * hash01(k, 4)), (sx_ + 4, oh + 22)]), '#8e5f2b', 230)
+    # inner walls converging to the bottom
+    walls = [(poly([(-ow, -oh), (ow, -oh), (iw, -ih), (-iw, -ih)]), '#3a2a19'), (poly([(-ow, oh), (ow, oh), (iw, ih), (-iw, ih)]), '#5a4128'),
+             (poly([(-ow, -oh), (-ow, oh), (-iw, ih), (-iw, -ih)]), '#2c2014'), (poly([(ow, -oh), (ow, oh), (iw, ih), (iw, -ih)]), '#4a3520')]
+    for p_, col_ in walls:
+        c.fill(p_, col_); c.line(p_, c.lw * 0.6, '#140d07')
+    bot = rect(-iw, -ih, iw * 2, ih * 2)
+    c.fill(bot, '#20170e')
+    c.radial(bot, -30, -10, 120, [(0, '#3a2a19', 255), (1, '#0e0a06', 255)])
+    # a sliver of sunrise across one wall and the bottom
+    c.fill(poly([(ow, -oh), (ow, -oh * 0.2), (iw, -ih * 0.1), (iw, -ih)]), sun, 60)
+    c.fill(poly([(iw, -ih), (iw, -ih * 0.1), (-iw * 0.2, ih * 0.4), (-iw * 0.1, -ih)]), sun, 40)
+    if keys:
+        c.glow(4, 6, 80, 40, '#000000', 120)
+        kc = c.sub(-28, -30, -58.0, 1.0)
+        _keyring(kc, detail, t, rust)
+        c.glow(-10, -20, 40, 16, sun, 110 * (0.6 + 0.4 * math.sin(t * 1.3)))
+    c.line(rect(-ow, -oh, ow * 2, oh * 2), c.lw * 1.2)
+
+
+def draw_keys_bowl(pen, x, y, size, drop=None, t=0.0, rust=0.0, hand=False, keys_in=True, light=None, detail=2):
+    """The key bowl on the hall side table: a glazed ceramic bowl seen from a little above, dad's keys on the bead keychain
+    lying in it. drop = seconds since the keys were released (None = resting; negative = not there yet): they fall in,
+    hit at KEYS_DROP_IMPACT, bounce and jangle to rest. hand=True shows a pale grey hand letting go above (dad's, at
+    3:11, fading). (x, y) = bowl foot, size = bowl width in design px."""
+    lt = light or {}
+    c = Ctx(pen, skia.Matrix(), _lw_for(size * 1.2) * 0.85).sub(x, y, 0.0, size / 200.0)
+    rim_y = -70.0
+    glaze, glaze_sh, inner = '#2f5664', '#1c3640', '#4f7f8b'
+    body = smooth([(-100, rim_y), (-92, -30), (-62, -6), (-30, 0), (30, 0), (62, -6), (92, -30), (100, rim_y)], True, 0.7)
+    rim = oval(0, rim_y, 100, 34)
+    c.glow(0, 2, 110, 14, '#000000', 160)
+    c.fill(body, glaze); c.grad(body, -100, 0, 100, 0, [(0, glaze_sh, 255), (0.35, glaze, 255), (0.6, mix(glaze, '#ffffff', 0.12), 255), (1, glaze_sh, 255)])
+    c.line(body, c.lw)
+    c.fill(rim, inner); c.radial(rim, 10, rim_y + 6, 100, [(0, mix(inner, '#000000', 0.3), 255), (1, inner, 255)], sy=0.3)
+    # keys
+    show = keys_in and (drop is None or drop >= 0)
+    if show:
+        if drop is None or drop >= KEYS_DROP_IMPACT:
+            tau = 0.0 if drop is None else drop - KEYS_DROP_IMPACT
+            bounce = 0.0 if drop is None else 10.0 * math.exp(-tau * 9.0) * abs(math.sin(tau * 18.0))
+            jang = 0.0 if drop is None else math.exp(-tau * 3.0)
+            kc = c.sub(-40, rim_y - 12 - bounce, -72.0 + 6.0 * jang * math.sin(tau * 14.0), 0.82, 0.7)
+            with c.clip(union(oval(0, rim_y, 96, 31), rect(-200, -400, 400, 400 + rim_y))):
+                _keyring(kc, detail, t, rust, jangle=jang)
+        else:
+            u = drop / KEYS_DROP_IMPACT
+            kc = c.sub(-30 + 10 * (1 - u), rim_y - 12 - 230.0 * (1 - u * u), -10.0 - 62.0 * u, 0.82)
+            _keyring(kc, detail, t, rust, spread=1.2)
+    # the front lip of the bowl over the keys
+    lip = minus(oval(0, rim_y, 100, 34), oval(0, rim_y - 6, 96, 30))
+    c.fill(lip, mix(glaze, '#ffffff', 0.18)); c.line(oval(0, rim_y, 100, 34), c.lw)
+    if detail >= 1: c.glow(-40, rim_y + 14, 26, 6, '#ffffff', 60)
+    if hand and drop is not None and drop < 1.2:
+        a_ = 1.0 - clamp((drop - 0.2) / 1.0)
+        cv = pen.cv; cv.saveLayerAlpha(None, int(255 * 0.85 * a_))
+        hc = Ctx(pen, skia.Matrix(), _lw_for(size * 1.2) * 0.85)
+        hx, hy = x + 10 * size / 200.0, y - size * 1.25 - 20 * clamp(drop)
+        _draw_hand(hc, CAST['dad'], 'open', hx, hy, size / 200.0 * 1.25, 0.0, 1, detail, '#b9b4b0', '#85807e', True, 0.0, t)
+        cv.restore()
+
+
+# ------------------------------------------------------------------ delivery: the acting arc over the film
+FEAR_ARC = {'you': [(215.74, 0.35), (353.24, 0.55), (497.79, 0.8)],          # photo, the chain, the knocking stops
+            'mom': [(287.97, 0.45), (377.96, 0.7), (497.79, 0.85)]}          # she sees the van, the box knocks, 3:40
+DRIVER_TWITCH = [(196.51, 4.0, 6.0), (340.87, 2.2, 3.2), (446.44, 1.5, 2.5)]   # from t: a twitch / jerk every lo..hi s
+DRIVER_STILL = (435.84, 446.44)                                               # "his face is perfectly still"
+
+
+def escalate(a, t0, t1, kind=None):
+    """The delivery film's acting arc for one actor over a shot [t0, t1] in film time (call it from film.py's escalate,
+    like the police film's). Driver: the smile arc is automatic (DRIVER_ARC under every clip); this adds twitches and
+    jerks, rarer at first (from 'wider' 196.5 s), then every 2.2-3.2 s once he leans in (340.9 s), every 1.5-2.5 s after
+    he smiles again (446.4 s), none while his face is perfectly still. you / mom: fear tremble that builds (FEAR_ARC).
+    Lily and dad: nothing (Lily is calm; dad is a memory). Rule cards (kind 'rule'): nothing."""
+    if kind == 'rule' or t1 - t0 < 0.4: return a
+    if a.who == 'driver':
+        rate = None
+        for (ts, lo, hi) in DRIVER_TWITCH:
+            if t0 >= ts: rate = (lo, hi)
+        if rate and t1 - t0 > 1.2:
+            k = t0 + 0.5 + 0.8 * float(hash01(int(t0 * 10), 71)); ts_ = []
+            while k < t1 - 0.25:
+                if not (DRIVER_STILL[0] - 0.3 <= k <= DRIVER_STILL[1] + 0.3): ts_.append(k)
+                k += rate[0] + (rate[1] - rate[0]) * float(hash01(int(k * 10), 72))
+            if ts_:
+                a.twitch(ts_[::2], 1.0)
+                for tj in ts_[1::2]: a.jerk(tj, 0.5)
+    elif a.who in FEAR_ARC:
+        amp = 0.0
+        for ts, am in FEAR_ARC[a.who]:
+            if t0 >= ts: amp = am
+        if amp > 0: a.tremble(t0, t1, amp)
+    return a
+
+
 # ====================================================================================================== HUD phone hand
 def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve='#34443f'):
     """Drop-in for engine.hud._hand(pen, w, h, skin, a, front): a hand holding the phone in phone coords (the phone spans
@@ -4346,22 +5203,48 @@ def _selftest():
     assert runs and max(runs) / 240.0 <= 0.067, ('blink', max(runs) / 240.0)
     out.append('blinks: %d, longest shut %.0f ms' % (len(runs), 1000 * max(runs) / 240.0))
     # phone at the ear: wrist ends up near the ear, not past the shoulder (no spike)
-    for who in ('mum', 'you', 'officer'):
-        a = Acting(who, seed=2); a.phone_to_ear(0.0, None, side=1)
+    for who in ('mum', 'you', 'officer', 'mom', 'dad', 'driver'):
+        a = Acting(who, seed=2, arc=False); a.phone_to_ear(0.0, None, side=1)
         P = a.at(1.0); B = Body(CAST[who], P)
         S, E, W = _arm_data(CAST[who], B, P, 1)
         ear_y = B.yc - CAST[who]['hh'] / 2
         assert W[1] < B.y_sh and abs(W[1] - ear_y) < 0.6 * CAST[who]['hh'], ('phone_to_ear', who, W, ear_y)
         out.append('phone_to_ear %s: wrist %.0f above the shoulder, %.0f below the ear' % (who, B.y_sh - W[1], W[1] - ear_y))
-    # lip sync follows the voice envelope (when the narration is available)
+    # lip sync follows the voice envelope (when the narration is available): the driver's 'Signature required, I just
+    # need someone to sign.' (70.0-73.5 s); with his default 0.2 s mouth lag the best match is ~0.2 s late
     env = voice_envelope()
     if env is not None:
-        a = Acting('officer', seed=1); a.talk([(42.42, 46.5, None)])
-        ts = np.arange(42.3, 46.6, 1 / 30.0)
-        mo = np.array([a.at(t).m_open for t in ts]); ev = np.array([10 ** (_env_db(env, t) / 20.0) for t in ts])
+        ts = np.arange(69.8, 73.7, 1 / 60.0)
+        ev = np.array([10 ** (_env_db(env, t) / 20.0) for t in ts])
+        a = Acting('driver', seed=1, arc=False); a.talk([(70.0, 71.35, None), (71.96, 73.51, None)], lag=0.0)
+        mo = np.array([a.at(t).m_open for t in ts])
         r = float(np.corrcoef(mo, ev)[0, 1])
         assert r > 0.5, ('lip sync', r)
-        out.append('lip sync r = %.2f (line 12)' % r)
+        a2 = Acting('driver', seed=1, arc=False); a2.talk([(70.0, 71.35, None), (71.96, 73.51, None)])
+        mo2 = np.array([a2.at(t).m_open for t in ts])
+        best = max(range(0, 30), key=lambda k: np.corrcoef(mo2[k:], ev[:len(ev) - k])[0, 1] if k else np.corrcoef(mo2, ev)[0, 1])
+        assert 0.12 <= best / 60.0 <= 0.3, ('mouth lag', best / 60.0)
+        out.append('lip sync r = %.2f (driver line 28-30); driver mouth lags the voice by %.2f s' % (r, best / 60.0))
+    # the driver's smile widens stage by stage over the film, drops to nothing at 'no_smile', returns wider
+    a = Acting('driver', seed=2)
+    sm = [(tt, a.at(tt).smile, a.at(tt).grin) for tt in (30, 100, 160, 200, 345, 440, 460)]
+    gr = [g for _, _, g in sm]
+    assert sm[0][1] < 0.2 < sm[1][1] and gr[2] < gr[3] < gr[4] < gr[6] and sm[5][1] < 0.05, ('smile arc', sm)
+    out.append('driver smile arc: ' + ', '.join('%.0fs %.2f/%.2f' % x for x in sm))
+    ev = a.eye_flash(371.0, 0.5)
+    assert a.at(371.2).eyeshine > 0.9 and a.at(371.8).eyeshine < 0.05 and ev[0]['name'] == 'stinger'
+    # the box knocks two, then one (dad's knock)
+    b = BoxActing(1); kv = b.knock(380.0)
+    kt = [e['t'] for e in kv]
+    assert len(kt) == 3 and abs((kt[1] - kt[0]) - 0.3) < 1e-6 and kt[2] - kt[1] > 0.6, kt
+    assert b.at(kt[0] + 0.02)['bulge'] > 0.6 and b.at(kt[0] + 0.6)['bulge'] < 0.05
+    out.append('box knock pattern %s' % ', '.join('%.2f' % x for x in kt))
+    # escalate: mom trembles once the box knocks; the driver's face is still during DRIVER_STILL
+    m = Acting('mom', seed=1); escalate(m, 380.0, 384.0)
+    assert any(abs(m.at(t_).h_dx) > 0.5 for t_ in np.arange(380.2, 381.2, 0.05))
+    d = Acting('driver', seed=1); escalate(d, 436.0, 446.0)
+    assert d.at(441.0).smile < 0.05 and d.at(441.0).still > 0.95
+    out.append('escalate: mom tremble at 380 s, driver still 436-446 s')
     for o in out: print(o)
     print('characters self-test ok')
 
