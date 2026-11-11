@@ -91,8 +91,17 @@ sets; free library and synthesis only as extra layers). Default space in bracket
     ambience_suburb dur=30, dog=0.25, wind=0.4, buzz=0.3, traffic=0.4 (BED) [outside]
     ambience_dawn   dur=30, birds=0.6 (BED; birdsong windows chosen away from the roosters) [outside]
     room_tone_house dur=10, hum=0.3, clock=0.0 (BED) [inside]
+    hazard_tick     kind='on'|'off' [street]   ONE relay click (film.py cues every tick from sets.hazard_ticks());
+                    mix.py puts it on the bed bus (BED_BUS) so the music's foley dip does not pump at 1.25 Hz
+    window_latch    - [close]   a hand tries a locked window: latch clack + frame thud, twice (rule 7 montage)
     stinger         kind='eye_flash': short glassy flash for the driver's eyes on the doorbell camera
     knock_door      soft=True: a light palm / single soft knock
+    Params film.py uses on police names: memory=True on ANY name (21 years ago: duller, tape wow, more room);
+    car_pass kind='away' (= van_pull_away, starts at t) | 'arrive' (draws up and stops, starts at t);
+    car_idle kind='diesel' (= van_idle); chain_lock kind='rattle'; cloth_rustle kind='curtain' (= curtain_flutter),
+    dur; footsteps_wood_inside stairs=True (direction), run=True, slippers=True, foot='L'|'R'; footsteps_porch foot;
+    keys_drop bowl=True, jingle=True, lift=True; tape_rip soft=True (peel); ui_pop kind='speaker' (the doorbell's
+    two-way speaker opening); van_door_slide kind='open'|'close'; box_knock on='porch'|'door'|'vent', small=True.
 """
 import os, sys, json, math, hashlib
 from collections import OrderedDict, defaultdict, deque
@@ -400,10 +409,12 @@ def onset_s(y, rel_db=-24):
 
 
 def env_peak_s(y, smooth=0.25):
-    a = mono(st(y)) ** 2
-    k = n_(smooth)
-    e = np.convolve(a, np.ones(k) / k, 'same')
-    return int(np.argmax(e)) / SR
+    """Time of the loudest `smooth`-second stretch (moving mean of the power, centred; O(n) by cumulative sum)."""
+    a = mono(st(y)).astype(np.float64) ** 2
+    k = min(n_(smooth), len(a))
+    c = np.concatenate([[0.0], np.cumsum(a)])
+    e = c[k:] - c[:-k]                                   # window [i, i + k)
+    return (int(np.argmax(e)) + k // 2) / SR
 
 
 # ======================================================================================== impulse responses

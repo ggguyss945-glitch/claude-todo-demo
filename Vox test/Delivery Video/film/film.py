@@ -52,6 +52,10 @@ The driver's smile follows characters.DRIVER_ARC on the film clock (S0 flat -> S
 -> OFF 436 s -> S5 446 s); his mouth lags his voice 0.2 s; escalate() adds the cast's twitch / tremble arc.
 Global look (glob_fx): per-family exposure, the last 35 % creeping into red_alert, a second ramp over the last minute,
 scare flashes, fade in / out (the police film's global look).
+
+Measured (W/tests/film/): 254 shots, median 2.41 s (p10 1.37, p90 3.93); 2560x1440, one process, one OpenCV thread,
+160 frames over 40 shots: 0.35 s/frame mean incl. cold caches, 0.25 s steady, heaviest shot 0.42 s steady (shared,
+loaded machine; police budget 0.6). Preview 640x360 / 30 fps: 6.3 min with 2 workers.
 """
 import bisect, json, math, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1147,7 +1151,12 @@ def B_doorway(F, sh):
     ppl = list(p.get('ppl', []))
     for q in ppl: q.setdefault('surface', 'inside')
     L, A = people(F, sh, sp, ppl, lt)
-    cam = cam_from(F, sh, p.get('cam', dict(mv='push', x=960, y=540, rate=0.02)))
+    cd = dict(p.get('cam', dict(mv='push', x=960, y=540, rate=0.02)))
+    # the doorway's frame-sized walls sit in the DOF blur: a fast optical zoom re-blurs them every frame (> 0.6 s/frame
+    # at 2560), so the dolly stays slow and the global post push carries the move
+    if cd.get('mv') == 'move': cd = dict(mv='push', x=cd.get('x1', cd['x']), y=cd.get('y1', cd['y']), z=cd.get('z', 1.0))
+    cd['rate'] = min(cd.get('rate', 0.02), 0.02)
+    cam = cam_from(F, sh, cd)
     return Spec(sp.add(*L), cam, None, p.get('grade', sp.grade), sp.focus, sp.dof,
                 fx=lambda t: dict(sp.fx(t) or {}, **p.get('post', {})), hud=p.get('hud'))
 
@@ -1594,6 +1603,8 @@ def shot_common(F, sh, spec):
             else:
                 sh.sfx.append(_ev(tt - 0.08, 'touch_tap', -8, 0, 'close'))
                 sh.sfx.append(_ev(tt, 'ui_pop', -8, 0, 'close'))
+    if sh.kind == 'hand':                                       # her shaking hand rattles the door chain
+        sh.sfx.append(_ev(sh.t0 + 0.15, 'chain_lock', -6, 0.15, 'close', kind='rattle', dur=round(min(1.6, sh.d), 2)))
     if sh.kind == 'latch':
         sh.sfx.append(_ev(p.get('t_lock', sh.t0 + 0.35), 'window_latch', -2, 0.1, 'close'))
     if sh.kind == 'photo':
@@ -2458,7 +2469,7 @@ if __name__ == '__main__':
                'by_shot': {str(k_): round(float(np.mean([r[2] for r in rows if r[3] == k_ and r[1] > 0])), 3) for k_ in sorted(set(r[3] for r in rows))}}
         print(json.dumps(res))
         os.makedirs(TESTS, exist_ok=True)
-        out = os.path.join(TESTS, 'speed_%s.json' % a.size)
+        out = os.path.join(TESTS, ('speed_shots_%s.json' if a.shots else 'speed_%s.json') % a.size)
         json.dump(res, open(out, 'w'), indent=1); print(out)
     if a.sheet:
         sh = F.shots[a.range[0]:a.range[1]] if a.range else F.shots

@@ -37,17 +37,17 @@ python3 film.py --bench 1 --shots 10,41,237 --size 2560x1440 --threads 1   # spe
 python3 render.py --stills 12.5,151.9,371.0 --size 960x540                  # -> W/tests/render/still_*.jpg
 python3 render.py --clip 370 380 --size 960x540 --audio W/align/vo_en.wav   # one process test clip
 python3 render.py --workers 3 --audio <mix.wav>                             # FULL: 2560x1440, 60 fps -> W/picture/picture.mp4 + film.mp4
-python3 render.py --workers 3 --from_ 100 --to 105 --out W/tests/render5    # a 5 s full-mode test (slices + join)
+python3 render.py --workers 3 --from_ 370 --to 375 --out W/tests/render5 --audio W/align/vo_en.wav   # a 5 s full-mode test
 python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview --audio W/align/vo_en.wav   # low-res preview
 ```
 - **Full mode** splits the range into contiguous slices, one per worker process, each with one OpenCV thread. Each slice is encoded with libx264 at crf 16, preset faster.
 - **Finished slices** get a `.done` marker. A re-run skips them, so delete the markers (and the slices) before rendering a changed film into the same `--out`.
-- **The preview** `W/preview/preview.mp4` is the full-mode output (`film.mp4`) renamed. Its audio is the voiceover only, until the mix exists.
+- **The preview** `W/preview/preview.mp4` was made from the full-mode `picture.mp4`, remuxed with the voiceover padded to the picture's 642.7 s. `render.py` now pads the audio the same way, so `film.mp4` keeps the last 2 s of black after the final line. Its audio is the voiceover only, until the mix exists. Afterwards the slices, `picture.mp4` and `film.mp4` were deleted.
+- **Partial ranges** (`--from_ / --to`): the audio is now muxed from `--from_`, not from 0.
 
 ## Speed (police budget: 0.6 s/frame at 2560x1440, one process, one OpenCV thread)
-- `film.py --bench 40`: mean 0.37 s/frame including cold caches, 0.27 s steady.
-- The heaviest shots, measured steady:
-  - the sunrise keys: about 0.6 s on a busy machine, 0.38 s alone;
-  - the doorway views: 0.47-0.54 s;
-  - the knocking-box close-ups and the wave panels: about 0.4-0.5 s.
-- The full film is 38,560 frames at 60 fps. With 3 workers it renders in about 1.5 h.
+- `film.py --bench 40` (160 frames over 40 shots): mean 0.35 s/frame including cold caches, 0.25 s steady. The heaviest shot is 0.42 s steady. These were measured on the shared machine while the mix was running.
+- The heaviest shots (`--bench 1 --shots ...`): the doorway views are 0.17-0.46 s steady and the sunrise keys 0.31 s.
+- The doorway's dolly is capped at 2 %/s: a faster optical zoom re-blurs its frame-sized walls every frame (0.74 s).
+- The full film is 38,560 frames at 60 fps. Three workers render it in about 1.5 h on a quiet machine.
+- A 5 s full-mode test (370-375 s, 3 workers, 2560x1440, with the voiceover) rendered end to end in 1.5 min on the loaded machine. The result is `W/tests/render5_370-375_2560.mp4`, and its audio offset checked to 370.00 s.

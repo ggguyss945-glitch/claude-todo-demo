@@ -74,7 +74,9 @@ def encoder(path, w, h, fps, crf, preset, x264_threads=2):
 def mux(video, audio, dst, t0=0.0, dur=None):
     cmd = ['ffmpeg', '-v', 'error', '-y', '-i', video]
     cmd += ['-ss', '%.3f' % t0] + (['-t', '%.3f' % dur] if dur else []) + ['-i', audio]
-    cmd += ['-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-shortest', '-movflags', '+faststart', dst]
+    # the audio is padded with silence so the file runs the picture's full length (the film's tail of black after the last
+    # line is not cut by -shortest)
+    cmd += ['-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-af', 'apad', '-shortest', '-movflags', '+faststart', dst]
     subprocess.run(cmd, check=True)
 
 

@@ -71,8 +71,8 @@ INTENSITY = [
     ('s94', 0.5), ('s96', 0.4),
     ('s98', 0.5), ('s100', 0.4), ('s102', 0.48), ('s105', 0.44), ('s106', 0.52), ('s107', 0.55), ('e109', 0.6),
     ('s110', 0.64), ('s113', 0.45), ('s115', 0.4), ('s117', 0.42), ('s119', 0.3), ('s122', 0.4),
-    ('s123', 0.46), ('s125', 0.3), ('s130', 0.36), ('s131', 0.42), ('s134', 0.3), ('s136', 0.34), ('s138', 0.4),
-    ('s139', 0.44), ('s143', 0.46), ('s144', 0.5), ('s145', 0.42), ('s147', 0.38),
+    ('s123', 0.48), ('s125', 0.36), ('s130', 0.4), ('s131', 0.46), ('s134', 0.36), ('s136', 0.4), ('s138', 0.44),
+    ('s139', 0.48), ('s143', 0.5), ('s144', 0.54), ('s145', 0.44), ('s147', 0.42),
     ('s148', 0.5), ('s150', 0.56), ('s155', 0.6), ('s156', 0.64), ('s159', 0.62), ('s162', 0.66), ('s163', 0.72),
     ('e163', 0.82), ('s164', 0.85),
     ('s165', 0.8), ('s167', 0.62), ('s170', 0.6), ('s171', 0.66), ('e173', 0.62), ('s174', 0.7), ('s177', 0.74),
@@ -197,7 +197,11 @@ def load_lines(timeline_path=None):
     return tl['lines'], float(tl.get('duration_en') or max(l['end'] for l in tl['lines']))
 
 
-FLATTEN = {}          # slug -> share of the track's own dynamics evened out (score.FLATTEN 0.3 otherwise)
+# slug -> share of the track's own dynamics evened out (score.FLATTEN 0.3 otherwise). The new tracks swing much more
+# than the police six (Are You Alone? runs -34 .. -9 LU): measured on the full-film mix, their quiet stretches sat 25-30
+# LU under the voice (the music "present" only 40 % of the time in those sections), so they are evened out more.
+FLATTEN = {'are_you_alone_victor_lundberg': 0.6, 'haunted_mind_etienne_roussel': 0.55, 'afterthoughts_beyza': 0.55,
+           'goth_christmas_par': 0.55, 'the_logic_of_tyrants_hampus_naeselius': 0.45}
 
 
 def track_map(lines):
