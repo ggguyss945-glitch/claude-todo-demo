@@ -149,13 +149,16 @@ LEVEL_LU = dict(knock_door=-3, doorbell_chime=-6, footsteps_porch=-7, footsteps_
                 radio_click=-8, radio_static=-19, bodycam_beep=-8, phone_ring=-7, phone_busy=-12, phone_vibrate=-9,
                 phone_pickup=-8, mail_slot=-6, paper=-9, pen_click=-6, key_in_lock=-4, lock_turn=-6,
                 chain_lock=-1, door_creak=-3, breath=-8, heartbeat=-8, whoosh=-9, riser=-5, braam=-3,
-                impact_hit=-2, sub_drop=-4, stinger=-2, glitch=-8, ui_pop=-12, typing=-9, tinnitus=-15,
+                impact_hit=0, sub_drop=-4, stinger=-2, glitch=-8, ui_pop=-12, typing=-9, tinnitus=-15,
                 ambience_night=-25, room_tone=-31, clock_tick=-8, countdown_tick=-8, tv_off=-9, crowd_whisper=-13)
 # delivery film: one-shots are momentary max, BEDS (and dur-given DUR_BEDS) integrated, LU rel the voice
-LEVEL_LU.update(doorbell_dingdong=-4, doorbell_cam_chime=-9, phone_notify=-10, box_knock=-2, box_tap=-9, box_creak=-11,
+# final mix (measured by measure_mix.py against the voice + music where each cue lands): touch_tap -12 -> -8,
+# camera_shutter -7 -> -4, cloth_rustle -12 -> -9, box_creak -11 -> -7, phone_notify -10 -> -8 (all were 16-25 LU
+# under the voice + music, i.e. inaudible); impact_hit -2 -> 0 (the reveal hits peaked ~4 LU under AUDIO_SPEC's +2)
+LEVEL_LU.update(doorbell_dingdong=-4, doorbell_cam_chime=-9, phone_notify=-8, box_knock=-2, box_tap=-9, box_creak=-7,
                 box_drop=-6, box_scrape=-8, box_open=-6, box_voice=-24, tape_rip=-6, hazard_ticks=-22,
                 van_door_slide=-8, van_idle=-24, van_pull_away=-11, van_step=-9, keys_drop=-4, window_slide=-7,
-                curtain_flutter=-18, cloth_rustle=-12, touch_tap=-12, stylus_scribble=-11, camera_shutter=-7,
+                curtain_flutter=-18, cloth_rustle=-9, touch_tap=-8, stylus_scribble=-11, camera_shutter=-4,
                 footsteps_stairs=-8, footsteps_hall=-9, mom_breath=-10, mom_sob=-9, ambience_suburb=-25,
                 ambience_dawn=-26, room_tone_house=-31, hazard_tick=-10, window_latch=-7)
 SPACE_LU = dict(close=1.0, inside=0.0, outside=-7.0, doorbell_mic=-2.0, street=-6.0, phone=-4.0, radio=-3.0,
@@ -176,7 +179,8 @@ BEDS = ('ambience_night', 'room_tone', 'radio_static', 'car_idle', 'tinnitus', '
         'hazard_ticks', 'van_idle', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'box_voice')
 DUR_BEDS = ('breath', 'siren_far', 'typing', 'heartbeat', 'curtain_flutter', 'mom_breath', 'mom_sob')   # with dur
 TIMED = ('hazard_ticks',)
-BED_BUS = BEDS + ('hazard_tick',)          # mix.py routes these to the bed bus (no foley dip of the music per relay tick)
+BED_BUS = BEDS + ('hazard_tick', 'curtain_flutter')   # mix.py routes these to the bed bus (no foley dip of the music per
+#                                                      relay tick; the open window's curtains run for a minute)
 HITS = ('impact_hit', 'stinger', 'braam', 'sub_drop')
 DEFAULT_SPACE = defaultdict(lambda: 'close', knock_door='inside', footsteps_porch='outside', car_pass='street',
                             car_idle='outside', car_door_open='street', car_door_close='street', siren_far='street',
@@ -983,6 +987,7 @@ def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, c
     else:
         y = _steps(rng, 'steps_wood', lambda: src('footsteps_wood_inside', nothas=['barn_reverberant']), n, dur, rate,
                approach, creak, weight)
+        y = eq(y, ('ls', 150, -2.5, 0.7), ('peak', 1100, 4.0, 0.8))   # final mix: some grains were all thud on a phone
     if foot in ('L', 'R'):
         y = pan(y, -0.08 if foot == 'L' else 0.08)
     return y, 0.0, 0.0, False

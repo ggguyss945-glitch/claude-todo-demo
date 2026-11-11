@@ -1534,6 +1534,8 @@ def shot_common(F, sh, spec):
                 if e['name'] == 'doorbell_chime':                   # the chime rings inside the house; the button click on the mic
                     sh.sfx.append(_ev(e['t'], 'doorbell_chime', g, 0.0, 'inside', kind='ding_dong'))
                     if sh.kind == 'door': sh.sfx.append(_ev(e['t'] - 0.05, 'ui_pop', -14, 0.0, 'doorbell_mic'))
+                    if p.get('era', 'now') != 'memory':             # and the doorbell app chimes on your phone
+                        sh.sfx.append(_ev(e['t'] + 0.3, 'doorbell_cam_chime', g - 3, 0.0, 'close'))
                     continue
                 if p.get('era') == 'memory': pr['memory'] = True
                 sh.sfx.append(_ev(e['t'], e['name'], g, e.get('pan', 0.0), sp_e, **pr))
@@ -1576,14 +1578,14 @@ def shot_common(F, sh, spec):
                 sh.sfx.append(_ev(tt, 'phone_vibrate', -4, 0, 'close', n=2))
                 sh.sfx.append(_ev(tt + 0.05, 'text_notification', -6, 0, 'close'))
             else:
-                sh.sfx.append(_ev(tt - 0.08, 'touch_tap', -8, 0, 'close'))
-                sh.sfx.append(_ev(tt, 'ui_pop', -8, 0, 'close'))
+                sh.sfx.append(_ev(tt - 0.08, 'touch_tap', -3, 0, 'close'))        # final mix: -8 / -8 were 20 LU under
+                sh.sfx.append(_ev(tt, 'ui_pop', -5, 0, 'close'))
     if sh.kind == 'hand':                                       # her shaking hand rattles the door chain
-        sh.sfx.append(_ev(sh.t0 + 0.15, 'chain_lock', -6, 0.15, 'close', kind='rattle', dur=round(min(1.6, sh.d), 2)))
+        sh.sfx.append(_ev(sh.t0 + 0.15, 'chain_lock', -3, 0.15, 'close', kind='rattle', dur=round(min(1.6, sh.d), 2)))
     if sh.kind == 'latch':
         sh.sfx.append(_ev(p.get('t_lock', sh.t0 + 0.35), 'window_latch', -2, 0.1, 'close'))
     if sh.kind == 'photo' and p.get('pop'):                     # the photo arriving full screen (the other crops cut silently)
-        sh.sfx.append(_ev(sh.t0, 'camera_shutter', -10, 0, 'close'))
+        sh.sfx.append(_ev(sh.t0, 'camera_shutter', -4, 0, 'close'))             # final mix: -10 was 23 LU under
     # van / flashers: relay ticks while the van is in view with its hazards on
     if sh.kind in ('door', 'street', 'peep', 'lily', 'side') and p.get('era', 'now') == 'now' and p.get('tod', 'night') == 'night':
         if sh.kind != 'lily' or p.get('view') == 'window':
@@ -1625,6 +1627,7 @@ def box_cues(F):
     """One box_knock per F.boxa hit: heard through the front door (outside) while the box stands on the porch; on the
     door itself (inside, at chest height) once it stands against it; the doorbell mic layer when the door camera is up."""
     out = []
+    t_two = F.w(283, 'two') - 0.15                              # the sting's "Two knocks." (the box is at the door again)
     for e in F.boxa.events:
         t = e['t']; pr = dict(e.get('params') or {})
         sh = F.shot_at(t)
@@ -1632,6 +1635,12 @@ def box_cues(F):
         pr['on'] = 'door' if on_door else 'porch'
         if t > T_DAWN:
             pr['small'] = True                                  # small knuckles (the sting)
+        if T_STING < t < t_two:
+            # "Somewhere down the street, you can already hear it. Small knuckles on cardboard.": far off and soft, so
+            # the knock that follows at the door reads as two, a pause, one (final mix: they were on the door at 0 dB)
+            pr['on'] = 'porch'
+            out.append(_ev(t, e['name'], e.get('gain_db', 0.0) - 3.0, -0.35, 'street', **pr))
+            continue
         out.append(_ev(t, e['name'], e.get('gain_db', 0.0), -0.25, 'inside' if on_door else 'outside', **pr))
         if sh.kind in ('door', 'box', 'wave', 'peep'):
             out.append(_ev(t, e['name'], e.get('gain_db', 0.0) - 6, 0.1, 'doorbell_mic' if sh.kind == 'door' else 'close', **pr))
@@ -1680,10 +1689,15 @@ def beds(F):
     out.append(_ev(0.0, 'ambience_night', -2, 0, 'outside', dur=round(T_DAWN, 1), dog=0.3, wind=0.5, buzz=0.4, crickets=0.6))
     out.append(_ev(0.0, 'room_tone', -4, 0, 'inside', dur=round(D, 1)))
     out.append(_ev(0.0, 'car_idle', -8, 0.4, 'street', dur=round(T_VAN_GO[0] + 0.5, 1), kind='diesel'))
-    out.append(_ev(T_VAN_GO[0], 'car_pass', -6, 0.5, 'street', kind='away', dur=round(T_VAN_GO[1] - T_VAN_GO[0] + 1.5, 1)))
+    out.append(_ev(T_VAN_GO[0], 'van_pull_away', 2, 0.5, 'window', dur=round(T_VAN_GO[1] - T_VAN_GO[0] + 1.5, 1)))
     out.append(_ev(T_DAWN, 'ambience_dawn', -6, 0, 'outside', dur=round(T_STING - T_DAWN, 1)))
     out.append(_ev(T_STING, 'ambience_night', -4, 0, 'outside', dur=round(D - T_STING, 1), dog=0.2, wind=0.6, buzz=0.3, crickets=0.6))
-    out.append(_ev(488.0, 'clock_tick', -10, 0.3, 'inside', dur=10.0, bpm=60))
+    out.append(_ev(488.0, 'clock_tick', -6, 0.3, 'inside', dur=10.0, bpm=60))
+    # Lily's room: the window stands wide open from "The window is wide open." to the sunrise cut; you stay in the room
+    # (final mix: the night air and the curtains, so the open window is heard, not only seen)
+    tw = F.t(242) - 0.1
+    out.append(_ev(tw, 'ambience_suburb', -2, 0.3, 'window', dur=round(T_DAWN - tw, 1), dog=0.1, wind=0.7, traffic=0.2))
+    out.append(_ev(tw + 0.3, 'curtain_flutter', -7, 0.25, 'close', dur=round(T_DAWN - tw - 0.3, 1), wind=0.7))
     return out
 
 
@@ -2003,7 +2017,8 @@ def plan(F):
     C(T(37), 'ins', name='label', cam=dict(mv='creep', x=900, y=480, z=1.35, snap=(t(37) + 0.05, 1.3)), hit=t(37) + 0.05,
       music=[(t(37) + 0.05, 'stinger', 0.85)])
     C(T(38), 'door', talk_btn=True, ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry(), lambda a, s: a.listen_tilt(t(38) + 1.0, e(38), 1, 14)))],
-      py=-60, z1=1.12)
+      py=-60, z1=1.12,     # "You press the button": the talk button (final mix: it had no sound)
+      sfx=[(w(38, 'press') + 0.1, 'touch_tap', -6, 0, 'close'), (w(38, 'press') + 0.16, 'ui_pop', -9, 0, 'close')])
     C(T(39), 'peep', ppl=[P(DR, act=_A(stare(), carry()))], cam=dict(mv='push', x=960, y=480, z=1.05))
     C(T(42), 'door', ppl=[P(DR, at=DA(-0.1, 0.9), act=_A(stare(-1), carry(), lean(0.5, 1.8, 0.5), creep(6, 4, None)), lean=True)], py=-90)
     C(T(43), 'bust', who=DR, cx=760, cy=590, scale=0.95, act=_A(stare(-1), creep(5, 3, None)), tablet=(1360, 700, 520), cam=dict(mv='push', x=1000, y=560, z=1.0))
@@ -2041,7 +2056,7 @@ def plan(F):
       px=640, py=-330)
     C(w(66, '309') - 0.15, 'door', ppl=[P(DR, at=DA(-0.15, 0.95), act=_A(stare(-1), carry()))], hud_follow=True, z0=2.6, z1=2.9, px=10, py=4, post_off=(600, -330),
       flicker=F.ts_flicker, post_fn=lambda t_: dict(glitch=0.7) if any(0 <= t_ - tf < 0.12 for tf, _ in F.ts_flicker) else {},
-      music=[(w(66, 'three', 1), 'stinger', 0.7)], sfx=[(tf, 'glitch', -8, 0.4, 'close', dict(dur=0.15, amount=0.6)) for tf, _ in F.ts_flicker])
+      music=[(w(66, 'three', 1), 'stinger', 0.7)], sfx=[(tf, 'glitch', -4, 0.4, 'close', dict(dur=0.15, amount=0.6)) for tf, _ in F.ts_flicker])
     C(T(67), 'ins', name='lock_inside', kw=dict(turn=0.0, chain=1.0), hand=False, cam=dict(mv='push', x=960, y=540, z=1.05, rate=0.04))
     C(T(68), 'bust', who=DR, cx=760, cy=590, scale=0.95, act=_A(stare(-1), tilt(0.4, 10, 1.2), creep(5, 3, None)), tablet=(1360, 690, 560),
       cam=dict(mv='push', x=1040, y=560, z=1.0),
@@ -2138,7 +2153,7 @@ def plan(F):
     C(w(135, 'without') - 0.1, 'bust', who=M, bg='hall', act=_A(ex('fear'), lambda a, s: a.set(s.t0, None, 0.3, look_y=0.45, lock=1.0)), light=phone_light,
       cam=dict(mv='creep', x=960, y=560, z=1.05))
     C(T(136), 'street', era='memory', drive=('in', t(136) - 0.2, t(136) + 3.2, -14.0, 3.6), cam=dict(mv='push', x=1100, y=620, z=1.2, rate=0.03),
-      sfx=[(t(136), 'car_pass', -6, 0.4, 'street', dict(kind='arrive', memory=True))], music=[(t(136), 'motif', 0.5, 5)])
+      sfx=[(t(136), 'car_pass', -2, 0.4, 'street', dict(kind='arrive', memory=True))], music=[(t(136), 'motif', 0.5, 5)])
     C(T(136, 3.4), 'hall', era='memory', ppl=[P(DAD, at=HA(-0.2, 1.6), act=_A(back_view(), lambda a, s: a.set(s.t0, None, 0.4, h_turn=0.3)), talk=False)],
       cam=dict(mv='push', x=960, y=520, z=1.05, rate=0.03))
     C(T(137), 'peep', era='memory', ppl=[P(DR, act=_A(stare(), lambda a, s: a.ring_bell(t(137) + 0.6)))], show_box=False,
@@ -2244,7 +2259,9 @@ def plan(F):
       post_fn=lambda t_, tf=t(208) + 0.3 + 1.6 * 0.55: dict(white=0.5 * math.exp(-((t_ - tf) / 0.05) ** 2)))
     C(T(209), 'door', box='door', ppl=[P(DR, act=_A(stare(-1), carry(), lambda a, s: a.climb_in(t(209) + 2.1)), track=True,
                                          path=[(T(209), T(209) + 2.1, [DA(-0.45, 1.1), 'steps', 'path_mid', 'gate', 'van_cab'], 2.0)])],
-      py=0, z1=1.08)
+      py=0, z1=1.08,
+      # the cab door (climb_in's own event lands after the cut to the app, where shot_common drops it)
+      sfx=[(t(209) + 2.1 + 1.2 + 0.35, 'car_door_close', -3, 0.45, 'street')])
     C(T(210), 'phone', states=[(t(210) + 0.15, 'attempted')], scale=1.2)
     C(T(213), 'phone', states=[(t(210) + 0.15, 'attempted')], full=True, zx=960, zy=640, prate=0.06, tags=[(w(213, '6') + 0.1, '6:12 AM', 960, 170, 'red', 1.8)])
     C(T(214), 'street', cam=dict(mv='push', x=960, y=480, z=1.0, rate=0.03), tags=[(t(214) + 0.4, 'SUNRISE  6:12', 960, 200, 'white', 1.8)])
@@ -2303,7 +2320,7 @@ def plan(F):
       music=[(t(254) + 0.02, 'sub_drop', 1.0), (t(254) - 1.2, 'silence', 0.0, 1.15)], sfx=[(t(254) + 0.02, 'sub_drop', -2, 0, None)])
     C(T(255), 'bust', who=LI, bg='lily', act=_A(lambda a, s: a.set(s.t0 - 1, None, 0.2, look_x=0.6, look_y=0.1, lock=1.0, wide=0.4)), cam=dict(mv='push', x=960, y=560))
     C(T(256), 'lily', bed='sleeping', cam=dict(mv='push', x=1560, y=780, z=1.6, rate=0.04),
-      sfx=[(t(256) + 0.3, 'box_knock', -14, 0.4, 'inside', dict(on='vent', n_in_pattern=1))])
+      sfx=[(t(256) + 0.3, 'box_knock', -8, 0.4, 'inside', dict(on='vent', n_in_pattern=1))])
     C(T(257), 'door', box='door', ppl=[], px=-480, py=100, z0=1.2, z1=1.45)
     C(T(258), 'bust', who=LI, bg='lily', act=_A(lambda a, s: a.set(s.t0 - 1, None, 0.2, look_x=0.5, lock=1.0, wide=0.3, brow_sad=0.4)),
       cam=dict(mv='creep', x=960, y=560, z=1.05))
@@ -2323,7 +2340,7 @@ def plan(F):
     C(T(264), 'doorway', tod='dawn', door_open=door_swing(t(264) + 0.2, 1.4, 0.0, 0.92), box=dict(at='door', state='open'),
       ppl=[P(M, at='hall_near', act=_A(back_view(), ex('sad')), light=dawn_light)], cam=dict(mv='move', x=980, y=560, z=1.0, x1=980, y1=760, z1=1.3),
       sfx=[(t(264) + 0.25, 'door_creak', -3, 0, 'inside'), (t(264) + 0.1, 'chain_lock', -6, 0, 'inside', dict(action='unlock'))])
-    C(T(266), 'box', tod='dawn', cam=dict(mv='push', x=960, y=520, z=1.1, rate=0.04), sfx=[(t(266) + 0.2, 'tape_rip', -10, 0, 'outside', dict(soft=True))])
+    C(T(266), 'box', tod='dawn', cam=dict(mv='push', x=960, y=520, z=1.1, rate=0.04), sfx=[(t(266) + 0.13, 'tape_rip', -6, 0, 'porch', dict(soft=True, dur=0.9))])
     C(T(267), 'ins', name='box_keys', cam=dict(mv='move', x=640, y=420, z=1.5, x1=990, y1=560, z1=1.9), music=[(w(268, 'ring'), 'hit', 0.55)],
       sfx=[(w(268, 'keys') + 0.2, 'keys_drop', -10, 0, 'close', dict(jingle=True))])
     C(T(269), 'keys', cam=dict(mv='move', x=960, y=480, z=1.0, x1=960, y1=600, z1=1.35), sfx=[(t(269) + 0.2, 'keys_drop', -8, 0, 'close', dict(jingle=True, lift=True))],
@@ -2352,12 +2369,13 @@ def plan(F):
     C(T(284), 'peep', ppl=[P(DR, at='driver_close', act=_A(stage(5), grin(-1), frz(0.1, 1.0)))], approach=False, cam=dict(mv='push', x=960, y=420, z=1.05, rate=0.04),
       music=[(t(284), 'silence', 0.0, 0.7)])
     C(w(285, 'one') - 0.12, 'box', cam=dict(mv='push', x=960, y=620, z=1.6, rate=0.07, roll=-3), music=[(w(285, 'one'), 'hit', 1.0), (e(285) + 0.3, 'end', 0.8, 3.0)])
-    C(e(285) + 0.28, 'black', cut='static', sfx=[(e(285) + 0.28, 'impact_hit', 0, 0, None, dict(size=1.3))])
+    C(e(285) + 0.28, 'black', cut='static', sfx=[(e(285) + 0.28, 'impact_hit', 4, 0, None, dict(size=1.5)),
+                                               (e(285) + 0.28, 'sub_drop', 0, 0, None)])
 
     # ============================================================ global cues
     for l in F.L:                                                     # the doorbell speaker: a click before he talks
         if l.get('fx') == 'doorbell' and l.get('found_en', True):
-            G.append(_ev(l['t'] - 0.12, 'ui_pop', -16, 0.0, 'doorbell_mic', kind='speaker'))
+            G.append(_ev(l['t'] - 0.12, 'ui_pop', -10, 0.0, 'doorbell_mic', kind='speaker'))   # final mix: -16 was 30 LU under
     G.append(_ev(t(122), 'footsteps_wood_inside', -6, -0.3, 'inside', n=6, rate=1.4, stairs=True, slippers=True))
     G.append(_ev(t(219) - 1.0, 'heartbeat', -8, 0, None, bpm=64, bpm_end=72, dur=8.0))
     G.append(_ev(t(242), 'heartbeat', -6, 0, None, bpm=88, bpm_end=120, dur=10.0))

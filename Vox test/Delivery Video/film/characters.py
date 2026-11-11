@@ -4359,7 +4359,7 @@ class Acting:
             if w >= 0.5: P.tablet_screen = screen
             P.h_nod += 0.03 * w; P.lock = lerp(P.lock, 1.0, w)
         self._add(t0, t1 + 0.6, fn)
-        return [self._ev(t0 + 0.08, 'cloth_rustle', -12.0), self._ev(t1 + 0.05, 'cloth_rustle', -14.0)]
+        return [self._ev(t0 + 0.08, 'cloth_rustle', -7.0), self._ev(t1 + 0.05, 'cloth_rustle', -9.0)]   # final mix: was -12 / -14, masked
 
     def ring_bell(self, t0, side=0.0, hand=None, hold=0.3):
         """Rings the doorbell. side 0: the bell is the doorbell camera itself: the index finger comes AT the lens from
@@ -4412,7 +4412,7 @@ class Acting:
             self._arm(P, side, w, out - 30.0 * u, down + 10.0 * u, fwd, 'open', up=0.5, rot=-side * 70.0)
             P.tilt += 2.0 * side * w; P.turn += 0.1 * side * w; P.h_turn -= 0.1 * side * w
         self._add(t0, t1 + 0.5, fn)
-        return [self._ev(t0 + 0.45, 'box_creak', -10.0, pan=0.3 * side)]
+        return [self._ev(t0 + 0.45, 'box_creak', -5.0, pan=0.3 * side)]                 # final mix: was -10, masked
 
     def lean_close(self, t0, dur=2.2, t1=None, tilt=7.0, side=1, amount=1.0):
         """Driver: leans right up to the lens ("he's talking to her now"), head tilted, stare locked (lean_in + tilt)."""
@@ -4540,8 +4540,8 @@ class Acting:
             P.lean += 0.08 * w; P.turn += 0.15 * side * w
             P.lock = lerp(P.lock, 0.0, w); P.look_x += 0.5 * side * w; P.look_y -= 0.2 * w
         self._add(t0, None if t1 is None else t1 + 0.5, fn)
-        ev = [self._ev(grab, 'chain_lock', -10.0, kind='rattle', pan=0.3 * side)]
-        if t1 is not None: ev.append(self._ev(t1 + 0.05, 'chain_lock', -14.0, kind='rattle', pan=0.3 * side))
+        ev = [self._ev(grab, 'chain_lock', -5.0, kind='rattle', pan=0.3 * side)]          # final mix: -10 / -14 were masked
+        if t1 is not None: ev.append(self._ev(t1 + 0.05, 'chain_lock', -9.0, kind='rattle', pan=0.3 * side))
         return ev
 
     def hands_over_mouth(self, t0, t1=None, fade=0.4, sob=True):
