@@ -740,7 +740,9 @@ def B_street(F, sh):
     L, A = people(F, sh, sp, p.get('ppl'), lambda t: porch_light(t, hz, k=0.6))
     cam = cam_from(F, sh, p.get('cam', dict(mv='push', x=960, y=560)))
     grade = p.get('grade', 'memory' if era == 'memory' else 'night_blue')
-    return Spec(sp.add(*L), cam, None, grade, 1.1, 0.0, fx=lambda t: dict(sp.fx(t) or {}, **p.get('post', {})), hud=p.get('hud'))
+    pf = p.get('post_fn')
+    return Spec(sp.add(*L), cam, None, grade, 1.1, 0.0, fx=lambda t: dict(sp.fx(t) or {}, **p.get('post', {}), **(pf(t) if pf else {})),
+                hud=p.get('hud'))
 
 
 def _doorbell_hud(F, sh, cam, lens, A, p):
@@ -1826,11 +1828,17 @@ def glob_fx(F, sh, t, fx):
             fx['red'] = fx.get('red', 0.0) + ((0.42 + (0.18 if ext else 0.0)) * k + 0.28 * k2 + 0.16 * k7) * ui
             fx['sat'] = fx.get('sat', 1.0) * (1 + (0.6 * k + 0.25 * k2 + 0.2 * k7) * ui)
             fx['exposure'] = fx.get('exposure', 0.0) - (0.42 * k + 0.3 * k2 + 0.8 * k7) * ui
-        if k7 > 0 and 'flash' not in fx:
+        # review 4: the hazards start reaching into the house before the climax (from the box at the door, 455 s), so the
+        # red builds instead of switching on at rule 7; the 3:41 photo is a still, so its hazard light is frozen in it
+        kh = 0.4 * clamp((t - 455.0) / 53.0) if t < 508.0 else 0.0
+        if sh.kind == 'photo' and k7 > 0:
+            fx['flash'] = _epost.Spill(0.42 * k7, side=1.0)
+            fx['exposure'] = fx.get('exposure', 0.0) - 0.3 * k7
+        elif max(k7, kh) > 0 and 'flash' not in fx:
             hz = ST.hazard(t, t_off=T_HZ_OFF)
             if hz > 0.01:
-                ui = 0.45 if sh.kind in ('phone', 'wave', 'ins', 'hand', 'latch', 'photo') else 1.0
-                fx['flash'] = _epost.Spill(0.55 * k7 * hz * ui, side=-1.0 if sh.idx % 2 else 1.0)
+                ui = 0.45 if sh.kind in ('phone', 'wave', 'ins', 'hand', 'latch') else 1.0
+                fx['flash'] = _epost.Spill(0.55 * max(k7, kh) * hz * ui, side=-1.0 if sh.idx % 2 else 1.0)
     if t > F.duration - 2.6: fx['fade'] = clamp((t - (F.duration - 2.6)) / 1.6)
     if t < 0.35: fx['fade'] = max(fx.get('fade', 0.0), 1 - t / 0.35)
 
@@ -1856,14 +1864,16 @@ def beds(F):
         if (sh.kind in ('street', 'door', 'peep', 'side', 'box') and sh.p.get('era', 'now') == 'now' and sh.p.get('tod', 'night') == 'night'
                 and sh.t0 < T_VAN_GO[0] and not (sh.kind == 'street' and sh.p.get('drive'))):
             t1_ = min(sh.t1, T_VAN_GO[0] + 0.3)
-            out.append(_ev(sh.t0, 'van_idle', -1, 0.4, 'street', dur=round(t1_ - sh.t0 + 0.15, 2)))   # (own name: not merged with the bed)
+            out.append(_ev(sh.t0, 'van_idle', 7, 0.4, 'street', dur=round(t1_ - sh.t0 + 0.15, 2)))    # (own name: not merged with the bed)
+            # review 4: at -1 the exterior shots measured only 0.8 dB over the interiors (-31.2 vs -32.0 LU); +4 gave
+            # -28.7 vs -32.0; +7 aims at the critic's ~-26 LU outside
     out.append(_ev(T_VAN_GO[0], 'van_pull_away', 6, 0.5, 'window', dur=round(T_VAN_GO[1] - T_VAN_GO[0] + 1.5, 1)))
     # the van's hazard relay: one continuous bed, phase-locked to the picture's blink, until they stop on "stop"
     out.append(_ev(0.0, 'hazard_ticks', -4, 0.45, 'outside', dur=round(T_HZ_OFF + 0.2, 2), t_off=T_HZ_OFF))
     # the dawn (fix 3: it sat under the night bed): heard through the door, then the open porch from the door creak on
     t_open = F.t(264) + 0.25
     out.append(_ev(T_DAWN, 'ambience_dawn', 9, 0, 'outside', dur=round(t_open - T_DAWN + 0.6, 1), birds=0.7))
-    out.append(_ev(t_open, 'ambience_dawn', 6, 0, 'porch', dur=round(T_STING - t_open, 1), birds=0.9))
+    out.append(_ev(t_open, 'ambience_dawn', 8, 0, 'porch', dur=round(T_STING - t_open, 1), birds=0.9))     # review 4: +2 (birds ~-25 LU)
     out.append(_ev(T_STING, 'ambience_night', -4, 0, 'outside', dur=round(D - T_STING, 1), dog=0.2, wind=0.6, buzz=0.3, crickets=0.6))
     out.append(_ev(488.0, 'clock_tick', -6, 0.3, 'inside', dur=10.0, bpm=60))
     # Lily's room: the window stands wide open from "The window is wide open." to the sunrise cut; you stay in the room
@@ -2494,8 +2504,8 @@ def plan(F):
     C(w(240, 'window') - 0.1, 'side', window_open=True, cam=dict(mv='push', x=960, y=520, z=1.0, rate=0.03))
     tpush = t(241) + 0.45
     C(T(241), 'upstairs', lily_door=lambda tt, t0=tpush: 0.07 + 0.83 * ease_in_out(clamp((tt - t0) / 1.1)), pov_push=tpush, dof=0.6,
-      cam=dict(mv='keys', shake=3.0, keys=[(T(241), 960, 531, 1.15, None, 1.3), (tpush, 960, 531, 1.4, 'in_out', 1.3),
-                                           (T(242), 960, 531, 1.6, 'lin', 1.3)]),        # constant optical zoom: no re-bakes
+      cam=dict(mv='keys', shake=3.0, keys=[(T(241), 960, 531, 3.0, None, 1.3), (tpush, 960, 531, 4.0, 'in_out', 1.3),
+                                           (T(242), 960, 531, 4.6, 'lin', 1.3)]),        # constant optical zoom: no re-bakes
       posts=[(T(241), tpush, 1.0, 1.12, 0, 0, 'in_out'), (tpush, T(242), 1.0, 1.25, 0, 0, 'lin')],    # the push into the image
       sfx=[(tpush, 'door_creak', -2, 0, 'inside'), (tpush - 0.05, 'cloth_rustle', -10, 0.3, 'close')])
     # one continuous shot (fix 3): the door swings in on the open window, push to the black gap and the blowing curtains,
@@ -2526,7 +2536,7 @@ def plan(F):
     C(t(254) - 0.15, 'ins', name='tablet_lily', cam=dict(mv='creep', x=960, y=600, z=1.2, snap=(t(254) + 0.02, 1.35)), hit=t(254) + 0.02,
       music=[(t(254) + 0.02, 'sub_drop', 1.0), (t(254) - 1.2, 'silence', 0.0, 1.15)], sfx=[(t(254) + 0.02, 'sub_drop', -2, 0, None)])
     C(T(255), 'bust', who=LI, bg='lily', act=_A(lambda a, s: a.set(s.t0 - 1, None, 0.2, look_x=0.6, look_y=0.1, lock=1.0, wide=0.4)), cam=dict(mv='push', x=960, y=560))
-    C(T(256), 'lily', bed='sleeping', dof=0.7, cam=dict(mv='keys', keys=[(T(256), *DP(1180, 700, 2.4), 1.15, None, 1.05),
+    C(T(256), 'lily', bed='awake', dof=0.7, cam=dict(mv='keys', keys=[(T(256), *DP(1180, 700, 2.4), 1.15, None, 1.05),
                                                                (T(257), *DP(1415, 780, 2.4), 1.4, 'in_out', 1.7)]),
       sfx=[(w(256, 'knock'), 'box_knock', -2, 0.4, 'inside', dict(on='vent', n_in_pattern=1))])
     C(T(257), 'door', box='door', ppl=[], px=-480, py=100, z0=1.2, z1=1.45, clock=_hms(3, 39, 41))
@@ -2571,7 +2581,11 @@ def plan(F):
              (w(280, 'child'), 1.62, 960, 600, 'lin'), (w(280, 'lily') + 0.02, 1.95, 960, 640, 'in_out'), (T(281), 2.02, 960, 645, 'lin')],
       hit=w(280, 'lily') + 0.02, music=[(w(280, 'lily'), 'stinger', 0.95)])
     # fix 3: "somewhere down the street": the van's hazards far down the block, turning in toward us (not parked at 144)
-    C(T(281), 'street', hazard=True, drive=('pass', t(281) - 0.6, e(281) + 0.6, -14.5, -6.6), cam=dict(mv='push', x=760, y=560, z=1.2, rate=0.03))
+    # review 4: its amber flashers are seen coming before the van is (a blinking wash from down the street, growing), then
+    # its nose rolls into frame on "you can already hear it"
+    C(T(281), 'street', hazard=True, drive=('pass', t(281) - 0.6, e(281) + 0.6, -12.5, -4.2), cam=dict(mv='push', x=760, y=560, z=1.2, rate=0.03),
+      post_fn=lambda t_, t0=T(281), t1=e(281) + 0.6: dict(flash=_epost.Spill((0.12 + 0.5 * clamp((t_ - t0) / (t1 - t0))) * ST.hazard(t_), side=-1.0,
+                                                                         color=(0.2, 0.64, 1.0), reach=0.6)))
     C(T(282), 'box', by=1360, view=-0.3, sender='Lily', cam=dict(mv='push', x=960, y=760, z=1.4, rate=0.05))
     C(T(283), 'door', box='boots', sender='Lily', ppl=[P(DR, at=DA(-0.05, 0.9), act=_A(stage(5), grin(-1), lean(0.1, 0.8, 1.0), tilt(0.2, 16, 1.0)), lean=True, k=0.62)],
       py=-110, z1=1.12)

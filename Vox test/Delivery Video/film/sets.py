@@ -5348,14 +5348,29 @@ def lily_room(view='room', window_open=False, bed='sleeping', curtains=1.0, wind
             pen.cv.save(); pen.cv.clipPath(union(quilt, hem), skia.ClipOp.kIntersect, True)
             _glow_stars(pen, lambda r: (*v.p(r.uniform(X0, X1), Yq, r.uniform(D1, D0 - 0.4)), 7), 16, 5, 150)
             pen.cv.restore()
-            if bed == 'sleeping':                    # a small curled shape under the covers, her hair on the pillow
-                cx_, cy_ = v.p((X0 + X1) / 2 + 0.06, Yq + 0.08, 2.45); ks = v.s(2.45)
-                mound = _blob(cx_, cy_, 0.26 * ks, 0.12 * ks, 11, 8, 0.12)
-                pen.fill(mound, '#3a4a8a'); pen.linear(mound, 0, cy_ - 0.12 * ks, 0, cy_ + 0.12 * ks, [(0, '#8a9ae0', 90), (1, '#000000', 60)])
+            if bed in ('sleeping', 'awake'):         # Lily in bed: a curled shape under the covers, her head on the pillow
+                cx_, cy_ = v.p((X0 + X1) / 2 + 0.06, Yq + 0.1, 2.5); ks = v.s(2.5)
+                mound = _blob(cx_, cy_, 0.36 * ks, 0.15 * ks, 11, 8, 0.12)
+                pen.fill(mound, '#3a4a8a'); pen.linear(mound, 0, cy_ - 0.15 * ks, 0, cy_ + 0.15 * ks, [(0, '#8a9ae0', 90), (1, '#000000', 60)])
                 pen.line(mound, 2.5, LINE)
-                hx, hy = v.p((X0 + X1) / 2 + 0.05, Ym + 0.22, D0 - 0.28)
-                pen.fill(_blob(hx, hy, 0.1 * v.s(D0), 0.065 * v.s(D0), 9, 3, 0.25), '#5a3a28')
-                pen.line(smooth([(hx - 0.06 * v.s(D0), hy + 0.02 * v.s(D0)), (hx, hy + 0.05 * v.s(D0)), (hx + 0.07 * v.s(D0), hy + 0.02 * v.s(D0))], False), 2, '#3a2418')
+                # review 4: she must read as a sleeping child (the bed read empty before "her bed is empty"): her hair
+                # fanned on the pillow, her face (eyes shut) above the quilt's edge, the quilt pulled up to her chin
+                hs = v.s(D0 - 0.3)
+                hx, hy = v.p((X0 + X1) / 2 + 0.04, Ym + 0.2, D0 - 0.3)
+                pen.fill(_blob(hx, hy - 0.02 * hs, 0.16 * hs, 0.1 * hs, 9, 3, 0.2), '#6a4430'); pen.line(_blob(hx, hy - 0.02 * hs, 0.16 * hs, 0.1 * hs, 9, 3, 0.2), 2, LINE, 180)
+                fx_, fy_ = hx + 0.01 * hs, hy + 0.045 * hs
+                face = oval(fx_, fy_, 0.085 * hs, 0.06 * hs)
+                pen.fill(face, '#d6b6a6'); pen.line(face, 2, LINE, 200)
+                pen.fill(_blob(fx_, fy_ - 0.05 * hs, 0.09 * hs, 0.035 * hs, 7, 5, 0.2), '#6a4430')        # her fringe
+                for e in (-1, 1):                    # eyes shut ('sleeping') / wide open, looking toward the vent ('awake')
+                    if bed == 'awake':
+                        pen.fill(oval(fx_ + e * 0.035 * hs, fy_ + 0.006 * hs, 0.02 * hs, 0.017 * hs), '#f4f0f0')
+                        pen.fill(oval(fx_ + e * 0.035 * hs + 0.008 * hs, fy_ + 0.007 * hs, 0.009 * hs), '#1a1418')
+                        pen.line(oval(fx_ + e * 0.035 * hs, fy_ + 0.006 * hs, 0.02 * hs, 0.017 * hs), 1.5, LINE, 220)
+                    else:
+                        pen.line(smooth([(fx_ + e * 0.035 * hs - 0.016 * hs, fy_ + 0.004 * hs), (fx_ + e * 0.035 * hs, fy_ + 0.013 * hs),
+                                         (fx_ + e * 0.035 * hs + 0.016 * hs, fy_ + 0.004 * hs)], False), 2, '#3a2418')
+                pen.fill(oval(fx_, fy_ + 0.075 * hs, 0.13 * hs, 0.03 * hs), '#3a4a8a'); pen.line(smooth([(fx_ - 0.13 * hs, fy_ + 0.07 * hs), (fx_, fy_ + 0.05 * hs), (fx_ + 0.13 * hs, fy_ + 0.07 * hs)], False), 2.5, LINE)   # the quilt's edge at her chin
         pen.fill(foot, '#d8ccdc'); pen.line(foot, 2.5, LINE)
         for k in range(1, 5): pen.seg(v.p(X0 + (X1 - X0) * k / 5, 0.15, D1), v.p(X0 + (X1 - X0) * k / 5, 0.58, D1), 4, '#a898b0')
         rx, ry = v.p(X0 + 0.15, Ym + 0.12, D0 - 0.15); rs = v.s(D0)                                 # stuffed rabbit
@@ -5381,7 +5396,7 @@ def lily_room(view='room', window_open=False, bed='sleeping', curtains=1.0, wind
          _cl(Db, back, 'back_wall', _key('lr', 'back', window_open), (v.x(-HW, Db) - 30, v.y(CH, Db) - 30, v.x(HW, Db) + 30, v.gy(Db) + 30)),
          Layer(Db - 0.02, curtains_dyn, 'curtains'),
          _cl(2.4, room, 'room', _key('lr', 'room2'), box),
-         _cl(2.0, bed_layer, 'bed', _key('lr', 'bed2', bed), (box[0], v.y(1.3, Db), v.x(0.0, 1.35), box[3])),
+         _cl(2.0, bed_layer, 'bed', _key('lr', 'bed3', bed), (box[0], v.y(1.3, Db), v.x(0.0, 1.35), box[3])),
          Layer(1.95, lights, 'nightlight', blur=0)]
     _exposure(L, 0.25, ('back_wall', 'room', 'bed'))
     a = {'bed': v.anchor(-1.1, 2.6, Y=0.55, note='lying in bed (head toward the far wall)'),
@@ -5933,7 +5948,7 @@ def photo_lily_scene():
     gx, gy = tx, ty + 0.42 * TAB                                       # his grip under the tablet
     XD = (gx - 960.0) / vw.s(DD) + 0.36                                # his centre: right of the grip, the arm reaches up-left
     dx_, dy_ = vw.p(XD, BIN_Y, DD)
-    DP = CH.Pose(turn=2.0, h_turn=-1.55, lean=-0.05, hl_out=40.0, hl_down=-200.0, hl_fwd=60.0, hl_up=0.0, hl_shape='grip',
+    DP = CH.Pose(turn=2.0, h_turn=-1.8, lean=-0.05, hl_out=40.0, hl_down=-200.0, hl_fwd=60.0, hl_up=0.0, hl_shape='grip',
                  hr_out=14.0, hr_down=330.0, hr_fwd=24.0, smile=1.0, grin=1.0, teeth=1.0, lock=1.0, look_x=-0.6) if CH else None
     if CH:                                                             # solve the reach (Gauss-Newton on out / down)
         for _ in range(8):
@@ -5990,7 +6005,14 @@ def photo_lily_scene():
         wheelie_bin(pen)
         pen.glow(tx, ty, TAB * 1.7, '#e8f0ff', 150)
         CH.draw(pen, 'driver', dx_, dy_, DRH, DP, light=dict(rim='#ffa31f', rim_a=150, side=1, key=-0.45))
-        CH.draw_tablet(pen, tx, ty, TAB, screen='sign', sig='lily', ink=0.62, ts='3:41 AM', angle=-6)
+        CH.draw_tablet(pen, tx, ty, TAB, screen='sign', sig='lily', ink=0.4, ts='3:41 AM', angle=-6)
+        # review 4: the flash flares off the tablet's glass right over the signature box, so the photo never spells her
+        # name (the reveal is "the signature reads... Lily" at 571 s, on the tablet insert); her finger stays on top
+        sgx, sgy = tx + 0.5, ty - 3.5
+        pen.radial(None, sgx - 2, sgy, 19, [(0, '#ffffff', 252), (0.45, '#f6f9ff', 230), (0.8, '#e8f0ff', 90), (1, '#e8f0ff', 0)], sy=0.62, clip=False)
+        pen.cv.save(); pen.cv.rotate(-6, tx, ty)
+        pen.fill(poly([(tx - 18, ty - 20), (tx - 9, ty - 20), (tx + 15, ty + 10), (tx + 6, ty + 10)]), '#ffffff', 120)   # a specular streak
+        pen.cv.restore()
         CH.draw_hand(pen, 'driver', gx, gy + 8, TAB * 0.5, 'grip', 180.0, 1)
         CH.draw_arm(pen, 'lily', 1, LP, light=lit, **LB)
 

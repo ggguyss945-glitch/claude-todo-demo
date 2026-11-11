@@ -63,6 +63,10 @@ python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview --audio W/
   the 3:11 clock push (78) 0.25. `--bench` samples 4 frames spread over a shot, so on the shots with an optical push
   (`mv='keys'` with f > 1) every sample re-bakes a layer cache at a new density and reads 0.8-1.4 s: not what a render sees.
   Keep optical zoom (f) changes small or constant on big cached sets (shot 199 holds f and pushes into the image instead).
+- Review 4, consecutive frames (one process, the mix running beside it): the door push with your hand (199, now a deeper
+  dolly z 3.0 -> 4.6 at a constant optical f 1.3) 0.19 s steady; the 3:41 photo (204) 0.27; Lily awake by the vent (208)
+  0.27; the sting street with the van rolling in (229) 0.19; Lily asleep (197) 0.19. An optical f of 1.7 or more on the
+  upstairs set costs 2.4-2.6 s a frame (its caches are baked at that density): keep f <= 1.3 there.
 - The heaviest shots (`--bench 1 --shots ...`, steady): doorway 122 (memory, door open) 0.54 s, phone 221 0.44 s, doorway 234 0.39 s, keys 237 0.29 s, the 3:41 photo shots 0.16-0.19 s, the latch insert 0.15 s. The first frame of a shot can take up to 1.5-2.4 s while its static layers are baked.
 - The doorway's dolly is capped at 2 %/s: a faster optical zoom re-blurs its frame-sized walls every frame (0.74 s).
 - The 3:41 photo is one shot drawn live (vector, sharp at any zoom, ~0.15 s a frame for the still itself); the old `comp=` crops still bake one cached layer each.
@@ -147,3 +151,21 @@ Sound:
 - The diesel idles under every exterior van shot (a second layer on top of the indoor bed), the pull-away +4 dB.
 - The hazard relay is one phase-locked bed; tag pops are off in the hushed beats; the doorbell speaker clicks only when he
   starts talking again; what Lily heard comes through her vent; the far knocks are 6 dB up.
+
+## Review 4 (verification of fix round 3)
+Every fix-3 item was checked on the new preview (1 fps scan of the whole film, 4-6 fps strips of the climax and the end,
+native and 2560 stills, optical-flow camera fits per shot, red / luma per tenth) and on the new mix (the sound critic's
+loudness curves, `_work/review/snd/tools`). Evidence: `_work/review/v4/`. What changed in this round:
+- **The 3:41 photo** no longer spells "Lily" before the reveal: the flash flares off the tablet's glass over the signature
+  box (`sets.photo_lily_scene`; the name is first read on the tablet insert at 571.5 s). The driver's head is turned further
+  over his shoulder (`h_turn` -1.8): both ringed eyes and the grin catch the flash (it read as a smeared profile).
+- **Lily in bed**: "she sleeps with a nightlight..." (535.7 s) showed an empty-looking bed before the door is opened; she is
+  now visibly asleep (hair on the pillow, eyes shut, the quilt at her chin); "she heard the knock through her vent"
+  (573.8 s) shows her awake in bed (`bed='awake'`, eyes open toward the vent).
+- **"You push the door open"** (540.9 s): the camera is now near her door (dolly z 3.0 -> 4.6), so your hand meets the door's
+  edge instead of pushing at a door at the far end of the hall.
+- **"Somewhere down the street"** (633.4 s): the van's amber flashers wash in from down the street first (a blinking
+  `Spill` growing over the shot, `post_fn` now works on street shots), then the van rolls into frame.
+- **The red build** starts at 455 s (the box at the door): a faint blinking hazard wash ramps up to the rule-7 climax; the
+  3:41 photo carries the hazard light frozen in it (static red spill, 0.3 stop darker).
+- **Sound**: the diesel idle layer on exterior shots +8 dB (-1 -> +7), the dawn porch bed +2 dB.
