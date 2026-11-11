@@ -1132,6 +1132,10 @@ def stairs_scene(var='stairs', from_ours=False, bottom=True, tess=None, doorway_
             for i in range(0, int(w), 17): pen.seg((i, 0), (i, h), 0.8, S['floor_dk'], 180)
             _vgrad(pen, w, h, [(0, S['gold_room'], 0), (1, S['gold_room'], 120)])
         sc.plane((-2.5, yb + 2.6, zb + 4.0), (1, 0, 0), (0, -1, 0), 500, 260, gwall, -70, 'gwall', 'bottom')
+        # review round 2 (B10): Noah's white sneaker on the gold floor beside his bed ("you see the shoe beside the bed")
+        def shoe_s(pen, w, h):
+            S1.sneaker(pen, w / 2, h / 2, 0.075, 15)
+        sc.plane((0.12, yb + 0.003, 2.85), (1, 0, 0), (0, 0, -1), 34, 22, shoe_s, -55, 'gshoe', 'bottom')
         # Noah's bunk at the foot of the stairs (right, beyond the newel)
         bw = dict(all='#b98650', top='#dcae74', left='#dcae74', front='#c99660')
         sc.box(0.55, yb, zb + 0.15, 1.45, yb + 0.46, zb + 2.2, dict(all='#c0563a', top='#d8704a', left='#e0805a', front='#b04a30'), 0,
@@ -1762,12 +1766,12 @@ def _theirs_anchors(cam, xf, d0):
     return A
 
 
-THEIRS_PTS = {'noah_bunk': ((0.95, B_LOW, 5.15), 1.5), 'noah_seat': ((0.95, B_LOW, 5.15), 1.5), 'queen_bunk': ((0.95, B_LOW, 4.65), 1.92),
+THEIRS_PTS = {'noah_bunk': ((0.95, B_LOW, 4.95), 1.5), 'noah_seat': ((0.95, B_LOW, 4.95), 1.5), 'queen_bunk': ((0.95, B_LOW, 5.32), 1.92),
            'you_bunk_end': ((1.0, B_LOW, 4.35), 1.76), 'you_stand': ((1.75, 0, 4.4), 1.76), 'you_room': ((2.3, 0, 3.6), 1.76),
            'queen_corner': ((4.1, 0, 5.75), 1.92), 'tess_doorway': ((2.93, DROP, 6.22), 1.68), 'doorway': ((2.93, DROP, 6.3), 1.6),
            'stairs_foot': ((1.25, 0, 5.4), 1.76), 'tread8': ((1.04, DROP - 1.6, 5.95), 1.76), 'tread1': ((2.93, DROP - 0.2, 5.95), 1.76),
            'towel': ((3.78, 0.0, 5.9), 0.2), 'drop': ((3.83, 0.62, 5.9), 0.1), 'shoe': ((1.18, 0, 4.71), 0.12),
-           'dip': ((0.95, B_LOW, 4.75), 0.2), 'door_wash': ((1.6, 0, 0.1), 1.76), 'clock': ((4.45, 1.97, 6.38), 0.3),
+           'dip': ((0.95, B_LOW, 4.32), 0.2), 'door_wash': ((1.6, 0, 0.1), 1.76), 'clock': ((4.45, 1.97, 6.38), 0.3),
            'window': ((3.78, 1.42, 6.38), 0.95)}
 
 
@@ -1847,24 +1851,30 @@ def drop_live(cam, xf, d0, st, info):
 
     def draw(pen, t):
         st_ = str(st.v('drop', t))
-        r = 0.022 * k
-        if st_.startswith('hanging') or d_raw.startswith('hanging'):
+        r = 0.032 * k                     # review round 2 (B19): a bead ~3 % of the frame height on the floor views
+        # review round 2 (B19): by film time (a merged shot carries one prop state): the drips tap the towel, one drop rises
+        # (335.25-337.09) and hangs; on the loop (345.06 on) the same drop falls again
+        if 337.09 <= t < 345.0 or (t < 335.25 and t > 348.0 and (st_.startswith('hanging') or d_raw.startswith('hanging'))):
             yy = y + 0.004 * k * math.sin(t * 2.0)
-        elif d_raw.startswith('rising'):
+        elif 335.25 <= t < 337.09 or d_raw.startswith('rising'):
             u = ease_in_out(prog(t, 335.25, 337.09)); yy = lerp(ty, y, u)
         else:
             ph = ((t - 297.59) % 1.6) / 1.6
             yy = lerp(y - 0.25 * k, ty, ph ** 2)
             if ph > 0.95:
                 _R(pen, None, tx, ty, 0.05 * k, [(0, '#e8f6ff', 160), (1, '#e8f6ff', 0)], sy=0.3, clip=False)
+        # its shadow on the towel below (darker as it nears), so it reads as a bead in the air, not a speck on the wall
+        near_ = clamp(1.0 - abs(ty - yy) / max(1.0, 0.5 * k))
+        _R(pen, None, tx, ty, 1.6 * r, [(0, '#3a2a10', 60 + 60 * near_), (1, '#3a2a10', 0)], sy=0.32, clip=False)
         drop = S1._drop_path(x, yy, r, 1.35)
-        pen.fill(drop, '#cfe6f2', 230)
+        _R(pen, None, x, yy, 2.4 * r, [(0, '#ffffff', 70), (1, '#ffffff', 0)], clip=False)
+        pen.fill(drop, '#bcd8e8', 240)
         # the room upside down inside it: a tiny warm window and floor band, inverted
         pen.cv.save(); pen.cv.clipPath(drop, skia.ClipOp.kIntersect, True)
         pen.fill(rect(x - r, yy - r * 1.4, 2 * r, r * 0.9), '#c99660', 230)
         pen.fill(rect(x - r * 0.3, yy + r * 0.1, r * 0.6, r * 0.5), '#fff2d0', 230)
         pen.cv.restore()
-        pen.line(drop, max(1.0, 0.002 * k), '#6a8090', 200)
+        pen.line(drop, max(1.5, 0.003 * k), '#4a6070', 230)
         pen.fill(oval(x - r * 0.35, yy - r * 0.2, r * 0.22), '#ffffff', 230)
     return _live(dep, draw, 'drop', blur=0)
 

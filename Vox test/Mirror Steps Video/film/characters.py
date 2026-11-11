@@ -7303,7 +7303,7 @@ def _q_mouth(c, hm, P, st, det, t, lw, L):
     voidk = st['void']
     flat = st['off'] * (1.0 - voidk)
     th_u = lerp(6.6, 2.2, flat); th_l = lerp(9.0, 2.6, flat)
-    gap = 14.0 * o
+    gap = 26.0 * o                       # review round 2 (M14): the lips part visibly on her lines (14 read as closed)
     seam_u = [(-26.0, my), (-14.0, my - 0.4), (0.0, my + 0.3), (14.0, my - 0.4), (26.0, my)]
     upper = [(-26.0, my), (-16.0, my - th_u * 0.85), (-5.5, my - th_u * 1.1), (0.0, my - th_u * 0.7), (5.5, my - th_u * 1.1),
              (16.0, my - th_u * 0.85), (26.0, my)]

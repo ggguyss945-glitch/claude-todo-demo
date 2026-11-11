@@ -566,7 +566,7 @@ def _merge_run(run, path_keys, M, c3=None, base=None):
     o['frame'] = M.get('frame') or (' >> '.join(fr) if len(fr) > 1 else fr[0])
     o['merged'] = [round(r['t0'], 3) for r in run]
     if len(run) > 1 or path_keys is not None or c3 is not None:
-        c = dict(mv='path', keys=path_keys, glide=M.get('glide') or [0.45, 0.6, 0.8], shake=first['cam'].get('shake', 2.0))
+        c = dict(mv='path', keys=path_keys, glide=M.get('glide') or [0.45, 0.6, 0.8], shake=M.get('shake', first['cam'].get('shake', 2.0)))
         for r in run:
             for kk in ('hit',):
                 if r['cam'].get(kk): c.setdefault(kk, []).extend(r['cam'][kk])
@@ -658,6 +658,7 @@ def apply_merges(shots):
         c3 = None
         if M.get('cam3'):
             c3 = dict(keys=M['cam3'], glide=M.get('glide') or [0.45, 0.6, 0.8])
+            if M.get('arc') is not None: c3['arc'] = M['arc']
         elif same_set and (first['set'] in ROOM_SETS or M.get('travel')) and len(set(views)) > 1 and not M.get('flat') \
                 and all(v in CAM3_VIEWS.get(first['set'], ()) for v in views):
             ks = [[round(first['t0'], 3), views[0]]]

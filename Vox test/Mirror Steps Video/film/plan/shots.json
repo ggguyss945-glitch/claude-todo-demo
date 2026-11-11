@@ -110,8 +110,8 @@
    "t0": 446.33,
    "t1": 542.03,
    "title": "Rule 5: ring the real bell",
-   "shots": 47,
-   "cuts_per_min": 29.5,
+   "shots": 43,
+   "cuts_per_min": 27.0,
    "intensity": [4.6, 9.9]
   },
   {
@@ -119,8 +119,8 @@
    "t0": 542.03,
    "t1": 609.48,
    "title": "Rule 6: let him go first",
-   "shots": 34,
-   "cuts_per_min": 30.2,
+   "shots": 30,
+   "cuts_per_min": 26.7,
    "intensity": [7.9, 10.0]
   },
   {
@@ -240,7 +240,7 @@
   },
   {
    "n": 6,
-   "shot": "S239",
+   "shot": "S235",
    "appear": 542.03,
    "rule_word": 542.48,
    "lead": 0.45,
@@ -259,7 +259,7 @@
   },
   {
    "n": 7,
-   "shot": "S273",
+   "shot": "S265",
    "appear": 609.48,
    "rule_word": 609.93,
    "lead": 0.45,
@@ -293,23 +293,23 @@
    "what": "she sits; the mattress dips",
    "shot": "S200",
    "t0": 464.59,
-   "t1": 470.51,
-   "dur": 5.92
+   "t1": 472.03,
+   "dur": 7.44
   },
   {
    "id": "H3",
    "brief": [478.0, 481.1, 3.1],
    "what": "the drawing splits into teeth on \"back\"",
-   "shot": "S205",
-   "t0": 478.03,
+   "shot": "S202",
+   "t0": 473.55,
    "t1": 481.13,
-   "dur": 3.1
+   "dur": 7.58
   },
   {
    "id": "H4",
    "brief": [531.6, 534.7, 3.1],
    "what": "the full face turns to the lens, then the smile goes off",
-   "shot": "S232",
+   "shot": "S228",
    "t0": 531.58,
    "t1": 534.68,
    "dur": 3.1
@@ -318,7 +318,7 @@
    "id": "H5",
    "brief": [562.5, 565.2, 2.7],
    "what": "the age morph",
-   "shot": "S249",
+   "shot": "S244",
    "t0": 562.41,
    "t1": 565.13,
    "dur": 2.72
@@ -327,25 +327,25 @@
    "id": "H6",
    "brief": [589.5, 591.6, 2.1],
    "what": "the jaw drops into the void, with Noah's face inside",
-   "shot": "S265",
-   "t0": 587.88,
+   "shot": "S258",
+   "t0": 586.28,
    "t1": 592.92,
-   "dur": 5.04
+   "dur": 6.64
   },
   {
    "id": "H7",
    "brief": [604.6, 607.4, 2.8],
    "what": "the POV tilt from your boots to her foot to her face",
-   "shot": "S271",
+   "shot": "S264",
    "t0": 602.52,
-   "t1": 607.36,
-   "dur": 4.84
+   "t1": 609.48,
+   "dur": 6.96
   },
   {
    "id": "H8",
    "brief": [622.0, 625.6, 3.6],
    "what": "she lifts her foot toward an erased step",
-   "shot": "S277",
+   "shot": "S269",
    "t0": 621.25,
    "t1": 625.53,
    "dur": 4.28
@@ -354,7 +354,7 @@
    "id": "H9",
    "brief": [661.6, 665.0, 3.4],
    "what": "the long pause on \"Hi, Mom\"",
-   "shot": "S291",
+   "shot": "S283",
    "t0": 660.39,
    "t1": 664.87,
    "dur": 4.48
@@ -363,7 +363,7 @@
    "id": "H10",
    "brief": [692.0, 695.7, 3.7],
    "what": "her tiny figure on the phone's 8th line, climbing one step",
-   "shot": "S301",
+   "shot": "S293",
    "t0": 684.98,
    "t1": 695.62,
    "dur": 10.64
@@ -680,7 +680,7 @@
    "on_screen": true
   },
   {
-   "shot": "S203",
+   "shot": "S202",
    "t0": 473.55,
    "stage": "S2",
    "size": 0.5,
@@ -692,24 +692,6 @@
   },
   {
    "shot": "S204",
-   "t0": 475.63,
-   "stage": "S2",
-   "step": null,
-   "on_screen": true
-  },
-  {
-   "shot": "S205",
-   "t0": 478.03,
-   "stage": "S3a",
-   "size": 0.7,
-   "where": "on the bunk",
-   "framing": "CU 70 %",
-   "wrong": "the drawing opens into teeth",
-   "step": null,
-   "on_screen": true
-  },
-  {
-   "shot": "S207",
    "t0": 483.31,
    "stage": "S3a",
    "size": 0.3,
@@ -720,7 +702,7 @@
    "on_screen": true
   },
   {
-   "shot": "S209",
+   "shot": "S206",
    "t0": 487.87,
    "stage": "S3a",
    "size": 0.3,
@@ -731,14 +713,14 @@
    "on_screen": true
   },
   {
-   "shot": "S211",
+   "shot": "S208",
    "t0": 492.99,
    "stage": "S3a",
    "step": null,
    "on_screen": true
   },
   {
-   "shot": "S213",
+   "shot": "S209",
    "t0": 496.67,
    "stage": "S3a",
    "size": 0.4,
@@ -749,7 +731,7 @@
    "on_screen": true
   },
   {
-   "shot": "S216",
+   "shot": "S212",
    "t0": 503.15,
    "stage": "S3b",
    "size": 0.3,
@@ -760,7 +742,7 @@
    "on_screen": true
   },
   {
-   "shot": "S232",
+   "shot": "S228",
    "t0": 531.58,
    "stage": "S3c",
    "size": 0.8,
@@ -771,7 +753,7 @@
    "on_screen": true
   },
   {
-   "shot": "S237",
+   "shot": "S233",
    "t0": 539.19,
    "stage": "OFF",
    "size": 0.3,
@@ -782,7 +764,7 @@
    "on_screen": true
   },
   {
-   "shot": "S239",
+   "shot": "S235",
    "t0": 542.03,
    "stage": "S3b",
    "size": 0.65,
@@ -793,7 +775,7 @@
    "on_screen": true
   },
   {
-   "shot": "S256",
+   "shot": "S251",
    "t0": 576.25,
    "stage": "S3c",
    "size": 0.3,
@@ -804,7 +786,7 @@
    "on_screen": true
   },
   {
-   "shot": "S257",
+   "shot": "S252",
    "t0": 577.29,
    "stage": "S3c",
    "size": 0.65,
@@ -815,8 +797,8 @@
    "on_screen": true
   },
   {
-   "shot": "S265",
-   "t0": 587.88,
+   "shot": "S258",
+   "t0": 586.28,
    "stage": "S3c",
    "step": 8,
    "size": 0.3,
@@ -826,7 +808,7 @@
    "on_screen": true
   },
   {
-   "shot": "S270",
+   "shot": "S263",
    "t0": 601.32,
    "stage": "S3c",
    "step": 3,
@@ -837,7 +819,7 @@
    "on_screen": true
   },
   {
-   "shot": "S271",
+   "shot": "S264",
    "t0": 602.52,
    "stage": "S3c",
    "step": "below yours",
@@ -848,7 +830,7 @@
    "on_screen": true
   },
   {
-   "shot": "S273",
+   "shot": "S265",
    "t0": 609.48,
    "stage": "S3c",
    "size": 0.9,
@@ -859,7 +841,7 @@
    "on_screen": true
   },
   {
-   "shot": "S277",
+   "shot": "S269",
    "t0": 621.25,
    "stage": "S3c",
    "size": 0.35,
@@ -870,14 +852,14 @@
    "on_screen": true
   },
   {
-   "shot": "S278",
+   "shot": "S270",
    "t0": 625.53,
    "stage": "S3c",
    "step": null,
    "on_screen": true
   },
   {
-   "shot": "S301",
+   "shot": "S293",
    "t0": 684.98,
    "stage": "S3c",
    "step": 8,
@@ -888,7 +870,7 @@
    "on_screen": true
   },
   {
-   "shot": "S303",
+   "shot": "S295",
    "t0": 696.74,
    "stage": "S3c",
    "size": 0.6,
@@ -1277,7 +1259,7 @@
    "what": "the map: Cabin 7 -> the path -> the mess hall crate"
   },
   {
-   "shot": "S222",
+   "shot": "S218",
    "t0": 513.39,
    "type": "INSERT",
    "kind": "insert",
@@ -1285,7 +1267,7 @@
    "what": "a perfect bell rings by itself (the fake)"
   },
   {
-   "shot": "S226",
+   "shot": "S222",
    "t0": 523.42,
    "type": "DIAGRAM",
    "kind": "diagram",
@@ -1293,7 +1275,7 @@
    "what": "the real bell: a clean note, then a rattle"
   },
   {
-   "shot": "S229",
+   "shot": "S225",
    "t0": 527.58,
    "type": "INSERT",
    "kind": "insert",
@@ -1301,7 +1283,7 @@
    "what": "like somebody dropped a spoon"
   },
   {
-   "shot": "S231",
+   "shot": "S227",
    "t0": 530.46,
    "type": "SPLIT",
    "kind": "diagram",
@@ -1309,7 +1291,7 @@
    "what": "the fake bell vs the real bell"
   },
   {
-   "shot": "S236",
+   "shot": "S232",
    "t0": 538.15,
    "type": "INSERT",
    "kind": "diagram",
@@ -1317,7 +1299,7 @@
    "what": "the loop breaks: 7:00 AM"
   },
   {
-   "shot": "S282",
+   "shot": "S274",
    "t0": 638.89,
    "type": "INSERT",
    "kind": "insert",
@@ -1325,7 +1307,7 @@
    "what": "just after midnight: 12:07"
   },
   {
-   "shot": "S285",
+   "shot": "S277",
    "t0": 644.81,
    "type": "POV",
    "kind": "insert",
@@ -1333,7 +1315,7 @@
    "what": "the candy, kept"
   },
   {
-   "shot": "S288",
+   "shot": "S280",
    "t0": 655.19,
    "type": "WS",
    "kind": "ui",
@@ -1341,7 +1323,7 @@
    "what": "the call to Mom"
   },
   {
-   "shot": "S297",
+   "shot": "S289",
    "t0": 677.34,
    "type": "MONTAGE",
    "kind": "doc",
@@ -1349,7 +1331,7 @@
    "what": "the phone lay face up the whole time (a mirror nobody covered)"
   },
   {
-   "shot": "S301",
+   "shot": "S293",
    "t0": 684.98,
    "type": "INSERT",
    "kind": "diagram",
@@ -1364,35 +1346,35 @@
   },
   "2": {
    "error": "Noah and the Queen vanish from the 488 wide",
-   "shots": ["S209"]
+   "shots": ["S206"]
   },
   "3": {
    "error": "open palm for \"in your fist\"",
-   "shots": ["S136", "S218"]
+   "shots": ["S136", "S214"]
   },
   "4": {
    "error": "a mark but no candy",
-   "shots": ["S285", "S286"]
+   "shots": ["S277", "S278"]
   },
   "5": {
    "error": "the tape vanishes, then is back on",
-   "shots": ["S245", "S247"]
+   "shots": ["S240", "S242"]
   },
   "6": {
    "error": "no shoulder hit",
-   "shots": ["S254"]
+   "shots": ["S249"]
   },
   "7": {
    "error": "a waist grab, no yank",
-   "shots": ["S244", "S272"]
+   "shots": ["S239", "S264"]
   },
   "8": {
    "error": "no bell on screen; the X on a window",
-   "shots": ["S222", "S231"]
+   "shots": ["S218", "S227"]
   },
   "9": {
    "error": "the real bell is never struck",
-   "shots": ["S233", "S234"]
+   "shots": ["S229", "S230"]
   },
   "10": {
    "error": "the beam stays after Tess leaves",
@@ -1400,11 +1382,11 @@
   },
   "11": {
    "error": "no opening in frame for the shove",
-   "shots": ["S240", "S243"]
+   "shots": ["S236", "S238"]
   },
   "12": {
    "error": "whose voice and face at 589",
-   "shots": ["S265"]
+   "shots": ["S258"]
   },
   "13": {
    "error": "no keys",
@@ -1412,31 +1394,31 @@
   },
   "14": {
    "error": "the tape design changes",
-   "shots": ["S002", "S090", "S245"]
+   "shots": ["S002", "S090", "S240"]
   },
   "15": {
    "error": "no 8th line on the phone",
-   "shots": ["S301"]
+   "shots": ["S293"]
   },
   "16": {
    "error": "the phone jumps from hand to floor",
-   "shots": ["S296", "S297", "S300"]
+   "shots": ["S288", "S289", "S292"]
   },
   "17": {
    "error": "fist, open, fist, open",
-   "shots": ["S285"]
+   "shots": ["S277"]
   },
   "18": {
    "error": "already grown, no morph",
-   "shots": ["S249"]
+   "shots": ["S244"]
   },
   "19": {
    "error": "the face turns into a paper card",
-   "shots": ["S117", "S232"]
+   "shots": ["S117", "S228"]
   },
   "20": {
    "error": "her mouth frozen while she talks",
-   "shots": ["S105", "S117", "S205"]
+   "shots": ["S105", "S117", "S202"]
   },
   "21": {
    "error": "Noah too big, then standing",
@@ -1456,7 +1438,7 @@
   },
   "25": {
    "error": "the phone steps appear late",
-   "shots": ["S301"]
+   "shots": ["S293"]
   },
   "26": {
    "error": "the face in the wrong world at 283.5",
@@ -1464,7 +1446,7 @@
   },
   "27": {
    "error": "the dawn cabin behind you on the stairs",
-   "shots": ["S256", "S265", "S271"]
+   "shots": ["S251", "S258", "S264"]
   },
   "28": {
    "error": "\"Instead\" has no picture",
@@ -1472,7 +1454,7 @@
   },
   "29": {
    "error": "grown Noah's yellow eyes",
-   "shots": ["S249", "S258"]
+   "shots": ["S244", "S253"]
   },
   "30": {
    "error": "\"Breakfast was canceled\" over a bare wall",
@@ -1837,22 +1819,22 @@
   },
   {
    "t0": 50.78,
-   "t1": 51.67,
-   "text": "Fourteen years,",
+   "t1": 52.31,
+   "text": "Fourteen years, and she can",
    "line": 18,
    "on_cut": true
   },
   {
-   "t0": 51.67,
-   "t1": 53.0,
-   "text": "and she can still tell you",
+   "t0": 52.31,
+   "t1": 53.3,
+   "text": "still tell you what",
    "line": 18,
    "on_cut": false
   },
   {
-   "t0": 53.0,
+   "t0": 53.3,
    "t1": 54.46,
-   "text": "what was in his pockets.",
+   "text": "was in his pockets.",
    "line": 18,
    "on_cut": true
   },
@@ -3944,17 +3926,17 @@
   },
   {
    "t0": 469.88,
-   "t1": 470.51,
-   "text": "room for her",
+   "t1": 470.92,
+   "text": "room for her without",
    "line": 192,
    "on_cut": false
   },
   {
-   "t0": 470.51,
+   "t0": 470.92,
    "t1": 472.03,
-   "text": "without even looking up.",
+   "text": "even looking up.",
    "line": 192,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 472.03,
@@ -3972,31 +3954,31 @@
   },
   {
    "t0": 474.68,
-   "t1": 475.63,
+   "t1": 475.72,
    "text": "like another minute.",
    "line": 194,
    "on_cut": false
   },
   {
-   "t0": 475.63,
+   "t0": 475.72,
    "t1": 476.84,
    "text": "She pats the empty",
    "line": 195,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 476.84,
-   "t1": 478.03,
+   "t1": 478.14,
    "text": "space beside Noah.",
    "line": 195,
    "on_cut": false
   },
   {
-   "t0": 478.03,
+   "t0": 478.2,
    "t1": 479.48,
    "text": "\"I can put you back",
    "line": 196,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 479.48,
@@ -4070,22 +4052,22 @@
   },
   {
    "t0": 492.99,
-   "t1": 494.51,
-   "text": "You could sit down beside him",
+   "t1": 493.96,
+   "text": "You could sit down",
    "line": 203,
    "on_cut": true
   },
   {
-   "t0": 494.51,
-   "t1": 495.4,
-   "text": "and tell him to leave",
+   "t0": 493.96,
+   "t1": 495.08,
+   "text": "beside him and tell him",
    "line": 203,
-   "on_cut": true
+   "on_cut": false
   },
   {
-   "t0": 495.4,
+   "t0": 495.08,
    "t1": 496.67,
-   "text": "the window open.",
+   "text": "to leave the window open.",
    "line": 203,
    "on_cut": false
   },
@@ -4329,17 +4311,17 @@
   },
   {
    "t0": 546.23,
-   "t1": 547.43,
+   "t1": 547.52,
    "text": "toward the opening.",
    "line": 227,
    "on_cut": true
   },
   {
-   "t0": 547.43,
+   "t0": 547.52,
    "t1": 549.52,
    "text": "He gets one bare foot through.",
    "line": 228,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 549.52,
@@ -4553,17 +4535,17 @@
   },
   {
    "t0": 586.28,
-   "t1": 587.88,
+   "t1": 587.97,
    "text": "You reach for the doorway.",
    "line": 247,
    "on_cut": true
   },
   {
-   "t0": 587.88,
+   "t0": 587.97,
    "t1": 589.54,
    "text": "Behind you, the queen says,",
    "line": 248,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 589.57,
@@ -4651,17 +4633,17 @@
   },
   {
    "t0": 605.77,
-   "t1": 607.36,
+   "t1": 607.45,
    "text": "on the step below yours.",
    "line": 257,
    "on_cut": false
   },
   {
-   "t0": 607.36,
+   "t0": 607.45,
    "t1": 608.41,
    "text": "Then Tess takes",
    "line": 258,
-   "on_cut": true
+   "on_cut": false
   },
   {
    "t0": 608.41,
@@ -8579,8 +8561,8 @@
   {
    "id": "S027",
    "t0": 50.78,
-   "t1": 53.0,
-   "dur": 2.22,
+   "t1": 53.3,
+   "dur": 2.52,
    "section": "arrival",
    "lines": [18],
    "cut_on_clause": true,
@@ -8597,7 +8579,7 @@
    "cam": {
     "move": "push",
     "keys": [[50.78, 960, 560, 1.05, 0.0],
-     [53.0, 960.0, 560.0, 1.1782, 0.0]],
+     [53.3, 960.0, 560.0, 1.1955, 0.0]],
     "ease": "lin",
     "shake": 2.0,
     "rate_pct_s": 5.5,
@@ -8689,13 +8671,13 @@
   },
   {
    "id": "S028",
-   "t0": 53.0,
+   "t0": 53.3,
    "t1": 54.46,
-   "dur": 1.46,
+   "dur": 1.16,
    "section": "arrival",
    "lines": [18],
    "cut_on_clause": false,
-   "clause_offset": 1.25,
+   "clause_offset": -1.33,
    "set": "camp_path",
    "view": "path",
    "var": "night",
@@ -8707,8 +8689,8 @@
    "frame": "the path from the gate to the mess hall: you and Tess walk away from us up the path, her beam bobbing ahead on the gravel; the MESS HALL sign over the door at the end",
    "cam": {
     "move": "push",
-    "keys": [[53.0, 960, 560, 1.04, 0.0],
-     [54.46, 960.0, 560.0, 1.0704, 0.0]],
+    "keys": [[53.3, 960, 560, 1.04, 0.0],
+     [54.46, 960.0, 560.0, 1.0641, 0.0]],
     "ease": "lin",
     "shake": 2.0,
     "rate_pct_s": 2.0,
@@ -8742,8 +8724,8 @@
       ]
      ],
      "mode": "body",
-     "path2d": [[53.0, 900, 1040, 470],
-      [54.75, 935, 800, 285]]
+     "path2d": [[53.3, 900, 1040, 470],
+      [54.75, 935, 810, 295]]
     },
     {
      "who": "you",
@@ -8762,8 +8744,8 @@
       ]
      ],
      "mode": "body",
-     "path2d": [[53.0, 1150, 1080, 500],
-      [54.75, 1060, 830, 300]]
+     "path2d": [[53.3, 1150, 1080, 500],
+      [54.75, 1060, 840, 312]]
     }
    ],
    "props": {
@@ -23337,14 +23319,13 @@
    "cam": {
     "move": "path",
     "keys": [[331.8, 960.0, 620.0, 1.0, 0.0],
-     [335.76, 960.0, 560.0, 1.422, 0.0],
-     [337.76, 980.0, 480.0, 1.836, 0.0],
-     [338.76, 1000.0, 480.0, 1.872, 0.0]],
+     [334.9, 930.0, 480.0, 1.25, 0.0],
+     [338.76, 895.0, 360.0, 1.9, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 12.53,
-    "pan_px_s": 20.9
+    "rate_pct_s": 12.93,
+    "pan_px_s": 38.5
    },
    "lens": null,
    "grade": "dawn_v2",
@@ -23792,14 +23773,13 @@
    "frame": "THEIRS, floor-level wide: the same drop falls again onto the towel under the window >> the splash on the towel (the same sample as 332.37); chip LOOP",
    "cam": {
     "move": "path",
-    "keys": [[345.06, 960.0, 560.0, 1.0, 0.0],
-     [347.31, 960.0, 600.0, 1.629, 0.0],
-     [347.62, 960.0, 600.0, 1.659, 0.0]],
+    "keys": [[345.06, 898.0, 380.0, 1.78, 0.0],
+     [347.62, 905.0, 450.0, 1.9, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.7, 0.6, 0.6],
     "shake": 2.0,
-    "rate_pct_s": 25.74,
-    "pan_px_s": 15.6
+    "rate_pct_s": 2.63,
+    "pan_px_s": 27.5
    },
    "lens": null,
    "grade": "dawn_v2",
@@ -27617,13 +27597,13 @@
    "cam": {
     "move": "path",
     "keys": [[405.98, 960.0, 540.0, 1.0, 0.0],
-     [410.1, 1017.3, 560.0, 1.08, 0.0],
-     [411.34, 1017.3, 560.0, 1.113, 0.0]],
+     [410.1, 1011.8, 630.0, 1.193, 0.0],
+     [411.34, 1011.8, 630.0, 1.23, 0.0]],
     "ease": "glide",
     "glide": [0.45, 0.6, 0.8],
     "shake": 2.0,
-    "rate_pct_s": 2.11,
-    "pan_px_s": 11.3
+    "rate_pct_s": 4.29,
+    "pan_px_s": 19.4
    },
    "lens": null,
    "grade": "memory_sepia",
@@ -27631,7 +27611,7 @@
    "chars": [
     {
      "who": "you_kid",
-     "at": [960, 980, 420],
+     "at": [960, 1010, 380],
      "view": "front",
      "expr": "sure",
      "acts": [
@@ -27647,17 +27627,22 @@
     },
     {
      "who": "extras",
-     "at": [960, 1000, 900],
-     "view": "front",
+     "at": [700, 990, 620],
+     "view": "q_right",
      "expr": "neutral",
      "acts": [
       [
        405.98,
        "shift_weight",
        {}
+      ],
+      [
+       406.28,
+       "shift_weight",
+       {}
       ]
      ],
-     "mode": "legs"
+     "mode": "body"
     }
    ],
    "props": {
@@ -27698,7 +27683,7 @@
    },
    "tr": "cut",
    "intensity": 3.7,
-   "energy": "legs shifting",
+   "energy": "grown-ups shifting their weight round a small kid",
    "sfx": [],
    "mus": [],
    "v1": {
@@ -27845,13 +27830,13 @@
    "cam": {
     "move": "path",
     "keys": [[405.98, 960.0, 540.0, 1.0, 0.0],
-     [410.1, 1017.3, 560.0, 1.08, 0.0],
-     [411.34, 1017.3, 560.0, 1.113, 0.0]],
+     [410.1, 1011.8, 630.0, 1.193, 0.0],
+     [411.34, 1011.8, 630.0, 1.23, 0.0]],
     "ease": "glide",
     "glide": [0.45, 0.6, 0.8],
     "shake": 2.0,
-    "rate_pct_s": 2.11,
-    "pan_px_s": 11.3
+    "rate_pct_s": 4.29,
+    "pan_px_s": 19.4
    },
    "lens": null,
    "grade": "memory_sepia",
@@ -27859,7 +27844,7 @@
    "chars": [
     {
      "who": "you_kid",
-     "at": [960, 980, 420],
+     "at": [960, 1010, 380],
      "view": "front",
      "expr": "sure",
      "acts": [
@@ -27883,17 +27868,22 @@
     },
     {
      "who": "extras",
-     "at": [960, 1000, 900],
-     "view": "front",
+     "at": [700, 990, 620],
+     "view": "q_right",
      "expr": "neutral",
      "acts": [
       [
        405.98,
        "shift_weight",
        {}
+      ],
+      [
+       406.28,
+       "shift_weight",
+       {}
       ]
      ],
-     "mode": "legs"
+     "mode": "body"
     }
    ],
    "props": {
@@ -27971,31 +27961,41 @@
    "side": "memory",
    "world": "memory",
    "look": "memory_sepia",
-   "type": "CU",
-   "cls": "face",
+   "type": "WS",
+   "cls": "wide",
    "frame": "memory CU: Noah at the breakfast table stuffing pancakes >> kid-you laughing across the table; the breakfast bell on its hook behind them",
    "cam": {
     "move": "path",
-    "keys": [[411.34, 960.0, 540.0, 1.0, 0.0],
-     [413.42, 960.0, 540.0, 1.085, 0.0],
-     [414.3, 960.0, 540.0, 1.051, 0.0]],
+    "keys": [[411.34, 1150.0, 700.0, 1.75, 0.0],
+     [414.3, 960.0, 560.0, 1.02, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.6, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 1.72,
-    "pan_px_s": 0.0
+    "rate_pct_s": -14.09,
+    "pan_px_s": 79.7
    },
    "lens": null,
    "grade": "memory_sepia",
-   "dof": {
-    "focus": 1.0,
-    "dof": 6.75
-   },
+   "dof": null,
    "chars": [
     {
+     "who": "you_kid",
+     "at": [700, 1000, 460],
+     "view": "q_right",
+     "expr": "laugh",
+     "acts": [
+      [
+       412.54,
+       "laugh",
+       {}
+      ]
+     ],
+     "mode": "body"
+    },
+    {
      "who": "noah13",
-     "at": [960, 560, 1.0],
-     "view": "front",
+     "at": [1200, 1000, 500],
+     "view": "q_left",
      "expr": "grin_kid",
      "acts": [
       [
@@ -28006,27 +28006,6 @@
       [
        412.54,
        "eat",
-       {}
-      ]
-     ],
-     "mode": "bust",
-     "light": {
-      "rim": "#f1e2c4",
-      "rim_a": 60,
-      "side": 1,
-      "key": 0.2,
-      "world": "memory"
-     }
-    },
-    {
-     "who": "you_kid",
-     "at": [700, 1000, 460],
-     "view": "q_right",
-     "expr": "laugh",
-     "acts": [
-      [
-       412.54,
-       "laugh",
        {}
       ]
      ],
@@ -28082,11 +28061,6 @@
    },
    "merged": [411.34, 412.54],
    "queen": null,
-   "bokeh": {
-    "palette": "memory",
-    "plate": "memory/breakfast_table blurred",
-    "discs": "45-165 px, +22-38 luma, drift 3-8 px/s"
-   },
    "setup_reused": false,
    "family": null,
    "glint": false,
@@ -30771,8 +30745,8 @@
   {
    "id": "S200",
    "t0": 464.59,
-   "t1": 470.51,
-   "dur": 5.92,
+   "t1": 472.03,
+   "dur": 7.44,
    "section": "rule5",
    "lines": [191, 192],
    "cut_on_clause": true,
@@ -30789,7 +30763,7 @@
    "cam": {
     "move": "path",
     "keys": [[464.59, 960.0, 540.0, 1.0, 0.0],
-     [468.35, 960.0, 540.0, 1.0, 0.0]],
+     [472.03, 960.0, 540.0, 1.0, 0.0]],
     "ease": "glide",
     "glide": [1.0, 1.0, 0.5],
     "shake": 2.0,
@@ -30813,9 +30787,17 @@
       ],
       [
        466.1,
-       "glide_sit",
+       "stride",
        {
-        "dur": 1.2
+        "t1": 467.6,
+        "steps_per_s": 1.1
+       }
+      ],
+      [
+       467.75,
+       "sit",
+       {
+        "dur": 0.6
        }
       ],
       [
@@ -30828,8 +30810,10 @@
      "stage": "S2",
      "w": [[464.59, 3.95, 0.0, 5.6],
       [466.1, 3.95, 0.0, 5.6],
-      [467.3, 1.24, 0.0, 4.45],
-      [470.51, 1.24, 0.0, 4.45]],
+      [466.7, 3.05, 0.0, 5.3],
+      [467.2, 1.95, 0.0, 5.28],
+      [467.7, 1.24, 0.0, 5.32],
+      [472.03, 1.24, 0.0, 5.32]],
      "light": {
       "key_c": "#e8ecff",
       "key_from": "below_front",
@@ -30851,15 +30835,14 @@
        {
         "period": 2.4
        }
-      ],
-      [
-       468.68,
-       "scoot",
-       {}
       ]
      ],
      "mode": "body",
-     "seated": true
+     "seated": true,
+     "w": [[464.59, 1.24, 0.0, 4.95],
+      [468.6, 1.24, 0.0, 4.95],
+      [469.25, 1.24, 0.0, 4.68],
+      [472.03, 1.24, 0.0, 4.68]]
     }
    ],
    "props": {
@@ -30907,7 +30890,7 @@
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 8.2,
+   "intensity": 8.3,
    "energy": "the glide, the mattress dipping, the knot loop",
    "sfx": [],
    "mus": [],
@@ -30930,17 +30913,17 @@
       }
      ],
      [
-      470.51,
+      472.03,
       {
-       "pos": [2.8, 1.35, 2.35],
-       "look": [1.9, 0.8, 5.4],
-       "fov": 70
+       "pos": [2.75, 1.33, 2.45],
+       "look": [1.75, 0.8, 5.25],
+       "fov": 68
       }
      ]
     ],
     "glide": [1.0, 1.0, 0.5]
    },
-   "merged": [464.59],
+   "merged": [464.59, 468.35, 470.51],
    "queen": {
     "stage": "S2",
     "size": 0.35,
@@ -30963,95 +30946,6 @@
   },
   {
    "id": "S201",
-   "t0": 470.51,
-   "t1": 472.03,
-   "dur": 1.52,
-   "section": "rule5",
-   "lines": [192],
-   "cut_on_clause": false,
-   "clause_offset": -1.69,
-   "set": "cabin_dawn",
-   "view": "dip_low",
-   "var": "dawn_queen",
-   "side": "theirs",
-   "world": "theirs_break",
-   "look": "dawn_queen_v2",
-   "type": "WS",
-   "cls": "wide",
-   "frame": "low wide along the mattress: her black satin settles into the dip beside Noah's knees",
-   "cam": {
-    "move": "push",
-    "keys": [[470.51, 960, 540, 1.0, 0.0],
-     [472.03, 960.0, 540.0, 1.0456, 0.0]],
-    "ease": "lin",
-    "shake": 2.0,
-    "rate_pct_s": 3.0,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "dawn_queen_v2",
-   "dof": null,
-   "chars": [],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "navy_dark",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_running",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "on",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "crate",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "running",
-    "queen": "bunk",
-    "noah": "unseen",
-    "tess": "porch",
-    "you": "theirs"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 5 OF 7",
-    "clock_mode": "theirs",
-    "clock_at_t0": "06:59:57",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 8.5,
-   "energy": "satin settling, the mattress sagging",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_dawn",
-    "view": "mattress_dip",
-    "var": "dawn_queen",
-    "grade": "dawn_queen"
-   },
-   "queen": null,
-   "setup_reused": false,
-   "family": "theirs",
-   "glint": false,
-   "chip": {
-    "text": "THE OTHER SIDE · 6:59 AM",
-    "style": "theirs",
-    "pop": false
-   },
-   "counter": 26
-  },
-  {
-   "id": "S202",
    "t0": 472.03,
    "t1": 473.55,
    "dur": 1.52,
@@ -31164,12 +31058,12 @@
    "counter": 25
   },
   {
-   "id": "S203",
+   "id": "S202",
    "t0": 473.55,
-   "t1": 475.63,
-   "dur": 2.08,
+   "t1": 481.13,
+   "dur": 7.58,
    "section": "rule5",
-   "lines": [194],
+   "lines": [194, 195, 196, 197],
    "cut_on_clause": true,
    "clause_offset": -0.17,
    "set": "cabin_dawn",
@@ -31180,15 +31074,18 @@
    "look": "dawn_queen_v2",
    "type": "CU",
    "cls": "face",
-   "frame": "CU of her, S2, the drawn smile; her lips move: another minute?",
+   "frame": "CU of her, S2, the drawn smile; her lips move: another minute? >> insert: the red-fingertip hand pats the dip twice >> HOLD H3: CU push 5 %/s; on \"back\" (479.24) the drawn stair-smile SPLITS OPEN along the drawing into a grin of flat human teeth climbing her cheeks; the lips keep talking (\"I can put you back the way he remembers you\")",
    "cam": {
-    "move": "push",
-    "keys": [[473.55, 960, 540, 1.0, 0.0],
-     [475.63, 960.0, 540.0, 1.0728, 0.0]],
-    "ease": "lin",
+    "move": "path",
+    "keys": [[473.55, 1075.0, 285.0, 2.25, 0.0],
+     [476.2, 1085.0, 500.0, 2.3, 0.0],
+     [478.03, 1090.0, 270.0, 2.42, 0.0],
+     [481.13, 1090.0, 262.0, 2.6, 0.0]],
+    "ease": "glide",
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 3.5,
-    "pan_px_s": 0.0
+    "rate_pct_s": 2.05,
+    "pan_px_s": 3.6
    },
    "lens": null,
    "grade": "dawn_queen_v2",
@@ -31199,7 +31096,7 @@
    "chars": [
     {
      "who": "queen",
-     "at": [960, 560, 1.1],
+     "at": [1080, 900, 500, 1.0],
      "view": "front",
      "expr": "queen_drawn",
      "acts": [
@@ -31207,13 +31104,53 @@
        473.65,
        "talk_silent",
        {
-        "dur": 1.6,
-        "glow": true
+        "dur": 1.6
+       }
+      ],
+      [
+       476.04,
+       "pat",
+       {}
+      ],
+      [
+       476.36,
+       "pat",
+       {}
+      ],
+      [
+       478.03,
+       "expr",
+       {
+        "name": "queen_grin",
+        "fade": 0.3
+       }
+      ],
+      [
+       478.03,
+       "stage",
+       {
+        "to": "S3a",
+        "dur": 0.1
+       }
+      ],
+      [
+       478.2,
+       "talk_line",
+       {
+        "line": 196
+       }
+      ],
+      [
+       479.24,
+       "split_open",
+       {
+        "dur": 0.25
        }
       ]
      ],
-     "mode": "bust",
+     "mode": "body",
      "stage": "S2",
+     "seated": true,
      "light": {
       "key_c": "#e8ecff",
       "key_from": "below_front",
@@ -31222,6 +31159,23 @@
       "bloom": 1.5,
       "drain_px": 450
      }
+    },
+    {
+     "who": "noah13",
+     "at": [760, 900, 420],
+     "view": "q_right",
+     "expr": "listening",
+     "acts": [
+      [
+       473.55,
+       "tie_loop",
+       {
+        "period": 2.4
+       }
+      ]
+     ],
+     "mode": "body",
+     "seated": true
     }
    ],
    "props": {
@@ -31261,7 +31215,7 @@
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 8.8,
+   "intensity": 9.0,
    "energy": "lips moving, the drawing still",
    "sfx": [],
    "mus": [],
@@ -31271,6 +31225,9 @@
     "var": "dawn_queen",
     "grade": "dawn_queen"
    },
+   "hold": "H3",
+   "errfix": [20],
+   "merged": [473.55, 475.63, 478.03],
    "queen": {
     "stage": "S2",
     "size": 0.5,
@@ -31296,270 +31253,7 @@
    "counter": 25
   },
   {
-   "id": "S204",
-   "t0": 475.63,
-   "t1": 478.03,
-   "dur": 2.4,
-   "section": "rule5",
-   "lines": [194, 195],
-   "cut_on_clause": true,
-   "clause_offset": -0.17,
-   "set": "cabin_dawn",
-   "view": "dip_low",
-   "var": "dawn_queen",
-   "side": "theirs",
-   "world": "theirs_break",
-   "look": "dawn_queen_v2",
-   "type": "INSERT",
-   "cls": "insert",
-   "frame": "insert: the red-fingertip hand pats the dip twice",
-   "cam": {
-    "move": "push",
-    "keys": [[475.63, 960, 540, 1.0, 0.0],
-     [478.03, 960.0, 540.0, 1.132, 0.0]],
-    "ease": "lin",
-    "shake": 2.0,
-    "rate_pct_s": 5.5,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "dawn_queen_v2",
-   "dof": null,
-   "chars": [
-    {
-     "who": "queen",
-     "at": [960, 640, 520],
-     "view": "front",
-     "expr": "queen_drawn",
-     "acts": [
-      [
-       476.04,
-       "pat",
-       {}
-      ],
-      [
-       476.36,
-       "pat",
-       {}
-      ]
-     ],
-     "mode": "hands",
-     "stage": "S2",
-     "light": {
-      "key_c": "#e8ecff",
-      "key_from": "below_front",
-      "rim": "#ff3b5c",
-      "rim_a": 140,
-      "bloom": 1.5,
-      "drain_px": 450
-     }
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "navy_dark",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_running",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "on",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "crate",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "running",
-    "queen": "bunk",
-    "noah": "unseen",
-    "tess": "porch",
-    "you": "theirs"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 5 OF 7",
-    "clock_mode": "theirs",
-    "clock_at_t0": "06:59:42",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 8.9,
-   "energy": "two pats",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_dawn",
-    "view": "mattress_dip",
-    "var": "dawn_queen",
-    "grade": "dawn_queen"
-   },
-   "queen": {
-    "stage": "S2",
-    "step": null,
-    "on_screen": true
-   },
-   "setup_reused": true,
-   "family": "theirs",
-   "glint": false,
-   "chip": {
-    "text": "THE OTHER SIDE · 6:59 AM",
-    "style": "theirs",
-    "pop": false
-   },
-   "counter": 25
-  },
-  {
-   "id": "S205",
-   "t0": 478.03,
-   "t1": 481.13,
-   "dur": 3.1,
-   "section": "rule5",
-   "lines": [196, 197],
-   "cut_on_clause": true,
-   "clause_offset": -0.25,
-   "set": "cabin_dawn",
-   "view": "queen_3s",
-   "var": "dawn_queen",
-   "side": "theirs",
-   "world": "theirs_break",
-   "look": "dawn_queen_v2",
-   "type": "CU",
-   "cls": "face",
-   "frame": "HOLD H3: CU push 5 %/s; on \"back\" (479.24) the drawn stair-smile SPLITS OPEN along the drawing into a grin of flat human teeth climbing her cheeks; the lips keep talking (\"I can put you back the way he remembers you\")",
-   "cam": {
-    "move": "push",
-    "keys": [[478.03, 960, 540, 1.0, 0.0],
-     [481.13, 960.0, 540.0, 1.155, 0.0]],
-    "ease": "lin",
-    "shake": 2.0,
-    "rate_pct_s": 5.0,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "dawn_queen_v2",
-   "dof": {
-    "focus": 1.0,
-    "dof": 6.75
-   },
-   "chars": [
-    {
-     "who": "queen",
-     "at": [960, 560, 1.15],
-     "view": "front",
-     "expr": "queen_grin",
-     "acts": [
-      [
-       478.2,
-       "talk_line",
-       {
-        "line": 196,
-        "glow": true
-       }
-      ],
-      [
-       479.24,
-       "split_open",
-       {
-        "dur": 0.25
-       }
-      ]
-     ],
-     "mode": "bust",
-     "stage": "S3a",
-     "light": {
-      "key_c": "#e8ecff",
-      "key_from": "below_front",
-      "rim": "#ff3b5c",
-      "rim_a": 140,
-      "bloom": 1.5,
-      "drain_px": 450
-     }
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "navy_dark",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_running",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "on",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "crate",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "running",
-    "queen": "bunk",
-    "noah": "unseen",
-    "tess": "porch",
-    "you": "theirs"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 5 OF 7",
-    "clock_mode": "theirs",
-    "clock_at_t0": "06:59:45",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 7.1,
-   "energy": "the split on the word, lips talking, push 5 %/s",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_dawn",
-    "view": "queen_bunk",
-    "var": "dawn_queen",
-    "grade": "dawn_queen"
-   },
-   "hold": "H3",
-   "errfix": [20],
-   "queen": {
-    "stage": "S3a",
-    "size": 0.7,
-    "where": "on the bunk",
-    "framing": "CU 70 %",
-    "wrong": "the drawing opens into teeth",
-    "step": null,
-    "on_screen": true
-   },
-   "bokeh": {
-    "palette": "theirs",
-    "plate": "cabin_dawn/queen_3s blurred",
-    "discs": "45-165 px, +22-38 luma, drift 3-8 px/s"
-   },
-   "setup_reused": true,
-   "family": "theirs",
-   "glint": false,
-   "chip": {
-    "text": "THE OTHER SIDE · 6:59 AM",
-    "style": "theirs",
-    "pop": false
-   },
-   "counter": 24
-  },
-  {
-   "id": "S206",
+   "id": "S203",
    "t0": 481.13,
    "t1": 483.31,
    "dur": 2.18,
@@ -31681,7 +31375,7 @@
    "counter": 24
   },
   {
-   "id": "S207",
+   "id": "S204",
    "t0": 483.31,
    "t1": 485.33,
    "dur": 2.02,
@@ -31826,7 +31520,7 @@
    "counter": 24
   },
   {
-   "id": "S208",
+   "id": "S205",
    "t0": 485.33,
    "t1": 487.87,
    "dur": 2.54,
@@ -31931,7 +31625,7 @@
    "counter": 23
   },
   {
-   "id": "S209",
+   "id": "S206",
    "t0": 487.87,
    "t1": 489.87,
    "dur": 2.0,
@@ -31951,13 +31645,12 @@
    "cam": {
     "move": "path",
     "keys": [[487.87, 960.0, 540.0, 1.0, 0.0],
-     [493.75, 1186.2, 550.8, 1.108, 0.0],
-     [494.51, 1186.2, 550.8, 1.133, 0.0]],
+     [496.67, 900.0, 560.0, 1.14, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 2.0,
-    "pan_px_s": 34.1
+    "rate_pct_s": 1.59,
+    "pan_px_s": 7.2
    },
    "lens": null,
    "grade": "dawn_queen_v2",
@@ -32092,7 +31785,7 @@
    "counter": 23
   },
   {
-   "id": "S210",
+   "id": "S207",
    "t0": 489.87,
    "t1": 492.99,
    "dur": 3.12,
@@ -32213,10 +31906,10 @@
    "counter": 23
   },
   {
-   "id": "S211",
+   "id": "S208",
    "t0": 492.99,
-   "t1": 494.51,
-   "dur": 1.52,
+   "t1": 496.67,
+   "dur": 3.68,
    "section": "rule5",
    "lines": [203],
    "cut_on_clause": true,
@@ -32229,17 +31922,16 @@
    "look": "dawn_queen_v2",
    "type": "WS",
    "cls": "wide",
-   "frame": "you begin to lower toward the dip; RED X (3 of 4) over the dip at 493.56; tag DON'T SIT DOWN",
+   "frame": "you begin to lower toward the dip; RED X (3 of 4) over the dip at 493.56; tag DON'T SIT DOWN >> CU you: your lips forming \"leave it open\"",
    "cam": {
     "move": "path",
     "keys": [[487.87, 960.0, 540.0, 1.0, 0.0],
-     [493.75, 1186.2, 550.8, 1.108, 0.0],
-     [494.51, 1186.2, 550.8, 1.133, 0.0]],
+     [496.67, 900.0, 560.0, 1.14, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
+    "glide": [0.5, 0.6, 0.7],
     "shake": 2.0,
-    "rate_pct_s": 2.0,
-    "pan_px_s": 34.1
+    "rate_pct_s": 1.59,
+    "pan_px_s": 7.2
    },
    "lens": null,
    "grade": "dawn_queen_v2",
@@ -32316,6 +32008,21 @@
        {
         "partial": 0.4
        }
+      ],
+      [
+       494.51,
+       "expr",
+       {
+        "name": "grief",
+        "fade": 0.4
+       }
+      ],
+      [
+       494.51,
+       "talk_silent",
+       {
+        "dur": 0.8
+       }
       ]
      ],
      "mode": "body"
@@ -32353,9 +32060,9 @@
     {
      "t": 493.56,
      "type": "red_x",
-     "x": 1180,
-     "y": 840,
-     "r": 140,
+     "x": 470,
+     "y": 690,
+     "r": 110,
      "hold": 0.8,
      "n": 3
     },
@@ -32366,7 +32073,7 @@
      "x": 960,
      "y": 150,
      "style": "lipstick",
-     "hold": 0.89
+     "hold": 1.0
     }
    ],
    "captions": true,
@@ -32377,7 +32084,7 @@
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 5.7,
+   "intensity": 5.9,
    "energy": "lowering, the X",
    "sfx": [],
    "mus": [],
@@ -32387,7 +32094,7 @@
     "var": "dawn_queen",
     "grade": "dawn_queen"
    },
-   "merged": [492.99],
+   "merged": [492.99, 494.51],
    "resumes": 487.87,
    "queen": {
     "stage": "S3a",
@@ -32406,128 +32113,7 @@
    "counter": 22
   },
   {
-   "id": "S212",
-   "t0": 494.51,
-   "t1": 496.67,
-   "dur": 2.16,
-   "section": "rule5",
-   "lines": [203],
-   "cut_on_clause": false,
-   "clause_offset": 1.35,
-   "set": "cabin_dawn",
-   "view": "bokeh",
-   "var": "dawn",
-   "side": "theirs",
-   "world": "theirs",
-   "look": "dawn_v2",
-   "type": "CU",
-   "cls": "face",
-   "frame": "CU you: your lips forming \"leave it open\"",
-   "cam": {
-    "move": "push",
-    "keys": [[494.51, 960, 540, 1.0, 0.0],
-     [496.67, 960.0, 540.0, 1.0648, 0.0]],
-    "ease": "lin",
-    "shake": 2.0,
-    "rate_pct_s": 3.0,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "dawn_v2",
-   "dof": {
-    "focus": 1.0,
-    "dof": 6.75
-   },
-   "chars": [
-    {
-     "who": "you",
-     "at": [960, 560, 1.0],
-     "view": "q_right",
-     "expr": "grief",
-     "acts": [
-      [
-       494.51,
-       "talk_silent",
-       {
-        "dur": 0.8
-       }
-      ]
-     ],
-     "mode": "bust",
-     "light": {
-      "rim": "#ffe2a8",
-      "rim_a": 100,
-      "side": -1,
-      "key": 0.35,
-      "world": "theirs"
-     }
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "navy_dark",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_running",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "on",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "crate",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "running",
-    "queen": "bunk",
-    "noah": "unseen",
-    "tess": "porch",
-    "you": "theirs"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 5 OF 7",
-    "clock_mode": "theirs",
-    "clock_at_t0": "06:59:42",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 6.1,
-   "energy": "lips moving",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_dawn",
-    "view": "noah_cu",
-    "var": "dawn",
-    "grade": "dawn_normal"
-   },
-   "queen": null,
-   "bokeh": {
-    "palette": "theirs",
-    "plate": "own",
-    "discs": "45-165 px, +22-38 luma, drift 3-8 px/s"
-   },
-   "setup_reused": true,
-   "family": "theirs",
-   "glint": false,
-   "chip": {
-    "text": "THE OTHER SIDE · 6:59 AM",
-    "style": "theirs",
-    "pop": false
-   },
-   "counter": 22
-  },
-  {
-   "id": "S213",
+   "id": "S209",
    "t0": 496.67,
    "t1": 500.03,
    "dur": 3.36,
@@ -32681,7 +32267,7 @@
    "counter": 21
   },
   {
-   "id": "S214",
+   "id": "S210",
    "t0": 500.03,
    "t1": 501.47,
    "dur": 1.44,
@@ -32785,7 +32371,7 @@
    "counter": 21
   },
   {
-   "id": "S215",
+   "id": "S211",
    "t0": 501.47,
    "t1": 503.15,
    "dur": 1.68,
@@ -32916,7 +32502,7 @@
    "counter": 21
   },
   {
-   "id": "S216",
+   "id": "S212",
    "t0": 503.15,
    "t1": 504.11,
    "dur": 0.96,
@@ -33064,7 +32650,7 @@
    "counter": 20
   },
   {
-   "id": "S217",
+   "id": "S213",
    "t0": 504.11,
    "t1": 505.79,
    "dur": 1.68,
@@ -33185,7 +32771,7 @@
    "counter": 20
   },
   {
-   "id": "S218",
+   "id": "S214",
    "t0": 505.79,
    "t1": 508.19,
    "dur": 2.4,
@@ -33304,7 +32890,7 @@
    "counter": 20
   },
   {
-   "id": "S219",
+   "id": "S215",
    "t0": 508.19,
    "t1": 509.07,
    "dur": 0.88,
@@ -33410,7 +32996,7 @@
    "counter": 19
   },
   {
-   "id": "S220",
+   "id": "S216",
    "t0": 509.07,
    "t1": 511.47,
    "dur": 2.4,
@@ -33530,7 +33116,7 @@
    "counter": 19
   },
   {
-   "id": "S221",
+   "id": "S217",
    "t0": 511.47,
    "t1": 513.39,
    "dur": 1.92,
@@ -33619,7 +33205,7 @@
    "counter": 19
   },
   {
-   "id": "S222",
+   "id": "S218",
    "t0": 513.39,
    "t1": 514.43,
    "dur": 1.04,
@@ -33724,7 +33310,7 @@
    "counter": 19
   },
   {
-   "id": "S223",
+   "id": "S219",
    "t0": 514.43,
    "t1": 516.62,
    "dur": 2.19,
@@ -33831,7 +33417,7 @@
    "counter": 18
   },
   {
-   "id": "S224",
+   "id": "S220",
    "t0": 516.62,
    "t1": 519.9,
    "dur": 3.28,
@@ -33960,7 +33546,7 @@
    "counter": 18
   },
   {
-   "id": "S225",
+   "id": "S221",
    "t0": 519.9,
    "t1": 523.42,
    "dur": 3.52,
@@ -34081,7 +33667,7 @@
    "counter": 17
   },
   {
-   "id": "S226",
+   "id": "S222",
    "t0": 523.42,
    "t1": 524.78,
    "dur": 1.36,
@@ -34193,7 +33779,7 @@
    "counter": 17
   },
   {
-   "id": "S227",
+   "id": "S223",
    "t0": 524.78,
    "t1": 526.22,
    "dur": 1.44,
@@ -34322,7 +33908,7 @@
    "counter": 16
   },
   {
-   "id": "S228",
+   "id": "S224",
    "t0": 526.22,
    "t1": 527.58,
    "dur": 1.36,
@@ -34443,7 +34029,7 @@
    "counter": 16
   },
   {
-   "id": "S229",
+   "id": "S225",
    "t0": 527.58,
    "t1": 528.86,
    "dur": 1.28,
@@ -34537,7 +34123,7 @@
    "counter": 16
   },
   {
-   "id": "S230",
+   "id": "S226",
    "t0": 528.86,
    "t1": 530.46,
    "dur": 1.6,
@@ -34644,7 +34230,7 @@
    "counter": 16
   },
   {
-   "id": "S231",
+   "id": "S227",
    "t0": 530.46,
    "t1": 531.58,
    "dur": 1.12,
@@ -34787,7 +34373,7 @@
    "counter": 15
   },
   {
-   "id": "S232",
+   "id": "S228",
    "t0": 531.58,
    "t1": 534.68,
    "dur": 3.1,
@@ -34927,7 +34513,7 @@
    "counter": 15
   },
   {
-   "id": "S233",
+   "id": "S229",
    "t0": 534.68,
    "t1": 535.36,
    "dur": 0.68,
@@ -35042,7 +34628,7 @@
    "counter": 15
   },
   {
-   "id": "S234",
+   "id": "S230",
    "t0": 535.36,
    "t1": 536.0,
    "dur": 0.64,
@@ -35143,7 +34729,7 @@
    "counter": 15
   },
   {
-   "id": "S235",
+   "id": "S231",
    "t0": 536.0,
    "t1": 538.15,
    "dur": 2.15,
@@ -35258,7 +34844,7 @@
    "counter": 14
   },
   {
-   "id": "S236",
+   "id": "S232",
    "t0": 538.15,
    "t1": 539.19,
    "dur": 1.04,
@@ -35391,7 +34977,7 @@
    "counter": 14
   },
   {
-   "id": "S237",
+   "id": "S233",
    "t0": 539.19,
    "t1": 541.19,
    "dur": 2.0,
@@ -35528,7 +35114,7 @@
    "counter": 14
   },
   {
-   "id": "S238",
+   "id": "S234",
    "t0": 541.19,
    "t1": 542.03,
    "dur": 0.84,
@@ -35649,7 +35235,7 @@
    "counter": 14
   },
   {
-   "id": "S239",
+   "id": "S235",
    "t0": 542.03,
    "t1": 545.22,
    "dur": 3.19,
@@ -35806,7 +35392,7 @@
    "counter": null
   },
   {
-   "id": "S240",
+   "id": "S236",
    "t0": 545.22,
    "t1": 546.23,
    "dur": 1.01,
@@ -35941,7 +35527,7 @@
    "counter": 13
   },
   {
-   "id": "S241",
+   "id": "S237",
    "t0": 546.23,
    "t1": 546.73,
    "dur": 0.5,
@@ -36056,12 +35642,12 @@
    "counter": 13
   },
   {
-   "id": "S242",
+   "id": "S238",
    "t0": 546.73,
-   "t1": 547.43,
-   "dur": 0.7,
+   "t1": 551.29,
+   "dur": 4.56,
    "section": "rule6",
-   "lines": [227],
+   "lines": [227, 228, 229],
    "cut_on_clause": false,
    "clause_offset": -0.87,
    "set": "stairs",
@@ -36072,15 +35658,17 @@
    "look": "climax_v2",
    "type": "OTS",
    "cls": "mid",
-   "frame": "Noah climbing the top treads toward the doorway, you behind him",
+   "frame": "behind you on the stairs: Noah climbs into the doorway's light; one bare foot steps over the threshold and stays there (one move)",
    "cam": {
-    "move": "hand",
-    "keys": [[546.73, 960, 540, 1.0, 0.0],
-     [547.43, 960.0, 540.0, 1.021, 0.0]],
-    "ease": "lin",
-    "shake": 20,
-    "rate_pct_s": 3.0,
-    "pan_px_s": 0.0
+    "move": "path",
+    "keys": [[546.73, 960.0, 540.0, 1.0, 0.0],
+     [548.6, 968.0, 470.0, 1.18, 0.0],
+     [551.29, 975.0, 420.0, 1.34, 0.0]],
+    "ease": "glide",
+    "glide": [0.6, 0.6, 0.7],
+    "shake": 3.0,
+    "rate_pct_s": 7.46,
+    "pan_px_s": 26.5
    },
    "lens": null,
    "grade": "climax_v2",
@@ -36093,21 +35681,53 @@
      "expr": "strain",
      "acts": [
       [
-       546.73,
-       "climb",
+       546.5,
+       "stride",
+       {
+        "t1": 548.3,
+        "steps_per_s": 1.6,
+        "bob": 0.04
+       }
+      ],
+      [
+       548.25,
+       "step_through",
+       {
+        "foot": "bare",
+        "dur": 0.7
+       }
+      ],
+      [
+       549.2,
+       "still",
        {}
       ]
      ],
-     "mode": "body"
+     "mode": "body",
+     "path2d": [[546.73, 960, 900, 600],
+      [548.3, 978, 640, 430],
+      [549.0, 985, 600, 400],
+      [551.29, 985, 600, 400]]
     },
     {
      "who": "you",
      "at": [760, 1200, 900],
      "view": "back",
      "expr": "resolve",
-     "acts": [],
+     "acts": [
+      [
+       546.73,
+       "shove",
+       {
+        "dur": 0.5
+       }
+      ]
+     ],
      "mode": "body",
-     "ots": true
+     "ots": true,
+     "path2d": [[546.73, 760, 1200, 900],
+      [548.3, 790, 1150, 820],
+      [551.29, 800, 1140, 810]]
     }
    ],
    "props": {
@@ -36157,6 +35777,8 @@
     "var": "red",
     "grade": "climax_red"
    },
+   "errfix": [11],
+   "merged": [546.73, 547.43],
    "queen": null,
    "setup_reused": false,
    "family": null,
@@ -36165,102 +35787,7 @@
    "counter": 13
   },
   {
-   "id": "S243",
-   "t0": 547.43,
-   "t1": 551.29,
-   "dur": 3.86,
-   "section": "rule6",
-   "lines": [228, 229],
-   "cut_on_clause": true,
-   "clause_offset": -0.17,
-   "set": "cabin_now",
-   "view": "doorway",
-   "var": "red",
-   "side": "ours",
-   "world": "climax",
-   "look": "climax_v2",
-   "type": "WS",
-   "cls": "wide",
-   "frame": "OURS, from Cabin 7: his bare foot comes out of the dark stairs through the doorway onto our floorboards",
-   "cam": {
-    "move": "path",
-    "keys": [[547.43, 960.0, 560.0, 1.0, 0.0],
-     [552.0, 960.0, 540.0, 1.06, 0.0],
-     [557.0, 960.0, 560.0, 1.03, 0.0],
-     [562.41, 960.0, 540.0, 1.1, 0.0]],
-    "ease": "glide",
-    "glide": [0.5, 0.5, 0.8],
-    "shake": 2.0,
-    "rate_pct_s": 0.67,
-    "pan_px_s": 1.3
-   },
-   "lens": null,
-   "grade": "climax_v2",
-   "dof": null,
-   "chars": [],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "red",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_doorway",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "on",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "struck",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "7:00",
-    "queen": "bunk",
-    "noah": "stairs",
-    "tess": "cabin7_doorway",
-    "you": "stairs"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 6 OF 7",
-    "clock_mode": "ours",
-    "clock_at_t0": "00:05:42",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 9.0,
-   "energy": "the foot stepping out, red spill",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_now",
-    "view": "doorway",
-    "var": "red",
-    "grade": "climax_red"
-   },
-   "setup": "C7_RED",
-   "errfix": [11],
-   "merged": [547.43],
-   "queen": null,
-   "setup_reused": true,
-   "family": "ours",
-   "glint": false,
-   "chip": {
-    "text": "CABIN 7 · 12:05 AM",
-    "style": "ours",
-    "pop": false
-   },
-   "counter": 12
-  },
-  {
-   "id": "S244",
+   "id": "S239",
    "t0": 551.29,
    "t1": 554.33,
    "dur": 3.04,
@@ -36377,7 +35904,7 @@
    "counter": 12
   },
   {
-   "id": "S245",
+   "id": "S240",
    "t0": 554.33,
    "t1": 557.37,
    "dur": 3.04,
@@ -36494,7 +36021,7 @@
    "counter": 11
   },
   {
-   "id": "S246",
+   "id": "S241",
    "t0": 557.37,
    "t1": 559.53,
    "dur": 2.16,
@@ -36513,15 +36040,14 @@
    "frame": "MS: Tess leans back and pulls; his shoulders come through the white frame, already broader >> wide: they fall back onto the floorboards together (559.24); dust bursts in the red light",
    "cam": {
     "move": "path",
-    "keys": [[547.43, 960.0, 560.0, 1.0, 0.0],
-     [552.0, 960.0, 540.0, 1.06, 0.0],
-     [557.0, 960.0, 560.0, 1.03, 0.0],
+    "keys": [[551.29, 960.0, 560.0, 1.0, 0.0],
+     [557.0, 960.0, 550.0, 1.04, 0.0],
      [562.41, 960.0, 540.0, 1.1, 0.0]],
     "ease": "glide",
     "glide": [0.5, 0.5, 0.8],
     "shake": 18,
-    "rate_pct_s": 0.67,
-    "pan_px_s": 1.3
+    "rate_pct_s": 0.9,
+    "pan_px_s": 1.8
    },
    "lens": null,
    "grade": "climax_v2",
@@ -36612,7 +36138,6 @@
     "grade": "climax_red"
    },
    "merged": [557.37, 558.17],
-   "resumes": 547.43,
    "queen": null,
    "setup_reused": true,
    "family": "ours",
@@ -36625,7 +36150,7 @@
    "counter": 11
   },
   {
-   "id": "S247",
+   "id": "S242",
    "t0": 559.53,
    "t1": 560.89,
    "dur": 1.36,
@@ -36733,7 +36258,7 @@
    "counter": 10
   },
   {
-   "id": "S248",
+   "id": "S243",
    "t0": 560.89,
    "t1": 562.41,
    "dur": 1.52,
@@ -36752,15 +36277,14 @@
    "frame": "MS: a grown body in a kid's sweatshirt, cuffs halfway up",
    "cam": {
     "move": "path",
-    "keys": [[547.43, 960.0, 560.0, 1.0, 0.0],
-     [552.0, 960.0, 540.0, 1.06, 0.0],
-     [557.0, 960.0, 560.0, 1.03, 0.0],
+    "keys": [[551.29, 960.0, 560.0, 1.0, 0.0],
+     [557.0, 960.0, 550.0, 1.04, 0.0],
      [562.41, 960.0, 540.0, 1.1, 0.0]],
     "ease": "glide",
     "glide": [0.5, 0.5, 0.8],
     "shake": 2.0,
-    "rate_pct_s": 0.67,
-    "pan_px_s": 1.3
+    "rate_pct_s": 0.9,
+    "pan_px_s": 1.8
    },
    "lens": null,
    "grade": "climax_v2",
@@ -36843,7 +36367,7 @@
     "grade": "climax_red"
    },
    "merged": [560.89],
-   "resumes": 547.43,
+   "resumes": 557.37,
    "queen": null,
    "setup_reused": true,
    "family": "ours",
@@ -36856,7 +36380,7 @@
    "counter": 10
   },
   {
-   "id": "S249",
+   "id": "S244",
    "t0": 562.41,
    "t1": 565.13,
    "dur": 2.72,
@@ -36989,7 +36513,7 @@
    "counter": 10
   },
   {
-   "id": "S250",
+   "id": "S245",
    "t0": 565.13,
    "t1": 567.77,
    "dur": 2.64,
@@ -37104,7 +36628,7 @@
    "counter": 9
   },
   {
-   "id": "S251",
+   "id": "S246",
    "t0": 567.77,
    "t1": 569.69,
    "dur": 1.92,
@@ -37208,7 +36732,7 @@
    "counter": 9
   },
   {
-   "id": "S252",
+   "id": "S247",
    "t0": 569.69,
    "t1": 570.65,
    "dur": 0.96,
@@ -37335,7 +36859,7 @@
    "counter": 8
   },
   {
-   "id": "S253",
+   "id": "S248",
    "t0": 570.65,
    "t1": 572.09,
    "dur": 1.44,
@@ -37462,7 +36986,7 @@
    "counter": 8
   },
   {
-   "id": "S254",
+   "id": "S249",
    "t0": 572.09,
    "t1": 574.49,
    "dur": 2.4,
@@ -37576,7 +37100,7 @@
    "counter": 8
   },
   {
-   "id": "S255",
+   "id": "S250",
    "t0": 574.49,
    "t1": 576.25,
    "dur": 1.76,
@@ -37680,7 +37204,7 @@
    "counter": 8
   },
   {
-   "id": "S256",
+   "id": "S251",
    "t0": 576.25,
    "t1": 577.29,
    "dur": 1.04,
@@ -37817,7 +37341,7 @@
    "counter": 7
   },
   {
-   "id": "S257",
+   "id": "S252",
    "t0": 577.29,
    "t1": 578.73,
    "dur": 1.44,
@@ -37946,7 +37470,7 @@
    "counter": 7
   },
   {
-   "id": "S258",
+   "id": "S253",
    "t0": 578.73,
    "t1": 580.57,
    "dur": 1.84,
@@ -37984,14 +37508,28 @@
      "expr": "fear",
      "acts": [
       [
-       579.46,
+       578.5,
+       "kneel",
+       {
+        "dur": 0.4
+       }
+      ],
+      [
+       579.0,
        "cover_ears",
+       {
+        "t1": 584.6
+       }
+      ],
+      [
+       582.53,
+       "rock",
        {}
       ]
      ],
      "mode": "body",
      "eyes": "brown",
-     "seated": true
+     "w": [3.35, 0.0, 4.45]
     },
     {
      "who": "tess",
@@ -37999,6 +37537,13 @@
      "view": "q_left",
      "expr": "fear",
      "acts": [
+      [
+       578.5,
+       "kneel",
+       {
+        "dur": 0.4
+       }
+      ],
       [
        579.03,
        "look",
@@ -38009,7 +37554,7 @@
       ]
      ],
      "mode": "body",
-     "kneel": true
+     "w": [2.55, 0.0, 4.2]
     }
    ],
    "props": {
@@ -38079,7 +37624,7 @@
    "counter": 7
   },
   {
-   "id": "S259",
+   "id": "S254",
    "t0": 580.57,
    "t1": 582.53,
    "dur": 1.96,
@@ -38198,7 +37743,7 @@
    "counter": 6
   },
   {
-   "id": "S260",
+   "id": "S255",
    "t0": 582.53,
    "t1": 584.41,
    "dur": 1.88,
@@ -38236,9 +37781,18 @@
      "expr": "fear",
      "acts": [
       [
-       579.46,
+       578.5,
+       "kneel",
+       {
+        "dur": 0.4
+       }
+      ],
+      [
+       579.0,
        "cover_ears",
-       {}
+       {
+        "t1": 584.6
+       }
       ],
       [
        582.53,
@@ -38248,7 +37802,7 @@
      ],
      "mode": "body",
      "eyes": "brown",
-     "seated": true
+     "w": [3.35, 0.0, 4.45]
     },
     {
      "who": "tess",
@@ -38256,6 +37810,13 @@
      "view": "q_left",
      "expr": "fear",
      "acts": [
+      [
+       578.5,
+       "kneel",
+       {
+        "dur": 0.4
+       }
+      ],
       [
        579.03,
        "look",
@@ -38266,7 +37827,7 @@
       ]
      ],
      "mode": "body",
-     "kneel": true
+     "w": [2.55, 0.0, 4.2]
     }
    ],
    "props": {
@@ -38336,7 +37897,7 @@
    "counter": 6
   },
   {
-   "id": "S261",
+   "id": "S256",
    "t0": 584.41,
    "t1": 585.45,
    "dur": 1.04,
@@ -38436,7 +37997,7 @@
    "counter": 6
   },
   {
-   "id": "S262",
+   "id": "S257",
    "t0": 585.45,
    "t1": 586.28,
    "dur": 0.83,
@@ -38563,243 +38124,31 @@
    "counter": 6
   },
   {
-   "id": "S263",
+   "id": "S258",
    "t0": 586.28,
-   "t1": 587.2,
-   "dur": 0.92,
-   "section": "rule6",
-   "lines": [247],
-   "cut_on_clause": true,
-   "clause_offset": -0.17,
-   "set": "stairs",
-   "view": "section",
-   "var": "red",
-   "side": "stairs",
-   "world": "climax",
-   "look": "climax_v2",
-   "type": "SEC",
-   "cls": "wide",
-   "frame": "the section [R]: you climbing, three steps from the top",
-   "cam": {
-    "move": "path",
-    "keys": [[586.28, 960.0, 540.0, 1.0, 0.0],
-     [587.2, 960.0, 540.0, 1.018, 0.0]],
-    "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
-    "shake": 12,
-    "rate_pct_s": 1.96,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "climax_v2",
-   "dof": null,
-   "chars": [
-    {
-     "who": "you",
-     "at": [900, 560, 90],
-     "view": "profile_left",
-     "expr": "fear",
-     "acts": [
-      [
-       586.28,
-       "climb",
-       {}
-      ]
-     ],
-     "mode": "body"
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "red",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_doorway",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "off_loop_floor",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "struck",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "7:00",
-    "queen": "theirs_bunk_standing",
-    "noah": "ours",
-    "tess": "cabin7_doorway",
-    "you": "stairs_top3"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 6 OF 7",
-    "clock_mode": "ours",
-    "clock_at_t0": "00:06:21",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 10.0,
-   "energy": "climbing",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "mirror_world",
-    "view": "stairs",
-    "var": "red",
-    "grade": "climax_red"
-   },
-   "merged": [586.28],
-   "queen": null,
-   "setup_reused": true,
-   "reuse": "S120",
-   "family": null,
-   "glint": false,
-   "chip": null,
-   "counter": 5
-  },
-  {
-   "id": "S264",
-   "t0": 587.2,
-   "t1": 587.88,
-   "dur": 0.68,
-   "section": "rule6",
-   "lines": [247],
-   "cut_on_clause": false,
-   "clause_offset": 0.75,
-   "set": "stairs",
-   "view": "up",
-   "var": "red",
-   "side": "stairs",
-   "world": "climax",
-   "look": "climax_v2",
-   "type": "POV",
-   "cls": "pov",
-   "frame": "POV from below: your hand reaching up toward Tess's light",
-   "cam": {
-    "move": "path",
-    "keys": [[587.2, 960.0, 540.0, 1.0, 0.0],
-     [587.88, 960.0, 540.0, 1.02, 0.0]],
-    "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
-    "shake": 18,
-    "rate_pct_s": 2.94,
-    "pan_px_s": 0.0
-   },
-   "lens": null,
-   "grade": "climax_v2",
-   "dof": null,
-   "chars": [
-    {
-     "who": "you",
-     "at": [960, 700, 620],
-     "view": "front",
-     "expr": "neutral",
-     "acts": [
-      [
-       587.2,
-       "reach",
-       {
-        "up": true
-       }
-      ]
-     ],
-     "mode": "hands",
-     "pov": true,
-     "sleeve": "olive"
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "red",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_doorway",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "off_loop_floor",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "struck",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "7:00",
-    "queen": "theirs_bunk_standing",
-    "noah": "ours",
-    "tess": "cabin7_doorway",
-    "you": "stairs_top3"
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 6 OF 7",
-    "clock_mode": "ours",
-    "clock_at_t0": "00:06:22",
-    "opacity": 0.2
-   },
-   "tr": "flow",
-   "intensity": 10.0,
-   "energy": "reaching",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "cabin_dawn",
-    "view": "doorway_back",
-    "var": "dawn",
-    "grade": "dawn_normal"
-   },
-   "merged": [587.2],
-   "flow": [960, 540],
-   "queen": null,
-   "setup_reused": true,
-   "family": null,
-   "glint": false,
-   "chip": null,
-   "counter": 5
-  },
-  {
-   "id": "S265",
-   "t0": 587.88,
    "t1": 592.92,
-   "dur": 5.04,
+   "dur": 6.64,
    "section": "rule6",
-   "lines": [248, 249, 250],
+   "lines": [247, 248, 249, 250],
    "cut_on_clause": true,
    "clause_offset": -0.17,
    "set": "stairs",
-   "view": "low",
+   "view": "down",
    "var": "red",
    "side": "stairs",
    "world": "climax",
    "look": "climax_v2",
    "type": "WS",
    "cls": "wide",
-   "frame": "low angle at the foot of the stairs: she steps onto tread 8 (silence) >> HOLD H6: her jaw drops; the face below the eyes stretches 1.35x into a tall glossy void; Noah13's face glitches inside it, lip-synced to his voice (\"Wait, he forgot his shoe.\") >> ECU of the void with Noah13's face and gap teeth inside",
+   "frame": "from the doorway (Tess's place) down the stairs: you climb toward the light, reaching up; behind you, two treads lower, she faces up the stairs at your back; HOLD H6: her jaw drops over your shoulder into the tall void, Noah13's face inside it (\"Wait, he forgot his shoe\")",
    "cam": {
     "move": "path",
-    "keys": [[587.88, 960.0, 540.0, 1.0, -8.0],
-     [590.53, 960.0, 540.0, 1.041, 0.0],
-     [592.25, 960.0, 540.0, 1.033, 0.0],
-     [592.92, 960.0, 540.0, 1.067, 0.0]],
+    "keys": [[586.28, 960.0, 540.0, 1.0, 0.0],
+     [592.92, 960.0, 540.0, 1.0, 0.0]],
     "ease": "glide",
-    "glide": [0.45, 0.6, 0.8],
-    "shake": 2.0,
-    "rate_pct_s": 1.33,
+    "glide": [0.6, 0.6, 0.7],
+    "shake": 12,
+    "rate_pct_s": 0.0,
     "pan_px_s": 0.0
    },
    "lens": null,
@@ -38807,16 +38156,53 @@
    "dof": null,
    "chars": [
     {
+     "who": "you",
+     "at": [960, 900, 600],
+     "view": "front",
+     "expr": "fear",
+     "acts": [
+      [
+       586.0,
+       "stride",
+       {
+        "t1": 587.9,
+        "steps_per_s": 1.5,
+        "bob": 0.03
+       }
+      ],
+      [
+       587.2,
+       "reach",
+       {
+        "side": -1,
+        "dur": 0.6
+       }
+      ],
+      [
+       589.7,
+       "expr",
+       {
+        "name": "fear",
+        "fade": 0.3
+       }
+      ]
+     ],
+     "mode": "body",
+     "w": [[586.28, -0.12, -1.2, 1.375],
+      [587.9, -0.12, -0.8, 0.875],
+      [592.92, -0.12, -0.8, 0.86]]
+    },
+    {
      "who": "queen",
-     "at": [960, 900, 520, 2.0],
-     "view": "q_left",
+     "at": [960, 900, 520],
+     "view": "front",
      "expr": "queen_full",
      "acts": [
       [
-       588.4,
-       "climb_step",
+       587.95,
+       "fade_in",
        {
-        "to": 8
+        "dur": 0.35
        }
       ],
       [
@@ -38846,14 +38232,6 @@
       ],
       [
        591.58,
-       "expr",
-       {
-        "name": "queen_void",
-        "fade": 0.4
-       }
-      ],
-      [
-       591.58,
        "still",
        {
         "inner": "noah13",
@@ -38863,6 +38241,7 @@
      ],
      "mode": "body",
      "stage": "S3c",
+     "w": [0.16, -1.2, 1.4],
      "light": {
       "key_c": "#e8ecff",
       "key_from": "below_front",
@@ -38914,12 +38293,12 @@
    "header": {
     "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 6 OF 7",
     "clock_mode": "ours",
-    "clock_at_t0": "00:06:22",
+    "clock_at_t0": "00:06:21",
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 9.8,
-   "energy": "silence push, her foot on the tread",
+   "intensity": 10.0,
+   "energy": "climbing",
    "sfx": [],
    "mus": [],
    "v1": {
@@ -38930,7 +38309,36 @@
    },
    "hold": "H6",
    "errfix": [27, 12, 12],
-   "merged": [587.88, 589.48, 591.58],
+   "cam3": {
+    "keys": [
+     [
+      586.28,
+      {
+       "pos": [0.25, 1.75, -0.45],
+       "look": [0.0, 0.3, 1.25],
+       "fov": 70
+      }
+     ],
+     [
+      589.4,
+      {
+       "pos": [0.22, 1.7, -0.38],
+       "look": [0.02, 0.4, 1.2],
+       "fov": 64
+      }
+     ],
+     [
+      592.92,
+      {
+       "pos": [0.2, 1.66, -0.32],
+       "look": [0.04, 0.5, 1.15],
+       "fov": 58
+      }
+     ]
+    ],
+    "glide": [0.6, 0.6, 0.7]
+   },
+   "merged": [586.28, 587.2, 587.88, 589.48, 591.58],
    "queen": {
     "stage": "S3c",
     "step": 8,
@@ -38941,13 +38349,14 @@
     "on_screen": true
    },
    "setup_reused": true,
+   "reuse": "S120",
    "family": null,
    "glint": false,
    "chip": null,
    "counter": 5
   },
   {
-   "id": "S266",
+   "id": "S259",
    "t0": 592.92,
    "t1": 593.96,
    "dur": 1.04,
@@ -39066,7 +38475,7 @@
    "counter": 4
   },
   {
-   "id": "S267",
+   "id": "S260",
    "t0": 593.96,
    "t1": 595.56,
    "dur": 1.6,
@@ -39178,7 +38587,7 @@
    "counter": 4
   },
   {
-   "id": "S268",
+   "id": "S261",
    "t0": 595.56,
    "t1": 599.72,
    "dur": 4.16,
@@ -39294,7 +38703,7 @@
    "counter": 3
   },
   {
-   "id": "S269",
+   "id": "S262",
    "t0": 599.72,
    "t1": 601.32,
    "dur": 1.6,
@@ -39396,7 +38805,7 @@
    "counter": 2
   },
   {
-   "id": "S270",
+   "id": "S263",
    "t0": 601.32,
    "t1": 602.52,
    "dur": 1.2,
@@ -39522,12 +38931,12 @@
    "counter": 2
   },
   {
-   "id": "S271",
+   "id": "S264",
    "t0": 602.52,
-   "t1": 607.36,
-   "dur": 4.84,
+   "t1": 609.48,
+   "dur": 6.96,
    "section": "rule6",
-   "lines": [255, 256, 257],
+   "lines": [255, 256, 257, 258],
    "cut_on_clause": true,
    "clause_offset": -0.17,
    "set": "stairs",
@@ -39538,17 +38947,18 @@
    "look": "climax_v2",
    "type": "POV",
    "cls": "pov",
-   "frame": "HOLD H7 (one shot): POV of your boots on a red-edged tread; the next tread down holds HER FOOT (605.21 hit); the camera tilts up her dress to the S3c face looming over you",
+   "frame": "HOLD H7 (one move from your eyes): your boots on a red-edged tread; down the stairs, the white sneaker beside the bed at the bottom; back to the step below yours: HER bare foot (605.21 hit); the camera climbs her dress to the S3c face looming over you; Tess's orange arm grabs your collar from behind and the view is yanked up the stairs; white flash",
    "cam": {
     "move": "path",
     "keys": [[602.52, 960.0, 540.0, 1.0, 0.0],
-     [607.36, 960.0, 540.0, 1.0, 0.0]],
+     [609.48, 960.0, 540.0, 1.0, 0.0]],
     "ease": "glide",
-    "glide": [0.4, 0.6, 0.5],
-    "shake": 2.0,
+    "glide": [0.45, 1.0, 0.5],
+    "shake": 4.0,
     "rate_pct_s": 0.0,
     "pan_px_s": 0.0,
-    "hit": [[605.21, 14]],
+    "hit": [[605.21, 14],
+     [608.97, 18]],
     "snap": [605.21, 1.08, 0.1],
     "accel": [[603.25, 1.048, 0.7]],
     "accel_word": "shoe"
@@ -39565,7 +38975,9 @@
      "acts": [],
      "mode": "feet",
      "pov": true,
-     "pin": true
+     "pin": true,
+     "w": [0.0, -0.8, 0.85],
+     "_view": "pov_down"
     },
     {
      "who": "queen",
@@ -39577,7 +38989,7 @@
        605.17,
        "fade_in",
        {
-        "dur": 0.05
+        "dur": 0.06
        }
       ],
       [
@@ -39586,14 +38998,15 @@
        {}
       ],
       [
-       606.6,
+       606.9,
        "reach_shoulder",
        {}
       ]
      ],
      "mode": "body",
      "stage": "S3c",
-     "w": [0.0, -1.2, 1.4],
+     "w": [0.04, -1.2, 1.4],
+     "front": true,
      "light": {
       "key_c": "#e8ecff",
       "key_from": "below_front",
@@ -39602,6 +39015,42 @@
       "bloom": 1.5,
       "drain_px": 450
      }
+    },
+    {
+     "who": "tess",
+     "at": [960, 170, 560],
+     "view": "front",
+     "expr": "neutral",
+     "acts": [
+      [
+       600.0,
+       "hide",
+       {
+        "t1": 608.55,
+        "fade": 0.1
+       }
+      ],
+      [
+       608.6,
+       "reach_grab",
+       {
+        "foreshortened": true
+       }
+      ],
+      [
+       608.97,
+       "grab_collar",
+       {}
+      ],
+      [
+       609.1,
+       "yank",
+       {}
+      ]
+     ],
+     "mode": "hands",
+     "sleeve": "orange",
+     "pov": true
     }
    ],
    "props": {
@@ -39637,179 +39086,7 @@
       {
        "queen": "step_below_yours"
       }
-     ]
-    ]
-   },
-   "hud": [],
-   "captions": true,
-   "header": {
-    "left": "CABIN 7 · CAMP CEDAR LAKE  //  RULE 6 OF 7",
-    "clock_mode": "memory",
-    "clock_at_t0": "14 YEARS AGO",
-    "opacity": 0.2
-   },
-   "tr": "cut",
-   "intensity": 9.9,
-   "energy": "silence push, red light flickering below",
-   "sfx": [],
-   "mus": [],
-   "v1": {
-    "set": "mirror_world",
-    "view": "feet",
-    "var": "red",
-    "grade": "climax_red"
-   },
-   "hold": "H7",
-   "errfix": [27, 27],
-   "cam3": {
-    "keys": [
-     [602.52, "pov_down"],
-     [605.21, "pov_down"],
-     [
-      606.3,
-      {
-       "view": "pov_down",
-       "dl": [0.0, 1.35, -0.25],
-       "fov": 64
-      }
      ],
-     [
-      607.36,
-      {
-       "pos": [0.0, 0.2, 0.82],
-       "look": [0.0, 0.66, 1.42],
-       "fov": 54
-      }
-     ]
-    ],
-    "glide": [0.4, 0.6, 0.5]
-   },
-   "merged": [602.52, 604.48],
-   "queen": {
-    "stage": "S3c",
-    "step": "below yours",
-    "size": 1.0,
-    "where": "the step below yours",
-    "framing": "POV, 100 %",
-    "wrong": "30 cm away",
-    "on_screen": true
-   },
-   "setup_reused": false,
-   "family": null,
-   "glint": false,
-   "chip": null,
-   "counter": 2
-  },
-  {
-   "id": "S272",
-   "t0": 607.36,
-   "t1": 609.48,
-   "dur": 2.12,
-   "section": "rule6",
-   "lines": [258],
-   "cut_on_clause": true,
-   "clause_offset": -0.17,
-   "set": "stairs",
-   "view": "up",
-   "var": "red",
-   "side": "stairs",
-   "world": "climax",
-   "look": "climax_v2",
-   "type": "WS",
-   "cls": "wide",
-   "frame": "one low shot from below you on the stairs: the doorway above, Tess's orange arm shoots out, grabs your collar and whips you up; white flash",
-   "cam": {
-    "move": "path",
-    "keys": [[607.36, 960.0, 540.0, 1.0, 0.0],
-     [609.48, 960.0, 540.0, 1.0, 0.0]],
-    "ease": "glide",
-    "glide": [0.5, 1.0, 0.5],
-    "shake": 24,
-    "rate_pct_s": 0.0,
-    "pan_px_s": 0.0,
-    "hit": [[608.97, 18]]
-   },
-   "lens": null,
-   "grade": "climax_v2",
-   "dof": null,
-   "chars": [
-    {
-     "who": "you",
-     "at": [960, 900, 600],
-     "view": "back",
-     "expr": "fear",
-     "acts": [
-      [
-       607.4,
-       "stride",
-       {
-        "t1": 608.95,
-        "steps_per_s": 1.6
-       }
-      ]
-     ],
-     "mode": "body",
-     "w": [[607.36, 0.0, -0.4, 0.37],
-      [608.97, 0.0, -0.22, 0.17],
-      [609.48, 0.0, 0.1, 0.0]]
-    },
-    {
-     "who": "tess",
-     "at": [960, 380, 170],
-     "view": "front",
-     "expr": "neutral",
-     "acts": [
-      [
-       608.3,
-       "reach_grab",
-       {
-        "foreshortened": true
-       }
-      ],
-      [
-       608.97,
-       "grab_collar",
-       {}
-      ],
-      [
-       609.1,
-       "yank",
-       {}
-      ]
-     ],
-     "mode": "hands",
-     "sleeve": "orange",
-     "w": [0.04, 1.32, 0.12]
-    }
-   ],
-   "props": {
-    "steps_drawn": 7,
-    "eighth": "present",
-    "smeared": 7,
-    "erased": 0,
-    "mirror": "doorway",
-    "doorway": "red",
-    "towel": "tess_shoulder",
-    "flashlight": "tess_doorway",
-    "fist": "candy_fist",
-    "candy": "fist",
-    "tape": "off_loop_floor",
-    "shoe": "left_on_lace_loose",
-    "jacket": "you",
-    "padlock": "tess_hand",
-    "keys": "tess_hand",
-    "gate_padlock": "open",
-    "phone": "sill_face_up_red_glint",
-    "your_phone": "pocket",
-    "bell": "struck",
-    "drop": "hanging",
-    "sprinkler": "off",
-    "clock": "7:00",
-    "queen": "step_below_yours",
-    "noah": "ours",
-    "tess": "cabin7_doorway",
-    "you": "stairs_top3",
-    "changes_in_shot": [
      [
       609.3,
       {
@@ -39837,56 +39114,105 @@
     "opacity": 0.2
    },
    "tr": "cut",
-   "intensity": 9.7,
-   "energy": "the arm shooting down",
+   "intensity": 10.0,
+   "energy": "silence push, red light flickering below",
    "sfx": [],
    "mus": [],
    "v1": {
-    "set": "cabin_dawn",
-    "view": "doorway_back",
-    "var": "dawn",
-    "grade": "dawn_normal"
+    "set": "mirror_world",
+    "view": "feet",
+    "var": "red",
+    "grade": "climax_red"
    },
-   "errfix": [7, 7],
+   "fx_post": [
+    {
+     "t": 608.97,
+     "white": 0.8,
+     "dur": 0.1
+    }
+   ],
+   "hold": "H7",
+   "errfix": [27, 27, 7, 7],
    "cam3": {
     "keys": [
      [
-      607.36,
+      602.52,
       {
-       "pos": [0.12, -1.0, 3.05],
-       "look": [0.0, 0.45, 0.1],
+       "pos": [0.0, 0.1, 0.62],
+       "look": [0.0, -1.2, 1.55],
+       "fov": 74
+      }
+     ],
+     [
+      603.8,
+      {
+       "pos": [0.02, 0.1, 0.62],
+       "look": [0.4, -1.8, 2.6],
        "fov": 64
       }
      ],
      [
-      608.9,
+      605.21,
       {
-       "pos": [0.1, -0.9, 2.85],
-       "look": [0.0, 0.6, 0.05],
-       "fov": 62
+       "pos": [0.0, 0.12, 0.62],
+       "look": [0.02, -1.2, 1.38],
+       "fov": 70
+      }
+     ],
+     [
+      606.6,
+      {
+       "pos": [0.0, 0.2, 0.6],
+       "look": [0.03, -0.2, 1.42],
+       "fov": 66
+      }
+     ],
+     [
+      607.6,
+      {
+       "pos": [0.0, 0.35, 0.6],
+       "look": [0.03, 0.5, 1.4],
+       "fov": 64
+      }
+     ],
+     [
+      608.97,
+      {
+       "pos": [0.0, 0.8, 0.15],
+       "look": [0.03, 0.35, 1.4],
+       "fov": 70
       }
      ],
      [
       609.48,
       {
-       "pos": [0.08, -0.75, 2.7],
-       "look": [0.0, 1.5, 0.1],
-       "fov": 60
+       "pos": [0.0, 1.1, -0.15],
+       "look": [0.02, 0.2, 1.4],
+       "fov": 74
       }
      ]
     ],
-    "glide": [0.5, 1.0, 0.5]
+    "glide": [0.45, 1.0, 0.5],
+    "arc": 0.0
    },
-   "merged": [607.36, 608.97],
-   "queen": null,
-   "setup_reused": true,
+   "merged": [602.52, 604.48, 607.36, 608.97],
+   "queen": {
+    "stage": "S3c",
+    "step": "below yours",
+    "size": 1.0,
+    "where": "the step below yours",
+    "framing": "POV, 100 %",
+    "wrong": "30 cm away",
+    "on_screen": true
+   },
+   "setup_reused": false,
    "family": null,
    "glint": false,
    "chip": null,
-   "counter": 1
+   "counter": 2
   },
   {
-   "id": "S273",
+   "id": "S265",
    "t0": 609.48,
    "t1": 614.71,
    "dur": 5.23,
@@ -40047,7 +39373,7 @@
    "counter": null
   },
   {
-   "id": "S274",
+   "id": "S266",
    "t0": 614.71,
    "t1": 616.16,
    "dur": 1.45,
@@ -40162,7 +39488,7 @@
    "counter": null
   },
   {
-   "id": "S275",
+   "id": "S267",
    "t0": 616.16,
    "t1": 618.4,
    "dur": 2.24,
@@ -40293,7 +39619,7 @@
    "counter": null
   },
   {
-   "id": "S276",
+   "id": "S268",
    "t0": 618.4,
    "t1": 621.25,
    "dur": 2.85,
@@ -40502,7 +39828,7 @@
    "counter": null
   },
   {
-   "id": "S277",
+   "id": "S269",
    "t0": 621.25,
    "t1": 625.53,
    "dur": 4.28,
@@ -40629,7 +39955,7 @@
    "counter": null
   },
   {
-   "id": "S278",
+   "id": "S270",
    "t0": 625.53,
    "t1": 627.29,
    "dur": 1.76,
@@ -40749,7 +40075,7 @@
    "counter": null
   },
   {
-   "id": "S279",
+   "id": "S271",
    "t0": 627.29,
    "t1": 628.55,
    "dur": 1.26,
@@ -40854,7 +40180,7 @@
    "counter": null
   },
   {
-   "id": "S280",
+   "id": "S272",
    "t0": 628.55,
    "t1": 629.05,
    "dur": 0.5,
@@ -40948,7 +40274,7 @@
    "counter": null
   },
   {
-   "id": "S281",
+   "id": "S273",
    "t0": 629.05,
    "t1": 638.89,
    "dur": 9.84,
@@ -41134,7 +40460,7 @@
    "counter": null
   },
   {
-   "id": "S282",
+   "id": "S274",
    "t0": 638.89,
    "t1": 640.57,
    "dur": 1.68,
@@ -41228,7 +40554,7 @@
    "counter": null
   },
   {
-   "id": "S283",
+   "id": "S275",
    "t0": 640.57,
    "t1": 643.37,
    "dur": 2.8,
@@ -41351,7 +40677,7 @@
    "counter": null
   },
   {
-   "id": "S284",
+   "id": "S276",
    "t0": 643.37,
    "t1": 644.81,
    "dur": 1.44,
@@ -41458,7 +40784,7 @@
    "counter": null
   },
   {
-   "id": "S285",
+   "id": "S277",
    "t0": 644.81,
    "t1": 652.39,
    "dur": 7.58,
@@ -41667,7 +40993,7 @@
    "counter": null
   },
   {
-   "id": "S286",
+   "id": "S278",
    "t0": 652.39,
    "t1": 653.91,
    "dur": 1.52,
@@ -41779,7 +41105,7 @@
    "counter": null
   },
   {
-   "id": "S287",
+   "id": "S279",
    "t0": 653.91,
    "t1": 655.19,
    "dur": 1.28,
@@ -41912,7 +41238,7 @@
    "counter": null
   },
   {
-   "id": "S288",
+   "id": "S280",
    "t0": 655.19,
    "t1": 656.63,
    "dur": 1.44,
@@ -42045,7 +41371,7 @@
    "counter": null
   },
   {
-   "id": "S289",
+   "id": "S281",
    "t0": 656.63,
    "t1": 658.39,
    "dur": 1.76,
@@ -42144,7 +41470,7 @@
    "counter": null
   },
   {
-   "id": "S290",
+   "id": "S282",
    "t0": 658.39,
    "t1": 660.39,
    "dur": 2.0,
@@ -42287,7 +41613,7 @@
    "counter": null
   },
   {
-   "id": "S291",
+   "id": "S283",
    "t0": 660.39,
    "t1": 664.87,
    "dur": 4.48,
@@ -42451,7 +41777,7 @@
    "counter": null
   },
   {
-   "id": "S292",
+   "id": "S284",
    "t0": 664.87,
    "t1": 666.87,
    "dur": 2.0,
@@ -42591,7 +41917,7 @@
    "counter": null
   },
   {
-   "id": "S293",
+   "id": "S285",
    "t0": 666.87,
    "t1": 669.75,
    "dur": 2.88,
@@ -42734,7 +42060,7 @@
    "counter": null
   },
   {
-   "id": "S294",
+   "id": "S286",
    "t0": 669.75,
    "t1": 673.06,
    "dur": 3.31,
@@ -42848,7 +42174,7 @@
    "counter": null
   },
   {
-   "id": "S295",
+   "id": "S287",
    "t0": 673.06,
    "t1": 674.26,
    "dur": 1.2,
@@ -42973,7 +42299,7 @@
    "counter": null
   },
   {
-   "id": "S296",
+   "id": "S288",
    "t0": 674.26,
    "t1": 677.34,
    "dur": 3.08,
@@ -43100,7 +42426,7 @@
    "counter": null
   },
   {
-   "id": "S297",
+   "id": "S289",
    "t0": 677.34,
    "t1": 678.74,
    "dur": 1.4,
@@ -43232,7 +42558,7 @@
    "counter": null
   },
   {
-   "id": "S298",
+   "id": "S290",
    "t0": 678.74,
    "t1": 682.18,
    "dur": 3.44,
@@ -43367,7 +42693,7 @@
    "counter": null
   },
   {
-   "id": "S299",
+   "id": "S291",
    "t0": 682.18,
    "t1": 683.94,
    "dur": 1.76,
@@ -43497,7 +42823,7 @@
    "counter": null
   },
   {
-   "id": "S300",
+   "id": "S292",
    "t0": 683.94,
    "t1": 684.98,
    "dur": 1.04,
@@ -43604,7 +42930,7 @@
    "counter": null
   },
   {
-   "id": "S301",
+   "id": "S293",
    "t0": 684.98,
    "t1": 695.62,
    "dur": 10.64,
@@ -43921,7 +43247,7 @@
    "counter": null
   },
   {
-   "id": "S302",
+   "id": "S294",
    "t0": 695.62,
    "t1": 696.74,
    "dur": 1.12,
@@ -44039,7 +43365,7 @@
    "counter": null
   },
   {
-   "id": "S303",
+   "id": "S295",
    "t0": 696.74,
    "t1": 698.62,
    "dur": 1.88,
@@ -44205,7 +43531,7 @@
    "counter": null
   },
   {
-   "id": "S304",
+   "id": "S296",
    "t0": 698.62,
    "t1": 700.0,
    "dur": 1.38,

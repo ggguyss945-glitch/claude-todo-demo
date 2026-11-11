@@ -484,7 +484,8 @@ class CamPath3:
     (no overshoot, continuous speed) under `warp` (a function film time -> path time, e.g. an eased glide). at(t) caches
     the last Cam3."""
 
-    def __init__(self, keys, warp=None, shift=(0.0, 0.0)):
+    def __init__(self, keys, warp=None, shift=(0.0, 0.0), lam=0.6):
+        self.lam = float(lam)                    # ArcBlend weight (0: the keys keep their exact times, e.g. a key on a hit)
         ks = sorted(keys, key=lambda k: k[0])
         self.ts = [float(k[0]) for k in ks]
         rows = []
@@ -512,9 +513,9 @@ class CamPath3:
 
     def state(self, t):
         u = self.warp(t)
-        if len(self.ts) > 2 and self.ts[0] < u < self.ts[-1]:
+        if len(self.ts) > 2 and self.ts[0] < u < self.ts[-1] and self.lam > 0:
             if not hasattr(self, '_arc'):
-                self._arc = ArcBlend(self.ts, self._raw, (1.0, 1.0, 1.0, 1 / 35.0, 1 / 35.0, 1 / 30.0, 1 / 20.0))
+                self._arc = ArcBlend(self.ts, self._raw, (1.0, 1.0, 1.0, 1 / 35.0, 1 / 35.0, 1 / 30.0, 1 / 20.0), lam=self.lam)
             u = self._arc(u)
         return self._raw(u)
 

@@ -398,7 +398,7 @@ REPLACE_CHARS = {}
 
 # per-shot extras and overrides are keyed by a film time inside the shot (ids change when shots merge): _by_time()
 EXTRA_CHARS_T = {425.0: _knot_echo, 90.9: _glass_pair, 108.8: _glass_pair, 388.5: _bunk_pair, 257.0: _towel_drop_pair,
-                 250.0: _you_ots_mirror, 282.7: _you_at_doorway, 470.6: _dip_pair}
+                 250.0: _you_ots_mirror, 282.7: _you_at_doorway}     # review round 2: 470.6 (_dip_pair) is inside H2's one set-up now
 
 
 # ==================================================================================================== staging the cast
@@ -439,7 +439,9 @@ FLOOR_SETS = ('cabin_now', 'cabin_dawn', 'mirror', 'memory')
 HEIGHT_M = {'you': 1.76, 'tess': 1.68, 'noah13': 1.42, 'noah_grown': 1.90, 'queen': 1.97, 'you_kid': 1.30, 'kids': 1.30,
             'counselor': 1.74, 'extras': 1.74, 'mom': 1.66}
 # THEIRS: Noah's bunk along the left wall (x 0.08-0.92, z 4.25-6.3); hips on the mattress edge, feet on the floor in front
-THEIRS_SEAT = {'noah13': 5.35, 'queen': 4.45, 'you': 4.3, 'noah_grown': 5.2}
+# review round 2 (M9): Noah's seat moved 0.4 m down the mattress, away from the foot of the stairs (from most bunk angles his
+# seated figure overlapped the bottom treads and read as sitting on the stairs); the Queen's seat beside him follows
+THEIRS_SEAT = {'noah13': 4.68, 'queen': 5.32, 'you': 4.3, 'noah_grown': 4.95}
 SEAT_VIEWS = ('queen_3s', 'master')   # views whose plan guesses miss the mattress (bunk_2s / ots_noah guesses read right)
 SEAT_X, FEET_X = 0.85, 1.24
 H2_START = (3.95, 0.0, 5.6)           # where she stands before the H2 glide: the window corner (DIRECTION_V2 372)
@@ -452,9 +454,9 @@ def bunk_chart(who, t):
     (382.4-388.6, the first sight), stands in the window corner from 388.6, glides to his side in H2 (464.6-466.4) and sits
     there; you stand at the foot end. The two of them never overlap. -> (world point, seated) or None."""
     if not (382.0 <= t < 500.5): return None
-    if who == 'noah13': return (FEET_X, 0.0, THEIRS_SEAT['noah13']), True
+    if who == 'noah13': return (FEET_X, 0.0, THEIRS_SEAT['noah13'] if t >= 468.6 else 4.95), True   # he scoots over in H2
     if who == 'queen':
-        if t < 388.3 or t >= 466.4: return (FEET_X, 0.0, THEIRS_SEAT['queen']), True
+        if t < 388.3 or t >= 467.7: return (FEET_X, 0.0, THEIRS_SEAT['queen']), True
         return QUEEN_CORNER, False
     if who == 'you': return YOU_FOOT, False
     return None
@@ -518,8 +520,8 @@ def stage(sp, spec, sh):
     ch_ = bunk_chart(who, sh['t0'] + 0.01) if (sh['set'] == 'cabin_dawn' and cam3 is not None and 'sit_beside' not in names) else None
     if ch_ is not None and sh['view'] not in ('bokeh',):              # the bunk chart wins over the plan's guesses
         a2 = _anchor_at(sp, ch_[0], who)
-        if a2 is None or a2[2] > 1.2 * DH:                              # the chart puts them behind / right at the lens
-            s['_skip'] = True; return s
+        if a2 is None or a2[2] > 2.6 * DH:                              # the chart puts them behind / right at the lens
+            s['_skip'] = True; return s                                 # (M9: up to 2.6 H she is a cropped foreground figure, not gone)
         if a2 is not None:
             seated = ch_[1]
             s['seated'] = seated
@@ -636,7 +638,7 @@ def campath_of(sh):
     keys = [(float(t),) + _cam3_spec(sh['set'], spec) for t, spec in c3['keys']]
     g = list(c3.get('glide') or [])
     v0, v1, ramp = (g + [0.45, 0.6, 0.8][len(g):])[:3]
-    return CamPath3(keys, warp=glide(keys[0][0], keys[-1][0], v0, v1, ramp))
+    return CamPath3(keys, warp=glide(keys[0][0], keys[-1][0], v0, v1, ramp), lam=float(c3.get('arc', 0.6)))
 
 
 def _ray_floor_cam(cam3, x, y, yplane=0.0):
@@ -955,6 +957,8 @@ class Film:
             dep = 1.0
             for (a, b, ld) in bm:                 # in front of its band; nearer people in front of farther ones
                 if (a <= dist or a <= -1e8) and dist < b: dep = max(0.3, float(ld) - 0.02 + 0.0008 * min(dist, 10.0)); break
+            if spec.get('front') and bm:          # review round 2 (B10): standing on the tread just below the camera, she belongs in
+                dep = max(0.3, min(float(ld_) for (_a, _b, ld_) in bm) - 0.03)   # front of the near band (the treads hid her feet)
             Lc = _char_layer(rig, [x, y, h, dep], mode, None, B.sh, spec, sp)
             if nf < 0.999: Lc.alpha = float(Lc.alpha) * nf
             L.append(Lc)
