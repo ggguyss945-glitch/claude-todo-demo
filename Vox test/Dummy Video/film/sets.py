@@ -112,6 +112,35 @@ Delivery builders (police off, 3:07 AM defaults; all registered in SETS / build(
 Timing helpers: hazard(t, rate, t_on, t_off) -> 0..1, hazard_ticks(t0, t1, ...) -> [(t, 'on'|'off')] (SFX), knock_pulse(times).
 Drawing: delivery_van(pen, x, y, length, t, facing, wheel, bounce, pitch, hz, head, brake, driver, door), WINDOWS_3AM,
     doorway_camera(sp). Grades registered by name: 'dawn', 'memory', 'nightlight'.
+
+DUMMY FILM ("If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"; section at the end; SETS.md)
+Grandpa's house is ONE floor plan (HView: house coordinates x, Y, y in metres; every view is a camera placed in it), so
+the kitchen seen from the hall, from the couch and from its own doorway is the same kitchen with the same chair. Light is
+modelled: static layers are albedo x a light map (_lmap: ambient + lamps); a lamp that changes is a 'plus' layer whose
+alpha is its level (engine Layer(blend='plus')), so flickers / lamps going out cost nothing.
+    gp_hall(view='kitchen'|'door'|'stairs', light, kitchen, living, case='closed'|'open'|None, envelope, latch, den, clock,
+            beam=dict(keys=[(t, x, y)], Y, aim, on), tod, steam, chair, mug, door)
+        'kitchen': down the hall to the lit kitchen opening (Grandpa's chair: anchor 'kitchen_chair'), the bench with the
+        case, the grandfather clock (pendulum_ticks()), the knee-high flashlight beam; 'door': toward the front door;
+        'stairs': up the stairs (anchor 'step3').
+    gp_kitchen(view='table'|'chair', kitchen, mug, steam, chair, tod='night'|'morning', sway)   anchors chair, chair_stand, table, mug
+    gp_living(view='tv'|'couch', lamp, tv=dict(on, snow, mode, pulse), kitchen, content, tod)   the CRT shows the 1974 tape live
+        (tv_level(sp.info['tv'], t) = the light it throws); anchors kitchen_chair, bookcase_top, couch_l/m/r, mom, window
+    gp_den(lamp, hall, moon)     the armchair (anchor 'armchair'), the rug (anchor 'rug'), posters; lamp goes out: dict(out=...)
+    gp_studio(view='full'|'close', laugh=laugh_waves([...]), applause, vhs, bezel, track)   1974 'Saturday Morning with
+        Walter Kemp' full frame through engine.post fx['vhs'] (wobble, tracking band, chroma, CRT curve); anchors stool, knee
+    studio_content(figures, laugh) -> content f(pen, W, H, t) for a CRT face (gp_living(content=...))
+    hospital(view='bed'|'close', bpm, flat, light, hall)   live ECG; monitor_beeps(t0, t1, bpm, flat); anchors bed_head, bed_lap, chair
+    museum(view='case'|'wide', spot)   the vitrine (glass layer in front of anchor 'display'), the plaque
+    street_morning(view='window'|'outside', van=dict(drive=('out', t0, t1, x0, x1)))   8 AM, museum_van(); anchors owen / owen_window
+    stage_1962(spot, curtain)    sepia first show (grade 'memory');   bedroom_doorway(hall, door)   anchor 'doorway' (backlit)
+    insert(name) / gp_insert(name, ...) for GP_INSERTS: letter (prop_kw hl=n, smear, show), letter_close, envelope, ps, latches
+        (latch), case_open (warm), mug (stir=f(t)), back_slot (hand, paper), squeeze (squeeze=squeeze_pulses([...]), take),
+        photo, poster_1962, vcr (tape, play)
+    rule_card_lie(cv, n, text, t, reveal, mode='tear'|'smear'|'flicker') on the HUD: the rule card that lies.
+    shaky_text(pen, s, x, y, size, ...) Grandpa's shaky hand (steady=True: the hand that changed rule six).
+Grades registered: gp_house, gp_dark, tv_glow, hospital, vhs74, museum, morning. Every view lists its safe camera
+envelope in info['cam_env'] (checked by tools/sets_sheet.py --frame).
 """
 import bisect, math, os
 import numpy as np
@@ -3887,6 +3916,7 @@ def insert(name, t0=0.0, prop_kw=None, motion=None, hand=None, bg_dim=0.3, polic
     lambda t: dict(key_in=t/2)). motion: f(t) -> (dx, dy, dscale, drot) added to the prop pose (slides, shakes).
     hand: None = default from INSERTS, False = none, or (pose, x, y, scale, rot). Use dof=6.75, focus=1 (SetPiece.dof).
     'mail_slot': the door's mail slot from inside; prop_kw=dict(feed=0..1, item='complaint'|'licence', flap=0..1)."""
+    if name in GP_INSERTS: return gp_insert(name, t0, prop_kw, motion, hand, bg_dim)
     spec = INSERTS[name]
     bgf = _BG[spec['bg']]
     bgd = spec.get('bgd', 1.04 if spec['bg'] == 'door' else 3.0)    # the lock / mail slot sit ON the door: keep it in focus
@@ -6364,3 +6394,3567 @@ def doorway_camera(sp, t0=0.0, t1=6.0, rate=0.02, shake=1.2):
 
 
 __all__ += ['doorway_camera']
+
+
+# ######################################################################################################################
+# DUMMY FILM: "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"   (SETS.md, section "Dummy film")
+# Grandpa Walter Kemp's old house at night, laid out on ONE floor plan (every view is a camera placed in it, so the
+# kitchen seen from the hall, from the couch and from its own doorway is the same kitchen), the hospital room, the 1974
+# TV studio (on the CRT in the living room and full frame through engine.post fx['vhs']), the 1962 stage, the museum,
+# the street at 8 AM, your bedroom doorway, the inserts and the torn rule card. Light is modelled, not painted: every
+# static layer is drawn as albedo and multiplied by a light map (ambient + lamps); a lamp that changes (the hall light,
+# the living-room lamp that flickers, the den lamp that goes out) is its own 'plus' layer (albedo x that lamp) whose
+# alpha is the lamp's level, so lights add up exactly and a flicker costs nothing.
+# ######################################################################################################################
+
+_epost.GRADES.setdefault('gp_house', dict(contrast=1.07, pivot=0.24, gamma=1.0, sat=1.1, wb=(1.03, 1.0, 0.96), floor='#090a12',
+                                         bloom=0.75, bloom_thr=228, vignette=0.4, grain=0.7, shoulder=0.45))
+_epost.GRADES.setdefault('gp_dark', dict(contrast=1.05, pivot=0.24, gamma=0.97, sat=1.05, wb=(0.96, 0.99, 1.08), floor='#06070e',
+                                        bloom=0.85, bloom_thr=226, vignette=0.36, grain=0.8, shoulder=0.45))
+_epost.GRADES.setdefault('tv_glow', dict(contrast=1.06, pivot=0.24, gamma=1.0, sat=1.05, wb=(0.93, 1.0, 1.1), floor='#070912',
+                                        bloom=0.9, bloom_thr=224, vignette=0.38, grain=0.8, shoulder=0.45))
+_epost.GRADES.setdefault('hospital', dict(contrast=1.02, pivot=0.25, gamma=1.0, sat=0.72, wb=(0.93, 1.03, 1.03), floor='#091013',
+                                         bloom=0.6, bloom_thr=232, vignette=0.42, grain=0.9, shoulder=0.5))
+_epost.GRADES.setdefault('vhs74', dict(exposure=0.08, contrast=0.94, pivot=0.3, gamma=1.04, sat=0.92, wb=(1.07, 1.0, 0.86), floor='#1a130f',
+                                      bloom=0.9, bloom_thr=222, vignette=0.6, grain=0.0, soft=0.6, shoulder=0.55))
+_epost.GRADES.setdefault('museum', dict(contrast=1.1, pivot=0.24, gamma=0.98, sat=0.98, wb=(0.98, 1.0, 1.04), floor='#05070a',
+                                       bloom=0.75, bloom_thr=228, vignette=0.32, grain=0.6, shoulder=0.5))
+_epost.GRADES.setdefault('morning', dict(exposure=0.2, contrast=1.0, pivot=0.25, gamma=1.05, sat=0.9, wb=(0.99, 1.0, 1.04),
+                                        floor='#0f1116', bloom=0.6, bloom_thr=232, vignette=0.45, grain=0.5, shoulder=0.5))
+
+GP_AMB = '#2c3550'           # the house at night: moonlit navy ambient (multiplies the albedo)
+GP_LAMP = '#ffcf94'          # tungsten lamps
+GP_KLAMP = '#ffbf6a'         # the kitchen pendant through amber glass
+GP_MOON = '#6f84c4'
+GP_TV = '#a8c8ff'            # CRT light
+GP_WOOD, GP_WOOD_D = '#6a4126', '#3a2214'
+
+
+class HView(View):
+    """A camera placed on Grandpa's floor plan. House coordinates (metres): x right when facing the back of the house,
+    y from the front wall toward the back, Y up from the floor. The camera stands at (cam_x, cam_y), eye cam_h, facing
+    +1 (toward the back) or -1 (toward the front). Every View method takes HOUSE coordinates: p(x, Y, y), x(x, y),
+    y(Y, y), s(y) (px per metre at that distance), quad([(x, Y, y), ...]), anchor(x, y, Y) (depth = distance)."""
+
+    def __init__(self, S, horizon, cam_h, cam_x, cam_y, facing=1, cx=960.0):
+        View.__init__(self, S, horizon, cam_h, cx)
+        self.hx, self.hy, self.f = float(cam_x), float(cam_y), (1 if facing > 0 else -1)
+
+    def d(self, y): return max(0.04, (y - self.hy) * self.f)
+
+    def p(self, x, Y, y):
+        k = self.S / self.d(y)
+        return (self.cx + (x - self.hx) * self.f * k, self.h - (Y - self.cam_h) * k)
+
+    def x(self, x, y): return self.cx + (x - self.hx) * self.f * self.S / self.d(y)
+
+    def y(self, Y, y): return self.h - (Y - self.cam_h) * self.S / self.d(y)
+
+    def s(self, y): return self.S / self.d(y)
+
+    def gy(self, y): return self.y(0.0, y)
+
+    def anchor(self, x, y, Y=0.0, note=''):
+        px, py = self.p(x, Y, y); D = self.d(y)
+        return Anchor(px, py, D, 1.85 * self.S / D, note)
+
+
+# ---- the floor plan (metres; see HView)
+HALL_X = (-1.35, 1.35); HALL_BACK = 6.0; CEIL = 2.6
+STAIR_X = (0.5, 1.35); STAIR_Y0, STAIR_RISE, STAIR_RUN, STAIR_N = 0.9, 0.19, 0.26, 14
+KOPEN = (-1.15, 0.25, 2.15)                  # the kitchen opening at the end of the hall (x0, x1, top)
+LIV_X = (-6.0, -1.35); ARCH_Y = (3.4, 4.8); LDOOR = (-2.55, -1.6, 2.05)     # living room; arch from the hall; door to the kitchen
+TV_X = (-5.25, -4.35); COUCH = (-4.75, -2.65, 1.5, 2.4); LWIN = (-4.6, -2.8); BOOK_X = (-5.9, -5.05)
+KIT_X = (-5.6, 1.35); KIT_Y = (6.0, 10.0)
+TABLE = (-1.5, -0.4, 7.8, 8.6, 0.76); GCHAIR = (-0.95, 8.85); PENDANT = (-0.95, 8.2, 1.62); KWIN = (-1.55, -0.35, 1.05, 2.0)
+BENCH = (-1.35, -0.95, 1.45, 2.35, 0.46); CASE = (-1.31, -0.91, 1.5, 2.32, 0.46, 0.27)
+
+
+def _kfn(spec, seed=0, default=1.0):
+    """A light's level -> f(t) 0..1. spec: a number, f(t), None (= default), or dict(k=1.0, flick=[(t0, dur), ...] (flicker
+    bursts), out=[(t0, t1), ...] (switched off / blown, ~60 ms bulb ramps), on=t (comes on at t), off=t (goes off at t),
+    amount=1.0 (flicker depth))."""
+    if spec is None: spec = default
+    if callable(spec): return spec
+    if not isinstance(spec, dict):
+        v = float(spec); return lambda t: v
+    k = float(spec.get('k', 1.0)); fl = spec.get('flick'); outs = list(spec.get('out', ()))
+    if spec.get('off') is not None: outs.append((spec['off'], 1e9))
+    if spec.get('on') is not None: outs.append((-1e9, spec['on']))
+    amt = spec.get('amount', 1.0)
+
+    def f(t):
+        v = k * (flicker(t, seed, amt, fl) if fl else 1.0)
+        for (a, b) in outs:
+            if a - 0.06 <= t <= b + 0.06:
+                v *= 1.0 - clamp(min((t - a) / 0.06 + 1.0, (b - t) / 0.06 + 1.0))
+        return v
+    return f
+
+
+_LMAP_POS = [0.0, 0.22, 0.5, 0.78, 1.0]
+_LMAP_FALL = [1.0, 0.72, 0.36, 0.1, 0.0]
+
+
+def _lmap(pen, hv, box, ambient, lights, k=1.0):
+    """Multiply everything this layer has drawn so far by a light map: `ambient` (hex, the unlit level) plus lights
+    [(x, Y, y, r_m, hex, k[, sy])] (house coordinates on the lit surface; radial falloff of radius r_m metres, sy squashes
+    it: floor pools ~0.3). Alpha is kept (kModulate with an opaque map); a map value of 1 = the albedo itself."""
+    cv = pen.cv
+    x0, y0, x1, y1 = box
+    cv.saveLayer(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(BlendMode=skia.BlendMode.kModulate))
+    cv.drawColor(col(ambient))
+    for L_ in lights:
+        x, Y, y, r, c, kk = L_[:6]
+        sy = L_[6] if len(L_) > 6 else 1.0
+        if hv.d(y) <= 0.05: continue
+        px, py = hv.p(x, Y, y); R = r * hv.s(y)
+        a = clamp(kk * k, 0, 4)
+        r_, g_, b_ = rgb(c)
+        cs = [skia.Color(int(min(255, r_ * a * f)), int(min(255, g_ * a * f)), int(min(255, b_ * a * f)), 255) for f in _LMAP_FALL]
+        m = skia.Matrix(); m.setScale(1.0, sy, px, py)
+        sh = skia.GradientShader.MakeRadial(skia.Point(px, py), R, cs, _LMAP_POS, skia.TileMode.kClamp, 0, m)
+        cv.drawRect(skia.Rect.MakeLTRB(px - R, py - R * sy, px + R, py + R * sy), skia.Paint(Shader=sh, BlendMode=skia.BlendMode.kPlus))
+    cv.restore()
+
+
+def _lit(depth, art, name, key, bounds, hv, ambient, lights, var=(), **kw):
+    """Static lit layers for one piece of the set: the base layer = albedo x (ambient + constant lights), and for each
+    variable light (vname, lights, f(t)) a 'plus' layer = albedo x that light, alpha = its level (cached; skipped at 0)."""
+    def base(pen, t):
+        art(pen); _lmap(pen, hv, bounds, ambient, lights)
+    L = [Layer(depth, base, name, cache=key, bounds=bounds, **kw)]
+    for (vn, vl, kf) in var:
+        if not vl: continue
+
+        def add(pen, t, vl=vl):
+            art(pen); _lmap(pen, hv, bounds, '#000000', vl)
+        L.append(Layer(depth, add, name + ':' + vn, cache=key + ':' + vn, bounds=bounds, alpha=kf, blend='plus', **kw))
+    return L
+
+
+def _hface(pen, hv, tl, tr, br, bl, W, H, fn):
+    """Draw fn(pen) in a flat W x H frame (cm, y down) mapped in perspective onto the house quad tl, tr, br, bl
+    (each (x, Y, y))."""
+    _draw_face(pen, W, H, [hv.p(*tl), hv.p(*tr), hv.p(*br), hv.p(*bl)], fn)
+
+
+def _pattern(pen, W, H, kind, ink, a=150, seed=0):
+    """Wallpaper motifs in a cm frame."""
+    cv = pen.cv
+    if kind == 'damask':
+        dx, dy = 32.0, 40.0
+        j = 0; y = 6.0
+        while y < H + dy:
+            x = (dx / 2 if j % 2 else 0.0) + 4.0
+            while x < W + dx:
+                m = smooth([(x, y - 12), (x + 6, y - 3), (x + 10, y + 2), (x + 3, y + 5), (x, y + 13), (x - 3, y + 5), (x - 10, y + 2),
+                            (x - 6, y - 3)], True, 0.8)
+                pen.fill(m, ink, a); pen.fill(oval(x, y - 18, 1.8), ink, a)
+                pen.line(smooth([(x - 9, y + 14), (x, y + 19), (x + 9, y + 14)], False), 1.2, ink, a * 0.8)
+                x += dx
+            y += dy; j += 1
+    elif kind == 'stripe':
+        x = 0.0; k = 0
+        while x < W:
+            pen.fill(rect(x, 0, 5.0, H), ink, a * (0.55 if k % 2 else 1.0)); x += 15.0; k += 1
+    elif kind == 'trellis':                                   # 70s mustard: small diamonds and dots
+        y = 0.0; j = 0
+        while y < H + 20:
+            x = (10.0 if j % 2 else 0.0)
+            while x < W + 20:
+                pen.line(poly([(x, y - 9), (x + 7, y), (x, y + 9), (x - 7, y)]), 1.3, ink, a)
+                pen.fill(oval(x, y, 1.6), ink, a)
+                x += 20.0
+            y += 18.0; j += 1
+    elif kind == 'kitchen':                                   # cream with tiny teapots and sprigs
+        rng = np.random.default_rng(seed)
+        y = 10.0; j = 0
+        while y < H + 30:
+            x = (17.0 if j % 2 else 3.0)
+            while x < W + 30:
+                if (int(x) + j) % 3 == 0:
+                    pen.fill(oval(x, y, 4.0, 3.2), ink, a); pen.fill(rrect(x + 3, y - 1.5, 3.5, 1.4, 0.6), ink, a)
+                    pen.fill(rect(x - 1.2, y - 4.6, 2.4, 1.4), ink, a)
+                else:
+                    for q in range(3):
+                        ang = q * 2.1 + rng.uniform(0, 0.4)
+                        pen.fill(oval(x + math.cos(ang) * 2.6, y + math.sin(ang) * 2.6, 1.4), ink, a * 0.8)
+                x += 34.0
+            y += 26.0; j += 1
+    elif kind == 'panel':                                     # wood panelling (den): vertical boards with grooves
+        x = 0.0; k = 0
+        while x < W:
+            pen.fill(rect(x, 0, 30.0, H), ink, a * (0.18 + 0.22 * _h(k, seed)))
+            pen.fill(rect(x, 0, 1.6, H), '#000000', 110); x += 30.0; k += 1
+
+
+def _hwall(pen, hv, a, b, Y0, Y1, paper, ink=None, kind='damask', wains=0.0, wc=GP_WOOD_D, holes=(), base_h=0.14,
+           pa=150, art=None, trim='#4a2e1c', rail=None, seed=0):
+    """A wall from floor point a = (x, y) to b = (x, y), heights Y0..Y1 (drawn flat in cm, mapped in perspective).
+    holes: [(u0, v0, u1, v1[, 'arch'])] metres along the wall from a / up from Y0, cut out (doorways, arches, windows)
+    and cased with `trim`. wains = wainscot height (m), rail = picture-rail height (m). art(pen, W, H) draws frames /
+    posters in the same cm frame (v measured DOWN from the top edge)."""
+    Lm = math.hypot(b[0] - a[0], b[1] - a[1]); W = Lm * 100.0; H = (Y1 - Y0) * 100.0
+
+    def hole_path(h):
+        u0, v0, u1, v1 = h[:4]
+        r = rect(u0 * 100, H - v1 * 100, (u1 - u0) * 100, (v1 - v0) * 100)
+        if len(h) > 4 and h[4] == 'arch':
+            rr = (u1 - u0) * 50
+            r = union(rect(u0 * 100, H - v1 * 100 + rr, (u1 - u0) * 100, (v1 - v0) * 100 - rr), oval((u0 + u1) * 50, H - v1 * 100 + rr, rr, rr * 0.8))
+        return r
+
+    def fn(p_):
+        cv = p_.cv
+        wall = rect(0, 0, W, H)
+        hp = [hole_path(h) for h in holes]
+        for q in hp: wall = minus(wall, q)
+        cv.save(); cv.clipPath(wall, skia.ClipOp.kIntersect, True)
+        p_.fill(rect(0, 0, W, H), paper)
+        p_.texture(rect(0, 0, W, H), 'plaster', 0.32, 'overlay', 0.45)
+        if ink: _pattern(p_, W, H, kind, ink, pa, seed)
+        if rail:
+            ry = H - rail * 100
+            p_.fill(rect(0, ry - 2.5, W, 5.0), trim); p_.fill(rect(0, ry - 2.5, W, 1.2), '#ffffff', 50)
+        if wains:
+            wy = H - wains * 100
+            p_.fill(rect(0, wy, W, H - wy), wc); p_.texture(rect(0, wy, W, H - wy), 'wood', 0.5, 'overlay', 0.7, 90)
+            x = 8.0
+            while x < W - 30:                                  # raised panels
+                pr = rect(x, wy + 12, 52, H - wy - 12 - base_h * 100 - 8)
+                p_.fill(pr, _lighten(wc, 0.06)); p_.line(pr, 1.6, '#000000', 120)
+                p_.fill(rect(x, wy + 12, 52, 2.2), '#ffffff', 40)
+                x += 62.0
+            p_.fill(rect(0, wy - 4, W, 8), _lighten(wc, 0.12)); p_.fill(rect(0, wy - 4, W, 2), '#ffffff', 60)
+        p_.fill(rect(0, H - base_h * 100, W, base_h * 100), _darken(trim, 0.1)); p_.fill(rect(0, H - base_h * 100, W, 2), '#ffffff', 40)
+        p_.fill(rect(0, 0, W, 6), _darken(trim, 0.2))                                       # crown moulding
+        if art: art(p_, W, H)
+        cv.restore()
+        for h, q in zip(holes, hp):                                                         # casings round the openings
+            if len(h) > 5 and h[5] == 'nocase': continue
+            p_.line(q, 9.0, trim); p_.line(q, 2.0, '#000000', 140)
+    _hface(pen, hv, (a[0], Y1, a[1]), (b[0], Y1, b[1]), (b[0], Y0, b[1]), (a[0], Y0, a[1]), W, H, fn)
+
+
+def _hfloor(pen, hv, x0, x1, y0, y1, kind='boards', c0='#7a5234', c1='#5a3a22', Y=0.0, runner=None, seed=0):
+    """A floor rectangle x0..x1, y0..y1 at height Y (drawn flat in cm, mapped in perspective). kind 'boards' (oak boards
+    along y), 'checker' (30 cm linoleum tiles c0 / c1), 'carpet'. runner = (x0, x1, y0, y1, colour, border) on top."""
+    W = abs(x1 - x0) * 100.0; H = abs(y1 - y0) * 100.0
+
+    def fn(p_):
+        r = rect(0, 0, W, H)
+        if kind == 'boards':
+            p_.fill(r, c0); p_.texture(r, 'wood', 0.6, 'overlay', 0.9, 90)
+            u = 0.0; i = 0
+            while u < W:
+                p_.fill(rect(u, 0, 12.0, H), c1, 60 + 70 * _h(i, seed))
+                p_.fill(rect(u, 0, 0.9, H), '#140c06', 200)
+                j = _h(i, seed + 3) * 180
+                while j < H:
+                    p_.fill(rect(u, j, 12.0, 0.8), '#140c06', 170); j += 120 + 140 * _h(int(j) + i, seed + 5)
+                u += 12.0; i += 1
+        elif kind == 'checker':
+            p_.fill(r, c0)
+            n = int(W / 30) + 1; m = int(H / 30) + 1
+            for i in range(n):
+                for j in range(m):
+                    if (i + j) % 2: p_.fill(rect(i * 30, j * 30, 30, 30), c1)
+            p_.texture(r, 'grunge', 0.35, 'overlay', 0.6)
+            for i in range(n + 1): p_.fill(rect(i * 30 - 0.4, 0, 0.8, H), '#000000', 60)
+        else:
+            p_.fill(r, c0); p_.texture(r, 'fabric', 0.6, 'overlay', 0.7)
+        if runner:
+            rx0, rx1, ry0, ry1, rc, rb = runner
+            ux0 = (min(rx0, rx1) - min(x0, x1)) * 100; vy0 = (max(y0, y1) - max(ry0, ry1)) * 100
+            rr = rect(ux0, vy0, abs(rx1 - rx0) * 100, abs(ry1 - ry0) * 100)
+            p_.fill(rr, rc); p_.texture(rr, 'fabric', 0.7, 'overlay', 0.8)
+            ir = rect(ux0 + 8, vy0 + 8, abs(rx1 - rx0) * 100 - 16, abs(ry1 - ry0) * 100 - 16)
+            p_.line(ir, 3.0, rb); p_.line(rr, 2.0, '#000000', 150)
+            cxm = ux0 + abs(rx1 - rx0) * 50
+            yy = vy0 + 40
+            while yy < vy0 + abs(ry1 - ry0) * 100 - 30:
+                dm = poly([(cxm, yy - 16), (cxm + 18, yy), (cxm, yy + 16), (cxm - 18, yy)])
+                p_.fill(dm, rb, 220); p_.fill(oval(cxm, yy, 4), rc); yy += 70
+    # far edge at the top of the cm frame
+    if hv.f > 0:
+        tl, tr, br, bl = (min(x0, x1), Y, max(y0, y1)), (max(x0, x1), Y, max(y0, y1)), (max(x0, x1), Y, min(y0, y1)), (min(x0, x1), Y, min(y0, y1))
+    else:
+        tl, tr, br, bl = (max(x0, x1), Y, min(y0, y1)), (min(x0, x1), Y, min(y0, y1)), (min(x0, x1), Y, max(y0, y1)), (max(x0, x1), Y, max(y0, y1))
+        if runner:                                                      # runner given in house coords: mirror for the frame
+            rx0, rx1, ry0, ry1, rc, rb = runner
+            runner = (x0 + x1 - rx1, x0 + x1 - rx0, y0 + y1 - ry1, y0 + y1 - ry0, rc, rb)
+    _hface(pen, hv, tl, tr, br, bl, W, H, fn)
+
+
+def _hceil(pen, hv, x0, x1, y0, y1, Y=CEIL, c='#d8d0bc'):
+    """A plaster ceiling (seen from below)."""
+    q = hv.quad([(x0, Y, y0), (x1, Y, y0), (x1, Y, y1), (x0, Y, y1)])
+    pen.fill(q, c); pen.texture(q, 'plaster', 0.35, 'overlay', 0.6)
+
+
+def _hbox(pen, hv, x0, x1, Y0, Y1, y0, y1, c, top=None, side=None, lw=None, line=True, tex=None, faces=None):
+    """An axis-aligned box: draws the faces the camera can see (front toward the camera, one side, top or bottom).
+    faces: optional dict face -> fn(pen, W, H) drawing flat art (cm) on that face ('front', 'top', 'side')."""
+    xa, xb = min(x0, x1), max(x0, x1); ya, yb = min(y0, y1), max(y0, y1)
+    yn = ya if hv.f > 0 else yb                                           # the face toward the camera
+    lw = lw if lw is not None else max(1.0, 0.008 * hv.s(yn))
+    out = []
+    if hv.hx < xa: xs = xa
+    elif hv.hx > xb: xs = xb
+    else: xs = None
+    if xs is not None:
+        q = [(xs, Y1, yb if hv.f > 0 else ya), (xs, Y1, yn), (xs, Y0, yn), (xs, Y0, yb if hv.f > 0 else ya)]
+        out.append(('side', q, side or _darken(c, 0.28)))
+    if Y1 < hv.cam_h:
+        yf = yb if hv.f > 0 else ya
+        out.append(('top', [(xa, Y1, yf), (xb, Y1, yf), (xb, Y1, yn), (xa, Y1, yn)], top or _lighten(c, 0.1)))
+    elif Y0 > hv.cam_h:
+        yf = yb if hv.f > 0 else ya
+        out.append(('bottom', [(xa, Y0, yn), (xb, Y0, yn), (xb, Y0, yf), (xa, Y0, yf)], _darken(c, 0.45)))
+    fl, fr = (xa, xb) if hv.f > 0 else (xb, xa)
+    out.append(('front', [(fl, Y1, yn), (fr, Y1, yn), (fr, Y0, yn), (fl, Y0, yn)], c))
+    for name, q, cc in out:
+        path = hv.quad(q)
+        pen.fill(path, cc)
+        if tex: pen.texture(path, tex, 0.45, 'overlay', 1.0, 90)
+        if faces and name in faces:
+            W = (math.hypot(q[1][0] - q[0][0], q[1][2] - q[0][2])) * 100; H = abs(q[0][1] - q[3][1]) * 100
+            if name == 'top': H = math.hypot(q[0][0] - q[3][0], q[0][2] - q[3][2]) * 100
+            _hface(pen, hv, q[0], q[1], q[2], q[3], W, H, lambda p_, f=faces[name], W=W, H=H: f(p_, W, H))
+        if line: pen.line(path, lw, LINE, 210)
+    return out
+
+
+def _hframe(pen, W, H, x, y, w, h, kind='photo', frame='#3a2414', seed=0, fn=None):
+    """A framed picture on a wall, in the wall's cm frame (x, y = top-left, cm). kind: 'photo' (sepia family photo),
+    'poster' (fn draws the poster art in a w x h cm frame), 'mirror', 'landscape'."""
+    fw = max(2.0, min(w, h) * 0.07)
+    pen.fill(rect(x + 1.5, y + 2.5, w, h), '#000000', 90)
+    pen.fill(rect(x, y, w, h), frame); pen.fill(rect(x + fw * 0.3, y + fw * 0.3, w - fw * 0.6, h - fw * 0.6), _lighten(frame, 0.14))
+    ix, iy, iw, ih = x + fw, y + fw, w - 2 * fw, h - 2 * fw
+    cv = pen.cv; cv.save(); cv.clipPath(rect(ix, iy, iw, ih), skia.ClipOp.kIntersect, True)
+    if kind == 'mirror':
+        pen.linear(rect(ix, iy, iw, ih), ix, iy, ix + iw, iy + ih, ['#3a4258', '#7a849c', '#2a3040'])
+    elif kind == 'landscape':
+        pen.linear(rect(ix, iy, iw, ih), 0, iy, 0, iy + ih, ['#7a9ab0', '#d8c48a'])
+        pen.fill(poly([(ix, iy + ih * 0.7), (ix + iw * 0.4, iy + ih * 0.4), (ix + iw * 0.7, iy + ih * 0.62), (ix + iw, iy + ih * 0.5),
+                       (ix + iw, iy + ih), (ix, iy + ih)]), '#4a5a3a')
+    elif fn is not None:
+        cv.translate(ix, iy); fn(pen, iw, ih); cv.translate(-ix, -iy)
+    else:
+        _sepia_photo(pen, ix, iy, iw, ih, seed)
+    pen.fill(poly([(ix, iy + ih * 0.4), (ix + iw * 0.4, iy), (ix + iw * 0.55, iy), (ix, iy + ih * 0.6)]), '#ffffff', 22)
+    cv.restore()
+    pen.line(rect(x, y, w, h), max(0.8, fw * 0.15), LINE, 220)
+
+
+def _sepia_photo(pen, x, y, w, h, seed=0):
+    """A small old photograph: a man in a suit with a small figure on his knee (seed varies the pose), sepia."""
+    pen.linear(rect(x, y, w, h), 0, y, 0, y + h, ['#c8b08a', '#8a6a48'])
+    pen.radial(None, x + w * 0.5, y + h * 0.4, w * 0.7, [(0, '#e8d4ae', 160), (1, '#e8d4ae', 0)], clip=False)
+    mx = x + w * (0.4 + 0.1 * _h(seed, 3)); my = y + h * 0.95
+    pen.fill(smooth([(mx - w * 0.2, my), (mx - w * 0.18, my - h * 0.45), (mx, my - h * 0.52), (mx + w * 0.18, my - h * 0.45), (mx + w * 0.2, my)], True, 0.5), '#3a2a1c')
+    pen.fill(oval(mx, my - h * 0.62, w * 0.09, h * 0.1), '#b89870')
+    pen.fill(oval(mx, my - h * 0.68, w * 0.09, h * 0.05), '#4a3a2a')
+    dx = mx + w * 0.17; dy = my - h * 0.36                                                     # the little figure on his knee
+    pen.fill(rrect(dx - w * 0.07, dy - h * 0.02, w * 0.14, h * 0.2, w * 0.03), '#5a2a22')
+    pen.fill(oval(dx, dy - h * 0.1, w * 0.07, h * 0.08), '#d8b896')
+    pen.fill(oval(dx, dy - h * 0.16, w * 0.07, h * 0.035), '#8a4a2a')
+
+
+# ---------------------------------------------------------------------------------------------- small house props
+def _lamp_shade(pen, x, y, s, k=1.0, c='#e8dcc0', kind='drum', pleat=True):
+    """A lamp shade (bottom centre at x, y; s px per metre) glowing at level k (emissive; draw after the light map)."""
+    if kind == 'drum':
+        sh = poly([(x - 0.17 * s, y - 0.3 * s), (x + 0.17 * s, y - 0.3 * s), (x + 0.22 * s, y), (x - 0.22 * s, y)])
+    else:                                                   # 'bell': flared 60s shade
+        sh = smooth([(x - 0.13 * s, y - 0.32 * s), (x + 0.13 * s, y - 0.32 * s), (x + 0.2 * s, y - 0.1 * s), (x + 0.26 * s, y),
+                     (x - 0.26 * s, y), (x - 0.2 * s, y - 0.1 * s)], True, 0.4)
+    off = _darken(c, 0.62)
+    pen.fill(sh, mix(off, c, k))
+    if k > 0.01:
+        pen.radial(sh, x, y - 0.12 * s, 0.32 * s, [(0, '#fff6e2', 255 * k), (0.6, mix(c, '#fff0d0', 0.5), 235 * k), (1, c, 120 * k)])
+    if pleat:
+        for i in range(-6, 7):
+            u = i / 6.0
+            pen.seg((x + u * 0.17 * s, y - 0.3 * s), (x + u * 0.22 * s, y), max(0.8, 0.004 * s), _darken(c, 0.25), 90)
+    pen.line(sh, max(1.0, 0.007 * s), LINE, 220)
+    if k > 0.01:
+        pen.fill(oval(x, y + 0.004 * s, 0.215 * s, 0.025 * s), '#fff8ea', 240 * k)
+
+
+def _flashlight_beam(pen, x, y, ax, ay, s, k=1.0, spread=0.32, length=None, c='#fff2c8'):
+    """A small flashlight seen in the dark: the bright lens at (x, y), the beam toward (ax, ay) (a direction point),
+    s = px per metre at the torch. Draw on a dynamic layer at the torch's depth."""
+    if k <= 0.01: return
+    dx, dy = ax - x, ay - y; L = math.hypot(dx, dy) or 1.0
+    ux, uy = dx / L, dy / L
+    ln = length or 3.2 * s
+    nx_, ny_ = -uy, ux
+    w0, w1 = 0.02 * s, ln * spread
+    beam = poly([(x + nx_ * w0, y + ny_ * w0), (x + ux * ln + nx_ * w1, y + uy * ln + ny_ * w1),
+                 (x + ux * ln - nx_ * w1, y + uy * ln - ny_ * w1), (x - nx_ * w0, y - ny_ * w0)])
+    pen.linear(beam, x, y, x + ux * ln, y + uy * ln, [(0, c, 120 * k), (0.35, c, 46 * k), (1, c, 0)])
+    pen.glow(x, y, 0.35 * s, c, 150 * k)
+    pen.glow(x, y, 0.08 * s, '#ffffff', 250 * k)
+
+
+def _steam(pen, x, y, s, t, k=1.0, seed=0):
+    """Coffee steam rising from a mug rim at (x, y): three soft wisps that curl and fade (s = px per metre)."""
+    if k <= 0.01: return
+    for i in range(3):
+        ph = t * 0.55 + i * 0.37 + seed
+        pts = []
+        for j in range(9):
+            u = j / 8.0
+            yy = y - u * 0.26 * s
+            xx = x + (i - 1) * 0.018 * s + 0.03 * s * u * noise1(ph * 1.3 + u * 2.2, seed + i) + 0.012 * s * math.sin(ph * 3 + u * 6)
+            pts.append((xx, yy))
+        a = 70 * k * (0.6 + 0.4 * (0.5 + 0.5 * noise1(t * 0.8 + i, seed + 7)))
+        pen.line(smooth(pts, False, 0.8), max(1.2, 0.018 * s), '#f4ecdf', a, blur=max(0.6, 0.006 * s))
+
+
+def _mug_art(pen, x, y, s, spoon=True, logo=True):
+    """Grandpa's mug (cream enamel, the old show's logo in red), bottom centre at (x, y), s px per metre, seen from the
+    front slightly above. Coffee inside, the spoon handle sticking out."""
+    w, h = 0.085 * s, 0.1 * s
+    body = smooth([(x - w / 2, y - h), (x + w / 2, y - h), (x + w / 2 * 0.98, y - h * 0.1), (x + w * 0.42, y), (x - w * 0.42, y),
+                   (x - w / 2 * 0.98, y - h * 0.1)], True, 0.3)
+    hd = smooth([(x + w * 0.48, y - h * 0.82), (x + w * 0.85, y - h * 0.78), (x + w * 0.9, y - h * 0.35), (x + w * 0.48, y - h * 0.25)], False, 0.8)
+    pen.line(hd, max(1.5, 0.014 * s), LINE); pen.line(hd, max(1.0, 0.009 * s), '#e6dcc6')
+    pen.fill(oval(x, y, w * 0.55, w * 0.1), '#000000', 90)
+    pen.fill(body, '#e9dfc8'); pen.linear(body, x - w / 2, 0, x + w / 2, 0, [(0, '#ffffff', 60), (0.4, '#ffffff', 0), (1, '#000000', 50)])
+    if logo:
+        pen.fill(oval(x - w * 0.04, y - h * 0.52, w * 0.24, h * 0.2), '#c8322a', 230)
+        pen.fill(oval(x - w * 0.04, y - h * 0.52, w * 0.12, h * 0.1), '#f4d24a', 230)
+    pen.line(body, max(1.0, 0.009 * s), LINE)
+    top = oval(x, y - h, w / 2, w * 0.13)
+    pen.fill(top, '#d8ccb4'); pen.fill(oval(x, y - h + w * 0.015, w * 0.43, w * 0.1), '#3a2010')
+    pen.fill(oval(x - w * 0.12, y - h + w * 0.005, w * 0.1, w * 0.025), '#a8784a', 160)
+    if spoon:
+        pen.line(poly([(x + w * 0.12, y - h + w * 0.03), (x + w * 0.42, y - h - 0.075 * s)], False), max(1.5, 0.008 * s), '#b8bcc4')
+        pen.line(poly([(x + w * 0.12, y - h + w * 0.03), (x + w * 0.42, y - h - 0.075 * s)], False), max(0.6, 0.003 * s), '#ffffff', 160)
+    pen.line(top, max(0.8, 0.007 * s), LINE, 200)
+
+
+# ---------------------------------------------------------------------------------------------- the kitchen (house coords)
+def _kitchen_outside(pen, hv, t=0.0, tod='night'):
+    """Through the kitchen window: the back yard at night (or morning)."""
+    x0, y0 = hv.p(KWIN[0] - 0.4, KWIN[3] + 0.4, KIT_Y[1] + 0.05); x1, y1 = hv.p(KWIN[1] + 0.4, KWIN[2] - 0.3, KIT_Y[1] + 0.05)
+    r = rect(x0, y0, x1 - x0, y1 - y0)
+    if tod == 'morning':
+        pen.linear(r, 0, y0, 0, y1, ['#b8c6d8', '#dfe2e0', '#a8b49a'])
+        draw_tree(pen, x0 + (x1 - x0) * 0.7, y1, (y1 - y0) * 1.6, t, 52, 0.4, '#5a6450', None, 4)
+    else:
+        pen.linear(r, 0, y0, 0, y1, ['#0b1430', '#1a2448', '#0c1020'])
+        pen.radial(None, x0 + (x1 - x0) * 0.25, y0 + (y1 - y0) * 0.3, (x1 - x0) * 0.6, [(0, '#3a4c84', 120), (1, '#3a4c84', 0)], clip=False)
+        draw_tree(pen, x0 + (x1 - x0) * 0.72, y1, (y1 - y0) * 1.5, t, 52, 0.4, '#05070d', None, 4)
+        pen.fill(rect(x0, y0 + (y1 - y0) * 0.78, x1 - x0, (y1 - y0) * 0.22), '#060810')
+        for i in range(2):
+            wx = x0 + (x1 - x0) * (0.18 + 0.4 * i); wy = y0 + (y1 - y0) * 0.62
+            pen.fill(rect(wx, wy, (x1 - x0) * 0.05, (y1 - y0) * 0.06), '#d9b47c' if i == 0 else '#0a0d16')
+
+
+def _kitchen_room(pen, hv, tod='night'):
+    """Back wall (window, cafe curtains, cabinets, sink, the sunburst clock), fridge, stove, the right wall with the back
+    door and the calendar, the checker floor and the ceiling. Albedo only (lit by _lmap)."""
+    xa, xb = KIT_X; ya, yb = KIT_Y
+    yn = max(ya, hv.hy + 0.3)
+    _kitchen_outside(pen, hv, 0.0, tod)
+    _hfloor(pen, hv, xa, xb, yn, yb, 'checker', '#e6dcc4', '#2c2a30')
+    _hceil(pen, hv, xa, xb, yn, yb, CEIL, '#e8dcc0')
+    wu0, wu1 = KWIN[0] - xa, KWIN[1] - xa
+
+    def back_art(p_, W, H):
+        # sunburst clock
+        cx, cy = (-2.85 - xa) * 100, H - 185
+        for k in range(16):
+            ang = k * math.pi / 8
+            p_.line(poly([(cx + math.cos(ang) * 14, cy + math.sin(ang) * 14), (cx + math.cos(ang) * 30, cy + math.sin(ang) * 30)], False), 3.0, '#b8902a')
+        p_.fill(oval(cx, cy, 14), '#f2ead6'); p_.line(oval(cx, cy, 14), 2.0, '#b8902a')
+        # cafe curtains (red gingham) on a rod across the lower window half, a valance on top
+        p_.fill(rect(wu0 * 100 - 12, H - KWIN[3] * 100 - 14, (wu1 - wu0) * 100 + 24, 18), '#b8322a')
+        for i in range(12):
+            p_.fill(rect(wu0 * 100 - 12 + i * ((wu1 - wu0) * 100 + 24) / 12, H - KWIN[3] * 100 - 14, ((wu1 - wu0) * 100 + 24) / 24, 18), '#f0e6d6', 160)
+        cy0 = H - (KWIN[2] + 0.45) * 100
+        for side in (0, 1):
+            cxp = wu0 * 100 + (0 if side == 0 else (wu1 - wu0) * 50)
+            cur = rect(cxp, cy0, (wu1 - wu0) * 50, 45)
+            p_.fill(cur, '#c8443a')
+            for i in range(9): p_.fill(rect(cxp + i * (wu1 - wu0) * 50 / 9, cy0, (wu1 - wu0) * 25 / 9, 45), '#f4ece0', 150)
+            for j in range(4): p_.fill(rect(cxp, cy0 + j * 11.25, (wu1 - wu0) * 50, 5.6), '#f4ece0', 110)
+            p_.line(cur, 1.5, '#5a1a14', 180)
+        p_.fill(rect(wu0 * 100 - 6, cy0 - 3, (wu1 - wu0) * 100 + 12, 3), '#c9b06a')
+        # a framed sampler and a calendar
+        p_.fill(rect((0.55 - xa) * 100, H - 200, 26, 34), '#f4ecd8'); p_.fill(rect((0.55 - xa) * 100, H - 200, 26, 10), '#c8322a')
+        p_.line(rect((0.55 - xa) * 100, H - 200, 26, 34), 1.2, LINE)
+    _hwall(pen, hv, (xa, yb), (xb, yb), 0.0, CEIL, '#efe2b8', '#b88a4a', 'kitchen', 0.0, holes=[(wu0, KWIN[2], wu1, KWIN[3])],
+           base_h=0.1, pa=120, art=back_art, trim='#f2ead8', seed=4)
+    # window sill + mullion
+    pen.fill(hv.quad([(KWIN[0] - 0.05, KWIN[2], yb), (KWIN[1] + 0.05, KWIN[2], yb), (KWIN[1] + 0.05, KWIN[2] - 0.04, yb - 0.1),
+                      (KWIN[0] - 0.05, KWIN[2] - 0.04, yb - 0.1)]), '#f2ead8')
+    mx = (KWIN[0] + KWIN[1]) / 2
+    pen.seg(hv.p(mx, KWIN[2], yb), hv.p(mx, KWIN[3], yb), max(2.0, 0.035 * hv.s(yb)), '#f2ead8')
+    pen.seg(hv.p(KWIN[0], (KWIN[2] + KWIN[3]) / 2, yb), hv.p(KWIN[1], (KWIN[2] + KWIN[3]) / 2, yb), max(2.0, 0.03 * hv.s(yb)), '#f2ead8')
+    # right wall: the back door (half glass) and a calendar
+    def right_art(p_, W, H):
+        p_.fill(rect(150, H - 120, 40, 52), '#f4ecd8'); p_.fill(rect(150, H - 120, 40, 18), '#3a6a9a')
+        p_.line(rect(150, H - 120, 40, 52), 1.2, LINE)
+    _hwall(pen, hv, (xb, yn), (xb, yb), 0.0, CEIL, '#efe2b8', '#b88a4a', 'kitchen', 0.0, holes=[(ya + 1.0 - yn, 0.0, ya + 1.85 - yn, 2.05)],
+           base_h=0.1, pa=120, art=right_art, trim='#f2ead8', seed=5)
+    door = hv.quad([(xb, 2.05, ya + 1.0), (xb, 2.05, ya + 1.85), (xb, 0.0, ya + 1.85), (xb, 0.0, ya + 1.0)])
+    pen.fill(door, '#e8dcc0'); pen.fill(hv.quad([(xb, 1.9, ya + 1.12), (xb, 1.9, ya + 1.73), (xb, 1.2, ya + 1.73), (xb, 1.2, ya + 1.12)]),
+                                          '#1a2448' if tod != 'morning' else '#c8d4e0')
+    pen.line(door, 2, LINE, 200)
+    # base cabinets + counter + sink under the window, upper cabinets, fridge, stove
+    cy0 = yb - 0.62
+    _hbox(pen, hv, -2.3, 0.3, 0.0, 0.86, cy0, yb, '#8fbca6', top='#e8e0cc',
+          faces={'front': lambda p_, W, H: _cab_doors(p_, W, H, 4)})
+    _hbox(pen, hv, -2.34, 0.34, 0.86, 0.91, cy0 - 0.03, yb, '#d8302a', top='#efe8d8')
+    sk = hv.quad([(KWIN[0] + 0.15, 0.911, cy0 + 0.1), (KWIN[1] - 0.15, 0.911, cy0 + 0.1), (KWIN[1] - 0.15, 0.911, yb - 0.12), (KWIN[0] + 0.15, 0.911, yb - 0.12)])
+    pen.fill(sk, '#b8c0c8'); pen.line(sk, 1.5, LINE, 200)
+    fx_, fy_ = hv.p(mx, 1.12, yb - 0.08)
+    pen.line(smooth([hv.p(mx, 0.92, yb - 0.08), hv.p(mx, 1.12, yb - 0.08), hv.p(mx, 1.1, yb - 0.22)], False, 0.8), max(2.0, 0.02 * hv.s(yb)), '#c8ccd2')
+    for (ux0, ux1) in ((-2.3, -1.7), (-0.2, 0.3)):
+        _hbox(pen, hv, ux0, ux1, 1.45, 2.25, yb - 0.34, yb, '#8fbca6', faces={'front': lambda p_, W, H: _cab_doors(p_, W, H, 1, upper=True)})
+    # fridge (rounded 50s cream fridge with a chrome handle)
+    _hbox(pen, hv, -3.35, -2.55, 0.0, 1.62, yb - 0.7, yb - 0.02, '#ece4cc', top='#f4ecd8',
+          faces={'front': lambda p_, W, H: (p_.fill(rect(W - 14, 30, 6, 36), '#c8ccd2'), p_.fill(rect(4, 52, W - 8, 1.5), '#000000', 80),
+                                            p_.fill(rect(W * 0.2, 8, W * 0.6, 6), '#b8a888', 160))})
+    # stove (white enamel, back panel with clock and knobs) + the red kettle
+    _hbox(pen, hv, 0.36, 1.1, 0.0, 0.9, yb - 0.66, yb - 0.02, '#ece8e0', top='#2a2a2e',
+          faces={'front': lambda p_, W, H: (p_.line(rect(8, 22, W - 16, H - 36), 2.0, '#a8a8a8'), p_.fill(rect(W * 0.35, 30, W * 0.3, 4), '#c8ccd2'),
+                                            [p_.fill(oval(12 + i * (W - 24) / 4, 10, 3.2), '#2a2a2a') for i in range(5)])})
+    _hbox(pen, hv, 0.36, 1.1, 0.9, 1.2, yb - 0.08, yb - 0.02, '#ece8e0')
+    kx, ky = hv.p(0.6, 0.9, yb - 0.42); ks = hv.s(yb - 0.42)
+    kt = smooth([(kx - 0.11 * ks, ky), (kx - 0.12 * ks, ky - 0.1 * ks), (kx - 0.05 * ks, ky - 0.17 * ks), (kx + 0.05 * ks, ky - 0.17 * ks),
+                 (kx + 0.12 * ks, ky - 0.1 * ks), (kx + 0.11 * ks, ky)], True, 0.5)
+    pen.shape(kt, '#c8322a', max(1.0, 0.008 * ks)); pen.line(poly([(kx + 0.1 * ks, ky - 0.1 * ks), (kx + 0.2 * ks, ky - 0.16 * ks)], False), max(1.5, 0.02 * ks), '#c8322a')
+
+
+def _cab_doors(p_, W, H, n, upper=False):
+    """Cabinet doors with chrome pulls on a front face (cm frame)."""
+    dw = W / n
+    for i in range(n):
+        r = rect(i * dw + 3, 4 if upper else 14, dw - 6, H - (8 if upper else 22))
+        p_.line(r, 1.6, '#000000', 110); p_.fill(rect(i * dw + 3, 4 if upper else 14, dw - 6, 2), '#ffffff', 70)
+        hx = i * dw + (dw - 12 if i % 2 == 0 else 9)
+        p_.fill(rrect(hx, (H - 18 if upper else 30), 3.0, 12, 1.2), '#d8dce2')
+    if not upper: p_.fill(rect(0, 2, W, 7), '#000000', 40)
+
+
+def _table_art(pen, hv, mug=True, cloth=False):
+    """The kitchen table (yellow formica, chrome edge, chrome legs), the mug in front of Grandpa's chair."""
+    x0, x1, y0, y1, Y = TABLE
+    yn = y0 if hv.f > 0 else y1
+    yf = y1 if hv.f > 0 else y0
+    for (lx, ly) in ((x0 + 0.06, y0 + 0.06), (x1 - 0.06, y0 + 0.06), (x0 + 0.06, y1 - 0.06), (x1 - 0.06, y1 - 0.06)):
+        a_, b_ = hv.p(lx, 0, ly), hv.p(lx, Y - 0.03, ly)
+        w = max(1.5, 0.032 * hv.s(ly))
+        pen.seg(a_, b_, w + 2, LINE, 220); pen.seg(a_, b_, w, '#c8ccd4'); pen.seg((a_[0] - w * 0.2, a_[1]), (b_[0] - w * 0.2, b_[1]), w * 0.25, '#ffffff', 150)
+    top = hv.quad([(x0, Y, yf), (x1, Y, yf), (x1, Y, yn), (x0, Y, yn)])
+    pen.fill(top, '#d6b85e'); pen.texture(top, 'grunge', 0.3, 'overlay', 0.6)
+    _hface(pen, hv, (x0, Y, yf), (x1, Y, yf), (x1, Y, yn), (x0, Y, yn), (x1 - x0) * 100, (y1 - y0) * 100,
+           lambda p_: [p_.fill(oval(10 + 13 * i % 100, 7 + (37 * i) % 70, 1.4, 0.7), '#b89a40', 140) for i in range(40)])
+    pen.line(top, max(1.0, 0.008 * hv.s(yn)), LINE, 220)
+    ed = hv.quad([(x0, Y, yn), (x1, Y, yn), (x1, Y - 0.04, yn), (x0, Y - 0.04, yn)])
+    pen.fill(ed, '#d8dce4'); pen.fill(hv.quad([(x0, Y - 0.012, yn), (x1, Y - 0.012, yn), (x1, Y - 0.02, yn), (x0, Y - 0.02, yn)]), '#ffffff', 170)
+    pen.line(ed, max(1.0, 0.006 * hv.s(yn)), LINE, 200)
+    if mug:
+        mx, my = hv.p(GCHAIR[0] + 0.02, Y, GCHAIR[1] - 0.42)
+        _mug_art(pen, mx, my, hv.s(GCHAIR[1] - 0.42))
+        sx, sy_ = hv.p(GCHAIR[0] + 0.25, Y, GCHAIR[1] - 0.45)                      # the sugar bowl
+        ss = hv.s(GCHAIR[1] - 0.45)
+        pen.fill(oval(sx, sy_ - 0.03 * ss, 0.05 * ss, 0.035 * ss), '#c8c0b0'); pen.line(oval(sx, sy_ - 0.03 * ss, 0.05 * ss, 0.035 * ss), 1.2, LINE, 200)
+        pen.fill(oval(sx, sy_ - 0.06 * ss, 0.045 * ss, 0.012 * ss), '#d8d0c0')
+
+
+def _gchair_art(pen, hv, part='back'):
+    """Grandpa's chair: a dark wooden captain's chair with arms and a spindle back and a faded red cushion, facing the
+    hall (toward -y). part 'back' (back rail, spindles, seat: behind whoever sits in it) or 'arms' (the arm rests and
+    their front posts: in front)."""
+    cx, cy = GCHAIR
+    hw, sd = 0.27, 0.22
+    Ys = 0.46
+    wood, dk = '#5a3420', '#2e1a0e'
+    if part == 'back':
+        yb_ = cy + sd                                                   # the back's plane
+        # spindles + top rail (curved) + back legs
+        for i in range(7):
+            u = -1 + 2 * i / 6
+            a_, b_ = hv.p(cx + u * hw * 0.82, Ys + 0.04, yb_), hv.p(cx + u * hw * 0.78, 1.0 - 0.04 * u * u, yb_ + 0.02)
+            w = max(1.2, 0.022 * hv.s(yb_))
+            pen.seg(a_, b_, w + 1.5, LINE, 220); pen.seg(a_, b_, w, wood)
+        rail = [hv.p(cx + u * hw * 1.05, 1.02 - 0.05 * u * u, yb_ + 0.02) for u in np.linspace(-1, 1, 9)]
+        pen.line(poly(rail, False), max(4.0, 0.07 * hv.s(yb_)), LINE); pen.line(poly(rail, False), max(3.0, 0.058 * hv.s(yb_)), wood)
+        pen.line(poly(rail, False), max(1.0, 0.012 * hv.s(yb_)), '#ffffff', 50)
+        for sx in (-1, 1):
+            a_, b_ = hv.p(cx + sx * hw, 0.0, yb_), hv.p(cx + sx * hw * 1.02, 1.02, yb_ + 0.02)
+            w = max(2.0, 0.04 * hv.s(yb_)); pen.seg(a_, b_, w + 2, LINE); pen.seg(a_, b_, w, dk)
+        # seat (seen from above) + cushion + front legs
+        seat = hv.quad([(cx - hw, Ys, cy + sd), (cx + hw, Ys, cy + sd), (cx + hw, Ys, cy - sd), (cx - hw, Ys, cy - sd)])
+        pen.fill(seat, wood); pen.texture(seat, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(seat, 1.5, LINE, 200)
+        cu = hv.quad([(cx - hw * 0.85, Ys + 0.04, cy + sd * 0.8), (cx + hw * 0.85, Ys + 0.04, cy + sd * 0.8), (cx + hw * 0.85, Ys + 0.04, cy - sd * 0.9),
+                      (cx - hw * 0.85, Ys + 0.04, cy - sd * 0.9)])
+        pen.fill(cu, '#9a3a30'); pen.texture(cu, 'fabric', 0.6, 'overlay', 0.8)
+        fr = hv.quad([(cx - hw, Ys, cy - sd), (cx + hw, Ys, cy - sd), (cx + hw, Ys - 0.05, cy - sd), (cx - hw, Ys - 0.05, cy - sd)])
+        pen.fill(fr, dk); pen.line(fr, 1.2, LINE, 200)
+        for sx in (-1, 1):
+            a_, b_ = hv.p(cx + sx * hw * 0.92, 0.0, cy - sd), hv.p(cx + sx * hw * 0.92, Ys - 0.04, cy - sd)
+            w = max(2.0, 0.04 * hv.s(cy - sd)); pen.seg(a_, b_, w + 2, LINE); pen.seg(a_, b_, w, dk)
+    else:
+        for sx in (-1, 1):
+            ar = [hv.p(cx + sx * hw * 1.02, 0.7, cy + sd), hv.p(cx + sx * hw * 1.06, 0.72, cy - sd * 0.9)]
+            pen.line(poly(ar, False), max(3.0, 0.05 * hv.s(cy)), LINE); pen.line(poly(ar, False), max(2.0, 0.04 * hv.s(cy)), wood)
+            a_, b_ = hv.p(cx + sx * hw * 1.0, Ys, cy - sd * 0.85), hv.p(cx + sx * hw * 1.05, 0.71, cy - sd * 0.9)
+            w = max(1.5, 0.028 * hv.s(cy - sd)); pen.seg(a_, b_, w + 1.5, LINE); pen.seg(a_, b_, w, wood)
+
+
+def _dinette_chair(pen, hv, x, y, face):
+    """A chrome dinette chair with red vinyl, at (x, y) facing +x (face=1) or -x (-1), seen across the table."""
+    Ys = 0.46; hw = 0.2
+    sx0, sx1 = x - hw, x + hw
+    bx = x - face * hw                                               # its back is on the far side from where it faces
+    for (lx, ly) in ((sx0 + 0.03, y - hw + 0.03), (sx1 - 0.03, y - hw + 0.03), (sx0 + 0.03, y + hw - 0.03), (sx1 - 0.03, y + hw - 0.03)):
+        pen.seg(hv.p(lx, 0, ly), hv.p(lx, Ys - 0.04, ly), max(1.5, 0.022 * hv.s(ly)) + 1.5, LINE, 200)
+        pen.seg(hv.p(lx, 0, ly), hv.p(lx, Ys - 0.04, ly), max(1.2, 0.022 * hv.s(ly)), '#c8ccd4')
+    _hbox(pen, hv, sx0, sx1, Ys - 0.06, Ys, y - hw, y + hw, '#a82a24', top='#c0362e', lw=max(1.0, 0.006 * hv.s(y)))
+    for ly in (y - hw * 0.85, y + hw * 0.85):                        # the chrome back posts
+        pen.seg(hv.p(bx, Ys, ly), hv.p(bx, 0.9, ly), max(1.5, 0.02 * hv.s(ly)) + 1.5, LINE, 200)
+        pen.seg(hv.p(bx, Ys, ly), hv.p(bx, 0.9, ly), max(1.2, 0.02 * hv.s(ly)), '#c8ccd4')
+    q = [(bx, 0.9, y - hw * 0.9), (bx, 0.9, y + hw * 0.9), (bx, 0.66, y + hw * 0.9), (bx, 0.66, y - hw * 0.9)]
+    _hface(pen, hv, *q, 36, 24, lambda p_: (p_.fill(rrect(0, 0, 36, 24, 7), '#c0362e'), p_.texture(rrect(0, 0, 36, 24, 7), 'fabric', 0.4, 'overlay', 0.6),
+                                           p_.line(rrect(2, 2, 32, 20, 6), 1.0, '#7a1410', 160), p_.fill(rrect(3, 3, 30, 5, 3), '#ffffff', 50),
+                                           p_.line(rrect(0, 0, 36, 24, 7), 2.4, '#c8ccd4'), p_.line(rrect(0, 0, 36, 24, 7), 0.8, LINE)))
+
+
+def _pendant_art(pen, hv, k=1.0, sway=0.0):
+    """The amber glass dome pendant over the table (emissive at level k), its cord to the ceiling."""
+    x, y, Yb = PENDANT
+    px, py = hv.p(x + sway, Yb, y); s = hv.s(y)
+    cx_, cy_ = hv.p(x, CEIL, y)
+    pen.seg((cx_, cy_), (px, py - 0.22 * s), max(1.0, 0.008 * s), '#1a1410')
+    pen.fill(oval(cx_, cy_, 0.05 * s, 0.015 * s), '#3a2a1a')
+    dome = smooth([(px - 0.2 * s, py), (px - 0.17 * s, py - 0.1 * s), (px - 0.08 * s, py - 0.2 * s), (px, py - 0.23 * s), (px + 0.08 * s, py - 0.2 * s),
+                   (px + 0.17 * s, py - 0.1 * s), (px + 0.2 * s, py)], True, 0.5)
+    pen.fill(dome, mix('#4a2a10', '#e8962a', k))
+    if k > 0.01:
+        pen.radial(dome, px, py - 0.03 * s, 0.26 * s, [(0, '#fff2c0', 255 * k), (0.5, '#ffb84a', 230 * k), (1, '#c86a1a', 160 * k)])
+    for i in range(-3, 4):
+        pen.line(smooth([(px + i * 0.05 * s, py), (px + i * 0.035 * s, py - 0.12 * s), (px + i * 0.01 * s, py - 0.21 * s)], False), max(0.6, 0.004 * s), '#7a3a10', 90)
+    pen.line(dome, max(1.0, 0.008 * s), LINE, 220)
+    pen.fill(oval(px, py, 0.2 * s, 0.03 * s), mix('#3a2410', '#fff4d0', k))
+    if k > 0.01: pen.glow(px, py + 0.01 * s, 0.25 * s, '#ffd890', 140 * k)
+
+
+KITCHEN_LIGHTS = [(PENDANT[0], 1.3, PENDANT[1], 3.0, GP_KLAMP, 0.72), (PENDANT[0], TABLE[4], PENDANT[1], 1.0, '#ffe8b8', 0.3, 0.5),
+                  (PENDANT[0], 1.5, KIT_Y[1], 2.6, GP_KLAMP, 0.42), (PENDANT[0], 0.0, PENDANT[1] + 0.3, 2.2, GP_KLAMP, 0.5, 0.35),
+                  (GCHAIR[0], 0.7, GCHAIR[1] + 0.2, 0.9, '#ffd8a0', 0.25), (-3.0, 1.2, KIT_Y[1], 3.0, GP_KLAMP, 0.22)]
+KITCHEN_NIGHT = [(KWIN[0] * 0.5 + KWIN[1] * 0.5, 1.5, KIT_Y[1], 1.6, GP_MOON, 0.55), (-0.95, 0.0, 9.0, 1.6, GP_MOON, 0.25, 0.4)]
+
+
+def _kitchen_layers(hv, tag, kf, box, tod='night', mug=True, steam=None, chair=True, sway=None):
+    """The kitchen's layers seen from any HView (depths = distances): room, Grandpa's chair, the table (+ mug, the
+    dinette chairs, the chair's arms), the pendant (emissive) and the steam (live). kf = the pendant's level f(t)."""
+    amb = '#1c2034' if tod == 'night' else '#c8ccd2'
+    lights = KITCHEN_NIGHT if tod == 'night' else [(-0.95, 1.5, KIT_Y[1], 3.0, '#e8eef8', 0.6)]
+    var = [('pendant', KITCHEN_LIGHTS, kf)] if tod == 'night' else []
+    L = []
+    L += _lit(hv.d(KIT_Y[1] - 0.3), lambda p: _kitchen_room(p, hv, tod), 'k_room', _key('gp', tag, 'kroom', tod), box, hv, amb, lights, var)
+    if chair:
+        L += _lit(hv.d(GCHAIR[1] + 0.18), lambda p: _gchair_art(p, hv, 'back'), 'k_chair', _key('gp', tag, 'kchair'), box, hv, amb, lights, var)
+
+    def table(p):
+        _dinette_chair(p, hv, TABLE[0] - 0.3, (TABLE[2] + TABLE[3]) / 2, 1)
+        _dinette_chair(p, hv, TABLE[1] + 0.3, (TABLE[2] + TABLE[3]) / 2, -1)
+        if chair: _gchair_art(p, hv, 'arms')
+        _table_art(p, hv, mug)
+    L += _lit(hv.d(TABLE[2] + 0.35), table, 'k_table', _key('gp', tag, 'ktable', mug, chair), box, hv, amb, lights, var)
+    sw = sway or (lambda t: 0.0)
+    L.append(Layer(hv.d(PENDANT[1]), lambda pen, t: _pendant_art(pen, hv, kf(t) if tod == 'night' else 0.15, sw(t)), 'k_pendant', blur=None))
+    if mug:
+        stf = _kfn(steam, 3, 1.0)
+        mx, my = hv.p(GCHAIR[0] + 0.02, TABLE[4] + 0.1, GCHAIR[1] - 0.42)
+        ms = hv.s(GCHAIR[1] - 0.42)
+        L.append(Layer(hv.d(GCHAIR[1] - 0.43), lambda pen, t: _steam(pen, mx, my, ms, t, stf(t), 5), 'k_steam', blur=None))
+    return L
+
+
+# ---------------------------------------------------------------------------------------------- the front hall
+def _case3d(pen, hv, state='closed', envelope=True, latch=0.0):
+    """The black leather case on the hall bench (CASE: x0, x1, y0, y1, Y0, h). state 'closed' (the envelope taped to the
+    lid) | 'open' (lid up against the wall, the red velvet, the dummy-shaped hollow) | 'none'."""
+    if state in (None, 'none'): return
+    x0, x1, y0, y1, Y0, h = CASE
+    leather, ld = '#2a2730', '#141218'
+    brass = '#c9a24a'
+
+    def stitch(p_, W, H, m=3.5):
+        p_.dashed(rrect(m, m, W - 2 * m, H - 2 * m, 4), 0.9, '#8a8478', 150, 3.0, 2.2)
+
+    def front_art(p_, W, H):                               # the side facing the hall: latches, handle, the seam
+        p_.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#3a3742', leather, ld])
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.4, 'overlay', 0.5)
+        sy = H * 0.38
+        p_.fill(rect(0, sy - 1.2, W, 2.4), '#0a090c'); p_.fill(rect(0, sy + 1.2, W, 0.8), '#5a5662', 160)
+        stitch(p_, W, H)
+        for u in (0.22, 0.78):
+            lx = W * u
+            op = clamp(latch)
+            p_.fill(rrect(lx - 4.5, sy - 2, 9, 9, 1.5), brass); p_.line(rrect(lx - 4.5, sy - 2, 9, 9, 1.5), 0.8, LINE)
+            p_.cv.save(); p_.cv.translate(lx, sy - 2); p_.cv.rotate(-150 * op)
+            p_.fill(rrect(-3.5, -9, 7, 10, 1.5), _lighten(brass, 0.15)); p_.line(rrect(-3.5, -9, 7, 10, 1.5), 0.8, LINE)
+            p_.cv.restore()
+            p_.fill(oval(lx - 1.5, sy + 3, 1.2), '#fff4c0', 200)
+        hx = W / 2
+        p_.fill(rrect(hx - 9, sy - 3, 3, 6, 1), brass); p_.fill(rrect(hx + 6, sy - 3, 3, 6, 1), brass)
+        p_.line(smooth([(hx - 7.5, sy - 1), (hx - 6, sy - 7), (hx + 6, sy - 7), (hx + 7.5, sy - 1)], False), 3.2, '#1a1820')
+        for (cx_, cy_) in ((2, 2), (W - 2, 2), (2, H - 2), (W - 2, H - 2)):
+            p_.fill(oval(cx_, cy_, 3.2), brass, 230)
+
+    def end_art(p_, W, H):
+        p_.linear(rect(0, 0, W, H), 0, 0, W, 0, [leather, '#3a3742', ld]); stitch(p_, W, H)
+        p_.fill(rect(0, H * 0.38 - 1.2, W, 2.4), '#0a090c')
+        for (cx_, cy_) in ((2, 2), (W - 2, 2), (2, H - 2), (W - 2, H - 2)): p_.fill(oval(cx_, cy_, 3.2), brass, 230)
+
+    def lid_art(p_, W, H):                                 # the top of the lid (W across the case, H along it)
+        p_.linear(rect(0, 0, W, H), 0, 0, W, H, ['#34313c', leather, '#1c1a22'])
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.4, 'overlay', 0.6); stitch(p_, W, H)
+        p_.fill(poly([(W * 0.1, 0), (W * 0.35, 0), (W * 0.05, H * 0.4), (0, H * 0.3)]), '#ffffff', 22)
+        if envelope:
+            cv = p_.cv; cv.save(); cv.translate(W * 0.52, H * 0.55); cv.rotate(-4)
+            e = rect(-14, -8.5, 28, 17)
+            p_.fill(rect(-13, -7.5, 28, 17), '#000000', 90)
+            p_.fill(e, '#ece2c8'); p_.texture(e, 'paper', 0.5, 'overlay', 0.4)
+            p_.line(poly([(-14, -8.5), (0, 1.5), (14, -8.5)], False), 0.5, '#8a7a60', 160)
+            for (tx, ang) in ((-12, 35), (12, -35)):
+                cv.save(); cv.translate(tx, -8.5); cv.rotate(ang); p_.fill(rect(-5, -1.6, 10, 3.2), '#e8d8a0', 170); cv.restore()
+            for i in range(3):
+                p_.line(smooth([(-7 + i * 0.6, 2 + i * 2.2), (-2, 1 + i * 2.2), (3, 2.4 + i * 2.2), (8 - i * 2, 1.4 + i * 2.2)], False), 0.45, '#2a3060', 200)
+            cv.restore()
+
+    if state == 'closed':
+        _hbox(pen, hv, x0, x1, Y0, Y0 + h, y0, y1, leather, faces={'front': end_art, 'side': front_art, 'top': lid_art},
+              lw=max(1.0, 0.006 * hv.s(y0)))
+        return
+    # open: the base, the velvet inside, the lid standing up against the wall behind it
+    hb = h * 0.62
+    Yt = Y0 + hb
+    lid = [(x0 + 0.01, Yt + 0.42, y1), (x0 + 0.01, Yt + 0.42, y0), (x0 + 0.03, Yt, y0), (x0 + 0.03, Yt, y1)]
+    lq = hv.quad(lid)
+    pen.fill(lq, '#7a1420'); _hface(pen, hv, *lid, 82, 42, lambda p_: (p_.fill(rect(0, 0, 82, 42), '#8a1a26'), p_.texture(rect(0, 0, 82, 42), 'fabric', 0.7, 'overlay', 0.5),
+                                                                      p_.line(rect(2, 2, 78, 38), 1.0, '#4a0a12', 200),
+                                                                      p_.fill(rect(30, 8, 22, 12), '#5a0e18', 150)))
+    pen.line(lq, 1.5, LINE, 220)
+    _hbox(pen, hv, x0, x1, Y0, Yt, y0, y1, leather, faces={'front': end_art, 'side': front_art}, lw=max(1.0, 0.006 * hv.s(y0)))
+    m = 0.025
+    inner = [(x0 + m, Yt, y1 - m), (x1 - m, Yt, y1 - m), (x1 - m, Yt, y0 + m), (x0 + m, Yt, y0 + m)]
+    pen.fill(hv.quad(inner), '#3a0810')
+    bot = [(x0 + m, Y0 + 0.03, y1 - m), (x1 - m, Y0 + 0.03, y1 - m), (x1 - m, Y0 + 0.03, y0 + m), (x0 + m, Y0 + 0.03, y0 + m)]
+    cv = pen.cv; cv.save(); cv.clipPath(hv.quad(inner), skia.ClipOp.kIntersect, True)
+    _hface(pen, hv, *bot, 35, 77, lambda p_: _velvet_hollow(p_, 35, 77))
+    wall_far = hv.quad([(x0 + m, Y0 + 0.03, y1 - m), (x1 - m, Y0 + 0.03, y1 - m), (x1 - m, Yt, y1 - m), (x0 + m, Yt, y1 - m)])
+    pen.fill(wall_far, '#6a1018'); pen.texture(wall_far, 'fabric', 0.6, 'overlay', 0.5)
+    wall_l = hv.quad([(x0 + m, Y0 + 0.03, y0 + m), (x0 + m, Y0 + 0.03, y1 - m), (x0 + m, Yt, y1 - m), (x0 + m, Yt, y0 + m)])
+    pen.fill(wall_l, '#7a1420'); pen.texture(wall_l, 'fabric', 0.6, 'overlay', 0.5)
+    cv.restore()
+    pen.line(hv.quad(inner), 1.5, '#c9a24a', 200)
+
+
+def _velvet_hollow(p_, W, H):
+    """Red velvet bed of the case with the dummy-shaped hollow (head at the far end, top of the frame), seen from above."""
+    p_.fill(rect(0, 0, W, H), '#9a1c2a'); p_.texture(rect(0, 0, W, H), 'fabric', 0.75, 'overlay', 0.4)
+    p_.radial(rect(0, 0, W, H), W / 2, H * 0.45, H * 0.6, [(0, '#c8303e', 120), (1, '#4a0810', 160)])
+    cx = W / 2
+    sil = union(oval(cx, H * 0.14, W * 0.2, W * 0.22),                                                  # head
+                smooth([(cx - W * 0.28, H * 0.27), (cx + W * 0.28, H * 0.27), (cx + W * 0.3, H * 0.55), (cx + W * 0.22, H * 0.6),
+                        (cx + W * 0.2, H * 0.94), (cx + W * 0.03, H * 0.95), (cx, H * 0.62), (cx - W * 0.03, H * 0.95), (cx - W * 0.2, H * 0.94),
+                        (cx - W * 0.22, H * 0.6), (cx - W * 0.3, H * 0.55)], True, 0.35))
+    sil = union(sil, smooth([(cx - W * 0.3, H * 0.29), (cx - W * 0.42, H * 0.45), (cx - W * 0.36, H * 0.58), (cx - W * 0.27, H * 0.5)], True, 0.5))
+    sil = union(sil, smooth([(cx + W * 0.3, H * 0.29), (cx + W * 0.42, H * 0.45), (cx + W * 0.36, H * 0.58), (cx + W * 0.27, H * 0.5)], True, 0.5))
+    p_.fill(sil, '#4a0610')
+    p_.cv.save(); p_.cv.clipPath(sil, skia.ClipOp.kIntersect, True)
+    p_.radial(sil, cx - W * 0.1, H * 0.35, H * 0.5, [(0, '#6a0c18', 200), (1, '#2a0208', 230)])
+    p_.cv.restore()
+    p_.line(sil, 1.6, '#d8485a', 150)                                                                   # the lit rim of the hollow
+    p_.line(moved(sil, 0.8, 1.0), 1.2, '#1a0006', 160)
+
+
+def _bench_art(pen, hv):
+    """The carved hall bench against the left wall (seat, high back panel, arms), Grandpa's hat and coat on the hooks."""
+    x0, x1, y0, y1, Ys = BENCH
+    wood = '#5a3420'
+    _hbox(pen, hv, x0, x1, Ys - 0.06, Ys, y0, y1, wood, tex='wood', lw=max(1.0, 0.006 * hv.s(y0)))
+    _hbox(pen, hv, x0 + 0.04, x1 - 0.04, 0.0, Ys - 0.06, y0 + 0.04, y0 + 0.08, _darken(wood, 0.3))
+    _hbox(pen, hv, x0 + 0.04, x1 - 0.04, 0.0, Ys - 0.06, y1 - 0.08, y1 - 0.04, _darken(wood, 0.3))
+    for yy in (y0, y1 - 0.06):
+        _hbox(pen, hv, x0, x1, Ys, Ys + 0.24, yy, yy + 0.06, wood, tex='wood')
+    bp = hv.quad([(x0 + 0.01, Ys, y0), (x0 + 0.01, Ys, y1), (x0 + 0.01, 1.12, y1), (x0 + 0.01, 1.12, y0)])
+    pen.fill(bp, _darken(wood, 0.1)); pen.texture(bp, 'wood', 0.5, 'overlay', 1.0, 0)
+    _hface(pen, hv, (x0 + 0.012, 1.12, y0), (x0 + 0.012, 1.12, y1), (x0 + 0.012, Ys, y1), (x0 + 0.012, Ys, y0), (y1 - y0) * 100, (1.12 - Ys) * 100,
+           lambda p_: [p_.line(rect(6 + i * ((y1 - y0) * 100 - 12) / 3, 8, ((y1 - y0) * 100 - 12) / 3 - 6, (1.12 - Ys) * 100 - 16), 2.0, '#1a0e06', 160)
+                       for i in range(3)])
+    pen.line(bp, 1.5, LINE, 200)
+    # hooks rail above with Grandpa's long coat and fedora
+    rail = hv.quad([(x0 + 0.005, 1.72, y0 + 0.1), (x0 + 0.005, 1.72, y1 - 0.1), (x0 + 0.005, 1.64, y1 - 0.1), (x0 + 0.005, 1.64, y0 + 0.1)])
+    pen.fill(rail, wood); pen.line(rail, 1.2, LINE, 200)
+    cy_ = y0 + 0.55
+    hx, hy = hv.p(x0 + 0.07, 1.68, cy_); s = hv.s(cy_)
+    pen.fill(oval(hx, hy, 0.015 * s), '#c9a24a')
+    coat = smooth([(hx - 0.02 * s, hy), (hx + 0.03 * s, hy), (hx + 0.13 * s, hy + 0.1 * s), (hx + 0.15 * s, hy + 0.55 * s), (hx + 0.18 * s, hy + 1.02 * s),
+                   (hx + 0.02 * s, hy + 1.06 * s), (hx - 0.13 * s, hy + 1.03 * s), (hx - 0.12 * s, hy + 0.5 * s), (hx - 0.11 * s, hy + 0.1 * s)], True, 0.35)
+    pen.fill(coat, '#34343c'); pen.texture(coat, 'fabric', 0.6, 'overlay', 1.0)
+    pen.cv.save(); pen.cv.clipPath(coat, skia.ClipOp.kIntersect, True)
+    pen.linear(coat, hx - 0.13 * s, 0, hx + 0.18 * s, 0, [(0, '#000000', 110), (0.45, '#000000', 0), (1, '#000000', 140)])
+    for sx in (-1, 1):                                                   # the sleeves hanging at its sides
+        pen.line(smooth([(hx + sx * 0.1 * s, hy + 0.12 * s), (hx + sx * 0.13 * s, hy + 0.45 * s), (hx + sx * 0.11 * s, hy + 0.72 * s)], False),
+                 max(1.0, 0.012 * s), '#16161c', 220)
+    pen.cv.restore()
+    lap = smooth([(hx - 0.06 * s, hy + 0.04 * s), (hx + 0.07 * s, hy + 0.04 * s), (hx + 0.02 * s, hy + 0.36 * s), (hx - 0.01 * s, hy + 0.36 * s)], True, 0.4)
+    pen.fill(lap, '#24242a'); pen.line(lap, max(0.8, 0.005 * s), LINE, 200)
+    for k in range(3): pen.fill(oval(hx + 0.005 * s, hy + (0.45 + 0.13 * k) * s, 0.012 * s), '#1a1410')
+    pen.line(coat, max(1.0, 0.007 * s), LINE, 220)
+    fx, fy = hv.p(x0 + 0.08, 1.74, y0 + 0.2); fs = hv.s(y0 + 0.2)
+    brim = oval(fx, fy, 0.15 * fs, 0.04 * fs)
+    crown = smooth([(fx - 0.1 * fs, fy), (fx - 0.09 * fs, fy - 0.12 * fs), (fx, fy - 0.1 * fs), (fx + 0.09 * fs, fy - 0.12 * fs), (fx + 0.1 * fs, fy)], True, 0.6)
+    pen.fill(brim, '#4a3a2a'); pen.fill(crown, '#4a3a2a'); pen.fill(rect(fx - 0.1 * fs, fy - 0.035 * fs, 0.2 * fs, 0.025 * fs), '#1a1410')
+    pen.line(union(brim, crown), max(1.0, 0.006 * fs), LINE, 220)
+
+
+def _stairs_house(pen, hv, light='#000000'):
+    """The staircase along the right wall (x 0.5..1.35) rising toward the back, its side panel with the closet door,
+    balusters, handrail and newel post (drawn far -> near; works from any camera that looks along +y)."""
+    xa, xb = STAIR_X
+    side = [(xa, 0, STAIR_Y0)]
+    for k in range(STAIR_N):
+        yk = STAIR_Y0 + k * STAIR_RUN
+        side += [(xa, (k + 1) * STAIR_RISE, yk), (xa, (k + 1) * STAIR_RISE, yk + STAIR_RUN)]
+    side += [(xa, 0, STAIR_Y0 + STAIR_N * STAIR_RUN)]
+    panel = hv.quad(side)
+    pen.fill(panel, '#8a7a62'); pen.texture(panel, 'plaster', 0.3, 'overlay', 0.8)
+    cd = hv.quad([(xa, 0, 2.4), (xa, 1.2, 2.4), (xa, 1.2, 3.05), (xa, 0, 3.05)])
+    pen.fill(cd, '#5a3a24'); pen.texture(cd, 'wood', 0.5, 'overlay', 1.0, 90); pen.line(cd, 2, LINE, 220)
+    pen.fill(oval(*hv.p(xa, 0.58, 2.52), max(1.5, 0.018 * hv.s(2.52))), '#c9a64a')
+    pen.line(panel, 2, LINE, 200)
+    for k in range(STAIR_N - 1, -1, -1):
+        yk = STAIR_Y0 + k * STAIR_RUN; Y0, Y1 = k * STAIR_RISE, (k + 1) * STAIR_RISE
+        if hv.d(yk) < 0.08: continue
+        if Y1 < hv.cam_h:
+            pen.fill(hv.quad([(xa, Y1, yk), (xb, Y1, yk), (xb, Y1, yk + STAIR_RUN), (xa, Y1, yk + STAIR_RUN)]), '#6a4228')
+            pen.fill(hv.quad([(xa + 0.15, Y1, yk), (xb - 0.12, Y1, yk), (xb - 0.12, Y1, yk + STAIR_RUN), (xa + 0.15, Y1, yk + STAIR_RUN)]), '#6a1e24')
+        r = hv.quad([(xa, Y0, yk), (xb, Y0, yk), (xb, Y1, yk), (xa, Y1, yk)])
+        pen.fill(r, '#3a2416')
+        pen.fill(hv.quad([(xa + 0.15, Y0, yk - 0.001), (xb - 0.12, Y0, yk - 0.001), (xb - 0.12, Y1, yk - 0.001), (xa + 0.15, Y1, yk - 0.001)]), '#4a141a')
+        pen.line(poly([hv.p(xa, Y1, yk), hv.p(xb, Y1, yk)], False), max(1.5, 0.012 * hv.s(yk)), '#a8804a', 230)
+        pen.line(poly([hv.p(xa + 0.15, Y0 + 0.012, yk), hv.p(xb - 0.12, Y0 + 0.012, yk)], False), max(1.0, 0.008 * hv.s(yk)), '#c9a64a', 200)
+
+    def Yh(y): return 0.95 + STAIR_RISE + (y - STAIR_Y0) * STAIR_RISE / STAIR_RUN
+    for k in range(STAIR_N):
+        for f in (0.3, 0.75):
+            y = STAIR_Y0 + k * STAIR_RUN + STAIR_RUN * f
+            if hv.d(y) < 0.1: continue
+            a_, b_ = hv.p(xa + 0.05, (k + 1) * STAIR_RISE, y), hv.p(xa + 0.05, Yh(y), y)
+            w = max(2.0, 0.024 * hv.s(y))
+            pen.seg(a_, b_, w + 2, LINE, 200); pen.seg(a_, b_, w, '#5a3420'); pen.seg((a_[0] - w * 0.2, a_[1]), (b_[0] - w * 0.2, b_[1]), w * 0.3, '#a07a50', 150)
+    ys = [y for y in np.linspace(STAIR_Y0 - 0.05, STAIR_Y0 + STAIR_N * STAIR_RUN, 12) if hv.d(y) > 0.1]
+    rail = [hv.p(xa + 0.05, Yh(y), y) for y in ys]
+    if len(rail) > 1:
+        pen.line(poly(rail, False), max(5.0, 0.055 * hv.s(1.6)), LINE); pen.line(poly(rail, False), max(3.5, 0.042 * hv.s(1.6)), '#4a2a16')
+        pen.line(poly(rail, False), max(1.0, 0.01 * hv.s(1.6)), '#c8986a', 120)
+    if hv.d(STAIR_Y0 - 0.05) > 0.12:
+        nx, ny = hv.p(xa + 0.05, 0, STAIR_Y0 - 0.05); s0 = hv.s(STAIR_Y0 - 0.05)
+        post = rect(nx - 0.06 * s0, ny - 1.15 * s0, 0.12 * s0, 1.15 * s0)
+        pen.shape(post, '#4a2a16', 3); pen.fill(rect(nx + 0.02 * s0, ny - 1.15 * s0, 0.04 * s0, 1.15 * s0), '#2a160a')
+        pen.shape(oval(nx, ny - 1.26 * s0, 0.07 * s0), '#5a3420', 3); pen.fill(oval(nx - 0.02 * s0, ny - 1.28 * s0, 0.02 * s0), '#c8986a', 160)
+
+
+HALL_PAPER, HALL_INK = '#4f6a52', '#36503a'
+
+
+def _hall_walls_art(pen, hv, den=0.0):
+    """Left wall (living-room arch, Grandpa's poster and photos), right wall above the stairs (photos up the stairs),
+    the den door at the end on the right, the ceiling and the upstairs gallery."""
+    xa, xb = HALL_X
+    yn = hv.hy + 0.3 * hv.f
+
+    def left_art(p_, W, H):
+        u = lambda y: (y - yn) * 100
+        _hframe(p_, W, H, u(2.78), H - 205, 52, 66, 'poster', fn=lambda q, w, h: _poster_art(q, w, h, '1974'))
+        for i, (y, Yc, w, h) in enumerate(((3.05, 1.82, 22, 28), (5.15, 1.6, 30, 24), (5.55, 1.88, 20, 26))):
+            _hframe(p_, W, H, u(y), H - Yc * 100, w, h, 'photo', seed=i + 1)
+    _hwall(pen, hv, (xa, yn), (xa, HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+           holes=[(ARCH_Y[0] - yn, 0.0, ARCH_Y[1] - yn, 2.3, 'arch')], art=left_art, rail=2.2, seed=1)
+
+    def right_art(p_, W, H):
+        u = lambda y: (y - yn) * 100
+        for i in range(5):
+            y = 1.3 + i * 0.62; Yc = 1.75 + (y - STAIR_Y0) * STAIR_RISE / STAIR_RUN
+            _hframe(p_, W, H, u(y), H - (Yc + 0.3) * 100, 24 + 6 * (i % 2), 30, 'photo', seed=10 + i)
+    _hwall(pen, hv, (xb, yn), (xb, HALL_BACK), 0.0, 5.2, HALL_PAPER, HALL_INK, 'damask', 0.0,
+           holes=[(4.85 - yn, 0.0, 5.75 - yn, 2.05)], art=right_art, seed=2)
+    # den door (dark panelled, ajar by `den`)
+    dq = [(xb, 2.05, 4.85), (xb, 2.05, 5.75), (xb, 0.0, 5.75), (xb, 0.0, 4.85)]
+    pen.fill(hv.quad(dq), '#07070a')
+    ang = math.radians(80.0) * clamp(den)
+    xf = xb - 0.9 * math.sin(ang); yf = 4.85 + 0.9 * math.cos(ang)
+    leaf = [(xb, 2.05, 4.85), (xf, 2.05, yf), (xf, 0.0, yf), (xb, 0.0, 4.85)]
+    _hface(pen, hv, *leaf, 90, 205, lambda p_: (p_.fill(rect(0, 0, 90, 205), '#4a2a18'), p_.texture(rect(0, 0, 90, 205), 'wood', 0.6, 'overlay', 0.8, 90),
+                                               [p_.line(rect(12, 12 + j * 64, 66, 54), 2.0, '#1a0c06', 170) for j in range(3)],
+                                               p_.fill(oval(80, 105, 3.5), '#c9a24a')))
+    pen.line(hv.quad(leaf), 1.5, LINE, 200)
+    # ceiling over the corridor + under the landing; the stairwell opening; the gallery fascia and railing
+    _hceil(pen, hv, xa, STAIR_X[0], yn, HALL_BACK, CEIL, '#9a8e78')
+    _hceil(pen, hv, STAIR_X[0], xb, yn, 1.3, CEIL, '#9a8e78')
+    _hceil(pen, hv, STAIR_X[0], xb, 4.6, HALL_BACK, 2.66, '#9a8e78')
+    pen.fill(hv.quad([(STAIR_X[0], CEIL, 1.3), (xb, CEIL, 1.3), (xb, 5.2, 1.3), (STAIR_X[0], 5.2, 1.3)]), '#14141a')
+    pen.fill(hv.quad([(STAIR_X[0], CEIL, 1.3), (STAIR_X[0], CEIL + 0.22, 1.3), (STAIR_X[0], CEIL + 0.22, 4.6), (STAIR_X[0], CEIL, 4.6)]), '#5a4630')
+    for y in np.arange(1.45, 4.55, 0.17):
+        a_, b_ = hv.p(STAIR_X[0] + 0.02, CEIL + 0.22, y), hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, y)
+        pen.seg(a_, b_, max(2.0, 0.024 * hv.s(y)), '#5a3420')
+    pen.line(poly([hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, 1.35), hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, 4.55)], False), max(4.0, 0.05 * hv.s(1.6)), '#3a2010')
+    # the ceiling fixture (frosted bowl) base
+    fx, fy = hv.p(-0.42, CEIL, 2.6); fs = hv.s(2.6)
+    pen.fill(oval(fx, fy + 0.02 * fs, 0.12 * fs, 0.03 * fs), '#8a7a5a')
+
+
+def _poster_art(pen, w, h, kind='1974'):
+    """Framed show posters (cm frame w x h). '1974': SATURDAY MORNING with WALTER KEMP (the TV show, orange sunburst);
+    '1962': THE AMAZING WALTER KEMP & MISTER WINKS at the Palace (sepia); 'live': WALTER KEMP LIVE (teal, 60s)."""
+    cv = pen.cv
+    if kind == '1974':
+        pen.fill(rect(0, 0, w, h), '#f2c23a')
+        cx, cy = w / 2, h * 0.42
+        for k in range(14):
+            a0 = k * math.pi / 7; a1 = a0 + math.pi / 14
+            pen.fill(poly([(cx, cy), (cx + math.cos(a0) * w, cy + math.sin(a0) * w), (cx + math.cos(a1) * w, cy + math.sin(a1) * w)]), '#ef8a2a')
+        pen.fill(oval(cx, cy, w * 0.2), '#c8322a')
+        _winks_face(pen, cx, cy, w * 0.17)
+        pen.fill(rect(0, h * 0.7, w, h * 0.3), '#2a6a8a')
+        text(cv, 'SATURDAY', w / 2, h * 0.79, 900, h * 0.075, '#f4ead0', 255, 0.06)
+        text(cv, 'MORNING', w / 2, h * 0.87, 900, h * 0.075, '#f4ead0', 255, 0.06)
+        text(cv, 'WITH WALTER KEMP', w / 2, h * 0.95, 800, h * 0.045, '#f2c23a', 255, 0.08)
+    elif kind == '1962':
+        pen.fill(rect(0, 0, w, h), '#e2d0a8'); pen.texture(rect(0, 0, w, h), 'paper', 0.6, 'overlay', 0.5)
+        text(cv, 'THE PALACE', w / 2, h * 0.1, 800, h * 0.05, '#5a3a20', 255, 0.2)
+        text(cv, 'WALTER KEMP', w / 2, h * 0.24, 900, h * 0.09, '#3a2210', 255, 0.04)
+        pen.fill(oval(w / 2, h * 0.5, w * 0.26), '#5a3a20'); _winks_face(pen, w / 2, h * 0.5, w * 0.22, sepia=True)
+        text(cv, '& MISTER WINKS', w / 2, h * 0.84, 900, h * 0.07, '#3a2210', 255, 0.04)
+        text(cv, 'FIRST APPEARANCE  •  1962', w / 2, h * 0.93, 700, h * 0.035, '#5a3a20', 255, 0.12)
+    else:
+        pen.fill(rect(0, 0, w, h), '#2a7a7a')
+        text(cv, 'LIVE!', w / 2, h * 0.18, 900, h * 0.12, '#f2c23a', 255, 0.06)
+        _winks_face(pen, w / 2, h * 0.5, w * 0.24)
+        text(cv, 'WALTER KEMP', w / 2, h * 0.86, 900, h * 0.08, '#f4ead0', 255, 0.04)
+
+
+def _winks_face(pen, cx, cy, r, sepia=False, grin=0.0):
+    """Mister Winks's painted face as printed on posters, mugs and photos: red side-parted hair, pillbox cap, freckles,
+    rosy cheeks, big glossy eyes, the two slot lines of the hinged jaw and the painted grin (a graphic, not the cast rig)."""
+    c = (lambda h: mix(h, '#a08060', 0.75)) if sepia else (lambda h: h)
+    face = smooth([(cx - r * 0.78, cy - r * 0.2), (cx - r * 0.7, cy - r * 0.78), (cx, cy - r), (cx + r * 0.7, cy - r * 0.78), (cx + r * 0.78, cy - r * 0.2),
+                   (cx + r * 0.62, cy + r * 0.62), (cx, cy + r * 0.95), (cx - r * 0.62, cy + r * 0.62)], True, 0.7)
+    pen.fill(face, c('#ecc4ad')); pen.line(face, max(1.0, r * 0.04), LINE)
+    hair = smooth([(cx - r * 0.82, cy - r * 0.1), (cx - r * 0.86, cy - r * 0.75), (cx - r * 0.2, cy - r * 1.08), (cx + r * 0.6, cy - r * 0.98),
+                   (cx + r * 0.86, cy - r * 0.55), (cx + r * 0.75, cy - r * 0.42), (cx + r * 0.1, cy - r * 0.62), (cx - r * 0.45, cy - r * 0.5),
+                   (cx - r * 0.66, cy - r * 0.08)], True, 0.6)
+    pen.fill(hair, c('#b9431f')); pen.line(hair, max(1.0, r * 0.035), LINE)
+    pen.line(smooth([(cx - r * 0.3, cy - r * 0.98), (cx - r * 0.42, cy - r * 0.62)], False), max(0.8, r * 0.03), c('#7a2410'))
+    cap = rrect(cx + r * 0.05, cy - r * 1.28, r * 0.62, r * 0.36, r * 0.08)
+    pen.fill(cap, c('#7d1d2b')); pen.fill(rect(cx + r * 0.05, cy - r * 1.0, r * 0.62, r * 0.07), c('#d6b257')); pen.line(cap, max(0.8, r * 0.03), LINE)
+    for sx in (-1, 1):
+        ex, ey = cx + sx * r * 0.33, cy - r * 0.18
+        pen.fill(oval(ex, ey, r * 0.2, r * 0.23), '#ffffff' if not sepia else '#efe2c8'); pen.line(oval(ex, ey, r * 0.2, r * 0.23), max(0.8, r * 0.03), LINE)
+        pen.fill(oval(ex + r * 0.02, ey + r * 0.02, r * 0.11), c('#6f97b8')); pen.fill(oval(ex + r * 0.02, ey + r * 0.02, r * 0.055), '#0a0a10')
+        pen.fill(oval(ex - r * 0.03, ey - r * 0.04, r * 0.035), '#ffffff')
+        pen.fill(oval(cx + sx * r * 0.5, cy + r * 0.22, r * 0.17, r * 0.11), c('#d8455a'), 150)
+    for i in range(7):
+        pen.fill(oval(cx + (i - 3) * r * 0.1, cy + r * (0.08 + 0.05 * (i % 2)), r * 0.022), c('#a85a3a'), 200)
+    gw = r * (0.42 + 0.12 * grin)
+    pen.fill(smooth([(cx - gw, cy + r * 0.38), (cx, cy + r * (0.52 + 0.05 * grin)), (cx + gw, cy + r * 0.38), (cx, cy + r * 0.62)], True, 0.7), c('#b01f2d'))
+    for sx in (-1, 1):
+        pen.line(poly([(cx + sx * r * 0.3, cy + r * 0.44), (cx + sx * r * 0.32, cy + r * 0.86)], False), max(0.8, r * 0.035), '#3a2418')
+
+
+def _grandfather_clock(pen, hv, x, y, t, clock='12:40', part='case'):
+    """A tall grandfather clock against the end wall (x, y = front-centre on the floor). part 'case' (static) or 'live'
+    (the dial hands for `clock` = 'H:MM' or f(t) -> minutes past midnight, and the pendulum swinging at 0.5 Hz)."""
+    s = hv.s(y)
+    bx, by = hv.p(x, 0.0, y)
+    w = 0.5 * s
+    if part == 'case':
+        body = poly([(bx - w * 0.5, by), (bx + w * 0.5, by), (bx + w * 0.42, by - 1.45 * s), (bx + w * 0.5, by - 1.55 * s), (bx + w * 0.5, by - 2.15 * s),
+                     (bx - w * 0.5, by - 2.15 * s), (bx - w * 0.5, by - 1.55 * s), (bx - w * 0.42, by - 1.45 * s)])
+        pen.fill(body, '#4a2614'); pen.texture(body, 'wood', 0.6, 'overlay', 1.2, 90); pen.line(body, max(1.0, 0.01 * s), LINE)
+        hood = smooth([(bx - w * 0.56, by - 2.15 * s), (bx - w * 0.5, by - 2.3 * s), (bx, by - 2.4 * s), (bx + w * 0.5, by - 2.3 * s), (bx + w * 0.56, by - 2.15 * s)], True, 0.6)
+        pen.shape(hood, '#3a1c0e', max(1.0, 0.01 * s))
+        win = rrect(bx - w * 0.28, by - 1.4 * s, w * 0.56, 0.9 * s, w * 0.1)
+        pen.fill(win, '#0c0806'); pen.fill(poly([(bx - w * 0.28, by - 1.0 * s), (bx - w * 0.1, by - 1.4 * s), (bx + w * 0.02, by - 1.4 * s), (bx - w * 0.28, by - 0.8 * s)]), '#ffffff', 30)
+        pen.line(win, max(1.0, 0.008 * s), '#c9a24a')
+        pen.fill(oval(bx, by - 1.85 * s, w * 0.36), '#efe6cc'); pen.line(oval(bx, by - 1.85 * s, w * 0.36), max(1.0, 0.012 * s), '#c9a24a')
+        for k in range(12):
+            a = k * math.pi / 6
+            pen.seg((bx + math.cos(a) * w * 0.29, by - 1.85 * s + math.sin(a) * w * 0.29), (bx + math.cos(a) * w * 0.33, by - 1.85 * s + math.sin(a) * w * 0.33),
+                    max(0.8, 0.006 * s), '#2a2014')
+        return
+    # live: hands + pendulum
+    if callable(clock): mins = clock(t)
+    else:
+        hh, mm = (int(v) for v in str(clock).split(':')); mins = hh * 60 + mm + t / 60.0
+    cx, cy = bx, by - 1.85 * s
+    ah = math.radians((mins / 60.0 % 12) * 30 - 90); am = math.radians((mins % 60) * 6 - 90)
+    pen.seg((cx, cy), (cx + math.cos(ah) * w * 0.18, cy + math.sin(ah) * w * 0.18), max(1.2, 0.012 * s), '#1a1410')
+    pen.seg((cx, cy), (cx + math.cos(am) * w * 0.28, cy + math.sin(am) * w * 0.28), max(1.0, 0.008 * s), '#1a1410')
+    sw = 0.16 * math.sin(t * math.pi)                                        # 1 s period: tick on every swing end
+    px, py = cx, by - 1.38 * s
+    ex, ey = px + math.sin(sw) * 0.62 * s, py + math.cos(sw) * 0.62 * s
+    pen.cv.save(); pen.cv.clipPath(rrect(bx - w * 0.28, by - 1.4 * s, w * 0.56, 0.9 * s, w * 0.1), skia.ClipOp.kIntersect, True)
+    pen.seg((px, py), (ex, ey), max(1.0, 0.008 * s), '#b89040')
+    pen.fill(oval(ex, ey, 0.06 * s), '#c9a24a'); pen.fill(oval(ex - 0.015 * s, ey - 0.015 * s, 0.02 * s), '#fff0c0', 180)
+    pen.cv.restore()
+
+
+def pendulum_ticks(t0, t1):
+    """Grandfather-clock tick times between t0 and t1 (one per pendulum swing end, 1 s apart) -> [t] for the SFX."""
+    k = math.ceil(t0 - 0.5); out = []
+    while k + 0.5 <= t1:
+        out.append(round(k + 0.5, 3)); k += 1
+    return out
+
+
+def _beam_fn(beam):
+    """beam spec -> f(t) -> None | (x, Y, y, aim_x, aim_Y, aim_y, k): a flashlight carried at knee height. beam =
+    dict(keys=[(t, x, y), ...] (house coords on the floor plan), Y=0.5, aim=(dx, dY, dy) direction (default along the
+    walk), on=t (clicks on), off=t) or f(t) returning the tuple."""
+    if beam is None: return lambda t: None
+    if callable(beam): return beam
+    ks = sorted(beam['keys']); Yb = beam.get('Y', 0.5); on = beam.get('on', ks[0][0]); off = beam.get('off', 1e9)
+    aim = beam.get('aim')
+
+    def f(t):
+        if t < on or t > off: return None
+        if t <= ks[0][0]: x, y = ks[0][1], ks[0][2]; i = 0
+        elif t >= ks[-1][0]: x, y = ks[-1][1], ks[-1][2]; i = len(ks) - 2
+        else:
+            for i in range(len(ks) - 1):
+                if ks[i][0] <= t <= ks[i + 1][0]:
+                    u = ease_in_out((t - ks[i][0]) / max(1e-6, ks[i + 1][0] - ks[i][0]))
+                    x = lerp(ks[i][1], ks[i + 1][1], u); y = lerp(ks[i][2], ks[i + 1][2], u); break
+        if aim: ax, aY, ay = aim
+        else:
+            i = max(0, min(i, len(ks) - 2)); ax, ay = ks[i + 1][1] - ks[i][1], ks[i + 1][2] - ks[i][2]; aY = -0.15
+            n = math.hypot(ax, ay) or 1.0; ax, ay = ax / n, ay / n
+        k = clamp((t - on) / 0.05) * (1.0 - 0.06 * (0.5 + 0.5 * noise1(t * 9.0, 41)))
+        bob = 0.015 * math.sin(t * 2 * math.pi * 1.6)                           # a little walker's bob
+        return (x, Yb + bob, y, ax, aY, ay, k)
+    return f
+
+
+def _beam_layers(hv, bf, name='beam'):
+    """The knee-high flashlight: the beam cone, its pool on the floor and walls (live, depth follows it)."""
+    def depth(t):
+        b = bf(t)
+        return hv.d(b[2]) if b else 50.0
+
+    def draw(pen, t):
+        b = bf(t)
+        if not b: return
+        x, Y, y, ax, aY, ay, k = b
+        if hv.d(y) < 0.2: return
+        px, py = hv.p(x, Y, y); s = hv.s(y)
+        toward = -(ay * hv.f)                                                    # > 0: aimed back at the camera
+        yl = y + ay * 1.4
+        if hv.d(yl) > 0.2:                                                       # the pool where it lands on the floor
+            fx, fy = hv.p(x + ax * 1.4, 0.0, yl); fs = hv.s(yl)
+            pen.radial(None, fx, fy, 1.0 * fs, [(0, '#fff0c8', 150 * k), (0.45, '#ffe6b0', 60 * k), (1, '#ffe6b0', 0)], sy=0.32, clip=False)
+        pen.radial(None, px, py + 0.3 * s, 2.2 * s, [(0, '#ffe8b8', 34 * k), (1, '#ffe8b8', 0)], sy=0.6, clip=False)   # spill round it
+        if toward > 0.5:                                                         # pointed at you: a blinding disc + streak
+            g = clamp((toward - 0.5) * 2)
+            pen.glow(px, py, 0.9 * s * (0.6 + 0.4 * g), '#fff4d8', 200 * k * g)
+            pen.glow(px, py, 0.18 * s, '#ffffff', 255 * k)
+            pen.radial(None, px, py, 1.3 * s, [(0, '#fff4d8', 110 * k * g), (1, '#fff4d8', 0)], sy=0.06, clip=False)
+        else:
+            tx, ty = hv.p(x + ax * 1.0, Y + aY, y + ay * 1.0)
+            _flashlight_beam(pen, px, py, tx, ty, s, k, 0.32, 2.4 * s)
+            pen.glow(px, py, 0.22 * s, '#fff8e8', 230 * k)
+    return Layer(depth, draw, name, blur=None)
+
+
+def gp_hall(view='kitchen', light=1.0, kitchen=1.0, living=0.6, case='closed', envelope=True, latch=0.0, den=0.0, clock='12:40',
+            beam=None, tod='night', steam=1.0, chair=True, mug=True, door=0.0):
+    """Grandpa's front hall (green damask over walnut wainscot, the burgundy runner, the grandfather clock, framed show
+    posters, the stairs on the right). view:
+      'kitchen'  from just inside the front door down the hall to the KITCHEN OPENING at the end: through it, lit by the
+                 amber pendant, Grandpa's chair at the table facing you (anchor 'kitchen_chair': where Mister Winks sits),
+                 the steaming mug, the window behind; the hall bench with the black leather case (case 'closed' with the
+                 envelope taped to the lid | 'open' (the red velvet hollow) | None) and Grandpa's coat and hat on the hooks;
+                 the living-room arch (left) and the den door at the end on the right (den 0..1 ajar).
+      'door'     the reverse: from the hall toward the front door (stairs coming down on the left, the bench on the right).
+      'stairs'   from the foot of the stairs looking up (anchor 'step3': three steps up, where he sits at 3 AM).
+    light = the hall's ceiling light (level spec: number | f(t) | dict(flick=, out=, on=, off=)), kitchen = the pendant,
+    living = the living-room lamp glowing through the arch, beam = the knee-high flashlight moving down the hall
+    (dict(keys=[(t, x, y)], on=t) on the floor plan; see _beam_fn), clock = the grandfather clock ('H:MM' runs on with t,
+    or f(t) -> minutes past midnight; pendulum_ticks() gives its tick times). Lens 'lens', grade 'gp_house'
+    ('gp_dark' with the lights off)."""
+    if view == 'door': return _gp_hall_door(light, case, envelope, latch, tod, door)
+    if view == 'stairs': return _gp_stairs(light, beam, tod)
+    hv = HView(560, 470, 1.5, -0.35, 0.2, 1)
+    kf, hf, lvf = _kfn(kitchen, 21), _kfn(light, 22), _kfn(living, 23)
+    box = FRAME
+    yn = hv.hy + 0.3
+    amb = '#262c44'
+    moon = [(-0.35, 0.0, 0.9, 1.8, GP_MOON, 0.35, 0.4), (-1.35, 1.2, 1.0, 1.4, GP_MOON, 0.25)]
+    hall_l = [(-1.35, 1.6, 2.6, 2.6, GP_LAMP, 0.95), (0.5, 1.2, 2.4, 2.2, GP_LAMP, 0.75), (-0.4, 0.0, 2.6, 2.7, GP_LAMP, 0.9, 0.35),
+              (-0.42, CEIL, 2.6, 1.0, GP_LAMP, 0.75), (-0.4, 1.5, HALL_BACK, 2.4, GP_LAMP, 0.35), (-1.1, 0.6, 1.9, 1.5, GP_LAMP, 0.7),
+              (1.35, 2.2, 3.0, 2.2, GP_LAMP, 0.6)]
+    kit_l = [(-0.45, 1.2, HALL_BACK, 1.7, GP_KLAMP, 0.6), (-0.45, 0.0, 5.2, 2.0, GP_KLAMP, 0.95, 0.3), (-1.35, 0.9, 5.4, 1.3, GP_KLAMP, 0.45),
+             (0.5, 0.8, 5.0, 1.2, GP_KLAMP, 0.35), (1.35, 1.0, 5.5, 1.1, GP_KLAMP, 0.4)]
+    liv_l = [(-1.35, 1.0, ARCH_Y[0] + 0.3, 1.1, GP_LAMP, 0.55), (-0.9, 0.0, 3.9, 1.2, GP_LAMP, 0.4, 0.35)]
+    var = [('hall', hall_l, hf), ('kitchen', kit_l, kf), ('living', liv_l, lvf)]
+    # the kitchen through the opening (only what the opening can show, with room for pushes and pans)
+    ox0, oy0 = hv.p(KOPEN[0], KOPEN[2], HALL_BACK); ox1, oy1 = hv.p(KOPEN[1], 0.0, HALL_BACK)
+    kbox = (ox0 - (ox1 - ox0) * 0.9, oy0 - (oy1 - oy0) * 0.5, ox1 + (ox1 - ox0) * 0.9, oy1 + (oy1 - oy0) * 0.35)
+    L = _kitchen_layers(hv, 'hallk', kf, kbox, 'night', mug, steam, chair)
+
+    def end_art(p_):
+        def art(q, W, H):
+            _hframe(q, W, H, 165, H - 196, 34, 44, 'photo', seed=7)
+        _hwall(p_, hv, (HALL_X[0], HALL_BACK), (HALL_X[1], HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+               holes=[(KOPEN[0] - HALL_X[0], 0.0, KOPEN[1] - HALL_X[0], KOPEN[2])], art=art, rail=2.2, seed=3)
+        for jx, jf in ((KOPEN[0], 1), (KOPEN[1], -1)):                     # the opening's jambs (wall thickness)
+            if (hv.hx - jx) * jf > 0:
+                jq = hv.quad([(jx, KOPEN[2], HALL_BACK), (jx, KOPEN[2], HALL_BACK + 0.16), (jx, 0.0, HALL_BACK + 0.16), (jx, 0.0, HALL_BACK)])
+                p_.fill(jq, '#5a3820'); p_.texture(jq, 'wood', 0.4, 'overlay', 1.0, 90); p_.line(jq, 1.2, LINE, 200)
+        hq = hv.quad([(KOPEN[0], KOPEN[2], HALL_BACK), (KOPEN[1], KOPEN[2], HALL_BACK), (KOPEN[1], KOPEN[2], HALL_BACK + 0.16), (KOPEN[0], KOPEN[2], HALL_BACK + 0.16)])
+        p_.fill(hq, '#4a2e18')
+        _grandfather_clock(p_, hv, 0.85, HALL_BACK - 0.28, 0.0, clock, 'case')
+    ebox = (hv.x(HALL_X[0], HALL_BACK) - 40, hv.y(CEIL + 0.2, HALL_BACK), hv.x(HALL_X[1], HALL_BACK) + 40, hv.gy(HALL_BACK) + 30)
+    L += _lit(hv.d(HALL_BACK), end_art, 'h_end', _key('gp', 'hall', 'end'), ebox, hv, amb, moon, var)
+
+    def beyond(p_):                                                           # the dark living room through the arch
+        q = hv.quad([(HALL_X[0], 0, ARCH_Y[0]), (HALL_X[0], 2.4, ARCH_Y[0]), (HALL_X[0], 2.4, ARCH_Y[1]), (HALL_X[0], 0, ARCH_Y[1])])
+        b = q.getBounds()
+        p_.fill(rect(b.left() - 60, b.top() - 20, b.width() + 120, b.height() + 40), '#3a3448')
+        _hwall(p_, hv, (LIV_X[0], ARCH_Y[0] - 1.0), (LIV_X[0], ARCH_Y[1] + 1.0), 0.0, CEIL, '#7a6a40', '#5a4a2a', 'trellis', 0.0, seed=8)
+        _hfloor(p_, hv, LIV_X[0], HALL_X[0], ARCH_Y[0] - 1.0, ARCH_Y[1] + 1.0, 'carpet', '#5a4a3a')
+        _hbox(p_, hv, -4.0, -3.2, 0.0, 0.85, ARCH_Y[0] + 0.3, ARCH_Y[0] + 1.1, '#6a3a24')                          # an armchair back
+    abox = (hv.x(HALL_X[0], ARCH_Y[1]) - 80, hv.y(2.6, ARCH_Y[0]), hv.x(HALL_X[0], ARCH_Y[0]) + 60, hv.gy(ARCH_Y[0]) + 40)
+    L += _lit(hv.d(ARCH_Y[1]) + 1.2, beyond, 'h_arch', _key('gp', 'hall', 'arch'), abox, hv, '#1e2238', [], [('living', [(-3.0, 1.2, ARCH_Y[0] + 0.5, 2.6, GP_LAMP, 1.0)], lvf)])
+    L += _lit(3.0, lambda p_: _hall_walls_art(p_, hv, den), 'h_walls', _key('gp', 'hall', 'walls', round(den, 2)), box, hv, amb, moon, var)
+    fbox = (box[0], hv.gy(HALL_BACK) - 10, box[2], box[3])
+    L += _lit(2.9, lambda p_: _hfloor(p_, hv, HALL_X[0], HALL_X[1], yn, HALL_BACK, 'boards', '#7a5234', '#4a2e1a',
+                                       runner=(-0.95, 0.15, 0.55, 5.85, '#6a1c24', '#c8a050')), 'h_floor', _key('gp', 'hall', 'floor'), fbox, hv, amb, moon, var)
+    sbox = (hv.x(STAIR_X[0], HALL_BACK) - 40, box[1], box[2], box[3])
+    L += _lit(2.0, lambda p_: _stairs_house(p_, hv), 'h_stairs', _key('gp', 'hall', 'stairs'), sbox, hv, amb, moon, var)
+    bbox = (box[0], hv.y(2.0, BENCH[2]), hv.x(BENCH[1] + 0.2, BENCH[2]), hv.gy(BENCH[2]) + 30)
+
+    def bench(p_):
+        _bench_art(p_, hv); _case3d(p_, hv, case, envelope, latch)
+    L += _lit(hv.d(1.3), bench, 'h_bench', _key('gp', 'hall', 'bench', case, envelope, round(latch, 2)), bbox, hv, amb, moon, var)
+
+    # practicals: the ceiling bowl glowing, the kitchen opening's haze, the clock's hands and pendulum, the beam
+    def fixture(pen, t):
+        k = hf(t)
+        fx, fy = hv.p(-0.42, CEIL, 2.6); s = hv.s(2.6)
+        bowl = smooth([(fx - 0.16 * s, fy + 0.02 * s), (fx - 0.12 * s, fy + 0.09 * s), (fx, fy + 0.12 * s), (fx + 0.12 * s, fy + 0.09 * s), (fx + 0.16 * s, fy + 0.02 * s)], True, 0.6)
+        pen.fill(bowl, mix('#2e2c2a', '#fff6e0', k)); pen.line(bowl, 1.5, LINE, 200)
+        if k > 0.02: pen.glow(fx, fy + 0.07 * s, 0.6 * s, '#ffe2b0', 120 * k)
+    L.append(Layer(hv.d(2.6), fixture, 'h_fixture', blur=None))
+
+    def haze(pen, t):
+        k = kf(t)
+        if k < 0.02: return
+        cx_, cy_ = hv.p((KOPEN[0] + KOPEN[1]) / 2, 1.0, HALL_BACK); s = hv.s(HALL_BACK)
+        pen.radial(None, cx_, cy_, 1.6 * s, [(0, '#ffc070', 46 * k), (1, '#ffc070', 0)], sy=1.2, clip=False)
+    L.append(Layer(hv.d(HALL_BACK) - 0.05, haze, 'h_haze', blur=0))
+    L.append(Layer(hv.d(HALL_BACK - 0.3), lambda pen, t: _grandfather_clock(pen, hv, 0.85, HALL_BACK - 0.28, t, clock, 'live'), 'h_clock', blur=None))
+    bf = _beam_fn(beam)
+    if beam is not None: L.append(_beam_layers(hv, bf))
+    a = {'kitchen_chair': hv.anchor(GCHAIR[0], GCHAIR[1], 0.47, 'seated in Grandpa\'s chair (seat height; the table hides his legs)'),
+         'kitchen_stand': hv.anchor(GCHAIR[0], GCHAIR[1], 0.5, 'standing ON the chair seat'),
+         'kitchen_table': hv.anchor(GCHAIR[0], GCHAIR[1] - 0.3, TABLE[4], 'on the table in front of the chair (his glove)'),
+         'mug': hv.anchor(GCHAIR[0] + 0.02, GCHAIR[1] - 0.42, TABLE[4], 'the mug'),
+         'kitchen_door': hv.anchor(-0.45, HALL_BACK - 0.2, note='in the kitchen opening'),
+         'hall_mid': hv.anchor(-0.45, 3.0), 'hall_near': hv.anchor(-0.4, 1.5), 'hall_end': hv.anchor(-0.45, 5.3),
+         'case': hv.anchor((CASE[0] + CASE[1]) / 2, (CASE[2] + CASE[3]) / 2, CASE[4] + CASE[5], 'top of the case'),
+         'bench_stand': hv.anchor(-0.65, 1.5, note='standing at the bench, looking down at the case'),
+         'arch': hv.anchor(-1.2, (ARCH_Y[0] + ARCH_Y[1]) / 2, note='in the living-room arch'),
+         'stairs_low': hv.anchor(0.92, STAIR_Y0 + 2 * STAIR_RUN + 0.13, 3 * STAIR_RISE, 'three steps up'),
+         'stairs_mid': hv.anchor(0.92, STAIR_Y0 + 7 * STAIR_RUN + 0.13, 8 * STAIR_RISE),
+         'den_door': hv.anchor(1.0, 5.3, note='at the den door')}
+    paths = {'down_hall': [a['kitchen_door'], a['hall_end'], a['hall_mid'], a['hall_near']]}
+    info = {'view': hv, 'kitchen': kf, 'hall_light': hf, 'living': lvf, 'beam': bf, 'kopen': (ox0, oy0, ox1, oy1),
+            'cam_env': dict(x=(780, 1140), y=(470, 620), zoom=(1.0, 2.2), f=(1.0, 3.2), note='push down the hall to the opening')}
+    return SetPiece('gp_hall', L, a, paths, lens='lens', grade='gp_house', focus=hv.d(GCHAIR[1]), dof=1.2, cover=FRAME, info=info)
+
+
+UP_CEIL = 5.2                         # the upstairs ceiling over the stairwell
+LANDING_Y = STAIR_Y0 + STAIR_N * STAIR_RUN
+
+
+def _gp_stairs(light=0.0, beam=None, tod='night'):
+    """From the foot of the stairs looking up: the flight rising away, the banister on the left over the dark hall (the
+    kitchen opening glows at its end), the family photos climbing the right wall, the landing at the top under a tall
+    moonlit window. Anchors: step3 (three steps up, where Mister Winks sits at 3 AM, facing down), step1, step6,
+    landing, foot (where you stand). beam: his flashlight (dict(keys=[(t, x, y)], Y, aim=(dx, dY, dy)) on the plan);
+    aim it at the lens (aim=(0, 0.45, -1)) and it flares."""
+    hv = HView(540, 585, 1.5, 0.92, 0.12, 1)
+    hf = _kfn(light, 31)
+    box = FRAME
+    amb = '#202640'
+    moon = [(0.9, 3.9, 6.0, 2.4, GP_MOON, 1.1), (0.92, 2.7, 5.0, 2.2, GP_MOON, 0.8, 0.5), (1.35, 3.4, 4.6, 2.0, GP_MOON, 0.6),
+            (0.92, 1.6, 3.4, 1.6, GP_MOON, 0.35), (-0.45, 1.0, 6.0, 1.4, '#ffbf6a', 0.25)]
+    hall_l = [(0.92, 2.2, 1.6, 2.6, GP_LAMP, 0.8), (0.5, 1.4, 2.2, 2.0, GP_LAMP, 0.7)]
+    var = [('hall', hall_l, hf)]
+
+    def upper(p_):
+        def win_art(q, W, H):
+            wx0, wx1 = (0.6 + 1.35) * 100, (1.25 + 1.35) * 100
+            wv0 = H - (4.6 - 2.66) * 100; wv1 = H - (3.3 - 2.66) * 100
+            q.fill(rect(wx0 - 6, wv1, wx1 - wx0 + 12, 6), '#e8e0d0')
+        # landing back wall with the window (the night sky through it), the landing floor, the upstairs ceiling, the
+        # dark doorway of the upstairs hall on the left
+        wq = hv.quad([(0.6, 4.6, HALL_BACK), (1.25, 4.6, HALL_BACK), (1.25, 3.3, HALL_BACK), (0.6, 3.3, HALL_BACK)])
+        b = wq.getBounds()
+        p_.linear(rect(b.left(), b.top(), b.width(), b.height()), 0, b.top(), 0, b.bottom(), ['#2a3a70', '#4a5a94', '#1a2244'])
+        draw_tree(p_, b.left() + b.width() * 0.35, b.bottom() + b.height() * 0.1, b.height() * 1.1, 0.0, 77, 0.3, '#060812', None, 4)
+        _moon(p_, b.left() + b.width() * 0.68, b.top() + b.height() * 0.25, b.width() * 0.12)
+        _hwall(p_, hv, (HALL_X[0], HALL_BACK), (HALL_X[1], HALL_BACK), 2.66, UP_CEIL, HALL_PAPER, HALL_INK, 'damask', 0.0,
+               holes=[(0.6 - HALL_X[0], 3.3 - 2.66, 1.25 - HALL_X[0], 4.6 - 2.66, 'arch'), (-0.75 - HALL_X[0], 0.0, 0.1 - HALL_X[0], 2.05)], art=win_art, seed=9)
+        dq = hv.quad([(-0.75, 4.71, HALL_BACK + 0.01), (0.1, 4.71, HALL_BACK + 0.01), (0.1, 2.66, HALL_BACK + 0.01), (-0.75, 2.66, HALL_BACK + 0.01)])
+        _hfloor(p_, hv, HALL_X[0], HALL_X[1], LANDING_Y, HALL_BACK, 'boards', '#7a5234', '#4a2e1a', Y=2.66)
+        _hceil(p_, hv, HALL_X[0], HALL_X[1], 1.3, HALL_BACK, UP_CEIL, '#6a6254')
+        for i in range(2):                                                  # window muntins
+            xm = 0.6 + 0.65 * (i + 1) / 3
+            p_.seg(hv.p(xm, 3.3, HALL_BACK), hv.p(xm, 4.45, HALL_BACK), max(1.5, 0.02 * hv.s(HALL_BACK)), '#e8e0d0')
+        p_.seg(hv.p(0.6, 3.95, HALL_BACK), hv.p(1.25, 3.95, HALL_BACK), max(1.5, 0.02 * hv.s(HALL_BACK)), '#e8e0d0')
+    ubox = (box[0], box[1], box[2], hv.y(2.0, HALL_BACK))
+    L = _lit(hv.d(HALL_BACK), upper, 'st_upper', _key('gp', 'stairs', 'upper'), ubox, hv, amb, moon, var)
+
+    def walls(p_):
+        def right_art(q, W, H):
+            u = lambda y: (y - 0.22) * 100
+            for i in range(5):
+                y = 1.3 + i * 0.62; Yc = 1.75 + (y - STAIR_Y0) * STAIR_RISE / STAIR_RUN
+                _hframe(q, W, H, u(y), H - (Yc + 0.3) * 100, 24 + 6 * (i % 2), 30, 'photo', seed=10 + i)
+        _hwall(p_, hv, (HALL_X[1], 0.22), (HALL_X[1], HALL_BACK), 0.0, UP_CEIL, HALL_PAPER, HALL_INK, 'damask', 0.0, art=right_art, seed=2)
+        # the hall beyond the banister: its far end with the kitchen opening (dark), the left wall, the ceiling
+        _hwall(p_, hv, (HALL_X[0], HALL_BACK), (STAIR_X[0], HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+               holes=[(KOPEN[0] - HALL_X[0], 0.0, KOPEN[1] - HALL_X[0], KOPEN[2])], rail=2.2, seed=3)
+        oq = hv.quad([(KOPEN[0], KOPEN[2], HALL_BACK + 0.01), (KOPEN[1], KOPEN[2], HALL_BACK + 0.01), (KOPEN[1], 0, HALL_BACK + 0.01), (KOPEN[0], 0, HALL_BACK + 0.01)])
+        p_.fill(oq, '#3a2a20')
+        _hwall(p_, hv, (HALL_X[0], 0.55), (HALL_X[0], HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+               holes=[(ARCH_Y[0] - 0.55, 0.0, ARCH_Y[1] - 0.55, 2.3, 'arch')], rail=2.2, seed=1)
+        _hfloor(p_, hv, HALL_X[0], STAIR_X[0], 0.55, HALL_BACK, 'boards', '#7a5234', '#4a2e1a', runner=(-0.95, 0.15, 0.55, 5.85, '#6a1c24', '#c8a050'))
+        _hceil(p_, hv, HALL_X[0], STAIR_X[0], 0.55, HALL_BACK, CEIL, '#5a5248')
+        p_.fill(hv.quad([(STAIR_X[0], CEIL, 1.3), (STAIR_X[0], CEIL + 0.22, 1.3), (STAIR_X[0], CEIL + 0.22, HALL_BACK), (STAIR_X[0], CEIL, HALL_BACK)]), '#5a4630')
+        for y in np.arange(1.45, HALL_BACK, 0.17):
+            a_, b_ = hv.p(STAIR_X[0] + 0.02, CEIL + 0.22, y), hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, y)
+            p_.seg(a_, b_, max(2.0, 0.024 * hv.s(y)), '#5a3420')
+        p_.line(poly([hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, 1.35), hv.p(STAIR_X[0] + 0.02, CEIL + 1.1, HALL_BACK)], False), max(4.0, 0.05 * hv.s(2.0)), '#3a2010')
+    L += _lit(3.2, walls, 'st_walls', _key('gp', 'stairs', 'walls'), box, hv, amb, moon, var)
+    L += _lit(1.6, lambda p_: _stairs_house(p_, hv), 'st_flight', _key('gp', 'stairs', 'flight'), box, hv, amb, moon, var)
+    bf = _beam_fn(beam)
+    if beam is not None: L.append(_beam_layers(hv, bf))
+
+    def moonbeam(pen, t):                                       # a shaft of moonlight down the top of the flight
+        a_, b_ = hv.p(0.6, 4.6, HALL_BACK), hv.p(1.25, 4.6, HALL_BACK)
+        c_, d_ = hv.p(1.3, 2.0, 3.6), hv.p(0.55, 2.0, 3.6)
+        sh = poly([a_, b_, c_, d_])
+        pen.linear(sh, 0, a_[1], 0, c_[1], [(0, '#9fb4f0', 40), (1, '#9fb4f0', 0)])
+    L.append(Layer(hv.d(4.8), moonbeam, 'st_moonbeam', cache=_key('gp', 'stairs', 'mb'), bounds=box, blur=0))
+    st = lambda k: hv.anchor(0.92, STAIR_Y0 + (k - 1) * STAIR_RUN + 0.13, k * STAIR_RISE, 'sitting on step %d (the tread top)' % k)
+    a = {'step1': st(1), 'step3': st(3), 'step6': st(6), 'landing': hv.anchor(0.92, LANDING_Y + 0.4, 2.66, 'on the landing'),
+         'foot': hv.anchor(0.92, 0.75, note='at the foot of the stairs')}
+    info = {'view': hv, 'beam': bf, 'hall_light': hf, 'cam_env': dict(x=(860, 1060), y=(440, 640), zoom=(1.0, 1.25), f=(1.0, 1.8))}
+    return SetPiece('gp_stairs', L, a, {}, lens='lens', grade='gp_dark', focus=1.3, dof=1.6, cover=FRAME, info=info)
+
+
+def _gp_hall_door(light=1.0, case='closed', envelope=True, latch=0.0, tod='night', door=0.0):
+    """The front hall from inside, facing the front door: the door (oval glass: moonlight, or 8 AM daylight), the stairs
+    coming down on the left (their newel post by the door), the hall bench with the case on the right under Grandpa's
+    coat and hat, the arch to the living room at the right edge. door 0..1 (or f(t)) swings it open into the hall
+    (outside: the porch and the street, morning or night). Anchors: door (just inside it), bench_stand, case, mid,
+    stairs_foot."""
+    hv = HView(560, 470, 1.5, -0.4, 3.7, -1)
+    hf = _kfn(light, 32)
+    dfn = door if callable(door) else (lambda t, d=float(door): d)
+    box = FRAME
+    morning = tod == 'morning'
+    amb = '#c8ccd8' if morning else '#262c44'
+    moon = ([(-0.4, 1.4, 0.0, 2.6, '#f4f0e6', 0.8), (-0.4, 0.0, 0.9, 2.2, '#f4f0e6', 0.7, 0.35)] if morning else
+            [(-0.4, 1.4, 0.05, 1.6, GP_MOON, 0.55), (-0.4, 0.0, 0.8, 1.6, GP_MOON, 0.4, 0.35)])
+    hall_l = [(-1.35, 1.6, 2.4, 2.6, GP_LAMP, 0.9), (0.5, 1.2, 2.2, 2.2, GP_LAMP, 0.7), (-0.4, 0.0, 2.4, 2.6, GP_LAMP, 0.85, 0.35),
+              (-0.42, CEIL, 2.6, 1.0, GP_LAMP, 0.7), (-0.4, 1.4, 0.0, 2.2, GP_LAMP, 0.45), (-1.1, 0.6, 1.9, 1.5, GP_LAMP, 0.7)]
+    var = [('hall', hall_l, hf)] if not morning else []
+    DX0, DX1, DH = -0.85, 0.05, 2.1
+
+    def front(p_):
+        def art(q, W, H):
+            u0 = (HALL_X[1] - 0.05) * 100; u1 = (HALL_X[1] + 0.85) * 100
+            q.fill(rect(u0 - 4, H - (DH + 0.42) * 100, u1 - u0 + 8, 30), '#3a2414')                      # transom frame
+            q.fill(rect(u0 + 6, H - (DH + 0.36) * 100, u1 - u0 - 12, 20), '#7a8ac0' if not morning else '#f4f0e0')
+            for i in range(1, 4): q.fill(rect(u0 + i * (u1 - u0) / 4 - 1, H - (DH + 0.36) * 100, 2, 20), '#3a2414')
+            text(q.cv, '4 1 7', (u0 + u1) / 2, H - (DH + 0.21) * 100, 800, 9, '#3a2414', 230, 0.3)
+        _hwall(p_, hv, (HALL_X[1], 0.0), (HALL_X[0], 0.0), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+               holes=[(HALL_X[1] - DX1, 0.0, HALL_X[1] - DX0, DH, None, 'nocase')], art=art, rail=2.2, seed=6)
+        # what the door opens onto: porch boards, the street
+        oq = hv.quad([(DX0, DH, -0.02), (DX1, DH, -0.02), (DX1, 0, -0.02), (DX0, 0, -0.02)])
+        b = oq.getBounds()
+        p_.cv.save(); p_.cv.clipPath(oq, skia.ClipOp.kIntersect, True)
+        if morning:
+            p_.linear(oq, 0, b.top(), 0, b.bottom(), ['#b8c8dc', '#dfe4e8', '#c8c8c0'])
+        else:
+            p_.linear(oq, 0, b.top(), 0, b.bottom(), ['#0e1630', '#1c2448', '#0a0c14'])
+        hz_ = b.top() + b.height() * 0.62
+        for i, hx_ in enumerate((-0.2, 0.35, 0.8)):                     # houses across the street
+            x_ = b.left() + b.width() * hx_; w_ = b.width() * 0.42
+            p_.fill(rect(x_, hz_ - b.height() * 0.16, w_, b.height() * 0.16), ('#8a8a90', '#9a8a7a', '#7a8a8a')[i] if morning else '#0c1020')
+            p_.fill(poly([(x_ - w_ * 0.05, hz_ - b.height() * 0.16), (x_ + w_ / 2, hz_ - b.height() * 0.26), (x_ + w_ * 1.05, hz_ - b.height() * 0.16)]),
+                    '#5a4a48' if morning else '#080a14')
+        draw_tree(p_, b.left() + b.width() * 0.15, hz_, b.height() * 0.55, 0.0, 61, 0.3, '#6a6a5a' if morning else '#04060c', None, 4)
+        p_.fill(rect(b.left(), hz_, b.width(), b.height() * 0.1), '#8a8a88' if morning else '#10121a')
+        p_.fill(rect(b.left(), hz_ + b.height() * 0.1, b.width(), b.height() * 0.3), '#7a6a58' if morning else '#120e0c')
+        p_.cv.restore()
+        # the casing
+        cs = hv.quad([(DX0 - 0.09, DH + 0.09, 0.0), (DX1 + 0.09, DH + 0.09, 0.0), (DX1 + 0.09, 0, 0.0), (DX0 - 0.09, 0, 0.0)])
+        p_.line(cs, max(3.0, 0.06 * hv.s(0.0)), '#3a2414')
+    fbox = (hv.x(HALL_X[1], 0.0) - 60, hv.y(CEIL + 0.2, 0.0), hv.x(HALL_X[0], 0.0) + 60, hv.gy(0.0) + 30)
+    L = _lit(hv.d(0.0), front, 'hd_front', _key('gp', 'hdoor', 'front', tod), fbox, hv, amb, moon, var)
+
+    def leaf(pen, t):                                                     # the door: hinged on the stairs side (x = DX1)
+        o = clamp(dfn(t)); ang = math.radians(95.0) * o
+        xf = DX1 - 0.9 * math.cos(ang); yf = 0.0 + 0.9 * math.sin(ang)
+        q = [(DX1, DH, 0.0), (xf, DH, yf), (xf, 0.0, yf), (DX1, 0.0, 0.0)]
+        if o < 0.01: q = [(DX1, DH, 0.0), (DX0, DH, 0.0), (DX0, 0.0, 0.0), (DX1, 0.0, 0.0)]
+
+        def art(p_):
+            p_.fill(rect(0, 0, 90, 210), '#4a2414'); p_.texture(rect(0, 0, 90, 210), 'wood', 0.6, 'overlay', 0.8, 90)
+            p_.line(rect(14, 120, 62, 76), 2.0, '#1a0a04', 170)
+            gl = oval(45, 58, 24, 36)
+            p_.fill(gl, '#8ea0d8' if not morning else '#f4f0e4'); p_.texture(gl, 'grunge', 0.35, 'overlay', 0.5)
+            for k in range(5): p_.line(oval(45, 58, 24 - k * 4.5, 36 - k * 6.5), 0.8, '#ffffff', 60)
+            p_.line(gl, 3.0, '#2a1408')
+            p_.fill(oval(8 if o < 0.01 else 82, 110, 3.5), '#c9a24a')
+        _hface(pen, hv, *q, 90, 210, art)
+        pen.line(hv.quad(q), 1.5, LINE, 220)
+        if o > 0.01:                                                      # light through the open door across the floor
+            c = '#fff4dc' if morning else '#8fa4e0'
+            a_, b_ = hv.p(DX0, 0.0, 0.0), hv.p(DX1, 0.0, 0.0)
+            c_, d_ = hv.p(DX1 + 0.3, 0.0, 2.2), hv.p(DX0 - 0.3, 0.0, 2.2)
+            pen.linear(poly([a_, b_, c_, d_]), 0, a_[1], 0, c_[1], [(0, c, 110 * o), (1, c, 0)])
+    L.append(Layer(2.95, leaf, 'hd_door', blur=None, ref_depth=hv.d(0.3)))
+
+    def walls(p_):
+        _hwall(p_, hv, (HALL_X[0], 0.0), (HALL_X[0], 4.0), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
+               holes=[(ARCH_Y[0], 0.0, ARCH_Y[1], 2.3, 'arch')], rail=2.2, seed=1)
+        def right_art(q, W, H):
+            for i in range(3):
+                y = 1.3 + i * 0.62; Yc = 1.75 + (y - STAIR_Y0) * STAIR_RISE / STAIR_RUN
+                _hframe(q, W, H, y * 100, H - (Yc + 0.3) * 100, 24 + 6 * (i % 2), 30, 'photo', seed=10 + i)
+        _hwall(p_, hv, (HALL_X[1], 0.0), (HALL_X[1], 4.0), 0.0, UP_CEIL, HALL_PAPER, HALL_INK, 'damask', 0.0, art=right_art, seed=2)
+        _hfloor(p_, hv, HALL_X[0], HALL_X[1], 0.0, 4.0, 'boards', '#7a5234', '#4a2e1a', runner=(-0.95, 0.15, 0.55, 4.0, '#6a1c24', '#c8a050'))
+        _hceil(p_, hv, HALL_X[0], STAIR_X[0], 0.0, 4.0, CEIL, '#9a8e78')
+        _hceil(p_, hv, STAIR_X[0], HALL_X[1], 0.0, 1.3, CEIL, '#9a8e78')
+        fx, fy = hv.p(-0.42, CEIL, 2.6); fs = hv.s(2.6)
+        p_.fill(oval(fx, fy + 0.02 * fs, 0.12 * fs, 0.03 * fs), '#8a7a5a')
+    L += _lit(3.0, walls, 'hd_walls', _key('gp', 'hdoor', 'walls', tod), box, hv, amb, moon, var)
+
+    def stairs(p_):                                                       # the flight coming down toward the door
+        xa, xb = STAIR_X
+        side = [(xa, 0, STAIR_Y0)]
+        for k in range(STAIR_N):
+            yk = STAIR_Y0 + k * STAIR_RUN
+            side += [(xa, (k + 1) * STAIR_RISE, yk), (xa, (k + 1) * STAIR_RISE, yk + STAIR_RUN)]
+        ycut = hv.hy - 0.2
+        side = [q for q in side if q[2] <= ycut]
+        side += [(xa, 0.95 + STAIR_RISE + (ycut - STAIR_Y0) * STAIR_RISE / STAIR_RUN - 0.95 - 0.0, ycut), (xa, 0, ycut)]
+        sp_ = side
+        for k in range(STAIR_N):                                          # far (by the door) -> near
+            yk = STAIR_Y0 + k * STAIR_RUN; Y0, Y1 = k * STAIR_RISE, (k + 1) * STAIR_RISE
+            if hv.d(yk + STAIR_RUN) < 0.15: continue
+            p_.fill(hv.quad([(xa, Y0, yk), (xb, Y0, yk), (xb, Y1, yk), (xa, Y1, yk)]), '#3a2416')
+            if Y1 < hv.cam_h:
+                p_.fill(hv.quad([(xa, Y1, yk), (xb, Y1, yk), (xb, Y1, yk + STAIR_RUN), (xa, Y1, yk + STAIR_RUN)]), '#6a4228')
+                p_.fill(hv.quad([(xa + 0.15, Y1, yk), (xb - 0.12, Y1, yk), (xb - 0.12, Y1, yk + STAIR_RUN), (xa + 0.15, Y1, yk + STAIR_RUN)]), '#6a1e24')
+                p_.line(poly([hv.p(xa, Y1, yk), hv.p(xb, Y1, yk)], False), max(1.2, 0.01 * hv.s(yk)), '#a8804a', 220)
+        if len(sp_) > 2:
+            panel = hv.quad(sp_); p_.fill(panel, '#8a7a62'); p_.texture(panel, 'plaster', 0.3, 'overlay', 0.8); p_.line(panel, 2, LINE, 200)
+        def Yh(y): return 0.95 + STAIR_RISE + (y - STAIR_Y0) * STAIR_RISE / STAIR_RUN
+        for k in range(STAIR_N):
+            y = STAIR_Y0 + k * STAIR_RUN + STAIR_RUN * 0.5
+            if hv.d(y) < 0.25: continue
+            a_, b_ = hv.p(xa + 0.05, (k + 1) * STAIR_RISE, y), hv.p(xa + 0.05, Yh(y), y)
+            w = max(2.0, 0.024 * hv.s(y)); p_.seg(a_, b_, w + 2, LINE, 200); p_.seg(a_, b_, w, '#5a3420')
+        ys = [y for y in np.linspace(STAIR_Y0 - 0.05, LANDING_Y, 12) if hv.d(y) > 0.25]
+        if len(ys) > 1:
+            rail = [hv.p(xa + 0.05, Yh(y), y) for y in ys]
+            p_.line(poly(rail, False), max(5.0, 0.055 * hv.s(2.0)), LINE); p_.line(poly(rail, False), max(3.5, 0.042 * hv.s(2.0)), '#4a2a16')
+        nx, ny = hv.p(xa + 0.05, 0, STAIR_Y0 - 0.05); s0 = hv.s(STAIR_Y0 - 0.05)
+        p_.shape(rect(nx - 0.06 * s0, ny - 1.15 * s0, 0.12 * s0, 1.15 * s0), '#4a2a16', 3)
+        p_.shape(oval(nx, ny - 1.26 * s0, 0.07 * s0), '#5a3420', 3)
+    L += _lit(2.6, stairs, 'hd_stairs', _key('gp', 'hdoor', 'stairs', tod), box, hv, amb, moon, var)
+
+    def bench(p_):
+        _bench_art(p_, hv); _case3d(p_, hv, case, envelope, latch)
+    L += _lit(hv.d(1.9), bench, 'hd_bench', _key('gp', 'hdoor', 'bench', case, envelope, round(latch, 2), tod), box, hv, amb, moon, var)
+
+    def fixture(pen, t):
+        k = hf(t) if not morning else 0.0
+        fx, fy = hv.p(-0.42, CEIL, 2.6); s = hv.s(2.6)
+        bowl = smooth([(fx - 0.16 * s, fy + 0.02 * s), (fx - 0.12 * s, fy + 0.09 * s), (fx, fy + 0.12 * s), (fx + 0.12 * s, fy + 0.09 * s), (fx + 0.16 * s, fy + 0.02 * s)], True, 0.6)
+        pen.fill(bowl, mix('#2e2c2a' if not morning else '#b8b0a0', '#fff6e0', k)); pen.line(bowl, 1.5, LINE, 200)
+        if k > 0.02: pen.glow(fx, fy + 0.07 * s, 0.6 * s, '#ffe2b0', 120 * k)
+    L.append(Layer(hv.d(2.6), fixture, 'hd_fixture', blur=None))
+    a = {'door': hv.anchor(-0.4, 0.45, note='just inside the front door'), 'outside': hv.anchor(-0.4, -0.5, note='on the porch, in the doorway'),
+         'mid': hv.anchor(-0.45, 2.6), 'bench_stand': hv.anchor(-0.7, 1.9, note='at the bench'),
+         'case': hv.anchor((CASE[0] + CASE[1]) / 2, (CASE[2] + CASE[3]) / 2, CASE[4] + CASE[5], 'top of the case'),
+         'stairs_foot': hv.anchor(0.9, 0.6), 'stairs_low': hv.anchor(0.92, STAIR_Y0 + 2 * STAIR_RUN + 0.13, 3 * STAIR_RISE)}
+    info = {'view': hv, 'hall_light': hf, 'door': dfn, 'cam_env': dict(x=(820, 1100), y=(460, 620), zoom=(1.0, 1.25), f=(1.0, 2.0))}
+    return SetPiece('gp_hall_door', L, a, {'enter': [a['outside'], a['door'], a['mid']]}, lens='lens',
+                    grade='morning' if morning else 'gp_house', focus=2.0, dof=1.5, cover=FRAME, info=info)
+
+
+def gp_kitchen(view='table', kitchen=1.0, mug=True, steam=1.0, chair=True, tod='night', sway=0.0):
+    """Grandpa's kitchen (the same kitchen the hall and the couch look into): mint cabinets, cream teapot wallpaper,
+    black-and-cream checker floor, the red kettle, the amber glass pendant over the yellow formica table, Grandpa's
+    dark captain's chair with the red cushion at the far side facing you, the mug of coffee (still steaming) with the
+    spoon in it and the sugar bowl, the cafe curtains, the window behind the chair. view:
+      'table'  from the kitchen opening (standing): the whole table, the chair, the window
+      'chair'  seated eye height, close across the table: the chair fills the middle, the mug in front (the glove lifts
+               off the table here; push in on the face)
+    kitchen = the pendant level spec (flickers: dict(flick=...)); sway = pendant sway amplitude (m) or f(t) -> offset.
+    tod 'morning': the same kitchen in grey daylight (the last scenes: the new Owen drinks his coffee).
+    Anchors: chair (seated, seat height), chair_stand (standing on the seat), table (his glove on the table), mug,
+    beside (standing at the table's near-left corner: Mom picking up the mug)."""
+    if view == 'chair':
+        hv = HView(1050, 600, 1.12, GCHAIR[0], GCHAIR[1] - 1.95, 1)
+    else:
+        hv = HView(820, 520, 1.55, GCHAIR[0] + 0.1, HALL_BACK + 0.25, 1)
+    kf = _kfn(kitchen, 41)
+    swf = sway if callable(sway) else (lambda t, a=float(sway): a * math.sin(t * 1.3) if a else 0.0)
+    box = FRAME
+    L = _kitchen_layers(hv, 'kit_' + view, kf, box, tod, mug, steam, chair, swf)
+    a = {'chair': hv.anchor(GCHAIR[0], GCHAIR[1], 0.47, 'seated in Grandpa\'s chair (seat height)'),
+         'chair_stand': hv.anchor(GCHAIR[0], GCHAIR[1], 0.5, 'standing on the seat'),
+         'table': hv.anchor(GCHAIR[0], GCHAIR[1] - 0.3, TABLE[4], 'his glove on the table'),
+         'mug': hv.anchor(GCHAIR[0] + 0.02, GCHAIR[1] - 0.42, TABLE[4], 'the mug (rim ~0.1 m above)'),
+         'beside': hv.anchor(TABLE[0] - 0.15, TABLE[2] + 0.1, note='standing at the near-left corner of the table'),
+         'near': hv.anchor(GCHAIR[0] + 0.5, TABLE[2] - 0.4, note='standing on the near side of the table')}
+    grade = 'morning' if tod == 'morning' else 'gp_house'
+    info = {'view': hv, 'kitchen': kf, 'cam_env': dict(x=(820, 1100), y=(440, 640), zoom=(1.0, 1.3), f=(1.0, 2.6))}
+    return SetPiece('gp_kitchen', L, a, {}, lens='lens', grade=grade, focus=hv.d(GCHAIR[1]), dof=1.6 if view == 'chair' else 1.0,
+                    cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the living room
+LIV_PAPER, LIV_INK = '#a08a48', '#7a6430'
+BOOK_H = 1.85                                         # the bookcase's top (room for him to sit up there)
+TVBOX = (-5.12, -4.48, 0.62, 1.16, 5.5, 5.96)          # x0, x1, Y0, Y1, y0, y1 of the CRT set on the cabinet
+TVSCR = (-5.06, -4.66, 0.7, 1.06)                    # the picture tube's face on the TV front (x0, x1, Y0, Y1)
+LAMP_POS = (-2.38, 2.05, 1.52)                       # the floor lamp beside the couch (x, y, shade bottom Y)
+
+
+def _tv_spec(tv):
+    """tv spec -> f(t) -> (mode, level): mode 'off' | 'snow' | 'blue' | 'tape'; level 0..1 = the screen's brightness.
+    tv = None / 'off' | a mode string | dict(on=t (switches itself on), snow=0.6 (seconds of static first), blue=0.0
+    (seconds of the VCR's blue screen), mode='tape', off=t, k=1.0, pulse=f(t) -> 0..1 (the picture's brightness:
+    the laughter waves)) | f(t) -> (mode, level)."""
+    if tv is None or tv == 'off': return lambda t: ('off', 0.0)
+    if callable(tv): return tv
+    if isinstance(tv, str): return lambda t, m=tv: (m, 1.0)
+    on = tv.get('on', -1e9); sn = tv.get('snow', 0.6); bl = tv.get('blue', 0.0); off = tv.get('off', 1e9)
+    k = tv.get('k', 1.0); pulse = tv.get('pulse'); mode = tv.get('mode', 'tape')
+
+    def f(t):
+        if t < on or t >= off: return ('off', 0.0)
+        u = t - on
+        if u < 0.08: return ('snow', k * u / 0.08)
+        if u < sn: return ('snow', k)
+        if u < sn + bl: return ('blue', k)
+        return (mode, k * (pulse(t) if pulse else 1.0))
+    return f
+
+
+def _crt_face(pen, W, H, t, mode, lvl, content=None, seed=0):
+    """What is on the picture tube (a W x H frame, 4:3): 'off' (dark curved glass with the room's reflection), 'snow'
+    (static), 'blue' (the VCR's blue screen with PLAY), 'tape' (content(pen, W, H, t): the 1974 show) with scanlines,
+    a rolling bar, a soft glow and the glass curvature shading."""
+    cv = pen.cv
+    tube = rrect(0, 0, W, H, min(W, H) * 0.09)
+    cv.save(); cv.clipPath(tube, skia.ClipOp.kIntersect, True)
+    if mode == 'off' or lvl <= 0.01:
+        pen.fill(tube, '#1a201e')
+        pen.radial(tube, W * 0.4, H * 0.35, W * 0.8, [(0, '#3a4440', 255), (1, '#0e1210', 255)])
+    elif mode == 'snow':
+        pen.fill(tube, '#7a7e80')
+        pen.texture(tube, 'noise', 0.95, 'overlay', 0.08 * W / 46.0, 0.0, (t * 9731) % 512, (t * 6151) % 512)
+        pen.texture(tube, 'noise', 0.7, 'overlay', 0.13 * W / 46.0, 90.0, (t * 3313) % 512, (t * 1777) % 512)
+        for i in range(3):
+            yy = ((t * 1.7 + i * 0.37) % 1.0) * H
+            pen.fill(rect(0, yy, W, H * 0.04), '#ffffff', 60)
+    elif mode == 'blue':
+        pen.fill(tube, '#1a3ad0')
+        text(cv, 'PLAY  ▶', W * 0.08, H * 0.16, 800, H * 0.09, '#e8f0ff', 255, 0.08, 'left')
+    else:
+        pen.fill(tube, '#20140c')
+        if content is not None: content(pen, W, H, t)
+        # VHS on a CRT: a slow rolling bar, scanlines, a little snow
+        yb = ((t * 0.09 + 0.3) % 1.25 - 0.12) * H
+        pen.linear(rect(0, yb - H * 0.06, W, H * 0.12), 0, yb - H * 0.06, 0, yb + H * 0.06, [(0, '#ffffff', 0), (0.5, '#ffffff', 40), (1, '#ffffff', 0)])
+        pen.texture(tube, 'noise', 0.22, 'overlay', 0.06 * W / 46.0, 0.0, (t * 9731) % 512, (t * 6151) % 512)
+    if mode != 'off' and lvl > 0.01:
+        n = int(H / max(0.6, H / 120.0))
+        for i in range(0, n, 2):
+            pen.fill(rect(0, i * H / n, W, H / n * 0.5), '#000000', 70)
+        pen.fill(tube, '#000000', 255 * (1 - clamp(lvl)))
+    pen.radial(tube, W / 2, H / 2, W * 0.72, [(0, '#000000', 0), (0.7, '#000000', 40), (1, '#000000', 170)])     # tube falloff
+    pen.fill(poly([(W * 0.06, H * 0.08), (W * 0.42, H * 0.04), (W * 0.2, H * 0.36), (W * 0.04, H * 0.5)]), '#ffffff', 26)  # glass sheen
+    cv.restore()
+    pen.line(tube, max(0.6, W * 0.012), '#000000', 230)
+
+
+def _tv_cabinet_art(pen, hv):
+    """The walnut TV cabinet (an open shelf with the VCR, a stack of tapes), the CRT on top with its wood-grain
+    shell, the dial knobs, the rabbit-ears antenna. Static; the tube's face is drawn live (_crt_face)."""
+    _hbox(pen, hv, -5.3, -4.3, 0.0, 0.62, 5.46, 6.0, '#5a3820', top='#6a4228', tex='wood',
+          faces={'front': lambda p_, W, H: _cab_front(p_, W, H)})
+    x0, x1, Y0, Y1, y0, y1 = TVBOX
+    def tv_front(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#4a3020'); p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 0.8, 0)
+        p_.fill(rrect(3, 3, (TVSCR[1] - x0) * 100 + 3, H - 6, 4), '#1a1614')
+        kx = (TVSCR[1] - x0) * 100 + 10
+        p_.fill(rect(kx - 2, 4, W - kx - 2, H - 8), '#2a2420')
+        for j, yy in enumerate((12, 24)):
+            p_.fill(oval(kx + 5, yy, 3.6), '#c8c0b0'); p_.line(oval(kx + 5, yy, 3.6), 0.6, LINE)
+            p_.seg((kx + 5, yy), (kx + 5 + 2.6 * math.cos(j * 2.0), yy + 2.6 * math.sin(j * 2.0)), 0.6, '#2a2420')
+        for i in range(5): p_.fill(rect(kx + 1, 34 + i * 2.6, 8, 1.0), '#5a5248')
+        text(p_.cv, 'ZENITH', kx + 5, H - 6, 800, 2.2, '#c9a24a', 230, 0.1)
+    _hbox(pen, hv, x0, x1, Y0, Y1, y0, y1, '#4a3020', top='#5a3a24', tex='wood', faces={'front': tv_front})
+    ax, ay = hv.p((x0 + x1) / 2, Y1, (y0 + y1) / 2); s = hv.s((y0 + y1) / 2)
+    pen.fill(oval(ax, ay, 0.05 * s, 0.02 * s), '#1a1a1a')
+    for sgn in (-1, 1):
+        pen.line(poly([(ax, ay), (ax + sgn * 0.28 * s, ay - 0.42 * s)], False), max(1.0, 0.006 * s), '#b8bcc4')
+        pen.fill(oval(ax + sgn * 0.28 * s, ay - 0.42 * s, 0.01 * s), '#d8dce4')
+
+
+def _cab_front(p_, W, H):
+    """The cabinet face: two doors below, the open shelf above with the VCR and a stack of tapes."""
+    p_.fill(rect(4, 4, W - 8, H * 0.42), '#140c06')
+    vx, vy, vw, vh = 8, 7, W * 0.55, H * 0.2
+    p_.fill(rect(vx, vy, vw, vh), '#2a2a2e'); p_.fill(rect(vx, vy, vw, 2), '#5a5a62')
+    p_.fill(rect(vx + 3, vy + vh * 0.35, vw * 0.45, vh * 0.28), '#0a0a0c')                       # the tape slot
+    p_.fill(rect(vx + vw * 0.62, vy + vh * 0.3, vw * 0.3, vh * 0.4), '#061008')                  # the clock window
+    for i in range(4): p_.fill(rect(vx + vw * 0.08 + i * 4, vy + vh * 0.78, 3, 1.4), '#8a8a92')
+    for i in range(4):
+        p_.fill(rect(vx + vw + 6 + i * 5.5, vy + 2 + i * 0.5, 4.5, vh + 3 - i * 0.5), ('#2a2a30', '#1a2a4a', '#2a2a30', '#4a1a1a')[i])
+        p_.fill(rect(vx + vw + 6.6 + i * 5.5, vy + 6, 3.3, 6), '#e8e0d0', 200)
+    for i in range(2):
+        r = rect(6 + i * (W - 12) / 2, H * 0.5, (W - 12) / 2 - 3, H * 0.44)
+        p_.line(r, 1.4, '#000000', 140); p_.fill(oval(i * (W - 12) / 2 + (W - 12) / 2 - 6 + (6 if i == 0 else -((W - 12) / 2 - 12)), H * 0.72, 1.6), '#c9a24a')
+
+
+def _vcr_clock(pen, hv, t, blink=True):
+    """The VCR's green clock (blinking 12:00) on the cabinet shelf (live)."""
+    W = 100.0; x0 = -5.3 + (8 + 100 * 0.55 * 0.62) / 100.0
+    q0 = (x0 + 0.01, 0.62 - 0.07 - 0.2 * 0.62 * 0.3, 5.459)
+    px, py = hv.p(-5.3 + (8 + 55 * 0.62 + 55 * 0.15) / 100.0, 0.62 - (7 + 12.4 * 0.5) / 100.0, 5.455)
+    s = hv.s(5.455)
+    on = (not blink) or (t % 1.0) < 0.55
+    if on:
+        text(pen.cv, '12:00', px, py + 0.012 * s, 800, 0.028 * s, '#5aff8a', 230, 0.05)
+        pen.glow(px, py, 0.04 * s, '#3aff6a', 60)
+
+
+def _coffee_table(p_, hv):
+    """The low walnut coffee table (y 3.3..3.9) with a candy dish, TV Guide magazines and a glass ashtray."""
+    x0, x1, y0, y1 = -4.25, -3.15, 3.3, 3.9
+    for (lx, ly) in ((x0 + 0.05, y0 + 0.05), (x1 - 0.05, y0 + 0.05), (x0 + 0.05, y1 - 0.05), (x1 - 0.05, y1 - 0.05)):
+        p_.seg(hv.p(lx, 0, ly), hv.p(lx, 0.36, ly), max(2.0, 0.03 * hv.s(ly)), '#2a1408')
+    _hbox(p_, hv, x0, x1, 0.36, 0.42, y0, y1, '#5a3820', top='#7a4e2c', tex='wood')
+    cx, cy = hv.p(-3.95, 0.42, 3.6); s = hv.s(3.6)
+    p_.fill(oval(cx, cy, 0.11 * s, 0.035 * s), '#c8a838'); p_.fill(oval(cx, cy - 0.01 * s, 0.08 * s, 0.022 * s), '#e85a3a')
+    for i, c in enumerate(('#d8c8a8', '#8ab0c8')):
+        mq = hv.quad([(-3.6 + i * 0.03, 0.425 + i * 0.006, 3.45 + i * 0.02), (-3.32 + i * 0.03, 0.425 + i * 0.006, 3.45 + i * 0.02),
+                      (-3.32 + i * 0.03, 0.425 + i * 0.006, 3.75 + i * 0.02), (-3.6 + i * 0.03, 0.425 + i * 0.006, 3.75 + i * 0.02)])
+        p_.fill(mq, c); p_.line(mq, 1.0, LINE, 180)
+
+
+def _couch_art(pen, hv, side='front'):
+    """The rust velour 70s couch (seat cushions, rolled arms, tufted back) facing +y. Works from both views."""
+    x0, x1, y0, y1 = COUCH
+    c, cd = '#a4482a', '#6a2a18'
+    Ys = 0.44
+    yb, yf = y0, y1                                           # back at the front-window side, the seat front facing the TV
+    if hv.f > 0:                                              # seen from behind (from the TV it's the front)
+        pass
+    # base / skirt
+    _hbox(pen, hv, x0 + 0.05, x1 - 0.05, 0.0, Ys - 0.08, yb + 0.05, yf - 0.02, cd, tex='fabric')
+    # back rest
+    _hbox(pen, hv, x0 + 0.08, x1 - 0.08, Ys - 0.1, 0.92, yb, yb + 0.25, c, top=_lighten(c, 0.08), tex='fabric',
+          faces={'front': lambda p_, W, H: [p_.line(rrect(4 + i * (W - 8) / 3, 4, (W - 8) / 3 - 3, H - 10, 6), 1.4, '#3a1208', 160) for i in range(3)]})
+    # seat cushions (three)
+    w3 = (x1 - x0 - 0.36) / 3
+    for i in range(3):
+        cx0 = x0 + 0.18 + i * w3
+        _hbox(pen, hv, cx0 + 0.005, cx0 + w3 - 0.005, Ys - 0.08, Ys + 0.04, yb + 0.25, yf, c, top=_lighten(c, 0.1), tex='fabric')
+    # arms
+    for ax0 in (x0, x1 - 0.18):
+        _hbox(pen, hv, ax0, ax0 + 0.18, 0.0, 0.66, yb, yf, c, top=_lighten(c, 0.12), tex='fabric')
+
+
+def _floor_lamp_art(pen, hv, part='stand'):
+    """The brass floor lamp with a pleated cream drum shade beside the couch (stand static; the shade is emissive)."""
+    x, y, Yb = LAMP_POS
+    a_, b_ = hv.p(x, 0.0, y), hv.p(x, Yb + 0.05, y)
+    s = hv.s(y)
+    pen.fill(oval(a_[0], a_[1], 0.16 * s, 0.04 * s), '#8a6a2a'); pen.line(oval(a_[0], a_[1], 0.16 * s, 0.04 * s), 1.2, LINE, 200)
+    pen.seg(a_, b_, max(2.5, 0.022 * s) + 2, LINE, 220); pen.seg(a_, b_, max(2.0, 0.022 * s), '#b8903a')
+    pen.seg((a_[0] - 0.006 * s, a_[1]), (b_[0] - 0.006 * s, b_[1]), max(0.8, 0.006 * s), '#f0d890', 150)
+
+
+def _bookcase_art(pen, hv):
+    """The tall dark bookcase on the front wall (books, framed photos, a little trophy, Grandpa's photo with the
+    dummy). Its top (Y 2.3) is where Mister Winks sits at rule 5 (anchor 'bookcase_top')."""
+    x0, x1 = BOOK_X
+    y0, y1 = 0.0, 0.36
+
+    def front(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#2a160c')
+        sh = [H - 8 - i * (H - 16) / 5 for i in range(6)]       # five shelves
+        rng = np.random.default_rng(12)
+        for i in range(5):
+            top_, bot = sh[i + 1] + 3, sh[i] - 1
+            p_.fill(rect(4, top_, W - 8, bot - top_), '#120804')
+            x = 6.0
+            if i == 3:                                                  # the framed photo of Grandpa with the dummy
+                _hframe(p_, W, H, 8, bot - 26, 20, 24, 'photo', seed=3); x = 32
+            if i == 1:                                                  # a small gold trophy
+                p_.fill(rect(W - 18, bot - 4, 10, 4), '#5a4a20'); p_.fill(poly([(W - 17, bot - 4), (W - 9, bot - 4), (W - 11, bot - 14), (W - 15, bot - 14)]), '#c9a24a')
+                p_.fill(oval(W - 13, bot - 16, 4, 2.5), '#e8c860')
+            while x < W - (22 if i == 1 else 6):
+                bw = rng.uniform(2.5, 5.0); bh = (bot - top_) * rng.uniform(0.62, 0.95)
+                c_ = ('#6a1a1a', '#1a3a5a', '#3a5a2a', '#8a6a2a', '#4a2a4a', '#b8a888', '#2a2a2a')[int(rng.integers(0, 7))]
+                lean = rng.uniform(0, 1) < 0.08
+                p_.fill(rect(x, bot - bh, bw, bh), c_); p_.fill(rect(x, bot - bh + bh * 0.15, bw, 0.8), '#e8d8a0', 140)
+                x += bw + 0.4
+        for y_ in sh: p_.fill(rect(0, y_ - 2, W, 4), '#4a2a16')
+        p_.fill(rect(0, 0, 4, H), '#4a2a16'); p_.fill(rect(W - 4, 0, 4, H), '#4a2a16'); p_.fill(rect(0, 0, W, 6), '#4a2a16')
+    _hbox(pen, hv, x0, x1, 0.0, BOOK_H, y0, y1, '#3a2010', top='#4a2a16', tex='wood', faces={'front': front})
+
+
+def _living_shell(pen, hv, part='back'):
+    """Walls, floor and ceiling of the living room (house coords). part 'back' = back wall (TV wall with the doorway to
+    the kitchen), 'front' = front wall (window + drapes), plus the side walls and the floor / ceiling the view sees."""
+    xa, xb = LIV_X
+    yn = hv.hy + 0.3 * hv.f
+    if hv.f > 0:
+        # back wall (y 6.0) seen from the couch: the doorway to the kitchen (the kitchen layers show through)
+        def art(q, W, H):
+            _hframe(q, W, H, (-3.55 - xa) * 100, H - 200, 64, 46, 'landscape')
+            _hframe(q, W, H, (-4.0 - xa) * 100, H - 170, 22, 28, 'photo', seed=21)
+        _hwall(pen, hv, (xa, HALL_BACK), (xb, HALL_BACK), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9,
+               holes=[(LDOOR[0] - xa, 0.0, LDOOR[1] - xa, LDOOR[2])], art=art, rail=2.25, seed=11, wc='#4a2e1a')
+        for jx, jf in ((LDOOR[0], 1), (LDOOR[1], -1)):
+            if (hv.hx - jx) * jf > 0:
+                jq = hv.quad([(jx, LDOOR[2], HALL_BACK), (jx, LDOOR[2], HALL_BACK + 0.16), (jx, 0.0, HALL_BACK + 0.16), (jx, 0.0, HALL_BACK)])
+                pen.fill(jq, '#5a3820'); pen.line(jq, 1.2, LINE, 200)
+        _hwall(pen, hv, (xb, yn), (xb, HALL_BACK), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9,
+               holes=[(ARCH_Y[0] - yn, 0.0, ARCH_Y[1] - yn, 2.3, 'arch')], rail=2.25, seed=12, wc='#4a2e1a')
+        aq = hv.quad([(xb, 2.3, ARCH_Y[0]), (xb, 2.3, ARCH_Y[1]), (xb, 0, ARCH_Y[1]), (xb, 0, ARCH_Y[0])])
+        def lart(q, W, H):
+            _hframe(q, W, H, (3.2 - yn) * 100, H - 190, 40, 52, 'poster', fn=lambda p2, w, h: _poster_art(p2, w, h, 'live'))
+        _hwall(pen, hv, (xa, yn), (xa, HALL_BACK), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9, art=lart, rail=2.25, seed=13, wc='#4a2e1a')
+        _hfloor(pen, hv, xa, xb, yn, HALL_BACK, 'carpet', '#5a5a36')
+        _hceil(pen, hv, xa, xb, yn, HALL_BACK, CEIL, '#8a8070')
+    else:
+        # front wall (y 0) seen from the TV end: the window with drapes, the street at night beyond
+        def art(q, W, H):
+            _hframe(q, W, H, (xb * -1 + 1.35 - 0.0) * 0 + 30, H - 190, 30, 38, 'photo', seed=31)
+        _hwall(pen, hv, (xb, 0.0), (xa, 0.0), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9,
+               holes=[(xb - LWIN[1], 0.85, xb - LWIN[0], 2.1)], art=art, rail=2.25, seed=14, wc='#4a2e1a')
+        _hwall(pen, hv, (xa, yn), (xa, 0.0), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9, rail=2.25, seed=15, wc='#4a2e1a')
+        _hwall(pen, hv, (xb, 0.0), (xb, yn), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9,
+               holes=[(ARCH_Y[0], 0.0, ARCH_Y[1], 2.3, 'arch')], rail=2.25, seed=16, wc='#4a2e1a')
+        _hfloor(pen, hv, xa, xb, 0.0, yn, 'carpet', '#5a5a36')
+        _hceil(pen, hv, xa, xb, 0.0, yn, CEIL, '#8a8070')
+
+
+def _window_night(pen, hv, tod='night', t=0.0):
+    """The street through the living-room window (behind the drapes)."""
+    q = hv.quad([(LWIN[0], 2.1, -0.02), (LWIN[1], 2.1, -0.02), (LWIN[1], 0.85, -0.02), (LWIN[0], 0.85, -0.02)])
+    b = q.getBounds()
+    pen.cv.save(); pen.cv.clipPath(q, skia.ClipOp.kIntersect, True)
+    if tod == 'morning':
+        pen.linear(q, 0, b.top(), 0, b.bottom(), ['#b8c8dc', '#e0e4e6'])
+    else:
+        pen.linear(q, 0, b.top(), 0, b.bottom(), ['#0c1430', '#1a2448'])
+    hz = b.top() + b.height() * 0.66
+    for i in range(3):
+        x_ = b.left() + b.width() * (0.05 + 0.33 * i); w_ = b.width() * 0.26
+        pen.fill(rect(x_, hz - b.height() * 0.2, w_, b.height() * 0.2), '#8a8478' if tod == 'morning' else '#0c1020')
+        pen.fill(poly([(x_ - w_ * 0.05, hz - b.height() * 0.2), (x_ + w_ / 2, hz - b.height() * 0.32), (x_ + w_ * 1.05, hz - b.height() * 0.2)]),
+                 '#5a4a48' if tod == 'morning' else '#080a14')
+        if tod != 'morning' and i == 1: pen.fill(rect(x_ + w_ * 0.4, hz - b.height() * 0.13, w_ * 0.16, b.height() * 0.07), '#d9b47c')
+    _streetlamp(pen, b.left() + b.width() * 0.82, hz + b.height() * 0.05, b.height() * 0.9 / 5.0, 1, 0.0 if tod == 'morning' else 1.0)
+    pen.fill(rect(b.left(), hz, b.width(), b.height()), '#7a7a74' if tod == 'morning' else '#0e1018')
+    pen.cv.restore()
+    for i in range(1, 3):
+        xm = LWIN[0] + (LWIN[1] - LWIN[0]) * i / 3
+        pen.seg(hv.p(xm, 2.1, 0.0), hv.p(xm, 0.85, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#e8e0d0')
+    pen.seg(hv.p(LWIN[0], 1.5, 0.0), hv.p(LWIN[1], 1.5, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#e8e0d0')
+
+
+def _drapes_art(pen, hv, t=0.0, open_=0.0):
+    """Heavy rust-orange drapes either side of the front window + a sheer, on a brass rod (front wall, y ~0.08)."""
+    y = 0.1
+    for side in (-1, 1):
+        xo = LWIN[0] - 0.35 if side < 0 else LWIN[1] - 0.05
+        tl = hv.p(xo + (0.4 if side > 0 else 0.0), 2.25, y) if hv.f < 0 else hv.p(xo, 2.25, y)
+        a_ = hv.p(xo, 2.25, y); b_ = hv.p(xo + 0.42, 2.25, y)
+        xs = sorted([a_[0], b_[0]])
+        w = xs[1] - xs[0]; top = a_[1]; h = hv.p(xo, 0.05, y)[1] - top
+        _curtain(pen, xs[0], top, w, h, t, side, '#b8562a', 0.15, 31 + side, folds=6)
+    a_ = hv.p(LWIN[0] - 0.4, 2.3, y); b_ = hv.p(LWIN[1] + 0.4, 2.3, y)
+    pen.line(poly([a_, b_], False), max(2.0, 0.018 * hv.s(y)), '#b8903a')
+
+
+def _tv_screen_layer(hv, tvf, content, name='tv_screen'):
+    """The CRT's face drawn live in perspective (content: f(pen, W, H, t) for 'tape'; the default is the studio)."""
+    x0, x1, Y0, Y1 = TVSCR
+    yf = TVBOX[4] - 0.003
+    q = [(x0, Y1, yf), (x1, Y1, yf), (x1, Y0, yf), (x0, Y0, yf)] if hv.f > 0 else [(x1, Y1, yf), (x0, Y1, yf), (x0, Y0, yf), (x1, Y0, yf)]
+    W, H = (x1 - x0) * 100, (Y1 - Y0) * 100
+
+    def draw(pen, t):
+        mode, lvl = tvf(t)
+        _hface(pen, hv, *q, W, H, lambda p_: _crt_face(p_, W, H, t, mode, lvl, content or _studio_on_tv))
+    return Layer(hv.d(yf), draw, name, blur=None)
+
+
+def _tv_glow_layer(hv, tvf, name='tv_glow'):
+    def draw(pen, t):
+        mode, lvl = tvf(t)
+        if mode == 'off' or lvl <= 0.01: return
+        x, y = (TVSCR[0] + TVSCR[1]) / 2, TVBOX[4]
+        px, py = hv.p(x, (TVSCR[2] + TVSCR[3]) / 2, y); s = hv.s(y)
+        c = {'snow': '#d8e0ff', 'blue': '#4a6aff'}.get(mode, '#b8d0ff')
+        pen.radial(None, px, py, 1.4 * s, [(0, c, 70 * lvl), (0.4, c, 22 * lvl), (1, c, 0)], clip=False)
+    return Layer(hv.d(TVBOX[4]) - 0.02, draw, name, blur=0)
+
+
+def tv_level(tvf, t):
+    """0..1 light the TV throws into the room at t (for the cast's light and the room's 'tv' light layer)."""
+    m, l = tvf(t)
+    if m == 'off': return 0.0
+    flick = 0.88 + 0.12 * (0.5 + 0.5 * noise1(t * 6.0, 91))
+    return l * flick * (1.15 if m == 'snow' else 1.0)
+
+
+def gp_living(view='tv', lamp=1.0, tv=None, kitchen=1.0, steam=1.0, chair=True, mug=True, tod='night', content=None, moon=1.0):
+    """The living room (mustard trellis wallpaper over dark wainscot, olive carpet, the rust velour couch, the brass floor
+    lamp, the walnut cabinet with the CRT and the VCR, the tall bookcase on the front wall). view:
+      'tv'     from the couch (seated): the back wall with the TV on its cabinet (left), the doorway to the kitchen
+               (right of centre: through it, lit, Grandpa's chair at the table; anchor 'kitchen_chair' = Mister Winks),
+               the arch to the hall at the right edge, the bookcase's end on the left
+      'couch'  the reverse, from the TV end: the couch under the lamp, the front window with drapes, the bookcase
+               (anchor 'bookcase_top': where Mister Winks sits at rule 5), Mom's spot in front of it.
+    lamp = the floor lamp's level (flicker / out: dict(flick=[(t0, d)], out=[(t0, t1)])), tv = the TV (see _tv_spec:
+    dict(on=t, snow=0.6, mode='tape', pulse=f(t)); tv_level(sp.info['tv'], t) gives the light it throws), kitchen = the
+    pendant seen through the doorway, content = f(pen, W, H, t) drawing the tape (default: the 1974 studio with the
+    audience; the cast adds Walter and the dummy through studio_figures). lens 'lens', grade 'gp_house' / 'tv_glow'."""
+    tvf = _tv_spec(tv)
+    lf, kf = _kfn(lamp, 51), _kfn(kitchen, 52)
+    tvl = lambda t: tv_level(tvf, t)
+    box = FRAME
+    amb = '#1c2034' if tod == 'night' else '#c4c8d0'
+    lamp_l = [(LAMP_POS[0], 1.3, LAMP_POS[1], 3.0, GP_LAMP, 0.95), (LAMP_POS[0], 0.0, LAMP_POS[1], 2.0, GP_LAMP, 0.85, 0.4),
+              (-3.7, 0.6, 2.0, 1.8, GP_LAMP, 0.6), (LAMP_POS[0], CEIL, LAMP_POS[1], 1.6, GP_LAMP, 0.6), (-2.0, 1.4, 0.0, 2.4, GP_LAMP, 0.5),
+              (-5.5, 1.6, 0.36, 1.8, GP_LAMP, 0.35), (-2.6, 1.3, HALL_BACK, 3.2, GP_LAMP, 0.32), (-2.8, 0.0, 3.4, 2.4, GP_LAMP, 0.45, 0.4),
+              (-1.35, 1.2, 3.0, 2.2, GP_LAMP, 0.4)]
+    tv_l = [(-4.8, 0.9, 5.5, 2.2, GP_TV, 0.62), (-3.7, 0.6, 2.3, 2.0, GP_TV, 0.42), (-4.8, 0.0, 4.6, 1.8, GP_TV, 0.45, 0.4),
+            (-4.8, CEIL, 5.0, 1.6, GP_TV, 0.25), (-6.0, 1.2, 4.8, 1.6, GP_TV, 0.3)]
+    kit_l = [(-2.08, 0.0, 5.6, 1.6, GP_KLAMP, 0.7, 0.35), (-2.08, 1.2, HALL_BACK, 1.2, GP_KLAMP, 0.5), (-1.35, 1.0, 5.2, 1.0, GP_KLAMP, 0.3)]
+    moon_l = [(-3.7, 1.2, 0.1, 2.6, GP_MOON, 0.55 * moon), (-3.7, 0.7, 1.6, 1.6, GP_MOON, 0.3 * moon)]
+    if tod == 'morning':
+        moon_l = [(-3.7, 1.4, 0.1, 4.0, '#f0f0ea', 0.9), (-3.7, 0.0, 2.0, 3.0, '#f0f0ea', 0.5, 0.4)]
+    var = [('lamp', lamp_l, lf), ('tv', tv_l, tvl), ('kitchen', kit_l, kf)] if tod == 'night' else []
+    if view == 'couch':
+        hv = HView(760, 480, 1.58, -3.6, 4.75, -1)
+        L = []
+
+        def back(p_):
+            _living_shell(p_, hv)
+            _window_night(p_, hv, tod)
+        L += _lit(hv.d(0.0), back, 'lv_room', _key('gp', 'liv', 'couch', 'room', tod), box, hv, amb, moon_l, var)
+        L += _lit(hv.d(0.12), lambda p_: _drapes_art(p_, hv), 'lv_drapes', _key('gp', 'liv', 'couch', 'drapes', tod), box, hv, amb, moon_l, var)
+        L += _lit(hv.d(0.2), lambda p_: _bookcase_art(p_, hv), 'lv_bookcase', _key('gp', 'liv', 'couch', 'book', tod), box, hv, amb, moon_l, var)
+        L += _lit(hv.d(1.9), lambda p_: _couch_art(p_, hv), 'lv_couch', _key('gp', 'liv', 'couch', 'couch', tod), box, hv, amb, moon_l, var)
+
+        table = lambda p_: _coffee_table(p_, hv)
+        L += _lit(hv.d(3.6), table, 'lv_table', _key('gp', 'liv', 'couch', 'table', tod), box, hv, amb, moon_l, var)
+        L += _lit(hv.d(LAMP_POS[1]), lambda p_: _floor_lamp_art(p_, hv), 'lv_lamp_stand', _key('gp', 'liv', 'couch', 'lstand', tod), box, hv, amb, moon_l, var)
+        sx, sy = hv.p(LAMP_POS[0], LAMP_POS[2], LAMP_POS[1]); ss = hv.s(LAMP_POS[1])
+        L.append(Layer(hv.d(LAMP_POS[1]) - 0.01, lambda pen, t: (_lamp_shade(pen, sx, sy, ss, lf(t)),
+                                                                pen.glow(sx, sy - 0.15 * ss, 0.9 * ss, '#ffd8a0', 70 * lf(t)) if lf(t) > 0.02 else None),
+                       'lv_shade', blur=None))
+        a = {'bookcase_top': hv.anchor((BOOK_X[0] + BOOK_X[1]) / 2, 0.2, BOOK_H, 'sitting on top of the bookcase'),
+             'mom': hv.anchor(-4.75, 1.3, note='standing in front of the bookcase'),
+             'couch_l': hv.anchor(-4.2, 1.9, 0.44, 'seated (couch, left)'), 'couch_m': hv.anchor(-3.7, 1.9, 0.44, 'seated (middle)'),
+             'couch_r': hv.anchor(-3.15, 1.9, 0.44, 'seated (right, by the lamp)'), 'window': hv.anchor(-3.7, 0.55, note='at the front window (behind the couch)'),
+             'you': hv.anchor(-3.4, 3.8, note='standing near the coffee table')}
+        info = {'view': hv, 'lamp': lf, 'tv': tvf, 'kitchen': kf, 'cam_env': dict(x=(800, 1120), y=(420, 640), zoom=(1.0, 1.3), f=(1.0, 2.4))}
+        return SetPiece('gp_living', L, a, {}, lens='lens', grade='gp_house' if tod == 'night' else 'morning', focus=3.0, dof=1.2, cover=FRAME, info=info)
+    # view 'tv' (from the couch)
+    hv = HView(900, 520, 1.12, -3.7, 2.05, 1)
+    dx0, dy0 = hv.p(LDOOR[0], LDOOR[2], HALL_BACK); dx1, dy1 = hv.p(LDOOR[1], 0.0, HALL_BACK)
+    kbox = (dx0 - (dx1 - dx0) * 1.2, dy0 - (dy1 - dy0) * 0.5, dx1 + (dx1 - dx0) * 1.2, dy1 + (dy1 - dy0) * 0.35)
+    L = _kitchen_layers(hv, 'livk', kf, kbox, tod, mug, steam, chair)
+    L += _lit(hv.d(HALL_BACK), lambda p_: _living_shell(p_, hv), 'lv_room', _key('gp', 'liv', 'tv', 'room', tod), box, hv, amb, moon_l, var)
+
+    def beyond_arch(p_):
+        q = hv.quad([(LIV_X[1], 2.3, ARCH_Y[0]), (LIV_X[1], 2.3, ARCH_Y[1]), (LIV_X[1], 0, ARCH_Y[1]), (LIV_X[1], 0, ARCH_Y[0])])
+        b = q.getBounds(); p_.fill(rect(b.left() - 40, b.top() - 40, b.width() + 400, b.height() + 80), '#2a2a34')
+        _stairs_house(p_, hv)
+    L += _lit(hv.d(ARCH_Y[1]) + 1.5, beyond_arch, 'lv_arch', _key('gp', 'liv', 'tv', 'arch', tod), (hv.x(LIV_X[1], ARCH_Y[1]) - 60, box[1], box[2], box[3]),
+              hv, '#141826', [], [('kitchen', [(0.0, 1.0, 5.5, 2.0, GP_KLAMP, 0.4)], kf)])
+    L += _lit(hv.d(5.73), lambda p_: _tv_cabinet_art(p_, hv), 'lv_tvset', _key('gp', 'liv', 'tv', 'tvset', tod), box, hv, amb, moon_l, var)
+    L.append(_tv_screen_layer(hv, tvf, content))
+    L.append(_tv_glow_layer(hv, tvf))
+    L.append(Layer(hv.d(5.45), lambda pen, t: _vcr_clock(pen, hv, t), 'lv_vcr_clock', blur=None))
+    L += _lit(hv.d(3.6), lambda p_: _coffee_table(p_, hv), 'lv_table', _key('gp', 'liv', 'tv', 'table', tod), box, hv, amb, moon_l, var)
+    a = {'kitchen_chair': hv.anchor(GCHAIR[0], GCHAIR[1], 0.47, 'Grandpa\'s chair through the doorway (seat height)'),
+         'kitchen_stand': hv.anchor(GCHAIR[0], GCHAIR[1], 0.5, 'standing on the chair seat'),
+         'kitchen_door': hv.anchor((LDOOR[0] + LDOOR[1]) / 2, HALL_BACK - 0.25, note='in the doorway to the kitchen'),
+         'tv_stand': hv.anchor(-4.0, 5.0, note='standing by the TV'), 'room_mid': hv.anchor(-3.4, 3.9),
+         'arch': hv.anchor(-1.6, (ARCH_Y[0] + ARCH_Y[1]) / 2, note='in the arch to the hall')}
+    info = {'view': hv, 'lamp': lf, 'tv': tvf, 'tv_level': tvl, 'kitchen': kf,
+            'tv_screen': [hv.p(TVSCR[0], TVSCR[3], TVBOX[4]), hv.p(TVSCR[1], TVSCR[2], TVBOX[4])],
+            'kdoor': (dx0, dy0, dx1, dy1), 'cam_env': dict(x=(700, 1300), y=(440, 620), zoom=(1.0, 1.3), f=(1.0, 3.4))}
+    return SetPiece('gp_living', L, a, {}, lens='lens', grade='gp_house' if tod == 'night' else 'morning', focus=hv.d(GCHAIR[1]), dof=0.8,
+                    cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the 1974 TV studio
+STUDIO_STOOL = (960, 760)               # design point: the stool's seat top (Walter sits here, the dummy on his knee)
+
+
+def laugh_waves(times, dur=2.6, peak=1.0):
+    """Studio laughter envelope -> f(t) 0..1: one roaring wave per start time (fast swell ~0.35 s, a ragged tail)."""
+    ts = sorted(times)
+
+    def f(t):
+        v = 0.0
+        for t0 in ts:
+            u = t - t0
+            if 0 <= u < dur * 1.6:
+                env = clamp(u / 0.35) * math.exp(-max(0.0, u - 0.6) / (dur * 0.45))
+                v = max(v, peak * env * (0.86 + 0.14 * noise1(t * 7.0, 77)))
+        return clamp(v)
+    return f
+
+
+def _bubble_text(pen, s, x, y, size, fill='#ffd23a', edge='#c8261e', shadow='#5a1a10', spacing=0.02, weight=900):
+    """Chunky 70s show lettering: a fat outline, a drop shadow and a light top edge."""
+    cv = pen.cv
+    for (dx, dy, c, w) in ((size * 0.06, size * 0.08, shadow, size * 0.22), (0, 0, edge, size * 0.2)):
+        f = skia.Font(typeface(weight), size)
+        tw = text_width(s, weight, size, spacing)
+        p = skia.Paint(AntiAlias=True, Color=col(c), Style=skia.Paint.kStroke_Style, StrokeWidth=w, StrokeJoin=skia.Paint.kRound_Join)
+        blob = skia.TextBlob.MakeFromString(s, f)
+        cv.drawTextBlob(blob, x - tw / 2 + dx, y + dy, p)
+    text(cv, s, x, y, weight, size, fill, 255, spacing, 'center')
+    cv.save(); cv.clipRect(skia.Rect.MakeLTRB(x - 3000, y - size * 0.8, x + 3000, y - size * 0.55))
+    text(cv, s, x, y, weight, size, '#fff6c8', 200, spacing, 'center'); cv.restore()
+
+
+def _cloud_cutout(pen, x, y, w, seed=0):
+    bumps = [(x - w * 0.32, y, w * 0.2), (x - w * 0.1, y - w * 0.12, w * 0.24), (x + w * 0.16, y - w * 0.08, w * 0.22), (x + w * 0.34, y + w * 0.02, w * 0.16)]
+    p = rrect(x - w * 0.48, y - w * 0.02, w * 0.96, w * 0.2, w * 0.1)
+    for (bx, by, br) in bumps: p = union(p, oval(bx, by, br))
+    pen.fill(moved(p, w * 0.03, w * 0.04), '#000000', 60)
+    pen.fill(p, '#f6f2e6'); pen.line(p, max(2.0, w * 0.018), '#3a7ac8')
+    pen.fill(oval(x - w * 0.1, y - w * 0.18, w * 0.08, w * 0.04), '#ffffff', 200)
+
+
+def _studio_static(pen, era=1974):
+    """The stage of 'Saturday Morning with Walter Kemp' (1920 x 1080 design, drawn over -260..2180 x -160..1240):
+    a sunburst flat with cardboard clouds, hills and lollipop trees, the marquee sign, the teal riser with stars, the
+    stool, the little side table with a glass of milk. Painted bright: the VHS grade (vhs74) and fx['vhs'] age it."""
+    x0, y0, x1, y1 = -260, -160, 2180, 1240
+    cx, cy = 960, 470
+    pen.fill(rect(x0, y0, x1 - x0, y1 - y0), '#f0a838')
+    for k in range(24):                                                          # the sunburst
+        a0 = k * math.pi / 12; a1 = a0 + math.pi / 24
+        pen.fill(poly([(cx, cy), (cx + math.cos(a0) * 2600, cy + math.sin(a0) * 2600), (cx + math.cos(a1) * 2600, cy + math.sin(a1) * 2600)]), '#f6c64a')
+    pen.radial(None, cx, cy, 1300, [(0, '#fff2c0', 150), (1, '#fff2c0', 0)], clip=False)
+    # rainbow arc
+    for i, c in enumerate(('#e8463a', '#f2963a', '#f6d23a', '#5ab05a', '#3a8ad8', '#7a5ac8')):
+        r = 720 - i * 34
+        pen.line(smooth([(cx + math.cos(a) * r, cy + 150 + math.sin(a) * r * 0.75) for a in np.linspace(math.pi * 1.05, math.pi * 1.95, 14)], False), 34, c)
+    for (x, y, w, sd) in ((330, 230, 380, 1), (1600, 180, 420, 2), (1250, 360, 260, 3), (620, 420, 220, 4)):
+        _cloud_cutout(pen, x, y, w, sd)
+    # hills + lollipop trees
+    for (hx, hy, hw, c) in ((300, 820, 900, '#5ab04a'), (1650, 800, 1000, '#4a9a3a'), (960, 860, 1400, '#6ac05a')):
+        h = smooth([(hx - hw * 0.6, 1300), (hx - hw * 0.5, hy + 60), (hx, hy - 80), (hx + hw * 0.5, hy + 60), (hx + hw * 0.6, 1300)], True, 0.6)
+        pen.fill(h, c); pen.line(h, 5, '#2a5a2a')
+    for (tx, ty, s, c) in ((180, 720, 1.0, '#3a8a3a'), (1760, 690, 1.15, '#e8463a'), (1540, 760, 0.8, '#3a8a3a'), (420, 770, 0.75, '#f2963a')):
+        pen.fill(rect(tx - 9 * s, ty, 18 * s, 160 * s), '#8a5a2a'); pen.line(rect(tx - 9 * s, ty, 18 * s, 160 * s), 3, LINE)
+        pen.fill(oval(tx, ty - 40 * s, 80 * s), c); pen.line(oval(tx, ty - 40 * s, 80 * s), 5, LINE)
+        pen.line(smooth([(tx - 50 * s, ty - 50 * s), (tx, ty - 90 * s), (tx + 40 * s, ty - 40 * s)], False), 4, '#ffffff', 90)
+    # the riser: teal with gold stars, a lip
+    rs = rect(x0, 840, x1 - x0, y1 - 840)
+    pen.fill(rs, '#1f8a8a'); pen.linear(rs, 0, 840, 0, 1100, [(0, '#000000', 0), (1, '#000000', 120)])
+    pen.fill(rect(x0, 832, x1 - x0, 22), '#f2c23a'); pen.line(rect(x0, 832, x1 - x0, 22), 3, LINE)
+    for i in range(14):
+        sx = x0 + 90 + i * 180; sy = 950 + (i % 2) * 70
+        st = poly([(sx + math.cos(a) * (26 if j % 2 == 0 else 11), sy + math.sin(a) * (26 if j % 2 == 0 else 11))
+                   for j, a in enumerate(np.linspace(-math.pi / 2, 1.5 * math.pi, 11)[:-1])])
+        pen.fill(st, '#f2d24a', 230)
+    # the stool (chrome legs, red seat) and the side table with a glass of milk
+    sx, sy = STUDIO_STOOL
+    for dx in (-48, 48, -20, 20):
+        pen.line(poly([(sx + dx * 0.6, sy + 10), (sx + dx, 850)], False), 9, LINE); pen.line(poly([(sx + dx * 0.6, sy + 10), (sx + dx, 850)], False), 6, '#c8ccd4')
+    pen.line(oval(sx, sy + 70, 40, 8), 5, '#c8ccd4')
+    seat = oval(sx, sy, 62, 17)
+    pen.fill(rect(sx - 62, sy, 124, 14), '#8a1a1a'); pen.fill(seat, '#d8322a'); pen.line(union(seat, rect(sx - 62, sy, 124, 14)), 4, LINE)
+    tx, ty = 1290, 740
+    pen.fill(rect(tx - 6, ty, 12, 100), '#c8ccd4'); pen.line(rect(tx - 6, ty, 12, 100), 3, LINE)
+    pen.fill(oval(tx, ty, 70, 14), '#e8463a'); pen.line(oval(tx, ty, 70, 14), 3, LINE)
+    pen.fill(rrect(tx - 16, ty - 64, 32, 62, 5), '#f6f4ee'); pen.fill(rect(tx - 16, ty - 64, 32, 14), '#ffffff', 120); pen.line(rrect(tx - 16, ty - 64, 32, 62, 5), 3, LINE)
+
+
+def _studio_sign(pen, t=0.0, live=False, chase=1.0):
+    """The marquee sign over the stage: SATURDAY MORNING (bubble letters) on a rounded red board ringed with bulbs, the
+    'with WALTER KEMP' ribbon. live=True draws only the bulbs (chasing)."""
+    bx, by, bw, bh = 470, 40, 980, 250
+    if not live:
+        board = rrect(bx, by, bw, bh, 70)
+        pen.fill(moved(board, 10, 14), '#000000', 90); pen.fill(board, '#c8261e'); pen.line(board, 7, LINE)
+        pen.fill(rrect(bx + 26, by + 26, bw - 52, bh - 52, 50), '#e8463a')
+        _bubble_text(pen, 'SATURDAY', 960, by + 112, 92)
+        _bubble_text(pen, 'MORNING', 960, by + 205, 92)
+        rb = poly([(620, 300), (1300, 300), (1340, 338), (1300, 376), (620, 376), (580, 338)])
+        pen.fill(moved(rb, 6, 8), '#000000', 80); pen.fill(rb, '#2a6ab0'); pen.line(rb, 5, LINE)
+        text(pen.cv, 'with WALTER KEMP', 960, 354, 900, 44, '#f6f2e6', 255, 0.04)
+        return
+    n = 34
+    for i in range(n):
+        u = i / n
+        per = 2 * (bw + bh); d = u * per
+        if d < bw: x, y = bx + d, by
+        elif d < bw + bh: x, y = bx + bw, by + d - bw
+        elif d < 2 * bw + bh: x, y = bx + bw - (d - bw - bh), by + bh
+        else: x, y = bx, by + bh - (d - 2 * bw - bh)
+        on = chase <= 0 or ((i + int(t * 8 * chase)) % 3 != 0)
+        pen.fill(oval(x, y, 11), '#fff6d0' if on else '#8a6a3a')
+        if on: pen.glow(x, y, 26, '#ffe28a', 120)
+
+
+def _applause_sign(pen, x, y, k):
+    """The red APPLAUSE box (lit at level k)."""
+    r = rrect(x - 150, y - 42, 300, 84, 10)
+    pen.fill(moved(r, 6, 8), '#000000', 90)
+    pen.fill(r, mix('#3a0c0c', '#e8261e', k)); pen.line(r, 6, LINE)
+    text(pen.cv, 'APPLAUSE', x, y + 16, 900, 44, mix('#7a3a30', '#fff2e8', k), 255, 0.08)
+    if k > 0.05: pen.glow(x, y, 220, '#ff4a3a', 110 * k)
+
+
+def _audience(pen, t, laugh, y_base=1080, n=17, seed=0, scale=1.0, dark='#0e0a0c', rim='#f6b858'):
+    """Two rows of audience heads from behind (kids and parents), dark against the bright stage; laughter shakes them,
+    tips heads back, lifts a few clapping hands. laugh = f(t) 0..1."""
+    lv = laugh(t) if laugh else 0.0
+    for row in range(2):
+        yb = y_base + (0 if row == 0 else 70 * scale)
+        k = row * 0.25
+        for i in range(n + row):
+            x = -120 + (2160 / (n - 1)) * (i + (0.5 if row else 0.0)) + 30 * (_h(i, seed + row) - 0.5)
+            kid = _h(i, seed + 5 + row) < 0.45
+            r = (42 if kid else 56) * scale * (1.0 + 0.2 * row)
+            ph = _h(i, seed + 9) * 6.28
+            bob = lv * (14 + 10 * _h(i, seed + 3)) * scale * abs(math.sin(t * (9 + 3 * _h(i, seed + 4)) + ph))
+            tip = lv * 8 * math.sin(t * 5 + ph)
+            hy = yb - (190 if kid else 250) * scale * (1.0 + 0.15 * row) - bob
+            cv = pen.cv; cv.save(); cv.translate(x, hy); cv.rotate(tip)
+            body = smooth([(-r * 1.9, 260 * scale), (-r * 1.7, r * 1.2), (-r * 0.6, r * 0.9), (r * 0.6, r * 0.9), (r * 1.7, r * 1.2), (r * 1.9, 260 * scale)], True, 0.5)
+            pen.fill(body, mix(dark, '#2a2028', k)); pen.fill(oval(0, 0, r, r * 1.08), mix(dark, '#2a2028', k))
+            if _h(i, seed + 11) < 0.3:                                              # pigtails / a cap / big 70s hair
+                pen.fill(oval(-r * 0.95, r * 0.2, r * 0.32, r * 0.5), mix(dark, '#2a2028', k)); pen.fill(oval(r * 0.95, r * 0.2, r * 0.32, r * 0.5), mix(dark, '#2a2028', k))
+            elif _h(i, seed + 11) > 0.8:
+                pen.fill(oval(0, -r * 0.1, r * 1.35, r * 1.2), mix(dark, '#2a2028', k))
+            pen.line(smooth([(-r * 0.7, -r * 0.75), (0, -r * 1.1), (r * 0.7, -r * 0.75)], False), max(2.0, r * 0.09), rim, 120)
+            cv.restore()
+            if lv > 0.4 and _h(i, seed + 13) < 0.35:                                # clapping hands up
+                cl = abs(math.sin(t * 14 + ph))
+                hx = x + (r * 1.1 if _h(i, seed + 14) < 0.5 else -r * 1.1)
+                for sgn in (-1, 1):
+                    pen.fill(oval(hx + sgn * r * 0.25 * cl, hy - r * 0.6 - lv * 20 * scale, r * 0.26, r * 0.36), mix(dark, '#2a2028', k))
+
+
+def studio_content(figures=None, laugh=None, applause=None, era=1974, crop=True):
+    """The tape's picture as a content function f(pen, W, H, t) for a screen of W x H (4:3): the studio (cached sprite),
+    the marquee bulbs, the APPLAUSE sign (lit by applause(t) or laugh(t) > 0.35), figures(pen, t) drawn in the studio's
+    1920 x 1080 design space (Walter on the stool with the dummy on his knee: the cast), then the audience in front.
+    crop=True takes the 4:3 middle of the 16:9 stage (x 240..1680)."""
+    lf = laugh or (lambda t: 0.0)
+    af = applause or (lambda t: clamp((lf(t) - 0.35) * 3.0))
+
+    def content(pen, W, H, t):
+        cv = pen.cv; cv.save()
+        if crop: cv.scale(W / 1440.0, H / 1080.0); cv.translate(-240, 0)
+        else: cv.scale(W / 1920.0, H / 1080.0)
+        _sprite(pen, ('studio74', era), lambda p_: (_studio_static(p_, era), _studio_sign(p_)), (-260, -160, 2180, 1240))
+        _studio_sign(pen, t, live=True)
+        _applause_sign(pen, 1690 if not crop else 1500, 470, af(t))
+        if figures: figures(pen, t)
+        _audience(pen, t, lf, 1120, 13 if crop else 17)
+        cv.restore()
+    return content
+
+
+_studio_on_tv = studio_content(laugh=laugh_waves([1.0]))
+
+
+def gp_studio(view='full', laugh=None, applause=None, vhs=None, bezel=0.0, track=0.35, era=1974):
+    """'Saturday Morning with Walter Kemp', 1974, as the tape shows it, FULL FRAME (for the push into the screen):
+    the cheerful stage (sunburst, cardboard clouds, rainbow, lollipop trees, the marquee sign with chasing bulbs, the teal
+    riser with stars, the red stool, the glass of milk), the APPLAUSE box (lights with the laughter), the audience's heads
+    in the foreground shaking with each wave (laugh = f(t) 0..1, e.g. laugh_waves([t0, t1, ...])). Walter and the dummy are
+    the cast: anchor 'stool' (seat top, depth 1.0), 'knee' (where the dummy sits), 'stand' (Walter standing).
+    view 'full' (the show's wide) | 'close' (the studio camera tighter on the stool: the dummy's look into the lens).
+    The tape look is engine post fx['vhs'] (wobble, tracking band (track 0..1), chroma bleed, snow, scanlines, the CRT
+    glass curve; bezel 0..1 shows the TV's plastic round the tube) via sp.fx(t); grade 'vhs74'. vhs=False turns it off."""
+    lf = laugh or (lambda t: 0.0)
+    af = applause or (lambda t: clamp((lf(t) - 0.35) * 3.0))
+    zoom = 1.0 if view == 'full' else 1.0
+    L = [Layer(3.0, lambda pen, t: _studio_static(pen, era), 'st_stage', cache=_key('gp', 'studio', era), bounds=(-260, -160, 2180, 1240)),
+         Layer(2.6, lambda pen, t: _studio_sign(pen), 'st_sign', cache=_key('gp', 'studio', 'sign'), bounds=(380, -40, 1540, 420)),
+         Layer(2.59, lambda pen, t: _studio_sign(pen, t, live=True), 'st_bulbs', blur=None),
+         Layer(2.6, lambda pen, t: _applause_sign(pen, 1690, 470, af(t)), 'st_applause', blur=None),
+         Layer(0.62, lambda pen, t: _audience(pen, t, lf, 1120, 17), 'st_audience', blur=None)]
+
+    def spots(pen, t):
+        for (x, c) in ((420, '#fff2c8'), (1500, '#ffe0f0')):
+            pen.cone(x, -60, 30, 520, 980, c, 34, 60)
+    L.append(Layer(2.0, spots, 'st_spots', cache=_key('gp', 'studio', 'spots'), bounds=(-200, -100, 2120, 1180), blur=0))
+    a = {'stool': Anchor(STUDIO_STOOL[0], STUDIO_STOOL[1], 1.0, 760.0, 'the stool seat top (Walter sits; height = a 1.85 m adult standing on the riser)'),
+         'knee': Anchor(STUDIO_STOOL[0] + 70, STUDIO_STOOL[1] - 40, 1.0, 760.0, 'the dummy on his right knee'),
+         'stand': Anchor(STUDIO_STOOL[0] + 260, 845, 1.0, 760.0, 'standing on the riser beside the stool')}
+    use_vhs = vhs is not False
+
+    def fx(t):
+        return {'vhs': dict(t=t, track=track, bezel=bezel)} if use_vhs else {}
+    cam_hint = (960, 600, 1.0) if view == 'full' else (1010, 560, 1.7)
+    info = {'laugh': lf, 'applause': af, 'cam_home': cam_hint, 'cam_env': dict(x=(860, 1080), y=(480, 640), zoom=(1.0, 2.2), f=(1.0, 1.6))}
+    return SetPiece('gp_studio', L, a, {}, lens=None, grade='vhs74', focus=1.0, dof=0.0, cover=(-260, -160, 2180, 1240), fx=fx, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the den
+DEN = dict(W=2.0, D=3.9, CH=2.5)                     # half width, back wall distance, ceiling (den-local View coordinates)
+DEN_CHAIR = (-0.3, 2.65)                             # Grandpa's armchair (X, D): faces the door
+DEN_LAMP = (0.55, 2.85, 1.45)                         # the reading lamp beside it (X, D, shade bottom Y)
+
+
+def _vbox(pen, v, X0, X1, Y0, Y1, D0, D1, c, top=None, side=None, tex=None, faces=None, lw=None):
+    """_hbox for a plain View (camera at X = 0 looking along +D)."""
+    hv = HView(v.S, v.h, v.cam_h, 0.0, 0.0, 1, v.cx)
+    return _hbox(pen, hv, X0, X1, Y0, Y1, D0, D1, c, top, side, lw, True, tex, faces)
+
+
+def _armchair(pen, hv, x, y, face=-1, c='#2f5a3e', part='all'):
+    """Grandpa's green leather wingback armchair at (x, y) (plan coords of hv), facing -y (toward the camera) when
+    face=-1. Buttoned back, rolled arms, wings, a worn seat cushion, short mahogany legs."""
+    hw, hd = 0.44, 0.42
+    Ys = 0.46
+    yb = y + hd if face < 0 else y - hd
+    yf = y - hd if face < 0 else y + hd
+    cd = _darken(c, 0.35)
+    if part in ('all', 'back'):
+        bk = [(x - hw + 0.04, 1.22, yb), (x + hw - 0.04, 1.22, yb), (x + hw - 0.04, Ys, yb), (x - hw + 0.04, Ys, yb)]
+        _hface(pen, hv, *bk, 80, 76, lambda p_: (p_.fill(rrect(0, 0, 80, 80, 14), c), p_.texture(rect(0, 0, 80, 76), 'grunge', 0.35, 'overlay', 0.5),
+                                                [p_.fill(oval(14 + 13 * (i % 5), 14 + 14 * (i // 5), 1.6), _darken(c, 0.5)) for i in range(15)],
+                                                p_.radial(rect(0, 0, 80, 76), 40, 20, 60, [(0, '#ffffff', 40), (1, '#ffffff', 0)]),
+                                                p_.line(rrect(0, 0, 80, 80, 14), 1.5, LINE)))
+        for sgn in (-1, 1):                                                   # the wings
+            wq = hv.quad([(x + sgn * (hw - 0.02), 1.18, yb), (x + sgn * (hw + 0.02), 1.05, yb - 0.3 * (1 if face < 0 else -1)),
+                          (x + sgn * (hw + 0.02), 0.7, yb - 0.3 * (1 if face < 0 else -1)), (x + sgn * (hw - 0.02), 0.7, yb)])
+            pen.fill(wq, _lighten(c, 0.05)); pen.line(wq, 1.4, LINE, 210)
+        _hbox(pen, hv, x - hw + 0.08, x + hw - 0.08, Ys - 0.1, Ys + 0.04, min(yb, yf), max(yb, yf), c, top=_lighten(c, 0.12), tex='grunge')
+    if part in ('all', 'arms'):
+        for sgn in (-1, 1):
+            ax0 = x + sgn * hw - (0.13 if sgn > 0 else 0.0)
+            _hbox(pen, hv, ax0, ax0 + 0.13, 0.12, 0.66, min(yb, yf), max(yb, yf), c, top=_lighten(c, 0.15), tex='grunge')
+            fx, fy = hv.p(ax0 + 0.065, 0.66, yf); fs = hv.s(yf)
+            pen.fill(oval(fx, fy, 0.075 * fs, 0.05 * fs), _lighten(c, 0.1)); pen.line(oval(fx, fy, 0.075 * fs, 0.05 * fs), 1.2, LINE, 200)
+        _hbox(pen, hv, x - hw + 0.02, x + hw - 0.02, 0.1, Ys - 0.1, min(yb, yf), max(yb, yf), cd)
+        for sgn in (-1, 1):
+            a_, b_ = hv.p(x + sgn * (hw - 0.06), 0.0, yf + 0.03 * face), hv.p(x + sgn * (hw - 0.06), 0.1, yf + 0.03 * face)
+            pen.seg(a_, b_, max(2.0, 0.04 * hv.s(yf)), '#3a1a0c')
+
+
+def gp_den(lamp=1.0, hall=0.5, moon=1.0):
+    """Grandpa's den, from its door (the end of the hall): dark walnut panelling hung with his framed show posters
+    (SATURDAY MORNING 1974, THE PALACE 1962, LIVE!) and photos, the green leather wingback armchair facing you with the
+    brass reading lamp beside it (lamp: the level spec; 'The lamp goes out': dict(out=[(t0, t1)])), the oriental rug
+    (Mister Winks lies face down on it later), a side table with his pipe and glasses, a shelf of trophies with an
+    EMPTY dummy stand, a curtained window. Anchors: armchair (Owen seated: seat height), knee_front (you kneel there),
+    mom (standing at the chair's left), rug (the dummy face down), door. lens 'lens', grade 'gp_house'."""
+    hv = HView(700, 520, 1.5, 0.0, -0.3, 1)
+    lf = _kfn(lamp, 61); hf = _kfn(hall, 62)
+    W_, D_, CH_ = DEN['W'], DEN['D'], DEN['CH']
+    box = FRAME
+    amb = '#1c1e30'
+    moon_l = [(-W_, 1.3, 2.4, 1.8, GP_MOON, 0.6 * moon), (-1.0, 0.0, 2.4, 1.6, GP_MOON, 0.3 * moon, 0.4)]
+    lamp_l = [(DEN_LAMP[0], 1.2, DEN_LAMP[1], 2.4, GP_LAMP, 1.0), (DEN_LAMP[0], 0.0, DEN_LAMP[1] - 0.4, 2.0, GP_LAMP, 0.85, 0.4),
+              (DEN_CHAIR[0], 0.8, DEN_CHAIR[1] - 0.3, 1.3, GP_LAMP, 0.7), (0.3, 1.5, D_, 2.2, GP_LAMP, 0.55), (W_, 1.3, 3.0, 1.8, GP_LAMP, 0.4)]
+    hall_l = [(0.0, 0.0, 0.8, 1.6, GP_LAMP, 0.5, 0.4), (0.0, 1.2, D_, 2.4, GP_LAMP, 0.18)]
+    var = [('lamp', lamp_l, lf), ('hall', hall_l, hf)]
+
+    def room(p_):
+        def back_art(q, W, H):
+            _hframe(q, W, H, 70, H - 200, 50, 66, 'poster', fn=lambda p2, w, h: _poster_art(p2, w, h, '1974'))
+            _hframe(q, W, H, 150, H - 196, 44, 60, 'poster', fn=lambda p2, w, h: _poster_art(p2, w, h, '1962'))
+            _hframe(q, W, H, 300, H - 192, 40, 52, 'poster', fn=lambda p2, w, h: _poster_art(p2, w, h, 'live'))
+            _hframe(q, W, H, 228, H - 150, 22, 28, 'photo', seed=41)
+        _hwall(p_, hv, (-W_, D_), (W_, D_), 0.0, CH_, '#5a3420', '#2a1408', 'panel', 0.0, art=back_art, pa=200, trim='#3a1e0e', seed=21)
+        def left_art(q, W, H):
+            _hframe(q, W, H, 300, H - 170, 26, 32, 'photo', seed=42)
+        _hwall(p_, hv, (-W_, 0.25), (-W_, D_), 0.0, CH_, '#5a3420', '#2a1408', 'panel', 0.0, holes=[(1.6, 0.85, 2.7, 2.05)], art=left_art,
+               pa=200, trim='#3a1e0e', seed=22)
+        wq = hv.quad([(-W_, 2.05, 1.85), (-W_, 2.05, 2.95), (-W_, 0.85, 2.95), (-W_, 0.85, 1.85)])
+        p_.fill(wq, '#1a2650')
+        for (u0, u1) in ((1.7, 2.0), (2.55, 2.85)):                             # heavy drapes
+            dq = hv.quad([(-W_ + 0.03, 2.2, u0 + 0.05), (-W_ + 0.03, 2.2, u1 + 0.05), (-W_ + 0.03, 0.4, u1 + 0.05), (-W_ + 0.03, 0.4, u0 + 0.05)])
+            p_.fill(dq, '#5a1a1e'); p_.texture(dq, 'fabric', 0.6, 'overlay', 1.0, 90); p_.line(dq, 1.5, LINE, 200)
+        def right_art(q, W, H):
+            q.fill(rect(150, H - 160, 120, 4), '#3a1e0e'); q.fill(rect(150, H - 110, 120, 4), '#3a1e0e')
+            for i in range(4):
+                tx = 165 + i * 28
+                q.fill(poly([(tx - 4, H - 160), (tx + 4, H - 160), (tx + 2, H - 176), (tx - 2, H - 176)]), '#c9a24a'); q.fill(oval(tx, H - 179, 4), '#e8c860')
+            q.fill(rect(215, H - 156, 4, 40), '#2a1408'); q.fill(rect(207, H - 118, 20, 3), '#2a1408')       # the empty dummy stand
+            q.fill(rrect(210, H - 160, 14, 6, 2), '#2a1408')
+        _hwall(p_, hv, (W_, 0.25), (W_, D_), 0.0, CH_, '#5a3420', '#2a1408', 'panel', 0.0, art=right_art, pa=200, trim='#3a1e0e', seed=23)
+        _hfloor(p_, hv, -W_, W_, 0.25, D_, 'boards', '#6a4426', '#3a2212')
+        rug = (-1.05, 0.85, 0.9, 2.2)
+        _hface(p_, hv, (rug[0], 0.004, rug[3]), (rug[1], 0.004, rug[3]), (rug[1], 0.004, rug[2]), (rug[0], 0.004, rug[2]), 190, 155, _rug_art)
+        _hceil(p_, hv, -W_, W_, 0.25, D_, CH_, '#4a3424')
+    L = _lit(hv.d(D_), room, 'den_room', _key('gp', 'den', 'room'), box, hv, amb, moon_l, var)
+
+    def furniture(p_):
+        _hbox(p_, hv, -1.4, -0.95, 0.0, 0.58, 2.45, 2.9, '#4a2814', top='#5a3420', tex='wood')
+        px, py = hv.p(-1.17, 0.58, 2.65); s = hv.s(2.65)
+        p_.line(smooth([(px - 0.08 * s, py - 0.02 * s), (px + 0.03 * s, py), (px + 0.06 * s, py - 0.04 * s)], False), max(2.0, 0.014 * s), '#2a1408')   # pipe
+        p_.fill(oval(px + 0.07 * s, py - 0.05 * s, 0.022 * s, 0.018 * s), '#3a1a0a')
+        p_.line(oval(px - 0.1 * s, py - 0.01 * s, 0.03 * s, 0.015 * s), 1.2, '#c8b890'); p_.line(oval(px - 0.03 * s, py - 0.01 * s, 0.03 * s, 0.015 * s), 1.2, '#c8b890')
+        _armchair(p_, hv, DEN_CHAIR[0], DEN_CHAIR[1], -1, part='back')
+        _floor_lamp_den(p_, hv)
+    L += _lit(hv.d(DEN_CHAIR[1] + 0.3), furniture, 'den_chair', _key('gp', 'den', 'chair'), box, hv, amb, moon_l, var)
+    L += _lit(hv.d(DEN_CHAIR[1] - 0.45), lambda p_: _armchair(p_, hv, DEN_CHAIR[0], DEN_CHAIR[1], -1, part='arms'), 'den_arms',
+              _key('gp', 'den', 'arms'), box, hv, amb, moon_l, var)
+    sx, sy = hv.p(DEN_LAMP[0], DEN_LAMP[2], DEN_LAMP[1]); ss = hv.s(DEN_LAMP[1])
+    L.append(Layer(hv.d(DEN_LAMP[1]) - 0.02, lambda pen, t: (_lamp_shade(pen, sx, sy, ss, lf(t), '#d8c49a', 'bell'),
+                                                            pen.glow(sx, sy - 0.12 * ss, 1.0 * ss, '#ffd8a0', 80 * lf(t)) if lf(t) > 0.02 else None), 'den_shade', blur=None))
+    a = {'armchair': hv.anchor(DEN_CHAIR[0], DEN_CHAIR[1] - 0.05, 0.5, 'seated in the armchair (seat height)'),
+         'knee_front': hv.anchor(DEN_CHAIR[0] + 0.05, DEN_CHAIR[1] - 0.95, note='kneeling in front of the chair'),
+         'mom': hv.anchor(DEN_CHAIR[0] - 0.85, DEN_CHAIR[1] - 0.6, note='standing at the chair\'s left'),
+         'rug': hv.anchor(-0.1, 1.5, 0.0, 'lying face down on the rug'), 'door': hv.anchor(0.0, 0.5, note='in the doorway')}
+    info = {'view': hv, 'lamp': lf, 'hall': hf, 'cam_env': dict(x=(800, 1120), y=(440, 640), zoom=(1.0, 1.3), f=(1.0, 2.6))}
+    return SetPiece('gp_den', L, a, {}, lens='lens', grade='gp_house', focus=hv.d(DEN_CHAIR[1]), dof=1.2, cover=FRAME, info=info)
+
+
+def _rug_art(p_):
+    """An oriental rug (190 x 155 cm frame): border bands, a medallion."""
+    W, H = 190, 155
+    p_.fill(rect(0, 0, W, H), '#6a1a1e'); p_.texture(rect(0, 0, W, H), 'fabric', 0.7, 'overlay', 0.6)
+    for k, c in enumerate(('#1a2a4a', '#c89a4a', '#2a1a3a')):
+        p_.line(rect(6 + k * 7, 6 + k * 7, W - 12 - k * 14, H - 12 - k * 14), 4.5, c)
+    med = poly([(W / 2, H * 0.2), (W * 0.72, H / 2), (W / 2, H * 0.8), (W * 0.28, H / 2)])
+    p_.fill(med, '#1a2a4a'); p_.line(med, 2.0, '#c89a4a')
+    p_.fill(oval(W / 2, H / 2, 12, 9), '#c89a4a')
+    for i in range(int(W / 3)):
+        p_.seg((i * 3, 0), (i * 3, -4), 1.0, '#d8c8a0', 200); p_.seg((i * 3, H), (i * 3, H + 4), 1.0, '#d8c8a0', 200)
+
+
+def _floor_lamp_den(p_, hv):
+    x, y, Yb = DEN_LAMP
+    a_, b_ = hv.p(x, 0.0, y), hv.p(x, Yb + 0.05, y); s = hv.s(y)
+    p_.fill(oval(a_[0], a_[1], 0.15 * s, 0.04 * s), '#6a4a1a')
+    p_.seg(a_, b_, max(2.5, 0.02 * s) + 2, LINE, 220); p_.seg(a_, b_, max(2.0, 0.02 * s), '#b8903a')
+
+
+# ---------------------------------------------------------------------------------------------- your bedroom doorway (home)
+def bedroom_doorway(hall=1.0, door=0.85, moon=1.0):
+    """Your bedroom at home, months later, from your bed (lying, eye ~0.75 m): the dark room (band poster, a pennant,
+    the desk and chair with clothes over it), the bed's foot in the foreground, and the open doorway in the far wall
+    with the warm hall light behind it, so whoever stops there is a silhouette with a rim (anchor 'doorway').
+    hall = the hall light level; door = how far the door is open (0..1). lens 'lens', grade 'gp_dark'."""
+    hv = HView(700, 600, 0.78, 0.0, -0.1, 1)
+    hf = _kfn(hall, 71)
+    D_, W_, CH_ = 3.3, 1.7, 2.4
+    DXa, DXb = -0.15, 0.7
+    box = FRAME
+    amb = '#141828'
+    moon_l = [(-W_, 1.2, 2.6, 1.6, GP_MOON, 0.5 * moon), (-0.6, 0.0, 2.6, 1.5, GP_MOON, 0.3 * moon, 0.4)]
+    hall_l = [((DXa + DXb) / 2, 0.0, D_ - 0.6, 1.4, GP_LAMP, 0.9, 0.3), ((DXa + DXb) / 2, 1.0, D_, 1.3, GP_LAMP, 0.55),
+              (W_, 1.0, D_ - 0.5, 1.2, GP_LAMP, 0.35)]
+    var = [('hall', hall_l, hf)]
+
+    def beyond(p_):
+        q = hv.quad([(DXa, 2.05, D_), (DXb, 2.05, D_), (DXb, 0.0, D_), (DXa, 0.0, D_)]); b = q.getBounds()
+        p_.fill(rect(b.left() - 60, b.top() - 60, b.width() + 120, b.height() + 120), '#e8c890')
+        _hwall(p_, hv, (DXa - 1.0, D_ + 1.2), (DXb + 1.0, D_ + 1.2), 0.0, CH_, '#d8c49a', '#b8a070', 'stripe', 0.0, pa=60, seed=71)
+        _hfloor(p_, hv, DXa - 1.0, DXb + 1.0, D_, D_ + 1.2, 'boards', '#a8784a', '#7a5432')
+    L = _lit(hv.d(D_ + 1.0), beyond, 'bd_hall', _key('gp', 'bed', 'hall'), box, hv, '#4a3a2a', [], [('hall', [((DXa + DXb) / 2, 1.6, D_ + 1.0, 2.0, '#fff0d0', 1.0)], hf)])
+
+    def room(p_):
+        def back_art(q, W, H):
+            q.fill(rect(25, H - 205, 46, 64), '#1a1a2a'); q.fill(rect(29, H - 201, 38, 40), '#c83a3a')
+            text(q.cv, 'THE MOTH', 48, H - 150, 900, 7, '#f0e0d0', 230, 0.1)
+            q.fill(poly([(250, H - 200), (330, H - 188), (250, H - 176)]), '#2a5aa8'); text(q.cv, 'GO!', 272, H - 185, 900, 7, '#ffffff', 230, 0.1)
+        _hwall(p_, hv, (-W_, D_), (W_, D_), 0.0, CH_, '#4a5a7a', '#3a4a68', 'stripe', 0.0, holes=[(DXa + W_, 0.0, DXb + W_, 2.05)], art=back_art, pa=90,
+               trim='#d8d0c0', seed=72)
+        _hwall(p_, hv, (-W_, 0.3), (-W_, D_), 0.0, CH_, '#4a5a7a', '#3a4a68', 'stripe', 0.0, holes=[(1.9, 0.95, 2.7, 1.95)], pa=90, trim='#d8d0c0', seed=73)
+        wq = hv.quad([(-W_, 1.95, 2.2), (-W_, 1.95, 3.0), (-W_, 0.95, 3.0), (-W_, 0.95, 2.2)]); p_.fill(wq, '#1e2c5a')
+        for (u0, u1) in ((2.05, 2.25), (2.95, 3.15)):
+            dq = hv.quad([(-W_ + 0.02, 2.1, u0), (-W_ + 0.02, 2.1, u1), (-W_ + 0.02, 0.8, u1), (-W_ + 0.02, 0.8, u0)]); p_.fill(dq, '#3a3a5a')
+        _hwall(p_, hv, (W_, 0.3), (W_, D_), 0.0, CH_, '#4a5a7a', '#3a4a68', 'stripe', 0.0, pa=90, trim='#d8d0c0', seed=74)
+        _hfloor(p_, hv, -W_, W_, 0.3, D_, 'carpet', '#4a4a5a')
+        _hceil(p_, hv, -W_, W_, 0.3, D_, CH_, '#5a5a66')
+        _hbox(p_, hv, 0.95, 1.65, 0.0, 0.75, 1.6, 2.2, '#5a4a3a', top='#6a5a48', tex='wood')                        # desk
+        _hbox(p_, hv, 0.75, 1.15, 0.0, 0.45, 1.85, 2.2, '#3a3a44')                                                  # chair + clothes
+        cq = hv.quad([(0.72, 0.95, 2.2), (1.18, 0.95, 2.2), (1.2, 0.3, 1.95), (0.7, 0.35, 1.95)])
+        p_.fill(cq, '#6a3a3a'); p_.line(cq, 1.2, LINE, 200)
+    L += _lit(hv.d(D_), room, 'bd_room', _key('gp', 'bed', 'room'), box, hv, amb, moon_l, var)
+
+    def leaf(p_):
+        ang = math.radians(100.0) * clamp(door)
+        xf = DXb - 0.85 * math.cos(ang); yf = D_ - 0.85 * math.sin(ang)
+        q = [(DXb, 2.05, D_), (xf, 2.05, yf), (xf, 0.0, yf), (DXb, 0.0, D_)]
+        _hface(p_, hv, *q, 85, 205, lambda pp: (pp.fill(rect(0, 0, 85, 205), '#d8d0c0'), [pp.line(rect(10, 10 + j * 64, 65, 56), 1.5, '#8a8478', 180) for j in range(3)]))
+        p_.line(hv.quad(q), 1.5, LINE, 200)
+    L += _lit(hv.d(D_ - 0.4), leaf, 'bd_door', _key('gp', 'bed', 'door', round(door, 2)), box, hv, amb, moon_l, var)
+
+    def foot(pen, t):                                                     # the bed's foot and your blanket, out of focus
+        pen.fill(smooth([(-200, 1180), (-200, 900), (500, 860), (1100, 880), (1700, 840), (2150, 920), (2150, 1180)], True, 0.5), '#2a2f4a')
+        pen.fill(smooth([(-200, 1000), (600, 930), (1300, 960), (2150, 940), (2150, 1180), (-200, 1180)], True, 0.5), '#1e2238')
+    L.append(Layer(0.5, foot, 'bd_foot', cache=_key('gp', 'bed', 'foot'), bounds=(-330, 700, 2250, 1310)))
+    a = {'doorway': hv.anchor((DXa + DXb) / 2, D_ + 0.05, note='standing in the doorway, backlit'),
+         'hall': hv.anchor((DXa + DXb) / 2, D_ + 0.8, note='in the hall beyond the door')}
+    info = {'view': hv, 'hall': hf, 'cam_env': dict(x=(840, 1080), y=(460, 640), zoom=(1.0, 1.3), f=(1.0, 2.6))}
+    return SetPiece('bedroom_doorway', L, a, {}, lens='lens', grade='gp_dark', focus=hv.d(D_), dof=1.4, cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the hospital room
+MON = (1.05, 1.62, 3.15)                    # the heart monitor's screen centre (X, Y, D) in the hospital view
+
+
+def ecg(t, bpm=72.0, flat=None):
+    """The heart monitor's trace value at time t (-1..1): P wave, QRS spike, T wave; after `flat` it decays to a flat line."""
+    if flat is not None and t >= flat: return 0.0
+    ph = (t * bpm / 60.0) % 1.0
+    v = 0.12 * math.exp(-((ph - 0.12) / 0.03) ** 2) - 0.15 * math.exp(-((ph - 0.24) / 0.008) ** 2) + 1.0 * math.exp(-((ph - 0.27) / 0.012) ** 2) \
+        - 0.3 * math.exp(-((ph - 0.3) / 0.01) ** 2) + 0.25 * math.exp(-((ph - 0.5) / 0.05) ** 2)
+    return v
+
+
+def monitor_beeps(t0, t1, bpm=72.0, flat=None):
+    """Beep times (each QRS spike) between t0 and t1 -> [t]; at `flat` the monitor's continuous alarm starts (the SFX
+    names it 'monitor_flatline' at that time)."""
+    P = 60.0 / bpm; out = []
+    k = math.floor(t0 / P)
+    while (k + 0.27) * P <= t1:
+        tb = (k + 0.27) * P
+        if tb >= t0 and (flat is None or tb < flat): out.append(round(tb, 3))
+        k += 1
+    return out
+
+
+def _monitor_screen(pen, x, y, w, h, t, bpm=72.0, flat=None, k=1.0):
+    """The bedside monitor's screen (live): green ECG sweep, HR, SpO2, blood pressure; red alarm text when flat."""
+    pen.fill(rrect(x, y, w, h, h * 0.04), '#020806')
+    sweep = 2.4
+    n = 90
+    pts = []
+    tn = t
+    xs = ((tn / sweep) % 1.0) * w
+    for i in range(n + 1):
+        u = i / n; xx = x + u * w
+        age = (xs - u * w) / w
+        if age < 0: age += 1.0
+        tt = tn - age * sweep
+        pts.append((xx, y + h * 0.36 - ecg(tt, bpm, flat) * h * 0.22, age))
+    for i in range(n):
+        a = clamp(1.0 - pts[i][2] * 1.1) * 255 * k
+        if pts[i][2] > 0.97 or a < 6: continue
+        pen.seg(pts[i][:2], pts[i + 1][:2], max(1.0, h * 0.018), '#4aff7a', a)
+    pen.fill(rect(x + xs, y + h * 0.05, w * 0.03, h * 0.62), '#020806')
+    flatd = flat is not None and t >= flat
+    hr = '0' if flatd else str(int(bpm + 2 * math.sin(t * 0.3)))
+    text(pen.cv, hr, x + w * 0.86, y + h * 0.42, 900, h * 0.26, '#ff4a4a' if flatd else '#4aff7a', 255 * k, 0.0)
+    text(pen.cv, 'HR', x + w * 0.86, y + h * 0.14, 800, h * 0.08, '#4aff7a', 200 * k, 0.1)
+    text(pen.cv, '96', x + w * 0.2, y + h * 0.88, 900, h * 0.16, '#5ad0ff', 230 * k, 0.0)
+    text(pen.cv, '118/74', x + w * 0.6, y + h * 0.88, 900, h * 0.14, '#ffd84a', 230 * k, 0.0)
+    if flatd and (t * 2) % 1.0 < 0.6:
+        text(pen.cv, 'ASYSTOLE', x + w * 0.4, y + h * 0.14, 900, h * 0.1, '#ff3a3a', 255 * k, 0.12)
+
+
+def hospital(view='bed', bpm=72.0, flat=None, light=1.0, hall=1.0, blinds=0.5):
+    """The hospital room at night (last week): pale mint walls, the bed with its head raised and a pale-blue blanket
+    (Grandpa is the cast: anchor 'bed_head' (his head on the pillow), 'bed_lap' (the dummy on his lap), 'bed_hand'),
+    the visitor chair beside it ('chair': where the nurses sat Mister Winks), the heart monitor on its wall arm with
+    the live ECG (bpm; flat = the time it flatlines; monitor_beeps() gives the beep times), the IV pole, the window with
+    half-open blinds (city lights), the privacy curtain, the reading light over the bed (light), the corridor light
+    under the door (hall). view 'bed' (from the foot, across) | 'close' (tighter, lower: the wrist grab).
+    lens 'lens', grade 'hospital'."""
+    if view == 'close':
+        hv = HView(980, 560, 1.25, -0.1, 0.4, 1)
+    else:
+        hv = HView(800, 520, 1.55, -0.25, 0.1, 1)
+    lf, hf = _kfn(light, 81), _kfn(hall, 82)
+    W_, D_, CH_ = 2.2, 4.2, 2.7
+    BED = (-0.5, 0.5, 2.0, 4.05, 0.62)            # x0, x1, y0 (foot), y1 (head), mattress top
+    box = FRAME
+    amb = '#2c3e46'
+    win_l = [(1.0, 1.6, D_, 2.4, '#7a9ad0', 0.8), (0.6, 0.7, 3.4, 1.8, '#7a9ad0', 0.4), (-1.2, 1.2, 2.6, 2.0, '#5a7a8a', 0.35)]
+    mon_l = [(MON[0], MON[1], MON[2], 0.9, '#4aff8a', 0.55), (0.6, 0.8, 3.3, 0.9, '#4aff8a', 0.25)]
+    read_l = [(0.0, 1.7, BED[3] - 0.1, 1.5, '#ffd8a8', 0.6), (0.0, BED[4], 3.3, 1.2, '#ffd8a8', 0.38, 0.6), (-1.1, 0.7, 2.7, 1.2, '#ffd8a8', 0.3)]
+    hall_l = [(-W_, 0.0, 1.0, 1.6, '#d8e8e0', 0.5, 0.3)]
+    var = [('reading', read_l, lf), ('hall', hall_l, hf)]
+
+    def room(p_):
+        def back_art(q, W, H):
+            q.fill(rect(70, H - 160, 300, 26), '#c8d0cc'); q.line(rect(70, H - 160, 300, 26), 1.5, LINE, 200)       # headwall panel
+            for i in range(5):
+                q.fill(rrect(84 + i * 56, H - 154, 16, 14, 3), ('#e8e8e8', '#3a7a3a', '#e8e8e8', '#3a5aa8', '#e8e8e8')[i])
+            q.fill(rect(150, H - 132, 3, 40), '#a8b0b0')
+        def back_art2(q, W, H):
+            back_art(q, W, H)
+            q.fill(rect(20, H - 210, 70, 50), '#f2f4f2'); q.line(rect(20, H - 210, 70, 50), 1.5, '#8a9090')          # whiteboard
+            text(q.cv, 'ROOM 412', 55, H - 198, 800, 5.5, '#2a4a8a', 230, 0.06)
+            text(q.cv, 'NURSE: DANA', 55, H - 188, 700, 4.5, '#2a2a2a', 210, 0.04)
+            text(q.cv, 'KEMP, WALTER', 55, H - 178, 700, 4.5, '#2a2a2a', 210, 0.04)
+            text(q.cv, 'GOAL: REST', 55, H - 168, 700, 4.5, '#c83a3a', 210, 0.04)
+            cx_, cy_ = 230, H - 225                                                                        # wall clock 11:40
+            q.fill(oval(cx_, cy_, 13), '#f4f4f0'); q.line(oval(cx_, cy_, 13), 2.0, '#3a3a3a')
+            q.seg((cx_, cy_), (cx_ - 5, cy_ - 9), 1.6, '#1a1a1a'); q.seg((cx_, cy_), (cx_ - 11, cy_ - 4), 1.0, '#1a1a1a')
+        _hwall(p_, hv, (-W_, D_), (W_, D_), 0.0, CH_, '#a8c4b8', None, 'stripe', 0.0, holes=[(W_ + 0.55, 0.9, W_ + 1.75, 2.15)], art=back_art2,
+               trim='#c8d4cc', base_h=0.1, seed=81)
+        wq = hv.quad([(0.55, 2.15, D_ + 0.01), (1.75, 2.15, D_ + 0.01), (1.75, 0.9, D_ + 0.01), (0.55, 0.9, D_ + 0.01)]); b = wq.getBounds()
+        p_.cv.save(); p_.cv.clipPath(wq, skia.ClipOp.kIntersect, True)
+        p_.linear(wq, 0, b.top(), 0, b.bottom(), ['#0a1430', '#1a2a58'])
+        rng = np.random.default_rng(8)
+        for i in range(30):                                                  # city lights
+            lx = b.left() + rng.uniform(0, 1) * b.width(); ly = b.top() + b.height() * rng.uniform(0.55, 0.95)
+            p_.fill(rect(lx, ly, b.width() * 0.012, b.height() * 0.018), ('#ffd890', '#ffffff', '#ff9a5a')[i % 3], 200)
+        p_.fill(rect(b.left(), b.top() + b.height() * 0.75, b.width(), b.height() * 0.25), '#0a0e1a', 160)
+        nb = 16
+        for i in range(nb):                                                  # blinds (half open: slats with gaps)
+            yy = b.top() + b.height() * i / nb
+            p_.fill(rect(b.left(), yy, b.width(), b.height() / nb * (0.35 + 0.6 * (1 - blinds))), '#c8ccc4')
+            p_.fill(rect(b.left(), yy, b.width(), 1.2), '#ffffff', 90)
+        p_.cv.restore()
+        _hwall(p_, hv, (-W_, hv.hy + 0.35), (-W_, D_), 0.0, CH_, '#a8c4b8', None, 'stripe', 0.0, trim='#c8d4cc', base_h=0.1, seed=82)
+        _hwall(p_, hv, (W_, hv.hy + 0.35), (W_, D_), 0.0, CH_, '#a8c4b8', None, 'stripe', 0.0, trim='#c8d4cc', base_h=0.1, seed=83)
+        _hfloor(p_, hv, -W_, W_, hv.hy + 0.35, D_, 'checker', '#c8c4b4', '#b8b4a4')
+        _hceil(p_, hv, -W_, W_, hv.hy + 0.35, D_, CH_, '#b8c0bc')
+        # the privacy curtain on its track (left)
+        for i in range(9):
+            y0_ = 1.0 + i * 0.32
+            cq = hv.quad([(-1.55, 2.45, y0_), (-1.55, 2.45, y0_ + 0.32), (-1.55, 0.25, y0_ + 0.32), (-1.55, 0.25, y0_)])
+            p_.fill(cq, '#9ac0a8' if i % 2 else '#8ab498')
+        p_.line(poly([hv.p(-1.55, 2.5, 1.0), hv.p(-1.55, 2.5, D_)], False), 3, '#d8dcd8')
+    L = _lit(hv.d(D_), room, 'hp_room', _key('gp', 'hosp', view, 'room'), box, hv, amb, win_l + mon_l, var)
+
+    def furniture(p_):
+        x0, x1, y0, y1, Ym = BED
+        _hbox(p_, hv, x0 - 0.04, x1 + 0.04, 0.28, Ym - 0.12, y0, y1, '#d8dcd8', tex='grunge')                 # frame
+        for (lx, ly) in ((x0, y0 + 0.05), (x1, y0 + 0.05)):
+            p_.seg(hv.p(lx, 0.0, ly), hv.p(lx, 0.3, ly), max(2.0, 0.025 * hv.s(ly)), '#8a9090')
+        hb = hv.quad([(x0 - 0.05, 1.2, y1), (x1 + 0.05, 1.2, y1), (x1 + 0.05, 0.3, y1), (x0 - 0.05, 0.3, y1)]); p_.fill(hb, '#c8ccc8'); p_.line(hb, 1.5, LINE, 200)
+        mt = [(x0, Ym, y0), (x1, Ym, y0), (x1, Ym, y1 - 0.8), (x0, Ym, y1 - 0.8)]
+        p_.fill(hv.quad(mt), '#e8eceb')
+        bk = hv.quad([(x0, Ym, y1 - 0.8), (x1, Ym, y1 - 0.8), (x1, Ym + 0.55, y1 - 0.1), (x0, Ym + 0.55, y1 - 0.1)]); p_.fill(bk, '#e4e8e6')     # raised back
+        pl = hv.quad([(x0 + 0.08, Ym + 0.6, y1 - 0.12), (x1 - 0.08, Ym + 0.6, y1 - 0.12), (x1 - 0.08, Ym + 0.32, y1 - 0.42), (x0 + 0.08, Ym + 0.32, y1 - 0.42)])
+        p_.fill(pl, '#d8dcd8'); p_.line(pl, 1.2, LINE, 160)
+        for sx_ in (x0 - 0.07, x1 + 0.07):                                    # side rails
+            for Yr in (Ym + 0.12, Ym + 0.3):
+                p_.line(poly([hv.p(sx_, Yr, y1 - 1.35), hv.p(sx_, Yr, y1 - 0.35)], False), max(1.5, 0.018 * hv.s(y1 - 0.8)), '#a8b0b4')
+            for yy in (y1 - 1.3, y1 - 0.4):
+                p_.seg(hv.p(sx_, Ym + 0.05, yy), hv.p(sx_, Ym + 0.3, yy), max(1.5, 0.018 * hv.s(yy)), '#a8b0b4')
+        cq = hv.quad([(-0.14, Ym + 0.06, y0 - 0.03), (0.14, Ym + 0.06, y0 - 0.03), (0.14, Ym - 0.3, y0 - 0.03), (-0.14, Ym - 0.3, y0 - 0.03)])
+        p_.fill(cq, '#8a6a3a'); p_.fill(hv.quad([(-0.12, Ym + 0.02, y0 - 0.035), (0.12, Ym + 0.02, y0 - 0.035), (0.12, Ym - 0.28, y0 - 0.035), (-0.12, Ym - 0.28, y0 - 0.035)]), '#f0ece0')
+        bl = smooth([hv.p(x0 - 0.06, Ym + 0.04, y0 - 0.02), hv.p(x1 + 0.06, Ym + 0.04, y0 - 0.02), hv.p(x1 + 0.08, Ym + 0.1, y1 - 0.9), hv.p(x0 - 0.08, Ym + 0.1, y1 - 0.9)], True, 0.25)
+        p_.fill(bl, '#8aa8c8'); p_.texture(bl, 'fabric', 0.6, 'overlay', 1.0)
+        fq = hv.quad([(x0 - 0.06, Ym + 0.04, y0 - 0.02), (x1 + 0.06, Ym + 0.04, y0 - 0.02), (x1 + 0.06, 0.32, y0 - 0.02), (x0 - 0.06, 0.32, y0 - 0.02)])
+        p_.fill(fq, '#7a98b8'); p_.line(bl, 1.4, LINE, 200)
+        rail = [hv.p(x1 + 0.08, Ym + 0.28, y) for y in (y1 - 1.3, y1 - 0.3)]
+        p_.line(poly(rail, False), max(2.0, 0.025 * hv.s(y1 - 0.8)), '#b8c0c4')
+        # visitor chair (left of the bed): vinyl, steel
+        _hbox(p_, hv, -1.35, -0.85, 0.0, 0.45, 2.55, 3.0, '#4a6a7a', top='#5a7a8a')
+        _hbox(p_, hv, -1.35, -0.85, 0.45, 0.95, 2.98, 3.06, '#4a6a7a')
+        # IV pole + bag (right of the bed's head)
+        ix, iy = hv.p(0.85, 0.0, 3.55); s = hv.s(3.55)
+        p_.seg((ix, iy), (ix, iy - 1.9 * s), max(1.5, 0.012 * s), '#c8ccd0')
+        p_.fill(rrect(ix + 0.02 * s, iy - 1.85 * s, 0.12 * s, 0.2 * s, 0.03 * s), '#d8e8f0', 200); p_.line(rrect(ix + 0.02 * s, iy - 1.85 * s, 0.12 * s, 0.2 * s, 0.03 * s), 1.0, LINE, 160)
+        p_.line(smooth([(ix + 0.08 * s, iy - 1.65 * s), (ix + 0.02 * s, iy - 1.2 * s), (ix - 0.25 * s, iy - 0.9 * s)], False), max(0.8, 0.004 * s), '#e8f0f0', 180)
+        # monitor on its arm
+        mx, my = hv.p(MON[0], MON[1], MON[2]); ms = hv.s(MON[2])
+        p_.seg(hv.p(1.45, 1.9, D_), (mx + 0.1 * ms, my - 0.1 * ms), max(2.0, 0.025 * ms), '#a8b0b4')
+        p_.fill(rrect(mx - 0.22 * ms, my - 0.16 * ms, 0.44 * ms, 0.32 * ms, 0.02 * ms), '#3a4044'); p_.line(rrect(mx - 0.22 * ms, my - 0.16 * ms, 0.44 * ms, 0.32 * ms, 0.02 * ms), 1.5, LINE)
+        # the over-bed reading light
+        lx, ly = hv.p(0.0, 2.05, BED[3] - 0.05); ls = hv.s(BED[3] - 0.05)
+        p_.fill(rrect(lx - 0.35 * ls, ly - 0.04 * ls, 0.7 * ls, 0.08 * ls, 0.02 * ls), '#d8dcd8'); p_.line(rrect(lx - 0.35 * ls, ly - 0.04 * ls, 0.7 * ls, 0.08 * ls, 0.02 * ls), 1.2, LINE)
+    L += _lit(hv.d(3.0), furniture, 'hp_bed', _key('gp', 'hosp', view, 'bed'), box, hv, amb, win_l + mon_l, var)
+    mx, my = hv.p(MON[0], MON[1], MON[2]); ms = hv.s(MON[2])
+    L.append(Layer(hv.d(3.0) - 0.05, lambda pen, t: (_monitor_screen(pen, mx - 0.2 * ms, my - 0.14 * ms, 0.4 * ms, 0.28 * ms, t, bpm, flat),
+                                                       pen.glow(mx, my, 0.5 * ms, '#4aff8a', 26)), 'hp_monitor', blur=None))
+    lx, ly = hv.p(0.0, 2.05, BED[3] - 0.05); ls = hv.s(BED[3] - 0.05)
+    L.append(Layer(hv.d(BED[3] - 0.05) - 0.01, lambda pen, t: (pen.fill(rect(lx - 0.33 * ls, ly + 0.02 * ls, 0.66 * ls, 0.02 * ls), mix('#6a6a64', '#fff8e8', lf(t))),
+                                                              pen.glow(lx, ly + 0.05 * ls, 0.6 * ls, '#ffe8c8', 90 * lf(t))), 'hp_light', blur=None))
+    x0, x1, y0, y1, Ym = BED
+    a = {'bed_head': hv.anchor(0.0, y1 - 0.35, Ym + 0.45, 'his head on the pillow (raised back)'),
+         'bed_lap': hv.anchor(0.0, y1 - 1.05, Ym + 0.12, 'on the blanket over his lap'),
+         'bed_hand': hv.anchor(-0.4, y1 - 1.0, Ym + 0.15, 'his left hand on the blanket'),
+         'chair': hv.anchor(-1.1, 2.78, 0.47, 'the visitor chair seat'), 'bedside': hv.anchor(-0.85, 2.3, note='standing at the bed\'s left side'),
+         'door': hv.anchor(-1.9, 0.9, note='coming in (the door is behind the camera, left)')}
+    info = {'view': hv, 'reading': lf, 'hall': hf, 'bpm': bpm, 'flat': flat, 'cam_env': dict(x=(840, 1100), y=(440, 620), zoom=(1.0, 1.3), f=(1.0, 2.4))}
+    return SetPiece('hospital', L, a, {}, lens='lens', grade='hospital', focus=hv.d(y1 - 0.6), dof=1.2, cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the museum
+MUS_CASE = (0.0, 6.0)                   # the vitrine on its plinth (x, y on the gallery plan)
+
+
+def _plaque_art(p_, W, H):
+    """The black plaque with brass edge (W x H cm frame)."""
+    p_.fill(rect(0, 0, W, H), '#c9a24a'); p_.fill(rect(1.2, 1.2, W - 2.4, H - 2.4), '#141416')
+    cv = p_.cv
+    text(cv, 'MISTER WINKS', W / 2, H * 0.3, 900, H * 0.17, '#e8dcc0', 255, 0.12)
+    text(cv, 'Ventriloquist figure  •  carved and painted wood  •  c. 1958', W / 2, H * 0.52, 700, H * 0.075, '#c8bca0', 255, 0.04)
+    text(cv, 'Performed with Walter Kemp for sixty years.', W / 2, H * 0.68, 700, H * 0.075, '#c8bca0', 255, 0.04)
+    text(cv, 'Gift of the Kemp family', W / 2, H * 0.86, 600, H * 0.065, '#8a8270', 255, 0.06)
+
+
+def _vitrine_art(pen, hv, part='plinth'):
+    """The museum case: a charcoal plinth with the plaque (part 'plinth'), the little red velvet chair inside and the
+    case's back panel (part 'inside'), the glass box's edges and reflections (part 'glass', in front of the dummy)."""
+    cx, cy = MUS_CASE
+    px0, px1, py0, py1, PH = cx - 0.55, cx + 0.55, cy - 0.32, cy + 0.32, 0.95
+    if part == 'plinth':
+        _hbox(pen, hv, px0, px1, 0.0, PH, py0, py1, '#2a2c30', top='#3a3c42', tex='grunge',
+              faces={'front': lambda p_, W, H: _hface(p_, hv, (cx - 0.3, 0.72, py0 - 0.002), (cx + 0.3, 0.72, py0 - 0.002),
+                                                       (cx + 0.3, 0.5, py0 - 0.002), (cx - 0.3, 0.5, py0 - 0.002), 60, 22, lambda q: _plaque_art(q, 60, 22))
+                     if False else None})
+        _hface(pen, hv, (cx - 0.3, 0.74, py0 - 0.003), (cx + 0.3, 0.74, py0 - 0.003), (cx + 0.3, 0.5, py0 - 0.003), (cx - 0.3, 0.5, py0 - 0.003), 60, 24,
+               lambda q: _plaque_art(q, 60, 24))
+        return
+    gx0, gx1, gy0, gy1, GT = cx - 0.5, cx + 0.5, cy - 0.27, cy + 0.27, PH + 1.05
+    if part == 'inside':
+        bq = hv.quad([(gx0, GT, gy1), (gx1, GT, gy1), (gx1, PH, gy1), (gx0, PH, gy1)])
+        pen.fill(bq, '#3a1418'); pen.texture(bq, 'fabric', 0.6, 'overlay', 0.8)
+        fq = hv.quad([(gx0, PH + 0.005, gy1), (gx1, PH + 0.005, gy1), (gx1, PH + 0.005, gy0), (gx0, PH + 0.005, gy0)])
+        pen.fill(fq, '#5a1a20'); pen.texture(fq, 'fabric', 0.7, 'overlay', 0.8)
+        # the small velvet chair he sits in
+        _hbox(pen, hv, cx - 0.17, cx + 0.17, PH, PH + 0.2, cy - 0.05, cy + 0.2, '#7a1a24', top='#9a2a32', tex='fabric')
+        _hbox(pen, hv, cx - 0.17, cx + 0.17, PH + 0.2, PH + 0.62, cy + 0.17, cy + 0.22, '#7a1a24', tex='fabric')
+        for sx in (-1, 1):
+            _hbox(pen, hv, cx + sx * 0.17 - (0.04 if sx > 0 else 0.0), cx + sx * 0.17 + (0.0 if sx > 0 else 0.04), PH + 0.2, PH + 0.36, cy - 0.05, cy + 0.2, '#6a141c')
+        return
+    # glass: the box edges (bright hairlines), reflections, the spot's hot reflection on the top front edge
+    s = hv.s(gy0)
+    corners = [(gx0, GT, gy0), (gx1, GT, gy0), (gx1, PH, gy0), (gx0, PH, gy0)]
+    fq = hv.quad(corners); b = fq.getBounds()
+    pen.fill(fq, '#a8c0d0', 14)
+    pen.cv.save(); pen.cv.clipPath(fq, skia.ClipOp.kIntersect, True)
+    for (u, w, a) in ((0.1, 0.08, 34), (0.22, 0.025, 26), (0.68, 0.05, 22)):
+        x0_ = b.left() + b.width() * u
+        pen.fill(poly([(x0_, b.bottom()), (x0_ + b.width() * w, b.bottom()), (x0_ + b.width() * (w + 0.45), b.top()), (x0_ + b.width() * 0.45, b.top())]), '#ffffff', a)
+    pen.linear(fq, 0, b.top(), 0, b.bottom(), [(0, '#ffffff', 30), (0.25, '#ffffff', 0), (1, '#ffffff', 10)])
+    pen.cv.restore()
+    for (a_, b_) in ((corners[0], corners[1]), (corners[1], corners[2]), (corners[0], corners[3]), ((gx0, GT, gy1), (gx1, GT, gy1)),
+                     ((gx0, GT, gy0), (gx0, GT, gy1)), ((gx1, GT, gy0), (gx1, GT, gy1)), ((gx1, PH, gy0), (gx1, PH, gy1))):
+        pen.seg(hv.p(*a_), hv.p(*b_), max(1.0, 0.004 * s), '#e8f4ff', 150)
+    tx, ty = hv.p(cx - 0.12, GT, gy0)
+    pen.glow(tx, ty, 0.08 * s, '#ffffff', 160)
+
+
+def museum(view='case', spot=1.0):
+    """The museum, three states away: a hushed dark-teal gallery. Mister Winks sits behind glass in a vitrine on a
+    charcoal plinth (a little red velvet chair, red velvet backing), lit by one warm spotlight from above; the plaque
+    (MISTER WINKS, c. 1958, 'Performed with Walter Kemp for sixty years', Gift of the Kemp family); behind, a big
+    1974 show poster and the wall title. view 'case' (close on the vitrine; anchor 'display' = his seat, depth inside
+    the glass; the glass is its own layer IN FRONT of him with edges and reflections) | 'wide' (the gallery: velvet rope,
+    a bench, other cases, a visitor's spot). lens 'lens', grade 'museum'."""
+    if view == 'wide':
+        hv = HView(760, 480, 1.6, 0.3, 1.6, 1)
+    else:
+        hv = HView(1250, 470, 1.45, 0.0, 3.2, 1)
+    sf = _kfn(spot, 91)
+    cx, cy = MUS_CASE
+    box = FRAME
+    amb = '#1c262c'
+    spot_l = [(cx, 1.5, cy, 1.0, '#fff0d8', 1.0), (cx, 0.95, cy - 0.3, 0.8, '#fff0d8', 0.8), (cx, 0.0, cy - 0.9, 1.6, '#fff0d8', 0.6, 0.3),
+              (cx, 1.4, 9.0, 3.0, '#f0e0c8', 0.45)]
+    const = [(-2.4, 1.8, 9.0, 1.8, '#f0dcc0', 0.55), (2.15, 1.7, 9.0, 1.6, '#f0dcc0', 0.6), (0.0, 2.55, 9.0, 1.6, '#f0dcc0', 0.45),
+             (-2.6, 1.3, 7.2, 1.2, '#f0dcc0', 0.6), (2.8, 1.3, 6.6, 1.2, '#f0dcc0', 0.6), (0.0, 0.0, 4.0, 3.0, '#8ab0c0', 0.25, 0.3)]
+    var = [('spot', spot_l, sf)]
+
+    def room(p_):
+        def back_art(q, W, H):
+            _hframe(q, W, H, 555, H - 250, 120, 160, 'poster', frame='#1a1a1a', fn=lambda p2, w, h: _poster_art(p2, w, h, '1974'))
+            text(q.cv, 'WALTER KEMP & MISTER WINKS', 400, H - 262, 900, 17, '#f0f4f4', 240, 0.12)
+            text(q.cv, 'SIXTY YEARS OF SATURDAY MORNINGS', 400, H - 246, 800, 9, '#b8c8c8', 230, 0.2)
+            _hframe(q, W, H, 150, H - 220, 56, 74, 'photo', seed=91); _hframe(q, W, H, 230, H - 205, 44, 58, 'photo', seed=92)
+        _hwall(p_, hv, (-4.0, 9.0), (4.0, 9.0), 0.0, 3.4, '#22383e', '#1a2c32', 'stripe', 0.0, art=back_art, pa=40, trim='#101618', base_h=0.12, seed=91)
+        _hwall(p_, hv, (-4.0, hv.hy + 0.4), (-4.0, 9.0), 0.0, 3.4, '#22383e', None, 'stripe', 0.0, trim='#101618', seed=92)
+        _hwall(p_, hv, (4.0, hv.hy + 0.4), (4.0, 9.0), 0.0, 3.4, '#22383e', None, 'stripe', 0.0, trim='#101618', seed=93)
+        _hfloor(p_, hv, -4.0, 4.0, hv.hy + 0.4, 9.0, 'boards', '#3a2a20', '#22180f')
+        _hceil(p_, hv, -4.0, 4.0, hv.hy + 0.4, 9.0, 3.4, '#101418')
+        for (vx, vy) in ((-2.6, 7.2), (2.8, 6.6)):                         # other cases: a 70s TV camera, a ribbon microphone
+            _hbox(p_, hv, vx - 0.4, vx + 0.4, 0.0, 0.9, vy - 0.3, vy + 0.3, '#2a2c30', top='#3a3c42')
+            gq = hv.quad([(vx - 0.38, 1.7, vy - 0.28), (vx + 0.38, 1.7, vy - 0.28), (vx + 0.38, 0.9, vy - 0.28), (vx - 0.38, 0.9, vy - 0.28)])
+            p_.fill(gq, '#a8c0d0', 20); p_.line(gq, 1.0, '#c8e0f0', 90)
+            ox, oy = hv.p(vx, 1.15, vy); os_ = hv.s(vy)
+            if vx < 0:
+                p_.fill(rrect(ox - 0.18 * os_, oy - 0.12 * os_, 0.3 * os_, 0.2 * os_, 0.02 * os_), '#3a3a40'); p_.fill(oval(ox + 0.16 * os_, oy - 0.02 * os_, 0.06 * os_), '#1a1a1e')
+            else:
+                p_.fill(rrect(ox - 0.05 * os_, oy - 0.2 * os_, 0.1 * os_, 0.14 * os_, 0.03 * os_), '#b8bcc4'); p_.seg((ox, oy - 0.06 * os_), (ox, oy + 0.25 * os_), max(1.0, 0.01 * os_), '#8a8e94')
+        if view == 'wide':
+            for sx in (-1.3, 1.3):                                               # stanchions and the velvet rope
+                a_, b_ = hv.p(sx, 0.0, 4.6), hv.p(sx, 0.95, 4.6)
+                p_.seg(a_, b_, max(2.0, 0.03 * hv.s(4.6)), '#c9a24a'); p_.fill(oval(b_[0], b_[1], 0.035 * hv.s(4.6)), '#e8c860')
+            rp = [hv.p(x, 0.9 - 0.18 * (1 - (x / 1.3) ** 2), 4.6) for x in np.linspace(-1.3, 1.3, 12)]
+            p_.line(poly(rp, False), max(2.5, 0.03 * hv.s(4.6)), '#8a1a24')
+            _hbox(p_, hv, -1.0, 1.0, 0.0, 0.45, 2.4, 2.8, '#2a1a10', top='#4a2e1a', tex='wood')
+    L = _lit(hv.d(9.0), room, 'mu_room', _key('gp', 'mus', view, 'room'), box, hv, amb, const, var)
+    L += _lit(hv.d(cy + 0.3), lambda p_: _vitrine_art(p_, hv, 'inside'), 'mu_inside', _key('gp', 'mus', view, 'inside'), box, hv, amb, const, var)
+    L += _lit(hv.d(cy - 0.32), lambda p_: _vitrine_art(p_, hv, 'plinth'), 'mu_plinth', _key('gp', 'mus', view, 'plinth'), box, hv, amb, const, var)
+    L.append(Layer(hv.d(cy - 0.28), lambda pen, t: _vitrine_art(pen, hv, 'glass'), 'mu_glass', cache=_key('gp', 'mus', view, 'glass'), bounds=box, blur=0))
+
+    def spot_cone(pen, t):
+        k = sf(t)
+        if k < 0.02: return
+        a_ = hv.p(cx - 0.12, 3.4, cy); b_ = hv.p(cx + 0.12, 3.4, cy)
+        c_ = hv.p(cx + 0.55, 0.95, cy); d_ = hv.p(cx - 0.55, 0.95, cy)
+        cone = poly([a_, b_, c_, d_])
+        pen.linear(cone, 0, a_[1], 0, c_[1], [(0, '#fff2d8', 40 * k), (1, '#fff2d8', 8 * k)])
+    L.append(Layer(hv.d(cy) - 0.01, spot_cone, 'mu_spot', blur=0))
+    a = {'display': hv.anchor(cx, cy + 0.06, 0.95 + 0.2, 'seated on the little chair inside the case (seat height)'),
+         'visitor': hv.anchor(0.6, 4.2, note='a visitor at the rope'), 'plaque': hv.anchor(cx, cy - 0.33, 0.62, 'the plaque')}
+    info = {'view': hv, 'spot': sf, 'cam_env': dict(x=(860, 1060), y=(440, 640), zoom=(1.0, 1.25), f=(1.0, 2.4))}
+    return SetPiece('museum', L, a, {}, lens='lens', grade='museum', focus=hv.d(cy), dof=1.0 if view == 'case' else 0.6, cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- the museum van, the morning street
+def _mvan_body(pen, s, facing):
+    """The museum's van: a clean white high-roof van, a burgundy band, gold lettering (static sprite art)."""
+    cv = pen.cv
+    cv.save()
+    if facing > 0: cv.scale(-1, 1)
+    lw = max(1.2, 0.035 * s)
+
+    def P(a, b): return (a * s, -b * s)
+    body = _van_profile(s)
+    pen.linear(body, 0, -2.55 * s, 0, -0.3 * s, ['#f2f0ea', '#e2dfd6', '#b8b4a8'])
+    cv.save(); cv.clipPath(body, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(-3.1 * s, -1.2 * s, 6.2 * s, 0.22 * s), '#6a1a24'); pen.fill(rect(-3.1 * s, -1.2 * s, 6.2 * s, 0.03 * s), '#c9a24a')
+    cvt = cv; cvt.save()
+    if facing > 0: cvt.scale(-1, 1)
+    fx = -1 if facing > 0 else 1
+    lx = (1.15 if fx > 0 else -1.15) * s
+    text(cvt, 'MERIDIAN MUSEUM', lx, -1.75 * s, 900, 0.32 * s, '#6a1a24', 255, 0.06)
+    text(cvt, 'of STAGE & SCREEN', lx, -1.42 * s, 700, 0.18 * s, '#8a6a2a', 255, 0.2)
+    text(cvt, 'FINE ART TRANSPORT', lx, -0.72 * s, 800, 0.13 * s, '#4a4a48', 230, 0.3)
+    cvt.restore()
+    pen.linear(rect(-3.1 * s, -0.8 * s, 6.2 * s, 0.5 * s), 0, -0.8 * s, 0, -0.3 * s, [(0, '#5a5048', 0), (1, '#5a5048', 110)])
+    cv.restore()
+    sc = '#8a867c'
+    pen.line(poly([P(-2.05, 0.42), P(-2.05, 1.36), P(-1.6, 2.24), P(-0.62, 2.24), P(-0.62, 0.42)]), lw * 0.6, sc, 220)
+    pen.line(rrect(-0.53 * s, -2.27 * s, 1.4 * s, 1.85 * s, 0.05 * s), lw * 0.6, sc, 200)
+    pen.fill(poly([P(-2.22, 1.3), P(-1.66, 2.26), P(-1.55, 2.26), P(-2.06, 1.37)]), '#2a3446')
+    win = poly([P(-1.95, 1.44), P(-1.53, 2.13), P(-0.74, 2.13), P(-0.74, 1.44)])
+    pen.linear(win, 0, -2.13 * s, 0, -1.44 * s, ['#8a9ab0', '#3a4458'])
+    hx, hy = -1.12, 1.84
+    pen.fill(union(oval(*P(hx, hy), 0.12 * s, 0.15 * s), rrect(*P(hx - 0.3, 1.66), 0.62 * s, 0.4 * s, 0.12 * s)), '#1a1c22', 230)
+    pen.line(win, lw * 0.8, '#05060a')
+    pen.fill(rrect(*P(-0.96, 1.29), 0.2 * s, 0.06 * s, 0.025 * s), '#5a5a58')
+    pen.shape(rrect(*P(-2.34, 1.88), 0.2 * s, 0.42 * s, 0.05 * s), '#24262b', lw * 0.6)
+    pen.fill(rect(*P(-0.5, 0.36), 1.36 * s, 0.07 * s), '#1a1b1e')
+    pen.shape(rrect(*P(-3.04, 0.62), 0.42 * s, 0.32 * s, 0.06 * s), '#3a3c40', lw * 0.6)
+    pen.shape(rrect(*P(2.72, 0.5), 0.33 * s, 0.22 * s, 0.05 * s), '#3a3c40', lw * 0.6)
+    pen.line(body, lw, LINE)
+    for wx in (-1.92, 1.8): pen.fill(oval(*P(wx, 0.36), 0.49 * s), '#050607')
+    cv.restore()
+
+
+def museum_van(pen, x, y, length, t=0.0, facing=1, wheel=0.0, bounce=0.0, brake=False):
+    """The museum van in side view ((x, y) = centre between the wheels on the ground; facing +1 = nose right): body
+    sprite, live wheels and brake lights."""
+    s = length / VAN_LEN
+    cv = pen.cv
+    pen.radial(None, x, y + 0.04 * s, 3.5 * s, [(0, '#000000', 150), (0.75, '#000000', 90), (1, '#000000', 0)], sy=0.09, clip=False)
+    cv.save(); cv.translate(x, y + bounce)
+    _sprite(pen, ('mvan', facing), lambda p_: _mvan_body(p_, _VAN_S, facing), (-3.25 * _VAN_S, -2.75 * _VAN_S, 3.25 * _VAN_S, 0.1 * _VAN_S), scale=s / _VAN_S)
+    if facing > 0: cv.scale(-1, 1)
+    for wx in (-1.92, 1.8):
+        cx_, cy_ = wx * s, -0.36 * s
+        pen.fill(oval(cx_, cy_, 0.38 * s), '#08090b'); pen.fill(oval(cx_, cy_, 0.24 * s), '#9aa0a8')
+        for k in range(6):
+            a = math.radians(-wheel + k * 60)
+            pen.fill(oval(cx_ + math.cos(a) * 0.14 * s, cy_ + math.sin(a) * 0.14 * s, 0.03 * s), '#3a3c40')
+        pen.fill(oval(cx_, cy_, 0.06 * s), '#d0d4d8')
+    pen.fill(rrect(2.9 * s, -1.5 * s, 0.09 * s, 0.38 * s, 0.02 * s), '#ff3a2a' if brake else '#7a1a14')
+    cv.restore()
+    if brake:
+        F = 1 if facing > 0 else -1
+        pen.glow(x - F * 2.95 * s, y + bounce - 1.3 * s, 0.7 * s, '#ff3020', 140)
+
+
+def _van_drive(drive, t):
+    """drive = ('out', t0, t1, x0, x1) (eases off from x0 to x1) -> (x, moving, wheel deg)."""
+    if not drive: return None
+    mode, t0, t1, x0, x1 = drive
+    u = clamp((t - t0) / max(1e-6, t1 - t0))
+    e = u * u if mode == 'out' else ease_in_out(u)
+    x = lerp(x0, x1, e)
+    return x, (0 < u < 1), (x - x0) / 0.36 * 57.3
+
+
+def _street_morning_far(pen, hv, facing=-1):
+    """The street in grey 8 AM light as seen from Grandpa's front window / from across it: sky, the houses opposite,
+    autumn trees, sidewalk, the road."""
+    def P(x, Y, y): return hv.p(x, Y, y)
+    yfar = -16.0 if facing < 0 else 16.0
+    sky = rect(-400, -300, 2720, 1100)
+    pen.linear(sky, 0, -300, 0, hv.y(0.0, yfar) + 40, ['#9aaac0', '#c8d0d8', '#e2e2dc'])
+    for i, hx in enumerate(range(-22, 18, 8)):
+        x0 = hx; w = 6.5
+        c = ('#a8968a', '#8a9aa0', '#b4a890', '#9a8a98', '#a0a890')[i % 5]
+        hb = hv.quad([(x0, 0.0, yfar), (x0 + w, 0.0, yfar), (x0 + w, 5.6, yfar), (x0, 5.6, yfar)])
+        pen.fill(hb, c); _siding(pen, hb, *[v for v in hb.getBounds().asScalars()], 6, '#000000', 30)
+        pen.fill(hv.quad([(x0 - 0.3, 5.6, yfar), (x0 + w / 2, 7.6, yfar), (x0 + w + 0.3, 5.6, yfar)]), '#4a3e3a')
+        for (wx, wy) in ((x0 + 1.2, 1.2), (x0 + 4.2, 1.2), (x0 + 1.2, 3.6), (x0 + 4.2, 3.6)):
+            q = hv.quad([(wx, wy + 1.2, yfar), (wx + 1.0, wy + 1.2, yfar), (wx + 1.0, wy, yfar), (wx, wy, yfar)])
+            pen.fill(q, '#4a5260'); pen.line(q, 2, '#e8e4dc')
+    for (tx, tc) in ((-14.0, '#c86a2a'), (-3.0, '#d8a03a'), (9.0, '#b8502a')):
+        bx, by = hv.p(tx, 0.0, yfar * 0.8); s = hv.s(yfar * 0.8)
+        pen.fill(rect(bx - 0.18 * s, by - 3.2 * s, 0.36 * s, 3.2 * s), '#3a2a20')
+        for k in range(6):
+            pen.fill(oval(bx + (k - 2.5) * 0.7 * s, by - (3.6 + 0.8 * (k % 2)) * s, 1.4 * s, 1.1 * s), mix(tc, '#e8b860', 0.15 * (k % 3)), 235)
+    pen.fill(hv.quad([(-40, 0.0, yfar), (40, 0.0, yfar), (40, 0.0, yfar * 0.62), (-40, 0.0, yfar * 0.62)]), '#9a9a8e')
+    pen.fill(hv.quad([(-40, 0.0, yfar * 0.62), (40, 0.0, yfar * 0.62), (40, 0.0, yfar * 0.24), (-40, 0.0, yfar * 0.24)]), '#5a5c60')
+    pen.fill(hv.quad([(-40, 0.0, yfar * 0.43 - 0.06), (40, 0.0, yfar * 0.43 - 0.06), (40, 0.0, yfar * 0.43 + 0.06), (-40, 0.0, yfar * 0.43 + 0.06)]), '#d8c86a', 160)
+    pen.fill(hv.quad([(-40, 0.0, yfar * 0.24), (40, 0.0, yfar * 0.24), (40, 0.0, yfar * 0.16), (-40, 0.0, yfar * 0.16)]), '#a8a89c')
+    pen.fill(hv.quad([(-40, 0.0, yfar * 0.16), (40, 0.0, yfar * 0.16), (40, 0.0, yfar * 0.01), (-40, 0.0, yfar * 0.01)]), '#6a7a4a')
+
+
+def street_morning(view='window', van=None, owen=True):
+    """8 AM: the museum van takes him. view 'window': from inside the living room behind the couch, the front window
+    (drapes open, grey morning) with the street outside; Owen stands at the glass (anchor 'owen', seen from behind) and
+    waves as the van pulls away (van = dict(drive=('out', t0, t1, x0, x1)) on the house plan (x decreasing = to the right
+    of frame); default parked at the curb). view 'outside': across the street, Grandpa's house (siding, white trim,
+    the porch, the living-room window: anchor 'owen_window' is Owen inside the glass waving: draw him BEFORE the
+    'so_glass' layer's reflections). lens 'lens', grade 'morning'."""
+    vs = dict(drive=None, x=-5.5); vs.update(van or {})
+    if view == 'outside':
+        return _street_outside(vs)
+    hv = HView(820, 500, 1.6, -3.7, 4.3, -1)
+    box = FRAME
+    amb = '#7a808c'
+    day = [(-3.7, 1.4, 0.0, 3.6, '#f4f2ec', 0.85), (-3.7, 0.0, 1.0, 2.6, '#f4f2ec', 0.5, 0.35), (-3.7, 0.9, 1.6, 1.8, '#f4f2ec', 0.45)]
+
+    def outside(p_):
+        _street_morning_far(p_, hv, -1)
+    L = [Layer(hv.d(-16.0), lambda pen, t: outside(pen), 'sm_street', cache=_key('gp', 'sm', 'street'), bounds=box, ref_depth=hv.d(-16.0))]
+    vY = -7.0
+
+    def van_layer(pen, t):
+        dv = _van_drive(vs['drive'], t)
+        x = dv[0] if dv else vs['x']
+        wheel = dv[2] if dv else 0.0
+        px, py = hv.p(x, 0.0, vY); s = hv.s(vY)
+        museum_van(pen, px, py, VAN_LEN * s, t, -1, wheel, 0.0, brake=bool(dv and not dv[1] and t < vs['drive'][1]))
+    L.append(Layer(hv.d(vY), van_layer, 'sm_van', blur=None))
+
+    def room(p_):
+        _hwall(p_, hv, (LIV_X[1], 0.0), (LIV_X[0], 0.0), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9,
+               holes=[(LIV_X[1] - LWIN[1], 0.85, LIV_X[1] - LWIN[0], 2.1)], rail=2.25, seed=14, wc='#4a2e1a')
+        for i in range(1, 3):
+            xm = LWIN[0] + (LWIN[1] - LWIN[0]) * i / 3
+            p_.seg(hv.p(xm, 2.1, 0.0), hv.p(xm, 0.85, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#e8e0d0')
+        p_.seg(hv.p(LWIN[0], 1.5, 0.0), hv.p(LWIN[1], 1.5, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#e8e0d0')
+        sl = hv.quad([(LWIN[0] - 0.08, 0.85, 0.0), (LWIN[1] + 0.08, 0.85, 0.0), (LWIN[1] + 0.08, 0.85, 0.16), (LWIN[0] - 0.08, 0.85, 0.16)])
+        p_.fill(sl, '#e8e0d0'); p_.line(sl, 1.2, LINE, 200)
+        _hwall(p_, hv, (LIV_X[0], 3.0), (LIV_X[0], 0.0), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9, rail=2.25, seed=15, wc='#4a2e1a')
+        _hwall(p_, hv, (LIV_X[1], 0.0), (LIV_X[1], 3.0), 0.0, CEIL, LIV_PAPER, LIV_INK, 'trellis', 0.9, rail=2.25, seed=16, wc='#4a2e1a')
+        _hfloor(p_, hv, LIV_X[0], LIV_X[1], 0.0, 3.0, 'carpet', '#5a5a36')
+        _hceil(p_, hv, LIV_X[0], LIV_X[1], 0.0, 3.0, CEIL, '#8a8070')
+        for side in (-1, 1):                                                    # drapes pulled open
+            xo = LWIN[0] - 0.55 if side < 0 else LWIN[1] + 0.05
+            a_ = hv.p(xo + 0.5, 2.25, 0.08); b_ = hv.p(xo, 2.25, 0.08)
+            xs = sorted([a_[0], b_[0]]); top = a_[1]; h = hv.p(xo, 0.05, 0.08)[1] - top
+            _curtain(p_, xs[0], top, xs[1] - xs[0], h, 0.0, side, '#b8562a', 0.0, 41 + side, folds=7)
+        _bookcase_art(p_, hv)
+    L += _lit(hv.d(0.0), room, 'sm_room', _key('gp', 'sm', 'room'), box, hv, amb, day, [])
+    L += _lit(hv.d(1.9), lambda p_: _couch_art(p_, hv), 'sm_couch', _key('gp', 'sm', 'couch'), box, hv, amb, day, [])
+    a = {'owen': hv.anchor(-3.7, 0.55, note='standing at the front window, his back to us'),
+         'mom': hv.anchor(-2.6, 1.0, note='by the window, right'), 'van': hv.anchor(vs['x'], vY, note='the van at the curb')}
+    info = {'view': hv, 'van': vs, 'cam_env': dict(x=(820, 1100), y=(430, 620), zoom=(1.0, 1.2), f=(1.0, 2.2))}
+    return SetPiece('street_morning', L, a, {}, lens='lens', grade='morning', focus=hv.d(0.5), dof=0.8, cover=FRAME, info=info)
+
+
+def _street_outside(vs):
+    """Grandpa's house from across the street at 8 AM (see street_morning)."""
+    hv = HView(1500, 520, 1.5, -2.6, -17.0, 1)
+    box = FRAME
+    amb = '#9aa0aa'
+    day = [(-2.6, 3.0, 0.0, 9.0, '#f4f2ec', 0.5)]
+    HX0, HX1 = -6.6, 1.8
+
+    def far(pen):
+        pen.linear(rect(box[0], box[1], box[2] - box[0], 800), 0, box[1], 0, 700, ['#9aaac0', '#d0d6dc'])
+        for (tx, c) in ((-11.0, '#c86a2a'), (6.0, '#d8a03a')):
+            bx, by = hv.p(tx, 0.0, 6.0); s = hv.s(6.0)
+            pen.fill(rect(bx - 0.2 * s, by - 3.5 * s, 0.4 * s, 3.5 * s), '#3a2a20')
+            for k in range(7): pen.fill(oval(bx + (k - 3) * 0.8 * s, by - (4.2 + 0.9 * (k % 2)) * s, 1.6 * s, 1.3 * s), c, 235)
+    L = [Layer(hv.d(8.0), lambda pen, t: far(pen), 'so_far', cache=_key('gp', 'so', 'far'), bounds=box)]
+
+    def house(p_):
+        def front_art(q, W, H):
+            q.fill(rect(0, 0, W, H), '#9aaab8')
+            y = 0.0
+            while y < H:
+                q.fill(rect(0, y, W, 1.2), '#000000', 40); q.fill(rect(0, y + 1.2, W, 1.0), '#ffffff', 40); y += 14
+            for (wx0, wx1, wy0, wy1) in ((LWIN[0], LWIN[1], 0.85, 2.1), (-0.85 - 0.0, 0.05, 0.0, 2.1), (-4.4, -3.0, 3.6, 4.9), (-1.0, 0.2, 3.6, 4.9)):
+                u0 = (wx0 - HX0) * 100; u1 = (wx1 - HX0) * 100
+                q.fill(rect(u0 - 10, H - wy1 * 100 - 10, u1 - u0 + 20, (wy1 - wy0) * 100 + 20), '#f0ece4')
+            q.fill(rect(0, 0, W, 10), '#f0ece4')
+        _hwall(p_, hv, (HX0, 0.0), (HX1, 0.0), 0.0, 6.2, '#9aaab8', None, 'stripe', 0.0,
+               holes=[(LWIN[0] - HX0, 0.85, LWIN[1] - HX0, 2.1), (-0.85 - HX0, 0.0, 0.05 - HX0, 2.1), (-4.4 - HX0, 3.6, -3.0 - HX0, 4.9), (-1.0 - HX0, 3.6, 0.2 - HX0, 4.9)],
+               art=front_art, trim='#f0ece4', base_h=0.3, seed=95)
+        ch = hv.quad([(HX1 - 1.6, 9.2, 0.3), (HX1 - 1.0, 9.2, 0.3), (HX1 - 1.0, 6.5, 0.3), (HX1 - 1.6, 6.5, 0.3)])
+        p_.fill(ch, '#7a3a2a'); _bricks(p_, ch, *[v for v in ch.getBounds().asScalars()], 4, 9, '#000000', 50); p_.line(ch, 2, LINE)
+        roof = hv.quad([(HX0 - 0.4, 6.2, 0.0), (HX1 + 0.4, 6.2, 0.0), ((HX0 + HX1) / 2, 8.6, 0.0)])
+        p_.fill(roof, '#4a3e3a'); p_.texture(roof, 'grunge', 0.4, 'overlay', 1.0); p_.line(roof, 3, LINE)
+        gw = hv.quad([((HX0 + HX1) / 2 - 0.4, 7.4, -0.01), ((HX0 + HX1) / 2 + 0.4, 7.4, -0.01), ((HX0 + HX1) / 2 + 0.4, 6.6, -0.01), ((HX0 + HX1) / 2 - 0.4, 6.6, -0.01)])
+        p_.fill(gw, '#5a6070'); p_.line(gw, 3, '#f0ece4')
+        for (wx0, wx1, wy0, wy1) in ((LWIN[0], LWIN[1], 0.85, 2.1), (-4.4, -3.0, 3.6, 4.9), (-1.0, 0.2, 3.6, 4.9)):
+            for sx_, sw_ in ((wx0 - 0.42, 0.34), (wx1 + 0.08, 0.34)):
+                sq = hv.quad([(sx_, wy1, -0.01), (sx_ + sw_, wy1, -0.01), (sx_ + sw_, wy0, -0.01), (sx_, wy0, -0.01)])
+                p_.fill(sq, '#2a4a3a'); p_.line(sq, 1.2, LINE, 200)
+        p_.fill(hv.quad([(HX0, 0.3, -0.01), (HX1, 0.3, -0.01), (HX1, 0.0, -0.01), (HX0, 0.0, -0.01)]), '#7a7068')
+        for (wx0, wx1, wy0, wy1) in ((-4.4, -3.0, 3.6, 4.9), (-1.0, 0.2, 3.6, 4.9)):
+            p_.fill(hv.quad([(wx0, wy1, 0.0), (wx1, wy1, 0.0), (wx1, wy0, 0.0), (wx0, wy0, 0.0)]), '#5a6070')
+        p_.fill(hv.quad([(-0.85, 2.1, 0.0), (0.05, 2.1, 0.0), (0.05, 0.0, 0.0), (-0.85, 0.0, 0.0)]), '#4a2414')
+        # porch: floor, columns, steps, railing
+        _hbox(p_, hv, -1.6, 0.8, 0.0, 0.45, -1.8, 0.0, '#d8d4cc', top='#8a7a6a')
+        for px_ in (-1.5, 0.7):
+            _hbox(p_, hv, px_ - 0.08, px_ + 0.08, 0.45, 2.6, -1.78, -1.62, '#f0ece4')
+        _hbox(p_, hv, -1.7, 0.9, 2.6, 2.85, -1.85, 0.0, '#f0ece4', top='#5a4e4a')
+        for k in range(3): _hbox(p_, hv, -0.8, 0.0, 0.0, 0.15 * (3 - k), -1.8 - 0.28 * (k + 1), -1.8 - 0.28 * k, '#c8c4bc', top='#a89c8c')
+        _hfloor(p_, hv, -9.0, 5.0, -4.2, 0.0, 'carpet', '#6a7a4a')
+        _hfloor(p_, hv, -0.75, -0.05, -4.2, -2.6, 'carpet', '#b8b4a8')
+        _hfloor(p_, hv, -12.0, 8.0, -5.6, -4.2, 'carpet', '#a8a89c')
+        _hfloor(p_, hv, -14.0, 10.0, -13.0, -5.6, 'carpet', '#5a5c60')
+        mx, my = hv.p(1.4, 0.0, -4.0); ms = hv.s(-4.0)
+        p_.seg((mx, my), (mx, my - 1.0 * ms), max(2.0, 0.06 * ms), '#5a4030')
+        p_.fill(rrect(mx - 0.25 * ms, my - 1.3 * ms, 0.5 * ms, 0.3 * ms, 0.12 * ms), '#2a2a2e')
+        text(p_.cv, 'KEMP', mx, my - 1.1 * ms, 900, 0.1 * ms, '#e8e0d0', 240, 0.1)
+    L += _lit(hv.d(0.0), house, 'so_house', _key('gp', 'so', 'house'), box, hv, amb, day, [])
+    wq = [(LWIN[0], 2.1, 0.0), (LWIN[1], 2.1, 0.0), (LWIN[1], 0.85, 0.0), (LWIN[0], 0.85, 0.0)]
+
+    def inside(pen, t):                                                         # dim room behind the glass
+        q = hv.quad(wq); pen.fill(q, '#3a3430'); b = q.getBounds()
+        pen.linear(q, 0, b.top(), 0, b.bottom(), [(0, '#5a4a3a', 255), (1, '#2a221c', 255)])
+    L.append(Layer(hv.d(1.2), inside, 'so_inside', cache=_key('gp', 'so', 'inside'), bounds=box))
+
+    def glass(pen, t):
+        q = hv.quad(wq); b = q.getBounds()
+        pen.cv.save(); pen.cv.clipPath(q, skia.ClipOp.kIntersect, True)
+        pen.linear(q, 0, b.top(), 0, b.bottom(), [(0, '#d8e0ec', 70), (0.6, '#d8e0ec', 20), (1, '#d8e0ec', 40)])
+        for u in (0.1, 0.55):
+            x0_ = b.left() + b.width() * u
+            pen.fill(poly([(x0_, b.bottom()), (x0_ + b.width() * 0.1, b.bottom()), (x0_ + b.width() * 0.35, b.top()), (x0_ + b.width() * 0.25, b.top())]), '#ffffff', 30)
+        pen.cv.restore()
+        for i in range(1, 3):
+            xm = LWIN[0] + (LWIN[1] - LWIN[0]) * i / 3
+            pen.seg(hv.p(xm, 2.1, 0.0), hv.p(xm, 0.85, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#f0ece4')
+        pen.seg(hv.p(LWIN[0], 1.5, 0.0), hv.p(LWIN[1], 1.5, 0.0), max(2.0, 0.03 * hv.s(0.0)), '#f0ece4')
+    L.append(Layer(hv.d(-0.02), glass, 'so_glass', cache=_key('gp', 'so', 'glass'), bounds=box, blur=0))
+    vY = -6.6
+
+    def van_layer(pen, t):
+        dv = _van_drive(vs['drive'], t)
+        x = dv[0] if dv else vs['x']
+        px, py = hv.p(x, 0.0, vY); s = hv.s(vY)
+        museum_van(pen, px, py, VAN_LEN * s, t, 1, dv[2] if dv else 0.0)
+    L.append(Layer(hv.d(vY), van_layer, 'so_van', blur=None))
+    a = {'owen_window': hv.anchor(-3.7, 0.6, note='Owen standing inside the front window (draw before so_glass)'),
+         'porch': hv.anchor(-0.4, -1.0, 0.45, 'on the porch')}
+    info = {'view': hv, 'van': vs, 'cam_env': dict(x=(760, 1160), y=(420, 640), zoom=(1.0, 1.1), f=(1.0, 3.0))}
+    return SetPiece('street_morning', L, a, {}, lens='lens', grade='morning', focus=hv.d(0.0), dof=0.3, cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- 1962: the first show
+def stage_1962(spot=1.0, curtain=1.0):
+    """The Palace, 1962, his very first show (sepia, grade 'memory'): a small proscenium stage, red velvet curtains
+    swagged open (curtain 0..1: 0 = closed), footlights, a hard spotlight circle on the boards, the stool and a
+    microphone stand, the dark backdrop, the audience's heads at the bottom. Anchors: stool (seat top), stand."""
+    v = View(820, 480, 1.4)
+    sf = _kfn(spot, 97)
+    cf = curtain if callable(curtain) else (lambda t, c=float(curtain): c)
+
+    def back(pen, t):
+        pen.fill(rect(-330, -230, 2580, 1540), '#140c0a')
+        pen.fill(rect(-330, 700, 2580, 700), '#4a3020'); pen.texture(rect(-330, 700, 2580, 700), 'wood', 0.6, 'overlay', 1.4, 90)
+        for i in range(30): pen.seg((-330 + i * 90, 700), (-330 + i * 90 - (i - 15) * 30, 1310), 2, '#1a1008', 160)
+        pen.linear(rect(-330, -230, 2580, 940), 0, -230, 0, 700, ['#1a0e0c', '#2a1410'])
+        for i in range(16):
+            x = -200 + i * 150
+            pen.fill(rect(x, -230, 70, 930), '#24100c', 160)
+        sx, sy = 960, 720
+        for dx in (-40, 40):
+            pen.line(poly([(sx + dx * 0.5, sy - 40), (sx + dx, sy + 120)], False), 7, '#8a7a6a')
+        pen.fill(oval(sx, sy - 44, 52, 14), '#3a2a20'); pen.line(oval(sx, sy - 44, 52, 14), 3, LINE)
+        mx = 1180
+        pen.seg((mx, 840), (mx, 560), 5, '#8a8a8a'); pen.fill(oval(mx, 840, 40, 10), '#3a3a3a'); pen.fill(rrect(mx - 14, 520, 28, 48, 12), '#a8a8a8')
+
+    def spot_fn(pen, t):
+        k = sf(t)
+        if k < 0.02: return
+        pen.cone(960, -230, 40, 380, 1000, '#fff6e0', 40 * k, 50)
+        pen.radial(None, 960, 800, 420, [(0, '#fff6e0', 140 * k), (0.8, '#fff6e0', 90 * k), (1, '#fff6e0', 0)], sy=0.22, clip=False)
+
+    def proscenium(pen, t):
+        o = clamp(cf(t))
+        pen.fill(minus(rect(-400, -300, 2720, 1700), rrect(80, 40, 1760, 1100, 60)), '#2a1a12')
+        pen.fill(rect(-400, -300, 2720, 160), '#6a1a1a')
+        for i in range(24):
+            pen.fill(poly([(-400 + i * 120, -140), (-340 + i * 120, -60), (-280 + i * 120, -140)]), '#7a2222')
+        for side in (-1, 1):
+            w = 260 + (1 - o) * 760
+            x0 = 80 if side < 0 else 1840 - w
+            cur = smooth([(x0, 40), (x0 + w, 40), (x0 + w - (120 * o if side < 0 else -120 * o) * 0.0, 400), (x0 + (w * 0.55 if side < 0 else w * 0.45), 1140),
+                          (x0 + (0 if side < 0 else w), 1140)], True, 0.4)
+            pen.fill(rect(x0, 40, w, 1100), '#8a1a1a')
+            for k in range(8):
+                pen.fill(rect(x0 + k * w / 8, 40, w / 16, 1100), '#5a0c0c', 140)
+            pen.line(rect(x0, 40, w, 1100), 4, LINE)
+            if o > 0.3:
+                tx = x0 + (w * 0.75 if side < 0 else w * 0.25)
+                pen.line(smooth([(tx - 30, 560), (tx, 600), (tx + 30, 560)], False), 10, '#d8b04a')
+        for i in range(14):                                                    # footlights
+            fx = 160 + i * 124
+            pen.fill(rrect(fx - 26, 1090, 52, 22, 8), '#3a2a1a'); pen.fill(oval(fx, 1092, 18, 8), '#fff2c8')
+            pen.glow(fx, 1088, 60, '#ffe6a8', 100)
+    L = [Layer(2.0, back, 'st62_back', cache=_key('gp', '1962', 'back'), bounds=(-330, -230, 2250, 1310)),
+         Layer(1.98, spot_fn, 'st62_spot', blur=0),
+         Layer(0.9, proscenium, 'st62_frame', blur=None),
+         Layer(0.6, lambda pen, t: _audience(pen, t, None, 1180, 15, 7, 1.1, '#0a0806', '#e8d0a0'), 'st62_audience', blur=None)]
+    a = {'stool': Anchor(960, 676, 2.0, 640.0, 'the stool seat (on the stage, depth 2)'), 'stand': Anchor(1120, 840, 2.0, 640.0, 'standing at the microphone')}
+    info = {'spot': sf, 'curtain': cf, 'cam_env': dict(x=(880, 1040), y=(480, 600), zoom=(1.0, 1.3), f=(1.0, 1.6))}
+    return SetPiece('stage_1962', L, a, {}, lens='lens', grade='memory', focus=2.0, dof=1.0, cover=FRAME, info=info)
+
+
+# ---------------------------------------------------------------------------------------------- shaky handwriting
+_HAND_FONT = '/usr/share/fonts/opentype/inter/Inter-ThinItalic.otf'
+_HAND_TF = {}
+
+
+def _hand_tf():
+    if 'tf' not in _HAND_TF:
+        tf = skia.Typeface.MakeFromFile(_HAND_FONT) if os.path.exists(_HAND_FONT) else None
+        _HAND_TF['tf'] = tf or typeface(600)
+    return _HAND_TF['tf']
+
+
+def _tremor(x, y, seed):
+    return (math.sin(x * 1.7 + seed * 3.1 + math.sin(y * 1.3 + seed)) * 0.5 + math.sin(y * 2.3 - x * 0.7 + seed * 5.7) * 0.35
+            + math.sin(x * 4.1 + y * 3.7 + seed * 1.9) * 0.15)
+
+
+def _warp_glyph(p, size, amp, seed):
+    """Resample a glyph outline and push it through a smooth tremor field (both edges of a stroke move together, so it
+    reads as a shaking pen, not a jagged outline)."""
+    out = skia.Path()
+    cm = skia.PathMeasure(p, False)
+    step = max(0.6, size * 0.035); f = 1.0 / (size * 0.11)
+    while True:
+        L = cm.getLength()
+        if L > 0:
+            n = max(2, int(L / step))
+            pts = []
+            for i in range(n + 1):
+                pos, _ = cm.getPosTan(min(L, i * L / n))
+                x, y = pos.x(), pos.y()
+                pts.append((x + amp * _tremor(x * f, y * f, seed), y + amp * _tremor(y * f + 7, x * f + 3, seed + 11)))
+            out.moveTo(*pts[0])
+            for q in pts[1:]: out.lineTo(*q)
+            if cm.isClosed(): out.close()
+        if not cm.nextContour(): break
+    return out
+
+
+def shaky_text(pen, s, x, y, size, c='#26306a', a=235, seed=0, shake=1.0, w=None, steady=False):
+    """Grandpa's shaky hospital handwriting (a thin italic hand pushed through a tremor field, baseline drift, letters
+    wandering in size and angle). steady=True: the neater, colder hand (rule six - the one HE changed). Returns width."""
+    rng = np.random.default_rng(seed)
+    font = skia.Font(_hand_tf(), size)
+    glyphs = font.textToGlyphs(s); widths = font.getWidths(glyphs)
+    k = 0.35 if steady else 1.0
+    pw = (w if w is not None else size * 0.03) * (0.8 if steady else 1.0)
+    st = skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=pw, Color=col(c, a), StrokeCap=skia.Paint.kRound_Cap,
+                    StrokeJoin=skia.Paint.kRound_Join)
+    fl = skia.Paint(AntiAlias=True, Color=col(c, a))
+    px = x; drift = 0.0
+    for g, wd in zip(glyphs, widths):
+        drift = drift * 0.85 + rng.normal(0, size * 0.012 * k)
+        sc = 1 + rng.normal(0, 0.05 * k)
+        p = font.getPath(g)
+        if p is not None and not p.isEmpty():
+            m = skia.Matrix(); m.setScale(sc, sc * (1 + rng.normal(0, 0.04 * k))); m.postRotate(rng.normal(0, 2.5 * k)); m.postTranslate(px, y + drift)
+            q = skia.Path(p); q.transform(m)
+            q = _warp_glyph(q, size, size * 0.022 * shake * k, seed * 13 + int(px))
+            pen.cv.drawPath(q, fl); pen.cv.drawPath(q, st)
+        px += wd * sc * (1 + rng.normal(0, 0.03 * k))
+    return px - x
+
+
+def _shaky_lines(s, size, maxw):
+    """Word-wrap for the handwriting (font metrics of the hand)."""
+    font = skia.Font(_hand_tf(), size)
+    out, cur = [], ''
+    for wd in s.split(' '):
+        tryl = (cur + ' ' + wd).strip()
+        if font.measureText(tryl) > maxw and cur: out.append(cur); cur = wd
+        else: cur = tryl
+    if cur: out.append(cur)
+    return out
+
+
+LETTER_RULES = [(1, 'Keep him in the case.'), (2, 'He does voices.'), (3, "Don't laugh at his jokes."), (4, 'Never put your hand inside him.'),
+                (5, "If someone is talking and their lips don't move, it isn't them talking."),
+                (6, "If he's ever on someone's lap, don't pull him off. Have them say \"Say goodnight, Mister Winks.\""),
+                (7, 'Never say goodnight to him.')]
+PS_TEXT = ("P.S. He'll change one of my rules. He'll make it sound like a way to stop him. There is no way to stop him. "
+           "Just never say the word.")
+
+
+def _notepaper(pen, w, h, torn_bottom=True, torn_top=False, seed=0, header=True):
+    """Hospital notepad paper (centred at 0, 0): faint blue rules, a red margin, the letterhead, a torn edge."""
+    x0, y0 = -w / 2, -h / 2
+    rng = np.random.default_rng(seed)
+    pts = [(x0, y0)]
+    if torn_top:
+        pts = [(x0 + w * i / 24, y0 + rng.uniform(0, h * 0.03)) for i in range(25)]
+    else:
+        pts = [(x0, y0), (x0 + w, y0)]
+    if torn_bottom:
+        bot = [(x0 + w - w * i / 26, y0 + h - rng.uniform(0, h * 0.035) - (h * 0.02 if i % 5 == 0 else 0)) for i in range(27)]
+    else:
+        bot = [(x0 + w, y0 + h), (x0, y0 + h)]
+    paper = poly(pts + ([(x0 + w, y0)] if not torn_top else []) + bot)
+    pen.shadow(paper, w * 0.012, w * 0.02, w * 0.025, '#000000', 140)
+    pen.fill(paper, '#f2eee2'); pen.texture(paper, 'paper', 0.55, 'overlay', 1.0)
+    pen.cv.save(); pen.cv.clipPath(paper, skia.ClipOp.kIntersect, True)
+    lh = h / 17.0
+    for i in range(3, 18):
+        pen.fill(rect(x0, y0 + i * lh, w, max(1.0, h * 0.0018)), '#8ab0d8', 150)
+    pen.fill(rect(x0 + w * 0.12, y0, max(1.0, w * 0.003), h), '#e06a6a', 170)
+    if header:
+        text(pen.cv, 'RIVERSIDE MEMORIAL HOSPITAL', x0 + w * 0.56, y0 + lh * 1.1, 800, lh * 0.32, '#3a6aa8', 220, 0.14)
+        text(pen.cv, 'PATIENT NOTES  •  4TH FLOOR', x0 + w * 0.56, y0 + lh * 1.6, 600, lh * 0.22, '#3a6aa8', 180, 0.18)
+        pen.fill(oval(x0 + w * 0.2, y0 + lh * 1.25, lh * 0.32), '#3a6aa8', 200)
+        pen.fill(rect(x0 + w * 0.2 - lh * 0.06, y0 + lh * 1.05, lh * 0.12, lh * 0.4), '#ffffff')
+        pen.fill(rect(x0 + w * 0.2 - lh * 0.2, y0 + lh * 1.19, lh * 0.4, lh * 0.12), '#ffffff')
+    pen.linear(paper, x0, y0, x0 + w, y0 + h, [(0, '#c8a868', 30), (0.6, '#c8a868', 0), (1, '#8a6a3a', 50)])     # age
+    pen.cv.restore()
+    pen.line(paper, max(1.0, w * 0.002), '#8a8478', 200)
+    return paper, lh
+
+
+def _prop_letter(pen, t, hl=0, smear=0.0, show=7, **kw):
+    """Grandpa's letter: the seven rules in his shaky hand on hospital notepaper, the bottom torn off (the P.S. went with
+    it). Rule six is in the neater, colder hand (he changed it). hl = rule number to light (the rest dim), smear 0..1 runs
+    rule six's ink (the lie revealed), show = how many rules are written (0..7)."""
+    w, h = 760, 1040
+    paper, lh = _notepaper(pen, w, h, True, False, 3)
+    x0, y0 = -w / 2 + w * 0.15, -h / 2 + lh * 2.95
+    _sprite(pen, ('gp_letter', show), lambda p_: _letter_ink(p_, w, h, lh, show), (-w / 2, -h / 2, w / 2, h / 2))
+    if hl:
+        y = _letter_rule_y(hl, lh, w)
+        pen.cv.save(); pen.cv.clipPath(paper, skia.ClipOp.kIntersect, True)
+        pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 70)
+        pen.fill(rect(-w / 2 + w * 0.13, y[0] - lh * 0.75, w * 0.86, (y[1] - y[0]) + lh * 0.95), '#fff2b0', 110)
+        pen.cv.restore()
+    if smear > 0.01:                                                       # rule six runs: ink drips and a smudge
+        y6 = _letter_rule_y(6, lh, w)
+        rng = np.random.default_rng(66)
+        pen.cv.save(); pen.cv.clipPath(paper, skia.ClipOp.kIntersect, True)
+        pen.fill(rect(x0 - 10, y6[0] - lh * 0.7, w * 0.8, y6[1] - y6[0] + lh), '#2a2a5a', 70 * smear, blur=12)
+        for i in range(9):
+            dx = x0 + rng.uniform(0, w * 0.75); ln = lh * (0.6 + 2.4 * rng.uniform()) * smear
+            pen.line(poly([(dx, y6[0]), (dx + rng.uniform(-4, 4), y6[0] + ln)], False), rng.uniform(2.0, 4.5), '#26306a', 190)
+            pen.fill(oval(dx, y6[0] + ln, 3.4), '#26306a', 200)
+        pen.cv.restore()
+
+
+def _letter_rule_y(n, lh, w):
+    """(top, bottom) baseline y of rule n's lines on the letter."""
+    y = -1040 / 2 + lh * 4.0
+    for (k, s) in LETTER_RULES:
+        nl = len(_shaky_lines('%d. %s' % (k, s), 34, w * 0.76))
+        if k == n: return (y, y + (nl - 1) * lh)
+        y += nl * lh + lh * 0.25
+    return (y, y)
+
+
+def _letter_ink(p_, w, h, lh, show):
+    x0 = -w / 2 + w * 0.15
+    shaky_text(p_, 'For whoever is in my house tonight -', x0, -h / 2 + lh * 2.95, 36, seed=1, shake=1.3)
+    y = -h / 2 + lh * 4.0
+    for (k, s) in LETTER_RULES:
+        lines = _shaky_lines('%d. %s' % (k, s), 34, w * 0.76)
+        if k <= show:
+            for i, ln in enumerate(lines):
+                shaky_text(p_, ln, x0 + (0 if i == 0 else 22), y + i * lh, 34, c='#1a1c3a' if k == 6 else '#26306a', seed=10 + k * 7 + i,
+                           shake=1.15, steady=(k == 6))
+        y += len(lines) * lh + lh * 0.25
+
+
+def _prop_ps(pen, t, **kw):
+    """The torn-off end of the letter: a corner of the same notepaper, ragged on two edges, the P.S. and the signature
+    'Walter. The real one.'"""
+    w, h = 620, 470
+    rng = np.random.default_rng(9)
+    x0, y0 = -w / 2, -h / 2
+    top = [(x0 + w * i / 20, y0 + rng.uniform(0, h * 0.05)) for i in range(21)]
+    right = [(x0 + w - rng.uniform(0, w * 0.04), y0 + h * i / 12) for i in range(1, 12)]
+    paper = poly(top + right + [(x0 + w * 0.7, y0 + h), (x0, y0 + h)])
+    pen.shadow(paper, 8, 12, 14, '#000000', 140)
+    pen.fill(paper, '#f0ebde'); pen.texture(paper, 'paper', 0.6, 'overlay', 1.0)
+    pen.cv.save(); pen.cv.clipPath(paper, skia.ClipOp.kIntersect, True)
+    lh = 1040 / 17.0
+    for i in range(0, 9): pen.fill(rect(x0, y0 + 20 + i * lh, w, 1.6), '#8ab0d8', 150)
+    pen.fill(rect(x0 + 760 * 0.12 - 40, y0, 2.2, h), '#e06a6a', 170)
+    pen.fill(poly([(x0 + w * 0.45, y0 + h), (x0 + w * 0.7, y0 + h * 0.6), (x0 + w * 0.9, y0 + h)]), '#000000', 18)       # a fold crease
+    pen.cv.restore()
+
+    def ink(p_):
+        lines = _shaky_lines(PS_TEXT, 33, w * 0.82)
+        for i, ln in enumerate(lines):
+            shaky_text(p_, ln, x0 + 48, y0 + 20 + lh * (i + 0.85), 33, seed=200 + i, shake=1.5)
+        yy = y0 + 20 + lh * (len(lines) + 0.95)
+        shaky_text(p_, 'Walter. The real one.', x0 + w * 0.36, yy, 36, seed=250, shake=1.7)
+    _sprite(pen, 'gp_ps_ink', ink, (x0, y0, x0 + w, y0 + h))
+
+
+def _prop_envelope(pen, t, **kw):
+    """The envelope taped to the case's lid: cream, a little foxed, two strips of yellowed tape, 'For whoever is in my
+    house tonight.' in the shaky hand."""
+    w, h = 900, 520
+    e = rect(-w / 2, -h / 2, w, h)
+    pen.shadow(e, 6, 10, 12, '#000000', 160)
+    pen.fill(e, '#ece2c6'); pen.texture(e, 'paper', 0.6, 'overlay', 1.0)
+    pen.linear(e, -w / 2, -h / 2, w / 2, h / 2, [(0, '#c8a868', 40), (0.5, '#c8a868', 0), (1, '#8a6a3a', 60)])
+    pen.line(poly([(-w / 2, -h / 2), (0, h * 0.06), (w / 2, -h / 2)], False), 2.0, '#a8987a', 200)
+    pen.line(e, 2.0, '#8a7e64', 220)
+    _sprite(pen, 'gp_env_ink', lambda p_: (shaky_text(p_, 'For whoever is in', -w * 0.36, h * 0.12, 64, seed=301, shake=1.4),
+                                           shaky_text(p_, 'my house tonight.', -w * 0.3, h * 0.12 + 86, 64, seed=302, shake=1.4)),
+            (-w / 2, -h / 2, w / 2, h / 2))
+    for (tx, ty, ang) in ((-w / 2 + 40, -h / 2 + 10, 38), (w / 2 - 40, -h / 2 + 10, -38), (-w / 2 + 40, h / 2 - 10, -38), (w / 2 - 40, h / 2 - 10, 38)):
+        pen.cv.save(); pen.cv.translate(tx, ty); pen.cv.rotate(ang)
+        tp = rect(-90, -26, 180, 52)
+        pen.fill(tp, '#e8d49a', 150); pen.texture(tp, 'grunge', 0.4, 'overlay', 0.8)
+        pen.line(poly([(-90, -26), (-86, -14), (-91, 0), (-85, 12), (-90, 26)], False), 1.5, '#b8a060', 160)
+        pen.cv.restore()
+
+
+def _leather_bg(pen, t):
+    """The case's black leather lid filling the frame (in focus behind the envelope / latches): grain, stitching."""
+    r = rect(-700, -500, 3320, 2080)
+    pen.linear(r, -700, -500, 2620, 1580, ['#2c2a34', '#1a1820', '#0e0d12'])
+    pen.texture(r, 'grunge', 0.5, 'overlay', 0.5)
+    pen.texture(r, 'skin', 0.35, 'overlay', 1.5)
+    pen.dashed(rrect(-140, -60, 2200, 1200, 40), 4.0, '#8a8478', 170, 18, 12)
+    pen.radial(None, 500, 200, 1500, [(0, '#ffe2b8', 50), (1, '#ffe2b8', 0)], clip=False)
+
+
+def _prop_latches(pen, t, latch=0.0, **kw):
+    """The case's front: the seam, two brass latches (latch 0..1 or (l, r) flips them open), the leather handle."""
+    l1, l2 = (latch, latch) if not isinstance(latch, (tuple, list)) else latch
+    W = 1700
+    pen.fill(rect(-W / 2 - 400, -40, W + 800, 22), '#08070a'); pen.fill(rect(-W / 2 - 400, -18, W + 800, 6), '#4a4652', 200)
+    for (lx, op) in ((-520, l1), (520, l2)):
+        op = clamp(op)
+        base = rrect(lx - 90, -60, 180, 150, 18)
+        pen.shadow(base, 6, 10, 10, '#000000', 160)
+        pen.radial(base, lx - 30, -20, 220, [(0, '#f8e2a0'), (0.55, '#c9a24a'), (1, '#7a5a22')]); pen.line(base, 4, '#3a2a10')
+        for (sx, sy) in ((-60, -30), (60, -30), (-60, 60), (60, 60)):
+            pen.fill(oval(lx + sx, sy, 9), '#8a6a2a'); pen.line(poly([(lx + sx - 5, sy), (lx + sx + 5, sy)], False), 2, '#4a3a1a')
+        pen.cv.save(); pen.cv.translate(lx, -50); pen.cv.rotate(-165 * ease_out_back(op, 1.4))
+        hasp = rrect(-62, -150, 124, 160, 24)
+        pen.shadow(hasp, 4, 8, 8, '#000000', 150)
+        pen.radial(hasp, -20, -110, 200, [(0, '#fff0b8'), (0.5, '#d8b04a'), (1, '#8a6a22')]); pen.line(hasp, 4, '#3a2a10')
+        pen.fill(rrect(-30, -130, 60, 34, 10), '#8a6a2a', 200); pen.fill(rrect(-48, -146, 30, 112, 12), '#ffffff', 45)
+        pen.cv.restore()
+        pen.fill(oval(lx, 60, 22, 16), '#3a2a10'); pen.fill(oval(lx, 56, 18, 12), '#c9a24a')
+    hx = 0
+    for sx in (-110, 110):
+        pen.fill(rrect(hx + sx - 30, -50, 60, 70, 10), '#c9a24a'); pen.line(rrect(hx + sx - 30, -50, 60, 70, 10), 3, '#3a2a10')
+    hd = smooth([(hx - 120, -30), (hx - 100, -170), (hx + 100, -170), (hx + 120, -30)], False, 0.9)
+    pen.line(hd, 62, '#000000', 120); pen.line(hd, 56, '#1e1c22'); pen.line(hd, 10, '#4a4652', 160)
+
+
+def _prop_case_open(pen, t, warm=1.0, **kw):
+    """The open case from above: the leather rim, the brass hinges, the lid's velvet lining (top), and the red velvet bed
+    pressed into the shape of him: the hollow (warm: a faint shimmer rising off it)."""
+    W, H = 760, 1260
+    pen.shadow(rrect(-W / 2, -H / 2 + 300, W, H - 300, 30), 10, 18, 24, '#000000', 170)
+    lid = rrect(-W / 2, -H / 2 - 120, W, 420, 30)
+    pen.fill(lid, '#1c1a22'); pen.fill(rrect(-W / 2 + 26, -H / 2 - 94, W - 52, 368, 18), '#7a1420'); pen.texture(rrect(-W / 2 + 26, -H / 2 - 94, W - 52, 368, 18), 'fabric', 0.7, 'overlay', 1.0)
+    pen.fill(rrect(-W / 4, -H / 2 - 40, W / 2, 160, 12), '#5a0e18', 200); pen.line(rrect(-W / 4, -H / 2 - 40, W / 2, 160, 12), 3, '#3a060c', 200)
+    body = rrect(-W / 2, -H / 2 + 300, W, H - 300, 30)
+    pen.fill(body, '#1c1a22'); pen.texture(body, 'grunge', 0.5, 'overlay', 0.6)
+    for hx in (-W * 0.28, W * 0.28):
+        pen.fill(rrect(hx - 50, -H / 2 + 280, 100, 40, 8), '#c9a24a'); pen.line(rrect(hx - 50, -H / 2 + 280, 100, 40, 8), 3, '#3a2a10')
+    pen.cv.save(); pen.cv.translate(-W / 2 + 34, -H / 2 + 334)
+    _velvet_hollow(pen, W - 68, H - 368) if False else None
+    pen.cv.scale((W - 68) / 35.0, (H - 368) / 77.0)
+    _velvet_hollow(pen, 35, 77)
+    pen.cv.restore()
+    pen.dashed(rrect(-W / 2 + 12, -H / 2 + 312, W - 24, H - 324, 22), 3.0, '#8a8478', 160, 14, 10)
+    if warm > 0.01:
+        for i in range(7):
+            ph = t * 0.6 + i * 0.37
+            x = -W * 0.3 + i * W * 0.1
+            pts = [(x + 14 * math.sin(ph * 3 + j * 0.8), 300 - j * 90 - (ph % 1.0) * 90) for j in range(8)]
+            pen.line(smooth(pts, False, 0.8), 6, '#ffc8a0', 22 * warm, blur=6)
+        pen.radial(None, 0, 160, 420, [(0, '#ff8a60', 36 * warm), (1, '#ff8a60', 0)], clip=False)
+
+
+def _prop_mug(pen, t, stir=None, spoon=True, sugar=2, **kw):
+    """Grandpa's mug of coffee on the kitchen table, from above at 3/4: the show logo, the coffee's surface, the spoon
+    (stir = f(t) -> angle in turns while stirring, or None = resting), two sugar-cube wrappers beside it, the sugar bowl."""
+    s = 1000.0
+    w, h = 0.32 * s, 0.34 * s
+    x, y = 0, 150
+    pen.radial(None, x + 40, y + 20, 340, [(0, '#000000', 150), (1, '#000000', 0)], sy=0.32, clip=False)
+    body = smooth([(x - w / 2, y - h), (x + w / 2, y - h), (x + w / 2, y - h * 0.08), (x + w * 0.4, y + 6), (x - w * 0.4, y + 6), (x - w / 2, y - h * 0.08)], True, 0.25)
+    hd = smooth([(x + w * 0.48, y - h * 0.82), (x + w * 0.9, y - h * 0.78), (x + w * 0.95, y - h * 0.3), (x + w * 0.48, y - h * 0.22)], False, 0.8)
+    pen.line(hd, 44, LINE); pen.line(hd, 34, '#e6dcc6')
+    pen.fill(body, '#ece2cc'); pen.linear(body, x - w / 2, 0, x + w / 2, 0, [(0, '#ffffff', 80), (0.35, '#ffffff', 0), (1, '#000000', 60)])
+    pen.cv.save(); pen.cv.clipPath(body, skia.ClipOp.kIntersect, True)
+    _winks_face(pen, x - w * 0.06, y - h * 0.5, w * 0.2)
+    text(pen.cv, 'SATURDAY MORNING', x - w * 0.06, y - h * 0.16, 900, w * 0.07, '#c8322a', 255, 0.04)
+    pen.cv.restore()
+    pen.line(body, 5, LINE)
+    rim = oval(x, y - h, w / 2, w * 0.17)
+    pen.fill(rim, '#d8ccb4'); pen.line(rim, 4, LINE, 220)
+    cof = oval(x, y - h + 10, w * 0.44, w * 0.14)
+    pen.fill(cof, '#3a1e0c')
+    an = (stir(t) if callable(stir) else 0.0) * 2 * math.pi
+    pen.cv.save(); pen.cv.clipPath(cof, skia.ClipOp.kIntersect, True)
+    for r in (0.12, 0.24, 0.34):                                                   # swirl on the coffee
+        pen.line(oval(x, y - h + 10, w * r, w * r * 0.32), 3, '#7a4a24', 90 if stir else 40)
+    pen.fill(oval(x - w * 0.12 + 18 * math.cos(an), y - h + 4 + 6 * math.sin(an), w * 0.1, w * 0.025), '#c8945a', 120)
+    pen.cv.restore()
+    if spoon:
+        sx, sy = x + w * 0.16 * math.cos(an), y - h + 10 + w * 0.05 * math.sin(an)
+        hx_, hy_ = sx + w * 0.55, sy - h * 0.62
+        pen.line(poly([(sx, sy), (hx_, hy_)], False), 16, LINE); pen.line(poly([(sx, sy), (hx_, hy_)], False), 11, '#c0c4cc')
+        pen.line(poly([(sx + 2, sy - 3), (hx_ + 2, hy_ - 3)], False), 3, '#ffffff', 160)
+        pen.fill(oval(hx_, hy_, 16, 9), '#c0c4cc'); pen.line(oval(hx_, hy_, 16, 9), 3, LINE)
+    for i in range(sugar):                                                          # two torn sugar-cube wrappers
+        cx_, cy_ = x - 300 + i * 70, y + 40 + i * 30
+        pen.cv.save(); pen.cv.translate(cx_, cy_); pen.cv.rotate(-20 + 34 * i)
+        wr = poly([(-34, -22), (30, -26), (36, 20), (-30, 24)])
+        pen.fill(wr, '#f4f0e6'); pen.line(wr, 2.5, '#8a8478', 220)
+        text(pen.cv, 'SUGAR', 0, 6, 900, 13, '#c8322a', 230, 0.08)
+        pen.cv.restore()
+    bx, by = x + 330, y - 40
+    pen.fill(oval(bx, by, 120, 40), '#000000', 90)
+    bowl = smooth([(bx - 110, by - 80), (bx + 110, by - 80), (bx + 90, by), (bx - 90, by)], True, 0.5)
+    pen.fill(bowl, '#e8e4dc'); pen.line(bowl, 4, LINE)
+    pen.fill(oval(bx, by - 80, 110, 30), '#d8d0c0'); pen.line(oval(bx, by - 80, 110, 30), 3, LINE, 200)
+    for k in range(5):
+        pen.fill(rect(bx - 70 + k * 28, by - 98 - (k % 2) * 10, 24, 22), '#fbfaf6'); pen.line(rect(bx - 70 + k * 28, by - 98 - (k % 2) * 10, 24, 22), 1.5, '#a8a49c')
+
+
+def _bg_kitchen_table(pen, t):
+    r = rect(-700, -500, 3320, 2080)
+    pen.fill(r, '#e8cf72'); pen.texture(r, 'grunge', 0.3, 'overlay', 0.8)
+    pen.fill(rect(-700, -500, 3320, 620), '#efe2b8')
+    pen.fill(rect(-700, 80, 3320, 60), '#d8dce4')
+    pen.fill(rect(800, -500, 520, 520), '#1a2448'); pen.line(rect(800, -500, 520, 520), 20, '#f2ead8')
+    pen.radial(None, 960, 300, 1300, [(0, '#ffd890', 120), (0.6, '#ffb860', 30), (1, '#000000', 140)], clip=False)
+
+
+def _prop_slot(pen, t, hand=0.0, paper=0.0, **kw):
+    """The back of Mister Winks: the burgundy usher's jacket (centre seam, a half-belt with two brass buttons), the
+    slot cut through it into the hollow wooden body (dark inside, the head stick's lever glinting). hand 0..1 slides your
+    hand in (fingers vanish into the dark); paper 0..1 pushes a folded corner of hospital notepaper out of the slot."""
+    jk, jsh, jhi = '#7d1d2b', '#4e0f19', '#a8384a'
+    back = smooth([(-520, -620), (520, -620), (560, -200), (540, 700), (-540, 700), (-560, -200)], True, 0.4)
+    pen.fill(back, jk); pen.texture(back, 'fabric', 0.7, 'overlay', 1.0)
+    pen.linear(back, -560, 0, 560, 0, [(0, '#000000', 110), (0.3, '#000000', 0), (0.7, '#000000', 0), (1, '#000000', 130)])
+    pen.seg((0, -620), (0, 700), 5, jsh); pen.seg((4, -620), (4, 700), 2, jhi, 120)
+    pen.fill(smooth([(-520, -620), (-200, -680), (200, -680), (520, -620), (420, -560), (0, -600), (-420, -560)], True, 0.5), '#5a6070')   # collar
+    belt = rect(-380, 360, 760, 70)
+    pen.fill(belt, jsh); pen.line(belt, 3, LINE)
+    for bx in (-300, 300):
+        pen.radial(oval(bx, 395, 24), bx - 8, 386, 30, [(0, '#fff0b8'), (0.6, '#d8b04c'), (1, '#8a6a22')]); pen.line(oval(bx, 395, 24), 3, LINE)
+    slot = rrect(-110, -260, 220, 360, 30)
+    pen.fill(rrect(-124, -274, 248, 388, 36), '#3a2414')                          # the carved wooden lip
+    pen.texture(rrect(-124, -274, 248, 388, 36), 'wood', 0.6, 'overlay', 1.0, 90)
+    pen.fill(slot, '#060304')
+    pen.radial(slot, 0, -140, 200, [(0, '#3a1a0a', 200), (1, '#060304', 0)])
+    pen.line(poly([(30, -220), (40, 40)], False), 18, '#2a1a0c'); pen.line(poly([(26, -220), (34, 40)], False), 4, '#8a6a3a', 140)   # the head stick
+    pen.line(rrect(-124, -274, 248, 388, 36), 4, LINE)
+    pen.line(rrect(-110, -260, 220, 360, 30), 3, '#000000', 200)
+    if paper > 0.01:
+        u = clamp(paper)
+        pen.cv.save(); pen.cv.clipPath(minus(rect(-1000, -1000, 2000, 2000), rect(-110, -1000, 220, 1000 - 260 + 360 * (1 - u))), skia.ClipOp.kIntersect, True)
+        pen.cv.restore()
+        pen.cv.save(); pen.cv.clipPath(union(rect(-2000, 100, 4000, 2000), slot), skia.ClipOp.kIntersect, True)
+        py = 100 - 40 + 260 * u
+        pc = poly([(-60, py - 260), (70, py - 250), (80, py + 30), (-50, py + 40)])
+        pen.fill(pc, '#f0ebde'); pen.texture(pc, 'paper', 0.6, 'overlay', 1.0)
+        for i in range(3): pen.fill(rect(-60, py - 200 + i * 60, 140, 2), '#8ab0d8', 140)
+        pen.line(pc, 2.5, '#8a8478')
+        pen.cv.restore()
+
+
+def _slot_hand(part):
+    def draw(pen, t, kw=None):
+        h = clamp((kw or {}).get('hand', 0.0))
+        if h <= 0.01: return
+        CHm = _CH()
+        y = 820 - 860 * ease_in_out(h)
+        cv = pen.cv
+        cv.save()
+        if part == 'in':                                                       # fingers inside: clipped to the slot
+            cv.clipPath(rrect(-110, -260, 220, 360, 30), skia.ClipOp.kIntersect, True)
+            if CHm is not None: CHm.draw_hand(pen, 'you', 0, y, 300, 'flat', 180.0, 1)
+            else: draw_hand(pen, 0, y, 1.0, 180.0, 'flat', skin='#d8b8a0', sleeve='#4a5a7a')
+            pen.fill(rect(-120, -270, 240, 400), '#000000', 150)
+        else:                                                                  # the wrist and sleeve below the slot
+            cv.clipPath(rect(-2000, 100, 4000, 3000), skia.ClipOp.kIntersect, True)
+            if CHm is not None: CHm.draw_hand(pen, 'you', 0, y, 300, 'flat', 180.0, 1)
+            sl = rrect(-90, y + 230, 180, 900, 40)
+            pen.fill(sl, '#3a4a6a'); pen.texture(sl, 'fabric', 0.6, 'overlay', 1.0); pen.line(sl, 4, LINE)
+        cv.restore()
+    return draw
+
+
+def _prop_squeeze(pen, t, squeeze=None, take=1.0, **kw):
+    kw = dict(kw, take=take)
+    """Inside the dummy: the dark carved hollow, the head stick and its jaw cord, your hand pushed in from below left and
+    a warm old hand (a gold wedding band) coming from above that lets go of the stick and closes round yours. squeeze =
+    f(t) -> 0..1 (three pulses = 'I love you'); each pulse tightens the grip and warms the light."""
+    k = clamp(squeeze(t)) if callable(squeeze) else clamp(float(squeeze or 0.0))
+    pen.fill(rect(-1200, -800, 2400, 1600), '#0a0604')
+    rng = np.random.default_rng(14)
+    for i in range(40):                                                         # gouge marks of the carving
+        x = rng.uniform(-1200, 1200); y = rng.uniform(-800, 800); ln = rng.uniform(120, 420); a = rng.uniform(-0.5, 0.5)
+        pts = [(x + math.cos(a) * ln * u, y + math.sin(a) * ln * u + 18 * math.sin(u * 3)) for u in (0, 0.33, 0.66, 1.0)]
+        pen.line(smooth(pts, False), rng.uniform(14, 34), '#1e120a', 200)
+        pen.line(smooth([(p[0], p[1] - 6) for p in pts], False), 2.5, '#5a3a1e', 110)
+    pen.radial(None, 60, 0, 900, [(0, '#ffb070', 70 + 70 * k), (0.5, '#c86a30', 30 + 30 * k), (1, '#000000', 0)], clip=False)
+    pen.line(poly([(260, -900), (220, 200)], False), 64, '#3a2414'); pen.line(poly([(250, -900), (212, 200)], False), 12, '#8a6a3a', 150)
+    pen.line(smooth([(240, -300), (330, -200), (300, 100)], False), 5, '#c8b890', 170)
+    CHm = _CH()
+    tk = ease_in_out(clamp(kw.get('take', 1.0)))
+    tight = 1.0 - 0.07 * k
+    ox, oy, oa = lerp(250, -120, tk), lerp(-520, 60, tk), lerp(10.0, -42.0, tk) - 8 * k
+    if CHm is not None:
+        CHm.draw_hand(pen, 'you', -250, 560, 560, 'open', 145.0, 1)
+        pen.cv.save(); pen.cv.translate(ox, oy); pen.cv.scale(tight, tight)
+        CHm.draw_hand(pen, 'grandpa', 0, 0, 560, 'grip', oa, -1)
+        pen.cv.restore()
+    else:
+        draw_hand(pen, -250, 560, 1.3, 145.0, 'flat', skin='#d8b8a0', sleeve='#3a4a6a')
+        draw_hand(pen, ox, oy, 1.3 * tight, oa, 'hold', skin='#c8a088', sleeve='#6a5a4a')
+    gx, gy = ox + 70 * tight, oy + 300 * tight
+    pen.glow(gx, gy, 70, '#ffe8a8', 60 + 140 * k)                                # his wedding band glints
+    sl = smooth([(-1200, 900), (-700, 520), (-560, 640), (-900, 1100)], True, 0.5)
+    pen.fill(sl, '#2a3450'); pen.line(sl, 4, LINE)
+
+
+def _prop_photo_family(pen, t, **kw):
+    """A framed 1970s photo (colour faded to amber): young Walter in his TV suit on the show's stool with Mister Winks on
+    his knee, both 'smiling' at the camera. Uses the cast's figures when characters.py provides them."""
+    W, H = 760, 980
+    fr = rect(-W / 2, -H / 2, W, H)
+    pen.shadow(fr, 10, 16, 18, '#000000', 160)
+    pen.fill(fr, '#4a2a16'); pen.texture(fr, 'wood', 0.6, 'overlay', 1.0, 90)
+    pen.fill(rect(-W / 2 + 40, -H / 2 + 40, W - 80, H - 80), '#e8e0cc')
+    ix, iy, iw, ih = -W / 2 + 90, -H / 2 + 90, W - 180, H - 220
+    cv = pen.cv; cv.save(); cv.clipPath(rect(ix, iy, iw, ih), skia.ClipOp.kIntersect, True)
+    pen.linear(rect(ix, iy, iw, ih), 0, iy, 0, iy + ih, ['#d8a050', '#c86a3a', '#6a3a2a'])
+    for k in range(10):
+        a0 = k * math.pi / 5
+        pen.fill(poly([(0, iy + ih * 0.3), (math.cos(a0) * 900, iy + ih * 0.3 + math.sin(a0) * 900), (math.cos(a0 + 0.3) * 900, iy + ih * 0.3 + math.sin(a0 + 0.3) * 900)]), '#e8b860', 120)
+    CHm = _CH()
+    drew = False
+    if CHm is not None and hasattr(CHm, 'draw_lap'):
+        try:
+            aw = CHm.Acting('walter74'); aw.vent_pose(); P = aw.at(1.0); P.smile = max(getattr(P, 'smile', 0.0), 0.6)
+            ad = CHm.Acting('winks'); ad.sit_dummy(); D = ad.at(1.0)
+            CHm.draw_lap(pen, 'walter74', -60, iy + ih + 40, ih * 1.05, P, D, side=1)
+            drew = True
+        except Exception:
+            drew = False
+    if not drew:
+        _sepia_photo(pen, ix, iy, iw, ih, 1)
+    pen.fill(rect(ix, iy, iw, ih), '#f0c890', 50)
+    pen.linear(rect(ix, iy, iw, ih), ix, iy, ix + iw, iy + ih, [(0, '#ffffff', 40), (0.5, '#ffffff', 0), (1, '#3a1a0a', 70)])
+    cv.restore()
+    shaky_text(pen, "Walt & Winks - '74", -W / 2 + 120, H / 2 - 70, 40, c='#3a3020', seed=410, shake=0.6)
+    pen.fill(poly([(-W / 2 + 40, -H / 2 + 40), (-W / 2 + 300, -H / 2 + 40), (-W / 2 + 40, -H / 2 + 360)]), '#ffffff', 26)
+
+
+def _prop_poster(pen, t, kind='1962', **kw):
+    W, H = 700, 1000
+    fr = rect(-W / 2, -H / 2, W, H)
+    pen.shadow(fr, 10, 16, 18, '#000000', 160)
+    pen.cv.save(); pen.cv.translate(-W / 2, -H / 2)
+    _poster_art(pen, W, H, kind)
+    pen.cv.restore()
+    if kind == '1962':
+        pen.fill(fr, '#8a6a3a', 40); pen.texture(fr, 'paper', 0.5, 'overlay', 1.0)
+        for (cx_, cy_) in ((-W / 2 + 20, -H / 2 + 20), (W / 2 - 20, -H / 2 + 20)):
+            pen.fill(oval(cx_, cy_, 10), '#c8c4bc'); pen.line(oval(cx_, cy_, 10), 2, LINE)
+    pen.line(fr, 3, '#3a2a1a')
+
+
+def _prop_vcr(pen, t, tape=1.0, play=True, **kw):
+    """The VCR on the cabinet shelf, close: the silver deck, the blinking 12:00, the PLAY light, the tape half-in with its
+    handwritten label 'SAT. MORNING w/ WALTER KEMP - 1974'."""
+    W, H = 1500, 300
+    deck = rrect(-W / 2, -H / 2, W, H, 16)
+    pen.shadow(deck, 8, 14, 16, '#000000', 170)
+    pen.linear(deck, 0, -H / 2, 0, H / 2, ['#5a5a62', '#3a3a40', '#26262a']); pen.line(deck, 4, LINE)
+    pen.fill(rect(-W / 2 + 60, -H / 2 + 60, 620, 110), '#0c0c0e')
+    u = clamp(tape)
+    if u > 0:
+        tw = 560; th = 80 + 60 * u
+        sp_ = rect(-W / 2 + 90, -H / 2 + 75 - th * 0.15, tw, th)
+        pen.fill(rect(-W / 2 + 90, -H / 2 + 75 + th * 0.85, tw, 14), '#000000', 140)
+        pen.fill(sp_, '#1a1a1e'); pen.line(sp_, 3, LINE)
+        lb = rect(-W / 2 + 120, -H / 2 + 75 - th * 0.15 + 12, tw - 60, th - 24)
+        pen.fill(lb, '#e2ddce'); pen.line(lb, 2, '#8a8478')
+        shaky_text(pen, 'SAT. MORNING w/ WALTER KEMP  1974', -W / 2 + 132, -H / 2 + 75 - th * 0.15 + th * 0.62, 25, c='#2a2a6a', seed=501, shake=0.5)
+    win = rect(260, -H / 2 + 70, 360, 100)
+    pen.fill(win, '#061008')
+    if (t % 1.0) < 0.55: text(pen.cv, '12:00', 440, -H / 2 + 145, 800, 64, '#5aff8a', 240, 0.08); pen.glow(440, -H / 2 + 120, 110, '#3aff6a', 60)
+    pen.fill(oval(680, -H / 2 + 90, 12), '#ff3a2a' if play else '#3a1a1a')
+    if play: pen.glow(680, -H / 2 + 90, 40, '#ff3a2a', 120)
+    text(pen.cv, 'PLAY', 680, -H / 2 + 130, 800, 20, '#c8c8cc', 200, 0.1)
+    for i, lbl in enumerate(('REW', 'PLAY', 'FF', 'STOP', 'EJECT')):
+        bx = -W / 2 + 120 + i * 120
+        pen.fill(rrect(bx - 45, H / 2 - 90, 90, 44, 6), '#8a8a92'); pen.line(rrect(bx - 45, H / 2 - 90, 90, 44, 6), 2, LINE)
+        text(pen.cv, lbl, bx, H / 2 - 22, 800, 16, '#c8c8cc', 200, 0.1)
+    text(pen.cv, 'VIDEOSTAR  HQ', W / 2 - 160, H / 2 - 40, 900, 28, '#c8c8cc', 220, 0.12)
+
+
+def _bg_table_lamp(pen, t):
+    r = rect(-700, -500, 3320, 2080)
+    pen.linear(r, 0, -500, 0, 1580, ['#3a2416', '#5a3a22', '#2a1a10']); pen.texture(r, 'wood', 0.7, 'overlay', 2.6, 90)
+    pen.radial(None, 300, 100, 1600, [(0, '#ffcf8f', 110), (0.55, '#ffcf8f', 26), (1, '#000000', 140)], clip=False)
+
+
+def _bg_shelf(pen, t):
+    r = rect(-700, -500, 3320, 2080)
+    pen.fill(r, '#2a160c')
+    for i in range(30):
+        x = -600 + i * 110
+        pen.fill(rect(x, -300, 70, 900), ('#6a1a1a', '#1a3a5a', '#3a5a2a', '#8a6a2a')[i % 4], 200)
+    pen.fill(rect(-700, 600, 3320, 60), '#4a2a16')
+    pen.radial(None, 1400, 200, 1600, [(0, '#ffcf8f', 80), (1, '#000000', 160)], clip=False)
+
+
+def _bg_cabinet(pen, t):
+    r = rect(-700, -500, 3320, 2080)
+    pen.fill(r, '#140c06'); pen.fill(rect(-700, 260, 3320, 1400), '#5a3820'); pen.texture(rect(-700, 260, 3320, 1400), 'wood', 0.6, 'overlay', 2.0, 0)
+    pen.radial(None, 960, 0, 1500, [(0, '#a8c8ff', 70), (1, '#000000', 120)], clip=False)
+
+
+def _bg_dark(pen, t): pen.fill(rect(-700, -500, 3320, 2080), '#050304')
+
+
+def _bg_jacket(pen, t):
+    r = rect(-700, -500, 3320, 2080)
+    pen.linear(r, 0, -500, 0, 1580, ['#2a1a20', '#1a1014']); pen.radial(None, 960, 300, 1300, [(0, '#ffcf8f', 60), (1, '#000000', 0)], clip=False)
+
+
+GP_INSERTS = {
+    'letter': dict(prop=_prop_letter, bg=_bg_table_lamp, pos=(960, 560), scale=0.98, rot=-3, hand=('you', 1310, 940, 330, 'grip', 200.0, -1), grade='face_close'),
+    'letter_close': dict(prop=_prop_letter, bg=_bg_table_lamp, pos=(1100, 760), scale=1.9, rot=-3, grade='face_close'),
+    'envelope': dict(prop=_prop_envelope, bg=_leather_bg, bgd=1.03, pos=(960, 560), scale=1.0, rot=-4, grade='face_close'),
+    'ps': dict(prop=_prop_ps, bg=_bg_dark, pos=(960, 540), scale=1.35, rot=5, hand=('you', 600, 870, 330, 'grip', 150.0, 1), grade='face_close'),
+    'latches': dict(prop=_prop_latches, bg=_leather_bg, bgd=1.03, pos=(960, 600), scale=0.85, rot=0, grade='face_close'),
+    'case_open': dict(prop=_prop_case_open, bg=_bg_table_lamp, pos=(960, 560), scale=0.78, rot=90, grade='face_close'),
+    'mug': dict(prop=_prop_mug, bg=_bg_kitchen_table, pos=(960, 600), scale=1.25, rot=0, grade='gp_house', steam=(960, 330, 1100)),
+    'back_slot': dict(prop=_prop_slot, bg=_bg_jacket, pos=(960, 560), scale=0.92, rot=0, grade='face_close', slot=True),
+    'squeeze': dict(prop=_prop_squeeze, bg=_bg_dark, pos=(960, 540), scale=0.9, rot=0, grade='gp_dark'),
+    'photo': dict(prop=_prop_photo_family, bg=_bg_shelf, pos=(960, 560), scale=0.95, rot=2, grade='face_close'),
+    'poster_1962': dict(prop=lambda pen, t, **kw: _prop_poster(pen, t, '1962'), bg=_bg_dark, pos=(960, 540), scale=0.95, rot=-2, grade='memory'),
+    'vcr': dict(prop=_prop_vcr, bg=_bg_cabinet, pos=(960, 600), scale=1.0, rot=0, grade='tv_glow'),
+}
+
+
+def gp_insert(name, t0=0.0, prop_kw=None, motion=None, hand=None, bg_dim=0.3):
+    """Dummy-film inserts (also reachable as insert(name)): close-ups with background DOF (background depth 3 blurred and
+    darkened, prop sharp at depth 1, a hand at 0.92). names (GP_INSERTS): letter (the seven rules; prop_kw hl=n lights rule
+    n, smear=0..1 runs rule six, show=0..7), letter_close, envelope, ps (the torn P.S.), latches (latch=0..1 or (l, r)),
+    case_open (warm=0..1), mug (stir=f(t)->turns, sugar=2; the steam is live), back_slot (hand=0..1, paper=0..1),
+    squeeze (squeeze=f(t) 0..1: use squeeze_pulses(); take 0..1: the old hand lets go of the stick and takes yours), photo (Walter and Winks '74), poster_1962, vcr (tape=0..1, play).
+    motion = f(t) -> (dx, dy, dscale, drot); hand = None (default) | False | (who, x, y, size, shape, angle, side)."""
+    spec = GP_INSERTS[name]
+    bgd = spec.get('bgd', 3.0)
+    L = [Layer(bgd, spec['bg'], 'insert_bg', cache=_key('gpins', name, 'bg'), bounds=(-700, -500, 2620, 1580), dim=bg_dim * (0.4 if bgd < 2 else 1.0))]
+
+    def kw_at(t):
+        kw = {}
+        if prop_kw: kw.update(prop_kw(t - t0) if callable(prop_kw) else prop_kw)
+        return kw
+
+    def pose(t):
+        x, y = spec['pos']; s = spec['scale']; r = spec['rot']
+        if motion:
+            dx, dy, ds, dr = motion(t - t0); x += dx; y += dy; s *= (1 + ds); r += dr
+        return x, y, s, r
+
+    def prop(pen, t):
+        x, y, s, r = pose(t)
+        pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(r); pen.cv.scale(s, s)
+        spec['prop'](pen, t - t0, **kw_at(t))
+        pen.cv.restore()
+    L.append(Layer(1.0, prop, 'insert_prop', blur=0))
+    if spec.get('slot'):
+        for part, d in (('out', 0.995), ('in', 0.99)):
+            fn = _slot_hand(part)
+
+            def sl(pen, t, fn=fn):
+                x, y, s, r = pose(t)
+                pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(r); pen.cv.scale(s, s); fn(pen, t, kw_at(t)); pen.cv.restore()
+            L.append(Layer(d, sl, 'insert_hand_' + part, blur=0))
+    if spec.get('steam'):
+        sx, sy, ss = spec['steam']
+        L.append(Layer(0.98, lambda pen, t: _steam(pen, sx, sy, ss, t, 1.0, 9), 'insert_steam', blur=0))
+    hs = spec.get('hand') if hand is None else hand
+    if hs:
+        who, hx, hy, hsz, shp, ang, side = hs
+
+        def hand_fn(pen, t):
+            x, y, s, r = pose(t)
+            dx, dy = x - spec['pos'][0], y - spec['pos'][1]
+            CHm = _CH()
+            if CHm is not None:
+                CHm.draw_hand(pen, who, hx + dx, hy + dy, hsz, shp, ang, side)
+            else:
+                draw_hand(pen, hx + dx, hy + dy, hsz / 330.0, ang - 180, 'hold', side=side)
+        L.append(Layer(0.92, hand_fn, 'insert_hand', blur=0))
+    return SetPiece('insert:' + name, L, {}, {}, lens=None, grade=spec.get('grade', 'face_close'), focus=1.0, dof=6.75, cover=FRAME,
+                    info={'spec': spec, 'pose': pose})
+
+
+def squeeze_pulses(times, dur=0.42):
+    """f(t) -> 0..1 for the squeeze insert / the cast: one quick squeeze (grip in 0.12 s, release) at each time."""
+    def f(t):
+        v = 0.0
+        for t0 in times:
+            u = t - t0
+            if 0 <= u < dur: v = max(v, math.sin(math.pi * clamp(u / dur)) ** 0.7)
+        return v
+    return f
+
+
+# ---------------------------------------------------------------------------------------------- the rule card that lies
+def _rule_card_picture(n, text_, t, **kw):
+    from engine import hud as _H
+    rec = skia.PictureRecorder()
+    c2 = rec.beginRecording(skia.Rect.MakeLTRB(-200, -200, DW + 200, DH + 200))
+    _H.rule_card(c2, n, text_, t, scrim=0.0, **kw)
+    return rec.finishRecordingAsPicture()
+
+
+def _tear_path(y0, seed=6, amp=9.0):
+    rng = np.random.default_rng(seed)
+    pts = [(-400, y0)]
+    x = -400.0
+    while x < DW + 400:
+        x += rng.uniform(22, 54)
+        pts.append((x, y0 + rng.uniform(-amp, amp) + 0.012 * (x - DW / 2)))
+    return pts
+
+
+def rule_card_lie(cv, n, text_, t, reveal=None, mode='tear', scrim=0.35, alpha=255, y=0.0, **kw):
+    """The police rule card (engine.hud.rule_card) for the rule that LIES, with its damage when the lie comes out.
+    t = seconds since the card appeared (as rule_card); reveal = the card-clock second the lie is revealed (None = an
+    intact card). mode:
+      'tear'    the card rips along a jagged line through its first text line: the halves slide apart and tilt, a red
+                seam glows in the gap, the frame jolts for two frames (u = 0..1 over 0.45 s after reveal)
+      'smear'   the ink runs: the rule's words drip down the screen in long streaks and 'LIE' is scrawled across it in
+                Grandpa's shaky red hand
+      'flicker' a two-frame glitch with 'LIE?' (rule two, when the thing CLAIMS it is the lie: a false lead)
+    Draw it on the HUD canvas (design coordinates) like rule_card; the hard cut / sting is the cue sheet's job (cue
+    'rule_lie' at the reveal)."""
+    if t < 0: return
+    pen = Pen(cv)
+    if scrim:
+        pen.radial(None, DW / 2, DH / 2 + y, 900, [(0, '#000000', 255 * scrim), (1, '#000000', 255 * scrim * 0.45)], sy=0.75)
+    pic = _rule_card_picture(n, text_, t, alpha=alpha, y=y, **kw)
+    u = 0.0 if reveal is None or t < reveal else clamp((t - reveal) / 0.45)
+    if mode == 'tear' and u > 0:
+        e = ease_out_back(u, 1.2)
+        ty = 661 + y
+        pts = _tear_path(ty, 6 + n)
+        top = poly([(-400, -400)] + pts + [(DW + 400, -400)])
+        bot = poly([(-400, DH + 400)] + pts + [(DW + 400, DH + 400)])
+        jolt = (9 * math.sin(t * 90) if u < 0.12 else 0.0)
+        for path, dx, dy, rot in ((top, -26 * e + jolt, -34 * e, -2.2 * e), (bot, 30 * e - jolt, 46 * e, 3.0 * e)):
+            cv.save()
+            cv.translate(DW / 2 + dx, ty + dy); cv.rotate(rot); cv.translate(-DW / 2, -ty)
+            cv.clipPath(path, skia.ClipOp.kIntersect, True)
+            cv.drawPicture(pic)
+            cv.restore()
+        seam = poly([p for p in pts if 330 < p[0] < DW - 330], False)
+        cv.save(); cv.clipRect(skia.Rect.MakeLTRB(330, -400, DW - 330, DH + 400))
+        pen.line(seam, 10 + 18 * e, '#ff2a2a', 90 * e, blur=10)
+        pen.line(seam, 2.5, '#ff6a5a', 200 * e)
+        cv.restore()
+        return
+    if mode == 'smear' and u > 0:
+        cv.drawPicture(pic)
+        rng = np.random.default_rng(60 + n)
+        for i in range(18):                                                    # the letters run: tapered drips
+            x = DW / 2 - 360 + rng.uniform(0, 720)
+            y0 = 650 + y + rng.uniform(-10, 50)
+            ln = (40 + 300 * rng.uniform() ** 1.6) * ease_in_out(u)
+            wdt = rng.uniform(3.0, 8.0)
+            drip = poly([(x - wdt / 2, y0), (x + wdt / 2, y0), (x + wdt * 0.25, y0 + ln), (x - wdt * 0.25, y0 + ln)])
+            pen.fill(drip, '#f2f2f2', 210); pen.fill(oval(x, y0 + ln, wdt * 0.5, wdt * 0.75), '#f2f2f2', 230)
+        cv.save(); cv.translate(DW / 2 - 330, 720 + y); cv.rotate(-6)
+        k = clamp((t - reveal - 0.15) / 0.5)
+        if k > 0:
+            cv.saveLayer(None, skia.Paint(Alphaf=k))
+            shaky_text(pen, 'LIE', 0, 0, 230, c='#d8262e', a=255, seed=666, shake=2.2, w=10)
+            cv.restore()
+        cv.restore()
+        return
+    if mode == 'flicker' and reveal is not None and 0 <= t - reveal < 0.12:
+        cv.save(); cv.translate(14 * math.sin(t * 200), 0); cv.drawPicture(pic); cv.restore()
+        text(cv, 'LIE?', DW / 2 + 260, 470 + y, 900, 64, '#d8262e', 230, 0.1)
+        return
+    cv.drawPicture(pic)
+
+
+# ---------------------------------------------------------------------------------------------- dummy-film registry
+SETS.update({'gp_hall': gp_hall, 'gp_kitchen': gp_kitchen, 'gp_living': gp_living, 'gp_den': gp_den, 'gp_studio': gp_studio,
+             'hospital': hospital, 'museum': museum, 'street_morning': street_morning, 'stage_1962': stage_1962,
+             'bedroom_doorway': bedroom_doorway})
+__all__ += ['HView', 'gp_hall', 'gp_kitchen', 'gp_living', 'gp_den', 'gp_studio', 'hospital', 'museum', 'street_morning', 'stage_1962',
+            'bedroom_doorway', 'gp_insert', 'GP_INSERTS', 'rule_card_lie', 'shaky_text', 'laugh_waves', 'studio_content', 'squeeze_pulses',
+            'monitor_beeps', 'ecg', 'pendulum_ticks', 'tv_level', 'museum_van', 'LETTER_RULES', 'PS_TEXT']

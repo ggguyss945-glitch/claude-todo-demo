@@ -191,8 +191,9 @@ Delivery film additions ("If A Delivery Driver Rings Your Doorbell At 3 AM..."; 
 
 Dummy film additions ("If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"; everything above still works;
 the delivery 'mom' / police 'you' designs live on as 'mom_delivery' / 'you_police'). Times are FILM time.
-    Cast: 'winks' (Mister Winks, a 0.85 m vent figure: painted red hair with a hard side part, freckles, rosy cheeks, glass
-        eyes under wooden lids, heavy arched painted brows, a wide painted grin and the LOWER JAW BLOCK on two marionette
+    Cast: 'winks' (Mister Winks, a 0.85 m vent figure: lacquered ivory wood, carved auburn hair with a hard side part,
+        faded rouge, glossy staring eyes with small near-black irises under low wooden lids, heavy sharply arched black-brown
+        brows angled down to the nose, a tight wide grin in thin dark-red lips and the LOWER JAW BLOCK on two marionette
         slot lines, a burgundy usher's jacket with brass buttons and gold braid, a pillbox cap, white gloves, the usher's
         flashlight, a slot in his back), 'grandpa' (86, the thing: bald with a white fringe, big ears, the hooked Kemp
         nose, bushy white brows, moss cardigan; too-still smile, lips barely move: talk 0.3), 'grandpa_bed' (the same in
@@ -383,10 +384,10 @@ _FACE_OLD = [-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120]
 CAST['winks'] = dict(
     outfit='usher', hat='pillbox', hair='painted', sex='m', hh=300.0, dummy=True,
     head_ys=_FACE_OLD, head_ws=[0, 60, 87, 100, 104, 102, 96, 89, 80, 56, 0],
-    eye_dx=41, eye_y=-14, eye_r=28.5, pupil=0.55, brow_th=16, nose_len=14, mouth_y=52, mouth_w=50,
-    skin='#ecc4ad', skin_sh='#c4907a', skin_dp='#6e3c32', blush='#d8455a', lip='#b01f2d', stubble=None, stub=0,
-    hair_c='#b9431f', brow_c='#7a2614', bags=0.0, age=0.0, blink_rate=0.0, lock=1.0, micro=0.0, breath=0.0,
-    scar=0, ring=0, part=1, lashes=0.0, talk=1.0, feet='shoes', iris='#6f97b8',
+    eye_dx=41, eye_y=-14, eye_r=28.5, pupil=0.55, brow_th=18, nose_len=14, mouth_y=52, mouth_w=50,
+    skin='#efdcc3', skin_sh='#b8977f', skin_dp='#45282a', blush='#b0525a', lip='#7a1420', stubble=None, stub=0,
+    hair_c='#8c2b13', brow_c='#22130e', bags=0.0, age=0.0, blink_rate=0.0, lock=1.0, micro=0.0, breath=0.0,
+    scar=0, ring=0, part=1, lashes=0.0, talk=1.0, feet='shoes', iris='#2a1a12',
     body=dict(sh=82, ch=74, wa=66, hip=64, arm=(30, 24), leg=(32, 27), neck=22, hand=1.22, arm_k=0.8),
     cloth=dict(top='#7d1d2b', top_sh='#4e0f19', top_hi='#a8384a', brass='#d8b04c', brass_sh='#8a6a22', brass_hi='#fff0b8',
                braid='#d6b257', trousers='#262a40', trousers_sh='#161828', stripe='#c9a24a', shoes='#3b1712',
@@ -1441,7 +1442,7 @@ def _hairline(style, part):
     elif style == 'painted':                                     # Mister Winks: carved hair, hard side part on his left
         def yf0(ph):
             return np.interp(ph, [-PI, -2.35, -2.0, -1.78, -1.5, -1.25, -0.95, -0.35, 0.28, 0.42, 0.56, 0.95, 1.25, 1.5, 1.78, 2.0, 2.35, PI],
-                             [92.0, 88.0, 40.0, -24.0, -30.0, -44.0, -57.0, -66.0, -72.0, -88.0, -74.0, -62.0, -46.0, -32.0, -24.0, 38.0, 88.0, 92.0])
+                             [92.0, 88.0, 40.0, -24.0, -32.0, -52.0, -68.0, -78.0, -83.0, -96.0, -84.0, -72.0, -52.0, -34.0, -24.0, 38.0, 88.0, 92.0])
         return yf0, 5.0
     elif style == 'shaggy':                                      # you: curtain bangs parted in the middle, over the ears
         def yf0(ph):
@@ -4551,13 +4552,13 @@ def driver_stage(t, arc=None):
 # the end (the brows of a scared boy under the widest painted grin, wet eyes); 'asleep' = the same with the lids shut.
 _WINKS_KEYS = ('grin_w', 'pupil', 'wide', 'brow_angry', 'brow_up', 'brow_sad', 'crack', 'desperate', 'lock', 'lid_l', 'lid_r', 'tears')
 WINKS_STAGES = {
-    0: dict(grin_w=0.00, pupil=0.58, wide=0.08, brow_angry=0.10, brow_up=0.12, brow_sad=0.0, crack=0.0, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    1: dict(grin_w=0.30, pupil=0.50, wide=0.15, brow_angry=0.18, brow_up=0.10, brow_sad=0.0, crack=0.17, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    2: dict(grin_w=0.58, pupil=0.43, wide=0.25, brow_angry=0.30, brow_up=0.06, brow_sad=0.0, crack=0.34, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    3: dict(grin_w=0.85, pupil=0.37, wide=0.35, brow_angry=0.42, brow_up=0.02, brow_sad=0.0, crack=0.5, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    4: dict(grin_w=1.10, pupil=0.32, wide=0.45, brow_angry=0.55, brow_up=0.0, brow_sad=0.0, crack=0.67, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    5: dict(grin_w=1.40, pupil=0.27, wide=0.55, brow_angry=0.70, brow_up=0.0, brow_sad=0.0, crack=0.84, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
-    'show': dict(grin_w=0.0, pupil=0.85, wide=0.0, brow_angry=0.0, brow_up=0.4, brow_sad=0.0, crack=0.0, desperate=0.0, lock=0.4, lid_l=0.0, lid_r=0.0, tears=0.0),
+    0: dict(grin_w=0.00, pupil=0.62, wide=0.10, brow_angry=0.30, brow_up=0.05, brow_sad=0.0, crack=0.0, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    1: dict(grin_w=0.30, pupil=0.54, wide=0.16, brow_angry=0.42, brow_up=0.03, brow_sad=0.0, crack=0.17, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    2: dict(grin_w=0.58, pupil=0.46, wide=0.24, brow_angry=0.55, brow_up=0.0, brow_sad=0.0, crack=0.34, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    3: dict(grin_w=0.85, pupil=0.38, wide=0.32, brow_angry=0.68, brow_up=0.0, brow_sad=0.0, crack=0.5, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    4: dict(grin_w=1.10, pupil=0.31, wide=0.40, brow_angry=0.80, brow_up=0.0, brow_sad=0.0, crack=0.67, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    5: dict(grin_w=1.40, pupil=0.24, wide=0.48, brow_angry=0.92, brow_up=0.0, brow_sad=0.0, crack=0.84, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    'show': dict(grin_w=0.0, pupil=0.85, wide=0.0, brow_angry=0.12, brow_up=0.35, brow_sad=0.0, crack=0.0, desperate=0.0, lock=0.4, lid_l=0.0, lid_r=0.0, tears=0.0),
     'tape': dict(grin_w=0.0, pupil=1.05, wide=0.45, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.0, desperate=1.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.7),
     'owen': dict(grin_w=1.40, pupil=1.1, wide=0.5, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.84, desperate=1.0, lock=0.6, lid_l=0.0, lid_r=0.0, tears=0.35),
     'asleep': dict(grin_w=1.40, pupil=1.1, wide=0.5, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.84, desperate=1.0, lock=0.6, lid_l=1.0, lid_r=1.0, tears=0.0),
@@ -6783,18 +6784,19 @@ def _sph(hm, phi, y, grow=0.0):
 
 def _winks_mouth(sp, P):
     """Front-coords mouth of the dummy: (mw, cy, ym, yu, yl, ylo): half width, corner height and functions of x for the
-    mouth line (the top edge of the jaw block), the top of the painted teeth, the top of the upper lip and the bottom
-    of the lower lip (on the jaw block). pose.grin_w widens the painted grin in stages (0 .. 1.4)."""
+    mouth line (the top edge of the jaw block: the seam of the tight painted grin), the bottom of the strip of painted
+    upper teeth (seen only when the jaw is open), the top of the thin upper lip and the bottom of the thin lower lip (on
+    the jaw block). pose.grin_w widens, lifts and tightens the grin in stages (0 .. 1.4)."""
     g = max(0.0, P.grin_w)
-    mw = sp['mouth_w'] + 19.0 * g
-    cy = sp['mouth_y'] - 13.0 - 7.0 * g
-    y0 = sp['mouth_y'] + 6.0 + 4.0 * g
-    th = 9.5 + 5.0 * g
+    mw = sp['mouth_w'] + 6.0 + 18.0 * g
+    cy = sp['mouth_y'] - 16.0 - 8.0 * g
+    y0 = sp['mouth_y'] + 5.0 + 3.0 * g
+    tl = 4.0 - 0.8 * min(g, 1.4)                        # the lips thin out as the grin stretches
     def u(x): return np.clip(1.0 - (np.asarray(x, float) / mw) ** 2, 0.0, 1.0)
-    def ym(x): return cy + (y0 - cy) * u(x) ** 0.85
-    def yu(x): return ym(x) - th * u(x) ** 0.55
-    def yl(x): return yu(x) - 6.5 * u(x) ** 0.5 - 1.2
-    def ylo(x): return ym(x) + 9.0 * u(x) ** 0.6 + 0.8
+    def ym(x): return cy + (y0 - cy) * u(x) ** 0.6
+    def yu(x): return ym(x) + 7.5 * u(x) ** 0.3
+    def yl(x): return ym(x) - tl * u(x) ** 0.45 - 0.9
+    def ylo(x): return ym(x) + (tl + 0.8) * u(x) ** 0.45 + 0.9
     return mw, cy, ym, yu, yl, ylo
 
 
@@ -6819,16 +6821,14 @@ _WINKS_FRECKLES = None
 
 
 def _winks_freckles():
+    """A few faint painted dots high on each cheek (three a side)."""
     global _WINKS_FRECKLES
     if _WINKS_FRECKLES is None:
         pts = []
-        for k in range(30):                                    # two cheek clusters and a sprinkle over the nose bridge
+        for k in range(6):
             s = -1 if k % 2 else 1
-            if k < 22:
-                a = hash01(k, 301) * 2 * PI; r = 21.0 * math.sqrt(hash01(k, 302))
-                pts.append((s * (44 + r * math.cos(a) * 1.3), 8 + r * math.sin(a) * 0.75, 1.7 + 1.3 * hash01(k, 303)))
-            else:
-                pts.append((s * (6 + 15 * hash01(k, 304)), 2 + 10 * hash01(k, 305), 1.5 + 1.0 * hash01(k, 306)))
+            j = k // 2
+            pts.append((s * (34.0 + 9.0 * j + 3.0 * hash01(k, 302)), 22.0 + 4.0 * hash01(k, 303) - 2.0 * j, 1.25 + 0.4 * hash01(k, 304)))
         _WINKS_FRECKLES = pts
     return _WINKS_FRECKLES
 
@@ -6839,114 +6839,153 @@ _WINKS_CRACKS = [
     [(30, -80), (22, -70), (26, -62), (18, -55)],                         # down from the hairline over the right brow
     [(54, 50), (66, 64), (64, 74), (74, 86)],                             # off the right slot line
     [(-20, -86), (-30, -74), (-26, -68), (-38, -60)],                     # forehead, left
-    [(-62, -10), (-76, -4), (-80, 8)],                                    # under the left eye, out to the temple
+    [(-62, 22), (-76, 26), (-82, 38)],                                    # under the left cheek, out to the jaw
     [(8, 96), (16, 104), (12, 112)],                                      # the chin
 ]
+_WINKS_CRAZE = None
+
+
+def _winks_craze():
+    """Fine crazing of the old lacquer (front coords): short branching hairlines away from the eyes, nose and mouth,
+    in reveal order (pose.crack shows the first crack * n). Each is a list of (x, y)."""
+    global _WINKS_CRAZE
+    if _WINKS_CRAZE is None:
+        out, k = [], 0
+        while len(out) < 34 and k < 400:
+            x = -92.0 + 184.0 * hash01(k, 411); y = -74.0 + 184.0 * hash01(k, 412); k += 1
+            ex = abs(x) - 41.0
+            if (ex / 36.0) ** 2 + ((y + 14.0) / 36.0) ** 2 < 1.0: continue          # the eyes
+            if abs(x) < 18 and -2 < y < 36: continue                                # the nose
+            if abs(x) < 70 and 22 < y < 70: continue                                # the grin
+            if abs(x) > 96 - 0.004 * y * y: continue
+            pts = [(x, y)]
+            a = hash01(k, 413) * 2 * PI
+            for j in range(3 + int(hash01(k, 414) * 3)):
+                a += (hash01(k * 7 + j, 415) - 0.5) * 1.6
+                L = 4.0 + 4.5 * hash01(k * 7 + j, 416)
+                pts.append((pts[-1][0] + L * math.cos(a), pts[-1][1] + L * math.sin(a)))
+            out.append(pts)
+            if hash01(k, 417) > 0.55:                                               # a branch off the middle
+                b = pts[len(pts) // 2]; a2 = a + (1.2 if hash01(k, 418) > 0.5 else -1.2)
+                out.append([b, (b[0] + 5.0 * math.cos(a2), b[1] + 5.0 * math.sin(a2)), (b[0] + 9.0 * math.cos(a2 + 0.4), b[1] + 9.0 * math.sin(a2 + 0.4))])
+        _WINKS_CRAZE = out
+    return _WINKS_CRAZE
+
+
+# two chips knocked out of the paint (front coords x, y, size): the bare wood shows
+_WINKS_CHIPS = [(-80.0, 46.0, 1.0), (79.0, -24.0, 0.75)]
+
+
+def _winks_eye_shape(sp, P, side):
+    """(r, droop, tilt) of one eye: radius, how far the resting upper lid hangs over the eyeball (0 = open .. 1), and
+    the tilt of the lid edge (+ = lower toward the nose: the sly scowl; - = pleading)."""
+    dsp = clamp(P.desperate); sad = clamp(P.brow_sad + dsp); ang = clamp(P.brow_angry) * (1.0 - sad)
+    r = sp['eye_r'] * (1.0 + 0.08 * P.wide)
+    droop = clamp(0.17 + 0.14 * ang - 0.3 * P.brow_up - 0.42 * dsp, 0.0, 0.5)
+    return r, droop, 0.17 * ang - 0.12 * sad
 
 
 def _winks_eye(c, hm, sp, P, side, det, t, skin, sh):
-    """One glass eye under a wooden lid. side -1 = screen-left eye (character's right). Returns (X, Y, r, fs) or None."""
+    """One glossy painted eyeball under a heavy wooden lid. side -1 = screen-left eye (character's right). Small,
+    near-black irises with a hard pinpoint highlight, locked on the lens; the upper lid rests low (sizing you up) and
+    slides shut for the wink / blink. Returns (X, Y, r, fs, glint) or None; glint = (x, y, rx, ry) of the visible
+    pinpoint highlight or None."""
     ex0 = side * sp['eye_dx']; ey0 = sp['eye_y']
     X, Y, V = hm.map1(ex0, ey0, 3.0)
     if V < 0.1: return None
     fs = hm.sx(ex0, ey0)
-    r = sp['eye_r'] * (1.0 + 0.1 * P.wide)
+    r, droop, tilt0 = _winks_eye_shape(sp, P, side)
     rx = r * fs
-    dp = sp['skin_dp']
-    # carved socket: a soft dark ring round the eyeball
-    c.glow(X, Y + 1.5, rx * 1.5, r * 1.45, dp, 105 + 30 * P.desperate)
+    dsp = clamp(P.desperate); ang = clamp(P.brow_angry) * (1.0 - clamp(P.brow_sad + dsp))
+    # a deep-set socket and the faint grey-violet shadow under the eye
+    c.glow(X, Y + 1.0, rx * 1.55, r * 1.45, '#33233a', 105 + 70 * ang + 40 * dsp)
+    c.glow(X, Y + r * 1.0, rx * 1.1, r * 0.46, '#56436a', 105 + 50 * ang + 50 * dsp)
     white = oval(X, Y, rx, r)
-    c.fill(white, '#efe7d0')
+    c.fill(white, '#f0e8d4')
     lidk = clamp(max(P.blink, P.lid_l if side > 0 else P.lid_r))
     lock = clamp(P.lock)
     lx = lerp(P.look_x, -math.sin(hm.yaw) * 0.8, lock)
-    ly = lerp(P.look_y, -math.sin(hm.pitch) * 0.9 - 0.06, lock)
-    ir = r * 0.47 * (1.0 - 0.14 * clamp(P.wide)) * (0.9 + 0.1 * P.pupil)
-    pr = ir * 0.46 * P.pupil
-    reach = r - ir - 1.5
+    ly = lerp(P.look_y, -math.sin(hm.pitch) * 0.9 + 0.05, lock)
+    if dsp > 0.02:                           # the one inside: the eyes shiver, searching for help
+        lx += dsp * 0.06 * math.sin(t * 19.0 + 1.3 * side); ly += dsp * 0.04 * math.sin(t * 15.0 + 0.7)
+    ir = r * (0.21 + 0.10 * P.pupil + 0.05 * dsp)
+    pr = ir * (0.42 + 0.22 * dsp)
+    reach = r - ir - 2.5
     px = X + lx * reach * fs; py = Y + ly * reach
-    irc = sp.get('iris', '#5d8db8')
+    irc = sp.get('iris', '#2a1a12')
+    e = ease_in_out(lidk)
+    f = droop + (1.0 - droop) * e
+    yc = Y - r * 1.04 + 2.1 * r * f                # lid edge: centre height, the dome's sag, the tilt to the nose
+    sag = r * (0.14 + 0.1 * e)
+    tilt = r * tilt0 * (1.0 - e)
+
+    def edge_y(u): return yc - sag * u * u - tilt * side * u
+    us = (-1.4, -1.0, -0.55, 0.0, 0.55, 1.0, 1.4)
+    edge_pts = [(X + u * rx, edge_y(u)) for u in us]
+    glint = None
     with c.clip(white):
-        c.radial(white, X - rx * 0.15, Y - r * 0.2, r * 1.2, [(0, '#fffdf2', 0), (0.5, '#efe7d0', 0), (0.85, '#c9b996', 200), (1, '#8f7f62', 245)])
+        c.radial(white, X - rx * 0.2, Y - r * 0.1, r * 1.15, [(0, '#fffaf0', 0), (0.55, '#f0e8d4', 0), (0.85, '#c8b99c', 210), (1, '#86745e', 250)])
         iris = oval(px, py, ir * fs, ir)
-        c.radial(iris, px - ir * 0.15 * fs, py - ir * 0.2, ir * 1.15, [(0, mix(irc, '#ffffff', 0.45), 255), (0.55, irc, 255),
-                                                                        (1, mix(irc, '#0b1420', 0.65), 255)])
-        if det >= 2:
-            sp_ = []
-            for k in range(14):
-                a = k * 2 * PI / 14 + 0.2
-                sp_.append(poly([(px + math.cos(a) * pr * 1.25 * fs, py + math.sin(a) * pr * 1.25),
-                                 (px + math.cos(a) * ir * 0.86 * fs, py + math.sin(a) * ir * 0.86)], False))
-            c.line(_multi(sp_), c.lw * 0.18, mix(irc, '#0b1420', 0.5), 150)
-        c.line(iris, c.lw * 0.45, '#101820', 230)
-        c.fill(oval(px, py, pr * fs, pr), '#07080b')
-        # the hard painted highlight + a second spark, and the glassy window reflection over the eyeball
-        hx, hy = px - ir * 0.36 * fs, py - ir * 0.4
-        c.fill(oval(hx, hy, max(1.6, ir * 0.24) * fs, max(1.6, ir * 0.27)), '#ffffff', 245)
-        c.fill(oval(px + ir * 0.34 * fs, py + ir * 0.32, max(1.0, ir * 0.1) * fs, max(1.0, ir * 0.1)), '#ffffff', 200)
+        c.radial(iris, px + ir * 0.2 * fs, py + ir * 0.25, ir * 1.1, [(0, mix(irc, '#7a4a2a', 0.3), 255), (0.5, irc, 255), (1, mix(irc, '#000000', 0.6), 255)])
+        c.line(iris, c.lw * 0.4, '#050303', 240)
+        c.fill(oval(px, py, pr * fs, pr), '#020101')
+        # the hard pinpoint highlight (+ a faint second spark), unless the lid is over it
+        gx, gy = px - ir * 0.38 * fs, py - ir * 0.42
+        gr = max(1.3, ir * 0.2)
+        if gy - gr > edge_y((gx - X) / max(rx, 1e-3)) + 0.5:
+            glint = (gx, gy, gr * fs, gr)
+            c.fill(oval(gx, gy, gr * fs, gr), '#ffffff', 250)
+        c.fill(oval(px + ir * 0.4 * fs, py + ir * 0.38, max(0.8, ir * 0.08) * fs, max(0.8, ir * 0.08)), '#ffffff', 150)
+        if det >= 1:                          # glassy sheen on the lower eyeball
+            c.line(smooth([(X - rx * 0.62, Y + r * 0.5), (X - rx * 0.2, Y + r * 0.72), (X + rx * 0.25, Y + r * 0.7)], False),
+                   c.lw * 0.6, '#ffffff', 80 * P.gloss)
+        if dsp > 0.02:                       # the one inside: wet, red-rimmed, a tear pooling on the lower lid
+            c.fill(smooth([(X - rx, Y + r * 0.58), (X, Y + r * 0.8), (X + rx, Y + r * 0.58), (X, Y + r * 1.15)], True), '#bcd6f2', 140 * dsp)
+            c.line(smooth([(X - rx * 0.7, Y + r * 0.76), (X, Y + r * 0.88), (X + rx * 0.7, Y + r * 0.76)], False), c.lw * 0.35, '#ffffff', 190 * dsp)
+            c.line(white, c.lw * 1.6, '#a0384a', 120 * dsp)
+        # the lid's shadow on the eyeball, the lid, its hard painted edge
+        lid = smooth([(X - rx * 1.5, Y - r * 1.7), (X + rx * 1.5, Y - r * 1.7)] + edge_pts[::-1], True, 0.7)
+        edge = smooth(edge_pts, False, 0.8)
+        c.line(moved_path(edge, 0.0, r * 0.16), r * 0.32, '#2a1a1c', 85 - 40 * e)
+        lc = mix(skin, sh, 0.3)
+        c.fill(lid, lc)
+        c.grad(lid, 0, Y - r, 0, yc + r * 0.05, [(0, mix(lc, '#ffffff', 0.12), 255), (0.65, lc, 255), (1, mix(lc, sp['skin_dp'], 0.45), 255)])
         if det >= 1:
-            c.line(smooth([(X - rx * 0.62, Y - r * 0.3), (X - rx * 0.3, Y - r * 0.66), (X + rx * 0.12, Y - r * 0.74)], False),
-                   c.lw * 0.7, '#ffffff', 90 * P.gloss)
-        dsp = clamp(P.desperate)
-        if dsp > 0.02:                       # the one inside: a wet shine along the bottom of the eye
-            c.fill(smooth([(X - rx, Y + r * 0.55), (X, Y + r * 0.8), (X + rx, Y + r * 0.55), (X, Y + r * 1.15)], True), '#bcd6f2', 150 * dsp)
-            c.line(smooth([(X - rx * 0.7, Y + r * 0.74), (X, Y + r * 0.86), (X + rx * 0.7, Y + r * 0.74)], False), c.lw * 0.35, '#ffffff', 170 * dsp)
-        if lidk > 0.01:                      # the wooden lid slides down over the eyeball (a dome: curved edge)
-            e = ease_in_out(lidk)
-            ye = Y - r * 1.08 + 1.72 * r * e
-            sag = r * (0.16 + 0.12 * e)
-            lid = smooth([(X - rx * 1.3, Y - r * 1.6), (X + rx * 1.3, Y - r * 1.6), (X + rx * 1.3, ye - sag * 0.3),
-                          (X + rx * 0.6, ye + sag * 0.75), (X, ye + sag), (X - rx * 0.6, ye + sag * 0.75), (X - rx * 1.3, ye - sag * 0.3)], True, 0.7)
-            lc = mix(skin, sh, 0.38)
-            c.fill(lid, lc)
-            c.grad(lid, 0, Y - r, 0, ye + sag, [(0, mix(lc, '#ffffff', 0.1), 255), (0.6, lc, 255), (1, mix(lc, dp, 0.5), 255)])
-            if det >= 1 and e > 0.5:                     # the carved crease of the lid
-                c.line(smooth([(X - rx * 0.8, Y - r * 0.55), (X, Y - r * 0.72), (X + rx * 0.8, Y - r * 0.55)], False), c.lw * 0.45, dp, 160 * e)
-            if det >= 1:
-                c.fill(oval(X - rx * 0.3, max(Y - r * 0.75, ye - r * 0.55), rx * 0.32, r * 0.1), '#ffffff', 90 * P.gloss)
-            edge = smooth([(X - rx * 1.05, ye - sag * 0.2), (X - rx * 0.5, ye + sag * 0.78), (X, ye + sag), (X + rx * 0.5, ye + sag * 0.78),
-                           (X + rx * 1.05, ye - sag * 0.2)], False)
-            c.line(edge, c.lw * (1.15 + 0.5 * e))
-    if lidk > 0.35:                          # painted lashes hanging from the lid's edge (over the eye outline)
-        e = ease_in_out(lidk); ye = Y - r * 1.08 + 1.72 * r * e; sag = r * (0.16 + 0.12 * e)
-        ls = []
-        for k in range(6):
-            u = -0.75 + 0.3 * k
-            x1 = X + u * rx; y1 = ye + sag * (1.0 - u * u * 0.85)
-            ls.append(poly([(x1, y1), (x1 + u * 5.0 * fs, y1 + 7.5)], False))
-        c.line(_multi(ls), c.lw * 0.55, '#2a1410', 255 * clamp((e - 0.35) / 0.3))
-    c.line(white, c.lw * 0.95)
-    if det >= 1 and lidk < 0.9:              # painted lashes: three on the outer upper corner, five below (doll style)
-        ls = []
-        for k in range(3):
-            a = -PI / 2 + side * (0.75 + 0.28 * k)
-            x1, y1 = X + math.cos(a) * rx * 1.0, Y + math.sin(a) * r * 1.0
-            ln = 8.0 + 2.0 * k
-            ls.append(poly([(x1, y1), (x1 + math.cos(a) * ln * fs, y1 + math.sin(a) * ln)], False))
-        for k in range(5):
-            a = PI / 2 + (k - 2) * 0.36
-            x1, y1 = X + math.cos(a) * rx * 1.04, Y + math.sin(a) * r * 1.04
-            ls.append(poly([(x1, y1), (x1 + math.cos(a) * 6.5 * fs, y1 + math.sin(a) * 6.5)], False))
-        c.line(_multi(ls), c.lw * 0.42, '#2a1410', 235)
-    return (X, Y, r, fs)
+            if f > 0.55:                     # the carved crease of the lid
+                c.line(smooth([(X - rx * 0.8, Y - r * 0.55), (X, Y - r * 0.72), (X + rx * 0.8, Y - r * 0.55)], False), c.lw * 0.45, sp['skin_dp'], 160 * e)
+            c.fill(oval(X - rx * 0.28, max(Y - r * 0.8, yc - r * 0.45), rx * 0.3, r * 0.08), '#ffffff', 110 * P.gloss)
+        c.line(edge, c.lw * (1.5 + 0.3 * e), '#160c0a')
+        if e > 0.75:                         # shut: the seam where the lid meets the lower rim
+            c.line(smooth([(X - rx * 0.86, Y + r * 0.34), (X, Y + r * 0.6), (X + rx * 0.86, Y + r * 0.34)], False), c.lw * 1.2, '#160c0a',
+                   255 * clamp((e - 0.75) / 0.2))
+    c.line(white, c.lw * 0.9)
+    return (X, Y, r, fs, glint)
 
 
 def _winks_brow(c, hm, sp, P, side):
-    """Heavy arched painted brow: thick at the peak, tapering to a point outside."""
-    ex0 = side * sp['eye_dx']; r = sp['eye_r']
-    up = P.brow_up; ang = P.brow_angry; sad = clamp(P.brow_sad + P.desperate)
-    base = sp['eye_y'] - r - 6.0 - 5.0 * up                 # between the eyes and the hairline (a short carved forehead)
-    xi, yi = ex0 - side * 31.0, base + 3.0 + 11.0 * ang * (1 - sad) - 17.0 * sad
-    xp, yp = ex0 + side * 3.0 - side * 12.0 * sad, base - 10.0 - 3.0 * up + 3.0 * ang * (1 - sad) - 4.0 * sad
-    xo, yo = ex0 + side * 42.0, base + 4.0 - 6.0 * ang + 13.0 * sad
-    th = sp['brow_th']
-    top = [(xi, yi - th * 0.45), ((xi + xp) / 2, (yi + yp) / 2 - th * 0.62 - 3), (xp, yp - th * 0.55), ((xp + xo) / 2, (yp + yo) / 2 - th * 0.25 - 2), (xo, yo)]
-    bot = [((xp + xo) / 2, (yp + yo) / 2 + th * 0.2 - 1), (xp, yp + th * 0.5), ((xi + xp) / 2, (yi + yp) / 2 + th * 0.42 - 2), (xi, yi + th * 0.45)]
-    pts = top + bot
+    """Heavy, sharply arched painted brow, angled down toward the nose (a sly scowl even while he grins): a blunt heavy
+    head low by the nose, a pointed peak over the outer half of the eye, a tapering tail. brow_angry lowers and
+    sharpens it; brow_sad / desperate lift the inner end (pleading)."""
+    ex = sp['eye_dx']; r = sp['eye_r']; ey = sp['eye_y']
+    up = P.brow_up; sad = clamp(P.brow_sad + P.desperate); ang = clamp(P.brow_angry) * (1 - sad)
+    th = sp['brow_th'] * (1.0 + 0.1 * ang)
+    xi, yi = side * (ex - 30.0), ey - r - 3.0 + 12.0 * ang - 19.0 * sad - 4.0 * up
+    xp, yp = side * (ex + 9.0 - 13.0 * sad), ey - r - 21.0 - 4.0 * up + 2.0 * ang - 1.0 * sad
+    xo, yo = side * (ex + 43.0), ey - r - 6.0 - 3.0 * ang + 11.0 * sad
+    L = lambda a, b, k: a + (b - a) * k             # noqa: E731
+    pts = [(xi, yi + th * 0.5), (xi + side * 1.5, yi - th * 0.52),
+           (L(xi, xp, 0.5), L(yi, yp, 0.5) - th * 0.5 - 1.0), (xp, yp - th * 0.45),
+           (L(xp, xo, 0.5), L(yp, yo, 0.5) - th * 0.14 - 0.8), (xo, yo),
+           (L(xp, xo, 0.5), L(yp, yo, 0.5) + th * 0.24), (xp - side * 2.0, yp + th * 0.42),
+           (L(xi, xp, 0.5), L(yi, yp, 0.5) + th * 0.5)]
     X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
     if V.mean() < 0.1: return
-    p = _pts_path(X, Y, True, 0.85)
-    c.fill(p, sp['brow_c']); c.line(p, c.lw * 0.35, mix(sp['brow_c'], '#000000', 0.4))
+    p = _pts_path(X, Y, True, 0.45)
+    c.fill(p, sp['brow_c']); c.line(p, c.lw * 0.4, mix(sp['brow_c'], '#000000', 0.5))
+    if P.gloss > 0.05:                          # the lacquer catches the top of the arch
+        q = [(L(xi, xp, 0.45), L(yi, yp, 0.45) - th * 0.25), (L(xi, xp, 0.85), L(yi, yp, 0.85) - th * 0.28), (xp + side * 3.0, yp - th * 0.12)]
+        X2, Y2, V2 = hm.map([a[0] for a in q], [a[1] for a in q], 3.5)
+        if V2.min() > 0.15: c.line(_pts_path(X2, Y2, False, 0.8), c.lw * 0.45, '#ffffff', 70 * P.gloss)
 
 
 def _winks_cap(c, hm, sp, P, det, cl):
@@ -6985,22 +7024,23 @@ def _winks_cap(c, hm, sp, P, det, cl):
 
 
 def _winks_hair(c, hm, sp, P, det, sil):
-    """Painted, carved red hair: a hard side part on his left (phi ~ +0.42), the forelock swept across to his right,
-    grooves following the carving, varnish shine; covers the back of the head down to the nape."""
+    """Painted, carved auburn hair: a hard side part on his left (phi ~ +0.42), the forelock swept across to his right,
+    sculpted ridges (a dark groove with a lit ridge beside it) following the carving, a hard varnish shine; covers the
+    back of the head down to the nape."""
     yf, grow = _hairline('painted', 1)
     X, Y = hm.arc_phi(yf, 120)
     if len(X) < 3: return None
     region = poly([(float(X[0]) - 300, -420.0)] + [(float(x), float(y)) for x, y in zip(X, Y)] + [(float(X[-1]) + 300, -420.0)], True)
     vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.5, y_bot=100)
     hair = inter(union(vol, sil), region)
-    hc = sp['hair_c']; hsh = mix(hc, '#2a0a04', 0.42); hhi = mix(hc, '#ffd0a0', 0.35)
+    hc = sp['hair_c']; hsh = mix(hc, '#1a0603', 0.5); hhi = mix(hc, '#ffc08a', 0.38)
     # the forelock throws a shadow band on the forehead under the hairline
     if hm.map1(0, -60)[2] > 0.05:
-        sh_ = inter(minus(moved_path(hair, 2.0, 7.0), hair), sil)
-        c.fill(sh_, sp['skin_dp'], 110)
+        sh_ = inter(minus(moved_path(hair, 2.0, 8.0), hair), sil)
+        c.fill(sh_, sp['skin_dp'], 130)
     c.fill(hair, hc)
     with c.clip(hair):
-        c.radial(None, -40 + 30 * hm.st, -100, 170, [(0, hhi, 150), (0.45, hc, 0), (1, hsh, 230)], clip=False)
+        c.radial(None, -40 + 30 * hm.st, -100, 170, [(0, hhi, 150), (0.45, hc, 0), (1, hsh, 235)], clip=False)
         if det >= 1:
             gr = []
             for k in range(6 if det >= 2 else 4):              # swept forelock: from the part across to his right temple
@@ -7023,25 +7063,31 @@ def _winks_hair(c, hm, sp, P, det, sil):
                 Xg, Yg, Vg = _sph(hm, ph, ys, 1.5)
                 m = Vg > 0.02
                 if m.sum() > 2: gr.append(_pts_path(Xg[m], Yg[m], False, 0.9))
-            if gr: c.line(_multi(gr), c.lw * 0.42, hsh, 210)
-        # varnish shine along the crest of the swoop
+            if gr:                                              # carved ridges: lit edge, then the groove
+                q = _multi(gr)
+                c.line(moved_path(q, -1.6, -2.0), c.lw * 0.9, hhi, 120)
+                c.line(q, c.lw * 0.75, hsh, 235)
+        # hard varnish shine along the crest of the swoop
         ph = np.linspace(0.25, -1.1, 10)
         Xs, Ys, Vs = _sph(hm, ph, -100.0 + (0.25 - ph) * 15.0, 2.0)
         m = Vs > 0.1
         if m.sum() > 2:
             sl = _pts_path(Xs[m], Ys[m], False, 0.9)
-            c.line(sl, c.lw * 2.6, '#ffffff', 55 * P.gloss); c.line(sl, c.lw * 0.6, '#fff4e0', 150 * P.gloss)
+            c.line(sl, c.lw * 2.8, '#ffffff', 50 * P.gloss); c.line(sl, c.lw * 0.8, '#fff4e0', 200 * P.gloss)
     # the part: a hard groove from the hairline back over the crown
-    ys = np.linspace(-87.0, -119.5, 7)
+    ys = np.linspace(-96.0, -119.5, 7)
     Xp, Yp, Vp = _sph(hm, np.full(7, 0.42), ys, 1.0)
     m = Vp > 0.02
-    if m.sum() > 2: c.line(_pts_path(Xp[m], Yp[m], False, 0.9), c.lw * 0.75, mix(hsh, '#000000', 0.3))
+    if m.sum() > 2: c.line(_pts_path(Xp[m], Yp[m], False, 0.9), c.lw * 0.9, mix(hsh, '#000000', 0.4))
     c.line(hair, c.lw)
     return hair
 
 
 def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
-    """Mister Winks's head on Ctx c (origin = head centre, head units). Returns the HeadMap."""
+    """Mister Winks's head on Ctx c (origin = head centre, head units). Returns the HeadMap. Lacquered ivory wood:
+    glossy staring eyes with small near-black irises under low heavy lids, heavy arched black-brown brows angled down
+    to the nose, a tight wide grin in thin dark-red lips, the jaw block on two deep slot lines, faded rouge, crazed
+    varnish and chips. The menace (shadows, scowl, crazing) builds with the stage arc."""
     sp = sp or CAST[who]
     cl = sp['cloth']
     hm = HeadMap(sp, yaw, pitch, 0.0, 0.0)
@@ -7051,6 +7097,8 @@ def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     sil = minus(sil_full, cut) if cut is not None else sil_full
     face_v = hm.map1(0, 0)[2]
     gl = clamp(P.gloss)
+    dsp = clamp(P.desperate)
+    men = clamp(0.3 + 0.5 * clamp(P.grin_w / 1.4) + 0.3 * clamp(P.brow_angry) - 0.3 * dsp)   # menace: deeper shadows
     for side in (-1, 1):                                       # far ear behind the skull
         if -side * hm.st < 0.25: _ear(c, hm, sp, side, skin, sh, det)
     # the jaw block, at rest and dropped
@@ -7062,11 +7110,11 @@ def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     head = minus(sil, B0) if front else sil
     jdx, jdy = 0.0, J * hm.cp
     Bm = moved_path(B0, jdx, jdy) if front else None
-    # skull fill and shading (one shade step, painted wood under varnish)
+    # skull fill and shading: painted wood under a hard varnish
     c.fill(head, skin)
     lsd = (light or {}).get('side', 1)
-    c.radial(head, -35.0 * lsd + hm.st * 20, -40, 165, [(0, mix(skin, '#ffffff', 0.12), 120), (0.55, skin, 0), (0.88, sh, 90), (1.0, sh, 160)], sy=1.1)
-    c.fill(_crescent(head, -lsd * 26, 5), sh, 50)
+    c.radial(head, -35.0 * lsd + hm.st * 20, -40, 165, [(0, mix(skin, '#ffffff', 0.15), 130), (0.5, skin, 0), (0.84, sh, 110 + 50 * men), (1.0, sh, 200)], sy=1.1)
+    c.fill(_crescent(head, -lsd * 26, 5), sh, 50 + 60 * men)
     if cut is not None: c.fill(head, sh, 110 * clamp((-hm.ct - 0.2) / 0.4))
     if det >= 2: c.texture(inter(head, rect(-130, -80, 260, 260)), 'paper', 0.05, 0.4)
     if light and light.get('under'):
@@ -7078,56 +7126,65 @@ def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     eyes = {}
     if face_v > -0.35:
         with (c.clip(hm.silhouette(grow=1.0)) if abs(hm.st) > 0.2 or abs(P.h_nod) > 0.3 else _noop()):
-            # rosy painted cheeks (hard edged), freckles, chip and cracks in the varnish
+            # small faded rouge circles, a few faint freckles, chips and crazing in the varnish
             for side in (-1, 1):
-                bx_, by_, bv_ = hm.map1(side * 60, 14, 2)
+                bx_, by_, bv_ = hm.map1(side * 63, 18, 2)
                 if bv_ > 0.08:
-                    fs_ = hm.sx(side * 60, 14)
-                    c.radial(oval(bx_, by_, 21 * fs_, 19), bx_, by_, 21, [(0, sp['blush'], 200), (0.72, sp['blush'], 175), (0.9, sp['blush'], 90),
-                                                                         (1, sp['blush'], 0)], sy=19 / 21.0)
+                    fs_ = hm.sx(side * 63, 18)
+                    c.radial(oval(bx_, by_, 12 * fs_, 11.5), bx_, by_, 12, [(0, sp['blush'], 125), (0.7, sp['blush'], 105), (0.92, sp['blush'], 40),
+                                                                         (1, sp['blush'], 0)], sy=11.5 / 12.0)
             if det >= 1:
                 fr = _winks_freckles()
                 X_, Y_, V_ = hm.map([f[0] for f in fr], [f[1] for f in fr], 2.0)
                 dots = [oval(float(X_[i]), float(Y_[i]), fr[i][2] * hm.sx(fr[i][0], fr[i][1]), fr[i][2]) for i in range(len(fr)) if V_[i] > 0.1]
-                if dots: c.fill(_multi(dots), '#a5532f', 200)
-                cx_, cy_, cv_ = hm.map1(-80, 46, 2)
-                if cv_ > 0.15 and det >= 2:
-                    chip = poly([(cx_ - 4, cy_ - 3), (cx_ - 1, cy_ - 5), (cx_ + 3, cy_ - 4), (cx_ + 2, cy_ - 1), (cx_ + 4, cy_ + 2), (cx_, cy_ + 4),
-                                 (cx_ - 3, cy_ + 2), (cx_ - 2, cy_)])
-                    c.fill(chip, '#d9bd96'); c.line(chip, c.lw * 0.3, '#6e4a33', 220)
-                ncr = int(math.ceil(clamp(P.crack) * len(_WINKS_CRACKS) - 1e-6))
+                if dots: c.fill(_multi(dots), '#8e5038', 95)
+                for (x_, y_, s_) in _WINKS_CHIPS:
+                    cx_, cy_, cv_ = hm.map1(x_, y_, 2)
+                    if cv_ > 0.15:
+                        f_ = s_ * max(0.4, hm.sx(x_, y_))
+                        chip = poly([(cx_ - 4 * f_, cy_ - 3 * s_), (cx_ - 1 * f_, cy_ - 5 * s_), (cx_ + 3 * f_, cy_ - 4 * s_), (cx_ + 2 * f_, cy_ - 1 * s_),
+                                     (cx_ + 4.5 * f_, cy_ + 2 * s_), (cx_, cy_ + 4 * s_), (cx_ - 3 * f_, cy_ + 2.5 * s_), (cx_ - 2 * f_, cy_)])
+                        c.fill(chip, '#dcbf96')
+                        with c.clip(chip): c.line(moved_path(chip, 1.0, 1.2), c.lw * 0.6, '#8a6040', 150)
+                        c.line(chip, c.lw * 0.28, '#4e2e1c', 210)
                 crs = []
+                ncr = int(math.ceil(clamp(P.crack) * len(_WINKS_CRACKS) - 1e-6))
                 for k in range(ncr):
                     pts = _WINKS_CRACKS[k]
                     X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 2.5)
                     if V_.min() > 0.08: crs.append(_pts_path(X_, Y_, False, 0.3))
                 if crs:
                     q = _multi(crs)
-                    c.line(moved_path(q, 0.8, 0.8), c.lw * 0.3, '#fff1e2', 120); c.line(q, c.lw * 0.32, '#4a2418', 220)
-            # the painted mouth above the jaw line: upper lip (red), the band of flat painted teeth
+                    c.line(moved_path(q, 0.8, 0.8), c.lw * 0.3, '#fff1e2', 120); c.line(q, c.lw * 0.34, '#3a1a12', 230)
+                if det >= 2 and P.crack > 0.01:            # the fine crazing spreads with the arc
+                    cz = _winks_craze()
+                    n = int(round(clamp(0.25 + 0.75 * clamp(P.crack)) * len(cz)))
+                    flat = [p for s_ in cz[:n] for p in s_]
+                    X_, Y_, V_ = hm.map([p[0] for p in flat], [p[1] for p in flat], 2.2)
+                    i0, czp = 0, []
+                    for s_ in cz[:n]:
+                        i1 = i0 + len(s_)
+                        if V_[i0:i1].min() > 0.12: czp.append(_pts_path(X_[i0:i1], Y_[i0:i1], False, 0.2))
+                        i0 = i1
+                    if czp:
+                        q = _multi(czp)
+                        c.line(moved_path(q, 0.6, 0.6), c.lw * 0.2, '#fff6ea', 70); c.line(q, c.lw * 0.2, '#4a2a20', 90 + 80 * clamp(P.crack))
+            # the thin painted upper lip over the seam, and the painted creases that hook up from the corners
             xs = np.linspace(-mw, mw, 25)
-            tpts = list(zip(xs.tolist(), yu(xs).tolist())) + list(zip(xs[::-1].tolist(), ym(xs[::-1]).tolist()))
-            teeth, TV = _fpath(hm, tpts, 4.5, True, 0.7)
-            lpts = list(zip(xs.tolist(), yl(xs).tolist())) + list(zip(xs[::-1].tolist(), yu(xs[::-1]).tolist()))
-            ulip, _ = _fpath(hm, lpts, 4.5, True, 0.7)
-            if float(np.max(TV)) > 0.02:
-                c.fill(teeth, '#f1ead8')
-                if det >= 1:
-                    c.grad(teeth, 0, float(hm.map1(0, float(yu(0.0)))[1]), 0, float(hm.map1(0, float(ym(0.0)))[1]),
-                           [(0, '#c9bea4', 255), (0.5, '#f1ead8', 0), (1, '#f1ead8', 0)])
-                n = int(10 + 6 * max(0.0, P.grin_w))
-                seps = []
-                for k in range(1, n):
-                    x_ = -mw + 2 * mw * k / n
-                    a0 = hm.map1(x_, float(yu(x_)) + 0.5, 4.6); a1 = hm.map1(x_ * 0.985, float(ym(x_)), 4.6)
-                    if a0[2] > 0.02 and abs(float(yu(x_)) - float(ym(x_))) > 1.0: seps.append(poly([(a0[0], a0[1]), (a1[0], a1[1])], False))
-                if seps: c.line(_multi(seps), c.lw * 0.32, '#8c7f68', 230)
+            lpts = list(zip(xs.tolist(), yl(xs).tolist())) + list(zip(xs[::-1].tolist(), ym(xs[::-1]).tolist()))
+            ulip, UV = _fpath(hm, lpts, 4.5, True, 0.7)
+            if float(np.max(UV)) > 0.02:
                 c.fill(ulip, sp['lip'])
                 if det >= 1:
-                    hx, hy, hv = hm.map1(-mw * 0.3, float(yl(-mw * 0.3)) + 2.0, 5.0)
-                    if hv > 0.1: c.fill(oval(hx, hy, 7 * hm.sx(-mw * 0.3, 40), 1.6), '#ffffff', 140 * gl)
-                c.line(ulip, c.lw * 0.5, mix(sp['lip'], '#000000', 0.5))
-                c.line(teeth, c.lw * 0.45, '#6b5b48', 200)
+                    hx, hy, hv = hm.map1(-mw * 0.32, float(yl(-mw * 0.32)) + 1.5, 5.0)
+                    if hv > 0.1: c.fill(oval(hx, hy, 5.5 * hm.sx(-mw * 0.3, 40), 1.1), '#ffffff', 150 * gl)
+                c.line(ulip, c.lw * 0.45, mix(sp['lip'], '#000000', 0.55))
+                cr = []
+                for side in (-1, 1):
+                    pts = [(side * (mw - 1.5), cy + 0.5), (side * (mw + 3.5), cy - 4.5), (side * (mw + 4.5), cy - 9.0 - 3.0 * clamp(P.grin_w))]
+                    X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 4.0)
+                    if V_.min() > 0.05: cr.append(_pts_path(X_, Y_, False, 0.8))
+                if cr: c.line(_multi(cr), c.lw * 0.85, mix(sp['lip'], '#000000', 0.6), 245)
             for side in (-1, 1):
                 eyes[side] = _winks_eye(c, hm, sp, P, side, det, t, skin, sh)
                 _winks_brow(c, hm, sp, P, side)
@@ -7142,78 +7199,101 @@ def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
                     if Vt.min() > 0.1:
                         tp = _pts_path(Xt, Yt, False)
                         c.line(tp, c.lw * 1.1, '#a8c8f0', 200 * clamp(P.tears)); c.line(tp, c.lw * 0.3, '#ffffff', 200 * clamp(P.tears))
-    # the open mouth: the black hollow behind the teeth, then the jaw block on top
+    c.line(head, c.lw)                      # (under the block: the dropped block covers the cut edges it slides over)
+    # deep slot grooves: a dark shadow on the head side of each marionette line (under the block where it overlaps)
+    if front and face_v > -0.35:
+        xb = mw * 0.84
+        g1, g2 = [], []
+        for side in (-1, 1):
+            for off, lst in ((3.2, g1), (1.4, g2)):
+                pts = [(side * (mw + off), cy + 1), (side * (mw * 0.5 + xb * 0.5 + off), cy * 0.5 + _jaw_y(sp, xb) * 0.5),
+                       (side * (xb + off), min(118.0, _jaw_y(sp, xb)) - 2)]
+                X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
+                if V_.min() > 0.05: lst.append(_pts_path(X_, Y_, False))
+        if g1: c.line(_multi(g1), c.lw * 2.4, dp, 70 + 60 * men)
+        if g2: c.line(_multi(g2), c.lw * 0.9, '#120607', 150 + 60 * men)
+    # the open mouth: the black void with a dark-red rim and the strips of painted teeth, then the jaw block on top
     if front:
         if J > 0.3:
             hole = minus(B0, Bm)
-            c.fill(hole, '#14060a')
-            hb = hole.getBounds()
+            c.fill(hole, '#060102')
+            ts = clamp(J / 12.0)
             with c.clip(hole):
-                c.radial(None, hb.centerX(), hb.bottom(), max(hb.width(), 1.0) * 0.55, [(0, '#5c1218', 200), (0.6, '#2a0a0e', 120), (1, '#14060a', 0)],
-                         sy=0.45, clip=False)
-            c.line(hole, c.lw * 0.6)
+                xs = np.linspace(-mw, mw, 21)                                   # the dark-red rim: the lips' inner edges
+                rim, _ = _fpath(hm, list(zip(xs.tolist(), ym(xs).tolist())), 4.5, False, 0.8)
+                c.line(_multi([rim, moved_path(rim, jdx, jdy)]), c.lw * 3.6, '#4e0a12', 255)
+                xs = np.linspace(-mw * 0.97, mw * 0.97, 21)
+                uu = np.clip(1.0 - (xs / mw) ** 2, 0.0, 1.0)
+                tb = ym(xs) + ts * (yu(xs) - ym(xs))
+                tpts = list(zip(xs.tolist(), (ym(xs) - 1.0).tolist())) + list(zip(xs[::-1].tolist(), tb[::-1].tolist()))
+                teeth, TV = _fpath(hm, tpts, 4.6, True, 0.7)
+                lb = ym(xs) - ts * 4.5 * uu ** 0.3
+                lpts2 = list(zip(xs.tolist(), lb.tolist())) + list(zip(xs[::-1].tolist(), (ym(xs[::-1]) + 1.0).tolist()))
+                lteeth = moved_path(_fpath(hm, lpts2, 4.6, True, 0.7)[0], jdx, jdy)
+                c.fill(teeth, '#e4d9bf'); c.fill(lteeth, '#b9ad93')
+                if det >= 1:
+                    n = int(12 + 6 * max(0.0, P.grin_w))
+                    seps, seps2 = [], []
+                    for k in range(1, n):
+                        x_ = -mw + 2 * mw * k / n
+                        a0 = hm.map1(x_, float(ym(x_)), 4.7); a1 = hm.map1(x_ * 0.99, float(ym(x_) + ts * (yu(x_) - ym(x_))), 4.7)
+                        if a0[2] > 0.02: seps.append(poly([(a0[0], a0[1]), (a1[0], a1[1])], False))
+                        b0 = hm.map1(x_, float(ym(x_)), 4.7)
+                        seps2.append(poly([(b0[0] + jdx, b0[1] + jdy), (b0[0] + jdx, b0[1] + jdy - ts * 4.0)], False))
+                    if seps: c.line(_multi(seps), c.lw * 0.3, '#6e604c', 230)
+                    if seps2: c.line(_multi(seps2), c.lw * 0.3, '#5a4e3c', 200)
+                c.line(teeth, c.lw * 0.4, '#1a0a08', 220); c.line(lteeth, c.lw * 0.4, '#1a0a08', 220)
+            c.line(hole, c.lw * 0.7)
         c.fill(Bm, skin)
         bb = Bm.getBounds()
-        c.radial(Bm, -30.0 * lsd + hm.st * 20 + jdx, -40 + jdy, 165, [(0, skin, 0), (0.62, skin, 0), (0.9, sh, 110), (1.0, sh, 170)], sy=1.1)
-        c.grad(Bm, 0, bb.top() + bb.height() * 0.45, 0, bb.bottom(), [(0, dp, 0), (1, dp, 90)])
+        c.radial(Bm, -30.0 * lsd + hm.st * 20 + jdx, -40 + jdy, 165, [(0, skin, 0), (0.6, skin, 0), (0.88, sh, 120 + 40 * men), (1.0, sh, 190)], sy=1.1)
+        c.grad(Bm, 0, bb.top() + bb.height() * 0.4, 0, bb.bottom(), [(0, dp, 0), (1, dp, 100 + 40 * men)])
+        with c.clip(Bm):                                                         # the block's bevelled, shadowed edges
+            c.line(Bm, c.lw * 3.0, dp, 70 + 40 * men)
         if light and light.get('under'):
             c.radial(Bm, hm.st * 20 + jdx, 150 + jdy, 220, [(0, light['under'], light.get('under_a', 120)), (1, light['under'], 0)], sy=0.8)
         if face_v > -0.35:
-            for side in (-1, 1):                               # the cheek circles run on over the slot lines
-                bx_, by_, bv_ = hm.map1(side * 60, 14, 2)
-                if bv_ > 0.08:
-                    fs_ = hm.sx(side * 60, 14)
-                    with c.clip(Bm):
-                        c.radial(oval(bx_ + jdx, by_ + jdy, 21 * fs_, 19), bx_ + jdx, by_ + jdy, 21,
-                                 [(0, sp['blush'], 200), (0.72, sp['blush'], 175), (0.9, sp['blush'], 90), (1, sp['blush'], 0)], sy=19 / 21.0)
             xs = np.linspace(-mw, mw, 25)
             lpts = list(zip(xs.tolist(), ym(xs).tolist())) + list(zip(xs[::-1].tolist(), ylo(xs[::-1]).tolist()))
             llip, LV = _fpath(hm, lpts, 4.5, True, 0.7)
             llip = moved_path(llip, jdx, jdy)
             c.fill(llip, mix(sp['lip'], '#000000', 0.08))
             if det >= 1:
-                hx, hy, hv = hm.map1(mw * 0.15, float(ylo(mw * 0.15)) - 3.0, 5.0)
-                if hv > 0.1: c.fill(oval(hx + jdx, hy + jdy, 9 * hm.sx(mw * 0.15, 60), 2.0), '#ffffff', 150 * gl)
-                ch_ = hm.map1(0, 104, 4.0)
-                if ch_[2] > 0.1:
-                    c.line(smooth([(ch_[0] - 9 + jdx, ch_[1] - 2 + jdy), (ch_[0] + jdx, ch_[1] + 2 + jdy), (ch_[0] + 9 + jdx, ch_[1] - 2 + jdy)], False),
-                           c.lw * 0.4, dp, 150)
-                    c.fill(oval(ch_[0] - 10 + jdx, ch_[1] - 8 + jdy, 10, 4), '#ffffff', 90 * gl)
-            c.line(llip, c.lw * 0.5, mix(sp['lip'], '#000000', 0.5))
+                hx, hy, hv = hm.map1(mw * 0.15, float(ylo(mw * 0.15)) - 2.0, 5.0)
+                if hv > 0.1: c.fill(oval(hx + jdx, hy + jdy, 7 * hm.sx(mw * 0.15, 60), 1.4), '#ffffff', 170 * gl)
+                ch_ = hm.map1(-6, 100, 4.0)
+                if ch_[2] > 0.1: c.fill(oval(ch_[0] + jdx, ch_[1] + jdy, 9 * hm.sx(-6, 100), 3.2), '#ffffff', 110 * gl)
+            c.line(llip, c.lw * 0.45, mix(sp['lip'], '#000000', 0.55))
             if det >= 1 and P.crack > 0.3:
                 X_, Y_, V_ = hm.map([-30, -22, -26], [96, 104, 112], 2.5)
-                if V_.min() > 0.08: c.line(moved_path(_pts_path(X_, Y_, False, 0.3), jdx, jdy), c.lw * 0.3, '#4a2418', 200)
-        # deep slot grooves: a shadow line on the head side of each marionette line
-        if face_v > -0.35:
-            xb = mw * 0.84
-            for side in (-1, 1):
-                pts = [(side * (mw + 2.5), cy + 3), (side * (xb + 2.5), min(118.0, _jaw_y(sp, xb)) - 2)]
-                X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
-                if V_.min() > 0.05: c.line(_pts_path(X_, Y_, False), c.lw * 0.7, dp, 140)
-        c.line(Bm, c.lw * 1.05)
-    c.line(head, c.lw)
+                if V_.min() > 0.08: c.line(moved_path(_pts_path(X_, Y_, False, 0.3), jdx, jdy), c.lw * 0.3, '#3a1a12', 210)
+        c.line(Bm, c.lw * 1.1)
     if face_v > -0.35:
-        # button nose: a round tip with two nostrils and a varnish spark
+        # a small carved nose: a round tip, two nostrils, its shadow on the lip, a varnish spark
         nx, ny, nv = hm.map1(0, 20, 5.0)
         if nv > -0.4:
             fs_ = max(0.78, hm.sx(0, 20, 5.0))
-            nose = oval(nx, ny, 12.5 * fs_, 10.5)
+            c.glow(nx + 2 * lsd * fs_, ny + 8, 13 * fs_, 5, dp, 80 + 40 * men)
+            nose = oval(nx, ny, 9.0 * fs_, 8.0)
             c.fill(nose, mix(skin, sh, 0.12))
-            c.radial(nose, nx - 3 * fs_, ny - 3, 14, [(0, mix(skin, '#ffffff', 0.2), 255), (0.7, mix(skin, sh, 0.1), 255), (1, sh, 255)])
+            c.radial(nose, nx - 3 * fs_, ny - 3, 12, [(0, mix(skin, '#ffffff', 0.2), 255), (0.65, mix(skin, sh, 0.12), 255), (1, sh, 255)])
             if abs(hm.st) < 0.55:
                 for s2 in (-1, 1):
-                    c.fill(oval(nx + s2 * 5.0 * fs_, ny + 6.0, 2.6 * fs_, 1.8), dp, 220)
-            c.line(nose, c.lw * 0.7)
-            c.fill(oval(nx - 4 * fs_, ny - 4, 3.2 * fs_, 2.4), '#ffffff', 210 * gl)
-        # varnish highlights on the forehead and the cheeks
-        if det >= 1 and gl > 0.02:
-            fx, fy, fv = hm.map1(-30, -56, 2)
+                    c.fill(oval(nx + s2 * 3.6 * fs_, ny + 4.8, 1.7 * fs_, 1.1), dp, 170)
+            c.line(nose, c.lw * 0.65)
+            c.fill(oval(nx - 3.0 * fs_, ny - 3.0, 2.3 * fs_, 1.6), '#ffffff', 220 * gl)
+        # the hard lacquer highlights: one on the forehead, one on each cheekbone
+        if gl > 0.02:
+            fx, fy, fv = hm.map1(-2, -60, 2)
             if fv > 0.1:
-                c.glow(fx, fy, 22 * hm.sx(-30, -56), 8, '#ffffff', 80 * gl)
-                c.line(smooth([(fx - 10 * hm.sx(-30, -56), fy + 2), (fx, fy - 2), (fx + 9 * hm.sx(-30, -56), fy)], False), c.lw * 0.45, '#ffffff', 120 * gl)
+                f_ = hm.sx(-2, -60)
+                if det >= 1: c.glow(fx, fy, 18 * f_, 8, '#ffffff', 60 * gl)
+                c.fill(smooth([(fx - 10 * f_, fy + 3.0), (fx - 2 * f_, fy - 1.8), (fx + 9 * f_, fy - 3.4), (fx + 2 * f_, fy + 1.2)], True, 0.8), '#ffffff', 200 * gl)
             for side in (-1, 1):
-                hx, hy, hv = hm.map1(side * 52, 4, 2)
-                if hv > 0.12: c.fill(oval(hx - 4, hy, 5.5 * hm.sx(side * 52, 4), 3.2), '#ffffff', 150 * gl)
+                hx, hy, hv = hm.map1(side * 55, 9, 2)
+                if hv > 0.12:
+                    f_ = hm.sx(side * 55, 9)
+                    c.fill(oval(hx - 2 * f_, hy, 6.0 * f_, 2.4), '#ffffff', (175 if side * lsd < 0 else 120) * gl)
     hair = _winks_hair(c, hm, sp, P, det, sil_full)
     for side in (-1, 1):
         if -side * hm.st >= 0.25: _ear(c, hm, sp, side, skin, sh, det)
@@ -7224,6 +7304,8 @@ def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         if front and Bm is not None: allp = union(allp, Bm)
         c.grad(allp, 0, -160, 0, 30 + J, [(0, '#05060a', 0.8 * ua), (0.6, '#05060a', 0.35 * ua), (1, '#05060a', 0)])
         c.radial(allp, hm.st * 20, 130 + J, 150, [(0, light['under'], 0.75 * ua), (0.5, light['under'], 0.3 * ua), (1, light['under'], 0)], sy=0.9)
+        gls = [oval(g[0], g[1], g[2], g[3]) for g in (e_[4] for e_ in eyes.values() if e_ is not None) if g is not None]
+        if gls: c.fill(_multi(gls), '#ffffff', 235)        # the glass still glints in the dark
     return hm
 
 

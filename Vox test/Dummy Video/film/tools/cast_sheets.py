@@ -177,7 +177,7 @@ def sheet_lineup():
 def sheet_winks_turnaround():
     surf, cv, pen = canvas()
     floor(pen, 930)
-    title(cv, 'MISTER WINKS: TURNAROUND', 'painted red hair, hard side part, freckles, glass eyes under wooden lids, the jaw block on two slot lines, '
+    title(cv, 'MISTER WINKS: TURNAROUND', 'carved auburn hair, hard side part, lacquered face, staring eyes under low wooden lids, the jaw block on two slot lines, '
           'burgundy usher\'s jacket, pillbox cap, white gloves')
     views = [(0.0, 'FRONT'), (-0.5, '3/4 LEFT'), (0.5, '3/4 RIGHT'), (1.0, 'PROFILE'), (2.0, 'BACK (the slot)')]
     for i, (yaw, lab) in enumerate(views):
