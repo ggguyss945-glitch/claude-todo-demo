@@ -1,6 +1,8 @@
 #!/bin/bash
-# Final render + delivery + checks for the delivery film, in one chain (run from film/, in the background):
-#   nohup bash tools/final_chain.sh > _work/logs/final_chain.log 2>&1 &
+# Final render + delivery + checks for the delivery film, in one chain (run from film/):
+#   bash tools/final_chain.sh > _work/logs/final_chain.log 2>&1
+# In a cloud session run it as a harness-tracked background task, not with nohup: the container is reclaimed about
+# 5 minutes after the session goes idle, and that kills detached processes.
 # The picture is rendered as K short chunks (frame-exact boundaries), 3 at a time, so a container restart only loses
 # the chunks in flight: re-running skips every chunk with an OK marker. Then the chunks are joined (stream copy) into
 # _work/picture/picture.mp4, checked, and tools/deliver.sh makes _work/deliver/If_A_Delivery_Driver_Rings_EN_1440p60_HEVC.mp4.
