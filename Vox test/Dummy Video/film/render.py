@@ -19,7 +19,7 @@ import cv2
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-W = os.path.join(HERE, '_work')                       # this film's work dir (the delivery film)
+W = os.path.join(HERE, '_work')                       # this film's work dir (film/_work)
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--timeline', default=os.path.join(W, 'align', 'timeline.json'))
