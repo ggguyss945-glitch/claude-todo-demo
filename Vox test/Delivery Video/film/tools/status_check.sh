@@ -21,7 +21,8 @@ if ag: print('newest agent file age: %d min' % ((time.time() - os.path.getmtime(
 PY
 ps -eo etimes,args | grep -E 'render.py|mix.py|film.py|ffmpeg|final_chain|deliver' | grep -v grep | cut -c1-120 | head -5
 L="$F/logs/final_chain.log"; [ -f "$L" ] && { echo "-- final chain (log age $(( ($(date +%s) - $(stat -c %Y "$L")) / 60 )) min):"; grep -E '^==' "$L" | tail -4; grep -E 'Error|Traceback|Killed|TOO SHORT' "$L" | tail -3; }
-for P in "$F"/picture/progress_*.json; do [ -f "$P" ] && echo "$(basename "$P") $(cat "$P")"; done
+echo "chunks done: $(ls "$F"/picture/chunks/c*/OK 2>/dev/null | wc -l) of $(wc -l < "$F/picture/chunks/ranges.txt" 2>/dev/null || echo '?')"
+for P in "$F"/picture/chunks/c*/progress_*.json; do [ -f "$P" ] && [ ! -f "$(dirname "$P")/OK" ] && echo "$(basename "$(dirname "$P")") $(cat "$P")"; done
 pgrep -f "bash tools/final_chain[.]sh" >/dev/null && echo "final chain: RUNNING" || echo "final chain: not running"
 free -g | awk 'NR==2{print "mem used", $3, "GB of", $2}'
 df -h /home | tail -1 | awk '{print "disk free", $4}'
