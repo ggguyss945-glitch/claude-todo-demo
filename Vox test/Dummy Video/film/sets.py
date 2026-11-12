@@ -6890,6 +6890,7 @@ def _kitchen_room(pen, hv, tod='night'):
     xa, xb = KIT_X; ya, yb = KIT_Y
     yn = max(ya - 0.7, hv.hy + 0.3)                        # reaches under the opening: no seam on a push through it
     _kitchen_outside(pen, hv, 0.0, tod)
+    _backing(pen, hv, yb, xa - 1.0, xb + 1.0, -0.8, CEIL + 1.2, '#b8a888', [(KWIN[0], KWIN[1], KWIN[2], KWIN[3])])
     _hfloor(pen, hv, xa, xb, yn, yb, 'checker', '#e6dcc4', '#2c2a30')
     _hceil(pen, hv, xa, xb, yn, yb, CEIL, '#e8dcc0')
     wu0, wu1 = KWIN[0] - xa, KWIN[1] - xa
@@ -6929,7 +6930,6 @@ def _kitchen_room(pen, hv, tod='night'):
     def right_art(p_, W, H):
         p_.fill(rect(150, H - 120, 40, 52), '#f4ecd8'); p_.fill(rect(150, H - 120, 40, 18), '#3a6a9a')
         p_.line(rect(150, H - 120, 40, 52), 1.2, LINE)
-    _backing(pen, hv, yb, xa - 1.0, xb + 1.0, -0.8, CEIL + 1.2, '#b8a888', [(KWIN[0], KWIN[1], KWIN[2], KWIN[3])])
     _hwall(pen, hv, (xb, yn), (xb, yb), 0.0, CEIL, '#efe2b8', '#b88a4a', 'kitchen', 0.0, holes=[(ya + 1.0 - yn, 0.0, ya + 1.85 - yn, 2.05)],
            base_h=0.1, pa=120, art=right_art, trim='#f2ead8', seed=5)
     door = hv.quad([(xb, 2.05, ya + 1.0), (xb, 2.05, ya + 1.85), (xb, 0.0, ya + 1.85), (xb, 0.0, ya + 1.0)])
