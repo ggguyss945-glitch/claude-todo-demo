@@ -177,8 +177,8 @@ def sheet_lineup():
 def sheet_winks_turnaround():
     surf, cv, pen = canvas()
     floor(pen, 930)
-    title(cv, 'MISTER WINKS: TURNAROUND', 'an original vent figure: painted red hair with a hard side part, freckles, rosy cheeks, glass eyes under wooden lids, the jaw '
-          'block on two slot lines, a burgundy usher\'s jacket with brass buttons, a pillbox cap, white gloves, the usher\'s flashlight')
+    title(cv, 'MISTER WINKS: TURNAROUND', 'painted red hair, hard side part, freckles, glass eyes under wooden lids, the jaw block on two slot lines, '
+          'burgundy usher\'s jacket, pillbox cap, white gloves')
     views = [(0.0, 'FRONT'), (-0.5, '3/4 LEFT'), (0.5, '3/4 RIGHT'), (1.0, 'PROFILE'), (2.0, 'BACK (the slot)')]
     for i, (yaw, lab) in enumerate(views):
         a = CH.Acting('winks', seed=2); a.set(-10, None, 0.1, turn=yaw)
@@ -186,8 +186,8 @@ def sheet_winks_turnaround():
         CH.draw(pen, 'winks', x, 930, 760, a.at(30.0), light=LAMP)
         label(cv, lab, x, 975, 20)
     a = CH.Acting('winks', seed=2); a.sit_dummy(hands='knees'); a.set(-10, None, 0.1, turn=0.35)
-    chair(pen, 1790, 760, 300)
-    CH.draw(pen, 'winks', 1790, 760, 760, a.at(30.0), light=LAMP)
+    seat = kitchen(pen, 1790, 930, 560)
+    CH.draw(pen, 'winks', 1790, seat, 560, a.at(30.0), light=LAMP)
     label(cv, 'SEATED (perch)', 1790, 975, 20)
     save(surf, 'winks_turnaround')
 
@@ -541,8 +541,12 @@ def sheet_props():
     CH.draw_prop(pen, 'key', 1550, 400, 220)
     label(cv, 'Mom\'s keys', 1550, 600, 18)
     a = CH.Acting('winks', seed=1); a.set(-9, None, 0.1, turn=2.0); a.paper_out(0.0, 1.0)
-    CH.draw_bust(pen, 'winks', 400, 900, 0.32, a.at(2.0), light=LAMP)
-    label(cv, 'the P.S. slides out of the slot (slot_paper)', 400, 1060, 16)
+    CH.draw(pen, 'winks', 400, 1040, 330, a.at(2.0), light=LAMP)
+    label(cv, 'the P.S. slides out of the slot (slot_paper)', 400, 1068, 16)
+    b = CH.Acting('winks', seed=1); b.face_down()
+    rug(pen, 1000, 1000, 420)
+    CH.draw(pen, 'winks', 980, 990, 330, b.at(1.0), light=LAMP)
+    label(cv, 'face down on the rug (lie 1)', 1000, 1068, 16)
     save(surf, 'props')
 
 

@@ -1,4 +1,5 @@
-"""characters.py: the cast, their creepy faces and an acting timeline (police v2 cast + the delivery film cast).
+"""characters.py: the cast, their creepy faces and an acting timeline (police v2 cast, the delivery film cast and the
+dummy film cast: Mister Winks, Grandpa, the real Walter, young Walter 1974, Mom, Owen, you).
 
 Everything draws with skia in the engine's 1920x1080 design space, on any canvas the engine hands a Layer (camera zoom and
 render size are already in the canvas matrix). Line weight follows the VISUAL_SPEC: about 8 design px on close-ups and
@@ -57,6 +58,7 @@ Acting (timeline builder; every clip is eased, sub-frame continuous and layered 
     a.knock(t0, n=3, spacing=0.32, side=0.0) -> [knock_door events]   side: -1/+1 door to screen left/right, 0 = lens
     a.talk(intervals, text=None, intensity=1.0)      visemes from text (vowels/consonants) or pseudo-syllables;
         intervals: [(t0, t1)] or [(t0, t1, text)]; a.talk_lines(timeline_lines, who='O') takes timeline.json lines
+        (who may be a code or a tuple of codes: 'winks' talks on ('K', 'U', 'R') and on 'G' lines with fx 'dummy')
     a.radio_to_mouth(t0, t1) -> [radio_click x2, police_radio_squelch]   hand keys the shoulder mic, head dips to it
     a.press_bodycam(t, on=True) -> [bodycam_beep]    finger presses the chest camera; LED follows pose.cam_on
     a.hold_up(prop, t0, t1, side=-1) -> [paper|...]  raises a prop toward the lens (side -1 = right hand)
@@ -186,6 +188,58 @@ Delivery film additions ("If A Delivery Driver Rings Your Doorbell At 3 AM..."; 
         tablet uplight colour) + under_a, brim (driver's bill shadow strength, default 1).
     Pose fields: eyeshine, floor, tiptoe, hl_/hr_stretch, hl_/hr_shake, tablet_ink, tablet_flash, tablet_screen.
     See CAST.md for the beat map and sheets (W/cast/*.jpg, tools/cast_sheets.py).
+
+Dummy film additions ("If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"; everything above still works;
+the delivery 'mom' / police 'you' designs live on as 'mom_delivery' / 'you_police'). Times are FILM time.
+    Cast: 'winks' (Mister Winks, a 0.85 m vent figure: painted red hair with a hard side part, freckles, rosy cheeks, glass
+        eyes under wooden lids, heavy arched painted brows, a wide painted grin and the LOWER JAW BLOCK on two marionette
+        slot lines, a burgundy usher's jacket with brass buttons and gold braid, a pillbox cap, white gloves, the usher's
+        flashlight, a slot in his back), 'grandpa' (86, the thing: bald with a white fringe, big ears, the hooked Kemp
+        nose, bushy white brows, moss cardigan; too-still smile, lips barely move: talk 0.3), 'grandpa_bed' (the same in
+        a hospital gown, gaunt), 'walter' (the real Walter in that body for one hour: lucid, terrified, a scared cast),
+        'walter74' (young Walter on the 1974 tape: pompadour and sideburns, powder-blue suit, wide tie; lips never move:
+        talk 0), 'mom' (mid 40s: long camel coat, teal scarf, dark low bun), 'owen' (9: cowlick, big ears, a missing front
+        tooth, mustard hoodie), 'owen_new' (the thing in Owen's body at the end: never blinks, lips barely move), 'you'
+        (16: dark curtain bangs, denim jacket over a grey hoodie). Heights: winks 0.85 m (DUMMY_M), grandpa 1.72, walter74
+        1.78, mom 1.65, you 1.74, owen 1.32.
+    Mister Winks's face: pose.jaw (0 shut .. 1 wide: the block drops straight down and shows the black hollow), lid_l /
+        lid_r (wooden lids; his LEFT is the wink eye), grin_w (painted grin width by stage), crack (varnish cracks),
+        desperate (the soul inside looking out: pleading brows, wet eyes), tears, gloss (varnish shine), lock (the glass
+        eyes follow the lens). The arc is automatic: WINKS_ARC = [(t, stage, transition)] with WINKS_STAGES 0..5 (the grin
+        widens, the stare hardens), 'asleep' (lids shut, 567.1-655.6), 'owen' (Owen inside, from 655.6), plus 'show' /
+        'tape' for the 1974 tape (Acting('winks', arc=WINKS_TAPE_ARC)); winks_stage(t), stage_at(t, arc, stages, keys),
+        a.smile_stage(t0, stage, t1) overrides a window.
+    Talking: a.talk(...) on 'winks' drives the JAW (hard open / snap shut on each syllable from the local contrast of the
+        voice envelope) and adds a 'dummy_clack' event (kind speech, -14..-8 dB) at every snap shut.
+    Winks clips: jaw_drop(t0, amount) -> dummy_jaw | jaw_hang(t0, amount) | clack(t, dur) -> dummy_clack (dur > 0.3 = the
+        slow close; clacks end any drop / hang) | wink(t, side, hold) / blink_click(t) -> eyelid_click x2 | try_wink(t, gap,
+        hold) -> eyelid_click x2 (both lids close: Owen inside) | lids(t0, t1, amount, side) | eyes_open(t0, dur) ->
+        eyelid_click | doll_turn(t0, to, dur, steps, frm, until, body) -> wood_creak per step (ratchet) | head_turn_180(t0,
+        dur, frm, to) -> wood_creak (grind, params dur) | head_snap(t, to) | tick(t, tilt) -> wood_creak | sit_dummy(t0,
+        t1, hands 'knees'|'table'|'limp') | glove_lift(t0, side) -> wood_creak, cloth_rustle | fingers_curl(t, side) |
+        elbow_bend(t, side) -> wood_creak | stand_on_chair(t0) -> wood_creak x3, footsteps_wood_inside | torch_on(t, ang,
+        side, t1, hold 'side'|'up'|'lens'|'chin') -> flashlight_click | torch_sweep(t0, t1, a0, a1) | puppet(t0, t1, look)
+        (worked on a lap) | carried(t0, t1, recline) | fall_face_down(t0) -> dummy_thud | face_down(t0, t1) |
+        paper_out(t0) -> paper (the P.S. slides out of his back slot; pose.slot_paper).
+    Family clips: mom open_latches(t0) -> case_latch x2, smell_mug(t0, t1, side, pale_at) -> breath sniff / gasp,
+        pull_dummy(t0, t1) -> cloth_rustle per pull, grab_keys(t0) -> keys_drop (jangle), laugh_soft(t0); Owen snort(t) ->
+        snort, try_wink_kid(t), jump_hug(t0) -> footsteps, wave(t0, t1), hold_mug(t0, t1, sip=[t]) -> sip, doorway_smile(t0);
+        you grab_dummy(t0) -> cloth_rustle, hand_inside(t0) -> cloth_rustle, squeezed([t, t, t]) -> hand_squeeze x3,
+        hold_dummy(t0), kneel(t0), clamp_mouth(t0) -> cloth_rustle, spin_around(t0) -> whoosh; Grandpa tuck_in(t0),
+        squeeze_hand(t0, n=3) -> hand_squeeze x3, in_bed(), grab_wrist(t0) -> cloth_rustle (the real Walter); vent_pose(t0,
+        t1, side, free) and showman(t0, t1) for whoever works him (Grandpa in bed, young Walter, Owen). EXPR adds 'lucid',
+        'kid_grin', 'still_smile', 'showman'.
+    Composites: draw_lap(pen, who, x, y_feet, height, pose, dpose, side, m, ...) (the person, the dummy on that knee, the
+        operating hand hidden in his back); draw_carry(pen, who, ..., pose, dpose) (cradled across your arms); lap_anchor(who,
+        pose, side, ...) -> (x, y) of the knee top; pose.perch (y_feet = the surface a sitting figure sits on: chair seat,
+        stair, shelf, lap), pose.recline (tip the figure about its hips), pose.lie (1 face down on the floor, -1 face up);
+        draw_bust keeps a seated / kneeling figure's face where the bust was asked for.
+    Flashlight: prop 'flashlight' in a hand turns with pose.torch_ang (0 up); torch_pos(who, pose, side, ...) -> (x, y,
+        angle) of its lens; draw_torch_beam(pen, x, y, ang, length, spread, a, t, lens) draws the cone or, with lens 1, the
+        glare into the camera; light=dict(under='#fff1c8', under_a=210) is the flashlight under his chin. Prop 'mug'
+        (steam with pose.steam), 'key'.
+    escalate(a, t0, t1, kind) now also gives Mister Winks his wooden ticks (WINKS_TICKS, none in WINKS_QUIET or with
+        kind='worked') and you / mom / owen the dummy film's FEAR_ARC tremble.
 
 Typical use in a shot
     a = Acting('officer', seed=7, height=700); a.stare(0); a.creep_smile(1.0, 3.5); ev = a.knock(0.4)
@@ -345,7 +399,7 @@ _GRANDPA = dict(
     head_ys=_FACE_OLD, head_ws=[0, 52, 76, 89, 92, 89, 80, 69, 53, 31, 0],
     eye_dx=40, eye_y=-6, eye_r=17.5, pupil=0.85, brow_th=11, nose_len=36, mouth_y=64, mouth_w=21, nose='hook',
     skin='#d3ae9c', skin_sh='#a07f72', skin_dp='#6a5050', blush='#d99594', lip='#9a6a68', stubble='#d9d4cc', stub=0.25,
-    hair_c='#dcd8d2', brow_c='#d6d1ca', bags=1.1, age=1.35, blink_rate=0.1, lock=0.55, micro=0.25, breath=0.6,
+    hair_c='#dcd8d2', brow_c='#d6d1ca', bags=1.1, age=1.35, blink_rate=0.1, lock=0.45, micro=0.25, breath=0.6,
     scar=0, ring=1, part=0, lashes=0.0, ears=1.35, brows='bushy', spots=1.0, talk=0.3, lids=0.2,
     body=dict(sh=112, ch=108, wa=104, hip=100, arm=(44, 36), leg=(50, 42), neck=38, hand=0.98))
 CAST['grandpa'] = dict(_GRANDPA, outfit='cardi_m', feet='slippers',
@@ -364,7 +418,7 @@ CAST['walter74'] = dict(
     head_ys=_FACE_OLD, head_ws=[0, 53, 77, 91, 96, 95, 89, 77, 58, 33, 0],
     eye_dx=41, eye_y=-8, eye_r=18.5, pupil=0.8, brow_th=10.5, nose_len=30, mouth_y=62, mouth_w=22, nose='hook',
     skin='#d2a98f', skin_sh='#a37b66', skin_dp='#6b4b44', blush='#dc958d', lip='#a06a62', stubble='#4a3a30', stub=0.3,
-    hair_c='#3b2a1f', brow_c='#2b1e16', bags=0.4, age=0.4, blink_rate=0.0, lock=0.6, micro=0.35, breath=0.6,
+    hair_c='#3b2a1f', brow_c='#2b1e16', bags=0.4, age=0.4, blink_rate=0.05, lock=0.45, micro=0.35, breath=0.6,
     scar=0, ring=1, part=1, lashes=0.0, ears=1.25, talk=0.0, feet='shoes',
     body=dict(sh=124, ch=118, wa=106, hip=106, arm=(52, 42), leg=(58, 48), neck=46, hand=1.02),
     cloth=dict(top='#8fb2cf', top_sh='#617f9b', top_hi='#b6d0e6', shirt='#efe3c4', shirt_sh='#cbbd9b', tie='#9a6a24',
@@ -2488,13 +2542,14 @@ def _prop(c, name, det, t=0.0, P=None):
         c.line(bd, c.lw * 0.7)
         top = oval(0, -30, 24, 6); c.fill(top, '#3a2416'); c.line(top, c.lw * 0.5)
         st_ = clamp(P.steam) if P is not None else 1.0
-        if st_ > 0.01 and det >= 1:
-            ws = []
+        if st_ > 0.01 and det >= 1:                # soft wisps that curl up and fade
             for k in range(3):
                 ph = t * 1.3 + k * 2.1
-                xs = [(-10 + 10 * k) + 6 * math.sin(ph + u * 3.0) for u in (0, 0.33, 0.66, 1.0)]
-                ws.append(smooth([(xs[0], -36), (xs[1], -52), (xs[2], -68), (xs[3], -84)], False))
-            c.line(_multi(ws), c.lw * 0.9, '#ffffff', 90 * st_)
+                pts = [((-10 + 10 * k) + 6 * math.sin(ph + u * 3.0), -36 - 56 * u) for u in np.linspace(0, 1, 7)]
+                for j in range(3):
+                    seg = smooth(pts[j * 2:j * 2 + 3], False)
+                    a_ = st_ * (1.0 - j / 3.0)
+                    c.line(seg, c.lw * 2.6, '#ffffff', 34 * a_); c.line(seg, c.lw * 0.8, '#ffffff', 70 * a_)
     elif name == 'radio':
         r = rrect(-17, -40, 34, 80, 8)
         c.shape(r, '#17181c')
@@ -4394,7 +4449,7 @@ def _onset_vis(c):
 
 
 # ------------------------------------------------------------------ voice envelope + word timing (lip sync, v2.1)
-_SCR = os.path.join(_HERE, '_work')                      # this film's work dir W (Delivery Video/film/_work)
+_SCR = os.path.join(_HERE, '_work')                      # this film's work dir W (Dummy Video/film/_work)
 VOICE_WAV = os.environ.get('POV2_VOICE_WAV', os.path.join(_SCR, 'align', 'vo_en.wav'))
 VOICE_WORDS = os.environ.get('POV2_VOICE_WORDS', os.path.join(_SCR, 'align', 'asr_cache.json'))
 ENV_FPS = 100.0
@@ -4545,6 +4600,7 @@ class Acting:
         self.who, self.seed, self.height = who, int(seed), float(height)
         self._arc = CAST[who].get('arc') if arc is None else (arc or None)   # driver: the smile arc in film time
         self.life_k = float(life)
+        if CAST[who].get('dummy') and life == 1.0: self.life_k = 0.0   # Mister Winks is dead still unless he acts (ticks: escalate)
         sp = CAST[who]
         self.sp = sp
         self.expr0 = expr
@@ -6230,9 +6286,11 @@ class Acting:
             return self._add(lo - 0.2 + lag, hi + 0.3 + lag, lambda P, t: fn(P, t - lag))
         return self._add(lo - 0.2, hi + 0.3, fn)
 
-    def talk_lines(self, lines, who='O', intensity=1.0):
-        """Talk on every timeline.json line spoken by `who` (uses each line's t, end and en text)."""
-        iv = [(l['t'], l['end'], l.get('en')) for l in lines if l.get('who') == who and l.get('end')]
+    def talk_lines(self, lines, who='O', intensity=1.0, fx=None):
+        """Talk on every timeline.json line spoken by `who` (a code or a tuple of codes; fx: only lines with that fx), using
+        each line's t, end and en text. Mister Winks: talk_lines(lines, ('K', 'U', 'R', 'G'), fx=...) as the shot needs."""
+        codes = (who,) if isinstance(who, str) else tuple(who)
+        iv = [(l['t'], l['end'], l.get('en')) for l in lines if l.get('who') in codes and l.get('end') and (fx is None or l.get('fx') == fx)]
         return self.talk(iv, intensity=intensity) if iv else self
 
     def _visemes_timed(self, segs, k):
