@@ -6476,8 +6476,11 @@ def _kfn(spec, seed=0, default=1.0):
     amount=1.0 (flicker depth))."""
     if spec is None: spec = default
     if callable(spec): return spec
-    if not isinstance(spec, dict):
-        v = float(spec); return lambda t: v
+    if not isinstance(spec, dict) or not any(spec.get(k_) is not None for k_ in ('flick', 'out', 'on', 'off')):
+        v = float(spec.get('k', 1.0)) if isinstance(spec, dict) else float(spec)
+        f0 = lambda t: v
+        f0.const = v                                        # a steady light: _lit bakes it into the base layer
+        return f0
     k = float(spec.get('k', 1.0)); fl = spec.get('flick'); outs = list(spec.get('out', ()))
     if spec.get('off') is not None: outs.append((spec['off'], 1e9))
     if spec.get('on') is not None: outs.append((-1e9, spec['on']))
@@ -6520,12 +6523,20 @@ def _lmap(pen, hv, box, ambient, lights, k=1.0):
 
 def _lit(depth, art, name, key, bounds, hv, ambient, lights, var=(), **kw):
     """Static lit layers for one piece of the set: the base layer = albedo x (ambient + constant lights), and for each
-    variable light (vname, lights, f(t)) a 'plus' layer = albedo x that light, alpha = its level (cached; skipped at 0)."""
+    variable light (vname, lights, f(t)) a 'plus' layer = albedo x that light, alpha = its level (cached; skipped at 0).
+    A light whose level is steady (_kfn of a number: f.const) is baked into the base layer instead (one layer, cheap)."""
+    lights = list(lights); dyn = []
+    for (vn, vl, kf) in var:
+        if not vl: continue
+        c = getattr(kf, 'const', None)
+        if c is None: dyn.append((vn, vl, kf)); continue
+        key = key + ':%s=%.3f' % (vn, c)
+        if c > 0.001: lights += [tuple(q[:5]) + (q[5] * c,) + tuple(q[6:]) for q in vl]
+
     def base(pen, t):
         art(pen); _lmap(pen, hv, bounds, ambient, lights)
     L = [Layer(depth, base, name, cache=key, bounds=bounds, **kw)]
-    for (vn, vl, kf) in var:
-        if not vl: continue
+    for (vn, vl, kf) in dyn:
 
         def add(pen, t, vl=vl):
             art(pen); _lmap(pen, hv, bounds, '#000000', vl)
@@ -6635,6 +6646,23 @@ def _hwall(pen, hv, a, b, Y0, Y1, paper, ink=None, kind='damask', wains=0.0, wc=
             if len(h) > 5 and h[5] == 'nocase': continue
             p_.line(q, 9.0, trim); p_.line(q, 2.0, '#000000', 140)
     _hface(pen, hv, (a[0], Y1, a[1]), (b[0], Y1, b[1]), (b[0], Y0, b[1]), (a[0], Y0, a[1]), W, H, fn)
+
+
+def _rb(path):
+    """A path's bounds as plain floats (x0, y0, x1, y1). Never use Rect.asScalars() on a temporary: it is a view of freed
+    memory (garbage bounds -> a loop drawing a billion siding lines)."""
+    b = path.getBounds()
+    return float(b.left()), float(b.top()), float(b.right()), float(b.bottom())
+
+
+def _backing(pen, hv, y, x0, x1, Y0, Y1, c, holes=()):
+    """An oversized flat plane at y (house coords) behind a back wall, minus `holes` [(x0, x1, Y0, Y1)]: drawn first in the
+    farthest layer so the parallax gaps at the room's seams (ceiling / side walls / floor sliding over the far wall under a
+    camera move) show wall colour instead of nothing."""
+    q = hv.quad([(x0, Y1, y), (x1, Y1, y), (x1, Y0, y), (x0, Y0, y)])
+    for (hx0, hx1, hY0, hY1) in holes:
+        q = minus(q, hv.quad([(hx0, hY1, y), (hx1, hY1, y), (hx1, hY0, y), (hx0, hY0, y)]))
+    pen.fill(q, c)
 
 
 def _hfloor(pen, hv, x0, x1, y0, y1, kind='boards', c0='#7a5234', c1='#5a3a22', Y=0.0, runner=None, seed=0):
@@ -6860,7 +6888,7 @@ def _kitchen_room(pen, hv, tod='night'):
     """Back wall (window, cafe curtains, cabinets, sink, the sunburst clock), fridge, stove, the right wall with the back
     door and the calendar, the checker floor and the ceiling. Albedo only (lit by _lmap)."""
     xa, xb = KIT_X; ya, yb = KIT_Y
-    yn = max(ya, hv.hy + 0.3)
+    yn = max(ya - 0.7, hv.hy + 0.3)                        # reaches under the opening: no seam on a push through it
     _kitchen_outside(pen, hv, 0.0, tod)
     _hfloor(pen, hv, xa, xb, yn, yb, 'checker', '#e6dcc4', '#2c2a30')
     _hceil(pen, hv, xa, xb, yn, yb, CEIL, '#e8dcc0')
@@ -6901,6 +6929,7 @@ def _kitchen_room(pen, hv, tod='night'):
     def right_art(p_, W, H):
         p_.fill(rect(150, H - 120, 40, 52), '#f4ecd8'); p_.fill(rect(150, H - 120, 40, 18), '#3a6a9a')
         p_.line(rect(150, H - 120, 40, 52), 1.2, LINE)
+    _backing(pen, hv, yb, xa - 1.0, xb + 1.0, -0.8, CEIL + 1.2, '#b8a888', [(KWIN[0], KWIN[1], KWIN[2], KWIN[3])])
     _hwall(pen, hv, (xb, yn), (xb, yb), 0.0, CEIL, '#efe2b8', '#b88a4a', 'kitchen', 0.0, holes=[(ya + 1.0 - yn, 0.0, ya + 1.85 - yn, 2.05)],
            base_h=0.1, pa=120, art=right_art, trim='#f2ead8', seed=5)
     door = hv.quad([(xb, 2.05, ya + 1.0), (xb, 2.05, ya + 1.85), (xb, 0.0, ya + 1.85), (xb, 0.0, ya + 1.0)])
@@ -7063,14 +7092,14 @@ def _kitchen_layers(hv, tag, kf, box, tod='night', mug=True, steam=None, chair=T
     L = []
     L += _lit(hv.d(KIT_Y[1] - 0.3), lambda p: _kitchen_room(p, hv, tod), 'k_room', _key('gp', tag, 'kroom', tod), box, hv, amb, lights, var)
     if chair:
-        L += _lit(hv.d(GCHAIR[1] + 0.18), lambda p: _gchair_art(p, hv, 'back'), 'k_chair', _key('gp', tag, 'kchair'), box, hv, amb, lights, var)
+        L += _lit(hv.d(GCHAIR[1] + 0.18), lambda p: _gchair_art(p, hv, 'back'), 'k_chair', _key('gp', tag, 'kchair', tod), box, hv, amb, lights, var)
 
     def table(p):
         _dinette_chair(p, hv, TABLE[0] - 0.3, (TABLE[2] + TABLE[3]) / 2, 1)
         _dinette_chair(p, hv, TABLE[1] + 0.3, (TABLE[2] + TABLE[3]) / 2, -1)
         if chair: _gchair_art(p, hv, 'arms')
         _table_art(p, hv, mug)
-    L += _lit(hv.d(TABLE[2] + 0.35), table, 'k_table', _key('gp', tag, 'ktable', mug, chair), box, hv, amb, lights, var)
+    L += _lit(hv.d(TABLE[2] + 0.35), table, 'k_table', _key('gp', tag, 'ktable', mug, chair, tod), box, hv, amb, lights, var)
     sw = sway or (lambda t: 0.0)
     L.append(Layer(hv.d(PENDANT[1]), lambda pen, t: _pendant_art(pen, hv, kf(t) if tod == 'night' else 0.15, sw(t)), 'k_pendant', blur=None))
     if mug:
@@ -7517,6 +7546,8 @@ def gp_hall(view='kitchen', light=1.0, kitchen=1.0, living=0.6, case='closed', e
     L = _kitchen_layers(hv, 'hallk', kf, kbox, 'night', mug, steam, chair)
 
     def end_art(p_):
+        _backing(p_, hv, HALL_BACK, -2.6, 2.6, -0.9, CEIL + 1.4, _darken(HALL_PAPER, 0.3), [(KOPEN[0], KOPEN[1], 0.0, KOPEN[2])])
+
         def art(q, W, H):
             _hframe(q, W, H, 165, H - 196, 34, 44, 'photo', seed=7)
         _hwall(p_, hv, (HALL_X[0], HALL_BACK), (HALL_X[1], HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
@@ -7528,7 +7559,7 @@ def gp_hall(view='kitchen', light=1.0, kitchen=1.0, living=0.6, case='closed', e
         hq = hv.quad([(KOPEN[0], KOPEN[2], HALL_BACK), (KOPEN[1], KOPEN[2], HALL_BACK), (KOPEN[1], KOPEN[2], HALL_BACK + 0.16), (KOPEN[0], KOPEN[2], HALL_BACK + 0.16)])
         p_.fill(hq, '#4a2e18')
         _grandfather_clock(p_, hv, 0.85, HALL_BACK - 0.28, 0.0, clock, 'case')
-    ebox = (hv.x(HALL_X[0], HALL_BACK) - 40, hv.y(CEIL + 0.2, HALL_BACK), hv.x(HALL_X[1], HALL_BACK) + 40, hv.gy(HALL_BACK) + 30)
+    ebox = (hv.x(-2.6, HALL_BACK), hv.y(CEIL + 1.4, HALL_BACK), hv.x(2.6, HALL_BACK), hv.y(-0.9, HALL_BACK))
     L += _lit(hv.d(HALL_BACK), end_art, 'h_end', _key('gp', 'hall', 'end'), ebox, hv, amb, moon, var)
 
     def beyond(p_):                                                           # the dark living room through the arch
@@ -7619,11 +7650,12 @@ def _gp_stairs(light=0.0, beam=None, tod='night'):
         p_.linear(rect(b.left(), b.top(), b.width(), b.height()), 0, b.top(), 0, b.bottom(), ['#2a3a70', '#4a5a94', '#1a2244'])
         draw_tree(p_, b.left() + b.width() * 0.35, b.bottom() + b.height() * 0.1, b.height() * 1.1, 0.0, 77, 0.3, '#060812', None, 4)
         _moon(p_, b.left() + b.width() * 0.68, b.top() + b.height() * 0.25, b.width() * 0.12)
+        _backing(p_, hv, HALL_BACK, -2.6, 2.8, 1.8, UP_CEIL + 1.5, _darken(HALL_PAPER, 0.4), [(0.6, 1.25, 3.3, 4.6)])
         _hwall(p_, hv, (HALL_X[0], HALL_BACK), (HALL_X[1], HALL_BACK), 2.66, UP_CEIL, HALL_PAPER, HALL_INK, 'damask', 0.0,
                holes=[(0.6 - HALL_X[0], 3.3 - 2.66, 1.25 - HALL_X[0], 4.6 - 2.66, 'arch'), (-0.75 - HALL_X[0], 0.0, 0.1 - HALL_X[0], 2.05)], art=win_art, seed=9)
         dq = hv.quad([(-0.75, 4.71, HALL_BACK + 0.01), (0.1, 4.71, HALL_BACK + 0.01), (0.1, 2.66, HALL_BACK + 0.01), (-0.75, 2.66, HALL_BACK + 0.01)])
         _hfloor(p_, hv, HALL_X[0], HALL_X[1], LANDING_Y, HALL_BACK, 'boards', '#7a5234', '#4a2e1a', Y=2.66)
-        _hceil(p_, hv, HALL_X[0], HALL_X[1], 1.3, HALL_BACK, UP_CEIL, '#6a6254')
+        _hceil(p_, hv, -2.6, 2.8, 0.3, HALL_BACK, UP_CEIL, '#6a6254')
         for i in range(2):                                                  # window muntins
             xm = 0.6 + 0.65 * (i + 1) / 3
             p_.seg(hv.p(xm, 3.3, HALL_BACK), hv.p(xm, 4.45, HALL_BACK), max(1.5, 0.02 * hv.s(HALL_BACK)), '#e8e0d0')
@@ -7643,6 +7675,8 @@ def _gp_stairs(light=0.0, beam=None, tod='night'):
                holes=[(KOPEN[0] - HALL_X[0], 0.0, KOPEN[1] - HALL_X[0], KOPEN[2])], rail=2.2, seed=3)
         oq = hv.quad([(KOPEN[0], KOPEN[2], HALL_BACK + 0.01), (KOPEN[1], KOPEN[2], HALL_BACK + 0.01), (KOPEN[1], 0, HALL_BACK + 0.01), (KOPEN[0], 0, HALL_BACK + 0.01)])
         p_.fill(oq, '#3a2a20')
+        aq = hv.quad([(HALL_X[0], 2.5, ARCH_Y[0] - 0.1), (HALL_X[0], 2.5, ARCH_Y[1] + 0.1), (HALL_X[0], -0.3, ARCH_Y[1] + 0.1), (HALL_X[0], -0.3, ARCH_Y[0] - 0.1)])
+        p_.fill(aq, '#15131c')                                              # the dark living room through the arch
         _hwall(p_, hv, (HALL_X[0], 0.55), (HALL_X[0], HALL_BACK), 0.0, CEIL, HALL_PAPER, HALL_INK, 'damask', 0.95,
                holes=[(ARCH_Y[0] - 0.55, 0.0, ARCH_Y[1] - 0.55, 2.3, 'arch')], rail=2.2, seed=1)
         _hfloor(p_, hv, HALL_X[0], STAIR_X[0], 0.55, HALL_BACK, 'boards', '#7a5234', '#4a2e1a', runner=(-0.95, 0.15, 0.55, 5.85, '#6a1c24', '#c8a050'))
@@ -7690,6 +7724,8 @@ def _gp_hall_door(light=1.0, case='closed', envelope=True, latch=0.0, tod='night
     DX0, DX1, DH = -0.85, 0.05, 2.1
 
     def front(p_):
+        _backing(p_, hv, 0.0, -2.6, 2.6, -0.9, UP_CEIL + 0.6, _darken(HALL_PAPER, 0.35), [(DX0, DX1, 0.0, DH)])
+
         def art(q, W, H):
             u0 = (HALL_X[1] - 0.05) * 100; u1 = (HALL_X[1] + 0.85) * 100
             q.fill(rect(u0 - 4, H - (DH + 0.42) * 100, u1 - u0 + 8, 30), '#3a2414')                      # transom frame
@@ -7719,7 +7755,7 @@ def _gp_hall_door(light=1.0, case='closed', envelope=True, latch=0.0, tod='night
         # the casing
         cs = hv.quad([(DX0 - 0.09, DH + 0.09, 0.0), (DX1 + 0.09, DH + 0.09, 0.0), (DX1 + 0.09, 0, 0.0), (DX0 - 0.09, 0, 0.0)])
         p_.line(cs, max(3.0, 0.06 * hv.s(0.0)), '#3a2414')
-    fbox = (hv.x(HALL_X[1], 0.0) - 60, hv.y(CEIL + 0.2, 0.0), hv.x(HALL_X[0], 0.0) + 60, hv.gy(0.0) + 30)
+    fbox = (hv.x(2.6, 0.0), hv.y(UP_CEIL + 0.6, 0.0), hv.x(-2.6, 0.0), hv.y(-0.9, 0.0))
     L = _lit(hv.d(0.0), front, 'hd_front', _key('gp', 'hdoor', 'front', tod), fbox, hv, amb, moon, var)
 
     def leaf(pen, t):                                                     # the door: hinged on the stairs side (x = DX1)
@@ -8165,7 +8201,7 @@ def gp_living(view='tv', lamp=1.0, tv=None, kitchen=1.0, steam=1.0, chair=True, 
     audience; the cast adds Walter and the dummy through studio_figures). lens 'lens', grade 'gp_house' / 'tv_glow'."""
     tvf = _tv_spec(tv)
     lf, kf = _kfn(lamp, 51), _kfn(kitchen, 52)
-    tvl = lambda t: tv_level(tvf, t)
+    tvl = _kfn(0.0) if (tv is None or tv == 'off') else (lambda t: tv_level(tvf, t))
     box = FRAME
     amb = '#1c2034' if tod == 'night' else '#c4c8d0'
     lamp_l = [(LAMP_POS[0], 1.3, LAMP_POS[1], 3.0, GP_LAMP, 0.95), (LAMP_POS[0], 0.0, LAMP_POS[1], 2.0, GP_LAMP, 0.85, 0.4),
@@ -8186,7 +8222,7 @@ def gp_living(view='tv', lamp=1.0, tv=None, kitchen=1.0, steam=1.0, chair=True, 
         def back(p_):
             _living_shell(p_, hv)
             _window_night(p_, hv, tod)
-        L += _lit(hv.d(0.0), back, 'lv_room', _key('gp', 'liv', 'couch', 'room', tod), box, hv, amb, moon_l, var)
+        L += _lit(hv.d(0.0), back, 'lv_room', _key('gp', 'liv', 'couch', 'room', tod, moon), box, hv, amb, moon_l, var)
         L += _lit(hv.d(0.12), lambda p_: _drapes_art(p_, hv), 'lv_drapes', _key('gp', 'liv', 'couch', 'drapes', tod), box, hv, amb, moon_l, var)
         L += _lit(hv.d(0.2), lambda p_: _bookcase_art(p_, hv), 'lv_bookcase', _key('gp', 'liv', 'couch', 'book', tod), box, hv, amb, moon_l, var)
         L += _lit(hv.d(1.9), lambda p_: _couch_art(p_, hv), 'lv_couch', _key('gp', 'liv', 'couch', 'couch', tod), box, hv, amb, moon_l, var)
@@ -8210,7 +8246,7 @@ def gp_living(view='tv', lamp=1.0, tv=None, kitchen=1.0, steam=1.0, chair=True, 
     dx0, dy0 = hv.p(LDOOR[0], LDOOR[2], HALL_BACK); dx1, dy1 = hv.p(LDOOR[1], 0.0, HALL_BACK)
     kbox = (dx0 - (dx1 - dx0) * 1.2, dy0 - (dy1 - dy0) * 0.5, dx1 + (dx1 - dx0) * 1.2, dy1 + (dy1 - dy0) * 0.35)
     L = _kitchen_layers(hv, 'livk', kf, kbox, tod, mug, steam, chair)
-    L += _lit(hv.d(HALL_BACK), lambda p_: _living_shell(p_, hv), 'lv_room', _key('gp', 'liv', 'tv', 'room', tod), box, hv, amb, moon_l, var)
+    L += _lit(hv.d(HALL_BACK), lambda p_: _living_shell(p_, hv), 'lv_room', _key('gp', 'liv', 'tv', 'room', tod, moon), box, hv, amb, moon_l, var)
 
     def beyond_arch(p_):
         q = hv.quad([(LIV_X[1], 2.3, ARCH_Y[0]), (LIV_X[1], 2.3, ARCH_Y[1]), (LIV_X[1], 0, ARCH_Y[1]), (LIV_X[1], 0, ARCH_Y[0])])
@@ -8538,7 +8574,7 @@ def gp_den(lamp=1.0, hall=0.5, moon=1.0):
         rug = (-1.05, 0.85, 0.9, 2.2)
         _hface(p_, hv, (rug[0], 0.004, rug[3]), (rug[1], 0.004, rug[3]), (rug[1], 0.004, rug[2]), (rug[0], 0.004, rug[2]), 190, 155, _rug_art)
         _hceil(p_, hv, -W_, W_, 0.25, D_, CH_, '#4a3424')
-    L = _lit(hv.d(D_), room, 'den_room', _key('gp', 'den', 'room'), box, hv, amb, moon_l, var)
+    L = _lit(hv.d(D_), room, 'den_room', _key('gp', 'den', 'room', moon), box, hv, amb, moon_l, var)
 
     def furniture(p_):
         _hbox(p_, hv, -1.4, -0.95, 0.0, 0.58, 2.45, 2.9, '#4a2814', top='#5a3420', tex='wood')
@@ -8548,9 +8584,9 @@ def gp_den(lamp=1.0, hall=0.5, moon=1.0):
         p_.line(oval(px - 0.1 * s, py - 0.01 * s, 0.03 * s, 0.015 * s), 1.2, '#c8b890'); p_.line(oval(px - 0.03 * s, py - 0.01 * s, 0.03 * s, 0.015 * s), 1.2, '#c8b890')
         _armchair(p_, hv, DEN_CHAIR[0], DEN_CHAIR[1], -1, part='back')
         _floor_lamp_den(p_, hv)
-    L += _lit(hv.d(DEN_CHAIR[1] + 0.3), furniture, 'den_chair', _key('gp', 'den', 'chair'), box, hv, amb, moon_l, var)
+    L += _lit(hv.d(DEN_CHAIR[1] + 0.3), furniture, 'den_chair', _key('gp', 'den', 'chair', moon), box, hv, amb, moon_l, var)
     L += _lit(hv.d(DEN_CHAIR[1] - 0.45), lambda p_: _armchair(p_, hv, DEN_CHAIR[0], DEN_CHAIR[1], -1, part='arms'), 'den_arms',
-              _key('gp', 'den', 'arms'), box, hv, amb, moon_l, var)
+              _key('gp', 'den', 'arms', moon), box, hv, amb, moon_l, var)
     sx, sy = hv.p(DEN_LAMP[0], DEN_LAMP[2], DEN_LAMP[1]); ss = hv.s(DEN_LAMP[1])
     L.append(Layer(hv.d(DEN_LAMP[1]) - 0.02, lambda pen, t: (_lamp_shade(pen, sx, sy, ss, lf(t), '#d8c49a', 'bell'),
                                                             pen.glow(sx, sy - 0.12 * ss, 1.0 * ss, '#ffd8a0', 80 * lf(t)) if lf(t) > 0.02 else None), 'den_shade', blur=None))
@@ -8624,7 +8660,7 @@ def bedroom_doorway(hall=1.0, door=0.85, moon=1.0):
         _hbox(p_, hv, 0.75, 1.15, 0.0, 0.45, 1.85, 2.2, '#3a3a44')                                                  # chair + clothes
         cq = hv.quad([(0.72, 0.95, 2.2), (1.18, 0.95, 2.2), (1.2, 0.3, 1.95), (0.7, 0.35, 1.95)])
         p_.fill(cq, '#6a3a3a'); p_.line(cq, 1.2, LINE, 200)
-    L += _lit(hv.d(D_), room, 'bd_room', _key('gp', 'bed', 'room'), box, hv, amb, moon_l, var)
+    L += _lit(hv.d(D_), room, 'bd_room', _key('gp', 'bed', 'room', moon), box, hv, amb, moon_l, var)
 
     def leaf(p_):
         ang = math.radians(100.0) * clamp(door)
@@ -8763,7 +8799,7 @@ def hospital(view='bed', bpm=72.0, flat=None, light=1.0, hall=1.0, blinds=0.5):
             cq = hv.quad([(-1.55, 2.45, y0_), (-1.55, 2.45, y0_ + 0.32), (-1.55, 0.25, y0_ + 0.32), (-1.55, 0.25, y0_)])
             p_.fill(cq, '#9ac0a8' if i % 2 else '#8ab498')
         p_.line(poly([hv.p(-1.55, 2.5, 1.0), hv.p(-1.55, 2.5, D_)], False), 3, '#d8dcd8')
-    L = _lit(hv.d(D_), room, 'hp_room', _key('gp', 'hosp', view, 'room'), box, hv, amb, win_l + mon_l, var)
+    L = _lit(hv.d(D_), room, 'hp_room', _key('gp', 'hosp', view, 'room', blinds), box, hv, amb, win_l + mon_l, var)
 
     def furniture(p_):
         x0, x1, y0, y1, Ym = BED
@@ -8841,10 +8877,7 @@ def _vitrine_art(pen, hv, part='plinth'):
     cx, cy = MUS_CASE
     px0, px1, py0, py1, PH = cx - 0.55, cx + 0.55, cy - 0.32, cy + 0.32, 0.95
     if part == 'plinth':
-        _hbox(pen, hv, px0, px1, 0.0, PH, py0, py1, '#2a2c30', top='#3a3c42', tex='grunge',
-              faces={'front': lambda p_, W, H: _hface(p_, hv, (cx - 0.3, 0.72, py0 - 0.002), (cx + 0.3, 0.72, py0 - 0.002),
-                                                       (cx + 0.3, 0.5, py0 - 0.002), (cx - 0.3, 0.5, py0 - 0.002), 60, 22, lambda q: _plaque_art(q, 60, 22))
-                     if False else None})
+        _hbox(pen, hv, px0, px1, 0.0, PH, py0, py1, '#2a2c30', top='#3a3c42', tex='grunge')
         _hface(pen, hv, (cx - 0.3, 0.74, py0 - 0.003), (cx + 0.3, 0.74, py0 - 0.003), (cx + 0.3, 0.5, py0 - 0.003), (cx - 0.3, 0.5, py0 - 0.003), 60, 24,
                lambda q: _plaque_art(q, 60, 24))
         return
@@ -9031,7 +9064,7 @@ def _street_morning_far(pen, hv, facing=-1):
         x0 = hx; w = 6.5
         c = ('#a8968a', '#8a9aa0', '#b4a890', '#9a8a98', '#a0a890')[i % 5]
         hb = hv.quad([(x0, 0.0, yfar), (x0 + w, 0.0, yfar), (x0 + w, 5.6, yfar), (x0, 5.6, yfar)])
-        pen.fill(hb, c); _siding(pen, hb, *[v for v in hb.getBounds().asScalars()], 6, '#000000', 30)
+        pen.fill(hb, c); _siding(pen, hb, *_rb(hb), 6, '#000000', 30)
         pen.fill(hv.quad([(x0 - 0.3, 5.6, yfar), (x0 + w / 2, 7.6, yfar), (x0 + w + 0.3, 5.6, yfar)]), '#4a3e3a')
         for (wx, wy) in ((x0 + 1.2, 1.2), (x0 + 4.2, 1.2), (x0 + 1.2, 3.6), (x0 + 4.2, 3.6)):
             q = hv.quad([(wx, wy + 1.2, yfar), (wx + 1.0, wy + 1.2, yfar), (wx + 1.0, wy, yfar), (wx, wy, yfar)])
@@ -9112,7 +9145,8 @@ def _street_outside(vs):
     HX0, HX1 = -6.6, 1.8
 
     def far(pen):
-        pen.linear(rect(box[0], box[1], box[2] - box[0], 800), 0, box[1], 0, 700, ['#9aaac0', '#d0d6dc'])
+        pen.linear(rect(box[0], box[1], box[2] - box[0], hv.gy(8.0) + 10 - box[1]), 0, box[1], 0, 700, ['#9aaac0', '#d0d6dc'])
+        pen.fill(rect(box[0], hv.gy(8.0) - 4, box[2] - box[0], box[3] - hv.gy(8.0) + 4), '#7a8060')
         for (tx, c) in ((-11.0, '#c86a2a'), (6.0, '#d8a03a')):
             bx, by = hv.p(tx, 0.0, 6.0); s = hv.s(6.0)
             pen.fill(rect(bx - 0.2 * s, by - 3.5 * s, 0.4 * s, 3.5 * s), '#3a2a20')
@@ -9133,7 +9167,7 @@ def _street_outside(vs):
                holes=[(LWIN[0] - HX0, 0.85, LWIN[1] - HX0, 2.1), (-0.85 - HX0, 0.0, 0.05 - HX0, 2.1), (-4.4 - HX0, 3.6, -3.0 - HX0, 4.9), (-1.0 - HX0, 3.6, 0.2 - HX0, 4.9)],
                art=front_art, trim='#f0ece4', base_h=0.3, seed=95)
         ch = hv.quad([(HX1 - 1.6, 9.2, 0.3), (HX1 - 1.0, 9.2, 0.3), (HX1 - 1.0, 6.5, 0.3), (HX1 - 1.6, 6.5, 0.3)])
-        p_.fill(ch, '#7a3a2a'); _bricks(p_, ch, *[v for v in ch.getBounds().asScalars()], 4, 9, '#000000', 50); p_.line(ch, 2, LINE)
+        p_.fill(ch, '#7a3a2a'); _bricks(p_, ch, *_rb(ch), 4, 9, '#000000', 50); p_.line(ch, 2, LINE)
         roof = hv.quad([(HX0 - 0.4, 6.2, 0.0), (HX1 + 0.4, 6.2, 0.0), ((HX0 + HX1) / 2, 8.6, 0.0)])
         p_.fill(roof, '#4a3e3a'); p_.texture(roof, 'grunge', 0.4, 'overlay', 1.0); p_.line(roof, 3, LINE)
         gw = hv.quad([((HX0 + HX1) / 2 - 0.4, 7.4, -0.01), ((HX0 + HX1) / 2 + 0.4, 7.4, -0.01), ((HX0 + HX1) / 2 + 0.4, 6.6, -0.01), ((HX0 + HX1) / 2 - 0.4, 6.6, -0.01)])
@@ -9373,20 +9407,37 @@ def _notepaper(pen, w, h, torn_bottom=True, torn_top=False, seed=0, header=True)
     return paper, lh
 
 
+_NOTEPATH = {}
+
+
+def _notepaper_cached(pen, w, h, torn_bottom=True, torn_top=False, seed=0, header=True):
+    """_notepaper through a sprite (the shadow blur and paper texture are the expensive part): returns (paper path, lh)."""
+    k = (w, h, torn_bottom, torn_top, seed, header)
+    if k not in _NOTEPATH:
+        rec = skia.PictureRecorder(); c2 = rec.beginRecording(skia.Rect.MakeLTRB(-w, -h, w, h))
+        _NOTEPATH[k] = _notepaper(Pen(c2), w, h, torn_bottom, torn_top, seed, header)
+        rec.finishRecordingAsPicture()
+    _sprite(pen, ('gp_notepaper',) + k, lambda p_: _notepaper(p_, w, h, torn_bottom, torn_top, seed, header),
+            (-w / 2 - 40, -h / 2 - 40, w / 2 + 60, h / 2 + 70))
+    return _NOTEPATH[k]
+
+
 def _prop_letter(pen, t, hl=0, smear=0.0, show=7, **kw):
     """Grandpa's letter: the seven rules in his shaky hand on hospital notepaper, the bottom torn off (the P.S. went with
     it). Rule six is in the neater, colder hand (he changed it). hl = rule number to light (the rest dim), smear 0..1 runs
     rule six's ink (the lie revealed), show = how many rules are written (0..7)."""
     w, h = 760, 1040
-    paper, lh = _notepaper(pen, w, h, True, False, 3)
+    paper, lh = _notepaper_cached(pen, w, h, True, False, 3)
     x0, y0 = -w / 2 + w * 0.15, -h / 2 + lh * 2.95
     _sprite(pen, ('gp_letter', show), lambda p_: _letter_ink(p_, w, h, lh, show), (-w / 2, -h / 2, w / 2, h / 2))
     if hl:
         y = _letter_rule_y(hl, lh, w)
-        pen.cv.save(); pen.cv.clipPath(paper, skia.ClipOp.kIntersect, True)
-        pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 70)
-        pen.fill(rect(-w / 2 + w * 0.13, y[0] - lh * 0.75, w * 0.86, (y[1] - y[0]) + lh * 0.95), '#fff2b0', 110)
-        pen.cv.restore()
+        band = skia.Rect.MakeXYWH(-w / 2 + w * 0.13, y[0] - lh * 0.75, w * 0.86, (y[1] - y[0]) + lh * 0.95)
+        cv = pen.cv
+        cv.save(); cv.clipPath(paper, skia.ClipOp.kIntersect, True)
+        cv.save(); cv.clipRect(band, skia.ClipOp.kDifference); pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 95); cv.restore()
+        cv.drawRect(band, skia.Paint(Color=col('#ffe066'), BlendMode=skia.BlendMode.kMultiply, AntiAlias=True))   # a highlighter
+        cv.restore()
     if smear > 0.01:                                                       # rule six runs: ink drips and a smudge
         y6 = _letter_rule_y(6, lh, w)
         rng = np.random.default_rng(66)
@@ -9519,7 +9570,6 @@ def _prop_case_open(pen, t, warm=1.0, **kw):
     for hx in (-W * 0.28, W * 0.28):
         pen.fill(rrect(hx - 50, -H / 2 + 280, 100, 40, 8), '#c9a24a'); pen.line(rrect(hx - 50, -H / 2 + 280, 100, 40, 8), 3, '#3a2a10')
     pen.cv.save(); pen.cv.translate(-W / 2 + 34, -H / 2 + 334)
-    _velvet_hollow(pen, W - 68, H - 368) if False else None
     pen.cv.scale((W - 68) / 35.0, (H - 368) / 77.0)
     _velvet_hollow(pen, 35, 77)
     pen.cv.restore()
