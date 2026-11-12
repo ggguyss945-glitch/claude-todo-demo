@@ -1,7 +1,7 @@
 """engine.scene: layered 2.5D compositing with real parallax, depth of field, cached static layers and the frame pipeline.
 
 Layer(depth, draw, name='', blur=None, alpha=1.0, cache=False, bounds=None, cache_res=1.0, dim=0.0, tint=None,
-      ref_depth=None, screen=False, cache_t=0.0)
+      ref_depth=None, screen=False, cache_t=0.0, blend=None)
   depth     float or f(t). 1.0 = the subject plane. Far backgrounds 3..50, door frames / foreground 0.4..0.8.
   draw      f(pen, t): draws in DESIGN coordinates exactly as the layer looks from the home camera (x=960, y=540, zoom=1)
             when it sits at ref_depth (default: its depth at t=0). Depth only changes how it reacts to the camera:
@@ -14,6 +14,8 @@ Layer(depth, draw, name='', blur=None, alpha=1.0, cache=False, bounds=None, cach
             (design rect x0, y0, x1, y1; default the frame +-25%) and transform that image each frame. Static sets
             become cheap. Only non-empty tiles are drawn. cache_res > 1 keeps big push-ins crisp.
   screen    True: locked to the frame (ignores the camera) but still goes through the lens.
+  blend     None (normal) | 'plus' | 'screen' | 'multiply': how the layer composites onto what is behind it. 'plus' is for
+            light-contribution layers (sets: albedo x one lamp's light, alpha = the lamp's level): lights add up exactly.
 
 render_frame(layers, cam_state, t, frame_i, focus=1.0, dof=0.0, lens=None, grade=None, post=None, hud=None, bg='#000000')
     -> uint8 RGB (CFG.rh, CFG.rw, 3)
@@ -63,8 +65,9 @@ def _val(v, t):
 
 class Layer:
     def __init__(self, depth, draw, name='', blur=None, alpha=1.0, cache=False, bounds=None, cache_res=1.0, dim=0.0, tint=None,
-                 ref_depth=None, screen=False, cache_t=0.0):
+                 ref_depth=None, screen=False, cache_t=0.0, blend=None):
         self.depth, self.draw, self.name, self.blur, self.alpha = depth, draw, name, blur, alpha
+        self.blend = blend
         self.cache, self.cache_res, self.dim, self.tint, self.screen, self.cache_t = cache, cache_res, dim, tint, screen, cache_t
         self.bounds = bounds or (-DW * 0.25, -DH * 0.25, DW * 1.25, DH * 1.25)
         self.ref_depth = ref_depth if ref_depth is not None else float(_val(depth, 0.0))
@@ -256,6 +259,9 @@ def _layer_paint(layer, t, ir_gain=None):
 
 
 # ------------------------------------------------------------------ compositing
+_BLEND = {'plus': skia.BlendMode.kPlus, 'screen': skia.BlendMode.kScreen, 'multiply': skia.BlendMode.kModulate}
+
+
 def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
     """Render the layers into the lens' source canvas. Returns the BGRA array (owned by a cached surface)."""
     L = get_lens(lens)
@@ -299,6 +305,11 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
         irg = L.ir_gain(d) if (L is not None and L.ir) else None
         paint, lpaint, gains, alpha = _layer_paint(l, t, irg)
         if alpha <= 0.001: continue
+        bm = _BLEND.get(l.blend) if l.blend else None
+        if bm is not None:
+            paint.setBlendMode(bm)
+            if lpaint is None and not l.cache: lpaint = skia.Paint()
+            if lpaint is not None: lpaint.setBlendMode(bm)
         M = skia.Matrix(); M.setAll(a, 0, tx, 0, a, ty, 0, 0, 1)
         t0 = time.perf_counter()
         if sig < 0.6:

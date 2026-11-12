@@ -13,6 +13,12 @@ Per-frame effects: pass post={...} to scene.render_frame:
   exposure (stops), sat (x), fade (0..1 to black), white (0..1 white flash), dim (0..1), red (0..1 blend to red_alert),
   mix (Grade, k), flash (police_flash(t) result), static (0..1 TV static, 2-6 frame scare flashes), glitch (0..1 RGB tear),
   blur (design px, whole-frame blur for rule-card backgrounds), vignette / bloom (override the grade's value)
+  vhs (dict): a 1970s tape played on a CRT, applied at output resolution before the static / glitch / grain:
+      dict(t=seconds (required: drives the wobble and the rolling tracking band), k=1 (overall), wobble=1 (per-line
+      horizontal jitter + slow skew), track=0.35 (the rolling tracking-noise band; 1 = a bad tape), noise=1 (tape snow,
+      dropouts), chroma=1 (colour bleed / shift), curve=1 (CRT glass curvature + rounded tube corners; 0 = flat),
+      scan=1 (scanlines), glow=1 (phosphor glow), glass=1 (sheen on the glass), bezel=0..1 (the TV's bezel round the tube:
+      the push-in from the living room lands on it), head=1 (head-switching noise at the bottom))
 
 police_flash(t, strength=1.0, speed=1.0, mode='sweep'|'strobe', side=0.0) -> Flash: rotating red/blue light sweeps.
   Flash.light(xf) -> (r, b) 0..1 intensities at horizontal frame fraction xf (for sets that light walls in-scene).
@@ -300,10 +306,117 @@ def _vig_small(v80, w, h):
     return _c[key]
 
 
+def _vhs_static(w, h, vw, vh, curve, scan, glass, bezel):
+    """Cached per size: CRT curvature maps (output px -> VHS-res source px), the tube mask (scanlines, edge falloff,
+    rounded corners; u8, 200 = unity), the glass sheen (additive u8) and the bezel image outside the tube."""
+    key = ('vhs', w, h, vw, vh, round(curve, 3), round(scan, 3), round(glass, 3), round(bezel, 3))
+    if key in _c: return _c[key]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    nx = (xx + 0.5) / w * 2 - 1; ny = (yy + 0.5) / h * 2 - 1
+    cx, cy = 5.2 / max(1e-3, curve), 4.2 / max(1e-3, curve)
+    if curve > 1e-3:
+        sx = nx + nx * (ny / cy) ** 2 * 1.0; sy = ny + ny * (nx / cx) ** 2 * 1.0
+        sx = sx * (0.985 if bezel <= 0 else 1.0); sy = sy * (0.985 if bezel <= 0 else 1.0)
+    else:
+        sx, sy = nx, ny
+    mx = ((sx + 1) * 0.5 * vw - 0.5).astype(np.float32); my = ((sy + 1) * 0.5 * vh - 0.5).astype(np.float32)
+    m1, m2 = cv2.convertMaps(mx, my, cv2.CV_16SC2)
+    # tube: rounded-rectangle edge in source space, soft 0.6 % falloff; corner radius ~7 %
+    ax, ay = np.abs(sx), np.abs(sy)
+    rr = 0.075
+    qx, qy = np.maximum(ax - (1 - rr), 0), np.maximum(ay - (1 - rr * 16 / 9), 0)
+    dist = np.sqrt(qx ** 2 + (qy * 9 / 16) ** 2) - rr + np.minimum(np.maximum(ax - 1, ay - 1), 0) * 0      # <0 inside
+    inside = np.clip(-dist / 0.012, 0, 1) * (ax < 1.02) * (ay < 1.02)
+    edge = np.exp(-((np.maximum(ax, 0) ** 6) * 0.9 + (np.maximum(ay, 0) ** 6) * 0.9))                       # darker rim
+    lines = vh * 0.62                                                                                         # ~270 lines
+    sl = 1.0 - 0.32 * scan * (0.5 + 0.5 * np.cos((sy + 1) * 0.5 * lines * 2 * np.pi)) ** 1.6
+    m = np.clip(inside * edge * sl * 200, 0, 255).astype(np.uint8)
+    mask = cv2.merge([m, m, m])
+    add = None
+    if glass > 0:                                                                     # a soft diagonal sheen + top glint
+        g = np.clip(1 - np.abs((nx * 0.55 + ny * 0.85) + 0.55) / 0.22, 0, 1) ** 2 * 18 * glass
+        g += np.exp(-(((nx + 0.45) / 0.35) ** 2 + ((ny + 0.78) / 0.12) ** 2)) * 26 * glass
+        g = g * inside
+        gu = np.clip(g, 0, 255).astype(np.uint8)
+        add = cv2.merge([gu, gu, gu])
+    bz = None
+    if bezel > 0:                                                                     # warm dark plastic round the tube
+        out_ = 1 - inside
+        lum = (0.16 + 0.05 * (-ny) + 0.04 * np.exp(-((dist - 0.03) / 0.02) ** 2)) * out_
+        b = np.clip(lum * 255 * bezel, 0, 255)
+        bz = cv2.merge([np.clip(b * 0.78, 0, 255).astype(np.uint8), np.clip(b * 0.86, 0, 255).astype(np.uint8), b.astype(np.uint8)])
+    _c[key] = (m1, m2, mask, add, bz)
+    return _c[key]
+
+
+def vhs(img, p, frame_i):
+    """The 1974 tape on a CRT (see the module docstring, fx['vhs']). img BGR u8 at output size -> BGR u8."""
+    if not isinstance(p, dict): p = dict(k=float(p))
+    h, w = img.shape[:2]
+    t = float(p.get('t', frame_i / 60.0)); k = float(p.get('k', 1.0))
+    vw = max(320, int(round(w * 0.38 / 2)) * 2); vh = max(180, int(round(vw * h / w / 2)) * 2)
+    small = cv2.resize(img, (vw, vh), interpolation=cv2.INTER_AREA)
+    rng = np.random.default_rng(frame_i * 7919 + 13)
+    # chroma bleed + shift (YCrCb, chroma smeared along the line, nudged right)
+    ch = float(p.get('chroma', 1.0)) * k
+    if ch > 0:
+        ycc = cv2.cvtColor(small, cv2.COLOR_BGR2YCrCb)
+        yl, cr, cb = cv2.split(ycc)
+        kx = max(3, int(vw * 0.012 * ch) | 1)
+        cr = cv2.blur(cr, (kx, 1)); cb = cv2.blur(cb, (kx, 1))
+        shf = int(round(vw * 0.003 * ch))
+        if shf: cr = np.roll(cr, shf, axis=1); cb = np.roll(cb, shf, axis=1)
+        yl = cv2.GaussianBlur(yl, (0, 0), sigmaX=0.6 + 0.3 * k, sigmaY=0.01)
+        small = cv2.cvtColor(cv2.merge([yl, cr, cb]), cv2.COLOR_YCrCb2BGR)
+    # per-line horizontal displacement: slow skew wave, line jitter, the rolling tracking band, head switching
+    rows = np.arange(vh, dtype=np.float32)
+    wob = float(p.get('wobble', 1.0)) * k
+    off = wob * (0.9 * np.sin(rows / vh * 2 * np.pi * 1.3 + t * 1.7) + 0.5 * np.sin(rows / vh * 2 * np.pi * 0.37 - t * 0.9))
+    off += wob * 0.45 * rng.standard_normal(vh).astype(np.float32)
+    tr = float(p.get('track', 0.35)) * k
+    band = np.zeros(vh, np.float32)
+    if tr > 0:
+        yb = ((t * 0.075 + 0.3) % 1.35 - 0.15) * vh
+        bh = vh * (0.035 + 0.03 * tr)
+        band = np.exp(-((rows - yb) / bh) ** 2).astype(np.float32)
+        off += band * tr * vw * 0.012 * (1.0 + rng.standard_normal(vh).astype(np.float32))
+    hd = float(p.get('head', 1.0)) * k
+    if hd > 0:
+        nb = max(2, int(vh * 0.022))
+        off[-nb:] += hd * vw * 0.02 * (1 + 0.5 * rng.standard_normal(nb).astype(np.float32)) * np.linspace(0.3, 1.0, nb)
+    mx = np.tile(np.arange(vw, dtype=np.float32), (vh, 1)) - off[:, None]
+    my = np.repeat(rows[:, None], vw, axis=1)
+    small = cv2.remap(small, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    # tape snow, dropouts, the noisy band
+    nz = float(p.get('noise', 1.0)) * k
+    if nz > 0:
+        g = (rng.standard_normal((vh // 2, vw // 2)).astype(np.float32) * 9 * nz)
+        g = cv2.resize(g, (vw, vh), interpolation=cv2.INTER_LINEAR)
+        g += (band[:, None] * tr * 70 * (rng.random((vh, vw), dtype=np.float32) - 0.35))
+        small = np.clip(small.astype(np.float32) + g[..., None], 0, 255).astype(np.uint8)
+        for _ in range(int(rng.poisson(2.5 * nz))):                         # dropouts: short white streaks
+            yy_ = int(rng.integers(0, vh)); xx_ = int(rng.integers(0, vw)); ln = int(rng.integers(vw // 40, vw // 8))
+            small[yy_, xx_:xx_ + ln] = np.maximum(small[yy_, xx_:xx_ + ln], 210)
+    gl = float(p.get('glow', 1.0)) * k
+    if gl > 0:
+        bl = cv2.GaussianBlur(small, (0, 0), vw * 0.012)
+        small = cv2.addWeighted(small, 1.0, bl, 0.22 * gl, 0)
+    curve = float(p.get('curve', 1.0)); scan = float(p.get('scan', 1.0)) * k
+    glass = float(p.get('glass', 1.0)); bezel = float(p.get('bezel', 0.0))
+    m1, m2, mask, add, bz = _vhs_static(w, h, vw, vh, curve, scan, glass, round(bezel * 4) / 4)
+    out = cv2.remap(small, m1, m2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+    out = cv2.multiply(out, mask, scale=1 / 200.0)
+    if add is not None: out = cv2.add(out, add)
+    if bz is not None: out = cv2.add(out, bz)
+    return out
+
+
 def finish(img, grade, fx, frame_i):
-    """Output-resolution finishing: blur (rule-card backgrounds), softness, static, glitch, grain."""
+    """Output-resolution finishing: VHS / CRT (fx['vhs']), blur (rule-card backgrounds), softness, static, glitch, grain."""
     p = grade.p
     h, w = img.shape[:2]
+    if fx.get('vhs'):
+        img = vhs(img, fx['vhs'], frame_i)
     if fx.get('blur'):
         s = fx['blur'] * w / 1920.0
         f = 4 if s > 6 else 2

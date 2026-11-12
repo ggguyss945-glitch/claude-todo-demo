@@ -200,6 +200,7 @@ import skia
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path: sys.path.insert(0, _HERE)
 from engine.core import (CFG, LINE, col, mix, Pen, smooth, poly, rect, rrect, oval, inter, union, minus, clamp, lerp, prog,  # noqa: E402
+                         set_render_size,
                          ease, ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, ease_out_quad, spring, noise1, hash01,
                          tex, text)
 from engine.core import _ramp, _stops_key                                                   # noqa: E402
@@ -317,6 +318,96 @@ CAST['dad'] = dict(
 CAST['you']['feet'] = 'socks'                          # 3 AM at home: grey socks (the delivery photo shows them)
 CAST['you']['cloth'].update(socks='#8d8f96', socks_sh='#5f6169')
 
+# ---------------------------------------------------------------------------------------- dummy film cast
+# "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH". This film's cast takes the plain names
+# ('mom', 'you'); the delivery designs stay as 'mom_delivery' / 'you_police' (the police / delivery 'you' in socks).
+CAST['mom_delivery'] = CAST['mom']
+CAST['you_police'] = CAST['you']
+_FACE_OLD = [-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120]
+# Mister Winks: a 0.85 m ventriloquist figure (big carved head, skinny stuffed limbs). His head is drawn by _winks_head
+# (painted wooden face, hinged jaw block, wooden eyelids, painted red hair, pillbox cap); body units as everyone else.
+CAST['winks'] = dict(
+    outfit='usher', hat='pillbox', hair='painted', sex='m', hh=300.0, dummy=True,
+    head_ys=_FACE_OLD, head_ws=[0, 60, 87, 100, 104, 102, 96, 89, 80, 56, 0],
+    eye_dx=41, eye_y=-14, eye_r=28.5, pupil=0.55, brow_th=16, nose_len=14, mouth_y=52, mouth_w=50,
+    skin='#ecc4ad', skin_sh='#c4907a', skin_dp='#6e3c32', blush='#d8455a', lip='#b01f2d', stubble=None, stub=0,
+    hair_c='#b9431f', brow_c='#7a2614', bags=0.0, age=0.0, blink_rate=0.0, lock=1.0, micro=0.0, breath=0.0,
+    scar=0, ring=0, part=1, lashes=0.0, talk=1.0, feet='shoes', iris='#6f97b8',
+    body=dict(sh=82, ch=74, wa=66, hip=64, arm=(30, 24), leg=(32, 27), neck=22, hand=1.22, arm_k=0.8),
+    cloth=dict(top='#7d1d2b', top_sh='#4e0f19', top_hi='#a8384a', brass='#d8b04c', brass_sh='#8a6a22', brass_hi='#fff0b8',
+               braid='#d6b257', trousers='#262a40', trousers_sh='#161828', stripe='#c9a24a', shoes='#3b1712',
+               glove='#f4f0e6', glove_sh='#c8c0ad', shirt='#efe9dc', cap='#7d1d2b', cap_sh='#4e0f19', strap='#17121a'))
+# Grandpa (86): the thing that lived as Walter Kemp. Bald dome, white tufts over big ears, a long hooked nose, bushy
+# white brows, deep folds; the kind cardigan look in memories, the gown in the hospital. His smile is a little too still
+# and his lips barely move when he talks (talk 0.3): sixty years of never moving them.
+_GRANDPA = dict(
+    hat=None, hair='bald', sex='m', hh=180.0,
+    head_ys=_FACE_OLD, head_ws=[0, 52, 76, 89, 92, 89, 80, 69, 53, 31, 0],
+    eye_dx=40, eye_y=-6, eye_r=17.5, pupil=0.85, brow_th=11, nose_len=36, mouth_y=64, mouth_w=21, nose='hook',
+    skin='#d3ae9c', skin_sh='#a07f72', skin_dp='#6a5050', blush='#d99594', lip='#9a6a68', stubble='#d9d4cc', stub=0.25,
+    hair_c='#dcd8d2', brow_c='#d6d1ca', bags=1.1, age=1.35, blink_rate=0.1, lock=0.55, micro=0.25, breath=0.6,
+    scar=0, ring=1, part=0, lashes=0.0, ears=1.35, brows='bushy', spots=1.0, talk=0.3, lids=0.2,
+    body=dict(sh=112, ch=108, wa=104, hip=100, arm=(44, 36), leg=(50, 42), neck=38, hand=0.98))
+CAST['grandpa'] = dict(_GRANDPA, outfit='cardi_m', feet='slippers',
+                       cloth=dict(top='#5e6a45', top_sh='#3e472c', top_hi='#7a875c', shirt='#e7dcc4', shirt_sh='#bfb196',
+                                  check='#b49a7a', trousers='#6a4f3a', trousers_sh='#463325', shoes='#5a3b2c', shoes_sh='#3b261c',
+                                  button='#8a6440'))
+CAST['grandpa_bed'] = dict(_GRANDPA, outfit='gown', feet='socks', gaunt=0.8, blink_rate=0.06,
+                           cloth=dict(top='#a9c3d6', top_sh='#7894aa', top_hi='#cddcea', print_c='#5f7c96', trousers='#c7a596',
+                                      trousers_sh='#9a7b70', socks='#c9b28a', socks_sh='#9a8462', band='#f2f2ee'))
+# the real Walter, back in his own dying body for one hour: the same face and gown, lucid and terrified (scared cast)
+CAST['walter'] = dict(CAST['grandpa_bed'], lock=0.0, blink_rate=0.3, micro=1.0, talk=0.85, lids=0.0)
+# young Walter on the 1974 tape: thick dark hair and sideburns, the family nose and ears, a powder-blue suit with huge
+# lapels, a big showman smile, and lips that never move (talk 0: the dummy does the talking)
+CAST['walter74'] = dict(
+    outfit='suit70', hat=None, hair='pomp', sex='m', hh=178.0,
+    head_ys=_FACE_OLD, head_ws=[0, 53, 77, 91, 96, 95, 89, 77, 58, 33, 0],
+    eye_dx=41, eye_y=-8, eye_r=18.5, pupil=0.8, brow_th=10.5, nose_len=30, mouth_y=62, mouth_w=22, nose='hook',
+    skin='#d2a98f', skin_sh='#a37b66', skin_dp='#6b4b44', blush='#dc958d', lip='#a06a62', stubble='#4a3a30', stub=0.3,
+    hair_c='#3b2a1f', brow_c='#2b1e16', bags=0.4, age=0.4, blink_rate=0.0, lock=0.6, micro=0.35, breath=0.6,
+    scar=0, ring=1, part=1, lashes=0.0, ears=1.25, talk=0.0, feet='shoes',
+    body=dict(sh=124, ch=118, wa=106, hip=106, arm=(52, 42), leg=(58, 48), neck=46, hand=1.02),
+    cloth=dict(top='#8fb2cf', top_sh='#617f9b', top_hi='#b6d0e6', shirt='#efe3c4', shirt_sh='#cbbd9b', tie='#9a6a24',
+               tie_hi='#d4a24a', trousers='#8fb2cf', trousers_sh='#617f9b', shoes='#4a2e1e', shoes_sh='#2e1c12', square='#d4a24a'))
+# Mom (mid 40s): drove up tonight. Long camel coat, a chunky teal scarf, dark hair in a low bun with loose strands,
+# tired eyes. Grieving and holding it together.
+CAST['mom'] = dict(
+    outfit='longcoat', hat=None, hair='lowbun', sex='f', hh=182.0,
+    head_ys=_FACE_OLD, head_ws=[0, 49, 71, 87, 92, 90, 82, 66, 46, 24, 0],
+    eye_dx=40, eye_y=-6, eye_r=18.0, pupil=1.0, brow_th=7.5, nose_len=24, mouth_y=60, mouth_w=21,
+    skin='#d9b19a', skin_sh='#a9806d', skin_dp='#6d4f4c', blush='#de9a95', lip='#a8666a', stubble=None, stub=0, lips=0.55,
+    hair_c='#3a2620', brow_c='#2e1f1a', bags=0.75, age=0.45, blink_rate=0.3, lock=0.0, micro=1.0, breath=1.0,
+    scar=0, ring=1, part=0, lashes=0.9, earrings=True, feet='boots',
+    body=dict(sh=104, ch=104, wa=92, hip=104, arm=(44, 36), leg=(46, 38), neck=36, hand=0.86),
+    cloth=dict(top='#b28a5e', top_sh='#806040', top_hi='#cfa878', button='#4a3424', scarf='#2f6a66', scarf_sh='#1d4846',
+               scarf_hi='#4b8c86', sweater='#5b4a5e', trousers='#2b2f3e', trousers_sh='#1a1d28', shoes='#3a2a22', shoes_sh='#22180f'))
+# Owen (9): big round head, a cowlick that never lies down, big ears, a missing front tooth, a mustard hoodie, red
+# sneakers. He can't wink: both eyes close (Acting.try_wink).
+CAST['owen'] = dict(
+    outfit='hoodie', hat=None, hair='cowlick', sex='m', hh=232.0, child=True,
+    head_ys=_FACE_OLD, head_ws=[0, 58, 85, 99, 104, 104, 99, 87, 66, 36, 0],
+    eye_dx=40, eye_y=4, eye_r=22.5, pupil=1.4, brow_th=7.0, nose_len=14, mouth_y=64, mouth_w=18, nose='button',
+    skin='#e2b89c', skin_sh='#b38a72', skin_dp='#7a5752', blush='#ef9f96', lip='#c07c74', stubble=None, stub=0, lips=0.0,
+    hair_c='#8a5a32', brow_c='#6b4428', bags=0.15, age=0.0, blink_rate=0.35, lock=0.0, micro=1.0, breath=1.0,
+    scar=0, ring=0, part=1, lashes=0.4, ears=1.3, gap=True, feet='shoes',
+    body=dict(sh=84, ch=82, wa=80, hip=80, arm=(36, 30), leg=(40, 34), neck=30, hand=0.78, arm_k=0.88),
+    cloth=dict(top='#d9a12c', top_sh='#a6741a', top_hi='#f0c55a', trousers='#3c5a86', trousers_sh='#273d5e', shoes='#c43a32',
+               shoes_sh='#8a2620', string='#f4ead2'))
+# the thing in Owen's body at the end: the same boy, a creepy cast (never blinks, the too-still smile, Grandpa's way)
+CAST['owen_new'] = dict(CAST['owen'], lock=1.0, blink_rate=0.0, micro=0.25, talk=0.3, pupil=1.05)
+# you (the narrator, ~16): long face, dark curtain bangs parted in the middle over the ears, a blue denim jacket over a
+# heather-grey hoodie, black jeans, white sneakers
+CAST['you'] = dict(
+    outfit='denim', hat=None, hair='shaggy', sex='m', hh=184.0,
+    head_ys=_FACE_OLD, head_ws=[0, 50, 72, 88, 93, 92, 85, 69, 49, 25, 0],
+    eye_dx=41, eye_y=-4, eye_r=19.5, pupil=1.05, brow_th=8.5, nose_len=22, mouth_y=60, mouth_w=20,
+    skin='#c99c80', skin_sh='#9a7260', skin_dp='#5f4442', blush='#d88f86', lip='#a16a62', stubble=None, stub=0, lips=0.0,
+    hair_c='#231b1a', brow_c='#1d1615', bags=0.55, age=0.12, blink_rate=0.35, lock=0.0, micro=1.0, breath=1.0,
+    scar=0, ring=0, part=0, lashes=0.2, feet='shoes',
+    body=dict(sh=112, ch=106, wa=96, hip=98, arm=(46, 38), leg=(50, 42), neck=40, hand=0.96),
+    cloth=dict(top='#3d5f8c', top_sh='#2a4466', top_hi='#5d80ad', hood='#8d9097', hood_sh='#62656c', button='#c9a24a',
+               trousers='#1f2026', trousers_sh='#121318', shoes='#e8e4dc', shoes_sh='#a8a39a', string='#e8e4dc'))
+
 # ====================================================================================================== pose
 POSE_DEFAULTS = dict(
     # placement / body (body units: 1000 = feet to crown)
@@ -346,6 +437,17 @@ POSE_DEFAULTS = dict(
     # (stretch 0.5 = 1.5x arm length), hand tremor (shake), tablet screen ink (signature progress) and camera flash
     eyeshine=0.0, floor=0.0, tiptoe=0.0, hl_stretch=0.0, hr_stretch=0.0, hl_shake=0.0, hr_shake=0.0,
     tablet_ink=1.0, tablet_flash=0.0,
+    # dummy film: jaw (Mister Winks's hinged jaw block, 0 shut .. 1 hanging wide), lid_l / lid_r (eyelids per side,
+    # character's left / right: wooden lids on the dummy, a squeeze on people), crack (paint cracks spreading), desperate
+    # (the soul inside looking out: sad brows, wet eyes, under a painted grin), torch (usher's flashlight on 0..1) and
+    # torch_ang (deg, 0 = beam up, 90 = to the character's left/screen right in a front view, 180 = down, 'lens' via
+    # torch_lens 1 = pointed into the camera), lie (0 upright .. 1 lying face down on the floor, -1 face up), slot_paper
+    # (the torn P.S. sliding out of his back slot), steam (mug steam), kneel (one knee down)
+    jaw=0.0, lid_l=0.0, lid_r=0.0, crack=0.0, desperate=0.0, torch=0.0, torch_ang=0.0, torch_lens=0.0, lie=0.0,
+    slot_paper=0.0, steam=1.0, kneel=0.0, grin_w=0.0, gloss=1.0,
+    # perch 1: y_feet is the surface a sitting figure sits on (chair seat, lap, stair, shelf): the figure drops so its
+    # seat rests there and the legs hang below (works with pose.sit; Mister Winks's sit clips set it)
+    perch=0.0, recline=0.0,
 )
 POSE_DISCRETE = dict(hl_shape='mitt', hr_shape='mitt', hl_prop=None, hr_prop=None, tablet_screen='sign')
 
@@ -416,6 +518,12 @@ EXPR = {
     'sad': dict(brow_sad=0.85, smile=-0.45, pupil=0.95, eye_open=0.8, h_nod=0.08, wet=0.5),
     'suspicious': dict(squint=0.5, brow_angry=0.45, brow_asym=0.7, smile=0.12, m_side=-0.7, pupil=0.8, look_x=-0.35),
     'sweaty': dict(sweat=1.0, brow_sad=0.55, wide=0.3, smile=-0.2, tremble=0.35, pupil=0.7, m_press=0.4),
+    # dummy film
+    'lucid': dict(wide=0.85, pupil=0.42, brow_sad=0.95, brow_up=0.75, tears=0.75, wet=1.0, m_open=0.14, m_round=0.45, smile=-0.35,
+                  tremble=0.5, lock=1.0),                                        # the real Walter: awake, terrified, whispering
+    'kid_grin': dict(smile=1.0, teeth=1.0, m_open=0.2, brow_up=0.35, squint=0.15, pupil=1.0),   # Owen delighted (the gap tooth)
+    'still_smile': dict(smile=0.42, m_press=0.38, pupil=0.85, still=0.6),          # Grandpa: a kind smile that never moves
+    'showman': dict(smile=1.0, grin=0.5, teeth=1.0, brow_up=0.3, pupil=0.75, lock=0.8),
 }
 
 
@@ -736,6 +844,8 @@ def _ear(c, hm, sp, side, skin, sh, det):
     nz = -side * hm.st
     if nz < -0.5: return
     pts = [(0, -24), (9, -29), (19, -20), (21, -2), (15, 18), (5, 27), (-1, 17)]
+    ek = sp.get('ears', 1.0)                         # dummy film: big ears (Grandpa, young Walter, Owen)
+    if ek != 1.0: pts = [(u * ek, v * ek + 3.0 * (ek - 1.0)) for u, v in pts]
     P_ = [(AX + u * du, AY + v) for u, v in pts]
     p = smooth(P_, True, 0.9)
     c.fill(p, skin); c.line(p, c.lw * 0.9)
@@ -744,9 +854,10 @@ def _ear(c, hm, sp, side, skin, sh, det):
         c.fill(oval(ex_, ey_, 4.5), '#d8b04c'); c.line(oval(ex_, ey_, 4.5), c.lw * 0.35)
         if det >= 1: c.fill(oval(ex_ - 1.3, ey_ - 1.3, 1.4), '#fff2c0')
     if det >= 1 and abs(du) > 0.3:
-        inner = smooth([(AX + 13 * du, AY - 16), (AX + 6 * du, AY - 6), (AX + 10 * du, AY + 8), (AX + 4 * du, AY + 14)], False)
+        inner = smooth([(AX + 13 * du * ek, AY - 16 * ek), (AX + 6 * du * ek, AY - 6 * ek), (AX + 10 * du * ek, AY + 8 * ek),
+                        (AX + 4 * du * ek, AY + 14 * ek)], False)
         c.line(inner, c.lw * 0.5, sp['skin_dp'], 190)
-        c.glow(AX + 8 * du, AY, 9, 14, sh, 110)
+        c.glow(AX + 8 * du * ek, AY, 9 * ek, 14 * ek, sh, 110)
 
 
 def _eye(c, hm, sp, P, side, det, t, skin, sh):
@@ -757,7 +868,8 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
     fs = hm.sx(ex0, ey0)
     r = sp['eye_r'] * (1.0 + 0.16 * P.wide) * (1.0 + 0.04 * P.brow_up)
     asym = P.brow_asym * 0.0
-    op = clamp(P.eye_open * (1.0 - P.blink) * (1.0 - 0.45 * P.squint) + 0.18 * P.wide * (1 - P.blink), 0, 1.25)
+    bl_ = max(P.blink, P.lid_l if side > 0 else P.lid_r)
+    op = clamp(P.eye_open * (1.0 - bl_) * (1.0 - 0.45 * P.squint) * (1.0 - 0.3 * sp.get('lids', 0.0)) + 0.18 * P.wide * (1 - bl_), 0, 1.25)
     rx = r * fs
     # sockets and bags (under everything else of the eye)
     c.glow(X, Y + 2, rx * 1.9, r * 1.7, sp['skin_dp'], 46 + 34 * P.wide + 30 * sp['bags'])
@@ -847,9 +959,11 @@ def _eye(c, hm, sp, P, side, det, t, skin, sh):
             low = smooth([(X - rx * 1.3, Y + r * 1.5), (X - rx * 1.3, ly2 + r * 0.2), (X, ly2), (X + rx * 1.3, ly2 + r * 0.2), (X + rx * 1.3, Y + r * 1.5)], True, 0.6)
             c.fill(low, skin)
             c.line(smooth([(X - rx * 1.05, ly2 + r * 0.25), (X, ly2), (X + rx * 1.05, ly2 + r * 0.25)], False), c.lw * 0.6)
-    c.line(white, c.lw * 0.85)
     if op < 0.99:
+        with c.clip(rect(X - rx * 2, lid_y, rx * 4, r * 4)): c.line(white, c.lw * 0.85)
         c.line(smooth([(X - rx * 1.06, lid_y + r * 0.02), (X, lid_y + r * 0.18 * (1 - op) - 1), (X + rx * 1.06, lid_y + r * 0.02)], False), c.lw * 1.15)
+    else:
+        c.line(white, c.lw * 0.85)
     if sp['lashes'] > 0 and det >= 1:
         ly_ = max(Y - r, lid_y if op < 0.99 else Y - r)
         for k, ln in ((0.62, 7), (0.86, 9), (1.0, 8)):
@@ -879,6 +993,16 @@ def _brow(c, hm, sp, P, side, eyeinfo):
     path = _pts_path(X, Y, True, 0.8)
     c.fill(path, sp['brow_c'])
     c.line(path, c.lw * 0.3, sp['brow_c'])
+    if sp.get('brows') == 'bushy':                        # Grandpa: wiry white brow hairs sticking up and out
+        hs = []
+        for k in range(7):
+            u = k / 6.0
+            x0 = xi + (xo - xi) * u; y0 = base - 6 + (inner_dy + outer_dy) * 0.3 * (1 - abs(2 * u - 1)) + (inner_dy * (1 - u) + outer_dy * u) * 0.5
+            a_, b_, v_ = hm.map1(x0, y0 - th * 0.3, 3.5)
+            a2, b2, _ = hm.map1(x0 + side * (6 + 4 * u), y0 - th * 0.9 - 6 * hash01(k, 61 + side), 3.5)
+            if v_ > 0.1: hs.append(poly([(a_, b_), (a2, b2)], False))
+        c.line(path, c.lw * 0.45, mix(sp['brow_c'], '#7a746c', 0.6), 200)
+        if hs: c.line(_multi(hs), c.lw * 0.35, sp['brow_c'], 230); c.line(_multi(hs), c.lw * 0.12, '#8a847c', 120)
 
 
 def _nose(c, hm, sp, P, det, skin, sh):
@@ -890,9 +1014,23 @@ def _nose(c, hm, sp, P, det, skin, sh):
     X, Y, V = hm.map1(0, tip_y + 6, L * 0.4)
     if V > -0.2 and not turned:
         c.glow(X + 6 * side, Y + 4, 20, 9, sh, 90)
+    if not turned and sp.get('nose') == 'button':        # dummy film: Owen's small round button nose
+        X, Y, V = hm.map1(0, tip_y + 2, L * 0.8)
+        fs_ = hm.sx(0, tip_y)
+        tip = oval(X, Y, 10 * fs_, 8)
+        c.fill(tip, mix(skin, sh, 0.15))
+        c.line(smooth([(X - 10 * fs_, Y), (X - 6 * fs_, Y + 7), (X + 6 * fs_, Y + 7), (X + 10 * fs_, Y)], False), c.lw * 0.7)
+        if det >= 1:
+            for s2 in (-1, 1): c.fill(oval(X + s2 * 4.5 * fs_, Y + 4, 2.4 * fs_, 1.6), sp['skin_dp'], 170)
+            c.fill(oval(X - 3 * fs_, Y - 3, 2.6 * fs_, 2), '#ffffff', 90)
+        return
     if not turned:
         pts = [(side * 5, root_y + 6), (side * 9, tip_y - 6), (side * 13, tip_y + 2), (side * 7, tip_y + 9), (-side * 4, tip_y + 8)]
         dz = [3, L * 0.7, L * 0.85, L * 0.55, L * 0.35]
+        if sp.get('nose') == 'hook':                      # the Kemp nose: long, a bump on the bridge, a heavy tip
+            pts = [(side * 4, root_y + 4), (side * 10, root_y + 22), (side * 8, tip_y - 8), (side * 15, tip_y + 3), (side * 9, tip_y + 12),
+                   (-side * 5, tip_y + 11)]
+            dz = [3, L * 0.6, L * 0.75, L * 0.85, L * 0.55, L * 0.35]
         X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], np.array(dz))
         c.line(_pts_path(X, Y, False, 0.8), c.lw * 0.85)
         if det >= 1:
@@ -1064,6 +1202,11 @@ def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
                 if hv > 0.8:
                     xa, xb = ex[i], ex[i + 1]
                     c.fill(rect(min(xa, xb) + 1, min(ey[i], ey[i] + direction * th) , abs(xb - xa) - 2, th), '#b4a27a', 70)
+    if sp.get('gap') and direction > 0 and n >= 4:              # Owen: a missing front tooth (a dark gap)
+        i = n // 2
+        xa, xb = ex[i], ex[i + 1]
+        gp = poly([(xa + 0.8, ey[i] - 2), (xb - 0.8, ey[i + 1] - 2), (xb - 0.8, ey[i + 1] + th * 1.05), (xa + 0.8, ey[i] + th * 1.05)])
+        c.fill(gp, '#2a0e11')
     c.line(_pts_path(np.array([p[0] for p in bot]), np.array([p[1] for p in bot]), False, 0.6), c.lw * 0.45)
     seps = []
     for i in range(1, n):
@@ -1241,6 +1384,38 @@ def _hairline(style, part):
             return np.interp(a, [0, 1.0, 1.3, 1.6, 2.0, PI], [0, 0, 1, 1, 1, 1]) * (np.interp(a, [1.0, 1.3, 1.6, 2.15, 2.6, PI], [-60, -24, -14, 50, 78, 88])) + \
                 (1 - np.interp(a, [0, 1.0, 1.3], [0, 0, 1])) * fr
         grow = 9.0
+    elif style == 'painted':                                     # Mister Winks: carved hair, hard side part on his left
+        def yf0(ph):
+            return np.interp(ph, [-PI, -2.35, -2.0, -1.78, -1.5, -1.25, -0.95, -0.35, 0.28, 0.42, 0.56, 0.95, 1.25, 1.5, 1.78, 2.0, 2.35, PI],
+                             [92.0, 88.0, 40.0, -24.0, -30.0, -44.0, -57.0, -66.0, -72.0, -88.0, -74.0, -62.0, -46.0, -32.0, -24.0, 38.0, 88.0, 92.0])
+        return yf0, 5.0
+    elif style == 'shaggy':                                      # you: curtain bangs parted in the middle, over the ears
+        def yf0(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.12, 0.3, 0.6, 0.95, 1.2, 1.6, 1.9, 2.3, PI], [-84, -62, -52, -46, -30, -8, 6, 40, 82, 90])
+        return yf0, 11.0
+    elif style == 'cowlick':                                     # Owen: short boy's cut, an uneven fringe
+        def yf0(ph):
+            a = np.abs(ph)
+            fr = -62.0 + 4.0 * np.sin(ph * 9.0) * (a < 0.9)
+            return np.interp(a, [0, 0.9, 1.2, 1.55, 2.1, PI], [0, 0, 1, 1, 1, 1]) * np.interp(a, [0.9, 1.2, 1.55, 2.1, 2.6, PI], [-56, -26, -18, 54, 80, 86]) + \
+                (1 - np.interp(a, [0, 0.9, 1.2], [0, 0, 1])) * fr
+        return yf0, 8.0
+    elif style == 'lowbun':                                      # mom: centre part, pulled back over the ears to a low bun
+        def yf0(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.12, 0.6, 1.0, 1.3, 1.7, 1.95, 2.3, PI], [-78, -71, -64, -46, -14, -8, 50, 80, 86])
+        return yf0, 6.0
+    elif style == 'pomp':                                        # young Walter: thick 70s hair, side part, long sideburns
+        def yf0(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 0.8, 1.08, 1.18, 1.38, 1.5, 1.72, 1.9, 2.2, PI], [-70, -64, -48, 34, 34, -14, -16, 44, 82, 90])
+        return yf0, 14.0
+    elif style == 'bald':                                        # Grandpa: the LOWER edge of the white fringe (see _bald_fringe)
+        def yf0(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 1.16, 1.24, 1.4, 1.65, 2.2, PI], [-400, -400, -2, 10, 22, 60, 70])
+        return yf0, 10.0
     elif style == 'kid':                                         # Lily: bob with straight bangs, hair framing the face
         def yf0(ph):
             a = np.abs(ph)
@@ -1282,8 +1457,147 @@ def _nape_cut(hm, sp):
     return poly(pts, True)
 
 
+_NEW_HAIR = ('shaggy', 'cowlick', 'lowbun', 'pomp', 'bald')
+_EARLESS = ('kid', 'shaggy')
+
+
+def _region_above(X, Y, top=-420.0):
+    return poly([(float(X[0]) - 300, top)] + [(float(x), float(y)) for x, y in zip(X, Y)] + [(float(X[-1]) + 300, top)], True)
+
+
+def _strands(c, hm, lines, grow, lw, colr, a):
+    """Hair strand lines given as [(phis, ys)] on the head surface (drawn only where they face the camera)."""
+    ps = []
+    for ph, ys in lines:
+        X, Y, V = _sph(hm, ph, ys, grow)
+        m = V > 0.02
+        if m.sum() > 2: ps.append(_pts_path(X[m], Y[m], False, 0.9))
+    if ps: c.line(_multi(ps), lw, colr, a)
+
+
+def _lowbun(c, hm, sp, det, behind):
+    """Mom's low bun at the nape (drawn behind the skull when it faces away, over the hair when we see the back)."""
+    X, Y, V = _sph(hm, np.array([PI]), np.array([54.0]), 20.0)
+    X, Y, V = float(X[0]), float(Y[0]), float(V[0])
+    if (V < 0) != behind: return
+    hc = sp['hair_c']; hsh = mix(hc, '#000000', 0.4); hhi = mix(hc, '#ffffff', 0.22)
+    rx = 30.0 * (0.75 + 0.25 * abs(hm.st)); ry = 25.0
+    bun = oval(X, Y, rx, ry)
+    c.fill(bun, hc); c.radial(bun, X - 8, Y - 10, rx * 1.3, [(0, hhi, 160), (0.6, hc, 0), (1, hsh, 220)])
+    if det >= 1:
+        c.line(_multi([smooth([(X - rx * 0.8, Y - 4 + k * 8), (X, Y - 12 + k * 8), (X + rx * 0.8, Y - 2 + k * 8)], False) for k in range(3)]),
+               c.lw * 0.35, hsh, 180)
+    c.line(bun, c.lw)
+
+
+def _hair_new(c, hm, sp, P, det, sil, t):
+    """The dummy film's hair styles: 'shaggy' (you), 'cowlick' (Owen), 'lowbun' (mom), 'pomp' (young Walter), 'bald'
+    (Grandpa's white fringe over big ears, liver spots and a shine on the dome)."""
+    style = sp['hair']; hc = sp['hair_c']
+    hsh = mix(hc, '#000000', 0.38); hhi = mix(hc, '#ffffff', 0.28)
+    yf, grow = _hairline(style, sp['part'])
+    X, Y = hm.arc_phi(yf, 120)
+    if len(X) < 3: return
+    region = _region_above(X, Y)
+    if style == 'shaggy':
+        vol = _bumpy(hm, grow, 9, 5.0, -125.0, 92.0, spiky=True, seed=4)
+    elif style == 'cowlick':
+        vol = _bumpy(hm, grow, 11, 6.0, -127.0, 94.0, spiky=True, seed=1)
+    elif style == 'lowbun':
+        vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.5, y_bot=80)
+    elif style == 'pomp':
+        vol = union(hm.silhouette(grow=grow, y_top=-120 - grow * 1.1, y_bot=50), hm.silhouette(grow=4.0, y_top=-120, y_bot=60))
+        fx, fy, fv = hm.map1(-14, -104, 16)
+        vol = union(vol, oval(fx, fy - 4, 70 * max(0.6, hm.sx(-14, -104, 16)), 26))
+    else:                                                       # bald: a fluffy fringe between two lines round the back
+        vol = _bumpy(hm, grow, 22, 6.0, -100.0, 84.0, spiky=False)
+        def yu(ph):
+            a = np.abs(ph)
+            return np.interp(a, [0, 1.16, 1.24, 1.4, 1.65, 2.0, 2.6, PI], [400.0, 400.0, -8.0, -26.0, -42.0, -54.0, -60.0, -62.0])
+        Xu, Yu = hm.arc_phi(yu, 120)
+        if len(Xu) < 3: return
+        Yu = Yu + 4.5 * np.sin(Xu * 0.33) + 2.5 * np.sin(Xu * 0.71 + 1.0)       # a wispy, uneven top edge
+        region = inter(region, _region_above(Xu, Yu, 420.0))
+    hair = inter(union(vol, sil), region)
+    if style == 'bald':                                         # the dome: liver spots and a shine (under the fringe)
+        if det >= 1:
+            spots = [(-58, -76, 7), (48, -88, 5), (-26, -100, 4.5), (66, -58, 4), (-74, -40, 3.5), (12, -108, 3.5)]
+            Xs, Ys, Vs = hm.map([p[0] for p in spots], [p[1] for p in spots], 1.0)
+            ds = [oval(float(Xs[i]), float(Ys[i]), spots[i][2] * hm.sx(spots[i][0], spots[i][1]), spots[i][2] * 0.8) for i in range(len(spots)) if Vs[i] > 0.1]
+            if ds: c.fill(_multi(ds), '#9c7258', 120 * sp.get('spots', 1.0))
+        gx, gy, gv = hm.map1(-28, -96, 2)
+        if gv > -0.2:
+            c.glow(gx, gy, 34, 16, '#ffffff', 80)
+            c.line(smooth([(gx - 20, gy + 4), (gx - 4, gy - 4), (gx + 16, gy - 2)], False), c.lw * 0.5, '#ffffff', 120)
+    c.fill(hair, hc)
+    with c.clip(hair):
+        c.radial(None, -30, -90, 175, [(0, hhi, 120), (0.5, hc, 0), (1, hsh, 200)], clip=False)
+        if det >= 1:
+            L = []
+            if style == 'shaggy':                               # curtain bangs from the centre part, sweeping out and down
+                for k in range(5):
+                    for sd in (-1, 1):
+                        ph = sd * np.linspace(0.02 + 0.03 * k, 0.4 + 0.25 * k, 8)
+                        L.append((ph, np.linspace(-118.0 + 6 * k, -42.0 + 10 * k, 8)))
+                for k in range(8):
+                    ph0 = 1.7 + k * 0.2
+                    L.append((np.full(6, ph0), np.linspace(-110.0, 70.0, 6))); L.append((np.full(6, -ph0), np.linspace(-110.0, 70.0, 6)))
+            elif style == 'cowlick':
+                for k in range(8):
+                    ph = np.linspace(-0.8 + 0.2 * k, -0.6 + 0.2 * k, 5)
+                    L.append((ph, np.linspace(-120.0, -64.0, 5)))
+            elif style == 'lowbun':                             # combed back from the part
+                for k in range(1, 6):
+                    for sd in (-1, 1):
+                        ph = sd * np.linspace(0.06, 1.6 + 0.2 * k, 9)
+                        L.append((ph, np.linspace(-118.0 + 4 * k, -60.0 + 16 * k, 9)))
+            elif style == 'pomp':
+                for k in range(6):
+                    ph = np.linspace(-0.45, 1.1 + 0.15 * k, 9)
+                    L.append((ph, np.linspace(-124.0 + 5 * k, -84.0 + 12 * k, 9)))
+            elif style == 'bald':
+                for k in range(10):
+                    ph0 = 1.25 + k * 0.2
+                    for sd in (-1, 1):
+                        L.append((np.full(4, sd * ph0) + sd * np.linspace(0, 0.08, 4), np.linspace(-58.0 + 3 * k, 20.0 + 4 * k, 4)))
+            _strands(c, hm, L, grow * 0.5, c.lw * 0.32, hsh, 160)
+        if style == 'pomp':                                     # brilliantine shine on the wave
+            Xs, Ys, Vs = _sph(hm, np.linspace(-0.6, 0.7, 8), np.linspace(-104.0, -112.0, 8), grow)
+            m = Vs > 0.1
+            if m.sum() > 2: c.line(_pts_path(Xs[m], Ys[m], False), c.lw * 1.8, '#ffffff', 60)
+    if style == 'lowbun' or style == 'pomp':                    # the part
+        ph0 = 0.0 if style == 'lowbun' else -0.45
+        Xp, Yp, Vp = _sph(hm, np.full(6, ph0), np.linspace(-78.0 if style == 'lowbun' else -70.0, -119.0, 6), 1.0)
+        m = Vp > 0.02
+        if m.sum() > 2: c.line(_pts_path(Xp[m], Yp[m], False), c.lw * 0.6, mix(hsh, '#000000', 0.3))
+    c.line(hair, c.lw)
+    if style == 'cowlick':                                      # the tuft at the crown that never lies down
+        X0, Y0, V0 = _sph(hm, np.array([-0.4]), np.array([-116.0]), grow)
+        x0, y0 = float(X0[0]), float(Y0[0])
+        k_ = 1.0 if hm.ct > -0.3 else -1.0
+        tuft = smooth([(x0 - 12, y0 + 6), (x0 - 10 * k_, y0 - 14), (x0 + 2 * k_, y0 - 34), (x0 + 4 * k_, y0 - 16), (x0 + 16 * k_, y0 - 30),
+                       (x0 + 14 * k_, y0 - 6), (x0 + 12, y0 + 6)], True, 0.55)
+        c.fill(tuft, hc); c.line(tuft, c.lw * 0.9)
+        c.fill(_crescent(tuft, -4, 3), hsh, 120)
+    if style == 'lowbun' and det >= 1 and hm.map1(0, 0)[2] > 0.0:   # loose strands that slipped out, framing her face
+        for sd in (-1, 1):
+            if -sd * hm.st > 0.3: continue                      # only at the face's edge, never across the cheek
+            ph = sd * np.linspace(1.12, 1.3, 6)
+            ys = np.linspace(-50.0, 44.0, 6)
+            X_, Y_, V_ = _sph(hm, ph, ys, 4.0)
+            m = V_ > 0.0
+            if m.sum() > 2:
+                q = _pts_path(X_[m] + sd * 3.0 * np.sin(np.linspace(0, 3, int(m.sum()))), Y_[m], False)
+                c.line(q, c.lw * 0.8, LINE); c.line(q, c.lw * 0.4, hhi)
+    if style == 'bald' and det >= 1:                            # two wisps of white hair on the dome
+        for sd in (-1, 1):
+            X_, Y_, V_ = hm.map([sd * 8, sd * 14, sd * 6], [-112, -128, -134], 2.0)
+            if V_.min() > -0.3: c.line(_pts_path(X_, Y_, False), c.lw * 0.5, mix(hc, '#9a958e', 0.3), 230)
+
+
 def _hair_region(c, hm, sp, P, det, sil, t):
     style = sp['hair']; hc = sp['hair_c']
+    if style in _NEW_HAIR: return _hair_new(c, hm, sp, P, det, sil, t)
     hsh = mix(hc, '#000000', 0.35); hhi = mix(hc, '#ffffff', 0.25)
     part = sp['part']
     yf, grow = _hairline(style, part)
@@ -1636,6 +1950,7 @@ def _cap_courier(c, hm, sp, P, det, cl, t, light=None):
 def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     """Head in head units (crown -120 .. chin +120) on Ctx c (origin at the head centre). yaw/pitch in radians."""
     sp = sp or CAST[who]
+    if sp.get('dummy'): return _winks_head(c, who, P, yaw, pitch, det, t, light, sp)
     hm = HeadMap(sp, yaw, pitch, jaw=26.0 * clamp(P.m_open) + 5.0 * clamp(P.grin), cheek=clamp(P.grin + 0.4 * max(P.smile, 0.0)))
     skin, sh, dp = _skin_cols(sp, P, light)
     sil_full = hm.silhouette()
@@ -1652,8 +1967,9 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             if det >= 1: c.line(smooth([(bx - 20, by - 26), (bx, by - 36), (bx + 22, by - 22)], False), c.lw * 0.4, mix(sp['hair_c'], '#000000', 0.4))
     if sp['hair'] == 'kid':
         _kid_hair_back(c, hm, sp, P, det, t)
+    if sp['hair'] == 'lowbun': _lowbun(c, hm, sp, det, True)
     for side in (-1, 1):
-        if -side * hm.st < 0.25 and sp['hair'] != 'kid': _ear(c, hm, sp, side, skin, sh, det)
+        if -side * hm.st < 0.25 and sp['hair'] not in _EARLESS: _ear(c, hm, sp, side, skin, sh, det)
     # skull
     c.fill(sil, skin)
     # skin shading: every layer is drawn on a path inside the silhouette (no clip masks: they are slow at 2560)
@@ -1693,9 +2009,13 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             if sp['scar']: _scar(c, hm, sp, sp['scar'], det)
             for side in (-1, 1):
                 eyes[side] = _eye(c, hm, sp, P, side, det, t, skin, sh)
-            if sp['hair'] != 'messy':
+            if sp['hair'] not in ('messy', 'shaggy'):
                 for side in (-1, 1):
                     _brow(c, hm, sp, P, side, eyes.get(side))
+            if sp.get('spots') and det >= 1:              # Grandpa: liver spots on the temples
+                for (x_, y_, r_) in ((-70, -44, 4.5), (72, -30, 3.5), (-60, 20, 3.0)):
+                    X_, Y_, V_ = hm.map1(x_, y_, 1.0)
+                    if V_ > 0.1: c.fill(oval(X_, Y_, r_ * hm.sx(x_, y_), r_ * 0.8), '#9c7258', 110)
             _tears(c, hm, sp, P, t, det, eyes)
             _sweat(c, hm, sp, P, t, det)
     c.line(sil, c.lw)
@@ -1705,11 +2025,12 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
     if sp['hair']:
         if sp['hat'] != 'cap' or True:
             _hair_region(c, hm, sp, P, det, sil_full, t)
-        if sp['hair'] == 'messy' and face_v > -0.35:          # v2.1: brows over the fringe so fear/scream angles read
+        if sp['hair'] == 'lowbun': _lowbun(c, hm, sp, det, False)
+        if sp['hair'] in ('messy', 'shaggy') and face_v > -0.35:   # v2.1: brows over the fringe so fear/scream angles read
             for side in (-1, 1):
                 _brow(c, hm, sp, P, side, eyes.get(side))
     for side in (-1, 1):
-        if -side * hm.st >= 0.25: _ear(c, hm, sp, side, skin, sh, det)
+        if -side * hm.st >= 0.25 and sp['hair'] not in _EARLESS: _ear(c, hm, sp, side, skin, sh, det)
     if sp.get('glasses') and face_v > -0.2 and getattr(P, 'specs', 1.0) > 0.5:
         _glasses(c, hm, sp, P, det, eyes, t)
     if sp['hat'] == 'cap':
@@ -1782,7 +2103,8 @@ class Body:
         self.sit = clamp(P.sit)
         self.floor = clamp(getattr(P, 'floor', 0.0))
         self.tip = clamp(getattr(P, 'tiptoe', 0.0))
-        self.hip_drop = 170.0 * self.sit * (1.0 - self.floor) + P.crouch * 120 + 330.0 * self.floor - 34.0 * self.tip
+        self.kneel = clamp(getattr(P, 'kneel', 0.0))
+        self.hip_drop = 170.0 * self.sit * (1.0 - self.floor) + P.crouch * 120 + 330.0 * self.floor - 34.0 * self.tip + 40.0 * self.kneel
         self.y0c = -620.0
         self.tilt = math.radians(P.tilt)
         self.ctl, self.stl = math.cos(self.tilt), math.sin(self.tilt)
@@ -2049,7 +2371,11 @@ def _draw_hand(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring=False
     if det >= 1 and G['seps'] is not None and shape != 'mitt':
         hc.line(G['seps'], hc.lw * 0.42, LINE, 150)
     hc.line(u, hc.lw * 0.9)
-    if det >= 1:
+    if det >= 1 and sp.get('dummy'):                         # white glove: soft creases, three stitch lines on the back
+        if G['creases_p'] is not None: hc.line(G['creases_p'], hc.lw * 0.32, '#9a917e', 150)
+        if shape in ('open', 'flat', 'relaxed', 'mitt', 'palm4', 'fist', 'grip', 'point'):
+            hc.line(_multi([poly([(k * 6.0, 8.0), (k * 7.5, 26.0)], False) for k in (-1, 0, 1)]), hc.lw * 0.4, '#a39a86', 200)
+    elif det >= 1:
         if G['creases_p'] is not None: hc.line(G['creases_p'], hc.lw * 0.32, sp['skin_dp'], 170)
         if G['lines_p'] is not None: hc.line(G['lines_p'], hc.lw * 0.35, sp['skin_dp'], 150)
         nailc = mix(skin, '#ffffff', 0.38)
@@ -2143,6 +2469,32 @@ def _prop(c, name, det, t=0.0, P=None):
         sh_ = smooth([(0, -26), (17, -18), (20, 2), (10, 20), (0, 27), (-10, 20), (-20, 2), (-17, -18)], True, 0.6)
         c.shape(sh_, '#c9a64a', c.lw * 0.6)
         c.radial(sh_, -5, -8, 26, [(0, '#f2dc94', 255), (1, '#86682a', 255)]); c.line(sh_, c.lw * 0.6)
+    elif name == 'flashlight':                # the usher's torch: chrome barrel, a wider head with the lens at the top (-y)
+        on = clamp(P.torch) if P is not None else 0.0
+        body = rrect(-7, -14, 14, 52, 5)
+        c.shape(body, '#9aa0a8'); c.grad(body, -7, 0, 7, 0, [(0, '#e6eaf0', 255), (0.4, '#a5abb4', 255), (1, '#4c5058', 255)]); c.line(body, c.lw * 0.6)
+        hd = poly([(-12, -36), (12, -36), (8, -14), (-8, -14)])
+        c.shape(hd, '#b8bec6'); c.grad(hd, -12, 0, 12, 0, [(0, '#f2f4f8', 255), (0.45, '#b8bec6', 255), (1, '#5a5e66', 255)]); c.line(hd, c.lw * 0.6)
+        c.shape(rrect(-3, 0, 6, 9, 2), '#8a1f2b', c.lw * 0.4)                     # the red slide switch
+        lens = oval(0, -36, 12, 4)
+        c.fill(lens, '#fff6d0' if on > 0.5 else '#6b7078'); c.line(lens, c.lw * 0.5)
+        if on > 0.01: c.glow(0, -38, 30, 18, '#fff4cc', 200 * on)
+    elif name == 'mug':                       # Grandpa's mug: cream ceramic, a brown band, coffee, steam (pose.steam)
+        bd = smooth([(-24, -30), (24, -30), (22, 26), (16, 32), (-16, 32), (-22, 26)], True, 0.3)
+        hdl = minus(oval(28, -2, 14, 17), oval(28, -2, 7, 10))
+        c.shape(hdl, '#ece4d2', c.lw * 0.6)
+        c.fill(bd, '#ece4d2'); c.grad(bd, -24, 0, 24, 0, [(0, '#fffaf0', 255), (0.5, '#ece4d2', 255), (1, '#a99e88', 255)])
+        c.fill(rect(-24, -6, 48, 9), '#8a5a3a', 230)
+        c.line(bd, c.lw * 0.7)
+        top = oval(0, -30, 24, 6); c.fill(top, '#3a2416'); c.line(top, c.lw * 0.5)
+        st_ = clamp(P.steam) if P is not None else 1.0
+        if st_ > 0.01 and det >= 1:
+            ws = []
+            for k in range(3):
+                ph = t * 1.3 + k * 2.1
+                xs = [(-10 + 10 * k) + 6 * math.sin(ph + u * 3.0) for u in (0, 0.33, 0.66, 1.0)]
+                ws.append(smooth([(xs[0], -36), (xs[1], -52), (xs[2], -68), (xs[3], -84)], False))
+            c.line(_multi(ws), c.lw * 0.9, '#ffffff', 90 * st_)
     elif name == 'radio':
         r = rrect(-17, -40, 34, 80, 8)
         c.shape(r, '#17181c')
@@ -2406,6 +2758,14 @@ def _torso_rows(sp, B):
         ws = [b['neck'] + 14, b['sh'] * 0.88, b['sh'] + 2, b['ch'] * k + 4, b['ch'] * k + 6, b['wa'] + 8, b['hip'] + 8, b['hip'] + 6]
     elif o == 'flannel':
         ws = [b['neck'] + 18, b['sh'] * 0.86, b['sh'], b['ch'] * k + 2, b['ch'] * k, b['wa'] + 4, b['hip'] + 2, b['hip']]
+    elif o == 'usher':                                    # the dummy's stiff little jacket: square shoulders, short
+        ws = [b['neck'] + 18, b['sh'] * 0.92, b['sh'] + 2, b['ch'] * k + 4, b['ch'] * k + 2, b['wa'] + 4, b['hip'] + 4, b['hip'] + 2]
+    elif o in ('longcoat', 'denim', 'suit70', 'cardi_m'):
+        ws = [b['neck'] + 22, b['sh'] * 0.9, b['sh'] + 4, b['ch'] * k + 6, b['ch'] * k + 4, b['wa'] + 6, b['hip'] + 6, b['hip'] + 6]
+    elif o == 'gown':                                     # thin cotton over a gaunt body: hangs loose
+        ws = [b['neck'] + 12, b['sh'] * 0.86, b['sh'] - 2, b['ch'] * k, b['ch'] * k + 2, b['wa'] + 10, b['hip'] + 10, b['hip'] + 10]
+    if ys[4] >= ys[5] - 4:                                # a big-headed figure (the dummy): keep the rows ascending
+        ys[4] = (ys[3] + ys[5]) * 0.5
     ds = [w * f for w, f in zip(ws, [0.55, 0.52, 0.5, 0.56, 0.6, 0.6, 0.62, 0.64])]
     return ys, ws, ds
 
@@ -2908,6 +3268,268 @@ def _flannel_front(c, sp, B, rows, P, det, t):
         if v > -0.2: cp = poly(col_); c.fill(cp, cl['top']); c.line(cp, lw * 0.6)
 
 
+# ---------------------------------------------------------------------------------------------- dummy film outfits
+def _braid(c, pts, lw, cl, w=1.0):
+    """Gold braid piping along a polyline (a gold line inside two dark edges)."""
+    p_ = poly(pts, False) if len(pts) < 3 else smooth(pts, False)
+    c.line(p_, lw * 1.9 * w, LINE); c.line(p_, lw * 1.2 * w, cl['braid']); c.line(p_, lw * 0.35 * w, '#fff0b8', 170)
+
+
+def _brass_button(c, X, Y, r, cl, lw):
+    c.fill(oval(X, Y, r), cl['brass']); c.radial(oval(X, Y, r), X - r * 0.3, Y - r * 0.35, r * 1.3, [(0, cl.get('brass_hi', '#fff0b8'), 255),
+                                                                                                    (0.6, cl['brass'], 255), (1, cl['brass_sh'], 255)])
+    c.line(oval(X, Y, r), lw * 0.35)
+
+
+def _usher_front(c, sp, B, rows, P, det, t):
+    """Mister Winks's usher jacket: mandarin collar with gold braid, two rows of brass buttons narrowing to the waist,
+    gold piping down the front and round the short hem, little gold shoulder boards."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    yH = B.y_hip - 10
+    col_, v = _surf_poly(B, rows, [(-b['neck'] - 13, yS - 40), (b['neck'] + 13, yS - 40), (b['neck'] + 17, yS - 16), (0, yS - 12), (-b['neck'] - 17, yS - 16)], dz=6)
+    if v > -0.3:
+        cp = smooth(col_, True, 0.25); c.fill(cp, cl['top_sh']); c.line(cp, lw * 0.6)
+        tp, _ = _surf_poly(B, rows, [(-b['neck'] - 13, yS - 39), (b['neck'] + 13, yS - 39)], dz=7)
+        _braid(c, tp, lw * 0.55, cl)
+    pf, v = _surf_poly(B, rows, [(0, yS - 13), (0, yH)], dz=2)
+    if v > 0.05:
+        c.line(poly(pf, False), lw * 0.7, LINE, 230)
+        _braid(c, pf, lw * 0.4, cl)
+    hm_, v = _surf_poly(B, rows, [(-b['hip'] - 2, yH), (-b['hip'] * 0.5, yH + 2), (0, yH + 4), (b['hip'] * 0.5, yH + 2), (b['hip'] + 2, yH)], dz=2)
+    if v > -0.3: _braid(c, hm_, lw * 0.5, cl)
+    for k in range(4):                                       # 2 x 4 brass buttons, the rows narrowing to the waist
+        yy = yS + 14 + k * (yH - yS - 40) / 3.0
+        xx = 24.0 - 8.0 * k / 3.0
+        for side in (-1, 1):
+            X, Y, vv, s_ = B.surf(side * xx, yy, 6, False, rows)
+            if vv > 0.12: _brass_button(c, X, Y, 6.2 * s_, cl, lw)
+    for side in (-1, 1):                                     # shoulder boards
+        bd, v = _surf_poly(B, rows, [(side * (b['neck'] + 6), yS - 22), (side * (b['sh'] - 6), yS - 14), (side * (b['sh'] - 4), yS + 2),
+                                     (side * (b['neck'] + 8), yS - 6)], dz=8)
+        if v > -0.2:
+            bp = poly(bd); c.fill(bp, cl['braid']); c.line(bp, lw * 0.5)
+            if det >= 1:
+                fr = [poly([(bd[1][0] + (bd[2][0] - bd[1][0]) * u, bd[1][1] + (bd[2][1] - bd[1][1]) * u),
+                            (bd[1][0] + (bd[2][0] - bd[1][0]) * u + side * 5, bd[1][1] + (bd[2][1] - bd[1][1]) * u + 2)], False) for u in (0.2, 0.5, 0.8)]
+                c.line(_multi(fr), lw * 0.4, '#8a6a22')
+
+
+def _usher_back(c, sp, B, rows, P, det, t):
+    """The back of the jacket: the slot the operator's hand goes through (the hollow with the head stick), and the torn
+    P.S. sliding out of it (pose.slot_paper)."""
+    cl = sp['cloth']; lw = c.lw
+    y0, y1 = B.y_sh + 6, B.y_ch + 52
+    sl, v = _surf_poly(B, rows, [(-13, y0 + 12), (-7, y0), (7, y0), (13, y0 + 12), (12, y1), (-12, y1)], back=True, dz=2)
+    if v > 0.0:
+        sp_ = smooth(sl, True, 0.4)
+        c.fill(sp_, '#0b0607'); c.line(sp_, lw * 0.8)
+        if det >= 1:
+            ed, _ = _surf_poly(B, rows, [(-17, y0 + 10), (-16, y1 + 4), (16, y1 + 4), (17, y0 + 10)], back=True, dz=2)
+            c.line(smooth(ed, False), lw * 0.35, cl['top_hi'], 200)
+        ppr = clamp(P.slot_paper)
+        if ppr > 0.01:                                       # a folded corner of hospital notepaper slides out
+            X0, Y0, _, s_ = B.surf(0, y0 + (y1 - y0) * 0.55, 3, True, rows)
+            k = c.sub(X0, Y0, -24.0 + 10.0 * ppr, s_)
+            pp = poly([(-16, 10), (14, 6), (20, 10 - 58 * ppr), (-10, 10 - 52 * ppr)])
+            k.fill(pp, '#efe9d6'); k.line(pp, lw * 0.5 / s_)
+            if det >= 1:
+                k.line(_multi([poly([(-13 + 4 * j, 4 - 12 * j * ppr), (12 + 3 * j, 0 - 12 * j * ppr)], False) for j in range(1, 4) if 12 * j < 52 * ppr]),
+                       lw * 0.25 / s_, '#8fb0d6', 200)
+    hm_, v = _surf_poly(B, rows, [(-sp['body']['hip'], B.y_hip - 10), (sp['body']['hip'], B.y_hip - 10)], back=True, dz=2)
+    if v > -0.3: _braid(c, hm_, lw * 0.5, cl)
+    cs, v = _surf_poly(B, rows, [(0, B.y_sh - 10), (0, B.y_hip - 12)], back=True, dz=1)
+    if v > 0.05: c.line(poly(cs, False), lw * 0.4, LINE, 150)
+
+
+def _scarf(c, sp, B, rows, P, det, t):
+    """Mom's chunky knit scarf: a thick loop round the neck and one long end down the front, fringed."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS = B.y_sh
+    loop, v = _surf_poly(B, rows, [(-b['neck'] - 30, yS - 40), (0, yS - 30), (b['neck'] + 30, yS - 40), (b['neck'] + 40, yS - 6),
+                                    (b['neck'] + 16, yS + 22), (0, yS + 26), (-b['neck'] - 16, yS + 22), (-b['neck'] - 40, yS - 6)], dz=16)
+    sw = 6.0 * P.sec_x
+    tail, v2 = _surf_poly(B, rows, [(10, yS + 4), (44, yS + 2), (48 + sw * 0.5, B.y_ch + 70), (52 + sw, B.y_wa + 30), (18 + sw, B.y_wa + 34),
+                                     (14 + sw * 0.5, B.y_ch + 60)], dz=14)
+    for pth, vv in ((tail, v2), (loop, v)):
+        if vv < -0.4: continue
+        q = smooth(pth, True, 0.45)
+        c.fill(q, cl['scarf'])
+        c.fill(_crescent(q, -10, 4), cl['scarf_sh'], 170)
+        if det >= 1:
+            c.texture(q, 'fabric', 0.22, 0.6)
+            bb = q.getBounds()
+            with c.clip(q):
+                rib = [poly([(bb.left() + k * 9.0, bb.top()), (bb.left() + k * 9.0 + 3, bb.bottom())], False) for k in range(int(bb.width() / 9) + 2)]
+                c.line(_multi(rib), lw * 0.35, cl['scarf_sh'], 150)
+        c.line(q, lw * 0.8)
+    if v2 > -0.4 and det >= 1:                               # fringe at the end of the tail
+        a, b_ = tail[3], tail[4]
+        fr = [poly([(a[0] + (b_[0] - a[0]) * u, a[1] + (b_[1] - a[1]) * u), (a[0] + (b_[0] - a[0]) * u + 1.5 * sw, a[1] + (b_[1] - a[1]) * u + 16)], False)
+              for u in np.linspace(0.05, 0.95, 7)]
+        c.line(_multi(fr), lw * 0.9, LINE); c.line(_multi(fr), lw * 0.5, cl['scarf_hi'])
+
+
+def _longcoat_front(c, sp, B, rows, P, det, t):
+    """Mom's long camel coat: notched lapels open on a plum sweater, double-breasted buttons, then the scarf."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    vn, v = _surf_poly(B, rows, [(-30, yS - 26), (30, yS - 26), (14, yC + 60), (-14, yC + 60)], dz=2)
+    if v > 0.0: q = poly(vn); c.fill(q, cl['sweater']); c.fill(_crescent(q, -6, 0), mix(cl['sweater'], '#000000', 0.3), 120); c.line(q, lw * 0.4)
+    for side in (-1, 1):
+        lp, v = _surf_poly(B, rows, [(side * 24, yS - 30), (side * (b['neck'] + 30), yS - 34), (side * (b['neck'] + 34), yS - 2),
+                                     (side * 64, yC - 4), (side * 52, yC + 14), (side * 14, yC + 64)], dz=6)
+        if v > -0.2:
+            lpp = poly(lp); c.fill(lpp, cl['top_hi'] if side < 0 else cl['top']); c.line(lpp, lw * 0.7)
+    cl_, v = _surf_poly(B, rows, [(-12, yC + 64), (-12, B.y_hip - 10)], dz=3)
+    if v > 0.05: c.line(poly(cl_, False), lw * 0.55)
+    for k in range(2):
+        for side in (-1, 1):
+            X, Y, vv, s_ = B.surf(side * 30 - 6, yC + 96 + k * 66, 5, False, rows)
+            if vv > 0.12: c.shape(oval(X, Y, 6.5 * s_), cl['button'], lw * 0.4)
+    _scarf(c, sp, B, rows, P, det, t)
+
+
+def _denim_front(c, sp, B, rows, P, det, t):
+    """Your denim jacket open on a grey hoodie: pointed collar, chest pockets with flaps, copper buttons, the waistband,
+    contrast stitching; the hoodie's drawstrings hang in the gap."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    gap, v = _surf_poly(B, rows, [(-34, yS - 24), (34, yS - 24), (26, B.y_hip - 4), (-26, B.y_hip - 4)], dz=2)
+    if v > 0.0:
+        q = poly(gap); c.fill(q, cl['hood']); c.fill(_crescent(q, -8, 0), cl['hood_sh'], 120)
+        if det >= 1: c.texture(q, 'fabric', 0.14, 0.6)
+        c.line(q, lw * 0.5)
+        for side in (-1, 1):
+            sw = 4 * P.sec_x
+            st, vs = _surf_poly(B, rows, [(side * 12, yS - 4), (side * 13 + sw, yC + 20), (side * 11 + sw * 1.5, yC + 72)], dz=5)
+            if vs > 0.0:
+                sp_ = smooth(st, False); c.line(sp_, lw * 2.1, LINE); c.line(sp_, lw * 0.95, cl['string'])
+    for side in (-1, 1):
+        fr, v = _surf_poly(B, rows, [(side * 34, yS - 26), (side * 30, B.y_hip - 4)], dz=4)
+        if v > -0.1:
+            c.line(poly(fr, False), lw * 2.3, LINE); c.line(poly(fr, False), lw * 1.1, cl['top_hi'])
+        x0, x1 = side * 40, side * (b['ch'] * 0.82)
+        y0, y1 = yC - 30, yC + 26
+        pk, v = _surf_poly(B, rows, [(x0, y0 + 12), (x1, y0 + 12), (x1, y1), ((x0 + x1) / 2, y1 + 8), (x0, y1)], dz=3)
+        if v > 0.05:
+            c.line(poly(pk), lw * 0.45)
+            fl, _ = _surf_poly(B, rows, [(x0 - side * 2, y0), (x1 + side * 2, y0), (x1 + side * 2, y0 + 15), ((x0 + x1) / 2, y0 + 22), (x0 - side * 2, y0 + 15)], dz=4)
+            c.fill(poly(fl), cl['top_sh']); c.line(poly(fl), lw * 0.5)
+            X, Y, vv, s_ = B.surf((x0 + x1) / 2, y0 + 15, 6, False, rows)
+            if vv > 0.1: c.shape(oval(X, Y, 4.0 * s_), cl['button'], lw * 0.35)
+            if det >= 1:
+                st_, _ = _surf_poly(B, rows, [(x0 + side * 3, y0 + 18), (x0 + side * 3, y1 - 2)], dz=3)
+                c.line(poly(st_, False), lw * 0.25, '#d9a24a', 200)
+        col_, v = _surf_poly(B, rows, [(side * 26, yS - 34), (side * (b['neck'] + 28), yS - 40), (side * (b['neck'] + 40), yS - 6), (side * 58, yS + 22),
+                                       (side * 36, yS - 4)], dz=7)
+        if v > -0.2: cp = poly(col_); c.fill(cp, cl['top']); c.fill(_crescent(cp, -side * 4, 3), cl['top_sh'], 120); c.line(cp, lw * 0.6)
+        for k in range(2):
+            X, Y, vv, s_ = B.surf(side * 30, yC + 80 + k * 50, 6, False, rows)
+            if vv > 0.12: c.shape(oval(X, Y, 4.5 * s_), cl['button'], lw * 0.35)
+    wb, v = _surf_poly(B, rows, [(-b['hip'] - 6, B.y_hip - 34), (-34, B.y_hip - 32), (-34, B.y_hip - 4), (-b['hip'] - 6, B.y_hip - 6)], dz=3)
+    for side in (-1, 1):
+        wb, v = _surf_poly(B, rows, [(side * (b['hip'] + 6), B.y_hip - 34), (side * 30, B.y_hip - 32), (side * 30, B.y_hip - 4), (side * (b['hip'] + 6), B.y_hip - 6)], dz=3)
+        if v > -0.1: q = poly(wb); c.fill(q, cl['top_sh']); c.line(q, lw * 0.5)
+
+
+def _cardi_m_front(c, sp, B, rows, P, det, t):
+    """Grandpa's moss cardigan open on a cream checked shirt (collar points), leather buttons, ribbed hem, pockets."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    op, v = _surf_poly(B, rows, [(-28, yS - 28), (28, yS - 28), (18, B.y_hip - 18), (-18, B.y_hip - 18)], dz=2)
+    if v > 0.05:
+        q = smooth(op, True, 0.2); c.fill(q, cl['shirt'])
+        if det >= 1:
+            bb = q.getBounds()
+            with c.clip(q):
+                gl_ = [poly([(bb.left() + k * 13.0, bb.top()), (bb.left() + k * 13.0, bb.bottom())], False) for k in range(int(bb.width() / 13) + 2)]
+                gl_ += [poly([(bb.left(), bb.top() + k * 13.0), (bb.right(), bb.top() + k * 13.0)], False) for k in range(int(bb.height() / 13) + 2)]
+                c.line(_multi(gl_), lw * 0.35, cl['check'], 140)
+        c.fill(_crescent(q, -8, 0), cl['shirt_sh'], 120); c.line(q, lw * 0.5)
+        pl, _ = _surf_poly(B, rows, [(0, yS - 4), (0, B.y_hip - 18)], dz=3)
+        c.line(poly(pl, False), lw * 0.35, LINE, 160)
+        for side in (-1, 1):
+            cc, _ = _surf_poly(B, rows, [(0, yS - 22), (side * 30, yS - 30), (side * 26, yS + 8), (side * 4, yS - 2)], dz=6)
+            c.shape(smooth(cc, True, 0.5), cl['shirt'], lw * 0.55)
+    for side in (-1, 1):
+        ed, v = _surf_poly(B, rows, [(side * 28, yS - 28), (side * 20, B.y_hip - 18)], dz=4)
+        if v > -0.2: c.line(poly(ed, False), lw * 2.6, LINE); c.line(poly(ed, False), lw * 1.4, cl['top_hi'])
+        pk, v = _surf_poly(B, rows, [(side * 40, B.y_wa - 4), (side * 84, B.y_wa - 4), (side * 84, B.y_wa + 52), (side * 40, B.y_wa + 52)], dz=3)
+        if v > 0.05: c.line(poly(pk), lw * 0.5)
+    for k in range(4):
+        X, Y, vv, s_ = B.surf(-24, yC + k * 58, 6, False, rows)
+        if vv > 0.12: c.shape(oval(X, Y, 5.5 * s_), cl['button'], lw * 0.4)
+    if det >= 1:
+        for k in range(-6, 7):
+            if abs(k) < 2: continue
+            rb, v = _surf_poly(B, rows, [(k * 16, B.y_hip - 44), (k * 16, B.y_hip - 18)], dz=1)
+            if v > 0.1: c.line(poly(rb, False), lw * 0.3, cl['top_sh'], 170)
+        hem, v = _surf_poly(B, rows, [(-b['hip'] - 6, B.y_hip - 44), (b['hip'] + 6, B.y_hip - 44)], dz=1)
+        if v > -0.2: c.line(poly(hem, False), lw * 0.4, LINE, 200)
+
+
+def _gown_front(c, sp, B, rows, P, det, t):
+    """Hospital gown: pale blue cotton, a little diamond print, a round neck with a tie, a snap shoulder."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS = B.y_sh
+    nk, v = _surf_poly(B, rows, [(-b['neck'] - 12, yS - 30), (0, yS + 4), (b['neck'] + 12, yS - 30)], dz=3)
+    if v > -0.2: c.line(smooth(nk, False), lw * 0.7)
+    for side in (-1, 1):
+        X, Y, vv, s_ = B.surf(side * (b['neck'] + 26), yS - 22, 4, False, rows)
+        if vv > 0.1: c.shape(oval(X, Y, 3.5 * s_), '#e8eef4', lw * 0.3)
+
+
+def _gown_print(c, B, rows, cl, det, path):
+    if det < 1: return
+    bb = path.getBounds()
+    ds = []
+    for i in range(int(bb.width() / 26) + 2):
+        for j in range(int(bb.height() / 26) + 2):
+            x = bb.left() + i * 26 + (13 if j % 2 else 0); y = bb.top() + j * 26
+            ds.append(poly([(x, y - 4), (x + 3, y), (x, y + 4), (x - 3, y)]))
+    with c.clip(path):
+        c.fill(_multi(ds), cl['print_c'], 120)
+
+
+def _suit70_front(c, sp, B, rows, P, det, t):
+    """Young Walter's 1974 powder-blue suit: huge peak lapels, a cream shirt whose wide collar spreads over them, a wide
+    tie, a pocket square, two buttons."""
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yC = B.y_sh, B.y_ch
+    vn, v = _surf_poly(B, rows, [(-34, yS - 26), (34, yS - 26), (8, yC + 98), (-8, yC + 98)], dz=2)
+    if v > 0.0:
+        q = poly(vn); c.fill(q, cl['shirt']); c.fill(_crescent(q, -6, 0), cl['shirt_sh'], 140); c.line(q, lw * 0.4)
+        ti, _ = _surf_poly(B, rows, [(-9, yS - 18), (9, yS - 18), (16, yC + 70), (0, yC + 96), (-16, yC + 70)], dz=4)
+        tp = poly(ti); c.fill(tp, cl['tie'])
+        if det >= 1:
+            with c.clip(tp):
+                bb = tp.getBounds()
+                c.line(_multi([poly([(bb.left() - 20, bb.top() + k * 22), (bb.right() + 20, bb.top() + k * 22 + 18)], False) for k in range(12)]),
+                       lw * 1.4, cl['tie_hi'], 160)
+        c.line(tp, lw * 0.5)
+        kn, _ = _surf_poly(B, rows, [(-10, yS - 26), (10, yS - 26), (7, yS - 8), (-7, yS - 8)], dz=5)
+        c.shape(poly(kn), cl['tie'], lw * 0.5)
+    for side in (-1, 1):
+        lp, v = _surf_poly(B, rows, [(side * 30, yS - 30), (side * (b['neck'] + 28), yS - 36), (side * (b['neck'] + 38), yS - 10),
+                                     (side * 96, yS + 6), (side * 72, yC + 26), (side * 10, yC + 100)], dz=6)
+        if v > -0.2:
+            lpp = poly(lp); c.fill(lpp, cl['top_hi'] if side < 0 else cl['top']); c.fill(_crescent(lpp, -side * 5, 3), cl['top_sh'], 110)
+            c.line(lpp, lw * 0.7)
+        sc, v = _surf_poly(B, rows, [(side * 8, yS - 26), (side * (b['neck'] + 30), yS - 30), (side * (b['neck'] + 44), yS + 16), (side * 22, yS + 10)], dz=9)
+        if v > -0.2: q = poly(sc); c.fill(q, cl['shirt']); c.line(q, lw * 0.55)
+    X, Y, vv, s_ = B.surf(-62, yC + 6, 7, False, rows)
+    if vv > 0.1:
+        sq = smooth([(X - 11 * s_, Y + 4 * s_), (X - 6 * s_, Y - 9 * s_), (X + 1 * s_, Y - 2 * s_), (X + 7 * s_, Y - 8 * s_), (X + 11 * s_, Y + 4 * s_)], True, 0.5)
+        c.shape(sq, cl['square'], lw * 0.4)
+        pk, _ = _surf_poly(B, rows, [(-84, yC + 4), (-40, yC + 4)], dz=6); c.line(poly(pk, False), lw * 0.5)
+    for k in range(2):
+        X, Y, vv, s_ = B.surf(14, yC + 112 + k * 46, 6, False, rows)
+        if vv > 0.12: c.shape(oval(X, Y, 5.5 * s_), mix(cl['top'], '#000000', 0.3), lw * 0.4)
+    cl_, v = _surf_poly(B, rows, [(10, yC + 100), (12, B.y_hip - 6)], dz=3)
+    if v > 0.05: c.line(poly(cl_, False), lw * 0.55)
+
+
 # ---------------------------------------------------------------------------------------------- figure
 def _limb_cols(sp):
     cl = sp['cloth']; o = sp['outfit']
@@ -2917,6 +3539,8 @@ def _limb_cols(sp):
     if o == 'courier': return cl['shirt'], cl['shirt_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
     if o in ('pajamas', 'flannel'): return cl['top'], cl['top_sh'], cl['trousers'], cl['trousers_sh'], cl['shoes']
     if o == 'robe': return cl['top'], cl['top_sh'], cl['legs'], mix(cl['legs'], '#7a5a52', 0.35), cl['shoes']
+    if 'trousers' in cl and o != 'cardigan':           # dummy film outfits: usher, longcoat, denim, cardi_m, gown, suit70
+        return cl['top'], cl['top_sh'], cl['trousers'], cl.get('trousers_sh', mix(cl['trousers'], '#000000', 0.3)), cl.get('shoes', '#222')
     return cl['top'], cl['top_sh'], cl['legs'], mix(cl['legs'], '#000000', 0.25), cl['shoes']
 
 
@@ -2976,15 +3600,28 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     widths = [aw0 * pts[0][2], (aw0 + aw1) / 2 * max(pts[1][2], hz ** 0.5), aw1 * hz]
     o = sp['outfit']
     if o == 'robe': widths[2] *= 1.45; widths[1] *= 1.12          # wide terry sleeves
+    if o == 'longcoat': widths[2] *= 1.25; widths[1] *= 1.08
     # extend the sleeve top into the shoulder
     tp = _tube([(P2[0][0] - side * 4, P2[0][1] - 14)] + P2, [widths[0] * 1.05] + widths)
-    c.fill(tp, sleeve)
-    _cloth_shade(c, tp, sleeve_sh, 170, 1.0, 12 * pts[0][2])
+    if o == 'gown':                                       # short sleeves: a bare, thin old arm below them
+        c.fill(tp, skin); _cloth_shade(c, tp, sh, 120, 1.0, 8 * pts[0][2])
+        if det >= 1:
+            ex_, ey_ = P2[1]
+            c.line(smooth([(ex_ - 8, ey_ - 4), (ex_, ey_ + 2), (ex_ + 7, ey_ - 3)], False), c.lw * 0.35, sp['skin_dp'], 160)
+        c.line(tp, c.lw)
+        mx_, my_ = (P2[0][0] + (P2[1][0] - P2[0][0]) * 0.55, P2[0][1] + (P2[1][1] - P2[0][1]) * 0.55)
+        sl_ = _tube([(P2[0][0] - side * 4, P2[0][1] - 14), P2[0], (mx_, my_)], [widths[0] * 1.15, widths[0] * 1.2, widths[0] * 1.35])
+        c.fill(sl_, sleeve); _cloth_shade(c, sl_, sleeve_sh, 160, 1.0, 10)
+        _gown_print(c, None, None, sp['cloth'], det, sl_)
+        c.line(sl_, c.lw)
+    else:
+        c.fill(tp, sleeve)
+        _cloth_shade(c, tp, sleeve_sh, 170, 1.0, 12 * pts[0][2])
     if o == 'flannel':
         _plaid(c, tp, sp['cloth'], None, det)
-    elif o == 'robe' and det >= 1:
+    elif o in ('robe', 'usher', 'longcoat', 'cardi_m', 'denim') and det >= 1:
         with c.clip(tp): c.texture(tp, 'fabric', 0.12, 0.7)
-    c.line(tp, c.lw)
+    if o != 'gown': c.line(tp, c.lw)
     # elbow crease + cuff + patch
     if det >= 1:
         ex, ey = P2[1]
@@ -2995,10 +3632,22 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     cuffc = sleeve_sh if o != 'hoodie' else mix(sleeve, '#000000', 0.15)
     if o == 'pajamas': cuffc = sp['cloth']['trim']
     elif o == 'robe': cuffc = sp['cloth']['collar']
+    elif o == 'suit70': cuffc = sp['cloth']['shirt']
+    elif o == 'usher': cuffc = sp['cloth']['braid']
+    elif o == 'cardi_m': cuffc = mix(sleeve, '#000000', 0.12)
     cuff = c.sub(wx, wy, ang, hz)
-    cw = aw1 * (0.8 if o == 'robe' else 0.55)
-    cpath = rrect(-cw, -22, cw * 2, 22 if o != 'pajamas' else 14, 5)
-    cuff.fill(cpath, cuffc); cuff.line(cpath, c.lw * 0.7 / hz)
+    cw = aw1 * (0.8 if o == 'robe' else (0.68 if o == 'longcoat' else 0.55))
+    if o == 'gown':
+        if side > 0:                                      # the hospital ID band on his left wrist
+            bp = rrect(-aw1 * 0.5, -16, aw1, 9, 3); cuff.fill(bp, sp['cloth']['band']); cuff.line(bp, c.lw * 0.5 / hz)
+    elif o == 'usher':                                    # gold braid cuff ring, then the white glove's flared gauntlet
+        cpath = rrect(-cw * 1.05, -24, cw * 2.1, 10, 4)
+        cuff.fill(cpath, cuffc); cuff.line(cpath, c.lw * 0.6 / hz)
+        gaunt = poly([(-cw * 0.95, -15), (cw * 0.95, -15), (cw * 1.35, 6), (-cw * 1.35, 6)])
+        cuff.fill(gaunt, sp['cloth']['glove']); cuff.fill(_crescent(gaunt, 3, 0), sp['cloth']['glove_sh'], 160); cuff.line(gaunt, c.lw * 0.7 / hz)
+    else:
+        cpath = rrect(-cw, -22, cw * 2, 22 if o != 'pajamas' else 14, 5)
+        cuff.fill(cpath, cuffc); cuff.line(cpath, c.lw * 0.7 / hz)
     if o == 'hoodie' and det >= 1:
         cuff.line(_multi([poly([(k * cw / 4, -20), (k * cw / 4, -3)], False) for k in range(-3, 4)]), c.lw * 0.3 / hz, LINE, 140)
     if o == 'courier':
@@ -3034,12 +3683,19 @@ def _draw_arm(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     hang = ang * (1 - up) + (180.0) * up + rot
     hs = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0) * getattr(P, 'hl_scale' if side > 0 else 'hr_scale', 1.0)
     ring = (sp['ring'] == side)
+    if o == 'usher':                                      # white cotton gloves (the hands of a vent figure)
+        skin, sh = sp['cloth']['glove'], sp['cloth']['glove_sh']
     if prop:
         if ear > 0.5 and prop == 'phone':
             # phone pressed to the ear: dark back of the phone along the cheek, the hand wrapped round it
             pc = c.sub(wx + math.sin(math.radians(-hang)) * 30 * hs, wy + math.cos(math.radians(hang)) * 30 * hs,
                        side * 17.0 * B.ct, hs * 1.0)
             _prop(pc, 'phone_back', det, t)
+            _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
+        elif prop == 'flashlight':                         # the torch lies in the fist, pointing along pose.torch_ang
+            fx_ = wx + math.sin(math.radians(-hang)) * 34 * hs; fy_ = wy + math.cos(math.radians(hang)) * 34 * hs
+            pc = c.sub(fx_, fy_, P.torch_ang, hs * 1.15 * sp['body'].get('hand', 1.0))
+            _prop(pc, 'flashlight', det, t, P)
             _draw_hand(c, sp, 'grip', wx, wy, hs, hang, side, det, skin, sh, ring, press, t)
         else:
             pk_ = 1.15 * (1.28 if prop in ('tablet', 'tablet_back') else 1.0)
@@ -3064,7 +3720,9 @@ def _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec):
         hip = np.array([side * b['hip'] * 0.46, B.y_hip + 8, 0.0])
         fwd = B.foot_fwd(side) + B.sit * 210.0 * (1.0 - fl) + fl * (262.0 + 22.0 * side)
         lift = B.foot_lift(side)
-        ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance + 24 * fl), -38.0 - lift - 34.0 * tip, fwd])
+        kn = B.kneel
+        fwd += (150.0 if side > 0 else -230.0) * kn
+        ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance + 24 * fl), -38.0 - lift - 34.0 * tip + (18.0 * kn if side < 0 else 0.0), fwd])
         hipw = hip.copy(); hipw[1] -= 0  # legs do not lean
         pole = np.array([0.08 * side + 0.3 * side * fl, -0.15 - 0.85 * fl, 1.0])
         K, A = _ik(hipw + np.array([0, B.bob, 0]), ank, 206.0, 180.0, pole)
@@ -3213,12 +3871,12 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     for side in behind: _draw_arm(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
     floor_late = B.floor > 0.5 and not upper_only          # sitting on the floor: knees up in front of the torso
     if not upper_only:
-        if o not in ('cardigan', 'robe'):
+        if o not in ('cardigan', 'robe', 'gown'):
             if not floor_late: _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
             _pelvis(c, sp, B, rows, legc, legsh, det)
         elif not floor_late:
             _draw_legs(c, sp, B, P, det, t, legc, legsh, shoec)
-    elif o not in ('coat', 'robe'):
+    elif o not in ('coat', 'robe', 'longcoat', 'gown'):
         _pelvis(c, sp, B, rows, legc, legsh, det)
     torso, L, R = _torso_path(B, rows)
     top = {'police': cl.get('shirt'), 'hoodie': cl.get('top'), 'coat': cl.get('coat'), 'cardigan': cl.get('top'),
@@ -3233,14 +3891,18 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
         _skirt(c, sp, B, det, B.y_wa + 10, -205 + 150 * B.floor, sp['body']['hip'] * 1.04, sp['body']['hip'] * 1.2 + 60 * B.floor,
                cl['top'], cl['top_sh'], t=t, P=P)
         _robe_skirt_front(c, sp, B, P, det, -205 + 150 * B.floor)
+    if o == 'gown' and not upper_only:                    # hospital gown to the knee (sitting: over the thighs)
+        gs = _skirt(c, sp, B, det, B.y_wa + 10, -300 + 120 * B.sit, sp['body']['hip'] * 1.08, sp['body']['hip'] * 1.18 + 50 * B.sit,
+                    cl['top'], cl['top_sh'], t=t, P=P)
+        _gown_print(c, B, rows, cl, det, gs)
     # neck (behind collar)
     nb = B.p3(0, B.y_sh - 34, 0); nt = B.p3(0, B.yc - 30, 0)
     nw = sp['body']['neck']
     neck = _tube([(nb[0], nb[1]), (nt[0], nt[1])], [nw * 2 * nb[2], nw * 1.9 * nt[2]])
-    if o == 'hoodie':
+    if o in ('hoodie', 'denim'):
         hood = smooth([(nb[0] - (nw + 46) * nb[2], nb[1] + 8), (nb[0] - (nw + 30) * nb[2], nb[1] - 42), (nb[0], nb[1] - 56 - 10 * (B.ct < 0)),
                        (nb[0] + (nw + 30) * nb[2], nb[1] - 42), (nb[0] + (nw + 46) * nb[2], nb[1] + 8)], True, 0.8)
-        c.shape(hood, cl['top_sh'])
+        c.shape(hood, cl['hood_sh'] if o == 'denim' else cl['top_sh'])
     c.fill(neck, skin)
     with c.clip(neck):
         c.fill(moved_path(neck, 0, -30), skin_sh, 0)
@@ -3250,11 +3912,24 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     if o == 'coat':
         if not upper_only:
             _skirt(c, sp, B, det, B.y_wa, -236, sp['body']['wa'] + 8, sp['body']['hip'] * 1.22, cl['coat'], cl['coat_sh'], t=t, P=P)
+    if o == 'longcoat' and not upper_only:               # mom's coat to the knee (open a little at the front)
+        cs = _skirt(c, sp, B, det, B.y_wa, -250 + 120 * B.sit, sp['body']['wa'] + 10, sp['body']['hip'] * 1.3 + 40 * B.sit,
+                    cl['top'], cl['top_sh'], t=t, P=P)
+        if not back_view and det >= 1:
+            X0, Y0, _, _ = B.p3(0, B.y_wa, 0); X1, Y1, _, _ = B.p3(0, -250 + 120 * B.sit, 0, upper=False)
+            for side in (-1, 1):
+                fx = X0 + side * 34 * B.ct
+                c.line(poly([(fx - 12, Y0 + 30), (X1 - 12 + side * 6, Y1)], False), c.lw * 0.6)
+                c.line(smooth([(X0 + side * 62 * B.ct, Y0 + 70), (X0 + side * 112 * B.ct, Y0 + 66)], False), c.lw * 0.5)
     c.fill(torso, top)
     c.grad(torso, L[3][0] - 10, 0, R[3][0] + 10, 0, [(0, tophi, 90), (0.35, top, 0), (0.7, topsh, 60), (1, topsh, 200)])
     with c.clip(torso):
         c.grad(rect(-400, B.y_wa - 10, 800, 300), 0, B.y_wa - 60, 0, B.y_hip, [(0, topsh, 0), (1, topsh, 140)])
-        if det >= 1: c.texture(torso, 'fabric' if o in ('robe', 'pajamas', 'flannel') else 'grunge', 0.1 if o == 'robe' else 0.07, 0.7)
+        if det >= 1: c.texture(torso, 'fabric' if o in ('robe', 'pajamas', 'flannel', 'usher', 'longcoat', 'cardi_m', 'gown') else 'grunge',
+                               0.1 if o == 'robe' else 0.07, 0.7)
+        if o == 'gown': _gown_print(c, B, rows, cl, det, torso)
+        if o == 'denim' and det >= 1:                     # denim twill
+            c.texture(torso, 'fabric', 0.1, 0.35)
         if o == 'flannel' and det >= 0: _plaid(c, torso, cl, B, det)
         if o == 'pajamas' and det >= 1: _moon_print(c, B, rows, cl, back_view)
         # armpit creases + blousing
@@ -3281,6 +3956,14 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
         elif o == 'robe': _robe_front(c, sp, B, rows, P, det, t)
         elif o == 'pajamas': _pajama_front(c, sp, B, rows, P, det, t)
         elif o == 'flannel': _flannel_front(c, sp, B, rows, P, det, t)
+        elif o == 'usher': _usher_front(c, sp, B, rows, P, det, t)
+        elif o == 'longcoat': _longcoat_front(c, sp, B, rows, P, det, t)
+        elif o == 'denim': _denim_front(c, sp, B, rows, P, det, t)
+        elif o == 'cardi_m': _cardi_m_front(c, sp, B, rows, P, det, t)
+        elif o == 'gown': _gown_front(c, sp, B, rows, P, det, t)
+        elif o == 'suit70': _suit70_front(c, sp, B, rows, P, det, t)
+    elif o == 'usher':
+        _usher_back(c, sp, B, rows, P, det, t)
     else:
         yy = B.y_sh + 30
         sm, v = _surf_poly(B, rows, [(-sp['body']['sh'] * 0.8, yy), (0, yy + 12), (sp['body']['sh'] * 0.8, yy)], back=True, dz=1)
@@ -3326,7 +4009,17 @@ def draw(pen, who, x, y_feet, height, pose=None, detail=None, light=None, t=None
         k = ease_in_out(clamp(P.approach))
         ox = (aim[0] - (x + P.dx)) * k
         oy = (aim[1] - (y_feet + P.dy - (1000.0 - sp['hh'] / 2) * s)) * k
+    oy += clamp(getattr(P, 'perch', 0.0)) * clamp(P.sit) * 222.0 * s       # perch: y_feet = the surface he sits on
     c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(x + P.dx + ox, y_feet + P.dy + oy, 0.0, s)
+    rec = getattr(P, 'recline', 0.0)
+    if abs(rec) > 1e-3:                   # recline (deg): the whole figure tips about its hips (cradled in someone's arms)
+        hy = -422.0 + 170.0 * clamp(P.sit)
+        c = c.sub(0.0, hy, rec).sub(0.0, -hy, 0.0)
+    lie = getattr(P, 'lie', 0.0)
+    if abs(lie) > 1e-3:                   # lying down: rotate about the hips, rest on the floor (lie 1 face down, -1 face up)
+        a_ = math.radians(90.0 * lie)
+        T_ = 422.0 * (1.0 - abs(lie)) + 62.0 * abs(lie)
+        c = c.sub(-422.0 * math.sin(a_), -T_ + 422.0 * math.cos(a_), math.degrees(a_))
     return _figure(c, who, P, det, t, light)
 
 
@@ -3340,7 +4033,13 @@ def draw_bust(pen, who, cx, cy, scale=1.0, pose=None, detail=None, light=None, t
     c0 = Ctx(pen, skia.Matrix(), _lw_for(head_px))
     yh = -1000 + sp['hh'] / 2
     ty = cy + 60.0 * scale * clamp(P.approach)
-    c = c0.sub(cx - 0 * s, ty - yh * s, 0.0, s)
+    ox_ = oy_ = 0.0
+    if P.sit + P.crouch + getattr(P, 'floor', 0.0) + getattr(P, 'kneel', 0.0) > 0.03 or abs(P.lean) > 0.05 or P.hunch > 0.05:
+        Q = P.copy(); Q.sit = Q.crouch = Q.lean = Q.hunch = 0.0; Q.floor = Q.kneel = Q.tiptoe = 0.0
+        B1, B0 = Body(sp, P), Body(sp, Q)                 # dummy film: a seated / kneeling bust keeps its face in frame
+        a1, b1 = B1.p3(0, B1.yc - 22, 0)[:2]; a0, b0 = B0.p3(0, B0.yc - 22, 0)[:2]
+        ox_, oy_ = (a0 - a1) * s, (b0 - b1) * s
+    c = c0.sub(cx + ox_, ty - yh * s + oy_, 0.0, s)
     det = _auto_detail(pen, head_px) if detail is None else detail
     return _figure(c, who, P, det, t, light, upper_only=True)
 
@@ -3398,6 +4097,117 @@ def draw_head(pen, who, cx, cy, size, pose=None, detail=2, light=None, t=None):
     c = Ctx(pen, skia.Matrix(), _lw_for(size)).sub(cx, cy, P.h_tilt, s)
     yaw = (P.turn + P.h_turn) * PI / 2; pitch = P.h_nod * 0.6
     return draw_head_local(c, who, P, yaw, pitch, detail, t, light)
+
+
+def _place(who, P, x=None, y_feet=None, height=None, cx=None, cy=None, scale=None):
+    """(origin x, origin y, design px per body unit) of a figure drawn by draw() / draw_bust() (perch included)."""
+    sp = CAST[who]
+    if cx is not None:
+        k = 1.0 + 1.1 * clamp(P.approach)
+        s = 600.0 * (scale or 1.0) * k / sp['hh']
+        return cx, cy + 60.0 * (scale or 1.0) * clamp(P.approach) - (-1000 + sp['hh'] / 2) * s, s
+    s = height / 1000.0
+    return x + P.dx, y_feet + P.dy + clamp(getattr(P, 'perch', 0.0)) * clamp(P.sit) * 222.0 * s, s
+
+
+def torch_pos(who, pose, side=1, x=None, y_feet=None, height=None, cx=None, cy=None, scale=None):
+    """Design-space (lens x, lens y, beam angle deg) of the usher's flashlight in a hand (pose.torch_ang: 0 = up)."""
+    P = _as_pose(pose); sp = CAST[who]
+    B = Body(sp, P)
+    S, E, W = _arm_data(sp, B, P, side)
+    wx, wy, ws, wz = B.p3(*W); ex, ey, _, _ = B.p3(*E)
+    ang = math.degrees(math.atan2(wy - ey, wx - ex)) - 90
+    up = getattr(P, ('hl_' if side > 0 else 'hr_') + 'up')
+    hang = ang * (1 - up) + 180.0 * up + getattr(P, ('hl_' if side > 0 else 'hr_') + 'rot')
+    hs = clamp(900.0 / (900.0 - wz), 0.6, 3.0)
+    fx = wx + math.sin(math.radians(-hang)) * 34 * hs; fy = wy + math.cos(math.radians(hang)) * 34 * hs
+    k = hs * 1.15 * sp['body'].get('hand', 1.0)
+    a = math.radians(P.torch_ang)
+    lx, ly = fx + math.sin(a) * 38 * k, fy - math.cos(a) * 38 * k
+    ox, oy, s = _place(who, P, x, y_feet, height, cx, cy, scale)
+    return ox + lx * s, oy + ly * s, P.torch_ang
+
+
+def draw_torch_beam(pen, x, y, ang, length=900.0, spread=13.0, a=1.0, t=0.0, colr='#fff1c8', lens=0.0):
+    """The flashlight's beam from its lens at (x, y) (design px) toward ang (deg, 0 = up): a soft cone fading out with
+    distance plus the hot glow at the lens; lens 0..1 = it points into the camera (a round glare with a star instead of
+    a cone). Draw it on a light layer above the set (and, for the glare, above the figure)."""
+    if a <= 0.01: return
+    flick = 0.94 + 0.06 * noise1(t * 7.0, 3)
+    if lens > 0.01:
+        pen.glow(x, y, 240 * lens, colr, 190 * a * lens * flick)
+        pen.glow(x, y, 70, '#ffffff', 255 * a * lens)
+        for k, ln in ((0, 260), (90, 200), (45, 90), (135, 90)):
+            r_ = math.radians(k)
+            pen.line(poly([(x - math.cos(r_) * ln * lens, y - math.sin(r_) * ln * lens), (x + math.cos(r_) * ln * lens, y + math.sin(r_) * ln * lens)], False),
+                     5.0, '#ffffff', 110 * a * lens)
+        if lens > 0.95: return
+    r = math.radians(ang)
+    dx, dy = math.sin(r), -math.cos(r)
+    w = math.tan(math.radians(spread)) * length
+    ex, ey = x + dx * length, y + dy * length
+    cone = poly([(x - dy * 6, y + dx * 6), (ex - dy * w, ey + dx * w), (ex + dy * w, ey - dx * w), (x + dy * 6, y - dx * 6)])
+    pen.linear(cone, x, y, ex, ey, [(0, colr, int(150 * a * flick)), (0.35, colr, int(70 * a * flick)), (1, colr, 0)])
+    pen.glow(x, y, 60, colr, 220 * a * flick)
+
+
+def lap_anchor(who, pose, side=1, x=None, y_feet=None, height=None):
+    """Design-space (x, y) of the top of `who`'s thigh at the knee on `side` (+1 the character's left), where a figure
+    sitting on that knee rests (draw it there with perch on). Works for any view and sit amount."""
+    P = _as_pose(pose); sp = CAST[who]; b = sp['body']
+    B = Body(sp, P)
+    hip = np.array([side * b['hip'] * 0.46, B.y_hip + 8, 0.0])
+    fwd = B.sit * 210.0
+    ank = np.array([side * (b['hip'] * 0.46 + 6 + 30 * P.stance), -38.0, fwd])
+    K, A = _ik(hip + np.array([0, B.bob, 0]), ank, 206.0, 180.0, np.array([0.08 * side, -0.15, 1.0]))
+    mid = hip + (K - np.array([0, B.bob, 0]) - hip) * 0.72
+    X, Y, sc, _ = B.p3(mid[0], mid[1] - b['leg'][0] * 0.55, mid[2], upper=False)
+    ox, oy, s = _place(who, P, x, y_feet, height)
+    return ox + X * s, oy + Y * s
+
+
+DUMMY_M = 0.85                                     # Mister Winks's length (m) for scaling him against people
+
+
+def draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=1.75, light=None, dlight=None, free_arm=False, dummy='winks',
+             dx=0.0, dy=0.0, lift=0.05, between=None):
+    """A ventriloquist (or Owen) sitting with the dummy on the knee `side` and the other hand inside his back: draws the
+    person, the dummy on the knee (perch), then the free arm over the dummy. m = the person's height in metres (the dummy
+    is drawn to scale, 0.85 m). Give the person Acting.vent_pose (or set the arms) and the dummy sit_dummy / puppet.
+    lift (x height) raises the knee he sits on (a vent's knee is up on a footrest / crossed leg); between(pen) draws
+    something after the person and before the dummy (a hospital blanket over the legs). Stage the person in 3/4 turned
+    front-on or a little toward the dummy's side (turn 0 .. +0.25 for side +1) so the figure sits beside the body;
+    free_arm=True draws the other arm over him (vent_pose(free='dummy'): the hand on his knee).
+    Returns (dummy x, dummy seat y, dummy height px)."""
+    P = _as_pose(pose); D = _as_pose(dpose)
+    draw(pen, who, x, y_feet, height, P, light=light)
+    if between: between(pen)
+    ax, ay = lap_anchor(who, P, side, x, y_feet, height)
+    ay -= lift * height
+    dh = height * DUMMY_M / m
+    D = D.copy(); D.perch = 1.0
+    if D.sit < 0.5: D.sit = 1.0
+    draw(pen, dummy, ax + dx, ay + dy, dh, D, light=dlight or light)
+    if free_arm: draw_arm(pen, who, -side, P, x=x, y_feet=y_feet, height=height, light=light)
+    return ax + dx, ay + dy, dh
+
+
+def draw_carry(pen, who, x, y_feet, height, pose, dpose, m=1.74, light=None, dlight=None, dummy='winks', dx=0.0, dy=0.0):
+    """`who` holding the dummy in their arms at the waist (Acting.hold_dummy on the person, Acting.carried on him): draws
+    the person, the dummy sitting on the forearms, then both arms again over him. Returns (dummy x, seat y, height px)."""
+    P = _as_pose(pose); D = _as_pose(dpose)
+    draw(pen, who, x, y_feet, height, P, light=light)
+    (wl, _), (wr, _) = hand_pos(who, P, 1, x=x, y_feet=y_feet, height=height), hand_pos(who, P, -1, x=x, y_feet=y_feet, height=height)
+    ax, ay = (wl[0] + wr[0]) / 2, (wl[1] + wr[1]) / 2 - 4.0
+    dh = height * DUMMY_M / m
+    D = D.copy(); D.perch = 1.0
+    if D.sit < 0.5: D.sit = 0.85
+    k_ = clamp(-getattr(D, 'recline', 0.0) / 60.0)          # cradled: slide him so his middle lies across your arms
+    dx += 0.36 * dh * k_; dy += 0.1 * dh * k_
+    draw(pen, dummy, ax + dx, ay + dy, dh, D, light=dlight or light)
+    # the arm behind his back stays under him (his head rests in its crook); the arm under his knees comes over him
+    draw_arm(pen, who, 1, P, x=x, y_feet=y_feet, height=height, light=light)
+    return ax + dx, ay + dy, dh
 
 
 def draw_hand(pen, who, x, y, size, shape='open', angle=0.0, side=1, pose=None, detail=2):
@@ -3680,6 +4490,54 @@ def driver_stage(t, arc=None):
     return {k: pv[k] + (st[k] - pv[k]) * u for k in _STAGE_KEYS}
 
 
+# ------------------------------------------------------------------ dummy film: Mister Winks's arc, stage by stage
+# The painted grin widens and the stare hardens over the night (like the driver's smile). Every stage holds the same keys.
+# 'show' = the cheerful 1974 TV figure; 'tape' = the real Walter crying inside him on the tape; 'owen' = Owen inside him at
+# the end (the brows of a scared boy under the widest painted grin, wet eyes); 'asleep' = the same with the lids shut.
+_WINKS_KEYS = ('grin_w', 'pupil', 'wide', 'brow_angry', 'brow_up', 'brow_sad', 'crack', 'desperate', 'lock', 'lid_l', 'lid_r', 'tears')
+WINKS_STAGES = {
+    0: dict(grin_w=0.00, pupil=0.58, wide=0.08, brow_angry=0.10, brow_up=0.12, brow_sad=0.0, crack=0.0, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    1: dict(grin_w=0.30, pupil=0.50, wide=0.15, brow_angry=0.18, brow_up=0.10, brow_sad=0.0, crack=0.17, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    2: dict(grin_w=0.58, pupil=0.43, wide=0.25, brow_angry=0.30, brow_up=0.06, brow_sad=0.0, crack=0.34, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    3: dict(grin_w=0.85, pupil=0.37, wide=0.35, brow_angry=0.42, brow_up=0.02, brow_sad=0.0, crack=0.5, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    4: dict(grin_w=1.10, pupil=0.32, wide=0.45, brow_angry=0.55, brow_up=0.0, brow_sad=0.0, crack=0.67, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    5: dict(grin_w=1.40, pupil=0.27, wide=0.55, brow_angry=0.70, brow_up=0.0, brow_sad=0.0, crack=0.84, desperate=0.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.0),
+    'show': dict(grin_w=0.0, pupil=0.85, wide=0.0, brow_angry=0.0, brow_up=0.4, brow_sad=0.0, crack=0.0, desperate=0.0, lock=0.4, lid_l=0.0, lid_r=0.0, tears=0.0),
+    'tape': dict(grin_w=0.0, pupil=1.05, wide=0.45, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.0, desperate=1.0, lock=1.0, lid_l=0.0, lid_r=0.0, tears=0.7),
+    'owen': dict(grin_w=1.40, pupil=1.1, wide=0.5, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.84, desperate=1.0, lock=0.6, lid_l=0.0, lid_r=0.0, tears=0.35),
+    'asleep': dict(grin_w=1.40, pupil=1.1, wide=0.5, brow_angry=0.0, brow_up=0.3, brow_sad=1.0, crack=0.84, desperate=1.0, lock=0.6, lid_l=1.0, lid_r=1.0, tears=0.0),
+}
+# (film time s, stage, transition s) from this film's timeline tags: in Grandpa's chair 173.97 ('in_chair'), the 180 head
+# turn 250.39, stands on the chair 314.69, "smiles up at me" 401.93, Owen's lap 523.43, "Goodnight, Owen" -> Owen is in
+# him and the lids are shut 567.06 ('eyes_close'), "opens his eyes" 655.47 (the lids open over 1.8 s, desperate)
+WINKS_ARC = [(-1e9, 0, 0.0), (173.97, 1, 1.5), (250.39, 2, 1.2), (314.69, 3, 2.0), (401.93, 4, 1.4), (523.43, 5, 1.6),
+             (567.06, 'asleep', 0.12), (655.6, 'owen', 1.8)]
+WINKS_TAPE_ARC = [(-1e9, 'show', 0.0), (448.58, 'tape', 0.8)]     # the dummy on the 1974 tape (the real Walter inside)
+CAST['winks']['arc'] = WINKS_ARC
+CAST['winks']['stages'] = WINKS_STAGES
+CAST['winks']['stage_keys'] = _WINKS_KEYS
+
+
+def stage_at(t, arc, stages=None, keys=None):
+    """Stage parameters at film time t for an arc [(t, stage, transition)], blending stage changes."""
+    stages = DRIVER_STAGES if stages is None else stages
+    keys = _STAGE_KEYS if keys is None else keys
+    i = 0
+    for k, a in enumerate(arc):
+        if a[0] <= t: i = k
+    st = stages[arc[i][1]]
+    tr = arc[i][2] if len(arc[i]) > 2 else 1.5
+    if i == 0 or tr <= 0 or t >= arc[i][0] + tr: return dict(st)
+    pv = stages[arc[i - 1][1]]
+    u = ease_in_out((t - arc[i][0]) / tr)
+    return {k: pv[k] + (st[k] - pv[k]) * u for k in keys}
+
+
+def winks_stage(t, arc=None):
+    """Mister Winks's face parameters at film time t (dict of _WINKS_KEYS)."""
+    return stage_at(t, WINKS_ARC if arc is None else arc, WINKS_STAGES, _WINKS_KEYS)
+
+
 class Acting:
     """Timeline of acting clips for one character. See the module docstring for the clip vocabulary."""
 
@@ -3696,6 +4554,7 @@ class Acting:
         self.late = []               # clips that override everything else (snap_turn)
         self.freezes = []            # (t0, t1)
         self.events = []
+        self._clacks = []            # dummy: jaw snaps (they end jaw_drop / jaw_hang)
         self.base = dict(lock=sp['lock'], pupil=1.0)
         rng = np.random.default_rng(900 + self.seed * 31 + len(who))
         # blink schedule
@@ -3766,7 +4625,7 @@ class Acting:
         P = Pose()
         P.t = t
         P.mix(self.base); P.mix(EXPR[self.expr0])
-        if self._arc: P.mix(driver_stage(tf, self._arc), 1.0)
+        if self._arc: P.mix(stage_at(tf, self._arc, self.sp.get('stages'), self.sp.get('stage_keys')), 1.0)
         sd = self.seed * 7 + 3
         # idle: breathing, micro head motion, sway, wandering eyes
         P.breath = 0.5 + 0.45 * math.sin(2 * PI * tf / 3.9 + sd) + 0.08 * noise1(tf * 0.4, sd)
@@ -3804,6 +4663,11 @@ class Acting:
         4.5-8.5 s. Scared cast (you, mum): quick nervous head re-orients every 1.3-2.6 s scaled by the fear in the face,
         and a shiver (8-12 Hz) with pose.tremble. Breathing never stops (only freeze() stops everything). No blinks."""
         st = clamp(P.still)
+        if self.sp.get('dummy'):                       # a dummy: no breath, no drift; a hard little head tick now and then
+            if lf > 0.01:
+                a_, n_, x_ = self._step(self._set_t, self._set_v, tf, 0.05, lambda u: u)
+                P.h_tilt += 0.9 * a_ * lf; P.h_nod += 0.5 * n_ * lf
+            return
         k = lf * (1.0 if self.creepy else st)
         if k > 0.01:
             P.h_tilt += 3.2 * k * noise1(tf * 0.06, sd + 21)
@@ -4355,8 +5219,9 @@ class Acting:
         return -1000.0 + self.sp['hh'] + 44.0 + 20.0                      # shoulder joint (body units, feet = 0)
 
     def smile_stage(self, t0, stage, t1=None, fade=0.4):
-        """Driver: hold a smile stage (DRIVER_STAGES key) over a window, on top of the film-time arc."""
-        d = DRIVER_STAGES[stage]
+        """Driver: hold a smile stage (DRIVER_STAGES key) over a window, on top of the film-time arc. Mister Winks: a
+        WINKS_STAGES key (0..5, 'show', 'tape', 'owen', 'asleep')."""
+        d = (self.sp.get('stages') or DRIVER_STAGES)[stage]
         return self._add(t0, None if t1 is None else t1 + fade, lambda P, t: P.mix(d, _env(t, t0, t1, fade, fade)))
 
     def smile_arc(self, arc=DRIVER_ARC):
@@ -4709,6 +5574,556 @@ class Acting:
         self.reach(t0, t0 + 1.0, side, 30.0, 40.0, 300.0, 'flat', up=1.0, fade=0.3)
         return [self._ev(t0 + 0.35, 'door_creak', -6.0)]
 
+    # ------------------------------------------------------------------ dummy film: Mister Winks
+    def _alen(self):
+        return 348.0 * self.sp['body'].get('arm_k', 1.0)
+
+    def _hipsz(self):
+        """Body units of the sitting drop (pose.perch: y_feet is the surface he sits on)."""
+        return 222.0
+
+    def jaw_drop(self, t0, amount=1.0, dur=0.16):
+        """The jaw falls open (accelerating, a little bounce at the bottom) and hangs until the next clack(). Returns
+        [dummy_jaw] (the hinge bottoming out: a dull wooden knock)."""
+        def fn(P, t):
+            if t < t0 or any(t0 < tc <= t for tc in self._clacks): return
+            u = (t - t0) / dur
+            v = ease_in_cubic(min(1.0, u)) if u < 1 else 1.0 + 0.1 * math.exp(-(t - t0 - dur) * 13.0) * math.sin((t - t0 - dur) * 38.0)
+            P.jaw = amount * v
+        self._add(t0, None, fn)
+        return [self._ev(t0 + dur, 'dummy_jaw', -6.0, 0.0, kind='drop')]
+
+    def jaw_hang(self, t0, amount=0.3, fade=0.25):
+        """The jaw hangs a little open from t0 (eased) until the next clack()."""
+        def fn(P, t):
+            if t < t0 or any(t0 < tc <= t for tc in self._clacks): return
+            P.jaw = max(P.jaw, amount * ease_in_out(prog(t, t0, t0 + fade)))
+        return self._add(t0, None, fn)
+
+    def clack(self, t, dur=0.07):
+        """The jaw snaps shut at t (dur > 0.3: "it closes, very slowly. Clack." - a slow rise, then the snap). Overrides any
+        hang / drop before it. Returns [dummy_clack]."""
+        self._clacks.append(float(t))
+        def fn(P, tt):
+            if tt < t - dur or tt > t + 0.3: return
+            if tt < t:
+                u = (tt - (t - dur)) / dur
+                k = ease_in_out(u) * 0.82 if dur > 0.3 else ease_in_cubic(u)
+                if dur > 0.3 and u > 0.9: k = 0.82 + 0.18 * ease_in_cubic((u - 0.9) / 0.1)
+                P.jaw = P.jaw * (1.0 - k)
+            else:
+                P.jaw = 0.0
+                tau = tt - t
+                P.h_nod += 0.025 * math.exp(-tau * 18.0) * math.sin(tau * 60.0)
+        self._add(t - dur - 0.05, t + 0.35, fn, late=True)
+        return [self._ev(t, 'dummy_clack', 0.0, 0.0, kind='snap')]
+
+    def wink(self, t, side=1, hold=0.32):
+        """A wooden lid clicks shut over one eye (side +1 = his left, the wink eye), holds, clicks open. Returns
+        [eyelid_click x2]."""
+        key = 'lid_l' if side > 0 else 'lid_r'
+        def fn(P, tt):
+            v = clamp((tt - t) / 0.05) * (1.0 - clamp((tt - t - 0.05 - hold) / 0.08))
+            if v > 0: setattr(P, key, max(getattr(P, key), v))
+        self._add(t - 0.1, t + hold + 0.3, fn, late=True)
+        return [self._ev(t + 0.05, 'eyelid_click', -2.0, 0.0, kind='shut'), self._ev(t + 0.05 + hold + 0.08, 'eyelid_click', -8.0, 0.0, kind='open')]
+
+    def blink_click(self, t, hold=0.14):
+        """Both lids click shut and open (a doll's blink). Returns [eyelid_click x2]."""
+        def fn(P, tt):
+            v = clamp((tt - t) / 0.05) * (1.0 - clamp((tt - t - 0.05 - hold) / 0.07))
+            if v > 0: P.lid_l = max(P.lid_l, v); P.lid_r = max(P.lid_r, v)
+        self._add(t - 0.1, t + hold + 0.3, fn, late=True)
+        return [self._ev(t + 0.05, 'eyelid_click', -3.0, 0.0, kind='shut'), self._ev(t + 0.05 + hold + 0.07, 'eyelid_click', -9.0, 0.0, kind='open')]
+
+    def try_wink(self, t, gap=0.7, hold=1.2, reopen=0.9):
+        """Owen inside the dummy tries to wink: his left lid clicks shut, then - he can't help it - the right one too
+        ("Both of his eyelids close. Click, click."); they stay shut, then creep open. Returns [eyelid_click x2]."""
+        def fn(P, tt):
+            a = clamp((tt - t) / 0.05); b = clamp((tt - t - gap) / 0.05)
+            r = 1.0 - ease_in_out(prog(tt, t + gap + hold, t + gap + hold + reopen))
+            P.lid_l = max(P.lid_l, a * r); P.lid_r = max(P.lid_r, b * r)
+            if t - 0.4 <= tt <= t + gap:                      # the effort: a tiny shudder of the head before each click
+                P.h_tilt += 1.6 * math.sin(tt * 70.0) * clamp((tt - t + 0.4) / 0.4)
+        self._add(t - 0.5, t + gap + hold + reopen + 0.2, fn, late=True)
+        return [self._ev(t + 0.05, 'eyelid_click', 0.0, 0.0, kind='shut'), self._ev(t + gap + 0.05, 'eyelid_click', 0.0, 0.0, kind='shut')]
+
+    def lids(self, t0, t1=None, amount=1.0, fade=0.06, side=0):
+        """Hold the wooden lids at `amount` (side 0 both, +1 his left, -1 his right); fade 0.06 = a click."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade, lambda u: u, lambda u: u)
+            if w <= 0: return
+            if side >= 0: P.lid_l = lerp(P.lid_l, amount, w)
+            if side <= 0: P.lid_r = lerp(P.lid_r, amount, w)
+        return self._add(t0, None if t1 is None else t1 + fade, fn, late=True)
+
+    def eyes_open(self, t0, dur=1.6):
+        """Shut lids creep open over dur, ending on a click (In my arms, Mister Winks opens his eyes). Returns [eyelid_click]."""
+        def fn(P, t):
+            v = 1.0 - ease_in_out(prog(t, t0, t0 + dur))
+            P.lid_l = v if t >= t0 else max(P.lid_l, 1.0); P.lid_r = P.lid_l
+        self._add(t0 - 0.5, t0 + dur + 0.1, fn, late=True)
+        return [self._ev(t0 + dur, 'eyelid_click', -6.0, 0.0, kind='open')]
+
+    def doll_turn(self, t0, to, dur=1.0, steps=4, frm=None, until=None, body=False):
+        """A jerky doll head turn: the head ratchets from `frm` (None = where it is) to `to` (quarter turns, +-2 = all the way
+        round) in `steps` hard snaps with a tiny overshoot, dead still between them; holds `to` (until None = for good).
+        body=True turns the whole figure instead. Returns [wood_creak per step]."""
+        st_ = [t0 + dur * (k + 0.5) / steps for k in range(steps)]
+        def fn(P, tt):
+            if tt < t0 - 0.05: return
+            if until is not None and tt > until + 0.3: return
+            f = (P.turn + P.h_turn if body else P.h_turn) if frm is None else frm
+            v = f
+            for k, ts in enumerate(st_):
+                if tt >= ts:
+                    tau = tt - ts
+                    a = f + (to - f) * k / steps; b = f + (to - f) * (k + 1) / steps
+                    v = a + (b - a) * (clamp(tau / 0.05) + 0.12 * math.exp(-tau * 16.0) * math.sin(tau * 45.0) * (tau > 0.05))
+            if body: P.turn = v - P.h_turn
+            else: P.h_turn = v
+            P.lock = max(P.lock, 0.0)
+        self._add(t0 - 0.1, None if until is None else until + 0.3, fn, late=True)
+        return [self._ev(ts, 'wood_creak', -11.0, 0.0, kind='tick', dur=0.12) for ts in st_]
+
+    def head_turn_180(self, t0, dur=3.2, frm=0.0, to=-2.0, until=None):
+        """The slow, smooth, impossible head turn (the body stays put; the eyes stay locked on you). Returns [wood_creak]
+        with params dur (one long grinding creak)."""
+        def fn(P, tt):
+            if tt < t0 - 0.05 or (until is not None and tt > until): return
+            u = ease_in_out(prog(tt, t0, t0 + dur))
+            P.h_turn = frm + (to - frm) * u
+            P.lock = 1.0
+        self._add(t0 - 0.1, until, fn, late=True)
+        return [self._ev(t0, 'wood_creak', -4.0, 0.0, kind='grind', dur=dur)]
+
+    def head_snap(self, t, to, frm=None, until=None):
+        """One hard doll snap of the head to `to` (quarter turns). Returns [wood_creak]."""
+        return self.doll_turn(t - 0.03, to, 0.06, 1, frm, until)
+
+    def tick(self, t, tilt=6.0, nod=0.0):
+        """A single wooden tick of the head (held): the slightest move that says it is alive. Returns [wood_creak]."""
+        def fn(P, tt):
+            if tt >= t:
+                k = clamp((tt - t) / 0.04) + 0.15 * math.exp(-(tt - t) * 18) * math.sin((tt - t) * 50) * (tt > t + 0.04)
+                P.h_tilt += tilt * k; P.h_nod += nod * k
+        self._add(t - 0.05, None, fn)
+        return [self._ev(t, 'wood_creak', -14.0, 0.0, kind='tick', dur=0.08)]
+
+    def sit_dummy(self, t0=-1e9, t1=None, fade=0.4, hands='knees', slump=0.0):
+        """Mister Winks sitting (pose.perch: draw him with y_feet = the seat / lap / step / shelf he sits on; his legs
+        dangle below it). hands 'knees' | 'table' (flat on a table in front) | 'limp'. slump tips him a little sideways."""
+        L = self._alen()
+        tab = {'knees': (-12.0, 0.66 * L, 0.5 * L, 'relaxed'), 'table': (-22.0, 0.42 * L, 0.78 * L, 'relaxed'),
+               'limp': (8.0, 0.98 * L, 0.12 * L, 'relaxed')}[hands]
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            P.sit = lerp(P.sit, 1.0, w); P.perch = lerp(P.perch, 1.0, w)
+            for sd in (-1, 1): self._arm(P, sd, w, tab[0], tab[1], tab[2], tab[3], up=0.0)
+            P.tilt += 4.0 * slump * w; P.h_tilt += 8.0 * slump * w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def glove_lift(self, t0, side=1, height=0.35, dur=1.4, steps=3):
+        """One white glove lifts off the table in jerky steps (from the 'table' hands). Returns [wood_creak]."""
+        L = self._alen()
+        ts = [t0 + dur * (k + 0.3) / steps for k in range(steps)]
+        def fn(P, t):
+            if t < t0: return
+            v = 0.0
+            for k, tk in enumerate(ts):
+                if t >= tk: v = (k + clamp((t - tk) / 0.07)) / steps
+            self._arm(P, side, 1.0, -22.0 + 10.0 * v, (0.42 - height * v) * L, (0.78 - 0.15 * v) * L, 'relaxed', up=0.0, rot=-side * 20 * v)
+        self._add(t0, None, fn)
+        return [self._ev(ts[0], 'wood_creak', -10.0, 0.0, kind='tick', dur=0.15), self._ev(ts[0] + 0.05, 'cloth_rustle', -14.0, 0.0, kind='glove')]
+
+    def fingers_curl(self, t, side=1):
+        """The glove's fingers curl (relaxed -> grip -> fist in two clicks). Returns [wood_creak]."""
+        pre = 'hl_' if side > 0 else 'hr_'
+        def fn(P, tt):
+            if tt >= t + 0.18: setattr(P, pre + 'shape', 'fist')
+            elif tt >= t: setattr(P, pre + 'shape', 'grip')
+        self._add(t, None, fn, late=True)
+        return [self._ev(t, 'cloth_rustle', -14.0, 0.0, kind='glove')]
+
+    def elbow_bend(self, t, side=1, amount=0.3):
+        """A jerky bend of the elbow: the forearm comes up off the table. Returns [wood_creak]."""
+        L = self._alen()
+        def fn(P, tt):
+            if tt < t: return
+            k = clamp((tt - t) / 0.06) + 0.1 * math.exp(-(tt - t) * 14) * math.sin((tt - t) * 40) * (tt > t + 0.06)
+            pre = 'hl_' if side > 0 else 'hr_'
+            setattr(P, pre + 'down', getattr(P, pre + 'down') - amount * L * k)
+            setattr(P, pre + 'fwd', getattr(P, pre + 'fwd') - 0.1 * L * k)
+        self._add(t - 0.05, None, fn)
+        return [self._ev(t, 'wood_creak', -10.0, 0.0, kind='tick', dur=0.15)]
+
+    def stand_on_chair(self, t0, dur=1.7, steps=3):
+        """Hands flat on the table, he pushes up and stands on the chair seat in jerky steps (draw him with y_feet = the
+        seat and perch on: the perch drop follows the sit). Returns [wood_creak x steps, footstep_small]."""
+        L = self._alen()
+        ts = [t0 + dur * (k + 0.4) / steps for k in range(steps)]
+        def fn(P, t):
+            if t < t0: return
+            v = 0.0
+            for k, tk in enumerate(ts):
+                if t >= tk: v = (k + ease_out_cubic(clamp((t - tk) / 0.12))) / steps
+            P.sit = lerp(P.sit, 0.0, v); P.perch = 1.0
+            P.lean += 0.25 * math.sin(PI * v)
+            for sd in (-1, 1):
+                self._arm(P, sd, 1.0, -22.0, (0.42 + 0.5 * v) * L, (0.78 - 0.55 * v) * L, 'flat' if v < 0.8 else 'relaxed', up=0.0)
+        self._add(t0, None, fn)
+        ev = [self._ev(tk, 'wood_creak', -8.0, 0.0, kind='tick', dur=0.2) for tk in ts]
+        ev.append(self._ev(ts[-1] + 0.12, 'footsteps_wood_inside', -12.0, 0.0, n=1, kind='tiny'))
+        return ev
+
+    def torch_on(self, t, ang=0.0, side=1, t1=None, hold='side'):
+        """The usher's flashlight clicks on in one glove; ang = beam direction (deg, 0 up, 90 his left / screen right in
+        front view, 180 down). hold 'side' (low, beside him), 'up' (pointed at the ceiling), 'lens' (pointed at the
+        camera: the glare), 'chin' (under his chin: light the face from below with light=dict(under=...)).
+        Returns [flashlight_click]. Draw the beam with draw_torch_beam at torch_pos(...)."""
+        L = self._alen()
+        tgt = {'side': (12.0, 0.8 * L, 0.3 * L), 'up': (0.42 * L, 0.3 * L, 0.45 * L), 'lens': (-30.0, 0.45 * L, 0.85 * L),
+               'chin': (-60.0, -0.05 * L, 0.45 * L)}[hold]
+        def fn(P, tt):
+            w = _env(tt, t - 0.6, t1, 0.4, 0.3)
+            if w <= 0: return
+            self._arm(P, side, w, tgt[0], tgt[1], tgt[2], 'grip', up=0.0, prop='flashlight')
+            P.torch = 1.0 if (tt >= t and (t1 is None or tt < t1)) else 0.0
+            P.torch_ang = ang; P.torch_lens = 1.0 if hold == 'lens' else 0.0
+        self._add(t - 0.6, None if t1 is None else t1 + 0.3, fn)
+        ev = [self._ev(t, 'flashlight_click', -6.0, 0.0, kind='on')]
+        if t1 is not None: ev.append(self._ev(t1, 'flashlight_click', -9.0, 0.0, kind='off'))
+        return ev
+
+    def torch_sweep(self, t0, t1, a0, a1):
+        """Swing the beam from a0 to a1 degrees (eased) over [t0, t1]."""
+        def fn(P, t):
+            if P.torch > 0 or getattr(P, 'hl_prop') == 'flashlight' or getattr(P, 'hr_prop') == 'flashlight':
+                P.torch_ang = a0 + (a1 - a0) * ease_in_out(prog(t, t0, t1))
+        return self._add(t0, None, fn, late=True)
+
+    def puppet(self, t0, t1, look=1.0, rate=1.0, talk_bob=True):
+        """Being worked on a lap (the hospital, the 1974 show, Owen's act): lively puppet head moves - turns between the
+        operator (look -1/+1 = which side he sits) and the audience, nods, a cheeky tilt - every 0.6-1.4 s."""
+        rng = np.random.default_rng(self.seed + 71)
+        keys, tt = [(t0, 0.0, 0.0, 0.0)], t0
+        while tt < t1:
+            tt += rng.uniform(0.6, 1.4) / rate
+            r = rng.uniform()
+            keys.append((tt, look * 0.7 if r < 0.35 else rng.uniform(-0.25, 0.25), rng.uniform(-10, 12), rng.uniform(-0.12, 0.1)))
+        kt = [k[0] for k in keys]
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.3, 0.3)
+            if w <= 0: return
+            i = max(0, _bisect.bisect_right(kt, t) - 1)
+            a = keys[max(0, i - 1)]; b = keys[i]
+            u = ease_out_back(clamp((t - b[0]) / 0.22)) if i > 0 else 1.0
+            P.h_turn += (a[1] + (b[1] - a[1]) * u) * w
+            P.h_tilt += (a[2] + (b[2] - a[2]) * u) * w
+            P.h_nod += (a[3] + (b[3] - a[3]) * u) * w
+            P.lock = lerp(P.lock, 0.3, w)
+        return self._add(t0, t1 + 0.3, fn)
+
+    def carried(self, t0=-1e9, t1=None, fade=0.4, recline=-66.0, look_up=True):
+        """Limp in someone's arms (draw with draw_carry): cradled, tipped back by `recline` degrees (0 = upright, held
+        against the chest), legs dangling over the arm, arms hanging, the head lolling a little; look_up: the face tips
+        up toward the one holding him."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            P.sit = lerp(P.sit, 0.85, w); P.perch = lerp(P.perch, 1.0, w); P.recline = lerp(P.recline, recline, w)
+            for sd in (-1, 1): self._arm(P, sd, w, 18.0, 0.95 * L, 0.1 * L, 'relaxed', up=0.0)
+            P.h_tilt += (3.0 * math.sin(t * 1.3) + 4.0 * P.sec_x) * w
+            if look_up: P.h_nod -= 0.25 * w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def fall_face_down(self, t0, dur=0.45):
+        """He drops face down on the rug (pose.lie 0 -> 1 with a bounce). Returns [dummy_thud]."""
+        def fn(P, t):
+            if t < t0: return
+            u = clamp((t - t0) / dur)
+            P.lie = ease_in_cubic(u) + (0.04 * math.exp(-(t - t0 - dur) * 10) * math.sin((t - t0 - dur) * 30) if u >= 1 else 0.0)
+            P.turn = lerp(P.turn, 1.0, ease_out_cubic(clamp(u * 2.2))); P.h_turn *= 1.0 - u; P.sit = 0.15 * (1 - u)
+            L = self._alen()
+            for sd in (-1, 1): self._arm(P, sd, 1.0, 10.0, 0.9 * L, 0.1 * L, 'relaxed', up=0.0)
+        self._add(t0, None, fn, late=True)
+        return [self._ev(t0 + dur, 'dummy_thud', 0.0, 0.0, kind='rug')]
+
+    def face_down(self, t0=-1e9, t1=None):
+        """Lying face down on the rug (pose.lie 1)."""
+        L = self._alen()
+        def fn(P, t):
+            if t < t0 or (t1 is not None and t > t1): return
+            P.lie = 1.0; P.turn = 1.0; P.h_turn = 0.0; P.sit = 0.0
+            for sd in (-1, 1): self._arm(P, sd, 1.0, 10.0, 0.9 * L, 0.1 * L, 'relaxed', up=0.0)
+        return self._add(t0, t1, fn, late=True)
+
+    def paper_out(self, t0, dur=1.2):
+        """The torn P.S. slides out of the slot in his back (pose.slot_paper; seen in back views). Returns [paper]."""
+        self.set(t0, None, dur, slot_paper=1.0)
+        return [self._ev(t0 + 0.1, 'paper', -8.0, 0.0, kind='slide', dur=dur)]
+
+    # ------------------------------------------------------------------ dummy film: the family
+    def open_latches(self, t0, side_gap=0.22):
+        """Mom pops the case's two brass latches with her thumbs (hands forward at hip height). Returns [case_latch x2]."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0 - 0.5, t0 + 1.2, 0.45, 0.6)
+            if w <= 0: return
+            for sd in (-1, 1):
+                pop = math.exp(-max(0.0, t - (t0 + (0.0 if sd < 0 else side_gap))) * 12.0) * (t >= t0 + (0.0 if sd < 0 else side_gap))
+                self._arm(P, sd, w, -40.0, 0.72 * L - 18 * pop, 0.5 * L, 'grip', up=0.0, rot=sd * 8.0 * pop)
+            P.h_nod += 0.22 * w; P.lean += 0.12 * w
+        self._add(t0 - 0.5, t0 + 1.9, fn)
+        return [self._ev(t0, 'case_latch', -2.0, -0.15), self._ev(t0 + side_gap, 'case_latch', -2.0, 0.15)]
+
+    def smell_mug(self, t0, t1=None, side=-1, pale_at=None):
+        """Mom lifts the mug to her nose, breathes in; at pale_at (default t0 + 1.6) all the colour leaves her face."""
+        L = self._alen(); pa = t0 + 1.6 if pale_at is None else pale_at
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.6, 0.6)
+            if w > 0:
+                out, down = self._mouth_target(4.0, side=side)
+                self._arm(P, side, w, out + 10.0, down + 6.0, 0.36 * L, 'grip', up=0.0, prop='mug')
+                P.h_nod += 0.1 * w; P.squint = max(P.squint, 0.25 * w * (1 - clamp((t - pa) / 0.3)))
+            k = ease_in_out(prog(t, pa, pa + 1.2))
+            if k > 0: P.pale = max(P.pale, 0.85 * k); P.wide = max(P.wide, 0.6 * k); P.pupil = min(P.pupil, 1 - 0.45 * k); P.brow_up += 0.4 * k
+        self._add(t0, None, fn)
+        return [self._ev(t0 + 0.5, 'breath', -12.0, 0.0, kind='sniff'), self._ev(pa + 0.2, 'breath', -8.0, 0.0, kind='gasp')]
+
+    def hold_mug(self, t0=-1e9, t1=None, side=1, sip=None):
+        """A mug in one hand at chest height (the new Owen's coffee); sip = [t] mug to the mouth."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.4, 0.4)
+            if w <= 0: return
+            up_ = 0.0
+            for ts in (sip or []):
+                up_ = max(up_, _env(t, ts, ts + 1.3, 0.5, 0.5))
+            out, down = self._mouth_target(2.0, side=side)
+            self._arm(P, side, w, lerp(-20.0, out + 6.0, up_), lerp(0.62 * L, down + 8.0, up_), lerp(0.42 * L, 0.32 * L, up_), 'grip', up=0.0, prop='mug')
+            P.h_nod += 0.08 * up_ * w
+        self._add(t0, None if t1 is None else t1 + 0.4, fn)
+        return [self._ev(ts + 0.6, 'sip', -12.0, 0.0) for ts in (sip or [])]
+
+    def pull_dummy(self, t0, t1, pulls=3):
+        """Mom grabs the dummy with both hands at chest height and pulls, leaning back in jerks (draw the dummy between her
+        hands with lap_anchor / draw_lap). Returns [cloth_rustle per pull]."""
+        L = self._alen()
+        ts = [t0 + 0.4 + (t1 - t0 - 0.6) * k / max(1, pulls) for k in range(pulls)]
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.3, 0.5)
+            if w <= 0: return
+            jerk = max([math.exp(-max(0.0, t - tk) * 5.0) * (t >= tk) for tk in ts] + [0.0])
+            for sd in (-1, 1): self._arm(P, sd, w, -34.0 - 10 * jerk, (0.62 - 0.1 * jerk) * L, (0.78 - 0.2 * jerk) * L, 'grip', up=0.0)
+            P.lean += (0.3 - 0.32 * jerk) * w; P.hunch += 0.25 * w; P.shrug += 0.2 * jerk * w
+        self._add(t0, t1 + 0.5, fn)
+        return [self._ev(tk, 'cloth_rustle', -6.0, 0.0, kind='grab') for tk in ts]
+
+    def grab_keys(self, t0, side=1):
+        """Mom snatches her keys off a side table (reach out and down, back to the chest). Returns [keys_jangle]."""
+        L = self._alen()
+        def fn(P, t):
+            w_out = _env(t, t0, t0 + 0.35, 0.3, 0.35); w_back = ease_in_out(prog(t, t0 + 0.5, t0 + 0.9))
+            if t < t0: return
+            if t < t0 + 0.65: self._arm(P, side, w_out, 0.35 * L, 0.75 * L, 0.3 * L, 'grip', up=0.0)
+            else: self._arm(P, side, w_back, -10.0, 0.62 * L, 0.32 * L, 'grip', up=0.0, prop='key')
+        self._add(t0, None, fn)
+        return [self._ev(t0 + 0.4, 'keys_drop', -8.0, 0.3 * side, kind='jangle')]
+
+    def laugh_soft(self, t0, dur=1.6):
+        """A tired little laugh (mom at the letter): a smile, a head shake, the shoulders bounce twice."""
+        def fn(P, t):
+            w = _env(t, t0, t0 + dur, 0.25, 0.6)
+            if w <= 0: return
+            P.mix(dict(smile=0.7, teeth=0.4, squint=0.35, brow_sad=0.3), w)
+            P.h_turn += 0.06 * math.sin((t - t0) * 9.0) * w; P.shrug += 0.12 * abs(math.sin((t - t0) * 11.0)) * w
+        return self._add(t0, t0 + dur + 0.6, fn)
+
+    def snort(self, t):
+        """Owen snorts at the joke - he can't help it, he's nine: head jerks, eyes squeeze, a hand flies to his nose.
+        Returns [snort]."""
+        def fn(P, tt):
+            k = math.exp(-max(0.0, tt - t) * 4.0) * (tt >= t - 0.05)
+            if k < 0.01: return
+            P.h_nod += 0.18 * k; P.shrug += 0.3 * k
+            P.mix(dict(smile=0.8, teeth=0.6, squint=0.8, blink=0.7, brow_up=0.3), clamp(k * 1.4))
+        self._add(t - 0.1, t + 1.5, fn)
+        self.hand_to_mouth(t + 0.08, t + 1.1, side=-1, fade=0.18, shock=False)
+        return [self._ev(t, 'snort', 0.0, 0.0)]
+
+    def try_wink_kid(self, t, hold=0.5):
+        """Owen tries to wink: both eyes squeeze shut (the left a beat first), the cheek bunches, the mouth pulls sideways."""
+        def fn(P, tt):
+            a = _env(tt, t, t + hold, 0.06, 0.12); b = _env(tt, t + 0.05, t + hold, 0.08, 0.12)
+            if a <= 0 and b <= 0: return
+            P.lid_l = max(P.lid_l, a); P.lid_r = max(P.lid_r, b)
+            P.squint = max(P.squint, 0.5 * a); P.m_side += 0.8 * a; P.smile = max(P.smile, 0.45 * a); P.brow_asym += 0.6 * a
+        return self._add(t - 0.1, t + hold + 0.3, fn)
+
+    def jump_hug(self, t0, side=0):
+        """Owen jumps up out of the chair and throws his arms round Mom (arms up and forward, a hop). Returns [footsteps]."""
+        L = self._alen()
+        def fn(P, t):
+            if t < t0: return
+            u = prog(t, t0, t0 + 0.35)
+            P.sit = lerp(P.sit, 0.0, ease_out_cubic(u))
+            hop = math.sin(PI * clamp((t - t0 - 0.2) / 0.35)) * (t < t0 + 0.55)
+            P.bob -= 40.0 * hop
+            w = ease_out_cubic(prog(t, t0 + 0.2, t0 + 0.6))
+            for sd in (-1, 1): self._arm(P, sd, w, 30.0, 0.18 * L, 0.75 * L, 'relaxed', up=0.0)
+            P.mix(dict(smile=1.0, teeth=1.0, grin=0.25, brow_up=0.5), w)
+        self._add(t0, None, fn)
+        return [self._ev(t0 + 0.55, 'footsteps_wood_inside', -6.0, 0.0, n=1)]
+
+    def wave(self, t0, t1, side=1, rate=2.4):
+        """A hand up, waving side to side (Owen at the window as the van pulls away)."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.4, 0.5)
+            if w <= 0: return
+            self._arm(P, side, w, 0.2 * L + 0.12 * L * math.sin((t - t0) * rate * 2 * PI), -0.25 * L, 0.25 * L, 'open', up=1.0,
+                      rot=side * 18.0 * math.sin((t - t0) * rate * 2 * PI))
+        return self._add(t0, t1 + 0.5, fn)
+
+    def doorway_smile(self, t0, dur=4.0):
+        """The new Owen in your doorway: he looks at you a long time (no blink), then the smile comes, slow and too still."""
+        def fn(P, t):
+            if t < t0: return
+            P.mix(dict(lock=1.0, pupil=0.62, still=0.9, wide=0.2), 1.0)
+            k = ease_in_out(prog(t, t0 + dur * 0.55, t0 + dur))
+            P.mix(dict(smile=1.0, grin=0.12, m_press=0.5, teeth=0.0, squint=0.0, brow_up=0.0, wide=0.3, pupil=0.55), k)
+        return self._add(t0, None, fn)
+
+    def kneel(self, t0, t1=None, fade=0.7):
+        """You kneel down (crouch, one knee to the floor) in front of Owen's chair."""
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w > 0: P.crouch = lerp(P.crouch, 1.25, w); P.lean += 0.12 * w; P.kneel = w
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def grab_dummy(self, t0, t1=None, fade=0.25):
+        """Both hands shoot out and grab the dummy in front, low (on the stairs). Returns [cloth_rustle]."""
+        L = self._alen()
+        self.reach(t0, t1, -1, -20.0, 0.62 * L, 0.72 * L, 'grip', fade=fade)
+        self.reach(t0 + 0.04, t1, 1, -20.0, 0.62 * L, 0.72 * L, 'grip', fade=fade)
+        self.set(t0, t1, fade, lean=0.25, h_nod=0.12)
+        return [self._ev(t0 + fade, 'cloth_rustle', -4.0, 0.0, kind='grab')]
+
+    def hand_inside(self, t0, t1=None, side=1, depth=1.0, fade=0.6):
+        """Your hand pushes in through the slot in his back (the arm reaches forward and down; the dummy, drawn over it,
+        hides the hand). Returns [cloth_rustle]."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            push = ease_in_out(prog(t, t0, t0 + fade * 1.6))
+            self._arm(P, side, w, -36.0, 0.55 * L, (0.42 + 0.22 * push * depth) * L, 'flat', up=0.0)
+            P.lean += 0.1 * w
+        self._add(t0, None if t1 is None else t1 + fade, fn)
+        return [self._ev(t0 + fade * 0.8, 'cloth_rustle', -10.0, 0.0, kind='slot')]
+
+    def squeezed(self, times):
+        """Your reaction to each squeeze from inside: a small flinch through the arm and the face (three = I love you).
+        Returns [hand_squeeze per time]."""
+        times = [times] if isinstance(times, (int, float)) else list(times)
+        def fn(P, t):
+            for ti in times:
+                tau = t - ti
+                if 0 <= tau < 0.5:
+                    k = math.exp(-tau * 9.0)
+                    P.shrug += 0.12 * k; P.wide += 0.4 * k; P.h_nod -= 0.04 * k
+        self._add(min(times) - 0.1, max(times) + 0.6, fn, real=True)
+        return [self._ev(ti, 'hand_squeeze', -10.0, 0.0) for ti in times]
+
+    def hold_dummy(self, t0=-1e9, t1=None, fade=0.5):
+        """You hold the dummy cradled in your arms at the waist (draw him with draw_carry; he reclines along your arms):
+        your right forearm under his knees, the left behind his back. Your head bows to look down at him."""
+        L = self._alen()
+        self.reach(t0, t1, -1, 0.05 * L, 0.5 * L, 0.42 * L, 'grip', fade=fade)
+        self.reach(t0, t1, 1, -0.3 * L, 0.66 * L, 0.5 * L, 'relaxed', fade=fade)
+        return self.set(t0, t1, fade, h_nod=0.32)
+
+    def clamp_mouth(self, t0, t1=None, side=1, reach_x=0.6):
+        """Your hand clamps over Owen's mouth beside you (reach across at his face height). Returns [cloth_rustle]."""
+        L = self._alen()
+        self.reach(t0, t1, side, reach_x * L, 0.28 * L, 0.3 * L, 'flat', up=1.0, fade=0.2)
+        return [self._ev(t0 + 0.2, 'cloth_rustle', -8.0, 0.4 * side, kind='grab')]
+
+    def spin_around(self, t0, to=2.0, dur=0.32):
+        """You spin round (a fast whole-body turn with an overshoot). Returns [whoosh]."""
+        def fn(P, t):
+            if t < t0: return
+            P.turn = to * ease_out_back(clamp((t - t0) / dur))
+        self._add(t0, None, fn, late=True)
+        return [self._ev(t0, 'whoosh', -8.0, 0.0, kind='soft')]
+
+    def tuck_in(self, t0, t1=None):
+        """Grandpa (memory) leans down over the bed, a hand on the blanket."""
+        L = self._alen()
+        self.reach(t0, t1, 1, -30.0, 0.85 * L, 0.55 * L, 'open', fade=0.8)
+        return self.set(t0, t1, 0.8, lean=0.35, hunch=0.4, h_nod=0.2)
+
+    def squeeze_hand(self, t0, n=3, gap=0.42, side=1):
+        """Grandpa's hand squeezes three times (I love you): small grip pulses. Returns [hand_squeeze x n]."""
+        ts = [t0 + k * gap for k in range(n)]
+        pre = 'hl_' if side > 0 else 'hr_'
+        def fn(P, t):
+            for tk in ts:
+                if tk <= t < tk + 0.18: setattr(P, pre + 'shape', 'fist')
+        self._add(t0, ts[-1] + 0.3, fn, late=True)
+        return [self._ev(tk, 'hand_squeeze', -12.0, 0.0) for tk in ts]
+
+    def grab_wrist(self, t0, t1=None, side=1):
+        """The real Walter grabs your wrist so hard it hurts: his hand shoots out from the bed. Returns [cloth_rustle]."""
+        L = self._alen()
+        self.reach(t0, t1, side, 0.15 * L, 0.42 * L, 0.78 * L, 'grip', fade=0.14)
+        self.set(t0, t1, 0.2, lean=0.18, shrug=0.25)
+        return [self._ev(t0 + 0.14, 'cloth_rustle', -2.0, 0.3 * side, kind='grab')]
+
+    def in_bed(self, t0=-1e9, t1=None, fade=0.4):
+        """Half sitting up against hospital pillows (the blanket is the set's: draw it over his legs)."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            P.sit = lerp(P.sit, 1.0, w); P.lean = lerp(P.lean, -0.22, w)
+            for sd in (-1, 1): self._arm(P, sd, w, -10.0, 0.75 * L, 0.38 * L, 'relaxed', up=0.0)
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def vent_pose(self, t0=-1e9, t1=None, side=1, fade=0.4, free='thigh'):
+        """A ventriloquist sitting with the figure on his knee `side` (+1 his left): the hand on that side goes in at the
+        figure's back (hidden by him), the other rests on his own thigh (free='thigh') or on the figure's knee
+        (free='dummy': then draw_lap(..., free_arm=True) draws it over the figure). Draw them together with draw_lap."""
+        L = self._alen()
+        def fn(P, t):
+            w = _env(t, t0, t1, fade, fade)
+            if w <= 0: return
+            P.sit = lerp(P.sit, 1.0, w); P.stance = lerp(P.stance, 1.3, w)
+            self._arm(P, side, w, 0.05 * L, 0.5 * L, 0.3 * L, 'flat', up=0.0)               # inside the figure's back
+            if free == 'dummy': self._arm(P, -side, w, -0.45 * L, 0.72 * L, 0.55 * L, 'relaxed', up=0.0)
+            else: self._arm(P, -side, w, 0.0, 0.82 * L, 0.42 * L, 'relaxed', up=0.0)
+        return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+    def showman(self, t0, t1, look=1.0):
+        """Young Walter on the 1974 show: the big fixed TV smile, eyes on the camera, the head turning to the figure on
+        his knee and back on the beats. His lips never move."""
+        rng = np.random.default_rng(self.seed + 31)
+        ks, tt = [], t0
+        while tt < t1:
+            tt += rng.uniform(1.2, 2.4); ks.append(tt)
+        def fn(P, t):
+            w = _env(t, t0, t1, 0.4, 0.4)
+            if w <= 0: return
+            P.mix(dict(smile=1.0, grin=0.5, teeth=1.0, brow_up=0.3, m_open=0.0, pupil=0.75, lock=0.8), w)
+            look_ = 0.0
+            for i, k in enumerate(ks):
+                if i % 2 == 0: look_ = max(look_, _env(t, k, k + 0.9, 0.2, 0.25))
+            P.h_turn += look * 0.45 * look_ * w; P.lock = lerp(P.lock, 1.0 - look_, w)
+        return self._add(t0, t1 + 0.4, fn)
+
     # ------------------------------------------------------------------ speech
     def talk(self, intervals, text=None, intensity=1.0, env='auto', words='auto', lead=0.02, lag=None):
         """Mouth shapes for speech. intervals: [(t0, t1)] or [(t0, t1, text)]; text applies to a single interval.
@@ -4748,6 +6163,7 @@ class Acting:
         it0 = [v[0] for v in ivs]
         lo = min((float(iv[0]) for iv in intervals), default=0.0); hi = max((float(iv[1]) for iv in intervals), default=0.0)
         FLOOR = -40.0
+        dummy = bool(self.sp.get('dummy'))
 
         def fn(P, t):
             if not keys or t < kt[0] - 0.1 or t > kt[-1] + 0.2: return
@@ -4773,6 +6189,22 @@ class Acting:
                 pr *= 1.0 - clamp(on * 3.0)
             else:
                 o = ov * intensity; on = clamp(ov / 0.6)
+            if dummy:                                                 # Mister Winks: the hinged jaw drops and snaps
+                if ref is not None and not callable(E):
+                    # syllable by syllable: open near each local peak of the voice, snap shut in each valley
+                    tq = t + lead
+                    i0 = max(0, int((tq - 0.11) * ENV_FPS)); i1 = max(i0 + 2, int((tq + 0.11) * ENV_FPS))
+                    seg = E[i0:i1]
+                    if len(seg) < 2: return
+                    db = _env_db(E, tq)
+                    loc = (db - float(seg.min())) / max(5.0, float(seg.max()) - float(seg.min()))
+                    drive = clamp(on / 0.35) * clamp((loc - 0.42) / 0.3)
+                else:
+                    drive = clamp(ov / 0.55)
+                jw = drive * drive * (3.0 - 2.0 * drive)
+                P.jaw = max(P.jaw, jw * (0.62 + 0.38 * clamp(on)) * intensity)
+                P.h_nod += 0.03 * acc
+                return
             base = P.m_open; g = clamp(P.grin)
             if base >= 0.5:                                           # shout / scream: modulate around the base
                 P.m_open = clamp(base - 0.27 * intensity * (1.0 - on) * (1.0 if ref is not None else 0.6), 0.0, 1.0)
@@ -4784,6 +6216,16 @@ class Acting:
             P.teeth = max(P.teeth, te * 0.8)
             P.m_press = max(P.m_press, pr)
             P.h_nod += 0.035 * acc; P.brow_up += 0.12 * acc
+        if dummy and keys:                                             # every time the jaw snaps shut: a wooden clack
+            prev, opened, last = 0.0, 0.0, -9.0
+            for tt in np.arange(lo - 0.1, hi + 0.3, 1.0 / 120.0):
+                Pq = Pose(); fn(Pq, float(tt)); j = Pq.jaw
+                opened = max(opened, j)
+                if prev >= 0.12 and j < 0.12 and opened > 0.45 and tt - last > 0.14:
+                    self._ev(float(tt) + lag, 'dummy_clack', -14.0 + 6.0 * clamp((opened - 0.45) / 0.4), 0.0, kind='speech')
+                    last = float(tt); opened = 0.0
+                if j < 0.05: opened = min(opened, 0.0) if prev < 0.05 else opened
+                prev = j
         if lag:
             return self._add(lo - 0.2 + lag, hi + 0.3 + lag, lambda P, t: fn(P, t - lag))
         return self._add(lo - 0.2, hi + 0.3, fn)
@@ -5162,19 +6604,42 @@ def draw_keys_bowl(pen, x, y, size, drop=None, t=0.0, rust=0.0, hand=False, keys
 
 
 # ------------------------------------------------------------------ delivery: the acting arc over the film
-FEAR_ARC = {'you': [(215.74, 0.35), (353.24, 0.55), (497.79, 0.8)],          # photo, the chain, the knocking stops
-            'mom': [(287.97, 0.45), (377.96, 0.7), (497.79, 0.85)]}          # she sees the van, the box knocks, 3:40
+DELIVERY_FEAR_ARC = {'you_police': [(215.74, 0.35), (353.24, 0.55), (497.79, 0.8)],   # the delivery film's (you / mom then)
+                     'mom_delivery': [(287.97, 0.45), (377.96, 0.7), (497.79, 0.85)]}
+# dummy film (film time): the case is empty 155.3, "kiddo" from the kitchen 243.5, the stairs 354.6, the bookcase 423.1,
+# Mom screams 543.7; the new Owen is calm (owen_new: no tremble)
+FEAR_ARC = {'you': [(155.33, 0.3), (243.48, 0.5), (354.61, 0.65), (423.12, 0.75), (543.73, 0.9), (567.06, 0.6)],
+            'mom': [(184.4, 0.45), (247.11, 0.65), (420.57, 0.75), (543.73, 0.95), (575.48, 0.4)],
+            'owen': [(155.33, 0.15), (290.16, 0.45), (543.73, 0.95)]}
+FEAR_ARC.update(DELIVERY_FEAR_ARC)
+# Mister Winks's wooden ticks over the night (from t: one tick every lo..hi s); none while he lies face down / sleeps
+WINKS_TICKS = [(173.97, 5.0, 8.0), (314.69, 3.0, 5.0), (401.93, 2.0, 3.5)]
+WINKS_QUIET = [(567.06, 655.6)]
 DRIVER_TWITCH = [(196.51, 4.0, 6.0), (340.87, 2.2, 3.2), (446.44, 1.5, 2.5)]   # from t: a twitch / jerk every lo..hi s
 DRIVER_STILL = (435.84, 446.44)                                               # "his face is perfectly still"
 
 
 def escalate(a, t0, t1, kind=None):
-    """The delivery film's acting arc for one actor over a shot [t0, t1] in film time (call it from film.py's escalate,
-    like the police film's). Driver: the smile arc is automatic (DRIVER_ARC under every clip); this adds twitches and
+    """The film's acting arc for one actor over a shot [t0, t1] in film time (call it from film.py's escalate, like the
+    police film's). Dummy film: Mister Winks gets a hard wooden head tick every 5-8 s from 'in_chair' (174 s), 3-5 s from
+    'stand' (315 s), 2-3.5 s from 'clack_shut' (402 s), none while he sleeps face down (567-656 s) or with kind='worked'
+    (on a lap); you / mom / Owen get the FEAR_ARC tremble. Delivery film (below): Driver: the smile arc is automatic (DRIVER_ARC under every clip); this adds twitches and
     jerks, rarer at first (from 'wider' 196.5 s), then every 2.2-3.2 s once he leans in (340.9 s), every 1.5-2.5 s after
     he smiles again (446.4 s), none while his face is perfectly still. you / mom: fear tremble that builds (FEAR_ARC).
     Lily and dad: nothing (Lily is calm; dad is a memory). Rule cards (kind 'rule'): nothing."""
     if kind == 'rule' or t1 - t0 < 0.4: return a
+    if a.who == 'winks':                       # dummy film: a hard little wooden tick of the head, more often as the night goes on
+        rate = None
+        for (ts, lo, hi) in WINKS_TICKS:
+            if t0 >= ts: rate = (lo, hi)
+        if rate and t1 - t0 > 1.0 and kind != 'worked':
+            k = t0 + 0.6 + 0.9 * float(hash01(int(t0 * 10), 73)); n = 0
+            while k < t1 - 0.2:
+                if not any(q0 - 0.3 <= k <= q1 for q0, q1 in WINKS_QUIET):
+                    sg = 1.0 if (n % 2 == 0) else -1.0
+                    a.tick(k, tilt=sg * (3.0 + 3.0 * float(hash01(int(k * 10), 74))), nod=0.02 * sg); n += 1
+                k += rate[0] + (rate[1] - rate[0]) * float(hash01(int(k * 10), 75))
+        return a
     if a.who == 'driver':
         rate = None
         for (ts, lo, hi) in DRIVER_TWITCH:
@@ -5235,6 +6700,475 @@ def hud_phone_hand(pen, w, h, skin='#c9aa98', a=255, front=False, sleeve='#34443
     c.fill(nl, nail, 230 * k); c.line(nl, lw * 0.3, dp, 190 * k)
 
 
+# ====================================================================================================== dummy film: Mister Winks's head
+# Front-view head units as everywhere (crown -120, chin +120). The face is painted wood under varnish: hard-edged rosy
+# cheeks, freckles, heavy arched painted brows, big round glass eyes (painted iris, hard highlight, painted lashes) under
+# wooden lids, a button nose, a wide painted grin (red lips, a band of flat painted teeth) and the LOWER JAW BLOCK: cut
+# along two deep marionette slot lines from the mouth corners straight down to the chin, it drops straight down (pose.jaw)
+# and shows the black hollow behind the teeth. Painted red hair with a hard side part (carved grooves, varnish shine) and
+# a burgundy pillbox cap with gold braid sit on top.
+
+def _sph(hm, phi, y, grow=0.0):
+    """Points on the head surface all the way round (phi 0 = front, +pi/2 = the character's left / screen right in a
+    front view, +-pi = back) at height y -> projected X, Y and a visibility (> 0 = facing the camera)."""
+    phi = np.asarray(phi, float); y = np.asarray(y, float)
+    w = np.maximum(hm.W(np.clip(y, -119.9, 119.9)), 1.0) + grow
+    c_, s_ = np.cos(phi), np.sin(phi)
+    d = np.where(c_ > 0, hm.DF, hm.DB)
+    px = w * s_; pz = d * w * c_
+    y1 = hm.J(y) * hm.cp + pz * hm.spi
+    z1 = pz * hm.cp - y * hm.spi
+    X = px * hm.ct + z1 * hm.st
+    vis = -s_ * d * hm.st + c_ * hm.ct
+    return X, y1, vis
+
+
+def _winks_mouth(sp, P):
+    """Front-coords mouth of the dummy: (mw, cy, ym, yu, yl, ylo): half width, corner height and functions of x for the
+    mouth line (the top edge of the jaw block), the top of the painted teeth, the top of the upper lip and the bottom
+    of the lower lip (on the jaw block). pose.grin_w widens the painted grin in stages (0 .. 1.4)."""
+    g = max(0.0, P.grin_w)
+    mw = sp['mouth_w'] + 19.0 * g
+    cy = sp['mouth_y'] - 13.0 - 7.0 * g
+    y0 = sp['mouth_y'] + 6.0 + 4.0 * g
+    th = 9.5 + 5.0 * g
+    def u(x): return np.clip(1.0 - (np.asarray(x, float) / mw) ** 2, 0.0, 1.0)
+    def ym(x): return cy + (y0 - cy) * u(x) ** 0.85
+    def yu(x): return ym(x) - th * u(x) ** 0.55
+    def yl(x): return yu(x) - 6.5 * u(x) ** 0.5 - 1.2
+    def ylo(x): return ym(x) + 9.0 * u(x) ** 0.6 + 0.8
+    return mw, cy, ym, yu, yl, ylo
+
+
+def _winks_block(sp, P, mw, cy, ym):
+    """Front-coords outline of the jaw block: the mouth line, the two slot lines down to the jaw line, the chin."""
+    xs = np.linspace(-mw, mw, 17)
+    top = list(zip(xs.tolist(), ym(xs).tolist()))
+    xb = mw * 0.84
+    jy = lambda x: min(119.0, _jaw_y(sp, x) + 0.5)     # noqa: E731
+    right = [(mw - (mw - xb) * k / 4.0, cy + (jy(xb) - cy) * k / 4.0) for k in range(1, 5)]
+    chin = [(x, jy(x)) for x in np.linspace(xb, -xb, 15)[1:-1].tolist()]
+    left = [(-xb + (xb - mw) * k / 4.0, jy(xb) + (cy - jy(xb)) * k / 4.0) for k in range(0, 4)]
+    return top + right + chin + left
+
+
+def _fpath(hm, pts, dz=0.0, closed=True, k=0.9):
+    X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], dz)
+    return _pts_path(X, Y, closed, k), V
+
+
+_WINKS_FRECKLES = None
+
+
+def _winks_freckles():
+    global _WINKS_FRECKLES
+    if _WINKS_FRECKLES is None:
+        pts = []
+        for k in range(30):                                    # two cheek clusters and a sprinkle over the nose bridge
+            s = -1 if k % 2 else 1
+            if k < 22:
+                a = hash01(k, 301) * 2 * PI; r = 21.0 * math.sqrt(hash01(k, 302))
+                pts.append((s * (44 + r * math.cos(a) * 1.3), 8 + r * math.sin(a) * 0.75, 1.7 + 1.3 * hash01(k, 303)))
+            else:
+                pts.append((s * (6 + 15 * hash01(k, 304)), 2 + 10 * hash01(k, 305), 1.5 + 1.0 * hash01(k, 306)))
+        _WINKS_FRECKLES = pts
+    return _WINKS_FRECKLES
+
+
+# hairline cracks in the varnish (front coords), revealed one by one as pose.crack rises
+_WINKS_CRACKS = [
+    [(-46, 44), (-58, 30), (-63, 31), (-72, 18)],                         # from the left slot line up the cheek
+    [(30, -80), (22, -70), (26, -62), (18, -55)],                         # down from the hairline over the right brow
+    [(54, 50), (66, 64), (64, 74), (74, 86)],                             # off the right slot line
+    [(-20, -86), (-30, -74), (-26, -68), (-38, -60)],                     # forehead, left
+    [(-62, -10), (-76, -4), (-80, 8)],                                    # under the left eye, out to the temple
+    [(8, 96), (16, 104), (12, 112)],                                      # the chin
+]
+
+
+def _winks_eye(c, hm, sp, P, side, det, t, skin, sh):
+    """One glass eye under a wooden lid. side -1 = screen-left eye (character's right). Returns (X, Y, r, fs) or None."""
+    ex0 = side * sp['eye_dx']; ey0 = sp['eye_y']
+    X, Y, V = hm.map1(ex0, ey0, 3.0)
+    if V < 0.1: return None
+    fs = hm.sx(ex0, ey0)
+    r = sp['eye_r'] * (1.0 + 0.1 * P.wide)
+    rx = r * fs
+    dp = sp['skin_dp']
+    # carved socket: a soft dark ring round the eyeball
+    c.glow(X, Y + 1.5, rx * 1.5, r * 1.45, dp, 105 + 30 * P.desperate)
+    white = oval(X, Y, rx, r)
+    c.fill(white, '#efe7d0')
+    lidk = clamp(max(P.blink, P.lid_l if side > 0 else P.lid_r))
+    lock = clamp(P.lock)
+    lx = lerp(P.look_x, -math.sin(hm.yaw) * 0.8, lock)
+    ly = lerp(P.look_y, -math.sin(hm.pitch) * 0.9 - 0.06, lock)
+    ir = r * 0.47 * (1.0 - 0.14 * clamp(P.wide)) * (0.9 + 0.1 * P.pupil)
+    pr = ir * 0.46 * P.pupil
+    reach = r - ir - 1.5
+    px = X + lx * reach * fs; py = Y + ly * reach
+    irc = sp.get('iris', '#5d8db8')
+    with c.clip(white):
+        c.radial(white, X - rx * 0.15, Y - r * 0.2, r * 1.2, [(0, '#fffdf2', 0), (0.5, '#efe7d0', 0), (0.85, '#c9b996', 200), (1, '#8f7f62', 245)])
+        iris = oval(px, py, ir * fs, ir)
+        c.radial(iris, px - ir * 0.15 * fs, py - ir * 0.2, ir * 1.15, [(0, mix(irc, '#ffffff', 0.45), 255), (0.55, irc, 255),
+                                                                        (1, mix(irc, '#0b1420', 0.65), 255)])
+        if det >= 2:
+            sp_ = []
+            for k in range(14):
+                a = k * 2 * PI / 14 + 0.2
+                sp_.append(poly([(px + math.cos(a) * pr * 1.25 * fs, py + math.sin(a) * pr * 1.25),
+                                 (px + math.cos(a) * ir * 0.86 * fs, py + math.sin(a) * ir * 0.86)], False))
+            c.line(_multi(sp_), c.lw * 0.18, mix(irc, '#0b1420', 0.5), 150)
+        c.line(iris, c.lw * 0.45, '#101820', 230)
+        c.fill(oval(px, py, pr * fs, pr), '#07080b')
+        # the hard painted highlight + a second spark, and the glassy window reflection over the eyeball
+        hx, hy = px - ir * 0.36 * fs, py - ir * 0.4
+        c.fill(oval(hx, hy, max(1.6, ir * 0.24) * fs, max(1.6, ir * 0.27)), '#ffffff', 245)
+        c.fill(oval(px + ir * 0.34 * fs, py + ir * 0.32, max(1.0, ir * 0.1) * fs, max(1.0, ir * 0.1)), '#ffffff', 200)
+        if det >= 1:
+            c.line(smooth([(X - rx * 0.62, Y - r * 0.3), (X - rx * 0.3, Y - r * 0.66), (X + rx * 0.12, Y - r * 0.74)], False),
+                   c.lw * 0.7, '#ffffff', 90 * P.gloss)
+        dsp = clamp(P.desperate)
+        if dsp > 0.02:                       # the one inside: a wet shine along the bottom of the eye
+            c.fill(smooth([(X - rx, Y + r * 0.55), (X, Y + r * 0.8), (X + rx, Y + r * 0.55), (X, Y + r * 1.15)], True), '#bcd6f2', 150 * dsp)
+            c.line(smooth([(X - rx * 0.7, Y + r * 0.74), (X, Y + r * 0.86), (X + rx * 0.7, Y + r * 0.74)], False), c.lw * 0.35, '#ffffff', 170 * dsp)
+        if lidk > 0.01:                      # the wooden lid slides down over the eyeball (a dome: curved edge)
+            e = ease_in_out(lidk)
+            ye = Y - r * 1.08 + 1.72 * r * e
+            sag = r * (0.16 + 0.12 * e)
+            lid = smooth([(X - rx * 1.3, Y - r * 1.6), (X + rx * 1.3, Y - r * 1.6), (X + rx * 1.3, ye - sag * 0.3),
+                          (X + rx * 0.6, ye + sag * 0.75), (X, ye + sag), (X - rx * 0.6, ye + sag * 0.75), (X - rx * 1.3, ye - sag * 0.3)], True, 0.7)
+            lc = mix(skin, sh, 0.38)
+            c.fill(lid, lc)
+            c.grad(lid, 0, Y - r, 0, ye + sag, [(0, mix(lc, '#ffffff', 0.1), 255), (0.6, lc, 255), (1, mix(lc, dp, 0.5), 255)])
+            if det >= 1 and e > 0.5:                     # the carved crease of the lid
+                c.line(smooth([(X - rx * 0.8, Y - r * 0.55), (X, Y - r * 0.72), (X + rx * 0.8, Y - r * 0.55)], False), c.lw * 0.45, dp, 160 * e)
+            if det >= 1:
+                c.fill(oval(X - rx * 0.3, max(Y - r * 0.75, ye - r * 0.55), rx * 0.32, r * 0.1), '#ffffff', 90 * P.gloss)
+            edge = smooth([(X - rx * 1.05, ye - sag * 0.2), (X - rx * 0.5, ye + sag * 0.78), (X, ye + sag), (X + rx * 0.5, ye + sag * 0.78),
+                           (X + rx * 1.05, ye - sag * 0.2)], False)
+            c.line(edge, c.lw * (1.15 + 0.5 * e))
+    if lidk > 0.35:                          # painted lashes hanging from the lid's edge (over the eye outline)
+        e = ease_in_out(lidk); ye = Y - r * 1.08 + 1.72 * r * e; sag = r * (0.16 + 0.12 * e)
+        ls = []
+        for k in range(6):
+            u = -0.75 + 0.3 * k
+            x1 = X + u * rx; y1 = ye + sag * (1.0 - u * u * 0.85)
+            ls.append(poly([(x1, y1), (x1 + u * 5.0 * fs, y1 + 7.5)], False))
+        c.line(_multi(ls), c.lw * 0.55, '#2a1410', 255 * clamp((e - 0.35) / 0.3))
+    c.line(white, c.lw * 0.95)
+    if det >= 1 and lidk < 0.9:              # painted lashes: three on the outer upper corner, five below (doll style)
+        ls = []
+        for k in range(3):
+            a = -PI / 2 + side * (0.75 + 0.28 * k)
+            x1, y1 = X + math.cos(a) * rx * 1.0, Y + math.sin(a) * r * 1.0
+            ln = 8.0 + 2.0 * k
+            ls.append(poly([(x1, y1), (x1 + math.cos(a) * ln * fs, y1 + math.sin(a) * ln)], False))
+        for k in range(5):
+            a = PI / 2 + (k - 2) * 0.36
+            x1, y1 = X + math.cos(a) * rx * 1.04, Y + math.sin(a) * r * 1.04
+            ls.append(poly([(x1, y1), (x1 + math.cos(a) * 6.5 * fs, y1 + math.sin(a) * 6.5)], False))
+        c.line(_multi(ls), c.lw * 0.42, '#2a1410', 235)
+    return (X, Y, r, fs)
+
+
+def _winks_brow(c, hm, sp, P, side):
+    """Heavy arched painted brow: thick at the peak, tapering to a point outside."""
+    ex0 = side * sp['eye_dx']; r = sp['eye_r']
+    up = P.brow_up; ang = P.brow_angry; sad = clamp(P.brow_sad + P.desperate)
+    base = sp['eye_y'] - r - 6.0 - 5.0 * up                 # between the eyes and the hairline (a short carved forehead)
+    xi, yi = ex0 - side * 31.0, base + 3.0 + 11.0 * ang * (1 - sad) - 17.0 * sad
+    xp, yp = ex0 + side * 3.0 - side * 12.0 * sad, base - 10.0 - 3.0 * up + 3.0 * ang * (1 - sad) - 4.0 * sad
+    xo, yo = ex0 + side * 42.0, base + 4.0 - 6.0 * ang + 13.0 * sad
+    th = sp['brow_th']
+    top = [(xi, yi - th * 0.45), ((xi + xp) / 2, (yi + yp) / 2 - th * 0.62 - 3), (xp, yp - th * 0.55), ((xp + xo) / 2, (yp + yo) / 2 - th * 0.25 - 2), (xo, yo)]
+    bot = [((xp + xo) / 2, (yp + yo) / 2 + th * 0.2 - 1), (xp, yp + th * 0.5), ((xi + xp) / 2, (yi + yp) / 2 + th * 0.42 - 2), (xi, yi + th * 0.45)]
+    pts = top + bot
+    X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
+    if V.mean() < 0.1: return
+    p = _pts_path(X, Y, True, 0.85)
+    c.fill(p, sp['brow_c']); c.line(p, c.lw * 0.35, mix(sp['brow_c'], '#000000', 0.4))
+
+
+def _winks_cap(c, hm, sp, P, det, cl):
+    """Burgundy pillbox cap with gold braid and a brass button, perched on the crown, tipped to his right."""
+    x0, y0, z0 = -14.0, -116.0, -6.0
+    y1 = y0 * hm.cp + z0 * hm.spi; z1 = z0 * hm.cp - y0 * hm.spi
+    X = x0 * hm.ct + z1 * hm.st; Y = y1
+    roll = -15.0 * hm.ct + 10.0 * hm.st
+    e = clamp(0.2 + 0.78 * hm.spi + 0.05, 0.1, 0.88)
+    R, Hc = 40.0, 31.0
+    k = c.sub(X, Y + 4.0, roll)
+    body = union(rect(-R, -Hc, 2 * R, Hc), oval(0, 0, R, R * e))
+    k.fill(body, cl['cap'])
+    k.grad(body, -R, 0, R, 0, [(0, mix(cl['cap'], '#ffffff', 0.18), 255), (0.32, cl['cap'], 255), (0.75, cl['cap_sh'], 255), (1, mix(cl['cap_sh'], '#000000', 0.3), 255)])
+    if det >= 1: k.texture(body, 'fabric', 0.12, 0.45)
+    top = oval(0, -Hc, R, R * e)
+    k.fill(top, mix(cl['cap'], '#ffffff', 0.1))
+    k.radial(top, -R * 0.3, -Hc - R * e * 0.3, R * 1.1, [(0, mix(cl['cap'], '#ffffff', 0.22), 255), (1, cl['cap'], 255)], sy=max(e, 0.15))
+    k.line(body, c.lw)
+    # gold braid round the base and the rim
+    band = minus(union(rect(-R, -8.0, 2 * R, 8.0), oval(0, 0, R, R * e)), oval(0, -8.0, R, R * e))
+    k.fill(band, cl['braid']); k.grad(band, -R, 0, R, 0, [(0, '#f6e3a0', 255), (0.4, cl['braid'], 255), (1, '#7d5f22', 255)])
+    if det >= 1:
+        ts = [poly([(x_, -7.0 + R * e * math.sqrt(max(0.0, 1 - (x_ / R) ** 2))), (x_ + 3.0, R * e * math.sqrt(max(0.0, 1 - (x_ / R) ** 2)))], False)
+              for x_ in np.linspace(-R + 4, R - 6, 14).tolist()]
+        k.line(_multi(ts), c.lw * 0.25, '#7d5f22', 200)
+    k.line(band, c.lw * 0.5)
+    k.line(top, c.lw * 0.8)
+    rim = smooth([(-R, -Hc), (0, -Hc + R * e), (R, -Hc)], False)
+    k.line(rim, c.lw * 0.9, cl['braid']); k.line(rim, c.lw * 0.3, '#7d5f22', 200)
+    if hm.ct > -0.1:                         # the brass button on the front of the band
+        bx = R * math.sin(hm.yaw) * 0.95; by = -12.0 + R * e * math.cos(hm.yaw) * 0.9
+        br = 5.5 * (0.5 + 0.5 * max(0.0, hm.ct))
+        k.fill(oval(bx, by, br, br), cl['brass']); k.line(oval(bx, by, br, br), c.lw * 0.35)
+        k.fill(oval(bx - br * 0.3, by - br * 0.3, br * 0.32, br * 0.32), '#fff6c8', 230)
+
+
+def _winks_hair(c, hm, sp, P, det, sil):
+    """Painted, carved red hair: a hard side part on his left (phi ~ +0.42), the forelock swept across to his right,
+    grooves following the carving, varnish shine; covers the back of the head down to the nape."""
+    yf, grow = _hairline('painted', 1)
+    X, Y = hm.arc_phi(yf, 120)
+    if len(X) < 3: return None
+    region = poly([(float(X[0]) - 300, -420.0)] + [(float(x), float(y)) for x, y in zip(X, Y)] + [(float(X[-1]) + 300, -420.0)], True)
+    vol = hm.silhouette(grow=grow, y_top=-120 - grow * 0.5, y_bot=100)
+    hair = inter(union(vol, sil), region)
+    hc = sp['hair_c']; hsh = mix(hc, '#2a0a04', 0.42); hhi = mix(hc, '#ffd0a0', 0.35)
+    # the forelock throws a shadow band on the forehead under the hairline
+    if hm.map1(0, -60)[2] > 0.05:
+        sh_ = inter(minus(moved_path(hair, 2.0, 7.0), hair), sil)
+        c.fill(sh_, sp['skin_dp'], 110)
+    c.fill(hair, hc)
+    with c.clip(hair):
+        c.radial(None, -40 + 30 * hm.st, -100, 170, [(0, hhi, 150), (0.45, hc, 0), (1, hsh, 230)], clip=False)
+        if det >= 1:
+            gr = []
+            for k in range(6 if det >= 2 else 4):              # swept forelock: from the part across to his right temple
+                ph = np.linspace(0.36, -1.62, 14)
+                yy = (-121.0 + 8.5 * k) + (0.36 - ph) * (13.0 + 5.0 * k) - 7.0 * np.sin((0.36 - ph) * 1.4)
+                Xg, Yg, Vg = _sph(hm, ph, np.minimum(yy, 66.0), 1.5)
+                m = Vg > 0.02
+                if m.sum() > 2: gr.append(_pts_path(Xg[m], Yg[m], False, 0.9))
+            for k in range(4):                                  # the short side: combed down from the part
+                ph = np.linspace(0.5, 1.75, 10)
+                yy = (-118.0 + 9.0 * k) + (ph - 0.5) * (40.0 + 6.0 * k)
+                Xg, Yg, Vg = _sph(hm, ph, yy, 1.5)
+                m = Vg > 0.02
+                if m.sum() > 2: gr.append(_pts_path(Xg[m], Yg[m], False, 0.9))
+            for k in range(10):                                 # the back: combed down to the nape
+                ph0 = 1.75 + k * 0.28
+                ph0 = ph0 if ph0 <= PI else ph0 - 2 * PI
+                ys = np.linspace(-112.0, 66.0, 10)
+                ph = ph0 + 0.08 * np.sin((ys + 112.0) / 60.0)
+                Xg, Yg, Vg = _sph(hm, ph, ys, 1.5)
+                m = Vg > 0.02
+                if m.sum() > 2: gr.append(_pts_path(Xg[m], Yg[m], False, 0.9))
+            if gr: c.line(_multi(gr), c.lw * 0.42, hsh, 210)
+        # varnish shine along the crest of the swoop
+        ph = np.linspace(0.25, -1.1, 10)
+        Xs, Ys, Vs = _sph(hm, ph, -100.0 + (0.25 - ph) * 15.0, 2.0)
+        m = Vs > 0.1
+        if m.sum() > 2:
+            sl = _pts_path(Xs[m], Ys[m], False, 0.9)
+            c.line(sl, c.lw * 2.6, '#ffffff', 55 * P.gloss); c.line(sl, c.lw * 0.6, '#fff4e0', 150 * P.gloss)
+    # the part: a hard groove from the hairline back over the crown
+    ys = np.linspace(-87.0, -119.5, 7)
+    Xp, Yp, Vp = _sph(hm, np.full(7, 0.42), ys, 1.0)
+    m = Vp > 0.02
+    if m.sum() > 2: c.line(_pts_path(Xp[m], Yp[m], False, 0.9), c.lw * 0.75, mix(hsh, '#000000', 0.3))
+    c.line(hair, c.lw)
+    return hair
+
+
+def _winks_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
+    """Mister Winks's head on Ctx c (origin = head centre, head units). Returns the HeadMap."""
+    sp = sp or CAST[who]
+    cl = sp['cloth']
+    hm = HeadMap(sp, yaw, pitch, 0.0, 0.0)
+    skin, sh, dp = _skin_cols(sp, P, light)
+    sil_full = hm.silhouette()
+    cut = _nape_cut(hm, sp)
+    sil = minus(sil_full, cut) if cut is not None else sil_full
+    face_v = hm.map1(0, 0)[2]
+    gl = clamp(P.gloss)
+    for side in (-1, 1):                                       # far ear behind the skull
+        if -side * hm.st < 0.25: _ear(c, hm, sp, side, skin, sh, det)
+    # the jaw block, at rest and dropped
+    mw, cy, ym, yu, yl, ylo = _winks_mouth(sp, P)
+    J = 30.0 * clamp(P.jaw, 0.0, 1.2)
+    blk_pts = _winks_block(sp, P, mw, cy, ym)
+    B0, BV = _fpath(hm, blk_pts, 4.0, True, 0.55)
+    front = face_v > -0.2 and float(np.max(BV)) > 0.02
+    head = minus(sil, B0) if front else sil
+    jdx, jdy = 0.0, J * hm.cp
+    Bm = moved_path(B0, jdx, jdy) if front else None
+    # skull fill and shading (one shade step, painted wood under varnish)
+    c.fill(head, skin)
+    lsd = (light or {}).get('side', 1)
+    c.radial(head, -35.0 * lsd + hm.st * 20, -40, 165, [(0, mix(skin, '#ffffff', 0.12), 120), (0.55, skin, 0), (0.88, sh, 90), (1.0, sh, 160)], sy=1.1)
+    c.fill(_crescent(head, -lsd * 26, 5), sh, 50)
+    if cut is not None: c.fill(head, sh, 110 * clamp((-hm.ct - 0.2) / 0.4))
+    if det >= 2: c.texture(inter(head, rect(-130, -80, 260, 260)), 'paper', 0.05, 0.4)
+    if light and light.get('under'):
+        ua = light.get('under_a', 120)
+        c.grad(head, 0, -125, 0, 40, [(0, '#07080d', 0.6 * ua), (1, '#07080d', 0)])
+        c.radial(head, hm.st * 20, 150, 220, [(0, light['under'], ua), (0.55, light['under'], 0.45 * ua), (1, light['under'], 0)], sy=0.8)
+    if light and light.get('rim'):
+        c.fill(_crescent(sil, -lsd * 7, 3), light['rim'], light.get('rim_a', 70))
+    eyes = {}
+    if face_v > -0.35:
+        with (c.clip(hm.silhouette(grow=1.0)) if abs(hm.st) > 0.2 or abs(P.h_nod) > 0.3 else _noop()):
+            # rosy painted cheeks (hard edged), freckles, chip and cracks in the varnish
+            for side in (-1, 1):
+                bx_, by_, bv_ = hm.map1(side * 60, 14, 2)
+                if bv_ > 0.08:
+                    fs_ = hm.sx(side * 60, 14)
+                    c.radial(oval(bx_, by_, 21 * fs_, 19), bx_, by_, 21, [(0, sp['blush'], 200), (0.72, sp['blush'], 175), (0.9, sp['blush'], 90),
+                                                                         (1, sp['blush'], 0)], sy=19 / 21.0)
+            if det >= 1:
+                fr = _winks_freckles()
+                X_, Y_, V_ = hm.map([f[0] for f in fr], [f[1] for f in fr], 2.0)
+                dots = [oval(float(X_[i]), float(Y_[i]), fr[i][2] * hm.sx(fr[i][0], fr[i][1]), fr[i][2]) for i in range(len(fr)) if V_[i] > 0.1]
+                if dots: c.fill(_multi(dots), '#a5532f', 200)
+                cx_, cy_, cv_ = hm.map1(-80, 46, 2)
+                if cv_ > 0.15 and det >= 2:
+                    chip = poly([(cx_ - 4, cy_ - 3), (cx_ - 1, cy_ - 5), (cx_ + 3, cy_ - 4), (cx_ + 2, cy_ - 1), (cx_ + 4, cy_ + 2), (cx_, cy_ + 4),
+                                 (cx_ - 3, cy_ + 2), (cx_ - 2, cy_)])
+                    c.fill(chip, '#d9bd96'); c.line(chip, c.lw * 0.3, '#6e4a33', 220)
+                ncr = int(math.ceil(clamp(P.crack) * len(_WINKS_CRACKS) - 1e-6))
+                crs = []
+                for k in range(ncr):
+                    pts = _WINKS_CRACKS[k]
+                    X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 2.5)
+                    if V_.min() > 0.08: crs.append(_pts_path(X_, Y_, False, 0.3))
+                if crs:
+                    q = _multi(crs)
+                    c.line(moved_path(q, 0.8, 0.8), c.lw * 0.3, '#fff1e2', 120); c.line(q, c.lw * 0.32, '#4a2418', 220)
+            # the painted mouth above the jaw line: upper lip (red), the band of flat painted teeth
+            xs = np.linspace(-mw, mw, 25)
+            tpts = list(zip(xs.tolist(), yu(xs).tolist())) + list(zip(xs[::-1].tolist(), ym(xs[::-1]).tolist()))
+            teeth, TV = _fpath(hm, tpts, 4.5, True, 0.7)
+            lpts = list(zip(xs.tolist(), yl(xs).tolist())) + list(zip(xs[::-1].tolist(), yu(xs[::-1]).tolist()))
+            ulip, _ = _fpath(hm, lpts, 4.5, True, 0.7)
+            if float(np.max(TV)) > 0.02:
+                c.fill(teeth, '#f1ead8')
+                if det >= 1:
+                    c.grad(teeth, 0, float(hm.map1(0, float(yu(0.0)))[1]), 0, float(hm.map1(0, float(ym(0.0)))[1]),
+                           [(0, '#c9bea4', 255), (0.5, '#f1ead8', 0), (1, '#f1ead8', 0)])
+                n = int(10 + 6 * max(0.0, P.grin_w))
+                seps = []
+                for k in range(1, n):
+                    x_ = -mw + 2 * mw * k / n
+                    a0 = hm.map1(x_, float(yu(x_)) + 0.5, 4.6); a1 = hm.map1(x_ * 0.985, float(ym(x_)), 4.6)
+                    if a0[2] > 0.02 and abs(float(yu(x_)) - float(ym(x_))) > 1.0: seps.append(poly([(a0[0], a0[1]), (a1[0], a1[1])], False))
+                if seps: c.line(_multi(seps), c.lw * 0.32, '#8c7f68', 230)
+                c.fill(ulip, sp['lip'])
+                if det >= 1:
+                    hx, hy, hv = hm.map1(-mw * 0.3, float(yl(-mw * 0.3)) + 2.0, 5.0)
+                    if hv > 0.1: c.fill(oval(hx, hy, 7 * hm.sx(-mw * 0.3, 40), 1.6), '#ffffff', 140 * gl)
+                c.line(ulip, c.lw * 0.5, mix(sp['lip'], '#000000', 0.5))
+                c.line(teeth, c.lw * 0.45, '#6b5b48', 200)
+            for side in (-1, 1):
+                eyes[side] = _winks_eye(c, hm, sp, P, side, det, t, skin, sh)
+                _winks_brow(c, hm, sp, P, side)
+            # a tear from the one inside (pose.tears): a single wet streak down the painted cheek
+            if P.tears > 0.02:
+                for side in (-1, 1):
+                    if eyes.get(side) is None: continue
+                    x0 = side * (sp['eye_dx'] - 6); y0 = sp['eye_y'] + sp['eye_r'] * 0.95
+                    L_ = 70.0 * clamp(P.tears * 1.2)
+                    ys_ = np.linspace(y0, y0 + L_, 8); xs_ = x0 + side * 4.0 * np.sin((ys_ - y0) / 30.0)
+                    Xt, Yt, Vt = hm.map(xs_, ys_, 3.0)
+                    if Vt.min() > 0.1:
+                        tp = _pts_path(Xt, Yt, False)
+                        c.line(tp, c.lw * 1.1, '#a8c8f0', 200 * clamp(P.tears)); c.line(tp, c.lw * 0.3, '#ffffff', 200 * clamp(P.tears))
+    # the open mouth: the black hollow behind the teeth, then the jaw block on top
+    if front:
+        if J > 0.3:
+            hole = minus(B0, Bm)
+            c.fill(hole, '#14060a')
+            hb = hole.getBounds()
+            with c.clip(hole):
+                c.radial(None, hb.centerX(), hb.bottom(), max(hb.width(), 1.0) * 0.55, [(0, '#5c1218', 200), (0.6, '#2a0a0e', 120), (1, '#14060a', 0)],
+                         sy=0.45, clip=False)
+            c.line(hole, c.lw * 0.6)
+        c.fill(Bm, skin)
+        bb = Bm.getBounds()
+        c.radial(Bm, -30.0 * lsd + hm.st * 20 + jdx, -40 + jdy, 165, [(0, skin, 0), (0.62, skin, 0), (0.9, sh, 110), (1.0, sh, 170)], sy=1.1)
+        c.grad(Bm, 0, bb.top() + bb.height() * 0.45, 0, bb.bottom(), [(0, dp, 0), (1, dp, 90)])
+        if light and light.get('under'):
+            c.radial(Bm, hm.st * 20 + jdx, 150 + jdy, 220, [(0, light['under'], light.get('under_a', 120)), (1, light['under'], 0)], sy=0.8)
+        if face_v > -0.35:
+            for side in (-1, 1):                               # the cheek circles run on over the slot lines
+                bx_, by_, bv_ = hm.map1(side * 60, 14, 2)
+                if bv_ > 0.08:
+                    fs_ = hm.sx(side * 60, 14)
+                    with c.clip(Bm):
+                        c.radial(oval(bx_ + jdx, by_ + jdy, 21 * fs_, 19), bx_ + jdx, by_ + jdy, 21,
+                                 [(0, sp['blush'], 200), (0.72, sp['blush'], 175), (0.9, sp['blush'], 90), (1, sp['blush'], 0)], sy=19 / 21.0)
+            xs = np.linspace(-mw, mw, 25)
+            lpts = list(zip(xs.tolist(), ym(xs).tolist())) + list(zip(xs[::-1].tolist(), ylo(xs[::-1]).tolist()))
+            llip, LV = _fpath(hm, lpts, 4.5, True, 0.7)
+            llip = moved_path(llip, jdx, jdy)
+            c.fill(llip, mix(sp['lip'], '#000000', 0.08))
+            if det >= 1:
+                hx, hy, hv = hm.map1(mw * 0.15, float(ylo(mw * 0.15)) - 3.0, 5.0)
+                if hv > 0.1: c.fill(oval(hx + jdx, hy + jdy, 9 * hm.sx(mw * 0.15, 60), 2.0), '#ffffff', 150 * gl)
+                ch_ = hm.map1(0, 104, 4.0)
+                if ch_[2] > 0.1:
+                    c.line(smooth([(ch_[0] - 9 + jdx, ch_[1] - 2 + jdy), (ch_[0] + jdx, ch_[1] + 2 + jdy), (ch_[0] + 9 + jdx, ch_[1] - 2 + jdy)], False),
+                           c.lw * 0.4, dp, 150)
+                    c.fill(oval(ch_[0] - 10 + jdx, ch_[1] - 8 + jdy, 10, 4), '#ffffff', 90 * gl)
+            c.line(llip, c.lw * 0.5, mix(sp['lip'], '#000000', 0.5))
+            if det >= 1 and P.crack > 0.3:
+                X_, Y_, V_ = hm.map([-30, -22, -26], [96, 104, 112], 2.5)
+                if V_.min() > 0.08: c.line(moved_path(_pts_path(X_, Y_, False, 0.3), jdx, jdy), c.lw * 0.3, '#4a2418', 200)
+        # deep slot grooves: a shadow line on the head side of each marionette line
+        if face_v > -0.35:
+            xb = mw * 0.84
+            for side in (-1, 1):
+                pts = [(side * (mw + 2.5), cy + 3), (side * (xb + 2.5), min(118.0, _jaw_y(sp, xb)) - 2)]
+                X_, Y_, V_ = hm.map([p[0] for p in pts], [p[1] for p in pts], 3.0)
+                if V_.min() > 0.05: c.line(_pts_path(X_, Y_, False), c.lw * 0.7, dp, 140)
+        c.line(Bm, c.lw * 1.05)
+    c.line(head, c.lw)
+    if face_v > -0.35:
+        # button nose: a round tip with two nostrils and a varnish spark
+        nx, ny, nv = hm.map1(0, 20, 5.0)
+        if nv > -0.4:
+            fs_ = max(0.78, hm.sx(0, 20, 5.0))
+            nose = oval(nx, ny, 12.5 * fs_, 10.5)
+            c.fill(nose, mix(skin, sh, 0.12))
+            c.radial(nose, nx - 3 * fs_, ny - 3, 14, [(0, mix(skin, '#ffffff', 0.2), 255), (0.7, mix(skin, sh, 0.1), 255), (1, sh, 255)])
+            if abs(hm.st) < 0.55:
+                for s2 in (-1, 1):
+                    c.fill(oval(nx + s2 * 5.0 * fs_, ny + 6.0, 2.6 * fs_, 1.8), dp, 220)
+            c.line(nose, c.lw * 0.7)
+            c.fill(oval(nx - 4 * fs_, ny - 4, 3.2 * fs_, 2.4), '#ffffff', 210 * gl)
+        # varnish highlights on the forehead and the cheeks
+        if det >= 1 and gl > 0.02:
+            fx, fy, fv = hm.map1(-30, -56, 2)
+            if fv > 0.1:
+                c.glow(fx, fy, 22 * hm.sx(-30, -56), 8, '#ffffff', 80 * gl)
+                c.line(smooth([(fx - 10 * hm.sx(-30, -56), fy + 2), (fx, fy - 2), (fx + 9 * hm.sx(-30, -56), fy)], False), c.lw * 0.45, '#ffffff', 120 * gl)
+            for side in (-1, 1):
+                hx, hy, hv = hm.map1(side * 52, 4, 2)
+                if hv > 0.12: c.fill(oval(hx - 4, hy, 5.5 * hm.sx(side * 52, 4), 3.2), '#ffffff', 150 * gl)
+    hair = _winks_hair(c, hm, sp, P, det, sil_full)
+    for side in (-1, 1):
+        if -side * hm.st >= 0.25: _ear(c, hm, sp, side, skin, sh, det)
+    _winks_cap(c, hm, sp, P, det, cl)
+    if light and light.get('under'):                       # the flashlight under his chin: dark above, a hot glow below
+        ua = light.get('under_a', 120)
+        allp = union(sil_full, hair) if hair is not None else sil_full
+        if front and Bm is not None: allp = union(allp, Bm)
+        c.grad(allp, 0, -160, 0, 30 + J, [(0, '#05060a', 0.8 * ua), (0.6, '#05060a', 0.35 * ua), (1, '#05060a', 0)])
+        c.radial(allp, hm.st * 20, 130 + J, 150, [(0, light['under'], 0.75 * ua), (0.5, light['under'], 0.3 * ua), (1, light['under'], 0)], sy=0.9)
+    return hm
+
+
 # ====================================================================================================== self-test
 def _selftest():
     """python3 characters.py --selftest : acting regressions for the v2.1 fixes (prints and asserts)."""
@@ -5266,26 +7200,36 @@ def _selftest():
         ear_y = B.yc - CAST[who]['hh'] / 2
         assert W[1] < B.y_sh and abs(W[1] - ear_y) < 0.6 * CAST[who]['hh'], ('phone_to_ear', who, W, ear_y)
         out.append('phone_to_ear %s: wrist %.0f above the shoulder, %.0f below the ear' % (who, B.y_sh - W[1], W[1] - ear_y))
-    # lip sync follows the voice envelope (when the narration is available): the driver's 'Signature required, I just
-    # need someone to sign.' (70.0-73.5 s); with his default 0.2 s mouth lag the best match is ~0.2 s late
+    # lip sync follows the voice envelope (this film's narration): Owen's 'Look! I'm doing it! Grandpa said his mouth was
+    # stuck.' (534.69-537.94 s); the driver's mouth (kept for the delivery cast) lags the voice by ~0.2 s on the same line
     env = voice_envelope()
     if env is not None:
-        ts = np.arange(69.8, 73.7, 1 / 60.0)
+        ts = np.arange(534.5, 538.2, 1 / 60.0)
         ev = np.array([10 ** (_env_db(env, t) / 20.0) for t in ts])
-        a = Acting('driver', seed=1, arc=False); a.talk([(70.0, 71.35, None), (71.96, 73.51, None)], lag=0.0)
+        iv = [(534.69, 535.09, 'Look'), (535.09, 535.86, "I'm doing it"), (536.05, 537.94, 'Grandpa said his mouth was stuck')]
+        a = Acting('owen', seed=1); a.talk(iv)
         mo = np.array([a.at(t).m_open for t in ts])
         r = float(np.corrcoef(mo, ev)[0, 1])
         assert r > 0.5, ('lip sync', r)
-        a2 = Acting('driver', seed=1, arc=False); a2.talk([(70.0, 71.35, None), (71.96, 73.51, None)])
+        a2 = Acting('driver', seed=1, arc=False); a2.talk(iv)
         mo2 = np.array([a2.at(t).m_open for t in ts])
         best = max(range(0, 30), key=lambda k: np.corrcoef(mo2[k:], ev[:len(ev) - k])[0, 1] if k else np.corrcoef(mo2, ev)[0, 1])
         assert 0.12 <= best / 60.0 <= 0.3, ('mouth lag', best / 60.0)
-        out.append('lip sync r = %.2f (driver line 28-30); driver mouth lags the voice by %.2f s' % (r, best / 60.0))
+        out.append('lip sync r = %.2f (Owen, 534.7 s); driver mouth lags the voice by %.2f s' % (r, best / 60.0))
+        # Mister Winks's jaw: drops and snaps shut syllable by syllable on his joke (271.29-274.38 s), a clack each time
+        ts = np.arange(271.0, 275.0, 0.01)
+        ev = np.array([10 ** (_env_db(env, t) / 20.0) for t in ts])
+        d = Acting('winks', seed=1); d.talk([(271.29, 274.38, "Why does a dummy always sit on the ventriloquist's knee")])
+        jw = np.array([d.at(t).jaw for t in ts])
+        rs = [float(np.corrcoef(jw[max(0, l):len(jw) + min(0, l)], ev[max(0, -l):len(ev) - max(0, l)])[0, 1]) for l in range(-8, 9)]
+        cl = [e for e in d.events if e['name'] == 'dummy_clack']
+        assert max(rs) > 0.65 and len(cl) >= 8 and jw.max() > 0.8 and np.mean(jw < 0.1) > 0.3, ('jaw sync', max(rs), len(cl))
+        out.append('jaw sync r = %.2f (best lag %+.2f s), %d clacks on the joke' % (max(rs), (int(np.argmax(rs)) - 8) * 0.01, len(cl)))
     # the driver's smile widens stage by stage over the film, drops to nothing at 'no_smile', returns wider
     a = Acting('driver', seed=2)
     sm = [(tt, a.at(tt).smile, a.at(tt).grin) for tt in (30, 100, 160, 200, 345, 440, 460)]
     gr = [g for _, _, g in sm]
-    assert sm[0][1] < 0.2 < sm[1][1] and gr[2] < gr[3] < gr[4] < gr[6] and sm[5][1] < 0.05, ('smile arc', sm)
+    assert gr[0] < gr[1] < gr[2] < gr[3] < gr[4] < gr[6] and sm[5][1] < 0.05, ('smile arc', sm)
     out.append('driver smile arc: ' + ', '.join('%.0fs %.2f/%.2f' % x for x in sm))
     ev = a.eye_flash(371.0, 0.5)
     assert a.at(371.2).eyeshine > 0.9 and a.at(371.8).eyeshine < 0.05 and ev[0]['name'] == 'stinger'
@@ -5301,7 +7245,42 @@ def _selftest():
     d = Acting('driver', seed=1); escalate(d, 436.0, 446.0)
     assert d.at(441.0).smile < 0.05 and d.at(441.0).still > 0.95
     out.append('escalate: mom tremble at 380 s, driver still 436-446 s')
-    for o in out: print(o)
+    # ---- dummy film
+    # Mister Winks's arc: the grin widens and the pupils shrink stage by stage; asleep (lids shut) after "Goodnight, Owen"
+    # until "he opens his eyes"; Owen inside = desperate brows
+    w = Acting('winks', seed=2)
+    g = [w.at(tt).grin_w for tt in (100, 178, 252, 318, 404, 530)]
+    pu = [w.at(tt).pupil for tt in (100, 178, 252, 318, 404, 530)]
+    assert all(g[i] < g[i + 1] for i in range(5)) and all(pu[i] > pu[i + 1] for i in range(5)), ('winks arc', g, pu)
+    assert w.at(600.0).lid_l > 0.95 and w.at(658.5).lid_l < 0.05 and w.at(658.5).desperate > 0.95, 'winks asleep / awake'
+    out.append('winks arc grin_w %s, asleep 567-656 s, Owen inside after' % ' '.join('%.2f' % x for x in g))
+    # jaw: drop hangs, the slow close ends on a clack and stays shut; wink / try_wink lids; ticks from escalate
+    w = Acting('winks', seed=3); ev = w.jaw_drop(1.0) + w.clack(3.0, 1.2)
+    assert w.at(1.5).jaw > 0.95 and 0.05 < w.at(2.6).jaw < 0.9 and w.at(3.2).jaw < 0.01 and w.at(5.0).jaw < 0.01, 'jaw drop / clack'
+    assert [e['name'] for e in ev] == ['dummy_jaw', 'dummy_clack']
+    ev = w.wink(6.0)
+    assert w.at(6.2).lid_l > 0.95 and w.at(6.2).lid_r < 0.05 and w.at(6.8).lid_l < 0.05 and len(ev) == 2
+    ev = w.try_wink(8.0, gap=0.7)
+    assert w.at(8.2).lid_l > 0.95 and w.at(8.2).lid_r < 0.05 and w.at(8.9).lid_r > 0.95, 'try_wink: both lids close'
+    w2 = Acting('winks', seed=3); w2.sit_dummy(); escalate(w2, 405.0, 420.0)
+    assert sum(1 for e in w2.events if e['name'] == 'wood_creak') >= 3, 'winks ticks'
+    out.append('winks jaw drop / slow clack, wink, try_wink (both lids), %d ticks in 15 s at S4' % len(w2.events))
+    # every new cast member draws in every view, full body and bust; composites draw
+    set_render_size(480, 270)
+    surf = skia.Surface(CFG.rw, CFG.rh); pen = Pen(surf.getCanvas()); surf.getCanvas().scale(CFG.k, CFG.k)
+    for who in ('winks', 'grandpa', 'grandpa_bed', 'walter', 'walter74', 'mom', 'owen', 'owen_new', 'you'):
+        for yaw in (0.0, 0.5, -0.5, 1.0, 2.0):
+            draw(pen, who, 960, 1000, 700, Pose(turn=yaw, jaw=0.6, lid_l=0.5))
+            draw_bust(pen, who, 960, 540, 0.6, Pose(h_turn=yaw, sit=0.5))
+    d = Acting('winks', seed=1); d.sit_dummy(); o = Acting('owen', seed=1); o.vent_pose()
+    draw_lap(pen, 'owen', 900, 1000, 600, o.at(1.0), d.at(1.0), side=1, m=1.32)
+    y_ = Acting('you', seed=1); y_.hold_dummy(); d2 = Acting('winks', seed=1); d2.carried()
+    draw_carry(pen, 'you', 900, 1000, 700, y_.at(1.0), d2.at(1.0))
+    d3 = Acting('winks', seed=1); d3.face_down(); draw(pen, 'winks', 900, 1000, 400, d3.at(1.0))
+    ax, ay = lap_anchor('owen', o.at(1.0), 1, 900, 1000, 600)
+    assert 900 < ax < 1000 and 700 < ay < 900, ('lap anchor', ax, ay)
+    out.append('all 9 dummy-film cast ids draw in 5 views (full + bust); draw_lap / draw_carry / face_down ok')
+    for o_ in out: print(o_)
     print('characters self-test ok')
 
 
