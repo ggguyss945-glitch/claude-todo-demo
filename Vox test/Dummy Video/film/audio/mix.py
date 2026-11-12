@@ -9,8 +9,12 @@ CLI
                    [--who-fx X=hall,...]  voice FX for every line of a speaker that has no fx in the timeline
                                     (default X=hall: the hallway voice; --who-fx '' turns it off)
                    [--plan auto|off]  auto (default): a music_cues.json with no track_map gets the music map of
-                                    audio/music_plan.py (film.py writes none); a sheet with no events also gets the
-                                    plan's events and intensity. Windowed renders shift the map with the window.
+                                    audio/music_plan.py (film.py writes none); a sheet with no 'show' / 'winks' events
+                                    gets the plan's IDENTITY (the show theme on the TV, Mister Winks's theme, the music
+                                    box; film.py 'theme' cues inside those spans are dropped, the others play as Winks
+                                    phrases); a sheet with no events also gets the plan's events and intensity.
+                                    Windowed renders shift the map with the window.
+                   [--score-stems]  also write the raw score stems of the window (stems/score_<stem>.wav; tests)
                    [--fallback]     force the placeholder drone instead of audio/score.py
                    [--bed-p50 -16]  target bed (music + SFX) 3 s short-term median, LU rel voice (true K-weighting)
                    [--bed-rel -13]  reference integrated bed level; the bed is capped at bed_rel + 1.5
@@ -545,8 +549,14 @@ def with_plan(mcues, tl):
         if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks') for e in ev):
             idt = MP.identity_events(lines)
             have_motif = any(e.get('type') == 'motif' for e in ev)
-            ev = ev + [e for e in idt if not (have_motif and e['type'] == 'motif')]
-            what.append('identity (show / winks%s)' % ('' if have_motif else ' / motif'))
+            add = [e for e in idt if not (have_motif and e['type'] == 'motif')]
+            spans = [(e['t'] - 1.0, e['t'] + float(e.get('len', 0)) + 1.0) for e in add if e['type'] in ('show', 'winks')]
+            # film.py's own 'theme' cues that fall inside a planned show / Winks theme would play the same tune twice
+            # at once: the plan's arrangement takes over there; the others stay (score.py plays them as Winks phrases)
+            drop = [e for e in ev if e.get('type') == 'theme' and any(a <= float(e.get('t', 0)) <= b for a, b in spans)]
+            ev = [e for e in ev if not any(e is d for d in drop)] + add
+            what.append('identity (show / winks%s%s)' % ('' if have_motif else ' / motif',
+                                                          f', {len(drop)} overlapping film.py theme cues dropped' if drop else ''))
         out['events'] = sorted(ev, key=lambda e: float(e.get('t', 0)))
         if what:
             log(f'music plan: {" + ".join(what)} from music_plan.py ({len(out.get("track_map") or [])} sections)')

@@ -160,7 +160,6 @@ MAP = {
     'hospital_tone': [['room_tone']],
     'museum_tone': [['room_tone']],
     'keys_jangle': [['keys_jingle'], ['keys', 'jingle']],
-    'scream_hit': [['scream', 'female'], ['stinger']],
 }
 
 

@@ -1,4 +1,5 @@
-"""Measure a delivery-film mix (mix.py output dir) against the final-mix targets and list misfires.
+"""Measure a mix of this film (mix.py output dir; the dummy film, built on the delivery film's) against the final-mix
+targets and list misfires.
 
     python3 audio/measure_mix.py _work/mix/final [--cues _work/cues] [--mix mix.wav] [--no-cues] [--plot]   (from film/)
 
@@ -35,8 +36,13 @@ HOP = 0.05
 SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutter', 'cloth_rustle', 'tinnitus', 'riser',
               'whoosh', 'door_creak', 'box_creak', 'box_scrape', 'van_pull_away', 'window_slide', 'heartbeat', 'car_pass',
               'typing', 'stylus_scribble', 'clock_tick', 'chain_lock', 'van_door_slide', 'glitch', 'footsteps_porch',
-              'footsteps_wood_inside', 'footsteps_stairs', 'footsteps_hall', 'paper', 'crowd_whisper', 'siren_far')
-HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop')
+              'footsteps_wood_inside', 'footsteps_stairs', 'footsteps_hall', 'paper', 'crowd_whisper', 'siren_far',
+              # the dummy film: swells, slides, waves and creaks have no single transient
+              'wood_creak', 'velvet', 'spoon_stir', 'hand_slot', 'studio_laugh', 'applause', 'owen_cry', 'owen_giggle',
+              'tv_on', 'vcr', 'lamp_flicker', 'paper_slide', 'case_lid', 'glove_lift', 'sip', 'snort', 'heart_monitor',
+              'tape_glitch', 'winks_laugh', 'tiny_steps', 'keys_jangle', 'hand_squeeze', 'mom_scream', 'tv_voice',
+              'clock_chime', 'rule_lie', 'monitor_flatline', 'tape_hiss', 'old_clock')
+HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit')
 
 
 def lev(x, win=0.4, hop=HOP):

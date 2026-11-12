@@ -399,8 +399,7 @@
    "set": "dummy",
    "slug": "voices_scream_female_scream_falling_short",
    "serves": [
-    "mom_scream",
-    "scream_hit"
+    "mom_scream"
    ],
    "dur": 0.54,
    "sr": 48000,
@@ -413,8 +412,7 @@
    "set": "dummy",
    "slug": "voices_scream_female_scream_mid",
    "serves": [
-    "mom_scream",
-    "scream_hit"
+    "mom_scream"
    ],
    "dur": 0.56,
    "sr": 48000,
@@ -427,8 +425,7 @@
    "set": "dummy",
    "slug": "voices_scream_female_scream_short",
    "serves": [
-    "mom_scream",
-    "scream_hit"
+    "mom_scream"
    ],
    "dur": 0.83,
    "sr": 48000,
@@ -1198,7 +1195,6 @@
    "serves": [
     "braam",
     "impact_hit",
-    "scream_hit",
     "stinger"
    ],
    "dur": 9.37,
@@ -1331,7 +1327,6 @@
    "slug": "designed_stinger_cinematic_hit_impact_big_dark_creepy_horror_04",
    "serves": [
     "impact_hit",
-    "scream_hit",
     "stinger"
    ],
    "dur": 5.6,
@@ -1346,7 +1341,6 @@
    "slug": "designed_stinger_cinematic_hit_impact_horror_hard_scary",
    "serves": [
     "impact_hit",
-    "scream_hit",
     "stinger"
    ],
    "dur": 5.41,
@@ -1361,7 +1355,6 @@
    "slug": "designed_stinger_hit_impact_dark_creepy_eerie_powerful_reverberant",
    "serves": [
     "impact_hit",
-    "scream_hit",
     "stinger"
    ],
    "dur": 3.97,

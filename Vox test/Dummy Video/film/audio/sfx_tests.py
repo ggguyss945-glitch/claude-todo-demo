@@ -30,8 +30,8 @@ and the measurements:
     momentary max vs the narration's there), vs_music_LU (vs the music stem there: does it read over the score)
     per identity event (the show theme / the Winks theme, from stems/score_show.wav): its 1 s loudness median vs the
     voice's integrated level, and its share of energy in the voice band (1-4 kHz)
-    flags: a cue more than 40 ms off, thinner than -15 dB on a phone, more than 20 LU under the voice or 12 LU under the
-    music; an identity layer more than 24 LU under the voice
+    flags: a cue more than 40 ms off, thinner than -15 dB on a phone, more than 20 LU under the voice (his per-word
+    'speech' jaw ticks: 26) or 12 LU under the music; an identity layer more than 24 LU under the voice
 """
 import json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -174,7 +174,9 @@ def t04_hand_inside():
         ev(A('s159') + 0.4, 'cloth_rustle', -10.0, kind='slot', dur=1.4),     # the hand through the slot
         ev(A('s161') + 0.6, 'wood_creak', -12.0, 'tight', kind='tick', dur=0.12),
         ev(A('w163:takes') + 0.2, 'hand_squeeze', -6.0),               # it takes hold of my hand
-        ev(374.90, 'hand_squeeze', -10.0), ev(375.86, 'hand_squeeze', -10.0), ev(376.66, 'hand_squeeze', -10.0),
+        # the three squeezes a beat BEFORE "Once." "Twice." "Three times." (the cast puts them on the words, where the
+        # narration buries them: tests measured -20..-26 LU under the voice there)
+        ev(374.60, 'hand_squeeze', -6.0), ev(375.56, 'hand_squeeze', -6.0), ev(376.36, 'hand_squeeze', -6.0),
         ev(A('w169:fingertips') + 0.2, 'paper', -10.0, dur=0.6),      # something folded, like paper
         ev(A('w184:pull') + 0.1, 'cloth_rustle', -10.0, kind='slot', dur=0.8),   # I pull my hand out
         ev(A('w185:clacks'), 'dummy_clack', 0.0, 'tight', kind='snap'),  # his jaw clacks shut
@@ -233,9 +235,9 @@ def t08_ending():
     sting = A('s330')
     return a, b, [
         ev(a, 'room_tone_house', 0.0, dur=museum - a + 0.5),
-        ev(A('w319:museum'), 'car_pass', -2.0, 'window', kind='arrive', dur=5.0),   # the man from the museum comes
-        ev(A('s324') + 0.4, 'car_door_close', -6.0, 'window'),
-        ev(A('w324:waves') + 0.5, 'van_pull_away', 0.0, 'window', dur=6.0),          # the van pulls away
+        ev(A('w319:museum'), 'car_pass', 2.0, 'window', kind='arrive', dur=5.0),   # the man from the museum comes
+        ev(A('s324') + 0.4, 'car_door_close', -2.0, 'window'),
+        ev(A('w324:waves') + 0.5, 'van_pull_away', 3.0, 'window', dur=6.0),          # the van pulls away
         ev(museum, 'museum_tone', 0.0, dur=sting - museum + 0.3),
         ev(684.9, 'eyelid_click', -2.0, 'behind_glass', kind='shut'),  # he'll try to wink at you
         ev(685.35, 'eyelid_click', -2.0, 'behind_glass', kind='shut'),
@@ -308,9 +310,10 @@ def measure(name, a, b, cues, odir):
             w.append(f"transient {ck['transient_ms']} ms off the cue")
         if ck['phone_band_db'] < -15 and e['resolved'] not in ('goodnight_hit',):
             w.append(f"{ck['phone_band_db']} dB above 300 Hz (thin on a phone)")
-        if (ck['vs_voice_LU'] or 0) < -20:
+        speech_tick = e['resolved'] == 'dummy_clack' and (e.get('params') or {}).get('kind') == 'speech'
+        if (ck['vs_voice_LU'] or 0) < (-26 if speech_tick else -20):   # his per-word ticks ride under his own line
             w.append(f"{ck['vs_voice_LU']} LU under the voice there")
-        if (ck['vs_music_LU'] or 0) < -12:
+        if (ck['vs_music_LU'] or 0) < -12 and not speech_tick:
             w.append(f"{ck['vs_music_LU']} LU under the music there")
         if w:
             flags.append(f"{e['t']} {e['resolved']}: " + ', '.join(w))
@@ -331,7 +334,16 @@ def measure(name, a, b, cues, odir):
             ident.append(r)
             if r['level_1s_median_rel_voice_LU'] is None or r['level_1s_median_rel_voice_LU'] < -24:
                 flags.append(f"{e['t']} {e['type']}: {r['level_1s_median_rel_voice_LU']} LU under the voice (lost)")
-    return log, ident, flags
+    sfx_ = sf.read(os.path.join(sd, 'sfx.wav'), dtype='float32')[0]
+    prof = []
+    for j in range(int(len(voice) / SR)):
+        seg = slice(j * SR, (j + 1) * SR)
+        row = [round(a + j, 1)]
+        for x in (voice, music, sfx_) + ((show,) if show is not None else ()):
+            m = x[seg]
+            row.append(round(SX.mom_max(m) - Lv, 1) if np.abs(m).max() > 1e-6 else -99.0)
+        prof.append(row)
+    return log, ident, flags, prof
 
 
 def run(k):
@@ -356,8 +368,9 @@ def run(k):
         print(name, 'FAILED\n', r.stdout[-2500:], r.stderr[-2500:]); return name, None
     os.replace(os.path.join(odir, 'mix_en.wav'), os.path.join(OUT, name + '.wav'))
     rep = json.load(open(os.path.join(odir, 'mix_report.json')))
-    log, ident, flags = measure(name, a, b, cues, odir)
+    log, ident, flags, prof = measure(name, a, b, cues, odir)
     json.dump({'film_window': [a, b], 'about': fn.__doc__ or '', 'report': rep, 'identity': ident, 'flags': flags,
+               'profile_1s_cols': ['film s', 'voice', 'music', 'sfx', 'show'], 'profile_1s': prof,
                'cues': log, 'seconds': round(time.time() - t0, 1)},
               open(os.path.join(OUT, name + '.json'), 'w'), indent=1)
     import shutil
@@ -371,11 +384,11 @@ def run(k):
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    args = [x for x in sys.argv[1:] if not x.startswith('--')]
+    argv = sys.argv[1:]
     jobs = 2
-    if '--jobs' in sys.argv:
-        jobs = int(sys.argv[sys.argv.index('--jobs') + 1]); args = [x for x in args if x != str(jobs)]
-    which = [int(x) for x in args] or list(range(1, len(TESTS) + 1))
+    if '--jobs' in argv:
+        k = argv.index('--jobs'); jobs = int(argv[k + 1]); argv = argv[:k] + argv[k + 2:]
+    which = [int(x) for x in argv if not x.startswith('--')] or list(range(1, len(TESTS) + 1))
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
         for name, flags in ex.map(run, which):
             for f in flags or []:

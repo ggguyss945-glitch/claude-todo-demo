@@ -2,6 +2,10 @@
 
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
+This film uses four Epidemic sets (catalogued in audio/catalog_epidemic_dummy.json, never copied out of
+_work/samples, never committed): the dummy set (_work/samples/epidemic: 35 effects and 11 vintage tracks), and the
+delivery, police and mirror sets through the symlinks in _work/samples. Keep the channel connected in the Epidemic
+account so Content ID does not claim the show theme (Balloon Twister) or the 1962 tune (Ye Olde Piano Roll).
 A line whose files the final mix does not use may be dropped; keeping every line is always safe.
 
 ```

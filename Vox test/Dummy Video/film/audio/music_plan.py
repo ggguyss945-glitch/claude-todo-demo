@@ -61,9 +61,11 @@ TRACK_MAP = [
     ('s52', 'the_logic_of_tyrants_hampus_naeselius', 62.0,
      'rule 1 (the empty case, the warm velvet, the spoon, the clinks, Winks in Grandpa\'s chair, two sugars): from '
      'the track\'s quiet dip (62 s), a low pulse building to "like he\'s lived here a lot longer than any of us"'),
-    ('s77', 'dark_forebodings_ethan_sloan', 4.0,
+    ('s77', 'from_hell_christoffer_moe_ditlevsen', 4.0,
      'rule 2 (the voices upstairs, "See you in the morning, kiddo", the head turned all the way, the slow clack): the '
-     'police film\'s flat dark drone, the calm second quarter'),
+     'police set\'s unpulsed, mid-register dread (Bb -> A minor, centroid 1.5 kHz: it reads on a phone, where the sub '
+     'drones vanish; tests: the police drone left the music present 32 % of this window), quiet at first, building '
+     'from its 46 s to the clack'),
     ('s115', 'a_massive_mist_ethan_sloan', 0.0,
      'rule 3 (the joke, the snort, the clack, the TV turns on, the laughter, he stands, the lamp): a very low drone '
      '(centroid 112 Hz) that leaves the whole mid band to the show theme on the TV and the studio audience'),
@@ -83,9 +85,10 @@ TRACK_MAP = [
      'around the scream'),
     ('s272', 'tefu_sayuri_hayashi_egnell', 0.0,
      'false relief ("It worked! He\'s asleep!", the dummy face down on the rug): the police film\'s D major, quiet'),
-    ('s279', 'one_step_away_dian_shuai', 40.0,
+    ('s279', 'one_step_away_dian_shuai', 25.0,
      'rule 7 (rules six and seven side by side, the P.S., 1962, "a young one", the eyelids: "Click, click."): the '
-     'percussive build to the climax (its 86-130 s on film 628-672); its drop (132.5 s) lands on the van at the window'),
+     'percussive build to the climax (its loud 86-130 s on film 643-677: the last minute is the loudest, AUDIO_SPEC; '
+     'the full-film check had its peak at 631 s with offset 40)'),
     ('s325', 'are_you_alone_victor_lundberg', 67.6,
      'the museum glass, "Wink back", the sting ("The boy who came home with us doesn\'t laugh anymore", two sugars, the '
      'doorway): the opening track again, its spike on "See you in the morning, kiddo."'),
@@ -97,32 +100,37 @@ FLATTEN = {'are_you_alone_victor_lundberg': 0.6, 'haunted_mind_etienne_roussel':
            'the_logic_of_tyrants_hampus_naeselius': 0.45, 'tefu_sayuri_hayashi_egnell': 0.4}
 # slug -> level trim (dB) of the track in its sections: sub drones read quiet (a_massive_mist centroid 112 Hz,
 # dark_forebodings 174 Hz: the delivery film measured +3 dB needed), the two near-silent pads need lifting
-GAIN = {'a_massive_mist_ethan_sloan': 3.0, 'dark_forebodings_ethan_sloan': 3.0, 'when_the_sun_sets_anna_landstrom': 3.0,
-        'haunted_mind_etienne_roussel': 1.5, 'are_you_alone_victor_lundberg': 1.0, 'irene_kevin_dailey': 2.0,
+# Full-film checks (film.py's cue sheets, measure_mix.py): music by quarter -17.0 / -14.4 / -14.2 / -14.3 LU rel voice
+# with the first gains: the first quarter was the quietest (AUDIO_SPEC: Q2 the calmest, the cold open strong), so the
+# Q1 tracks come up 2.5-3 dB and the Q2 tracks go down 1.5 dB.
+GAIN = {'a_massive_mist_ethan_sloan': 1.5, 'dark_forebodings_ethan_sloan': 3.0, 'from_hell_christoffer_moe_ditlevsen': -2.5,
+        'when_the_sun_sets_anna_landstrom': 7.0,
+        'haunted_mind_etienne_roussel': 4.0, 'are_you_alone_victor_lundberg': 5.0, 'irene_kevin_dailey': 2.0,
+        'turning_stones_stefan_ekstrom': 4.5, 'the_logic_of_tyrants_hampus_naeselius': -1.0,
         'tefu_sayuri_hayashi_egnell': -1.0}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [
     # cold open
-    ('s0', 0.52), ('s2', 0.58), ('s3', 0.44), ('s6', 0.52), ('s7', 0.42), ('s10', 0.5), ('s11', 0.64), ('e11', 0.68),
+    ('s0', 0.6), ('s2', 0.66), ('s3', 0.52), ('s6', 0.6), ('s7', 0.5), ('s10', 0.58), ('s11', 0.72), ('e11', 0.76),
     # Walter, the show, Owen, the habit, the tuck-in
-    ('s12', 0.36), ('s14', 0.34), ('s17', 0.38), ('s18', 0.34), ('s23', 0.38), ('s24', 0.44), ('s26', 0.38),
-    ('s27', 0.4),
+    ('s12', 0.42), ('s14', 0.4), ('s17', 0.44), ('s18', 0.4), ('s23', 0.44), ('s24', 0.5), ('s26', 0.44),
+    ('s27', 0.46),
     # the hospital
-    ('s28', 0.44), ('s32', 0.52), ('s35', 0.58), ('s36', 0.64), ('s37', 0.72), ('s38', 0.76), ('s39', 0.52),
+    ('s28', 0.5), ('s32', 0.58), ('s35', 0.64), ('s36', 0.7), ('s37', 0.78), ('s38', 0.8), ('s39', 0.58),
     # the drive, the house, the case
-    ('s41', 0.42), ('s43', 0.46), ('s46', 0.5), ('s48', 0.56), ('s50', 0.64), ('e51', 0.68),
+    ('s41', 0.48), ('s43', 0.52), ('s46', 0.56), ('s48', 0.62), ('s50', 0.7), ('e51', 0.72),
     # rule 1
     ('s52', 0.62), ('s56', 0.42), ('s59', 0.46), ('s60', 0.64), ('s62', 0.6), ('s63', 0.5), ('s64', 0.54),
-    ('s67', 0.55), ('s68', 0.64), ('s69', 0.6), ('s71', 0.6), ('s72', 0.66), ('s75', 0.7), ('e76', 0.72),
+    ('s67', 0.55), ('s68', 0.62), ('s69', 0.57), ('s71', 0.57), ('s72', 0.63), ('s75', 0.67), ('e76', 0.69),
     # rule 2 (the calm quarter)
-    ('s77', 0.54), ('s82', 0.4), ('s83', 0.32), ('s86', 0.4), ('s89', 0.38), ('s91', 0.46), ('s92', 0.52),
-    ('s96', 0.42), ('s99', 0.52), ('s103', 0.62), ('s104', 0.54), ('s108', 0.6), ('s109', 0.66), ('s110', 0.7),
-    ('s111', 0.76), ('s112', 0.56), ('s113', 0.6), ('e114', 0.58),
+    ('s77', 0.5), ('s82', 0.36), ('s83', 0.3), ('s86', 0.38), ('s89', 0.36), ('s91', 0.44), ('s92', 0.5),
+    ('s96', 0.4), ('s99', 0.5), ('s103', 0.6), ('s104', 0.52), ('s108', 0.58), ('s109', 0.64), ('s110', 0.68),
+    ('s111', 0.74), ('s112', 0.54), ('s113', 0.58), ('e114', 0.56),
     # rule 3 (the joke, the TV, the laughter)
-    ('s115', 0.52), ('s118', 0.28), ('s122', 0.32), ('s124', 0.36), ('s127', 0.58), ('s128', 0.62), ('s130', 0.44),
-    ('s131', 0.36), ('s132', 0.5), ('s135', 0.5), ('s137', 0.6), ('s140', 0.72), ('s141', 0.64), ('s142', 0.7),
-    ('s143', 0.46), ('s144', 0.62), ('s145', 0.6), ('s147', 0.64),
+    ('s115', 0.5), ('s118', 0.26), ('s122', 0.3), ('s124', 0.34), ('s127', 0.54), ('s128', 0.58), ('s130', 0.4),
+    ('s131', 0.34), ('s132', 0.46), ('s135', 0.46), ('s137', 0.56), ('s140', 0.68), ('s141', 0.6), ('s142', 0.66),
+    ('s143', 0.44), ('s144', 0.6), ('s145', 0.58), ('s147', 0.62),
     # rule 4 (the stairs, the hand)
     ('s148', 0.6), ('s150', 0.46), ('s152', 0.4), ('s153', 0.44), ('s156', 0.62), ('s157', 0.74), ('s158', 0.78),
     ('s159', 0.72), ('s161', 0.8), ('s162', 0.62), ('s164', 0.42), ('s168', 0.44), ('s169', 0.56), ('s172', 0.52),
@@ -140,12 +148,12 @@ INTENSITY = [
     # rule 7 (the realisation, the P.S., 1962, the eyelids)
     ('s279', 0.64), ('s283', 0.62), ('s284', 0.68), ('s285', 0.74), ('s286', 0.8), ('s287', 0.86), ('s289', 0.9),
     ('s290', 0.68), ('s292', 0.64), ('s293', 0.72), ('s295', 0.78), ('s297', 0.86), ('s298', 0.82), ('s299', 0.68),
-    ('s300', 0.72), ('s301', 0.78), ('s305', 0.88), ('s306', 0.82), ('s308', 0.86), ('s309', 0.9), ('s310', 0.92),
+    ('s300', 0.68), ('s301', 0.72), ('s305', 0.8), ('s306', 0.76), ('s308', 0.82), ('s309', 0.86), ('s310', 0.9),
     ('s311', 0.88), ('s312', 0.82), ('s314', 0.9), ('s315', 0.94), ('s316', 1.0), ('s317', 0.96), ('s318', 0.92),
     # the ending (the van, the museum, the sting)
     ('s319', 0.68), ('s321', 0.76), ('s322', 0.62), ('s324', 0.66), ('s325', 0.58), ('s326', 0.62), ('s328', 0.68),
-    ('s329', 0.72), ('s330', 0.88), ('s331', 0.84), ('s333', 0.88), ('s335', 0.94), ('s336', 1.0), ('s337', 0.96),
-    ('e338', 0.92),
+    ('s329', 0.74), ('s330', 0.92), ('s331', 0.9), ('s333', 0.94), ('s335', 0.98), ('s336', 1.0), ('s337', 1.0),
+    ('e338', 0.96),
 ]
 
 # ---------------------------------------------------------------------------------------------------- events
@@ -180,22 +188,21 @@ EVENTS = [
     ('s77', 'riser', 0.55, 4.0), ('s77', 'rule', 0.7, None),
     # rule 2: the voices
     ('s86', 'sub_drop', 0.4, None),                    # "At 1:15, Mom's voice calls from upstairs."
-    ('s87-0.1', 'silence', 0.45, 2.6),                 # "Honey? Can you come up here a second?"
     ('s89', 'hit', 0.45, None),                        # "Mom is sitting right next to you."
     ('s92', 'stinger', 0.55, None),                    # "Your voice."
-    ('s93-0.1', 'silence', 0.45, 3.2),                 # "Mom? I'm up here. Who's down there with you?"
     ('s103-0.5', 'silence', 0.7, 2.1), ('e103', 'hit', 0.7, None),       # "See you in the morning, kiddo." alone, then
     ('s108', 'swell', 0.6, 5.2),                       # the head has turned all the way -> the jaw hanging
-    ('s110', 'silence', 0.7, 2.05), ('w111:clack', 'hit', 0.85, None),    # "It closes, very slowly. / Clack."
+    ('s110', 'silence', 0.7, 2.05), ('w111:clack+0.04', 'hit', 0.6, None),   # "It closes, very slowly. / Clack."
+    #   (the music hits on the clacks land 40 ms after the wooden clack and smaller: tests 2-4 measured the full-size
+    #   hit 0.3-4 LU over the clack itself, burying the film's signature sound)
     ('s113', 'stinger', 0.45, None),                   # "But that was Grandpa's line."
     ('s115', 'rule', 0.7, None),
     # rule 3: the joke, the TV
-    ('s118-0.3', 'silence', 0.55, 3.3),                # the joke hangs in the dark
-    ('s121-0.3', 'silence', 0.6, 1.5),                 # "Because he can't stand him!"
+    ('s118-0.3', 'silence', 0.55, 2.4),                # the joke hangs in the dark
     ('s124', 'silence', 0.5, 1.2),                     # "Owen snorts."
-    ('w127:clack', 'hit', 0.8, None),                  # "Clack."
+    ('w127:clack+0.04', 'hit', 0.6, None),             # "Clack."
     ('w128:lifts', 'sub_drop', 0.5, None),             # a glove lifts off the table
-    ('s130', 'silence', 0.5, 2.4),                     # "Nobody laughs. Nobody breathes."
+    ('s130', 'silence', 0.5, 2.0),                     # "Nobody laughs. Nobody breathes."
     ('s132', 'hit', 0.55, None),                       # "Then the TV turns on by itself."
     ('s137', 'swell', 0.6, 13.3),                      # with every wave he moves -> "his own audience"
     ('s143', 'silence', 0.75, 1.25),                   # the lamp flickers: everything drops
@@ -212,7 +219,7 @@ EVENTS = [
     ('s164-0.2', 'silence', 0.4, 1.0),                 # "And it squeezes." (the music box takes over)
     ('s181', 'sub_drop', 0.6, None),                   # "One of those rules is a lie."
     ('e182', 'braam', 0.55, 2.5),                      # "It's rule two." -> "When you hear my voice, it's me."
-    ('w185:clacks', 'hit', 0.75, None),                # "His jaw clacks shut"
+    ('w185:clacks+0.04', 'hit', 0.55, None),           # "His jaw clacks shut"
     ('s189', 'sub_drop', 0.5, None),                   # "Just not the way I thought."
     ('s190', 'rule', 0.75, None),
     # rule 5: the bookcase, the tape
@@ -250,7 +257,7 @@ EVENTS = [
     ('s293', 'sub_drop', 0.5, None),                   # "P.S. He'll change one of my rules."
     ('s293', 'swell', 0.65, 6.7),                      # -> "Walter."
     ('s297', 'hit', 0.75, None),
-    ('s305', 'braam', 0.85, 3.5),                      # "And they traded places."
+    ('s305', 'braam', 0.75, 3.5),                      # "And they traded places."
     ('s306', 'pulse_on', 0.65, None),                  # "Sixty years later..."
     ('s310', 'hit', 0.85, None),                       # "A young one."
     ('s311', 'pulse_off', 0.5, None),
@@ -280,23 +287,23 @@ IDENTITY = [
     ('s68', 'winks', 0.38, 13.0, {}),                  # in Grandpa's chair at the kitchen table
     ('s108', 'winks', 0.5, None, dict(until='w111:clack-0.25', stop='cut', depth=1.2)),   # the head turned, the jaw, cut
     ('e121+0.1', 'winks', 0.45, 2.2, dict(stop='drag', off=14.0)),        # after the punchline: a rotten rimshot
-    ('w132:turns+0.25', 'show', 0.55, None, dict(until='s143+0.05', space='tv', off=58.0, warp=0.4, warp_at='s140',
+    ('w132:turns+0.25', 'show', 0.5, None, dict(until='s143+0.05', space='tv', off=58.0, warp=0.4, warp_at='s140',
                                                 stop='cut', fade=0.05)),  # the TV on by itself -> the lamp flickers
     ('s144+0.3', 'show', 0.3, 7.4, dict(space='far', off=36.0, stop='fade')),   # the TV still playing, far away
     ('s145', 'winks', 0.42, 5.5, {}),                  # a little flashlight clicks on; down the hall
-    ('s156', 'winks', 0.45, 5.0, dict(depth=1.2)),     # 3 AM, the flashlight comes back
+    ('s156', 'winks', 0.58, 5.0, dict(depth=1.2)),     # 3 AM, the flashlight comes back
     ('s164', 'motif', 0.4, 6.5, dict(inst='musicbox')),                   # the three squeezes: I love you
     ('s172', 'motif', 0.45, 12.0, {}),                 # "Kiddo, it's me." (the wrong phrase)
     ('s198', 'winks', 0.45, 5.4, dict(depth=1.3)),     # on the bookcase, the jaw going up and down
     ('s203+0.5', 'show', 0.45, None, dict(until='w209:stops+0.15', space='tv', off=40.0, stop='drag')),  # the tape
     ('s218+1.2', 'show', 0.4, None, dict(until='s221', space='tv', off=52.0, stop='fade', fade=1.0)),   # "part of the act"
     ('s232', 'motif', 0.45, 8.0, dict(inst='musicbox')),                  # the hand that squeezed mine; the only grandpa I ever had
-    ('s243', 'winks', 0.5, None, dict(until='s254', stop='cut', depth=0.9, off=20.0)),   # Owen doing the act
-    ('s300', 'show', 0.42, None, dict(until='e304', space='old', slug='ye_olde_piano_roll_the_fly_guy_five',
+    ('s243', 'winks', 0.62, None, dict(until='s254', stop='cut', depth=0.9, off=20.0)),   # Owen doing the act
+    ('s300', 'show', 0.36, None, dict(until='e304', space='old', slug='ye_olde_piano_roll_the_fly_guy_five',
                                       off=2.0, stop='drag')),             # 1962, his very first show
     ('s312', 'winks', 0.5, None, dict(until='s315', stop='cut', depth=1.4)),   # in my arms he opens his eyes
     ('s325', 'motif', 0.4, 10.0, dict(inst='musicbox')),                  # behind glass, three states away
-    ('e338+0.15', 'show', 0.22, 3.6, dict(space='far', off=52.0, stop='fade', fade=0.6)),   # a TV somewhere, after
+    ('e338+0.15', 'show', 0.3, 3.6, dict(space='far', off=52.0, stop='fade', fade=0.6)),   # a TV somewhere, after
 ]
 
 

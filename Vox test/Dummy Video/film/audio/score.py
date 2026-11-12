@@ -71,6 +71,8 @@ Event semantics (t in seconds, level 0..1, default 0.7)
     'octaves' forces the instrument, otherwise the intensity picks it);
     show: the show theme from the old TV (len, slug, shift, off, space, warp, warp_at, stop, fade; see render_show);
     winks: the same tune rotting, Mister Winks's theme (len, slug, shift, off, depth, stop; see render_winks);
+    theme (film.py's name): the show theme as a score cue = a 'winks' phrase (the rotting tune), or a 'show' on the
+    TV when the event carries a space ('tv' | 'far' | 'tape' | 'old'); drone (film.py): a string swell over len;
     swell: string crescendo from t peaking at t + len (default 12 s), the whole bed breathes with it;
     pulse_on / pulse_off; rule: rule-card sting at t (and an arrangement boundary);
     end: the final cadence from t (len default 12 s): everything else fades over 4 s, D-minor chord (always home
@@ -156,9 +158,10 @@ CALM_MAX = 0.30                  # the D-major track (Tefu) only where the inten
 REUSE_W = 1.2                    # cost of replaying the same track material (fraction of the section)
 FIXED_KEY = {'tefu_sayuri_hayashi_egnell': (2, 1)}   # melodic bass: root detection unreliable; D pedal, major
 FLATTEN = 0.3                    # share of each track's own dynamics flattened by the gain automation (was 0.6-0.8)
-DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0}
+DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0,
+               'theme': 5.0, 'drone': 8.0}
 KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
-                'rule', 'end', 'scene', 'show', 'winks')
+                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone')
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -1454,7 +1457,7 @@ class Score:
         x = (np.tanh(1.2 * x / pk) / np.tanh(1.2) * pk).astype(np.float32)
         x *= self._envelope(len(x), float(e.get('fade', 1.2)), 1.8, stop)[:, None]
         st = short_term(x, 0.25).max() if len(x) > 3 * SR else momentary_max(x)
-        x *= np.float32(db(REF_LUFS + 2.0 + 8.0 * (lv - 0.5) - st))
+        x *= np.float32(db(REF_LUFS + 0.0 + 8.0 * (lv - 0.5) - st))     # tests: -2 dB (it sat on the lines)
         self.bus['show'].add(t, x, rev={'hall': 0.6, 'cavern': 0.4})
         self._duck_span(t, t + len(x) / SR, SHOW_DUCK['winks'])
         self.log(f'winks {t:.1f}-{t + ln:.1f}s depth {depth} stop {stop}')
@@ -1746,7 +1749,12 @@ class Score:
                 self.render_swell(e)
             elif ty == 'rule':
                 self.render_rule(e)
-            elif ty in ('show', 'winks'):
+            elif ty == 'drone':                           # film.py: a held swell under the ending
+                self.render_swell(dict(e, len=max(2.0, float(e.get('len') or 8.0))))
+            elif ty in ('show', 'winks', 'theme'):
+                if ty == 'theme':                         # film.py: the show theme as a score cue
+                    ty = 'show' if e.get('space') else 'winks'
+                    e = dict(e, len=float(e.get('len') or 5.0), stop=e.get('stop') or 'drag')
                 if any(x['type'] == 'end' and x['t'] <= e['t'] for x in self.ev):
                     continue                              # after the end cue: rendered after the end fade (below)
                 try:
