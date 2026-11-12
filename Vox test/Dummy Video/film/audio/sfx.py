@@ -139,7 +139,13 @@ DELIVERY_NAMES = ('doorbell_dingdong', 'doorbell_cam_chime', 'phone_notify', 'bo
                   'cloth_rustle', 'touch_tap', 'stylus_scribble', 'camera_shutter', 'footsteps_stairs', 'footsteps_hall',
                   'mom_breath', 'mom_sob', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'hazard_tick',
                   'window_latch')
-NAMES = POLICE_NAMES + DELIVERY_NAMES
+DUMMY_NAMES = ('dummy_clack', 'dummy_jaw', 'eyelid_click', 'wood_creak', 'wood_knock', 'tiny_steps', 'glove_lift',
+               'hand_slot', 'hand_squeeze', 'case_latch', 'case_lid', 'velvet', 'spoon_stir', 'spoon_clink', 'mug_set',
+               'sip', 'dummy_thud', 'tv_on', 'vcr', 'tape_hiss', 'studio_laugh', 'applause', 'lamp_flicker', 'lamp_out',
+               'flashlight_click', 'flashlight_hum', 'heart_monitor', 'monitor_flatline', 'mom_scream', 'snort',
+               'owen_giggle', 'owen_cry', 'winks_laugh', 'goodnight_hit', 'old_clock', 'hospital_tone', 'museum_tone',
+               'house_creaks', 'tape_glitch', 'keys_jangle', 'paper_slide')
+NAMES = POLICE_NAMES + DELIVERY_NAMES + DUMMY_NAMES
 
 # v2.1 (sound critic): foley raised so it reads over the music (footsteps -11 -> -7, typing -14 -> -9,
 # pen -11 -> -6, paper -13 -> -9, breath -13 -> -8, radio_click -11 -> -8, chain -8 -> -1, creak -9 -> -3,
@@ -158,11 +164,24 @@ LEVEL_LU = dict(knock_door=-3, doorbell_chime=-6, footsteps_porch=-7, footsteps_
 LEVEL_LU.update(doorbell_dingdong=-4, doorbell_cam_chime=-9, phone_notify=-8, box_knock=-2, box_tap=-9, box_creak=-7,
                 box_drop=-6, box_scrape=-8, box_open=-6, box_voice=-24, tape_rip=-6, hazard_ticks=-22,
                 van_door_slide=-8, van_idle=-24, van_pull_away=-11, van_step=-9, keys_drop=-4, window_slide=-7,
-                curtain_flutter=-18, cloth_rustle=-9, touch_tap=-8, stylus_scribble=-11, camera_shutter=-4,
+                curtain_flutter=-18, cloth_rustle=-7, touch_tap=-8, stylus_scribble=-11, camera_shutter=-4,
                 footsteps_stairs=-8, footsteps_hall=-9, mom_breath=-10, mom_sob=-9, ambience_suburb=-25,
                 ambience_dawn=-26, room_tone_house=-31, hazard_tick=-10, window_latch=-7)
+# dummy film. One-shots: momentary max, LU rel the voice, at gain_db 0. The cast's events (characters.py) arrive with
+# their own gain_db on top (CAST.md): dummy_clack snap 0 / speech -14..-8, dummy_jaw -6, eyelid_click shut 0..-3 /
+# open -6..-9, wood_creak tick -8..-14 / grind -4, flashlight_click -6 / -9, dummy_thud 0, case_latch -2,
+# hand_squeeze -10 / -12, snort 0, sip -12; these levels put them where they read (clack snap -18 LUFS momentary,
+# a speech clack -28..-32, the squeezes -28, the sip -28; the voice sits at -14).
+LEVEL_LU.update(dummy_clack=-4, dummy_jaw=-4, eyelid_click=-4, wood_creak=-3, wood_knock=-6, tiny_steps=-8,
+                glove_lift=-8, hand_slot=-8, hand_squeeze=-4, case_latch=-4, case_lid=-6, velvet=-12, spoon_stir=-8,
+                spoon_clink=-4, mug_set=-6, sip=-2, dummy_thud=-3, tv_on=-5, vcr=-9, tape_hiss=-26, studio_laugh=-5,
+                applause=-8, lamp_flicker=-8, lamp_out=-6, flashlight_click=0, flashlight_hum=-32, heart_monitor=-16,
+                monitor_flatline=-11, mom_scream=-5, snort=-6, owen_giggle=-9, owen_cry=-9, winks_laugh=-8,
+                goodnight_hit=-2, old_clock=-27, hospital_tone=-30, museum_tone=-31, house_creaks=-27, tape_glitch=-9,
+                keys_jangle=-6, paper_slide=-6)
 SPACE_LU = dict(close=1.0, inside=0.0, outside=-7.0, doorbell_mic=-2.0, street=-6.0, phone=-4.0, radio=-3.0,
-                car=-2.0, dry=0.0, porch=-2.0, window=-8.0, upstairs=-9.0, box=-3.0, app=-3.0)
+                car=-2.0, dry=0.0, porch=-2.0, window=-8.0, upstairs=-9.0, box=-3.0, app=-3.0,
+                tight=1.0, next_room=-4.0, tv=-2.0, tape=-1.0, hospital=0.0, museum=-2.0, behind_glass=-9.0, memory=-1.0)
 SPACE_ALIAS = dict(hall='inside', hallway='inside', house='inside', interior='inside', indoors='inside', stairs='inside',
                    room='close', bedroom='close', kitchen='close', near='close', foley='close',
                    door='outside', through_door='outside', behind_door='outside', front_door='outside',
@@ -170,18 +189,33 @@ SPACE_ALIAS = dict(hall='inside', hallway='inside', house='inside', interior='in
                    doorbell_cam='doorbell_mic', exterior='porch', outdoors='porch', yard='street', van='street',
                    road='street', far='street', curb='street', speaker='phone', tablet='app', upstairs_hall='upstairs',
                    lily_room='upstairs', none='dry', mono='dry', ui='dry', inside_box='box', cardboard='box')
+# dummy film: the kitchen is heard from the hall / living room through the doorway (the rooms are "you" in a close
+# shot: give 'close'), the old TV, the 1974 tape full-frame, the hospital memory, the museum and its glass case
+SPACE_ALIAS.update(kitchen='next_room', doorway='next_room', other_room='next_room', next_door='next_room',
+                   living_room='close', den='close', couch='close', dry_close='tight', jaw='tight', on_lap='tight',
+                   arms='tight', television='tv', tv_speaker='tv', screen='tv', set='tv', vhs='tv', studio='tape',
+                   broadcast='tape', tape_1974='tape', full_frame='tape', ward='hospital', hospital_room='hospital',
+                   bedside='hospital', gallery='museum', glass='behind_glass', display='behind_glass',
+                   display_case='behind_glass', flashback='memory', past='memory', stairs_up='upstairs')
 SPACES = tuple(SPACE_LU)
 PEAK_CAP = defaultdict(lambda: -7.0, knock_door=-5.0, impact_hit=-4.0, braam=-4.0, stinger=-4.0, sub_drop=-4.0,
                        riser=-5.0, car_door_close=-6.0, mail_slot=-6.0, lock_turn=-6.0,
                        doorbell_dingdong=-5.0, box_knock=-5.0, box_drop=-6.0, box_open=-4.0, tape_rip=-4.0,
-                       keys_drop=-3.0, camera_shutter=-5.0, touch_tap=-6.0, van_door_slide=-6.0)
+                       keys_drop=-3.0, camera_shutter=-5.0, touch_tap=-6.0, van_door_slide=-6.0,
+                       dummy_clack=-4.0, dummy_jaw=-5.0, eyelid_click=-6.0, case_latch=-5.0, spoon_clink=-4.0,
+                       mug_set=-5.0, dummy_thud=-4.0, goodnight_hit=-4.0, mom_scream=-4.0, flashlight_click=-3.0,
+                       studio_laugh=-4.0, lamp_out=-5.0, wood_knock=-5.0)
 BEDS = ('ambience_night', 'room_tone', 'radio_static', 'car_idle', 'tinnitus', 'phone_busy', 'crowd_whisper',
-        'hazard_ticks', 'van_idle', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'box_voice')
-DUR_BEDS = ('breath', 'siren_far', 'typing', 'heartbeat', 'curtain_flutter', 'mom_breath', 'mom_sob')   # with dur
+        'hazard_ticks', 'van_idle', 'ambience_suburb', 'ambience_dawn', 'room_tone_house', 'box_voice',
+        'tape_hiss', 'old_clock', 'hospital_tone', 'museum_tone', 'house_creaks', 'flashlight_hum')
+DUR_BEDS = ('breath', 'siren_far', 'typing', 'heartbeat', 'curtain_flutter', 'mom_breath', 'mom_sob',
+            'heart_monitor', 'owen_cry')   # with dur
 TIMED = ('hazard_ticks',)
-BED_BUS = BEDS + ('hazard_tick', 'curtain_flutter')   # mix.py routes these to the bed bus (no foley dip of the music per
-#                                                      relay tick; the open window's curtains run for a minute)
-HITS = ('impact_hit', 'stinger', 'braam', 'sub_drop')
+BED_BUS = BEDS + ('hazard_tick', 'curtain_flutter', 'heart_monitor', 'studio_laugh', 'applause')
+# mix.py routes these to the bed bus (no foley dip of the music per relay tick / monitor beep; the open window's
+# curtains run for a minute; the studio audience's laughter swells in the gaps and steps back under the narration
+# with the music: test 3 measured a 'huge' wave on the events bus 3.5 LU under the voice's momentary peak, mid band)
+HITS = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit')
 DEFAULT_SPACE = defaultdict(lambda: 'close', knock_door='inside', footsteps_porch='outside', car_pass='street',
                             car_idle='outside', car_door_open='street', car_door_close='street', siren_far='street',
                             mail_slot='inside', key_in_lock='inside', lock_turn='inside', chain_lock='inside',
@@ -197,6 +231,15 @@ DEFAULT_SPACE.update(doorbell_dingdong='inside', doorbell_cam_chime='close', pho
                      stylus_scribble='close', camera_shutter='doorbell_mic', footsteps_stairs='inside',
                      footsteps_hall='inside', mom_breath='close', mom_sob='close', ambience_suburb='outside',
                      ambience_dawn='outside', room_tone_house='inside', hazard_tick='street', window_latch='close')
+DEFAULT_SPACE.update(dummy_clack='tight', dummy_jaw='tight', eyelid_click='tight', wood_creak='tight',
+                     wood_knock='close', tiny_steps='inside', glove_lift='close', hand_slot='tight', hand_squeeze='tight',
+                     case_latch='close', case_lid='close', velvet='tight', spoon_stir='close', spoon_clink='close',
+                     mug_set='close', sip='close', dummy_thud='close', tv_on='close', vcr='close', tape_hiss='tv',
+                     studio_laugh='tv', applause='tv', lamp_flicker='close', lamp_out='close', flashlight_click='close',
+                     flashlight_hum='dry', heart_monitor='hospital', monitor_flatline='hospital', mom_scream='close',
+                     snort='close', owen_giggle='close', owen_cry='close', winks_laugh='tight', goodnight_hit='dry',
+                     old_clock='dry', hospital_tone='dry', museum_tone='dry', house_creaks='dry', tape_glitch='tv',
+                     keys_jangle='close', paper_slide='tight')
 
 
 # ======================================================================================== basic DSP
@@ -608,6 +651,28 @@ def space(y, kind, seed=0, wet=None):
         x = mono(space(y, 'doorbell_mic', seed))
         x = eq(bp(x, 300, 7500, 2), ('peak', 2200, 2.5, 1.0), ('ls', 350, -5, 0.7))
         return st(x)
+    # ---- dummy film
+    if kind == 'tight':                                   # dry and close: the dummy's jaw and eyelids, on a lap
+        return reverb(y, 'living', 0.05 if wet is None else wet, 0.001)
+    if kind == 'next_room':                               # through the doorway from the next room (the kitchen)
+        x = eq(lp(y, 8000, 2), ('hs', 2500, -3.0, 0.7), ('peak', 300, 1.5, 1.0))
+        return reverb(x, 'living', 0.42 if wet is None else wet, 0.008)
+    if kind == 'tv':                                      # the old console TV's speaker, across the living room
+        x = lp(hp(mono(y), 200, 4), 4800, 4)
+        x = sat(eq(x, ('peak', 1500, 3.0, 1.0), ('peak', 330, 2.5, 2.0)), 1.5)
+        return reverb(x, 'living', 0.2 if wet is None else wet, 0.003)
+    if kind == 'tape':                                    # the 1974 tape's own sound (the full-frame studio shots)
+        x = sat(lp(hp(mono(y), 110, 2), 7000, 4), 1.25)
+        return st(x)
+    if kind == 'hospital':                                # a small, hard hospital room
+        return reverb(hp(y, 80, 2), 'living', 0.25 if wet is None else wet, 0.002)
+    if kind == 'museum':                                  # a big, still gallery
+        return reverb(y, 'hall', 0.45 if wet is None else wet, 0.012)
+    if kind == 'behind_glass':                            # inside the display case, heard through the glass
+        x = eq(lp(y, 1600, 2), ('peak', 420, 3.0, 1.2))
+        return reverb(x, 'hall', 0.35 if wet is None else wet, 0.01)
+    if kind == 'memory':                                  # the hospital / bedtime memories (render_event adds memory_fx)
+        return reverb(y, 'living', 0.12 if wet is None else wet, 0.002)
     warn(f'unknown space {kind!r}: using close')
     return space(y, 'close', seed, wet)
 
@@ -970,9 +1035,13 @@ def r_footsteps_porch(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0
 
 
 def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, creak=0.4, weight=0.6, stairs=False,
-                            run=False, slippers=False, foot=None, direction=None, **_):
+                            run=False, slippers=False, foot=None, direction=None, kind=None, **_):
     """stairs=True: stair treads (direction 'up' / 'down' / None = level); run=True: faster and heavier;
-    slippers=True: soft scuffing slippers (mom); foot 'L' / 'R': one step of a walk (film.py cues every step)."""
+    slippers=True: soft scuffing slippers (mom); foot 'L' / 'R': one step of a walk (film.py cues every step);
+    kind 'tiny' (dummy film, cast -12 dB): the little wooden figure's steps (= tiny_steps)."""
+    if kind == 'tiny':
+        y, pre, offs, spaced = r_tiny_steps(rng, sp, n=n or 1, dur=dur, approach=approach)
+        return y, pre, offs + 4.0, spaced
     if run:
         rate, weight = rate * 1.5, max(weight, 0.85)
     if stairs:
@@ -1184,7 +1253,10 @@ def r_mail_slot(rng, sp, paper=False, **_):
     return _seq(ev, 0.1), 0.0, 0.0, False
 
 
-def r_paper(rng, sp, dur=1.2, **_):
+def r_paper(rng, sp, dur=1.2, kind=None, **_):
+    if kind in ('slide', 'slip', 'out'):                 # dummy film: the P.S. sliding out of the slot (cast: paper, kind
+        y, pre, offs, spaced = r_paper_slide(rng, sp, dur=dur)   # 'slide', -8 dB)
+        return y, pre, offs + 5.0, spaced
     E = src('paper', nothas=['pencil', 'book']); e = E[int(rng.choice(len(E), p=_epi_w(E)))]
     y = audio(e); n = n_(dur)
     gs = grains(e, 'phrase', gap=0.2, max_len=8.0, keep=-18)
@@ -1262,11 +1334,16 @@ def r_door_creak(rng, sp, dur=None, slow=1.0, **_):
     return _seq([(0, a), (0.02, lp(b, 3500, 2) * 0.35)], 0.1), 0.0, 0.0, False
 
 
+_BREATH_BOOST = dict(sob=2.0, sniff=10.0, gasp=3.0)   # dummy film: the cast emits these at -8..-12 dB (CAST.md)
+
+
 def r_breath(rng, sp, kind='nervous', dur=3.0, **_):
     if kind == 'sob':
-        return r_mom_sob(rng, sp, dur=dur)
+        y, pre, offs, spaced = r_mom_sob(rng, sp, dur=dur)
+        return y, pre, offs + _BREATH_BOOST['sob'], spaced
     if kind in ('shaky', 'sniff'):
-        return r_mom_breath(rng, sp, kind=kind, dur=dur)
+        y, pre, offs, spaced = r_mom_breath(rng, sp, kind=kind, dur=dur)
+        return y, pre, offs + _BREATH_BOOST.get(kind, 0.0), spaced
     if kind in ('panic', 'panting'):
         E = src('breath', epi=True, has=['panic'] if kind == 'panic' else ['panting'])
         e = E[int(rng.integers(len(E)))]
@@ -1275,7 +1352,7 @@ def r_breath(rng, sp, kind='nervous', dur=3.0, **_):
     if kind == 'gasp':
         P = pool('gasp', lambda: src('breath', has=['gasp', 'freaked', 'attenti'], epi=False), 'phrase', gap=0.2,
                  max_len=2.0, keep=-14)
-        return P.get(rng, rj=0.03, fo=0.1), 0.0, 0.0, False
+        return P.get(rng, rj=0.03, fo=0.1), 0.0, _BREATH_BOOST['gasp'], False
     P = pool('breaths', lambda: src('breath', has=['breath'], nothas=['panic', 'panting']), 'phrase', gap=0.25,
              max_len=2.5, keep=-20)
     ev = []; t = 0.0
@@ -1943,8 +2020,12 @@ def r_van_step(rng, sp, **_):
     return _seq(lay, 0.1), hit, 0.0, False
 
 
-def r_keys_drop(rng, sp, surface='bowl', rust=False, bowl=False, jingle=False, lift=False, **_):
-    """bowl=True = surface 'bowl'; jingle=True: the keys jingle in the hand first; lift=True: keys lifted (jingle only)."""
+def r_keys_drop(rng, sp, surface='bowl', rust=False, bowl=False, jingle=False, lift=False, kind=None, **_):
+    """bowl=True = surface 'bowl'; jingle=True: the keys jingle in the hand first; lift=True: keys lifted (jingle only);
+    kind 'jangle' (dummy film: Mom grabs her keys) = keys_jangle."""
+    if kind in ('jangle', 'grab', 'jingle', 'snatch'):
+        y, pre, offs, spaced = r_keys_jangle(rng, sp)
+        return y, pre, offs - 2.0, spaced
     if lift:
         J = pool('keys', lambda: src('key_in_lock', has=['keys_jingle_hand', 'keys_jingle']), 'phrase', gap=0.15,
                  max_len=0.8, keep=-16)
@@ -2015,6 +2096,12 @@ def r_curtain_flutter(rng, sp, dur=4.0, wind=0.6, **_):
 def r_cloth_rustle(rng, sp, kind='rustle', dur=None, **_):
     if kind == 'curtain':
         return r_curtain_flutter(rng, sp, dur=dur or 2.0)
+    if kind == 'glove':                                  # dummy film (cast: -14 dB): the little glove lifting
+        y, pre, offs, spaced = r_glove_lift(rng, sp)
+        return y, pre, offs + 10.0, spaced
+    if kind == 'slot':                                   # dummy film (cast: -10 dB): the hand through the slot
+        y, pre, offs, spaced = r_hand_slot(rng, sp, dur=dur or 0.9)
+        return y, pre, offs + 6.0, spaced
     P = pool('cloth', lambda: src('cloth_rustle') + src(category='sfx/foley/cloth'), 'phrase', gap=0.15, max_len=1.0,
              keep=-18)
     g = P.get(rng, rj=0.05, fo=0.08)
@@ -2243,6 +2330,788 @@ def r_window_latch(rng, sp, **_):
     return _seq([(0, jolt), (0.005, th), (0.02, a), (0.21, jolt * 0.5), (0.215, th * 0.6)], 0.1), 0.0, 0.0, False
 
 
+# ======================================================================================== dummy film recipes
+# "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH". The owner's dummy set first
+# (W/samples/epidemic: wooden pole / blocks / box lid / woody click, spoon and mug, studio laughter, the old hifi and
+# the VHS deck, the boy's and the men's laughs, the female screams, the heart monitor), then the delivery, police and
+# mirror sets and the free library (kenney wood impacts, VSCO ratchet, oculus switches and HVAC); synthesis only for
+# the dummy's hollow head and jaw hinge, the doll's eye, the CRT, the lamp's buzz, the sip and the flatline.
+
+def _wood_pool():
+    """Hard, dry, small wood hits: the dummy set's pole / blocks / box lid / woody click (3x weight), the kenney wood
+    light and plank impacts."""
+    return pool('dummy_wood', lambda: src('dummy_clack') + src(category='sfx/impacts', has=['impact_wood_light',
+                                                                                         'impact_plank_medium']),
+                'onset', gap=0.05, max_len=0.22, keep=-20)
+
+
+def _wood_body_pool():
+    """Heavier wood (the dummy's body on a chair, a table, a floor): kenney wood medium / heavy + the dummy set."""
+    return pool('dummy_wood_body', lambda: src('wood_knock') + src(category='sfx/impacts', has=['impact_wood_medium',
+                                                                                             'impact_wood_heavy']),
+                'onset', gap=0.06, max_len=0.35, keep=-20)
+
+
+def _creak_pool():
+    """Short wooden creaks: bunk bed, mattress, wooden door, wood friction (mirror set)."""
+    return pool('wood_creak', lambda: src('wood_creak'), 'onset', gap=0.12, max_len=1.2, keep=-22)
+
+
+def _cloth_pool():
+    return pool('cloth_soft', lambda: src('velvet') + src(category='sfx/foley/cloth', has=['kenney_rpg__cloth']),
+                'phrase', gap=0.08, max_len=0.9, keep=-20)
+
+
+def _head_modes(rng, scale=1.0, dec=1.0, dur=0.16, amp=None):
+    """The hollow carved head (a 15 cm shell with the mouth slot): air cavity + shell modes, short and dry."""
+    f = np.array([410.0, 760.0, 1240.0, 1890.0, 2650.0]) * scale * (1 + 0.03 * rng.standard_normal(5))
+    d = np.array([0.045, 0.03, 0.02, 0.012, 0.008]) * dec
+    a = np.array(amp or [1.0, 0.7, 0.5, 0.35, 0.2])
+    return modal(f, d, a, dur, seed=int(rng.integers(1 << 30)), exc=0.0006)
+
+
+def _click_burst(rng, dur=0.006, f=2500.0):
+    tt = np.arange(n_(dur)) / SR
+    return st(hp(noise(dur, int(rng.integers(1 << 30))), f, 2) * np.exp(-tt / (dur / 4)))
+
+
+def _hinge(rng, f0=165.0, dec=0.035):
+    """The jaw's wooden hinge / the head knocking on its stick: a low hollow thock."""
+    return st(modal(np.array([f0, f0 * 1.63, f0 * 2.7]) * (1 + 0.04 * rng.standard_normal(3)), [dec, dec * 0.7, dec * 0.4],
+                    [1.0, 0.6, 0.3], 0.18, int(rng.integers(1 << 30)), exc=0.0012))
+
+
+def r_dummy_clack(rng, sp, kind='snap', **_):
+    """The jaw snapping shut: a dry hardwood click (recorded), the hollow head ringing for 30-50 ms, a tiny sharp
+    contact click, and the hinge's low thock. kind 'snap' (deliberate: "Clack."), 'slow' (after a slow close: a
+    little heavier), 'speech' / 'soft' (one per syllable while he talks: lighter, shorter, no hinge, -5 dB)."""
+    light = kind in ('speech', 'soft', 'syllable', 'talk')
+    g = _wood_pool().get(rng, rj=0.07, tilt=1.5, fo=0.025)[:n_(0.11 if light else 0.16)]
+    g = hp(g, 380 if light else 300, 2)
+    scale = rng.uniform(0.9, 1.12) * (1.1 if light else 1.0)
+    lay = [(0.0, g), (0.0, st(_head_modes(rng, scale, 0.6 if light else 0.9)) * (0.28 if light else 0.42)),
+           (0.0, _click_burst(rng, 0.004 if light else 0.006, 2800) * (0.2 if light else 0.32))]
+    if not light:
+        lay.append((0.0015, _hinge(rng, 150 if kind == 'slow' else 172) * (0.32 if kind == 'slow' else 0.2)))
+    y = _seq(lay, 0.04)
+    y = eq(y, ('peak', 1900, 3.0, 1.0), ('ls', 160, -2.0, 0.7))        # dry wooden bite that reads on a phone
+    return y, onset_s(y, -18), (-5.0 if light else (1.0 if kind == 'slow' else 0.0)), False
+
+
+def r_dummy_jaw(rng, sp, kind='drop', **_):
+    """The jaw falling open and bottoming out on its hinge: a dull wooden knock (lower and rounder than the clack),
+    the head's hollow, then the jaw bouncing once or twice (6 Hz, as characters.Winks.jaw_drop draws it)."""
+    g = lp(_wood_body_pool().get(rng, rj=0.05, tilt=1.0, fo=0.04)[:n_(0.2)], 2600, 2)
+    body = st(_head_modes(rng, rng.uniform(0.78, 0.86), 1.3)) * 0.5
+    th = _hinge(rng, 128, 0.05) * 0.7
+    y = _seq([(0.0, g), (0.0, body), (0.002, th)], 0.05)
+    lay = [(0.0, y)]
+    for k, (dt, a) in enumerate(((0.085, 0.16), (0.155, 0.06))):      # the bounce
+        r = rate(_wood_pool().get(rng, rj=0.05, fo=0.02)[:n_(0.06)], 1.15)
+        lay.append((dt + rng.uniform(-0.008, 0.008), lp(r, 3500, 2) * a))
+    y = _seq(lay, 0.05)
+    return y, onset_s(y, -18), 0.0, False
+
+
+def r_eyelid_click(rng, sp, kind='shut', **_):
+    """A doll's wooden eyelid: a tiny tight click (the dummy set's woody click / metal click), the glass eye's small
+    ring (2.6-5.6 kHz, 8 ms) and the weighted lid's micro rattle. kind 'shut' (the wink, "Click."), 'open' (softer,
+    a tone lower, -5 dB), 'wink' (= shut)."""
+    P = pool('eyelid', lambda: src('eyelid_click', has=['woody', 'metal_click', 'wooden_block']), 'onset', gap=0.05,
+             max_len=0.08, keep=-18)
+    g = lp(hp(P.get(rng, rj=0.05, tilt=1.0, fo=0.012)[:n_(0.06)], 900, 2), 9000, 2)
+    op = kind == 'open'
+    if op:
+        g = rate(g, semis(-2.0))
+    eye = st(modal(np.array([2600.0, 3900.0, 5600.0]) * (1 + 0.03 * rng.standard_normal(3)) * (0.9 if op else 1.0),
+                   [0.008, 0.006, 0.004], [1.0, 0.6, 0.35], 0.05, int(rng.integers(1 << 30)), exc=0.0003)) * 0.25
+    lay = [(0.0, g), (0.0, eye), (0.0, _click_burst(rng, 0.003, 3500) * 0.2)]
+    lay.append((0.022 + rng.uniform(0, 0.008), lp(g[:n_(0.02)], 5000, 2) * 0.18))        # the lid settles
+    y = _seq(lay, 0.03)
+    return y, onset_s(y, -18), (-5.0 if op else 0.0), False
+
+
+def r_wood_creak(rng, sp, kind='tick', dur=None, **_):
+    """A wooden joint. kind 'tick' (one small creak, dur 0.08-0.3: a finger, an elbow, the head ratcheting one notch),
+    'grind' (the slow 180-degree head turn, dur default 3.0: a long wooden groan time-fitted to dur, pitched down, with
+    the neck's ratchet ticking under it), 'creak' (a medium creak, dur default 0.7)."""
+    C = _creak_pool()
+    if kind == 'grind':
+        d = float(dur or 3.0)
+        D = pool('door_creak', lambda: src('door_creak', category='sfx/door_creak'), 'phrase', gap=0.2, max_len=4.0,
+                 keep=-18)
+        a = D.get(rng, rj=0.03, fo=0.1)
+        a = rate(a, float(np.clip(len(a) / SR / d, 0.55, 1.6)) * semis(-3))
+        a = _fit(a, n_(d), rng)
+        lay = [(0.0, lp(hp(a, 160, 2), 4500, 2))]
+        R = src(category='score/percussion/metals', has=['ratchet1_slow', 'ratchet1_crank'])
+        if R:
+            r = audio(_pick(rng, R, 1.0))
+            r = _fit(rate(r, semis(-7)), n_(d), rng)                   # slower, lower: a wooden gear, not a toy
+            lay.append((0.0, lp(hp(r, 250, 2), 3000, 2) * peak(a) / (peak(r) + 1e-9) * 0.35))
+        M = src(category='sfx/creaks_scrapes', has=['arco_noise_moan', 'arco_noise_creak'])
+        if M:
+            m = _fit(rate(audio(_pick(rng, M, 1.0)), semis(-5)), n_(d), rng)
+            lay.append((0.0, lp(m, 1200, 2) * peak(a) / (peak(m) + 1e-9) * 0.25))
+        y = _seq(lay, 0.0)[:n_(d)]
+        g = np.interp(np.arange(len(y)) / SR, [0, 0.12, d * 0.5, d - 0.25, d], [0.0, 0.8, 1.0, 0.9, 0.0])
+        return fade(y * g[:, None].astype(np.float32), 0.02, 0.1), 0.0, 2.0, False
+    d = float(dur or (0.7 if kind == 'creak' else 0.15))
+    g = C.get(rng, rj=0.08, tilt=1.0, fo=0.03)
+    g = rate(g, semis(rng.uniform(1.0, 4.0)) if kind == 'tick' else semis(rng.uniform(-2.0, 1.0)))
+    g = fade(hp(g[:n_(max(0.05, d))], 250, 2), 0.004, min(0.04, d * 0.4))
+    return g, 0.0, 0.0, False
+
+
+def r_wood_knock(rng, sp, n=1, spacing=0.18, size=1.0, **_):
+    """The dummy's wooden body knocking against a chair / a table / the stairs: wood impact + a hollow body mode."""
+    ev = []
+    for k in range(max(1, int(n))):
+        g = _wood_body_pool().get(rng, rj=0.05, fo=0.04)
+        body = st(_head_modes(rng, 0.62 / max(0.5, float(size)), 1.4)) * 0.35
+        y = _seq([(0, lp(g, 6000, 2)), (0.001, body)], 0.03) * (1.0 if k == 0 else rng.uniform(0.6, 0.85))
+        ev.append((k * spacing * (1 + 0.1 * rng.standard_normal()), y))
+    y = _seq(ev, 0.05)
+    return y, onset_s(y, -18), 6 * np.log10(max(0.3, float(size))), False
+
+
+def r_tiny_steps(rng, sp, n=None, dur=None, rate_=None, approach=0.0, **kw):
+    """A knee-high wooden figure walking: tiny double knocks (heel, then toe 30-40 ms later) of small wooden shoes on
+    floorboards, quick and light, a board creaking now and then. n or dur, rate (steps/s, default 3.0),
+    approach (+1 nearer, -1 away)."""
+    rt = float(kw.get('rate', rate_ or 3.0))
+    n = int(n or max(1, round((dur or 2.0) * rt)))
+    W_ = _wood_pool(); C = _creak_pool()
+    ev = []; t = 0.0
+    for k in range(n):
+        prog = k / max(1, n - 1)
+        gdb = approach * (prog - 0.5) * 8 + rng.normal(0, 1.0) + (-1.5 if k % 2 else 0.0)
+        heel = lp(rate(W_.get(rng, rj=0.06, fo=0.02)[:n_(0.07)], semis(rng.uniform(1, 4))), 6500, 2)
+        toe = lp(rate(W_.get(rng, rj=0.06, fo=0.02)[:n_(0.05)], semis(rng.uniform(3, 6))), 5000, 2) * 0.45
+        board = st(modal([118 * rng.uniform(0.9, 1.1), 236, 410], [0.05, 0.03, 0.02], [1, 0.4, 0.2], 0.15,
+                         int(rng.integers(1 << 30)))) * 0.25
+        a = 10 ** (gdb / 20)
+        ev += [(t, pan(heel * a, -0.05 if k % 2 else 0.05)), (t + 0.001, board * a), (t + rng.uniform(0.03, 0.042), toe * a)]
+        if rng.uniform() < 0.18:
+            ev.append((t + rng.uniform(0.02, 0.06), C.get(rng, rj=0.1)[:n_(0.3)] * 0.12 * a))
+        t += (1.0 / rt) * (1 + 0.08 * rng.standard_normal())
+    y = _seq(ev, 0.2)
+    return y, onset_s(y, -18), 0.0, False
+
+
+def r_glove_lift(rng, sp, **_):
+    """A small white cotton glove lifting off the table: a cloth whisper and the finger joint's micro wood tick."""
+    g = _cloth_pool().get(rng, rj=0.05, fo=0.06)
+    g = fade(lp(hp(g[:n_(0.28)], 450, 2), 7000, 2), 0.01, 0.08)
+    tk = r_wood_creak(rng, sp, kind='tick', dur=0.08)[0] * 0.5
+    return _seq([(0.0, g), (0.04, tk)], 0.05), 0.0, 0.0, False
+
+
+def r_hand_slot(rng, sp, dur=1.0, **_):
+    """Your hand pushed through the slot in his back: the jacket's fabric sliding, the wooden edge of the slot rubbing
+    the wrist, and the hollow inside answering when the hand reaches the head stick."""
+    d = max(0.4, float(dur))
+    c = _cloth_pool().get(rng, rj=0.04, fo=0.1)
+    c = fade(lp(_fit(c, n_(d), rng), 4500, 2), 0.05, 0.15)
+    tt = np.arange(n_(d)) / SR
+    rub_env = np.interp(tt, [0, 0.15 * d, 0.6 * d, d], [0, 1, 0.7, 0]) * (0.75 + 0.25 * np.abs(np.sin(2 * np.pi * 7.3 * tt)))
+    rub = st(bp(noise(d, int(rng.integers(1 << 30))), 500, 2400, 2) * rub_env) * peak(c) * 0.22
+    inside = st(lp(_head_modes(rng, 0.62, 1.6, 0.3), 1600, 2)) * peak(c) * 0.9
+    knock = lp(_wood_pool().get(rng, rj=0.05, fo=0.03)[:n_(0.08)], 2000, 2) * peak(c) * 0.4
+    y = _seq([(0, c), (0, rub), (0.72 * d, inside), (0.72 * d, knock)], 0.2)
+    return y, 0.0, 0.0, False
+
+
+def r_hand_squeeze(rng, sp, **_):
+    """One soft squeeze (a hand inside the dummy squeezing yours; Grandpa's three squeezes): fabric compressing and
+    skin, close and quiet, with a faint low pressure thump."""
+    g = _cloth_pool().get(rng, rj=0.05, fo=0.06)
+    g = fade(lp(hp(g[:n_(0.22)], 180, 2), 2600, 2), 0.02, 0.08)
+    tt = np.arange(n_(0.12)) / SR
+    th = st(lp(np.sin(2 * np.pi * 95 * tt) * np.exp(-tt / 0.03), 300, 2).astype(np.float32)) * peak(g) * 0.4
+    return _seq([(0.0, g), (0.03, th)], 0.05), 0.0, 0.0, False
+
+
+def r_case_latch(rng, sp, kind='pop', **_):
+    """A brass latch of the old leather case snapping open: the latch (flightcase latch / metal click), a small brass
+    ring and the leather case's dull body. kind 'pop' (open) | 'close'."""
+    A = pool('case_latch', lambda: src('case_latch', has=['flightcase', 'metal_click']), 'onset', gap=0.08,
+             max_len=0.2, keep=-16)
+    a = hp(A.get(rng, rj=0.04, tilt=1.0, fo=0.03), 400, 2)
+    ring = st(modal(np.array([2150.0, 3420.0, 5200.0]) * (1 + 0.02 * rng.standard_normal(3)), [0.09, 0.05, 0.03],
+                    [1.0, 0.5, 0.25], 0.25, int(rng.integers(1 << 30)), exc=0.0004)) * 0.12
+    body = st(modal([175.0, 320.0, 560.0], [0.04, 0.03, 0.02], [1.0, 0.5, 0.25], 0.15, int(rng.integers(1 << 30)))) * 0.35
+    y = _seq([(0, a), (0.0005, ring), (0.001, body)], 0.05)
+    return y, onset_s(y, -16), (-2.0 if kind == 'close' else 0.0), False
+
+
+def r_case_lid(rng, sp, action='open', **_):
+    """The case lid: 'open' (the leather case's squeaky hinge and the lid swinging back onto the table), 'close'
+    (the wooden lid coming down on the velvet: a soft wooden thump)."""
+    if action == 'close':
+        L_ = pool('box_lid', lambda: src('case_lid', has=['wooden_box', 'shoe_box']), 'phrase', gap=0.15, max_len=0.6,
+                  keep=-14)
+        a = lp(L_.get(rng, rj=0.04, fo=0.05), 5000, 2)
+        th = st(modal([140.0, 260.0], [0.06, 0.04], [1.0, 0.4], 0.2, int(rng.integers(1 << 30)))) * 0.4
+        y = _seq([(0, a), (0.002, th)], 0.05)
+        return y, onset_s(y, -16), 0.0, False
+    E = src('case_lid', has=['briefcase'])
+    e = _pick(rng, E)
+    y = fade(pnorm(audio(e)), 0.003, 0.08)
+    y = rate(y, 1 + rng.uniform(-0.04, 0.02))
+    flop = st(modal([120.0, 230.0], [0.07, 0.05], [1.0, 0.4], 0.25, int(rng.integers(1 << 30)))) * 0.3
+    return _seq([(0, y), (len(y) / SR * 0.85, flop)], 0.1), 0.0, 0.0, False
+
+
+def r_velvet(rng, sp, dur=0.8, **_):
+    """Fingers pressing into and brushing the red velvet lining: soft plush friction, no highs."""
+    d = max(0.2, float(dur))
+    g = _fit(_cloth_pool().get(rng, rj=0.04, fo=0.1), n_(d), rng)
+    g = eq(lp(hp(g, 200, 2), 3500, 2), ('peak', 900, 2.0, 0.8))
+    return fade(g, min(0.08, d / 4), min(0.2, d / 3)), 0.0, 0.0, False
+
+
+def r_spoon_stir(rng, sp, dur=3.0, clink=False, **_):
+    """A teaspoon stirring in a ceramic mug (the dummy set's mug / teacup stirs), time-fitted to dur; clink=True ends
+    on a tap on the rim."""
+    d = max(0.5, float(dur))
+    E = src('spoon_stir')
+    e = _pick(rng, E)
+    gs = grains(e, 'phrase', gap=0.3, max_len=8.0, keep=-24)
+    s0, s1 = max(gs, key=lambda g: g[1] - g[0])
+    y = _fit(audio(e)[s0:s1], n_(d), rng)
+    y = fade(hp(y, 280, 2), 0.08, 0.15)
+    lay = [(0.0, y)]
+    if clink:
+        c, pre, *_r = r_spoon_clink(rng, sp, n=1)
+        lay.append((max(0.0, d - 0.05 - pre), c * 0.8))
+    return _seq(lay, 0.1), 0.0, 0.0, False
+
+
+def _clink_pool():
+    return pool('spoon_clink', lambda: src('spoon_clink', has=['single_glass_clink', 'ramekins', 'spoon_stir_clink']),
+                'onset', gap=0.08, max_len=0.5, keep=-14)
+
+
+def r_spoon_clink(rng, sp, n=3, spacing=0.62, times=None, **_):
+    """'Clink. Clink. Clink.': the spoon tapped on the mug's rim, deliberately, one per word. A recorded clink, the
+    mug's ceramic ring and the spoon's thin metal ring. n, spacing (s) or times=[offsets in s] (to sit on the words);
+    the first transient lands on the cue time."""
+    T = [float(x) for x in times] if times else [k * float(spacing) for k in range(max(1, int(n)))]
+    C = _clink_pool()
+    ev = []
+    for k, t in enumerate(T):
+        g = hp(C.get(rng, rj=0.03, tilt=1.0, fo=0.05), 700, 2)
+        g = g[n_(max(0.0, onset_s(g, -14) - 0.002)):]
+        mug = st(modal(np.array([1980.0, 3110.0, 4700.0]) * (1 + 0.01 * rng.standard_normal(3)), [0.28, 0.16, 0.08],
+                       [1.0, 0.5, 0.25], 0.6, int(rng.integers(1 << 30)), exc=0.0003)) * 0.16
+        spn = st(modal([5230.0, 7900.0], [0.06, 0.04], [1.0, 0.4], 0.15, int(rng.integers(1 << 30)), exc=0.0002)) * 0.06
+        a = 1.0 if k == 0 else rng.uniform(0.85, 1.0)
+        ev += [(t, g * a), (t, mug * a), (t, spn * a)]
+    y = _seq(ev, 0.3)
+    return y, onset_s(y, -16), 0.0, False
+
+
+def r_mug_set(rng, sp, kind='down', **_):
+    """The mug: kind 'down' (set down on the wooden table: a ceramic thunk, the table, coffee sloshing), 'pickup'
+    (lifted: a short scrape and a faint clink of the spoon)."""
+    if kind in ('pickup', 'lift', 'up'):
+        tt = np.arange(n_(0.15)) / SR
+        scr = st(bp(noise(0.15, int(rng.integers(1 << 30))), 700, 3500, 2) * np.interp(tt, [0, 0.03, 0.15], [0, 1, 0]))
+        c = _clink_pool().get(rng, rj=0.03, fo=0.05) * 0.25
+        return _seq([(0, scr * 0.5), (0.08, hp(c, 1500, 2))], 0.2), 0.0, -4.0, False
+    P = pool('mug_place', lambda: src('mug_set', has=['placing', 'ramekins']), 'onset', gap=0.1, max_len=0.4, keep=-14)
+    g = lp(P.get(rng, rj=0.04, fo=0.06), 6000, 2)
+    tbl = st(modal([180.0, 410.0, 760.0], [0.045, 0.03, 0.02], [1.0, 0.5, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.5
+    tt = np.arange(n_(0.3)) / SR
+    slosh = st(bp(noise(0.3, int(rng.integers(1 << 30))), 280, 1100, 2) *
+               (np.exp(-tt / 0.08) * (0.6 + 0.4 * np.sin(2 * np.pi * 8 * tt)))) * 0.12
+    y = _seq([(0, g), (0.001, tbl), (0.02, slosh)], 0.1)
+    return y, onset_s(y, -16), 0.0, False
+
+
+def r_sip(rng, sp, **_):
+    """A sip of hot coffee: a careful slurp (air drawn over the liquid), a swallow, a small breath out."""
+    d = 0.42; tt = np.arange(n_(d)) / SR
+    cen = 900 + 800 * (tt / d)
+    turb = 0.7 + 0.3 * lp(noise(d, int(rng.integers(1 << 30))), 25, 1)[:len(tt)] * 6
+    sl = sweep_bp(noise(d, int(rng.integers(1 << 30))), cen[::max(1, len(cen) // 32)][:32], q=3.0) * turb * \
+        np.interp(tt, [0, 0.05, 0.3, d], [0, 1, 0.8, 0])
+    t2 = np.arange(n_(0.09)) / SR
+    gulp = np.sin(2 * np.pi * np.cumsum(190 - 600 * t2) / SR) * np.exp(-t2 / 0.025)
+    lay = [(0.0, st(sl.astype(np.float32)) * 0.6), (0.55, st(lp(gulp.astype(np.float32), 900, 2)) * 0.5)]
+    B = src('sip', has=['calm'])
+    if B:
+        gs = grains(B[0], 'phrase', gap=0.25, max_len=2.5, keep=-20)
+        s0, s1 = gs[int(rng.integers(len(gs)))]
+        b = fade(lp(hp(audio(B[0])[s0:min(s1, s0 + n_(0.5))], 200, 2), 2500, 2), 0.05, 0.15)
+        lay.append((0.75, pnorm(b) * 0.25))
+    return _seq(lay, 0.1), 0.0, 0.0, False
+
+
+def r_dummy_thud(rng, sp, kind='rug', **_):
+    """Mister Winks falling face down: the body on the rug (a cloth-padded thump), the wooden torso, the head knocking
+    a beat later, the little limbs clattering, a low floor thump. kind 'rug' | 'floor' (bare boards: harder)."""
+    rug = kind != 'floor'
+    lay = []
+    if rug:
+        P = pool('cloth_impact', lambda: src('dummy_thud', has=['cloth_impact']), 'onset', gap=0.15, max_len=0.5,
+                 keep=-14)
+        lay.append((0.0, lp(P.get(rng, rj=0.04, fo=0.1), 2500, 2)))
+    b = _wood_body_pool().get(rng, rj=0.04, fo=0.06)
+    lay.append((0.004, lp(b, 1800 if rug else 5000, 2) * (0.8 if rug else 1.0)))
+    hd = _seq([(0, lp(_wood_pool().get(rng, rj=0.04, fo=0.03), 3200 if rug else 7000, 2)),
+               (0, st(_head_modes(rng, 0.85, 1.2)) * 0.5)], 0.02)
+    lay.append((0.028 + rng.uniform(0, 0.01), hd * 0.75))
+    for dt, a in ((0.065, 0.35), (0.11, 0.22), (0.17, 0.12)):        # arms and legs settle
+        r = _wood_pool().get(rng, rj=0.06, fo=0.02)[:n_(0.05)]
+        lay.append((dt + rng.uniform(-0.01, 0.01), lp(rate(r, semis(rng.uniform(1, 4))), 4000 if rug else 8000, 2) * a))
+    lay.append((0.0, st(sub_boom(72, 46, 0.35, 0.0)) * 0.35))
+    y = _seq(lay, 0.1)
+    return y, onset_s(y, -16), 0.0, False
+
+
+def r_tv_on(rng, sp, **_):
+    """The old console TV turning on by itself: the power switch's clunk (the old hifi), the degauss 'thoom' (a 60 Hz
+    coil burst with its beat), the screen charging (static crackle 2-7 kHz, falling away over 1.5 s), the flyback
+    whine and the set's fan / transformer hum settling in."""
+    E = src('tv_on', has=['hifi'])
+    e = E[0] if E else None
+    lay = []
+    hum_len = 3.0
+    if e is not None:
+        y = audio(e)
+        on = n_(0.1)
+        lay.append((0.0, eq(fade(y[on:on + n_(0.55)], 0.002, 0.1), ('peak', 1200, 4.0, 0.9))))
+        whir = y[n_(0.7):n_(0.7 + hum_len)]
+        g = np.interp(np.arange(len(whir)) / SR, [0, 0.4, hum_len], [0, 1, 0.0])[:, None]
+        lay.append((0.25, lp(whir, 3000, 2) * g.astype(np.float32) * 0.6))
+    tt = np.arange(n_(1.1)) / SR
+    dg = (np.sin(2 * np.pi * 60 * tt) + 0.6 * np.sin(2 * np.pi * 120 * tt + 0.5) + 0.25 * np.sin(2 * np.pi * 61.5 * tt)) * \
+        np.exp(-tt / 0.32) * (1 - np.exp(-tt / 0.01)) * (1 + 0.3 * np.sin(2 * np.pi * 7 * tt))
+    lay.append((0.06, st(lp(hp(dg.astype(np.float32), 45, 2), 450, 2)) * 0.32))
+    t3 = np.arange(n_(1.6)) / SR
+    imp = (rng.uniform(size=len(t3)) < 0.0035 * np.exp(-t3 / 0.5)).astype(np.float32)
+    crk = bp(np.convolve(imp * rng.standard_normal(len(t3)).astype(np.float32), np.exp(-np.arange(n_(0.004)) / n_(0.0008)),
+                         'same').astype(np.float32), 2000, 7000, 2)
+    lay.append((0.08, st(crk) * 0.9))
+    wh = np.sin(2 * np.pi * 15734.0 * t3) * np.interp(t3, [0, 0.3, 1.6], [0, 1, 0.8]) * 0.012
+    lay.append((0.1, st(wh.astype(np.float32))))
+    y = _seq(lay, 0.1)
+    return y, onset_s(y, -18), 0.0, False
+
+
+def r_vcr(rng, sp, action='play', dur=None, **_):
+    """Grandpa's old VCR: 'play' / 'insert' (the cassette mechanism threading the tape: the dummy set's Into VHS),
+    'rewind' (the rewinding motor, dur), 'stop' (the mechanism unthreading: the last clunks)."""
+    if action == 'rewind':
+        E = src('vcr', has=['rewind'])
+        e = _pick(rng, E)
+        y = excerpt(e, float(dur or 4.0), rng, 0.5)
+        return fade(hp(y, 120, 2), 0.05, 0.3), 0.0, -3.0, False
+    E = src('vcr', has=['into_vhs'])
+    y = pnorm(audio(E[0])) if E else noise(1.0) * 0.01
+    if action == 'stop':
+        y = y[n_(1.7):]
+    if dur:
+        y = y[:n_(float(dur))]
+    return fade(hp(y, 120, 2), 0.005, 0.1), 0.0, 0.0, False
+
+
+def r_tape_hiss(rng, sp, dur=10.0, **_):
+    """BED: an old VHS tape running (heard from the TV): hiss with flutter, the 30 Hz head-switch buzz, mains hum."""
+    d = float(dur); n = n_(d); tt = np.arange(n) / SR
+    h = bp(noise(d, int(rng.integers(1 << 30))), 1500, 9000, 2)
+    h = h * (1 + 0.12 * np.sin(2 * np.pi * 6.3 * tt) + 0.06 * np.sin(2 * np.pi * 0.7 * tt))
+    pulse = ((tt * 29.97) % 1.0 < 0.012).astype(np.float32)
+    buzz = lp(hp(pulse, 60, 2), 2200, 2) * 0.35
+    hum = (np.sin(2 * np.pi * 60 * tt) + 0.5 * np.sin(2 * np.pi * 180 * tt)) * 0.05
+    y = st((h + buzz + hum).astype(np.float32))
+    return fade(y, 0.3, 0.5), 0.0, 0.0, False
+
+
+def _laugh_files():
+    return {k: src('studio_laugh', has=[k]) for k in ('audience_large_studio', 'medium_02', 'medium_03',
+                                                       'large_audience_short')}
+
+
+def r_studio_laugh(rng, sp, size='medium', dur=None, align='start', swell=None, **_):
+    """The 1974 studio audience. size 'short' (a 2-4 s burst), 'medium' (one 6-7 s laugh), 'huge' (three takes layered
+    and widened into one roaring wave, 7-12 s: "a huge, roaring wave of laughter fills the dark house"); dur cuts and
+    fades it; swell (s) fades it in over that time (a wave rising); align 'peak' puts the loudest moment of the wave
+    on the cue time (pre = time to the crest), 'start' (default) starts it there."""
+    F = _laugh_files()
+    pick = lambda k: F[k][0] if F.get(k) else _pick(rng, src('studio_laugh'))
+    if size == 'short':
+        e = pick('large_audience_short') if rng.uniform() < 0.5 else pick('audience_large_studio')
+        y = fade(pnorm(audio(e)[:n_(3.2)]), 0.01, 1.0)
+    elif size in ('huge', 'big', 'roar', 'wave'):
+        a = pnorm(audio(pick('audience_large_studio')))
+        b = pnorm(audio(pick('medium_02')))
+        c = pnorm(audio(pick('medium_03')))
+        lay = [(0.0, a), (0.35, pan(rate(b, 1.03), -0.45) * 0.75), (0.7, pan(rate(c, 0.97), 0.45) * 0.7),
+               (2.6, pan(rate(a, 0.95), 0.25) * 0.45)]
+        y = _seq(lay, 0.0)
+        y = width(y, 1.3)
+    else:
+        e = pick('audience_large_studio') if rng.uniform() < 0.6 else pick('medium_03')
+        y = fade(pnorm(audio(e)), 0.01, 0.8)
+    if dur:
+        y = fade(y[:n_(float(dur))], 0.01, min(1.5, float(dur) * 0.35))
+    if swell:
+        sw = float(swell)
+        g = np.clip(np.arange(len(y)) / SR / max(0.05, sw), 0, 1) ** 1.5
+        y = y * g[:, None].astype(np.float32)
+    y = fade(hp(y, 90, 2), 0.01, 0.3)
+    pre = env_peak_s(y, 0.5) if align == 'peak' else 0.0
+    return y, pre, (1.5 if size in ('huge', 'big', 'roar', 'wave') else (-2.0 if size == 'short' else 0.0)), False
+
+
+def r_applause(rng, sp, dur=4.0, **_):
+    """The studio audience applauding (the tails of the laughter-and-applause takes), dur."""
+    E = src('applause')
+    e = _pick(rng, E)
+    y = audio(e); n = len(y)
+    seg = y[n // 3:] if n > n_(3) else y
+    y = _fit(seg, n_(float(dur)), rng)
+    return fade(hp(y, 120, 2), 0.3, 0.8), 0.0, 0.0, False
+
+
+def _lamp_buzz(d, rng):
+    tt = np.arange(n_(d)) / SR
+    y = sum((0.9 / k) * np.sin(2 * np.pi * 120 * k * tt + rng.uniform(0, 6)) for k in range(1, 18))
+    y = np.tanh(2.2 * y) * (1 + 0.15 * lp(rng.standard_normal(len(tt)).astype(np.float32), 8, 1) * 20)
+    return bp(y.astype(np.float32), 110, 4500, 2)
+
+
+def r_lamp_flicker(rng, sp, dur=1.2, times=None, buzz=0.6, **_):
+    """The lamp flickering: on/off edges (times=[offsets s], else 4-6 irregular flicks over dur), each edge a
+    filament tick and a 'zzt' arc, the lamp's 120 Hz buzz while it is on, the static of the socket under it."""
+    d = max(0.3, float(dur))
+    if times:
+        edges = sorted(float(x) for x in times)
+    else:
+        edges = []; t = 0.0
+        while t < d - 0.12:
+            t += rng.uniform(0.04, 0.22); edges.append(t)
+    n = n_(d + 0.3); tt = np.arange(n) / SR
+    state = np.ones(n, np.float32)
+    on = True
+    for i, e in enumerate(edges):
+        on = not on
+        state[n_(e):] = 1.0 if on else 0.0
+    k = n_(0.004); state = np.convolve(state, np.ones(k) / k, 'same').astype(np.float32)
+    bz = _lamp_buzz(d + 0.3, rng) * state * 0.25 * buzz
+    lay = [(0.0, st(bz))]
+    for e in edges:
+        lay.append((e, _click_burst(rng, 0.004, 3000) * 0.5))
+        z = bp(noise(0.035, int(rng.integers(1 << 30))), 1800, 5000, 2) * np.exp(-np.arange(n_(0.035)) / n_(0.008))
+        lay.append((e, st(z.astype(np.float32)) * 0.35))
+    S_ = src('lamp_flicker', has=['buzz_noise'])
+    if S_:
+        s = excerpt(_pick(rng, S_, 1.0), d + 0.3, rng, 0.2)
+        lay.append((0.0, bp(s, 150, 4000, 2) * state[:len(s), None] * peak(bz) / (peak(s) + 1e-9) * 0.3))
+    return fade(_seq(lay, 0.0), 0.003, 0.05), 0.0, 0.0, False
+
+
+def r_lamp_out(rng, sp, kind='out', **_):
+    """'out': the lamp dies (the filament's tink and pop, its buzz cut dead, a soft low whump of the dark); 'on': it
+    comes back (the switch, the buzz returning)."""
+    if kind == 'on':
+        S_ = pool('switch', lambda: src(category='sfx/clicks', has=['mechswtch', 'kenney_ui__switch']), 'onset',
+                  gap=0.05, max_len=0.2, keep=-14)
+        c = S_.get(rng, rj=0.03, fo=0.03)
+        bz = st(_lamp_buzz(0.8, rng)) * np.linspace(0, 1, n_(0.8))[:, None].astype(np.float32) ** 2 * 0.06
+        return _seq([(0.0, c), (0.02, bz)], 0.05), 0.0, -2.0, False
+    tink = st(modal([4200.0, 6100.0, 8300.0], [0.05, 0.03, 0.02], [1.0, 0.5, 0.25], 0.15, int(rng.integers(1 << 30)),
+                    exc=0.0002)) * 0.1
+    pop = _click_burst(rng, 0.004, 1500) * 0.5
+    bz = st(_lamp_buzz(0.25, rng)) * 0.08
+    bz[-n_(0.01):] *= np.linspace(1, 0, n_(0.01))[:, None].astype(np.float32)
+    wh = st(sub_boom(62, 34, 0.7, 0.0)) * 0.3
+    y = _seq([(0.0, bz), (0.25, pop), (0.25, tink), (0.252, wh)], 0.2)
+    return y, 0.25, 0.0, False
+
+
+def r_flashlight_click(rng, sp, kind='on', **_):
+    """The usher's little flashlight: the switch (the mirror set's flashlight / Maglite switch takes) and the small
+    plastic body. kind 'on' | 'off' (a tone lower, softer)."""
+    P = pool('torch', lambda: src('flashlight_click'), 'onset', gap=0.08, max_len=0.25, keep=-16)
+    g = hp(P.get(rng, rj=0.03, tilt=1.0, fo=0.03), 300, 2)
+    if kind == 'off':
+        g = rate(g, semis(-1.5)) * 0.8
+    body = st(modal([980.0, 2300.0], [0.012, 0.008], [1.0, 0.5], 0.05, int(rng.integers(1 << 30)), exc=0.0003)) * 0.15
+    y = _seq([(0, g), (0.0005, body)], 0.03)
+    return y, onset_s(y, -16), (-2.0 if kind == 'off' else 0.0), False
+
+
+def r_flashlight_hum(rng, sp, dur=6.0, **_):
+    """BED: the flashlight's faint electric hum (the beam on the wall): a soft 100 Hz hum with a thin shimmer around
+    2.2 kHz, wobbling slowly as the beam sweeps."""
+    d = float(dur); tt = np.arange(n_(d)) / SR
+    w = 1 + 0.25 * np.sin(2 * np.pi * 0.23 * tt + rng.uniform(0, 6))
+    y = (np.sin(2 * np.pi * 100 * tt) + 0.4 * np.sin(2 * np.pi * 200 * tt) +
+         0.06 * np.sin(2 * np.pi * 2210 * tt * (1 + 0.002 * np.sin(2 * np.pi * 0.4 * tt)))) * w
+    return fade(st(y.astype(np.float32)), 0.8, 0.8), 0.0, 0.0, False
+
+
+def _beep_pool():
+    return pool('monitor_beep', lambda: src('heart_monitor'), 'phrase', gap=0.25, max_len=0.6, keep=-12)
+
+
+def r_heart_monitor(rng, sp, dur=8.0, bpm=62.0, bpm_end=None, flatline_at=None, **_):
+    """The hospital heart monitor: the recorded beep (488 Hz) at bpm (ramping to bpm_end); flatline_at (s): from there
+    one continuous tone. The memories (75-110 s) use memory=True or space 'memory'."""
+    d = float(dur); P = _beep_pool()
+    bpm_end = float(bpm_end or bpm)
+    ev = []; t = rng.uniform(0.05, 0.4)
+    fl = float(flatline_at) if flatline_at is not None else None
+    while t < d - 0.1 and (fl is None or t < fl - 0.2):
+        b = bpm + (bpm_end - bpm) * (t / max(d, 1e-3))
+        g = P.get(rng, rj=0.0, tilt=0.0, fo=0.04, avoid=0)
+        ev.append((t, hp(g, 250, 2)))
+        t += 60.0 / b * (1 + 0.01 * rng.standard_normal())
+    if fl is not None and fl < d:
+        f, *_r = r_monitor_flatline(rng, sp, dur=d - fl, beeps=0)
+        ev.append((fl, f))
+    if not ev:
+        ev = [(0.0, np.zeros((n_(0.1), 2), np.float32))]
+    y = _seq(ev, 0.1)[:n_(d)]
+    return y, 0.0, 0.0, False
+
+
+def r_monitor_flatline(rng, sp, dur=4.0, beeps=2, bpm=38.0, **_):
+    """The flatline: `beeps` last, slowing beeps, then the monitor's tone held (the recorded beep's steady part
+    looped, so it is the same voice), dur seconds of tone."""
+    P = _beep_pool()
+    g = P.get(rng, rj=0.0, tilt=0.0, fo=0.02, avoid=0)
+    a = n_(0.05); b = n_(0.19)
+    core = g[a:b] if len(g) > b else g
+    ev = []; t = 0.0
+    for k in range(int(beeps)):
+        ev.append((t, hp(P.get(rng, rj=0.0, tilt=0.0, fo=0.04, avoid=0), 250, 2)))
+        t += 60.0 / bpm * (1 + 0.25 * k)
+    tone = _fit(core, n_(max(0.3, float(dur))), rng)
+    tone = fade(hp(tone, 250, 2), 0.003, 0.3)
+    ev.append((t, tone))
+    return _seq(ev, 0.1), 0.0, 0.0, False
+
+
+def r_mom_scream(rng, sp, kind='mid', breath=True, **_):
+    """Mom's scream (the dummy set's female screams: 'mid', 'short', 'falling'), a sharp inhale before it."""
+    E = src('mom_scream', has=[{'mid': 'scream_mid', 'short': 'scream_short', 'falling': 'falling'}.get(kind, 'scream_mid')]) \
+        or src('mom_scream')
+    y = fade(pnorm(audio(_pick(rng, E))), 0.004, 0.12)
+    lay = [(0.0, y)]
+    pre = 0.0
+    if breath:
+        g, *_r = r_mom_breath(rng, sp, kind='gasp')
+        g = g[:n_(0.35)]
+        pre = 0.3
+        lay = [(0.0, fade(g, 0.02, 0.08) * 0.35)] + [(pre, y)]
+    return _seq(lay, 0.2), pre, 0.0, False
+
+
+def _boy_pool():
+    return pool('boy_laugh', lambda: src('owen_giggle'), 'phrase', gap=0.12, max_len=1.5, keep=-22)
+
+
+def r_snort(rng, sp, **_):
+    """Owen's stifled snort-laugh: the laugh caught in the nose. A boy's laugh grain cut to a 0.2 s burst and pushed
+    through the nose (nasal band, no mouth), a sharp nasal air burst, a shaking suppressed giggle after it."""
+    P = _boy_pool()
+    g = P.get(rng, rj=0.03, fo=0.05)[:n_(0.22)]
+    g = eq(bp(g, 350, 4500, 2), ('peak', 1100, 5.0, 1.4), ('peak', 2600, -4.0, 1.0))
+    d = 0.12; tt = np.arange(n_(d)) / SR
+    nz = bp(noise(d, int(rng.integers(1 << 30))), 700, 3200, 2) * np.interp(tt, [0, 0.01, 0.04, d], [0, 1, 0.5, 0])
+    after = P.get(rng, rj=0.03, fo=0.1)[:n_(0.45)]
+    after = _tremolo(lp(after, 2500, 2), 9.0, 0.6, rng) * 0.3
+    y = _seq([(0.0, st(nz.astype(np.float32)) * peak(g) * 0.9), (0.0, g * 0.7), (0.2, after)], 0.1)
+    return y, 0.0, 0.0, False
+
+
+def r_owen_giggle(rng, sp, dur=1.5, **_):
+    """Owen (9) giggling: a phrase of the boy's laugh take, fitted to dur."""
+    P = _boy_pool()
+    g = P.get(rng, rj=0.02, fo=0.15)
+    return fade(_fit(g, n_(float(dur)), rng) if len(g) < n_(float(dur)) else g[:n_(float(dur))], 0.01, 0.2), 0.0, 0.0, False
+
+
+def r_owen_cry(rng, sp, kind='cry', dur=3.0, **_):
+    """Owen: kind 'shriek' (a child's shriek: the short female scream up 3 semitones, smaller and thinner), 'cry' /
+    'whimper' (a frightened boy crying: the stuttered sobbing breaths up 5 semitones and the boy's laugh slowed into
+    shaking sobs underneath), dur."""
+    if kind == 'shriek':
+        E = src('mom_scream', has=['scream_short']) or src('mom_scream')
+        y = rate(pnorm(audio(_pick(rng, E))), semis(3.0))
+        return fade(lp(hp(y, 300, 2), 7500, 2), 0.004, 0.1), 0.0, 0.0, False
+    d = float(dur)
+    s, *_r = r_mom_sob(rng, sp, dur=d, intensity=0.8 if kind == 'cry' else 0.5)
+    s = rate(s, semis(5.0))
+    P = _boy_pool(); ev = []; t = 0.1
+    while t < d - 0.3:
+        g = _tremolo(rate(P.get(rng, rj=0.03, fo=0.1)[:n_(0.5)], 0.82), rng.uniform(5, 7), 0.55, rng)
+        ev.append((t, lp(g, 3000, 2) * 0.35))
+        t += rng.uniform(0.8, 1.4)
+    y = _seq([(0.0, s)] + ev, 0.1)[:n_(d + 0.5)]
+    return fade(y, 0.05, 0.3), 0.0, (-3.0 if kind == 'whimper' else 0.0), False
+
+
+def r_winks_laugh(rng, sp, kind='giggle', dur=None, **_):
+    """Mister Winks laughing. 'giggle': a man's laugh pushed up 6 semitones (a small body), boxed in the hollow head,
+    with a light jaw clack on every syllable; 'dark': the insane laugh slowed 4 semitones into a long hall (use once,
+    for a stinger layer)."""
+    if kind == 'dark':
+        E = src('winks_laugh', has=['insane'])
+        y = excerpt(_pick(rng, E), float(dur or 3.0), rng, 0.3)
+        y = lp(rate(y, semis(-4)), 3200, 2)
+        y = reverb(y, 'hall', 0.5, 0.02)
+        return fade(y, 0.2, 0.8), 0.0, -2.0, False
+    P = pool('man_laugh', lambda: src('winks_laugh', nothas=['insane']), 'phrase', gap=0.2, max_len=2.5, keep=-18)
+    g = P.get(rng, rj=0.02, fo=0.15)
+    if dur:
+        g = g[:n_(float(dur))]
+    g = rate(g, semis(6.0))
+    g = eq(lp(hp(g, 250, 2), 5500, 2), ('peak', 520, 4.0, 1.3), ('peak', 1250, 2.0, 1.5))
+    on = []
+    m = np.abs(mono(g)); hop = n_(0.01)
+    env = np.array([m[i:i + hop].max() for i in range(0, len(m) - hop, hop)])
+    thr = env.max() * 0.35
+    for i in range(1, len(env)):
+        if env[i] > thr and env[i - 1] <= thr:
+            on.append(i * 0.01)
+    lay = [(0.0, g)]
+    for t in on[:12]:
+        c, pre, *_r = r_dummy_clack(rng, sp, kind='speech')
+        lay.append((max(0.0, t - pre + 0.04), c * 0.35 * peak(g) / (peak(c) + 1e-9)))
+    return fade(_seq(lay, 0.1), 0.01, 0.15), 0.0, 0.0, False
+
+
+def r_goodnight_hit(rng, sp, swell=0.9, **_):
+    """'Goodnight, Owen.' landing in near silence: a short reversed air swell into one deep, soft sub thump (D, 37 Hz
+    falling), the washed braam far under it, a long dark tail. Not loud: felt. pre = the swell, so the thump lands
+    on the cue time."""
+    sw = max(0.2, float(swell))
+    nz = sweep_bp(noise(sw, int(rng.integers(1 << 30))), 300, 2200, q=1.2)
+    tt = np.arange(len(nz)) / SR
+    rev = st((nz * (tt / sw) ** 3).astype(np.float32)) * 0.12
+    th = st(sub_boom(55, 30, 3.2, 0.05, int(rng.integers(1 << 30)))) * 0.8
+    t2 = np.arange(n_(2.5)) / SR                         # a felt low D-A fifth (73 / 110 Hz, saturated): the hit has a
+    fifth = np.tanh(2.5 * (np.sin(2 * np.pi * 73.42 * t2) + 0.7 * np.sin(2 * np.pi * 110.0 * t2))) * \
+        np.exp(-t2 / 0.7) * (1 - np.exp(-t2 / 0.01))       # body a small speaker still plays
+    lay = [(0.0, rev), (sw, th), (sw, st(lp(fifth.astype(np.float32), 1200, 2)) * 0.7)]
+    E = src('goodnight_hit', has=['braam_washed', 'bass_drop_deep'])
+    if E:
+        b = fade(pnorm(audio(_pick(rng, E, 1.0))), 0.01, 1.2)
+        lay.append((sw, lp(b, 1500, 2) * 0.5))
+    y = _seq(lay, 0.0)
+    y = reverb(y, 'church', 0.22, 0.02, hpf=120)
+    return y, sw, 0.0, True
+
+
+def r_old_clock(rng, sp, dur=10.0, bpm=60.0, **_):
+    """BED: Grandpa's old clock: a deep tick-tock (the mirror set's wall clock pitched down 4 semitones, its wooden
+    case's body), the tock a semitone lower and softer, a little of the hall's room."""
+    P = pool('clock_old', lambda: src('old_clock', has=['wall_clock']) or src('old_clock'), 'onset', gap=0.3,
+             max_len=0.25, keep=-14)
+    ev = []; t = 0.0; k = 0
+    while t < float(dur):
+        g = rate(P.get(rng, rj=0.0, tilt=0.0, fo=0.04, avoid=0), semis(-4.0 - (1.0 if k % 2 else 0.0)))
+        case = st(modal([210.0, 520.0, 980.0], [0.05, 0.03, 0.015], [1.0, 0.5, 0.25], 0.15, 7 + k % 2)) * 0.3
+        ev += [(t, hp(g, 200, 2) * (1.0 if k % 2 == 0 else 0.7)), (t, case * (1.0 if k % 2 == 0 else 0.7))]
+        t += 60.0 / float(bpm) + rng.normal(0, 0.002); k += 1
+    y = _seq(ev, 0.3)[:n_(float(dur))]
+    return reverb(y, 'hallway', 0.3), 0.0, 0.0, False
+
+
+def r_hospital_tone(rng, sp, dur=20.0, **_):
+    """BED: the hospital room: ventilation (oculus HVAC loop), the fluorescent tube's 120 Hz buzz, the room's air."""
+    E = src(category='sfx/room_tone', has=['machhvac_hvac_loop']) or src('hospital_tone')
+    y = lp(excerpt(_pick(rng, E, 1.0), float(dur), rng, 2.0), 2500, 2)
+    bz = st(_lamp_buzz(float(dur), rng)) * peak(y) * 0.05
+    return fade(y + bz[:len(y)], 1.0, 1.5), 0.0, 0.0, False
+
+
+def r_museum_tone(rng, sp, dur=20.0, **_):
+    """BED: the museum gallery at night: a big still room (room tone through the hall), the faint hum of the display
+    case lights."""
+    E = src('museum_tone') or src('room_tone')
+    y = lp(excerpt(_pick(rng, E, 1.0), float(dur), rng, 2.0), 6000, 2)
+    y = reverb(y, 'hall', 0.5)[:len(y)]
+    hm = st(_lamp_buzz(float(dur), rng)) * peak(y) * 0.02
+    return fade(y + hm[:len(y)], 1.5, 2.0), 0.0, 0.0, False
+
+
+def r_house_creaks(rng, sp, dur=20.0, density=0.12, **_):
+    """BED: the old house settling at night: sparse, distant timber creaks (pitched down, dull), each somewhere else
+    in the dark (random pan), down the hall."""
+    D = pool('door_creak', lambda: src('door_creak', category='sfx/door_creak'), 'phrase', gap=0.2, max_len=4.0, keep=-18)
+    C = _creak_pool()
+    d = float(dur); ev = []; t = rng.exponential(1.0 / max(density, 1e-3)) * 0.5
+    while t < d - 1.0:
+        g = (D if rng.uniform() < 0.5 else C).get(rng, rj=0.05, fo=0.2)
+        L_ = rng.uniform(0.3, 1.0)
+        g = fade(lp(rate(g[:n_(L_ * 1.4)], semis(-rng.uniform(3, 8))), 2200, 2), 0.05, 0.2)
+        ev.append((t, pan(g * 10 ** (-rng.uniform(0, 8) / 20), rng.uniform(-0.8, 0.8))))
+        t += rng.exponential(1.0 / max(density, 1e-3)) + 1.0
+    if not ev:
+        ev = [(0.0, np.zeros((n_(0.1), 2), np.float32))]
+    y = _seq(ev, 0.5)[:n_(d)]
+    y = np.pad(y, ((0, max(0, n_(d) - len(y))), (0, 0)))
+    return reverb(y, 'hallway', 0.6)[:n_(d) + n_(1.0)], 0.0, 0.0, False
+
+
+def r_tape_glitch(rng, sp, kind='stop', dur=0.8, **_):
+    """The VHS tape: 'stop' (the tape drags to a halt: the hiss and the hum dive in pitch, the mechanism clunks),
+    'tracking' (a tracking-error burst: noise tearing at 30 Hz, the head buzz), 'warble' (the picture's sound
+    wobbling for dur)."""
+    d = max(0.2, float(dur)); n = n_(d); tt = np.arange(n) / SR
+    if kind == 'tracking':
+        tear = bp(noise(d, int(rng.integers(1 << 30))), 900, 6000, 2) * ((np.sin(2 * np.pi * 29.97 * tt) > 0.2) * 1.0)
+        bz = np.sign(np.sin(2 * np.pi * 59.94 * tt)) * 0.15
+        y = st(lp((tear + bz).astype(np.float32), 7000, 2) * np.interp(tt, [0, 0.03, d - 0.05, d], [0, 1, 1, 0]))
+        return y, 0.0, 0.0, False
+    if kind == 'warble':
+        h, *_r = r_tape_hiss(rng, sp, dur=d)
+        r = 1 + 0.08 * np.sin(2 * np.pi * 3.0 * tt)
+        return h * r[:len(h), None].astype(np.float32), 0.0, -4.0, False
+    f = 120.0 * np.exp(-tt / (d * 0.35))
+    hum = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt / (d * 0.6))
+    hs = sweep_bp(noise(d, int(rng.integers(1 << 30))), 4000, 300, q=1.0) * np.exp(-tt / (d * 0.5))
+    lay = [(0.0, st((hum * 0.5 + hs * 0.6).astype(np.float32)))]
+    E = src('vcr', has=['into_vhs'])
+    if E:
+        y = audio(E[0]); gs = grains(E[0], 'onset', gap=0.08, max_len=0.3, keep=-20)
+        s0, s1 = gs[-1]
+        lay.append((d * 0.7, fade(pnorm(y[s0:s1]), 0.002, 0.05) * 0.6))
+    return _seq(lay, 0.1), 0.0, 0.0, False
+
+
+def r_keys_jangle(rng, sp, **_):
+    """Keys snatched up (Mom grabs her keys): a quick jingle in the hand."""
+    J = pool('keys', lambda: src('key_in_lock', has=['keys_jingle_hand', 'keys_jingle']), 'phrase', gap=0.15,
+             max_len=0.8, keep=-16)
+    y = J.get(rng, rj=0.04, fo=0.1)[:n_(0.55)]
+    return fade(lp(y, 8000, 2), 0.003, 0.12), 0.0, 0.0, False
+
+
+def r_paper_slide(rng, sp, dur=0.8, **_):
+    """Folded paper sliding out of fabric (the P.S. out of the slot in his back): a paper rustle, smooth friction,
+    a soft flop as it falls free."""
+    d = max(0.3, float(dur))
+    E = src('paper', nothas=['pencil', 'book'])
+    e = _pick(rng, E)
+    gs = grains(e, 'phrase', gap=0.2, max_len=8.0, keep=-18)
+    s0, s1 = gs[int(rng.integers(len(gs)))]
+    g = _fit(audio(e)[s0:s1], n_(d), rng)
+    g = fade(hp(g, 500, 2), 0.04, 0.1)
+    tt = np.arange(n_(d)) / SR
+    fr = st(bp(noise(d, int(rng.integers(1 << 30))), 1800, 6000, 2) * np.interp(tt, [0, 0.2 * d, 0.8 * d, d], [0, 1, 1, 0])) \
+        * peak(g) * 0.25
+    flop = st(lp(noise(0.06, int(rng.integers(1 << 30))) * np.exp(-np.arange(n_(0.06)) / n_(0.012)), 900, 2)) * peak(g) * 0.5
+    return _seq([(0.0, g * 0.8), (0.0, fr), (d * 0.92, flop)], 0.1), 0.0, 0.0, False
+
+
 def memory_fx(y, rng):
     """21 years ago: duller, further, a slow tape wow, a little more room."""
     y = eq(lp(hp(st(y), 120, 2), 4500, 2), ('hs', 2500, -3, 0.7))
@@ -2293,8 +3162,54 @@ ALIASES = {
     'eye_flash': ('stinger', {'kind': 'eye_flash'}), 'knock': ('knock_door', {}), 'hit': ('impact_hit', {}),
     'boom': ('impact_hit', {}), 'drop': ('sub_drop', {}), 'rattle': ('chain_lock', {'kind': 'rattle'}),
     'grab': ('cloth_rustle', {'kind': 'grab'}), 'car_door': ('car_door_close', {}),
+    # ---- dummy film
+    'clack': ('dummy_clack', {}), 'jaw_clack': ('dummy_clack', {}), 'jaw_snap': ('dummy_clack', {}),
+    'speech_clack': ('dummy_clack', {'kind': 'speech'}), 'jaw_drop': ('dummy_jaw', {}), 'jaw_open': ('dummy_jaw', {}),
+    'eyelid': ('eyelid_click', {}), 'wink': ('eyelid_click', {'kind': 'shut'}), 'wink_click': ('eyelid_click', {}),
+    'blink': ('eyelid_click', {}), 'click_click': ('eyelid_click', {}), 'head_turn': ('wood_creak', {'kind': 'grind'}),
+    'head_creak': ('wood_creak', {'kind': 'grind'}), 'neck_creak': ('wood_creak', {'kind': 'grind'}),
+    'joint_creak': ('wood_creak', {'kind': 'tick'}), 'wood_tick': ('wood_creak', {'kind': 'tick'}),
+    'dummy_knock': ('wood_knock', {}), 'body_knock': ('wood_knock', {}), 'dummy_steps': ('tiny_steps', {}),
+    'little_steps': ('tiny_steps', {}), 'tiny_footsteps': ('tiny_steps', {}), 'glove': ('glove_lift', {}),
+    'hand_inside': ('hand_slot', {}), 'slot': ('hand_slot', {}), 'squeeze': ('hand_squeeze', {}),
+    'squeezes': ('hand_squeeze', {}), 'latch_pop': ('case_latch', {}), 'case_latches': ('case_latch', {}),
+    'case_open': ('case_lid', {'action': 'open'}), 'case_close': ('case_lid', {'action': 'close'}),
+    'lid': ('case_lid', {}), 'spoon': ('spoon_stir', {}), 'stir': ('spoon_stir', {}), 'coffee_stir': ('spoon_stir', {}),
+    'clink': ('spoon_clink', {}), 'clinks': ('spoon_clink', {'n': 3}), 'mug': ('mug_set', {}), 'mug_down': ('mug_set', {}),
+    'mug_pickup': ('mug_set', {'kind': 'pickup'}), 'cup': ('mug_set', {}), 'drink': ('sip', {}), 'slurp': ('sip', {}),
+    'thud': ('dummy_thud', {}), 'rug_thud': ('dummy_thud', {'kind': 'rug'}), 'fall': ('dummy_thud', {}),
+    'tv': ('tv_on', {}), 'tv_power': ('tv_on', {}), 'television_on': ('tv_on', {}), 'crt_on': ('tv_on', {}),
+    'vhs': ('vcr', {}), 'vcr_play': ('vcr', {'action': 'play'}), 'tape_play': ('vcr', {'action': 'play'}),
+    'rewind': ('vcr', {'action': 'rewind'}), 'tape_noise': ('tape_hiss', {}), 'hiss': ('tape_hiss', {}),
+    'laugh_track': ('studio_laugh', {}), 'laughter': ('studio_laugh', {}), 'audience_laugh': ('studio_laugh', {}),
+    'studio_laughter': ('studio_laugh', {}), 'laugh_wave': ('studio_laugh', {'size': 'huge'}),
+    'audience_roar': ('studio_laugh', {'size': 'huge'}), 'clapping': ('applause', {}), 'flicker': ('lamp_flicker', {}),
+    'lamp': ('lamp_flicker', {}), 'lights_out': ('lamp_out', {}), 'lamp_on': ('lamp_out', {'kind': 'on'}),
+    'flashlight': ('flashlight_click', {}), 'torch': ('flashlight_click', {}), 'torch_click': ('flashlight_click', {}),
+    'flashlight_on': ('flashlight_click', {'kind': 'on'}), 'flashlight_off': ('flashlight_click', {'kind': 'off'}),
+    'monitor': ('heart_monitor', {}), 'heart_beeps': ('heart_monitor', {}), 'ecg': ('heart_monitor', {}),
+    'flatline': ('monitor_flatline', {}), 'scream': ('mom_scream', {}), 'shriek': ('owen_cry', {'kind': 'shriek'}),
+    'owen_shriek': ('owen_cry', {'kind': 'shriek'}), 'giggle': ('owen_giggle', {}), 'owen_laugh': ('owen_giggle', {}),
+    'owen_snort': ('snort', {}), 'dummy_laugh': ('winks_laugh', {}), 'goodnight': ('goodnight_hit', {}),
+    'clock': ('old_clock', {}), 'grandfather_clock': ('old_clock', {}), 'hospital': ('hospital_tone', {}),
+    'museum': ('museum_tone', {}), 'creaks': ('house_creaks', {}), 'house_settle': ('house_creaks', {}),
+    'tape_stop': ('tape_glitch', {'kind': 'stop'}), 'tracking': ('tape_glitch', {'kind': 'tracking'}),
+    'keys_grab': ('keys_jangle', {}), 'p_s': ('paper_slide', {}), 'ps_slide': ('paper_slide', {}),
+    'van_arrive': ('car_pass', {'kind': 'arrive'}), 'museum_van': ('car_pass', {'kind': 'arrive'}),
+    'van_away': ('van_pull_away', {}), 'van_doors': ('car_door_close', {}),
 }
-KEYWORDS = [('doorbell', 'doorbell_dingdong'), ('chime', 'doorbell_dingdong'), ('box', 'box_creak'),
+KEYWORDS = [('clack', 'dummy_clack'), ('jaw', 'dummy_jaw'), ('eyelid', 'eyelid_click'), ('wink', 'eyelid_click'),
+            ('blink', 'eyelid_click'), ('laugh', 'studio_laugh'), ('applau', 'applause'), ('audience', 'studio_laugh'),
+            ('spoon', 'spoon_stir'), ('stir', 'spoon_stir'), ('clink', 'spoon_clink'), ('mug', 'mug_set'),
+            ('coffee', 'spoon_stir'), ('latch', 'case_latch'), ('stair', 'footsteps_stairs'), ('case_', 'case_lid'), ('velvet', 'velvet'),
+            ('glove', 'glove_lift'), ('squeeze', 'hand_squeeze'), ('slot', 'hand_slot'), ('vcr', 'vcr'), ('vhs', 'vcr'),
+            ('tape_', 'tape_hiss'), ('tv', 'tv_on'), ('television', 'tv_on'), ('flicker', 'lamp_flicker'),
+            ('lamp', 'lamp_out'), ('flashlight', 'flashlight_click'), ('torch', 'flashlight_click'),
+            ('monitor', 'heart_monitor'), ('flatline', 'monitor_flatline'), ('scream', 'mom_scream'),
+            ('shriek', 'owen_cry'), ('snort', 'snort'), ('giggle', 'owen_giggle'), ('sip', 'sip'), ('thud', 'dummy_thud'),
+            ('rug', 'dummy_thud'), ('dummy', 'wood_knock'), ('wood', 'wood_knock'), ('goodnight', 'goodnight_hit'),
+            ('clock', 'old_clock'), ('hospital', 'hospital_tone'), ('museum', 'museum_tone'),
+            ('doorbell', 'doorbell_dingdong'), ('chime', 'doorbell_dingdong'), ('box', 'box_creak'),
             ('carton', 'box_creak'), ('tape', 'tape_rip'), ('knock', 'knock_door'), ('hazard', 'hazard_ticks'),
             ('stair', 'footsteps_stairs'), ('step', 'footsteps_porch'), ('foot', 'footsteps_porch'),
             ('key', 'keys_drop'), ('window', 'window_slide'), ('curtain', 'curtain_flutter'), ('cloth', 'cloth_rustle'),
@@ -2318,7 +3233,9 @@ def warn(msg):
 def resolve(name, params=None):
     """name -> (recipe name, params, note). note is None for a known name, 'alias' for an alias, a warning text for a
     keyword guess; recipe name None when nothing fits."""
-    params = dict(params or {})
+    params = dict(params) if isinstance(params, dict) else {}
+    if not isinstance(name, str):
+        name = str(name)
     if name in RECIPES:
         return name, params, None
     key = str(name).lower().strip().replace('-', '_').replace(' ', '_')
@@ -2334,6 +3251,10 @@ def resolve(name, params=None):
 
 
 def resolve_space(sp, name):
+    if sp is not None and not isinstance(sp, str):
+        d = DEFAULT_SPACE[name]
+        warn(f'space {sp!r} for {name!r} is not a name: using {d!r}')
+        return d
     if sp is None or sp in SPACE_LU:
         return sp
     k = str(sp).lower().strip()
@@ -2364,7 +3285,7 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
     sp = resolve_space(sp, name)
     h = int(hashlib.md5(f'{name}|{seed}'.encode()).hexdigest()[:8], 16)
     rng = np.random.default_rng(h)
-    memory = bool(params.pop('memory', False))
+    memory = bool(params.pop('memory', False)) or sp == 'memory'
     y, pre, offs, spaced = RECIPES[name](rng, sp, **params)
     y = st(y)
     if memory:                                            # 21 years ago (film.py: memory=True)

@@ -1,6 +1,15 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
+    python3 epidemic_catalog.py --dummy               THIS film (the ventriloquist dummy): writes
+                                                      audio/catalog_epidemic_dummy.json from all four sets, in this order
+                                                      (first set wins on duplicates): W/samples/epidemic (the dummy set:
+                                                      mp3, studio laughter, TV/VHS, spoon and mug, wooden clicks, voices,
+                                                      heart monitor, 11 vintage tracks), epidemic_delivery, epidemic_police,
+                                                      epidemic_mirror (symlinks to the earlier films' folders, read only).
+                                                      Rows of audio/catalog_epidemic_delivery.json whose file is unchanged
+                                                      (same set, slug and size) are reused, so only the new set is analysed
+                                                      (--no-reuse analyses everything again)
     python3 epidemic_catalog.py --delivery            the delivery film: writes audio/catalog_epidemic_delivery.json from
                                                       W/samples/epidemic (new set), epidemic_police and epidemic_mirror
     python3 epidemic_catalog.py <out.json> <set>=<dir> [<set>=<dir> ...]     any list of sets (first set wins on duplicates)
@@ -8,9 +17,12 @@ the audio out of the sample folders).
     --sfx-only                                        skip the (slow, ~10 s per track) music analysis and keep the music
                                                       entries of an existing output file
 
-Each set folder holds 48 kHz WAVs in <dir>/sfx and <dir>/music (music_unverified and _zips are ignored).
+Each set folder holds audio in <dir>/sfx and <dir>/music (music_unverified and _zips are ignored): 48 kHz WAVs in
+the earlier sets, MP3 (48 kHz) in the dummy set; any of .wav .mp3 .flac .ogg is read (soundfile / libsndfile 1.2).
 For every SFX: set, slug (lower-case words joined by '_', so 'Bells, Doorbell, Ding Dong, Single.wav' ->
-'bells_doorbell_ding_dong_single'; the police files keep their slugs), path (absolute, through W/samples), duration,
+'bells_doorbell_ding_dong_single'; the Epidemic download dressing 'ES_', ' - Epidemic Sound' and copy markers ' (1)'
+are dropped, so 'ES_Wooden Pole, Hit Wood 02 - Epidemic Sound.mp3' -> 'wooden_pole_hit_wood_02'; the police files
+keep their slugs), path (absolute, through W/samples), duration,
 integrated loudness, sample peak, onset count, and `serves`: the SFX names in sfx.NAMES (police + delivery) it can
 build. A file present in two sets (same slug, or same size and first megabyte) is listed once, under the first set,
 with `also_in`.
@@ -29,6 +41,12 @@ DELIVERY_SETS = [('delivery', os.path.join(W, 'samples', 'epidemic')),
                  ('police', os.path.join(W, 'samples', 'epidemic_police')),
                  ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 DELIVERY_OUT = os.path.join(HERE, 'catalog_epidemic_delivery.json')
+DUMMY_SETS = [('dummy', os.path.join(W, 'samples', 'epidemic')),
+              ('delivery', os.path.join(W, 'samples', 'epidemic_delivery')),
+              ('police', os.path.join(W, 'samples', 'epidemic_police')),
+              ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
+DUMMY_OUT = os.path.join(HERE, 'catalog_epidemic_dummy.json')
+AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
 # SFX name -> filename keyword alternatives (every word of one alternative must appear in the slug). Police names first
@@ -46,7 +64,7 @@ MAP = {
     'siren_far': [['siren']],
     'police_radio_squelch': [['walkie_talkie'], ['static_radio']],
     'radio_static': [['static']],
-    'radio_click': [['ui_buttons_confirm'], ['click']],
+    'radio_click': [['ui_buttons_confirm'], ['click', 'pops']],     # (was ['click']: keeps the dummy set's wood clicks out)
     'bodycam_beep': [['camera', 'focus']],
     'phone_ring': [['phone_ringing']],
     'phone_busy': [['busy_tone']],
@@ -82,7 +100,7 @@ MAP = {
     'box_scrape': [['cardboard', 'drag'], ['box', 'drag'], ['box', 'scrape']],
     'box_open': [['cardboard_box_open'], ['cardboard', 'remove'], ['cardboard', 'rummage']],
     'box_voice': [['cardboard', 'rummage'], ['whisper'], ['breath', 'calm']],
-    'tape_rip': [['tape']],
+    'tape_rip': [['tape', 'rip'], ['tape', 'tear']],     # (was ['tape']: keeps the dummy set's videotape out)
     'hazard_ticks': [['hazard']],
     'van_door_slide': [['van', 'sliding'], ['doors_sliding']],
     'van_idle': [['diesel', 'idle'], ['idle']],
@@ -104,10 +122,53 @@ MAP = {
     'room_tone_house': [['room_tone']],
     'flashlight_click': [['flashlight']],
     'bed_creak': [['bed', 'creak'], ['bunk_bed']],
+    # ---- the dummy film (sfx.py DUMMY_NAMES): the dummy set first, the earlier sets as extra layers
+    'case_latch': [['flightcase', 'latch'], ['metal_click'], ['briefcase', 'open']],
+    'case_lid': [['briefcase', 'open'], ['wooden_box', 'lid'], ['shoe_box', 'lid']],
+    'velvet': [['cloth', 'wipe'], ['couch', 'wipe'], ['cloth', 'handle']],
+    'spoon_stir': [['spoon', 'stir']],
+    'spoon_clink': [['spoon', 'clink'], ['single_glass_clink'], ['ramekins', 'clink'], ['spoon_stiring', 'placing']],
+    'mug_set': [['spoon_stiring', 'placing'], ['ramekins', 'clink'], ['wooden_block', 'place']],
+    'sip': [['breath', 'calm']],
+    'dummy_clack': [['wooden_pole', 'hit'], ['wooden_block'], ['click', 'woody'], ['wooden_box', 'lid']],
+    'dummy_jaw': [['wooden_box', 'lid'], ['wooden_block'], ['wooden_pole', 'hit']],
+    'eyelid_click': [['click', 'woody'], ['metal_click'], ['wooden_block']],
+    'wood_creak': [['bunk_bed'], ['bed', 'creak'], ['friction', 'wood'], ['doors_creak', 'wooden']],
+    'wood_knock': [['wooden_block'], ['wooden_pole', 'hit'], ['wooden_box', 'lid'], ['knock', 'wood']],
+    'tiny_steps': [['wooden_block'], ['click', 'woody'], ['wooden_pole', 'hit']],
+    'glove_lift': [['cloth', 'handle'], ['cloth', 'wipe'], ['couch', 'wipe']],
+    'hand_slot': [['cloth', 'handle'], ['couch', 'wipe'], ['wooden_box', 'lid']],
+    'hand_squeeze': [['cloth', 'handle'], ['couch', 'wipe']],
+    'dummy_thud': [['cloth', 'impact'], ['wooden_block'], ['bunk_bed', 'jump']],
+    'tv_on': [['hifi', 'turn_on'], ['radio', 'turn_on']],
+    'vcr': [['vhs']],
+    'tape_hiss': [['vhs', 'rewind'], ['static_analog']],
+    'studio_laugh': [['crowds', 'laughter']],
+    'applause': [['laughter', 'applause']],
+    'lamp_flicker': [['static_analog', 'buzz'], ['radio', 'scramble']],
+    'lamp_out': [['metal_click'], ['ui_buttons_confirm']],
+    'flashlight_hum': [['tinnitus', 'dirty']],
+    'heart_monitor': [['heart_monitor']],
+    'monitor_flatline': [['heart_monitor']],
+    'mom_scream': [['scream', 'female']],
+    'snort': [['laugh', 'child', 'boy'], ['child', 'boy', 'laughing']],
+    'owen_giggle': [['child', 'boy']],
+    'owen_cry': [['child', 'boy'], ['breath', 'calm']],
+    'winks_laugh': [['laugh', 'male']],
+    'goodnight_hit': [['bass_drop'], ['braam', 'washed']],
+    'old_clock': [['clocks', 'tick']],
+    'hospital_tone': [['room_tone']],
+    'museum_tone': [['room_tone']],
+    'keys_jangle': [['keys_jingle'], ['keys', 'jingle']],
+    'scream_hit': [['scream', 'female'], ['stinger']],
 }
 
 
 def slugify(name):
+    """'ES_Wooden Pole, Hit Wood 02 - Epidemic Sound (1)' -> 'wooden_pole_hit_wood_02' (download dressing dropped)."""
+    name = re.sub(r'\s*\(\d+\)\s*$', '', name)
+    name = re.sub(r'^ES_', '', name)
+    name = re.sub(r'\s*-\s*Epidemic Sound\s*$', '', name, flags=re.I)
     s = re.sub(r'[^0-9a-z]+', '_', name.lower()).strip('_')
     return re.sub(r'_+', '_', s)
 
@@ -196,10 +257,25 @@ def music_entry(meter, p, set_name, slug):
             'section_stats': secs}
 
 
-def build(sets, out, sfx_only=False):
+def _reuse_table(paths):
+    """(kind, set, slug) -> entry of earlier catalogues (only used when the file size is unchanged)."""
+    tab = {}
+    for p in paths:
+        if not p or not os.path.exists(p):
+            continue
+        c = json.load(open(p))
+        for kind in ('sfx', 'music'):
+            for e in c.get(kind, []):
+                tab.setdefault((kind, e.get('set'), e.get('slug')), e)
+    return tab
+
+
+def build(sets, out, sfx_only=False, reuse=()):
     import pyloudnorm
     meter = pyloudnorm.Meter(SR)
     old = json.load(open(out)) if sfx_only and os.path.exists(out) else None
+    prev = _reuse_table(reuse)
+    n_reused = 0
     cat = {'licence': "Epidemic Sound, through the channel owner's subscription. Keep the channel connected in the "
                       "Epidemic account to avoid Content ID claims. Do not redistribute, copy or commit the files.",
            'sets': {s: d for s, d in sets}, 'sfx': [], 'music': []}
@@ -213,19 +289,31 @@ def build(sets, out, sfx_only=False):
             if not os.path.isdir(sub):
                 continue
             for f in sorted(os.listdir(sub)):
-                if not f.lower().endswith('.wav'):
+                stem, ext = os.path.splitext(f)
+                if ext.lower() not in AUDIO_EXT:
                     continue
                 p = os.path.join(sub, f)
-                slug = slugify(f[:-4])
+                slug = slugify(stem)
                 fp = _fingerprint(p)
                 dup = seen_slug.get((kind, slug)) or seen_fp.get((kind, fp))
                 if dup is not None:
-                    dup.setdefault('also_in', []).append(set_name)
+                    if set_name != dup['set']:
+                        dup.setdefault('also_in', []).append(set_name)
                     continue
-                print(f'  {kind} {set_name}: {f}', flush=True)
-                e = (sfx_entry if kind == 'sfx' else music_entry)(meter, p, set_name, slug)
+                r = prev.get((kind, set_name, slug))
+                if r is not None and os.path.exists(r.get('path', '')) and os.path.getsize(r['path']) == os.path.getsize(p):
+                    e = dict(r, path=p, set=set_name)          # unchanged file: keep its analysis, path through W/samples
+                    e.pop('also_in', None)
+                    if kind == 'sfx':
+                        e['serves'] = serves(slug)
+                    n_reused += 1
+                else:
+                    print(f'  {kind} {set_name}: {f}', flush=True)
+                    e = (sfx_entry if kind == 'sfx' else music_entry)(meter, p, set_name, slug)
                 cat[kind].append(e)
                 seen_slug[(kind, slug)] = e; seen_fp[(kind, fp)] = e
+    if n_reused:
+        print(f'{n_reused} rows reused from {", ".join(os.path.basename(r) for r in reuse)} (same set, slug and size)')
     tmp = out + '.tmp'
     json.dump(cat, open(tmp, 'w'), indent=1)
     os.replace(tmp, out)
@@ -243,7 +331,9 @@ def build(sets, out, sfx_only=False):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--delivery' in sys.argv:
+    if '--dummy' in sys.argv:
+        build(DUMMY_SETS, DUMMY_OUT, so, reuse=() if '--no-reuse' in sys.argv else (DUMMY_OUT, DELIVERY_OUT))
+    elif '--delivery' in sys.argv:
         build(DELIVERY_SETS, DELIVERY_OUT, so)
     elif args and '=' in args[-1]:
         build([tuple(a.split('=', 1)) for a in args[1:]], args[0], so)

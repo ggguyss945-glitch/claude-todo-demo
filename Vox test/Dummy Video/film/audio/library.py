@@ -1,10 +1,12 @@
 """Query and load the recorded sample library (the owner's Epidemic files + free CC0/CC-BY files).
 
 Two catalogues, Epidemic first:
-    audio/catalog_epidemic_delivery.json   (audio/epidemic_catalog.py --delivery) the owner's Epidemic files for this
-        film: the new delivery set W/samples/epidemic, the police set W/samples/epidemic_police and the mirror set
-        W/samples/epidemic_mirror. Paths are absolute (through W/samples). These entries come FIRST in entries(), so
-        every pick and pool prefers them; they carry `set` and `serves` (sfx.py names, police + delivery).
+    audio/catalog_epidemic_dummy.json   (audio/epidemic_catalog.py --dummy) the owner's Epidemic files for THIS film
+        (the ventriloquist dummy): the dummy set W/samples/epidemic (mp3: studio laughter, TV / VHS, spoon and mug,
+        wooden clicks, voices, heart monitor, the vintage tracks), then the delivery, police and mirror sets
+        (W/samples/epidemic_delivery, epidemic_police, epidemic_mirror). Paths are absolute (through W/samples). These
+        entries come FIRST in entries(), so every pick and pool prefers them; they carry `set` and `serves` (sfx.py
+        names: police + delivery + dummy). Falls back to audio/catalog_epidemic_delivery.json when it is missing.
     audio/catalog.json   (audio/build_library.py) the shared free library; its audio stays where the catalogue says
         (ROOT, the police project's samples folder, read only). Its own 'epidemic' rows (the police set, relative
         paths) are dropped when the delivery catalogue is present (they are in it, with the same ids).
@@ -36,11 +38,12 @@ _CAT = None
 _BY_ID = None
 
 
-EPI_CATALOG = os.path.join(HERE, 'catalog_epidemic_delivery.json')
+EPI_CATALOGS = (os.path.join(HERE, 'catalog_epidemic_dummy.json'), os.path.join(HERE, 'catalog_epidemic_delivery.json'))
+EPI_CATALOG = next((p for p in EPI_CATALOGS if os.path.exists(p)), EPI_CATALOGS[0])
 
 
 def _epi_entries():
-    """The delivery Epidemic catalogue as library entries (empty if it has not been built)."""
+    """This film's Epidemic catalogue as library entries (empty if it has not been built)."""
     if not os.path.exists(EPI_CATALOG):
         return []
     c = json.load(open(EPI_CATALOG))

@@ -1,5 +1,6 @@
-"""Final mix (police v2 pipeline, delivery film): narration with line voicing, the SFX from sfx_cues.json, and the score
-stems from music_cues.json, mixed to the reference measurements in analysis/AUDIO_SPEC.md.
+"""Final mix (police v2 pipeline; the dummy film, built on the delivery film's mix): narration with line voicing, the SFX
+from sfx_cues.json, and the score stems from music_cues.json, mixed to the reference measurements in
+analysis/AUDIO_SPEC.md.
 
 CLI
     python3 mix.py <timeline.json> <vo_en.wav> <vo_ru_dub.wav | -> <cues dir> <out dir>
@@ -25,6 +26,19 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
+  this film (script/lines.py fx codes):
+    tv         the real Walter crying on the 1974 tape, through the old console TV across the living room: 220 Hz-4.2 kHz,
+               the cabinet's 330 Hz box, a 1.6 kHz cone peak, tape wow (0.5 Hz) and flutter (6 Hz), light saturation,
+               tape hiss and mains hum under it, the room's first reflections (-1 LU)
+    dummy      Mister Winks speaking in the room (Grandpa's voice, Mom's voice, the joke): a touch boxy and wooden (the
+               hollow head: 480 Hz and 950 Hz resonances, a 2.2 ms comb from the carved cavity), a little of the room
+               around him, top end eased (-1 LU)
+    letter     the narrator reading Grandpa's letter: DRY (no change)
+    memory     the hospital / bedtime memories (Grandpa's whisper, "See you in the morning, kiddo"): slightly distant,
+               a little duller (150 Hz-6 kHz), a soft room, a very slow wow (-1.5 LU)
+    upstairs   the voices calling from upstairs (Mom's, then yours): through the ceiling and down the stairwell, dull
+               (3.2 kHz) with the stairwell's boom (250 Hz) and its reverb, still intelligible (-3 LU)
+  earlier films (kept):
     doorbell   the driver through the doorbell camera's two-way audio, played by your phone: 260 Hz-6 kHz, camera
                presence, porch slap-back, light compression and grit, a faint camera hiss (-1 LU)
     box        a voice from INSIDE the cardboard box: dull (2.4 kHz), boxy cavity resonances (190 / 430 Hz), the tiny
@@ -34,11 +48,12 @@ Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness
     hall       a voice behind you in the hallway (short hall reverb, a little dull); not in the script's fx, offered for
                the X lines ("Hey, buddy"): mix.py's default --who-fx X=hall (lines with their own fx, the box
                lines, keep it)
-    any other fx -> dry, with a warning
+    any other fx -> dry, with a warning (also an fx that is not a string, and an fx whose processing fails)
 Never crashes on cue data: an SFX name is resolved by sfx.resolve() (aliases, then a keyword guess with a warning);
     a name nothing fits is skipped with a warning; an unknown space falls back to the name's default space with a
     warning; a cue whose recipe raises is retried with default params and space, then skipped with a warning (--strict
-    restores the police behaviour: stop). Every fallback is listed in mix_report.json `sfx_fallbacks`.
+    restores the police behaviour: stop); a cue with no usable time, or a gain / pan that is not a number, is skipped or
+    defaulted with a warning. Every fallback is listed in mix_report.json `sfx_fallbacks`.
     hazard_ticks (sfx.TIMED) gets cue_t = the cue's film time so the relay ticks lock to the drawn flashers.
 
 Signal flow
@@ -88,7 +103,8 @@ def band(x, lo, hi, order=4):
     return signal.sosfilt(signal.butter(order, [lo, hi], 'bandpass', fs=SR, output='sos'), x).astype(np.float32)
 
 
-LINE_FX_LU = {'radio': -2.0, 'phone_call': -1.0, 'phone_far': -2.0, 'doorbell': -1.0, 'box': -1.5, 'hall': -1.0}
+LINE_FX_LU = {'radio': -2.0, 'phone_call': -1.0, 'phone_far': -2.0, 'doorbell': -1.0, 'box': -1.5, 'hall': -1.0,
+              'tv': -1.0, 'dummy': -1.0, 'memory': -1.5, 'upstairs': -3.0}
 # processed line vs the same line dry (K-weighted)
 
 
@@ -144,8 +160,60 @@ def hall_fx(x):
     return SX.mono(SX.reverb(d, 'hallway', 0.32))[:len(x)].astype(np.float32)
 
 
+def _wow(x, depth=0.0025, hz=0.5, fl_depth=0.0006, fl_hz=6.2, seed=0):
+    """Tape speed wobble: wow (slow) + flutter (fast), a variable-rate read (linear interpolation, no length change)."""
+    n = len(x); rng = np.random.default_rng(seed)
+    t = np.arange(n) / SR
+    r = 1 + depth * np.sin(2 * np.pi * hz * t + rng.uniform(0, 6)) + fl_depth * np.sin(2 * np.pi * fl_hz * t + rng.uniform(0, 6))
+    pos = np.clip(np.cumsum(r) - r[0], 0, n - 2); i = pos.astype(np.int64); f = (pos - i).astype(np.float32)
+    return (x[i] * (1 - f) + x[i + 1] * f).astype(np.float32)
+
+
+def tv_fx(x):
+    """The real Walter's voice on the 1974 tape, through the old console TV across the room. Stays intelligible: the
+    1-4 kHz band is kept, the lows and the air are gone."""
+    y = _wow(x, 0.0025, 0.5, 0.0006, 6.2, 11)
+    y = SX.lp(SX.hp(y, 220, 4), 4200, 4)
+    y = SX.eq(y, ('peak', 1600, 3.0, 1.0), ('peak', 330, 2.0, 2.0), ('peak', 900, -1.0, 1.2))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(y / pk * 1.5) / np.tanh(1.5) * pk).astype(np.float32)
+    sl = np.zeros_like(y)                                   # the room: TV cabinet -> walls -> you
+    for d, g in ((0.006, 0.16), (0.013, 0.1), (0.024, 0.05)):
+        k = int(d * SR); sl[k:] += y[:-k] * g
+    y = y + SX.lp(sl, 3000, 2)
+    rng = np.random.default_rng(12); t = np.arange(len(y)) / SR
+    hiss = band(rng.normal(0, 1, len(y)).astype(np.float32), 1800, 8000) * pk * 0.006
+    hum = (np.sin(2 * np.pi * 60 * t) + 0.4 * np.sin(2 * np.pi * 180 * t)).astype(np.float32) * pk * 0.004
+    return (y + hiss + hum).astype(np.float32)
+
+
+def dummy_fx(x):
+    """Mister Winks speaking (any voice he does): a touch boxy and wooden, close, in the room."""
+    y = SX.eq(SX.lp(x, 9500, 2), ('peak', 480, 2.5, 1.6), ('peak', 950, 1.5, 2.0), ('peak', 2300, 1.0, 1.0),
+              ('ls', 140, -2.0, 0.7))
+    k = int(0.0022 * SR); c = np.zeros_like(y); c[k:] = y[:-k] * 0.15         # the carved hollow: a short comb
+    y = y + c
+    return SX.mono(SX.reverb(y, 'living', 0.1))[:len(x)].astype(np.float32)
+
+
+def memory_voice_fx(x):
+    """The memories (the hospital, the bedtime line): a little distant and duller, a soft room, a very slow wow."""
+    y = _wow(x, 0.0012, 0.3, 0.0, 6.0, 13)
+    y = SX.eq(SX.lp(SX.hp(y, 150, 2), 6000, 2), ('hs', 3000, -2.0, 0.7), ('peak', 250, 1.0, 1.0))
+    return SX.mono(SX.reverb(y, 'hall', 0.12, 0.01, hpf=200))[:len(x)].astype(np.float32)
+
+
+def upstairs_fx(x):
+    """A voice calling from upstairs: through the ceiling and down the stairwell (dull, boomy, reverberant), but every
+    word still clear."""
+    y = SX.eq(SX.lp(x, 3800, 2), ('peak', 250, 3.0, 1.0), ('hs', 1800, -3.0, 0.7), ('peak', 1100, 1.5, 1.2))
+    return SX.mono(SX.reverb(y, 'hallway', 0.45, 0.006))[:len(x)].astype(np.float32)
+
+
 LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: phone_fx(x, True), 'doorbell': doorbell_fx,
-           'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None}
+           'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None,
+           'tv': tv_fx, 'dummy': dummy_fx, 'memory': memory_voice_fx, 'upstairs': upstairs_fx, 'letter': None,
+           'television': tv_fx, 'tape': tv_fx, 'flashback': memory_voice_fx, 'ceiling': upstairs_fx}
 _FX_WARNED = set()
 
 
@@ -153,23 +221,33 @@ def apply_line_fx(vo, spans):
     """spans: list of (start s, end s, kind). Replace those stretches of the voice with the processed version."""
     out = vo.copy()
     for a, b, kind in spans:
-        fx = LINE_FX.get(kind, 'unknown')
+        key = str(kind).strip().lower() if isinstance(kind, (str, int, float)) else repr(kind)
+        fx = LINE_FX.get(key, 'unknown')
         if fx == 'unknown':
-            if kind not in _FX_WARNED:
-                _FX_WARNED.add(kind); log(f'WARNING: unknown line fx {kind!r}: left dry')
+            if key not in _FX_WARNED:
+                _FX_WARNED.add(key); log(f'WARNING: unknown line fx {kind!r}: left dry')
             continue
         if fx is None:
             continue
+        try:
+            a, b = float(a), float(b)
+        except (TypeError, ValueError):
+            log(f'WARNING: line fx {key!r} span {a!r}-{b!r} is not a time: left dry'); continue
         i0, i1 = max(0, int((a - 0.05) * SR)), min(len(vo), int((b + 0.15) * SR))
         seg = vo[i0:i1]
         if len(seg) < 100: continue
-        y = np.asarray(fx(seg), np.float32)
+        try:
+            y = np.asarray(fx(seg), np.float32)
+            if not np.all(np.isfinite(y)):
+                raise ValueError('non-finite output')
+        except Exception as e:                           # a voicing must never cost the line: leave it dry
+            log(f'WARNING: line fx {key!r} failed at {a:.2f} s ({repr(e)[:80]}): left dry'); continue
         if len(y) < len(seg):                    # a reverb FX trims its silent tail: pad back to the segment
             y = np.pad(y, (0, len(seg) - len(y)))
         # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
         Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
         if Ls > -70 and Ly > -70:
-            y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(kind, -1.0) - Ly) / 20))
+            y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(key, -1.0) - Ly) / 20))
         f = int(0.01 * SR); w = np.ones(len(seg), np.float32); w[:f] = np.linspace(0, 1, f); w[-f:] = np.linspace(1, 0, f)
         out[i0:i1] = seg * (1 - w) + y[:len(seg)] * w
     return out
@@ -447,21 +525,31 @@ def stale(cues_dir, out_dir):
 
 def with_plan(mcues, tl):
     """The music map (audio/music_plan.py) for a cue sheet that has none: film.py writes intensity and events from the
-    picture but no track_map, so score.py would otherwise pick tracks by itself. A sheet with no events at all also
-    gets the plan's intensity curve and events. Never fails the mix: on any error the sheet is used as it is."""
-    if mcues.get('track_map'):
-        return mcues
+    picture but no track_map, so score.py would otherwise pick tracks by itself. The film's own sound (music_plan
+    IDENTITY: the show theme on the TV, Mister Winks's theme, the music box) is added when the sheet has no 'show' /
+    'winks' events of its own. A sheet with no events at all also gets the plan's intensity curve and events. Never
+    fails the mix: on any error the sheet is used as it is."""
     try:
         import music_plan as MP
         lines = tl['lines']
         out = dict(mcues)
-        out['track_map'] = MP.track_map(lines)
-        what = 'track_map'
-        if not mcues.get('events'):
-            out['events'] = MP.events(lines)
+        what = []
+        if not mcues.get('track_map'):
+            out['track_map'] = MP.track_map(lines)
+            what.append('track_map')
+        ev = list(mcues.get('events') or [])
+        if not ev:
+            ev = MP.events(lines)
             out['intensity'] = MP.intensity(lines, float(mcues.get('duration') or tl['duration_en'] + 2.5))
-            what += ' + events + intensity'
-        log(f'music plan: {what} from music_plan.py ({len(out["track_map"])} sections)')
+            what.append('events + intensity')
+        if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks') for e in ev):
+            idt = MP.identity_events(lines)
+            have_motif = any(e.get('type') == 'motif' for e in ev)
+            ev = ev + [e for e in idt if not (have_motif and e['type'] == 'motif')]
+            what.append('identity (show / winks%s)' % ('' if have_motif else ' / motif'))
+        out['events'] = sorted(ev, key=lambda e: float(e.get('t', 0)))
+        if what:
+            log(f'music plan: {" + ".join(what)} from music_plan.py ({len(out.get("track_map") or [])} sections)')
         return out
     except Exception as e:
         log('WARNING: music_plan.py failed (%s); score.py arranges the tracks itself' % repr(e)[:160])
@@ -509,6 +597,9 @@ def main():
     ap.add_argument('--bed-rel', type=float, default=-13.0, help='reference integrated bed level (report and cap)')
     ap.add_argument('--bed-p50', type=float, default=-16.0, help='target bed 3 s short-term median, LU rel voice')
     ap.add_argument('--no-stems', action='store_true')
+    ap.add_argument('--score-stems', action='store_true',
+                    help='also write the raw score stems (tracks, drones, pulse, melodic, strings, show, hits) of the window '
+                         'at the music and master gain, before the music bus processing: stems/score_<stem>.wav (tests)')
     ap.add_argument('--voice-plr', type=float, default=11.5)
     ap.add_argument('--music-width', type=float, default=0.7)
     A = ap.parse_args()
@@ -548,11 +639,25 @@ def main():
     def fb(key, what):
         fallbacks.setdefault(key, {'what': what, 'n': 0})['n'] += 1
         if fallbacks[key]['n'] == 1: log('WARNING:', what)
-    order = sorted(range(len(sfx_cues)), key=lambda k: (sfx_cues[k]['t'], k))
+    def _tkey(k):                                   # a cue with no usable time sorts last (and is skipped below)
+        try:
+            return (float(sfx_cues[k]['t']), k)
+        except (KeyError, TypeError, ValueError):
+            return (float('inf'), k)
+    if not isinstance(sfx_cues, list):
+        log('WARNING: sfx_cues.json is not a list: no SFX'); sfx_cues = []
+    sfx_cues = [c if isinstance(c, dict) else {'name': repr(c)} for c in sfx_cues]
+    order = sorted(range(len(sfx_cues)), key=_tkey)
     tsfx = time.time()
     for rank, k in enumerate(order):
         c = sfx_cues[k]; name0 = c.get('name', '?')
-        name, params, note = SX.resolve(name0, c.get('params') or {})
+        try:
+            c_t = float(c['t'])
+        except (KeyError, TypeError, ValueError):
+            fb('bad_t:' + str(name0), f'cue {name0!r} has no usable time ({c.get("t")!r}): skipped'); continue
+        if c.get('params') is not None and not isinstance(c.get('params'), dict):
+            fb('params:' + str(name0), f'cue {name0!r}: params {c.get("params")!r} is not a dict: defaults used')
+        name, params, note = SX.resolve(name0, c.get('params') if isinstance(c.get('params'), dict) else {})
         if name is None:
             skipped.append(name0); fb('name:' + str(name0), note); continue
         if note and note != 'alias':
@@ -565,9 +670,13 @@ def main():
                 fb(f'space:{name}:{space}', f'unknown space {space!r} for {name!r}: using {sp2!r}')
             space = sp2
         if name in SX.TIMED:
-            params.setdefault('cue_t', float(c['t']))
-        dur_hint = float(params.get('dur', 0) or 0)
-        tt = float(c['t']) - t0
+            params.setdefault('cue_t', c_t)
+        try:
+            dur_hint = float(params.get('dur', 0) or 0)
+        except (TypeError, ValueError):
+            fb(f'dur:{name}', f'{name}: dur {params.get("dur")!r} is not a number: dropped'); params.pop('dur', None)
+            dur_hint = 0.0
+        tt = c_t - t0
         if dur_hint and tt + dur_hint > dur + 2 and name in SX.BEDS:      # window renders: no need for the rest
             params['dur'] = max(1.0, min(dur_hint, dur + 2 - tt))
         if tt > dur + 0.5 or tt + max(dur_hint, 30.0) < 0:
@@ -575,7 +684,7 @@ def main():
         try:
             y, pre = SX.render_event(name, seed=int(c.get('seed', rank)), space=space, **params)
         except Exception as e:                  # police: stop. Here: retry with defaults, then skip (both reported)
-            log('SFX failed', name, c['t'], repr(e)[:160])
+            log('SFX failed', name, c_t, repr(e)[:160])
             if A.strict:
                 raise
             try:
@@ -584,9 +693,16 @@ def main():
                 fb(f'retry:{name}', f'{name} failed with its params/space ({repr(e)[:80]}); rendered with defaults')
             except Exception as e2:
                 skipped.append(name0); fb(f'fail:{name}', f'{name} failed twice ({repr(e2)[:80]}); skipped'); continue
-        y = y * 10 ** (float(c.get('gain_db', 0.0)) / 20)
-        if c.get('pan'):
-            y = SX.pan(y, float(c['pan']))
+        try:
+            gdb = float(c.get('gain_db', 0.0) or 0.0)
+        except (TypeError, ValueError):
+            gdb = 0.0; fb(f'gain:{name}', f'{name}: gain_db {c.get("gain_db")!r} is not a number: 0 dB')
+        y = y * 10 ** (gdb / 20)
+        try:
+            if c.get('pan'):
+                y = SX.pan(y, float(c['pan']))
+        except (TypeError, ValueError):
+            fb(f'pan:{name}', f'{name}: pan {c.get("pan")!r} is not a number: centred')
         knock = name in ('knock_door', 'box_knock')
         b = 'hits' if name in SX.HITS else 'beds' if name in getattr(SX, 'BED_BUS', SX.BEDS) else 'knocks' if knock else 'events'
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
@@ -617,8 +733,11 @@ def main():
     stems, score_src = score_stems(mc, sdur, A.fallback)
     stem_names = list(stems)
     music = np.zeros((N, 2), np.float32); mhits = np.zeros((N, 2), np.float32)
+    raw_stems = {}
     for k in list(stems):
         s = fit(stems.pop(k), npre + N)[npre:]
+        if A.score_stems:
+            raw_stems[k] = s.copy()
         if k == 'hits':
             mhits += s                       # music hits: never ducked or EQ'd
         else:
@@ -754,6 +873,9 @@ def main():
             if lang == langs[0]:
                 m_out *= g; sf.write(os.path.join(stem_dir, 'music.wav'), m_out, SR, subtype='FLOAT')
                 s_out *= g; sf.write(os.path.join(stem_dir, 'sfx.wav'), s_out, SR, subtype='FLOAT')
+                for k, x in raw_stems.items():
+                    sf.write(os.path.join(stem_dir, f'score_{k}.wav'), x * np.float32(gm) * g, SR, subtype='FLOAT')
+                raw_stems = {}
         del vst, m_out, s_out
     mins = dur / 60
     report['per_min'] = {'hits': round((counts['hits'] + sum(1 for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam')

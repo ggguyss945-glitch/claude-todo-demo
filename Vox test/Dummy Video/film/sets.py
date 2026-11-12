@@ -136,7 +136,7 @@ alpha is its level (engine Layer(blend='plus')), so flickers / lamps going out c
     stage_1962(spot, curtain)    sepia first show (grade 'memory');   bedroom_doorway(hall, door)   anchor 'doorway' (backlit)
     insert(name) / gp_insert(name, ...) for GP_INSERTS: letter (prop_kw hl=n, smear, show), letter_close, envelope, ps, latches
         (latch), case_open (warm), mug (stir=f(t)), back_slot (hand, paper), squeeze (squeeze=squeeze_pulses([...]), take),
-        photo, poster_1962, vcr (tape, play)
+        family_photo, poster_1962, vcr (tape, play)
     rule_card_lie(cv, n, text, t, reveal, mode='tear'|'smear'|'flicker') on the HUD: the rule card that lies.
     shaky_text(pen, s, x, y, size, ...) Grandpa's shaky hand (steady=True: the hand that changed rule six).
 Grades registered: gp_house, gp_dark, tv_glow, hospital, vhs74, museum, morning. Every view lists its safe camera
@@ -9848,7 +9848,7 @@ GP_INSERTS = {
     'mug': dict(prop=_prop_mug, bg=_bg_kitchen_table, pos=(960, 600), scale=1.25, rot=0, grade='gp_house', steam=(960, 330, 1100)),
     'back_slot': dict(prop=_prop_slot, bg=_bg_jacket, pos=(960, 560), scale=0.92, rot=0, grade='face_close', slot=True),
     'squeeze': dict(prop=_prop_squeeze, bg=_bg_dark, pos=(960, 540), scale=0.9, rot=0, grade='gp_dark'),
-    'photo': dict(prop=_prop_photo_family, bg=_bg_shelf, pos=(960, 560), scale=0.95, rot=2, grade='face_close'),
+    'family_photo': dict(prop=_prop_photo_family, bg=_bg_shelf, pos=(960, 560), scale=0.95, rot=2, grade='face_close'),
     'poster_1962': dict(prop=lambda pen, t, **kw: _prop_poster(pen, t, '1962'), bg=_bg_dark, pos=(960, 540), scale=0.95, rot=-2, grade='memory'),
     'vcr': dict(prop=_prop_vcr, bg=_bg_cabinet, pos=(960, 600), scale=1.0, rot=0, grade='tv_glow'),
 }
@@ -9859,7 +9859,7 @@ def gp_insert(name, t0=0.0, prop_kw=None, motion=None, hand=None, bg_dim=0.3):
     darkened, prop sharp at depth 1, a hand at 0.92). names (GP_INSERTS): letter (the seven rules; prop_kw hl=n lights rule
     n, smear=0..1 runs rule six, show=0..7), letter_close, envelope, ps (the torn P.S.), latches (latch=0..1 or (l, r)),
     case_open (warm=0..1), mug (stir=f(t)->turns, sugar=2; the steam is live), back_slot (hand=0..1, paper=0..1),
-    squeeze (squeeze=f(t) 0..1: use squeeze_pulses(); take 0..1: the old hand lets go of the stick and takes yours), photo (Walter and Winks '74), poster_1962, vcr (tape=0..1, play).
+    squeeze (squeeze=f(t) 0..1: use squeeze_pulses(); take 0..1: the old hand lets go of the stick and takes yours), family_photo (Walter and Winks '74), poster_1962, vcr (tape=0..1, play).
     motion = f(t) -> (dx, dy, dscale, drot); hand = None (default) | False | (who, x, y, size, shape, angle, side)."""
     spec = GP_INSERTS[name]
     bgd = spec.get('bgd', 3.0)

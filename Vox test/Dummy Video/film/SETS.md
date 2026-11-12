@@ -5,7 +5,7 @@
 
 ## How to run
 ```
-python3 tools/sets_sheet.py                    # 56 stills (1280x720) + contact_sheet.jpg + index.json -> _work/sets/
+python3 tools/sets_sheet.py                    # 50 stills (1280x720) + contact_sheet.jpg + index.json -> _work/sets/
 python3 tools/sets_sheet.py --only hall,ins_   # a subset
 python3 tools/sets_sheet.py --frame            # + framing check at each view's widest move -> frame_check.json / .jpg
 python3 tools/sets_sheet.py --bench            # + bench_2560.json (2560x1440, 1 OpenCV thread, caches warm, 2.5 %/s push)
@@ -57,7 +57,7 @@ variant's anchors (x, y, depth, height of a 1.85 m adult there) and its camera e
 | `mug` | The show mug, `stir=f(t)` (turns), two sugar wrappers, the sugar bowl, live steam. |
 | `back_slot` | The jacket's back with the slot. `hand=0..1` (your hand goes in), `paper=0..1` (the P.S. slides out). |
 | `squeeze` | Inside him: your hand and the warm old hand that lets go of the stick (`take=0..1`) and squeezes (`squeeze=squeeze_pulses([t1, t2, t3])`). |
-| `photo` | 'Walt & Winks '74' (drawn with the cast's `walter74` and `winks`). |
+| `family_photo` | 'Walt & Winks '74' (drawn with the cast's `walter74` and `winks`). The police `photo` insert is unchanged. |
 | `poster_1962`, `vcr` | The sepia first-show poster; the VCR with the tape ('SAT. MORNING w/ WALTER KEMP 1974'), `tape=0..1`, `play`. |
 
 **The rule card that lies:** `rule_card_lie(cv, n, text, t, reveal, mode)` draws the police rule card on the HUD; at
@@ -81,6 +81,28 @@ LIE in his hand, `'flicker'` is a two-frame 'LIE?' for rule two (the false lead)
 - The post move pads with reflection. Any post offset (`post_push(x=, y=)`, a crop offset) needs a post zoom of at least
   1 + 2|offset| / 1920, or the frame shows a mirrored copy of the set (the trap from the last film).
 
+- **Framing check result:** all 50 views are hole-free at every corner and at the deepest push
+  (`frame_check.json`, worst 0.0 %). The first run found seams (the ceiling, side walls and floor sliding off the far
+  wall, the kitchen floor under the opening on a deep push, the stairwell, the arch seen from the stairs, the sky band
+  behind the house). The fix is oversized backing planes in the farthest layer (`_backing`), only seen in those gaps.
+
 ## Speed
-See `_work/sets/bench_2560.json` (2560x1440, one process, one OpenCV thread, caches warm): numbers in the report and in
-the table at the end of this file once the bench has run.
+2560x1440, one process, one OpenCV thread, caches warm, a 2.5 %/s push, sets only (`_work/sets/bench_2560.json`). The
+mean over the 50 variants is 0.19 s/frame. Steady lights are baked into one layer per piece. Only a light that changes
+in the shot (a flicker, a lamp going out, the TV) adds its 'plus' layers.
+
+| views | s/frame |
+|---|---|
+| house interiors, hospital, museum, street, bedroom, 1962 stage | 0.12-0.18 |
+| a flickering pendant (dynamic light layers), the TV on (live tape on the CRT) | 0.32-0.37 |
+| the studio full frame with the VHS look | 0.22-0.25 |
+| inserts | 0.11-0.27 (letter_close 0.33 after caching the notepaper) |
+| rule cards over the blurred living room (HUD) | 0.31-0.36 |
+
+All of these are within the police budget of 0.6 s/frame, and the cast adds about 20-50 ms per figure. The first frame
+of a deep optical push (f 3+) re-bakes the caches once, at about 12 s at 1280x720. Keep f changes smooth and inside
+`cam_env`.
+
+## Gotchas
+- Never pass `skia.Rect.asScalars()` of a temporary `getBounds()`: it is a view of freed memory. Use `_rb(path)`.
+- Cache keys must carry every parameter that changes a static layer's art or light (tod, moon, blinds, case, den, ...).

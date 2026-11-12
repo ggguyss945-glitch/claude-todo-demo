@@ -1,6 +1,21 @@
-"""score.py: the music for "If A Delivery Driver Rings Your Doorbell At 3 AM..." (the police film's v2 score engine),
-rendered from music_cues.json. The arrangement for this film is pinned by audio/music_plan.py (cues['track_map'];
-mix.py adds it when film.py's cue sheet has none).
+"""score.py: the music for "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH" (the police film's
+v2 score engine, as the delivery film used it), rendered from music_cues.json. The arrangement for this film is pinned
+by audio/music_plan.py (cues['track_map'], and the film's own sound identity, the 'show' / 'winks' / 'motif' events,
+which mix.py adds when film.py's cue sheet has none).
+
+This film's identity (stem `show`):
+    show    the cheerful 1970s kids-show theme ("Saturday Morning with Walter Kemp": the owner's Epidemic track Balloon
+            Twister, Macy's Voice) heard from Grandpa's old console TV: band-limited 200 Hz-4.5 kHz, the cabinet's box,
+            tape wow and flutter, hiss and hum, the room's first reflections; or from the next room ('far'), or as the
+            1974 tape's own sound in the full-frame studio shots ('tape'), or the 1962 first show ('old': Ye Olde Piano
+            Roll, a kinescope band with crackle). The awful contrast: it plays while he moves. warp drags the tape (the
+            pitch sags up to 9 semitones), stop 'drag' winds it down to a halt (the tape stops mid-joke), 'cut' kills it
+            (the lamp, the power). While it plays the dark track bed steps back 6 dB (the drone and the sub stay).
+    winks   Mister Winks's theme when he is near: the SAME tune, slowed 9 semitones (0.6x, B major -> D, the film's
+            key), detuned (a second read 15 cents sharp, 30 ms late), a slow seasick wow (0.22 Hz, +-35 cents) and a
+            flutter, darkened (2.8 kHz), in a big dark room. It is the show theme rotting.
+    motif   (the police engine's music box, kept) the celesta lullaby: Grandpa's tuck-in, the three squeezes, "Kiddo",
+            the museum glass; its second phrase turns wrong.
 
 Public API
     render(cues, duration=None, *, seed=None, normalize=True, progress=None) -> dict[str, np.ndarray]
@@ -52,7 +67,10 @@ Event semantics (t in seconds, level 0..1, default 0.7)
     hit, stinger, braam (len = hold, default 3.5 s), sub_drop: start at t (transients sample-aligned to t);
     riser: ends at t (len default 6 s; when a hit lands on t the riser stops 0.16-0.25 s early: a breath before
     the hit); silence: everything out for len (default 1.7 s), depth 20 + 40 * level dB, 0.12 s fade;
-    motif: phrase from t (len -> bars of 2.37 s, default 4 bars the first time, then 8);
+    motif: phrase from t (len -> bars of 2.37 s, default 4 bars the first time, then 8; inst 'musicbox' | 'piano' |
+    'octaves' forces the instrument, otherwise the intensity picks it);
+    show: the show theme from the old TV (len, slug, shift, off, space, warp, warp_at, stop, fade; see render_show);
+    winks: the same tune rotting, Mister Winks's theme (len, slug, shift, off, depth, stop; see render_winks);
     swell: string crescendo from t peaking at t + len (default 12 s), the whole bed breathes with it;
     pulse_on / pulse_off; rule: rule-card sting at t (and an arrangement boundary);
     end: the final cadence from t (len default 12 s): everything else fades over 4 s, D-minor chord (always home
@@ -78,7 +96,7 @@ if HERE not in sys.path:
 import library as L  # noqa: E402
 
 SR = 48000
-STEMS = ('tracks', 'drones', 'pulse', 'melodic', 'strings', 'hits')
+STEMS = ('tracks', 'drones', 'pulse', 'melodic', 'strings', 'show', 'hits')
 REF_LUFS = -28.0
 NOM = -20.0                      # every sample is normalised to this momentary-max loudness before gains
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))   # this film's work dir
@@ -108,7 +126,28 @@ TRACKS = {
     'from_hell_christoffer_moe_ditlevsen': -1,   # police: Bb minor -> A minor
     'in_continuum_dream_cave': 0,                # police: D minor
     'tefu_sayuri_hayashi_egnell': 0,             # police: D major (false comfort)
+    # dummy film: four of the mirror set's tracks
+    'when_the_sun_sets_anna_landstrom': 1,       # mirror: C# major -> D major, a quiet warm pad (Grandpa, Walter's show)
+    'come_closer_belladonna_strings': -1,        # mirror: D# minor -> D minor, horror strings (the stairs, the hand)
+    'don_t_look_belladonna_strings': -1,         # mirror: D# minor -> D minor, horror strings (the bookcase, the TV)
+    'irene_kevin_dailey': 0,                     # mirror: D minor, starts near silent and builds (the tape's twist)
 }
+# The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
+# warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
+# centre, a little slow: an old tape) and the default start (s, in the original track).
+VINTAGE = {
+    'balloon_twister_macy_s_voice': (-2.0, 6.0),            # B major -> A: THE show theme (5.5 s: the band comes in)
+    'ye_olde_piano_roll_the_fly_guy_five': (-4.0, 2.0),     # F# minor -> D minor: the 1962 first show
+    'the_tale_of_tomfoolery_tom_martin_landstrom': (-7.0, 1.0),   # A minor -> D minor: whimsical, spare
+    'hold_tight_roll_macy_s_voice': (-2.0, 3.0), 'roaming_around_the_fly_guy_five': (0.0, 1.0),
+    'circus_beat_martin_landstrom': (-2.0, 5.0), 'chasing_snakes_martin_landstrom': (-7.0, 2.0),
+    'once_i_was_a_miner_martin_landstrom': (-4.0, 4.0), 'a_gal_i_know_martin_landstrom': (-7.0, 1.0),
+    'it_s_just_me_instrumental_version_john_runefelt': (-6.0, 1.0), 'un_jour_peut_etre_ote': (-4.0, 1.0),
+}
+SHOW_THEME = 'balloon_twister_macy_s_voice'
+WINKS_SHIFT = -9.0                # the theme, rotting: B -> D, 0.6x
+WINKS_OFF = 6.0                   # (s in the original track) the tune, not the intro
+SHOW_DUCK = {'show': -6.0, 'winks': -3.0}   # the dark track bed steps back while the TV / the Winks theme plays
 KEYPREF = {2: 0.0, 9: 0.05, 5: 0.45, 10: 0.45, 7: 0.6, 0: 0.7}   # cost by root pitch class: D, A, F, Bb, G, C
 KEY_W = 2.0                      # weight of the key cost (v2.1: 0.2 -> 0.6, every section lands on D or A)
 OTHER_KEY = 3.0                  # cost of any other root (Eb, Ab, B, E, F#, C#: the semitone / tritone clashes)
@@ -117,9 +156,9 @@ CALM_MAX = 0.30                  # the D-major track (Tefu) only where the inten
 REUSE_W = 1.2                    # cost of replaying the same track material (fraction of the section)
 FIXED_KEY = {'tefu_sayuri_hayashi_egnell': (2, 1)}   # melodic bass: root detection unreliable; D pedal, major
 FLATTEN = 0.3                    # share of each track's own dynamics flattened by the gain automation (was 0.6-0.8)
-DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0}
+DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0}
 KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
-                'rule', 'end', 'scene')
+                'rule', 'end', 'scene', 'show', 'winks')
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -234,9 +273,8 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        cp = os.path.join(HERE, 'catalog_epidemic_delivery.json')
-        if not os.path.exists(cp):
-            cp = os.path.join(HERE, 'catalog_epidemic.json')
+        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_dummy.json', 'catalog_epidemic_delivery.json',
+                                                     'catalog_epidemic.json') if os.path.exists(os.path.join(HERE, f))))
         epi = json.load(open(cp))
         self.epi_sfx = {e['slug']: e for e in epi['sfx']}
         self.epi_music = {e['slug']: e for e in epi['music']}
@@ -461,6 +499,19 @@ def _track_audio(bank, slug):
         y = soxr.resample(y[:, :2], sr, SR / r, quality='VHQ').astype(np.float32)
         y = (y * db(NOM - e['lufs'])).astype(np.float32)
         bank.raw[k] = y
+    return bank.raw[k]
+
+
+def _vintage_audio(bank, slug, semis):
+    """A vintage tune (the dummy set) varispeeded by `semis` (tape-style resampling), at NOM LUFS."""
+    k = f'vin:{slug}:{round(float(semis) * 100)}'
+    if k not in bank.raw:
+        e = bank.epi_music[slug]
+        y, sr = sf.read(e['path'], dtype='float32', always_2d=True)
+        y = _st(y[:, 0]) if y.shape[1] == 1 else y[:, :2]
+        r = 2 ** (float(semis) / 12.0)
+        y = soxr.resample(y, sr, SR / r, quality='VHQ').astype(np.float32)
+        bank.raw[k] = (y * db(NOM - e['lufs'])).astype(np.float32)
     return bank.raw[k]
 
 
@@ -718,7 +769,8 @@ class Score:
         self.plan = plan(cues, self.dur, self.bank)
         self.keys = self.plan['keys']
         self.t_end = self.plan['t_end']
-        self.bus = {k: Bus(self.n) for k in ('tracks', 'drones', 'pulse', 'melodic', 'strings_bed', 'strings_fx', 'hits')}
+        self.bus = {k: Bus(self.n) for k in ('tracks', 'drones', 'pulse', 'melodic', 'strings_bed', 'strings_fx', 'show',
+                                             'hits')}
         self.motif_count = 0
         self._ents = {}
         self.end_t1 = self.dur
@@ -729,6 +781,7 @@ class Score:
         self.reentry = np.zeros(self.nc)     # post-silence (bed layers, not melodic)
         self.swell = np.zeros(self.nc)       # 0..1 swell envelope (boosts bed)
         self.endfade = np.zeros(self.nc)     # end of film (all non-end layers)
+        self.showduck = np.zeros(self.nc)    # the dark track bed steps back under the TV show / the Winks theme
 
     # ----------------------------------------------------------------------------------------- helpers
     def i_at(self, t, smooth=False):
@@ -863,7 +916,7 @@ class Score:
                 ext[:xf] *= _fade(xf, 'in')[:, None]
                 seg[-xf:] *= _fade(xf, 'out')[:, None]
                 seg = np.concatenate([seg[:-xf], seg[-xf:] + ext[:xf], ext[xf:]])
-            nin, nout = int(fin * SR), int(fout * SR)
+            nin, nout = min(int(fin * SR), len(seg)), min(int(fout * SR), len(seg))   # (a short last section in a window)
             seg[:nin] *= _fade(nin, 'in')[:, None]
             seg[-nout:] *= _fade(nout, 'out')[:, None]
             # gain automation: follow the intensity curve, partly flatten the track's own dynamics
@@ -1055,7 +1108,8 @@ class Score:
         motifs = [e for e in self.ev if e['type'] == 'motif']
         busy = []
         for e in motifs:
-            t1 = self.motif(e)
+            inst = e.get('inst') if e.get('inst') in ('musicbox', 'piano', 'octaves') else None
+            t1 = self.motif(e, force_inst=inst)
             busy.append((e['t'] - 3, t1 + 2))
         # sparse low-piano lament between motifs (D C Bb A, then the A-Bb-A neighbour, the F-E-D fall, the Eb rub);
         # v2.1: about 3x denser (critic: 22 pitch changes / min vs 91-114 in the references), every third note
@@ -1284,6 +1338,131 @@ class Score:
         self.bus['hits'].add(t1, _limit(hs), rev={'hall': 0.35}, at=n)
         if lv > 0.5:
             self.roll(t1, ln, root, target - 6)
+
+    # ----------------------------------------------------------------------------------------- the show / Winks
+    def _wow_ratio(self, n, depth, hz, fl_depth, fl_hz):
+        t = np.arange(n) / SR
+        return (1 + depth * np.sin(2 * np.pi * hz * t + float(self.rng.uniform(0, 6))) +
+                fl_depth * np.sin(2 * np.pi * fl_hz * t + float(self.rng.uniform(0, 6)))).astype(np.float64)
+
+    def _read(self, y, i0, ratio):
+        """Variable-rate read of y from sample i0 (loops the tune if it runs out)."""
+        need = int(i0 + ratio.sum() + 16)
+        src = y[i0:need + 4]
+        while len(src) < need - i0 + 4:
+            src = np.concatenate([src, y[int(5 * SR):]])
+        return self.vread(src, ratio)
+
+    def _speaker(self, x, space):
+        """The playback chain: 'tv' (the old console TV across the living room), 'far' (the TV in the next room),
+        'tape' (the 1974 tape's own sound, full-frame), 'old' (the 1962 kinescope), 'clean' (no processing)."""
+        if space == 'clean':
+            return x
+        m = x.mean(1)
+        if space == 'old':
+            m = _filt(_filt(m, 'highpass', 300, 4), 'lowpass', 3200, 4)
+            m = np.tanh(2.0 * m / (np.abs(m).max() + 1e-9)) * (np.abs(m).max() + 1e-9)
+            ck = (self.rng.uniform(size=len(m)) < 3.0 / SR).astype(np.float32) * self.rng.uniform(-1, 1, len(m)).astype(np.float32)
+            m = m + _filt(ck, 'highpass', 1500, 2) * np.float32(np.abs(m).max() * 0.25)
+        elif space == 'tape':
+            m = _filt(_filt(m, 'highpass', 110, 2), 'lowpass', 7000, 4)
+            m = np.tanh(1.25 * m / (np.abs(m).max() + 1e-9)) * (np.abs(m).max() + 1e-9)
+        else:
+            m = _filt(_filt(m, 'highpass', 200, 4), 'lowpass', 4500 if space == 'tv' else 2300, 4)
+            m = _peq(_peq(m, 1500, 3.0, 1.0), 330, 2.5, 2.0)
+            pk = np.abs(m).max() + 1e-9
+            m = np.tanh(1.5 * m / pk) / np.tanh(1.5) * pk
+            sl = np.zeros_like(m)
+            for d, g in ((0.006, 0.16), (0.013, 0.1), (0.024, 0.05)):
+                k = int(d * SR); sl[k:] += m[:-k] * g
+            m = m + _filt(sl, 'lowpass', 3000, 2)
+        pk = float(np.abs(m).max()) + 1e-9
+        t = np.arange(len(m)) / SR
+        hiss = _filt(self.rng.standard_normal(len(m)).astype(np.float32), 'bandpass', [1800, 8000], 2) * pk * 0.012
+        hum = (np.sin(2 * np.pi * 60 * t) + 0.4 * np.sin(2 * np.pi * 180 * t)).astype(np.float32) * pk * \
+            (0.012 if space == 'old' else 0.005)
+        return _st((m + hiss + hum).astype(np.float32))
+
+    def _envelope(self, n, fin, fout, stop):
+        env = np.ones(n, np.float32)
+        a = min(n, max(1, int(fin * SR)))
+        env[:a] = np.sin(np.linspace(0, np.pi / 2, a)) ** 2
+        b = min(n, max(1, int((0.025 if stop == 'cut' else fout) * SR)))
+        env[-b:] *= np.cos(np.linspace(0, np.pi / 2, b)) ** 2
+        return env
+
+    def render_show(self, e):
+        """The show on the TV (see the module docstring). Event keys: len, level, slug, shift (semitones), off (s in
+        the original track), space ('tv' | 'far' | 'tape' | 'old' | 'clean'), warp (0..1: the tape sags up to 9
+        semitones), warp_at (s after t where the sag starts, default len * 0.5), stop ('fade' | 'cut' | 'drag'),
+        fade (fade-in s, default 0.25)."""
+        t, ln, lv = e['t'], max(0.5, float(e.get('len') or 10.0)), e['level']
+        slug = e.get('slug') if e.get('slug') in self.bank.epi_music else SHOW_THEME
+        if slug not in self.bank.epi_music:
+            print(f'[score] WARNING: show tune {slug!r} not in the catalogue: skipped', flush=True); return
+        shift, off0 = VINTAGE.get(slug, (-2.0, 1.0))
+        shift = float(e.get('shift', shift)); off = float(e.get('off', off0))
+        space = str(e.get('space') or 'tv'); stop = str(e.get('stop') or 'fade')
+        y = _vintage_audio(self.bank, slug, shift)
+        r = 2 ** (shift / 12.0)
+        n = int(ln * SR)
+        ratio = self._wow_ratio(n, 0.0025, 0.5, 0.0007, 6.2) if space != 'clean' else np.ones(n)
+        warp = float(np.clip(e.get('warp', 0.0) or 0.0, 0, 1))
+        if warp > 0:
+            wa = float(e.get('warp_at', ln * 0.5))
+            u = np.clip((np.arange(n) / SR - wa) / max(0.3, ln - wa), 0, 1) ** 1.5
+            ratio *= 2 ** (-9.0 * warp * u / 12.0)
+        if space == 'old':
+            ratio *= self._wow_ratio(n, 0.004, 0.8, 0.0015, 9.0)
+        if stop == 'drag':                                   # the tape winds down to a halt
+            k = min(n, int(0.9 * SR))
+            ratio[-k:] *= np.linspace(1.0, 0.04, k) ** 1.5
+        x = self._read(y, int(off / r * SR), ratio)[:n]
+        x = self._speaker(x, space)
+        x *= self._envelope(len(x), float(e.get('fade', 0.25)), 1.5, stop)[:, None]
+        st = short_term(x, 0.25).max() if len(x) > 3 * SR else momentary_max(x)
+        target = REF_LUFS + (4.0 if space in ('tv', 'tape', 'old', 'clean') else -2.0) + 8.0 * (lv - 0.5)
+        x *= np.float32(db(target - st))
+        rev = {'recital': 0.12} if space in ('tv', 'tape', 'clean') else ({'hall': 0.45} if space == 'far' else {'recital': 0.2})
+        self.bus['show'].add(t, x, rev=rev)
+        self._duck_span(t, t + len(x) / SR, SHOW_DUCK['show'] * (0.5 if space == 'far' else 1.0))
+        self.log(f'show {slug[:18]} {space} {t:.1f}-{t + ln:.1f}s warp {warp} stop {stop}')
+
+    def render_winks(self, e):
+        """Mister Winks's theme: the show theme rotting (see the module docstring). Event keys: len, level, slug, shift
+        (default -9), off (s in the original track), depth (0..1, the wow, default 1), stop ('fade' | 'cut' | 'drag')."""
+        t, ln, lv = e['t'], max(0.5, float(e.get('len') or 8.0)), e['level']
+        slug = e.get('slug') if e.get('slug') in self.bank.epi_music else SHOW_THEME
+        if slug not in self.bank.epi_music:
+            print(f'[score] WARNING: winks tune {slug!r} not in the catalogue: skipped', flush=True); return
+        shift = float(e.get('shift', WINKS_SHIFT)); off = float(e.get('off', WINKS_OFF))
+        depth = float(np.clip(e.get('depth', 1.0), 0, 1.5)); stop = str(e.get('stop') or 'fade')
+        y = _vintage_audio(self.bank, slug, shift)
+        r = 2 ** (shift / 12.0)
+        n = int(ln * SR)
+        ratio = self._wow_ratio(n, 0.02 * depth, 0.22, 0.004 * depth, 4.5)
+        if stop == 'drag':
+            k = min(n, int(1.2 * SR))
+            ratio[-k:] *= np.linspace(1.0, 0.05, k) ** 1.5
+        i0 = int(off / r * SR)
+        a = self._read(y, i0, ratio)[:n]
+        b = self._read(y, i0, ratio * 2 ** (0.15 / 12))[:n]
+        k = int(0.03 * SR)
+        x = _pan(a, -0.3) + np.concatenate([np.zeros((k, 2), np.float32), _pan(b, 0.35)[:-k]]) * np.float32(0.6)
+        x = _filt(_filt(x, 'highpass', 100, 2), 'lowpass', 2800, 2)
+        pk = np.abs(x).max() + 1e-9
+        x = (np.tanh(1.2 * x / pk) / np.tanh(1.2) * pk).astype(np.float32)
+        x *= self._envelope(len(x), float(e.get('fade', 1.2)), 1.8, stop)[:, None]
+        st = short_term(x, 0.25).max() if len(x) > 3 * SR else momentary_max(x)
+        x *= np.float32(db(REF_LUFS + 2.0 + 8.0 * (lv - 0.5) - st))
+        self.bus['show'].add(t, x, rev={'hall': 0.6, 'cavern': 0.4})
+        self._duck_span(t, t + len(x) / SR, SHOW_DUCK['winks'])
+        self.log(f'winks {t:.1f}-{t + ln:.1f}s depth {depth} stop {stop}')
+
+    def _duck_span(self, a, b, depth):
+        tt = np.arange(self.nc) / CR
+        d = np.interp(tt, [a - 0.6, a + 0.4, b - 0.4, b + 1.2], [0, depth, depth, 0], left=0, right=0)
+        self.showduck = np.minimum(self.showduck, d)
 
     # ----------------------------------------------------------------------------------------- hits
     def _timp(self, root, lv, rr):
@@ -1567,6 +1746,13 @@ class Score:
                 self.render_swell(e)
             elif ty == 'rule':
                 self.render_rule(e)
+            elif ty in ('show', 'winks'):
+                if any(x['type'] == 'end' and x['t'] <= e['t'] for x in self.ev):
+                    continue                              # after the end cue: rendered after the end fade (below)
+                try:
+                    (self.render_show if ty == 'show' else self.render_winks)(e)
+                except Exception as ex:                   # an identity layer must never cost the score
+                    print(f'[score] WARNING: {ty} at {e["t"]:.2f} s failed ({repr(ex)[:120]}): skipped', flush=True)
             elif ty not in KNOWN_EVENTS:
                 print(f'[score] WARNING: unknown music event type {ty!r} at {e["t"]:.2f} s: ignored', flush=True)
         self.log(f'events {time.time() - t00:.1f}s')
@@ -1582,12 +1768,12 @@ class Score:
         # pre-reverb automation (ducks, re-entry, swell breathing, end fade); silences are gated after the reverb
         # v2.1: swells lift the whole bed (tracks +7, drones +3, string bed +4 dB at the peak; was tracks +4 only), so
         # the bed breathes in ~13 s rises of 8-12 LU like the references
-        pre = {'tracks': self.duck + self.reentry + 7.0 * self.swell + self.endfade,
+        pre = {'tracks': self.duck + self.reentry + 7.0 * self.swell + self.endfade + self.showduck,
                'drones': self.duck + self.reentry + 3.0 * self.swell + self.endfade,
                'pulse': self.duck + self.reentry + self.endfade,
-               'strings_bed': self.duck + self.reentry + 4.0 * self.swell + self.endfade,
+               'strings_bed': self.duck + self.reentry + 4.0 * self.swell + self.endfade + 0.5 * self.showduck,
                'melodic': np.maximum(self.duck, -8.0) + self.endfade,
-               'strings_fx': self.endfade, 'hits': self.endfade}
+               'strings_fx': self.endfade, 'hits': self.endfade, 'show': np.maximum(self.duck, -6.0) + self.endfade}
         for k, c in pre.items():
             if not np.any(c):
                 continue
@@ -1598,11 +1784,18 @@ class Score:
             del g
         for e in ends:
             self.render_end(e)
+        for e in self.ev:                                 # identity events after the end cue (the TV far away at the end)
+            if e['type'] in ('show', 'winks') and any(x['type'] == 'end' and x['t'] <= e['t'] for x in self.ev):
+                try:
+                    (self.render_show if e['type'] == 'show' else self.render_winks)(e)
+                    self.end_t1 = max(self.end_t1, e['t'] + float(e.get('len') or 4.0) + 1.0)
+                except Exception as ex:
+                    print(f'[score] WARNING: {e["type"]} at {e["t"]:.2f} s failed ({repr(ex)[:120]}): skipped', flush=True)
         self.bank.pitched.clear()                     # free sample caches before the reverb stage
         self.bank.raw = {k: v for k, v in self.bank.raw.items() if k.startswith('trk:')}
         irs = {k: _ir(k) for k in IRS}
         out = {}
-        for k in ('tracks', 'drones', 'pulse', 'melodic', 'hits'):
+        for k in ('tracks', 'drones', 'pulse', 'melodic', 'show', 'hits'):
             out[k] = self.bus[k].mixdown(irs)
         out['strings'] = self.bus['strings_bed'].mixdown(irs)
         out['strings'] += self.bus['strings_fx'].mixdown(irs)
