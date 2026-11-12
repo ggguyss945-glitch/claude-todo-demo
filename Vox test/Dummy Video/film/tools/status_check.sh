@@ -1,7 +1,7 @@
 #!/bin/bash
 # One-shot status of the delivery film pipeline: workflow journal, running processes, render/mix logs, disk.
-J=/root/.claude/projects/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/subagents/workflows/wf_2fb88743-6fa/journal.jsonl
-F="/home/user/claude-todo-demo/Vox test/Delivery Video/film/_work"
+J=/root/.claude/projects/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/subagents/workflows/wf_85214f76-679/journal.jsonl
+F="/home/user/claude-todo-demo/Vox test/Dummy Video/film/_work"
 date '+now %H:%M'
 python3 - "$J" <<'PY'
 import json, sys, os, time
