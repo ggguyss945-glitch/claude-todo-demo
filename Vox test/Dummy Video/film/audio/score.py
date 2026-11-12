@@ -65,6 +65,8 @@ Public API
 
 Event semantics (t in seconds, level 0..1, default 0.7)
     hit, stinger, braam (len = hold, default 3.5 s), sub_drop: start at t (transients sample-aligned to t);
+    optional boost (dB, 0..9): the final mix's biggest scares sized over the level-1 target (the tape cry, the
+    goodnight, the both-eyelids blink);
     riser: ends at t (len default 6 s; when a hit lands on t the riser stops 0.16-0.25 s early: a breath before
     the hit); silence: everything out for len (default 1.7 s), depth 20 + 40 * level dB, 0.12 s fade;
     motif: phrase from t (len -> bars of 2.37 s, default 4 bars the first time, then 8; inst 'musicbox' | 'piano' |
@@ -477,6 +479,10 @@ def _events(cues):
         d['t'] = float(d.get('t', 0.0))
         d['level'] = float(np.clip(d.get('level', 0.7) if d.get('level') is not None else 0.7, 0, 1))
         d['type'] = str(d.get('type', '')).lower()
+        try:                                       # final mix: the biggest scares go over the level-1 size (dB, 0..9)
+            d['boost'] = float(np.clip(float(d.get('boost') or 0.0), 0.0, 9.0))
+        except (TypeError, ValueError):
+            d['boost'] = 0.0
         d['i'] = i
         if d.get('len') is None and d['type'] in DEFAULT_LEN:
             d['len'] = DEFAULT_LEN[d['type']]
@@ -1531,9 +1537,11 @@ class Score:
             if st:
                 parts.append((self.bank.get('epi:' + st[(rr + 1) % len(st)]), 0.0, 0.0, 0.0))
         y = self._decay(_width(self._layer(parts), 0.75), 1.5 + 1.3 * lv, hold=0.1)
-        target = REF_LUFS + 2 + 9 * lv          # v2.1: was +5 + 13 * lv (hits masked the reveal lines)
+        target = REF_LUFS + 2 + 9 * lv + e.get('boost', 0.0)   # v2.1: was +5 + 13 * lv (hits masked the reveal lines)
         y = self.norm_to(y, target)
-        self.bus['hits'].add(t, _limit(y), rev={'hall': 0.45, 'cavern': 0.12 * lv})
+        # a boosted hit (the final mix's three hardest scares) keeps 2 dB more of its peak: at -3 dBFS the composite
+        # limiter capped it, and the boost bought no loudness (the mix's master limiter takes the rest)
+        self.bus['hits'].add(t, _limit(y, -1.0 if e.get('boost') else -3.0), rev={'hall': 0.45, 'cavern': 0.12 * lv})
         self.pre_duck(t, lv)
 
     def _decay(self, y, t60, hold=0.25):
@@ -1603,8 +1611,8 @@ class Score:
             ye = self.bank.get('epi:' + bsrc)
             layers.append((ye, -2.0, 0.0, 0.0))
         y = self._decay(_width(self._layer(layers), 0.75), hold + 2.5, hold=hold * 0.6)
-        y = self.norm_to(y, REF_LUFS + 0 + 9 * lv)
-        self.bus['hits'].add(t, _limit(y), rev={'hall': 0.4, 'cavern': 0.15})
+        y = self.norm_to(y, REF_LUFS + 0 + 9 * lv + e.get('boost', 0.0))
+        self.bus['hits'].add(t, _limit(y, -1.0 if e.get('boost') else -3.0), rev={'hall': 0.4, 'cavern': 0.15})
         self.pre_duck(t, lv)
 
     def render_subdrop(self, e):
@@ -1615,7 +1623,7 @@ class Score:
         if sd:
             parts.append((self.bank.get('epi:' + sd[e['i'] % len(sd)]), -3.0, 0.0, 0.0))
         y = self._layer(parts)
-        y = self.norm_to(y, REF_LUFS - 1 + 9 * lv)
+        y = self.norm_to(y, REF_LUFS - 1 + 9 * lv + e.get('boost', 0.0))
         self.bus['hits'].add(t, _limit(y), rev={'hall': 0.15})
         if lv > 0.6:
             self.pre_duck(t, lv * 0.7)

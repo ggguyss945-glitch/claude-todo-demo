@@ -103,9 +103,13 @@ FLATTEN = {'are_you_alone_victor_lundberg': 0.6, 'haunted_mind_etienne_roussel':
 # Full-film checks (film.py's cue sheets, measure_mix.py): music by quarter -17.0 / -14.4 / -14.2 / -14.3 LU rel voice
 # with the first gains: the first quarter was the quietest (AUDIO_SPEC: Q2 the calmest, the cold open strong), so the
 # Q1 tracks come up 2.5-3 dB and the Q2 tracks go down 1.5 dB.
-GAIN = {'a_massive_mist_ethan_sloan': 1.5, 'dark_forebodings_ethan_sloan': 3.0, 'from_hell_christoffer_moe_ditlevsen': -2.5,
+# Final mix (music by quarter -17.3 / -17.8 / -16.3 / -14.2 LU rel voice with the full plan): rules 4 and 5 sat at -18.6
+# and -18.0 while the job asks for the bed "thicker and louder by rule 5": come_closer +2, don't_look +3.
+GAIN = {'come_closer_belladonna_strings': 2.0, 'don_t_look_belladonna_strings': 3.0,   # (and irene 2 -> 0.5: the
+        # twist section measured the loudest music of the film, -11 LU, its swell 5 LU over the line)
+        'a_massive_mist_ethan_sloan': 1.5, 'dark_forebodings_ethan_sloan': 3.0, 'from_hell_christoffer_moe_ditlevsen': -2.5,
         'when_the_sun_sets_anna_landstrom': 7.0,
-        'haunted_mind_etienne_roussel': 4.0, 'are_you_alone_victor_lundberg': 5.0, 'irene_kevin_dailey': 2.0,
+        'haunted_mind_etienne_roussel': 4.0, 'are_you_alone_victor_lundberg': 5.0, 'irene_kevin_dailey': 0.5,
         'turning_stones_stefan_ekstrom': 4.5, 'the_logic_of_tyrants_hampus_naeselius': -1.0,
         'tefu_sayuri_hayashi_egnell': -1.0}
 
@@ -160,19 +164,24 @@ INTENSITY = [
 # (anchor, type, level, len). Silences sit under the line before the scare and end on it; rule stings on every
 # "Rule number N"; risers end on their anchor; hits never sit on a line the dummy speaks (they land just after it).
 EVENTS = [
+    # (anchor, type, level, len[, extra]). extra: 'boost' (dB over the level-1 size: score.py; the three hardest scares
+    # of the film: the tape cry, the goodnight, the both-eyelids blink), 'nosnap' (mix.py --plan full moves hits within
+    # 0.35 s of a picture hit onto the picture's frame; nosnap keeps the word's time, e.g. the music hit 40 ms after a
+    # wooden clack). Final-mix revisions (the full-length checks) are marked "final:".
     # cold open
     ('w2:goodnight', 'stinger', 0.5, None),            # "...never, ever tell it goodnight."
     ('s6', 'sub_drop', 0.45, None),                    # "And it is very tired of being worked."
     ('s10', 'hit', 0.4, None),                         # "Last week, we buried him."
-    ('w11:lips', 'riser', 0.55, 3.0), ('w11:lips', 'hit', 0.7, None),     # "...why his LIPS never moved."
+    ('e11+0.06', 'riser', 0.45, 3.0), ('e11+0.06', 'hit', 0.7, None),     # final: on the picture's cut after "...why
+    #   his lips never moved." (was on "lips", 1.15 s before the picture's impact: two hits)
     # Walter, the habit, the tuck-in
     ('s24', 'silence', 0.45, 1.2),                     # "He never said goodnight."
     ('s24', 'sub_drop', 0.35, None),
     # the hospital
     ('w35:grabbed', 'hit', 0.65, None),                # "Grandpa grabbed my wrist so hard it hurt."
-    ('w36:whispered', 'silence', 0.55, 2.4),           # the whisper alone: "It wasn't me."
+    ('w36:whispered', 'silence', 0.55, 2.9),           # final: the whisper alone through "It was never me." (2.4 -> 2.9)
     ('e38', 'braam', 0.6, 3.0),                        # "It was never me." -> "An hour later, he was gone."
-    ('s39', 'sub_drop', 0.45, None),
+    #   final: the sub drop on "An hour later" (0.23 s after the braam) removed
     # the house, the case, the letter
     ('s43', 'hit', 0.4, None),                         # "The case is waiting for us in the front hall."
     ('s48', 'swell', 0.55, 6.0),                       # seven rules -> "one of the seven was a lie"
@@ -182,7 +191,9 @@ EVENTS = [
     ('e59-0.5', 'silence', 0.5, 0.5), ('s60', 'hit', 0.7, None),          # "The case is empty."
     ('s62', 'sub_drop', 0.4, None),                    # "And the velvet is still warm."
     ('s63', 'silence', 0.6, 1.8),                      # "From the kitchen, there's a sound." (the spoon alone)
-    ('s68', 'swell', 0.6, 9.0),                        # Mister Winks in Grandpa's chair
+    ('s68', 'swell', 0.45, 9.35),                      # Mister Winks in Grandpa's chair (final: peaks in the gap
+    #   after "In front of him is a mug of coffee.", not on it)
+    ('s68', 'hit', 0.6, None),                         # final: the reveal cut (the picture's impact) gets the score too
     ('w71:face', 'stinger', 0.5, None),                # "...all the color leaves her face."
     ('s72', 'silence', 0.5, 1.0), ('e72', 'sub_drop', 0.5, None),         # "Two sugars."
     ('s77', 'riser', 0.55, 4.0), ('s77', 'rule', 0.7, None),
@@ -192,7 +203,8 @@ EVENTS = [
     ('s92', 'stinger', 0.55, None),                    # "Your voice."
     ('s103-0.5', 'silence', 0.7, 2.1), ('e103', 'hit', 0.7, None),       # "See you in the morning, kiddo." alone, then
     ('s108', 'swell', 0.6, 5.2),                       # the head has turned all the way -> the jaw hanging
-    ('s110', 'silence', 0.7, 2.05), ('w111:clack+0.04', 'hit', 0.6, None),   # "It closes, very slowly. / Clack."
+    ('s108', 'hit', 0.75, None),                       # final: the head-turn reveal cut (the picture's impact)
+    ('s110', 'silence', 0.7, 2.05), ('w111:clack+0.04', 'hit', 0.6, None, {'nosnap': True}),   # "slowly. / Clack."
     #   (the music hits on the clacks land 40 ms after the wooden clack and smaller: tests 2-4 measured the full-size
     #   hit 0.3-4 LU over the clack itself, burying the film's signature sound)
     ('s113', 'stinger', 0.45, None),                   # "But that was Grandpa's line."
@@ -200,7 +212,7 @@ EVENTS = [
     # rule 3: the joke, the TV
     ('s118-0.3', 'silence', 0.55, 2.4),                # the joke hangs in the dark
     ('s124', 'silence', 0.5, 1.2),                     # "Owen snorts."
-    ('w127:clack+0.04', 'hit', 0.6, None),             # "Clack."
+    ('w127:clack+0.04', 'hit', 0.6, None, {'nosnap': True}),             # "Clack."
     ('w128:lifts', 'sub_drop', 0.5, None),             # a glove lifts off the table
     ('s130', 'silence', 0.5, 2.0),                     # "Nobody laughs. Nobody breathes."
     ('s132', 'hit', 0.55, None),                       # "Then the TV turns on by itself."
@@ -219,33 +231,45 @@ EVENTS = [
     ('s164-0.2', 'silence', 0.4, 1.0),                 # "And it squeezes." (the music box takes over)
     ('s181', 'sub_drop', 0.6, None),                   # "One of those rules is a lie."
     ('e182', 'braam', 0.55, 2.5),                      # "It's rule two." -> "When you hear my voice, it's me."
-    ('w185:clacks+0.04', 'hit', 0.55, None),           # "His jaw clacks shut"
+    ('w185:clacks+0.04', 'hit', 0.55, None, {'nosnap': True}),           # "His jaw clacks shut"
     ('s189', 'sub_drop', 0.5, None),                   # "Just not the way I thought."
     ('s190', 'rule', 0.75, None),
     # rule 5: the bookcase, the tape
-    ('w196:move', 'hit', 0.8, None),                   # "Her lips didn't move."
+    ('s196', 'hit', 0.8, None),                        # final: "Her lips didn't move." on the picture's cut (was on
+    #   "move", 1 s after the picture's impact)
     ('s198', 'braam', 0.8, 3.0),                       # Mister Winks on top of the bookcase, the flashlight under his chin
     ('s206', 'sub_drop', 0.45, None),                  # "They don't move."
     ('s208', 'stinger', 0.55, None),                   # "Because he isn't doing the voice."
-    ('w209:stops', 'silence', 0.55, 2.0),              # the tape stops in the middle of a joke
-    ('s211', 'swell', 0.55, 4.6),                      # an old man's voice, cracked, crying ->
-    ('s214-0.2', 'silence', 0.5, 3.5),                 # "Please. Somebody help me. My name is Walter Kemp."
-    ('e217', 'braam', 0.85, 3.5),                      # "...That isn't me in the chair." -> the audience laughs
-    ('s224', 'hit', 0.7, None),                        # "He wasn't Walter Kemp."
-    ('s225', 'swell', 0.75, 6.0),                      # the real Walter on his knee, begging ->
+    ('s209+0.3', 'silence', 0.6, 3.0),                 # final: the tape stops mid-joke (the picture stops at the line's
+    #   start, the show theme drags to a halt with it): the drop-out runs to the camera look
+    ('w210:turns', 'hit', 0.8, None),                  # final: he turns and looks straight into the camera (the
+    #   picture's impact): silence -> hit
+    ('s211', 'swell', 0.55, 3.0),                      # an old man's voice, cracked, crying -> (final: 4.6 -> 3.0 s,
+    #   peaking into the drop-out)
+    ('s214-0.2', 'silence', 0.5, 4.7),                 # final: "Please. Somebody help me. My name is Walter Kemp. That
+    #   isn't me in the chair." all of it in the drop-out (was 3.5 s: the music came back under "That isn't me")
+    ('e217', 'hit', 1.0, None, {'boost': 7.0}),        # final: the hardest hit of the film, with the audience laughing
+    ('e217', 'braam', 1.0, 3.0, {'boost': 3.0}),       #   (the hit is the punch; the braam's body stays lower: at +6 it
+    #   sat 5 LU over "And the studio audience laughs.")
+    ('s224', 'sub_drop', 0.65, None),                  # "He wasn't Walter Kemp." (final: a sub drop, not a hit: the cut
+    #   lands on "...three times." and the hit sat 10 LU over it)
+    ('s225', 'swell', 0.5, 6.3),                       # the real Walter on his knee, begging -> (final: peaks in the
+    #   gap after "...in front of millions.", 0.75 -> 0.65)
     ('w226:laughed', 'stinger', 0.7, None),            # "And everyone laughed."
     ('s234', 'rule', 0.75, None),
     # rule 6: Owen in the den
-    ('s242', 'hit', 0.75, None),                       # "When I turn around, Owen is gone."
+    ('e242-0.05', 'hit', 0.45, None, {'nosnap': True}),   # final: "...Owen is gone." lands as the word ends (on the word
+    #   "gone" and the picture's cut it sat 11-12 LU over it; the picture's impact there is at -8 dB)
     ('s246', 'stinger', 0.55, None),                   # "And Owen is grinning."
-    ('s254', 'hit', 0.9, None), ('s254', 'pulse_on', 0.7, None),          # Mom screams and pulls
+    ('w254:screams', 'hit', 0.9, None), ('w254:screams', 'pulse_on', 0.7, None),   # final: on the scream (was 0.5 s early)
     ('e259', 'braam', 0.75, 2.5),                      # "...and his hand comes with me." -> I catch Mom's wrist
     ('s260', 'pulse_off', 0.5, None),
     ('s261', 'sub_drop', 0.5, None),                   # "Rule six."
     ('s264-0.4', 'silence', 0.6, 2.0),                 # "Say goodnight, Mister Winks." (Owen, crying)
     ('s266-0.15', 'silence', 0.7, 0.75),               # "Click."
-    ('s268-0.5', 'silence', 0.8, 0.5),                 # "Goodnight, Owen." in near silence ->
-    ('w268:owen', 'sub_drop', 0.55, None),             # the low hit (the SFX goodnight_hit sits with it)
+    ('s268-0.5', 'silence', 0.8, 1.56),                # final: "Goodnight, Owen." all of it in near silence (0.5 -> 1.56 s)
+    ('e268+0.05', 'hit', 1.0, None, {'boost': 8.0}),   # final: it lands as Owen's eyes close (the cut): one of the three
+    ('e268+0.05', 'sub_drop', 0.8, None),              #   hardest hits (with the SFX goodnight thump just before)
     ('s271', 'silence', 0.9, 1.15),                    # "The lamp goes out."
     ('s276', 'sub_drop', 0.45, None),                  # face down on the rug
     ('s279', 'rule', 0.8, None),
@@ -259,19 +283,23 @@ EVENTS = [
     ('s297', 'hit', 0.75, None),
     ('s305', 'braam', 0.75, 3.5),                      # "And they traded places."
     ('s306', 'pulse_on', 0.65, None),                  # "Sixty years later..."
-    ('s310', 'hit', 0.85, None),                       # "A young one."
+    ('s310', 'sub_drop', 0.75, None, {'nosnap': True}),   # "A young one." (final: a sub drop on the line; the hit on the
+    #   picture's cut sat on "...a new one")
     ('s311', 'pulse_off', 0.5, None),
-    ('s315-0.1', 'silence', 0.8, 2.3),                 # "Both of his eyelids close." ...
-    ('w316:click', 'stinger', 1.0, None),              # "Click, click." Owen is in the dummy.
-    ('e318', 'sub_drop', 0.7, None),                   # "He never could."
+    ('s315-0.1', 'silence', 0.8, 3.0),                 # final: "Both of his eyelids close." (the two dry clicks) "Click,
+    #   click." all in the drop-out (2.3 -> 3.0 s) ->
+    ('s317-0.1', 'stinger', 1.0, None, {'boost': 8.0}),   # final: "Owen can't wink." on the cut to Owen: the twist's hit
+    #   (was on the narrated "Click", masking it)
+    ('e318', 'sub_drop', 0.5, None),                   # "He never could." (final: 0.7 -> 0.5, after the big one)
     # the ending
     ('s321', 'stinger', 0.55, None),                   # "I scream it."
     ('s328-0.2', 'silence', 0.5, 0.9),                 # "Wink back."
     ('s330', 'sub_drop', 0.8, None),                   # "The boy who came home with us doesn't laugh anymore."
-    ('s331', 'swell', 0.85, 11.0),                     # two sugars, the doorway, the smile ->
-    ('s336-0.4', 'silence', 0.8, 2.0),                 # "See you in the morning, kiddo." in near silence ->
-    ('e336', 'hit', 1.0, None),                        # -> "He didn't say goodnight."
-    ('e338', 'end', 0.9, 4.0),                         # "He never will."
+    ('s331', 'swell', 0.65, 9.1),                      # two sugars, the doorway, the smile -> (final: peaks into the cut;
+    #   0.85 -> 0.65: it rose 6 LU over "He looked at me for a long time.")
+    ('s336-0.4', 'silence', 0.6, 4.66),                # final: near silence from "See you in the morning, kiddo." through
+    #   "He didn't say goodnight. He never will." (the SFX goodnight thump after "kiddo"; was a full hit 1.0 there)
+    ('e338+0.25', 'end', 0.9, 4.0),                    # the cut to black (the picture's end hit)
 ]
 
 # ---------------------------------------------------------------------------------------------------- identity
@@ -295,7 +323,8 @@ IDENTITY = [
     ('s164', 'motif', 0.4, 6.5, dict(inst='musicbox')),                   # the three squeezes: I love you
     ('s172', 'motif', 0.45, 12.0, {}),                 # "Kiddo, it's me." (the wrong phrase)
     ('s198', 'winks', 0.45, 5.4, dict(depth=1.3)),     # on the bookcase, the jaw going up and down
-    ('s203+0.5', 'show', 0.45, None, dict(until='w209:stops+0.15', space='tv', off=40.0, stop='drag')),  # the tape
+    ('s203+0.5', 'show', 0.45, None, dict(until='s209+0.3', space='tv', off=40.0, stop='drag')),  # the tape (final:
+    #   drags to a halt with the picture's stop and the warble, into the drop-out; was on the word "stops", 1.3 s later)
     ('s218+1.2', 'show', 0.4, None, dict(until='s221', space='tv', off=52.0, stop='fade', fade=1.0)),   # "part of the act"
     ('s232', 'motif', 0.45, 8.0, dict(inst='musicbox')),                  # the hand that squeezed mine; the only grandpa I ever had
     ('s243', 'winks', 0.62, None, dict(until='s254', stop='cut', depth=0.9, off=20.0)),   # Owen doing the act
@@ -367,8 +396,14 @@ def track_map(lines):
     return out
 
 
+# final mix: the arc the job asks for (quiet dread early, thicker and louder by rule 5): (from, to, + intensity)
+ARC = [('s148', 's190', 0.03), ('s190', 's234', 0.06), ('s234', 's264', 0.04), ('s331', 's336', -0.1)]
+
+
 def intensity(lines, duration=None):
-    pts = sorted((round(resolve(a, lines), 3), float(v)) for a, v in INTENSITY)
+    arc = [(resolve(a, lines), resolve(b, lines), d) for a, b, d in ARC]
+    pts = sorted((round(resolve(a, lines), 3), float(min(1.0, v + sum(d for x, y, d in arc if x <= resolve(a, lines) < y))))
+                 for a, v in INTENSITY)
     out = []
     for t, v in pts:
         if out and abs(out[-1][0] - t) < 0.05:
@@ -382,10 +417,13 @@ def intensity(lines, duration=None):
 
 def events(lines):
     ev = []
-    for a, ty, lv, ln in EVENTS:
+    for row in EVENTS:
+        a, ty, lv, ln = row[:4]
         e = {'t': round(resolve(a, lines), 3), 'type': ty, 'level': lv}
         if ln is not None:
             e['len'] = ln
+        if len(row) > 4 and row[4]:
+            e.update(row[4])
         ev.append(e)
     return sorted(ev, key=lambda e: e['t'])
 

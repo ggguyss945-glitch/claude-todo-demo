@@ -179,6 +179,10 @@ def main():
     T0 = time.time()
     W = os.path.normpath(os.path.join(HERE, '..', '_work'))
     cues_dir = A.cues or os.path.join(W, 'cues')
+    # the sheets as mixed (mix.py --plan full writes them: music_plan.py's score events, sfx_plan.py's pass over the
+    # picture's SFX); the picture's own sheets are still the ones the sha1 check compares with
+    used = os.path.join(A.dir, 'cues_used')
+    ev_dir = used if (A.cues is None and os.path.exists(os.path.join(used, 'sfx_cues.json'))) else cues_dir
     tl = json.load(open(A.timeline or os.path.join(W, 'align', 'timeline.json')))
     mixname = A.mix or ('mix.wav' if os.path.exists(os.path.join(A.dir, 'mix.wav')) else 'mix_en.wav')
     rd = lambda p: sf.read(p, dtype='float32', always_2d=True)[0]
@@ -196,7 +200,7 @@ def main():
          'sample_peak_dbfs': round(float(20 * np.log10(np.abs(mix).max() + 1e-12)), 2),
          'voice_rel_mix': round(Lv - Lmix, 2), 'music_rel_voice': round(SX.lufs_int(m) - Lv, 2),
          'sfx_rel_voice': round(SX.lufs_int(s) - Lv, 2), 'bed_rel_voice': round(SX.lufs_int(bed) - Lv, 2),
-         'cues_sha1_match': rep.get('cues_sha1') == MX.cue_hashes(cues_dir)}
+         'cues_sha1_match': rep.get('cues_sha1') == MX.cue_hashes(cues_dir), 'cues_measured': ev_dir}
     st3 = lev(mix, 3.0, 1.0); st3 = st3[st3 > -70]
     R['mix_lra_lu'] = round(float(np.percentile(st3, 95) - np.percentile(st3, 10)), 1)
     mi = lev(mix) - Lmix
@@ -233,7 +237,7 @@ def main():
     R['voice_weak_spots'] = sorted(wk, key=lambda x: x['min_margin_LU'])[:25]
 
     # ---------------- music presence outside the authored silences
-    mc = json.load(open(os.path.join(cues_dir, 'music_cues.json')))
+    mc = json.load(open(os.path.join(ev_dir, 'music_cues.json')))
     sil = [e for e in mc['events'] if e['type'] == 'silence']
     insil = np.zeros(nb, bool)
     for e in sil:
@@ -284,7 +288,7 @@ def main():
         R['sections_music_bed_rel_voice'] = repr(e)[:120]
 
     # ---------------- events
-    sc = json.load(open(os.path.join(cues_dir, 'sfx_cues.json')))
+    sc = json.load(open(os.path.join(ev_dir, 'sfx_cues.json')))
     hits = sorted({round(c['t'], 2) for c in sc if c['name'] in HIT_NAMES} |
                   {round(e['t'], 2) for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop')})
     hp_ = []

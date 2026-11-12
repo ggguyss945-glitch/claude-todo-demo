@@ -436,7 +436,24 @@ def tp_limit(y, ceiling_db=-1.7, look=0.005, rel=0.08, os_=4, chunk=SR * 20):
     return y * g[:, None], float(-20 * np.log10(max(float(g.min()), 1e-6))), float((g < 10 ** (-1 / 20)).mean())
 
 
-def voice_chain(v, plr=11.0):
+def voice_ride(v, over_lu=2.5, ratio=3.0):
+    """A slow fader ride on the narration's loudest phrases: where the 400 ms K-weighted loudness goes more than
+    over_lu above the integrated level, take it down (ratio 3:1), smoothed (no pumping: 0.25 s rise, 0.6 s fall).
+    Final mix: the narration's own peaks reached +4.5 LU momentary over the mix (the loudest moments of the film were
+    words); the ride caps them near +3 so the three hardest scares sit clearly above every line. Returns (v, max dB)."""
+    L0 = SX.lufs_int(v)
+    hop = 0.05
+    Lb = -0.691 + 10 * np.log10(SX._blocks(v, 0.4, hop) + 1e-20)
+    gdb = -np.maximum(0.0, Lb - (L0 + over_lu)) * (1 - 1 / ratio)
+    k = int(0.3 / hop)                                  # hold the cut over the block's span, then smooth
+    gdb = minimum_filter1d(gdb, size=k, mode='nearest')
+    gdb = uniform_filter1d(gdb, size=int(0.25 / hop), mode='nearest')
+    tb = np.arange(len(gdb)) * hop + 0.2
+    g = np.interp(np.arange(len(v)) / SR, tb, gdb).astype(np.float32)
+    return (v * (10 ** (g / 20))).astype(np.float32), float(-gdb.min()) if len(gdb) else 0.0
+
+
+def voice_chain(v, plr=11.0, ride_lu=None):
     """Narration bus: loudness to -14 LUFS, gentle 2.5:1 compression on the loudest syllables, then a transparent
     true-peak limiter so the voice's peak-to-loudness ratio is <= plr dB (EN narration arrives at PLR 15.6 dB, which
     would otherwise make the master limiter pump on every plosive). Returns (voice, stats)."""
@@ -448,10 +465,14 @@ def voice_chain(v, plr=11.0):
     thr = float(np.percentile(edb[edb > -60], 97))
     v = SX.compress(v, thr, 2.5, 0.003, 0.06, knee=6.0)
     v = v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)
+    ride = 0.0
+    if ride_lu is not None:
+        v, ride = voice_ride(v, ride_lu)
+        v = v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)
     y, gr, frac = tp_limit(np.stack([v, v], 1), TARGET + plr, look=0.003, rel=0.05)
     v = y[:, 0]
     v = (v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)).astype(np.float32)
-    return v, {'plr': round(true_peak(np.stack([v, v], 1)) - TARGET, 1), 'limit_gr_max': round(gr, 1),
+    return v, {'plr': round(true_peak(np.stack([v, v], 1)) - TARGET, 1), 'limit_gr_max': round(gr, 1), 'ride_max_db': round(ride, 1),
                'limit_over_1dB_pct': round(100 * frac, 2)}
 
 
@@ -500,6 +521,8 @@ def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5)
 
 DUCK_DB = 4.5        # music + SFX beds under the voice (critic: 3 -> 4.5 dB, so the bed sits ~-13 LU under speech)
 HIT_DUCK_DB = 6.0    # hits bus (SFX + score hits) under the voice: the reveal line stays clear of the hit's tail
+HIT_CUT_DB = 3.0     # final mix: the hits bus also gets the voice-keyed 1-4.5 kHz bell cut (the hit's body is low: the
+                     # cut keeps the next words readable while the hits come up --hits-db)
 FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
 
 
@@ -525,6 +548,51 @@ def stale(cues_dir, out_dir):
     if not os.path.exists(p):
         return True
     return json.load(open(p)).get('cues_sha1') != cue_hashes(cues_dir)
+
+
+SNAP_TYPES = ('hit', 'stinger', 'braam', 'sub_drop', 'rule')
+
+
+def picture_hits(mcues, sfx_cues):
+    """The picture's hit frames: film.py's impact SFX and its music hit / stinger / braam / sub_drop / rule events
+    (both retimed onto the reveal cuts by film.py's polish pass)."""
+    out = set()
+    for c in sfx_cues or []:
+        if isinstance(c, dict) and c.get('name') in ('impact_hit', 'stinger', 'braam', 'sub_drop'):
+            try: out.add(round(float(c['t']), 3))
+            except (KeyError, TypeError, ValueError): pass
+    for e in mcues.get('events') or []:
+        if isinstance(e, dict) and e.get('type') in SNAP_TYPES:
+            try: out.add(round(float(e['t']), 3))
+            except (KeyError, TypeError, ValueError): pass
+    return sorted(out)
+
+
+def full_plan(mcues, tl, sfx_cues, tol=0.35):
+    """--plan full (the final mix): the score follows audio/music_plan.py entirely (track map, intensity curve, tension
+    events anchored to the narration's words, the film's identity layer); film.py's own music events are replaced (the
+    full-length checks: its generic swells every ~20 s, braams on reveal lines and its intensity curve made the second
+    quarter louder than the first and put a braam 23 LU over the narration at 454 s). The picture still decides the
+    sync: a plan hit / stinger / braam / sub drop / rule sting within `tol` s of one of the picture's hit frames moves
+    onto that frame (unless it carries nosnap). Keeps film.py's duration. Returns (cues, snapped list)."""
+    import music_plan as MP
+    lines = tl['lines']
+    dur = float(mcues.get('duration') or tl['duration_en'] + 2.5)
+    ph = picture_hits(mcues, sfx_cues)
+    ev, snapped = [], []
+    for e in MP.events(lines):
+        e = dict(e)
+        if e['type'] in SNAP_TYPES + ('riser',) and not e.pop('nosnap', False) and ph:   # a riser ends on its hit
+            near = min(ph, key=lambda h: abs(h - e['t']))
+            if 0.002 < abs(near - e['t']) <= tol:
+                snapped.append((e['type'], e['t'], near)); e['t'] = near
+        else:
+            e.pop('nosnap', None)
+        ev.append(e)
+    ev += MP.identity_events(lines)
+    out = {'duration': dur, 'intensity': MP.intensity(lines, dur), 'track_map': MP.track_map(lines),
+           'events': sorted(ev, key=lambda e: float(e.get('t', 0))), 'plan': 'full'}
+    return out, snapped
 
 
 def with_plan(mcues, tl):
@@ -601,16 +669,26 @@ def main():
     ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
     ap.add_argument('--who-fx', default='X=hall',
                     help='line fx for a speaker whose lines have none (default X=hall: the hallway voice); "" = off')
-    ap.add_argument('--plan', default='auto', choices=('auto', 'off'),
+    ap.add_argument('--plan', default='auto', choices=('auto', 'full', 'off'),
                     help='auto: a music_cues.json without track_map gets music_plan.py\'s arrangement (and its '
-                         'intensity / events when the sheet has none); off: score.py arranges by itself')
+                         'intensity / events when the sheet has none); full (the final mix, final_mix.sh): the score '
+                         'follows music_plan.py entirely (snapped to the picture\'s hit frames) and audio/sfx_plan.py '
+                         'refines the picture\'s SFX sheet; off: score.py arranges by itself')
     ap.add_argument('--bed-rel', type=float, default=-13.0, help='reference integrated bed level (report and cap)')
     ap.add_argument('--bed-p50', type=float, default=-16.0, help='target bed 3 s short-term median, LU rel voice')
     ap.add_argument('--no-stems', action='store_true')
+    ap.add_argument('--write-cues', action='store_true', help='write the cue sheets as mixed to <out>/cues_used '
+                                                               '(always with --plan full)')
     ap.add_argument('--score-stems', action='store_true',
                     help='also write the raw score stems (tracks, drones, pulse, melodic, strings, show, hits) of the window '
                          'at the music and master gain, before the music bus processing: stems/score_<stem>.wav (tests)')
     ap.add_argument('--voice-plr', type=float, default=11.5)
+    ap.add_argument('--voice-ride', type=float, default=None,
+                    help='LU over the narration\'s integrated level where a slow 3:1 ride starts on its loudest '
+                         'phrases (final_mix.sh: 2.5; default off)')
+    ap.add_argument('--hits-db', type=float, default=0.0,
+                    help='gain on the score\'s hits stem (final_mix.sh: +4; the full-length checks measured the hits '
+                         'p50 7 LU under the voice, the references +2)')
     ap.add_argument('--music-width', type=float, default=0.7)
     A = ap.parse_args()
     T0 = time.time()
@@ -624,6 +702,25 @@ def main():
                                                                   'events': []}
     if A.plan == 'auto':
         mcues = with_plan(mcues, tl)
+    elif A.plan == 'full':
+        try:
+            mcues, snapped = full_plan(mcues, tl, sfx_cues)
+        except Exception as e:                       # never fail the mix on the plan: film.py's sheet + the auto plan
+            log('WARNING: music_plan.py full plan failed (%s): --plan auto' % repr(e)[:160])
+            mcues, snapped = with_plan(mcues, tl), []
+        log(f'music plan FULL: {len(mcues["events"])} events from music_plan.py, {len(snapped)} snapped to the '
+            f'picture\'s hit frames: ' + ', '.join(f'{ty} {a:.2f}->{b:.2f}' for ty, a, b in snapped))
+        try:
+            import sfx_plan as SP
+            sfx_cues, slog = SP.apply(sfx_cues if isinstance(sfx_cues, list) else [], tl['lines'])
+            for ln_ in slog:
+                log('  sfx plan:', ln_)
+        except Exception as e:                       # the picture's sheet as it is: never fail the mix on the pass
+            log('WARNING: sfx_plan.py failed (%s): the picture\'s SFX sheet as it is' % repr(e)[:160])
+    if A.plan == 'full' or A.write_cues:               # what was mixed, for measure_mix.py (the picture's sheets stay)
+        ud = os.path.join(A.out, 'cues_used'); os.makedirs(ud, exist_ok=True)
+        json.dump(sfx_cues, open(os.path.join(ud, 'sfx_cues.json'), 'w'), indent=0)
+        json.dump(mcues, open(os.path.join(ud, 'music_cues.json'), 'w'), indent=0)
     full = float(mcues.get('duration') or 0) or tl['duration_en'] + 2.5     # fix 3: exactly the picture's length (film.py)
     t0 = A.t0; t1 = min(full, A.t1) if A.t1 else full
     dur = t1 - t0; N = int(round(dur * SR)); i0 = int(round(t0 * SR))
@@ -638,7 +735,7 @@ def main():
     vstats = {}
     for k in vo:
         v = vo[k][i0:i0 + N]; v = np.pad(v, (0, N - len(v)))
-        vo[k], vstats[k] = voice_chain(v, A.voice_plr)
+        vo[k], vstats[k] = voice_chain(v, A.voice_plr, A.voice_ride)
     log('voice chain:', vstats)
     key = vo['en'] if 'en' in vo else vo[langs[0]]
 
@@ -780,8 +877,10 @@ def main():
     buses['events'] += buses.pop('knocks')        # knocks join the events bus after the foley-dip key is taken
     # the hit duck spares each hit's first 0.15 s (the transient lands on the cut), then takes the tail down under the line
     spare = np.ones(N, np.float32)
+    big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
     for h in hit_times + mus_hits:
-        a = int((h - 0.03) * SR); b = int((h + 0.15) * SR); c = int((h + 0.35) * SR)
+        long_ = any(abs(h - x) < 0.01 for x in big)   # the three hardest scares: the body of the hit stays up 0.3 s
+        a = int((h - 0.03) * SR); b = int((h + (0.3 if long_ else 0.15)) * SR); c = int((h + (0.7 if long_ else 0.35)) * SR)
         if b <= 0 or a >= N: continue
         spare[max(0, a):min(N, b)] = 0.0
         if c > b:
@@ -792,11 +891,11 @@ def main():
         dm = (10 ** (-DUCK_DB * act / 20)).astype(np.float32)
         hd = (10 ** (-HIT_DUCK_DB * act_h * spare / 20)).astype(np.float32)
         m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
-        m += mhits * (hd * np.float32(gm))[:, None]
+        m += dyn_cut(mhits, act, HIT_CUT_DB) * (hd * np.float32(gm * 10 ** (A.hits_db / 20)))[:, None]
         s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
         e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
         s += e; del e
-        s += buses['hits'] * hd[:, None]; del hd
+        s += dyn_cut(buses['hits'], act, HIT_CUT_DB) * hd[:, None]; del hd
         bed, gr, gg = glue(m + s)
         m *= gg[:, None]; s *= gg[:, None]
         return bed, m, s, gr
@@ -830,7 +929,7 @@ def main():
     if Lm > -10: gm *= 10 ** ((-10 - Lm) / 20)
 
     report = {'cues_sha1': hashes, 'window': [t0, t1], 'score': score_src,
-              'music_gain_db': round(20 * np.log10(gm), 2),
+              'music_gain_db': round(20 * np.log10(gm), 2), 'hits_db': A.hits_db, 'plan': A.plan,
               'sfx_counts': counts, 'silences': n_sil, 'langs': {},
               'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped))}
     stem_dir = os.path.join(A.out, 'stems'); os.makedirs(stem_dir, exist_ok=True)
