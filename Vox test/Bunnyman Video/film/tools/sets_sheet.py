@@ -1,7 +1,11 @@
-"""Dummy-film sets (and the delivery / police regressions): stills of every set / variant, a contact sheet, the framing
-check at each view's widest camera move and the draw-time bench.
+"""Bunnyman-film sets (and the dummy / delivery / police regressions): stills of every set / variant, a contact sheet,
+the floor plan with every camera, the framing check at each view's widest camera move and the draw-time bench.
 
-    python3 tools/sets_sheet.py                       # dummy-film stills (1280x720) + contact_sheet.jpg + index.json -> W/sets/
+    python3 tools/sets_sheet.py                       # bunny-film stills (1280x720) + contact_sheet.jpg + index.json
+                                                      #   (anchors with plan / screen data per variant) + floorplan.jpg -> W/sets/
+    python3 tools/sets_sheet.py --dummy               # the dummy film's variants (regression)
+    python3 tools/sets_sheet.py --stage               # staging test stills: cast figures placed only from the sets' Spots
+                                                      #   (ST.stage_figure) -> W/sets/stage_*.jpg + stage_sheet.jpg
     python3 tools/sets_sheet.py --only hall,ins_      # variants whose name contains any of these
     python3 tools/sets_sheet.py --frame               # + framing check: every view at the corners of its info['cam_env'] (and
                                                       #   +-8 px handheld) over a magenta background -> frame_check.json / .jpg
@@ -11,7 +15,7 @@ check at each view's widest camera move and the draw-time bench.
 W = film/_work. Stills are graded through the engine exactly like the film (lens, grade, set fx incl. the VHS tape look).
 Sets that need people are shown empty (anchors in SETS.md / index.json); rule cards are drawn over a blurred living room.
 """
-import argparse, json, os, sys, time
+import argparse, json, math, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILM = os.path.dirname(HERE)
 sys.path.insert(0, FILM)
@@ -26,6 +30,8 @@ ap.add_argument('--bench', action='store_true')
 ap.add_argument('--bench_frames', type=int, default=6)
 ap.add_argument('--police', action='store_true')
 ap.add_argument('--delivery', action='store_true')
+ap.add_argument('--dummy', action='store_true')
+ap.add_argument('--stage', action='store_true')
 ap.add_argument('--frame', action='store_true')
 ap.add_argument('--no_sheet', action='store_true')
 a = ap.parse_args()
@@ -176,6 +182,173 @@ POLICE = [('police_porch_doorbell', S(lambda: ST.porch_doorbell()), 1.0, None, '
           ('police_insert_licence', S(lambda: ST.insert('licence')), 1.0, None, 'police regression')]
 
 
+# ---------------------------------------------------------------------------------------------- the Bunnyman film
+def rcard(n, t=4.0):
+    """Rule card n (engine.hud.rule_card in the police style + its icon) over the blurred living room."""
+    def build():
+        sp = ST.ob_living('wide', lamp=0.7)
+        return sp, dict(hud=lambda cv, tt: ST.rule_card_bunny(cv, n, t), post=dict(blur=6.0, dim=0.3))
+    return build
+
+
+def I(name, grade=None, **kw):
+    return G((lambda n_, kw_: lambda: ST.ob_insert(n_, **kw_))(name, kw), grade)
+
+
+_feet = lambda t: [(0.28, 0.42), (0.55, 0.69)]
+_rattle = lambda t: math.sin(t * 40.0) * (0.6 + 0.4 * math.sin(t * 3.0))
+BUNNY = [
+    # the living room
+    ('liv_wide', G(lambda: ST.ob_living('wide')), 0.5, None, 'from the back-right corner: couch under the lamp, front window, Mom\'s wingback'),
+    ('liv_wide2', G(lambda: ST.ob_living('wide2')), 0.5, None, 'from the hall opening: the couch at 3/4 (seat people on the couch here)'),
+    ('liv_wide_dark', G(lambda: ST.ob_living('wide', lamp=0.0)), 0.5, None, 'lamp off: moonlight only (grade ob_dark)'),
+    ('liv_wide_chairlamp', G(lambda: ST.ob_living('wide', lamp=0.0, chair_lamp=1.0)), 0.5, None, 'only the little lamp by the wingback'),
+    ('liv_wide_curtains', G(lambda: ST.ob_living('wide', curtains=0.0)), 0.5, None, 'curtains closed (rule 1)'),
+    ('liv_back', G(lambda: ST.ob_living('back')), 0.5, None, 'the back door\'s POV: through the opening, the wingback facing the lens'),
+    ('liv_chair', G(lambda: ST.ob_living('chair')), 0.5, None, 'from the couch: the wingback\'s back, the dark kitchen, the back door'),
+    ('liv_chair_kitchen', G(lambda: ST.ob_living('chair', kitchen=1.0)), 0.5, None, 'the kitchen light on through the opening'),
+    ('liv_couch', G(lambda: ST.ob_living('couch')), 0.5, None, 'medium on the couch (anchors couch_left/mid/right, couch_lie)'),
+    ('liv_couch_blanket', G(lambda: ST.ob_living('couch', blanket=True, lamp=0.4)), 0.5, None, '2:47: June\'s blanket left on the couch'),
+    ('liv_window', G(lambda: ST.ob_living('window')), 0.5, None, 'the front window, curtains open'),
+    ('liv_window_closed', G(lambda: ST.ob_living('window', curtains=0.0)), 0.5, None, 'curtains closed'),
+    ('liv_hall', G(lambda: ST.ob_living('hall', hall=1.0)), 0.5, None, 'from the hall into the living room'),
+    # hall + stairs + front door
+    ('hall_door', G(lambda: ST.ob_hall('door')), 0.5, None, 'facing the front door: peephole, mail slot, deadbolt, chain; stairs left'),
+    ('hall_door_dark', G(lambda: ST.ob_hall('door', hall=0.0, console=0.4)), 0.5, None, 'hall light off, console lamp low'),
+    ('hall_door_crack', G(lambda: ST.ob_hall('door', door=14, porch=1.0)), 0.5, None, 'the door open a crack, porch light outside'),
+    ('hall_door_open_dawn', G(lambda: ST.ob_hall('door', door=88, tod='dawn', hall=0.0)), 0.5, None, 'dawn: the door wide open'),
+    ('hall_in', G(lambda: ST.ob_hall('in', living=1.0)), 0.5, None, 'from the door into the house'),
+    ('hall_foot', G(lambda: ST.ob_hall('foot', upstairs=1.0)), 0.5, None, 'up the flight from the bottom: June\'s door at the top'),
+    ('hall_top', G(lambda: ST.ob_hall('top')), 0.5, None, 'down the flight from the top: the front door at the bottom'),
+    ('hall_slot', G(lambda: ST.ob_hall('slot')), 0.5, None, 'the mail slot close, flap shut'),
+    ('hall_slot_open', G(lambda: ST.ob_hall('slot', flap=1.0)), 0.5, None, '1:40: the flap pushed open from outside'),
+    ('hall_peep', G(lambda: ST.ob_hall('peep')), 0.5, None, 'the peephole + deadbolt close'),
+    ('hall_bottom_dawn', G(lambda: ST.ob_hall('bottom', tod='dawn', hall=0.0)), 0.5, None, 'dawn: low at the foot of the stairs'),
+    # upstairs
+    ('up_hall', G(lambda: ST.ob_upstairs('hall', upstairs=1.0)), 0.5, None, 'the corridor looking west (attic door at the end)'),
+    ('up_hall_dark', G(lambda: ST.ob_upstairs('hall', attic_gap=1.0)), 0.5, None, 'dark: only the line of light under the attic door'),
+    ('up_west', G(lambda: ST.ob_upstairs('west', upstairs=1.0)), 0.5, None, 'looking east to the window'),
+    ('up_bath', G(lambda: ST.ob_upstairs('bath', upstairs=1.0)), 0.5, None, 'from the stairhead: the bathroom door, June\'s door'),
+    ('up_june', G(lambda: ST.ob_upstairs('june', june_gap=1.0)), 0.5, None, 'June\'s door, light under it'),
+    ('up_from_bath', G(lambda: ST.ob_upstairs('from_bath', upstairs=1.0)), 0.5, None, 'from the bathroom door down the corridor'),
+    ('up_hall_wrecked', G(lambda: ST.ob_upstairs('hall', wrecked=1.0, tod='dawn')), 0.5, None, 'dawn: the corridor wrecked'),
+    ('up_bath_wrecked', G(lambda: ST.ob_upstairs('bath', wrecked=1.0, tod='dawn')), 0.5, None, 'dawn: the gouged bathroom door'),
+    # June's room
+    ('june_window', G(lambda: ST.ob_june('window')), 0.5, None, 'June\'s room: the window to the treeline, moon nightlight'),
+    ('june_window_closed', G(lambda: ST.ob_june('window', curtains=0.0)), 0.5, None, 'curtains closed'),
+    ('june_out', G(lambda: ST.ob_june('out')), 0.5, None, 'the treeline from June\'s window (anchors bunny_treeline / bunny_clearing)'),
+    ('june_door', G(lambda: ST.ob_june('door', hall=1.0)), 0.5, None, 'toward the door, hall light'),
+    ('june_bed', G(lambda: ST.ob_june('bed')), 0.5, None, 'the bed, made'),
+    ('june_bed_empty', G(lambda: ST.ob_june('bed', bed='empty', dress=False)), 0.5, None, 'the bed empty, quilt thrown back'),
+    # the bathroom
+    ('bath_door', G(lambda: ST.ob_bath('door')), 0.5, None, 'from the tub: the door, the line of light under it'),
+    ('bath_door_feet', G(lambda: ST.ob_bath('door', feet=_feet)), 0.5, None, 'two shadows in the gap (someone outside)'),
+    ('bath_tub', G(lambda: ST.ob_bath('tub')), 0.5, None, 'the empty tub (anchors tub_left / tub_right)'),
+    ('bath_gap', G(lambda: ST.ob_bath('gap')), 0.5, None, 'the gap under the door'),
+    ('bath_gap_sunrise', G(lambda: ST.ob_bath('gap', tod='dawn', gap_col=ST.DAWN_C)), 0.5, None, '6:12: the gap turns gold'),
+    ('bath_lock', G(lambda: ST.ob_bath('lock')), 0.5, None, 'the lock close: bolt across'),
+    ('bath_lock_turning', G(lambda: ST.ob_bath('lock', lock=0.45, key=0.6, tod='dawn', gap_col=ST.DAWN_C)), 0.5, None, 'the bolt turning by itself, the key from outside'),
+    # the attic
+    ('attic_chest', G(lambda: ST.ob_attic('chest')), 0.5, None, 'Mom\'s old toy chest under the bare bulb'),
+    ('attic_corner', G(lambda: ST.ob_attic('corner')), 0.5, None, 'the dark corner (the rocker)'),
+    ('attic_mom', G(lambda: ST.ob_attic('mom')), 0.5, None, 'from the stairhead: Mom\'s POV on June at the chest'),
+    ('attic_dark', G(lambda: ST.ob_attic('chest', bulb=0.0)), 0.5, None, 'the bulb off'),
+    # the kitchen
+    ('kit_back', G(lambda: ST.ob_kitchen('back', kitchen=1.0)), 0.5, None, 'the window over the sink, the back door, the fridge'),
+    ('kit_back_dark', G(lambda: ST.ob_kitchen('back')), 0.5, None, 'dark kitchen'),
+    ('kit_back_smash', G(lambda: ST.ob_kitchen('back', smash_t=0.3)), 0.42, None, 'the window exploding (smash_t)'),
+    ('kit_back_smashed', G(lambda: ST.ob_kitchen('back', smash=1.0, mud=1.0)), 0.5, None, 'after: glass, mud drag marks'),
+    ('kit_door', G(lambda: ST.ob_kitchen('door', porch=1.0)), 0.5, None, 'the back door, Grandma\'s porch light'),
+    ('kit_door_crash', G(lambda: ST.ob_kitchen('door', crash_t=0.3)), 0.4, None, 'the back door crashing open (crash_t)'),
+    ('kit_door_open', G(lambda: ST.ob_kitchen('door', back_door=82.0)), 0.5, None, 'the back door hanging open'),
+    ('kit_fridge', G(lambda: ST.ob_kitchen('fridge', kitchen=1.0)), 0.5, None, 'the fridge: the rules under the bunny magnet'),
+    ('kit_table', G(lambda: ST.ob_kitchen('table', kitchen=1.0)), 0.5, None, 'the table under the pendant'),
+    ('kit_memory', G(lambda: ST.ob_kitchen('back', tod='memory')), 0.5, None, 'Grandma\'s daylight kitchen (memory)'),
+    # outside
+    ('yard_woods', G(lambda: ST.ob_yard('woods')), 0.5, None, 'from the back porch to the treeline'),
+    ('yard_woods_light', G(lambda: ST.ob_yard('woods', back_light=1.0)), 0.5, None, 'Grandma\'s porch light on'),
+    ('yard_house', G(lambda: ST.ob_yard('house', kitchen=1.0, june_light=1.0)), 0.5, None, 'from the treeline back at the house, windows lit'),
+    ('yard_house_dark', G(lambda: ST.ob_yard('house')), 0.5, None, 'the house dark'),
+    ('yard_wide', G(lambda: ST.ob_yard('wide', back_light=1.0)), 0.5, None, 'establishing from the east side'),
+    ('yard_close', G(lambda: ST.ob_yard('close')), 0.5, None, 'telephoto on the treeline (anchor treeline)'),
+    ('yard_dawn', G(lambda: ST.ob_yard('woods', tod='dawn')), 0.5, None, 'dawn'),
+    ('woods_edge_sunrise87', G(lambda: ST.ob_yard('close', tod='sunrise87')), 0.5, None, '1987 sunrise: the woods\' edge (little Laurie walks out)'),
+    ('yard_barrel', G(lambda: ST.ob_yard('barrel', fire=1.0, egg=0.4)), 1.2, None, 'the burn barrel: the egg melting in the fire'),
+    ('front_house', G(lambda: ST.ob_front('house')), 0.5, None, 'the last house on Orchard Road, porch light on'),
+    ('front_house_off', G(lambda: ST.ob_front('house', front_light=0.0)), 0.5, None, 'porch light off'),
+    ('front_porch', G(lambda: ST.ob_front('porch', egg=True)), 0.5, None, 'on the porch: the egg on the doormat'),
+    ('front_egg', G(lambda: ST.ob_front('egg', egg=True, egg_rattle=_rattle)), 0.5, None, 'low on the egg (rattling)'),
+    ('front_peephole', G(lambda: ST.ob_front('peephole', egg=True)), 0.5, None, 'the fisheye peephole view: the empty porch, the egg'),
+    ('front_police', G(lambda: ST.ob_front('house', tod='dawn', police=dict(mode='sweep'))), 0.5, None, 'dawn: police lights at the house'),
+    ('woods_bridge', G(lambda: ST.ob_woods('bridge')), 0.5, None, 'the old railroad bridge'),
+    ('woods_under', G(lambda: ST.ob_woods('under')), 0.5, None, 'Dad\'s flashlight on the gravel, still on'),
+    ('woods_path', G(lambda: ST.ob_woods('path')), 0.5, None, 'deep in Holloway Woods'),
+    ('woods_day87', G(lambda: ST.ob_woods('bridge', tod='day87')), 0.5, None, '1987: the search, overcast'),
+    ('hosp_room', G(lambda: ST.ob_hospital('room')), 0.5, None, 'the narrator\'s room, the window, the calendar'),
+    ('hosp_bed', G(lambda: ST.ob_hospital('bed')), 0.5, None, 'the bed, the calendar'),
+    ('hosp_visit', G(lambda: ST.ob_hospital('visit')), 0.5, None, 'the visiting room'),
+    ('hosp_table', G(lambda: ST.ob_hospital('table')), 0.5, None, 'a visiting table'),
+    ('hosp_corridor', G(lambda: ST.ob_hospital('corridor')), 0.5, None, 'the corridor'),
+    ('parade_street', G(lambda: ST.ob_parade('street')), 0.5, None, '1987 parade: Main Street, the float, the crowd (VHS)'),
+    ('parade_store', G(lambda: ST.ob_parade('store')), 0.5, None, 'Pemberton\'s store front (VHS)'),
+    ('parade_photo', G(lambda: ST.ob_parade('photo')), 0.5, None, 'the photo spot by the float (VHS)'),
+    ('parade_clean', G(lambda: ST.ob_parade('street', vhs=False)), 0.5, None, 'the street without the tape look'),
+]
+for n in ST.INSERTS_B:
+    BUNNY.append(('ins_' + n, I(n), 0.5, None, ST.INSERTS_B[n][2]))
+BUNNY += [
+    ('ins_rules_hl3', I('rules', prop_kw=dict(hl=3)), 0.5, None, 'the rules, rule 3 highlighted'),
+    ('ins_egg_rattle', I('egg', prop_kw=dict(rattle=_rattle)), 0.53, None, 'the egg rattling on the mat'),
+    ('ins_slot_eyes', I('slot', prop_kw=dict(flap=0.9, eyes=1.0)), 0.5, None, 'the flap up, a glint in the dark'),
+    ('ins_lock_key', I('lock', grade='ins_dawn', prop_kw=dict(lock=0.4, key=0.7, knob=12)), 0.5, None, 'the bolt turning, the key from outside'),
+    ('ins_clock_113', I('clock', prop_kw=dict(time=(1, 13))), 0.5, None, '1:13'),
+    ('ins_clock_612', I('clock', prop_kw=dict(time=(6, 12), kind='digital')), 0.5, None, '6:12 (June\'s clock)'),
+    ('ins_switch_off', I('switch', prop_kw=dict(on=False)), 0.5, None, 'the porch switch off'),
+    ('ins_drawing_slide', I('drawing', prop_kw=dict(slide=0.45)), 0.5, None, 'the drawing coming under the door'),
+] + [('card_rule%d' % n, rcard(n), 0.0, None, 'rule card %d (typed on, key words in red)' % n) for n in range(1, 8)]
+
+
+# staging test stills: (name, set builder, [(who, spot, stage_figure kwargs)], note)
+STAGE = [
+    ('liv_wide', lambda: ST.ob_living('wide'), [('mom', 'armchair', dict(expr='too_still'))], 'Mom in the wingback (the couch is front-on here)'),
+    ('liv_wide2', lambda: ST.ob_living('wide2'), [('narrator', 'couch_mid', dict(seed=3)), ('june', 'couch_right', dict(seed=4))],
+     'the kids on the couch at 3/4'),
+    ('liv_couch', lambda: ST.ob_living('couch'), [('narrator', 'couch_mid', dict(seed=3)), ('june', 'couch_right', dict(seed=4)),
+                                                  ('mom', 'window_front', dict(turn=2.0))], 'on the couch; Mom at the front window'),
+    ('liv_back', lambda: ST.ob_living('back', chair_lamp=1.0), [('mom', 'armchair', dict(expr='too_still'))], 'Mom facing the back door'),
+    ('kit_fridge', lambda: ST.ob_kitchen('fridge', kitchen=1.0), [('mom', 'fridge', {})], 'Mom at the fridge (the rules)'),
+    ('hall_door', lambda: ST.ob_hall('door'), [('mom', 'peephole_eye', {}), ('narrator', 'stairs_foot', dict(seed=3))],
+     'Mom at the peephole (back to camera), the narrator at the foot of the stairs'),
+    ('up_hall', lambda: ST.ob_upstairs('hall', upstairs=1.0), [('mom', 'hall_mid', dict(turn=0.0, expr='too_still'))], 'Mom in the corridor'),
+    ('bath_tub', lambda: ST.ob_bath('tub'), [('narrator', 'tub_left', dict(seed=3)), ('june', 'tub_right', dict(seed=4))],
+     'the kids in the empty tub (the near wall in front of them)'),
+    ('june_window', lambda: ST.ob_june('window'), [('june', 'window', {})], 'June at her window'),
+    ('june_out', lambda: ST.ob_june('out'), [('bunny', 'bunny_treeline', {})], 'the Bunnyman at the treeline from June\'s window'),
+    ('attic_mom', lambda: ST.ob_attic('mom'), [('june', 'chest_floor', {})], 'June kneeling at the toy chest'),
+    ('yard_woods', lambda: ST.ob_yard('woods', back_light=1.0), [('bunny', 'treeline', {}), ('dad', 'yard_mid', {})],
+     'Dad walking to the treeline, the Bunnyman waiting'),
+    ('hosp_table', lambda: ST.ob_hospital('table'), [('mom_hosp', 'seat1', {}), ('narrator_neat', 'seat0', dict(expr='wrong_smile'))],
+     'the visit: the narrator in Mom\'s body, the thing in the narrator\'s'),
+]
+
+
+def stage_run():
+    set_render_size(W0, H0)
+    tiles = []
+    for name, build, figs, note in STAGE:
+        t0 = time.time()
+        sp = build()
+        lays = [ST.stage_figure(sp, who, spot, **kw)[0] for who, spot, kw in figs]
+        sp2 = sp.add(*lays)
+        img = render_frame(list(sp2), None, 0.5, 0, **sp2.render_kw(), post=sp2.fx(0.5))
+        cv2.imwrite(os.path.join(a.out, 'stage_' + name + '.jpg'), img[:, :, ::-1], [cv2.IMWRITE_JPEG_QUALITY, 90])
+        tiles.append(label(cv2.resize(img[:, :, ::-1], (640, 360), interpolation=cv2.INTER_AREA).copy(), 'stage_' + name))
+        print('%-24s %5.2fs  %s' % ('stage_' + name, time.time() - t0, note), flush=True)
+    cols = 3
+    rows = [np.hstack(tiles[i:i + cols] + [np.zeros_like(tiles[0])] * (cols - len(tiles[i:i + cols]))) for i in range(0, len(tiles), cols)]
+    cv2.imwrite(os.path.join(a.out, 'stage_sheet.jpg'), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 86])
+
+
 def cam_for(sp, mode):
     if mode == 'doorway' and 'doorway_cam' in sp.info:
         return ST.doorway_camera(sp, 0.0, 6.0)
@@ -199,7 +372,9 @@ def label(img, s):
 
 def main():
     os.makedirs(a.out, exist_ok=True)
-    vs = POLICE if a.police else (DELIVERY if a.delivery else DUMMY)
+    if a.stage:
+        stage_run(); return
+    vs = POLICE if a.police else (DELIVERY if a.delivery else (DUMMY if a.dummy else BUNNY))
     if a.only: vs = [v for v in vs if any(k in v[0] for k in a.only.split(','))]
     thumbs, index = [], []
     for name, build, t, cm, note in vs:
@@ -208,15 +383,22 @@ def main():
         img = render(sp, opt, t, cam_for(sp, cm))
         cv2.imwrite(os.path.join(a.out, name + '.jpg'), img[:, :, ::-1], [cv2.IMWRITE_JPEG_QUALITY, 90])
         th = cv2.resize(img[:, :, ::-1], (480, 270), interpolation=cv2.INTER_AREA)
-        thumbs.append(label(th.copy(), name)); index.append(dict(name=name, set=sp.name, t=t, note=note, lens=sp.lens,
-                                                                   grade=str(sp.grade), anchors=sorted(sp.anchors)))
+        anchors = sorted(sp.anchors)
+        if hasattr(ST, 'Spot') and any(isinstance(v_, ST.Spot) for v_ in sp.anchors.values()):
+            anchors = {k_: dict(kind=v_.kind, x=round(v_.x, 1), y=round(v_.y, 1), depth=round(v_.depth, 3), ppm=round(v_.ppm, 1),
+                                plan=(round(v_.X, 2), round(v_.Yp, 2), round(v_.Y, 2)), turn=None if v_.turn is None else round(v_.turn, 2),
+                                seat_y=None if v_.seat_y is None else round(v_.seat_y, 1), note=v_.note)
+                       for k_, v_ in sorted(sp.anchors.items()) if isinstance(v_, ST.Spot)}
+        thumbs.append(label(th.copy(), name)); index.append(dict(name=name, set=sp.name, t=t, note=note, lens=str(sp.lens),
+                                                                   grade=str(sp.grade), anchors=anchors))
         print('%-32s %5.2fs  %s' % (name, time.time() - t0, note), flush=True)
     if not a.no_sheet and thumbs:
         cols = 5
         rows = [np.hstack(thumbs[i:i + cols] + [np.zeros_like(thumbs[0])] * (cols - len(thumbs[i:i + cols]))) for i in range(0, len(thumbs), cols)]
         sheet = np.vstack(rows)
-        pre = 'police_' if a.police else ('delivery_' if a.delivery else '')
+        pre = 'police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ''))
         cv2.imwrite(os.path.join(a.out, pre + 'contact_sheet.jpg'), sheet, [cv2.IMWRITE_JPEG_QUALITY, 86])
+        if not (a.police or a.delivery or a.dummy): ST.plan_map(os.path.join(a.out, 'floorplan.jpg'))
         if not a.only: json.dump(index, open(os.path.join(a.out, pre + 'index.json'), 'w'), indent=1)
     if a.frame:
         frame_check(vs)
@@ -232,8 +414,12 @@ def frame_check(vs):
     at the envelope centre). Writes frame_check.json and frame_check.jpg (the worst corner of each view)."""
     set_render_size(480, 270)
     res, tiles = [], []
+    seen = set()
     for name, build, t, cm, note in vs:
         sp, opt = build()
+        key = (sp.name, cm)
+        if key in seen: continue
+        seen.add(key)
         env = sp.info.get('cam_env') or dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.1), f=(1.0, 1.0))
         x0, x1 = env['x']; y0, y1 = env['y']; z1 = env.get('zoom', (1.0, 1.0))[1]; f1 = env.get('f', (1.0, 1.0))[1]
         cams = [('%s_%s' % (cx_n, cy_n), Cam([(0.0, cx + dx, cy + dy, 1.0)]))
@@ -276,7 +462,7 @@ def bench(vs):
             t0 = time.perf_counter(); render(sp, opt, tt, cam, k + 1); ts.append(time.perf_counter() - t0)
         res.append(dict(name=name, mean_s=round(float(np.mean(ts)), 3), max_s=round(float(np.max(ts)), 3)))
         print('bench %-32s mean %.3f s  max %.3f s' % (name, res[-1]['mean_s'], res[-1]['max_s']), flush=True)
-    json.dump(res, open(os.path.join(a.out, ('police_' if a.police else ('delivery_' if a.delivery else '')) + 'bench_2560.json'), 'w'), indent=1)
+    json.dump(res, open(os.path.join(a.out, ('police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ''))) + 'bench_2560.json'), 'w'), indent=1)
     ms = [r['mean_s'] for r in res]
     print('bench: %d variants, mean %.3f s/frame, worst %.3f s (%s); police budget 0.6 s/frame' %
           (len(ms), float(np.mean(ms)), max(ms), res[int(np.argmax(ms))]['name']))
