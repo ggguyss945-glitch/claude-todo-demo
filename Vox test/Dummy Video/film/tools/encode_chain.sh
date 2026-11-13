@@ -1,19 +1,19 @@
 #!/bin/bash
 # Resumable HEVC delivery for the dummy film, from the finished picture and the final mix (run from film/):
 #   P=2 bash tools/encode_chain.sh > _work/logs/encode_chain.log 2>&1
-# Same encoder settings as tools/deliver.sh, but the picture is encoded as K frame-exact segments with OK markers, so a
+# Same x265 settings as tools/deliver.sh except rate control (capped CRF 17, see tools/enc_seg.sh), but the picture is encoded as K frame-exact segments with OK markers, so a
 # container restart only loses the segments in flight: re-running skips every finished segment. The segments are joined
 # with a stream copy, the AAC (with the -3 dBFS limiter) is muxed on, and the result is checked frame by frame.
 # Run it as a harness-tracked background task, never with nohup, and never edit it while it runs.
 set -e
 cd "$(dirname "$0")/.."
 W=_work; PIC=$(realpath $W/picture/picture.mp4); MIX=$W/mix/final/mix_en.wav
-S=$W/deliver/segments; K=${K:-24}; P=${P:-2}
+S=${S:-$W/deliver/segments_crf}; K=${K:-24}; P=${P:-2}
 B=If_Your_Grandpas_Dummy_Tells_A_Joke; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
 mkdir -p "$S"
 NT=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$PIC")
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
-echo "== encode start $(date -u +%H:%M) picture $NT frames $DUR s, $K segments, $P at a time"
+echo "== encode start $(date -u +%H:%M) picture $NT frames $DUR s, $K segments, $P at a time, rate control: ${RC:--crf 17}"
 python3 -c "
 NT, K = $NT, $K
 for k in range(K):
