@@ -190,10 +190,31 @@ def _cached(layer, density, gains=None):
         cv.scale(density, density); cv.translate(-x0, -y0)
         layer.draw(Pen(cv), layer.cache_t)
         del cv, s
+        bounds = layer.bounds
+        arr, crop = _crop_to_content(arr)                  # keep only the painted part: a piece of furniture caches as
+        if crop is not None:                               # its own size, not a whole frame (no LRU thrash at 2560)
+            cx0, cy0, cx1, cy1 = crop
+            bounds = (x0 + cx0 / density, y0 + cy0 / density, x0 + cx1 / density, y0 + cy1 / density)
         e = _Entry(); e.arr = arr; e.img = image_from(arr); e.rects = _occupied_rects(arr[..., 3])
-        e.density = density; e.bounds = layer.bounds; e.nbytes = arr.nbytes
+        e.density = density; e.bounds = bounds; e.nbytes = arr.nbytes
         _store(key, e)
     return _gained(key, e, gains)
+
+
+def _crop_to_content(arr, pad=2):
+    """(arr, (x0, y0, x1, y1) px) cropped to the non-transparent pixels (+pad) when that saves at least a fifth of the
+    raster; (arr, None) otherwise. An empty raster becomes 1x1."""
+    a = arr[..., 3]
+    rows = np.flatnonzero(a.max(axis=1))
+    if rows.size == 0:
+        return np.zeros((1, 1, 4), np.uint8), (0, 0, 1, 1)
+    cols = np.flatnonzero(a.max(axis=0))
+    h, w = a.shape
+    y0, y1 = max(0, rows[0] - pad), min(h, rows[-1] + 1 + pad)
+    x0, x1 = max(0, cols[0] - pad), min(w, cols[-1] + 1 + pad)
+    if (x1 - x0) * (y1 - y0) > 0.8 * w * h:
+        return arr, None
+    return np.ascontiguousarray(arr[y0:y1, x0:x1]), (x0, y0, x1, y1)
 
 
 def _cached_blur(layer, density_full, sigma_design, gains=None):
@@ -209,7 +230,7 @@ def _cached_blur(layer, density_full, sigma_design, gains=None):
         pad = int(math.ceil(sb * db * 3)) + 2
         arr = cv2.copyMakeBorder(src.arr, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0))
         arr = cv2.GaussianBlur(arr, (0, 0), sb * db)
-        x0, y0, x1, y1 = layer.bounds
+        x0, y0, x1, y1 = src.bounds                        # (the source may be cropped to its content)
         e = _Entry(); e.arr = np.ascontiguousarray(arr); e.img = image_from(e.arr); e.rects = _occupied_rects(e.arr[..., 3])
         e.density = db; e.bounds = (x0 - pad / db, y0 - pad / db, x1 + pad / db, y1 + pad / db); e.nbytes = e.arr.nbytes
         _store(key, e)
