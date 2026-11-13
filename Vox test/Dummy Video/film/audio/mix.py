@@ -68,7 +68,7 @@ Signal flow
               beds (ambience, room tone, static...), events, hits
     music  -> audio/score.py render(cues, duration) stems (placeholder D-A drone if score.py is missing or fails)
     bed bus = music + SFX beds + events + hits:
-        - silence events in music_cues: SFX beds drop 9 dB (80 ms out, 400 ms back; score.py silences the music)
+        - silence events in music_cues: SFX beds drop 6 dB (80 ms out, 400 ms back; score.py silences the music)
         - pre-hit dip: music and beds dip 8 dB over the 0.4 s before each SFX hit/stinger/braam/sub_drop/knock
           (score.py ducks its own hits; SFX beds also dip for the score's hits)
         - score bus: bounded auto tilt EQ toward the AUDIO_SPEC octave tilt, width 0.7, slow two-way leveler
@@ -857,7 +857,9 @@ def main():
     # ---------------- bed automation shared by both languages
     # score.py already applies silences and pre-hit ducks for its own events; the placeholder does silences only.
     # So: music gets pre-hit dips for SFX-cue hits; SFX beds get silences + dips for every hit.
-    sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -9.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
+    # final mix: the SFX beds (room tone, the night outside, the house settling) dip 6 dB in the drop-outs (was 9: the
+    # 3 s drop-out before "Click, click." read as dead air; the house must stay audible when the music goes)
+    sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -6.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
     mus_hits = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop', 'rule')]
     dip = lambda ts: [(h - 0.05, h, -8.0, 0.4, 0.6) for h in ts]
     kt = sorted(set(round(x, 3) for x in knock_times))
