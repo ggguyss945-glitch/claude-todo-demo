@@ -2835,7 +2835,9 @@ def plan_rule5(F):
     # 202 "June is gone."  203 "Mom's chair is empty."
     C(T(202), 'bust', who='narrator', bg=('living', 'couch'), set=dict(lamp=0.0, curtains=0.0, blanket=True), cx=980, cy=620, scale=0.9, turn=0.35,
       expr='haunted', light=NIGHT, act=_A(lookxy(1600, 600, t(202), t(202) + 0.6, 0.25, z=300.0), lookxy(300, 600, t(202) + 0.7, None, 0.3, z=300.0)))
-    C(T(203), 'set', room='living', view='chair', set=dict(lamp=0.0, chair_lamp=0.0, kitchen=0.0), rim=NIGHT, c=dict(mv='push', f=1.2, rate=0.03))
+    # (dof 0: the whole dark room in focus; the set's own depth of field put a several-screen layer through the dynamic blur
+    # path on every frame, 1.7 s/frame at 2560)
+    C(T(203), 'set', room='living', view='chair', set=dict(lamp=0.0, chair_lamp=0.0, kitchen=0.0), rim=NIGHT, dof=0.0, c=dict(mv='push', f=1.2, rate=0.03))
     # 204 "And every door is still locked from the inside."  the back door (bolt + chain), then the front door's deadbolt
     C(T(204), 'set', room='kitchen', view='door', set=dict(kitchen=0.0, locked=1.0), c=dict(mv='push', f=1.3, rate=0.02))
     C(w(204, 'locked') - 0.1, 'set', room='hall', view='peep', set=dict(hall=0.0), c=dict(mv='push', f=1.0, rate=0.03))
