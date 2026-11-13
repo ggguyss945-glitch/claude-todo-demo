@@ -94,8 +94,7 @@
    "serves": [
     "egg_rattle",
     "ring_drop",
-    "ring_hand",
-    "ring_roll"
+    "ring_hand"
    ],
    "dur": 7.83,
    "sr": 48000,
@@ -302,7 +301,8 @@
    "set": "bunny",
    "slug": "doors_wood_70_s_aggressive_kick_out_03",
    "serves": [
-    "door_crash"
+    "door_crash",
+    "struggle"
    ],
    "dur": 8.48,
    "sr": 48000,
@@ -344,7 +344,8 @@
    "set": "bunny",
    "slug": "doors_wood_kick_open_internal",
    "serves": [
-    "door_crash"
+    "door_crash",
+    "struggle"
    ],
    "dur": 0.7,
    "sr": 48000,
@@ -402,9 +403,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Fight, Grab, Push, Shove, Cloth, Leather Details, Grunts, Angry - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "fight_grab_push_shove_cloth_leather_details_grunts_angry",
-   "serves": [
-    "struggle"
-   ],
+   "serves": [],
    "dur": 5.43,
    "sr": 48000,
    "lufs": -22.2,
@@ -549,10 +548,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Gore, Bone, Break, Snap 04 - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "gore_bone_break_snap_04",
-   "serves": [
-    "bone_crack",
-    "struggle"
-   ],
+   "serves": [],
    "dur": 0.67,
    "sr": 48000,
    "lufs": -20.0,
@@ -616,10 +612,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Objects, Coin, Money, Coins, Multiple In Jar, Roll, Concrete 01 - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "objects_coin_money_coins_multiple_in_jar_roll_concrete_01",
-   "serves": [
-    "egg_rattle",
-    "ring_roll"
-   ],
+   "serves": [],
    "dur": 9.0,
    "sr": 48000,
    "lufs": -17.6,
@@ -630,10 +623,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Objects, Coin, Money, Coins, Multiple In Jar, Roll, Concrete 02 - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "objects_coin_money_coins_multiple_in_jar_roll_concrete_02",
-   "serves": [
-    "egg_rattle",
-    "ring_roll"
-   ],
+   "serves": [],
    "dur": 6.88,
    "sr": 48000,
    "lufs": -19.5,
@@ -645,7 +635,6 @@
    "set": "bunny",
    "slug": "objects_coin_money_roll_on_glass_01",
    "serves": [
-    "egg_rattle",
     "ring_drop",
     "ring_roll"
    ],
@@ -660,7 +649,6 @@
    "set": "bunny",
    "slug": "objects_coin_money_roll_on_glass_02",
    "serves": [
-    "egg_rattle",
     "ring_drop",
     "ring_roll"
    ],
@@ -776,8 +764,7 @@
    "serves": [
     "egg_rattle",
     "ring_drop",
-    "ring_hand",
-    "ring_roll"
+    "ring_hand"
    ],
    "dur": 0.69,
    "sr": 48000,
@@ -792,8 +779,7 @@
    "serves": [
     "egg_rattle",
     "ring_drop",
-    "ring_hand",
-    "ring_roll"
+    "ring_hand"
    ],
    "dur": 1.2,
    "sr": 48000,
@@ -818,9 +804,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Toys, Mechanical, Wind Up Music Box - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "toys_mechanical_wind_up_music_box",
-   "serves": [
-    "music_box_wind"
-   ],
+   "serves": [],
    "dur": 4.5,
    "sr": 48000,
    "lufs": -28.7,
@@ -842,9 +826,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Voices, Efforts, Male, Fight, Dark, Grunts, Hits - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "voices_efforts_male_fight_dark_grunts_hits",
-   "serves": [
-    "struggle"
-   ],
+   "serves": [],
    "dur": 9.49,
    "sr": 48000,
    "lufs": -23.3,
@@ -855,9 +837,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Voices, Efforts, Male, Fight, Grunts & Roar - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "voices_efforts_male_fight_grunts_roar",
-   "serves": [
-    "struggle"
-   ],
+   "serves": [],
    "dur": 24.24,
    "sr": 48000,
    "lufs": -23.4,
@@ -879,7 +859,9 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bunnyman Video/film/_work/samples/epidemic/sfx/ES_Weapon, Sword, Axe, Heavy, Whoosh, Blade Impact 05 - Epidemic Sound.mp3",
    "set": "bunny",
    "slug": "weapon_sword_axe_heavy_whoosh_blade_impact_05",
-   "serves": [],
+   "serves": [
+    "struggle"
+   ],
    "dur": 0.71,
    "sr": 48000,
    "lufs": -12.4,

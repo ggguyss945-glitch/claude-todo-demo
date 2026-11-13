@@ -1,4 +1,4 @@
-"""Final mix (police v2 pipeline; the dummy film, built on the delivery film's mix): narration with line voicing, the SFX
+"""Final mix (police v2 pipeline; the Bunnyman film, built on the dummy and delivery films' mix): narration with line voicing, the SFX
 from sfx_cues.json, and the score stems from music_cues.json, mixed to the reference measurements in
 analysis/AUDIO_SPEC.md.
 
@@ -30,7 +30,17 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
-  this film (script/lines.py fx codes):
+  this film, the Bunnyman (script/lines.py fx codes; the character voices themselves are baked into vo_en.wav by
+  tools/vo_voices.py, these only put them in their place):
+    door       through the shut bathroom door (the girl under the door, Mom from the hall): 2.4 kHz top, the panel's
+               220 Hz boom, the crack under the door leaking the consonants, the hallway behind, the tiled bathroom
+               around us (-3 LU)
+    slot       through the brass mail slot: 300 Hz-3.8 kHz, the slot's 1.1 kHz channel resonance and 3.6 ms comb, the
+               porch behind, the hall around us (-1.5 LU)
+    memory     Grandma remembered: warm (+2.5 dB at 260 Hz), the top softened, a small warm room, a faint wow (-1.5 LU)
+    whisper    a close whisper: dry, 120 Hz high-pass, the breath's air and presence lifted, gentle 2:1 (0 LU)
+    (no default fx for any speaker: --who-fx is empty; an unknown fx is left dry with a warning, never a crash)
+  the dummy film (kept):
     tv         the real Walter crying on the 1974 tape, through the old console TV across the living room: 220 Hz-4.2 kHz,
                the cabinet's 330 Hz box, a 1.6 kHz cone peak, tape wow (0.5 Hz) and flutter (6 Hz), light saturation,
                tape hiss and mains hum under it, the room's first reflections (-1 LU)
@@ -108,7 +118,9 @@ def band(x, lo, hi, order=4):
 
 
 LINE_FX_LU = {'radio': -2.0, 'phone_call': -1.0, 'phone_far': -2.0, 'doorbell': -1.0, 'box': -1.5, 'hall': -1.0,
-              'tv': -1.0, 'dummy': -1.0, 'memory': -1.5, 'upstairs': -3.0}
+              'tv': -1.0, 'dummy': -1.0, 'memory': -1.5, 'upstairs': -3.0,
+              'door': -3.0, 'through_door': -3.0, 'slot': -1.5, 'mail_slot': -1.5, 'whisper': 0.0, 'whispered': 0.0,
+              'grandma': -1.5}
 # processed line vs the same line dry (K-weighted)
 
 
@@ -201,10 +213,45 @@ def dummy_fx(x):
 
 
 def memory_voice_fx(x):
-    """The memories (the hospital, the bedtime line): a little distant and duller, a soft room, a very slow wow."""
-    y = _wow(x, 0.0012, 0.3, 0.0, 6.0, 13)
-    y = SX.eq(SX.lp(SX.hp(y, 150, 2), 6000, 2), ('hs', 3000, -2.0, 0.7), ('peak', 250, 1.0, 1.0))
-    return SX.mono(SX.reverb(y, 'hall', 0.12, 0.01, hpf=200))[:len(x)].astype(np.float32)
+    """Grandma remembered ("This is our family knock"): warm and a little distant. The low-mids warmed (+2.5 dB at
+    260 Hz), the top softened (-3.5 dB from 3 kHz, 6.5 kHz low-pass), her kitchen around her (a small warm room,
+    18 %, 12 ms early), the faintest slow wow of an old memory; every word stays clear (-1.5 LU)."""
+    y = _wow(x, 0.0010, 0.3, 0.0, 6.0, 13)
+    y = SX.eq(SX.lp(SX.hp(y, 110, 2), 6500, 2), ('peak', 260, 2.5, 0.9), ('hs', 3000, -3.5, 0.7), ('peak', 1200, 0.8, 1.0))
+    y = SX.mono(SX.reverb(y, 'living', 0.18, 0.012))[:len(x)]
+    return SX.mono(SX.reverb(y, 'hall', 0.06, 0.02, hpf=250))[:len(x)].astype(np.float32)
+
+
+def door_fx(x):
+    """A voice from the other side of the shut bathroom door (the little girl's "Don't let her do the trick", Mom's
+    "GET OUT OF MY HOUSE", "It's over, sweetheart", "It's sunrise, babies"): the solid-core door takes the top off
+    (2.4 kHz, a 5 dB high shelf down from 1.5 kHz) and gives its panel boom (220 Hz); the crack under the door leaks
+    a little air (1.5-5 kHz, 9 %, so the consonants survive); the hallway behind it; the small tiled bathroom we
+    hear it in. Intelligible but unmistakably through a door (-3 LU)."""
+    d = SX.eq(SX.lp(x, 2400, 2), ('peak', 220, 4.0, 1.1), ('peak', 520, 1.5, 1.3), ('hs', 1500, -5.0, 0.7))
+    gap = band(x, 1500, 5000, 2) * 0.09
+    y = SX.mono(SX.reverb(d + gap, 'hallway', 0.3, 0.004))[:len(x)]
+    return SX.mono(SX.reverb(y, 'bathroom', 0.16, 0.001))[:len(x)].astype(np.float32)
+
+
+def slot_fx(x):
+    """The voice through the brass mail slot ("Mama?", "Is she humming?"): close to the opening but squeezed
+    through it: 300 Hz-3.8 kHz, the slot's narrow channel resonating (+5 dB at 1.1 kHz), a 3.6 ms comb from its
+    depth, the porch outside behind the voice, the front hall around us (-1.5 LU)."""
+    y = SX.eq(band(x, 300, 3800, 2), ('peak', 1100, 5.0, 1.4), ('peak', 2400, 2.0, 2.0), ('ls', 300, -2.0, 0.7))
+    k = int(0.0036 * SR); c = np.zeros_like(y); c[k:] = y[:-k] * 0.35
+    y = y + c
+    y = SX.mono(SX.reverb(y, 'porch', 0.12, 0.0))[:len(x)]
+    return SX.mono(SX.reverb(y, 'hallway', 0.18, 0.002))[:len(x)].astype(np.float32)
+
+
+def whisper_fx(x):
+    """A whisper close to the ear (June at the window, the counts, "I know it's you", the old body's question):
+    intimate and dry: below 120 Hz removed (no handling rumble), the breath's air lifted (+2.5 dB from 4 kHz) and the
+    presence (+1.5 dB at 2.5 kHz), gentle 2:1 compression so every whispered consonant reads, no room."""
+    y = SX.eq(SX.hp(x, 120, 2), ('hs', 4000, 2.5, 0.7), ('peak', 2500, 1.5, 1.0), ('peak', 300, -1.0, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    return SX.compress(y, SX.db(pk) - 12, 2.0, 0.004, 0.1).astype(np.float32)
 
 
 def upstairs_fx(x):
@@ -217,7 +264,10 @@ def upstairs_fx(x):
 LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: phone_fx(x, True), 'doorbell': doorbell_fx,
            'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None,
            'tv': tv_fx, 'dummy': dummy_fx, 'memory': memory_voice_fx, 'upstairs': upstairs_fx, 'letter': None,
-           'television': tv_fx, 'tape': tv_fx, 'flashback': memory_voice_fx, 'ceiling': upstairs_fx}
+           'television': tv_fx, 'tape': tv_fx, 'flashback': memory_voice_fx, 'ceiling': upstairs_fx,
+           # the Bunnyman film (script/lines.py fx codes)
+           'door': door_fx, 'slot': slot_fx, 'whisper': whisper_fx, 'mail_slot': slot_fx, 'through_door': door_fx,
+           'grandma': memory_voice_fx, 'whispered': whisper_fx}
 _FX_WARNED = set()
 
 
@@ -668,8 +718,9 @@ def main():
     ap.add_argument('--t0', type=float, default=0.0); ap.add_argument('--t1', type=float, default=None)
     ap.add_argument('--langs', default='en'); ap.add_argument('--fallback', action='store_true')
     ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
-    ap.add_argument('--who-fx', default='X=hall',
-                    help='line fx for a speaker whose lines have none (default X=hall: the hallway voice); "" = off')
+    ap.add_argument('--who-fx', default='',
+                    help='line fx for a speaker whose lines have none, e.g. X=hall (default: none; the Bunnyman film '
+                         'gives every line its own fx in script/lines.py, and X is the old body in the car: dry)')
     ap.add_argument('--plan', default='auto', choices=('auto', 'full', 'off'),
                     help='auto: a music_cues.json without track_map gets music_plan.py\'s arrangement (and its '
                          'intensity / events when the sheet has none); full (the final mix, final_mix.sh): the score '

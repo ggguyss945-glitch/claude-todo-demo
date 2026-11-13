@@ -1,75 +1,55 @@
-"""film.py: the shot list, editor and cue sheets for "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH".
+"""film.py: the shot list, editor and cue sheets for "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN".
 
-Built the way the police film ("If A Police Officer Knocks At Midnight...", film_police_ref.py) and the delivery film
-(film_delivery_ref.py) were: the same format, craft and pace, the same engine, cast system and set system, the police
-header / rule cards / captions and global look with the red climax ramp, and cue sheets derived from the picture.
+Built the way the police film (film_police_ref.py) and the dummy film (film_dummy_ref.py) were: the same engine, cast
+system (characters.py + characters_bunny.py) and set system (sets.py + sets_bunny.py), the police header / rule cards /
+captions / tags, a global look with a climax ramp, and cue sheets derived from the picture. The shot map this list follows
+line by line is W/shotmap.md (every timeline line -> the picture that shows it).
 
     from film import Film
     F = Film(timeline_dict)          # engine set_render_size(...) must be called first (render.py does it)
     F.frame(t, i) -> uint8 RGB       # one frame at the engine render size
-    F.duration                       # seconds (narration 707.5 s + 3 s tail)
-    F.shots                          # [Shot(t0, t1, kind, p)] 258 shots, hard cuts (a few static / glitch / white flashes)
-    F.cues(out_dir=None) -> (sfx, music)   writes W/cues/sfx_cues.json + music_cues.json + shots.json (ARCHITECTURE contract)
-    python3 film.py --list | --cues | --sheet PREFIX [--range a b] | --bench N | --frames PREFIX | --check
+    F.duration                       # seconds (narration 1079.16 s + 3 s tail)
+    F.shots                          # [Shot(t0, t1, kind, p)] hard cuts (a few white flashes / static / VHS cuts)
+    F.cues(out_dir=None) -> (sfx, music)   writes W/cues/sfx_cues.json + music_cues.json + shots.json
+    python3 film.py --list | --cues | --sheet PREFIX [--range a b] | --frames PREFIX | --lipcheck | --bench N [--shots ..]
 
-Shot kinds (builders B_<kind>; every set is one of sets.py's dummy-film builders, one floor plan for Grandpa's house):
-  hall      the front hall from the front door down to the kitchen opening (gp_hall 'kitchen'): the bench with the black
-            case, Grandpa's coat, the grandfather clock (its hands run on the story clock), the kitchen light, Mister Winks in
-            Grandpa's chair seen through the opening (winks=...), the knee-high flashlight beam coming down the hall (beam=)
-  hdoor     the hall facing the front door (gp_hall 'door'): the family arriving at night, the museum man at 8 AM
-  stairs    up the stairs (gp_hall 'stairs'): Mister Winks three steps up with the flashlight in your face, the grab
-  kitchen   the kitchen (gp_kitchen 'table' | 'chair'): him in Grandpa's chair, the steaming mug, Mom smelling it, the joke,
-            the glove, standing on the chair, the flicker, the empty chair; tod='morning' for the new Owen's coffee
-  living    the living room (gp_living 'tv' = from the couch: the CRT and the kitchen doorway with his chair | 'couch' = the
-            couch under the lamp and the bookcase): the family on the couch, the TV turning on (the 1974 tape plays live on
-            the CRT with Walter and the dummy drawn by the cast), him on top of the bookcase
-  den       Grandpa's den (gp_den): Owen in the armchair with the dummy on his knee, Mom pulling, you kneeling, the lamp
-            going out, the dummy face down on the rug
-  studio    "Saturday Morning with Walter Kemp", 1974, full frame through the VHS / CRT look (gp_studio): young Walter with
-            the dummy on his knee (draw_lap), the audience shaking with laughter waves, the dummy turning to the camera
-  hospital  the hospital room last week (hospital): Grandpa in bed with the dummy on his lap, the real Walter's grab, the ECG
-  stage62   the Palace, 1962 (stage_1962, sepia): the first show, "Say goodnight, Mister Winks"
-  museum    the museum vitrine (museum): Mister Winks behind glass trying to wink
-  street    8 AM (street_morning): the new Owen waving at the window as the museum van pulls away
-  bedroom   your bedroom months later (bedroom_doorway): the new Owen in the backlit doorway
-  bust      face close-ups over a blurred, darkened set (framings rotate: BUST_FRAMES); ghost= puts a figure in the blurred
-            set behind (the dummy on the bookcase behind Mom)
-  lap       a person with the dummy on the knee, large, over a blurred set (draw_lap): Owen in the den, Grandpa in bed, Walter
-  carry     you holding the dummy in your arms, large (draw_carry): the pick-up off the rug
-  hug       "He hugs me too": over your shoulder, the new Owen's face beside your head, his arms round you
-  glove     "His fingers curl.": his glove lying palm down on the kitchen table, closing in three jerky steps
-  portrait  Mister Winks full figure, large, one camera move over him (the cold open's description: hair, freckles, jacket,
-            the flashlight clicking on in one white glove)
-  hands     hand close-ups (Grandpa's three squeezes, the wrist grab, Mom's hand finding yours, catching Mom's wrist)
-  ins       prop inserts (sets.gp_insert: letter, letter_close, envelope, ps, latches, case_open, mug, back_slot, squeeze,
-            family_photo, poster_1962, vcr)
-  rule      the police rule card over a blurred live scene (these 7 rules); recall=True cards (rule two's false 'LIE?',
-            rule six torn by the lie) do not change the header
-  black     the hard cut to black after the last line
+THE OWNER'S NOTES, MADE INTO CODE (what this file does differently from the last film):
+  * Staging lives on the house plan. Every figure in a set shot stands on a plan point (an anchor Spot or (x, y[, Y]) in
+    metres) of the same floor plan the set is drawn from: its height comes from the px-per-metre there
+    (CH.height_px(who, spot.ppm)), its feet from the floor point, its draw order from sp.order_at() (furniture between it
+    and the camera is drawn over it), its light from sp.light_kw(). Seats, kneels and lies come from the spot's kind, so
+    nobody stands on a couch and nothing floats. Facing is a plan direction (face=(x, y)) turned into the cast's turn by
+    the view (sp.turn_for), so eyelines point at what the character looks at.
+  * Mediums are real cameras on the same plan (cam=dict(eye=(x, y, Y), look=(x, y, Y), S=focal, sx, sy)): the set is
+    redrawn from that point of view (ST.cam overrides, cached under their own key), so a cut from a wide to a medium keeps
+    every wall, door and person where they were. No long camera fly-throughs: moves are short pushes while people act.
+  * Contact: every actor is placed (Acting.place) with the x, y, height it is drawn with, so look_at / reach_to / give /
+    hand_over / hold_hand land on their targets; shot-level acts(A, s, sp) stage the interactions between actors and the
+    props (PropTrack: a prop rests or is held, never both, never teleports).
+  * Lip sync on character lines only (VOICE); narrator lines move no mouths. The Bunnyman's mask never moves its mouth.
+  * escalate() is the film-wide acting arc WITHOUT the "scared jiggle": tension shows as wider eyes, raised brows and
+    faster breathing for the kids, stiller and stiller stillness for Mom; flinches only on a real sound.
 
-Plan conventions (plan() at the end of the file, as in the police and delivery films): F.cut(t, kind, **p) starts a shot;
-it ends at the next cut. Times come from the timeline (F.t(i) line start, F.e(i) line end, F.w(i, 'word') ASR word start
-inside line i). Common p keys: cam=dict(mv='push'|'fast'|'creep'|'pull'|'drift'|'move'|'hand'|'keys', x, y, z, rate, x1,
-y1, z1, snap=(t, k), hit=[t], opt=k, d=depth, keys=[(t, x, y, z[, ease[, f]])] (KeyCam: z = dolly <= 1.3 on the 2.5D
-interiors, f = optical zoom)); ppl=[P(who, at=anchor | (x, y, depth, h) | ('h', x, y[, Y]) (a point on the house plan),
-act=f(acting, shot), path=...)]; winks=dict(at=..., act=..., torch=...) (Mister Winks on the set); tags=[(t, text, x, y,
-style, hold)]; sfx=[(t, name, gain_db, pan, space, params)]; music=[(t, type, level, len)]; cut='static'|'glitch'|'white'
-(quiet_cut=True: no impact on it); post={...}; post_fn=f(t)->{...}.
-Speech: every actor talks only on its own lines (VOICE: mom M, owen / owen_new O, grandpa / walter G 'memory', Mister
-Winks K, G 'dummy', U 'dummy'; the tape's dummy R); narrator lines move no mouths. The dummy's hinged jaw drops and snaps
-on each syllable of his lines (characters talk on 'winks'), and stays shut otherwise: the jaw actions the narration
-describes (hanging open 254 s, the slow close and clack 257.8 s, 'jaw going up and down' on the bookcase 423 s, the
-clacks) are explicit clips. The tape dummy's jaw follows the TV's own voice (tv_voice: a replay of his joke from the
-recording, played low through the TV under the narration at 440-445 s: the cue sheet carries it as 'tv_voice' with the
-source span), so young Walter's unmoving lips read against a talking dummy.
-Global look (glob_fx): per-family exposure, the last 35 % creeping into red (from 460 s), a faster climax ramp from Mom's
-scream (543.7 s) with a red heartbeat wash (engine.post.Spill) until Owen's eyes close, the reveal held dark, the 8 AM
-and museum scenes clean, a last red creep in the doorway, scare flashes, fade in / out.
-Measured (README.md 'Checks'): 258 shots, median 2.60 s; 0 holes over the 257 cuts (--frames); every speaking actor's
-mouth moves on its lines and none moves on the narration except the five scripted motions (--lipcheck); 0.19 s/frame
-steady and 0.55 s/frame on the heaviest shot at 2560x1440 (--bench / --shots), inside the police budget of 0.6.
+Shot kinds (builders B_<kind>):
+  set      a set view (sets_bunny ob_* builders) with figures placed on the plan: room 'living' | 'hall' | 'up' | 'june' |
+           'bath' | 'attic' | 'kitchen' | 'yard' | 'front' | 'woods' | 'hosp' | 'parade', view = the builder's view name,
+           cam = None (the set's own camera) or a custom camera on the plan; set = builder kwargs (lights, doors ...);
+           ppl = [P(who, at, ...)], acts = f(A, shot, sp) -> [extra layers], props, cam moves (c=dict(...))
+  bust     a face close-up (CH.draw_bust) over a blurred set background (bg=(room, view[, cam]) + set kwargs); extra busts,
+           a hand over the eyes / the mouth, a prop held beside the face, the hand toward the lens
+  ins      a prop insert: sets_bunny ob_insert(name, ...) or one of this file's own inserts (INS_CUSTOM)
+  rule     the police rule card over the blurred laminated sheet on the fridge (rule n highlighted); recall=True re-shows a
+           card (no header change, the key words pulsing)
+  pause    the comment prompt: the VHS PAUSE over a frozen frame (src=t), the split MOM | THE BUNNYMAN, ONE WORD, PLAY
+  card     graphic cards (the outro: the trick, the eye, the like, the next-episode phone, the end)
+  black    black (with an optional line of text)
+Plan conventions (plan() at the end): F.cut(t, kind, **p) starts a shot that ends at the next cut. F.t(i) / F.e(i) line
+start / end, F.w(i, 'word') the ASR start of a word inside line i; T(i) = F.t(i) - LEAD (cuts land 0.1 s before the word).
+Common p keys: c=dict(mv='push'|'keys'|'hold', f, rate, x, y, keys=[(t, x, y, z, ease, f)], hit=[t], shake), tags=[(t, text, x,
+y, style, hold)], sfx=[(t, name, gain_db, pan, space, params)], music=[(t, type, level, len)], cut='white'|'static'|'vhs',
+era='now'|'1987'|'memory'|'recall'|'outro', grade, post, focus, dof.
 """
-import bisect, json, math, os, sys, time
+import bisect, hashlib, json, math, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import numpy as np
@@ -77,7 +57,7 @@ import skia
 from engine import *                                                    # noqa: F401,F403
 from engine import hud as H
 from engine import post as _epost
-from engine.core import DW, DH, clamp, lerp, ease_in_out, ease_out_cubic, noise1, hash01, prog
+from engine.core import DW, DH, CFG, clamp, lerp, ease_in_out, ease_out_cubic, ease_out_back, noise1, hash01, prog, image_from
 import characters as CH
 import sets as ST
 
@@ -88,76 +68,37 @@ TESTS = os.path.join(W, 'tests', 'film')
 WORDS = os.path.join(ALIGN, 'asr_cache.json')
 FPS = 60
 LEAD = 0.10                      # cut a moment before the word
-GLOBAL_PPUSH = 0.02              # uniform post push (per second) added to every non-lens shot
-DEEP_PPUSH = 0.022               # interiors (2.5D, lens): a gentle push into the finished image + a slow drift
-DEEP_SETS = ('hall', 'hdoor', 'stairs', 'kitchen', 'living', 'den', 'hospital', 'museum', 'street', 'bedroom', 'stage62')
-TITLE = "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"
+TAIL = 3.6                       # black + the last soft hum after "that's just the outro."
+TITLE = "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN"
+BASE = 'If_The_Bunnyman_Asks_You_To_Close_Your_Eyes'
 H._hand = CH.hud_phone_hand
 
-RULES = {1: "Keep him *in the case*.",
-         2: "He *does voices*.",
-         3: "*Don't laugh* at his jokes.",
-         4: "Never put your *hand inside* him.",
-         5: "If someone is talking and their *lips don't move*, it *isn't them* talking.",
-         6: "If he's ever on someone's lap, *don't pull him off*.",
-         7: "Never say *goodnight* to him."}
+# who speaks which timeline lines (code, fx or None): narrator lines (N) move no mouths. The Bunnyman's L lines (the
+# little girl's voice) only nod the mask (the cast's talk on 'bunny'); D ("Mama.") is Dale's face under the half-off head.
+VOICE = {'mom': [('M', None)], 'june': [('J', None)], 'june_dress': [('J', None)], 'grandma': [('G', None)],
+         'bunny': [('L', None), ('D', None)], 'narrator_neat': [('X', None)], 'narrator_new': [('X', None)]}
+WHISPER = ('whisper',)
 
-# who speaks which timeline lines (code, fx or None): narrator lines (N) move no mouths
-VOICE = {'mom': [('M', None)], 'owen': [('O', None)], 'owen_new': [('O', None)], 'grandpa': [('G', 'memory')],
-         'walter': [('G', 'memory')], 'winks': [('K', None), ('G', 'dummy'), ('U', 'dummy')]}
-TAPE_VOICE = [('R', None)]                       # the dummy on the 1974 tape (the real Walter crying inside)
-HEIGHT_M = {'winks': CH.DUMMY_M, 'you': 1.74, 'mom': 1.65, 'owen': 1.32, 'owen_new': 1.32, 'grandpa': 1.72, 'grandpa_bed': 1.72,
-            'walter': 1.72, 'walter74': 1.78}
-
-# ---------------------------------------------------------------- story beats (film seconds, from the timeline)
-T_KIT_ON = 168.85                # the kitchen light comes on by itself ("You don't have to go looking.")
-T_TV_ON = 294.98                 # the TV turns on by itself
-T_FLICK = 324.08                 # the lamp flickers ... and goes out
-T_BACK = 325.3                   # ... comes back on: the chair is empty
-T_BEAM = 329.3                   # a little flashlight clicks on (knee high) at the kitchen end of the hall
-T_3AM = 351.8                    # the flashlight comes back
-T_GRAB = 359.05                  # you grab him on the stairs
-T_SWAP = 567.06                  # "Owen's eyes close": from here the boy is owen_new
-T_LAMP_OUT = (569.12, 570.38)    # the den lamp goes out ... and comes back on
-WINK_NEAR = 1                    # the eyelid nearer the camera when his head is turned toward Owen (-h_turn: screen left,
-                                 # where Owen's face is in the lap two-shots)
-T_JUMP = 573.4                   # Owen jumps up out of the armchair, the dummy falls face down on the rug
-DEN_FALL = ('h', -0.32, 2.12)    # where he lands face down on the rug, just in front of the armchair (and stays)
-T_PICK = 598.6                   # you pick the dummy up off the rug
-T_OPEN = 655.6                   # in your arms, Mister Winks opens his eyes
-T_8AM = 665.13                   # 8 AM: the museum
-T_MUSEUM = 677.38                # behind glass
-T_HOME = 691.11                  # the boy who came home with us
-CHAIR_UP = ('h', -0.95, 8.85, 0.74)   # Mister Winks in Grandpa's chair, sitting up on the red cushion (shoulders over the table)
+# ---------------------------------------------------------------- the story clock (header corner)
+def _hm(h, m): return h * 60 + m
 
 
-def _hms(h, m, s=0): return h * 3600 + m * 60 + s
+CLOCK_KEYS = [(187.6, _hm(19, 42)), (200.42, _hm(23, 7)), (287.62, _hm(24, 0)), (369.06, _hm(25, 13)), (425.38, _hm(25, 40)),
+              (508.57, _hm(26, 47)), (600.0, _hm(28, 30)), (709.2, _hm(30, 12)), (913.0, _hm(30, 24)), (950.0, _hm(30, 58))]
+CORNER = [(0.0, 'EASTER EVE'), (65.75, 'APRIL 1987'), (122.2, 'EVERY EASTER'), (153.5, 'LAST EASTER'), (171.1, 'THIS EASTER'),
+          (187.6, None), (950.7, 'NOW'), (993.8, 'RULES AFTER DARK')]
 
 
-# the story clock (the header corner and the grandfather clock's hands): the night at Grandpa's house runs from the arrival
-# (11:52 PM) through 1:15 ("At 1:15, Mom's voice calls from upstairs") and 3:00 ("At three in the morning") to the
-# reveal; 8 AM for the museum van; the museum and the last night are later
-CLOCK = [(0.0, 110.61, _hms(23, 47, 10), _hms(23, 48, 30)), (110.61, 218.35, _hms(23, 52), _hms(25, 15)),
-         (218.35, 351.76, _hms(25, 15), _hms(26, 59, 50)), (351.76, 409.41, _hms(27, 0), _hms(27, 8, 40)),
-         (409.41, 582.23, _hms(27, 9), _hms(27, 41)), (582.23, 665.13, _hms(27, 41), _hms(27, 58)),
-         (665.13, 677.38, _hms(32, 0), _hms(32, 3)), (677.38, 693.79, _hms(14, 12), _hms(14, 13)),
-         (693.79, 800.0, _hms(21, 41), _hms(21, 44))]
-
-
-def story_clock(t):
-    for a, b, s0, s1 in CLOCK:
-        if a <= t < b: return s0 + (s1 - s0) * (t - a) / (b - a)
-    return CLOCK[-1][3]
-
-
-def clock_hm(t):
-    s = int(story_clock(t)); h, m = (s // 3600) % 24, (s // 60) % 60
-    return '%d:%02d %s' % ((h % 12) or 12, m, 'AM' if h < 12 else 'PM')
-
-
-def clock_minutes(t):
-    """The grandfather clock's hands: minutes past midnight (12 h dial)."""
-    return (story_clock(t) / 60.0) % 1440.0
+def clock_str(t):
+    for k in range(len(CORNER) - 1, -1, -1):
+        if t >= CORNER[k][0]:
+            if CORNER[k][1] is not None: return CORNER[k][1]
+            break
+    ts = [a for a, _ in CLOCK_KEYS]; ms = [b for _, b in CLOCK_KEYS]
+    m = float(np.interp(t, ts, ms))
+    if 258.0 <= t < 279.6: m = float(np.interp(257.0, ts, ms))         # paused
+    h, mm = int(m // 60) % 24, int(m % 60)
+    return '%d:%02d %s' % ((h % 12) or 12, mm, 'AM' if h < 12 else 'PM')
 
 
 def _ev(t, name, gain_db=0.0, pan=0.0, space=None, **params):
@@ -172,13 +113,10 @@ class Shot:
         self.t0, self.kind, self.p, self.idx = float(t0), kind, p, idx
         self.t1 = self.t0 + 3.0
         self.sfx, self.music = [], []
-        self.spec = None
         self.actors = []
 
     @property
     def d(self): return self.t1 - self.t0
-
-    def at(self, f): return self.t0 + f * self.d
 
     def __repr__(self): return 'Shot(%d %.2f-%.2f %s)' % (self.idx, self.t0, self.t1, self.kind)
 
@@ -198,46 +136,32 @@ class _Memo:
         return self.p
 
 
-# ==================================================================================================== light
-def lvl(f, t):
-    return float(f(t)) if callable(f) else float(f if f is not None else 1.0)
-
-
-def house_light(level=1.0, rim='#ffcf8f', side=-1, base=0.12, cold=-0.35):
-    """A cast light that follows a room's lamp level (sets' level f(t)): warm key and rim when lit, cold and dark when off."""
-    def f(t):
-        k = lvl(level, t)
-        return dict(rim=rim if k > 0.2 else '#8fa6d8', rim_a=int(30 + 45 * k), side=side, key=lerp(cold, base, clamp(k)))
-    return f
-
-
-def tv_light(sp, base=None):
-    """The TV's blue flicker on faces (gp_living's tv level), on top of the lamp."""
-    tvf = sp.info.get('tv') if sp is not None and sp.info else None
-    lf = sp.info.get('lamp') if sp is not None and sp.info else None
-
-    def f(t):
-        tv = ST.tv_level(tvf, t) if tvf is not None else 0.0
-        lk = lvl(lf, t) if lf is not None else 0.0
-        if tv > 0.05:
-            return dict(rim='#9fd0ff', rim_a=int(50 + 110 * tv), side=1, key=lerp(-0.4, -0.05, clamp(tv)) + 0.1 * lk)
-        return dict(rim='#ffcf8f' if lk > 0.2 else '#8fa6d8', rim_a=int(30 + 40 * lk), side=-1, key=lerp(-0.35, 0.1, clamp(lk)))
-    return f
-
-
-WARM = dict(rim='#ffcf8f', rim_a=60, side=-1, key=0.12)
-NIGHT = dict(rim='#8fa6d8', rim_a=60, side=1, key=-0.25)
-HOSP = dict(rim='#d8f0ea', rim_a=60, side=1, key=0.05)
-MEMORY = dict(rim='#ffd9a0', rim_a=75, side=-1, key=0.25)
-MORNING = dict(rim='#f4f2ec', rim_a=70, side=1, key=0.1)
-TORCH = dict(under='#fff1c8', under_a=210, rim='#8fa6d8', rim_a=40, side=1, key=-0.3)
-TAPE = dict(rim='#fff2c8', rim_a=70, side=-1, key=0.15)
-MUSEUM = dict(rim='#fff0d8', rim_a=80, side=-1, key=0.05)
-BACKLIT = dict(rim='#ffe0b0', rim_a=150, side=1, key=-0.55)
+# ==================================================================================================== light on figures
+LAMP = dict(rim='#ffcf8f', rim_a=60, side=-1, key=0.1)
+LAMP_R = dict(rim='#ffcf8f', rim_a=60, side=1, key=0.1)
+NIGHT = dict(rim='#8fa6e8', rim_a=70, side=1, key=-0.25)
+NIGHT_L = dict(rim='#8fa6e8', rim_a=70, side=-1, key=-0.25)
+MOON = dict(rim='#a8bcff', rim_a=110, side=1, key=-0.35)
+DARK = dict(rim='#8fa6e8', rim_a=40, side=1, key=-0.45)
+PORCH = dict(rim='#ffc888', rim_a=80, side=-1, key=-0.15)
+DAWN = dict(rim='#ffc070', rim_a=95, side=1, key=0.12)
+DAWN_L = dict(rim='#ffc070', rim_a=95, side=-1, key=0.12)
+MEMORY = dict(rim='#ffd9a0', rim_a=70, side=-1, key=0.25)
+VHS87 = dict(rim='#fff2d0', rim_a=50, side=-1, key=0.3)
+SUN87 = dict(rim='#ffd08a', rim_a=110, side=1, key=0.2)
+HOSP = dict(rim='#e8f4f0', rim_a=55, side=1, key=0.12)
+FIRE = dict(rim='#ff9a48', rim_a=120, side=1, key=-0.1)
+POLICE = dict(rim='#ff3a4a', rim_a=90, side=-1, key=-0.1)
+BULB = dict(rim='#ffcf8f', rim_a=75, side=-1, key=-0.05)
+TORCH = dict(rim='#fff1c8', rim_a=60, side=1, key=-0.1)
 
 
 def as_fn(v):
     return v if callable(v) else (lambda t, v=v: v)
+
+
+def lvl(f, t):
+    return float(f(t)) if callable(f) else float(f if f is not None else 1.0)
 
 
 # ==================================================================================================== the film
@@ -245,24 +169,23 @@ class Film:
     def __init__(self, tl):
         self.tl = tl
         self.L = tl['lines']
-        self.duration = float(tl.get('duration_en', 707.52)) + 3.0      # black after "He never will." for the end hit
+        self.duration = float(tl.get('duration_en', 1079.16)) + TAIL
         self.words = []
         if os.path.exists(WORDS):
             try:
-                self.words = [(w.strip().lower().strip('.,?!;:"“”'), float(t)) for w, t in json.load(open(WORDS))['en_words']]
+                self.words = [(w.strip().lower().strip('.,?!;:"“”…'), float(t)) for w, t in json.load(open(WORDS))['en_words']]
             except Exception:
                 self.words = []
         self._wt = [t for _, t in self.words]
         self.shots = []
         self.globals = []                    # extra global cues (beds, music)
-        self.tv_voices = []                  # [(t_at, src0, src1)] the tape's own voice (a replay from the recording)
+        self._freeze = {}
         plan(self)
         self.shots.sort(key=lambda s: s.t0)
         for k, s in enumerate(self.shots):
             s.idx = k
             s.t1 = self.shots[k + 1].t0 if k + 1 < len(self.shots) else self.duration
         self._starts = [s.t0 for s in self.shots]
-        assign_bust_framings(self)
         self.rules = [(s.t0, s.p['n']) for s in self.shots if s.kind == 'rule' and not s.p.get('recall')]
         self._built = {}
         for s in self.shots:                 # build every shot once: cues need the acting events (cheap: no drawing)
@@ -311,45 +234,42 @@ class Film:
         sh.sfx, sh.music, sh.actors = [], [], []
         spec = BUILDERS[sh.kind](self, sh)
         shot_common(self, sh, spec)
-        mv = (sh.p.get('cam') or {}).get('mv', 'push')
-        if sh.p.get('handheld_hz') and isinstance(spec.cam, Cam): spec.cam.shake_hz = sh.p['handheld_hz']
-        if sh.p.get('posts') and isinstance(spec.cam, Cam):            # chained pushes into the finished image
-            for q in sh.p['posts']: spec.cam.post_push(q[0], q[1], q[2], q[3], q[6] if len(q) > 6 else 'push', x=q[4], y=q[5])
-        if (spec.lens is None and isinstance(spec.cam, Cam) and not spec.cam.posts and mv not in ('pull', 'keys')
-                and sh.kind not in ('rule', 'black') and not sh.p.get('no_ppush')):
-            spec.cam.post_push(sh.t0, sh.t1, 1.0, (1.0 + GLOBAL_PPUSH) ** max(0.3, sh.d), ease='push')
-        elif (sh.kind in DEEP_SETS and isinstance(spec.cam, Cam) and not spec.cam.posts and mv not in ('pull', 'keys')
-              and not sh.p.get('no_ppush')):
-            # the 2.5D interiors are deep: a dolly of 2-3 %/s barely moves their far wall, so a uniform push into the image
-            # with a slow lateral drift keeps every shot alive (offset stays inside the zoom's margin: no mirrored edges)
-            sgn = 1 if sh.idx % 2 else -1
-            z1 = (1.0 + DEEP_PPUSH) ** max(0.3, sh.d)
-            spec.cam.post_push(sh.t0, sh.t1, 1.0, z1, ease='push', x=sgn * 6.0 * sh.d, y=-2.0 * sh.d)
-        if len(self._built) > 3: self._built.clear()
+        if len(self._built) > 4: self._built.clear()
         self._built[sh.idx] = spec
         return spec
 
     # ---------------------------------------------------------------- frame
-    def frame(self, t, i, bg='#000000'):
+    def frame(self, t, i, bg='#000000', overlay=True):
         sh = self.shot_at(t)
         spec = self._build(sh)
-        fx = spec.fx(t) if spec.fx else {}
-        fx = dict(fx or {})
+        for ts in (getattr(spec, 'pre', None) or []):          # the VHS pause's frozen frames are rendered first
+            self.freeze(ts)
+        fx = dict(spec.fx(t) if spec.fx else {})
         glob_fx(self, sh, t, fx)
         cs = spec.cam.at(t) if spec.cam is not None else None
         if cs is not None: cs = safe_post(cs)
 
         def hud_all(cv, tt):
             if spec.hud: spec.hud(cv, tt)
-            self.overlay(cv, tt, sh)
-        return render_frame(spec.layers, cs, t, i, focus=spec.focus, dof=spec.dof, lens=spec.lens, grade=spec.grade, post=fx,
+            if overlay: self.overlay(cv, tt, sh)
+        focus = spec.focus(t) if callable(spec.focus) else spec.focus
+        return render_frame(spec.layers, cs, t, i, focus=focus, dof=spec.dof, lens=spec.lens, grade=spec.grade, post=fx,
                             hud=hud_all, bg=bg)
+
+    def freeze(self, t_src):
+        """The picture (no captions / header) at film time t_src at the current render size: the VHS pause's frozen frame."""
+        key = (round(t_src, 3), CFG.rw, CFG.rh)
+        if key not in self._freeze:
+            if len(self._freeze) > 6: self._freeze.clear()
+            self._freeze[key] = self.frame(t_src, int(round(t_src * FPS)), overlay=False)
+        return self._freeze[key]
 
     # ---------------------------------------------------------------- captions + header (police / v1 logic)
     def header_text(self, t):
         cur = 'INTRODUCTION'
         for t0, n in self.rules:
             if t >= t0: cur = 'RULE %d OF 7' % n
+        if t >= 993.8: cur = 'THE END'
         return cur
 
     def line_at(self, t):
@@ -367,7 +287,7 @@ class Film:
         for w in words:
             if len(cur) + len(w) + 1 > 40 and cur: out.append(cur); cur = w
             else: cur = (cur + ' ' + w).strip()
-            if cur.endswith((',', '.', '?', '!')) and len(cur) > 22: out.append(cur); cur = ''
+            if cur.endswith((',', '.', '?', '!', ':')) and len(cur) > 22: out.append(cur); cur = ''
         if cur: out.append(cur)
         return out
 
@@ -380,17 +300,17 @@ class Film:
             acc += len(c)
 
     def overlay(self, cv, t, sh):
-        if sh.kind == 'black': return
-        if sh.kind == 'studio':
-            vhs_osd(cv, t, sh)
-        else:
-            H.header(cv, self.header_text(t), clock_hm(t))
+        if sh.kind == 'black' and not sh.p.get('caption'): return
+        if sh.p.get('era') == '1987' and sh.kind in ('set', 'bust') and sh.p.get('vhs', True) and sh.p.get('osd', True):
+            ST.vhs_stamp(cv, t - sh.t0 + sh.p.get('tape0', 0.0), date=sh.p.get('date', 'APR.19 1987'), clock=sh.p.get('clock_osd', '10:42 AM'), play=False)
+        elif sh.kind not in ('black',):
+            H.header(cv, self.header_text(t), clock_str(t))
         if sh.kind == 'rule': return
         l = self.line_at(t)
         if not l or not l.get('found_en', True): return
         k, ch = self.chunk_at(l, t)
         txt = ch[k]
-        if l['who'] != 'N' or l.get('fx') == 'letter':
+        if l['who'] != 'N':
             if k == 0: txt = '“' + txt
             if k == len(ch) - 1: txt = txt + '”'
         H.caption(cv, txt)
@@ -420,9 +340,8 @@ class Film:
 
 
 def safe_post(cs):
-    """Keep the post offset inside the post zoom's margin (|px| <= 960 (1 - 1/pz), |py| <= 540 (1 - 1/pz)): the post move pads
-    with a reflection, so an offset past the margin would show a mirrored copy of the set at the frame edge (the trap from
-    the last film)."""
+    """Keep the post offset inside the post zoom's margin (|px| <= 960 (1 - 1/pz), |py| <= 540 (1 - 1/pz)): past it the post
+    move would pad with a mirrored copy of the frame edge."""
     if not (cs.px or cs.py): return cs
     pz = max(1.0, cs.pz)
     mx, my = 960.0 * (1 - 1 / pz), 540.0 * (1 - 1 / pz)
@@ -431,31 +350,18 @@ def safe_post(cs):
     return CamState(cs.x, cs.y, cs.zoom, cs.roll, cs.fz, cs.pz, px, py, cs.vx, cs.vy)
 
 
-def vhs_osd(cv, t, sh):
-    """The VCR's on-screen display over the full-frame tape (in place of the house header)."""
-    pen = Pen(cv)
-    tape_t = max(0.0, t - sh.p.get('tape0', T_TV_ON)) + sh.p.get('counter0', 734.0)
-    blink = (t * 1.0) % 1.0 < 0.7
-    if blink:
-        text(cv, 'PLAY', 96, 92, 800, 30, '#f2f2f2', 225, 0.12, 'left', 0.9)
-        pen.fill(poly([(70, 66), (88, 77), (70, 88)]), '#f2f2f2', 225)
-    s = int(tape_t)
-    text(cv, 'SP  %d:%02d:%02d' % (s // 3600, (s // 60) % 60, s % 60), DW - 90, 92, 800, 26, '#f2f2f2', 210, 0.12, 'right', 0.9)
-
-
 def shot_table(F):
-    """The cut list for the sound team: [{i, t0, t1, kind, space, loc, era, cut}]."""
+    """The cut list for the sound team: [{i, t0, t1, kind, space, loc, era, cut, room}]."""
     out = []
     for s in F.shots:
-        out.append({'i': s.idx, 't0': round(s.t0, 3), 't1': round(s.t1, 3), 'kind': s.kind, 'space': shot_space(s),
-                    'loc': shot_loc(s), 'era': s.p.get('era', 'now'), 'cut': s.p.get('cut')})
+        out.append({'i': s.idx, 't0': round(s.t0, 3), 't1': round(s.t1, 3), 'kind': s.kind, 'space': shot_space(s), 'loc': shot_loc(s),
+                    'era': s.p.get('era', 'now'), 'cut': s.p.get('cut'), 'room': s.p.get('room') or (s.p.get('bg') or [None])[0]})
     return out
 
 
 # ==================================================================================================== camera
 class KeyCam(Cam):
-    """Cam whose keys also carry an optical zoom f (no parallax): the deep interiors are pushed with f while the dolly part
-    (z <= 1.3) keeps the parallax. fkeys [(t, f, ease)] interpolate like the keys (geometric, the same per-segment eases)."""
+    """Cam whose keys also carry an optical zoom f (no parallax). fkeys [(t, f, ease)] interpolate like the keys."""
     def __init__(self, keys, fkeys, **kw):
         super().__init__(keys, **kw)
         self.fkeys = sorted(fkeys, key=lambda k: k[0])
@@ -471,1360 +377,1116 @@ class KeyCam(Cam):
         return super()._fz(t) * f
 
 
-def push_rate(t):
-    """Push-in speed grows toward the climaxes (reference median 2.3-2.8 %/s, p90 6-8 %/s)."""
-    if t > 540: return 0.034
-    if t > 400: return 0.03
-    if t > 240: return 0.027
-    return 0.024
+ENV0 = dict(x=(930, 990), y=(510, 570), zoom=(1.0, 1.06), f=(1.0, 1.4))
 
 
-def mkcam(sh, mv='push', x=960, y=540, z=1.0, rate=None, dx=0.0, dy=0.0, shake=1.6, roll=0.0, x1=None, y1=None, z1=None,
-          snap=None, hit=None, opt=None, d=None, keys=None):
-    """opt: constant optical zoom (no parallax; frames far layers); d: x, y (and x1, y1) are points on a layer at depth d.
-    mv='keys': one continuous move through keys=[(t, x, y, z[, ease[, f]])] (absolute film seconds; ease of the segment
-    arriving at the key, default 'in_out'; f = optical zoom), so a push, a hold-creep and a pan live in one shot."""
+def _clampk(v, rng, free=False):
+    if free or rng is None: return v
+    return clamp(v, rng[0], rng[1])
+
+
+def scam(sh, env=None, c=None, depth=None):
+    """The camera of a shot: c = dict(mv='push' | 'keys' | 'hold', f (optical zoom at the cut), rate (push %/s as optical
+    zoom), x, y, x1, y1 (design point on the depth-1 plane; with d=depth they are screen points of a layer at that depth),
+    z (dolly), keys=[(t, x, y, z, ease, f)], shake, hit=[t] | [(t, amp)], snap=(t, k), free=True (no env clamp))."""
+    c = dict(c or {})
+    env = dict(env or ENV0)
+    # a view's env must contain its home framing (960, 540); a few sets' envs do not (the porch-egg view): fall back to a box
+    if env.get('x') and not (env['x'][0] <= 960 <= env['x'][1]): env['x'] = (900, 1020)
+    if env.get('y') and not (env['y'][0] <= 540 <= env['y'][1]): env['y'] = (490, 590)
+    free = c.get('free', False)
     t0, t1 = sh.t0, sh.t1
-    if d is not None:
-        x, y = 960 + d * (x - 960), 540 + d * (y - 540)
-        if x1 is not None: x1 = 960 + d * (x1 - 960)
-        if y1 is not None: y1 = 540 + d * (y1 - 540)
-    r = rate if rate is not None else push_rate(t0)
-    if mv == 'push':
-        c = push_in(t0, t1, x, y, z, rate=r, drift=(dx, dy), roll=roll, shake=shake, seed=sh.idx)
-    elif mv == 'fast':
-        c = push_in(t0, t1, x, y, z, rate=r * 2.6, drift=(dx, dy), roll=roll, shake=shake + 0.8, seed=sh.idx)
-    elif mv == 'creep':
-        c = push_in(t0, t1, x, y, z, rate=r * 0.5, drift=(dx, dy), roll=roll, shake=shake * 0.6, seed=sh.idx)
-    elif mv == 'pull':
-        c = pull_out(t0, t1, x, y, z * (1 + max(0.06, r * 2.2 * sh.d)), z, shake=shake, seed=sh.idx)
-    elif mv == 'drift':
-        c = drift(t0, t1, x - dx / 2, y - dy / 2, x + dx / 2, y + dy / 2, zoom=z, z1=z * (1 + r * 0.5 * sh.d), shake=shake, seed=sh.idx)
-    elif mv == 'move':
-        c = Cam([(t0, x, y, z, roll), (t1, x1 if x1 is not None else x, y1 if y1 is not None else y, z1 or z * (1 + r * sh.d), roll, 'push')],
-                shake=shake, seed=sh.idx)
-    elif mv == 'keys':
+    d = c.get('d', depth)
+
+    def P(x, y):
+        if d is not None and c.get('screen'):
+            return 960 + d * (x - 960), 540 + d * (y - 540)
+        return x, y
+    mv = c.get('mv', 'push')
+    shake = c.get('shake', 1.1)
+    if mv == 'keys':
         ks, fk = [], []
-        for k in keys:
-            kx, ky = (960 + d * (k[1] - 960), 540 + d * (k[2] - 540)) if d is not None else (k[1], k[2])
-            ks.append((k[0], kx, ky, k[3], roll, k[4] if len(k) > 4 else None))
-            fk.append((k[0], k[5] if len(k) > 5 else 1.0, k[4] if len(k) > 4 else None))
-        c = KeyCam(ks, fk, shake=shake, seed=sh.idx)
-    elif mv == 'hand':
-        c = push_in(t0, t1, x, y, z, rate=r * 0.8, drift=(dx, dy), shake=4.5, seed=sh.idx)
-        c.shake_hz = 0.9
+        for k in c['keys']:
+            x, y = P(k[1], k[2])
+            z = k[3] if len(k) > 3 else 1.0
+            e = k[4] if len(k) > 4 else None
+            f = k[5] if len(k) > 5 else 1.0
+            ks.append((k[0], _clampk(x, env.get('x'), free), _clampk(y, env.get('y'), free), _clampk(z, env.get('zoom'), free), 0.0, e))
+            fk.append((k[0], _clampk(f, env.get('f'), free), e))
+        cam = KeyCam(ks, fk, shake=shake, seed=sh.idx)
     else:
-        c = hold(x, y, z, shake=shake, seed=sh.idx)
-    if opt: c.snap(t0 - 30.0, opt, 0.001)
-    if snap:                                  # an eased 0.24 s push-in (a 0.1 s overshooting pop reads as a jump cut)
-        c.snap_back = False; c.snap(snap[0], snap[1] if len(snap) > 1 else 1.25, 0.24)
-    if hit:
-        for h in (hit if isinstance(hit, (list, tuple)) else [hit]): c.hit(h, 7.0)
-    return c
+        x, y = P(c.get('x', 960), c.get('y', 540))
+        x1, y1 = P(c.get('x1', c.get('x', 960)), c.get('y1', c.get('y', 540)))
+        f0 = c.get('f', 1.0)
+        rate = c.get('rate', 0.02) if mv == 'push' else 0.0
+        f1 = c.get('f1', f0 * (1.0 + rate) ** max(0.3, sh.d))
+        z0 = c.get('z', 1.0); z1 = c.get('z1', z0)
+        ks = [(t0, _clampk(x, env.get('x'), free), _clampk(y, env.get('y'), free), _clampk(z0, env.get('zoom'), free), 0.0, None),
+              (t1, _clampk(x1, env.get('x'), free), _clampk(y1, env.get('y'), free), _clampk(z1, env.get('zoom'), free), 0.0, c.get('ease', 'push'))]
+        fk = [(t0, _clampk(f0, env.get('f'), free), None), (t1, _clampk(f1, env.get('f'), free), c.get('ease', 'push'))]
+        cam = KeyCam(ks, fk, shake=shake, seed=sh.idx)
+    for h in c.get('hit', []) or []:
+        if isinstance(h, (tuple, list)): cam.hit(h[0], h[1] if len(h) > 1 else 6.0)
+        else: cam.hit(h, 6.0)
+    if c.get('snap'):
+        cam.snap_back = False; cam.snap(c['snap'][0], c['snap'][1] if len(c['snap']) > 1 else 1.2, 0.24)
+    if c.get('post'):
+        for q in c['post']: cam.post_push(*q)
+    return cam
 
 
-def cam_from(F, sh, d, default=None):
-    d = dict(d or default or {})
-    return mkcam(sh, **d)
+# ==================================================================================================== sets on the plan
+YARD_CAM = {'woods': 'yard_woods', 'house': 'yard_house', 'wide': 'yard_wide', 'close': 'treeline_close', 'barrel': 'barrel'}
+FRONT_CAM = {'house': 'front_house', 'porch': 'porch', 'egg': 'porch_egg', 'peephole': 'peephole'}
+ROOMS = {'living': ('ob_living', 'liv_'), 'hall': ('ob_hall', 'hall_'), 'up': ('ob_upstairs', 'up_'), 'june': ('ob_june', 'june_'),
+         'bath': ('ob_bath', 'bath_'), 'attic': ('ob_attic', 'attic_'), 'kitchen': ('ob_kitchen', 'kit_'), 'yard': ('ob_yard', YARD_CAM),
+         'front': ('ob_front', FRONT_CAM), 'woods': ('ob_woods', 'woods_'), 'hosp': ('ob_hospital', 'hosp_'), 'parade': ('ob_parade', 'parade_')}
+_SETS = {}
 
 
-# ==================================================================================================== actors
-def acting(F, sh, who, act=None, seed=0, height=700.0, expr=None, talk=True, blink=None, voice=None, arc=None, worked=False):
-    a = CH.Acting(who, seed=seed + sh.idx * 3, height=height, expr=expr or 'neutral', blink=blink, arc=arc)
+def cam_over(cam, base):
+    """A camera dict -> BView overrides: eye=(x, y, Y) at the plan point, look=(x, y, Y) lands at screen (sx, sy) with focal
+    length S (design px per metre at 1 m); yaw from the look direction; a shift lens (verticals stay vertical)."""
+    c0 = ST.CAMS[base]
+    ex, ey, eY = cam['eye']
+    lx, ly, lY = cam['look']
+    yaw = math.degrees(math.atan2(lx - ex, ly - ey)) + cam.get('yaw_off', 0.0)
+    S = float(cam.get('S', c0['S']))
+    D = max(0.2, math.hypot(lx - ex, ly - ey))
+    sy = float(cam.get('sy', 540.0)); sx = float(cam.get('sx', 960.0))
+    h = sy + (lY - eY) * S / D
+    ov = dict(S=S, h=h, eye=eY, x=ex, y=ey, yaw=yaw, cx=sx)
+    ov['env'] = cam.get('env', dict(ENV0))
+    if cam.get('pitch'): ov['pitch'] = cam['pitch']
+    return ov
+
+
+def make_set(room, view, cam=None, **kw):
+    """The set `room` seen from `view` (the builder's own camera) or from a custom camera on the same plan (cam dict, see
+    cam_over). Built through the sets' own builders, so the far rooms, the outside and the lights are the view's; a
+    custom camera gets its own cache key."""
+    fn_name, pre = ROOMS[room]
+    builder = getattr(ST, fn_name)
+    base = (pre + view) if isinstance(pre, str) else pre[view]
+    if cam is None:
+        key = (room, view, json.dumps(kw, sort_keys=True, default=str))
+        return builder(view, **kw)
+    ov = cam_over(cam, base)
+    tag = hashlib.md5(json.dumps(ov, sort_keys=True).encode()).hexdigest()[:8]
+    orig_cam, orig_bv = ST.cam, ST.build_view
+
+    def cam2(name, **o):
+        if name == base: return orig_cam(base, **dict(ov, **o))
+        return orig_cam(name, **o)
+
+    def bv2(vname, v_, *a, **k): return orig_bv(vname + '@' + tag, v_, *a, **k)
+    ST.cam, ST.build_view = cam2, bv2
+    try:
+        sp = builder(view, **kw)
+    finally:
+        ST.cam, ST.build_view = orig_cam, orig_bv
+    sp.info['cam_env'] = ov['env']
+    return sp
+
+
+def spot_of(sp, at, Y=None, kind=None):
+    """A plan point -> Spot: an anchor name, a Spot, (x, y) or (x, y, Y)."""
+    if isinstance(at, str):
+        s = sp.anchors[at]
+        return s
+    if isinstance(at, ST.Spot): return at
+    x, y = at[0], at[1]
+    YY = at[2] if len(at) > 2 else (Y if Y is not None else 0.0)
+    return sp.spot(x, y, YY, kind=kind or 'stand')
+
+
+def plan_xy(sp, at):
+    s = spot_of(sp, at)
+    return (s.X, s.Yp, s.Y)
+
+
+def P(who, at=None, **k):
+    """A figure entry for set shots: who, at (anchor | (x, y[, Y])), face=(x, y) plan point to face (or turn=), kind
+    ('stand' | 'seat' | 'kneel' | 'lie' | 'floor'), expr, act=f(a, shot), path=[(t, at), ...] (walks between plan points;
+    run=True), seat=0.45 (seat height m for a seat at a plan tuple), knees, hands, light (rim dict), sil (silhouette 0..1),
+    talk, voice, seed, name, dz (depth nudge), legs_hidden."""
+    return dict(who=who, at=at, **k)
+
+
+def _turn_for(sp, X, Y, face):
+    if face is None: return None
+    if isinstance(face, str): face = plan_xy(sp, face)[:2]
+    return sp.view.turn_for(X, Y, face[0] - X, face[1] - Y)
+
+
+def acting(F, sh, who, act=None, seed=0, height=700.0, expr=None, talk=True, voice=None, blink=None, intensity=None):
+    a = CH.Acting(who, seed=seed + sh.idx * 3, height=height, expr=expr or 'neutral', blink=blink)
     if act: act(a, sh)
-    escalate(a, sh, who, worked)
+    escalate(a, sh, who)
     if talk:
         v = voice if voice is not None else VOICE.get(who, [])
         ls = F.voice_lines(sh.t0, sh.t1, v) if v else []
-        if ls: a.talk([(l['t'], l['end'], l['en']) for l in ls])
-        if who == 'winks' and voice is TAPE_VOICE:                    # the tape's own voice (a replay under the narration)
-            for (ta, s0, s1, cut, _g) in F.tv_voices:
-                if ta + (s1 - s0) > sh.t0 - 0.2 and ta < sh.t1 + 0.2:
-                    a.talk([(ta, ta + min(s1 - s0, cut), None)], env=tv_env(ta, s0, s1, cut), words=None)
+        if ls:
+            for l in ls:
+                k = intensity if intensity is not None else (0.55 if l.get('fx') == 'whisper' else (1.15 if l['en'].isupper() else 1.0))
+                a.talk([(l['t'], l['end'], l['en'])], intensity=k)
     sh.actors.append(a)
     return a
 
 
-_TVENV = {}
-
-
-def tv_env(ta, s0, s1, cut=99.0):
-    """The voice envelope with the source span [s0, s1) of the recording copied to film time ta (cut short after `cut` s):
-    the tape dummy's jaw follows the TV's replay of his own voice."""
-    key = (round(ta, 3), round(s0, 3), round(s1, 3), round(cut, 3))
-    if key in _TVENV: return _TVENV[key]
-    E = CH.voice_envelope()
-    if E is None: return None
-    out = np.full_like(E, -90.0)
-    fps = CH.ENV_FPS
-    a0, a1 = int(s0 * fps), int(min(s1, s0 + cut) * fps)
-    b0 = int(ta * fps)
-    n = min(a1 - a0, len(out) - b0)
-    if n > 0: out[b0:b0 + n] = E[a0:a0 + n]
-    _TVENV[key] = out
-    return out
-
-
-def escalate(a, sh, who, worked=False):
-    """The film-wide acting arc (characters.escalate on the film clock): Mister Winks's wooden ticks come more often as the
-    night goes on (none on a lap, on the tape or while he sleeps); you / Mom / Owen tremble harder (FEAR_ARC). Memory,
-    tape, 1962 shots and rule cards: none."""
-    if sh.kind in ('rule',) or sh.p.get('era') in ('memory', 'tape', '1962', 'later'): return
-    if who in ('winks', 'you', 'mom', 'owen'):
-        CH.escalate(a, sh.t0, sh.t1, 'worked' if worked else sh.kind)
-
-
-def _beam_layer(m, x, y, h, depth, length=900.0, lens=False, name='beam', side=1, k=1.0):
-    """The dummy's flashlight beam (characters.draw_torch_beam) from the glove he holds it in, while P.torch is on."""
-    def draw(pen, t):
-        P = m(t)
-        if P.torch <= 0.01: return
-        lx, ly, ang = CH.torch_pos('winks', P, side, x=x, y_feet=y, height=h)
-        CH.draw_torch_beam(pen, lx, ly, ang, length * h / 400.0, a=P.torch * k, t=t, lens=P.torch_lens if lens else 0.0)
-    return Layer(depth - 0.01 if not callable(depth) else (lambda t: depth(t) - 0.01), draw, name, blur=0)
-
-
-def figure(F, sh, who, x, y, depth, height, act=None, seed=0, expr=None, light=None, name=None, path=None, talk=True,
-           alpha=1.0, facing=0.0, shadow=0.0, surface='inside', voice=None, arc=None, dim=None, worked=False, torch=None,
-           blink=None):
-    """Full-body character layer. path walks along anchors with a real walk cycle and the layer depth follows the path.
-    shadow 0..1 draws a dark silhouette. dim = f(t) | k darkens the figure with the room (set light levels). torch = dict(
-    side, length, lens) draws Mister Winks's flashlight beam while it is on."""
-    a = acting(F, sh, who, act, seed, height, expr, talk, voice=voice, arc=arc, worked=worked, blink=blink)
-    m = _Memo(a)
-    lt = light
-
-    def put(pen, t, lx, ly, lh, P):
-        if shadow > 0:
-            cv = pen.cv
-            cv.saveLayer(None, None)
-            CH.draw(pen, who, lx, ly, lh, P, light=None, t=t)
-            cv.drawPaint(skia.Paint(Color=skia.Color4f(0.012, 0.012, 0.025, shadow), BlendMode=skia.BlendMode.kSrcATop))
-            cv.restore()
-        else:
-            CH.draw(pen, who, lx, ly, lh, P, light=lt(t) if callable(lt) else lt, t=t)
-
-    if path is not None:
-        legs = [path] if (len(path) == 3 and not isinstance(path[0], (list, tuple))) else list(path)
-        L_ = []
-        for lg in legs:
-            q0, q1, pts_ = lg[0], lg[1], [tuple(q) for q in lg[2]]
-            fc = lg[3] if len(lg) > 3 else facing
-            sg = [math.hypot(pts_[j + 1][0] - pts_[j][0], pts_[j + 1][1] - pts_[j][1]) + abs(pts_[j + 1][3] - pts_[j][3]) * 1.5
-                  for j in range(len(pts_) - 1)]
-            L_.append((q0, q1, pts_, sg, sum(sg) or 1.0, fc))
-        _walk_legs(a, [(q0, q1, tot_ * 1.4 / (a.height / 1000.0), fc) for (q0, q1, _, _, tot_, fc) in L_], surface)
-        pts = L_[-1][2]
-
-        def pos(t):
-            leg = L_[0]
-            for lg in L_:
-                if t >= lg[0]: leg = lg
-            q0, q1, pts_, sg, tot_, _ = leg
-            u = clamp((t - q0) / max(1e-3, q1 - q0)); u = u * u * (3 - 2 * u) * 0.25 + u * 0.75
-            dd = u * tot_
-            for j, g in enumerate(sg):
-                if dd <= g or j == len(sg) - 1:
-                    f = clamp(dd / max(1e-6, g)); A, B = pts_[j], pts_[j + 1]
-                    return tuple(A[q] + (B[q] - A[q]) * f for q in range(4))
-                dd -= g
-            return pts_[-1]
-        R = pts[-1][2]
-
-        def dfun(t): return pos(t)[2]
-
-        def local(t):
-            px, py, pd, ph = pos(t); s = pd / R
-            return 960 + (px - 960) * s, 540 + (py - 540) * s, ph * s
-
-        def draw(pen, t):
-            P = m(t).copy(); P.dx = 0.0
-            lx, ly, lh = local(t)
-            put(pen, t, lx, ly, lh, P)
-        lay = Layer(dfun, draw, name or who, ref_depth=R, alpha=alpha, dim=dim or 0.0)
-        lay._pos = pos
-        return lay, a
-
-    def draw(pen, t):
-        P = m(t)
-        put(pen, t, x, y, height, P)
-        if torch and P.torch > 0.01:
-            lx, ly, ang = CH.torch_pos('winks', P, torch.get('side', 1), x=x, y_feet=y, height=height)
-            CH.draw_torch_beam(pen, lx, ly, ang, torch.get('length', 2.2) * height, a=P.torch * torch.get('k', 1.0), t=t,
-                               lens=P.torch_lens if torch.get('lens') else 0.0)
-    lay = Layer(depth, draw, name or who, ref_depth=depth, alpha=alpha, dim=dim or 0.0)
-    lay._m = m
-    return lay, a
-
-
-def _walk_legs(a, legs, surface='inside'):
-    """Walk cycle for one or more walks per actor: legs [(t0, t1, units, facing)]; footstep events (inside: wood floor).
-    '_quiet' suffix drops the footstep events."""
+def _walk_clip(a, legs, surface='inside', run=False, step_m=0.62, gain=-6.0):
+    """Walk cycle for plan walks: legs [(t0, t1, dist_m, face_fn)]: walk_amt / walk_ph / turn (no dx: the layer moves);
+    footsteps (surface 'inside' wood, 'porch', 'grass', 'stairs', 'heavy' for the Bunnyman, '_quiet' none)."""
     info = []
     quiet = surface.endswith('_quiet')
-    for (t0, t1, units, face) in legs:
-        n = max(2, int(round((t1 - t0) * 1.9)))
+    name = {'inside': 'footsteps_wood_inside', 'porch': 'footsteps_porch', 'grass': 'footsteps_grass', 'stairs': 'footsteps_wood_inside',
+            'heavy': 'footsteps_heavy', 'gravel': 'footsteps_gravel'}.get(surface.replace('_quiet', ''), 'footsteps_wood_inside')
+    for (t0, t1, dist, face) in legs:
+        n = max(2, int(round(dist / (step_m * (1.25 if run else 1.0)))))
         info.append((t0, t1, n / 2.0, face))
         if quiet: continue
         for k in range(1, n + 1):
-            a._ev(t0 + (t1 - t0) * (k - 0.5) / n, 'footsteps_wood_inside', -6.0, pan=0.0, n=1, foot='L' if k % 2 else 'R')
+            pr = dict(n=1, foot='L' if k % 2 else 'R')
+            if run: pr['kind'] = 'run'
+            if surface == 'stairs': pr['kind'] = 'stair'
+            a._ev(t0 + (t1 - t0) * (k - 0.5) / n, name, gain + (2.0 if run else 0.0), pan=0.0, **pr)
 
-    def fn(P, t):
+    def fn(P_, t):
         for (t0, t1, cyc, face) in info:
             if t0 - 0.45 <= t <= t1 + 0.45:
                 amt = ease_in_out(clamp((t - t0 + 0.15) / 0.3)) * ease_in_out(clamp((t1 + 0.15 - t) / 0.3))
-                w = ease_in_out(clamp((t - t0 + 0.4) / 0.4)) * ease_in_out(clamp((t1 + 0.45 - t) / 0.45))
-                P.walk_amt = max(P.walk_amt, amt)
-                P.walk_ph = cyc * clamp((t - t0) / max(1e-3, t1 - t0))
-                P.turn = lerp(P.turn, face, w)
-                P.lean += 0.05 * amt
+                w_ = ease_in_out(clamp((t - t0 + 0.4) / 0.4)) * ease_in_out(clamp((t1 + 0.45 - t) / 0.45))
+                P_.walk_amt = max(P_.walk_amt, amt)
+                P_.walk_ph = cyc * clamp((t - t0) / max(1e-3, t1 - t0))
+                tr = face(t)
+                if tr is not None: P_.turn = lerp(P_.turn, tr, w_)
+                if run:
+                    P_.run = max(getattr(P_, 'run', 0.0), amt); P_.lean += 0.14 * amt
+                else:
+                    P_.lean += 0.04 * amt
     a._add(legs[0][0] - 0.5, legs[-1][1] + 0.6, fn)
 
 
-def bust(F, sh, who, cx=960, cy=560, scale=1.0, act=None, seed=0, expr=None, light=None, depth=1.0, talk=True, name=None,
-         voice=None, arc=None, worked=False, blink=None):
-    a = acting(F, sh, who, act, seed, 700.0, expr, talk, voice=voice, arc=arc, worked=worked, blink=blink)
+def figure(F, sh, sp, q, k=0, rim=None):
+    """One figure on a set (P entry q) -> (Layer, Acting, info). Static figures stand / sit / kneel / lie on their Spot;
+    walkers follow plan keys (depth, scale and order follow the plan point)."""
+    who = q['who']
+    v = sp.view
+    path = q.get('path')
+    s0 = spot_of(sp, q['at'] if q.get('at') is not None else path[0][1], kind=q.get('kind'))
+    kind = q.get('kind') or {'seat': 'seat', 'kneel': 'kneel', 'lie': 'lie'}.get(s0.kind, 'stand')
+    Yf = s0.Y if s0.kind != 'seat' else s0.Y
+    h0 = CH.height_px(who, s0.ppm) * q.get('hk', 1.0)
+    a = CH.Acting(who, seed=q.get('seed', 0) + k * 11 + sh.idx * 3, height=h0, expr=q.get('expr', 'neutral'), blink=q.get('blink'))
+    a.place(s0.x, s0.y + q.get('dy', 0.0))
+    tr = q.get('turn')
+    if tr is None and q.get('face') is not None: tr = _turn_for(sp, s0.X, s0.Yp, q['face'])
+    if tr is None: tr = s0.turn
+    if tr is not None: a.face(tr, q.get('h_turn', 0.0))
+    if kind == 'seat':
+        seat_y = s0.seat_y
+        if seat_y is None:
+            seat_y = v.p(s0.X, s0.Y + q.get('seat', 0.45), s0.Yp)[1]
+        if q.get('sit_t') is not None:
+            a.sit_on(q['sit_t'], seat_y, dur=q.get('sit_dur', 1.0), t1=q.get('stand_t'), hands=q.get('hands', 'lap'))
+        else:
+            a.seated(seat_y, hands=q.get('hands', 'lap'), t1=q.get('stand_t'))
+            if q.get('stand_t') is not None: a.stand_up(q['stand_t'], seat_y=seat_y, hands=q.get('hands', 'lap'))
+    elif kind == 'kneel':
+        a.kneel_down(q.get('kneel_t', -2.0), q.get('kneel_dur', 0.01), knees=q.get('knees', 1), t1=q.get('rise_t'))
+    elif kind == 'lie':
+        a.lie(-1.0, q.get('lie_face', 'up'), arms=q.get('arms', 'side'))
+    elif kind == 'floor':
+        a.sit_floor(-1.0, None, 0.01)
+    if q.get('act'): q['act'](a, sh)
+    escalate(a, sh, who)
+    if q.get('talk', True):
+        vv = q.get('voice') if q.get('voice') is not None else VOICE.get(who, [])
+        for l in (F.voice_lines(sh.t0, sh.t1, vv) if vv else []):
+            kk = 0.55 if l.get('fx') == 'whisper' else (1.15 if l['en'].isupper() else 1.0)
+            a.talk([(l['t'], l['end'], l['en'])], intensity=kk * q.get('talk_k', 1.0))
+    sh.actors.append(a)
     m = _Memo(a)
+    lt = q.get('light', rim)
+    sil = q.get('sil', 0.0)
+
+    torch = q.get('torch')
+
+    def put(pen, t, x, y, hh):
+        if torch or path:
+            a.x0, a.y0, a.height = float(x), float(y), float(hh)
+        P_ = m(t)
+        if torch and torch.get('behind'):
+            lx, ly, ang = CH.torch_pos3(a, t, torch.get('side', 1))
+            CH.draw_torch_beam(pen, lx, ly, ang, torch.get('length', 4.0) * hh, torch.get('spread', 12.0), torch.get('a', 0.9), t)
+        if sil:
+            CH.draw_silhouette(pen, who, x, y, hh, P_, t=t, colr=q.get('sil_c', '#04060c'), a=sil, rim=q.get('sil_rim', '#9fb6ff'),
+                               rim_a=q.get('sil_rim_a', 0.5), rim_side=q.get('sil_side', 1), eyes=q.get('sil_eyes', 0.0))
+        else:
+            CH.draw(pen, who, x, y, hh, P_, light=lt(t) if callable(lt) else lt, t=t)
+        if torch and not torch.get('behind'):
+            lx, ly, ang = CH.torch_pos3(a, t, torch.get('side', 1))
+            CH.draw_torch_beam(pen, lx, ly, ang, torch.get('length', 4.0) * hh, torch.get('spread', 12.0), torch.get('a', 0.9), t)
+    name = q.get('name') or 'p%d_%s' % (k, who)
+    if path:
+        keys = []
+        for (tk, at) in path:
+            s_ = spot_of(sp, at)
+            keys.append((float(tk), s_.X, s_.Yp, s_.Y))
+        R = max(0.3, s0.depth)
+
+        def pos(t):
+            if t <= keys[0][0]: return keys[0][1:]
+            if t >= keys[-1][0]: return keys[-1][1:]
+            for ka, kb in zip(keys, keys[1:]):
+                if ka[0] <= t <= kb[0]:
+                    u = (t - ka[0]) / max(1e-6, kb[0] - ka[0])
+                    u = u * u * (3 - 2 * u) * 0.25 + u * 0.75 if not q.get('linear') else u
+                    return tuple(ka[j] + (kb[j] - ka[j]) * u for j in (1, 2, 3))
+            return keys[-1][1:]
+        legs = []
+        for ka, kb in zip(keys, keys[1:]):
+            dist = math.hypot(kb[1] - ka[1], kb[2] - ka[2])
+            if dist < 0.05 or kb[0] - ka[0] < 0.1: continue
+            dX, dY = kb[1] - ka[1], kb[2] - ka[2]
+            legs.append((ka[0], kb[0], dist, (lambda t, dX=dX, dY=dY: v.turn_for(pos(t)[0], pos(t)[1], dX, dY))))
+        if legs and not q.get('no_walk'):
+            _walk_clip(a, legs, q.get('surface', 'inside'), q.get('run', False), gain=q.get('step_gain', -6.0))
+
+        def sp_at(t):
+            X, Y, YY = pos(t)
+            return v.spot(X, Y, YY)
+
+        def dfun(t): return max(0.25, sp_at(t).depth) + q.get('dz', 0.0)
+
+        def draw(pen, t):
+            s_ = sp_at(t)
+            kk = max(0.25, s_.depth) / R
+            hh = CH.height_px(who, s_.ppm) * q.get('hk', 1.0)
+            put(pen, t, 960 + (s_.x - 960) * kk, 540 + (s_.y + q.get('dy', 0.0) - 540) * kk, hh * kk)
+        lkw = sp.light_kw(s0.X, s0.Yp, s0.Y + 1.2) if q.get('room_light', True) else ({'dim': q['dimk']} if q.get('dimk') else {})
+        lay = Layer(dfun, draw, name, ref_depth=R, alpha=q.get('alpha', 1.0), **lkw)
+        lay.order = q.get('order', lambda t: sp.order_at(*pos(t)[:2]))
+        info = dict(depth=s0.depth, spot=s0, pos=pos)
+        return lay, a, info
 
     def draw(pen, t):
-        CH.draw_bust(pen, who, cx, cy, scale, m(t), light=light(t) if callable(light) else light, t=t)
-    lay = Layer(depth, draw, name or who, blur=0)
-    lay._m = m
-    return lay, a
+        put(pen, t, s0.x, s0.y + q.get('dy', 0.0), h0)
+    lkw = sp.light_kw(s0.X, s0.Yp, s0.Y + 1.2) if q.get('room_light', True) else ({'dim': q['dimk']} if q.get('dimk') else {})
+    lay = Layer(s0.depth + q.get('dz', 0.0), draw, name, ref_depth=s0.depth + q.get('dz', 0.0), alpha=q.get('alpha', 1.0), **lkw)
+    lay.order = q.get('order', sp.order_at(s0.X, s0.Yp) + q.get('dorder', 0.0))
+    return lay, a, dict(depth=s0.depth, spot=s0)
 
 
-def anc(sp, name):
-    """Anchor -> (x, y, depth, height of a 1.85 m adult there). name: a set anchor, (x, y, d, h), or ('h', x, y[, Y]) a point on
-    the house plan (HView sets) / ('v', X, D[, Y]) on a View set."""
-    if isinstance(name, tuple) and name and name[0] in ('h', 'v'):
-        v = sp.info['view']; a = v.anchor(name[1], name[2], name[3] if len(name) > 3 else 0.0)
-        return (a.x, a.y, a.depth, a.height)
-    if not isinstance(name, str): return name
-    a = sp.anchors[name]; return (a.x, a.y, a.depth, a.height)
+def prop_layer(sp, track, at, name='prop', order_dz=-0.05):
+    """A resting PropTrack drawn at its plan point's depth (it disappears while a hand holds it)."""
+    s = spot_of(sp, at)
+    lay = Layer(s.depth, lambda pen, t: track.draw(pen, t), name, ref_depth=s.depth)
+    lay.order = sp.order_at(s.X, s.Yp) + order_dz
+    return lay
 
 
-def people(F, sh, sp, ppl, light, dim=None):
-    """ppl: list of dicts {who, at (anchor / tuple / ('h', x, y)), act, path, expr, seed, light, shadow, dy, dx, hk}.
-    Anchor heights are a 1.85 m adult; each figure is scaled to its own height (HEIGHT_M)."""
-    L, A = [], []
-    for k, q in enumerate(ppl or []):
-        who = q['who']
-        at = q.get('at')
-        if q.get('path') and at is None:
-            pq = q['path']; at = (pq if not isinstance(pq[0], (list, tuple)) else pq[0])[2][0]
-        x, y, d, h = anc(sp, at)
-        hk = q.get('hk', HEIGHT_M.get(who, 1.85) / 1.85)
-        x += q.get('dx', 0.0) * h; y += q.get('dy', 0.0) * h
-        path = None
-        if q.get('path'):
-            pq = q['path']
-            legs = [pq] if not isinstance(pq[0], (list, tuple)) else pq
-            path = []
-            for lg in legs:
-                pts = []
-                for n in lg[2]:
-                    ax, ay, ad, ah = anc(sp, n)
-                    pts.append((ax, ay, ad, ah * hk))
-                path.append(tuple([lg[0], lg[1], pts] + list(lg[3:])))
-        lay, a = figure(F, sh, who, x, y, d + q.get('dd', 0.0), h * hk, q.get('act'), seed=k * 11 + q.get('seed', 0), expr=q.get('expr'),
-                        light=q.get('light', light), name='p%d_%s' % (k, who), path=path, talk=q.get('talk', True),
-                        facing=q.get('facing', 0.0), alpha=q.get('alpha', 1.0), shadow=q.get('shadow', 0.0),
-                        surface=q.get('surface', 'inside'), voice=q.get('voice'), arc=q.get('arc'), dim=q.get('dim', dim),
-                        worked=q.get('worked', False), torch=q.get('torch'), blink=q.get('blink'))
-        L.append(lay); A.append((q, lay, a))
-    return L, A
+def ptrack(sp, name, at, dx=0.0, dy=0.0, angle=0.0):
+    s = spot_of(sp, at)
+    return ST and CH.PropTrack(name, s.x + dx, s.y + dy, s.ppm / 100.0, angle)
 
 
-def dimmed(sp, k, keep=()):
-    for l in sp:
-        if l.name not in keep and not callable(l.dim): l.dim = max(l.dim if isinstance(l.dim, float) else 0.0, k)
-    return sp
+# ==================================================================================================== escalate
+# The film-wide acting arc on the film clock. NO tremble ("scared jiggle") as filler: tension shows in the eyes, brows and
+# breath of the kids; Mom grows stiller (fewer blinks, a locked smile) as the night goes on.
+KID_ARC = [(0.0, 0.0), (200.0, 0.15), (247.0, 0.35), (287.0, 0.3), (340.0, 0.45), (425.0, 0.5), (508.0, 0.55), (600.0, 0.75),
+           (616.0, 0.9), (690.0, 0.8), (709.0, 0.6), (737.0, 0.85), (770.0, 0.9), (913.0, 0.0)]
+MOM_ARC = [(0.0, 0.2), (176.0, 0.35), (247.0, 0.55), (343.0, 0.65), (444.0, 0.7), (580.0, 0.8), (737.0, 0.9), (913.0, 0.0)]
 
 
-def room_dim(level, lo=0.0, hi=0.62):
-    """A figure's layer dim from a room light level f(t): lit 0 -> dark hi."""
-    return lambda t: lerp(hi, lo, clamp(lvl(level, t)))
+def _arc(arc, t):
+    return float(np.interp(t, [a for a, _ in arc], [b for _, b in arc]))
 
 
-def P(who, at=None, act=None, **k):
-    return dict(who=who, at=at, act=act, **k)
+def escalate(a, sh, who):
+    """Kids (narrator, June): wide eyes, raised brows, faster shallow breath with the night's tension. Mom (until the
+    swap): stillness, fewer blinks. Memory / 1987 / recall / outro shots and rule cards: nothing."""
+    if sh.kind in ('rule', 'card', 'black') or sh.p.get('era') in ('memory', '1987', 'outro', 'recall'): return
+    if who in ('narrator', 'june', 'june_dress'):
+        k = _arc(KID_ARC, sh.t0) * (0.6 if who != 'narrator' else 1.0)
+        if k <= 0.02: return
+
+        def fn(P_, t, k=k):
+            P_.wide += 0.22 * k; P_.brow_up += 0.12 * k; P_.brow_sad += 0.1 * k
+            per = 3.9 - 1.7 * k
+            P_.breath = 0.5 + (0.45 + 0.1 * k) * math.sin(2 * math.pi * t / per + a.seed)
+        a._add(sh.t0 - 1.0, sh.t1 + 1.0, fn, real=True)
+    elif who == 'mom' and sh.t0 < 913.0:
+        k = _arc(MOM_ARC, sh.t0)
+
+        def fn(P_, t, k=k):
+            P_.lock = max(P_.lock, 0.5 * k)
+            P_.smile = max(P_.smile, 0.12 * k)
+        a._add(sh.t0 - 1.0, sh.t1 + 1.0, fn, real=True)
 
 
-def W_(at='kitchen_chair', act=None, **k):
-    """Mister Winks on a set (people() entry): dead still unless he acts; he talks only on his own lines."""
-    return dict(who='winks', at=at, act=act, **k)
+# ==================================================================================================== builders: sets
+ROOM_RIM = {'living': LAMP, 'hall': LAMP, 'up': NIGHT, 'june': MOON, 'bath': DARK, 'attic': BULB, 'kitchen': LAMP_R,
+            'yard': MOON, 'front': PORCH, 'woods': MOON, 'hosp': HOSP, 'parade': VHS87}
 
 
-# ==================================================================================================== acting presets
-def winks_chair(torch_up=True, look=0.85, t_turned=None, hands='table'):
-    """Mister Winks in Grandpa's chair: sitting up straight, hands on the table, the flashlight in his left glove pointed at
-    the ceiling; his head looks down the hall (h_turn = look, seen from the couch) until t_turned, then it has turned all
-    the way toward you (the camera)."""
-    def f(a, s):
-        a.sit_dummy(hands=hands)
-        if torch_up: a.torch_on(-1e9 + 1, 0.0, 1, hold='up')
-        if look:
-            a.set(-1e9, t_turned, 0.05, h_turn=look, lock=0.0)
-    return f
-
-
-def knee_beam(keys, on, Y=0.4, sweep=0.85, per=2.8, toward=-0.32):
-    """Mister Winks's little flashlight carried knee high down the hall (sets' beam spec as f(t)): the lens on the plan
-    path `keys` [(t, x, y)], clicking on at `on`, the beam swinging slowly side to side (it sweeps the runner and the
-    wallpaper) and tipped a little toward the camera, so it reads as a small cone with a hot spot, not a glare disc."""
-    base = ST._beam_fn(dict(keys=keys, Y=Y, on=on, aim=(0.0, -0.1, -1.0)))
-
-    def f(t):
-        b = base(t)
-        if not b: return None
-        x, Yb, y, _, _, _, k = b
-        ph = math.sin(2 * math.pi * (t - on) / per)
-        ax, ay = sweep * ph, toward
-        n = math.hypot(ax, ay) or 1.0
-        return (x, Yb, y, ax / n, -0.12, ay / n, k)
-    return f
-
-
-def _A(*fns):
-    return lambda a, s: [f(a, s) for f in fns if f]
-
-
-def stare(d=-1.0): return lambda a, s: a.stare(s.t0 + d)
-def ex(name, d=-1.0, t1=None): return lambda a, s: a.expr(name, s.t0 + d, t1)
-def at_(t, **kw): return lambda a, s: a.set(t, None, kw.pop('fade', 0.3), **kw)
-def setp(d=-2.0, fade=0.1, **kw): return lambda a, s: a.set(s.t0 + d, None, fade, **kw)
-def turned(to=2.0, h=0.0): return lambda a, s: a.set(s.t0 - 2, None, 0.1, turn=to, h_turn=h)
-def tilt(d=0.3, ang=14.0, dur=1.6): return lambda a, s: a.head_tilt(s.t0 + d, ang, dur)
-def down(d=-1.0, amt=1.0): return lambda a, s: a.head_down(s.t0 + d, None, amt)
-def look_side(t, h=0.85, fade=0.45): return lambda a, s: a.set(t, None, fade, h_turn=h, lock=0.0, look_x=0.6 if h > 0 else -0.6)
-def turn_to(t, to, dur=0.6): return lambda a, s: a.turn(t, to, dur)
-def sitp(d=-3.0): return lambda a, s: a.set(s.t0 + d, None, 0.1, sit=1.0, perch=1.0)
-def tremble(amp=0.6): return lambda a, s: a.tremble(s.t0 - 0.5, s.t1 + 0.5, amp)
-def flinch_at(*ts, amp=1.0): return lambda a, s: [a.flinch(t, amp) for t in ts]
-def blink_at(*ts): return lambda a, s: [a.blink(t) for t in ts]
-def stage(n, d=-2.0, t1=None): return lambda a, s: a.smile_stage(s.t0 + d, n, t1)       # Mister Winks: hold an arc stage
-
-
-def sway(amp=5.0, per=3.3, tilt=2.5, ph=0.0):
-    def f(a, s):
-        def fn(P, t):
-            u = math.sin(2 * math.pi * (t - s.t0) / per + ph)
-            P.sway += amp * u; P.tilt += 0.7 * u; P.h_tilt -= tilt * u
-        a._add(s.t0 - 1.0, s.t1 + 1.0, fn, real=True)
-    return f
-
-
-def creep(tilt=6.0, dur=None):
-    """A slow head-tilt drift over the shot (the creepy cast's unease: Grandpa, the new Owen)."""
-    def f(a, s):
-        d = max(0.6, (dur or (s.t1 - s.t0)))
-
-        def fn(P, t):
-            P.h_tilt += tilt * ease_in_out(clamp((t - s.t0 + 0.3) / (d + 0.3)))
-        a._add(s.t0 - 1.0, s.t1 + 1.0, fn, real=True)
-    return f
-
-
-def jaw_chatter(t0, t1, rate=1.7, amount=0.55):
-    """'jaw going up and down' in silence (the bookcase): a slow mechanical drop and clack, over and over (dummy_jaw /
-    dummy_clack events on each)."""
-    def f(a, s):
-        k = t0
-        while k < t1 - 0.3:
-            a.jaw_drop(k, amount, 0.14)
-            a.clack(k + 0.5 / rate + 0.05, 0.12)
-            k += 1.0 / rate
-    return f
-
-
-# ==================================================================================================== builders: the house
 def _fx(sp, p):
     def fx(t):
-        d = dict(sp.fx(t) or {}, **p.get('post', {}))
+        d = dict((sp.fx(t) if sp is not None and hasattr(sp, 'fx') else None) or {}, **p.get('post', {}))
         if p.get('post_fn'): d.update(p['post_fn'](t))
         return d
     return fx
 
 
-def _focus(p, sp, A, default=None):
-    if p.get('focus') is not None: return p['focus']
-    for q, lay, a in A:
-        if q['who'] != 'winks' or q.get('focus_on'):
-            return lay.depth_at(0.0) if not callable(lay.depth) else lay.ref_depth
-    return default if default is not None else sp.focus
+def dimmed(sp, k, keep=()):
+    for l in sp:
+        if l.name not in keep and not callable(l.dim): l.dim = max(l.dim if isinstance(l.dim, (int, float)) else 0.0, k)
+    return sp
 
 
-def _winks_entry(p, sp, light, dim):
-    """p['winks'] (a dict or True) -> a people() entry for Mister Winks on this set."""
-    wv = p.get('winks')
-    if not wv: return None
-    q = dict(who='winks', at=CHAIR_UP, act=winks_chair(), light=light, dim=dim, torch=dict(side=1, length=2.4))
-    if isinstance(wv, dict): q.update(wv)
-    return q
-
-
-def B_hall(F, sh):
-    """Down the front hall to the kitchen opening (gp_hall 'kitchen'). Mister Winks in Grandpa's chair through the opening
-    (winks=True | dict), the knee-high beam (beam=), the family at the bench (ppl)."""
+def B_set(F, sh):
+    """A set view with figures on the plan (see the module docstring)."""
     p = sh.p
-    sp = ST.gp_hall('kitchen', light=p.get('light', 1.0), kitchen=p.get('kitchen', 1.0), living=p.get('living', 0.6),
-                    case=p.get('case', 'closed'), envelope=p.get('envelope', True), latch=p.get('latch', 0.0), den=p.get('den', 0.0),
-                    clock=clock_minutes, beam=p.get('beam'), steam=p.get('steam', 1.0), mug=p.get('mug', True))
-    hf, kf = sp.info['hall_light'], sp.info['kitchen']
-    ppl = [dict(q) for q in p.get('ppl', [])]
-    wq = _winks_entry(p, sp, house_light(kf, side=1), room_dim(kf, 0.1, 0.8))
-    if wq: ppl.append(wq)
-    L, A = people(F, sh, sp, ppl, p.get('light_fn') or house_light(hf), dim=room_dim(hf, 0.0, 0.5))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560))
-    grade = p.get('grade', 'gp_house' if lvl(hf, sh.t0 + 0.1) > 0.3 else 'gp_dark')
-    return Spec(sp.add(*L), cam, 'lens', grade, _focus(p, sp, A), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_hdoor(F, sh):
-    """The hall facing the front door (gp_hall 'door'): door 0..1 | f(t), tod 'night' | 'morning'."""
-    p = sh.p
-    sp = ST.gp_hall('door', light=p.get('light', 1.0), case=p.get('case', 'closed'), envelope=p.get('envelope', True),
-                    tod=p.get('tod', 'night'), door=p.get('door', 0.0))
-    hf = sp.info['hall_light']
-    morning = p.get('tod') == 'morning'
-
-    def backing(pen, t, morning=morning):
-        pen.linear(rect(-3000, -2000, 7920, 5080), 0, -2000, 0, 3080, ['#b8b0a0', '#8a8070'] if morning else ['#1c1a24', '#2a2026'])
-    sp = sp.add(Layer(60.0, backing, 'hd_backing', cache='film:hd_backing:%d' % morning, bounds=(-3000, -2000, 4920, 3080)))
-    lt = (lambda t: MORNING) if morning else house_light(hf)
-    L, A = people(F, sh, sp, p.get('ppl', []), p.get('light_fn') or lt, dim=None if p.get('tod') == 'morning' else room_dim(hf, 0.0, 0.5))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560))
-    grade = p.get('grade', sp.grade if p.get('tod') == 'morning' else ('gp_house' if lvl(hf, sh.t0 + 0.1) > 0.3 else 'gp_dark'))
-    return Spec(sp.add(*L), cam, 'lens', grade, _focus(p, sp, A), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def pov_hands(t0, t1=None, reach=(1000, 760), size=330, grab=None, shape='grip', dark=0.55, depth=0.5, both=True):
-    """Your hands (POV) coming up into the frame from the bottom: denim cuffs, reaching to `reach` (design px) at t0 and holding
-    there until t1 (then dropping out of frame). grab = t: the fingers close (grip) at t."""
-    sl = CH.CAST['you']['cloth']
-
-    def draw(pen, t):
-        u_in = ease_out_cubic(clamp((t - t0) / 0.38))
-        u_out = ease_in_out(clamp((t - t1) / 0.45)) if t1 is not None else 0.0
-        if u_in <= 0 or u_out >= 1: return
-        k = u_in * (1 - u_out)
-        for sd in ((-1, 1) if both else (1,)):
-            bx, by = reach[0] + sd * size * 0.95, reach[1]
-            x = lerp(bx + sd * 520, bx, k); y = lerp(by + 900, by, k) + 6 * math.sin(t * 7 + sd)
-            ang = 200.0 if sd < 0 else 160.0
-            cv = pen.cv
-            arm = poly([(x - 0.42 * size, y + 0.25 * size), (x + 0.42 * size, y + 0.3 * size), (x + sd * 0.6 * size + 0.5 * size, 1500),
-                        (x + sd * 0.6 * size - 0.55 * size, 1500)])
-            pen.shape(arm, sl['top'], 6); pen.fill(_crescent_x(arm, -sd * 30), sl['top_sh'], 150)
-            pen.shape(rrect(x - 0.45 * size, y + 0.12 * size, 0.9 * size, 0.28 * size, 0.1 * size), sl['top_hi'], 5)
-            shp = shape if (grab is None or t >= grab) else 'open'
-            CH.draw_hand(pen, 'you', x, y + 0.14 * size, size, shp, ang, sd)
-        if dark > 0:
-            pen.cv.drawPaint(skia.Paint(Color=skia.Color4f(0.03, 0.035, 0.07, dark * 0.0)))
-    return Layer(depth, draw, 'pov_hands', blur=0, dim=dark)
-
-
-def _crescent_x(path, dx):
-    m = skia.Matrix(); m.setTranslate(dx, 0)
-    q = skia.Path(path); q.transform(m)
-    return minus(path, q)
-
-
-def B_stairs(F, sh):
-    """Up the stairs (gp_hall 'stairs'): Mister Winks three steps up (winks=dict(...), default at 'step3' with the flashlight in
-    your face), your POV hands (pov=dict(t0, t1, reach, grab))."""
-    p = sh.p
-    sp = ST.gp_hall('stairs', light=p.get('light', 0.0), beam=p.get('beam'))
-    ppl = [dict(q) for q in p.get('ppl', [])]
-    wv = p.get('winks')
-    if wv:
-        q = dict(who='winks', at='step3', act=lambda a, s: a.sit_dummy(hands='knees'), light=NIGHT, torch=dict(side=-1, length=2.0, lens=True))
-        if isinstance(wv, dict): q.update(wv)
-        ppl.append(q)
-    L, A = people(F, sh, sp, ppl, p.get('light_fn') or (lambda t: NIGHT))
-    if p.get('pov'):
-        L.append(pov_hands(**p['pov']))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560))
-    return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'gp_dark'), _focus(p, sp, A, 1.43 if wv else None), p.get('dof', sp.dof),
-                fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def _kitchen_set(p, view):
-    kw = dict(kitchen=p.get('kitchen', 1.0), steam=p.get('steam', 1.0), chair=True, tod=p.get('tod', 'night'), sway=p.get('sway', 0.0))
-    t_off = p.get('mug_off')
-    if t_off is None:
-        return ST.gp_kitchen(view, mug=p.get('mug', True), **kw)
-    kw['steam'] = dict(off=t_off)
-    a = ST.gp_kitchen(view, mug=True, **kw)
-    b = ST.gp_kitchen(view, mug=False, **kw)
-    ta = a.layer('k_table'); tb = b.layer('k_table')
-    ta.alpha = lambda t, t_=t_off: 1.0 if t < t_ else 0.0
-    tb.alpha = lambda t, t_=t_off: 0.0 if t < t_ else 1.0
-    tb.name = 'k_table_nomug'
-    return a.add(tb)
-
-
-def B_kitchen(F, sh):
-    """The kitchen (gp_kitchen 'table' | 'chair'): Mister Winks in Grandpa's chair (winks=), Mom picking up the mug
-    (mug_off = t: the set's mug vanishes as she lifts hers), the new Owen at 8 AM / the last morning (tod='morning')."""
-    p = sh.p
-    view = p.get('view', 'table')
-    sp = _kitchen_set(p, view)
-    kf = sp.info['kitchen']
-    morning = p.get('tod') == 'morning'
-    lt = (lambda t: MORNING) if morning else house_light(kf, side=1)
-    ppl = [dict(q) for q in p.get('ppl', [])]
-    wq = _winks_entry(dict(p, winks=p.get('winks') and dict(dict(at=CHAIR_UP), **(p['winks'] if isinstance(p['winks'], dict) else {}))),
-                      sp, lt, None if morning else room_dim(kf, 0.0, 0.85))
-    if wq: ppl.append(wq)
-    L, A = people(F, sh, sp, ppl, p.get('light_fn') or lt, dim=None if morning else room_dim(kf, 0.0, 0.85))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
+    sp = make_set(p['room'], p['view'], p.get('cam'), **p.get('set', {}))
+    if p.get('curtains_fn') is not None and p['room'] == 'living':
+        # the front curtains drawn live (closing): the cached curtain piece is swapped for a live layer under the room light
+        cf = p['curtains_fn']
+        info = sp.info
+        sp = sp.without(*[l.name for l in sp if l.name.startswith('curtains_front')])
+        lay = ST.live_layer('curtains_live', sp.view, (-3.3, 1.5, 0.12),
+                            lambda pen, v_, t, cf=cf: ST.curtain_pair(pen, v_, (-1.4, 0.0), (-5.0, 0.0), -1.4 - ST.LWIN_F[1], -1.4 - ST.LWIN_F[0],
+                                                                      ST.LWIN_F[3], 2.0, 0.0, cf(t), ST.P_['drape'], seed=1),
+                            info['amb'], info['lights'], info['var_lights'])
+        sp = sp.add(lay)
+    sh.sp = sp
+    rim = p.get('rim', ROOM_RIM.get(p['room']))
+    L, A, I = [], {}, {}
+    for k, q in enumerate(p.get('ppl', [])):
+        lay, a, info = figure(F, sh, sp, q, k, rim)
+        L.append(lay); key = q.get('id', q['who']); A[key] = a; I[key] = info
+    if p.get('acts'):
+        L += [l for l in (p['acts'](A, sh, sp) or []) if l is not None]
+    if p.get('bg_dim'): dimmed(sp, p['bg_dim'])
+    if p.get('focus') is not None:
+        focus = p['focus']
+    elif I:
+        first = p.get('focus_on') or list(I)[0]
+        focus = I[first]['depth']
+    else:
+        focus = sp.focus
+    cam = scam(sh, sp.info.get('cam_env'), p.get('c'))
     grade = p.get('grade', sp.grade)
-    return Spec(sp.add(*L), cam, 'lens', grade, _focus(p, sp, A, sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
+    if p.get('era') == '1987' and p['room'] != 'parade' and p.get('vhs'):
+        grade = p.get('grade', 'ob_vhs87')
+    sh.A = A
+    return Spec(sp.add(*L), cam, p.get('lens', sp.lens), grade, focus, p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
 
 
-# ---------------------------------------------------------------------------------------------------- the 1974 tape
-LAUGH_T = []                     # laugh-wave times on the film clock (plan() fills it): studio laughter = applause = he moves
-
-
-def laugh_fn(F):
-    return ST.laugh_waves(sorted(set(LAUGH_T)), 2.6, 1.0) if LAUGH_T else (lambda t: 0.0)
-
-
-def tape_figures(F, sh, w_act=None, d_act=None, light=TAPE, scale=1.0, cx=960, cy=760, h=None):
-    """Young Walter on the stool with Mister Winks on his knee, as the tape shows them (drawn in the studio's 1920x1080 space;
-    the same function draws them full frame and on the living-room CRT). Walter's lips never move; the dummy's jaw talks on
-    the tape's lines (R) and on the tape's own replayed voice (tv_voice)."""
-    hh = (h or 760.0 * HEIGHT_M['walter74'] / 1.85) * scale
-    wa = acting(F, sh, 'walter74', _A(lambda a, s: a.vent_pose(side=1), lambda a, s: a.set(-1e9, None, 0.1, perch=1.0, turn=0.45),
-                                      lambda a, s: a.showman(s.t0 - 2, s.t1 + 2), w_act), talk=False, worked=True)
-    da = acting(F, sh, 'winks', _A(lambda a, s: a.sit_dummy(), d_act or (lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.8))),
-                voice=TAPE_VOICE, arc=CH.WINKS_TAPE_ARC, worked=True)
-    mw, md = _Memo(wa), _Memo(da)
-
-    def figures(pen, t):
-        CH.draw_lap(pen, 'walter74', cx, cy, hh, mw(t), md(t), side=1, m=HEIGHT_M['walter74'], light=light)
-    return figures, wa, da
-
-
-def B_studio(F, sh):
-    """'Saturday Morning with Walter Kemp', 1974, full frame through the VHS / CRT look: the stage, the figures (tape_figures),
-    the audience shaking with the laughter waves (LAUGH_T). view 'full' | 'close' (the studio camera tighter: cam keys)."""
-    p = sh.p
-    lf = laugh_fn(F)
-    sp = ST.gp_studio(p.get('view', 'full'), laugh=lf, bezel=p.get('bezel', 0.0), track=p.get('track', 0.35))
-    L = []
-    if p.get('figures', True):
-        fig, wa, da = tape_figures(F, sh, p.get('w_act'), p.get('d_act'))
-        L.append(Layer(1.0, lambda pen, t: fig(pen, t), 'tape_figures', blur=0))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560, rate=0.03))
-    sh.p.setdefault('era', 'tape')
-
-    def fx(t):
-        d = dict(sp.fx(t) or {}, **p.get('post', {}))
-        if p.get('track_fn') and isinstance(d.get('vhs'), dict): d['vhs'] = dict(d['vhs'], track=p['track_fn'](t))
-        if p.get('bezel_fn') and isinstance(d.get('vhs'), dict): d['vhs'] = dict(d['vhs'], bezel=p['bezel_fn'](t))
-        if p.get('post_fn'): d.update(p['post_fn'](t))
-        return d
-    return Spec(sp.add(*L), cam, None, p.get('grade', 'vhs74'), 1.0, 0.0, fx=fx, hud=p.get('hud'))
-
-
-def B_living(F, sh):
-    """The living room (gp_living): 'tv' from the couch (the CRT plays the tape live with the cast on it; the kitchen
-    doorway with Mister Winks in Grandpa's chair: winks=), 'couch' (the family on the couch under the lamp, Mom at the
-    bookcase, Mister Winks on the bookcase top: winks=dict(at='bookcase_top', ...))."""
-    p = sh.p
-    view = p.get('view', 'tv')
-    tv = p.get('tv')
-    content = None
-    if tv is not None and p.get('tape', True):
-        fig, wa, da = tape_figures(F, sh, p.get('w_act'), p.get('d_act'))
-        content = ST.studio_content(figures=fig, laugh=laugh_fn(F))
-    sp = ST.gp_living(view, lamp=p.get('lamp', 1.0), tv=tv, kitchen=p.get('kitchen', 1.0), steam=p.get('steam', 1.0),
-                      mug=p.get('mug', True), content=content, tod=p.get('tod', 'night'))
-    lf = sp.info.get('lamp'); kf = sp.info.get('kitchen')
-    lt = p.get('light_fn') or tv_light(sp)
-    ppl = [dict(q) for q in p.get('ppl', [])]
-    if p.get('winks'):
-        wv = p['winks']
-        if view == 'tv':
-            q = dict(who='winks', at=CHAIR_UP, act=winks_chair(), light=house_light(kf, side=1), dim=room_dim(kf, 0.1, 0.85),
-                     torch=dict(side=1, length=2.4))
-        else:
-            q = dict(who='winks', at='bookcase_top', act=lambda a, s: a.sit_dummy(hands='limp'), light=TORCH, torch=dict(side=1, length=1.2))
-        if isinstance(wv, dict): q.update(wv)
-        ppl.append(q)
-    L, A = people(F, sh, sp, ppl, lt, dim=room_dim(lambda t: max(lvl(lf, t), 0.6 * ST.tv_level(sp.info.get('tv'), t)), 0.05, 0.55))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    on = tv is not None and ST.tv_level(sp.info.get('tv'), sh.t0 + 0.5) > 0.05
-    grade = p.get('grade', 'tv_glow' if on else ('gp_house' if lvl(lf, sh.t0 + 0.1) > 0.3 else 'gp_dark'))
-    return Spec(sp.add(*L), cam, 'lens', grade, _focus(p, sp, A, sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def lap_layer(F, sh, who, x, y, height, act=None, dact=None, side=1, depth=1.0, light=None, dlight=None, between=None,
-              dvoice=None, d_arc=None, jerk=None, name='lap', release=None, fall=None, seed=0, hop=None, arm_out=None):
-    """A person sitting with Mister Winks on the knee (characters.draw_lap). y = the seat surface (the person perches).
-    jerk = f(t) -> dx px (Mom pulling at him); release = t: from then the person is drawn alone (they slide the hand out
-    and jump up) and the dummy falls face down to fall = (x, y, h) (the rug)."""
-    m = HEIGHT_M.get(who, 1.7)
-    pa = acting(F, sh, who, _A(lambda a, s: a.set(-1e9, None, 0.1, perch=1.0, turn=-0.42 * side), act), seed=seed)
-    da = acting(F, sh, 'winks', _A(lambda a, s: a.sit_dummy(), dact), voice=dvoice, arc=d_arc, worked=True, seed=seed + 5)
-    mp, md = _Memo(pa), _Memo(da)
-    st = {}
-
-    def draw(pen, t):
-        Pp, Pd = mp(t), md(t)
-        lt = light(t) if callable(light) else light
-        dl = dlight(t) if callable(dlight) else (dlight or lt)
-        if release is not None and t >= release:
-            if 'k' not in st:
-                Q, D = mp(release).copy(), md(release)
-                Q.turn = -0.42 * side                         # as draw_lap stages him (3/4)
-                ax, ay = CH.lap_anchor(who, Q, side, x, y, height)
-                st['k'] = (ax, ay - 0.05 * height, height * CH.DUMMY_M / m)
-            Q = Pp.copy(); Q.perch = 0.0                      # standing up: the feet stay on the floor (not on the seat)
-            k3 = ease_in_out(clamp((t - release) / 0.5))      # out of the 3/4 lap staging into his own turn
-            Q.turn = lerp(-0.42 * side, Q.turn, k3)
-            X, Y, Hh = x, y + 222.0 * height / 1000.0, height
-            if hop:                                           # he springs across the rug (hop = (x, floor y, height) there)
-                u = ease_in_out(clamp((t - release - 0.12) / 0.62))
-                X, Y, Hh = lerp(X, hop[0], u), lerp(Y, hop[1], u), lerp(Hh, hop[2], u)
-            CH.draw(pen, who, X, Y, Hh, Q, light=lt, t=t)
-            ax, ay, dh = st['k']
-            if fall:                                          # the dummy tips forward off the knee and lands face down
-                u = clamp((t - release) / 0.5)
-                fx_, fy_, fh_ = fall
-                D = Pd.copy()
-                D.sit = lerp(1.0, 0.0, ease_in_out(u)); D.perch = 1.0 - ease_in_out(u)
-                D.lie = u ** 2.2 + (0.04 * math.exp(-(t - release - 0.5) * 10) * math.sin((t - release - 0.5) * 30) if u >= 1 else 0.0)
-                D.turn = lerp(D.turn, 1.0, ease_out_cubic(clamp(u * 2.0))); D.h_turn *= 1.0 - u
-                g = u * u
-                CH.draw(pen, 'winks', lerp(ax, fx_, ease_out_cubic(u)), lerp(ay, fy_, g), lerp(dh, fh_, u), D, light=dl, t=t)
-            return
-        dx = jerk(t) if jerk else 0.0
-        CH.draw_lap(pen, who, x, y, height, Pp, Pd, side=side, m=m, light=lt, dlight=dl, between=between, dx=dx,
-                    arm_over=arm_out is not None and t >= arm_out)
-    lay = Layer(depth, draw, name, ref_depth=depth if not callable(depth) else None)
-    return lay, pa, da
-
-
-def B_den(F, sh):
-    """Grandpa's den (gp_den): Owen in the armchair with the dummy on his knee (lap=dict(...)), Mom, you kneeling (ppl), the
-    lamp going out (lamp=dict(out=...)), the dummy face down on the rug (rug=True)."""
-    p = sh.p
-    sp = ST.gp_den(lamp=p.get('lamp', 1.0), hall=p.get('hall', 0.5))
-    lf = sp.info['lamp']
-    lt = p.get('light_fn') or house_light(lf, side=-1)
-    dim = room_dim(lf, 0.0, 0.78)
-    L, A = people(F, sh, sp, p.get('ppl', []), lt, dim=dim)
-    if p.get('lap'):
-        q = dict(p['lap'])
-        x, y, d, h = anc(sp, q.pop('at', 'armchair'))
-        who = q.pop('who', 'owen')
-        hh = h * HEIGHT_M[who] / 1.85
-        fall = None
-        if q.get('release') is not None:
-            rx, ry, rd, rh = anc(sp, DEN_FALL)
-            fall = (rx, ry, rh * CH.DUMMY_M / 1.85)
-        if q.get('hop') is not None:
-            hx, hy, hd, hh_ = anc(sp, q['hop'])
-            q['hop'] = (hx, hy, hh_ * HEIGHT_M[who] / 1.85)
-        lay, pa, da = lap_layer(F, sh, who, x + q.pop('dx', 0.0) * h, y, hh, q.pop('act', None), q.pop('dact', None), side=q.pop('side', 1),
-                                depth=d, light=lt, dvoice=VOICE['winks'], fall=fall, **q)
-        lay.dim = dim
-        L.append(lay)
-    if p.get('rug'):
-        rv = p['rug'] if isinstance(p['rug'], dict) else {}
-        L2, A2 = people(F, sh, sp, [dict(dict(who='winks', at=DEN_FALL, act=lambda a, s: a.face_down()), **rv)], lt, dim=dim)
-        L += L2
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560))
-    grade = p.get('grade', 'gp_house' if lvl(lf, sh.t0 + 0.1) > 0.3 else 'gp_dark')
-    return Spec(sp.add(*L), cam, 'lens', grade, p.get('focus', sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-# ---------------------------------------------------------------------------------------------------- elsewhere
-def blanket_fn(x0, y0, w, h, c='#a9c3d6'):
-    """The hospital blanket over the legs (drawn between the person and the dummy)."""
-    def f(pen):
-        b = smooth([(x0 - w * 0.5, y0 + h * 0.15), (x0 - w * 0.45, y0 - h * 0.05), (x0, y0 - h * 0.12), (x0 + w * 0.45, y0 - h * 0.02),
-                    (x0 + w * 0.55, y0 + h * 0.3), (x0 + w * 0.5, y0 + h), (x0 - w * 0.5, y0 + h)], True, 0.7)
-        pen.shape(b, c, 4); pen.fill(_crescent_x(b, 30), '#7894aa', 140)
-        for k in range(3):
-            pen.line(smooth([(x0 - w * 0.35 + k * w * 0.3, y0), (x0 - w * 0.3 + k * w * 0.3, y0 + h * 0.6)], False), 3, '#7894aa', 120)
-    return f
-
-
-def B_hospital(F, sh):
-    """The hospital room last week (hospital 'bed' | 'close'): Grandpa (bed='grandpa_bed' | 'walter') sitting up in bed
-    (with the dummy on his lap: lap=True | limp beside him: dummy='bed' | in the visitor chair: dummy='chair'), you at the
-    bedside (ppl), the live ECG (bpm, flat)."""
-    p = sh.p
-    view = p.get('view', 'bed')
-    sp = ST.hospital(view, bpm=p.get('bpm', 72.0), flat=p.get('flat'), light=p.get('light', 1.0))
-    hv = sp.info['view']
-    L = []
-    who = p.get('bed', 'grandpa_bed')
-    seat = hv.anchor(0.0, 3.35, 0.62)
-    hh = seat.height * HEIGHT_M[who] / 1.85
-    bd = sp.layer('hp_bed').depth_at(0.0) - 0.03            # in front of the bed (he sits up against the pillows)
-    bl = blanket_fn(seat.x + 0.02 * hh, seat.y - 0.02 * hh, 0.55 * hh, 0.42 * hh)
-    act = _A(lambda a, s: a.in_bed(), p.get('bed_act'))
-    if p.get('lap'):
-        lay, pa, da = lap_layer(F, sh, who, seat.x, seat.y, hh, _A(act, lambda a, s: a.vent_pose(side=1), lambda a, s: a.set(-9, None, 0.1, turn=0.12)),
-                                p.get('dact', lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.7)), side=1, depth=bd,
-                                light=HOSP, between=bl, dvoice=VOICE['winks'])
-        L.append(lay)
-    else:
-        lay, a = figure(F, sh, who, seat.x, seat.y, bd, hh, _A(lambda a, s: a.set(-9, None, 0.1, perch=1.0), act), light=HOSP,
-                        name='bed_' + who, voice=VOICE.get(who))
-        L.append(lay)
-        L.append(Layer(bd - 0.01, lambda pen, t: bl(pen), 'blanket', blur=None))
-        if p.get('dummy') == 'bed':
-            bq = hv.anchor(0.32, 3.0, 0.62)
-            L2, _ = people(F, sh, sp, [dict(who='winks', at=(bq.x, bq.y, bd - 0.02, bq.height),
-                                            act=_A(lambda a, s: a.sit_dummy(hands='limp', slump=1.0), p.get('dact')), light=HOSP)], HOSP)
-            L += L2
-    if p.get('dummy') == 'chair':
-        L2, _ = people(F, sh, sp, [dict(who='winks', at='chair', act=_A(lambda a, s: a.sit_dummy(), p.get('dact')), light=HOSP)], HOSP)
-        L += L2
-    L2, A = people(F, sh, sp, p.get('ppl', []), HOSP)
-    L += L2
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'hospital'), p.get('focus', bd), p.get('dof', sp.dof), fx=_fx(sp, p),
-                hud=p.get('hud'))
-
-
-def B_stage62(F, sh):
-    """The Palace, 1962 (stage_1962, sepia): young Walter on the stool with Mister Winks on his knee."""
-    p = sh.p
-    sp = ST.stage_1962(spot=p.get('spot', 1.0), curtain=p.get('curtain', 1.0))
-    a_ = sp.anchors['stool']
-    hh = a_.height * HEIGHT_M['walter74'] / 1.85
-    lay, wa, da = lap_layer(F, sh, 'walter74', a_.x, a_.y, hh, _A(lambda a, s: a.vent_pose(side=1), lambda a, s: a.set(-9, None, 0.1, turn=0.45),
-                                                                 p.get('w_act')),
-                            p.get('d_act'), side=1, depth=a_.depth, light=dict(rim='#fff2d0', rim_a=90, side=-1, key=0.2), name='walter62')
-    sh.p.setdefault('era', '1962')
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    return Spec(sp.add(lay), cam, 'lens', p.get('grade', 'memory'), a_.depth, p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_museum(F, sh):
-    """The museum vitrine (museum 'case' | 'wide'): Mister Winks behind the glass (the 'owen' stage: Owen inside him)."""
-    p = sh.p
-    sp = ST.museum(p.get('view', 'case'), spot=p.get('spot', 1.0))
-    gl = sp.layer('mu_glass')
-    a_ = sp.anchors['display']
-    gd = gl.depth_at(0.0)
-    L, A = people(F, sh, sp, [dict(who='winks', at=(a_.x, a_.y, max(gd + 0.02, a_.depth), a_.height),
-                                   act=_A(lambda a, s: a.sit_dummy(), p.get('act')), light=MUSEUM)], MUSEUM)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    sh.p.setdefault('era', 'later')
-    return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'museum'), p.get('focus', sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_street(F, sh):
-    """8 AM (street_morning 'window' | 'outside'): the new Owen waving as the museum van pulls away."""
-    p = sh.p
-    view = p.get('view', 'window')
-    sp = ST.street_morning(view, van=p.get('van'))
-    ppl = [dict(q) for q in p.get('ppl', [])]
-    L, A = people(F, sh, sp, ppl, lambda t: MORNING)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    sh.p.setdefault('era', 'later')
-    return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'morning'), p.get('focus', sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_bedroom(F, sh):
-    """Your bedroom months later (bedroom_doorway): the new Owen stops in the backlit doorway."""
-    p = sh.p
-    sp = ST.bedroom_doorway(hall=p.get('hall', 1.0), door=p.get('door', 0.85))
-    L, A = people(F, sh, sp, p.get('ppl', []), lambda t: BACKLIT)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    sh.p.setdefault('era', 'later')
-    return Spec(sp.add(*L), cam, 'lens', p.get('grade', 'gp_dark'), p.get('focus', sp.focus), p.get('dof', sp.dof), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-# ==================================================================================================== close-ups
-def _bg(F, sh, name, p):
-    """Background set for close-ups (drawn at its own depths, blurred by DOF and darkened): -> (setpiece, light, grade)."""
-    if name == 'hall':
-        sp = ST.gp_hall('kitchen', light=p.get('light', 1.0), kitchen=p.get('kitchen', 1.0), case=p.get('case', 'closed'), clock=clock_minutes)
-        lt, gr = house_light(sp.info['hall_light']), 'face_close'
-    elif name == 'hall_dark':
-        sp = ST.gp_hall('kitchen', light=0.0, kitchen=p.get('kitchen', 0.0), living=0.0, case=p.get('case', 'open'), clock=clock_minutes,
-                        beam=p.get('beam'))
-        lt, gr = (lambda t: NIGHT), 'gp_dark'
-    elif name == 'hdoor':
-        sp = ST.gp_hall('door', light=p.get('light', 1.0), tod=p.get('tod', 'night'), door=p.get('door', 0.0))
-        mo = p.get('tod') == 'morning'                         # the far plane behind the living-room arch (as B_hdoor)
-        sp = sp.add(Layer(60.0, lambda pen, t, mo=mo: pen.linear(rect(-3000, -2000, 7920, 5080), 0, -2000, 0, 3080,
-                                                                   ['#b8b0a0', '#8a8070'] if mo else ['#1c1a24', '#2a2026']),
-                          'hd_backing', cache='film:hd_backing:%d' % mo, bounds=(-3000, -2000, 4920, 3080)))
-        lt, gr = ((lambda t: MORNING), 'morning') if mo else (house_light(sp.info['hall_light']), 'face_close')
-    elif name == 'kitchen':
-        sp = _kitchen_set(dict(p, mug=p.get('mug', True)), 'chair')
-        lt, gr = house_light(sp.info['kitchen'], side=1), 'face_close'
-    elif name == 'kitchen_table':
-        sp = _kitchen_set(dict(p, mug=p.get('mug', True)), 'table')
-        lt, gr = house_light(sp.info['kitchen'], side=1), 'face_close'
-    elif name in ('kitchen_morning', 'memory_kitchen'):
-        sp = ST.gp_kitchen('table', tod='morning', steam=p.get('steam', 1.0))
-        lt, gr = ((lambda t: MEMORY), 'memory') if name == 'memory_kitchen' else ((lambda t: MORNING), 'morning')
-    elif name == 'living':
-        # the couch side of the room behind a close-up: the TV's light is on the face only (TVL), not baked into extra
-        # light layers of the blurred background (each light doubles the room's cached layers: cache thrash at 2560)
-        tv = p.get('tv')
-        sp = ST.gp_living('couch', lamp=p.get('lamp', 1.0))
-        lt, gr = ((lambda t: TVL) if tv is not None else tv_light(sp)), ('tv_glow' if tv is not None else 'face_close')
-    elif name == 'living_tv':
-        tv = p.get('tv')
-        content = None
-        if tv is not None:
-            fig, _, _ = tape_figures(F, sh)
-            content = ST.studio_content(figures=fig, laugh=laugh_fn(F))
-        sp = ST.gp_living('tv', lamp=p.get('lamp', 1.0), tv=tv, content=content)
-        lt, gr = tv_light(sp), ('tv_glow' if tv is not None else 'face_close')
-    elif name == 'stairs':
-        sp = ST.gp_hall('stairs', light=p.get('light', 0.0))
-        lt, gr = (lambda t: NIGHT), 'gp_dark'
-    elif name == 'den':
-        sp = ST.gp_den(lamp=p.get('lamp', 1.0), hall=0.5)
-        lt, gr = house_light(sp.info['lamp']), 'face_close'
-    elif name == 'hospital':
-        sp = ST.hospital(p.get('hview', 'bed'), bpm=p.get('bpm', 72.0), flat=p.get('flat'))
-        lt, gr = (lambda t: HOSP), 'hospital'
-    elif name == 'studio':
-        sp = ST.gp_studio('full', laugh=laugh_fn(F), bezel=p.get('bezel', 0.0), track=p.get('track', 0.35))
-        lt, gr = (lambda t: TAPE), 'vhs74'
-    elif name == 'memory_bed':
-        sp = ST.bedroom_doorway(hall=1.0, door=0.4)
-        lt, gr = (lambda t: MEMORY), 'memory'
-    elif name == 'bedroom':
-        sp = ST.bedroom_doorway(hall=1.0, door=0.85)
-        lt, gr = (lambda t: BACKLIT), 'gp_dark'
-    elif name == 'museum':
-        sp = ST.museum('case')
-        lt, gr = (lambda t: MUSEUM), 'museum'
-    elif name == 'stage62':
-        sp = ST.stage_1962()
-        lt, gr = (lambda t: dict(rim='#fff2d0', rim_a=90, side=-1, key=0.2)), 'memory'
-    elif name == 'street':
-        sp = ST.street_morning('window')
-        lt, gr = (lambda t: MORNING), 'morning'
-    else:
-        raise KeyError(name)
-    return dimmed(sp, p.get('bg_dim', 0.3)), lt, gr
-
-
-# bust framings per character: (cx, cy, scale, body turn, head turn relative to the body). Rotated so the same
-# (who, bg, framing) never repeats within 60 s (assign_bust_framings); Mister Winks keeps his glass eyes on the lens.
+# ==================================================================================================== builders: busts
+# framing presets (cx, cy, scale, body turn, head turn): rotated so the same face never sits twice in a row in the same spot
 BUST_FRAMES = {
-    'winks': [(960, 560, 1.0, 0.0, 0.0), (800, 590, 0.92, 0.3, -0.3), (1140, 570, 1.08, -0.3, 0.3), (960, 610, 0.84, 0.0, 0.0),
-              (760, 560, 1.12, 0.22, -0.22), (1180, 600, 0.9, -0.35, 0.35)],
-    'you': [(960, 580, 1.0, 0.0, 0.0), (1180, 610, 0.9, -0.55, 0.0), (720, 580, 1.08, 0.5, -0.2), (960, 640, 0.78, 0.0, 0.0),
-            (1240, 560, 1.15, -0.35, 0.1), (680, 620, 0.88, 0.5, -0.15)],
-    'mom': [(960, 590, 1.0, 0.0, 0.0), (720, 600, 0.92, 0.55, 0.0), (1200, 590, 1.06, -0.45, 0.1), (960, 650, 0.8, 0.0, 0.0),
-            (680, 570, 1.12, 0.35, -0.1), (1240, 620, 0.88, -0.5, 0.15)],
-    'owen': [(960, 620, 1.0, 0.0, 0.0), (1180, 640, 0.92, -0.4, 0.1), (740, 630, 1.06, 0.4, -0.1), (960, 660, 0.86, 0.0, 0.0)],
-    'owen_new': [(960, 620, 1.0, 0.0, 0.0), (1160, 640, 0.92, -0.3, 0.3), (760, 630, 1.06, 0.3, -0.3)],
-    'grandpa': [(960, 580, 1.0, 0.0, 0.0), (1180, 600, 0.92, -0.45, 0.1), (720, 590, 1.06, 0.45, -0.1)],
-    'grandpa_bed': [(960, 580, 1.0, 0.0, 0.0), (1160, 600, 0.94, -0.35, 0.1), (760, 590, 1.04, 0.35, -0.1)],
-    'walter': [(960, 580, 1.0, 0.0, 0.0), (1160, 600, 0.94, -0.35, 0.1), (760, 590, 1.04, 0.35, -0.1)],
-    'walter74': [(960, 580, 1.0, 0.0, 0.0), (1160, 600, 0.94, -0.3, 0.2), (760, 590, 1.04, 0.3, -0.2)],
+    'default': [(960, 600, 0.82, 0.0, 0.0), (1120, 620, 0.78, -0.35, 0.05), (800, 620, 0.78, 0.35, -0.05), (960, 640, 0.95, 0.0, 0.0)],
 }
 
 
-def assign_bust_framings(F):
-    last, ctr = {}, {}
-    for sh in F.shots:
-        if sh.kind != 'bust' or 'cx' in sh.p: continue
-        who = sh.p.get('who', 'you'); bg = sh.p.get('bg', 'hall')
-        opts = BUST_FRAMES.get(who, BUST_FRAMES['you'])
-        k0 = ctr.get(who, 0); k = k0 % len(opts)
-        for j in range(len(opts)):
-            k = (k0 + j) % len(opts)
-            if sh.t0 - last.get((who, bg, k), -1e9) >= 60.0: break
-        ctr[who] = k + 1; last[(who, bg, k)] = sh.t0
-        sh.p['_frame'] = opts[k]
+def bust_eyes(who, cx, cy, scale):
+    """Design point between the eyes of a bust drawn at (cx, cy, scale) facing front (for hands over the eyes)."""
+    sp = CH.CAST[who]
+    k = 600.0 * scale / sp['hh']
+    return cx, cy + sp['eye_y'] * k
 
 
-def _head_guard(cd, top, d):
-    """Keep the crown (design y `top` at depth 1) >= 24 px inside the frame over the whole camera move."""
-    z0 = cd.get('z', 1.0)
-    mv = cd.get('mv', 'push')
-    r = cd.get('rate', 0.03)
-    z1 = cd.get('z1') or (z0 * (1 + r * (2.6 if mv == 'fast' else 1.0)) ** d if mv in ('push', 'fast', 'hand', 'creep') else z0)
-    k = cd['snap'][1] if cd.get('snap') and len(cd['snap']) > 1 else (1.25 if cd.get('snap') else 1.0)
-    zmax = max(z0, z1) * k
-    lim = top + 516.0 / zmax
-    if cd.get('y', 540) > lim: cd['y'] = lim
-    if cd.get('y1') is not None and cd['y1'] > lim: cd['y1'] = lim
-    return cd
+def bust_place(who, cx, cy, scale):
+    """The full-figure placement (x, y_feet, height) that draws the head where draw_bust(cx, cy, scale) does, so look_at /
+    reach_to / hand_over work in close-ups too."""
+    hh = CH.CAST[who]['hh']
+    s = 600.0 * scale / hh
+    return cx, cy + (1000.0 - hh / 2.0) * s, 1000.0 * s
 
 
-def _tuck_layers():
-    """The bedtime memory close-up (bg 'memory_bed'): the warm bedside lamp behind Grandpa's shoulder, and in the near
-    foreground the edge of your pillow and the turned-down blanket (soft, low in the frame, under his chest)."""
-    def lamp(pen, t):
-        fl = 1.0 + 0.03 * noise1(t * 1.3, 7)
-        pen.glow(1560, 330, 520, '#ffd9a0', 120 * fl); pen.glow(1560, 330, 170, '#fff2d8', 150 * fl)
-        shade = poly([(1490, 250), (1630, 250), (1670, 360), (1450, 360)])
-        pen.fill(shade, '#f0d6a8', 200); pen.line(shade, 3.0, '#5a4630', 160)
-        pen.fill(rect(1552, 360, 16, 120), '#5a4630', 200)
+def bust_layer(F, sh, who, cx, cy, scale, act=None, expr=None, light=None, depth=1.0, voice=None, name=None, seed=0, talk=True, blink=None):
+    bx, by, bh = bust_place(who, cx, cy, scale)
+    pre = lambda a_, s_: a_.place(bx, by, bh)
+    a = acting(F, sh, who, (lambda a_, s_: (pre(a_, s_), act and act(a_, s_))), seed=seed, expr=expr, voice=voice, talk=talk, blink=blink)
+    m = _Memo(a)
+    lt = light
 
-    def bed(pen, t):
-        pen.fill(smooth([(-200, 1300), (-200, 1050), (300, 1030), (760, 1048), (1120, 1036), (1500, 1052), (2150, 1040), (2150, 1300)], True, 0.5),
-                 '#cfc2ae')                                                                     # the turned-down sheet
-        pen.fill(smooth([(-200, 1300), (-200, 1078), (400, 1066), (900, 1082), (1400, 1068), (2150, 1080), (2150, 1300)], True, 0.5),
-                 '#8a6a54')                                                                     # the quilt
-        pen.fill(smooth([(-260, 1300), (-260, 960), (40, 925), (300, 950), (380, 1040), (300, 1300)], True, 0.6), '#e8dcc8')   # the pillow
-        pen.line(smooth([(-260, 960), (40, 925), (300, 950), (380, 1040), (300, 1300)], False, 0.6), 4.0, '#6a5a48', 170)
-    return [Layer(2.6, lamp, 'tuck_lamp', blur=None), Layer(0.62, bed, 'tuck_bed', cache='film:tuck:bed', bounds=(-330, 820, 2250, 1310))]
+    def draw(pen, t):
+        CH.draw_bust(pen, who, cx, cy, scale, m(t), light=lt(t) if callable(lt) else lt, t=t)
+    lay = Layer(depth, draw, name or 'bust_' + who, blur=0)
+    lay._m = m
+    return lay, a
+
+
+def _sleeve_poly(x0, y0, x1, y1, w0, w1):
+    dx, dy = x1 - x0, y1 - y0
+    n = math.hypot(dx, dy) or 1.0
+    nx, ny = -dy / n, dx / n
+    return poly([(x0 + nx * w0, y0 + ny * w0), (x1 + nx * w1, y1 + ny * w1), (x1 - nx * w1, y1 - ny * w1), (x0 - nx * w0, y0 - ny * w0)])
+
+
+SLEEVE = {'mom': ('#d7a3a8', '#b07e86'), 'mom_scratched': ('#d7a3a8', '#b07e86'), 'narrator': ('#8fae8a', '#6c8a68'),
+          'bunny87': ('#a7abb5', '#7a7f8b'), 'bunny': ('#5d5f66', '#3f4148'), 'grandma': ('#b9a6d6', '#8f7cb0'),
+          'june': ('#a8e0c8', '#7cb8a0'), 'narrator_new': ('#8fae8a', '#6c8a68')}
+
+
+def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None, scratch=False, name='hand', paw=False):
+    """A hand in a close-up: fn(t) -> (x, y, angle, alpha) | None (design px, angle 0 = fingers down); the sleeve runs
+    from the wrist to sleeve_from (x, y) (off frame). Paws for the Bunnyman ('paw_flat' etc.)."""
+    sc = SLEEVE.get(who, ('#8a8a8a', '#666666'))
+
+    def draw(pen, t):
+        r = fn(t)
+        if r is None: return
+        x, y, ang, al = r[:4]
+        sz = r[4] if len(r) > 4 else size
+        if al <= 0.01: return
+        cv = pen.cv
+        if al < 0.999: cv.saveLayerAlpha(None, int(255 * al))
+        if sleeve_from is not None:
+            a_ = math.radians(ang)
+            wx, wy = x - math.sin(-a_) * sz * 0.05, y - math.cos(a_) * sz * 0.05
+            sx, sy = sleeve_from(t) if callable(sleeve_from) else sleeve_from
+            sl = _sleeve_poly(wx, wy, sx, sy, sz * 0.2, sz * 0.32)
+            pen.fill(sl, sc[0]); pen.line(sl, max(2.0, sz * 0.012), '#1a1418', 220)
+            pen.fill(_sleeve_poly(wx, wy, sx, sy, sz * 0.08, sz * 0.1), sc[1], 90)
+            if scratch:
+                for j in range(5):
+                    u0 = 0.15 + 0.15 * j
+                    px0, py0 = lerp(wx, sx, u0), lerp(wy, sy, u0)
+                    pen.seg((px0 - sz * 0.06, py0 - sz * 0.03), (px0 + sz * 0.07, py0 + sz * 0.04), max(1.5, sz * 0.008), '#a3262a', 200)
+        CH.draw_hand(pen, who if who in CH.CAST else 'mom', x, y, sz, shape, ang, side)
+        if al < 0.999: cv.restore()
+    return Layer(depth, draw, name, blur=0)
 
 
 def B_bust(F, sh):
-    """Face close-up over a blurred, darkened set; framings rotate; the crown never leaves the frame unless p['ecu'].
-    p['ghost'] = [people() entries] puts figures in the blurred set behind (the dummy on the bookcase behind Mom)."""
+    """A face close-up over a blurred, darkened set: p who, bg=(room, view[, cam]) + set=dict(..), cx, cy, scale, turn,
+    h_turn (or a framing preset), act, expr, light; busts=[dict(who, cx, cy, scale, act, expr, light, depth)] more faces;
+    hands=[dict(who, fn, size, shape, side, sleeve_from, depth)]; plain=(c1, c2) a plain gradient background instead."""
     p = sh.p
-    bgn = p.get('bg', 'hall')
-    sp, light, gr = _bg(F, sh, bgn, p)
-    if bgn == 'memory_bed':                 # tucked in: Grandpa leans over your bed; the pillow and blanket edge in the near
-        sp = sp.without('bd_foot').add(*_tuck_layers())     # foreground under his cardigan, the bedside lamp glowing behind
-    elif bgn == 'bedroom':                  # the bed's foot would cut a close-up off at the neck; close on him, the lit
-        def doorway(pen, t):                # doorway fills the frame behind him (the warm hall light, the frame's edges)
-            pen.fill(rect(-400, -300, 2720, 1680), '#0a0c18')
-            pen.linear(rect(640, -200, 640, 1480), 640, 0, 1280, 0, [(0, '#c89a60'), (0.5, '#f4d8a8'), (1, '#c08f58')])
-            pen.radial(None, 960, 380, 520, [(0, '#fff2d8', 200), (1, '#fff2d8', 0)], clip=False)
-            for x0 in (600, 1280):
-                pen.fill(rect(x0, -200, 40, 1480), '#d8d0c0'); pen.line(rect(x0, -200, 40, 1480), 3.0, '#3a3430', 200)
-            pen.fill(rect(1320, -200, 300, 1480), '#121424', 230)                                  # the door leaf, dark
-        sp = sp.without('bd_foot').add(Layer(2.4, doorway, 'bust_doorway', cache='film:bust:doorway', bounds=(-400, -300, 2320, 1380)))
-    who = p.get('who', 'you')
-    fr = p.get('_frame')
-    cx = p.get('cx', fr[0] if fr else 960)
-    cy = p.get('cy', fr[1] if fr else 560)
-    sc = p.get('scale', fr[2] if fr else 1.0)
-    if bgn == 'memory_bed' and 'cx' not in p:            # leaning over the bed: frame the cardigan's shoulders and collar too
-        cy, sc = cy - 100, sc * 0.86
-    view = None
-    if fr and (fr[3] or fr[4]) and not p.get('no_view'):
-        view = lambda a, s, v=(fr[3], fr[4]): a.set(s.t0 - 3, None, 0.1, turn=v[0], h_turn=v[1])
-    base = None
-    if who == 'winks':
-        base = lambda a, s: a.sit_dummy(hands=p.get('hands', 'knees'))
-    voice = TAPE_VOICE if p.get('tape') else None
-    arc = CH.WINKS_TAPE_ARC if p.get('tape') else None
-    lay, a = bust(F, sh, who, cx, cy, sc, _A(base, view, p.get('act')), expr=p.get('expr'), light=p.get('light', light), voice=voice, arc=arc,
-                  worked=bool(p.get('tape') or p.get('worked')))
+    who = p['who']
+    if p.get('bg'):
+        bg = p['bg']
+        sp = make_set(bg[0], bg[1], bg[2] if len(bg) > 2 else None, **p.get('set', {}))
+        dimmed(sp, p.get('bg_dim', 0.28))
+        # a close-up's background is behind the face: near set pieces (a crowd cut-out, a door frame at arm's length)
+        # would be drawn over the face, so they are left out
+        layers = [l for l in sp if l.depth_at(0.0) >= p.get('bg_near', 1.3)]
+        lens = None; grade = p.get('grade', sp.grade); sfx_fn = sp
+    else:
+        c1, c2 = p.get('plain', ('#1c2030', '#0c0e16'))
+        layers = [Layer(4.0, lambda pen, t, c1=c1, c2=c2: pen.linear(rect(-1200, -900, 4320, 2880), 0, -400, 0, 1480, [c1, c2]), 'plain_bg',
+                        cache='film:plain:%s:%s' % (c1, c2), bounds=(-1200, -900, 3120, 1980))]
+        sp = None; lens = None; grade = p.get('grade', 'face_close'); sfx_fn = None
+    fr = BUST_FRAMES['default'][sh.idx % 4]
+    cx, cy, sc = p.get('cx', fr[0]), p.get('cy', fr[1]), p.get('scale', fr[2])
+    tr, ht = p.get('turn', 0.0), p.get('h_turn', 0.0)
+    base = lambda a, s: a.set(s.t0 - 3, None, 0.1, turn=tr, h_turn=ht)
+    act = p.get('act')
+    lay, a = bust_layer(F, sh, who, cx, cy, sc, lambda a_, s: (base(a_, s), act and act(a_, s)), expr=p.get('expr'),
+                        light=p.get('light', ROOM_RIM.get((p.get('bg') or ['x'])[0], LAMP)), seed=p.get('seed', 0), blink=p.get('blink'))
+    sh.A = {who: a}
     extra = []
-    if p.get('ghost'):
-        L2, _ = people(F, sh, sp, p['ghost'], light)
-        extra += L2
-    if p.get('glass'):                                         # behind glass: a cold sheen, two diagonal glare streaks
-        def glass(pen, t):
-            sx = 160.0 * math.sin(t * 0.35)
-            for (x0, wd, a_) in ((260, 140, 34), (520, 46, 26), (1380, 90, 20)):
-                pen.fill(poly([(x0 + sx, -100), (x0 + wd + sx, -100), (x0 + wd - 520 + sx, 1180), (x0 - 520 + sx, 1180)]), '#e8f2ff', a_)
-            pen.linear(rect(-200, -200, 2320, 1480), 0, -200, 0, 1280, [(0, '#cfe0ff', 26), (0.5, '#cfe0ff', 0), (1, '#cfe0ff', 14)])
-        extra.append(Layer(0.6, glass, 'glass_sheen', blur=None))
-    if p.get('hold'):                                          # a hand holding him (your arms): (who, x, y, size, shape, ang, side)
-        hw = p['hold']
-
-        def holdhand(pen, t, hw=hw):
-            _sleeve(pen, hw[0], hw[1], hw[2], hw[5], hw[3], length=900)
-            CH.draw_hand(pen, hw[0], hw[1], hw[2], hw[3], hw[4], hw[5], hw[6])
-        extra.append(Layer(0.9, holdhand, 'hold_hand', blur=0))
-    if p.get('torch_glow'):                                   # the flashlight under his chin, in frame below the face
-        tg = p['torch_glow']
-
-        def glow(pen, t, tg=tg):
-            k = clamp((t - tg) / 0.06) if isinstance(tg, (int, float)) else 1.0
-            if k <= 0: return
-            x, y = cx + 30 * sc, cy + 420 * sc
-            pen.glow(x, y, 220 * sc, '#fff1c8', 170 * k); pen.glow(x, y, 60 * sc, '#ffffff', 230 * k)
-        extra.append(Layer(0.95, glow, 'torch_glow', blur=0))
-    cd = dict(p.get('cam', dict(mv='push', x=960, y=cy - 20)))
-    if fr and 'x' in cd and cd['x'] == 960: cd['x'] = 960 + (cx - 960) * 0.3
-    if not p.get('ecu') and cd.get('mv') != 'keys': cd = _head_guard(cd, cy - 330 * sc, sh.d)
-    cam = cam_from(F, sh, cd)
-    grade = p.get('grade', gr)
-    if bgn == 'studio': sh.p.setdefault('era', 'tape')
+    for k, b in enumerate(p.get('busts', [])):
+        tr2, ht2 = b.get('turn', 0.0), b.get('h_turn', 0.0)
+        act2 = b.get('act')
+        l2, a2 = bust_layer(F, sh, b['who'], b['cx'], b['cy'], b['scale'],
+                            (lambda tr2, ht2, act2: lambda a_, s: (a_.set(s.t0 - 3, None, 0.1, turn=tr2, h_turn=ht2), act2 and act2(a_, s)))(tr2, ht2, act2),
+                            expr=b.get('expr'), light=b.get('light', p.get('light', LAMP)), depth=b.get('depth', 1.02 + 0.02 * k),
+                            name='bust%d_%s' % (k, b['who']), seed=k + 5)
+        extra.append(l2); sh.A[b.get('id', b['who'])] = a2
+    for hd in p.get('hands', []):
+        extra.append(hand_layer(hd['who'], hd['fn'], hd['size'], hd.get('shape', 'open'), hd.get('side', 1), hd.get('depth', 0.9),
+                                hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand')))
+    if p.get('acts'):
+        extra += [l for l in (p['acts'](sh.A, sh, None) or []) if l is not None]
+    c = dict(p.get('c') or dict(mv='push', x=960 + (cx - 960) * 0.25, y=cy - 40, rate=0.0))
+    c.setdefault('free', True)
+    if c.get('mv', 'push') == 'push' and 'z1' not in c:
+        c['z1'] = (1.0 + c.get('zrate', 0.022)) ** max(0.3, sh.d)
+    cam = scam(sh, None, c)
 
     def fx(t):
-        d = dict(sp.fx(t) or {}, **p.get('post', {}))
-        if p.get('track_fn') and isinstance(d.get('vhs'), dict): d['vhs'] = dict(d['vhs'], track=p['track_fn'](t))
+        d = dict((sfx_fn.fx(t) if sfx_fn is not None else None) or {}, **p.get('post', {}))
         if p.get('post_fn'): d.update(p['post_fn'](t))
         return d
-    return Spec(sp.add(lay, *extra), cam, None, grade, 1.0, p.get('dof', 6.75), fx=fx, hud=p.get('hud'))
+    return Spec(layers + [lay] + extra, cam, lens, grade, 1.0, p.get('dof', 6.75), fx=fx, hud=p.get('hud'))
 
 
-def B_lap(F, sh):
-    """A person with Mister Winks on the knee, large (draw_lap), over a blurred set: who 'owen' (the den), 'grandpa_bed'
-    (hospital, the blanket between), 'walter74' (the tape / 1962). x, y (seat), h (person height px)."""
-    p = sh.p
-    bgn = p.get('bg', 'den')
-    sp, light, gr = _bg(F, sh, bgn, p)
-    who = p.get('who', 'owen')
-    x, y, h = p.get('x', 900), p.get('y', 900), p.get('h', 1500)
-    between = blanket_fn(x + 0.03 * h, y - 0.02 * h, 0.55 * h, 0.42 * h) if who in ('grandpa_bed', 'walter') else None
-    act = p.get('act')
-    if not p.get('no_vent'):
-        sd_ = p.get('side', 1)
-        act = _A(lambda a, s: a.vent_pose(side=sd_), act)
-    lay, pa, da = lap_layer(F, sh, who, x, y, h, act, p.get('dact'), side=p.get('side', 1), depth=1.0, light=p.get('light', light), arm_out=p.get('arm_out'),
-                            between=between, dvoice=TAPE_VOICE if p.get('tape') else VOICE['winks'], d_arc=CH.WINKS_TAPE_ARC if p.get('tape') else None,
-                            jerk=p.get('jerk'))
-    if bgn in ('studio',): sh.p.setdefault('era', 'tape')
-    if bgn in ('stage62',): sh.p.setdefault('era', '1962')
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    return Spec(sp.add(lay), cam, None, p.get('grade', gr), 1.0, p.get('dof', 6.75), fx=_fx(sp, p), hud=p.get('hud'))
+# ==================================================================================================== builders: inserts
+def _fur_bg(pen, c1='#a7abb5', c2='#7a7f8b', c3='#ced2da', seed=3):
+    pen.fill(rect(-400, -300, 2720, 1680), c1)
+    pen.texture(rect(-400, -300, 2720, 1680), 'fabric', 0.55, 'overlay', 3.0)
+    rng = np.random.default_rng(seed)
+    for k in range(900):
+        x, y = rng.uniform(-300, 2220), rng.uniform(-200, 1280)
+        a = rng.uniform(-0.6, 0.6) + math.pi / 2
+        L_ = rng.uniform(14, 40)
+        pen.seg((x, y), (x + math.cos(a) * L_, y + math.sin(a) * L_), rng.uniform(2, 4), c2 if k % 3 else c3, 90)
 
 
-def B_carry(F, sh):
-    """You holding Mister Winks in your arms, large (draw_carry), over the blurred den: 'In my arms, he opens his eyes'."""
-    p = sh.p
-    sp, light, gr = _bg(F, sh, p.get('bg', 'den'), p)
-    x, y, h = p.get('x', 900), p.get('y', 2300), p.get('h', 2400)
-    ya = acting(F, sh, 'you', _A(lambda a, s: a.hold_dummy(), p.get('act')))
-    da = acting(F, sh, 'winks', _A(lambda a, s: a.carried(), p.get('dact')))
-    my, md = _Memo(ya), _Memo(da)
-    lt = p.get('light', light)
+def ins_badge(pen, t, **kw):
+    """Dale's Pemberton's name badge pinned on the mascot's grey fur (1987)."""
+    _fur_bg(pen)
+    cv = pen.cv
+    cv.save(); cv.translate(960, 560); cv.rotate(-4.0)
+    b = rrect(-430, -190, 860, 380, 28)
+    pen.fill(moved(b, 14, 22), '#000000', 110, blur=16)
+    pen.fill(b, '#fbfaf4'); pen.line(b, 5, '#3a3036')
+    top = rrect(-430, -190, 860, 120, 28)
+    pen.fill(inter(top, b), '#c8323a')
+    ST.btext(pen, "Pemberton's", 0, -105, 'script', 92, '#fbfaf4', 255, 'center')
+    ST.btext(pen, 'DALE', 0, 60, 'head', 150, '#1c1a20', 250, 'center', spacing=0.06)
+    ST.btext(pen, 'STOCK ROOM  ·  SINCE 1985', 0, 140, 'sans_b', 40, '#5a525a', 230, 'center', spacing=0.08)
+    pen.linear(b, -430, -190, 430, 190, [(0, '#ffffff', 0), (0.42, '#ffffff', 0), (0.5, '#ffffff', 70), (0.58, '#ffffff', 0), (1, '#ffffff', 0)])
+    pen.fill(oval(-380, -150, 12), '#c9b06a'); pen.fill(oval(380, -150, 12), '#c9b06a')
+    cv.restore()
 
+
+def ins_poster(pen, t, **kw):
+    """MISSING: Dale Whitlock, 19, on a telephone pole (rain-faded, staples)."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#3a2c22')
+    pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.9, 'overlay', 1.5, 90)
+    for k in range(9):
+        x = 200 + k * 190
+        pen.seg((x, -300), (x + 20, 1380), 6, '#2a1e16', 120)
+    cv = pen.cv
+    cv.save(); cv.translate(960, 540); cv.rotate(2.0)
+    paper = rect(-420, -470, 840, 940)
+    pen.fill(moved(paper, 12, 18), '#000000', 120, blur=14)
+    pen.fill(paper, '#e8e0c8'); pen.texture(paper, 'paper', 0.6, 'overlay', 1.0)
+    ST.btext(pen, 'MISSING', 0, -330, 'head', 150, '#1a1414', 245, 'center', spacing=0.05)
+    ph = rect(-200, -270, 400, 380)
+    pen.fill(ph, '#8a8278'); pen.texture(ph, 'paper', 0.4, 'overlay', 1.0)
+    pen.fill(oval(0, -120, 90, 110), '#5a524a'); pen.fill(rrect(-150, -20, 300, 130, 60), '#4a423a')
+    ST.btext(pen, 'DALE WHITLOCK, 19', 0, 190, 'head', 74, '#1a1414', 240, 'center')
+    for k, s_ in enumerate(['LAST SEEN EASTER SUNDAY, APRIL 19, 1987', "PEMBERTON'S EASTER PARADE, MAIN STREET", 'WEARING A GREY RABBIT COSTUME',
+                            'CALL HOLLOWAY POLICE  555-0143']):
+        ST.btext(pen, s_, 0, 260 + k * 46, 'sans_b', 31, '#2a2420', 230, 'center')
+    for y0 in (-450, 440):
+        for x0 in (-390, 390):
+            pen.seg((x0 - 14, y0), (x0 + 14, y0 + 3), 4, '#8a8a90', 230)
+    pen.linear(paper, 0, -470, 0, 470, [(0, '#3a2a1a', 0), (0.7, '#3a2a1a', 30), (1, '#3a2a1a', 90)])
+    cv.restore()
+
+
+def _frame_photo(pen, x, y, w, h, wood='#6a4426', mat='#efe6d0'):
+    pen.fill(moved(rect(x - w / 2 - 40, y - h / 2 - 40, w + 80, h + 80), 12, 20), '#000000', 110, blur=18)
+    fr = rect(x - w / 2 - 40, y - h / 2 - 40, w + 80, h + 80)
+    pen.fill(fr, wood); pen.texture(fr, 'wood', 0.6, 'overlay', 1.2); pen.line(fr, 4, '#2a1a10')
+    pen.fill(rect(x - w / 2 - 10, y - h / 2 - 10, w + 20, h + 20), mat)
+
+
+def ins_wedding(pen, t, **kw):
+    """Mom and Dad's wedding photo on the mantel (framed): grew up, married my dad."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#c8a8b0'); pen.texture(rect(-400, -300, 2720, 1680), 'paper', 0.4, 'overlay', 1.0)
+    pen.fill(rect(-400, 880, 2720, 600), '#5a3a28'); pen.texture(rect(-400, 880, 2720, 600), 'wood', 0.7, 'overlay', 1.4)
+    pen.radial(None, 700, 200, 1500, [(0, '#ffd8a0', 70), (1, '#000000', 120)])
+    x, y, w, h = 960, 500, 640, 760
+    _frame_photo(pen, x, y, w, h)
+    cv = pen.cv
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x - w / 2, y - h / 2, w, h))
+    pen.linear(rect(x - w / 2, y - h / 2, w, h), 0, y - h / 2, 0, y + h / 2, ['#e8dcc4', '#bfae90'])
+    P1 = CH.Pose(); P1.smile = 0.7; P1.teeth = 0.3; P1.turn = 0.25
+    P2 = CH.Pose(); P2.smile = 0.6; P2.teeth = 0.2; P2.turn = -0.3; P2.h_tilt = 6.0
+    CH.draw_bust(pen, 'dad', x + 120, y - 10, 0.42, P2, light=MEMORY, t=0.0)
+    CH.draw_bust(pen, 'mom', x - 120, y + 40, 0.38, P1, light=MEMORY, t=0.0)
+    pen.fill(rect(x - w / 2, y - h / 2, w, h), '#d8b888', 60)
+    cv.restore()
+    pen.linear(rect(x - w / 2, y - h / 2, w, h), x - w / 2, y - h / 2, x + w / 2, y + h / 2,
+               [(0, '#ffffff', 0), (0.35, '#ffffff', 0), (0.42, '#ffffff', 45), (0.5, '#ffffff', 0), (1, '#ffffff', 0)])
+
+
+def ins_gran_photo(pen, t, **kw):
+    """Grandma's framed portrait on the hall console, a black ribbon across the corner (dead six years)."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#9aa8c8'); pen.texture(rect(-400, -300, 2720, 1680), 'paper', 0.4, 'overlay', 1.0)
+    pen.fill(rect(-400, 900, 2720, 600), '#4a3020'); pen.texture(rect(-400, 900, 2720, 600), 'wood', 0.7, 'overlay', 1.4)
+    pen.radial(None, 960, 300, 1300, [(0, '#ffd8a0', 60), (1, '#000000', 150)])
+    x, y, w, h = 960, 520, 560, 680
+    _frame_photo(pen, x, y, w, h, wood='#3a2a1a')
+    cv = pen.cv
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x - w / 2, y - h / 2, w, h))
+    pen.linear(rect(x - w / 2, y - h / 2, w, h), 0, y - h / 2, 0, y + h / 2, ['#c8b8d8', '#8a7a9a'])
+    P1 = CH.Pose(); P1.smile = 0.55; P1.squint = 0.15
+    CH.draw_bust(pen, 'grandma', x, y + 60, 0.5, P1, light=MEMORY, t=0.0)
+    cv.restore()
+    rib = poly([(x + w / 2 - 170, y - h / 2 - 40), (x + w / 2 - 70, y - h / 2 - 40), (x + w / 2 + 40, y - h / 2 + 70), (x + w / 2 + 40, y - h / 2 + 170)])
+    pen.fill(rib, '#0c0a0c'); pen.line(rib, 2, '#2a2a2a')
+
+
+def ins_wristband(pen, t, **kw):
+    """The hospital wristband on the narrator's new (Mom's) wrist: PRICE, LAURIE."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#c8d4d0'); pen.texture(rect(-400, -300, 2720, 1680), 'fabric', 0.5, 'overlay', 2.0)
+    arm = poly([(-300, 700), (2300, 420), (2300, 900), (-300, 1180)])
+    pen.fill(arm, '#e8c0a8'); pen.linear(arm, 0, 420, 0, 1180, [(0, '#ffffff', 40), (0.5, '#000000', 0), (1, '#000000', 70)]); pen.line(arm, 4, '#7a5040')
+    band = poly([(380, 560), (1540, 440), (1560, 720), (400, 840)])
+    pen.fill(moved(band, 10, 18), '#000000', 90, blur=12)
+    pen.fill(band, '#fbfbf8'); pen.line(band, 4, '#8a8a90')
+    cv = pen.cv
+    cv.save(); cv.translate(960, 640); cv.rotate(-6.0)
+    ST.btext(pen, 'PRICE, LAURIE', -480, -10, 'mono', 76, '#141414', 245, 'left')
+    ST.btext(pen, 'F  43Y   RM 11   DR. HALVERSON', -480, 60, 'mono', 40, '#2a2a2a', 230, 'left')
+    for k in range(28):
+        bw = 4 + 6 * hash01(k, 7)
+        pen.fill(rect(260 + k * 11, -70, bw, 120), '#141414', 230)
+    cv.restore()
+
+
+def ins_report(pen, t, **kw):
+    """A report card: straight A's (the narrator's old body, doing great)."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#5a4636'); pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.7, 'overlay', 1.2)
+    cv = pen.cv
+    cv.save(); cv.translate(960, 540); cv.rotate(-3.0)
+    paper = rect(-520, -470, 1040, 940)
+    pen.fill(moved(paper, 14, 20), '#000000', 110, blur=16)
+    pen.fill(paper, '#f6f2e6'); pen.texture(paper, 'paper', 0.5, 'overlay', 1.0)
+    ST.btext(pen, 'HOLLOWAY HIGH SCHOOL', 0, -380, 'serif_b', 54, '#1a2a4a', 240, 'center')
+    ST.btext(pen, 'REPORT CARD  ·  SPRING TERM', 0, -320, 'sans_b', 34, '#3a4a6a', 230, 'center', spacing=0.06)
+    subj = ['ENGLISH', 'ALGEBRA II', 'BIOLOGY', 'U.S. HISTORY', 'SPANISH', 'ART']
+    for k, s_ in enumerate(subj):
+        yy = -210 + k * 108
+        pen.seg((-440, yy + 30), (440, yy + 30), 2, '#8a96aa', 200)
+        ST.btext(pen, s_, -420, yy, 'sans_b', 40, '#1a1a24', 235, 'left')
+        u = clamp((t - 0.15 * k) / 0.25)
+        if u > 0:
+            ST.btext(pen, 'A', 330, yy + 6, 'head', 74, '#c8262e', 255 * u, 'center')
+            pen.line(oval(330, yy - 18, 52 * u + 4, 44 * u + 4), 5, '#c8262e', 220 * u)
+    ST.btext(pen, 'ABSENCES: 0     TARDIES: 0', -420, 450, 'sans_b', 34, '#2a2a34', 230, 'left')
+    cv.restore()
+
+
+def ins_knuckles(pen, t, hits=(), **kw):
+    """Grandma's knuckles knocking on the kitchen table (memory): the fist lifts and comes down on each hit time (s from
+    the start of the shot)."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#d8c8a0')
+    top = poly([(-400, 520), (2320, 480), (2320, 1380), (-400, 1380)])
+    pen.fill(top, '#a87a4a'); pen.texture(top, 'wood', 0.8, 'overlay', 1.4, 0)
+    pen.linear(rect(-400, -300, 2720, 900), 0, -300, 0, 600, [(0, '#fff2d8', 255), (1, '#e8d4b0', 255)])
+    pen.fill(rect(-400, 470, 2720, 40), '#6a4a2a', 200)
+    lift = 1.0
+    for th in hits:
+        dt = t - th
+        if -0.16 < dt < 0.0: lift = min(lift, -dt / 0.16)
+        elif 0.0 <= dt < 0.2: lift = min(lift, dt / 0.2)
+    y = 760 - 120 * ease_in_out(lift)
+    sc = SLEEVE['grandma']
+    sl = _sleeve_poly(1060, y - 40, 1900, y - 330, 120, 170)
+    pen.fill(sl, sc[0]); pen.line(sl, 5, '#2a2030', 230)
+    pen.fill(oval(960, 790, 230 - 40 * lift, 34), '#000000', 90 - 50 * lift, blur=16)
+    CH.draw_hand(pen, 'grandma', 1000, y - 40, 420, 'fist', 70.0, 1)
+
+
+def ins_desk(pen, t, **kw):
+    """A very ordinary cup of coffee steaming beside a notebook (the script) and a pen, under a desk lamp."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#6a4a32'); pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.8, 'overlay', 1.3, 0)
+    pen.radial(None, 1300, 200, 1400, [(0, '#ffe2b0', 120), (1, '#000000', 160)])
+    cv = pen.cv
+    cv.save(); cv.translate(700, 560); cv.rotate(-7.0)
+    nb = rect(-420, -330, 840, 660)
+    pen.fill(moved(nb, 12, 18), '#000000', 110, blur=14)
+    pen.fill(nb, '#f4efe0'); pen.texture(nb, 'paper', 0.5, 'overlay', 1.0)
+    for k in range(11): pen.seg((-400, -240 + k * 52), (400, -240 + k * 52), 2, '#9ab0d0', 200)
+    pen.seg((-330, -330), (-330, 330), 2, '#d88a8a', 200)
+    ST.btext(pen, 'Rules After Dark', -300, -262, 'hand', 52, '#1a2a5a', 240, 'left')
+    for k, s_ in enumerate(['the bunnyman - easter', 'seven rules on the fridge', 'mom hums. always.', "don't count to seven",
+                            'the trick = the swap ?', 'ending: the hospital']):
+        ST.btext(pen, s_, -300, -158 + k * 52, 'hand', 40, '#1a2a5a', 220, 'left')
+    pen.seg((-300, 70), (60, 70), 4, '#1a2a5a', 200)
+    cv.restore()
+    pen.seg((1120, 900), (1460, 690), 18, '#2a2a34'); pen.seg((1440, 702), (1470, 684), 18, '#c8a24a')
+    mx, my = 1380, 520
+    pen.fill(oval(mx + 20, my + 190, 210, 50), '#000000', 110, blur=16)
+    body = rrect(mx - 170, my - 120, 340, 300, 40)
+    pen.fill(body, '#e8e4dc'); pen.linear(body, mx - 170, 0, mx + 170, 0, [(0, '#ffffff', 90), (0.6, '#000000', 0), (1, '#000000', 80)]); pen.line(body, 5, '#3a3430')
+    pen.line(oval(mx + 200, my + 20, 70, 90), 26, '#e8e4dc'); pen.line(oval(mx + 200, my + 20, 70, 90), 4, '#3a3430')
+    pen.fill(oval(mx, my - 120, 170, 42), '#d8d2c8'); pen.fill(oval(mx, my - 116, 148, 32), '#3a2216')
+    pen.fill(oval(mx - 30, my - 122, 60, 10), '#8a5a3a', 140)
+    for k in range(3):
+        ph = t * 0.6 + k * 0.33
+        u = ph % 1.0
+        sx = mx - 50 + k * 50 + 30 * math.sin(ph * 6.0 + k)
+        sy = my - 150 - 260 * u
+        pen.fill(oval(sx, sy, 34 + 40 * u, 60 + 50 * u), '#ffffff', 60 * (1 - u) * min(1.0, u * 4), blur=18)
+
+
+def ins_hanger(pen, t, back=False, zip_t=None, **kw):
+    """The Bunnyman is just a costume: the clean suit hanging empty on a rail in a wardrobe room (back=True: from behind,
+    the zipper; zip_t = s when the pull slides down)."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#2a2630'); pen.texture(rect(-400, -300, 2720, 1680), 'plaster', 0.5, 'overlay', 1.0)
+    pen.radial(None, 960, 120, 1300, [(0, '#fff0d0', 120), (1, '#000000', 140)])
+    pen.fill(rect(-400, 100, 2720, 26), '#8a8a90'); pen.line(rect(-400, 100, 2720, 26), 3, '#2a2a30')
+    P_ = CH.Pose(); P_.turn = 2.0 if back else 0.05; P_.still = 1.0; P_.life = 0.0
+    for side in ('hl_', 'hr_'):
+        setattr(P_, side + 'down', 330.0); setattr(P_, side + 'out', -6.0); setattr(P_, side + 'fwd', 20.0)
+    P_.h_nod = 0.35; P_.h_tilt = 6.0 * math.sin(t * 0.8)
+    pen.seg((960, 100), (960, 190), 6, '#b8b8c0')
+    pen.line(poly([(860, 230), (960, 175), (1060, 230)], False), 7, '#b8b8c0')
+    sway = 4.0 * math.sin(t * 0.9)
+    cv = pen.cv
+    cv.save(); cv.rotate(0.3 * math.sin(t * 0.9)); cv.translate(sway, 0)
+    CH.draw(pen, 'bunny87', 960, 1240, 1180, P_, light=dict(rim='#fff0d0', rim_a=60, side=-1, key=0.0), t=t)
+    if back and zip_t is not None:
+        u = ease_in_out(clamp((t - zip_t) / 1.2))
+        x0, y0 = 960, 420
+        pen.seg((x0, y0), (x0, y0 + 520), 6, '#3a3a40', 200)
+        zy = y0 + 470 * u
+        pen.fill(poly([(x0 - 14, y0), (x0 + 14, y0), (x0 + 30 * u, zy), (x0 - 30 * u, zy)]), '#16121a', 220)
+        pen.fill(rrect(x0 - 11, zy, 22, 54, 6), '#c8c8d0'); pen.line(rrect(x0 - 11, zy, 22, 54, 6), 3, '#3a3a40')
+    cv.restore()
+
+
+def ins_lens_hand(pen, t, **kw):
+    pass
+
+
+INS_CUSTOM = {'badge': (ins_badge, 'ins_memory'), 'poster': (ins_poster, 'ins_memory'), 'wedding': (ins_wedding, 'ins_lamp'),
+              'gran_photo': (ins_gran_photo, 'ins_lamp'), 'wristband': (ins_wristband, 'ins_hosp'), 'report': (ins_report, 'ins_lamp'),
+              'knuckles': (ins_knuckles, 'ins_memory'), 'desk': (ins_desk, 'ins_lamp'), 'hanger': (ins_hanger, 'ins_lamp')}
+
+
+def strike_layer(t0, x0, y0, x1, y1, w=26.0, dur=0.45, c='#d8262e'):
+    """A red marker line struck through something (the outro: no Holloway, no Pemberton's)."""
     def draw(pen, t):
-        l_ = lt(t) if callable(lt) else lt
-        CH.draw_carry(pen, 'you', x, y, h, my(t), md(t), m=HEIGHT_M['you'], light=l_)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    return Spec(sp.add(Layer(1.0, draw, 'carry', blur=0)), cam, None, p.get('grade', gr), 1.0, p.get('dof', 6.75), fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_hug(F, sh):
-    """'He hugs me too': over your shoulder, the new Owen's face pressed beside your head, his arms round you, one hand
-    flat on your back and the other over your far shoulder; you (back of the head, 3/4) fill the near frame. bg blurred."""
-    p = sh.p
-    sp, light, gr = _bg(F, sh, p.get('bg', 'den'), p)
-    lt = p.get('light', light)
-    oa_ = p.get('o_act')
-    lay_o, oa = bust(F, sh, 'owen_new', p.get('ox', 1110), p.get('oy', 440), p.get('os', 0.86),
-                     _A(lambda a, s: a.set(-9, None, 0.1, smile=0.55, lock=1.0, still=1.0, h_tilt=9.0, turn=-0.12), oa_), light=lt, depth=1.08,
-                     name='hug_owen')
-    lay_y, ya = bust(F, sh, 'you', p.get('yx', 700), p.get('yy', 720), p.get('ys', 1.2),
-                     _A(lambda a, s: a.set(-9, None, 0.1, turn=1.7, h_turn=0.0), p.get('y_act')), light=lt, depth=0.96, name='hug_you')
-    hk = p.get('hold', sh.t0)
-
-    def hands(pen, t):
-        u = ease_out_cubic(clamp((t - hk) / 0.5))
+        u = ease_out_cubic(clamp((t - t0) / dur))
         if u <= 0: return
-        sq = 6.0 * math.sin(clamp((t - hk - 0.5) / 0.6) * math.pi) if t > hk + 0.5 else 0.0
-        bx, by = lerp(1240, 960, u), lerp(1180, 980, u) + sq
-        _sleeve(pen, 'owen_new', bx, by, 300.0 - 20 * u, 300, length=520)               # his arm round your back
-        CH.draw_hand(pen, 'owen_new', bx, by, 300, 'flat', 300.0 - 20 * u, 1)
-        sx, sy = lerp(470, 470, u), lerp(1000, 845, u)                                    # fingers over your far shoulder
-        CH.draw_hand(pen, 'owen_new', sx, sy, 260, 'relaxed', 8.0, -1)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540, rate=0.035))
-    return Spec(sp.add(lay_o, lay_y, Layer(0.9, hands, 'hug_hands', blur=0)), cam, None, p.get('grade', gr), 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_glove(F, sh):
-    """'His fingers curl.': a close insert of Mister Winks's white glove lying flat on the kitchen table under the pendant,
-    his burgundy cuff, the steaming mug soft behind; at p['curl'] the wooden fingers close in three jerky doll steps
-    (flat, half, fist) with a tiny tremor, each step a wooden tick."""
-    p = sh.p
-    sp, light, gr = _bg(F, sh, 'kitchen_table', dict(p, bg_dim=0.45))
-    tc = p.get('curl', sh.t0 + 0.4)
-    # three jerky curls, all inside the insert: seen from above the fingertips draw back under the knuckles, so each step
-    # foreshortens the glove toward the cuff (k = its length). (Review v3: the third step swapped to the front-view 'grip'
-    # roll shape, which squashed flat read as a different drawing and popped; it also fell after the cut.)
-    steps = [(tc, 'relaxed', 0.86), (tc + 0.28, 'relaxed', 0.71), (tc + 0.56, 'relaxed', 0.58)]
-
-    def table(pen, t):
-        pen.linear(rect(-400, 330, 2720, 1130), 0, 330, 0, 1460, [(0, '#6a4628'), (0.4, '#7a5230'), (1, '#3e2614')])
-        pen.texture(rect(-400, 330, 2720, 1130), 'wood', 0.25, 'overlay', 2.0, 0)
-        pen.line(poly([(-400, 330), (2320, 330)], False), 6.0, '#2a1a0e', 200)                         # the table's far edge
-        pen.radial(None, 1000, 760, 900, [(0, '#ffd9a0', 120), (1, '#ffd9a0', 0)], clip=False)          # the pendant's pool
-
-    def glove(pen, t):
-        shape, k = 'flat', 1.0
-        for (ts, sh_, kk) in steps:
-            if t >= ts:                                   # each step snaps in over 4 frames (a doll's jerk, not a pop)
-                shape = sh_; k = lerp(k, kk, ease_out_cubic(clamp((t - ts) / 0.07)))
-        tr = 0.0 if t < tc else 2.5 * math.sin(t * 61.0) * math.exp(-max(0.0, t - tc - 0.56) * 2.0)
-        # his arm comes across the table from his side (the cuff at the far edge), the glove lying palm down with the
-        # fingers toward us: as they curl the fingertips draw back under the knuckles
-        x, y, ang = 1000 + tr, 560, 4.0
-        pen.fill(oval(x + 40, y + 190 * (0.55 + 0.45 * k), 300, 120 * (0.6 + 0.4 * k)), '#000000', 90, blur=34)   # its shadow on the wood
-        cv = pen.cv
-        cv.save(); cv.translate(x, y); cv.scale(1.0, 0.6); cv.translate(-x, -y)                     # lying flat: seen from above
-        _sleeve(pen, 'winks', x, y - 6, ang, 470, length=1300)
-        cv.translate(x, y); cv.scale(1.0, k); cv.translate(-x, -y)                                   # the curl: foreshortened
-        CH.draw_hand(pen, 'winks', x, y, 470, shape, ang + (5.0 if shape != 'flat' else 0.0), 1)
-        cv.restore()
-    lay = [Layer(1.6, table, 'glove_table', cache='film:glove:table', bounds=(-400, 280, 2320, 1500)), Layer(1.0, glove, 'glove', blur=0)]
-    for (ts, _, _) in steps:
-        sh.sfx.append(_ev(ts, 'wood_creak', -4, 0.1, 'close', kind='tick'))
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=990, y=640, z=1.05, rate=0.045))
-    return Spec(sp.add(*lay), cam, None, p.get('grade', gr), 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
-
-
-def B_portrait(F, sh):
-    """Mister Winks full figure, large, over a dark red velvet backdrop (the case lining), lit like a museum piece; one
-    camera move travels over him (cam keys): the painted hair, the freckles, the jacket and brass buttons, the flashlight
-    clicking on in one white glove."""
-    p = sh.p
-    x, y, h = p.get('x', 960), p.get('y', 3000), p.get('h', 2600)
-    a = acting(F, sh, 'winks', _A(lambda a_, s: a_.set(-9, None, 0.1, h_tilt=-4.0), p.get('act')))
-    m = _Memo(a)
-
-    def back(pen, t):
-        pen.radial(None, 960, 900, 2600, [(0, '#5a141c'), (0.55, '#300a10'), (1, '#0c0204')], clip=False)
-        pen.texture(rect(-1500, -1500, 4920, 5080), 'fabric', 0.35, 'overlay', 2.0, 90)
-        for k in range(14):
-            yy = -900 + k * 380
-            pen.line(smooth([(-1500, yy), (0, yy + 60), (1500, yy - 30), (3400, yy + 40)], False), 30, '#000000', 40)
-
-    def draw(pen, t):
-        P = m(t)
-        CH.draw(pen, 'winks', x, y, h, P, light=dict(rim='#fff0d8', rim_a=110, side=-1, key=0.15), t=t)
-        if P.torch > 0.01:
-            lx, ly, ang = CH.torch_pos('winks', P, 1, x=x, y_feet=y, height=h)
-            CH.draw_torch_beam(pen, lx, ly, ang, 0.6 * h, a=P.torch, t=t)
-
-    def key(pen, t):
-        pen.radial(None, 1200, 300, 1600, [(0, '#fff0d8', 34), (1, '#fff0d8', 0)], clip=False)
-    L = [Layer(2.2, back, 'velvet', cache='film:portrait:velvet', bounds=(-1500, -1500, 3420, 3580)), Layer(1.0, draw, 'winks'),
-         Layer(0.9, key, 'key', blur=0)]
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
-    return Spec(L, cam, None, p.get('grade', 'face_close'), 1.0, p.get('dof', 2.0), fx=lambda t: dict(p.get('post', {})), hud=p.get('hud'))
-
-
-def _sleeve(pen, who, x, y, ang, size, length=1400.0):
-    """A sleeve running from a hand's wrist (x, y) back along the arm (ang = the hand's angle: 0 = fingers down, 90 = left,
-    180 = up) off frame: a tapered tube in the character's top colour with a cuff band and a shade side."""
-    cl = CH.CAST[who].get('cloth', {})
-    c, csh = cl.get('top', '#555555'), cl.get('top_sh', '#333333')
-    a = math.radians(ang)
-    dx, dy = -math.sin(a), math.cos(a)                 # the direction the fingers point
-    pts = [(x - dx * size * f, y - dy * size * f) for f in (0.02, 0.6, 1.6, length / max(1.0, size))]
-    tube = CH._tube(pts, [0.42 * size, 0.5 * size, 0.62 * size, 0.8 * size], 0.9)
-    pen.shape(tube, c, max(3.0, size * 0.016))
-    nx, ny = -dy, dx
-    sh_ = CH._tube([(px + nx * size * 0.16, py + ny * size * 0.16) for px, py in pts], [0.14 * size, 0.18 * size, 0.24 * size, 0.3 * size], 0.9)
-    pen.cv.save(); pen.cv.clipPath(tube, skia.ClipOp.kIntersect, True); pen.fill(sh_, csh, 150); pen.cv.restore()
-    cuff = CH._tube([(x - dx * size * 0.04, y - dy * size * 0.04), (x - dx * size * 0.24, y - dy * size * 0.24)], [0.46 * size, 0.5 * size], 0.9)
-    pen.shape(cuff, cl.get('top_hi', c), max(3.0, size * 0.014))
-
-
-def B_hands(F, sh):
-    """Hand close-ups over a blurred set: mode 'squeeze' (Grandpa's old hand closing over yours, three squeezes: squeeze=[t]),
-    'grab' (the real Walter's hand clamps your wrist), 'find' (Mom's hand finds yours on the couch), 'catch' (your hand
-    catches Mom's wrist on the dummy). Every squeeze / grab returns its sound."""
-    p = sh.p
-    mode = p.get('mode', 'squeeze')
-    bgn = p.get('bg', {'squeeze': 'memory_bed', 'grab': 'hospital', 'find': 'living', 'catch': 'den'}[mode])
-    sp, light, gr = _bg(F, sh, bgn, p)
-    t0 = sh.t0
-    tg = p.get('tg', t0 + 0.4)
-    sq = p.get('squeeze', [])
-
-    def pulse(t):
-        v = 0.0
-        for s_ in sq:
-            u = t - s_
-            if 0 <= u < 0.4: v = max(v, math.sin(math.pi * u / 0.4))
-        return v
-
-    def draw(pen, t):
-        shake = p.get('shake', 0.0)
-        jx = shake * (4 * math.sin(t * 43) + 2 * noise1(t * 9, 3)); jy = shake * (3 * math.sin(t * 37 + 1))
-        if mode == 'squeeze':                         # your small hand on the quilt; Grandpa's old hand closes over it
-            _sleeve(pen, 'you', 1180, 700, 90.0, 300)
-            CH.draw_hand(pen, 'you', 1180, 700, 300, 'relaxed', 90.0, -1)
-            u = ease_out_cubic(clamp((t - tg) / 0.8)); k = pulse(t)
-            gx, gy = lerp(1500, 1120, u), lerp(120, 520, u) + 10 * k
-            _sleeve(pen, 'grandpa', gx, gy, 35.0, 360)
-            CH.draw_hand(pen, 'grandpa', gx, gy, 360 * (1 - 0.03 * k), 'grip' if (u > 0.9 and k > 0.25) else 'relaxed', 35.0 + 4 * k, 1)
-        elif mode == 'grab':                          # your hand and wrist; the real Walter's hand shoots up and clamps the wrist
-            _sleeve(pen, 'you', 1150 + jx * 0.3, 620, 90.0, 300)
-            CH.draw_hand(pen, 'you', 1150 + jx * 0.3, 620, 300, 'open', 90.0, -1)
-            u = ease_out_cubic(clamp((t - tg) / 0.16))
-            gx, gy = lerp(700, 1110 + jx, u), lerp(1250, 760 + jy, u)
-            _sleeve(pen, 'grandpa_bed', gx, gy, 200.0, 340)
-            CH.draw_hand(pen, 'grandpa_bed', gx, gy, 340, 'grip' if u > 0.85 else 'open', 200.0, 1)
-        elif mode == 'find':                          # on the couch cushion: Mom's hand slides over yours and holds it
-            _sleeve(pen, 'you', 720, 660, 270.0, 300)
-            CH.draw_hand(pen, 'you', 720, 660, 300, 'relaxed', 270.0, 1)
-            u = ease_in_out(clamp((t - tg) / 1.1))
-            mx, my = lerp(1650, 1260, u), lerp(700, 640, u)
-            _sleeve(pen, 'mom', mx, my, 90.0, 300)
-            CH.draw_hand(pen, 'mom', mx, my, 300, 'grip' if u > 0.92 else 'relaxed', 90.0, -1)
-        else:                                         # catch: Mom's arm pulling at him; your hand clamps her wrist
-            mx, my = 780 + jx, 600 + jy
-            _sleeve(pen, 'mom', mx, my, 245.0, 320)
-            CH.draw_hand(pen, 'mom', mx, my, 320, 'grip', 245.0, 1)
-            c = ease_out_cubic(clamp((t - tg) / 0.22))
-            if c > 0:
-                yx, yy = lerp(1500, 860 + jx, c), lerp(1150, 720 + jy, c)
-                _sleeve(pen, 'you', yx, yy, 150.0, 330)
-                CH.draw_hand(pen, 'you', yx, yy, 330, 'grip' if c > 0.85 else 'open', 150.0, -1)
-    lay = Layer(0.95, draw, 'hands', blur=0)
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=980, y=600, z=1.05, rate=0.045))
-    if mode == 'grab': cam.hit(tg + 0.16, 6.0)
-    if mode == 'squeeze':
-        for s_ in sq: sh.sfx.append(_ev(s_, 'hand_squeeze', -9, 0.1, 'close', who='grandpa'))
-    elif mode == 'grab':
-        sh.sfx.append(_ev(tg + 0.14, 'cloth_rustle', -2, 0.2, 'close', kind='grab'))
-    elif mode == 'find':
-        sh.sfx.append(_ev(tg + 0.9, 'cloth_rustle', -14, 0.2, 'close', kind='touch'))
-    else:
-        sh.sfx.append(_ev(tg + 0.2, 'cloth_rustle', -4, 0.2, 'close', kind='grab'))
-    grade = p.get('grade', gr if gr not in ('gp_dark',) else 'face_close')
-    return Spec(sp.add(lay), cam, None, grade, 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
+        pen.seg((x0, y0), (lerp(x0, x1, u), lerp(y0, y1, u)), w, c, 235)
+    return Layer(0.99, draw, 'strike', blur=0)
 
 
 def B_ins(F, sh):
-    """Prop insert (sets.gp_insert): push at 4.5 %/s (dolly) plus a uniform post push, so the prop itself visibly grows."""
+    """A prop insert: name in sets_bunny INSERTS_B (ob_insert) or in INS_CUSTOM; kw = dict | f(t_rel) -> dict; motion;
+    strike=(t, x0, y0, x1, y1) a red strike-through; c = camera (default a 3 %/s optical push)."""
     p = sh.p
-    sp = ST.insert(p['name'], t0=sh.t0, prop_kw=p.get('kw'), motion=p.get('motion'), hand=p.get('hand'))
-    cd = dict(p.get('cam', dict(mv='push', x=960, y=540)))
-    if cd.get('mv', 'push') == 'push' and 'rate' not in cd: cd['rate'] = 0.045
-    cam = cam_from(F, sh, cd)
-    if sp.lens is None and cd.get('mv') != 'keys': cam.post_push(sh.t0, sh.t1, 1.0, (1.02) ** max(0.3, sh.d), ease='push')
-    grade = p.get('grade', sp.grade or 'face_close')
-    return Spec(sp, cam, sp.lens, grade, sp.focus, sp.dof, fx=_fx(sp, p), hud=p.get('hud'))
+    name = p['name']
+    t0 = sh.t0
+    if name in INS_CUSTOM:
+        fn, gr = INS_CUSTOM[name]
+        kw = p.get('kw') or {}
+        static = not callable(kw) and not p.get('anim', False)
+
+        def draw(pen, t, fn=fn, kw=kw):
+            k_ = kw(t - t0) if callable(kw) else kw
+            fn(pen, t - t0, **k_)
+        lay = Layer(1.0, draw, 'insert', cache=('film:ins:%s:%s' % (name, json.dumps(kw, sort_keys=True, default=str))) if static else False,
+                    bounds=(-460, -320, 2380, 1400), blur=0)
+        layers = [lay]; grade = p.get('grade', gr); lens = None; sp = None
+    else:
+        sp = ST.ob_insert(name, p.get('kw'), p.get('motion'), t0=t0)
+        layers = list(sp); grade = p.get('grade', sp.grade); lens = sp.lens
+    if p.get('strike'):
+        s_ = p['strike']
+        layers.append(strike_layer(*s_))
+    for hd in p.get('hands', []):
+        layers.append(hand_layer(hd['who'], hd['fn'], hd['size'], hd.get('shape', 'open'), hd.get('side', 1), hd.get('depth', 0.9),
+                                 hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand')))
+    c = dict(p.get('c') or dict(mv='push', rate=0.03))
+    c.setdefault('free', True)
+    cam = scam(sh, None, c)
+    return Spec(layers, cam, lens, grade, 1.0, 0.0, fx=_fx(sp, p), hud=p.get('hud'))
 
 
-def B_black(F, sh):
-    return Spec([], None, None, 'neutral', 1.0, 0.0, fx=lambda t: dict(sh.p.get('post', {})), hud=None)
-
-
-RED_ICON = '#e3262e'
-
-
-def _icon(n):
-    """Small white line icons for the rule cards: f(pen, x, y, size, alpha)."""
-    def f(pen, x, y, sz, a):
-        k = sz / 120.0; w = 7 * k
-        if n == 1:                                                          # the case with a padlock
-            pen.line(rrect(x - 52 * k, y - 26 * k, 104 * k, 64 * k, 8 * k), w, '#ffffff', a)
-            pen.line(smooth([(x - 16 * k, y - 26 * k), (x - 16 * k, y - 46 * k), (x + 16 * k, y - 46 * k), (x + 16 * k, y - 26 * k)], False), w * 0.8, '#ffffff', a)
-            pen.fill(rrect(x - 12 * k, y - 4 * k, 24 * k, 20 * k, 4 * k), RED_ICON, a)
-        elif n == 2:                                                        # a speech bubble with a voice wave
-            pen.line(rrect(x - 52 * k, y - 40 * k, 104 * k, 64 * k, 14 * k), w, '#ffffff', a)
-            pen.line(poly([(x - 20 * k, y + 24 * k), (x - 30 * k, y + 46 * k), (x, y + 24 * k)], False), w, '#ffffff', a)
-            for j, hh in enumerate((10, 22, 14, 26, 8)):
-                xx = x - 30 * k + j * 15 * k
-                pen.seg((xx, y - 8 * k - hh * k / 2), (xx, y - 8 * k + hh * k / 2), w * 0.6, RED_ICON if j == 3 else '#ffffff', a)
-        elif n == 3:                                                        # a laughing mouth, crossed
-            pen.line(smooth([(x - 44 * k, y - 12 * k), (x, y + 30 * k), (x + 44 * k, y - 12 * k)], False), w, '#ffffff', a)
-            pen.seg((x - 44 * k, y - 12 * k), (x + 44 * k, y - 12 * k), w, '#ffffff', a)
-            pen.seg((x - 54 * k, y + 50 * k), (x + 54 * k, y - 50 * k), w, RED_ICON, a)
-        elif n == 4:                                                        # a hand going into a slot, crossed
-            pen.line(rrect(x - 12 * k, y - 50 * k, 24 * k, 60 * k, 6 * k), w * 0.8, '#ffffff', a)
-            pen.line(smooth([(x - 30 * k, y + 52 * k), (x - 24 * k, y + 10 * k), (x - 4 * k, y - 4 * k), (x + 22 * k, y + 8 * k), (x + 28 * k, y + 52 * k)], False),
-                     w * 0.8, '#ffffff', a)
-            pen.seg((x - 54 * k, y + 52 * k), (x + 54 * k, y - 52 * k), w, RED_ICON, a)
-        elif n == 5:                                                        # closed lips with a sound coming out
-            pen.line(smooth([(x - 46 * k, y), (x - 20 * k, y - 16 * k), (x, y - 8 * k), (x + 20 * k, y - 16 * k), (x + 46 * k, y)], False), w, '#ffffff', a)
-            pen.line(smooth([(x - 46 * k, y), (x, y + 22 * k), (x + 46 * k, y)], False), w, '#ffffff', a)
-            for j in range(3):
-                pen.line(smooth([(x + 52 * k + j * 12 * k, y - 18 * k - j * 6 * k), (x + 60 * k + j * 12 * k, y), (x + 52 * k + j * 12 * k, y + 18 * k + j * 6 * k)], False),
-                         w * 0.6, RED_ICON, a)
-        elif n == 6:                                                        # a knee with a little figure on it
-            pen.line(smooth([(x - 54 * k, y + 40 * k), (x - 10 * k, y + 10 * k), (x + 50 * k, y + 14 * k)], False), w, '#ffffff', a)
-            pen.line(oval(x + 8 * k, y - 34 * k, 14 * k), w * 0.8, '#ffffff', a)
-            pen.seg((x + 8 * k, y - 20 * k), (x + 8 * k, y + 8 * k), w * 0.8, '#ffffff', a)
-            pen.fill(oval(x + 8 * k, y - 34 * k, 5 * k), RED_ICON, a)
-        else:                                                               # a crescent moon, crossed (no goodnight)
-            pen.line(minus(oval(x, y, 40 * k), oval(x + 18 * k, y - 12 * k, 34 * k)), w * 0.8, '#ffffff', a)
-            pen.seg((x - 54 * k, y + 52 * k), (x + 54 * k, y - 52 * k), w, RED_ICON, a)
-    return f
+# ==================================================================================================== rule cards
+RECALL_TEXT = {6: "Don't open it for anybody. *Not even me.*", 7: "Whatever happens, never close your eyes *before sunrise.*"}
 
 
 def B_rule(F, sh):
-    """Rule card over a dimmed, blurred LIVE scene (the police style). recall=True: a card recalled later (rule two's
-    'LIE?' flicker, rule six torn by the lie: mode / reveal), which does not change the header."""
+    """The police rule card over the laminated sheet on the fridge (blurred, dimmed; rule n highlighted). recall=True
+    re-shows the card typed out at once (no header change) with its key words pulsing red."""
     p = sh.p
-    n = p['n']; text_ = RULES[n]
-    bgk = p.get('bg', 'hall')
-    sp, light, gr = _bg(F, sh, bgk, dict(p, bg_dim=0.0))
-    L = []
-    if p.get('ghost'):
-        L, _ = people(F, sh, sp, p['ghost'], light)
-    cam = mkcam(sh, 'push', 960, 540, 1.03, rate=push_rate(sh.t0))
+    n = p['n']
+    sp = ST.ob_insert('rules', dict(hl=n, show=7))
     t0 = sh.t0
-    icon = _icon(n)
-    mode, reveal = p.get('mode'), p.get('reveal')
+    rec = p.get('recall')
 
     def hud(cv, t):
-        if mode:
-            ST.rule_card_lie(cv, n, text_, t - t0, reveal=None if reveal is None else reveal - t0, mode=mode, icon=icon)
+        if rec:
+            ST.rule_card_bunny(cv, n, max(0.0, t - t0) + (6.0 if rec else 0.0), text_=RECALL_TEXT.get(n))
+            u = 0.5 + 0.5 * math.sin((t - t0) * 7.0)
+            pen = Pen(cv)
+            pen.fill(rrect(DW / 2 - 300, 590, 600, 6, 3), H.RED, 120 + 120 * u)
         else:
-            H.rule_card(cv, n, text_, t - t0, icon=icon)
-    if bgk == 'studio': sh.p.setdefault('era', 'tape')
+            ST.rule_card_bunny(cv, n, t - t0)
+    cam = scam(sh, None, dict(mv='push', rate=0.012, free=True))
 
     def fx(t):
-        d = dict(sp.fx(t) or {}, blur=6, dim=0.35)
+        d = dict(blur=7, dim=0.42)
         if p.get('post_fn'): d.update(p['post_fn'](t))
         return d
-    return Spec(sp.add(*L), cam, None, gr if gr not in ('face_close',) else 'gp_house', 1.0, 0.0, fx=fx, hud=hud)
+    return Spec(list(sp), cam, None, 'ins_lamp', 1.0, 0.0, fx=fx, hud=hud)
 
 
-def _rug(pen, t):
-    """Grandpa's oriental rug filling the frame, seen low across the floor (the den's rug, close)."""
-    pen.fill(rect(-900, -700, 3720, 2480), '#2a1a12')
-    pen.texture(rect(-900, -700, 3720, 2480), 'wood', 0.5, 'overlay', 1.2, 90)
-    R = rect(-500, 380, 2920, 1300)
-    pen.fill(R, '#6a1c24'); pen.texture(R, 'fabric', 0.55, 'overlay', 1.6, 90)
-    pen.line(rect(-440, 420, 2800, 1220), 26, '#c8a050', 200); pen.line(rect(-380, 470, 2680, 1120), 10, '#1c2a4a', 220)
-    for k in range(9):
-        cx = -200 + k * 310
-        d = poly([(cx, 640), (cx + 110, 780), (cx, 920), (cx - 110, 780)])
-        pen.fill(d, '#1c2a4a', 200); pen.line(d, 6, '#c8a050', 180)
-        pen.fill(oval(cx, 780, 26), '#c8a050', 200)
-    pen.linear(rect(-900, -700, 3720, 1300), 0, -700, 0, 600, [(0, '#000000', 230), (1, '#000000', 0)])
-
-
-def B_floor(F, sh):
-    """Mister Winks lying face down on the rug, close and low (the den's floor; lamp light from the left)."""
-    p = sh.p
-    a = acting(F, sh, 'winks', _A(lambda a_, s: a_.face_down(), p.get('act')), worked=True)
-    m = _Memo(a)
-    x, y, h = p.get('x', 1040), p.get('y', 820), p.get('h', 1000)
+# ==================================================================================================== the VHS pause (comment prompt)
+def _img_layer(F, key_fn, name='freeze', depth=1.0, xform=None):
+    """Draws a pre-rendered frame (F.freeze(t_src)) filling the design frame; xform(t) -> (dx, dy, scale) for jitter."""
+    cache = {}
 
     def draw(pen, t):
-        CH.draw(pen, 'winks', x, y, h, m(t), light=dict(rim='#ffcf8f', rim_a=70, side=-1, key=-0.1), t=t)
-    L = [Layer(2.0, _rug, 'rug', cache='film:rug', bounds=(-900, -700, 2820, 1780)), Layer(1.0, draw, 'winks_floor', blur=0)]
-    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=600, rate=0.035))
-    return Spec(L, cam, None, p.get('grade', 'gp_dark'), 1.0, p.get('dof', 3.0), fx=lambda t: dict(p.get('post', {}), exposure=-0.15), hud=p.get('hud'))
+        ts = key_fn(t)
+        img = F.freeze(ts)
+        k = (ts, img.shape)
+        if cache.get('k') != k:
+            rgba = np.dstack([img, np.full(img.shape[:2], 255, np.uint8)])
+            cache['img'] = skia.Image.fromarray(np.ascontiguousarray(rgba), colorType=skia.kRGBA_8888_ColorType)
+            cache['k'] = k
+        cv = pen.cv
+        dx, dy, s = xform(t) if xform else (0.0, 0.0, 1.0)
+        cv.save(); cv.translate(960 + dx, 540 + dy); cv.scale(s, s); cv.translate(-960, -540)
+        cv.drawImageRect(cache['img'], skia.Rect.MakeWH(DW, DH), skia.SamplingOptions(skia.FilterMode.kLinear))
+        cv.restore()
+    return Layer(depth, draw, name, blur=0)
+
+
+def _vhs_osd(cv, t, mode='pause', counter=258.0):
+    pen = Pen(cv)
+    blink = (t * 1.2) % 1.0 < 0.65
+    if mode == 'pause':
+        if blink:
+            ST.btext(pen, 'PAUSE', 150, 130, 'vhs', 76, '#f2f2f2', 240, 'left')
+            pen.fill(rect(90, 78, 18, 56), '#f2f2f2', 240); pen.fill(rect(118, 78, 18, 56), '#f2f2f2', 240)
+    elif mode == 'play':
+        ST.btext(pen, 'PLAY', 150, 130, 'vhs', 76, '#f2f2f2', 240, 'left')
+        pen.fill(poly([(92, 76), (136, 106), (92, 136)]), '#f2f2f2', 240)
+    elif mode == 'rew':
+        ST.btext(pen, 'REW', 190, 130, 'vhs', 76, '#f2f2f2', 240, 'left')
+        for k in range(2):
+            x = 92 + k * 44
+            pen.fill(poly([(x + 40, 76), (x, 106), (x + 40, 136)]), '#f2f2f2', 240)
+    s = int(counter)
+    ST.btext(pen, 'SP  %d:%02d:%02d' % (s // 3600, (s // 60) % 60, s % 60), 1820, 130, 'vhs', 64, '#f2f2f2', 225, 'right')
+
+
+def _comment_cue(cv, t, alpha=1.0):
+    """A plain comment box (no platform branding): a speech-bubble icon, 'Add a comment...' and a blinking cursor."""
+    if t < 0: return
+    pen = Pen(cv)
+    u = ease_out_back(clamp(t / 0.45), 1.6)
+    y = lerp(1180, 820, u)
+    a = 255 * alpha * clamp(t / 0.2)
+    box = rrect(560, y - 52, 800, 104, 52)
+    pen.fill(moved(box, 0, 10), '#000000', 0.45 * a, blur=14)
+    pen.fill(box, '#f4f4f2', a); pen.line(box, 3, '#d0d0d4', a)
+    bub = rrect(600, y - 26, 62, 44, 12)
+    pen.fill(bub, '#c0161c', a); pen.fill(poly([(612, y + 16), (604, y + 34), (630, y + 16)]), '#c0161c', a)
+    for k in range(3): pen.fill(oval(616 + k * 15, y - 4, 4.5), '#ffffff', a)
+    text(cv, 'Add a comment...', 690, y + 12, 600, 34, '#5a5a62', a, 0.0, 'left')
+    if (t * 1.6) % 1.0 < 0.55:
+        pen.fill(rect(1000, y - 22, 4, 44), '#16171c', a)
+
+
+def B_pause(F, sh):
+    """The comment prompt as a VHS PAUSE: mode 'freeze' (src = film time of the frozen frame; cue = s when the comment box
+    slides up; push = slow zoom), 'split' (srcs=(left, right) with the labels MOM | THE BUNNYMAN; hl = 'L' | 'R' lights one;
+    flicker), 'word' (ONE WORD. typed over the split, dim), 'play' (PLAY, a tracking roll and the tape running again),
+    'rew' (rewinding: srcs flick backwards)."""
+    p = sh.p
+    mode = p.get('mode', 'freeze')
+    t0 = sh.t0
+    L = []
+    srcs = p.get('srcs') or (p.get('src'),)
+    sh.pre = [s for s in srcs if s is not None]
+
+    def jitter(t):
+        k = int(t * 12)
+        return (0.0, 1.6 * (hash01(k, 3) - 0.5) * 2.0, 1.0)
+    if mode in ('freeze', 'play', 'word'):
+        src = p['src']
+        push = p.get('push', 0.0)
+        xf = (lambda t: (0.0, jitter(t)[1], 1.0 + push * clamp((t - t0) / max(0.5, sh.d))))
+        if mode == 'play':
+            xf = (lambda t: (0.0, (-1080.0 * ease_in_out(clamp((t - t0 - 0.25) / 0.5)) if t < t0 + 0.75 else 0.0) + jitter(t)[1], 1.0))
+        L.append(_img_layer(F, lambda t, s=src: s, 'freeze', xform=xf))
+        if mode == 'play':
+            L.append(_img_layer(F, lambda t, s=src: s, 'freeze2', depth=1.01,
+                                xform=lambda t: (0.0, 1080.0 - 1080.0 * ease_in_out(clamp((t - t0 - 0.25) / 0.5)) if t < t0 + 0.75 else 3000.0, 1.0)))
+    elif mode == 'split':
+        sl, sr = srcs
+        for k, (s_, side) in enumerate(((sl, -1), (sr, 1))):
+            def draw(pen, t, s_=s_, side=side):
+                img = F.freeze(s_)
+                cache = draw.__dict__.setdefault('c', {})
+                if cache.get('k') != (s_, img.shape):
+                    rgba = np.dstack([img, np.full(img.shape[:2], 255, np.uint8)])
+                    cache['img'] = skia.Image.fromarray(np.ascontiguousarray(rgba), colorType=skia.kRGBA_8888_ColorType); cache['k'] = (s_, img.shape)
+                cv = pen.cv
+                x0 = 0 if side < 0 else 960
+                ofs = p.get('ofs', (0.0, 0.0))[0 if side < 0 else 1]
+                cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, 0, 960, 1080))
+                cv.drawImageRect(cache['img'], skia.Rect.MakeXYWH(x0 - 480 + ofs, 0, DW, DH), skia.SamplingOptions(skia.FilterMode.kLinear))
+                cv.restore()
+            L.append(Layer(1.0 + 0.01 * k, draw, 'split%d' % k, blur=0))
+        L.append(Layer(0.98, lambda pen, t: pen.fill(rect(954, -10, 12, 1100), '#0a0a0e'), 'split_line', blur=0))
+    elif mode == 'rew':
+        ss = list(srcs)
+        per = p.get('per', 0.16)
+        L.append(_img_layer(F, lambda t: ss[min(len(ss) - 1, int(max(0.0, t - t0) / per))], 'rew', xform=jitter))
+
+    def hud(cv, t):
+        u = t - t0
+        osd = {'freeze': 'pause', 'split': 'pause', 'word': 'pause', 'play': 'play', 'rew': 'rew'}[mode]
+        pen = Pen(cv)
+        if mode != 'play' or u < 1.0:
+            _vhs_osd(cv, t, osd, p.get('counter', 4 * 60 + 18) + (u if mode == 'play' else 0.0) - (u * 12 if mode == 'rew' else 0.0))
+        if mode in ('split', 'word'):
+            hl = p.get('hl')
+            for side, lab in ((-1, 'MOM'), (1, 'THE BUNNYMAN')):
+                x = 480 if side < 0 else 1440
+                lit = (hl == 'L' and side < 0) or (hl == 'R' and side > 0)
+                fl = p.get('flicker') == ('L' if side < 0 else 'R') and (int(u * 9) % 3 == 0)
+                st = 'red' if lit else 'white'
+                if not fl: H.tag(cv, lab, x, 830, st, u - (0.0 if side < 0 else 0.15), size=46)
+            if mode == 'split' and not p.get('no_or'):
+                text(cv, 'OR', 960, 560, 900, 64, '#ffffff', 230 * clamp(u / 0.3), 0.0, 'center', 0.8)
+        if mode == 'word':
+            s = 'ONE WORD.'
+            n = int(clamp(u / 0.5) * len(s))
+            pen.fill(rect(0, 0, DW, DH), '#000000', 120)
+            text(cv, s[:n], 960, 600, 900, 150, '#ffffff', 255, 0.02, 'center', 0.8)
+        if p.get('cue') is not None:
+            _comment_cue(cv, t - p['cue'])
+        if p.get('label'):
+            for (tl, lab, x, y, st) in p['label']:
+                H.tag(cv, lab, x, y, st, t - tl, size=46)
+        if p.get('reply') is not None:
+            _reply_cue(cv, t - p['reply'], p.get('reply_side', -1))
+        # tracking noise band
+        k = (t * 0.7) % 1.0
+        yb = 900 + 140 * math.sin(t * 1.3)
+        pen.fill(rect(0, yb, DW, 18 + 10 * k), '#ffffff', 26)
+        for j in range(14):
+            xx = (hash01(int(t * 30) * 17 + j, 5)) * DW
+            pen.fill(rect(xx, yb + 4 + 3 * j % 18, 60 + 120 * hash01(j, 9), 2), '#ffffff', 90)
+
+    def fx(t):
+        d = dict(vhs=dict(t=t, k=0.6, curve=0.0, track=0.35 if mode != 'rew' else 1.2, bezel=0.0, glass=0.0, scan=0.5, tube=False, noise=0.8),
+                 sat=0.82)
+        if mode == 'play' and t - t0 < 0.8: d['vhs']['track'] = 2.2
+        return d
+    cam = scam(sh, None, dict(mv='hold', free=True, shake=0.0))
+    spec = Spec(L, cam, None, p.get('grade', 'neutral'), 1.0, 0.0, fx=fx, hud=hud)
+    spec.pre = sh.pre
+    return spec
+
+
+def _reply_cue(cv, t, side=-1):
+    if t < 0: return
+    pen = Pen(cv)
+    a = 255 * clamp(t / 0.3)
+    x = 480 if side < 0 else 1440
+    y = 690
+    pen.line(smooth([(x + 70, y - 60), (x - 40, y - 60), (x - 80, y - 20), (x - 80, y + 30)], False), 10, '#ffffff', a)
+    pen.fill(poly([(x - 110, y + 20), (x - 50, y + 20), (x - 80, y + 64)]), '#ffffff', a)
+    text(cv, 'REPLY', x + 40, y + 46, 800, 38, '#ffffff', a, 0.1, 'left', 0.6)
+
+
+# ==================================================================================================== cards (outro) + black
+def _eye_icon(pen, x, y, s, look=(0.0, 0.0), lid=0.0, a=255):
+    up = poly([(x - s, y), (x - s * 0.5, y - s * 0.55 * (1 - lid)), (x + s * 0.5, y - s * 0.55 * (1 - lid)), (x + s, y)], False)
+    pen.fill(smooth([(x - s, y), (x - s * 0.5, y - s * 0.56 * (1 - lid)), (x, y - s * 0.62 * (1 - lid)), (x + s * 0.5, y - s * 0.56 * (1 - lid)), (x + s, y),
+                     (x + s * 0.5, y + s * 0.5 * (1 - lid)), (x, y + s * 0.56 * (1 - lid)), (x - s * 0.5, y + s * 0.5 * (1 - lid))], True, 0.9), '#f4f4f2', a)
+    if lid < 0.9:
+        cx, cy = x + look[0] * s * 0.35, y + look[1] * s * 0.2
+        pen.fill(oval(cx, cy, s * 0.36 * (1 - lid * 0.5)), '#3a6a8a', a); pen.fill(oval(cx, cy, s * 0.17), '#0a0a10', a)
+        pen.fill(oval(cx - s * 0.1, cy - s * 0.1, s * 0.06), '#ffffff', a)
+    pen.line(smooth([(x - s, y), (x - s * 0.5, y - s * 0.56 * (1 - lid)), (x, y - s * 0.62 * (1 - lid)), (x + s * 0.5, y - s * 0.56 * (1 - lid)), (x + s, y),
+                     (x + s * 0.5, y + s * 0.5 * (1 - lid)), (x, y + s * 0.56 * (1 - lid)), (x - s * 0.5, y + s * 0.5 * (1 - lid))], True, 0.9), 10, '#ffffff', a)
+
+
+def _thumb(pen, x, y, s, a=255):
+    pen.fill(rrect(x - s * 0.62, y - s * 0.05, s * 0.3, s * 0.72, s * 0.06), '#ffffff', a)
+    pen.fill(smooth([(x - s * 0.25, y - s * 0.05), (x - s * 0.05, y - s * 0.6), (x + s * 0.12, y - s * 0.62), (x + s * 0.08, y - s * 0.2),
+                     (x + s * 0.55, y - s * 0.2), (x + s * 0.6, y + s * 0.05), (x + s * 0.45, y + s * 0.62), (x - s * 0.25, y + s * 0.67)], True, 0.5), '#ffffff', a)
+
+
+def B_card(F, sh):
+    """Graphic cards: mode 'trick' (THE TRICK: close your eyes / count to seven), 'eye' (an open eye looking round), 'safe'
+    (so you never did), 'like' (a like that lands like a knock: hit at p['hit_t']), 'next' (next time: a phone ringing on a
+    nightstand at 3:00 AM, the doctor), 'title' (RULES AFTER DARK), 'end'."""
+    p = sh.p
+    mode = p['mode']
+    t0 = sh.t0
+    bgc = p.get('bgc', ('#141622', '#06070c'))
+    L = [Layer(3.0, lambda pen, t: pen.linear(rect(-600, -400, 3120, 1880), 0, -400, 0, 1480, list(bgc)), 'card_bg',
+               cache='film:card_bg:%s' % (bgc,), bounds=(-600, -400, 2520, 1480))]
+
+    def hud(cv, t):
+        u = t - t0
+        pen = Pen(cv)
+        if mode == 'trick':
+            text(cv, 'THE TRICK ONLY WORKS IF YOU', 960, 330, 800, 44, '#b8b8c4', 255 * clamp(u / 0.3), 0.12, 'center', 0.6)
+            for k, (tk, s_) in enumerate(p['steps']):
+                if t >= tk: H.tag(cv, s_, 960, 520 + k * 150, 'white', t - tk, size=58)
+        elif mode == 'eye':
+            look = (math.sin(u * 2.1) * 0.9, 0.3 * math.sin(u * 1.3))
+            _eye_icon(pen, 960, 520, 300, look, 0.0, 255 * clamp(u / 0.25))
+        elif mode == 'safe':
+            _eye_icon(pen, 960, 430, 220, (0.0, 0.0), 0.0, 255)
+            if u > 0.2:
+                text(cv, 'SO YOU NEVER DID.', 960, 800, 900, 78, '#ffffff', 255 * clamp((u - 0.2) / 0.2), 0.04, 'center', 0.7)
+        elif mode == 'like':
+            th = p.get('hit_t', t0 + 0.4)
+            v = t - th
+            if v > -0.25:
+                s = 1.0 + 0.55 * clamp(-v / 0.25) if v < 0 else 1.0 + 0.06 * math.exp(-v * 9) * math.cos(v * 40)
+                a = 255 * clamp((v + 0.25) / 0.12)
+                cv.save(); cv.translate(960, 520); cv.scale(s, s); cv.translate(-960, -520)
+                pen.fill(oval(960, 520, 230), H.RED, a); _thumb(pen, 960, 520, 230, a)
+                cv.restore()
+                if v > 0.05: text(cv, 'LIKE', 960, 870, 900, 70, '#ffffff', 255 * clamp((v - 0.05) / 0.2), 0.2, 'center', 0.6)
+        elif mode == 'next':
+            text(cv, 'NEXT TIME ON', 960, 150, 800, 34, '#a8a8b8', 255 * clamp(u / 0.3), 0.3, 'center', 0.6)
+            text(cv, 'RULES AFTER DARK', 960, 225, 900, 64, '#ffffff', 255 * clamp(u / 0.4), 0.12, 'center', 0.7)
+            H.phone(cv, 'incoming', u, name='DR. HALVERSON', x=960, y=640, scale=0.72, hand=False)
+            text(cv, '3:00 AM', 960, 1000, 800, 44, '#e3262e', 255 * clamp((u - 0.6) / 0.3), 0.2, 'center', 0.6)
+        elif mode == 'title':
+            text(cv, 'RULES AFTER DARK', 960, 560, 900, 96, '#ffffff', 255 * clamp(u / 0.6) * (1 - clamp((u - sh.d + 0.6) / 0.5)), 0.12, 'center', 0.7)
+        elif mode == 'end':
+            pass
+    cam = scam(sh, None, dict(mv='hold', free=True, shake=0.0))
+    return Spec(L, cam, None, 'neutral', 1.0, 0.0, fx=lambda t: dict(p.get('post', {})), hud=hud)
+
+
+def B_black(F, sh):
+    p = sh.p
+
+    def hud(cv, t):
+        if p.get('text'):
+            u = t - sh.t0
+            a = clamp(u / 0.5) * (1 - clamp((u - (sh.d - 0.6)) / 0.5))
+            text(cv, p['text'], 960, 560, 900, p.get('size', 64), '#ffffff', 255 * a, 0.12, 'center', 0.6)
+    return Spec([], None, None, 'neutral', 1.0, 0.0, fx=lambda t: dict(p.get('post', {})), hud=hud)
 
 
 BUILDERS = {k[2:]: v for k, v in dict(globals()).items() if k.startswith('B_')}
 
 
 # ==================================================================================================== spaces + per-shot cues
-SPACE = {'hall': 'inside', 'hdoor': 'inside', 'stairs': 'inside', 'kitchen': 'inside', 'living': 'inside', 'den': 'inside',
-         'studio': 'tv', 'hospital': 'hospital', 'stage62': 'memory', 'museum': 'museum', 'street': 'inside', 'bedroom': 'inside',
-         'lap': 'close', 'carry': 'close', 'hug': 'close', 'glove': 'close', 'portrait': 'close', 'hands': 'close', 'ins': 'close', 'floor': 'inside', 'rule': None, 'black': None}
-LOC = {'hall': 'house', 'hdoor': 'house', 'stairs': 'house', 'kitchen': 'house', 'living': 'house', 'den': 'house', 'studio': 'tape',
-       'hospital': 'hospital', 'stage62': '1962', 'museum': 'museum', 'street': 'house', 'bedroom': 'home'}
-BG_LOC = {'studio': 'tape', 'hospital': 'hospital', 'stage62': '1962', 'museum': 'museum', 'bedroom': 'home', 'memory_bed': 'memory',
-          'memory_kitchen': 'memory'}
-
-
-def shot_loc(s):
-    if s.p.get('era') == 'memory': return 'memory'
-    if s.kind in LOC: return LOC[s.kind]
-    return BG_LOC.get(s.p.get('bg'), 'house')
+SPACE = {'living': 'inside', 'hall': 'inside', 'up': 'inside', 'june': 'inside', 'bath': 'bath', 'attic': 'attic', 'kitchen': 'inside',
+         'yard': 'outside', 'front': 'outside', 'woods': 'woods', 'hosp': 'hospital', 'parade': 'vhs'}
 
 
 def shot_space(s):
-    if s.kind in ('bust', 'lap', 'carry', 'hands'):
-        return {'studio': 'tv', 'hospital': 'hospital', 'museum': 'museum', 'memory_bed': 'memory', 'memory_kitchen': 'memory',
-                'stage62': 'memory'}.get(s.p.get('bg'), 'close')
-    return SPACE.get(s.kind)
+    if s.kind in ('rule', 'black', 'card'): return None
+    if s.kind == 'pause': return 'vhs'
+    if s.kind == 'ins': return 'close'
+    if s.p.get('era') == '1987' and (s.p.get('room') == 'parade' or (s.p.get('bg') or [''])[0] == 'parade'): return 'vhs'
+    if s.p.get('era') == 'memory': return 'memory'
+    room = s.p.get('room') or (s.p.get('bg') or [None])[0]
+    if s.kind == 'bust': return {'hosp': 'hospital', 'yard': 'outside', 'front': 'outside', 'woods': 'woods', 'parade': 'vhs'}.get(room, 'close')
+    return SPACE.get(room, 'inside')
+
+
+def shot_loc(s):
+    if s.p.get('era') in ('1987', 'memory', 'outro', 'recall'): return s.p['era']
+    room = s.p.get('room') or (s.p.get('bg') or [None])[0]
+    if room in ('hosp',): return 'hospital'
+    if room in ('woods',): return 'woods'
+    if s.kind in ('rule', 'card', 'black', 'pause'): return s.kind
+    return 'house'
 
 
 def shot_common(F, sh, spec):
-    """Collect the shot's SFX / music events from its acting, camera, tags and explicit cue lists."""
+    """Collect the shot's SFX / music events from its acting, camera, tags, cut type and explicit cue lists."""
     p = sh.p
     space = shot_space(sh)
     for a in sh.actors:
@@ -1832,44 +1494,60 @@ def shot_common(F, sh, spec):
             if sh.t0 - 0.05 <= e['t'] <= sh.t1 + 0.4 and e['name']:
                 pr = dict(e.get('params') or {})
                 if e.get('who'): pr['who'] = e['who']
-                if p.get('era') in ('memory', 'tape', '1962'): pr['era'] = p['era']
-                sh.sfx.append(_ev(e['t'], e['name'], e.get('gain_db', 0.0), e.get('pan', 0.0), space, **pr))
-    if (p.get('cam') or {}).get('snap'):
-        sh.sfx.append(_ev(p['cam']['snap'][0], 'whoosh', -3, 0, None, kind='hard'))
-    elif (p.get('cam') or {}).get('mv') == 'pull':
-        sh.sfx.append(_ev(sh.t0 + 0.02, 'whoosh', -4, 0, None, kind='soft'))
+                if p.get('era') in ('memory', '1987'): pr['era'] = p['era']
+                g = e.get('gain_db', 0.0)
+                if e['name'].startswith('footsteps') and a.who in ('bunny', 'bunny87'): pr['heavy'] = True
+                sh.sfx.append(_ev(e['t'], e['name'], g, e.get('pan', 0.0), space, **pr))
+    c = p.get('c') or {}
+    if c.get('snap'):
+        sh.sfx.append(_ev(c['snap'][0], 'whoosh', -4, 0, None, kind='hard'))
     for tg in p.get('tags', []):
         if p.get('tag_sound', True): sh.sfx.append(_ev(tg[0], 'ui_pop', -6, 0, 'close'))
-    if p.get('cut') in ('static', 'glitch'):
+    cut = p.get('cut')
+    if cut in ('static', 'glitch'):
         sh.sfx.append(_ev(sh.t0, 'glitch', -4, 0, None, dur=0.25, amount=0.8))
-    if p.get('cut') == 'white' and not p.get('quiet_cut'):
-        sh.sfx.append(_ev(sh.t0, 'impact_hit', 0, 0, None, size=1.1))
-    if p.get('hit'):
-        for h in (p['hit'] if isinstance(p['hit'], (list, tuple)) else [p['hit']]):
-            sh.sfx.append(_ev(h, 'impact_hit', -2, 0, None, size=1.0))
-            sh.music.append({'t': round(h, 3), 'type': 'hit', 'level': 0.75})
-    for c in p.get('sfx', []):                   # explicit (t, name, gain, pan, space, params)
-        t, name = c[0], c[1]
-        g = c[2] if len(c) > 2 else 0.0; pan = c[3] if len(c) > 3 else 0.0
-        sp_ = c[4] if len(c) > 4 else space
-        pr = c[5] if len(c) > 5 else {}
+    if cut == 'vhs':
+        sh.sfx.append(_ev(sh.t0, 'vhs_glitch', -6, 0, 'vhs', dur=0.3))
+    if cut == 'white' and not p.get('quiet_cut'):
+        sh.sfx.append(_ev(sh.t0, 'impact_hit', -1, 0, None, size=1.1))
+    for h in (p.get('hit') if isinstance(p.get('hit'), (list, tuple)) else ([p['hit']] if p.get('hit') else [])):
+        sh.sfx.append(_ev(h, 'impact_hit', -2, 0, None, size=1.0))
+        sh.music.append({'t': round(h, 3), 'type': 'hit', 'level': 0.75})
+    for cc in p.get('sfx', []):                   # explicit (t, name, gain, pan, space, params)
+        t, name = cc[0], cc[1]
+        g = cc[2] if len(cc) > 2 else 0.0; pan = cc[3] if len(cc) > 3 else 0.0
+        sp_ = cc[4] if len(cc) > 4 else space
+        pr = cc[5] if len(cc) > 5 else {}
         sh.sfx.append(_ev(t, name, g, pan, sp_, **pr))
     for m in p.get('music', []):
         e = {'t': round(m[0], 3), 'type': m[1], 'level': m[2] if len(m) > 2 else 0.7}
         if len(m) > 3: e['len'] = m[3]
+        if len(m) > 4: e.update(m[4])
         sh.music.append(e)
     if sh.kind == 'rule':
-        tm = H.rule_times(RULES[sh.p['n']])
+        n = sh.p['n']
+        tm = H.rule_times(ST.RULE_CARDS[n])
         sh.sfx.append(_ev(sh.t0 + tm['pop'], 'ui_pop', 0, 0, 'close'))
         if not p.get('recall'):
             sh.sfx.append(_ev(sh.t0 + tm['type0'], 'typing', -6, 0, 'close', dur=round(tm['type1'] - tm['type0'], 2), cps=14))
             sh.music.append({'t': round(sh.t0, 3), 'type': 'rule', 'level': 0.75})
-            sh.music.append({'t': round(sh.t0, 3), 'type': 'riser', 'level': 0.55, 'len': 4.0})
-        if p.get('reveal') is not None:
-            sh.sfx.append(_ev(p['reveal'], 'rule_lie', 0, 0, 'close', mode=p.get('mode')))
-            sh.music.append({'t': round(p['reveal'], 3), 'type': 'stinger' if p.get('mode') != 'flicker' else 'hit', 'level': 0.9})
-    if sh.kind in ('hall',) and isinstance(p.get('beam'), dict) and p['beam'].get('on') is not None and sh.t0 - 0.05 <= p['beam']['on'] < sh.t1:
-        sh.sfx.append(_ev(p['beam']['on'], 'flashlight_click', -4, 0.0, 'inside', kind='on', far=True))
+            sh.music.append({'t': round(sh.t0, 3), 'type': 'riser', 'level': 0.5, 'len': 3.5})
+            sh.sfx.append(_ev(sh.t0 + 0.02, 'magnet_click', -8, 0, 'close'))
+        else:
+            sh.sfx.append(_ev(sh.t0 + 0.05, 'stinger', -6, 0, None, kind='recall'))
+    if sh.kind == 'pause':
+        mode = p.get('mode')
+        if mode in ('freeze',) and p.get('first'):
+            sh.sfx.append(_ev(sh.t0, 'vhs_pause', 0, 0, 'vhs', kind='pause'))
+            sh.music.append({'t': round(sh.t0, 3), 'type': 'silence', 'level': 0.0, 'len': round(min(19.0, F.t(100) - sh.t0 - 1.0), 2), 'kind': 'pause'})
+        if mode == 'play':
+            sh.sfx.append(_ev(sh.t0 + 0.2, 'vhs_pause', 0, 0, 'vhs', kind='play'))
+        if mode == 'rew':
+            sh.sfx.append(_ev(sh.t0, 'vhs_pause', 0, 0, 'vhs', kind='rewind', dur=round(sh.d, 2)))
+        if p.get('cue') is not None:
+            sh.sfx.append(_ev(p['cue'], 'ui_pop', -4, 0, 'close', kind='comment'))
+    if sh.kind == 'card' and p['mode'] == 'like':
+        sh.sfx.append(_ev(p.get('hit_t', sh.t0 + 0.4), 'knock_door', 2, 0, 'close', n=1, kind='like'))
     tags = p.get('tags')
     if tags:
         prev = spec.hud
@@ -1877,114 +1555,103 @@ def shot_common(F, sh, spec):
         def hud(cv, t, prev=prev, tags=tags):
             if prev: prev(cv, t)
             for tg in tags:
-                t0, txt, x, y, style = tg[:5]
+                t0_, txt, x, y, style = tg[:5]
                 hold_ = tg[5] if len(tg) > 5 else (1.2 if style == 'alert' else 2.6)
-                if t0 <= t <= t0 + hold_: H.tag(cv, txt, x, y, style, t - t0)
+                if t0_ <= t <= t0_ + hold_: H.tag(cv, txt, x, y, style, t - t0_)
         spec.hud = hud
 
 
-EXPO = {'hall': -0.2, 'hdoor': -0.2, 'stairs': 0.0, 'kitchen': -0.2, 'living': -0.15, 'den': -0.15, 'ins': -0.1, 'hands': -0.1}
+# ==================================================================================================== the global look
+EXPO = {'ins': -0.05}
 
 
 def glob_fx(F, sh, t, fx):
-    """Per-frame global effects: scare-cut flashes, the night creeping into red over the last 35 %, the climax ramp with the
-    red heartbeat wash (Mom's scream to Owen's eyes closing), the end fade."""
+    """Per-frame global effects: cut flashes; the night creeping into red from the window smash (600 s) to the slam, a
+    gold dawn that holds it back, then the climax ramp from Mom's hand over June's eyes (770 s) through the counts with
+    a red heartbeat wash at the frame edge until "Seven." (912.7 s: a white flash); the aftermath drained; 1987 / memory /
+    hospital / outro clean; fade in / out."""
     u = t - sh.t0
     c = sh.p.get('cut')
     if c == 'static' and u < 0.09: fx['static'] = 0.85 - u * 6
     elif c == 'glitch' and u < 0.12: fx['glitch'] = 0.9; fx['static'] = 0.3
-    elif c == 'white' and u < 0.1: fx['white'] = 0.85 * (1 - u / 0.1)
+    elif c == 'white' and u < 0.14: fx['white'] = 0.95 * (1 - u / 0.14)
+    elif c == 'vhs' and u < 0.18: fx['glitch'] = 0.6 * (1 - u / 0.18)
     ek = EXPO.get(sh.kind, 0.0)
     if ek: fx['exposure'] = fx.get('exposure', 0.0) + ek
     era = sh.p.get('era', 'now')
-    clean = era in ('memory', '1962', 'later') or sh.kind in ('rule', 'black', 'studio') or (T_8AM - 0.3 <= sh.t0 < T_HOME - 0.3)
+    clean = era in ('1987', 'memory', 'outro') or sh.kind in ('rule', 'black', 'card', 'pause') or (sh.p.get('room') == 'hosp') or \
+        ((sh.p.get('bg') or [''])[0] == 'hosp')
     if not clean:
-        ui = 0.5 if sh.kind in ('ins', 'hands') or era == 'tape' else 1.0
-        # the last 35 %: darker, redder, more saturated; a faster ramp from Mom's scream into the goodnight; the reveal
-        # holds it; the doorway at the very end creeps back in
-        k = clamp((t - 460.0) / 80.0) if t < T_8AM else clamp((t - 696.0) / 8.0)
-        k2 = clamp((t - 543.7) / 12.0) * (1.0 - 0.45 * clamp((t - 575.0) / 8.0)) if t < T_8AM else 0.0
-        if k > 0:
-            fx['red'] = fx.get('red', 0.0) + (0.42 * k + 0.32 * k2) * ui
-            fx['sat'] = fx.get('sat', 1.0) * (1 + (0.5 * k + 0.3 * k2) * ui)
-            fx['exposure'] = fx.get('exposure', 0.0) - (0.35 * k + 0.45 * k2) * ui
-        # the heartbeat: a red wash pulsing in from the frame edge, faster and stronger until Owen's eyes close
-        if 543.7 <= t < T_SWAP + 0.4 and 'flash' not in fx:
-            bpm = lerp(78, 132, clamp((t - 543.7) / 22.0))
-            ph = ((t - 543.7) * bpm / 60.0) % 1.0
+        ui = 0.5 if sh.kind in ('ins',) or era == 'recall' else 1.0
+        dawn = clamp((t - 709.0) / 3.0) * (1.0 - clamp((t - 770.0) / 10.0))
+        k = clamp((t - 600.0) / 80.0) * (1.0 - 0.75 * dawn)
+        k2 = clamp((t - 664.0) / 16.0) * (1.0 - clamp((t - 683.0) / 6.0))
+        k3 = clamp((t - 770.0) / 18.0) if t < 913.0 else 0.0
+        kk = max(k, k3)
+        if kk > 0 or k2 > 0:
+            fx['red'] = fx.get('red', 0.0) + (0.38 * kk + 0.3 * k2 + 0.12 * k3) * ui
+            fx['sat'] = fx.get('sat', 1.0) * (1 + (0.4 * kk + 0.25 * k2) * ui)
+            fx['exposure'] = fx.get('exposure', 0.0) - (0.25 * kk + 0.3 * k2) * ui
+        if 783.6 <= t < 912.7 and 'flash' not in fx:
+            bpm = lerp(72, 138, clamp((t - 783.6) / 128.0))
+            ph = ((t - 783.6) * bpm / 60.0) % 1.0
             beat = math.exp(-ph * 9.0) + 0.6 * math.exp(-max(0.0, ph - 0.18) * 11.0) * (ph >= 0.18)
-            fx['flash'] = _epost.Spill(0.42 * clamp((t - 543.7) / 3.0) * clamp(beat) * ui, side=-1.0 if sh.idx % 2 else 1.0,
-                                       color=(0.06, 0.08, 0.9), reach=0.8)
-    if t > F.duration - 2.6: fx['fade'] = clamp((t - (F.duration - 2.6)) / 1.6)
-    if t < 0.35: fx['fade'] = max(fx.get('fade', 0.0), 1 - t / 0.35)
+            ramp = clamp((t - 783.6) / 3.0) * (0.5 + 0.5 * clamp((t - 884.0) / 25.0))
+            fx['flash'] = _epost.Spill(0.4 * ramp * clamp(beat) * ui, side=-1.0 if sh.idx % 2 else 1.0, color=(0.06, 0.08, 0.9), reach=0.8)
+        if 913.0 <= t < 950.0:
+            fx['sat'] = fx.get('sat', 1.0) * 0.72
+    if t > F.duration - 3.0: fx['fade'] = clamp((t - (F.duration - 3.0)) / 1.8)
+    if t < 0.4: fx['fade'] = max(fx.get('fade', 0.0), 1 - t / 0.4)
 
 
 # ==================================================================================================== beds + music curve
 def beds(F):
-    """Ambience beds: the old house at night (room tone, the wind round the eaves), the grandfather clock ticking in the hall,
-    the tape's TV hiss and crowd murmur while the TV is on, the hospital's corridor hum, 8 AM street, the museum hush."""
-    out = []
+    """Ambience beds by place and time (the sound step maps the names): the night outside, the house's room tone, the 1987
+    parade crowd on the camcorder, the woods, the hospital hum, the dawn birds, the tape hiss under the VHS pause."""
+    t, e = F.t, F.e
     D = F.duration
-    house = [(110.61, T_8AM)]
-    out.append(_ev(0.0, 'room_tone', 0, 0, 'inside', dur=round(D, 1)))      # v2: +6 dB (the house must feel real)
-    out.append(_ev(110.61, 'ambience_night', -10, 0, 'outside', dur=round(T_8AM - 110.61, 1), wind=0.6, crickets=0.3, dog=0.1, house=True))
-    # the hall clock: heard through the whole house at night, louder in the hall shots (one bed, phase-locked to the pendulum)
-    out.append(_ev(110.61, 'clock_tick', -16, -0.2, 'inside', dur=round(T_8AM - 110.61, 1), bpm=60, phase=0.5, kind='grandfather'))
-    for sh in F.shots:
-        if sh.kind == 'hall' or (sh.kind == 'bust' and sh.p.get('bg') in ('hall', 'hall_dark')):
-            out.append(_ev(sh.t0, 'clock_tick', -9, -0.2, 'inside', dur=round(sh.d, 2), bpm=60, phase=0.5, kind='grandfather', near=True))
-    # the TV: the tape's hiss and the crowd under the narration while it plays (the laughter waves are separate events)
-    out.append(_ev(T_TV_ON, 'tv_bed', -12, -0.3, 'tv', dur=round(471.6 - T_TV_ON, 1), kind='vhs_hiss_crowd'))
-    out.append(_ev(75.9, 'room_tone', -8, 0, 'hospital', dur=round(110.6 - 75.9, 1), kind='hospital_hum'))
-    out.append(_ev(486.0, 'room_tone', -8, 0, 'hospital', dur=12.0, kind='hospital_hum'))
-    out.append(_ev(632.6, 'room_tone', -8, 0, 'hospital', dur=14.6, kind='hospital_hum'))
-    out.append(_ev(T_8AM, 'ambience_morning', -6, 0.2, 'outside', dur=round(T_MUSEUM - T_8AM, 1), birds=0.6, traffic=0.3))
-    out.append(_ev(T_MUSEUM, 'room_tone', -6, 0, 'museum', dur=round(T_HOME - T_MUSEUM, 1), kind='gallery_hush'))
-    out += monitor_cues(F)
-    return out
-
-
-def monitor_cues(F):
-    """The heart monitor follows the hospital room, not the shot kind (the busts, laps and hand close-ups in the same room
-    beep too): one beep per beat on a tempo that follows the scene (72; the grab -> 104; the whisper -> 120; the
-    flatline on "gone"), the same for the real Walter's hour (486-498 s) and the thing feeling its body die (632-647 s)."""
-    t, e, w = F.t, F.e, F.w
-    spans = [  # (t0, t1, [(t, bpm)], flat)
-        (75.9, 110.6, [(75.9, 72.0), (w(35, 'grabbed'), 72.0), (w(35, 'grabbed') + 0.6, 104.0), (t(36), 112.0), (e(38), 120.0),
-                       (w(39, 'gone'), 118.0)], w(39, 'gone') + 0.15),
-        (486.0, 498.4, [(486.0, 104.0), (t(229), 112.0), (t(231), 84.0)], t(231) + 0.7),
-        (632.6, 647.2, [(632.6, 52.0), (t(307), 52.0), (t(308), 118.0)], None)]
     out = []
-    for (a, b, keys, flat) in spans:
-        kt = [k[0] for k in keys]; kb = [k[1] for k in keys]
-        tt = a + 0.2
-        while tt < b and (flat is None or tt < flat):
-            out.append(_ev(tt, 'heart_monitor', -10, 0.35, 'hospital', kind='beep'))
-            tt += 60.0 / float(np.interp(tt, kt, kb))
-        if flat is not None:
-            out.append(_ev(flat, 'heart_monitor', -6, 0.35, 'hospital', kind='flatline', dur=round(b - flat + 0.3, 2)))
+    out.append(_ev(0.0, 'ambience_night', -10, 0, 'outside', dur=round(t(3) - 0.2, 2), crickets=0.5, wind=0.5, dog=0.1))
+    out.append(_ev(t(3) - 0.1, 'crowd_parade', -6, 0, 'vhs', dur=round(t(8) - t(3) + 0.1, 2), cheer=1.0, vhs=True))
+    out.append(_ev(t(8), 'room_tone', -14, 0, 'inside', dur=round(t(16) - t(8), 2)))
+    out.append(_ev(t(16) - 0.1, 'room_tone', -8, 0, 'hospital', dur=round(t(19) - t(16), 2), kind='hospital_hum'))
+    out.append(_ev(t(19) - 0.1, 'crowd_parade', -6, 0, 'vhs', dur=round(t(29) - t(19) + 0.1, 2), cheer=0.8, vhs=True))
+    out.append(_ev(t(29) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(39) - t(29), 2), tod='day', birds=0.4))
+    out.append(_ev(t(39) - 0.1, 'ambience_night', -8, 0, 'outside', dur=round(t(54) - t(39), 2), crickets=0.6, wind=0.6, dog=0.15))
+    out.append(_ev(t(54) - 0.1, 'room_tone', -10, 0, 'inside', dur=round(t(61) - t(54), 2), kind='house_evening'))
+    house0 = t(61) - 0.1
+    out.append(_ev(house0, 'room_tone', -6, 0, 'inside', dur=round(t(322) - house0, 2), kind='house_night'))
+    out.append(_ev(house0, 'ambience_night', -16, 0, 'outside', dur=round(t(286) - house0, 2), crickets=0.5, wind=0.7, dog=0.1, through_walls=True))
+    out.append(_ev(t(286), 'ambience_dawn', -12, 0, 'outside', dur=round(t(371) - t(286), 2), birds=0.7, through_walls=True))
+    out.append(_ev(t(371) - 0.1, 'room_tone', -8, 0, 'hospital', dur=round(t(386) - t(371), 2), kind='hospital_hum'))
+    out.append(_ev(t(386) + 1.0, 'room_tone', -14, 0, 'inside', dur=round(D - t(386) - 1.0, 2), kind='warm_room'))
+    out.append(_ev(t(92) - 0.1, 'tape_hiss', -10, 0, 'vhs', dur=round(t(100) - t(92), 2)))
+    # the song from the woods: slow and tinny, a speaker with dying batteries (heard outside, through the glass)
+    out.append(_ev(F.w(65, 'starts'), 'jingle', -8, 0.2, 'outside', dur=round(t(91) - F.w(65, 'starts'), 2), version='tinny_woods', loop=True))
+    out.append(_ev(t(206) - 0.2, 'bulb_hum', -14, 0, 'attic', dur=round(t(232) - t(206), 2)))
+    out.append(_ev(t(370) - 0.2, 'sirens', -10, 0, 'outside', dur=6.0, far=True))
+    out.append(_ev(t(370) + 2.0, 'police_radio', -16, 0, 'outside', dur=6.0))
     return out
 
 
 INTENSITY = [  # (seconds, level): the story's tension, read off the beats
-    (0.0, 0.5), (4.3, 0.55), (10.2, 0.45), (16.3, 0.55), (18.6, 0.4), (26.6, 0.5), (31.3, 0.6), (33.0, 0.35), (39.6, 0.4),
-    (47.6, 0.5), (50.3, 0.3), (61.5, 0.4), (68.2, 0.35), (73.9, 0.45), (76.0, 0.4), (86.6, 0.5), (96.9, 0.75), (104.2, 0.85),
-    (106.8, 0.6), (110.6, 0.35), (118.8, 0.4), (124.4, 0.5), (131.1, 0.55), (134.7, 0.65), (139.2, 0.6), (147.0, 0.35),
-    (151.7, 0.45), (155.3, 0.7), (159.2, 0.75), (162.7, 0.6), (164.9, 0.72), (169.4, 0.65), (174.0, 0.8), (181.0, 0.6),
-    (184.4, 0.7), (188.3, 0.75), (192.3, 0.6), (199.0, 0.6), (210.4, 0.4), (215.3, 0.5), (218.4, 0.62), (221.9, 0.7), (229.7, 0.75),
-    (233.9, 0.7), (238.8, 0.72), (243.5, 0.9), (247.1, 0.85), (250.4, 0.95), (257.8, 0.9), (258.4, 0.6), (264.9, 0.55),
-    (271.3, 0.62), (277.5, 0.7), (278.9, 0.45), (283.5, 0.6), (286.6, 0.85), (290.2, 0.75), (292.4, 0.7), (294.9, 0.8),
-    (299.6, 0.6), (305.2, 0.7), (312.3, 0.8), (314.7, 0.92), (320.7, 0.8), (324.1, 0.85), (325.3, 0.95), (327.6, 0.9),
-    (333.2, 0.6), (338.1, 0.45), (351.8, 0.6), (354.6, 0.85), (359.0, 0.9), (360.2, 0.75), (367.7, 0.85), (373.7, 0.7),
-    (378.0, 0.62), (384.6, 0.72), (396.0, 0.8), (397.6, 0.85), (401.9, 0.9), (404.7, 0.6), (409.4, 0.6), (415.0, 0.6),
-    (417.9, 0.82), (420.6, 0.9), (423.1, 1.0), (428.5, 0.8), (434.1, 0.6), (439.9, 0.7), (445.3, 0.8), (448.6, 0.92),
-    (457.5, 0.95), (462.2, 0.85), (469.4, 0.7), (476.9, 0.8), (478.4, 0.75), (486.2, 0.65), (492.5, 0.7), (498.1, 0.6),
-    (503.8, 0.5), (506.3, 0.6), (518.4, 0.55), (521.4, 0.8), (523.4, 0.85), (532.9, 0.75), (539.1, 0.92), (543.7, 1.0),
-    (552.3, 0.92), (555.0, 0.85), (559.8, 0.9), (565.9, 1.0), (567.1, 0.75), (569.1, 0.85), (570.3, 0.6), (575.5, 0.5),
-    (578.5, 0.45), (582.2, 0.6), (589.3, 0.7), (594.5, 0.8), (598.2, 0.7), (608.7, 0.85), (615.5, 0.8), (619.3, 0.6),
-    (627.8, 0.8), (631.1, 0.9), (632.7, 0.65), (643.5, 0.75), (647.3, 0.8), (651.1, 0.95), (655.5, 0.85), (660.2, 1.0),
-    (663.2, 0.7), (665.1, 0.35), (673.8, 0.4), (677.4, 0.5), (682.1, 0.55), (688.7, 0.6), (691.1, 0.65), (693.8, 0.7),
-    (696.9, 0.8), (701.9, 0.9), (703.3, 1.0), (706.4, 0.95), (707.4, 0.5)]
+    (0.0, 0.55), (10.8, 0.65), (16.9, 0.7), (17.9, 0.4), (26.8, 0.35), (33.3, 0.55), (38.4, 0.5), (44.8, 0.45), (54.7, 0.6),
+    (58.5, 0.4), (65.9, 0.3), (84.8, 0.35), (93.2, 0.5), (99.7, 0.6), (103.3, 0.5), (113.9, 0.6), (117.8, 0.55), (122.3, 0.6),
+    (127.0, 0.7), (134.1, 0.65), (136.3, 0.35), (145.5, 0.4), (149.6, 0.5), (153.6, 0.55), (160.8, 0.7), (162.3, 0.6), (168.7, 0.65),
+    (171.2, 0.4), (176.8, 0.5), (183.9, 0.55), (187.7, 0.6), (191.6, 0.65), (200.4, 0.6), (208.3, 0.7), (215.8, 0.65), (219.3, 0.8),
+    (227.2, 0.75), (230.2, 0.6), (239.1, 0.8), (245.4, 0.9), (248.6, 1.0), (257.1, 0.95), (258.1, 0.2), (279.6, 0.6), (287.6, 0.55),
+    (294.4, 0.65), (303.2, 0.5), (314.6, 0.55), (317.8, 0.7), (323.4, 0.75), (328.2, 0.9), (336.6, 0.6), (340.2, 0.75), (343.4, 0.85),
+    (352.9, 0.7), (356.5, 0.8), (359.1, 0.65), (369.1, 0.7), (376.5, 0.85), (383.1, 0.8), (386.0, 0.45), (397.0, 0.55), (404.0, 0.7),
+    (406.9, 0.85), (410.5, 0.9), (416.4, 0.65), (425.4, 0.75), (435.4, 0.9), (444.8, 0.75), (455.4, 0.65), (461.0, 0.8), (466.0, 0.85),
+    (473.3, 0.95), (479.3, 0.85), (484.3, 0.7), (488.5, 0.75), (494.8, 0.8), (496.6, 0.65), (503.5, 0.5), (508.6, 0.7), (513.1, 0.85),
+    (520.1, 0.8), (522.8, 0.65), (547.3, 0.75), (561.6, 0.85), (571.3, 0.95), (575.3, 0.85), (580.2, 0.95), (586.8, 0.9), (589.9, 0.7),
+    (600.0, 1.0), (608.4, 0.95), (611.8, 0.8), (616.6, 0.9), (623.7, 1.0), (628.5, 0.9), (635.9, 0.95), (640.7, 0.8), (659.6, 0.85),
+    (664.4, 0.9), (670.1, 1.0), (680.5, 1.0), (683.1, 0.3), (687.5, 0.55), (692.3, 0.7), (698.2, 0.6), (709.2, 0.5), (716.5, 0.6),
+    (725.1, 0.75), (731.2, 0.85), (737.2, 0.8), (743.0, 0.85), (750.9, 0.9), (766.6, 1.0), (768.5, 0.7), (770.4, 0.8), (776.9, 0.85),
+    (783.7, 0.9), (789.0, 0.75), (791.6, 0.6), (816.6, 0.65), (830.9, 0.7), (844.6, 0.8), (853.0, 0.75), (884.4, 0.9), (889.5, 0.95),
+    (897.5, 1.0), (911.0, 1.0), (912.7, 1.0), (914.4, 0.85), (931.2, 0.9), (937.2, 0.95), (939.2, 0.6), (950.8, 0.4), (962.9, 0.45),
+    (973.6, 0.6), (979.0, 0.75), (986.4, 0.9), (989.5, 0.95), (993.9, 0.15), (1005.5, 0.2), (1028.5, 0.25), (1046.9, 0.3),
+    (1063.4, 0.45), (1073.4, 0.2), (1078.6, 0.1)]
 
 
 def intensity_curve(F):
@@ -1995,17 +1662,16 @@ def intensity_curve(F):
 
 HIT_SFX = ('impact_hit', 'stinger', 'braam', 'sub_drop')
 HIT_MUS = ('hit', 'stinger', 'braam', 'sub_drop')
-# drop-outs before the big scares (the music goes out and the room tone is left)
-EXTRA_SIL = [(154.0, 1.3), (167.4, 1.4), (242.3, 1.2), (249.2, 1.2), (293.6, 1.4), (325.0, 0.9), (366.3, 1.4), (420.4, 1.0),
-             (447.4, 1.2), (456.4, 1.0), (520.6, 0.8), (564.6, 1.2), (568.9, 1.4), (650.0, 1.0), (659.9, 0.8), (702.0, 1.2)]
+# drop-outs before the big scares (the music goes out and the room tone is left): (time, length)
+EXTRA_SIL = [(247.6, 0.9), (327.4, 0.8), (369.4, 1.2), (434.6, 0.8), (519.3, 0.8), (600.6, 0.9), (669.1, 1.0), (682.9, 1.6),
+             (729.9, 1.0), (749.9, 1.0), (765.8, 0.8), (910.0, 0.9), (912.2, 0.5), (985.6, 0.9)]
 WHOOSH_GAP = 40.0
 
 
 def polish_cues(F, sfx, mus):
-    """Cue-sheet pass after the shots (police film): hits land on the reveal cut, braams leave the reveal line clear,
-    whooshes are rationed, silences sit before the big scares, swells breathe, duplicates are merged."""
+    """Cue-sheet pass after the shots (police / dummy film): hits land on the reveal cut, braams leave the reveal line
+    clear, whooshes are rationed, silences sit before the big scares, swells breathe, duplicates are merged."""
     cuts = sorted(sh.t0 for sh in F.shots)
-    snaps = [sh.p['cam']['snap'][0] for sh in F.shots if (sh.p.get('cam') or {}).get('snap')]
     lines = [(l['t'], l['end']) for l in F.L]
 
     def line_at(t):
@@ -2014,7 +1680,6 @@ def polish_cues(F, sfx, mus):
         return None
 
     def retime(t):
-        if any(abs(t - sn) < 0.06 for sn in snaps): return t
         prev = [c for c in cuts if 0.0 < t - c <= 0.25]
         if prev: return max(prev)
         ln = line_at(t); nxt = [c for c in cuts if 0.0 < c - t <= 0.35]
@@ -2022,62 +1687,37 @@ def polish_cues(F, sfx, mus):
         return t
 
     for e in sfx:
-        if e['name'] in HIT_SFX: e['t'] = round(retime(e['t']), 3)
+        if e['name'] in HIT_SFX and not (e.get('params') or {}).get('fixed'): e['t'] = round(retime(e['t']), 3)
     for e in mus:
-        if e['type'] in HIT_MUS: e['t'] = round(retime(e['t']), 3)
+        if e['type'] in HIT_MUS and not e.get('fixed'): e['t'] = round(retime(e['t']), 3)
     for e in mus:
         if e['type'] != 'braam': continue
         ln = line_at(e['t'] + 0.02)
         if ln and ln[0] < e['t'] - 0.02:
             nxt = [c for c in cuts if ln[1] - 0.05 <= c <= ln[1] + 1.0]
             e['t'] = round(min(nxt) if nxt else ln[1] + 0.05, 3)
-
-    ht = [e['t'] for e in mus if e['type'] in HIT_MUS] + [e['t'] for e in sfx if e['name'] in HIT_SFX]
-    wh = [e for e in sfx if e['name'] == 'whoosh' and (e.get('params') or {}).get('kind') != 'soft' or e['name'] == 'whoosh' and not e.get('params')]
-    pri = lambda e: (0 if any(abs(e['t'] - sn) < 0.06 for sn in snaps) else 1 if any(abs(e['t'] - h) < 0.4 for h in ht) else 2)
+    wh = [e for e in sfx if e['name'] == 'whoosh' and (e.get('params') or {}).get('kind') != 'soft']
     keep = []
-    for e in sorted(wh, key=lambda e: (pri(e), e['t'])):
+    for e in sorted(wh, key=lambda e: e['t']):
         if all(abs(e['t'] - k['t']) >= WHOOSH_GAP for k in keep): keep.append(e)
-    kid = set(map(id, keep)) | set(id(e) for e in sfx if e['name'] == 'whoosh' and e not in wh)
-    sfx = [e for e in sfx if e['name'] != 'whoosh' or id(e) in kid]
-
+    kid = set(map(id, keep))
+    sfx = [e for e in sfx if e['name'] != 'whoosh' or id(e) in kid or (e.get('params') or {}).get('kind') == 'soft']
     for t, ln in EXTRA_SIL:
-        if not any(e['type'] == 'silence' and abs(e['t'] - t) < 3 for e in mus):
+        if not any(e['type'] == 'silence' and abs(e['t'] - t) < 2 for e in mus):
             mus.append({'t': t, 'type': 'silence', 'level': 0.0, 'len': ln})
-    hts = sorted(e['t'] for e in mus if e['type'] in HIT_MUS + ('rule',))
-    for e in mus:
-        if e['type'] != 'silence': continue
-        ln = max(1.0, float(e.get('len', 1.4)))
-        h = [x for x in hts if e['t'] < x <= e['t'] + ln + 0.6]
-        if h:
-            end = min(h) - 0.04
-            start = max(end - ln, e['t'] - 1.2)
-            e['t'] = round(start, 3); ln = end - start
-        e['len'] = round(max(0.6, ln), 2)
-
     for e in mus:
         if e['type'] == 'swell' and float(e.get('len', 12)) < 12:
-            pk = e['t'] + float(e.get('len', 6)); e['len'] = 13.0; e['t'] = round(max(0.5, pk - 13.0), 3)
-    peaks = [e['t'] + e['len'] for e in mus if e['type'] == 'swell']
-    sil = [(e['t'], e['t'] + e['len']) for e in mus if e['type'] == 'silence']
-    want = int(F.duration / 60 * 2.5)
-    iv = intensity_curve(F)
-    for t, v in sorted(iv, key=lambda p: -p[1]):
-        if len(peaks) >= want: break
-        if t < 16 or t > F.duration - 4: continue
-        if any(abs(t - q) < 20 for q in peaks) or any(a - 0.5 <= t <= b + 0.5 for a, b in sil): continue
-        mus.append({'t': round(t - 13.0, 3), 'type': 'swell', 'level': 0.5, 'len': 13.0}); peaks.append(t)
-
+            pk = e['t'] + float(e.get('len', 6)); e['len'] = 12.0; e['t'] = round(max(0.5, pk - 12.0), 3)
     out = []
-    kk = lambda e: (e['name'], '' if e['name'] == 'dummy_clack' else str(e.get('space')), str((e.get('params') or {}).get('who')))
+    kk = lambda e: (e['name'], str(e.get('space')), str((e.get('params') or {}).get('who')), str((e.get('params') or {}).get('index')))
     for e in sorted(sfx, key=lambda e: kk(e) + (e['t'],)):
-        if out and kk(out[-1]) == kk(e) and e['t'] - out[-1]['t'] < (0.03 if e['name'] == 'dummy_clack' else 0.06):
+        if out and kk(out[-1]) == kk(e) and e['t'] - out[-1]['t'] < 0.05:
             if e['gain_db'] > out[-1]['gain_db']: out[-1] = e
             continue
         out.append(e)
     mo = []
     for e in sorted(mus, key=lambda e: (e['type'], e['t'])):
-        if mo and mo[-1]['type'] == e['type'] and e['type'] != 'silence' and e['t'] - mo[-1]['t'] < 0.06:
+        if mo and mo[-1]['type'] == e['type'] and e['type'] not in ('silence', 'jingle') and e['t'] - mo[-1]['t'] < 0.06:
             if e.get('level', 0) > mo[-1].get('level', 0): mo[-1] = e
             continue
         mo.append(e)
@@ -2093,830 +1733,84 @@ def plan(F):
 
 def plan_dev(F):
     """Staging calibration: one shot per builder (FILM_DEV=1)."""
-    C, t, w = F.cut, F.t, F.w
-    LAUGH_T[:] = [303.0, 305.6, 309.6, 312.2, 313.5, 314.8]
-    C(0.0, 'hall', winks=True, ppl=[P('mom', at='bench_stand'), P('owen', at=('h', -0.2, 1.7)), P('you', at=('h', 0.3, 1.5))])
-    C(3.0, 'hall', winks=True, cam=dict(mv='keys', keys=[(3.0, 960, 560, 1.0, None, 1.0), (6.0, 900, 560, 1.15, 'in_out', 2.6)]))
-    C(6.0, 'hdoor', door=0.85, ppl=[P('mom', at='mid'), P('owen', at='bench_stand')])
-    C(9.0, 'stairs', winks=dict(act=lambda a, s: (a.sit_dummy(hands='knees'), a.torch_on(9.3, 0.0, -1, hold='lens'))))
-    C(12.0, 'kitchen', view='table', winks=True, ppl=[P('mom', at='beside', act=lambda a, s: a.smell_mug(12.5, None, -1, pale_at=13.5))])
-    C(15.0, 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.glove_lift(15.5))))
-    C(18.0, 'living', view='tv', winks=dict(act=winks_chair(look=0.85)))
-    C(21.0, 'living', view='tv', tv=dict(on=20.0, snow=0.0), lamp=0.25, winks=dict(act=winks_chair(look=0.0)))
-    C(24.0, 'living', view='couch', ppl=[P('owen', at='couch_r', act=_A(sitp(), setp(turn=0.5))), P('you', at='couch_m', act=_A(sitp(), setp(turn=0.35))),
-                                         P('mom', at='couch_l', act=_A(sitp(), setp(turn=-0.5)))],
-      winks=dict())
-    C(27.0, 'den', lap=dict(who='owen', act=lambda a, s: a.vent_pose(side=1), dact=lambda a, s: a.puppet(26, 31, look=-1)),
-      ppl=[P('mom', at='mom'), P('you', at=('h', 0.45, 1.85), act=_A(turned(1.55), lambda a, s: a.kneel(27.0)))])
-    C(30.0, 'den', rug=True, lamp=1.0)
-    C(33.0, 'studio')
-    C(36.0, 'hospital', lap=True, ppl=[P('you', at='bedside', act=turned(-0.6))])
-    C(39.0, 'hospital', view='close', bed='walter', dummy='bed', ppl=[P('you', at='bedside')])
-    C(42.0, 'stage62')
-    C(45.0, 'museum', act=lambda a, s: a.smile_stage(-9, 'owen'))
-    C(48.0, 'street', van=dict(drive=('out', 48.5, 51.0, -5.5, -14.0)), ppl=[P('owen_new', at='owen', act=_A(turned(2.0), lambda a, s: a.wave(48.2, 51)))])
-    C(51.0, 'street', view='outside', ppl=[P('owen_new', at='owen_window', act=lambda a, s: a.wave(51.2, 54))])
-    C(54.0, 'bedroom', ppl=[P('owen_new', at='doorway')])
-    C(57.0, 'bust', who='winks', bg='kitchen')
-    C(60.0, 'bust', who='mom', bg='living', ghost=[dict(who='winks', at='bookcase_top', act=_A(lambda a, s: a.sit_dummy(hands='limp'),
-                                                                                                lambda a, s: a.torch_on(60.0, 0, 1, hold='chin')), light=TORCH)])
-    C(63.0, 'lap', who='owen', bg='den', x=880, y=980, h=1350, act=lambda a, s: a.vent_pose(side=1), dact=lambda a, s: a.puppet(62, 67, look=-1))
-    C(66.0, 'carry', act=None, dact=lambda a, s: a.smile_stage(-9, 'owen'))
-    C(69.0, 'portrait', cam=dict(mv='keys', keys=[(69.0, 960, 900, 1.0), (72.0, 960, 2000, 1.0)]),
-      act=lambda a, s: a.torch_on(70.5, 30.0, 1, hold='side'))
-    C(72.0, 'hands', mode='squeeze', squeeze=[73.0, 73.5, 74.0])
-    C(75.0, 'hands', mode='grab', tg=75.3)
-    C(78.0, 'ins', name='letter', kw=dict(hl=4))
-    C(81.0, 'rule', n=6, bg='den')
-    C(84.0, 'rule', n=6, bg='den', recall=True, mode='tear', reveal=85.5)
-    C(87.0, 'bust', who='walter74', bg='studio', cam=dict(mv='push', x=960, y=560))
-    C(90.0, 'black')
+    C = F.cut
+    C(0.0, 'set', room='living', view='wide2', set=dict(lamp=1.0),
+      ppl=[P('narrator', 'couch_left', expr='haunted'), P('june', 'couch_mid')])
+    C(3.0, 'bust', who='mom', bg=('kitchen', 'back'), set=dict(kitchen=1.0), expr='too_still', cx=960, cy=600, scale=0.8)
+    C(6.0, 'ins', name='egg', kw=dict(rattle=lambda t: math.sin(t * 20) * clamp(t - 1.0)))
+    C(9.0, 'rule', n=1)
+    C(12.0, 'ins', name='badge')
+    C(15.0, 'card', mode='like', hit_t=15.5)
+    C(18.0, 'black')
 
 
 def plan_film(F):
-    t, e, w, C = F.t, F.e, F.w, F.cut
-    T = lambda i, off=0.0: F.t(i) - LEAD + off
-    Y, M, O, ON = 'you', 'mom', 'owen', 'owen_new'
-    G = F.globals
-
-    def KP(t0, t1, x0, y0, f0, x1, y1, f1, z0=1.0, z1=1.06, ease='in_out', shake=1.4):
-        """One continuous interior move: dolly z0 -> z1 (<= 1.3) and optical zoom f0 -> f1."""
-        return dict(mv='keys', shake=shake, keys=[(t0, x0, y0, z0, None, f0), (t1, x1, y1, z1, ease, f1)])
-    plan_open(F, t, e, w, C, T, KP)
-    plan_night(F, t, e, w, C, T, KP)
-    plan_rules34(F, t, e, w, C, T, KP)
-    plan_rules56(F, t, e, w, C, T, KP)
-    plan_end(F, t, e, w, C, T, KP)
-    plan_globals(F, t, e, w, G)
-
-
-TVL = dict(rim='#9fd0ff', rim_a=150, side=1, key=-0.2)           # the TV's blue light on faces
-LIMP = lambda a, s: a.set(-9, None, 0.1, h_tilt=14.0, h_nod=0.12)
-DOOR_WALK = []
-
-
-def door_swing(t_open, dur=1.4, k0=0.0, k1=0.85):
-    return lambda t: k0 + (k1 - k0) * ease_in_out(clamp((t - t_open) / dur))
-
-
-def plan_open(F, t, e, w, C, T, KP):
-    Y, M, O = 'you', 'mom', 'owen'
-    # the studio audience: every laugh is applause, and applause lets him move (film clock; the kitchen dummy moves on them)
-    LAUGH_T[:] = [11.4, 14.3, 35.3, 37.9, 64.4, 66.9, 302.95, 305.45, 309.2, 312.1, 313.45, 314.85, 316.9, 318.7, 321.0, 322.5,
-                  443.6, 462.03, 464.5, 480.3, 484.55]
-    # the tape's own voice under the narration (the joke replayed from the recording, low through the TV): the dummy's jaw on
-    # the tape follows it, so young Walter's unmoving lips read against a talking dummy; it stops in the middle of the joke
-    F.tv_voices = [(440.05, F.t(118), F.e(118), 99.0, -18), (444.78, F.t(121), F.e(121), 0.47, -14)]   # the punchline cut mid-word by the tape stop
-
-    # ============================================================ COLD OPEN (0 - 75.9)
-    # his glass eyes in the dark, the flashlight under his chin; a wooden wink on "jokes"
-    C(0.0, 'bust', who='winks', bg='hall_dark', cx=960, cy=640, scale=1.45, ecu=True, light=TORCH, torch_glow=True,
-      act=_A(stage(3), lambda a, s: a.wink(w(0, 'jokes') + 0.1)), cam=dict(mv='creep', x=960, y=500, z=1.0),
-      music=[(0.2, 'motif', 0.5, 5)])
-    C(T(1), 'ins', name='back_slot', kw=lambda tt: dict(hand=0.4 * ease_in_out(clamp((tt - 0.2) / 1.3))), cam=dict(mv='push', x=960, y=560, rate=0.05))
-    # in Grandpa's chair under the flickering pendant: on "goodnight" the light dies and only his flashlight is left
-    tg = w(2, 'goodnight')
-    C(T(2), 'kitchen', view='chair', kitchen=dict(flick=[(T(2) + 0.7, 1.0), (tg - 0.45, 0.4)], out=[(tg + 0.05, 99.0)]), sway=0.03,
-      winks=dict(act=_A(winks_chair(look=0.0), stage(3))), cam=KP(T(2), T(3), 960, 560, 1.0, 960, 520, 1.55, 1.0, 1.1),
-      sfx=[(tg + 0.05, 'lamp_out', -3, 0.1, 'inside', dict(kind='pop')), (T(2) + 0.7, 'bulb_flicker', -10, 0.1, 'inside', dict(dur=1.0))])
-    # the tape: two seats; one of them talks; the other one gets worked; it is very tired of being worked
-    C(T(3), 'studio', track=0.5, cam=dict(mv='keys', keys=[(T(3), 960, 600, 1.0), (T(5), 990, 580, 1.2, 'in_out')]),
-      music=[(T(3), 'theme', 0.3, 5.0)])
-    C(T(5), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(5), 1010, 600, 1.6), (T(6), 1040, 610, 1.9, 'in_out')]))
-    tg6 = w(6, 'tired')
-    C(T(6), 'bust', who='winks', bg='studio', tape=True, cx=960, cy=580, scale=1.1,
-      act=_A(lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.7), lambda a, s: a.smile_stage(tg6 + 0.1, 'tape', tg6 + 0.75, fade=0.05)),
-      track_fn=lambda tt, a=tg6: 0.35 + 2.4 * math.exp(-max(0.0, tt - a - 0.1) * 4.0) * (tt > a + 0.05),
-      cam=dict(mv='creep', x=960, y=520), sfx=[(tg6 + 0.1, 'tape_glitch', -6, 0, 'tv', dict(dur=0.7))])
-    # the greatest ventriloquist who ever lived; sixty years and nobody saw his lips move
-    C(T(7), 'ins', name='family_photo', cam=dict(mv='push', x=960, y=540, rate=0.04), music=[(t(7), 'motif', 0.5, 5)])
-    C(T(8), 'bust', who='walter74', bg='studio', cx=960, cy=600, scale=1.15, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.3),
-      cam=dict(mv='keys', keys=[(T(8), 960, 500, 1.0), (T(9), 960, 600, 1.35, 'in_out')]))
-    C(T(9), 'bust', who='walter74', bg='studio', ecu=True, cx=960, cy=380, scale=1.7, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.0),
-      cam=dict(mv='creep', x=960, y=560))
-    # last week we buried him: the black case in the dark hall like a little coffin
-    C(T(10), 'ins', name='latches', kw=dict(latch=0.0), cam=dict(mv='push', x=960, y=560, rate=0.035), music=[(t(10), 'silence', 0.0, 1.0)])
-    # why his lips never moved: his jaw hangs open in the dark ... and clacks shut on "moved"
-    tm = w(11, 'moved')
-    C(T(11), 'bust', who='winks', bg='hall_dark', cx=960, cy=640, scale=1.25, light=TORCH, torch_glow=True,
-      act=_A(stage(3), lambda a, s: a.jaw_hang(s.t0 - 1, 0.55), lambda a, s: a.clack(tm + 0.2, 0.09)),
-      cam=dict(mv='creep', x=960, y=520), hit=tm + 0.2)
-    C(T(12), 'ins', name='poster_1962', cam=dict(mv='push', x=960, y=520, rate=0.04))
-    # Saturday mornings: from the TV's bezel into the cheerful show; on "Mister Winks" the dummy snaps round to the camera
-    tmw = w(13, 'mr')
-    C(T(13), 'studio', bezel=1.0, track=0.3, cam=dict(mv='keys', keys=[(T(13), 960, 560, 1.0), (w(13, 'dummy') - 0.1, 975, 575, 1.2, 'in_out')]),
-      music=[(t(13), 'theme', 0.55, 6.0)])
-    C(w(13, 'dummy') - 0.1, 'studio', track=0.3, cam=dict(mv='keys', keys=[(w(13, 'dummy') - 0.1, 1030, 600, 1.7), (e(13), 1040, 590, 2.0, 'in_out')]),
-      d_act=lambda a, s: (a.puppet(s.t0 - 2, tmw - 0.3, look=-1, rate=0.8), a.head_snap(tmw + 0.1, 0.0)))
-    # painted red hair, freckles, the usher's jacket and brass buttons, the little flashlight in one white glove: one move
-    tf = w(16, 'flashlight')
-    C(T(14), 'portrait', x=960, y=3050, h=2700, act=_A(stage(1), lambda a, s: a.torch_on(tf + 0.2, 35.0, 1, hold='side')),
-      cam=dict(mv='keys', keys=[(T(14), 990, 420, 1.0), (t(15) - 0.05, 1010, 780, 1.12, 'in_out'), (t(16) + 0.4, 960, 1350, 1.0, 'in_out'),
-                                (w(16, 'brass'), 940, 1560, 1.05, 'in_out'), (tf, 1180, 1900, 1.0, 'in_out'), (T(17), 1210, 1960, 1.05, 'lin')]))
-    C(T(17), 'bust', who='winks', bg='kitchen', cx=960, cy=620, scale=1.3, ecu=True, act=_A(stage(1), lambda a, s: a.wink(e(17) + 0.05)),
-      cam=dict(mv='creep', x=960, y=480))
-    # Owen and the tapes: practising the wink his whole life; both eyes close, every time
-    C(T(18), 'bust', who=O, bg='living', lamp=0.15, light=TVL, act=_A(ex('kid_grin'), sway(3, 2.4)), cam=dict(mv='push', x=960, y=580))
-    C(w(18, 'every') - 0.1, 'living', view='tv', tv=dict(on=-10.0, snow=0.0), lamp=0.2, era='memory', cam=KP(w(18, 'every') - 0.1, T(19), 930, 570, 1.25, 900, 585, 1.7))
-    C(T(19), 'bust', who=O, bg='living', lamp=0.15, light=TVL, act=_A(ex('kid_grin'), lambda a, s: a.try_wink_kid(w(20, 'wink'), 0.45)),
-      cam=dict(mv='push', x=960, y=570))
-    C(T(21), 'bust', who=O, bg='living', lamp=0.15, light=TVL, ecu=True, cx=960, cy=660, scale=1.3,
-      act=_A(ex('kid_grin'), lambda a, s: a.try_wink_kid(w(22, 'both') + 0.15, 0.9)), cam=dict(mv='creep', x=960, y=520))
-    # Grandpa: one strange habit; he never said goodnight, not to his audience (the end of the show: a wave, no goodnight)
-    C(T(23), 'bust', who='grandpa', bg='memory_kitchen', era='memory', expr='still_smile', act=creep(4), cam=dict(mv='creep', x=960, y=540))
-    C(T(24), 'studio', track=0.3, cam=dict(mv='pull', x=960, y=560, z=1.2), w_act=lambda a, s: a.wave(t(25) + 0.5, e(25), side=-1))
-    # every night he'd tuck me in, squeeze my hand three times (I love you), and say ...
-    C(T(26), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=1000, cy=470, scale=0.86,
-      act=_A(lambda a, s: a.tuck_in(s.t0 + 0.2), setp(h_nod=0.2)), cam=dict(mv='push', x=980, y=540))
-    sq = [w(26, 'three') - 0.05, w(26, 'three') + 0.38, w(26, 'times') + 0.4]
-    C(w(26, 'squeeze') - 0.2, 'hands', mode='squeeze', squeeze=sq, tg=w(26, 'squeeze'), era='memory', grade='memory')
-    C(T(27), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=960, cy=500, scale=1.0, ecu=True, act=creep(3),
-      cam=dict(mv='creep', x=960, y=480), music=[(t(27), 'motif', 0.5, 4)])
-
-    # ============================================================ THE HOSPITAL (75.9 - 110.6)
-    bed_a = _A(ex('still_smile'), setp(pupil=0.7, still=0.8))
-    C(T(28), 'hospital', bed_act=bed_a, cam=KP(T(28), T(29), 960, 540, 1.0, 990, 520, 1.3), music=[(t(28), 'silence', 0.0, 0.8)])
-    C(T(29), 'hospital', view='close', bed_act=bed_a, dummy='chair', dact=stage(0), cam=KP(T(29), T(30), 960, 560, 1.0, 900, 570, 1.25))
-    C(T(30), 'bust', who=Y, bg='hospital', act=_A(lambda a, s: a.hold_mug(s.t0 - 1), ex('sad')), cam=dict(mv='push', x=960, y=580))
-    # Mister Winks on Grandpa's lap, the old hand inside him: one last show (his head works; his jaw stays shut)
-    tgh = w(32, 'hand') - 0.25
-    C(T(32), 'hospital', lap=True, bed_act=bed_a, cam=KP(T(32), tgh, 960, 540, 1.0, 1000, 545, 1.9, 1.0, 1.1))
-    tws = w(32, 'way') - 0.1
-    C(tgh, 'lap', who='grandpa_bed', bg='hospital', x=880, y=930, h=1300, act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), bed_a,
-                                                                          setp(turn=0.15)),
-      dact=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.8), cam=dict(mv='keys', keys=[(tgh, 960, 560, 1.0), (tws, 960, 520, 1.12, 'in_out')]))
-    C(tws, 'studio', track=0.45, cam=dict(mv='keys', keys=[(tws, 1000, 560, 1.4), (T(33), 1030, 590, 1.7, 'in_out')]))
-    C(T(33), 'bust', who=Y, bg='hospital', act=_A(ex('sad'), setp(d=0.4, fade=0.8, smile=0.25)), cam=dict(mv='push', x=960, y=580))
-    # the real Walter: the grab, the look, the whisper; the flatline
-    tg35 = w(35, 'grabbed') + 0.05
-    wl = _A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), setp(turn=0.15), ex('fear'))
-    C(T(35), 'hospital', view='close', bed='walter', lap=True, bpm=104, bed_act=_A(wl, lambda a, s: a.grab_wrist(tg35, None, side=-1)), dact=LIMP,
-      ppl=[P(Y, at='bedside', act=_A(turned(-0.55), ex('fear', 0.0)))], cam=KP(T(35), w(35, 'hard') - 0.2, 940, 560, 1.0, 900, 560, 1.25), hit=tg35 + 0.12)
-    C(w(35, 'hard') - 0.25, 'hands', mode='grab', tg=w(35, 'hard') - 0.15, shake=1.0, bpm=104)
-    C(T(36), 'bust', who='walter', bg='hospital', hview='close', act=_A(ex('lucid'), tremble(0.8)), cam=dict(mv='creep', x=960, y=560))
-    C(T(37), 'bust', who='walter', bg='hospital', hview='close', ecu=True, cx=960, cy=640, scale=1.35, act=_A(ex('lucid'), tremble(1.0)),
-      cam=dict(mv='creep', x=960, y=520), music=[(t(37), 'silence', 0.0, 1.0)])
-    tflat = w(39, 'gone') + 0.15
-    C(T(39), 'hospital', view='close', bed='walter', lap=True, bpm=60, flat=tflat, flat_dur=round(T(41) - tflat + 0.3, 2), bed_act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1),
-                                                                                         setp(turn=0.15, eye_open=0.25, smile=-0.1, still=1.0)),
-      dact=LIMP, cam=KP(T(39), T(40), 960, 540, 1.0, 1000, 560, 1.4))
-    C(T(40), 'hospital', bed='walter', lap=True, bpm=60, flat=tflat, light=0.6,
-      bed_act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), setp(turn=0.15, eye_open=0.2, still=1.0)),
-      dact=_A(LIMP, stage(1), lambda a, s: a.doll_turn(t(40) + 0.6, -0.05, 0.9, 3, frm=0.4)), cam=KP(T(40), T(41), 980, 540, 1.2, 1000, 550, 1.9))
-
-    # ============================================================ TONIGHT: GRANDPA'S HOUSE (110.6 - 139.2)
-    td = t(41) + 0.45
-    C(T(41), 'hdoor', light=dict(on=t(42) - 0.6), door=door_swing(td, 1.5, 0.0, 0.85),
-      ppl=[P(M, path=(td + 0.7, td + 3.1, ['outside', 'door', ('h', -0.65, 1.55)]), act=ex('sad')),
-           P(O, path=(td + 1.2, td + 3.5, ['outside', 'door', ('h', -0.05, 1.9)]), act=ex('nervous')),
-           P(Y, path=(td + 1.7, td + 3.9, ['outside', 'door', ('h', 0.45, 1.45)]))],
-      cam=KP(T(41), T(42), 960, 560, 1.0, 960, 560, 1.2), focus=2.2,
-      sfx=[(T(41) + 0.05, 'car_door', -10, -0.3, 'outside', dict(n=3, spacing=0.45)), (td - 0.5, 'key_in_lock', -6, 0, 'inside'),
-           (td, 'door_creak', -4, 0, 'inside', dict(kind='front_door')), (t(42) - 0.6, 'light_switch', -6, -0.3, 'inside')])
-    C(T(42), 'hall', kitchen=0.0, ppl=[P(M, at=('h', -0.75, 1.55), act=turned(2.0, -0.3)), P(O, at=('h', -0.15, 1.9), act=turned(2.0)),
-                                      P(Y, at=('h', 0.35, 1.25), act=turned(2.0, 0.2))],
-      cam=KP(T(42), T(43), 960, 560, 1.0, 950, 520, 1.25), focus=1.6, tags=[(w(42, 'eight') + 0.1, '8:00 AM   MUSEUM PICKUP', 960, 170, 'white', 2.4)])
-    C(T(43), 'hall', kitchen=0.0, ppl=[P(M, at=('h', -0.75, 1.55), act=turned(2.0, -0.3)), P(O, at=('h', -0.15, 1.9), act=turned(2.0)),
-                                      P(Y, at=('h', 0.35, 1.25), act=turned(2.0, 0.2))], cam=KP(T(43), T(44), 900, 560, 1.15, 790, 600, 1.75, 1.0, 1.08), focus=1.7)
-    C(T(44), 'ins', name='latches', kw=dict(latch=0.0), cam=dict(mv='move', x=700, y=560, z=1.15, x1=1080, y1=540, z1=1.32))
-    C(T(46), 'ins', name='envelope', cam=dict(mv='keys', keys=[(T(46), 960, 560, 1.0), (T(47), 960, 545, 1.22, 'in_out'), (T(48), 990, 560, 1.55, 'in_out')]))
-    t4 = w(49, 'fourth')
-    C(T(48), 'ins', name='letter', kw=lambda tt, a=t4 - T(48): dict(hl=4 if tt >= a else 0),
-      cam=dict(mv='keys', keys=[(T(48), 960, 540, 1.0), (t4, 930, 560, 1.4, 'in_out'), (T(50), 925, 565, 1.5, 'lin')]))
-    C(T(50), 'bust', who=Y, bg='hall', act=_A(ex('nervous'), down(-1, 0.4)), cam=dict(mv='push', x=960, y=580))
-    C(T(51), 'hall', kitchen=0.0, ppl=[P(M, at=('h', -0.7, 1.75), act=turned(2.0, -0.3)), P(O, at=('h', -0.1, 2.05), act=turned(2.0)),
-                                      P(Y, at=('h', 0.4, 1.7), act=turned(2.0, 0.2))],
-      cam=KP(T(51), T(52), 960, 530, 1.0, 950, 500, 1.6, 1.0, 1.06), focus=5.0,
-      music=[(t(51), 'swell', 0.5, 3.0)])
-
-
-def plan_night(F, t, e, w, C, T, KP):
-    Y, M, O = 'you', 'mom', 'owen'
-    HALL3 = lambda tt=None, a=(0.6, 0.3, -0.5): [P(M, at=('h', -0.75, 1.75), act=turned(a[0])), P(O, at=('h', -0.15, 2.0), act=turned(a[1])),
-                                                 P(Y, at=('h', 0.4, 1.7), act=turned(a[2]))]
-    # ============================================================ RULE 1 (139.2 - 199.0): keep him in the case
-    C(T(52), 'rule', n=1, bg='hall', case='closed')
-    C(T(54), 'ins', name='letter_close', kw=dict(hl=1), cam=dict(mv='push', x=960, y=470, rate=0.035))
-    C(T(55), 'hall', kitchen=0.0, ppl=HALL3(), focus=1.6, cam=KP(T(55), T(56), 960, 600, 1.0, 960, 590, 1.25))
-    C(T(56), 'ins', name='letter', motion=lambda tt: (0.0, 3.0 * math.sin(tt * 9.0) * clamp(1.0 - tt / 1.6), 0, 0.4 * math.sin(tt * 8.0)),
-      cam=dict(mv='push', x=960, y=540, rate=0.04))
-    C(T(57), 'bust', who=M, bg='hall', act=_A(lambda a, s: a.laugh_soft(s.t0 - 0.8, 1.6), lambda a, s: a.set(s.t0, s.t0 + 2.0, 0.35, smile=0.55, teeth=0.2, squint=0.2),
-                                             lambda a, s: a.set(s.t0 + 0.05, s.t0 + 0.75, 0.25, look_y=-0.85, look_x=0.25, brow_up=0.35),
-                                             ex('sad', 2.6)), cam=dict(mv='push', x=960, y=580))
-    tl = w(59, 'pops') + 0.1
-    C(T(59), 'ins', name='latches', kw=lambda tt, a=tl - T(59): dict(latch=(clamp((tt - a) / 0.08), clamp((tt - a - 0.26) / 0.08))),
-      cam=dict(mv='push', x=960, y=560, rate=0.05), sfx=[(tl, 'case_latch', -2, -0.15, 'close'), (tl + 0.26, 'case_latch', -2, 0.15, 'close')])
-    C(w(59, 'show') - 0.12, 'bust', who=O, bg='hall', act=_A(ex('nervous'), setp(d=0.0, fade=0.5, h_nod=0.12)), cam=dict(mv='push', x=960, y=600))
-    # the case is empty: the shape of him pressed into the red velvet ... and the velvet is still warm
-    C(T(60), 'ins', name='case_open', kw=dict(warm=0.0), cam=dict(mv='keys', keys=[(T(60), 960, 540, 1.0), (T(62), 960, 560, 1.32, 'in_out')]),
-      sfx=[(t(60) - 0.2, 'case_lid', -3, 0, 'close', dict(kind='open'))], hit=t(60) + 0.04, music=[(t(60), 'stinger', 0.75)])
-    C(T(62), 'ins', name='case_open', kw=lambda tt: dict(warm=clamp(tt / 0.9)), hand=('mom', 1240, 760, 320, 'open', 150.0, 1),
-      cam=dict(mv='push', x=1080, y=640, z=1.5, rate=0.04), tags=[(w(62, 'warm'), 'STILL WARM', 960, 170, 'red', 1.6)])
-    # from the kitchen, a sound: a spoon stirring in a cup. Clink. Clink. Clink.
-    C(T(63), 'hall', case='open', kitchen=0.0, focus=1.6, ppl=[P(M, at=('h', -1.05, 1.75), act=_A(turned(0.6), turn_to(t(63) + 0.4, 1.7, 0.7))),
-                                                         P(O, at=('h', -0.72, 2.05), act=_A(turned(0.3), turn_to(t(63) + 0.6, 2.0, 0.6))),
-                                                         P(Y, at=('h', 0.6, 1.65), act=_A(turned(-0.5), turn_to(t(63) + 0.3, 2.2, 0.6)))],
-      cam=KP(T(63), T(64), 960, 580, 1.0, 950, 540, 1.25, 1.0, 1.08),
-      sfx=[(w(64, 'spoon') - 0.1, 'spoon_clink', -6, -0.1, 'kitchen_far', dict(kind='stir', dur=1.8))])
-    C(T(64), 'hall', case='open', kitchen=0.0, focus=6.0, ppl=[P(M, at=('h', -1.05, 1.75), act=turned(1.7)), P(O, at=('h', -0.72, 2.05), act=turned(2.0)), P(Y, at=('h', 0.6, 1.65), act=turned(2.2))], cam=KP(T(64), T(65), 950, 540, 1.25, 945, 505, 2.6, 1.0, 1.06))
-    clinks = [w(65, 'clink', k) - 0.3 for k in range(3)]       # each clink just before its word
-    C(T(65), 'bust', who=Y, bg='hall', case='open', act=_A(ex('fear'), flinch_at(*[c + 0.05 for c in clinks], amp=0.6)), cam=dict(mv='creep', x=960, y=580),
-      sfx=[(c, 'spoon_clink', 2, -0.1, 'kitchen_far', dict(kind='clink')) for c in clinks], music=[(t(65) - 0.3, 'silence', 0.0, 2.2)])
-    # you don't have to go looking: the kitchen light comes on by itself; down the hall: Mister Winks in Grandpa's chair
-    C(T(66), 'hall', case='open', kitchen=dict(on=T_KIT_ON), winks=dict(act=winks_chair(look=0.0)), focus=8.6, ppl=[P(M, at=('h', -1.05, 1.75), act=turned(1.7)), P(O, at=('h', -0.72, 2.05), act=turned(2.0)), P(Y, at=('h', 0.6, 1.65), act=turned(2.2))],
-      cam=dict(mv='keys', shake=1.2, keys=[(T(66), 960, 560, 1.0, None, 1.0), (T_KIT_ON + 0.4, 955, 540, 1.02, 'in_out', 1.15),
-                                           (t(68), 860, 515, 1.05, 'in_out', 2.2), (w(68, 'up'), 815, 512, 1.08, 'in_out', 3.0)]),
-      sfx=[(T_KIT_ON - 0.05, 'light_switch', -8, -0.1, 'kitchen_far', dict(kind='pull_chain')), (T_KIT_ON, 'bulb_buzz', -14, -0.1, 'kitchen_far', dict(dur=6.0))],
-      music=[(t(68), 'braam', 0.8)], hit=t(68) + 0.02)
-    C(w(68, 'little') - 0.15, 'kitchen', view='table', winks=dict(act=winks_chair(look=0.0)),
-      cam=KP(w(68, 'little') - 0.15, T(69), 950, 520, 1.0, 960, 470, 1.5, 1.0, 1.08))
-    C(T(69), 'ins', name='mug', cam=dict(mv='keys', keys=[(T(69), 960, 540, 1.0), (T(71), 960, 470, 1.35, 'in_out')]))
-    # Mom picks it up, smells it, and all the colour leaves her face
-    tp = w(71, 'picks') + 0.15; tpale = w(71, 'color')
-    C(T(71), 'kitchen', view='table', mug_off=tp + 0.35, winks=dict(act=winks_chair(look=0.0)),
-      ppl=[P(M, at='beside', act=_A(turned(-0.55), lambda a, s: a.smell_mug(tp, None, -1, pale_at=tpale)))],
-      cam=KP(T(71), tpale - 0.3, 960, 560, 1.0, 900, 540, 1.2), focus=1.65)
-    C(tpale - 0.3, 'bust', who=M, bg='kitchen_table', mug=False, act=lambda a, s: a.smell_mug(s.t0 - 2.0, None, -1, pale_at=tpale),
-      cam=dict(mv='creep', x=960, y=560))
-    C(T(72), 'ins', name='mug', cam=dict(mv='keys', keys=[(T(72), 900, 640, 1.3), (T(73), 860, 680, 1.55, 'in_out')]),
-      tags=[(t(72) + 0.05, 'TWO SUGARS', 960, 170, 'white', 1.6)])
-    C(T(73), 'bust', who='grandpa', bg='memory_kitchen', era='memory', expr='still_smile',
-      act=_A(lambda a, s: a.hold_mug(s.t0 - 1, None, sip=[t(73) + 0.9])), cam=dict(mv='push', x=960, y=560))
-    C(T(74), 'kitchen', view='chair', winks=dict(act=winks_chair(look=0.0)), cam=KP(T(74), T(75), 960, 520, 1.0, 960, 480, 1.25))
-    C(T(75), 'bust', who='winks', bg='kitchen', hands='table', act=lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, hold='up'),
-      cam=dict(mv='keys', keys=[(T(75), 960, 560, 1.0), (T(77), 960, 470, 1.4, 'in_out')]), music=[(t(76), 'swell', 0.55, 3.0)])
-
-    # ============================================================ RULE 2 (199.0 - 264.9): he does voices
-    C(T(77), 'rule', n=2, bg='kitchen', ghost=[dict(who='winks', at=CHAIR_UP, act=winks_chair(look=0.0), light=WARM, torch=dict(side=1, length=2.4))])
-    C(T(79), 'ins', name='letter_close', kw=dict(hl=2), cam=dict(mv='push', x=960, y=500, rate=0.035))
-    C(T(80), 'ins', name='letter', cam=dict(mv='keys', keys=[(T(80), 940, 450, 1.25), (T(82), 930, 660, 1.45, 'in_out')]))   # ... down to rule six's colder hand
-    C(T(82), 'kitchen', view='table', winks=dict(act=winks_chair(look=0.0)), ppl=[P(M, at='beside', act=_A(turned(-0.5), turn_to(t(82) + 0.2, -1.6, 0.8)))],
-      cam=KP(T(82), T(83), 960, 540, 1.1, 960, 540, 1.0, 1.05, 1.0), focus=1.65)
-    # the couch under the lamp; through the doorway you can see him; he doesn't move
-    couch = lambda extra=None: [P(M, at='couch_r', act=_A(sitp(), setp(turn=0.45), extra and extra.get(M))),
-                                P(Y, at='couch_m', act=_A(sitp(), setp(turn=0.15), extra and extra.get(Y))),
-                                P(O, at='couch_l', act=_A(sitp(), setp(turn=-0.45), extra and extra.get(O)))]
-    C(T(83), 'living', view='couch', ppl=couch(), cam=KP(T(83), T(84), 1000, 560, 1.0, 980, 600, 1.4), focus=2.85)
-    C(T(84), 'living', view='tv', winks=dict(act=winks_chair(look=0.85)), cam=KP(T(84), T(86), 1060, 540, 1.0, 1110, 530, 1.3, 1.0, 1.05),
-      posts=[(T(84), T(86), 1.0, 1.32, 230, -10, 'in_out')])
-    # 1:15: Mom's voice calls from upstairs ("Honey? Can you come up here a second?"); nobody on screen speaks
-    C(T(86), 'stairs', light=0.0, cam=KP(T(86), T(87), 960, 600, 1.0, 960, 500, 1.55, 1.0, 1.08), focus=4.8,
-      tags=[(w(86, '1:15'), '1:15 AM', 960, 170, 'white', 1.8)],
-      music=[(t(87) - 0.5, 'silence', 0.0, 1.0)])
-    C(T(87), 'bust', who=M, bg='living', act=_A(ex('fear'), lambda a, s: a.set(t(87) + 0.3, None, 0.5, h_turn=0.35, look_y=-0.4, wide=0.5),
-                                             lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_round=0.0, m_press=0.55)),
-      cam=dict(mv='creep', x=960, y=580))
-    C(T(89), 'living', view='couch', ppl=couch(), cam=KP(T(89), T(90), 900, 600, 1.6, 880, 610, 1.85), focus=2.85)
-    C(T(90), 'hands', mode='find', tg=t(90) + 0.1)
-    C(T(91), 'stairs', light=0.0, cam=KP(T(91), T(93), 960, 470, 1.45, 960, 455, 1.8, 1.0, 1.08), focus=4.8)
-    C(T(93), 'bust', who=Y, bg='living', lamp=1.0, act=_A(ex('fear'), lambda a, s: a.set(t(93), None, 0.4, h_turn=-0.25, look_y=-0.3),
-                                                       lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_round=0.0, m_press=0.55)),
-      cam=dict(mv='creep', x=960, y=580))
-    C(T(96), 'bust', who=M, bg='living', act=_A(ex('fear'), lambda a, s: a.set(t(96) + 0.1, None, 0.7, h_turn=-0.45, lock=1.0, pupil=0.7)),
-      cam=dict(mv='creep', x=960, y=580))
-    C(T(97), 'bust', who=Y, bg='living', no_view=True, cx=1060, act=_A(ex('nervous'), setp(h_turn=0.22, look_x=0.4)), cam=dict(mv='creep', x=990, y=580))
-    C(T(98), 'bust', who=M, bg='living', ecu=True, cx=960, cy=640, scale=1.35, act=_A(ex('fear'), setp(h_turn=-0.3, lock=1.0, pupil=0.62, squint=0.3)),
-      cam=dict(mv='creep', x=960, y=520))
-    # a third voice from the kitchen: old, warm, a little rough: "See you in the morning, kiddo." (his jaw talks)
-    C(T(99), 'living', view='tv', winks=dict(act=winks_chair(look=0.85)), cam=KP(T(99), T(100), 1080, 540, 1.0, 1120, 520, 1.3, 1.0, 1.05),
-      posts=[(T(99), T(100), 1.0, 1.35, 250, -10, 'in_out')])
-    C(T(100), 'kitchen', view='table', winks=dict(act=winks_chair(look=0.0)), cam=KP(T(100), T(103), 960, 500, 1.3, 960, 470, 1.7, 1.0, 1.04),
-      music=[(t(102), 'silence', 0.0, 1.1)])
-    C(T(103), 'bust', who='winks', bg='kitchen', hands='table', cx=880, cy=600, scale=1.05,
-      act=_A(lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, hold='up'), setp(h_turn=0.55, lock=0.0, look_x=0.5)),
-      cam=dict(mv='creep', x=920, y=540))
-    C(T(104), 'bust', who=M, bg='living', act=_A(ex('shock'), lambda a, s: a.hand_to_mouth(w(104, 'hand') - 0.15, t(105) - 0.25)),
-      cam=dict(mv='push', x=960, y=580))
-    C(T(106), 'living', view='couch', ppl=couch({M: lambda a, s: (a.set(t(106) + 0.2, t(107) + 0.4, 0.5, sit=0.0, perch=0.0, lean=0.15),
-                                                                   a.expr('shock', s.t0 - 1)),
-                                                Y: lambda a, s: a.reach(t(107) + 0.1, None, 1, 0.5 * a._alen(), 0.2 * a._alen(), 0.3 * a._alen(), 'grip')}),
-      cam=KP(T(106), T(108), 960, 580, 1.2, 960, 600, 1.4), focus=2.85, sfx=[(t(106) - 0.4, 'wood_creak', -12, -0.2, 'kitchen_far', dict(kind='grind', dur=2.6))])
-    # his head has turned all the way towards you; his jaw hangs open; it closes, very slowly. Clack.
-    C(T(108), 'living', view='tv', winks=dict(act=_A(winks_chair(look=0.0), stage(2))), cam=KP(T(108), T(109), 1100, 530, 1.0, 1120, 520, 1.45, 1.0, 1.06),
-      posts=[(T(108), T(109), 1.12, 1.45, 260, -14, 'in_out')], hit=t(108) + 0.05, music=[(t(108), 'braam', 0.85)])
-    C(T(109), 'bust', who='winks', bg='kitchen', hands='table', cx=960, cy=640, scale=1.2,
-      act=_A(lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, hold='up'), lambda a, s: a.jaw_hang(s.t0 - 1.0, 0.75, 0.1),
-             lambda a, s: a.clack(e(110), 1.9)),                     # in the 80 ms gap before "Clack."
-      cam=dict(mv='keys', keys=[(T(109), 960, 560, 1.0), (w(111, 'clack'), 960, 500, 1.3, 'in_out'), (T(112), 960, 498, 1.32, 'lin')]),
-      music=[(e(110) + 0.06, 'sub_drop', 0.6)])
-    C(T(112), 'bust', who=Y, bg='living', act=_A(ex('fear'), lambda a, s: a.set(s.t0 + 1.0, None, 0.8, wet=0.6)), cam=dict(mv='push', x=960, y=580))
-    C(T(114), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', act=_A(lambda a, s: a.tuck_in(s.t0 - 1), creep(5)),
-      cam=dict(mv='creep', x=960, y=560), music=[(t(114), 'motif', 0.5, 3)])
-
-
-def plan_rules34(F, t, e, w, C, T, KP):
-    Y, M, O = 'you', 'mom', 'owen'
-    couch = lambda extra=None: [P(M, at='couch_r', act=_A(sitp(), setp(turn=0.45), extra and extra.get(M))),
-                                P(Y, at='couch_m', act=_A(sitp(), setp(turn=0.15), extra and extra.get(Y))),
-                                P(O, at='couch_l', act=_A(sitp(), setp(turn=-0.45), extra and extra.get(O)))]
-    W_ON = lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, hold='up')
-    TVON = dict(on=T_TV_ON, snow=0.6)
-    # ============================================================ RULE 3 (264.9 - 333.2): don't laugh at his jokes
-    C(T(115), 'rule', n=3, bg='kitchen', ghost=[dict(who='winks', at=CHAIR_UP, act=_A(winks_chair(look=0.0), stage(2)), light=WARM,
-                                                    torch=dict(side=1, length=2.4))])
-    C(T(117), 'ins', name='letter_close', kw=dict(hl=3), cam=dict(mv='push', x=960, y=540, rate=0.035))
-    C(T(118), 'bust', who='winks', bg='kitchen', hands='table', act=W_ON, cam=dict(mv='creep', x=960, y=540))
-    C(T(119), 'living', view='couch', ppl=couch({O: lambda a, s: a.set(s.t0, None, 0.4, m_press=1.0, smile=0.3, squint=0.3)}),
-      cam=KP(T(119), T(121), 960, 600, 1.35, 960, 610, 1.6), focus=2.85)
-    C(T(121), 'bust', who='winks', bg='kitchen', hands='table', cx=960, cy=560, scale=1.1,
-      act=_A(W_ON, lambda a, s: a.tick(e(121) + 0.1, 8.0)), cam=dict(mv='keys', keys=[(T(121), 960, 545, 1.0), (T(122), 960, 525, 1.12, 'in_out')]))
-    # Grandpa told it at breakfast every time Owen visited (memory: the morning kitchen, little Owen laughing)
-    C(T(122), 'kitchen', view='table', tod='morning', era='memory', grade='memory', mug=True,
-      ppl=[P('grandpa', at='chair', act=_A(sitp(), ex('still_smile'), setp(turn=0.1))), P(O, at=('h', -1.75, 7.75), act=_A(turned(0.7),
-                                                                                                               lambda a, s: a.laugh_soft(s.t0 + 1.2, 2.2)))],
-      cam=KP(T(122), T(124), 960, 520, 1.0, 940, 520, 1.3), focus=2.6, sfx=[(t(122) + 1.3, 'kid_laugh', -4, -0.3, 'memory')])
-    C(T(124), 'bust', who=O, bg='living', act=_A(ex('fear'), lambda a, s: a.snort(e(124) - 0.05)), cam=dict(mv='push', x=960, y=600))
-    # Clack. One of his little white gloves lifts off the table.
-    tcl = w(127, 'clack') - 0.08               # the snap just before the word
-    C(T(127), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.jaw_drop(tcl - 0.32, 0.6, 0.12), lambda a, s: a.clack(tcl),
-                                                         lambda a, s: a.glove_lift(w(128, 'lifts') - 0.3, -1, 0.4, 1.5))),
-      cam=dict(mv='keys', shake=1.2, keys=[(T(127), 960, 470, 1.0, None, 1.4), (tcl + 0.4, 950, 480, 1.03, 'in_out', 1.5),
-                                           (T(129), 900, 560, 1.08, 'in_out', 2.0)]), quiet_cut=True, music=[(tcl, 'stinger', 0.8)])
-    C(T(129), 'living', view='couch', ppl=couch({Y: lambda a, s: a.clamp_mouth(w(129, 'clamp') + 0.1, None, side=1),
-                                                O: lambda a, s: (a.expr('fear', s.t0 - 1), a.set(w(129, 'clamp') + 0.3, None, 0.2, wide=0.6))}),
-      cam=KP(T(129), T(130), 920, 600, 1.55, 940, 610, 1.85), focus=2.85)
-    C(T(130), 'living', view='tv', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.glove_lift(s.t0 - 5, -1, 0.4, 0.2))),
-      cam=KP(T(130), T(132), 1060, 540, 1.0, 1100, 530, 1.2, 1.0, 1.04), posts=[(T(130), T(132), 1.0, 1.3, 220, -8, 'in_out')],
-      music=[(t(131), 'silence', 0.0, 1.0)])
-    # the TV turns on by itself: the tape in Grandpa's old VCR; Saturday Morning with Walter Kemp, 1974
-    C(T(132), 'living', view='tv', tv=TVON, lamp=0.6, cam=KP(T(132), T(133), 960, 560, 1.0, 900, 580, 1.4), hit=T_TV_ON + 0.02,
-      sfx=[(T_TV_ON, 'tv_on', 0, -0.3, 'inside', dict(kind='crt')), (T_TV_ON, 'tv_static', -6, -0.3, 'inside', dict(dur=0.6))],
-      music=[(T_TV_ON, 'stinger', 0.75)])
-    C(T(133), 'ins', name='vcr', kw=dict(tape=1.0, play=True), cam=dict(mv='push', x=960, y=540, rate=0.045),
-      sfx=[(t(133) + 0.2, 'vcr', -6, -0.3, 'close', dict(kind='play', dur=2.0))])
-    C(T(134), 'studio', bezel=1.0, track=0.5, bezel_fn=lambda tt, a=t(134) + 1.4: 1.0 - ease_in_out(clamp((tt - a) / 1.0)),
-      cam=dict(mv='keys', keys=[(T(134), 960, 560, 1.0), (T(135), 965, 590, 1.25, 'in_out'), (T(136), 960, 620, 1.1, 'in_out')]),
-      music=[(t(134), 'theme', 0.6, 6.0)])
-    # a huge roaring wave of laughter fills the dark house; with every wave something in the kitchen moves
-    C(T(136), 'living', view='tv', tv=TVON, lamp=0.6, winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.tick(305.95, -6.0),
-                                                                          lambda a, s: a.tick(309.75, 7.0, 0.05))),
-      cam=dict(mv='keys', shake=1.4, keys=[(T(136), 900, 560, 1.05, None, 1.3), (T(137), 1080, 540, 1.0, 'in_out', 1.1),
-                                           (T(138), 1110, 530, 1.05, 'in_out', 1.25)]), posts=[(T(137), T(138), 1.0, 1.4, 250, -10, 'in_out')])
-    # his fingers curl (a close insert of the glove on the table, on the wave) ... his elbow bends (back on him in the chair)
-    C(T(138), 'glove', curl=w(138, 'fingers') + 0.1, cam=dict(mv='keys', keys=[(T(138), 1000, 620, 1.0), (T(139), 1000, 650, 1.1, 'in_out')]))
-    C(T(139), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
-                                                         lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
-      cam=KP(T(139), T(140), 900, 610, 2.0, 880, 600, 2.2, 1.0, 1.03))
-    tst = w(140, 'puts')
-    # his hat knocks the pendant as he straightens up on the seat (the last of his three jerks, stand_on_chair): the dome
-    # swings aside and back, so his face comes out from under it on "...stands up on the chair", and it is still swaying
-    # over the empty chair when the light comes back (review v3: the push ended with the dome over his head)
-    t_bump = tst + 0.3 + 3.0 * 2.4 / 3 + 0.08
-    lamp_sway = lambda tt, b=t_bump: (0.0 if tt < b else 0.3 * math.sin((tt - b) * 2 * math.pi / 2.2) * math.exp(-(tt - b) * 0.22)
-                                 * min(1.0, (tt - b) / 0.12))
-    C(T(140), 'kitchen', view='table', sway=lamp_sway, winks=dict(act=_A(lambda a, s: a.sit_dummy(-1e9, tst + 0.4, hands='table'),
-                                                         lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, t1=tst - 0.2, hold='up'),
-                                                         lambda a, s: a.stand_on_chair(tst + 0.3, 3.0, 3))),
-      cam=dict(mv='keys', shake=1.2, keys=[(T(140), 960, 520, 1.0, None, 1.0), (w(140, 'flat') - 0.3, 960, 500, 1.02, 'in_out', 1.25),
-                                           (T(141), 960, 455, 1.06, 'in_out', 2.3)]), music=[(w(140, 'stands'), 'braam', 0.85)],
-      sfx=[(t_bump, 'wood_knock', -6, 0.0, 'inside', dict(size=0.8)), (t_bump + 0.01, 'spoon_clink', -8, 0.0, 'inside', dict(kind='clink'))])
-    C(T(141), 'bust', who=Y, bg='living', tv=TVON, lamp=0.5, light=TVL, act=ex('fear'), cam=dict(mv='push', x=960, y=580))
-    C(T(142), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(142), 960, 820, 1.7), (T(143), 940, 800, 1.95, 'in_out')]))
-    # the lamp flickers; when it comes back on, the chair is empty; a little flashlight clicks on, knee high, down the hall
-    STAND = lambda a, s: (a.sit_dummy(-1e9, 317.2, hands='table'), a.stand_on_chair(317.1, 0.2, 1))
-    # every light in the house flickers and dies together: a frame-wide flicker and blackout over steady lights (three
-    # flickering light layers at once cost ~0.9 s/frame at 2560)
-    flk = lambda tt: 0.0 if T_FLICK + 0.85 <= tt <= T_BACK else ST.flicker(tt, 5, 1.0, [(T_FLICK, 0.9)])
-    C(T(143), 'living', view='tv', tv=dict(on=T_TV_ON, snow=0.6), lamp=0.6, winks=dict(act=STAND),
-      post_fn=lambda tt: dict(fade=clamp(1.0 - flk(tt)) * 0.97),
-      cam=KP(T(143), T(144), 1060, 540, 1.1, 1100, 530, 1.25, 1.0, 1.04), posts=[(T(143), T(144), 1.1, 1.3, 230, -8, 'in_out')],
-      sfx=[(T_FLICK, 'bulb_flicker', -4, -0.2, 'inside', dict(dur=0.9)), (T_FLICK + 0.85, 'lamp_out', -6, -0.2, 'inside', dict(kind='buzz_off'))])
-    C(T(144), 'kitchen', view='table', kitchen=dict(on=T_BACK), sway=lamp_sway, cam=KP(T(144), T(145), 960, 520, 1.0, 960, 480, 1.5, 1.0, 1.06),
-      hit=w(144, 'empty') + 0.05, music=[(w(144, 'empty'), 'stinger', 0.85)], sfx=[(T_BACK, 'bulb_buzz', -10, 0, 'inside', dict(kind='on'))])
-    C(T(145), 'hall', light=0.0, living=0.0, kitchen=0.5, case='open', focus=4.0,
-      beam=knee_beam([(T_BEAM + 0.6, -0.35, 6.2), (334.0, -0.6, 3.6)], on=w(145, 'clicks') - 0.07),
-      cam=KP(T(145), T(148), 960, 540, 1.0, 950, 560, 1.35, 1.0, 1.06),
-      sfx=[(w(146, 'knee'), 'footsteps_wood_inside', -16, -0.1, 'inside', dict(n=8, rate=2.6, kind='tiny')),
-           (w(145, 'clicks') - 0.07, 'flashlight_click', 2, 0.0, 'inside', dict(kind='on', far=True))])
-
-    # ============================================================ RULE 4 (333.2 - 409.4): never put your hand inside him
-    C(T(148), 'rule', n=4, bg='hall_dark', beam=knee_beam([(T_BEAM + 0.6, -0.35, 6.2), (334.0, -0.6, 3.6), (336.5, -0.7, 3.4)], on=330.0))
-    C(T(150), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, light=TVL, act=_A(ex('nervous'), down(-1, 0.3)), cam=dict(mv='push', x=960, y=580))
-    C(T(152), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(152), 980, 600, 1.3), (T(153), 1020, 610, 1.6, 'in_out')]))
-    C(T(153), 'ins', name='back_slot', kw=lambda tt: dict(hand=0.65 * ease_in_out(clamp((tt - 0.5) / 2.5))), cam=dict(mv='push', x=960, y=560, rate=0.04))
-    C(T(154), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, light=TVL, act=_A(ex('sweaty'), lambda a, s: a.set(s.t0 + 0.4, None, 0.6, m_press=0.7)),
-      cam=dict(mv='push', x=960, y=580))
-    C(T(155, 0.6), 'ins', name='case_open', kw=dict(warm=0.0), cam=dict(mv='push', x=960, y=560, z=1.15, rate=0.035))
-    # 3 AM: the flashlight comes back; he's on the stairs, three steps up, pointing it right at my face
-    C(T(156), 'hall', light=0.0, living=0.0, kitchen=0.3, case='open', focus=3.0,
-      beam=knee_beam([(351.0, -0.8, 5.4), (354.6, 0.3, 2.6)], on=T_3AM + 0.15, sweep=0.6), cam=KP(T(156), T(157), 940, 560, 1.05, 990, 560, 1.2),
-      tags=[(w(156, 'three') + 0.1, '3:00 AM', 960, 170, 'white', 1.8)],
-      sfx=[(T_3AM + 0.15, 'flashlight_click', -2, 0.0, 'inside', dict(kind='on', far=True))] +
-          [(w(156, 'three') + 0.05 + k * 1.1, 'clock_chime', -8, -0.2, 'inside', dict(kind='hour')) for k in range(3)])
-    C(T(157), 'stairs', winks=dict(act=_A(lambda a, s: a.sit_dummy(hands='knees'), lambda a, s: a.torch_on(353.6, 0.0, -1, t1=T_GRAB + 0.3, hold='lens'),
-                                          stage(3))),
-      cam=KP(T(157), T(158), 960, 560, 1.0, 960, 600, 1.55, 1.0, 1.08), music=[(t(157), 'braam', 0.8)])
-    C(T(158), 'stairs', winks=dict(act=_A(lambda a, s: a.sit_dummy(hands='knees'), lambda a, s: a.torch_on(353.6, 0.0, -1, t1=T_GRAB + 0.3, hold='lens'),
-                                          stage(3))),
-      pov=dict(t0=T_GRAB - 0.1, reach=(960, 860), size=300, grab=T_GRAB + 0.25, depth=0.9),
-      cam=KP(T(158), T(159), 960, 600, 1.6, 960, 640, 1.8, 1.04, 1.1, shake=4.0), hit=T_GRAB + 0.25)
-    C(T(159), 'ins', name='back_slot', kw=lambda tt: dict(hand=ease_in_out(clamp((tt - 0.35) / 2.0))), cam=dict(mv='push', x=960, y=560, rate=0.04))
-    # inside him: a stick, and a hand; it lets go of the stick and takes my hand; it squeezes once, twice, three times
-    C(T(160), 'ins', name='squeeze', kw=dict(take=0.0, squeeze=0.0), cam=dict(mv='keys', keys=[(T(160), 960, 560, 1.0), (T(162), 960, 560, 1.22, 'in_out')]),
-      music=[(t(161) - 0.2, 'silence', 0.0, 1.0), (t(161), 'swell', 0.55, 4.0)])
-    tk = w(163, 'lets')
-    C(T(162), 'bust', who=Y, bg='stairs', light=NIGHT, no_view=True, act=_A(ex('fear'), setp(wide=0.7, wet=0.6)), cam=dict(mv='creep', x=960, y=580))
-    C(T(163), 'ins', name='squeeze', kw=lambda tt, a=tk - T(163): dict(take=ease_in_out(clamp((tt - a) / 2.3)), squeeze=0.0),
-      cam=dict(mv='push', x=960, y=560, z=1.15, rate=0.03))
-    sq = [w(165, 'once') - 0.2, w(166, 'twice') - 0.2, w(167, 'three') - 0.2]   # each squeeze just before its word
-    sqf = ST.squeeze_pulses(sq)
-    C(T(164), 'ins', name='squeeze', kw=lambda tt, a=T(164): dict(take=1.0, squeeze=sqf(tt + a)), cam=dict(mv='push', x=1010, y=620, z=1.55, rate=0.03),
-      sfx=[(s_, 'hand_squeeze', -2, 0, 'close') for s_ in sq], music=[(t(168), 'motif', 0.55, 4)])
-    C(T(169), 'bust', who=Y, bg='stairs', light=NIGHT, act=_A(ex('sad'), lambda a, s: a.set(s.t0, None, 0.5, wet=1.0, tears=0.6), lambda a, s: a.squeezed(sq)),
-      cam=dict(mv='push', x=960, y=580))
-    C(T(170), 'stairs', winks=dict(act=_A(lambda a, s: a.sit_dummy(hands='limp'), stage(3), setp(h_nod=-0.1))),
-      pov=dict(t0=T(170) - 1.0, reach=(1080, 760), size=300, both=False, depth=1.46), cam=KP(T(170), T(172), 960, 560, 1.5, 960, 560, 1.7))
-    # "Kiddo," says Grandpa's voice, very softly ... his jaw talks only on his words
-    WST = lambda: _A(stage(3), setp(h_nod=-0.12))
-    C(T(172), 'bust', who='winks', bg='stairs', light=dict(NIGHT, under='#ffd9a0', under_a=60), act=WST(), cam=dict(mv='creep', x=960, y=540))
-    C(T(173) + 0.15, 'bust', who=Y, bg='stairs', light=NIGHT, no_view=True, act=_A(ex('sad'), setp(wet=1.0, h_nod=0.15)), cam=dict(mv='creep', x=960, y=580))
-    C(T(174), 'bust', who='winks', bg='stairs', cx=930, cy=620, scale=1.2, light=dict(NIGHT, under='#ffd9a0', under_a=60), act=WST(), cam=dict(mv='push', x=950, y=520))
-    C(w(176, 'behind') - 0.1, 'bust', who=Y, bg='stairs', light=NIGHT, act=_A(ex('sad'), setp(wet=1.0)), cam=dict(mv='creep', x=960, y=580))
-    C(T(178), 'bust', who='winks', bg='stairs', light=dict(NIGHT, under='#ffd9a0', under_a=60), act=WST(), cam=dict(mv='push', x=960, y=520))
-    C(T(181), 'bust', who='winks', bg='stairs', ecu=True, cx=960, cy=640, scale=1.35, light=dict(NIGHT, under='#ffd9a0', under_a=60), act=WST(),
-      cam=dict(mv='creep', x=960, y=500))
-    C(w(182, 'rule') - 0.25, 'rule', n=2, bg='stairs', recall=True, mode='flicker', reveal=w(182, 'two') + 0.05)
-    C(T(183), 'bust', who='winks', bg='stairs', light=dict(NIGHT, under='#ffd9a0', under_a=60), act=WST(), cam=dict(mv='push', x=960, y=520))
-    C(T(184), 'ins', name='back_slot', kw=lambda tt: dict(hand=1.0 - ease_in_out(clamp((tt - 0.1) / 0.7))), cam=dict(mv='push', x=960, y=560, rate=0.05),
-      sfx=[(t(184) + 0.2, 'cloth_rustle', -6, 0, 'close', dict(kind='slot'))])
-    tcs = w(185, 'clacks') + 0.05
-    C(T(185), 'bust', who='winks', bg='stairs', cx=960, cy=560, scale=1.15, light=dict(NIGHT, under='#ffd9a0', under_a=60),
-      act=_A(setp(h_nod=-0.25), lambda a, s: a.jaw_hang(s.t0 - 0.6, 0.45, 0.2), lambda a, s: a.clack(tcs, 0.08)),
-      cam=dict(mv='keys', keys=[(T(185), 960, 620, 1.0), (T(186), 960, 560, 1.25, 'in_out')]), hit=tcs, music=[(tcs, 'stinger', 0.75)])
-    C(T(186), 'bust', who=Y, bg='stairs', light=NIGHT, act=_A(ex('sad'), setp(wet=1.0, tears=0.8)), cam=dict(mv='push', x=960, y=580))
-    C(T(188), 'bust', who='winks', bg='stairs', ecu=True, cx=960, cy=660, scale=1.4, light=dict(NIGHT, under='#ffd9a0', under_a=60),
-      act=setp(h_nod=-0.2), cam=dict(mv='creep', x=960, y=520), music=[(t(189), 'swell', 0.55, 3.0)])
-
-
-def plan_rules56(F, t, e, w, C, T, KP):
-    Y, M, O, ON = 'you', 'mom', 'owen', 'owen_new'
-    TVON = dict(on=T_TV_ON, snow=0.6)
-    BOOK = lambda extra=None, torch_t=417.55: dict(act=_A(lambda a, s: a.sit_dummy(hands='limp'), lambda a, s: a.torch_on(torch_t, 0.0, 1, hold='chin'),
-                                                          stage(4), extra), light=TORCH, torch=dict(side=1, length=0.6))
-    # ============================================================ RULE 5 (409.4 - 506.3): if their lips don't move, it isn't them
-    C(T(190), 'rule', n=5, bg='living', tv=TVON, lamp=0.6)
-    C(413.55, 'bust', who=M, bg='living', tv=TVON, lamp=0.4, ecu=True, cx=960, cy=180, scale=1.85, light=TVL,
-      act=_A(ex('blank'), lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_press=0.6, lock=1.0)), cam=dict(mv='creep', x=960, y=600))
-    C(T(192), 'living', view='couch', tv=TVON, lamp=0.6, winks=BOOK(), focus=3.45,
-      ppl=[P(M, at='mom', act=_A(turned(0.35), lambda a, s: a.grab_keys(e(192) - 0.34, 1), ex('fear'))),
-           P(O, at='couch_l', act=_A(sitp(), setp(turn=-0.45), ex('fear')))],
-      cam=KP(T(192), T(193), 1100, 520, 1.0, 1200, 500, 1.6, 1.0, 1.05), posts=[(T(192), T(193), 1.0, 1.25, 180, -30, 'in_out')])
-    C(T(193), 'bust', who=M, bg='living', tv=TVON, lamp=0.6, cx=820, cy=600, scale=0.95, dof=3.2, act=_A(ex('blank'), setp(lock=1.0, pupil=0.75)),
-      ghost=[dict(who='winks', at=(1390, 360, 1.9, 760), **BOOK())], cam=dict(mv='creep', x=900, y=560))
-    C(T(196), 'bust', who=M, bg='living', tv=TVON, lamp=0.6, ecu=True, cx=960, cy=330, scale=1.75, act=_A(ex('blank'), setp(lock=1.0)),
-      cam=dict(mv='creep', x=960, y=560), hit=t(196) + 0.05, music=[(t(196), 'stinger', 0.8)])
-    C(T(197), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, act=_A(ex('fear'), lambda a, s: a.spin_around(w(197, 'spin'), 2.0, 0.42)),
-      cam=dict(mv='fast', x=960, y=580),                       # a whip blur through the turn (no one-frame face-to-back pop)
-      post_fn=lambda tt, a=w(197, 'spin'): dict(blur=7.0 * math.exp(-((tt - a - 0.12) / 0.08) ** 2)))
-    C(T(198), 'living', view='couch', tv=TVON, lamp=0.6, winks=BOOK(jaw_chatter(t(198) - 0.2, 429.0, 1.7, 0.5)), focus=4.55,
-      ppl=[P(M, at='mom', act=_A(turned(0.35), ex('fear')))],
-      cam=KP(T(198), w(198, 'under') - 0.4, 1150, 470, 1.0, 1290, 440, 1.9, 1.0, 1.05), posts=[(T(198), w(198, 'under') - 0.4, 1.0, 1.25, 190, -100, 'in_out')],
-      music=[(t(198), 'braam', 0.85)], hit=t(198) + 0.04)
-    C(w(198, 'under') - 0.4, 'bust', who='winks', bg='living', tv=TVON, lamp=0.6, light=TORCH, torch_glow=True, cx=960, cy=600, scale=1.15,
-      act=_A(lambda a, s: a.torch_on(417.55, 0.0, 1, hold='chin'), stage(4), jaw_chatter(t(198) - 0.2, 429.0, 1.7, 0.55)),
-      cam=dict(mv='creep', x=960, y=520))
-    C(T(199), 'bust', who=M, bg='living', tv=TVON, lamp=0.6, no_view=True, cx=900, act=_A(ex('fear'), setp(h_turn=-0.15, look_x=-0.3)), cam=dict(mv='push', x=930, y=580))
-    C(T(202), 'living', view='couch', tv=TVON, lamp=0.6, winks=BOOK(), focus=3.45, ppl=[P(M, at='mom', act=_A(turned(0.35), ex('fear')))],
-      cam=KP(T(202), T(203), 1060, 520, 1.3, 1080, 510, 1.55))
-    # the tape: young Walter smiling with Mister Winks on his knee; his lips never move; the dummy stops mid-joke, turns to the
-    # camera, and an old man's voice cries out of him
-    C(T(203), 'living', view='tv', tv=TVON, lamp=0.6, cam=KP(T(203), T(204), 940, 560, 1.0, 900, 580, 1.5))
-    C(T(204), 'studio', track=0.35, cam=dict(mv='keys', keys=[(T(204), 960, 600, 1.0), (w(204, 'young') - 0.1, 975, 560, 1.2, 'in_out')]))
-    C(w(204, 'young') - 0.1, 'bust', who='walter74', bg='studio', cx=960, cy=600, scale=1.1, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.35),
-      cam=dict(mv='creep', x=960, y=560))
-    C(T(205), 'studio', track=0.3, cam=dict(mv='keys', keys=[(T(205), 1000, 480, 1.75), (T(208), 1010, 470, 2.15, 'in_out')]))
-    C(T(208), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(208), 990, 540, 1.4), (T(209), 1000, 530, 1.55, 'in_out')]))
-    tsn = w(210, 'turns') + 0.05
-    C(T(209), 'bust', who='winks', bg='studio', tape=True, cx=980, cy=600, scale=1.0, no_view=True,
-      act=_A(lambda a, s: a.puppet(s.t0 - 2, 445.0, look=-1, rate=0.8), lambda a, s: a.set(445.3, tsn - 0.05, 0.2, h_turn=-0.35, lock=0.0),
-             lambda a, s: a.head_snap(tsn, 0.0, -0.35)),
-      track_fn=lambda tt: (0.35 + 0.5 * clamp((tt - 446.0) / 2.4)) if tt < tsn else 0.85 + 1.5 * math.exp(-max(0.0, tt - tsn) * 3),
-      cam=dict(mv='keys', keys=[(T(209), 980, 560, 1.0), (tsn, 970, 545, 1.08, 'in_out'), (w(210, 'his') - 0.1, 960, 520, 1.2, 'in_out')]), hit=tsn,
-      music=[(tsn, 'braam', 0.9)])
-    C(w(210, 'his') - 0.1, 'living', view='tv', tv=TVON, lamp=0.4, d_act=lambda a, s: a.set(-9, None, 0.1, h_turn=0.0, lock=1.0),
-      cam=KP(w(210, 'his') - 0.1, T(211), 930, 580, 1.4, 890, 600, 2.2))
-    C(T(211), 'bust', who='winks', bg='studio', tape=True, ecu=True, cx=960, cy=640, scale=1.35, cam=dict(mv='creep', x=960, y=520), track_fn=lambda tt: 0.6)
-    # "Please. Somebody help me. My name is Walter Kemp. That isn't me in the chair.": one held close-up of the tape dummy for
-    # all four lines (the jaw clear in frame on every syllable), wet, terrified painted eyes, one slow push in
-    C(T(214), 'bust', who='winks', bg='studio', tape=True, cx=960, cy=540, scale=1.05, track_fn=lambda tt: 0.45,
-      act=lambda a, s: a.set(s.t0 - 2, None, 0.1, tears=1.0, desperate=1.0, brow_sad=1.0, wide=0.6, lock=1.0, h_nod=-0.04),
-      cam=dict(mv='keys', keys=[(T(214), 960, 560, 1.0), (T(218), 960, 590, 1.24, 'in_out')]), music=[(t(214), 'silence', 0.0, 0.0)])
-    C(T(218), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(218), 960, 600, 1.1), (T(220), 960, 620, 1.0, 'in_out')]))
-    C(T(220), 'bust', who='walter74', bg='studio', ecu=True, cx=960, cy=560, scale=1.45, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.0),
-      cam=dict(mv='creep', x=960, y=600))
-    C(T(221), 'living', view='tv', tv=TVON, lamp=0.35, cam=KP(T(221), T(222), 900, 580, 1.2, 880, 590, 1.6))
-    C(T(222), 'ins', name='family_photo', cam=dict(mv='push', x=960, y=520, rate=0.04))
-    C(T(223), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', act=_A(lambda a, s: a.tuck_in(s.t0 - 1), creep(4)),
-      cam=dict(mv='push', x=960, y=560), post_fn=lambda tt, a=T(223): dict(sat=1.0 - 0.6 * clamp((tt - a) / 3.4)))
-    C(T(224), 'bust', who='grandpa', bg='hall_dark', ecu=True, cx=960, cy=600, scale=1.35, light=NIGHT, act=_A(ex('still_smile'), setp(lock=1.0, pupil=0.6)),
-      cam=dict(mv='creep', x=960, y=520), hit=t(224) + 0.05, music=[(t(224), 'stinger', 0.85)])
-    C(T(225), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(225), 960, 600, 1.0), (w(225, 'knee'), 1010, 560, 1.5, 'in_out')]))
-    C(w(225, 'knee') - 0.05, 'bust', who='winks', bg='studio', tape=True, ecu=True, cx=960, cy=640, scale=1.35, cam=dict(mv='creep', x=960, y=520))
-    C(T(226), 'studio', track=0.3, cam=dict(mv='keys', keys=[(T(226), 960, 820, 1.7), (T(227), 960, 800, 1.95, 'in_out')]))
-    # last week, the real Walter back in his body for one hour: long enough to tell me, to write me a letter, to die
-    WB = _A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), setp(turn=0.15), ex('lucid'))
-    C(T(227), 'hospital', bed='walter', lap=True, bpm=104, bed_act=_A(WB, tremble(0.6)), dact=LIMP, era='memory',
-      cam=KP(T(227), w(228, 'one') - 0.3, 960, 540, 1.0, 990, 540, 1.6))
-    C(w(228, 'one') - 0.3, 'bust', who='walter', bg='hospital', era='memory', act=_A(ex('lucid'), tremble(0.8)), cam=dict(mv='creep', x=960, y=560))
-    C(T(229), 'hands', mode='grab', tg=t(229) + 0.25, shake=1.0, era='memory')
-    C(T(230), 'ins', name='letter', era='memory', cam=dict(mv='push', x=960, y=540, rate=0.05))
-    C(T(231), 'hospital', view='close', bed='walter', lap=True, bpm=60, flat=t(231) + 0.7, era='memory',
-      bed_act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), setp(turn=0.15, eye_open=0.3, still=1.0)), dact=LIMP,
-      cam=KP(T(231), T(232), 960, 540, 1.2, 980, 540, 1.5))
-    sq2 = [w(232, 'three') - 0.25, w(232, 'three') + 0.17, w(232, 'times') + 0.35]
-    sqf2 = ST.squeeze_pulses(sq2)
-    C(T(232), 'ins', name='squeeze', kw=lambda tt, a=T(232): dict(take=1.0, squeeze=sqf2(tt + a)), cam=dict(mv='push', x=960, y=560, z=1.1, rate=0.035),
-      sfx=[(s_, 'hand_squeeze', -9, 0, 'close') for s_ in sq2])
-    C(w(232, "wasn't") - 0.1, 'bust', who='grandpa', bg='memory_bed', era='memory', act=_A(lambda a, s: a.tuck_in(s.t0 - 1), setp(smile=0.6, brow_sad=0.3)),
-      cam=dict(mv='push', x=960, y=560))
-    C(T(233), 'bust', who=Y, bg='living', tv=TVON, lamp=0.5, light=TVL, act=_A(ex('sad'), setp(wet=1.0, tears=1.0)), cam=dict(mv='creep', x=960, y=580),
-      music=[(t(233), 'motif', 0.55, 3)])
-
-    # ============================================================ RULE 6 (506.3 - 582.2): don't pull him off; have them say goodnight
-    C(T(234), 'rule', n=6, bg='living', tv=TVON, lamp=0.5)
-    C(T(236), 'ins', name='letter_close', kw=dict(hl=6), cam=dict(mv='push', x=960, y=800, z=1.15, rate=0.03))
-    C(T(238), 'ins', name='letter', kw=dict(hl=6), cam=dict(mv='keys', keys=[(T(238), 940, 640, 1.3), (T(240), 950, 680, 1.55, 'in_out')]))
-    C(T(240), 'bust', who='winks', bg='living', tv=TVON, lamp=0.5, light=TORCH, torch_glow=True, act=_A(lambda a, s: a.torch_on(417.55, 0.0, 1, hold='chin'), stage(4)),
-      cam=dict(mv='creep', x=960, y=540))
-    C(T(241), 'bust', who=Y, bg='living', tv=TVON, lamp=0.5, light=TVL, act=_A(ex('sad'), setp(d=0.3, fade=0.8, brow_sad=0.2, m_press=0.0)),
-      cam=dict(mv='push', x=960, y=580))
-    # when I turn around, Owen is gone (and so is the dummy on the bookcase)
-    C(T(242), 'living', view='couch', tv=TVON, lamp=0.5, focus=2.85, ppl=[P(M, at='couch_r', act=_A(sitp(), setp(turn=0.45), ex('fear')))],
-      cam=KP(T(242), T(243), 1000, 560, 1.0, 1080, 540, 1.3), hit=e(242) - 0.05, music=[(w(242, 'gone'), 'stinger', 0.85)])   # the impact after "gone.", not on it
-    # the den: Owen in Grandpa's armchair, the dummy on his knee, his hand inside up to the wrist, grinning
-    OL = lambda **k: dict(dict(who=O, side=-1, act=_A(lambda a, s: a.vent_pose(side=-1), ex('kid_grin')),
-                               dact=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=1, rate=0.9)), **k)
-    C(T(243), 'den', lap=OL(), cam=KP(T(243), w(244, 'mister') - 0.1, 960, 560, 1.0, 920, 575, 1.35), music=[(t(243), 'braam', 0.75)])
-    C(w(244, 'mister') - 0.1, 'lap', who=O, bg='den', x=820, y=900, h=1150, side=-1, act=ex('kid_grin'),
-      dact=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=1, rate=0.9), cam=dict(mv='push', x=920, y=560))
-    C(T(245), 'ins', name='back_slot', kw=dict(hand=1.0), cam=dict(mv='push', x=960, y=600, rate=0.04))
-    C(w(245, 'way', 1) - 0.1, 'studio', track=0.4, cam=dict(mv='keys', keys=[(w(245, 'way', 1) - 0.1, 1000, 560, 1.5), (T(246), 1020, 580, 1.7, 'in_out')]))
-    LAP_O = dict(who=O, bg='den', x=760, y=960, h=1350, side=-1)
-    C(T(246), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), ex('kid_grin')), dact=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=1, rate=1.0),
-      cam=dict(mv='keys', keys=[(T(246), 900, 540, 1.0), (T(247), 885, 550, 1.06, 'in_out'), (T(250), 860, 480, 1.25, 'in_out')]))
-    C(T(250), 'bust', who=M, bg='den', act=_A(ex('fear'), setp(wide=0.7, eye_open=1.0), lambda a, s: a.hand_to_mouth(s.t0 + 0.2, None, shock=False)),
-      cam=dict(mv='push', x=960, y=580))
-    # "He's a natural, kiddo," says the dummy in Grandpa's voice, "Just like me.": one lap two-shot, the camera pushing in
-    # on the dummy while Owen's grin falters
-    C(T(251), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), ex('kid_grin'), lambda a, s: a.expr('nervous', t(252), fade=0.6),
-                                     lambda a, s: a.set(t(252) + 0.3, None, 0.5, h_turn=0.3, look_x=0.5)),
-      dact=_A(lambda a, s: a.puppet(s.t0 - 2, t(253) - 0.3, look=0.25, rate=0.5), lambda a, s: a.set(t(253) - 0.3, None, 0.25, h_turn=0.0, lock=1.0)),
-      cam=dict(mv='keys', keys=[(T(251), 890, 560, 1.0), (T(253), 900, 500, 1.28, 'in_out'), (T(254), 905, 480, 1.45, 'in_out')]),
-      music=[(t(251), 'stinger', 0.8)])
-    # Mom screams and grabs him to pull him off; Owen shrieks; his hand won't come out; "Pull, and his hand comes with me."
-    tp0, tp1 = w(254, 'grabs'), w(256, 'out') + 0.4
-    pulls = [tp0 + 0.4 + (tp1 - tp0 - 0.6) * k / 3 for k in range(3)]
-    jerk = lambda tt: sum(-26.0 * math.exp(-max(0.0, tt - p_) * 5.0) * (tt >= p_) for p_ in pulls)
-    C(T(254), 'den', lap=OL(act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(t(255))), jerk=jerk),
-      ppl=[P(M, at=('h', -0.85, 2.15), act=_A(turned(-0.6), lambda a, s: a.pull_dummy(tp0, tp1), lambda a, s: a.scream(e(253) + 0.02, w(254, 'grabs') + 1.6)))],
-      cam=KP(T(254), T(255), 900, 580, 1.25, 860, 600, 1.6, shake=3.0),
-      sfx=[(e(253) + 0.02, 'scream', 3, -0.2, 'inside', dict(who='mom'))], music=[(w(254, 'grabs'), 'hit', 0.5)])
-    C(T(255), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.expr('scream', s.t0 - 0.3), lambda a, s: a.cry(s.t0)),
-      jerk=lambda tt: jerk(tt) * 2.5, cam=dict(mv='hand', x=880, y=540), sfx=[(t(255) - 0.3, 'shriek', 0, 0.1, 'inside', dict(who='owen'))])   # before "Owen shrieks"
-    # "Pull," says the dummy, "and his hand comes with me.": one close-up of him, shaken by Mom's pulls (her scream off screen)
-    C(T(257), 'bust', who='winks', bg='den', cx=960, cy=590, scale=1.12, worked=True,
-      act=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=0.15), lambda a, s: a.set(t(259) - 0.2, None, 0.3, h_turn=0.0, lock=1.0),
-             lambda a, s: [a.jerk(p_, 0.8) for p_ in (s.t0 + 0.25, s.t0 + 1.1, s.t0 + 2.0)]),
-      cam=dict(mv='keys', shake=2.2, keys=[(T(257), 960, 560, 1.0), (T(259), 960, 520, 1.2, 'in_out'), (T(260), 960, 505, 1.32, 'in_out')]))
-    C(T(260), 'hands', mode='catch', tg=w(260, 'catch') + 0.05, shake=1.2, tags=[(t(261), 'RULE SIX', 960, 170, 'red', 1.3)])
-    C(T(262), 'den', lap=OL(act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)), dact=None),
-      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(w(262, 'kneel')))),
-           P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), lambda a, s: a.hands_over_mouth(s.t0 - 0.5, None, 0.4, True)))],
-      cam=KP(T(262), T(263), 960, 580, 1.0, 940, 590, 1.35))
-    C(T(263), 'bust', who=O, bg='den', act=_A(lambda a, s: a.cry(s.t0 - 1)), cam=dict(mv='creep', x=960, y=600))
-    C(T(264), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)), cam=dict(mv='creep', x=900, y=500))
-    tw = w(266, 'click') - 0.03
-    # the head ratchets round toward Owen and stops at 3/4 (both eyes stay on his face), then on "Click" the near lid snaps
-    # shut in a tight close-up
-    C(T(265), 'bust', who='winks', bg='den', cx=960, cy=600, scale=1.2, worked=True,
-      act=_A(lambda a, s: a.doll_turn(w(265, 'turns'), -0.42, 1.0, 3), lambda a, s: a.wink(tw, WINK_NEAR, 0.45),
-             lambda a, s: a.set(w(265, 'turns') + 1.0, None, 0.4, look_y=-0.3)),
-      cam=dict(mv='keys', keys=[(T(265), 960, 560, 1.0), (tw - 0.5, 985, 470, 1.32, 'in_out'), (tw, 990, 455, 1.4, 'in_out'),
-                                (T(268), 992, 452, 1.43, 'lin')]), music=[(tw, 'hit', 0.6)])
-    C(T(268), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)),
-      dact=lambda a, s: a.set(-9, None, 0.1, h_turn=-0.45, look_y=-0.45), cam=dict(mv='keys', keys=[(T(268), 860, 470, 1.25), (T(269), 860, 460, 1.32, 'in_out')]),
-      music=[(t(268) - 0.6, 'silence', 0.0, 0.5)])
-    C(T(269), 'bust', who=O, bg='den', ecu=True, cx=960, cy=640, scale=1.3, act=_A(lambda a, s: a.cry(s.t0 - 1),
-                                                                                lambda a, s: a.lids(T_SWAP, None, 1.0, 0.55)),
-      cam=dict(mv='creep', x=960, y=520), music=[(T_SWAP, 'sub_drop', 0.9)])
-    C(T(271), 'den', lamp=dict(out=[(T_LAMP_OUT[0], T_LAMP_OUT[1])]), lap=dict(who=ON, side=-1, act=_A(lambda a, s: a.vent_pose(side=-1), setp(eye_open=0.0)),
-                                                                                   dact=None),
-      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2))), P(M, at=('h', -0.95, 2.05), act=turned(-0.5))],
-      cam=KP(T(271), T(272), 940, 580, 1.2, 940, 580, 1.3), sfx=[(T_LAMP_OUT[0], 'lamp_out', -2, 0.1, 'inside', dict(kind='pop')),
-                                                                  (T_LAMP_OUT[1], 'lamp_on', 0, 0.1, 'inside', dict(kind='buzz_on'))],
-      music=[(T_LAMP_OUT[0], 'silence', 0.0, 1.2)])
-    # the lamp comes back: Owen slides his hand out like it's nothing (the dummy sags off the hand; the empty hand comes up
-    # beside his face, fingers wriggling), jumps up into Mom's arms; the dummy tips off his knee face down onto the rug
-    tsl = w(272, 'slides')
-    L_ = lambda a: a._alen()
-    C(T(272), 'lap', who=ON, bg='den', x=760, y=960, h=1350, side=-1, arm_out=tsl + 0.5,
-      act=_A(lambda a, s: a.set(tsl, None, 0.5, smile=0.5, grin=0.1),
-             lambda a, s: a.reach(tsl + 0.05, None, -1, 0.6 * L_(a), 0.1 * L_(a), 0.4 * L_(a), 'open', up=1.0, fade=0.6)),
-      dact=lambda a, s: a.sit_dummy(tsl + 0.1, None, 0.5, hands='limp', slump=1.0),
-      cam=dict(mv='keys', keys=[(T(272), 880, 560, 1.0), (tsl + 0.6, 860, 520, 1.08, 'in_out'), (w(272, 'jumps') - 0.35, 850, 510, 1.1, 'lin')]),
-      music=[(t(272) + 0.6, 'motif', 0.45, 3)], sfx=[(tsl + 0.15, 'cloth_rustle', -8, -0.1, 'close', dict(kind='slot'))])
-    C(w(272, 'jumps') - 0.35, 'den', lap=dict(who=ON, side=-1, act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.6, grin=0.15),
-                                                                      lambda a, s: a.jump_hug(T_JUMP), turn_to(T_JUMP + 0.15, -0.8, 0.4)),
-                                               dact=lambda a, s: a.sit_dummy(-9, None, 0.1, hands='limp', slump=1.0), release=T_JUMP + 0.1,
-                                               hop=('h', -0.74, 2.2)),
-      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2, T_JUMP, 0.45))),   # you get up as he springs
-           P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), ex('shock'), turn_to(T_JUMP + 0.3, 0.7, 0.5),
-                                              lambda a, s: a.reach(T_JUMP + 0.55, None, 1, -0.05 * L_(a), 0.42 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4),
-                                              lambda a, s: a.reach(T_JUMP + 0.6, None, -1, -0.05 * L_(a), 0.45 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4)))],
-      # the camera eases back and down as he lands, so he lies face down on the rug in front of the chair above the
-      # captions (review v3: the zoom-in ended with the rug under the caption and he seemed to vanish off the knee)
-      cam=dict(mv='keys', shake=1.4, keys=[(w(272, 'jumps') - 0.35, 930, 610, 1.0, None, 1.15), (T(273), 900, 720, 1.0, 'in_out', 1.05)]),
-      sfx=[(T_JUMP + 0.6, 'dummy_thud', -2, -0.1, 'inside', dict(kind='rug'))])
-    C(T(273), 'bust', who=ON, bg='den', act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.8, grin=0.3, teeth=0.5), setp(turn=0.3)), cam=dict(mv='push', x=960, y=600))
-    # he hugs me too: over my shoulder, his cheek beside my head, his arms round me
-    C(T(275), 'hug', bg='den', hold=w(275, 'hugs') - 0.1, cam=dict(mv='push', x=940, y=540, rate=0.035))
-    C(T(276), 'floor', cam=dict(mv='keys', keys=[(T(276), 940, 600, 1.0), (T(279), 1000, 640, 1.3, 'in_out')]), music=[(t(277), 'silence', 0.0, 1.2)])
-
-
-def plan_end(F, t, e, w, C, T, KP):
-    Y, M, O, ON = 'you', 'mom', 'owen', 'owen_new'
-    # ============================================================ RULE 7 (582.2 - 655.5): never say goodnight to him
-    C(T(279), 'rule', n=7, bg='den', lamp=1.0)
-    C(T(283), 'ins', name='letter', kw=dict(hl=0), motion=lambda tt: (2.0 * math.sin(tt * 17), 1.5 * math.sin(tt * 13), 0, 0.3 * math.sin(tt * 11)),
-      cam=dict(mv='push', x=960, y=540, rate=0.04))
-    # "I just never put rule six and rule seven side by side": the camera tilts down the letter so six and seven share the
-    # frame; seven's highlight fades in under six on "seven", and on "side by side" a red pen bracket joins them
-    t7, tsd = w(285, 'seven'), w(285, 'side')
-    C(T(285), 'ins', name='letter_close', kw=lambda tt, a=t7 - T(285), b=tsd - T(285): dict(hl=(6, 7), hla=(1.0, ease_in_out(clamp((tt - a) / 0.35))),
-                                                                                             bracket=ease_in_out(clamp((tt - b) / 0.9))),
-      cam=dict(mv='keys', keys=[(T(285), 960, 1010, 1.18), (t7 - 0.1, 975, 1170, 1.2, 'in_out'), (tsd, 980, 1230, 1.22, 'in_out'),
-                                (T(287), 985, 1250, 1.3, 'in_out')]))
-    C(T(287), 'den', lap=None, rug=True, ppl=[P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.4), ex('sad'))),
-                                              P(ON, at=('h', -0.55, 2.0), act=_A(turned(1.8), lambda a, s: a.set(t(288), None, 0.9, h_turn=-1.5, lock=1.0, smile=0.6)))],
-      cam=KP(T(287), T(290), 940, 560, 1.15, 860, 520, 1.6), focus=2.0, music=[(t(289), 'swell', 0.55, 3.0)])
-    # I pick the dummy up off the rug; something slides out of the slot in his back: the torn P.S.
-    C(T(290), 'carry', bg='den', x=900, y=2350, h=2400, dact=lambda a, s: a.smile_stage(-9, 'asleep'), cam=dict(mv='push', x=960, y=520))
-    C(w(290, 'something') - 0.1, 'ins', name='back_slot', kw=lambda tt, a=w(290, 'slides') - w(290, 'something') - 0.2: dict(paper=0.9 * ease_in_out(clamp((tt - a) / 1.3))),
-      cam=dict(mv='push', x=960, y=620, rate=0.045), sfx=[(w(290, 'slides') - 0.3, 'paper', 2, 0, 'close', dict(kind='slide', dur=1.3))])
-    C(T(291), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(291), 960, 560, 1.0), (T(292), 960, 540, 1.2, 'in_out')]),
-      sfx=[(t(291) - 0.2, 'paper', 4, 0, 'close', dict(kind='unfold'))])   # in the gap before the line
-    C(T(292), 'ins', name='letter', cam=dict(mv='keys', keys=[(T(292), 960, 760, 1.35), (T(293), 960, 820, 1.55, 'in_out')]))
-    C(T(293), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(293), 880, 440, 1.45), (T(295), 920, 520, 1.55, 'in_out')]), music=[(t(293), 'motif', 0.55, 4)])
-    C(T(295), 'bust', who=Y, bg='den', act=_A(ex('fear'), setp(wet=0.8)), cam=dict(mv='creep', x=960, y=580))
-    C(T(297), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(297), 1040, 640, 1.5), (T(299), 1060, 650, 1.7, 'in_out')]))
-    C(T(299), 'bust', who=Y, bg='den', act=_A(ex('shock'), setp(wet=0.8)), cam=dict(mv='push', x=960, y=580))
-    # 1962: the end of his very first show; "Say goodnight, Mister Winks." His knee. His hand. His goodnight. They traded places.
-    # Before the trade young Walter has a warm, nervous, innocent smile and the figure is the cheeky show dummy; on "traded"
-    # (white flash) Walter's face snaps to the locked stare and the widening grin, and the dummy's painted eyes go wet and
-    # frightened (the tape-cry face): held on the two of them, close
-    WARM = lambda: lambda a, s: a.set(-9, None, 0.1, smile=0.55, teeth=0.25, brow_up=0.4, brow_sad=0.25, pupil=1.05, squint=0.1, sweat=0.35)
-    THING = lambda tt: lambda a, s: a.set(tt, None, 0.06, smile=1.0, grin=0.85, teeth=1.0, brow_up=0.0, brow_sad=0.0, pupil=0.5, lock=1.0,
-                                          still=1.0, sweat=0.0, squint=0.25)
-    ttr = w(305, 'traded')
-    C(T(300), 'stage62', cam=dict(mv='keys', shake=1.2, keys=[(T(300), 960, 560, 1.0, None, 1.0), (w(300, 'young'), 955, 520, 1.03, 'in_out', 1.3),
-                                                          (w(300, 'said') - 0.1, 970, 480, 1.06, 'in_out', 1.6)]),
-      tags=[(w(300, '1962'), '1962', 960, 170, 'white', 2.0)], music=[(t(300), 'motif', 0.5, 6)], w_act=WARM(),
-      d_act=_A(stage(1), lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.7)))
-    C(w(300, 'said') - 0.1, 'bust', who='walter74', bg='stage62', era='1962', grade='memory',
-      act=_A(WARM(), lambda a, s: a.set(s.t0 + 1.0, s.t0 + 2.2, 0.35, h_turn=0.3, look_x=0.5)), cam=dict(mv='creep', x=960, y=560))
-    C(T(301), 'lap', who='walter74', bg='stage62', x=880, y=980, h=1400, grade='memory', d_act=None, act=WARM(),
-      dact=_A(stage(1), lambda a, s: a.doll_turn(t(301) + 0.2, -0.8, 0.8, 2)), cam=dict(mv='creep', x=940, y=480))
-    C(w(302, 'knee') - 0.12, 'lap', who='walter74', bg='stage62', x=880, y=700, h=1400, grade='memory', act=WARM(),
-      dact=_A(stage(1), lambda a, s: a.set(-9, None, 0.1, h_turn=-0.8)), cam=dict(mv='push', x=980, y=760, z=1.2))
-    C(w(303, 'hand') - 0.12, 'ins', name='back_slot', kw=dict(hand=1.0), grade='memory', cam=dict(mv='push', x=960, y=560, z=1.1))
-    C(w(304, 'good') - 0.15, 'bust', who='winks', bg='stage62', cx=960, cy=600, scale=1.2, worked=True, era='1962', grade='memory',
-      act=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=-0.6), stage(1), lambda a, s: a.wink(w(304, 'night') + 0.05, 1, 0.3)), cam=dict(mv='creep', x=960, y=520))
-    C(T(305), 'lap', who='walter74', bg='stage62', x=880, y=980, h=1400, grade='memory', cut='white', hit=ttr,
-      act=_A(WARM(), lambda a, s: a.set(-9, None, 0.1, h_turn=0.25), THING(ttr)),
-      dact=_A(stage(1), lambda a, s: a.set(-9, None, 0.1, h_turn=-0.6), lambda a, s: a.smile_stage(ttr, 'tape', fade=0.08),
-              lambda a, s: a.head_snap(ttr + 0.05, 0.0)),
-      cam=dict(mv='keys', keys=[(T(305), 930, 470, 1.0), (ttr, 925, 455, 1.06, 'in_out'), (T(306), 920, 430, 1.16, 'in_out')]),
-      music=[(ttr, 'braam', 0.9)])
-    # sixty years later: the thing in his body felt it dying; asked for its dummy, sat him on its lap, said the word
-    C(T(306), 'hospital', bpm=52, bed_act=_A(ex('still_smile'), setp(pupil=0.7, still=0.8, eye_open=0.6)),
-      cam=KP(T(306), w(306, 'felt') - 0.1, 960, 540, 1.0, 990, 530, 1.3))
-    C(w(306, 'felt') - 0.1, 'bust', who='grandpa_bed', bg='hospital', expr='still_smile', act=setp(pupil=0.65, lock=1.0, eye_open=0.7),
-      cam=dict(mv='creep', x=960, y=560))
-    C(T(307), 'hospital', lap=True, bpm=52, bed_act=_A(ex('still_smile'), setp(pupil=0.7, still=0.8)), cam=KP(T(307), w(307, 'and', 1) - 0.1, 960, 540, 1.2, 1000, 545, 1.9))
-    C(w(307, 'and', 1) - 0.1, 'lap', who='grandpa_bed', bg='hospital', x=880, y=930, h=1300,
-      act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1), ex('still_smile'), setp(turn=0.15)),
-      dact=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=-0.6), lambda a, s: a.wink(w(307, 'word') + 0.1, 1, 0.4)), cam=dict(mv='creep', x=940, y=500))
-    C(T(308), 'hospital', view='close', bed='walter', lap=True, bpm=118, bed_act=_A(lambda a, s: a.in_bed(), lambda a, s: a.vent_pose(side=1),
-                                                                                 setp(turn=0.15), ex('lucid'), tremble(0.8)),
-      dact=LIMP, cam=KP(T(308), T(309), 960, 540, 1.0, 990, 540, 1.5))
-    # it came home in a box to wait for a new one. A young one.
-    C(T(309), 'hall', light=0.0, living=0.0, kitchen=0.0, case='closed', envelope=False, focus=1.7,
-      cam=KP(T(309), T(310), 900, 570, 1.0, 800, 600, 1.8, 1.0, 1.08))
-    C(T(310), 'bust', who=ON, bg='den', lamp=0.6, act=setp(lock=1.0, pupil=0.62, still=1.0), cam=dict(mv='fast', x=960, y=600), hit=t(310) + 0.05)
-    # it told me rule two was the lie, so I'd never doubt the one it actually wrote: rule six tears
-    C(T(311), 'rule', n=6, bg='den', recall=True, mode='tear', reveal=w(311, 'actually') - 0.05)
-
-    # ============================================================ THE END (655.5 - 710.5)
-    # in my arms he opens his eyes, looks up at me, tries to wink: both eyelids close. Click, click. Owen can't wink.
-    C(T(312), 'bust', who='winks', bg='den', cx=930, cy=560, scale=1.05, no_view=True, hold=('you', 1330, 980, 330, 'grip', 120.0, -1),
-      act=_A(lambda a, s: a.set(-9, None, 0.1, h_tilt=-16.0, h_nod=-0.22, lock=1.0, look_y=-0.6), lambda a, s: a.eyes_open(T_OPEN + 0.15, 1.3)),
-      cam=dict(mv='keys', keys=[(T(312), 950, 560, 1.0), (T(314), 945, 520, 1.2, 'in_out')]), music=[(T_OPEN, 'hit', 0.6)])
-    tw2 = e(315) + 0.1                       # the two lids close in the silence after the line, before "Click, click."
-    C(T(314), 'bust', who='winks', bg='den', ecu=True, cx=960, cy=660, scale=1.4, act=_A(setp(h_nod=-0.2), lambda a, s: a.try_wink(tw2, 0.5, 2.0, 0.8)),
-      cam=dict(mv='creep', x=960, y=520), music=[(tw2, 'stinger', 0.8)])
-    C(T(317), 'bust', who=O, bg='living', lamp=0.15, light=TVL, era='memory', cx=960, cy=640, scale=1.2,
-      act=_A(ex('kid_grin'), lambda a, s: a.try_wink_kid(w(317, 'wink') + 0.05, 0.8)), cam=dict(mv='creep', x=960, y=540))
-    # 8 AM: the museum; you tell Mom everything; she thinks it's grief; Owen waves at the window as the van pulls away
-    C(T(319), 'hdoor', tod='morning', light=0.0, door=door_swing(t(319) + 0.4, 1.6, 0.0, 0.85), case=None, focus=3.0,
-      cam=KP(T(319), T(320), 960, 560, 1.0, 960, 540, 1.25), sfx=[(t(319) + 0.4, 'door_creak', -4, 0, 'inside', dict(kind='front_door'))])
-    C(T(320), 'bust', who=Y, bg='hdoor', tod='morning', door=0.85, light=MORNING, act=_A(ex('fear'), lambda a, s: a.scream(w(321, 'scream') - 0.4, e(321))),
-      cam=dict(mv='hand', x=960, y=580), sfx=[(w(321, 'scream') - 0.4, 'scream', -6, 0.0, 'inside', dict(who='mom', kind='short'))])
-    C(T(322), 'bust', who=M, bg='hdoor', tod='morning', door=0.85, light=MORNING, act=_A(ex('sad'), down(-1, 0.3)), cam=dict(mv='push', x=960, y=580))
-    tv0 = w(324, 'van') - 0.6
-    C(T(324), 'street', van=dict(drive=('out', tv0, tv0 + 4.5, -5.5, -14.0)),
-      ppl=[P(ON, at='owen', act=_A(turned(2.0), lambda a, s: a.wave(w(324, 'waves') - 0.1, 678.0)))],
-      cam=KP(T(324), w(324, 'as') + 0.1, 960, 560, 1.15, 960, 540, 1.9), focus=3.75, sfx=[(tv0, 'van_pull_away', 0, 0.3, 'outside', dict(dur=5.0))])
-    C(w(324, 'as') + 0.1, 'street', view='outside', van=dict(drive=('out', tv0 - 2.5, tv0 + 2.5, 8.0, 30.0)),
-      ppl=[P(ON, at='owen_window', act=_A(lambda a, s: a.wave(s.t0 - 2, 678.0), lambda a, s: a.set(-9, None, 0.1, smile=0.5, lock=1.0)))],
-      cam=KP(w(324, 'as') + 0.1, T(325), 960, 540, 1.0, 930, 550, 1.35), focus=17.6)
-    # behind glass, three states away: he'll try to wink at you. He can't. Wink back.
-    C(T(325), 'museum', view='wide', act=stage('owen'), cam=KP(T(325), T(326), 960, 520, 1.0, 950, 500, 1.6), tags=[(t(325) + 1.0, 'THREE STATES AWAY', 960, 170, 'white', 2.2)])
-    tw3 = w(326, 'wink') + 0.05
-    C(T(326), 'museum', act=_A(stage('owen'), lambda a, s: a.try_wink(tw3, 0.45, 0.9, 0.7)), cam=KP(T(326), T(327), 960, 520, 1.0, 960, 470, 1.7))
-    C(T(327), 'bust', who='winks', bg='museum', ecu=True, cx=960, cy=640, scale=1.4, light=MUSEUM, era='later', glass=True,
-      act=_A(stage('owen'), lambda a, s: a.try_wink(t(327) + 0.1, 0.4, 0.6, 0.5)), cam=dict(mv='creep', x=960, y=520))
-    C(T(328), 'museum', act=stage('owen'), cam=KP(T(328), T(330), 960, 470, 1.6, 960, 450, 2.35, 1.0, 1.08))
-    # the boy who came home with us doesn't laugh any more; coffee with two sugars; he's nine; the doorway; "kiddo"
-    C(T(330), 'bust', who=ON, bg='living', tv=dict(on=-10.0, snow=0.0), lamp=0.3, light=TVL, act=setp(lock=1.0, pupil=0.62, still=1.0, smile=0.0),
-      cam=dict(mv='creep', x=960, y=590), sfx=[(t(330) + 0.3, 'studio_laughter', -16, -0.3, 'tv', dict(dur=2.4, level=0.7))])
-    C(T(331), 'kitchen', view='chair', tod='morning', mug=False, era='later', grade='morning',
-      ppl=[P(ON, at='chair', act=_A(sitp(), lambda a, s: a.hold_mug(s.t0 - 1, None, side=1, sip=[w(331, 'coffee') - 0.3]), setp(lock=1.0, still=1.0)))],
-      cam=KP(T(331), T(332), 960, 560, 1.3, 960, 540, 1.95), focus=1.95)
-    C(T(332), 'ins', name='mug', era='later', grade='morning', kw=dict(stir=lambda tt: 0.8 * tt), cam=dict(mv='push', x=900, y=640, z=1.3, rate=0.04),
-      sfx=[(t(332) + 0.15, 'spoon_clink', -2, 0, 'close', dict(kind='clink')), (t(332) + 0.55, 'spoon_clink', -4, 0, 'close', dict(kind='clink'))])
-    C(T(333), 'bedroom', hall=1.0, door=0.85, ppl=[P(ON, path=(t(333) + 0.6, t(333) + 2.4, [('h', 1.3, 3.45), 'doorway'], 0.0),
-                                                    act=_A(setp(lock=1.0, still=0.8), lambda a, s: a.doorway_smile(t(334), e(335) - t(334) + 0.3)),
-                                                    surface='inside')],
-      cam=dict(mv='keys', shake=1.2, keys=[(T(333), 960, 560, 1.0, None, 1.0), (T(334), 960, 540, 1.03, 'in_out', 1.3),
-                                           (T(336), 980, 520, 1.06, 'in_out', 2.4)]), focus=3.45, music=[(t(333), 'drone', 0.6, 8.0)])
-    # "See you in the morning, kiddo.": a medium close-up of him in the doorway, shoulders and hoodie against the lit hall
-    C(T(336), 'bust', who=ON, bg='bedroom', light=BACKLIT, ecu=True, cx=960, cy=470, scale=0.92, bg_dim=0.0,
-      act=lambda a, s: a.doorway_smile(s.t0 - 5.0, 4.0), cam=dict(mv='keys', keys=[(T(336), 960, 540, 1.0), (T(337), 960, 505, 1.1, 'in_out')]),
-      music=[(t(336), 'silence', 0.0, 0.0)])
-    C(T(337), 'bedroom', hall=lambda tt: 1.0 - 0.75 * ease_in_out(clamp((tt - t(338) - 0.2) / 1.0)), door=0.85,
-      ppl=[P(ON, at='doorway', act=lambda a, s: a.doorway_smile(t(334), 4.0))], cam=KP(T(337), e(338) + 0.25, 980, 520, 2.2, 980, 520, 2.4), focus=3.45,
-      sfx=[(t(338) + 0.2, 'light_switch', -10, 0.1, 'inside')])
-    C(e(338) + 0.25, 'black', cut='static', sfx=[(e(338) + 0.25, 'impact_hit', 4, 0, None, dict(size=1.4)), (e(338) + 0.25, 'sub_drop', 0, 0, None)],
-      music=[(e(338) + 0.25, 'end', 0.8, 2.6)])
-
-
-def plan_globals(F, t, e, w, G):
-    """Film-wide cues: the studio laughter waves (applause = he moves), the clack and voice moments, music colour."""
-    for lt in LAUGH_T:
-        tv = 294.0 < lt < 500.0
-        G.append(_ev(lt, 'studio_laughter', -4 if not tv else -2, -0.3 if tv else 0.0, 'tv', dur=2.6, level=1.0 if lt in (305.45, 314.85, 462.03, 484.55) else 0.75,
-                     roar=lt in (305.45, 314.85)))
-        if tv and 300 < lt < 330:
-            G.append(_ev(lt + 0.05, 'applause', -10, -0.3, 'tv', dur=2.2))
-    for (ta, s0, s1, cut, g_) in F.tv_voices:                    # the tape's own voice: a replay of the recording through the TV
-        G.append(_ev(ta, 'tv_voice', g_, -0.3, 'tv', src_t0=round(s0, 3), src_t1=round(min(s1, s0 + cut), 3), cut=cut < 50))
-    G.append(_ev(445.25, 'tape_stop', -8, -0.3, 'tv', kind='warble', dur=0.5))
-    G.append(_ev(t(86) - 0.35, 'clock_chime', -4, -0.2, 'inside', kind='quarter'))   # the 1:15 chime, in the gap before the line
-    G.append(_ev(t(36) - 0.5, 'heartbeat', -8, 0, None, bpm=96, bpm_end=118, dur=8.0))
-    G.append(_ev(t(157), 'heartbeat', -6, 0, None, bpm=84, bpm_end=120, dur=8.0))
-    G.append(_ev(543.7, 'heartbeat', -4, 0, None, bpm=78, bpm_end=132, dur=round(t(268) - 543.7, 2)))   # out before "Goodnight, Owen."
-    G.append(_ev(t(193) - 0.3, 'breath', -10, 0.0, 'close', kind='held', dur=2.4))
-    for ti, kind in ((7, 'motif'), (28, 'swell'), (41, 'motif'), (63, 'swell'), (99, 'swell'), (145, 'swell'), (156, 'swell'), (198, 'swell'),
-                     (210, 'swell'), (225, 'swell'), (243, 'swell'), (254, 'swell'), (300, 'motif'), (312, 'swell'), (330, 'swell')):
-        G.append({'t': round(t(ti), 3), 'type': kind, 'level': 0.6, 'len': 6.0 if kind == 'swell' else 4.0})
-    for tr in (t(60), t(68), w(108, 'turned'), T_TV_ON, w(144, 'empty'), t(157), w(161, 'hand'), t(196), w(210, 'camera'), w(242, 'gone'),
-               t(268), w(311, 'actually'), w(315, 'eyelids'), t(336)):   # risers peak ON the reveal
-        G.append({'t': round(tr, 3), 'type': 'riser', 'level': 0.6, 'len': 3.0})
-    G.append({'t': round(543.7, 3), 'type': 'pulse_on', 'level': 0.8})
-    G.append({'t': round(T_SWAP, 3), 'type': 'pulse_off', 'level': 0.5})
-    G.append({'t': 299.5, 'type': 'theme', 'level': 0.6, 'len': 6.0})
+    plan_open(F)
+    plan_1987(F)
+    plan_since(F)
+    plan_rule1(F)
+    plan_pause(F)
+    plan_rule2(F)
+    plan_rule3(F)
+    plan_rule4(F)
+    plan_rule5(F)
+    plan_rule6(F)
+    plan_rule7(F)
+    plan_reveal(F)
+    plan_after(F)
+    plan_outro(F)
+    plan_globals(F)
 
 
 # ==================================================================================================== tools
-def contact_sheets(F, prefix, cols=8, rows=6, size=(960, 540), tile=240, ts=None):
+def _wrap_txt(s, n):
+    out, cur = [], ''
+    for w_ in s.split():
+        if len(cur) + len(w_) + 1 > n and cur: out.append(cur); cur = w_
+        else: cur = (cur + ' ' + w_).strip()
+    if cur: out.append(cur)
+    return out
+
+
+def shot_sheets(F, prefix, rng=None, per=8, tile=320):
+    """The review sheet: one row per shot = first | middle | last frame (960x540 renders scaled to tile) and, under it,
+    the shot's index / kind / times and the narration lines it covers (the words it must show)."""
     import cv2
-    ts = ts if ts is not None else [(s.t0 + s.t1) / 2 for s in F.shots]
-    tiles = []
-    for k, t in enumerate(ts):
-        try:
-            img = F.frame(t, int(t * FPS))
-        except Exception as ex_:
-            import traceback; print('FRAME ERROR t=%.2f shot %s: %r' % (t, F.shot_at(t), ex_)); traceback.print_exc(limit=-3)
-            img = np.zeros((size[1], size[0], 3), np.uint8); img[..., 0] = 120
-        im = cv2.resize(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), (tile, tile * 9 // 16), interpolation=cv2.INTER_AREA)
-        sh = F.shot_at(t)
-        cv2.putText(im, '%d %s %.1f' % (sh.idx, sh.kind, t), (3, 11), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (0, 255, 255), 1, cv2.LINE_AA)
-        tiles.append(im)
+    ks = list(range(len(F.shots))) if rng is None else list(range(rng[0], min(rng[1], len(F.shots))))
+    th = tile * 9 // 16
+    rows = []
+    for k in ks:
+        sh = F.shots[k]
+        ts = [sh.t0 + min(0.04, sh.d * 0.1), (sh.t0 + sh.t1) / 2, sh.t1 - min(0.05, sh.d * 0.1)]
+        ims = []
+        for tt in ts:
+            try:
+                img = F.frame(tt, int(round(tt * FPS)))
+            except Exception as ex_:
+                import traceback; print('FRAME ERROR t=%.2f shot %s: %r' % (tt, sh, ex_)); traceback.print_exc(limit=-4)
+                img = np.zeros((CFG.rh, CFG.rw, 3), np.uint8); img[..., 0] = 140
+            ims.append(cv2.resize(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), (tile, th), interpolation=cv2.INTER_AREA))
+        row = np.hstack(ims)
+        ls = [l for l in F.L if l['end'] > sh.t0 + 0.05 and l['t'] < sh.t1 - 0.05]
+        txt = ' / '.join('[%d%s] %s' % (l['i'], '' if l['who'] == 'N' else ' ' + l['who'], l['en']) for l in ls) or '(no line)'
+        hdr = '#%d %s %s  %.2f-%.2f (%.2fs)' % (sh.idx, sh.kind, sh.p.get('room') or sh.p.get('name') or sh.p.get('who') or sh.p.get('mode') or '',
+                                              sh.t0, sh.t1, sh.d)
+        tl = [hdr] + _wrap_txt(txt, 118)[:3]
+        band = np.full((16 * len(tl) + 6, row.shape[1], 3), 24, np.uint8)
+        for j, s_ in enumerate(tl):
+            cv2.putText(band, s_, (5, 14 + 16 * j), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (120, 230, 255) if j == 0 else (235, 235, 235), 1, cv2.LINE_AA)
+        rows.append(np.vstack([row, band, np.full((4, row.shape[1], 3), 70, np.uint8)]))
+        F._built.clear()
     paths = []
-    per = cols * rows
-    for s0 in range(0, len(tiles), per):
-        tl = tiles[s0:s0 + per]
-        while len(tl) % cols: tl.append(np.zeros_like(tiles[0]))
-        sheet = np.vstack([np.hstack(tl[i:i + cols]) for i in range(0, len(tl), cols)])
-        p = '%s_%02d.jpg' % (prefix, s0 // per)
-        cv2.imwrite(p, sheet, [cv2.IMWRITE_JPEG_QUALITY, 82]); paths.append(p)
+    for s0 in range(0, len(rows), per):
+        p_ = '%s_%03d.jpg' % (prefix, ks[s0])
+        cv2.imwrite(p_, np.vstack(rows[s0:s0 + per]), [cv2.IMWRITE_JPEG_QUALITY, 84]); paths.append(p_)
     return paths
 
 
-
 def cut_frames(F, prefix, size=(480, 270), rng=None, cols=4):
-    """Every cut as a pair: the last frame of shot k | the first frame of shot k+1 (pops between cuts), rendered over MAGENTA
-    so a camera aimed past a set plate shows as magenta (holes are counted per frame -> prefix_holes.json)."""
+    """Every cut as a pair: the last frame of shot k | the first frame of shot k+1, rendered over MAGENTA so a camera that
+    sees past a set plate shows as magenta (holes are counted per frame -> prefix_holes.json)."""
     import cv2
     ks = range(len(F.shots) - 1) if rng is None else range(rng[0], min(rng[1], len(F.shots) - 1))
     pairs, holes = [], []
@@ -2927,60 +1821,1060 @@ def cut_frames(F, prefix, size=(480, 270), rng=None, cols=4):
             img = F.frame(tt, int(round(tt * FPS)), bg='#ff00ff')
             r_, g_, b_ = img[..., 0].astype(int), img[..., 1].astype(int), img[..., 2].astype(int)
             mag = float(np.mean((r_ - g_ > 60) & (b_ - g_ > 60) & (np.abs(r_ - b_) < 70)))
-            if mag > 0.0005: holes.append(dict(shot=sh.idx, kind=sh.kind, t=round(tt, 3), hole=round(mag, 4)))
+            if mag > 0.0005 and sh.kind not in ('card',): holes.append(dict(shot=sh.idx, kind=sh.kind, t=round(tt, 3), hole=round(mag, 4)))
             im = cv2.resize(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), size, interpolation=cv2.INTER_AREA)
             cv2.putText(im, '%d %s %.2f' % (sh.idx, sh.kind, tt), (3, 11), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (0, 255, 255), 1, cv2.LINE_AA)
             ims.append(im)
-        pair = np.hstack([ims[0], np.full((size[1], 4, 3), 255, np.uint8), ims[1]])
-        pairs.append(pair)
+        pairs.append(np.hstack([ims[0], np.full((size[1], 4, 3), 255, np.uint8), ims[1]]))
+        F._built.clear()
     paths = []
     per = cols * 6
     for s0 in range(0, len(pairs), per):
         tl = pairs[s0:s0 + per]
         while len(tl) % cols: tl.append(np.zeros_like(pairs[0]))
         rows = [np.hstack([np.pad(x, ((4, 4), (6, 6), (0, 0))) for x in tl[i:i + cols]]) for i in range(0, len(tl), cols)]
-        p = '%s_%02d.jpg' % (prefix, s0 // per)
-        cv2.imwrite(p, np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 80]); paths.append(p)
+        p_ = '%s_%02d.jpg' % (prefix, s0 // per)
+        cv2.imwrite(p_, np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 80]); paths.append(p_)
     json.dump(holes, open(prefix + '_holes.json', 'w'), indent=1)
     return paths, holes
 
 
 def lip_check(F, fps=30.0):
-    """Mouths move only on their own lines. For every shot and actor, sample the pose at `fps` and measure mouth MOTION (the
-    mean |change| per second of m_open for people, of the jaw for Mister Winks) inside and outside the actor's own lines (lines
-    overlapping the shot by > 0.15 s; the tape dummy also speaks the replayed TV voice). A held expression (a scream, a
-    gasp) is not motion. Explicit jaw actions outside lines (jaw_hang / jaw_drop / clack / the bookcase chatter) show up as
-    off-line motion on 'winks' and are listed so they can be checked against the plan."""
+    """Mouths move only on their own lines: for every shot and actor, the mean |change| per second of m_open (people) inside
+    and outside the actor's own lines (lines overlapping the shot by > 0.15 s). The Bunnyman's mask has no mouth; Dale's
+    face (unmask) moves on D. Humming is a closed mouth (no motion)."""
     rows = []
     for sh in F.shots:
         F._build(sh)
         for a in sh.actors:
             who = a.who
-            if who == 'winks':
-                tape = a._arc is CH.WINKS_TAPE_ARC
-                v = TAPE_VOICE if tape else VOICE['winks']
-            else:
-                tape, v = False, VOICE.get(who, [])
-            lines = [(l['t'], l['end']) for l in F.voice_lines(sh.t0, sh.t1, v)]
-            if tape: lines += [(ta, ta + min(s1 - s0, c)) for ta, s0, s1, c, _g in F.tv_voices]
+            v = VOICE.get(who, [])
+            lines = [(l['t'], l['end']) for l in F.voice_lines(sh.t0, sh.t1, v)] if v else []
             lines = [(l0, l1) for l0, l1 in lines if min(l1, sh.t1) - max(l0, sh.t0) > 0.15]
             ts = np.arange(sh.t0 + 0.02, sh.t1 - 0.02, 1.0 / fps)
-            vals = []
-            for tt in ts:
-                P_ = a.at(float(tt))
-                vals.append(P_.jaw if who == 'winks' else P_.m_open)
-            vals = np.array(vals)
-            d = np.abs(np.diff(vals)) * fps if len(vals) > 1 else np.zeros(1)
-            mid = ts[1:] if len(ts) > 1 else ts
-            ins = np.array([any(l0 - 0.1 <= tt <= l1 + 0.15 for l0, l1 in lines) for tt in mid]) if len(mid) else np.zeros(0, bool)
+            if len(ts) < 3: continue
+            vals = np.array([a.at(float(tt)).m_open for tt in ts])
+            d = np.abs(np.diff(vals)) * fps
+            mid = ts[1:]
+            ins = np.array([any(l0 - 0.1 <= tt <= l1 + 0.15 for l0, l1 in lines) for tt in mid])
             on = float(d[ins].mean()) if ins.any() else 0.0
             off = float(d[~ins].mean()) if (~ins).any() else 0.0
-            peak_off = float(d[~ins].max()) if (~ins).any() else 0.0
-            rows.append(dict(shot=sh.idx, t0=round(sh.t0, 2), kind=sh.kind, who=who, tape=tape, lines=len(lines), move_on=round(on, 3),
-                             move_off=round(off, 3), peak_off=round(peak_off, 2)))
+            rows.append(dict(shot=sh.idx, t0=round(sh.t0, 2), kind=sh.kind, who=who, lines=len(lines), move_on=round(on, 3), move_off=round(off, 3),
+                             peak_off=round(float(d[~ins].max()) if (~ins).any() else 0.0, 2)))
         F._built.clear()
     return rows
 
+
+# ==================================================================================================== PLAN (sections below)
+# ==================================================================================================== PLAN helpers
+def scr(sp, at, dx=0.0, dy=0.0):
+    """Screen (design) point of a plan point / anchor in set sp (for look_at / reach_to targets)."""
+    s = spot_of(sp, at)
+    return (s.x + dx, s.y + dy)
+
+
+def cm(eye, look, S=1000.0, sx=960.0, sy=540.0, env=None):
+    """A custom camera on the house plan: eye (x, y, Y), look (x, y, Y) -> screen (sx, sy), focal S."""
+    d = dict(eye=eye, look=look, S=S, sx=sx, sy=sy)
+    if env: d['env'] = env
+    return d
+
+
+def _A(*fns):
+    return lambda a, s: [f(a, s) for f in fns if f]
+
+
+def ex(name, t0, t1=None, fade=0.35): return lambda a, s: a.expr(name, t0, t1, fade)
+
+
+def pose(t0, t1=None, fade=0.3, **kw): return lambda a, s: a.set(t0, t1, fade, **kw)
+
+
+def hum(t0, t1=None, amount=1.0): return lambda a, s: a.hum(t0, t1, amount)
+
+
+def lookp(at, t0, t1=None, dur=0.4, z=None, body=0.0):
+    """look at a plan point / anchor of the shot's set"""
+    return lambda a, s: a.look_at(t0, scr(s.sp, at), t1, dur, z=z, body=body)
+
+
+def lookxy(x, y, t0, t1=None, dur=0.4, z=None):
+    return lambda a, s: a.look_at(t0, (x, y), t1, dur, z=z)
+
+
+def blinks(*ts): return lambda a, s: [a.blink(t) for t in ts]
+
+
+def tilt(t0, ang=10.0, dur=1.6): return lambda a, s: a.head_tilt(t0, ang, dur)
+
+
+def VHS_STREET(t0, t1, y0, y1):
+    return lambda tt: lerp(y0, y1, clamp((tt - t0) / max(0.1, t1 - t0)))
+
+
+# ==================================================================================================== COLD OPEN (0 - 65.75)
+def plan_open(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    # 0 "If you ever see a man in a bunny suit standing at the edge of the woods on Easter night, don't wave at him."
+    tcut = w(0, 'on', 1) if w(0, 'on', 1) > 3.0 else w(0, 'easter') - 0.3
+    tw = w(0, 'wave')
+    C(0.0, 'set', room='yard', view='woods', set=dict(tod='night'), rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.25, act=pose(-9, None, 0.1, h_tilt=-3.0))],
+      c=dict(mv='push', f=2.45, rate=0.035), music=[(0.0, 'drone', 0.45, 7.0)],
+      sfx=[(0.3, 'wind_gust', -8, 0, 'outside')])
+    C(tcut - LEAD, 'set', room='yard', view='close', rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15,
+             act=_A(tilt(tcut + 0.3, -9.0, 1.6), lambda a, s: a.wave(tw - 0.15, s.t1 + 1.5, side=1, slow=True)))],
+      c=dict(mv='push', f=1.3, rate=0.02))
+    # 1 "If he leaves an egg on your porch, don't open it."   (the egg rocks once on 'open')
+    to = w(1, 'open')
+    C(T(1), 'set', room='front', view='egg', cam=cm((-0.18, -1.05, 0.30), (-0.38, -0.36, 0.0), S=1700, sx=960, sy=640),
+      set=dict(egg=True, egg_rattle=lambda tt, to=to: 0.9 * math.sin((tt - to) * 24.0) * math.exp(-max(0.0, tt - to) * 3.5) * (tt > to)),
+      c=dict(mv='push', f=1.0, rate=0.035), sfx=[(to + 0.02, 'egg_rattle', -4, 0, 'outside', dict(n=3))])
+    # 2 "And if anyone, anyone at all, asks you to close your eyes and count to seven... don't."  Mom, too still, leans in;
+    #   her open hand comes up toward the lens on 'close your eyes' and covers it on 'seven'; black on "don't"
+    tc, ts = w(2, 'close'), w(2, 'seven')
+
+    def lens_hand(tt, tc=tc, ts=ts):
+        if tt < tc - 0.1: return None
+        u = ease_in_out(clamp((tt - tc) / max(0.4, ts + 0.45 - tc)))
+        size = lerp(430.0, 3600.0, u ** 1.7)
+        return (lerp(1260.0, 980.0, u), lerp(1360.0, 520.0 + size * 0.42, u), 182.0, 1.0, size)
+    C(T(2), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.0), bg_dim=0.5, expr='too_still', cx=960, cy=610, scale=0.88,
+      act=_A(pose(t(2), None, 3.5, approach=0.16), tilt(w(2, 'anyone', 1), 9.0, 1.7), lookxy(960, 540, t(2) - 0.5, None, 0.5, z=400.0)),
+      light=dict(rim='#ffcf8f', rim_a=55, side=-1, key=-0.3),
+      hands=[dict(who='mom', fn=lens_hand, size=430, shape='open', side=-1, sleeve_from=lambda tt: (1560, 1500), depth=0.5)],
+      post_fn=lambda tt, ts=ts: dict(fade=clamp((tt - ts - 0.25) / 0.3)), c=dict(mv='push', zrate=0.01),
+      sfx=[(tc, 'cloth_rustle', -8, 0, 'close')], music=[(ts + 0.3, 'silence', 0.0, 1.2)])
+
+    # 3-6 the jingle on the camcorder tape: the Pemberton's Easter parade, April 1987 (VHS), the cheering crowd
+    t3, t4, t5, t6, t7 = T(3), T(4), T(5), T(6), T(7)
+    fy = VHS_STREET(t3, t4, 21.0, 16.5)
+    C(t3, 'set', room='parade', view='street', era='1987', cut='vhs', set=dict(float_y=fy),
+      ppl=[P('bunny87', (0.0, fy(t3) + 2.2, 1.25), path=[(t3, (0.0, fy(t3) + 2.2, 1.25)), (t4, (0.0, fy(t4) + 2.2, 1.25))], no_walk=True,
+             linear=True, turn=0.1, act=_A(lambda a, s: a.hold_prop('basket', -1), lambda a, s: a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01),
+                                           lambda a, s: a.wave(s.t0, s.t1 + 1.0, side=1, speed=0.8)), room_light=False)],
+      c=dict(mv='push', f=2.1, rate=0.02),
+      music=[(t3, 'jingle', 0.9, 8.5, dict(version='vhs_parade'))], sfx=[(t3 + 0.05, 'crowd_cheer', -2, 0, 'vhs')])
+    C(t4, 'set', room='parade', view='photo', era='1987', tape0=1.7,
+      ppl=[P('bunny87', 'float_deck', turn=0.25, room_light=False,
+             act=_A(lambda a, s: a.hold_prop('basket', -1), lambda a, s: a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01),
+                    lambda a, s: a.wave(s.t0 - 0.5, s.t1 + 0.5, side=1, speed=0.9)))],
+      c=dict(mv='push', f=1.35, rate=0.02))
+    # "Close your eyes and count to seven." the mascot covers his glass eyes with both paws (peek-a-boo), then drops them
+    pk1 = e(5) - 0.35
+    C(t5, 'set', room='parade', view='photo', era='1987', tape0=3.8,
+      cam=cm((-2.3, 20.9, 2.2), (0.0, 24.2, 2.55), S=1500, sx=960, sy=560),
+      ppl=[P('bunny87', 'float_deck', turn=-0.1, room_light=False,
+             act=_A(lambda a, s: a.reach_to(t(5) + 0.05, 1, (a, 'eye_l'), t1=pk1, dur=0.45, contact='palm', shape='paw_flat', z=110.0, fade=0.35),
+                    lambda a, s: a.reach_to(t(5) + 0.1, -1, (a, 'eye_r'), t1=pk1, dur=0.45, contact='palm', shape='paw_flat', z=110.0, fade=0.35),
+                    tilt(pk1 + 0.1, 12.0, 1.2)))],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # "Find an egg that fell from heaven." he lifts a plastic egg out of his basket and tosses it up over the crowd
+    tt_ = w(6, 'egg') - 0.25
+
+    def toss_acts(A, s, sp, tt_=tt_):
+        a = A['bunny87']
+        a.hold_prop('egg', 1, s.t0 - 1.0, tt_ + 0.45)
+        a.reach(s.t0 + 0.1, tt_ + 0.6, 1, out=60.0, down=120.0, fwd=170.0, shape='grip', up=0.0, fade=0.35)
+        a.reach(tt_, tt_ + 0.9, 1, out=110.0, down=-160.0, fwd=120.0, shape='paw_open', up=1.0, fade=0.4)
+
+        def egg(pen, tt):
+            if tt < tt_ + 0.45: return
+            u = tt - (tt_ + 0.45)
+            x0, y0 = a.grip_point(tt_ + 0.45, 1, 'egg')
+            x = x0 + 520.0 * u; y = y0 - 700.0 * u + 900.0 * u * u
+            ST.draw_egg(pen, x, y, 120.0, rot=200.0 * u, col='#f4a8c4', stamp=False)
+        lay = Layer(spot_of(sp, 'float_deck').depth, egg, 'toss_egg', blur=0)
+        lay.order = 0.5
+        return [lay]
+    C(t6, 'set', room='parade', view='photo', era='1987', tape0=6.1, cam=cm((-2.9, 19.9, 2.0), (0.0, 24.2, 2.35), S=1150, sx=900, sy=560),
+      ppl=[P('bunny87', 'float_deck', turn=0.3, room_light=False,
+             act=_A(lambda a, s: a.hold_prop('basket', -1), lambda a, s: a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01)))],
+      acts=toss_acts, c=dict(mv='push', f=1.0, rate=0.015), sfx=[(tt_ + 0.5, 'crowd_cheer', -4, 0, 'vhs', dict(kind='kids'))])
+    # 7 "That's the jingle from Pemberton's Department Store, Easter of 1987." the float passes the store
+    fy7 = VHS_STREET(t7, T(8), 14.0, 27.0)
+    C(t7, 'set', room='parade', view='store', era='1987', tape0=9.0, set=dict(float_y=fy7),
+      ppl=[P('bunny87', (0.0, fy7(t7) + 2.2, 1.25), path=[(t7, (0.0, fy7(t7) + 2.2, 1.25)), (T(8), (0.0, fy7(T(8)) + 2.2, 1.25))], no_walk=True,
+             linear=True, turn=1.0, room_light=False,
+             act=_A(lambda a, s: a.hold_prop('basket', -1), lambda a, s: a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01),
+                    lambda a, s: a.wave(s.t0, s.t1 + 1.0, side=1, speed=0.7)))],
+      c=dict(mv='push', f=1.0, rate=0.012))
+    # 8 the Holloway Courier: GIRL, 7, MISSING AFTER EASTER PARADE;  9 "She was seven years old." -> the photo
+    C(T(8), 'ins', name='courier', cut='vhs', c=dict(mv='keys', keys=[(T(8), 960, 330, 1.0, None, 1.55), (T(9), 960, 345, 1.0, 'push', 1.7)]),
+      sfx=[(T(8) + 0.05, 'paper', -10, 0, 'close', dict(kind='newspaper'))])
+    C(T(9), 'ins', name='courier', c=dict(mv='keys', keys=[(T(9), 735, 660, 1.0, None, 1.75), (T(10), 740, 655, 1.0, 'push', 1.95)]))
+    # 10 "Three days later, she walked out of the woods." 1987 sunrise, the woods' edge: little Laurie walks out alone
+    C(T(10), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      ppl=[P('laurie87', (-2.55, 41.6, -0.45), path=[(T(10), (-2.55, 41.6, -0.45)), (T(11) + 0.4, (-2.6, 38.0, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=_A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01), hum(t(10), None, 0.6)))],
+      c=dict(mv='push', f=1.75, rate=0.02))
+    # 11 "And she has been humming it ever since." Mom (now) humming in the kitchen, far away
+    C(T(11), 'bust', who='mom', bg=('kitchen', 'back'), set=dict(kitchen=1.0), expr='too_still', cx=900, cy=620, scale=0.82, turn=0.3, h_turn=0.05,
+      act=_A(hum(t(11) - 0.3, None), lookxy(1500, 520, t(11) - 1.0, None, 0.5, z=500.0)), light=LAMP,
+      music=[(t(11), 'jingle', 0.5, 3.0, dict(version='hum'))], sfx=[(t(11) - 0.2, 'hum', -8, 0, 'close', dict(who='mom', dur=2.8))])
+    # 12 "Every Easter Eve, my mother taped seven rules to our fridge."  Mom presses the laminated sheet under the bunny magnet
+    tm = w(12, 'taped')
+
+    def fridge_acts(A, s, sp, tm=tm):
+        m = A['mom']
+        tgt = scr(sp, 'fridge_rules', 0, -10)
+        sheet = scr(sp, (-4.21, 7.74, 0.86))                      # the sheet as the fridge draws it (the anchor sits 0.6 m too high)
+        magnet = scr(sp, (-4.21, 7.74, 1.09))
+        m.reach_to(tm - 0.35, -1, sheet, t1=e(12) + 0.2, dur=0.55, contact='palm', shape='flat', z=-60.0)
+        m.reach_to(tm - 0.05, 1, magnet, t1=e(12) + 0.2, dur=0.5, contact='tips', shape='point', z=-60.0)
+        m.look_at(s.t0, sheet, None, 0.4)
+        return []
+    C(T(12), 'set', room='kitchen', view='fridge', set=dict(kitchen=1.0, rules=1.0), rim=LAMP_R, cam=cm((-2.35, 6.35, 1.5), (-4.25, 7.75, 1.25), S=980, sx=900, sy=560),
+      ppl=[P('mom', 'fridge', expr='too_still', act=hum(t(12), None, 0.6))], acts=fridge_acts,
+      c=dict(mv='push', f=1.1, rate=0.02), sfx=[(tm + 0.25, 'magnet_click', -4, 0, 'inside'), (tm, 'paper', -10, 0, 'inside', dict(kind='laminate'))])
+    C(w(12, 'seven') - 0.15, 'ins', name='rules', kw=dict(hl=0, show=7), c=dict(mv='keys', keys=[(w(12, 'seven') - 0.15, 960, 430, 1.0, None, 1.15), (T(13), 960, 470, 1.0, 'push', 1.25)]))
+    # 13-14 "We followed every one of them. Every single rule was true." the sheet; the highlighter band runs down it
+    C(T(13), 'ins', name='rules', kw=dict(hl=0, show=7), c=dict(mv='keys', keys=[(T(13), 960, 520, 1.0, None, 1.4), (T(14), 960, 640, 1.0, 'push', 1.5)]))
+    C(T(14), 'ins', name='rules', kw=lambda tr: dict(hl=1 + min(6, int(tr / 0.27)), show=7),
+      c=dict(mv='keys', keys=[(T(14), 960, 400, 1.0, None, 1.3), (T(15), 960, 760, 1.0, 'lin', 1.3)]))
+    # 15 "And not one of them was written to protect us from him."  the Bunnyman at the treeline
+    C(T(15), 'set', room='yard', view='close', set=dict(tod='night'), rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.2, act=_A(pose(-9, None, 0.1, h_tilt=6.0), lambda a, s: a.head_down(t(15) + 1.2, None, 0.25, 1.4)))],
+      c=dict(mv='push', f=1.6, rate=0.03),
+      music=[(e(15) - 0.3, 'hit', 0.6)])
+    # 16 "I'm telling you this from a hospital."  a woman in a gown on the bed, her back to us, facing the window
+    C(T(16), 'set', room='hosp', view='room', era='now', rim=HOSP,
+      ppl=[P('mom_hosp', 'window', expr='haunted', act=pose(-9, None, 0.1, h_nod=0.12))], c=dict(mv='push', f=1.1, rate=0.015),
+      sfx=[(T(16), 'heart_monitor', -16, 0.3, 'hospital', dict(kind='far'))])
+    # 17 "The doctors here are very kind."  the doctor in the doorway with his clipboard, a kind smile, a nod
+    C(T(17), 'set', room='hosp', view='room', rim=HOSP, cam=cm((10.9, 6.5, 1.5), (9.45, 2.75, 1.35), S=950, sx=960, sy=520),
+      ppl=[P('doctor', 'door', face=(10.3, 5.0), expr='warm_smile', act=_A(lambda a, s: a.hold_prop('clipboard', -1),
+                                                          lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=160.0, fwd=190.0, shape='grip', up=0.0, fade=0.01),
+                                                          lambda a, s: a.head_down(t(17) + 0.4, t(17) + 1.0, 0.35, 0.4)))],
+      c=dict(mv='push', f=1.15, rate=0.015))
+    # 18 "They just don't believe a word I say."  the doctor's kind smile; he writes without looking up
+    C(T(18), 'bust', who='doctor', bg=('hosp', 'room'), expr='warm_smile', cx=1000, cy=600, scale=0.78, turn=-0.25, light=HOSP,
+      act=_A(lambda a, s: a.hold_prop('clipboard', -1), lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=60.0, fwd=210.0, shape='grip', up=0.0, fade=0.01),
+             lambda a, s: a.head_down(t(18) + 0.6, None, 0.5, 0.5)),
+      sfx=[(t(18) + 0.7, 'pen_write', -10, 0, 'hospital')])
+
+
+# ==================================================================================================== 1987 (65.75 - 122.2)
+BASKET = lambda a, s: (a.hold_prop('basket', -1), a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01))
+PHOTO_CAM = None
+
+
+def plan_1987(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    # 19 "In 1987, at the Easter parade in Holloway, the Bunnyman rode the last float, handing out plastic eggs."
+    th = w(19, 'handing')
+    fy = VHS_STREET(T(19), th, 22.0, 17.5)
+    C(T(19), 'set', room='parade', view='street', era='1987', cut='vhs', tape0=40.0, set=dict(float_y=fy),
+      ppl=[P('bunny87', (0.0, fy(T(19)) + 2.2, 1.25), path=[(T(19), (0.0, fy(T(19)) + 2.2, 1.25)), (th, (0.0, fy(th) + 2.2, 1.25))], no_walk=True,
+             linear=True, turn=0.15, room_light=False, act=_A(BASKET, lambda a, s: a.wave(s.t0, s.t1 + 1.0, side=1, speed=0.8)))],
+      c=dict(mv='push', f=2.0, rate=0.02), sfx=[(T(19) + 0.05, 'crowd_cheer', -4, 0, 'vhs')],
+      music=[(T(19), 'jingle', 0.55, 7.0, dict(version='vhs_parade', distant=True))])
+    # ... handing out plastic eggs: he kneels at the edge of the float and holds an egg out to the crowd
+    C(th - 0.1, 'set', room='parade', view='photo', era='1987', tape0=46.0, cam=cm((-2.6, 20.2, 1.9), (0.0, 24.2, 2.2), S=1500, sx=960, sy=560),
+      ppl=[P('bunny87', 'float_deck', turn=0.55, room_light=False,
+             act=_A(BASKET, lambda a, s: a.kneel_down(s.t0 - 0.6, 0.5, knees=0), lambda a, s: a.hold_prop('egg', 1, s.t0 - 1.0, s.t1 + 1.0),
+                    lambda a, s: a.reach(s.t0 + 0.1, None, 1, out=150.0, down=120.0, fwd=170.0, shape='grip', up=0.0, fade=0.5), tilt(th + 0.3, 8.0, 1.5)))],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 20 "Big grey suit."  the mascot full figure on the deck, arms out wide
+    C(T(20), 'set', room='parade', view='photo', era='1987', tape0=48.0, cam=cm((-2.2, 20.3, 1.8), (0.0, 24.2, 2.25), S=1300, sx=960, sy=540),
+      ppl=[P('bunny87', 'float_deck', turn=0.05, room_light=False,
+             act=_A(lambda a, s: a.reach(t(20) - 0.1, None, 1, out=230.0, down=-20.0, fwd=40.0, shape='paw_open', up=0.0, fade=0.45),
+                    lambda a, s: a.reach(t(20), None, -1, out=230.0, down=-20.0, fwd=40.0, shape='paw_open', up=0.0, fade=0.45)))],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 21 "Black glass eyes."   22 "Buck teeth and a stitched-on smile."  (the clean mascot, close, on the tape)
+    C(T(21), 'bust', who='bunny87', bg=('parade', 'photo'), era='1987', tape0=50.0, cx=960, cy=700, scale=1.25, light=VHS87,
+      act=tilt(t(21) + 0.2, 6.0, 1.4), post=dict(vhs=dict(k=0.55, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)),
+      post_fn=lambda tt: {'vhs': dict(t=tt, k=0.55, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)})
+    C(T(22), 'bust', who='bunny87', bg=('parade', 'photo'), era='1987', tape0=52.0, cx=960, cy=300, scale=2.0, light=VHS87,
+      act=pose(t(22), None, 0.6, h_tilt=-5.0), c=dict(mv='push', x=960, y=620, zrate=0.025),
+      post_fn=lambda tt: {'vhs': dict(t=tt, k=0.55, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)})
+    # 23 "Inside it was a nineteen-year-old stock boy named Dale Whitlock."  his Pemberton's name badge on the fur
+    C(T(23), 'ins', name='badge', era='1987', c=dict(mv='keys', keys=[(T(23), 960, 560, 1.0, None, 1.0), (T(24), 960, 545, 1.0, 'push', 1.18)]))
+    # 24 "There's a photo from that morning."  the Courier photo
+    C(T(24), 'ins', name='courier', c=dict(mv='keys', keys=[(T(24), 760, 640, 1.0, None, 1.45), (T(25), 745, 660, 1.0, 'push', 1.6)]),
+      sfx=[(T(24) + 0.05, 'paper', -12, 0, 'close', dict(kind='newspaper'))])
+    # 25 "A little girl in a yellow Easter dress, holding his paw."  the photo, live: Laurie holds the mascot's paw; the flash
+    tf = w(25, 'paw') + 0.35
+
+    def photo_acts(A, s, sp):
+        b, l = A['bunny87'], A['laurie87']
+        b.hold_hand(s.t0 - 1.0, -1, l, 1, dur=0.01)
+        l.look_at(s.t0 - 0.5, (960, 380), None, 0.3, z=500.0)
+        b.look_at(s.t0 - 0.5, (960, 380), None, 0.3, z=500.0)
+        return []
+    C(T(25), 'set', room='parade', view='photo', era='1987', tape0=58.0,
+      ppl=[P('bunny87', (3.7, 25.6, 0.0), turn=-0.12, room_light=False, act=lambda a, s: (a.hold_prop('basket', 1), a.reach(-1.0, None, 1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01))),
+           P('laurie87', (3.05, 25.35, 0.0), turn=0.15, expr='warm_smile', room_light=False)],
+      acts=photo_acts, c=dict(mv='push', f=1.65, rate=0.02, y=560),
+      post_fn=lambda tt, tf=tf: dict(white=0.9 * clamp(1.0 - (tt - tf) / 0.25) if tt >= tf else 0.0),
+      sfx=[(tf, 'camera_flash', -2, 0, 'vhs')])
+    # 26 "Laurie Price."   27 "My mom."  (the same face, now)
+    C(T(26), 'bust', who='laurie87', bg=('parade', 'photo'), era='1987', tape0=62.0, cx=960, cy=600, scale=0.95, light=VHS87, expr='warm_smile',
+      act=tilt(t(26) + 0.1, 7.0, 1.2), post_fn=lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.22, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)})
+    C(T(27), 'bust', who='mom', bg=('living', 'wide'), set=dict(lamp=1.0), cx=960, cy=600, scale=0.95, light=LAMP, expr='too_still', era='now')
+    # 28 "He showed her a magic trick."  he kneels to her and makes a plastic egg appear by her ear, then gives it to her
+    tg = t(28) + 0.15
+
+    def trick_acts(A, s, sp, tg=tg):
+        b, l = A['bunny87'], A['laurie87']
+        egg = CH.PropTrack('egg', 0, 0, sp.anchors['photo'].ppm / 100.0)
+        egg.held(-1e9, b, 1)
+        b.hold_prop('egg', 1, -1e9, None)
+        b.reach_to(tg - 0.6, 1, (l, 'eye_l'), t1=tg + 0.25, dur=0.45, contact='grip', shape='grip', prop='egg', z=70.0, fade=0.3)
+        b.give(egg, tg + 0.4, 1, l, -1, dur=0.9)
+        l.look_at(tg - 0.6, (b, 'hand_l'), tg + 1.3, 0.25)
+        l.look_at(tg + 1.4, (b, 'eyes'), None, 0.35)
+        b.look_at(s.t0 - 1.0, (l, 'eyes'), None, 0.3)
+        l.expr('kid_grin', tg + 0.3, None, 0.3)
+        return []
+    C(T(28), 'set', room='parade', view='photo', era='1987', tape0=64.0,
+      ppl=[P('bunny87', (3.85, 25.65, 0.0), turn=-0.6, kind='kneel', knees=0, room_light=False),
+           P('laurie87', (3.05, 25.35, 0.0), turn=0.55, expr='warm_smile', room_light=False)],
+      acts=trick_acts, c=dict(mv='push', f=1.75, rate=0.02, y=560), sfx=[(tg + 0.2, 'magic_sparkle', -10, 0, 'vhs')])
+    # 29 "Then he walked off into Holloway Woods."  30 "And she followed him."  (1987, overcast)
+    C(T(29), 'set', room='woods', view='path', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
+      ppl=[P('bunny87', (-4.6, -2.6, 0.0), path=[(T(29), (-4.6, -2.6, 0.0)), (T(30) + 0.3, (-1.8, 4.6, 0.0))], surface='grass', room_light=False, dimk=0.1)],
+      c=dict(mv='push', f=1.1, rate=0.02))
+    C(T(30), 'set', room='woods', view='path', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
+      cam=cm((-6.3, -5.2, 0.9), (-2.4, 3.0, 0.7), S=1000, sx=960, sy=600),
+      ppl=[P('bunny87', (-1.6, 6.6, 0.0), path=[(T(30), (-1.6, 6.6, 0.0)), (T(31), (-1.2, 8.8, 0.0))], surface='grass_quiet', room_light=False, dimk=0.35),
+           P('laurie87', (-4.9, -2.4, 0.0), path=[(T(30), (-4.9, -2.4, 0.0)), (T(31) + 0.2, (-3.0, 2.6, 0.0))], surface='grass', room_light=False)],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 31 "The search dogs lost her scent at the old railroad bridge."  the trestle, overcast; then the Courier's sub-headline
+    tb = w(31, 'old') - 0.1
+    C(T(31), 'set', room='woods', view='bridge', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
+      ppl=[P('cop', (-5.4, 6.6, 0.0), face=(0.0, 9.0), expr='sad', room_light=False, act=lookp((0.0, 9.0, 1.0), -1.0, None, 0.3))],
+      c=dict(mv='push', f=1.15, rate=0.02), sfx=[(T(31) + 0.2, 'dogs_bark_far', -10, 0.4, 'woods')])
+    C(tb, 'ins', name='courier', c=dict(mv='keys', keys=[(tb, 1300, 470, 1.0, None, 2.2), (T(32), 1300, 470, 1.0, 'push', 2.4)]))
+    # 32 "Three days later, at sunrise on Easter morning, she walked out of the trees alone."
+    C(T(32), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      ppl=[P('laurie87', (-2.5, 43.6, -0.45), path=[(T(32) + 0.6, (-2.5, 43.6, -0.45)), (T(33) + 0.2, (-2.6, 38.6, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=_A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.45, rate=0.02), sfx=[(T(32) + 0.3, 'birds_dawn', -8, 0, 'outside')])
+    # 33 "Her dress was spotless."  medium, walking toward us in the gold light
+    C(T(33), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      cam=cm((-2.62, 34.6, 0.6), (-2.6, 38.2, 0.2), S=1300, sx=960, sy=600),
+      ppl=[P('laurie87', (-2.6, 38.6, -0.45), path=[(T(33), (-2.6, 38.6, -0.45)), (T(34), (-2.6, 37.6, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=_A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 34 the golden plastic egg;  35 "And she was humming."  36 "She didn't remember a thing."
+    C(T(34), 'ins', name='egg_gold', era='1987', c=dict(mv='push', rate=0.03))
+    C(T(35), 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=960, cy=590, scale=0.9,
+      light=SUN87, expr='too_still', act=hum(t(35) - 0.2, None), grade='ob_sunrise87',
+      sfx=[(t(35), 'hum', -10, 0, 'outside', dict(who='laurie87', dur=1.4))], music=[(t(35), 'jingle', 0.5, 2.0, dict(version='hum_child'))])
+    C(T(36), 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=1100, cy=640, scale=1.0,
+      turn=-0.55, light=SUN87, expr='too_still', grade='ob_sunrise87',
+      act=_A(pose(t(36) + 0.5, None, 0.8, smile=0.35, still=0.6), lookxy(960, 520, t(36) - 1.0, None, 0.3, z=500.0)))
+    # 37 "Dale Whitlock was never found."  the missing poster;  38 "Neither was the suit."  the empty woods at night
+    C(T(37), 'ins', name='poster', era='1987', c=dict(mv='keys', keys=[(T(37), 960, 520, 1.0, None, 1.05), (T(38), 960, 600, 1.0, 'push', 1.3)]))
+    C(T(38), 'set', room='woods', view='path', set=dict(tod='night', flashlight=0.0), rim=MOON, c=dict(mv='push', f=1.2, rate=0.03),
+      sfx=[(T(38) + 0.2, 'wind_gust', -10, 0, 'woods')])
+
+
+# ==================================================================================================== EVERY EASTER SINCE / THE HOUSE / DAD / THIS EASTER (122.2 - 191.5)
+BELLY_CAM = cm((-2.6, 37.3, 0.65), (-2.6, 39.6, 0.55), S=1500, sx=960, sy=520)
+
+
+def plan_since(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    # 39 "But every Easter since, somebody sees him at the edge of the woods."  through June's window: him at the treeline
+    C(T(39), 'set', room='june', view='out', set=dict(curtains=1.0), rim=MOON,
+      ppl=[P('bunny', 'bunny_treeline', room_light=False, dimk=0.3, act=pose(-9, None, 0.1, h_tilt=-5.0))],
+      c=dict(mv='push', f=2.2, rate=0.03), music=[(T(39), 'swell', 0.5, 6.0)])
+    # 40 "Fur matted dark."  41 "One ear snapped."  (close, moonlight)
+    C(T(40), 'bust', who='bunny', bg=('yard', 'close'), cx=960, cy=560, scale=1.15, light=MOON, act=pose(-9, None, 0.1, h_turn=0.15))
+    C(T(41), 'bust', who='bunny', bg=('yard', 'close'), cx=900, cy=650, scale=0.9, turn=0.45, light=MOON, act=tilt(t(41), 14.0, 1.4))
+    # 42 "The belly stained rust-brown."  a medium on the belly, the chest breathing
+    C(T(42), 'set', room='yard', view='close', cam=BELLY_CAM, rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15)], c=dict(mv='push', f=1.0, rate=0.02))
+    # 43 "Just standing there."  44 "Watching the houses."  (over his shoulder to the lit house)
+    C(T(43), 'set', room='yard', view='close', rim=MOON, ppl=[P('bunny', 'treeline', room_light=False, dimk=0.2)], c=dict(mv='push', f=1.1, rate=0.012))
+    C(T(44), 'set', room='yard', view='house', set=dict(kitchen=1.0, june_light=0.8), rim=MOON,
+      ppl=[P('bunny', (-2.05, 39.95, -0.45), turn=1.92, room_light=False, dimk=0.35, act=pose(-9, None, 0.1, h_tilt=4.0))],
+      c=dict(mv='push', f=1.0, rate=0.02), focus=10.0)
+    # 45 "Mom grew up, married my dad, and moved us into her childhood home: the last house on Orchard Road, where the backyard
+    #    ends at the woods."  the wedding photo on the mantel; the house on Orchard Road; the yard and the woods
+    tmv, twh = w(45, 'moved') - 0.1, w(45, 'where') - 0.1
+    C(T(45), 'ins', name='wedding', c=dict(mv='keys', keys=[(T(45), 960, 520, 1.0, None, 1.0), (tmv, 960, 500, 1.0, 'push', 1.12)]))
+    C(tmv, 'set', room='front', view='house', set=dict(front_light=1.0), c=dict(mv='push', f=1.0, rate=0.02),
+      tags=[(w(45, 'last') - 0.05, 'ORCHARD ROAD', 960, 230, 'white', 2.4)])
+    C(twh, 'set', room='yard', view='wide', set=dict(kitchen=1.0), c=dict(mv='push', f=1.0, rate=0.02))
+    # 46 "Every Easter, Grandma left the porch light on all night."  her hand flips it on; the light burning over the yard
+    t46 = T(46); tp = w(46, 'porch') - 0.1
+
+    def gran_finger(on):
+        def fn(tt):
+            u = ease_in_out(clamp((tt - t46 - 0.15) / 0.45)); v = ease_in_out(clamp((tt - t46 - 1.2) / 0.45))
+            k = u * (1.0 - v)
+            if k <= 0: return None
+            y = (lerp(560, 470, ease_in_out(clamp((tt - t46 - 0.55) / 0.25))) if on else lerp(470, 600, ease_in_out(clamp((tt - t46 - 0.55) / 0.25))))
+            return (lerp(1500, 975, k), y + (1 - k) * 300, 168.0 if on else 200.0, 1.0)
+        return fn
+    C(t46, 'ins', name='switch', era='memory', grade='ins_memory', kw=lambda tr: dict(flip=lambda tt: ease_in_out(clamp((tt - 0.55) / 0.2))),
+      hands=[dict(who='grandma', fn=gran_finger(True), size=420, shape='point', side=-1, sleeve_from=lambda tt: (1900, 900))],
+      c=dict(mv='push', rate=0.02), sfx=[(t46 + 0.6, 'light_switch', -2, 0, 'close')])
+    C(tp, 'set', room='yard', view='house', set=dict(back_light=1.0, kitchen=0.6), era='memory', grade='ob_ext', c=dict(mv='push', f=1.4, rate=0.02))
+    # 47 "And every Easter, Mom switched it off."  her finger pushes the switch down; the porch light dies
+    t47 = T(47); toff = w(47, 'switched')
+    C(t47, 'ins', name='switch', kw=lambda tr, a=toff - t47: dict(flip=lambda tt: 1.0 - ease_in_out(clamp((tt - a) / 0.15))),
+      hands=[dict(who='mom', fn=(lambda tt, a=toff: (lerp(1500, 975, ease_in_out(clamp((tt - a + 0.6) / 0.5))),
+                                                     lerp(760, 470, ease_in_out(clamp((tt - a + 0.6) / 0.5))) + 120 * ease_in_out(clamp((tt - a) / 0.15)),
+                                                     196.0, 1.0)), size=420, shape='point', side=-1, sleeve_from=lambda tt: (1900, 1000))],
+      c=dict(mv='push', rate=0.02), sfx=[(toff + 0.02, 'light_switch', -2, 0, 'close')])
+    C(toff + 0.45, 'set', room='yard', view='house', set=dict(back_light=dict(off=toff + 0.85), kitchen=0.6), c=dict(mv='push', f=1.4, rate=0.02),
+      sfx=[(toff + 0.85, 'bulb_tink', -10, 0, 'outside')])
+    # 48 "Last Easter, Dad walked out to the treeline with a flashlight."  down the yard, the beam swinging ahead of him
+    t48 = T(48)
+    C(t48, 'set', room='yard', view='woods', set=dict(tod='night'), rim=MOON, era='memory',
+      ppl=[P('dad', (-3.25, 13.6, -0.45), path=[(t48, (-3.25, 13.6, -0.45)), (T(49) + 0.6, (-3.0, 19.5, -0.45))], surface='grass', room_light=False, dimk=0.1,
+             torch=dict(side=1, length=1.3, spread=13.0, a=0.85),
+             act=_A(lambda a, s: a.hold_prop('maglite', 1), lambda a, s: a.reach(-1.0, None, 1, out=40.0, down=180.0, fwd=200.0, shape='grip', up=0.0, fade=0.01),
+                    pose(-1.0, None, 0.01, torch_ang=8.0)))],
+      c=dict(mv='push', f=1.15, rate=0.02), sfx=[(t48 + 0.1, 'flashlight_click', -6, 0, 'outside')])
+    # 49 "He said he was going to talk to it."  Dad on the back porch, the flashlight up, his eyes on the woods (lips still)
+    C(T(49), 'bust', who='dad', bg=('yard', 'woods'), era='memory', cx=880, cy=600, scale=0.85, turn=1.4, h_turn=-0.55, expr='determined', light=TORCH,
+      act=_A(lambda a, s: a.hold_prop('maglite', 1), lambda a, s: a.reach(-1.0, None, 1, out=40.0, down=60.0, fwd=220.0, shape='grip', up=0.0, fade=0.01)))
+    # 50 "He never came back."  the beam at the treeline goes in among the trees and is gone
+    t50 = T(50)
+    C(t50, 'set', room='yard', view='woods', set=dict(tod='night'), rim=MOON, era='memory',
+      ppl=[P('dad', (-2.75, 36.5, -0.45), path=[(t50, (-2.75, 36.5, -0.45)), (T(51) + 0.2, (-2.5, 41.6, -0.45))], surface='grass_quiet', room_light=False, dimk=0.35,
+             torch=dict(side=1, length=1.4, spread=13.0, a=0.8),
+             act=_A(lambda a, s: a.hold_prop('maglite', 1), lambda a, s: a.reach(-1.0, None, 1, out=40.0, down=180.0, fwd=200.0, shape='grip', up=0.0, fade=0.01),
+                    pose(-1.0, None, 0.01, torch_ang=4.0)))],
+      c=dict(mv='push', f=2.6, rate=0.03))
+    # 51 "The police found his flashlight under the railroad bridge, still on."
+    C(T(51), 'set', room='woods', view='under', set=dict(flashlight=1.0), rim=MOON, c=dict(mv='push', f=1.0, rate=0.025),
+      sfx=[(T(51) + 0.2, 'creek', -10, 0, 'woods', dict(dur=3.8))])
+    # 52 "Mom told them he'd left us."  the house at dawn, two patrol cars, the light bars sweeping
+    C(T(52), 'set', room='front', view='house', set=dict(tod='blue', police=dict(mode='sweep', strength=0.5)), c=dict(mv='push', f=1.15, rate=0.02),
+      sfx=[(T(52), 'police_radio', -14, 0, 'outside', dict(dur=1.6))])
+    # 53 "Mom told them a lot of things."  her face in the red / blue light, the smallest smile
+    C(T(53), 'bust', who='mom', bg=('front', 'porch'), set=dict(tod='blue'), cx=1000, cy=600, scale=0.9, turn=-0.3, expr='too_still', light=POLICE,
+      act=pose(t(53) + 0.5, None, 0.8, smile=0.5), post_fn=lambda tt: {'flash': _epost.police_flash(tt, 0.35, 1.0, 'sweep')})
+    # 54 "This Easter, my little sister June turned seven."  June on her bed, beaming
+    C(T(54), 'set', room='june', view='bed', set=dict(lamp=1.0, nightlight=1.0), rim=LAMP, cam=cm((0.2, 7.0, 4.05), (1.8, 7.75, 3.55), S=1050, sx=960, sy=520),
+      ppl=[P('june', 'bed_edge', expr='kid_grin', act=_A(lambda a, s: a.wave(t(54) + 0.3, t(54) + 1.6, side=1, speed=1.2)))],
+      tags=[(w(54, 'seven') - 0.1, 'JUNE  ·  7', 960, 200, 'white', 2.0)], c=dict(mv='push', f=1.0, rate=0.02))
+    # 55 "The same age Mom was."  Laurie in 1987 -> June now, the same framing
+    tm = w(55, 'mom') - 0.15
+    C(T(55), 'bust', who='laurie87', bg=('parade', 'photo', PHOTO_CAM), era='1987', vhs=True, osd=False, cx=960, cy=600, scale=0.9, light=VHS87, expr='warm_smile',
+      post_fn=lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.22, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)})
+    C(tm, 'bust', who='june', bg=('june', 'bed'), set=dict(lamp=1.0), cx=960, cy=600, scale=0.9, light=LAMP, expr='warm_smile')
+    # 56 "All week, Mom's been humming that jingle."  Mom at the kitchen sink, her back to us, swaying on the beat
+    C(T(56), 'set', room='kitchen', view='back', set=dict(kitchen=1.0), rim=LAMP_R, cam=cm((-1.6, 6.4, 1.55), (-1.4, 9.0, 1.2), S=1050, sx=960, sy=560),
+      ppl=[P('mom', 'sink', expr='too_still', act=_A(hum(t(56) - 0.3, None), lambda a, s: a.reach(-1.0, None, 1, out=10.0, down=150.0, fwd=180.0, shape='relaxed', up=0.0, fade=0.01),
+                                                     lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=150.0, fwd=180.0, shape='relaxed', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(t(56) - 0.2, 'hum', -8, 0, 'inside', dict(who='mom', dur=2.6)), (T(56), 'water_tap', -14, 0, 'inside', dict(dur=2.5))],
+      music=[(t(56), 'jingle', 0.5, 2.6, dict(version='hum'))])
+    # 57 "And yesterday, she bought June a new Easter dress."  58 "Yellow."  59 "Exactly like the one in the photo."
+    C(T(57), 'set', room='june', view='door', set=dict(dress=True, lamp=1.0), rim=LAMP, cam=cm((1.3, 8.6, 4.2), (-0.37, 6.45, 3.95), S=1100, sx=960, sy=520),
+      c=dict(mv='push', f=1.0, rate=0.025))
+    C(T(58), 'ins', name='dress_new', c=dict(mv='push', rate=0.03))
+    C(T(59), 'ins', name='courier', c=dict(mv='keys', keys=[(T(59), 700, 760, 1.0, None, 2.4), (T(60), 700, 770, 1.0, 'push', 2.6)]))
+    # 60 "At sundown, the rules went up on the fridge."  her hand presses the bunny magnet onto the sheet
+    t60 = T(60); tup = w(60, 'rules')
+    C(t60, 'ins', name='rules', kw=dict(hl=0, show=7, magnet=True),
+      hands=[dict(who='mom', fn=(lambda tt, a=tup: (lerp(1500, 1010, ease_in_out(clamp((tt - a + 0.4) / 0.5))),
+                                                     lerp(-150, 60, ease_in_out(clamp((tt - a + 0.4) / 0.5))), 160.0,
+                                                     1.0 - ease_in_out(clamp((tt - a - 1.0) / 0.4)))), size=480, shape='flat', side=-1, sleeve_from=lambda tt: (2000, -300))],
+      c=dict(mv='keys', keys=[(t60, 960, 360, 1.0, None, 1.25), (T(61), 960, 420, 1.0, 'push', 1.35)]),
+      grade='ins_lamp', post=dict(exposure=-0.05), sfx=[(tup + 0.1, 'magnet_click', -2, 0, 'close')])
+
+
+# ==================================================================================================== RULE 1: THE TREELINE (191.5 - 258.0)
+JUNE_FROM_WINDOW = cm((1.55, 9.55, 4.15), (0.95, 6.6, 3.95), S=900, sx=960, sy=500)        # inside June's room, back to the window
+
+
+def curtains_close(t0, dur=1.25):
+    return lambda tt: 1.0 - ease_in_out(clamp((tt - t0) / dur))
+
+
+def plan_rule1(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(61), 'rule', n=1)
+    # 65 "At 11:07, the song starts."  the kitchen clock;  66 "From the woods."  the dark treeline
+    C(T(65), 'ins', name='clock', kw=dict(time=(11, 7)), c=dict(mv='push', rate=0.03), sfx=[(T(65) + 0.1, 'clock_tick', -10, 0, 'close', dict(dur=2.4))])
+    C(T(66), 'set', room='yard', view='woods', set=dict(tod='night'), c=dict(mv='push', f=2.0, rate=0.03))
+    # 67 "Slow and tinny, like a speaker with dying batteries."  the narrator alone on the couch looks up toward the back
+    C(T(67), 'set', room='living', view='wide2', set=dict(lamp=1.0, curtains=1.0), rim=LAMP,
+      ppl=[P('narrator', 'couch_mid', turn=0.62, expr='haunted', act=_A(lookxy(1700, 420, t(67) + 0.2, None, 0.45, z=400.0), blinks(t(67) + 1.6)))],
+      c=dict(mv='push', f=1.05, rate=0.015))
+    # 68 "Hop... hop... hop along."  close: listening, eyes to the back of the house
+    C(T(68), 'bust', who='narrator', bg=('living', 'wide2'), set=dict(lamp=1.0), cx=900, cy=600, scale=0.85, turn=0.4, h_turn=0.15, expr='haunted', light=LAMP,
+      act=_A(lookxy(1750, 480, t(68) - 0.5, None, 0.4, z=500.0), blinks(t(68) + 1.3)))
+    # 69 "I close the curtains downstairs, then run up to June's room."
+    tcl = w(69, 'close') + 0.1; trun = w(69, 'then') - 0.1
+    cf = curtains_close(tcl + 0.3)
+
+    def curtain_acts(A, s, sp, cf=cf, tcl=tcl):
+        n = A['narrator']
+        cl, cr, mid = plan_xy(sp, 'curtain_front_l'), plan_xy(sp, 'curtain_front_r'), (-3.3, 0.12, 1.3)
+        fl = lambda tt: scr(sp, tuple(lerp(cl[j], mid[j], 1.0 - cf(tt)) for j in range(3)), 30.0, 0)
+        fr = lambda tt: scr(sp, tuple(lerp(cr[j], mid[j], 1.0 - cf(tt)) for j in range(3)), -30.0, 0)
+        n.reach_to(tcl - 0.1, 1, fr, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
+        n.reach_to(tcl - 0.05, -1, fl, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
+        return []
+    C(T(69), 'set', room='living', view='window', set=dict(lamp=1.0, curtains=1.0), curtains_fn=cf, rim=LAMP,
+      ppl=[P('narrator', 'window_front', expr='haunted')], acts=curtain_acts, c=dict(mv='push', f=1.05, rate=0.02),
+      sfx=[(tcl + 0.3, 'curtain_draw', -4, 0, 'inside', dict(dur=1.2))])
+    C(trun, 'set', room='hall', view='foot', set=dict(hall=1.0, upstairs=1.0), rim=LAMP,
+      ppl=[P('narrator', (-0.55, 1.75, 0.0), path=[(trun, (-0.55, 1.75, 0.0)), (trun + 0.55, (0.8, 1.2, 0.19)), (T(70) + 0.15, 'step13')], run=True, surface='stairs', turn=1.95)],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 70 "June is at her window in her pajamas, waving."  (the narrator comes in behind her)
+    C(T(70), 'set', room='june', view='window', set=dict(nightlight=1.0, curtains=1.0, hall=1.0), rim=MOON,
+      ppl=[P('june', 'window', expr='warm_smile', act=lambda a, s: a.wave(s.t0 - 0.5, s.t1 + 1.0, side=1, speed=0.8, height=1.1)),
+           P('narrator', (1.5, 8.35, 2.85), path=[(T(70) + 0.2, (1.5, 8.35, 2.85)), (T(70) + 1.6, 'window_side')], expr='haunted', turn=-1.8)],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='june')
+    # 71 "At the treeline, under the moon, there he is."  through her window
+    C(T(71), 'set', room='june', view='out', set=dict(curtains=1.0), rim=MOON,
+      ppl=[P('bunny', 'bunny_treeline', room_light=False, dimk=0.25)], c=dict(mv='keys', keys=[(T(71), 960, 540, 1.0, None, 1.0), (w(71, 'there') + 0.6, 960, 540, 1.0, 'in_out', 2.4), (T(72), 960, 540, 1.0, 'lin', 2.5)]),
+      music=[(w(71, 'there'), 'hit', 0.55)])
+    # 72 "Taller than my dad."  73 "Black glass eyes that don't reflect anything."
+    C(T(72), 'set', room='yard', view='close', rim=MOON, ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15)], c=dict(mv='push', f=1.15, rate=0.015))
+    C(T(73), 'bust', who='bunny', bg=('yard', 'close'), cx=960, cy=640, scale=1.5, light=MOON, c=dict(mv='push', x=960, y=540, zrate=0.025),
+      act=pose(-9, None, 0.1, h_tilt=-3.0))
+    # 74-75 "And he's waving back. Slowly."
+    C(T(74), 'set', room='yard', view='close', rim=MOON, cam=cm((-2.6, 33.5, 1.0), (-2.6, 39.6, 1.0), S=1700, sx=960, sy=520),
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15, act=lambda a, s: a.wave(t(74) - 0.1, s.t1 + 3.0, side=1, slow=True))],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 76-79 June whispers at the window: "That's Mister Bunny ... He waves at me every year. He's sad."  (lips on J only)
+    C(T(76), 'bust', who='june', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=900, cy=600, scale=0.88, turn=-0.15, h_turn=0.0,
+      expr='warm_smile', light=MOON, act=_A(lookxy(1100, 380, -9, None, 0.3, z=700.0), ex('sad', t(79) - 0.2, None, 0.5),
+                                              lambda a, s: a.wave(s.t0 - 1.0, w(78, 'every'), side=1, speed=0.7, height=0.9)))
+    # 80 "Every year."  81 "Nobody ever told me."
+    C(T(80), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=1020, cy=600, scale=0.85, turn=0.2,
+      expr='haunted', light=MOON, act=_A(lookxy(700, 640, t(80) - 0.4, t(81) - 0.1, 0.35, z=300.0), lookxy(1000, 380, t(81), None, 0.4, z=700.0)))
+    # 82-83 "Then the Bunnyman stops waving. He lifts one paw and points."
+    tl = w(83, 'lifts')
+    C(T(82), 'set', room='yard', view='close', rim=MOON, cam=cm((-2.6, 33.5, 1.0), (-2.6, 39.6, 1.0), S=1700, sx=960, sy=520),
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15,
+             act=_A(lambda a, s: a.wave(s.t0 - 2.0, t(82) + 0.5, side=1, slow=True),
+                    lambda a, s: a.point_at(tl, (960, 470), None, side=-1, dur=0.9, z=900.0)))],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 84 "Not at June."  85 "Not at me."  86 "Past us."
+    C(T(84), 'bust', who='june', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=900, cy=610, scale=0.9, turn=-0.15, expr='nervous',
+      light=MOON, act=lookxy(1100, 360, -9, None, 0.3, z=700.0))
+    C(T(85), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=1040, cy=610, scale=0.9, turn=0.15, expr='haunted',
+      light=MOON, act=lookxy(1000, 360, -9, None, 0.3, z=700.0))
+    C(T(86), 'set', room='yard', view='close', rim=MOON, cam=cm((-5.2, 35.6, 1.2), (-2.6, 39.6, 1.25), S=1500, sx=1080, sy=500),
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.1, turn=-0.35,
+             act=lambda a, s: a.point_at(s.t0 - 2.0, (140, 600), None, side=-1, dur=0.01, z=300.0))],
+      c=dict(mv='push', f=1.0, rate=0.03))
+    # 87 "I turn around."  the narrator turns from the window to the room; behind, in the lit doorway, Mom (focus pulls to her)
+    tt87 = t(87)
+    MOM_DOOR = P('mom', 'doorway', expr='too_still', turn=0.05, act=_A(pose(-9, None, 0.1, still=0.6)))
+    C(T(87), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0, hall=1.0), cx=1060, cy=600, scale=0.88, turn=0.1,
+      expr='haunted', light=MOON, act=_A(lambda a, s: a.turn(tt87 + 0.05, 0.95, 0.45), pose(tt87 + 0.1, None, 0.45, h_turn=0.7)),
+      sfx=[(tt87 + 0.05, 'cloth_rustle', -10, 0, 'close')])
+    C(T(88), 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), rim=MOON, cam=cm((1.6, 9.8, 4.15), (0.85, 6.0, 3.95), S=880, sx=960, sy=520),
+      ppl=[MOM_DOOR, P('june', (0.55, 9.3, 2.85), turn=-1.6, expr='nervous', dimk=0.2)],
+      focus=3.9, c=dict(mv='push', f=1.15, rate=0.03), music=[(t(88), 'hit', 0.7)])
+    C(T(89), 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), rim=LAMP, cam=cm((1.0, 8.2, 4.2), (0.8, 5.95, 4.0), S=1350, sx=960, sy=500),
+      ppl=[dict(MOM_DOOR, act=_A(pose(-9, None, 0.1, still=0.6), tilt(t(89) + 0.4, 6.0, 1.8)))], focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
+    C(T(90), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=dict(hall=1.0), cx=960, cy=600, scale=0.9,
+      expr='too_still', light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25), act=_A(pose(t(90), None, 0.9, smile=0.62), lookxy(960, 520, -9, None, 0.3, z=600.0)))
+    C(T(91), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=dict(hall=1.0), cx=960, cy=640, scale=1.08,
+      expr='too_still', light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25),
+      act=_A(pose(-9, None, 0.1, smile=0.6), tilt(t(91) + 0.1, 9.0, 1.6), lookxy(960, 520, -9, None, 0.3, z=600.0)), music=[(e(91) + 0.3, 'hit', 0.8)])
+
+
+# ==================================================================================================== THE COMMENT PROMPT: VHS PAUSE (258.0 - 279.5)
+def plan_pause(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    src_mom = T(92) - 0.06                              # the last frame of "I told you not to look at the treeline."
+    src_bun = T(74) + 1.9                                # the Bunnyman at the treeline, waving back
+    src_door = T(105) + 0.6                              # the front door from inside (midnight)
+    era = dict(era='pause')
+    C(T(92), 'pause', mode='freeze', src=src_mom, first=True, **era)
+    C(T(93), 'pause', mode='freeze', src=src_mom, cue=w(93, 'comments') - 0.3, **era)
+    C(T(94), 'pause', mode='freeze', src=src_mom, push=0.22, **era)
+    C(T(95), 'pause', mode='split', srcs=(src_mom, src_bun), ofs=(0.0, 0.0), **era)
+    C(T(96), 'pause', mode='freeze', src=src_door, label=[(w(96, 'who') - 0.1, 'MOM', 640, 830, 'white'), (w(96, 'who') + 0.05, 'THE BUNNYMAN', 1280, 830, 'white')],
+      cue=None, **era)
+    C(T(97), 'pause', mode='word', src=src_mom, **era)
+    C(T(98), 'pause', mode='split', srcs=(src_mom, src_bun), flicker='L', **era)
+    C(T(99), 'pause', mode='play', src=src_mom, **era)
+
+
+# ==================================================================================================== RULE 2: THE EGG (279.5 - 359.0)
+HALL_MED = cm((-0.2, 2.6, 1.5), (-0.45, 0.8, 1.35), S=1150, sx=960, sy=470)        # two-shot by the front door, from the hall
+HALL_IN_MED = cm((-0.4, 0.12, 1.55), (-0.35, 1.6, 1.45), S=820, sx=960, sy=500)    # from the door, looking into the hall
+OVEN = lambda a, s: (a.set(-9, None, 0.01, hl_shape='oven', hr_shape='oven'),
+                     a.reach(-9, None, -1, out=-34.0, down=180.0, fwd=210.0, shape='oven', up=0.0, fade=0.01),
+                     a.reach(-9, None, 1, out=-34.0, down=180.0, fwd=210.0, shape='oven', up=0.0, fade=0.01))
+
+
+def plan_rule2(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(100), 'rule', n=2)
+    # 104 "At midnight, there's one soft tap on the front door."
+    ttap = w(104, 'tap') + 0.05
+    C(T(104), 'ins', name='clock', kw=dict(time=(12, 0)), c=dict(mv='push', rate=0.03))
+    C(w(104, 'one') - 0.1, 'set', room='hall', view='door', set=dict(hall=0.3, porch=0.0), rim=NIGHT,
+      ppl=[P('narrator', (-0.3, 1.55, 0.0), turn=1.95, expr='haunted', act=_A(lambda a, s: a.flinch(ttap + 0.05, 0.6), pose(ttap + 0.1, None, 0.3, h_turn=0.1)))],
+      c=dict(mv='push', f=1.25, rate=0.02), sfx=[(ttap, 'egg_tap', 0, 0, 'outside', dict(kind='one_tap'))], music=[(ttap, 'silence', 0.0, 1.0)])
+    # 105 "Through the peephole, the porch is empty."  the eye to the peephole, then the fisheye porch
+    tpo = w(105, 'porch') - 0.25
+
+    def peep_acts(A, s, sp):
+        n = A['narrator']
+        pe = scr(sp, 'peephole')
+        n.head_to(s.t0 - 0.3, pe, 'eyes', dur=0.6, max_lean=0.25)
+        n.reach_to(s.t0 - 0.2, 1, (pe[0] - 0.15 * sp.anchors['peephole'].ppm, pe[1] + 0.2 * sp.anchors['peephole'].ppm), dur=0.5, contact='palm', shape='flat', z=-60.0)
+        n.set(s.t0 + 0.2, None, 0.2, lid_l=0.85)
+        return []
+    C(T(105), 'set', room='hall', view='door', set=dict(hall=0.3), rim=NIGHT, cam=HALL_MED,
+      ppl=[P('narrator', 'peephole_eye', expr='haunted')], acts=peep_acts, c=dict(mv='push', f=1.0, rate=0.02))
+    C(tpo, 'set', room='front', view='peephole', set=dict(egg=True, front_light=1.0), c=dict(mv='keys', keys=[(tpo, 960, 540, 1.0, None, 1.0), (w(106, 'egg'), 960, 560, 1.0, 'in_out', 1.15), (T(107), 960, 565, 1.0, 'lin', 1.2)]),
+      music=[(w(106, 'egg'), 'hit', 0.45)])
+    # 107 "Old pink plastic, faded by the sun."  108 "Stamped on the side: Pemberton's."
+    C(T(107), 'set', room='front', view='egg', cam=cm((-0.18, -1.05, 0.30), (-0.38, -0.36, 0.0), S=1700, sx=960, sy=640), set=dict(egg=True),
+      c=dict(mv='push', f=1.0, rate=0.03))
+    C(T(108), 'ins', name='egg', c=dict(mv='keys', keys=[(T(108), 960, 560, 1.0, None, 1.15), (T(109), 1040, 570, 1.0, 'push', 1.65)]))
+    # 109 "Every Easter, Mom carries the egg to the burn barrel in oven mitts and sets it on fire, unopened."
+    tset = w(109, 'sets') - 0.1
+
+    def barrel_acts(A, s, sp, tset=tset):
+        m = A['mom']
+        egg = CH.PropTrack('egg', 0, 0, sp.anchors['barrel'].ppm / 100.0)
+        egg.held(-1e9, m, -1)
+        m.hold_prop('egg', -1, -1e9, tset - 0.15)
+        egg.gone(tset - 0.15)
+        top = scr(sp, 'barrel_top')
+        m.reach_to(tset - 0.9, -1, top, t1=tset + 0.3, dur=0.6, contact='grip', shape='oven', prop='egg', z=60.0, fade=0.5)
+        m.reach_to(tset - 0.85, 1, (top[0] + 30, top[1] - 10), t1=tset + 0.3, dur=0.6, contact='palm', shape='oven', z=60.0, fade=0.5)
+        m.look_at(s.t0, top, None, 0.4)
+        return []
+    C(T(109), 'set', room='yard', view='barrel', set=dict(fire=1.0), era='memory', rim=FIRE,
+      ppl=[P('mom', (-5.6, 25.4, -0.45), path=[(T(109), (-5.6, 25.4, -0.45)), (tset - 1.0, 'barrel')], surface='grass', face=(-7.6, 26.3), expr='too_still', act=OVEN)],
+      acts=barrel_acts, c=dict(mv='push', f=1.0, rate=0.02), sfx=[(T(109), 'fire_crackle', -6, 0, 'outside', dict(dur=6.3))])
+    C(tset + 0.25, 'ins', name='egg_fire', kw=lambda tr: dict(melt=0.05 + 0.04 * tr), c=dict(mv='push', rate=0.03), sfx=[(tset + 0.25, 'fire_whoosh', -4, 0, 'close')])
+    # 110 "Nine years."  111 "Nine eggs."  112 "They smell sweet when they melt."
+    C(T(110), 'set', room='yard', view='barrel', set=dict(fire=1.0), era='memory', rim=FIRE,
+      ppl=[P('mom', 'barrel', face=(-7.6, 26.3), expr='too_still', act=_A(lambda a, s: a.set(-9, None, 0.01, hl_shape='oven', hr_shape='oven'),
+                                                                          lambda a, s: a.reach(-9, None, 1, out=10.0, down=200.0, fwd=150.0, shape='oven', up=0.0, fade=0.01),
+                                                                          lambda a, s: a.reach(-9, None, -1, out=10.0, down=200.0, fwd=150.0, shape='oven', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.3, rate=0.02))
+    C(T(111), 'ins', name='egg_fire', kw=dict(melt=0.35), c=dict(mv='push', rate=0.035))
+    C(T(112), 'ins', name='egg_fire', kw=lambda tr: dict(melt=0.45 + 0.3 * tr), c=dict(mv='push', rate=0.03))
+    # 113 "This year, Mom is upstairs tucking June in."
+    C(T(113), 'set', room='june', view='bed', set=dict(bed='over', nightlight=1.0, lamp=0.6), rim=LAMP,
+      ppl=[P('june', 'bed_lie', expr='sleep', lie_face='up', arms='side', talk=False),
+           P('mom', 'bed_side', expr='warm_smile', act=_A(hum(t(113), None, 0.8)))],
+      acts=lambda A, s, sp: [A['mom'].reach_to(t(113), 1, scr(sp, (2.05, 7.6, 3.4)), t1=None, dur=0.6, contact='palm', shape='flat', z=60.0),
+                             A['mom'].look_at(t(113) - 0.5, (A['june'], 'eyes'), None, 0.4)] and [],
+      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(t(113), 'hum', -10, 0, 'inside', dict(who='mom', dur=2.6, far=True))])
+    # 114 "And out on the doormat, the egg rattles."  115 "Like something inside wants out."
+    tr0 = w(114, 'rattles')
+    C(T(114), 'set', room='front', view='egg', cam=cm((-0.18, -1.05, 0.30), (-0.38, -0.36, 0.0), S=1700, sx=960, sy=640),
+      set=dict(egg=True, egg_rattle=lambda tt, a=tr0: 0.8 * math.sin((tt - a) * 31.0) * (tt > a) * (0.6 + 0.4 * math.sin((tt - a) * 3.0))),
+      c=dict(mv='push', f=1.0, rate=0.04), sfx=[(tr0, 'egg_rattle', -2, 0, 'outside', dict(dur=1.4))])
+    C(T(115), 'ins', name='egg', kw=dict(rattle=lambda tt: math.sin(tt * 38.0) * (0.7 + 0.3 * math.sin(tt * 5.0))), c=dict(mv='push', rate=0.05),
+      sfx=[(T(115), 'egg_rattle', 0, 0, 'close', dict(dur=1.7, hard=True))])
+    # 116 "I open the door."  117 "Just a crack."  (the deadbolt, the knob, a crack of porch light; they crouch and take the egg)
+    tdb = t(116) + 0.05; tcr = w(117, 'crack') - 0.25; tpick = e(117) + 0.05
+
+    def door_acts(A, s, sp):
+        n = A['narrator']
+        n.reach_to(tdb - 0.25, 1, scr(sp, 'deadbolt'), t1=tdb + 0.35, dur=0.3, contact='tips', shape='grip', z=-40.0)
+        n.reach_to(tdb + 0.35, 1, scr(sp, 'knob'), t1=tcr + 0.55, dur=0.3, contact='palm', shape='grip', z=-40.0)
+        n.crouch(tcr + 0.4, 1.0, s.t1 + 0.5, 0.35)
+        n.reach_to(tpick - 0.25, -1, scr(sp, (-0.08, -0.05, 0.05)), t1=tpick + 0.2, dur=0.3, contact='grip', shape='grip', z=-80.0)
+        n.hold_prop('egg', -1, tpick, None)
+        return []
+    C(T(116), 'set', room='hall', view='door', cam=HALL_MED,
+      set=dict(hall=0.3, porch=1.0, door=lambda tt, a=tcr: 14.0 * ease_in_out(clamp((tt - a) / 0.6))), rim=NIGHT,
+      ppl=[P('narrator', 'door_inside', expr='haunted', turn=-1.75)], acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
+      sfx=[(tdb, 'deadbolt', -4, 0, 'inside'), (tcr, 'door_creak', -4, 0, 'inside', dict(kind='front_door', crack=True))])
+    # 118 "And I open the egg."  (turned to us, the egg in front of the chest, the halves come apart)
+    tsplit = w(118, 'egg') - 0.4
+
+    def open_acts(A, s, sp):
+        n = A['narrator']
+        ts_, ev = n.open_egg(tsplit - 0.6, dur=1.3)
+        n.look_at(s.t0, lambda tt: n.grip_point(tt, -1, 'egg', post=False), None, 0.3)
+        return []
+    C(T(118), 'set', room='hall', view='door', cam=cm((-0.9, 1.7, 1.45), (-0.3, 0.6, 1.2), S=1350, sx=960, sy=520),
+      set=dict(hall=0.3, porch=1.0, door=14.0), rim=PORCH,
+      ppl=[P('narrator', (-0.45, 0.85, 0.0), turn=0.25, expr='haunted')], acts=open_acts, c=dict(mv='push', f=1.0, rate=0.025))
+    # 119 "Inside, rolling around, is a gold ring."  120 "My dad's wedding ring."  121 "Engraved on the inside: M and L, forever."
+    C(T(119), 'ins', name='egg_halves', kw=lambda tr: dict(k_open=ease_out_cubic(clamp(0.6 + tr / 1.2))), c=dict(mv='keys', keys=[(T(119), 860, 600, 1.0, None, 1.1), (T(120), 800, 620, 1.0, 'push', 1.6)]),
+      sfx=[(T(119) + 0.3, 'ring_roll', -4, 0, 'close', dict(dur=1.6))], music=[(w(119, 'gold'), 'hit', 0.6)])
+    C(T(120), 'ins', name='ring', c=dict(mv='push', rate=0.035))
+    C(T(121), 'ins', name='ring_inside', c=dict(mv='keys', keys=[(T(121), 960, 470, 1.0, None, 1.0), (T(122), 980, 440, 1.0, 'push', 1.35)]))
+    # 122 "He never took it off."  Dad, a memory
+    C(T(122), 'bust', who='dad', bg=('kitchen', 'table'), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=960, cy=600, scale=0.88, turn=-0.2,
+      expr='warm_smile', light=MEMORY, act=pose(t(122), None, 0.6, smile=0.65))
+    # 123 "Not once."  124 "The Bunnyman has my father's wedding ring."  the ring pinched beside the face, tears
+    C(T(123), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=14.0), cx=960, cy=560, scale=0.82, light=PORCH, expr='shock',
+      act=_A(lambda a, s: a.hold_prop('ring', 1, -1.0, None), lambda a, s: a.reach(-1.0, None, 1, out=55.0, down=-80.0, fwd=220.0, shape='grip', up=0.0, fade=0.01),
+             lambda a, s: a.reach(t(123) + 0.3, None, 1, out=45.0, down=-92.0, fwd=235.0, shape='grip', up=0.0, fade=2.4),
+             pose(-1.0, None, 0.01, h_nod=0.05, h_turn=-0.1, look_x=-0.42, look_y=0.05, _gaze=1.0), ex('cry', t(124) - 0.3, None, 1.2)),
+      c=dict(mv='push', x=960, y=540, zrate=0.025))
+    # 125 M "You opened it."  Mom on the stairs, looking down
+    C(T(125), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, upstairs=1.0), cx=960, cy=640, scale=0.92, turn=0.15, expr='too_still', light=LAMP,
+      act=_A(pose(-9, None, 0.1, h_nod=0.35), lookxy(900, 900, -9, None, 0.3, z=300.0)), music=[(t(125), 'hit', 0.6)])
+    # 126 "Mom is on the stairs."  the narrator's view up the hall: Mom standing on the stairs
+    C(T(126), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
+      ppl=[P('mom', 'step9', turn=-0.5, expr='too_still', act=lookxy(960, 720, -9, None, 0.3, z=200.0))], c=dict(mv='push', f=1.0, rate=0.02))
+    # 127 "She walks down, takes the ring out of my hand, and stares at it for a very long time."
+    ttk = w(127, 'takes') - 0.1
+    C(T(127), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
+      ppl=[P('mom', 'step9', path=[(T(127) + 0.1, 'step9'), (ttk - 0.3, 'step1'), (ttk + 0.3, (0.3, 1.0, 0.0))], surface='stairs', expr='too_still')],
+      c=dict(mv='push', f=1.0, rate=0.02))
+
+    def ring_acts(A, s, sp, tg=ttk + 0.2):
+        n, m = A['narrator'], A['mom']
+        ring = CH.PropTrack('ring', 0, 0, sp.anchors['door_inside'].ppm / 100.0 if 'door_inside' in sp.anchors else 3.0)
+        ring.held(-1e9, n, 1)
+        n.hold_prop('ring', 1, -1e9, tg + 0.6)
+        n.reach(-1.0, tg + 0.1, 1, out=40.0, down=150.0, fwd=210.0, shape='grip', up=0.0, fade=0.5)
+        n.look_at(s.t0, (m, 'eyes'), None, 0.3)
+        m.look_at(s.t0, (n, 'hand_l'), tg + 1.2, 0.35)
+        tc = n.give(ring, tg, 1, m, -1, dur=1.2)
+        held = lambda tt: (m.where(tt, 'eyes', post=False)[0] + 0.07 * m.height, m.where(tt, 'eyes', post=False)[1] + 0.06 * m.height)
+        m.reach_to(tc + 0.4, -1, held, t1=None, dur=0.8, contact='grip', prop='ring', z=170.0, fade=0.6)
+        m.look_at(tc + 0.6, ring, None, 0.6)
+        m.expr('dead_stare', tc + 1.0, None, 0.8)
+        return []
+    C(ttk, 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=0.0), rim=LAMP,
+      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
+      acts=ring_acts, c=dict(mv='push', f=1.0, rate=0.015), focus_on='mom')
+    # 128 "Then she doesn't throw it in the fire."  her stare at the ring, held beside her face
+    C(T(128), 'bust', who='mom', bg=('hall', 'door'), set=dict(hall=0.3), cx=1000, cy=600, scale=0.85, turn=-0.25, expr='dead_stare', light=LAMP,
+      act=_A(lambda a, s: a.hold_prop('ring', -1, -1.0, None), lambda a, s: a.reach(-1.0, None, -1, out=60.0, down=-70.0, fwd=230.0, shape='grip', up=0.0, fade=0.01),
+             pose(-1.0, None, 0.01, look_x=0.45, look_y=0.1, _gaze=1.0)), c=dict(mv='push', x=980, y=560, zrate=0.02))
+    # 129 "She puts it in her pocket."
+    tpk = t(129) + 0.15
+
+    def pocket_acts(A, s, sp, tpk=tpk):
+        n, m = A['narrator'], A['mom']
+        m.hold_prop('ring', -1, -9.0, tpk + 0.45)
+        m.reach(-1.0, tpk - 0.1, -1, out=60.0, down=40.0, fwd=210.0, shape='grip', up=0.0, fade=0.3)
+        pk = lambda tt: (m.where(tt, 'hip', post=False)[0] + 0.02 * m.height, m.where(tt, 'hip', post=False)[1] + 0.01 * m.height)
+        m.reach_to(tpk, -1, pk, t1=tpk + 0.8, dur=0.45, contact='tips', z=90.0, fade=0.5)
+        m.look_at(tpk + 0.5, (n, 'eyes'), None, 0.5)
+        n.look_at(s.t0, (m, 'hand_r'), None, 0.3)
+        return []
+    C(T(129), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3), rim=LAMP,
+      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
+      acts=pocket_acts, c=dict(mv='push', f=1.05, rate=0.02), focus_on='mom', sfx=[(tpk + 0.45, 'cloth_rustle', -8, 0, 'inside', dict(kind='pocket'))])
+
+
+# ==================================================================================================== RULE 3: THE KNOCK (359.0 - 416.2)
+KNOCK_TAGS = [(-340, -150), (340, -150), (-380, 40), (0, -260), (380, 40), (-300, 230), (300, 230)]
+GRAN_CAM = cm((-0.75, 5.95, 1.25), (-0.75, 8.45, 0.95), S=1100, sx=960, sy=560)
+
+
+def plan_rule3(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(130), 'rule', n=3)
+    # the knocks: 2 . pause . 3 . pause . 2 (each group in the gap just before the line that names it)
+    g1 = [e(135) + 0.1, e(135) + 0.36]
+    g2 = [e(137) + 0.04, e(137) + 0.22, e(137) + 0.4]
+    g3 = [e(139) + 0.05, e(139) + 0.25]
+    knocks = g1 + g2 + g3
+    F.knocks = knocks
+    ksfx = [(tk, 'knock_door', -1, 0, 'inside', dict(group=gi, index=k, pattern='2-3-2'))
+            for k, (tk, gi) in enumerate(zip(knocks, [0, 0, 1, 1, 1, 2, 2]))]
+    C(T(135), 'ins', name='clock', kw=dict(time=(1, 13)), c=dict(mv='push', rate=0.03))
+    # "he knocks": the two of them in the hall, facing the front door
+    FAM = [P('mom', (-0.75, 1.4, 0.0), turn=1.9, expr='too_still'), P('narrator', (0.05, 1.55, 0.0), turn=1.95, expr='haunted')]
+    th = w(135, 'he') - 0.1
+    C(th, 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.15, rate=0.02, hit=[(k, 3.0) for k in g1]),
+      tags=[(g1[0], '1', 960 + KNOCK_TAGS[0][0], 540 + KNOCK_TAGS[0][1], 'white', 7.0), (g1[1], '2', 960 + KNOCK_TAGS[1][0], 540 + KNOCK_TAGS[1][1], 'white', 7.0)],
+      tag_sound=False, sfx=ksfx[:2])
+    # the door, close: three more (and the count runs on); a pause; two; "Seven."
+    tags = [(knocks[k], str(k + 1), 960 + KNOCK_TAGS[k][0], 540 + KNOCK_TAGS[k][1], 'white' if k < 6 else 'red', 9.0) for k in range(7)]
+    C(T(136), 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, c=dict(mv='push', f=2.0, rate=0.012, hit=[(k, 4.0) for k in g2 + g3]),
+      tags=[tg for tg in tags if tg[0] < T(137) + 2.6], tag_sound=False, sfx=ksfx[2:5])
+    C(T(139) - 0.25, 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.35, rate=0.015, hit=[(k, 3.5) for k in g3]),
+      tags=[(tg[0] if tg[0] > T(139) - 0.25 else T(139) - 0.25, ) + tg[1:] for tg in tags], tag_sound=False, sfx=ksfx[5:],
+      music=[(t(141), 'hit', 0.65)])
+    # 142 "Mom nods."  143-144 M "That's him. That's how he knocks, every year."
+    C(T(142), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=960, cy=610, scale=0.9, expr='too_still', light=LAMP,
+      act=_A(lambda a, s: a.head_down(t(142) + 0.1, t(142) + 0.45, 0.45, 0.3), lambda a, s: a.head_down(t(142) + 0.6, t(142) + 0.9, 0.35, 0.3),
+             lookxy(860, 560, -9, None, 0.3, z=500.0)))
+    C(T(143), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=1000, cy=640, scale=1.0, turn=-0.15, expr='too_still', light=LAMP,
+      act=lookxy(760, 560, -9, None, 0.3, z=500.0))
+    # 145 "But my stomach drops, because I know that knock."
+    C(T(145), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.4), cx=930, cy=600, scale=0.88, turn=0.15, expr='haunted', light=LAMP,
+      act=_A(ex('shock', w(145, 'drops') - 0.1, None, 0.25), lookxy(960, 500, w(145, 'know') - 0.2, None, 0.4, z=700.0)))
+    # 146 "Grandma taught it to me when I was six."  (memory: Grandma's daylight kitchen, the narrator at six beside her)
+    GK = [P('grandma', (-1.05, 8.37, 0.0), kind='seat', seat=0.46, turn=0.0, expr='warm_smile', hands='lap'),
+          P('narrator_kid', (-0.4, 8.37, 0.0), kind='seat', seat=0.46, turn=-0.15, expr='neutral', hands='lap')]
+    C(T(146), 'set', room='kitchen', view='table', set=dict(tod='memory', kitchen=0.0), era='memory', grade='ob_memory', rim=MEMORY, cam=GRAN_CAM,
+      ppl=[dict(GK[0], act=lambda a, s: None), dict(GK[1])],
+      acts=lambda A, s, sp: [A['grandma'].look_at(s.t0, (A['narrator_kid'], 'eyes'), None, 0.3), A['narrator_kid'].look_at(s.t0, (A['grandma'], 'eyes'), None, 0.3)] and [],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 147-148 G "This is our family knock," she said.  her knuckles on the tabletop, two, three, two
+    tk0 = t(147) + 0.1
+
+    def gran_knock(A, s, sp, tk0=tk0):
+        g, k = A['grandma'], A['narrator_kid']
+        evs = g.knock_pattern(tk0, (2, 3, 2), side=-1, beat=0.18, gap=0.34, target=scr(sp, (-0.95, 8.0, 0.77)), z=120.0, kind='table')
+        k.look_at(s.t0, scr(sp, (-0.95, 8.0, 0.77)), tk0 + 1.6, 0.3)
+        k.look_at(tk0 + 1.7, (g, 'eyes'), None, 0.35)
+        g.look_at(s.t0, (k, 'eyes'), None, 0.3)
+        return []
+    C(T(147), 'set', room='kitchen', view='table', set=dict(tod='memory', kitchen=0.0), era='memory', grade='ob_memory', rim=MEMORY,
+      cam=cm((-0.75, 6.4, 1.15), (-0.75, 8.4, 0.95), S=1350, sx=960, sy=600), ppl=GK, acts=gran_knock, c=dict(mv='push', f=1.0, rate=0.015))
+    # 149-150 G "If anyone ever knocks like this, it's family. I taught it to your mother when she was little."
+    C(T(149), 'bust', who='grandma', bg=('kitchen', 'table', GRAN_CAM), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=930, cy=600, scale=0.85,
+      turn=0.25, expr='warm_smile', light=MEMORY, act=lookxy(1500, 640, -9, None, 0.3, z=300.0))
+    # 151 "Then she got very quiet."   152-154 G "She never used it again. Not once. Not after the woods."
+    C(T(151), 'bust', who='grandma', bg=('kitchen', 'table', GRAN_CAM), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=960, cy=620, scale=1.0,
+      turn=0.2, expr='warm_smile', light=MEMORY, act=_A(ex('haunted', t(151) + 0.2, None, 0.8), lambda a, s: a.head_down(t(151) + 0.3, None, 0.45, 0.9)))
+    C(T(152), 'bust', who='grandma', bg=('kitchen', 'table', GRAN_CAM), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=1000, cy=660, scale=1.15,
+      turn=0.15, expr='haunted', light=MEMORY, act=_A(pose(-9, None, 0.1, h_nod=0.25), lookxy(1300, 900, -9, None, 0.3, z=300.0)))
+    # 155-157 "Two. Three. Two."  her knuckles on the table, on each word
+    hits = []
+    for i, n_ in ((155, 2), (156, 3), (157, 2)):
+        a0 = t(i) + 0.02
+        hits += [a0 + 0.17 * k for k in range(n_)]
+    C(T(155), 'ins', name='knuckles', era='memory', anim=True, kw=lambda tr, h=tuple(hh - T(155) for hh in hits): dict(hits=h),
+      c=dict(mv='push', rate=0.02), sfx=[(hh, 'knock_door', -3, 0, 'memory', dict(kind='table', index=k)) for k, hh in enumerate(hits)])
+    # 158 "Somebody at our front door knows my grandmother's secret knock."
+    C(T(158), 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.3, rate=0.03))
+    # 159 "And my mother, standing right next to me, doesn't recognize it at all."  from the door: both faces; I look at her
+    tmo = w(159, 'mother')
+    C(T(159), 'set', room='hall', view='in', set=dict(hall=0.4), rim=LAMP, cam=HALL_IN_MED,
+      ppl=[P('mom', (-0.75, 1.4, 0.0), turn=0.08, expr='too_still', act=lookxy(980, 470, -9, None, 0.3, z=400.0)),
+           P('narrator', (0.05, 1.55, 0.0), turn=-0.12, expr='haunted')],
+      acts=lambda A, s, sp: [A['narrator'].look_at(tmo, (A['mom'], 'eyes'), None, 0.45, body=0.2)] and [], c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
+
+
+# ==================================================================================================== RULE 4: THE MAIL SLOT (416.2 - 496.5)
+PORCH_CAM = cm((1.05, -2.15, 1.45), (-0.38, -0.3, 0.75), S=1050, sx=960, sy=540)
+SLOT_SIDE = cm((-1.28, 1.25, 1.3), (-0.3, 0.3, 0.8), S=1050, sx=960, sy=560)       # in the hall by the wall: the door at 3/4
+
+
+def bunny_at_slot(cry_t=None, tilt_t=None):
+    """The Bunnyman crouched at the front door, a paw holding the mail slot flap open (outside, on the porch)."""
+    def act(a, s):
+        a.crouch(-9, 0.85, None, 0.01)
+        a.reach_to(-9, -1, s.sp and scr(s.sp, (-0.40, -0.05, 0.95)), dur=0.01, contact='tips', shape='paw_flat', z=0.0)
+        a.set(-9, None, 0.01, h_tilt=-8.0, h_nod=0.2)
+        if tilt_t is not None: a.head_tilt(tilt_t, -16.0, 1.6)
+        if cry_t is not None:
+            def sob(P_, tt, c0=cry_t):
+                if tt < c0: return
+                k = min(1.0, (tt - c0) / 0.8)
+                ph = (tt - c0) / 0.72
+                beat = math.exp(-((ph % 1.0) * 5.0)) * k
+                P_.h_nod += 0.18 * k + 0.08 * beat; P_.hunch += 0.25 * k + 0.12 * beat; P_.tilt += 1.5 * beat
+            a._add(cry_t - 0.5, None, sob, real=True)
+    return act
+
+
+def plan_rule4(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(160), 'rule', n=4)
+    # 164 "At 1:40, the brass flap of the mail slot creaks open, and a voice comes through."
+    tfl = w(164, 'creaks')
+    C(T(164), 'ins', name='clock', kw=dict(time=(1, 40)), c=dict(mv='push', rate=0.03))
+    C(w(164, 'brass') - 0.1, 'set', room='hall', view='slot', set=dict(hall=0.3, flap=lambda tt, a=tfl: ease_in_out(clamp((tt - a) / 1.3))),
+      c=dict(mv='push', f=1.0, rate=0.03), sfx=[(tfl, 'mail_slot', -2, 0, 'inside', dict(kind='creak_open', dur=1.3))], music=[(tfl, 'silence', 0.0, 1.2)])
+    # 165 "A little girl's voice."  166 "Small, and scared."
+    C(T(165), 'ins', name='slot', kw=dict(flap=1.0, eyes=0.0), c=dict(mv='push', rate=0.03))
+    C(T(166), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3), cx=930, cy=600, scale=0.85, turn=0.2, expr='haunted', light=NIGHT,
+      act=lookxy(1100, 760, -9, None, 0.3, z=500.0))
+    # 167 L "Mama?"  the dark slot, a wet glint far in
+    C(T(167), 'ins', name='slot', kw=dict(flap=1.0, eyes=0.7), c=dict(mv='push', rate=0.045), music=[(t(167), 'hit', 0.5)])
+    # 168 "Grandma has been dead for six years."
+    C(T(168), 'ins', name='gran_photo', c=dict(mv='push', rate=0.03))
+    # 169-171 L "Mama, it's Laurie. I lost my egg. Can I come home now?"  outside: the Bunnyman crouched at the mail slot
+    C(T(169), 'set', room='front', view='porch', cam=PORCH_CAM, set=dict(front_light=1.0), rim=PORCH,
+      ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), expr='neutral', act=bunny_at_slot(tilt_t=t(171)), talk_k=0.6)],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 172 "Mom's face doesn't move."  173-175 M "It took my voice," she says, very calmly. "When I was seven."
+    C(T(172), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3), cx=960, cy=620, scale=0.95, expr='too_still', light=NIGHT_L, blink=False,
+      act=pose(-9, None, 0.1, still=0.85, lock=1.0))
+    C(T(173), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3), cx=1000, cy=620, scale=0.9, turn=-0.2, expr='too_still', light=NIGHT_L,
+      act=lookxy(760, 560, -9, None, 0.3, z=500.0))
+    # 176 M "It's been using it for thirty-six years to make children open doors."  two-shot by the door
+    C(T(176), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3), rim=NIGHT,
+      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
+      acts=lambda A, s, sp: [A['narrator'].look_at(s.t0, (A['mom'], 'eyes'), None, 0.3), A['mom'].look_at(s.t0, (A['narrator'], 'eyes'), None, 0.3)] and [],
+      c=dict(mv='push', f=1.05, rate=0.02), focus_on='mom')
+    # 177-179 "It makes sense. It makes perfect sense. I want it to make sense."
+    C(T(177), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3), cx=960, cy=600, scale=0.9, turn=0.1, expr='haunted', light=NIGHT,
+      act=_A(lookxy(800, 520, -9, w(179, 'want') - 0.1, 0.3, z=400.0), lookxy(980, 700, w(179, 'want'), None, 0.5, z=300.0), blinks(t(178) + 0.2)))
+    # 180 "But June has crept down the stairs in her socks, and she kneels at the mail slot."
+    tkn = w(180, 'kneels') - 0.1
+    C(T(180), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=0.6), rim=NIGHT,
+      ppl=[P('june', 'step11', path=[(T(180) + 0.1, 'step11'), (tkn - 0.1, 'step2')], surface='stairs_quiet', expr='neutral', turn=-0.3,
+             act=lambda a, s: a.set(-9, None, 0.1, lean=0.12))],
+      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(T(180) + 0.3, 'stairs_creak', -12, 0.3, 'inside', dict(soft=True))])
+    C(tkn, 'set', room='hall', view='door', set=dict(hall=0.3), rim=NIGHT,
+      ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=2, kneel_t=tkn + 0.05, kneel_dur=0.7, expr='neutral', turn=1.95),
+           P('mom', (-0.75, 1.45, 0.0), turn=1.9, expr='too_still'), P('narrator', (0.05, 1.6, 0.0), turn=1.95, expr='haunted')],
+      c=dict(mv='push', f=1.25, rate=0.02), focus_on='june')
+    # 181-183 J "Laurie's my mom," she says. "She's right here."  June at the slot, her cheek near the door
+    C(T(181), 'bust', who='june', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=1100, cy=660, scale=0.92, turn=-0.75, h_turn=-0.15,
+      expr='neutral', light=NIGHT_L, act=pose(-9, None, 0.1, h_nod=0.15))
+    # 184 "Silence."  185-186 "Then the little voice whispers," L "Is she humming?"
+    C(T(184), 'set', room='hall', view='slot', set=dict(hall=0.3, flap=1.0), c=dict(mv='push', f=1.05, rate=0.03))
+    C(T(185), 'set', room='front', view='porch', cam=cm((0.6, -1.6, 1.25), (-0.35, -0.3, 0.85), S=1250, sx=960, sy=520), set=dict(front_light=1.0), rim=PORCH,
+      ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(tilt_t=t(186) - 0.3), talk_k=0.6)],
+      c=dict(mv='push', f=1.0, rate=0.03))
+    # 187 "June looks back at Mom."  188 J "Yeah."
+    C(T(187), 'bust', who='june', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=1080, cy=660, scale=0.92, turn=-0.75, expr='neutral', light=NIGHT_L,
+      act=_A(lambda a, s: a.turn(t(187) + 0.1, 0.35, 0.6), pose(t(187) + 0.15, None, 0.6, h_turn=0.4), lookxy(1700, 360, t(187) + 0.2, None, 0.5, z=300.0)))
+    # 189 "And on the other side of the door, the little girl starts to cry."  190-191 "Not like a monster. Like a kid ..."
+    C(T(189), 'set', room='front', view='porch', cam=PORCH_CAM, set=dict(front_light=1.0), rim=PORCH,
+      ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(cry_t=w(189, 'cry') - 0.2))],
+      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(w(189, 'cry') - 0.2, 'girl_cry', 0, 0, 'outside', dict(dur=8.5, through_door=True))])
+    C(T(190), 'bust', who='bunny', bg=('front', 'porch', PORCH_CAM), set=dict(front_light=1.0), cx=960, cy=640, scale=0.95, turn=-0.55, h_turn=-0.1,
+      light=PORCH, act=_A(pose(-9, None, 0.1, h_nod=0.3, h_tilt=-12.0), bunny_cry_bust(t(190) - 1.0)))
+    # 192 "Mom closes the mail slot."  193 "She smooths June's hair."  (one move: the fingertips push the flap shut, the hand on her hair)
+    tcl = t(192) + 0.25
+
+    def close_acts(A, s, sp, tcl=tcl):
+        m, j = A['mom'], A['june']
+        m.reach_to(tcl - 0.5, -1, scr(sp, (-0.37, 0.02, 0.95)), t1=tcl + 0.35, dur=0.5, contact='tips', shape='flat', z=-30.0)
+        m.crouch(tcl - 0.6, 0.55, tcl + 0.6, 0.4)
+        m.smooth_hair(t(193) - 0.1, 1, j, n=2, stroke=0.7)
+        m.look_at(s.t0, (j, 'crown'), None, 0.3)
+        j.look_at(s.t0, scr(sp, (-0.4, 0.0, 0.95)), t(193), 0.3)
+        return []
+    C(T(192), 'set', room='hall', view='door', cam=SLOT_SIDE, set=dict(hall=0.3, flap=lambda tt, a=tcl: 1.0 - ease_in_out(clamp((tt - a) / 0.2))), rim=NIGHT,
+      ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=2, expr='sad', face=(-0.4, 0.0)),
+           P('mom', (0.02, 0.72, 0.0), face=(-0.4, 0.2), expr='too_still')],
+      acts=close_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom', sfx=[(tcl, 'mail_slot', -2, 0, 'inside', dict(kind='close'))])
+    # 194 M "Bedtime, bunny."  195 "She's humming."
+    C(T(194), 'bust', who='mom', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=960, cy=620, scale=0.92, turn=-0.3, expr='warm_smile', light=NIGHT_L,
+      act=_A(lookxy(760, 900, -9, None, 0.3, z=300.0), hum(e(194) + 0.3, None)), sfx=[(t(195), 'hum', -6, 0, 'close', dict(who='mom', dur=2.0))],
+      music=[(t(195), 'jingle', 0.6, 2.0, dict(version='hum'))])
+
+
+def bunny_cry_bust(c0):
+    def act(a, s):
+        def sob(P_, tt):
+            if tt < c0: return
+            ph = (tt - c0) / 0.72
+            beat = math.exp(-((ph % 1.0) * 5.0))
+            P_.h_nod += 0.06 * beat; P_.tilt += 1.2 * beat; P_.h_tilt += 2.0 * beat
+        a._add(c0 - 0.5, None, sob, real=True)
+    return act
+
+
+# ==================================================================================================== RULE 5: THE ATTIC (496.5 - 589.8)
+BACKDOOR_POV = cm((-3.3, 6.55, 1.2), (-3.3, 4.4, 0.9), S=1050, sx=960, sy=560)
+ATTIC_MED = cm((-0.6, 6.4, 6.4), (0.6, 7.55, 5.75), S=1200, sx=960, sy=560)
+
+
+def plan_rule5(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(196), 'rule', n=5)
+    # 199 "June and I sleep on the couch, with Mom in the armchair facing the back door."
+    twm = w(199, 'with') - 0.1
+    SLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-14.0, lean=-0.08, h_nod=0.15)
+    C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=NIGHT,
+      ppl=[P('narrator', 'couch_mid', expr='sleep', act=SLEEP), P('june', 'couch_right', expr='sleep', act=lambda a, s: a.set(-9, None, 0.1, h_tilt=16.0, lean=-0.05, h_nod=0.2))],
+      c=dict(mv='push', f=1.05, rate=0.015))
+    C(twm, 'set', room='living', view='back', cam=BACKDOOR_POV, set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0), rim=LAMP,
+      ppl=[P('mom', 'armchair', expr='too_still', blink=False, hands='arms', act=_A(pose(-9, None, 0.1, still=0.8), lookxy(960, 380, -9, None, 0.3, z=900.0))),
+           P('narrator', 'couch_mid', expr='sleep', act=SLEEP), P('june', 'couch_right', expr='sleep', act=lambda a, s: a.set(-9, None, 0.1, h_tilt=16.0))],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
+    # 200 "At 2:47, I wake up."
+    C(T(200), 'ins', name='clock', kw=dict(time=(2, 47)), c=dict(mv='push', rate=0.03))
+    twk = w(200, 'i') - 0.1
+    C(twk, 'bust', who='narrator', bg=('living', 'couch'), set=dict(lamp=0.0, chair_lamp=0.0, curtains=0.0, blanket=True), cx=940, cy=620, scale=0.9, turn=0.3,
+      expr='sleep', light=NIGHT, act=_A(ex('haunted', twk + 0.35, None, 0.2), pose(twk + 0.35, None, 0.25, lid_l=0.0, lid_r=0.0)), sfx=[(twk + 0.35, 'breath', -8, 0, 'close', dict(kind='gasp'))])
+    # 201 "June's blanket is still warm."  the empty seat beside the narrator, the hand on the blanket
+    C(T(201), 'set', room='living', view='couch', set=dict(lamp=0.0, chair_lamp=0.0, curtains=0.0, blanket=True), rim=NIGHT,
+      ppl=[P('narrator', 'couch_left', expr='haunted', turn=0.45)],
+      acts=lambda A, s, sp: [A['narrator'].reach_to(t(201), -1, scr(sp, (-3.3, 1.25, 0.45)), dur=0.6, contact='palm', shape='flat', z=40.0),
+                             A['narrator'].look_at(t(201) - 0.3, scr(sp, (-3.3, 1.25, 0.45)), None, 0.3)] and [],
+      c=dict(mv='push', f=1.05, rate=0.02))
+    # 202 "June is gone."  203 "Mom's chair is empty."
+    C(T(202), 'bust', who='narrator', bg=('living', 'couch'), set=dict(lamp=0.0, curtains=0.0, blanket=True), cx=980, cy=620, scale=0.9, turn=0.35,
+      expr='haunted', light=NIGHT, act=_A(lookxy(1600, 600, t(202), t(202) + 0.6, 0.25, z=300.0), lookxy(300, 600, t(202) + 0.7, None, 0.3, z=300.0)))
+    C(T(203), 'set', room='living', view='chair', set=dict(lamp=0.0, chair_lamp=0.0, kitchen=0.0), rim=NIGHT, c=dict(mv='push', f=1.2, rate=0.03))
+    # 204 "And every door is still locked from the inside."  the back door (bolt + chain), then the front door's deadbolt
+    C(T(204), 'set', room='kitchen', view='door', set=dict(kitchen=0.0, locked=1.0), c=dict(mv='push', f=1.3, rate=0.02))
+    C(w(204, 'locked') - 0.1, 'set', room='hall', view='peep', set=dict(hall=0.0), c=dict(mv='push', f=1.0, rate=0.03))
+    # 205 "There's a light under the attic door."
+    C(T(205), 'set', room='up', view='hall', set=dict(upstairs=0.0, attic_gap=1.0), c=dict(mv='push', f=1.8, rate=0.03),
+      sfx=[(T(205) + 0.2, 'house_settle', -12, 0, 'inside')])
+    # 206 "June is sitting on the attic floor in front of Mom's old toy chest."
+    C(T(206), 'set', room='attic', view='chest', set=dict(bulb=1.0, chest='open'), rim=BULB,
+      ppl=[P('june', 'chest_floor', kind='floor', turn=-1.2, expr='neutral', act=_A(lambda a, s: a.hold_prop('diary', -1),
+                                                                                lambda a, s: a.reach(-9, None, -1, out=-30.0, down=230.0, fwd=210.0, shape='grip', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.15, rate=0.025), sfx=[(T(206), 'bulb_hum', -12, 0, 'attic', dict(dur=4.0))])
+    # 207 "She's holding a tiny yellow dress, stiff and grey with age."
+    C(T(207), 'set', room='attic', view='chest', cam=ATTIC_MED, set=dict(bulb=1.0, chest='open'), rim=BULB,
+      ppl=[P('june', 'chest_floor', kind='floor', turn=-0.9, expr='neutral',
+             act=_A(lambda a, s: a.hold_prop('dress_tiny', 1), lambda a, s: a.reach(-9, None, 1, out=40.0, down=-10.0, fwd=200.0, shape='grip', up=0.0, fade=0.01),
+                    lambda a, s: a.hold_prop('diary', -1), lambda a, s: a.reach(-9, None, -1, out=-30.0, down=230.0, fwd=210.0, shape='grip', up=0.0, fade=0.01),
+                    lambda a, s: a.look_at(-9, lambda tt: a.grip_point(tt, 1, 'dress_tiny', post=False), None, 0.3)))],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    C(w(207, 'stiff') - 0.1, 'ins', name='dress_old', c=dict(mv='push', rate=0.03))
+    # 208 the diary with the pink plastic lock;  209 "Laurie Price, age seven."
+    C(T(208), 'ins', name='diary', c=dict(mv='keys', keys=[(T(208), 960, 560, 1.0, None, 1.0), (T(209), 1100, 560, 1.0, 'push', 1.25)]))
+    C(T(209), 'ins', name='diary', c=dict(mv='keys', keys=[(T(209), 960, 410, 1.0, None, 1.7), (T(210), 960, 410, 1.0, 'push', 1.9)]))
+    # 210 "The first half is crayon."  211 "Huge, crooked letters."  212-214 I love Mama. / I love my dog Biscuit. / Tomorrow is the Easter parade.
+    C(T(210), 'ins', name='diary_crayon', c=dict(mv='push', rate=0.025), sfx=[(T(210) + 0.05, 'page_flip', -6, 0, 'close')])
+    C(T(211), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(211), 960, 540, 1.0, None, 1.25), (T(212), 980, 540, 1.0, 'push', 1.35)]))
+    C(T(212), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(212), 560, 300, 1.0, None, 1.9), (T(213), 560, 300, 1.0, 'lin', 1.95)]))
+    C(T(213), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(213), 580, 560, 1.0, None, 1.75), (T(214), 600, 560, 1.0, 'lin', 1.8)]))
+    C(T(214), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(214), 1300, 420, 1.0, None, 1.6), (T(215), 1300, 440, 1.0, 'lin', 1.65)]))
+    # 215 "Then Easter, 1987."  216 "And the handwriting changes."  217 "Perfect, slanted cursive."
+    C(T(215), 'ins', name='diary_flip', c=dict(mv='keys', keys=[(T(215), 640, 420, 1.0, None, 1.6), (T(216), 650, 430, 1.0, 'push', 1.7)]),
+      sfx=[(T(215) + 0.05, 'page_flip', -4, 0, 'close')], music=[(t(215), 'hit', 0.45)])
+    C(T(216), 'ins', name='diary_flip', c=dict(mv='keys', keys=[(T(216), 960, 540, 1.0, None, 1.05), (T(217), 1280, 500, 1.0, 'in_out', 1.6)]))
+    C(T(217), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(217), 1300, 400, 1.0, None, 1.7), (T(218), 1290, 420, 1.0, 'lin', 1.8)]),
+      sfx=[(T(217) + 0.05, 'page_flip', -6, 0, 'close')])
+    # 218 "Grown-up handwriting, from a seven-year-old."  June reading it under the bulb
+    C(T(218), 'bust', who='june', bg=('attic', 'chest'), set=dict(bulb=1.0), cx=960, cy=560, scale=0.88, turn=-0.3, expr='neutral', light=BULB,
+      act=_A(pose(-9, None, 0.1, h_nod=0.45), lambda a, s: [a.look_at(-9, (900 + 120 * k, 1100), None, 0.2, z=200.0) for k in range(1)]))
+    # 219 "The same sentence, over and over, page after page."  220-223 "I am Laurie." x 4
+    C(T(219), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(219), 700, 300, 1.0, None, 1.5), (T(220), 700, 800, 1.0, 'lin', 1.5)]),
+      sfx=[(T(219) + 1.2, 'page_flip', -8, 0, 'close'), (T(219) + 2.2, 'page_flip', -8, 0, 'close')])
+    for k, (i, x, y) in enumerate(((220, 560, 220), (221, 1210, 400), (222, 640, 588), (223, 1260, 818))):
+        C(T(i), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(i), x, y, 1.0, None, 2.6 + 0.15 * k), (T(i + 1), x + 20, y, 1.0, 'lin', 2.7 + 0.15 * k)]),
+          post=dict(exposure=-0.03 * k))
+    # 224 "And on the very last page, in that same perfect hand:"  225 "It is so nice to be small again."
+    C(T(224), 'ins', name='diary_last', c=dict(mv='keys', keys=[(T(224), 960, 540, 1.0, None, 1.05), (T(225), 1300, 600, 1.0, 'in_out', 1.4)]),
+      sfx=[(T(224) + 0.1, 'page_flip', -4, 0, 'close')])
+    C(T(225), 'ins', name='diary_last', c=dict(mv='keys', keys=[(T(225), 1330, 600, 1.0, None, 2.0), (T(226), 1330, 600, 1.0, 'push', 2.2)]),
+      music=[(t(225), 'stinger', 0.6)])
+    # 226 "June smiles up at me."  227-228 J "Mom says I can wear the yellow dress tomorrow. For the magic trick."
+    C(T(226), 'bust', who='june', bg=('attic', 'chest'), set=dict(bulb=1.0), cx=960, cy=640, scale=0.92, turn=-0.25, expr='neutral', light=BULB,
+      act=_A(pose(-9, None, 0.1, h_nod=-0.15), lookxy(1000, 260, -9, None, 0.3, z=300.0), ex('warm_smile', t(226) + 0.1, None, 0.5),
+             lambda a, s: a.hold_prop('dress_tiny', 1), lambda a, s: a.reach(-9, None, 1, out=40.0, down=60.0, fwd=200.0, shape='grip', up=0.0, fade=0.01)))
+    # 229 "And from the dark corner of the attic, behind the boxes, Mom says,"  230 M "Back to bed, you two."
+    C(T(229), 'set', room='attic', view='corner', set=dict(bulb=1.0), rim=dict(rim='#ffcf8f', rim_a=30, side=-1, key=-0.55),
+      ppl=[P('mom', 'corner_seat', expr='too_still', blink=False, hands='knees', act=lookxy(500, 640, -9, None, 0.3, z=300.0), dimk=0.55, room_light=False)],
+      c=dict(mv='keys', keys=[(T(229), 960, 540, 1.0, None, 1.0), (T(230), 960, 540, 1.0, 'push', 1.7)]), focus_on='mom')
+    C(T(230), 'bust', who='mom', bg=('attic', 'corner'), set=dict(bulb=1.0), bg_dim=0.55, cx=960, cy=620, scale=0.92, turn=0.25, expr='too_still',
+      light=dict(rim='#ffcf8f', rim_a=55, side=-1, key=-0.6), act=lookxy(500, 640, -9, None, 0.3, z=300.0), music=[(t(230), 'hit', 0.75)])
+    # 231 "I never saw her sitting there."  from her corner: past the boxes to June at the chest, the narrator at the top of the stairs
+    C(T(231), 'set', room='attic', view='mom', set=dict(bulb=1.0), rim=BULB,
+      ppl=[P('june', 'chest_floor', kind='floor', turn=-0.6, expr='neutral'), P('narrator', 'stair_top', expr='haunted', face='chest_floor')],
+      c=dict(mv='push', f=1.15, rate=0.02))
+
+
+def plan_rule6(F): pass
+def plan_rule7(F): pass
+def plan_reveal(F): pass
+def plan_after(F): pass
+def plan_outro(F): pass
+def plan_globals(F): pass
+
+
+# ==================================================================================================== main
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser()
@@ -2988,17 +2882,18 @@ if __name__ == '__main__':
     ap.add_argument('--cues', action='store_true')
     ap.add_argument('--out', default=None, help='cue sheet dir (default W/cues)')
     ap.add_argument('--list', action='store_true')
-    ap.add_argument('--sheet', default=None)
+    ap.add_argument('--sheet', default=None, help='review sheets (first | mid | last frame + the lines) -> PREFIX_NNN.jpg')
+    ap.add_argument('--per', type=int, default=8)
+    ap.add_argument('--tile', type=int, default=320)
     ap.add_argument('--range', nargs=2, type=int, default=None)
     ap.add_argument('--size', default='960x540')
-    ap.add_argument('--tile', type=int, default=240)
-    ap.add_argument('--cols', type=int, default=8)
     ap.add_argument('--bench', type=int, default=0, help='N shots x 4 frames at --size (use 2560x1440), one process')
     ap.add_argument('--shots', default=None, help='comma-separated shot indices for --bench')
-    ap.add_argument('--consec', type=int, default=0, help='--bench: N consecutive samples (every 3rd frame) per shot instead of 4 spread ones')
+    ap.add_argument('--consec', type=int, default=0, help='--bench: N consecutive samples (every 3rd frame) per shot')
     ap.add_argument('--threads', type=int, default=None)
     ap.add_argument('--frames', default=None, help='cut pairs (last | first frame) over magenta -> PREFIX_NN.jpg + PREFIX_holes.json')
     ap.add_argument('--lipcheck', action='store_true')
+    ap.add_argument('--still', default=None, help='comma-separated times -> W/tests/film/still_T.jpg')
     a = ap.parse_args()
     if a.threads is not None:
         import cv2; cv2.setNumThreads(a.threads)
@@ -3008,15 +2903,24 @@ if __name__ == '__main__':
     F = Film(json.load(open(a.timeline)))
     print('%d shots built in %.1fs' % (len(F.shots), time.time() - t_))
     if a.list:
-        for s in F.shots: print('%3d %7.2f %5.2f %-8s' % (s.idx, s.t0, s.d, s.kind))
+        for s in F.shots: print('%3d %7.2f %5.2f %-6s %s' % (s.idx, s.t0, s.d, s.kind, s.p.get('room') or s.p.get('name') or s.p.get('who') or s.p.get('mode') or ''))
         ds = np.array([s.d for s in F.shots])
-        print('shots %d  median %.2f  p10 %.2f  p90 %.2f  min %.2f' % (len(ds), np.median(ds), np.percentile(ds, 10), np.percentile(ds, 90), ds.min()))
+        print('shots %d  median %.2f  p10 %.2f  p90 %.2f  min %.2f  max %.2f  cuts/min %.1f' % (len(ds), np.median(ds), np.percentile(ds, 10),
+                                                                                            np.percentile(ds, 90), ds.min(), ds.max(), len(ds) / F.duration * 60))
     if a.cues:
         sfx, mus = F.cues(a.out)
         print('sfx %d, music events %d -> %s' % (len(sfx), len(mus['events']), a.out or CUES_DIR))
+    if a.still:
+        import cv2
+        os.makedirs(TESTS, exist_ok=True)
+        for s_ in a.still.split(','):
+            tt = float(s_)
+            img = F.frame(tt, int(round(tt * FPS)))
+            pth = os.path.join(TESTS, 'still_%07.2f.jpg' % tt)
+            cv2.imwrite(pth, cv2.cvtColor(img, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 88]); print(pth)
     if a.bench:
         idx = [int(v) for v in a.shots.split(',')] if a.shots else np.linspace(0, len(F.shots) - 1, a.bench).round().astype(int)
-        rows, t_all = [], time.time()
+        rows = []
         for k in idx:
             s_ = F.shots[k]
             for j in range(a.consec or 4):
@@ -3034,14 +2938,13 @@ if __name__ == '__main__':
         json.dump(res, open(out, 'w'), indent=1); print(out)
     if a.frames:
         paths, holes = cut_frames(F, a.frames, rng=a.range)
-        print(paths); print('holes:', len(holes), holes[:20])
+        print(paths); print('holes:', len(holes), holes[:30])
     if a.lipcheck:
         rows = lip_check(F)
         os.makedirs(TESTS, exist_ok=True)
         json.dump(rows, open(os.path.join(TESTS, 'lipcheck.json'), 'w'), indent=0)
-        bad = [r for r in rows if r['move_off'] > 0.35 or (r['lines'] and r['move_on'] < 0.5 and r['who'] not in ('owen_new', 'grandpa'))]
+        bad = [r for r in rows if r['move_off'] > 0.35 or (r['lines'] and r['move_on'] < 0.4)]
         for r in bad: print('CHECK', r)
         print('lipcheck: %d actor-shots, %d flagged -> %s' % (len(rows), len(bad), os.path.join(TESTS, 'lipcheck.json')))
     if a.sheet:
-        sh = F.shots[a.range[0]:a.range[1]] if a.range else F.shots
-        print(contact_sheets(F, a.sheet, cols=a.cols, tile=a.tile, ts=[(s.t0 + s.t1) / 2 for s in sh]))
+        print(shot_sheets(F, a.sheet, rng=a.range, per=a.per, tile=a.tile))
