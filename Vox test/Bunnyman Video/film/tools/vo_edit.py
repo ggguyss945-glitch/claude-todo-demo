@@ -1095,6 +1095,18 @@ def true_peak(y, n=400):
     return 20 * np.log10(best + 1e-12)
 
 
+def silence_mask(edl, n, pre=0.015, post=0.030, ramp=0.005):
+    """1 over every line (from 15 ms before its first sound to 30 ms after its last), 0 in the gaps, 5 ms ramps."""
+    m = np.zeros(n)
+    r = int(ramp * SR); up = fade(r, 'in')
+    for e in edl:
+        a = max(0, int((e['out'][0] - pre) * SR)); b = min(n, int((e['out'][1] + post) * SR))
+        m[a:b] = 1.0
+        if a - r >= 0: m[a - r:a] = np.maximum(m[a - r:a], up)
+        if b + r <= n: m[b:b + r] = np.maximum(m[b:b + r], up[::-1])
+    return m
+
+
 def finish(y):
     """The narrator's gentle cleanup: 70 Hz high-pass and the de-esser. Level is set later from the peak."""
     st = {}
@@ -1132,6 +1144,8 @@ def cmd_build():
     log(f'assembled: {len(y) / SR:.2f} s, narrator median speech level {med:.1f} dB')
     clean, st = finish(y)
     voiced, vrep = apply_voices(clean, edl, SR)                     # character voices on the quoted words only
+    gate = silence_mask(edl, len(clean))                            # the gaps are digital silence (no filter tails)
+    clean = clean * gate; voiced = voiced * gate
     pk = max(true_peak(clean), true_peak(voiced))
     g = 10 ** ((PEAK_CEIL - pk) / 20)                               # one gain, no limiter: the dynamics stay the take's
     clean = clean * g; voiced = voiced * g
