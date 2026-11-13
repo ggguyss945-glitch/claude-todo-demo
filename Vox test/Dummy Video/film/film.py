@@ -1531,7 +1531,10 @@ def B_glove(F, sh):
     p = sh.p
     sp, light, gr = _bg(F, sh, 'kitchen_table', dict(p, bg_dim=0.45))
     tc = p.get('curl', sh.t0 + 0.4)
-    steps = [(tc, 'relaxed'), (tc + 0.32, 'grip'), (tc + 0.62, 'fist')]
+    # three jerky curls, all inside the insert: seen from above the fingertips draw back under the knuckles, so each step
+    # foreshortens the glove toward the cuff (k = its length). (Review v3: the third step swapped to the front-view 'grip'
+    # roll shape, which squashed flat read as a different drawing and popped; it also fell after the cut.)
+    steps = [(tc, 'relaxed', 0.86), (tc + 0.28, 'relaxed', 0.71), (tc + 0.56, 'relaxed', 0.58)]
 
     def table(pen, t):
         pen.linear(rect(-400, 330, 2720, 1130), 0, 330, 0, 1460, [(0, '#6a4628'), (0.4, '#7a5230'), (1, '#3e2614')])
@@ -1540,21 +1543,23 @@ def B_glove(F, sh):
         pen.radial(None, 1000, 760, 900, [(0, '#ffd9a0', 120), (1, '#ffd9a0', 0)], clip=False)          # the pendant's pool
 
     def glove(pen, t):
-        shape = 'flat'
-        for (ts, sh_) in steps:
-            if t >= ts: shape = sh_
-        tr = 0.0 if t < tc else 2.5 * math.sin(t * 61.0) * math.exp(-max(0.0, t - tc - 0.62) * 2.0)
+        shape, k = 'flat', 1.0
+        for (ts, sh_, kk) in steps:
+            if t >= ts:                                   # each step snaps in over 4 frames (a doll's jerk, not a pop)
+                shape = sh_; k = lerp(k, kk, ease_out_cubic(clamp((t - ts) / 0.07)))
+        tr = 0.0 if t < tc else 2.5 * math.sin(t * 61.0) * math.exp(-max(0.0, t - tc - 0.56) * 2.0)
         # his arm comes across the table from his side (the cuff at the far edge), the glove lying palm down with the
         # fingers toward us: as they curl the fingertips draw back under the knuckles
         x, y, ang = 1000 + tr, 560, 4.0
-        pen.fill(oval(x + 40, y + 190, 300, 120), '#000000', 90, blur=34)                                  # its shadow on the wood
+        pen.fill(oval(x + 40, y + 190 * (0.55 + 0.45 * k), 300, 120 * (0.6 + 0.4 * k)), '#000000', 90, blur=34)   # its shadow on the wood
         cv = pen.cv
         cv.save(); cv.translate(x, y); cv.scale(1.0, 0.6); cv.translate(-x, -y)                     # lying flat: seen from above
         _sleeve(pen, 'winks', x, y - 6, ang, 470, length=1300)
+        cv.translate(x, y); cv.scale(1.0, k); cv.translate(-x, -y)                                   # the curl: foreshortened
         CH.draw_hand(pen, 'winks', x, y, 470, shape, ang + (5.0 if shape != 'flat' else 0.0), 1)
         cv.restore()
     lay = [Layer(1.6, table, 'glove_table', cache='film:glove:table', bounds=(-400, 280, 2320, 1500)), Layer(1.0, glove, 'glove', blur=0)]
-    for (ts, _) in steps:
+    for (ts, _, _) in steps:
         sh.sfx.append(_ev(ts, 'wood_creak', -4, 0.1, 'close', kind='tick'))
     cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=990, y=640, z=1.05, rate=0.045))
     return Spec(sp.add(*lay), cam, None, p.get('grade', gr), 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
@@ -2448,16 +2453,23 @@ def plan_rules34(F, t, e, w, C, T, KP):
       cam=dict(mv='keys', shake=1.4, keys=[(T(136), 900, 560, 1.05, None, 1.3), (T(137), 1080, 540, 1.0, 'in_out', 1.1),
                                            (T(138), 1110, 530, 1.05, 'in_out', 1.25)]), posts=[(T(137), T(138), 1.0, 1.4, 250, -10, 'in_out')])
     # his fingers curl (a close insert of the glove on the table, on the wave) ... his elbow bends (back on him in the chair)
-    C(T(138), 'glove', curl=w(138, 'curl') - 0.05, cam=dict(mv='keys', keys=[(T(138), 1000, 620, 1.0), (T(139), 1000, 650, 1.1, 'in_out')]))
+    C(T(138), 'glove', curl=w(138, 'fingers') + 0.1, cam=dict(mv='keys', keys=[(T(138), 1000, 620, 1.0), (T(139), 1000, 650, 1.1, 'in_out')]))
     C(T(139), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
                                                          lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
       cam=KP(T(139), T(140), 900, 610, 2.0, 880, 600, 2.2, 1.0, 1.03))
     tst = w(140, 'puts')
-    C(T(140), 'kitchen', view='table', winks=dict(act=_A(lambda a, s: a.sit_dummy(-1e9, tst + 0.4, hands='table'),
+    # his hat knocks the pendant as he straightens up on the seat (the last of his three jerks, stand_on_chair): the dome
+    # swings aside and back, so his face comes out from under it on "...stands up on the chair", and it is still swaying
+    # over the empty chair when the light comes back (review v3: the push ended with the dome over his head)
+    t_bump = tst + 0.3 + 3.0 * 2.4 / 3 + 0.08
+    lamp_sway = lambda tt, b=t_bump: (0.0 if tt < b else 0.3 * math.sin((tt - b) * 2 * math.pi / 2.2) * math.exp(-(tt - b) * 0.22)
+                                 * min(1.0, (tt - b) / 0.12))
+    C(T(140), 'kitchen', view='table', sway=lamp_sway, winks=dict(act=_A(lambda a, s: a.sit_dummy(-1e9, tst + 0.4, hands='table'),
                                                          lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, t1=tst - 0.2, hold='up'),
                                                          lambda a, s: a.stand_on_chair(tst + 0.3, 3.0, 3))),
       cam=dict(mv='keys', shake=1.2, keys=[(T(140), 960, 520, 1.0, None, 1.0), (w(140, 'flat') - 0.3, 960, 500, 1.02, 'in_out', 1.25),
-                                           (T(141), 960, 455, 1.06, 'in_out', 2.3)]), music=[(w(140, 'stands'), 'braam', 0.85)])
+                                           (T(141), 960, 455, 1.06, 'in_out', 2.3)]), music=[(w(140, 'stands'), 'braam', 0.85)],
+      sfx=[(t_bump, 'wood_knock', -6, 0.0, 'inside', dict(size=0.8)), (t_bump + 0.01, 'spoon_clink', -8, 0.0, 'inside', dict(kind='clink'))])
     C(T(141), 'bust', who=Y, bg='living', tv=TVON, lamp=0.5, light=TVL, act=ex('fear'), cam=dict(mv='push', x=960, y=580))
     C(T(142), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(142), 960, 820, 1.7), (T(143), 940, 800, 1.95, 'in_out')]))
     # the lamp flickers; when it comes back on, the chair is empty; a little flashlight clicks on, knee high, down the hall
@@ -2469,7 +2481,7 @@ def plan_rules34(F, t, e, w, C, T, KP):
       post_fn=lambda tt: dict(fade=clamp(1.0 - flk(tt)) * 0.97),
       cam=KP(T(143), T(144), 1060, 540, 1.1, 1100, 530, 1.25, 1.0, 1.04), posts=[(T(143), T(144), 1.1, 1.3, 230, -8, 'in_out')],
       sfx=[(T_FLICK, 'bulb_flicker', -4, -0.2, 'inside', dict(dur=0.9)), (T_FLICK + 0.85, 'lamp_out', -6, -0.2, 'inside', dict(kind='buzz_off'))])
-    C(T(144), 'kitchen', view='table', kitchen=dict(on=T_BACK), cam=KP(T(144), T(145), 960, 520, 1.0, 960, 480, 1.5, 1.0, 1.06),
+    C(T(144), 'kitchen', view='table', kitchen=dict(on=T_BACK), sway=lamp_sway, cam=KP(T(144), T(145), 960, 520, 1.0, 960, 480, 1.5, 1.0, 1.06),
       hit=w(144, 'empty') + 0.05, music=[(w(144, 'empty'), 'stinger', 0.85)], sfx=[(T_BACK, 'bulb_buzz', -10, 0, 'inside', dict(kind='on'))])
     C(T(145), 'hall', light=0.0, living=0.0, kitchen=0.5, case='open', focus=4.0,
       beam=knee_beam([(T_BEAM + 0.6, -0.35, 6.2), (334.0, -0.6, 3.6)], on=w(145, 'clicks') - 0.07),
@@ -2707,11 +2719,13 @@ def plan_rules56(F, t, e, w, C, T, KP):
                                                                       lambda a, s: a.jump_hug(T_JUMP), turn_to(T_JUMP + 0.15, -0.8, 0.4)),
                                                dact=lambda a, s: a.sit_dummy(-9, None, 0.1, hands='limp', slump=1.0), release=T_JUMP + 0.1,
                                                hop=('h', -0.74, 2.2)),
-      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2))),
+      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2, T_JUMP, 0.45))),   # you get up as he springs
            P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), ex('shock'), turn_to(T_JUMP + 0.3, 0.7, 0.5),
                                               lambda a, s: a.reach(T_JUMP + 0.55, None, 1, -0.05 * L_(a), 0.42 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4),
                                               lambda a, s: a.reach(T_JUMP + 0.6, None, -1, -0.05 * L_(a), 0.45 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4)))],
-      cam=KP(w(272, 'jumps') - 0.35, T(273), 930, 610, 1.15, 890, 630, 1.28),
+      # the camera eases back and down as he lands, so he lies face down on the rug in front of the chair above the
+      # captions (review v3: the zoom-in ended with the rug under the caption and he seemed to vanish off the knee)
+      cam=dict(mv='keys', shake=1.4, keys=[(w(272, 'jumps') - 0.35, 930, 610, 1.0, None, 1.15), (T(273), 900, 720, 1.0, 'in_out', 1.05)]),
       sfx=[(T_JUMP + 0.6, 'dummy_thud', -2, -0.1, 'inside', dict(kind='rug'))])
     C(T(273), 'bust', who=ON, bg='den', act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.8, grin=0.3, teeth=0.5), setp(turn=0.3)), cam=dict(mv='push', x=960, y=600))
     # he hugs me too: over my shoulder, his cheek beside my head, his arms round me

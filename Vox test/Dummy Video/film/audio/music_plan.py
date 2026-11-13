@@ -266,10 +266,12 @@ EVENTS = [
     ('s310', 'sub_drop', 0.75, None, {'nosnap': True}),   # "A young one." (final: a sub drop on the line; the hit on the
     #   picture's cut sat on "...a new one")
     ('s311', 'pulse_off', 0.5, None),
-    ('s315-0.1', 'silence', 0.8, 3.0),                 # final: "Both of his eyelids close." (the two dry clicks) "Click,
-    #   click." all in the drop-out (2.3 -> 3.0 s) ->
-    ('s317-0.1', 'stinger', 1.0, None, {'boost': 5.0}),   # v2: 8 -> 5 (B1). final: "Owen can't wink." on the cut to Owen: the twist's hit
-    #   (was on the narrated "Click", masking it)
+    ('s315-0.1', 'silence', 0.8, 3.78),                # final: "Both of his eyelids close." (the two dry clicks) "Click,
+    #   click." all in the drop-out (2.3 -> 3.0 s) -> v3: and "Owen can't wink." too (3.0 -> 3.78 s): the twist line is
+    #   spoken into the silence ->
+    ('w317:wink+0.1', 'stinger', 1.0, None, {'boost': 5.0}),   # v2: 8 -> 5 (B1). v3: the twist's hit lands after "Owen
+    #   can't wink." as his eyes squeeze shut on screen, under "He never could." (on the cut, 663.13, it sat on the tail of
+    #   "click." and 0.12 s before "Owen": the line only cleared the stinger by 1-3 dB in the 1-4 kHz band)
     # v2 (m13): the classic riser into the reveal word (film.py's reveal list, kept by the full plan now)
     ('s60', 'riser', 0.5, 3.0), ('s68', 'riser', 0.5, 3.0), ('w108:turned', 'riser', 0.5, 3.0), ('w132:turns', 'riser', 0.5, 3.0),
     ('w144:empty', 'riser', 0.55, 3.0), ('s157-0.12', 'riser', 0.4, 3.0, {'nosnap': True}), ('w161:hand', 'riser', 0.55, 3.0),
