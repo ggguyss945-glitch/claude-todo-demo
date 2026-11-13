@@ -216,6 +216,20 @@ def _cached_blur(layer, density_full, sigma_design, gains=None):
     return _gained(key, e, gains)
 
 
+def _blur_raster_too_big(layer, a, sig, sw, sh):
+    """The pre-blurred cache holds the WHOLE layer at the needed density. Under a strong optical zoom (fz 2-3) that raster
+    is many times the screen, and while the zoom moves its sigma/density bucket changes every few frames, so a huge
+    Gaussian blur is rebuilt per frame (26 s/frame at 2560 on the dummy film's hall push). Past 2.5 screens, blur the
+    layer in screen space instead (the dynamic path): the same sigma on screen, cost bounded by the screen size."""
+    try:
+        x0, y0, x1, y1 = layer.bounds
+    except Exception:
+        return False
+    sb = 1.1 ** round(math.log(max(0.3, sig / max(1e-6, a))) / math.log(1.1))
+    db = min(_density_bucket(a), _density_bucket(2.6 / sb))
+    return (x1 - x0) * (y1 - y0) * db * db > 2.5 * sw * sh
+
+
 def _draw_entry(cv, e, paint):
     """Draw a cached image (only its occupied tiles) in layer design coordinates."""
     x0, y0 = e.bounds[0], e.bounds[1]; d = e.density
@@ -328,7 +342,7 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
                 _draw_offscreen(cv, l, t, M, sw, sh, gains, paint)
             cv.restore()
             _tick('layers_sharp', t0); _tick('L:' + (l.name or '?'), t0)
-        elif l.cache:
+        elif l.cache and not _blur_raster_too_big(l, a, sig, sw, sh):
             e = _cached_blur(l, _density_bucket(a), sig / a, gains)
             cv.save(); cv.setMatrix(M); _draw_entry(cv, e, paint); cv.restore()
             _tick('layers_blur_cached', t0); _tick('L:' + (l.name or '?'), t0)
