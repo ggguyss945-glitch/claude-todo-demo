@@ -251,20 +251,41 @@ def _blur_raster_too_big(layer, a, sig, sw, sh):
     return (x1 - x0) * (y1 - y0) * db * db > 2.5 * sw * sh
 
 
-SHARP_MAX_SCREENS = 6.0
+SHARP_MAX_SCREENS = 12.0           # ~44 MP at 2560x1440 (a 170 MB RGBA raster, near _density_cap's 48 MP)
+SHARP_REBAKE_S = 0.6               # a second big bake wanted this soon after the last one = the zoom is racing
+_sharp_bake_t = {}
 
 
 def _sharp_raster_too_big(layer, density, sw, sh):
-    """The sharp cache, like the blurred one, holds the WHOLE layer (its bounds) at the needed density. A strong optical
-    zoom (fz 2-3) or a near layer in a big close-up asks for a raster of many screens, rebuilt each time the push crosses
-    a density bucket (seconds per rebuild at 2560, and hundreds of MB). Past SHARP_MAX_SCREENS screens the layer is drawn
-    straight into the frame instead (the dynamic path): the same picture, cost bounded by the screen. Below it the cache
-    stays (a room shell at an ordinary push is drawn once and reused for the whole shot)."""
+    """The sharp cache, like the blurred one, holds the WHOLE layer (its bounds) at the needed density: under a strong
+    optical zoom (fz 2-3) or for a near layer in a big close-up that is a raster of many screens."""
     try:
         x0, y0, x1, y1 = layer.bounds
     except Exception:
         return False
     return (x1 - x0) * (y1 - y0) * density * density > SHARP_MAX_SCREENS * sw * sh
+
+
+def _sharp_dynamic(layer, density, sw, sh, t):
+    """Guard for the sharp cached path (the `_blur_raster_too_big` idea, made for sharp layers): a raster past
+    SHARP_MAX_SCREENS screens is still baked and reused while the camera is slow (one bake serves a whole slow push:
+    re-drawing a forest of vector trees every frame is 10x slower than one big bake), but when the zoom races (a fresh
+    big bake would be needed again within SHARP_REBAKE_S of film time) the layer is drawn straight into the frame instead
+    of re-baking several screens of pixels per frame; it is baked again once the zoom settles.
+    Measured at 2560 (Bunnyman film): a slow push on the woods (cold open, fz 2.45 + 3.5 %/s) stays on the cache, 0.16
+    s/frame (drawing it on every frame was 1.79 s); a racing zoom (fz 1 -> 3 in 1.2 s on the same woods) costs about the
+    same either way (one bake every ~1.4x of zoom thanks to _pick_density's headroom), so the threshold sits high, where
+    the raster's memory and _density_cap's upscale (a soft cache) are the real cost."""
+    key = (_base_key(layer), round(density, 4))
+    if key in _cache or not _sharp_raster_too_big(layer, density, sw, sh):
+        return False
+    bk = _base_key(layer)
+    if len(_sharp_bake_t) > 4096: _sharp_bake_t.clear()
+    tb = _sharp_bake_t.get(bk)
+    if tb is not None and abs(t - tb) < SHARP_REBAKE_S:
+        return True
+    _sharp_bake_t[bk] = t
+    return False
 
 
 def _draw_entry(cv, e, paint):
@@ -371,7 +392,7 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
             if l.cache:
                 need = a * max(1.0, l.cache_res)                            # px per layer design px
                 dens = _pick_density(l, need)
-                if _sharp_raster_too_big(l, dens, sw, sh):                  # a huge raster: draw it on the frame instead
+                if _sharp_dynamic(l, dens, sw, sh, t):                      # a huge raster under a racing zoom: draw it on the frame
                     cv.restore(); cv.save()
                     _draw_offscreen(cv, l, l.cache_t, M, sw, sh, gains, paint)
                     _tick('layers_sharp_dyn', t0)

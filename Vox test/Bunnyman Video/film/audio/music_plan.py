@@ -351,8 +351,10 @@ IDENTITY = [
     ('w380:hums+0.3', 'jingle', 0.3, 3.0, dict(version='hum_x', phrases=(2,), stop='fade')),
     # "Easter is in nine days." -- the first phrase on the music box, minor, winding down
     ('e385+0.5', 'jingle', 0.4, 3.2, dict(version='musicbox', minor=True, tempo=76.0, wind_down=True, stop='drag')),
-    # "...if you hear a little song tonight... that's just the outro." -- cheerful, and it ends on a soft hum
-    ('w411:song', 'jingle', 0.6, None, dict(version='outro', stop='fade')),
+    # "...if you hear a little song tonight... that's just the outro." -- and the song IS the outro: cheerful, from
+    # the moment the line ends, its last phrase given to a soft hum (9.7 s: the picture must hold its end card to
+    # about 1088.5 s; music_cues() extends the score's duration to the end of the last identity event)
+    ('e411+0.1', 'jingle', 0.6, None, dict(version='outro', stop='fade')),
 ]
 
 
@@ -480,9 +482,15 @@ def music_cues(lines=None, duration=None):
         lines, d0 = load_lines()
         duration = duration or d0 + 2.5
     duration = float(duration or max(l['end'] for l in lines) + 2.5)
+    idt = identity_events(lines)
+    duration = max(duration, max(e['t'] + OUTRO_LEN if e.get('version') == 'outro' else e['t'] + float(e.get('len') or 0)
+                                 for e in idt) + 0.6)
     return {'duration': round(duration, 2), 'intensity': intensity(lines, duration),
-            'events': sorted(events(lines) + identity_events(lines), key=lambda e: e['t']),
+            'events': sorted(events(lines) + idt, key=lambda e: e['t']),
             'track_map': track_map(lines)}
+
+
+OUTRO_LEN = 9.75                                          # jingle.render('outro') length (s): the end card holds for it
 
 
 def table(lines):

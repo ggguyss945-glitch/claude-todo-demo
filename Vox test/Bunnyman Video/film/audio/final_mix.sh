@@ -1,6 +1,6 @@
 #!/bin/bash
-# Rebuild the final mix after picture changes (the dummy film), from any directory:
-#   bash "Vox test/Dummy Video/film/audio/final_mix.sh"            cues -> mix -> measure -> preview_mix.mp4
+# Rebuild the final mix after picture changes (the Bunnyman film), from any directory:
+#   bash "Vox test/Bunnyman Video/film/audio/final_mix.sh"         cues -> mix -> measure -> preview_mix.mp4
 #   ... final_mix.sh --no-preview                                        skip the preview mux
 # Steps (each one is also fine to run by hand from film/):
 #   1. python3 film.py --cues                       cue sheets from the picture -> _work/cues/{sfx,music}_cues.json

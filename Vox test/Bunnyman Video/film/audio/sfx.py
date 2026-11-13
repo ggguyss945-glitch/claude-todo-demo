@@ -191,7 +191,8 @@ brackets; levels in LEVEL_LU (one-shots momentary max, beds integrated, LU rel t
     knock_family    beat=0.476, groups=[s, s, s], force, soft, door [inside]   THE family knock 2-3-2 on the jingle's
                     beat (knocks on beats 0, 1 | 3, 3.5, 4 | 6, 7); groups move each group into the narration's gaps
                     (spacing inside a group stays on the beat); soft=True: Grandma on the kitchen table (memory=True)
-    slot_flap       action='open'|'close'|'snap' [inside]   the brass mail slot: the spring hinge creak, the clack
+    slot_flap       action='open'|'hold' (dur)|'close'|'snap' [inside]   the brass mail slot: the spring hinge creak,
+                    held open (faint strain), let down, snapped shut
     girl_cry        dur, intensity, seed_voice (DUR) [slot]   the real Laurie crying (her own voice, voicesynth.cry)
     jingle          version ('speaker' | 'vhs' | 'parade' | 'musicbox' | 'hum' | 'hum_x' | 'girl' | 'knocks' |
                     'climax' | 'count' | 'outro' | 'studio'), dur, stop ('fade'|'cut'|'drag'), + jingle.render keys
@@ -3817,10 +3818,11 @@ def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, doo
     return y, onset_s(y, -12), (-6.0 if soft else 0.0), False
 
 
-def r_slot_flap(rng, sp, action='open', **_):
+def r_slot_flap(rng, sp, action='open', dur=None, **_):
     """The brass flap of the mail slot. 'open': pushed open from outside, slowly: the spring hinge creaks, the plate
     scrapes its frame, the brass rings faintly; 'close': let down gently; 'snap': snapped shut (a bright brass clack,
-    the door answering). Synthesised brass plate modes over the recorded mailbox / latch (police set) for the
+    the door answering); 'hold' (dur: held open while the voice comes through: the spring straining, the plate
+    trembling, very faint). Synthesised brass plate modes over the recorded mailbox / latch (police set) for the
     mechanism."""
     M = pool('mailbox', lambda: _has('slot_flap', 'mailbox') + _has('slot_flap', 'metal_click'), 'onset', gap=0.08,
              max_len=0.5, keep=-16)
@@ -3837,6 +3839,16 @@ def r_slot_flap(rng, sp, action='open', **_):
         g = M.get(rng, rj=0.05, fo=0.05) * 0.25
         y = _seq([(0.0, g), (0.05, cr * 0.6), (0.0, scr), (0.05, plate(0.5) * 0.08)], 0.2)
         return y, 0.0, 0.0, False
+    if action == 'hold':                                  # held open from outside (dur): the spring straining,
+        d = float(dur or 2.0); n = n_(d); ev = []         # the plate trembling in its frame: tiny ticks, faint creaks
+        t = rng.uniform(0.1, 0.4)
+        while t < d - 0.1:
+            ev.append((t, plate(0.25) * rng.uniform(0.01, 0.03)))
+            t += rng.uniform(0.25, 0.7)
+        tt = np.arange(n) / SR
+        strain = bp(noise(d, int(rng.integers(1 << 30))), 1800, 4500, 2) * (0.5 + 0.5 * np.sin(2 * np.pi * 0.7 * tt)) * 0.004
+        y = _seq([(0.0, st(strain))] + ev, 0.1)
+        return fade(y, 0.1, 0.2), 0.0, -8.0, False
     g = M.get(rng, rj=0.04, fo=0.05)
     v = 0.45 if action == 'close' else 1.0
     door = st(modal([110, 170, 260], [0.08, 0.06, 0.04], [1, 0.6, 0.35], 0.3, int(rng.integers(1 << 30)))) * 0.3 * v

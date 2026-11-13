@@ -83,6 +83,59 @@ bash tools/final_chain.sh > W/logs/final_chain.log 2>&1      # FINAL: 2560x1440 
 - **Music events** (the final mix, `audio/final_mix.sh` = `mix.py --plan full`, replaces these with `audio/music_plan.py`'s word-anchored events and keeps only the picture's timing: a plan hit, stinger, braam, sub drop, riser end or rule sting within 0.35 s of one of the picture's hit frames moves onto that frame; see "Sound: the final mix"): `theme` (the cheerful 1974 kids-show theme on the tape: 10.2, 32.9, 299.5 s), `motif`, `swell`, `riser` (peaking on the reveals), `braam`, `hit`, `stinger`, `sub_drop` (Owen's eyes close), `silence` (21 drop-outs before the scares), `pulse_on/off` (Mom's scream to the goodnight), `drone` (the doorway), `rule` (card stings), `end`.
 - Voice fx are on the timeline lines (`upstairs`, `dummy`, `tv`, `letter`, `memory`); see `../script/lines.py`.
 
+## Sound prep (the Bunnyman film)
+Everything below is in `audio/`; run from `film/`. The verdicts, the music map and the tests are measured, not guessed.
+- **Catalogue**: `python3 audio/epidemic_catalog.py --bunny` -> `audio/catalog_epidemic_bunny.json` (the bunny set
+  `W/samples/epidemic` first, then the dummy, delivery, police and mirror sets; 271 effects, 45 tracks; a rebuild reuses
+  every unchanged row and only recomputes `serves`). `library.py` and `score.py` read it first. `MAP` gives each file the
+  `sfx.py` names it can feed; `NOT` keeps the rejected files away from the older names.
+- **The owner's new files, judged one by one**: `python3 audio/review_sfx.py` measures all 80 (loudness, clipping,
+  floor, spectrum, codec low-pass, onsets, harmonic share, tonal clarity, stereo, and what a recogniser hears in the
+  crowds and voices) and draws `W/mix/review/sheet_*.png`; `--md` writes `W/mix/sfx_review.md` from its `DECISIONS`
+  (effects: 29 use, 21 process, 20 reject; music: 6 use, 4 reject; every reason written down; the appendix
+  `sfx_review.md.notes` covers the synthesis and the free library).
+- **The jingle**: `audio/jingle.py` is the ORIGINAL Pemberton's tune (D major, 2/4, 126 bpm; bars 5-6 climb the scale one
+  note per syllable of "close your eyes and count to se-ven", so June's count in the climax climbs the same scale in
+  D harmonic minor and stops on C#, one step short of home). `python3 audio/jingle.py [names]` renders every version
+  to `W/mix/jingle/` (vhs, vhs_cold_open, parade, speaker, speaker_near, musicbox, musicbox_minor,
+  musicbox_wind_down, hum, hum_x, knocks, girl, climax, count_1..7, outro, studio), checks each one
+  (`jingle_check.json`: the tune's notes found in the render, the voices' pitch against the melody) and draws
+  `jingle_sheet.png`. The cold-open version puts every note on the narrator's own syllable of "Hop, hop, hop
+  along..." while the band keeps a steady pulse (`COLD_OPEN_MELODY`, `COLD_OPEN_ANCHORS`). The family knock 2-3-2 is the
+  tune's own rhythm (`KNOCK_BEATS`).
+- **Voices made from the narration**: `audio/voicesynth.py` (WORLD, the cast settings of `tools/vo_voices.py`): `hum`
+  (the narrator's /m/ from 37 words, sung on the melody: Mom, Grandma, June, the old body), `sing` (the narrator's spoken
+  syllables re-timed and re-pitched onto notes: the real Laurie's broken "Hop... hop... hop along... the Bunnyman
+  sings his..."; a recogniser hears "...hop... The bunny man sings his"), `cry` (her crying: wails that crack, hiccup
+  sobs, shaky gasps). Analyses are cached in `W/cache/voicesynth/`.
+- **SFX**: `audio/sfx.py` `BUNNY_NAMES` (44 new names, the docstring lists every parameter): `ambience_woods`,
+  `owl_hoot`, `crowd_parade`, `hospital_corridor`, `hospital_room`, `burn_barrel`, `plastic_melt`, `egg_tap`, `egg_set`,
+  `egg_rattle`, `egg_open`, `ring_roll`, `ring_drop`, `ring_hand`, `oven_mitt`, `knock_family` (2-3-2 on the jingle's
+  beat, `groups` puts each group into the narration's gaps), `slot_flap` (open / close / snap), `girl_cry`, `jingle`
+  (any version as a sound in the scene), `attic_door`, `bulb`, `chest_lid`, `page_flip`, `diary_lock`, `window_smash`,
+  `door_crash`, `wet_drag`, `hatchet_step` (the Thunk lands 0.3 s after each tread), `doorknob`, `paper_under_door`,
+  `struggle` (wall / shake / slam / crack / full: restrained, no library screams), `key_outside`, `sirens_arrive`,
+  `vhs_pause`, `light_switch` (wall / porch / porch_off), `music_box_wind`, `flash_pop`, `dogs_search`, `bathtub`,
+  `body_fall_stairs`, `zipper`, `fridge_paper`, `curtain_close`, `peephole`. New spaces: `woods`, `door` (the hall
+  heard from inside the shut bathroom), `bathroom`, `slot`, `vhs`, `attic`. Aliases and keyword guesses cover loose names
+  (`family_knock`, `mail_flap`, `crying`, `song`, `hum`, `hatchet`, `thunk`, `fight`, `slam`, `crack`, `porch_light`...):
+  `python3 audio/sfx.py <name> out.wav --params '{...}'` renders one.
+- **Voice FX** (`audio/mix.py`, timeline `fx`): `door` (2.4 kHz top, the panel's boom, the crack under the door, the
+  hall, the tiled bathroom; -3 LU), `slot` (300 Hz-3.8 kHz, the slot's 1.1 kHz channel and 3.6 ms comb; -1.5 LU),
+  `memory` (Grandma warm and distant; -1.5 LU), `whisper` (dry, close, the breath's air lifted; 0 LU). An unknown fx is
+  left dry with a warning. `--who-fx` is now empty by default (the old `X=hall` would have put the old body in a hall).
+- **Music**: `audio/music_plan.py` (19 track sections, 172 intensity points, 135 tension events, 24 identity events;
+  `python3 audio/music_plan.py --table` prints the map) and `score.py` (`render_jingle`: the `jingle` event type; the new
+  tracks' varispeeds in `TRACKS`; the children's tunes in `VINTAGE`; `SHOW_DUCK['jingle']` and `JINGLE_LIFT` per version).
+  The score's duration runs to the end of the outro jingle: **the picture must hold its end card to about 1088.5 s**.
+- **The sound-design pass**: `audio/sfx_plan.py` ADD (112 cues anchored to the narration's words: every bed, every
+  off-screen sound the narration hears, the small foley of the close-ups) on top of the picture's sheet; a row is
+  skipped when the picture already has that sound within 1.5 s. EDIT is empty until the full-length checks.
+- **Tests**: `python3 audio/sfx_tests.py [1..8]` mixes 8 windows through the whole pipeline (mix.py with the plan) to
+  `W/mix/tests/NN_name.wav` + `.json` (every cue re-rendered and checked: sync, phone band, level against the voice and
+  the music; every identity layer's level), `--sheet` draws `W/mix/tests/tests_sheet.png`. One mix at a time (about
+  1 min each; the first run spends 2 min analysing the tracks into `W/cache/score/`).
+
 ## Sound: the final mix
 `bash audio/final_mix.sh` (from anywhere; about 7 min, peaks at 9 GB of RAM: never while a render runs) rebuilds everything after a picture change: `film.py --cues`, then `audio/mix.py ... --plan full --hits-db 4 --voice-ride 2.0` to `W/mix/final/` (`mix_en.wav`, the hard link `mix.wav`, `stems/`, `mix_report.json`, `cues_used/` = the two sheets as mixed), then `audio/measure_mix.py W/mix/final --plot` (`measure.txt`, `measure.json`, `measure_cues.json`, `measure_plot.png`), then the mux onto the preview `W/preview/preview_mix.mp4` (`--no-preview` skips it). `python3 audio/mix.py --check W/cues W/mix/final` says whether the mix is stale against the picture's sheets.
 - **Score**: `audio/music_plan.py` (the track map, the intensity arc, 110 tension events anchored to the narration's words, the identity layer: the show theme on the TV, Mister Winks's rotting theme, the music box). Final-mix revisions are marked `final:` in its EVENTS. The three hardest scares carry `boost` (score.py): the tape cry (462.0 s, after "That isn't me in the chair.", +6 dB, the studio roar on the same frame), "Goodnight, Owen." landing as Owen's eyes close (567.0 s, +5) and the twist, as Owen's eyes squeeze shut on screen after "Owen can't wink." (663.95 s, +5; review v3: it was on the cut to Owen, 663.1 s, on the tail of "click." and 0.12 s before "Owen", so the twist line only cleared it by 1-3 dB in the speech band; the drop-out now runs 660.1-663.9 s and the line is spoken into it). Each one sits after a drop-out that leaves the line alone. Review v2: 22 hits, stingers and sub drops on ordinary lines were removed (4.05 hits/min now) and the reveal hits that stay are +2 dB (`HITS_LIFT`); every hit, stinger and braam has a 150 Hz-2.5 kHz crack layer 6 dB under its body so it reads on a phone; the classic riser into the reveal word is back on ten reveals; the rule stings and the hits that followed a word or a jaw snap moved off the word (`nosnap`). The identity layer is 6 dB louder (`IDENTITY_LIFT`) and the dark track steps back 10 dB under the TV theme and 7 dB under the Winks theme (`SHOW_DUCK`): the TV bursts on with the theme blaring for 0.5 s (`blast`), and the rotten rimshot after the punchline is at 0.8. The ending is near silent from "See you in the morning, kiddo." to the cut to black (702.9-707.6 s): only the room, a low thump after "kiddo" and the final line, then the end hit and cadence.

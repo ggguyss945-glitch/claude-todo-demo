@@ -43,7 +43,7 @@ narrator's "Hop" on beat 0, "Bun" on 4, "Close" on 8, "Find" on 12); otherwise t
 
 CLI: python3 audio/jingle.py [--out W/mix/jingle] [names...]    renders every version (or the names) to wav, checks
      each one (loudness, peak, band shares, the melody's notes found by pitch tracking, for the voices the F0 against
-     the melody, for the girl what a recogniser hears) into jingle_check.json and draws jingle_sheet.png
+     the melody) into jingle_check.json and draws jingle_sheet.png (every version's spectrogram)
 """
 import json, os, sys
 import numpy as np, soundfile as sf
@@ -162,10 +162,19 @@ def toy_piano(midi, vel, rng, detune_cents=0.0):
     y *= (1 - np.exp(-t / 0.0008))
     box = SX.modal([212.0, 488.0, 930.0], [0.05, 0.03, 0.015], [1.0, 0.6, 0.3], 0.15, int(rng.integers(1 << 30)))
     ham = SX.lp(SX.noise(0.004, int(rng.integers(1 << 30))) * np.hanning(int(0.004 * SR)), 3500, 2)
+    y *= _tail_fade(len(t))                             # the rod still rings when the buffer ends: never a click
     out = y.astype(np.float32) * vel
     out[:len(box)] += box * 0.10 * vel
     out[:len(ham)] += ham * 0.15 * vel
     return out
+
+
+def _tail_fade(n, frac=0.3):
+    """1 ... 1 then a cosine fade over the last `frac` of n samples."""
+    w = np.ones(n)
+    k = max(2, int(n * frac))
+    w[-k:] = np.cos(np.linspace(0, np.pi / 2, k)) ** 2
+    return w
 
 
 def music_box(midi, vel, rng, detune_cents=0.0, decay=1.0):
@@ -180,6 +189,7 @@ def music_box(midi, vel, rng, detune_cents=0.0, decay=1.0):
          + 0.22 * np.sin(2 * np.pi * f * 5.43 * t + ph[2]) * np.exp(-t / 0.22)
          + 0.06 * np.sin(2 * np.pi * f * 11.9 * t + ph[3]) * np.exp(-t / 0.05))
     y *= (1 - np.exp(-t / 0.0004))
+    y *= _tail_fade(len(t))                             # the tine still rings when the buffer ends: never a click
     click = SX.hp(SX.noise(0.002, int(rng.integers(1 << 30))) * np.hanning(int(0.002 * SR)), 2500, 2) * 0.08
     out = y.astype(np.float32) * vel
     out[:len(click)] += click * vel
@@ -257,7 +267,11 @@ def _put(buf, t, y, gain=1.0, pan=0.0):
         y = SX.pan(y, pan)
     a, b = max(0, i), min(len(buf), i + len(y))
     if b > a:
-        buf[a:b] += y[a - i:b - i] * gain
+        seg = y[a - i:b - i] * gain
+        if b - i < len(y):                              # cut by the buffer's end: fade the last 80 ms, never click
+            k = min(len(seg), int(0.08 * SR))
+            seg = seg.copy(); seg[-k:] *= (np.cos(np.linspace(0, np.pi / 2, k)) ** 2)[:, None]
+        buf[a:b] += seg
 
 
 def _melody(minor=False, octave=0):
@@ -605,12 +619,13 @@ def render(version, anchors=None, tempo=None, seed=0, **kw):
         rng = np.random.default_rng(seed + int(kw.get('n', 1)))
         nn = int(np.clip(kw.get('n', 1), 1, 7))
         m = COUNT_MIDI[nn - 1]
-        L = 4.5
+        L = 6.0
         buf = np.zeros((int(L * SR), 2), np.float32)
         for dc in (-22, 19):
             _put(buf, 0.0, music_box(m + 12, 0.5, rng, dc, decay=1.6), 1.0, 0.35 if dc > 0 else -0.35)
         _put(buf, 0.005, low_piano(m - 24, 0.55, nn % 2), 1.0, 0.0)
         _put(buf, 0.0, SX.st(SX.sub_boom(hz(m - 36) * 1.4, hz(m - 36), 1.8, 0.0)) * 0.3, 1.0, 0.0)
+        buf *= _tail_fade(len(buf), 0.35)[:, None].astype(np.float32)
         y = _wow(buf, depth=0.005, hz_=0.3, fl=0.0, seed=seed)
         y = SX.reverb(SX.lp(y, 6000, 2), 'hall', 0.3, 0.02)
         if kw.get('cut', nn == 7):                        # "Seven": the note is cut dead after 0.32 s
@@ -741,6 +756,33 @@ def main():
         print(fn, json.dumps({k: v for k, v in r.items() if k != 'info'}), flush=True)
     json.dump(chk, open(pj, 'w'), indent=1)
     print('wrote', pj)
+    sheet(out)
+
+
+def sheet(out=OUT):
+    """out/jingle_sheet.png: every rendered version's spectrogram (log frequency) with its check line."""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    pj = os.path.join(out, 'jingle_check.json')
+    chk = json.load(open(pj)) if os.path.exists(pj) else {}
+    files = sorted(f for f in os.listdir(out) if f.endswith('.wav'))
+    fig, axs = plt.subplots(len(files), 1, figsize=(15, 1.9 * len(files)), dpi=72)
+    for ax, f in zip(np.atleast_1d(axs), files):
+        x = sf.read(os.path.join(out, f), dtype='float32', always_2d=True)[0].mean(1)
+        fr, t, S = signal.spectrogram(x, SR, nperseg=2048, noverlap=1536)
+        S = 10 * np.log10(S + 1e-14); vm = np.percentile(S, 99.5)
+        ax.pcolormesh(t, fr, S, shading='auto', cmap='magma', vmin=vm - 75, vmax=vm, rasterized=True)
+        ax.set_yscale('log'); ax.set_ylim(60, 12000)
+        c = chk.get(f[:-4], {})
+        mel = c.get('melody') or {}
+        ax.set_title(f"{f}  |  {c.get('dur')} s, {c.get('lufs')} LUFS, peak {c.get('peak_db')}"
+                     + (f", tune: {mel.get('rank1')}/{mel.get('notes_checked')} notes the strongest new pitch"
+                        if mel else ''), fontsize=8, loc='left')
+    plt.tight_layout()
+    p = os.path.join(out, 'jingle_sheet.png')
+    plt.savefig(p)
+    print('wrote', p)
 
 
 if __name__ == '__main__':
