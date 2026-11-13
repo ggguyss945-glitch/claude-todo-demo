@@ -296,30 +296,36 @@ def line_bounds(n):
 en_st, en_en = line_bounds(len(LINES))
 
 
-def silence_bounds(st, en, thr=-70.0, min_gap=0.10):
-    """An edited narration with true silence between lines (this film's tools/vo_edit.py): every boundary sits in the
-    longest stretch below thr dBFS (5 ms RMS, 1 ms hop) between the last word of one line and the first word of the
-    next; the line ends where that silence starts and the next begins where it ends (to the millisecond). Boundaries
-    without such a silence keep the level-based bounds. Returns (starts, ends, number of boundaries placed)."""
+def silence_bounds(st, en, thr=-70.0, min_gap=0.12):
+    """An edited narration with true silence between lines (this film's tools/vo_edit.py): every silent stretch (below
+    thr dBFS, 5 ms RMS at 1 ms hops, at least min_gap long) is a candidate boundary; the boundary after line k is the
+    longest one whose middle lies between the last word of line k and the first word of line k+1 (+0.15 s), or, when a
+    word is badly timed and there is none, between the two lines' median word times; the line ends where that silence
+    starts and the next line begins where it ends, to the millisecond.
+    Boundaries without such a silence keep the level-based bounds. Returns (starts, ends, number placed)."""
     w = int(0.005 * SR); h = int(0.001 * SR)
     cs = np.concatenate([[0.0], np.cumsum(en48.astype(np.float64) ** 2)])
     idx = np.arange(0, len(en48) - w, h)
     d5 = 10 * np.log10((cs[idx + w] - cs[idx]) / w + 1e-20)
     quiet = d5 < thr
+    q = np.concatenate([[False], quiet, [False]])
+    dq = np.diff(q.astype(np.int8)); qa = np.where(dq == 1)[0]; qb = np.where(dq == -1)[0]
+    gaps = [(a_ / 1000, b_ / 1000) for a_, b_ in zip(qa, qb) if (b_ - a_) / 1000 >= min_gap]
+    mids = np.array([(a_ + b_) / 2 for a_, b_ in gaps])
+    med = {}
+    for i in range(len(LINES)):
+        if i in fk and i in lk and lk[i] >= fk[i]: med[i] = float(np.median([words[k][1] for k in range(fk[i], lk[i] + 1)]))
+        elif i in first: med[i] = (first[i] + last[i]) / 2
     st, en = list(st), list(en); placed = 0
     for k in range(len(LINES) - 1):
-        if k not in last or k + 1 not in first: continue
-        lo, hi = int(last[k] * 1000), int((first[k + 1] + 0.15) * 1000)
-        if hi <= lo: continue
-        q = np.concatenate([[False], quiet[lo:hi], [False]])
-        dq = np.diff(q.astype(np.int8)); a_ = np.where(dq == 1)[0]; b_ = np.where(dq == -1)[0]
-        if not len(a_): continue
-        m = int(np.argmax(b_ - a_))
-        if (b_[m] - a_[m]) / 1000 < min_gap: continue
-        e_k = (lo + a_[m]) / 1000 + 0.004; s_k = (lo + b_[m]) / 1000 + 0.001
-        en[k] = round(e_k, 3); st[k + 1] = round(s_k, 3); placed += 1
-    f0_ = int(np.argmax(~quiet)); st[0] = max(0.0, f0_ / 1000)
-    l0_ = len(quiet) - int(np.argmax(~quiet[::-1])); en[-1] = l0_ / 1000 + 0.005
+        if k not in med or k + 1 not in med or med[k + 1] <= med[k]: continue
+        near = [g for g, m in zip(gaps, mids) if k in last and k + 1 in first and last[k] < m < first[k + 1] + 0.15]
+        cand = near or [g for g, m in zip(gaps, mids) if med[k] < m < med[k + 1]]
+        if not cand: continue
+        a_, b_ = max(cand, key=lambda g: g[1] - g[0])
+        en[k] = round(a_ + 0.004, 3); st[k + 1] = round(b_ + 0.001, 3); placed += 1
+    if gaps and gaps[0][0] == 0.0: st[0] = round(gaps[0][1] + 0.001, 3)
+    if gaps and gaps[-1][1] >= len(quiet) / 1000 - 0.002: en[-1] = round(gaps[-1][0] + 0.004, 3)
     return st, en, placed
 
 

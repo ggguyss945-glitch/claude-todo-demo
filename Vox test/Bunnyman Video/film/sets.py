@@ -10046,3 +10046,11 @@ SETS.update({'gp_hall': gp_hall, 'gp_kitchen': gp_kitchen, 'gp_living': gp_livin
 __all__ += ['HView', 'gp_hall', 'gp_kitchen', 'gp_living', 'gp_den', 'gp_studio', 'hospital', 'museum', 'street_morning', 'stage_1962',
             'bedroom_doorway', 'gp_insert', 'GP_INSERTS', 'rule_card_lie', 'shaky_text', 'laugh_waves', 'studio_content', 'squeeze_pulses',
             'monitor_beeps', 'ecg', 'pendulum_ticks', 'tv_level', 'museum_van', 'LETTER_RULES', 'PS_TEXT']
+
+
+# ---------------------------------------------------------------------------------------------- Bunnyman film additions
+# The Bunnyman film's sets (the Orchard Road house on one floor plan, the yard and the treeline, the woods and the bridge,
+# 1987, the hospital, the inserts) live in sets_bunny.py, run here in this module's namespace (so they are part of `sets`).
+# See its docstring and SETS.md.
+_BUNNY_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_bunny.py')
+exec(compile(open(_BUNNY_SETS_SRC).read(), _BUNNY_SETS_SRC, 'exec'))

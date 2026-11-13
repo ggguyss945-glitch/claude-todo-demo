@@ -36,7 +36,7 @@ SLIPS = [  # (where in the take, what the TTS did, what the edit does, how it wa
     ('964.72-965.74 "See leave well"', 'an extra vowel after the S of "Sleep" and a v for its p',
      'the S runs straight into "lee" (8 ms equal-power crossfade, the extra vowel 964.952-965.104 cut) and the v '
      '(965.300-965.425) becomes a 70 ms p closure', 'both: "Sleep well."'),
-    ('454.059 "facing | the back door"', 'the two uploaded parts meet here (a 0.011 step in the waveform)',
+    ('454.059 "facing / the back door"', 'the two uploaded parts meet here (a 0.011 step in the waveform)',
      '12 ms equal-power crossfade across the seam', 'both: "facing the back door" (a 40 ms gap made Whisper hear "facing in")'),
     ('56.94, 884.64, 903.30', 'TTS noises: a voiced "huh" after "hospital.", a voiced blip after "magic trick?", '
      'an "mm-hmm" after "cup of coffee."', 'dropped with the gaps', '-'),
@@ -150,6 +150,7 @@ def main():
              'don\'t ask", "tonight... [0.5] that\'s just the outro"); a pause inside a word (the closure before a final s or '
              'release) is never touched.')
     g = c['gaps']
+    w.append('')
     w.append(f'Measured on the file (last sound above -60 dBFS to the next first sound): {g["n"]} gaps, largest '
              f'difference from the map {g["max_abs_dev_vs_map"]} s ({g["n_off_map"]} over 30 ms: lines whose quiet tails '
              f'or onsets sit near -60 dBFS), {len(g["under_0.15"])} under 0.15 s, {len(g["over_2.0"])} over 2 s (the outro '
@@ -169,7 +170,8 @@ def main():
         w.append('|---|---|---|')
         used = Counter(v['voice'] for v in e['voices'])
         for k, s in VV.VOICES.items():
-            w.append(f'| {k} | {used.get(k, 0)} lines | {s["desc"]} |')
+            n_ = used.get(k, 0)
+            w.append(f'| {k} | {n_} line{"" if n_ == 1 else "s"} | {s["desc"]} |')
         w.append('')
     except Exception as ex:
         w.append(f'(voice table unavailable: {ex})\n')

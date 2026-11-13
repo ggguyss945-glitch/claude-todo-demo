@@ -16,8 +16,16 @@ All commands run from this folder (`Vox test/Dummy Video/film`). The work dir is
 | `audio/` | Sound pipeline (the sound step). It reads `W/cues/*.json`. |
 
 ## Inputs
-- `W/align/timeline.json` (339 lines), `W/align/asr_cache.json` (word times), `W/align/vo_en.wav` (the voiceover, 48 kHz, 707.5 s). Written by `tools/align.py`.
+- `W/align/timeline.json` (412 lines), `W/align/asr_cache.json` (word times), `W/align/vo_en.wav` (the edited voiceover, 48 kHz, 1079.3 s). Written by `tools/align.py` from `W/narration/narration_en.wav` (see Narration below).
 - Script: `../script/lines.py` and `../script/narration_en.txt`.
+
+## Narration (the voiceover edit)
+The owner's raw TTS take (`W/narration/raw/narration_raw_24k.wav`, 970.8 s, two parts joined) is edited, never re-voiced for the narrator:
+- `tools/vo_asr.py <wav> <json>`: Parakeet words with start and end times (+ a rescue pass for the short words the VAD skips) -> `W/narration/asr_raw.json`.
+- `tools/vo_edit.py analyze | pacing [--force] | build | check`: maps every line of `script/lines.py` onto the take's sound islands, drops breaths / clicks / lip thumps / the TTS's noises, repairs the TTS slips (FIXES: "eleven seven", "Ye knocks", "Yah. I I", "c-corner", "c-cup", "See leave well", the part seam), re-paces every line boundary from `W/narration/pacing_map.md` (the source of truth: edit a gap there and rebuild), levels each line (one gain per line), 70 Hz high-pass, a light de-esser, 48 kHz 24-bit -> `narration_clean.wav`; then `tools/vo_voices.py` re-voices the quoted words of Mom, June, the girl in the Bunnyman, Grandma, the dying man and the old body (WORLD pitch / formant / breath) -> `narration_en.wav`. Every source span and gap: `edit_list.json`.
+- `tools/vo_check.py` (or `vo_edit.py check`): before / after strips and scans (`W/narration/tests/`); `tools/vo_report.py` -> `W/narration/voice_report.md`.
+- Then `python3 tools/align.py --write-pauses` (rewrites the pause / pace of every row of `script/lines.py`). With silence between all lines, align.py places every boundary in the silence (to the millisecond) and places a line the recogniser cannot hear (June's "Yeah.") on the sound between its neighbours.
+- Order after any change: `vo_edit.py build`, `vo_edit.py check`, `rm -rf _work/align && align.py --write-pauses`, `vo_report.py` (about 6 min on 2 cores).
 
 ## The shot list
 ```
