@@ -2628,7 +2628,7 @@ def plan_rules56(F, t, e, w, C, T, KP):
       cam=dict(mv='push', x=960, y=580))
     # when I turn around, Owen is gone (and so is the dummy on the bookcase)
     C(T(242), 'living', view='couch', tv=TVON, lamp=0.5, focus=2.85, ppl=[P(M, at='couch_r', act=_A(sitp(), setp(turn=0.45), ex('fear')))],
-      cam=KP(T(242), T(243), 1000, 560, 1.0, 1080, 540, 1.3), hit=w(242, 'gone') + 0.05, music=[(w(242, 'gone'), 'stinger', 0.85)])
+      cam=KP(T(242), T(243), 1000, 560, 1.0, 1080, 540, 1.3), hit=e(242) - 0.05, music=[(w(242, 'gone'), 'stinger', 0.85)])   # the impact after "gone.", not on it
     # the den: Owen in Grandpa's armchair, the dummy on his knee, his hand inside up to the wrist, grinning
     OL = lambda **k: dict(dict(who=O, side=-1, act=_A(lambda a, s: a.vent_pose(side=-1), ex('kid_grin')),
                                dact=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=1, rate=0.9)), **k)
@@ -2654,9 +2654,9 @@ def plan_rules56(F, t, e, w, C, T, KP):
     pulls = [tp0 + 0.4 + (tp1 - tp0 - 0.6) * k / 3 for k in range(3)]
     jerk = lambda tt: sum(-26.0 * math.exp(-max(0.0, tt - p_) * 5.0) * (tt >= p_) for p_ in pulls)
     C(T(254), 'den', lap=OL(act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(t(255))), jerk=jerk),
-      ppl=[P(M, at=('h', -0.85, 2.15), act=_A(turned(-0.6), lambda a, s: a.pull_dummy(tp0, tp1), lambda a, s: a.scream(w(254, 'screams') - 0.35, w(254, 'grabs') + 1.6)))],
+      ppl=[P(M, at=('h', -0.85, 2.15), act=_A(turned(-0.6), lambda a, s: a.pull_dummy(tp0, tp1), lambda a, s: a.scream(e(253) + 0.02, w(254, 'grabs') + 1.6)))],
       cam=KP(T(254), T(255), 900, 580, 1.25, 860, 600, 1.6, shake=3.0),
-      sfx=[(w(254, 'screams') - 0.35, 'scream', 3, -0.2, 'inside', dict(who='mom'))], music=[(w(254, 'grabs'), 'hit', 0.5)])
+      sfx=[(e(253) + 0.02, 'scream', 3, -0.2, 'inside', dict(who='mom'))], music=[(w(254, 'grabs'), 'hit', 0.5)])
     C(T(255), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.expr('scream', s.t0 - 0.3), lambda a, s: a.cry(s.t0)),
       jerk=lambda tt: jerk(tt) * 2.5, cam=dict(mv='hand', x=880, y=540), sfx=[(t(255) - 0.3, 'shriek', 0, 0.1, 'inside', dict(who='owen'))])   # before "Owen shrieks"
     # "Pull," says the dummy, "and his hand comes with me.": one close-up of him, shaken by Mom's pulls (her scream off screen)
@@ -2738,7 +2738,7 @@ def plan_end(F, t, e, w, C, T, KP):
     C(w(290, 'something') - 0.1, 'ins', name='back_slot', kw=lambda tt, a=w(290, 'slides') - w(290, 'something') - 0.2: dict(paper=0.9 * ease_in_out(clamp((tt - a) / 1.3))),
       cam=dict(mv='push', x=960, y=620, rate=0.045), sfx=[(w(290, 'slides') - 0.3, 'paper', 2, 0, 'close', dict(kind='slide', dur=1.3))])
     C(T(291), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(291), 960, 560, 1.0), (T(292), 960, 540, 1.2, 'in_out')]),
-      sfx=[(t(291) + 0.1, 'paper', 0, 0, 'close', dict(kind='unfold'))])
+      sfx=[(t(291) - 0.2, 'paper', 4, 0, 'close', dict(kind='unfold'))])   # in the gap before the line
     C(T(292), 'ins', name='letter', cam=dict(mv='keys', keys=[(T(292), 960, 760, 1.35), (T(293), 960, 820, 1.55, 'in_out')]))
     C(T(293), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(293), 880, 440, 1.45), (T(295), 920, 520, 1.55, 'in_out')]), music=[(t(293), 'motif', 0.55, 4)])
     C(T(295), 'bust', who=Y, bg='den', act=_A(ex('fear'), setp(wet=0.8)), cam=dict(mv='creep', x=960, y=580))

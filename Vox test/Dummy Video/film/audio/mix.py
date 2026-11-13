@@ -887,6 +887,7 @@ def main():
     von = acth_key > 0.5
     onsets = (np.flatnonzero(von[1:] & ~von[:-1]) + 1) / SR
     spare = np.ones(N, np.float32)
+    bwin = np.zeros(N, np.float32)          # the three boosted scares' spare windows (the hits limiter lets them up)
     big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
     for h in hit_times + mus_hits:
         long_ = any(abs(h - x) < 0.01 for x in big)
@@ -897,6 +898,7 @@ def main():
         a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue
         spare[max(0, a):min(N, b)] = 0.0
+        if long_: bwin[max(0, a):min(N, b)] = 1.0
         if c > b:
             r = np.linspace(0, 1, c - b, dtype=np.float32)[:max(0, min(N, c) - b)]
             spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
@@ -910,8 +912,9 @@ def main():
 
     def hits_limit(hx, act_h):
         """Variable-ceiling look-ahead peak limiter on the hits bus: ceiling = voice p99.9 - 3 dB in the gaps, - 9 dB more
-        while a line is spoken (outside each hit's spare window)."""
-        ceil = (vpk * 10 ** ((-3.0 - 9.0 * act_h * spare) / 20)).astype(np.float32)
+        while a line is spoken (outside each hit's spare window), + 6 dB inside the three boosted scares' spare windows
+        (v2.1: at -3 dB the scares' transients were capped and the film's loudest moments became narration phrases)."""
+        ceil = (vpk * 10 ** ((-3.0 + 6.0 * bwin - 9.0 * act_h * spare) / 20)).astype(np.float32)
         pk = np.abs(hx).max(1)
         req = np.minimum(1.0, ceil / np.maximum(pk, 1e-9)).astype(np.float32)
         L = int(0.004 * SR)

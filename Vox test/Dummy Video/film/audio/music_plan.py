@@ -186,7 +186,7 @@ EVENTS = [
     # rule 1
     ('e59-0.5', 'silence', 0.5, 0.5), ('s60', 'hit', 0.7, None),          # "The case is empty."
     ('s63', 'silence', 0.6, 1.8),                      # "From the kitchen, there's a sound." (the spoon alone)
-    ('s68', 'swell', 0.45, 9.35),                      # Mister Winks in Grandpa's chair (final: peaks in the gap
+    ('s68', 'swell', 0.38, 9.4),                       # Mister Winks in Grandpa's chair (final: peaks in the gap
     #   after "In front of him is a mug of coffee.", not on it)
     ('s68', 'hit', 0.6, None),                         # final: the reveal cut (the picture's impact) gets the score too
     ('s72', 'silence', 0.5, 1.0),                      # "Two sugars." (v2: its sub drop removed: too many hits)
@@ -237,7 +237,7 @@ EVENTS = [
     ('e217', 'hit', 1.0, None, {'boost': 6.0}),        # final: the hardest hit of the film, with the audience laughing
     ('e217', 'braam', 1.0, 3.0),       #   (the hit is the punch; the braam's body stays lower: at +6 it
     #   sat 5 LU over "And the studio audience laughs.")
-    ('s225', 'swell', 0.5, 6.3),                       # the real Walter on his knee, begging -> (final: peaks in the
+    ('s225', 'swell', 0.42, 6.3),                      # the real Walter on his knee, begging -> (final: peaks in the
     #   gap after "...in front of millions.", 0.75 -> 0.65)
     ('w226:laughed', 'stinger', 0.7, None),            # "And everyone laughed."
     ('s234-0.1', 'rule', 0.75, None, {'nosnap': True}),
@@ -272,8 +272,8 @@ EVENTS = [
     #   (was on the narrated "Click", masking it)
     # v2 (m13): the classic riser into the reveal word (film.py's reveal list, kept by the full plan now)
     ('s60', 'riser', 0.5, 3.0), ('s68', 'riser', 0.5, 3.0), ('w108:turned', 'riser', 0.5, 3.0), ('w132:turns', 'riser', 0.5, 3.0),
-    ('w144:empty', 'riser', 0.55, 3.0), ('s157-0.12', 'riser', 0.55, 3.0, {'nosnap': True}), ('w161:hand', 'riser', 0.55, 3.0),
-    ('s196', 'riser', 0.55, 3.0), ('w210:camera', 'riser', 0.55, 3.0), ('w242:gone', 'riser', 0.5, 3.0),
+    ('w144:empty', 'riser', 0.55, 3.0), ('s157-0.12', 'riser', 0.4, 3.0, {'nosnap': True}), ('w161:hand', 'riser', 0.55, 3.0),
+    ('s196', 'riser', 0.55, 3.0), ('w210:camera', 'riser', 0.55, 3.0),   # (w242:gone dropped, v2.1: it masked "gone.")
     ('w311:actually', 'riser', 0.55, 3.0),
     # the ending
     ('s321', 'stinger', 0.55, None),                   # "I scream it."
