@@ -599,15 +599,14 @@ def _leg_chain(sp, B, P, side):
             A = A + (Ak - A) * kn
             K, A = _ik(H, A, _THIGH, _SHIN, pole)
             return H, K, A, 0.0
-        # knee on the floor: the knee goes down and a little forward, the shin lies back along the floor
+        # knee on the floor: the knee goes down and a little forward, the shin lies back along the floor; on the way down
+        # the foot stays on the floor (it slides back onto its toes) while the knee bends down to meet the floor
         Kk = _v3(hipx * 1.05, -30.0, 30.0 if knees < 1.5 else 70.0)
-        Ks, As = _ik(H, A, _THIGH, _SHIN, pole)
-        K = Ks + (Kk - Ks) * kn
-        # keep the thigh length: slide the knee along the hip-knee line
-        d = K - H; L = float(np.linalg.norm(d)) or 1.0
-        K = H + d / L * min(L, _THIGH + 2.0) if L > _THIGH + 2.0 else K
-        Ak = K + _v3(0.0, -8.0, -_SHIN)
-        A = As + (Ak - As) * kn
+        Af = Kk + _v3(0.0, -8.0, -_SHIN)
+        A = A + (Af - A) * kn
+        A[1] = -38.0 - lift
+        Ks, _ = _ik(H, A, _THIGH, _SHIN, _v3(0.08 * side, 0.35, 1.0))
+        K = Ks + (Kk - Ks) * (kn ** 2)
         pitch = 1.25 * kn                               # toes down behind
         return H, K, A, pitch
     K, A = _ik(H, A, _THIGH, _SHIN, pole)
@@ -775,8 +774,6 @@ def _draw_paw(c, sp, shape, x, y, scale, angle, side, det):
         hc.shape(oval(0, 26, 15, 12), pc, hc.lw * 0.45)
         for k, (px, py) in enumerate(((-15, 50), (-5, 57), (6, 57), (16, 50))):
             hc.shape(oval(px, py, 5.5, 6.5), pc, hc.lw * 0.35)
-    elif pad is not None and det >= 1 and False:
-        pass
     if det >= 1 and grooves: hc.line(_multi(grooves), hc.lw * 0.55, cl['fur_dp'], 210)
     hc.line(u, hc.lw * 0.95)
 
@@ -1612,10 +1609,9 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     c.fill(hair, hc)
     with c.clip(hair):
         c.radial(None, -30, -92, 180, [(0, hhi, 125), (0.5, hc, 0), (1, hsh, 205)], clip=False)
-        if style in ('bob', 'loose', 'chin', 'chin_neat') and det >= 1:      # a soft sheen band across the crown
-            Xs, Ys, Vs = _sph(hm, np.linspace(-1.0, 1.0, 9), np.full(9, -96.0), grow)
-            m = Vs > 0.05
-            if m.sum() > 2: c.line(_pts_path(Xs[m], Ys[m], False), c.lw * 1.6, '#ffffff', 20)
+        if style in ('bob', 'loose', 'chin', 'chin_neat') and det >= 1:      # a soft sheen on the crown
+            gx, gy, gv = hm.map1(-30.0, -96.0, grow)
+            if gv > 0.0: c.glow(gx, gy, 46, 16, '#ffffff', 34)
         if style == 'side_short' or style == 'doc':
             # grey at the temples
             for sd in (-1, 1):
@@ -1658,15 +1654,15 @@ def _hair_region(c, hm, sp, P, det, sil, t):
         else: _pigtails(c, hm, sp, P, det, t, behind=False)
     if style in ('chin', 'loose') and det >= 1 and hm.map1(0, 0)[2] > 0.2:      # a loose strand or two over the face
         pp = 1.0 if sp['part'] >= 0 else -1.0
-        n_ = 1 if style == 'chin' else 3
+        n_ = 1 if style == 'chin' else 2
         for k in range(n_):
-            ph = -pp * np.linspace(0.05 + 0.12 * k, 0.5 + 0.1 * k, 6)
-            ys = np.linspace(-80.0, -20.0 + 18 * k + 30 * mess, 6)
+            ph = -pp * np.linspace(0.42 + 0.14 * k, 0.78 + 0.1 * k, 6)
+            ys = np.linspace(-84.0, -10.0 + 22 * k + 30 * mess, 6)
             X_, Y_, V_ = _sph(hm, ph, ys, grow * 0.7)
             m = V_ > 0.0
             if m.sum() > 2:
                 q = _pts_path(X_[m], Y_[m], False)
-                c.line(q, c.lw * 0.9, LINE); c.line(q, c.lw * 0.5, hc)
+                c.line(q, c.lw * 0.55, mix(hc, '#000000', 0.45), 220); c.line(q, c.lw * 0.28, hc)
     # brows over the fringe so worry / fear always read
     if style in ('bob', 'loose', 'chin', 'pigtails', 'pigtails_hi') and hm.map1(0, 0)[2] > -0.3:
         for side in (-1, 1): _brow(c, hm, sp, P, side, None)
@@ -2151,7 +2147,7 @@ def _scratches(c, P2, widths, u0, det, amt, seed=0):
     """Mom's forearms scratched to ribbons: thin raw red lines (some beaded) across the bare forearm from u0 to the wrist."""
     if amt <= 0.01: return
     ls, beads = [], []
-    n = int(3 + 6 * amt)
+    n = int(5 + 9 * amt)
     for k in range(n):
         u = u0 + (0.97 - u0) * (k + 0.5) / n
         x, y = _arm_pt(P2, u)
@@ -2211,8 +2207,6 @@ def _draw_arm3(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     _cloth_shade(c, sl, sleeve_sh, 165, 1.0, 12 * pts[0][2])
     if det >= 1:
         c.texture(sl, 'fabric', 0.09, 0.6)
-        if o == 'pj3':
-            pass
     c.line(sl, c.lw)
     if det >= 1 and ue > 0.55:
         ex, ey = P2[1]
@@ -2373,19 +2367,27 @@ def _p_diary(c, det, t, P=None, open_=False):
 
 
 def _p_dress_tiny(c, det, t, P=None, age=1.0):
-    """Laurie's tiny yellow Easter dress from the toy chest, grey with age; held by the collar, it hangs down."""
-    y = mix('#f2c84b', '#b9b4a2', 0.75 * age); ysh = mix('#c99a24', '#8a8676', 0.75 * age)
-    sw = 1.2 * math.sin(t * 1.3)
-    d = smooth([(-6, 0), (6, 0), (9, 4), (8, 14), (14 + sw, 40), (0 + sw, 42), (-14 + sw, 40), (-8, 14), (-9, 4)], True, 0.5)
-    c.fill(d, y); c.fill(_crescent(d, 2.5, 0), ysh, 170)
-    if det >= 1:
-        c.line(_multi([poly([(k * 3.0, 16), (k * 4.2 + sw, 40)], False) for k in (-2, -1, 1, 2)]), c.lw * 0.3, ysh, 170)
-        c.fill(rect(-8, 13, 16, 3), mix('#fbfaf4', '#b9b4a2', 0.7 * age))
-    col = mix('#fbfaf4', '#b9b4a2', 0.6 * age)
+    """Laurie's tiny yellow Easter dress from the toy chest, grey with age; held by the collar it hangs down: puff
+    sleeves, a round white collar, a sash, a full gathered skirt with a lace hem (about 60 cm long)."""
+    y = mix('#f2c84b', '#b9b4a2', 0.72 * age); ysh = mix('#c99a24', '#8a8676', 0.72 * age)
+    wc = mix('#fbfaf4', '#c9c4b2', 0.6 * age)
+    sw = 1.4 * math.sin(t * 1.3)
+    bod = smooth([(-8, 1), (8, 1), (10, 10), (9, 22), (-9, 22), (-10, 10)], True, 0.5)
+    sk = smooth([(-9, 22), (9, 22), (19 + sw, 52), (10 + sw, 56), (0 + sw, 57), (-10 + sw, 56), (-19 + sw, 52)], True, 0.55)
     for sd in (-1, 1):
-        cp = smooth([(0, 0.5), (sd * 6, 0), (sd * 7, 3.6), (sd * 1, 3)], True, 0.8); c.fill(cp, col); c.line(cp, c.lw * 0.4)
-    c.line(d, c.lw * 0.8)
-    if age > 0.3 and det >= 1: c.texture(d, 'grunge', 0.25 * age, 0.4)
+        sl = _blob(sd * 11.5, 6.0, 5.5, 5.0, 8, 2 + sd, 0.1)
+        c.fill(sl, y); c.fill(_crescent(sl, sd * 1.5, 0), ysh, 150); c.line(sl, c.lw * 0.6)
+    c.fill(sk, y); c.fill(_crescent(sk, 3, 0), ysh, 160)
+    c.fill(bod, y); c.fill(_crescent(bod, 2, 0), ysh, 150)
+    if det >= 1:
+        c.line(_multi([poly([(k * 3.5, 24), (k * 5.0 + sw, 54)], False) for k in (-3, -2, -1, 0, 1, 2, 3)]), c.lw * 0.3, ysh, 170)
+        lace = _multi([oval(-17 + k * 4.2 + sw, 56.5, 2.3, 1.6) for k in range(9)])
+        c.fill(lace, wc); c.line(lace, c.lw * 0.3, '#8a8676', 160)
+        c.texture(sk, 'grunge', 0.25 * age, 0.4)
+    c.fill(rect(-9.5, 20, 19, 3.2), wc); c.line(rect(-9.5, 20, 19, 3.2), c.lw * 0.4)
+    c.line(sk, c.lw * 0.8); c.line(bod, c.lw * 0.8)
+    for sd in (-1, 1):
+        cp = smooth([(0, 1.0), (sd * 7.5, 0.4), (sd * 8.5, 4.6), (sd * 1.5, 4.0)], True, 0.8); c.fill(cp, wc); c.line(cp, c.lw * 0.45)
 
 
 def _p_drawing(c, det, t, P=None):
@@ -2456,7 +2458,7 @@ def _held_prop(c, sp, prop, wx, wy, hang, hs, side, det, t, P, front_part=False)
     if not front_part and prop == 'ring': return
     fn, how, (gx, gy) = PROPS3[prop]
     k = 10.0 / sp.get('m', 1.7)                              # body units per cm for this holder
-    hk = sp['body'].get('hand', 1.0) * sp.get('hand_k', 1.0)
+    hk = sp['body'].get('hand', 1.0)                         # hs already carries the cast's hand_k
     reach = (36.0 if how != 'hang' else 52.0) * hs * hk
     if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): reach = 50.0 * hs * hk
     if prop == 'ring': reach = 64.0 * hs * hk
@@ -2520,9 +2522,15 @@ def _acting_raw3(self, t, post=True):
     P.look_x += sx * un; P.look_y += sy * un
     b = self._blink_amt(tf) * (1.0 - clamp(P.still)) * (1.0 - clamp(getattr(P, '_noblink', 0.0)))
     P.blink = max(P.blink, b)
-    if post:
-        for (t0, t1, fn) in getattr(self, 'post', ()):
-            if t0 - 1.5 <= tf <= t1 + 1.5: fn(P, tf)
+    if post and getattr(self, 'post', None) and not getattr(self, '_in_post', False):
+        # contact solves; a nested look-up of this same actor from inside them (a look at a prop it holds) gets the pose
+        # before the solves instead of recursing
+        self._in_post = True
+        try:
+            for (t0, t1, fn) in self.post:
+                if t0 - 1.5 <= tf <= t1 + 1.5: fn(P, tf)
+        finally:
+            self._in_post = False
     return P
 
 
@@ -2552,7 +2560,7 @@ def _origin(self, P):
 
 def _head_point(sp, B, P, fx, fy, dz=2.0):
     """Body-frame 2D point of a face point (front coords fx, fy in head units) as the figure draws its head."""
-    hx, hy, hrot, hs = _head_xf(sp, B, P) if sp.get('v3') or sp.get('bunny') else _head_xf(sp, B, P)
+    hx, hy, hrot, hs = _head_xf(sp, B, P)
     yaw = (P.turn + P.h_turn) * PI / 2
     hm = HeadMap(sp, yaw, P.h_nod * 0.6) if not sp.get('bunny') else BunnyMap(sp, yaw, P.h_nod * 0.6)
     X, Y, V = hm.map1(fx, fy, dz)
@@ -2652,7 +2660,7 @@ def _solve_reach(self, P, side, wx, wy, z, contact, w, lean_ok=True, prop=None):
         if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): off = 50.0 * hk
         if prop == 'ring': off = 64.0 * hk
     L = _arm_len(sp)
-    for it in range(3):
+    for it in range(5):
         B = Body(sp, P)
         x, y, zz = _world_to_body(self, P, B, wx, wy, z)
         S = np.array([side * (sp['body']['sh'] - 17), B.y_sh + 20, 0.0])
@@ -2663,12 +2671,18 @@ def _solve_reach(self, P, side, wx, wy, z, contact, w, lean_ok=True, prop=None):
         n = float(np.linalg.norm(d)) or 1.0
         Wt = Tgt - d / n * off
         dist = float(np.linalg.norm(Wt - S))
-        if lean_ok and dist > L * 0.97 and it == 0:
-            k = clamp((dist - L * 0.97) / 260.0)
-            P.lean += 0.32 * k * w * (1.0 if (Tgt[2] > 0 or abs(Tgt[0]) < 60) else 0.4)
-            P.tilt += -side * 6.0 * k * w * (1.0 if abs(Tgt[0]) > 120 else 0.0) * (1 if B.ct >= 0 else -1)
+        if lean_ok and dist > L * 0.97 and it < 4:
+            k = clamp((dist - L * 0.97) / 200.0)
+            low = Tgt[1] > B.y_hip - 40.0                # below the waist: squat and bend (a pick-up from the floor)
+            if low:
+                P.lean = min(1.5, P.lean + 0.55 * k * w); P.crouch = min(2.2, P.crouch + 0.9 * k * w)
+            else:
+                P.lean = min(0.9, P.lean + 0.32 * k * w * (1.0 if (Tgt[2] > 0 or abs(Tgt[0]) < 60) else 0.4))
+                P.tilt += -side * 6.0 * k * w * (1.0 if abs(Tgt[0]) > 120 else 0.0) * (1 if B.ct >= 0 else -1)
             continue
         rel = Wt - S
+        if B.walk > 0:                                  # _arm_data adds the walk's arm swing: take it back out
+            rel = rel + np.array([0.0, 0.0, 60.0 * B.walk * math.cos(B.leg_phase(-side))])
         cur = np.array([side * getattr(P, pre + 'out'), getattr(P, pre + 'down'), getattr(P, pre + 'fwd')])
         tgt = np.array([side * rel[0], rel[1], rel[2]])
         new = cur + (tgt - cur) * w
@@ -2745,3 +2759,951 @@ Acting.place = _acting_place
 Acting.where = _acting_where
 Acting.look_at = _acting_look_at
 Acting.reach_to = _acting_reach_to
+
+
+class PropTrack:
+    """One prop's single source of truth over a shot: it rests somewhere (drawn by track.draw) or is held by an actor
+    (drawn in that hand by the figure); never both, never teleporting. Keys are added by the actors' clips (pick_up,
+    put_down, give) or by hand: track.rest(t, x, y, angle), track.held(t, actor, side).
+        egg = PropTrack('egg', 980, 905, px_per_cm)    # px_per_cm: the scene scale at the prop's depth
+        a.pick_up(egg, 2.0, side=-1)                   # reach, grip at contact, lift
+        Layer(d, lambda pen, t: egg.draw(pen, t))      # draws it only while it rests
+    """
+
+    def __init__(self, name, x, y, px_per_cm, angle=0.0):
+        self.name, self.ppc = name, float(px_per_cm)
+        self.keys = [(-INF, ('rest', float(x), float(y), float(angle)))]
+
+    def _key(self, t, st):
+        self.keys.append((float(t), st)); self.keys.sort(key=lambda k: k[0]); return self
+
+    def rest(self, t, x, y, angle=0.0): return self._key(t, ('rest', float(x), float(y), float(angle)))
+
+    def held(self, t, actor, side): return self._key(t, ('held', actor, side))
+
+    def gone(self, t): return self._key(t, ('gone',))
+
+    def state(self, t):
+        st = self.keys[0][1]
+        for tk, s_ in self.keys:
+            if tk <= t: st = s_
+            else: break
+        return st
+
+    def holder(self, t):
+        st = self.state(t)
+        return (st[1], st[2]) if st[0] == 'held' else None
+
+    def pos(self, t):
+        """Design-space grip point at time t (the hand's grip point while held)."""
+        st = self.state(t)
+        if st[0] == 'rest': return st[1], st[2]
+        if st[0] == 'held':
+            a, side = st[1], st[2]
+            return a.grip_point(t, side, self.name)
+        return (-1e6, -1e6)
+
+    def draw(self, pen, t, detail=2, pose=None):
+        st = self.state(t)
+        if st[0] == 'rest': draw_prop3(pen, self.name, st[1], st[2], self.ppc, st[3], detail, t, pose)
+
+
+def _grip_point(self, t, side, prop, post=True):
+    """Design-space grip point of a prop held in a hand (where draw puts it). post=False: before the contact solves (use
+    it inside this actor's own clips)."""
+    P = self.at(t) if post else self._raw(t, False); sp = self.sp
+    B = Body(sp, P)
+    S, E, W = _arm_data(sp, B, P, side)
+    pts = [B.p3(*S), B.p3(*E), B.p3(*W)]
+    wx, wy = pts[2][0], pts[2][1]
+    ang = math.degrees(math.atan2(pts[2][1] - pts[1][1], pts[2][0] - pts[1][0])) - 90
+    pre = 'hl_' if side > 0 else 'hr_'
+    up = getattr(P, pre + 'up'); rot = getattr(P, pre + 'rot')
+    hang = ang * (1 - up) + 180.0 * up + rot
+    hz = clamp(900.0 / (900.0 - pts[2][3]), 0.6, 3.0)
+    hs = hz * getattr(P, pre + 'scale', 1.0) * sp.get('hand_k', 1.0)
+    how = PROPS3.get(prop, (None, 'upright'))[1]
+    hk = sp['body'].get('hand', 1.0) * sp.get('hand_k', 1.0)
+    reach = (36.0 if how != 'hang' else 52.0) * hs * sp['body'].get('hand', 1.0)
+    if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): reach = 50.0 * hs * sp['body'].get('hand', 1.0)
+    if prop == 'ring': reach = 64.0 * hs * sp['body'].get('hand', 1.0)
+    gx, gy = wx + math.sin(math.radians(-hang)) * reach, wy + math.cos(math.radians(hang)) * reach
+    ox, oy, s = _origin(self, P)
+    return ox + gx * s, oy + gy * s
+
+
+def _set_prop(self, side, t0, t1, name):
+    pre = 'hl_' if side > 0 else 'hr_'
+    def fn(P, t):
+        if t0 <= t < (INF if t1 is None else t1): setattr(P, pre + 'prop', name)
+    return self._add(t0, t1, fn, late=True)
+
+
+def _acting_hold_prop(self, name, side, t0=-INF, t1=None):
+    """The hand holds prop `name` from t0 to t1 (a prop the actor already has: the hatchet, the basket, the flashlight)."""
+    return _set_prop(self, side, t0, t1, name)
+
+
+def _acting_pick_up(self, track, t0, side=1, dur=1.0, carry=None, z=0.0, shape='grip'):
+    """Reach for a resting PropTrack, take it at contact (t0 + 0.55 dur: the track switches to this hand, the prop is in
+    the hand from that frame), then carry it to `carry` (design point / target; None = up in front of the chest) by t0 +
+    dur. Returns the contact time."""
+    tc = t0 + 0.55 * dur
+    x, y = track.pos(t0)
+    self.reach_to(t0, side, (x, y), t1=tc, dur=0.55 * dur, z=z, contact='grip', shape=shape, fade=0.45 * dur, prop=track.name)
+    track.held(tc, self, side)
+    _set_prop(self, side, tc, None, track.name)
+    if carry is not None:
+        self.reach_to(tc, side, carry, t1=None, dur=0.45 * dur, z=z, contact='grip', shape=shape, fade=0.4, prop=track.name)
+    else:
+        self.reach(tc, None, side, out=40.0, down=150.0, fwd=150.0, shape='grip', up=0.0, fade=0.45 * dur)
+    return tc
+
+
+def _acting_put_down(self, track, t0, side, x, y, dur=1.0, z=0.0, angle=0.0, release_t1=None):
+    """Carry the held prop to (x, y), let go at contact (t0 + 0.55 dur: it rests there from that frame), the hand
+    returns. Returns the contact time."""
+    tc = t0 + 0.55 * dur
+    self.reach_to(t0, side, (x, y), t1=tc, dur=0.55 * dur, z=z, contact='grip', fade=0.45 * dur, prop=track.name)
+    track.rest(tc, x, y, angle)
+    pre = 'hl_' if side > 0 else 'hr_'
+    def fn(P, t):
+        if t >= tc and getattr(P, pre + 'prop') == track.name: setattr(P, pre + 'prop', None)
+    self._add(tc, release_t1, fn, late=True)
+    return tc
+
+
+def _acting_give(self, track, t0, side, other, other_side, dur=1.2, meet=None, z=0.0):
+    """Hand a held prop to another actor: both hands meet at `meet` (None = halfway between the two hands), the prop
+    changes hands at contact (t0 + 0.5 dur), both arms settle. Returns the contact time."""
+    tc = t0 + 0.5 * dur
+    if meet is None:                                      # between the two chests, a little below: both arms reach it
+        a0 = self.where(t0, 'chest', post=False); b0 = other.where(t0, 'chest', post=False)
+        a1 = self.where(t0, 'belly', post=False); b1 = other.where(t0, 'belly', post=False)
+        meet = ((a0[0] + b0[0]) / 2, ((a0[1] + b0[1]) / 2 + (a1[1] + b1[1]) / 2) / 2)
+    self.reach_to(t0, side, meet, t1=tc + 0.1, dur=0.5 * dur, z=z, contact='grip', fade=0.5 * dur, prop=track.name)
+    other.reach_to(t0 + 0.1 * dur, other_side, meet, t1=tc + 0.15, dur=0.4 * dur, z=z, contact='grip', fade=0.45 * dur, prop=track.name)
+    track.held(tc, other, other_side)
+    pre = 'hl_' if side > 0 else 'hr_'
+    def fn(P, t):
+        if t >= tc and getattr(P, pre + 'prop') == track.name: setattr(P, pre + 'prop', None)
+    self._add(tc, None, fn, late=True)
+    _set_prop(other, other_side, tc, None, track.name)
+    return tc
+
+
+Acting.grip_point = _grip_point
+Acting.hold_prop = _acting_hold_prop
+Acting.pick_up = _acting_pick_up
+Acting.put_down = _acting_put_down
+Acting.give = _acting_give
+
+
+# ------------------------------------------------------------------------------------------- body clips (v3 staging)
+def _acting_sit_on(self, t0, seat_y, dur=1.0, t1=None, hands='lap', floor_y=None, lean_back=0.0):
+    """Sit down onto a seat whose top is at design y seat_y (the figure's y_feet stays the FLOOR, the feet stay on it):
+    a small lean forward and bend (anticipation), the hips lower onto the seat (pose.seat, pose.sit), the back straightens.
+    t1: start of standing back up (stand_up). hands 'lap' | 'knees' | 'arms' (on armrests) | None."""
+    fy = self.y0 if floor_y is None else floor_y
+    s = self.height / 1000.0
+    seat_u = max(60.0, (fy - seat_y) / s)
+    def fn(P, t):
+        u = prog(t, t0, t0 + dur)
+        if t < t0: return
+        k = ease_in_out(clamp((u - 0.15) / 0.8))
+        lean = 0.22 * math.sin(PI * clamp(u / 0.9)) * (1.0 - k * 0.3)
+        if t1 is not None and t >= t1:
+            return
+        P.seat = seat_u; P.sit = max(P.sit, k)
+        P.lean += lean + 0.05 * k - lean_back * k
+        if hands and k > 0.01:
+            for side in (-1, 1):
+                if hands == 'lap': self._arm(P, side, k, -28.0, 300.0, 170.0, 'relaxed', up=0.0)
+                elif hands == 'knees': self._arm(P, side, k, -10.0, 300.0, 230.0, 'relaxed', up=0.0)
+                elif hands == 'arms': self._arm(P, side, k, 40.0, 250.0, 110.0, 'relaxed', up=0.0)
+    self._add(t0, None, fn)
+    if t1 is not None: self.stand_up(t1, seat_y=seat_y, floor_y=floor_y, hands=hands)
+    return self
+
+
+def _acting_seated(self, seat_y, t0=-INF, t1=None, hands='lap', floor_y=None):
+    """Already sitting on the seat at design y seat_y (no sit-down move)."""
+    fy = self.y0 if floor_y is None else floor_y
+    seat_u = max(60.0, (fy - seat_y) / (self.height / 1000.0))
+    def fn(P, t):
+        P.seat = seat_u; P.sit = 1.0; P.lean += 0.05
+        if hands:
+            for side in (-1, 1):
+                if hands == 'lap': self._arm(P, side, 1.0, -28.0, 300.0, 170.0, 'relaxed', up=0.0)
+                elif hands == 'knees': self._arm(P, side, 1.0, -10.0, 300.0, 230.0, 'relaxed', up=0.0)
+                elif hands == 'arms': self._arm(P, side, 1.0, 40.0, 250.0, 110.0, 'relaxed', up=0.0)
+    return self._add(t0, t1, fn)
+
+
+def _acting_stand_up(self, t0, dur=1.1, seat_y=None, floor_y=None, hands='lap'):
+    """Stand up from a seat: lean the weight forward over the feet first (anticipation), push up, straighten."""
+    fy = self.y0 if floor_y is None else floor_y
+    seat_u = max(60.0, (fy - seat_y) / (self.height / 1000.0)) if seat_y is not None else None
+    def fn(P, t):
+        if t < t0: return
+        u = prog(t, t0, t0 + dur)
+        k = 1.0 - ease_in_out(clamp((u - 0.25) / 0.75))
+        if seat_u is not None: P.seat = seat_u
+        P.sit = min(1.0, k) if P.sit <= 1.0 else P.sit
+        P.sit = k
+        P.lean += 0.32 * math.sin(PI * clamp(u / 0.85)) * (1.0 if u < 0.85 else 0.0)
+        if hands and k > 0.01:
+            for side in (-1, 1):
+                self._arm(P, side, k * 0.8 + 0.2 * math.sin(PI * u), -10.0, 290.0, 220.0, 'relaxed', up=0.0)
+    return self._add(t0, None, fn)
+
+
+def _acting_kneel_down(self, t0, dur=1.0, knees=0, t1=None, up_dur=1.0):
+    """Kneel: one knee (knees 0: the character's right knee down, left foot forward), both knees (1) or sitting back on
+    the heels (2). A small step and lean forward on the way down; t1 = start of getting back up."""
+    def fn(P, t):
+        if t < t0: return
+        u = prog(t, t0, t0 + dur)
+        k = ease_in_out(u)
+        if t1 is not None and t >= t1:
+            k *= 1.0 - ease_in_out(prog(t, t1, t1 + up_dur))
+            P.lean += 0.25 * math.sin(PI * prog(t, t1, t1 + up_dur))
+        P.kneel = max(P.kneel, k); P.knees = float(knees)
+        P.lean += 0.18 * math.sin(PI * u) + (0.06 if knees < 1.5 else 0.12) * k
+    return self._add(t0, None, fn)
+
+
+def _acting_run(self, t0, t1, x_from, x_to, surface='inside', facing=None):
+    """Run from x_from to x_to (pose.dx): a running cycle (longer stride, a flight phase, forward lean, bent arms pumping)
+    with footstep events (louder) at each foot strike."""
+    d = x_to - x_from
+    units = abs(d) / (self.height / 1000.0)
+    cycles = units / 760.0
+    face = facing if facing is not None else (1.0 if d >= 0 else -1.0)
+    dur = t1 - t0
+    def fn(P, t):
+        u = ease_in_out(prog(t, t0, t1)) * 0.25 + prog(t, t0, t1) * 0.75
+        w = _env(t, t0 - 0.25, t1, 0.3, 0.35, ease)
+        P.dx = x_from + d * u
+        P.walk_amt = max(P.walk_amt, _env(t, t0, t1, 0.2, 0.3))
+        P.run = max(P.run, _env(t, t0, t1, 0.25, 0.3))
+        P.walk_ph = cycles * u
+        P.turn = lerp(P.turn, face, w)
+        P.lean += 0.16 * P.run
+        sw = math.sin(cycles * u * 2 * PI)
+        for side in (-1, 1):
+            self._arm(P, side, 0.9 * P.run, 26.0, 150.0 + 40.0 * side * sw, 120.0 - 150.0 * side * sw, 'fist', up=0.0)
+    if not getattr(self, '_walked', False):
+        self._walked = True
+        self.clips.append((-INF, t0 - 0.3, lambda P, t: setattr(P, 'dx', x_from), False))
+    self._add(t0 - 0.3, None, fn)
+    evs = []
+    n = int(math.floor(cycles * 2.0))
+    for k in range(1, n + 1):
+        uu = k / (cycles * 2.0)
+        evs.append(self._ev(t0 + dur * uu, 'footsteps_wood_inside' if surface == 'inside' else 'footsteps_porch', 1.0, pan=0.0,
+                            n=1, kind='run', foot='L' if k % 2 else 'R'))
+    return evs
+
+
+def _acting_wave(self, t0, t1, side=1, speed=1.0, height=1.0, slow=False):
+    """Wave (side +1 = the character's left hand): the arm comes up, the hand sways from the elbow; slow=True is the
+    Bunnyman's slow, heavy wave (about one sway every 1.6 s, no wrist flick)."""
+    per = 1.6 if slow else 0.55 / speed
+    def fn(P, t):
+        w = _env(t, t0, t1, 0.5 if slow else 0.3, 0.6 if slow else 0.35)
+        if w <= 0: return
+        ph = math.sin(2 * PI * max(0.0, t - t0 - (0.5 if slow else 0.3)) / per)
+        self._arm(P, side, w, 150.0 + 40.0 * ph, -150.0 * height - 20.0 * abs(ph), 60.0, 'wave' if not self.sp.get('bunny') else 'paw_open',
+                  up=1.0, rot=-side * 18.0 * ph)
+        P.tilt += -side * 1.2 * w * ph
+    return self._add(t0, t1 + 0.8, fn)
+
+
+def _acting_point_at(self, t0, target, t1=None, side=1, dur=0.6, z=200.0, fade=0.5):
+    """Lift an arm and point at a target (design point / actor part): the arm extends straight along the line from the
+    shoulder to the target, the head looks along it."""
+    def fn(P, t):
+        w = _env(t, t0, t1, dur, fade)
+        if w <= 0.001: return
+        tx, ty = _target_xy(target, t)
+        sp = self.sp
+        B = Body(sp, P)
+        x, y, zz = _world_to_body(self, P, B, tx, ty, z)
+        S = np.array([side * (sp['body']['sh'] - 17), B.y_sh + 20, 0.0])
+        d = np.array([x, y, zz]) - S; n = float(np.linalg.norm(d)) or 1.0
+        Wt = S + d / n * _arm_len(sp) * 0.93
+        rel = Wt - S
+        pre = 'hl_' if side > 0 else 'hr_'
+        self._arm(P, side, w, side * rel[0], rel[1], rel[2], 'point' if not sp.get('bunny') else 'paw_point', up=0.0)
+    return _acting_post(self, t0, None if t1 is None else t1 + fade, fn)
+
+
+def _acting_hum(self, t0, t1=None, amount=1.0, fade=0.5, rate=1.0):
+    """Closed-mouth humming (the Pemberton's jingle): lips pressed in a soft smile, a slow sway of the head on the beat
+    (about 2 beats a second), the brows a touch lifted and calm. No lip sync (it is not speech)."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade) * amount
+        if w <= 0: return
+        beat = math.sin(2 * PI * 1.05 * rate * (t - t0))
+        P.m_press += 0.45 * w; P.smile += 0.32 * w; P.m_open *= (1.0 - w)
+        P.h_tilt += 4.0 * w * beat; P.sway += 3.0 * w * beat
+        P.brow_up += 0.12 * w
+        P.hum = max(getattr(P, 'hum', 0.0), w)
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _acting_knock_pattern(self, t0, pattern=(2, 3, 2), side=1, beat=0.28, gap=0.62, target=None, z=0.0, kind='door'):
+    """Knock a pattern (Grandma's family knock 2-3-2; seven knocks): the fist comes to the door (target design point,
+    or out in front), a forearm snap per knock. Returns knock_door events (one per hit, params n and group)."""
+    evs = []
+    tt = t0 + 0.45
+    hits = []
+    for g, n in enumerate(pattern):
+        for k in range(n):
+            hits.append((tt, g)); tt += beat
+        tt += gap - beat
+    t_end = hits[-1][0] + 0.5
+    def pulse(t):
+        v = 0.0
+        for (th, _) in hits:
+            dt = t - th
+            if -0.12 < dt < 0.0: v = max(v, 1.0 - (-dt) / 0.12)
+            elif 0.0 <= dt < 0.16: v = max(v, 1.0 - dt / 0.16)
+        return v
+    if target is not None:
+        self.reach_to(t0, side, target, t1=t_end, dur=0.4, z=z, contact='tips', shape='fist', fade=0.5)
+        def fn(P, t):
+            if t0 + 0.3 < t < t_end:
+                pre = 'hl_' if side > 0 else 'hr_'
+                p = pulse(t)
+                setattr(P, pre + 'fwd', getattr(P, pre + 'fwd') - 26.0 * (1.0 - p))
+                setattr(P, pre + 'shape', 'fist')
+        _acting_post(self, t0, t_end, fn)
+    else:
+        def fn(P, t):
+            w = _env(t, t0, t_end, 0.4, 0.5)
+            if w <= 0: return
+            self._arm(P, side, w, 30.0, -10.0 - 10.0 * pulse(t), 170.0 + 30.0 * pulse(t), 'fist', up=0.0)
+        self._add(t0, t_end + 0.5, fn)
+    for i, (th, g) in enumerate(hits):
+        evs.append(self._ev(th, 'knock_door', -2.0 if kind == 'table' else 0.0, pan=0.0, n=1, group=g, index=i, kind=kind))
+    return evs
+
+
+def _acting_eyes_shut(self, t0, t1=None, squeeze=1.0, fade=0.15):
+    """Eyes shut (squeezed when squeeze > 0.5: brows pinched down, the face scrunched)."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, 0.25)
+        if w <= 0: return
+        P.lid_l = max(P.lid_l, w); P.lid_r = max(P.lid_r, w)
+        if squeeze > 0.3:
+            P.squint += 0.6 * w * squeeze; P.brow_angry += 0.3 * w * squeeze; P.brow_sad += 0.4 * w * squeeze
+            P.m_press += 0.5 * w * squeeze
+    return self._add(t0, None if t1 is None else t1 + 0.3, fn)
+
+
+Acting.sit_on = _acting_sit_on
+Acting.seated = _acting_seated
+Acting.stand_up = _acting_stand_up
+Acting.kneel_down = _acting_kneel_down
+Acting.run = _acting_run
+Acting.wave = _acting_wave
+Acting.point_at = _acting_point_at
+Acting.hum = _acting_hum
+Acting.knock_pattern = _acting_knock_pattern
+Acting.eyes_shut = _acting_eyes_shut
+
+
+# ------------------------------------------------------------------------------------------- contact clips (v3 staging)
+def _acting_face(self, turn, h_turn=0.0, t0=-INF, t1=None):
+    """Base facing from t0 (quarter turns: + faces screen right). Use it to stage the opening pose of a shot."""
+    return self.set(t0, t1, 0.001 if t0 == -INF else 0.4, turn=turn, h_turn=h_turn)
+
+
+def _acting_hand_over(self, t0, side, other, part='eyes', t1=None, dur=0.7, z=60.0, fade=0.5):
+    """Lay a hand over another actor's eyes / mouth / head (palm on the part, the back of the hand to camera)."""
+    return self.reach_to(t0, side, (other, part), t1=t1, dur=dur, z=z, contact='palm', shape='open', fade=fade)
+
+
+def _acting_hold_hand(self, t0, side, other, other_side, t1=None, dur=0.6, fade=0.5, lift=None):
+    """Hold hands with another actor: the hands meet near the taller one's hanging hand, a little above it (lift px;
+    None = 5 % of the taller figure: a hanging arm is already almost straight, so a meeting point below it is out of
+    reach), the shorter one reaching up. Solved before either reach, so the two never chase each other."""
+    if lift is None: lift = 0.05 * max(self.height, other.height)
+    def meet(t):
+        a = self.where(t, 'hand_l' if side > 0 else 'hand_r', post=False)
+        b = other.where(t, 'hand_l' if other_side > 0 else 'hand_r', post=False)
+        # the taller one's arm hangs naturally and the shorter one reaches up to it (weighted by real height)
+        ha, hb = self.sp.get('m', 1.7), other.sp.get('m', 1.7)
+        k = clamp(0.5 + 2.0 * (ha - hb) / (ha + hb), 0.15, 0.85)     # 0.5 = equal heights; -> 0.85 for the much taller
+        return ((a[0] + b[0]) * 0.5, b[1] + (a[1] - b[1]) * k - lift)
+    self.reach_to(t0, side, meet, t1=t1, dur=dur, contact='palm', shape='grip', fade=fade)
+    other.reach_to(t0, other_side, meet, t1=t1, dur=dur, contact='palm', shape='grip', fade=fade)
+    return self
+
+
+def _acting_smooth_hair(self, t0, side, other, n=2, stroke=0.9, t1=None):
+    """Smooth another actor's hair: the palm lands on the crown and strokes back over the head n times."""
+    def tgt(t):
+        cx, cy = other.where(t, 'crown', post=False)
+        hx, hy = other.where(t, 'head', post=False)
+        ph = max(0.0, t - t0 - 0.5) / stroke
+        k = 0.5 - 0.5 * math.cos(2 * PI * min(ph, n))
+        sgn = 1.0 if other._raw(t, False).turn >= 0 else -1.0
+        return cx + (hx - cx) * 0.1 - 22.0 * k * sgn, cy + (hy - cy) * 0.12 + 6.0 * k
+    t_end = t0 + 0.5 + n * stroke
+    return self.reach_to(t0, side, tgt, t1=t1 if t1 is not None else t_end, dur=0.5, z=40.0, contact='palm', shape='relaxed', fade=0.5)
+
+
+def _acting_head_to(self, t0, target, part='eyes', t1=None, dur=0.8, fade=0.6, max_lean=0.55):
+    """Bring a face part (the eye to a peephole, the face into a hand, the mouth to an ear) to a target point by bending
+    at the hips and shifting the body (pose.lean, dx, dy, crouch) in the post pass."""
+    def fn(P, t):
+        w = _env(t, t0, t1, dur, fade)
+        if w <= 0.001: return
+        tx, ty = _target_xy(target, t)
+        for it in range(3):
+            ox, oy, s = _origin(self, P)
+            X, Y = _body_point(self, P, part)
+            ex, ey = ox + X * s, oy + Y * s
+            dx, dy = (tx - ex) / s, (ty - ey) / s
+            # lower the head by leaning forward (toward the side the figure faces) and crouching, then slide the rest
+            if dy > 0:
+                need = clamp(dy / 520.0, 0.0, max_lean)
+                P.lean += need * w * 0.5
+                P.crouch += clamp((dy - 260.0 * max_lean) / 200.0, 0.0, 1.2) * w * 0.5 if dy > 260 * max_lean else 0.0
+            elif dy < 0:
+                P.tiptoe = max(getattr(P, 'tiptoe', 0.0), clamp(-dy / 40.0) * w)
+            ox, oy, s = _origin(self, P)
+            X, Y = _body_point(self, P, part)
+            ex, ey = ox + X * s, oy + Y * s
+            P.dx += (tx - ex) * w * 0.85
+            if abs(ty - ey) < 60 and dy > 0: P.dy += (ty - ey) * 0.0
+    return _acting_post(self, t0, None if t1 is None else t1 + fade, fn)
+
+
+def _acting_crouch(self, t0, amount=1.0, t1=None, dur=0.7, fade=0.6):
+    """Crouch down (knees bent, hips lowered, a forward lean), e.g. to the doormat or a mail slot."""
+    def fn(P, t):
+        w = _env(t, t0, t1, dur, fade) * amount
+        if w <= 0: return
+        P.crouch += 1.4 * w; P.lean += 0.18 * w; P.stance += 0.35 * w
+    return self._add(t0, None if t1 is None else t1 + fade, fn)
+
+
+def _acting_lie(self, t0, face='up', dur=0.01, t1=None, arms='out', knees=0.15):
+    """Lie on the floor (face 'up' or 'down'): for a lying figure draw() takes y_feet = the surface it lies on. arms 'out'
+    flung out, 'side' along the body; knees a little bent."""
+    def fn(P, t):
+        w = ease_in_out(prog(t, t0, t0 + dur)) if dur > 0.02 else float(t >= t0)
+        if t1 is not None: w *= 1.0 - ease_in_out(prog(t, t1, t1 + 0.8))
+        if w <= 0: return
+        P.lie = (-1.0 if face == 'up' else 1.0) * w
+        if arms == 'out':
+            for side in (-1, 1): self._arm(P, side, w, 150.0, 240.0, -40.0 + 30 * side, 'relaxed', up=0.0)
+        P.crouch += knees * w
+        P.still = max(P.still, 0.0)
+    return self._add(t0, None if t1 is None else t1 + 0.8, fn)
+
+
+def _acting_dead(self, t0, fade=0.6):
+    """Life leaves the face: lids sink half shut, the eyes go still, the mouth falls slack, no breath, no blinks."""
+    def fn(P, t):
+        w = ease_in_out(prog(t, t0, t0 + fade))
+        if w <= 0: return
+        P.still = max(P.still, w); P.life *= (1.0 - w); P._noblink = max(getattr(P, '_noblink', 0.0), w)
+        P.eye_open = lerp(P.eye_open, 0.45, w); P.pupil = lerp(P.pupil, 1.25, w); P.m_open = lerp(P.m_open, 0.12, w)
+        P.brow_sad *= (1.0 - 0.6 * w); P.brow_up *= (1.0 - 0.6 * w); P.breath = lerp(P.breath, 0.5, w)
+        P.look_x *= (1.0 - w); P.look_y *= (1.0 - w); P.tremble *= (1.0 - w)
+    return self._add(t0, None, fn)
+
+
+def _acting_unmask(self, t0, dur=1.2, amount=1.0):
+    """The Bunnyman's foam head slides half off (pose.unmask), uncovering Dale's face beneath."""
+    def fn(P, t):
+        P.unmask = max(getattr(P, 'unmask', 0.0), amount * ease_in_out(prog(t, t0, t0 + dur)))
+    return self._add(t0, None, fn)
+
+
+def _acting_drag_hatchet(self, t0, t1=None, side=-1):
+    """Carry the old hatchet hanging from one paw / hand, its head down by the feet (it knocks on each step)."""
+    self.hold_prop('hatchet', side, t0, t1)
+    def fn(P, t):
+        w = _env(t, t0, t1, 0.4, 0.4)
+        self._arm(P, side, w, 22.0, 352.0, -30.0, 'grip', up=0.0, rot=0.0)
+    return self._add(t0, None if t1 is None else t1 + 0.4, fn)
+
+
+def _acting_climb(self, t0, t1, x_from, y_rise, n_steps, run_px, surface='stairs', hatchet=None):
+    """Climb n_steps stairs from t0 to t1: a slow walk cycle in profile (dx += run_px per step) with the body rising
+    y_rise px per step (pose.dy), one foot per step. Returns footstep events and, with hatchet=side, a 'hatchet_thunk'
+    after each step (the head knocking against the stair)."""
+    dur = (t1 - t0) / n_steps
+    evs = []
+    face = 1.0 if run_px >= 0 else -1.0
+    def fn(P, t):
+        u = clamp((t - t0) / (t1 - t0))
+        k = u * n_steps
+        i = min(int(k), n_steps - 1) if u < 1 else n_steps
+        f = k - int(k) if u < 1 else 0.0
+        e = ease_in_out(clamp(f / 0.7))
+        P.dx = x_from + run_px * (min(i, n_steps) + (e if u < 1 else 0.0))
+        P.dy = -y_rise * (min(i, n_steps) + (e if u < 1 else 0.0))
+        P.walk_amt = max(P.walk_amt, 0.75 * _env(t, t0, t1, 0.3, 0.3))
+        P.walk_ph = 0.5 * k
+        P.turn = lerp(P.turn, face, _env(t, t0 - 0.3, t1, 0.3, 0.3))
+        P.lean += 0.12 * _env(t, t0, t1, 0.4, 0.4)
+    if not getattr(self, '_walked', False):
+        self._walked = True
+        self.clips.append((-INF, t0 - 0.3, lambda P, t: (setattr(P, 'dx', x_from)), False))
+    self._add(t0 - 0.3, None, fn)
+    for k in range(n_steps):
+        tt = t0 + (k + 0.7) * dur
+        evs.append(self._ev(tt, 'footsteps_wood_inside', -1.0, pan=0.0, n=1, kind='stair', step=k))
+        if hatchet is not None:
+            evs.append(self._ev(tt + 0.22, 'hatchet_thunk', 0.0, pan=0.0, step=k))
+    return evs
+
+
+def _acting_mama(self, t0, dur=0.9):
+    """Dale's lips form "Mama" (two M closures, two A openings): a whisper."""
+    return self.talk([(t0, t0 + dur, 'Mama')], env=None, words=None, intensity=0.7)
+
+
+def _acting_open_egg(self, t0, egg_track=None, dur=1.6, ring=True):
+    """Open the plastic egg held in both hands: the right hand holds it (prop 'egg'), the left comes to it, a twist, and
+    it splits: the left hand lifts the top half, the right keeps the bottom half (with Dad's ring in it). Returns the
+    split time and a 'egg_open' event."""
+    ts = t0 + 0.55 * dur
+    self.hold_prop('egg', -1, -INF, ts)
+    self.hold_prop('egg_bot_ring' if ring else 'egg_bot', -1, ts, None)
+    self.hold_prop('egg_top', 1, ts, None)
+    self.reach(t0 - 0.4, None, -1, out=10.0, down=170.0, fwd=210.0, shape='grip', up=0.0, fade=0.4)
+    tgt = lambda t: self.grip_point(t, -1, 'egg', post=False)    # noqa: E731
+    self.reach_to(t0, 1, tgt, t1=ts, dur=0.5 * dur, contact='palm', shape='grip', z=200.0, fade=0.3)
+    def fn(P, t):
+        u = prog(t, ts, ts + 0.45 * dur)
+        if t < ts: P.hr_rot += -14.0 * math.sin(PI * prog(t, t0 + 0.35 * dur, ts))
+        if u > 0:
+            self._arm(P, 1, ease_in_out(u), 70.0, 150.0 - 50.0 * u, 200.0, 'grip', up=0.0)
+            P.hl_rot += -30.0 * ease_in_out(u)
+    self._add(t0, None, fn)
+    return ts, self._ev(ts, 'egg_open', 0.0, pan=0.0)
+
+
+Acting.face = _acting_face
+Acting.hand_over = _acting_hand_over
+Acting.hold_hand = _acting_hold_hand
+Acting.smooth_hair = _acting_smooth_hair
+Acting.head_to = _acting_head_to
+Acting.crouch = _acting_crouch
+Acting.lie = _acting_lie
+Acting.dead = _acting_dead
+Acting.unmask = _acting_unmask
+Acting.drag_hatchet = _acting_drag_hatchet
+Acting.climb = _acting_climb
+Acting.mama = _acting_mama
+Acting.open_egg = _acting_open_egg
+
+
+
+# ------------------------------------------------------------------------------------------- expressions (this film)
+EXPR.update({
+    'warm_smile': dict(smile=0.55, teeth=0.2, squint=0.15, brow_up=0.12),                       # Mom as people see her
+    'too_still': dict(smile=0.4, m_press=0.32, still=0.55, pupil=0.78, lock=0.55, brow_up=0.05),  # the smile that never moves
+    'proud': dict(smile=0.72, teeth=0.35, brow_up=0.32, squint=0.1, pupil=0.85),
+    'little_girl': dict(wide=0.6, brow_sad=1.0, brow_up=0.55, wet=1.0, tears=0.55, pupil=1.25, m_open=0.08, m_round=0.3,
+                        tremble=0.5, smile=-0.3),                                                # Dale's face: Laurie inside
+    'terror': dict(wide=0.9, pupil=0.45, brow_sad=0.9, brow_up=0.7, m_open=0.32, m_round=0.35, smile=-0.45, tremble=0.7, sweat=0.4),
+    'haunted': dict(eye_open=0.88, pupil=0.95, brow_sad=0.6, brow_up=0.15, smile=-0.15, wet=0.4),
+    'wrong_smile': dict(smile=0.62, grin=0.08, teeth=0.25, pupil=0.72, lock=0.8, still=0.4, brow_up=0.08),
+    'sleep': dict(lid_l=1.0, lid_r=1.0, m_open=0.05, h_nod=0.18, still=0.3),
+    'determined': dict(brow_angry=0.55, brow_sad=0.25, m_press=0.6, squint=0.15, wide=0.15),
+})
+
+
+def _bunny_unmasked_head(c, who, P, yaw, pitch, det, t, light, sp):
+    """The suit's head half off (pose.unmask 0..1): Dale's face (55, gaunt, grey stubble) with the wide wet eyes of a
+    terrified little girl, his lips free to move ("Mama"); the foam head tipped back off his crown, its dark neck opening
+    showing, the ears splayed."""
+    u = clamp(getattr(P, 'unmask', 0.0))
+    ds = CAST['dale']
+    fsz = ds['hh'] / sp['hh'] * 1.02                       # Dale's head inside the big foam head
+    fc = c.sub(0.0, 26.0 * u, 0.0, fsz)
+    draw_head_local(fc, 'dale', P, yaw, pitch, det, t, light, ds)
+    # the foam head, tipped back off the crown: pushed up past the forehead, foreshortened as it tips away, a little
+    # to one side; the dark inside of its neck opening shows as a band along its lower rim
+    sgn = 1.0 if math.sin(yaw) >= 0 else -1.0
+    mc = c.sub(-sgn * 14.0 * u, -104.0 * u, -sgn * 14.0 * u, 1.0, 1.0 - 0.3 * u)
+    Pm = P.copy(); Pm.m_open = 0.0
+    hm = draw_head_local(mc, who, Pm, yaw, pitch - 0.45 * u, det, t, light, sp)
+    if u > 0.05:
+        ys = np.linspace(-1.0, 1.0, 13)
+        w_ = 88.0
+        lower = [(x * w_, 112.0 - 10.0 * (1 - x * x)) for x in ys]
+        upper = [(x * w_ * 0.86, 112.0 - (10.0 + 26.0 * u) * (1 - x * x) ** 0.7) for x in ys[::-1]]
+        band = smooth(lower + upper, True, 0.8)
+        mc.fill(band, '#140e0d', 235 * clamp(u * 2.0))
+        mc.line(smooth(lower, False, 0.8), mc.lw * 0.9)
+
+
+EXPR_BUNNY = ('warm_smile', 'too_still', 'proud', 'little_girl', 'terror', 'haunted', 'wrong_smile', 'sleep', 'determined')
+
+
+
+# ====================================================================================================== the crayon drawing
+# Slid under the bathroom door: a bridge, a tall man lying on the ground, a lady over him holding a rock with a big wide
+# smile, and a grey bunny with blue crayon tears; "I TRIED TO HELP HIM" in shaky letters in the corner.
+_STROKE_FONT = {
+    'I': [[(0.5, 0), (0.5, 1)], [(0.2, 0), (0.8, 0)], [(0.2, 1), (0.8, 1)]],
+    'T': [[(0, 0), (1, 0)], [(0.5, 0), (0.5, 1)]],
+    'R': [[(0, 1), (0, 0), (0.8, 0.05), (0.85, 0.4), (0, 0.5)], [(0.3, 0.5), (0.95, 1)]],
+    'E': [[(0.9, 0), (0, 0), (0, 1), (0.9, 1)], [(0, 0.5), (0.7, 0.5)]],
+    'D': [[(0, 0), (0, 1), (0.6, 0.95), (0.9, 0.5), (0.6, 0.05), (0, 0)]],
+    'O': [[(0.5, 0), (0.95, 0.3), (0.9, 0.8), (0.5, 1), (0.1, 0.8), (0.05, 0.3), (0.5, 0)]],
+    'H': [[(0, 0), (0, 1)], [(0.9, 0), (0.9, 1)], [(0, 0.5), (0.9, 0.5)]],
+    'L': [[(0, 0), (0, 1), (0.85, 1)]],
+    'P': [[(0, 1), (0, 0), (0.8, 0.05), (0.85, 0.4), (0, 0.5)]],
+    'M': [[(0, 1), (0, 0), (0.45, 0.6), (0.9, 0), (0.9, 1)]],
+}
+
+
+def _crayon(c, pts, colr, w, seed=0, a=230, passes=3, jit=1.0, closed=False):
+    """A waxy crayon stroke: a few jittery passes over the same line with gaps where the wax skips."""
+    for p_ in range(passes):
+        q = []
+        for i, (x, y) in enumerate(pts):
+            q.append((x + (hash01(i + 31 * p_ + seed * 7, 501) - 0.5) * 0.42 * jit, y + (hash01(i + 31 * p_ + seed * 7, 502) - 0.5) * 0.42 * jit))
+        path = smooth(q, closed, 0.6) if len(q) > 2 else poly(q, closed)
+        c.line(path, w * (1.0 - 0.18 * p_), colr, a * (0.85 if p_ else 1.0))
+
+
+def _crayon_fill(c, path, colr, seed=0, a=170, ang=0.6, gap=2.2, w=1.4):
+    """Scribble-fill a shape with crayon hatching (clipped)."""
+    bb = path.getBounds()
+    ls = []
+    L = max(bb.width(), bb.height()) * 1.5
+    n = int(L / gap) + 2
+    for k in range(-n, n):
+        x0 = bb.centerX() + k * gap; y0 = bb.centerY()
+        dx, dy = math.cos(ang) * L, math.sin(ang) * L
+        j = (hash01(k + 4000 + seed * 13, 503) - 0.5) * 0.25
+        ls.append(poly([(x0 - dx + j, y0 - dy), (x0 + dx + j, y0 + dy)], False))
+    with c.clip(path):
+        c.line(_multi(ls), w, colr, a)
+
+
+def _crayon_page(c, x, y, w, h, det, t, corner=False):
+    """The drawing on a sheet w x h (local units) centred at (x, y) (corner=True: held at its top-left corner)."""
+    if corner: x, y = x + w * 0.5 - 1.0, y + h * 0.5 - 1.0
+    k = w / 21.0                                            # drawn on a 21 x 29.7 unit page
+    pc = c.sub(x - w / 2, y - h / 2, 0.0, k)
+    pc.lw = c.lw / k
+    page = poly([(0, 0.3), (21, 0), (20.8, 29.7), (0.2, 29.5)], True)
+    pc.fill(page, '#f4efe2')
+    if det >= 1: pc.texture(page, 'paper', 0.25, 0.08)
+    pc.line(poly([(0.3, 14.6), (20.7, 14.9)], False), pc.lw * 0.25, '#c9c0aa', 160)          # the fold
+    lw = 0.3
+    # night sky scribble and a yellow moon
+    sky = poly([(1, 1), (20, 1), (20, 7), (1, 7.5)], True)
+    if det >= 1: _crayon_fill(pc, sky, '#2b3f8a', 1, 90, 0.25, 0.42, 0.2)
+    _crayon(pc, [(17.6 + 1.4 * math.cos(a), 5.4 + 1.4 * math.sin(a)) for a in np.linspace(0, 2 * PI, 12)], '#e8b820', lw * 1.2, 2, closed=True)
+    if det >= 1: _crayon_fill(pc, oval(17.6, 5.4, 1.3), '#f2c830', 3, 200, 0.9, 0.3, 0.22)
+    # the railroad bridge: a deck with X trestles
+    _crayon(pc, [(1.0, 10.5), (13.5, 10.0)], '#4a2e1c', lw * 1.3, 4)
+    _crayon(pc, [(1.0, 11.3), (13.5, 10.8)], '#4a2e1c', lw * 1.0, 5)
+    for k in range(4):
+        x0 = 1.8 + k * 3.2
+        _crayon(pc, [(x0, 11.2), (x0 + 2.8, 15.5)], '#4a2e1c', lw * 0.9, 6 + k)
+        _crayon(pc, [(x0 + 2.8, 11.1), (x0, 15.5)], '#4a2e1c', lw * 0.9, 9 + k)
+    # grass
+    _crayon(pc, [(0.8 + 0.5 * k + (0.25 if k % 2 else 0), 27.6 - (0.9 if k % 2 else 0)) for k in range(40)], '#3f8a3a', lw * 0.9, 11, passes=2)
+    # the tall man lying on the ground (Dad), X eyes, not moving
+    _crayon(pc, [(2.0, 24.4), (9.6, 24.0)], '#3a2a20', lw * 1.1, 12)              # body
+    _crayon(pc, [(9.6, 24.0), (11.6, 23.0)], '#3a2a20', lw, 13); _crayon(pc, [(9.6, 24.0), (11.8, 25.0)], '#3a2a20', lw, 14)
+    _crayon(pc, [(4.0, 24.3), (5.0, 22.6)], '#3a2a20', lw, 15); _crayon(pc, [(4.0, 24.3), (5.4, 25.8)], '#3a2a20', lw, 16)
+    _crayon(pc, [(0.6 + 1.1 * math.cos(a), 24.3 + 1.1 * math.sin(a)) for a in np.linspace(0, 2 * PI, 10)], '#3a2a20', lw, 17, closed=True)
+    _crayon(pc, [(0.2, 23.9), (0.7, 24.4)], '#3a2a20', lw * 0.7, 18); _crayon(pc, [(0.7, 23.9), (0.2, 24.4)], '#3a2a20', lw * 0.7, 19)
+    _crayon(pc, [(1.6, 23.2), (3.4, 23.3)], '#e8c840', lw * 0.8, 20)              # the flashlight still on beside him
+    # the lady over him: pink triangle dress, red hair, a big wide smile, a grey rock held up
+    _crayon(pc, [(10.6, 23.6), (12.4, 17.6), (14.2, 23.6), (10.6, 23.6)], '#d97a8a', lw * 1.1, 21, closed=True)
+    if det >= 1: _crayon_fill(pc, poly([(10.6, 23.6), (12.4, 17.6), (14.2, 23.6)]), '#e88a9a', 22, 170, 0.8, 0.3, 0.22)
+    _crayon(pc, [(11.6, 23.6), (11.4, 25.6)], '#3a2a20', lw, 23); _crayon(pc, [(13.2, 23.6), (13.4, 25.6)], '#3a2a20', lw, 24)
+    _crayon(pc, [(12.4 + 1.25 * math.cos(a), 16.2 + 1.25 * math.sin(a)) for a in np.linspace(0, 2 * PI, 10)], '#3a2a20', lw, 25, closed=True)
+    _crayon(pc, [(11.0, 15.4), (11.2, 14.4), (12.4, 14.0), (13.6, 14.4), (13.9, 15.6)], '#b8442a', lw * 1.4, 26)
+    _crayon(pc, [(11.25, 16.0), (11.6, 16.9), (12.4, 17.25), (13.2, 16.9), (13.55, 16.0)], '#c0283a', lw * 1.0, 27)   # the big wide smile
+    _crayon(pc, [(11.25, 16.0), (12.4, 16.35), (13.55, 16.0)], '#c0283a', lw * 0.8, 47)
+    _crayon(pc, [(12.9, 18.6), (14.6, 15.2)], '#3a2a20', lw, 28)
+    _crayon(pc, [(14.9 + 1.0 * math.cos(a), 14.4 + 0.8 * math.sin(a)) for a in np.linspace(0, 2 * PI, 9)], '#6f6f74', lw * 1.1, 29, closed=True)
+    if det >= 1: _crayon_fill(pc, oval(14.9, 14.4, 0.9, 0.7), '#7a7a80', 30, 210, 0.5, 0.25, 0.2)
+    # the grey bunny beside them, one ear bent, blue crayon tears running down
+    bx, by = 17.4, 21.6
+    _crayon(pc, [(bx + 1.6 * math.cos(a), by + 2.2 * math.sin(a)) for a in np.linspace(0, 2 * PI, 12)], '#6f6f74', lw * 1.1, 31, closed=True)
+    if det >= 1: _crayon_fill(pc, oval(bx, by, 1.5, 2.1), '#8a8a90', 32, 160, 0.9, 0.3, 0.22)
+    _crayon(pc, [(bx + 1.2 * math.cos(a), by - 3.4 + 1.2 * math.sin(a)) for a in np.linspace(0, 2 * PI, 10)], '#6f6f74', lw * 1.1, 33, closed=True)
+    _crayon(pc, [(bx + 0.5, by - 4.4), (bx + 0.9, by - 7.6)], '#6f6f74', lw * 1.2, 34)
+    _crayon(pc, [(bx - 0.5, by - 4.4), (bx - 0.9, by - 5.6), (bx - 2.2, by - 5.0)], '#6f6f74', lw * 1.2, 35)
+    pc.fill(oval(bx - 0.45, by - 3.6, 0.22), '#1a1a1a'); pc.fill(oval(bx + 0.45, by - 3.6, 0.22), '#1a1a1a')
+    _crayon(pc, [(bx - 0.4, by - 2.7), (bx, by - 2.95), (bx + 0.4, by - 2.7)], '#3a3a40', lw * 0.7, 46)
+    for sd in (-1, 1):
+        _crayon(pc, [(bx + sd * 0.45, by - 3.2), (bx + sd * 0.6, by - 1.6), (bx + sd * 0.5, by + 0.4)], '#2f6fd8', lw * 0.9, 36 + sd, passes=2)
+    # I TRIED TO HELP HIM, shaky, in the corner
+    txt = 'I TRIED TO HELP HIM'
+    x0, y0, ch = 1.4, 1.9, 0.9
+    xx = x0
+    lines = []
+    for i, chh in enumerate(txt):
+        if chh == ' ':
+            xx += ch * 0.55; continue
+        for stroke in _STROKE_FONT.get(chh, []):
+            pts = [(xx + u * ch * 0.7 + (hash01(i * 7 + j, 511) - 0.5) * 0.12, y0 + v * ch * 1.15 + (hash01(i * 7 + j, 512) - 0.5) * 0.12 + 0.12 * math.sin(i * 1.7))
+                   for j, (u, v) in enumerate(stroke)]
+            lines.append(pts)
+        xx += ch * 0.92
+    sc = min(1.0, 14.0 / max(1.0, xx - x0))
+    for j, pts in enumerate(lines):
+        _crayon(pc, [(x0 + (x - x0) * sc, y0 + (y - y0) * sc) for x, y in pts], '#14182e', lw * 0.75, 40 + j, passes=2, jit=0.4)
+    pc.line(page, pc.lw * 0.45, '#9a917e')
+
+
+def draw_crayon_drawing(pen, cx, cy, w, t=0.0, angle=0.0, detail=2):
+    """The crayon drawing as an insert: a sheet w design px wide (A4 proportions) centred at (cx, cy), turned by angle."""
+    c = Ctx(pen, skia.Matrix(), _lw_for(w * 0.35)).sub(cx, cy, angle, 1.0)
+    _crayon_page(c, 0.0, 0.0, w, w * 29.7 / 21.0, detail, t)
+
+
+# the narrator at six (Grandma teaches the family knock): the same hair and eyes, child proportions, striped pajamas
+CAST['narrator_kid'] = _v3cast(outfit='pj3', feet='socks', **dict(_JUNE, hair='chin', hair_c='#4a2a1f', brow_c='#3a2118',
+                                                                   iris_c='#7a7a4c', part=1, sex='n', m=1.15, lashes=0.2),
+                               cloth=dict(top='#c9b07a', top_sh='#9a8350', top_hi='#e2cc98', trim='#f4f0e2', print_c='#8a6a3a',
+                                          print_c2='#f4f0e2', trousers='#c9b07a', trousers_sh='#9a8350', socks='#c9c6c0',
+                                          socks_sh='#9a978f'))
+BUNNY_CAST = BUNNY_CAST + ('narrator_kid',)
+
+
+
+def torch_pos3(actor, t, side=1):
+    """Design-space (x, y, angle deg) of the lens of the 'maglite' (Dad's flashlight) held in a hand, for
+    draw_torch_beam(pen, x, y, angle, ...). pose.torch_ang aims it (0 = up, 90 = screen right)."""
+    gx, gy = actor.grip_point(t, side, 'maglite')
+    P = actor.at(t)
+    a = math.radians(getattr(P, 'torch_ang', 0.0))
+    k = actor.height / (actor.sp.get('m', 1.7) * 100.0)          # px per cm
+    return gx + math.sin(a) * 20.5 * k, gy - math.cos(a) * 20.5 * k, P.torch_ang
+
+
+def _acting_foot_gap(self, t):
+    """Height in design px of the lower planted sole above the floor plane (0 = a foot on the floor); a figure lying,
+    kneeling or sitting on the floor reports its lowest contact. Used by the clip checks."""
+    P = self.at(t); sp = self.sp
+    if abs(getattr(P, 'lie', 0.0)) > 0.5: return 0.0
+    B = Body(sp, P)
+    lows = []
+    for side in (-1, 1):
+        H, K, A, pitch = _leg_chain(sp, B, P, side)
+        lows.append(max(0.0, -(A[1] + 38.0)))
+        if B.kneel > 0.5 and not (side > 0 and B.knees < 0.5): lows.append(max(0.0, -(K[1] + 30.0)))
+    return min(lows) * self.height / 1000.0
+
+
+Acting.foot_gap = _acting_foot_gap
+
+
+_draw_arm_public_v2 = draw_arm
+
+
+def draw_arm(pen, who, side=1, pose=None, x=None, y_feet=None, height=None, cx=None, cy=None, scale=None, light=None,
+             detail=None, t=None):
+    """Draw ONE arm (sleeve, hand, held prop) exactly where draw() / draw_bust() puts it: use it to bring a hand in front
+    of another figure (Mom's hand smoothing June's hair from behind her, a hand on a shoulder). v3 cast and the
+    Bunnyman's paws included."""
+    sp = CAST[who]
+    if not (sp.get('v3') or sp.get('bunny')):
+        return _draw_arm_public_v2(pen, who, side, pose, x, y_feet, height, cx, cy, scale, light, detail, t)
+    P = _as_pose(pose); t = P.t if t is None else t
+    if cx is not None:
+        k = 1.0 + 1.1 * clamp(P.approach)
+        head_px = 600.0 * (scale or 1.0) * k
+        s_ = head_px / sp['hh']
+        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(cx, cy + 60.0 * (scale or 1.0) * clamp(P.approach) - (-1000 + sp['hh'] / 2) * s_, 0.0, s_)
+    else:
+        s_ = height / 1000.0; head_px = sp['hh'] * s_
+        py = clamp(getattr(P, 'perch', 0.0)) * clamp(P.sit) * 222.0 * s_
+        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(x + P.dx, y_feet + P.dy + py, 0.0, s_)
+    det = _auto_detail(pen, head_px) if detail is None else detail
+    B = Body(sp, P)
+    if sp.get('bunny'):
+        _bunny_arm(c, sp, B, P, side, det, t, light); return
+    skin, skin_sh, _ = _skin_cols(sp, P, light)
+    sleeve, sleeve_sh = _limb_cols3(sp)[:2]
+    _draw_arm3(c, sp, B, P, side, det, t, skin, skin_sh, sleeve, sleeve_sh, light)
+
+
+# ------------------------------------------------------------------------------------------- small heads (wide shots)
+def _feat_k(c):
+    """Line-weight factor for facial features from the head's size on the render target: features stay crisp and the
+    eyes stay open on wide shots (a 40 px head would otherwise get outlines as wide as its eyes)."""
+    m = c.cv.getTotalMatrix()
+    sc = math.sqrt(abs(m.getScaleX() * m.getScaleY() - m.getSkewX() * m.getSkewY()))
+    head_px = 240.0 * c.s * sc
+    return clamp(head_px / 260.0, 0.32, 1.0), head_px
+
+
+def _wrap_feature(fn):
+    def w(c, hm, sp, P, *a, **kw):
+        if not sp.get('v3') or sp.get('bunny'): return fn(c, hm, sp, P, *a, **kw)
+        k, hpx = _feat_k(c)
+        if k >= 0.999: return fn(c, hm, sp, P, *a, **kw)
+        lw0 = c.lw
+        c.lw = lw0 * k
+        try:
+            return fn(c, hm, sp, P, *a, **kw)
+        finally:
+            c.lw = lw0
+    return w
+
+
+_eye_v3_full = _eye
+_eye = _wrap_feature(_eye_v3_full)
+_brow = _wrap_feature(_brow)
+_mouth = _wrap_feature(_mouth)
+_nose = _wrap_feature(_nose)
+
+
+# ====================================================================================================== self-test
+_REF_VOICE = os.path.join(_HERE, '..', '..', 'Dummy Video', 'film', '_work', 'align')
+
+
+def _selftest_bunny():
+    """The Bunnyman film's checks: every new id draws in every view and state; reach_to lands the palm on reachable
+    targets; sitting keeps the feet on the floor and the hips on the seat; kneeling keeps the feet down; the planted
+    walk does not slide; a prop picked up does not jump; look_at turns toward the target; hands held while walking meet."""
+    out = []
+    set_render_size(480, 270)
+    surf = skia.Surface(CFG.rw, CFG.rh); pen = Pen(surf.getCanvas()); surf.getCanvas().scale(CFG.k, CFG.k)
+    for who in BUNNY_CAST:
+        for yaw in (0.0, 0.5, -0.5, 1.0, 1.5, 2.0):
+            draw(pen, who, 960, 1000, 700, Pose(turn=yaw, kneel=0.5 if yaw == 1.5 else 0.0, sit=0.6 if yaw == 1.0 else 0.0,
+                                                seat=250.0 if yaw == 1.0 else 0.0))
+            draw_bust(pen, who, 960, 540, 0.6, Pose(h_turn=yaw, unmask=1.0 if who == 'bunny' and yaw == 0.5 else 0.0))
+        draw(pen, who, 960, 1000, 600, Pose(lie=-1.0, turn=1.0))
+    draw_crayon_drawing(pen, 960, 540, 300)
+    for nm in PROPS3: draw_prop3(pen, nm, 960, 540, 5.0)
+    out.append('%d cast ids draw in 6 views, kneeling, seated, lying and as busts; %d props; the crayon drawing' % (len(BUNNY_CAST), len(PROPS3)))
+    # reach precision
+    errs = []
+    for who in ('mom', 'narrator', 'june', 'bunny', 'dad'):
+        a0 = Acting(who, seed=1, height=height_px(who, 380)).place(900, 1000)
+        sh = a0.where(1.0, 'shoulder_l'); R = _arm_len(CAST[who]) * a0.height / 1000.0
+        for q in (-0.8, 0.0, 0.7):
+            tg = (sh[0] + 0.72 * R * math.cos(q), sh[1] + 0.72 * R * math.sin(q))
+            a = Acting(who, seed=1, height=a0.height).place(900, 1000); a.reach_to(0.0, 1, tg, dur=0.2, lean=False)
+            h = a.where(1.0, 'hand_l'); errs.append(math.hypot(h[0] - tg[0], h[1] - tg[1]))
+    assert max(errs) < 8.0, ('reach_to', max(errs))
+    out.append('reach_to: palm within %.1f px of 15 reachable targets (5 cast members)' % max(errs))
+    # seat anchor: hips on the seat, feet on the floor
+    for who, seat_m in (('mom', 0.46), ('narrator', 0.40), ('june', 0.30)):
+        ppm = 380.0; fl = 1000.0; seat_y = fl - seat_m * ppm
+        a = Acting(who, seed=2, height=height_px(who, ppm)).place(900, fl); a.face(0.6); a.sit_on(0.0, seat_y, dur=0.8)
+        P = a.at(2.0); hy = a.where(2.0, 'hip')[1]
+        assert a.foot_gap(2.0) < 0.5 and abs(hy - (seat_y - 40.0 * a.height / 1000.0)) < 0.06 * a.height, (who, hy, seat_y)
+        for t in np.arange(0.0, 1.0, 0.1): assert a.foot_gap(float(t)) < 0.5, ('sit feet', who, t)
+    out.append('sit_on: hips on the seat (chair / couch / low), feet on the floor all the way down')
+    for k in (0, 1, 2):
+        a = Acting('mom', seed=3, height=600).place(900, 1000); a.kneel_down(0.0, 1.0, knees=k)
+        gaps = [a.foot_gap(float(t)) for t in np.arange(0.0, 1.4, 0.05)]
+        assert max(gaps) < 0.5, ('kneel feet', k, max(gaps))
+    out.append('kneel_down (one knee, both knees, on the heels): a foot or a knee on the floor every frame')
+    # planted walk: the stance foot stays put
+    a = Acting('mom', seed=4, height=600).place(500, 1000); a.walk(0.0, 3.0, 0.0, 600.0, facing=1.0)
+    slide = 0.0; prev = None
+    for t in np.arange(0.8, 2.2, 1 / 60.0):
+        P = a.at(float(t)); B = Body(a.sp, P)
+        sd = min((-1, 1), key=lambda s_: B.foot_lift(s_))
+        fx = a.where(float(t), 'foot_l' if sd > 0 else 'foot_r')[0]
+        if prev is not None and prev[0] == sd and B.foot_lift(sd) < 0.5: slide = max(slide, abs(fx - prev[1]))
+        prev = (sd, fx)
+    assert slide < 2.5, ('walk slide px/frame', slide)
+    out.append('walk: the planted foot moves at most %.2f px per frame (no skating)' % slide)
+    # props: picked up without a jump, never in two places
+    a = Acting('narrator', seed=5, height=600).place(900, 1000)
+    egg = PropTrack('egg', 830, 990, 600 / 168.0)
+    tc = a.pick_up(egg, 0.5, side=-1, dur=1.2)
+    before = egg.pos(tc - 1e-3); after = egg.pos(tc + 1e-3)
+    assert math.hypot(after[0] - before[0], after[1] - before[1]) < 8.0, ('pick-up jump', before, after)
+    assert egg.state(tc - 0.01)[0] == 'rest' and egg.state(tc + 0.01)[0] == 'held' and a.at(tc + 0.05).hr_prop == 'egg'
+    out.append('pick_up: the egg changes from the doormat to the hand with a %.1f px jump' % math.hypot(after[0] - before[0], after[1] - before[1]))
+    # look_at: the head turns toward the target side; eyes follow
+    a = Acting('mom', seed=6, height=600).place(900, 1000); a.look_at(0.0, (1500, 500), dur=0.2)
+    b = Acting('mom', seed=6, height=600).place(900, 1000); b.look_at(0.0, (300, 500), dur=0.2)
+    pa, pb = a.at(1.0), b.at(1.0)
+    assert pa.turn + pa.h_turn > 0.3 and pb.turn + pb.h_turn < -0.3 and pa.look_x > -0.05 and pb.look_x < 0.05
+    out.append('look_at: yaw %+.2f / %+.2f toward targets right / left' % (pa.turn + pa.h_turn, pb.turn + pb.h_turn))
+    # hand in paw while walking
+    bb = Acting('bunny87', seed=6, height=height_px('bunny87', 300)).place(980, 940)
+    ll = Acting('laurie87', seed=7, height=height_px('laurie87', 300)).place(880, 954)
+    bb.face(-0.15); ll.face(0.15); bb.hold_hand(-1.0, -1, ll, 1)
+    bb.walk(1.8, 5.0, 0.0, 520.0, facing=1.0); ll.walk(1.8, 5.0, 0.0, 520.0, facing=1.0)
+    for t in np.arange(0.0, 5.0, 0.1): bb.at(float(t)); ll.at(float(t))
+    assert not getattr(bb, 'misses', None) and not getattr(ll, 'misses', None), 'hand in paw'
+    out.append('hold_hand: the Bunnyman and little Laurie keep hold all through the walk')
+    # character lines move lips; the foam head never does
+    m = Acting('mom', seed=7); m.talk([(0.2, 1.4, 'I told you not to look at the treeline')], env=None, words=None)
+    mo = [m.at(float(t)).m_open for t in np.arange(0.2, 1.4, 0.02)]
+    assert max(mo) > 0.25 and min(mo) < 0.1, 'mom lip sync'
+    out.append('lip sync from text: mouth open %.2f..%.2f on Mom\'s line' % (min(mo), max(mo)))
+    for o_ in out: print(o_)
+    print('bunnyman film self-test ok')
+
+
+_selftest_v2 = _selftest
+
+
+def _selftest():
+    """python3 characters.py --selftest: the older films' checks (their lip sync against the dummy film's recording when
+    it is there, so this film's new narration cannot break them) and the Bunnyman film's checks."""
+    global VOICE_WAV, VOICE_WORDS
+    ref_w, ref_j = os.path.join(_REF_VOICE, 'vo_en.wav'), os.path.join(_REF_VOICE, 'asr_cache.json')
+    keep = (VOICE_WAV, VOICE_WORDS)
+    if os.path.exists(ref_w):
+        VOICE_WAV, VOICE_WORDS = ref_w, ref_j
+    try:
+        _selftest_v2()
+    finally:
+        VOICE_WAV, VOICE_WORDS = keep
+    _selftest_bunny()
+
+
+from engine.core import rgb  # noqa: E402
+
+
+def draw_silhouette(pen, who, x, y_feet, height, pose=None, t=None, colr='#05070d', a=0.94, rim='#9fb6ff', rim_a=0.55,
+                    rim_side=1, eyes=0.0):
+    """A figure as a dark silhouette against a brighter sky (the Bunnyman far off at the treeline under the moon): the
+    figure flattened to colr, a thin moonlight rim on one side, and with eyes > 0 the Bunnyman's felt eye rings catching
+    a little light (two pale dots)."""
+    P = _as_pose(pose); t = P.t if t is None else t
+    cv = pen.cv
+    cv.saveLayer(None, None)
+    draw(pen, who, x, y_feet, height, P, detail=0, t=t)
+    cv.drawPaint(skia.Paint(Color=skia.Color4f(*[v / 255.0 for v in rgb(colr)[:3]], a), BlendMode=skia.BlendMode.kSrcATop))
+    cv.restore()
+    if rim_a > 0:
+        cv.saveLayer(None, None)
+        draw(pen, who, x + rim_side * max(1.5, height * 0.004), y_feet, height, P, detail=0, t=t)
+        cv.drawPaint(skia.Paint(Color=skia.Color4f(*[v / 255.0 for v in rgb(rim)[:3]], rim_a), BlendMode=skia.BlendMode.kSrcATop))
+        cv.saveLayer(None, skia.Paint(BlendMode=skia.BlendMode.kDstOut))
+        draw(pen, who, x, y_feet, height, P, detail=0, t=t)
+        cv.restore()
+        cv.restore()
+    if eyes > 0 and CAST[who].get('bunny'):
+        sp = CAST[who]
+        s = height / 1000.0
+        B = Body(sp, P)
+        hx, hy, hrot, hs = _head_xf(sp, B, P)
+        for side in (-1, 1):
+            ex = x + P.dx + (hx + side * sp['eye_dx'] * hs * math.cos((P.turn + P.h_turn) * PI / 2)) * s
+            ey = y_feet + P.dy + (hy + 18.0 + sp['eye_y'] * hs) * s
+            pen.glow(ex, ey, max(2.0, sp['eye_r'] * hs * s * 1.6), '#c9d2e6', 140 * eyes)
+            pen.fill(oval(ex, ey, max(0.8, sp['eye_r'] * hs * s * 0.6)), '#05070d', 255 * eyes)

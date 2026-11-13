@@ -1,5 +1,7 @@
-"""characters.py: the cast, their creepy faces and an acting timeline (police v2 cast, the delivery film cast and the
-dummy film cast: Mister Winks, Grandpa, the real Walter, young Walter 1974, Mom, Owen, you).
+"""characters.py: the cast, their creepy faces and an acting timeline (police v2 cast, the delivery film cast, the
+dummy film cast: Mister Winks, Grandpa, the real Walter, young Walter 1974, Mom, Owen, you; and the Bunnyman film cast,
+which lives in characters_bunny.py and is run into this module at import: see its BUNNY_API, CAST.md, and the section
+"Bunnyman film additions" at the end of this docstring).
 
 Everything draws with skia in the engine's 1920x1080 design space, on any canvas the engine hands a Layer (camera zoom and
 render size are already in the canvas matrix). Line weight follows the VISUAL_SPEC: about 8 design px on close-ups and
@@ -241,6 +243,28 @@ the delivery 'mom' / police 'you' designs live on as 'mom_delivery' / 'you_polic
         (steam with pose.steam), 'key'.
     escalate(a, t0, t1, kind) now also gives Mister Winks his wooden ticks (WINKS_TICKS, none in WINKS_QUIET or with
         kind='worked') and you / mom / owen the dummy film's FEAR_ARC tremble.
+
+Bunnyman film additions (characters_bunny.py; everything above still works; the dummy film's 'mom' / delivery 'dad' live on
+as 'mom_dummy' / 'dad_delivery'). See CAST.md for the cast table, the staging rules and the beat map.
+    Cast: 'bunny' (now: matted, one ear snapped, rust-brown belly, rips, dead matte glass eyes, zipper in the back),
+        'bunny87' (the clean 1987 mascot), 'mom' (Laurie, 43), 'mom_hosp' (the narrator in Mom's body), 'june',
+        'june_dress', 'laurie87', 'narrator', 'narrator_new' / 'narrator_neat' (the thing in the narrator's body),
+        'narrator_kid', 'grandma', 'dad', 'dale' (the face under the mask), 'cop', 'cop2', 'doctor', 'nurse'.
+        height_px(who, px_per_m) keeps everyone to scale. v3 faces: iris eyes with resting lids, tapered brows, line
+        weights that follow the on-screen head size; new hair styles; outfits cardigan3, hoodie3, pj3, dress3, gran3,
+        jacket3, labcoat3, scrubs3, gown3, neat3. The Bunnyman's suit: _bunny_figure / _bunny_head, paws, pose.unmask.
+    Body3 (now the global Body): pose.seat (hips on a seat, feet on the floor), pose.knees (kneel style 0/1/2), pose.run,
+        and a planted walk for the v3 cast.
+    World-space staging (a.place(x, y_floor) first): a.where(t, part), a.look_at(t0, target, t1, dur, z, body),
+        a.reach_to(t0, side, target, t1, dur, z, contact), a.point_at, a.head_to, a.hand_over, a.hold_hand, a.smooth_hair,
+        a.sit_on / a.seated / a.stand_up, a.kneel_down, a.crouch, a.run, a.climb, a.lie, a.dead, a.face, a.wave,
+        a.hum, a.knock_pattern, a.eyes_shut, a.unmask, a.mama, a.drag_hatchet, a.open_egg; targets are points, callables,
+        (actor, part) or PropTrack; misses land in a.misses; a.foot_gap(t) checks the feet. Solves run in a post pass
+        after the idle life, so contact holds on the drawn pose.
+    Props: PROPS3 (egg, egg_gold, egg_top / egg_bot / egg_bot_ring, ring, hatchet, maglite, diary, diary_open,
+        dress_tiny, drawing, basket, key, clipboard) in real centimetres; draw_prop3(pen, name, x, y, px_per_cm);
+        PropTrack (rest / held / gone keys) + a.pick_up / a.put_down / a.give / a.hold_prop; hand shape 'oven' (mitts);
+        torch_pos3(actor, t, side) for the maglite beam; draw_crayon_drawing(pen, cx, cy, w); draw_arm (v3 + paws).
 
 Typical use in a shot
     a = Acting('officer', seed=7, height=700); a.stare(0); a.creep_smile(1.0, 3.5); ev = a.knock(0.4)

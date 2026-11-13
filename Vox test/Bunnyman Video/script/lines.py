@@ -6,14 +6,17 @@ script/narration_en.txt word for word except:
   - "Buck teeth and a stitched-on smile." (script: "in a"; both recognisers hear "and a"; kept, a reduced vowel in
     running speech that reads the same)
 TTS slips repaired in the edit (film/_work/narration/voice_report.md lists each one):
-  - the opening jingle had two hops ("Hop, hop along"): a third "hop" from the same take is spliced in;
-  - "Rule number three. If he knocks" was read "...three. Ye knocks": "If he" is spliced in from rule six's text;
+  - "At 11:07" was read "At eleven seven": the "O" of the comment prompt's "Okay" goes in ("eleven-oh-seven");
+  - "Rule number three. If he knocks" was read "...three. Ye knocks": "If he" is spliced in from rule four's text;
   - "it's family. Yah. I I taught it": the extra "Yah" and the doubled "I" are cut;
   - "the dark c-corner", "a very ordinary c-cup": the stutters are cut;
   - "count to seven [opt] One": the stray syllable between Mom's line and June's count is cut;
   - "costume. Yeah. It has a zipper": the extra "Yeah" is cut;
-  - the last "Sleep well." came out as "See leave well": rebuilt from "sleep" (rule five, "June and I sleep on the
-    couch") and the "well" of the same take.
+  - the last "Sleep well." came out as "See leave well": the extra vowel after the S is cut and the v becomes a p
+    closure (both recognisers then hear "Sleep well.");
+  - the two uploaded parts meet inside "...facing | the back door": both sides are faded into a 40 ms gap.
+Also differs from the script, kept: "who would have let Laurie come home" (script: would've; both recognisers hear
+"would have").
 who: N narrator (16, "I"), M Mom (the thing living as Laurie), J June (7), L the little-girl voice coming from the
      Bunnyman (the real Laurie in Dale's 55-year-old body), G Grandma (remembered), D the dying man's last "Mama",
      X the thing in the narrator's old body ("Want to see a magic trick?" in the car). Character lines carry the voice
@@ -205,8 +208,8 @@ LINES = [
     L('G', "Not once.", '', 0.45, fx='memory'),
     L('G', "Not after the woods.", '', 0.45, fx='memory', tag='after_woods'),
     L('N', "Two.", '', 0.45, tag='knock_recall'),
-    L('N', "Three.", '', 0.45),
-    L('N', "Two.", '', 0.45),
+    L('N', "Three.", '', 0.45, tag='knock_recall_3'),
+    L('N', "Two.", '', 0.45, tag='knock_recall_2'),
     L('N', "Somebody at our front door knows my grandmother's secret knock.", '', 0.45, tag='secret_knock'),
     L('N', "And my mother, standing right next to me, doesn't recognize it at all.", '', 0.45, tag='doesnt_recognize'),
     # ---------------------------------------------------------------- rule 4: the voice at the mail slot
@@ -372,7 +375,7 @@ LINES = [
     L('M', "Close your eyes.", '', 0.45, tag='close_eyes'),
     L('M', "And count to seven.", '', 0.45, tag='count_to_seven'),
     L('J', "One,", '', 0.45, fx='whisper', tag='count'),
-    L('N', "June whispers.", '', 0.45),
+    L('N', "June whispers.", '', 0.45, tag='count_whisper'),
     L('J', "Two.", '', 0.45, fx='whisper', tag='count_2'),
     L('J', "Three.", '', 0.45, fx='whisper', tag='count_3'),
     # ---------------------------------------------------------------- the reveal: the trade
@@ -406,7 +409,7 @@ LINES = [
     L('N', "And never close your eyes before sunrise...", '', 0.45, tag='recap7'),
     L('N', "So the first time June closed them on Easter morning, it would be for Mom.", '', 0.45, tag='for_mom'),
     L('J', "Four,", '', 0.45, fx='whisper', tag='count_4'),
-    L('N', "June whispers.", '', 0.45),
+    L('N', "June whispers.", '', 0.45, tag='count_whisper2'),
     L('J', "Five.", '', 0.45, fx='whisper', tag='count_5'),
     L('N', "If it was going to take one of us, it wasn't going to be her.", '', 0.45, tag='not_her'),
     L('N', "I pull June's face out from under that hand, and I push my own face into it, and I squeeze my eyes shut.", '', 0.45, tag='swap'),
@@ -456,7 +459,7 @@ LINES = [
     L('N', "You've been watching this whole time.", '', 0.45, tag='watching_whole'),
     L('N', "So you never did.", '', 0.45, tag='never_did'),
     L('N', "Now, go back to the comment you left before rule two.", '', 0.45, tag='comments'),
-    L('N', "If you said the Bunnyman, you're the only one who would've let Laurie come home.", '', 0.45, tag='said_bunnyman'),
+    L('N', "If you said the Bunnyman, you're the only one who would have let Laurie come home.", '', 0.45, tag='said_bunnyman'),
     L('N', "Find someone who said Mom, and reply to them.", '', 0.45, tag='reply'),
     L('N', "Gently.", '', 0.45, tag='gently_reply'),
     L('N', "They're going to need it.", '', 0.45, tag='need_it'),
