@@ -117,7 +117,8 @@ T_3AM = 351.8                    # the flashlight comes back
 T_GRAB = 359.05                  # you grab him on the stairs
 T_SWAP = 567.06                  # "Owen's eyes close": from here the boy is owen_new
 T_LAMP_OUT = (569.12, 570.38)    # the den lamp goes out ... and comes back on
-WINK_NEAR = -1                   # the eyelid nearer the camera when his head is turned toward Owen (+h_turn)
+WINK_NEAR = 1                    # the eyelid nearer the camera when his head is turned toward Owen (-h_turn: screen left,
+                                 # where Owen's face is in the lap two-shots)
 T_JUMP = 573.4                   # Owen jumps up out of the armchair, the dummy falls face down on the rug
 DEN_FALL = ('h', -0.32, 2.12)    # where he lands face down on the rug, just in front of the armchair (and stays)
 T_PICK = 598.6                   # you pick the dummy up off the rug
@@ -1541,12 +1542,14 @@ def B_glove(F, sh):
         for (ts, sh_) in steps:
             if t >= ts: shape = sh_
         tr = 0.0 if t < tc else 2.5 * math.sin(t * 61.0) * math.exp(-max(0.0, t - tc - 0.62) * 2.0)
-        x, y, ang = 1000 + tr, 930, 176.0
-        pen.fill(oval(x + 30, y - 110, 300, 120), '#000000', 90, blur=34)                                  # its shadow on the wood
+        # his arm comes across the table from his side (the cuff at the far edge), the glove lying palm down with the
+        # fingers toward us: as they curl the fingertips draw back under the knuckles
+        x, y, ang = 1000 + tr, 560, 4.0
+        pen.fill(oval(x + 40, y + 190, 300, 120), '#000000', 90, blur=34)                                  # its shadow on the wood
         cv = pen.cv
-        cv.save(); cv.translate(x, y); cv.scale(1.0, 0.52); cv.translate(-x, -y)                    # lying flat: seen from above
-        _sleeve(pen, 'winks', x, y + 6, ang, 470, length=1400)
-        CH.draw_hand(pen, 'winks', x, y, 470, shape, ang + (4.0 if shape != 'flat' else 0.0), 1)
+        cv.save(); cv.translate(x, y); cv.scale(1.0, 0.6); cv.translate(-x, -y)                     # lying flat: seen from above
+        _sleeve(pen, 'winks', x, y - 6, ang, 470, length=1300)
+        CH.draw_hand(pen, 'winks', x, y, 470, shape, ang + (5.0 if shape != 'flat' else 0.0), 1)
         cv.restore()
     lay = [Layer(1.6, table, 'glove_table', cache='film:glove:table', bounds=(-400, 280, 2320, 1500)), Layer(1.0, glove, 'glove', blur=0)]
     for (ts, _) in steps:
@@ -2443,10 +2446,10 @@ def plan_rules34(F, t, e, w, C, T, KP):
       cam=dict(mv='keys', shake=1.4, keys=[(T(136), 900, 560, 1.05, None, 1.3), (T(137), 1080, 540, 1.0, 'in_out', 1.1),
                                            (T(138), 1110, 530, 1.05, 'in_out', 1.25)]), posts=[(T(137), T(138), 1.0, 1.4, 250, -10, 'in_out')])
     # his fingers curl (a close insert of the glove on the table, on the wave) ... his elbow bends (back on him in the chair)
-    C(T(138), 'glove', curl=w(138, 'curl') - 0.05, cam=dict(mv='keys', keys=[(T(138), 990, 660, 1.0), (w(139, 'bends') - 0.15, 1000, 700, 1.12, 'in_out')]))
-    C(w(139, 'bends') - 0.15, 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
-                                                                        lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
-      cam=KP(w(139, 'bends') - 0.15, T(140), 900, 610, 2.0, 880, 600, 2.2, 1.0, 1.03))
+    C(T(138), 'glove', curl=w(138, 'curl') - 0.05, cam=dict(mv='keys', keys=[(T(138), 1000, 620, 1.0), (T(139), 1000, 650, 1.1, 'in_out')]))
+    C(T(139), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
+                                                         lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
+      cam=KP(T(139), T(140), 900, 610, 2.0, 880, 600, 2.2, 1.0, 1.03))
     tst = w(140, 'puts')
     C(T(140), 'kitchen', view='table', winks=dict(act=_A(lambda a, s: a.sit_dummy(-1e9, tst + 0.4, hands='table'),
                                                          lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, t1=tst - 0.2, hold='up'),
@@ -2672,11 +2675,12 @@ def plan_rules56(F, t, e, w, C, T, KP):
     # the head ratchets round toward Owen and stops at 3/4 (both eyes stay on his face), then on "Click" the near lid snaps
     # shut in a tight close-up
     C(T(265), 'bust', who='winks', bg='den', cx=960, cy=600, scale=1.2, worked=True,
-      act=_A(lambda a, s: a.doll_turn(w(265, 'turns'), 0.42, 1.0, 3), lambda a, s: a.wink(tw, WINK_NEAR, 0.45)),
-      cam=dict(mv='keys', keys=[(T(265), 960, 560, 1.0), (tw - 0.5, 935, 470, 1.32, 'in_out'), (tw, 930, 455, 1.4, 'in_out'),
-                                (T(268), 928, 452, 1.43, 'lin')]), music=[(tw, 'hit', 0.6)])
+      act=_A(lambda a, s: a.doll_turn(w(265, 'turns'), -0.42, 1.0, 3), lambda a, s: a.wink(tw, WINK_NEAR, 0.45),
+             lambda a, s: a.set(w(265, 'turns') + 1.0, None, 0.4, look_y=-0.3)),
+      cam=dict(mv='keys', keys=[(T(265), 960, 560, 1.0), (tw - 0.5, 985, 470, 1.32, 'in_out'), (tw, 990, 455, 1.4, 'in_out'),
+                                (T(268), 992, 452, 1.43, 'lin')]), music=[(tw, 'hit', 0.6)])
     C(T(268), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)),
-      dact=lambda a, s: a.set(-9, None, 0.1, h_turn=0.8), cam=dict(mv='keys', keys=[(T(268), 860, 470, 1.25), (T(269), 860, 460, 1.32, 'in_out')]),
+      dact=lambda a, s: a.set(-9, None, 0.1, h_turn=-0.45, look_y=-0.45), cam=dict(mv='keys', keys=[(T(268), 860, 470, 1.25), (T(269), 860, 460, 1.32, 'in_out')]),
       music=[(t(268) - 0.6, 'silence', 0.0, 0.5)])
     C(T(269), 'bust', who=O, bg='den', ecu=True, cx=960, cy=640, scale=1.3, act=_A(lambda a, s: a.cry(s.t0 - 1),
                                                                                 lambda a, s: a.lids(T_SWAP, None, 1.0, 0.55)),

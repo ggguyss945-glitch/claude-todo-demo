@@ -250,7 +250,7 @@ EVENTS = [
     ('s264-0.4', 'silence', 0.6, 2.0),                 # "Say goodnight, Mister Winks." (Owen, crying)
     ('s266-0.15', 'silence', 0.7, 0.75),               # "Click."
     ('s268-0.5', 'silence', 0.8, 1.56),                # final: "Goodnight, Owen." all of it in near silence (0.5 -> 1.56 s)
-    ('e268+0.05', 'hit', 1.0, None, {'boost': 6.0}),   # final: it lands as Owen's eyes close (the cut): one of the three
+    ('e268+0.05', 'hit', 1.0, None, {'boost': 5.0}),   # v2: 8 -> 5 (B1). final: it lands as Owen's eyes close (the cut): one of the three
     ('e268+0.05', 'sub_drop', 0.8, None),              #   hardest hits (with the SFX goodnight thump just before)
     ('s271', 'silence', 0.9, 1.15),                    # "The lamp goes out."
     ('s279-0.1', 'rule', 0.8, None, {'nosnap': True}),
@@ -268,7 +268,7 @@ EVENTS = [
     ('s311', 'pulse_off', 0.5, None),
     ('s315-0.1', 'silence', 0.8, 3.0),                 # final: "Both of his eyelids close." (the two dry clicks) "Click,
     #   click." all in the drop-out (2.3 -> 3.0 s) ->
-    ('s317-0.1', 'stinger', 1.0, None, {'boost': 6.0}),   # final: "Owen can't wink." on the cut to Owen: the twist's hit
+    ('s317-0.1', 'stinger', 1.0, None, {'boost': 5.0}),   # v2: 8 -> 5 (B1). final: "Owen can't wink." on the cut to Owen: the twist's hit
     #   (was on the narrated "Click", masking it)
     # v2 (m13): the classic riser into the reveal word (film.py's reveal list, kept by the full plan now)
     ('s60', 'riser', 0.5, 3.0), ('s68', 'riser', 0.5, 3.0), ('w108:turned', 'riser', 0.5, 3.0), ('w132:turns', 'riser', 0.5, 3.0),
