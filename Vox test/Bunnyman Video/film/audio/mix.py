@@ -665,16 +665,17 @@ def with_plan(mcues, tl):
             ev = MP.events(lines)
             out['intensity'] = MP.intensity(lines, float(mcues.get('duration') or tl['duration_en'] + 2.5))
             what.append('events + intensity')
-        if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks') for e in ev):
+        if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks', 'jingle') for e in ev):
             idt = MP.identity_events(lines)
             have_motif = any(e.get('type') == 'motif' for e in ev)
             add = [e for e in idt if not (have_motif and e['type'] == 'motif')]
-            spans = [(e['t'] - 1.0, e['t'] + float(e.get('len', 0)) + 1.0) for e in add if e['type'] in ('show', 'winks')]
+            spans = [(e['t'] - 1.0, e['t'] + float(e.get('len', 0)) + 1.0) for e in add
+                     if e['type'] in ('show', 'winks', 'jingle')]
             # film.py's own 'theme' cues that fall inside a planned show / Winks theme would play the same tune twice
             # at once: the plan's arrangement takes over there; the others stay (score.py plays them as Winks phrases)
             drop = [e for e in ev if e.get('type') == 'theme' and any(a <= float(e.get('t', 0)) <= b for a, b in spans)]
             ev = [e for e in ev if not any(e is d for d in drop)] + add
-            what.append('identity (show / winks%s%s)' % ('' if have_motif else ' / motif',
+            what.append('identity (jingle / show / winks%s%s)' % ('' if have_motif else ' / motif',
                                                           f', {len(drop)} overlapping film.py theme cues dropped' if drop else ''))
         out['events'] = sorted(ev, key=lambda e: float(e.get('t', 0)))
         if what:

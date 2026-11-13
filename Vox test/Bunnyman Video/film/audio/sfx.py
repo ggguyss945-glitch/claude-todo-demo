@@ -1,5 +1,5 @@
-"""Sound effects for "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH" (built on the police film's
-v2 SFX engine, as the delivery film extended it): recorded, layered, perspective-processed, 48 kHz stereo float.
+"""Sound effects for "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" (the police film's v2 SFX
+engine, as the delivery and dummy films extended it): recorded, layered, perspective-processed, 48 kHz stereo float.
 
 Every sound is built from the recorded library (the owner's Epidemic files first, then the free CC0/CC-BY library in
 catalog.json via library.py), cut into single events ("grains") automatically, layered 2-3 deep (e.g. a knock =
@@ -12,8 +12,8 @@ Public API
     render_event(name, seed=0, space=None, level=0.0, **params) -> (audio, pre_s)
         pre_s = seconds of audio that come BEFORE the cue time t, so mix.py places the audio at t - pre_s:
         a riser ends at t, a whoosh / car_pass / siren pass peaks at t, a hit's transient lands on t.
-    NAMES       POLICE_NAMES (the 42 police names) + DELIVERY_NAMES (the delivery film) + DUMMY_NAMES (this film, see
-                the end of this docstring)
+    NAMES       POLICE_NAMES (the 42 police names) + DELIVERY_NAMES (the delivery film) + DUMMY_NAMES (the dummy film)
+                + BUNNY_NAMES (this film, see the end of this docstring)
     SPACES      'close', 'inside', 'outside', 'doorbell_mic' (+ 'street', 'phone', 'radio', 'car', 'dry', and for this
                 film 'porch' (on the porch, exterior shots), 'window' (outdoors heard through an open window), 'upstairs'
                 (through the ceiling / far up the stairs), 'box' (inside the cardboard box), 'app' (the doorbell camera's
@@ -170,6 +170,55 @@ in LEVEL_LU (gain_db 0 = the house level; the cast's own gains, CAST.md, ride on
     eyelid_click, wood_creak, flashlight_click, dummy_thud, case_latch, hand_squeeze, snort, sip, paper (kind 'slide'),
     cloth_rustle (kind 'grab' / 'glove' / 'slot'), breath ('sniff' +10, 'gasp' +3, 'sob' +2 dB: the cast sends them at
     -8..-12), keys_drop (kind 'jangle'), footsteps_wood_inside (kind 'tiny'), whoosh.
+
+Bunnyman film names (BUNNY_NAMES; the owner's bunny set W/samples/epidemic first: every file judged in
+W/mix/sfx_review.md (use / process / reject); then the dummy, delivery, police and mirror sets and the free library;
+synthesis for the egg's plastic shell, the ring, the brass flap, the barrel's steel, the bulb, the zipper, the curtain
+rings, the VHS pause; the real Laurie's crying is her own voice through audio/voicesynth.py). Default space in
+brackets; levels in LEVEL_LU (one-shots momentary max, beds integrated, LU rel the voice at gain_db 0).
+    ambience_woods  dur, crickets=0.6, owl=0.5, wind=0.5, frogs=0.25, dog=0 (BED) [window]   the night at the treeline:
+                    field crickets (the close single cricket kept back), frogs, wind in bare branches, the tawny owl
+    owl_hoot        [woods]   one owl call        dogs_search  dur, n_dogs (DUR) [woods]   1987: the search dogs
+    crowd_parade    dur, cheer, drums, applause, swell_at (BED) [dry]   the 1987 parade (kids close, adults far)
+    hospital_corridor dur, busy (BED) [dry]      hospital_room  dur, hum (BED) [dry]
+    burn_barrel     dur, ignite=False, size (BED) [porch]   embers, a low flame body, the steel ticking; ignite: whoomp
+    plastic_melt    dur (DUR) [porch]   the egg melting: sizzle, bubbles, sagging crackle
+    egg_tap         [inside]  "one soft tap on the front door"      egg_set  surface='mat'|'wood' [porch]
+    egg_rattle      dur, strength [outside]   the egg rocking on the mat, the ring loose inside
+    egg_open        ring=True [close]   the old halves pop apart, the shell rings, the ring clinks
+    ring_roll       dur [close]   the ring rolling round the plastic half       ring_drop  surface='hand'|'egg'|'floor'
+    ring_hand       kind='take'|'pocket' [close]     oven_mitt  dur [close]
+    knock_family    beat=0.476, groups=[s, s, s], force, soft, door [inside]   THE family knock 2-3-2 on the jingle's
+                    beat (knocks on beats 0, 1 | 3, 3.5, 4 | 6, 7); groups move each group into the narration's gaps
+                    (spacing inside a group stays on the beat); soft=True: Grandma on the kitchen table (memory=True)
+    slot_flap       action='open'|'close'|'snap' [inside]   the brass mail slot: the spring hinge creak, the clack
+    girl_cry        dur, intensity, seed_voice (DUR) [slot]   the real Laurie crying (her own voice, voicesynth.cry)
+    jingle          version ('speaker' | 'vhs' | 'parade' | 'musicbox' | 'hum' | 'hum_x' | 'girl' | 'knocks' |
+                    'climax' | 'count' | 'outro' | 'studio'), dur, stop ('fade'|'cut'|'drag'), + jingle.render keys
+                    (DUR) [dry]   the Pemberton's jingle as a sound in the scene (the score plays it as 'jingle' events)
+    attic_door      action='open'|'close' [inside]     bulb  kind='chain'|'buzz' (dur) [attic]
+    chest_lid       action='open'|'close' [attic]      page_flip  n, rate [attic]     diary_lock [attic]
+    window_smash    [next_room] HIT   the kitchen window explodes (glass x2, the frame, shards, a low thump)
+    door_crash      [next_room] HIT   the back door kicked in, into the wall, splinters
+    wet_drag        dur, wet [next_room]   something heavy, wet, dragging on the kitchen boards
+    hatchet_step    n, rate=0.75, weight [door]   a slow heavy tread, then 0.3 s later the hatchet head knocking the
+                    step ("Thunk."): the k-th Thunk lands at t + k / rate + 0.3
+    doorknob        kind='turn'|'rattle' [bathroom]      paper_under_door  dur [bathroom]
+    struggle        kind='wall'|'shake'|'slam'|'crack'|'full' (dur) [door]   the fight in the hall, from the bathroom:
+                    restrained (no library screams: the voiceover carries them); 'slam' pre = 0.25 s (the hit on t)
+    key_outside     [bathroom]   the key in the bathroom lock from the hall side; pre = 0.75 (the bolt on the cue)
+    sirens_arrive   dur, n_cars [street]   police cars pulling up at dawn
+    vhs_pause       kind='pause' (dur: the paused deck's hum and tracking noise) | 'play' [dry]   the comment prompt
+    light_switch    kind='wall'|'porch'|'porch_off' [close]     music_box_wind  dur [close]
+    flash_pop       [close]   the 1987 newspaper camera (shutter, flash, winder)
+    bathtub         kind='settle'|'squeak' [bathroom]   body_fall_stairs  n [door]   zipper  dur [close]
+    fridge_paper    [close]   the rules go up      curtain_close  dur [close]   (rings on the rod)    peephole [close]
+    Spaces added: 'woods' (deep in the trees, -12), 'door' (the hall heard from inside the shut bathroom: panel boom,
+    the crack under the door, the tiled room, -6), 'bathroom' (inside it), 'slot' (through the brass mail slot, -4),
+    'vhs' (the 1987 camcorder tape: audio/jingle.camcorder), 'attic'. IRs added: 'bathroom', 'attic' (image-source).
+    Aliases (ALIASES) and keyword guesses (KEYWORDS, bunny words first): woods, owl, parade, fire, barrel, egg, ring,
+    family_knock, secret_knock, mail_flap, crying, song / pembertons / hum / music_box (-> jingle), attic, bulb_chain,
+    chest, pages, smash, kick_in, drag, hatchet, thunk, knob, fight, slam, crack, sirens, pause, porch_light, zip...
 """
 import os, sys, json, math, hashlib
 from collections import OrderedDict, defaultdict, deque
@@ -314,14 +363,14 @@ DEFAULT_SPACE.update(dummy_clack='tight', dummy_jaw='tight', eyelid_click='tight
 # dur): integrated. Spaces: 'woods' (deep in the trees), 'door' (the hall heard from inside the shut bathroom: the
 # panel's boom, the gap under the door, the tiled room), 'bathroom' (inside it), 'slot' (through the brass mail
 # slot), 'vhs' (the 1987 camcorder tape), 'attic'.
-LEVEL_LU.update(ambience_woods=-26, owl_hoot=-14, crowd_parade=-20, hospital_corridor=-28, hospital_room=-32,
+LEVEL_LU.update(ambience_woods=-26, owl_hoot=-4, crowd_parade=-20, hospital_corridor=-28, hospital_room=-32,
                 burn_barrel=-24, plastic_melt=-20, egg_tap=-8, egg_set=-12, egg_rattle=-8, egg_open=-6, ring_roll=-10,
                 ring_drop=-6, ring_hand=-10, oven_mitt=-12, knock_family=-3, slot_flap=-6, girl_cry=-14, jingle=-18,
                 attic_door=-8, bulb=-12, chest_lid=-8, page_flip=-10, diary_lock=-10, window_smash=0, door_crash=-1,
                 wet_drag=-12, hatchet_step=-5, doorknob=-9, paper_under_door=-10, struggle=-3, key_outside=-5,
                 sirens_arrive=-14, vhs_pause=-10, light_switch=-6, music_box_wind=-12, flash_pop=-8, dogs_search=-20,
                 bathtub=-12, body_fall_stairs=-5, zipper=-10, fridge_paper=-9, curtain_close=-10, peephole=-12)
-SPACE_LU.update(woods=-12.0, door=-6.0, bathroom=0.0, slot=-4.0, vhs=-2.0, attic=0.0)
+SPACE_LU.update(woods=-9.0, door=-6.0, bathroom=0.0, slot=-4.0, vhs=-2.0, attic=0.0)
 SPACE_ALIAS.update(forest='woods', treeline='woods', trees='woods', bathroom_door='door', through_door='door',
                    closed_door='door', hallway_from_bathroom='door', tub='bathroom', mail_slot='slot', letterbox='slot',
                    camcorder='vhs', vcr_tape='vhs', home_video='vhs', loft='attic')
@@ -789,7 +838,7 @@ def space(y, kind, seed=0, wet=None):
     if kind == 'door':                                    # the hall, heard from inside the shut bathroom
         m = mono(y)
         panel = eq(lp(m, 1600, 2), ('peak', 220, 4.0, 1.1), ('peak', 480, 1.5, 1.4), ('hs', 1400, -6.0, 0.7))
-        gap = bp(m, 1400, 6000, 2) * 0.06                  # the crack under the door
+        gap = bp(m, 1400, 6000, 2) * 0.09                  # the crack under the door (tests: the Thunks read on a phone)
         x = reverb(panel + gap, 'hallway', 0.35, 0.002)
         return width(reverb(x, 'bathroom', 0.22 if wet is None else wet, 0.001), 0.5)
     if kind == 'bathroom':                                # inside the small tiled bathroom
@@ -3979,13 +4028,14 @@ def r_hatchet_step(rng, sp, n=4, rate=0.75, weight=1.0, **_):
         t = k / float(rate) * (1 + 0.05 * rng.standard_normal()) if k else 0.0
         g = lp(T.get(rng, rj=0.04, fo=0.05), 3500, 2) * weight
         tread = st(modal(np.array([92, 160, 248, 330]) * (1 + 0.03 * rng.standard_normal()), [0.09, 0.07, 0.05, 0.03],
-                         [1, 0.7, 0.45, 0.3], 0.3, int(rng.integers(1 << 30)))) * 0.45 * weight
+                         [1, 0.7, 0.45, 0.3], 0.3, int(rng.integers(1 << 30)))) * 0.25 * weight
         sc = Sc.get(rng, rj=0.05, fo=0.05)
         o = int(rng.integers(0, max(1, len(sc) - n_(0.22))))
         sc = fade(lp(sc[o:o + n_(0.22)], 2800, 2), 0.03, 0.08) * 0.18
         th = lp(Ch.get(rng, rj=0.03, fo=0.12), 3200, 2)
-        ev += [(t, g), (t + 0.004, tread), (t + 0.12, sc), (t + 0.3, th * rng.uniform(0.85, 1.0)),
-               (t + 0.302, st(modal([120, 210, 330], [0.06, 0.04, 0.03], [1, 0.6, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.35)]
+        bite = pnorm(hp(th, 900, 2), 0.5 * peak(th))     # the head's bite into the tread: what a phone speaker keeps
+        ev += [(t, g), (t + 0.004, tread), (t + 0.12, sc), (t + 0.3, th * rng.uniform(0.85, 1.0)), (t + 0.3, bite),
+               (t + 0.302, st(modal([120, 210, 330], [0.06, 0.04, 0.03], [1, 0.6, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.2)]
     y = _seq(ev, 0.4)
     return y, onset_s(y, -14), 0.0, False
 
@@ -4249,7 +4299,7 @@ def r_curtain_close(rng, sp, dur=1.0, **_):
 def r_peephole(rng, sp, **_):
     """The front-door peephole's little brass cover swung aside."""
     tt = np.arange(n_(0.12)) / SR
-    sc = st(bp(noise(0.12, int(rng.integers(1 << 30))), 2500, 7000, 2) * np.sin(np.pi * tt / 0.12)) * 0.03
+    sc = st(bp(noise(0.12, int(rng.integers(1 << 30))), 2500, 7000, 2) * np.sin(np.pi * tt / 0.12)) * 0.006
     tk = st(modal([3900, 6100], [0.02, 0.01], [1, 0.4], 0.06, int(rng.integers(1 << 30)), exc=0.0002)) * 0.15
     y = _seq([(0.0, sc), (0.1, tk)], 0.05)
     return y, 0.1, 0.0, False

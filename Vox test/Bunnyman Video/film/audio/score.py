@@ -1,7 +1,18 @@
-"""score.py: the music for "If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH" (the police film's
-v2 score engine, as the delivery film used it), rendered from music_cues.json. The arrangement for this film is pinned
-by audio/music_plan.py (cues['track_map'], and the film's own sound identity, the 'show' / 'winks' / 'motif' events,
-which mix.py adds when film.py's cue sheet has none).
+"""score.py: the music for "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" (the police film's
+v2 score engine, as the delivery and dummy films used it), rendered from music_cues.json. The arrangement for this
+film is pinned by audio/music_plan.py (cues['track_map'], and the film's own sound identity, the 'jingle' events: the
+ORIGINAL Pemberton's jingle of audio/jingle.py in its versions, and two of the owner's children's tunes as 'show'
+events, which mix.py adds when film.py's cue sheet has none).
+
+This film's identity (stem `show`):
+    jingle  render_jingle(e): an audio/jingle.py version (vhs, parade, speaker, musicbox, hum, hum_x, girl, climax,
+            count, outro, knocks, studio) placed at t, bent onto the narration's words by its anchors, cropped to len
+            (stop fade / cut / drag), optionally through an sfx.py space ('slot': the girl at the mail slot); the dark
+            bed steps back by SHOW_DUCK['jingle'][version] while it plays.
+    show    (kept) a tune from the catalogue at its VINTAGE shift: here Mary Had a Little Lamb (F -> D) on the crayon
+            diary and Mr. Otter's Rainy Day (A) for June turning seven, space 'clean'.
+The dummy film's identity notes follow (the show theme on its TV, Mister Winks's rotting theme): the code is kept and
+still works, this film's plan does not use it.
 
 This film's identity (stem `show`):
     show    the cheerful 1970s kids-show theme ("Saturday Morning with Walter Kemp": the owner's Epidemic track Balloon
@@ -135,6 +146,16 @@ TRACKS = {
     'come_closer_belladonna_strings': -1,        # mirror: D# minor -> D minor, horror strings (the stairs, the hand)
     'don_t_look_belladonna_strings': -1,         # mirror: D# minor -> D minor, horror strings (the bookcase, the TV)
     'irene_kevin_dailey': 0,                     # mirror: D minor, starts near silent and builds (the tape's twist)
+    # the Bunnyman film: the owner's new tracks and the earlier sets' unused ones (keys: catalog_epidemic_bunny.json)
+    'the_haunted_luella_gren': 1,                # bunny: G# minor -> A minor, sparse piano over a thin high drone
+    'sleep_forever_luella_gren': 1,              # bunny: G# major -> A, a sinister lullaby (Mom and the yellow dress)
+    'the_cursed_path_of_everlasting_loneliness_polar_nights': -2,   # bunny: G major -> F major (D minor's relative:
+                                                 # June's count D E F G A Bb C# sits on it; the C# rubs, on purpose)
+    'mermaid_s_story_jerry_lacey': 2,            # bunny: C major -> D major, the outro's harp lullaby
+    'end_of_rain_beyza': 0,                      # mirror: A major, very quiet pad
+    'annihilated_blue_saga': 0,                  # mirror: D major, pale pad
+    'midnight_wanderer_luella_gren': -2,         # mirror: E minor -> D minor
+    'escalation_jon_bjork': 2,                   # mirror: C minor -> D minor, a steady escalation
 }
 # The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
 # warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
@@ -147,11 +168,20 @@ VINTAGE = {
     'circus_beat_martin_landstrom': (-2.0, 5.0), 'chasing_snakes_martin_landstrom': (-7.0, 2.0),
     'once_i_was_a_miner_martin_landstrom': (-4.0, 4.0), 'a_gal_i_know_martin_landstrom': (-7.0, 1.0),
     'it_s_just_me_instrumental_version_john_runefelt': (-6.0, 1.0), 'un_jour_peut_etre_ote': (-4.0, 1.0),
+    # the Bunnyman film's children's tunes (identity 'show' events, space 'clean')
+    'mary_had_a_little_lamb_lil_y': (-3.0, 0.3),       # F major -> D major: the real Laurie's crayon diary
+    'mr_otter_s_rainy_day_lil_y': (0.0, 0.3),          # A major: June turning seven
 }
 SHOW_THEME = 'balloon_twister_macy_s_voice'
 WINKS_SHIFT = -9.0                # the theme, rotting: B -> D, 0.6x
 WINKS_OFF = 6.0                   # (s in the original track) the tune, not the intro
-SHOW_DUCK = {'show': -10.0, 'winks': -7.0}  # the dark track bed steps back while the TV / the Winks theme plays (final
+SHOW_DUCK = {'show': -10.0, 'winks': -7.0,  # the dark track bed steps back while the TV / the Winks theme plays (final
+             # the Bunnyman film: how far the dark bed steps back under each jingle version
+             'jingle': {'vhs': -14.0, 'parade': -12.0, 'speaker': -6.0, 'hum': -4.0, 'hum_x': -4.0, 'musicbox': -5.0,
+                        'girl': -6.0, 'climax': -3.0, 'count': -1.5, 'outro': -9.0, 'knocks': -4.0, 'studio': -10.0}}
+JINGLE_LIFT = {'vhs': -2.0, 'parade': -1.0, 'speaker': 0.0, 'hum': -3.0, 'hum_x': -3.0, 'musicbox': -2.0, 'girl': 0.0,
+               'climax': -1.0, 'count': 1.0, 'outro': 0.0}  # dB on IDENTITY_LIFT per version (test 1: the VHS jingle sat
+#   at +2.5 LU over the narration speaking its words, Mom's hum at -3.5: both down so the voice stays on top)
 #   mix v2: -6 / -3 -> -10 / -7: the review measured the film's own sound 16-29 dB under the voice, under the drones)
 IDENTITY_LIFT = 6.0                          # final mix v2: the show theme and the Winks theme +6 dB
 HITS_LIFT = 2.0                              # final mix v2: 22 hits on ordinary lines removed; the reveal hits left +2 dB
@@ -166,7 +196,7 @@ FLATTEN = 0.3                    # share of each track's own dynamics flattened 
 DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0,
                'theme': 5.0, 'drone': 8.0}
 KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
-                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone')
+                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone', 'jingle')
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -1476,6 +1506,60 @@ class Score:
         self._duck_span(t, t + len(x) / SR, SHOW_DUCK['winks'])
         self.log(f'winks {t:.1f}-{t + ln:.1f}s depth {depth} stop {stop}')
 
+    def render_jingle(self, e):
+        """The Pemberton's jingle (audio/jingle.py, the film's own tune): event keys version ('vhs' | 'parade' |
+        'speaker' | 'musicbox' | 'hum' | 'hum_x' | 'girl' | 'climax' | 'count' | 'outro' | 'knocks' | 'studio'), len,
+        stop ('fade' | 'cut' | 'drag'), fade (fade-in s), anchors [[beat, film s], ...] (the tune bends so those beats
+        land there), space (an sfx.py space: 'slot', 'woods', 'door', ...), off (s into the render), and the render's
+        own keys (tempo, loops, phrases, who, transpose, n, minor, wind_down, speed, pass_at, far). Level: the version's
+        short-term max at REF_LUFS + 4 + 8 * (level - 0.5) + IDENTITY_LIFT + JINGLE_LIFT; the dark bed steps back by
+        SHOW_DUCK['jingle'][version] while it plays."""
+        import jingle as JG
+        t, lv = e['t'], e['level']
+        ver = str(e.get('version') or 'musicbox')
+        keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
+                'cut', 'phrase3_only', 'wind')
+        kw = {k: e[k] for k in keys if k in e and e[k] is not None}
+        if 'phrases' in kw:
+            kw['phrases'] = tuple(int(p) for p in kw['phrases'])
+        if e.get('anchors'):
+            kw['anchors'] = [(float(b), float(x) - t) for b, x in e['anchors']]
+        if e.get('melody_anchors'):
+            kw['melody_anchors'] = [(float(b), float(x) - t) for b, x in e['melody_anchors']]
+        y, info = JG.render(ver, seed=int(e.get('seed', 3)), **kw)
+        y = _st(np.asarray(y, np.float32))
+        off = float(e.get('off', 0.0) or 0.0)
+        if off > 0:
+            y = y[int(off * SR):]
+        stop = str(e.get('stop') or 'fade')
+        ln = e.get('len')
+        if ln:
+            n = int(float(ln) * SR)
+            if stop == 'drag' and len(y) > n:                 # the tape / the motor drags to a halt
+                k = min(n, int(1.0 * SR))
+                r = np.linspace(1.0, 0.05, k) ** 1.5
+                ratio = np.concatenate([np.ones(n - k), r])
+                y = self.vread(np.concatenate([y, np.zeros((SR, 2), np.float32)]), ratio)[:n]
+                y[-k:] *= np.linspace(1, 0, k)[:, None].astype(np.float32) ** 0.7
+            else:
+                y = y[:n]
+        y = y * self._envelope(len(y), float(e.get('fade', 0.03)), 0.025 if stop == 'cut' else 0.8,
+                               'cut' if stop == 'cut' else 'fade')[:, None]
+        if e.get('space'):
+            try:
+                import sfx as SFX
+                y = _st(SFX.space(y, str(e['space']), int(e.get('seed', 3))))[:len(y) + int(0.6 * SR)]
+            except Exception as ex:
+                print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
+        st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
+        target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + JINGLE_LIFT.get(ver, 0.0)
+        y = (y * np.float32(db(target - st))).astype(np.float32)
+        rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio') else \
+            ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
+        self.bus['show'].add(t, y, rev=rev)
+        self._duck_span(t, t + len(y) / SR, SHOW_DUCK['jingle'].get(ver, -4.0))
+        self.log(f'jingle {ver} {t:.1f}-{t + len(y) / SR:.1f}s stop {stop}')
+
     def _duck_span(self, a, b, depth):
         tt = np.arange(self.nc) / CR
         d = np.interp(tt, [a - 0.6, a + 0.4, b - 0.4, b + 1.2], [0, depth, depth, 0], left=0, right=0)
@@ -1785,6 +1869,13 @@ class Score:
                 self.render_rule(e)
             elif ty == 'drone':                           # film.py: a held swell under the ending
                 self.render_swell(dict(e, len=max(2.0, float(e.get('len') or 8.0))))
+            elif ty == 'jingle':
+                if any(x['type'] == 'end' and x['t'] <= e['t'] for x in self.ev):
+                    continue
+                try:
+                    self.render_jingle(e)
+                except Exception as ex:                   # the identity must never cost the score
+                    print(f'[score] WARNING: jingle at {e["t"]:.2f} s failed ({repr(ex)[:160]}): skipped', flush=True)
             elif ty in ('show', 'winks', 'theme'):
                 if ty == 'theme':                         # film.py: the show theme as a score cue
                     ty = 'show' if e.get('space') else 'winks'

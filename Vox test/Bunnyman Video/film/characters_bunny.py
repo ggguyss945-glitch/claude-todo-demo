@@ -78,10 +78,10 @@ _BUNNY_FUR = dict(
     clean=dict(fur='#a7abb5', fur_sh='#7a7f8b', fur_dp='#565a66', fur_hi='#ced2da', belly='#f1efe9', belly_sh='#c9c5bc',
                pad='#f2f0ea', pad_sh='#cdc8be', inner='#eaa3b2', inner_sh='#c47c8d', nose='#e98b9f', nose_sh='#b85f74',
                teeth='#fbf8ef', teeth_sh='#d8d1c0', eye='#08090c', stitch='#3a3036', whisk='#2b2a30', sole='#e0a6b1'),
-    dirty=dict(fur='#5d5f66', fur_sh='#3f4148', fur_dp='#26272d', fur_hi='#7e8189', belly='#a99f8c', belly_sh='#7f7563',
+    dirty=dict(fur='#5d5f66', fur_sh='#3f4148', fur_dp='#26272d', fur_hi='#7e8189', belly='#8e8574', belly_sh='#6a6152',
                pad='#b9b09d', pad_sh='#8d8370', inner='#a6727a', inner_sh='#7a4e57', nose='#a46a70', nose_sh='#7a4850',
                teeth='#d9c995', teeth_sh='#a8955e', eye='#050506', stitch='#231b1c', whisk='#1d1b1e', sole='#7e5f5d',
-               rust='#7b3a20', rust_dk='#4e2212', mud='#3b2f24', hole='#120d0c', stuffing='#cfc6b2'))
+               rust='#5e3424', rust_dk='#3a1f15', mud='#3b2f24', hole='#120d0c', stuffing='#cfc6b2'))
 _BUNNY_HEAD_YS = [-120, -117, -108, -86, -50, -10, 34, 66, 92, 110, 120]
 _BUNNY_HEAD_WS = [0, 38, 64, 87, 98, 105, 110, 108, 96, 68, 0]
 
@@ -839,9 +839,10 @@ def _bunny_belly(c, sp, B, rows, P, det, t):
             # one big soaked stain spreading from the upper belly, darkest at its heart, a dried tide line at the edge
             X, Y, vv, s_ = B.surf(-0.08 * b['ch'], yt + (yb - yt) * 0.42, 3, False, rows)
             fx = max(0.35, abs(B.ct))
-            stain = _blob(X, Y, 86 * s_ * fx, 104 * s_, 13, 3, 0.55)
-            c.radial(stain, X + 10 * s_, Y - 20 * s_, 130 * s_, [(0, cl['rust_dk'], 235 * dirt), (0.5, cl['rust'], 210 * dirt),
-                                                             (0.85, cl['rust'], 130 * dirt), (1, cl['rust'], 70 * dirt)], sy=1.15)
+            # (kept dark and low in contrast: from across a room it should read as old filth, not a bright target)
+            stain = _blob(X, Y, 72 * s_ * fx, 88 * s_, 13, 3, 0.55)
+            c.radial(stain, X + 10 * s_, Y - 20 * s_, 115 * s_, [(0, cl['rust_dk'], 200 * dirt), (0.5, cl['rust'], 165 * dirt),
+                                                             (0.85, cl['rust'], 105 * dirt), (1, cl['rust'], 55 * dirt)], sy=1.15)
             c.line(stain, c.lw * 1.2, cl['rust_dk'], 120 * dirt)
             sec = _blob(X + 70 * s_ * fx, Y + 130 * s_, 34 * s_ * fx, 40 * s_, 9, 5, 0.5)
             c.fill(sec, cl['rust'], 150 * dirt); c.line(sec, c.lw * 0.8, cl['rust_dk'], 90 * dirt)

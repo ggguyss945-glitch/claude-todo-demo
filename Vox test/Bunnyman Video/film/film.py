@@ -505,6 +505,11 @@ def plan_xy(sp, at):
     return (s.X, s.Yp, s.Y)
 
 
+def STEP(k, dx=0.0):
+    """Plan point standing on stair tread k (1..15) of the hall flight."""
+    return (0.82 + dx, 0.9 + (k - 1) * 0.26 + 0.15, k * 0.19)
+
+
 def P(who, at=None, **k):
     """A figure entry for set shots: who, at (anchor | (x, y[, Y])), face=(x, y) plan point to face (or turn=), kind
     ('stand' | 'seat' | 'kneel' | 'lie' | 'floor'), expr, act=f(a, shot), path=[(t, at), ...] (walks between plan points;
@@ -855,9 +860,24 @@ def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None,
                     u0 = 0.15 + 0.15 * j
                     px0, py0 = lerp(wx, sx, u0), lerp(wy, sy, u0)
                     pen.seg((px0 - sz * 0.06, py0 - sz * 0.03), (px0 + sz * 0.07, py0 + sz * 0.04), max(1.5, sz * 0.008), '#a3262a', 200)
-        CH.draw_hand(pen, who if who in CH.CAST else 'mom', x, y, sz, shape, ang, side)
+        if paw or who in ('bunny', 'bunny87'):                         # the Bunnyman's mitten paws
+            sp_ = CH.CAST[who if who in CH.CAST else 'bunny']
+            c_ = CH.Ctx(pen, skia.Matrix(), CH._lw_for(sz * 3.5))
+            CH._draw_paw(c_, sp_, shape if str(shape).startswith('paw') else 'paw_flat', x, y, sz / 66.0, ang, side, 2)
+        else:
+            CH.draw_hand(pen, who if who in CH.CAST else 'mom', x, y, sz, shape, ang, side)
         if al < 0.999: cv.restore()
     return Layer(depth, draw, name, blur=0)
+
+
+def _draw_order(l):
+    """The depth a layer is sorted by in the composite (its .order when it has one: room shells, the outside and the far
+    rooms carry big orders and are drawn first whatever their projected depth)."""
+    o = getattr(l, 'order', None)
+    try:
+        return float(o(0.0)) if callable(o) else (float(o) if o is not None else l.depth_at(0.0))
+    except Exception:
+        return l.depth_at(0.0)
 
 
 def B_bust(F, sh):
@@ -872,7 +892,7 @@ def B_bust(F, sh):
         dimmed(sp, p.get('bg_dim', 0.28))
         # a close-up's background is behind the face: near set pieces (a crowd cut-out, a door frame at arm's length)
         # would be drawn over the face, so they are left out
-        layers = [l for l in sp if l.depth_at(0.0) >= p.get('bg_near', 1.3)]
+        layers = [l for l in sp if _draw_order(l) >= p.get('bg_near', 1.3)]
         lens = None; grade = p.get('grade', sp.grade); sfx_fn = sp
     else:
         c1, c2 = p.get('plain', ('#1c2030', '#0c0e16'))
@@ -1172,7 +1192,10 @@ def B_ins(F, sh):
                     bounds=(-460, -320, 2380, 1400), blur=0)
         layers = [lay]; grade = p.get('grade', gr); lens = None; sp = None
     else:
-        sp = ST.ob_insert(name, p.get('kw'), p.get('motion'), t0=t0)
+        kw = p.get('kw')
+        if callable(kw):                                  # the plan's kw functions take the time since the cut
+            kw = (lambda tt, f=kw: f(tt - t0))
+        sp = ST.ob_insert(name, kw, p.get('motion'), t0=t0)
         layers = list(sp); grade = p.get('grade', sp.grade); lens = sp.lens
     if p.get('strike'):
         s_ = p['strike']
@@ -2417,9 +2440,14 @@ def plan_rule2(F):
     # 104 "At midnight, there's one soft tap on the front door."
     ttap = w(104, 'tap') + 0.05
     C(T(104), 'ins', name='clock', kw=dict(time=(12, 0)), c=dict(mv='push', rate=0.03))
+    # the door in the middle of the frame (it is what the line is about); the narrator at the side of the hall, knees up,
+    # turning toward it at the tap
     C(w(104, 'one') - 0.1, 'set', room='hall', view='door', set=dict(hall=0.3, porch=0.0), rim=NIGHT,
-      ppl=[P('narrator', (-0.3, 1.55, 0.0), turn=1.95, expr='haunted', act=_A(lambda a, s: a.flinch(ttap + 0.05, 0.6), pose(ttap + 0.1, None, 0.3, h_turn=0.1)))],
-      c=dict(mv='push', f=1.25, rate=0.02), sfx=[(ttap, 'egg_tap', 0, 0, 'outside', dict(kind='one_tap'))], music=[(ttap, 'silence', 0.0, 1.0)])
+      ppl=[P('narrator', (-0.95, 2.45, 0.0), face=(0.3, 2.0), expr='haunted', act=lambda a, s: a.flinch(ttap + 0.05, 0.6))],
+      acts=lambda A, s, sp: [A['narrator'].turn(ttap + 0.12, sp.view.turn_for(-0.95, 2.45, 0.55, -2.45), 0.55),
+                             A['narrator'].look_at(ttap + 0.1, scr(sp, (-0.4, 0.0, 1.2)), None, 0.3)] and [],
+      c=dict(mv='push', f=1.0, rate=0.015, hit=[(ttap, 1.2)]), focus=2.6,
+      sfx=[(ttap, 'egg_tap', 0, 0, 'outside', dict(kind='one_tap'))], music=[(ttap, 'silence', 0.0, 1.0)])
     # 105 "Through the peephole, the porch is empty."  the eye to the peephole, then the fisheye porch
     tpo = w(105, 'porch') - 0.25
 
@@ -2465,11 +2493,12 @@ def plan_rule2(F):
     C(T(111), 'ins', name='egg_fire', kw=dict(melt=0.35), c=dict(mv='push', rate=0.035))
     C(T(112), 'ins', name='egg_fire', kw=lambda tr: dict(melt=0.45 + 0.3 * tr), c=dict(mv='push', rate=0.03))
     # 113 "This year, Mom is upstairs tucking June in."
+    # Mom at the foot end (her back to us), both hands smoothing the quilt up to June's shoulders; June asleep on the pillow
     C(T(113), 'set', room='june', view='bed', set=dict(bed='over', nightlight=1.0, lamp=0.6), rim=LAMP,
       ppl=[P('june', 'bed_lie', expr='sleep', lie_face='up', arms='side', talk=False),
-           P('mom', 'bed_side', expr='warm_smile', act=_A(hum(t(113), None, 0.8)))],
-      acts=lambda A, s, sp: [A['mom'].reach_to(t(113), 1, scr(sp, (2.05, 7.6, 3.4)), t1=None, dur=0.6, contact='palm', shape='flat', z=60.0),
-                             A['mom'].look_at(t(113) - 0.5, (A['june'], 'eyes'), None, 0.4)] and [],
+           P('mom', (1.45, 7.35, 2.85), face=(2.3, 8.8), expr='warm_smile', act=_A(hum(t(113), None, 0.8), pose(-9, None, 0.3, lean=0.3, crouch=0.15)))],
+      acts=lambda A, s, sp: [A['mom'].reach_to(t(113) - 0.2, 1, scr(sp, (2.0, 8.3, 3.47)), t1=None, dur=0.7, contact='palm', shape='flat', z=60.0),
+                             A['mom'].reach_to(t(113) - 0.05, -1, scr(sp, (1.95, 8.0, 3.45)), t1=None, dur=0.7, contact='palm', shape='flat', z=60.0)] and [],
       c=dict(mv='push', f=1.05, rate=0.02), sfx=[(t(113), 'hum', -10, 0, 'inside', dict(who='mom', dur=2.6, far=True))])
     # 114 "And out on the doormat, the egg rattles."  115 "Like something inside wants out."
     tr0 = w(114, 'rattles')
@@ -2478,20 +2507,19 @@ def plan_rule2(F):
       c=dict(mv='push', f=1.0, rate=0.04), sfx=[(tr0, 'egg_rattle', -2, 0, 'outside', dict(dur=1.4))])
     C(T(115), 'ins', name='egg', kw=dict(rattle=lambda tt: math.sin(tt * 38.0) * (0.7 + 0.3 * math.sin(tt * 5.0))), c=dict(mv='push', rate=0.05),
       sfx=[(T(115), 'egg_rattle', 0, 0, 'close', dict(dur=1.7, hard=True))])
-    # 116 "I open the door."  117 "Just a crack."  (the deadbolt, the knob, a crack of porch light; they crouch and take the egg)
-    tdb = t(116) + 0.05; tcr = w(117, 'crack') - 0.25; tpick = e(117) + 0.05
+    # 116 "I open the door."  117 "Just a crack."  from the foot of the stairs: the deadbolt, the knob, the door opens a crack
+    # (the porch light in the gap) and the narrator leans to it (the egg is picked up off screen: the next shot has it)
+    tdb = t(116) + 0.05; tcr = w(117, 'crack') - 0.25
 
     def door_acts(A, s, sp):
         n = A['narrator']
         n.reach_to(tdb - 0.25, 1, scr(sp, 'deadbolt'), t1=tdb + 0.35, dur=0.3, contact='tips', shape='grip', z=-40.0)
-        n.reach_to(tdb + 0.35, 1, scr(sp, 'knob'), t1=tcr + 0.55, dur=0.3, contact='palm', shape='grip', z=-40.0)
-        n.crouch(tcr + 0.4, 1.0, s.t1 + 0.5, 0.35)
-        n.reach_to(tpick - 0.25, -1, scr(sp, (-0.08, -0.05, 0.05)), t1=tpick + 0.2, dur=0.3, contact='grip', shape='grip', z=-80.0)
-        n.hold_prop('egg', -1, tpick, None)
+        n.reach_to(tdb + 0.35, 1, scr(sp, 'knob'), t1=None, dur=0.3, contact='palm', shape='grip', z=-40.0)
+        n.head_to(tcr + 0.45, scr(sp, (0.08, -0.05, 1.42)), 'eyes', dur=0.55, max_lean=0.18)
         return []
-    C(T(116), 'set', room='hall', view='door', cam=HALL_MED,
-      set=dict(hall=0.3, porch=1.0, door=lambda tt, a=tcr: 14.0 * ease_in_out(clamp((tt - a) / 0.6))), rim=NIGHT,
-      ppl=[P('narrator', 'door_inside', expr='haunted', turn=-1.75)], acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
+    C(T(116), 'set', room='hall', view='door', cam=cm((0.25, 1.75, 1.45), (-0.3, 0.0, 1.0), S=900, sx=960, sy=500),
+      set=dict(hall=0.3, porch=1.0, door=lambda tt, a=tcr: 20.0 * ease_in_out(clamp((tt - a) / 0.6))), rim=NIGHT,
+      ppl=[P('narrator', (-0.2, 0.5, 0.0), face=(-0.2, 0.0), expr='haunted')], acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
       sfx=[(tdb, 'deadbolt', -4, 0, 'inside'), (tcr, 'door_creak', -4, 0, 'inside', dict(kind='front_door', crack=True))])
     # 118 "And I open the egg."  (turned to us, the egg in front of the chest, the halves come apart)
     tsplit = w(118, 'egg') - 0.4
@@ -2522,13 +2550,13 @@ def plan_rule2(F):
     C(T(125), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, upstairs=1.0), cx=960, cy=640, scale=0.92, turn=0.15, expr='too_still', light=LAMP,
       act=_A(pose(-9, None, 0.1, h_nod=0.35), lookxy(900, 900, -9, None, 0.3, z=300.0)), music=[(t(125), 'hit', 0.6)])
     # 126 "Mom is on the stairs."  the narrator's view up the hall: Mom standing on the stairs
-    C(T(126), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
-      ppl=[P('mom', 'step9', turn=-0.5, expr='too_still', act=lookxy(960, 720, -9, None, 0.3, z=200.0))], c=dict(mv='push', f=1.0, rate=0.02))
     # 127 "She walks down, takes the ring out of my hand, and stares at it for a very long time."
+    # one shot up the flight from the bottom: Mom standing on the 9th step, then coming down toward us
     ttk = w(127, 'takes') - 0.1
-    C(T(127), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
-      ppl=[P('mom', 'step9', path=[(T(127) + 0.1, 'step9'), (ttk - 0.3, 'step1'), (ttk + 0.3, (0.3, 1.0, 0.0))], surface='stairs', expr='too_still')],
-      c=dict(mv='push', f=1.0, rate=0.02))
+    C(T(126), 'set', room='hall', view='foot', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
+      ppl=[P('mom', 'step9', path=[(T(127) - 0.05, 'step9'), (ttk + 0.1, 'step5')], surface='stairs', expr='too_still',
+             act=lookxy(960, 980, -9, None, 0.3, z=200.0))],
+      c=dict(mv='push', f=1.0, rate=0.015))
 
     def ring_acts(A, s, sp, tg=ttk + 0.2):
         n, m = A['narrator'], A['mom']
@@ -2654,6 +2682,8 @@ def plan_rule3(F):
 
 # ==================================================================================================== RULE 4: THE MAIL SLOT (416.2 - 496.5)
 PORCH_CAM = cm((1.05, -2.15, 1.45), (-0.38, -0.3, 0.75), S=1050, sx=960, sy=540)
+SLOT_OUT_WIDE = cm((1.35, -1.05, 1.3), (-0.3, -0.5, 1.0), S=900, sx=960, sy=560)     # on the porch: the Bunnyman at the slot in profile
+SLOT_OUT_CLOSE = cm((1.0, -0.6, 1.2), (-0.3, -0.5, 1.2), S=1000, sx=900, sy=600)     # closer: the mask's profile at the flap
 SLOT_SIDE = cm((-1.28, 1.25, 1.3), (-0.3, 0.3, 0.8), S=1050, sx=960, sy=560)       # in the hall by the wall: the door at 3/4
 
 
@@ -2693,7 +2723,7 @@ def plan_rule4(F):
     # 168 "Grandma has been dead for six years."
     C(T(168), 'ins', name='gran_photo', c=dict(mv='push', rate=0.03))
     # 169-171 L "Mama, it's Laurie. I lost my egg. Can I come home now?"  outside: the Bunnyman crouched at the mail slot
-    C(T(169), 'set', room='front', view='porch', cam=PORCH_CAM, set=dict(front_light=1.0), rim=PORCH,
+    C(T(169), 'set', room='front', view='porch', cam=SLOT_OUT_WIDE, set=dict(front_light=1.0), rim=PORCH,
       ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), expr='neutral', act=bunny_at_slot(tilt_t=t(171)), talk_k=0.6)],
       c=dict(mv='push', f=1.0, rate=0.02))
     # 172 "Mom's face doesn't move."  173-175 M "It took my voice," she says, very calmly. "When I was seven."
@@ -2711,27 +2741,29 @@ def plan_rule4(F):
       act=_A(lookxy(800, 520, -9, w(179, 'want') - 0.1, 0.3, z=400.0), lookxy(980, 700, w(179, 'want'), None, 0.5, z=300.0), blinks(t(178) + 0.2)))
     # 180 "But June has crept down the stairs in her socks, and she kneels at the mail slot."
     tkn = w(180, 'kneels') - 0.1
-    C(T(180), 'set', room='hall', view='in', set=dict(hall=0.3, upstairs=0.6), rim=NIGHT,
-      ppl=[P('june', 'step11', path=[(T(180) + 0.1, 'step11'), (tkn - 0.1, 'step2')], surface='stairs_quiet', expr='neutral', turn=-0.3,
-             act=lambda a, s: a.set(-9, None, 0.1, lean=0.12))],
-      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(T(180) + 0.3, 'stairs_creak', -12, 0.3, 'inside', dict(soft=True))])
-    C(tkn, 'set', room='hall', view='door', set=dict(hall=0.3), rim=NIGHT,
-      ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=2, kneel_t=tkn + 0.05, kneel_dur=0.7, expr='neutral', turn=1.95),
-           P('mom', (-0.75, 1.45, 0.0), turn=1.9, expr='too_still'), P('narrator', (0.05, 1.6, 0.0), turn=1.95, expr='haunted')],
-      c=dict(mv='push', f=1.25, rate=0.02), focus_on='june')
+    # up the flight from the bottom: June creeping down toward us in her socks, a hand on the rail
+    C(T(180), 'set', room='hall', view='foot', set=dict(hall=0.3, upstairs=0.6), rim=NIGHT,
+      ppl=[P('june', STEP(12), path=[(T(180) + 0.1, STEP(12)), (tkn + 0.2, STEP(4))], surface='stairs_quiet', expr='neutral',
+             act=_A(lambda a, s: a.set(-9, None, 0.1, lean=0.12, crouch=0.15), lookxy(700, 900, -9, None, 0.3, z=300.0)))],
+      c=dict(mv='push', f=1.0, rate=0.015), sfx=[(T(180) + 0.3, 'stairs_creak', -12, 0.3, 'inside', dict(soft=True))])
+    # low, from the side of the hall: June kneels at the mail slot, her face at the flap
+    C(tkn + 0.2, 'set', room='hall', view='door', cam=cm((-1.25, 1.45, 0.85), (-0.4, 0.3, 0.7), S=1000, sx=960, sy=560), set=dict(hall=0.3, flap=1.0), rim=NIGHT,
+      ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=2, kneel_t=tkn + 0.25, kneel_dur=0.6, expr='neutral', face=(-0.4, 0.0),
+             act=pose(tkn + 0.7, None, 0.4, lean=0.15, h_nod=0.15))],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='june')
     # 181-183 J "Laurie's my mom," she says. "She's right here."  June at the slot, her cheek near the door
     C(T(181), 'bust', who='june', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=1100, cy=660, scale=0.92, turn=-0.75, h_turn=-0.15,
       expr='neutral', light=NIGHT_L, act=pose(-9, None, 0.1, h_nod=0.15))
     # 184 "Silence."  185-186 "Then the little voice whispers," L "Is she humming?"
     C(T(184), 'set', room='hall', view='slot', set=dict(hall=0.3, flap=1.0), c=dict(mv='push', f=1.05, rate=0.03))
-    C(T(185), 'set', room='front', view='porch', cam=cm((0.6, -1.6, 1.25), (-0.35, -0.3, 0.85), S=1250, sx=960, sy=520), set=dict(front_light=1.0), rim=PORCH,
+    C(T(185), 'set', room='front', view='porch', cam=SLOT_OUT_CLOSE, set=dict(front_light=1.0), rim=PORCH,
       ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(tilt_t=t(186) - 0.3), talk_k=0.6)],
       c=dict(mv='push', f=1.0, rate=0.03))
     # 187 "June looks back at Mom."  188 J "Yeah."
     C(T(187), 'bust', who='june', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=1080, cy=660, scale=0.92, turn=-0.75, expr='neutral', light=NIGHT_L,
       act=_A(lambda a, s: a.turn(t(187) + 0.1, 0.35, 0.6), pose(t(187) + 0.15, None, 0.6, h_turn=0.4), lookxy(1700, 360, t(187) + 0.2, None, 0.5, z=300.0)))
     # 189 "And on the other side of the door, the little girl starts to cry."  190-191 "Not like a monster. Like a kid ..."
-    C(T(189), 'set', room='front', view='porch', cam=PORCH_CAM, set=dict(front_light=1.0), rim=PORCH,
+    C(T(189), 'set', room='front', view='porch', cam=SLOT_OUT_CLOSE, set=dict(front_light=1.0), rim=PORCH,
       ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(cry_t=w(189, 'cry') - 0.2))],
       c=dict(mv='push', f=1.05, rate=0.02), sfx=[(w(189, 'cry') - 0.2, 'girl_cry', 0, 0, 'outside', dict(dur=8.5, through_door=True))])
     C(T(190), 'bust', who='bunny', bg=('front', 'porch', PORCH_CAM), set=dict(front_light=1.0), cx=960, cy=640, scale=0.95, turn=-0.55, h_turn=-0.1,
@@ -2747,7 +2779,8 @@ def plan_rule4(F):
         m.look_at(s.t0, (j, 'crown'), None, 0.3)
         j.look_at(s.t0, scr(sp, (-0.4, 0.0, 0.95)), t(193), 0.3)
         return []
-    C(T(192), 'set', room='hall', view='door', cam=SLOT_SIDE, set=dict(hall=0.3, flap=lambda tt, a=tcl: 1.0 - ease_in_out(clamp((tt - a) / 0.2))), rim=NIGHT,
+    C(T(192), 'set', room='hall', view='door', cam=cm((-1.3, 2.35, 1.35), (-0.25, 0.45, 0.95), S=820, sx=960, sy=600),
+      set=dict(hall=0.3, flap=lambda tt, a=tcl: 1.0 - ease_in_out(clamp((tt - a) / 0.2))), rim=NIGHT,
       ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=2, expr='sad', face=(-0.4, 0.0)),
            P('mom', (0.02, 0.72, 0.0), face=(-0.4, 0.2), expr='too_still')],
       acts=close_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom', sfx=[(tcl, 'mail_slot', -2, 0, 'inside', dict(kind='close'))])
@@ -2780,12 +2813,13 @@ def plan_rule5(F):
     # 199 "June and I sleep on the couch, with Mom in the armchair facing the back door."
     twm = w(199, 'with') - 0.1
     SLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-14.0, lean=-0.08, h_nod=0.15)
-    C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=NIGHT,
-      ppl=[P('narrator', 'couch_mid', expr='sleep', act=SLEEP), P('june', 'couch_right', expr='sleep', act=lambda a, s: a.set(-9, None, 0.1, h_tilt=16.0, lean=-0.05, h_nod=0.2))],
-      c=dict(mv='push', f=1.05, rate=0.015))
+    JSLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=18.0, lean=-0.1, h_nod=0.3)
+    C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=True), rim=NIGHT,
+      ppl=[P('narrator', 'couch_left', expr='sleep', act=SLEEP), P('june', 'couch_mid', expr='sleep', act=JSLEEP)],
+      c=dict(mv='push', f=1.45, rate=0.012))
     C(twm, 'set', room='living', view='back', cam=BACKDOOR_POV, set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0), rim=LAMP,
       ppl=[P('mom', 'armchair', expr='too_still', blink=False, hands='arms', act=_A(pose(-9, None, 0.1, still=0.8), lookxy(960, 380, -9, None, 0.3, z=900.0))),
-           P('narrator', 'couch_mid', expr='sleep', act=SLEEP), P('june', 'couch_right', expr='sleep', act=lambda a, s: a.set(-9, None, 0.1, h_tilt=16.0))],
+           P('narrator', 'couch_left', expr='sleep', act=SLEEP), P('june', 'couch_mid', expr='sleep', act=JSLEEP)],
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
     # 200 "At 2:47, I wake up."
     C(T(200), 'ins', name='clock', kw=dict(time=(2, 47)), c=dict(mv='push', rate=0.03))
@@ -2866,12 +2900,736 @@ def plan_rule5(F):
       c=dict(mv='push', f=1.15, rate=0.02))
 
 
-def plan_rule6(F): pass
-def plan_rule7(F): pass
-def plan_reveal(F): pass
-def plan_after(F): pass
-def plan_outro(F): pass
-def plan_globals(F): pass
+# ==================================================================================================== RULE 6: THE BATHROOM (589.8 - 698.1)
+TUB_CAM = cm((-2.55, 6.3, 4.15), (-2.0, 8.2, 3.55), S=1050, sx=960, sy=560)            # into the tub from the left of the door
+FLOOR_CAM = cm((-2.15, 8.0, 0.22), (-3.05, 9.3, 0.18), S=900, sx=960, sy=720)            # low on the kitchen floor by the back door
+UPMID = cm((1.7, 5.17, 4.3), (4.3, 5.17, 4.15), S=1250, sx=960, sy=520)                    # down the corridor to the east end (Mom)
+TUB_KIDS = [P('narrator', 'tub_left', expr='terror', turn=-0.35), P('june', 'tub_right', expr='terror', turn=-0.3)]
+
+
+def feet_gap(t0, t1, u=(0.42, 0.62), wob=0.03):
+    """Two foot shadows in the light under the bathroom door between t0 and t1 (fractions of the gap)."""
+    def f(tt):
+        if not (t0 <= tt <= t1): return []
+        s_ = math.sin(tt * 1.3) * wob
+        return [(u[0] + s_, u[0] + 0.08 + s_), (u[1] + s_, u[1] + 0.08 + s_)]
+    return f
+
+
+def tub_hand(A, s, sp, t0=None):
+    n, j = A['narrator'], A['june']
+    n.hand_over(s.t0 - 2.0 if t0 is None else t0, -1, j, 'mouth', dur=0.01 if t0 is None else 0.5)
+    n.reach_to(s.t0 - 2.0, 1, (j, 'chest'), dur=0.01, contact='palm', shape='relaxed', z=80.0)
+    gz = scr(sp, (-1.62, 5.85, 3.3))
+    n.look_at(s.t0 - 2.0, gz, None, 0.01, z=300.0); j.look_at(s.t0 - 2.0, gz, None, 0.01, z=300.0)
+    return []
+
+
+def plan_rule6(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(232), 'rule', n=6)
+    # 236 "At 4:30, the kitchen window explodes."
+    tsm = w(236, 'explodes') + 0.05
+    C(T(236), 'ins', name='clock', kw=dict(time=(4, 30)), c=dict(mv='push', rate=0.03))
+    C(w(236, 'the') - 0.1, 'set', room='kitchen', view='back', set=dict(kitchen=0.0, smash_t=tsm), c=dict(mv='push', f=1.15, rate=0.02, hit=[(tsm, 9.0)]),
+      sfx=[(tsm, 'window_smash', 3, 0, 'inside')], music=[(tsm, 'hit', 0.9)])
+    # 237 "The back door crashes open."
+    tcr = w(237, 'crashes') + 0.05
+    C(T(237), 'set', room='kitchen', view='door', set=dict(kitchen=0.0, crash_t=tcr), c=dict(mv='push', f=1.1, rate=0.02, hit=[(tcr, 10.0)]),
+      sfx=[(tcr, 'door_crash', 3, 0, 'inside')], music=[(tcr, 'hit', 0.85)])
+    # 238 "Something heavy comes inside."  a huge dark shape fills the doorway and steps down into the kitchen
+    C(T(238), 'set', room='kitchen', view='door', set=dict(kitchen=0.0, back_door=100.0, mud=0.4), rim=MOON,
+      ppl=[P('bunny', (-3.3, 10.9, 0.45), path=[(T(238) + 0.2, (-3.3, 10.9, 0.45)), (T(238) + 1.0, (-3.3, 10.15, 0.45)), (T(239), (-3.25, 9.35, 0.0))],
+             surface='heavy', sil=0.9, sil_rim='#9fb6ff', sil_rim_a=0.55, turn=0.0, act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(T(238) + 1.0, 'floor_creak_heavy', -2, 0, 'inside')])
+    # 239 "Wet."  240 "Dragging."  low on the floor: filthy wet feet, the hatchet head dragging on the linoleum
+    C(T(239), 'set', room='kitchen', view='back', cam=FLOOR_CAM, set=dict(kitchen=0.0, mud=1.0, smash=1.0), rim=MOON,
+      ppl=[P('bunny', (-3.2, 9.6, 0.0), path=[(T(239), (-3.2, 9.6, 0.0)), (T(241), (-2.55, 8.45, 0.0))], surface='heavy', dimk=0.35, room_light=False,
+             act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
+      c=dict(mv='push', f=1.0, rate=0.02), focus=1.4, sfx=[(t(239), 'wet_step', 0, 0, 'inside'), (t(240) - 0.05, 'wet_drag', 0, 0, 'inside', dict(dur=1.0, hatchet=True))])
+    # 241 "I grab June and run."  down the corridor toward us, to the bathroom
+    C(T(241), 'set', room='up', view='west', set=dict(upstairs=0.0, june_door=70.0), rim=NIGHT,
+      ppl=[P('narrator', (0.7, 5.45, 2.85), path=[(T(241), (0.7, 5.45, 2.85)), (T(242) + 0.3, (-1.25, 5.42, 2.85))], run=True, expr='terror'),
+           P('june', (1.05, 5.15, 2.85), path=[(T(241) + 0.1, (1.05, 5.15, 2.85)), (T(242) + 0.35, (-0.95, 5.12, 2.85))], run=True, expr='terror')],
+      c=dict(mv='push', f=1.1, rate=0.02))
+    # 242 "Bathroom."  they dash in, the door swings shut
+    tdoor = T(242) + 0.45
+    C(T(242), 'set', room='up', view='bath', set=dict(upstairs=0.0, bath_door=lambda tt, a=tdoor: 75.0 * (1.0 - ease_in_out(clamp((tt - a) / 0.25)))),
+      rim=NIGHT, ppl=[P('june', (-1.1, 5.35, 2.85), path=[(T(242), (-1.1, 5.35, 2.85)), (tdoor - 0.05, (-1.65, 6.15, 2.85))], run=True, surface='inside_quiet'),
+                      P('narrator', (-0.75, 5.3, 2.85), path=[(T(242), (-0.75, 5.3, 2.85)), (tdoor, (-1.55, 6.2, 2.85))], run=True, surface='inside_quiet')],
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(tdoor + 0.25, 'door_slam', -2, 0, 'inside', dict(kind='bathroom'))])
+    # 243 "Lock."
+    tlk = t(243)
+    C(T(243), 'ins', name='lock', kw=lambda tr, a=tlk - T(243): dict(lock=lambda tt: ease_in_out(clamp((tt - a) / 0.15)), knob=0.0, key=0.0),
+      c=dict(mv='push', rate=0.04), sfx=[(tlk + 0.05, 'lock_turn', 0, 0, 'close', dict(kind='thumb_bolt'))])
+    # 244 "We sit in the dark, in the empty bathtub, my hand over her mouth."
+    C(T(244), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6, bath_light=0.0), rim=DARK,
+      ppl=TUB_KIDS, acts=lambda A, s, sp: tub_hand(A, s, sp, t0=w(244, 'hand') - 0.2), c=dict(mv='push', f=1.0, rate=0.02))
+    # 245-246 "Footsteps on the stairs. Slow."  down the flight from the top: he climbs toward us, the hatchet hanging
+    steps = ['step1', 'step3', 'step5', 'step7']
+    t0s = T(245)
+    keys = [(t0s + 0.1 + 0.85 * k, st) for k, st in enumerate(steps)]
+    C(T(245), 'set', room='hall', view='top', set=dict(hall=0.0, upstairs=0.0), rim=NIGHT,
+      ppl=[P('bunny', 'step1', path=keys, surface='stairs', step_gain=-2.0, dimk=0.4, room_light=False, act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(kk[0] + 0.3, 'hatchet_thunk', -3, 0, 'inside', dict(step=i)) for i, kk in enumerate(keys[1:])])
+    # 247 "And behind them, something hard knocking against every step."  248 "Thunk."  249 "Thunk."  250 the old hatchet
+    hits247 = [T(247) + 0.5 + 0.85 * k for k in range(4)]
+    C(T(247), 'ins', name='hatchet', kw=lambda tr, h=tuple(x - T(247) for x in hits247): dict(hit=lambda tt: max([0.0] + [math.exp(-abs(tt - x) * 9) for x in h])),
+      c=dict(mv='push', rate=0.03, hit=[(x, 5.0) for x in hits247]), sfx=[(x, 'hatchet_thunk', 0, 0, 'close', dict(step=k)) for k, x in enumerate(hits247)])
+    C(T(248), 'ins', name='hatchet', kw=lambda tr, a=t(248) - T(248): dict(hit=lambda tt: math.exp(-abs(tt - a) * 9)),
+      c=dict(mv='push', rate=0.04, hit=[(t(248), 8.0)]), sfx=[(t(248), 'hatchet_thunk', 2, 0, 'close')])
+    C(T(249), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6), rim=DARK, ppl=TUB_KIDS,
+      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].flinch(t(249) + 0.02, 0.8), A['june'].flinch(t(249) + 0.04, 1.0)) and [],
+      c=dict(mv='push', f=1.05, rate=0.02, hit=[(t(249), 4.0)]), sfx=[(t(249), 'hatchet_thunk', 0, 0, 'inside', dict(far=True))])
+    C(T(250), 'ins', name='hatchet', kw=dict(hit=lambda tt: 0.0), c=dict(mv='keys', keys=[(T(250), 960, 540, 1.0, None, 1.3), (T(251), 1100, 520, 1.0, 'push', 1.6)]))
+    # 251 "The doorknob turns."  252 "Gently."
+    tkn = t(251) + 0.3
+    C(T(251), 'set', room='bath', view='lock', set=dict(gap=0.6, lock=1.0, knob=lambda tt, a=tkn: 38.0 * math.sin(math.pi * clamp((tt - a) / 2.6))), rim=DARK,
+      c=dict(mv='push', f=1.0, rate=0.025), sfx=[(tkn, 'knob_turn', -2, 0, 'close', dict(dur=2.6, gentle=True))], music=[(tkn - 0.2, 'silence', 0.0, 1.0)])
+    # 253 "And the little girl's voice comes through the crack under the door."  254-256 L "Don't let her do the trick. Please. Don't close your eyes."
+    C(T(253), 'set', room='bath', view='gap', set=dict(gap=1.0, feet=feet_gap(T(253) + 0.4, T(258) + 2.0)), c=dict(mv='push', f=1.0, rate=0.02))
+    C(w(255, 'please') - 0.1, 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6), rim=DARK, ppl=TUB_KIDS,
+      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['june'].look_at(s.t0 + 0.2, scr(sp, (-1.62, 5.85, 3.0)), None, 0.5, body=0.15)) and [],
+      c=dict(mv='push', f=1.05, rate=0.02))
+    # 257 "Something slides under the door."  258-264 the crayon drawing, part by part
+    C(T(257), 'ins', name='drawing', kw=lambda tr: dict(slide=ease_out_cubic(clamp((tr - 0.2) / 1.2))), anim=True, c=dict(mv='push', rate=0.02),
+      sfx=[(T(257) + 0.2, 'paper_slide', 0, 0, 'close', dict(dur=1.2))])
+    C(T(258), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=[(T(258), 960, 560, 1.0, None, 1.05), (T(259), 960, 560, 1.0, 'push', 1.15)]))
+    DR = {259: (770, 470, 2.1), 260: (760, 640, 2.0), 261: (930, 520, 2.1), 262: (1080, 520, 2.2), 263: (780, 280, 2.2), 264: (800, 270, 2.6)}
+    for i, (x, y, f) in DR.items():
+        C(T(i), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=[(T(i), x, y, 1.0, None, f), (T(i + 1), x, y, 1.0, 'push', f * 1.06)]),
+          music=[(t(264), 'stinger', 0.7)] if i == 264 else [])
+    # 265 "Then Mom's voice, from the end of the hall."  266 "A voice I've never heard her use."  267 M "GET OUT OF MY HOUSE."
+    C(T(265), 'set', room='up', view='west', set=dict(upstairs=0.0), rim=NIGHT,
+      ppl=[P('mom', 'hall_east', turn=-0.05, expr='determined', dimk=0.35, room_light=False)], c=dict(mv='push', f=1.5, rate=0.03))
+    C(T(266), 'set', room='up', view='west', cam=UPMID, set=dict(upstairs=0.0), rim=NIGHT_L,
+      ppl=[P('mom', 'hall_east', turn=0.0, expr='determined', act=_A(pose(-9, None, 0.1, brow_angry=0.8), lookxy(960, 500, -9, None, 0.3, z=500.0)))],
+      c=dict(mv='push', f=1.0, rate=0.03))
+    C(T(267), 'bust', who='mom', bg=('up', 'west', UPMID), set=dict(upstairs=0.0), cx=960, cy=620, scale=1.0, expr='determined', light=NIGHT_L,
+      act=_A(pose(-9, None, 0.1, brow_angry=1.0, wide=0.4), lookxy(960, 520, -9, None, 0.3, z=500.0)), c=dict(mv='push', x=960, y=580, zrate=0.05),
+      music=[(t(267), 'hit', 0.9)])
+    # 268 "And the little girl screams back,"  269 L "IT'S MY HOUSE!"
+    C(T(268), 'set', room='up', view='hall', set=dict(upstairs=0.0), rim=NIGHT,
+      ppl=[P('bunny', (-0.7, 5.25, 2.85), turn=1.95, dimk=0.25, room_light=False,
+             act=_A(lambda a, s: a.drag_hatchet(-9, None, side=-1), lambda a, s: a.turn(t(268) + 0.2, 0.05, 0.5)))],
+      c=dict(mv='push', f=1.6, rate=0.02))
+    C(T(269), 'bust', who='bunny', bg=('up', 'hall'), set=dict(upstairs=0.0), cx=960, cy=640, scale=1.05, light=NIGHT,
+      act=_A(lambda a, s: a.flinch(t(269), 1.0), pose(t(269), None, 0.15, h_nod=-0.15, approach=0.2)), c=dict(mv='push', x=960, y=600, zrate=0.06, shake=3.0))
+    # 270 "The whole hallway shakes."  271 "Something slams into the bathroom door."  272 "Screaming."  273 "A wet, heavy crack."
+    tsl = w(271, 'slams') + 0.05
+    C(T(270), 'set', room='bath', view='door', set=dict(gap=0.8, feet=feet_gap(T(270), T(272), (0.3, 0.6), 0.12)), c=dict(mv='push', f=1.0, rate=0.02, shake=3.0,
+                                                                                                                        hit=[(t(270) + 0.1, 7.0), (t(270) + 0.7, 5.0)]),
+      sfx=[(t(270), 'struggle', 2, 0, 'inside', dict(dur=1.6, through_door=True))])
+    C(T(271), 'set', room='bath', view='door', set=dict(gap=0.8, slam=tsl), c=dict(mv='push', f=1.05, rate=0.02, shake=2.0, hit=[(tsl, 12.0)]),
+      sfx=[(tsl, 'door_slam', 4, 0, 'inside', dict(kind='body'))], music=[(tsl, 'hit', 0.95)])
+    C(T(272), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6), rim=DARK, ppl=TUB_KIDS,
+      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].eyes_shut(s.t0, None, 1.0), A['june'].eyes_shut(s.t0, None, 1.0)) and [],
+      c=dict(mv='push', f=1.05, rate=0.02, shake=2.0), sfx=[(T(272), 'scream_far', 0, 0, 'inside', dict(through_door=True, dur=0.9))])
+    tck = t(273) + 0.1
+    C(T(273), 'set', room='bath', view='gap', set=dict(gap=lambda tt, a=tck: 1.0 - 0.75 * ease_in_out(clamp((tt - a) / 0.15)),
+                                                     feet=lambda tt, a=tck: [(0.05, 0.95)] if tt > a else [(0.35, 0.45), (0.55, 0.65)]),
+      c=dict(mv='push', f=1.0, rate=0.02, hit=[(tck, 6.0)]), sfx=[(tck, 'wet_crack', 4, 0, 'inside')], music=[(tck, 'sub_drop', 0.9)])
+    # 274 "Then nothing."  275 "Then, softly, Mom's voice."  276-278 M "It's over, sweetheart. It's gone. You can open the door now."
+    C(T(274), 'set', room='bath', view='door', set=dict(gap=0.35), c=dict(mv='hold', f=1.05, shake=0.4), music=[(T(274), 'silence', 0.0, 2.2)])
+    C(T(275), 'set', room='bath', view='gap', set=dict(gap=0.6, feet=feet_gap(T(275) + 0.6, T(279) + 2.0, (0.44, 0.58), 0.0)), c=dict(mv='push', f=1.0, rate=0.015))
+    C(T(276), 'set', room='bath', view='door', set=dict(gap=0.6, feet=feet_gap(T(276), T(279) + 2.0, (0.44, 0.58), 0.0)), c=dict(mv='push', f=1.0, rate=0.02))
+    # 279-280 "Rule six. Not even me."  281 "I don't open it."
+    C(T(279), 'rule', n=6, recall=True)
+    C(T(281), 'bust', who='narrator', bg=('bath', 'tub', TUB_CAM), set=dict(gap=0.6), cx=940, cy=620, scale=0.9, turn=-0.25, expr='determined', light=DARK,
+      act=lookxy(900, 420, -9, None, 0.3, z=500.0))
+
+
+# ==================================================================================================== RULE 7: SUNRISE (698.1 - 788.9)
+UP_DAWN = cm((-2.9, 5.1, 4.25), (-0.4, 5.25, 3.7), S=1100, sx=960, sy=520)                 # the wrecked corridor at dawn, toward June's door
+FLOOR_BG = ('#3a281c', '#1a110c')
+
+
+def dale_bust(F, C, t0, scale, cy, act, c=None, **kw):
+    """Dale's face under the half-off head, seen from above (he lies on his back at the foot of the stairs, dawn)."""
+    C(t0, 'bust', who='bunny', plain=FLOOR_BG, cx=960, cy=cy, scale=scale, expr='little_girl', light=DAWN, grade='ob_dawn',
+      act=_A(pose(-9, None, 0.01, unmask=1.0, h_turn=0.1), act), c=c, **kw)
+
+
+def plan_rule7(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    C(T(282), 'rule', n=7)
+    # 284 "So we don't."  285 "We sit in that bathtub and stare at the door."
+    C(T(284), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.5), rim=DARK, ppl=TUB_KIDS,
+      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].set(s.t0, None, 0.3, wide=0.5), A['june'].set(s.t0, None, 0.3, wide=0.5)) and [],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    C(T(285), 'set', room='bath', view='door', set=dict(gap=0.5), c=dict(mv='push', f=1.0, rate=0.012))
+    # 286 "At 6:12, the light under the door turns gold."
+    tgd = w(286, 'gold') - 0.2
+    C(T(286), 'ins', name='clock', kw=dict(time=(6, 12), kind='digital'), c=dict(mv='push', rate=0.03))
+    C(w(286, 'the') - 0.1, 'set', room='bath', view='gap', set=dict(gap=lambda tt, a=tgd: 0.35 + 0.65 * ease_in_out(clamp((tt - a) / 1.0)), gap_col=ST.DAWN_C, tod='dawn'),
+      c=dict(mv='push', f=1.0, rate=0.02), music=[(tgd, 'swell', 0.5, 4.0)])
+    # 287 "Sunrise."  288 "Easter morning."
+    C(T(287), 'set', room='yard', view='woods', set=dict(tod='dawn'), c=dict(mv='push', f=1.3, rate=0.02), sfx=[(T(287), 'birds_dawn', -6, 0, 'outside')])
+    C(T(288), 'set', room='front', view='house', set=dict(tod='dawn', front_light=0.0), c=dict(mv='push', f=1.0, rate=0.02))
+    # 289 "Mom knocks, softly."  290-293 M "It's sunrise, babies. You did it. You followed every single rule. I'm so proud of you."
+    kn = [t(289) + 0.95, t(289) + 1.2, t(289) + 1.45] if e(289) + 0.4 < t(290) else [e(289) + 0.05, e(289) + 0.2, e(289) + 0.35]
+    C(T(289), 'set', room='bath', view='door', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=feet_gap(T(289), T(294), (0.44, 0.58), 0.0)),
+      c=dict(mv='push', f=1.0, rate=0.015, hit=[(k, 2.0) for k in kn]),
+      sfx=[(k, 'knock_door', -6, 0, 'inside', dict(soft=True, index=i)) for i, k in enumerate(kn)])
+    C(T(290), 'set', room='bath', view='gap', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=feet_gap(T(290), T(294), (0.44, 0.58), 0.0)),
+      c=dict(mv='push', f=1.0, rate=0.015))
+    C(T(292), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), rim=DAWN, ppl=TUB_KIDS,
+      acts=lambda A, s, sp: (A['june'].set(t(292) + 0.2, None, 0.5, lean=0.25, crouch=-0.2),
+                             A['narrator'].reach_to(t(292) + 0.6, -1, (A['june'], 'shoulder_l'), dur=0.4, contact='palm', shape='grip', z=60.0),
+                             A['june'].look_at(s.t0, scr(sp, (-1.62, 5.85, 3.2)), None, 0.3), A['narrator'].look_at(s.t0, (A['june'], 'eyes'), None, 0.3)) and [],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 294 "Before sunrise."  295 "That's what the rule said."  296 "And it isn't before sunrise anymore."
+    C(T(294), 'bust', who='narrator', bg=('bath', 'tub', TUB_CAM), set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), cx=960, cy=620, scale=0.95, turn=-0.2,
+      expr='haunted', light=DAWN_L, act=_A(ex('shock', t(294) + 0.2, None, 0.3), lookxy(1100, 380, -9, None, 0.3, z=600.0)))
+    C(T(295), 'rule', n=7, recall=True)
+    C(T(296), 'set', room='bath', view='gap', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=feet_gap(T(296), T(297) + 1, (0.44, 0.58), 0.0)),
+      c=dict(mv='push', f=1.05, rate=0.02))
+    # 297 "The lock turns by itself."  298 "From the outside."  299 "Mom has a key."
+    tl0 = t(297) + 0.3
+    C(T(297), 'ins', name='lock', kw=lambda tr, a=tl0 - T(297): dict(lock=lambda tt: 1.0 - ease_in_out(clamp((tt - a) / 0.9)), key=0.0), anim=True,
+      c=dict(mv='push', rate=0.035), sfx=[(tl0, 'lock_turn', 0, 0, 'close', dict(kind='by_itself', dur=0.9))], music=[(tl0, 'hit', 0.6)])
+    C(T(298), 'ins', name='lock', kw=lambda tr: dict(lock=0.0, key=ease_in_out(clamp((tr - 0.2) / 0.7))), anim=True,
+      c=dict(mv='keys', keys=[(T(298), 960, 700, 1.0, None, 1.4), (T(299), 960, 720, 1.0, 'push', 1.6)]), sfx=[(T(298) + 0.2, 'key_in_lock', 0, 0, 'close')])
+    top = t(299) + 0.25
+    C(T(299), 'set', room='bath', view='door', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', lock=0.0, door=lambda tt, a=top: 70.0 * ease_in_out(clamp((tt - a) / 1.0))),
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(top, 'door_creak', -2, 0, 'inside', dict(kind='bathroom_open'))])
+    # 300 "The hallway is wrecked."  301 "Mom's arms are scratched to ribbons, and she's smiling."
+    C(T(300), 'set', room='up', view='hall', set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), c=dict(mv='push', f=1.15, rate=0.03))
+    MOMD = lambda a, s: (a.set(-9, None, 0.01, scratch=1.0, mess=0.6), a.hold_prop('dress_tiny', 1),
+                         a.reach(-9, None, 1, out=30.0, down=200.0, fwd=140.0, shape='grip', up=0.0, fade=0.01))
+    C(T(301), 'set', room='up', view='west', cam=cm((-1.9, 5.3, 4.2), (-0.3, 5.2, 4.0), S=1250, sx=960, sy=520), set=dict(wrecked=1.0, tod='dawn', bath_door=70.0),
+      rim=DAWN, ppl=[P('mom', (-0.35, 5.2, 2.85), turn=-0.15, expr='proud',
+                       act=_A(MOMD, lookxy(960, 420, -9, None, 0.3, z=500.0), pose(t(301) + 0.6, None, 0.6, smile=0.7)))],
+      c=dict(mv='push', f=1.0, rate=0.025))
+    # 302 "At the bottom of the stairs, the Bunnyman lies on his back, not moving."  303 "The head of the suit has come halfway off."
+    BODY = lambda u: P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', expr='little_girl',
+                       act=_A(pose(-9, None, 0.01, unmask=u), lambda a, s: a.dead(-9, 0.01), lambda a, s: a.face(1.0)))
+    C(T(302), 'set', room='hall', view='bottom', cam=cm((-0.9, 2.6, 1.6), (0.45, 0.45, 0.2), S=950, sx=960, sy=580), set=dict(tod='dawn', hall=0.0),
+      rim=DAWN, ppl=[BODY(0.6)], c=dict(mv='push', f=1.0, rate=0.025))
+    dale_bust(F, C, T(303), 0.8, 640, pose(-9, None, 0.01, unmask=0.6, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 304 "Inside, there's no monster."  305-306 "It's a man. Maybe fifty-five."  307-308 "Grey stubble. Skin and bone."
+    dale_bust(F, C, T(304), 0.9, 600, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    dale_bust(F, C, T(305), 1.2, 600, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    dale_bust(F, C, T(307), 1.6, 480, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=640, zrate=0.02))
+    # 309 "He's staring up at June's bedroom door with the eyes of a terrified little girl."  the eyes; what they look at
+    dale_bust(F, C, T(309), 1.35, 640, pose(-9, None, 0.01, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=0.8), c=dict(mv='push', x=960, y=480, zrate=0.025))
+    C(w(309, "june's") - 0.1, 'set', room='hall', view='foot', set=dict(tod='dawn', hall=0.0, upstairs=0.0), c=dict(mv='push', f=1.6, rate=0.03))
+    C(w(309, 'eyes') - 0.15, 'bust', who='bunny', plain=FLOOR_BG, cx=960, cy=720, scale=1.8, expr='little_girl', light=DAWN, grade='ob_dawn',
+      act=pose(-9, None, 0.01, unmask=1.0, h_turn=0.1, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=1.0), c=dict(mv='push', x=960, y=540, zrate=0.02))
+    # 310 "His lips move one last time."  311 D "Mama."  312 "Then he's still."
+    dale_bust(F, C, T(310), 1.5, 520, _A(pose(-9, None, 0.01, look_x=0.1, look_y=-0.8, _gaze=1.0, wet=1.0, tears=0.9), lambda a, s: a.dead(t(312) - 0.1, 0.9)),
+              c=dict(mv='push', x=960, y=600, zrate=0.015), music=[(e(311) + 0.2, 'sub_drop', 0.7)])
+    # 313 "Mom kneels in front of June, holding the little yellow dress, and gently puts one hand over June's eyes."
+    tpu = w(313, 'puts') - 0.1
+    C(T(313), 'set', room='up', view='west', cam=UP_DAWN, set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
+      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral'),
+           P('mom', (-0.55, 5.05, 2.85), path=[(T(313), (-1.0, 4.95, 2.85)), (T(313) + 1.0, (-0.6, 5.05, 2.85))], face=(-0.05, 5.35), expr='proud', kind='stand',
+             act=_A(MOMD, lambda a, s: a.kneel_down(T(313) + 1.1, 0.8, knees=0))),
+           P('narrator', (0.55, 5.55, 2.85), face=(-0.3, 5.2), expr='haunted')],
+      acts=lambda A, s, sp: [A['mom'].look_at(s.t0, (A['june'], 'eyes'), None, 0.3), A['june'].look_at(s.t0, (A['mom'], 'eyes'), None, 0.3)] and [],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
+
+    def eyes_acts(A, s, sp):
+        m, j, n = A['mom'], A['june'], A['narrator']
+        m.hand_over(tpu + 0.1, -1, j, 'eyes', dur=0.8)
+        m.look_at(s.t0, (j, 'eyes'), None, 0.3); j.look_at(s.t0, (m, 'eyes'), tpu + 0.5, 0.3)
+        n.look_at(s.t0, (m, 'hand_r'), None, 0.4)
+        return []
+    C(tpu, 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
+      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral'),
+           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0, act=MOMD),
+           P('narrator', (0.5, 5.6, 2.85), face=(-0.3, 5.2), expr='haunted')],
+      acts=eyes_acts, c=dict(mv='push', f=1.0, rate=0.025), focus_on='mom')
+    # 314-315 M "Happy Easter, bunny. Want to see a magic trick?"  316-317 M "Close your eyes. And count to seven."
+    C(T(314), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=900, cy=640, scale=0.95, turn=0.35, expr='proud', light=DAWN,
+      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6), lookxy(1500, 640, -9, None, 0.3, z=300.0), pose(-9, None, 0.1, h_nod=0.15)))
+    C(T(316), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=980, cy=660, scale=1.12, turn=0.3, expr='too_still', light=DAWN,
+      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.7), lookxy(1500, 680, -9, None, 0.3, z=300.0)), music=[(t(317), 'pulse_on', 0.6)])
+    # 318-321 J "One," June whispers. "Two. Three."  Mom's hand over her eyes
+    def june_hand(c0):
+        def fn(tt):
+            ex_, ey_ = bust_eyes('june', 940, 620, 0.95)
+            return (ex_ - 330.0, ey_ - 10.0, 262.0, 1.0)
+        return fn
+    C(T(318), 'bust', who='june', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=940, cy=620, scale=0.95, turn=-0.2, expr='neutral', light=DAWN_L,
+      act=lambda a, s: a.eyes_shut(-9, None, 0.0),
+      hands=[dict(who='mom', fn=june_hand(T(318)), size=520, shape='flat', side=-1, sleeve_from=lambda tt: (-200, 900), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=940, y=560, zrate=0.02))
+
+
+# ==================================================================================================== THE REVEAL (788.9 - 914.3)
+TRADE_CAM = cm((-3.05, -1.3, 1.0), (-3.05, 1.6, 0.85), S=1100, sx=960, sy=560)      # the woods, 1987: the mascot kneels to Laurie
+UNDER_CAM = cm((-2.8, 7.6, 0.3), (-0.6, 9.6, -1.6), S=1000, sx=960, sy=560)         # down the bank to the gravel under the bridge
+UNDER_SIDE = cm((-0.4, 7.0, ST._bank_Y(7.0) + 1.5), (-0.4, 9.8, ST._bank_Y(9.8) + 1.0), S=1000, sx=960, sy=560)
+WOODS_PATH = cm((-6.3, -5.2, 0.9), (-2.4, 3.0, 0.7), S=1000, sx=960, sy=600)
+D87 = dict(era='1987', vhs=False, rim=MEMORY, grade='ob_memory')
+RECALL = dict(era='recall', post=dict(sat=0.45, exposure=-0.05))
+BY = ST._bank_Y
+
+
+def paw_eyes(who, cx, cy, sc, t_in=None, side=-1, size=560):
+    """A paw (or a hand) laid over the eyes of a bust drawn at (cx, cy, sc), coming in from the side."""
+    def fn(tt):
+        ex_, ey_ = bust_eyes(who, cx, cy, sc)
+        k = 1.0 if t_in is None else ease_out_cubic(clamp((tt - t_in) / 0.5))
+        x = ex_ + side * (340.0 + 600.0 * (1.0 - k))
+        return (x, ey_ - 6.0, 262.0 if side < 0 else 98.0, 1.0)
+    return fn
+
+
+def plan_reveal(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    UPD = dict(wrecked=1.0, tod='dawn')
+    # 322 "And that's when I finally understand all of it."
+    C(T(322), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=610, scale=0.95, turn=0.1, expr='haunted', light=DAWN_L,
+      act=_A(ex('shock', t(322) + 0.9, None, 0.6), lookxy(1100, 640, -9, None, 0.3, z=400.0)), c=dict(mv='push', x=960, y=560, zrate=0.03),
+      music=[(t(322), 'riser', 0.6, 3.0)])
+    # 323 "In 1987, the Bunnyman didn't take my mother."  the parade photo, live on the tape: Laurie holding the mascot's paw
+    C(T(323), 'set', room='parade', view='photo', era='1987', tape0=58.0, cut='vhs',
+      ppl=[P('bunny87', (3.7, 25.6, 0.0), turn=-0.12, room_light=False,
+             act=lambda a, s: (a.hold_prop('basket', 1), a.reach(-1.0, None, 1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01))),
+           P('laurie87', (3.05, 25.35, 0.0), turn=0.15, expr='warm_smile', room_light=False)],
+      acts=lambda A, s, sp: [A['bunny87'].hold_hand(s.t0 - 1.0, -1, A['laurie87'], 1, dur=0.01),
+                             A['laurie87'].look_at(s.t0 - 0.5, (960, 380), None, 0.3, z=500.0)] and [],
+      c=dict(mv='push', f=1.65, rate=0.015, y=560))
+    # 324 "He traded with her."  the woods, 1987: he kneels and lays his paw over her eyes
+    def trade(A, s, sp):
+        b, l = A['bunny87'], A['laurie87']
+        b.hand_over(t(324) + 0.15, -1, l, 'eyes', dur=0.6)
+        b.look_at(s.t0 - 0.5, (l, 'eyes'), None, 0.3); l.look_at(s.t0 - 0.5, (b, 'eyes'), t(324) + 0.5, 0.3)
+        return []
+    C(T(324), 'set', room='woods', view='path', cam=TRADE_CAM, set=dict(tod='day87'), **D87,
+      ppl=[P('bunny87', (-3.5, 1.6, 0.0), face=(-2.7, 1.6), kind='kneel', knees=0, room_light=False),
+           P('laurie87', (-2.75, 1.6, 0.0), face=(-3.5, 1.6), expr='warm_smile', room_light=False)],
+      acts=trade, c=dict(mv='push', f=1.0, rate=0.02), sfx=[(T(324), 'ambience_woods', -14, 0, 'woods', dict(dur=3.0, tod='day'))])
+    # 325 "That's the trick."  her face under the paw;  326 "Whoever closes their eyes and counts to seven under its hand opens
+    # them somewhere else."  the paw, the count (her lips), a white flash, and the eyes that open are not hers
+    cx_, cy_, sc_ = 960, 600, 0.95
+    C(T(325), 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_, scale=sc_,
+      expr='warm_smile', light=MEMORY, act=lambda a, s: a.eyes_shut(-9, None, 0.0),
+      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_, sc_), size=600, shape='paw_flat', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
+      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    top = w(326, 'opens') - 0.05
+    C(T(326), 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_ + 20, scale=sc_ * 1.12,
+      expr='neutral', light=MEMORY, act=_A(lambda a, s: a.eyes_shut(-9, top, 0.0), lambda a, s: a.talk([(w(326, 'counts'), w(326, 'under'))], 0.25)),
+      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_ + 20, sc_ * 1.12), size=660, shape='paw_flat', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
+      c=dict(mv='push', x=960, y=560, zrate=0.025), music=[(w(326, 'seven'), 'heartbeat', 0.4, 1.6)])
+    C(top, 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_ + 20, scale=sc_ * 1.12,
+      expr='too_still', light=MEMORY, cut='white', act=_A(pose(-9, None, 0.01, still=0.9), lookxy(960, 560, -9, None, 0.01, z=600.0)),
+      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 327 "In someone else."  the mascot looking down at its own paws
+    C(T(327), 'bust', who='bunny87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=560, scale=0.9,
+      light=MEMORY, act=_A(pose(-9, None, 0.3, h_nod=0.45), lambda a, s: a.reach(-9, None, 1, out=60.0, down=-40.0, fwd=230.0, shape='paw_open', up=0.0, fade=0.4),
+                           lambda a, s: a.reach(-9, None, -1, out=60.0, down=-40.0, fwd=230.0, shape='paw_open', up=0.0, fade=0.4)),
+      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 328 "Dale Whitlock's body walked into those woods with a little girl."  hand in paw, into the trees
+    C(T(328), 'set', room='woods', view='path', cam=WOODS_PATH, set=dict(tod='day87'), **D87,
+      ppl=[P('bunny87', (-4.4, -2.6, 0.0), path=[(T(328), (-4.4, -2.6, 0.0)), (T(329), (-2.7, 2.4, 0.0))], surface='grass_quiet', room_light=False, dimk=0.1),
+           P('laurie87', (-4.95, -2.4, 0.0), path=[(T(328), (-4.95, -2.4, 0.0)), (T(329), (-3.25, 2.6, 0.0))], surface='grass_quiet', room_light=False)],
+      acts=lambda A, s, sp: [A['bunny87'].hold_hand(s.t0 - 1.0, 1, A['laurie87'], -1, dur=0.01)] and [],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 329 "And a little girl's body walked out."  330 "Clean."  331 "Calm."  332 "Humming."
+    C(T(329), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      ppl=[P('laurie87', (-2.5, 42.6, -0.45), path=[(T(329), (-2.5, 42.6, -0.45)), (T(330) + 0.2, (-2.6, 39.4, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False)],
+      c=dict(mv='push', f=1.45, rate=0.02))
+    C(T(330), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      cam=cm((-2.62, 34.6, 0.6), (-2.6, 38.2, 0.2), S=1300, sx=960, sy=600),
+      ppl=[P('laurie87', (-2.6, 38.4, -0.45), path=[(T(330), (-2.6, 38.4, -0.45)), (T(331) + 0.3, (-2.6, 37.9, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False)],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    C(T(331), 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=960, cy=590, scale=0.9,
+      light=SUN87, expr='too_still', grade='ob_sunrise87', act=pose(-9, None, 0.1, still=0.8), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    C(T(332), 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=1000, cy=620, scale=1.05, turn=-0.2,
+      light=SUN87, expr='too_still', grade='ob_sunrise87', act=hum(t(332) - 0.1, None), c=dict(mv='push', x=980, y=580, zrate=0.02),
+      sfx=[(t(332), 'hum', -10, 0, 'outside', dict(who='laurie87', dur=1.4))], music=[(t(332), 'jingle', 0.45, 1.6, dict(version='hum_child'))])
+    # 333 "The real Laurie woke up under a railroad bridge, in a grown man's body, inside a bunny suit she was too scared to take off."
+    tg = w(333, 'grown') - 0.15
+    C(T(333), 'set', room='woods', view='under', cam=UNDER_CAM, set=dict(tod='day87'), **D87,
+      ppl=[P('bunny87', 'under_bridge', kind='lie', lie_face='up', arms='side', room_light=False,
+             act=_A(pose(w(333, 'woke'), None, 0.6, h_nod=-0.3, h_turn=0.25), blinks(w(333, 'woke') + 0.1)))],
+      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(T(333), 'creek', -12, 0, 'woods', dict(dur=3.0))])
+    tlift = w(333, 'take') - 0.4
+    C(tg, 'bust', who='bunny87', bg=('woods', 'under', UNDER_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=580, scale=0.95, light=MEMORY,
+      act=_A(pose(-9, None, 0.3, h_nod=0.3),
+             lambda a, s: a.reach(-9, tlift, 1, out=60.0, down=-60.0, fwd=230.0, shape='paw_open', up=0.0, fade=0.4),
+             lambda a, s: a.reach(-9, tlift, -1, out=60.0, down=-60.0, fwd=230.0, shape='paw_open', up=0.0, fade=0.4),
+             lambda a, s: a.reach(tlift, tlift + 1.0, 1, out=170.0, down=-330.0, fwd=60.0, shape='paw_grip', up=0.0, fade=0.35),
+             lambda a, s: a.reach(tlift, tlift + 1.0, -1, out=170.0, down=-330.0, fwd=60.0, shape='paw_grip', up=0.0, fade=0.35)),
+      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 334 "For thirty-six years, she lived in those woods."  (now: the filthy suit, alone among the trees at night)
+    C(T(334), 'set', room='woods', view='path', cam=WOODS_PATH, set=dict(tod='night', flashlight=0.0), rim=MOON,
+      ppl=[P('bunny', (-3.4, 0.4, 0.0), path=[(T(334), (-3.4, 0.4, 0.0)), (T(335) + 0.4, (-2.9, 2.6, 0.0))], surface='grass_quiet', room_light=False, dimk=0.15)],
+      c=dict(mv='push', f=1.0, rate=0.015), sfx=[(T(334), 'wind_gust', -12, 0, 'woods')])
+    # 335 "She never grew up."  the masked head tilted, the paws held together like a child's
+    C(T(335), 'bust', who='bunny', bg=('woods', 'path', WOODS_PATH), set=dict(tod='night', flashlight=0.0), cx=960, cy=600, scale=0.95, light=MOON,
+      act=_A(pose(-9, None, 0.3, h_tilt=-14.0, h_nod=0.15), lambda a, s: a.reach(-9, None, 1, out=-10.0, down=40.0, fwd=210.0, shape='paw', up=0.0, fade=0.3),
+             lambda a, s: a.reach(-9, None, -1, out=-10.0, down=40.0, fwd=210.0, shape='paw', up=0.0, fade=0.3)),
+      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 336 "She only knew one song."  under the bridge, swaying to it
+    def sway(a, s):
+        def fn(P_, tt):
+            P_.h_tilt += 9.0 * math.sin((tt - s.t0) * 2.4); P_.tilt += 2.0 * math.sin((tt - s.t0) * 2.4 + 0.6)
+        a._add(s.t0 - 0.5, None, fn, real=True)
+    C(T(336), 'set', room='woods', view='under', cam=UNDER_SIDE, set=dict(tod='night', flashlight=0.0), rim=MOON,
+      ppl=[P('bunny', (-0.4, 10.0, BY(10.0)), face=(-0.4, 7.0), room_light=False, dimk=0.15, act=_A(sway, hum(T(336), None)))],
+      c=dict(mv='push', f=1.05, rate=0.02), music=[(t(336) + 0.3, 'jingle', 0.45, 2.0, dict(version='hum', distant=True))])
+    # 337 "And every Easter, she came home to the last house on Orchard Road, knocked her mother's knock, and waved at the little girl in the window."
+    tkk = w(337, 'knocked') - 0.15; twv = w(337, 'waved') - 0.25
+    C(T(337), 'set', room='yard', view='house', set=dict(kitchen=0.6, june_light=0.8), rim=MOON,
+      ppl=[P('bunny', 'treeline', face=(-2.6, 30.0), room_light=False, dimk=0.2)], c=dict(mv='push', f=1.0, rate=0.015))
+    kt = [tkk + 0.15 + d for d in (0.0, 0.17, 0.55, 0.72, 0.89, 1.27, 1.44)]
+
+    def knock_acts(A, s, sp):
+        b = A['bunny']
+        tgt = scr(sp, (-0.15, -0.03, 1.25))
+        b.reach_to(tkk - 0.1, 1, tgt, t1=None, dur=0.25, contact='tips', shape='paw_grip', z=-30.0)
+        def rap(P_, tt):
+            for k in kt:
+                if k - 0.08 <= tt <= k + 0.1: P_.hl_fwd = getattr(P_, 'hl_fwd', 0.0) - 26.0 * math.sin(clamp((tt - k + 0.08) / 0.18) * math.pi)
+        b._add(tkk, None, rap, real=True)
+        return []
+    C(tkk, 'set', room='front', view='porch', cam=SLOT_OUT_WIDE, set=dict(front_light=1.0), rim=PORCH,
+      ppl=[P('bunny', (-0.3, -0.62, -0.03), face=(-0.3, 0.0), room_light=False)], acts=knock_acts, c=dict(mv='push', f=1.0, rate=0.02),
+      sfx=[(k, 'knock_door', -3, 0, 'outside', dict(index=i, pattern='2-3-2', soft=True)) for i, k in enumerate(kt)])
+    C(twv, 'set', room='june', view='out', set=dict(curtains=1.0), rim=MOON,
+      ppl=[P('bunny', 'bunny_treeline', room_light=False, dimk=0.25, act=lambda a, s: a.wave(s.t0, s.t1 + 2.0, side=1, slow=True))],
+      c=dict(mv='push', f=2.0, rate=0.015))
+    # 338 "Her daughter."  June at her window, waving back
+    C(T(338), 'bust', who='june', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=900, cy=600, scale=0.88, turn=-0.15,
+      expr='warm_smile', light=MOON, act=_A(lookxy(1100, 380, -9, None, 0.3, z=700.0), lambda a, s: a.wave(s.t0 - 1.0, s.t1 + 1.0, side=1, speed=0.7, height=0.9)))
+    # 339 "Born from the body that was stolen from her."
+    C(T(339), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=620, scale=0.95, expr='too_still', light=DAWN,
+      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6), pose(-9, None, 0.1, still=0.85), lookxy(1300, 700, -9, None, 0.3, z=300.0)),
+      c=dict(mv='push', x=960, y=580, zrate=0.025))
+    # 340 "Last Easter, Dad went to the bridge and talked to her."
+    C(T(340), 'set', room='woods', view='under', cam=UNDER_SIDE, set=dict(tod='night', flashlight=0.0), era='memory', rim=MOON,
+      ppl=[P('bunny', (0.45, 9.9, BY(9.9)), face=(-1.2, 9.7), room_light=False, dimk=0.15, act=tilt(t(340) + 1.0, -10.0, 2.0)),
+           P('dad', (-1.2, 9.7, BY(9.7)), face=(0.45, 9.9), expr='determined', room_light=False, talk=False,
+             act=lambda a, s: a.reach(-9, None, -1, out=40.0, down=60.0, fwd=150.0, shape='open', up=0.0, fade=0.6))],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 341 "And the thing that called itself my mother followed him there."
+    C(T(341), 'set', room='woods', view='path', cam=WOODS_PATH, set=dict(tod='night', flashlight=0.0), era='memory', rim=MOON,
+      ppl=[P('mom', (-5.4, -3.4, 0.0), path=[(T(341), (-5.4, -3.4, 0.0)), (T(342), (-4.2, -0.6, 0.0))], expr='too_still', surface='grass_quiet',
+             room_light=False, dimk=0.1)],
+      c=dict(mv='push', f=1.0, rate=0.015))
+    # 342 "Every rule was true."  the laminated rules, each one lighting in turn
+    C(T(342), 'ins', name='rules', kw=lambda tr: dict(hl=1 + min(6, int(tr / 0.2)), show=7), c=dict(mv='push', rate=0.03), music=[(t(342), 'hit', 0.6)])
+    # 343 "Don't look at the treeline, so we'd never see who she was pointing at."
+    C(T(343), 'set', room='yard', view='close', cam=cm((-5.2, 35.6, 1.2), (-2.6, 39.6, 1.25), S=1500, sx=1080, sy=500), set=dict(tod='night'), **RECALL, rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.1, turn=-0.35, act=lambda a, s: a.point_at(s.t0 - 2.0, (140, 600), None, side=-1, dur=0.01, z=300.0))],
+      c=dict(mv='push', f=1.0, rate=0.03), cut='static')
+    C(w(343, 'who') - 0.1, 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), **RECALL, rim=LAMP,
+      cam=cm((1.0, 8.2, 4.2), (0.8, 5.95, 4.0), S=1350, sx=960, sy=500),
+      ppl=[P('mom', 'doorway', expr='too_still', turn=0.05, act=pose(-9, None, 0.1, still=0.6, smile=0.5))], focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
+    # 344 "Don't open the egg, so we'd never see her proof."
+    C(T(344), 'ins', name='egg_halves', kw=dict(k_open=1.0), **RECALL, cut='static', c=dict(mv='keys', keys=[(T(344), 860, 600, 1.0, None, 1.3), (T(345), 820, 610, 1.0, 'push', 1.6)]))
+    # 345 "Count the knocks in your head, so by morning, counting to seven would feel like nothing."  the door and the count
+    k0 = T(345) + 0.4
+    C(T(345), 'set', room='hall', view='door', set=dict(hall=0.4), **RECALL, rim=LAMP, cut='static', c=dict(mv='push', f=2.0, rate=0.012),
+      tags=[(k0 + 0.42 * k, str(k + 1), 960 + KNOCK_TAGS[k][0], 540 + KNOCK_TAGS[k][1], 'white' if k < 6 else 'red', 9.0) for k in range(7)],
+      tag_sound=False, sfx=[(k0 + 0.42 * k, 'knock_door', -10, 0, 'inside', dict(index=k, soft=True, memory=True)) for k in range(7)])
+    # 346 "Don't answer the little girl, because she was the real Laurie."
+    C(T(346), 'set', room='front', view='porch', cam=SLOT_OUT_CLOSE, set=dict(front_light=1.0), **RECALL, rim=PORCH, cut='static',
+      ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(cry_t=T(346) - 1.0))], c=dict(mv='push', f=1.0, rate=0.02))
+    C(w(346, 'because') - 0.1, 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=960, cy=600, scale=0.92,
+      light=SUN87, expr='sad', grade='ob_sunrise87', act=lookxy(960, 520, -9, None, 0.3, z=600.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # 347 "Keep June in sight, so June would never leave this house."  June with the tiny dress, in the attic
+    C(T(347), 'set', room='attic', view='chest', cam=ATTIC_MED, set=dict(bulb=1.0, chest='open'), **RECALL, rim=BULB, cut='static',
+      ppl=[P('june', 'chest_floor', kind='floor', turn=-0.9, expr='neutral',
+             act=_A(lambda a, s: a.hold_prop('dress_tiny', 1), lambda a, s: a.reach(-9, None, 1, out=40.0, down=-10.0, fwd=200.0, shape='grip', up=0.0, fade=0.01)))],
+      c=dict(mv='push', f=1.0, rate=0.02))
+    # 348 "Lock yourselves in, so we wouldn't see what it did to her."
+    C(T(348), 'set', room='bath', view='door', set=dict(gap=0.5, slam=T(348) + 0.35), **RECALL, cut='static', c=dict(mv='push', f=1.1, rate=0.02, hit=[(T(348) + 0.35, 5.0)]),
+      sfx=[(T(348) + 0.35, 'door_slam', -6, 0, 'inside', dict(memory=True))])
+    C(w(348, 'what') - 0.1, 'set', room='hall', view='bottom', cam=cm((-0.9, 2.6, 1.6), (0.45, 0.45, 0.2), S=950, sx=960, sy=580), set=dict(tod='dawn', hall=0.0),
+      **RECALL, rim=DAWN, ppl=[P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', act=_A(pose(-9, None, 0.01, unmask=0.6), lambda a, s: a.dead(-9, 0.01)))],
+      c=dict(mv='push', f=1.0, rate=0.03))
+    # 349 "And never close your eyes before sunrise..."  the gold under the door
+    C(T(349), 'set', room='bath', view='gap', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), **RECALL, cut='static', c=dict(mv='push', f=1.0, rate=0.02))
+    # 350 "So the first time June closed them on Easter morning, it would be for Mom."  back to now: the hand over June's eyes, Mom's smile
+    C(T(350), 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=UPD, rim=DAWN, cut='white', quiet_cut=True,
+      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral', act=lambda a, s: a.eyes_shut(-9, None, 0.0)),
+           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0,
+             act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.75), lambda a, s: a.hold_prop('dress_tiny', 1),
+                    lambda a, s: a.reach(-9, None, 1, out=30.0, down=200.0, fwd=140.0, shape='grip', up=0.0, fade=0.01))),
+           P('narrator', (0.5, 5.6, 2.85), face=(-0.3, 5.2), expr='haunted')],
+      acts=lambda A, s, sp: [A['mom'].hand_over(s.t0 - 2.0, -1, A['june'], 'eyes', dur=0.01), A['mom'].look_at(s.t0 - 1.0, (A['june'], 'eyes'), None, 0.3),
+                             A['narrator'].look_at(s.t0 - 1.0, (A['mom'], 'eyes'), None, 0.3)] and [],
+      c=dict(mv='push', f=1.0, rate=0.025), focus_on='mom')
+    # 351-353 J "Four," June whispers. "Five."  June under the hand (lips: J)
+    jx, jy, js = 940, 620, 0.95
+    C(T(351), 'bust', who='june', bg=('up', 'west', UP_DAWN), set=UPD, cx=jx, cy=jy, scale=js, turn=-0.2, expr='neutral', light=DAWN_L,
+      act=lambda a, s: a.eyes_shut(-9, None, 0.0),
+      hands=[dict(who='mom', fn=paw_eyes('june', jx, jy, js, side=-1), size=520, shape='flat', side=-1, sleeve_from=lambda tt: (-200, 900), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=940, y=560, zrate=0.02))
+    # 354 "If it was going to take one of us, it wasn't going to be her."
+    C(T(354), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=980, cy=610, scale=0.95, turn=0.15, expr='determined', light=DAWN_L,
+      act=_A(lookxy(760, 640, -9, None, 0.3, z=300.0), pose(t(354) + 1.2, None, 0.6, brow_angry=0.4)), c=dict(mv='push', x=970, y=560, zrate=0.03),
+      music=[(t(354), 'swell', 0.6, 3.5)])
+    # 355 "I pull June's face out from under that hand, and I push my own face into it, and I squeeze my eyes shut."
+    tpl = w(355, 'pull') - 0.05; tpu = w(355, 'push') - 0.15
+
+    def pull_acts(A, s, sp):
+        n, j, m = A['narrator'], A['june'], A['mom']
+        m.hand_over(s.t0 - 2.0, -1, j, 'eyes', dur=0.01)
+        n.reach_to(tpl, 1, (j, 'shoulder_r'), t1=None, dur=0.35, contact='palm', shape='grip', z=60.0)
+        n.reach_to(tpl + 0.05, -1, (j, 'shoulder_l'), t1=None, dur=0.35, contact='palm', shape='grip', z=60.0)
+        n.look_at(s.t0, (j, 'eyes'), None, 0.3)
+        m.look_at(s.t0 - 1.0, (j, 'eyes'), None, 0.3)
+        return []
+    C(T(355), 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=UPD, rim=DAWN,
+      ppl=[P('june', (-0.05, 5.35, 2.85), path=[(tpl + 0.35, (-0.05, 5.35, 2.85)), (tpu - 0.1, (0.45, 5.55, 2.85))], no_walk=True, face=(-0.55, 5.1), expr='terror',
+             act=lambda a, s: a.eyes_shut(-9, tpl + 0.5, 0.0)),
+           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0,
+             act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.75), lambda a, s: a.hold_prop('dress_tiny', 1),
+                    lambda a, s: a.reach(-9, None, 1, out=30.0, down=200.0, fwd=140.0, shape='grip', up=0.0, fade=0.01))),
+           P('narrator', (0.2, 5.5, 2.85), face=(-0.3, 5.2), expr='determined')],
+      acts=pull_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator', sfx=[(tpl + 0.3, 'cloth_rustle', -6, 0, 'close')])
+    nx, ny, ns = 980, 600, 1.0
+    C(tpu, 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny, scale=ns, turn=0.1, expr='determined', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(w(355, 'squeeze') + 0.1, None, 0.15), pose(w(355, 'squeeze') + 0.1, None, 0.25, squint=0.8, brow_angry=0.5)),
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny, ns, t_in=tpu + 0.2, side=-1, size=560), size=560, shape='flat', side=-1,
+                  sleeve_from=lambda tt: (-220, 940), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=980, y=560, zrate=0.03))
+    # 356 "I've been counting to seven in my head all night."  357 "It's the easiest thing in the world."  358 "Six."  359 "Seven."
+    C(T(356), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 40, scale=ns * 1.25, turn=0.1, expr='determined', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.8, brow_angry=0.5)),
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 40, ns * 1.25, side=-1), size=700, shape='flat', side=-1,
+                  sleeve_from=lambda tt: (-260, 1000), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=980, y=560, zrate=0.02))
+    C(T(357), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=640, scale=1.05, turn=0.3, expr='too_still', light=DAWN,
+      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6), pose(t(357), None, 1.2, smile=0.85), lookxy(1500, 680, -9, None, 0.3, z=300.0)),
+      c=dict(mv='push', x=960, y=600, zrate=0.025))
+    C(T(358), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 80, scale=ns * 1.5, turn=0.1, expr='determined', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=1.0, brow_angry=0.6)),
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 80, ns * 1.5, side=-1), size=840, shape='flat', side=-1,
+                  sleeve_from=lambda tt: (-300, 1080), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=980, y=540, zrate=0.03), music=[(t(358), 'heartbeat', 0.7, 1.6)])
+    C(T(359), 'black', post=dict(white=0.0), sfx=[(t(359) + 0.05, 'impact_hit', 0, 0, None, dict(size=1.2))],
+      music=[(t(359) + 0.05, 'sub_drop', 0.9), (t(359) + 0.1, 'silence', 0.0, 1.2)])
+
+
+# ==================================================================================================== AFTER: THE HOSPITAL (914.3 - 993.9)
+LOW_UP = cm((-0.75, 5.1, 3.95), (0.35, 5.5, 4.25), S=1100, sx=960, sy=520)       # from Mom's eyes on her knees, up at the narrator's body
+SCREAM = lambda k=1.0: _A(pose(-9, None, 0.08, m_open=0.85 * k, wide=1.0, brow_up=0.9, brow_sad=0.6, tremble=0.0), ex('terror', -9, None, 0.05))
+
+
+def plan_after(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    UPD = dict(wrecked=1.0, tod='dawn')
+    MOMK = lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6)
+    NEW = lambda: P('narrator_new', (0.35, 5.5, 2.85), face=(-0.6, 5.05), expr='wrong_smile',
+                    act=_A(pose(-9, None, 0.1, h_nod=0.25), lookxy(760, 820, -9, None, 0.3, z=300.0)))
+    JUNE_H = lambda: P('june', (0.75, 5.62, 2.85), face=(-0.6, 5.05), expr='neutral', act=lookxy(760, 820, -9, None, 0.3, z=300.0))
+    hand_in_hand = lambda A, s, sp: [A['narrator_new'].hold_hand(s.t0 - 1.0, 1, A['june'], -1, dur=0.01)] and []
+    # 360 "When I open my eyes, I'm on my knees in the hallway, my arms are scratched to ribbons, and I'm looking at myself."
+    top = w(360, 'open') + 0.15
+    C(T(360), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=620, scale=1.0, expr='terror', light=DAWN,
+      act=_A(MOMK, lambda a, s: a.eyes_shut(-9, top, 0.0), lookxy(1100, 300, top, None, 0.25, z=300.0)), c=dict(mv='push', x=960, y=580, zrate=0.03),
+      sfx=[(top, 'breath', -4, 0, 'close', dict(kind='gasp'))], music=[(top, 'stinger', 0.5)])
+    tar = w(360, 'arms') - 0.15
+
+    def arms_acts(A, s, sp):
+        m = A['mom']
+        m.reach(-9, None, 1, out=40.0, down=150.0, fwd=210.0, shape='open', up=0.0, fade=0.01)
+        m.reach(-9, None, -1, out=40.0, down=150.0, fwd=210.0, shape='open', up=0.0, fade=0.01)
+        m.look_at(-9, lambda tt: m.where(tt, 'hand_r', post=False), None, 0.01)
+        return []
+    C(tar, 'set', room='up', view='west', cam=cm((-1.75, 5.55, 4.05), (-0.55, 5.05, 3.45), S=1350, sx=960, sy=540), set=UPD, rim=DAWN,
+      ppl=[P('mom', (-0.6, 5.05, 2.85), face=(0.35, 5.5), expr='terror', kind='kneel', knees=0, act=_A(MOMK, pose(-9, None, 0.1, h_nod=0.5)))],
+      acts=arms_acts, c=dict(mv='push', f=1.0, rate=0.02))
+    C(w(360, 'looking') - 0.2, 'set', room='up', view='west', cam=LOW_UP, set=UPD, rim=DAWN_L, ppl=[NEW(), JUNE_H()], acts=hand_in_hand,
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator_new')
+    # 361 "Sixteen years old."  362 "Holding June's hand."  363 "Smiling."  364 "My own face looks down at me."  365 "And it hums."
+    C(T(361), 'set', room='up', view='west', cam=cm((-0.6, 5.15, 3.9), (0.35, 5.5, 4.35), S=1500, sx=960, sy=560), set=UPD, rim=DAWN_L, ppl=[NEW(), JUNE_H()],
+      acts=hand_in_hand, c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator_new')
+    C(T(362), 'set', room='up', view='west', cam=cm((-0.5, 5.2, 3.75), (0.55, 5.56, 3.75), S=1500, sx=960, sy=520), set=UPD, rim=DAWN_L, ppl=[NEW(), JUNE_H()],
+      acts=hand_in_hand, c=dict(mv='push', f=1.0, rate=0.02))
+    C(T(363), 'bust', who='narrator_new', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=600, scale=0.95, expr='wrong_smile', light=DAWN_L,
+      act=_A(pose(-9, None, 0.1, h_nod=0.2), pose(t(363), None, 0.6, smile=0.9), lookxy(860, 860, -9, None, 0.3, z=300.0)), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    C(T(364), 'bust', who='narrator_new', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=560, scale=1.1, expr='wrong_smile', light=DAWN_L,
+      act=_A(pose(-9, None, 0.1, h_nod=0.4, smile=0.8), lookxy(960, 980, -9, None, 0.3, z=250.0)), c=dict(mv='push', x=960, y=540, zrate=0.025))
+    C(T(365), 'bust', who='narrator_new', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=600, scale=1.25, expr='wrong_smile', light=DAWN_L,
+      act=_A(pose(-9, None, 0.1, h_nod=0.35), hum(t(365) - 0.1, None), lookxy(960, 980, -9, None, 0.3, z=250.0)), c=dict(mv='push', x=960, y=560, zrate=0.02),
+      sfx=[(t(365), 'hum', -8, 0, 'close', dict(who='narrator_new', dur=2.2))], music=[(t(365), 'jingle', 0.5, 2.2, dict(version='hum'))])
+    # 366 "So I did the only thing I could."  367 "I screamed."  368 "I screamed that I was sixteen."  369 "I screamed my own name."
+    C(T(366), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=620, scale=1.0, expr='terror', light=DAWN,
+      act=_A(MOMK, lookxy(1100, 300, -9, None, 0.3, z=300.0)), c=dict(mv='push', x=960, y=580, zrate=0.02))
+    C(T(367), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=640, scale=1.1, expr='terror', light=DAWN,
+      act=_A(MOMK, SCREAM(1.0), lookxy(1100, 300, -9, None, 0.3, z=300.0)), c=dict(mv='push', x=960, y=600, zrate=0.04, shake=0.6),
+      music=[(t(367), 'braam', 0.8)])
+    C(T(368), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=680, scale=1.35, expr='terror', light=DAWN,
+      act=_A(MOMK, SCREAM(0.9), lookxy(1100, 300, -9, None, 0.3, z=300.0)), c=dict(mv='push', x=960, y=620, zrate=0.03, shake=0.5))
+    C(T(369), 'set', room='up', view='west', cam=UP_DAWN, set=UPD, rim=DAWN,
+      ppl=[P('mom', (-0.6, 5.05, 2.85), face=(0.35, 5.5), expr='terror', kind='kneel', knees=0, act=_A(MOMK, SCREAM(0.9), lookxy(1300, 300, -9, None, 0.3, z=300.0))),
+           NEW(), JUNE_H()],
+      acts=hand_in_hand, c=dict(mv='push', f=1.0, rate=0.015))
+    # 370 "When the police came, they found a dead man in a bunny suit who'd been missing since 1987, and a mother who had
+    # fought him off to save her children, and then lost her mind."
+    C(T(370), 'set', room='front', view='house', set=dict(tod='dawn', police=dict(mode='sweep', strength=0.55)), c=dict(mv='push', f=1.15, rate=0.02))
+    C(w(370, 'dead') - 0.15, 'set', room='hall', view='bottom', cam=cm((-0.9, 2.6, 1.6), (0.45, 0.45, 0.2), S=950, sx=960, sy=580), set=dict(tod='dawn', hall=0.0, door=60.0),
+      rim=POLICE, ppl=[P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', act=_A(pose(-9, None, 0.01, unmask=0.6), lambda a, s: a.dead(-9, 0.01))),
+                       P('cop', (-0.35, 0.95, 0.0), face=(0.5, 0.45), kind='kneel', knees=1, expr='sad', act=lookp((0.55, 0.45, 0.2), -9, None, 0.3))],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='cop')
+    C(w(370, 'mother') - 0.25, 'bust', who='mom', bg=('front', 'house'), set=dict(tod='dawn', police=dict(mode='sweep', strength=0.55)), cx=960, cy=620, scale=0.95,
+      expr='dead_stare', light=POLICE, act=_A(MOMK, pose(-9, None, 0.1, still=0.9, h_nod=0.2), lookxy(1150, 700, -9, None, 0.3, z=300.0)),
+      c=dict(mv='push', x=960, y=580, zrate=0.02))
+    # 371 "That's where I am now."  372 "Holloway State Hospital."  373 "The doctors are very kind."  374 "They call me Laurie."
+    C(T(371), 'set', room='hosp', view='room', rim=HOSP,
+      ppl=[P('mom_hosp', 'window', expr='haunted', act=pose(-9, None, 0.1, h_nod=0.12))], c=dict(mv='push', f=1.1, rate=0.015))
+    C(T(372), 'set', room='hosp', view='corridor', rim=HOSP, c=dict(mv='push', f=1.0, rate=0.02),
+      tags=[(t(372) + 0.1, 'HOLLOWAY STATE HOSPITAL', 960, 760, 'white', 2.6)])
+    C(T(373), 'set', room='hosp', view='room', rim=HOSP, cam=cm((10.9, 6.5, 1.5), (9.45, 2.75, 1.35), S=950, sx=960, sy=520),
+      ppl=[P('doctor', 'door', face=(10.3, 5.0), expr='warm_smile', act=_A(lambda a, s: a.hold_prop('clipboard', -1),
+                                                          lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=160.0, fwd=190.0, shape='grip', up=0.0, fade=0.01),
+                                                          lambda a, s: a.head_down(t(373) + 0.4, t(373) + 1.0, 0.35, 0.4)))],
+      c=dict(mv='push', f=1.15, rate=0.015))
+    C(T(374), 'ins', name='wristband', c=dict(mv='push', rate=0.03))
+    # 375 "They say I'm forty-three, and that the trauma made me believe I'm my own child."
+    C(T(375), 'bust', who='doctor', bg=('hosp', 'room'), expr='warm_smile', cx=1000, cy=600, scale=0.8, turn=-0.25, light=HOSP,
+      act=_A(lambda a, s: a.hold_prop('clipboard', -1), lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=60.0, fwd=210.0, shape='grip', up=0.0, fade=0.01),
+             lambda a, s: a.head_down(t(375) + 0.5, t(375) + 0.9, 0.3, 0.3)))
+    C(w(375, 'and') - 0.1, 'bust', who='mom_hosp', bg=('hosp', 'room'), cx=940, cy=610, scale=0.95, turn=0.15, expr='haunted', light=HOSP,
+      act=lookxy(1200, 560, -9, None, 0.3, z=400.0), c=dict(mv='push', x=950, y=560, zrate=0.02))
+    # 376 "Every Sunday, June visits."  377 "She comes with my old body, which is doing great."
+    C(T(376), 'set', room='hosp', view='visit', rim=HOSP,
+      ppl=[P('june', (15.1, 2.75, 0.0), path=[(T(376) + 0.2, (15.1, 2.75, 0.0)), (T(377), (16.0, 4.1, 0.0))], expr='neutral'),
+           P('narrator_neat', (15.5, 2.6, 0.0), path=[(T(376) + 0.4, (15.5, 2.6, 0.0)), (T(377) + 0.2, (16.5, 3.9, 0.0))], expr='too_still')],
+      acts=lambda A, s, sp: [A['narrator_neat'].hold_hand(s.t0 - 1.0, -1, A['june'], 1, dur=0.01)] and [],
+      c=dict(mv='push', f=1.1, rate=0.015))
+    C(T(377), 'set', room='hosp', view='visit', cam=cm((18.9, 6.6, 1.5), (16.5, 3.9, 1.45), S=1100, sx=960, sy=520), rim=HOSP,
+      ppl=[P('narrator_neat', (16.5, 3.9, 0.0), face=(18.9, 6.6), expr='too_still', act=pose(-9, None, 0.1, still=0.7, smile=0.3)),
+           P('june', (16.0, 4.1, 0.0), face=(18.9, 6.6), expr='neutral')],
+      acts=lambda A, s, sp: [A['narrator_neat'].hold_hand(s.t0 - 1.0, -1, A['june'], 1, dur=0.01)] and [],
+      c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator_neat')
+    # 378 "Straight A's."  379 "Never late."  380 "Hums all the time."
+    C(T(378), 'ins', name='report', c=dict(mv='push', rate=0.035))
+    C(T(379), 'bust', who='narrator_neat', bg=('hosp', 'visit'), cx=960, cy=600, scale=0.92, expr='too_still', light=HOSP,
+      act=_A(pose(-9, None, 0.1, still=0.8, smile=0.35), lookxy(960, 560, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    C(T(380), 'bust', who='narrator_neat', bg=('hosp', 'visit'), cx=980, cy=620, scale=1.05, turn=-0.2, expr='too_still', light=HOSP,
+      act=_A(hum(t(380) - 0.1, None), lookxy(700, 560, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=970, y=580, zrate=0.02),
+      sfx=[(t(380), 'hum', -8, 0, 'hospital', dict(who='narrator_neat', dur=1.6))], music=[(t(380), 'jingle', 0.45, 1.8, dict(version='hum'))])
+    # 381 "Last Sunday, June climbed into my lap, put her mouth against my ear, and whispered,"  382 J "I know it's you."
+    # a close two-shot: June on her lap, leaning in to her ear (June's bust lower and in front, turned to her)
+    def lap(t_lean, k=1.0):
+        return [dict(who='june', cx=780, cy=700, scale=0.82 * k, turn=0.55, expr='neutral', light=HOSP, depth=0.98,
+                     act=_A(pose(t_lean, None, 0.6, h_tilt=8.0, h_nod=0.1, approach=0.25), lookxy(1200, 560, -9, None, 0.3, z=200.0)))]
+    C(T(381), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1150, cy=600, scale=0.9, turn=-0.3, expr='haunted', light=HOSP,
+      act=lookxy(1500, 560, -9, None, 0.3, z=400.0), busts=lap(w(381, 'put')), c=dict(mv='push', x=1000, y=580, zrate=0.02))
+    C(T(382), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1180, cy=620, scale=1.0, turn=-0.3, expr='haunted', light=HOSP,
+      act=_A(lookxy(1500, 560, -9, None, 0.3, z=400.0), pose(t(382) + 0.4, None, 0.5, wide=0.6)), busts=lap(-9, 1.12), c=dict(mv='push', x=1000, y=600, zrate=0.02))
+    # 383 "Then she told me what my old body asked her in the car, on the way over."  384 X "Want to see a magic trick?"
+    C(T(383), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=960, cy=620, scale=1.05, expr='haunted', light=HOSP,
+      act=_A(pose(t(383) + 1.5, None, 1.2, wide=0.7, brow_up=0.6), lookxy(960, 560, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=960, y=580, zrate=0.025))
+    C(T(384), 'bust', who='narrator_neat', bg=('hosp', 'visit'), cx=960, cy=620, scale=1.15, expr='too_still', light=HOSP, talk_k=0.35,
+      act=_A(pose(-9, None, 0.1, still=0.85, smile=0.45), lookxy(960, 540, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=960, y=580, zrate=0.03),
+      music=[(t(384), 'stinger', 0.7)])
+    # 385 "Easter is in nine days."
+    C(T(385), 'ins', name='calendar', c=dict(mv='keys', keys=[(T(385), 960, 540, 1.0, None, 1.0), (T(386) - 0.1, 760, 960, 1.0, 'in_out', 1.9)]),
+      music=[(e(385) + 0.2, 'sub_drop', 0.6)])
+
+
+# ==================================================================================================== OUTRO (993.9 - end)
+MOM_DOOR_BG = ('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900))
+
+
+def _vhs_fn(k=0.55):
+    return lambda tt: {'vhs': dict(t=tt, k=k, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)}
+
+
+def plan_outro(F):
+    t, e, w, C = F.t, F.e, F.w, F.cut
+    T = lambda i, off=0.0: F.t(i) - LEAD + off
+    O = dict(era='outro')
+    # 386 "Okay."  387 "Breathe."  black, a breath
+    C(T(386) - 0.4, 'black', sfx=[(t(387) + 0.1, 'breath', -12, 0, 'close', dict(kind='calm_exhale'))], music=[(T(386) - 0.4, 'silence', 0.0, 2.0)])
+    # 388 "You can turn a light on now."  the switch flips ON; the frame floods warm
+    ton = w(388, 'on') - 0.05
+    C(T(388), 'ins', name='switch', **O, kw=lambda tr, a=ton - T(388): dict(flip=lambda tt: ease_in_out(clamp((tt - a) / 0.15))),
+      post_fn=lambda tt, a=ton: dict(exposure=0.22 * ease_in_out(clamp((tt - a) / 0.5))), c=dict(mv='push', rate=0.02),
+      sfx=[(ton, 'light_switch', -2, 0, 'close')], music=[(ton + 0.1, 'outro_warm', 0.4, 30.0)])
+    # 389 "None of this happened."  the living room, every lamp on, empty and warm
+    C(T(389), 'set', room='living', view='wide', set=dict(lamp=1.0, chair_lamp=1.0, curtains=0.0), **O, rim=LAMP, c=dict(mv='push', f=1.0, rate=0.012))
+    # 390 "There's no Holloway."  391 "No Pemberton's."  (struck through in red marker)
+    C(T(390), 'ins', name='courier', **O, strike=(w(390, 'holloway') + 0.1, 690, 70, 1120, 40),
+      c=dict(mv='keys', keys=[(T(390), 960, 190, 1.0, None, 1.7), (T(391), 960, 190, 1.0, 'lin', 1.75)]), sfx=[(w(390, 'holloway') + 0.1, 'marker_strike', -4, 0, 'close')])
+    C(T(391), 'ins', name='egg', **O, strike=(w(391, 'pemberton') + 0.05, 985, 465, 1150, 640),
+      c=dict(mv='keys', keys=[(T(391), 1060, 540, 1.0, None, 1.5), (T(392), 1060, 540, 1.0, 'lin', 1.55)]), sfx=[(w(391, 'pemberton') + 0.05, 'marker_strike', -4, 0, 'close')])
+    # 392 "No bridge at the end of Orchard Road."  just a bridge, in daylight
+    C(T(392), 'set', room='woods', view='bridge', set=dict(tod='day87'), **O, rim=MEMORY, grade='ob_ext', c=dict(mv='push', f=1.1, rate=0.015),
+      sfx=[(T(392), 'birds_day', -12, 0, 'woods', dict(dur=2.5))])
+    # 393 "Laurie, June and the little girl in the suit were made up by someone drinking a very ordinary cup of coffee."
+    C(T(393), 'ins', name='desk', **O, c=dict(mv='keys', keys=[(T(393), 900, 560, 1.0, None, 1.0), (T(394), 1100, 560, 1.0, 'in_out', 1.25)]),
+      sfx=[(w(393, 'cup') - 0.2, 'mug_set_down', -8, 0, 'close')])
+    # 394 "The Bunnyman is just a costume."  395 "It has a zipper in the back, where zippers go."
+    C(T(394), 'ins', name='hanger', **O, c=dict(mv='push', rate=0.02))
+    C(T(395), 'ins', name='hanger', **O, kw=dict(back=True, zip_t=w(395, 'zipper') - T(395)), anim=True,
+      c=dict(mv='keys', keys=[(T(395), 960, 540, 1.0, None, 1.0), (T(396), 960, 600, 1.0, 'in_out', 1.3)]), sfx=[(w(395, 'zipper'), 'zipper', -4, 0, 'close')])
+    # 396 "...the trick only works if you close your eyes and count to seven."  397 "You've been watching this whole time."  398 "So you never did."
+    C(T(396), 'card', mode='trick', steps=[(w(396, 'close') - 0.05, '1. CLOSE YOUR EYES'), (w(396, 'count') - 0.05, '2. COUNT TO SEVEN')], **O)
+    C(T(397), 'card', mode='eye', **O)
+    C(T(398), 'card', mode='safe', **O)
+    # 399 "Now, go back to the comment you left before rule two."  the tape rewinds to the pause
+    src_mom = T(92) - 0.06; src_bun = T(74) + 1.9
+    C(T(399), 'pause', mode='rew', srcs=[T(357) + 0.3, T(267) + 0.3, T(169) + 1.0, T(119) + 0.5, T(104) + 0.5, src_mom],
+      per=max(0.3, (T(400) - T(399)) / 6.0), era='pause')
+    # 400 "If you said the Bunnyman, you're the only one who would have let Laurie come home."
+    C(T(400), 'pause', mode='split', srcs=(src_mom, src_bun), hl='R', era='pause')
+    # 401-403 "Find someone who said Mom, and reply to them. Gently. They're going to need it."
+    C(T(401), 'pause', mode='split', srcs=(src_mom, src_bun), hl='L', reply=w(401, 'reply') - 0.1, reply_side=-1, era='pause')
+    # 404 "And if you said Mom... don't worry."  405 "She liked you too."  (the frozen frame, then it plays: the smile widens, the eyes come to us)
+    C(T(404), 'pause', mode='freeze', src=src_mom, era='pause')
+    C(T(405), 'bust', who='mom', bg=MOM_DOOR_BG, set=dict(hall=1.0), cx=960, cy=640, scale=1.08, expr='too_still', era='pause',
+      light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25), post_fn=_vhs_fn(),
+      act=_A(pose(-9, None, 0.1, smile=0.6), pose(t(405) + 0.2, None, 0.8, smile=0.95), lookxy(700, 560, -9, t(405) + 0.3, 0.3, z=600.0),
+             lookxy(960, 520, t(405) + 0.35, None, 0.5, z=600.0)),
+      c=dict(mv='push', x=960, y=600, zrate=0.03), music=[(t(405) + 0.3, 'stinger', 0.45)])
+    # 406 "If this story made you glance at a window, even once, leave a like, so I know the trick worked."
+    C(T(406), 'set', room='living', view='window', set=dict(lamp=0.0, curtains=1.0), rim=NIGHT, **O, c=dict(mv='push', f=1.0, rate=0.02))
+    C(w(406, 'leave') - 0.1, 'card', mode='like', hit_t=w(406, 'like') + 0.05, **O)
+    # 407 "And subscribe."  Grandma's porch light switches on
+    C(T(407), 'set', room='yard', view='house', set=dict(back_light=dict(on=t(407) + 0.35), kitchen=0.0), **O, rim=MOON, c=dict(mv='push', f=1.6, rate=0.015),
+      sfx=[(t(407) + 0.35, 'light_switch', -6, 0, 'outside', dict(kind='porch'))])
+    # 408 "...the next story comes to you, so you never have to go looking for it in the woods."
+    C(T(408), 'set', room='yard', view='woods', set=dict(back_light=1.0), **O, rim=PORCH, c=dict(mv='push', f=1.0, rate=0.012))
+    C(w(408, 'next') - 0.1, 'set', room='yard', view='house', set=dict(back_light=1.0, kitchen=0.6), **O, rim=MOON, c=dict(mv='push', f=2.2, rate=0.012))
+    # 409 "Next time on Rules After Dark: if your doctor calls at three in the morning ..."
+    C(T(409), 'card', mode='next', **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
+    # 410 "Sleep well."  411 "And if you hear a little song tonight... that's just the outro."
+    C(T(410), 'card', mode='title', **O)
+    C(T(411), 'black', **O, music=[(e(411) + 0.6, 'jingle', 0.35, 3.0, dict(version='outro_soft'))])
+
+
+# ==================================================================================================== global music + extra beds
+def plan_globals(F):
+    """Music events that run across cuts (the Pemberton's jingle by version, the climax heartbeat / pulse, swells) and the
+    beds the reveal and the aftermath need (the 1987 woods, the night woods, police, the hospital)."""
+    t, e, w = F.t, F.e, F.w
+    G = F.globals
+    m = lambda tt, typ, lv, **k: G.append(dict({'t': round(tt, 3), 'type': typ, 'level': lv}, **k))
+    # the jingle: the 1987 parade on the tape, the hums, the tinny one from the woods, the broken girl's version, the outro
+    # (the parade tape is cued by its shot; the tinny one from the woods is a bed in beds())
+    m(t(255) - 0.2, 'jingle', 0.3, len=round(t(258) - t(255) + 0.4, 2), version='girl_broken')
+    # the climax: the pulse from Mom's hand over June's eyes, the heartbeat under the counts, stopped dead at "Seven."
+    m(t(313), 'pulse_on', 0.5)
+    m(t(318) - 0.05, 'heartbeat', 0.45, len=round(t(359) - t(318) + 0.1, 2), bpm0=72, bpm1=138)
+    m(t(359) + 0.05, 'pulse_off', 0.0)
+    m(t(323), 'swell', 0.4, len=8.0)
+    m(t(350), 'riser', 0.6, len=round(t(351) - t(350), 2))
+    m(t(355), 'riser', 0.75, len=round(t(358) - t(355), 2))
+    m(t(370), 'swell', 0.35, len=10.0, kind='sorrow')
+    m(t(386) - 0.4, 'silence', 0.0, len=2.0)
+    # beds the shots need on top of beds(): woods (1987 day / night), the police morning, the hospital
+    G.append(_ev(t(324) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(329) - t(324), 2), tod='day', birds=0.4))
+    G.append(_ev(t(333) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(334) - t(333), 2), tod='day', birds=0.3, creek=0.6))
+    G.append(_ev(t(334) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(337) - t(334), 2), tod='night', creek=0.4))
+    G.append(_ev(t(340) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(342) - t(340), 2), tod='night', creek=0.4))
+    G.append(_ev(t(370) - 0.1, 'police_radio', -18, 0.3, 'outside', dur=6.0))
 
 
 # ==================================================================================================== main

@@ -2,10 +2,26 @@
 
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
-This film uses four Epidemic sets (catalogued in audio/catalog_epidemic_dummy.json, never copied out of
-_work/samples, never committed): the dummy set (_work/samples/epidemic: 35 effects and 11 vintage tracks), and the
-delivery, police and mirror sets through the symlinks in _work/samples. Keep the channel connected in the Epidemic
-account so Content ID does not claim the show theme (Balloon Twister) or the 1962 tune (Ye Olde Piano Roll).
+This film ("If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN") uses five Epidemic sets (catalogued
+in audio/catalog_epidemic_bunny.json, never copied out of _work/samples, never committed): the bunny set
+(_work/samples/epidemic: 70 effects and 10 tracks, each judged in _work/mix/sfx_review.md: 29 used, 21 used only after
+processing, 20 rejected; 6 tracks used, 4 rejected), and the dummy, delivery, police and mirror sets through the
+symlinks in _work/samples. Keep the channel connected in the Epidemic account so Content ID does not claim the
+tracks (The Haunted, Sleep Forever, The Cursed Path of Everlasting Loneliness, Mermaid's Story, Mary Had a Little
+Lamb, Mr. Otter's Rainy Day and the earlier sets' dark tracks).
+
+No new third-party sound was downloaded for this film: the free hosts (Freesound, OpenGameArt, Wikimedia Commons) are
+not reachable from the work machine, and nothing the film needed was missing. What the recordings could not give is
+made here and owes nobody a credit:
+- The Pemberton's Department Store jingle is an ORIGINAL tune written for this film (audio/jingle.py: melody,
+  harmony, arrangement); its toy piano, music box, e-piano, bass, kick and shaker are synthesised; its glockenspiel
+  (VS Chamber Orchestra CE), celesta (A Sampled Celesta), hand claps (Body Percussion) and low piano (Scary Piano)
+  are CC0 samples already in the library.
+- The hums, the real Laurie's broken singing and her crying are the film's own narration (the owner's voiceover)
+  re-synthesised with the WORLD vocoder in the cast's voices (audio/voicesynth.py, tools/vo_voices.py): no library
+  voice. The bunny set's crying file (a three-year-old boy) is rejected.
+- The plastic egg's shell, the ring's ring, the brass mail-slot flap, the barrel's steel ticks, the bare bulb, the
+  zipper, the curtain rings and the VHS pause are synthesised layers over the recordings named in sfx.py.
 A line whose files the final mix does not use may be dropped; keeping every line is always safe.
 
 ```

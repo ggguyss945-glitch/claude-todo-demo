@@ -82,9 +82,11 @@ SYLL = {3: [17.905, 18.355, 18.62, 18.855, 18.95, 19.405],
         4: [19.645, 19.73, 19.93, 20.12, 20.395, 20.70, 20.905, 21.365],
         5: [21.645, 21.99, 22.10, 22.45, 22.605, 22.885, 23.075, 23.305, 23.57],
         6: [23.845, 24.30, 24.44, 24.775, 24.955, 25.26, 25.43, 25.66, 25.915]}
-COLD_OPEN_ANCHORS = [(0.0, 17.92), (1.0, 18.40), (2.0, 18.66), (3.0, 18.98), (4.0, 19.75), (5.0, 20.13),
-                     (6.0, 20.43), (7.0, 20.93), (8.0, 21.67), (10.0, 22.62), (11.0, 23.09), (12.0, 23.88),
-                     (14.0, 24.97), (15.0, 25.45), (16.0, 26.02)]
+# the cold open: the band keeps a steady pulse per phrase (anchors on the phrase downbeats), the melody follows the
+# narrator's own syllables like a singer phrasing over a band (each note on its syllable's vowel: boundary + 50 ms)
+COLD_OPEN_ANCHORS = [(0.0, 17.94), (4.0, 19.77), (8.0, 21.69), (12.0, 23.89), (16.0, 26.0)]
+COLD_OPEN_MELODY = [(b, round(t + 0.05, 3)) for (b, d, m, s), t in
+                    zip(MELODY, SYLL[3][:-1] + SYLL[4][:-1] + SYLL[5][:-1] + SYLL[6][:-1])]
 MINOR = {66: 65, 71: 70, 78: 77, 83: 82, 54: 53, 59: 58, 42: 41, 47: 46}   # F# -> F, B -> Bb (D harmonic minor)
 COUNT_MIDI = [62, 64, 65, 67, 69, 70, 73]             # One..Seven: D E F G A Bb C# (no D: never home)
 
@@ -267,9 +269,11 @@ def _melody(minor=False, octave=0):
 
 
 def studio(bm, loops=1, seed=0, drums=True, minor=False, inst=('toy', 'celesta', 'glock', 'ep', 'bass'), tag=True,
-           detune=12.0):
-    """The commercial's own mix (dry), `loops` times through. Returns (stereo, beat times, end time)."""
+           detune=12.0, bm_mel=None):
+    """The commercial's own mix (dry), `loops` times through. bm_mel: a separate map for the melody (the cold open:
+    the melody on the narrator's syllables over the band's steady pulse). Returns (stereo, beat times, end time)."""
     rng = np.random.default_rng(seed)
+    mel_t = (lambda b: float(bm_mel(b))) if bm_mel is not None else (lambda b: float(bm(b)))
     total_beats = N_BEATS * loops + (2.0 if tag else 0.0)
     end = float(bm(total_beats)) + 2.5
     buf = np.zeros((int(end * SR) + SR, 2), np.float32)
@@ -277,7 +281,7 @@ def studio(bm, loops=1, seed=0, drums=True, minor=False, inst=('toy', 'celesta',
     for L in range(loops):
         o = L * N_BEATS
         for b, d, m, s in _melody(minor):
-            t = float(bm(o + b))
+            t = mel_t(o + b)
             acc = 1.0 if abs(b - round(b)) < 1e-6 else 0.82
             if 'toy' in inst:
                 _put(buf, t, toy_piano(m, 0.9 * acc * rng.uniform(0.92, 1.0), rng, tune[m]), 1.0, -0.1)
@@ -461,11 +465,13 @@ def render(version, anchors=None, tempo=None, seed=0, **kw):
     v = version
     if v in ('studio', 'vhs', 'parade', 'speaker', 'outro', 'knocks'):
         bm = BeatMap(tempo or TEMPO, anchors)
+        mel = kw.get('melody_anchors')
+        bm_mel = BeatMap(tempo or TEMPO, mel, swing=0.5) if mel else None
     if v == 'studio':
         y, beats, end = studio(bm, kw.get('loops', 1), seed)
         return _level(y, -16), {'beats': beats}
     if v == 'vhs':
-        y, beats, end = studio(bm, 1, seed)
+        y, beats, end = studio(bm, 1, seed, bm_mel=bm_mel)
         y = _level(y, -18)
         tag_t = beats[16] if len(beats) > 16 else end - 1.5
         cr = _crowd(len(y) / SR, seed + 1, cheer_at=tag_t + 0.6, kids=0.0, bed=0.0)
@@ -473,7 +479,10 @@ def render(version, anchors=None, tempo=None, seed=0, **kw):
         g = np.clip((np.arange(len(y)) / SR - (tag_t - 0.2)) / 0.4, 0, 1) * np.clip(1 - (np.arange(len(y)) / SR - tag_t - 2.0) / 1.0, 0, 1)
         y = y + _level(k, -27) * g[:, None].astype(np.float32) * 1.6
         y = vhs(y, seed)
-        return _level(y, -18), {'beats': beats, 'tag': tag_t}
+        info = {'beats': beats, 'tag': tag_t}
+        if bm_mel is not None:
+            info['note_times'] = [float(bm_mel(b)) for b, d, m, s in MELODY]
+        return _level(y, -18), info
     if v == 'parade':
         loops = int(kw.get('loops', 3))
         y, beats, end = studio(bm, loops, seed)
@@ -650,12 +659,18 @@ def melody_check(y, info, minor=False, transpose=0.0, first=0, count=None, swing
     beats = info.get('beats') or []
     ranks = []
     sel = MELODY if count is None else MELODY[first:first + count]
-    for b, d, mm, s in sel:
-        if not beats or b + 0.1 > len(beats) - 1:
-            break
-        fl = np.floor(b + 1e-9); fr = b - fl
-        bb = fl + swing if abs(fr - 0.5) < 1e-6 else b
-        t0 = float(np.interp(bb, np.arange(len(beats)), beats))
+    note_t = info.get('note_times')
+    for k, (b, d, mm, s) in enumerate(sel):
+        if note_t is not None:
+            if k >= len(note_t):
+                break
+            t0 = float(note_t[k])
+        else:
+            if not beats or b + 0.1 > len(beats) - 1:
+                break
+            fl = np.floor(b + 1e-9); fr = b - fl
+            bb = fl + swing if abs(fr - 0.5) < 1e-6 else b
+            t0 = float(np.interp(bb, np.arange(len(beats)), beats))
         now = C[:, (tt >= t0 + 0.01) & (tt <= t0 + 0.13)].mean(1)
         bef = C[:, (tt >= t0 - 0.09) & (tt <= t0 - 0.01)].mean(1) if t0 > 0.1 else np.zeros(60)
         new_ = np.maximum(now - 0.6 * bef, 0)
@@ -690,7 +705,9 @@ def main():
         if nm == 'count':
             jobs += [(f'count_{k}', 'count', dict(n=k)) for k in range(1, 8)]
         elif nm == 'vhs':
-            jobs.append(('vhs_cold_open', 'vhs', dict(anchors=[(b, t - COLD_OPEN_ANCHORS[0][1] + 0.6) for b, t in COLD_OPEN_ANCHORS])))
+            z = COLD_OPEN_ANCHORS[0][1] - 0.6
+            jobs.append(('vhs_cold_open', 'vhs', dict(anchors=[(b, t - z) for b, t in COLD_OPEN_ANCHORS],
+                                                      melody_anchors=[(b, t - z) for b, t in COLD_OPEN_MELODY])))
             jobs.append(('vhs', 'vhs', {}))
         elif nm == 'musicbox':
             jobs.append(('musicbox', 'musicbox', dict(wind=True)))
