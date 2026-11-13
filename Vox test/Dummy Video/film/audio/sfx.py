@@ -1500,6 +1500,26 @@ def r_braam(rng, sp, key='d', **_):
     return y, onset_s(y, -20), 0.0, True
 
 
+def mid_crack(rng, y, at=0.0, under_db=6.0, dur=0.32):
+    """Add a short mid-band 'crack' (150 Hz - 2.5 kHz: a band-passed noise burst and a dry wooden knock) at `at` s into
+    a hit, `under_db` under the hit's own loudest 50 ms: the body of a hit is mostly sub and vanishes on a phone (the
+    review measured the regular hits 9-14 dB under the voice through a 300 Hz high-pass)."""
+    y = st(np.asarray(y, np.float32)); n = int(dur * SR); i0 = int(at * SR)
+    if i0 >= len(y): return y
+    x = np.arange(n) / SR
+    nz = bp(rng.standard_normal(n).astype(np.float32) * np.exp(-x / 0.045).astype(np.float32), 180, 2500, 2)
+    kn = (np.sin(2 * np.pi * 172 * x) * np.exp(-x / 0.08) + 0.5 * np.sin(2 * np.pi * 410 * x) * np.exp(-x / 0.04)).astype(np.float32)
+    c = st(nz / (np.abs(nz).max() + 1e-9) + 0.7 * kn)
+    w = int(0.05 * SR)
+    seg = y[i0:i0 + int(0.6 * SR)]
+    pk = np.sqrt(np.convolve((seg ** 2).mean(1), np.ones(w) / w, 'valid').max()) if len(seg) > w else 1e-3
+    pc = np.sqrt(np.convolve((c ** 2).mean(1), np.ones(w) / w, 'valid').max())
+    c *= np.float32(pk / (pc + 1e-9) * 10 ** (-under_db / 20))
+    m = min(n, len(y) - i0)
+    y = y.copy(); y[i0:i0 + m] += c[:m]
+    return y
+
+
 def r_impact_hit(rng, sp, size=1.0, **_):
     A = pool('hits', lambda: src('impact_hit', epi=True), 'phrase', gap=0.6, max_len=8.0, keep=-12)
     B = pool('booms', lambda: src(category='score/percussion/bass_drum') + src(category='score/percussion/timpani'),
@@ -1509,6 +1529,7 @@ def r_impact_hit(rng, sp, size=1.0, **_):
     sb = st(sub_boom(55 * size ** -0.3, 30, 1.4 * size, 0.1, int(rng.integers(1 << 30)))) * 0.55
     on = onset_s(a, -14)
     y = _seq([(0, a), (on, b), (on, sb)], 0.0)
+    y = mid_crack(rng, y, on)                     # final mix v2: a mid crack ~6 dB under the body (it reads on a phone)
     y = reverb(y, 'church', 0.22 * size, 0.015, hpf=180)
     return y, onset_s(y, -14), 6 * np.log10(max(size, 0.2)), True
 

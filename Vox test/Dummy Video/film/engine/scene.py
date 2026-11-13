@@ -14,6 +14,8 @@ Layer(depth, draw, name='', blur=None, alpha=1.0, cache=False, bounds=None, cach
             (design rect x0, y0, x1, y1; default the frame +-25%) and transform that image each frame. Static sets
             become cheap. Only non-empty tiles are drawn. cache_res > 1 keeps big push-ins crisp.
   screen    True: locked to the frame (ignores the camera) but still goes through the lens.
+  .order    (attribute, optional) float or f(t): the depth used only to sort the draw order (a light on the floor drawn
+            over the floor plate it sits on); projection and blur keep `depth`.
   blend     None (normal) | 'plus' | 'screen' | 'multiply': how the layer composites onto what is behind it. 'plus' is for
             light-contribution layers (sets: albedo x one lamp's light, alpha = the lamp's level): lights add up exactly.
 
@@ -283,7 +285,8 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
     items = []
     for i, l in enumerate(layers):
         d = l.depth_at(t)
-        items.append((-d, i, l, d))
+        o = getattr(l, 'order', None)                                   # optional draw-order depth (projection keeps d)
+        items.append((-(float(_val(o, t)) if o is not None else d), i, l, d))
     items.sort(key=lambda x: (x[0], x[1]))
     pen = Pen(cv)
     for _, _, l, d in items:

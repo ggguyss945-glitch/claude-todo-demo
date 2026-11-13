@@ -7479,17 +7479,26 @@ def _beam_fn(beam):
     return f
 
 
-def _beam_layers(hv, bf, name='beam'):
-    """The knee-high flashlight: the beam cone, its pool on the floor and walls (live, depth follows it)."""
+def _beam_layers(hv, bf, name='beam', order_max=None):
+    """The knee-high flashlight: the beam cone, its pool on the floor and walls (live, depth follows it). order_max: draw
+    it no deeper than this (over a floor / wall plate that is one layer nearer than the beam really is)."""
     def depth(t):
         b = bf(t)
         return hv.d(b[2]) if b else 50.0
+
+    R = 4.0                                                                      # authored at ref depth R (the depth moves)
 
     def draw(pen, t):
         b = bf(t)
         if not b: return
         x, Y, y, ax, aY, ay, k = b
         if hv.d(y) < 0.2: return
+        g = hv.d(y) / R                                    # the engine scales this layer by R / depth: pre-scale so the
+        pen.cv.save(); pen.cv.translate(960, 540); pen.cv.scale(g, g); pen.cv.translate(-960, -540)   # beam lands where hv puts it
+        try: _beam_draw(pen, t, x, Y, y, ax, aY, ay, k)
+        finally: pen.cv.restore()
+
+    def _beam_draw(pen, t, x, Y, y, ax, aY, ay, k):
         px, py = hv.p(x, Y, y); s = hv.s(y)
         toward = -(ay * hv.f)                                                    # > 0: aimed back at the camera
         yl = y + ay * 1.4
@@ -7506,7 +7515,9 @@ def _beam_layers(hv, bf, name='beam'):
             tx, ty = hv.p(x + ax * 1.0, Y + aY, y + ay * 1.0)
             _flashlight_beam(pen, px, py, tx, ty, s, k, 0.32, 2.4 * s)
             pen.glow(px, py, 0.22 * s, '#fff8e8', 230 * k)
-    return Layer(depth, draw, name, blur=None)
+    lay = Layer(depth, draw, name, blur=None, ref_depth=R)
+    if order_max is not None: lay.order = lambda t: min(depth(t), order_max)
+    return lay
 
 
 def gp_hall(view='kitchen', light=1.0, kitchen=1.0, living=0.6, case='closed', envelope=True, latch=0.0, den=0.0, clock='12:40',
@@ -7600,7 +7611,7 @@ def gp_hall(view='kitchen', light=1.0, kitchen=1.0, living=0.6, case='closed', e
     L.append(Layer(hv.d(HALL_BACK) - 0.05, haze, 'h_haze', blur=0))
     L.append(Layer(hv.d(HALL_BACK - 0.3), lambda pen, t: _grandfather_clock(pen, hv, 0.85, HALL_BACK - 0.28, t, clock, 'live'), 'h_clock', blur=None))
     bf = _beam_fn(beam)
-    if beam is not None: L.append(_beam_layers(hv, bf))
+    if beam is not None: L.append(_beam_layers(hv, bf, order_max=2.85))   # over the floor + wall plates (2.9 / 3.0)
     a = {'kitchen_chair': hv.anchor(GCHAIR[0], GCHAIR[1], 0.47, 'seated in Grandpa\'s chair (seat height; the table hides his legs)'),
          'kitchen_stand': hv.anchor(GCHAIR[0], GCHAIR[1], 0.5, 'standing ON the chair seat'),
          'kitchen_table': hv.anchor(GCHAIR[0], GCHAIR[1] - 0.3, TABLE[4], 'on the table in front of the chair (his glove)'),
@@ -9422,22 +9433,49 @@ def _notepaper_cached(pen, w, h, torn_bottom=True, torn_top=False, seed=0, heade
     return _NOTEPATH[k]
 
 
-def _prop_letter(pen, t, hl=0, smear=0.0, show=7, **kw):
+def _prop_letter(pen, t, hl=0, smear=0.0, show=7, hla=None, bracket=0.0, **kw):
     """Grandpa's letter: the seven rules in his shaky hand on hospital notepaper, the bottom torn off (the P.S. went with
-    it). Rule six is in the neater, colder hand (he changed it). hl = rule number to light (the rest dim), smear 0..1 runs
-    rule six's ink (the lie revealed), show = how many rules are written (0..7)."""
+    it). Rule six is in the neater, colder hand (he changed it). hl = rule number to light (the rest dim), or a tuple of
+    rule numbers (hla = their highlight alphas 0..1, so a second band fades in instead of blinking); bracket 0..1 draws a
+    red pen bracket joining rules six and seven down the margin ('side by side'); smear 0..1 runs rule six's ink (the lie
+    revealed), show = how many rules are written (0..7)."""
     w, h = 760, 1040
     paper, lh = _notepaper_cached(pen, w, h, True, False, 3)
     x0, y0 = -w / 2 + w * 0.15, -h / 2 + lh * 2.95
     _sprite(pen, ('gp_letter', show), lambda p_: _letter_ink(p_, w, h, lh, show), (-w / 2, -h / 2, w / 2, h / 2))
-    if hl:
-        y = _letter_rule_y(hl, lh, w)
-        band = skia.Rect.MakeXYWH(-w / 2 + w * 0.13, y[0] - lh * 0.75, w * 0.86, (y[1] - y[0]) + lh * 0.95)
+    hls = tuple(hl) if isinstance(hl, (tuple, list)) else ((hl,) if hl else ())
+    if hls:
+        als = list(hla) if hla is not None else [1.0] * len(hls)
+        bands = []
+        for n in hls:
+            y = _letter_rule_y(n, lh, w)
+            bands.append(skia.Rect.MakeXYWH(-w / 2 + w * 0.13, y[0] - lh * 0.75, w * 0.86, (y[1] - y[0]) + lh * 0.95))
         cv = pen.cv
         cv.save(); cv.clipPath(paper, skia.ClipOp.kIntersect, True)
-        cv.save(); cv.clipRect(band, skia.ClipOp.kDifference); pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 95); cv.restore()
-        cv.drawRect(band, skia.Paint(Color=col('#ffe066'), BlendMode=skia.BlendMode.kMultiply, AntiAlias=True))   # a highlighter
+        cv.save()
+        for b, a_ in zip(bands, als):
+            if a_ > 0.0: cv.clipRect(b, skia.ClipOp.kDifference)
+        pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 95); cv.restore()
+        for b, a_ in zip(bands, als):
+            if 0.0 < a_ < 0.999:                                          # a band fading in: the dim lifts off it gradually
+                cv.save(); cv.clipRect(b, skia.ClipOp.kIntersect); pen.fill(rect(-w / 2, -h / 2, w, h), '#000000', 95 * (1.0 - a_)); cv.restore()
+            if a_ > 0.0:
+                cv.drawRect(b, skia.Paint(Color=col('#ffe066', int(255 * a_)), BlendMode=skia.BlendMode.kMultiply, AntiAlias=True))
         cv.restore()
+    if bracket > 0.01:                                                     # the red pen: six and seven, side by side
+        y6, y7 = _letter_rule_y(6, lh, w), _letter_rule_y(7, lh, w)
+        top, bot = y6[0] - lh * 0.55, y7[1] + lh * 0.25
+        xm = -w / 2 + w * 0.105
+        k = clamp(bracket)
+        pts = [(xm + 26, top), (xm, top + 18), (xm, bot - 18), (xm + 26, bot)]
+        seg = [(xm + 26, top), (xm, top + 18)]
+        L_ = (bot - top)
+        if k > 0.15: seg.append((xm, top + 18 + (L_ - 36) * clamp((k - 0.15) / 0.7)))
+        if k > 0.85: seg += [(xm, bot - 18), (xm + 26 * clamp((k - 0.85) / 0.15), bot - 18 + 18 * clamp((k - 0.85) / 0.15))]
+        pen.line(poly(seg, False), 7.0, '#c8202a', 235)
+        if k > 0.95:
+            for (xa, yy) in ((x0 + 22, y6[1] + lh * 0.12), (x0 + 30, y7[0] + lh * 0.12)):   # 'Say goodnight' / 'Never say goodnight'
+                pen.line(smooth([(xa, yy), (xa + w * 0.25, yy + 4), (xa + w * 0.46, yy + 1)], False), 5.0, '#c8202a', 200)
     if smear > 0.01:                                                       # rule six runs: ink drips and a smudge
         y6 = _letter_rule_y(6, lh, w)
         rng = np.random.default_rng(66)

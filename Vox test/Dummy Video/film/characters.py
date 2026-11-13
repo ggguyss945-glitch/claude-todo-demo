@@ -4114,7 +4114,8 @@ def draw_arm(pen, who, side=1, pose=None, x=None, y_feet=None, height=None, cx=N
         c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(cx, cy + 60.0 * (scale or 1.0) * clamp(P.approach) - (-1000 + sp['hh'] / 2) * s_, 0.0, s_)
     else:
         s_ = height / 1000.0; head_px = sp['hh'] * s_
-        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(x + P.dx, y_feet + P.dy, 0.0, s_)
+        py = clamp(getattr(P, 'perch', 0.0)) * clamp(P.sit) * 222.0 * s_          # perched: as draw() places him
+        c = Ctx(pen, skia.Matrix(), _lw_for(head_px)).sub(x + P.dx, y_feet + P.dy + py, 0.0, s_)
     det = _auto_detail(pen, head_px) if detail is None else detail
     B = Body(sp, P)
     skin, skin_sh, _ = _skin_cols(sp, P, light)
@@ -4226,7 +4227,7 @@ DUMMY_M = 0.85                                     # Mister Winks's length (m) f
 
 
 def draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=1.75, light=None, dlight=None, free_arm=False, dummy='winks',
-             dx=0.0, dy=0.0, lift=0.05, between=None):
+             dx=0.0, dy=0.0, lift=0.05, between=None, three_q=0.42, d_turn=0.4, arm_over=False):
     """A ventriloquist (or Owen) sitting with the dummy on the knee `side` and the other hand inside his back: draws the
     person, the dummy on the knee (perch), then the free arm over the dummy. m = the person's height in metres (the dummy
     is drawn to scale, 0.85 m). Give the person Acting.vent_pose (or set the arms) and the dummy sit_dummy / puppet.
@@ -4236,6 +4237,11 @@ def draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=1.75, light=Non
     free_arm=True draws the other arm over him (vent_pose(free='dummy'): the hand on his knee).
     Returns (dummy x, dummy seat y, dummy height px)."""
     P = _as_pose(pose); D = _as_pose(dpose)
+    if three_q:                           # staged in 3/4 (front-on, a seated person reads as standing and the figure as
+        P = P.copy()                      # standing beside him): his body turns away from the knee the figure sits on, so
+        old = P.turn                      # the thigh runs out under the figure and the arm goes round behind into his back;
+        P.turn = -three_q * side          # the head keeps most of its direction
+        P.h_turn += (old - P.turn) * 0.6
     draw(pen, who, x, y_feet, height, P, light=light)
     if between: between(pen)
     ax, ay = lap_anchor(who, P, side, x, y_feet, height)
@@ -4243,8 +4249,11 @@ def draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=1.75, light=Non
     dh = height * DUMMY_M / m
     D = D.copy(); D.perch = 1.0
     if D.sit < 0.5: D.sit = 1.0
+    if d_turn:                            # the figure's body sits along the thigh (3/4); his head keeps its own direction
+        D.turn += -d_turn * side; D.h_turn -= -d_turn * side
     draw(pen, dummy, ax + dx, ay + dy, dh, D, light=dlight or light)
     if free_arm: draw_arm(pen, who, -side, P, x=x, y_feet=y_feet, height=height, light=light)
+    if arm_over: draw_arm(pen, who, side, P, x=x, y_feet=y_feet, height=height, light=light)   # the hand is out of his back
     return ax + dx, ay + dy, dh
 
 

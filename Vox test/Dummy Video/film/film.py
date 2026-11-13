@@ -117,7 +117,9 @@ T_3AM = 351.8                    # the flashlight comes back
 T_GRAB = 359.05                  # you grab him on the stairs
 T_SWAP = 567.06                  # "Owen's eyes close": from here the boy is owen_new
 T_LAMP_OUT = (569.12, 570.38)    # the den lamp goes out ... and comes back on
-T_JUMP = 573.2                   # Owen jumps up out of the armchair, the dummy falls face down on the rug
+WINK_NEAR = -1                   # the eyelid nearer the camera when his head is turned toward Owen (+h_turn)
+T_JUMP = 573.4                   # Owen jumps up out of the armchair, the dummy falls face down on the rug
+DEN_FALL = ('h', -0.32, 2.12)    # where he lands face down on the rug, just in front of the armchair (and stays)
 T_PICK = 598.6                   # you pick the dummy up off the rug
 T_OPEN = 655.6                   # in your arms, Mister Winks opens his eyes
 T_8AM = 665.13                   # 8 AM: the museum
@@ -533,7 +535,7 @@ def acting(F, sh, who, act=None, seed=0, height=700.0, expr=None, talk=True, bli
         ls = F.voice_lines(sh.t0, sh.t1, v) if v else []
         if ls: a.talk([(l['t'], l['end'], l['en']) for l in ls])
         if who == 'winks' and voice is TAPE_VOICE:                    # the tape's own voice (a replay under the narration)
-            for (ta, s0, s1, cut) in F.tv_voices:
+            for (ta, s0, s1, cut, _g) in F.tv_voices:
                 if ta + (s1 - s0) > sh.t0 - 0.2 and ta < sh.t1 + 0.2:
                     a.talk([(ta, ta + min(s1 - s0, cut), None)], env=tv_env(ta, s0, s1, cut), words=None)
     sh.actors.append(a)
@@ -760,6 +762,23 @@ def winks_chair(torch_up=True, look=0.85, t_turned=None, hands='table'):
         if torch_up: a.torch_on(-1e9 + 1, 0.0, 1, hold='up')
         if look:
             a.set(-1e9, t_turned, 0.05, h_turn=look, lock=0.0)
+    return f
+
+
+def knee_beam(keys, on, Y=0.4, sweep=0.85, per=2.8, toward=-0.32):
+    """Mister Winks's little flashlight carried knee high down the hall (sets' beam spec as f(t)): the lens on the plan
+    path `keys` [(t, x, y)], clicking on at `on`, the beam swinging slowly side to side (it sweeps the runner and the
+    wallpaper) and tipped a little toward the camera, so it reads as a small cone with a hot spot, not a glare disc."""
+    base = ST._beam_fn(dict(keys=keys, Y=Y, on=on, aim=(0.0, -0.1, -1.0)))
+
+    def f(t):
+        b = base(t)
+        if not b: return None
+        x, Yb, y, _, _, _, k = b
+        ph = math.sin(2 * math.pi * (t - on) / per)
+        ax, ay = sweep * ph, toward
+        n = math.hypot(ax, ay) or 1.0
+        return (x, Yb, y, ax / n, -0.12, ay / n, k)
     return f
 
 
@@ -1040,12 +1059,12 @@ def B_living(F, sh):
 
 
 def lap_layer(F, sh, who, x, y, height, act=None, dact=None, side=1, depth=1.0, light=None, dlight=None, between=None,
-              dvoice=None, d_arc=None, jerk=None, name='lap', release=None, fall=None, seed=0):
+              dvoice=None, d_arc=None, jerk=None, name='lap', release=None, fall=None, seed=0, hop=None, arm_out=None):
     """A person sitting with Mister Winks on the knee (characters.draw_lap). y = the seat surface (the person perches).
     jerk = f(t) -> dx px (Mom pulling at him); release = t: from then the person is drawn alone (they slide the hand out
     and jump up) and the dummy falls face down to fall = (x, y, h) (the rug)."""
     m = HEIGHT_M.get(who, 1.7)
-    pa = acting(F, sh, who, _A(lambda a, s: a.set(-1e9, None, 0.1, perch=1.0, turn=0.45 * side), act), seed=seed)
+    pa = acting(F, sh, who, _A(lambda a, s: a.set(-1e9, None, 0.1, perch=1.0, turn=-0.42 * side), act), seed=seed)
     da = acting(F, sh, 'winks', _A(lambda a, s: a.sit_dummy(), dact), voice=dvoice, arc=d_arc, worked=True, seed=seed + 5)
     mp, md = _Memo(pa), _Memo(da)
     st = {}
@@ -1056,21 +1075,32 @@ def lap_layer(F, sh, who, x, y, height, act=None, dact=None, side=1, depth=1.0, 
         dl = dlight(t) if callable(dlight) else (dlight or lt)
         if release is not None and t >= release:
             if 'k' not in st:
-                Q, D = mp(release), md(release)
+                Q, D = mp(release).copy(), md(release)
+                Q.turn = -0.42 * side                         # as draw_lap stages him (3/4)
                 ax, ay = CH.lap_anchor(who, Q, side, x, y, height)
                 st['k'] = (ax, ay - 0.05 * height, height * CH.DUMMY_M / m)
             Q = Pp.copy(); Q.perch = 0.0                      # standing up: the feet stay on the floor (not on the seat)
-            CH.draw(pen, who, x, y + 222.0 * height / 1000.0, height, Q, light=lt, t=t)
+            k3 = ease_in_out(clamp((t - release) / 0.5))      # out of the 3/4 lap staging into his own turn
+            Q.turn = lerp(-0.42 * side, Q.turn, k3)
+            X, Y, Hh = x, y + 222.0 * height / 1000.0, height
+            if hop:                                           # he springs across the rug (hop = (x, floor y, height) there)
+                u = ease_in_out(clamp((t - release - 0.12) / 0.62))
+                X, Y, Hh = lerp(X, hop[0], u), lerp(Y, hop[1], u), lerp(Hh, hop[2], u)
+            CH.draw(pen, who, X, Y, Hh, Q, light=lt, t=t)
             ax, ay, dh = st['k']
-            if fall:
-                u = ease_in_out(clamp((t - release) / 0.45))
+            if fall:                                          # the dummy tips forward off the knee and lands face down
+                u = clamp((t - release) / 0.5)
                 fx_, fy_, fh_ = fall
                 D = Pd.copy()
-                D.sit = lerp(1.0, 0.0, u); D.perch = 1.0 - u
-                CH.draw(pen, 'winks', lerp(ax, fx_, u), lerp(ay, fy_, u), lerp(dh, fh_, u), D, light=dl, t=t)
+                D.sit = lerp(1.0, 0.0, ease_in_out(u)); D.perch = 1.0 - ease_in_out(u)
+                D.lie = u ** 2.2 + (0.04 * math.exp(-(t - release - 0.5) * 10) * math.sin((t - release - 0.5) * 30) if u >= 1 else 0.0)
+                D.turn = lerp(D.turn, 1.0, ease_out_cubic(clamp(u * 2.0))); D.h_turn *= 1.0 - u
+                g = u * u
+                CH.draw(pen, 'winks', lerp(ax, fx_, ease_out_cubic(u)), lerp(ay, fy_, g), lerp(dh, fh_, u), D, light=dl, t=t)
             return
         dx = jerk(t) if jerk else 0.0
-        CH.draw_lap(pen, who, x, y, height, Pp, Pd, side=side, m=m, light=lt, dlight=dl, between=between, dx=dx)
+        CH.draw_lap(pen, who, x, y, height, Pp, Pd, side=side, m=m, light=lt, dlight=dl, between=between, dx=dx,
+                    arm_over=arm_out is not None and t >= arm_out)
     lay = Layer(depth, draw, name, ref_depth=depth if not callable(depth) else None)
     return lay, pa, da
 
@@ -1091,15 +1121,18 @@ def B_den(F, sh):
         hh = h * HEIGHT_M[who] / 1.85
         fall = None
         if q.get('release') is not None:
-            rx, ry, rd, rh = anc(sp, 'rug')
-            fall = (rx + 0.1 * rh, ry, rh * CH.DUMMY_M / 1.85)
+            rx, ry, rd, rh = anc(sp, DEN_FALL)
+            fall = (rx, ry, rh * CH.DUMMY_M / 1.85)
+        if q.get('hop') is not None:
+            hx, hy, hd, hh_ = anc(sp, q['hop'])
+            q['hop'] = (hx, hy, hh_ * HEIGHT_M[who] / 1.85)
         lay, pa, da = lap_layer(F, sh, who, x + q.pop('dx', 0.0) * h, y, hh, q.pop('act', None), q.pop('dact', None), side=q.pop('side', 1),
                                 depth=d, light=lt, dvoice=VOICE['winks'], fall=fall, **q)
         lay.dim = dim
         L.append(lay)
     if p.get('rug'):
         rv = p['rug'] if isinstance(p['rug'], dict) else {}
-        L2, A2 = people(F, sh, sp, [dict(dict(who='winks', at='rug', act=lambda a, s: a.face_down(), dx=0.1), **rv)], lt, dim=dim)
+        L2, A2 = people(F, sh, sp, [dict(dict(who='winks', at=DEN_FALL, act=lambda a, s: a.face_down()), **rv)], lt, dim=dim)
         L += L2
     cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=560))
     grade = p.get('grade', 'gp_house' if lvl(lf, sh.t0 + 0.1) > 0.3 else 'gp_dark')
@@ -1350,6 +1383,15 @@ def B_bust(F, sh):
     sp, light, gr = _bg(F, sh, bgn, p)
     if bgn == 'memory_bed':                 # tucked in: Grandpa leans over your bed; the pillow and blanket edge in the near
         sp = sp.without('bd_foot').add(*_tuck_layers())     # foreground under his cardigan, the bedside lamp glowing behind
+    elif bgn == 'bedroom':                  # the bed's foot would cut a close-up off at the neck; close on him, the lit
+        def doorway(pen, t):                # doorway fills the frame behind him (the warm hall light, the frame's edges)
+            pen.fill(rect(-400, -300, 2720, 1680), '#0a0c18')
+            pen.linear(rect(640, -200, 640, 1480), 640, 0, 1280, 0, [(0, '#c89a60'), (0.5, '#f4d8a8'), (1, '#c08f58')])
+            pen.radial(None, 960, 380, 520, [(0, '#fff2d8', 200), (1, '#fff2d8', 0)], clip=False)
+            for x0 in (600, 1280):
+                pen.fill(rect(x0, -200, 40, 1480), '#d8d0c0'); pen.line(rect(x0, -200, 40, 1480), 3.0, '#3a3430', 200)
+            pen.fill(rect(1320, -200, 300, 1480), '#121424', 230)                                  # the door leaf, dark
+        sp = sp.without('bd_foot').add(Layer(2.4, doorway, 'bust_doorway', cache='film:bust:doorway', bounds=(-400, -300, 2320, 1380)))
     who = p.get('who', 'you')
     fr = p.get('_frame')
     cx = p.get('cx', fr[0] if fr else 960)
@@ -1371,6 +1413,20 @@ def B_bust(F, sh):
     if p.get('ghost'):
         L2, _ = people(F, sh, sp, p['ghost'], light)
         extra += L2
+    if p.get('glass'):                                         # behind glass: a cold sheen, two diagonal glare streaks
+        def glass(pen, t):
+            sx = 160.0 * math.sin(t * 0.35)
+            for (x0, wd, a_) in ((260, 140, 34), (520, 46, 26), (1380, 90, 20)):
+                pen.fill(poly([(x0 + sx, -100), (x0 + wd + sx, -100), (x0 + wd - 520 + sx, 1180), (x0 - 520 + sx, 1180)]), '#e8f2ff', a_)
+            pen.linear(rect(-200, -200, 2320, 1480), 0, -200, 0, 1280, [(0, '#cfe0ff', 26), (0.5, '#cfe0ff', 0), (1, '#cfe0ff', 14)])
+        extra.append(Layer(0.6, glass, 'glass_sheen', blur=None))
+    if p.get('hold'):                                          # a hand holding him (your arms): (who, x, y, size, shape, ang, side)
+        hw = p['hold']
+
+        def holdhand(pen, t, hw=hw):
+            _sleeve(pen, hw[0], hw[1], hw[2], hw[5], hw[3], length=900)
+            CH.draw_hand(pen, hw[0], hw[1], hw[2], hw[3], hw[4], hw[5], hw[6])
+        extra.append(Layer(0.9, holdhand, 'hold_hand', blur=0))
     if p.get('torch_glow'):                                   # the flashlight under his chin, in frame below the face
         tg = p['torch_glow']
 
@@ -1408,7 +1464,7 @@ def B_lap(F, sh):
     if not p.get('no_vent'):
         sd_ = p.get('side', 1)
         act = _A(lambda a, s: a.vent_pose(side=sd_), act)
-    lay, pa, da = lap_layer(F, sh, who, x, y, h, act, p.get('dact'), side=p.get('side', 1), depth=1.0, light=p.get('light', light),
+    lay, pa, da = lap_layer(F, sh, who, x, y, h, act, p.get('dact'), side=p.get('side', 1), depth=1.0, light=p.get('light', light), arm_out=p.get('arm_out'),
                             between=between, dvoice=TAPE_VOICE if p.get('tape') else VOICE['winks'], d_arc=CH.WINKS_TAPE_ARC if p.get('tape') else None,
                             jerk=p.get('jerk'))
     if bgn in ('studio',): sh.p.setdefault('era', 'tape')
@@ -1432,6 +1488,67 @@ def B_carry(F, sh):
         CH.draw_carry(pen, 'you', x, y, h, my(t), md(t), m=HEIGHT_M['you'], light=l_)
     cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540))
     return Spec(sp.add(Layer(1.0, draw, 'carry', blur=0)), cam, None, p.get('grade', gr), 1.0, p.get('dof', 6.75), fx=_fx(sp, p), hud=p.get('hud'))
+
+
+def B_hug(F, sh):
+    """'He hugs me too': over your shoulder, the new Owen's face pressed beside your head, his arms round you, one hand
+    flat on your back and the other over your far shoulder; you (back of the head, 3/4) fill the near frame. bg blurred."""
+    p = sh.p
+    sp, light, gr = _bg(F, sh, p.get('bg', 'den'), p)
+    lt = p.get('light', light)
+    oa_ = p.get('o_act')
+    lay_o, oa = bust(F, sh, 'owen_new', p.get('ox', 1110), p.get('oy', 440), p.get('os', 0.86),
+                     _A(lambda a, s: a.set(-9, None, 0.1, smile=0.55, lock=1.0, still=1.0, h_tilt=9.0, turn=-0.12), oa_), light=lt, depth=1.08,
+                     name='hug_owen')
+    lay_y, ya = bust(F, sh, 'you', p.get('yx', 700), p.get('yy', 720), p.get('ys', 1.2),
+                     _A(lambda a, s: a.set(-9, None, 0.1, turn=1.7, h_turn=0.0), p.get('y_act')), light=lt, depth=0.96, name='hug_you')
+    hk = p.get('hold', sh.t0)
+
+    def hands(pen, t):
+        u = ease_out_cubic(clamp((t - hk) / 0.5))
+        if u <= 0: return
+        sq = 6.0 * math.sin(clamp((t - hk - 0.5) / 0.6) * math.pi) if t > hk + 0.5 else 0.0
+        bx, by = lerp(1240, 960, u), lerp(1180, 980, u) + sq
+        _sleeve(pen, 'owen_new', bx, by, 300.0 - 20 * u, 300, length=520)               # his arm round your back
+        CH.draw_hand(pen, 'owen_new', bx, by, 300, 'flat', 300.0 - 20 * u, 1)
+        sx, sy = lerp(470, 470, u), lerp(1000, 845, u)                                    # fingers over your far shoulder
+        CH.draw_hand(pen, 'owen_new', sx, sy, 260, 'relaxed', 8.0, -1)
+    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=960, y=540, rate=0.035))
+    return Spec(sp.add(lay_o, lay_y, Layer(0.9, hands, 'hug_hands', blur=0)), cam, None, p.get('grade', gr), 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
+
+
+def B_glove(F, sh):
+    """'His fingers curl.': a close insert of Mister Winks's white glove lying flat on the kitchen table under the pendant,
+    his burgundy cuff, the steaming mug soft behind; at p['curl'] the wooden fingers close in three jerky doll steps
+    (flat, half, fist) with a tiny tremor, each step a wooden tick."""
+    p = sh.p
+    sp, light, gr = _bg(F, sh, 'kitchen_table', dict(p, bg_dim=0.45))
+    tc = p.get('curl', sh.t0 + 0.4)
+    steps = [(tc, 'relaxed'), (tc + 0.32, 'grip'), (tc + 0.62, 'fist')]
+
+    def table(pen, t):
+        pen.linear(rect(-400, 330, 2720, 1130), 0, 330, 0, 1460, [(0, '#6a4628'), (0.4, '#7a5230'), (1, '#3e2614')])
+        pen.texture(rect(-400, 330, 2720, 1130), 'wood', 0.25, 'overlay', 2.0, 0)
+        pen.line(poly([(-400, 330), (2320, 330)], False), 6.0, '#2a1a0e', 200)                         # the table's far edge
+        pen.radial(None, 1000, 760, 900, [(0, '#ffd9a0', 120), (1, '#ffd9a0', 0)], clip=False)          # the pendant's pool
+
+    def glove(pen, t):
+        shape = 'flat'
+        for (ts, sh_) in steps:
+            if t >= ts: shape = sh_
+        tr = 0.0 if t < tc else 2.5 * math.sin(t * 61.0) * math.exp(-max(0.0, t - tc - 0.62) * 2.0)
+        x, y, ang = 1000 + tr, 930, 176.0
+        pen.fill(oval(x + 30, y - 110, 300, 120), '#000000', 90, blur=34)                                  # its shadow on the wood
+        cv = pen.cv
+        cv.save(); cv.translate(x, y); cv.scale(1.0, 0.52); cv.translate(-x, -y)                    # lying flat: seen from above
+        _sleeve(pen, 'winks', x, y + 6, ang, 470, length=1400)
+        CH.draw_hand(pen, 'winks', x, y, 470, shape, ang + (4.0 if shape != 'flat' else 0.0), 1)
+        cv.restore()
+    lay = [Layer(1.6, table, 'glove_table', cache='film:glove:table', bounds=(-400, 280, 2320, 1500)), Layer(1.0, glove, 'glove', blur=0)]
+    for (ts, _) in steps:
+        sh.sfx.append(_ev(ts, 'wood_creak', -4, 0.1, 'close', kind='tick'))
+    cam = cam_from(F, sh, p.get('cam'), dict(mv='push', x=990, y=640, z=1.05, rate=0.045))
+    return Spec(sp.add(*lay), cam, None, p.get('grade', gr), 1.0, 6.75, fx=_fx(sp, p), hud=p.get('hud'))
 
 
 def B_portrait(F, sh):
@@ -1672,7 +1789,7 @@ BUILDERS = {k[2:]: v for k, v in dict(globals()).items() if k.startswith('B_')}
 # ==================================================================================================== spaces + per-shot cues
 SPACE = {'hall': 'inside', 'hdoor': 'inside', 'stairs': 'inside', 'kitchen': 'inside', 'living': 'inside', 'den': 'inside',
          'studio': 'tv', 'hospital': 'hospital', 'stage62': 'memory', 'museum': 'museum', 'street': 'inside', 'bedroom': 'inside',
-         'lap': 'close', 'carry': 'close', 'portrait': 'close', 'hands': 'close', 'ins': 'close', 'floor': 'inside', 'rule': None, 'black': None}
+         'lap': 'close', 'carry': 'close', 'hug': 'close', 'glove': 'close', 'portrait': 'close', 'hands': 'close', 'ins': 'close', 'floor': 'inside', 'rule': None, 'black': None}
 LOC = {'hall': 'house', 'hdoor': 'house', 'stairs': 'house', 'kitchen': 'house', 'living': 'house', 'den': 'house', 'studio': 'tape',
        'hospital': 'hospital', 'stage62': '1962', 'museum': 'museum', 'street': 'house', 'bedroom': 'home'}
 BG_LOC = {'studio': 'tape', 'hospital': 'hospital', 'stage62': '1962', 'museum': 'museum', 'bedroom': 'home', 'memory_bed': 'memory',
@@ -1737,12 +1854,6 @@ def shot_common(F, sh, spec):
         if p.get('reveal') is not None:
             sh.sfx.append(_ev(p['reveal'], 'rule_lie', 0, 0, 'close', mode=p.get('mode')))
             sh.music.append({'t': round(p['reveal'], 3), 'type': 'stinger' if p.get('mode') != 'flicker' else 'hit', 'level': 0.9})
-    if sh.kind == 'hospital':                        # the heart monitor: one beep per beat while it runs, the flatline tone
-        for tb in ST.monitor_beeps(sh.t0, sh.t1, p.get('bpm', 72.0), p.get('flat')):
-            sh.sfx.append(_ev(tb, 'heart_monitor', -12 if sh.p.get('view', 'bed') == 'bed' else -9, 0.35, 'hospital', kind='beep'))
-        if p.get('flat') is not None and sh.t0 <= p['flat'] < sh.t1 + 0.2:
-            sh.sfx.append(_ev(p['flat'], 'heart_monitor', -6, 0.35, 'hospital', kind='flatline',
-                              dur=round(p.get('flat_dur') or max(1.0, sh.t1 - p['flat'] + 1.5), 2)))
     if sh.kind in ('hall',) and isinstance(p.get('beam'), dict) and p['beam'].get('on') is not None and sh.t0 - 0.05 <= p['beam']['on'] < sh.t1:
         sh.sfx.append(_ev(p['beam']['on'], 'flashlight_click', -4, 0.0, 'inside', kind='on', far=True))
     tags = p.get('tags')
@@ -1801,7 +1912,7 @@ def beds(F):
     out = []
     D = F.duration
     house = [(110.61, T_8AM)]
-    out.append(_ev(0.0, 'room_tone', -6, 0, 'inside', dur=round(D, 1)))
+    out.append(_ev(0.0, 'room_tone', 0, 0, 'inside', dur=round(D, 1)))      # v2: +6 dB (the house must feel real)
     out.append(_ev(110.61, 'ambience_night', -10, 0, 'outside', dur=round(T_8AM - 110.61, 1), wind=0.6, crickets=0.3, dog=0.1, house=True))
     # the hall clock: heard through the whole house at night, louder in the hall shots (one bed, phase-locked to the pendulum)
     out.append(_ev(110.61, 'clock_tick', -16, -0.2, 'inside', dur=round(T_8AM - 110.61, 1), bpm=60, phase=0.5, kind='grandfather'))
@@ -1815,6 +1926,29 @@ def beds(F):
     out.append(_ev(632.6, 'room_tone', -8, 0, 'hospital', dur=14.6, kind='hospital_hum'))
     out.append(_ev(T_8AM, 'ambience_morning', -6, 0.2, 'outside', dur=round(T_MUSEUM - T_8AM, 1), birds=0.6, traffic=0.3))
     out.append(_ev(T_MUSEUM, 'room_tone', -6, 0, 'museum', dur=round(T_HOME - T_MUSEUM, 1), kind='gallery_hush'))
+    out += monitor_cues(F)
+    return out
+
+
+def monitor_cues(F):
+    """The heart monitor follows the hospital room, not the shot kind (the busts, laps and hand close-ups in the same room
+    beep too): one beep per beat on a tempo that follows the scene (72; the grab -> 104; the whisper -> 120; the
+    flatline on "gone"), the same for the real Walter's hour (486-498 s) and the thing feeling its body die (632-647 s)."""
+    t, e, w = F.t, F.e, F.w
+    spans = [  # (t0, t1, [(t, bpm)], flat)
+        (75.9, 110.6, [(75.9, 72.0), (w(35, 'grabbed'), 72.0), (w(35, 'grabbed') + 0.6, 104.0), (t(36), 112.0), (e(38), 120.0),
+                       (w(39, 'gone'), 118.0)], w(39, 'gone') + 0.15),
+        (486.0, 498.4, [(486.0, 104.0), (t(229), 112.0), (t(231), 84.0)], t(231) + 0.7),
+        (632.6, 647.2, [(632.6, 52.0), (t(307), 52.0), (t(308), 118.0)], None)]
+    out = []
+    for (a, b, keys, flat) in spans:
+        kt = [k[0] for k in keys]; kb = [k[1] for k in keys]
+        tt = a + 0.2
+        while tt < b and (flat is None or tt < flat):
+            out.append(_ev(tt, 'heart_monitor', -10, 0.35, 'hospital', kind='beep'))
+            tt += 60.0 / float(np.interp(tt, kt, kb))
+        if flat is not None:
+            out.append(_ev(flat, 'heart_monitor', -6, 0.35, 'hospital', kind='flatline', dur=round(b - flat + 0.3, 2)))
     return out
 
 
@@ -1921,9 +2055,9 @@ def polish_cues(F, sfx, mus):
         mus.append({'t': round(t - 13.0, 3), 'type': 'swell', 'level': 0.5, 'len': 13.0}); peaks.append(t)
 
     out = []
-    kk = lambda e: (e['name'], str(e.get('space')), str((e.get('params') or {}).get('who')))
+    kk = lambda e: (e['name'], '' if e['name'] == 'dummy_clack' else str(e.get('space')), str((e.get('params') or {}).get('who')))
     for e in sorted(sfx, key=lambda e: kk(e) + (e['t'],)):
-        if out and kk(out[-1]) == kk(e) and e['t'] - out[-1]['t'] < 0.06:
+        if out and kk(out[-1]) == kk(e) and e['t'] - out[-1]['t'] < (0.03 if e['name'] == 'dummy_clack' else 0.06):
             if e['gain_db'] > out[-1]['gain_db']: out[-1] = e
             continue
         out.append(e)
@@ -2015,10 +2149,10 @@ def plan_open(F, t, e, w, C, T, KP):
     Y, M, O = 'you', 'mom', 'owen'
     # the studio audience: every laugh is applause, and applause lets him move (film clock; the kitchen dummy moves on them)
     LAUGH_T[:] = [11.4, 14.3, 35.3, 37.9, 64.4, 66.9, 302.95, 305.45, 309.2, 312.1, 313.45, 314.85, 316.9, 318.7, 321.0, 322.5,
-                  443.6, 462.4, 464.5, 480.3, 485.0]
+                  443.6, 462.03, 464.5, 480.3, 484.55]
     # the tape's own voice under the narration (the joke replayed from the recording, low through the TV): the dummy's jaw on
     # the tape follows it, so young Walter's unmoving lips read against a talking dummy; it stops in the middle of the joke
-    F.tv_voices = [(440.05, F.t(118), F.e(118), 99.0), (444.0, F.t(121), F.e(121), 0.62)]
+    F.tv_voices = [(440.05, F.t(118), F.e(118), 99.0, -18), (444.78, F.t(121), F.e(121), 0.47, -14)]   # the punchline cut mid-word by the tape stop
 
     # ============================================================ COLD OPEN (0 - 75.9)
     # his glass eyes in the dark, the flashlight under his chin; a wooden wink on "jokes"
@@ -2065,7 +2199,7 @@ def plan_open(F, t, e, w, C, T, KP):
     C(T(14), 'portrait', x=960, y=3050, h=2700, act=_A(stage(1), lambda a, s: a.torch_on(tf + 0.2, 35.0, 1, hold='side')),
       cam=dict(mv='keys', keys=[(T(14), 990, 420, 1.0), (t(15) - 0.05, 1010, 780, 1.12, 'in_out'), (t(16) + 0.4, 960, 1350, 1.0, 'in_out'),
                                 (w(16, 'brass'), 940, 1560, 1.05, 'in_out'), (tf, 1180, 1900, 1.0, 'in_out'), (T(17), 1210, 1960, 1.05, 'lin')]))
-    C(T(17), 'bust', who='winks', bg='kitchen', cx=960, cy=620, scale=1.3, ecu=True, act=_A(stage(1), lambda a, s: a.wink(w(17, 'winked') + 0.05)),
+    C(T(17), 'bust', who='winks', bg='kitchen', cx=960, cy=620, scale=1.3, ecu=True, act=_A(stage(1), lambda a, s: a.wink(e(17) + 0.05)),
       cam=dict(mv='creep', x=960, y=480))
     # Owen and the tapes: practising the wink his whole life; both eyes close, every time
     C(T(18), 'bust', who=O, bg='living', lamp=0.15, light=TVL, act=_A(ex('kid_grin'), sway(3, 2.4)), cam=dict(mv='push', x=960, y=580))
@@ -2149,11 +2283,12 @@ def plan_night(F, t, e, w, C, T, KP):
     # ============================================================ RULE 1 (139.2 - 199.0): keep him in the case
     C(T(52), 'rule', n=1, bg='hall', case='closed')
     C(T(54), 'ins', name='letter_close', kw=dict(hl=1), cam=dict(mv='push', x=960, y=470, rate=0.035))
-    C(T(55), 'hall', kitchen=0.0, light=dict(flick=[(t(55) + 0.9, 0.5)]), ppl=HALL3(), focus=1.6,
-      cam=KP(T(55), T(56), 960, 600, 1.0, 960, 590, 1.25), sfx=[(t(55) + 0.9, 'bulb_flicker', -12, 0, 'inside', dict(dur=0.5))])
+    C(T(55), 'hall', kitchen=0.0, ppl=HALL3(), focus=1.6, cam=KP(T(55), T(56), 960, 600, 1.0, 960, 590, 1.25))
     C(T(56), 'ins', name='letter', motion=lambda tt: (0.0, 3.0 * math.sin(tt * 9.0) * clamp(1.0 - tt / 1.6), 0, 0.4 * math.sin(tt * 8.0)),
       cam=dict(mv='push', x=960, y=540, rate=0.04))
-    C(T(57), 'bust', who=M, bg='hall', act=_A(lambda a, s: a.laugh_soft(s.t0 - 0.6, 1.0), ex('sad', 2.2)), cam=dict(mv='push', x=960, y=580))
+    C(T(57), 'bust', who=M, bg='hall', act=_A(lambda a, s: a.laugh_soft(s.t0 - 0.8, 1.6), lambda a, s: a.set(s.t0, s.t0 + 2.0, 0.35, smile=0.55, teeth=0.2, squint=0.2),
+                                             lambda a, s: a.set(s.t0 + 0.05, s.t0 + 0.75, 0.25, look_y=-0.85, look_x=0.25, brow_up=0.35),
+                                             ex('sad', 2.6)), cam=dict(mv='push', x=960, y=580))
     tl = w(59, 'pops') + 0.1
     C(T(59), 'ins', name='latches', kw=lambda tt, a=tl - T(59): dict(latch=(clamp((tt - a) / 0.08), clamp((tt - a - 0.26) / 0.08))),
       cam=dict(mv='push', x=960, y=560, rate=0.05), sfx=[(tl, 'case_latch', -2, -0.15, 'close'), (tl + 0.26, 'case_latch', -2, 0.15, 'close')])
@@ -2170,9 +2305,9 @@ def plan_night(F, t, e, w, C, T, KP):
       cam=KP(T(63), T(64), 960, 580, 1.0, 950, 540, 1.25, 1.0, 1.08),
       sfx=[(w(64, 'spoon') - 0.1, 'spoon_clink', -6, -0.1, 'kitchen_far', dict(kind='stir', dur=1.8))])
     C(T(64), 'hall', case='open', kitchen=0.0, focus=6.0, ppl=[P(M, at=('h', -1.05, 1.75), act=turned(1.7)), P(O, at=('h', -0.72, 2.05), act=turned(2.0)), P(Y, at=('h', 0.6, 1.65), act=turned(2.2))], cam=KP(T(64), T(65), 950, 540, 1.25, 945, 505, 2.6, 1.0, 1.06))
-    clinks = [w(65, 'clink', 0), w(65, 'clink', 1), w(65, 'clink', 2)]
+    clinks = [w(65, 'clink', k) - 0.3 for k in range(3)]       # each clink just before its word
     C(T(65), 'bust', who=Y, bg='hall', case='open', act=_A(ex('fear'), flinch_at(*[c + 0.05 for c in clinks], amp=0.6)), cam=dict(mv='creep', x=960, y=580),
-      sfx=[(c, 'spoon_clink', -3, -0.1, 'kitchen_far', dict(kind='clink')) for c in clinks], music=[(t(65) - 0.3, 'silence', 0.0, 2.2)])
+      sfx=[(c, 'spoon_clink', 2, -0.1, 'kitchen_far', dict(kind='clink')) for c in clinks], music=[(t(65) - 0.3, 'silence', 0.0, 2.2)])
     # you don't have to go looking: the kitchen light comes on by itself; down the hall: Mister Winks in Grandpa's chair
     C(T(66), 'hall', case='open', kitchen=dict(on=T_KIT_ON), winks=dict(act=winks_chair(look=0.0)), focus=8.6, ppl=[P(M, at=('h', -1.05, 1.75), act=turned(1.7)), P(O, at=('h', -0.72, 2.05), act=turned(2.0)), P(Y, at=('h', 0.6, 1.65), act=turned(2.2))],
       cam=dict(mv='keys', shake=1.2, keys=[(T(66), 960, 560, 1.0, None, 1.0), (T_KIT_ON + 0.4, 955, 540, 1.02, 'in_out', 1.15),
@@ -2212,14 +2347,16 @@ def plan_night(F, t, e, w, C, T, KP):
       posts=[(T(84), T(86), 1.0, 1.32, 230, -10, 'in_out')])
     # 1:15: Mom's voice calls from upstairs ("Honey? Can you come up here a second?"); nobody on screen speaks
     C(T(86), 'stairs', light=0.0, cam=KP(T(86), T(87), 960, 600, 1.0, 960, 500, 1.55, 1.0, 1.08), focus=4.8,
-      tags=[(w(86, '1:15'), '1:15 AM', 960, 170, 'white', 1.8)], sfx=[(w(86, '1:15') + 0.1, 'clock_chime', -6, -0.2, 'inside', dict(kind='quarter'))],
+      tags=[(w(86, '1:15'), '1:15 AM', 960, 170, 'white', 1.8)],
       music=[(t(87) - 0.5, 'silence', 0.0, 1.0)])
-    C(T(87), 'bust', who=M, bg='living', act=_A(ex('fear'), lambda a, s: a.set(t(87) + 0.3, None, 0.5, h_turn=0.35, look_y=-0.4, wide=0.5)),
+    C(T(87), 'bust', who=M, bg='living', act=_A(ex('fear'), lambda a, s: a.set(t(87) + 0.3, None, 0.5, h_turn=0.35, look_y=-0.4, wide=0.5),
+                                             lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_round=0.0, m_press=0.55)),
       cam=dict(mv='creep', x=960, y=580))
     C(T(89), 'living', view='couch', ppl=couch(), cam=KP(T(89), T(90), 900, 600, 1.6, 880, 610, 1.85), focus=2.85)
     C(T(90), 'hands', mode='find', tg=t(90) + 0.1)
     C(T(91), 'stairs', light=0.0, cam=KP(T(91), T(93), 960, 470, 1.45, 960, 455, 1.8, 1.0, 1.08), focus=4.8)
-    C(T(93), 'bust', who=Y, bg='living', lamp=1.0, act=_A(ex('fear'), lambda a, s: a.set(t(93), None, 0.4, h_turn=-0.25, look_y=-0.3)),
+    C(T(93), 'bust', who=Y, bg='living', lamp=1.0, act=_A(ex('fear'), lambda a, s: a.set(t(93), None, 0.4, h_turn=-0.25, look_y=-0.3),
+                                                       lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_round=0.0, m_press=0.55)),
       cam=dict(mv='creep', x=960, y=580))
     C(T(96), 'bust', who=M, bg='living', act=_A(ex('fear'), lambda a, s: a.set(t(96) + 0.1, None, 0.7, h_turn=-0.45, lock=1.0, pupil=0.7)),
       cam=dict(mv='creep', x=960, y=580))
@@ -2245,9 +2382,9 @@ def plan_night(F, t, e, w, C, T, KP):
       posts=[(T(108), T(109), 1.12, 1.45, 260, -14, 'in_out')], hit=t(108) + 0.05, music=[(t(108), 'braam', 0.85)])
     C(T(109), 'bust', who='winks', bg='kitchen', hands='table', cx=960, cy=640, scale=1.2,
       act=_A(lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, hold='up'), lambda a, s: a.jaw_hang(s.t0 - 1.0, 0.75, 0.1),
-             lambda a, s: a.clack(w(111, 'clack') + 0.02, 1.9)),
+             lambda a, s: a.clack(e(110), 1.9)),                     # in the 80 ms gap before "Clack."
       cam=dict(mv='keys', keys=[(T(109), 960, 560, 1.0), (w(111, 'clack'), 960, 500, 1.3, 'in_out'), (T(112), 960, 498, 1.32, 'lin')]),
-      music=[(w(111, 'clack') + 0.02, 'hit', 0.7)])
+      music=[(e(110) + 0.06, 'sub_drop', 0.6)])
     C(T(112), 'bust', who=Y, bg='living', act=_A(ex('fear'), lambda a, s: a.set(s.t0 + 1.0, None, 0.8, wet=0.6)), cam=dict(mv='push', x=960, y=580))
     C(T(114), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', act=_A(lambda a, s: a.tuck_in(s.t0 - 1), creep(5)),
       cam=dict(mv='creep', x=960, y=560), music=[(t(114), 'motif', 0.5, 3)])
@@ -2267,20 +2404,20 @@ def plan_rules34(F, t, e, w, C, T, KP):
     C(T(118), 'bust', who='winks', bg='kitchen', hands='table', act=W_ON, cam=dict(mv='creep', x=960, y=540))
     C(T(119), 'living', view='couch', ppl=couch({O: lambda a, s: a.set(s.t0, None, 0.4, m_press=1.0, smile=0.3, squint=0.3)}),
       cam=KP(T(119), T(121), 960, 600, 1.35, 960, 610, 1.6), focus=2.85)
-    C(T(121), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.tick(e(121) + 0.1, 8.0))),
-      cam=KP(T(121), T(122), 960, 480, 1.35, 960, 470, 1.6, 1.0, 1.04))
+    C(T(121), 'bust', who='winks', bg='kitchen', hands='table', cx=960, cy=560, scale=1.1,
+      act=_A(W_ON, lambda a, s: a.tick(e(121) + 0.1, 8.0)), cam=dict(mv='keys', keys=[(T(121), 960, 545, 1.0), (T(122), 960, 525, 1.12, 'in_out')]))
     # Grandpa told it at breakfast every time Owen visited (memory: the morning kitchen, little Owen laughing)
     C(T(122), 'kitchen', view='table', tod='morning', era='memory', grade='memory', mug=True,
       ppl=[P('grandpa', at='chair', act=_A(sitp(), ex('still_smile'), setp(turn=0.1))), P(O, at=('h', -1.75, 7.75), act=_A(turned(0.7),
                                                                                                                lambda a, s: a.laugh_soft(s.t0 + 1.2, 2.2)))],
-      cam=KP(T(122), T(124), 960, 520, 1.0, 940, 520, 1.3), focus=2.6, sfx=[(t(122) + 1.3, 'kid_laugh', -10, -0.3, 'memory')])
-    C(T(124), 'bust', who=O, bg='living', act=_A(ex('fear'), lambda a, s: a.snort(w(124, 'snorts') - 0.35)), cam=dict(mv='push', x=960, y=600))
+      cam=KP(T(122), T(124), 960, 520, 1.0, 940, 520, 1.3), focus=2.6, sfx=[(t(122) + 1.3, 'kid_laugh', -4, -0.3, 'memory')])
+    C(T(124), 'bust', who=O, bg='living', act=_A(ex('fear'), lambda a, s: a.snort(e(124) - 0.05)), cam=dict(mv='push', x=960, y=600))
     # Clack. One of his little white gloves lifts off the table.
-    tcl = w(127, 'clack') + 0.02
+    tcl = w(127, 'clack') - 0.08               # the snap just before the word
     C(T(127), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.jaw_drop(tcl - 0.32, 0.6, 0.12), lambda a, s: a.clack(tcl),
                                                          lambda a, s: a.glove_lift(w(128, 'lifts') - 0.3, -1, 0.4, 1.5))),
       cam=dict(mv='keys', shake=1.2, keys=[(T(127), 960, 470, 1.0, None, 1.4), (tcl + 0.4, 950, 480, 1.03, 'in_out', 1.5),
-                                           (T(129), 900, 560, 1.08, 'in_out', 2.0)]), hit=tcl, music=[(tcl, 'stinger', 0.8)])
+                                           (T(129), 900, 560, 1.08, 'in_out', 2.0)]), quiet_cut=True, music=[(tcl, 'stinger', 0.8)])
     C(T(129), 'living', view='couch', ppl=couch({Y: lambda a, s: a.clamp_mouth(w(129, 'clamp') + 0.1, None, side=1),
                                                 O: lambda a, s: (a.expr('fear', s.t0 - 1), a.set(w(129, 'clamp') + 0.3, None, 0.2, wide=0.6))}),
       cam=KP(T(129), T(130), 920, 600, 1.55, 940, 610, 1.85), focus=2.85)
@@ -2301,14 +2438,17 @@ def plan_rules34(F, t, e, w, C, T, KP):
                                                                           lambda a, s: a.tick(309.75, 7.0, 0.05))),
       cam=dict(mv='keys', shake=1.4, keys=[(T(136), 900, 560, 1.05, None, 1.3), (T(137), 1080, 540, 1.0, 'in_out', 1.1),
                                            (T(138), 1110, 530, 1.05, 'in_out', 1.25)]), posts=[(T(137), T(138), 1.0, 1.4, 250, -10, 'in_out')])
-    C(T(138), 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
-                                                         lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
-      cam=KP(T(138), T(140), 880, 600, 1.7, 870, 590, 2.1, 1.0, 1.04))
+    # his fingers curl (a close insert of the glove on the table, on the wave) ... his elbow bends (back on him in the chair)
+    C(T(138), 'glove', curl=w(138, 'curl') - 0.05, cam=dict(mv='keys', keys=[(T(138), 990, 660, 1.0), (w(139, 'bends') - 0.15, 1000, 700, 1.12, 'in_out')]))
+    C(w(139, 'bends') - 0.15, 'kitchen', view='chair', winks=dict(act=_A(winks_chair(look=0.0), lambda a, s: a.fingers_curl(w(138, 'curl') - 0.05, -1),
+                                                                        lambda a, s: a.elbow_bend(w(139, 'bends') - 0.1, -1, 0.3))),
+      cam=KP(w(139, 'bends') - 0.15, T(140), 900, 610, 2.0, 880, 600, 2.2, 1.0, 1.03))
     tst = w(140, 'puts')
     C(T(140), 'kitchen', view='table', winks=dict(act=_A(lambda a, s: a.sit_dummy(-1e9, tst + 0.4, hands='table'),
                                                          lambda a, s: a.torch_on(-1e9 + 1, 0.0, 1, t1=tst - 0.2, hold='up'),
                                                          lambda a, s: a.stand_on_chair(tst + 0.3, 3.0, 3))),
-      cam=KP(T(140), T(141), 960, 520, 1.0, 960, 470, 1.35, 1.0, 1.05), music=[(w(140, 'stands'), 'braam', 0.85)])
+      cam=dict(mv='keys', shake=1.2, keys=[(T(140), 960, 520, 1.0, None, 1.0), (w(140, 'flat') - 0.3, 960, 500, 1.02, 'in_out', 1.25),
+                                           (T(141), 960, 455, 1.06, 'in_out', 2.3)]), music=[(w(140, 'stands'), 'braam', 0.85)])
     C(T(141), 'bust', who=Y, bg='living', tv=TVON, lamp=0.5, light=TVL, act=ex('fear'), cam=dict(mv='push', x=960, y=580))
     C(T(142), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(142), 960, 820, 1.7), (T(143), 940, 800, 1.95, 'in_out')]))
     # the lamp flickers; when it comes back on, the chair is empty; a little flashlight clicks on, knee high, down the hall
@@ -2323,12 +2463,13 @@ def plan_rules34(F, t, e, w, C, T, KP):
     C(T(144), 'kitchen', view='table', kitchen=dict(on=T_BACK), cam=KP(T(144), T(145), 960, 520, 1.0, 960, 480, 1.5, 1.0, 1.06),
       hit=w(144, 'empty') + 0.05, music=[(w(144, 'empty'), 'stinger', 0.85)], sfx=[(T_BACK, 'bulb_buzz', -10, 0, 'inside', dict(kind='on'))])
     C(T(145), 'hall', light=0.0, living=0.0, kitchen=0.5, case='open', focus=4.0,
-      beam=dict(keys=[(T_BEAM + 0.6, -0.4, 5.6), (334.0, -0.75, 3.7)], Y=0.42, on=w(145, 'clicks') + 0.1),
+      beam=knee_beam([(T_BEAM + 0.6, -0.35, 6.2), (334.0, -0.6, 3.6)], on=w(145, 'clicks') - 0.07),
       cam=KP(T(145), T(148), 960, 540, 1.0, 950, 560, 1.35, 1.0, 1.06),
-      sfx=[(w(146, 'knee'), 'footsteps_wood_inside', -16, -0.1, 'inside', dict(n=8, rate=2.6, kind='tiny'))])
+      sfx=[(w(146, 'knee'), 'footsteps_wood_inside', -16, -0.1, 'inside', dict(n=8, rate=2.6, kind='tiny')),
+           (w(145, 'clicks') - 0.07, 'flashlight_click', 2, 0.0, 'inside', dict(kind='on', far=True))])
 
     # ============================================================ RULE 4 (333.2 - 409.4): never put your hand inside him
-    C(T(148), 'rule', n=4, bg='hall_dark', beam=dict(keys=[(333.0, -0.75, 3.75), (336.5, -0.85, 3.6)], Y=0.42, on=330.0))
+    C(T(148), 'rule', n=4, bg='hall_dark', beam=knee_beam([(T_BEAM + 0.6, -0.35, 6.2), (334.0, -0.6, 3.6), (336.5, -0.7, 3.4)], on=330.0))
     C(T(150), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, light=TVL, act=_A(ex('nervous'), down(-1, 0.3)), cam=dict(mv='push', x=960, y=580))
     C(T(152), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(152), 980, 600, 1.3), (T(153), 1020, 610, 1.6, 'in_out')]))
     C(T(153), 'ins', name='back_slot', kw=lambda tt: dict(hand=0.65 * ease_in_out(clamp((tt - 0.5) / 2.5))), cam=dict(mv='push', x=960, y=560, rate=0.04))
@@ -2337,9 +2478,10 @@ def plan_rules34(F, t, e, w, C, T, KP):
     C(T(155, 0.6), 'ins', name='case_open', kw=dict(warm=0.0), cam=dict(mv='push', x=960, y=560, z=1.15, rate=0.035))
     # 3 AM: the flashlight comes back; he's on the stairs, three steps up, pointing it right at my face
     C(T(156), 'hall', light=0.0, living=0.0, kitchen=0.3, case='open', focus=3.0,
-      beam=dict(keys=[(351.0, -1.0, 4.2), (354.6, 0.55, 1.55)], Y=0.42, on=350.0), cam=KP(T(156), T(157), 940, 560, 1.05, 990, 560, 1.2),
+      beam=knee_beam([(351.0, -0.8, 5.4), (354.6, 0.3, 2.6)], on=T_3AM + 0.15, sweep=0.6), cam=KP(T(156), T(157), 940, 560, 1.05, 990, 560, 1.2),
       tags=[(w(156, 'three') + 0.1, '3:00 AM', 960, 170, 'white', 1.8)],
-      sfx=[(w(156, 'three') + 0.05 + k * 1.1, 'clock_chime', -8, -0.2, 'inside', dict(kind='hour')) for k in range(3)])
+      sfx=[(T_3AM + 0.15, 'flashlight_click', -2, 0.0, 'inside', dict(kind='on', far=True))] +
+          [(w(156, 'three') + 0.05 + k * 1.1, 'clock_chime', -8, -0.2, 'inside', dict(kind='hour')) for k in range(3)])
     C(T(157), 'stairs', winks=dict(act=_A(lambda a, s: a.sit_dummy(hands='knees'), lambda a, s: a.torch_on(353.6, 0.0, -1, t1=T_GRAB + 0.3, hold='lens'),
                                           stage(3))),
       cam=KP(T(157), T(158), 960, 560, 1.0, 960, 600, 1.55, 1.0, 1.08), music=[(t(157), 'braam', 0.8)])
@@ -2355,10 +2497,10 @@ def plan_rules34(F, t, e, w, C, T, KP):
     C(T(162), 'bust', who=Y, bg='stairs', light=NIGHT, no_view=True, act=_A(ex('fear'), setp(wide=0.7, wet=0.6)), cam=dict(mv='creep', x=960, y=580))
     C(T(163), 'ins', name='squeeze', kw=lambda tt, a=tk - T(163): dict(take=ease_in_out(clamp((tt - a) / 2.3)), squeeze=0.0),
       cam=dict(mv='push', x=960, y=560, z=1.15, rate=0.03))
-    sq = [w(165, 'once') + 0.05, w(166, 'twice') + 0.05, w(167, 'three') + 0.1]
+    sq = [w(165, 'once') - 0.2, w(166, 'twice') - 0.2, w(167, 'three') - 0.2]   # each squeeze just before its word
     sqf = ST.squeeze_pulses(sq)
     C(T(164), 'ins', name='squeeze', kw=lambda tt, a=T(164): dict(take=1.0, squeeze=sqf(tt + a)), cam=dict(mv='push', x=1010, y=620, z=1.55, rate=0.03),
-      sfx=[(s_, 'hand_squeeze', -6, 0, 'close') for s_ in sq], music=[(t(168), 'motif', 0.55, 4)])
+      sfx=[(s_, 'hand_squeeze', -2, 0, 'close') for s_ in sq], music=[(t(168), 'motif', 0.55, 4)])
     C(T(169), 'bust', who=Y, bg='stairs', light=NIGHT, act=_A(ex('sad'), lambda a, s: a.set(s.t0, None, 0.5, wet=1.0, tears=0.6), lambda a, s: a.squeezed(sq)),
       cam=dict(mv='push', x=960, y=580))
     C(T(170), 'stairs', winks=dict(act=_A(lambda a, s: a.sit_dummy(hands='limp'), stage(3), setp(h_nod=-0.1))),
@@ -2392,18 +2534,19 @@ def plan_rules56(F, t, e, w, C, T, KP):
                                                           stage(4), extra), light=TORCH, torch=dict(side=1, length=0.6))
     # ============================================================ RULE 5 (409.4 - 506.3): if their lips don't move, it isn't them
     C(T(190), 'rule', n=5, bg='living', tv=TVON, lamp=0.6)
-    C(413.55, 'bust', who='winks', bg='living', tv=TVON, lamp=0.4, ecu=True, cx=960, cy=250, scale=1.9, light=TORCH, act=stage(4),
-      cam=dict(mv='creep', x=960, y=560))
+    C(413.55, 'bust', who=M, bg='living', tv=TVON, lamp=0.4, ecu=True, cx=960, cy=180, scale=1.85, light=TVL,
+      act=_A(ex('blank'), lambda a, s: a.set(s.t0 - 1, None, 0.1, m_open=0.0, m_press=0.6, lock=1.0)), cam=dict(mv='creep', x=960, y=600))
     C(T(192), 'living', view='couch', tv=TVON, lamp=0.6, winks=BOOK(), focus=3.45,
-      ppl=[P(M, at='mom', act=_A(turned(0.35), lambda a, s: a.grab_keys(w(192, 'grabs') + 0.15, 1), ex('fear'))),
+      ppl=[P(M, at='mom', act=_A(turned(0.35), lambda a, s: a.grab_keys(e(192) - 0.34, 1), ex('fear'))),
            P(O, at='couch_l', act=_A(sitp(), setp(turn=-0.45), ex('fear')))],
       cam=KP(T(192), T(193), 1100, 520, 1.0, 1200, 500, 1.6, 1.0, 1.05), posts=[(T(192), T(193), 1.0, 1.25, 180, -30, 'in_out')])
     C(T(193), 'bust', who=M, bg='living', tv=TVON, lamp=0.6, cx=820, cy=600, scale=0.95, dof=3.2, act=_A(ex('blank'), setp(lock=1.0, pupil=0.75)),
       ghost=[dict(who='winks', at=(1390, 360, 1.9, 760), **BOOK())], cam=dict(mv='creep', x=900, y=560))
     C(T(196), 'bust', who=M, bg='living', tv=TVON, lamp=0.6, ecu=True, cx=960, cy=330, scale=1.75, act=_A(ex('blank'), setp(lock=1.0)),
       cam=dict(mv='creep', x=960, y=560), hit=t(196) + 0.05, music=[(t(196), 'stinger', 0.8)])
-    C(T(197), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, act=_A(ex('fear'), lambda a, s: a.spin_around(w(197, 'spin'), 2.0, 0.32)),
-      cam=dict(mv='fast', x=960, y=580))
+    C(T(197), 'bust', who=Y, bg='living', tv=TVON, lamp=0.6, act=_A(ex('fear'), lambda a, s: a.spin_around(w(197, 'spin'), 2.0, 0.42)),
+      cam=dict(mv='fast', x=960, y=580),                       # a whip blur through the turn (no one-frame face-to-back pop)
+      post_fn=lambda tt, a=w(197, 'spin'): dict(blur=7.0 * math.exp(-((tt - a - 0.12) / 0.08) ** 2)))
     C(T(198), 'living', view='couch', tv=TVON, lamp=0.6, winks=BOOK(jaw_chatter(t(198) - 0.2, 429.0, 1.7, 0.5)), focus=4.55,
       ppl=[P(M, at='mom', act=_A(turned(0.35), ex('fear')))],
       cam=KP(T(198), w(198, 'under') - 0.4, 1150, 470, 1.0, 1290, 440, 1.9, 1.0, 1.05), posts=[(T(198), w(198, 'under') - 0.4, 1.0, 1.25, 190, -100, 'in_out')],
@@ -2432,10 +2575,11 @@ def plan_rules56(F, t, e, w, C, T, KP):
     C(w(210, 'his') - 0.1, 'living', view='tv', tv=TVON, lamp=0.4, d_act=lambda a, s: a.set(-9, None, 0.1, h_turn=0.0, lock=1.0),
       cam=KP(w(210, 'his') - 0.1, T(211), 930, 580, 1.4, 890, 600, 2.2))
     C(T(211), 'bust', who='winks', bg='studio', tape=True, ecu=True, cx=960, cy=640, scale=1.35, cam=dict(mv='creep', x=960, y=520), track_fn=lambda tt: 0.6)
-    C(T(214), 'bust', who='winks', bg='studio', tape=True, cx=960, cy=600, scale=1.15, cam=dict(mv='creep', x=960, y=520), music=[(t(214), 'silence', 0.0, 0.0)])
-    C(T(216), 'bust', who='walter74', bg='studio', cx=960, cy=600, scale=1.2, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.0),
-      cam=dict(mv='creep', x=960, y=640))
-    C(T(217), 'bust', who='winks', bg='studio', tape=True, ecu=True, cx=960, cy=660, scale=1.4, cam=dict(mv='creep', x=960, y=520))
+    # "Please. Somebody help me. My name is Walter Kemp. That isn't me in the chair.": one held close-up of the tape dummy for
+    # all four lines (the jaw clear in frame on every syllable), wet, terrified painted eyes, one slow push in
+    C(T(214), 'bust', who='winks', bg='studio', tape=True, cx=960, cy=540, scale=1.05, track_fn=lambda tt: 0.45,
+      act=lambda a, s: a.set(s.t0 - 2, None, 0.1, tears=1.0, desperate=1.0, brow_sad=1.0, wide=0.6, lock=1.0, h_nod=-0.04),
+      cam=dict(mv='keys', keys=[(T(214), 960, 560, 1.0), (T(218), 960, 590, 1.24, 'in_out')]), music=[(t(214), 'silence', 0.0, 0.0)])
     C(T(218), 'studio', track=0.4, cam=dict(mv='keys', keys=[(T(218), 960, 600, 1.1), (T(220), 960, 620, 1.0, 'in_out')]))
     C(T(220), 'bust', who='walter74', bg='studio', ecu=True, cx=960, cy=560, scale=1.45, act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.0),
       cam=dict(mv='creep', x=960, y=600))
@@ -2491,26 +2635,29 @@ def plan_rules56(F, t, e, w, C, T, KP):
       cam=dict(mv='keys', keys=[(T(246), 900, 540, 1.0), (T(247), 885, 550, 1.06, 'in_out'), (T(250), 860, 480, 1.25, 'in_out')]))
     C(T(250), 'bust', who=M, bg='den', act=_A(ex('fear'), setp(wide=0.7, eye_open=1.0), lambda a, s: a.hand_to_mouth(s.t0 + 0.2, None, shock=False)),
       cam=dict(mv='push', x=960, y=580))
-    C(T(251), 'bust', who='winks', bg='den', cx=960, cy=600, scale=1.15, worked=True, no_view=True, act=_A(lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=0.25, rate=0.5)),
-      cam=dict(mv='creep', x=960, y=520), music=[(t(251), 'stinger', 0.8)])
-    C(T(252), 'bust', who=O, bg='den', act=_A(ex('nervous'), setp(h_turn=0.35, look_x=0.5)), cam=dict(mv='creep', x=960, y=600))
-    C(T(253), 'bust', who='winks', bg='den', cx=900, cy=600, scale=1.25, worked=True, act=setp(h_turn=-0.1), cam=dict(mv='push', x=930, y=520))
+    # "He's a natural, kiddo," says the dummy in Grandpa's voice, "Just like me.": one lap two-shot, the camera pushing in
+    # on the dummy while Owen's grin falters
+    C(T(251), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), ex('kid_grin'), lambda a, s: a.expr('nervous', t(252), fade=0.6),
+                                     lambda a, s: a.set(t(252) + 0.3, None, 0.5, h_turn=0.3, look_x=0.5)),
+      dact=_A(lambda a, s: a.puppet(s.t0 - 2, t(253) - 0.3, look=0.25, rate=0.5), lambda a, s: a.set(t(253) - 0.3, None, 0.25, h_turn=0.0, lock=1.0)),
+      cam=dict(mv='keys', keys=[(T(251), 890, 560, 1.0), (T(253), 900, 500, 1.28, 'in_out'), (T(254), 905, 480, 1.45, 'in_out')]),
+      music=[(t(251), 'stinger', 0.8)])
     # Mom screams and grabs him to pull him off; Owen shrieks; his hand won't come out; "Pull, and his hand comes with me."
     tp0, tp1 = w(254, 'grabs'), w(256, 'out') + 0.4
     pulls = [tp0 + 0.4 + (tp1 - tp0 - 0.6) * k / 3 for k in range(3)]
     jerk = lambda tt: sum(-26.0 * math.exp(-max(0.0, tt - p_) * 5.0) * (tt >= p_) for p_ in pulls)
     C(T(254), 'den', lap=OL(act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(t(255))), jerk=jerk),
-      ppl=[P(M, at=('h', -0.85, 2.15), act=_A(turned(-0.6), lambda a, s: a.pull_dummy(tp0, tp1), lambda a, s: a.scream(w(254, 'screams'), w(254, 'grabs') + 1.6)))],
+      ppl=[P(M, at=('h', -0.85, 2.15), act=_A(turned(-0.6), lambda a, s: a.pull_dummy(tp0, tp1), lambda a, s: a.scream(w(254, 'screams') - 0.35, w(254, 'grabs') + 1.6)))],
       cam=KP(T(254), T(255), 900, 580, 1.25, 860, 600, 1.6, shake=3.0),
-      sfx=[(w(254, 'screams'), 'scream', -2, -0.2, 'inside', dict(who='mom'))], music=[(w(254, 'screams'), 'hit', 0.9)])
+      sfx=[(w(254, 'screams') - 0.35, 'scream', 3, -0.2, 'inside', dict(who='mom'))], music=[(w(254, 'grabs'), 'hit', 0.5)])
     C(T(255), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.expr('scream', s.t0 - 0.3), lambda a, s: a.cry(s.t0)),
-      jerk=lambda tt: jerk(tt) * 2.5, cam=dict(mv='hand', x=880, y=540), sfx=[(t(255) + 0.05, 'shriek', -3, 0.1, 'inside', dict(who='owen'))])
-    C(T(257), 'bust', who='winks', bg='den', cx=960, cy=600, scale=1.15, worked=True, act=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=0.15)),
-      cam=dict(mv='hand', x=960, y=520))
-    C(T(258), 'bust', who=M, bg='den', act=_A(ex('scream'), lambda a, s: a.pull_dummy(s.t0 - 1, s.t1 + 0.5)), cam=dict(mv='hand', x=960, y=580))
-    C(T(259), 'bust', who='winks', bg='den', ecu=True, cx=960, cy=640, scale=1.35, worked=True, act=setp(h_turn=0.1), cam=dict(mv='hand', x=960, y=520))
-    C(T(260), 'hands', mode='catch', tg=w(260, 'catch') + 0.05, shake=1.2)
-    C(T(261), 'rule', n=6, bg='den', recall=True)
+      jerk=lambda tt: jerk(tt) * 2.5, cam=dict(mv='hand', x=880, y=540), sfx=[(t(255) - 0.3, 'shriek', 0, 0.1, 'inside', dict(who='owen'))])   # before "Owen shrieks"
+    # "Pull," says the dummy, "and his hand comes with me.": one close-up of him, shaken by Mom's pulls (her scream off screen)
+    C(T(257), 'bust', who='winks', bg='den', cx=960, cy=590, scale=1.12, worked=True,
+      act=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=0.15), lambda a, s: a.set(t(259) - 0.2, None, 0.3, h_turn=0.0, lock=1.0),
+             lambda a, s: [a.jerk(p_, 0.8) for p_ in (s.t0 + 0.25, s.t0 + 1.1, s.t0 + 2.0)]),
+      cam=dict(mv='keys', shake=2.2, keys=[(T(257), 960, 560, 1.0), (T(259), 960, 520, 1.2, 'in_out'), (T(260), 960, 505, 1.32, 'in_out')]))
+    C(T(260), 'hands', mode='catch', tg=w(260, 'catch') + 0.05, shake=1.2, tags=[(t(261), 'RULE SIX', 960, 170, 'red', 1.3)])
     C(T(262), 'den', lap=OL(act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)), dact=None),
       ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(w(262, 'kneel')))),
            P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), lambda a, s: a.hands_over_mouth(s.t0 - 0.5, None, 0.4, True)))],
@@ -2518,9 +2665,12 @@ def plan_rules56(F, t, e, w, C, T, KP):
     C(T(263), 'bust', who=O, bg='den', act=_A(lambda a, s: a.cry(s.t0 - 1)), cam=dict(mv='creep', x=960, y=600))
     C(T(264), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)), cam=dict(mv='creep', x=900, y=500))
     tw = w(266, 'click') - 0.03
+    # the head ratchets round toward Owen and stops at 3/4 (both eyes stay on his face), then on "Click" the near lid snaps
+    # shut in a tight close-up
     C(T(265), 'bust', who='winks', bg='den', cx=960, cy=600, scale=1.2, worked=True,
-      act=_A(lambda a, s: a.doll_turn(w(265, 'turns'), 0.8, 1.0, 3), lambda a, s: a.wink(tw, 1, 0.45)),
-      cam=dict(mv='keys', keys=[(T(265), 960, 560, 1.0), (tw, 960, 520, 1.22, 'in_out'), (T(268), 960, 515, 1.25, 'lin')]), music=[(tw, 'hit', 0.6)])
+      act=_A(lambda a, s: a.doll_turn(w(265, 'turns'), 0.42, 1.0, 3), lambda a, s: a.wink(tw, WINK_NEAR, 0.45)),
+      cam=dict(mv='keys', keys=[(T(265), 960, 560, 1.0), (tw - 0.5, 935, 470, 1.32, 'in_out'), (tw, 930, 455, 1.4, 'in_out'),
+                                (T(268), 928, 452, 1.43, 'lin')]), music=[(tw, 'hit', 0.6)])
     C(T(268), 'lap', **LAP_O, act=_A(lambda a, s: a.vent_pose(side=-1), lambda a, s: a.cry(s.t0 - 1)),
       dact=lambda a, s: a.set(-9, None, 0.1, h_turn=0.8), cam=dict(mv='keys', keys=[(T(268), 860, 470, 1.25), (T(269), 860, 460, 1.32, 'in_out')]),
       music=[(t(268) - 0.6, 'silence', 0.0, 0.5)])
@@ -2531,18 +2681,31 @@ def plan_rules56(F, t, e, w, C, T, KP):
                                                                                    dact=None),
       ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2))), P(M, at=('h', -0.95, 2.05), act=turned(-0.5))],
       cam=KP(T(271), T(272), 940, 580, 1.2, 940, 580, 1.3), sfx=[(T_LAMP_OUT[0], 'lamp_out', -2, 0.1, 'inside', dict(kind='pop')),
-                                                                  (T_LAMP_OUT[1], 'lamp_on', -6, 0.1, 'inside', dict(kind='buzz_on'))],
+                                                                  (T_LAMP_OUT[1], 'lamp_on', 0, 0.1, 'inside', dict(kind='buzz_on'))],
       music=[(T_LAMP_OUT[0], 'silence', 0.0, 1.2)])
-    # the lamp comes back: Owen slides his hand out like it's nothing, jumps up, hugs Mom; the dummy drops face down on the rug
-    C(T(272), 'lap', who=ON, bg='den', x=760, y=960, h=1350, side=-1,
-      act=_A(lambda a, s: a.vent_pose(-1e9, w(272, 'slides') + 0.2, side=-1), lambda a, s: a.set(w(272, 'slides'), None, 0.5, smile=0.5, grin=0.1)),
-      cam=dict(mv='push', x=880, y=540), music=[(t(272) + 0.6, 'motif', 0.45, 3)])
-    C(w(272, 'jumps') - 0.2, 'den', lap=dict(who=ON, side=-1, act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.6, grin=0.15), lambda a, s: a.jump_hug(T_JUMP)),
-                                               dact=None, release=T_JUMP + 0.1),
-      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2))), P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), ex('shock')))],
-      cam=KP(w(272, 'jumps') - 0.2, T(273), 960, 580, 1.15, 940, 580, 1.25), sfx=[(T_JUMP + 0.55, 'dummy_thud', -2, -0.1, 'inside', dict(kind='rug'))])
+    # the lamp comes back: Owen slides his hand out like it's nothing (the dummy sags off the hand; the empty hand comes up
+    # beside his face, fingers wriggling), jumps up into Mom's arms; the dummy tips off his knee face down onto the rug
+    tsl = w(272, 'slides')
+    L_ = lambda a: a._alen()
+    C(T(272), 'lap', who=ON, bg='den', x=760, y=960, h=1350, side=-1, arm_out=tsl + 0.5,
+      act=_A(lambda a, s: a.set(tsl, None, 0.5, smile=0.5, grin=0.1),
+             lambda a, s: a.reach(tsl + 0.05, None, -1, 0.6 * L_(a), 0.1 * L_(a), 0.4 * L_(a), 'open', up=1.0, fade=0.6)),
+      dact=lambda a, s: a.sit_dummy(tsl + 0.1, None, 0.5, hands='limp', slump=1.0),
+      cam=dict(mv='keys', keys=[(T(272), 880, 560, 1.0), (tsl + 0.6, 860, 520, 1.08, 'in_out'), (w(272, 'jumps') - 0.35, 850, 510, 1.1, 'lin')]),
+      music=[(t(272) + 0.6, 'motif', 0.45, 3)], sfx=[(tsl + 0.15, 'cloth_rustle', -8, -0.1, 'close', dict(kind='slot'))])
+    C(w(272, 'jumps') - 0.35, 'den', lap=dict(who=ON, side=-1, act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.6, grin=0.15),
+                                                                      lambda a, s: a.jump_hug(T_JUMP), turn_to(T_JUMP + 0.15, -0.8, 0.4)),
+                                               dact=lambda a, s: a.sit_dummy(-9, None, 0.1, hands='limp', slump=1.0), release=T_JUMP + 0.1,
+                                               hop=('h', -0.74, 2.2)),
+      ppl=[P(Y, at=('h', 0.4, 1.95), act=_A(turned(1.55), lambda a, s: a.kneel(s.t0 - 2))),
+           P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.5), ex('shock'), turn_to(T_JUMP + 0.3, 0.7, 0.5),
+                                              lambda a, s: a.reach(T_JUMP + 0.55, None, 1, -0.05 * L_(a), 0.42 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4),
+                                              lambda a, s: a.reach(T_JUMP + 0.6, None, -1, -0.05 * L_(a), 0.45 * L_(a), 0.5 * L_(a), 'relaxed', fade=0.4)))],
+      cam=KP(w(272, 'jumps') - 0.35, T(273), 930, 610, 1.15, 890, 630, 1.28),
+      sfx=[(T_JUMP + 0.6, 'dummy_thud', -2, -0.1, 'inside', dict(kind='rug'))])
     C(T(273), 'bust', who=ON, bg='den', act=_A(lambda a, s: a.set(-9, None, 0.1, smile=0.8, grin=0.3, teeth=0.5), setp(turn=0.3)), cam=dict(mv='push', x=960, y=600))
-    C(T(275), 'bust', who=Y, bg='den', no_view=True, act=_A(ex('shock'), setp(h_turn=0.15)), cam=dict(mv='push', x=960, y=580))
+    # he hugs me too: over my shoulder, his cheek beside my head, his arms round me
+    C(T(275), 'hug', bg='den', hold=w(275, 'hugs') - 0.1, cam=dict(mv='push', x=940, y=540, rate=0.035))
     C(T(276), 'floor', cam=dict(mv='keys', keys=[(T(276), 940, 600, 1.0), (T(279), 1000, 640, 1.3, 'in_out')]), music=[(t(277), 'silence', 0.0, 1.2)])
 
 
@@ -2552,41 +2715,54 @@ def plan_end(F, t, e, w, C, T, KP):
     C(T(279), 'rule', n=7, bg='den', lamp=1.0)
     C(T(283), 'ins', name='letter', kw=dict(hl=0), motion=lambda tt: (2.0 * math.sin(tt * 17), 1.5 * math.sin(tt * 13), 0, 0.3 * math.sin(tt * 11)),
       cam=dict(mv='push', x=960, y=540, rate=0.04))
-    t7 = w(285, 'seven')
-    C(T(285), 'ins', name='letter_close', kw=lambda tt, a=t7 - T(285), b=T(286) - T(285): dict(hl=7 if a <= tt < b else 6),
-      cam=dict(mv='keys', keys=[(T(285), 960, 790, 1.15), (t7, 960, 850, 1.25, 'in_out'), (T(286), 960, 860, 1.3, 'in_out'),
-                                (T(287), 960, 820, 1.4, 'in_out')]))
+    # "I just never put rule six and rule seven side by side": the camera tilts down the letter so six and seven share the
+    # frame; seven's highlight fades in under six on "seven", and on "side by side" a red pen bracket joins them
+    t7, tsd = w(285, 'seven'), w(285, 'side')
+    C(T(285), 'ins', name='letter_close', kw=lambda tt, a=t7 - T(285), b=tsd - T(285): dict(hl=(6, 7), hla=(1.0, ease_in_out(clamp((tt - a) / 0.35))),
+                                                                                             bracket=ease_in_out(clamp((tt - b) / 0.9))),
+      cam=dict(mv='keys', keys=[(T(285), 960, 1010, 1.18), (t7 - 0.1, 975, 1170, 1.2, 'in_out'), (tsd, 980, 1230, 1.22, 'in_out'),
+                                (T(287), 985, 1250, 1.3, 'in_out')]))
     C(T(287), 'den', lap=None, rug=True, ppl=[P(M, at=('h', -0.95, 2.05), act=_A(turned(-0.4), ex('sad'))),
                                               P(ON, at=('h', -0.55, 2.0), act=_A(turned(1.8), lambda a, s: a.set(t(288), None, 0.9, h_turn=-1.5, lock=1.0, smile=0.6)))],
       cam=KP(T(287), T(290), 940, 560, 1.15, 860, 520, 1.6), focus=2.0, music=[(t(289), 'swell', 0.55, 3.0)])
     # I pick the dummy up off the rug; something slides out of the slot in his back: the torn P.S.
     C(T(290), 'carry', bg='den', x=900, y=2350, h=2400, dact=lambda a, s: a.smile_stage(-9, 'asleep'), cam=dict(mv='push', x=960, y=520))
-    C(w(290, 'something') - 0.1, 'ins', name='back_slot', kw=lambda tt, a=w(290, 'slides') - w(290, 'something') + 0.1: dict(paper=0.9 * ease_in_out(clamp((tt - a) / 1.3))),
-      cam=dict(mv='push', x=960, y=620, rate=0.045), sfx=[(w(290, 'slides'), 'paper', -6, 0, 'close', dict(kind='slide', dur=1.3))])
+    C(w(290, 'something') - 0.1, 'ins', name='back_slot', kw=lambda tt, a=w(290, 'slides') - w(290, 'something') - 0.2: dict(paper=0.9 * ease_in_out(clamp((tt - a) / 1.3))),
+      cam=dict(mv='push', x=960, y=620, rate=0.045), sfx=[(w(290, 'slides') - 0.3, 'paper', 2, 0, 'close', dict(kind='slide', dur=1.3))])
     C(T(291), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(291), 960, 560, 1.0), (T(292), 960, 540, 1.2, 'in_out')]),
-      sfx=[(t(291) + 0.5, 'paper', -8, 0, 'close', dict(kind='unfold'))])
+      sfx=[(t(291) + 0.1, 'paper', 0, 0, 'close', dict(kind='unfold'))])
     C(T(292), 'ins', name='letter', cam=dict(mv='keys', keys=[(T(292), 960, 760, 1.35), (T(293), 960, 820, 1.55, 'in_out')]))
     C(T(293), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(293), 880, 440, 1.45), (T(295), 920, 520, 1.55, 'in_out')]), music=[(t(293), 'motif', 0.55, 4)])
     C(T(295), 'bust', who=Y, bg='den', act=_A(ex('fear'), setp(wet=0.8)), cam=dict(mv='creep', x=960, y=580))
     C(T(297), 'ins', name='ps', cam=dict(mv='keys', keys=[(T(297), 1040, 640, 1.5), (T(299), 1060, 650, 1.7, 'in_out')]))
     C(T(299), 'bust', who=Y, bg='den', act=_A(ex('shock'), setp(wet=0.8)), cam=dict(mv='push', x=960, y=580))
     # 1962: the end of his very first show; "Say goodnight, Mister Winks." His knee. His hand. His goodnight. They traded places.
+    # Before the trade young Walter has a warm, nervous, innocent smile and the figure is the cheeky show dummy; on "traded"
+    # (white flash) Walter's face snaps to the locked stare and the widening grin, and the dummy's painted eyes go wet and
+    # frightened (the tape-cry face): held on the two of them, close
+    WARM = lambda: lambda a, s: a.set(-9, None, 0.1, smile=0.55, teeth=0.25, brow_up=0.4, brow_sad=0.25, pupil=1.05, squint=0.1, sweat=0.35)
+    THING = lambda tt: lambda a, s: a.set(tt, None, 0.06, smile=1.0, grin=0.85, teeth=1.0, brow_up=0.0, brow_sad=0.0, pupil=0.5, lock=1.0,
+                                          still=1.0, sweat=0.0, squint=0.25)
+    ttr = w(305, 'traded')
     C(T(300), 'stage62', cam=dict(mv='keys', shake=1.2, keys=[(T(300), 960, 560, 1.0, None, 1.0), (w(300, 'young'), 955, 520, 1.03, 'in_out', 1.3),
                                                           (w(300, 'said') - 0.1, 970, 480, 1.06, 'in_out', 1.6)]),
-      tags=[(w(300, '1962'), '1962', 960, 170, 'white', 2.0)], music=[(t(300), 'motif', 0.5, 6)],
-      d_act=lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.7))
-    C(w(300, 'said') - 0.1, 'bust', who='walter74', bg='stage62', era='1962', grade='memory', act=lambda a, s: a.showman(s.t0 - 2, s.t1 + 2, look=0.3),
-      cam=dict(mv='creep', x=960, y=560))
-    C(T(301), 'lap', who='walter74', bg='stage62', x=880, y=980, h=1400, grade='memory', d_act=None,
-      dact=lambda a, s: a.doll_turn(t(301) + 0.2, -0.8, 0.8, 2), cam=dict(mv='creep', x=940, y=480))
-    C(w(302, 'knee') - 0.12, 'lap', who='walter74', bg='stage62', x=880, y=700, h=1400, grade='memory',
-      dact=lambda a, s: a.set(-9, None, 0.1, h_turn=-0.8), cam=dict(mv='push', x=980, y=760, z=1.2))
+      tags=[(w(300, '1962'), '1962', 960, 170, 'white', 2.0)], music=[(t(300), 'motif', 0.5, 6)], w_act=WARM(),
+      d_act=_A(stage(1), lambda a, s: a.puppet(s.t0 - 2, s.t1 + 2, look=-1, rate=0.7)))
+    C(w(300, 'said') - 0.1, 'bust', who='walter74', bg='stage62', era='1962', grade='memory',
+      act=_A(WARM(), lambda a, s: a.set(s.t0 + 1.0, s.t0 + 2.2, 0.35, h_turn=0.3, look_x=0.5)), cam=dict(mv='creep', x=960, y=560))
+    C(T(301), 'lap', who='walter74', bg='stage62', x=880, y=980, h=1400, grade='memory', d_act=None, act=WARM(),
+      dact=_A(stage(1), lambda a, s: a.doll_turn(t(301) + 0.2, -0.8, 0.8, 2)), cam=dict(mv='creep', x=940, y=480))
+    C(w(302, 'knee') - 0.12, 'lap', who='walter74', bg='stage62', x=880, y=700, h=1400, grade='memory', act=WARM(),
+      dact=_A(stage(1), lambda a, s: a.set(-9, None, 0.1, h_turn=-0.8)), cam=dict(mv='push', x=980, y=760, z=1.2))
     C(w(303, 'hand') - 0.12, 'ins', name='back_slot', kw=dict(hand=1.0), grade='memory', cam=dict(mv='push', x=960, y=560, z=1.1))
     C(w(304, 'good') - 0.15, 'bust', who='winks', bg='stage62', cx=960, cy=600, scale=1.2, worked=True, era='1962', grade='memory',
       act=_A(lambda a, s: a.set(-9, None, 0.1, h_turn=-0.6), stage(1), lambda a, s: a.wink(w(304, 'night') + 0.05, 1, 0.3)), cam=dict(mv='creep', x=960, y=520))
-    C(T(305), 'stage62', cut='white', cam=KP(T(305), T(306), 970, 480, 1.6, 970, 470, 1.6), hit=w(305, 'traded'),
-      d_act=lambda a, s: (a.set(-9, None, 0.1, h_turn=-0.6), a.head_snap(w(305, 'traded') + 0.05, 0.0)),
-      w_act=lambda a, s: a.set(w(305, 'traded'), None, 0.05, smile=0.6, still=1.0, lock=1.0), music=[(w(305, 'traded'), 'braam', 0.9)])
+    C(T(305), 'lap', who='walter74', bg='stage62', x=880, y=980, h=1400, grade='memory', cut='white', hit=ttr,
+      act=_A(WARM(), lambda a, s: a.set(-9, None, 0.1, h_turn=0.25), THING(ttr)),
+      dact=_A(stage(1), lambda a, s: a.set(-9, None, 0.1, h_turn=-0.6), lambda a, s: a.smile_stage(ttr, 'tape', fade=0.08),
+              lambda a, s: a.head_snap(ttr + 0.05, 0.0)),
+      cam=dict(mv='keys', keys=[(T(305), 930, 470, 1.0), (ttr, 925, 455, 1.06, 'in_out'), (T(306), 920, 430, 1.16, 'in_out')]),
+      music=[(ttr, 'braam', 0.9)])
     # sixty years later: the thing in his body felt it dying; asked for its dummy, sat him on its lap, said the word
     C(T(306), 'hospital', bpm=52, bed_act=_A(ex('still_smile'), setp(pupil=0.7, still=0.8, eye_open=0.6)),
       cam=KP(T(306), w(306, 'felt') - 0.1, 960, 540, 1.0, 990, 530, 1.3))
@@ -2608,9 +2784,10 @@ def plan_end(F, t, e, w, C, T, KP):
 
     # ============================================================ THE END (655.5 - 710.5)
     # in my arms he opens his eyes, looks up at me, tries to wink: both eyelids close. Click, click. Owen can't wink.
-    C(T(312), 'carry', bg='den', x=900, y=2350, h=2400, cam=dict(mv='keys', keys=[(T(312), 960, 560, 1.0), (T(314), 960, 470, 1.3, 'in_out')]),
-      music=[(T_OPEN, 'hit', 0.6)])
-    tw2 = w(315, 'both') + 0.1
+    C(T(312), 'bust', who='winks', bg='den', cx=930, cy=560, scale=1.05, no_view=True, hold=('you', 1330, 980, 330, 'grip', 120.0, -1),
+      act=_A(lambda a, s: a.set(-9, None, 0.1, h_tilt=-16.0, h_nod=-0.22, lock=1.0, look_y=-0.6), lambda a, s: a.eyes_open(T_OPEN + 0.15, 1.3)),
+      cam=dict(mv='keys', keys=[(T(312), 950, 560, 1.0), (T(314), 945, 520, 1.2, 'in_out')]), music=[(T_OPEN, 'hit', 0.6)])
+    tw2 = e(315) + 0.1                       # the two lids close in the silence after the line, before "Click, click."
     C(T(314), 'bust', who='winks', bg='den', ecu=True, cx=960, cy=660, scale=1.4, act=_A(setp(h_nod=-0.2), lambda a, s: a.try_wink(tw2, 0.5, 2.0, 0.8)),
       cam=dict(mv='creep', x=960, y=520), music=[(tw2, 'stinger', 0.8)])
     C(T(317), 'bust', who=O, bg='living', lamp=0.15, light=TVL, era='memory', cx=960, cy=640, scale=1.2,
@@ -2619,7 +2796,7 @@ def plan_end(F, t, e, w, C, T, KP):
     C(T(319), 'hdoor', tod='morning', light=0.0, door=door_swing(t(319) + 0.4, 1.6, 0.0, 0.85), case=None, focus=3.0,
       cam=KP(T(319), T(320), 960, 560, 1.0, 960, 540, 1.25), sfx=[(t(319) + 0.4, 'door_creak', -4, 0, 'inside', dict(kind='front_door'))])
     C(T(320), 'bust', who=Y, bg='hdoor', tod='morning', door=0.85, light=MORNING, act=_A(ex('fear'), lambda a, s: a.scream(w(321, 'scream') - 0.4, e(321))),
-      cam=dict(mv='hand', x=960, y=580))
+      cam=dict(mv='hand', x=960, y=580), sfx=[(w(321, 'scream') - 0.4, 'scream', -6, 0.0, 'inside', dict(who='mom', kind='short'))])
     C(T(322), 'bust', who=M, bg='hdoor', tod='morning', door=0.85, light=MORNING, act=_A(ex('sad'), down(-1, 0.3)), cam=dict(mv='push', x=960, y=580))
     tv0 = w(324, 'van') - 0.6
     C(T(324), 'street', van=dict(drive=('out', tv0, tv0 + 4.5, -5.5, -14.0)),
@@ -2632,7 +2809,7 @@ def plan_end(F, t, e, w, C, T, KP):
     C(T(325), 'museum', view='wide', act=stage('owen'), cam=KP(T(325), T(326), 960, 520, 1.0, 950, 500, 1.6), tags=[(t(325) + 1.0, 'THREE STATES AWAY', 960, 170, 'white', 2.2)])
     tw3 = w(326, 'wink') + 0.05
     C(T(326), 'museum', act=_A(stage('owen'), lambda a, s: a.try_wink(tw3, 0.45, 0.9, 0.7)), cam=KP(T(326), T(327), 960, 520, 1.0, 960, 470, 1.7))
-    C(T(327), 'bust', who='winks', bg='museum', ecu=True, cx=960, cy=640, scale=1.4, light=MUSEUM, era='later',
+    C(T(327), 'bust', who='winks', bg='museum', ecu=True, cx=960, cy=640, scale=1.4, light=MUSEUM, era='later', glass=True,
       act=_A(stage('owen'), lambda a, s: a.try_wink(t(327) + 0.1, 0.4, 0.6, 0.5)), cam=dict(mv='creep', x=960, y=520))
     C(T(328), 'museum', act=stage('owen'), cam=KP(T(328), T(330), 960, 470, 1.6, 960, 450, 2.35, 1.0, 1.08))
     # the boy who came home with us doesn't laugh any more; coffee with two sugars; he's nine; the doorway; "kiddo"
@@ -2642,14 +2819,16 @@ def plan_end(F, t, e, w, C, T, KP):
       ppl=[P(ON, at='chair', act=_A(sitp(), lambda a, s: a.hold_mug(s.t0 - 1, None, side=1, sip=[w(331, 'coffee') - 0.3]), setp(lock=1.0, still=1.0)))],
       cam=KP(T(331), T(332), 960, 560, 1.3, 960, 540, 1.95), focus=1.95)
     C(T(332), 'ins', name='mug', era='later', grade='morning', kw=dict(stir=lambda tt: 0.8 * tt), cam=dict(mv='push', x=900, y=640, z=1.3, rate=0.04),
-      sfx=[(t(332) + 0.15, 'spoon_clink', -8, 0, 'close', dict(kind='clink')), (t(332) + 0.55, 'spoon_clink', -10, 0, 'close', dict(kind='clink'))])
+      sfx=[(t(332) + 0.15, 'spoon_clink', -2, 0, 'close', dict(kind='clink')), (t(332) + 0.55, 'spoon_clink', -4, 0, 'close', dict(kind='clink'))])
     C(T(333), 'bedroom', hall=1.0, door=0.85, ppl=[P(ON, path=(t(333) + 0.6, t(333) + 2.4, [('h', 1.3, 3.45), 'doorway'], 0.0),
                                                     act=_A(setp(lock=1.0, still=0.8), lambda a, s: a.doorway_smile(t(334), e(335) - t(334) + 0.3)),
                                                     surface='inside')],
       cam=dict(mv='keys', shake=1.2, keys=[(T(333), 960, 560, 1.0, None, 1.0), (T(334), 960, 540, 1.03, 'in_out', 1.3),
                                            (T(336), 980, 520, 1.06, 'in_out', 2.4)]), focus=3.45, music=[(t(333), 'drone', 0.6, 8.0)])
-    C(T(336), 'bust', who=ON, bg='bedroom', light=BACKLIT, ecu=True, cx=960, cy=600, scale=1.3,
-      act=lambda a, s: a.doorway_smile(s.t0 - 5.0, 4.0), cam=dict(mv='creep', x=960, y=540), music=[(t(336), 'silence', 0.0, 0.0)])
+    # "See you in the morning, kiddo.": a medium close-up of him in the doorway, shoulders and hoodie against the lit hall
+    C(T(336), 'bust', who=ON, bg='bedroom', light=BACKLIT, ecu=True, cx=960, cy=470, scale=0.92, bg_dim=0.0,
+      act=lambda a, s: a.doorway_smile(s.t0 - 5.0, 4.0), cam=dict(mv='keys', keys=[(T(336), 960, 540, 1.0), (T(337), 960, 505, 1.1, 'in_out')]),
+      music=[(t(336), 'silence', 0.0, 0.0)])
     C(T(337), 'bedroom', hall=lambda tt: 1.0 - 0.75 * ease_in_out(clamp((tt - t(338) - 0.2) / 1.0)), door=0.85,
       ppl=[P(ON, at='doorway', act=lambda a, s: a.doorway_smile(t(334), 4.0))], cam=KP(T(337), e(338) + 0.25, 980, 520, 2.2, 980, 520, 2.4), focus=3.45,
       sfx=[(t(338) + 0.2, 'light_switch', -10, 0.1, 'inside')])
@@ -2661,16 +2840,17 @@ def plan_globals(F, t, e, w, G):
     """Film-wide cues: the studio laughter waves (applause = he moves), the clack and voice moments, music colour."""
     for lt in LAUGH_T:
         tv = 294.0 < lt < 500.0
-        G.append(_ev(lt, 'studio_laughter', -4 if not tv else -2, -0.3 if tv else 0.0, 'tv', dur=2.6, level=1.0 if lt in (305.45, 314.85, 485.0) else 0.75,
+        G.append(_ev(lt, 'studio_laughter', -4 if not tv else -2, -0.3 if tv else 0.0, 'tv', dur=2.6, level=1.0 if lt in (305.45, 314.85, 462.03, 484.55) else 0.75,
                      roar=lt in (305.45, 314.85)))
         if tv and 300 < lt < 330:
             G.append(_ev(lt + 0.05, 'applause', -10, -0.3, 'tv', dur=2.2))
-    for (ta, s0, s1, cut) in F.tv_voices:                        # the tape's own voice: a replay of the recording through the TV
-        G.append(_ev(ta, 'tv_voice', -14, -0.3, 'tv', src_t0=round(s0, 3), src_t1=round(min(s1, s0 + cut), 3), cut=cut < 50))
+    for (ta, s0, s1, cut, g_) in F.tv_voices:                    # the tape's own voice: a replay of the recording through the TV
+        G.append(_ev(ta, 'tv_voice', g_, -0.3, 'tv', src_t0=round(s0, 3), src_t1=round(min(s1, s0 + cut), 3), cut=cut < 50))
     G.append(_ev(445.25, 'tape_stop', -8, -0.3, 'tv', kind='warble', dur=0.5))
+    G.append(_ev(t(86) - 0.35, 'clock_chime', -4, -0.2, 'inside', kind='quarter'))   # the 1:15 chime, in the gap before the line
     G.append(_ev(t(36) - 0.5, 'heartbeat', -8, 0, None, bpm=96, bpm_end=118, dur=8.0))
     G.append(_ev(t(157), 'heartbeat', -6, 0, None, bpm=84, bpm_end=120, dur=8.0))
-    G.append(_ev(543.7, 'heartbeat', -4, 0, None, bpm=78, bpm_end=132, dur=round(T_SWAP - 543.7, 2)))
+    G.append(_ev(543.7, 'heartbeat', -4, 0, None, bpm=78, bpm_end=132, dur=round(t(268) - 543.7, 2)))   # out before "Goodnight, Owen."
     G.append(_ev(t(193) - 0.3, 'breath', -10, 0.0, 'close', kind='held', dur=2.4))
     for ti, kind in ((7, 'motif'), (28, 'swell'), (41, 'motif'), (63, 'swell'), (99, 'swell'), (145, 'swell'), (156, 'swell'), (198, 'swell'),
                      (210, 'swell'), (225, 'swell'), (243, 'swell'), (254, 'swell'), (300, 'motif'), (312, 'swell'), (330, 'swell')):
@@ -2758,7 +2938,7 @@ def lip_check(F, fps=30.0):
             else:
                 tape, v = False, VOICE.get(who, [])
             lines = [(l['t'], l['end']) for l in F.voice_lines(sh.t0, sh.t1, v)]
-            if tape: lines += [(ta, ta + min(s1 - s0, c)) for ta, s0, s1, c in F.tv_voices]
+            if tape: lines += [(ta, ta + min(s1 - s0, c)) for ta, s0, s1, c, _g in F.tv_voices]
             lines = [(l0, l1) for l0, l1 in lines if min(l1, sh.t1) - max(l0, sh.t0) > 0.15]
             ts = np.arange(sh.t0 + 0.02, sh.t1 - 0.02, 1.0 / fps)
             vals = []

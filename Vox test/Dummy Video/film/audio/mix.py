@@ -521,6 +521,7 @@ def level_music(m, sil, up_max=9.0, lo_rel=-4.5, hi_rel=6.5, r_up=0.7, r_dn=0.5)
 
 DUCK_DB = 4.5        # music + SFX beds under the voice (critic: 3 -> 4.5 dB, so the bed sits ~-13 LU under speech)
 HIT_DUCK_DB = 6.0    # hits bus (SFX + score hits) under the voice: the reveal line stays clear of the hit's tail
+HIT_DUCK_HI_DB = 10.0   # final mix v2: the hits above 150 Hz duck 10 dB under a line (the sub body is not ducked)
 HIT_CUT_DB = 3.0     # final mix: the hits bus also gets the voice-keyed 1-4.5 kHz bell cut (the hit's body is low: the
                      # cut keeps the next words readable while the hits come up --hits-db)
 FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
@@ -877,27 +878,63 @@ def main():
 
     foley_dip = (10 ** (-FOLEY_DIP_DB * event_activity(buses['events']) / 20)).astype(np.float32)
     buses['events'] += buses.pop('knocks')        # knocks join the events bus after the foley-dip key is taken
-    # the hit duck spares each hit's first 0.15 s (the transient lands on the cut), then takes the tail down under the line
+    # the hit duck spares each hit's first 0.15 s (0.3 s for the three hardest scares: the transient lands on the cut),
+    # but never past the next word: the spare window ends at the next voice onset - 20 ms, and the duck is fully on
+    # 60 ms later (review: "Owen can't wink." / "Owen's eyes close." / "And the studio audience..." started 0.10-0.28 s
+    # after the boosted hits and were buried under a fixed 0.3 s spare + 0.7 s ramp)
+    act_key = voice_activity(key, rel=0.25)
+    acth_key = voice_activity(key, att=0.02, rel=0.25)
+    von = acth_key > 0.5
+    onsets = (np.flatnonzero(von[1:] & ~von[:-1]) + 1) / SR
     spare = np.ones(N, np.float32)
     big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
     for h in hit_times + mus_hits:
-        long_ = any(abs(h - x) < 0.01 for x in big)   # the three hardest scares: the body of the hit stays up 0.3 s
-        a = int((h - 0.03) * SR); b = int((h + (0.3 if long_ else 0.15)) * SR); c = int((h + (0.7 if long_ else 0.35)) * SR)
+        long_ = any(abs(h - x) < 0.01 for x in big)
+        k_ = np.searchsorted(onsets, h + 0.01)
+        nxt = onsets[k_] if k_ < len(onsets) else 1e9
+        te = min(h + (0.3 if long_ else 0.15), max(h + 0.02, nxt - 0.02))
+        tr = 0.06 if nxt - te < 0.5 else (0.4 if long_ else 0.2)
+        a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue
         spare[max(0, a):min(N, b)] = 0.0
         if c > b:
             r = np.linspace(0, 1, c - b, dtype=np.float32)[:max(0, min(N, c) - b)]
             spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
+    # the hits split at 150 Hz: the duck (HIT_DUCK_HI_DB) and the voice-keyed bell take only the part above it; the sub
+    # body is never ducked (the weight stays) but the whole hits bus is pre-limited under a ceiling that drops while the
+    # narration speaks, so the master limiter never pulls a line down under a hit's tail
+    _xo = signal.butter(4, 150.0, 'lowpass', fs=SR, output='sos')
+    mh_lo = signal.sosfiltfilt(_xo, mhits, axis=0).astype(np.float32); mh_hi = mhits - mh_lo
+    sh_lo = signal.sosfiltfilt(_xo, buses['hits'], axis=0).astype(np.float32); sh_hi = buses.pop('hits') - sh_lo
+    vpk = float(np.percentile(np.abs(key[np.abs(key) > 1e-4]), 99.9)) if (np.abs(key) > 1e-4).any() else 0.3
+
+    def hits_limit(hx, act_h):
+        """Variable-ceiling look-ahead peak limiter on the hits bus: ceiling = voice p99.9 - 3 dB in the gaps, - 9 dB more
+        while a line is spoken (outside each hit's spare window)."""
+        ceil = (vpk * 10 ** ((-3.0 - 9.0 * act_h * spare) / 20)).astype(np.float32)
+        pk = np.abs(hx).max(1)
+        req = np.minimum(1.0, ceil / np.maximum(pk, 1e-9)).astype(np.float32)
+        L = int(0.004 * SR)
+        g = minimum_filter1d(req, size=2 * L + 1, origin=-L)
+        g = np.minimum(uniform_filter1d(g, size=L), g)
+        gr = SX.follow((1.0 - g).astype(np.float32), 0.0, SX.coef(0.12))
+        return hx * (1.0 - gr)[:, None]
 
     def bed_for(act, gm, act_h):
         dm = (10 ** (-DUCK_DB * act / 20)).astype(np.float32)
-        hd = (10 ** (-HIT_DUCK_DB * act_h * spare / 20)).astype(np.float32)
+        hd = (10 ** (-HIT_DUCK_HI_DB * act_h * spare / 20)).astype(np.float32)
         m = dyn_cut(music, act, 5.0); m *= (dm * autom * foley_dip * np.float32(gm))[:, None]
-        m += dyn_cut(mhits, act, HIT_CUT_DB) * (hd * np.float32(gm * 10 ** (A.hits_db / 20)))[:, None]
+        gh = np.float32(gm * 10 ** (A.hits_db / 20))
+        hb = dyn_cut(mh_hi, act, HIT_CUT_DB) * (hd * gh)[:, None] + mh_lo * gh
+        hb += dyn_cut(sh_hi, act, HIT_CUT_DB) * hd[:, None] + sh_lo; del hd
+        hb = hits_limit(hb, act_h)
         s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
         e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
         s += e; del e
-        s += dyn_cut(buses['hits'], act, HIT_CUT_DB) * hd[:, None]; del hd
+        # the score's hits count as music in the stems (as before), the SFX hits as SFX
+        mfrac = np.abs(mh_lo * gh + mh_hi * gh).max(1); sfrac = np.abs(sh_lo + sh_hi).max(1)
+        wm = (mfrac / np.maximum(mfrac + sfrac, 1e-9)).astype(np.float32); del mfrac, sfrac
+        m += hb * wm[:, None]; s += hb * (1.0 - wm)[:, None]; del hb, wm
         bed, gr, gg = glue(m + s)
         m *= gg[:, None]; s *= gg[:, None]
         return bed, m, s, gr
@@ -907,8 +944,6 @@ def main():
     # re-measured with true per-channel K-weighting give -15.3 / -16.1 / -16.5; AUDIO_SPEC's short-term numbers come
     # from analysis/measure.py, whose kweight() filters across channels, so they read about 4 dB hot), while the
     # integrated bed stays at or under voice + bed_rel + 1.5 (references: -12.5 / -12.8 / -13.4).
-    act_key = voice_activity(key, rel=0.25)
-    acth_key = voice_activity(key, att=0.02, rel=0.25)
     Lv = SX.lufs_int(key)
     def bstat(b):
         st3 = -0.691 + 10 * np.log10(SX._blocks(b, 3.0, 1.0) + 1e-20)

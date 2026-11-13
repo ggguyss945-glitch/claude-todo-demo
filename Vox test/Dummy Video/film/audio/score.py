@@ -151,7 +151,10 @@ VINTAGE = {
 SHOW_THEME = 'balloon_twister_macy_s_voice'
 WINKS_SHIFT = -9.0                # the theme, rotting: B -> D, 0.6x
 WINKS_OFF = 6.0                   # (s in the original track) the tune, not the intro
-SHOW_DUCK = {'show': -6.0, 'winks': -3.0}   # the dark track bed steps back while the TV / the Winks theme plays
+SHOW_DUCK = {'show': -10.0, 'winks': -7.0}  # the dark track bed steps back while the TV / the Winks theme plays (final
+#   mix v2: -6 / -3 -> -10 / -7: the review measured the film's own sound 16-29 dB under the voice, under the drones)
+IDENTITY_LIFT = 6.0                          # final mix v2: the show theme and the Winks theme +6 dB
+HITS_LIFT = 2.0                              # final mix v2: 22 hits on ordinary lines removed; the reveal hits left +2 dB
 KEYPREF = {2: 0.0, 9: 0.05, 5: 0.45, 10: 0.45, 7: 0.6, 0: 0.7}   # cost by root pitch class: D, A, F, Bb, G, C
 KEY_W = 2.0                      # weight of the key cost (v2.1: 0.2 -> 0.6, every section lands on D or A)
 OTHER_KEY = 3.0                  # cost of any other root (Eb, Ab, B, E, F#, C#: the semitone / tritone clashes)
@@ -1430,8 +1433,12 @@ class Score:
         x = self._speaker(x, space)
         x *= self._envelope(len(x), float(e.get('fade', 0.25)), 1.5, stop)[:, None]
         st = short_term(x, 0.25).max() if len(x) > 3 * SR else momentary_max(x)
-        target = REF_LUFS + (4.0 if space in ('tv', 'tape', 'old', 'clean') else -2.0) + 8.0 * (lv - 0.5)
+        target = REF_LUFS + (4.0 if space in ('tv', 'tape', 'old', 'clean') else -2.0) + 8.0 * (lv - 0.5) + IDENTITY_LIFT
         x *= np.float32(db(target - st))
+        bl = float(e.get('blast', 0.0) or 0.0)
+        if bl > 0:                                           # the TV bursting on: the first 0.5 s blares, then settles
+            tt_ = np.arange(len(x)) / SR
+            x *= db(bl * np.clip(1.0 - (tt_ - 0.5) / 0.35, 0.0, 1.0)).astype(np.float32)[:, None]
         rev = {'recital': 0.12} if space in ('tv', 'tape', 'clean') else ({'hall': 0.45} if space == 'far' else {'recital': 0.2})
         self.bus['show'].add(t, x, rev=rev)
         self._duck_span(t, t + len(x) / SR, SHOW_DUCK['show'] * (0.5 if space == 'far' else 1.0))
@@ -1463,7 +1470,7 @@ class Score:
         x = (np.tanh(1.2 * x / pk) / np.tanh(1.2) * pk).astype(np.float32)
         x *= self._envelope(len(x), float(e.get('fade', 1.2)), 1.8, stop)[:, None]
         st = short_term(x, 0.25).max() if len(x) > 3 * SR else momentary_max(x)
-        x *= np.float32(db(REF_LUFS + 0.0 + 8.0 * (lv - 0.5) - st))     # tests: -2 dB (it sat on the lines)
+        x *= np.float32(db(REF_LUFS + 0.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT - st))     # tests: -2 dB (it sat on the lines)
         self.bus['show'].add(t, x, rev={'hall': 0.6, 'cavern': 0.4})
         self._duck_span(t, t + len(x) / SR, SHOW_DUCK['winks'])
         self.log(f'winks {t:.1f}-{t + ln:.1f}s depth {depth} stop {stop}')
@@ -1501,6 +1508,23 @@ class Score:
         y = np.tanh(1.6 * np.sin(ph)) * env
         return _st(y.astype(np.float32) * np.float32(0.1))
 
+    def _crack(self, y, under_db=6.0, dur=0.32):
+        """A short mid crack (150 Hz - 2.5 kHz noise burst + dry knock) at the onset, under_db under the composite's
+        loudest 50 ms: the hits' bodies are mostly sub and vanish on a phone (review: 9-14 dB under the voice through a
+        300 Hz high-pass; 37-93 % of their energy below 120 Hz)."""
+        n = min(int(dur * SR), len(y))
+        x = np.arange(n) / SR
+        nz = _filt(_filt(self.rng.standard_normal(n).astype(np.float32) * np.exp(-x / 0.045).astype(np.float32),
+                         'highpass', 180, 2), 'lowpass', 2500, 2)
+        kn = (np.sin(2 * np.pi * 172 * x) * np.exp(-x / 0.08) + 0.5 * np.sin(2 * np.pi * 410 * x) * np.exp(-x / 0.04)).astype(np.float32)
+        c = _st(nz / (np.abs(nz).max() + 1e-9) + 0.7 * kn)
+        w = int(0.05 * SR)
+        seg = y[:int(0.6 * SR)]
+        pk = np.sqrt(np.convolve((seg ** 2).mean(1), np.ones(w) / w, 'valid').max()) if len(seg) > w else 1e-3
+        pc = np.sqrt(np.convolve((c ** 2).mean(1), np.ones(w) / w, 'valid').max())
+        y = y.copy(); y[:n] += c * np.float32(pk / (pc + 1e-9) * 10 ** (-under_db / 20))
+        return y
+
     def render_hit(self, e, kind='hit'):
         t, lv = e['t'], e['level']
         root, mode = _key_at(self.keys, t)
@@ -1536,8 +1560,9 @@ class Score:
             st = self.epi('stinger')
             if st:
                 parts.append((self.bank.get('epi:' + st[(rr + 1) % len(st)]), 0.0, 0.0, 0.0))
-        y = self._decay(_width(self._layer(parts), 0.75), 1.5 + 1.3 * lv, hold=0.1)
+        y = self._crack(self._decay(_width(self._layer(parts), 0.75), 1.5 + 1.3 * lv, hold=0.1))
         target = REF_LUFS + 2 + 9 * lv + e.get('boost', 0.0)   # v2.1: was +5 + 13 * lv (hits masked the reveal lines)
+        target += 0.0 if e.get('boost') else HITS_LIFT
         y = self.norm_to(y, target)
         # a boosted hit (the final mix's three hardest scares) keeps 2 dB more of its peak: at -3 dBFS the composite
         # limiter capped it, and the boost bought no loudness (the mix's master limiter takes the rest)
@@ -1610,8 +1635,8 @@ class Score:
         if bsrc:
             ye = self.bank.get('epi:' + bsrc)
             layers.append((ye, -2.0, 0.0, 0.0))
-        y = self._decay(_width(self._layer(layers), 0.75), hold + 2.5, hold=hold * 0.6)
-        y = self.norm_to(y, REF_LUFS + 0 + 9 * lv + e.get('boost', 0.0))
+        y = self._crack(self._decay(_width(self._layer(layers), 0.75), hold + 2.5, hold=hold * 0.6))
+        y = self.norm_to(y, REF_LUFS + 0 + 9 * lv + e.get('boost', 0.0) + (0.0 if e.get('boost') else HITS_LIFT))
         self.bus['hits'].add(t, _limit(y, -1.0 if e.get('boost') else -3.0), rev={'hall': 0.4, 'cavern': 0.15})
         self.pre_duck(t, lv)
 
