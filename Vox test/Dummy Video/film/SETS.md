@@ -32,7 +32,7 @@ variant's anchors (x, y, depth, height of a 1.85 m adult there) and its camera e
 ## Builders
 | builder | what | lens / grade |
 |---|---|---|
-| `gp_hall('kitchen')` | Down the front hall to the lit kitchen opening: Grandpa's chair at the table (`kitchen_chair`), the steaming mug, the bench with the black leather case (`case='closed'` with the envelope, `'open'` with the velvet hollow, `None`), his coat and hat on the hooks, the 1974 poster, the grandfather clock (live pendulum, `pendulum_ticks()`), the arch to the living room, the den door (`den` 0..1). `beam=` the knee-high flashlight moving down the hall. | lens, `gp_house` / `gp_dark` |
+| `gp_hall('kitchen')` | Down the front hall to the lit kitchen opening: Grandpa's chair at the table (`kitchen_chair`), the steaming mug, the bench with the black leather case (`case='closed'` with the envelope, `'open'` with the velvet hollow, `None`), his coat and hat on the hooks, the 1974 poster, the grandfather clock (live pendulum, `pendulum_ticks()`), the arch to the living room, the den door (`den` 0..1). `beam=` the knee-high flashlight moving down the hall (a spec dict or f(t); film.py's `knee_beam` sweeps it side to side). Review fix: the beam layer's depth moves, so it is authored at a fixed ref depth and pre-scaled (it was drawn 10x too large, off frame), and it draws over the floor and wall plates (`Layer.order`, a draw-order-only depth). | lens, `gp_house` / `gp_dark` |
 | `gp_hall('door')` | Facing the front door: the stairs coming down on the left, the bench and case on the right. `door` 0..1 or f(t) opens it (night, or `tod='morning'` with the street outside). | lens, `gp_house` / `morning` |
 | `gp_hall('stairs')` | From the foot of the stairs up to the moonlit landing window (`step1/step3/step6`, `landing`). `beam=dict(keys=[(t, 0.92, 1.55)], Y=0.82, aim=(0, 0.45, -1))` = his flashlight in your face (flare). | lens, `gp_dark` |
 | `gp_kitchen('table'\|'chair')` | The kitchen from its doorway / seated across the table: mint cabinets, teapot wallpaper, checker floor, red kettle, amber pendant (`kitchen` level, `sway`), the captain's chair, the mug with spoon and steam, the sugar bowl. `tod='morning'` for the last scenes. | lens, `gp_house` / `morning` |
@@ -49,7 +49,7 @@ variant's anchors (x, y, depth, height of a 1.85 m adult there) and its camera e
 ## Inserts (`insert(name)` or `gp_insert(name)`)
 | insert | prop_kw |
 |---|---|
-| `letter`, `letter_close` | The seven rules in Grandpa's shaky hand on hospital notepaper, the bottom torn off. Rule six is in a neater, colder hand (he changed it). `hl=n` lights rule n, `smear=0..1` makes rule six run, `show=0..7`. |
+| `letter`, `letter_close` | The seven rules in Grandpa's shaky hand on hospital notepaper, the bottom torn off. Rule six is in a neater, colder hand (he changed it). `hl=n` lights rule n (or a tuple, `hla` = their alphas so a band fades in), `bracket=0..1` draws the red pen bracket joining six and seven and underlines both goodnights, `smear=0..1` makes rule six run, `show=0..7`. |
 | `envelope` | 'For whoever is in my house tonight.' taped to the leather lid. |
 | `ps` | The torn P.S., signed 'Walter. The real one.' |
 | `latches` | `latch=0..1` or `(l, r)`: the brass latches flip open. |

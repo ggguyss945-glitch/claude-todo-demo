@@ -1253,7 +1253,11 @@ def _bg(F, sh, name, p):
         lt, gr = (lambda t: NIGHT), 'gp_dark'
     elif name == 'hdoor':
         sp = ST.gp_hall('door', light=p.get('light', 1.0), tod=p.get('tod', 'night'), door=p.get('door', 0.0))
-        lt, gr = ((lambda t: MORNING), 'morning') if p.get('tod') == 'morning' else (house_light(sp.info['hall_light']), 'face_close')
+        mo = p.get('tod') == 'morning'                         # the far plane behind the living-room arch (as B_hdoor)
+        sp = sp.add(Layer(60.0, lambda pen, t, mo=mo: pen.linear(rect(-3000, -2000, 7920, 5080), 0, -2000, 0, 3080,
+                                                                   ['#b8b0a0', '#8a8070'] if mo else ['#1c1a24', '#2a2026']),
+                          'hd_backing', cache='film:hd_backing:%d' % mo, bounds=(-3000, -2000, 4920, 3080)))
+        lt, gr = ((lambda t: MORNING), 'morning') if mo else (house_light(sp.info['hall_light']), 'face_close')
     elif name == 'kitchen':
         sp = _kitchen_set(dict(p, mug=p.get('mug', True)), 'chair')
         lt, gr = house_light(sp.info['kitchen'], side=1), 'face_close'

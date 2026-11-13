@@ -89,7 +89,7 @@ Over the night the painted grin widens and tightens (`grin_w`), the irises shrin
 | 693.8 / 696.9-704.8 | coffee with two sugars; the doorway smile; "See you in the morning, kiddo." | owen_new `hold_mug(sip=[694.0])`, `doorway_smile(697.0, 5.0)`, `talk` (O, lips barely move) |
 
 ## Composites
-- **`draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=...)`** draws three things in order: the person, Mister Winks on the knee top (`lap_anchor`, raised by `lift`), then, with `free_arm=True`, the other arm over him.
+- **`draw_lap(pen, who, x, y_feet, height, pose, dpose, side=1, m=..., three_q=0.42, d_turn=0.4, arm_over=False)`** draws three things in order: the person, Mister Winks on the knee top (`lap_anchor`, raised by `lift`), then, with `free_arm=True`, the other arm over him. Review fix: front-on, a seated person read as standing and the figure as standing beside him; the person is now always staged in 3/4 turned away from the knee (`three_q`, the head keeps most of its own direction), so the thigh runs out under the figure, his legs hang over the knee and the operating arm goes round behind into his back; the figure's body turns along the thigh (`d_turn`, his head keeps its direction). `arm_over=True` draws the operating arm over him (the hand has come out of his back: Owen's "slides his hand out like it's nothing"). `draw_arm` now places a perched figure's arm where `draw` does.
   - Give the person `vent_pose(side)`: the hand on the dummy's side goes into his back and he hides it.
   - Stage them front-on or turned a little toward the dummy (`turn` 0..+0.25 for side +1).
   - `between(pen)` draws a hospital blanket between the person and the dummy.
