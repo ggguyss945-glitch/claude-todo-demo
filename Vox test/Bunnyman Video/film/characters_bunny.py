@@ -696,7 +696,7 @@ def _foot_fill(c, sp, kind, foot, cl, det, P, B, side):
     elif kind == 'boots':
         c.fill(rect(bb.left() - 2, bb.bottom() - 8, bb.width() + 4, 8), mix(sc, '#000000', 0.45))
     elif kind == 'clogs':
-        c.fill(rect(bb.left() - 2, bb.bottom() - 9, bb.width() + 4, 9), mix(sc, '#ffffff', 0.5))
+        c.line(_crescent(foot, 0, -6), c.lw * 0.5, mix(sc, '#000000', 0.25), 200)
     else:
         if cl.get('sole'): c.fill(rect(bb.left() - 2, bb.bottom() - 8, bb.width() + 4, 8), cl['sole'])
         c.glow(bb.centerX() - bb.width() * 0.18, bb.top() + bb.height() * 0.32, bb.width() * 0.3, bb.height() * 0.13, '#ffffff', 40)
@@ -2484,3 +2484,264 @@ def draw_prop3(pen, name, x, y, px_per_cm, angle=0.0, detail=2, t=0.0, pose=None
 def _crayon_page(c, x, y, w, h, det, t, corner=False):
     """Placeholder: replaced by the crayon drawing below."""
     c.shape(rect(x - w / 2, y - h / 2, w, h), '#f6f1e4', c.lw * 0.5)
+
+
+
+# ====================================================================================================== staging tools
+# World-space acting: an Acting that knows where its figure stands (a.place) can look at, reach to and touch points in
+# the same design coordinates its draw() call uses, so eyelines, contacts and props always line up with the set.
+# Targets: (x, y) | callable t -> (x, y) | (other_acting, part) | PropTrack. Parts (Acting.where): 'head', 'eyes',
+# 'eye_l', 'eye_r', 'mouth', 'nose', 'chin', 'crown', 'neck', 'chest', 'belly', 'hip', 'lap', 'knee_l', 'knee_r',
+# 'foot_l', 'foot_r', 'hand_l', 'hand_r' (palm centre), 'wrist_l', 'wrist_r', 'shoulder_l', 'shoulder_r'.
+# Solves run in a post pass, after every clip, the idle life and the breathing, so contact holds on the final pose.
+
+def _acting_raw3(self, t, post=True):
+    tf = self._tmap(t)
+    P = Pose()
+    P.t = t
+    P.mix(self.base); P.mix(EXPR[self.expr0])
+    if self._arc: P.mix(stage_at(tf, self._arc, self.sp.get('stages'), self.sp.get('stage_keys')), 1.0)
+    sd = self.seed * 7 + 3
+    P.breath = 0.5 + 0.45 * math.sin(2 * PI * tf / 3.9 + sd) + 0.08 * noise1(tf * 0.4, sd)
+    for (t0, t1, fn, real) in (self.clips + self.late if self.late else self.clips):
+        tt = t if real else tf
+        if (t0 == -INF or t0 - 1.5 <= tt) and tt <= t1 + 1.5: fn(P, tt)
+    m = self.micro * (1.0 - clamp(P.still))
+    P.h_tilt += 1.7 * m * noise1(tf * 0.21, sd + 1)
+    P.h_turn += 0.035 * m * noise1(tf * 0.16, sd + 2)
+    P.h_nod += 0.03 * m * noise1(tf * 0.19, sd + 3)
+    P.sway += 3.0 * m * noise1(tf * 0.3, sd + 4)
+    P.tilt += 0.5 * m * noise1(tf * 0.13, sd + 5)
+    lf = self.life_k * clamp(P.life)
+    if P.still > 0: P.breath = lerp(P.breath, 0.5 + (0.15 + 0.17 * lf) * math.sin(2 * PI * tf / 4.6 + sd), clamp(P.still))
+    if lf > 0.01: self._life(P, tf, lf, sd)
+    sx, sy = self._saccade(tf)
+    un = (1.0 - clamp(P.lock)) * (1.0 - clamp(P.still)) * (1.0 - clamp(getattr(P, '_gaze', 0.0)))
+    P.look_x += sx * un; P.look_y += sy * un
+    b = self._blink_amt(tf) * (1.0 - clamp(P.still)) * (1.0 - clamp(getattr(P, '_noblink', 0.0)))
+    P.blink = max(P.blink, b)
+    if post:
+        for (t0, t1, fn) in getattr(self, 'post', ()):
+            if t0 - 1.5 <= tf <= t1 + 1.5: fn(P, tf)
+    return P
+
+
+Acting._raw = _acting_raw3
+POSE_DEFAULTS.update(_gaze=0.0)
+
+
+def _acting_place(self, x, y_feet, height=None):
+    """Tell the actor where its figure is drawn (the same x, y_feet, height as the draw() call; pose.dx / dy still move it).
+    Needed by look_at / reach_to / where / the prop and contact clips. Returns self."""
+    self.x0, self.y0 = float(x), float(y_feet)
+    if height is not None: self.height = float(height)
+    return self
+
+
+def _acting_post(self, t0, t1, fn):
+    if not hasattr(self, 'post'): self.post = []
+    self.post.append((t0, INF if t1 is None else t1, fn))
+    return self
+
+
+def _origin(self, P):
+    """(ox, oy, s): design-space origin of the figure's body frame and px per body unit (as draw() places it)."""
+    if not hasattr(self, 'x0'): raise ValueError('Acting.place(x, y_feet, height) first: %s' % self.who)
+    return _place(self.who, P, self.x0, self.y0, self.height)
+
+
+def _head_point(sp, B, P, fx, fy, dz=2.0):
+    """Body-frame 2D point of a face point (front coords fx, fy in head units) as the figure draws its head."""
+    hx, hy, hrot, hs = _head_xf(sp, B, P) if sp.get('v3') or sp.get('bunny') else _head_xf(sp, B, P)
+    yaw = (P.turn + P.h_turn) * PI / 2
+    hm = HeadMap(sp, yaw, P.h_nod * 0.6) if not sp.get('bunny') else BunnyMap(sp, yaw, P.h_nod * 0.6)
+    X, Y, V = hm.map1(fx, fy, dz)
+    a = math.radians(hrot)
+    if sp.get('bunny'): hy += 18.0
+    return hx + (X * math.cos(a) - Y * math.sin(a)) * hs, hy + (X * math.sin(a) + Y * math.cos(a)) * hs
+
+
+def _body_point(self, P, part):
+    """Body-frame 2D point of a named part for pose P."""
+    sp = self.sp; B = Body(sp, P); b = sp['body']
+    if part in ('head', 'eyes', 'eye_l', 'eye_r', 'mouth', 'nose', 'chin', 'crown', 'forehead'):
+        ey = sp['eye_y']
+        fp = {'head': (0, 0), 'eyes': (0, ey), 'eye_l': (sp['eye_dx'], ey), 'eye_r': (-sp['eye_dx'], ey),
+              'mouth': (0, sp['mouth_y']), 'nose': (0, (ey + sp['mouth_y']) * 0.5), 'chin': (0, 112), 'crown': (0, -118),
+              'forehead': (0, -60)}[part]
+        return _head_point(sp, B, P, fp[0], fp[1], 6.0 if part != 'head' else 0.0)
+    if part in ('hand_l', 'hand_r', 'wrist_l', 'wrist_r', 'shoulder_l', 'shoulder_r', 'elbow_l', 'elbow_r'):
+        side = 1 if part.endswith('_l') else -1
+        S, E, W = _arm_data(sp, B, P, side)
+        if part.startswith('shoulder'): X, Y, _, _ = B.p3(*S); return X, Y
+        if part.startswith('elbow'): X, Y, _, _ = B.p3(*E); return X, Y
+        wx, wy, ws, _ = B.p3(*W); ex, ey, _, _ = B.p3(*E)
+        if part.startswith('wrist'): return wx, wy
+        L = math.hypot(wx - ex, wy - ey) or 1.0
+        k = 34.0 * ws * sp['body'].get('hand', 1.0) * sp.get('hand_k', 1.0)
+        return wx + (wx - ex) / L * k, wy + (wy - ey) / L * k
+    if part in ('knee_l', 'knee_r', 'foot_l', 'foot_r'):
+        side = 1 if part.endswith('_l') else -1
+        H, K, A, _ = _leg_chain(sp, B, P, side)
+        Q = K if part.startswith('knee') else A
+        X, Y, _, _ = B.p3(Q[0], Q[1] - B.bob, Q[2], upper=False)
+        return X, Y
+    if part == 'lap':
+        Hl, Kl, _, _ = _leg_chain(sp, B, P, 1); Hr, Kr, _, _ = _leg_chain(sp, B, P, -1)
+        m_ = (Hl + Kl + Hr + Kr) / 4.0
+        X, Y, _, _ = B.p3(m_[0], m_[1] - B.bob - b['leg'][0] * 0.5, m_[2], upper=False)
+        return X, Y
+    y = {'neck': B.y_sh - 30, 'chest': B.y_ch, 'belly': B.y_wa, 'hip': B.y_hip}[part]
+    X, Y, _, _ = B.p3(0, y, b['ch'] * 0.6 if part in ('chest', 'belly') else 0.0, upper=part != 'hip')
+    return X, Y
+
+
+def _acting_where(self, t, part='head', post=True):
+    """Design-space (x, y) of a body part at time t (see the part names above). post=False uses the pose before the
+    contact solves (two actors that reach for each other use it to avoid chasing each other)."""
+    P = self._raw(t, post) if not post else self.at(t)
+    ox, oy, s = _origin(self, P)
+    X, Y = _body_point(self, P, part)
+    return ox + X * s, oy + Y * s
+
+
+def _target_xy(target, t):
+    """Resolve a target at time t: (x, y) | callable | (Acting, part) | PropTrack."""
+    if isinstance(target, PropTrack): return target.pos(t)
+    if callable(target): return target(t)
+    if isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], Acting):
+        return target[0].where(t, target[1], post=False)
+    return target
+
+
+def _world_to_body(self, P, B, wx, wy, z=0.0):
+    """Inverse of the body projection: a design-space point (wx, wy) at camera depth z (body units toward the camera,
+    relative to the body's centre plane) -> body-frame (x, y_in, z) as _arm_data's targets use (y_in without the bob)."""
+    ox, oy, s = _origin(self, P)
+    X = (wx - ox) / s; Y = (wy - oy) / s
+    # undo the 2D tilt and sway about the hips
+    hx, hy = 0.0, B.y_hip + B.bob
+    X -= P.sway
+    dx, dy = X - hx, Y - hy
+    X = hx + dx * B.ctl + dy * B.stl; Y = hy - dx * B.stl + dy * B.ctl
+    sc = B.D / (B.D - z)
+    xc = X / sc; y1 = B.y0c + (Y - B.y0c) / sc
+    x = xc * B.ct - z * B.st; z1 = xc * B.st + z * B.ct
+    yp = B.y_hip + B.bob
+    y1p = y1 - yp
+    dyb = y1p * B.cL - z1 * B.sL; zb = y1p * B.sL + z1 * B.cL
+    return x, yp + dyb - B.bob, zb
+
+
+def _arm_len(sp):
+    ak = sp['body'].get('arm_k', 1.0)
+    return (182.0 + 166.0) * ak
+
+
+def _solve_reach(self, P, side, wx, wy, z, contact, w, lean_ok=True, prop=None):
+    """Blend the arm (side) of pose P toward a design-space target by weight w: the palm centre (contact 'palm'), the
+    fingertips ('tips') or the held prop's grip point ('grip') lands on (wx, wy). Leans the body a little toward targets
+    just out of reach; records misses in self.misses."""
+    if w <= 0.001: return
+    sp = self.sp; pre = 'hl_' if side > 0 else 'hr_'
+    hk = sp['body'].get('hand', 1.0) * sp.get('hand_k', 1.0)
+    off = {'palm': 34.0, 'tips': 62.0, 'wrist': 0.0}.get(contact, 34.0) * hk
+    if contact == 'grip' and prop:
+        how = PROPS3.get(prop, (None, 'upright'))[1]
+        off = (52.0 if how == 'hang' else 36.0) * hk
+        if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): off = 50.0 * hk
+        if prop == 'ring': off = 64.0 * hk
+    L = _arm_len(sp)
+    for it in range(3):
+        B = Body(sp, P)
+        x, y, zz = _world_to_body(self, P, B, wx, wy, z)
+        S = np.array([side * (sp['body']['sh'] - 17), B.y_sh + 20, 0.0])
+        Tgt = np.array([x, y, zz])
+        # direction of the hand: from the current elbow (or the shoulder) toward the target
+        _, E, Wc = _arm_data(sp, B, P, side)
+        d = Tgt - E if it > 0 else Tgt - S
+        n = float(np.linalg.norm(d)) or 1.0
+        Wt = Tgt - d / n * off
+        dist = float(np.linalg.norm(Wt - S))
+        if lean_ok and dist > L * 0.97 and it == 0:
+            k = clamp((dist - L * 0.97) / 260.0)
+            P.lean += 0.32 * k * w * (1.0 if (Tgt[2] > 0 or abs(Tgt[0]) < 60) else 0.4)
+            P.tilt += -side * 6.0 * k * w * (1.0 if abs(Tgt[0]) > 120 else 0.0) * (1 if B.ct >= 0 else -1)
+            continue
+        rel = Wt - S
+        cur = np.array([side * getattr(P, pre + 'out'), getattr(P, pre + 'down'), getattr(P, pre + 'fwd')])
+        tgt = np.array([side * rel[0], rel[1], rel[2]])
+        new = cur + (tgt - cur) * w
+        setattr(P, pre + 'out', float(new[0])); setattr(P, pre + 'down', float(new[1])); setattr(P, pre + 'fwd', float(new[2]))
+        setattr(P, pre + 'up', getattr(P, pre + 'up') * (1.0 - w))
+    if w > 0.98:
+        B = Body(sp, P)
+        _, E, Wr = _arm_data(sp, B, P, side)
+        if float(np.linalg.norm(Wr - Wt)) > 12.0:
+            ms = getattr(self, 'misses', None)
+            if ms is None: self.misses = ms = []
+            if len(ms) < 200: ms.append((round(P.t, 3), side, round(float(np.linalg.norm(Wr - Wt)), 1)))
+
+
+def _acting_look_at(self, t0, target, t1=None, dur=0.4, z=None, body=0.0, head=1.0, fade=0.35, eyes_lead=0.07, max_head=0.85):
+    """Head and eyes look at a target (design point, callable, (actor, part) or PropTrack) from t0 (to t1, None = hold).
+    The eyes get there first (a saccade in eyes_lead s), the head follows with an eased turn over dur, the body turns by
+    `body` (0..1) of the yaw. z = the target's depth toward the camera in body units (None: a little in front of the
+    figure, the usual 2D cheat that keeps both faces in 3/4). Pitch follows the height difference (looking down at a
+    child, up at the stairs)."""
+    def fn(P, t):
+        w_e = _env(t, t0, t1, eyes_lead, fade)
+        w_h = _env(t, t0, t1, dur, fade * 1.4) * head
+        if w_e <= 0.001 and w_h <= 0.001: return
+        tx, ty = _target_xy(target, t)
+        sp = self.sp
+        ox, oy, s = _origin(self, P)
+        B = Body(sp, P)
+        hx, hy, _, _ = _head_xf(sp, B, P)
+        dx = (tx - (ox + hx * s)) / s; dy = (ty - (oy + hy * s)) / s
+        dz = (0.6 * abs(dx) + 60.0) if z is None else float(z)
+        yaw = math.atan2(dx, dz) / (PI / 2)                # quarter turns
+        pitch = math.atan2(dy, math.hypot(dx, max(dz, 1.0)))
+        tot0 = P.turn + P.h_turn
+        if body > 0:
+            P.turn += (yaw - P.turn) * body * w_h
+        want_h = clamp(yaw - P.turn, -max_head, max_head)
+        P.h_turn += (want_h - P.h_turn) * w_h
+        P.h_nod += (clamp(pitch / 0.6 * 0.85, -0.7, 0.8) - P.h_nod) * w_h
+        # eyes: the rest of the angle (they lead, then stay on target while the head arrives)
+        rem_yaw = yaw - (P.turn + P.h_turn)
+        rem_pitch = pitch - P.h_nod * 0.6
+        P.look_x += (clamp(rem_yaw * 1.6, -1.0, 1.0) - P.look_x) * w_e
+        P.look_y += (clamp(rem_pitch * 1.4, -1.0, 1.0) - P.look_y) * w_e
+        P.lock *= (1.0 - w_e)
+        P._gaze = max(getattr(P, '_gaze', 0.0), w_e)
+    return _acting_post(self, t0 - dur, None if t1 is None else t1 + fade * 1.5, fn)
+
+
+def _acting_reach_to(self, t0, side, target, t1=None, dur=0.55, z=0.0, contact='palm', shape='grip', fade=0.45,
+                     antic_k=0.06, prop=None, lean=True, press=None, rot=None):
+    """The hand (side +1 = character's left) reaches a target (design point, callable, (actor, part), PropTrack) by
+    t0 + dur with anticipation and an eased arrival, holds until t1 (None = for good), then returns over fade. contact:
+    'palm' (palm centre on the target), 'tips' (fingertips), 'grip' (the held prop's grip point), 'wrist'. z: the
+    target's depth toward the camera in body units (0 = the figure's own plane; + = in front of it)."""
+    def fn(P, t):
+        u = prog(t, t0, t0 + dur)
+        w_in = settle(u, 0.03) if u > 0 else 0.0
+        if u > 0 and u < 0.3: w_in += antic(u, antic_k) * 0.5 * 0.0
+        w_out = 1.0 if t1 is None else 1.0 - ease_in_out(prog(t, t1, t1 + fade))
+        w = clamp(min(w_in, w_out), 0.0, 1.05)
+        if w <= 0.001: return
+        tx, ty = _target_xy(target, t)
+        pr_ = prop if prop is not None else getattr(P, ('hl_' if side > 0 else 'hr_') + 'prop')
+        _solve_reach(self, P, side, tx, ty, z, contact, min(w, 1.0), lean, pr_)
+        pre = 'hl_' if side > 0 else 'hr_'
+        if shape is not None and w > 0.5: setattr(P, pre + 'shape', shape)
+        if press is not None: setattr(P, pre + 'press', press * min(w, 1.0))
+        if rot is not None: setattr(P, pre + 'rot', getattr(P, pre + 'rot') + rot * min(w, 1.0))
+    return _acting_post(self, t0, None if t1 is None else t1 + fade, fn)
+
+
+Acting.place = _acting_place
+Acting.where = _acting_where
+Acting.look_at = _acting_look_at
+Acting.reach_to = _acting_reach_to
