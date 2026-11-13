@@ -4459,7 +4459,7 @@ def _onset_vis(c):
 
 
 # ------------------------------------------------------------------ voice envelope + word timing (lip sync, v2.1)
-_SCR = os.path.join(_HERE, '_work')                      # this film's work dir W (Dummy Video/film/_work)
+_SCR = os.path.join(_HERE, '_work')                      # this film's work dir W (Bunnyman Video/film/_work)
 VOICE_WAV = os.environ.get('POV2_VOICE_WAV', os.path.join(_SCR, 'align', 'vo_en.wav'))
 VOICE_WORDS = os.environ.get('POV2_VOICE_WORDS', os.path.join(_SCR, 'align', 'asr_cache.json'))
 ENV_FPS = 100.0
@@ -7431,6 +7431,13 @@ def _selftest():
     out.append('all 9 dummy-film cast ids draw in 5 views (full + bust); draw_lap / draw_carry / face_down ok')
     for o_ in out: print(o_)
     print('characters self-test ok')
+
+
+# ---------------------------------------------------------------------------------------- Bunnyman film additions
+# The Bunnyman film's cast and staging tools live in characters_bunny.py, run here in this module's namespace (so they are
+# part of `characters`, see BUNNY_API / CAST.md).
+_BUNNY_SRC = os.path.join(_HERE, 'characters_bunny.py')
+exec(compile(open(_BUNNY_SRC).read(), _BUNNY_SRC, 'exec'))
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:
