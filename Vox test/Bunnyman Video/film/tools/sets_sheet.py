@@ -431,7 +431,8 @@ def frame_check(vs):
             post = dict(sp.fx(t)); post.update(opt.get('post', {}))
             post.pop('vhs', None)                                             # the tube mask is black by design: test the plates
             img = render_frame(list(sp), cam.at(t), t, 0, **kw, post=post, bg='#ff00ff')
-            mag = float(np.mean((img[..., 0] > 200) & (img[..., 1] < 70) & (img[..., 2] > 200)))
+            r_, g_, b_ = (img[..., k].astype(np.int16) for k in range(3))            # magenta, also where it is blended
+            mag = float(np.mean((r_ > 150) & (b_ > 150) & (g_ * 20 < np.minimum(r_, b_) * 9)))
             if mag > worst: worst, wimg, wname = mag, img, cn
         res.append(dict(name=name, worst_hole=round(worst, 5), at=wname, env=env))
         th = wimg[:, :, ::-1].copy()

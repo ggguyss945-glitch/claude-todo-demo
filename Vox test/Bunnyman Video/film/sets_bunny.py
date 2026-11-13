@@ -3266,22 +3266,87 @@ def _console(pen, v):
 
 
 def _coats(pen, v):
-    """Coats on the hooks by the front door: Dad's tan canvas work jacket (still there), Mom's rose cardigan, a scarf."""
-    for (y, col_, kind, L) in ((0.4, '#b8945a', 'jacket', 0.8), (0.62, '#c98aa0', 'cardigan', 0.66), (0.84, '#3a5a7a', 'scarf', 0.85)):
-        x = -1.37
-        top = v.p(x, 1.72, y); s = v.s(x, y)
-        if v.d(x, y) < 0.3: continue
-        w = 0.24 if kind != 'scarf' else 0.08
-        q = [(x, 1.72, y - w * 0.3), (x + 0.04, 1.6, y - w / 2), (x + 0.06, 1.72 - L, y - w / 2 - 0.04), (x + 0.06, 1.72 - L, y + w / 2 + 0.04),
-             (x + 0.04, 1.6, y + w / 2), (x, 1.72, y + w * 0.3)]
-        path = v.poly3(q)
-        c = lit(col_, (x + 0.05, 1.3, y), (1, 0, 0))
-        pen.fill(path, c); pen.line(path, 1.1)
+    """Coats on the hooks by the front door (on the hall's west wall, x -1.4): Dad's tan canvas work jacket (still there:
+    collar, sleeves hanging at its sides, the open front, a pocket), Mom's rose cardigan (buttons, ribbed hem), June's
+    knitted scarf looped over the last hook with its two fringed tails. Drawn as shapes hanging off the wall (they bulge a
+    few cm out at the middle) and lit by the hall's light; the brass hooks above them."""
+    X0 = -1.4
+    Yh = 1.72
+
+    def off(dY, bulge):                                   # how far the cloth stands off the wall at dY below the hook
+        u = clamp(-dY / 0.25)
+        return 0.012 + bulge * (0.35 + 0.65 * u)
+
+    def shape(y0, pts, bulge, smooth_k=0.6):
+        P3 = [(X0 + off(dY, bulge), Yh + dY, y0 + du) for (du, dY) in pts]
+        q = _clip_near3(v, P3)
+        if len(q) < 3: return None
+        return smooth([v.p(*a) for a in q], True, smooth_k)
+
+    def strip(y0, pts, bulge):
+        return poly([v.p(X0 + off(dY, bulge), Yh + dY, y0 + du) for (du, dY) in pts], False)
+
+    def sides(y0, w, L, bulge, c):                       # the cloth's thickness off the wall (reads at grazing angles)
+        for sd in (-1, 1):
+            P3 = [(X0, Yh - 0.03, y0 + sd * w * 0.5)] + [(X0 + off(dY, bulge), Yh + dY, y0 + sd * w) for dY in (-0.1, -0.25, -0.45, -L)] + \
+                 [(X0, Yh - L, y0 + sd * w)]
+            q = _clip_near3(v, P3)
+            if len(q) >= 3:
+                sp_ = poly([v.p(*a_) for a_ in q]); pen.fill(sp_, c); pen.line(sp_, lw * 0.7)
+    lw = clamp(0.011 * v.S / max(0.5, v.d(X0, 0.6)), 0.7, 2.6)
+    for (y0, kind) in ((0.4, 'jacket'), (0.64, 'cardigan'), (0.86, 'scarf')):
+        if v.d(X0 + 0.05, y0) < 0.35: continue
+        P = (X0 + 0.05, 1.3, y0)
         if kind == 'jacket':
-            mid = v.poly3([(x + 0.06, 1.5, y), (x + 0.065, 1.72 - L, y)], closed=False)
-            pen.line(mid, 0.8, '#3a2a14', 160)
-            col2 = v.poly3([(x + 0.05, 1.68, y - 0.09), (x + 0.07, 1.55, y - 0.02), (x + 0.07, 1.55, y + 0.02), (x + 0.05, 1.68, y + 0.09)])
-            pen.fill(col2, lit('#6a4a2a', (x, 1.6, y), (1, 0, 0)))
+            base, dark = lit('#b8945a', P, (1, 0, 0)), lit('#7a5e34', P, (1, 0, 0))
+            L = 0.82
+            sides(y0, 0.13, L, 0.13, lit('#5e4428', P, (1, 0, 0)))
+            for sd in (-1, 1):                            # the sleeves, behind the body's edges
+                sl = shape(y0, [(sd * 0.09, -0.08), (sd * 0.145, -0.16), (sd * 0.16, -0.52), (sd * 0.13, -0.6), (sd * 0.1, -0.57), (sd * 0.095, -0.2)], 0.1)
+                if sl is not None: pen.fill(sl, dark); pen.line(sl, lw * 0.8)
+            body = shape(y0, [(-0.025, 0.0), (-0.1, -0.07), (-0.125, -0.2), (-0.13, -L + 0.02), (-0.06, -L), (0.06, -L), (0.13, -L + 0.02),
+                              (0.125, -0.2), (0.1, -0.07), (0.025, 0.0)], 0.13)
+            if body is None: continue
+            pen.fill(body, base)
+            pen.linear(body, *v.p(X0, Yh, y0 - 0.13), *v.p(X0, Yh, y0 + 0.13), [(0, '#000000', 60), (0.35, '#000000', 0), (0.7, '#ffffff', 20), (1, '#000000', 50)])
+            pen.line(strip(y0, [(0.0, -0.1), (0.005, -0.4), (0.0, -L + 0.005)], 0.13), lw * 0.8, '#3a2a14', 190)     # the open front
+            col = shape(y0, [(-0.03, 0.0), (-0.1, -0.06), (-0.06, -0.15), (0.0, -0.1), (0.06, -0.15), (0.1, -0.06), (0.03, 0.0)], 0.135)
+            if col is not None: pen.fill(col, lit('#6a4a2a', P, (1, 0, 0))); pen.line(col, lw * 0.7)
+            pk = shape(y0, [(0.03, -0.5), (0.1, -0.5), (0.1, -0.62), (0.03, -0.62)], 0.13, 0.2)
+            if pk is not None: pen.line(pk, lw * 0.7, '#3a2a14', 170)
+            pen.line(body, lw)
+        elif kind == 'cardigan':
+            base, dark = lit('#c98a9a', P, (1, 0, 0)), lit('#9c6470', P, (1, 0, 0))
+            L = 0.64
+            sides(y0, 0.11, L, 0.09, lit('#7a4a56', P, (1, 0, 0)))
+            for sd in (-1, 1):
+                sl = shape(y0, [(sd * 0.07, -0.06), (sd * 0.12, -0.13), (sd * 0.13, -0.5), (sd * 0.1, -0.55), (sd * 0.08, -0.5), (sd * 0.075, -0.16)], 0.07)
+                if sl is not None: pen.fill(sl, dark); pen.line(sl, lw * 0.8)
+            body = shape(y0, [(-0.02, 0.0), (-0.085, -0.06), (-0.105, -0.18), (-0.11, -L), (0.11, -L), (0.105, -0.18), (0.085, -0.06), (0.02, 0.0)], 0.09)
+            if body is None: continue
+            pen.fill(body, base)
+            pen.linear(body, *v.p(X0, Yh, y0 - 0.11), *v.p(X0, Yh, y0 + 0.11), [(0, '#000000', 50), (0.4, '#000000', 0), (1, '#000000', 40)])
+            hem = shape(y0, [(-0.11, -L + 0.06), (0.11, -L + 0.06), (0.11, -L), (-0.11, -L)], 0.09, 0.2)
+            if hem is not None: pen.fill(hem, dark, 200)
+            pen.line(strip(y0, [(0.0, -0.06), (0.0, -L)], 0.09), lw * 0.7, dark)
+            for k in range(5):
+                bx, by = v.p(X0 + off(-0.12 - k * 0.1, 0.09) + 0.004, Yh - 0.12 - k * 0.1, y0 + 0.012)
+                pen.fill(oval(bx, by, max(1.0, 0.009 * v.s(X0, y0))), lit('#f3ece0', P, (1, 0, 0)))
+            pen.line(body, lw)
+        else:                                             # the scarf over the hook: two tails, stripes, fringe
+            base, st = lit('#3a5a7a', P, (1, 0, 0)), lit('#e8d8a0', P, (1, 0, 0))
+            for (du, L) in ((-0.035, 0.84), (0.035, 0.64)):
+                tail = shape(y0, [(du - 0.03, 0.0), (du + 0.03, 0.0), (du + 0.045, -L), (du - 0.015, -L)], 0.03, 0.3)
+                if tail is None: continue
+                pen.fill(tail, base)
+                for k in range(1, int(L / 0.12)):
+                    pen.line(strip(y0, [(du - 0.028 + 0.002 * k, -k * 0.12), (du + 0.032 + 0.002 * k, -k * 0.12)], 0.03), lw * 1.6, st, 200)
+                for f in range(5):
+                    fx = du - 0.012 + f * 0.012
+                    pen.line(strip(y0, [(fx, -L), (fx + 0.003, -L - 0.05)], 0.03), lw * 0.7, base)
+                pen.line(tail, lw * 0.9)
+        hx, hy = v.p(X0 + 0.015, Yh + 0.02, y0)
+        pen.fill(oval(hx, hy, max(1.5, 0.012 * v.s(X0, y0))), lit('#c8a24a', P, (1, 0, 0))); pen.line(oval(hx, hy, max(1.5, 0.012 * v.s(X0, y0))), lw * 0.6)
 
 
 # ---------------------------------------------------------------------------------------------- the outside through the windows
@@ -3360,7 +3425,8 @@ def burn_barrel(pen, v, x=None, y=None, fire=0.0, t=0.0, egg=None, tod='night'):
     bot = ellipse3(v, x, y, r, r, Yb)
     tb, bb = _rb(top), _rb(bot)
     body = union(poly([(tb[0], (tb[1] + tb[3]) / 2), (tb[2], (tb[1] + tb[3]) / 2), (bb[2], (bb[1] + bb[3]) / 2), (bb[0], (bb[1] + bb[3]) / 2)]), bot)
-    rust = lit('#7a4a2e', (x, 0.6, y), None, 1.1)
+    nx_, ny_ = v.hx - x, v.hy - y; nn_ = math.hypot(nx_, ny_) or 1.0
+    rust = lit('#7a4a2e', (x, 0.6, y), (nx_ / nn_, 0.0, ny_ / nn_), 1.1)       # the side facing us (the fire is inside, above it)
     pen.fill(body, rust); pen.texture(body, 'grunge', 0.7, 'overlay', 1.0)
     pen.linear(body, bb[0], 0, bb[2], 0, [(0, '#000000', 120), (0.35, '#000000', 0), (0.7, '#000000', 30), (1, '#000000', 140)])
     for Yr in (Yb + 0.25, Yb + 0.6):                                    # rolling hoops
@@ -3378,27 +3444,44 @@ def burn_barrel(pen, v, x=None, y=None, fire=0.0, t=0.0, egg=None, tod='night'):
         _flames(pen, v, x, y, Yb + H, r, fire, t, egg)
 
 
-def _flames(pen, v, x, y, Ytop, r, k, t, egg=None):
-    """Flames licking out of the barrel (layered teardrops flickering with noise), sparks, a warm glow."""
+def _flames(pen, v, x, y, Ytop, r, k, t, egg=None, gap=0.2, egg_r=0.075, egg_fn=None):
+    """Fire in the burn barrel: smoke rolling up behind, three ranks of flame tongues (deep red and tall at the back, orange,
+    a pale yellow core) each shaded from a hot base to a thin dark tip, leaning and curling with noise, the white-hot glow at
+    the mouth, sparks drifting up. k = how big the fire is (0..1)."""
+    if k <= 0.01: return
     s = v.s(x, y)
     cx, cy = v.p(x, Ytop, y)
-    pen.radial(None, cx, cy - 0.3 * s, 1.6 * s, [(0, '#ff9a3a', 90 * k), (1, '#ff9a3a', 0)], clip=False)
-    if egg is not None:
-        _melting_egg(pen, cx, cy - 0.02 * s, 0.07 * s, egg, t)
-    for layer_, (col_, wk, hk) in enumerate((('#c83a14', 1.0, 1.0), ('#ff8a24', 0.75, 0.82), ('#ffd36a', 0.45, 0.6))):
-        for i in range(5):
-            ph = t * (2.2 + 0.4 * i) + i * 1.7
-            fx = cx + (i - 2) * r * 0.32 * s + 0.04 * s * noise1(ph, i + layer_ * 7)
-            hh = (0.28 + 0.16 * (0.5 + 0.5 * noise1(ph * 1.3, i + 3))) * s * hk * k
-            ww = r * 0.36 * s * wk
-            lean = 0.06 * s * noise1(ph * 0.8, i + 11)
-            fl = smooth([(fx - ww, cy), (fx - ww * 0.6, cy - hh * 0.45), (fx + lean, cy - hh), (fx + ww * 0.6, cy - hh * 0.45), (fx + ww, cy)], True, 0.8)
-            pen.fill(fl, col_, 235)
-    for i in range(10):                                                 # sparks
+    for i in range(7):                                                  # smoke
+        ph = (t * 0.22 + i / 7.0) % 1.0
+        rr = (0.1 + 0.32 * ph) * s
+        sx_ = cx + 0.1 * s * noise1(t * 0.3 + i, 21) + ph * 0.3 * s
+        sy_ = cy - (0.45 + ph * 1.7) * s
+        pen.fill(oval(sx_, sy_, rr, rr * 0.8), '#1c1816', 80 * math.sin(math.pi * ph) * k, blur=rr * 0.6)
+    pen.radial(None, cx, cy - 0.3 * s, 1.7 * s, [(0, '#ff9a3a', 95 * k), (0.5, '#ff7a2a', 30 * k), (1, '#ff9a3a', 0)], clip=False)
+    ranks = (('#7a1606', '#e2501a', 1.0, 1.2, 6), ('#c8400e', '#ff9a2c', 0.72, 0.92, 6), ('#ff8a24', '#fff2b0', 0.4, 0.62, 4))
+    for layer_, (c_tip, c_base, wk, hk, n) in enumerate(ranks):
+        if layer_ == 1 and egg is not None:                            # the egg sits on the burning trash, in front of the
+            if egg_fn is not None: egg_fn(pen, cx, cy - 0.05 * s, egg_r * s)   # back flames; the front ranks part around it
+            else: _melting_egg(pen, cx, cy - 0.05 * s, egg_r * s, egg, t)
+        for i in range(n):
+            ph = t * (2.6 + 0.45 * i + 0.3 * layer_) + i * 1.7 + layer_ * 3.1
+            u = (i + 0.5) / n - 0.5
+            if egg is not None and layer_ >= 1 and abs(u) < gap: continue
+            fx = cx + u * r * 1.75 * s * (1 - 0.25 * layer_) + 0.03 * s * noise1(ph, i + layer_ * 7)
+            hh = (0.2 + 0.24 * (0.5 + 0.5 * noise1(ph * 1.3, i + 3))) * s * hk * k * (1 - 0.55 * abs(u))
+            ww = r * 0.42 * s * wk * (1 - 0.3 * abs(u))
+            lean = 0.08 * s * noise1(ph * 0.8, i + 11)
+            curl = 0.045 * s * noise1(ph * 2.1, i + 19)
+            fl = smooth([(fx - ww, cy + 0.015 * s), (fx - ww * 0.8, cy - hh * 0.3), (fx - ww * 0.32 + lean * 0.5, cy - hh * 0.68),
+                         (fx + lean + curl, cy - hh), (fx + ww * 0.28 + lean * 0.5, cy - hh * 0.62), (fx + ww * 0.8, cy - hh * 0.3),
+                         (fx + ww, cy + 0.015 * s)], True, 0.8)
+            pen.linear(fl, fx, cy, fx, cy - hh, [(0, c_base, 245), (0.5, mix(c_base, c_tip, 0.55), 225), (1, c_tip, 110)])
+    pen.radial(None, cx, cy, 0.34 * s, [(0, '#fff6d0', 210 * k), (0.6, '#ffb050', 90 * k), (1, '#ff9a3a', 0)], sy=0.32, clip=False)
+    for i in range(12):                                                 # sparks
         ph = (t * 0.7 + i * 0.137) % 1.0
-        sx_ = cx + (i - 5) * 0.03 * s + 0.1 * s * noise1(t + i, 9)
-        sy_ = cy - (0.3 + ph * 1.2) * s
-        pen.fill(oval(sx_, sy_, max(0.8, 0.006 * s)), '#ffcf7a', 255 * (1 - ph) * k)
+        sx_ = cx + (i - 6) * 0.03 * s + 0.12 * s * noise1(t * 0.8 + i, 9)
+        sy_ = cy - (0.3 + ph * 1.3) * s
+        pen.fill(oval(sx_, sy_, max(0.8, 0.006 * s)), '#ffd88a', 255 * (1 - ph) * k)
 
 
 def _melting_egg(pen, x, y, r, melt, t):
@@ -4236,8 +4319,8 @@ class Bathroom(Room):
         S = {}
         tY = Y0 + 0.08                                            # the tub floor
         S['tub_left'] = _mk_spot(v, 'tub_left', TUB.cx - 0.42, TUB.cy, tY, 'seat', 'sitting IN the tub (the narrator), facing the door: feet on the tub floor',
-                                 face=(0, -1), seat_Y=0.0)
-        S['tub_right'] = _mk_spot(v, 'tub_right', TUB.cx + 0.32, TUB.cy, tY, 'seat', 'sitting in the tub (June)', face=(0, -1), seat_Y=0.0)
+                                 face=(0, -1), seat_Y=0.0, legs_hidden=True)
+        S['tub_right'] = _mk_spot(v, 'tub_right', TUB.cx + 0.32, TUB.cy, tY, 'seat', 'sitting in the tub (June)', face=(0, -1), seat_Y=0.0, legs_hidden=True)
         S['door_inside'] = _mk_spot(v, 'door_inside', -1.62, 6.15, Y0, 'stand', 'inside, at the door (locking it): face (0, -1)', face=(0, -1))
         S['lock'] = _mk_spot(v, 'lock', D_BATH[1] - 0.075, Y0 + KNOB_Y + 0.17, 5.84, 'point', 'the little thumb-turn bolt (inside)')
         S['knob'] = _mk_spot(v, 'knob', D_BATH[1] - 0.075, Y0 + KNOB_Y, 5.84, 'point', 'the knob (inside): it turns gently')
@@ -4805,10 +4888,24 @@ def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0
             if slam is not None and t >= slam: jolt = 0.012 * math.exp(-(t - slam) * 9.0) * math.cos((t - slam) * 60)
             bd = bath_door_leaf(lock=_val_t(lock, t), knob_turn=_val_t(knob, t))
             bd.hinge = (bd.hinge[0], bd.hinge[1] + jolt)
+            if abs(ang) < 1.0:                              # the floor beyond the gap, in the door's own layer (no parallax
+                gl = clamp(_val_t(gap, t))                  # hole under the door when the camera drifts)
+                q = _clip_near3(v_, [(D_BATH[0] - 0.02, UP_Y - 0.01, 5.8), (D_BATH[1] + 0.02, UP_Y - 0.01, 5.8),
+                                     (D_BATH[1] + 0.02, UP_Y + 0.06, 5.8), (D_BATH[0] - 0.02, UP_Y + 0.06, 5.8)])
+                if len(q) >= 3: pen.fill(poly([v_.p(*p3) for p3 in q]), mix('#0a0806', gc, 0.85 * gl))
             bd.draw(pen, v_, ang)
         sp_dyn.append(live_layer('door', v, (-1.62, UP_Y + 1.0, 5.85), door_fn, amb, steady, var))
     sp = build_view('ob_bath_' + view, v, main, o, far=[UpstairsHall()], outside=None, grade='ob_dawn' if tod == 'dawn' else 'ob_dark', dyn=sp_dyn,
-                    focus=(v.d(-1.62, 5.8) if view in ('gap', 'lock', 'door') else None), dof=(2.5 if view in ('gap', 'lock') else 0.8))
+                    focus=(v.d(-1.62, 5.8) if view in ('gap', 'lock', 'door') else None), dof=(2.5 if view in ('gap', 'lock') else 0.8),
+                    cover=((-330, -400, 2250, 1310) if view == 'gap' else None))
+    # parallax backfill: the floor by the door again as a plate at the door's depth, drawn just BEHIND the shell. The shell is
+    # one plate at the room's mid depth, so a camera drift slides it off the far end of the floor; this fills that sliver.
+    dbf = v.d(-1.62, 6.1)
+    if dbf > v.near + 0.3:
+        x0b, x1b = D_BATH[0] - 0.45, D_BATH[1] + 0.45
+        bf = lambda pen: floor_rect(pen, v, x0b, x1b, 5.8, 6.5, UP_Y, '#f2efe6', 'hex', '#1a1a1a', '#f2efe6', seed=51)
+        sp = sp.add(*blit(dbf, bf, 'door_floor_backfill', 'ob:ob_bath_%s:%s:backfill' % (view, _okey(o)), FRAME, amb, steady, var,
+                          order=ORDER_SHELL + 0.5))
     if slam is not None: sp.info['slam'] = slam
     return sp
 
@@ -5446,7 +5543,7 @@ def ob_front(view='house', tod='night', front_light=1.0, egg=False, police=None,
     if view == 'peephole': grade = 'porch_warm'
     if police and view != 'peephole': grade = 'ob_police'
     sp = build_view('ob_front_' + view, v, main, o, outside=None, lens=lens, grade=grade, dyn=dynl,
-                    cover=(PEEP if view == 'peephole' else None), focus=(v.d(FD_CX, -0.36) if view in ('egg', 'peephole') else None),
+                    cover=(PEEP if view == 'peephole' else ((-330, -480, 2250, 1310) if view == 'egg' else None)), focus=(v.d(FD_CX, -0.36) if view in ('egg', 'peephole') else None),
                     dof=(2.0 if view == 'egg' else 0.6))
     if police:
         sp._fx = lambda t: {'flash': police_flash(t, 0.5 * police['strength'], police['speed'], police['mode'])}
@@ -6973,6 +7070,56 @@ def _ins_lock(pen, t, lock=1.0, key=0.0, knob=0.0, **kw):
     pen.fill(rect(-400, 1060, 2720, 30), '#ffc070', 200)
 
 
+class _FlatView:
+    """A stand-in view for drawing a set prop big in an insert: a fixed scale (px per metre) about one screen point."""
+    def __init__(self, cx, cy, ppm): self.cx, self.cy, self.ppm = cx, cy, ppm
+    def s(self, x, y): return self.ppm
+    def p(self, x, Y, y): return (self.cx, self.cy)
+
+
+def _ins_egg_fire(pen, t, melt=0.4, k=1.0, **kw):
+    """The Pemberton's egg melting in the burn barrel, close and looking a little down into it: the far half of the rusty lip,
+    the burning trash glowing in the dark mouth, the egg (the insert egg) sagging, blistering and charring from the bottom
+    (melt 0..1 or f(t)) with the yard set's flames rising behind and beside it, the near lip and the barrel's side in front."""
+    m = clamp(melt(t) if callable(melt) else melt)
+    pen.fill(rect(-400, -300, 2720, 1680), '#0a080c')
+    pen.radial(None, 960, 600, 1250, [(0, '#3a1a0c', 255), (0.6, '#140a0a', 255), (1, '#0a080c', 255)])
+    cx, cy, rx, ry = 960, 760, 840, 230
+    outer, inner = oval(cx, cy, rx, ry), oval(cx, cy + 6, rx - 44, ry - 24)
+    lip = minus(outer, inner)
+    far = inter(lip, rect(cx - rx - 10, cy - ry - 10, 2 * rx + 20, ry + 10))
+    near = inter(lip, rect(cx - rx - 10, cy, 2 * rx + 20, ry + 10))
+    side = minus(rect(cx - rx, cy, 2 * rx, 700), outer)
+    pen.fill(far, '#3a2014'); pen.radial(far, cx, cy - ry, rx, [(0, '#ff9a48', 150 * k), (1, '#2a140c', 0)])
+    pen.fill(inner, '#160a06')
+    pen.radial(inner, cx, cy + 30, rx, [(0, '#ff8a30', 170 * k), (0.45, '#a03a10', 90 * k), (1, '#160a06', 0)], sy=0.3)
+    for i in range(14):                                                 # charred trash in the glow
+        a_ = i * 2.4
+        px_, py_ = cx + math.cos(a_) * rx * 0.6 * (0.3 + 0.7 * ((i * 37) % 10) / 10), cy + 40 + math.sin(a_) * ry * 0.35
+        tr_ = _blob(px_, py_, 50, 22, 7, i, 0.4)
+        pen.fill(tr_, '#1a0c08', 220); pen.line(tr_, 3, '#ff8a3a', 120 * k)
+
+    def egg_fn(pen_, ex, ey, er):
+        cv = pen_.cv
+        cv.save(); cv.translate(ex, ey - er * 0.9 * (1 - 0.35 * m)); cv.scale(1 + 0.25 * m, 1 - 0.35 * m)
+        draw_egg(pen_, 0, 0, er * 2.3, rot=-80 + 10 * m, shine=m < 0.35)
+        cv.restore()
+        body = oval(ex, ey - er * 0.9 * (1 - 0.35 * m), er * 1.25 * (1 + 0.25 * m), er * 0.95 * (1 - 0.35 * m))
+        pen_.linear(body, 0, ey - er * 1.6, 0, ey, [(0, '#000000', 0), (max(0.05, 0.75 - 0.6 * m), '#000000', 0), (1, '#160806', 235 * m)])
+        pen_.radial(body, ex - er * 0.4, ey - er, er * 2.2, [(0, '#ffb070', 0), (1, '#ff7a2a', 90)])           # firelight on it
+        for j, (fx_, fl_) in enumerate(((-0.72, 0.7), (0.48, 1.0), (0.05, 0.45))[:int(1 + 2.5 * m)]):
+            dx = fx_ * er                                                   # drips of melted plastic (irregular)
+            pen_.fill(smooth([(ex + dx - er * 0.14, ey - er * 0.12), (ex + dx - er * 0.02, ey + er * (0.15 + 0.4 * m) * fl_),
+                              (ex + dx + er * 0.03, ey + er * (0.1 + 0.3 * m) * fl_), (ex + dx + er * 0.12, ey - er * 0.12)], True, 0.9), '#4a1e26', 230)
+        for (bx_, by_, bs_) in ((0.58, -0.28, 1.0), (-0.34, -0.12, 0.7), (0.12, -0.58, 0.55), (-0.7, -0.48, 0.8), (0.36, -0.02, 0.6))[:int(5 * m)]:
+            bx, by = ex + bx_ * er, ey + by_ * er                           # blisters, scattered over the lower half
+            pen_.fill(_blob(bx, by, er * 0.13 * bs_, er * 0.08 * bs_, 7, int(bx), 0.35), '#2a1012', 190)
+    _flames(pen, _FlatView(cx, cy + 40, 1500.0), 0.0, 0.0, 0.0, 0.36, k, t, egg=m, gap=0.36, egg_r=0.1, egg_fn=egg_fn)
+    pen.fill(side, '#2a160e'); pen.texture(side, 'grunge', 0.9, 'overlay', 1.4)
+    pen.linear(side, cx - rx, 0, cx + rx, 0, [(0, '#000000', 200), (0.3, '#000000', 40), (0.7, '#000000', 60), (1, '#000000', 200)])
+    pen.fill(near, '#5a3420'); pen.linear(near, 0, cy, 0, cy + ry, [(0, '#ffb060', 170 * k), (1, '#3a1a0c', 40)])
+    pen.line(outer, 4, '#120806'); pen.line(inner, 3, '#120806', 200)
+
 def _bg_plain(c1, c2):
     return lambda pen, t: pen.linear(rect(-700, -500, 3320, 2080), 0, -500, 0, 1580, [c1, c2])
 
@@ -6983,6 +7130,7 @@ INSERTS_B = {
     'egg': (lambda pen, t, **kw: _ins_egg(pen, t, 'whole', **kw), 'ins_lamp', 'the Pemberton\'s egg on the doormat (rattle=f(t))'),
     'egg_halves': (lambda pen, t, **kw: _ins_egg(pen, t, 'halves', **kw), 'ins_lamp', 'the egg opened: the two halves, Dad\'s ring rolling inside (k_open)'),
     'egg_gold': (lambda pen, t, **kw: _ins_egg(pen, t, 'whole', gold=True, bg='dark', **kw), 'ins_dawn', 'the golden egg Laurie carried out of the woods'),
+    'egg_fire': (_ins_egg_fire, 'ins_dark', 'the egg melting in the burn barrel (melt 0..1 or f(t))'),
     'ring': (_ins_ring, 'ins_lamp', 'the gold ring on the narrator\'s palm (view palm | inside)'),
     'ring_inside': (lambda pen, t, **kw: _ins_ring(pen, t, 'inside', **kw), 'ins_lamp', 'M and L, forever: engraved inside the band'),
     'diary': (lambda pen, t, **kw: _ins_diary(pen, t, 'closed', **kw), 'ins_lamp', 'the diary: pink plastic lock, Laurie Price, age seven'),
@@ -7230,7 +7378,7 @@ def stage_figure(sp, who, spot, act=None, turn=None, seed=1, expr='neutral', nam
     tr = s.turn if turn is None else turn
     if tr is not None: a.face(tr)
     if act == 'seat':
-        if tr is not None and abs(tr) < 0.45:
+        if tr is not None and abs(tr) < 0.4 and not s.extra.get('legs_hidden'):
             import warnings
             warnings.warn('stage_figure: %s seated at %r is seen nearly front-on (turn %.2f): it reads as standing; use a view '
                           'where the seat is at |turn| >= 0.5 (liv_wide2 / liv_couch for the couch)' % (who, spot, tr))

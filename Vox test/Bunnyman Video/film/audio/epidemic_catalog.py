@@ -1,6 +1,18 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
+    python3 epidemic_catalog.py --bunny               THIS film (the Bunnyman): writes audio/catalog_epidemic_bunny.json
+                                                      from all five sets, in this order (first set wins on duplicates):
+                                                      W/samples/epidemic (the bunny set: 70 mp3 effects, parade crowds,
+                                                      knuckle knocks, glass, door kick-ins, axes, fights, bones, fire,
+                                                      plastic boxes, rings, coins, books, music boxes, owls, hospital
+                                                      ambiences; 10 tracks), then epidemic_dummy, epidemic_delivery,
+                                                      epidemic_police, epidemic_mirror (symlinks to the earlier films'
+                                                      folders, read only). Rows of W/catalog_bunny_new.json (the first
+                                                      analysis of the bunny set) and of audio/catalog_epidemic_dummy.json /
+                                                      catalog_epidemic_delivery.json whose file is unchanged (same set,
+                                                      slug and size) are reused, so a rebuild only recomputes `serves`
+                                                      (--no-reuse analyses everything again)
     python3 epidemic_catalog.py --dummy               THIS film (the ventriloquist dummy): writes
                                                       audio/catalog_epidemic_dummy.json from all four sets, in this order
                                                       (first set wins on duplicates): W/samples/epidemic (the dummy set:
@@ -46,6 +58,13 @@ DUMMY_SETS = [('dummy', os.path.join(W, 'samples', 'epidemic')),
               ('police', os.path.join(W, 'samples', 'epidemic_police')),
               ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 DUMMY_OUT = os.path.join(HERE, 'catalog_epidemic_dummy.json')
+BUNNY_SETS = [('bunny', os.path.join(W, 'samples', 'epidemic')),
+              ('dummy', os.path.join(W, 'samples', 'epidemic_dummy')),
+              ('delivery', os.path.join(W, 'samples', 'epidemic_delivery')),
+              ('police', os.path.join(W, 'samples', 'epidemic_police')),
+              ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
+BUNNY_OUT = os.path.join(HERE, 'catalog_epidemic_bunny.json')
+BUNNY_FIRST = os.path.join(W, 'catalog_bunny_new.json')          # the first analysis of the bunny set (reused)
 AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
@@ -160,7 +179,63 @@ MAP = {
     'hospital_tone': [['room_tone']],
     'museum_tone': [['room_tone']],
     'keys_jangle': [['keys_jingle'], ['keys', 'jingle']],
+    # ---- the Bunnyman film (sfx.py BUNNY_NAMES): the bunny set first (W/samples/epidemic), the earlier sets as layers.
+    # Files the review rejected (_work/mix/sfx_review.md: the toddler boy crying, the metal-staircase body falls, the
+    # horse-racing crowd with its PA music, the metal valve door) are mapped to no bunny name.
+    'ambience_woods': [['tawny_owl'], ['ambience', 'suburban', 'night', 'crickets'], ['ambience', 'rural', 'night'],
+                       ['forest', 'night', 'crickets']],
+    'owl_hoot': [['tawny_owl']],
+    'crowd_parade': [['crowds', 'norwegian_constitution_day'], ['crowds', 'cheltenham', 'parade_ring'],
+                     ['crowds', 'children', 'cheering'], ['laughter', 'applause']],
+    'hospital_corridor': [['hospital', 'corridor']],
+    'hospital_room': [['hospital', 'corridor', 'walla_doors'], ['room_tone']],
+    'burn_barrel': [['fire', 'crackle'], ['fire', 'burst']],
+    'plastic_melt': [['fire', 'sizzling'], ['fire', 'burst'], ['fire', 'crackle', 'embers']],
+    'egg_tap': [['knock', 'knuckles'], ['plastic_box', 'small', 'open']],
+    'egg_set': [['egg', 'take_out'], ['plastic_box', 'small'], ['plastic', 'food_box']],
+    'egg_rattle': [['plastic_lunch_box'], ['plastic', 'food_box'], ['ring', 'drop'], ['coin', 'roll']],
+    'egg_open': [['plastic_box', 'small', 'open'], ['plastic_lunch_box'], ['thermometer', 'plastic_case'],
+                 ['plastic', 'food_box'], ['egg', 'take_out']],
+    'ring_roll': [['coin', 'roll'], ['ring', 'drop']],
+    'ring_drop': [['ring', 'drop'], ['shell', 'drop'], ['coin', 'roll', 'glass']],
+    'ring_hand': [['ring', 'drop'], ['keys', 'jingle'], ['cloth', 'handle']],
+    'oven_mitt': [['cloth', 'handle'], ['cloth', 'wipe'], ['couch', 'wipe']],
+    'knock_family': [['knock', 'knuckles']],
+    'slot_flap': [['mailbox'], ['metal_click'], ['flightcase', 'latch']],
+    'attic_door': [['doors_creak', 'wooden'], ['cabinet', 'door_impact'], ['doors', 'wood', 'impact', 'light_door']],
+    'bulb': [['metal_click'], ['flashlight', 'switch'], ['static_analog', 'buzz']],
+    'chest_lid': [['wooden_box', 'lid'], ['briefcase', 'open'], ['doors_creak', 'wooden'], ['shoe_box', 'lid']],
+    'page_flip': [['book', 'flip_page'], ['paper', 'handle']],
+    'diary_lock': [['plastic_box', 'small', 'open'], ['thermometer', 'plastic_case'], ['metal_click']],
+    'window_smash': [['glass', 'break']],
+    'door_crash': [['doors', 'wood', 'kick'], ['cabinet', 'door_impact'], ['doors', 'wood', 'impact', 'light_door']],
+    'wet_drag': [['chair', 'drag'], ['furniture', 'chair', 'drag'], ['cardboard', 'drag'], ['plastic_tub', 'drag']],
+    'hatchet_step': [['axe', 'scrape'], ['wood', 'chopping'], ['hand_axe', 'hit'], ['footsteps', 'creaky'],
+                     ['footsteps', 'wood', 'heavy']],
+    'doorknob': [['mortise_lock'], ['deadbolt'], ['lock_entrance']],
+    'paper_under_door': [['paper', 'handle'], ['paper', 'rustl']],
+    'struggle': [['fight', 'grab'], ['fight', 'push'], ['efforts', 'male', 'fight'], ['cabinet', 'door_impact'],
+                 ['gore', 'bone'], ['doors', 'wood', 'impact']],
+    'bone_crack': [['gore', 'bone']],
+    'key_outside': [['deadbolt'], ['mortise_lock'], ['lock_entrance'], ['keys', 'jingle']],
+    'sirens_arrive': [['siren']],
+    'vhs_pause': [['vhs']],
+    'light_switch': [['flashlight', 'switch'], ['metal_click'], ['ui_buttons_confirm']],
+    'music_box_wind': [['music_box', 'wind']],
+    'flash_pop': [['camera']],
+    'dogs_search': [['dog_barks']],
+    'body_fall_stairs': [['cloth', 'impact'], ['cabinet', 'door_impact'], ['doors', 'wood', 'impact', 'light_door']],
+    'fridge_paper': [['tape', 'rip'], ['paper', 'handle']],
+    'curtain_close': [['cloth', 'flap'], ['cloth', 'handle']],
+    'peephole': [['metal_click'], ['flightcase', 'latch']],
 }
+# name -> slug words that veto a match (the bunny set's sword whooshes are blade hits, not air; the metal valve door and
+# the battle-axe shield hits are clangs, not the film's impacts; the metal-staircase body falls never land in this
+# wooden house; the toddler boy's crying is not a little girl)
+NOT = {'whoosh': ['blade', 'sword', 'axe'], 'impact_hit': ['valve', 'shield', 'axe'], 'van_step': ['valve'],
+       'box_knock': ['knuckles'], 'wood_knock': ['knuckles'], 'struggle': ['metal_plate', 'staircase'],
+       'crowd_parade': ['horse', 'fight'], 'hospital_room': ['speakerphone'], 'owen_cry': ['crying_boy'],
+       'snort': ['crying'], 'owen_giggle': ['crying']}
 
 
 def slugify(name):
@@ -173,7 +248,8 @@ def slugify(name):
 
 
 def serves(slug):
-    return sorted(k for k, alts in MAP.items() if any(all(w in slug for w in alt) for alt in alts))
+    return sorted(k for k, alts in MAP.items() if any(all(w in slug for w in alt) for alt in alts)
+                  and not any(w in slug for w in NOT.get(k, ())))
 
 
 def _fingerprint(p):
@@ -330,7 +406,10 @@ def build(sets, out, sfx_only=False, reuse=()):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--dummy' in sys.argv:
+    if '--bunny' in sys.argv:
+        build(BUNNY_SETS, BUNNY_OUT, so, reuse=() if '--no-reuse' in sys.argv else (BUNNY_OUT, BUNNY_FIRST, DUMMY_OUT,
+                                                                                     DELIVERY_OUT))
+    elif '--dummy' in sys.argv:
         build(DUMMY_SETS, DUMMY_OUT, so, reuse=() if '--no-reuse' in sys.argv else (DUMMY_OUT, DELIVERY_OUT))
     elif '--delivery' in sys.argv:
         build(DELIVERY_SETS, DELIVERY_OUT, so)
