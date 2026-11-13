@@ -306,10 +306,11 @@ def _vig_small(v80, w, h):
     return _c[key]
 
 
-def _vhs_static(w, h, vw, vh, curve, scan, glass, bezel):
+def _vhs_static(w, h, vw, vh, curve, scan, glass, bezel, tube=True):
     """Cached per size: CRT curvature maps (output px -> VHS-res source px), the tube mask (scanlines, edge falloff,
-    rounded corners; u8, 200 = unity), the glass sheen (additive u8) and the bezel image outside the tube."""
-    key = ('vhs', w, h, vw, vh, round(curve, 3), round(scan, 3), round(glass, 3), round(bezel, 3))
+    rounded corners; u8, 200 = unity), the glass sheen (additive u8) and the bezel image outside the tube. tube=False: a
+    camcorder tape seen full frame (scanlines only, no tube edge / corners)."""
+    key = ('vhs', w, h, vw, vh, round(curve, 3), round(scan, 3), round(glass, 3), round(bezel, 3), bool(tube))
     if key in _c: return _c[key]
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     nx = (xx + 0.5) / w * 2 - 1; ny = (yy + 0.5) / h * 2 - 1
@@ -328,6 +329,8 @@ def _vhs_static(w, h, vw, vh, curve, scan, glass, bezel):
     dist = np.sqrt(qx ** 2 + (qy * 9 / 16) ** 2) - rr + np.minimum(np.maximum(ax - 1, ay - 1), 0) * 0      # <0 inside
     inside = np.clip(-dist / 0.012, 0, 1) * (ax < 1.02) * (ay < 1.02)
     edge = np.exp(-((np.maximum(ax, 0) ** 6) * 0.9 + (np.maximum(ay, 0) ** 6) * 0.9))                       # darker rim
+    if not tube:
+        inside = np.ones_like(inside); edge = np.ones_like(edge)
     lines = vh * 0.62                                                                                         # ~270 lines
     sl = 1.0 - 0.32 * scan * (0.5 + 0.5 * np.cos((sy + 1) * 0.5 * lines * 2 * np.pi)) ** 1.6
     m = np.clip(inside * edge * sl * 200, 0, 255).astype(np.uint8)
@@ -403,7 +406,7 @@ def vhs(img, p, frame_i):
         small = cv2.addWeighted(small, 1.0, bl, 0.22 * gl, 0)
     curve = float(p.get('curve', 1.0)); scan = float(p.get('scan', 1.0)) * k
     glass = float(p.get('glass', 1.0)); bezel = float(p.get('bezel', 0.0))
-    m1, m2, mask, add, bz = _vhs_static(w, h, vw, vh, curve, scan, glass, round(bezel * 4) / 4)
+    m1, m2, mask, add, bz = _vhs_static(w, h, vw, vh, curve, scan, glass, round(bezel * 4) / 4, bool(p.get('tube', True)))
     out = cv2.remap(small, m1, m2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
     out = cv2.multiply(out, mask, scale=1 / 200.0)
     if add is not None: out = cv2.add(out, add)

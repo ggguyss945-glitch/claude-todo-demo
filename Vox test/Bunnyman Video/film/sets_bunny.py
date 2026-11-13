@@ -113,12 +113,15 @@ class BView:
     (absolute Y). Methods take PLAN coordinates: p(x, Y, y) -> design (sx, sy); d(x, y) = depth along the view axis;
     s(x, y) = px per metre there; spot(x, y, Y) -> Spot; pick(sx, sy, Y) -> plan (x, y)."""
 
-    def __init__(self, S, horizon, cam_h, cam_x, cam_y, yaw=0.0, cx=960.0, near=0.12, name=''):
+    def __init__(self, S, horizon, cam_h, cam_x, cam_y, yaw=0.0, cx=960.0, near=0.12, name='', pitch=0.0):
         self.S, self.h, self.cam_h, self.cx = float(S), float(horizon), float(cam_h), float(cx)
         self.hx, self.hy, self.yaw, self.near, self.name = float(cam_x), float(cam_y), float(yaw), float(near), name
         th = math.radians(yaw)
         self.fx, self.fy = math.sin(th), math.cos(th)            # forward (plan)
         self.rx, self.ry = math.cos(th), -math.sin(th)           # screen right (plan)
+        self.pitch = float(pitch)                                 # degrees down (0: a level, shift-lens camera)
+        pr = math.radians(self.pitch)
+        self.cp, self.sp = math.cos(pr), math.sin(pr)
 
     def __repr__(self): return 'BView(%s: S=%.0f h=%.0f eye=%.2f at (%.2f, %.2f) yaw %.0f)' % (self.name, self.S, self.h, self.cam_h, self.hx, self.hy, self.yaw)
 
@@ -126,7 +129,17 @@ class BView:
 
     def u(self, x, y): return (x - self.hx) * self.rx + (y - self.hy) * self.ry
 
+    def d3(self, x, Y, y):
+        """True depth along the (possibly pitched) optical axis."""
+        if not self.pitch: return self.d(x, y)
+        return self.d(x, y) * self.cp - (Y - self.cam_h) * self.sp
+
     def p(self, x, Y, y):
+        if self.pitch:
+            dd, up = self.d(x, y), Y - self.cam_h
+            D = max(self.near, dd * self.cp - up * self.sp); U = dd * self.sp + up * self.cp
+            k = self.S / D
+            return (self.cx + self.u(x, y) * k, self.h - U * k)
         D = max(self.near, self.d(x, y)); k = self.S / D
         return (self.cx + self.u(x, y) * k, self.h - (Y - self.cam_h) * k)
 
@@ -177,7 +190,7 @@ def _clip_near3(v, pts, near=None):
     n = len(pts)
     for i in range(n):
         a, b = pts[i], pts[(i + 1) % n]
-        da, db = v.d(a[0], a[2]) - nr, v.d(b[0], b[2]) - nr
+        da, db = v.d3(a[0], a[1], a[2]) - nr, v.d3(b[0], b[1], b[2]) - nr
         if da >= 0: out.append(a)
         if (da >= 0) != (db >= 0):
             t = da / (da - db)
@@ -278,6 +291,11 @@ def light_at(P, n=None, amb=None, lights=None):
     if amb is None: return (1.0, 1.0, 1.0)
     r, g, b = (q / 255.0 for q in rgb(amb))
     for L in lights:
+        if L.kind == 'dir':
+            nd = 1.0 if n is None else max(0.0, -_dot3(n, L.d))
+            r0, g0, b0 = rgb(L.c)
+            r += r0 / 255.0 * L.k * nd; g += g0 / 255.0 * L.k * nd; b += b0 / 255.0 * L.k * nd
+            continue
         if L.kind != 'point': continue
         lr, lg, lb = L.at(P, n)
         r += lr; g += lg; b += lb
@@ -298,7 +316,10 @@ def fmat(v, O, U, V):
     def comps(P, pt):
         if pt: dx, dy, up = P[0] - v.hx, P[2] - v.hy, P[1] - v.cam_h
         else: dx, dy, up = P[0], P[2], P[1]
-        return dx * v.rx + dy * v.ry, up, dx * v.fx + dy * v.fy
+        dd = dx * v.fx + dy * v.fy
+        if getattr(v, 'pitch', 0.0):
+            return dx * v.rx + dy * v.ry, dd * v.sp + up * v.cp, dd * v.cp - up * v.sp
+        return dx * v.rx + dy * v.ry, up, dd
     Ro, Uo, Do = comps(O, True); Ru, Uu, Du = comps(U, False); Rv, Uv, Dv = comps(V, False)
     S, cx, h = v.S, v.cx, v.h
     k = 1.0 / max(1e-6, max(abs(Do), 1e-3))
@@ -465,6 +486,11 @@ def _light_map(pen, v, F):
             sh = skia.GradientShader.MakeRadial(skia.Point(a, b), R, cs, ps, skia.TileMode.kClamp, 0, mm)
             cv.drawRect(skia.Rect.MakeLTRB(a - R * L.sxy[0], b - R * L.sxy[1], a + R * L.sxy[0], b + R * L.sxy[1]),
                         skia.Paint(Shader=sh, BlendMode=_BLEND_PLUS))
+        elif L.kind == 'dir':
+            nd = -_dot3(n, L.d)
+            if nd <= 0.0: continue
+            r0, g0, b0 = rgb(L.c); I = L.k * nd
+            cv.drawPaint(skia.Paint(Color=skia.Color(int(min(255, r0 * I)), int(min(255, g0 * I)), int(min(255, b0 * I)), 255), BlendMode=_BLEND_PLUS))
         elif L.kind == 'win' and L.panes:
             d = L.d
             nd = _dot3(n, d)
@@ -748,7 +774,7 @@ SIDETAB = (-4.18, 4.62, 0.24, 0.62)                          # round side table 
 FLAMP = (-4.62, 1.12, 1.3, 1.6)                              # floor lamp by the couch: x, y, shade bottom, shade top
 CHIMNEY = (-5.0, -4.58, 2.1, 3.9)                            # chimney breast on the left wall (x0, x1, y0, y1)
 MANTEL_Y = 1.22
-BOOKCASE = Box(-1.58, 4.5, 1.25, 0.34, 0.0, 1.95, -90)      # on the right wall, facing -x
+BOOKCASE = Box(-1.58, 3.95, 1.2, 0.34, 0.0, 1.95, -90)      # on the right wall between the hall opening and the back corner, facing -x
 RUG_LIV = (-3.3, 2.65, 1.5, 1.1)                           # braided oval (x, y, rx, ry)
 # kitchen (plan)
 FRIDGE = Box(-4.6, 7.75, 0.78, 0.72, 0.0, 1.72, 90)         # harvest-gold fridge on the left wall, facing +x
@@ -801,7 +827,7 @@ P_ = dict(
     attic_wood='#8f6c48', attic_rafter='#6e4b2e', attic_floor='#7c5a3a',
     couch='#4f7f7c', couch_d='#2f5554', chair='#c99430', chair_d='#8e6418', brick='#9a4a34', mortar='#cdbda4',
     drape='#a35a60', siding='#e6e2d6', shutter='#2f4a3c', roof='#4b4e56', door_w='#f1ece0', door_wood='#8a5a34')
-NIGHT_AMB = '#2e3760'                # moonlit navy (inside, lamps off)
+NIGHT_AMB = '#3a4672'                # moonlit navy (inside, lamps off)
 LAMP_C = '#ffc98a'                   # tungsten
 MOON_C = '#8aa2e6'
 DAWN_C = '#ffb560'
@@ -1904,62 +1930,88 @@ def _pine(pen, x, y, h, w, c='#060a12', rim=None, seed=0, a=255):
     if rim: pen.shade(path, moved(path, -w * 0.06, h * 0.01), rim[0], rim[1])
 
 
+def _birch(pen, x, y, h, w, seed=0, lit_=1.0):
+    """A white birch trunk with black marks (they glow under the moon at the treeline)."""
+    rng = np.random.default_rng(seed)
+    lean = rng.uniform(-0.05, 0.05)
+    trunk = poly([(x - w / 2, y), (x + w / 2, y), (x + w * 0.3 + lean * h, y - h), (x - w * 0.3 + lean * h, y - h)])
+    pen.fill(trunk, mix('#3a4058', '#c8d0e0', lit_))
+    for i in range(int(h / max(4.0, w * 1.5))):
+        yy = y - rng.uniform(0.05, 0.95) * h
+        xx = x + lean * (y - yy)
+        pen.fill(rect(xx - w * 0.4, yy, w * rng.uniform(0.3, 0.8), max(1.0, w * 0.18)), '#0a0c12', 220)
+    pen.line(trunk, max(0.8, w * 0.08), '#0a0c12', 200)
+
+
 def woods(pen, v, y_edge=TREELINE_Y, xr=(-70, 70), depth=40.0, seed=7, tod='night', near_y=None, mist=True, edge_detail=True,
-          c_far='#0b1226', c_near='#05070e', rim='#5a6ea8', clearing=None):
-    """Holloway Woods behind the yard: a dense band of bare oaks and pines from y_edge back `depth` metres, drawn far ->
-    near from camera v, moonlit rims on the near trunks, mist pooling at the treeline. clearing = (x0, x1): a gap in the
-    first row (where the Bunnyman stands)."""
+          c_far='#16203e', c_near='#04060c', rim='#6a80c0', clearing=None):
+    """Holloway Woods behind the yard: rows of bare oaks, pines and a few white birches from y_edge back `depth` metres,
+    drawn far -> near from camera v with aerial perspective (far rows paler in the moonlit haze), mist pooling between the
+    rows and at the treeline, moonlit rims on the near trunks. clearing = (x0, x1): a gap in the first row (where the
+    Bunnyman stands)."""
     rng = np.random.default_rng(seed)
     trees = []
-    for k in range(int((xr[1] - xr[0]) * depth / 9)):
-        x = rng.uniform(*xr); y = y_edge + depth * rng.uniform(0, 1) ** 1.6
+    for k in range(int((xr[1] - xr[0]) * depth / 7)):
+        x = rng.uniform(*xr); y = y_edge + 2.5 + (depth - 2.5) * rng.uniform(0, 1) ** 1.3
         trees.append((x, y, rng.uniform(0, 1), int(rng.integers(0, 99999))))
-    for k in range(int((xr[1] - xr[0]) * 0.9)):                               # the first row: the treeline itself
-        x = rng.uniform(*xr); y = y_edge + rng.uniform(-1.5, 2.5)
+    for k in range(int((xr[1] - xr[0]) * 1.1)):                               # the first row: the treeline itself
+        x = rng.uniform(*xr); y = y_edge + rng.uniform(-1.2, 2.5)
         if clearing and clearing[0] < x < clearing[1]: continue
         trees.append((x, y, rng.uniform(0, 1), int(rng.integers(0, 99999))))
     trees.sort(key=lambda q: -v.d(q[0], q[1]))
-    fc = {'night': (c_far, c_near), 'dawn': ('#3a3048', '#1a1420'), 'sunrise87': ('#5a4a58', '#2a2028'), 'day87': ('#4a5a48', '#2a3428'),
-          'blue': ('#1a1e36', '#0a0c18')}.get(tod, (c_far, c_near))
-    # the dark mass of the far woods (a band with a ragged top)
+    pal = {'night': (c_far, c_near, '#5a6aa0'), 'dawn': ('#7a6078', '#22182a', '#f0b8a8'), 'sunrise87': ('#a08088', '#3a2a30', '#ffe0c0'),
+           'day87': ('#7a9a88', '#2a3a2c', '#e8f0e8'), 'blue': ('#2a2e4e', '#0a0c18', '#8a8ab8')}.get(tod, (c_far, c_near, '#5a6aa0'))
+    far_c, near_c, mist_c = pal
+    # the far woods: a ragged band at the back, then mist
     pts = []
-    for i in range(80):
-        x = xr[0] + (xr[1] - xr[0]) * i / 79
-        hh = 15.0 + 6.0 * (0.5 + 0.5 * math.sin(i * 1.7 + seed)) + 4 * rng.uniform()
-        pts.append(v.p(x, hh, y_edge + depth * 0.9))
-    far_band = poly(pts + [v.p(xr[1], -1, y_edge + depth * 0.9), v.p(xr[0], -1, y_edge + depth * 0.9)])
+    for i in range(90):
+        x = xr[0] + (xr[1] - xr[0]) * i / 89
+        hh = 16.0 + 7.0 * (0.5 + 0.5 * math.sin(i * 1.7 + seed)) + 5 * rng.uniform()
+        pts.append(v.p(x, hh, y_edge + depth))
     if v.d(0, y_edge + depth) > 0.5:
-        pen.fill(far_band, fc[0])
+        pen.fill(poly(pts + [v.p(xr[1], -2, y_edge + depth), v.p(xr[0], -2, y_edge + depth)]), mix(far_c, mist_c, 0.25))
+    bands = [y_edge + depth * f for f in (0.75, 0.5, 0.3, 0.15)]
+    bi = 0
     for (x, y, r, sd) in trees:
         D = v.d(x, y)
+        while mist and bi < len(bands) and y < bands[bi]:                      # haze between the rows as we come nearer
+            yy = bands[bi]; bi += 1
+            if v.d(0, yy) < 0.5: continue
+            ya, yb = v.p(0, 3.5, yy)[1], v.p(0, 0, yy)[1]
+            pen.linear(rect(-1200, ya, 4400, yb - ya + 30), 0, ya, 0, yb + 10, [(0, mist_c, 0), (0.75, mist_c, 46), (1, mist_c, 30)])
         if D < 0.6: continue
         s = v.S / D
         bx, by = v.p(x, 0, y)
-        if bx < -900 or bx > 2800: continue
-        far_k = clamp((D - 6) / 40.0)
-        c = mix(fc[1], fc[0], far_k)
-        if r < 0.38:
+        if bx < -1100 or bx > 3000: continue
+        far_k = clamp((D - 5) / 45.0) ** 0.8
+        c = mix(near_c, far_c, far_k)
+        edge = y < y_edge + 2.6
+        if r < 0.36:
             hh = (13 + 9 * _h(sd, 1)) * s
-            _pine(pen, bx, by, hh, (3.2 + 2.0 * _h(sd, 2)) * s, c, (rim, 40 * (1 - far_k)) if (edge_detail and tod == 'night' and D < 25) else None, sd)
+            _pine(pen, bx, by, hh, (3.4 + 2.2 * _h(sd, 2)) * s, c, (rim, 50 * (1 - far_k)) if (edge_detail and tod == 'night' and D < 28) else None, sd)
+        elif r < 0.44 and edge and D < 40:
+            _birch(pen, bx, by, (8 + 5 * _h(sd, 6)) * s, max(1.2, 0.22 * s), sd, lit_=(0.75 if tod == 'night' else 0.95) * (1 - far_k * 0.6))
         else:
-            hh = (5.5 + 3.5 * _h(sd, 3)) * s
-            lit_ = (rim, int(150 * (1 - far_k))) if (edge_detail and D < 30) else None
+            hh = (5.8 + 3.8 * _h(sd, 3)) * s
+            lit_ = (rim, int(170 * (1 - far_k))) if (edge_detail and D < 32) else None
             draw_tree(pen, bx, by, hh, 0.0, sd, 0.0, c, lit_, 5 if D < 25 else 4, 1.0 + 0.3 * _h(sd, 4), (_h(sd, 5) - 0.5) * 0.15)
     if mist:
-        for i, (yy, hh, a) in enumerate(((y_edge - 1.0, 1.2, 70), (y_edge + 2.0, 2.2, 60), (y_edge + 6, 3.5, 45))):
+        for i, (yy, hh, a) in enumerate(((y_edge - 1.5, 1.0, 80), (y_edge + 1.0, 1.8, 70))):
             if v.d(0, yy) < 0.5: continue
             ya, yb = v.p(0, hh, yy)[1], v.p(0, 0, yy)[1]
-            mc = {'night': '#6a7ab0', 'dawn': '#e8b8b0', 'sunrise87': '#ffe0c0', 'day87': '#e0e8e8', 'blue': '#8a8ab0'}.get(tod, '#6a7ab0')
-            pen.linear(rect(-900, ya, 3700, yb - ya + 20), 0, ya, 0, yb + 10, [(0, mc, 0), (0.7, mc, a), (1, mc, a * 0.6)])
+            pen.linear(rect(-1200, ya, 4400, yb - ya + 26), 0, ya, 0, yb + 10, [(0, mist_c, 0), (0.7, mist_c, a), (1, mist_c, a * 0.5)])
 
 
 def ground(pen, v, y0, y1, x0=-80.0, x1=80.0, Y=0.0, tod='night', c=None, worn=None, seed=2):
     """The yard: grass from y0 to y1 (plan), mown dark, with a worn path (worn = [(x, y), ...] polyline in plan) and
     clumps of longer grass near the treeline."""
-    cc = c or {'night': '#22342c', 'dawn': '#4a5a3a', 'day87': '#5a8a42', 'sunrise87': '#6a7a48', 'blue': '#26302c'}.get(tod, '#22342c')
+    cc = c or {'night': '#1c2c2c', 'dawn': '#4a5a3a', 'day87': '#5a8a42', 'sunrise87': '#6a7a48', 'blue': '#26302c'}.get(tod, '#1c2c2c')
     F = floor_face(x0, x1, y0, y1, Y)
+    far_c = {'night': '#2a3a52', 'dawn': '#8a7a7a', 'day87': '#8ab070', 'sunrise87': '#b8a080', 'blue': '#3a4258'}.get(tod, '#2a3a52')
 
     def art(p_, W, H):
+        # aerial perspective: paler toward the treeline (the art's top edge is the far side)
+        p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, far_c, 255), (0.55, cc, 255), (1, _darken(cc, 0.25), 255)])
         p_.texture(rect(0, 0, W, H), 'grunge', 0.55, 'overlay', 6.0)
         p_.texture(rect(0, 0, W, H), 'fabric', 0.35, 'overlay', 0.8)
         if worn:
@@ -2001,8 +2053,9 @@ class Piece:
     optional draw of the parts that sit IN FRONT of an occupant (near arm, chair back seen from behind, the tub's near
     wall, the quilt) with the occupant point (x, y) they are in front of."""
 
-    def __init__(self, name, ref, draw, occupant=None, front=None, block=None, rooms=None):
+    def __init__(self, name, ref, draw, occupant=None, front=None, block=None, rooms=None, vis=None):
         self.name, self.ref, self.draw, self.occupant, self.front, self.block = name, ref, draw, occupant, front, block
+        self.vis = vis                      # vis(view) -> False when an interior partition hides the piece from that camera
 
 
 def _parts_split(parts, v, occ, margin=0.12):
@@ -2303,9 +2356,9 @@ def _side_table(pen, v):
 
 
 # ====================================================================================================== views
-_epost.GRADES.setdefault('ob_night', dict(contrast=1.08, pivot=0.24, gamma=1.0, sat=1.14, wb=(1.02, 1.0, 0.98), floor='#080a16',
+_epost.GRADES.setdefault('ob_night', dict(contrast=1.08, pivot=0.24, gamma=1.05, sat=1.14, wb=(1.02, 1.0, 0.98), floor='#080a16',
                                           bloom=0.8, bloom_thr=226, vignette=0.38, grain=0.7, shoulder=0.45))
-_epost.GRADES.setdefault('ob_dark', dict(contrast=1.06, pivot=0.24, gamma=0.98, sat=1.08, wb=(0.95, 0.99, 1.08), floor='#05070f',
+_epost.GRADES.setdefault('ob_dark', dict(contrast=1.06, pivot=0.24, gamma=1.07, sat=1.08, wb=(0.95, 0.99, 1.08), floor='#05070f',
                                          bloom=0.85, bloom_thr=224, vignette=0.34, grain=0.8, shoulder=0.45))
 _epost.GRADES.setdefault('ob_dawn', dict(exposure=0.12, contrast=1.04, pivot=0.25, gamma=1.03, sat=1.05, wb=(1.08, 1.0, 0.9),
                                          floor='#120c10', bloom=0.9, bloom_thr=222, vignette=0.4, grain=0.6, shoulder=0.5))
@@ -2313,8 +2366,8 @@ _epost.GRADES.setdefault('ob_memory', dict(exposure=0.1, contrast=0.95, pivot=0.
                                            floor='#1a120c', bloom=0.7, bloom_thr=226, vignette=0.5, grain=1.0, soft=0.5, shoulder=0.5))
 _epost.GRADES.setdefault('ob_ext', dict(contrast=1.1, pivot=0.22, gamma=0.98, sat=1.12, wb=(0.96, 1.0, 1.06), floor='#04060e',
                                         bloom=0.9, bloom_thr=228, vignette=0.36, grain=0.8, shoulder=0.45))
-_epost.GRADES.setdefault('ob_vhs87', dict(exposure=0.12, contrast=0.96, pivot=0.3, gamma=1.03, sat=1.08, wb=(1.06, 1.0, 0.9), floor='#14100e',
-                                          bloom=0.8, bloom_thr=222, vignette=0.55, grain=0.0, soft=0.4, shoulder=0.55))
+_epost.GRADES.setdefault('ob_vhs87', dict(exposure=0.0, contrast=1.04, pivot=0.3, gamma=1.0, sat=1.18, wb=(1.06, 1.0, 0.9), floor='#120e0c',
+                                          bloom=0.7, bloom_thr=226, vignette=0.6, grain=0.0, soft=0.3, shoulder=0.55))
 _epost.GRADES.setdefault('ob_sunrise87', dict(exposure=0.15, contrast=1.0, pivot=0.26, gamma=1.04, sat=0.95, wb=(1.1, 1.0, 0.86),
                                               floor='#18100c', bloom=1.0, bloom_thr=220, vignette=0.42, grain=1.0, soft=0.4, shoulder=0.55))
 _epost.GRADES.setdefault('ob_hospital', dict(exposure=0.1, contrast=1.0, pivot=0.25, gamma=1.03, sat=0.7, wb=(0.95, 1.02, 1.04),
@@ -2327,14 +2380,15 @@ def cam(name, **over):
     """The named camera (a BView) from the CAMS table (every view's camera on the plan: PLAN_MAP draws them)."""
     c = dict(CAMS[name]); c.update(over)
     env = c.pop('env', None); c.pop('note', None); c.pop('room', None)
+    if not c.get('pitch'): c.pop('pitch', None)
     v = BView(c.pop('S'), c.pop('h'), c.pop('eye'), c.pop('x'), c.pop('y'), c.pop('yaw'), name=name, **c)
     v.env = env
     return v
 
 
-def _cam(name, S, h, eye, x, y, yaw, env=None, note='', room=''):
+def _cam(name, S, h, eye, x, y, yaw, env=None, note='', room='', pitch=0.0):
     CAMS[name] = dict(S=S, h=h, eye=eye, x=x, y=y, yaw=yaw, env=env or dict(x=(900, 1020), y=(500, 580), zoom=(1.0, 1.12), f=(1.0, 1.4)),
-                      note=note, room=room)
+                      note=note, room=room, pitch=pitch)
 
 
 def _okey(o):
@@ -2372,11 +2426,8 @@ def build_view(vname, v, main, o, far=(), outside=None, lens='lens', grade='ob_n
         L += blit(dctr, (lambda R_: lambda pen: R_.shell(pen, v, o))(R), 'far_' + R.name, key + ':far:' + R.name, cover, famb, fst, fvar,
                   order=ORDER_FAR + i)
         for P in R.pieces(o):
-            d = v.d(P.ref[0], P.ref[2])
-            if d < v.near + 0.2: continue
-            L += blit(max(0.3, d), (lambda P_: lambda pen: P_.draw(pen, v))(P), 'far_%s_%s' % (R.name, P.name),
-                      key + ':farp:%s:%s' % (R.name, P.name), cover, famb, fst, fvar, order=ORDER_SHELL + 0.1 * d)
             if P.block: info['blocks'][P.name] = P.block
+            L += _piece_layers(P, v, key + ':farp:' + R.name, cover, famb, fst, fvar, lambda d_: ORDER_SHELL + 0.1 * d_, 'far_%s_' % R.name, info)
         info['floors'].append(R.poly); info['rooms'][R.name] = R.poly
         for g in R.glows(v, o):
             nm, ref, fn = g
@@ -2389,25 +2440,8 @@ def build_view(vname, v, main, o, far=(), outside=None, lens='lens', grade='ob_n
     L += blit(dmain, lambda pen: main.shell(pen, v, o), 'shell', key + ':shell', cover, amb, steady, var, order=ORDER_SHELL)
     pieces = list(main.pieces(o))
     for P in pieces:
-        d = v.d(P.ref[0], P.ref[2])
         if P.block: info['blocks'][P.name] = P.block
-        if d < v.near + 0.15: continue
-        if P.occupant and P.front:
-            occ = [q for q in P.occupant if v.d(q[0], q[1]) > v.near]
-            if occ:
-                dmin = min(v.d(q[0], q[1]) for q in occ); dmax = max(v.d(q[0], q[1]) for q in occ)
-                front = [p_ for p_ in P.front if p_.depth(v) < dmin - 0.14]
-                back = [p_ for p_ in P.front if p_.depth(v) >= dmin - 0.14]
-                L += blit(max(0.3, d), (lambda ps: lambda pen: draw_parts(pen, v, ps))(back), P.name, key + ':p:' + P.name, cover, amb, steady, var,
-                          order=dmax + 0.06)
-                info['orders'][P.name] = dmax + 0.06
-                if front:
-                    L += blit(max(0.3, dmin - 0.2), (lambda ps: lambda pen: draw_parts(pen, v, ps))(front), P.name + '_front', key + ':pf:' + P.name,
-                              cover, amb, steady, var, order=dmin - 0.06)
-                    info['orders'][P.name + '_front'] = dmin - 0.06
-                continue
-        L += blit(max(0.3, d), (lambda P_: lambda pen: P_.draw(pen, v))(P), P.name, key + ':p:' + P.name, cover, amb, steady, var, order=d)
-        info['orders'][P.name] = d
+        L += _piece_layers(P, v, key + ':p', cover, amb, steady, var, lambda d_: d_, '', info)
     for (nm, ref, fn) in (extra or []):
         d = v.d(ref[0], ref[2])
         if d < v.near + 0.15: continue
@@ -2432,17 +2466,78 @@ def build_view(vname, v, main, o, far=(), outside=None, lens='lens', grade='ob_n
     return sp
 
 
+def _piece_layers(P, v, key, cover, amb, steady, var, f, prefix, info):
+    """Layers for one furniture piece: a seat / tub / bed (P.occupant) is split into the parts behind its occupants
+    (order f(deepest occupant + 0.06)) and the parts in front of them (order f(nearest occupant - 0.06)); other pieces are
+    one layer at f(depth of their reference point). f maps a depth to a draw order (main room: identity; far rooms:
+    ORDER_SHELL + 0.1 depth), so a figure placed with BSet.order_at() always sorts right against them."""
+    if P.vis is not None and not P.vis(v): return []
+    d = v.d(P.ref[0], P.ref[2])
+    if P.block:
+        dfar = max(v.d(x_, y_) for (x_, y_) in P.block)
+        if dfar < v.near + 0.15: return []
+        d = max(d, v.near + 0.2)
+    elif d < v.near + 0.15: return []
+    out = []
+    if P.block:
+        info.setdefault('occl', []).append((prefix + P.name, P.block))
+    if P.occupant and P.front:
+        occ = [q for q in P.occupant if v.d(q[0], q[1]) > v.near]
+        if occ:
+            dmin = min(v.d(q[0], q[1]) for q in occ); dmax = max(v.d(q[0], q[1]) for q in occ)
+            front = [p_ for p_ in P.front if p_.depth(v) < dmin - 0.14]
+            back = [p_ for p_ in P.front if p_.depth(v) >= dmin - 0.14]
+            out += blit(max(0.3, d), (lambda ps: lambda pen: draw_parts(pen, v, ps))(back), prefix + P.name, key + ':' + P.name, cover, amb, steady, var,
+                        order=f(dmax + 0.06))
+            info['orders'][prefix + P.name] = f(dmax + 0.06)
+            if front:
+                out += blit(max(0.3, dmin - 0.2), (lambda ps: lambda pen: draw_parts(pen, v, ps))(front), prefix + P.name + '_front',
+                            key + ':f:' + P.name, cover, amb, steady, var, order=f(dmin - 0.06))
+                info['orders'][prefix + P.name + '_front'] = f(dmin - 0.06)
+            return out
+    out += blit(max(0.3, d), (lambda P_: lambda pen: P_.draw(pen, v))(P), prefix + P.name, key + ':' + P.name, cover, amb, steady, var, order=f(d))
+    info['orders'][prefix + P.name] = f(d)
+    return out
+
+
+def _seg_hits_poly(ax, ay, bx, by, q):
+    """Does the segment a -> b cross polygon q (plan)?"""
+    if _in_poly((ax, ay), q): return True
+    n = len(q)
+    for i in range(n):
+        cx, cy = q[i]; dx, dy = q[(i + 1) % n]
+        d1 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax); d2 = (bx - ax) * (dy - ay) - (by - ay) * (dx - ax)
+        d3 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx); d4 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx)
+        if (d1 > 0) != (d2 > 0) and (d3 > 0) != (d4 > 0): return True
+    return False
+
+
 def _order_at(self, x, y):
-    """Draw order for a figure standing at plan (x, y): its depth in the main room; ORDER_SHELL + 0.1 depth in a room seen
-    through an opening (so the main room's walls hide what is outside the opening); ORDER_SHELL + 20 + 0.1 depth outside."""
+    """Draw order for a figure standing at plan (x, y) (use it for every figure layer: layer.order = sp.order_at(x, y)):
+    its depth in the main room, but pushed behind any furniture piece whose footprint the line of sight crosses (a person
+    standing behind the couch is hidden by it, even when the couch is long and seen at an angle); ORDER_SHELL + 0.1 depth
+    in a room seen through an opening (the main room's walls hide what is outside the opening); ORDER_SHELL + 20 + 0.1 depth
+    outside (seen through a window). A seated figure: use its seat Spot's plan point (sits between the seat's back and front
+    layers)."""
     v = self.view
     d = v.d(x, y)
     rooms = self.info.get('rooms', {})
     main = rooms.get(self.room)
-    if main and _in_poly((x, y), main): return d
-    for nm, q in rooms.items():
-        if nm != self.room and _in_poly((x, y), q): return ORDER_SHELL + 0.1 * d
-    return ORDER_SHELL + 20.0 + 0.1 * d
+    if main and _in_poly((x, y), main): f = lambda d_: d_
+    else:
+        f = None
+        for nm, q in rooms.items():
+            if nm != self.room and _in_poly((x, y), q): f = lambda d_: ORDER_SHELL + 0.1 * d_; break
+        if f is None: return ORDER_SHELL + 20.0 + 0.1 * d
+    o = f(d)
+    orders = self.info.get('orders', {})
+    for (nm, q) in self.info.get('occl', []):
+        if _in_poly((x, y), q): continue
+        if _seg_hits_poly(v.hx, v.hy, x, y, q):
+            for k_, ov in orders.items():
+                if k_ == nm or k_.startswith(nm + '_front'):
+                    o = max(o, ov + 0.02)
+    return o
 
 
 BSet.order_at = _order_at
@@ -2459,14 +2554,14 @@ BSet.figure_kw = _figure_kw
 
 
 # ---------------------------------------------------------------------------------------------- living room views
-_cam('liv_wide', 860, 470, 1.5, -1.72, 5.5, -146, dict(x=(880, 1060), y=(450, 600), zoom=(1.0, 1.15), f=(1.0, 1.6)),
+_cam('liv_wide', 740, 470, 1.45, -1.62, 5.64, -132, dict(x=(880, 1060), y=(450, 600), zoom=(1.0, 1.15), f=(1.0, 1.7)),
      'from the back-right corner: the couch (kids) under the lamp, the curtained front window, the fireplace; Mom\'s wingback in the right foreground facing camera-right (the back door)', 'living')
 _cam('liv_back', 980, 455, 1.5, -3.3, 9.55, 180, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.15), f=(1.0, 2.0)),
      'the back door\'s point of view: through the kitchen opening, Mom in the wingback facing the lens, the couch with the kids behind her', 'living')
 _cam('liv_chair', 900, 520, 1.2, -2.95, 1.95, 6, dict(x=(880, 1040), y=(470, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
      'from the couch: the back of Mom\'s wingback, the opening, the dark kitchen, the back door', 'living')
-_cam('liv_couch', 1000, 520, 1.25, -2.05, 3.85, -150, dict(x=(860, 1060), y=(470, 620), zoom=(1.0, 1.12), f=(1.0, 1.6)),
-     'medium on the couch from the front-right: the lamp, the seats, the curtains behind', 'living')
+_cam('liv_couch', 880, 520, 1.25, -1.62, 2.65, -118, dict(x=(860, 1060), y=(470, 620), zoom=(1.0, 1.12), f=(1.0, 1.6)),
+     'the couch from the hall side at 3/4 (seated figures read as seated: turn 0.45-0.65): the lamp, the front window', 'living')
 _cam('liv_window', 900, 470, 1.55, -3.3, 3.3, 180, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.6)),
      'the front window over the back of the couch: the curtains (open / closing / closed)', 'living')
 _cam('liv_hall', 860, 470, 1.55, 0.35, 2.3, -90, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.6)),
@@ -2538,14 +2633,14 @@ class KitchenRoom(Room):
     poly = [(KIT[0], KIT[2]), (KIT[1], KIT[2]), (KIT[1], KIT[3]), (KIT[0], KIT[3])]
 
     def lights(self, o):
-        amb = o.get('amb_k', '#283050')
+        amb = o.get('amb_k', '#36406a')
         win = Lamp(kind='win', c=MOON_C, k=0.9 * o.get('moon', 1.0), soft=8.0, panes=_panes_y(KWIN[0], KWIN[1], KWIN[2], KWIN[3], 10.0),
                    d=_norm3((-0.15, -0.5, -1.0)), only={'floor', 'top', 'front', 'side', 'wall'})
         bd = Lamp(kind='win', c=MOON_C, k=0.6 * o.get('moon', 1.0), soft=8.0, panes=[[(BDOOR[0] + 0.12, 2.0, 10.0), (BDOOR[1] - 0.12, 2.0, 10.0),
                                                                                        (BDOOR[1] - 0.12, 1.45, 10.0), (BDOOR[0] + 0.12, 1.45, 10.0)]],
                   d=_norm3((0.1, -0.55, -1.0)), only={'floor', 'top', 'front', 'side'})
         steady = [win, bd]
-        pend = [Lamp(KTABLE.cx, 1.75, KTABLE.cy, 3.8, '#ffd59a', 1.25, (1.0, 0.7, 0.9))]
+        pend = [Lamp(KTABLE.cx, 1.75, KTABLE.cy, 6.0, '#ffd59a', 1.8, (1.0, 0.8, 0.9), fall=1.45)]
         porch = [Lamp(BACK_LIGHT[0], 1.9, 10.4, 2.2, '#ffcf8a', 0.5, only={'floor', 'top', 'front'})]
         var = [('kitchen', pend, _kfn(o.get('kitchen', 0.0), 61)), ('porch', porch, _kfn(o.get('porch', 0.0), 62))]
         if o.get('tod') == 'memory':
@@ -3031,11 +3126,11 @@ class HallRoom(Room):
     poly = [(HALL[0], HALL[2]), (HALL[1], HALL[2]), (HALL[1], HALL[3]), (HALL[0], HALL[3])]
 
     def lights(self, o):
-        amb = o.get('amb_h', '#262c48')
-        light = [Lamp(-0.5, CEIL0 - 0.12, 2.4, 3.8, LAMP_C, 1.15, (1.0, 1.0, 0.5))]
-        console = [Lamp(-1.25, 1.12, 4.1, 2.2, LAMP_C, 0.8, (1.0, 0.6, 0.7))]
+        amb = o.get('amb_h', '#36406a')
+        light = [Lamp(-0.5, CEIL0 - 0.12, 2.4, 6.0, LAMP_C, 1.7, (1.0, 1.0, 0.5), fall=1.45)]
+        console = [Lamp(-1.25, 1.12, 4.1, 3.6, LAMP_C, 1.3, (1.0, 0.7, 0.8), fall=1.5)]
         porch = [Lamp(FD_CX, 1.0, 0.25, 1.6, '#ffcf8a', 0.18, only={'floor'})]
-        up = [Lamp(0.8, UP_Y + 2.2, 5.2, 3.0, LAMP_C, 0.6)]
+        up = [Lamp(0.8, UP_Y + 2.2, 5.2, 4.5, LAMP_C, 1.0, fall=1.5)]
         var = [('hall', light, _kfn(o.get('hall', 1.0), 71)), ('console', console, _kfn(o.get('console', 0.0), 72)),
                ('porch', porch, _kfn(o.get('porch', 0.0), 73)), ('upstairs', up, _kfn(o.get('upstairs', 0.0), 74))]
         steady = [Lamp(kind='win', c=MOON_C, k=0.35, soft=10.0, panes=[[(FD_CX - 0.12, 1.62, -0.04), (FD_CX + 0.12, 1.62, -0.04), (FD_CX + 0.12, 1.42, -0.04), (FD_CX - 0.12, 1.42, -0.04)]],
@@ -3061,13 +3156,10 @@ class HallRoom(Room):
         ceil_rect(pen, v, x0, STAIR_X[0], y0, y1, CEIL0)
         ceil_rect(pen, v, STAIR_X[0], x1, y0, STAIRWELL[2], CEIL0)
         ceil_rect(pen, v, STAIR_X[0], x1, ST_TOP, y1, CEIL0)
-        staircase(pen, v, 'flight')
-        # the ceiling fixture
-        fx, fy = v.p(-0.5, CEIL0, 2.4)
-        if v.d(-0.5, 2.4) > 0.3:
-            s = v.s(-0.5, 2.4)
+        if v.d(-0.5, 2.4) > 0.3 and v.cam_h < CEIL0:                            # the ceiling bowl
             bowl = ellipse3(v, -0.5, 2.4, 0.18, 0.18, CEIL0 - 0.08)
             pen.fill(bowl, lit('#e8e0d0', (-0.5, CEIL0 - 0.1, 2.4), (0, -1, 0))); pen.line(bowl, 1.0)
+        staircase(pen, v, 'flight')
         # the front door (closed / ajar) drawn with the shell when it does not move
         ang = o.get('door', 0.0)
         if not callable(ang):
@@ -3105,8 +3197,9 @@ class HallRoom(Room):
         return art
 
     def pieces(self, o):
-        P = [Piece('console', (-1.25, 0.6, 4.1), lambda pen, v: _console(pen, v), block=[(-1.4, 3.65), (-1.05, 3.65), (-1.05, 4.55), (-1.4, 4.55)]),
-             Piece('coats', (-1.33, 1.2, 0.95), lambda pen, v: _coats(pen, v)),
+        below = lambda v: not (v.cam_h > CEIL0 and v.hx > STAIR_X[0] - 0.05)
+        P = [Piece('console', (-1.25, 0.6, 4.1), lambda pen, v: _console(pen, v), block=[(-1.4, 3.65), (-1.05, 3.65), (-1.05, 4.55), (-1.4, 4.55)], vis=below),
+             Piece('coats', (-1.33, 1.2, 0.95), lambda pen, v: _coats(pen, v), vis=below),
              Piece('stair_rail', (STAIR_X[0] + 0.05, 1.2, 1.8), lambda pen, v: staircase(pen, v, 'rail'))]
         if callable(o.get('door', 0.0)):
             pass
@@ -3184,17 +3277,16 @@ def _coats(pen, v):
 def _outside_back(pen, v, tod='night'):
     """Behind the house: the yard to the treeline under the moon (what the kitchen window, the back door, June's window
     see)."""
-    sky_dome(pen, v, 'dawn' if tod == 'dawn' else 'night')
-    ground(pen, v, 10.0, 75.0, tod='dawn' if tod == 'dawn' else 'night', worn=[(-3.3, 12.1), (-5.5, 18.0), (-7.4, 25.6)])
-    woods(pen, v, tod='dawn' if tod == 'dawn' else 'night', clearing=(-3.8, -1.4))
-    yard_props(pen, v, tod)
+    _outside_yard_full(pen, v, tod)
 
 
 def _outside_front(pen, v, tod='night'):
-    """In front of the house: the porch roof edge and rail, the lawn, Orchard Road, a street lamp, the neighbours far off."""
+    """In front of the house: the porch, the lawn, Orchard Road, a street lamp, the neighbours far off."""
     sky_dome(pen, v, 'dawn' if tod == 'dawn' else 'night', moon=False)
-    ground(pen, v, -60.0, -0.1, tod='dawn' if tod == 'dawn' else 'night', c='#1e2e28')
-    road_front(pen, v, tod)
+    vg = lifted(v, GROUND_Y)
+    ground(pen, vg, -60.0, -0.1, tod='dawn' if tod == 'dawn' else 'night', c='#1e2e28')
+    road_front(pen, vg, tod)
+    porch_front(pen, v, tod)
 
 
 # ---------------------------------------------------------------------------------------------- the yard and the road
@@ -3226,7 +3318,7 @@ def shed(pen, v, tod='night'):
     # gable roof (ridge along the shed's depth axis N)
     w2, d2 = B.w / 2 + 0.12, B.d / 2 + 0.15
     ridge = B.Y1 + 0.9
-    roofc = '#3c3e44'
+    roofc = '#5a5c64'
     for s_ in (-1, 1):
         q = [B.at(-w2 * s_, -d2, B.Y1 - 0.05), B.at(0, -d2, ridge), B.at(0, d2, ridge), B.at(-w2 * s_, d2, B.Y1 - 0.05)]
         nrm = _norm3((-s_ * B.U[0] * 0.9, 1.0, -s_ * B.U[1] * 0.9))
@@ -3574,3 +3666,2592 @@ def box_extrude(pen, v, B, u0, u1, n0, n1, Y0, Y1, prof, cap, side=None, art=Non
         W, H = (n1 - n0) * 100, (Y1 - Y0) * 100
         O = B.at(u0, n0, Y1)
         extrude(pen, v, O, N3, dn, prof(W, H), _scale3(U3, (u1 - u0)), cap, side, art, line=line)
+
+
+# ---------------------------------------------------------------------------------------------- upstairs: the corridor
+def _door_leaf(hinge, width, closed_dir, swing, Y0, art_a, art_b, height=DOOR_H, col=DOOR_PANEL):
+    return Door(hinge, width, height, closed_dir, swing, Y0, art_a=art_a, art_b=art_b, col=col)
+
+
+def bath_door_leaf(Y0=UP_Y, lock=1.0, key=0.0, knob_turn=0.0, damage=0.0):
+    """The upstairs bathroom door (an old house door: brass knob, a mortise lock with a keyhole, a little thumb-turn bolt
+    inside). Hinged at x -2.0 on y 5.8, opens into the bathroom (+y). face a = the corridor side."""
+    corridor = door_art('six', 'right', bolt=False, keyhole=True, knob_turn=knob_turn, scuff=0.3, stain=0.0)
+    inside = door_art('six', 'left', bolt=True, keyhole=True, turn=lock, knob_turn=knob_turn)
+    if damage:
+        corridor = _damaged(corridor, damage)
+    return Door((D_BATH[0], 5.8 + 0.03), D_BATH[1] - D_BATH[0], DOOR_H, (1.0, 0.0), 1, Y0, art_a=corridor, art_b=inside)
+
+
+def _damaged(art, k):
+    """Door art with hatchet gouges, splinters and dark smears (the corridor side at dawn)."""
+    def f(p_, W, H):
+        art(p_, W, H)
+        rng = np.random.default_rng(66)
+        for i in range(int(7 * k)):
+            x, y = rng.uniform(W * 0.15, W * 0.85), rng.uniform(H * 0.25, H * 0.75)
+            a = rng.uniform(-0.6, 0.6)
+            g = poly([(x - 9 * math.cos(a), y - 9 * math.sin(a)), (x + 1.2 * math.sin(a), y - 1.2 * math.cos(a)), (x + 9 * math.cos(a), y + 9 * math.sin(a)),
+                      (x - 1.2 * math.sin(a), y + 1.2 * math.cos(a))])
+            p_.fill(g, '#3a2414'); p_.line(g, 0.6, '#c8b090', 200)
+        for i in range(int(14 * k)):
+            x, y = rng.uniform(W * 0.1, W * 0.9), rng.uniform(H * 0.2, H * 0.8)
+            p_.seg((x, y), (x + rng.uniform(-6, 6), y + rng.uniform(-14, 14)), 0.7, '#5a3a24', 200)
+        _stain(p_, W * 0.55, H * 0.55, 22, 40, 0.8 * k, '#4a1a12')
+    return f
+
+
+class UpstairsHall(Room):
+    name = 'upstairs'
+    poly = [(UPH[0], UPH[2]), (UPH[1], UPH[2]), (UPH[1], UPH[3]), (UPH[0], UPH[3])]
+    Y = UP_Y
+
+    def lights(self, o):
+        Y0 = UP_Y
+        amb = o.get('amb_u', '#34406a')
+        moon = Lamp(kind='win', c=MOON_C, k=0.7, soft=10.0, panes=_panes_x(UWIN[0], UWIN[1], UWIN[2], UWIN[3], 5.0, Y0), d=_norm3((-1.0, -0.42, 0.12)))
+        lightsL = [Lamp(-1.5, CEIL1 - 0.15, 5.17, 5.5, LAMP_C, 1.6, (1.0, 1.0, 0.4), fall=1.45), Lamp(2.5, CEIL1 - 0.15, 5.17, 5.5, LAMP_C, 1.6, (1.0, 1.0, 0.4), fall=1.45)]
+        attic = [Lamp(UPH[0] + 0.08, Y0 + 0.02, 5.17, 2.2, '#ffd9a0', 1.6, only={'floor'}, sxy=(1.0, 1.6))]
+        june = [Lamp(0.8, Y0 + 0.02, 5.82, 1.2, '#c8d8ff', 0.6, only={'floor'}, sxy=(1.6, 1.0))]
+        var = [('upstairs', lightsL, _kfn(o.get('upstairs', 0.0), 81)), ('attic_gap', attic, _kfn(o.get('attic_gap', 0.0), 82)),
+               ('june_gap', june, _kfn(o.get('june_gap', 0.0), 83))]
+        steady = [moon]
+        if o.get('tod') == 'dawn':
+            amb = '#5a4a5a'
+            steady = [Lamp(kind='win', c=DAWN_C, k=1.6, soft=14.0, panes=_panes_x(UWIN[0], UWIN[1], UWIN[2], UWIN[3], 5.0, Y0), d=_norm3((-1.0, -0.3, 0.05))),
+                      Lamp(4.4, Y0 + 1.3, 5.17, 7.5, DAWN_C, 0.75, fall=1.3)]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        Y0 = UP_Y
+        x0, x1, y0, y1 = UPH
+        wk = o.get('wrecked', 0.0)
+        floor_rect(pen, v, x0, x1, y0, y1, Y0, P_['floor0'], 'boards', '#5a3a22', seed=31,
+                   art=lambda p_, W, H: (_runner(p_, W, H, x0, y1, x0 + 0.3, x1 - 0.3, 4.86, 5.48, '#2a4a6a', '#7a2a32') if not wk else _runner_wrecked(p_, W, H, x0, y1),
+                                         _debris(p_, W, H, x0, y1, wk) if wk else None))
+        walls = [((5.0, ST_TOP), (-3.8, ST_TOP), [(5.0 - D_MOM[1], 0.0, 5.0 - D_MOM[0], DOOR_H), (5.0 - STAIR_X[1], 0.0, 5.0 - STAIR_X[0], 2.45, None, 'nocase'),
+                                                  (5.0 - D_NARR[1], 0.0, 5.0 - D_NARR[0], DOOR_H)]),
+                 ((-3.8, 5.8), (5.0, 5.8), [(D_BATH[0] + 3.8, 0.0, D_BATH[1] + 3.8, DOOR_H), (D_JUNE[0] + 3.8, 0.0, D_JUNE[1] + 3.8, DOOR_H),
+                                            (D_BACK[0] + 3.8, 0.0, D_BACK[1] + 3.8, DOOR_H)]),
+                 ((5.0, 5.8), (5.0, ST_TOP), [(5.8 - UWIN[1], UWIN[2], 5.8 - UWIN[0], UWIN[3])]),
+                 ((-3.8, ST_TOP), (-3.8, 5.8), [(D_ATTIC[0] - ST_TOP, 0.0, D_ATTIC[1] - ST_TOP, 1.95)])]
+        for (a, b, holes) in walls:
+            hs = [h[:4] if len(h) < 6 else (h[0], h[1], h[2], h[3], 'rect', 'nocase') for h in holes]
+            hs = [h if len(h) == 4 else (h[0], h[1], h[2], h[3], None, 'nocase') for h in hs]
+            wall(pen, v, a, b, Y0, CEIL1, P_['up_wall'], '#c8d0b0', 'stripe', hs, wains=0.9, seed=33, scale=1.2, pa=70,
+                 art=self.wall_art(a, b, o, wk))
+        ceil_rect(pen, v, x0, x1, y0, y1, CEIL1)
+        for fx_ in (-1.5, 2.5):
+            if v.d(fx_, 5.17) > 0.3:
+                bowl = ellipse3(v, fx_, 5.17, 0.17, 0.17, CEIL1 - 0.07)
+                pen.fill(bowl, lit('#e8e0d0', (fx_, CEIL1 - 0.1, 5.17), (0, -1, 0))); pen.line(bowl, 1.0)
+        window_unit(pen, v, (5.0, 5.8), (5.0, ST_TOP), 5.8 - UWIN[1], 5.8 - UWIN[0], UWIN[2], UWIN[3], Y0, lites=(1, 2))
+        # closed doors (Mom's, the narrator's, the back bedroom) are part of the shell
+        for (hx, cd, sw, art_) in (((D_MOM[0], ST_TOP - 0.03), (1.0, 0.0), -1, door_art('six', 'right', bolt=False)),
+                                   ((D_NARR[0], ST_TOP - 0.03), (1.0, 0.0), -1, door_art('six', 'right', bolt=False)),
+                                   ((D_BACK[0], 5.8 + 0.03), (1.0, 0.0), 1, door_art('six', 'right', bolt=False))):
+            Door(hx, D_MOM[1] - D_MOM[0], DOOR_H, cd, sw, Y0, art_a=art_, art_b=art_).draw(pen, v, 0.0)
+
+    def wall_art(self, a, b, o, wk):
+        if a == (-3.8, 5.8):                                       # the back wall: photos between the doors
+            def art(p_, W, H):
+                for i, (u, kind) in enumerate(((3.2, 'june'), (3.62, 'wedding'), (6.4, 'grandma'), (6.85, 'laurie'))):
+                    tilt = wk * (8 if i % 2 else -11)
+                    if wk and i == 2: continue                        # fallen
+                    _tilted(p_, W, H, u * 100, H - 175, 30, 38, kind, tilt)
+                if wk: _scratches_wall(p_, W, H, wk)
+            return art
+        if a == (5.0, ST_TOP):                                     # the front wall: a mirror, photos, the switch
+            def art(p_, W, H):
+                _light_switch(p_, (5.0 - 0.1) * 100, H - 120, o.get('upstairs', 0.0) > 0.5)
+                _tilted(p_, W, H, 120, H - 185, 34, 44, 'woods', wk * 6)
+                if wk: _scratches_wall(p_, W, H, wk * 0.7, seed=4)
+            return art
+        return None
+
+    def pieces(self, o):
+        Y0 = UP_Y
+        wk = o.get('wrecked', 0.0)
+        P = []
+        ba = o.get('bath_door', 0.0); ja = o.get('june_door', 0.0); aa = o.get('attic_door', 0.0)
+        bd = bath_door_leaf(lock=o.get('bath_lock', 1.0), damage=wk)
+        if not callable(ba):
+            P.append(Piece('bath_door', (-1.62, Y0 + 1.0, 5.8 + 0.4 * math.sin(math.radians(ba))), lambda pen, v: bd.draw(pen, v, ba)))
+        jd = Door((D_JUNE[0], 5.8 + 0.03), D_JUNE[1] - D_JUNE[0], DOOR_H, (1.0, 0.0), 1, Y0, art_a=door_art('six', 'right', bolt=False),
+                  art_b=door_art('six', 'left', bolt=False))
+        if not callable(ja):
+            P.append(Piece('june_door', (0.8, Y0 + 1.0, 5.8 + 0.4 * math.sin(math.radians(ja))), lambda pen, v: jd.draw(pen, v, ja)))
+        ad = Door((UPH[0] - 0.03, D_ATTIC[1]), D_ATTIC[1] - D_ATTIC[0], 1.95, (0.0, -1.0), 1, Y0, art_a=door_art('plank', 'right', bolt=False, col='#d8ccb0'),
+                  art_b=door_art('plank', 'left', bolt=False, col='#d8ccb0'))
+        if not callable(aa):
+            P.append(Piece('attic_door', (-3.8 + 0.4 * math.sin(math.radians(aa)), Y0 + 1.0, 5.17), lambda pen, v: ad.draw(pen, v, aa)))
+        if not wk:
+            P.append(Piece('hall_table', (3.95, Y0 + 0.4, 4.74), lambda pen, v: _up_table(pen, v, Y0), block=[(3.55, 4.56), (4.35, 4.56), (4.35, 4.92), (3.55, 4.92)]))
+        else:
+            P.append(Piece('hall_table', (3.6, Y0 + 0.2, 5.05), lambda pen, v: _up_table_fallen(pen, v, Y0)))
+        return P
+
+    def glows(self, v, o):
+        out = []
+        ka = _kfn(o.get('attic_gap', 0.0), 82)
+        kj = _kfn(o.get('june_gap', 0.0), 83)
+        Y0 = UP_Y
+
+        def attic_gap(pen, t):
+            gap_glow(pen, v, (UPH[0] + 0.005, D_ATTIC[1] - 0.02), (UPH[0] + 0.005, D_ATTIC[0] + 0.02), Y0, ka(t), '#ffd6a0', 0.85, side_n=-1.0)
+
+        def june_gap(pen, t):
+            gap_glow(pen, v, (D_JUNE[0] + 0.02, 5.8 - 0.005), (D_JUNE[1] - 0.02, 5.8 - 0.005), Y0, kj(t), '#c8d8ff', 0.6, side_n=1.0)
+        out.append(('attic_gap_glow', (UPH[0] + 0.3, Y0, 5.17), attic_gap))
+        out.append(('june_gap_glow', (0.8, Y0, 5.6), june_gap))
+        return out
+
+    def spots(self, v, o):
+        Y0 = UP_Y
+        S = {}
+        S['stair_head'] = _mk_spot(v, 'stair_head', 0.82, ST_TOP + 0.3, Y0, 'stand', 'at the top of the stairs (in the corridor)')
+        S['june_door'] = _mk_spot(v, 'june_door', 0.8, 5.55, Y0, 'stand', "outside June's door (facing it: face (0, 1))", face=(0, 1))
+        S['june_doorway'] = _mk_spot(v, 'june_doorway', 0.8, 5.92, Y0, 'stand', "in June's doorway (Mom: 'I told you not to look')", face=(0, 1))
+        S['bath_door'] = _mk_spot(v, 'bath_door', -1.62, 5.5, Y0, 'stand', 'outside the bathroom door', face=(0, 1))
+        S['bath_knob'] = _mk_spot(v, 'bath_knob', D_BATH[1] - 0.075, KNOB_Y + Y0, 5.79, 'point', 'the bathroom door knob (corridor side)')
+        S['bath_keyhole'] = _mk_spot(v, 'bath_keyhole', D_BATH[1] - 0.075, KNOB_Y - 0.13 + Y0, 5.79, 'point', 'the bathroom keyhole (corridor side): the key goes in here')
+        S['attic_door'] = _mk_spot(v, 'attic_door', -3.4, 5.17, Y0, 'stand', 'at the attic door (face (-1, 0))', face=(-1, 0))
+        S['hall_east'] = _mk_spot(v, 'hall_east', 4.3, 5.17, Y0, 'stand', 'the end of the hall by the east window (Mom: GET OUT OF MY HOUSE)', face=(-1, 0))
+        S['hall_west'] = _mk_spot(v, 'hall_west', -3.1, 5.17, Y0, 'stand', 'the west end, by the attic door')
+        S['hall_mid'] = _mk_spot(v, 'hall_mid', -0.5, 5.17, Y0, 'stand', 'between the bathroom and June\'s door')
+        S['kneel_mid'] = _mk_spot(v, 'kneel_mid', -0.4, 5.17, Y0, 'kneel', 'the wrecked hall at dawn: kneeling in front of June (Mom with the little dress)')
+        S['mom_door'] = _mk_spot(v, 'mom_door', 2.67, 4.8, Y0, 'stand', "outside Mom's bedroom door")
+        return S
+
+
+def _tilted(p_, W, H, x, y, w, h, kind, deg):
+    cv = p_.cv
+    cv.save(); cv.translate(x + w / 2, y); cv.rotate(deg); cv.translate(-(x + w / 2), -y)
+    _frame_photo(p_, W, H, x, y, w, h, kind)
+    cv.restore()
+
+
+def _scratches_wall(p_, W, H, k, seed=2):
+    """Gouges, claw scratches and dark smears along a wall (the fight in the night)."""
+    rng = np.random.default_rng(seed)
+    for i in range(int(16 * k)):
+        x, y = rng.uniform(0.05 * W, 0.95 * W), rng.uniform(0.3 * H, 0.75 * H)
+        for j in range(3):
+            p_.seg((x + j * 2.2, y), (x + j * 2.2 + rng.uniform(-8, 8), y + rng.uniform(12, 30)), 0.8, '#3a2a20', 180)
+    for i in range(int(4 * k)):
+        x, y = rng.uniform(0.1 * W, 0.9 * W), rng.uniform(0.4 * H, 0.7 * H)
+        _stain(p_, x, y, 18, 26, 0.7 * k, '#3a1a14')
+    for i in range(int(3 * k)):                                     # hatchet gouges in the plaster
+        x, y = rng.uniform(0.1 * W, 0.9 * W), rng.uniform(0.35 * H, 0.65 * H)
+        g = poly([(x - 8, y), (x, y - 2), (x + 8, y + 1), (x, y + 2.5)])
+        p_.fill(g, '#5a4a3a'); p_.line(g, 0.6, '#2a1a10', 220)
+
+
+def _runner_wrecked(p_, W, H, x0, y1):
+    """The corridor runner kicked into folds and pulled askew."""
+    u0, v0 = floor_uv(x0, y1, -2.6, 5.5); u1, v1 = floor_uv(x0, y1, 3.2, 4.86)
+    pts = [(u0, v0 + 4), (u0 + 120, v0 - 6), (u0 + 260, v0 + 14), (u1, v0 + 2), (u1 + 8, v1), (u1 - 200, v1 + 10), (u0 + 150, v1 - 8), (u0 - 6, v1 + 2)]
+    r = poly(pts)
+    p_.fill(r, '#2a4a6a'); p_.texture(r, 'fabric', 0.7, 'overlay', 0.8)
+    for k in range(6):
+        xx = u0 + 70 + k * 85
+        p_.linear(rect(xx - 10, v0 - 10, 20, v1 - v0 + 20), xx - 10, 0, xx + 10, 0, [(0, '#000000', 0), (0.5, '#000000', 90), (1, '#ffffff', 30)])
+    p_.line(r, 1.4, '#000000', 140)
+
+
+def _debris(p_, W, H, x0, y1, k):
+    """Broken glass, a smashed picture frame, splinters, dark drips along the corridor floor (wrecked at dawn)."""
+    rng = np.random.default_rng(9)
+    for i in range(int(60 * k)):
+        u, vv = floor_uv(x0, y1, rng.uniform(-3.4, 4.6), rng.uniform(4.6, 5.75))
+        a = rng.uniform(0, 6.28); s_ = rng.uniform(1.0, 3.2)
+        p_.fill(poly([(u + math.cos(a) * s_, vv + math.sin(a) * s_), (u + math.cos(a + 2.2) * s_ * 0.7, vv + math.sin(a + 2.2) * s_ * 0.7),
+                      (u + math.cos(a + 4.1) * s_, vv + math.sin(a + 4.1) * s_)]), '#c8d8e8', 200)
+    u, vv = floor_uv(x0, y1, 2.55, 5.55)                                  # the fallen photo of Grandma, glass cracked
+    p_.cv.save(); p_.cv.translate(u, vv); p_.cv.rotate(28)
+    p_.fill(rect(-16, -20, 32, 40), '#5a3a20'); p_.fill(rect(-13, -17, 26, 34), '#b8a890')
+    p_.line(poly([(-13, -10), (2, 2), (13, -6)], False), 0.6, '#ffffff', 200); p_.line(poly([(2, 2), (-4, 17)], False), 0.6, '#ffffff', 200)
+    p_.cv.restore()
+    for i in range(int(14 * k)):
+        u, vv = floor_uv(x0, y1, rng.uniform(-2.2, 1.6), rng.uniform(4.7, 5.7))
+        p_.fill(_blob(u, vv, rng.uniform(2, 6), rng.uniform(1.5, 4), 7, i, 0.5), '#3a1612', 170 * k)
+
+
+def _up_table(pen, v, Y0):
+    B = Box(3.95, 4.74, 0.8, 0.36, Y0, Y0 + 0.78, 0)
+    draw_parts(pen, v, table_parts(B, '#6a3e22', apron=0.08))
+    _vase_tulips(pen, v, 3.8, Y0 + 0.78, 4.72)
+
+
+def _up_table_fallen(pen, v, Y0):
+    """The hall table knocked onto its side, the vase smashed."""
+    B = Box(3.6, 5.05, 0.8, 0.36, Y0, Y0 + 0.36, 20)
+    draw_box(pen, v, B, {'all': dict(fill='#6a3e22', art=_wood_art), 'top': dict(fill='#7a4a2a', art=_wood_art)})
+
+
+def _vase_tulips(pen, v, x, Y, y):
+    """A milk-glass vase of plastic Easter tulips."""
+    s = v.s(x, y)
+    px, py = v.p(x, Y, y)
+    vase = smooth([(px - 0.04 * s, py), (px - 0.055 * s, py - 0.1 * s), (px - 0.03 * s, py - 0.2 * s), (px + 0.03 * s, py - 0.2 * s),
+                   (px + 0.055 * s, py - 0.1 * s), (px + 0.04 * s, py)], True, 0.8)
+    pen.fill(vase, lit('#ece8e0', (x, Y + 0.1, y), None)); pen.line(vase, 1.0)
+    cols = ['#f2a5b5', '#f6d978', '#d9b3f0', '#9fd3f0', '#f2a5b5']
+    for k in range(5):
+        a = (k - 2) * 0.25
+        tx, ty = px + math.sin(a) * 0.18 * s, py - 0.2 * s - math.cos(a) * 0.2 * s
+        pen.seg((px, py - 0.18 * s), (tx, ty), max(0.8, 0.008 * s), '#4a7a3a')
+        fl = smooth([(tx - 0.025 * s, ty), (tx - 0.028 * s, ty - 0.04 * s), (tx, ty - 0.03 * s), (tx + 0.028 * s, ty - 0.04 * s), (tx + 0.025 * s, ty),
+                     (tx, ty + 0.012 * s)], True, 0.8)
+        pen.fill(fl, lit(cols[k], (x, Y + 0.4, y), None, 1.1)); pen.line(fl, 0.8)
+
+
+# ---------------------------------------------------------------------------------------------- June's room
+JNIGHT = (2.18, 9.42)                                        # the nightstand by the bed's head (moon nightlight)
+JDRESSER = Box(-0.15, 7.6, 1.0, 0.46, 0.0, 0.95, 90)         # the dresser on the left wall, facing +x
+JCLOSET = (6.05, 6.85)                                       # the closet door on the left wall (y range)
+
+
+class JuneRoom(Room):
+    name = 'june'
+    poly = [(JUNE[0], JUNE[2]), (JUNE[1], JUNE[2]), (JUNE[1], JUNE[3]), (JUNE[0], JUNE[3])]
+    Y = UP_Y
+
+    def lights(self, o):
+        Y0 = UP_Y
+        amb = o.get('amb_j', '#3c4274')
+        moon = Lamp(kind='win', c=MOON_C, k=1.6 * o.get('moon', 1.0), soft=8.0, panes=_panes_y(JWIN[0], JWIN[1], JWIN[2], JWIN[3], 10.0, Y0),
+                    d=_norm3((-0.15, -0.5, -1.0)))
+        night = [Lamp(JNIGHT[0], Y0 + 0.62, JNIGHT[1], 3.8, '#a8c0ff', 1.3, fall=1.5)]
+        hall = [Lamp(0.8, Y0 + 1.6, 5.6, 3.4, LAMP_C, 1.1, fall=1.5)]
+        lampL = [Lamp(JNIGHT[0] - 0.05, Y0 + 0.9, JNIGHT[1], 3.6, LAMP_C, 1.4, (1.0, 0.7, 0.8), fall=1.7)]
+        var = [('nightlight', night, _kfn(o.get('nightlight', 1.0), 91)), ('hall', hall, _kfn(o.get('hall', 0.0), 92)),
+               ('lamp', lampL, _kfn(o.get('lamp', 0.0), 93))]
+        steady = [moon] if o.get('curtains', 1.0) > 0.4 else []
+        if o.get('tod') == 'dawn':
+            amb = '#5a5068'
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        Y0 = UP_Y
+        x0, x1, y0, y1 = JUNE
+        floor_rect(pen, v, x0, x1, y0, y1, Y0, P_['floor0'], 'boards', '#5a3a22', seed=41,
+                   art=lambda p_, W, H: (_round_rug(p_, *floor_uv(x0, y1, 0.9, 8.0), 95, 75), _toys_floor(p_, W, H, x0, y1)))
+        walls = [((2.6, 5.8), (-0.4, 5.8), [(2.6 - D_JUNE[1], 0.0, 2.6 - D_JUNE[0], DOOR_H)]),
+                 ((-0.4, 5.8), (-0.4, 10.0), [(JCLOSET[0] - 5.8, 0.0, JCLOSET[1] - 5.8, 1.98)]),
+                 ((-0.4, 10.0), (2.6, 10.0), [(JWIN[0] + 0.4, JWIN[2], JWIN[1] + 0.4, JWIN[3])]),
+                 ((2.6, 10.0), (2.6, 5.8), [])]
+        for (a, b, holes) in walls:
+            wall(pen, v, a, b, Y0, CEIL1, P_['june_wall'], '#ffffff', 'ditsy', holes, wains=0.0, rail=0.95, seed=43, ink2='#f6d978', scale=1.3, pa=150,
+                 art=self.wall_art(a, b, o))
+        ceil_rect(pen, v, x0, x1, y0, y1, CEIL1, art=lambda p_, W, H: pat(p_, W, H, 'stars', '#d8f0c8', 170, 7))
+        F, panes = window_unit(pen, v, (-0.4, 10.0), (2.6, 10.0), JWIN[0] + 0.4, JWIN[1] + 0.4, JWIN[2], JWIN[3], Y0, lites=(1, 1), frame='#fbf6ee')
+        self._win = (F, panes)
+        # the closet door with the NEW yellow Easter dress hanging on it (in a clear dry-cleaning bag)
+        cd = Door((-0.4 + 0.03, JCLOSET[1]), JCLOSET[1] - JCLOSET[0], 1.98, (0.0, -1.0), 1, Y0, art_a=_closet_dress_art(o.get('dress', True)),
+                  art_b=door_art('four', 'left', bolt=False))
+        cd.draw(pen, v, 0.0)
+
+    def wall_art(self, a, b, o):
+        if a == (-0.4, 5.8):
+            def art(p_, W, H):
+                p_.cv.save(); p_.cv.translate(0, H - 0.95 * 100 - 14); pat(p_, W, 12, 'bunnies', '#ffffff', 230); p_.cv.restore()
+                for i, k in enumerate(('house', 'bunny', 'sun')):                # June's drawings taped up
+                    x = 240 + i * 34; y = H - 165 - (i % 2) * 10
+                    p_.fill(rect(x, y, 28, 22), '#fbf7ee'); _tiny_drawing(p_, x, y, 28, 22, k)
+                    p_.fill(rect(x + 10, y - 2, 8, 4), '#e8e0b0', 200)
+            return art
+        if a == (2.6, 10.0):
+            def art(p_, W, H):
+                p_.cv.save(); p_.cv.translate(0, H - 0.95 * 100 - 14); pat(p_, W, 12, 'bunnies', '#ffffff', 230); p_.cv.restore()
+                _hframe(p_, W, H, 180, H - 190, 36, 30, 'poster', frame='#f2f2f2', fn=lambda q, w, h: (q.linear(rect(0, 0, w, h), 0, 0, 0, h, ['#9fd3f0', '#fef6e0']),
+                        q.fill(oval(w * 0.5, h * 0.62, w * 0.18, h * 0.2), '#ffffff'), q.fill(oval(w * 0.45, h * 0.32, w * 0.04, h * 0.14), '#ffffff'),
+                        q.fill(oval(w * 0.55, h * 0.32, w * 0.04, h * 0.14), '#ffffff')))
+            return art
+        if a == (-0.4, 10.0) or a == (2.6, 5.8):
+            def art(p_, W, H):
+                p_.cv.save(); p_.cv.translate(0, H - 0.95 * 100 - 14); pat(p_, W, 12, 'bunnies', '#ffffff', 230); p_.cv.restore()
+                if a == (2.6, 5.8): _light_switch(p_, (2.6 - 1.32) * 100, H - 120, o.get('lamp', 0.0) > 0.5)
+            return art
+        return None
+
+    def pieces(self, o):
+        Y0 = UP_Y
+        bedp = bed_parts(JBED, Y0, o.get('bed', 'made'))
+        P = [Piece('bed', (JBED.cx, Y0 + 0.3, JBED.cy), lambda pen, v: draw_parts(pen, v, bedp), occupant=[(JBED.cx, JBED.cy)], front=bedp,
+                   block=JBED.footprint()),
+             Piece('nightstand', (JNIGHT[0], Y0 + 0.3, JNIGHT[1]), lambda pen, v: _nightstand(pen, v, Y0), block=_circ(JNIGHT[0], JNIGHT[1], 0.25)),
+             Piece('dresser', (JDRESSER.cx, Y0 + 0.5, JDRESSER.cy), lambda pen, v: _dresser(pen, v, Y0), block=JDRESSER.footprint()),
+             Piece('curtains', (1.1, Y0 + 1.5, 9.88), lambda pen, v: curtain_pair(pen, v, (-0.4, 10.0), (2.6, 10.0), JWIN[0] + 0.4, JWIN[1] + 0.4, JWIN[3],
+                                                                                    1.4, Y0, o.get('curtains', 1.0), '#f2b8c8', seed=5, sheer=False))]
+        return P
+
+    def glows(self, v, o):
+        kn = _kfn(o.get('nightlight', 1.0), 91)
+        Y0 = UP_Y
+
+        def night(pen, t):
+            k = kn(t)
+            if k <= 0.01: return
+            x, y = JNIGHT[0] - 0.08, JNIGHT[1] - 0.05
+            px, py = v.p(x, Y0 + 0.66, y); s = v.s(x, y)
+            moon = minus(oval(px, py, 0.06 * s), oval(px + 0.03 * s, py - 0.015 * s, 0.05 * s))
+            pen.glow(px, py, 0.45 * s, '#a8c0ff', 90 * k)
+            pen.fill(moon, mix('#7a8ab0', '#f4f6ff', k)); pen.line(moon, 0.8)
+        return [('nightlight_glow', (JNIGHT[0], Y0 + 0.6, JNIGHT[1]), night)]
+
+    def spots(self, v, o):
+        Y0 = UP_Y
+        S = {}
+        S['window'] = _mk_spot(v, 'window', 1.1, 9.62, Y0, 'stand', 'June at her window (waving at the treeline): face (0, 1)', face=(0, 1))
+        S['window_side'] = _mk_spot(v, 'window_side', 1.75, 9.45, Y0, 'stand', 'beside June at the window (the narrator)', face=(0, 1))
+        S['sill'] = _mk_spot(v, 'sill', 1.1, 9.93, Y0 + JWIN[2], 'surface', 'the window sill (inside)')
+        S['glass'] = _mk_spot(v, 'glass', 1.1, 9.97, Y0 + 1.45, 'point', 'the window glass (June\'s hand on it)')
+        S['doorway'] = _mk_spot(v, 'doorway', 0.8, 5.95, Y0, 'stand', 'in the doorway (Mom smiling: face (0, 1))', face=(0, 1))
+        S['bed_edge'] = _mk_spot(v, 'bed_edge', JBED.cx - 0.25, JBED.cy - 0.2, Y0, 'seat', 'sitting on the bed edge (face -x)', face=(-1, 0), seat_Y=0.5)
+        S['bed_lie'] = _mk_spot(v, 'bed_lie', JBED.cx, JBED.cy + 0.1, Y0 + 0.52, 'lie', 'June in bed (head toward the window: +y; the quilt layer over her)')
+        S['bed_side'] = _mk_spot(v, 'bed_side', JBED.cx - 0.75, JBED.cy + 0.3, Y0, 'stand', 'beside the bed (Mom tucking June in): face (1, 0)', face=(1, 0))
+        S['room_mid'] = _mk_spot(v, 'room_mid', 0.7, 7.6, Y0, 'stand', "the middle of June's room")
+        S['dress'] = _mk_spot(v, 'dress', -0.37, 6.45, Y0 + 1.25, 'point', 'the new yellow dress on the closet door')
+        return S
+
+
+def _round_rug(p_, cx, cy, rx, ry):
+    p_.fill(oval(cx, cy, rx, ry), '#f2b0c0'); p_.texture(oval(cx, cy, rx, ry), 'fabric', 0.7, 'overlay', 0.5)
+    for k, c in enumerate(('#ffffff', '#f6d978', '#ffffff')):
+        p_.line(oval(cx, cy, rx * (0.85 - k * 0.2), ry * (0.85 - k * 0.2)), 2.0, c, 160)
+    p_.line(oval(cx, cy, rx, ry), 1.2, '#000000', 110)
+
+
+def _toys_floor(p_, W, H, x0, y1):
+    """A few toys on June's floor: a plush bunny, blocks, crayons (drawn flat on the floor art)."""
+    u, vv = floor_uv(x0, y1, 0.25, 8.6)
+    for k, c in enumerate(('#e84a5a', '#4aa8e8', '#f2c84a', '#5ab85a')):
+        p_.fill(rect(u + k * 7, vv + (k % 2) * 4, 6, 6), c); p_.line(rect(u + k * 7, vv + (k % 2) * 4, 6, 6), 0.5, '#000000', 120)
+    u, vv = floor_uv(x0, y1, 1.35, 6.9)
+    for k, c in enumerate(('#e84a5a', '#4a6ae8', '#3aa84a', '#f2a83a', '#8a4ad8')):
+        p_.cv.save(); p_.cv.translate(u + k * 3, vv); p_.cv.rotate(k * 23 - 30)
+        p_.fill(rrect(-0.6, -5, 1.2, 10, 0.5), c); p_.cv.restore()
+
+
+def _closet_dress_art(dress=True):
+    def art(p_, W, H):
+        door_art('four', 'right', bolt=False)(p_, W, H)
+        if not dress: return
+        cx, top = W * 0.5, 22
+        p_.line(poly([(cx - 9, top + 8), (cx, top), (cx + 9, top + 8)], False), 0.9, '#c8c8c8')        # hanger
+        p_.line(oval(cx, top - 3, 2.2), 0.8, '#c8c8c8')
+        dr = smooth([(cx - 10, top + 9), (cx + 10, top + 9), (cx + 12, top + 26), (cx + 25, top + 70), (cx - 25, top + 70), (cx - 12, top + 26)], True, 0.5)
+        p_.fill(dr, '#f6cf3e'); p_.line(dr, 0.8, '#8a6a10', 220)
+        p_.fill(rect(cx - 12, top + 25, 24, 4), '#ffffff')                                                 # sash
+        for sd in (-1, 1): p_.fill(oval(cx + sd * 12, top + 13, 5, 4.5), '#f6cf3e'); p_.line(oval(cx + sd * 12, top + 13, 5, 4.5), 0.6, '#8a6a10', 200)
+        p_.fill(smooth([(cx - 6, top + 9), (cx, top + 13), (cx + 6, top + 9)], True, 0.8), '#ffffff')    # collar
+        for k in range(9): p_.fill(oval(cx - 24 + k * 6, top + 70, 3.2, 2.2), '#ffffff')                 # lace hem
+        bag = rrect(cx - 28, top + 4, 56, 74, 6)
+        p_.fill(bag, '#e8f0ff', 40); p_.linear(bag, cx - 28, 0, cx + 28, 0, [(0, '#ffffff', 60), (0.3, '#ffffff', 0), (0.7, '#ffffff', 40), (1, '#ffffff', 0)])
+        p_.line(bag, 0.6, '#ffffff', 110)
+        p_.fill(rect(cx - 9, top + 6, 18, 6), '#ffffff', 220); btext(p_, "PEMBERTON'S", cx, top + 10.8, 'script', 4.0, '#c8264a', 230, 'center')
+    return art
+
+
+def bed_parts(B, Y0, state='made'):
+    """June's twin bed: white painted frame with a heart-cutout headboard, mattress, pillow, a pastel patchwork quilt
+    (state 'made' | 'turned' (corner turned back) | 'empty' (thrown back) | 'over' (the quilt is a separate layer over
+    whoever lies there))."""
+    w2, d2 = B.w / 2, B.d / 2
+    P = []
+    for (u, n) in ((-w2 + 0.03, -d2 + 0.03), (w2 - 0.03, -d2 + 0.03), (-w2 + 0.03, d2 - 0.03), (w2 - 0.03, d2 - 0.03)):
+        P.append(Part(sub(B, u - 0.03, u + 0.03, n - 0.03, n + 0.03, Y0, Y0 + 0.3), {'all': '#f2eee6'}))
+    P.append(Part(sub(B, -w2, w2, -d2, d2, Y0 + 0.18, Y0 + 0.32), {'all': '#f2eee6'}))
+    P.append(Part(sub(B, -w2 + 0.02, w2 - 0.02, -d2 + 0.02, d2 - 0.02, Y0 + 0.32, Y0 + 0.5), {'all': '#f6f2ea', 'top': '#fbf8f2'}))
+    # headboard (at the +u end? the bed's long axis is its depth; head toward +y = the box's -n side for fa -90)
+    hb = sub(B, -w2, w2, -d2 - 0.04, -d2 + 0.0, Y0, Y0 + 0.95)
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, hb, -w2, w2, -d2 - 0.04, -d2, Y0, Y0 + 0.95,
+                                                 lambda W, H: rounded_rect_pts(W, H, 18.0, 0.0), '#f6f2ea', '#d8d0c4',
+                                                 lambda p_, W, H: (p_.fill(_heart(W / 2, H * 0.3, 10), '#f2a5b5'),)) if False else
+                  box_extrude(pen, v, B, -w2, w2, -d2 - 0.05, -d2 + 0.005, Y0, Y0 + 0.95, lambda W, H: rounded_rect_pts(W, H, 18.0, 0.0), '#f6f2ea', '#d8d0c4',
+                              lambda p_, W, H: p_.fill(_heart(W / 2, H * 0.28, 9), '#f2a5b5')), ref=B.at(0, -d2 - 0.02, 0.5), tag='head'))
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2, w2, d2 - 0.005, d2 + 0.04, Y0, Y0 + 0.62, lambda W, H: rounded_rect_pts(W, H, 10.0, 0.0),
+                                                 '#f6f2ea', '#d8d0c4'), ref=B.at(0, d2 + 0.02, 0.4), tag='foot'))
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 + 0.1, w2 - 0.1, -d2 + 0.05, -d2 + 0.38, Y0 + 0.5, Y0 + 0.62,
+                                                 lambda W, H: rounded_rect_pts(W, H, 5.0, 3.0, bulge=1.5), '#fbfaf6', '#d8d4cc'),
+                  ref=B.at(0, -d2 + 0.2, 0.55), tag='pillow'))
+    if state != 'empty':
+        n0 = -d2 + 0.42 if state != 'turned' else -d2 + 0.62
+        qt = Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 - 0.03, w2 + 0.03, n0, d2 + 0.0, Y0 + 0.28, Y0 + 0.55,
+                                                 lambda W, H: rounded_rect_pts(W, H, 3.0, 0.0, bulge=2.0), '#f2c8d0', '#d8a8b4', _quilt_art) if True else None,
+                  ref=B.at(0, 0.2, 0.5), tag='quilt')
+        if state == 'over':
+            qt.ref = (qt.ref[0], qt.ref[1], qt.ref[2])
+            qt.tag = 'quilt_over'
+        P.append(qt)
+    else:
+        P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 - 0.03, w2 + 0.03, d2 - 0.45, d2 + 0.02, Y0 + 0.28, Y0 + 0.62,
+                                                     lambda W, H: rounded_rect_pts(W, H, 6.0, 0.0, bulge=4.0), '#f2c8d0', '#d8a8b4', _quilt_art),
+                      ref=B.at(0, d2 - 0.2, 0.5), tag='quilt'))
+    return P
+
+
+def _heart(x, y, r):
+    return smooth([(x, y + r), (x - r, y - r * 0.1), (x - r * 0.55, y - r * 0.8), (x, y - r * 0.35), (x + r * 0.55, y - r * 0.8), (x + r, y - r * 0.1)], True, 0.9)
+
+
+def _quilt_art(p_, W, H):
+    s_ = 16.0
+    cols = ['#f2c8d0', '#fbe6a8', '#c8e6d8', '#d8d0f0', '#fbf2e6', '#f2b8c8']
+    for i in range(int(W / s_) + 1):
+        for j in range(int(H / s_) + 1):
+            p_.fill(rect(i * s_, j * s_, s_, s_), cols[(i * 2 + j * 3) % len(cols)])
+            p_.line(rect(i * s_ + 1, j * s_ + 1, s_ - 2, s_ - 2), 0.5, '#a07a8a', 110)
+    p_.texture(rect(0, 0, W, H), 'fabric', 0.5, 'overlay', 0.5)
+
+
+def _nightstand(pen, v, Y0):
+    B = Box(JNIGHT[0], JNIGHT[1], 0.42, 0.38, Y0, Y0 + 0.58, -90)
+    draw_box(pen, v, B, {'all': '#f2eee6', 'front': dict(fill='#f2eee6', art=lambda p_, W, H: (p_.line(rect(4, 6, W - 8, H * 0.38), 0.8, '#000000', 110),
+                                                                                            p_.fill(oval(W / 2, 6 + H * 0.19, 1.6), '#e8a0b0')))})
+    # a little lamp (off) and a plush bunny
+    x, y = JNIGHT[0] + 0.07, JNIGHT[1] + 0.05
+    _shade(pen, v, x, y, Y0 + 0.82, Y0 + 0.98, 0.11, 0.08, '#f8e0e8', 0.0)
+    pen.seg(v.p(x, Y0 + 0.58, y), v.p(x, Y0 + 0.82, y), max(1.0, 0.012 * v.s(x, y)), lit('#e8dcc8', (x, Y0 + 0.7, y), None))
+
+
+def _dresser(pen, v, Y0):
+    B = JDRESSER
+    B2 = Box(B.cx, B.cy, B.w, B.d, Y0, Y0 + 0.95, B.fa)
+
+    def front(p_, W, H):
+        for k in range(3):
+            r = rect(4, 6 + k * (H - 10) / 3, W - 8, (H - 10) / 3 - 4)
+            p_.line(r, 0.9, '#000000', 110)
+            for sx_ in (0.3, 0.7): p_.fill(oval(W * sx_, 6 + k * (H - 10) / 3 + (H - 10) / 6 - 2, 1.8), '#f2a5b5')
+    draw_box(pen, v, B2, {'all': '#f6f2ea', 'front': dict(fill='#f6f2ea', art=front)})
+    # plush toys on top: a bunny (white) and a bear
+    for (dy, c, kind) in ((-0.25, '#f2eee6', 'bunny'), (0.2, '#b88a5a', 'bear')):
+        x, y = B.cx + 0.02, B.cy + dy
+        px, py = v.p(x, Y0 + 0.95, y); s = v.s(x, y)
+        body = union(oval(px, py - 0.07 * s, 0.07 * s, 0.07 * s), oval(px, py - 0.17 * s, 0.055 * s))
+        if kind == 'bunny':
+            body = union(body, union(oval(px - 0.025 * s, py - 0.25 * s, 0.015 * s, 0.05 * s), oval(px + 0.025 * s, py - 0.25 * s, 0.015 * s, 0.05 * s)))
+        else:
+            body = union(body, union(oval(px - 0.045 * s, py - 0.21 * s, 0.02 * s), oval(px + 0.045 * s, py - 0.21 * s, 0.02 * s)))
+        pen.fill(body, lit(c, (x, Y0 + 1.05, y), None)); pen.line(body, 0.9)
+        for sd in (-1, 1): pen.fill(oval(px + sd * 0.018 * s, py - 0.18 * s, max(0.6, 0.006 * s)), '#1a1a1a')
+
+
+# ---------------------------------------------------------------------------------------------- the bathroom
+BSINK = (-2.62, 6.75)                                        # pedestal sink on the left wall (faces +x)
+BTOILET = (-0.68, 7.25)                                      # toilet on the right wall (faces -x)
+
+
+class Bathroom(Room):
+    name = 'bath'
+    poly = [(BATH[0], BATH[2]), (BATH[1], BATH[2]), (BATH[1], BATH[3]), (BATH[0], BATH[3])]
+    Y = UP_Y
+
+    def lights(self, o):
+        Y0 = UP_Y
+        amb = o.get('amb_b', '#2c3258')
+        gap = [Lamp(-1.62, Y0 + 0.015, 5.86, 1.8, o.get('gap_col', LAMP_C), 1.5, only={'floor', 'side', 'front'}, sxy=(1.7, 1.0), fall=1.4)]
+        bulb = [Lamp(-1.65, Y0 + 2.2, 7.2, 3.6, '#fff0d8', 1.5)]
+        var = [('gap', gap, _kfn(o.get('gap', 0.0), 101)), ('bath_light', bulb, _kfn(o.get('bath_light', 0.0), 102))]
+        steady = []
+        if o.get('tod') == 'dawn':
+            amb = '#3a3048'
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        Y0 = UP_Y
+        x0, x1, y0, y1 = BATH
+        floor_rect(pen, v, x0, x1, y0, y1, Y0, '#f2efe6', 'hex', '#1a1a1a', '#f2efe6', seed=51, art=lambda p_, W, H: _bath_mat(p_, W, H, x0, y1))
+        walls = [((-0.4, 5.8), (-2.9, 5.8), [(-0.4 - D_BATH[1], 0.0, -0.4 - D_BATH[0], DOOR_H)]),
+                 ((-2.9, 5.8), (-2.9, 8.6), []), ((-2.9, 8.6), (-0.4, 8.6), []), ((-0.4, 8.6), (-0.4, 5.8), [])]
+        for (a, b, holes) in walls:
+            wall(pen, v, a, b, Y0, CEIL1, P_['bath_wall'], None, None, holes, wains=1.35, wcol=P_['bath_tile'], seed=53, base_h=0.0,
+                 art=self.wall_art(a, b, o))
+        ceil_rect(pen, v, x0, x1, y0, y1, CEIL1)
+
+    def wall_art(self, a, b, o):
+        def tiles(p_, W, H):
+            ty = H - 135
+            p_.fill(rect(0, ty, W, 135), P_['bath_tile'])
+            p_.cv.save(); p_.cv.translate(0, ty); pat(p_, W, 135, 'tile', '#f8e8ec', 255, scale=1.0); p_.cv.restore()
+            p_.fill(rect(0, ty - 3, W, 5), '#1a1a1a'); p_.fill(rect(0, ty - 3, W, 1.2), '#5a5a5a')
+            p_.fill(rect(0, H - 8, W, 8), '#1a1a1a')
+        if a == (-2.9, 5.8):                                     # left wall: the medicine cabinet over the sink, towel bar
+            def art(p_, W, H):
+                tiles(p_, W, H)
+                mx = (BSINK[1] - 5.8) * 100
+                p_.fill(rect(mx - 22, H - 195, 44, 52), '#e8e4dc'); p_.fill(rect(mx - 19, H - 192, 38, 46), '#5a6478')
+                p_.linear(rect(mx - 19, H - 192, 38, 46), mx - 19, H - 192, mx + 19, H - 146, [(0, '#c8d4e8', 120), (0.4, '#c8d4e8', 0), (1, '#c8d4e8', 60)])
+                p_.line(rect(mx - 22, H - 195, 44, 52), 0.8, '#000000', 140)
+                tx = (7.9 - 5.8) * 100
+                p_.fill(rect(tx - 25, H - 112, 50, 2.5), '#c8c8c8')
+                p_.fill(rect(tx - 20, H - 111, 40, 34), '#f2a5b5'); p_.fill(rect(tx - 20, H - 88, 40, 4), '#ffffff')
+            return art
+        if a == (-0.4, 5.8):                                     # door wall: the light switch
+            def art(p_, W, H):
+                tiles(p_, W, H)
+                _light_switch(p_, (-0.4 - D_BATH[1] + 0.15) * 100 - 15, H - 120, o.get('bath_light', 0.0) > 0.5)
+            return art
+        return lambda p_, W, H: tiles(p_, W, H)
+
+    def pieces(self, o):
+        Y0 = UP_Y
+        tubp = tub_parts(TUB, Y0)
+        ang = o.get('door', 0.0)
+        bd = bath_door_leaf(lock=o.get('lock', 1.0), knob_turn=0.0)
+        P = [Piece('tub', (TUB.cx, Y0 + 0.3, TUB.cy), lambda pen, v: draw_parts(pen, v, tubp), occupant=[(TUB.cx - 0.4, TUB.cy), (TUB.cx + 0.35, TUB.cy)],
+                   front=tubp, block=TUB.footprint()),
+             Piece('sink', (BSINK[0], Y0 + 0.5, BSINK[1]), lambda pen, v: _pedestal_sink(pen, v, Y0), block=_circ(BSINK[0] + 0.1, BSINK[1], 0.26)),
+             Piece('toilet', (BTOILET[0], Y0 + 0.4, BTOILET[1]), lambda pen, v: _toilet(pen, v, Y0), block=[(-0.4, 7.05), (-1.08, 7.05), (-1.08, 7.45), (-0.4, 7.45)]),
+             Piece('shower_curtain', (TUB.cx + 0.6, Y0 + 1.4, TUB.cy - 0.33), lambda pen, v: _shower_curtain(pen, v, Y0))]
+        if not callable(ang):
+            P.append(Piece('door', (-1.62, Y0 + 1.0, 5.8 + 0.4 * math.sin(math.radians(ang))), lambda pen, v: bd.draw(pen, v, ang)))
+        return P
+
+    def glows(self, v, o):
+        kg = _kfn(o.get('gap', 0.0), 101)
+        Y0 = UP_Y
+        feet = o.get('feet')
+
+        def gap(pen, t):
+            ff = feet(t) if callable(feet) else (feet or ())
+            gap_glow(pen, v, (D_BATH[1] - 0.02, 5.8 + 0.005), (D_BATH[0] + 0.02, 5.8 + 0.005), Y0, kg(t), o.get('gap_col', '#ffd9a0'), 0.9, ff, side_n=1.0)
+        return [('gap_glow', (-1.62, Y0, 5.9), gap)]
+
+    def spots(self, v, o):
+        Y0 = UP_Y
+        S = {}
+        tY = Y0 + 0.08                                            # the tub floor
+        S['tub_left'] = _mk_spot(v, 'tub_left', TUB.cx - 0.42, TUB.cy, tY, 'seat', 'sitting IN the tub (the narrator), facing the door: feet on the tub floor',
+                                 face=(0, -1), seat_Y=0.0)
+        S['tub_right'] = _mk_spot(v, 'tub_right', TUB.cx + 0.32, TUB.cy, tY, 'seat', 'sitting in the tub (June)', face=(0, -1), seat_Y=0.0)
+        S['door_inside'] = _mk_spot(v, 'door_inside', -1.62, 6.15, Y0, 'stand', 'inside, at the door (locking it): face (0, -1)', face=(0, -1))
+        S['lock'] = _mk_spot(v, 'lock', D_BATH[1] - 0.075, Y0 + KNOB_Y + 0.17, 5.84, 'point', 'the little thumb-turn bolt (inside)')
+        S['knob'] = _mk_spot(v, 'knob', D_BATH[1] - 0.075, Y0 + KNOB_Y, 5.84, 'point', 'the knob (inside): it turns gently')
+        S['keyhole'] = _mk_spot(v, 'keyhole', D_BATH[1] - 0.075, Y0 + KNOB_Y - 0.13, 5.84, 'point', 'the keyhole (inside): Mom\'s key turns in it')
+        S['gap'] = _mk_spot(v, 'gap', -1.62, 5.83, Y0, 'point', 'the gap under the door (the drawing slides in here)')
+        S['gap_floor'] = _mk_spot(v, 'gap_floor', -1.62, 6.12, Y0, 'surface', 'the floor just inside the door (where the drawing comes to rest)')
+        return S
+
+
+def _bath_mat(p_, W, H, x0, y1):
+    u0, v0 = floor_uv(x0, y1, -2.65, 7.8); u1, v1 = floor_uv(x0, y1, -1.35, 7.4)
+    r = rrect(u0, v0, u1 - u0, v1 - v0, 4)
+    p_.fill(r, '#e88aa0'); p_.texture(r, 'fabric', 0.8, 'overlay', 0.8); p_.line(r, 1.0, '#000000', 90)
+
+
+def tub_parts(B, Y0):
+    """The pink built-in tub: a tiled apron on the room side, a rolled rim, the dark empty basin."""
+    w2, d2 = B.w / 2, B.d / 2
+    P = []
+    pink = '#eaa4b2'
+    # apron (the near side, toward the room: +n is the front for fa 0 = facing -y)
+    P.append(Part(sub(B, -w2, w2, d2 - 0.08, d2, Y0, Y0 + 0.5), {'all': pink, 'front': dict(fill=pink, art=lambda p_, W, H: (pat(p_, W, H, 'tile', '#f8e0e6', 255, scale=1.0),
+                                                                                                                         p_.fill(rect(0, 0, W, 4), '#1a1a1a')))},
+                  tag='apron'))
+    # the back and end walls of the tub (behind an occupant)
+    P.append(Part(sub(B, -w2, w2, -d2, -d2 + 0.07, Y0, Y0 + 0.56), {'all': pink, 'top': '#f2c0cc'}, tag='back'))
+    for (u0, u1) in ((-w2, -w2 + 0.07), (w2 - 0.07, w2)):
+        P.append(Part(sub(B, u0, u1, -d2 + 0.07, d2 - 0.08, Y0, Y0 + 0.56), {'all': pink, 'top': '#f2c0cc'}, tag='end'))
+    # the basin floor
+    P.append(Part(fn=lambda pen, v: draw_face(pen, v, floor_face(B.cx - w2 + 0.07, B.cx + w2 - 0.07, B.cy - d2 + 0.07, B.cy + d2 - 0.08, Y0 + 0.08), None, '#c88896',
+                                              ao=14, line=False), ref=B.at(0, 0, 0.1), tag='basin'))
+    # the rim on the near side (in front of whoever sits in the tub)
+    P.append(Part(sub(B, -w2, w2, d2 - 0.1, d2, Y0 + 0.5, Y0 + 0.57), {'all': '#f0b4c0', 'top': '#f6ccd6'}, tag='rim'))
+    # faucet and spout on the end wall
+    P.append(Part(fn=lambda pen, v: _tub_faucet(pen, v, B, Y0), ref=B.at(-w2 + 0.04, 0, 0.7), tag='back'))
+    return P
+
+
+def _tub_faucet(pen, v, B, Y0):
+    x, Y, y = B.at(-B.w / 2 + 0.035, 0.0, Y0 + 0.75)
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    a_, b_ = v.p(x, Y0 + 0.75, y), v.p(x + 0.12 * B.U[0], Y0 + 0.72, y + 0.12 * B.U[1])
+    pen.seg(a_, b_, max(2.0, 0.03 * s) + 2, LINE); pen.seg(a_, b_, max(1.6, 0.03 * s), lit('#c8ccd4', (x, Y0 + 0.75, y), None))
+    for dd in (-0.12, 0.12):
+        kx, ky = v.p(x, Y0 + 0.92, y + dd)
+        pen.fill(oval(kx, ky, 0.025 * s), lit('#d8dce4', (x, Y0 + 0.9, y), None)); pen.line(oval(kx, ky, 0.025 * s), 0.8)
+
+
+def _shower_curtain(pen, v, Y0):
+    """A floral shower curtain pushed to the tub's right end on a chrome rod."""
+    B = TUB
+    O = B.at(B.w / 2 - 0.45, B.d / 2 - 0.02, Y0 + 2.0)
+    F = Face(O, (B.U[0], 0, B.U[1]), (0, -1, 0), 44.0, 150.0, (B.N[0], 0, B.N[1]), 'front')
+    shp = poly([(0, 0), (44, 0), (44, 150)] + [(x, 150 - 3 * abs(math.sin(x * 0.35))) for x in np.linspace(44, 0, 10)])
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#f2eef4')
+        for i in range(6):
+            p_.linear(rect(i * W / 6, 0, W / 6, H), i * W / 6, 0, (i + 1) * W / 6, 0, [(0, '#000000', 60), (0.4, '#ffffff', 30), (1, '#000000', 60)])
+        pat(p_, W, H, 'ditsy', '#e88aa0', 170, 8, '#9fd3f0', 1.6)
+    draw_face(pen, v, F, art, '#f2eef4', shape=shp, ao=False, lw=1.0, two_sided=True)
+    a_ = v.p(*B.at(-B.w / 2, B.d / 2 - 0.02, Y0 + 2.02)); b_ = v.p(*B.at(B.w / 2, B.d / 2 - 0.02, Y0 + 2.02))
+    pen.seg(a_, b_, max(1.2, 0.012 * v.s(B.cx, B.cy)) + 2, LINE); pen.seg(a_, b_, max(1.0, 0.012 * v.s(B.cx, B.cy)), '#c8ccd4')
+
+
+def _pedestal_sink(pen, v, Y0):
+    x, y = BSINK
+    B = Box(x + 0.1, y, 0.5, 0.42, Y0 + 0.78, Y0 + 0.88, 90)
+    s = v.s(x + 0.1, y)
+    a_, b_ = v.p(x + 0.06, Y0, y), v.p(x + 0.06, Y0 + 0.78, y)
+    pen.seg(a_, b_, max(3, 0.13 * s) + 2, LINE); pen.seg(a_, b_, max(2, 0.13 * s), lit('#f2efe8', (x, Y0 + 0.4, y), None))
+    draw_box(pen, v, B, {'all': '#f2efe8', 'top': '#fbfaf6'})
+
+
+def _toilet(pen, v, Y0):
+    x, y = BTOILET
+    tank = Box(x + 0.18, y, 0.42, 0.18, Y0 + 0.42, Y0 + 0.8, -90)
+    bowl = Box(x - 0.08, y, 0.36, 0.42, Y0, Y0 + 0.4, -90)
+    seat = Box(x - 0.1, y, 0.38, 0.46, Y0 + 0.4, Y0 + 0.43, -90)
+    for b_ in sorted((tank, bowl, seat), key=lambda q: -v.d(q.cx, q.cy)):
+        draw_box(pen, v, b_, {'all': '#f2efe8', 'top': '#fbfaf6'})
+
+
+# ---------------------------------------------------------------------------------------------- the attic
+def roof_Y(y):
+    """The underside of the roof above plan y (ridge at y 5)."""
+    return RIDGE - abs(y - 5.0) * (RIDGE - (ATTIC_Y + KNEE)) / (5.0 - KNEE_Y0)
+
+
+class Attic(Room):
+    name = 'attic'
+    poly = [(ATT[0], KNEE_Y0), (ATT[1], KNEE_Y0), (ATT[1], KNEE_Y1), (ATT[0], KNEE_Y1)]
+    Y = ATTIC_Y
+
+    def lights(self, o):
+        amb = o.get('amb_a', '#2a2c48')
+        bulb = [Lamp(BULB[0], BULB[1] - 0.06, BULB[2], 7.0, '#ffd08a', 2.6, (1.0, 0.95, 0.85), fall=1.6)]
+        moon = Lamp(kind='win', c=MOON_C, k=0.9, soft=8.0, panes=[[(5.0, ATTIC_Y + 2.0, 4.65), (5.0, ATTIC_Y + 2.0, 5.35), (5.0, ATTIC_Y + 1.3, 5.35), (5.0, ATTIC_Y + 1.3, 4.65)]],
+                    d=_norm3((-1.0, -0.35, 0.2)))
+        var = [('bulb', bulb, _kfn(o.get('bulb', 1.0), 111))]
+        return amb, [moon], var
+
+    def shell(self, pen, v, o):
+        Y0 = ATTIC_Y
+        floor_rect(pen, v, ATT[0], ATT[1], KNEE_Y0, KNEE_Y1, Y0, P_['attic_floor'], 'boards', '#3a2412', seed=61, scale=1.6,
+                   art=lambda p_, W, H: _attic_floor_art(p_, W, H))
+        # knee walls (planks) and the two gable ends
+        for (a, b) in (((5.0, KNEE_Y0), (-5.0, KNEE_Y0)), ((-5.0, KNEE_Y1), (5.0, KNEE_Y1))):
+            F = wall_face(a, b, Y0, Y0 + KNEE)
+            draw_face(pen, v, F, lambda p_, W, H: (p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 1.0, 90), pat(p_, W, H, 'boards', '#2a1a0c', 110, 3, scale=2.0)),
+                      P_['attic_wood'], ao={'bottom': 18, 'top': 10})
+        for (x, y0_, y1_, win) in ((5.0, KNEE_Y1, KNEE_Y0, 'round'), (-5.0, KNEE_Y0, KNEE_Y1, 'square')):
+            prof = [(y0_, Y0), (y0_, Y0 + KNEE), (5.0, RIDGE), (y1_, Y0 + KNEE), (y1_, Y0)]
+            F = Face((x, RIDGE, y0_), (0, 0, 1.0 if y1_ > y0_ else -1.0), (0, -1, 0), abs(y1_ - y0_) * 100, (RIDGE - Y0) * 100, (-1.0 if x > 0 else 1.0, 0, 0), 'wall')
+            shp = poly([(abs(yy - y0_) * 100, (RIDGE - YY) * 100) for (yy, YY) in prof])
+            if win == 'round':
+                hole = oval(abs(5.0 - y0_) * 100, (RIDGE - (Y0 + 1.65)) * 100, 34, 34)
+            else:
+                hole = rect(abs(5.0 - y0_) * 100 - 26, (RIDGE - (Y0 + 1.9)) * 100, 52, 44)
+            draw_face(pen, v, F, lambda p_, W, H: (p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 1.0, 90), pat(p_, W, H, 'boards', '#2a1a0c', 110, 4, scale=2.0)),
+                      P_['attic_wood'], shape=shp, holes=[hole], ao={'bottom': 18})
+        # the roof underside: boards between rafters, both slopes
+        for side in (-1, 1):
+            ya, yb = (5.0, KNEE_Y1) if side > 0 else (KNEE_Y0, 5.0)
+            Ya, Yb = (RIDGE, Y0 + KNEE) if side > 0 else (Y0 + KNEE, RIDGE)
+            O = (ATT[0], Ya, ya)
+            U = (1.0, 0.0, 0.0); Vd = _norm3((0.0, Yb - Ya, yb - ya))
+            L_ = math.hypot(Yb - Ya, yb - ya)
+            nrm = _norm3((0.0, -abs(yb - ya), -side * abs(Yb - Ya)))
+            F = Face(O, U, Vd, (ATT[1] - ATT[0]) * 100, L_ * 100, nrm, 'ceil')
+            draw_face(pen, v, F, _roof_boards, '#6a4e36', ao=14, two_sided=True)
+        # rafters (screen-space strips along each slope) and the ridge beam
+        for x in np.arange(-4.7, 5.0, 0.6):
+            for side in (-1, 1):
+                ya, yb = (5.0, KNEE_Y1) if side > 0 else (5.0, KNEE_Y0)
+                pts = [(x - 0.03, RIDGE - 0.02, ya), (x + 0.03, RIDGE - 0.02, ya), (x + 0.03, Y0 + KNEE, yb), (x - 0.03, Y0 + KNEE, yb)]
+                path = v.poly3(pts)
+                if path.isEmpty(): continue
+                pen.fill(path, lit(P_['attic_rafter'], (x, (RIDGE + Y0) / 2, (ya + yb) / 2), (0, -1, 0))); pen.line(path, 0.8)
+        rb = v.poly3([(ATT[0], RIDGE, 4.94), (ATT[1], RIDGE, 4.94), (ATT[1], RIDGE - 0.12, 4.94), (ATT[0], RIDGE - 0.12, 4.94)])
+        pen.fill(rb, lit('#5a3e26', (0, RIDGE, 5.0), (0, -1, 0))); pen.line(rb, 1.0)
+        # the stair opening with its railing
+        x0, x1, y0, y1 = ATT_STAIR
+        hq = v.poly3([(x0, Y0 + 0.001, y0), (x1, Y0 + 0.001, y0), (x1, Y0 + 0.001, y1), (x0, Y0 + 0.001, y1)])
+        pen.fill(hq, '#0a0806'); pen.line(hq, 1.2)
+        for (a, b) in (((x1, y0), (x1, y1)), ((x0, y1), (x1, y1))):
+            for k in range(5):
+                u = k / 4
+                px, py = a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u
+                if v.d(px, py) < 0.2: continue
+                pen.seg(v.p(px, Y0, py), v.p(px, Y0 + 0.85, py), max(1.5, 0.035 * v.s(px, py)), lit('#6a4a2e', (px, Y0 + 0.4, py), None))
+            if v.d(a[0], a[1]) > 0.2 and v.d(b[0], b[1]) > 0.2:
+                pen.seg(v.p(a[0], Y0 + 0.85, a[1]), v.p(b[0], Y0 + 0.85, b[1]), max(2.0, 0.05 * v.s(a[0], a[1])), lit('#6a4a2e', (a[0], Y0 + 0.85, a[1]), (0, 1, 0)))
+
+    def pieces(self, o):
+        Y0 = ATTIC_Y
+        tc = TOYCHEST
+        P = [Piece('toychest', (tc.cx, Y0 + 0.3, tc.cy), lambda pen, v: toy_chest(pen, v, Y0, o.get('chest', 'open')), block=tc.footprint()),
+             Piece('boxes_corner', (-3.5, Y0 + 0.5, 7.3), lambda pen, v: _box_stack(pen, v, Y0, [(-3.0, 7.0, 0.62, 0.5, 0.5, 10), (-3.05, 7.0, 0.55, 0.45, 0.45, -6),
+                                                                                                   (-3.7, 7.25, 0.6, 0.55, 0.6, 4), (-3.0, 7.75, 0.5, 0.5, 0.4, 0)], 'corner'),
+                   block=[(-4.1, 6.7), (-2.6, 6.7), (-2.6, 8.05), (-4.1, 8.05)]),
+             Piece('boxes_south', (-1.5, Y0 + 0.4, 2.2), lambda pen, v: _box_stack(pen, v, Y0, [(-1.6, 2.0, 0.6, 0.5, 0.45, 3), (-0.9, 1.9, 0.5, 0.45, 0.5, -8),
+                                                                                                (-1.25, 2.0, 0.5, 0.4, 0.4, 0), (2.2, 1.95, 0.7, 0.5, 0.5, 12)], 'south')),
+             Piece('rocker', (ROCKER[0], Y0 + 0.4, ROCKER[1]), lambda pen, v: rocking_chair(pen, v, ROCKER[0], ROCKER[1], Y0, 120), block=_circ(ROCKER[0], ROCKER[1], 0.38)),
+             Piece('dressform', (2.6, Y0 + 0.8, 7.6), lambda pen, v: _dress_form(pen, v, 2.6, 7.6, Y0)),
+             Piece('horse', (2.9, Y0 + 0.4, 2.3), lambda pen, v: _rocking_horse(pen, v, 2.9, 2.3, Y0)),
+             Piece('bulb', (BULB[0], BULB[1], BULB[2]), lambda pen, v: _bulb(pen, v, 0.0)),
+             Piece('boxes_east', (3.6, Y0 + 0.4, 7.7), lambda pen, v: _box_stack(pen, v, Y0, [(3.5, 7.8, 0.6, 0.5, 0.5, -10), (3.5, 7.8, 0.5, 0.45, 0.4, 6),
+                                                                                                (4.3, 7.5, 0.5, 0.5, 0.45, 15), (1.9, 8.1, 0.45, 0.4, 0.35, -4)], 'east'),
+                   block=[(1.6, 7.2), (4.6, 7.2), (4.6, 8.4), (1.6, 8.4)]),
+             Piece('suitcases', (-1.2, Y0 + 0.3, 8.1), lambda pen, v: _suitcases(pen, v, -1.2, 8.1, Y0), block=[(-1.6, 7.8), (-0.8, 7.8), (-0.8, 8.4), (-1.6, 8.4)]),
+             Piece('sheet_chair', (-2.0, Y0 + 0.5, 2.4), lambda pen, v: _sheet_chair(pen, v, -2.0, 2.4, Y0))]
+        return P
+
+    def glows(self, v, o):
+        kb = _kfn(o.get('bulb', 1.0), 111)
+
+        def bulb(pen, t):
+            k = kb(t)
+            if k <= 0.01: return
+            _bulb(pen, v, k, t)
+        return [('bulb_glow', BULB, bulb)]
+
+    def spots(self, v, o):
+        Y0 = ATTIC_Y
+        S = {}
+        tc = TOYCHEST
+        S['chest_floor'] = _mk_spot(v, 'chest_floor', tc.cx, tc.cy - 0.62, Y0, 'kneel', 'June sitting on the floor in front of the toy chest (face (0, 1))', face=(0, 1))
+        S['chest_top'] = _mk_spot(v, 'chest_top', tc.cx, tc.cy, Y0 + tc.Y1, 'surface', 'the toy chest (the old dress and the diary inside)')
+        S['corner_seat'] = _mk_spot(v, 'corner_seat', ROCKER[0], ROCKER[1], Y0, 'seat', "Mom in Grandma's rocking chair in the dark corner, behind the boxes",
+                                    face=(math.cos(math.radians(30)), -math.sin(math.radians(30))), seat_Y=0.42)
+        S['stair_top'] = _mk_spot(v, 'stair_top', -3.55, 5.2, Y0, 'stand', 'at the top of the attic stairs (the narrator arriving)', face=(1, 0))
+        S['mid'] = _mk_spot(v, 'mid', 0.0, 6.0, Y0, 'stand', 'under the bulb')
+        return S
+
+
+def _roof_boards(p_, W, H):
+    p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 1.0)
+    y = 0.0; k = 0
+    while y < H:
+        p_.fill(rect(0, y, W, 14), '#000000', 18 + 25 * _h(k, 3)); p_.fill(rect(0, y, W, 0.9), '#000000', 140); y += 15.0; k += 1
+    rng = np.random.default_rng(3)
+    for i in range(int(W * H / 30000)):                                        # nail heads poking through, cobwebs
+        p_.fill(oval(rng.uniform(0, W), rng.uniform(0, H), 0.8), '#c8c0b0', 160)
+
+
+def _attic_floor_art(p_, W, H):
+    rng = np.random.default_rng(5)
+    for i in range(14):                                                        # dust and scuffs
+        p_.fill(_blob(rng.uniform(0, W), rng.uniform(0, H), rng.uniform(20, 70), rng.uniform(10, 30), 8, i, 0.5), '#c8b8a0', 26)
+
+
+def toy_chest(pen, v, Y0, state='open'):
+    """Mom's old toy chest: white-painted wood with faded pink and yellow flowers, LAURIE in chipped letters, 1980s
+    unicorn and rainbow stickers, brass corners. state 'closed' | 'open' (the lid up against the knee wall)."""
+    B = TOYCHEST
+    B2 = Box(B.cx, B.cy, B.w, B.d, Y0, Y0 + B.Y1 - 0.06, B.fa)
+
+    def front(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'wood', 0.4, 'overlay', 0.8, 90)
+        for k in range(5):
+            x = 10 + k * (W - 20) / 4
+            p_.fill(oval(x, H * 0.62, 4.2), '#f2a5b5', 180); p_.fill(oval(x, H * 0.62, 1.6), '#f6d978', 200)
+            p_.fill(oval(x - 5, H * 0.66, 2.4, 1.2), '#8ab87a', 160)
+        btext(p_, 'LAURIE', W / 2, H * 0.38, 'kid', H * 0.24, '#d86a8a', 220, 'center')
+        p_.fill(rrect(W * 0.12, H * 0.14, 12, 9, 2), '#fbf6ff'); p_.fill(oval(W * 0.12 + 6, H * 0.14 + 5, 3), '#c8a8f0')       # stickers
+        p_.fill(rrect(W * 0.78, H * 0.12, 11, 8, 2), '#fbf6ff')
+        for k, c in enumerate(('#e84a5a', '#f2a83a', '#f2d84a', '#5ab85a', '#4a8ae8')):
+            p_.line(smooth([(W * 0.78 + 1.5, H * 0.12 + 7.5 - k * 0.0), (W * 0.78 + 5.5, H * 0.12 + 2 + k * 0.9), (W * 0.78 + 9.5, H * 0.12 + 7.5)], False, 1.0), 0.7, c)
+        rng = np.random.default_rng(2)
+        for i in range(12):                                                     # chipped paint
+            p_.fill(_blob(rng.uniform(0, W), rng.uniform(0, H), rng.uniform(1, 3), rng.uniform(0.6, 2), 6, i, 0.5), '#8a6a4a', 160)
+        for (cx_, cy_) in ((3, 3), (W - 3, 3), (3, H - 3), (W - 3, H - 3)):
+            p_.fill(rect(cx_ - 3, cy_ - 3, 6, 6), '#b8944a')
+    draw_box(pen, v, B2, {'front': dict(fill='#efe8dc', art=front), 'all': dict(fill='#e2dace', art=_wood_art), 'top': '#3a2a1c'})
+    if state == 'open':
+        # the lid standing open against the knee wall, its underside showing (a faded Pemberton's sticker)
+        lid = Box(B.cx, B.cy - B.d / 2 - 0.02, B.w, 0.04, Y0 + B.Y1 - 0.06, Y0 + B.Y1 + B.d - 0.06, B.fa)
+        def under(p_, W, H):
+            p_.texture(rect(0, 0, W, H), 'wood', 0.4, 'overlay', 0.8, 90)
+            p_.fill(oval(W * 0.5, H * 0.5, 11, 7), '#f4e8e0'); btext(p_, "Pemberton's", W * 0.5, H * 0.5 + 1.6, 'script', 4.4, '#c8264a', 200, 'center')
+        lid = Box(B.cx, B.cy - B.d / 2 + 0.02, B.w, 0.04, Y0 + B.Y1 - 0.04, Y0 + B.Y1 + B.d * 0.95, B.fa)
+        draw_box(pen, v, lid, {'front': dict(fill='#e2dace', art=under), 'all': '#d2c8ba'})
+        # inside: old clothes, a doll's arm, the diary's pink corner
+        inn = v.poly3([B.at(-B.w / 2 + 0.03, B.d / 2 - 0.03, Y0 + B.Y1 - 0.08), B.at(B.w / 2 - 0.03, B.d / 2 - 0.03, Y0 + B.Y1 - 0.08),
+                       B.at(B.w / 2 - 0.03, -B.d / 2 + 0.03, Y0 + B.Y1 - 0.08), B.at(-B.w / 2 + 0.03, -B.d / 2 + 0.03, Y0 + B.Y1 - 0.08)])
+        if v.cam_h > Y0 + B.Y1:
+            pen.fill(inn, lit('#6a5a6a', (B.cx, Y0 + 0.5, B.cy), (0, 1, 0)))
+            px, py = v.p(*B.at(0.15, 0.0, Y0 + B.Y1 - 0.07)); s = v.s(B.cx, B.cy)
+            pen.fill(oval(px, py, 0.12 * s, 0.04 * s), lit('#d8c8a8', (B.cx, Y0 + 0.5, B.cy), (0, 1, 0)))
+            pen.fill(oval(px - 0.2 * s, py + 0.01 * s, 0.08 * s, 0.03 * s), lit('#c8a8b8', (B.cx, Y0 + 0.5, B.cy), (0, 1, 0)))
+
+
+def _box_stack(pen, v, Y0, boxes, seed='x'):
+    """Cardboard boxes (x, y, w, d, h, rotation) stacked from the floor; labels in marker: XMAS, LAURIE, EASTER, BOOKS."""
+    placed = []
+    heights = {}
+    for i, (x, y, w, d, h, rot) in enumerate(boxes):
+        k = (round(x, 1), round(y, 1))
+        base = heights.get(k, 0.0)
+        placed.append((x, y, w, d, base, base + h, rot, i))
+        heights[k] = base + h
+    placed.sort(key=lambda q: (-v.d(q[0], q[1]), q[4]))
+    labels = ['XMAS', 'LAURIE', 'EASTER', 'BOOKS', 'MOM', 'JUNE BABY']
+    for (x, y, w, d, Ya, Yb, rot, i) in placed:
+        B = Box(x, y, w, d, Y0 + Ya, Y0 + Yb, rot)
+        lab = labels[(i + len(seed)) % len(labels)]
+        def face_art(p_, W, H, lab=lab, i=i):
+            p_.texture(rect(0, 0, W, H), 'paper', 0.5, 'overlay', 0.6)
+            p_.fill(rect(W * 0.42, 0, W * 0.16, H * 0.18), '#d8c8a0')
+            btext(p_, lab, W / 2, H * 0.62, 'caveat_b', H * 0.24, '#1a1a1a', 210, 'center')
+        draw_box(pen, v, B, {'all': dict(fill='#b8905a', art=face_art), 'top': dict(fill='#c8a06a', art=lambda p_, W, H: (p_.fill(rect(W * 0.45, 0, W * 0.1, H), '#d8c8a0'),
+                                                                                                              p_.line(poly([(0, H / 2), (W, H / 2)], False), 0.8, '#6a4a2a')))})
+
+
+def rocking_chair(pen, v, x, y, Y0, fa=120):
+    """Grandma's old rocking chair (dark wood, a faded cushion) in the attic corner."""
+    B = Box(x, y, 0.5, 0.55, Y0, Y0 + 1.05, fa)
+    parts = []
+    w2, d2 = 0.25, 0.27
+    for s_ in (-1, 1):
+        parts.append(Part(fn=(lambda s__: lambda pen, v: _rocker_runner(pen, v, B, s__ * 0.23, Y0))(s_), ref=B.at(s_ * 0.23, 0, 0.1)))
+        parts.append(Part(sub(B, s_ * 0.23 - 0.02, s_ * 0.23 + 0.02, -d2, -d2 + 0.04, Y0 + 0.06, Y0 + 1.02), {'all': '#3a2414'}))
+        parts.append(Part(sub(B, s_ * 0.23 - 0.02, s_ * 0.23 + 0.02, d2 - 0.06, d2 - 0.02, Y0 + 0.06, Y0 + 0.62), {'all': '#3a2414'}))
+    parts.append(Part(sub(B, -w2, w2, -d2, d2, Y0 + 0.4, Y0 + 0.44), {'all': '#4a2e1a', 'top': dict(fill='#7a5a6a', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.6, 'overlay', 0.6))}))
+    for k in range(5):
+        u = -0.18 + k * 0.09
+        parts.append(Part(sub(B, u - 0.012, u + 0.012, -d2 + 0.005, -d2 + 0.03, Y0 + 0.44, Y0 + 0.98), {'all': '#3a2414'}))
+    parts.append(Part(sub(B, -w2, w2, -d2, -d2 + 0.05, Y0 + 0.94, Y0 + 1.04), {'all': '#3a2414'}))
+    draw_parts(pen, v, parts)
+
+
+def _rocker_runner(pen, v, B, u, Y0):
+    pts = [B.at(u, n, Y0 + 0.06 + 0.5 * (n / 0.4) ** 2 * 0.25) for n in np.linspace(-0.4, 0.38, 9)]
+    if any(v.d(p_[0], p_[2]) < 0.2 for p_ in pts): return
+    pen.line(poly([v.p(*p_) for p_ in pts], False), max(1.5, 0.035 * v.s(B.cx, B.cy)) + 2, LINE)
+    pen.line(poly([v.p(*p_) for p_ in pts], False), max(1.2, 0.035 * v.s(B.cx, B.cy)), lit('#3a2414', (B.cx, Y0, B.cy), None))
+
+
+def _dress_form(pen, v, x, y, Y0):
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    bx, by = v.p(x, Y0, y)
+    pen.seg((bx, by), v.p(x, Y0 + 0.9, y), max(1.5, 0.025 * s), lit('#3a2a1a', (x, Y0 + 0.5, y), None))
+    for (dx, dy) in ((-0.2, 0.0), (0.2, 0.0), (0.0, 0.18)):
+        pen.seg((bx, by), v.p(x + dx, Y0, y + dy), max(1.2, 0.02 * s), lit('#3a2a1a', (x, Y0, y), None))
+    tx, ty = v.p(x, Y0 + 1.5, y)
+    torso = smooth([(tx - 0.1 * s, ty - 0.05 * s), (tx - 0.17 * s, ty + 0.08 * s), (tx - 0.12 * s, ty + 0.3 * s), (tx - 0.16 * s, ty + 0.55 * s),
+                    (tx + 0.16 * s, ty + 0.55 * s), (tx + 0.12 * s, ty + 0.3 * s), (tx + 0.17 * s, ty + 0.08 * s), (tx + 0.1 * s, ty - 0.05 * s)], True, 0.8)
+    pen.fill(torso, lit('#c8b8a0', (x, Y0 + 1.2, y), None)); pen.texture(torso, 'fabric', 0.5, 'overlay', 0.5); pen.line(torso, 1.2)
+    pen.fill(oval(tx, ty - 0.08 * s, 0.03 * s, 0.03 * s), lit('#5a4a3a', (x, Y0 + 1.5, y), None))
+
+
+def _rocking_horse(pen, v, x, y, Y0):
+    """A child's dapple-grey rocking horse with a red saddle and a black mane on curved rockers (a side-on sprite)."""
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    px, py = v.p(x, Y0, y)
+    k = s * 0.9
+    rk = smooth([(px - 0.48 * k, py - 0.14 * k), (px, py), (px + 0.48 * k, py - 0.14 * k)], False, 1.0)
+    pen.line(rk, max(2.4, 0.05 * k) + 2, LINE); pen.line(rk, max(2.0, 0.05 * k), lit('#7a3a22', (x, Y0, y), None))
+    for lx, ly in ((-0.26, -0.05), (-0.16, -0.03), (0.15, -0.03), (0.25, -0.05)):
+        pen.seg((px + lx * k, py + ly * k), (px + lx * 0.7 * k, py - 0.42 * k), max(2.0, 0.045 * k) + 2, LINE)
+        pen.seg((px + lx * k, py + ly * k), (px + lx * 0.7 * k, py - 0.42 * k), max(1.6, 0.045 * k), lit('#cfcfd4', (x, Y0 + 0.3, y), None))
+    body = smooth([(px - 0.3 * k, py - 0.42 * k), (px - 0.24 * k, py - 0.6 * k), (px + 0.2 * k, py - 0.6 * k), (px + 0.28 * k, py - 0.44 * k)], True, 0.8)
+    neck = smooth([(px + 0.16 * k, py - 0.56 * k), (px + 0.3 * k, py - 0.86 * k), (px + 0.44 * k, py - 0.82 * k), (px + 0.4 * k, py - 0.7 * k),
+                   (px + 0.3 * k, py - 0.6 * k), (px + 0.26 * k, py - 0.46 * k)], True, 0.8)
+    grey = lit('#d8d8de', (x, Y0 + 0.6, y), None)
+    pen.fill(body, grey); pen.fill(neck, grey)
+    for i in range(7):
+        pen.fill(oval(px + (-0.2 + 0.07 * i) * k, py - (0.5 + 0.04 * (i % 2)) * k, 0.025 * k), '#8a8a94', 140)
+    pen.fill(smooth([(px - 0.08 * k, py - 0.6 * k), (px + 0.1 * k, py - 0.6 * k), (px + 0.08 * k, py - 0.52 * k), (px - 0.06 * k, py - 0.52 * k)], True, 0.7),
+             lit('#b8262e', (x, Y0 + 0.6, y), None))
+    pen.line(smooth([(px + 0.27 * k, py - 0.62 * k), (px + 0.24 * k, py - 0.78 * k), (px + 0.34 * k, py - 0.88 * k)], False, 1.0), max(2.0, 0.04 * k), '#1a1a1a')
+    pen.line(body, 1.2); pen.line(neck, 1.2)
+    pen.fill(oval(px + 0.37 * k, py - 0.79 * k, 0.012 * k), '#1a1a1a')
+    pen.line(smooth([(px - 0.29 * k, py - 0.55 * k), (px - 0.38 * k, py - 0.42 * k), (px - 0.36 * k, py - 0.3 * k)], False, 1.0), max(2.0, 0.03 * k), '#3a3a3a')
+
+
+def _bulb(pen, v, k=0.0, t=0.0):
+    """The bare bulb hanging from the ridge on its cord, with a pull chain (k = how bright it burns)."""
+    x, Y, y = BULB
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    sway = 0.006 * math.sin(t * 1.1)
+    top = v.p(x, RIDGE - 0.1, y); bp = v.p(x + sway, Y, y)
+    pen.seg(top, bp, max(1.0, 0.008 * s), '#1a1a1a')
+    pen.fill(rect(bp[0] - 0.02 * s, bp[1] - 0.02 * s, 0.04 * s, 0.05 * s), '#3a3a3a')
+    g = oval(bp[0], bp[1] + 0.06 * s, 0.035 * s, 0.045 * s)
+    if k > 0:
+        pen.glow(bp[0], bp[1] + 0.06 * s, 1.2 * s, '#ffcf8a', 90 * k)
+        pen.glow(bp[0], bp[1] + 0.06 * s, 0.25 * s, '#fff2d8', 220 * k)
+    pen.fill(g, mix('#a8a090', '#fffaf0', k)); pen.line(g, 0.8)
+    chain = [(bp[0] + 0.01 * s, bp[1]), (bp[0] + 0.012 * s, bp[1] + 0.3 * s)]
+    pen.seg(chain[0], chain[1], max(0.6, 0.004 * s), '#8a8a7a')
+
+
+# ====================================================================================================== live (animated) pieces
+def live_layer(name, v, ref, fn, amb, steady, var, order=None, depth=None):
+    """An animated set piece drawn every frame under the room's light (variable lamps at their level at t):
+    fn(pen, v, t). Its depth / order come from the plan point ref (x, Y, y)."""
+    d = depth if depth is not None else max(0.3, v.d(ref[0], ref[2]))
+
+    def draw(pen, t):
+        ls = list(steady)
+        for (vn, vl, kf) in var:
+            k = kf(t)
+            if k > 0.001: ls += [L_.scaled(k) for L_ in vl]
+        with lighting(amb, ls, 1.0): fn(pen, v, t)
+    lay = Layer(d, draw, name, blur=None)
+    lay.order = order if order is not None else d
+    return lay
+
+
+def _val_t(x, t): return x(t) if callable(x) else x
+
+
+# ====================================================================================================== interior view builders
+# --- front hall + stairs
+_cam('hall_door', 780, 480, 1.55, -0.15, 3.65, 180, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     'facing the front door from mid-hall: the stairs coming down on the left, the coats and the living room opening on the right', 'hall')
+_cam('hall_in', 760, 470, 1.55, -0.4, 0.38, 0, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     'from just inside the front door into the house: the stairs rising on the right, the living room left, the kitchen door at the end', 'hall')
+_cam('hall_foot', 700, 660, 1.5, 0.82, 0.18, 0, dict(x=(900, 1020), y=(560, 700), zoom=(1.0, 1.1), f=(1.0, 2.2)),
+     "the stairs from the bottom looking up: the flight, the photos, June's door at the top", 'hall')
+_cam('hall_top', 760, 60, UP_Y + 1.6, 0.8, 4.78, 180, dict(x=(900, 1020), y=(380, 560), zoom=(1.0, 1.1), f=(1.0, 2.2)),
+     'the stairs from the top looking down the flight to the foot (the body there at dawn) and the front door', 'hall')
+_cam('hall_slot', 2300, 540, 0.95, FD_CX + 0.05, 0.62, 182, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)),
+     'close on the brass mail slot from inside (flap closed / open)', 'hall')
+_cam('hall_peep', 2000, 560, 1.48, FD_CX + 0.2, 0.62, 198, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)),
+     'close on the peephole and the deadbolt from inside', 'hall')
+_cam('hall_bottom', 900, 400, 1.05, -0.75, 2.2, 158, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'low at the foot of the stairs toward the front door (the Bunnyman lying there at dawn)', 'hall')
+
+
+def ob_hall(view='door', hall=1.0, console=0.0, porch=0.0, upstairs=0.0, door=0.0, flap=0.0, bolt=1.0, chain=True, knob=0.0, tod='night',
+            living=0.0, kitchen=0.0, lamp=0.0, egg=False, body=False, **kw):
+    """The front hall and the stairs. view:
+      'door'   facing the front door (peephole 1.52 m, mail slot 0.95 m, deadbolt, chain); stairs coming down on the left
+      'in'     from the door into the house          'foot'  up the flight from the bottom (June's door at the top)
+      'top'    down the flight from the top          'slot'  close on the mail slot (flap 0..1 or f(t))
+      'peep'   close on the peephole + deadbolt      'bottom'  low at the foot of the stairs (dawn: the body)
+    door = the front door's angle in degrees (0 shut, ~12 a crack, 90 open; or f(t)): when open the porch shows outside.
+    Lights: hall (ceiling bowl), console (table lamp), porch (outside the door), upstairs (the corridor at the top)."""
+    v = cam('hall_' + view)
+    o = dict(hall=hall, console=console, porch=porch, upstairs=upstairs, door=door if not callable(door) else 0.0, flap=0.0,
+             bolt=bolt, chain=chain, tod=tod, lamp=lamp, kitchen=kitchen, curtains=0.0)
+    door_live = callable(door) or callable(flap) or (not callable(flap) and flap > 0) or callable(knob)
+    if door_live: o['door'] = lambda t: 0.0                              # the shell skips the static door; drawn live below
+    main = HallRoom()
+    far = [LivingRoom(), KitchenRoom(), UpstairsHall()]
+    out = lambda pen, v_: _outside_porch(pen, v_, tod, egg)
+    grade = 'ob_dawn' if tod == 'dawn' else ('ob_night' if (_kfn(hall, 0)(0) > 0.1 or lamp) else 'ob_dark')
+    dynl = []
+    if door_live:
+        amb, steady, var = main.lights(o)
+
+        def door_fn(pen, v_, t):
+            fd = front_door(_val_t(door, t), _val_t(flap, t), bolt, chain, _val_t(knob, t))
+            fd.draw(pen, v_, _val_t(door, t))
+        dynl.append(live_layer('front_door', v, (FD_CX, 1.0, 0.0), door_fn, amb, steady, var, order=ORDER_SHELL - 0.5 if view not in ('slot', 'peep') else None))
+    if body:
+        pass
+    sp = build_view('ob_hall_' + view, v, main, o, far=far, outside=out, grade=grade, dyn=dynl,
+                    focus=(v.d(FD_CX, 0.0) if view in ('door', 'slot', 'peep') else None), dof=(3.0 if view in ('slot', 'peep') else 0.8))
+    if view == 'top':
+        sp.info['note'] = 'The stairs layer is the hall shell: a figure ON the stairs uses order_at(x, y) of its step (depth)'
+    return sp
+
+
+def _outside_porch(pen, v, tod='night', egg=False):
+    """Seen through the open front door: the porch boards, the railing, the steps, the doormat (+ the egg), the dark lawn,
+    Orchard Road, the street lamp."""
+    sky_dome(pen, v, 'dawn' if tod == 'dawn' else 'night', moon=False)
+    vg = lifted(v, GROUND_Y)
+    ground(pen, vg, -60.0, -2.4, tod='dawn' if tod == 'dawn' else 'night', c='#1e2e28')
+    road_front(pen, vg, tod)
+    porch_front(pen, v, tod, egg=egg, part='all')
+
+
+# --- the upstairs corridor
+_cam('up_hall', 820, 470, UP_Y + 1.55, 4.55, 5.17, -90, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.6)),
+     "from the east window looking west down the corridor: June's door and the bathroom door on the right, the stair head left, the attic door at the far end", 'upstairs')
+_cam('up_west', 820, 470, UP_Y + 1.55, -3.35, 5.17, 90, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.6)),
+     'from the attic door looking east toward the window (dawn comes from there; Mom at that end)', 'upstairs')
+_cam('up_bath', 820, 480, UP_Y + 1.5, 0.35, 4.72, -58, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'the bathroom door at 3/4 from the stair head', 'upstairs')
+_cam('up_from_bath', 820, 520, UP_Y + 1.15, -1.55, 5.62, 90, dict(x=(880, 1040), y=(470, 620), zoom=(1.0, 1.12), f=(1.0, 2.6)),
+     'from the bathroom doorway (low, the kids\' eye) down the corridor east: the stair head on the right', 'upstairs')
+_cam('up_june', 820, 480, UP_Y + 1.55, 0.82, 4.66, 0, dict(x=(900, 1020), y=(440, 600), zoom=(1.0, 1.1), f=(1.0, 1.6)),
+     "June's door from the stair head", 'upstairs')
+
+
+def ob_upstairs(view='hall', upstairs=0.0, attic_gap=0.0, june_gap=0.0, bath_door=0.0, june_door=0.0, attic_door=0.0, wrecked=0.0, tod='night',
+                bath_lock=1.0, **kw):
+    """The upstairs corridor (UP_Y): June's door faces the head of the stairs, the bathroom door next to it, the attic door
+    at the west end, the east window (sunrise). view 'hall' | 'west' | 'bath' | 'from_bath' | 'june'. Lights: upstairs
+    (two ceiling bowls), attic_gap (the line of light under the attic door), june_gap. Doors: bath_door / june_door /
+    attic_door = degrees open or f(t). wrecked 0..1 (dawn): gouges, scratches, tilted / fallen photos, broken glass, the
+    runner kicked up, the hall table knocked over, the bathroom door gouged. tod 'dawn': gold sun through the east window."""
+    v = cam('up_' + view)
+    o = dict(upstairs=upstairs, attic_gap=attic_gap, june_gap=june_gap, bath_door=bath_door, june_door=june_door, attic_door=attic_door,
+             wrecked=wrecked, tod=tod, bath_lock=bath_lock, hall=0.0, nightlight=1.0)
+    main = UpstairsHall()
+    far = [HallRoom(), JuneRoom(), Bathroom()]
+    out = lambda pen, v_: _outside_east(pen, v_, tod)
+    grade = 'ob_dawn' if tod == 'dawn' else ('ob_night' if upstairs else 'ob_dark')
+    dynl = []
+    amb, steady, var = main.lights(o)
+    if callable(bath_door):
+        dynl.append(live_layer('bath_door', v, (-1.62, UP_Y + 1.0, 5.85),
+                               lambda pen, v_, t: bath_door_leaf(lock=bath_lock, damage=wrecked).draw(pen, v_, bath_door(t)), amb, steady, var))
+    if callable(june_door):
+        jd = Door((D_JUNE[0], 5.8 + 0.03), D_JUNE[1] - D_JUNE[0], DOOR_H, (1.0, 0.0), 1, UP_Y, art_a=door_art('six', 'right', bolt=False),
+                  art_b=door_art('six', 'left', bolt=False))
+        dynl.append(live_layer('june_door', v, (0.8, UP_Y + 1.0, 5.85), lambda pen, v_, t: jd.draw(pen, v_, june_door(t)), amb, steady, var))
+    if callable(attic_door):
+        ad = Door((UPH[0] - 0.03, D_ATTIC[1]), D_ATTIC[1] - D_ATTIC[0], 1.95, (0.0, -1.0), 1, UP_Y, art_a=door_art('plank', 'right', bolt=False, col='#d8ccb0'),
+                  art_b=door_art('plank', 'left', bolt=False, col='#d8ccb0'))
+        dynl.append(live_layer('attic_door', v, (-3.75, UP_Y + 1.0, 5.17), lambda pen, v_, t: ad.draw(pen, v_, attic_door(t)), amb, steady, var))
+    sp = build_view('ob_up_' + view, v, main, o, far=far, outside=out, grade=grade, dyn=dynl)
+    return sp
+
+
+def _outside_east(pen, v, tod='night'):
+    """Through the east window of the corridor: the side yard, the woods curling round, the sky (sunrise at dawn)."""
+    sky_dome(pen, v, 'dawn' if tod == 'dawn' else 'night')
+    vg = lifted(v, GROUND_Y)
+    ground(pen, vg, -20.0, 60.0, 5.2, 80.0, tod='dawn' if tod == 'dawn' else 'night')
+    woods(pen, vg, y_edge=TREELINE_Y, xr=(-30, 70), seed=7, tod='dawn' if tod == 'dawn' else 'night')
+
+
+# --- June's room
+_cam('june_window', 860, 470, UP_Y + 1.35, 0.42, 6.4, 9, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     'June at her window: the curtains, the treeline outside, the bed on the right', 'june')
+_cam('june_door', 820, 480, UP_Y + 1.3, 1.45, 9.6, 188, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     "from the window back to the door: Mom in the doorway, the closet with the yellow dress, the dresser", 'june')
+_cam('june_out', 1100, 330, UP_Y + 1.2, 1.1, 9.18, 2, dict(x=(900, 1020), y=(470, 590), zoom=(1.0, 1.08), f=(1.0, 3.0)),
+     "the treeline as seen from June's window: the sashes and curtains in front, the yard, the woods under the moon", 'june')
+_cam('june_bed', 860, 500, UP_Y + 1.3, 0.05, 6.8, 58, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'the bed from the door side (Mom tucking June in)', 'june')
+
+
+def ob_june(view='window', nightlight=1.0, hall=0.0, lamp=0.0, curtains=1.0, bed='made', dress=True, tod='night', door=0.0, **kw):
+    """June's room (pink, a bunny frieze, glow stars on the ceiling, the moon nightlight). view 'window' | 'door' | 'out'
+    (the treeline from the window: anchors 'bunny_treeline', 'bunny_clearing') | 'bed'. bed 'made' | 'turned' | 'empty' |
+    'over' (the quilt is its own layer in front of whoever lies there). dress: the new yellow dress on the closet door."""
+    v = cam('june_' + view)
+    o = dict(nightlight=nightlight, hall=hall, lamp=lamp, curtains=curtains, bed=bed, dress=dress, tod=tod, upstairs=hall, june_door=door)
+    main = JuneRoom()
+    far = [UpstairsHall()]
+    out = lambda pen, v_: _outside_yard_full(pen, v_, tod)
+    grade = 'ob_night' if (hall or lamp) else 'ob_dark'
+    sp = build_view('ob_june_' + view, v, main, o, far=far, outside=out, grade=grade)
+    if view == 'out':
+        for nm, (x, y) in (('bunny_treeline', (-2.55, 39.6)), ('bunny_clearing', (-2.6, 41.5)), ('treeline_left', (-12.0, 39.8)), ('barrel', BARREL)):
+            sp.anchors[nm] = _mk_spot(v, nm, x, y, 0.0, 'stand', 'outside, seen through the window: order = sp.order_at(x, y) (ORDER_SHELL + 20 + 0.1 depth)', face=(0, -1))
+    return sp
+
+
+def _outside_yard_full(pen, v, tod='night', porch_light=0.0):
+    """The back yard and the woods as seen from inside the house (June's window, the kitchen window, the back door)."""
+    tt = 'dawn' if tod == 'dawn' else ('day87' if tod == 'day87' else 'night')
+    sky_dome(pen, v, tt)
+    vg = lifted(v, GROUND_Y)
+    ground(pen, vg, 10.0, 75.0, tod=tt, worn=[(-3.3, 12.9), (-5.5, 18.0), (-7.4, 25.6)])
+    woods(pen, vg, tod=tt, clearing=(-3.8, -1.4))
+    grass_tufts(pen, vg, (-20, 20), (33, 40), 160, 4)
+    yard_props(pen, vg, tt)
+    house_back_porch(pen, v, tt, porch_light)
+
+
+# --- the bathroom
+_cam('bath_door', 820, 400, UP_Y + 0.8, -2.2, 8.24, 181, dict(x=(880, 1040), y=(470, 620), zoom=(1.0, 1.1), f=(1.0, 2.2)),
+     'from inside the empty tub: the door, the line of light under it, the lock (anchors tub_left / tub_right)', 'bath')
+_cam('bath_tub', 820, 470, UP_Y + 1.5, -1.62, 6.0, 4, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'from the door: the pink tub (the kids sitting in it), the shower curtain', 'bath')
+_cam('bath_gap', 1300, 230, UP_Y + 0.2, -1.56, 6.6, 180, dict(x=(900, 1020), y=(200, 300), zoom=(1.0, 1.06), f=(1.0, 1.8)),
+     'low and close on the gap under the door: the light (gold at sunrise), the feet shadows, the drawing sliding in', 'bath')
+_cam('bath_lock', 2500, 540, UP_Y + 1.06, -1.28, 6.25, 186, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.3)),
+     'close on the knob, the little bolt and the keyhole from inside (the lock turns by itself)', 'bath')
+
+
+def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0.0, feet=None, door=0.0, tod='night', slam=None, key=0.0, **kw):
+    """The upstairs bathroom: pink tile to 1.35 m with a black bullnose, the pink built-in tub (the kids sit IN it:
+    anchors tub_left / tub_right, the tub's near wall is a layer in front of them), the pedestal sink, the toilet, the
+    door with an old brass knob, a little thumb-turn bolt and a keyhole. view 'door' | 'tub' | 'gap' | 'lock'.
+    gap = level of the line of light under the door (number or f(t)), gap_col (default warm; DAWN_C at sunrise), feet =
+    f(t) -> [(u0, u1)] shadowed fractions (someone standing outside), lock 0..1 (or f(t): the bolt turning by itself),
+    knob = degrees (or f(t): it turns gently), slam = time of the slam (the door jumps in its frame)."""
+    v = cam('bath_' + view)
+    gc = gap_col or ('#ffc070' if tod == 'dawn' else '#ffd9a0')
+    o = dict(gap=gap, gap_col=gc, bath_light=bath_light, lock=lock, door=door, feet=feet, tod=tod)
+    live = callable(lock) or callable(knob) or slam is not None or callable(door) or key
+    if live: o['door'] = lambda t: 0.0
+    main = Bathroom()
+    sp_dyn = []
+    amb, steady, var = main.lights(o)
+    if live:
+        def door_fn(pen, v_, t):
+            ang = _val_t(door, t) if not callable(o['door']) or callable(door) else 0.0
+            ang = _val_t(door, t)
+            jolt = 0.0
+            if slam is not None and t >= slam: jolt = 0.012 * math.exp(-(t - slam) * 9.0) * math.cos((t - slam) * 60)
+            bd = bath_door_leaf(lock=_val_t(lock, t), knob_turn=_val_t(knob, t))
+            bd.hinge = (bd.hinge[0], bd.hinge[1] + jolt)
+            bd.draw(pen, v_, ang)
+        sp_dyn.append(live_layer('door', v, (-1.62, UP_Y + 1.0, 5.85), door_fn, amb, steady, var))
+    sp = build_view('ob_bath_' + view, v, main, o, far=[UpstairsHall()], outside=None, grade='ob_dawn' if tod == 'dawn' else 'ob_dark', dyn=sp_dyn,
+                    focus=(v.d(-1.62, 5.8) if view in ('gap', 'lock', 'door') else None), dof=(2.5 if view in ('gap', 'lock') else 0.8))
+    if slam is not None: sp.info['slam'] = slam
+    return sp
+
+
+# --- the attic
+_cam('attic_chest', 860, 470, ATTIC_Y + 1.45, -1.55, 5.35, 38, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     "from the top of the attic stairs: the bare bulb, Mom's old toy chest (June on the floor in front of it), the boxes", 'attic')
+_cam('attic_corner', 840, 500, ATTIC_Y + 1.35, 0.3, 6.0, -68, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.4)),
+     'toward the dark corner behind the boxes (Grandma\'s rocking chair: anchor corner_seat)', 'attic')
+_cam('attic_mom', 840, 520, ATTIC_Y + 1.15, -3.85, 7.35, 100, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     "from the dark corner (Mom's point of view): past the boxes to June at the chest under the bulb", 'attic')
+
+
+def ob_attic(view='chest', bulb=1.0, chest='open', **kw):
+    """The attic: rafters and roof boards, knee walls, the bare bulb on its cord (pull chain), Mom's old toy chest (LAURIE
+    in faded letters), stacked boxes (XMAS, LAURIE, EASTER), Grandma's rocking chair in the dark corner behind them, a
+    dress form, a rocking horse, the moon through the round gable window. view 'chest' | 'corner' | 'mom'."""
+    v = cam('attic_' + view)
+    o = dict(bulb=bulb, chest=chest)
+    out = lambda pen, v_: (sky_dome(pen, v_, 'night'), woods(pen, v_, tod='night'))
+    return build_view('ob_attic_' + view, v, Attic(), o, outside=out, grade='ob_night' if bulb else 'ob_dark')
+
+
+# --- the kitchen
+_cam('kit_back', 800, 480, 1.55, -1.55, 6.25, 6, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     'the back wall: the back door (left), the sink under the window (smashes at 4:30), the stove', 'kitchen')
+_cam('kit_fridge', 860, 480, 1.5, -2.05, 7.65, -90, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     'the harvest-gold fridge with the laminated rules under the bunny magnet (Mom puts them up at sundown)', 'kitchen')
+_cam('kit_table', 860, 500, 1.3, 0.75, 6.25, -42, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     "the kitchen table (Grandma's memory: she knocks the family knock on it; tod='memory')", 'kitchen')
+_cam('kit_door', 900, 480, 1.4, -2.75, 7.4, -6, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'the back door close (it crashes open; the deadbolt and chain locked from the inside)', 'kitchen')
+
+
+def ob_kitchen(view='back', kitchen=0.0, porch=0.0, smash=0.0, back_door=0.0, rules=1.0, mud=0.0, tod='night', clock=(11, 7), locked=1.0,
+               porch_switch=0.0, smash_t=None, crash_t=None, **kw):
+    """The kitchen (Grandma's harvest-gold fridge, knotty-pine cabinets, the avocado stove, gingham cafe curtains, red
+    brick linoleum). view 'back' | 'fridge' | 'table' | 'door'. kitchen = the pendant over the table, porch = the back
+    porch light (Grandma's), rules 0..1 (the laminated rules on the fridge), smash 0..1 (the window over the sink broken)
+    or smash_t (it explodes at t: flying glass), back_door degrees or crash_t (crashes open at t), mud 0..1 (the wet drag
+    marks across the floor), clock (h, m) on the wall clock, tod 'night' | 'memory' (Grandma's daylight kitchen)."""
+    v = cam('kit_' + view)
+    o = dict(kitchen=kitchen, porch=porch, smash=smash if smash_t is None else 0.0, rules=rules, mud=mud, tod=tod, clock=clock,
+             locked=locked, porch_switch=porch_switch, back_door=back_door if crash_t is None else 0.0, amb_k='#9a8a78' if tod == 'memory' else '#283050')
+    main = KitchenRoom()
+    dynl = []
+    amb, steady, var = main.lights(o)
+    if crash_t is not None:
+        o['back_door_live'] = True
+        def crash(pen, v_, t):
+            u = clamp((t - crash_t) / 0.22)
+            ang = 0.0 if t < crash_t else min(100.0, 100.0 * ease_out_back(u, 1.1)) - (6.0 * math.exp(-(t - crash_t - 0.22) * 6) * math.cos((t - crash_t) * 30) if u >= 1 else 0)
+            bd = back_door(latch_turn=0.0 if t >= crash_t else 1.0, chain_on=t < crash_t)
+            bd.draw(pen, v_, ang); _bdoor_glass(pen, v_, bd, ang)
+            if t >= crash_t: _splinters(pen, v_, t - crash_t)
+        dynl.append(live_layer('back_door', v, (-3.3, 1.0, 9.8), crash, amb, steady, var))
+    if smash_t is not None:
+        def burst(pen, v_, t):
+            _glass_burst(pen, v_, t - smash_t)
+        dynl.append(Layer(max(0.3, v.d(-1.35, 9.6)), lambda pen, t: burst(pen, v, t), 'glass_burst', blur=None))
+        dynl[-1].order = v.d(-1.35, 9.4)
+        o['smash_live'] = smash_t
+    out = lambda pen, v_: _outside_yard_full(pen, v_, 'night' if tod != 'memory' else 'day87')
+    far = [LivingRoom(), HallRoom()]
+    grade = 'ob_memory' if tod == 'memory' else ('ob_night' if kitchen else 'ob_dark')
+    sp = build_view('ob_kitchen_' + view, v, main, o, far=far, outside=out, grade=grade, dyn=dynl)
+    if smash_t is not None:
+        sp.add_smash = smash_t
+    return sp
+
+
+def _splinters(pen, v, dt):
+    """Wood splinters and the chain's plate flying off the frame when the back door crashes open."""
+    if dt > 1.2: return
+    rng = np.random.default_rng(14)
+    for i in range(14):
+        vx, vy, vz = rng.uniform(-0.6, 0.6), rng.uniform(0.5, 2.0), rng.uniform(-2.6, -0.8)
+        x = BDOOR[1] + vx * dt; Y = 1.2 + vy * dt - 4.9 * dt * dt; y = 10.0 + vz * dt * 0.6
+        if Y < 0.0: Y = 0.0
+        if v.d(x, y) < 0.3: continue
+        px, py = v.p(x, Y, y); s = v.s(x, y)
+        a = rng.uniform(0, 6.28) + dt * 9
+        L_ = rng.uniform(0.03, 0.09) * s
+        pen.seg((px - math.cos(a) * L_, py - math.sin(a) * L_), (px + math.cos(a) * L_, py + math.sin(a) * L_), max(1.0, 0.008 * s), '#d8c09a')
+
+
+def _glass_burst(pen, v, dt):
+    """The kitchen window exploding inward: glass shards flying into the room with the light catching them."""
+    if dt < 0 or dt > 1.6: return
+    rng = np.random.default_rng(23)
+    for i in range(70):
+        vx, vy, vz = rng.uniform(-1.4, 1.4), rng.uniform(-0.4, 2.2), rng.uniform(-4.5, -1.2)
+        x = -1.35 + rng.uniform(-0.5, 0.5) + vx * dt; Y = 1.5 + rng.uniform(-0.4, 0.4) + vy * dt - 4.9 * dt * dt; y = 9.98 + vz * dt
+        if Y < 0.0: continue
+        if v.d(x, y) < 0.3: continue
+        px, py = v.p(x, Y, y); s = v.s(x, y) * rng.uniform(0.02, 0.06)
+        a = rng.uniform(0, 6.28) + dt * rng.uniform(4, 14)
+        sh = poly([(px + math.cos(a) * s, py + math.sin(a) * s), (px + math.cos(a + 2.3) * s * 0.6, py + math.sin(a + 2.3) * s * 0.6),
+                   (px + math.cos(a + 4.0) * s * 0.9, py + math.sin(a + 4.0) * s * 0.9)])
+        g = 0.5 + 0.5 * math.sin(a * 3)
+        pen.fill(sh, mix('#9ab0d8', '#ffffff', g), 220 * (1 - dt / 1.6)); pen.line(sh, 0.6, '#ffffff', 180 * (1 - dt / 1.6))
+
+
+# ====================================================================================================== the house outside
+GROUND_Y = -0.45                                             # the yard is 0.45 m below the ground floor (foundation, porch steps)
+EAVE_Y = CEIL1 + 0.3                                         # the eaves
+RIDGE_EXT = RIDGE + 0.25
+
+
+def lifted(v, dY):
+    """The same camera with the world lifted by dY: anything drawn at height Y appears at Y + dY (yard props are modelled
+    on their own ground, Y 0; lifted(v, GROUND_Y) puts them on the yard)."""
+    w = BView(v.S, v.h, v.cam_h - dY, v.hx, v.hy, v.yaw, v.cx, v.near, v.name)
+    w.env = getattr(v, 'env', None)
+    return w
+
+
+# windows of the house seen from outside: (wall, u0, u1, sill, top, room for the glow) - wall 'front' y 0, 'back' y 10, 'west' x -5, 'east' x 5
+EXT_WINDOWS = [('front', -4.15, -2.45, 0.95, 2.15, 'living'), ('front', 2.2, 3.4, 0.95, 2.15, 'dining'), ('front', 3.8, 4.6, 0.95, 2.15, 'dining'),
+               ('front', -3.6, -2.6, UP_Y + 0.85, UP_Y + 2.05, 'narrator'), ('front', -1.4, -0.6, UP_Y + 0.85, UP_Y + 2.05, 'narrator'),
+               ('front', 2.6, 3.6, UP_Y + 0.85, UP_Y + 2.05, 'mom'),
+               ('back', KWIN[0], KWIN[1], KWIN[2], KWIN[3], 'kitchen'), ('back', 3.3, 4.3, 1.0, 2.05, 'mud'),
+               ('back', -4.4, -3.4, UP_Y + 0.85, UP_Y + 2.05, 'sewing'), ('back', JWIN[0], JWIN[1], UP_Y + JWIN[2], UP_Y + JWIN[3], 'june'),
+               ('back', 3.3, 4.3, UP_Y + 0.85, UP_Y + 2.05, 'backroom'),
+               ('west', 4.25, 5.25, 0.9, 2.1, 'living'), ('west', 7.0, 8.0, 1.0, 2.05, 'kitchen'), ('west', 1.0, 2.0, UP_Y + 0.85, UP_Y + 2.05, 'narrator'),
+               ('east', 1.5, 2.5, 0.95, 2.15, 'dining'), ('east', 7.6, 8.4, 1.0, 2.05, 'mud'), ('east', UWIN[0], UWIN[1], UP_Y + UWIN[2], UP_Y + UWIN[3], 'upstairs'),
+               ('east', 1.8, 2.8, UP_Y + 0.85, UP_Y + 2.05, 'mom')]
+
+
+def _ext_wall_ends(wall_name):
+    """Plan endpoints of an outside wall face (visible side outward) and how a window's u maps along it."""
+    if wall_name == 'front': return (-5.0, 0.0), (5.0, 0.0), lambda x: x + 5.0
+    if wall_name == 'back': return (5.0, 10.0), (-5.0, 10.0), lambda x: 5.0 - x
+    if wall_name == 'west': return (-5.0, 10.0), (-5.0, 0.0), lambda y: 10.0 - y
+    return (5.0, 0.0), (5.0, 10.0), lambda y: y
+
+
+def house_exterior(pen, v, tod='night', glow=None, back_light=0.0, front_light=0.0, part='all', police=None, t=0.0):
+    """The last house on Orchard Road from outside: white clapboard over a stone foundation, dark green shutters, a grey
+    shingle gable roof (ridge along x), the brick chimney on the west gable, both porches. glow = {room: level} (windows
+    lit from inside: 'june', 'kitchen', 'living', 'upstairs', 'mom', ...). part 'all' | 'back' | 'front' (what to bother
+    drawing). Window glass is drawn here (lit rooms glow warm through it; dark ones show the night)."""
+    glow = glow or {}
+    sid = P_['siding'] if tod != 'dawn' else '#efe8dc'
+    walls = [('front', (-5.0, 0.0), (5.0, 0.0)), ('back', (5.0, 10.0), (-5.0, 10.0)), ('west', (-5.0, 10.0), (-5.0, 0.0)), ('east', (5.0, 0.0), (5.0, 10.0))]
+    walls.sort(key=lambda w: -v.d((w[1][0] + w[2][0]) / 2, (w[1][1] + w[2][1]) / 2))
+    if v.hx >= -5.0: _chimney(pen, v)                                     # behind the house: only its top shows above the roof
+    if part in ('all', 'back') and v.hy <= 10.0: house_back_porch(pen, v, tod, back_light)
+    if part in ('all', 'front') and v.hy >= 0.0: porch_front(pen, v, tod, light=front_light, part='all')
+    for (nm, a, b) in walls:
+        top = EAVE_Y
+        F = wall_face(a, b, GROUND_Y, top)
+        if not v.visible(F.O, F.n): continue
+        to_u = _ext_wall_ends(nm)[2]
+        wins = [w for w in EXT_WINDOWS if w[0] == nm]
+        holes = []
+        doors = []
+        if nm == 'back': doors = [(to_u(BDOOR[1]), to_u(BDOOR[0]), 0.0, BDOOR[2], 'back_door'), (to_u(2.85), to_u(2.0), 0.0, 2.03, 'mud_door')]
+        if nm == 'front': doors = [(to_u(FDOOR[0]), to_u(FDOOR[1]), 0.0, FDOOR[2], 'front_door')]
+
+        def art(p_, W, H, wins=wins, doors=doors, to_u=to_u, nm=nm):
+            pat(p_, W, H, 'clapboard', '#000000', 150)
+            p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 1.2)
+            p_.fill(rect(0, H - (0.0 - GROUND_Y) * 100, W, (0.0 - GROUND_Y) * 100), '#8a8478')            # stone foundation
+            p_.cv.save(); p_.cv.translate(0, H - (0.0 - GROUND_Y) * 100); pat(p_, W, (0.0 - GROUND_Y) * 100, 'brick', '#5a564e', 200, 2); p_.cv.restore()
+            p_.fill(rect(0, 0, W, 9), P_['trim']); p_.fill(rect(0, H - 47, W, 3), P_['trim'])
+            p_.fill(rect(0, H - (UP_Y + 0.18 - GROUND_Y) * 100, W, 6), P_['trim'])                     # belt between floors
+            for (_, u0, u1, sill, top_, room) in wins:
+                ua, ub = sorted((to_u(u0), to_u(u1)))
+                x0_, x1_ = ua * 100, ub * 100
+                y0_, y1_ = H - (top_ - GROUND_Y) * 100, H - (sill - GROUND_Y) * 100
+                for sx_ in (x0_ - 30, x1_ + 4):                                           # shutters
+                    sh = rect(sx_, y0_, 26, y1_ - y0_)
+                    p_.fill(sh, P_['shutter']); p_.line(sh, 0.8, '#000000', 160)
+                    for k in range(int((y1_ - y0_) / 9)): p_.fill(rect(sx_ + 3, y0_ + 4 + k * 9, 20, 2.0), '#000000', 70)
+                p_.fill(rect(x0_ - 6, y0_ - 8, x1_ - x0_ + 12, y1_ - y0_ + 16), P_['trim'])
+            for (u0, u1, Y0_, Y1_, kind) in doors:
+                ua, ub = sorted((u0, u1))
+                p_.fill(rect(ua * 100 - 8, H - (Y1_ - GROUND_Y) * 100 - 8, (ub - ua) * 100 + 16, (Y1_ - Y0_) * 100 + 8), P_['trim'])
+        # the glass + doors are drawn as holes, then filled below (so they can glow)
+        for (_, u0, u1, sill, top_, room) in wins:
+            ua, ub = sorted((to_u(u0), to_u(u1)))
+            holes.append(rect(ua * 100, (top - top_) * 100, (ub - ua) * 100, (top_ - sill) * 100))
+        draw_face(pen, v, F, art, sid, holes=holes, ao=False)
+        for (_, u0, u1, sill, top_, room) in wins:
+            _ext_window(pen, v, a, b, to_u(u0), to_u(u1), sill, top_, glow.get(room, 0.0), tod)
+        for (u0, u1, Y0_, Y1_, kind) in doors:
+            ua, ub = sorted((u0, u1))
+            dx, dy = b[0] - a[0], b[1] - a[1]; Lw = math.hypot(dx, dy); fx, fy = dx / Lw, dy / Lw
+            O = (a[0] + fx * ua + fy * 0.02, Y1_, a[1] + fy * ua - fx * 0.02)
+            Fd = Face(O, (fx, 0, fy), (0, -1, 0), (ub - ua) * 100, (Y1_ - Y0_) * 100, (fy, 0, -fx), 'front')
+            if kind == 'front_door':
+                art_ = _wreath_art(door_art('six', 'right', peep=True, slot=True, bolt=False, col='#7a2a2c'))
+            elif kind == 'back_door':
+                art_ = door_art('glass', 'left', bolt=False)
+            else:
+                art_ = door_art('four', 'left', bolt=False)
+            draw_face(pen, v, Fd, art_, '#f1ece0', ao=False)
+            if kind == 'back_door':
+                gl = glow.get('kitchen', 0.0)
+                gq = [(a[0] + fx * (ua + 0.11) + fy * 0.025, Y1_ - 0.11, a[1] + fy * (ua + 0.11) - fx * 0.025),
+                      (a[0] + fx * (ub - 0.11) + fy * 0.025, Y1_ - 0.11, a[1] + fy * (ub - 0.11) - fx * 0.025),
+                      (a[0] + fx * (ub - 0.11) + fy * 0.025, Y1_ * 0.52, a[1] + fy * (ub - 0.11) - fx * 0.025),
+                      (a[0] + fx * (ua + 0.11) + fy * 0.025, Y1_ * 0.52, a[1] + fy * (ua + 0.11) - fx * 0.025)]
+                pen.fill(v.poly3(gq), mix('#121628', '#ffc070', gl))
+    _roof(pen, v, tod)
+    if v.hx < -5.0: _chimney(pen, v)
+    if part in ('all', 'back') and v.hy > 10.0: house_back_porch(pen, v, tod, back_light)
+    if part in ('all', 'front') and v.hy < 0.0: porch_front(pen, v, tod, light=front_light, part='all')
+
+
+def _ext_window(pen, v, a, b, u0, u1, sill, top, k, tod):
+    """A window from outside: dark glass with the sky's sheen, or warm lamplight from inside (k 0..1); sash bars."""
+    ua, ub = sorted((u0, u1))
+    dx, dy = b[0] - a[0], b[1] - a[1]; L = math.hypot(dx, dy); fx, fy = dx / L, dy / L
+    nx, ny = fy, -fx
+    O = (a[0] + fx * ua - nx * 0.05, top, a[1] + fy * ua - ny * 0.05)
+    F = Face(O, (fx, 0, fy), (0, -1, 0), (ub - ua) * 100, (top - sill) * 100, (nx, 0, ny), 'front')
+    if not v.visible(F.O, F.n): return
+
+    def art(p_, W, H):
+        if k > 0.01:
+            p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffcf8a'), (1, '#ff9a4a')])
+            p_.fill(rect(0, 0, W, H), '#000000', 255 * (1 - k) * 0.85)
+            p_.fill(rect(W * 0.08, 0, W * 0.25, H), '#7a2a2a', 140 * k)                     # curtains inside
+            p_.fill(rect(W * 0.67, 0, W * 0.25, H), '#7a2a2a', 140 * k)
+        else:
+            p_.linear(rect(0, 0, W, H), 0, 0, W, H, ['#1a2240', '#0a0e1c'] if tod != 'dawn' else ['#8a7a8a', '#4a4058'])
+            p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#8aa0e0', 0), (0.4, '#8aa0e0', 40), (0.5, '#8aa0e0', 0)])
+        fw = 4.0
+        p_.line(rect(0, 0, W, H), fw * 2, '#f1ece0')
+        p_.fill(rect(0, H / 2 - 2, W, 4), '#f1ece0'); p_.fill(rect(W / 2 - 1.2, 0, 2.4, H), '#f1ece0')
+    draw_face(pen, v, F, art, '#101420', ao=False, unlit=k > 0.01, lw=1.0)
+    if k > 0.01:
+        c = F.centre(); px, py = v.p(*c)
+        pen.glow(px, py, 1.3 * v.s(c[0], c[2]), '#ffb060', 60 * k)
+
+
+def _roof(pen, v, tod='night'):
+    """Grey shingle gable roof: ridge along x at y 5, overhanging the walls; the gable ends are the walls' triangles."""
+    ov = 0.45
+    sides = []
+    for (ya, yb) in ((5.0, -ov), (5.0, 10.0 + ov)):
+        q = [(-5.0 - 0.3, RIDGE_EXT, ya), (5.0 + 0.3, RIDGE_EXT, ya), (5.0 + 0.3, EAVE_Y - 0.12, yb), (-5.0 - 0.3, EAVE_Y - 0.12, yb)]
+        sgn = 1.0 if yb > ya else -1.0
+        nrm = _norm3((0.0, abs(yb - ya), sgn * (RIDGE_EXT - EAVE_Y)))
+        sides.append((q, nrm))
+    sides.sort(key=lambda s_: -v.d(0.0, (s_[0][0][2] + s_[0][2][2]) / 2))
+    for (q, nrm) in sides:
+        if not v.visible(q[0], nrm): continue
+        F = Face(q[0], (1.0, 0.0, 0.0), _norm3(_sub3(q[3], q[0])), (q[1][0] - q[0][0]) * 100, math.dist(q[0], q[3]) * 100, nrm, 'top')
+        draw_face(pen, v, F, lambda p_, W, H: (pat(p_, W, H, 'shingle', '#b8bcc8', 120, 5), p_.texture(rect(0, 0, W, H), 'grunge', 0.4, 'overlay', 1.0)),
+                  '#6e727e', ao=False)
+        rid = v.poly3([q[0], q[1]], closed=False)
+        pen.line(rid, max(1.0, 0.05 * v.s(0.0, 5.0)), '#9aa8d8', 150)
+    # gable triangles (siding) on the two ends
+    for (x, nn) in ((-5.0, (-1.0, 0, 0)), (5.0, (1.0, 0, 0))):
+        tri = [(x, EAVE_Y, 0.0), (x, RIDGE_EXT - 0.1, 5.0), (x, EAVE_Y, 10.0)] if x > 0 else [(x, EAVE_Y, 10.0), (x, RIDGE_EXT - 0.1, 5.0), (x, EAVE_Y, 0.0)]
+        if not v.visible(tri[0], nn): continue
+        path = v.poly3(tri)
+        pen.fill(path, lit(P_['siding'], tri[1], nn)); pen.line(path, 1.2)
+        # the round attic window in the east gable, square one in the west
+        cx_, cy_ = v.p(x, ATTIC_Y + 1.65, 5.0); s = v.s(x, 5.0)
+        pen.fill(oval(cx_, cy_, 0.32 * s * abs(v.fx if x > 0 else v.fx) + 0.05 * s, 0.32 * s), '#101420' if x < 0 else '#141a30')
+
+
+def _chimney(pen, v):
+    """The brick chimney climbing the west gable (the living room fireplace)."""
+    B = Box(-5.25, 3.0, 1.2, 0.5, GROUND_Y, RIDGE_EXT + 0.9, -90)
+    draw_box(pen, v, B, {'all': dict(fill=P_['brick'], art=lambda p_, W, H: pat(p_, W, H, 'brick', P_['mortar'], 220, 7, P_['brick']))})
+
+
+def house_back_porch(pen, v, tod='night', light=0.0, glow_k=None):
+    """The back porch (Grandma's porch light by the kitchen door): grey boards on joists, three steps down to the yard,
+    turned posts, a railing, a shed roof; light = 0..1 the porch light (a lantern: lit glass + a warm pool)."""
+    x0, x1, y0, y1, Yf = PORCH_B
+    Yf = -0.03
+    deck = Box((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, GROUND_Y, Yf, 0)
+    draw_box(pen, v, deck, {'all': dict(fill='#5a5a58', art=lambda p_, W, H: pat(p_, W, H, 'boards', '#2a2a2a', 120, 3, scale=1.2)),
+                            'top': dict(fill='#7a7a74', art=lambda p_, W, H: pat(p_, W, H, 'boards', '#2a2a2a', 130, 3, scale=1.2))})
+    for k in range(3):                                                    # steps down at the front, centred on the door
+        st = Box(-3.3, y1 + 0.14 + k * 0.28, 1.3, 0.28, GROUND_Y, Yf - (k + 1) * 0.14, 0)
+        draw_box(pen, v, st, {'all': '#6a6a66', 'top': '#82827c'})
+    for (px, py) in ((x0 + 0.08, y1 - 0.08), (x1 - 0.08, y1 - 0.08), (x0 + 0.08, y0 + 0.1), (x1 - 0.08, y0 + 0.1)):
+        post = Box(px, py, 0.12, 0.12, Yf, 2.45, 0)
+        draw_box(pen, v, post, {'all': P_['trim']})
+    # railings on the two sides (balusters)
+    for x in (x0 + 0.08, x1 - 0.08):
+        rail = v.poly3([(x, Yf + 0.9, y0 + 0.15), (x, Yf + 0.9, y1 - 0.15), (x, Yf + 0.84, y1 - 0.15), (x, Yf + 0.84, y0 + 0.15)])
+        pen.fill(rail, lit(P_['trim'], (x, 0.9, (y0 + y1) / 2), (1, 0, 0))); pen.line(rail, 0.8)
+        for yy in np.arange(y0 + 0.25, y1 - 0.15, 0.13):
+            if v.d(x, yy) < 0.2: continue
+            pen.seg(v.p(x, Yf, yy), v.p(x, Yf + 0.84, yy), max(1.0, 0.02 * v.s(x, yy)), lit(P_['trim'], (x, 0.5, yy), (1, 0, 0)))
+    roof = [(x0 - 0.2, 2.62, y0), (x1 + 0.2, 2.62, y0), (x1 + 0.2, 2.4, y1 + 0.2), (x0 - 0.2, 2.4, y1 + 0.2)]
+    nrm = _norm3((0.0, 1.0, 0.1))
+    if v.visible(roof[0], nrm):
+        F = Face(roof[0], (1.0, 0, 0), _norm3(_sub3(roof[3], roof[0])), (x1 - x0 + 0.4) * 100, math.dist(roof[0], roof[3]) * 100, nrm, 'top')
+        draw_face(pen, v, F, lambda p_, W, H: pat(p_, W, H, 'shingle', '#9a9ca4', 110, 6), P_['roof'], ao=False)
+    else:
+        path = v.poly3(roof)
+        pen.fill(path, lit('#c8c0b0', (-3.3, 2.5, 11.0), (0, -1, 0))); pen.line(path, 1.0)
+    fascia = v.poly3([(x0 - 0.2, 2.4, y1 + 0.2), (x1 + 0.2, 2.4, y1 + 0.2), (x1 + 0.2, 2.25, y1 + 0.2), (x0 - 0.2, 2.25, y1 + 0.2)])
+    pen.fill(fascia, lit(P_['trim'], (-3.3, 2.3, y1), (0, 0, 1))); pen.line(fascia, 1.0)
+    porch_lantern(pen, v, BACK_LIGHT, light, facing=(0, 0, 1))
+
+
+def porch_lantern(pen, v, P, k=0.0, facing=(0, 0, 1)):
+    """A brass wall lantern at P (x, Y, y): glass box with a bulb; k = on (glowing glass, a warm halo)."""
+    x, Y, y = P
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    px, py = v.p(x, Y, y)
+    w, h = 0.13 * s, 0.24 * s
+    body = rrect(px - w / 2, py - h / 2, w, h, w * 0.15)
+    pen.fill(rect(px - w * 0.25, py + h / 2, w * 0.5, h * 0.12), '#3a2a14')
+    pen.fill(poly([(px - w * 0.62, py - h / 2), (px + w * 0.62, py - h / 2), (px, py - h * 0.82)]), '#2a2014')
+    if k > 0.01:
+        pen.glow(px, py, 2.2 * s, '#ffcf8a', 70 * k)
+        pen.glow(px, py, 0.5 * s, '#fff0c8', 160 * k)
+    pen.fill(body, mix('#20242c', '#ffe2a8', k)); pen.line(body, max(1.0, 0.012 * s), '#3a2a14')
+    pen.seg((px, py - h / 2), (px, py + h / 2), max(0.8, 0.008 * s), '#3a2a14')
+    if k > 0.01:
+        pen.fill(oval(px, py + h * 0.05, w * 0.18, h * 0.14), '#fffaf0')
+
+
+def porch_front(pen, v, tod='night', light=0.0, egg=False, part='all', egg_rattle=None, t=0.0, open_egg=False):
+    """The front porch: grey boards, white posts and railing, a porch swing at the west end, steps down to the walk, the
+    doormat in front of the door, the egg on it (egg True: the old faded-pink Pemberton's egg; egg_rattle f(t) jiggles it),
+    the brass lantern by the door (light 0..1)."""
+    x0, x1, y0, y1, _ = PORCH_F
+    Yf = -0.03
+    deck = Box((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, GROUND_Y, Yf, 0)
+    draw_box(pen, v, deck, {'all': dict(fill='#5a5a58', art=lambda p_, W, H: pat(p_, W, H, 'boards', '#2a2a2a', 120, 4, scale=1.2)),
+                            'top': dict(fill='#7c7c76', art=lambda p_, W, H: (pat(p_, W, H, 'boards', '#2a2a2a', 140, 4, scale=1.2),
+                                                                             _doormat_art(p_, W, H, x0, y1)))})
+    for k in range(3):
+        st = Box(FD_CX, y0 - 0.14 - k * 0.28, 1.6, 0.28, GROUND_Y, Yf - (k + 1) * 0.14, 0)
+        draw_box(pen, v, st, {'all': '#6a6a66', 'top': '#82827c'})
+    posts = [(x0 + 0.1, y0 + 0.1), (x1 - 0.1, y0 + 0.1), (-1.6, y0 + 0.1), (0.8, y0 + 0.1)]
+    for (px, py) in posts:
+        if v.d(px, py) < 0.25: continue
+        post = Box(px, py, 0.14, 0.14, Yf, 2.5, 0)
+        draw_box(pen, v, post, {'all': P_['trim']})
+    for (xa, xb) in ((x0 + 0.17, -1.67), (0.87, x1 - 0.17)):
+        if v.d((xa + xb) / 2, y0 + 0.1) < 0.3: continue
+        rail = v.poly3([(xa, Yf + 0.92, y0 + 0.1), (xb, Yf + 0.92, y0 + 0.1), (xb, Yf + 0.86, y0 + 0.1), (xa, Yf + 0.86, y0 + 0.1)])
+        pen.fill(rail, lit(P_['trim'], ((xa + xb) / 2, 0.9, y0), (0, 0, -1))); pen.line(rail, 0.8)
+        for xx in np.arange(xa + 0.06, xb, 0.13):
+            if v.d(xx, y0 + 0.1) < 0.2: continue
+            pen.seg(v.p(xx, Yf, y0 + 0.1), v.p(xx, Yf + 0.86, y0 + 0.1), max(1.0, 0.02 * v.s(xx, y0 + 0.1)), lit(P_['trim'], (xx, 0.5, y0), (0, 0, -1)))
+    roof = [(x0 - 0.2, 2.5, y0 - 0.25), (x1 + 0.2, 2.5, y0 - 0.25), (x1 + 0.2, 2.72, 0.0), (x0 - 0.2, 2.72, 0.0)]
+    path = v.poly3(roof)
+    if not path.isEmpty():
+        if v.cam_h < 2.5: pen.fill(path, lit('#cfc8b8', (FD_CX, 2.5, -1.2), (0, -1, 0)))
+        else: pen.fill(path, lit(P_['roof'], (FD_CX, 2.6, -1.2), (0, 1, 0)))
+        pen.line(path, 1.0)
+    porch_lantern(pen, v, FRONT_LIGHT, light, facing=(0, 0, -1))
+    if egg:
+        dx = 0.0
+        if egg_rattle is not None: dx = 0.006 * egg_rattle(t)
+        porch_egg(pen, v, FD_CX + 0.02 + dx, -0.36, Yf + 0.012, rattle=egg_rattle(t) if egg_rattle else 0.0, opened=open_egg)
+
+
+def _doormat_art(p_, W, H, x0, y1):
+    u0, v0 = floor_uv(x0, y1, FDOOR[0] + 0.02, -0.05)
+    u1, v1 = floor_uv(x0, y1, FDOOR[1] - 0.02, -0.68)
+    r = rrect(u0, v0, u1 - u0, v1 - v0, 3)
+    p_.fill(r, '#6a5232'); p_.texture(r, 'fabric', 0.9, 'overlay', 1.6)
+    p_.line(rrect(u0 + 4, v0 + 4, u1 - u0 - 8, v1 - v0 - 8, 2), 1.6, '#3a2a18', 200)
+    btext(p_, 'WELCOME', (u0 + u1) / 2, (v0 + v1) / 2 + 4, 'sans_b', 11, '#2a1a10', 170, 'center')
+
+
+def porch_egg(pen, v, x, y, Y, rattle=0.0, opened=False, scale=1.0):
+    """The Pemberton's egg lying on the doormat at plan (x, y), resting on height Y (9 cm long, on its side, the seam
+    across its middle); rattle -1..1 rocks it."""
+    if v.d(x, y) < 0.15: return
+    s = v.s(x, y) * scale
+    px, py = v.p(x, Y, y)
+    pen.fill(oval(px + 0.006 * s, py - 0.002 * s, 0.05 * s, 0.012 * s), '#000000', 140, blur=max(1.0, 0.01 * s))
+    c = lit('#e3a9b6', (x, Y + 0.03, y), (0, 1, 0), 1.0)
+    draw_egg(pen, px, py - 0.031 * s, 0.062 * s, rot=-90 + 7 * rattle, col=c, shine=0.8)
+
+
+def draw_egg(pen, cx, cy, size, rot=0.0, col='#e9a8b6', faded=0.6, stamp=True, shine=1.0, seam=True, gold=False):
+    """The Pemberton's plastic Easter egg (the cast's design at insert quality): size = its length in design px (point up
+    at rot 0), sun-faded pink plastic (faded 0..1), a moulded seam ring around its waist, 'Pemberton's' stamped in a
+    raised oval on its side, a soft glossy highlight. gold=True: the golden egg Laurie came home with."""
+    cv = pen.cv
+    cv.save(); cv.translate(cx, cy); cv.rotate(rot)
+    L = size / 2.0; W = L * 0.74
+    pts = []
+    for i in range(40):
+        a = 2 * math.pi * i / 40
+        yy = -math.cos(a) * L
+        ww = W * math.sin(a) * (1.0 - 0.18 * math.cos(a))                       # the narrow end on top
+        pts.append((ww, yy))
+    e = smooth(pts, True, 0.9)
+    base = col if not gold else '#e8bd3c'
+    pale = mix(base, '#f6efe8', 0.35 * faded) if not gold else '#f6d46a'
+    pen.fill(e, pale)
+    pen.radial(e, -W * 0.35, -L * 0.35, L * 1.25, [(0, '#ffffff', 70 * shine), (0.45, '#ffffff', 0), (1, '#5a2a38' if not gold else '#7a5a10', 140)])
+    if faded and not gold:                                                       # sun-bleached on the side that faced the sky
+        pen.linear(e, -W, 0, W, 0, [(0, '#ffffff', 40 * faded), (0.6, '#ffffff', 0)])
+    if seam:
+        sm = smooth([(-W * 0.99, L * 0.02), (-W * 0.5, L * 0.1), (0, L * 0.12), (W * 0.5, L * 0.1), (W * 0.99, L * 0.02)], False, 1.0)
+        pen.line(sm, max(1.0, L * 0.035), mix(pale, '#5a2a38', 0.45), 220)
+        pen.line(moved(sm, 0, -L * 0.03), max(0.8, L * 0.015), '#ffffff', 110)
+    if stamp and not gold:
+        st = oval(0, L * 0.42, W * 0.5, L * 0.13)
+        pen.fill(st, mix(pale, '#7a4a58', 0.35)); pen.line(st, max(0.6, L * 0.012), mix(pale, '#5a2a38', 0.5), 200)
+        if L > 14:
+            btext(pen, "Pemberton's", 0, L * 0.47, 'script', L * 0.15, mix(pale, '#4a1a2a', 0.65), 230, 'center')
+    pen.fill(oval(-W * 0.38, -L * 0.42, W * 0.16, L * 0.2), '#ffffff', 170 * shine)
+    pen.fill(oval(-W * 0.18, -L * 0.62, W * 0.07, L * 0.08), '#ffffff', 200 * shine)
+    pen.line(e, max(1.0, L * 0.04))
+    cv.restore()
+
+
+def _suitcases(pen, v, x, y, Y0):
+    """Two old suitcases stacked (a tan one with straps, a small blue train case on top)."""
+    for (B, col_) in ((Box(x, y, 0.7, 0.48, Y0, Y0 + 0.24, 8), '#a8804a'), (Box(x + 0.05, y, 0.4, 0.3, Y0 + 0.24, Y0 + 0.48, -6), '#4a6a9a')):
+        def art(p_, W, H, col_=col_):
+            p_.texture(rect(0, 0, W, H), 'grunge', 0.4, 'overlay', 0.6)
+            p_.fill(rect(W * 0.25, 0, 3, H), '#5a3a1a'); p_.fill(rect(W * 0.72, 0, 3, H), '#5a3a1a')
+        draw_box(pen, v, B, {'all': dict(fill=col_, art=art)})
+
+
+def _sheet_chair(pen, v, x, y, Y0):
+    """An armchair under a dust sheet: a lumpy white ghost of a chair."""
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    px, py = v.p(x, Y0, y)
+    sh = smooth([(px - 0.45 * s, py), (px - 0.47 * s, py - 0.55 * s), (px - 0.36 * s, py - 0.62 * s), (px - 0.3 * s, py - 1.0 * s), (px, py - 1.08 * s),
+                 (px + 0.3 * s, py - 1.0 * s), (px + 0.36 * s, py - 0.62 * s), (px + 0.47 * s, py - 0.55 * s), (px + 0.45 * s, py)], True, 0.7)
+    pen.fill(sh, lit('#d8d4c8', (x, Y0 + 0.6, y), None)); pen.texture(sh, 'fabric', 0.5, 'overlay', 0.5)
+    for k in range(4):
+        pen.line(smooth([(px + (k - 1.5) * 0.18 * s, py - 0.95 * s), (px + (k - 1.5) * 0.2 * s, py - 0.4 * s), (px + (k - 1.5) * 0.22 * s, py)], False, 1.0), 1.0, '#000000', 50)
+    pen.line(sh, 1.2)
+
+
+# ====================================================================================================== exterior views
+MOON_DIR = _norm3((-math.sin(math.radians(MOON_AZ)) * math.cos(math.radians(MOON_EL)), -math.sin(math.radians(MOON_EL)),
+                   -math.cos(math.radians(MOON_AZ)) * math.cos(math.radians(MOON_EL))))         # light travels from the moon
+SUN_DIR = _norm3((-math.sin(math.radians(SUN_AZ)) * math.cos(math.radians(14)), -math.sin(math.radians(14)), -math.cos(math.radians(SUN_AZ)) * math.cos(math.radians(14))))
+EXT_LIGHT = {'night': ('#3a4a78', [Lamp(kind='dir', c='#9ab0f0', k=0.75, d=MOON_DIR)]),
+             'dawn': ('#7a6a80', [Lamp(kind='dir', c='#ffc890', k=0.85, d=SUN_DIR)]),
+             'blue': ('#5a5a80', [Lamp(kind='dir', c='#b8b0e0', k=0.45, d=SUN_DIR)]),
+             'day87': ('#a8b0b8', [Lamp(kind='dir', c='#fff4e0', k=0.9, d=_norm3((0.3, -0.8, 0.5)))]),
+             'sunrise87': ('#9a8088', [Lamp(kind='dir', c='#ffcf98', k=1.0, d=SUN_DIR)])}
+
+
+class Yard(Room):
+    """The yard as a 'room' for the generic builder: the house (back + porch), the yard props, the woods, the sky. The
+    shell holds the sky, ground, woods and the house; the props are pieces (people sort against them by order_at)."""
+    name = 'yard'
+    poly = [(-30.0, 10.0), (30.0, 10.0), (30.0, 46.0), (-30.0, 46.0)]
+
+    def __init__(self, front=False):
+        self.front = front
+        if front: self.poly = [(-30.0, -30.0), (30.0, -30.0), (30.0, 0.0), (-30.0, 0.0)]
+
+    def lights(self, o):
+        tod = o.get('tod', 'night')
+        amb, steady = EXT_LIGHT.get(tod, EXT_LIGHT['night'])
+        steady = list(steady)
+        porch = [Lamp(BACK_LIGHT[0], BACK_LIGHT[1], BACK_LIGHT[2] + 0.25, 7.0, '#ffc888', 2.4, fall=1.6)]
+        front = [Lamp(FRONT_LIGHT[0], FRONT_LIGHT[1], FRONT_LIGHT[2] - 0.25, 6.0, '#ffc888', 2.0, fall=1.6)]
+        kit = [Lamp(-1.35, 1.5, 10.6, 5.0, '#ffb870', 1.2, fall=1.5)]
+        june = [Lamp(1.1, UP_Y + 1.4, 10.6, 5.0, '#ffd8a0', 0.9, fall=1.5)]
+        fire = [Lamp(BARREL[0], 1.6 + GROUND_Y, BARREL[1], 6.5, '#ff9a48', 2.2, fall=1.5)]
+        var = [('back_light', porch, _kfn(o.get('back_light', 0.0), 121)), ('front_light', front, _kfn(o.get('front_light', 0.0), 122)),
+               ('kitchen_win', kit, _kfn(o.get('kitchen', 0.0), 123)), ('june_win', june, _kfn(o.get('june_light', 0.0), 124)),
+               ('fire', fire, _kfn(o.get('fire_light', 0.0), 125))]
+        if o.get('police'):
+            pol = o['police']
+            for nm, c_, idx in (('police_r', '#ff2a3a', 0), ('police_b', '#2a5aff', 1)):
+                var.append((nm, [Lamp(0.5 + (-1.5 if idx else 1.5), 2.0 + GROUND_Y, -15.3, 26.0, c_, 2.4, fall=1.2)],
+                            (lambda i_: lambda t: lightbar(t, pol.get('mode', 'sweep'), pol.get('speed', 1.0), pol.get('strength', 1.0))[i_])(idx)))
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        tod = o.get('tod', 'night')
+        tt = tod if tod in SKY else 'night'
+        sky_dome(pen, v, 'blue' if tod == 'blue' else tt)
+        vg = lifted(v, GROUND_Y)
+        if self.front:
+            ground(pen, vg, -60.0, -0.1, -40.0, 40.0, tod=tt, c=None)
+            road_front(pen, vg, tt)
+            woods(pen, vg, y_edge=-24.0, xr=(14.0, 60.0), depth=25.0, seed=17, tod=tt, mist=True)
+            woods(pen, vg, y_edge=TREELINE_Y, xr=(-40, 40), seed=7, tod=tt)
+        else:
+            woods(pen, vg, tod=tt, clearing=(-3.8, -1.4))
+            ground(pen, vg, -60.0, 75.0, tod=tt, worn=[(-3.3, 12.9), (-5.5, 18.0), (-7.4, 25.6), (-3.0, 30.0), (-2.6, 39.0)])
+            grass_tufts(pen, vg, (-25, 25), (30, 40), 260, 4)
+        house_exterior(pen, v, tt, glow=o.get('glow', {}), back_light=0.0, front_light=0.0, part='front' if self.front else 'back')
+
+    def pieces(self, o):
+        tod = o.get('tod', 'night')
+        tt = tod if tod in SKY else 'night'
+        P = []
+        if not self.front:
+            for nm, (x, y), fn in (('shed', (SHED.cx, SHED.cy), lambda pen, v: shed(pen, lifted(v, GROUND_Y), tt)),
+                                   ('woodpile', (-9.3, 25.5), lambda pen, v: woodpile(pen, lifted(v, GROUND_Y))),
+                                   ('chopping_block', CHOP, lambda pen, v: chopping_block(pen, lifted(v, GROUND_Y))),
+                                   ('swing', SWING, lambda pen, v: swing_set(pen, lifted(v, GROUND_Y), tod=tt, rust=0.0 if tt in ('day87', 'sunrise87') else 1.0)),
+                                   ('fence', (0.0, 37.6), lambda pen, v: _fence(pen, lifted(v, GROUND_Y), tt)),
+                                   ('clothesline', (5.5, 22.0), lambda pen, v: _clothesline(pen, lifted(v, GROUND_Y)))):
+                P.append(Piece(nm, (x, GROUND_Y + 0.5, y), fn, block=(SHED.footprint() if nm == 'shed' else None)))
+            if not o.get('fire'):
+                P.append(Piece('barrel', (BARREL[0], GROUND_Y + 0.5, BARREL[1]), lambda pen, v: burn_barrel(pen, lifted(v, GROUND_Y), tod=tt),
+                               block=_circ(BARREL[0], BARREL[1], 0.32)))
+        return P
+
+    def spots(self, v, o):
+        S = {}
+        G = GROUND_Y
+        if not self.front:
+            S['treeline'] = _mk_spot(v, 'treeline', -2.6, 39.6, G, 'stand', 'the Bunnyman at the edge of the woods, in the gap of the old fence', face=(0, -1))
+            S['treeline_deep'] = _mk_spot(v, 'treeline_deep', -2.5, 42.5, G, 'stand', 'just inside the trees (half hidden)', face=(0, -1))
+            S['porch_top'] = _mk_spot(v, 'porch_top', -3.3, 11.4, -0.03, 'stand', 'on the back porch (Dad with the flashlight, setting off)', face=(0, 1))
+            S['yard_mid'] = _mk_spot(v, 'yard_mid', -3.0, 24.0, G, 'stand', 'halfway down the yard (Dad walking to the treeline)', face=(0, 1))
+            S['yard_near_trees'] = _mk_spot(v, 'yard_near_trees', -2.7, 34.0, G, 'stand', 'near the treeline', face=(0, 1))
+            S['barrel'] = _mk_spot(v, 'barrel', BARREL[0] + 0.75, BARREL[1] - 0.35, G, 'stand', 'Mom at the burn barrel (oven mitts): face (-1, 0.45)', face=(-1, 0.45))
+            S['barrel_top'] = _mk_spot(v, 'barrel_top', BARREL[0], BARREL[1], G + 1.06, 'surface', 'the mouth of the burn barrel (the egg goes in here)')
+            S['chopping_block'] = _mk_spot(v, 'chopping_block', CHOP[0], CHOP[1], G + 0.48, 'surface', 'the chopping block (the hatchet stuck in it)')
+            S['window_june'] = _mk_spot(v, 'window_june', 1.1, 10.02, UP_Y + 1.3, 'point', "June's window from outside (her face at the glass)")
+            S['back_door_out'] = _mk_spot(v, 'back_door_out', -3.3, 10.5, -0.03, 'stand', 'on the back porch at the door', face=(0, -1))
+            S['porch_light'] = _mk_spot(v, 'porch_light', BACK_LIGHT[0], BACK_LIGHT[2], BACK_LIGHT[1], 'point', "Grandma's porch light")
+        else:
+            S['porch_door'] = _mk_spot(v, 'porch_door', FD_CX, -0.9, -0.03, 'stand', 'on the front porch at the door', face=(0, 1))
+            S['doormat'] = _mk_spot(v, 'doormat', FD_CX, -0.36, -0.03, 'surface', 'the doormat (the egg)')
+            S['walk'] = _mk_spot(v, 'walk', FD_CX, -5.0, GROUND_Y, 'stand', 'on the front walk')
+            S['road'] = _mk_spot(v, 'road', 0.0, -17.5, GROUND_Y - 0.1, 'stand', 'Orchard Road in front of the house')
+            S['cop_porch'] = _mk_spot(v, 'cop_porch', 0.6, -1.3, -0.03, 'stand', 'a cop on the porch')
+        return S
+
+
+_cam('yard_woods', 1000, 520, GROUND_Y + 2.0, -3.3, 11.7, 0, dict(x=(860, 1060), y=(460, 620), zoom=(1.0, 1.15), f=(1.0, 3.0)),
+     'from the back porch down the yard to the treeline under the moon (the burn barrel and the shed left, the swing set right)', 'yard')
+_cam('yard_house', 860, 560, GROUND_Y + 1.75, -2.6, 41.2, 182, dict(x=(860, 1060), y=(480, 640), zoom=(1.0, 1.15), f=(1.0, 3.0)),
+     "from the treeline back at the house (the Bunnyman's view, 'watching the houses'): June's window, Grandma's porch light", 'yard')
+_cam('yard_wide', 760, 430, GROUND_Y + 3.4, 16.0, 16.5, -78, dict(x=(860, 1060), y=(400, 560), zoom=(1.0, 1.15), f=(1.0, 2.0)),
+     'establishing: the last house on Orchard Road, the yard and the woods from the east side', 'yard')
+_cam('treeline_close', 2200, 520, GROUND_Y + 1.6, -2.6, 25.0, 0, dict(x=(880, 1040), y=(470, 600), zoom=(1.0, 1.08), f=(1.0, 2.0)),
+     'telephoto on the treeline: the gap in the fence where he stands (anchor treeline), the mist at his feet', 'yard')
+_cam('barrel', 1000, 500, GROUND_Y + 1.45, -5.6, 24.4, -48, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     'the burn barrel by the shed (fire, the egg melting), the woodpile, the chopping block with the hatchet', 'yard')
+_cam('front_house', 760, 470, GROUND_Y + 1.6, 1.0, -26.0, -2, dict(x=(860, 1060), y=(440, 600), zoom=(1.0, 1.15), f=(1.0, 2.6)),
+     'the front of the house from Orchard Road (the dead end, the woods round it): night or dawn with the police', 'front')
+_cam('porch', 900, 520, 1.55, FD_CX + 1.35, -2.0, -28, dict(x=(860, 1060), y=(460, 600), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     'on the front porch: the door, the doormat, the egg, the lantern', 'front')
+_cam('porch_egg', 1500, 220, 0.28, FD_CX + 0.42, -1.05, -18, dict(x=(880, 1040), y=(180, 300), zoom=(1.0, 1.08), f=(1.0, 1.8)),
+     'low and close on the egg on the doormat (it rattles)', 'front')
+_cam('peephole', 560, 540, PEEP_Y, FD_CX, -0.06, 180, dict(x=(940, 980), y=(520, 560), zoom=(1.0, 1.02), f=(1.0, 1.2)),
+     'through the peephole: the fisheye porch, the egg on the doormat, the steps, the dark road (a wide peephole lens, tilted down)', 'front',
+     pitch=38.0)
+
+
+def ob_yard(view='woods', tod='night', back_light=0.0, kitchen=0.0, june_light=0.0, fire=0.0, egg=None, moon=1.0, **kw):
+    """The back yard and Holloway Woods' edge. view:
+      'woods'  from the back porch to the treeline   'house'  from the treeline back at the house
+      'wide'   establishing from the east side       'close'  telephoto on the treeline (anchor 'treeline')
+      'barrel' the burn barrel by the shed (fire 0..1 or f(t) animated flames; egg = melt 0..1 or f(t))
+    back_light = Grandma's porch light (level spec: number | f(t) | dict(on=, off=)), kitchen / june_light = those windows
+    lit from inside, tod 'night' | 'dawn' | 'sunrise87' (1987: the swing set new, gold light) | 'day87'."""
+    name = {'woods': 'yard_woods', 'house': 'yard_house', 'wide': 'yard_wide', 'close': 'treeline_close', 'barrel': 'barrel'}[view]
+    v = cam(name)
+    glow = {'kitchen': _kfn(kitchen, 0)(0.0), 'june': _kfn(june_light, 0)(0.0)}
+    o = dict(tod=tod, back_light=back_light, kitchen=kitchen, june_light=june_light, glow=glow, fire=fire, fire_light=0.0)
+    main = Yard()
+    dynl = []
+    if fire:
+        kf = fire if callable(fire) else (lambda t, f_=fire: f_)
+        o['fire_light'] = (lambda t: kf(t)) if callable(fire) else fire
+    amb, steady, var = main.lights(o)
+    if fire:
+        def barrel_fn(pen, v_, t):
+            e = egg(t) if callable(egg) else egg
+            burn_barrel(pen, lifted(v_, GROUND_Y), fire=kf(t), t=t, egg=e, tod=tod)
+        dynl.append(live_layer('barrel', v, (BARREL[0], GROUND_Y + 0.5, BARREL[1]), barrel_fn, amb, steady, var))
+    bl = _kfn(back_light, 121)
+    dynl.append(Layer(max(0.3, v.d(BACK_LIGHT[0], BACK_LIGHT[2])), lambda pen, t: porch_lantern(pen, v, BACK_LIGHT, bl(t)), 'porch_lantern', blur=None))
+    dynl[-1].order = v.d(BACK_LIGHT[0], BACK_LIGHT[2]) - 0.3
+    grade = {'night': 'ob_ext', 'dawn': 'ob_dawn', 'sunrise87': 'ob_sunrise87', 'day87': 'ob_vhs87'}.get(tod, 'ob_ext')
+    sp = build_view('ob_yard_' + view, v, main, o, outside=None, lens='lens', grade=grade, dyn=dynl,
+                    focus=v.d(-2.6, 39.6) if view in ('close', 'woods') else None, dof=0.6)
+    sp.info['back_light'] = bl
+    sp.info['note'] = 'Outside: figures order = sp.order_at(x, y) (their depth; behind the shed / barrel they sort behind it).'
+    return sp
+
+
+PEEPHOLE_LENS = None
+
+
+def _peep_lens():
+    global PEEPHOLE_LENS
+    from engine.lens import Lens as _Lens
+    PEEPHOLE_LENS = _Lens('peephole', fov=150.0, zoom=1.05)
+    return PEEPHOLE_LENS
+
+
+def ob_front(view='house', tod='night', front_light=1.0, egg=False, police=None, egg_rattle=None, glow=None, **kw):
+    """The front of the house on Orchard Road. view 'house' (from the road), 'porch' (on the porch: door, doormat,
+    lantern), 'egg' (low and close on the egg on the doormat; egg_rattle = f(t) -1..1 jiggle), 'peephole' (the fisheye
+    view from inside: a wide peephole lens). police = dict(mode='sweep', speed, strength): two patrol cars at the curb,
+    their light bars sweeping red / blue across the house (tod 'blue' or 'dawn' for the police dawn)."""
+    name = {'house': 'front_house', 'porch': 'porch', 'egg': 'porch_egg', 'peephole': 'peephole'}[view]
+    v = cam(name)
+    o = dict(tod=tod, front_light=front_light, glow=glow or {}, police=police)
+    main = Yard(front=True)
+    amb, steady, var = main.lights(o)
+    dynl = []
+    fl = _kfn(front_light, 122)
+    dynl.append(Layer(max(0.3, v.d(FRONT_LIGHT[0], FRONT_LIGHT[2])), lambda pen, t: porch_lantern(pen, v, FRONT_LIGHT, fl(t), facing=(0, 0, -1)), 'front_lantern', blur=None))
+    dynl[-1].order = v.d(FRONT_LIGHT[0], FRONT_LIGHT[2]) - 0.3
+    if egg:
+        def egg_fn(pen, v_, t):
+            r = egg_rattle(t) if egg_rattle else 0.0
+            porch_egg(pen, v_, FD_CX + 0.02 + 0.004 * r, -0.36, -0.03 + 0.012, rattle=r)
+        dynl.append(live_layer('egg', v, (FD_CX, 0.0, -0.36), egg_fn, amb, steady, var))
+    if police:
+        for i, (px, fc) in enumerate(((-4.2, 1), (5.4, -1))):
+            def car(pen, t, px=px, fc=fc, i=i):
+                vg = lifted(v, GROUND_Y)
+                if vg.d(px, -15.3) < 1.0: return
+                x_, y_ = vg.p(px, 0.0, -15.3)
+                r_, b_ = lightbar(t + i * 0.37, police.get('mode', 'sweep'), police.get('speed', 1.0), police.get('strength', 1.0))
+                patrol_car(pen, x_, y_, 4.9 * vg.s(px, -15.3), t, facing=fc, lights=(r_, b_), head=False)
+            lay = Layer(max(0.3, v.d(px, -15.3)), car, 'police_car_%d' % i, blur=None)
+            lay.order = v.d(px, -15.3)
+            dynl.append(lay)
+    lens = (PEEPHOLE_LENS or _peep_lens()) if view == 'peephole' else 'lens'
+    grade = {'night': 'ob_ext', 'dawn': 'ob_dawn', 'blue': 'ob_ext'}.get(tod, 'ob_ext')
+    if view == 'peephole': grade = 'porch_warm'
+    sp = build_view('ob_front_' + view, v, main, o, outside=None, lens=lens, grade=grade, dyn=dynl,
+                    cover=(PEEP if view == 'peephole' else None), focus=(v.d(FD_CX, -0.36) if view in ('egg', 'peephole') else None),
+                    dof=(2.0 if view == 'egg' else 0.6))
+    if police:
+        sp._fx = lambda t: {'flash': police_flash(t, 0.35, police.get('speed', 1.0), police.get('mode', 'sweep'))}
+    return sp
+
+
+# ====================================================================================================== Holloway Woods and the bridge
+# Its own plan: the creek runs along x at y CREEK (a ravine, banks falling to the water), the old railroad trestle crosses
+# it along y at x 0 (timber bents every 3.2 m, a plank deck with rusted rails 5 m above the water). Dad's flashlight lies on
+# the gravel under the bridge, still on. Ground level of the woods is Y 0; the creek bed Y BED.
+CREEK, CREEK_W, BED = 12.0, 3.2, -2.4
+BRIDGE_Y0, BRIDGE_Y1, DECK_Y = 2.0, 22.0, 2.7
+FLASH = (0.9, 10.1)                                          # Dad's flashlight on the gravel bank under the bridge (plan)
+
+
+def _bank_Y(y):
+    """Ground height across the ravine (plan y): woods floor 0, sloping to the creek bed."""
+    d = abs(y - CREEK)
+    if d < CREEK_W / 2: return BED
+    if d < CREEK_W / 2 + 4.5: return BED + (d - CREEK_W / 2) / 4.5 * (-BED) * ((d - CREEK_W / 2) / 4.5) ** 0.3
+    return 0.0
+
+
+class Woods(Room):
+    name = 'woods'
+    poly = [(-40.0, -10.0), (40.0, -10.0), (40.0, 40.0), (-40.0, 40.0)]
+
+    def lights(self, o):
+        tod = o.get('tod', 'night')
+        amb, steady = EXT_LIGHT.get(tod, EXT_LIGHT['night'])
+        steady = list(steady)
+        fl = [Lamp(FLASH[0] + 0.6, _bank_Y(FLASH[1]) + 0.25, FLASH[1] + 1.3, 6.0, '#fff2c8', 2.0, fall=1.4)]
+        var = [('flashlight', fl, _kfn(o.get('flashlight', 1.0), 131))]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        tod = o.get('tod', 'night')
+        tt = tod if tod in SKY else 'night'
+        sky_dome(pen, v, tt)
+        woods(pen, v, y_edge=26.0, xr=(-50, 50), depth=30.0, seed=33, tod=tt)
+        woods(pen, lifted(v, 0.0), y_edge=-8.0 if v.hy > 0 else 30.0, xr=(-50, 50), depth=4.0, seed=34, tod=tt, mist=False) if False else None
+        # the ravine: ground strips across y (far -> near from the camera)
+        strips = []
+        ys = list(np.arange(-12.0, 36.0, 0.75))
+        for y0_, y1_ in zip(ys[:-1], ys[1:]):
+            strips.append((y0_, y1_))
+        strips.sort(key=lambda q: -abs(v.d(0, (q[0] + q[1]) / 2)) if v.fy * 0 == 0 else 0)
+        strips.sort(key=lambda q: -v.d(v.hx, (q[0] + q[1]) / 2))
+        for (y0_, y1_) in strips:
+            Ya, Yb = _bank_Y(y0_), _bank_Y(y1_)
+            q = [(-60.0, Ya, y0_), (60.0, Ya, y0_), (60.0, Yb, y1_), (-60.0, Yb, y1_)]
+            path = v.poly3(q)
+            if path.isEmpty(): continue
+            wet = abs((y0_ + y1_) / 2 - CREEK) < CREEK_W / 2
+            nrm = _norm3((0.0, 1.0, -(Yb - Ya) / 0.75))
+            if wet:
+                c = '#0c1424' if tt == 'night' else '#3a4a4a'
+                pen.fill(path, c)
+                rb_ = _rb(path)
+                for k in range(6):                                           # broken moonlight on the water
+                    xx = rb_[0] + (rb_[2] - rb_[0]) * _h(k + int(y0_ * 10), 3)
+                    pen.fill(oval(xx, (rb_[1] + rb_[3]) / 2, (rb_[3] - rb_[1]) * 1.6, max(0.8, (rb_[3] - rb_[1]) * 0.12)), '#8aa0d8', 70)
+            else:
+                c = lit('#2a2a22' if tt == 'night' else '#4a4a38', (v.hx, (Ya + Yb) / 2, (y0_ + y1_) / 2), nrm, 1.0)
+                pen.fill(path, c); pen.texture(path, 'grunge', 0.5, 'overlay', 3.0)
+        # the creek's shine and stones, mist on the water
+        cy0, cy1 = CREEK - CREEK_W / 2, CREEK + CREEK_W / 2
+        rng = np.random.default_rng(5)
+        for i in range(140):
+            x, y = rng.uniform(-14, 14), rng.uniform(cy0 - 2.4, cy1 + 2.4)
+            if v.d(x, y) < 0.5: continue
+            px, py = v.p(x, _bank_Y(y) + 0.02, y); s = v.s(x, y) * rng.uniform(0.03, 0.1)
+            st = _blob(px, py, s, s * 0.5, 7, i, 0.3)
+            pen.fill(st, lit(mix('#3a3a38', '#5a5650', rng.uniform()), (x, BED, y), (0, 1, 0)), 240)
+            pen.fill(oval(px - s * 0.3, py - s * 0.2, s * 0.35, s * 0.12), '#c8d0e8', 50); pen.line(st, 0.6, LINE, 150)
+        if v.d(0, CREEK) > 0.5:
+            ya, yb = v.p(0, BED + 1.0, CREEK)[1], v.p(0, BED, CREEK)[1]
+            mc = '#8a9ad0' if tt == 'night' else '#d8d8d0'
+            pen.linear(rect(-1200, ya, 4400, yb - ya + 40), 0, ya, 0, yb + 20, [(0, mc, 0), (0.7, mc, 70), (1, mc, 40)])
+
+    def pieces(self, o):
+        tod = o.get('tod', 'night')
+        P = [Piece('bridge', (0.0, 2.0, CREEK), lambda pen, v: trestle(pen, v, tod)),
+             Piece('flashlight', (FLASH[0], _bank_Y(FLASH[1]), FLASH[1]), lambda pen, v: flashlight_ground(pen, v, FLASH[0], FLASH[1], 0.0))]
+        rng = np.random.default_rng(41)
+        for i in range(14):                                                    # near trunks framing the views
+            x, y = rng.uniform(-12, 12), rng.uniform(-6, 30)
+            if abs(x) < 2.5 and BRIDGE_Y0 - 1 < y < BRIDGE_Y1 + 1: continue
+            if abs(y - CREEK) < CREEK_W / 2 + 0.5: continue
+            P.append(Piece('trunk%d' % i, (x, 1.0, y), (lambda x_, y_, sd: lambda pen, v: _trunk(pen, v, x_, y_, sd, tod))(x, y, i)))
+        return P
+
+    def glows(self, v, o):
+        kf = _kfn(o.get('flashlight', 1.0), 131)
+
+        def beam(pen, t):
+            k = kf(t)
+            if k <= 0.01: return
+            flashlight_beam_ground(pen, v, FLASH[0], FLASH[1], k, t)
+        return [('flashlight_glow', (FLASH[0], 0.0, FLASH[1]), beam)]
+
+    def spots(self, v, o):
+        S = {}
+        S['flashlight'] = _mk_spot(v, 'flashlight', FLASH[0], FLASH[1], _bank_Y(FLASH[1]), 'surface', "Dad's flashlight on the gravel under the bridge, still on")
+        S['under_bridge'] = _mk_spot(v, 'under_bridge', -0.6, 9.6, _bank_Y(9.6), 'stand', 'under the bridge on the near bank')
+        S['bank_far'] = _mk_spot(v, 'bank_far', 0.8, 15.2, _bank_Y(15.2), 'stand', 'the far bank under the bridge')
+        S['deck'] = _mk_spot(v, 'deck', 0.0, 6.0, DECK_Y + 0.2, 'stand', 'on the bridge deck')
+        S['path'] = _mk_spot(v, 'path', -3.0, 2.0, 0.0, 'stand', 'on the path through the woods toward the bridge')
+        return S
+
+
+def _trunk(pen, v, x, y, sd, tod):
+    if v.d(x, y) < 0.6: return
+    s = v.s(x, y)
+    Yb = _bank_Y(y)
+    bx, by = v.p(x, Yb, y)
+    hh = (7.0 + 4.0 * _h(sd, 2)) * s
+    c = '#0a0c14' if tod == 'night' else '#2a2a26'
+    draw_tree(pen, bx, by, hh * 0.6, 0.0, sd + 300, 0.0, c, ('#6a7ab8', 160) if tod == 'night' else ('#c8c0b0', 120), 5, 1.1)
+
+
+def trestle(pen, v, tod='night'):
+    """The old railroad trestle: timber bents (four posts with X bracing) every 3.2 m across the ravine, a plank deck,
+    two rusted rails on the ties, the line running off into the trees both ways."""
+    bents = [BRIDGE_Y0 + k * 3.2 for k in range(int((BRIDGE_Y1 - BRIDGE_Y0) / 3.2) + 1)]
+    bents.sort(key=lambda y: -v.d(0.0, y))
+    wood = '#3a2e24' if tod == 'night' else '#5a4a3a'
+    for y in bents:
+        Yb = _bank_Y(y)
+        if v.d(0.0, y) < 0.4: continue
+        for xp in (-1.4, -0.5, 0.5, 1.4):
+            post = Box(xp, y, 0.22, 0.22, Yb, DECK_Y - 0.3, 0)
+            draw_box(pen, v, post, {'all': dict(fill=wood, art=_wood_art)}, lw=1.0)
+        for (Ya, Yb_) in ((Yb + 0.3, (Yb + DECK_Y) / 2), ((Yb + DECK_Y) / 2, DECK_Y - 0.4)):
+            for sgn in (1, -1):
+                q = [(-1.4 * sgn, Ya, y - 0.115), (1.4 * sgn, Yb_, y - 0.115), (1.4 * sgn, Yb_ - 0.12, y - 0.115), (-1.4 * sgn, Ya - 0.12, y - 0.115)]
+                path = v.poly3(q)
+                if path.isEmpty(): continue
+                pen.fill(path, lit(wood, (0, Ya, y), (0, 0, -1))); pen.line(path, 1.0)
+        if v.d(0.0, y) > 1.2:
+            cap = v.poly3([(-1.7, DECK_Y - 0.3, y), (1.7, DECK_Y - 0.3, y), (1.7, DECK_Y - 0.55, y), (-1.7, DECK_Y - 0.55, y)])
+            pen.fill(cap, lit(wood, (0, DECK_Y, y), (0, 0, -1))); pen.line(cap, 1.0)
+    # the deck (stringers + ties) and the rails, running past the ravine into the trees
+    y0, y1 = -14.0, 34.0
+    for (x0, x1, Ya, Yb, c) in ((-1.6, 1.6, DECK_Y - 0.3, DECK_Y - 0.05, wood),):
+        F = Face((x0, DECK_Y - 0.05, y1), (1, 0, 0), (0, 0, -1), (x1 - x0) * 100, (y1 - y0) * 100, (0, 1, 0), 'top')
+        if v.cam_h > DECK_Y:
+            draw_face(pen, v, F, lambda p_, W, H: pat(p_, W, H, 'boards', '#000000', 120, 8, scale=2.0), wood, ao=False)
+        Fs = Face((x0, DECK_Y - 0.05, y0), (0, 0, 1), (0, -1, 0), (y1 - y0) * 100, 25.0, (-1, 0, 0), 'side')
+        Fs2 = Face((x1, DECK_Y - 0.05, y1), (0, 0, -1), (0, -1, 0), (y1 - y0) * 100, 25.0, (1, 0, 0), 'side')
+        for Fx in (Fs, Fs2):
+            draw_face(pen, v, Fx, lambda p_, W, H: pat(p_, W, H, 'boards', '#000000', 120, 9, scale=1.5), _darken(wood, 0.2), ao=False)
+    for xr_ in (-0.72, 0.72):
+        ys_ = list(np.linspace(y0, y1, 40))
+        for ya_, yb_ in zip(ys_[:-1], ys_[1:]):
+            if min(v.d(xr_, ya_), v.d(xr_, yb_)) < 1.5: continue
+            q = [(xr_ - 0.035, DECK_Y + 0.17, ya_), (xr_ + 0.035, DECK_Y + 0.17, ya_), (xr_ + 0.035, DECK_Y + 0.17, yb_), (xr_ - 0.035, DECK_Y + 0.17, yb_)]
+            pen.fill(v.poly3(q), '#7a5a46')
+            q2 = [(xr_ - 0.035, DECK_Y + 0.05, ya_), (xr_ - 0.035, DECK_Y + 0.17, ya_), (xr_ - 0.035, DECK_Y + 0.17, yb_), (xr_ - 0.035, DECK_Y + 0.05, yb_)]
+            pen.fill(v.poly3(q2), '#4a2a1e')
+
+
+def flashlight_ground(pen, v, x, y, rot=0.0):
+    """Dad's big black flashlight lying on the gravel (the cast's design: black body, ribbed grip, a cream lens rim),
+    pointing along +x / +y (its beam is the glow layer)."""
+    Yb = _bank_Y(y)
+    if v.d(x, y) < 0.15: return
+    s = v.s(x, y)
+    a = (x - 0.14, Yb + 0.03, y - 0.05); b = (x + 0.14, Yb + 0.03, y + 0.06)
+    pa, pb = v.p(*a), v.p(*b)
+    w = max(2.0, 0.05 * s)
+    pen.fill(oval((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 + w * 0.5, math.dist(pa, pb) * 0.6, w * 0.6), '#000000', 150, blur=max(1.0, w * 0.4))
+    pen.seg(pa, pb, w + 2.5, LINE); pen.seg(pa, pb, w, '#1d1e22')
+    hx, hy = pb
+    pen.fill(oval(hx, hy, w * 0.75, w * 0.9), '#26272c'); pen.line(oval(hx, hy, w * 0.75, w * 0.9), 1.0)
+    pen.fill(oval(hx + w * 0.15, hy, w * 0.5, w * 0.7), '#fff6d8')
+    for k in range(5):
+        u = 0.2 + k * 0.1
+        q = (pa[0] + (pb[0] - pa[0]) * u, pa[1] + (pb[1] - pa[1]) * u)
+        pen.seg((q[0], q[1] - w * 0.45), (q[0], q[1] + w * 0.45), 0.8, '#3a3b42')
+
+
+def flashlight_beam_ground(pen, v, x, y, k=1.0, t=0.0):
+    """The flashlight's beam raking across the gravel and the water (still on, slightly flickering: dying batteries)."""
+    Yb = _bank_Y(y)
+    fl = k * (0.92 + 0.08 * noise1(t * 3.0, 77))
+    hx, hy = v.p(x + 0.15, Yb + 0.03, y + 0.07)
+    s = v.s(x, y)
+    pen.glow(hx, hy, 0.45 * s, '#fff2c8', 220 * fl)
+    pen.glow(hx, hy, 0.12 * s, '#ffffff', 255 * fl)
+    pts_c = [v.p(x + 0.15 + d_ * 0.55, _bank_Y(y + 0.07 + d_ * 0.83) + 0.02 + 0.05 * d_, y + 0.07 + d_ * 0.83) for d_ in (0.0,)]
+    tip_l = v.p(x + 3.4, _bank_Y(y + 2.6) + 0.02, y + 2.6); tip_r = v.p(x + 1.9, _bank_Y(y + 4.0) + 0.02, y + 4.0)
+    cone = poly([(hx, hy), tip_l, tip_r])
+    pen.linear(cone, hx, hy, (tip_l[0] + tip_r[0]) / 2, (tip_l[1] + tip_r[1]) / 2, [(0, '#fff2c8', 170 * fl), (0.5, '#fff2c8', 60 * fl), (1, '#fff2c8', 0)])
+    for k in range(9):                                                    # motes drifting in the beam
+        u = (k * 0.137 + t * 0.05) % 1.0
+        mx_ = hx + (tip_l[0] + tip_r[0] - 2 * hx) / 2 * u + 20 * math.sin(k * 3.1 + t * 0.7)
+        my_ = hy + (tip_l[1] + tip_r[1] - 2 * hy) / 2 * u - 30 * u * math.sin(k)
+        pen.fill(oval(mx_, my_, max(0.8, 0.004 * s)), '#fff6e0', 160 * fl * (1 - u))
+    px, py = v.p(x + 2.6, _bank_Y(y + 3.2), y + 3.2)
+    pen.radial(None, px, py, 1.8 * v.s(x + 2.6, y + 3.2), [(0, '#fff2c8', 110 * fl), (1, '#fff2c8', 0)], sy=0.35, clip=False)
+
+
+_cam('woods_bridge', 820, 470, 1.55, -9.5, 2.5, 52, dict(x=(860, 1060), y=(440, 600), zoom=(1.0, 1.15), f=(1.0, 2.4)),
+     'the old railroad trestle across the ravine in Holloway Woods, mist on the creek', 'woods')
+_cam('woods_under', 1000, 230, _bank_Y(9.3) + 0.62, 0.28, 9.35, 39, dict(x=(880, 1040), y=(360, 480), zoom=(1.0, 1.12), f=(1.0, 2.2)),
+     "under the bridge: Dad's flashlight on the gravel, still on, its beam across the bank and the water", 'woods')
+_cam('woods_path', 820, 500, 1.5, -6.0, -6.0, 30, dict(x=(860, 1060), y=(460, 600), zoom=(1.0, 1.15), f=(1.0, 2.2)),
+     'deep in Holloway Woods at night: trunks, moonbeams, the line of the old railroad ahead (Dad walking; the search in 1987)', 'woods')
+
+
+def ob_woods(view='bridge', tod='night', flashlight=1.0, **kw):
+    """Holloway Woods and the old railroad bridge. view 'bridge' (the trestle across the misty ravine) | 'under' (Dad's
+    flashlight lying on the gravel under the bridge, still on: flashlight = level spec) | 'path' (deep in the woods).
+    tod 'night' | 'day87' (the 1987 search: overcast day, grade ob_memory)."""
+    v = cam('woods_' + view)
+    o = dict(tod=tod, flashlight=flashlight if tod == 'night' else 0.0)
+    grade = 'ob_ext' if tod == 'night' else 'ob_memory'
+    return build_view('ob_woods_' + view, v, Woods(), o, outside=None, lens='lens', grade=grade, focus=v.d(FLASH[0], FLASH[1]) if view == 'under' else None,
+                      dof=1.0 if view == 'under' else 0.6)
+
+
+# ====================================================================================================== Holloway State Hospital
+# Its own plan: the corridor runs along x (y 0..2.4); the narrator's room (x 8..11.5, y 2.4..7.0) and the visiting room
+# (x 14..24, y 2.4..10.0) open off its north side. Overcast daylight through the north windows, fluorescent tubes.
+H_COR = (0.0, 30.0, 0.0, 2.4)
+H_ROOM = (8.0, 11.5, 2.4, 7.0)
+H_VISIT = (14.0, 24.0, 2.4, 10.0)
+H_CEIL = 2.75
+HBED = Box(10.95, 4.6, 0.95, 2.0, 0.0, 0.62, 90)              # the narrator's bed along the east wall (head north)
+HCAL = (8.0, 1.55, 4.3)                                       # the calendar on the room's west wall (x, Y, y)
+VTABLES = [(16.6, 5.0), (19.4, 5.2), (22.2, 5.0), (17.4, 7.9), (20.8, 8.0)]
+HOSP_WALL, HOSP_FLOOR = '#b8cfc4', '#cfc6b0'
+
+
+def _hosp_lights(o, room):
+    amb = '#8a9898'
+    tubes = []
+    if room in ('corridor',):
+        for x in np.arange(2.0, 30.0, 3.5):
+            tubes.append(Lamp(x, H_CEIL - 0.05, 1.2, 4.5, '#f2f8f4', 1.2, (1.0, 0.8, 0.3), fall=1.4))
+    if room == 'room':
+        tubes.append(Lamp(9.75, H_CEIL - 0.05, 4.7, 4.5, '#f2f8f4', 0.7, (1.0, 0.8, 0.3), fall=1.4))
+    if room == 'visit':
+        for (x, y) in ((16.5, 4.5), (21.5, 4.5), (16.5, 8.0), (21.5, 8.0)):
+            tubes.append(Lamp(x, H_CEIL - 0.05, y, 5.0, '#f2f8f4', 0.9, (1.0, 0.8, 0.3), fall=1.4))
+    day = []
+    if room == 'room':
+        day.append(Lamp(kind='win', c='#e8f0f4', k=1.0, soft=14.0, panes=[[(9.1, 2.2, 7.0), (10.4, 2.2, 7.0), (10.4, 1.0, 7.0), (9.1, 1.0, 7.0)]], d=_norm3((0.1, -0.5, -1.0))))
+    if room == 'visit':
+        for x0 in (15.0, 18.4, 21.8):
+            day.append(Lamp(kind='win', c='#e8f0f4', k=1.0, soft=16.0, panes=[[(x0, 2.3, 10.0), (x0 + 2.2, 2.3, 10.0), (x0 + 2.2, 0.9, 10.0), (x0, 0.9, 10.0)]],
+                            d=_norm3((0.0, -0.45, -1.0))))
+    var = [('tubes', tubes, _kfn(o.get('tubes', 1.0), 141))]
+    if o.get('tod') == 'night': amb = '#2a3448'; day = []
+    return amb, day, var
+
+
+class HospRoom(Room):
+    name = 'hosp_room'
+    poly = [(H_ROOM[0], H_ROOM[2]), (H_ROOM[1], H_ROOM[2]), (H_ROOM[1], H_ROOM[3]), (H_ROOM[0], H_ROOM[3])]
+
+    def lights(self, o): return _hosp_lights(o, 'room')
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = H_ROOM
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, HOSP_FLOOR, 'tile', '#a89e88', seed=3, scale=2.0)
+        walls = [((x1, y0), (x0, y0), [(x1 - 9.9, 0.0, x1 - 9.0, 2.1)]), ((x0, y0), (x0, y1), []),
+                 ((x0, y1), (x1, y1), [(9.1 - x0, 1.0, 10.4 - x0, 2.2)]), ((x1, y1), (x1, y0), [])]
+        for (a, b, holes) in walls:
+            wall(pen, v, a, b, 0.0, H_CEIL, HOSP_WALL, None, None, holes, wains=0.0, rail=0.9, seed=2, base_h=0.1, trim='#8aa094',
+                 art=self.wall_art(a, b, o))
+        ceil_rect(pen, v, x0, x1, y0, y1, H_CEIL, c='#e8ece6', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#c8ccc4', 200, scale=4.0))
+        window_unit(pen, v, (x0, y1), (x1, y1), 9.1 - x0, 10.4 - x0, 1.0, 2.2, lites=(1, 1), frame='#e8ece6')
+        _blinds(pen, v, 9.1, 10.4, 2.2, 1.0, y1 - 0.04, o.get('blinds', 0.45))
+
+    def wall_art(self, a, b, o):
+        if a == (H_ROOM[0], H_ROOM[2]):                            # west wall: the calendar, a cork board
+            def art(p_, W, H):
+                _calendar(p_, (HCAL[2] - H_ROOM[2]) * 100 - 16, H - HCAL[1] * 100 - 20, 32, 44, o.get('month', 'MARCH'), o.get('circle', (4, 0)))
+                p_.fill(rect(30, H - 175, 60, 42), '#b88a5a'); p_.line(rect(30, H - 175, 60, 42), 1.0, '#5a3a20')
+                for k, c_ in enumerate(('#f2f0e8', '#e8d870', '#f2f0e8')):
+                    p_.fill(rect(36 + k * 17, H - 170 + (k % 2) * 6, 13, 16), c_)
+                p_.fill(rect(36 + 17, H - 164, 13, 16), '#fbf7ee'); _tiny_drawing(p_, 36 + 17, H - 164, 13, 16, 'bunny')
+            return art
+        if a == (H_ROOM[1], H_ROOM[2]):                            # the door wall: a clock over the door
+            def art(p_, W, H):
+                _wall_clock(p_, (H_ROOM[1] - 9.45) * 100, H - 232, 13, 2, 50)
+            return art
+        return None
+
+    def pieces(self, o):
+        bp = hosp_bed_parts(HBED)
+        return [Piece('bed', (HBED.cx, 0.4, HBED.cy), lambda pen, v: draw_parts(pen, v, bp), occupant=[(HBED.cx - 0.15, HBED.cy)], front=bp, block=HBED.footprint()),
+                Piece('chair', (8.6, 0.45, 6.2), lambda pen, v: _plastic_chair(pen, v, 8.6, 6.2, 60), block=_circ(8.6, 6.2, 0.3)),
+                Piece('table', (8.45, 0.4, 5.3), lambda pen, v: draw_parts(pen, v, table_parts(Box(8.45, 5.3, 0.6, 0.5, 0.0, 0.72, 90), '#c8b898', apron=0.04)),
+                      block=Box(8.45, 5.3, 0.6, 0.5, 0.0, 0.72, 90).footprint())]
+
+    def spots(self, v, o):
+        S = {}
+        S['bed_edge'] = _mk_spot(v, 'bed_edge', HBED.cx - 0.25, 4.3, 0.0, 'seat', 'sitting on the bed edge (the narrator in Mom\'s body): face (-1, 0)', face=(-1, 0), seat_Y=0.62)
+        S['bed_lie'] = _mk_spot(v, 'bed_lie', HBED.cx, HBED.cy, 0.62, 'lie', 'lying in the bed (head north: +y)')
+        S['window'] = _mk_spot(v, 'window', 9.75, 6.6, 0.0, 'stand', 'at the window (face (0, 1))', face=(0, 1))
+        S['door'] = _mk_spot(v, 'door', 9.45, 2.7, 0.0, 'stand', 'in the doorway (a doctor / June visiting): face (0, 1)', face=(0, 1))
+        S['chair'] = _mk_spot(v, 'chair', 8.6, 6.2, 0.0, 'seat', 'the visitor chair', face=(0.86, -0.5), seat_Y=0.46)
+        S['calendar'] = _mk_spot(v, 'calendar', HCAL[0] + 0.01, HCAL[2], HCAL[1], 'point', 'the wall calendar (EASTER circled: nine days)')
+        return S
+
+
+def hosp_bed_parts(B):
+    w2, d2 = B.w / 2, B.d / 2
+    P = []
+    for (u, n) in ((-w2 + 0.04, -d2 + 0.04), (w2 - 0.04, -d2 + 0.04), (-w2 + 0.04, d2 - 0.04), (w2 - 0.04, d2 - 0.04)):
+        P.append(Part(sub(B, u - 0.02, u + 0.02, n - 0.02, n + 0.02, 0.0, 0.45), {'all': '#b8bcc0'}))
+    P.append(Part(sub(B, -w2, w2, -d2, d2, 0.42, 0.62), {'all': '#f2f2ee', 'top': dict(fill='#f6f6f2', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.4, 'overlay', 0.4))}))
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 + 0.1, w2 - 0.1, -d2 + 0.04, -d2 + 0.36, 0.62, 0.72, lambda W, H: rounded_rect_pts(W, H, 5.0, 3.0, bulge=1.2),
+                                                 '#fbfbf8', '#d8d8d4'), ref=B.at(0, -d2 + 0.2, 0.66), tag='pillow'))
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 - 0.02, w2 + 0.02, -d2 + 0.6, d2 + 0.02, 0.5, 0.66, lambda W, H: rounded_rect_pts(W, H, 4.0, 0.0, bulge=1.0),
+                                                 '#c8d8e0', '#a8b8c0'), ref=B.at(0, 0.3, 0.6), tag='blanket'))
+    for n_ in (-d2 - 0.02, d2 + 0.02):                                     # metal head / foot rails
+        P.append(Part(sub(B, -w2, w2, n_ - 0.02, n_ + 0.02, 0.45, 0.95 if n_ < 0 else 0.8), {'all': '#c8ccd0'}, tag='rail'))
+    return P
+
+
+def _blinds(pen, v, x0, x1, top, sill, y, k=0.5):
+    """Venetian blinds half drawn (k = how far down)."""
+    bot = top - (top - sill) * k
+    F = Face((x0, top, y), (1, 0, 0), (0, -1, 0), (x1 - x0) * 100, (top - bot) * 100, (0, 0, -1), 'front')
+
+    def art(p_, W, H):
+        yy = 0.0
+        while yy < H:
+            p_.fill(rect(0, yy, W, 2.6), '#e8ece6'); p_.fill(rect(0, yy + 2.6, W, 0.6), '#8a908a'); yy += 4.0
+    draw_face(pen, v, F, art, '#dfe4de', ao=False, lw=0.9)
+
+
+def _plastic_chair(pen, v, x, y, fa=0, col='#c86a3a'):
+    B = Box(x, y, 0.46, 0.46, 0.0, 0.46, fa)
+    parts = []
+    for (u, n) in ((-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2)):
+        parts.append(Part(sub(B, u - 0.015, u + 0.015, n - 0.015, n + 0.015, 0.0, 0.43), {'all': '#9aa0a8'}))
+    parts.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -0.22, 0.22, -0.22, 0.22, 0.42, 0.47, lambda W, H: rounded_rect_pts(W, H, 2.0), col, _darken(col, 0.2)),
+                      ref=B.at(0, 0, 0.45)))
+    parts.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -0.22, 0.22, -0.24, -0.2, 0.62, 0.88, lambda W, H: rounded_rect_pts(W, H, 5.0, 2.0), col, _darken(col, 0.2)),
+                      ref=B.at(0, -0.22, 0.75)))
+    draw_parts(pen, v, parts)
+
+
+class HospVisit(Room):
+    name = 'hosp_visit'
+    poly = [(H_VISIT[0], H_VISIT[2]), (H_VISIT[1], H_VISIT[2]), (H_VISIT[1], H_VISIT[3]), (H_VISIT[0], H_VISIT[3])]
+
+    def lights(self, o): return _hosp_lights(o, 'visit')
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = H_VISIT
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, HOSP_FLOOR, 'checker', '#b8ae98', seed=4, scale=1.4)
+        walls = [((x1, y0), (x0, y0), [(x1 - 15.6, 0.0, x1 - 14.6, 2.1)]), ((x0, y0), (x0, y1), []),
+                 ((x0, y1), (x1, y1), [(15.0 - x0, 0.9, 17.2 - x0, 2.3), (18.4 - x0, 0.9, 20.6 - x0, 2.3), (21.8 - x0, 0.9, 24.0 - x0 - 0.0001, 2.3)]),
+                 ((x1, y1), (x1, y0), [])]
+        for (a, b, holes) in walls:
+            wall(pen, v, a, b, 0.0, H_CEIL, '#c8d8c8', None, None, holes, wains=1.1, wcol='#a8bca8', seed=5, base_h=0.1, trim='#8aa094',
+                 art=self.wall_art(a, b, o))
+        ceil_rect(pen, v, x0, x1, y0, y1, H_CEIL, c='#eef0ea', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#c8ccc4', 200, scale=4.0))
+        for (u0, u1) in ((15.0, 17.2), (18.4, 20.6), (21.8, 24.0 - 0.0001)):
+            window_unit(pen, v, (x0, y1), (x1, y1), u0 - x0, u1 - x0, 0.9, 2.3, lites=(2, 1), frame='#e8ece6')
+        _tubes(pen, v, [(16.5, 4.5), (21.5, 4.5), (16.5, 8.0), (21.5, 8.0)])
+
+    def wall_art(self, a, b, o):
+        if a == (H_VISIT[1], H_VISIT[2]):
+            def art(p_, W, H):
+                p_.fill(rect(300, H - 200, 120, 60), '#f2f0e8'); btext(p_, 'VISITING HOURS', 360, H - 178, 'sans_b', 9, '#2a4a3a', 230, 'center')
+                btext(p_, 'SUNDAY 1 - 4 PM', 360, H - 160, 'sans', 8, '#2a4a3a', 230, 'center')
+                _wall_clock(p_, 620, H - 226, 14, 2, 15)
+            return art
+        if a == (H_VISIT[0], H_VISIT[2]):
+            def art(p_, W, H):
+                _hframe(p_, W, H, 380, H - 190, 90, 60, 'landscape', frame='#c8c8c0')
+            return art
+        return None
+
+    def pieces(self, o):
+        P = []
+        for i, (x, y) in enumerate(VTABLES):
+            P.append(Piece('vtable%d' % i, (x, 0.4, y), (lambda x_, y_: lambda pen, v: _round_table(pen, v, x_, y_))(x, y), block=_circ(x, y, 0.5)))
+            for k, ang in enumerate((0, 120, 240)):
+                cx_, cy_ = x + 0.72 * math.sin(math.radians(ang)), y - 0.72 * math.cos(math.radians(ang))
+                P.append(Piece('vchair%d_%d' % (i, k), (cx_, 0.4, cy_), (lambda cx__, cy__, fa: lambda pen, v: _plastic_chair(pen, v, cx__, cy__, fa))(cx_, cy_, ang),
+                               block=_circ(cx_, cy_, 0.26)))
+        P.append(Piece('vending', (14.35, 0.9, 8.6), lambda pen, v: _vending(pen, v), block=[(14.0, 8.15), (14.75, 8.15), (14.75, 9.05), (14.0, 9.05)]))
+        P.append(Piece('tv', (23.7, 2.2, 9.6), lambda pen, v: _wall_tv(pen, v)))
+        P.append(Piece('plant', (23.5, 0.6, 3.0), lambda pen, v: _fake_plant(pen, v, 23.5, 3.0)))
+        return P
+
+    def spots(self, v, o):
+        S = {}
+        x, y = VTABLES[1]
+        for k, ang in enumerate((0, 120, 240)):
+            cx_, cy_ = x + 0.72 * math.sin(math.radians(ang)), y - 0.72 * math.cos(math.radians(ang))
+            S['seat%d' % k] = _mk_spot(v, 'seat%d' % k, cx_, cy_, 0.0, 'seat', 'a chair at the middle table (%d deg round it), facing the table' % ang,
+                                       face=(x - cx_, y - cy_), seat_Y=0.46)
+        S['table'] = _mk_spot(v, 'table', x, y, 0.74, 'surface', 'the middle table top')
+        S['window'] = _mk_spot(v, 'window', 19.5, 9.5, 0.0, 'stand', 'at the big window')
+        S['door'] = _mk_spot(v, 'door', 15.1, 2.75, 0.0, 'stand', 'in the doorway from the corridor (June arriving)', face=(0, 1))
+        return S
+
+
+def _tubes(pen, v, pts):
+    for (x, y) in pts:
+        q = v.poly3([(x - 0.6, H_CEIL - 0.01, y - 0.15), (x + 0.6, H_CEIL - 0.01, y - 0.15), (x + 0.6, H_CEIL - 0.01, y + 0.15), (x - 0.6, H_CEIL - 0.01, y + 0.15)])
+        if q.isEmpty(): continue
+        pen.fill(q, '#f8fbf8'); pen.line(q, 1.0, '#9aa0a0')
+
+
+def _round_table(pen, v, x, y):
+    top = ellipse3(v, x, y, 0.5, 0.5, 0.74)
+    s = v.s(x, y)
+    a_, b_ = v.p(x, 0.0, y), v.p(x, 0.72, y)
+    pen.seg(a_, b_, max(2.0, 0.07 * s) + 2, LINE); pen.seg(a_, b_, max(1.5, 0.07 * s), lit('#9aa0a8', (x, 0.4, y), None))
+    pen.fill(ellipse3(v, x, y, 0.3, 0.3, 0.0), lit('#8a9098', (x, 0.0, y), (0, 1, 0)))
+    pen.fill(ellipse3(v, x, y, 0.5, 0.5, 0.71), lit('#c8c0a8', (x, 0.7, y), None))
+    pen.fill(top, lit('#e8e2d0', (x, 0.74, y), (0, 1, 0))); pen.line(top, 1.2)
+
+
+def _vending(pen, v):
+    B = Box(14.38, 8.6, 0.9, 0.72, 0.0, 1.85, 90)
+
+    def front(p_, W, H):
+        p_.fill(rect(6, 8, W * 0.62, H * 0.72), '#1a2028')
+        for r in range(5):
+            for c_ in range(4):
+                p_.fill(rect(10 + c_ * W * 0.15, 14 + r * H * 0.13, W * 0.11, H * 0.08), ['#d84a3a', '#4a8ad8', '#e8c84a', '#5ab85a'][(r + c_) % 4])
+        p_.fill(rect(W * 0.72, 18, W * 0.2, H * 0.3), '#2a2a30'); p_.fill(rect(W * 0.74, 22, W * 0.16, 10), '#5ad86a', 200)
+        p_.fill(rect(10, H * 0.84, W * 0.55, 12), '#0a0a0e')
+    draw_box(pen, v, B, {'front': dict(fill='#c83a3a', art=front), 'all': '#a82a2a'})
+
+
+def _wall_tv(pen, v):
+    B = Box(23.7, 9.55, 0.72, 0.45, 1.9, 2.4, 225)
+    draw_box(pen, v, B, {'front': dict(fill='#2a2a2e', art=lambda p_, W, H: (p_.fill(rect(4, 4, W - 8, H - 8), '#3a4a5a'),
+                                                                              p_.linear(rect(4, 4, W - 8, H - 8), 0, 4, W, H, [(0, '#8ab0d8', 60), (1, '#000000', 0)]))),
+                         'all': '#1a1a1e'})
+
+
+def _fake_plant(pen, v, x, y):
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    px, py = v.p(x, 0.0, y)
+    pot = poly([(px - 0.16 * s, py - 0.4 * s), (px + 0.16 * s, py - 0.4 * s), (px + 0.12 * s, py), (px - 0.12 * s, py)])
+    pen.fill(pot, lit('#d8d0c0', (x, 0.2, y), None)); pen.line(pot, 1.0)
+    for k in range(9):
+        a = -math.pi / 2 + (k - 4) * 0.28
+        L_ = (0.6 + 0.3 * _h(k, 2)) * s
+        tip = (px + math.cos(a) * L_, py - 0.4 * s + math.sin(a) * L_)
+        lf = smooth([(px, py - 0.4 * s), ((px + tip[0]) / 2 - 0.04 * s, (py - 0.4 * s + tip[1]) / 2), tip, ((px + tip[0]) / 2 + 0.04 * s, (py - 0.4 * s + tip[1]) / 2)], True, 0.9)
+        pen.fill(lf, lit('#3a7a4a', (x, 0.8, y), None)); pen.line(lf, 0.8)
+
+
+class HospCorridor(Room):
+    name = 'hosp_corridor'
+    poly = [(H_COR[0], H_COR[2]), (H_COR[1], H_COR[2]), (H_COR[1], H_COR[3]), (H_COR[0], H_COR[3])]
+
+    def lights(self, o): return _hosp_lights(o, 'corridor')
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = H_COR
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, HOSP_FLOOR, 'checker', '#b8ae98', seed=6, scale=1.4)
+        doors_n = [(9.0, 9.9), (14.6, 15.6), (4.0, 4.9), (26.0, 26.9)]
+        doors_s = [(6.0, 6.9), (12.0, 12.9), (19.0, 19.9), (24.0, 24.9)]
+        wall(pen, v, (x0, y1), (x1, y1), 0.0, H_CEIL, '#c8d8c8', None, None, [(a - x0, 0.0, b - x0, 2.1) for (a, b) in doors_n], wains=1.1, wcol='#a8bca8',
+             seed=7, base_h=0.1, trim='#8aa094', art=lambda p_, W, H: _handrail(p_, W, H))
+        wall(pen, v, (x1, y0), (x0, y0), 0.0, H_CEIL, '#c8d8c8', None, None, [(x1 - b, 0.0, x1 - a, 2.1) for (a, b) in doors_s], wains=1.1, wcol='#a8bca8',
+             seed=8, base_h=0.1, trim='#8aa094', art=lambda p_, W, H: _handrail(p_, W, H))
+        wall(pen, v, (x1, y1), (x1, y0), 0.0, H_CEIL, '#c8d8c8', None, None, [(0.6, 0.9, 1.8, 2.3)], wains=1.1, wcol='#a8bca8', seed=9, base_h=0.1, trim='#8aa094')
+        wall(pen, v, (x0, y0), (x0, y1), 0.0, H_CEIL, '#c8d8c8', None, None, [], wains=1.1, wcol='#a8bca8', seed=10, base_h=0.1, trim='#8aa094')
+        ceil_rect(pen, v, x0, x1, y0, y1, H_CEIL, c='#eef0ea', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#c8ccc4', 200, scale=4.0))
+        _tubes(pen, v, [(x, 1.2) for x in np.arange(2.0, 30.0, 3.5)])
+        for (a, b) in doors_n:
+            Door((a, y1 + 0.03), b - a, 2.08, (1.0, 0.0), 1, 0.0, art_a=_hosp_door_art(), art_b=_hosp_door_art(), col='#d8d8d0').draw(pen, v, 0.0)
+        for (a, b) in doors_s:
+            Door((b, y0 - 0.03), b - a, 2.08, (-1.0, 0.0), 1, 0.0, art_a=_hosp_door_art(), art_b=_hosp_door_art(), col='#d8d8d0').draw(pen, v, 0.0)
+
+    def pieces(self, o):
+        return [Piece('cart', (17.0, 0.5, 0.55), lambda pen, v: draw_box(pen, v, Box(17.0, 0.5, 0.9, 0.5, 0.15, 0.95, 0), {'all': '#c8ccd0', 'top': '#e8ecf0'}),
+                      block=Box(17.0, 0.5, 0.9, 0.5, 0.15, 0.95, 0).footprint())]
+
+    def spots(self, v, o):
+        return {'mid': _mk_spot(v, 'mid', 12.0, 1.2, 0.0, 'stand', 'the middle of the corridor'),
+                'room_door': _mk_spot(v, 'room_door', 9.45, 2.1, 0.0, 'stand', "outside the narrator's room", face=(0, 1))}
+
+
+def _handrail(p_, W, H):
+    p_.fill(rect(0, H - 95, W, 4.0), '#d8d8d0'); p_.fill(rect(0, H - 92, W, 1.2), '#000000', 70)
+
+
+def _hosp_door_art():
+    def art(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.15, 'overlay', 0.5)
+        p_.fill(rect(W * 0.3, 30, W * 0.4, 36), '#7a8a8a'); p_.fill(rect(W * 0.3, 30, W * 0.4, 36), '#c8d8e8', 120)
+        for k in range(5): p_.seg((W * 0.3, 32 + k * 7), (W * 0.7, 32 + k * 7), 0.4, '#3a3a3a', 160)
+        p_.fill(rrect(W - 12, H - 104, 8, 16, 2), '#b8bcc0')
+    return art
+
+
+_cam('hosp_room', 820, 480, 1.55, 9.0, 2.65, 22, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     "the narrator's room from the door: the bed, the window with blinds, the calendar", 'hosp_room')
+_cam('hosp_bed', 900, 500, 1.35, 8.55, 3.0, 55, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'the bed close (the narrator sitting on its edge, June in her lap)', 'hosp_room')
+_cam('hosp_visit', 760, 470, 1.6, 14.6, 3.0, 38, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.0)),
+     'the visiting room: round tables, plastic chairs, the big windows, the TV, the vending machine', 'hosp_visit')
+_cam('hosp_table', 900, 500, 1.3, 17.9, 6.3, 120, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     'a visiting table close (June climbs into my lap: anchors seat0..2)', 'hosp_visit')
+_cam('hosp_corridor', 800, 480, 1.6, 0.6, 1.2, 90, dict(x=(880, 1040), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 2.4)),
+     'down the long corridor: tube lights, handrails, doors', 'hosp_corridor')
+
+
+def ob_hospital(view='room', tubes=1.0, blinds=0.45, month='MARCH', circle=(4, 0), tod='day', **kw):
+    """Holloway State Hospital. view 'room' | 'bed' (the narrator's room: bed, window with blinds, the wall calendar
+    with EASTER circled in nine days: month / circle (row, col)), 'visit' | 'table' (the visiting room), 'corridor'."""
+    v = cam('hosp_' + view)
+    o = dict(tubes=tubes, blinds=blinds, month=month, circle=circle, tod=tod)
+    room = {'room': HospRoom, 'bed': HospRoom, 'visit': HospVisit, 'table': HospVisit, 'corridor': HospCorridor}[view]()
+    far = [HospCorridor()] if view in ('room', 'bed', 'visit', 'table') else [HospRoom(), HospVisit()]
+    out = lambda pen, v_: _outside_hospital(pen, v_)
+    return build_view('ob_hosp_' + view, v, room, o, far=far, outside=out, lens='lens', grade='ob_hospital')
+
+
+def _outside_hospital(pen, v):
+    """The hospital grounds through the windows: an overcast sky, a lawn, a row of bare spring trees, a fence."""
+    sky_dome(pen, v, 'day87', moon=False, stars=False, clouds=True)
+    vg = lifted(v, -3.0)
+    ground(pen, vg, 10.0, 90.0, -20.0, 60.0, tod='day87', c='#7a9a6a')
+    for i, x in enumerate(np.arange(0.0, 40.0, 4.5)):
+        y = 30.0 + 3 * _h(i, 3)
+        if vg.d(x, y) < 1: continue
+        bx, by = vg.p(x, 0.0, y)
+        draw_tree(pen, bx, by, 6.0 * vg.s(x, y), 0.0, 400 + i, 0.0, '#4a4a40', None, 4)
+
+
+# ====================================================================================================== 1987: the Easter parade
+# Main Street, Holloway, April 1987, its own plan: the street runs along y (road x -4..4, sidewalks to +-6.5), shop fronts
+# face it on both sides; Pemberton's Department Store fills the right side from y 18 to 36. The float (a flatbed dressed as
+# a giant Easter basket) drives along x 0 toward -y; float_y = its front's y (number or f(t)).
+PEMB = (6.5, 18.0, 36.0, 11.5)                               # store front x, y0, y1, height
+FLOAT_W, FLOAT_L = 2.5, 6.0
+SHOPS_L = [(2.0, 12.0, 'HOLLOWAY DINER', '#5a8ab8', 7.5), (12.0, 21.0, 'REXALL DRUGS', '#c84a3a', 8.0), (21.0, 30.0, 'FIVE & DIME', '#e8a83a', 7.0),
+           (30.0, 40.0, 'FIRST NATIONAL BANK', '#8a8a7a', 9.0), (40.0, 52.0, 'BIJOU', '#a83a5a', 8.5)]
+SHOPS_R = [(4.0, 12.0, 'HARDWARE', '#3a7a5a', 7.0), (36.0, 46.0, 'BAKERY', '#d88aa0', 7.5), (46.0, 58.0, 'HOLLOWAY COURIER', '#5a5a6a', 8.0)]
+
+
+class MainStreet(Room):
+    name = 'main_street'
+    poly = [(-6.5, -10.0), (6.5, -10.0), (6.5, 80.0), (-6.5, 80.0)]
+
+    def lights(self, o):
+        amb, steady = EXT_LIGHT['day87']
+        return '#c8c8c8', [Lamp(kind='dir', c='#fff4e0', k=0.55, d=_norm3((0.45, -0.75, 0.5)))], []
+
+    def shell(self, pen, v, o):
+        sky_dome(pen, v, 'day87', moon=False, stars=False, clouds=True)
+        # far end of the street: the courthouse with a clock tower, hills
+        vg = v
+        hx_, hy_ = v.p(0.0, 0.0, 95.0)
+        if v.d(0.0, 95.0) > 1:
+            B = Box(0.0, 98.0, 16.0, 8.0, 0.0, 10.0, 0)
+            draw_box(pen, v, B, {'all': '#c8b898', 'front': dict(fill='#d8c8a8', art=lambda p_, W, H: [p_.fill(rect(60 + k * 220, H - 600, 90, 380), '#5a6a7a') for k in range(7)])})
+            T = Box(0.0, 98.0, 3.5, 3.5, 10.0, 17.0, 0)
+            draw_box(pen, v, T, {'all': '#c8b898', 'front': dict(fill='#d8c8a8', art=lambda p_, W, H: (p_.fill(oval(W / 2, H * 0.35, 90), '#f2eee0'),
+                                                                                                    p_.line(oval(W / 2, H * 0.35, 90), 6, '#3a3a3a'),
+                                                                                                    p_.seg((W / 2, H * 0.35), (W / 2, H * 0.35 - 60), 6, '#2a2a2a'),
+                                                                                                    p_.seg((W / 2, H * 0.35), (W / 2 + 40, H * 0.35 + 20), 6, '#2a2a2a')))})
+        # road and sidewalks
+        F = floor_face(-4.0, 4.0, -12.0, 90.0, 0.0)
+        draw_face(pen, v, F, lambda p_, W, H: (p_.texture(rect(0, 0, W, H), 'asphalt', 0.5, 'overlay', 2.0),
+                                               [p_.fill(rect(W / 2 - 6, y, 12, 300), '#e8d870') for y in np.arange(0, H, 600)]), '#5a5c62', ao=False, line=False)
+        for (x0, x1) in ((-6.5, -4.0), (4.0, 6.5)):
+            Fs = floor_face(x0, x1, -12.0, 90.0, 0.15)
+            draw_face(pen, v, Fs, lambda p_, W, H: pat(p_, W, H, 'tile', '#8a8a84', 200, scale=6.0), '#b8b4a8', ao=False, line=False)
+            cb = 4.0 if x0 < 0 else -4.0
+        for x_ in (-4.0, 4.0):
+            q = v.poly3([(x_, 0.15, -12.0), (x_, 0.15, 90.0), (x_, 0.0, 90.0), (x_, 0.0, -12.0)])
+            pen.fill(q, '#d8d4c8'); pen.line(q, 0.8)
+        # shop fronts (left side faces +x, right side faces -x)
+        for (y0, y1, name, c_, h) in SHOPS_L:
+            _shopfront(pen, v, -6.5, y0, y1, h, name, c_, side=-1)
+        for (y0, y1, name, c_, h) in SHOPS_R:
+            _shopfront(pen, v, 6.5, y0, y1, h, name, c_, side=1)
+        _pembertons(pen, v)
+        _bunting(pen, v)
+
+    def pieces(self, o):
+        fy = o.get('float_y', 22.0)
+        P = []
+        if not callable(fy):
+            P.append(Piece('float', (0.0, 1.0, fy + FLOAT_L / 2), lambda pen, v: parade_float(pen, v, 0.0, fy)))
+        for side, x in ((-1, -5.2), (1, 5.2)):
+            P.append(Piece('crowd_%d' % side, (x, 0.8, 20.0), (lambda s_, x_: lambda pen, v: _crowd(pen, v, x_, s_, o.get('crowd_seed', 3)))(side, x)))
+        return P
+
+    def spots(self, v, o):
+        fy = o.get('float_y', 22.0)
+        fy = fy(0.0) if callable(fy) else fy
+        S = {}
+        S['float_deck'] = _mk_spot(v, 'float_deck', 0.0, fy + 2.2, 1.25, 'stand', 'the Bunnyman on the float (deck top Y 1.25)', face=(0, -1))
+        S['float_side'] = _mk_spot(v, 'float_side', -1.9, fy + 1.5, 0.0, 'stand', 'on the road beside the float (where he climbs down / Laurie takes his paw)')
+        S['curb_r'] = _mk_spot(v, 'curb_r', 4.6, 24.0, 0.15, 'stand', 'on the right curb in front of Pemberton\'s (Laurie in the crowd)', face=(-1, 0))
+        S['curb_l'] = _mk_spot(v, 'curb_l', -4.6, 20.0, 0.15, 'stand', 'on the left curb', face=(1, 0))
+        S['photo'] = _mk_spot(v, 'photo', 3.4, 25.5, 0.0, 'stand', "the newspaper photo: Laurie holding the Bunnyman's paw, Pemberton's behind")
+        return S
+
+
+def _shopfront(pen, v, x, y0, y1, h, name, c_, side=-1):
+    """A two-storey brick shop on Main Street (facing the road): a cornice, upper windows, a shop window with an awning and
+    the shop's painted sign."""
+    a, b = ((x, y0), (x, y1)) if side < 0 else ((x, y1), (x, y0))
+    F = wall_face(a, b, 0.15, h)
+    if not v.visible(F.O, F.n): return
+
+    def art(p_, W, H, name=name, c_=c_):
+        p_.fill(rect(0, 0, W, H), '#a85a42'); pat(p_, W, H, 'brick', '#c8b8a0', 120, 3)
+        p_.fill(rect(0, 0, W, 40), '#d8c8a8')
+        for k in range(int(W / 220)):
+            x_ = 60 + k * 220
+            p_.fill(rect(x_, 90, 110, 170), '#3a4a5a'); p_.fill(rect(x_ - 8, 82, 126, 186), '#e8dcc8'); p_.fill(rect(x_, 90, 110, 170), '#3a4a5a')
+            p_.linear(rect(x_, 90, 110, 170), x_, 90, x_ + 110, 260, [(0, '#c8d8e8', 120), (0.5, '#c8d8e8', 0)])
+        sy = H - 420
+        p_.fill(rect(30, sy, W - 60, 90), c_); p_.line(rect(30, sy, W - 60, 90), 4, '#2a2a2a')
+        btext(p_, name, W / 2, sy + 64, 'head', 60, '#fbf7ee', 255, 'center')
+        p_.fill(rect(40, H - 300, W - 80, 260), '#2a3a4a'); p_.linear(rect(40, H - 300, W - 80, 260), 40, H - 300, W - 40, H - 40, [(0, '#e8f0f8', 120), (0.4, '#e8f0f8', 0)])
+        for k in range(int((W - 80) / 60)):                                   # an awning
+            p_.fill(poly([(40 + k * 60, H - 320), (100 + k * 60, H - 320), (100 + k * 60, H - 270), (70 + k * 60, H - 255), (40 + k * 60, H - 270)]),
+                    c_ if k % 2 else '#fbf7ee')
+    draw_face(pen, v, F, art, '#a85a42', ao=False)
+
+
+def _pembertons(pen, v):
+    """Pemberton's Department Store: three storeys of cream terracotta and brick, the big red script sign, a pink and white
+    striped awning over the Easter windows (pastel eggs, a bunny display, a mannequin girl in a yellow dress), flags."""
+    x, y0, y1, h = PEMB
+    F = wall_face((x, y1), (x, y0), 0.15, h)
+    if not v.visible(F.O, F.n): return
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#e8dcc0'); p_.texture(rect(0, 0, W, H), 'plaster', 0.4, 'overlay', 0.6)
+        for k in range(int(W / 150)):                                         # upper windows, two floors
+            x_ = 50 + k * 150
+            for yy in (110, 380):
+                p_.fill(rect(x_ - 8, yy - 8, 96, 186), '#c8b898'); p_.fill(rect(x_, yy, 80, 170), '#3a4a5a')
+                p_.linear(rect(x_, yy, 80, 170), x_, yy, x_ + 80, yy + 170, [(0, '#e8f0f8', 130), (0.5, '#e8f0f8', 0)])
+        p_.fill(rect(0, 0, W, 50), '#c8b898'); p_.fill(rect(0, 46, W, 8), '#a89878')
+        sy = H - 560                                                           # the sign band
+        p_.fill(rect(60, sy, W - 120, 150), '#fbf6ea'); p_.line(rect(60, sy, W - 120, 150), 6, '#c8264a')
+        btext(p_, "Pemberton's", W / 2, sy + 118, 'script', 128, '#c8264a', 255, 'center')
+        btext(p_, 'DEPARTMENT STORE  -  SINCE 1921', W / 2, sy + 145, 'sans_b', 18, '#7a5a3a', 230, 'center', spacing=0.2)
+        # the Easter windows
+        for k in range(3):
+            wx = 80 + k * (W - 160) / 3
+            ww = (W - 160) / 3 - 40
+            r = rect(wx, H - 330, ww, 270)
+            p_.fill(r, '#f6e8d8'); p_.linear(r, wx, H - 330, wx, H - 60, ['#fbe8f0', '#e8f0d8'])
+            for i, c2 in enumerate(('#f2a5b5', '#f6d978', '#9fd3f0', '#b9e0a5', '#d9b3f0', '#f2a5b5', '#9fd3f0')):
+                ex = wx + 30 + i * (ww - 60) / 6
+                p_.fill(oval(ex, H - 90 - (i % 2) * 30, 22, 30), c2); p_.line(oval(ex, H - 90 - (i % 2) * 30, 22, 30), 2.0, '#5a4a4a')
+            if k == 1:                                                          # the mannequin girl in a yellow Easter dress
+                mx = wx + ww / 2
+                p_.fill(oval(mx, H - 270, 20, 24), '#f0d8c0')
+                p_.fill(poly([(mx - 24, H - 245), (mx + 24, H - 245), (mx + 50, H - 120), (mx - 50, H - 120)]), '#f6cf3e')
+                p_.fill(rect(mx - 26, H - 200, 52, 10), '#ffffff'); p_.line(poly([(mx - 24, H - 245), (mx + 24, H - 245), (mx + 50, H - 120), (mx - 50, H - 120)]), 2.5, '#8a6a10')
+            if k == 0:                                                          # a bunny display
+                bx_ = wx + ww * 0.5
+                p_.fill(oval(bx_, H - 140, 50, 60), '#e8e8ec'); p_.fill(oval(bx_, H - 215, 34, 30), '#e8e8ec')
+                p_.fill(oval(bx_ - 14, H - 270, 9, 32), '#e8e8ec'); p_.fill(oval(bx_ + 14, H - 270, 9, 32), '#e8e8ec')
+                p_.fill(oval(bx_ - 12, H - 220, 4), '#1a1a1a'); p_.fill(oval(bx_ + 12, H - 220, 4), '#1a1a1a')
+            p_.linear(r, wx, H - 330, wx + ww, H - 60, [(0, '#ffffff', 100), (0.3, '#ffffff', 0), (0.6, '#ffffff', 40), (0.7, '#ffffff', 0)])
+            p_.line(r, 5, '#7a6a5a')
+        for k in range(int(W / 50)):                                            # the striped awning
+            p_.fill(poly([(k * 50, H - 360), (k * 50 + 50, H - 360), (k * 50 + 50, H - 330), (k * 50 + 25, H - 318), (k * 50, H - 330)]),
+                    '#e88aa0' if k % 2 else '#fbf7ee')
+        p_.fill(rect(W / 2 - 70, H - 330, 140, 290), '#5a3a2a'); p_.fill(rect(W / 2 - 62, H - 322, 60, 274), '#8a9aa8'); p_.fill(rect(W / 2 + 2, H - 322, 60, 274), '#8a9aa8')
+    draw_face(pen, v, F, art, '#e8dcc0', ao=False)
+    for yy in (y0 + 3.0, (y0 + y1) / 2, y1 - 3.0):                             # flags on poles
+        if v.d(x, yy) < 1: continue
+        a_, b_ = v.p(x - 0.05, 7.5, yy), v.p(x - 1.6, 9.0, yy)
+        pen.seg(a_, b_, max(1.0, 0.05 * v.s(x, yy)), '#c8c8c8')
+        fl = v.poly3([(x - 1.6, 9.0, yy), (x - 1.6, 8.3, yy), (x - 2.6, 8.4, yy + 0.05), (x - 2.6, 9.1, yy + 0.05)])
+        pen.fill(fl, '#c8264a'); pen.line(fl, 0.8)
+
+
+def _bunting(pen, v):
+    """Strings of pastel pennants and balloons across Main Street."""
+    cols = ['#f2a5b5', '#f6d978', '#9fd3f0', '#b9e0a5', '#d9b3f0']
+    for yy in (10.0, 26.0, 42.0, 58.0):
+        if v.d(0.0, yy) < 1.0: continue
+        pts = [(x, 6.5 - 0.8 * (1 - (x / 6.5) ** 2), yy) for x in np.linspace(-6.4, 6.4, 25)]
+        sp_ = [v.p(*q) for q in pts]
+        pen.line(poly(sp_, False), max(0.8, 0.02 * v.s(0, yy)), '#e8e8e8', 200)
+        for i, q in enumerate(pts[:-1]):
+            q2 = pts[i + 1]
+            tri = v.poly3([q, q2, ((q[0] + q2[0]) / 2, q[1] - 0.5, yy)])
+            pen.fill(tri, cols[i % 5]); pen.line(tri, 0.6)
+
+
+def parade_float(pen, v, x, fy, t=0.0):
+    """The last float: a flatbed truck dressed as a giant Easter basket (woven sides, pastel eggs piled at the back, an arched
+    handle wound with ribbon, a bouquet of balloons, 'PEMBERTON'S' on a banner). Its front at plan y fy, driving -y."""
+    L, W = FLOAT_L, FLOAT_W
+    deck = Box(x, fy + L / 2, W, L, 0.25, 1.25, 0)
+    # the basket body
+    def weave(p_, W_, H_):
+        p_.fill(rect(0, 0, W_, H_), '#c8964a')
+        for k in range(int(W_ / 12)):
+            p_.fill(rect(k * 12, 0, 6, H_), '#a87a3a', 180)
+        for k in range(int(H_ / 10)):
+            p_.fill(rect(0, k * 10, W_, 4), '#e0b060', 150)
+        p_.fill(rect(0, 0, W_, 14), '#7fc36a'); p_.fill(rect(0, H_ - 14, W_, 14), '#a87a3a')
+        p_.fill(rect(W_ * 0.15, H_ * 0.35, W_ * 0.7, H_ * 0.32), '#fbf6ea'); p_.line(rect(W_ * 0.15, H_ * 0.35, W_ * 0.7, H_ * 0.32), 3, '#c8264a')
+        btext(p_, "Pemberton's", W_ / 2, H_ * 0.6, 'script', H_ * 0.22, '#c8264a', 255, 'center')
+    for (u, n) in ((-W / 2 + 0.05, -L / 2 + 0.9), (W / 2 - 0.05, -L / 2 + 0.9), (-W / 2 + 0.05, L / 2 - 1.0), (W / 2 - 0.05, L / 2 - 1.0)):
+        c = deck.at(u, n, 0.0)
+        if v.d(c[0], c[2]) < 0.5: continue
+        px, py = v.p(c[0], 0.36, c[2]); s = v.s(c[0], c[2])
+        pen.fill(oval(px, py, 0.14 * s, 0.36 * s), '#1a1a1a')
+    draw_box(pen, v, deck, {'all': dict(fill='#c8964a', art=weave), 'top': '#7fc36a', 'front': dict(fill='#c8964a', art=weave)})
+    # the handle arch and the balloons
+    pts = [(x + W / 2 * math.cos(a), 1.25 + 2.6 * math.sin(a), fy + L * 0.62) for a in np.linspace(0, math.pi, 20)]
+    if all(v.d(q[0], q[2]) > 0.5 for q in pts):
+        sp_ = [v.p(*q) for q in pts]
+        wdt = max(3.0, 0.22 * v.s(x, fy + L * 0.62))
+        pen.line(poly(sp_, False), wdt + 3, LINE); pen.line(poly(sp_, False), wdt, '#e0b060')
+        pen.line(poly(sp_, False), wdt * 0.35, '#f2a5b5', 200)
+    cols = ['#f2a5b5', '#f6d978', '#9fd3f0', '#b9e0a5', '#d9b3f0', '#f28a8a']
+    rng = np.random.default_rng(4)
+    for i in range(14):                                                       # balloons tied to the arch top
+        bx, bY, by = x + rng.uniform(-1.0, 1.0), 4.3 + rng.uniform(0, 1.4), fy + L * 0.62 + rng.uniform(-0.4, 0.4)
+        if v.d(bx, by) < 0.5: continue
+        tx, ty = v.p(x, 3.85, fy + L * 0.62); px, py = v.p(bx, bY, by); s = v.s(bx, by)
+        pen.line(poly([(tx, ty), (px, py + 0.25 * s)], False), 0.8, '#e8e8e8', 200)
+        bl = oval(px, py, 0.2 * s, 0.25 * s)
+        pen.fill(bl, cols[i % 6]); pen.fill(oval(px - 0.06 * s, py - 0.09 * s, 0.05 * s, 0.07 * s), '#ffffff', 170); pen.line(bl, 1.0)
+    for i in range(18):                                                       # giant eggs piled at the back of the deck
+        ex, ez = x + rng.uniform(-W / 2 + 0.3, W / 2 - 0.3), fy + L - rng.uniform(0.2, 1.6)
+        if v.d(ex, ez) < 0.5: continue
+        px, py = v.p(ex, 1.25 + rng.uniform(0.15, 0.45), ez); s = v.s(ex, ez)
+        e = oval(px, py, 0.18 * s, 0.24 * s)
+        pen.fill(e, cols[i % 6]); pen.fill(oval(px - 0.05 * s, py - 0.08 * s, 0.04 * s, 0.06 * s), '#ffffff', 160); pen.line(e, 1.0)
+
+
+def _crowd(pen, v, x, side, seed=3):
+    """The parade crowd along a curb: rows of townsfolk in 1987 spring colours (kids up front, a few on shoulders,
+    balloons and little flags), drawn from far to near."""
+    rng = np.random.default_rng(seed + (7 if side > 0 else 0))
+    people = []
+    for i in range(130):
+        y = rng.uniform(-6.0, 70.0)
+        xx = x + side * rng.uniform(-0.6, 0.9)
+        people.append((xx, y, rng.uniform(), int(rng.integers(0, 9999))))
+    people.sort(key=lambda q: -v.d(q[0], q[1]))
+    tops = ['#c84a3a', '#4a7ab8', '#e8c84a', '#5ab88a', '#e88aa0', '#8a5ab8', '#f2f0e6', '#3a3a4a', '#e8a04a', '#6ac8d8']
+    skins = ['#f0cdb0', '#d8a888', '#a8785a', '#f2d8c0', '#c89878']
+    hairs = ['#3a2a1a', '#8a5a2a', '#d8a858', '#1a1a1a', '#b8b0a8']
+    for (xx, y, r, sd) in people:
+        D = v.d(xx, y)
+        if D < 0.8: continue
+        s = v.S / D
+        bx, by = v.p(xx, 0.15, y)
+        if bx < -400 or bx > 2400: continue
+        kid = r < 0.28
+        hgt = (1.15 + 0.2 * _h(sd, 1)) if kid else (1.62 + 0.25 * _h(sd, 2))
+        w = (0.34 if kid else 0.46) * s
+        top = tops[sd % len(tops)]; skin = skins[(sd // 3) % len(skins)]; hair = hairs[(sd // 7) % len(hairs)]
+        body = rrect(bx - w / 2, by - hgt * 0.82 * s, w, hgt * 0.5 * s, w * 0.25)
+        pen.fill(rect(bx - w * 0.3, by - hgt * 0.36 * s, w * 0.6, hgt * 0.36 * s), '#3a4a6a' if sd % 3 else '#5a5a5a')
+        pen.fill(body, top); pen.line(body, max(0.8, 0.006 * s))
+        hr = 0.11 * s
+        pen.fill(oval(bx, by - hgt * s + hr, hr * 0.9, hr), skin); pen.fill(oval(bx, by - hgt * s + hr * 0.55, hr, hr * 0.65), hair)
+        pen.line(oval(bx, by - hgt * s + hr, hr * 0.9, hr), max(0.8, 0.005 * s))
+        if sd % 9 == 0:                                                      # a balloon
+            bx2, by2 = bx + 0.25 * s, by - (hgt + 0.9) * s
+            pen.line(poly([(bx + w * 0.4, by - hgt * 0.7 * s), (bx2, by2 + 0.2 * s)], False), 0.7, '#e8e8e8')
+            pen.fill(oval(bx2, by2, 0.15 * s, 0.19 * s), tops[(sd + 3) % len(tops)]); pen.line(oval(bx2, by2, 0.15 * s, 0.19 * s), 0.8)
+        if sd % 7 == 0 and not kid:                                           # a waving arm
+            pen.seg((bx + w * 0.4, by - hgt * 0.75 * s), (bx + w * 0.7, by - (hgt + 0.25) * s), max(1.5, 0.06 * s), skin)
+
+
+def vhs_stamp(cv, t, date='APR.16 1987', clock='10:42 AM', play=True, alpha=255):
+    """The camcorder's on-screen stamp for the 1987 parade tape (draw it in the HUD): PLAY (blinking at the start), the
+    date bottom left and the time bottom right in the camcorder's blocky font, a slight glow."""
+    pen = Pen(cv)
+    if play and (t < 3.0 and int(t * 2) % 2 == 0):
+        btext(pen, 'PLAY  >', 120, 120, 'vhs', 64, '#ffffff', alpha, 'left')
+    for (s_, x, al) in ((date, 120, 'left'), (clock, 1800, 'right')):
+        btext(pen, s_, x + 3, 983, 'vhs', 58, '#000000', alpha * 0.6, al)
+        btext(pen, s_, x, 980, 'vhs', 58, '#f2f2f2', alpha, al)
+
+
+_cam('parade_street', 900, 520, 1.6, -3.4, -4.0, 8, dict(x=(860, 1060), y=(460, 600), zoom=(1.0, 1.15), f=(1.0, 2.2)),
+     "down Main Street from the left curb (camcorder height): the crowd, the bunting, Pemberton's on the right, the float coming", 'parade')
+_cam('parade_store', 820, 500, 1.55, -5.4, 26.0, 74, dict(x=(860, 1060), y=(440, 600), zoom=(1.0, 1.15), f=(1.0, 2.0)),
+     "across the street at Pemberton's: the float passing in front of the store, the crowd on the curb", 'parade')
+_cam('parade_photo', 1000, 520, 1.45, -3.2, 20.2, 52, dict(x=(860, 1060), y=(440, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)),
+     "the newspaper photo's angle: by the float with Pemberton's behind (anchor 'photo': Laurie and the Bunnyman)", 'parade')
+
+
+def ob_parade(view='street', float_y=22.0, vhs=True, crowd_seed=3, **kw):
+    """The 1987 Easter parade on Main Street, Holloway (bright camcorder daylight). view 'street' | 'store' | 'photo'.
+    float_y = the float's front along the street (number, or f(t): it drives, drawn live). vhs=True: the tape look
+    (sp.fx(t) carries post['vhs']; draw ST.vhs_stamp(cv, t) in the HUD for the date)."""
+    v = cam('parade_' + view)
+    o = dict(float_y=float_y, crowd_seed=crowd_seed)
+    dynl = []
+    main = MainStreet()
+    amb, steady, var = main.lights(o)
+    if callable(float_y):
+        dynl.append(live_layer('float', v, (0.0, 1.0, 25.0), lambda pen, v_, t: parade_float(pen, v_, 0.0, float_y(t), t), amb, steady, var))
+        dynl[-1].order = lambda t: v.d(0.0, float_y(t) + FLOAT_L / 2)
+        dynl[-1].depth = lambda t: max(0.5, v.d(0.0, float_y(t) + FLOAT_L / 2))
+        dynl[-1].ref_depth = max(0.5, v.d(0.0, float_y(0.0) + FLOAT_L / 2))
+    sp = build_view('ob_parade_' + view, v, main, o, outside=None, lens='lens', grade='ob_vhs87', dyn=dynl, dof=0.4)
+    if vhs:
+        sp._fx = lambda t: {'vhs': dict(t=t, k=0.55, curve=0.0, track=0.22, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)}
+    return sp
