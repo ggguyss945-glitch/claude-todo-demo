@@ -1,5 +1,5 @@
 #!/bin/bash
-# Resumable HEVC delivery for the dummy film, from the finished picture and the final mix (run from film/):
+# Resumable HEVC delivery for the Bunnyman film, from the finished picture and the final mix (run from film/):
 #   P=2 bash tools/encode_chain.sh > _work/logs/encode_chain.log 2>&1
 # Same x265 settings as tools/deliver.sh except rate control (capped CRF 17, see tools/enc_seg.sh), but the picture is encoded as K frame-exact segments with OK markers, so a
 # container restart only loses the segments in flight: re-running skips every finished segment. The segments are joined
@@ -9,7 +9,7 @@ set -e
 cd "$(dirname "$0")/.."
 W=_work; PIC=$(realpath $W/picture/picture.mp4); MIX=$W/mix/final/mix_en.wav
 S=${S:-$W/deliver/segments_crf}; K=${K:-24}; P=${P:-2}
-B=If_Your_Grandpas_Dummy_Tells_A_Joke; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
+B=If_The_Bunnyman_Asks_You_To_Close_Your_Eyes; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
 mkdir -p "$S"
 NT=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$PIC")
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
@@ -32,7 +32,7 @@ ffmpeg -v error -nostdin -y -i "$MIX" -af alimiter=limit=0.708:attack=1:release=
   -c:a aac -b:a 160k -ar 48000 "$S/audio.m4a"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
-  -metadata title="If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH" \
+  -metadata title="If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"
 mv "$H.tmp.mp4" "$H"
 echo "== joined $(date -u +%H:%M)"

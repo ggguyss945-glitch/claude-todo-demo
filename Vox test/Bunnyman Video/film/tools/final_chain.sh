@@ -1,12 +1,12 @@
 #!/bin/bash
-# Final render + delivery + checks for the dummy film ("If Your Grandpa's Ventriloquist Dummy Tells You A Joke... DON'T LAUGH"),
+# Final render + delivery + checks for the Bunnyman film ("If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN"),
 # in one chain (run from film/):
 #   bash tools/final_chain.sh > _work/logs/final_chain.log 2>&1
 # In a cloud session run it as a harness-tracked background task, not with nohup: the container is reclaimed about
 # 5 minutes after the session goes idle, and that kills detached processes.
 # The picture is rendered as K short chunks (frame-exact boundaries), 3 at a time, so a container restart only loses
 # the chunks in flight: re-running skips every chunk with an OK marker. Then the chunks are joined (stream copy) into
-# _work/picture/picture.mp4, checked, and tools/deliver.sh makes _work/deliver/If_Your_Grandpas_Dummy_Tells_A_Joke_EN_1440p60_HEVC.mp4.
+# _work/picture/picture.mp4, checked, and tools/deliver.sh makes _work/deliver/If_The_Bunnyman_Asks_You_To_Close_Your_Eyes_EN_1440p60_HEVC.mp4.
 set -e
 cd "$(dirname "$0")/.."
 W=_work; C=$W/picture/chunks; K=${K:-24}; P=${P:-3}
@@ -50,7 +50,7 @@ if [ "$EXP" -gt 0 ] && [ "$NF" -ne "$EXP" ]; then echo "== PICTURE FRAME COUNT W
 rm -rf "$C"/c*/
 echo "== deliver start $(date -u +%H:%M)"
 bash tools/deliver.sh $W/picture/picture.mp4 $W/mix/final $W/deliver
-H=$W/deliver/If_Your_Grandpas_Dummy_Tells_A_Joke_EN_1440p60_HEVC.mp4
+H=$W/deliver/If_The_Bunnyman_Asks_You_To_Close_Your_Eyes_EN_1440p60_HEVC.mp4
 echo "== deliver done $(date -u +%H:%M)"
 ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,r_frame_rate -of compact "$H"
 echo "== HEVC frames $(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$H")"

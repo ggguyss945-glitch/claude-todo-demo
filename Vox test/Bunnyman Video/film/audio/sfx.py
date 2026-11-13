@@ -4037,7 +4037,8 @@ def r_hatchet_step(rng, sp, n=4, rate=0.75, weight=1.0, **_):
         ev += [(t, g), (t + 0.004, tread), (t + 0.12, sc), (t + 0.3, th * rng.uniform(0.85, 1.0)), (t + 0.3, bite),
                (t + 0.302, st(modal([120, 210, 330], [0.06, 0.04, 0.03], [1, 0.6, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.2)]
     y = _seq(ev, 0.4)
-    return y, onset_s(y, -14), 0.0, False
+    y = eq(hp(y, 80, 2), ('ls', 220, -6.0, 0.7), ('peak', 1800, 3.0, 1.0))   # through the door the knock must still
+    return y, onset_s(y, -14), 0.0, False                                      # read on a phone (tests: -18 dB > 300 Hz)
 
 
 def r_doorknob(rng, sp, kind='turn', **_):

@@ -251,6 +251,22 @@ def _blur_raster_too_big(layer, a, sig, sw, sh):
     return (x1 - x0) * (y1 - y0) * db * db > 2.5 * sw * sh
 
 
+SHARP_MAX_SCREENS = 6.0
+
+
+def _sharp_raster_too_big(layer, density, sw, sh):
+    """The sharp cache, like the blurred one, holds the WHOLE layer (its bounds) at the needed density. A strong optical
+    zoom (fz 2-3) or a near layer in a big close-up asks for a raster of many screens, rebuilt each time the push crosses
+    a density bucket (seconds per rebuild at 2560, and hundreds of MB). Past SHARP_MAX_SCREENS screens the layer is drawn
+    straight into the frame instead (the dynamic path): the same picture, cost bounded by the screen. Below it the cache
+    stays (a room shell at an ordinary push is drawn once and reused for the whole shot)."""
+    try:
+        x0, y0, x1, y1 = layer.bounds
+    except Exception:
+        return False
+    return (x1 - x0) * (y1 - y0) * density * density > SHARP_MAX_SCREENS * sw * sh
+
+
 def _draw_entry(cv, e, paint):
     """Draw a cached image (only its occupied tiles) in layer design coordinates."""
     x0, y0 = e.bounds[0], e.bounds[1]; d = e.density
@@ -354,8 +370,14 @@ def composite(layers, cs, t, focus=1.0, dof=0.0, lens=None, bg='#000000'):
             cv.save(); cv.setMatrix(M)
             if l.cache:
                 need = a * max(1.0, l.cache_res)                            # px per layer design px
-                e = _cached(l, _pick_density(l, need), gains)
-                _draw_entry(cv, e, paint)
+                dens = _pick_density(l, need)
+                if _sharp_raster_too_big(l, dens, sw, sh):                  # a huge raster: draw it on the frame instead
+                    cv.restore(); cv.save()
+                    _draw_offscreen(cv, l, l.cache_t, M, sw, sh, gains, paint)
+                    _tick('layers_sharp_dyn', t0)
+                else:
+                    e = _cached(l, dens, gains)
+                    _draw_entry(cv, e, paint)
             elif lpaint is None:
                 pen.lw = 4.0; l.draw(pen, t)
             else:
