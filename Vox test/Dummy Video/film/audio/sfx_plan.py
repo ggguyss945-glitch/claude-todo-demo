@@ -52,7 +52,7 @@ EDIT = [
     ('studio_laughter', 'e217-0.3', 's219', {}, {'gain_db': 5.0, 'params': {'level': 1.0, 'roar': True}},
      '"And the studio audience laughs." at the crying man: the biggest wave of the film, on the hit (v2: +4 dB, the braam '
      'unboosted: it sat at -12 LU under the braam body)'),
-    ('studio_laughter', 's135', 's142', {}, {'add_db': 6.0},
+    ('studio_laughter', 's135', 's141', {}, {'add_db': 6.0},
      'v2: the laughter waves he moves on peaked only -11..-16 LU rel the voice: +6 dB (the TV band keeps them off the words)'),
     ('studio_laughter', 's226-0.5', 'w226:laughed+0.2', {}, {'add_db': 8.0}, '"And everyone laughed." (was -24 under the stinger)'),
     ('scream', 'e253-0.2', 's255', {}, {'gain_db': 6.0},

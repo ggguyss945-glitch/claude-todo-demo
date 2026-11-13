@@ -35,7 +35,9 @@ Shot kinds (builders B_<kind>; every set is one of sets.py's dummy-film builders
   bust      face close-ups over a blurred, darkened set (framings rotate: BUST_FRAMES); ghost= puts a figure in the blurred
             set behind (the dummy on the bookcase behind Mom)
   lap       a person with the dummy on the knee, large, over a blurred set (draw_lap): Owen in the den, Grandpa in bed, Walter
-  carry     you holding the dummy in your arms, large (draw_carry): "In my arms, Mister Winks opens his eyes"
+  carry     you holding the dummy in your arms, large (draw_carry): the pick-up off the rug
+  hug       "He hugs me too": over your shoulder, the new Owen's face beside your head, his arms round you
+  glove     "His fingers curl.": his glove lying palm down on the kitchen table, closing in three jerky steps
   portrait  Mister Winks full figure, large, one camera move over him (the cold open's description: hair, freckles, jacket,
             the flashlight clicking on in one white glove)
   hands     hand close-ups (Grandpa's three squeezes, the wrist grab, Mom's hand finding yours, catching Mom's wrist)

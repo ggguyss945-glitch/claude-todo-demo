@@ -242,7 +242,7 @@ EVENTS = [
     ('w226:laughed', 'stinger', 0.7, None),            # "And everyone laughed."
     ('s234-0.1', 'rule', 0.75, None, {'nosnap': True}),
     # rule 6: Owen in the den
-    ('e242-0.05', 'hit', 0.45, None, {'nosnap': True}),   # final: "...Owen is gone." lands as the word ends (on the word
+    ('e242-0.05', 'sub_drop', 0.5, None, {'nosnap': True}),   # v2.1: a sub drop (the hit sat -8 LU on the end of "gone.")   # final: "...Owen is gone." lands as the word ends (on the word
     #   "gone" and the picture's cut it sat 11-12 LU over it; the picture's impact there is at -8 dB)
     ('w254:grabs', 'hit', 0.5, None, {'nosnap': True}), ('w254:screams', 'pulse_on', 0.7, None),   # v2 (M4): the scream first   # final: on the scream (was 0.5 s early)
     ('e259+0.14', 'braam', 0.75, 2.5, {'nosnap': True}),                      # "...and his hand comes with me." -> I catch Mom's wrist
