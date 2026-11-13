@@ -1322,17 +1322,41 @@ def _head_guard(cd, top, d):
     return cd
 
 
+def _tuck_layers():
+    """The bedtime memory close-up (bg 'memory_bed'): the warm bedside lamp behind Grandpa's shoulder, and in the near
+    foreground the edge of your pillow and the turned-down blanket (soft, low in the frame, under his chest)."""
+    def lamp(pen, t):
+        fl = 1.0 + 0.03 * noise1(t * 1.3, 7)
+        pen.glow(1560, 330, 520, '#ffd9a0', 120 * fl); pen.glow(1560, 330, 170, '#fff2d8', 150 * fl)
+        shade = poly([(1490, 250), (1630, 250), (1670, 360), (1450, 360)])
+        pen.fill(shade, '#f0d6a8', 200); pen.line(shade, 3.0, '#5a4630', 160)
+        pen.fill(rect(1552, 360, 16, 120), '#5a4630', 200)
+
+    def bed(pen, t):
+        pen.fill(smooth([(-200, 1300), (-200, 1050), (300, 1030), (760, 1048), (1120, 1036), (1500, 1052), (2150, 1040), (2150, 1300)], True, 0.5),
+                 '#cfc2ae')                                                                     # the turned-down sheet
+        pen.fill(smooth([(-200, 1300), (-200, 1078), (400, 1066), (900, 1082), (1400, 1068), (2150, 1080), (2150, 1300)], True, 0.5),
+                 '#8a6a54')                                                                     # the quilt
+        pen.fill(smooth([(-260, 1300), (-260, 960), (40, 925), (300, 950), (380, 1040), (300, 1300)], True, 0.6), '#e8dcc8')   # the pillow
+        pen.line(smooth([(-260, 960), (40, 925), (300, 950), (380, 1040), (300, 1300)], False, 0.6), 4.0, '#6a5a48', 170)
+    return [Layer(2.6, lamp, 'tuck_lamp', blur=None), Layer(0.62, bed, 'tuck_bed', cache='film:tuck:bed', bounds=(-330, 820, 2250, 1310))]
+
+
 def B_bust(F, sh):
     """Face close-up over a blurred, darkened set; framings rotate; the crown never leaves the frame unless p['ecu'].
     p['ghost'] = [people() entries] puts figures in the blurred set behind (the dummy on the bookcase behind Mom)."""
     p = sh.p
     bgn = p.get('bg', 'hall')
     sp, light, gr = _bg(F, sh, bgn, p)
+    if bgn == 'memory_bed':                 # tucked in: Grandpa leans over your bed; the pillow and blanket edge in the near
+        sp = sp.without('bd_foot').add(*_tuck_layers())     # foreground under his cardigan, the bedside lamp glowing behind
     who = p.get('who', 'you')
     fr = p.get('_frame')
     cx = p.get('cx', fr[0] if fr else 960)
     cy = p.get('cy', fr[1] if fr else 560)
     sc = p.get('scale', fr[2] if fr else 1.0)
+    if bgn == 'memory_bed' and 'cx' not in p:            # leaning over the bed: frame the cardigan's shoulders and collar too
+        cy, sc = cy - 100, sc * 0.86
     view = None
     if fr and (fr[3] or fr[4]) and not p.get('no_view'):
         view = lambda a, s, v=(fr[3], fr[4]): a.set(s.t0 - 3, None, 0.1, turn=v[0], h_turn=v[1])
@@ -2054,11 +2078,11 @@ def plan_open(F, t, e, w, C, T, KP):
     C(T(23), 'bust', who='grandpa', bg='memory_kitchen', era='memory', expr='still_smile', act=creep(4), cam=dict(mv='creep', x=960, y=540))
     C(T(24), 'studio', track=0.3, cam=dict(mv='pull', x=960, y=560, z=1.2), w_act=lambda a, s: a.wave(t(25) + 0.5, e(25), side=-1))
     # every night he'd tuck me in, squeeze my hand three times (I love you), and say ...
-    C(T(26), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=1000, cy=560, scale=1.0,
+    C(T(26), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=1000, cy=470, scale=0.86,
       act=_A(lambda a, s: a.tuck_in(s.t0 + 0.2), setp(h_nod=0.2)), cam=dict(mv='push', x=980, y=540))
     sq = [w(26, 'three') - 0.05, w(26, 'three') + 0.38, w(26, 'times') + 0.4]
     C(w(26, 'squeeze') - 0.2, 'hands', mode='squeeze', squeeze=sq, tg=w(26, 'squeeze'), era='memory', grade='memory')
-    C(T(27), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=960, cy=590, scale=1.2, ecu=True, act=creep(3),
+    C(T(27), 'bust', who='grandpa', bg='memory_bed', era='memory', expr='still_smile', cx=960, cy=500, scale=1.0, ecu=True, act=creep(3),
       cam=dict(mv='creep', x=960, y=480), music=[(t(27), 'motif', 0.5, 4)])
 
     # ============================================================ THE HOSPITAL (75.9 - 110.6)
