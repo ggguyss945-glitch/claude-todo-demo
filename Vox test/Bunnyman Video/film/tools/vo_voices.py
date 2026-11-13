@@ -20,6 +20,7 @@ import numpy as np
 
 SR = 48000
 NAR_F0 = 150.0                                         # the narrator's median F0 (Hz), measured on the take
+FP = 1.0                                               # WORLD frame period (ms): 1 ms keeps stop bursts sharp
 
 # character -> settings. f0: target median Hz; rng: excursion scale; alpha: formant warp; breath: 0..1 aperiodicity mix
 # (1 = whisper); trem: (Hz, depth) of F0 tremor; jit: random F0 jitter (fraction); under: undertone level dB (or None);
@@ -39,9 +40,10 @@ VOICES = {
     'J': dict(f0=285.0, rng=1.15, alpha=1.30, breath=0.15, trem=None, jit=0.0, under=None,
               eq=[('ls', 180, -3.0, 0.7)], lu=-1.0,
               desc='June, 7: a small child (median 285 Hz, livelier intonation x1.15, formants x1.30, no chest)'),
-    'J_whisper': dict(f0=285.0, rng=1.10, alpha=1.30, breath=0.82, trem=None, jit=0.0, under=None,
+    'J_whisper': dict(f0=285.0, rng=1.10, alpha=1.28, breath=0.62, trem=None, jit=0.0, under=None,
                       eq=[('ls', 200, -4.0, 0.7)], lu=-3.0,
-                      desc='June whispering: the same child voice, mostly breath (aperiodicity 0.82), softer'),
+                      desc='June whispering: the same child voice, breathy (aperiodicity 0.62: a stage whisper that '
+                           'keeps every word), softer'),
     'L': dict(f0=262.0, rng=1.30, alpha=1.02, breath=0.45, trem=(6.5, 0.025), jit=0.010, under=-15.0,
               eq=[('peak', 400, 1.5, 1.0)], lu=-1.5,
               desc='the real Laurie in the Bunnyman: a little girl\'s pitch and sing-song intonation (262 Hz, x1.30) '
@@ -176,19 +178,19 @@ def revoice(x, key):
     import pyworld as pw
     s = VOICES[key]
     x = np.ascontiguousarray(x, dtype=np.float64)
-    f0, t = pw.harvest(x, SR, f0_floor=60.0, f0_ceil=500.0, frame_period=5.0)
+    f0, t = pw.harvest(x, SR, f0_floor=60.0, f0_ceil=500.0, frame_period=FP)
     sp = pw.cheaptrick(x, f0, t, SR)
     ap = pw.d4c(x, f0, t, SR)
     f1 = new_f0(f0, s, t)
     sp1 = warp_envelope(sp, s['alpha'])
     ap1 = breathe(ap, s['breath'])
     C = np.ascontiguousarray
-    y = pw.synthesize(C(f1), C(sp1), C(ap1), SR, 5.0)[:len(x)]
+    y = pw.synthesize(C(f1), C(sp1), C(ap1), SR, FP)[:len(x)]
     if len(y) < len(x): y = np.concatenate([y, np.zeros(len(x) - len(y))])
     if s.get('under') is not None:                                   # the man under the girl
         f2 = f1 * 0.5
         sp2 = warp_envelope(sp, 0.97)
-        y2 = pw.synthesize(C(f2), C(sp2), C(breathe(ap, 0.5)), SR, 5.0)[:len(x)]
+        y2 = pw.synthesize(C(f2), C(sp2), C(breathe(ap, 0.5)), SR, FP)[:len(x)]
         if len(y2) < len(x): y2 = np.concatenate([y2, np.zeros(len(x) - len(y2))])
         y = y + y2 * 10 ** (s['under'] / 20) * (np.sqrt(np.mean(y ** 2)) / (np.sqrt(np.mean(y2 ** 2)) + 1e-12))
     if s.get('eq'): y = eq(y, s['eq'])

@@ -441,14 +441,17 @@ def _bunny_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         with (c.clip(sil0) if abs(hm.st) > 0.12 else _noop()):
             for side in (-1, 1):
                 eyes[side] = _bunny_eye(c, hm, sp, P, side, det, t)
-            if dirt > 0.4 and det >= 1:                              # a torn hole on the left cheek with stuffing
-                hx, hy, hv = hm.map1(70, 10, 3.0)
-                if hv > 0.15:
-                    fs_ = hm.sx(70, 10)
-                    hole = smooth([(hx - 11 * fs_, hy - 6), (hx - 2 * fs_, hy - 11), (hx + 10 * fs_, hy - 4), (hx + 8 * fs_, hy + 8), (hx - 4 * fs_, hy + 10)], True, 0.6)
+            if dirt > 0.4 and det >= 1:                              # a ragged tear low on the left jowl, stuffing
+                hx, hy, hv = hm.map1(74, 88, 3.0)                       # bulging out (well clear of the eye: by the
+                if hv > 0.15:                                            # eye ring it read as a third eye)
+                    fs_ = hm.sx(74, 88)
+                    hole = poly([(hx - 13 * fs_, hy - 2), (hx - 7 * fs_, hy - 6), (hx - 2 * fs_, hy - 3), (hx + 4 * fs_, hy - 7),
+                                 (hx + 12 * fs_, hy - 1), (hx + 7 * fs_, hy + 4), (hx + 1 * fs_, hy + 3), (hx - 7 * fs_, hy + 5)], True)
                     c.fill(hole, cl['hole'])
-                    c.fill(oval(hx + 1 * fs_, hy + 2, 5.5 * fs_, 4.5), cl['stuffing'], 230)
-                    c.line(hole, c.lw * 0.55)
+                    stf = union(union(oval(hx - 5 * fs_, hy + 1.5, 4.0 * fs_, 3.0), oval(hx + 0.5 * fs_, hy + 0.5, 4.6 * fs_, 3.6)),
+                                oval(hx + 6 * fs_, hy + 1.0, 3.6 * fs_, 2.8))
+                    c.fill(stf, cl['stuffing'], 235); c.line(stf, c.lw * 0.35, '#8d8574', 200)
+                    c.line(hole, c.lw * 0.5)
     if face_v > -0.3:                                               # whiskers over the outline (dirty: bent, one broken)
         wk = []
         for side in (-1, 1):
@@ -2128,6 +2131,48 @@ def _skirts3(c, sp, B, P, det, t, rows):
 
 
 # ====================================================================================================== v3 arms
+_arm_data_v2 = _arm_data
+
+
+def _arm_data(sp, B, P, side):
+    """v3 cast and the Bunnyman: as _arm_data_v2, but a hand held out in front of the body (an egg, a cup, a notebook, a
+    knob) drops its elbow: the IK pole swings from out-and-back to down-and-a-little-out instead of winging the elbow
+    out sideways. Raised hands and the phone at the ear keep their own elbows; older casts are unchanged."""
+    if not (sp.get('v3') or sp.get('bunny')): return _arm_data_v2(sp, B, P, side)
+    b = sp['body']
+    pre = 'hl_' if side > 0 else 'hr_'
+    g = lambda k: getattr(P, pre + k)   # noqa: E731
+    sx = side * (b['sh'] - 17)
+    S = np.array([sx, B.y_sh + 20, 0.0])
+    swing = 0.0
+    if B.walk > 0:
+        swing = -60.0 * B.walk * math.cos(B.leg_phase(-side))
+    H = S + np.array([side * g('out'), g('down'), g('fwd') + swing])
+    shk = getattr(P, pre + 'shake', 0.0)
+    if shk > 0.01:
+        tt_ = P.t
+        H = H + np.array([5.0 * shk * math.sin(tt_ * 61.0) + 3.0 * shk * noise1(tt_ * 13.0, 5 + side),
+                          4.0 * shk * math.sin(tt_ * 73.0 + 1.3), 3.0 * shk * noise1(tt_ * 11.0, 9 + side)])
+    pole = np.array([side * 0.75, 0.25, -0.65])
+    kup = clamp((S[1] - H[1] - 10.0) / 60.0)
+    kf = clamp((H[2] - S[2] - 50.0) / 110.0) * (1.0 - kup)          # hand forward of the shoulder: elbow down
+    if kf > 0: pole = pole + (np.array([side * 0.32, 1.0, -0.38]) - pole) * kf
+    if kup > 0: pole = pole + (np.array([side * 0.7, 1.0, 0.25]) - pole) * kup
+    ear = _ear_weight(P, side)
+    if ear > 0:
+        hh = sp['hh']
+        hw = float(np.interp(4.0, sp['head_ys'], sp['head_ws'])) * hh / 240.0
+        hy = P.h_turn * PI / 2
+        ex = side * (hw * 1.0 + 9.0) * math.cos(hy) + P.h_dx
+        ey = B.yc - hh / 2 + 3.0 * hh / 240.0 + P.h_dy
+        He = np.array([ex + side * 4.0, ey + 0.31 * hh, 26.0 - side * hw * 0.9 * math.sin(hy)])
+        H = H + (He - H) * ear
+        pole = pole + (np.array([side * 0.2, 1.0, 0.75]) - pole) * ear
+    ak = b.get('arm_k', 1.0) * (1.0 + max(0.0, getattr(P, pre + 'stretch', 0.0)))
+    E, Wp = _ik(S, H, 182.0 * ak, 166.0 * ak, pole)
+    return S, E, Wp
+
+
 _SLEEVES3 = {'cardigan3': 'long', 'hoodie3': 'over', 'pj3': 'long', 'dress3': 'puff', 'gran3': 'long', 'jacket3': 'long',
              'labcoat3': 'long', 'scrubs3': 'short', 'gown3': 'short', 'neat3': 'long', 'police': 'long'}
 
@@ -2461,7 +2506,7 @@ def _held_prop(c, sp, prop, wx, wy, hang, hs, side, det, t, P, front_part=False)
     hk = sp['body'].get('hand', 1.0)                         # hs already carries the cast's hand_k
     reach = (36.0 if how != 'hang' else 52.0) * hs * hk
     if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): reach = 50.0 * hs * hk
-    if prop == 'ring': reach = 64.0 * hs * hk
+    if prop == 'ring': reach = 40.0 * hs * hk                # pinched at the fingertips
     gx_, gy_ = wx + math.sin(math.radians(-hang)) * reach, wy + math.cos(math.radians(hang)) * reach
     if how == 'grip':
         rot = hang + 180.0                                    # handle along the hand, the head beyond the fingers
@@ -2826,7 +2871,7 @@ def _grip_point(self, t, side, prop, post=True):
     hk = sp['body'].get('hand', 1.0) * sp.get('hand_k', 1.0)
     reach = (36.0 if how != 'hang' else 52.0) * hs * sp['body'].get('hand', 1.0)
     if prop in ('egg', 'egg_gold', 'egg_top', 'egg_bot', 'egg_bot_ring', 'key'): reach = 50.0 * hs * sp['body'].get('hand', 1.0)
-    if prop == 'ring': reach = 64.0 * hs * sp['body'].get('hand', 1.0)
+    if prop == 'ring': reach = 40.0 * hs * sp['body'].get('hand', 1.0)
     gx, gy = wx + math.sin(math.radians(-hang)) * reach, wy + math.cos(math.radians(hang)) * reach
     ox, oy, s = _origin(self, P)
     return ox + gx * s, oy + gy * s
@@ -2856,7 +2901,7 @@ def _acting_pick_up(self, track, t0, side=1, dur=1.0, carry=None, z=0.0, shape='
     if carry is not None:
         self.reach_to(tc, side, carry, t1=None, dur=0.45 * dur, z=z, contact='grip', shape=shape, fade=0.4, prop=track.name)
     else:
-        self.reach(tc, None, side, out=40.0, down=150.0, fwd=150.0, shape='grip', up=0.0, fade=0.45 * dur)
+        self.reach(tc, None, side, out=-30.0, down=105.0, fwd=165.0, shape='grip', up=0.0, fade=0.45 * dur)
     return tc
 
 
@@ -3279,15 +3324,21 @@ def _acting_open_egg(self, t0, egg_track=None, dur=1.6, ring=True):
     self.hold_prop('egg', -1, -INF, ts)
     self.hold_prop('egg_bot_ring' if ring else 'egg_bot', -1, ts, None)
     self.hold_prop('egg_top', 1, ts, None)
-    self.reach(t0 - 0.4, None, -1, out=10.0, down=170.0, fwd=210.0, shape='grip', up=0.0, fade=0.4)
+    # the egg comes up in front of the lower chest, near the centre line, elbow bent: close enough to look into, and it
+    # reads in any view (front, 3/4 or profile)
+    self.reach(t0 - 0.4, None, -1, out=-50.0, down=100.0, fwd=170.0, shape='grip', up=0.0, fade=0.4)
     tgt = lambda t: self.grip_point(t, -1, 'egg', post=False)    # noqa: E731
-    self.reach_to(t0, 1, tgt, t1=ts, dur=0.5 * dur, contact='palm', shape='grip', z=200.0, fade=0.3)
+    self.reach_to(t0, 1, tgt, t1=ts, dur=0.5 * dur, contact='palm', shape='grip', z=170.0, fade=0.3)
     def fn(P, t):
         u = prog(t, ts, ts + 0.45 * dur)
         if t < ts: P.hr_rot += -14.0 * math.sin(PI * prog(t, t0 + 0.35 * dur, ts))
-        if u > 0:
-            self._arm(P, 1, ease_in_out(u), 70.0, 150.0 - 50.0 * u, 200.0, 'grip', up=0.0)
-            P.hl_rot += -30.0 * ease_in_out(u)
+        w1 = ease_in_out(prog(t, t0, t0 + 0.5 * dur))        # under the reach_to: the arm is already at the egg when the
+        if w1 > 0:                                            # contact solve lets go, so the hand never drops
+            e = ease_in_out(u)
+            self._arm(P, 1, w1, -100.0 + 145.0 * e, 95.0 - 40.0 * e, 175.0 - 15.0 * e, 'grip', up=0.0)  # lid up and away
+            if e > 0:
+                self._arm(P, -1, e, -50.0, 100.0 - 25.0 * e, 160.0, 'grip', up=0.0)    # the cup comes up to the eyes
+            P.hl_rot += -30.0 * e
     self._add(t0, None, fn)
     return ts, self._ev(ts, 'egg_open', 0.0, pan=0.0)
 

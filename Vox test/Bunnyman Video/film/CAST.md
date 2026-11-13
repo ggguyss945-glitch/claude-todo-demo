@@ -52,13 +52,17 @@ Heights: bunny 1.98, dad 1.83, narrator 1.68, mom 1.66, grandma 1.58, june / lau
    - `head_to(t0, target, part)`, which brings an eye to a peephole, a mouth to an ear or a face into a hand.
 6. **Props never teleport and never duplicate.** One `PropTrack(name, x, y, px_per_cm)` per prop that rests or changes
    hands. It draws itself only while resting, and the hand draws it while held. Use `a.pick_up(track, t0, side)`,
-   `a.put_down(track, t0, side, x, y)` and `a.give(track, t0, side, other, other_side)`. The jump at pick-up is under 1 px.
+   `a.put_down(track, t0, side, x, y)` and `a.give(track, t0, side, other, other_side)`. The jump at pick-up is under 2 px.
    `px_per_cm = height / (m * 100)` at that depth. For props a character simply holds, use `a.hold_prop(name, side, t0, t1)`.
-7. **Doors face the camera in our sets**, so to look through a peephole or talk into the mail slot, a character turns their
+7. **Props shown to camera** (the egg, the ring, a notebook) sit at chest height near the centre line: body-frame
+   `a.reach(t0, None, side, out=-50, down=100, fwd=170)` reads in front, 3/4 and profile views. The cast's arms drop
+   their elbows when a hand is held forward, so nothing wings out. In a close-up, hold a small prop **beside** the
+   face, never over it, with the eyes on it (`narr_ring_stare`).
+8. **Doors face the camera in our sets**, so to look through a peephole or talk into the mail slot, a character turns their
    back (turn about 1.6-2.0) and `head_to`s it. A profile at a camera-facing door looks along the wall, not through it.
-8. **A hand in front of another figure** (for example Mom's hand smoothing June's hair from behind her): draw the figure, the
+9. **A hand in front of another figure** (for example Mom's hand smoothing June's hair from behind her): draw the figure, the
    other figure, then `CH.draw_arm(pen, who, side, pose, x=, y_feet=, height=)` on top.
-9. **No scared jiggle as filler.** Act the line. Faces have `too_still`, `wrong_smile`, `little_girl`, `terror`, `haunted`,
+10. **No scared jiggle as filler.** Act the line. Faces have `too_still`, `wrong_smile`, `little_girl`, `terror`, `haunted`,
    `determined`, `proud`, `sleep`, plus the older set. `a.eyes_shut(t0, t1, squeeze)` is for counting,
    `a.hum(t0, t1)` for the jingle, and `talk([(t0, t1, text)])` for **character lines only**.
 
@@ -102,8 +106,10 @@ Heights: bunny 1.98, dad 1.83, narrator 1.68, mom 1.66, grandma 1.58, june / lau
 These join the older events (`breath`, `cloth_rustle`, `paper`).
 
 ## Speed and limits
-- **Speed:** a v3 figure at 960x540 renders at about 0.04 s per frame of a clip, scene included. The 2560x1440 bench is in the
-  report.
+- **Speed at 2560x1440** (one process, on a machine shared with one other job): a full figure takes 15-22 ms for the
+  people, 29 ms for the 1987 Bunnyman and 37 ms for the filthy one. A bust filling the frame takes 23-36 ms for people and
+  50 ms for the filthy Bunnyman. The 40 clips (11,160 frames at 960x540, stand-in scenery included) average 0.039 s per
+  frame.
 - **What draws where:** the cast draws in a 1920x1080 design space. Faces scale their line weight with on-screen size, so
   eyes stay open and readable on wide shots.
 - **Perspective:** feet forward of the body plane (seated) land slightly below `y_feet`, which is correct perspective.

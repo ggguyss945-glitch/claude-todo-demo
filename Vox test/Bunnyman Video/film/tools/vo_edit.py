@@ -81,11 +81,13 @@ FIXES = {
     # "At eleven seven": the TTS read 11:07 without the "oh"; the "O" of the comment prompt's "Okay" (142-154 Hz, it
     # sits between "eleven" (ends ~176 Hz) and "seven" (starts ~156 Hz)) goes in. Both recognisers then hear 11:07.
     'song': {'inserts': [(186.476, (235.452, 235.535), 0.020, 0.050)]},
-    # the two uploaded parts meet inside "facing | the back door": a fade on each side and a 40 ms breath of air
-    'couch': {'cuts': [(PART_JOIN, PART_JOIN, 0.040)]},
+    # the two uploaded parts meet inside "facing | the back door" (a 0.011 step in the waveform): a 12 ms equal-power
+    # crossfade across the seam (both recognisers hear "facing the back door"; a 40 ms gap made Whisper hear "facing in")
+    'couch': {'cuts': [(PART_JOIN, PART_JOIN, 0.0, 0.012)]},
     # Mom's "And count to seven" and June's "One": the stray "opt" between them (a weak vowel and a click) is dropped
-    # (the n of "seven" runs straight into a "pt"-like burst: it ends on a 25 ms fade at the end of its voicing)
-    'count_to_seven': {'end': 694.958, 'end_fade': 0.025},
+    # (the n of "seven" runs straight into a "pt"-like burst: it ends on an 80 ms fade at the end of its voicing; a
+    # 25 ms fade read as "seven up")
+    'count_to_seven': {'end': 694.950, 'end_fade': 0.080},
     'count': {'start': 695.086},
 }
 # pauses inside a line, by the word they follow (line tag -> {word index in the line: seconds})
@@ -387,38 +389,44 @@ def line_spans(T, verbose=False):
         return pj, nj
 
     def feats(j):
-        p, q = isl[j]
-        return q - p, T.vfrac(p, q), float(T.frames(p, q).max())
+        """duration, pitch-voiced share, low-band-dominant share, peak dB"""
+        p, q = isl[j]; sl = slice(int(p * 1000), int(q * 1000))
+        vp = float(T.voiced[sl].mean()) if q > p else 0.0
+        vl = float(T.lfdom[sl].mean()) if q > p else 0.0
+        return q - p, vp, vl, float(T.frames(p, q).max())
 
     # pass 1, forward: voiced sound next to a line, and codas (a release may follow another release: "snapped")
     for j in free:
         if j in dropped or owner_of[j]: continue
-        p, q = isl[j]; dur, vf, pk = feats(j)
+        p, q = isl[j]; dur, vp, vl, pk = feats(j)
         pj, nj = neighbours(j)
         gp = p - isl[pj][1] if pj is not None else 9.0
         gn = isl[nj][0] - q if nj is not None else 9.0
         li_prev = max(owner_of[pj]) if pj is not None else None
         li_next = min(owner_of[nj]) if nj is not None else None
         wprev = next((W_[k][0] for t, k, i in reversed(word_t0) if t < p), '')
-        if vf >= 0.2:
-            if (gp <= 0.12 or gn <= 0.12) and pk > -55: owner_of[j].add(li_prev if gp <= gn else li_next)
-            elif pk > -40 and min(gp, gn) <= 0.35: owner_of[j].add(li_prev if gp <= gn else li_next)
+        near = li_prev if gp <= gn else li_next
+        if vp >= 0.2:                                              # pitched: speech (a word timed late, a voiced tail)
+            if (min(gp, gn) <= 0.12 and pk > -55) or (pk > -40 and min(gp, gn) <= 0.35): owner_of[j].add(near)
+        elif vl >= 0.5 and ((min(gp, gn) <= 0.03 and pk > -55) or (gp <= 0.07 and pk > -40)):
+            owner_of[j].add(near if min(gp, gn) <= 0.03 else li_prev)  # a nasal / l murmur against its word ("smile")
         elif li_prev is not None and coda_ok(wprev, gp, dur, pk):
             owner_of[j].add(li_prev)
     # pass 2, backward: onsets (the s of "Stamped" before its closure, an initial s / f / h)
     for j in reversed(free):
         if j in dropped or owner_of[j]: continue
-        p, q = isl[j]; dur, vf, pk = feats(j)
+        p, q = isl[j]; dur, vp, vl, pk = feats(j)
         pj, nj = neighbours(j)
         gn = isl[nj][0] - q if nj is not None else 9.0
         li_next = min(owner_of[nj]) if nj is not None else None
         wnext = next((W_[k][0] for t, k, i in word_t0 if t >= q - 0.02), '')
-        if vf < 0.2 and li_next is not None and onset_ok(wnext, gn, dur):
+        if vp < 0.2 and li_next is not None and onset_ok(wnext, gn, dur):
             owner_of[j].add(li_next)
     for j in free:
         if j in dropped or owner_of[j]: continue
-        p, q = isl[j]; dur, vf, pk = feats(j)
-        dropped[j] = (('breath' if dur >= 0.08 else 'click') if vf < 0.2 else 'voiced noise', pk)
+        p, q = isl[j]; dur, vp, vl, pk = feats(j)
+        why = 'voiced noise' if vp >= 0.2 else ('low thump' if vl >= 0.5 else ('breath' if dur >= 0.08 else 'click'))
+        dropped[j] = (why, pk)
     tag2i = {l['tag']: i for i, l in enumerate(LINES) if l['tag']}
     fx = {tag2i[t]: v for t, v in FIXES.items()}
     first, last = {}, {}
@@ -495,16 +503,18 @@ def line_pieces(T, i, sp):
         for k in w_: word_at[k] = (p, q)
     # cuts and inserts inside the line (the slips): split a group at the cut, drop [c0, c1), put 'sil' of silence
     cuts = list(f.get('cuts', []))
-    for c0, c1, sil in cuts:
+    for cut in cuts:
+        c0, c1, sil = cut[:3]
+        xf_len = cut[3] if len(cut) > 3 else 0.008
         ng = []
         for g in groups:
             p, q = g[0], g[1]
             if q <= c0 or p >= c1 or (c0 == c1 and not (p < c0 < q)):
                 ng.append(g); continue
             if p < c0: ng.append([p, c0, 'cut_out'] if len(g) == 2 else [p, c0, 'cut_out'] + ([] if g[2] != 'cut_in' else []))
-            if q > c1: ng.append([c1, q, 'cut_in', sil])
+            if q > c1: ng.append([c1, q, 'cut_in', sil, xf_len])
             if p < c0 and len(g) > 2 and g[2] == 'cut_in':           # keep the earlier cut's silence on the left part
-                ng[-2 if q > c1 else -1] = [p, c0, 'cut_in_out', g[3]]
+                ng[-2 if q > c1 else -1] = [p, c0, 'cut_in_out', g[3], g[4] if len(g) > 4 else 0.008]
         groups = ng
     pieces = []
     prev_end = None
@@ -514,7 +524,7 @@ def line_pieces(T, i, sp):
         if len(g) > 2 and g[2] in ('cut_out', 'cut_in_out'): pc['fo'] = 0.010
         if len(g) > 2 and g[2] in ('cut_in', 'cut_in_out'):
             pc['fi'] = 0.006
-            pc['forced_gap'] = g[3]
+            pc['forced_gap'] = g[3]; pc['xf_len'] = g[4] if len(g) > 4 else 0.008
             if pieces: pieces[-1]['fo'] = max(pieces[-1]['fo'], 0.010)
         if prev_end is not None:
             pc['orig_gap'] = p - prev_end
@@ -531,7 +541,8 @@ def line_pieces(T, i, sp):
         if 'forced_gap' in pc:
             pc['gap_before'] = pc['forced_gap']; pc['why'] = 'slip repair'
             if pc['forced_gap'] == 0.0:
-                pc['xfade_before'] = 0.008; pc['fi'] = 0.008; pieces[k - 1]['fo'] = 0.008
+                n_ = pc.get('xf_len', 0.008)
+                pc['xfade_before'] = n_; pc['fi'] = n_; pieces[k - 1]['fo'] = n_
                 pc['xf_in'] = True; pieces[k - 1]['xf_out'] = True
             continue
         t_pause = pieces[k - 1]['src'][1]

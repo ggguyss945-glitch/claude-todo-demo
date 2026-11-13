@@ -254,7 +254,7 @@ as 'mom_dummy' / 'dad_delivery'). See CAST.md for the cast table, the staging ru
         weights that follow the on-screen head size; new hair styles; outfits cardigan3, hoodie3, pj3, dress3, gran3,
         jacket3, labcoat3, scrubs3, gown3, neat3. The Bunnyman's suit: _bunny_figure / _bunny_head, paws, pose.unmask.
     Body3 (now the global Body): pose.seat (hips on a seat, feet on the floor), pose.knees (kneel style 0/1/2), pose.run,
-        and a planted walk for the v3 cast.
+        and a planted walk for the v3 cast. v3 arms (_arm_data) drop the elbow when a hand is held forward.
     World-space staging (a.place(x, y_floor) first): a.where(t, part), a.look_at(t0, target, t1, dur, z, body),
         a.reach_to(t0, side, target, t1, dur, z, contact), a.point_at, a.head_to, a.hand_over, a.hold_hand, a.smooth_hair,
         a.sit_on / a.seated / a.stand_up, a.kneel_down, a.crouch, a.run, a.climb, a.lie, a.dead, a.face, a.wave,

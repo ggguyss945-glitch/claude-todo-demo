@@ -87,9 +87,18 @@ def couch(pen, x, seat_y, w=760, y=FLOOR, c='#6b5a4a'):
         pen.line(rrect(x + sd * (w / 2 - 40) - 40, seat_y - 110, 80, y - seat_y + 92, 24), 3)
 
 
-def table(pen, x, top, w=360, y=FLOOR, c='#7a5236'):
-    pen.fill(rect(x - w / 2, top, w, 20), c); pen.line(rect(x - w / 2, top, w, 20), 3)
-    for sd in (-1, 1): pen.fill(rect(x + sd * (w / 2 - 24) - 9, top + 20, 18, y - top - 20), mix(c, '#000000', 0.3))
+def table(pen, x, top, w=360, y=FLOOR, c='#7a5236', depth=26):
+    """A kitchen table seen a little from above: back legs, the top surface, the edge and apron, front legs."""
+    dk = mix(c, '#000000', 0.35)
+    for sd in (-1, 1):                                                  # back legs (set in, darker)
+        pen.fill(rect(x + sd * (w / 2 - 40) - 8, top - depth + 20, 16, y - top - 24), mix(c, '#000000', 0.5))
+    surf = poly([(x - w / 2 + 18, top - depth), (x + w / 2 - 18, top - depth), (x + w / 2, top), (x - w / 2, top)], True)
+    pen.fill(surf, mix(c, '#ffffff', 0.12)); pen.line(surf, 3)
+    pen.fill(rect(x - w / 2, top, w, 18), c); pen.line(rect(x - w / 2, top, w, 18), 3)
+    pen.fill(rect(x - w / 2 + 14, top + 18, w - 28, 22), dk); pen.line(rect(x - w / 2 + 14, top + 18, w - 28, 22), 2.5)
+    for sd in (-1, 1):                                                  # front legs
+        lg = rect(x + sd * (w / 2 - 26) - 10, top + 18, 20, y - top - 18)
+        pen.fill(lg, mix(c, '#000000', 0.22)); pen.line(lg, 2.5)
 
 
 def stairs(pen, x, n=6, rise=62, run=90, y=FLOOR, w=520, dirn=1):
@@ -775,6 +784,7 @@ def _c_egg_open():
     n.crouch(1.2, 1.0, 3.0, 0.7)
     n.look_at(1.0, egg, t1=4.0, dur=0.4)
     tc = n.pick_up(egg, 1.4, side=-1, dur=1.3, carry=None)
+    n.turn(2.8, -0.12, 0.6)                                  # turn to us so the egg (and the ring) read
     ts, ev = n.open_egg(3.4, dur=1.8)
     n.look_at(4.2, lambda t: n.grip_point(t, -1, 'egg_bot_ring', post=False), dur=0.4)
     n.expr('shock', 4.6, None, 0.4)
@@ -791,8 +801,10 @@ def _c_egg_open():
 def _c_ring_stare():
     n = CH.Acting('narrator', seed=35, height=700, expr='shock')
     n.hold_prop('ring', 1, -1.0, None)
-    n.reach(-1.0, None, 1, out=-70.0, down=-30.0, fwd=300.0, shape='grip', up=0.0, fade=0.01)
-    n.set(-1.0, None, 0.01, h_nod=0.18, look_x=0.12, look_y=0.55, _gaze=1.0)
+    # the ring pinched at the fingertips beside the face (never over it), the eyes on it; it drifts a little closer
+    n.reach(-1.0, None, 1, out=55.0, down=-80.0, fwd=220.0, shape='grip', up=0.0, fade=0.01)
+    n.reach(0.4, None, 1, out=45.0, down=-92.0, fwd=235.0, shape='grip', up=0.0, fade=2.4)
+    n.set(-1.0, None, 0.01, h_nod=0.05, h_turn=-0.1, look_x=-0.42, look_y=0.05, _gaze=1.0)
     n.expr('cry', 2.4, None, 1.2)
     def draw(pen, t):
         pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#2a2e3c'), (1, '#14161e')])
@@ -851,7 +863,7 @@ def _c_gran_knock():
     k.look_at(3.8, (g, 'eyes'), dur=0.3)
     def draw(pen, t):
         room(pen, '#d8c8a8', '#8a6a4a')
-        table(pen, 960, top, 420)
+        table(pen, 955, top, 300)
         fig(pen, g, t, WARM); fig(pen, k, t, WARM)
     return dict(draw=draw, actors=[g, k], grounded=[g, k])
 

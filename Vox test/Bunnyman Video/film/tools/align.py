@@ -3,19 +3,24 @@
     python3 align.py --asr-only ...      transcribe only (writes asr_cache.json + transcript.txt, no lines.py needed)
     python3 align.py --write-pauses ...  also rewrite each L(...) row of lines.py with the measured pause / pace
 Defaults: W/narration/narration_en.wav, the Parakeet TDT 0.6b v2 int8 dir ($PARAKEET_DIR or the scratchpad models dir),
-W/align, with W = Dummy Video/film/_work. Script: Dummy Video/script/lines.py (the recording is the truth).
+W/align, with W = Bunnyman Video/film/_work. Script: Bunnyman Video/script/lines.py (the recording is the truth).
 ASR: Silero VAD (vad.onnx beside the Parakeet dir) finds speech; neighbouring segments are merged into chunks of at most
 ~16 s, cut from the full recording with 0.3 s padding, and transcribed by Parakeet TDT with token timestamps. Words are
 cached in asr_cache.json ('en_words': [[word, t], ...] as film.py reads them, 'en_chunks': [[t0, t1, text], ...]);
+a rescue pass then decodes every stretch louder than -40 dB that no chunk covers (the VAD skips an isolated short word);
 delete it to re-run the ASR (about 2 min on 2 threads). Neighbouring chunks share the padding, so a word straddling a
 VAD cut can be heard by both: the copy that opens a chunk is dropped when it repeats the previous word < 0.45 s before.
 Matching: script and ASR words are normalised (lower case; clock times, number words and to/two unified) and matched with
 difflib; each line takes its first/last matched word. A line with no matched word (a word the recogniser spells its own
 way, e.g. the drawn-out 'RETURN') takes the unclaimed ASR words between its neighbours ('gap-filled', printed); a line
-whose first or last words went unmatched takes the unclaimed ASR words next to it ('stretched', printed).
+whose first or last words went unmatched takes the unclaimed ASR words next to it ('stretched', printed). A line
+the recogniser did not hear at all (a whispered word, a child's voice) takes the sound between its found neighbours
+('energy-filled', printed: the edited narration has silence between lines).
+Bounds on a narration with silent gaps (this film): each boundary is placed in the longest stretch below -70 dBFS between
+the two lines' words, so t / end are the first / last sound of each line to the millisecond (silence_bounds).
 Bounds: start = voice onset before the first word (at most 0.3 s back, never into the previous line's last word); end =
-last sounding frame after the last word (-52 dB), stopped by the next word. The recording is edited tight (median gap
-0.1 s), so many lines end exactly where the next begins.
+last sounding frame after the last word (-52 dB), stopped by the next word. The edited narration of this film
+(tools/vo_edit.py) has digital silence between lines, paced by _work/narration/pacing_map.md (0.15-2.8 s).
 Writes timeline.json ({'duration_en', 'lines': [{i, who, tag, fx, en, ru, pause, pace, t, end, found_en, match,
 pause_rec, pace_rec, ...}], 'dub': []}), vo_en.wav (48 kHz, 24-bit), asr_cache.json, transcript.txt and lines_table.txt.
 """
@@ -23,7 +28,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Dummy Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Bunnyman Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -77,6 +82,32 @@ if 'en_words' not in cache:
             cw = cw[1:]                                         # a word straddling the VAD cut, heard by both chunks
         words += cw
         ctext.append([round(lo, 2), round(hi, 2), st.result.text.strip()])
+    # rescue pass: sound the VAD skipped (an isolated short word after a long pause: "...count to seven... don't.",
+    # the first "Hop, hop" of the jingle) is decoded on its own; a word the chunks already hold is not added twice
+    w5 = 80
+    e5 = np.sqrt(np.convolve(en16 ** 2, np.ones(w5) / w5, 'same'))[::w5]
+    db5 = 20 * np.log10(e5 + 1e-9)
+    covered = np.zeros(len(db5), bool)
+    for lo_, hi_, _ in ctext: covered[int(lo_ * 200):int(hi_ * 200) + 1] = True
+    loud = (db5 > -40) & ~covered
+    k5 = 0
+    while k5 < len(loud):
+        if not loud[k5]: k5 += 1; continue
+        j5 = k5
+        while j5 < len(loud) and (loud[j5] or (j5 + 30 < len(loud) and loud[j5:j5 + 30].any())): j5 += 1
+        a5, b5 = k5 * 0.005, j5 * 0.005; k5 = j5
+        if b5 - a5 < 0.08: continue
+        lo, hi = max(0.0, a5 - 0.25), min(DUR, b5 + 0.25)
+        st = pk.create_stream(); st.accept_waveform(16000, en16[int(lo * 16000):int(hi * 16000)]); pk.decode_stream(st)
+        cur, cw = None, []
+        for tok, ts in zip(st.result.tokens, st.result.timestamps):
+            if tok.startswith(' ') or cur is None: cur = [tok.strip(), round(float(ts) + lo, 3)]; cw.append(cur)
+            else: cur[0] += tok
+        cw = [w for w in cw if w[0] and a5 - 0.1 <= w[1] <= b5 + 0.05
+              and not any(nw(v[0]) == nw(w[0]) and abs(v[1] - w[1]) < 0.4 for v in words)]
+        if cw:
+            words += cw; ctext.append([round(lo, 2), round(hi, 2), ' '.join(w[0] for w in cw)])
+    words.sort(key=lambda w: w[1]); ctext.sort()
     cache = {'en_words': words, 'en_chunks': ctext}
     json.dump(cache, open(CACHE, 'w'), ensure_ascii=False)
 words = cache['en_words']
@@ -93,9 +124,12 @@ from lines import LINES
 NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5',
        'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12', 'thirty': '30',
        'forty': '40', 'first': '1st', 'second': '2nd', 'fourth': '4th', 'twentyone': '21', 'fifteen': '15', 'sixty': '60',
-       'seventies': '70s', 'mr': 'mister'}
+       'seventies': '70s', 'mr': 'mister', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19',
+       'mamma': 'mama', 'lori': 'laurie', 'gray': 'grey', 'aged': 'age', 'pembertons': 'pemberton'}   # spellings of this film
 JOIN = {('good', 'night'): 'goodnight', ('any', 'more'): 'anymore', ('head', 'stick'): 'headstick', ('t', 'v'): 'tv',
-        ('arm', 'chair'): 'armchair', ('note', 'paper'): 'notepaper'}   # words the recogniser splits or joins its own way
+        ('arm', 'chair'): 'armchair', ('note', 'paper'): 'notepaper', ('tree', 'line'): 'treeline',
+        ('bunny', 'man'): 'bunnyman', ('door', 'knob'): 'doorknob', ('grown', 'up'): 'grownup'}
+# words the recogniser splits or joins its own way
 
 
 def toks(s):
@@ -103,6 +137,8 @@ def toks(s):
     are written ('3:07', '3.07', '307', 'three oh seven' -> 3 7); 'a.m.' -> am; number words and to/too/two -> digits;
     possessive 's dropped; Mr -> mister; 'good night' / 'T V' / 'head stick' ... joined (JOIN)."""
     s = s.lower().replace('a.m.', 'am').replace('p.m.', 'pm').replace('-', ' ').replace('—', ' ').replace('’', "'")
+    s = re.sub(r'\b1987\b', 'nineteen eighty seven', s)              # the year as it is read
+    s = re.sub(r"(\w)'ve\b", r'\1 have', s)
     s = re.sub(r"(\w)'s\b", r'\1', s); s = re.sub(r"s'(?=\W|$)", 's', s)   # possessives: Winks's / Winks' -> winks
     s = re.sub(r'(\d+)[:.](\d\d)', r'\1 \2', s)
     out = []
@@ -187,12 +223,49 @@ while i < len(LINES):
 first = {i: words[k][1] for i, k in fk.items()}
 last = {i: words[k][1] for i, k in lk.items()}
 nxt_word = {i: (words[k + 1][1] if k + 1 < len(words) else DUR) for i, k in lk.items()}
-found = sorted(first)
 
 # ------------------------------------------------------------------ line start / end from the word times and the level
 env = librosa.feature.rms(y=en16, frame_length=400, hop_length=160)[0]
 DB = 20 * np.log10(env + 1e-6)                                  # 10 ms frames
 SIL = -52.0                                                     # below this the recording is silent (edited gaps sit at -60..-120 dB)
+
+# lines the recogniser did not hear at all (a whispered word, a child's voice): with silence-separated lines, the
+# sound between their found neighbours is theirs ('energy-filled', printed); several missing lines in one gap share
+# its sound runs in order
+energyfill = []
+i = 0
+while i < len(LINES):
+    if i in first: i += 1; continue
+    j = i
+    while j < len(LINES) and j not in first: j += 1
+    a = (last[max(k for k in first if k < i)] + 0.15) if any(k < i for k in first) else 0.0
+    if any(k < i for k in first):                                # skip the previous line's own tail
+        f_ = int(a * 100)
+        while f_ < len(DB) and DB[f_] > SIL: f_ += 1
+        a = f_ / 100
+    b = (first[j] - 0.05) if j < len(LINES) else DUR
+    act = DB[int(a * 100):int(b * 100)] > SIL
+    runs, k0 = [], None
+    for f_, on in enumerate(np.concatenate([act, [False]])):
+        if on and k0 is None: k0 = f_
+        if not on and k0 is not None:
+            if f_ - k0 >= 5: runs.append([a + k0 / 100, a + f_ / 100])
+            k0 = None
+    merged = []
+    for r in runs:                                              # runs closer than 0.15 s are one phrase
+        if merged and r[0] - merged[-1][1] < 0.15: merged[-1][1] = r[1]
+        else: merged.append(r)
+    run = list(range(i, j))
+    if merged:
+        groups = [merged[round(q * len(merged) / len(run)):round((q + 1) * len(merged) / len(run))] or [merged[-1]]
+                  for q in range(len(run))]
+        for r_, g_ in zip(run, groups):
+            first[r_] = g_[0][0] + 0.02; last[r_] = max(g_[0][0] + 0.02, g_[-1][1] - 0.15)
+            nxt_word[r_] = b + 0.05
+            score[r_] = 0.0
+            energyfill.append((r_, round(g_[0][0], 2), round(g_[-1][1], 2)))
+    i = j
+found = sorted(first)
 
 
 def line_bounds(n):
@@ -221,6 +294,37 @@ def line_bounds(n):
 
 
 en_st, en_en = line_bounds(len(LINES))
+
+
+def silence_bounds(st, en, thr=-70.0, min_gap=0.10):
+    """An edited narration with true silence between lines (this film's tools/vo_edit.py): every boundary sits in the
+    longest stretch below thr dBFS (5 ms RMS, 1 ms hop) between the last word of one line and the first word of the
+    next; the line ends where that silence starts and the next begins where it ends (to the millisecond). Boundaries
+    without such a silence keep the level-based bounds. Returns (starts, ends, number of boundaries placed)."""
+    w = int(0.005 * SR); h = int(0.001 * SR)
+    cs = np.concatenate([[0.0], np.cumsum(en48.astype(np.float64) ** 2)])
+    idx = np.arange(0, len(en48) - w, h)
+    d5 = 10 * np.log10((cs[idx + w] - cs[idx]) / w + 1e-20)
+    quiet = d5 < thr
+    st, en = list(st), list(en); placed = 0
+    for k in range(len(LINES) - 1):
+        if k not in last or k + 1 not in first: continue
+        lo, hi = int(last[k] * 1000), int((first[k + 1] + 0.15) * 1000)
+        if hi <= lo: continue
+        q = np.concatenate([[False], quiet[lo:hi], [False]])
+        dq = np.diff(q.astype(np.int8)); a_ = np.where(dq == 1)[0]; b_ = np.where(dq == -1)[0]
+        if not len(a_): continue
+        m = int(np.argmax(b_ - a_))
+        if (b_[m] - a_[m]) / 1000 < min_gap: continue
+        e_k = (lo + a_[m]) / 1000 + 0.004; s_k = (lo + b_[m]) / 1000 + 0.001
+        en[k] = round(e_k, 3); st[k + 1] = round(s_k, 3); placed += 1
+    f0_ = int(np.argmax(~quiet)); st[0] = max(0.0, f0_ / 1000)
+    l0_ = len(quiet) - int(np.argmax(~quiet[::-1])); en[-1] = l0_ / 1000 + 0.005
+    return st, en, placed
+
+
+en_st, en_en, n_sil = silence_bounds(en_st, en_en)
+print(f'bounds: {n_sil}/{len(LINES) - 1} line boundaries placed in the silence between the lines')
 order_bad = [k for k in range(1, len(LINES)) if en_st[k] < en_st[k - 1] - 1e-6]
 pause_rec = [round(max(0.0, (en_st[k + 1] if k + 1 < len(LINES) else DUR) - en_en[k]), 2) for k in range(len(LINES))]
 WORDS_N = {0: 'oh', 1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten',
@@ -276,6 +380,8 @@ weak = [d for d in tl['lines'] if d['match'] < 0.8]
 print(f'English only: {len(found)}/{len(LINES)} lines located; {len(weak)} lines under 80 % word match; '
       f'{len(order_bad)} starts out of order')
 for r, heard in gapfill: print('   gap-filled %3d %6.2f  %-40s heard: %s' % (r, en_st[r], LINES[r]['en'], heard))
+for r, a, b in energyfill: print('   energy-filled %3d %6.2f-%6.2f  %s (not heard: placed on the sound between its neighbours)'
+                                % (r, a, b, LINES[r]['en']))
 for r, pre, post in stretched: print('   stretched %3d %6.2f  %-40s took: [%s] ... [%s]' % (r, en_st[r], LINES[r]['en'], pre, post))
 for d in weak: print('   weak %3d %.2f %6.2f  %s' % (d['i'], d['match'], d['t'], d['en']))
 missing = [k for k in range(len(LINES)) if k not in first]

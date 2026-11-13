@@ -161,37 +161,41 @@ def scan_breaths(x):
     return out
 
 
-def scan_clicks(x, edl):
+def step_clicks(x):
+    """Sample discontinuities: |x[n] - x[n-1]| above 12x its 10 ms moving mean, in sound (one hit per 20 ms)."""
+    from scipy.ndimage import uniform_filter1d
     d = np.abs(np.diff(x))
-    w = int(0.005 * SR)
-    from scipy.ndimage import maximum_filter1d, uniform_filter1d
-    # local reference: the 5 ms moving mean of the step size around each sample (excluding nothing; a click is a step
-    # far above its neighbourhood's typical step)
-    ref = uniform_filter1d(d, size=2 * w + 1, mode='nearest')
+    ref = uniform_filter1d(d, size=int(0.010 * SR) + 1, mode='nearest')
     loud = np.abs(x[1:]) > 10 ** (-60 / 20)
     cand = np.where((d > 12 * ref + 1e-4) & loud)[0]
-    clicks = []
-    last = -10 * SR
+    out, last = [], -10 * SR
     for k in cand:
         if k - last < int(0.02 * SR): continue
-        clicks.append(round(k / SR, 4)); last = k
-    # non-zero samples inside the gaps between lines
+        out.append(k); last = k
+    return np.array(out, dtype=np.int64)
+
+
+def scan_clicks(x, edl, raw48=None):
+    """Discontinuities in the edit vs the same detector on the raw take (TTS plosive bursts trip it too: what matters
+    is that the edit adds none), the ones within 5 ms of an edit point, and non-zero samples inside the gaps."""
+    hits = step_clicks(x)
+    edges = np.array(sorted(int(round(t * SR)) for l in edl['lines'] for pc in l['pieces'] for t in pc['out']))
+    near = []
+    if len(hits) and len(edges):
+        pos = np.searchsorted(edges, hits)
+        for h, p_ in zip(hits, pos):
+            dmin = min(abs(h - edges[min(p_, len(edges) - 1)]), abs(h - edges[max(p_ - 1, 0)]))
+            if dmin <= int(0.005 * SR): near.append(round(h / SR, 4))
     nz = []
     L = edl['lines']
     for a, b in zip(L, L[1:]):
-        g0, g1 = int((a['out'][1] + 0.005) * SR), int((b['out'][0] - 0.005) * SR)
-        if g1 > g0 and np.abs(x[g0:g1]).max() > 10 ** (-90 / 20):
+        g0, g1 = int((a['out'][1] + 0.040) * SR), int((b['out'][0] - 0.025) * SR)
+        if g1 > g0 and np.abs(x[g0:g1]).max() > 0:
             nz.append({'i': a['i'], 'max_dbfs': round(float(20 * np.log10(np.abs(x[g0:g1]).max())), 1)})
-    # steps at every piece edge
-    steps = []
-    for l in L:
-        for pc in l['pieces']:
-            for t in pc['out']:
-                k = int(round(t * SR))
-                if 1 <= k < len(x) - 1:
-                    s = float(np.abs(x[k] - x[k - 1]))
-                    if s > 1e-3: steps.append({'i': l['i'], 't': round(t, 4), 'step': round(s, 4)})
-    return {'discontinuities': clicks, 'n_discontinuities': len(clicks), 'nonzero_in_gaps': nz, 'edge_steps': steps}
+    r = {'n_discontinuities': int(len(hits)), 'at_edit_points': near, 'nonzero_in_gaps': nz}
+    if raw48 is not None:
+        r['n_discontinuities_raw_take'] = int(len(step_clicks(raw48)))
+    return r
 
 
 def scan_levels(x, edl):
@@ -240,8 +244,10 @@ def main():
     res['gaps'] = scan_gaps(edl, en)
     res['breaths_en'] = scan_breaths(en)
     res['breaths_clean'] = scan_breaths(cl)
+    import soxr
+    raw48 = soxr.resample(raw, raw_sr, SR, quality='VHQ')
     res['clicks_en'] = scan_clicks(en, edl)
-    res['clicks_clean'] = scan_clicks(cl, edl)
+    res['clicks_clean'] = scan_clicks(cl, edl, raw48)
     res['levels_clean'] = scan_levels(cl, edl)
     res['full_scale_samples_en'] = int((np.abs(en) >= 0.999).sum())
     res['true_peak_en'] = round(V.true_peak(en), 2); res['lufs_en'] = round(V.loudness(en), 2)
@@ -256,8 +262,9 @@ def main():
     for b in res['breaths_en'][:20]: print('   ', b)
     for k in ('clicks_en', 'clicks_clean'):
         c = res[k]
-        print(f"{k}: {c['n_discontinuities']} discontinuities {c['discontinuities'][:12]}, non-zero gaps {len(c['nonzero_in_gaps'])}, "
-              f"unfaded edges {len(c['edge_steps'])}")
+        print(f"{k}: {c['n_discontinuities']} step detections (raw take: {c.get('n_discontinuities_raw_take', '-')}), "
+              f"{len(c['at_edit_points'])} within 5 ms of an edit point {c['at_edit_points'][:10]}, "
+              f"non-zero samples in {len(c['nonzero_in_gaps'])} gaps")
     print('levels', res['levels_clean'], 'full-scale samples', res['full_scale_samples_en'],
           'TP en/clean', res['true_peak_en'], res['true_peak_clean'], 'LUFS en/clean', res['lufs_en'], res['lufs_clean'])
     if 'asr' in res:
