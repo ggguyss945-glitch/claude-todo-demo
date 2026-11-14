@@ -3425,6 +3425,9 @@ EXPR.update({
     'wrong_smile': dict(smile=0.62, grin=0.08, teeth=0.25, pupil=0.72, lock=0.8, still=0.4, brow_up=0.08),
     'sleep': dict(lid_l=1.0, lid_r=1.0, m_open=0.05, h_nod=0.18, still=0.3),
     'determined': dict(brow_angry=0.55, brow_sad=0.25, m_press=0.6, squint=0.15, wide=0.15),
+    # June about Mister Bunny (fix round 1, critic 2 minor 9: 'warm_smile' read as a sly half-lidded smirk on a child):
+    # innocent and wistful: eyes wide open, big pupils, brows lifted and a little sad, a small soft smile
+    'wistful': dict(smile=0.3, teeth=0.0, squint=0.0, wide=0.3, eye_open=1.0, brow_up=0.4, brow_sad=0.4, pupil=1.15),
 })
 
 

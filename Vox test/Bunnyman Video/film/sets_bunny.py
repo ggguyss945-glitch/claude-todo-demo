@@ -752,7 +752,9 @@ KIT = (-5.0, 1.3, 5.8, 10.0)
 # openings: doors are (x0, x1) along their wall + height; windows (u0, u1, sill, top)
 FDOOR = (-0.85, 0.05, 2.03)                                  # front door on y 0 (hinge at x -0.85, opens into the hall)
 FD_CX = (FDOOR[0] + FDOOR[1]) / 2
-PEEP_Y, SLOT_Y, KNOB_Y = 1.52, 0.95, 0.97                    # the cast's door: peephole, mail slot, knob heights
+PEEP_Y, SLOT_Y, KNOB_Y = 1.52, 0.74, 0.97                    # the cast's door: peephole, mail slot, knob heights
+# (fix round 1, critic 1 M5: the slot sat at 0.95 m, a head above a kneeling seven-year-old's mouth; 0.74 m puts it at
+# June's mouth when she kneels up at it, and the Bunnyman bends low to it from the porch)
 STAIR_X = (0.35, 1.3); ST_Y0 = 0.9; ST_RISE = 0.19; ST_RUN = 0.26; ST_N = 15     # 15 risers to UP_Y (2.85)
 ST_TOP = ST_Y0 + (ST_N - 1) * ST_RUN                         # y of the top riser (the corridor's front edge) = 4.54
 LH_OPEN = (1.5, 3.1, 2.1)                                    # living room <-> hall: on x -1.4 (y0, y1, height)
@@ -4725,7 +4727,7 @@ _cam('hall_foot', 700, 660, 1.5, 0.82, 0.18, 0, dict(x=(900, 1020), y=(560, 700)
      "the stairs from the bottom looking up: the flight, the photos, June's door at the top", 'hall')
 _cam('hall_top', 760, 60, UP_Y + 1.6, 0.86, 4.78, 170, dict(x=(900, 1020), y=(380, 560), zoom=(1.0, 1.1), f=(1.0, 2.2)),
      'the stairs from the top looking down the flight to the foot (the body there at dawn) and the front door', 'hall')
-_cam('hall_slot', 2300, 540, 0.95, FD_CX + 0.05, 0.62, 182, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)),
+_cam('hall_slot', 2300, 540, SLOT_Y, FD_CX + 0.05, 0.62, 182, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)),
      'close on the brass mail slot from inside (flap closed / open)', 'hall')
 _cam('hall_peep', 2000, 560, 1.48, FD_CX + 0.2, 0.62, 198, dict(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)),
      'close on the peephole and the deadbolt from inside', 'hall')
@@ -4869,6 +4871,13 @@ def _outside_yard_full(pen, v, tod='night', porch_light=0.0, moon_dir=None):
     vg = lifted(v, GROUND_Y)
     ground(pen, vg, 10.0, 75.0, tod=tt, worn=[(-3.3, 12.9), (-5.5, 18.0), (-7.4, 25.6)])
     woods(pen, vg, tod=tt, clearing=(-3.8, -1.4))
+    if moon_dir and tt == 'night':                    # the moon hung low over the clearing, in front of the far trees
+        q = sky_dir(v, *moon_dir)                     # (fix round 1: "at the treeline, under the moon" shows it)
+        if q is not None:
+            rr = 0.05 * v.S
+            pen.glow(q[0], q[1], rr * 7.0, '#4f64b0', 70)
+            _moon(pen, q[0], q[1], rr)
+            pen.fill(oval(q[0] - rr * 0.3, q[1] + rr * 0.55, rr * 2.4, rr * 0.22), '#6c7cb4', 60)     # a mist streak across it
     grass_tufts(pen, vg, (-20, 20), (33, 40), 160, 4)
     yard_props(pen, vg, tt)
     house_back_porch(pen, v, tt, porch_light)
@@ -5118,7 +5127,7 @@ def house_exterior(pen, v, tod='night', glow=None, back_light=0.0, front_light=0
             O = (a[0] + fx * ua + fy * 0.02, Y1_, a[1] + fy * ua - fx * 0.02)
             Fd = Face(O, (fx, 0, fy), (0, -1, 0), (ub - ua) * 100, (Y1_ - Y0_) * 100, (fy, 0, -fx), 'front')
             if kind == 'front_door':
-                art_ = _wreath_art(door_art('six', 'right', peep=True, slot=True, bolt=False, col='#7a2a2c'))
+                art_ = _wreath_art(door_art('six', 'right', peep=True, slot=True, flap=glow.get('front_flap', 0.0), bolt=False, col='#7a2a2c'))
             elif kind == 'back_door':
                 art_ = door_art('glass', 'left', bolt=False)
             else:
@@ -5305,8 +5314,25 @@ def porch_egg(pen, v, x, y, Y, rattle=0.0, opened=False, scale=1.0):
     s = v.s(x, y) * scale
     px, py = v.p(x, Y, y)
     pen.fill(oval(px + 0.006 * s, py - 0.002 * s, 0.05 * s, 0.012 * s), '#000000', 140, blur=max(1.0, 0.01 * s))
-    c = lit('#e3a9b6', (x, Y + 0.03, y), (0, 1, 0), 1.0)
-    draw_egg(pen, px, py - 0.031 * s, 0.062 * s, rot=-90 + 7 * rattle, col=c, shine=0.8)
+    # fix round 1 (critics 1 minor 3 / 2 minor 20): old sun-faded matte plastic, not a glossy lamp: a dusty desaturated
+    # pink, a chalky film, a dull highlight, scuffs; the rattle rocks it hard and makes it hop on the mat
+    c = mix(lit('#c99aa3', (x, Y + 0.03, y), (0, 1, 0), 1.0), '#8c6c74', 0.45)     # never brighter than old plastic gets
+    hop = 0.006 * s * abs(rattle) ** 1.5
+    draw_egg(pen, px + 0.004 * s * rattle, py - 0.031 * s - hop, 0.062 * s, rot=-90 + 16 * rattle, col=c, faded=1.0, shine=0.3)
+    _egg_scuffs(pen, px + 0.004 * s * rattle, py - 0.031 * s - hop, 0.062 * s, -90 + 16 * rattle)
+
+
+def _egg_scuffs(pen, cx, cy, size, rot):
+    """Old scuffs and specks on the Pemberton's egg (it has lain in the woods for years)."""
+    cv = pen.cv
+    cv.save(); cv.translate(cx, cy); cv.rotate(rot)
+    L = size / 2.0; W = L * 0.74
+    for k in range(7):
+        a = k * 1.7 + 0.4
+        x_ = W * 0.55 * math.sin(a); y_ = L * 0.6 * math.cos(a * 1.3)
+        pen.seg((x_, y_), (x_ + W * 0.12 * math.cos(a), y_ + L * 0.05 * math.sin(a)), max(0.6, L * 0.02), '#5a3a3a', 70)
+    pen.fill(oval(W * 0.2, L * 0.3, W * 0.22, L * 0.1), '#8a6a5a', 35)
+    cv.restore()
 
 
 def draw_egg(pen, cx, cy, size, rot=0.0, col='#e9a8b6', faded=0.6, stamp=True, shine=1.0, seam=True, gold=False):
@@ -5535,7 +5561,8 @@ def ob_front(view='house', tod='night', front_light=1.0, egg=False, police=None,
     name = {'house': 'front_house', 'porch': 'porch', 'egg': 'porch_egg', 'peephole': 'peephole'}[view]
     v = cam(name)
     if police: police = dict(dict(mode='sweep', speed=1.0, strength=0.55), **police)
-    o = dict(tod=tod, front_light=front_light, glow=glow or {}, police=police)
+    fo = kw.get('flap', 0.0)                       # the outside flap of the mail slot (the Bunnyman holds it up)
+    o = dict(tod=tod, front_light=front_light, glow=dict(glow or {}, front_flap=fo), police=police, flap_out=fo)
     main = Yard(front=True)
     amb, steady, var = main.lights(o)
     dynl = []
@@ -6657,8 +6684,13 @@ def _ins_egg(pen, t, state='whole', rattle=None, ring=True, bg='mat', gold=False
         pen.fill(rect(-400, -300, 2720, 1680), '#1a1416')
     r = rattle(t) if callable(rattle) else (rattle or 0.0)
     if state == 'whole':
-        pen.fill(oval(990, 790, 330, 60), '#000000', 150, blur=24)
-        draw_egg(pen, 960 + 12 * r, 560, 560, rot=-82 + 6 * r, gold=gold)
+        hop = 26.0 * abs(r) ** 1.5
+        pen.fill(oval(990, 790, 330 - 30 * abs(r), 60), '#000000', 150, blur=24)
+        if gold:
+            draw_egg(pen, 960 + 12 * r, 560, 560, rot=-82 + 6 * r, gold=gold)
+        else:                                       # the old egg: sun-faded matte plastic, scuffed; it rocks and hops
+            draw_egg(pen, 960 + 34 * r, 560 - hop, 560, rot=-82 + 15 * r, col='#cf9ea8', faded=1.0, shine=0.3)
+            _egg_scuffs(pen, 960 + 34 * r, 560 - hop, 560, -82 + 15 * r)
     elif state == 'halves':
         u = clamp(k_open)
         pen.fill(oval(800, 820, 260, 50), '#000000', 140, blur=22); pen.fill(oval(1180, 800, 240, 46), '#000000', 140, blur=22)
@@ -7121,10 +7153,12 @@ def _ins_calendar(pen, t, cross=21, easter=31, month='MARCH', **kw):
             btext(pen, 'EASTER', cx_ + cw / 2, cy_ + ch * 0.74, 'hand', 26, '#d02424', 245, 'center')
 
 
-def _ins_slot(pen, t, flap=0.0, eyes=0.0, **kw):
+def _ins_slot(pen, t, flap=0.0, eyes=0.0, night=0.0, **kw):
     """The brass mail slot from inside the front door, close: the white six-panel door, the slot plate with its two
     screws, the inner flap lifting (flap 0..1 or f(t): pushed from outside) on the dark gap (eyes 0..1: a wet glint far
-    in the dark), lit by the hall light from above."""
+    in the dark), lit by the hall light from above. night 0..1: the 1:40 AM hall (the door slate-blue in the dim light,
+    the brass dull), so the insert matches the hall's own close-up of the slot (fix round 1, critics 1 minor 16 / 2
+    minor 8: it was a daylit cream door with polished brass)."""
     pen.fill(rect(-400, -300, 2720, 1680), DOOR_PANEL); pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.25, 'overlay', 3.0, 90)
     pen.fill(rect(-400, -300, 2720, 260), _darken(DOOR_PANEL, 0.05)); pen.line(rect(130, -200, 600, 360), 4, '#000000', 80); pen.line(rect(1190, -200, 600, 360), 4, '#000000', 80)
     pen.linear(rect(-400, -300, 2720, 1680), 0, -300, 0, 1380, [(0, '#ffd8a0', 70), (0.6, '#000000', 0), (1, '#000000', 120)])
@@ -7136,14 +7170,18 @@ def _ins_slot(pen, t, flap=0.0, eyes=0.0, **kw):
         pen.fill(oval(sx, 540, 16), '#6a4a1a'); pen.seg((sx - 12, 540), (sx + 12, 540), 4, '#3a2a10')
     gap = rect(540, 470, 840, 140)
     pen.fill(gap, '#030202')
-    if eyes > 0:
-        for sd in (-1, 1):
-            pen.fill(oval(960 + sd * 70, 540, 14, 9), '#c8d0e0', 200 * eyes); pen.fill(oval(960 + sd * 70 + 4, 538, 4), '#ffffff', 220 * eyes)
     fh = 140 * math.cos(u * 1.35)
     flapr = rect(536, 466, 848, max(6, fh))
     pen.fill(flapr, '#d8b45a'); pen.radial(flapr, 760, 470, 700, [(0, '#fff2c0', 220), (1, '#8a6a20', 220)])
     pen.fill(rect(536, 466 + max(6, fh) - 8, 848, 8), '#5a4010'); pen.line(flapr, 4, '#3a2a10')
     pen.fill(rrect(536, 452, 848, 22, 10), '#a8843a'); pen.line(rrect(536, 452, 848, 22, 10), 3, '#3a2a10')
+    if night > 0:
+        pen.wash(mix('#ffffff', '#5c6894', night), 255, 'multiply')
+        pen.linear(rect(-400, -300, 2720, 1680), 0, -300, 0, 1380, [(0, '#ffcf8f', 26 * night), (0.5, '#ffcf8f', 0)])
+    if eyes > 0:                                                         # (over the night: the glint stays wet and bright)
+        for sd in (-1, 1):
+            pen.fill(oval(960 + sd * 70, 540, 14, 9), '#c8d0e0', 200 * eyes); pen.fill(oval(960 + sd * 70 + 4, 538, 4), '#ffffff', 220 * eyes)
+
 
 
 def _ins_peep(pen, t, glint=1.0, dark=0.0, **kw):
@@ -7201,7 +7239,7 @@ class _FlatView:
     def p(self, x, Y, y): return (self.cx, self.cy)
 
 
-def _ins_egg_fire(pen, t, melt=0.4, k=1.0, **kw):
+def _ins_egg_fire(pen, t, melt=0.4, k=1.0, heap=0.0, **kw):
     """The Pemberton's egg melting in the burn barrel, close and looking a little down into it: the far half of the rusty lip,
     the burning trash glowing in the dark mouth, the egg (the insert egg) sagging, blistering and charring from the bottom
     (melt 0..1 or f(t)) with the yard set's flames rising behind and beside it, the near lip and the barrel's side in front."""
@@ -7222,11 +7260,13 @@ def _ins_egg_fire(pen, t, melt=0.4, k=1.0, **kw):
         px_, py_ = cx + math.cos(a_) * rx * 0.6 * (0.3 + 0.7 * ((i * 37) % 10) / 10), cy + 40 + math.sin(a_) * ry * 0.35
         tr_ = _blob(px_, py_, 50, 22, 7, i, 0.4)
         pen.fill(tr_, '#1a0c08', 220); pen.line(tr_, 3, '#ff8a3a', 120 * k)
-
     def egg_fn(pen_, ex, ey, er):
+        # fix round 1 (critic 2 M8: it hung over the rim, untouched): the egg sits down IN the fire on the burning trash,
+        # the flames close round it and lick up its sides
         cv = pen_.cv
+        ey = ey + er * 0.55
         cv.save(); cv.translate(ex, ey - er * 0.9 * (1 - 0.35 * m)); cv.scale(1 + 0.25 * m, 1 - 0.35 * m)
-        draw_egg(pen_, 0, 0, er * 2.3, rot=-80 + 10 * m, shine=m < 0.35)
+        draw_egg(pen_, 0, 0, er * 2.3, rot=-80 + 10 * m, col='#cf9ea8', faded=1.0, shine=0.25 if m < 0.35 else 0.0)
         cv.restore()
         body = oval(ex, ey - er * 0.9 * (1 - 0.35 * m), er * 1.25 * (1 + 0.25 * m), er * 0.95 * (1 - 0.35 * m))
         pen_.linear(body, 0, ey - er * 1.6, 0, ey, [(0, '#000000', 0), (max(0.05, 0.75 - 0.6 * m), '#000000', 0), (1, '#160806', 235 * m)])
@@ -7238,7 +7278,29 @@ def _ins_egg_fire(pen, t, melt=0.4, k=1.0, **kw):
         for (bx_, by_, bs_) in ((0.58, -0.28, 1.0), (-0.34, -0.12, 0.7), (0.12, -0.58, 0.55), (-0.7, -0.48, 0.8), (0.36, -0.02, 0.6))[:int(5 * m)]:
             bx, by = ex + bx_ * er, ey + by_ * er                           # blisters, scattered over the lower half
             pen_.fill(_blob(bx, by, er * 0.13 * bs_, er * 0.08 * bs_, 7, int(bx), 0.35), '#2a1012', 190)
-    _flames(pen, _FlatView(cx, cy + 40, 1500.0), 0.0, 0.0, 0.0, 0.36, k, t, egg=m, gap=0.36, egg_r=0.1, egg_fn=egg_fn)
+        for j, sd_ in enumerate((-1, 1, -0.3)):                             # flames licking up its sides
+            ph_ = t * (3.1 + 0.7 * j) + j * 2.0
+            fx_ = ex + sd_ * er * (1.05 if abs(sd_) > 0.5 else 0.2)
+            fh_ = er * (1.1 + 0.45 * math.sin(ph_)) * (0.6 if abs(sd_) < 0.5 else 1.0)
+            fw_ = er * 0.32
+            tongue = smooth([(fx_ - fw_, ey + er * 0.1), (fx_ - fw_ * 0.6, ey - fh_ * 0.4), (fx_ + 0.15 * er * math.sin(ph_ * 1.3), ey - fh_),
+                             (fx_ + fw_ * 0.6, ey - fh_ * 0.45), (fx_ + fw_, ey + er * 0.1)], True, 0.8)
+            pen_.linear(tongue, fx_, ey, fx_, ey - fh_, [(0, '#fff2b0', 230), (0.5, '#ff9a2c', 200), (1, '#c8400e', 60)])
+    _flames(pen, _FlatView(cx, cy + 40, 1500.0), 0.0, 0.0, 0.0, 0.36, k, t, egg=m, gap=0.2, egg_r=0.1, egg_fn=egg_fn)
+    if heap > 0:                                    # "Nine eggs.": the eight old ones lie melted in the barrel's mouth round
+        for i, (hx_, hy_, hs_, ch_) in enumerate(((-0.62, 0.05, 1.0, 0.55), (-0.38, 0.32, 0.95, 0.35), (0.38, 0.3, 1.0, 0.45),   # this
+                                                  (0.62, 0.02, 1.05, 0.6), (-0.82, -0.12, 0.8, 0.7), (0.84, -0.14, 0.8, 0.5),       # year's
+                                                  (-0.12, 0.42, 0.9, 0.3), (0.16, 0.44, 0.85, 0.5))):
+            bx_, by_ = cx + hx_ * (rx - 90), cy + 20 + hy_ * (ry - 40)
+            w_, h_ = 64 * hs_, 36 * hs_
+            lump = smooth([(bx_ - w_, by_ + h_ * 0.4), (bx_ - w_ * 0.9, by_ - h_ * 0.5), (bx_ - w_ * 0.2, by_ - h_ * (1.0 + 0.2 * math.sin(i))),
+                           (bx_ + w_ * 0.5, by_ - h_ * 0.8), (bx_ + w_ * (1.0 + 0.15 * math.cos(i)), by_ - h_ * 0.1), (bx_ + w_ * 0.8, by_ + h_ * 0.5),
+                           (bx_, by_ + h_ * 0.7)], True, 0.8)
+            pen.fill(lump, mix('#c08e98', '#2a1414', ch_), 250 * heap)                  # pink plastic gone grey and black
+            pen.linear(lump, bx_, by_ - h_, bx_, by_ + h_, [(0, '#ffffff', 40), (0.5, '#000000', 0), (1, '#000000', 120)])
+            pen.line(smooth([(bx_ - w_ * 0.85, by_ - h_ * 0.05), (bx_, by_ + h_ * 0.12), (bx_ + w_ * 0.85, by_ - h_ * 0.08)], False), 3.5,
+                     mix('#e2b0b8', '#000000', ch_ * 0.8), 210 * heap)                  # the moulded seam
+            pen.line(lump, 3, '#ff8a3a', 150 * k * heap)
     pen.fill(side, '#2a160e'); pen.texture(side, 'grunge', 0.9, 'overlay', 1.4)
     pen.linear(side, cx - rx, 0, cx + rx, 0, [(0, '#000000', 200), (0.3, '#000000', 40), (0.7, '#000000', 60), (1, '#000000', 200)])
     pen.fill(near, '#5a3420'); pen.linear(near, 0, cy, 0, cy + ry, [(0, '#ffb060', 170 * k), (1, '#3a1a0c', 40)])
