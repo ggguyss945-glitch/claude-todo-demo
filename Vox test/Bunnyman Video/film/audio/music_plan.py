@@ -207,7 +207,9 @@ EVENTS = [
     ('s73', 'stinger', 0.55, None),                                    # "Black glass eyes that don't reflect anything."
     ('s75-0.2', 'silence', 0.5, 0.9),                                  # "Slowly."
     ('s82', 'silence', 0.6, 1.4),                                      # the song dies; "Then the Bunnyman stops waving."
-    ('s83', 'riser', 0.55, 3.2), ('e86+0.05', 'hit', 0.7, None),       # "...points. Not at June. Not at me. Past us."
+    ('s83-0.1', 'riser', 0.55, 3.2), ('e86+0.05', 'hit', 0.7, None),   # "...points. Not at June. Not at me. Past us."
+                                                                       # (fix round 1: the riser ends 0.1 s before "He",
+                                                                       # its peak masked the word)
     ('s87-0.1', 'silence', 0.7, 1.3),                                  # "I turn around."
     ('s88', 'hit', 0.85, None, {'boost': 3.0}),                        # "Mom is standing in the doorway."
     ('s90', 'swell', 0.5, 3.5), ('e91+0.05', 'stinger', 0.65, None),   # "She's smiling." / "I told you not to look..."
@@ -240,6 +242,8 @@ EVENTS = [
     ('s168', 'braam', 0.65, 2.8),                                      # "Grandma has been dead for six years."
     ('s176', 'swell', 0.5, 3.8),                                       # "...to make children open doors."
     ('s180', 'riser', 0.45, 3.0),                                      # June crept down the stairs
+    ('s164', 'pulse_on', 0.45, None), ('s167', 'pulse_off', 0.4, None),     # fix round 1 (M7): the slot creaks open: a faint
+                                                                       # pulse, the first of the night (rule 4)
     ('s184-0.05', 'silence', 0.6, 1.4),                                # "Silence."
     ('e186+0.1', 'stinger', 0.5, None, {'nosnap': True}),              # "Is she humming?"
     ('s192', 'sub_drop', 0.45, None),                                  # "Mom closes the mail slot."
@@ -248,6 +252,11 @@ EVENTS = [
     ('s202', 'hit', 0.7, None),                                        # "June is gone."
     ('s203', 'stinger', 0.5, None), ('s204', 'braam', 0.55, 2.5),      # "Mom's chair is empty." / "...locked from the inside."
     ('s205', 'riser', 0.45, 3.0),                                      # "There's a light under the attic door."
+    ('s202', 'pulse_on', 0.55, None), ('s206', 'pulse_off', 0.45, None),    # fix round 1 (M7): June gone, the chair, the
+                                                                       # locks: the pulse under the discoveries (rule 5)
+    ('s210', 'sub_drop', 0.4, None),                                   # the diary: "Laurie Price, age seven."
+    ('s220', 'stinger', 0.45, None),                                   # "I am Laurie." (the cursive)
+    ('s224', 'pulse_on', 0.5, None), ('s231', 'pulse_off', 0.5, None),     # the last page -> "Back to bed" -> "never saw"
     ('s215-0.1', 'silence', 0.5, 0.8),                                 # "Then Easter, 1987." (the nursery drags to a halt)
     ('s217', 'swell', 0.55, 7.0),                                      # the cursive -> "I am Laurie..."
     ('s225-0.6', 'silence', 0.75, 1.5), ('e225+0.1', 'hit', 0.75, None),    # "It is so nice to be small again."
@@ -256,21 +265,30 @@ EVENTS = [
     ('s232-0.1', 'rule', 0.8, None, {'nosnap': True}),
     # rule 6
     ('w236:explodes-0.55', 'silence', 0.8, 0.5),
-    ('w236:explodes', 'hit', 0.85, None),                               # "the kitchen window explodes." (final mix: 1.0 /
+    ('w236:explodes', 'hit', 0.9, None, {'boost': 2.5, 'notch': 0.3}),  # "the kitchen window explodes." (final mix: 1.0 /
                                                                        # boost 4 masked "explodes"; the window itself
                                                                        # carries it, the face reveal and the swap are the
                                                                        # hardest hits)
-    ('w237:crashes', 'hit', 0.75, None),                               # "The back door crashes open."
+    ('w237:crashes', 'hit', 0.85, None, {'boost': 2.5}),               # "The back door crashes open." (fix round 1: a
+                                                                       # boosted scare: the hits must top the narration)
     ('s241', 'pulse_on', 0.6, None), ('s243', 'hit', 0.5, None),       # "I grab June and run." / "Lock."
     ('s245', 'pulse_off', 0.5, None),
     ('s251-0.2', 'silence', 0.6, 2.4),                                 # "The doorknob turns. Gently."
     ('s253', 'swell', 0.45, 6.0),                                      # the girl's voice under the door
     ('s257', 'sub_drop', 0.45, None),                                  # "Something slides under the door."
+    ('s247', 'stinger', 0.45, None),                                   # fix round 1 (M7): "...something hard knocking
+                                                                       # against every step."
+    ('s250', 'sub_drop', 0.45, None),                                  # "The old hatchet from our woodpile."
+    ('s252', 'riser', 0.45, 2.5),                                      # "Gently." -> the voice under the door
+    ('s259', 'stinger', 0.45, None),                                   # "A bridge."
+    ('s261', 'stinger', 0.5, None),                                    # "...holding a rock, with a big wide smile." 
     ('s264', 'stinger', 0.6, None),                                    # "I TRIED TO HELP HIM."
     ('w267:get', 'hit', 0.85, None, {'boost': 3.0}),                   # "GET OUT OF MY HOUSE."
-    ('w269:house', 'hit', 0.85, None), ('w269:house', 'braam', 0.7, 2.5),   # "IT'S MY HOUSE!"
+    ('e269+0.05', 'hit', 0.85, None, {'boost': 2.0, 'nosnap': True}), ('e269+0.05', 'braam', 0.7, 2.5),   # "IT'S MY HOUSE!"
+                                                                       # (fix round 1: after the word; on it, the hit sat
+                                                                       # on "HOUSE!")
     ('s270', 'pulse_on', 0.7, None),                                   # the hallway shakes
-    ('w273:crack', 'hit', 0.8, None),                                  # "A wet, heavy crack."
+    ('w273:crack', 'hit', 0.9, None, {'boost': 3.0}),                  # "A wet, heavy crack." (fix round 1: boosted)
     ('s273', 'pulse_off', 0.5, None),
     ('e273+0.1', 'silence', 1.0, 3.2),                                 # "Then nothing."
     ('s280', 'sub_drop', 0.5, None),                                   # "Not even me."
@@ -278,11 +296,15 @@ EVENTS = [
     # rule 7
     ('s294-0.2', 'silence', 0.55, 0.9),                                # "Before sunrise."
     ('s296', 'hit', 0.65, None),                                       # "And it isn't before sunrise anymore."
-    ('s297', 'riser', 0.55, 3.0), ('w299:key', 'hit', 0.75, None),     # "...From the outside. Mom has a key."
+    ('s297', 'riser', 0.55, 3.0), ('e299+0.03', 'hit', 0.75, None, {'nosnap': True}),   # "...From the outside. Mom has
+                                                                       # a key." (fix round 1: after "key"; on it, the hit
+                                                                       # sat 5.9 dB over the word)
     ('s302', 'braam', 0.65, 3.0),                                      # the Bunnyman at the bottom of the stairs
     # the face reveal (final mix: one of the two hardest hits of the film, with the swap)
     # (on the cut to Dale's face, out of the 2.2 s silence, just before "It's a man.": on "man" it masked the word)
-    ('s304-0.1', 'silence', 0.6, 2.1), ('s305-0.1', 'hit', 0.95, None, {'boost': 3.5, 'spare': 0.3}),   # "Inside, there's no monster. It's a man."
+    ('s304-0.1', 'silence', 0.6, 2.1), ('s305-0.22', 'hit', 0.95, None, {'boost': 3.5, 'spare': 0.2}),   # "Inside, there's no monster. It's a man."
+                                                                       # (fix round 1: on the cut, 0.22 s before "It's":
+                                                                       # its spare window ends before the word)
     ('e309', 'stinger', 0.7, None),                                    # "...the eyes of a terrified little girl."
     ('s311-0.4', 'silence', 0.85, 2.0),                                # "Mama."
     ('s312', 'sub_drop', 0.55, None),                                  # "Then he's still."
@@ -304,7 +326,8 @@ EVENTS = [
     ('s360', 'pulse_off', 0.5, None),
     # after
     ('s360+0.05', 'sub_drop', 0.5, None),                              # "When I open my eyes..."
-    ('w365:hums+0.5', 'stinger', 0.5, None, {'nosnap': True}),         # "And it hums."
+    ('s364+0.05', 'stinger', 0.5, None, {'nosnap': True}),             # "My own face looks down at me." (fix round 1:
+                                                                       # on "And it hums." it covered the old body's hum)
     ('s367', 'hit', 0.6, None),                                        # "I screamed."
     ('s372-0.15', 'silence', 0.45, 0.8),                               # "Holloway State Hospital."
     ('s374', 'stinger', 0.45, None),                                   # "They call me Laurie."
@@ -321,6 +344,8 @@ EVENTS = [
 ]
 
 # ---------------------------------------------------------------------------------------------------- identity
+# fix round 1 (critic 3 m9): Mr. Otter (-23 LU in its gaps), Grandma's music box (-18) and Mary Had a Little Lamb (-20)
+# were too quiet for a phone speaker: level 0.3 -> 0.85 (+4.4 dB: 8 dB per 1.0 of level, score.render_show / jingle)
 # (anchor, type, level, len, extra). 'jingle': an audio/jingle.py version (version, tempo, loops, phrases, who, anchors
 # [(beat, anchor)], space, stop, fade, off ...; 'until' (an anchor) sets len). 'show': a children's tune clean
 # (slug, space 'clean', stop).
@@ -334,13 +359,13 @@ IDENTITY = [
     # "And she was humming." -- the seven-year-old body coming out of the trees (a child's hum)
     ('s35-0.1', 'jingle', 0.36, 3.2, dict(version='hum', who='J', phrases=(0,), transpose=0.0, stop='fade')),
     # June turns seven (Mr. Otter's Rainy Day, soft), then Mom humming the jingle all week
-    ('s54', 'show', 0.3, None, dict(slug='mr_otter_s_rainy_day_lil_y', space='clean', until='w56:humming-0.3',
+    ('s54', 'show', 0.85, None, dict(slug='mr_otter_s_rainy_day_lil_y', space='clean', until='w56:humming-0.3',
                                     stop='fade', fade=1.0)),
     ('w56:humming+0.35', 'jingle', 0.42, None, dict(version='hum', phrases=(0, 1), until='s59+0.6', stop='fade')),
     # 11:07: the song from the woods on a dying speaker, until he stops waving
     ('w65:starts', 'jingle', 0.55, None, dict(version='speaker', loops=4, until='s82+0.5', stop='drag')),
     # Grandma remembered: her music box behind her words
-    ('s147-0.4', 'jingle', 0.3, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
+    ('s147-0.4', 'jingle', 0.85, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
     # "Yeah." -> the real Laurie tries to sing it through the slot and breaks into tears; the slot snaps shut on her
     # final mix: only her broken "Hop... hop... hop along..." (5 s, its sob at the end); her crying then takes over
     # (the picture's girl_cry, sfx_plan PICTURE) as the narrator says "...starts to cry", until Mom shuts the slot
@@ -348,7 +373,7 @@ IDENTITY = [
     # "Bedtime, bunny." / "She's humming."
     ('e194+0.15', 'jingle', 0.45, 4.6, dict(version='hum', phrases=(0, 1), stop='fade')),
     # the crayon diary (the real Laurie at six): Mary Had a Little Lamb on a music box, dragged to a halt on 1987
-    ('s210-0.3', 'show', 0.32, None, dict(slug='mary_had_a_little_lamb_lil_y', space='clean', until='s215+0.5',
+    ('s210-0.3', 'show', 0.85, None, dict(slug='mary_had_a_little_lamb_lil_y', space='clean', until='s215+0.5',
                                           stop='drag')),
     # "Mom says I can wear the yellow dress tomorrow. For the magic trick." -- the count phrase, slow, minor
     ('s227+0.3', 'jingle', 0.3, None, dict(version='climax', tempo=58.0, until='s229+0.4', stop='cut')),

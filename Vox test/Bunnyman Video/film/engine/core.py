@@ -130,9 +130,34 @@ def ring(cx, cy, r0, r1):
     return minus(oval(cx, cy, r1), oval(cx, cy, r0))
 
 
-def inter(a, b): return skia.Op(a, b, skia.PathOp.kIntersect_PathOp)
-def union(a, b): return skia.Op(a, b, skia.PathOp.kUnion_PathOp)
-def minus(a, b): return skia.Op(a, b, skia.PathOp.kDifference_PathOp)
+def _op(a, b, op):
+    """skia's path boolean, robust: skia.Op can fail ("Failed to apply op") on near-degenerate geometry (the
+    Bunnyman film's fix round 1: a frame of the mascot's head killed a render worker). Retry with b nudged by a
+    hundredth of a pixel, then fall back: a union adds the two paths (the same fill under non-zero winding), an
+    intersection keeps the smaller one's bounds clipped to the other's, a difference keeps a."""
+    try:
+        return skia.Op(a, b, op)
+    except RuntimeError:
+        pass
+    for dx, dy in ((0.013, 0.007), (-0.011, 0.017)):
+        try:
+            q = skia.Path(b); q.offset(dx, dy)
+            return skia.Op(a, q, op)
+        except RuntimeError:
+            continue
+    if op == skia.PathOp.kUnion_PathOp:
+        out = skia.Path(a); out.addPath(b); return out
+    if op == skia.PathOp.kIntersect_PathOp:
+        try:
+            r = skia.Path(); r.addRect(b.computeTightBounds()); return skia.Op(a, r, op)
+        except RuntimeError:
+            return skia.Path(a)
+    return skia.Path(a)
+
+
+def inter(a, b): return _op(a, b, skia.PathOp.kIntersect_PathOp)
+def union(a, b): return _op(a, b, skia.PathOp.kUnion_PathOp)
+def minus(a, b): return _op(a, b, skia.PathOp.kDifference_PathOp)
 
 
 def moved(path, dx, dy):

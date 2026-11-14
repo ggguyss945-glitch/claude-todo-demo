@@ -266,7 +266,7 @@ BUNNY_NAMES = ('ambience_woods', 'owl_hoot', 'crowd_parade', 'hospital_corridor'
                'curtain_close', 'peephole')
 # the final mix: film.py's picture names the recipes above did not cover (sfx_plan.PICTURE maps them)
 FINAL_NAMES = ('footsteps_grass', 'wind_gust', 'police_radio', 'swap', 'marker_strike', 'water_tap', 'creek',
-               'magnet_click')
+               'magnet_click', 'magic_sparkle')
 NAMES = POLICE_NAMES + DELIVERY_NAMES + DUMMY_NAMES + BUNNY_NAMES + FINAL_NAMES
 
 # v2.1 (sound critic): foley raised so it reads over the music (footsteps -11 -> -7, typing -14 -> -9,
@@ -398,14 +398,15 @@ DEFAULT_SPACE.update(ambience_woods='window', owl_hoot='woods', crowd_parade='dr
                      fridge_paper='close', curtain_close='close', peephole='close')
 # the final mix (FINAL_NAMES): one-shots momentary max, beds / dur-beds integrated, LU rel the voice at gain_db 0
 LEVEL_LU.update(footsteps_grass=-9, wind_gust=-10, police_radio=-14, swap=-1, marker_strike=-10, water_tap=-16,
-                creek=-16, magnet_click=-12)
+                creek=-16, magnet_click=-12, magic_sparkle=-11)
 PEAK_CAP.update(swap=-3.0)
 BEDS = BEDS + ('creek',)
 DUR_BEDS = DUR_BEDS + ('water_tap', 'police_radio')
 BED_BUS = BED_BUS + ('creek', 'water_tap', 'police_radio')
 HITS = HITS + ('swap',)
 DEFAULT_SPACE.update(footsteps_grass='outside', wind_gust='outside', police_radio='street', swap='dry',
-                     marker_strike='close', water_tap='next_room', creek='woods', magnet_click='close')
+                     marker_strike='close', water_tap='next_room', creek='woods', magnet_click='close',
+                     magic_sparkle='vhs')
 
 
 # ======================================================================================== basic DSP
@@ -1412,7 +1413,10 @@ def r_bodycam_beep(rng, sp, n=2, **_):
     return _seq(ev, 0.05), 0.0, 0.0, False
 
 
-def r_phone_ring(rng, sp, dur=None, n=2, kind='ring', **_):
+def r_phone_ring(rng, sp, dur=None, n=2, kind='ring', cycle=None, on=None, **_):
+    """A phone ringing: library rings back to back (n, or as many as fit in dur), or, with cycle / on (s), bursts on
+    the picture's cadence: a ring cut to `on` seconds (40 ms fade) every `cycle` seconds for dur (the Bunnyman's
+    next-episode card rings 1.2 s on, 0.8 s off)."""
     if kind == 'ringback':
         d = dur or 6 * n - 3.5
         y = st(_ring_cad(d, 2.0, 4.0, [440, 480]) * 0.6)
@@ -1420,6 +1424,12 @@ def r_phone_ring(rng, sp, dur=None, n=2, kind='ring', **_):
         return y, 0.0, -4.0, False
     P = pool('ring', lambda: src('phone_ring'), 'phrase', gap=0.4, max_len=4.0, keep=-15)
     ev = []; t = 0.0
+    if cycle and on and dur:
+        while t < float(dur) - 0.2:
+            r = P.get(rng, rj=0.0, tilt=0.4, fo=0.06)
+            m = min(len(r), n_(float(on)))
+            ev.append((t, fade(r[:m], 0.002, 0.04))); t += float(cycle)
+        return _seq(ev, 0.1), 0.0, 0.0, False
     for k in range(int(n if dur is None else max(1, round(dur / 2.4)))):
         r = P.get(rng, rj=0.0, tilt=0.4, fo=0.06)
         ev.append((t, r)); t += len(r) / SR + 0.55
@@ -4533,6 +4543,23 @@ def r_magnet_click(rng, sp, **_):
     mag = st(modal([2100, 3300, 5200], [0.02, 0.012, 0.006], [1, 0.5, 0.25], 0.06, int(rng.integers(1 << 30)), exc=0.0003))
     door = st(modal([310, 520, 840], [0.05, 0.035, 0.02], [1, 0.6, 0.35], 0.15, int(rng.integers(1 << 30)))) * 0.2
     y = _seq([(0.0, mag), (0.001, door)], 0.05)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_magic_sparkle(rng, sp, **_):
+    """The Bunnyman's magic trick in 1987 (the egg appears in his empty paw in a little burst of light): a toy-chime
+    twinkle in the jingle's key (D major: D6 F#6 A6 D7 F#7 up in 45 ms steps, glockenspiel bars: the 1 : 2.76 : 5.40
+    partials of a free bar, a short metal tick on each strike) and a soft high shimmer under it. Synthesised, no samples."""
+    notes = [1174.66, 1479.98, 1760.0, 2349.32, 2959.96]
+    out = []
+    for k, f in enumerate(notes):
+        dec = 0.55 - 0.06 * k
+        bar = modal([f, f * 2.76, f * 5.40], [dec, dec * 0.35, dec * 0.12], [1.0, 0.32, 0.12], dec + 0.1,
+                    int(rng.integers(1 << 30)), exc=0.0002)
+        out.append((0.045 * k + float(rng.uniform(-0.004, 0.004)), pan(st(bar) * (0.85 - 0.08 * k), -0.35 + 0.18 * k)))
+    tt = np.arange(n_(0.9)) / SR
+    shim = st(hp(noise(0.9, int(rng.integers(1 << 30))), 6000, 2) * np.exp(-tt / 0.25) * (1 - np.exp(-tt / 0.03))) * 0.05
+    y = _seq(out + [(0.0, shim)], 0.1)
     return y, onset_s(y, -12), 0.0, False
 
 

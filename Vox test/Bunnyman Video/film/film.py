@@ -76,6 +76,40 @@ BASE = 'If_The_Bunnyman_Asks_You_To_Close_Your_Eyes'
 CHANNEL = 'NIGHT POLICY'           # the channel's name on the cards (the owner renamed it after the build started)
 H._hand = CH.hud_phone_hand
 
+# ---------------------------------------------------------------- authored times
+# The absolute times in this file's tables (the story clock and corner labels, the VHS pause, the header's THE END, the
+# kids' / Mom's fear arcs, the global look's red / dawn / climax ramps, INTENSITY, EXTRA_SIL) were authored against the
+# 1077.99 s narration (timeline_authored.json: its line times). Film() maps them onto the current timeline line by line
+# (piecewise linear between every line's start and end): at(t) = authored time -> now, authored(t) = now -> authored
+# time. Fix round 1 re-split the narration edit (1.9 s shorter by the end) and these tables follow their lines.
+_AUTH = {'old': None, 'new': None}
+
+
+def set_retime(lines, duration):
+    try:
+        a = json.load(open(os.path.join(HERE, 'timeline_authored.json')))
+    except Exception:
+        return
+    if len(a['lines']) != len(lines): return
+    xo, xn = [0.0], [0.0]
+    for (t0, t1), l in zip(a['lines'], lines):
+        if t0 > xo[-1] and l['t'] > xn[-1]: xo.append(t0); xn.append(l['t'])
+        if t1 > xo[-1] and l['end'] > xn[-1]: xo.append(t1); xn.append(l['end'])
+    xo.append(float(a['duration_en']) + TAIL + 60.0); xn.append(float(duration) + 60.0)
+    _AUTH['old'], _AUTH['new'] = np.array(xo), np.array(xn)
+
+
+def at(t):
+    """An authored time on the current timeline."""
+    if _AUTH['old'] is None: return t
+    return float(np.interp(t, _AUTH['old'], _AUTH['new']))
+
+
+def authored(t):
+    """A current time on the authored timeline (the inverse of at)."""
+    if _AUTH['old'] is None: return t
+    return float(np.interp(t, _AUTH['new'], _AUTH['old']))
+
 # who speaks which timeline lines (code, fx or None): narrator lines (N) move no mouths. The Bunnyman's L lines (the
 # little girl's voice) only nod the mask (the cast's talk on 'bunny'); D ("Mama.") is Dale's face under the half-off head.
 VOICE = {'mom': [('M', None)], 'june': [('J', None)], 'june_dress': [('J', None)], 'grandma': [('G', None)],
@@ -93,6 +127,7 @@ CORNER = [(0.0, 'EASTER EVE'), (65.75, 'APRIL 1987'), (122.2, 'EVERY EASTER'), (
 
 
 def clock_str(t):
+    t = authored(t)
     for k in range(len(CORNER) - 1, -1, -1):
         if t >= CORNER[k][0]:
             if CORNER[k][1] is not None: return CORNER[k][1]
@@ -173,6 +208,7 @@ class Film:
         self.tl = tl
         self.L = tl['lines']
         self.duration = float(tl.get('duration_en', 1079.16)) + TAIL
+        set_retime(self.L, self.duration)        # the authored absolute-time tables follow their lines
         self.words = []
         if os.path.exists(WORDS):
             try:
@@ -272,7 +308,7 @@ class Film:
         cur = 'INTRODUCTION'
         for t0, n in self.rules:
             if t >= t0: cur = 'RULE %d OF 7' % n
-        if t >= 993.8: cur = 'THE END'
+        if authored(t) >= 993.8: cur = 'THE END'
         return cur
 
     def line_at(self, t):
@@ -747,7 +783,7 @@ def escalate(a, sh, who):
     swap): stillness, fewer blinks. Memory / 1987 / recall / outro shots and rule cards: nothing."""
     if sh.kind in ('rule', 'card', 'black') or sh.p.get('era') in ('memory', '1987', 'outro', 'recall'): return
     if who in ('narrator', 'june', 'june_dress'):
-        k = _arc(KID_ARC, sh.t0) * (0.6 if who != 'narrator' else 1.0)
+        k = _arc(KID_ARC, authored(sh.t0)) * (0.6 if who != 'narrator' else 1.0)
         if k <= 0.02: return
 
         def fn(P_, t, k=k):
@@ -755,8 +791,8 @@ def escalate(a, sh, who):
             per = 3.9 - 1.7 * k
             P_.breath = 0.5 + (0.45 + 0.1 * k) * math.sin(2 * math.pi * t / per + a.seed)
         a._add(sh.t0 - 1.0, sh.t1 + 1.0, fn, real=True)
-    elif who == 'mom' and sh.t0 < 913.0:
-        k = _arc(MOM_ARC, sh.t0)
+    elif who == 'mom' and authored(sh.t0) < 913.0:
+        k = _arc(MOM_ARC, authored(sh.t0))
 
         def fn(P_, t, k=k):
             P_.lock = max(P_.lock, 0.5 * k)
@@ -2668,6 +2704,7 @@ def glob_fx(F, sh, t, fx):
     a red heartbeat wash at the frame edge until "Seven." (912.7 s: a white flash); the aftermath drained; 1987 / memory /
     hospital / outro clean; fade in / out."""
     u = t - sh.t0
+    ta = authored(t)                                    # the ramps below are in authored time (see at / authored)
     c = sh.p.get('cut')
     if c == 'static' and u < 0.09: fx['static'] = 0.85 - u * 6
     elif c == 'glitch' and u < 0.12: fx['glitch'] = 0.9; fx['static'] = 0.3
@@ -2680,22 +2717,22 @@ def glob_fx(F, sh, t, fx):
         ((sh.p.get('bg') or [''])[0] == 'hosp')
     if not clean:
         ui = 0.5 if sh.kind in ('ins',) or era == 'recall' else 1.0
-        dawn = clamp((t - 709.0) / 3.0) * (1.0 - clamp((t - 770.0) / 10.0))
-        k = clamp((t - 600.0) / 80.0) * (1.0 - 0.75 * dawn)
-        k2 = clamp((t - 664.0) / 16.0) * (1.0 - clamp((t - 683.0) / 6.0))
-        k3 = clamp((t - 770.0) / 18.0) if t < 913.0 else 0.0
+        dawn = clamp((ta - 709.0) / 3.0) * (1.0 - clamp((ta - 770.0) / 10.0))
+        k = clamp((ta - 600.0) / 80.0) * (1.0 - 0.75 * dawn)
+        k2 = clamp((ta - 664.0) / 16.0) * (1.0 - clamp((ta - 683.0) / 6.0))
+        k3 = clamp((ta - 770.0) / 18.0) if ta < 913.0 else 0.0
         kk = max(k, k3)
         if kk > 0 or k2 > 0:
             fx['red'] = fx.get('red', 0.0) + (0.38 * kk + 0.3 * k2 + 0.12 * k3) * ui
             fx['sat'] = fx.get('sat', 1.0) * (1 + (0.4 * kk + 0.25 * k2) * ui)
             fx['exposure'] = fx.get('exposure', 0.0) - (0.25 * kk + 0.3 * k2) * ui
-        if 783.6 <= t < 912.7 and 'flash' not in fx:
-            bpm = lerp(72, 138, clamp((t - 783.6) / 128.0))
-            ph = ((t - 783.6) * bpm / 60.0) % 1.0
+        if 783.6 <= ta < 912.7 and 'flash' not in fx:
+            bpm = lerp(72, 138, clamp((ta - 783.6) / 128.0))
+            ph = ((ta - 783.6) * bpm / 60.0) % 1.0
             beat = math.exp(-ph * 9.0) + 0.6 * math.exp(-max(0.0, ph - 0.18) * 11.0) * (ph >= 0.18)
-            ramp = clamp((t - 783.6) / 3.0) * (0.5 + 0.5 * clamp((t - 884.0) / 25.0))
+            ramp = clamp((ta - 783.6) / 3.0) * (0.5 + 0.5 * clamp((ta - 884.0) / 25.0))
             fx['flash'] = _epost.Spill(0.4 * ramp * clamp(beat) * ui, side=-1.0 if sh.idx % 2 else 1.0, color=(0.06, 0.08, 0.9), reach=0.8)
-        if 913.0 <= t < 950.0:
+        if 913.0 <= ta < 950.0:
             fx['sat'] = fx.get('sat', 1.0) * 0.72
     if t > F.duration - 3.0: fx['fade'] = clamp((t - (F.duration - 3.0)) / 1.8)
     if t < 0.4: fx['fade'] = max(fx.get('fade', 0.0), 1 - t / 0.4)
@@ -2752,7 +2789,7 @@ INTENSITY = [  # (seconds, level): the story's tension, read off the beats
 
 
 def intensity_curve(F):
-    pts = [[round(t, 2), round(v, 3)] for t, v in INTENSITY]
+    pts = [[round(at(t), 2), round(v, 3)] for t, v in INTENSITY]
     pts.append([round(F.duration, 2), 0.0])
     return pts
 
@@ -2800,6 +2837,7 @@ def polish_cues(F, sfx, mus):
     kid = set(map(id, keep))
     sfx = [e for e in sfx if e['name'] != 'whoosh' or id(e) in kid or (e.get('params') or {}).get('kind') == 'soft']
     for t, ln in EXTRA_SIL:
+        t = round(at(t), 3)
         if not any(e['type'] == 'silence' and abs(e['t'] - t) < 2 for e in mus):
             mus.append({'t': t, 'type': 'silence', 'level': 0.0, 'len': ln})
     for e in mus:
@@ -3723,7 +3761,7 @@ def plan_rule1(F):
         return []
     C(T(69), 'set', room='living', view='window', set=dict(lamp=1.0, curtains=CURT0), curtains_fn=cf, rim=LAMP,
       ppl=[P('narrator', 'window_front', expr='haunted')], acts=curtain_acts, c=dict(mv='push', f=1.05, rate=0.02),
-      sfx=[(tcl + 0.3, 'curtain_draw', -4, 0, 'inside', dict(dur=1.2))])
+      sfx=[(tcl + 0.55, 'curtain_draw', -4, 0, 'inside', dict(dur=1.2))])     # fix round 1: on the drawn motion (was 0.25 s early)
     C(trun, 'set', room='hall', view='foot', set=dict(hall=1.0, upstairs=1.0), rim=LAMP,
       ppl=[P('narrator', (-1.6, 2.35, 0.0), path=[(trun, (-1.6, 2.35, 0.0)), (trun + 0.75, (0.8, 1.2, 0.19)), (T(70) + 0.15, 'step13')], run=True, surface='stairs',
              turn=1.95, enter=True)],
@@ -3977,7 +4015,7 @@ def plan_rule2(F):
            P('mom', (1.45, 7.35, 2.85), face=(2.3, 8.8), expr='warm_smile', act=_A(hum(t(113), None, 0.8), pose(-9, None, 0.3, lean=0.3, crouch=0.15)))],
       acts=lambda A, s, sp: [A['mom'].reach_to(t(113) - 0.2, 1, scr(sp, (2.0, 8.3, 3.47)), t1=None, dur=0.7, contact='palm', shape='flat', z=60.0),
                              A['mom'].reach_to(t(113) - 0.05, -1, scr(sp, (1.95, 8.0, 3.45)), t1=None, dur=0.7, contact='palm', shape='flat', z=60.0)] and [],
-      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(t(113), 'hum', -10, 0, 'inside', dict(who='mom', dur=2.6, far=True))])
+      c=dict(mv='push', f=1.05, rate=0.02), sfx=[(t(113), 'hum', -5, 0, 'inside', dict(who='mom', dur=2.6, far=True))])   # fix round 1: +5 dB (18 LU under in its gap)
     # 114 "And out on the doormat, the egg rattles."  115 "Like something inside wants out."
     tr0 = w(114, 'rattles')
     C(T(114), 'set', room='front', view='egg', cam=cm((-0.18, -1.05, 0.30), (-0.38, -0.36, 0.0), S=1700, sx=960, sy=640),
@@ -4362,7 +4400,8 @@ def plan_rule4(F):
     tfl = w(164, 'creaks')
     C(T(164), 'ins', name='clock', kw=dict(time=(1, 40)), c=dict(mv='push', rate=0.03))
     C(w(164, 'brass') - 0.1, 'set', room='hall', view='slot', set=dict(hall=0.3, flap=lambda tt, a=tfl: ease_in_out(clamp((tt - a) / 1.3))),
-      c=dict(mv='push', f=1.0, rate=0.03), sfx=[(tfl, 'mail_slot', -2, 0, 'inside', dict(kind='creak_open', dur=1.3))], music=[(tfl, 'silence', 0.0, 1.2)])
+      c=dict(mv='push', f=1.0, rate=0.03), sfx=[(tfl + 0.2, 'mail_slot', -2, 0, 'inside', dict(kind='creak_open', dur=1.3))],   # fix round 1: on the flap's
+      music=[(tfl, 'silence', 0.0, 1.2)])                                                                                        # eased motion (was 0.2 s early)
     # 165 "A little girl's voice."  166 "Small, and scared."
     C(T(165), 'ins', name='slot', kw=dict(flap=1.0, eyes=0.0, night=1.0), grade='ins_dark', c=dict(mv='push', rate=0.03))
     # "Small, and scared.": its source, not a reaction: the brass flap held up from outside, trembling on the dark gap
@@ -5452,7 +5491,7 @@ def plan_reveal(F):
       act=_A(ex('shock_shut', t(322) + 0.9, None, 0.6), lookxy(1100, 640, -9, None, 0.3, z=400.0)), c=dict(mv='push', x=960, y=560, zrate=0.03),
       music=[(t(322), 'riser', 0.6, 3.0)])
     # 323 "In 1987, the Bunnyman didn't take my mother."  the parade photo, live on the tape: Laurie holding the mascot's paw
-    C(T(323), 'ins', name='courier', cut='static', c=dict(mv='keys', keys=[(T(323), 760, 640, 1.0, None, 1.5), (T(324), 745, 660, 1.0, 'push', 1.8)]),
+    C(T(323), 'ins', name='courier', cut='static', c=dict(mv='keys', keys=[(T(323), 760, 640, 1.0, None, 1.5), (min(T(324), T(323) + 3.8), 745, 660, 1.0, 'push', 1.8)]),
       sfx=[(T(323) + 0.05, 'paper', -12, 0, 'close', dict(kind='newspaper'))])
     # 324 "He traded with her."  the woods, 1987: he kneels and lays his paw over her eyes
     def trade(A, s, sp):
@@ -5976,8 +6015,8 @@ def plan_outro(F):
     # the notebook with the story's notes ('made up by someone'), then a cut to the very ordinary cup of coffee
     tdr = w(393, 'drinking') - 0.15
     C(T(393), 'ins', name='desk', **O, c=dict(mv='keys', keys=[(T(393), 820, 600, 1.0, None, 1.15), (tdr, 840, 600, 1.0, 'push', 1.2)]))
-    C(tdr, 'ins', name='desk', **O, c=dict(mv='keys', keys=[(tdr, 1240, 520, 1.0, None, 1.35), (T(394), 1240, 520, 1.0, 'push', 1.42)]),
-      sfx=[(w(393, 'cup') - 0.2, 'mug_set_down', -8, 0, 'close')])
+    # (fix round 1, critic 3 m5: no mug_set_down here: the mug stands on the desk and no hand touches it)
+    C(tdr, 'ins', name='desk', **O, c=dict(mv='keys', keys=[(tdr, 1240, 520, 1.0, None, 1.35), (T(394), 1240, 520, 1.0, 'push', 1.42)]))
     # 394 "The Bunnyman is just a costume."  395 "It has a zipper in the back, where zippers go."
     C(T(394), 'ins', name='hanger', **O, c=dict(mv='push', rate=0.02))
     C(T(395), 'ins', name='hanger', **O, kw=dict(back=True, zip_t=w(395, 'zipper') - T(395)), anim=True,
@@ -6022,7 +6061,10 @@ def plan_outro(F):
     C(w(408, 'next') - 0.1, 'set', room='yard', view='house', set=dict(back_light=flick, kitchen=0.6), **O, rim=MOON, c=dict(mv='push', f=2.2, rate=0.012),
       acts=lambda A, s, sp: [moths_layer(lambda tt, p_=scr(sp, (ST.BACK_LIGHT[0], ST.BACK_LIGHT[2], ST.BACK_LIGHT[1])): p_, 40.0, 5, 6.0, 0.5, seed=5, a=235)])
     # 409 "Next time... if your doctor calls at three in the morning ..."  (the card: NEXT TIME ON NIGHT POLICY)
-    C(T(409), 'card', mode='next', ring_t=w(409, 'doctor') + 0.3, **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
+    # the ring on the picture's cadence (1.2 s on, 0.8 s off) for as long as the card rings (fix round 1, fixer D)
+    C(T(409), 'card', mode='next', ring_t=w(409, 'doctor') + 0.3, **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close',
+                                                                             dict(kind='old_nightstand', cycle=2.0, on=1.2,
+                                                                                  dur=round(T(410) - w(409, 'doctor') - 0.4, 2)))])
     # 410 "Sleep well."  411 "And if you hear a little song tonight... that's just the outro."
     C(T(410), 'card', mode='title', **O)
     C(T(411), 'black', caption=True, **O)

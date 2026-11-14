@@ -6,7 +6,8 @@
                                       narration_en.wav (+ character voices, tools/vo_voices.py), edit_list.json,
                                       W/narration/build_stats.json (numbers for voice_report.md)
     python3 vo_edit.py check          scan the edited files (residual breaths, clicks, gaps vs the map, peaks, loudness)
-                                      and draw the before/after strips into W/narration/tests/
+                                      and draw the before/after strips into W/narration/tests/; after align.py, also
+                                      every line against the recogniser (tools/vo_asrcheck.py; fails the check)
 Source: W/narration/raw/narration_raw_24k.wav (24 kHz mono 16-bit, two uploaded parts joined at 454.0587 s inside
 "...facing | the back door"); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
 80 ms resolution, used as anchors); script: script/lines.py.
@@ -23,7 +24,10 @@ How the edit works
      its word ("smile"), the release of a final stop or the s after a stop closure ("suit", "six"), a loud final s
      ("since", "sense"), an initial s before its closure; everything else (breaths, mouth clicks, low lip thumps, the
      TTS's "huh" / "yah" / "mm-hmm" noises) is dropped, between lines and inside them. Two lines in one island are split
-     at the quietest point between their words. A loud pitched island that would be dropped stops the build.
+     in the last real dip before the next line's first word (split_point; SPLITS hand-sets the four the TTS ran together
+     with no dip). An island where the next line's first word starts is never claimed by the line before, and a
+     line-final piece under 60 ms is dropped unless the line ends in a stop (fix round 1: the "In-" / "A-" / "O-" ticks
+     and the words cut in half, "wood | pile", "Se | ven"). A loud pitched island that would be dropped stops the build.
   3. Fix the TTS slips (FIXES below; each one checked with two recognisers, see voice_report.md).
   4. Pace: every line boundary gets the gap of pacing_map.md (silence from the end of one line's decay to the next
      line's first sound); pauses inside a line keep the take's natural timing, clamped by their punctuation (comma
@@ -1321,4 +1325,11 @@ if __name__ == '__main__':
     elif cmd == 'check':
         from vo_check import main as check_main                       # noqa
         check_main()
+        # every line against the recogniser (tools/vo_asrcheck.py): needs align.py's ASR of THIS narration_en.wav
+        cache = os.path.join(W, 'align', 'asr_cache.json')
+        if os.path.exists(cache) and os.path.getmtime(cache) >= os.path.getmtime(OUT):
+            from vo_asrcheck import main as asr_main                  # noqa
+            if asr_main(): raise SystemExit('vo_asrcheck: a line does not read as its script (see above)')
+        else:
+            log('asrcheck skipped: run tools/align.py --write-pauses on this build, then vo_edit.py check again')
     else: raise SystemExit(__doc__)

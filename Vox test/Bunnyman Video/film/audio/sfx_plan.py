@@ -162,7 +162,8 @@ ADD = [
     ('s200-0.4', 'clock_tick', -6.0, 'inside', {'dur': 3.0}, '"At 2:47, I wake up."'),
     ('w201:blanket', 'cloth_rustle', -4.0, None, {'kind': 'rustle'}, 'June\'s blanket'),
     ('s205', 'bulb', -6.0, 'inside', {'kind': 'buzz', 'dur': 'until:s206'}, 'the light under the attic door'),
-    ('s206-0.9', 'attic_door', 0.0, 'inside', {'action': 'open'}, 'the attic door'),
+    ('s206-0.12', 'attic_door', 0.0, 'inside', {'action': 'open'}, 'the attic door, on the cut into the attic (fix round '
+     '1: at s206-0.9 it creaked over the shut door of "There\'s a light under the attic door.")'),
     ('s206', 'bulb', -2.0, 'attic', {'kind': 'buzz', 'dur': 'until:s232'}, 'the attic\'s bare bulb'),
     ('s206', 'room_tone_house', -4.0, 'attic', {'dur': 'until:s232', 'hum': 0.1}, 'the attic'),
     ('w207:dress', 'cloth_rustle', -6.0, 'attic', {'kind': 'rustle'}, 'the tiny yellow dress'),
@@ -187,7 +188,8 @@ ADD = [
     ('s242', 'room_tone_house', -2.0, 'bathroom', {'dur': 'until:s286', 'hum': 0.2}, 'the dark bathroom'),
     ('s244+1.2', 'bathtub', 0.0, None, {'kind': 'settle'}, 'in the empty bathtub'),
     ('w244:hand+0.1', 'breath', -6.0, None, {'kind': 'held', 'dur': 2.0}, 'my hand over her mouth'),
-    ('s245+0.3', 'hatchet_step', 0.0, None, {'n': 4, 'rate': 0.8}, '"Footsteps on the stairs. Slow."'),
+    # (fix round 1: "Footsteps on the stairs. Slow." is the picture's now: one tread every 0.95 s with the thunk 0.3 s
+    # after, film.py STEP_T; this row's own four treads at 0.8 / s doubled them on another rhythm)
     ('s248-0.3', 'hatchet_step', 2.0, None, {'n': 1}, '"Thunk." (the head lands on the word)'),
     ('s249-0.3', 'hatchet_step', 2.0, None, {'n': 1}, '"Thunk."'),
     ('s250+0.6', 'hatchet_step', 0.0, None, {'n': 2, 'rate': 0.8}, 'up to the landing'),
@@ -228,7 +230,11 @@ PICTURE = {
     'hatchet_thunk': ('hatchet_step', {'thunk_only': True, 'n': 1}, None, 'the head on the tread (n=4 was four steps a cue)'),
     'wind_gust': ('wind_gust', {}, None, 'a gust in the trees'),
     'pen_write': None,                                    # a pen under "They just don't believe a word I say": nothing fits
-    'magic_sparkle': None,                                # a sleight of hand makes no sound (a sparkle would be a cartoon)
+    # fix round 1 (fixer B's trick: the egg appears in the empty paw in a little burst of light): a faint toy-chime
+    # twinkle in the jingle's key, on the tape (sfx.r_magic_sparkle); it was dropped as "a cartoon" when the picture had
+    # no visible trick, now the picture draws one and the twinkle is the trick the ending pays off
+    'magic_sparkle': ('magic_sparkle', {}, -4.0, 'the egg appears in the empty paw'),
+    'footsteps_gravel': ('footsteps_grass', {}, None, 'the gravel by the bridge (no gravel recipe: grass, not a porch)'),
     'birds_dawn': ('ambience_dawn', {'dur': 3.0, 'birds': 0.9}, None, 'dawn birds'),
     'birds_day': ('ambience_dawn', {'dur': 2.5, 'birds': 0.8}, None, 'birds by day'),
     'creek': ('creek', {}, -2.0, 'the creek in the ravine'),
@@ -354,7 +360,9 @@ def picture_pass(out, lines, log):
                    'stop': 'fade'}
             if tr is not None:
                 np_['transpose'] = tr
-            c = dict(c, name='jingle', params=np_, gain_db=4.0, space='inside' if c.get('space') != 'close' else 'close')
+            c = dict(c, name='jingle', params=np_, gain_db=4.0 + (5.0 if p.get('far') else 0.0),
+                     space='inside' if c.get('space') != 'close' else 'close')   # fix round 1: Mom humming upstairs
+                                                                                  # (far) +5 dB: 18 LU under in its gap
             why = f'hum -> jingle {ver} ({who}), the picture\'s humming'
         elif nm == 'jingle' and p.get('version') in ('tinny_woods', 'speaker', None):
             if ident(('speaker',), t, t + float(p.get('dur') or 10.0)):
@@ -404,7 +412,8 @@ def picture_pass(out, lines, log):
             g = girl[0]; s0 = g['t'] + float(g.get('len') or 5.0) - 0.75
             e_ = at('s192+0.25', t + float(p.get('dur') or 6.0))
             c = dict(c, t=round(max(t, s0), 3), params={'dur': round(max(1.5, e_ - max(t, s0)), 2)}, space='slot',
-                     gain_db=6.0, seed=3)                 # seed 3: a cry that starts at once (others open with gasps)
+                     gain_db=12.0, seed=3)                # seed 3: a cry that starts at once (others open with gasps);
+                                                          # fix round 1 (critic 3 m9): +6 dB, it sat 17 LU under in its gaps
             why = 'her cry after the song, through the open slot, until Mom shuts it'
         elif nm == 'swap':                                # the trade's thump on the picture's flash (its impact_hit)
             imp = [float(x['t']) for x in out if x.get('name') == 'impact_hit' and abs(float(x.get('t', -9)) - t) <= 0.3]

@@ -779,7 +779,10 @@ def _multi(paths):
 def _crescent(path, dx, dy):
     """The part of `path` not covered by itself moved by (dx, dy): a shade / rim band (path op, no clip mask)."""
     q = skia.Path(path); q.offset(dx, dy)
-    r = skia.Op(path, q, skia.PathOp.kDifference_PathOp)
+    try:
+        r = skia.Op(path, q, skia.PathOp.kDifference_PathOp)
+    except RuntimeError:                      # skia's boolean fails on near-degenerate geometry: no band this frame
+        return skia.Path()
     return r if r is not None else skia.Path()
 
 
@@ -1967,7 +1970,10 @@ def _band_path(X0, Y0, X1, Y1):
         if a < 0: q = q[::-1]
         p.addPoly([skia.Point(float(x), float(y)) for x, y in q], True)
     p.setFillType(skia.PathFillType.kWinding)
-    return skia.Op(p, skia.Path(), skia.PathOp.kUnion_PathOp) or p
+    try:
+        return skia.Op(p, skia.Path(), skia.PathOp.kUnion_PathOp) or p
+    except RuntimeError:                      # skia's boolean fails on near-degenerate geometry: the winding path as is
+        return p
 
 
 def _cap_courier(c, hm, sp, P, det, cl, t, light=None):

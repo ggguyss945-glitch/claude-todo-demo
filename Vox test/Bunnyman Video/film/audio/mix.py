@@ -338,7 +338,16 @@ def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
         d = l['ru_src'][1] - l['ru_src'][0] if l.get('ru_src') else l['end'] - l['t']
         ru_spans.append((a, a + max(0.4, d), fx_of(l)))
     out = {}
-    if 'en' in langs: out['en'] = apply_line_fx(load_vo(vo_en, n_full), en_spans)
+    if 'en' in langs:
+        out['en'] = apply_line_fx(load_vo(vo_en, n_full), en_spans)
+        for l in L:                                       # per-line level (LINE_TAG_DB), 10 ms ramps
+            g_db = LINE_TAG_DB.get(l.get('tag'))
+            if not g_db: continue
+            i0, i1 = max(0, int((l['t'] - 0.05) * SR)), min(n_full, int((l['end'] + 0.15) * SR))
+            w = np.full(i1 - i0, 10 ** (g_db / 20), np.float32); f = min(int(0.01 * SR), len(w) // 2)
+            w[:f] = np.linspace(1, w[f], f); w[-f:] = np.linspace(w[f], 1, f)
+            out['en'][i0:i1] *= w
+            log(f'line {l["i"]} ({l.get("tag")}) {g_db:+.1f} dB')
     if 'ru' in langs: out['ru'] = apply_line_fx(load_vo(vo_ru, n_full), ru_spans)
     return out
 
@@ -454,9 +463,9 @@ def gain_env(n, segs):
     return (10 ** (e / 20)).astype(np.float32)
 
 
-def glue(x, thr_rel=0.0, ratio=2.0):
+def glue(x, thr_rel=0.0, ratio=2.0, free=None):
     """Slow RMS glue compressor on the bed bus (30 ms attack lets hit transients through). Threshold = p95 of the
-    bed's 50 ms RMS + thr_rel; gain reduction capped at 3 dB."""
+    bed's 50 ms RMS + thr_rel; gain reduction capped at 3 dB; none where `free` (bool per sample) is set."""
     p = (x[:, 0] * x[:, 0] + x[:, 1] * x[:, 1]) * 0.5
     k = int(0.05 * SR); r = np.sqrt(np.maximum(uniform_filter1d(p, k), 0)).astype(np.float32); del p
     rdb = SX.db(r); live = rdb > -60
@@ -469,6 +478,8 @@ def glue(x, thr_rel=0.0, ratio=2.0):
                                                  (1 - 1 / ratio) * (over + knee / 2) ** 2 / (2 * knee))).astype(np.float32)
     del over
     gr = np.minimum(gr, 3.0)
+    if free is not None:
+        gr[free] = 0.0
     g = (10 ** (-gr / 20)).astype(np.float32)
     return x * g[:, None], float(np.percentile(gr[live], 95)), g
 
@@ -533,7 +544,7 @@ def voice_chain(v, plr=11.0, ride_lu=None):
     v = v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)
     ride = 0.0
     if ride_lu is not None:
-        v, ride = voice_ride(v, ride_lu)
+        v, ride = voice_ride(v, ride_lu, RIDE_RATIO)
         v = v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)
     y, gr, frac = tp_limit(np.stack([v, v], 1), TARGET + plr, look=0.003, rel=0.05)
     v = y[:, 0]
@@ -599,6 +610,26 @@ CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the b
 CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
                      # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
+# fix round 1 (critic 3 M6: the scares never got louder than the narration's own loudest lines, +5 LU): the boosted
+# scares' spare windows let the hits bus up to BOOST_CEIL_DB over the voice's p99.9 peak (was 6) and drive it
+# BOOST_DRIVE_DB into its look-ahead limiter there (a denser body: a lower crest factor, so the 400 ms loudness rises,
+# not just the transient); the glue compressor leaves those windows alone. Grade by the plan's boost: >= 3.5 (the face
+# reveal, the swap) 1.0, >= 2.5 (the window, the back door, the crack, the doorway, GET OUT) 0.75, else 0.5
+BOOST_CEIL_DB = 10.0
+BOOST_DRIVE_DB = 6.0
+RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
+LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the
+                                # narration with the bed 7.9 dB under it (critic 3 m11)
+NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and SFX events by this much for that long
+                     # from the hit (the window smash on "explodes": the word stays readable under the boosted hit)
+# fix round 1 (critic 3 M7: the planned rule-by-rule build reached the mix almost flat, -14.2 .. -13.4 LU, the cold
+# open as loud as rule 6): the bed in the GAPS between lines (400 ms K-weighted blocks where the narration is silent),
+# rel the voice's integrated level, is steered to rise rule by rule; each rule's section of the music bus gets the
+# offset it needs (closed loop on the mix itself, clamped to +-ARC_MAX_DB, 2 s crossfades), then the music gain is
+# solved again. (first line of the section, target LU); the section ends at the next row; rule 7 (false relief) and
+# everything else are left alone
+ARC_TARGETS = [(61, -19.0), (92, None), (100, -17.5), (130, -16.0), (160, -14.5), (196, -13.0), (232, -11.5), (282, None)]   # (92: the VHS pause)
+ARC_MAX_DB = 5.0
 TRUE_SILENCE_LEVEL = 0.95   # silence events at or over this level are true silences: the SFX events and hits buses
                             # (hit tails, the swap's ring) are cut with the score, the room tone (beds) stays at -6 dB
 
@@ -977,7 +1008,8 @@ def main():
     # the Bunnyman: the hierarchy of the boosted scares: the face reveal and the swap (boost >= 3.5) are the hardest and
     # get the whole +6 dB of the hits limiter's boosted ceiling; Mom in the doorway, "Back to bed", GET OUT and the
     # narrator's swap get +3 dB, so the two hardest stand out over them
-    bgrade = {round(float(e['t']), 3): (1.0 if float(e.get('boost') or 0) >= 3.5 else 0.5) for e in mc['events']
+    _grade = lambda b: 1.0 if b >= 3.5 else (0.75 if b >= 2.5 else 0.5)
+    bgrade = {round(float(e['t']), 3): _grade(float(e.get('boost') or 0)) for e in mc['events']
               if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0}
     # the Bunnyman: a planned hit may carry 'spare' (s): its spare window is that long even past the next word (the face
     # reveal lands on the cut, 0.1 s before "It's a man.": the transient and body ride over "It's", "man" stays clear)
@@ -1045,13 +1077,30 @@ def main():
     _xo = signal.butter(4, 150.0, 'lowpass', fs=SR, output='sos')
     mh_lo = signal.sosfiltfilt(_xo, mhits, axis=0).astype(np.float32); mh_hi = mhits - mh_lo
     sh_lo = signal.sosfiltfilt(_xo, buses['hits'], axis=0).astype(np.float32); sh_hi = buses.pop('hits') - sh_lo
+    # a planned hit with 'notch' (s): its 1-4.5 kHz cut NOTCH_DB for that long from the hit on the hits and the SFX
+    # events (the window smash under "explodes"), 20 ms ramps, processed locally
+    for e_ in mc['events']:
+        nl = float(e_.get('notch') or 0.0)
+        if nl <= 0: continue
+        a_ = int((e_['t'] - 0.15) * SR); b_ = int((e_['t'] + nl + 0.15) * SR)
+        if b_ <= 0 or a_ >= N: continue
+        a_ = max(0, a_); b_ = min(N, b_)
+        tt_ = np.arange(a_, b_) / SR
+        act_n = np.clip(np.minimum((tt_ - (e_['t'] - 0.02)) / 0.02, (e_['t'] + nl + 0.02 - tt_) / 0.02), 0, 1).astype(np.float32)
+        for X_ in (mh_hi, sh_hi, buses['events']):
+            X_[a_:b_] = dyn_cut(X_[a_:b_], act_n, NOTCH_DB)
+        log(f'notch {NOTCH_DB:.0f} dB 1-4.5 kHz at {e_["t"]:.2f} s for {nl:.2f} s')
     vpk = float(np.percentile(np.abs(key[np.abs(key) > 1e-4]), 99.9)) if (np.abs(key) > 1e-4).any() else 0.3
 
     def hits_limit(hx, act_h):
         """Variable-ceiling look-ahead peak limiter on the hits bus: ceiling = voice p99.9 - 3 dB in the gaps, - 9 dB more
-        while a line is spoken (outside each hit's spare window), + 6 dB inside the three boosted scares' spare windows
-        (v2.1: at -3 dB the scares' transients were capped and the film's loudest moments became narration phrases)."""
-        ceil = (vpk * 10 ** ((-3.0 + 6.0 * bwin - 9.0 * act_h * spare) / 20)).astype(np.float32)
+        while a line is spoken (outside each hit's spare window), + BOOST_CEIL_DB x grade inside the boosted scares'
+        spare windows, where the bus is also driven BOOST_DRIVE_DB x grade into the limiter (fix round 1: a denser
+        body, so the scares' 400 ms loudness tops the narration; v2.1: at -3 dB the scares' transients were capped and
+        the film's loudest moments became narration phrases)."""
+        if bwin.any():
+            hx = hx * (10 ** (BOOST_DRIVE_DB * bwin / 20)).astype(np.float32)[:, None]
+        ceil = (vpk * 10 ** ((-3.0 + BOOST_CEIL_DB * bwin - 9.0 * act_h * spare) / 20)).astype(np.float32)
         pk = np.abs(hx).max(1)
         req = np.minimum(1.0, ceil / np.maximum(pk, 1e-9)).astype(np.float32)
         L = int(0.004 * SR)
@@ -1079,7 +1128,7 @@ def main():
         mfrac = np.abs(mh_lo * gh + mh_hi * gh).max(1); sfrac = np.abs(sh_lo + sh_hi).max(1)
         wm = (mfrac / np.maximum(mfrac + sfrac, 1e-9)).astype(np.float32); del mfrac, sfrac
         m += hb * wm[:, None]; s += hb * (1.0 - wm)[:, None]; del hb, wm
-        bed, gr, gg = glue(m + s)
+        bed, gr, gg = glue(m + s, free=(bwin > 0) if bwin.any() else None)
         m *= gg[:, None]; s *= gg[:, None]; del gg
         if clar is not None:
             cg, cmax, cfrac = clarity_gain(bed)
@@ -1098,14 +1147,59 @@ def main():
         return SX.lufs_int(b) - Lv, float(np.median(st3[st3 > -70])) - Lv if (st3 > -70).any() else -70.0
     Lm0 = SX.lufs_int(music + mhits)
     gm = 10 ** ((Lv + A.bed_rel - 1.0 - Lm0) / 20) if Lm0 > -70 else 1.0
-    for it in range(5):
+    # the rule-by-rule arc (ARC_TARGETS): sections of the music bus, their bed in the gaps steered to the targets in the
+    # same loop as the music gain (each pass measures the bed once)
+    vbl_g = -0.691 + 10 * np.log10(SX._blocks(key, 0.4, 0.1) + 1e-20)
+    arc_secs = []
+    for k_, (li, tgt) in enumerate(ARC_TARGETS[:-1]):
+        if tgt is None or li >= len(tl['lines']): continue
+        a_ = float(tl['lines'][li]['t']); b_ = float(tl['lines'][ARC_TARGETS[k_ + 1][0]]['t'])
+        if b_ > t0 and a_ < t1: arc_secs.append([a_ - t0, b_ - t0, tgt, 0.0])        # window time, target, offset dB
+
+    def gap_levels(bed):
+        bl = -0.691 + 10 * np.log10(SX._blocks(bed, 0.4, 0.1) + 1e-20)
+        n_ = min(len(bl), len(vbl_g)); tb = np.arange(n_) * 0.1 + 0.2
+        gap = (vbl_g[:n_] < Lv - 20) & (bl[:n_] > Lv - 60)
+        out = []
+        for a_, b_, tgt, off in arc_secs:
+            sel = gap & (tb >= a_ + 0.5) & (tb < b_ - 0.5)
+            out.append(float(np.median(bl[:n_][sel])) - Lv if sel.sum() >= 20 else None)
+        return out
+
+    def arc_env(secs):
+        env = np.zeros(N, np.float32); xf = int(1.0 * SR)
+        for a_, b_, tgt, off in secs:
+            ia, ib = max(0, int(a_ * SR)), min(N, int(b_ * SR))
+            if ib <= ia or off == 0: continue
+            w = np.ones(ib - ia, np.float32)
+            r = min(xf, (ib - ia) // 2)
+            if r > 1:
+                ramp = (np.sin(np.linspace(0, np.pi / 2, r)) ** 2).astype(np.float32)
+                w[:r] = ramp; w[-r:] = ramp[::-1]
+            env[ia:ib] += np.float32(off) * w
+        return env
+
+    music_base = music
+    for it in range(7):
         bed, _m, _s, gr = bed_for(act_key, gm, acth_key); del _m, _s
-        Li, P50 = bstat(bed); del bed
+        Li, P50 = bstat(bed)
+        gl = gap_levels(bed) if arc_secs else []; del bed
         err = min(A.bed_p50 - P50, (A.bed_rel + 1.5) - Li)
-        log(f'  music gain iter {it}: music {20 * np.log10(gm):+.1f} dB, bed integrated {Li:+.2f} LU, p50 {P50:+.2f} LU rel voice')
-        if abs(err) < 0.2:
+        aerr = [(sec[2] - g) if g is not None else 0.0 for sec, g in zip(arc_secs, gl)]
+        log(f'  music gain iter {it}: music {20 * np.log10(gm):+.1f} dB, bed integrated {Li:+.2f} LU, p50 {P50:+.2f} LU rel voice'
+            + ('; bed in gaps by rule ' + ' '.join('%+.1f' % g if g is not None else '-' for g in gl) +
+               ' (arc offsets ' + ' '.join('%+.1f' % sec[3] for sec in arc_secs) + ' dB)' if arc_secs else ''))
+        arc_done = all(abs(x) < 0.6 for x in aerr) or it >= 5
+        if abs(err) < 0.2 and arc_done:
             break
-        gm *= 10 ** (err * 1.1 / 20)
+        if abs(err) >= 0.2:
+            gm *= 10 ** (err * 1.1 / 20)
+        if not arc_done:
+            mean_e = float(np.mean(aerr)) if aerr else 0.0
+            for sec, x in zip(arc_secs, aerr):              # the shape only (the music gain takes the mean)
+                sec[3] = float(np.clip(sec[3] + 0.9 * (x - mean_e), -ARC_MAX_DB, ARC_MAX_DB))
+            music = music_base * (10 ** (arc_env(arc_secs) / 20)).astype(np.float32)[:, None]
+    del music_base
     # keep the music clearly present: music alone, as heard (after the ducks), within voice -17 .. -10 LU (v2.1: was
     # measured before the ducks, which with the 4.5 dB duck pulled the whole bed 2 dB under the target)
     _b, _m, _s, _g = bed_for(act_key, gm, acth_key); del _b, _s
@@ -1114,6 +1208,7 @@ def main():
     if Lm > -10: gm *= 10 ** ((-10 - Lm) / 20)
 
     report = {'cues_sha1': hashes, 'window': [t0, t1], 'score': score_src,
+              'arc': [{'t': round(a_ + t0, 2), 'target_gap_lu': tgt, 'offset_db': round(off, 2)} for a_, b_, tgt, off in arc_secs],
               'music_gain_db': round(20 * np.log10(gm), 2), 'hits_db': A.hits_db, 'plan': A.plan,
               'sfx_counts': counts, 'silences': n_sil, 'langs': {},
               'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped))}
