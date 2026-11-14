@@ -34,7 +34,8 @@ import music_plan as MP                                   # noqa: E402
 
 # --------------------------------------------------------------------------------------------- EDIT (picture cues)
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
-# change: {'add_db': x} | {'gain_db': x} | {'min_db': x} (raise to at least x) | {'params': {...}} | {'drop': True}
+# change: {'add_db': x} | {'gain_db': x} | {'min_db': x} (raise to at least x) | {'params': {...}} | {'space': s} |
+# {'drop': True}
 EDIT = [
     # the porch switch inserts: Grandma's fingertip pushes it up (on), Mom's pushes it down (off); film.py gives no kind
     ('light_switch', 's46-0.5', 's46+1.5', {}, {'params': {'kind': 'porch'}}, 'Grandma: the porch light on'),
@@ -45,7 +46,8 @@ EDIT = [
     # the first full mix (measure_mix.py): buried cues raised, cues over the narration lowered
     ('paper', 's12', 'e12', {}, {'add_db': 6.0}, 'the laminated rules pressed on the fridge (23 LU under)'),
     ('paper', 's24-0.3', 'e24', {}, {'add_db': 6.0}, 'the Courier (24 LU under)'),
-    ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': -2.0}, 'the mascot and Laurie walking into the woods (22 LU under)'),
+    ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': 1.0}, 'the mascot and Laurie walking into the woods (22 LU under; '
+     'at -2 still 19-20 LU under the braam and the line)'),
     ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': 3.0}, 'the run up the stairs (19 LU under)'),
     ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -13.0}, 'her knock under the line (6.5 LU over it)'),
     ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),
@@ -56,6 +58,21 @@ EDIT = [
     ('breath', 's386', 'e387+0.3', {}, {'gain_db': -8.0}, '"Breathe." (masked at -12)'),
     ('knock_door', 's406', 'e406', {}, {'gain_db': -4.0}, 'the like that lands like a knock (5.9 LU over the line)'),
     ('light_switch', 's407-0.3', 'e407', {}, {'gain_db': 0.0}, 'Grandma\'s porch light on at "And subscribe." (19 LU under)'),
+    # the final mix after the channel rename (measure_mix.py on the 04:45 mix): masked foley raised, a useless gust
+    # dropped, the 1987 trade's flash kept under the end of its line
+    ('wind_gust', 0.0, 's0+1.0', {}, {'add_db': 3.0}, 'the gust over the treeline in the cold open (19.4 LU under)'),
+    ('wind_gust', 's38-0.2', 'e38', {}, {'add_db': 6.0}, 'the gust on "Neither was the suit." (23.3 LU under)'),
+    ('flashlight_click', 's48-0.2', 's48+0.6', {}, {'space': 'memory'}, 'Dad\'s flashlight in the yard: the memory '
+     'space of his steps, not through the closed front door'),
+    ('footsteps_grass', 's48', 'e48+1.0', {'who': 'dad'}, {'add_db': 4.0}, 'Dad walking to the treeline (21.4 LU under)'),
+    ('wood_creak', 's180-0.3', 's180+1.0', {}, {'add_db': 3.0}, 'the stair under June\'s socks (19.4 LU under)'),
+    ('impact_hit', 'w326:opens-0.4', 'w326:opens+0.2', {}, {'gain_db': -4.0}, 'the 1987 trade\'s flash: its tail sat '
+     '1.6 LU over "...in someone else." (the face reveal and the swap stay the hardest hits)'),
+    ('footsteps_wood_inside', 's313-0.2', 's313+1.5', {'who': 'mom'}, {'add_db': 4.0}, 'Mom stepping to June with the '
+     'dress (20.4 LU under)'),
+    ('wind_gust', 's334-0.3', 's334+0.5', {}, {'drop': True}, 'a gust 32.5 LU under the reveal\'s music and line: '
+     'inaudible, the woods bed carries the place'),
+    ('footsteps_wood_inside', 's370', 'e370', {'who': 'cop'}, {'add_db': 4.0}, 'the cop crossing the hall (22.3 LU under)'),
 ]
 
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
@@ -434,6 +451,8 @@ def apply(cues, lines):
                 c['gain_db'] = max(g0, ch['min_db'])
             if 'params' in ch:
                 c['params'] = dict(c.get('params') or {}, **ch['params'])
+            if 'space' in ch:
+                c['space'] = ch['space']
         log.append(f'EDIT {name:18s} {ta:7.2f}-{tb:7.2f} {sub or ""} {ch}: {len(hit)} cue(s)  ({why[:70]})')
     out = [c for c in out if not c.get('_drop')]
     # THIN the speech ticks

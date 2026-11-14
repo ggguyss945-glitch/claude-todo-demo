@@ -98,7 +98,7 @@ Signal flow
 import argparse, json, os, sys, time, traceback
 import numpy as np, soundfile as sf
 from scipy import signal
-from scipy.ndimage import minimum_filter1d, uniform_filter1d
+from scipy.ndimage import maximum_filter1d, minimum_filter1d, uniform_filter1d
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -397,10 +397,15 @@ def fit(y, n):
     return y[:n] if len(y) >= n else np.pad(y, ((0, n - len(y)), (0, 0)))
 
 
-def voice_activity(v, att=0.04, rel=0.35):
-    """0..1 activity from the voice's envelope (10 ms RMS), for ducking and the dynamic EQ."""
+def voice_activity(v, att=0.04, rel=0.35, hold=0.0):
+    """0..1 activity from the voice's envelope (10 ms RMS), for ducking and the dynamic EQ. hold (s): the envelope is
+    held at its peak that long before it releases (the Bunnyman's final mix: the duck stays on through the commas and
+    word gaps of a phrase instead of letting the score swell up under the last syllable of every phrase)."""
     a = np.abs(v).astype(np.float64)
     e = SX.follow(a, SX.coef(att), SX.coef(rel))
+    if hold > 0:
+        h = max(1, int(hold * SR))
+        e = SX.follow(maximum_filter1d(e, size=h, origin=(h - 1) // 2), 0.0, SX.coef(rel))   # trailing max, then release
     edb = SX.db(e)
     ref = np.percentile(edb[edb > -70], 90) if (edb > -70).any() else -20
     return np.clip((edb - (ref - 26)) / 14, 0, 1).astype(np.float32)
@@ -575,6 +580,11 @@ HIT_DUCK_HI_DB = 10.0   # final mix v2: the hits above 150 Hz duck 10 dB under a
 HIT_CUT_DB = 3.0     # final mix: the hits bus also gets the voice-keyed 1-4.5 kHz bell cut (the hit's body is low: the
                      # cut keeps the next words readable while the hits come up --hits-db)
 FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
+DUCK_HOLD_S = 0.35   # the Bunnyman's final mix: the music / beds duck holds 0.35 s after each syllable (commas are cut to
+                     # 0.12-0.30 s, sentence gaps 0.35-0.6 s): the score breathes in the paragraph gaps and the rule cards,
+                     # not under the tail of every phrase (measure_mix: the weak spots were the score's release there)
+TRUE_SILENCE_LEVEL = 0.95   # silence events at or over this level are true silences: the SFX events and hits buses
+                            # (hit tails, the swap's ring) are cut with the score, the room tone (beds) stays at -6 dB
 
 
 def event_activity(e, att=0.01, rel=0.25, lo=-52.0, span=12.0):
@@ -920,6 +930,13 @@ def main():
     kdip = [(h - 0.05, h, -2.0, 0.25, 0.4) for h in k_first]
     autom = gain_env(N, dip(hit_times) + kdip)
     autom_b = gain_env(N, sil + dip(hit_times + mus_hits) + kdip)
+    # true silences ("Then nothing.", the cut on "Seven."): the hits and events buses go out with the score (40 ms), so
+    # no hit tail or swap ring is left in them; the room tone stays (beds -6 dB, above)
+    deep = [(e['t'], e['t'] + float(e.get('len', 1.7)), -60.0, 0.04, 0.5) for e in mc['events']
+            if e['type'] == 'silence' and float(e.get('level') or 0.0) >= TRUE_SILENCE_LEVEL]
+    autom_cut = gain_env(N, deep) if deep else None
+    if deep:
+        log('true silences (hits + events cut):', [round(d[0], 2) for d in deep])
     # score bus: corrective EQ toward the AUDIO_SPEC octave tilt (less 100-160 Hz mud), moderate width, leveler
     music, tilt = match_tilt(music, probe=dyn_cut(music, voice_activity(key), 5.0))
     log('score tilt EQ (dB):', tilt)
@@ -934,7 +951,7 @@ def main():
     # but never past the next word: the spare window ends at the next voice onset - 20 ms, and the duck is fully on
     # 60 ms later (review: "Owen can't wink." / "Owen's eyes close." / "And the studio audience..." started 0.10-0.28 s
     # after the boosted hits and were buried under a fixed 0.3 s spare + 0.7 s ramp)
-    act_key = voice_activity(key, rel=0.25)
+    act_key = voice_activity(key, rel=0.25, hold=DUCK_HOLD_S)
     acth_key = voice_activity(key, att=0.02, rel=0.25)
     von = acth_key > 0.5
     onsets = (np.flatnonzero(von[1:] & ~von[:-1]) + 1) / SR
@@ -989,8 +1006,12 @@ def main():
         hb = dyn_cut(mh_hi, act, HIT_CUT_DB) * (hd * gh)[:, None] + mh_lo * gh
         hb += dyn_cut(sh_hi, act, HIT_CUT_DB) * hd[:, None] + sh_lo; del hd
         hb = hits_limit(hb, act_h)
+        if autom_cut is not None:
+            hb *= autom_cut[:, None]
         s = dyn_cut(buses['beds'], act, 5.0); s *= (dm * autom_b)[:, None]; del dm
         e = dyn_cut(buses['events'], act, 2.0); e *= (10 ** (-1.5 * act / 20)).astype(np.float32)[:, None]
+        if autom_cut is not None:
+            e *= autom_cut[:, None]
         s += e; del e
         # the score's hits count as music in the stems (as before), the SFX hits as SFX
         mfrac = np.abs(mh_lo * gh + mh_hi * gh).max(1); sfrac = np.abs(sh_lo + sh_hi).max(1)

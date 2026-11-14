@@ -49,7 +49,7 @@ def save(surf, path):
     return arr
 
 
-def main(out, name1='RULES', name2='AFTER DARK', tagline='FOLLOW THE RULES. SURVIVE THE NIGHT.'):
+def main(out, name1='NIGHT', name2='POLICY', tagline='FOLLOW THE RULES. SURVIVE THE NIGHT.'):
     os.makedirs(out, exist_ok=True)
     # ---------------------------------------------------------------- logo (800x800)
     s = skia.Surface(800, 800); cv = s.getCanvas()

@@ -14,7 +14,9 @@ TTS slips repaired in the edit (film/_work/narration/voice_report.md lists each 
   - "costume. Yeah. It has a zipper": the extra "Yeah" is cut;
   - the last "Sleep well." came out as "See leave well": the extra vowel after the S is cut and the v becomes a p
     closure (both recognisers then hear "Sleep well.");
-  - the two uploaded parts meet inside "...facing | the back door": both sides are faded into a 40 ms gap.
+  - the two uploaded parts meet inside "...facing | the back door": a 12 ms equal-power crossfade across the seam.
+The channel is NIGHT POLICY (renamed after the take): the take says "Next time on" + the old channel name; the edit
+cuts "on" and the old name and reads "Next time... if your doctor calls..." (vo_edit.py FIXES 'next').
 Also differs from the script, kept: "who would have let Laurie come home" (script: would've; both recognisers hear
 "would have").
 who: N narrator (16, "I"), M Mom (the thing living as Laurie), J June (7), L the little-girl voice coming from the
@@ -468,7 +470,7 @@ LINES = [
     L('N', "If this story made you glance at a window, even once, leave a like, so I know the trick worked.", '', 0.40, tag='like'),
     L('N', "And subscribe.", '', 0.40, tag='subscribe'),
     L('N', "On this channel, it's the one rule that actually protects you: the next story comes to you, so you never have to go looking for it in the woods.", '', 0.90, tag='one_rule'),
-    L('N', "Next time on Rules After Dark: if your doctor calls at three in the morning to tell you your test results came back... don't ask what they found.", '', 1.10, tag='next'),
+    L('N', "Next time... if your doctor calls at three in the morning to tell you your test results came back... don't ask what they found.", '', 1.10, tag='next'),
     L('N', "Sleep well.", '', 0.55, tag='sleep_well'),
     L('N', "And if you hear a little song tonight... that's just the outro.", '', 0.60, tag='end'),
 ]

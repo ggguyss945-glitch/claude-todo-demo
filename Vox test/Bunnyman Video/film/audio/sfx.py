@@ -1256,6 +1256,10 @@ def r_footsteps_wood_inside(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, c
         y = _steps(rng, 'steps_wood', lambda: src('footsteps_wood_inside', nothas=['barn_reverberant']), n, dur, rate,
                approach, creak, weight)
         y = eq(y, ('ls', 150, -2.5, 0.7), ('peak', 1100, 4.0, 0.8))   # final mix: some grains were all thud on a phone
+        if foot in ('L', 'R'):
+            # the Bunnyman's final mix: one picture step per cue (the foot plant's frame); some grains rise for 50-200 ms
+            # before the plant (a scuff, a heel roll): the step's -12 dB onset lands on the cue, as the grass steps do
+            return pan(y, -0.08 if foot == 'L' else 0.08), min(0.15, onset_s(y, -12)), 0.0, False
     if foot in ('L', 'R'):
         y = pan(y, -0.08 if foot == 'L' else 0.08)
     return y, 0.0, 0.0, False
@@ -1680,10 +1684,25 @@ def r_sub_drop(rng, sp, **_):
     return _seq([(0, a * 0.8), (on, s)], 0.0), on, 0.0, False
 
 
+def _stinger_ok(e):
+    """A stinger has to hit: at most 8 s long and at its peak within 0.3 s of its -20 dB onset (the shared library's
+    score/stingers also hold a 26 s sub sting and 22 s string / organ swells peaking seconds in: the Bunnyman's final
+    mix found both rule recall cards playing the 26 s sub sting, 135 ms late and inaudible on a phone)."""
+    try:
+        a = st(audio(e))
+    except Exception:
+        return False
+    if len(a) > 8 * SR:
+        return False
+    pk = float(np.argmax(np.abs(a).max(1))) / SR
+    return pk - onset_s(a, -20) <= 0.3
+
+
 def r_stinger(rng, sp, kind=None, **_):
     if kind == 'eye_flash':
         return r_eye_flash(rng, sp)
     E = src('stinger', epi=True) + src(category='score/stingers')
+    E = [e for e in E if _stinger_ok(e)] or E
     e = E[int(rng.choice(len(E), p=_epi_w(E, 2)))]
     a = fade(pnorm(audio(e)), 0.002, 0.4)
     S2 = pool('scrape', lambda: src(category='sfx/creaks_scrapes', tags=['scrape', 'bow_noise']), 'phrase', gap=0.2,
@@ -3105,6 +3124,10 @@ def r_flashlight_click(rng, sp, kind='on', **_):
     plastic body. kind 'on' | 'off' (a tone lower, softer)."""
     P = pool('torch', lambda: src('flashlight_click'), 'onset', gap=0.08, max_len=0.25, keep=-16)
     g = hp(P.get(rng, rj=0.03, tilt=1.0, fo=0.03), 300, 2)
+    # the Bunnyman's final mix: some grains carry ~45 ms of switch noise before the click; under the memory / through-
+    # the-door processing it rose within 12 dB of the click and the sound read 45 ms early: the grain starts 3 ms
+    # before its -20 dB onset
+    g = fade(g[max(0, n_(onset_s(g, -20) - 0.003)):], 0.002, 0.0)
     if kind == 'off':
         g = rate(g, semis(-1.5)) * 0.8
     body = st(modal([980.0, 2300.0], [0.012, 0.008], [1.0, 0.5], 0.05, int(rng.integers(1 << 30)), exc=0.0003)) * 0.3
@@ -4731,6 +4754,26 @@ RECIPES = {k: globals()['r_' + k] for k in NAMES}
 
 
 # ======================================================================================== public entry points
+# the Bunnyman's final mix: footsteps and knocks that are all thump (< 300 Hz) vanish on a phone speaker; after the
+# space they get a high shelf until their loudness above 300 Hz is within 12 dB of the whole (measure_mix's phone check)
+PHONE_FIX = ('footsteps_wood_inside', 'footsteps_grass', 'footsteps_stairs', 'footsteps_porch', 'footsteps_hall',
+             'knock_door')
+
+
+def phone_presence(y, floor=-12.0, max_db=12.0):
+    """Lift the top of a short foley sound (high shelf at 400 Hz, at most max_db) until its loudness above 300 Hz is no
+    more than -floor dB under its full-band loudness: the thump stays, the click a small speaker can play comes up."""
+    tot = 0.0
+    for _ in range(3):
+        L = mom_max(y)
+        ph = mom_max(hp(hp(y, 300, 2), 300, 2)) - L
+        if not (np.isfinite(ph) and np.isfinite(L)) or ph >= floor or tot >= max_db - 0.05:
+            break
+        g = min(max_db - tot, floor - ph + 0.5)
+        y = eq(y, ('hs', 400, g, 0.7)); tot += g
+    return y
+
+
 def render_event(name, seed=0, space=None, level=0.0, **params):
     """Render one SFX. Returns (stereo float32 at 48 kHz, pre_s). Aliases and keyword guesses go through resolve()
     (a guess prints a warning); KeyError only when no recipe fits. An unknown space falls back with a warning."""
@@ -4753,6 +4796,8 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
     if not spaced:
         y0 = len(y)
         y = globals()['space'](y, sp, seed)
+    if name in PHONE_FIX:
+        y = phone_presence(y)
     target = REF + LEVEL_LU[name] + SPACE_LU.get(sp, 0.0) + offs + float(level)
     bed = name in BEDS or (params.get('dur') and name in DUR_BEDS)
     L = lufs_int(y) if bed else mom_max(y)

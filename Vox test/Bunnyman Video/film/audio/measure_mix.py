@@ -45,7 +45,10 @@ SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutt
               # the Bunnyman: gusts, owls, pages, the reverse swell of the trade, a door's sweep, cloth and the ring
               'wind_gust', 'owl_hoot', 'page_flip', 'swap', 'attic_door', 'ring_hand', 'oven_mitt', 'creek', 'water_tap',
               'police_radio', 'girl_cry', 'jingle', 'wet_drag', 'paper_under_door', 'doorknob', 'curtain_close',
-              'plastic_melt', 'egg_rattle', 'ring_roll', 'struggle', 'dogs_search', 'sirens_arrive', 'burn_barrel')
+              'plastic_melt', 'egg_rattle', 'ring_roll', 'struggle', 'dogs_search', 'sirens_arrive', 'burn_barrel',
+              # grass steps are swishes like the other footsteps above (no single transient; the recipe puts the
+              # -12 dB onset of the dry step on the cue, the woods / memory space moves it 10-60 ms)
+              'footsteps_grass')
 HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit', 'window_smash', 'door_crash', 'swap')
 
 

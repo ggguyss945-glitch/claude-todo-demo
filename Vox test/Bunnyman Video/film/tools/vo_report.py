@@ -38,6 +38,12 @@ SLIPS = [  # (where in the take, what the TTS did, what the edit does, how it wa
      '(965.300-965.425) becomes a 70 ms p closure', 'both: "Sleep well."'),
     ('454.059 "facing / the back door"', 'the two uploaded parts meet here (a 0.011 step in the waveform)',
      '12 ms equal-power crossfade across the seam', 'both: "facing the back door" (a 40 ms gap made Whisper hear "facing in")'),
+    ('956.58-958.20 "Next time on [the old channel name]. If your doctor"', 'not a slip: the channel was renamed NIGHT '
+     'POLICY after the take', '"on" and the old name are cut (the diphthong of "time" ends at 956.512, its m murmur holds '
+     'to 956.578, the o of "on" starts at 956.580): "Next time" ends on the whole m with a 25 ms fade, the breath before '
+     '"If" goes too, and "if your doctor calls" follows the script\'s ellipsis after 0.45 s; everything after it moves '
+     '1.175 s earlier', 'Parakeet: "Next time, if your doctor calls at 3 in the morning to tell you your test results '
+     'came back, don\'t ask what they found."'),
     ('56.94, 884.64, 903.30', 'TTS noises: a voiced "huh" after "hospital.", a voiced blip after "magic trick?", '
      'an "mm-hmm" after "cup of coffee."', 'dropped with the gaps', '-'),
 ]

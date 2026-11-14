@@ -93,6 +93,12 @@ FIXES = {
     # 25 ms fade read as "seven up")
     'count_to_seven': {'end': 694.950, 'end_fade': 0.080},
     'count': {'start': 695.086},
+    # the channel is NIGHT POLICY (the owner, after the build started): the take's "Next time on <the old channel
+    # name>. If your doctor" loses "on" and the old name. The take runs "time on" together: the diphthong of "time"
+    # ends at 956.512, its m murmur holds to 956.578, the o of "on" starts at 956.580; the breath before "If"
+    # (957.935-958.130) goes with the cut. The m keeps its whole murmur on a 25 ms fade (cut_fo) and "If" (958.200)
+    # comes in after the script's ellipsis ("Next time... if your doctor calls"): 0.45 s, the edit's shortest ellipsis
+    'next': {'cuts': [(956.576, 958.201, 0.45)], 'cut_fo': 0.025},
 }
 # pauses inside a line, by the word they follow (line tag -> {word index in the line: seconds})
 INTERNAL = {
@@ -559,7 +565,7 @@ def line_pieces(T, i, sp):
     for g in groups:
         p, q = g[0], g[1]
         pc = {'src': [p, q], 'fi': 0.002, 'fo': 0.002, 'gap_before': 0.0, 'xfade_before': 0.0, 'why': ''}
-        if len(g) > 2 and g[2] in ('cut_out', 'cut_in_out'): pc['fo'] = 0.010
+        if len(g) > 2 and g[2] in ('cut_out', 'cut_in_out'): pc['fo'] = f.get('cut_fo', 0.010)
         if len(g) > 2 and g[2] in ('cut_in', 'cut_in_out'):
             pc['fi'] = 0.006
             pc['forced_gap'] = g[3]; pc['xf_len'] = g[4] if len(g) > 4 else 0.008

@@ -73,6 +73,7 @@ LEAD = 0.10                      # cut a moment before the word
 TAIL = 9.85                      # the outro: the jingle's outro runs 9.75 s from e(411) + 0.1 (audio/music_plan.py), the end card holds for it
 TITLE = "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN"
 BASE = 'If_The_Bunnyman_Asks_You_To_Close_Your_Eyes'
+CHANNEL = 'NIGHT POLICY'           # the channel's name on the cards (the owner renamed it after the build started)
 H._hand = CH.hud_phone_hand
 
 # who speaks which timeline lines (code, fx or None): narrator lines (N) move no mouths. The Bunnyman's L lines (the
@@ -88,7 +89,7 @@ def _hm(h, m): return h * 60 + m
 CLOCK_KEYS = [(187.6, _hm(19, 42)), (200.42, _hm(23, 7)), (287.62, _hm(24, 0)), (369.06, _hm(25, 13)), (425.38, _hm(25, 40)),
               (508.57, _hm(26, 47)), (600.0, _hm(28, 30)), (709.2, _hm(30, 12)), (913.0, _hm(30, 24)), (950.0, _hm(30, 58))]
 CORNER = [(0.0, 'EASTER EVE'), (65.75, 'APRIL 1987'), (122.2, 'EVERY EASTER'), (153.5, 'LAST EASTER'), (171.1, 'THIS EASTER'),
-          (187.6, None), (950.7, 'NOW'), (993.8, 'RULES AFTER DARK')]
+          (187.6, None), (950.7, 'NOW'), (993.8, CHANNEL)]
 
 
 def clock_str(t):
@@ -1334,7 +1335,7 @@ def ins_desk(pen, t, **kw):
     pen.fill(nb, '#f4efe0'); pen.texture(nb, 'paper', 0.5, 'overlay', 1.0)
     for k in range(11): pen.seg((-400, -240 + k * 52), (400, -240 + k * 52), 2, '#9ab0d0', 200)
     pen.seg((-330, -330), (-330, 330), 2, '#d88a8a', 200)
-    ST.btext(pen, 'Rules After Dark', -300, -262, 'hand', 52, '#1a2a5a', 240, 'left')
+    ST.btext(pen, 'Night Policy', -300, -262, 'hand', 52, '#1a2a5a', 240, 'left')
     for k, s_ in enumerate(['the bunnyman - easter', 'seven rules on the fridge', 'mom hums. always.', "don't count to seven",
                             'the trick = the swap ?', 'ending: the hospital']):
         ST.btext(pen, s_, -300, -158 + k * 52, 'hand', 40, '#1a2a5a', 220, 'left')
@@ -1976,7 +1977,7 @@ def _thumb(pen, x, y, s, a=255):
 def B_card(F, sh):
     """Graphic cards: mode 'trick' (THE TRICK: close your eyes / count to seven), 'eye' (an open eye looking round), 'safe'
     (so you never did), 'like' (a like that lands like a knock: hit at p['hit_t']), 'next' (next time: a phone ringing on a
-    nightstand at 3:00 AM, the doctor), 'title' (RULES AFTER DARK), 'end'."""
+    nightstand at 3:00 AM, the doctor), 'title' (the channel: NIGHT POLICY), 'end'."""
     p = sh.p
     mode = p['mode']
     t0 = sh.t0
@@ -2010,11 +2011,11 @@ def B_card(F, sh):
                 if v > 0.05: text(cv, 'LIKE', 960, 870, 900, 70, '#ffffff', 255 * clamp((v - 0.05) / 0.2), 0.2, 'center', 0.6)
         elif mode == 'next':
             text(cv, 'NEXT TIME ON', 960, 150, 800, 34, '#a8a8b8', 255 * clamp(u / 0.3), 0.3, 'center', 0.6)
-            text(cv, 'RULES AFTER DARK', 960, 225, 900, 64, '#ffffff', 255 * clamp(u / 0.4), 0.12, 'center', 0.7)
+            text(cv, CHANNEL, 960, 225, 900, 64, '#ffffff', 255 * clamp(u / 0.4), 0.12, 'center', 0.7)
             H.phone(cv, 'incoming', u, name='DR. HALVERSON', x=960, y=640, scale=0.72, hand=False)
-            text(cv, '3:00 AM', 960, 1000, 800, 44, '#e3262e', 255 * clamp((u - 0.6) / 0.3), 0.2, 'center', 0.6)
+            text(cv, '3:00 AM', 960, 335, 800, 44, '#e3262e', 255 * clamp((u - 0.6) / 0.3), 0.2, 'center', 0.6)   # above the phone (at 1000 the caption covered it)
         elif mode == 'title':
-            text(cv, 'RULES AFTER DARK', 960, 560, 900, 96, '#ffffff', 255 * clamp(u / 0.6) * (1 - clamp((u - sh.d + 0.6) / 0.5)), 0.12, 'center', 0.7)
+            text(cv, CHANNEL, 960, 560, 900, 96, '#ffffff', 255 * clamp(u / 0.6) * (1 - clamp((u - sh.d + 0.6) / 0.5)), 0.12, 'center', 0.7)
         elif mode == 'end':
             pass
     cam = scam(sh, None, dict(mv='hold', free=True, shake=0.0))
@@ -2226,7 +2227,7 @@ INTENSITY = [  # (seconds, level): the story's tension, read off the beats
     (783.7, 0.9), (789.0, 0.75), (791.6, 0.6), (816.6, 0.65), (830.9, 0.7), (844.6, 0.8), (853.0, 0.75), (884.4, 0.9), (889.5, 0.95),
     (897.5, 1.0), (911.0, 1.0), (912.7, 1.0), (914.4, 0.85), (931.2, 0.9), (937.2, 0.95), (939.2, 0.6), (950.8, 0.4), (962.9, 0.45),
     (973.6, 0.6), (979.0, 0.75), (986.4, 0.9), (989.5, 0.95), (993.9, 0.15), (1005.5, 0.2), (1028.5, 0.25), (1046.9, 0.3),
-    (1063.4, 0.45), (1073.4, 0.2), (1078.6, 0.1)]
+    (1063.4, 0.45), (1072.2, 0.2), (1077.4, 0.1)]
 
 
 def intensity_curve(F):
@@ -4336,7 +4337,7 @@ def plan_outro(F):
     # 408 "...the next story comes to you, so you never have to go looking for it in the woods."
     C(T(408), 'set', room='yard', view='woods', set=dict(back_light=1.0), **O, rim=PORCH, c=dict(mv='push', f=1.0, rate=0.012))
     C(w(408, 'next') - 0.1, 'set', room='yard', view='house', set=dict(back_light=1.0, kitchen=0.6), **O, rim=MOON, c=dict(mv='push', f=2.2, rate=0.012))
-    # 409 "Next time on Rules After Dark: if your doctor calls at three in the morning ..."
+    # 409 "Next time... if your doctor calls at three in the morning ..."  (the card: NEXT TIME ON NIGHT POLICY)
     C(T(409), 'card', mode='next', **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
     # 410 "Sleep well."  411 "And if you hear a little song tonight... that's just the outro."
     C(T(410), 'card', mode='title', **O)

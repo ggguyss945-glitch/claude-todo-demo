@@ -18,7 +18,8 @@ sys.path.insert(0, HERE)
 SR = 48000
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 
-# (name, t0, t1): the film's scenes, narration seconds (W/align/timeline.json, 1079.16 s edit)
+# (name, t0, t1): the film's scenes, narration seconds (W/align/timeline.json, 1077.99 s edit: the channel rename cut
+# 1.175 s from line 409, so only the last window moved)
 SCENES = [
     ('cold_open', 0.0, 34.0), ('hospital_rules', 33.0, 66.0), ('parade_1987', 65.0, 99.0),
     ('woods_sunrise', 98.0, 137.0), ('house_dad', 136.0, 172.0), ('june_dress', 170.0, 201.0),
@@ -31,7 +32,7 @@ SCENES = [
     ('sunrise_key', 708.0, 740.0), ('body_face', 737.0, 772.0), ('trick_count', 768.0, 800.0),
     ('reveal', 788.0, 830.0), ('recap', 850.0, 892.0), ('swap_seven', 888.0, 920.0),
     ('scream_police', 912.0, 952.0), ('hospital_visits', 950.0, 980.0), ('ending', 970.0, 1000.0),
-    ('outro_a', 993.0, 1030.0), ('outro_b', 1026.0, 1063.0), ('outro_end', 1058.0, 1090.0),
+    ('outro_a', 993.0, 1030.0), ('outro_b', 1026.0, 1063.0), ('outro_end', 1058.0, 1088.0),
 ]
 HIT_T = ('hit', 'stinger', 'braam', 'sub_drop', 'rule')
 
