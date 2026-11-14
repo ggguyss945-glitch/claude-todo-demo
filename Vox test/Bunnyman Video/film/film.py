@@ -1917,37 +1917,77 @@ def ins_diary_lap(pen, t, **kw):
     pen.radial(None, 900, 120, 1400, [(0, '#ffd89a', 60), (1, '#000000', 120)])
 
 
-def ins_diary_turn(pen, t, dur=0.75, **kw):
-    """'Then Easter, 1987.' (fix round 1, critic 2 M6: a page turned by her hand) June's fingers take the right page by its
-    edge and turn it: the old crayon page swings over the spine and lands, its back is the new left page (Easter 1987, by
-    Laurie in crayon), and the first page of grown-up cursive is revealed on the right."""
-    u = ease_in_out(clamp(t / dur))
+def _diary_hand_at(u):
+    """June's fingers on the turning leaf's free edge at turn progress u: (x, y, angle) of the wrist (design px)."""
+    xe = lerp(1620.0, 300.0, u)
+    return xe + 90.0, 640.0 + 50.0 * math.sin(math.pi * u), lerp(70.0, 45.0, u)
+
+
+def _diary_hand(pen, x, y, ang, r=0.0):
+    """Her right hand at wrist (x, y), dropped away by r (0..1) toward the bottom right; the arm from below right."""
+    if r >= 1.0: return
+    hero_hand(pen, 'june', x + 260.0 * r, y + 700.0 * r, 300, 'grip', ang, 1, (max(x + 540.0, 1500.0) + 260.0 * r, 1500.0 + 700.0 * r),
+              dict(side=-1, key=0.2), shadow=(8, 14, 16, 60))
+
+
+def _diary_page_turn(pen, t, u, under, over, hand_t=None, hand=True):
+    """One page of the diary turning right to left at progress u (0..1): `under` is the spread the turn reveals, `over`
+    the spread it leaves (its right page is the turning leaf). June's fingers hold the leaf's free edge all the way over
+    (the same hand, side and grip throughout: no flip at the spine), then drop away (hand_t = time since the turn ended)."""
     cv = pen.cv
-    ST._ins_diary(pen, t, 'flip')                                        # the new spread under everything
+    ST._ins_diary(pen, t, under)                                         # the new spread under everything
+    xe = lerp(1620.0, 300.0, u)                                          # the turning leaf's free edge
     if u < 1.0:
-        xe = lerp(1620.0, 300.0, u)                                      # the turning page's free edge
         if u < 0.5:                                                      # the old left page is still showing on the left
             cv.save(); cv.clipRect(skia.Rect.MakeLTRB(-400, -300, 960, 1400))
-            ST._ins_diary(pen, t, 'crayon')
+            ST._ins_diary(pen, t, over)
             cv.restore()
-            k = (xe - 960.0) / 660.0                                     # the page's front (the old crayon right page)
+            k = (xe - 960.0) / 660.0                                     # the leaf's front (the old right page), foreshortened
             cv.save(); cv.clipPath(poly([(960, 105 - 40 * (1 - k)), (xe, 115 - 70 * (1 - k)), (xe, 995 + 30 * (1 - k)), (960, 1000)]), doAntiAlias=True)
             cv.translate(960, 0); cv.scale(max(0.02, k), 1.0); cv.translate(-960, 0)
-            ST._ins_diary(pen, t, 'crayon')
+            ST._ins_diary(pen, t, over)
             cv.restore()
             pen.linear(rect(960, 0, max(1.0, xe - 960), 1100), 960, 0, xe, 0, [(0, '#000000', 90 * (1 - k)), (1, '#000000', 10)])
         else:                                                            # past the spine: its back (the new left page) lands
             k = (960.0 - xe) / 660.0
             cv.save(); cv.clipRect(skia.Rect.MakeLTRB(-400, -300, xe, 1400))
-            ST._ins_diary(pen, t, 'crayon')                              # the old left page not yet covered
+            ST._ins_diary(pen, t, over)                                  # the old left page not yet covered
             cv.restore()
             pen.linear(rect(xe, 0, max(1.0, 960 - xe), 1100), xe, 0, 960, 0, [(0, '#ffffff', 40 * (1 - k)), (1, '#000000', 60 * (1 - k))])
-    if t < dur + 0.4:                                                    # her fingers on the page's edge, then away
-        r = ease_in_cubic(clamp((t - dur) / 0.4))
-        xe = lerp(1620.0, 300.0, u)
-        hx = xe + (30.0 if u < 0.5 else -30.0)
-        hero_hand(pen, 'june', hx + 60.0 + 260.0 * r, 640.0 + 40.0 * math.sin(math.pi * u) + 700.0 * r, 300, 'grip', 70.0 if u < 0.5 else -70.0,
-                  1 if u < 0.5 else -1, (hx + 600.0 + 260.0 * r, 1500.0 + 700.0 * r), dict(side=-1, key=0.2), shadow=(8, 14, 16, 60))
+            pen.seg((xe, 110), (xe, 1000), 3, CH.LINE, int(140 * (1 - k)))
+    if hand:
+        x, y, a = _diary_hand_at(u)
+        _diary_hand(pen, x, y, a, ease_in_cubic(clamp(hand_t / 0.4)) if hand_t is not None else 0.0)
+
+
+def ins_diary_turn(pen, t, dur=0.75, **kw):
+    """'Then Easter, 1987.' (fix round 1, critic 2 M6: a page turned by her hand) June's fingers take the right page by its
+    edge and turn it: the old crayon page swings over the spine and lands, its back is the new left page (Easter 1987, by
+    Laurie in crayon), and the first page of grown-up cursive is revealed on the right."""
+    _diary_page_turn(pen, t, ease_in_out(clamp(t / dur)), 'flip', 'crayon', (t - dur) if t > dur else None)
+
+
+def ins_diary_pages(pen, t, flips=(0.35, 1.25, 2.15), dur=0.5, **kw):
+    """'The same sentence, over and over, page after page.' June leafing on through the cursive: her hand comes in to the
+    leaf's edge, turns it (dur s, starting at each local time in `flips`), travels back over the new spread to the next
+    leaf (lifting a little: no jump), and after the last turn drops away. Every spread is the same perfect hand."""
+    x0, y0, a0 = _diary_hand_at(0.0)
+    x1, y1, a1 = _diary_hand_at(1.0)
+    if t < flips[0]:                                                     # in from the bottom right to the first leaf
+        _diary_page_turn(pen, t, 0.0, 'cursive', 'cursive', hand=False)
+        _diary_hand(pen, x0, y0, a0, 1.0 - ease_out_cubic(clamp((t - (flips[0] - 0.4)) / 0.4)))
+        return
+    for k, a in enumerate(flips):
+        if t < a + dur:
+            _diary_page_turn(pen, t, ease_in_out(clamp((t - a) / dur)), 'cursive', 'cursive')
+            return
+        nxt = flips[k + 1] if k + 1 < len(flips) else None
+        if nxt is not None and t < nxt:                                  # back across to the next leaf's edge
+            v = ease_in_out(clamp((t - a - dur) / max(0.1, nxt - a - dur)))
+            _diary_page_turn(pen, t, 0.0, 'cursive', 'cursive', hand=False)
+            _diary_hand(pen, lerp(x1, x0, v), lerp(y1, y0, v) - 90.0 * math.sin(math.pi * v), lerp(a1, a0, v))
+            return
+    _diary_page_turn(pen, t, 1.0, 'cursive', 'cursive', t - flips[-1] - dur)
 
 
 def trace_finger(t0, t1, pts, size=330.0, ang=150.0, side=1, who='june'):
@@ -1973,7 +2013,7 @@ def trace_finger(t0, t1, pts, size=330.0, ang=150.0, side=1, who='june'):
 
 
 INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dress_photo': (ins_dress_photo, 'ins_lamp'),
-                    'diary_lap': (ins_diary_lap, 'ins_lamp'), 'diary_turn': (ins_diary_turn, 'ins_lamp'),
+                    'diary_lap': (ins_diary_lap, 'ins_lamp'), 'diary_turn': (ins_diary_turn, 'ins_lamp'), 'diary_pages': (ins_diary_pages, 'ins_lamp'),
                     'body_above': (lambda pen, t, **kw: ins_body_above(pen, t, **kw), 'ob_dawn'),
                     'under_bridge': (lambda pen, t, **kw: ins_under_bridge(pen, t, **kw), 'ob_vhs87'),
                     'egg_halves_hand': (ins_egg_halves_hand, 'ins_lamp'), 'ring_pocket': (ins_ring_pocket, 'ins_lamp'),
@@ -3063,9 +3103,12 @@ def plan_1987(F):
       post_fn=lambda tt: {'vhs': dict(t=tt, k=0.55, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)})
     # 23 "Inside it was a nineteen-year-old stock boy named Dale Whitlock."  his Pemberton's name badge on the fur
     tnm = w(23, 'named') - 0.2
+    #    (a cut, not a 4.9 s zoom: the badge on the fur, then on "named" a punch-in on the name)
+    VHS_B = lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.2, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)}
     C(T(23), 'ins', name='badge', era='1987', anim=True,
-      c=dict(mv='keys', keys=[(T(23), 960, 560, 1.0, None, 1.0), (tnm, 960, 555, 1.0, 'push', 1.04), (T(24), 960, 520, 1.0, 'in_out', 1.22)]),
-      post_fn=lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.2, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)})
+      c=dict(mv='keys', keys=[(T(23), 960, 560, 1.0, None, 1.0), (tnm, 960, 555, 1.0, 'push', 1.04)]), post_fn=VHS_B)
+    C(tnm, 'ins', name='badge', era='1987', anim=True,
+      c=dict(mv='keys', keys=[(tnm, 960, 525, 1.0, None, 1.3), (T(24), 960, 520, 1.0, 'push', 1.34)]), post_fn=VHS_B)
     # 24 "There's a photo from that morning."  the Courier photo
     C(T(24), 'ins', name='courier', c=dict(mv='keys', keys=[(T(24), 760, 640, 1.0, None, 1.45), (T(25), 745, 660, 1.0, 'push', 1.6)]),
       sfx=[(T(24) + 0.05, 'paper', -12, 0, 'close', dict(kind='newspaper'))])
@@ -3114,8 +3157,10 @@ def plan_1987(F):
         l.look_at(s.t0 - 0.5, (b, 'hand_l'), t_give + 0.5, 0.2)
         l.look_at(t_give + 0.6, (b, 'eyes'), None, 0.3)
         b.look_at(s.t0 - 1.0, (l, 'eyes'), None, 0.3)
-        l.expr('shock', t_open + 0.04, t_open + 0.45, 0.12)
-        l.expr('kid_grin', t_open + 0.5, None, 0.25)
+        # (no open-mouth gasp: on a narrated line a mouth that opens and shuts reads as speech) her eyes pop wide, then
+        # the grin spreads once and holds
+        l.expr('shock_shut', t_open + 0.04, t_open + 0.4, 0.12)
+        l.expr('kid_grin', t_open + 0.4, None, 0.4)
 
         def sparkle(pen, tt):                                    # the egg itself (read big and pink) and the "ta-da" glint
             if tt >= t_open:
@@ -4217,7 +4262,7 @@ def plan_rule4(F):
       ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), act=bunny_at_slot(tilt_t=t(186) - 0.3), talk_k=0.6)],
       c=dict(mv='push', f=1.0, rate=0.03))
     # 187 "June looks back at Mom."  188 J "Yeah."
-    tmh = w(187, 'mom') + 0.35                                   # cut to Mom as June's eyes reach her
+    tmh = w(187, 'back') + 0.22                                  # cut to Mom as June's eyes reach her (1.1 s on Mom, not 0.6)
     C(T(187), 'bust', who='june', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3, flap=1.0), cx=760, cy=660, scale=0.92, turn=0.75, expr='neutral', light=NIGHT_L,
       act=_A(lambda a, s: a.turn(t(187) + 0.35, -0.2, 0.7), pose(t(187) + 0.4, None, 0.6, h_turn=-0.3), lookxy(300, 330, t(187) + 0.45, None, 0.45, z=300.0)))
     # (fix round 1, critic 2 M3: Mom was never shown humming) the reverse from June's height at the slot: Mom standing over
@@ -4359,8 +4404,26 @@ def plan_rule5(F):
     # (fix round 1, critic 1 minor 6: it showed the peephole) the front door's latch edge, close: the deadbolt thrown, the
     # chain on, the knob; the narrator's hand tries the knob, the bolt holds
     tlk = w(204, 'locked') - 0.1
-    C(tlk, 'set', room='hall', view='door', cam=cm((0.45, 0.62, 1.28), (-0.03, 0.0, 1.2), S=1500, sx=960, sy=560), set=dict(hall=0.0),
-      hands=[], c=dict(mv='push', f=1.0, rate=0.02))
+    trt = (tlk + 0.55, tlk + 1.05)                                           # the two tries at the knob
+
+    def knob_turn(tt):
+        return sum(24.0 * math.sin(math.pi * clamp((tt - a) / 0.32)) for a in trt)
+
+    def try_knob(A, s, sp):
+        kx, ky = scr(sp, 'knob')
+        t_in = tlk + 0.1
+
+        def fn(tt):
+            if tt < t_in: return None
+            u = ease_out_cubic(clamp((tt - t_in) / 0.42))
+            kt = knob_turn(tt)
+            # the right hand comes in from the right and closes on the knob; it twists with the knob and stops dead
+            return (kx + 120.0 + 520.0 * (1.0 - u), ky - 30.0 + 260.0 * (1.0 - u), 95.0 - 0.8 * kt, 1.0)
+        return [hand_layer('narrator', fn, 360.0, 'grip', -1, 0.9, sleeve_from=lambda tt: (2350.0, ky + 700.0), name='knob_hand',
+                           light=dict(side=-1, key=-0.35))]
+    C(tlk, 'set', room='hall', view='door', cam=cm((0.45, 0.62, 1.22), (-0.03, 0.0, 1.18), S=1000, sx=960, sy=500),
+      set=dict(hall=0.08, knob=knob_turn), rim=NIGHT, acts=try_knob, c=dict(mv='push', f=1.0, rate=0.02),
+      sfx=[(a + 0.04, 'knob', -8, 0, 'close', dict(kind='rattle')) for a in trt])
     # 205 "There's a light under the attic door."
     C(T(205), 'set', room='up', view='hall', set=dict(upstairs=0.0, attic_gap=1.0), c=dict(mv='push', f=1.8, rate=0.03),
       sfx=[(T(205) + 0.2, 'house_settle', -12, 0, 'inside')])
@@ -4404,8 +4467,10 @@ def plan_rule5(F):
     C(T(218), 'bust', who='june', bg=('attic', 'chest'), set=dict(bulb=1.0), cx=960, cy=560, scale=0.88, turn=-0.3, expr='neutral', light=BULB,
       act=_A(pose(-9, None, 0.1, h_nod=0.45), lambda a, s: [a.look_at(-9, (900 + 120 * k, 1100), None, 0.2, z=200.0) for k in range(1)]))
     # 219 "The same sentence, over and over, page after page."  220-223 "I am Laurie." x 4
-    C(T(219), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(219), 700, 300, 1.0, None, 1.5), (T(220), 700, 800, 1.0, 'lin', 1.5)]),
-      sfx=[(T(219) + 1.2, 'page_flip', -8, 0, 'close'), (T(219) + 2.2, 'page_flip', -8, 0, 'close')])
+    # (fix round 1, critic 2 M6) "page after page": her hand leafs on, three turns, the same sentence on every spread
+    PG = (0.35, 1.25, 2.15)
+    C(T(219), 'ins', name='diary_pages', anim=True, kw=dict(flips=PG), c=dict(mv='keys', keys=[(T(219), 960, 540, 1.0, None, 1.02), (T(220), 960, 520, 1.0, 'lin', 1.1)]),
+      sfx=[(T(219) + a + 0.05, 'page_flip', -8, 0, 'close') for a in PG])
     for k, (i, x, y) in enumerate(((220, 560, 220), (221, 1210, 400), (222, 640, 588), (223, 1260, 818))):
         C(T(i), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(i), x, y, 1.0, None, 2.6 + 0.15 * k), (T(i + 1), x + 20, y, 1.0, 'lin', 2.7 + 0.15 * k)]),
           post=dict(exposure=-0.03 * k))
