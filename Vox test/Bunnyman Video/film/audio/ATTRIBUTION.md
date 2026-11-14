@@ -22,6 +22,11 @@ made here and owes nobody a credit:
   voice. The bunny set's crying file (a three-year-old boy) is rejected.
 - The plastic egg's shell, the ring's ring, the brass mail-slot flap, the barrel's steel ticks, the bare bulb, the
   zipper, the curtain rings and the VHS pause are synthesised layers over the recordings named in sfx.py.
+- Final mix (sfx.py FINAL_NAMES, for the picture's own cue names): the trade under the hand ('swap': a reversed
+  swell into a thump and a glassy C#), the felt marker striking HOLLOWAY out, Mom's running kitchen tap, the creek
+  under the railroad bridge and the fridge magnet's clack are synthesised; the steps on grass are the Free-SFX
+  collection's CC0 grassy footsteps (owlishmedia), the gusts in the trees the civitas CC0 gusts, the patrol cars' radio
+  the police set's Epidemic walkie recording (band-limited). All three sources are already in the credits below.
 A line whose files the final mix does not use may be dropped; keeping every line is always safe.
 
 ```

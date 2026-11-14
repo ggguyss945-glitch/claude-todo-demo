@@ -269,7 +269,9 @@ EVENTS = [
     ('s296', 'hit', 0.65, None),                                       # "And it isn't before sunrise anymore."
     ('s297', 'riser', 0.55, 3.0), ('w299:key', 'hit', 0.75, None),     # "...From the outside. Mom has a key."
     ('s302', 'braam', 0.65, 3.0),                                      # the Bunnyman at the bottom of the stairs
-    ('s304-0.1', 'silence', 0.6, 2.2), ('w305:man', 'hit', 0.75, None),   # "Inside, there's no monster. It's a man."
+    # the face reveal (final mix: one of the two hardest hits of the film, with the swap)
+    # (on the cut to Dale's face, out of the 2.2 s silence, just before "It's a man.": on "man" it masked the word)
+    ('s304-0.1', 'silence', 0.6, 2.2), ('s305-0.06', 'hit', 0.95, None, {'boost': 3.5}),   # "Inside, there's no monster. It's a man."
     ('e309', 'stinger', 0.7, None),                                    # "...the eyes of a terrified little girl."
     ('s311-0.4', 'silence', 0.85, 2.0),                                # "Mama."
     ('s312', 'sub_drop', 0.55, None),                                  # "Then he's still."
@@ -286,6 +288,7 @@ EVENTS = [
     ('s354', 'riser', 0.75, 4.3),                                      # "...it wasn't going to be her."
     ('s355', 'hit', 0.9, None, {'boost': 3.0}),                        # the swap
     ('s356', 'swell', 0.75, 4.6),
+    ('w359:seven', 'hit', 1.0, None, {'boost': 4.0}),                  # "Seven.": the swap itself, the hardest hit
     ('w359:seven+0.3', 'silence', 1.0, 1.25),                          # "Seven." -> nothing
     ('s360', 'pulse_off', 0.5, None),
     # after
@@ -296,9 +299,12 @@ EVENTS = [
     ('s374', 'stinger', 0.45, None),                                   # "They call me Laurie."
     ('s382-0.3', 'silence', 0.7, 1.6),                                 # "I know it's you."
     ('e382+0.1', 'sub_drop', 0.5, None),
-    ('s384-0.2', 'silence', 0.7, 1.9),                                 # "Want to see a magic trick?"
-    ('w385:nine', 'riser', 0.6, 2.5), ('e385+0.05', 'hit', 0.85, None, {'boost': 2.0}),   # "Easter is in nine days."
-    ('e385+0.4', 'silence', 0.8, 2.3),                                 # into "Okay. Breathe."
+    # the ending is near silence (final mix): the score drops out under "Want to see a magic trick?" and stays out
+    # under "Easter is in nine days." (the line alone, clear); a low drop after it, then only the music box winding
+    # down (IDENTITY), then "Okay. Breathe." (was: a riser under the line and a boosted hit after it)
+    ('s384-0.2', 'silence', 0.85, 5.3),                                # "Want to see a magic trick?" .. "nine days."
+    ('e385+0.05', 'sub_drop', 0.45, None),                              # "Easter is in nine days."
+    ('e385+0.4', 'silence', 0.8, 2.3),                                 # into "Okay. Breathe." (the music box alone)
     # the outro
     ('e409', 'sub_drop', 0.35, None),                                  # "...don't ask what they found."
 ]
@@ -325,7 +331,9 @@ IDENTITY = [
     # Grandma remembered: her music box behind her words
     ('s147-0.4', 'jingle', 0.3, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
     # "Yeah." -> the real Laurie tries to sing it through the slot and breaks into tears; the slot snaps shut on her
-    ('e188+0.12', 'jingle', 0.6, None, dict(version='girl', space='slot', until='s192+0.35', stop='cut')),
+    # final mix: only her broken "Hop... hop... hop along..." (5 s, its sob at the end); her crying then takes over
+    # (the picture's girl_cry, sfx_plan PICTURE) as the narrator says "...starts to cry", until Mom shuts the slot
+    ('e188+0.12', 'jingle', 0.6, 5.0, dict(version='girl', space='slot', stop='fade')),
     # "Bedtime, bunny." / "She's humming."
     ('e194+0.15', 'jingle', 0.45, 4.6, dict(version='hum', phrases=(0, 1), stop='fade')),
     # the crayon diary (the real Laurie at six): Mary Had a Little Lamb on a music box, dragged to a halt on 1987

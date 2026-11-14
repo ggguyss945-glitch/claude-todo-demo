@@ -821,6 +821,7 @@ class Score:
         self.duck = np.zeros(self.nc)        # pre-hit cut (bed layers)
         self.gate = np.zeros(self.nc)        # silences (all)
         self.gate_hits = np.zeros(self.nc)
+        self.gate_show = np.zeros(self.nc)   # silences for the show stem (identity-opened ones spare it)
         self.reentry = np.zeros(self.nc)     # post-silence (bed layers, not melodic)
         self.swell = np.zeros(self.nc)       # 0..1 swell envelope (boosts bed)
         self.endfade = np.zeros(self.nc)     # end of film (all non-end layers)
@@ -1837,6 +1838,12 @@ class Score:
             t1 = t0 + ln
             g = np.interp(tt, [t0 - 0.12, t0, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
             self.gate = np.minimum(self.gate, g)
+            # final mix (the Bunnyman): a silence that opens with an identity cue (within 1 s of its start: the child's
+            # hum on "And she was humming.", the music box after "Easter is in nine days.") leaves the show stem alone:
+            # the drop-out is there to expose that tune, not to mute it; a silence later inside a playing tune still
+            # cuts it (the dying speaker's drop-outs, Grandma's music box on "Not once.")
+            if not any(x['type'] in ('jingle', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0 for x in self.ev):
+                self.gate_show = np.minimum(self.gate_show, g)
             gh = np.interp(tt, [t0 - 0.05, t0 + 0.2, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
             self.gate_hits = np.minimum(self.gate_hits, gh)
             r = np.interp(tt, [t1 - 0.01, t1, t1 + 4.5], [0, -12.0, 0], left=0, right=0)
@@ -1937,10 +1944,10 @@ class Score:
             out[k] = _peq(out[k], 120.0, -3.0, 0.9)
         self.bus = {}
         self.log(f'reverb {time.time() - t00:.1f}s')
-        gb, gh = self.to_audio(self.gate), self.to_audio(self.gate_hits)
+        gb, gh, gs = self.to_audio(self.gate), self.to_audio(self.gate_hits), self.to_audio(self.gate_show)
         for k in out:
-            out[k] *= (gh if k == 'hits' else gb)[:, None]
-        del gb, gh
+            out[k] *= (gh if k == 'hits' else gs if k == 'show' else gb)[:, None]
+        del gb, gh, gs
         # hard end: after the end cue's tail everything is silent (no stray tails past the film)
         if ends:                                      # fix 3: the fade also runs when the cadence outlasts the film
             i = min(int(min(self.dur, self.end_t1) * SR), self.n)

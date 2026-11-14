@@ -264,7 +264,10 @@ BUNNY_NAMES = ('ambience_woods', 'owl_hoot', 'crowd_parade', 'hospital_corridor'
                'paper_under_door', 'struggle', 'key_outside', 'sirens_arrive', 'vhs_pause', 'light_switch',
                'music_box_wind', 'flash_pop', 'dogs_search', 'bathtub', 'body_fall_stairs', 'zipper', 'fridge_paper',
                'curtain_close', 'peephole')
-NAMES = POLICE_NAMES + DELIVERY_NAMES + DUMMY_NAMES + BUNNY_NAMES
+# the final mix: film.py's picture names the recipes above did not cover (sfx_plan.PICTURE maps them)
+FINAL_NAMES = ('footsteps_grass', 'wind_gust', 'police_radio', 'swap', 'marker_strike', 'water_tap', 'creek',
+               'magnet_click')
+NAMES = POLICE_NAMES + DELIVERY_NAMES + DUMMY_NAMES + BUNNY_NAMES + FINAL_NAMES
 
 # v2.1 (sound critic): foley raised so it reads over the music (footsteps -11 -> -7, typing -14 -> -9,
 # pen -11 -> -6, paper -13 -> -9, breath -13 -> -8, radio_click -11 -> -8, chain -8 -> -1, creak -9 -> -3,
@@ -393,6 +396,16 @@ DEFAULT_SPACE.update(ambience_woods='window', owl_hoot='woods', crowd_parade='dr
                      sirens_arrive='street', vhs_pause='dry', light_switch='close', music_box_wind='close',
                      flash_pop='close', dogs_search='woods', bathtub='bathroom', body_fall_stairs='door', zipper='close',
                      fridge_paper='close', curtain_close='close', peephole='close')
+# the final mix (FINAL_NAMES): one-shots momentary max, beds / dur-beds integrated, LU rel the voice at gain_db 0
+LEVEL_LU.update(footsteps_grass=-9, wind_gust=-10, police_radio=-14, swap=-1, marker_strike=-10, water_tap=-16,
+                creek=-16, magnet_click=-12)
+PEAK_CAP.update(swap=-3.0)
+BEDS = BEDS + ('creek',)
+DUR_BEDS = DUR_BEDS + ('water_tap', 'police_radio')
+BED_BUS = BED_BUS + ('creek', 'water_tap', 'police_radio')
+HITS = HITS + ('swap',)
+DEFAULT_SPACE.update(footsteps_grass='outside', wind_gust='outside', police_radio='street', swap='dry',
+                     marker_strike='close', water_tap='next_room', creek='woods', magnet_click='close')
 
 
 # ======================================================================================== basic DSP
@@ -1142,8 +1155,12 @@ def _seq(events, extra=0.5):
     return out
 
 
-def r_knock_door(rng, sp, n=3, spacing=0.32, force=None, accel=0.0, material='wood', door=1, strength=None, soft=False,
+def r_knock_door(rng, sp, n=None, spacing=0.32, force=None, accel=0.0, material='wood', door=1, strength=None, soft=False,
                  **_):
+    # the final mix: film.py cues every knock of a pattern on its own frame (params index / group): one knock each
+    # (the default n=3 rendered three knocks per cue: 21 knocks for the 7 of rule 3)
+    if n is None:
+        n = 1 if ('index' in _ or 'group' in _) else 3
     # characters.Acting.knock emits strength (1.0 first knock .. 1.4 climax): 1.0 -> 0.7, 1.2 -> 0.85, 1.4 -> 1.0
     if soft and force is None:
         force = 0.3
@@ -3790,7 +3807,7 @@ def _knuckle_pool():
     return pool('knuckle_new', lambda: _has('knock_family', 'knuckles'), 'onset', gap=0.08, max_len=0.6, keep=-10)
 
 
-def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, door=1, **_):
+def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, door=1, times=None, **_):
     """The family knock, 2-3-2, on the jingle's beat (beat = s per quarter, jingle.TEMPO 126 -> 0.476): knocks on
     beats 0, 1 | 3, 3.5, 4 | 6, 7 ("Hop, hop" / "The Bun-ny" ... ). groups: the start time (s from the cue) of each
     of the three groups, to sit them in the narration's gaps (the spacing inside a group stays on the beat).
@@ -3801,6 +3818,9 @@ def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, doo
     modes = np.array([86, 131, 179, 244, 334, 482]) * (1 + 0.04 * dr.standard_normal())
     g_beats = [(0.0, 1.0), (3.0, 3.5, 4.0), (6.0, 7.0)]
     starts = [g[0] * beat for g in g_beats] if not groups else [float(x) for x in groups]
+    if times is not None:                                 # the final mix: the knocks on the picture's own frames
+        tl_ = [float(x) for x in (times if isinstance(times, (list, tuple)) else [times])]
+        g_beats = [(0.0,)] * len(tl_); starts = tl_; beat = 0.0
     ev = []
     f = 0.35 if soft else float(force)
     for gi, (gb, s0) in enumerate(zip(g_beats, starts)):
@@ -4025,7 +4045,7 @@ def r_wet_drag(rng, sp, dur=2.5, wet=0.6, **_):
     return fade(out, 0.1, 0.3), 0.0, 0.0, False
 
 
-def r_hatchet_step(rng, sp, n=4, rate=0.75, weight=1.0, **_):
+def r_hatchet_step(rng, sp, n=4, rate=0.75, weight=1.0, thunk_only=False, far=False, **_):
     """'Footsteps on the stairs. Slow. And behind them, something hard knocking against every step. Thunk. Thunk.'
     Per step: a heavy, slow tread on the wooden stair (the barefoot pool, weighted, the tread's modes), then 0.3 s
     later the hatchet head knocking the step it just left (the bunny set's wood chop + the axe on a wooden edge,
@@ -4046,9 +4066,16 @@ def r_hatchet_step(rng, sp, n=4, rate=0.75, weight=1.0, **_):
         sc = fade(lp(sc[o:o + n_(0.22)], 2800, 2), 0.03, 0.08) * 0.18
         th = lp(Ch.get(rng, rj=0.03, fo=0.12), 3200, 2)
         bite = pnorm(hp(th, 900, 2), 0.5 * peak(th))     # the head's bite into the tread: what a phone speaker keeps
-        ev += [(t, g), (t + 0.004, tread), (t + 0.12, sc), (t + 0.3, th * rng.uniform(0.85, 1.0)), (t + 0.3, bite),
-               (t + 0.302, st(modal([120, 210, 330], [0.06, 0.04, 0.03], [1, 0.6, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.2)]
+        tail = [(t + 0.12, sc), (t + 0.3, th * rng.uniform(0.85, 1.0)), (t + 0.3, bite),
+                (t + 0.302, st(modal([120, 210, 330], [0.06, 0.04, 0.03], [1, 0.6, 0.3], 0.2, int(rng.integers(1 << 30)))) * 0.2)]
+        ev += tail if thunk_only else [(t, g), (t + 0.004, tread)] + tail
     y = _seq(ev, 0.4)
+    if thunk_only:                     # the final mix: film.py cues each Thunk on its frame (hatchet_thunk): the
+        y = y[n_(0.1):]                # scrape and the head only, the head's bite landing on the cue
+        if far:
+            y = lp(y, 2400, 2) * 0.7
+        y = eq(hp(y, 80, 2), ('ls', 220, -6.0, 0.7), ('peak', 1800, 3.0, 1.0))
+        return y, 0.2, 0.0, False
     y = eq(hp(y, 80, 2), ('ls', 220, -6.0, 0.7), ('peak', 1800, 3.0, 1.0))   # through the door the knock must still
     return y, onset_s(y, -14), 0.0, False                                      # read on a phone (tests: -18 dB > 300 Hz)
 
@@ -4135,6 +4162,9 @@ def r_struggle(rng, sp, kind='full', dur=5.0, **_):
         ev = [(t, wall(rng.uniform(0.4, 0.8))) for t in np.cumsum(rng.uniform(0.2, 0.4, 5)) - 0.2]
         y = _seq(ev, 0.3)
         return y, 0.0, 0.0, False
+    if kind != 'full':                 # the final mix: film.py's door_slam kinds ('body', a memory recall...) are one
+        y, pre = slam()                # slam, never the 5 s fight
+        return y, pre, 0.0, False
     d = float(dur); ev = []; t = 0.0                     # 'full'
     while t < d - 1.2:
         if rng.uniform() < 0.5:
@@ -4285,13 +4315,13 @@ def r_zipper(rng, sp, dur=1.0, **_):
     return fade(st(y * np.sin(np.pi * np.clip(tt / d, 0, 1)) ** 0.3), 0.01, 0.05), 0.0, 0.0, False
 
 
-def r_fridge_paper(rng, sp, **_):
+def r_fridge_paper(rng, sp, magnet=True, **_):
     """'At sundown, the rules went up on the fridge.' The laminated sheet against the fridge door (a flat slap on
     hollow metal), tape torn and pressed, a magnet's clack."""
     t_, *_r = r_tape_rip(rng, sp, kind='rip')
     slap = st(modal([310, 520, 840, 1250], [0.05, 0.035, 0.02, 0.012], [1, 0.6, 0.35, 0.2], 0.2, int(rng.integers(1 << 30)))) * 0.25
     mag = st(modal([2100, 3300], [0.02, 0.01], [1, 0.5], 0.06, int(rng.integers(1 << 30)), exc=0.0003)) * 0.25
-    y = _seq([(0.0, slap), (0.35, t_ * 0.6), (1.1, mag)], 0.1)
+    y = _seq([(0.0, slap), (0.35, t_ * 0.6)] + ([(1.1, mag)] if magnet else []), 0.1)
     return y, 0.0, 0.0, False
 
 
@@ -4316,6 +4346,148 @@ def r_peephole(rng, sp, **_):
     tk = st(modal([3900, 6100], [0.02, 0.01], [1, 0.4], 0.06, int(rng.integers(1 << 30)), exc=0.0002)) * 0.15
     y = _seq([(0.0, sc), (0.1, tk)], 0.05)
     return y, 0.1, 0.0, False
+
+
+
+# ---------------------------------------------------------------------------------------- the final mix: picture names
+def r_footsteps_grass(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, weight=0.7, foot=None, heavy=False, **_):
+    """Steps on grass and the woods path (the yard at night, the 1987 path into Holloway Woods, the burn barrel): the
+    shared library's CC0 grassy footsteps (freesfx), soft and dull; heavy=True: the mascot's big padded feet."""
+    E = lambda: src(category='sfx/footsteps', has=['grass']) or src('footsteps_porch')
+    if heavy:
+        weight = max(weight, 1.0)
+    y = _steps(rng, 'steps_grass', E, n, dur, rate, approach, 0.0, weight)
+    y = lp(y, 4200 if heavy else 6500, 2)
+    if heavy:
+        y = eq(y, ('ls', 180, 3.0, 0.7))
+    if foot in ('L', 'R'):
+        y = pan(y, -0.08 if foot == 'L' else 0.08)
+    return y, 0.0, 0.0, False
+
+
+def r_wind_gust(rng, sp, strength=0.7, **_):
+    """A gust through the bare trees (the shared library's CC0 gusts, civitas), dulled with distance."""
+    E = src(category='sfx/ambience', has=['civitas__gust'])
+    if E:
+        y = pnorm(audio(_pick(rng, E)))[:n_(4.0)]
+    else:
+        L = 2.0; y = st(lp(noise(L, int(rng.integers(1 << 30))), 700, 2) * np.sin(np.linspace(0, np.pi, n_(L))) ** 2)
+    y = lp(hp(y, 120, 2), 3200 + 2500 * float(strength), 2)
+    return fade(y, 0.25, 0.6), 0.0, 0.0, False
+
+
+def r_police_radio(rng, sp, dur=3.0, **_):
+    """DUR. The patrol cars' radios at the house at dawn: a garbled dispatch voice (the police set's Epidemic walkie
+    recording, band-limited, squelched on and off), far under the narration."""
+    d = float(dur or 3.0)
+    E = src(None, has=['walkie_talkie_police_radio'])
+    v = excerpt(E[0], d, rng, 0.3) if E else st(noise(d, int(rng.integers(1 << 30))) * 0.02)
+    v = eq(bp(v, 450, 3000, 3), ('peak', 1600, 4.0, 1.0))
+    v = np.tanh(pnorm(v) * 1.8) / np.tanh(1.8)
+    k1, *_r = r_police_radio_squelch(rng, sp, kind='key')
+    k2, *_r = r_police_radio_squelch(rng, sp, kind='unkey')
+    y = _seq([(0.0, k1 * 0.5), (0.08, fade(v, 0.02, 0.05)), (0.1 + d, k2 * 0.4)], 0.2)
+    return y, 0.0, 0.0, False
+
+
+def r_swap(rng, sp, kind='now', **_):
+    """The trade under the hand ('...opens them somewhere else. In someone else.' and the narrator's "Seven."): a
+    reverse swell sucked in toward the cue (a breath of air and a glassy C#, the count's last note, never home, played
+    backwards out of a cold room), cut on the cue by a close, deep thump and the C# ringing forward. kind '1987' (the
+    story told): shorter, softer, duller; 'now': the full one. The swell's end lands on t."""
+    big = kind != '1987'
+    L = 1.35 if big else 0.75
+    f = 554.37                                             # C#5 (jingle.COUNT_MIDI: Seven)
+    tb = np.arange(n_(0.9)) / SR
+    tone_ = (np.sin(2 * np.pi * f * tb) + 0.45 * np.sin(2 * np.pi * f * 2.004 * tb + 1.0)
+             + 0.25 * np.sin(2 * np.pi * f * 3.011 * tb + 2.0)) * np.exp(-tb / 0.3)
+    burst = np.zeros(len(tb)); k = n_(0.06)
+    burst[:k] = noise(0.06, int(rng.integers(1 << 30)))[:k] * np.exp(-np.arange(k) / n_(0.015))
+    x = st(lp((tone_ * 0.35 + burst).astype(np.float32), 7000 if big else 4500, 2))
+    wet = reverb(x, 'church', 1.0, 0.0, dry=0.25)
+    rev = wet[::-1]
+    rev = rev[-n_(L):] if len(rev) > n_(L) else rev
+    rev = rev * (np.linspace(0, 1, len(rev)) ** 1.6)[:, None].astype(np.float32)
+    rev = fade(rev, 0.05, 0.004)
+    th = st(sub_boom(58, 30, 1.6 if big else 1.0, 0.12, int(rng.integers(1 << 30)))) * (0.8 if big else 0.5)
+    knock = st(modal([96, 158, 236, 410], [0.12, 0.09, 0.06, 0.03], [1, 0.7, 0.45, 0.25], 0.6,
+                     int(rng.integers(1 << 30)))) * (0.35 if big else 0.2)
+    tg = np.arange(n_(2.5)) / SR
+    glass = (np.sin(2 * np.pi * f * tg) + np.sin(2 * np.pi * f * 1.0045 * tg + 0.7)) * np.exp(-tg / 0.7) * 0.5
+    glass = reverb(st(glass.astype(np.float32)), 'church', 0.45, 0.02)
+    y = _seq([(0.0, rev * 0.9), (L, th), (L, knock), (L + 0.005, glass * (0.22 if big else 0.12))], 0.3)
+    if not big:
+        y = lp(y, 5000, 2)
+    return y, L, 0.0, False
+
+
+def r_marker_strike(rng, sp, dur=0.42, **_):
+    """'There's no Holloway. No Pemberton's.' A felt-tip marker struck hard across newsprint / the egg's stamp: the
+    felt's dry fibrous squeal (band noise with a fast fibre chatter, a thin squeak riding it), the paper under it, a
+    tick as the tip lifts. Synthesised (the library has no marker)."""
+    d = float(dur); n = n_(d); t = np.arange(n) / SR
+    env = np.clip(t / 0.02, 0, 1) * np.clip((d - t) / 0.07, 0, 1)
+    chatter = 0.55 + 0.45 * np.sign(np.sin(2 * np.pi * rng.uniform(55, 85) * t + rng.uniform(0, 6)))
+    fib = lp(bp(noise(d, int(rng.integers(1 << 30))), 1500, 5000, 2), 5500, 4) * chatter
+    fib = eq(fib, ('peak', 2900, 9.0, 3.0), ('peak', 4300, 5.0, 3.0))
+    fq = rng.uniform(2600, 3400) * (1 + 0.08 * t / d)
+    sq = np.sin(2 * np.pi * np.cumsum(fq) / SR) * (0.5 + 0.5 * np.sin(2 * np.pi * 23 * t)) * 0.25
+    body = bp(noise(d, int(rng.integers(1 << 30))), 350, 1300, 2) * 0.3
+    y = st(((fib + sq + body) * env).astype(np.float32))
+    tick = st(modal([3100, 5200], [0.01, 0.006], [1, 0.4], 0.04, int(rng.integers(1 << 30)), exc=0.0002)) * 0.2
+    return _seq([(0.0, y), (d - 0.02, tick)], 0.05), 0.0, 0.0, False
+
+
+def r_water_tap(rng, sp, dur=2.5, **_):
+    """DUR. Mom at the kitchen sink: the tap running into the steel basin (turbulent splash noise, bright little drops).
+    Synthesised (the library has no tap); heard across the kitchen ('next_room')."""
+    d = float(dur); n = n_(d); t = np.arange(n) / SR
+    tu = lp(noise(d, int(rng.integers(1 << 30))), 30, 1); tu = 0.75 + 0.5 * tu / (np.abs(tu).max() + 1e-9)
+    spl = eq(lp(bp(noise(d, int(rng.integers(1 << 30))), 500, 5000, 2), 5000, 4), ('peak', 1500, 5.0, 1.0),
+             ('peak', 3000, 2.0, 1.5)) * tu
+    drops = np.zeros(n, np.float32); k = 0.0
+    while True:
+        k += rng.exponential(1 / 25.0)
+        i = n_(k)
+        if i >= n - 2000:
+            break
+        f0 = rng.uniform(700, 2600); L = n_(rng.uniform(0.01, 0.03)); tt = np.arange(L) / SR
+        ch = np.sin(2 * np.pi * f0 * (1 + 2.0 * tt / tt[-1]) * tt) * np.exp(-tt / 0.008) * rng.lognormal(0, 0.5)
+        drops[i:i + L] += ch.astype(np.float32)
+    env = np.clip(t / 0.25, 0, 1) * np.clip((d - t) / 0.4, 0, 1)
+    y = st(((spl * 0.4 + lp(drops, 6000, 2) * 0.5) * env).astype(np.float32))
+    return y, 0.0, 0.0, False
+
+
+def r_creek(rng, sp, dur=10.0, flow=0.6, **_):
+    """BED. The creek in the ravine under the railroad bridge (the library has none): a dull rush breathing slowly and
+    a babble of tiny bubbles (short sine chirps rising in pitch, 300-1600 Hz), decorrelated left and right."""
+    d = float(dur); n = n_(d); t = np.arange(n) / SR
+    out = np.zeros((n, 2), np.float32)
+    for c in range(2):
+        rush = lp(hp(noise(d, int(rng.integers(1 << 30))), 150, 2), 1100, 2)
+        rush = rush * (0.8 + 0.2 * np.sin(2 * np.pi * rng.uniform(0.05, 0.12) * t + rng.uniform(0, 6))).astype(np.float32)
+        b = np.zeros(n, np.float32); k = 0.0; r_ = 40 + 60 * float(flow)
+        while True:
+            k += rng.exponential(1.0 / r_)
+            if k >= d - 0.06:
+                break
+            i = n_(k); f0 = float(np.exp(rng.uniform(np.log(300), np.log(1600))))
+            tau = rng.uniform(0.004, 0.015); L = n_(tau * 5); tt = np.arange(L) / SR
+            ph = 2 * np.pi * np.cumsum(f0 * (1 + 0.3 * float(flow) * tt / tau)) / SR
+            m = min(L, n - i)
+            b[i:i + m] += (np.sin(ph) * np.exp(-tt / tau) * rng.lognormal(0, 0.6))[:m].astype(np.float32)
+        out[:, c] = rush * 0.4 + bp(b, 250, 4000, 2) * 0.1
+    return fade(out, 0.8, 1.0), 0.0, 0.0, False
+
+
+def r_magnet_click(rng, sp, **_):
+    """A fridge magnet snapped onto the door (the bunny magnet on the laminated rules): a hard little clack and the
+    hollow door's thump."""
+    mag = st(modal([2100, 3300, 5200], [0.02, 0.012, 0.006], [1, 0.5, 0.25], 0.06, int(rng.integers(1 << 30)), exc=0.0003))
+    door = st(modal([310, 520, 840], [0.05, 0.035, 0.02], [1, 0.6, 0.35], 0.15, int(rng.integers(1 << 30)))) * 0.2
+    y = _seq([(0.0, mag), (0.001, door)], 0.05)
+    return y, onset_s(y, -12), 0.0, False
 
 
 # ---------------------------------------------------------------------------------------- names: aliases + fallbacks
@@ -4437,6 +4609,20 @@ ALIASES = {
     'dogs': ('dogs_search', {}), 'search_dogs': ('dogs_search', {}), 'tub': ('bathtub', {}),
     'fall_stairs': ('body_fall_stairs', {}), 'zip': ('zipper', {}), 'rules_fridge': ('fridge_paper', {}),
     'curtain_rings': ('curtain_close', {}), 'close_curtains': ('curtain_close', {}), 'peep': ('peephole', {}),
+    # the final mix: film.py's picture names (audio/sfx_plan.py PICTURE refines them further)
+    'hatchet_thunk': ('hatchet_step', {'thunk_only': True, 'n': 1}), 'magnet': ('magnet_click', {}),
+    'deadbolt': ('lock_turn', {}), 'wet_crack': ('struggle', {'kind': 'crack'}),
+    'birds_dawn': ('ambience_dawn', {'dur': 3.0, 'birds': 0.9}), 'birds_day': ('ambience_dawn', {'dur': 2.5, 'birds': 0.8}),
+    'key_turn': ('key_in_lock', {}), 'floor_creak_heavy': ('wood_creak', {'kind': 'creak', 'dur': 0.8}),
+    'stairs_creak': ('wood_creak', {'kind': 'creak', 'dur': 0.6}),
+    'footsteps_heavy': ('footsteps_wood_inside', {'weight': 1.0}), 'wet_step': ('footsteps_wood_inside', {'weight': 1.0}),
+    'vhs_glitch': ('tape_glitch', {'kind': 'tracking', 'dur': 0.3}), 'camera_flash': ('flash_pop', {}),
+    'fire_crackle': ('burn_barrel', {}), 'fire_whoosh': ('burn_barrel', {'ignite': True, 'dur': 2.5}),
+    'crowd_cheer': ('crowd_parade', {'dur': 3.5, 'cheer': 1.0, 'swell_at': 1.2}),
+    'dogs_bark_far': ('dogs_search', {'dur': 4.0}), 'mug_set_down': ('mug_set', {}),
+    'pen_write': ('stylus_scribble', {'dur': 1.0}), 'door_slam': ('struggle', {'kind': 'slam'}),
+    'gust': ('wind_gust', {}), 'water': ('water_tap', {}), 'faucet': ('water_tap', {}), 'stream': ('creek', {}),
+    'marker': ('marker_strike', {}),
 }
 KEYWORDS = [('jingle', 'jingle'), ('pemberton', 'jingle'), ('hum', 'jingle'), ('egg', 'egg_set'), ('ring', 'ring_drop'),
             ('owl', 'owl_hoot'), ('woods', 'ambience_woods'), ('forest', 'ambience_woods'), ('parade', 'crowd_parade'),
