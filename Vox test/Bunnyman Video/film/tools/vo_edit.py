@@ -97,7 +97,8 @@ FIXES = {
     # 25 ms fade read as "seven up")
     # (fix round 1: the 694.950 end on an 80 ms fade still carried the stray vowel's onset: a recogniser heard "seven
     # eyes". "-ven" decays into its n murmur at 694.78-694.845 (about -27 dB) and the stray open vowel starts at 694.85)
-    'count_to_seven': {'end': 694.845, 'end_fade': 0.025},
+    # (fix round 2: the 25 ms fade left the edge at -13 dB against the line: 35 ms, still inside the n murmur)
+    'count_to_seven': {'end': 694.845, 'end_fade': 0.035},
     'count': {'start': 695.086},
     # the channel is NIGHT POLICY (the owner, after the build started): the take's "Next time on <the old channel
     # name>. If your doctor" loses "on" and the old name. The take runs "time on" together: the diphthong of "time"
@@ -108,6 +109,10 @@ FIXES = {
     # the second "Thunk." of the stairs was read as "Sunk" (both recognisers; its t burst is weak): it reuses the first
     # take's "Thunk." (the same onomatopoeia, word for word)
     'thunk2': {'reuse': 'thunk'},
+    # "Okay." (fix round 2, verify r1): the island edge (886.491) sits 2 ms before the vowel's hard onset (886.493,
+    # -63 -> -18 dB in 2 ms); the take is digital silence 886.435-886.470, so the piece starts in it ('lead': the
+    # first piece's source start moves earlier, onto silence) and the attack is whole
+    'outro': {'lead': 886.472},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds) found by eye on 2 ms spectrograms
 # with the pitch and formant tracks (W/review/fixer_d/vo_splits.png), where split_point's dip search would land inside
@@ -118,6 +123,9 @@ SPLITS = {
     'seven': 816.620,        # "Seven | When": the n murmur ends where the pitch drops 240 -> 140 Hz into the w (was 816.389: "Se | ven")
     'liked_you': 938.620,    # "too | If": the strong vowel stops dead at 938.62; the weak I and f follow (was 938.677: "too I | f")
 }
+# fix round 2 (verify r1, minor 1): a hand-set split sits in voiced sound (the edge -2.5 .. -13 dB against the line), so
+# the line before it fades out over SPLIT_FO and the line after it fades in over SPLIT_FI (were 10 / 8 ms: hard edges)
+SPLIT_FO, SPLIT_FI = 0.030, 0.010
 # pauses inside a line, by the word they follow (line tag -> {word index in the line: seconds})
 INTERNAL = {
     'open_count': {'seven': 0.65},           # "count to seven... don't."  the hook's held breath
@@ -671,6 +679,10 @@ def line_pieces(T, i, sp):
         pieces.append(pc); prev_end = q
     if sp['cut_in']: pieces[0]['fi'] = 0.008
     if sp['cut_out']: pieces[-1]['fo'] = 0.010
+    if sp['cut_out'] and tag in SPLITS: pieces[-1]['fo'] = SPLIT_FO
+    if sp['cut_in'] and i > 0 and LINES[i - 1]['tag'] in SPLITS: pieces[0]['fi'] = SPLIT_FI
+    if 'lead' in f and f['lead'] < pieces[0]['src'][0]:
+        pieces[0]['src'] = [f['lead'], pieces[0]['src'][1]]; pieces[0]['why'] = (pieces[0]['why'] + ' lead-in on silence').strip()
     if 'end_fade' in f: pieces[-1]['fo'] = f['end_fade']
     if 'start_fade' in f: pieces[0]['fi'] = f['start_fade']
     # internal pauses: the word before each pause and its punctuation

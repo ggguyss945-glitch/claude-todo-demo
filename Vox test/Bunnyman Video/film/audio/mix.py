@@ -478,8 +478,9 @@ def glue(x, thr_rel=0.0, ratio=2.0, free=None):
                                                  (1 - 1 / ratio) * (over + knee / 2) ** 2 / (2 * knee))).astype(np.float32)
     del over
     gr = np.minimum(gr, 3.0)
-    if free is not None:
-        gr[free] = 0.0
+    if free is not None:                     # bool, or a 0..1 weight (fix round 2: the shaped boosted windows)
+        if free.dtype == bool: gr[free] = 0.0
+        else: gr *= (1.0 - np.clip(free, 0.0, 1.0)).astype(np.float32)
     g = (10 ** (-gr / 20)).astype(np.float32)
     return x * g[:, None], float(np.percentile(gr[live], 95)), g
 
@@ -647,6 +648,20 @@ SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitte
 # reveal, the swap) 1.0, >= 2.5 (the window, the back door, the crack, the doorway, GET OUT) 0.75, else 0.5
 BOOST_DRIVE_DB = 10.0
 BOOST_SPARE_S = 0.4   # a boosted scare's spare window lasts at least this long (the next word's onset ended it after 0.15 s)
+# fix round 2 (verify r1, major 2: the boosted windows were rectangular, so at each window's end the hits bus fell 7-14 dB
+# in 20 ms and the scares' tails were chopped): every boosted window now has a raised-cosine attack (BOOST_ATT_S) and
+# release (BOOST_REL_S) on its drive, its ceiling (blended in dB), the glue's exemption and the bed statistics' mask
+BOOST_ATT_S, BOOST_REL_S = 0.010, 0.35
+# fix round 2 (verify r1, major 1 / critic 3 M6: the scares only reached +4.3 LU momentary, about 1 LU over the loudest
+# narration, because the hits limiter pinned them at its ceiling with a crest factor of about 8 dB): inside a boosted
+# window the hits bus is scaled so its peak meets the ceiling up to BOOST_SAT_DB over it and soft-clipped (tanh) to the
+# ceiling: a denser body (crest about 4-5 dB). The drive is the largest (0.5 dB steps) whose loudest 400 ms in the window
+# stays under BOOST_TARGET_LU (by grade, LU over the voice's integrated level; a fixed drive turned the sustained swap on
+# "Seven." into a +17 LU square wave), and a window already over its target comes down to it. The saturation's harmonics
+# in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
+BOOST_SAT_DB = 9.0
+BOOST_TARGET_LU = {1.0: 8.5, 0.75: 7.0, 0.5: 6.0}
+BOOST_VCUT_DB = 8.0
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
 LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the
                                 # narration with the bed 7.9 dB under it (critic 3 m11)
@@ -1034,6 +1049,7 @@ def main():
     onsets = (np.flatnonzero(von[1:] & ~von[:-1]) + 1) / SR
     spare = np.ones(N, np.float32)
     bwin = np.zeros(N, np.float32)          # the three boosted scares' spare windows (the hits limiter lets them up)
+    bwins = []                              # (a, b, grade) per boosted window, samples
     big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
     # the Bunnyman: the hierarchy of the boosted scares: the face reveal and the swap (boost >= 3.5) are the hardest and
     # get the whole +6 dB of the hits limiter's boosted ceiling; Mom in the doorway, "Back to bed", GET OUT and the
@@ -1058,10 +1074,32 @@ def main():
         a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue
         spare[max(0, a):min(N, b)] = 0.0
-        if long_: bwin[max(0, a):min(N, b)] = next((v for k, v in bgrade.items() if abs(k - h) < 0.01), 1.0)
+        if long_:
+            bwin[max(0, a):min(N, b)] = next((v for k, v in bgrade.items() if abs(k - h) < 0.01), 1.0)
+            bwins.append((a, b, float(bwin[min(N - 1, max(0, a))])))
         if c > b:
             r = np.linspace(0, 1, c - b, dtype=np.float32)[:max(0, min(N, c) - b)]
             spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
+    # fix round 2: the shaped boost (bshape 0..1 with raised-cosine attack / release, bgr the grade carried through the
+    # release); the long spare windows' duck also returns over at least 0.25 s (it came back in 60 ms)
+    bshape = np.zeros(N, np.float32); bgr = np.zeros(N, np.float32)
+    na_, nr_ = int(BOOST_ATT_S * SR), int(BOOST_REL_S * SR)
+    for a, b, gd in bwins:
+        a0, b1 = max(0, a - na_), min(N, b + nr_)
+        if b1 <= a0: continue
+        tt = np.arange(a0, b1)
+        w = np.ones(len(tt), np.float32)
+        up = tt < a; w[up] = np.clip((tt[up] - (a - na_)) / max(1, na_), 0, 1)
+        dn = tt >= b; w[dn] = np.clip(1 - (tt[dn] - b) / max(1, nr_), 0, 1)
+        w = (np.sin(w * np.pi / 2) ** 2).astype(np.float32)
+        bshape[a0:b1] = np.maximum(bshape[a0:b1], w)
+        bgr[a0:b1] = np.where(w > 0, np.maximum(bgr[a0:b1], gd), bgr[a0:b1])
+        r_ = min(N, b + int(0.25 * SR)) - b
+        if r_ > 0:
+            spare[b:b + r_] = np.minimum(spare[b:b + r_], np.linspace(0, 1, r_, dtype=np.float32) ** 1.5)
+    if bwins:
+        log(f'boosted windows: {len(bwins)}, attack {BOOST_ATT_S * 1000:.0f} ms, release {BOOST_REL_S * 1000:.0f} ms, '
+            f'saturation {BOOST_SAT_DB:.0f} dB x grade, voice-keyed cut {BOOST_VCUT_DB:.0f} dB')
     # the voice always clear (the Bunnyman's final mix): while a line is spoken the bed (music + SFX) stays
     # CLARITY_MARGIN_LU under the narration's own 400 ms level (K-weighted blocks every 50 ms, as measure_mix.py reads
     # them); where it does not (a swell peaking on a line's last word, a loud bar of a track under a quiet word, a hit's
@@ -1125,6 +1163,9 @@ def main():
     vpk = float(np.percentile(np.abs(key[np.abs(key) > 1e-4]), 99.9)) if (np.abs(key) > 1e-4).any() else 0.3
     log(f'voice p99.9 peak {20 * np.log10(vpk):.1f} dBFS (the hits limiter\'s reference)')
 
+    Lv_b = SX.lufs_int(key)                 # fix round 2: the boosted scares' loudness targets are set against the voice
+    boost_log = []
+
     def hits_limit(hx, act_h):
         """Variable-ceiling look-ahead peak limiter on the hits bus: ceiling = voice p99.9 - 3 dB in the gaps, - 9 dB more
         while a line is spoken (outside each hit's spare window), + BOOST_CEIL_DB x grade inside the boosted scares'
@@ -1132,13 +1173,50 @@ def main():
         body, so the scares' 400 ms loudness tops the narration; v2.1: at -3 dB the scares' transients were capped and
         the film's loudest moments became narration phrases)."""
         ceil = (vpk * 10 ** ((-3.0 - 9.0 * act_h * spare) / 20)).astype(np.float32)
-        if bwin.any():
-            hx = hx * (10 ** (BOOST_DRIVE_DB * bwin / 20)).astype(np.float32)[:, None]
+        boost_log.clear()
+        if bwins:
             # inside a boosted scare's spare window the ceiling is absolute, near full scale (the master limiter takes
             # the rest): -1 dBFS for the hardest, -1.5 / -2 for the others (relative to the voice's p99.9 peak, about
-            # -12 dBFS, the scares were capped under the narration's own loudness)
-            cb = (10 ** ((-1.0 - 2.0 * (1.0 - bwin)) / 20)).astype(np.float32)
-            ceil = np.where(bwin > 0, np.maximum(ceil, cb), ceil)
+            # -12 dBFS, the scares were capped under the narration's own loudness); fix round 2: blended in dB by the
+            # shaped window, so the ceiling and the drive come down over BOOST_REL_S after the window, not in 20 ms
+            hx = hx * (10 ** (BOOST_DRIVE_DB * bgr * bshape / 20)).astype(np.float32)[:, None]
+            cdb = 20 * np.log10(np.maximum(ceil, 1e-9))
+            cbd = -1.0 - 2.0 * (1.0 - bgr)
+            ceil = (10 ** ((cdb + bshape * np.maximum(cbd - cdb, 0.0)) / 20)).astype(np.float32)
+            # fix round 2: density (see BOOST_SAT_DB): per window, scale the bus so its peak sits BOOST_SAT_DB x grade
+            # over the ceiling, soft-clip to the ceiling (tanh), cut the clip's 1-4.5 kHz under the voice; all faded by
+            # the shaped window, processed locally
+            na_, nr_ = int(BOOST_ATT_S * SR), int(BOOST_REL_S * SR)
+            for a, b, gd in bwins:
+                a0, b1 = max(0, a - na_), min(N, b + nr_)
+                if b1 - a0 < 64: continue
+                seg = hx[a0:b1]
+                w = bshape[a0:b1]
+                cl = 10 ** ((-1.0 - 2.0 * (1.0 - gd)) / 20)
+                pk_in = float(np.abs(hx[max(0, a):min(N, b)]).max()) if b > a else 0.0
+                if pk_in <= 1e-6: continue
+                tgt = Lv_b + next((v for k, v in sorted(BOOST_TARGET_LU.items()) if gd <= k + 1e-6), 8.5)
+                ca, cb_ = max(0, a) - a0, max(min(N, b), min(N, a + int(0.45 * SR))) - a0
+                def _sat(d):
+                    pre = (cl * 10 ** (d / 20)) / pk_in
+                    gp = (10 ** (w * 20 * np.log10(pre) / 20)).astype(np.float32)[:, None]
+                    return (cl * np.tanh(seg * gp / cl)).astype(np.float32)
+                def _loud(y):
+                    yc = y[ca:cb_] * w[ca:cb_, None]
+                    return float(-0.691 + 10 * np.log10(SX._blocks(yc, 0.4, 0.05).max() + 1e-20))
+                d_ok, l_ok = 0.0, None
+                for d in np.arange(0.0, BOOST_SAT_DB + 0.01, 0.5):
+                    l_ = _loud(_sat(d))
+                    if l_ > tgt and d > 0: break
+                    d_ok, l_ok = d, l_
+                sat = _sat(d_ok)
+                if l_ok is not None and l_ok > tgt:                  # already over its target at no drive: down to it
+                    sat *= np.float32(10 ** ((tgt - l_ok) / 20))
+                sat = dyn_cut(sat, act_h[a0:b1], BOOST_VCUT_DB)
+                hx[a0:b1] = seg * (1.0 - w)[:, None] + sat * w[:, None]
+                if boost_log is not None:
+                    boost_log.append((round((a + int(0.03 * SR)) / SR + t0, 2), gd, d_ok, round(l_ok - Lv_b, 1) if l_ok else None,
+                                      round(tgt - Lv_b, 1)))
         pk = np.abs(hx).max(1)
         req = np.minimum(1.0, ceil / np.maximum(pk, 1e-9)).astype(np.float32)
         L = int(0.004 * SR)
@@ -1166,7 +1244,7 @@ def main():
         mfrac = np.abs(mh_lo * gh + mh_hi * gh).max(1); sfrac = np.abs(sh_lo + sh_hi).max(1)
         wm = (mfrac / np.maximum(mfrac + sfrac, 1e-9)).astype(np.float32); del mfrac, sfrac
         m += hb * wm[:, None]; s += hb * (1.0 - wm)[:, None]; del hb, wm
-        bed, gr, gg = glue(m + s, free=(bwin > 0) if bwin.any() else None)
+        bed, gr, gg = glue(m + s, free=bshape if bwins else None)
         m *= gg[:, None]; s *= gg[:, None]; del gg
         if clar is not None:
             cg, cmax, cfrac = clarity_gain(bed)
@@ -1183,7 +1261,7 @@ def main():
     # fix round 1: the boosted scares' spare windows are left out of the bed's statistics (their hits now top the
     # narration by design; counted in, a rule 6 window measured the bed's integrated level 3 LU hot and the solver
     # pulled the whole score down 8 dB under them)
-    nbw = (bwin <= 0).astype(np.float32) if bwin.any() else None
+    nbw = (bshape <= 1e-3).astype(np.float32) if bwins else None
     def bstat(b):
         if nbw is not None:
             b = b * nbw[:, None]
@@ -1257,7 +1335,11 @@ def main():
               'arc': [{'t': round(a_ + t0, 2), 'target_gap_lu': tgt, 'offset_db': round(off, 2)} for a_, b_, tgt, off in arc_secs],
               'music_gain_db': round(20 * np.log10(gm), 2), 'hits_db': A.hits_db, 'plan': A.plan,
               'sfx_counts': counts, 'silences': n_sil, 'langs': {},
-              'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped))}
+              'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped)),
+              'boosts': [dict(t=t_, grade=g_, sat_db=float(d_), loud_lu_rel_voice=l_, target_lu=tg_)
+                         for t_, g_, d_, l_, tg_ in boost_log]}
+    for t_, g_, d_, l_, tg_ in boost_log:
+        log(f'boosted scare {t_:8.2f} s grade {g_:.2f}: saturation {d_:.1f} dB, loudest 400 ms {l_} LU over the voice (target {tg_})')
     stem_dir = os.path.join(A.out, 'stems'); os.makedirs(stem_dir, exist_ok=True)
     for lang in langs:
         v = vo[lang]

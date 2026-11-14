@@ -4576,7 +4576,10 @@ def plan_rule5(F):
         return [lay]
     C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=NIGHT,
       ppl=KIDS_ASLEEP, acts=blanket_acts, c=dict(mv='push', f=1.45, rate=0.012))
-    C(twm, 'set', room='living', view='back', cam=BACKDOOR_POV, set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=LAMP,
+    # (verify round 1: from straight on, the BACKDOOR_POV wide showed her legs running straight down through the seat, the
+    # owner's "standing on the couch" error; a longer lens from the same back door frames her from the lap up between the
+    # chair's arms, the kids asleep on the couch behind her)
+    C(twm, 'set', room='living', view='back', cam=cm((-3.3, 6.55, 1.2), (-3.3, 4.4, 0.95), S=1850, sx=960, sy=660), set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=LAMP,
       ppl=[P('mom', 'armchair', expr='too_still', blink=False, hands='arms', act=_A(pose(-9, None, 0.1, still=0.8), lookxy(960, 380, -9, None, 0.3, z=900.0)))]
       + KIDS_ASLEEP, acts=blanket_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
     # 200 "At 2:47, I wake up."
@@ -5045,11 +5048,13 @@ def plan_rule6(F):
     keys = [(T(245), STEP(1))]
     for k, tl in enumerate(STEP_T[:4]):
         keys += [(tl - 0.5, STEP(k + 1)), (tl, STEP(k + 2))]
-    C(T(245), 'set', room='hall', view='top', set=dict(hall=0.0, upstairs=0.0), rim=NIGHT,
+    # (verify round 1: the view's own camera at f 1.6 cropped the flight out of frame, so he read as standing still in the
+    # hall; down the flight from the landing, the carpeted treads, the rail and the front door below him are in frame)
+    C(T(245), 'set', room='hall', view='top', cam=cm((0.82, 4.45, 4.0), (0.8, 1.45, 0.9), S=900, sx=960, sy=760), set=dict(hall=0.0, upstairs=0.0), rim=NIGHT,
       ppl=[P('bunny', STEP(1), path=keys, surface='stairs_quiet', dimk=0.4, room_light=False, linear=True,
              act=_A(lambda a, s: a.drag_hatchet(-9, None, side=-1),
                     lambda a, s: [a.set(tl - 0.06, tl + 0.3, 0.08, crouch=0.18, h_nod=0.08) for tl in STEP_T[:4]]))],
-      c=dict(mv='push', f=1.6, rate=0.015),
+      c=dict(mv='push', f=1.0, rate=0.015),
       sfx=[(tl, 'footsteps_wood_inside', -2, 0, 'inside', dict(n=1, kind='stair', heavy=True, step=i)) for i, tl in enumerate(STEP_T[:3])] +
           [(tl + 0.3, 'hatchet_thunk', -3, 0, 'inside', dict(step=i)) for i, tl in enumerate(STEP_T[:3])])
     # 247 "And behind them, something hard knocking against every step."  248 "Thunk."  249 "Thunk."  250 the old hatchet

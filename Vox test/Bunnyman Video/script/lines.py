@@ -250,7 +250,7 @@ LINES = [
     L('N', "Mom closes the mail slot.", '', 0.45, tag='slot_close'),
     L('N', "She smooths June's hair.", '', 0.39, tag='smooth_hair'),
     L('M', "Bedtime, bunny.", '', 1.39, tag='bedtime'),
-    L('N', "She's humming.", '', 1.48, tag='humming'),
+    L('N', "She's humming.", '', 1.50, tag='humming'),
     # ---------------------------------------------------------------- rule 5: the attic, the diary
     L('N', "Rule number five.", '', 0.55, tag='rule5'),
     L('N', "Never let June out of your sight.", '', 0.45, tag='rule5_text'),
@@ -418,7 +418,7 @@ LINES = [
     L('N', "I've been counting to seven in my head all night.", '', 0.45, tag='counting_all_night'),
     L('N', "It's the easiest thing in the world.", '', 1.30, pace=1.35, tag='easiest'),
     L('N', "Six.", '', 0.94, tag='six'),
-    L('N', "Seven.", '', 1.29, tag='seven'),
+    L('N', "Seven.", '', 1.30, tag='seven'),
     # ---------------------------------------------------------------- the ending: the hospital, June's visits
     L('N', "When I open my eyes, I'm on my knees in the hallway, my arms are scratched to ribbons, and I'm looking at myself.", '', 0.85, tag='myself'),
     L('N', "Sixteen years old.", '', 0.40, tag='sixteen'),
@@ -445,9 +445,9 @@ LINES = [
     L('J', "I know it's you.", '', 0.85, fx='whisper', tag='i_know'),
     L('N', "Then she told me what my old body asked her in the car, on the way over.", '', 0.90, tag='car'),
     L('X', "Want to see a magic trick?", '', 1.50, fx='whisper', tag='x_trick'),
-    L('N', "Easter is in nine days.", '', 2.80, tag='nine_days'),
+    L('N', "Easter is in nine days.", '', 2.81, tag='nine_days'),
     # ---------------------------------------------------------------- outro
-    L('N', "Okay.", '', 0.45, tag='outro'),
+    L('N', "Okay.", '', 0.43, tag='outro'),
     L('N', "Breathe.", '', 0.50, tag='breathe'),
     L('N', "You can turn a light on now.", '', 0.85, tag='light_on'),
     L('N', "None of this happened.", '', 0.45, pace=1.35, tag='none_happened'),

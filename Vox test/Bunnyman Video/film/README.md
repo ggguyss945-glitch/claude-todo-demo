@@ -127,7 +127,7 @@ python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview_tmp --audi
 python3 render.py --workers 2 --from_ 460.9 --to 465.9 --out W/tests/render5 --audio W/align/vo_en.wav   # a 5 s full-mode test
 P=2 bash tools/final_chain.sh > W/logs/final_chain.log 2>&1      # FINAL: 2560x1440 / 60 fps in 24 chunks, then deliver.sh
 ```
-- **The preview** is `W/preview/preview.mp4`: 640x360, 30 fps, 1087.8 s (32,635 frames, 152 MB), the edited voiceover; 2 workers, about 8 min (re-rendered after the channel rename). `render.py` writes `film.mp4` into its `--out`: render into a scratch dir such as `W/preview_tmp`, then move `film.mp4` to `W/preview/preview.mp4`. `bash audio/final_mix.sh` muxes the final mix onto it as `W/preview/preview_mix.mp4`.
+- **The preview** is `W/preview/preview.mp4`: 640x360, 30 fps, 1085.93 s (32,578 frames, 135 MB), the edited voiceover; 2 workers, about 8 min (re-rendered by fixer D; verify round 1 spliced two re-rendered ranges in frame-exact: render the range with `--from_/--to` on whole frames, then trim + concat + re-encode with the same x264 settings). `render.py` writes `film.mp4` into its `--out`: render into a scratch dir such as `W/preview_tmp`, then move `film.mp4` to `W/preview/preview.mp4`. `bash audio/final_mix.sh` muxes the final mix onto it as `W/preview/preview_mix.mp4`.
 - **The full-mode test** is `W/tests/render5_460.9-465.9_2560.mp4` (June creeping down the stairs in her socks, then kneeling at the mail slot): 2560x1440, 60 fps, 300 frames, 2 workers, end to end in 49 s, the voiceover muxed from 460.9 s. Command: `python3 render.py --workers 2 --from_ 460.9 --to 465.9 --out W/tests/render5 --audio W/align/vo_en.wav`, then rename its `film.mp4`.
 - **The final render** goes through `tools/final_chain.sh`: frame-exact chunks from the film's own length (`K=24`, `P` processes; a re-run skips chunks with an OK marker), joined by stream copy into `W/picture/picture.mp4`, frame count checked, then `tools/deliver.sh` makes `W/deliver/If_The_Bunnyman_Asks_You_To_Close_Your_Eyes_EN_1440p60_HEVC.mp4` with `W/mix/final/mix_en.wav` (it needs the final mix first). `tools/encode_chain.sh` is the resumable alternative to `deliver.sh` (capped CRF 17 segments, `enc_seg.sh`). On the shared 4-core machine run two chunks at a time (`P=2`); the picture is about 1-1.5 GB of H.264, so chunks plus the joined file need about 3 GB of disk at the peak. Run it as a harness-tracked background task, not with nohup.
 - **Full mode** (`render.py` without `--stills/--clip`): contiguous slices per worker process (one OpenCV thread each), libx264 crf 16 preset faster, joined by stream copy; workers pass absolute frame indices, so a range render matches the full render frame for frame. Finished slices get a `.done` marker (delete markers and slices before re-rendering a changed film into the same `--out`).
@@ -459,7 +459,31 @@ fix of fixers A-C from the NEW preview, 88 tiles, each with its new time, the au
 - **Not done**: the girl's crying is not matched to the Bunnyman's visible sob catches (`SOB_T`, #189/#190; the cry is
   a synthesised phrase with its own timing); the four TTS re-takes (below) need the owner.
 
+## Verify round 1 (picture)
+Every picture blocker and major of critics 1 and 2 was checked on the new preview (strips across the cuts, stills, 52 full-size
+2560x1440 stills of the wide shots from `render.py --stills`) and the whole preview was scanned at 1 fps. Two staging errors
+were fixed with camera-only changes (no cue moved: `film.py --cues --out <scratch>` is byte-identical to `W/cues`):
+- **#177 "with Mom in the armchair facing the back door"** (504.4 s): from straight on, the back-door wide showed her legs running
+  straight down through the seat (the owner's "standing on the couch" error). A longer lens from the same back door
+  (`cm((-3.3, 6.55, 1.2), (-3.3, 4.4, 0.95), S=1850, sy=660)`) frames her from the lap up between the chair's arms, the kids
+  asleep behind her.
+- **#223 "Footsteps on the stairs. Slow."** (615.7 s): the view's own camera at f 1.6 cropped the flight out of frame, so he read
+  as standing still in the downstairs hall. Down the flight from the landing (`cm((0.82, 4.45, 4.0), (0.8, 1.45, 0.9), S=900,
+  sy=760)`, f 1.0): the carpeted treads, the rail and the front door below him; each tread now reads as a step up.
+The two ranges (504-508 s, 615-619 s) were re-rendered at 640x360/30 and spliced frame-exact into `W/preview/preview.mp4`;
+`preview_mix.mp4` carries the existing mix's AAC stream unchanged (stream copy, same MD5). Still open: see Open problems
+("Verify round 1 leftovers").
+
 ## Open problems
+- **Verify round 1 leftovers (picture)**: (1) **the cop shot #351 (939.6-944.0 s)**: the dead man at the foot of the stairs is the
+  front-view figure turned 90 degrees, so at full size it floats at waist height as a flat cutout behind the balusters, the
+  spindles drawn over his face, one arm hanging to the floor (a camera from the landing does not save it: it then lies across
+  the lower treads). It needs a real lying drawing in the set (the `ins_body_above` art projected onto the floor plane, or a
+  low side-view lying pose), or the beat restaged with the cop over the `body_above` insert (that moves the cop's footstep cues,
+  so it needs the sound step). (2) The porch slot shots (#158, #167, #171): the outer slot plate is hidden behind his body in
+  every frame, and in #158 the paw sits at the lock plate with its pads to the camera. (3) Smaller: the bathroom door's own
+  jolt on "shakes"/"slams" is subtle in the dark grade; Mom's open grin on "That's how he knocks, every year." still reads
+  cheerful; the couch blanket in #176 hangs as a flat sheet; in the outro `egg_empty` the lid half sits high on the desk.
 - **Lying figures in a set view** (`pose.lie`) are still the front view turned 90 degrees, so they only read from straight
   above: the lying beats are custom top-down inserts (`ins_body_above`, `ins_under_bridge`); the set view of the body from the
   top of the stairs is kept short (2.4 s) as the establishing shot.
@@ -468,8 +492,7 @@ fix of fixers A-C from the NEW preview, 88 tiles, each with its new time, the au
 - **The `porch_egg` camera's own `env`** (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.
 - **Keyed insert moves** that run a little over 4 s on purpose (the push down the peephole to the egg, the move across the diary's last page) and two outro holds are WARNs in the validator, checked by eye.
 - **Fixer B leftovers**: June at the slot close (#173, "Mom closes the mail slot") is drawn nearly frontal although she faces
-  the door (the kneel pose's turn); the Mom armchair shot from the back door (#177) reads a little like standing in front of
-  the chair (the frontal seated figure's foreshortening). (`magic_sparkle` has a recipe since fixer D.)
+  the door (the kneel pose's turn). (The armchair shot #177 is reframed since verify round 1; `magic_sparkle` has a recipe since fixer D.)
 - **Fixer C leftovers**: the lying body in the set view at the foot of the stairs is still the front-view figure turned 90 degrees
   (the cop shot reads, the top-down inserts carry the beat); Dale's hair has no wet, matted sheen; the whisper has no wide set
   shot of the lap (the climb into frame carries it); the bathroom door's slam jolt is small at preview size (the dust, the light
