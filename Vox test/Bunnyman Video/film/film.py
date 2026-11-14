@@ -1530,6 +1530,118 @@ def ins_egg_gold_hands(pen, t, **kw):
     cv.restore()
 
 
+def ins_egg_halves_hand(pen, t, settle_t=1.6, still=False, **kw):
+    """'Inside, rolling around, is a gold ring.' The narrator's own view, down at the hands in the hall (the floor and
+    the runner far below, out of focus, the porch light from the crack warm from the upper left): the bottom half of the
+    egg cupped in the RIGHT palm (the hoodie's ribbed cuff; the same hand that held it in the medium and that the ring
+    is tipped into next), Dad's ring rolling round inside it as the palm tips, slowing and settling by settle_t; the lid
+    in the left hand at the left edge, lowered away. still=True: the settled frame (the recap)."""
+    cv = pen.cv
+    if still: t = settle_t + 2.0
+    # the hall floor, ~1.3 m below: dark boards, the runner across it, the crack's warm wash; all out of focus
+    pen.fill(rect(-400, -300, 2720, 1680), '#1b1411')
+    for j in range(-6, 14):
+        x0 = -300 + j * 190
+        pen.seg((x0, -300), (x0 + 520, 1400), 9, '#0e0a08', 160)
+    run = poly([(-400, 1240), (-400, 640), (2320, -120), (2320, 470)])
+    pen.fill(run, '#4a1a20', 235, blur=26)
+    pen.fill(poly([(-400, 690), (-400, 650), (2320, -100), (2320, -60)]), '#22304a', 200, blur=20)
+    pen.fill(poly([(-400, 1220), (-400, 1180), (2320, 430), (2320, 470)]), '#22304a', 200, blur=20)
+    pen.fill(poly([(-400, 700), (-400, 712), (2320, -40), (2320, -28)]), '#b8984a', 90, blur=14)
+    pen.linear(rect(-400, -300, 2720, 1680), -300, -300, 1500, 1200, [(0, '#ffb868', 70), (0.45, '#ff9a48', 18), (1, '#000000', 0)])
+    pen.radial(None, 960, 560, 1250, [(0, '#000000', 0), (0.7, '#000000', 60), (1, '#000000', 170)])
+    # the palm tips a little and settles; the ring rolls against it, lagging, and comes to rest
+    dec = math.exp(-max(0.0, t) / 0.75) if t < settle_t else math.exp(-settle_t / 0.75) * max(0.0, 1.0 - (t - settle_t) / 0.4)
+    tip = 4.5 * math.sin(3.1 * t + 0.3) * dec
+    roll = math.sin(3.1 * t - 0.5) * dec * 1.6
+    breath = 3.0 * math.sin(t * 2.0 * math.pi / 3.4)
+    skin, skin_sh, skin_dp = '#e5b99f', '#bb8d78', '#7a524a'
+    cuff = '#7f957a'
+    # the left hand at the left edge, the lid in its fingers, lowering away (out of focus a little)
+    lo = ease_in_out(clamp(t / 2.2))
+    lx, ly = 250 - 60 * lo, 760 + 180 * lo
+    hero_hand(pen, 'narrator', lx - 120, ly + 330, 720, 'grip', 160.0, 1, (lx - 520, ly + 1400), dict(side=-1, key=0.2))
+    ST._egg_half(pen, lx + 30, ly - 40, 420, 'top', False, t, rot=-150 + 10 * lo)
+    hero_hand(pen, 'narrator', lx - 120, ly + 330, 720, 'grip', 160.0, 1, (lx - 520, ly + 1400), dict(side=-1, key=0.2))
+    # the right palm with the cup
+    pcx, pcy = 1060.0, 720.0 + breath
+    cv.save(); cv.translate(pcx, pcy + 260); cv.rotate(tip); cv.translate(-pcx, -(pcy + 260))
+    ST._hand_palm(pen, pcx, pcy, 640, skin=skin, sh=skin_sh, dp=skin_dp, cuff=cuff, curl=0.55, ang=-6)
+    csz = 560.0; L = csz / 2.0; W = L * 0.74
+    ccx, ccy = pcx - 20, pcy - L * 0.62                                     # the rim's centre: the cup sits in the palm
+    pen.fill(oval(ccx + 30, ccy + L * 0.92, W * 0.95, L * 0.22), '#5a3020', 120, blur=22)
+    ST._egg_half(pen, ccx, ccy, csz, 'bot', False, t, rot=0.0)
+    # Dad's ring inside: seen through the opening, rolling side to side, settling at the bottom
+    mouth = oval(ccx, ccy, W * 0.93, L * 0.185)
+    cv.save(); cv.clipPath(mouth, skia.ClipOp.kIntersect, True)
+    rx = ccx + W * 0.42 * roll; ry = ccy + L * 0.03 - abs(roll) * L * 0.02
+    pen.fill(oval(rx + 6, ry + 14, W * 0.32, L * 0.06), '#1a0a10', 150, blur=6)
+    ST.draw_ring(pen, rx, ry - L * 0.04, W * 0.6, tilt=0.3 + 0.05 * roll, t=t, band=0.22, engraving=False)
+    cv.restore()
+    # the porch light's glint on the gold and the rim
+    g = 0.5 + 0.5 * math.sin(t * 4.0)
+    pen.fill(oval(rx - W * 0.14, ry - L * 0.07, 16 + 6 * g, 6), '#fff6d0', 170 + 60 * g, blur=3)
+    cv.restore()
+
+
+def ins_ring_pocket(pen, t, **kw):
+    """'She puts it in her pocket.': close on the front of Mom's pink cardigan at the hip (the knit, the button band, the
+    patch pocket with its ribbed top), lamp light from the upper left; her right hand comes down with Dad's ring
+    pinched in its fingertips, the fingers slide into the pocket (hidden by its front panel) and come out empty; the
+    ring's small lump stays in the pocket."""
+    cv = pen.cv
+    top, top_sh, top_hi, rib = '#c98d94', '#9c6470', '#e2aab0', '#b07880'
+    bg = rect(-400, -300, 2720, 1680)
+    pen.fill(bg, top)
+    pen.texture(bg, 'fabric', 0.55, 'overlay', 2.6)
+    for k in range(-4, 30):                                                   # the knit's vertical ribs
+        x = -300 + k * 78
+        pen.seg((x, -300), (x + 14, 1400), 5, top_sh, 55)
+    pen.linear(bg, -200, -200, 2100, 1300, [(0, '#fff2e6', 60), (0.5, top, 0), (1, '#3a1820', 120)])
+    band = rect(140, -300, 150, 1700)                                          # the button band, a pearl button
+    pen.fill(band, mix(top, rib, 0.5)); pen.line(band, 4, '#2a1a1a', 200)
+    pen.fill(oval(215, 330, 34), '#f3ece0'); pen.line(oval(215, 330, 34), 3, '#7a5a5a')
+    pen.fill(oval(205, 320, 9), '#ffffff', 160)
+    # the patch pocket
+    yo = 470.0                                                                 # the opening (the top of the pocket)
+    pk = rrect(620, yo, 760, 640, 34)
+    pen.fill(moved(pk, 10, 16), '#3a1820', 90, blur=14)
+    pen.fill(pk, mix(top, top_sh, 0.18)); pen.texture(pk, 'fabric', 0.5, 'overlay', 2.6)
+    for k in range(9):
+        x = 660 + k * 84
+        pen.seg((x, yo + 90), (x + 6, yo + 620), 4, top_sh, 60)
+    rb = rrect(620, yo, 760, 92, 30)
+    pen.fill(rb, mix(top, rib, 0.6))
+    for k in range(38):
+        x = 640 + k * 19.5
+        pen.seg((x, yo + 8), (x, yo + 84), 3, top_sh, 120)
+    pen.line(pk, 5, '#2a1a1a', 220); pen.line(poly([(626, yo + 92), (1374, yo + 92)], False), 3, '#5a2a30', 180)
+    for k in range(40):                                                        # top-stitching round the pocket
+        u = k / 40.0
+        x0 = 650 + u * 700
+        pen.seg((x0, yo + 615), (x0 + 9, yo + 615), 3, '#f0d0d4', 150)
+    # the hand: down from the upper right, the ring pinched, into the pocket, out again
+    u_in = ease_in_out(clamp((t - 0.1) / 0.75))
+    u_dn = ease_in_out(clamp((t - 0.85) / 0.45))
+    u_out = ease_in_out(clamp((t - 1.45) / 0.6))
+    tipx = lerp(1500, 1010, u_in) + 60 * u_out
+    tipy = lerp(80, yo - 6, u_in) + 150 * u_dn - 520 * u_out
+    released = t > 1.2
+    ang = 205.0; size = 640.0
+    wx, wy = wrist_for((tipx, tipy), 'grip', -1, ang, size, 'mom')
+    if released:                                                               # the lump of the ring in the pocket
+        pen.line(oval(1020, yo + 300, 46, 20), 4, top_sh, 150)
+        pen.fill(oval(1020, yo + 296, 40, 14), top_hi, 70)
+    cv.save()
+    cv.clipRect(skia.Rect.MakeLTRB(-400, -300, 2320, yo + 10))                 # inside the pocket: hidden by its front
+    if u_out < 0.98:
+        hero_hand(pen, 'mom', wx, wy, size, 'grip', ang, -1, (wx + 900, wy - 1100), dict(side=-1, key=0.25),
+                  shadow=(14, 24, 22, 70))
+        if not released:
+            ST.draw_ring(pen, tipx - 6, tipy - 10, 120, tilt=0.8, t=t, band=0.25, engraving=False)
+    cv.restore()
+
+
 def _new_dress(pen, cx, top, s=1.0, age=0.0):
     """June's new yellow Easter dress on a white wire hanger (the dress_new insert's design, drawn on anything)."""
     y = CH.mix('#f2c84b', '#b9b4a2', 0.72 * age); ysh = CH.mix('#c99a24', '#8a8676', 0.72 * age); wc = '#fbfaf4'
@@ -1708,6 +1820,7 @@ def ins_hatchet_pile(pen, t, **kw):
 
 
 INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dress_photo': (ins_dress_photo, 'ins_lamp'),
+                    'egg_halves_hand': (ins_egg_halves_hand, 'ins_lamp'), 'ring_pocket': (ins_ring_pocket, 'ins_lamp'),
                     'hatchet_steps': (ins_hatchet_steps, 'ins_dark'), 'hatchet_thunk': (ins_hatchet_thunk, 'ins_dark'),
                     'hatchet_pile': (ins_hatchet_pile, 'ins_dark')}
 
@@ -2775,6 +2888,17 @@ def plan_1987(F):
 BELLY_CAM = cm((-2.6, 37.3, 0.65), (-2.6, 39.6, 0.55), S=1500, sx=960, sy=520)
 
 
+def washing_up(a, s):
+    """Hands in the sink (seen from behind): a slow scrubbing loop, the elbows working against each other, the
+    shoulders following."""
+    def fn(P, t):
+        ph = 2.0 * math.pi * 0.85 * (t - s.t0)
+        P.hl_out += 14.0 * math.sin(ph); P.hr_out += 14.0 * math.sin(ph + math.pi)
+        P.hl_down += 9.0 * math.cos(ph); P.hr_down += 9.0 * math.cos(ph + math.pi)
+        P.shrug += 0.02 * math.sin(ph * 2.0)
+    a._add(s.t0 - 1.0, None, fn)
+
+
 def plan_since(F):
     t, e, w, C = F.t, F.e, F.w, F.cut
     T = lambda i, off=0.0: F.t(i) - LEAD + off
@@ -2869,7 +2993,8 @@ def plan_since(F):
     # 56 "All week, Mom's been humming that jingle."  Mom at the kitchen sink, her back to us, swaying on the beat
     C(T(56), 'set', room='kitchen', view='back', set=dict(kitchen=1.0), rim=LAMP_R, cam=cm((-1.6, 6.4, 1.55), (-1.4, 9.0, 1.2), S=1050, sx=960, sy=560),
       ppl=[P('mom', 'sink', expr='too_still', act=_A(hum(t(56) - 0.3, None), lambda a, s: a.reach(-1.0, None, 1, out=10.0, down=150.0, fwd=180.0, shape='relaxed', up=0.0, fade=0.01),
-                                                     lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=150.0, fwd=180.0, shape='relaxed', up=0.0, fade=0.01)))],
+                                                     lambda a, s: a.reach(-1.0, None, -1, out=10.0, down=150.0, fwd=180.0, shape='relaxed', up=0.0, fade=0.01),
+                                                     washing_up))],
       c=dict(mv='push', f=1.0, rate=0.02), sfx=[(t(56) - 0.2, 'hum', -8, 0, 'inside', dict(who='mom', dur=2.6)), (T(56), 'water_tap', -14, 0, 'inside', dict(dur=2.5))],
       music=[(t(56), 'jingle', 0.5, 2.6, dict(version='hum'))])
     # 57 "And yesterday, she bought June a new Easter dress."  58 "Yellow."  59 "Exactly like the one in the photo."
@@ -2899,6 +3024,53 @@ CURT0 = 0.8                         # the front curtains before 11:07: open, the
 
 def curtains_close(t0, dur=1.25):
     return lambda tt: CURT0 * (1.0 - ease_in_out(clamp((tt - t0) / dur)))
+
+
+JUNE_WIN = (1.1, 10.0, 2.85 + 1.42)                      # June's lit window from outside (plan x, y, Y)
+OTS_CAM = cm((-1.55, 42.35, 1.35), (0.25, 10.0, 2.3), S=1450, sx=820, sy=520)
+
+
+OTS_CAM2 = cm((-1.95, 42.1, 1.25), (0.6, 10.0, 3.0), S=2300, sx=720, sy=430)
+
+
+def _point_house(a, s, t_lift=None, t_point=None):
+    """The Bunnyman seen from behind (over his left shoulder), his left arm straight out at June's window up in the dark
+    house; t_lift / t_point: the paw comes up (a small dip first) and then the arm straightens at it (else: already)."""
+    W_ = scr(s.sp, JUNE_WIN)
+
+    def aim(tt):
+        # the paw's tip on the screen line from his shoulder to the window, an arm's length out (a little into the
+        # scene): the arm lies along the line of the point, the whole mitten aimed (no single raised digit)
+        sx_, sy_ = a.where(tt, 'shoulder_l', post=False)
+        dx, dy = W_[0] - sx_, W_[1] - sy_
+        L = math.hypot(dx, dy) or 1.0
+        r = 0.31 * a.height
+        return sx_ + dx / L * r, sy_ + dy / L * r
+    if t_lift is None:
+        a.reach_to(s.t0 - 2.0, 1, aim, None, dur=0.01, z=-120.0, contact='tips', shape='relaxed', fade=0.3)
+    else:
+        a.reach(t_lift - 0.1, t_point + 0.15, 1, out=10.0, down=70.0, fwd=40.0, shape='relaxed', up=0.0, fade=0.35)
+        a.reach(t_lift + 0.22, t_point + 0.15, 1, out=60.0, down=10.0, fwd=110.0, shape='relaxed', up=0.0, fade=0.4)
+        a.reach_to(t_point - 0.08, 1, aim, None, dur=0.5, z=-120.0, contact='tips', shape='relaxed', fade=0.3)
+    a.set(s.t0 - 2.0, None, 0.01, h_tilt=-5.0, h_nod=-0.1)
+
+
+POINT_OTS = dict(room='yard', view='house', set=dict(tod='night', june_light=1.0), rim=MOON, cam=OTS_CAM, focus=30.0, dof=0.5)
+POINT_BUNNY = P('bunny', 'treeline', room_light=False, dimk=0.25, face=JUNE_WIN[:2], act=_point_house)
+
+
+JUNE_DOOR_OPEN = 95.0                 # June's door stands open into her room (Mom in the doorway, the lit corridor behind her)
+
+
+def mom_in_doorway(tilt_t=None):
+    """Mom in June's doorway: dead still, eyes locked on the kids, no smile yet; her hands folded in front of her (no
+    A-pose); tilt_t: one slow head tilt."""
+    def act(a, s):
+        a.set(-9, None, 0.1, still=0.9, lock=0.9, pupil=0.75, m_press=0.25, smile=0.05)
+        for sd in (1, -1):                                     # the hands folded in front of her, low and quiet
+            a.reach(-9, None, sd, out=-30.0, down=205.0, fwd=75.0, shape="relaxed", up=0.0, fade=0.01)
+        if tilt_t is not None: a.head_tilt(tilt_t, 7.0, 2.2, back=None)
+    return act
 
 
 def plan_rule1(F):
@@ -2963,38 +3135,45 @@ def plan_rule1(F):
     # 80 "Every year."  81 "Nobody ever told me."
     C(T(80), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=1020, cy=600, scale=0.85, turn=0.2,
       expr='haunted', light=MOON, act=_A(lookxy(700, 640, t(80) - 0.4, t(81) - 0.1, 0.35, z=300.0), lookxy(1000, 380, t(81), None, 0.4, z=700.0)))
-    # 82-83 "Then the Bunnyman stops waving. He lifts one paw and points."
-    tl = w(83, 'lifts')
+    # 82-83 "Then the Bunnyman stops waving. He lifts one paw and points."  the slow wave stops, the paw drops to his
+    # side, a beat of stillness; cut on "lifts" to behind him in the trees: his left paw comes up (a small dip first) and on
+    # "points" the arm straightens at the house, at June's lit window up in the dark wall
+    tl = w(83, 'lifts'); tpt = w(83, 'points')
     C(T(82), 'set', room='yard', view='close', rim=MOON, cam=cm((-2.6, 33.5, 1.0), (-2.6, 39.6, 1.0), S=1700, sx=960, sy=520),
       ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15,
-             act=_A(lambda a, s: a.wave(s.t0 - 2.0, t(82) + 0.5, side=1, slow=True),
-                    lambda a, s: a.point_at(tl, (960, 470), None, side=-1, dur=0.9, z=900.0)))],
+             act=_A(lambda a, s: a.wave(s.t0 - 2.0, t(82) + 0.4, side=1, slow=True), lambda a, s: a.set(t(82) + 0.9, None, 0.8, h_nod=0.06)))],
       c=dict(mv='push', f=1.0, rate=0.02))
+    C(tl - 0.12, 'set', **POINT_OTS, ppl=[dict(POINT_BUNNY, act=lambda a, s: _point_house(a, s, t_lift=tl, t_point=tpt))],
+      c=dict(mv='keys', keys=[(tl - 0.12, 960, 540, 1.0, None, 1.0), (tpt + 0.7, 940, 525, 1.0, 'in_out', 1.08)]))
     # 84 "Not at June."  85 "Not at me."  86 "Past us."
     C(T(84), 'bust', who='june', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=900, cy=610, scale=0.9, turn=-0.15, expr='nervous',
       light=MOON, act=lookxy(1100, 360, -9, None, 0.3, z=700.0))
     C(T(85), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0), cx=1040, cy=610, scale=0.9, turn=0.15, expr='haunted',
       light=MOON, act=lookxy(1000, 360, -9, None, 0.3, z=700.0))
-    C(T(86), 'set', room='yard', view='close', rim=MOON, cam=cm((-5.2, 35.6, 1.2), (-2.6, 39.6, 1.25), S=1500, sx=1080, sy=500),
-      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.1, turn=-0.35,
-             act=lambda a, s: a.point_at(s.t0 - 2.0, (140, 600), None, side=-1, dur=0.01, z=300.0))],
-      c=dict(mv='push', f=1.0, rate=0.03))
+    # 86 "Past us."  closer over his shoulder, a longer lens: the arm aimed at June's lit window, past the two kids in it
+    C(T(86), 'set', **dict(POINT_OTS, cam=OTS_CAM2), ppl=[POINT_BUNNY], c=dict(mv='push', f=1.0, rate=0.03))
     # 87 "I turn around."  the narrator turns from the window to the room; behind, in the lit doorway, Mom (focus pulls to her)
+    # (June's door stands open into the room, the lit corridor behind Mom; Mom is dead calm, no blinks, her right hand
+    # resting on the jamb; she only begins to smile on "She's smiling.")
     tt87 = t(87)
-    MOM_DOOR = P('mom', 'doorway', expr='too_still', turn=0.05, act=_A(pose(-9, None, 0.1, still=0.6)))
-    C(T(87), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=dict(nightlight=1.0, hall=1.0), cx=1060, cy=600, scale=0.88, turn=0.1,
+    MOM_DOOR = P('mom', 'doorway', expr='neutral', turn=0.05, blink=False, act=mom_in_doorway())
+    JD = dict(nightlight=1.0, hall=1.0, door=JUNE_DOOR_OPEN)
+    C(T(87), 'bust', who='narrator', bg=('june', 'door', JUNE_FROM_WINDOW), set=JD, cx=1060, cy=600, scale=0.88, turn=0.1,
       expr='haunted', light=MOON, act=_A(lambda a, s: a.turn(tt87 + 0.05, 0.95, 0.45), pose(tt87 + 0.1, None, 0.45, h_turn=0.7)),
       sfx=[(tt87 + 0.05, 'cloth_rustle', -10, 0, 'close')])
-    C(T(88), 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), rim=MOON, cam=cm((1.6, 9.8, 4.15), (0.85, 6.0, 3.95), S=880, sx=960, sy=520),
+    C(T(88), 'set', room='june', view='door', set=JD, rim=MOON, cam=cm((1.6, 9.8, 4.15), (0.85, 6.0, 3.95), S=880, sx=960, sy=520),
       ppl=[MOM_DOOR, P('june', (0.55, 9.3, 2.85), turn=-1.6, expr='nervous', dimk=0.2)],
       focus=3.9, c=dict(mv='push', f=1.15, rate=0.03), music=[(t(88), 'hit', 0.7)])
-    C(T(89), 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), rim=LAMP, cam=cm((1.0, 8.2, 4.2), (0.8, 5.95, 4.0), S=1350, sx=960, sy=500),
-      ppl=[dict(MOM_DOOR, act=_A(pose(-9, None, 0.1, still=0.6), tilt(t(89) + 0.4, 6.0, 1.8)))], focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
-    C(T(90), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=dict(hall=1.0), cx=960, cy=600, scale=0.9,
-      expr='too_still', light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25), act=_A(pose(t(90), None, 0.9, smile=0.62), lookxy(960, 520, -9, None, 0.3, z=600.0)))
-    C(T(91), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=dict(hall=1.0), cx=960, cy=640, scale=1.08,
-      expr='too_still', light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25),
-      act=_A(pose(-9, None, 0.1, smile=0.6), tilt(t(91) + 0.1, 9.0, 1.6), lookxy(960, 520, -9, None, 0.3, z=600.0)), music=[(e(91) + 0.3, 'hit', 0.8)])
+    C(T(89), 'set', room='june', view='door', set=JD, rim=LAMP, cam=cm((1.0, 8.2, 4.2), (0.8, 5.95, 4.0), S=1350, sx=960, sy=500),
+      ppl=[dict(MOM_DOOR, act=mom_in_doorway(tilt_t=t(89) + 0.5))], focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
+    C(T(90), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=JD, cx=960, cy=600, scale=0.9,
+      expr='neutral', blink=False, light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25),
+      act=_A(pose(-9, None, 0.1, h_tilt=7.0, still=0.9, lock=0.9, pupil=0.75, m_press=0.2), lookxy(960, 520, -9, None, 0.3, z=600.0),
+             lambda a, s: a.creep_smile(t(90) - 0.05, dur=1.6, amount=0.85)))
+    C(T(91), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=JD, cx=960, cy=640, scale=1.08,
+      expr='wrong_smile', blink=False, light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25),
+      act=_A(pose(-9, None, 0.1, smile=0.7, still=0.9, h_tilt=7.0), tilt(t(91) + 0.1, 5.0, 1.6), lookxy(960, 520, -9, None, 0.3, z=600.0)),
+      music=[(e(91) + 0.3, 'hit', 0.8)])
 
 
 # ==================================================================================================== THE COMMENT PROMPT: VHS PAUSE (258.0 - 279.5)
@@ -3019,6 +3198,53 @@ def plan_pause(F):
 # ==================================================================================================== RULE 2: THE EGG (279.5 - 359.0)
 HALL_MED = cm((-0.2, 2.6, 1.5), (-0.45, 0.8, 1.35), S=1150, sx=960, sy=470)        # two-shot by the front door, from the hall
 HALL_IN_MED = cm((-0.4, 0.12, 1.55), (-0.35, 1.6, 1.45), S=820, sx=960, sy=500)    # from the door, looking into the hall
+DOOR_AJAR = 32.0                    # the front door "just a crack" (degrees): wide enough for the porch light and an arm
+
+
+def door_latch_edge(ang):
+    """Plan point (x, y) of the front door leaf's latch edge (inside face) at angle ang (degrees)."""
+    a = math.radians(ang)
+    return (ST.FDOOR[0] + math.cos(a) * (ST.FDOOR[1] - ST.FDOOR[0]), -0.05 + math.sin(a) * (ST.FDOOR[1] - ST.FDOOR[0]) + 0.03)
+
+
+def door_gap_pt(ang, Y=1.2):
+    """Plan point (x, y, Y) in the middle of the crack between the leaf's latch edge and the jamb."""
+    ex, ey = door_latch_edge(ang)
+    return ((ex + ST.FDOOR[1]) / 2, (ey + 0.0) / 2, Y)
+
+
+def door_spill_layer(sp, ang_fn, k=1.0, reach=1.9):
+    """The porch light through the crack of the front door: a warm sliver standing in the gap (the jamb's edge lit) and
+    a fan of warm light on the hall floor from the threshold toward the room, growing with the door angle. Drawn just
+    after the hall shell, before the door leaf (the leaf covers the part of the fan behind it) and the people."""
+    v = sp.view
+
+    def draw(pen, t):
+        ang = ang_fn(t) if callable(ang_fn) else ang_fn
+        o = clamp(ang / 12.0) * k
+        if o <= 0.01: return
+        ex, ey = door_latch_edge(ang)
+        jx, jy = ST.FDOOR[1], 0.0
+        # the fan on the floor: from the threshold gap into the hall, spreading toward the stairs side
+        a0, a1 = (jx, 0.0, jy + 0.02), (ex, 0.0, ey)
+        far0 = (jx + 0.55 * reach / 1.9, 0.0, jy + reach)
+        far1 = (ex - 0.1, 0.0, ey + reach * 0.85)
+        path = v.poly3([a0, a1, far1, far0])
+        if not path.isEmpty():
+            m0 = v.p((jx + ex) / 2, 0.0, (jy + ey) / 2); m1 = v.p((far0[0] + far1[0]) / 2, 0.0, (far0[2] + far1[2]) / 2)
+            pen.linear(path, m0[0], m0[1], m1[0], m1[1], [(0, '#ffcf8a', 150 * o), (0.35, '#ffb868', 70 * o), (1, '#ff9a48', 0)])
+        # the lit edge of the crack: the outside's warm light standing in the gap, brightest low and at the knob height
+        g = v.poly3([(jx - 0.012, 0.0, jy), (ex + 0.01, 0.0, ey - 0.01), (ex + 0.01, ST.FDOOR[2], ey - 0.01), (jx - 0.012, ST.FDOOR[2], jy)])
+        if not g.isEmpty():
+            pen.fill(g, '#ffcf8a', 70 * o, blur=6)
+        lx0, ly0 = v.p(jx - 0.01, 0.05, jy); lx1, ly1 = v.p(jx - 0.01, ST.FDOOR[2] - 0.05, jy)
+        pen.seg((lx0, ly0), (lx1, ly1), max(1.5, 0.012 * v.s(jx, jy)), '#ffe2b0', 170 * o)
+    d = max(0.3, v.d(-0.2, 0.3))
+    lay = Layer(d, draw, 'door_spill', blur=7.0, blend='plus')
+    lay.order = ST.ORDER_SHELL - 0.4
+    return lay
+
+
 OVEN = lambda a, s: (a.set(-9, None, 0.01, hl_shape='oven', hr_shape='oven'),
                      a.reach(-9, None, -1, out=-34.0, down=180.0, fwd=210.0, shape='oven', up=0.0, fade=0.01),
                      a.reach(-9, None, 1, out=-34.0, down=180.0, fwd=210.0, shape='oven', up=0.0, fade=0.01))
@@ -3104,17 +3330,27 @@ def plan_rule2(F):
       sfx=[(T(115), 'egg_rattle', 0, 0, 'close', dict(dur=1.7, hard=True))])
     # 116 "I open the door."  117 "Just a crack."  from the foot of the stairs: the deadbolt, the knob, the door opens a crack
     # (the porch light in the gap) and the narrator leans to it (the egg is picked up off screen: the next shot has it)
-    tdb = t(116) + 0.05; tcr = w(117, 'crack') - 0.25
+    tdb = t(116) + 0.05; tcr = t(116) + 0.85
+    door116 = lambda tt, a=tcr: DOOR_AJAR * ease_in_out(clamp((tt - a) / 0.8))
 
     def door_acts(A, s, sp):
+        # the deadbolt, then the knob, which travels with the leaf as it is pulled open; the narrator stands on the hinge
+        # side of the gap (clear of the leaf's swing), so the crack at the jamb opens in full view of the camera on the
+        # latch side; the eyes go to the gap
         n = A['narrator']
+        fd = ST.front_door(0.0)
+
+        def knob_at(tt):
+            kx, kY, ky = fd.knob(door116(tt), 'b')
+            return scr(sp, (kx, ky, kY))
         n.reach_to(tdb - 0.25, 1, scr(sp, 'deadbolt'), t1=tdb + 0.35, dur=0.3, contact='tips', shape='grip', z=-40.0)
-        n.reach_to(tdb + 0.35, 1, scr(sp, 'knob'), t1=None, dur=0.3, contact='palm', shape='grip', z=-40.0)
-        n.head_to(tcr + 0.45, scr(sp, (0.08, -0.05, 1.42)), 'eyes', dur=0.55, max_lean=0.18)
-        return []
-    C(T(116), 'set', room='hall', view='door', cam=cm((0.25, 1.75, 1.45), (-0.3, 0.0, 1.0), S=900, sx=960, sy=500),
-      set=dict(hall=0.3, porch=1.0, door=lambda tt, a=tcr: 20.0 * ease_in_out(clamp((tt - a) / 0.6))), rim=NIGHT,
-      ppl=[P('narrator', (-0.2, 0.5, 0.0), face=(-0.2, 0.0), expr='haunted')], acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
+        n.reach_to(tdb + 0.35, 1, knob_at, t1=None, dur=0.3, contact='palm', shape='grip', z=-40.0)
+        n.set(tcr + 0.3, None, 0.5, h_turn=0.3, lean=0.12)
+        return [door_spill_layer(sp, door116)]
+    C(T(116), 'set', room='hall', view='door', cam=cm((0.28, 2.65, 1.5), (-0.3, 0.1, 1.0), S=1000, sx=980, sy=500),
+      set=dict(hall=0.25, porch=1.0, door=door116), rim=NIGHT,
+      ppl=[P('narrator', (-0.3, 0.62, 0.0), face=(-0.02, 0.12), expr='haunted')],
+      acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
       sfx=[(tdb, 'deadbolt', -4, 0, 'inside'), (tcr, 'door_creak', -4, 0, 'inside', dict(kind='front_door', crack=True))])
     # ... the egg is picked up through the crack: low on the doormat, the door ajar above, the narrator's hand (hoodie
     # cuff) comes down out of the gap, closes on the egg and takes it inside
@@ -3170,11 +3406,14 @@ def plan_rule2(F):
         ts_, ev = n.open_egg(tsplit - 0.6, dur=1.3)
         n.look_at(s.t0, lambda tt: n.grip_point(tt, -1, 'egg', post=False), None, 0.3)
         return []
-    C(T(118), 'set', room='hall', view='door', cam=cm((-0.9, 1.7, 1.45), (-0.3, 0.6, 1.2), S=1350, sx=960, sy=520),
-      set=dict(hall=0.3, porch=1.0, door=14.0), rim=PORCH,
-      ppl=[P('narrator', (-0.45, 0.85, 0.0), turn=0.25, expr='haunted')], acts=open_acts, c=dict(mv='push', f=1.0, rate=0.025))
+    # (from the latch side: the door still ajar behind the narrator, the porch light in the crack and on the floor)
+    C(T(118), 'set', room='hall', view='door', cam=cm((0.22, 2.2, 1.42), (-0.5, 0.7, 1.3), S=1650, sx=900, sy=560),
+      set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), rim=PORCH,
+      ppl=[P('narrator', (-0.5, 0.95, 0.0), face=(0.05, 2.1), expr='haunted')],
+      acts=lambda A, s, sp: (open_acts(A, s, sp) or []) + [door_spill_layer(sp, DOOR_AJAR, k=0.8)], c=dict(mv='push', f=1.0, rate=0.025))
     # 119 "Inside, rolling around, is a gold ring."  120 "My dad's wedding ring."  121 "Engraved on the inside: M and L, forever."
-    C(T(119), 'ins', name='egg_halves', kw=lambda tr: dict(k_open=ease_out_cubic(clamp(0.6 + tr / 1.2))), c=dict(mv='keys', keys=[(T(119), 860, 600, 1.0, None, 1.1), (T(120), 800, 620, 1.0, 'push', 1.6)]),
+    # (the narrator's own view down at the hands in the hall: the cup in the right palm, the ring rolling, settling)
+    C(T(119), 'ins', name='egg_halves_hand', anim=True, c=dict(mv='keys', keys=[(T(119), 960, 560, 1.0, None, 1.0), (T(120), 1010, 520, 1.0, 'push', 1.22)]),
       sfx=[(T(119) + 0.3, 'ring_roll', -4, 0, 'close', dict(dur=1.6))], music=[(w(119, 'gold'), 'hit', 0.6)])
     C(T(120), 'ins', name='ring', c=dict(mv='push', rate=0.035))
     C(T(121), 'ins', name='ring_inside', c=dict(mv='keys', keys=[(T(121), 960, 470, 1.0, None, 1.0), (T(122), 980, 440, 1.0, 'push', 1.35)]))
@@ -3182,7 +3421,7 @@ def plan_rule2(F):
     C(T(122), 'bust', who='dad', bg=('kitchen', 'table'), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=960, cy=600, scale=0.88, turn=-0.2,
       expr='warm_smile', light=MEMORY, act=pose(t(122), None, 0.6, smile=0.65))
     # 123 "Not once."  124 "The Bunnyman has my father's wedding ring."  the ring pinched beside the face, tears
-    C(T(123), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=14.0), cx=960, cy=560, scale=0.82, light=PORCH, expr='shock',
+    C(T(123), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), cx=960, cy=560, scale=0.82, light=PORCH, expr='shock',
       act=_A(lambda a, s: a.hold_prop('ring', 1, -1.0, None), lambda a, s: a.reach(-1.0, None, 1, out=55.0, down=-80.0, fwd=220.0, shape='grip', up=0.0, fade=0.01),
              lambda a, s: a.reach(t(123) + 0.3, None, 1, out=45.0, down=-92.0, fwd=235.0, shape='grip', up=0.0, fade=2.4),
              pose(-1.0, None, 0.01, h_nod=0.05, h_turn=-0.1, look_x=-0.42, look_y=0.05, _gaze=1.0), ex('cry', t(124) - 0.3, None, 1.2)),
@@ -3195,48 +3434,72 @@ def plan_rule2(F):
     # one shot up the flight from the bottom: Mom standing on the 9th step, then coming down toward us
     ttk = w(127, 'takes') - 0.1
     C(T(126), 'set', room='hall', view='foot', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
-      ppl=[P('mom', 'step9', path=[(T(127) - 0.05, 'step9'), (ttk + 0.1, 'step2')], surface='stairs', expr='too_still',
+      ppl=[P('mom', 'step9', path=[(T(126) + 0.9, 'step9'), (ttk + 0.05, 'step1')], surface='stairs', expr='too_still',
              act=lookxy(960, 980, -9, None, 0.3, z=200.0))],
       c=dict(mv='push', f=1.0, rate=0.015))
 
-    def ring_acts(A, s, sp, tg=ttk + 0.2):
+    RING_CAM = cm((-0.15, 2.95, 1.5), (-0.2, 0.6, 1.3), S=1150, sx=960, sy=500)     # side-on two-shot: Mom (stairs side) left, the narrator right, the ajar door between them
+
+    def ring_acts(A, s, sp, tg=ttk + 0.8):
+        # Mom comes off the stairs to the narrator, takes the ring with her right hand (the hand toward us), lifts it in
+        # front of her face and turns a little toward us as she stares at it: the eyes on the ring, the smile draining
         n, m = A['narrator'], A['mom']
         ring = CH.PropTrack('ring', 0, 0, sp.anchors['door_inside'].ppm / 100.0 if 'door_inside' in sp.anchors else 3.0)
         ring.held(-1e9, n, 1)
         n.hold_prop('ring', 1, -1e9, tg + 0.6)
         n.reach(-1.0, tg + 0.1, 1, out=40.0, down=150.0, fwd=210.0, shape='grip', up=0.0, fade=0.5)
-        n.look_at(s.t0, (m, 'eyes'), None, 0.3)
-        m.look_at(s.t0, (n, 'hand_l'), tg + 1.2, 0.35)
-        tc = n.give(ring, tg, 1, m, -1, dur=1.2)
-        held = lambda tt: (m.where(tt, 'eyes', post=False)[0] + 0.07 * m.height, m.where(tt, 'eyes', post=False)[1] + 0.06 * m.height)
-        m.reach_to(tc + 0.4, -1, held, t1=None, dur=0.8, contact='grip', prop='ring', z=170.0, fade=0.6)
-        m.look_at(tc + 0.6, ring, None, 0.6)
-        m.expr('dead_stare', tc + 1.0, None, 0.8)
+        n.look_at(s.t0 + 0.3, (m, 'eyes'), tg + 0.2, 0.3)
+        n.look_at(tg + 0.3, ring, None, 0.35)
+        m.look_at(tg - 0.3, (n, 'hand_l'), tg + 0.9, 0.35)
+        tc = n.give(ring, tg, 1, m, -1, dur=1.0)
+        held = lambda tt: (m.where(tt, 'eyes', post=False)[0] + 0.085 * m.height, m.where(tt, 'eyes', post=False)[1] + 0.03 * m.height)
+        m.reach_to(tc + 0.25, -1, held, t1=None, dur=0.75, contact='grip', prop='ring', z=170.0, fade=0.6)
+        m.look_at(tc + 0.45, ring, None, 0.5, z=170.0)
+        m.set(tc + 0.7, None, 0.5, look_x=0.85, look_y=0.25, lock=0.0, _gaze=1.0, smile=0.05, m_press=0.35)
+        m.turn(tc + 0.5, s.sp.view.turn_for(0.2, 1.0, -0.4, 0.9), 0.9)
+        m.expr('dead_stare', tc + 0.9, None, 1.2)
+        m.blink(tc + 2.3, dur=0.22)
         return []
-    # (the front door still ajar behind them: nobody has shut it yet; Mom comes off the bottom step to the narrator)
-    C(ttk, 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=1.0, door=14.0), rim=LAMP,
-      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'),
-           P('mom', (0.62, 1.05, 0.0), path=[(ttk, (0.62, 1.05, 0.0)), (ttk + 0.75, (-0.05, 1.2, 0.0))], face=(-0.6, 0.85), expr='too_still')],
-      acts=ring_acts, c=dict(mv='push', f=1.0, rate=0.015), focus_on='mom')
-    # 128 "Then she doesn't throw it in the fire."  her stare at the ring, held beside her face
-    C(T(128), 'bust', who='mom', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=14.0), cx=1000, cy=600, scale=0.85, turn=-0.25, expr='dead_stare', light=LAMP,
-      act=_A(lambda a, s: a.hold_prop('ring', -1, -1.0, None), lambda a, s: a.reach(-1.0, None, -1, out=60.0, down=-70.0, fwd=230.0, shape='grip', up=0.0, fade=0.01),
-             pose(-1.0, None, 0.01, look_x=0.45, look_y=0.1, _gaze=1.0)), c=dict(mv='push', x=980, y=560, zrate=0.02))
-    # 129 "She puts it in her pocket."
-    tpk = t(129) + 0.15
+    # (the front door still ajar behind them, the porch light in the crack between them; nobody has shut it yet)
+    # (Mom steps off the bottom tread behind the newel post and comes round it: she is behind the stair rail until she
+    # clears it, then in front of it: her draw order switches as she passes the post)
+    tsw = ttk + 0.68
+    C(ttk, 'set', room='hall', view='door', cam=RING_CAM, set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), rim=LAMP,
+      ppl=[P('narrator', (-0.55, 0.95, 0.0), face=(0.2, 1.0), expr='haunted'),
+           P('mom', 'step1', path=[(ttk, 'step1'), (ttk + 0.4, (0.58, 0.68, 0.0)), (ttk + 0.88, (0.2, 1.0, 0.0))], face=(-0.55, 0.95), expr='too_still',
+             order=lambda tt: 1.62 if tt < tsw else 1.0)],
+      acts=lambda A, s, sp: (ring_acts(A, s, sp) or []) + [door_spill_layer(sp, DOOR_AJAR, k=0.7)], c=dict(mv='push', f=1.0, rate=0.015), focus_on='mom')
+    # 128 "Then she doesn't throw it in the fire."  close: her stare locked on the ring she holds up in front of her face
+    # (her right hand: the forearm rises from her near elbow below the frame), a slow blink, the smile gone
+    RING_B = dict(cx=1020, cy=600, scale=0.85)
+    ex_, ey_ = bust_eyes('mom', RING_B['cx'], RING_B['cy'], RING_B['scale'])
+    ring_tip = lambda tt: (ex_ + 250 + 6 * math.sin(tt * 1.3), ey_ + 120 + 4 * math.sin(tt * 0.9 + 1.0))
+    RING_HAND = dict(shape='grip', side=-1, angle=212.0, size=330.0)
 
-    def pocket_acts(A, s, sp, tpk=tpk):
-        n, m = A['narrator'], A['mom']
-        m.hold_prop('ring', -1, -9.0, tpk + 0.45)
-        m.reach(-1.0, tpk - 0.1, -1, out=60.0, down=40.0, fwd=210.0, shape='grip', up=0.0, fade=0.3)
-        pk = lambda tt: (m.where(tt, 'hip', post=False)[0] + 0.02 * m.height, m.where(tt, 'hip', post=False)[1] + 0.01 * m.height)
-        m.reach_to(tpk, -1, pk, t1=tpk + 0.8, dur=0.45, contact='tips', z=90.0, fade=0.5)
-        m.look_at(tpk + 0.5, (n, 'eyes'), None, 0.5)
-        n.look_at(s.t0, (m, 'hand_r'), None, 0.3)
-        return []
-    C(T(129), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=1.0, door=14.0), rim=LAMP,
-      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
-      acts=pocket_acts, c=dict(mv='push', f=1.05, rate=0.02), focus_on='mom', sfx=[(tpk + 0.45, 'cloth_rustle', -8, 0, 'inside', dict(kind='pocket'))])
+    def ring_hand_fn(tt):
+        tip = ring_tip(tt)
+        wx, wy = wrist_for(tip, RING_HAND['shape'], RING_HAND['side'], RING_HAND['angle'], RING_HAND['size'], 'mom')
+        return (wx, wy, RING_HAND['angle'], 1.0, RING_HAND['size'])
+
+    def ring_pinch(A, s, sp):
+        def draw(pen, tt):
+            x, y = ring_tip(tt)
+            ST.draw_ring(pen, x - 4, y - 16, 62, tilt=0.82, t=tt, band=0.25, engraving=False)
+            g = 0.5 + 0.5 * math.sin(tt * 2.6)
+            pen.fill(oval(x - 18, y - 30, 7 + 3 * g, 4), '#fff6d0', 160 + 80 * g, blur=2)
+        return [Layer(0.88, draw, 'ring_pinch', blur=0)]
+    C(T(128), 'bust', who='mom', bg=('hall', 'door', RING_CAM), set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), turn=0.3, expr='dead_stare', light=LAMP, **RING_B,
+      hands=[dict(who='mom', fn=ring_hand_fn, size=RING_HAND['size'], shape=RING_HAND['shape'], side=RING_HAND['side'], depth=0.9,
+                  sleeve_from=lambda tt: (ring_tip(tt)[0] - 520, 1500))],
+      acts=ring_pinch,
+      act=_A(lambda a, s: a.expr('dead_stare', -9, None, 0.01), lambda a, s: a.blink(t(128) + 1.4, dur=0.3),
+             pose(-1.0, None, 0.01, h_nod=0.1, h_turn=0.12, look_x=0.9, look_y=0.42, lock=0.0, _gaze=1.0),
+             pose(t(128) + 0.2, None, 1.6, smile=0.0, m_press=0.45)),
+      c=dict(mv='push', x=1060, y=560, zrate=0.02))
+    # 129 "She puts it in her pocket."  the insert: her fingers slide the ring into the patch pocket of her cardigan
+    tpk = t(129) + 0.15
+    C(T(129), 'ins', name='ring_pocket', anim=True, c=dict(mv='push', rate=0.02),
+      sfx=[(T(129) + 1.05, 'cloth_rustle', -8, 0, 'close', dict(kind='pocket'))])
 
 
 # ==================================================================================================== RULE 3: THE KNOCK (359.0 - 416.2)
@@ -4039,14 +4302,13 @@ def plan_reveal(F):
     # 342 "Every rule was true."  the laminated rules, each one lighting in turn
     C(T(342), 'ins', name='rules', kw=lambda tr: dict(hl=1 + min(6, int(tr / 0.2)), show=7), c=dict(mv='push', rate=0.03), music=[(t(342), 'hit', 0.6)])
     # 343 "Don't look at the treeline, so we'd never see who she was pointing at."
-    C(T(343), 'set', room='yard', view='close', cam=cm((-5.2, 35.6, 1.2), (-2.6, 39.6, 1.25), S=1500, sx=1080, sy=500), set=dict(tod='night'), **RECALL, rim=MOON,
-      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.1, turn=-0.35, act=lambda a, s: a.point_at(s.t0 - 2.0, (140, 600), None, side=-1, dur=0.01, z=300.0))],
-      c=dict(mv='push', f=1.0, rate=0.03), cut='static')
-    C(w(343, 'who') - 0.1, 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0), **RECALL, rim=LAMP,
+    C(T(343), 'set', **POINT_OTS, **RECALL, ppl=[POINT_BUNNY], c=dict(mv='push', f=1.0, rate=0.03), cut='static')
+    C(w(343, 'who') - 0.1, 'set', room='june', view='door', set=dict(nightlight=1.0, hall=1.0, door=JUNE_DOOR_OPEN), **RECALL, rim=LAMP,
       cam=cm((1.0, 8.2, 4.2), (0.8, 5.95, 4.0), S=1350, sx=960, sy=500),
-      ppl=[P('mom', 'doorway', expr='too_still', turn=0.05, act=pose(-9, None, 0.1, still=0.6, smile=0.5))], focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
+      ppl=[P('mom', 'doorway', expr='wrong_smile', turn=0.05, blink=False, act=_A(mom_in_doorway(), pose(-9, None, 0.1, smile=0.6)))],
+      focus_on='mom', c=dict(mv='push', f=1.0, rate=0.02))
     # 344 "Don't open the egg, so we'd never see her proof."
-    C(T(344), 'ins', name='egg_halves', kw=dict(k_open=1.0), **RECALL, cut='static', c=dict(mv='keys', keys=[(T(344), 860, 600, 1.0, None, 1.3), (T(345), 820, 610, 1.0, 'push', 1.6)]))
+    C(T(344), 'ins', name='egg_halves_hand', kw=dict(still=True), **RECALL, cut='static', c=dict(mv='keys', keys=[(T(344), 1010, 520, 1.0, None, 1.15), (T(345), 1030, 500, 1.0, 'push', 1.35)]))
     # 345 "Count the knocks in your head, so by morning, counting to seven would feel like nothing."  the door and the count
     k0 = T(345) + 0.4
     C(T(345), 'set', room='hall', view='door', set=dict(hall=0.4), **RECALL, rim=LAMP, cut='static', c=dict(mv='push', f=2.0, rate=0.012),

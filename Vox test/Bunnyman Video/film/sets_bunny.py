@@ -4749,7 +4749,8 @@ def ob_hall(view='door', hall=1.0, console=0.0, porch=0.0, upstairs=0.0, door=0.
     if door_live: o['door'] = lambda t: 0.0                              # the shell skips the static door; drawn live below
     main = HallRoom()
     far = [LivingRoom(), KitchenRoom(), UpstairsHall()]
-    out = lambda pen, v_: _outside_porch(pen, v_, tod, egg)
+    porch_lit = (porch if not callable(porch) else 1.0) if tod != 'dawn' else 0.0
+    out = lambda pen, v_: _outside_porch(pen, v_, tod, egg, light=porch_lit)
     grade = 'ob_dawn' if tod == 'dawn' else ('ob_night' if (_kfn(hall, 0)(0) > 0.1 or lamp) else 'ob_dark')
     dynl = []
     if door_live:
@@ -4768,14 +4769,14 @@ def ob_hall(view='door', hall=1.0, console=0.0, porch=0.0, upstairs=0.0, door=0.
     return sp
 
 
-def _outside_porch(pen, v, tod='night', egg=False):
+def _outside_porch(pen, v, tod='night', egg=False, light=0.0):
     """Seen through the open front door: the porch boards, the railing, the steps, the doormat (+ the egg), the dark lawn,
-    Orchard Road, the street lamp."""
+    Orchard Road, the street lamp; light = the porch lantern (on while the hall's porch light is on)."""
     sky_dome(pen, v, 'dawn' if tod == 'dawn' else 'night', moon=False)
     vg = lifted(v, GROUND_Y)
     ground(pen, vg, -60.0, -2.4, tod='dawn' if tod == 'dawn' else 'night', c='#1e2e28')
     road_front(pen, vg, tod)
-    porch_front(pen, v, tod, egg=egg, part='all')
+    porch_front(pen, v, tod, light=light, egg=egg, part='all')
 
 
 # --- the upstairs corridor
@@ -6711,7 +6712,7 @@ def _ins_ring(pen, t, view='palm', **kw):
         return
     pen.fill(rect(-400, -300, 2720, 1680), '#14141c')
     pen.radial(None, 700, 200, 1400, [(0, '#5a4a3a', 255), (0.55, '#1e1a1e', 255), (1, '#0c0c12', 255)])
-    _hand_palm(pen, 950, 640, 600, ang=-8)
+    _hand_palm(pen, 950, 640, 600, skin='#e5b99f', sh='#bb8d78', dp='#7a524a', cuff='#7f957a', ang=-8)      # the narrator's right hand, hoodie cuff
     pen.fill(oval(990, 650, 118, 30), '#5a3020', 120, blur=8)
     draw_ring(pen, 965, 615, 230, tilt=0.45, t=t, band=0.2, engraving=False)
 

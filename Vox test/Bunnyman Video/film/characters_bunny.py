@@ -906,7 +906,10 @@ def _bunny_figure(c, who, P, det, t, light=None, upper_only=False):
     for side in (-1, 1):
         S, E, Wr = _arm_data(sp, B, P, side)
         arm_z[side] = (B.p3(*S)[3], B.p3(*Wr)[3])
-    behind = [s_ for s_ in (-1, 1) if arm_z[s_][0] < -20 and arm_z[s_][1] < 40]
+    # an arm goes behind the body when its shoulder is the far one, or (a back view, a hand reaching in front of a figure
+    # seen from behind: into the sink, at a door) when its hand is well behind the body's plane: the torso then covers
+    # the forearm and hand, never a front hand painted on the back
+    behind = [s_ for s_ in (-1, 1) if (arm_z[s_][0] < -20 and arm_z[s_][1] < 40) or (arm_z[s_][1] < -45 and arm_z[s_][0] < 25)]
     front = sorted([s_ for s_ in (-1, 1) if s_ not in behind], key=lambda s_: arm_z[s_][1])
     back_view = B.ct < -0.15
     tail_front = B.ct < -0.3
@@ -1760,7 +1763,10 @@ def _figure3(c, who, P, det, t, light=None, upper_only=False):
     for side in (-1, 1):
         S, E, Wr = _arm_data(sp, B, P, side)
         arm_z[side] = (B.p3(*S)[3], B.p3(*Wr)[3])
-    behind = [s_ for s_ in (-1, 1) if arm_z[s_][0] < -20 and arm_z[s_][1] < 40]
+    # an arm goes behind the body when its shoulder is the far one, or (a back view, a hand reaching in front of a figure
+    # seen from behind: into the sink, at a door) when its hand is well behind the body's plane: the torso then covers
+    # the forearm and hand, never a front hand painted on the back
+    behind = [s_ for s_ in (-1, 1) if (arm_z[s_][0] < -20 and arm_z[s_][1] < 40) or (arm_z[s_][1] < -45 and arm_z[s_][0] < 25)]
     front = sorted([s_ for s_ in (-1, 1) if s_ not in behind], key=lambda s_: arm_z[s_][1])
     back_view = B.ct < -0.15
     hx, hy, hrot, hs = _head_xf(sp, B, P)
@@ -1896,6 +1902,19 @@ def _front_cardigan3(c, sp, B, rows, P, det, t):
     for k in range(5):
         X, Y, vv, s_ = B.surf(0, yC + 6 + k * (B.y_hip - 40 - yC) / 4.5, 6, False, rows)
         if vv > 0.12: c.shape(oval(X, Y, 5.0 * s_), cl['button'], lw * 0.4)
+    # two patch pockets just above the ribbed hem (where the ring goes: "She puts it in her pocket.")
+    for sd in (-1, 1):
+        x0_, x1_ = sd * 17, sd * (b['hip'] * 0.78)
+        yt, yb = B.y_hip - 92, B.y_hip - 47
+        pk, v = _surf_poly(B, rows, [(x0_, yt), (x1_, yt), (x1_ * 0.98, yb), (x0_, yb)], dz=3)
+        if v > 0.08:
+            pp = smooth(pk, True, 0.25)
+            c.fill(pp, mix(cl['top'], cl['top_sh'], 0.25)); c.line(pp, lw * 0.5, LINE, 200)
+            band, _ = _surf_poly(B, rows, [(x0_, yt + 9), (x1_, yt + 9)], dz=3)
+            c.line(poly(band, False), lw * 0.45, cl['top_sh'], 200)
+            if getattr(P, 'ring_pocket', 0.0) > 0.5 and sd == -1:   # the ring's little lump in her right pocket
+                X, Y, vv, s_ = B.surf(sd * (b['hip'] * 0.45), yb - 12, 4, False, rows)
+                if vv > 0.1: c.line(oval(X, Y, 4.2 * s_, 2.6 * s_), lw * 0.35, cl['top_sh'], 180)
     if det >= 1:
         rb = []
         for k in range(-7, 8):
@@ -2329,8 +2348,14 @@ def _draw_oven_mitt(c, sp, x, y, scale, angle, side, det):
 # (handles), 'upright' = stays upright in the fingers, 'hang' = hangs down from the hand).
 def _p_egg(c, det, t, P=None, kind='pink'):
     col = {'pink': ('#e9a8b6', '#b9788a', '#f6cdd6'), 'gold': ('#e8bd3c', '#a8801c', '#fff0a0')}[kind]
+    tw = math.radians(getattr(P, 'egg_twist', 0.0) or 0.0) if P is not None else 0.0
     e = smooth([(0, -4.6), (2.6, -3.4), (3.2, -0.4), (2.6, 2.4), (0, 3.6), (-2.6, 2.4), (-3.2, -0.4), (-2.6, -3.4)], True, 0.9)
     c.fill(e, col[0]); c.radial(e, -1.0, -1.6, 4.8, [(0, col[2], 200), (0.5, col[0], 0), (1, col[1], 230)])
+    if tw:                                                    # the lid turning on the cup: its sheen slides round, the
+        c.fill(oval(-1.1 + 2.4 * math.sin(tw), -2.3, 0.75, 1.0), col[2], 150)              # seam's ridge ticks over
+        for j in (-1.6, 0.0, 1.6):
+            xj = j + 1.4 * math.sin(tw)
+            if abs(xj) < 2.9: c.line(poly([(xj, -0.55), (xj - 0.35, 0.25)], False), c.lw * 0.4, col[1], 210)
     c.line(smooth([(-3.15, -0.2), (0, 0.5), (3.15, -0.2)], False), c.lw * 0.45, col[1], 230)
     if kind == 'pink' and det >= 1:
         c.fill(rrect(-1.8, 0.9, 3.6, 1.1, 0.3), '#7a4a58', 150)
@@ -3329,13 +3354,19 @@ def _acting_open_egg(self, t0, egg_track=None, dur=1.6, ring=True):
     # reads in any view (front, 3/4 or profile)
     self.reach(t0 - 0.4, None, -1, out=-50.0, down=100.0, fwd=170.0, shape='grip', up=0.0, fade=0.4)
     tgt = lambda t: self.grip_point(t, -1, 'egg', post=False)    # noqa: E731
-    self.reach_to(t0, 1, tgt, t1=ts, dur=0.5 * dur, contact='palm', shape='grip', z=170.0, fade=0.3)
+    # the free hand closes on the egg's top by its GRIP point (where the lid is drawn once it splits): at the split the two
+    # halves sit exactly where the whole egg was (no jump), and the solve lets go slowly while the lid lifts away
+    self.reach_to(t0, 1, tgt, t1=ts + 0.08, dur=0.5 * dur, contact='grip', prop='egg_top', shape='grip', z=170.0, fade=0.5)
+    tw0, tw1 = t0 + 0.5 * dur, ts                             # the twist: both wrists turn against each other, twice
     def fn(P, t):
-        u = prog(t, ts, ts + 0.45 * dur)
-        if t < ts: P.hr_rot += -14.0 * math.sin(PI * prog(t, t0 + 0.35 * dur, ts))
+        u = prog(t, ts, ts + 0.5 * dur)
+        if tw0 <= t < tw1:
+            k = math.sin(PI * prog(t, tw0, tw1))
+            P.hr_rot += -16.0 * k; P.hl_rot += 16.0 * k
+            P.egg_twist = 25.0 * k
         w1 = ease_in_out(prog(t, t0, t0 + 0.5 * dur))        # under the reach_to: the arm is already at the egg when the
         if w1 > 0:                                            # contact solve lets go, so the hand never drops
-            e = ease_in_out(u)
+            e = ease_out_cubic(u) if u > 0 else 0.0
             self._arm(P, 1, w1, -100.0 + 145.0 * e, 95.0 - 40.0 * e, 175.0 - 15.0 * e, 'grip', up=0.0)  # lid up and away
             if e > 0:
                 self._arm(P, -1, e, -50.0, 100.0 - 25.0 * e, 160.0, 'grip', up=0.0)    # the cup comes up to the eyes
