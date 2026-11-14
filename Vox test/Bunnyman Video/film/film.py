@@ -4297,7 +4297,7 @@ def plan_rule4(F):
     C(T(192), 'set', room='hall', view='door', cam=cm((-1.45, 0.78, 1.05), (-0.3, 0.42, 0.78), S=760, sx=1000, sy=560),
       set=dict(hall=0.3, flap=lambda tt, a=tcl: 1.0 - ease_in_out(clamp((tt - a) / 0.2))), rim=NIGHT,
       ppl=[P('june', 'mail_slot_kneel', kind='kneel', knees=1, expr='sad', face=(-0.4, 0.0)),
-           P('mom', (0.02, 0.72, 0.0), face=(-0.4, 0.2), expr='too_still')],
+           P('mom', (-0.05, 0.62, 0.0), face=(-0.4, 0.2), expr='too_still')],
       acts=close_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom', sfx=[(tcl, 'mail_slot', -2, 0, 'inside', dict(kind='close'))])
     # 194 M "Bedtime, bunny."  195 "She's humming."
     C(T(194), 'bust', who='mom', bg=('hall', 'door', SLOT_SIDE), set=dict(hall=0.3), cx=960, cy=620, scale=0.92, turn=-0.3, expr='warm_smile', light=NIGHT_L,

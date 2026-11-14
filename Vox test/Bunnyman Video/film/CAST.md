@@ -125,3 +125,13 @@ These join the older events (`breath`, `cloth_rustle`, `paper`).
 - The narrator reads 16: lighter eye bags (0.2) and forehead folds scaled by age (`characters._wrinkles`).
 - Back views: an arm whose hand is behind the body's plane is drawn behind the torso.
 - `open_egg`: the free hand closes on the egg by its grip point and twists (`pose.egg_twist`), the halves part where the egg was.
+
+## Fix round 1 additions (fixer B)
+- Expression `wistful` (`characters_bunny.EXPR`): June's innocent, sad little smile for "He's sad." (`warm_smile` read as
+  a sly half-lidded smirk on a child).
+- `dale19` (Dale at 19, used on the missing poster) is the face the 55-year-old under the mask pays off.
+- Search dogs: `film.draw_dog` (a side view, 'hound' or 'shepherd', trotting gait, sniffing head, a lead to the handler's
+  hand).
+- Laurie (1987) at the magic trick reacts with `shock_shut` then `kid_grin` (no open-mouth gasp on a narrated line).
+- Hero hands in the new inserts: June's in `diary_lap`, `diary_turn`, `diary_pages` and the crayon finger tracing
+  (`trace_finger`); the narrator's on the front door's knob (`try_knob`).

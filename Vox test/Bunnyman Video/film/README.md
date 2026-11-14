@@ -41,7 +41,7 @@ python3 film.py --bench 1 --consec 10 --shots 0,10,57 --size 2560x1440 --threads
 ```
 (`W` stands for `_work`.) Each command builds the film once (about 5 s) and runs at 960x540 unless `--size` says otherwise. Review sheets are 960x540 frames in 320 px tiles, 8 shots a sheet, each row `#index kind start-end (length)` with the timeline lines it covers printed under it.
 
-- **386 shots** (after fix round 1, fixer A), median 2.48 s (p10 1.31, p90 4.72; longest 10.1 s: the rule cards, the next-episode card and the end card), 21.3 cuts/min (the police film runs 23.4).
+- **391 shots** (after fix round 1, fixer B), median 2.44 s (p10 1.31, p90 4.66; longest 10.1 s: the rule cards, the next-episode card and the end card), 21.6 cuts/min (the police film runs 23.4).
 - **The film is 1087.84 s** (65,270 frames at 60 fps): the narration (1077.99 s) + 9.85 s for the outro. The sound step's outro jingle starts 0.1 s after the last line ends and runs 9.75 s ("...that's just the outro." and the song IS the outro, `audio/music_plan.py`), so the NIGHT POLICY end card holds for it and the film fades out with its last soft hum.
 - **Story layout** (`plan_film`): `plan_open` (0-65.7 s: the cold open, the 1987 parade on tape, the Courier, Laurie walking out of the woods, the hospital, the house and the rules on the fridge), `plan_1987` (the float, the photo with Laurie holding his paw, the magic trick, the woods, the bridge, sunrise 1987, the missing poster), `plan_since` (every Easter since: the treeline, the burn barrel, Grandma's porch light, Dad and his flashlight, the police morning), `plan_rule1` (11:07, the song, the curtains, June at her window, the wave, "Past us.", Mom in the doorway), `plan_pause` (the comment prompt), `plan_rule2` .. `plan_rule7` (midnight's egg, 1:13's knock, 1:40's mail slot, 2:47's attic, 4:30's break-in and the bathroom, 6:12's sunrise and the body), `plan_reveal` (the trick, 1987 and now, the recalls of every rule, the swap), `plan_after` (Mom's body, the police, Holloway State Hospital, the visit, "Want to see a magic trick?"), `plan_outro`, `plan_globals` (the jingle by version, the count, the swap, the climax pulse and heartbeat, the beds the reveal needs).
 - **How it is staged** (the owner's notes on the last films):
@@ -292,6 +292,47 @@ All in `film.py` unless noted; `tools/validate.py` 0 errors (4 known WARNs), `--
   On the masked lines the body acts: uneven sobbing catches that heave the shoulders, a paw rubbing at the glass eye
   (`bunny_cry_bust`, `_sob_beat`); a lunge of the head on "IT'S MY HOUSE!".
 
+## Fix round 1, fixer B (the picture majors and cheap minors before 600 s)
+All in `film.py` unless noted; `tools/validate.py` 0 errors (WARN: 4 known camera holds), `--lipcheck` clean (only the
+masked lines). Shot numbers below are the current ones (`python3 film.py --list`). Evidence: `W/review/fixer_b/`
+(`sheet_a_0-200s.jpg`, `sheet_b_200-400s.jpg`, `sheet_c_400-600s.jpg`, `strips/s1..s6_*.jpg`).
+- **The hook (#0)**: a telephoto of the filthy Bunnyman at the treeline, about a third of the frame, the moon low behind.
+- **June's window (#81, #82)**: no camera-only push through the glass: the yard, treeline and moon through her window
+  (`moon_dir` in `sets_bunny` puts the moon in the window), then a cut on "there" to a telephoto (`WINDOW_TELE`) where he
+  lifts his head to the house. June's "He's sad." face is `wistful` (innocent, not the half-lidded smirk).
+- **1987**: the crowd has arms, faces, hats and kids on shoulders and cheers on a two-frame cycle (`_crowd` frames a/b
+  swapped by `ob_parade` at `CROWD_RATE`); "handing out plastic eggs" shows a pink egg in his paw taken by a kid's hand from
+  the curb (`handout_acts`); "He showed her a magic trick." is a closer two-shot: empty paw, closed, the other paw passes,
+  open: a pink egg in a burst of light, given to her (`trick_acts`; her eyes pop and the grin spreads, no open-mouth gasp
+  on the narrated line); two search dogs on leads with handlers (`draw_dog`, `dogs_acts`), noses down to the trestle, heads
+  up on "lost"; the VHS stamp says APR.16 1987 and the poster LAST SEEN THURSDAY, APRIL 16, 1987 with Dale's own face at 19
+  (`dale19`); the name badge breathes on the fur with a glint, as two framings (a punch-in on "named": no 4.9 s zoom);
+  Laurie's golden egg is cupped in both hands.
+- **Since**: Dad's flashlight beam is a cone onto the grass ahead of him; his close-up is in the yard, not on the porch;
+  the new yellow dress on the closet door is lit warm by the hall light (reads yellow); Mom's early lines (2, 11, 27) have
+  a warm smile beat over her blank resting face; the rule cards mark the sentence being read after the type-on
+  (`_rule_marks`).
+- **Rule 2**: the peephole first sees the empty porch and finds the egg on "Except for an egg"; the egg is old sun-faded
+  matte plastic with scuffs (`sets_bunny._egg_scuffs`), its rattle a bigger rock; at the burn barrel the egg is between both
+  oven mitts from the first frame, her eyes on it, lifted over the rim and dropped on "sets it on fire" into the fire on
+  the burning trash (`_ins_egg_fire` heap), "Nine eggs." shows the old ones melted round it; the pick-up hand comes out of
+  the door gap at knee height, back of the hand up.
+- **Rule 3, Grandma's knock (#142-#147)**: the 2-3-2 is knocked on the oilcloth by her fist on the cue times (insert
+  `knuckles`, cue `knock_door` kind='table' who='grandma'), then a 3/4 two-shot with the six-year-old, then varied close-ups.
+- **Rule 4, the mail slot**: the slot sits at 0.74 m on both faces of the door (`SLOT_Y`); the porch face has its own
+  brass slot plate and flap and his paw holds the flap; the slot's dull brass on the slate door matches in the wide and
+  every insert (`_ins_slot`); Mom says "It took my voice" from the door side, facing us, with the two on the same sides as
+  at the knocks; June comes off the stairs and kneels up at the slot (both shins on the floor) in profile, her close-up
+  faces the slot; "June looks back at Mom" now cuts to Mom humming over her for 1.1 s (#169, was 0.6 s) before "Yeah.";
+  Mom closing the slot stands nearer so her fingertips land on the flap (no REACH miss).
+- **Rule 5**: the two asleep and slumped on the couch, June's head on the narrator's shoulder, her blanket over both of
+  them to mid-shin (`blanket_acts`); "still locked" is the front door's latch edge (chain on, deadbolt thrown) with the
+  narrator's hand closing on the knob and trying it twice (`try_knob`, `knob_turn`, `knob` rattle cues); "in her lap" is
+  the insert `diary_lap`; the crayon is huge crooked letters (each its own size and lean) with June's fingertip tracing
+  under each line as it is read (`trace_finger`); her hand turns the page on "Then Easter, 1987" (`ins_diary_turn`, one
+  hand all the way over, no flip at the spine) and leafs on through three cursive spreads on "page after page"
+  (`ins_diary_pages`: the hand comes in, turns, travels back to the next leaf, turns; `_diary_page_turn`).
+
 ## Open problems
 - **Lying figures in a set view** (`pose.lie`) are still the front view turned 90 degrees, so they only read from straight
   above: the lying beats are custom top-down inserts (`ins_body_above`, `ins_under_bridge`); the set view of the body from the
@@ -300,5 +341,9 @@ All in `film.py` unless noted; `tools/validate.py` 0 errors (4 known WARNs), `--
 - **The masked Bunnyman's lines have no mouth** (by design): `tools/validate.py` lists those three shots as allowed (INFO).
 - **The `porch_egg` camera's own `env`** (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.
 - **Keyed insert moves** that run a little over 4 s on purpose (the push down the peephole to the egg, the move across the diary's last page) and two outro holds are WARNs in the validator, checked by eye.
+- **Fixer B leftovers**: June at the slot close (#173, "Mom closes the mail slot") is drawn nearly frontal although she faces
+  the door (the kneel pose's turn); the Mom armchair shot from the back door (#177) reads a little like standing in front of
+  the chair (the frontal seated figure's foreshortening); the sound cue `magic_sparkle` (#33, the trick) has no recipe in
+  `audio/sfx.py` yet (the mix skips it with a warning).
 - **Sound** (the final mix is done and measured; nobody has listened to it): the riskiest by ear are the synthetic jingle timbres (toy piano, music box, the hums, the girl's singing and crying) and the clarity ceiling's dips under the end of a loud swell (up to 10 dB, 2 % of the speech blocks). Rules 2 and 3 sit about 0.6 LU under rule 1 (rule 1 carries the dying speaker on top of its drone); from rule 4 on every rule is thicker than the one before. The six remaining weak spots are scares landing on their own words by design (spare windows) and the stomach-drop sub in a comma.
 - **Narration re-takes** (from the voice report, still open): "Sleep well.", "At 11:07, the song starts.", "If he knocks, don't answer." and Mom's "And count to seven." (a recogniser hears "seven up") are repaired splices; a fresh TTS take of these four would be safer.
