@@ -3507,6 +3507,56 @@ KNOCK_TAGS = [(-340, -150), (340, -150), (-380, 40), (0, -260), (380, 40), (-300
 GRAN_CAM = cm((-0.75, 5.95, 1.25), (-0.75, 8.45, 0.95), S=1100, sx=960, sy=560)
 
 
+def door_tag(k, tt, zoom=1.0):
+    """Knock count tag k (0..6) on the front door's top panel as the default door camera sees it (above the heads of the
+    two people standing in front of it), spread across the panel; zoom = the shot's push factor about the frame centre."""
+    v = ST.cam('hall_door')
+    x = ST.FDOOR[0] + 0.12 + (ST.FDOOR[1] - ST.FDOOR[0] - 0.24) * k / 6.0
+    px, py = v.p(x, 1.86, 0.0)
+    px, py = 960 + (px - 960) * zoom, 540 + (py - 540) * zoom
+    return (tt, str(k + 1), px, py, 'white' if k < 6 else 'red', 9.0)
+
+
+def mom_waits(a, s):
+    """Mom in the hall at the door: hands folded in front of her, still."""
+    for sd in (1, -1):
+        a.reach(-9, None, sd, out=-30.0, down=205.0, fwd=75.0, shape='relaxed', up=0.0, fade=0.01)
+
+
+def kid_braced(a, s):
+    """The narrator at the door at night: arms drawn in, hands holding the hoodie's front (not hanging straight)."""
+    for sd in (1, -1):
+        a.reach(-9, None, sd, out=-45.0, down=120.0, fwd=85.0, shape='grip', up=0.0, fade=0.01)
+
+
+def knock_acts(knocks, look_t=None, nod_t=None, look_back_t=None):
+    """The knock reactions on a back view of the two at the door: the narrator flinches on every knock and turns the head
+    to Mom at look_t (in profile; back at look_back_t); Mom's head tilts a little with each group and nods at nod_t; the
+    light under the front door shows the shadow of two feet and jolts with each knock."""
+    def acts(A, s, sp):
+        n, m = A.get('narrator'), A.get('mom')
+        ks = [k for k in knocks if s.t0 - 0.3 < k < s.t1 + 0.3]
+        if n is not None:
+            for k in ks: n.flinch(k + 0.03, 0.75)
+            if look_t is not None: n.set(look_t, look_back_t, 0.35, h_turn=-0.55)
+        if m is not None:
+            if ks: m.head_tilt(ks[0] + 0.1, 5.0, 1.8, back=None)
+            if nod_t is not None:
+                m.head_down(nod_t, nod_t + 0.45, 0.4, 0.35)
+        v = sp.view
+
+        def draw(pen, tt):
+            j = sum(math.exp(-max(0.0, tt - k) * 9.0) * (tt >= k) for k in knocks)
+            k_ = 0.85 * (1.0 - 0.25 * min(1.0, j))
+            sh = 0.012 * math.sin(tt * 60.0) * min(1.0, j)
+            ST.gap_glow(pen, v, (ST.FDOOR[0] + 0.03, -0.02), (ST.FDOOR[1] - 0.03, -0.02), 0.0, k_, '#ffcf8a', reach=0.75,
+                        feet=[(0.36 + sh, 0.46 + sh), (0.55 + sh, 0.65 + sh)], side_n=-1.0)
+        lay = Layer(max(0.3, v.d(-0.4, 0.0)), draw, 'door_gap', blur=None)
+        lay.order = ST.ORDER_SHELL - 0.45
+        return [lay]
+    return acts
+
+
 def plan_rule3(F):
     t, e, w, C = F.t, F.e, F.w, F.cut
     T = lambda i, off=0.0: F.t(i) - LEAD + off
@@ -3520,18 +3570,20 @@ def plan_rule3(F):
     ksfx = [(tk, 'knock_door', -1, 0, 'inside', dict(group=gi, index=k, pattern='2-3-2'))
             for k, (tk, gi) in enumerate(zip(knocks, [0, 0, 1, 1, 1, 2, 2]))]
     C(T(135), 'ins', name='clock', kw=dict(time=(1, 13)), c=dict(mv='push', rate=0.03))
-    # "he knocks": the two of them in the hall, facing the front door
-    FAM = [P('mom', (-0.75, 1.4, 0.0), turn=1.9, expr='too_still'), P('narrator', (0.05, 1.55, 0.0), turn=1.95, expr='haunted')]
+    # "he knocks": the two of them in the hall, facing the front door (not a row of statues: the narrator flinches at every
+    # knock and turns to Mom; Mom does not move, only her head tilts as if she counts along; under the door the porch
+    # light shows the shadow of two feet, and the line jolts with each knock). The count tags sit ON the door's top panel.
+    FAM = [P('mom', (-0.75, 1.4, 0.0), turn=1.9, expr='too_still', act=mom_waits), P('narrator', (0.05, 1.55, 0.0), turn=1.95, expr='haunted', act=kid_braced)]
     th = w(135, 'he') - 0.1
     C(th, 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.15, rate=0.02, hit=[(k, 3.0) for k in g1]),
-      tags=[(g1[0], '1', 960 + KNOCK_TAGS[0][0], 540 + KNOCK_TAGS[0][1], 'white', 7.0), (g1[1], '2', 960 + KNOCK_TAGS[1][0], 540 + KNOCK_TAGS[1][1], 'white', 7.0)],
-      tag_sound=False, sfx=ksfx[:2])
+      acts=knock_acts(knocks, look_t=g1[1] + 0.35), tags=[door_tag(k, knocks[k], 1.15) for k in range(2)], tag_sound=False, sfx=ksfx[:2])
     # the door, close: three more (and the count runs on); a pause; two; "Seven."
     tags = [(knocks[k], str(k + 1), 960 + KNOCK_TAGS[k][0], 540 + KNOCK_TAGS[k][1], 'white' if k < 6 else 'red', 9.0) for k in range(7)]
     C(T(136), 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, c=dict(mv='push', f=2.0, rate=0.012, hit=[(k, 4.0) for k in g2 + g3]),
-      tags=[tg for tg in tags if tg[0] < T(137) + 2.6], tag_sound=False, sfx=ksfx[2:5])
+      acts=knock_acts(knocks), tags=[tg for tg in tags if tg[0] < T(137) + 2.6], tag_sound=False, sfx=ksfx[2:5])
     C(T(139) - 0.25, 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.35, rate=0.015, hit=[(k, 3.5) for k in g3]),
-      tags=[(tg[0] if tg[0] > T(139) - 0.25 else T(139) - 0.25, ) + tg[1:] for tg in tags], tag_sound=False, sfx=ksfx[5:],
+      acts=knock_acts(knocks, look_t=t(141) - 0.2, nod_t=t(141) + 0.05),
+      tags=[door_tag(k, max(knocks[k], T(139) - 0.25), 1.35) for k in range(7)], tag_sound=False, sfx=ksfx[5:],
       music=[(t(141), 'hit', 0.65)])
     # 142 "Mom nods."  143-144 M "That's him. That's how he knocks, every year."
     C(T(142), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=960, cy=610, scale=0.9, expr='too_still', light=LAMP,
@@ -3576,14 +3628,20 @@ def plan_rule3(F):
         hits += [a0 + 0.17 * k for k in range(n_)]
     C(T(155), 'ins', name='knuckles', era='memory', anim=True, kw=lambda tr, h=tuple(hh - T(155) for hh in hits): dict(hits=h),
       c=dict(mv='push', rate=0.02), sfx=[(hh, 'knock_door', -3, 0, 'memory', dict(kind='table', index=k)) for k, hh in enumerate(hits)])
-    # 158 "Somebody at our front door knows my grandmother's secret knock."
-    C(T(158), 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.3, rate=0.03))
+    # 158 "Somebody at our front door knows my grandmother's secret knock."  the shadow of the feet still under the door;
+    # the narrator's head turns to Mom, then back to the door
+    C(T(158), 'set', room='hall', view='door', set=dict(hall=0.4), rim=LAMP, ppl=FAM, c=dict(mv='push', f=1.3, rate=0.03),
+      acts=knock_acts([], look_t=w(158, 'grandmother') - 0.2, look_back_t=e(158) - 0.6))
     # 159 "And my mother, standing right next to me, doesn't recognize it at all."  from the door: both faces; I look at her
+    # (a 3/4 two-shot from the narrator's side by the door: the narrator nearest, Mom beyond, both facing the door; the
+    # narrator's eyes dart to her and back, a swallow; Mom stares at the door, blank, hands folded; both breathe)
     tmo = w(159, 'mother')
-    C(T(159), 'set', room='hall', view='in', set=dict(hall=0.4), rim=LAMP, cam=HALL_IN_MED,
-      ppl=[P('mom', (-0.75, 1.4, 0.0), turn=0.08, expr='too_still', act=lookxy(980, 470, -9, None, 0.3, z=400.0)),
-           P('narrator', (0.05, 1.55, 0.0), turn=-0.12, expr='haunted')],
-      acts=lambda A, s, sp: [A['narrator'].look_at(tmo, (A['mom'], 'eyes'), None, 0.45, body=0.2)] and [], c=dict(mv='push', f=1.0, rate=0.012), focus_on='mom')
+    C(T(159), 'set', room='hall', view='in', set=dict(hall=0.4), rim=LAMP, cam=cm((0.62, 0.45, 1.52), (-0.55, 1.55, 1.42), S=1100, sx=980, sy=500),
+      ppl=[P('mom', (-0.75, 1.4, 0.0), face=(-0.6, 0.0), expr='neutral', blink=False, act=_A(mom_waits, pose(-9, None, 0.1, lock=0.9, still=0.95, smile=0.0, m_press=0.3))),
+           P('narrator', (0.05, 1.55, 0.0), face=(-0.2, 0.0), expr='haunted', act=kid_braced)],
+      acts=lambda A, s, sp: [A['narrator'].look_at(tmo - 0.1, (A['mom'], 'eyes'), w(159, 'recognize') - 0.2, 0.3, body=0.1),
+                             A['narrator'].set(tmo + 0.9, tmo + 1.25, 0.12, h_nod=0.12, m_press=0.6)] and [],
+      c=dict(mv='push', f=1.0, rate=0.012), focus_on='narrator')
     # "... doesn't recognize it at all.": her face, blank, polite, waiting (nothing in it knows that knock)
     trc = w(159, 'recognize') - 0.35
     C(trc, 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=960, cy=620, scale=0.95, turn=-0.05, expr='too_still', light=LAMP, blink=False,
