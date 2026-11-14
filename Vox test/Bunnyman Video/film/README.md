@@ -197,8 +197,46 @@ Everything below is in `audio/`; run from `film/`. The verdicts, the music map a
   1 min each; the first run spends 2 min analysing the tracks into `W/cache/score/`).
 
 ## Sound: the final mix
-`bash audio/final_mix.sh` (from anywhere; about 7 min, peaks at 9 GB of RAM: never while a render runs) rebuilds everything after a picture change: `film.py --cues`, then `audio/mix.py ... --plan full --hits-db 4 --voice-ride 2.0` to `W/mix/final/` (`mix_en.wav`, the hard link `mix.wav`, `stems/`, `mix_report.json`, `cues_used/` = the two sheets as mixed), then `audio/measure_mix.py W/mix/final --plot` (`measure.txt`, `measure.json`, `measure_cues.json`, `measure_plot.png`), then the mux onto the preview `W/preview/preview_mix.mp4` (`--no-preview` skips it). `python3 audio/mix.py --check W/cues W/mix/final` says whether the mix is stale against the picture's sheets.
-- Not run for this film yet (the next sound step). The measurements that stood here were the dummy film's mix and no longer apply. The picture holds its end card to 1089.0 s for the outro song (see The shot list).
+Rebuild after a picture change, from anywhere (about 16 min; the mix peaks at 12 GB of RAM: never while a render runs, never two at once, and never edit `final_mix.sh` while it runs: bash reads it as it goes):
+```
+bash "Vox test/Bunnyman Video/film/audio/final_mix.sh"          # cues -> mix -> measure -> scene sheets -> preview_mix.mp4
+```
+1. `python3 film.py --cues`: the cue sheets from the picture (`W/cues/`).
+2. `audio/mix.py ... --plan full --hits-db 4 --voice-ride 2.0` -> `W/mix/final/mix_en.wav` (+ the hard link `mix.wav`, `stems/`, `cues_used/` = the two sheets as mixed, `mix_report.json`, `mix.log`). About 14 min.
+3. `audio/measure_mix.py W/mix/final --plot` -> `measure.txt`, `measure.json`, `measure_cues.json`, `measure_plot.png`.
+4. `audio/mix_scenes.py W/mix/final` -> `scenes/NN_name.png` (36 scene sheets: spectrogram, cues, score events, stem levels).
+5. The mix onto `W/preview/preview.mp4` -> `W/preview/preview_mix.mp4` (`--no-preview` skips it).
+
+- **If the picture changed**, re-render the preview first (the mix is muxed onto it; about 8 min): `rm -rf _work/preview_tmp && python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav && mv _work/preview_tmp/film.mp4 _work/preview/preview.mp4 && rm -rf _work/preview_tmp`, then `bash audio/final_mix.sh`.
+- **If the narration changed**: the Narration order (`vo_edit.py build`, `vo_edit.py check`, `rm -rf _work/align && python3 tools/align.py --write-pauses`, `vo_report.py`), then the preview, then `final_mix.sh`. The sound plans (`music_plan.py`, `sfx_plan.py`) are anchored to lines and words, so they follow the new timing.
+- `python3 audio/mix.py --check W/cues W/mix/final` says whether the mix is stale against the picture's sheets.
+
+**The final mix** (`W/mix/final/mix.wav` = `mix_en.wav`, 1087.84 s, 48 kHz 24-bit stereo; on the preview: `W/preview/preview_mix.mp4`):
+
+| measure (`measure.txt`) | value |
+|---|---|
+| integrated / true peak / LRA | -14.05 LUFS / -1.67 dBTP / 3.2 LU |
+| voice, music, SFX, bed (integrated, rel the mix / the voice) | voice +0.47 LU over the mix; music -14.8, SFX -19.0, bed -14.2 LU under the voice |
+| voice minus bed while a line is spoken (400 ms blocks) | p1 6.5, p5 8.5, p50 17.8 LU; under 6 LU 0.62 %, under 3 LU 0.22 %, under 0 LU 0.07 % of speech (before this pass: p1 2.6, under 6 LU 3.2 %) |
+| the same in the 1-4 kHz band | p1 4.4, p5 11.9, p50 28.7 dB; under 6 dB 1.39 % (was 1.87 %) |
+| weak spots | 6, all at scares that land on their own word by design (the face reveal over "It's", the window on "explodes", "IT'S MY HOUSE!", the hit on "key") and the stomach-drop sub in the comma after "drops," (-1.2 LU); 25+ before |
+| SFX cues re-checked | 263 one-shots, 0 flags (21 before: masked foley, two late or early transients, thin on a phone) |
+| silences | 29 (1.6 / min), median depth 34 dB; the three shallow ones (16.95, 113.87, 991.56 s) are the jingle / hums playing in them by design; "Then nothing." and the cut on "Seven." are true silences (after "Seven." the mix sits 50-56 LU under its integrated level: only the dawn room tone) |
+| music | present 94.7 % of the time outside the authored silences; no holes; bed 3 s p10 / p50 / p90 -22.7 / -16.1 / -11.6 LU, bed in gaps +1.7 LU over the bed under speech |
+| events | 4.0 hits / min, 15.2 one-shot cues / min, 7 rule stings |
+
+- **Tension curve** (bed rel the voice by section): cold open -15.7, 1987 -14.4, the house and June -15.7, rule 1 -14.2 (the dying speaker on its drone), rule 2 -14.9, rule 3 -14.8 (the knocks alone in a 6 s drop-out), rule 4 -14.0, rule 5 -14.0, rule 6 -13.4, sunrise (false relief) -15.6, the unmasking -11.4, the dress and the count -12.6, the reveal -14.1, the swap -10.6, the aftermath -17.1, June's visits -17.9, "Easter is in nine days." under a 5.3 s drop-out (the bed about 40 LU under the line), the outro -22.2 and the outro song (the jingle's cheerful version and its last hum, the end card held to 1087.84 s).
+- **The hardest hits** (the bed's loudest 100 ms moments over the mix's integrated): the face reveal +4.1 LU, the swap on "Seven." +3.3, then Mom in the doorway +1.2, "Back to bed" +0.3, GET OUT +0.1; every other hit is under 0.
+- **The jingle comes back 24 times** (the score's identity stem, before the voice-keyed ducks, rel the voice): the VHS commercial under "Hop, hop, hop along" -10.2 LU, Mom's hums -12.4 / -14.4 / -14.6, the float's PA at the parade -10.6, the child's hum out of the woods -13.3, Mr. Otter for June -13.6, the dying speaker in the woods -11.5 (loudest 400 ms -6.0), Grandma's music box -14.5, the girl's broken song through the slot -9.1, Mary Had a Little Lamb on the crayon diary -11.9, the count phrase on "For the magic trick" -12.3 and on Mom's "Close your eyes. And count to seven." -10.1, the seven count notes -4.9 to -10.5 (Seven cut dead), the old body's hums -17.0 / -15.4, the music box winding down after "nine days" -12.1, the outro -9.9. The 2-3-2 knock is on the tune's beat in rule 3, in Grandma's memory and in the recap.
+
+**What the mix pass after the channel rename changed** (all measured, nothing listened to):
+- `audio/mix.py`: the **voice clarity ceiling** (`CLARITY_MARGIN_LU` 6, `CLARITY_MAX_CUT_DB` 10): while a line is spoken the bed is cut by its excess over the voice's own 400 ms level - 6 LU (2 % of the speech blocks are cut; the hits' spare windows are left alone); the music / beds duck holds 0.12 s after each syllable (`DUCK_HOLD_S`); **true silences** (plan silences at level >= 0.95) also cut the SFX events and hits buses (the swap's ring sat 26-31 dB into the silence after "Seven."); the score renders from a **fixed seed** (`SCORE_SEED`: the old seed was the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot); the hits limiter's boosted ceiling is graded (the face reveal and the swap +6 dB, the other boosted hits +3 dB).
+- `audio/sfx.py`: stingers must hit (at most 8 s, peak within 0.3 s of the onset: both rule recall cards were playing a 26 s sub sting, late and inaudible on a phone); footsteps and knocks get a high shelf until their top is within 12 dB of the whole (`PHONE_FIX`, `phone_presence`: thin on a phone before); a single wood footstep lands its -12 dB onset on the foot plant (some grains rose 50-200 ms before the plant); the flashlight click's grain starts 3 ms before its onset (it read 45 ms early).
+- `audio/sfx_plan.py` EDIT: the masked gusts and foley raised (cold open, "Neither was the suit.", Dad's steps, June's stair, Mom with the dress, the cop, the midnight walk to the door, the hospital corridor), the inaudible gust under the reveal dropped, Dad's flashlight in the memory space, the 1987 trade's flash -3 dB (its tail sat over "...in someone else."), the recap's family knock -9 dB (was -13, 19 LU under); EDIT changes can now set `space`.
+- `audio/score.py`: a silence that opens on an identity cue keeps the identity stem only if the cue plays on into it; the count's "Seven" note stops at the cut, so the "Six" note no longer rings through the silence after "Seven." (with the true-silence cut above, that silence now measures about -85 LU of music and -50 LU of room tone under the mix's level).
+- `audio/music_plan.py`: the rule-by-rule arc (track gains: rule 1's drone -1.5, rules 2-6 +0.5..+1.5 dB; rules 2-3's calm stretches +0.05 intensity), the stomach-drop sub 0.55 -> 0.42.
+- `film.py`: the LIKE icon and its knock land in the comma after "like," (on the word they sat 5.3 LU over it); 3:00 AM sits above the phone on the next-time card (the caption covered it).
+- `audio/measure_mix.py`: grass steps count as slow-onset like the other footsteps.
 
 ## Open problems
 - **Lying figures** (`pose.lie`) are the front view turned 90 degrees: they read from the side or from above (June asleep, the mascot curled on the gravel in 1987 seen from under the trestle, the body at the foot of the stairs seen from the top of the flight), never along their length.
@@ -206,4 +244,5 @@ Everything below is in `audio/`; run from `film/`. The verdicts, the music map a
 - **The masked Bunnyman's lines have no mouth** (by design): `tools/validate.py` lists those three shots as allowed (INFO).
 - **The `porch_egg` camera's own `env`** (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.
 - **Keyed insert moves** that run a little over 4 s on purpose (the push down the peephole to the egg, the move across the diary's last page) and two outro holds are WARNs in the validator, checked by eye.
-- **Sound**: the picture's music events are suggestions and the score is placed by `audio/music_plan.py`; the final mix for this film is the next sound step (`bash audio/final_mix.sh`, never while a render runs).
+- **Sound** (the final mix is done and measured; nobody has listened to it): the riskiest by ear are the synthetic jingle timbres (toy piano, music box, the hums, the girl's singing and crying) and the clarity ceiling's dips under the end of a loud swell (up to 10 dB, 2 % of the speech blocks). Rules 2 and 3 sit about 0.6 LU under rule 1 (rule 1 carries the dying speaker on top of its drone); from rule 4 on every rule is thicker than the one before. The six remaining weak spots are scares landing on their own words by design (spare windows) and the stomach-drop sub in a comma.
+- **Narration re-takes** (from the voice report, still open): "Sleep well.", "At 11:07, the song starts.", "If he knocks, don't answer." and Mom's "And count to seven." (a recogniser hears "seven up") are repaired splices; a fresh TTS take of these four would be safer.

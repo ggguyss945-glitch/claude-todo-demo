@@ -1842,7 +1842,11 @@ class Score:
             # hum on "And she was humming.", the music box after "Easter is in nine days.") leaves the show stem alone:
             # the drop-out is there to expose that tune, not to mute it; a silence later inside a playing tune still
             # cuts it (the dying speaker's drop-outs, Grandma's music box on "Not once.")
-            if not any(x['type'] in ('jingle', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0 for x in self.ev):
+            # (the Bunnyman's final mix: only a cue that plays on into the silence spares it: the count's "Seven" note
+            # starts 0.3 s before the cut to silence and stops there, so it no longer kept the show stem ungated and
+            # the "Six" note rang on through the silence after "Seven.")
+            if not any(x['type'] in ('jingle', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0
+                       and float(x['t']) + float(x.get('len') or 4.0) > t0 + 0.5 for x in self.ev):
                 self.gate_show = np.minimum(self.gate_show, g)
             gh = np.interp(tt, [t0 - 0.05, t0 + 0.2, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
             self.gate_hits = np.minimum(self.gate_hits, gh)
