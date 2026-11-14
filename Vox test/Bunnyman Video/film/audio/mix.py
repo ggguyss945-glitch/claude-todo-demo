@@ -380,7 +380,7 @@ def score_stems(cues, dur, force_fallback=False):
         try:
             import importlib
             score = importlib.import_module('score')
-            st = score.render(cues, dur)
+            st = score.render(cues, dur, seed=SCORE_SEED)
             if isinstance(st, dict) and st:
                 log('score.py stems:', ', '.join(st))
                 return st, 'score.py'
@@ -580,9 +580,13 @@ HIT_DUCK_HI_DB = 10.0   # final mix v2: the hits above 150 Hz duck 10 dB under a
 HIT_CUT_DB = 3.0     # final mix: the hits bus also gets the voice-keyed 1-4.5 kHz bell cut (the hit's body is low: the
                      # cut keeps the next words readable while the hits come up --hits-db)
 FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
-DUCK_HOLD_S = 0.35   # the Bunnyman's final mix: the music / beds duck holds 0.35 s after each syllable (commas are cut to
-                     # 0.12-0.30 s, sentence gaps 0.35-0.6 s): the score breathes in the paragraph gaps and the rule cards,
-                     # not under the tail of every phrase (measure_mix: the weak spots were the score's release there)
+DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.12 s after each syllable, so the dips inside
+                     # words and the shortest commas do not pump the score; sentence gaps still breathe (a 0.35 s hold kept
+                     # the duck on 97 % of the film and the bed came up only 0.6 LU in the gaps, the references 2.5-3 LU)
+CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the bed stays this far under the narration's own
+CLARITY_MAX_CUT_DB = 8.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
+SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
+                     # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
 TRUE_SILENCE_LEVEL = 0.95   # silence events at or over this level are true silences: the SFX events and hits buses
                             # (hit tails, the swap's ring) are cut with the score, the room tone (beds) stays at -6 dB
 
@@ -958,6 +962,11 @@ def main():
     spare = np.ones(N, np.float32)
     bwin = np.zeros(N, np.float32)          # the three boosted scares' spare windows (the hits limiter lets them up)
     big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
+    # the Bunnyman: the hierarchy of the boosted scares: the face reveal and the swap (boost >= 3.5) are the hardest and
+    # get the whole +6 dB of the hits limiter's boosted ceiling; Mom in the doorway, "Back to bed", GET OUT and the
+    # narrator's swap get +3 dB, so the two hardest stand out over them
+    bgrade = {round(float(e['t']), 3): (1.0 if float(e.get('boost') or 0) >= 3.5 else 0.5) for e in mc['events']
+              if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0}
     # the Bunnyman: a planned hit may carry 'spare' (s): its spare window is that long even past the next word (the face
     # reveal lands on the cut, 0.1 s before "It's a man.": the transient and body ride over "It's", "man" stays clear)
     forced = {round(float(e['t']), 3): float(e['spare']) for e in mc['events'] if e.get('spare')}
@@ -973,10 +982,51 @@ def main():
         a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue
         spare[max(0, a):min(N, b)] = 0.0
-        if long_: bwin[max(0, a):min(N, b)] = 1.0
+        if long_: bwin[max(0, a):min(N, b)] = next((v for k, v in bgrade.items() if abs(k - h) < 0.01), 1.0)
         if c > b:
             r = np.linspace(0, 1, c - b, dtype=np.float32)[:max(0, min(N, c) - b)]
             spare[b:b + len(r)] = np.minimum(spare[b:b + len(r)], r)
+    # the voice always clear (the Bunnyman's final mix): while a line is spoken the bed (music + SFX) stays
+    # CLARITY_MARGIN_LU under the narration's own 400 ms level (K-weighted blocks every 50 ms, as measure_mix.py reads
+    # them); where it does not (a swell peaking on a line's last word, a loud bar of a track under a quiet word, a hit's
+    # tail), the bed is pulled down by the excess (at most CLARITY_MAX_CUT_DB), over the whole block, smoothed. The hits'
+    # spare windows (the scares that ride over a line by design) are left alone.
+    clar = None
+    if CLARITY_MARGIN_LU is not None:
+        hb_, wb_ = 0.05, 0.4
+        kb_ = int(round(wb_ / hb_)); seg_ = int(round(hb_ * SR))
+        vbl = -0.691 + 10 * np.log10(SX._blocks(key, wb_, hb_) + 1e-20)
+        Lk = SX.lufs_int(key)
+        nb_ = len(vbl); tb_ = np.arange(nb_) * hb_ + wb_ / 2 + t0           # block centres, film time
+        inl = np.zeros(nb_, bool)
+        for l_ in tl['lines']:
+            inl |= (tb_ >= float(l_['t']) + 0.1) & (tb_ <= float(l_['end']) - 0.1)
+        ns_ = N // seg_
+        sp_seg = spare[:ns_ * seg_].reshape(ns_, seg_).min(1)
+        sp_blk = np.ones(nb_, np.float32)
+        for k_ in range(kb_):
+            sl_ = sp_seg[k_:k_ + nb_]
+            sp_blk[:len(sl_)] = np.minimum(sp_blk[:len(sl_)], sl_)
+        clar = dict(vbl=vbl, speech=inl & (vbl > Lk - 18.0) & (sp_blk > 0.99), kb=kb_, seg=seg_)
+        log(f'clarity: {int(clar["speech"].sum())} of {nb_} blocks are speech the bed must stay '
+            f'{CLARITY_MARGIN_LU:.0f} LU under')
+
+    def clarity_gain(bed):
+        """Per-sample gain that keeps the bed CLARITY_MARGIN_LU under the narration while it speaks (see above)."""
+        bbl = -0.691 + 10 * np.log10(SX._blocks(bed, 0.4, 0.05) + 1e-20)
+        n_ = min(len(bbl), len(clar['vbl']))
+        over = bbl[:n_] - (clar['vbl'][:n_] - CLARITY_MARGIN_LU) + 0.5
+        cut = np.where(clar['speech'][:n_], np.clip(over, 0.0, CLARITY_MAX_CUT_DB), 0.0)
+        kb = clar['kb']
+        cs = maximum_filter1d(np.concatenate([cut, np.zeros(kb - 1)]), size=kb, origin=(kb - 1) // 2, mode='constant')
+        cs = uniform_filter1d(maximum_filter1d(cs, size=3), size=3)       # 150 ms ramps into and out of each cut
+        ts = (np.arange(len(cs)) + 0.5) * 0.05; gs = 10 ** (-cs / 20)
+        g = np.empty(N, np.float32); step = SR * 20                       # in 20 s chunks (no full-length float64)
+        for a_ in range(0, N, step):
+            b_ = min(N, a_ + step)
+            g[a_:b_] = np.interp(np.arange(a_, b_) / SR, ts, gs)
+        return g, float(cut.max()) if len(cut) else 0.0, float((cut > 0.5).mean()) if len(cut) else 0.0
+
     # the hits split at 150 Hz: the duck (HIT_DUCK_HI_DB) and the voice-keyed bell take only the part above it; the sub
     # body is never ducked (the weight stays) but the whole hits bus is pre-limited under a ceiling that drops while the
     # narration speaks, so the master limiter never pulls a line down under a hit's tail
@@ -1018,7 +1068,11 @@ def main():
         wm = (mfrac / np.maximum(mfrac + sfrac, 1e-9)).astype(np.float32); del mfrac, sfrac
         m += hb * wm[:, None]; s += hb * (1.0 - wm)[:, None]; del hb, wm
         bed, gr, gg = glue(m + s)
-        m *= gg[:, None]; s *= gg[:, None]
+        m *= gg[:, None]; s *= gg[:, None]; del gg
+        if clar is not None:
+            cg, cmax, cfrac = clarity_gain(bed)
+            bed *= cg[:, None]; m *= cg[:, None]; s *= cg[:, None]; del cg
+            clar['stat'] = (cmax, cfrac)
         return bed, m, s, gr
 
     # ---------------- solve the music gain on the EN key so the bed sits at voice + bed_rel
@@ -1093,6 +1147,9 @@ def main():
              'music_present_pct': round(100 * float((short_term_rel(m_out, Lv0) > -20).mean()), 1),
              'glue_gr_p95_db': round(gr, 2), 'limiter_max_gr_db': round(lim_db, 2),
              'limiter_over_1dB_pct': round(100 * lim_frac, 2), 'master_gain_db': round(float(gdb), 2)}
+        if clar is not None and 'stat' in clar:
+            r['clarity_cut_max_db'] = round(clar['stat'][0], 1)
+            r['clarity_blocks_cut_pct'] = round(100 * clar['stat'][1], 2)
         del bed
         report['langs'][lang] = r
         log(lang, json.dumps(r))

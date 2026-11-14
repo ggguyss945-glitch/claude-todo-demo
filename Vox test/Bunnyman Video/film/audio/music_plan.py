@@ -110,14 +110,17 @@ FLATTEN = {'afterthoughts_beyza': 0.5, 'the_haunted_luella_gren': 0.45, 'end_of_
 # slug -> level trim (dB) of the track in its sections: the sub drones read quiet (dark_tunnels 125 Hz, a_massive_mist
 # 112 Hz, dark_forebodings 174 Hz centroids: the delivery and dummy films measured +3 dB needed); the near-silent pads
 # need lifting; the new melodic tracks (The Haunted, Sleep Forever, Cursed Path, Mermaid) are mid-band and loud: down
-GAIN = {'dark_tunnels_ethan_sloan': 3.0, 'a_massive_mist_ethan_sloan': 2.0, 'dark_forebodings_ethan_sloan': 2.5,
+GAIN = {'dark_tunnels_ethan_sloan': 3.0, 'a_massive_mist_ethan_sloan': 0.5, 'dark_forebodings_ethan_sloan': 2.5,
         'end_of_rain_beyza': 3.0, 'annihilated_blue_saga': 3.0, 'are_you_alone_victor_lundberg': 4.0,
-        'turning_stones_stefan_ekstrom': 3.5, 'the_haunted_luella_gren': -1.0, 'sleep_forever_luella_gren': -2.0,
+        'turning_stones_stefan_ekstrom': 4.5, 'the_haunted_luella_gren': -1.0, 'sleep_forever_luella_gren': -2.0,
         'the_cursed_path_of_everlasting_loneliness_polar_nights': -2.0, 'mermaid_s_story_jerry_lacey': -3.0,
-        'midnight_wanderer_luella_gren': -1.0, 'tefu_sayuri_hayashi_egnell': 2.0,
+        'midnight_wanderer_luella_gren': 0.5, 'tefu_sayuri_hayashi_egnell': 2.0,
         # final mix: the bed thickens rule by rule (the first full mix measured rules 2-4 flat at -15.6 LU, rule 7's
         # false relief at -21 LU): rule 4 +2, rule 5 +1.5, rule 6 +1 dB
-        'escalation_jon_bjork': 3.5, 'in_continuum_dream_cave': 2.5, 'one_hampus_naeselius': 1.5}
+        # the mix after the channel rename measured the bed rel voice by rule: 1 -13.9 (the dying speaker on top of
+        # its drone), 2 -14.9, 3 -14.6, 4 -14.2, 5 -13.9, 6 -12.9: rule 1 louder than rules 2-4. Rule 1's drone -1.5,
+        # rule 2 +1.5, rule 3 +1, rule 4 +1, rule 5 +0.5, rule 6 +0.5 dB, so each rule sits over the one before
+        'escalation_jon_bjork': 4.5, 'in_continuum_dream_cave': 3.0, 'one_hampus_naeselius': 2.0}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [

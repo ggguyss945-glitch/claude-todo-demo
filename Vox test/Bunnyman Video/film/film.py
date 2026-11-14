@@ -4330,7 +4330,9 @@ def plan_outro(F):
       c=dict(mv='push', x=960, y=600, zrate=0.03), music=[(t(405) + 0.3, 'stinger', 0.45)])
     # 406 "If this story made you glance at a window, even once, leave a like, so I know the trick worked."
     C(T(406), 'set', room='living', view='window', set=dict(lamp=0.0, curtains=1.0), rim=NIGHT, **O, c=dict(mv='push', f=1.0, rate=0.02))
-    C(w(406, 'leave') - 0.1, 'card', mode='like', hit_t=w(406, 'like') + 0.05, **O)
+    # the LIKE lands like a knock in the comma after "like," (the final mix: on "like" itself the knock sat 5.3 LU over
+    # the word's end), so the icon slams in with the knock, just before "so I know the trick worked"
+    C(w(406, 'leave') - 0.1, 'card', mode='like', hit_t=w(406, 'so') - 0.17, **O)
     # 407 "And subscribe."  Grandma's porch light switches on
     C(T(407), 'set', room='yard', view='house', set=dict(back_light=dict(on=t(407) + 0.35), kitchen=0.0), **O, rim=MOON, c=dict(mv='push', f=1.6, rate=0.015),
       sfx=[(t(407) + 0.35, 'light_switch', -6, 0, 'outside', dict(kind='porch'))])

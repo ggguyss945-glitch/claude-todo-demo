@@ -49,7 +49,8 @@ EDIT = [
     ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': 1.0}, 'the mascot and Laurie walking into the woods (22 LU under; '
      'at -2 still 19-20 LU under the braam and the line)'),
     ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': 3.0}, 'the run up the stairs (19 LU under)'),
-    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -13.0}, 'her knock under the line (6.5 LU over it)'),
+    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -9.0}, 'her knock under the line (6.5 LU over it '
+     'at -1; 19.2 LU under at -13; mix.py\'s clarity ceiling now keeps it under the words)'),
     ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),
     ('window_smash', 's236', 'e236+0.3', {}, {'gain_db': 1.0}, '"explodes" stays readable (+1.1 LU over the line)'),
     ('door_crash', 's237', 'e237', {}, {'gain_db': 0.0}, '"crashes open" stays readable (+2 LU over the line)'),
@@ -73,6 +74,10 @@ EDIT = [
     ('wind_gust', 's334-0.3', 's334+0.5', {}, {'drop': True}, 'a gust 32.5 LU under the reveal\'s music and line: '
      'inaudible, the woods bed carries the place'),
     ('footsteps_wood_inside', 's370', 'e370', {'who': 'cop'}, {'add_db': 4.0}, 'the cop crossing the hall (22.3 LU under)'),
+    ('footsteps_wood_inside', 's104', 's106', {'who': 'narrator'}, {'add_db': 2.0}, 'to the front door at midnight (18.3 LU '
+     'under)'),
+    ('footsteps_wood_inside', 's376', 'e377', {}, {'add_db': 2.0}, 'June and my old body in the hospital corridor (18.4 LU '
+     'under)'),
 ]
 
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
