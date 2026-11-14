@@ -131,7 +131,7 @@ python3 render.py --size 640x360 --fps 30 --workers 2 --out W/preview_tmp --audi
 python3 render.py --workers 2 --from_ 460.9 --to 465.9 --out W/tests/render5 --audio W/align/vo_en.wav   # a 5 s full-mode test
 P=2 bash tools/final_chain.sh > W/logs/final_chain.log 2>&1      # FINAL: 2560x1440 / 60 fps in 24 chunks, then deliver.sh
 ```
-- **The preview** is `W/preview/preview.mp4`: 640x360, 30 fps, 1085.93 s (32,578 frames, 156 MB), the edited voiceover; 2 workers, about 9 min (re-rendered whole in fix round 2; to patch a range instead, render it with `--from_/--to` on whole frames, then trim + concat + re-encode with the same x264 settings, as verify round 1 did). `render.py` writes `film.mp4` into its `--out`: render into a scratch dir such as `W/preview_tmp`, then move `film.mp4` to `W/preview/preview.mp4`. `bash audio/final_mix.sh` muxes the final mix onto it as `W/preview/preview_mix.mp4`.
+- **The preview** is `W/preview/preview.mp4`: 640x360, 30 fps, 1085.93 s (32,578 frames, 156 MB), the edited voiceover; 2 workers, about 9 min (re-rendered whole in fix round 2, 938.97-944.97 s patched in verify round 2; to patch a range instead, render it with `--from_/--to` on whole frames covering whole GOPs of the preview (keyframes every 60 frames from each worker slice's first frame: check with `ffprobe -show_entries frame=key_frame`), split the old file at those keyframes with ffmpeg's segment muxer (`-map 0:v -c copy -f segment -segment_frames A,B`), concat by stream copy, then re-mux `W/align/vo_en.wav` as `render.py` does (the split drops the audio)). `render.py` writes `film.mp4` into its `--out`: render into a scratch dir such as `W/preview_tmp`, then move `film.mp4` to `W/preview/preview.mp4`. `bash audio/final_mix.sh` muxes the final mix onto it as `W/preview/preview_mix.mp4`.
 - **The full-mode test** is `W/tests/render5_460.9-465.9_2560.mp4` (June creeping down the stairs in her socks, then kneeling at the mail slot): 2560x1440, 60 fps, 300 frames, 2 workers, end to end in 49 s, the voiceover muxed from 460.9 s. Command: `python3 render.py --workers 2 --from_ 460.9 --to 465.9 --out W/tests/render5 --audio W/align/vo_en.wav`, then rename its `film.mp4`.
 - **The final render** goes through `tools/final_chain.sh`: frame-exact chunks from the film's own length (`K=24`, `P` processes; a re-run skips chunks with an OK marker), joined by stream copy into `W/picture/picture.mp4`, frame count checked, then `tools/deliver.sh` makes `W/deliver/If_The_Bunnyman_Asks_You_To_Close_Your_Eyes_EN_1440p60_HEVC.mp4` with `W/mix/final/mix_en.wav` (it needs the final mix first). `tools/encode_chain.sh` is the resumable alternative to `deliver.sh` (capped CRF 17 segments, `enc_seg.sh`). On the shared 4-core machine run two chunks at a time (`P=2`); the picture is about 1-1.5 GB of H.264, so chunks plus the joined file need about 3 GB of disk at the peak. Run it as a harness-tracked background task, not with nohup.
 - **Full mode** (`render.py` without `--stills/--clip`): contiguous slices per worker process (one OpenCV thread each), libx264 crf 16 preset faster, joined by stream copy; workers pass absolute frame indices, so a range render matches the full render frame for frame. Finished slices get a `.done` marker (delete markers and slices before re-rendering a changed film into the same `--out`).
@@ -553,7 +553,34 @@ WARN 4 (the known camera holds #206, #295, #322, #394), INFO 3 (the masked lines
   "I pull June's face out...", "Seven", "Please." and "I turn around. Mom is standing in the doorway." (a clip cut ON the m of
   "Mom" hears the doorway hit's burst as a T, "Tom"; with the line before, or from 30 ms earlier, it reads "Mom").
 
+## Verify round 2 (picture)
+Every picture blocker and major (critics 1 and 2, verify round 1's two open majors) was checked again on the fix round 2
+preview: strips across the cuts (1.5-4 fps), 57 full-size 2560x1440 stills from `render.py --stills` (every wide shot, the
+cop insert, the porch slot, June at the slot, the parade crowd, the hallway kneel, the attic, the hospital), and a 1 fps scan
+of the whole preview (23 sheets). Evidence: `W/review/verify2/` (`s1/` the 1 fps sheets, `full/` the full-size grids and
+crops, `A_..K_*.jpg` the topic strips; the sheets were made before the one fix below).
+- **Verify r1 major 1, the cop shot: fixed.** `ins_body_cop` lies flat on the runner, seen straight down; the police light
+  sweeps, the shadow falls in, the hand comes down to the neck and draws back on the closer framing. One flaw fixed here:
+  the hand was `shape='flat'` (the palm with pressed pads), so from overhead it showed its palm to the lens; it is now
+  `'open'` (the back of the hand, nails and knuckles up; `wrist_for` uses the same shape, so the fingertips still land on the
+  neck). Picture only: `film.py --cues --out <scratch>` is byte-identical to `W/cues`; `tools/validate.py` ERROR 0, WARN 4
+  (the known camera holds), INFO 3.
+- **Verify r1 major 2, the porch slot: fixed.** "Mama, it's Laurie." is the outside slot insert (the back of the paw holding
+  the flap up, the mask at the edge); the porch mediums are in profile from the latch side, kneeling, the mask at the slot.
+- **Blockers and majors of critics 1 and 2**: still fixed (the point and the open doorway, the egg ajar / twist / halves, the
+  ring and the pocket, the sink, the knock rows, the unmasking, the three-beat swap). Round 2's minors are confirmed: Mom cold
+  on "That's how he knocks", June kneeling side-on at the slot close, the parade crowd off the float deck, the lid of the
+  empty egg on its rim.
+- **The preview**: 938.97-944.97 s (frames 28169-28348, three whole GOPs of the second render slice) re-rendered at 640x360 / 30
+  (`render.py --from_ 938.9666666667 --to 944.9666666667 --workers 1`) and spliced into `W/preview/preview.mp4` by stream copy
+  at those keyframes (frames outside the range are bit-identical to before); the voiceover track re-muxed exactly as
+  `render.py` does; `preview_mix.mp4` carries the existing mix's AAC stream unchanged (same MD5). 32,578 frames.
+
 ## Open problems
+- **Verify round 2 leftovers (picture minors)**: "Mom has a key." (#273, 734.1 s): for the first 0.45 s the key hangs
+  straight down from her fist beside the keyhole rather than standing in it (the insert before shows the key turning in the
+  lock, so the beat reads); the renderer is not bit-deterministic between runs on some sets (two still renders of the police
+  dawn front differ by about 1 grey level at low frequency), which matters only for range splices (no visible seam here).
 - **Fix round 2 leftovers**: the couch blanket in #176 hangs as a flat sheet; the body seen from the top of the stairs (#277,
   2.4 s) reads as a dark heap; the porch slot is shown from outside by the `slot_out` insert, while the porch mediums are in
   profile with the slot itself at his mask (the plate edge-on); Grandma's music box still sits over one frame of "when she was

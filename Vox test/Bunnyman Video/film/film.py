@@ -5315,9 +5315,11 @@ def ins_body_cop(pen, t, off=0.0, zoom=1.0, cx=960.0, cy=540.0, hand_t=1.25, lif
         tip = (lerp(tip0[0], tip1[0], u), lerp(tip0[1], tip1[1], u) + 3.0 * press)
         ang = 12.0
         size = 230.0
-        wx, wy = wrist_for(tip, 'flat', 1, ang, size, 'cop')
+        # (verify r2: 'flat' is the palm with pressed pads, so from straight above the hand reaching down showed its
+        # palm to the lens) 'open' is the back of the hand, nails and knuckles up, as a hand seen from above is
+        wx, wy = wrist_for(tip, 'open', 1, ang, size, 'cop')
         if u > 0.02:
-            hero_hand(pen, 'cop', wx, wy, size, shape='flat', angle=ang, side=1, sleeve_to=(wx + 230, wy - 900),
+            hero_hand(pen, 'cop', wx, wy, size, shape='open', angle=ang, side=1, sleeve_to=(wx + 230, wy - 900),
                       light=dict(DAWN), press=press, t=tt, shadow=(26, 30, 18, 110 * u))
     cv.restore()
 
