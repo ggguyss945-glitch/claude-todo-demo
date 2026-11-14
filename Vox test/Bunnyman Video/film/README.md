@@ -41,7 +41,7 @@ python3 film.py --bench 1 --consec 10 --shots 0,10,57 --size 2560x1440 --threads
 ```
 (`W` stands for `_work`.) Each command builds the film once (about 5 s) and runs at 960x540 unless `--size` says otherwise. Review sheets are 960x540 frames in 320 px tiles, 8 shots a sheet, each row `#index kind start-end (length)` with the timeline lines it covers printed under it.
 
-- **383 shots** (after the polish pass), median 2.50 s (p10 1.31, p90 4.75; shortest 0.69 s, longest 10.1 s: the rule cards, the next-episode card and the end card), 21.1 cuts/min (the police film runs 23.4).
+- **386 shots** (after fix round 1, fixer A), median 2.48 s (p10 1.31, p90 4.72; longest 10.1 s: the rule cards, the next-episode card and the end card), 21.3 cuts/min (the police film runs 23.4).
 - **The film is 1087.84 s** (65,270 frames at 60 fps): the narration (1077.99 s) + 9.85 s for the outro. The sound step's outro jingle starts 0.1 s after the last line ends and runs 9.75 s ("...that's just the outro." and the song IS the outro, `audio/music_plan.py`), so the NIGHT POLICY end card holds for it and the film fades out with its last soft hum.
 - **Story layout** (`plan_film`): `plan_open` (0-65.7 s: the cold open, the 1987 parade on tape, the Courier, Laurie walking out of the woods, the hospital, the house and the rules on the fridge), `plan_1987` (the float, the photo with Laurie holding his paw, the magic trick, the woods, the bridge, sunrise 1987, the missing poster), `plan_since` (every Easter since: the treeline, the burn barrel, Grandma's porch light, Dad and his flashlight, the police morning), `plan_rule1` (11:07, the song, the curtains, June at her window, the wave, "Past us.", Mom in the doorway), `plan_pause` (the comment prompt), `plan_rule2` .. `plan_rule7` (midnight's egg, 1:13's knock, 1:40's mail slot, 2:47's attic, 4:30's break-in and the bathroom, 6:12's sunrise and the body), `plan_reveal` (the trick, 1987 and now, the recalls of every rule, the swap), `plan_after` (Mom's body, the police, Holloway State Hospital, the visit, "Want to see a magic trick?"), `plan_outro`, `plan_globals` (the jingle by version, the count, the swap, the climax pulse and heartbeat, the beds the reveal needs).
 - **How it is staged** (the owner's notes on the last films):
@@ -238,8 +238,62 @@ bash "Vox test/Bunnyman Video/film/audio/final_mix.sh"          # cues -> mix ->
 - `film.py`: the LIKE icon and its knock land in the comma after "like," (on the word they sat 5.3 LU over it); 3:00 AM sits above the phone on the next-time card (the caption covered it).
 - `audio/measure_mix.py`: grass steps count as slow-onset like the other footsteps.
 
+## Fix round 1, fixer A (the picture blockers and the acting / design that runs through the whole film)
+All in `film.py` unless noted; `tools/validate.py` 0 errors (4 known WARNs), `--lipcheck` clean (only the masked lines).
+- **The egg** (rule 2): the front door is pulled open a real crack (`DOOR_AJAR` 32 degrees, `door_latch_edge`, `door_gap_pt`)
+  while the narrator holds the knob, which travels with the leaf; `door_spill_layer` puts the porch light in the gap and a
+  warm fan of it on the hall floor (`sets_bunny._outside_porch` now lights the porch lantern when the hall's porch light is
+  on). The medium is shot from the latch side so the ajar door and its lit crack stay behind the narrator; `open_egg`
+  (`characters_bunny.py`) closes the free hand on the egg by its grip point, so the halves part exactly where the egg was,
+  after a twist of both wrists (`pose.egg_twist` turns the lid's sheen). "Inside, rolling around" is the new insert
+  `egg_halves_hand` (the narrator's view down at the right palm: the cup in it, Dad's ring rolling and settling; the lid
+  in the left hand); the recap uses its settled frame and the outro rewind picks it up. The ring-on-palm insert now has the
+  narrator's skin and hoodie cuff.
+- **The ring**: a side-on two-shot (`RING_CAM`: Mom by the stairs left, the narrator right, the ajar door between them):
+  Mom comes round the newel (her draw order switches as she clears the stair rail), takes the ring, lifts it in front of
+  her face and stares at it as the smile drains; the close-up holds it pinched in her right hand (a hero hand whose forearm
+  rises from her near elbow) with her eyes locked on it and a slow blink; "She puts it in her pocket." is the insert
+  `ring_pocket` (her cardigan now has two patch pockets, `characters_bunny._front_cardigan3`).
+- **The point**: the wave stops on the treeline close; on "lifts" the cut goes over his shoulder from the woods
+  (`OTS_CAM`, `_point_house`): the whole mitten aimed along the line from his shoulder to June's lit window (no single
+  raised digit); "Past us." is a closer over-the-shoulder (`OTS_CAM2`); the recap uses the same.
+- **The doorway**: June's door stands open (`JUNE_DOOR_OPEN` 95) in every doorway shot and the recap; Mom is dead still
+  with her hands folded (`mom_in_doorway`), no blinks, one slow tilt; she only smiles on "She's smiling." (`creep_smile`) and
+  keeps that smile into "I told you...".
+- **Back views** (`characters_bunny._figure3` / `_bunny_figure`): an arm whose hand is well behind the body's plane is drawn
+  behind the torso (Mom's hands in the sink, a hand on a door seen from behind), never a front hand painted on a back.
+  The sink gets a slow scrubbing loop (`washing_up`).
+- **The knocks**: the narrator flinches at every knock and turns to Mom, Mom's head tilts as she counts and nods on
+  "Seven." (`knock_acts`); the light under the front door shows the shadow of two feet and jolts with each knock; the count
+  tags sit in an arch over the door frame, left to right (`door_tag`), never on a body; Mom waits with folded hands
+  (`mom_waits`), the narrator holds the hoodie (`kid_braced`); "standing right next to me" is a 3/4 two-shot from the
+  narrator's side (the eyes dart to her, a swallow).
+- **The climax** on the landing (`SWAP_CAM`, `SW_*`): Mom is screen LEFT in every medium (the first hand over June's eyes
+  at 770 s, "So the first time..." and the swap), so her hand comes from the left as in every close-up. The swap is three
+  beats: June's close-up pulled out of frame by the narrator's hands (busts accept `cx`/`cy` as functions of time), Mom's
+  hand left hanging empty; the two-shot where the narrator kneels into the palm; the ECU of the squeezed lids under her
+  fingers.
+- **The body**: "lies on his back" is seen straight down (`ins_body_above`: the figure lying on the runner it lies on,
+  arms out, the mask shoved off and twisted, the dawn stripe and its dust); every close-up of Dale is from above with the
+  hall floor under his head (`floor_above`, bust `floor=`, `rot=`), the framings vary (the mask, the face, the stubble, the
+  eyes above the caption, the lips, the face going still with one paw twitch on the runner). Dale is gaunter (narrower jaw,
+  sunken temples and cheek hollows, `gaunt` 2.3), with visible grey stubble (`stub_dots`) and cracked lips (`cracked`); the
+  mask can twist (`pose.mask_twist`, `mask_slide`). The 1987 wake-up is `ins_under_bridge` (curled on its side on the
+  gravel, the ties' shadows across it, a paw stirring on "woke").
+- **Faces**: Mom's resting face (`too_still`) is now composed and nearly blank (smile 0.12); her smiles are separate beats;
+  `fury` for "GET OUT OF MY HOUSE." (jaw wide, teeth bared, head thrust at the lens, the frame shaking; before it she squares
+  up with her fists down); the kids' fear on narrated lines keeps the mouth shut (`shock_shut`, `cry_shut`: wide eyes,
+  pressed lips, a swallow). Forehead folds scale with age (`characters._wrinkles`), the narrator's eye bags are lighter.
+- **The Bunnyman now** (`characters_bunny._BUNNY_FUR['dirty']`): grimy grey-brown, the pinks gone dirty mauve, no pink
+  cheek blush, a grey belly panel with an irregular low-contrast smear (no outline ring), mud worked up from the hem;
+  thicker plush limbs; the eyes always clipped to the head; the snapped ear's break shows grey stuffing (not thread marks).
+  On the masked lines the body acts: uneven sobbing catches that heave the shoulders, a paw rubbing at the glass eye
+  (`bunny_cry_bust`, `_sob_beat`); a lunge of the head on "IT'S MY HOUSE!".
+
 ## Open problems
-- **Lying figures** (`pose.lie`) are the front view turned 90 degrees: they read from the side or from above (June asleep, the mascot curled on the gravel in 1987 seen from under the trestle, the body at the foot of the stairs seen from the top of the flight), never along their length.
+- **Lying figures in a set view** (`pose.lie`) are still the front view turned 90 degrees, so they only read from straight
+  above: the lying beats are custom top-down inserts (`ins_body_above`, `ins_under_bridge`); the set view of the body from the
+  top of the stairs is kept short (2.4 s) as the establishing shot.
 - **Kneeling kids seen from behind** read as standing: June at the mail slot is shot from the side and in profile close-ups.
 - **The masked Bunnyman's lines have no mouth** (by design): `tools/validate.py` lists those three shots as allowed (INFO).
 - **The `porch_egg` camera's own `env`** (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.

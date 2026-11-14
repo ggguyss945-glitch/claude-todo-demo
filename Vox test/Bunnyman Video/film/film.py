@@ -59,7 +59,7 @@ import skia
 from engine import *                                                    # noqa: F401,F403
 from engine import hud as H
 from engine import post as _epost
-from engine.core import DW, DH, CFG, clamp, lerp, ease_in_out, ease_out_cubic, ease_out_back, noise1, hash01, prog, image_from
+from engine.core import DW, DH, CFG, clamp, lerp, ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, noise1, hash01, prog, image_from
 import characters as CH
 import sets as ST
 
@@ -465,6 +465,8 @@ def cam_over(cam, base):
     D = max(0.2, math.hypot(lx - ex, ly - ey))
     sy = float(cam.get('sy', 540.0)); sx = float(cam.get('sx', 960.0))
     h = sy + (lY - eY) * S / D
+    if cam.get('pitch'):                                   # a pitched (tilted) camera: its optical axis lands at sy
+        h = sy
     ov = dict(S=S, h=h, eye=eY, x=ex, y=ey, yaw=yaw, cx=sx)
     ov['env'] = cam.get('env', dict(ENV0))
     if cam.get('pitch'): ov['pitch'] = cam['pitch']
@@ -820,14 +822,17 @@ def bust_place(who, cx, cy, scale):
 
 
 def bust_layer(F, sh, who, cx, cy, scale, act=None, expr=None, light=None, depth=1.0, voice=None, name=None, seed=0, talk=True, blink=None):
-    bx, by, bh = bust_place(who, cx, cy, scale)
+    """cx / cy may be functions of t (a bust pulled across the frame); the acting is placed at their start values."""
+    cx0 = cx(sh.t0) if callable(cx) else cx
+    cy0 = cy(sh.t0) if callable(cy) else cy
+    bx, by, bh = bust_place(who, cx0, cy0, scale)
     pre = lambda a_, s_: a_.place(bx, by, bh)
     a = acting(F, sh, who, (lambda a_, s_: (pre(a_, s_), act and act(a_, s_))), seed=seed, expr=expr, voice=voice, talk=talk, blink=blink)
     m = _Memo(a)
     lt = light
 
     def draw(pen, t):
-        CH.draw_bust(pen, who, cx, cy, scale, m(t), light=lt(t) if callable(lt) else lt, t=t)
+        CH.draw_bust(pen, who, cx(t) if callable(cx) else cx, cy(t) if callable(cy) else cy, scale, m(t), light=lt(t) if callable(lt) else lt, t=t)
     lay = Layer(depth, draw, name or 'bust_' + who, blur=0)
     lay._m = m
     return lay, a
@@ -1121,6 +1126,12 @@ def B_bust(F, sh):
         # would be drawn over the face, so they are left out
         layers = [l for l in sp if _draw_order(l) >= p.get('bg_near', 1.3)]
         lens = None; grade = p.get('grade', sp.grade); sfx_fn = sp
+    elif p.get('floor') is not None:
+        # the hall floor seen from above (a face lying on it): boards, the runner across, the dawn light; rotates with the bust
+        fl = dict(p['floor'])
+        rot_ = p.get('rot', 0.0)
+        layers = [Layer(4.0, lambda pen, t, fl=fl, rot_=rot_: floor_above(pen, t, rot=rot_, **fl), 'floor_bg', blur=0)]
+        sp = None; lens = None; grade = p.get('grade', 'ob_dawn'); sfx_fn = None
     else:
         c1, c2 = p.get('plain', ('#1c2030', '#0c0e16'))
         layers = [Layer(4.0, lambda pen, t, c1=c1, c2=c2: pen.linear(rect(-1200, -900, 4320, 2880), 0, -400, 0, 1480, [c1, c2]), 'plain_bg',
@@ -1134,6 +1145,15 @@ def B_bust(F, sh):
     lay, a = bust_layer(F, sh, who, cx, cy, sc, lambda a_, s: (base(a_, s), act and act(a_, s)), expr=p.get('expr'),
                         light=p.get('light', ROOM_RIM.get((p.get('bg') or ['x'])[0], LAMP)), seed=p.get('seed', 0), blink=p.get('blink'))
     sh.A = {who: a}
+    if p.get('rot'):                                       # the whole face turned in the frame (lying on the floor, from above)
+        d0, r_ = lay.draw, float(p['rot'])
+
+        def rdraw(pen, t, d0=d0, r_=r_):
+            cv = pen.cv
+            cv.save(); cv.translate(960, 540); cv.rotate(r_); cv.translate(-960, -540)
+            d0(pen, t)
+            cv.restore()
+        lay.draw = rdraw
     extra = []
     for k, b in enumerate(p.get('busts', [])):
         tr2, ht2 = b.get('turn', 0.0), b.get('h_turn', 0.0)
@@ -1148,7 +1168,8 @@ def B_bust(F, sh):
                                 hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand')))
     if p.get('acts'):
         extra += [l for l in (p['acts'](sh.A, sh, None) or []) if l is not None]
-    c = dict(p.get('c') or dict(mv='push', x=960 + (cx - 960) * 0.25, y=cy - 40, rate=0.0))
+    cxs, cys = (cx(sh.t0) if callable(cx) else cx), (cy(sh.t0) if callable(cy) else cy)
+    c = dict(p.get('c') or dict(mv='push', x=960 + (cxs - 960) * 0.25, y=cys - 40, rate=0.0))
     c.setdefault('free', True)
     if c.get('mv', 'push') == 'push' and 'z1' not in c:
         c['z1'] = (1.0 + c.get('zrate', 0.022)) ** max(0.3, sh.d)
@@ -1820,6 +1841,8 @@ def ins_hatchet_pile(pen, t, **kw):
 
 
 INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dress_photo': (ins_dress_photo, 'ins_lamp'),
+                    'body_above': (lambda pen, t, **kw: ins_body_above(pen, t, **kw), 'ob_dawn'),
+                    'under_bridge': (lambda pen, t, **kw: ins_under_bridge(pen, t, **kw), 'ob_vhs87'),
                     'egg_halves_hand': (ins_egg_halves_hand, 'ins_lamp'), 'ring_pocket': (ins_ring_pocket, 'ins_lamp'),
                     'hatchet_steps': (ins_hatchet_steps, 'ins_dark'), 'hatchet_thunk': (ins_hatchet_thunk, 'ins_dark'),
                     'hatchet_pile': (ins_hatchet_pile, 'ins_dark')}
@@ -3172,7 +3195,7 @@ def plan_rule1(F):
              lambda a, s: a.creep_smile(t(90) - 0.05, dur=1.6, amount=0.85)))
     C(T(91), 'bust', who='mom', bg=('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900)), set=JD, cx=960, cy=640, scale=1.08,
       expr='wrong_smile', blink=False, light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25),
-      act=_A(pose(-9, None, 0.1, smile=0.7, still=0.9, h_tilt=7.0), tilt(t(91) + 0.1, 5.0, 1.6), lookxy(960, 520, -9, None, 0.3, z=600.0)),
+      act=_A(pose(-9, None, 0.1, smile=0.8, teeth=0.55, grin=0.25, still=0.9, h_tilt=7.0), tilt(t(91) + 0.1, 5.0, 1.6), lookxy(960, 520, -9, None, 0.3, z=600.0)),
       music=[(e(91) + 0.3, 'hit', 0.8)])
 
 
@@ -3421,14 +3444,16 @@ def plan_rule2(F):
     C(T(122), 'bust', who='dad', bg=('kitchen', 'table'), set=dict(tod='memory'), era='memory', grade='ob_memory', cx=960, cy=600, scale=0.88, turn=-0.2,
       expr='warm_smile', light=MEMORY, act=pose(t(122), None, 0.6, smile=0.65))
     # 123 "Not once."  124 "The Bunnyman has my father's wedding ring."  the ring pinched beside the face, tears
-    C(T(123), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), cx=960, cy=560, scale=0.82, light=PORCH, expr='shock',
+    C(T(123), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=DOOR_AJAR), cx=960, cy=560, scale=0.82, light=PORCH, expr='shock_shut',
       act=_A(lambda a, s: a.hold_prop('ring', 1, -1.0, None), lambda a, s: a.reach(-1.0, None, 1, out=55.0, down=-80.0, fwd=220.0, shape='grip', up=0.0, fade=0.01),
              lambda a, s: a.reach(t(123) + 0.3, None, 1, out=45.0, down=-92.0, fwd=235.0, shape='grip', up=0.0, fade=2.4),
-             pose(-1.0, None, 0.01, h_nod=0.05, h_turn=-0.1, look_x=-0.42, look_y=0.05, _gaze=1.0), ex('cry', t(124) - 0.3, None, 1.2)),
+             pose(-1.0, None, 0.01, h_nod=0.05, h_turn=-0.1, look_x=-0.42, look_y=0.05, _gaze=1.0), ex('cry_shut', t(124) - 0.3, None, 1.2),
+             lambda a, s: a.set(t(124) + 0.9, t(124) + 1.25, 0.12, h_nod=0.12, m_press=0.8)),
       c=dict(mv='push', x=960, y=540, zrate=0.025))
     # 125 M "You opened it."  Mom on the stairs, looking down
-    C(T(125), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, upstairs=1.0), cx=960, cy=640, scale=0.92, turn=0.15, expr='too_still', light=LAMP,
-      act=_A(pose(-9, None, 0.1, h_nod=0.35), lookxy(900, 900, -9, None, 0.3, z=300.0)), music=[(t(125), 'hit', 0.6)])
+    C(T(125), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, upstairs=1.0), cx=960, cy=640, scale=0.92, turn=0.15, expr='neutral', light=LAMP, blink=False,
+      act=_A(pose(-9, None, 0.1, h_nod=0.35, still=0.9, lock=0.9, smile=0.0, m_press=0.25, pupil=0.7), lookxy(900, 900, -9, None, 0.3, z=300.0)),
+      music=[(t(125), 'hit', 0.6)])
     # 126 "Mom is on the stairs."  the narrator's view up the hall: Mom standing on the stairs
     # 127 "She walks down, takes the ring out of my hand, and stares at it for a very long time."
     # one shot up the flight from the bottom: Mom standing on the 9th step, then coming down toward us
@@ -3508,11 +3533,12 @@ GRAN_CAM = cm((-0.75, 5.95, 1.25), (-0.75, 8.45, 0.95), S=1100, sx=960, sy=560)
 
 
 def door_tag(k, tt, zoom=1.0):
-    """Knock count tag k (0..6) on the front door's top panel as the default door camera sees it (above the heads of the
-    two people standing in front of it), spread across the panel; zoom = the shot's push factor about the frame centre."""
+    """Knock count tag k (0..6) in an arch over the front door as the default door camera sees it (above the heads of the
+    two people standing in front of it, never on them); zoom = the shot's push factor about the frame centre."""
     v = ST.cam('hall_door')
-    x = ST.FDOOR[0] + 0.12 + (ST.FDOOR[1] - ST.FDOOR[0] - 0.24) * k / 6.0
-    px, py = v.p(x, 1.86, 0.0)
+    u = k / 6.0                                              # an arch over the door frame, left to right, on the wall
+    x = ST.FDOOR[1] + 0.42 - (ST.FDOOR[1] - ST.FDOOR[0] + 0.84) * u      # (the camera faces -y: +x is screen left)
+    px, py = v.p(x, 2.13 + 0.16 * math.sin(math.pi * u), 0.0)
     px, py = 960 + (px - 960) * zoom, 540 + (py - 540) * zoom
     return (tt, str(k + 1), px, py, 'white' if k < 6 else 'red', 9.0)
 
@@ -3593,7 +3619,8 @@ def plan_rule3(F):
       act=lookxy(760, 560, -9, None, 0.3, z=500.0))
     # 145 "But my stomach drops, because I know that knock."
     C(T(145), 'bust', who='narrator', bg=('hall', 'door'), set=dict(hall=0.4), cx=930, cy=600, scale=0.88, turn=0.15, expr='haunted', light=LAMP,
-      act=_A(ex('shock', w(145, 'drops') - 0.1, None, 0.25), lookxy(960, 500, w(145, 'know') - 0.2, None, 0.4, z=700.0)))
+      act=_A(ex('shock_shut', w(145, 'drops') - 0.1, None, 0.25), lookxy(960, 500, w(145, 'know') - 0.2, None, 0.4, z=700.0),
+             lambda a, s: a.set(w(145, 'drops') + 0.35, w(145, 'drops') + 0.7, 0.12, h_nod=0.1, m_press=0.85)))
     # 146 "Grandma taught it to me when I was six."  (memory: Grandma's daylight kitchen, the narrator at six beside her)
     GK = [P('grandma', 'kchair2', turn=0.0, expr='warm_smile', hands='lap'),
           P('narrator_kid', 'kchair3', turn=-0.15, expr='neutral', hands='lap')]
@@ -3644,8 +3671,9 @@ def plan_rule3(F):
       c=dict(mv='push', f=1.0, rate=0.012), focus_on='narrator')
     # "... doesn't recognize it at all.": her face, blank, polite, waiting (nothing in it knows that knock)
     trc = w(159, 'recognize') - 0.35
-    C(trc, 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=960, cy=620, scale=0.95, turn=-0.05, expr='too_still', light=LAMP, blink=False,
-      act=_A(pose(-9, None, 0.1, still=0.9), lookxy(980, 520, -9, None, 0.3, z=600.0), lambda a, s: a.head_tilt(trc + 0.4, 5.0, 1.4)),
+    C(trc, 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.4), cx=960, cy=620, scale=0.95, turn=-0.05, expr='neutral', light=LAMP, blink=False,
+      act=_A(pose(-9, None, 0.1, still=0.95, lock=0.9, smile=0.0, m_press=0.25, pupil=0.8), lookxy(980, 520, -9, None, 0.3, z=600.0),
+             lambda a, s: a.head_tilt(trc + 0.4, 5.0, 1.4)),
       c=dict(mv='push', x=960, y=580, zrate=0.012))
 
 
@@ -3667,9 +3695,8 @@ def bunny_at_slot(cry_t=None, tilt_t=None):
             def sob(P_, tt, c0=cry_t):
                 if tt < c0: return
                 k = min(1.0, (tt - c0) / 0.8)
-                ph = (tt - c0) / 0.72
-                beat = math.exp(-((ph % 1.0) * 5.0)) * k
-                P_.h_nod += 0.18 * k + 0.08 * beat; P_.hunch += 0.25 * k + 0.12 * beat; P_.tilt += 1.5 * beat
+                beat = _sob_beat(tt, c0) * k
+                P_.h_nod += 0.18 * k + 0.08 * beat; P_.hunch += 0.25 * k + 0.12 * beat; P_.tilt += 1.5 * beat; P_.shrug += 0.3 * beat
             a._add(cry_t - 0.5, None, sob, real=True)
     return act
 
@@ -3697,10 +3724,10 @@ def plan_rule4(F):
       ppl=[P('bunny', (-0.32, -0.62, -0.03), face=(-0.38, 0.0), expr='neutral', act=bunny_at_slot(tilt_t=t(171)), talk_k=0.6)],
       c=dict(mv='push', f=1.0, rate=0.02))
     # 172 "Mom's face doesn't move."  173-175 M "It took my voice," she says, very calmly. "When I was seven."
-    C(T(172), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, flap=1.0), cx=960, cy=620, scale=0.95, expr='too_still', light=NIGHT_L, blink=False,
-      act=pose(-9, None, 0.1, still=0.85, lock=1.0))
-    C(T(173), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, flap=1.0), cx=1000, cy=620, scale=0.9, turn=-0.2, expr='too_still', light=NIGHT_L,
-      act=lookxy(760, 560, -9, None, 0.3, z=500.0))
+    C(T(172), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, flap=1.0), cx=960, cy=620, scale=0.95, expr='neutral', light=NIGHT_L, blink=False,
+      act=pose(-9, None, 0.1, still=0.95, lock=1.0, smile=0.0, m_press=0.3, pupil=0.75))
+    C(T(173), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.3, flap=1.0), cx=1000, cy=620, scale=0.9, turn=-0.2, expr='neutral', light=NIGHT_L, blink=False,
+      act=_A(lookxy(760, 560, -9, None, 0.3, z=500.0), pose(-9, None, 0.1, still=0.95, smile=0.0, m_press=0.2, pupil=0.75)))
     # 176 M "It's been using it for thirty-six years to make children open doors."  two-shot by the door
     C(T(176), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, flap=1.0), rim=NIGHT,
       ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
@@ -3762,14 +3789,31 @@ def plan_rule4(F):
       music=[(t(195), 'jingle', 0.6, 2.0, dict(version='hum'))])
 
 
+SOB_T = (0.0, 0.46, 1.18, 1.52, 2.31, 2.66, 3.02, 3.9, 4.25, 4.9, 5.5)    # a child's sobs: in uneven catches, never a metronome
+
+
+def _sob_beat(tt, c0):
+    if tt < c0: return 0.0
+    r = tt - c0
+    b = 0.0
+    for k, s0 in enumerate(SOB_T):
+        if r >= s0: b = max(b, math.exp(-(r - s0) * (6.5 if k % 3 else 4.0)) * (1.0 if k % 3 else 1.3))
+    return b
+
+
 def bunny_cry_bust(c0):
+    """The masked head crying like a lost child: uneven sobbing catches that heave the shoulders and duck the head, the
+    head hanging lower as it goes on, and one paw coming up to the glass eye as a child rubs its eye."""
     def act(a, s):
         def sob(P_, tt):
             if tt < c0: return
-            ph = (tt - c0) / 0.72
-            beat = math.exp(-((ph % 1.0) * 5.0))
-            P_.h_nod += 0.06 * beat; P_.tilt += 1.2 * beat; P_.h_tilt += 2.0 * beat
+            beat = _sob_beat(tt, c0)
+            k = min(1.0, (tt - c0) / 1.2)
+            P_.h_nod += 0.12 * k + 0.07 * beat; P_.shrug += 0.35 * beat; P_.hunch += 0.2 * k + 0.1 * beat
+            P_.tilt += 1.0 * beat; P_.h_tilt += -4.0 * k + 2.5 * beat
         a._add(c0 - 0.5, None, sob, real=True)
+        a.reach_to(c0 + 1.1, -1, lambda tt: (a.where(tt, 'eye_r', post=False)[0] + 6, a.where(tt, 'eye_r', post=False)[1] + 14),
+                   t1=c0 + 3.6, dur=0.7, contact='palm', shape='paw', z=120.0, fade=0.8)
     return act
 
 
@@ -3893,7 +3937,7 @@ def plan_rule5(F):
     # 231 "I never saw her sitting there."  from her corner: past the boxes to June at the chest, the narrator at the top of the stairs
     C(T(231), 'set', room='attic', view='mom', set=dict(bulb=1.0), rim=BULB,
       ppl=[P('june', 'chest_floor', kind='floor', turn=-0.6, expr='neutral', act=_A(lookxy(400, 500, t(231) + 0.2, None, 0.5, z=200.0))),
-           P('narrator', 'stair_top', expr='haunted', face='chest_floor', act=_A(lookxy(300, 520, t(231) - 0.2, None, 0.6, z=200.0), ex('shock', t(231) + 0.3, None, 0.6)))],
+           P('narrator', 'stair_top', expr='haunted', face='chest_floor', act=_A(lookxy(300, 520, t(231) - 0.2, None, 0.6, z=200.0), ex('shock_shut', t(231) + 0.3, None, 0.6)))],
       c=dict(mv='push', f=1.15, rate=0.015))
 
 
@@ -4009,19 +4053,26 @@ def plan_rule6(F):
     # 265 "Then Mom's voice, from the end of the hall."  266 "A voice I've never heard her use."  267 M "GET OUT OF MY HOUSE."
     C(T(265), 'set', room='up', view='west', set=dict(upstairs=0.0), rim=NIGHT,
       ppl=[P('mom', 'hall_east', turn=-0.05, expr='determined', dimk=0.35, room_light=False)], c=dict(mv='push', f=1.5, rate=0.03))
+    # (the voice she has never used: Mom squared up at the end of the hall, leaning forward, fists clenched, the brows
+    # down; then the scream itself, close: jaw wide, teeth bared, head thrust at the lens, the frame shaking with it)
     C(T(266), 'set', room='up', view='west', cam=UPMID, set=dict(upstairs=0.0), rim=NIGHT_L,
-      ppl=[P('mom', 'hall_east', turn=0.0, expr='determined', act=_A(pose(-9, None, 0.1, brow_angry=0.8), lookxy(960, 500, -9, None, 0.3, z=500.0)))],
-      c=dict(mv='push', f=1.0, rate=0.03))
-    C(T(267), 'bust', who='mom', bg=('up', 'west', UPMID), set=dict(upstairs=0.0), cx=960, cy=620, scale=1.0, expr='determined', light=NIGHT_L,
-      act=_A(pose(-9, None, 0.1, brow_angry=1.0, wide=0.4), lookxy(960, 520, -9, None, 0.3, z=500.0)), c=dict(mv='push', x=960, y=580, zrate=0.05),
-      music=[(t(267), 'hit', 0.9)])
+      ppl=[P('mom', 'hall_east', turn=0.0, expr='determined',
+             act=_A(pose(-9, None, 0.1, brow_angry=1.0, brow_sad=0.0, lean=0.3, m_press=0.8, lock=1.0, pupil=0.6, smile=-0.2),
+                    lambda a, s: [a.reach(-9, None, sd, out=4.0, down=300.0, fwd=18.0, shape='fist', up=0.0, fade=0.01) for sd in (1, -1)],
+                    lookxy(960, 500, -9, None, 0.3, z=500.0)))],
+      c=dict(mv='push', f=1.0, rate=0.04))
+    C(T(267), 'bust', who='mom', bg=('up', 'west', UPMID), set=dict(upstairs=0.0), cx=960, cy=620, scale=1.0, expr='fury', light=NIGHT_L,
+      act=_A(pose(-9, None, 0.1, approach=0.0), pose(t(267) - 0.05, None, 0.18, approach=0.3, h_nod=-0.12), lookxy(960, 520, -9, None, 0.3, z=500.0)),
+      c=dict(mv='push', x=960, y=580, zrate=0.05, shake=2.5), music=[(t(267), 'hit', 0.9)])
     # 268 "And the little girl screams back,"  269 L "IT'S MY HOUSE!"
     C(T(268), 'set', room='up', view='hall', set=dict(upstairs=0.0), rim=NIGHT,
       ppl=[P('bunny', (-0.7, 5.25, 2.85), turn=1.95, dimk=0.25, room_light=False,
              act=_A(lambda a, s: a.drag_hatchet(-9, None, side=-1), lambda a, s: a.turn(t(268) + 0.2, 0.05, 0.5)))],
       c=dict(mv='push', f=1.6, rate=0.02))
     C(T(269), 'bust', who='bunny', bg=('up', 'hall'), set=dict(upstairs=0.0), cx=960, cy=640, scale=1.05, light=NIGHT,
-      act=_A(lambda a, s: a.flinch(t(269), 1.0), pose(t(269), None, 0.15, h_nod=-0.15, approach=0.2)), c=dict(mv='push', x=960, y=600, zrate=0.06, shake=3.0))
+      act=_A(lambda a, s: a.set(t(269) - 0.25, t(269) - 0.05, 0.12, h_nod=0.12, hunch=0.15),
+             pose(t(269) - 0.05, None, 0.14, h_nod=-0.22, approach=0.42, shrug=0.25), lambda a, s: a.flinch(t(269) + 0.25, 0.6)),
+      c=dict(mv='push', x=960, y=600, zrate=0.06, shake=3.0))
     # 270 "The whole hallway shakes."  271 "Something slams into the bathroom door."  272 "Screaming."  273 "A wet, heavy crack."
     tsl = w(271, 'slams') + 0.05
     C(T(270), 'set', room='bath', view='door', set=dict(gap=0.8, feet=feet_gap(T(270), T(272), (0.3, 0.6), 0.12)), c=dict(mv='push', f=1.0, rate=0.02, shake=3.0,
@@ -4051,10 +4102,101 @@ UP_DAWN = cm((-2.9, 5.1, 4.25), (-0.4, 5.25, 3.7), S=1100, sx=960, sy=520)      
 FLOOR_BG = ('#3a281c', '#1a110c')
 
 
-def dale_bust(F, C, t0, scale, cy, act, c=None, **kw):
-    """Dale's face under the half-off head, seen from above (he lies on his back at the foot of the stairs, dawn)."""
-    C(t0, 'bust', who='bunny', plain=FLOOR_BG, cx=960, cy=cy, scale=scale, expr='little_girl', light=DAWN, grade='ob_dawn',
+def dale_bust(F, C, t0, scale, cy, act, c=None, cx=960, rot=0.0, **kw):
+    """Dale's face under the half-off head, seen from straight above (he lies on his back at the foot of the stairs on
+    the runner, dawn): the floor under his head, the frame turned by rot degrees."""
+    C(t0, 'bust', who='bunny', floor=dict(shadow=(960, 760, 520, 300)), rot=rot, cx=cx, cy=cy, scale=scale, expr='little_girl', light=DAWN, grade='ob_dawn',
       act=_A(pose(-9, None, 0.01, unmask=1.0, h_turn=0.1), act), c=c, **kw)
+
+
+def floor_above(pen, t, rot=0.0, shadow=None, light=1.0, scale=1.0):
+    """The front hall's floor seen from straight above at dawn (behind a face or a body lying on it): dark boards, the
+    red runner with its navy border and gold line running across, a warm stripe of dawn light from the door's window,
+    dust turning in it; shadow = (x, y, rx, ry): the soft contact shadow of whoever lies there (in the unrotated frame)."""
+    cv = pen.cv
+    cv.save(); cv.translate(960, 540); cv.rotate(rot); cv.scale(scale, scale); cv.translate(-960, -540)
+    R = rect(-1400, -1200, 4720, 3480)
+    pen.fill(R, '#24170f')
+    for j in range(-14, 26):
+        x = j * 150
+        pen.seg((x, -1200), (x, 2280), 6, '#140c07', 200)
+        pen.seg((x + 4, -1200), (x + 4, 2280), 2, '#3a271a', 120)
+    for j in range(-14, 26):
+        y0 = (j * 397) % 2300 - 1100
+        pen.seg((j * 150, y0), (j * 150 + 150, y0), 5, '#140c07', 170)
+    run = rect(-1400, 250, 4720, 640)
+    pen.fill(run, '#5a1c24'); pen.texture(run, 'fabric', 0.6, 'overlay', 3.0)
+    for yy in (250, 850):
+        pen.fill(rect(-1400, yy, 4720, 40), '#22304a')
+    pen.fill(rect(-1400, 300, 4720, 9), '#c9a64e', 210); pen.fill(rect(-1400, 831, 4720, 9), '#c9a64e', 210)
+    pen.line(rect(-1400, 250, 4720, 640), 4, '#0c0806', 200)
+    if shadow:
+        sx_, sy_, rx_, ry_ = shadow
+        pen.fill(oval(sx_, sy_, rx_, ry_), '#050302', 170, blur=60)
+    # the dawn stripe from the glass in the front door, and the dust in it
+    stripe = poly([(-600, 1600), (300, -900), (900, -900), (0, 1600)])
+    pen.fill(stripe, '#ffb868', 46 * light, blur=50)
+    for k in range(28):
+        u = (k * 0.137 + t * 0.03 * (1 + k % 3)) % 1.0
+        x = lerp(-300, 520, u) + 90 * math.sin(k * 2.1 + t * 0.4); y = lerp(1300, -500, u) + 40 * math.cos(k * 1.7)
+        pen.fill(oval(x, y, 3 + k % 3, 3 + k % 3), '#ffe2b0', 90 * light, blur=2)
+    cv.restore()
+    pen.radial(None, 960, 540, 1300, [(0, '#000000', 0), (0.65, '#000000', 50), (1, '#000000', 190)])
+
+
+_BODY_A = {}
+
+
+def ins_body_above(pen, t, **kw):
+    """'At the bottom of the stairs, the Bunnyman lies on his back, not moving.': straight down on him from above, the
+    whole length of him across the red runner, arms flung out, the filthy suit, the head of the suit shoved half off and
+    twisted on the boards (one glass eye to the ceiling), Dale's face turned up; the dawn stripe and its dust; nothing
+    moves but the dust (and the light breathing a little)."""
+    if 'a' not in _BODY_A:
+        a = CH.Acting('bunny', seed=5, height=1180.0, expr='little_girl')
+        a.lie(-9, 'up', arms='out'); a.dead(-9, 0.01)
+        a.set(-9, None, 0.01, unmask=0.62, mask_twist=-38.0, mask_slide=26.0, h_turn=0.12, look_x=0.1, look_y=-0.2, _gaze=1.0)
+        _BODY_A['a'] = a
+    P_ = _BODY_A['a'].at(5.0)
+    lt = 0.92 + 0.08 * math.sin(t * 1.1)
+    floor_above(pen, t, rot=0.0, shadow=(1000, 590, 600, 160), light=lt)
+    CH.draw(pen, 'bunny', 1010, 640, 1100.0, P_, light=dict(DAWN), t=t)
+
+
+_BRIDGE_A = {}
+
+
+def ins_under_bridge(pen, t, woke=1.6, **kw):
+    """'The real Laurie woke up under a railroad bridge': straight down on the gravel under the trestle, 1987 daylight
+    cut into stripes by the ties overhead: the clean mascot lying curled on its side on the stones (knees drawn up, one
+    paw under the head), the creek's edge along one side; at `woke` (seconds into the shot) the head lifts a little and
+    a paw stirs."""
+    key = round(woke, 2)
+    if key not in _BRIDGE_A:
+        a = CH.Acting('bunny87', seed=9, height=1000.0, expr='neutral')
+        a.lie(-9, 'up', arms='side'); a.set(-9, None, 0.01, turn=1.0, crouch=1.7, hunch=0.9, h_nod=0.5)
+        a.reach(-9, None, 1, out=-20.0, down=200.0, fwd=60.0, shape='paw', up=0.0, fade=0.01)
+        a.reach(-9, None, -1, out=-10.0, down=230.0, fwd=90.0, shape='paw', up=0.0, fade=0.01)
+        a.set(woke, None, 0.9, h_nod=0.12, h_turn=-0.2)
+        a.reach(woke + 0.35, None, -1, out=10.0, down=150.0, fwd=180.0, shape='paw_open', up=0.0, fade=0.9)
+        _BRIDGE_A[key] = a
+    P_ = _BRIDGE_A[key].at(t)
+    R = rect(-400, -300, 2720, 1680)
+    pen.fill(R, '#8a8070')
+    rng = np.random.default_rng(31)
+    for k in range(900):                                                     # the ballast stones
+        x, y = rng.uniform(-300, 2220), rng.uniform(-260, 1340)
+        r_ = rng.uniform(6, 16); c_ = ['#6e665a', '#9a9284', '#7a7266', '#a8a090', '#5a544a'][k % 5]
+        pen.fill(oval(x, y, r_ * 1.2, r_), c_, 230)
+    pen.fill(poly([(-400, 1050), (2320, 900), (2320, 1700), (-400, 1700)]), '#3e5a66', 235)            # the creek
+    pen.fill(poly([(-400, 1040), (2320, 890), (2320, 920), (-400, 1072)]), '#d8e4e0', 120, blur=6)
+    for j in range(-2, 9):                                                    # shadows of the ties and the beams overhead
+        x0 = j * 260 + 40
+        pen.fill(poly([(x0, -300), (x0 + 120, -300), (x0 + 60, 1400), (x0 - 60, 1400)]), '#1a1610', 105, blur=18)
+    pen.fill(rect(-400, 360, 2720, 70), '#120e0a', 90, blur=24)
+    pen.fill(oval(1000, 600, 470, 150), '#120e0a', 140, blur=40)               # where he lies
+    CH.draw(pen, 'bunny87', 1060, 620, 1000.0, P_, light=dict(rim='#fff2d0', rim_a=70, side=-1, key=0.1), t=t)
+    pen.radial(None, 960, 540, 1250, [(0, '#000000', 0), (0.7, '#000000', 40), (1, '#000000', 150)])
 
 
 def plan_rule7(F):
@@ -4138,16 +4280,26 @@ def plan_rule7(F):
                        act=_A(pose(-9, None, 0.01, unmask=u), lambda a, s: a.dead(-9, 0.01), lambda a, s: a.face(1.0)))
     C(T(302), 'set', room='hall', view='top', cam=cm((0.82, 4.45, 4.1), (0.6, 0.6, 0.15), S=1150, sx=960, sy=560), set=dict(tod='dawn', hall=0.0, upstairs=0.0),
       rim=DAWN, ppl=[BODY(0.6)], c=dict(mv='hold', f=1.0, shake=0.5))
-    dale_bust(F, C, T(303), 0.8, 640, pose(-9, None, 0.01, unmask=0.6, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
+    C(w(302, 'lies') - 0.15, 'ins', name='body_above', anim=True, c=dict(mv='push', rate=0.02))
+    # (every close-up of him is from straight above, his face up off the floor: the runner and the boards under his head,
+    # the dawn stripe across them; the framings change: the mask shoved off and twisted, the face, the stubble, the
+    # bones, the eyes, the lips, and the face going still)
+    MASK = dict(mask_twist=-38.0, mask_slide=26.0)
+    dale_bust(F, C, T(303), 0.72, 560, pose(-9, None, 0.01, unmask=0.6, look_x=0.2, look_y=-0.7, _gaze=1.0, **MASK), rot=-24.0,
+              c=dict(mv='push', x=960, y=540, zrate=0.025))
     # 304 "Inside, there's no monster."  305-306 "It's a man. Maybe fifty-five."  307-308 "Grey stubble. Skin and bone."
-    dale_bust(F, C, T(304), 0.9, 600, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
-    dale_bust(F, C, T(305), 1.2, 600, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=560, zrate=0.02))
-    dale_bust(F, C, T(307), 1.6, 480, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0), c=dict(mv='push', x=960, y=640, zrate=0.02))
+    dale_bust(F, C, T(304), 0.95, 520, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0, **MASK), rot=12.0,
+              c=dict(mv='push', x=960, y=520, zrate=0.02))
+    dale_bust(F, C, T(305), 1.25, 470, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0, **MASK), rot=-6.0,
+              c=dict(mv='push', x=960, y=500, zrate=0.02))
+    dale_bust(F, C, T(307), 2.1, -40, pose(-9, None, 0.01, look_x=0.2, look_y=-0.7, _gaze=1.0, **MASK), rot=4.0, cx=1010,
+              c=dict(mv='keys', keys=[(T(307), 960, 540, 1.0, None, 1.0), (T(308), 900, 500, 1.0, 'in_out', 1.06), (T(309), 880, 480, 1.0, 'lin', 1.1)]))
     # 309 "He's staring up at June's bedroom door with the eyes of a terrified little girl."  the eyes; what they look at
-    dale_bust(F, C, T(309), 1.35, 640, pose(-9, None, 0.01, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=0.8), c=dict(mv='push', x=960, y=480, zrate=0.025))
+    dale_bust(F, C, T(309), 1.35, 520, pose(-9, None, 0.01, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=0.8, **MASK), rot=-10.0,
+              c=dict(mv='push', x=960, y=480, zrate=0.025))
     C(w(309, "june's") - 0.1, 'set', room='hall', view='foot', set=dict(tod='dawn', hall=0.0, upstairs=0.0), c=dict(mv='push', f=1.6, rate=0.03))
-    C(w(309, 'eyes') - 0.15, 'bust', who='bunny', plain=FLOOR_BG, cx=960, cy=720, scale=1.8, expr='little_girl', light=DAWN, grade='ob_dawn',
-      act=pose(-9, None, 0.01, unmask=1.0, h_turn=0.1, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=1.0), c=dict(mv='push', x=960, y=540, zrate=0.02))
+    C(w(309, 'eyes') - 0.15, 'bust', who='bunny', floor=dict(), rot=8.0, cx=960, cy=330, scale=2.3, expr='little_girl', light=DAWN,
+      act=pose(-9, None, 0.01, unmask=1.0, h_turn=0.1, look_x=0.1, look_y=-0.85, _gaze=1.0, wet=1.0, tears=1.0, **MASK), c=dict(mv='push', x=960, y=470, zrate=0.02))
     # 310 "His lips move one last time."  311 D "Mama."  312 "Then he's still."
     def mama(a, s, t0=t(311), t1=e(311)):
         # the suit's cast has no talking mouth (the mask); Dale's own lips shape the two syllables of "Mama." by hand
@@ -4156,17 +4308,22 @@ def plan_rule7(F):
                 u = clamp((tt - t0 + 0.05) / max(0.2, t1 - t0 + 0.15))
                 P_.m_open += 0.28 * abs(math.sin(u * 2.0 * math.pi)) * (1.0 - 0.3 * u)
         a._add(t0 - 0.1, t1 + 0.2, fn, real=True)
-    DALE_EYES = pose(-9, None, 0.01, look_x=0.1, look_y=-0.8, _gaze=1.0, wet=1.0, tears=0.9)
-    dale_bust(F, C, T(310), 1.5, 520, _A(DALE_EYES, mama), c=dict(mv='push', x=960, y=600, zrate=0.012))
-    dale_bust(F, C, t(311) - 0.25, 2.1, 330, _A(DALE_EYES, mama), c=dict(mv='hold', x=960, y=560, shake=0.3), music=[(e(311) + 0.2, 'sub_drop', 0.7)])
-    dale_bust(F, C, T(312), 1.25, 600, _A(DALE_EYES, lambda a, s: a.dead(t(312) + 0.2, 1.2)), c=dict(mv='hold', x=960, y=560, shake=0.2))
+    DALE_EYES = pose(-9, None, 0.01, look_x=0.1, look_y=-0.8, _gaze=1.0, wet=1.0, tears=0.9, **MASK)
+    dale_bust(F, C, T(310), 1.5, 430, _A(DALE_EYES, mama), rot=-14.0, c=dict(mv='push', x=960, y=520, zrate=0.012))
+    dale_bust(F, C, t(311) - 0.25, 2.6, 60, _A(DALE_EYES, mama), rot=0.0, c=dict(mv='hold', x=960, y=540, shake=0.3), music=[(e(311) + 0.2, 'sub_drop', 0.7)])
+    # "Then he's still.": the whole face again, the life going out of it; the paw on the runner beside it gives one twitch
+    dale_bust(F, C, T(312), 1.05, 500, _A(DALE_EYES, lambda a, s: a.dead(t(312) + 0.2, 1.2)), rot=18.0, c=dict(mv='hold', x=960, y=540, shake=0.2),
+              hands=[dict(who='bunny', fn=lambda tt, t0=t(312): (1420 + 6 * math.exp(-max(0.0, tt - t0 - 0.15) * 6.0) * math.sin(max(0.0, tt - t0 - 0.15) * 40.0),
+                                                                760, 205.0, 1.0, 330), size=330, shape='paw', side=1,
+                          sleeve_from=lambda tt: (1900, 1100), depth=0.95)])
     # 313 "Mom kneels in front of June, holding the little yellow dress, and gently puts one hand over June's eyes."
     tpu = w(313, 'puts') - 0.1
+    # (staged as the climax will be, Mom screen LEFT: her hand comes in from the left exactly as in every close-up of it)
     C(T(313), 'set', room='up', view='west', cam=UP_DAWN, set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
-      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral'),
-           P('mom', (-0.55, 5.05, 2.85), path=[(T(313), (-1.0, 4.95, 2.85)), (T(313) + 1.0, (-0.6, 5.05, 2.85))], face=(-0.05, 5.35), expr='proud', kind='stand',
-             act=_A(MOMD, lambda a, s: a.kneel_down(T(313) + 1.1, 0.8, knees=0))),
-           P('narrator', (0.55, 5.55, 2.85), face=(-0.3, 5.2), expr='haunted')],
+      ppl=[P('june', SW_JUNE, face=SW_MOM[:2], expr='neutral'),
+           P('mom', SW_MOM, path=[(T(313), (-1.05, 5.42, 2.85)), (T(313) + 1.0, SW_MOM)], face=SW_JUNE[:2], expr='proud', kind='stand',
+             act=_A(MOMD, lambda a, s: a.kneel_down(T(313) + 1.1, 0.8, knees=2))),
+           P('narrator', SW_NARR, face=SW_MOM[:2], expr='haunted')],
       acts=lambda A, s, sp: [A['mom'].look_at(s.t0, (A['june'], 'eyes'), None, 0.3), A['june'].look_at(s.t0, (A['mom'], 'eyes'), None, 0.3)] and [],
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
 
@@ -4176,10 +4333,10 @@ def plan_rule7(F):
         m.look_at(s.t0, (j, 'eyes'), None, 0.3); j.look_at(s.t0, (m, 'eyes'), tpu + 0.5, 0.3)
         n.look_at(s.t0, (m, 'hand_r'), None, 0.4)
         return []
-    C(tpu, 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
-      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral'),
-           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0, act=MOMD),
-           P('narrator', (0.5, 5.6, 2.85), face=(-0.3, 5.2), expr='haunted')],
+    C(tpu, 'set', room='up', view='west', cam=SWAP_CAM, set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
+      ppl=[P('june', SW_JUNE, face=SW_MOM[:2], expr='neutral'),
+           P('mom', SW_MOM, face=SW_JUNE[:2], expr='proud', kind='kneel', knees=2, act=MOMD),
+           P('narrator', SW_NARR, face=SW_MOM[:2], expr='haunted')],
       acts=eyes_acts, c=dict(mv='push', f=1.0, rate=0.025), focus_on='mom')
     # 314-315 M "Happy Easter, bunny. Want to see a magic trick?"  316-317 M "Close your eyes. And count to seven."
     C(T(314), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=900, cy=640, scale=0.95, turn=0.35, expr='proud', light=DAWN,
@@ -4219,13 +4376,25 @@ def paw_eyes(who, cx, cy, sc, t_in=None, side=-1, size=560):
     return fn
 
 
+# the climax on the upstairs landing at dawn: Mom on her knees nearest the camera (screen LEFT, her hand comes in from the
+# left in every close-up), June facing her, the narrator behind June (right); after the pull June is backed against her
+# door (right) and the narrator kneels in her place
+SWAP_CAM = cm((-1.6, 4.62, 4.0), (-0.3, 5.15, 3.82), S=1350, sx=960, sy=520)
+SW_MOM = (-0.6, 5.3, 2.85)
+SW_JUNE = (-0.05, 5.0, 2.85)
+SW_NARR = (0.5, 4.78, 2.85)
+SW_KNEEL = (0.02, 5.0, 2.85)
+SW_JUNE_OFF = (0.95, 4.82, 2.85)
+SW_HAND = (-0.12, 5.06, 2.85 + 1.0)
+
+
 def plan_reveal(F):
     t, e, w, C = F.t, F.e, F.w, F.cut
     T = lambda i, off=0.0: F.t(i) - LEAD + off
     UPD = dict(wrecked=1.0, tod='dawn')
     # 322 "And that's when I finally understand all of it."
     C(T(322), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=610, scale=0.95, turn=0.1, expr='haunted', light=DAWN_L,
-      act=_A(ex('shock', t(322) + 0.9, None, 0.6), lookxy(1100, 640, -9, None, 0.3, z=400.0)), c=dict(mv='push', x=960, y=560, zrate=0.03),
+      act=_A(ex('shock_shut', t(322) + 0.9, None, 0.6), lookxy(1100, 640, -9, None, 0.3, z=400.0)), c=dict(mv='push', x=960, y=560, zrate=0.03),
       music=[(t(322), 'riser', 0.6, 3.0)])
     # 323 "In 1987, the Bunnyman didn't take my mother."  the parade photo, live on the tape: Laurie holding the mascot's paw
     C(T(323), 'ins', name='courier', cut='static', c=dict(mv='keys', keys=[(T(323), 760, 640, 1.0, None, 1.5), (T(324), 745, 660, 1.0, 'push', 1.8)]),
@@ -4284,17 +4453,11 @@ def plan_reveal(F):
       sfx=[(t(332), 'hum', -10, 0, 'outside', dict(who='laurie87', dur=1.4))], music=[(t(332), 'jingle', 0.45, 1.6, dict(version='hum_child'))])
     # 333 "The real Laurie woke up under a railroad bridge, in a grown man's body, inside a bunny suit she was too scared to take off."
     tg = w(333, 'grown') - 0.15
-    # seen from under the trestle, looking DOWN at the gravel: the mascot curled on its side, knees drawn up, one paw under
-    # the head (the figure in profile, folded, lying on the ground: a body, not a starfish), the bridge's dark beams
-    # framing the top; on 'woke' the head lifts a little and the paws stir
-    C(T(333), 'set', room='woods', view='under', cam=UNDER_TOP, set=dict(tod='day87'), montage=True, **D87,
-      ppl=[P('bunny87', 'under_bridge', kind='lie', lie_face='up', arms='side', turn=1.0, room_light=False, check=False,
-             act=_A(pose(-9, None, 0.1, crouch=1.6, hunch=0.8, h_nod=0.45), pose(w(333, 'woke'), None, 0.8, h_nod=0.15, h_turn=-0.25),
-                    lambda a, s: a.reach(-9, None, 1, out=-20.0, down=200.0, fwd=60.0, shape='paw', up=0.0, fade=0.01),
-                    lambda a, s: a.reach(-9, None, -1, out=-10.0, down=230.0, fwd=90.0, shape='paw', up=0.0, fade=0.01),
-                    lambda a, s: a.reach(w(333, 'woke') + 0.4, None, -1, out=10.0, down=120.0, fwd=200.0, shape='paw_open', up=0.0, fade=0.8),
-                    blinks(w(333, 'woke') + 0.1)))],
-      c=dict(mv='hold', f=1.0, shake=0.5), sfx=[(T(333), 'creek', -12, 0, 'woods', dict(dur=3.0))])
+    # straight down on the gravel under the trestle (a custom insert: the lying figure drawn on the ground it lies on, the
+    # ties' shadows under it): the mascot curled on its side, knees drawn up, one paw under the head; on 'woke' the head
+    # lifts a little and a paw stirs
+    C(T(333), 'ins', name='under_bridge', kw=dict(woke=round(w(333, 'woke') - T(333), 2)), anim=True, montage=True, **D87,
+      c=dict(mv='push', rate=0.015), sfx=[(T(333), 'creek', -12, 0, 'woods', dict(dur=3.0))])
     tlift = w(333, 'take') - 0.4
     C(tg, 'bust', who='bunny87', bg=('woods', 'under', UNDER_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=580, scale=0.95, light=MEMORY,
       act=_A(pose(-9, None, 0.3, h_nod=0.5), lookxy(960, 1000, -9, tlift, 0.3, z=200.0), lookxy(1300, 500, tlift, None, 0.4, z=500.0),
@@ -4385,18 +4548,18 @@ def plan_reveal(F):
     # 348 "Lock yourselves in, so we wouldn't see what it did to her."
     C(T(348), 'set', room='bath', view='door', set=dict(gap=0.5, slam=T(348) + 0.35), **RECALL, cut='static', c=dict(mv='push', f=1.1, rate=0.02, hit=[(T(348) + 0.35, 5.0)]),
       sfx=[(T(348) + 0.35, 'door_slam', -6, 0, 'inside', dict(memory=True))])
-    C(w(348, 'what') - 0.1, 'set', room='hall', view='bottom', cam=cm((-0.9, 2.6, 1.6), (0.45, 0.45, 0.2), S=950, sx=960, sy=580), set=dict(tod='dawn', hall=0.0),
-      **RECALL, rim=DAWN, ppl=[P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', act=_A(pose(-9, None, 0.01, unmask=0.6), lambda a, s: a.dead(-9, 0.01)))],
-      c=dict(mv='push', f=1.0, rate=0.03))
+    C(w(348, 'what') - 0.1, 'ins', name='body_above', anim=True, **RECALL, c=dict(mv='push', rate=0.03))
     # 349 "And never close your eyes before sunrise..."  the gold under the door
     C(T(349), 'set', room='bath', view='gap', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), **RECALL, cut='static', c=dict(mv='push', f=1.0, rate=0.02))
-    # 350 "So the first time June closed them on Easter morning, it would be for Mom."  back to now: the hand over June's eyes, Mom's smile
-    C(T(350), 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=UPD, rim=DAWN, cut='white', quiet_cut=True,
-      ppl=[P('june', (-0.05, 5.35, 2.85), face=(-0.55, 5.1), expr='neutral', act=lambda a, s: a.eyes_shut(-9, None, 0.0)),
-           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0,
+    # 350 "So the first time June closed them on Easter morning, it would be for Mom."  back to now: the hand over June's eyes,
+    # Mom's smile. (Staged so Mom is screen LEFT, her hand coming in from the left exactly as in every close-up of it: Mom on
+    # her knees nearest the camera, June facing her, the narrator behind June on the right.)
+    C(T(350), 'set', room='up', view='west', cam=SWAP_CAM, set=UPD, rim=DAWN, cut='white', quiet_cut=True,
+      ppl=[P('june', SW_JUNE, face=SW_MOM[:2], expr='neutral', act=lambda a, s: a.eyes_shut(-9, None, 0.0)),
+           P('mom', SW_MOM, face=SW_JUNE[:2], expr='proud', kind='kneel', knees=2,
              act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.75), lambda a, s: a.hold_prop('dress_tiny', 1),
                     lambda a, s: a.reach(-9, None, 1, out=30.0, down=200.0, fwd=140.0, shape='grip', up=0.0, fade=0.01))),
-           P('narrator', (0.5, 5.6, 2.85), face=(-0.3, 5.2), expr='haunted')],
+           P('narrator', SW_NARR, face=SW_MOM[:2], expr='haunted')],
       acts=lambda A, s, sp: [A['mom'].hand_over(s.t0 - 2.0, -1, A['june'], 'eyes', dur=0.01), A['mom'].look_at(s.t0 - 1.0, (A['june'], 'eyes'), None, 0.3),
                              A['narrator'].look_at(s.t0 - 1.0, (A['mom'], 'eyes'), None, 0.3)] and [],
       c=dict(mv='push', f=1.0, rate=0.025), focus_on='mom')
@@ -4412,32 +4575,84 @@ def plan_reveal(F):
       act=_A(lookxy(760, 640, -9, None, 0.3, z=300.0), pose(t(354) + 1.2, None, 0.6, brow_angry=0.4)), c=dict(mv='push', x=970, y=560, zrate=0.03),
       music=[(t(354), 'swell', 0.6, 3.5)])
     # 355 "I pull June's face out from under that hand, and I push my own face into it, and I squeeze my eyes shut."
-    tpl = w(355, 'pull') - 0.05; tpu = w(355, 'push') - 0.15
+    # three beats, three pictures:
+    #  1 "I pull June's face out from under that hand": June under Mom's hand (the "Four... Five." close-up), the
+    #    narrator's hands come in from the right, grip her shoulders and pull her out of frame right; Mom's scratched hand
+    #    is left hanging in the air, empty, and its fingers twitch
+    #  2 "and I push my own face into it": the two-shot (Mom on her knees left, June backed against her door right): the
+    #    narrator steps into June's place, kneels, and leans the face into the raised palm; Mom does not move, only the
+    #    hand settles on the face
+    #  3 "and I squeeze my eyes shut": extreme close-up, the narrator's eyes squeezed shut under Mom's fingers
+    tpl = w(355, 'pull'); tpu = w(355, 'push') - 0.15; tsq = w(355, 'squeeze') - 0.12
+    jx, jy, js = 940, 620, 0.95
+    t_grip = tpl + 0.3; t_yank = w(355, 'face') + 0.02
+    yank = lambda tt: ease_in_cubic(clamp((tt - t_yank) / 0.6))
+    jcx = lambda tt: jx + 1250.0 * yank(tt) + 30.0 * ease_out_cubic(clamp((tt - t_grip) / 0.3))
+    jcy = lambda tt: jy + 60.0 * yank(tt)
 
-    def pull_acts(A, s, sp):
-        n, j, m = A['narrator'], A['june'], A['mom']
-        m.hand_over(s.t0 - 2.0, -1, j, 'eyes', dur=0.01)
-        n.reach_to(tpl, 1, (j, 'shoulder_r'), t1=tpl + 1.0, dur=0.35, contact='palm', shape='grip', z=60.0)
-        n.reach_to(tpl + 0.05, -1, (j, 'shoulder_l'), t1=tpl + 1.0, dur=0.35, contact='palm', shape='grip', z=60.0)
-        n.head_to(tpl + 1.3, lambda tt: m.where(tt, 'hand_r', post=False), 'eyes', dur=0.6, max_lean=0.25)
-        n.look_at(s.t0, (j, 'eyes'), None, 0.3)
-        m.look_at(s.t0 - 1.0, (j, 'eyes'), None, 0.3)
+    def grip_hand(dx, dy, side, ang, sleeve):
+        def fn(tt):
+            u = ease_out_cubic(clamp((tt - (tpl - 0.1)) / 0.4))
+            x = jcx(tt) + dx + 520.0 * (1.0 - u); y = jcy(tt) + dy + 380.0 * (1.0 - u)
+            return (x, y, ang, 1.0 if u > 0.01 else 0.0)
+        return dict(who='narrator', fn=fn, size=470, shape='grip', side=side, depth=0.93,
+                    sleeve_from=lambda tt, fn=fn: (fn(tt)[0] + sleeve[0], fn(tt)[1] + sleeve[1]))
+    mom_h = paw_eyes('june', jx, jy, js, side=-1, size=430)
+
+    def mom_hand_left(tt):                                     # stays where June's eyes were: empty, the fingers twitch
+        x, y, a, al = mom_h(tt)
+        k = clamp((tt - (t_yank + 0.5)) / 0.5)
+        return (x + 6.0 * math.sin(tt * 7.0) * k, y + 4.0 * math.sin(tt * 5.3) * k, a + 3.0 * math.sin(tt * 6.1) * k, al)
+    C(T(355), 'bust', who='june', bg=('up', 'west', UP_DAWN), set=UPD, cx=jcx, cy=jcy, scale=js, turn=-0.2, expr='neutral', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(-9, t_yank - 0.05, 0.0), lambda a, s: a.expr('terror', t_yank - 0.05, None, 0.12),
+             lambda a, s: a.set(t_yank, None, 0.25, h_tilt=-12.0, h_turn=0.25)),
+      hands=[dict(who='mom', fn=mom_hand_left, size=430, shape='open', side=-1, sleeve_from=lambda tt: (-260, 1000), scratch=True, depth=0.95),
+             grip_hand(170, 235, 1, 330.0, (560, 560)), grip_hand(280, 390, -1, 315.0, (560, 460))],
+      c=dict(mv='push', x=960, y=560, zrate=0.012), sfx=[(t_yank, 'cloth_rustle', -4, 0, 'close'), (t_yank + 0.1, 'breath', -8, 0.3, 'close', dict(kind='gasp'))])
+
+    def push_acts(A, s, sp):
+        n, m, j = A['narrator'], A['mom'], A['june']
+        hp = scr(sp, SW_HAND)
+        m.reach_to(s.t0 - 2.0, -1, hp, None, dur=0.01, contact='palm', shape='open', z=60.0, fade=0.3)
+        m.look_at(s.t0 - 1.0, hp, tpu + 0.7, 0.3)
+        m.look_at(tpu + 0.7, (n, 'eyes'), None, 0.4)
+        n.kneel_down(tpu + 0.42, 0.5, knees=2)
+        n.head_to(tpu + 0.8, (hp[0] + 6, hp[1] + 4), 'eyes', dur=0.55, max_lean=0.32)
+        n.look_at(s.t0, hp, None, 0.25)
+        n.eyes_shut(tpu + 1.25, None, 0.4)
+        j.look_at(s.t0, (n, 'eyes'), None, 0.3)
         return []
-    C(T(355), 'set', room='up', view='west', cam=cm((-1.6, 5.75, 4.0), (-0.3, 5.2, 3.85), S=1350, sx=960, sy=520), set=UPD, rim=DAWN,
-      ppl=[P('june', (-0.05, 5.35, 2.85), path=[(tpl + 0.35, (-0.05, 5.35, 2.85)), (tpl + 1.1, (0.55, 5.85, 2.85))], no_walk=True, face=(-0.55, 5.1), expr='terror',
-             act=lambda a, s: a.eyes_shut(-9, tpl + 0.5, 0.0)),
-           P('mom', (-0.6, 5.05, 2.85), face=(-0.05, 5.35), expr='proud', kind='kneel', knees=0,
+    C(tpu, 'set', room='up', view='west', cam=SWAP_CAM, set=UPD, rim=DAWN,
+      ppl=[P('mom', SW_MOM, face=SW_JUNE[:2], expr='proud', kind='kneel', knees=2,
              act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.75), lambda a, s: a.hold_prop('dress_tiny', 1),
                     lambda a, s: a.reach(-9, None, 1, out=30.0, down=200.0, fwd=140.0, shape='grip', up=0.0, fade=0.01))),
-           P('narrator', (0.45, 5.6, 2.85), path=[(tpl - 0.35, (0.45, 5.6, 2.85)), (tpl + 0.1, (0.22, 5.5, 2.85)), (tpl + 0.95, (0.22, 5.5, 2.85)),
-                                                  (tpl + 1.55, (-0.02, 5.37, 2.85))], no_walk=True, face=(-0.3, 5.2), expr='determined')],
-      acts=pull_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator', sfx=[(tpl + 0.3, 'cloth_rustle', -6, 0, 'close')])
+           P('june', SW_JUNE_OFF, face=SW_MOM[:2], expr='terror', enter=True),
+           P('narrator', SW_NARR, path=[(tpu - 0.05, SW_NARR), (tpu + 0.45, SW_KNEEL)], face=SW_MOM[:2], expr='determined')],
+      acts=push_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator', sfx=[(tpu + 0.85, 'cloth_rustle', -8, 0, 'inside', dict(kind='kneel'))])
     nx, ny, ns = 980, 600, 1.0
-    C(tpu, 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny, scale=ns, turn=0.1, expr='determined', light=DAWN_L,
-      act=_A(lambda a, s: a.eyes_shut(w(355, 'squeeze') + 0.1, None, 0.15), pose(w(355, 'squeeze') + 0.1, None, 0.25, squint=0.8, brow_angry=0.5)),
-      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny, ns, t_in=tpu + 0.2, side=-1, size=500), size=500, shape='open', side=-1,
-                  sleeve_from=lambda tt: (-220, 940), scratch=True, depth=0.95)],
-      c=dict(mv='push', x=980, y=560, zrate=0.03))
+    # the squeeze: extreme close-up, eyes and brows; Mom's fingers lie across the brow and the bridge of the nose, the
+    # squeezed lids, their creases and the lashes show below them (no iris anywhere)
+    ex_ = bust_eyes('narrator', 960, 700, 2.3)
+
+    def squeeze_hand(tt):                                      # across the brow: the fingertips on the upper lids
+        return (ex_[0] - 0.62 * 1250, ex_[1] - 0.2 * 1250 - 175, 262.0, 1.0)
+
+    def squeeze_lines(A, s, sp):
+        def draw(pen, tt):
+            k = ease_out_cubic(clamp((tt - (tsq + 0.15)) / 0.35))
+            if k <= 0.01: return
+            for sd in (-1, 1):
+                x0 = ex_[0] + sd * 245; y0 = ex_[1] + 14
+                for j_ in range(3):
+                    a0 = (j_ - 1) * 0.32
+                    p0 = (x0 + sd * 34, y0 + 30 * a0); p1 = (x0 + sd * (90 + 14 * j_), y0 + 30 * a0 + sd * 0 + 26 * (j_ - 1))
+                    pen.line(smooth([p0, ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 - 6), p1], False), 3.0, '#8a5a4a', 150 * k)
+        return [Layer(0.97, draw, 'squeeze_creases', blur=0)]
+    C(tsq, 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=700, scale=2.3, turn=0.05, expr='determined', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.6, brow_angry=0.55, brow_sad=0.5, m_press=0.6),
+             pose(tsq + 0.15, None, 0.3, squint=1.0, brow_angry=0.75)),
+      hands=[dict(who='mom', fn=squeeze_hand, size=1250, shape='open', side=-1, sleeve_from=lambda tt: (-700, 1700), scratch=True, depth=0.95)],
+      acts=squeeze_lines, c=dict(mv='push', x=960, y=560, zrate=0.02))
     # 356 "I've been counting to seven in my head all night."  357 "It's the easiest thing in the world."  358 "Six."  359 "Seven."
     C(T(356), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 40, scale=ns * 1.25, turn=0.1, expr='determined', light=DAWN_L,
       act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.8, brow_angry=0.5)),

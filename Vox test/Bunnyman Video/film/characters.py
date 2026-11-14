@@ -1374,7 +1374,7 @@ def _wrinkles(c, hm, sp, P, det, sh):
     ey = sp['eye_y']; r = sp['eye_r']
     lw = c.lw * 0.35
     lift = P.brow_up + 0.6 * P.brow_sad + 0.3 * P.wide
-    a_f = clamp((lift - 0.3) / 0.5)
+    a_f = clamp((lift - 0.3) / 0.5) * clamp(0.3 + 1.4 * age)      # young skin barely folds (the kids read their age)
     if a_f > 0.03 and det >= 1:
         folds = []
         for k, yy in enumerate((-60, -49, -39)):
@@ -1422,6 +1422,21 @@ def _scar(c, hm, sp, side, det):
             c.line(poly([(x_ - 4, y_ + 1.5), (x_ + 4, y_ - 1.5)], False), c.lw * 0.22, '#8d5552', 180)
 
 
+def _lip_cracks(c, hm, sp, P, det, t):
+    """Dry, cracked lips (Dale): short dark splits across the lower and upper lip."""
+    if not sp.get('cracked') or det < 1: return
+    upper, lower, _, hw, _ = _mouth_geom(sp, P, t)
+    for pts, n, dy in ((lower, 5, 3.6), (upper, 3, -2.8)):
+        if len(pts) < 3: continue
+        for k in range(n):
+            u = (k + 0.5) / n
+            i = int(u * (len(pts) - 1))
+            x_, y_ = pts[i]
+            X, Y, V = hm.map([x_, x_ + 0.6], [y_, y_ + dy], 6.0)
+            if min(V) > 0.1:
+                c.line(poly([(X[0], Y[0]), (X[1], Y[1])], False), c.lw * 0.35, sp['skin_dp'], 170 * sp['cracked'])
+
+
 def _stubble(c, hm, sp, det, sil):
     a = sp['stub']
     if a <= 0 or not sp.get('stubble'): return
@@ -1431,6 +1446,20 @@ def _stubble(c, hm, sp, det, sil):
     X, Y, V = hm.map([p[0] for p in pts], [p[1] for p in pts], 1.0)
     reg = inter(_pts_path(X, Y, True, 0.8), sil)
     c.fill(reg, sp['stubble'], 26 * a)
+    if sp.get('stub_dots') and det >= 1:                 # a days-old grey stubble you can see: dots over the shadow
+        rng = np.random.default_rng(17)
+        n = int(260 * sp['stub_dots'])
+        xs = rng.uniform(-90, 90, n); ys = rng.uniform(my - 14, 120, n)
+        keep = [(x_, y_) for x_, y_ in zip(xs, ys) if ((x_ / 92.0) ** 2 + ((y_ - 40) / 84.0) ** 2) < 1.0 and not (abs(x_) < 26 and abs(y_ - my) < 9)]
+        if keep:
+            X2, Y2, V2 = hm.map([q[0] for q in keep], [q[1] for q in keep], 1.0)
+            dots = None
+            for x_, y_, v_ in zip(X2, Y2, V2):
+                if v_ <= 0.15: continue
+                o_ = oval(x_, y_, 1.25, 1.25)
+                dots = o_ if dots is None else union(dots, o_)
+            if dots is not None:
+                c.fill(inter(dots, sil), sp['stubble'], 190 * min(1.0, a))
 
 
 def _nape(ph):
@@ -2071,6 +2100,14 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
                 c.glow(hx_ + side * 4, hy_, 20 * hm.sx(side * 66, 58), 30, sh, 120 * g_)
                 bx_, by_, _ = hm.map1(side * 60, 22, 2)
                 c.glow(bx_, by_, 22 * hm.sx(side * 60, 22), 8, mix(skin, '#ffffff', 0.3), 60 * g_)
+                if g_ > 1.6:                                   # skin and bone: sunken temples, the cheekbone's edge, the hollow
+                    tx_, ty_, tv_ = hm.map1(side * 78, -40, 2)
+                    if tv_ > 0.05: c.glow(tx_, ty_, 16 * hm.sx(side * 78, -40), 26, sp['skin_dp'], 70 * (g_ - 1.0))
+                    cb = [hm.map1(side * k_, 30 + 0.12 * k_, 2) for k_ in (44, 58, 72, 82)]
+                    if min(q[2] for q in cb) > 0.05:
+                        c.line(smooth([(q[0], q[1]) for q in cb], False), c.lw * 0.45, sp['skin_dp'], 110)
+                    hx2, hy2, _ = hm.map1(side * 58, 74, 2)
+                    c.glow(hx2, hy2, 14 * hm.sx(side * 58, 74), 22, sp['skin_dp'], 80 * (g_ - 1.0))
     _stubble(c, hm, sp, det, sil)
     c.radial(inter(sil, rect(-150, 70, 300, 120)), hm.st * 30, 128, 90, [(0, dp, 90), (0.5, dp, 45), (1, dp, 0)], sy=22 / 90.0)
     if light and light.get('under'):                         # screen / tablet glow from below (uplight)
@@ -2085,6 +2122,7 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         with (c.clip(hm.silhouette(grow=1.5)) if abs(hm.st) > 0.22 or abs(P.h_nod) > 0.3 else _noop()):
             _wrinkles(c, hm, sp, P, det, sh)
             _mouth(c, hm, sp, P, det, t, skin, sh)
+            if sp.get('cracked'): _lip_cracks(c, hm, sp, P, det, t)
             if sp['scar']: _scar(c, hm, sp, sp['scar'], det)
             for side in (-1, 1):
                 eyes[side] = _eye(c, hm, sp, P, side, det, t, skin, sh)

@@ -15,7 +15,7 @@ API still work unchanged. The dummy film's Mom is now `mom_dummy`, and the deliv
 ## Who's who (draw height = `CH.height_px(who, px_per_m)` at the same depth)
 | id | look | notes |
 |---|---|---|
-| `bunny` | **The Bunnyman now.** A grey plush mascot suit on a tall man, 1.98 m to the crown with the ears above. Fur matted dark. The character's right ear is snapped 40 % up and its flap hangs over the side of the head, swinging with motion. Round black glass eyes in dirty felt rings that **reflect nothing**. Pink nose on two puffy muzzle pads, bent whiskers (one broken off), two big yellowed buck teeth (one chipped), and a long stitched smile with a rust-brown dribble. White belly panel soaked with a rust-brown stain, with runs and drops. Torn rips with stuffing bulging out. Mud on the legs and feet. A cotton tail, and a zipper in the back. | The mask **never lip-syncs**: `talk` only nods it a little, because the voice is inside. Paw hand shapes: `paw`, `paw_open` (wave), `paw_point`, `paw_grip` (holding), `paw_flat` (pads to camera). `pose.unmask` 0..1 tips the foam head back off his crown and shows Dale's face, which lip-syncs "Mama". |
+| `bunny` | **The Bunnyman now.** A grimy grey-brown plush mascot suit (36 years in the woods: the pinks gone dirty mauve, no cheek blush, a grey belly panel with an irregular old smear, mud worked up from the hem, thick plush limbs) on a tall man, 1.98 m to the crown with the ears above. Fur matted dark. The character's right ear is snapped 40 % up and its flap hangs over the side of the head, swinging with motion. Round black glass eyes in dirty felt rings that **reflect nothing**. Pink nose on two puffy muzzle pads, bent whiskers (one broken off), two big yellowed buck teeth (one chipped), and a long stitched smile with a rust-brown dribble. White belly panel soaked with a rust-brown stain, with runs and drops. Torn rips with stuffing bulging out. Mud on the legs and feet. A cotton tail, and a zipper in the back. | The mask **never lip-syncs**: `talk` only nods it a little, because the voice is inside. Paw hand shapes: `paw`, `paw_open` (wave), `paw_point`, `paw_grip` (holding), `paw_flat` (pads to camera). `pose.unmask` 0..1 tips the foam head back off his crown and shows Dale's face, which lip-syncs "Mama". |
 | `bunny87` | The clean 1987 department-store mascot. Fluffy light grey, white belly, both ears up, glossy eyes with highlights, pink nose and inner ears, white teeth. | `hold_prop('basket', side)` gives him the Easter basket. |
 | `mom` | **Laurie, 43.** Auburn chin-length bob with a side part, green eyes, pearl studs. Dusty-rose cardigan over a cream blouse with a round collar, taupe trousers, ballet flats, her gold wedding ring. | Expressions: `too_still` (a smile the eyes don't share), `hum()`, `proud`, `warm_smile`. `pose.scratch` 1 pushes her sleeves up and scratches her forearms to ribbons; `pose.mess` loosens her hair. |
 | `mom_hosp` | The same body in a hospital gown, with long unkempt hair and dark circles. | This is the **narrator inside Mom's body**, so play them as a scared cast member: blinks, `haunted`, `fear`, `cry`. |
@@ -114,3 +114,14 @@ These join the older events (`breath`, `cloth_rustle`, `paper`).
   eyes stay open and readable on wide shots.
 - **Perspective:** feet forward of the body plane (seated) land slightly below `y_feet`, which is correct perspective.
   The furniture's front edge belongs there.
+
+## Fix round 1 additions (fixer A)
+- Expressions (`characters_bunny.EXPR`): `too_still` is Mom's composed, nearly blank resting face (smile 0.12); `fury`
+  (Mom's scream: brows hard down, jaw wide, teeth bared, `approach` toward the lens); `shock_shut` and `cry_shut` (the kids'
+  fear and tears with the mouth shut, for narrated lines).
+- Mom's cardigan has two patch pockets (`pose.ring_pocket` shows the ring's lump in the right one).
+- Dale: `gaunt` 2.3 (sunken temples, the cheekbone's edge, hollow cheeks), `stub_dots` (visible grey stubble), `cracked` (dry
+  split lips, `characters._lip_cracks`); the foam head can be shoved off and twisted (`pose.mask_twist`, `pose.mask_slide`).
+- The narrator reads 16: lighter eye bags (0.2) and forehead folds scaled by age (`characters._wrinkles`).
+- Back views: an arm whose hand is behind the body's plane is drawn behind the torso.
+- `open_egg`: the free hand closes on the egg by its grip point and twists (`pose.egg_twist`), the halves part where the egg was.

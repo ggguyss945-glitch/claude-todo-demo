@@ -78,10 +78,12 @@ _BUNNY_FUR = dict(
     clean=dict(fur='#a7abb5', fur_sh='#7a7f8b', fur_dp='#565a66', fur_hi='#ced2da', belly='#f1efe9', belly_sh='#c9c5bc',
                pad='#f2f0ea', pad_sh='#cdc8be', inner='#eaa3b2', inner_sh='#c47c8d', nose='#e98b9f', nose_sh='#b85f74',
                teeth='#fbf8ef', teeth_sh='#d8d1c0', eye='#08090c', stitch='#3a3036', whisk='#2b2a30', sole='#e0a6b1'),
-    dirty=dict(fur='#5d5f66', fur_sh='#3f4148', fur_dp='#26272d', fur_hi='#7e8189', belly='#8e8574', belly_sh='#6a6152',
-               pad='#b9b09d', pad_sh='#8d8370', inner='#a6727a', inner_sh='#7a4e57', nose='#a46a70', nose_sh='#7a4850',
-               teeth='#d9c995', teeth_sh='#a8955e', eye='#050506', stitch='#231b1c', whisk='#1d1b1e', sole='#7e5f5d',
-               rust='#5e3424', rust_dk='#3a1f15', mud='#3b2f24', hole='#120d0c', stuffing='#cfc6b2'))
+    # the suit now: 36 years in the woods. Grimy grey-brown, the pinks gone to dirty mauve, the belly panel gone grey
+    # (no bright patch to read as a target from across a room), mud worked up from the feet, dark clumped fur
+    dirty=dict(fur='#55514b', fur_sh='#3a3732', fur_dp='#201e1a', fur_hi='#716c64', belly='#7a7265', belly_sh='#58514a',
+               pad='#a0988a', pad_sh='#7a7266', inner='#7a605e', inner_sh='#58423f', nose='#7c5a57', nose_sh='#573e3b',
+               teeth='#c7b886', teeth_sh='#958556', eye='#050506', stitch='#1e1717', whisk='#1a1817', sole='#5e4a46',
+               rust='#4b2a20', rust_dk='#2b1711', mud='#2c231a', hole='#0e0a09', stuffing='#b9b09c'))
 _BUNNY_HEAD_YS = [-120, -117, -108, -86, -50, -10, 34, 66, 92, 110, 120]
 _BUNNY_HEAD_WS = [0, 38, 64, 87, 98, 105, 110, 108, 96, 68, 0]
 
@@ -92,11 +94,11 @@ def _bunny_cast(state):
         outfit='bunny', hat=None, hair=None, sex='m', hh=232.0, bunny=state, m=1.98, v3=True,
         head_ys=_BUNNY_HEAD_YS, head_ws=_BUNNY_HEAD_WS,
         eye_dx=43, eye_y=-16, eye_r=25.0, pupil=1.0, brow_th=0, nose_len=10, mouth_y=66, mouth_w=40,
-        skin=f['fur'], skin_sh=f['fur_sh'], skin_dp=f['fur_dp'], blush='#e3a0aa', lip=f['nose'], stubble=None, stub=0,
+        skin=f['fur'], skin_sh=f['fur_sh'], skin_dp=f['fur_dp'], blush='#e3a0aa' if state == 'clean' else f['fur_sh'], lip=f['nose'], stubble=None, stub=0,
         hair_c=f['fur'], brow_c=f['fur_dp'], bags=0.0, age=0.0, blink_rate=0.0, lock=0.0, micro=0.35, breath=0.55,
         scar=0, ring=0, part=0, lashes=0.0, talk=0.0, feet='bunny',
         dirt=0.0 if state == 'clean' else 1.0, ear_snap=0.0 if state == 'clean' else 1.0, shine=1.0 if state == 'clean' else 0.0,
-        body=dict(sh=126, ch=142, wa=150, hip=138, arm=(76, 64), leg=(98, 78), neck=70, hand=1.34, arm_k=0.98),
+        body=dict(sh=126, ch=142, wa=150, hip=138, arm=(84, 72), leg=(106, 88), neck=70, hand=1.34, arm_k=0.98),
         cloth=dict(f, top=f['fur'], top_sh=f['fur_sh'], top_hi=f['fur_hi'], trousers=f['fur'], trousers_sh=f['fur_sh'],
                    shoes=f['fur'], shoes_sh=f['fur_sh']))
 
@@ -227,14 +229,16 @@ def _bunny_ears(c, hm, sp, P, det, t, phase):
             # the break: a crease and frayed fabric / stuffing
             Xs, Ys, _ = _ear_poly(hm, base, up, acr, L, [(0.40, -24.0), (0.42, 0.0), (0.40, 24.0)])
             c.line(_pts_path(Xs, Ys, False, 0.8), c.lw * 1.2, cl['fur_dp'])
-            if det >= 1:
-                fr = []
-                for k in range(6):
-                    q = base + up * (0.41 * L) + acr * (-20 + 8 * k)
+            if det >= 1:                                       # grey stuffing bulging out of the torn break (no thread marks)
+                tufts = None
+                for k in range(3):
+                    q = base + up * ((0.42 + 0.02 * hash01(k, 92)) * L) + acr * (-14 + 14 * k)
                     qx, qy, _ = _rot_head(hm, q[0], q[1], q[2])
-                    a_ = -PI / 2 + (hash01(k, 91) - 0.5) * 2.0
-                    fr.append(poly([(float(qx), float(qy)), (float(qx) + 8 * math.cos(a_), float(qy) + 8 * math.sin(a_))], False))
-                c.line(_multi(fr), c.lw * 0.5, cl.get('stuffing', '#cfc6b2'), 230)
+                    o_ = oval(float(qx), float(qy) - 3.0, 7.5 + 2.0 * hash01(k, 93), 6.0)
+                    tufts = o_ if tufts is None else union(tufts, o_)
+                if tufts is not None:
+                    c.fill(tufts, cl.get('stuffing', '#cfc6b2'), 235); c.fill(_crescent(tufts, 2, 3), '#8a8272', 150)
+                    c.line(tufts, c.lw * 0.45, cl['fur_dp'], 210)
 
 def _bunny_sil(hm, sp, det, seed=3):
     """The head outline with a soft fur fluff (clean) or matted clumps (dirty)."""
@@ -438,7 +442,7 @@ def _bunny_head(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             c.line(q, c.lw * 0.85)
         X_, Y_, V_ = hm.map([0, 0], [35, 50], 28.0)
         if V_.min() > 0.0: c.line(_pts_path(X_, Y_, False), c.lw * 0.6, cl['stitch'], 200)
-        with (c.clip(sil0) if abs(hm.st) > 0.12 else _noop()):
+        with c.clip(sil0):
             for side in (-1, 1):
                 eyes[side] = _bunny_eye(c, hm, sp, P, side, det, t)
             if dirt > 0.4 and det >= 1:                              # a ragged tear low on the left jowl, stuffing
@@ -836,16 +840,16 @@ def _bunny_belly(c, sp, B, rows, P, det, t):
     if dirt > 0.2:
         with c.clip(belly):
             c.texture(belly, 'grunge', 0.22 * dirt, 0.7)
-            # one big soaked stain spreading from the upper belly, darkest at its heart, a dried tide line at the edge
+            # an old soaked smear, not a shape: several ragged, overlapping, low-contrast patches spreading down and to one
+            # side from the chest, the darkest where it soaked deepest, no outline (from across a room: old filth)
             X, Y, vv, s_ = B.surf(-0.08 * b['ch'], yt + (yb - yt) * 0.42, 3, False, rows)
             fx = max(0.35, abs(B.ct))
-            # (kept dark and low in contrast: from across a room it should read as old filth, not a bright target)
-            stain = _blob(X, Y, 72 * s_ * fx, 88 * s_, 13, 3, 0.55)
-            c.radial(stain, X + 10 * s_, Y - 20 * s_, 115 * s_, [(0, cl['rust_dk'], 200 * dirt), (0.5, cl['rust'], 165 * dirt),
-                                                             (0.85, cl['rust'], 105 * dirt), (1, cl['rust'], 55 * dirt)], sy=1.15)
-            c.line(stain, c.lw * 1.2, cl['rust_dk'], 120 * dirt)
-            sec = _blob(X + 70 * s_ * fx, Y + 130 * s_, 34 * s_ * fx, 40 * s_, 9, 5, 0.5)
-            c.fill(sec, cl['rust'], 150 * dirt); c.line(sec, c.lw * 0.8, cl['rust_dk'], 90 * dirt)
+            for k, (dx_, dy_, rx_, ry_, a_) in enumerate(((0, 0, 70, 60, 120), (-34, 46, 52, 70, 95), (40, 70, 44, 52, 85),
+                                                          (12, -40, 58, 34, 75), (-60, -14, 30, 42, 70), (26, 118, 30, 44, 80))):
+                bl_ = _blob(X + dx_ * s_ * fx, Y + dy_ * s_, rx_ * s_ * fx, ry_ * s_, 11, 3 + k, 0.62)
+                c.fill(bl_, cl['rust'] if k else cl['rust_dk'], a_ * dirt)
+            c.texture(belly, 'grunge', 0.3 * dirt, 1.1)
+            c.grad(belly, 0, yt, 0, yb, [(0, cl['mud'], 0), (0.6, cl['mud'], 50 * dirt), (1, cl['mud'], 130 * dirt)])
             runs, drops = [], []
             for k in range(6):
                 x0 = X + (-60 + 24 * k) * s_ * fx
@@ -1130,7 +1134,7 @@ CAST['narrator'] = _v3cast(
     head_ws=[0, 50, 72, 88, 93, 92, 85, 70, 50, 26, 0],
     eye_dx=41, eye_y=-5, eye_r=19.0, iris_c='#7a7a4c', lid_rest=0.14, brow_th=8.5, nose_len=22, mouth_w=19,
     skin='#e5b99f', skin_sh='#bb8d78', skin_dp='#7a524a', blush='#e09a92', lip='#b07870', lips=0.0,
-    hair_c='#4a2a1f', brow_c='#3a2118', bags=0.45, age=0.12, lashes=0.25, part=1, feet='socks',
+    hair_c='#4a2a1f', brow_c='#3a2118', bags=0.2, age=0.08, lashes=0.25, part=1, feet='socks',
     body=dict(sh=108, ch=102, wa=94, hip=100, arm=(46, 38), leg=(50, 42), neck=38, hand=0.98),
     cloth=dict(top='#7f957a', top_sh='#596c55', top_hi='#9eb299', hood='#73896e', hood_sh='#4f604b', string='#e9e4d8',
                trousers='#3a3c44', trousers_sh='#24262c', socks='#a8a8ae', socks_sh='#7b7b82'))
@@ -1164,8 +1168,8 @@ CAST['dad'] = _v3cast(
 # Dale Whitlock at 55: the man inside the suit. Only his face is ever seen (the suit's head half off): gaunt, skin and
 # bone, grey stubble, thin grey hair, and the wide wet eyes of a terrified little girl. His lips form "Mama".
 CAST['dale'] = _v3cast(
-    outfit='gown3', hair='thin', sex='m', hh=180.0, m=1.85, gaunt=1.3,
-    head_ws=[0, 50, 72, 86, 90, 87, 77, 64, 47, 26, 0],
+    outfit='gown3', hair='thin', sex='m', hh=180.0, m=1.85, gaunt=2.3, stub_dots=1.0, cracked=1.0,
+    head_ws=[0, 50, 71, 84, 86, 80, 68, 55, 41, 24, 0],
     eye_dx=40, eye_y=-6, eye_r=19.5, iris_c='#6a5a44', lid_rest=0.0, pupil=1.25, brow_th=7.0, nose_len=28, mouth_w=20,
     skin='#cdb3a3', skin_sh='#9a8073', skin_dp='#5e4a48', blush='#c9928f', lip='#9a706c', stubble='#9a958e', stub=0.9,
     hair_c='#8e8a84', brow_c='#6e6a64', bags=1.2, age=0.9, lock=0.0, lashes=0.3, wet_k=1.0,
@@ -3394,7 +3398,14 @@ Acting.open_egg = _acting_open_egg
 # ------------------------------------------------------------------------------------------- expressions (this film)
 EXPR.update({
     'warm_smile': dict(smile=0.55, teeth=0.2, squint=0.15, brow_up=0.12),                       # Mom as people see her
-    'too_still': dict(smile=0.4, m_press=0.32, still=0.55, pupil=0.78, lock=0.55, brow_up=0.05),  # the smile that never moves
+    # Mom's resting face at night: composed, blank, a hint of a pleasant mouth that never moves (her real smiles are
+    # separate beats: 'wrong_smile', 'proud', creep_smile; 'fury' when she screams)
+    'too_still': dict(smile=0.12, m_press=0.36, still=0.6, pupil=0.78, lock=0.6, brow_up=0.0),
+    'fury': dict(brow_angry=1.0, brow_sad=0.0, wide=0.35, squint=0.25, m_open=0.55, m_wide=0.55, teeth=1.0, smile=-0.45,
+                 pupil=0.55, lock=0.9, tremble=0.0, h_nod=-0.1, approach=0.25),
+    # the kids' fear on the narrator's lines (no open mouth: the mouth only moves when they speak)
+    'shock_shut': dict(wide=0.9, pupil=0.42, brow_up=0.8, brow_sad=0.35, m_press=0.55, m_open=0.0, smile=-0.22, tremble=0.12),
+    'cry_shut': dict(tears=1.0, wet=1.0, brow_sad=1.0, brow_up=0.35, smile=-0.45, m_press=0.6, m_open=0.0, tremble=0.35, squint=0.25, blush=0.6),
     'proud': dict(smile=0.72, teeth=0.35, brow_up=0.32, squint=0.1, pupil=0.85),
     'little_girl': dict(wide=0.6, brow_sad=1.0, brow_up=0.55, wet=1.0, tears=0.55, pupil=1.25, m_open=0.08, m_round=0.3,
                         tremble=0.5, smile=-0.3),                                                # Dale's face: Laurie inside
@@ -3418,7 +3429,9 @@ def _bunny_unmasked_head(c, who, P, yaw, pitch, det, t, light, sp):
     # the foam head, tipped back off the crown: pushed up past the forehead, foreshortened as it tips away, a little
     # to one side; the dark inside of its neck opening shows as a band along its lower rim
     sgn = 1.0 if math.sin(yaw) >= 0 else -1.0
-    mc = c.sub(-sgn * 14.0 * u, -104.0 * u, -sgn * 14.0 * u, 1.0, 1.0 - 0.3 * u)
+    tw = getattr(P, 'mask_twist', 0.0) * u                 # lying on his back: the head shoved back off the crown and
+    sl = getattr(P, 'mask_slide', 0.0) * u                 # twisted to one side on the floor, one glass eye to the ceiling
+    mc = c.sub(-sgn * 14.0 * u + 0.35 * tw, -104.0 * u - sl, -sgn * 14.0 * u + tw, 1.0, 1.0 - 0.3 * u)
     Pm = P.copy(); Pm.m_open = 0.0
     hm = draw_head_local(mc, who, Pm, yaw, pitch - 0.45 * u, det, t, light, sp)
     if u > 0.05:
