@@ -47,7 +47,7 @@ EDIT = [
     ('paper', 's24-0.3', 'e24', {}, {'add_db': 6.0}, 'the Courier (24 LU under)'),
     ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': -2.0}, 'the mascot and Laurie walking into the woods (22 LU under)'),
     ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': 3.0}, 'the run up the stairs (19 LU under)'),
-    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -9.0}, 'her knock under the line (6.5 LU over it)'),
+    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -13.0}, 'her knock under the line (6.5 LU over it)'),
     ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),
     ('window_smash', 's236', 'e236+0.3', {}, {'gain_db': 1.0}, '"explodes" stays readable (+1.1 LU over the line)'),
     ('door_crash', 's237', 'e237', {}, {'gain_db': 0.0}, '"crashes open" stays readable (+2 LU over the line)'),

@@ -941,11 +941,17 @@ def main():
     spare = np.ones(N, np.float32)
     bwin = np.zeros(N, np.float32)          # the three boosted scares' spare windows (the hits limiter lets them up)
     big = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop') and float(e.get('boost') or 0) > 0]
+    # the Bunnyman: a planned hit may carry 'spare' (s): its spare window is that long even past the next word (the face
+    # reveal lands on the cut, 0.1 s before "It's a man.": the transient and body ride over "It's", "man" stays clear)
+    forced = {round(float(e['t']), 3): float(e['spare']) for e in mc['events'] if e.get('spare')}
     for h in hit_times + mus_hits:
         long_ = any(abs(h - x) < 0.01 for x in big)
         k_ = np.searchsorted(onsets, h + 0.01)
         nxt = onsets[k_] if k_ < len(onsets) else 1e9
         te = min(h + (0.3 if long_ else 0.15), max(h + 0.02, nxt - 0.02))
+        fs = next((v for k, v in forced.items() if abs(k - h) < 0.01), None)
+        if fs:
+            te = h + fs
         tr = 0.06 if nxt - te < 0.5 else (0.4 if long_ else 0.2)
         a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue

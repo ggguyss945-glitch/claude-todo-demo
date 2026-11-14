@@ -3809,13 +3809,31 @@ def _knuckle_pool():
     return pool('knuckle_new', lambda: _has('knock_family', 'knuckles'), 'onset', gap=0.08, max_len=0.6, keep=-10)
 
 
+def _crisp_knuckle_pool():
+    """The knuckle grains without the dullest 40 % (energy share above 1 kHz): the final mix measured some family knocks
+    -21 to -27 dB above 300 Hz (a thud on a phone); the knock is rule 3's whole sound and must read."""
+    key = 'knuckle_crisp'
+    if key not in _POOLS:
+        P = _knuckle_pool()
+        sc = []
+        for eid, a, b in P.items:
+            y = mono(audio(eid)[a:b]).astype(np.float64)
+            sc.append(float(np.sum(hp(y.astype(np.float32), 1000, 2).astype(np.float64) ** 2) / (np.sum(y ** 2) + 1e-12)))
+        thr = float(np.percentile(sc, 40)) if sc else 0.0
+        Q = Pool.__new__(Pool); Q.key = key
+        keep = [i for i, v in enumerate(sc) if v >= thr] or list(range(len(P.items)))
+        Q.items = [P.items[i] for i in keep]; Q.w = np.array([P.w[i] for i in keep], float)
+        _POOLS[key] = Q
+    return _POOLS[key]
+
+
 def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, door=1, times=None, **_):
     """The family knock, 2-3-2, on the jingle's beat (beat = s per quarter, jingle.TEMPO 126 -> 0.476): knocks on
     beats 0, 1 | 3, 3.5, 4 | 6, 7 ("Hop, hop" / "The Bun-ny" ... ). groups: the start time (s from the cue) of each
     of the three groups, to sit them in the narration's gaps (the spacing inside a group stays on the beat).
     Recorded knuckles on an old wooden door (the bunny set) + the door's body modes + its low boom; the first
     transient lands on the cue. soft=True: Grandma's knock on the kitchen table (the memory), or a gentle one."""
-    K = _knuckle_pool()
+    K = _knuckle_pool() if soft else _crisp_knuckle_pool()
     dr = np.random.default_rng(2000 + int(door))
     modes = np.array([86, 131, 179, 244, 334, 482]) * (1 + 0.04 * dr.standard_normal())
     g_beats = [(0.0, 1.0), (3.0, 3.5, 4.0), (6.0, 7.0)]

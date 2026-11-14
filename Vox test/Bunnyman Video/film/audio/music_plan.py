@@ -247,12 +247,12 @@ EVENTS = [
     ('s215-0.1', 'silence', 0.5, 0.8),                                 # "Then Easter, 1987." (the nursery drags to a halt)
     ('s217', 'swell', 0.55, 7.0),                                      # the cursive -> "I am Laurie..."
     ('s225-0.6', 'silence', 0.75, 1.5), ('e225+0.1', 'hit', 0.75, None),    # "It is so nice to be small again."
-    ('s229', 'riser', 0.6, 3.5), ('s230', 'hit', 0.9, None, {'boost': 3.0}), # "...Mom says," / "Back to bed, you two."
+    ('s229', 'riser', 0.6, 3.5), ('s230', 'hit', 0.9, None, {'boost': 2.0}), # "...Mom says," / "Back to bed, you two."
     ('s231', 'stinger', 0.6, None),                                    # "I never saw her sitting there."
     ('s232-0.1', 'rule', 0.8, None, {'nosnap': True}),
     # rule 6
     ('w236:explodes-0.55', 'silence', 0.8, 0.5),
-    ('w236:explodes', 'hit', 0.85, None, {'boost': 1.5}),              # "the kitchen window explodes." (final mix: 1.0 /
+    ('w236:explodes', 'hit', 0.85, None),                               # "the kitchen window explodes." (final mix: 1.0 /
                                                                        # boost 4 masked "explodes"; the window itself
                                                                        # carries it, the face reveal and the swap are the
                                                                        # hardest hits)
@@ -278,7 +278,7 @@ EVENTS = [
     ('s302', 'braam', 0.65, 3.0),                                      # the Bunnyman at the bottom of the stairs
     # the face reveal (final mix: one of the two hardest hits of the film, with the swap)
     # (on the cut to Dale's face, out of the 2.2 s silence, just before "It's a man.": on "man" it masked the word)
-    ('s304-0.1', 'silence', 0.6, 2.2), ('s305-0.06', 'hit', 0.95, None, {'boost': 3.5}),   # "Inside, there's no monster. It's a man."
+    ('s304-0.1', 'silence', 0.6, 2.1), ('s305-0.1', 'hit', 0.95, None, {'boost': 3.5, 'spare': 0.3}),   # "Inside, there's no monster. It's a man."
     ('e309', 'stinger', 0.7, None),                                    # "...the eyes of a terrified little girl."
     ('s311-0.4', 'silence', 0.85, 2.0),                                # "Mama."
     ('s312', 'sub_drop', 0.55, None),                                  # "Then he's still."
