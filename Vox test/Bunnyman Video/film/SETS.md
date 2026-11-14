@@ -135,6 +135,16 @@ a floor (the bathroom door) a backfill plate sits behind it.
   0.505 s (`front_police`: two light bars + flash), then `hall_slot_open` 0.34, the parade views ~0.3; budget 0.6 s.
   A set's first frame (building its caches) takes 2-5 s.
 
+## Polish pass (film staging review)
+- Eight point anchors had their plan y and their height swapped (the back door's `back_door_knob` / `back_door_bolt` /
+  `switch`, the bathroom's `bath_knob` / `bath_keyhole` and, inside, `lock` / `knob` / `keyhole`): they pointed into the
+  hall at attic height. Fixed in `KitchenRoom.spots`, `UpstairsHall.spots`, `Bathroom.spots`; `fridge_rules` now sits on
+  the drawn sheet (0.86 m). `tools/validate.py` (ANCHOR) checks every anchor against the floor levels.
+- Interior views at night put a dark veil (`NIGHT_VEIL`) over the outside layer seen through their windows; the '_out'
+  views (the yard through June's window as the picture itself) keep their exposure. `ob_living('wide2')` sees the front
+  yard through the front window. `ob_june(moon_dir=(az, el))` can place the moon in a window's frame.
+- June's closet door hangs the new dress on its room-side face (`art_b`).
+
 ## Known limits
 - Seated figures seen front-on read as standing (cast). Use the 3/4 views listed above; `stage_figure` warns.
 - `hall_top`: the stairwell is narrow, its west wall fills the right of frame; stage people on the runner.

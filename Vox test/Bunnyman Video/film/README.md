@@ -40,7 +40,7 @@ python3 film.py --bench 1 --consec 10 --shots 0,10,57 --size 2560x1440 --threads
 ```
 (`W` stands for `_work`.) Each command builds the film once (about 5 s) and runs at 960x540 unless `--size` says otherwise. Review sheets are 960x540 frames in 320 px tiles, 8 shots a sheet, each row `#index kind start-end (length)` with the timeline lines it covers printed under it.
 
-- **375 shots**, median 2.52 s (p10 1.31, p90 4.85; shortest 0.69 s, longest 10.1 s: the rule cards, the next-episode card and the end card), 20.7 cuts/min (the police film runs 23.4): 169 set shots, 96 close-ups, 79 inserts, 9 rule cards (7 + 2 recalls), 12 VHS-pause shots, 7 cards, 3 black.
+- **383 shots** (after the polish pass), median 2.50 s (p10 1.31, p90 4.75; shortest 0.69 s, longest 10.1 s: the rule cards, the next-episode card and the end card), 21.1 cuts/min (the police film runs 23.4).
 - **The film is 1089.01 s** (65,341 frames at 60 fps): the narration (1079.16 s) + 9.85 s for the outro. The sound step's outro jingle starts 0.1 s after the last line ends and runs 9.75 s ("...that's just the outro." and the song IS the outro, `audio/music_plan.py`), so the RULES AFTER DARK end card holds for it and the film fades out with its last soft hum.
 - **Story layout** (`plan_film`): `plan_open` (0-65.7 s: the cold open, the 1987 parade on tape, the Courier, Laurie walking out of the woods, the hospital, the house and the rules on the fridge), `plan_1987` (the float, the photo with Laurie holding his paw, the magic trick, the woods, the bridge, sunrise 1987, the missing poster), `plan_since` (every Easter since: the treeline, the burn barrel, Grandma's porch light, Dad and his flashlight, the police morning), `plan_rule1` (11:07, the song, the curtains, June at her window, the wave, "Past us.", Mom in the doorway), `plan_pause` (the comment prompt), `plan_rule2` .. `plan_rule7` (midnight's egg, 1:13's knock, 1:40's mail slot, 2:47's attic, 4:30's break-in and the bathroom, 6:12's sunrise and the body), `plan_reveal` (the trick, 1987 and now, the recalls of every rule, the swap), `plan_after` (Mom's body, the police, Holloway State Hospital, the visit, "Want to see a magic trick?"), `plan_outro`, `plan_globals` (the jingle by version, the count, the swap, the climax pulse and heartbeat, the beds the reveal needs).
 - **How it is staged** (the owner's notes on the last films):
@@ -53,6 +53,61 @@ python3 film.py --bench 1 --consec 10 --shots 0,10,57 --size 2560x1440 --threads
 - **The format**: the police header (HOUSE RULES / RULE n OF 7, the story's clock in the corner: 7:42 PM .. 6:12 AM), captions on every line, seven rule cards (the police card over the blurred laminated rules on the fridge, each with its line icon; rules 6 and 7 are recalled before they are broken), tags (HOLLOWAY STATE HOSPITAL, the knock count), the global look: a red creep from the window smash (600 s), the gold dawn holding it back (709 s), the climax ramp from Mom's hand over June's eyes (770 s) with a blue heartbeat spill at the frame edge under the counts, a white flash on "Seven." and black; the aftermath drained; 1987 on the camcorder tape (date and time stamp), memories warm, the recalls desaturated with a static cut.
 - **The comment prompt (258-279.5 s) is a VHS PAUSE**: the frame freezes on Mom's face after "I told you not to look at the treeline" (PAUSE, tape counter 0:04:18, tracking noise), the comment box slides up, the screen splits MOM | THE BUNNYMAN with OR, ONE WORD., the MOM half flickers, then PLAY rolls the tape on. The outro rewinds the tape to that split ("go back to the comment you left before rule two"): THE BUNNYMAN lit, then MOM with a reply arrow, the frozen Mom, then the frame plays: her smile widens and her eyes come to us ("She liked you too.").
 - **The outro shows what it says**: black and a breath, the switch flips on and the frame warms, the living room with every lamp on, the Courier's masthead and the egg's stamp struck through, the bridge in daylight, a very ordinary cup of coffee by the notebook with the story's notes, the costume on its hanger (then from behind: the zipper pull slides down), THE TRICK card (1. CLOSE YOUR EYES, 2. COUNT TO SEVEN), the open eye, "SO YOU NEVER DID.", the rewind and the split, the window at night, the LIKE that lands like a knock (a knock cue on its hit), "And subscribe." = Grandma's porch light switching on, the porch light over the empty treeline, the next-episode card (the phone ringing on the nightstand at 3:00 AM: DR. HALVERSON), RULES AFTER DARK, the last line on black and the end card held for the outro song.
+
+## The polish pass (staging and animation)
+Run `python3 tools/validate.py` after any change to the plan (about 40 s; exit 1 on an ERROR; `--shots a-b`, `--no-lip`,
+`--json`). It builds the film the way the renderer does and checks, from the plan and the actors' clips:
+ANCHOR (every staging point of every set on a floor of its level), FLOOR (feet inside a room and clear of furniture, seated
+people on seat anchors, nobody standing on a seat), LEVEL (feet at the floor height there; the stair treads), OVERLAP (two
+people inside each other), REACH (contacts that miss their target at full weight), PROP (a prop held by two hands at
+once, drawn by the set and held, jumping when it changes hands), CUTPOS (the same person on the same plan jumping across a
+cut with no walk to explain it: `enter=True` on a P entry marks an entrance, `montage=True` on a shot marks an ellipsis),
+STATE (the story's states by time: the curtains after 11:07, the porch light, the mail-slot flap, the kitchen window and
+the back door after 4:30, the bathroom lock and door, the wrecked corridor, Mom's scratched arms), CAM (a move over 4 s, a
+camera moving over figures that do not act, an empty set held long under a moving camera), LEN, LIP (the masked
+Bunnyman's girl's-voice lines are the allowed exception). Result: `W/tests/polish/validate.json`.
+Before the pass: 179 errors and 53 warnings; after: 0 errors, 4 warnings (keyed insert moves just over 4 s and two
+outro holds, checked by eye).
+
+`python3 tools/strips.py --shots a-b [--fps 12]` renders every frame of each shot at 12 fps, flags pops (a frame that
+changes 3.5x more than the shot's median: a limb or a prop that teleports) and tiles the sheets with the neighbouring
+shots' last / first frames (`W/tests/polish/before/` and `after/`: all 375 / 383 shots). Every flagged pop after the
+pass is an intended event (a flash, a static or VHS cut, the hand covering the lens, a light switching, a card).
+`python3 tools/before_after.py --before <dir with the old film.py / sets_bunny.py>` renders matched times from two
+copies of the code (`W/tests/polish/before_after/`).
+
+What changed (film.py unless noted):
+- **Night through the windows** (`sets_bunny.build_view`): everything seen through an interior window at night sits under
+  a dark veil (the lit rooms' grade had lifted the front yard into a pale, daytime field); the living room's `wide2` view
+  sees the FRONT yard through the front window (it drew the back yard).
+- **Hands** (`hero_hand`, `hero_paw`, `hand_layer`): every hand in an insert or a close-up is the cast's hand geometry at
+  hero size: skin shaded toward the light, knuckle highlights, nails with a glint, creases in skin tones, the character's
+  own sleeve with its cuff (rib knit for the cardigans and the hoodie), folds and the fabric's grain, a soft shadow on
+  what it lies on; Mom at dawn has her cardigan pushed up over a scratched forearm; the Bunnyman's paws are plush mittens
+  with fur tufts, pads and mud. `switch_finger` puts the fingertip ON the toggle and the wrist follows it; `wrist_for` /
+  `hand_tip` / `hand_low` place a hand by its fingertip or its knuckles. The hand toward the lens goes soft and dark as it
+  nears the glass. Hands over eyes (`paw_eyes`) lie across both eyes and leave the mouth free (June counts).
+- **New inserts**: Grandma's family knock on the red-checked cloth (`ins_knuckles2`), Laurie's hands holding the golden
+  egg (`egg_gold_hands`), the new dress on the closet door beside the 1987 clipping (`dress_photo`), three hatchet
+  pictures (`hatchet_steps`, `hatchet_thunk`, `hatchet_pile`), the egg taken off the doormat through the crack.
+- **Restaged**: the parade photo and the magic trick in front of the float (they stood behind it, hidden); Laurie walking
+  out of the woods (a wide, then a medium on 'walked'); June sitting on her bed (she stood on it); the curtains closed
+  by the right hands; the narrator crossing the hall to the door after the tap; Mom stepping off the stairs to take the
+  ring (the front door still ajar); June coming off the stairs and kneeling at the slot in profile; "Small, and scared."
+  on the trembling flap; Mom's blank face on "doesn't recognize it"; the dark attic corner (Mom a silhouette in the
+  rocker, then her eyes in a band of the bulb's light); the bathroom dash and the tub (side by side, the hand on June's
+  mouth reaching it); the dawn reverse (Mom turning her key: the keyhole anchor had its plan y and height swapped);
+  her scratched forearms, then her smile; the body seen from the top of the stairs; Dale's "Mama." on his lips, then
+  still; the mascot curled on the gravel under the trestle; the narrator's own face under Mom's hand on "It's the
+  easiest thing in the world"; the cop crouching by the body; the desk split into the notebook and the cup.
+- **Anchors** (`sets_bunny.py`): eight point anchors had their plan y and height swapped (the back door's knob, bolt and
+  switch, the bathroom's knob, keyhole, lock); `fridge_rules` sits on the sheet (0.86 m).
+- **State continuity**: the mail-slot flap stays open from 1:40 until Mom shuts it; the curtains stay shut after 11:07;
+  the back door stands open after 4:30; the front door stays ajar until the ring is pocketed.
+- **Camera**: a push longer than 4 s creeps at most 8 % (`scam`; `long_ok` lets a shot keep its move); long empty holds
+  are split into cuts (the gap under the door, the desk).
+- **Lips**: Laurie no longer mouths the narrator's line under the paw; the narrator's realisation on "Before sunrise." is
+  in the eyes and brows, the mouth closed.
 
 ## Checks
 - **Every shot reviewed**: review sheets `W/tests/film/final/sheet_NNN.jpg` (47 sheets, all 375 shots, NNN = the first shot on the sheet; first | mid | last frame of every shot with its lines), each checked against its line and the staging rules. The shots restaged after review were checked again on stills (`W/tests/film/still_*.jpg`): the tap on the front door (the door in frame), Mom tucking June in, the door opening a crack, Mom on the stairs (up the flight from the bottom), June creeping down in her socks and kneeling at the slot, Mom closing the slot and smoothing June's hair (the camera backed off: her head was cut), the Bunnyman at the slot (side-on), the kids asleep on the couch, the close-up backgrounds at the slot and in the attic, the body at the foot of the stairs, the paw over Laurie's eyes, the joined hands, the scream past the two of them, the cop in the doorway, the visiting room, the report card's A's, the end card.
@@ -144,11 +199,9 @@ Everything below is in `audio/`; run from `film/`. The verdicts, the music map a
 - Not run for this film yet (the next sound step). The measurements that stood here were the dummy film's mix and no longer apply. The picture holds its end card to 1089.0 s for the outro song (see The shot list).
 
 ## Open problems
-- **Sets**: the `fridge_rules` anchor sits at Y 1.42 m but the laminated sheet is drawn at about 0.84 m on the fridge door; the plan aims at plan points (-4.21, 7.74, 0.86) for the sheet and (-4.21, 7.74, 1.09) for the bunny magnet instead. The `porch_egg` camera's own `env` (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.
-- **The bathroom door from inside** cannot show the corridor through the open doorway: at sunrise the door swings open on the gold light and Mom is seen next in the corridor. A reverse from the corridor (`up` / `bath`, Mom turning the key) was tried and dropped: her reach to the `bath_keyhole` anchor goes to the wrong height in that view.
-- **Lying figures** (`pose.lie`) are the front view turned 90 degrees: they read from the side or from above (June asleep, the mascot on the gravel in 1987, the body at the foot of the stairs seen through the balusters), never along their length.
-- **Kneeling kids seen from behind** read as standing; June at the mail slot is shot from the side for that reason.
-- **The paw / hand over the eyes** in the close-ups is a flat hand layer laid over the bust (`hand_layer`): it reads, but it is the plainest image of the reveal; sleeves are plain tubes (with scratches on Mom's).
-- **The three hatchet inserts** (rule 6: "something hard knocking", "Thunk.", "the old hatchet from our woodpile") are one composition, varied by zoom and the hit, not by angle.
-- **The Bunnyman's lines have no mouth** (the mask): by design; `--lipcheck` lists those three shots.
+- **Lying figures** (`pose.lie`) are the front view turned 90 degrees: they read from the side or from above (June asleep, the mascot curled on the gravel in 1987 seen from under the trestle, the body at the foot of the stairs seen from the top of the flight), never along their length.
+- **Kneeling kids seen from behind** read as standing: June at the mail slot is shot from the side and in profile close-ups.
+- **The masked Bunnyman's lines have no mouth** (by design): `tools/validate.py` lists those three shots as allowed (INFO).
+- **The `porch_egg` camera's own `env`** (y 180-300) excludes the frame centre, so `scam()` falls back to (490, 590) for it.
+- **Keyed insert moves** that run a little over 4 s on purpose (the push down the peephole to the egg, the move across the diary's last page) and two outro holds are WARNs in the validator, checked by eye.
 - **Sound**: the picture's music events are suggestions and the score is placed by `audio/music_plan.py`; the final mix for this film is the next sound step (`bash audio/final_mix.sh`, never while a render runs).

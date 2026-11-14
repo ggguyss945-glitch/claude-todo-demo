@@ -350,7 +350,7 @@ def check_shot(k):
     if sh.d < 0.6 and sh.kind not in ('black',) and not p.get('flash'):
         add('WARN', k, 'LEN', 'a %.2f s shot (too short to read?)' % sh.d)
     lim = 10.5 if sh.kind in ('rule', 'card', 'pause') else 7.0
-    if sh.d > lim:
+    if sh.d > lim and not p.get('long_ok'):
         add('WARN', k, 'LEN', 'a %.2f s %s shot (long: does it keep acting?)' % (sh.d, sh.kind))
 
 
@@ -395,7 +395,7 @@ def states():
     t_flap0 = F.w(164, 'creaks') + 1.3
     t_flap1 = F.t(192) + 0.3
     t_lock0 = F.t(243) + 0.2
-    t_key = F.t(299) + 0.25
+    t_key = F.t(297) + 0.25                               # the lock turns by itself (then the key, then the door opens)
     t_dawn = F.t(300) - 0.2
     t_swap = F.t(359)
     for k in KS:
