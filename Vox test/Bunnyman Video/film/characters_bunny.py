@@ -1176,6 +1176,17 @@ CAST['dale'] = _v3cast(
     body=dict(sh=118, ch=104, wa=92, hip=98, arm=(44, 36), leg=(50, 42), neck=40, hand=1.0),
     cloth=dict(top='#5d5f66', top_sh='#3f4148', top_hi='#7e8189', print_c='#5d5f66', trousers='#5d5f66', trousers_sh='#3f4148',
                socks='#5d5f66', socks_sh='#3f4148', band='#5d5f66'))
+# a kid in the 1987 parade crowd (only its hand is ever drawn, reaching up for an egg): a red T-shirt sleeve
+CAST['kid87'] = dict(CAST['june'], skin='#eab896', skin_sh='#c08a6c', skin_dp='#7a5244',
+                     cloth=dict(CAST['june']['cloth'], top='#c8423a', top_sh='#922a26', top_hi='#e0645a'))
+# Dale Whitlock at 19 (1987), the stock boy on the MISSING poster: the same eyes, nose, mouth and iris as the man at 55
+# (so the face under the mask pays off), full young cheeks, dark side-parted hair, no stubble. Only drawn as the poster's
+# photocopied photo.
+CAST['dale19'] = dict(CAST['dale'], hair='side_short', gaunt=0.0, stub_dots=0.0, cracked=0.0, stub=0.0, stubble=None,
+                      head_ws=[0, 51, 74, 89, 94, 93, 86, 72, 52, 27, 0], hair_c='#3e2c20', brow_c='#33241a', brow_th=8.5,
+                      bags=0.1, age=0.04, lid_rest=0.16, pupil=1.0, wet_k=0.0, lashes=0.0,
+                      skin='#e4bea6', skin_sh='#b88e7a', skin_dp='#76534b', blush='#d99a90', lip='#b07a72', outfit='jacket3',
+                      cloth=dict(CAST['dad']['cloth'], top='#7a8a9a', top_sh='#5a6a7a', top_hi='#9aaaba', shirt='#e8e4dc', shirt_sh='#bdb8ae'))
 # The police (freshened from the police film's officers: ordinary, kind people this time) and the hospital staff
 CAST['cop'] = _v3cast(
     outfit='police', hat='cap', hair='short', sex='m', hh=178.0, m=1.80,

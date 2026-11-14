@@ -305,7 +305,7 @@ class Film:
     def overlay(self, cv, t, sh):
         if sh.kind == 'black' and not sh.p.get('caption'): return
         if sh.p.get('era') == '1987' and sh.kind in ('set', 'bust') and sh.p.get('vhs', True) and sh.p.get('osd', True):
-            ST.vhs_stamp(cv, t - sh.t0 + sh.p.get('tape0', 0.0), date=sh.p.get('date', 'APR.19 1987'), clock=sh.p.get('clock_osd', '10:42 AM'), play=False)
+            ST.vhs_stamp(cv, t - sh.t0 + sh.p.get('tape0', 0.0), date=sh.p.get('date', 'APR.16 1987'), clock=sh.p.get('clock_osd', '10:42 AM'), play=False)
         elif sh.kind not in ('black',):
             H.header(cv, self.header_text(t), clock_str(t))
         if sh.kind == 'rule': return
@@ -1195,10 +1195,17 @@ def _fur_bg(pen, c1='#a7abb5', c2='#7a7f8b', c3='#ced2da', seed=3):
 
 
 def ins_badge(pen, t, **kw):
-    """Dale's Pemberton's name badge pinned on the mascot's grey fur (1987)."""
-    _fur_bg(pen)
+    """Dale's Pemberton's name badge pinned on the mascot's grey fur (1987). Alive (fix round 1, critic 2 minor 4): the
+    chest under it breathes (a man is inside), the badge swings a little on its pin with each breath, and the sun's glint
+    slides across the laminate."""
+    br = math.sin(2.0 * math.pi * t / 3.1)
     cv = pen.cv
-    cv.save(); cv.translate(960, 560); cv.rotate(-4.0)
+    cv.save()
+    cv.translate(960, 600); cv.scale(1.0 + 0.012 * br, 1.0 + 0.012 * br); cv.translate(-960, -600 + 6.0 * br)
+    _fur_bg(pen)
+    pen.radial(None, 700, 300, 1500, [(0, '#ffffff', 40), (1, '#000000', 90)])        # the chest's curve in the sun
+    cv.restore()
+    cv.save(); cv.translate(960, 560 + 6.0 * br); cv.rotate(-4.0 + 1.6 * br)
     b = rrect(-430, -190, 860, 380, 28)
     pen.fill(moved(b, 14, 22), '#000000', 110, blur=16)
     pen.fill(b, '#fbfaf4'); pen.line(b, 5, '#3a3036')
@@ -1207,7 +1214,9 @@ def ins_badge(pen, t, **kw):
     ST.btext(pen, "Pemberton's", 0, -105, 'script', 92, '#fbfaf4', 255, 'center')
     ST.btext(pen, 'DALE', 0, 60, 'head', 150, '#1c1a20', 250, 'center', spacing=0.06)
     ST.btext(pen, 'STOCK ROOM  ·  SINCE 1985', 0, 140, 'sans_b', 40, '#5a525a', 230, 'center', spacing=0.08)
-    pen.linear(b, -430, -190, 430, 190, [(0, '#ffffff', 0), (0.42, '#ffffff', 0), (0.5, '#ffffff', 70), (0.58, '#ffffff', 0), (1, '#ffffff', 0)])
+    g = clamp((t - 0.6) / 2.4)                                          # the glint crossing the laminate
+    pen.linear(b, -430, -190, 430, 190, [(0, '#ffffff', 0), (max(0.01, g - 0.1), '#ffffff', 0), (g, '#ffffff', 80), (min(0.99, g + 0.1), '#ffffff', 0), (1, '#ffffff', 0)])
+    pen.seg((-300, -190), (-260, -236), 7, '#c9c9cf', 230); pen.seg((-260, -236), (260, -236), 5, '#c9c9cf', 200)   # the safety pin
     pen.fill(oval(-380, -150, 12), '#c9b06a'); pen.fill(oval(380, -150, 12), '#c9b06a')
     cv.restore()
 
@@ -1226,10 +1235,20 @@ def ins_poster(pen, t, **kw):
     pen.fill(paper, '#e8e0c8'); pen.texture(paper, 'paper', 0.6, 'overlay', 1.0)
     ST.btext(pen, 'MISSING', 0, -330, 'head', 150, '#1a1414', 245, 'center', spacing=0.05)
     ph = rect(-200, -270, 400, 380)
-    pen.fill(ph, '#8a8278'); pen.texture(ph, 'paper', 0.4, 'overlay', 1.0)
-    pen.fill(oval(0, -120, 90, 110), '#5a524a'); pen.fill(rrect(-150, -20, 300, 130, 60), '#4a423a')
+    pen.fill(ph, '#8a8278')
+    # fix round 1 (critic 2 minor 3): his own face, 19, a photocopied snapshot (the man at 55 under the mask pays it off)
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(-200, -270, 400, 380))
+    grey = skia.ColorFilters.Matrix([0.33, 0.5, 0.17, 0, 0.02, 0.33, 0.5, 0.17, 0, 0.0, 0.3, 0.46, 0.16, 0, -0.01, 0, 0, 0, 1, 0])
+    cv.saveLayer(None, skia.Paint(ColorFilter=grey))
+    pen.linear(ph, 0, -270, 0, 110, ['#b8b0a4', '#8a8278'])
+    Pd = CH.Pose(); Pd.smile = 0.45; Pd.teeth = 0.15; Pd.turn = 0.08; Pd.h_tilt = -3.0
+    CH.draw_bust(pen, 'dale19', 0, -55, 0.5, Pd, light=dict(rim='#ffffff', rim_a=0, side=-1, key=0.35), t=0.0)
+    cv.restore()
+    pen.fill(ph, '#000000', 34); pen.texture(ph, 'paper', 0.5, 'overlay', 1.2)
+    cv.restore()
+    pen.line(ph, 3, '#3a3430', 200)
     ST.btext(pen, 'DALE WHITLOCK, 19', 0, 190, 'head', 74, '#1a1414', 240, 'center')
-    for k, s_ in enumerate(['LAST SEEN EASTER SUNDAY, APRIL 19, 1987', "PEMBERTON'S EASTER PARADE, MAIN STREET", 'WEARING A GREY RABBIT COSTUME',
+    for k, s_ in enumerate(['LAST SEEN THURSDAY, APRIL 16, 1987', "PEMBERTON'S EASTER PARADE, MAIN STREET", 'WEARING A GREY RABBIT COSTUME',
                             'CALL HOLLOWAY POLICE  555-0143']):
         ST.btext(pen, s_, 0, 260 + k * 46, 'sans_b', 31, '#2a2420', 230, 'center')
     for y0 in (-450, 440):
@@ -2625,16 +2644,49 @@ def VHS_STREET(t0, t1, y0, y1):
 
 
 # ==================================================================================================== COLD OPEN (0 - 65.75)
+# the hook's low angle: from the grass 5 m in front of him, along the moon's azimuth (sets_bunny MOON_AZ 12, MOON_EL 21),
+# so the moon sits right behind his ears; knees-up telephoto
+HOOK_CAM = cm((-3.63, 34.76, -0.15), (-2.6, 39.6, 1.3), S=2000, sx=960, sy=470)
+
+
 def plan_open(F):
     t, e, w, C = F.t, F.e, F.w, F.cut
     T = lambda i, off=0.0: F.t(i) - LEAD + off
     # 0 "If you ever see a man in a bunny suit standing at the edge of the woods on Easter night, don't wave at him."
     tcut = w(0, 'on', 1) if w(0, 'on', 1) > 3.0 else w(0, 'easter') - 0.3
     tw = w(0, 'wave')
-    C(0.0, 'set', room='yard', view='woods', set=dict(tod='night'), rim=MOON,
-      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.25, act=pose(-9, None, 0.1, h_tilt=-3.0))],
-      c=dict(mv='push', f=2.45, rate=0.035), music=[(0.0, 'drone', 0.45, 7.0)],
+    # fix round 1 (critic 2 M1, the hook): the film opens ON him, readable on a phone in the first second: a low angle
+    # from the grass, his ears against the moon over the woods, mist; he slowly lifts his head to the house. Then the edge
+    # of the woods from the porch on "standing at the edge of the woods" (he is known by now, so the wide reads), then
+    # the wave close.
+    tst = w(0, 'standing') - LEAD
+
+    def hook_moon(A, s, sp):
+        # the moon in the gap of the treeline (the clearing the woods leave behind the fence), in its world direction,
+        # drawn over the far trees and under him, with the mist it lights: his ears stand against it
+        q = ST.sky_dir(sp.view, ST.MOON_AZ, ST.MOON_EL)
+        if q is None: return []
+        mx, my = q[0] + 30.0, q[1] - 40.0
+
+        def draw(pen, t, mx=mx, my=my):
+            r = 118.0
+            pen.glow(mx, my, r * 6.0, '#3f5296', 70)
+            ST._moon(pen, mx, my, r)
+            for k in range(3):                                   # mist drifting across the disc
+                yy = my + (k - 1) * 70.0 + 10.0 * math.sin(0.4 * t + k)
+                xx = mx - 260.0 + ((t * (14.0 + 6.0 * k) + 140.0 * k) % 520.0)
+                pen.fill(oval(xx, yy, 230.0, 26.0), '#7d8fc4', 34)
+        lay = Layer(40.0, draw, 'hook_moon', blur=0)
+        lay.order = 45.0
+        return [lay]
+    C(0.0, 'set', room='yard', view='close', set=dict(tod='night'), rim=MOON, cam=HOOK_CAM, dof=0.0,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.3,
+             act=_A(pose(-9, None, 0.1, h_tilt=-4.0), lambda a, s: a.head_down(-9.0, 0.9, 0.3, 1.2)))],
+      acts=hook_moon, c=dict(mv='push', f=1.0, rate=0.025, free=True), music=[(0.0, 'drone', 0.45, 7.0)],
       sfx=[(0.3, 'wind_gust', -8, 0, 'outside')])
+    C(tst, 'set', room='yard', view='woods', set=dict(tod='night'), rim=MOON,
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.25, act=pose(-9, None, 0.1, h_tilt=-3.0))],
+      c=dict(mv='push', f=2.2, rate=0.03))
     C(tcut - LEAD, 'set', room='yard', view='close', rim=MOON,
       ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15,
              act=_A(tilt(tcut + 0.3, -9.0, 1.6), lambda a, s: a.wave(tw - 0.15, s.t1 + 1.5, side=1, slow=True)))],
@@ -2792,12 +2844,41 @@ def plan_1987(F):
              linear=True, turn=0.15, room_light=False, act=_A(BASKET, lambda a, s: a.wave(s.t0, s.t1 + 1.0, side=1, speed=0.8)))],
       c=dict(mv='push', f=2.0, rate=0.02), sfx=[(T(19) + 0.05, 'crowd_cheer', -4, 0, 'vhs')],
       music=[(T(19), 'jingle', 0.55, 7.0, dict(version='vhs_parade', distant=True))])
-    # ... handing out plastic eggs: he kneels at the edge of the float and holds an egg out to the crowd
-    C(th - 0.1, 'set', room='parade', view='photo', era='1987', tape0=46.0, cam=cm((-2.6, 20.2, 1.9), (0.0, 24.2, 2.2), S=1500, sx=960, sy=560),
+    # ... handing out plastic eggs: he kneels at the edge of the float and holds a pink egg down to the crowd; a kid's hand
+    #     comes up from the curb, takes it and goes (fix round 1, critic 2 M2: the egg in the paw, the child's hand)
+    tgv = w(19, 'eggs') - 0.18                                       # the kid's fingers close on the egg
+
+    def handout_acts(A, s, sp, tgv=tgv):
+        b = A['bunny87']
+        eg = lambda tt: b.grip_point(min(tt, tgv), 1, 'egg')          # where the egg is while he holds it
+
+        def kid_hand(pen, tt):
+            ex_, ey_ = eg(tgv)
+            if tt < tgv:                                                # the egg in his paw, held out (drawn big enough to read)
+                px_, py_ = eg(tt)
+                ST.draw_egg(pen, px_, py_ - 8.0, 70.0, rot=-8.0, col='#f4a8c4', faded=0.1, stamp=False)
+            r0, r1 = s.t0 + 0.2, tgv                                    # a kid's hand up from the curb below the frame
+            u = ease_in_out(clamp((tt - r0) / max(0.2, r1 - r0)))
+            dn = ease_in_cubic(clamp((tt - tgv - 0.25) / 0.6))           # then down and away with the egg
+            if u <= 0: return
+            hx = lerp(ex_ + 140.0, ex_ + 12.0, u) + 60.0 * dn
+            hy = lerp(1300.0, ey_ + 62.0, u) + 560.0 * dn
+            if hy > 1290: return
+            ang = lerp(196.0, 174.0, u)
+            hero_hand(pen, 'kid87', hx, hy, 96.0, 'grip' if tt >= tgv - 0.05 else 'open', ang, -1, sleeve_to=(hx + 150.0, 1500.0),
+                      light=VHS87, bare=1000.0)
+            if tt >= tgv:                                               # the egg in the kid's fingers from the contact on
+                ST.draw_egg(pen, hx - 8.0, hy - 66.0, 70.0, rot=-12.0, col='#f4a8c4', faded=0.1, stamp=False)
+        lay = Layer(1.0, kid_hand, 'kid_hand', blur=0)
+        lay.order = 0.2
+        return [lay]
+    C(th - 0.1, 'set', room='parade', view='photo', era='1987', tape0=46.0, cam=cm((-2.6, 20.2, 1.9), (0.0, 24.2, 2.05), S=2000, sx=900, sy=520),
       ppl=[P('bunny87', 'float_deck', turn=0.55, room_light=False,
-             act=_A(BASKET, lambda a, s: a.kneel_down(s.t0 - 0.6, 0.5, knees=0), lambda a, s: a.hold_prop('egg', 1, s.t0 - 1.0, s.t1 + 1.0),
-                    lambda a, s: a.reach(s.t0 + 0.1, None, 1, out=150.0, down=120.0, fwd=170.0, shape='grip', up=0.0, fade=0.5), tilt(th + 0.3, 8.0, 1.5)))],
-      c=dict(mv='push', f=1.0, rate=0.015))
+             act=_A(BASKET, lambda a, s: a.kneel_down(s.t0 - 0.6, 0.5, knees=0),
+                    lambda a, s: a.reach(s.t0 - 0.6, tgv + 0.15, 1, out=110.0, down=210.0, fwd=170.0, shape='grip', up=0.0, fade=0.4),
+                    lambda a, s: a.wave(tgv + 0.35, s.t1 + 1.0, side=1, speed=0.9),
+                    tilt(th + 0.3, 8.0, 1.5), lookxy(1500, 980, th - 0.6, tgv + 0.6, 0.3, z=300.0)))],
+      acts=handout_acts, c=dict(mv='push', f=1.0, rate=0.015))
     # 20 "Big grey suit."  the mascot full figure on the deck, arms out wide
     C(T(20), 'set', room='parade', view='photo', era='1987', tape0=48.0, cam=cm((-2.2, 20.3, 1.8), (0.0, 24.2, 2.25), S=1300, sx=960, sy=540),
       ppl=[P('bunny87', 'float_deck', turn=0.05, room_light=False,
@@ -2812,7 +2893,10 @@ def plan_1987(F):
       act=pose(t(22), None, 0.6, h_tilt=-5.0), c=dict(mv='push', x=960, y=620, zrate=0.025),
       post_fn=lambda tt: {'vhs': dict(t=tt, k=0.55, curve=0.0, track=0.25, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)})
     # 23 "Inside it was a nineteen-year-old stock boy named Dale Whitlock."  his Pemberton's name badge on the fur
-    C(T(23), 'ins', name='badge', era='1987', c=dict(mv='keys', keys=[(T(23), 960, 560, 1.0, None, 1.0), (T(24), 960, 550, 1.0, 'push', 1.08)]))
+    tnm = w(23, 'named') - 0.2
+    C(T(23), 'ins', name='badge', era='1987', anim=True,
+      c=dict(mv='keys', keys=[(T(23), 960, 560, 1.0, None, 1.0), (tnm, 960, 555, 1.0, 'push', 1.04), (T(24), 960, 520, 1.0, 'in_out', 1.22)]),
+      post_fn=lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.2, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)})
     # 24 "There's a photo from that morning."  the Courier photo
     C(T(24), 'ins', name='courier', c=dict(mv='keys', keys=[(T(24), 760, 640, 1.0, None, 1.45), (T(25), 745, 660, 1.0, 'push', 1.6)]),
       sfx=[(T(24) + 0.05, 'paper', -12, 0, 'close', dict(kind='newspaper'))])
@@ -2841,25 +2925,47 @@ def plan_1987(F):
     C(T(26), 'bust', who='laurie87', bg=('parade', 'photo'), era='1987', tape0=62.0, cx=960, cy=600, scale=0.95, light=VHS87, expr='warm_smile',
       act=tilt(t(26) + 0.1, 7.0, 1.2), post_fn=lambda tt: {'vhs': dict(t=tt, k=0.5, curve=0.0, track=0.22, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.5)})
     C(T(27), 'bust', who='mom', bg=('living', 'wide'), set=dict(lamp=1.0), cx=960, cy=600, scale=0.95, light=LAMP, expr='too_still', era='now')
-    # 28 "He showed her a magic trick."  he kneels to her and makes a plastic egg appear by her ear, then gives it to her
-    tg = t(28) + 0.15
+    # 28 "He showed her a magic trick."  (fix round 1, critic 1 M19: the trick on screen, close) a closer two-shot: he shows
+    #    her his empty paw, closes it, passes the other paw over it, opens it: a pink egg is there; she gasps, he gives it
+    #    to her and she lights up (the ending's "Want to see a magic trick?" pays this off)
+    t_show = t(28) - 0.15
+    t_open = w(28, 'magic') + 0.02
+    t_give = t_open + 0.42
 
-    def trick_acts(A, s, sp, tg=tg):
+    def trick_acts(A, s, sp, t_show=t_show, t_open=t_open, t_give=t_give):
         b, l = A['bunny87'], A['laurie87']
         egg = CH.PropTrack('egg', 0, 0, sp.anchors['photo'].ppm / 100.0)
-        egg.held(-1e9, b, 1)
-        b.hold_prop('egg', 1, -1e9, None)
-        b.reach_to(tg - 0.6, 1, (l, 'eye_l'), t1=tg + 0.25, dur=0.45, contact='grip', shape='grip', prop='egg', z=70.0, fade=0.3)
-        b.give(egg, tg + 0.4, 1, l, -1, dur=0.9)
-        l.look_at(tg - 0.6, (b, 'hand_l'), tg + 1.3, 0.25)
-        l.look_at(tg + 1.4, (b, 'eyes'), None, 0.35)
+        egg.gone(-1e9); egg.held(t_open, b, 1)                   # nothing in the paw until it opens
+        b.hold_prop('egg', 1, t_open, None)
+        b.reach(s.t0 - 0.5, t_open - 0.38, 1, out=70.0, down=25.0, fwd=175.0, shape='paw_open', up=1.0, fade=0.3)    # the empty paw, pads up, between their faces
+        b.reach(t_open - 0.4, t_give, 1, out=70.0, down=25.0, fwd=175.0, shape='grip', up=0.0, fade=0.12)            # closed... open: an egg
+        b.reach(t_open - 0.55, t_open - 0.05, -1, out=20.0, down=-5.0, fwd=200.0, shape='paw_flat', up=0.0, fade=0.18)  # the other paw passes over it
+        b.give(egg, t_give, 1, l, -1, dur=0.55)
+        l.look_at(s.t0 - 0.5, (b, 'hand_l'), t_give + 0.5, 0.2)
+        l.look_at(t_give + 0.6, (b, 'eyes'), None, 0.3)
         b.look_at(s.t0 - 1.0, (l, 'eyes'), None, 0.3)
-        l.expr('kid_grin', tg + 0.3, None, 0.3)
-        return []
-    C(T(28), 'set', room='parade', view='photo', era='1987', tape0=64.0, cam=PHOTO_TRICK,
+        l.expr('shock', t_open + 0.04, t_open + 0.45, 0.12)
+        l.expr('kid_grin', t_open + 0.5, None, 0.25)
+
+        def sparkle(pen, tt):                                    # the egg itself (read big and pink) and the "ta-da" glint
+            if tt >= t_open:
+                x, y = egg.pos(tt)
+                ST.draw_egg(pen, x, y - 30.0, 84.0, rot=-10.0, col='#f4a8c4', faded=0.1, stamp=False)
+            u = (tt - t_open) / 0.45
+            if not (0.0 <= u <= 1.0): return
+            x, y = egg.pos(tt)
+            a = 255 * math.sin(math.pi * u)
+            for k_ in range(4):
+                ang = math.radians(45 * k_ + 120 * u)
+                r = 30 + 26 * u
+                pen.seg((x + math.cos(ang) * 8, y - 30 + math.sin(ang) * 8), (x + math.cos(ang) * r, y - 30 + math.sin(ang) * r), 4, '#fff6d8', a)
+            pen.glow(x, y - 30, 40, '#fff2c8', a * 0.6)
+        lay = Layer(1.0, sparkle, 'trick_sparkle', blur=0); lay.order = 0.3
+        return [lay]
+    C(T(28), 'set', room='parade', view='photo', era='1987', tape0=64.0, cam=cm((0.95, 19.75, 0.95), (2.6, 21.6, 0.95), S=2350, sx=960, sy=540),
       ppl=[P('bunny87', (3.05, 21.8, 0.0), turn=-0.6, kind='kneel', knees=0, room_light=False, dorder=-4.0),
            P('laurie87', (2.25, 21.45, 0.0), turn=0.55, expr='warm_smile', room_light=False, dorder=-4.0)],
-      acts=trick_acts, c=dict(mv='push', f=1.0, rate=0.012), sfx=[(tg + 0.2, 'magic_sparkle', -10, 0, 'vhs')])
+      acts=trick_acts, c=dict(mv='push', f=1.0, rate=0.012, free=True), sfx=[(t_open, 'magic_sparkle', -8, 0, 'vhs')])
     # 29 "Then he walked off into Holloway Woods."  30 "And she followed him."  (1987, overcast)
     C(T(29), 'set', room='woods', view='path', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
       ppl=[P('bunny87', (-4.6, -2.6, 0.0), path=[(T(29), (-4.6, -2.6, 0.0)), (T(30) + 0.3, (-1.8, 4.6, 0.0))], surface='grass', room_light=False, dimk=0.1)],
@@ -4858,11 +4964,14 @@ def plan_outro(F):
     C(T(401), 'pause', mode='split', srcs=(src_mom, src_bun), hl='L', reply=w(401, 'reply') - 0.1, reply_side=-1, era='pause')
     # 404 "And if you said Mom... don't worry."  405 "She liked you too."  (the frozen frame, then it plays: the smile widens, the eyes come to us)
     C(T(404), 'pause', mode='freeze', src=src_mom, era='pause')
-    C(T(405), 'bust', who='mom', bg=MOM_DOOR_BG, set=dict(hall=1.0), cx=960, cy=640, scale=1.08, expr='too_still', era='pause',
+    # it starts exactly as the frozen frame (src_mom: the doorway close-up of 91, its smile and its 12-degree tilt, June's
+    # door open behind her), then plays on: the smile widens, the head comes upright and the eyes lock on the lens
+    C(T(405), 'bust', who='mom', bg=MOM_DOOR_BG, set=dict(nightlight=1.0, hall=1.0, door=JUNE_DOOR_OPEN), cx=960, cy=640, scale=1.08, expr='wrong_smile', blink=False, era='pause',
       light=dict(rim='#ffcf8f', rim_a=90, side=-1, key=-0.25), post_fn=_vhs_fn(),
-      act=_A(pose(-9, None, 0.1, smile=0.6), pose(t(405) + 0.2, None, 0.8, smile=0.95), lookxy(700, 560, -9, t(405) + 0.3, 0.3, z=600.0),
-             lookxy(960, 520, t(405) + 0.35, None, 0.5, z=600.0)),
-      c=dict(mv='push', x=960, y=600, zrate=0.03), music=[(t(405) + 0.3, 'stinger', 0.45)])
+      act=_A(pose(-9, None, 0.1, smile=0.8, teeth=0.55, grin=0.25, still=0.9, h_tilt=12.0, tilt=0.3),
+             pose(t(405) + 0.2, None, 0.9, smile=0.95, teeth=0.7, grin=0.35, still=0.9, h_tilt=3.0, tilt=0.1),
+             lookxy(960, 520, -9, t(405) + 0.3, 0.3, z=600.0), lookxy(960, 560, t(405) + 0.35, None, 0.5, z=300.0)),
+      c=dict(mv='push', x=960, y=600, z=1.06, z1=1.11), music=[(t(405) + 0.3, 'stinger', 0.45)])
     # 406 "If this story made you glance at a window, even once, leave a like, so I know the trick worked."
     C(T(406), 'set', room='living', view='window', set=dict(lamp=0.0, curtains=1.0), rim=NIGHT, **O, c=dict(mv='push', f=1.0, rate=0.02))
     # the LIKE lands like a knock in the comma after "like," (the final mix: on "like" itself the knock sat 5.3 LU over

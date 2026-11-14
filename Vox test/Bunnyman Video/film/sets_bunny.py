@@ -6160,7 +6160,9 @@ class MainStreet(Room):
         if not callable(fy):
             P.append(Piece('float', (0.0, 1.0, fy + FLOAT_L / 2), lambda pen, v: parade_float(pen, v, 0.0, fy)))
         for side, x in ((-1, -5.2), (1, 5.2)):
-            P.append(Piece('crowd_%d' % side, (x, 0.8, 20.0), (lambda s_, x_: lambda pen, v: _crowd(pen, v, x_, s_, o.get('crowd_seed', 3)))(side, x)))
+            for ph in (0, 1):                     # two cached frames of the crowd's cheer cycle (ob_parade swaps them)
+                P.append(Piece('crowd_%d_%s' % (side, 'ab'[ph]), (x, 0.8, 20.0),
+                               (lambda s_, x_, ph_: lambda pen, v: _crowd(pen, v, x_, s_, o.get('crowd_seed', 3), ph_))(side, x, ph)))
         return P
 
     def spots(self, v, o):
@@ -6311,9 +6313,106 @@ def parade_float(pen, v, x, fy, t=0.0):
         pen.fill(e, cols[i % 6]); pen.fill(oval(px - 0.05 * s, py - 0.08 * s, 0.04 * s, 0.06 * s), '#ffffff', 160); pen.line(e, 1.0)
 
 
-def _crowd(pen, v, x, side, seed=3):
-    """The parade crowd along a curb: rows of townsfolk in 1987 spring colours (kids up front, a few on shoulders,
-    balloons and little flags), drawn from far to near."""
+CROWD_RATE = 4.2              # the crowd's cheer cycle: two cached poses swapped this many times a second (ob_parade)
+
+
+def _crowd_person(pen, bx, by, s, hgt, sd, kid, phase, lw, tops, skins, hairs, on_shoulders=False):
+    """One townsperson at feet (bx, by), s px per metre: legs, a torso with shoulders, two arms with hands, a head with
+    hair or a hat and (when it is big enough to read) eyes and a mouth. phase 0 | 1 picks the frame of the person's own
+    two-frame action (cheering arms pumping, clapping, waving, a little flag swung); half the crowd runs a frame out of
+    step so the swap reads as motion, not a blink."""
+    top = tops[sd % len(tops)]; skin = skins[(sd // 3) % len(skins)]; hair = hairs[(sd // 7) % len(hairs)]
+    bottom = ['#3a4a6a', '#5a5a5a', '#a89068', '#2e3a52', '#7a5a4a'][(sd // 5) % 5]
+    act = sd % 10
+    if kid and act in (0, 9): act = 5                                   # kids cheer
+    f = phase ^ ((sd // 13) % 2)
+    H_ = hgt * s
+    hip_y = by - 0.47 * H_; sh_y = by - 0.815 * H_
+    hr = 0.066 * H_                                                     # head radius
+    hy = by - H_ + hr                                                   # the chin at 0.87 H, the shoulders at 0.815 H
+    sw = (0.20 if kid else 0.23) * s                                    # half shoulder width
+    hw = 0.80 * sw
+    skirt = (not kid and sd % 4 == 1) or (kid and sd % 3 == 0)
+    # legs (or a skirt over them), shoes
+    lgw = max(1.0, 0.075 * s)
+    if not on_shoulders:
+        for k in (-1, 1):
+            pen.seg((bx + k * hw * 0.45, hip_y), (bx + k * hw * 0.5, by - 0.03 * s), lgw * 1.6, bottom)
+            pen.fill(oval(bx + k * hw * 0.55, by - 0.02 * s, lgw * 1.1, lgw * 0.55), '#2a2420')
+        if skirt:
+            sk = poly([(bx - hw * 0.95, hip_y - 0.04 * H_), (bx + hw * 0.95, hip_y - 0.04 * H_), (bx + hw * 1.35, by - 0.25 * H_), (bx - hw * 1.35, by - 0.25 * H_)])
+            pen.fill(sk, tops[(sd + 4) % len(tops)]); pen.line(sk, lw)
+    # torso: sloped shoulders, a slight waist
+    body = poly([(bx - sw * 0.62, sh_y), (bx + sw * 0.62, sh_y), (bx + sw, sh_y + 0.05 * H_), (bx + hw * 0.92, sh_y + 0.2 * H_),
+                 (bx + hw, hip_y), (bx - hw, hip_y), (bx - hw * 0.92, sh_y + 0.2 * H_), (bx - sw, sh_y + 0.05 * H_)])
+    pen.fill(body, top); pen.line(body, lw)
+    # arms: (shoulder -> elbow -> hand) per action and frame
+    aw = max(1.2, (0.055 if kid else 0.065) * s)
+    ua = 0.17 * H_; fa = 0.16 * H_
+
+    def arm(k, a1, a2):
+        """k = -1 left / 1 right; a1, a2 = upper / fore arm angles (degrees from straight down, outward positive)."""
+        x0, y0 = bx + k * sw * 0.86, sh_y + 0.04 * H_
+        r1, r2 = math.radians(a1), math.radians(a2)
+        ex, ey = x0 + k * ua * math.sin(r1), y0 + ua * math.cos(r1)
+        hx, hy_ = ex + k * fa * math.sin(r2), ey + fa * math.cos(r2)
+        pen.seg((x0, y0), (ex, ey), aw, top); pen.seg((ex, ey), (hx, hy_), aw * 0.92, top)
+        pen.fill(oval(hx, hy_, aw * 0.62), skin)
+        return hx, hy_
+    hands = {}
+    if act in (5, 6):                                                   # cheering: both arms up, pumping
+        for k in (-1, 1):
+            hands[k] = arm(k, 150 if f else 128, 170 if f else 112)
+    elif act in (3, 4):                                                 # clapping in front of the chest
+        for k in (-1, 1):
+            hands[k] = arm(k, 18, -62 if f else -38)
+    elif act == 7:                                                      # one arm up, waving
+        hands[-1] = arm(-1, 8, 4)
+        hands[1] = arm(1, 140, 150 if f else 190)
+    elif act == 8:                                                      # a little flag on a stick, swung
+        hands[-1] = arm(-1, 8, 4)
+        hx_, hy2 = arm(1, 120, 140)
+        ang = math.radians(-20 if f else 25)
+        tx, ty = hx_ + math.sin(ang) * 0.35 * s, hy2 - math.cos(ang) * 0.35 * s
+        pen.seg((hx_, hy2), (tx, ty), max(1.0, 0.012 * s), '#6a4a2a')
+        fl = poly([(tx, ty), (tx + 0.2 * s, ty + 0.02 * s), (tx + 0.18 * s, ty + 0.12 * s), (tx, ty + 0.11 * s)])
+        pen.fill(fl, ['#d8323a', '#f2f0e6', '#3a5ab8'][sd % 3]); pen.line(fl, lw)
+    else:                                                               # arms down, a weight shift
+        for k in (-1, 1):
+            hands[k] = arm(k, 6 + 3 * k * (sd % 3 - 1), 2)
+    # head: long hair behind it, the face, then hair on top or a hat
+    long_hair = (not kid and sd % 4 in (1, 2)) or (kid and sd % 2 == 0)
+    if long_hair:
+        pen.fill(rrect(bx - hr * 1.05, hy - hr * 0.6, hr * 2.1, hr * (2.3 if not kid else 1.9), hr * 0.8), hair)
+    pen.fill(rect(bx - hr * 0.42, hy + hr * 0.5, hr * 0.84, sh_y - hy - hr * 0.3), skin)                 # the neck
+    pen.fill(oval(bx, sh_y + 0.006 * H_, hr * 0.62, 0.016 * H_), mix(top, '#ffffff', 0.3))                # the collar
+    head = oval(bx, hy, hr * 0.88, hr)
+    pen.fill(head, skin); pen.line(head, lw)
+    hat = (not kid and sd % 8 == 3) and 'cap' or (not kid and sd % 10 == 6 and skirt) and 'bonnet' or None
+    if hat == 'cap':
+        cc = tops[(sd + 2) % len(tops)]
+        pen.fill(oval(bx, hy - hr * 0.45, hr * 0.95, hr * 0.62), cc); pen.fill(oval(bx + hr * 0.55, hy - hr * 0.2, hr * 0.7, hr * 0.16), cc)
+    elif hat == 'bonnet':
+        pen.fill(oval(bx, hy - hr * 0.55, hr * 1.7, hr * 0.32), '#f2e8c8'); pen.fill(oval(bx, hy - hr * 0.75, hr * 0.85, hr * 0.5), '#f2e8c8')
+        pen.fill(rect(bx - hr * 0.85, hy - hr * 0.62, hr * 1.7, hr * 0.14), tops[(sd + 5) % len(tops)])
+    else:
+        pen.fill(oval(bx, hy - hr * 0.42, hr * 0.98, hr * 0.68), hair)
+    if hr > 5.0:                                                        # a face when it can read
+        ew = max(0.8, hr * 0.13)
+        for k in (-1, 1):
+            pen.fill(oval(bx + k * hr * 0.33, hy + hr * 0.05, ew, ew * 1.2), '#2a1e1a')
+        cheering = act in (5, 6, 7) and f == 0
+        if cheering:
+            pen.fill(oval(bx, hy + hr * 0.5, hr * 0.22, hr * 0.2), '#5a2a28')
+        else:
+            pen.line(poly([(bx - hr * 0.25, hy + hr * 0.42), (bx, hy + hr * 0.55), (bx + hr * 0.25, hy + hr * 0.42)], False), max(0.8, hr * 0.08), '#6a3a30')
+    return hands
+
+
+def _crowd(pen, v, x, side, seed=3, phase=0):
+    """The parade crowd along a curb: rows of townsfolk in 1987 spring colours (kids up front, a few on dads' shoulders,
+    balloons and little flags), drawn from far to near. Each person has arms, hands and a face that reads when it is big
+    enough; phase 0 | 1 is the frame of the crowd's two-frame cheer cycle (ob_parade swaps the two cached rasters)."""
     rng = np.random.default_rng(seed + (7 if side > 0 else 0))
     people = []
     for i in range(130):
@@ -6332,20 +6431,22 @@ def _crowd(pen, v, x, side, seed=3):
         if bx < -400 or bx > 2400: continue
         kid = r < 0.28
         hgt = (1.15 + 0.2 * _h(sd, 1)) if kid else (1.62 + 0.25 * _h(sd, 2))
-        w = (0.34 if kid else 0.46) * s
-        top = tops[sd % len(tops)]; skin = skins[(sd // 3) % len(skins)]; hair = hairs[(sd // 7) % len(hairs)]
-        body = rrect(bx - w / 2, by - hgt * 0.82 * s, w, hgt * 0.5 * s, w * 0.25)
-        pen.fill(rect(bx - w * 0.3, by - hgt * 0.36 * s, w * 0.6, hgt * 0.36 * s), '#3a4a6a' if sd % 3 else '#5a5a5a')
-        pen.fill(body, top); pen.line(body, max(0.8, 0.006 * s))
-        hr = 0.11 * s
-        pen.fill(oval(bx, by - hgt * s + hr, hr * 0.9, hr), skin); pen.fill(oval(bx, by - hgt * s + hr * 0.55, hr, hr * 0.65), hair)
-        pen.line(oval(bx, by - hgt * s + hr, hr * 0.9, hr), max(0.8, 0.005 * s))
+        lw = max(0.8, 0.006 * s)
+        ride = not kid and sd % 11 == 0                                    # a kid on Dad's shoulders, cheering
+        if ride:                                                           # the kid behind Dad's head (hips on his shoulders)
+            ks = sd * 7 + 3
+            kh = 1.05
+            ky = by - hgt * 0.80 * s + 0.47 * kh * s
+            _crowd_person(pen, bx, ky, s, kh, ks - ks % 10 + 5, True, phase, lw, tops, skins, hairs, on_shoulders=True)
+        _crowd_person(pen, bx, by, s, hgt, sd, kid, phase, lw, tops, skins, hairs)
+        if ride:
+            for k in (-1, 1):                                              # the kid's legs down over Dad's shoulders
+                pen.seg((bx + k * 0.07 * s, by - hgt * 0.80 * s), (bx + k * 0.17 * s, by - hgt * 0.62 * s), max(1.0, 0.075 * s), '#3a4a6a')
+                pen.fill(oval(bx + k * 0.18 * s, by - hgt * 0.60 * s, 0.05 * s, 0.03 * s), '#f2f0e6')
         if sd % 9 == 0:                                                      # a balloon
-            bx2, by2 = bx + 0.25 * s, by - (hgt + 0.9) * s
-            pen.line(poly([(bx + w * 0.4, by - hgt * 0.7 * s), (bx2, by2 + 0.2 * s)], False), 0.7, '#e8e8e8')
+            bx2, by2 = bx + 0.25 * s, by - (hgt + 0.9) * s + (0.03 * s if phase else 0.0)
+            pen.line(poly([(bx + 0.18 * s, by - hgt * 0.62 * s), (bx2, by2 + 0.2 * s)], False), 0.7, '#e8e8e8')
             pen.fill(oval(bx2, by2, 0.15 * s, 0.19 * s), tops[(sd + 3) % len(tops)]); pen.line(oval(bx2, by2, 0.15 * s, 0.19 * s), 0.8)
-        if sd % 7 == 0 and not kid:                                           # a waving arm
-            pen.seg((bx + w * 0.4, by - hgt * 0.75 * s), (bx + w * 0.7, by - (hgt + 0.25) * s), max(1.5, 0.06 * s), skin)
 
 
 def vhs_stamp(cv, t, date='APR.16 1987', clock='10:42 AM', play=True, alpha=255):
@@ -6382,6 +6483,9 @@ def ob_parade(view='street', float_y=22.0, vhs=True, crowd_seed=3, **kw):
         dynl[-1].depth = lambda t: max(0.5, v.d(0.0, float_y(t) + FLOAT_L / 2))
         dynl[-1].ref_depth = max(0.5, v.d(0.0, float_y(0.0) + FLOAT_L / 2))
     sp = build_view('ob_parade_' + view, v, main, o, outside=None, lens='lens', grade='ob_vhs87', dyn=dynl, dof=0.4)
+    for l_ in sp:                                 # the crowd cheers: its two cached frames alternate CROWD_RATE times a second
+        if l_.name.startswith('crowd_') and l_.name[-2:] in ('_a', '_b'):
+            l_.alpha = (lambda b_: lambda t: 1.0 if (int(math.floor(t * CROWD_RATE)) % 2) == b_ else 0.0)(1 if l_.name.endswith('_b') else 0)
     if vhs:
         sp._fx = lambda t: {'vhs': dict(t=t, k=0.55, curve=0.0, track=0.22, bezel=0.0, glass=0.0, scan=0.45, tube=False, noise=0.6)}
     return sp

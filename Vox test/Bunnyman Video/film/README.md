@@ -259,7 +259,9 @@ All in `film.py` unless noted; `tools/validate.py` 0 errors (4 known WARNs), `--
   raised digit); "Past us." is a closer over-the-shoulder (`OTS_CAM2`); the recap uses the same.
 - **The doorway**: June's door stands open (`JUNE_DOOR_OPEN` 95) in every doorway shot and the recap; Mom is dead still
   with her hands folded (`mom_in_doorway`), no blinks, one slow tilt; she only smiles on "She's smiling." (`creep_smile`) and
-  keeps that smile into "I told you...".
+  keeps that smile into "I told you...". The outro's "She liked you too." close-up starts
+  exactly as that frozen frame (same smile, 12-degree tilt, zoom, open door) and plays on: the smile widens, the head comes
+  upright, the eyes lock on the lens.
 - **Back views** (`characters_bunny._figure3` / `_bunny_figure`): an arm whose hand is well behind the body's plane is drawn
   behind the torso (Mom's hands in the sink, a hand on a door seen from behind), never a front hand painted on a back.
   The sink gets a slow scrubbing loop (`washing_up`).
