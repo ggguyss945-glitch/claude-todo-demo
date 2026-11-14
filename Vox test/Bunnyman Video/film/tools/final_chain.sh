@@ -48,6 +48,9 @@ EXP=$(awk '{s+=$4} END {print s}' "$C/ranges.txt" 2>/dev/null || echo 0)
 echo "== picture frames $NF (expected $EXP) duration $PD (mix $MD)"
 if [ "$EXP" -gt 0 ] && [ "$NF" -ne "$EXP" ]; then echo "== PICTURE FRAME COUNT WRONG"; exit 2; fi
 rm -rf "$C"/c*/
+# PICTURE_ONLY=1 stops here; then run tools/encode_chain.sh (resumable capped-CRF HEVC segments) instead of the
+# single-pass deliver.sh, which a container restart would lose.
+[ -n "$PICTURE_ONLY" ] && { echo "== picture only: stop here, next: bash tools/encode_chain.sh"; exit 0; }
 echo "== deliver start $(date -u +%H:%M)"
 bash tools/deliver.sh $W/picture/picture.mp4 $W/mix/final $W/deliver
 H=$W/deliver/If_The_Bunnyman_Asks_You_To_Close_Your_Eyes_EN_1440p60_HEVC.mp4
