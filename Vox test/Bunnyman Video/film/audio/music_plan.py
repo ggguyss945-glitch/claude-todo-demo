@@ -211,7 +211,7 @@ EVENTS = [
                                                                        # (fix round 1: the riser ends 0.1 s before "He",
                                                                        # its peak masked the word)
     ('s87-0.1', 'silence', 0.7, 1.3),                                  # "I turn around."
-    ('s88', 'hit', 0.85, None, {'boost': 3.0}),                        # "Mom is standing in the doorway."
+    ('s88-0.3', 'hit', 0.85, None, {'boost': 3.0, 'spare': 0.3}),      # "Mom is standing in the doorway." (fix round 2: on the cut, 0.3 s before "Mom": the saturated scare masked it into "Tom")
     ('s90', 'swell', 0.5, 3.5), ('e91+0.05', 'stinger', 0.65, None),   # "She's smiling." / "I told you not to look..."
     # the comment prompt: the tape is paused
     ('s92-0.05', 'silence', 0.5, 21.2),
@@ -365,8 +365,8 @@ IDENTITY = [
     # 11:07: the song from the woods on a dying speaker, until he stops waving
     ('w65:starts', 'jingle', 0.55, None, dict(version='speaker', loops=4, until='s82+0.5', stop='drag')),
     # Grandma remembered: her music box behind her words
-    # (fix round 2: 0.85 put the box 1-3.5 dB over "when she was little" in 1-4 kHz)
-    ('s147-0.4', 'jingle', 0.72, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
+    # (fix round 2: 0.85 put the box 1-3.5 dB over "when she was little" in 1-4 kHz; 0.72 still 7 dB over one frame)
+    ('s147-0.4', 'jingle', 0.55, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
     # "Yeah." -> the real Laurie tries to sing it through the slot and breaks into tears; the slot snaps shut on her
     # final mix: only her broken "Hop... hop... hop along..." (5 s, its sob at the end); her crying then takes over
     # (the picture's girl_cry, sfx_plan PICTURE) as the narrator says "...starts to cry", until Mom shuts the slot

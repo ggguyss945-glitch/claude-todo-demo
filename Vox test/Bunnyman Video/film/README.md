@@ -474,6 +474,60 @@ The two ranges (504-508 s, 615-619 s) were re-rendered at 640x360/30 and spliced
 `preview_mix.mp4` carries the existing mix's AAC stream unchanged (stream copy, same MD5). Still open: see Open problems
 ("Verify round 1 leftovers").
 
+## Fix round 2 (verify round 1's open majors and cheap minors, picture and sound)
+Evidence: `W/review/fix_r2/` (strips of the changed shots from the new preview: `strip_cop.jpg` (5 fps), `strip_copHand.jpg`
+(15 fps), `strip_slot.jpg`, `strip_slotClose.jpg` (15 fps), `strip_hair.jpg`, `strip_cry.jpg`). `tools/validate.py`: ERROR 0,
+WARN 4 (the known camera holds #206, #295, #322, #394), INFO 3 (the masked lines); `--lipcheck`: only the 3 masked lines.
+399 shots, median 2.41 s, 22.0 cuts/min.
+
+**Picture** (film.py unless noted)
+- **The cop shot (was #351, 939.6-944.0 s; major 1)**: the set view of the body at the foot of the stairs is gone (the lying
+  figure is the front view turned 90 degrees and floated at waist height behind the balusters). New insert `ins_body_cop`
+  (`body_cop`): straight down on the body exactly as in "lies on his back" (`_BODY_A`), red / blue police light sweeping in
+  from the open door at the top of the frame, the policeman's dawn shadow falling over the body, and his hand coming down into
+  frame and laying its fingertips on Dale's neck (the pulse); a closer framing of the same insert (`zoom=1.9`, `off=` keeps the
+  action continuous across the cut) on "who'd been missing since 1987", where the hand draws back. Cues: the police radio, two
+  soft footsteps, a cloth rustle as he crouches.
+- **The porch slot (#158, #167, #171; major 2)**: "Mama, it's Laurie." is a new insert `ins_slot_out` (`slot_out`): the slot
+  from OUTSIDE, the red door under the porch light, the dull brass plate, the filthy paw (back of the mitten, `hero_hand` ->
+  `hero_paw`) holding the outer flap up, the mask out of focus at the edge, the flap trembling while she speaks. The porch
+  medium (`SLOT_OUT_WIDE`, `SLOT_OUT_CLOSE`) is now from the latch side close to the door's plane: he kneels bowed in profile
+  with the mask and his FAR paw at the slot (`bunny_at_slot`: lean 1.05, hunch 1.0, shape `paw`, side +1; the near arm no
+  longer crosses his face and no pads face the lens).
+- **Minors**: the bathroom door's jolt about 1.6x (`sets_bunny.ob_bath`: slam jolt 0.08 / swing 7 degrees, rattle 0.034 / 3.8);
+  Mom on "That's how he knocks, every year." is cold, not cheerful (heavy lids, flat brows, no smile); Mom closing the slot
+  (#174) is shot lower and side-on so June's shins on the floor read as kneeling, her fingertips land on the flap (Mom moved
+  5 cm nearer: no REACH miss) and the hair stroke uses Mom's NEAR hand (from this camera the far one floated); the parade's
+  crowd rows sort from y 27 (`sets_bunny.MainStreet.pieces`: with the old y 20 anchor the handout camera drew the people far
+  down the street ON the float's deck); the outro `egg_empty` lid rests on its rim on the desk beside the cup
+  (`sets_bunny._ins_egg`, bg 'table').
+- **Not done**: the couch blanket in #176 still hangs as a flat sheet; the body seen from the top of the stairs (#276, 2.4 s)
+  still reads as a dark heap.
+
+**Sound**
+- **The boosted scares' tails (major 2)** (`audio/mix.py`): every boosted window now has a raised-cosine attack (10 ms) and
+  release (`BOOST_REL_S` 0.35 s) on its drive, on its ceiling (blended in dB), on the glue's exemption (`glue(free=)` takes a
+  0..1 weight) and on the bed statistics' mask; the hit duck after a long window returns over at least 0.25 s. The music stem
+  now decays over about 0.4-0.5 s after each scare (was a 7-14 dB step in 20 ms at every window end).
+- **The scares over the narration (major 1 / M6)** (`audio/mix.py`): inside each boosted window the hits bus is scaled so its
+  peak sits up to `BOOST_SAT_DB` (14) over the ceiling and soft-clipped (tanh) to it: a denser body (the old windows sat pinned
+  at the limiter's ceiling with an 8 dB crest). The drive is the largest whose loudest 400 ms stays under `BOOST_TARGET_LU`
+  (grade 1.0 / 0.75 / 0.5: +10 / +9 / +8 LU over the voice; a fixed drive turned the sustained swap on "Seven." into a +17 LU
+  square wave in a test); the clip's 1-4.5 kHz is cut `BOOST_VCUT_DB` (8) under the voice. `mix_report.json` lists every
+  window (`boosts`). Result: see the table below. The doorway hit ("Mom is standing in the doorway.") now has a 0.3 s spare
+  (`music_plan.py`): at 0.4 s its saturated body masked "Mom" into "Tom".
+- **Narration** (`tools/vo_edit.py`): the four hand-set SPLITS fade out over 30 ms and in over 10 ms (`SPLIT_FO`, `SPLIT_FI`;
+  were 10 / 8 ms on voiced edges); "And count to seven." ends on a 35 ms fade; "Okay." starts 19 ms earlier on the take's
+  digital silence (`FIXES['outro']['lead']`, its attack whole) and the gap after it is 19 ms shorter (`pacing_map.md` row 386),
+  so every later line keeps its time. The timeline moved by at most 12 ms on 7 lines; `vo_edit.py check` (with the recogniser):
+  0 failures; the narrator's lines are only re-faded, never changed otherwise.
+- **Cues**: the mail slot's snap on the flap's shut (`tcl + 0.14`, 488.13 s); the girl's crying is synthesised on the picture's
+  sob catches (`voicesynth.cry(sobs=)`, `sfx.r_girl_cry(sobs=)`, film.py passes `SOB_T`, extended to 8.05 s; the close-up #173
+  keeps the porch shot's sob grid, its eye-rub keyed separately): the cry's onsets land within 10-50 ms of the catches; the
+  front door opens as "door" ends (`tcr = e(116) - 0.03`, swing 0.45 s, creak -6) and no longer sits on the word; the gasp on
+  waking is a soft intake on the cut before "I wake up" (-14 dB); the run up the stairs -6 dB under "June's room"; Grandma's
+  music box 0.85 -> 0.55 (it sat over "when she was little" in 1-4 kHz).
+
 ## Open problems
 - **Verify round 1 leftovers (picture)**: (1) **the cop shot #351 (939.6-944.0 s)**: the dead man at the foot of the stairs is the
   front-view figure turned 90 degrees, so at full size it floats at waist height as a flat cutout behind the balusters, the
