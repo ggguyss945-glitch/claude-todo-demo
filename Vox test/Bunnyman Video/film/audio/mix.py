@@ -87,6 +87,14 @@ Signal flow
           hits (SFX hits bus + score hits stem) -6 dB (20 ms attack, 250 ms release), so reveal lines stay clear
         - foley dip: the music dips 2.5 dB under the SFX events bus (footsteps, keys, paper read over the score)
         - glue compressor 2:1 on the whole bed bus (slow, RMS, ~1-3 dB)
+        - the Bunnyman's final mix: the voice always clear: while a line is spoken the bed (music + SFX) stays
+          CLARITY_MARGIN_LU (6) under the narration's own 400 ms K-weighted level; the excess is cut (at most
+          CLARITY_MAX_CUT_DB, over the whole block, 150 ms ramps); the hits' spare windows are left alone. The music /
+          beds duck holds DUCK_HOLD_S (0.12 s) after each syllable. True silences (plan silences at level >= 0.95:
+          "Then nothing.", the cut on "Seven.") also cut the SFX events and hits buses (no hit tail rings into them).
+          The score renders from SCORE_SEED (fixed: a cue change no longer re-rolls every random choice of the score).
+          Boosted hits: the hardest (boost >= 3.5: the face reveal, the swap) get the whole +6 dB boosted ceiling of
+          the hits limiter, the other boosted hits +3 dB.
         - music gain solved so the bed's 3 s short-term median = voice - 16 LU and its integrated <= voice - 11.5 LU.
           These are the references re-measured with true per-channel K-weighting (bed integrated -12.5/-12.8/-13.4,
           short-term p10/p50/p90 about -20.8/-16.0/-9.2, LRA 12.8). AUDIO_SPEC's short-term numbers come from
@@ -584,7 +592,7 @@ DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.1
                      # words and the shortest commas do not pump the score; sentence gaps still breathe (a 0.35 s hold kept
                      # the duck on 97 % of the film and the bed came up only 0.6 LU in the gaps, the references 2.5-3 LU)
 CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the bed stays this far under the narration's own
-CLARITY_MAX_CUT_DB = 8.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
+CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
                      # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
 TRUE_SILENCE_LEVEL = 0.95   # silence events at or over this level are true silences: the SFX events and hits buses

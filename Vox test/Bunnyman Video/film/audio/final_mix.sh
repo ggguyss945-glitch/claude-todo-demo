@@ -4,7 +4,7 @@
 #   ... final_mix.sh --no-preview                                        skip the preview mux
 # Steps (each one is also fine to run by hand from film/):
 #   1. python3 film.py --cues                       cue sheets from the picture -> _work/cues/{sfx,music}_cues.json
-#   2. python3 audio/mix.py ... _work/mix/final      the police mix (about 10.5 min, peaks at 12 GB: no render running)
+#   2. python3 audio/mix.py ... _work/mix/final      the police mix (about 14 min, peaks at 12 GB: no render running)
 #        --plan full     the score follows audio/music_plan.py (word-anchored tension events, snapped to the picture's
 #                        hit frames; film.py's own music events are replaced) and audio/sfx_plan.py refines the
 #                        picture's SFX sheet (PICTURE: film.py's names onto this film's recipes, the identity layer's
@@ -17,7 +17,8 @@
 #   4. python3 audio/measure_mix.py _work/mix/final  loudness, voice clarity, music presence, every SFX cue re-checked
 #   5. python3 audio/mix_scenes.py _work/mix/final   one sheet per scene (spectrogram, cues, score events, stem levels)
 #                                                    -> _work/mix/final/scenes/NN_name.png
-#   6. ffmpeg: the mix onto the low-res preview     -> _work/preview/preview_mix.mp4
+#   6. ffmpeg: the mix onto the low-res preview     -> _work/preview/preview_mix.mp4 (re-render the preview first when the
+#                                                    picture changed: README, Sound: the final mix)
 set -euo pipefail
 FILM="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$FILM"
