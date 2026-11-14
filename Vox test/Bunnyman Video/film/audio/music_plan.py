@@ -211,7 +211,9 @@ EVENTS = [
                                                                        # (fix round 1: the riser ends 0.1 s before "He",
                                                                        # its peak masked the word)
     ('s87-0.1', 'silence', 0.7, 1.3),                                  # "I turn around."
-    ('s88-0.3', 'hit', 0.85, None, {'boost': 3.0, 'spare': 0.3}),      # "Mom is standing in the doorway." (fix round 2: on the cut, 0.3 s before "Mom": the saturated scare masked it into "Tom")
+    ('s88-0.3', 'hit', 0.85, None, {'boost': 3.0, 'spare': 0.3}),      # "Mom is standing in the doorway." (fix round 2: snaps to the cut, 0.1 s before
+    # "Mom"; its saturated window is 0.3 s, not 0.4: the recogniser reads "I turn around. Mom is standing in the doorway." in the
+    # mix; a clip that starts on the m itself hears the hit's burst as a T, "Tom", so judge it with the line before)
     ('s90', 'swell', 0.5, 3.5), ('e91+0.05', 'stinger', 0.65, None),   # "She's smiling." / "I told you not to look..."
     # the comment prompt: the tape is paused
     ('s92-0.05', 'silence', 0.5, 21.2),
