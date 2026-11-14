@@ -3017,7 +3017,7 @@ def plan_rule2(F):
     # the door in the middle of the frame (it is what the line is about); the narrator at the side of the hall, knees up,
     # turning toward it at the tap
     C(w(104, 'one') - 0.1, 'set', room='hall', view='door', set=dict(hall=0.3, porch=0.0), rim=NIGHT,
-      ppl=[P('narrator', (-0.95, 2.45, 0.0), path=[(ttap + 0.55, (-0.95, 2.45, 0.0)), (T(105) + 0.15, (-0.5, 0.78, 0.0))], face=(0.3, 2.0), expr='haunted',
+      ppl=[P('narrator', (-0.95, 2.45, 0.0), path=[(ttap + 0.4, (-0.95, 2.45, 0.0)), (T(105) + 0.05, (-0.62, 1.55, 0.0))], face=(0.3, 2.0), expr='haunted',
              act=lambda a, s: a.flinch(ttap + 0.05, 0.6))],
       acts=lambda A, s, sp: [A['narrator'].turn(ttap + 0.12, sp.view.turn_for(-0.95, 2.45, 0.55, -2.45), 0.45),
                              A['narrator'].look_at(ttap + 0.1, scr(sp, (-0.4, 0.0, 1.2)), None, 0.3)] and [],
@@ -3027,14 +3027,17 @@ def plan_rule2(F):
     tpo = w(105, 'porch') - 0.25
 
     def peep_acts(A, s, sp):
+        # two steps to the door, the palm flat on it, the eye to the peephole
         n = A['narrator']
         pe = scr(sp, 'peephole')
-        n.head_to(s.t0 - 0.3, pe, 'eyes', dur=0.6, max_lean=0.25)
-        n.reach_to(s.t0 - 0.2, 1, (pe[0] - 0.15 * sp.anchors['peephole'].ppm, pe[1] + 0.2 * sp.anchors['peephole'].ppm), dur=0.5, contact='palm', shape='flat', z=-60.0)
-        n.set(s.t0 + 0.2, None, 0.2, lid_l=0.85)
+        ta = s.t0 + 0.55
+        n.head_to(ta, pe, 'eyes', dur=0.5, max_lean=0.25)
+        n.reach_to(ta - 0.1, 1, (pe[0] - 0.15 * sp.anchors['peephole'].ppm, pe[1] + 0.2 * sp.anchors['peephole'].ppm), dur=0.4, contact='palm', shape='flat', z=-60.0)
+        n.set(ta + 0.35, None, 0.2, lid_l=0.85)
         return []
     C(T(105), 'set', room='hall', view='door', set=dict(hall=0.3), rim=NIGHT, cam=HALL_MED,
-      ppl=[P('narrator', 'peephole_eye', expr='haunted')], acts=peep_acts, c=dict(mv='push', f=1.0, rate=0.02))
+      ppl=[P('narrator', 'peephole_eye', path=[(T(105), (-0.62, 1.55, 0.0)), (T(105) + 0.55, 'peephole_eye')], expr='haunted')], acts=peep_acts,
+      c=dict(mv='push', f=1.0, rate=0.02))
     C(tpo, 'set', room='front', view='peephole', set=dict(egg=True, front_light=1.0), c=dict(mv='keys', keys=[(tpo, 960, 540, 1.0, None, 1.0), (w(106, 'egg'), 960, 560, 1.0, 'in_out', 1.15), (T(107), 960, 565, 1.0, 'lin', 1.2)]),
       music=[(w(106, 'egg'), 'hit', 0.45)])
     # 107 "Old pink plastic, faded by the sun."  108 "Stamped on the side: Pemberton's."
@@ -3162,7 +3165,7 @@ def plan_rule2(F):
     # one shot up the flight from the bottom: Mom standing on the 9th step, then coming down toward us
     ttk = w(127, 'takes') - 0.1
     C(T(126), 'set', room='hall', view='foot', set=dict(hall=0.3, upstairs=1.0), rim=LAMP,
-      ppl=[P('mom', 'step9', path=[(T(127) - 0.05, 'step9'), (ttk + 0.1, 'step5')], surface='stairs', expr='too_still',
+      ppl=[P('mom', 'step9', path=[(T(127) - 0.05, 'step9'), (ttk + 0.1, 'step2')], surface='stairs', expr='too_still',
              act=lookxy(960, 980, -9, None, 0.3, z=200.0))],
       c=dict(mv='push', f=1.0, rate=0.015))
 
@@ -3180,11 +3183,13 @@ def plan_rule2(F):
         m.look_at(tc + 0.6, ring, None, 0.6)
         m.expr('dead_stare', tc + 1.0, None, 0.8)
         return []
-    C(ttk, 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=0.0), rim=LAMP,
-      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
+    # (the front door still ajar behind them: nobody has shut it yet; Mom comes off the bottom step to the narrator)
+    C(ttk, 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=1.0, door=14.0), rim=LAMP,
+      ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'),
+           P('mom', (0.62, 1.05, 0.0), path=[(ttk, (0.62, 1.05, 0.0)), (ttk + 0.75, (-0.05, 1.2, 0.0))], face=(-0.6, 0.85), expr='too_still')],
       acts=ring_acts, c=dict(mv='push', f=1.0, rate=0.015), focus_on='mom')
     # 128 "Then she doesn't throw it in the fire."  her stare at the ring, held beside her face
-    C(T(128), 'bust', who='mom', bg=('hall', 'door'), set=dict(hall=0.3), cx=1000, cy=600, scale=0.85, turn=-0.25, expr='dead_stare', light=LAMP,
+    C(T(128), 'bust', who='mom', bg=('hall', 'door'), set=dict(hall=0.3, porch=1.0, door=14.0), cx=1000, cy=600, scale=0.85, turn=-0.25, expr='dead_stare', light=LAMP,
       act=_A(lambda a, s: a.hold_prop('ring', -1, -1.0, None), lambda a, s: a.reach(-1.0, None, -1, out=60.0, down=-70.0, fwd=230.0, shape='grip', up=0.0, fade=0.01),
              pose(-1.0, None, 0.01, look_x=0.45, look_y=0.1, _gaze=1.0)), c=dict(mv='push', x=980, y=560, zrate=0.02))
     # 129 "She puts it in her pocket."
@@ -3199,7 +3204,7 @@ def plan_rule2(F):
         m.look_at(tpk + 0.5, (n, 'eyes'), None, 0.5)
         n.look_at(s.t0, (m, 'hand_r'), None, 0.3)
         return []
-    C(T(129), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3), rim=LAMP,
+    C(T(129), 'set', room='hall', view='door', cam=HALL_MED, set=dict(hall=0.3, porch=1.0, door=14.0), rim=LAMP,
       ppl=[P('narrator', (-0.6, 0.85, 0.0), face=(-0.05, 1.2), expr='haunted'), P('mom', (-0.05, 1.2, 0.0), face=(-0.6, 0.85), expr='too_still')],
       acts=pocket_acts, c=dict(mv='push', f=1.05, rate=0.02), focus_on='mom', sfx=[(tpk + 0.45, 'cloth_rustle', -8, 0, 'inside', dict(kind='pocket'))])
 
