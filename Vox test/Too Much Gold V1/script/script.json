@@ -1,0 +1,218 @@
+{
+  "title": "He Gave Away So Much Gold It Became Worthless",
+  "notes": "Rick's Clips structure: a paradox stated as fact at 0.0 s, 'You see' context by ~3 s, escalation with a turn word every 2-6 s, the question asked out loud, the 'Well,' explanation, a twist and an ironic closer that loops into the first line. Present tense, fast and bright, character voices for the baker and the king. Sources: al-Umari (Masalik al-Absar, c. 1337) on Mansa Musa's 1324 visit to Cairo, the fall in the value of gold that had not recovered twelve years later, and the king borrowing from Cairo merchants on his way home.",
+  "voices": {
+    "narrator": {
+      "blend": {
+        "am_eric": 0.65,
+        "am_santa": 0.35
+      },
+      "semitones": 1.5
+    },
+    "baker": {
+      "blend": {
+        "am_onyx": 0.55,
+        "am_eric": 0.45
+      },
+      "semitones": 0.5
+    },
+    "musa": {
+      "blend": {
+        "am_puck": 0.5,
+        "am_eric": 0.5
+      },
+      "semitones": 1.0
+    }
+  },
+  "lines": [
+    {
+      "beat": "hook",
+      "who": "narrator",
+      "t": "He gave away so much gold,",
+      "speed": 1.0,
+      "gap": 0.18
+    },
+    {
+      "beat": "hook",
+      "who": "narrator",
+      "t": "that gold became worthless.",
+      "speed": 0.98,
+      "gap": 0.32
+    },
+    {
+      "beat": "context",
+      "who": "narrator",
+      "t": "You see, in thirteen twenty-four, the king of Mali stopped in Cairo, on his way to Mecca,",
+      "speed": 1.06,
+      "gap": 0.08
+    },
+    {
+      "beat": "context",
+      "who": "narrator",
+      "t": "with sixty thousand people, and a hundred camels carrying gold.",
+      "speed": 1.04,
+      "gap": 0.3
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "And Mansa Musa doesn't just pay for things.",
+      "speed": 1.04,
+      "gap": 0.1
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "He hands out gold to everyone.",
+      "speed": 1.0,
+      "gap": 0.22
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "Merchants.",
+      "speed": 1.0,
+      "gap": 0.16
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "Beggars.",
+      "speed": 1.0,
+      "gap": 0.16
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "Kids.",
+      "speed": 1.0,
+      "gap": 0.2
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "The guy holding his camel.",
+      "speed": 1.02,
+      "gap": 0.32
+    },
+    {
+      "beat": "rise",
+      "who": "narrator",
+      "t": "Suddenly, Cairo is drowning in gold.",
+      "speed": 1.02,
+      "gap": 0.34
+    },
+    {
+      "beat": "turn",
+      "who": "narrator",
+      "t": "Except, the shopkeepers start asking for more gold, for the same bread.",
+      "speed": 1.06,
+      "gap": 0.22
+    },
+    {
+      "beat": "turn",
+      "who": "narrator",
+      "t": "The baker just shrugs.",
+      "speed": 1.02,
+      "gap": 0.12
+    },
+    {
+      "beat": "turn",
+      "who": "baker",
+      "t": "Everyone's got gold now, my friend!",
+      "speed": 1.0,
+      "gap": 0.32
+    },
+    {
+      "beat": "turn",
+      "who": "narrator",
+      "t": "Even the money changers start giving less for every coin.",
+      "speed": 1.04,
+      "gap": 0.3
+    },
+    {
+      "beat": "question",
+      "who": "narrator",
+      "t": "So how do you ruin a city,",
+      "speed": 1.0,
+      "gap": 0.14
+    },
+    {
+      "beat": "question",
+      "who": "narrator",
+      "t": "by giving it money?",
+      "speed": 0.96,
+      "gap": 0.32
+    },
+    {
+      "beat": "explain",
+      "who": "narrator",
+      "t": "Well, gold is only valuable because it's rare.",
+      "speed": 1.04,
+      "gap": 0.14
+    },
+    {
+      "beat": "explain",
+      "who": "narrator",
+      "t": "Flood a city with it, and it's just shiny metal.",
+      "speed": 1.04,
+      "gap": 0.28
+    },
+    {
+      "beat": "explain",
+      "who": "narrator",
+      "t": "Twelve years later, Cairo's gold still hadn't recovered.",
+      "speed": 1.04,
+      "gap": 0.36
+    },
+    {
+      "beat": "twist",
+      "who": "narrator",
+      "t": "But here's the best part.",
+      "speed": 1.0,
+      "gap": 0.2
+    },
+    {
+      "beat": "twist",
+      "who": "narrator",
+      "t": "On the way home, the richest king on Earth,",
+      "speed": 1.04,
+      "gap": 0.22
+    },
+    {
+      "beat": "twist",
+      "who": "narrator",
+      "t": "runs out of money.",
+      "speed": 0.94,
+      "gap": 0.32
+    },
+    {
+      "beat": "payoff",
+      "who": "narrator",
+      "t": "So he goes back to the same merchants he showered with gold,",
+      "speed": 1.06,
+      "gap": 0.16
+    },
+    {
+      "beat": "payoff",
+      "who": "musa",
+      "t": "Hey. Remember me?",
+      "speed": 0.96,
+      "gap": 0.3
+    },
+    {
+      "beat": "payoff",
+      "who": "narrator",
+      "t": "And they lend it to him.",
+      "speed": 1.0,
+      "gap": 0.12
+    },
+    {
+      "beat": "payoff",
+      "who": "narrator",
+      "t": "Because now, they're the ones with all the gold.",
+      "speed": 1.0,
+      "gap": 0.0
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+ "duration": 60.0,
+ "cues": [
+  {"t": 0.0,  "type": "drone",   "level": 0.3},
+  {"t": 2.5,  "type": "piano",   "level": 0.5},
+  {"t": 7.0,  "type": "rule",    "level": 0.7},
+  {"t": 11.0, "type": "piano",   "level": 0.4},
+  {"t": 14.0, "type": "pulse",   "level": 0.4},
+  {"t": 16.0, "type": "strings", "level": 0.5},
+  {"t": 21.0, "type": "drone",   "level": 0.55},
+  {"t": 24.5, "type": "piano",   "level": 0.45},
+  {"t": 27.0, "type": "pulse",   "level": 0.7},
+  {"t": 33.0, "type": "riser",   "level": 0.7},
+  {"t": 33.0, "type": "pulse",   "level": 0.0},
+  {"t": 33.0, "type": "silence", "level": 1.0},
+  {"t": 35.0, "type": "hit",     "level": 0.9},
+  {"t": 35.0, "type": "drone",   "level": 0.8},
+  {"t": 37.0, "type": "strings", "level": 0.8},
+  {"t": 45.0, "type": "rule",    "level": 0.6},
+  {"t": 49.0, "type": "drone",   "level": 0.3},
+  {"t": 50.5, "type": "piano",   "level": 0.35},
+  {"t": 55.0, "type": "drone",   "level": 0.0}
+ ]
+}
