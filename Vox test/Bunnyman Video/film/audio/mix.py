@@ -412,8 +412,11 @@ def voice_activity(v, att=0.04, rel=0.35, hold=0.0):
     a = np.abs(v).astype(np.float64)
     e = SX.follow(a, SX.coef(att), SX.coef(rel))
     if hold > 0:
+        # trailing max over `hold` (the envelope's own release then runs from the end of the hold), with a 30 ms
+        # smoothing of the step where the hold lets go (a second full release here would double the release time:
+        # the first try kept the bed only 0.9 LU up in the gaps instead of ~2.5 LU)
         h = max(1, int(hold * SR))
-        e = SX.follow(maximum_filter1d(e, size=h, origin=(h - 1) // 2), 0.0, SX.coef(rel))   # trailing max, then release
+        e = SX.follow(maximum_filter1d(e, size=h, origin=(h - 1) // 2), 0.0, SX.coef(0.03))
     edb = SX.db(e)
     ref = np.percentile(edb[edb > -70], 90) if (edb > -70).any() else -20
     return np.clip((edb - (ref - 26)) / 14, 0, 1).astype(np.float32)
@@ -588,9 +591,10 @@ HIT_DUCK_HI_DB = 10.0   # final mix v2: the hits above 150 Hz duck 10 dB under a
 HIT_CUT_DB = 3.0     # final mix: the hits bus also gets the voice-keyed 1-4.5 kHz bell cut (the hit's body is low: the
                      # cut keeps the next words readable while the hits come up --hits-db)
 FOLEY_DIP_DB = 2.5   # music dips under foley events (footsteps, keys, paper...) so they read
-DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.12 s after each syllable, so the dips inside
-                     # words and the shortest commas do not pump the score; sentence gaps still breathe (a 0.35 s hold kept
-                     # the duck on 97 % of the film and the bed came up only 0.6 LU in the gaps, the references 2.5-3 LU)
+DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.12 s after each syllable, then releases as
+                     # before (0.25 s), so the dips inside words and the shortest commas do not pump the score while the
+                     # sentence gaps still breathe (a 0.35 s hold kept the duck on 97 % of the film and the bed came up
+                     # only 0.6 LU in the gaps; the references come up 2.5-3 LU)
 CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the bed stays this far under the narration's own
 CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
