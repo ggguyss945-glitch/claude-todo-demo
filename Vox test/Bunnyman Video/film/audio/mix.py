@@ -530,6 +530,31 @@ def voice_ride(v, over_lu=2.5, ratio=3.0):
     return (v * (10 ** (g / 20))).astype(np.float32), float(-gdb.min()) if len(gdb) else 0.0
 
 
+VOICE_CAP_LU = 2.3   # fix round 1 (critic 3 M6): no 400 ms block of the narration more than this over its integrated
+                     # level (the mix's own loudest moments were ordinary lines at +5 LU; the ride's smoothing let them
+                     # through at +4.3). A loudness limiter on whole words: the cut covers the block, 150 ms ramps; about
+                     # 1 % of the blocks move, by at most a few dB; the narrator's voice itself is untouched
+
+
+def voice_cap(v, cap_lu=VOICE_CAP_LU, hop=0.05):
+    """Keep every 400 ms K-weighted block of v within cap_lu of its integrated level (returns v, max cut dB)."""
+    worst = 0.0
+    for _ in range(4):
+        L0 = SX.lufs_int(v)
+        Lb = -0.691 + 10 * np.log10(SX._blocks(v, 0.4, hop) + 1e-20)
+        cut = np.clip(Lb - (L0 + cap_lu) + 0.15, 0.0, 8.0)
+        if cut.max() < 0.2:
+            break
+        cut = maximum_filter1d(cut, size=int(0.4 / hop) + 1, mode='nearest')     # the whole block (+-0.2 s)
+        cut = uniform_filter1d(cut, size=3, mode='nearest')
+        worst = max(worst, float(cut.max()))
+        tb = np.arange(len(cut)) * hop + 0.2
+        g = np.interp(np.arange(len(v)) / SR, tb, -cut).astype(np.float32)
+        v = (v * 10 ** (g / 20)).astype(np.float32)
+        v = (v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)).astype(np.float32)
+    return v, worst
+
+
 def voice_chain(v, plr=11.0, ride_lu=None):
     """Narration bus: loudness to -14 LUFS, gentle 2.5:1 compression on the loudest syllables, then a transparent
     true-peak limiter so the voice's peak-to-loudness ratio is <= plr dB (EN narration arrives at PLR 15.6 dB, which
@@ -546,11 +571,16 @@ def voice_chain(v, plr=11.0, ride_lu=None):
     if ride_lu is not None:
         v, ride = voice_ride(v, ride_lu, RIDE_RATIO)
         v = v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)
+    capd = 0.0
+    if ride_lu is not None and VOICE_CAP_LU is not None:
+        v, capd = voice_cap(v)
     y, gr, frac = tp_limit(np.stack([v, v], 1), TARGET + plr, look=0.003, rel=0.05)
     v = y[:, 0]
     v = (v * 10 ** ((TARGET - SX.lufs_int(v)) / 20)).astype(np.float32)
+    if ride_lu is not None and VOICE_CAP_LU is not None:      # again: the limiter's make-up lifted the capped blocks
+        v, c2 = voice_cap(v); capd = max(capd, c2)
     return v, {'plr': round(true_peak(np.stack([v, v], 1)) - TARGET, 1), 'limit_gr_max': round(gr, 1), 'ride_max_db': round(ride, 1),
-               'limit_over_1dB_pct': round(100 * frac, 2)}
+               'limit_over_1dB_pct': round(100 * frac, 2), 'cap_max_db': round(capd, 1)}
 
 
 TILT = {63: 8.0, 125: 3.0, 250: 4.0, 500: 4.0, 2000: -7.0, 4000: -10.0, 8000: -14.0}   # AUDIO_SPEC sec. 2, rel 1 kHz
@@ -611,12 +641,12 @@ CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the exc
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
                      # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
 # fix round 1 (critic 3 M6: the scares never got louder than the narration's own loudest lines, +5 LU): the boosted
-# scares' spare windows let the hits bus up to BOOST_CEIL_DB over the voice's p99.9 peak (was 6) and drive it
-# BOOST_DRIVE_DB into its look-ahead limiter there (a denser body: a lower crest factor, so the 400 ms loudness rises,
+# scares' spare windows let the hits bus up to near full scale (an absolute ceiling, -1 .. -2 dBFS by grade, instead of
+# the voice's p99.9 peak + 6 dB) and drive it BOOST_DRIVE_DB into its look-ahead limiter there (a denser body: a lower crest factor, so the 400 ms loudness rises,
 # not just the transient); the glue compressor leaves those windows alone. Grade by the plan's boost: >= 3.5 (the face
 # reveal, the swap) 1.0, >= 2.5 (the window, the back door, the crack, the doorway, GET OUT) 0.75, else 0.5
-BOOST_CEIL_DB = 10.0
-BOOST_DRIVE_DB = 6.0
+BOOST_DRIVE_DB = 10.0
+BOOST_SPARE_S = 0.4   # a boosted scare's spare window lasts at least this long (the next word's onset ended it after 0.15 s)
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
 LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the
                                 # narration with the bed 7.9 dB under it (critic 3 m11)
@@ -1022,6 +1052,8 @@ def main():
         fs = next((v for k, v in forced.items() if abs(k - h) < 0.01), None)
         if fs:
             te = h + fs
+        elif long_:                                  # fix round 1: a boosted scare keeps its body for BOOST_SPARE_S even
+            te = max(te, h + BOOST_SPARE_S)          # over the next syllables (the 1-4.5 kHz cut keyed to the voice stays)
         tr = 0.06 if nxt - te < 0.5 else (0.4 if long_ else 0.2)
         a = int((h - 0.03) * SR); b = int(te * SR); c = int((te + tr) * SR)
         if b <= 0 or a >= N: continue
@@ -1091,6 +1123,7 @@ def main():
             X_[a_:b_] = dyn_cut(X_[a_:b_], act_n, NOTCH_DB)
         log(f'notch {NOTCH_DB:.0f} dB 1-4.5 kHz at {e_["t"]:.2f} s for {nl:.2f} s')
     vpk = float(np.percentile(np.abs(key[np.abs(key) > 1e-4]), 99.9)) if (np.abs(key) > 1e-4).any() else 0.3
+    log(f'voice p99.9 peak {20 * np.log10(vpk):.1f} dBFS (the hits limiter\'s reference)')
 
     def hits_limit(hx, act_h):
         """Variable-ceiling look-ahead peak limiter on the hits bus: ceiling = voice p99.9 - 3 dB in the gaps, - 9 dB more
@@ -1098,9 +1131,14 @@ def main():
         spare windows, where the bus is also driven BOOST_DRIVE_DB x grade into the limiter (fix round 1: a denser
         body, so the scares' 400 ms loudness tops the narration; v2.1: at -3 dB the scares' transients were capped and
         the film's loudest moments became narration phrases)."""
+        ceil = (vpk * 10 ** ((-3.0 - 9.0 * act_h * spare) / 20)).astype(np.float32)
         if bwin.any():
             hx = hx * (10 ** (BOOST_DRIVE_DB * bwin / 20)).astype(np.float32)[:, None]
-        ceil = (vpk * 10 ** ((-3.0 + BOOST_CEIL_DB * bwin - 9.0 * act_h * spare) / 20)).astype(np.float32)
+            # inside a boosted scare's spare window the ceiling is absolute, near full scale (the master limiter takes
+            # the rest): -1 dBFS for the hardest, -1.5 / -2 for the others (relative to the voice's p99.9 peak, about
+            # -12 dBFS, the scares were capped under the narration's own loudness)
+            cb = (10 ** ((-1.0 - 2.0 * (1.0 - bwin)) / 20)).astype(np.float32)
+            ceil = np.where(bwin > 0, np.maximum(ceil, cb), ceil)
         pk = np.abs(hx).max(1)
         req = np.minimum(1.0, ceil / np.maximum(pk, 1e-9)).astype(np.float32)
         L = int(0.004 * SR)
@@ -1142,7 +1180,13 @@ def main():
     # from analysis/measure.py, whose kweight() filters across channels, so they read about 4 dB hot), while the
     # integrated bed stays at or under voice + bed_rel + 1.5 (references: -12.5 / -12.8 / -13.4).
     Lv = SX.lufs_int(key)
+    # fix round 1: the boosted scares' spare windows are left out of the bed's statistics (their hits now top the
+    # narration by design; counted in, a rule 6 window measured the bed's integrated level 3 LU hot and the solver
+    # pulled the whole score down 8 dB under them)
+    nbw = (bwin <= 0).astype(np.float32) if bwin.any() else None
     def bstat(b):
+        if nbw is not None:
+            b = b * nbw[:, None]
         st3 = -0.691 + 10 * np.log10(SX._blocks(b, 3.0, 1.0) + 1e-20)
         return SX.lufs_int(b) - Lv, float(np.median(st3[st3 > -70])) - Lv if (st3 > -70).any() else -70.0
     Lm0 = SX.lufs_int(music + mhits)
@@ -1157,6 +1201,8 @@ def main():
         if b_ > t0 and a_ < t1: arc_secs.append([a_ - t0, b_ - t0, tgt, 0.0])        # window time, target, offset dB
 
     def gap_levels(bed):
+        if nbw is not None:
+            bed = bed * nbw[:, None]
         bl = -0.691 + 10 * np.log10(SX._blocks(bed, 0.4, 0.1) + 1e-20)
         n_ = min(len(bl), len(vbl_g)); tb = np.arange(n_) * 0.1 + 0.2
         gap = (vbl_g[:n_] < Lv - 20) & (bl[:n_] > Lv - 60)
@@ -1189,13 +1235,13 @@ def main():
         log(f'  music gain iter {it}: music {20 * np.log10(gm):+.1f} dB, bed integrated {Li:+.2f} LU, p50 {P50:+.2f} LU rel voice'
             + ('; bed in gaps by rule ' + ' '.join('%+.1f' % g if g is not None else '-' for g in gl) +
                ' (arc offsets ' + ' '.join('%+.1f' % sec[3] for sec in arc_secs) + ' dB)' if arc_secs else ''))
-        arc_done = all(abs(x) < 0.6 for x in aerr) or it >= 5
+        mean_e = float(np.mean(aerr)) if aerr else 0.0
+        arc_done = all(abs(x - mean_e) < 0.6 for x in aerr) or it >= 5     # the shape (the music gain takes the mean)
         if abs(err) < 0.2 and arc_done:
             break
         if abs(err) >= 0.2:
             gm *= 10 ** (err * 1.1 / 20)
         if not arc_done:
-            mean_e = float(np.mean(aerr)) if aerr else 0.0
             for sec, x in zip(arc_secs, aerr):              # the shape only (the music gain takes the mean)
                 sec[3] = float(np.clip(sec[3] + 0.9 * (x - mean_e), -ARC_MAX_DB, ARC_MAX_DB))
             music = music_base * (10 ** (arc_env(arc_secs) / 20)).astype(np.float32)[:, None]

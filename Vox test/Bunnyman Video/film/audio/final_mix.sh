@@ -11,7 +11,7 @@
 #                        hums / jingles / count thumps dropped from the SFX sheet; EDIT: re-levels; ADD: off-screen and
 #                        foley additions, deduplicated by sound family); both sheets as mixed go to
 #                        _work/mix/final/cues_used/
-#        --hits-db 4     the score's hits stem +4 dB (voice-keyed 1-4.5 kHz cut on the hits keeps the next words)
+#        --hits-db 6     the score's hits stem +6 dB (fix round 1: +4 -> +6) (voice-keyed 1-4.5 kHz cut on the hits keeps the next words)
 #        --voice-ride 1  a slow 4:1 ride on the narration's loudest phrases (> +1 LU; fix round 1: at 2 / 3:1 the
 #                        narration's loudest lines still reached +5 LU momentary over the mix), so the scares top the film
 #   3. mix.wav = hard link of mix_en.wav            (render.py / deliver.sh read mix_en.wav, the job names mix.wav)
@@ -26,7 +26,7 @@ cd "$FILM"
 W=_work; OUT=$W/mix/final
 mkdir -p "$OUT"
 python3 film.py --cues
-( cd audio && python3 mix.py ../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 4 --voice-ride 1.0 ) 2>&1 | tee "$OUT/mix.log"
+( cd audio && python3 mix.py ../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 ) 2>&1 | tee "$OUT/mix.log"
 ln -f "$OUT/mix_en.wav" "$OUT/mix.wav"
 python3 audio/measure_mix.py "$OUT" --plot | tee "$OUT/measure.txt"
 python3 audio/mix_scenes.py "$OUT" > "$OUT/scenes.log"
