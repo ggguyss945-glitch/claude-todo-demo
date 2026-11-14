@@ -4975,12 +4975,13 @@ def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0
             ang = _val_t(door, t)
             jolt = 0.0
             if slam is not None and t >= slam:                     # the slam: the leaf bows in hard against the bolt, then shudders
-                jolt = 0.05 * math.exp(-(t - slam) * 6.0) * math.cos((t - slam) * 48) - 0.06 * math.exp(-(t - slam) * 12.0)
-                ang += 4.5 * math.exp(-(t - slam) * 6.0) * abs(math.sin((t - slam) * 34 + 1.2))
+                # (fix round 2, verify r1 minor: subtle in the dark grade) about 1.6x the old jolt and swing
+                jolt = 0.08 * math.exp(-(t - slam) * 6.0) * math.cos((t - slam) * 48) - 0.10 * math.exp(-(t - slam) * 12.0)
+                ang += 7.0 * math.exp(-(t - slam) * 6.0) * abs(math.sin((t - slam) * 34 + 1.2))
             if rattle is not None and rattle[0] <= t <= rattle[1] + 0.4:
                 k_ = clamp((t - rattle[0]) / 0.15) * clamp((rattle[1] + 0.4 - t) / 0.4)
-                jolt += 0.02 * k_ * math.sin(t * 61.0) * (0.6 + 0.4 * math.sin(t * 7.3))
-                ang += 2.4 * k_ * abs(math.sin(t * 23.0)) * (0.5 + 0.5 * abs(math.sin(t * 5.1)))
+                jolt += 0.034 * k_ * math.sin(t * 61.0) * (0.6 + 0.4 * math.sin(t * 7.3))
+                ang += 3.8 * k_ * abs(math.sin(t * 23.0)) * (0.5 + 0.5 * abs(math.sin(t * 5.1)))
             for kt in (knocks or ()):
                 if kt <= t < kt + 0.25: jolt += 0.004 * math.exp(-(t - kt) * 22.0)
             bd = bath_door_leaf(lock=_val_t(lock, t), knob_turn=_val_t(knob, t))
@@ -6275,9 +6276,12 @@ class MainStreet(Room):
         P = []
         if not callable(fy):
             P.append(Piece('float', (0.0, 1.0, fy + FLOAT_L / 2), lambda pen, v: parade_float(pen, v, 0.0, fy)))
-        for side, x in ((-1, -5.2), (1, 5.2)):
+        # (fix round 2, verify r1 minor: from the handout camera beside the float the crowd rows. anchor (y 20) sorted them
+        # nearer than the float, so the people far down the street stood ON the deck: the row now sorts from y 27, past
+        # the float, the middle of the stretch of it that a camera beside the float sees)
+        for side, x, ya in ((-1, -5.2, 27.0), (1, 5.2, 27.0)):
             for ph in (0, 1):                     # two cached frames of the crowd's cheer cycle (ob_parade swaps them)
-                P.append(Piece('crowd_%d_%s' % (side, 'ab'[ph]), (x, 0.8, 20.0),
+                P.append(Piece('crowd_%d_%s' % (side, 'ab'[ph]), (x, 0.8, ya),
                                (lambda s_, x_, ph_: lambda pen, v: _crowd(pen, v, x_, s_, o.get('crowd_seed', 3), ph_))(side, x, ph)))
         return P
 
@@ -6785,9 +6789,16 @@ def _ins_egg(pen, t, state='whole', rattle=None, ring=True, bg='mat', gold=False
             _egg_scuffs(pen, 960 + 34 * r, 560 - hop, 560, -82 + 15 * r)
     elif state == 'halves':
         u = clamp(k_open)
-        pen.fill(oval(800, 820, 260, 50), '#000000', 140, blur=22); pen.fill(oval(1180, 800, 240, 46), '#000000', 140, blur=22)
-        _egg_half(pen, 760 - 60 * u, 640, 470, 'bot', ring, t)
-        _egg_half(pen, 1200 + 60 * u, 600, 470, 'top', False, t, rot=-24 * u)
+        if bg == 'table':
+            # (fix round 2, verify r1 minor: the lid hung high over its shadow) on the desk the lid rests on its rim, dome
+            # up, tipped a little against the table, beside the empty cup
+            pen.fill(oval(800, 860, 260, 46), '#000000', 140, blur=22); pen.fill(oval(1265, 860, 245, 40), '#000000', 150, blur=18)
+            _egg_half(pen, 760 - 60 * u, 640, 470, 'bot', ring, t)
+            _egg_half(pen, 1205 + 60 * u, 846, 470, 'top', False, t, rot=-7 * u)
+        else:
+            pen.fill(oval(800, 820, 260, 50), '#000000', 140, blur=22); pen.fill(oval(1180, 800, 240, 46), '#000000', 140, blur=22)
+            _egg_half(pen, 760 - 60 * u, 640, 470, 'bot', ring, t)
+            _egg_half(pen, 1200 + 60 * u, 600, 470, 'top', False, t, rot=-24 * u)
     elif state == 'hand':
         draw_egg(pen, 960, 470, 520, rot=-8, gold=gold)
 

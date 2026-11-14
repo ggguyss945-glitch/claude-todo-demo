@@ -193,7 +193,8 @@ brackets; levels in LEVEL_LU (one-shots momentary max, beds integrated, LU rel t
                     (spacing inside a group stays on the beat); soft=True: Grandma on the kitchen table (memory=True)
     slot_flap       action='open'|'hold' (dur)|'close'|'snap' [inside]   the brass mail slot: the spring hinge creak,
                     held open (faint strain), let down, snapped shut
-    girl_cry        dur, intensity, seed_voice (DUR) [slot]   the real Laurie crying (her own voice, voicesynth.cry)
+    girl_cry        dur, intensity, seed_voice, sobs (DUR) [slot]   the real Laurie crying (her own voice, voicesynth.cry;
+                    sobs: the picture's sob catches, s from the cue)
     jingle          version ('speaker' | 'vhs' | 'parade' | 'musicbox' | 'hum' | 'hum_x' | 'girl' | 'knocks' |
                     'climax' | 'count' | 'outro' | 'studio'), dur, stop ('fade'|'cut'|'drag'), + jingle.render keys
                     (DUR) [dry]   the Pemberton's jingle as a sound in the scene (the score plays it as 'jingle' events)
@@ -3946,20 +3947,21 @@ def _voice_sig():
     return hashlib.md5((json.dumps(VS.VV.VOICES, sort_keys=True, default=str) + ed).encode()).hexdigest()[:8]
 
 
-def r_girl_cry(rng, sp, dur=6.0, intensity=0.75, seed_voice=None, **_):
+def r_girl_cry(rng, sp, dur=6.0, intensity=0.75, seed_voice=None, sobs=None, **_):
     """DUR. 'On the other side of the door, the little girl starts to cry. Not like a monster. Like a kid who's been
     lost for a very, very long time.' The real Laurie's own voice (the narration's girl voice through vo_voices L:
     a girl's pitch in a man's body, the man an octave under) crying: long wails that crack and shake, hiccup sobs,
     shaky gasps (audio/voicesynth.cry; no library crying: the bunny set's crying is a toddler boy)."""
     import voicesynth as VS
     sv = int(seed_voice if seed_voice is not None else rng.integers(1 << 20))
-    key = (round(float(dur), 2), round(float(intensity), 2), sv)
+    sk = hashlib.md5(json.dumps([round(float(x), 3) for x in sobs]).encode()).hexdigest()[:8] if sobs else 'free'
+    key = (round(float(dur), 2), round(float(intensity), 2), sv, sk)
     if key not in _CRY:
-        p = os.path.join(CACHE, f'cry_{key[0]}_{key[1]}_{sv}_{_voice_sig()}.wav')
+        p = os.path.join(CACHE, f'cry_{key[0]}_{key[1]}_{sv}_{sk}_{_voice_sig()}.wav')
         if os.path.exists(p):
             _CRY[key] = sf.read(p, dtype='float32')[0]
         else:
-            y = VS.cry(float(dur), 'L', sv, float(intensity)).astype(np.float32)
+            y = VS.cry(float(dur), 'L', sv, float(intensity), sobs=sobs).astype(np.float32)
             os.makedirs(CACHE, exist_ok=True); sf.write(p, y, SR, subtype='FLOAT'); _CRY[key] = y
     y = st(_CRY[key])
     return fade(y, 0.05, 0.4), 0.0, 0.0, False

@@ -365,7 +365,8 @@ IDENTITY = [
     # 11:07: the song from the woods on a dying speaker, until he stops waving
     ('w65:starts', 'jingle', 0.55, None, dict(version='speaker', loops=4, until='s82+0.5', stop='drag')),
     # Grandma remembered: her music box behind her words
-    ('s147-0.4', 'jingle', 0.85, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
+    # (fix round 2: 0.85 put the box 1-3.5 dB over "when she was little" in 1-4 kHz)
+    ('s147-0.4', 'jingle', 0.72, None, dict(version='musicbox', tempo=92.0, until='e154+0.4', stop='fade')),
     # "Yeah." -> the real Laurie tries to sing it through the slot and breaks into tears; the slot snaps shut on her
     # final mix: only her broken "Hop... hop... hop along..." (5 s, its sob at the end); her crying then takes over
     # (the picture's girl_cry, sfx_plan PICTURE) as the narrator says "...starts to cry", until Mom shuts the slot

@@ -48,7 +48,8 @@ EDIT = [
     ('paper', 's24-0.3', 'e24', {}, {'add_db': 6.0}, 'the Courier (24 LU under)'),
     ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': 1.0}, 'the mascot and Laurie walking into the woods (22 LU under; '
      'at -2 still 19-20 LU under the braam and the line)'),
-    ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': 3.0}, 'the run up the stairs (19 LU under)'),
+    ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': -3.0}, 'the run up the stairs (19 LU under at +0; fix '
+     'round 2: at +3 they sat 9 dB over "June\'s room" in 1-4 kHz)'),
     ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -9.0}, 'her knock under the line (6.5 LU over it '
      'at -1; 19.2 LU under at -13; mix.py\'s clarity ceiling now keeps it under the words)'),
     ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),

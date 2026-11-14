@@ -659,8 +659,8 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.35
 # stays under BOOST_TARGET_LU (by grade, LU over the voice's integrated level; a fixed drive turned the sustained swap on
 # "Seven." into a +17 LU square wave), and a window already over its target comes down to it. The saturation's harmonics
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
-BOOST_SAT_DB = 9.0
-BOOST_TARGET_LU = {1.0: 8.5, 0.75: 7.0, 0.5: 6.0}
+BOOST_SAT_DB = 14.0
+BOOST_TARGET_LU = {1.0: 10.0, 0.75: 9.0, 0.5: 8.0}
 BOOST_VCUT_DB = 8.0
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
 LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the

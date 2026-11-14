@@ -318,10 +318,12 @@ def line_span(tag, pad0=0.035, pad1=0.045):
     return (float(l['t']) - pad0, float(l['end']) + pad1)
 
 
-def cry(dur=6.0, who='L', seed=0, intensity=0.8, src=None):
+def cry(dur=6.0, who='L', seed=0, intensity=0.8, src=None, sobs=None):
     """A lost child crying for `dur` s: wails ("aaah", "uuuh" on her own "Mama?" vowels: a rise, a long fall that
     cracks and shakes) and hiccup sobs between them, the character's voice (vo_voices: the real Laurie = a girl's
-    pitch in a man's tract, the man an octave under). intensity 0..1 (more wails, higher, rougher)."""
+    pitch in a man's tract, the man an octave under). intensity 0..1 (more wails, higher, rougher).
+    sobs (fix round 2): the picture's sob catches (s from the start; film.py SOB_T, the Bunnyman's shoulders heave on
+    each): a hiccup catch lands on every one, and a wail fills each gap of 0.6 s or more after its catch."""
     rng = np.random.default_rng(seed)
     s = VV.VOICES.get(who, VV.VOICES['L'])
     if src is None:
@@ -339,6 +341,30 @@ def cry(dur=6.0, who='L', seed=0, intensity=0.8, src=None):
     f0 = np.zeros(n); amp = np.zeros(n); src_i = np.zeros(n, int)
     t = 0.15
     base = s['f0'] * (1.15 + 0.25 * intensity)
+    if sobs:
+        sb = sorted(float(x) for x in sobs if 0.0 <= float(x) < dur - 0.1)
+        for j, s0 in enumerate(sb):
+            L = rng.uniform(0.10, 0.15)
+            i0, i1 = int(s0 / fp), min(n, int((s0 + L) / fp))
+            u = np.linspace(0, 1, max(1, i1 - i0))
+            f0[i0:i1] = base * rng.uniform(1.15, 1.4) * (1 - 0.15 * u)
+            amp[i0:i1] = np.sin(np.pi * u) * (0.75 if j % 3 else 0.9)
+            src_i[i0:i1] = vow[rng.integers(len(vow))]
+            nxt = sb[j + 1] if j + 1 < len(sb) else dur - 0.2
+            if nxt - s0 >= 0.6:                           # a wail out of the catch, broken off before the next one
+                a_ = s0 + L + 0.06; Lw = nxt - 0.12 - a_
+                w0, w1 = int(a_ / fp), min(n, int((a_ + Lw) / fp))
+                u = np.linspace(0, 1, max(1, w1 - w0))
+                pk = rng.uniform(1.05, 1.3)
+                shape = np.where(u < 0.18, 0.8 + (pk - 0.8) * np.sin(np.pi / 2 * np.clip(u / 0.18, 0, 1)),
+                                 pk - (pk - 0.7) * np.clip((u - 0.18) / 0.82, 0, 1) ** 1.3)
+                if rng.uniform() < 0.5:
+                    c = rng.uniform(0.3, 0.6); shape *= np.where(np.abs(u - c) < 0.05, 1.33, 1.0)
+                f0[w0:w1] = base * shape * (1 + 0.04 * np.sin(2 * np.pi * 7.0 * u * Lw))
+                pulse = 1 - 0.45 * intensity * (0.5 + 0.5 * np.cos(2 * np.pi * rng.uniform(3.2, 4.6) * u * Lw))
+                amp[w0:w1] = np.sin(np.pi * np.clip(u / 0.12, 0, 1) / 2) * (1 - u ** 3) ** 0.7 * pulse * 0.85
+                src_i[w0:w1] = vow[np.linspace(0, len(vow) - 1, w1 - w0).astype(int) % len(vow)]
+        t = dur                                           # the free pattern below is skipped
     while t < dur - 0.4:
         if rng.uniform() < 0.62:                          # a wail
             L = rng.uniform(0.9, 1.9) * (0.8 + 0.4 * intensity)
