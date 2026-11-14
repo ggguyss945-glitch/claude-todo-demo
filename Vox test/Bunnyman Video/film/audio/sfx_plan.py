@@ -42,6 +42,20 @@ EDIT = [
     # the attic's bare bulb under the whole attic scene: present, not a hum you notice (-14 was 26 LU under the voice)
     ('bulb', 's206-0.5', 's206+0.5', {'dur': 4.0}, {'drop': True}, 'a second bulb buzz on the first one'),
     ('bulb', 's206-0.5', 's206+0.5', {'kind': 'buzz'}, {'gain_db': -8.0}, 'the attic bulb'),
+    # the first full mix (measure_mix.py): buried cues raised, cues over the narration lowered
+    ('paper', 's12', 'e12', {}, {'add_db': 6.0}, 'the laminated rules pressed on the fridge (23 LU under)'),
+    ('paper', 's24-0.3', 'e24', {}, {'add_db': 6.0}, 'the Courier (24 LU under)'),
+    ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': -2.0}, 'the mascot and Laurie walking into the woods (22 LU under)'),
+    ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': 3.0}, 'the run up the stairs (19 LU under)'),
+    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -9.0}, 'her knock under the line (6.5 LU over it)'),
+    ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),
+    ('window_smash', 's236', 'e236+0.3', {}, {'gain_db': 1.0}, '"explodes" stays readable (+1.1 LU over the line)'),
+    ('door_crash', 's237', 'e237', {}, {'gain_db': 0.0}, '"crashes open" stays readable (+2 LU over the line)'),
+    ('sirens_arrive', 's370-0.5', 'e370', {}, {'add_db': 10.0}, 'the patrol cars arriving (24 LU under)'),
+    ('paper', 's323-0.3', 'e323', {}, {'add_db': 4.0}, 'the Courier at the reveal (20 LU under)'),
+    ('breath', 's386', 'e387+0.3', {}, {'gain_db': -8.0}, '"Breathe." (masked at -12)'),
+    ('knock_door', 's406', 'e406', {}, {'gain_db': -4.0}, 'the like that lands like a knock (5.9 LU over the line)'),
+    ('light_switch', 's407-0.3', 'e407', {}, {'gain_db': 0.0}, 'Grandma\'s porch light on at "And subscribe." (19 LU under)'),
 ]
 
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
@@ -292,6 +306,16 @@ def picture_pass(out, lines, log):
             return default
     res, n0 = [], len(out)
     girl = [e for e in idt if e.get('type') == 'jingle' and e.get('version') == 'girl']
+    bath = (at('s242'), at('s286')) if at('s242') and at('s286') else None   # locked in the bathroom: 4:30 -> 6:12
+    try:                                                  # the picture's shots: an 'outside' cue on an exterior shot is
+        shots = json.load(open(os.path.join(MP.W, 'cues', 'shots.json')))   # heard out there, not through the door
+    except Exception:
+        shots = []
+    def exterior(tt):
+        for sh in shots:
+            if sh.get('t0', 0) <= tt < sh.get('t1', 0):
+                return sh.get('space') == 'outside'
+        return False
     for c in out:
         nm = c.get('name'); p = dict(c.get('params') or {}) if isinstance(c.get('params'), dict) else {}
         try:
@@ -341,6 +365,12 @@ def picture_pass(out, lines, log):
                 p['dur'] = round(min(nxt) - t, 2); c = dict(c, params=p); why = 'the pause holds until PLAY'
         elif nm == 'vhs_pause' and p.get('kind') == 'rewind':
             c = dict(c, name='vcr', params={'action': 'rewind', 'dur': p.get('dur', 3.0)}); why = 'the tape rewinds'
+        elif nm == 'egg_tap':                              # we are in the hall when it taps: inside, and it must read
+            c = dict(c, space='inside', gain_db=2.0); why = 'the one soft tap, heard in the hall'
+        elif nm in ('key_in_lock', 'key_turn'):            # Mom's one key: no bunch jingling before the click
+            q = dict(p); q['jingle'] = False
+            c = dict(c, name='key_in_lock', params=q, gain_db=-8.0 if nm == 'key_turn' else c.get('gain_db', 0.0))
+            why = 'one key, the click on the frame'
         elif nm == 'room_tone' and p.get('kind') in ('hospital_hum', 'hospital'):
             log.append(f'PIC  room_tone {t:7.2f} dropped: hospital_room (sfx_plan ADD) is the hospital'); continue
         elif nm == 'ambience_night' and t < 130.0:        # the cold open and the sightings: the woods bed (ADD) is the night
@@ -352,7 +382,7 @@ def picture_pass(out, lines, log):
             g = girl[0]; s0 = g['t'] + float(g.get('len') or 5.0) - 0.75
             e_ = at('s192+0.25', t + float(p.get('dur') or 6.0))
             c = dict(c, t=round(max(t, s0), 3), params={'dur': round(max(1.5, e_ - max(t, s0)), 2)}, space='slot',
-                     gain_db=4.0)
+                     gain_db=6.0, seed=3)                 # seed 3: a cry that starts at once (others open with gasps)
             why = 'her cry after the song, through the open slot, until Mom shuts it'
         elif nm == 'swap':                                # the trade's thump on the picture's flash (its impact_hit)
             imp = [float(x['t']) for x in out if x.get('name') == 'impact_hit' and abs(float(x.get('t', -9)) - t) <= 0.3]
@@ -367,6 +397,12 @@ def picture_pass(out, lines, log):
             c = dict(c, name=rn, params=q)
             if g is not None:
                 c['gain_db'] = g
+        if c.get('space') == 'outside' and not (c.get('params') or {}).get('through_walls') and exterior(t) \
+                and not (c.get('name') in ('ambience_night', 'ambience_dawn', 'ambience_woods', 'room_tone')
+                         and float((c.get('params') or {}).get('dur') or 30.0) > 4.0):
+            c = dict(c, space='porch'); why = (why or c.get('name')) + ', on an exterior shot: porch, not through the door'
+        if c.get('name') == 'struggle' and bath and bath[0] <= t <= bath[1] and c.get('space') in (None, 'inside'):
+            c = dict(c, space='door'); why = (why or 'the fight') + ', heard through the bathroom door'
         if why:
             log.append(f'PIC  {nm:18s} {t:7.2f} -> {c["name"]} {c.get("params")} {c.get("gain_db", 0):+.1f} dB  ({why})')
         res.append(c)

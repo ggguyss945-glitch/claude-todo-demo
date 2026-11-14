@@ -112,9 +112,12 @@ FLATTEN = {'afterthoughts_beyza': 0.5, 'the_haunted_luella_gren': 0.45, 'end_of_
 # need lifting; the new melodic tracks (The Haunted, Sleep Forever, Cursed Path, Mermaid) are mid-band and loud: down
 GAIN = {'dark_tunnels_ethan_sloan': 3.0, 'a_massive_mist_ethan_sloan': 2.0, 'dark_forebodings_ethan_sloan': 2.5,
         'end_of_rain_beyza': 3.0, 'annihilated_blue_saga': 3.0, 'are_you_alone_victor_lundberg': 4.0,
-        'turning_stones_stefan_ekstrom': 3.0, 'the_haunted_luella_gren': -1.0, 'sleep_forever_luella_gren': -2.0,
+        'turning_stones_stefan_ekstrom': 3.5, 'the_haunted_luella_gren': -1.0, 'sleep_forever_luella_gren': -2.0,
         'the_cursed_path_of_everlasting_loneliness_polar_nights': -2.0, 'mermaid_s_story_jerry_lacey': -3.0,
-        'midnight_wanderer_luella_gren': -1.0, 'tefu_sayuri_hayashi_egnell': -1.0}
+        'midnight_wanderer_luella_gren': -1.0, 'tefu_sayuri_hayashi_egnell': 2.0,
+        # final mix: the bed thickens rule by rule (the first full mix measured rules 2-4 flat at -15.6 LU, rule 7's
+        # false relief at -21 LU): rule 4 +2, rule 5 +1.5, rule 6 +1 dB
+        'escalation_jon_bjork': 3.5, 'in_continuum_dream_cave': 2.5, 'one_hampus_naeselius': 1.5}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [
@@ -173,7 +176,8 @@ EVENTS = [
     ('e2', 'silence', 0.7, 0.45),                                      # a breath of nothing before the VHS jingle
     ('s8', 'swell', 0.5, 4.0),                                         # "...the last thing my mother heard before she disappeared."
     ('s9', 'stinger', 0.5, None),                                      # "She was seven years old."
-    ('w15:him', 'hit', 0.6, None, {'nosnap': True}),                   # "...to protect us from him."
+    ('e15+0.05', 'hit', 0.6, None, {'nosnap': True}),                  # "...to protect us from him." (after the word: on
+                                                                       # 'him' it masked it by 9 LU, final mix)
     ('s16', 'silence', 0.45, 0.8),                                     # "I'm telling you this from a hospital."
     ('e18', 'sub_drop', 0.5, None),                                    # "They just don't believe a word I say."
     # 1987
@@ -214,7 +218,7 @@ EVENTS = [
     ('s112', 'braam', 0.45, 2.5),                                      # "They smell sweet when they melt."
     ('s114-0.1', 'silence', 0.5, 1.1),                                 # "...the egg rattles."
     ('s118', 'riser', 0.55, 3.0), ('w119:gold', 'hit', 0.75, None),     # "...is a gold ring."
-    ('s124', 'braam', 0.6, 3.0),                                       # "The Bunnyman has my father's wedding ring."
+    ('s124', 'braam', 0.45, 3.0),                                      # "The Bunnyman has my father's wedding ring."
     ('s125-0.05', 'hit', 0.8, None, {'nosnap': True}),                 # "You opened it."
     ('s128+0.6', 'silence', 0.55, 1.5), ('s129', 'sub_drop', 0.55, None),   # "She puts it in her pocket."
     ('s130-0.1', 'rule', 0.7, None, {'nosnap': True}),
@@ -224,7 +228,7 @@ EVENTS = [
     ('w145:drops', 'sub_drop', 0.55, None),                            # "But my stomach drops..."
     ('s154-0.1', 'silence', 0.45, 1.6),                                # "Not after the woods."
     ('e158', 'hit', 0.7, None),                                        # "...knows my grandmother's secret knock."
-    ('s159', 'swell', 0.55, 4.6), ('e159', 'stinger', 0.6, None),      # "...doesn't recognize it at all."
+    ('s159', 'swell', 0.4, 4.6), ('e159', 'stinger', 0.6, None),       # "...doesn't recognize it at all."
     ('s160-0.1', 'rule', 0.75, None, {'nosnap': True}),
     # rule 4
     ('s164-0.2', 'silence', 0.5, 1.0),                                 # "...the mail slot creaks open"
@@ -248,7 +252,10 @@ EVENTS = [
     ('s232-0.1', 'rule', 0.8, None, {'nosnap': True}),
     # rule 6
     ('w236:explodes-0.55', 'silence', 0.8, 0.5),
-    ('w236:explodes', 'hit', 1.0, None, {'boost': 4.0}),               # "the kitchen window explodes."
+    ('w236:explodes', 'hit', 0.85, None, {'boost': 1.5}),              # "the kitchen window explodes." (final mix: 1.0 /
+                                                                       # boost 4 masked "explodes"; the window itself
+                                                                       # carries it, the face reveal and the swap are the
+                                                                       # hardest hits)
     ('w237:crashes', 'hit', 0.75, None),                               # "The back door crashes open."
     ('s241', 'pulse_on', 0.6, None), ('s243', 'hit', 0.5, None),       # "I grab June and run." / "Lock."
     ('s245', 'pulse_off', 0.5, None),
@@ -283,7 +290,7 @@ EVENTS = [
     ('w338:daughter', 'hit', 0.7, None),                               # "Her daughter."
     ('s341', 'braam', 0.65, 3.0),                                      # "...followed him there."
     ('s342', 'pulse_on', 0.6, None),                                   # the recap, rule by rule
-    ('s347', 'swell', 0.6, 8.0),
+    ('s347', 'swell', 0.45, 7.0),                                      # (final mix: 0.6 / 8 s peaked 5 LU over "...what it did to her.")
     ('w350:mom', 'hit', 0.85, None),                                   # "...it would be for Mom."
     ('s354', 'riser', 0.75, 4.3),                                      # "...it wasn't going to be her."
     ('s355', 'hit', 0.9, None, {'boost': 3.0}),                        # the swap
@@ -358,7 +365,7 @@ IDENTITY = [
     ('w365:hums+0.4', 'jingle', 0.42, 3.6, dict(version='hum_x', phrases=(0,), stop='fade')),
     ('w380:hums+0.3', 'jingle', 0.3, 3.0, dict(version='hum_x', phrases=(2,), stop='fade')),
     # "Easter is in nine days." -- the first phrase on the music box, minor, winding down
-    ('e385+0.5', 'jingle', 0.4, 3.2, dict(version='musicbox', minor=True, tempo=76.0, wind_down=True, stop='drag')),
+    ('e385+0.5', 'jingle', 0.3, 3.2, dict(version='musicbox', minor=True, tempo=76.0, wind_down=True, stop='drag')),
     # "...if you hear a little song tonight... that's just the outro." -- and the song IS the outro: cheerful, from
     # the moment the line ends, its last phrase given to a soft hum (9.7 s: the picture must hold its end card to
     # about 1088.5 s; music_cues() extends the score's duration to the end of the last identity event)
@@ -427,7 +434,8 @@ def track_map(lines):
 
 
 # the bed thickens rule by rule (AUDIO_SPEC: the second quarter the calmest, louder by rule 5): (from, to, + intensity)
-ARC = [('s130', 's160', 0.02), ('s160', 's196', 0.04), ('s196', 's232', 0.05), ('s232', 's282', 0.06),
+# (final mix: rule 3 +0.03, rule 4 +0.08, rule 5 +0.1, rule 6 +0.12: the first full mix measured rules 2-4 flat)
+ARC = [('s130', 's160', 0.03), ('s160', 's196', 0.08), ('s196', 's232', 0.10), ('s232', 's282', 0.12),
        ('s322', 's360', 0.05)]
 
 

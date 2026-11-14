@@ -1034,8 +1034,8 @@ def main():
         bed, m_out, s_out, gr = bed_for(act, gm, act_h)
         vst = np.stack([v, v], 1)
         mix = vst + bed
-        if t1 >= full - 0.01:                     # fix 3: master fade to silence over the last 1.5 s (the cut to black)
-            nf = min(N, int(1.5 * SR))
+        if t1 >= full - 0.01:                     # fix 3: master fade to silence at the end (the cut to black); the
+            nf = min(N, int(0.6 * SR))            # Bunnyman: 0.6 s (1.5 s cut the outro song's last hum, ~1088.4 s)
             mix[N - nf:] *= np.linspace(1.0, 0.0, nf, dtype=np.float32)[:, None] ** 2
         gdb = TARGET - SX.lufs_int(mix); ceiling = -1.7; y = None
         for it in range(6):

@@ -41,8 +41,12 @@ SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutt
               'wood_creak', 'velvet', 'spoon_stir', 'hand_slot', 'studio_laugh', 'applause', 'owen_cry', 'owen_giggle',
               'tv_on', 'vcr', 'lamp_flicker', 'paper_slide', 'case_lid', 'glove_lift', 'sip', 'snort', 'heart_monitor',
               'tape_glitch', 'winks_laugh', 'tiny_steps', 'keys_jangle', 'hand_squeeze', 'mom_scream', 'tv_voice',
-              'clock_chime', 'rule_lie', 'monitor_flatline', 'tape_hiss', 'old_clock')
-HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit')
+              'clock_chime', 'rule_lie', 'monitor_flatline', 'tape_hiss', 'old_clock',
+              # the Bunnyman: gusts, owls, pages, the reverse swell of the trade, a door's sweep, cloth and the ring
+              'wind_gust', 'owl_hoot', 'page_flip', 'swap', 'attic_door', 'ring_hand', 'oven_mitt', 'creek', 'water_tap',
+              'police_radio', 'girl_cry', 'jingle', 'wet_drag', 'paper_under_door', 'doorknob', 'curtain_close',
+              'plastic_melt', 'egg_rattle', 'ring_roll', 'struggle', 'dogs_search', 'sirens_arrive', 'burn_barrel')
+HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit', 'window_smash', 'door_crash', 'swap')
 
 
 def lev(x, win=0.4, hop=HOP):

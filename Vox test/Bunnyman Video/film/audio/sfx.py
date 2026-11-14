@@ -1485,12 +1485,14 @@ def r_pen_click(rng, sp, n=1, **_):
     return _seq(ev, 0.05), 0.0, 0.0, False
 
 
-def r_key_in_lock(rng, sp, **_):
+def r_key_in_lock(rng, sp, jingle=True, **_):
     J = pool('keys', lambda: src('key_in_lock', has=['keys_jingle_hand', 'keys_jingle']), 'phrase', gap=0.15,
              max_len=0.8, keep=-16)
     I = pool('key_insert', lambda: src('key_in_lock', has=['mechlock']), 'phrase', gap=0.12, max_len=2.2, keep=-16)
-    j = J.get(rng, rj=0.04, fo=0.08) * 0.45
     k = I.get(rng, rj=0.03, fo=0.05)
+    if not jingle:                                        # one key on its own (no bunch jingling before the click)
+        return k, onset_s(k, -12), 0.0, False
+    j = J.get(rng, rj=0.04, fo=0.08) * 0.45
     return _seq([(0, j), (0.18, k)], 0.05), 0.18 + onset_s(k, -12), 0.0, False   # the key's click lands on t
 
 
@@ -3830,7 +3832,9 @@ def r_knock_family(rng, sp, beat=0.476, groups=None, force=0.75, soft=False, doo
             g = K.get(rng, rj=0.03, tilt=1.0, fo=0.1)
             body = st(modal(modes * (1 + 0.01 * rng.standard_normal()), [0.18, 0.14, 0.11, 0.08, 0.06, 0.04],
                             np.array([1, 0.8, 0.6, 0.45, 0.3, 0.2]) * v ** 1.5, 0.6, int(rng.integers(1 << 30))))
-            lay = _seq([(0, g * v), (0.001, body * (0.15 if soft else 0.35))], 0.05)
+            lay = _seq([(0, g * v), (0.001, body * (0.15 if soft else 0.25))], 0.05)
+            if not soft:                                  # final mix: the knuckle's crack above 1.5 kHz, so a phone
+                lay = _seq([(0, lay), (0, hp(g, 1500, 2) * 0.9 * v)], 0.0)   # hears the knock (was -21 dB > 300 Hz)
             ev.append((t, lay))
     y = _seq(ev, 0.4)
     if soft:
@@ -4210,14 +4214,15 @@ def r_vhs_pause(rng, sp, kind='pause', dur=None, **_):
     E = src('vcr', has=['into_vhs'])
     mech = pnorm(audio(E[0])) if E else st(noise(1.0) * 0.01)
     clunk = fade(hp(mech[n_(0.2):n_(0.45)], 150, 2), 0.002, 0.05)
+    on = min(0.2, onset_s(clunk, -12))                   # final mix: the clunk's transient on the cue (was +109 ms)
     if kind in ('play', 'resume'):
         rw = hp(mech[n_(1.0):n_(1.5)], 200, 2)
-        return _seq([(0.0, clunk), (0.08, fade(rw, 0.02, 0.2) * 0.4)], 0.1), 0.0, 0.0, False
+        return _seq([(0.0, clunk), (0.08, fade(rw, 0.02, 0.2) * 0.4)], 0.1), on, 0.0, False
     d = float(dur or 2.5); n = n_(d); tt = np.arange(n) / SR
     hum = (np.sin(2 * np.pi * 30 * tt) * 0.5 + np.sin(2 * np.pi * 60 * tt) * 0.4 + np.sin(2 * np.pi * 15734 * tt) * 0.02)
     trk = bp(noise(d, int(rng.integers(1 << 30))), 1500, 7000, 2) * (0.4 + 0.6 * (np.sin(2 * np.pi * 1.7 * tt) > 0.6))
     bed = st((hum * 0.05 + trk * 0.025).astype(np.float32)) * _ramp_env(n, 0.05, 0.3)[:, None]
-    return _seq([(0.0, clunk), (0.05, bed)], 0.1), 0.0, 0.0, False
+    return _seq([(0.0, clunk), (0.05, bed)], 0.1), on, 0.0, False
 
 
 def r_light_switch(rng, sp, kind='wall', **_):
@@ -4357,12 +4362,12 @@ def r_footsteps_grass(rng, sp, n=None, dur=None, rate=1.8, approach=0.0, weight=
     if heavy:
         weight = max(weight, 1.0)
     y = _steps(rng, 'steps_grass', E, n, dur, rate, approach, 0.0, weight)
-    y = lp(y, 4200 if heavy else 6500, 2)
-    if heavy:
-        y = eq(y, ('ls', 180, 3.0, 0.7))
+    # final mix: the grass grains are mostly < 300 Hz thump (thin on a phone) and peak ~100 ms after their start: the
+    # crunch is lifted and the step's peak lands on the cue (the foot plant's frame)
+    y = eq(hp(lp(y, 4200 if heavy else 6500, 2), 160, 2), ('peak', 2600, 5.0, 0.9), ('ls', 180, 2.0 if heavy else -2.0, 0.7))
     if foot in ('L', 'R'):
         y = pan(y, -0.08 if foot == 'L' else 0.08)
-    return y, 0.0, 0.0, False
+    return y, min(0.15, onset_s(y, -12)), 0.0, False
 
 
 def r_wind_gust(rng, sp, strength=0.7, **_):
