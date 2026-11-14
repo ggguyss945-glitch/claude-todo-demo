@@ -837,10 +837,231 @@ SLEEVE = {'mom': ('#d7a3a8', '#b07e86'), 'mom_scratched': ('#d7a3a8', '#b07e86')
           'june': ('#a8e0c8', '#7cb8a0'), 'narrator_new': ('#8fae8a', '#6c8a68')}
 
 
-def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None, scratch=False, name='hand', paw=False):
-    """A hand in a close-up: fn(t) -> (x, y, angle, alpha) | None (design px, angle 0 = fingers down); the sleeve runs
-    from the wrist to sleeve_from (x, y) (off frame). Paws for the Bunnyman ('paw_flat' etc.)."""
-    sc = SLEEVE.get(who, ('#8a8a8a', '#666666'))
+# ==================================================================================================== hero hands
+# Hands seen big (inserts, a hand over the eyes, a hand toward the lens) are drawn with the cast's own hand geometry
+# (characters._hand_geom: the same fingers, nails and creases as the figures) but finished for their size: skin shaded
+# across the hand toward the light, soft knuckle highlights, nails with a glint, thin creases in a skin tone (not red
+# lines), a wrist, the character's own sleeve (the cast's colours) with its cuff (knit rib for the cardigans and the
+# hoodie, a hem for the pyjamas), folds and the fabric's grain, and at dawn Mom's pushed-up sleeve over a scratched
+# forearm. The Bunnyman's paws get fur: a shaded mitten, tufts along the edge, pads, mud on the filthy suit.
+CUFF = {'cardigan3': 'rib', 'gran3': 'rib', 'hoodie3': 'rib', 'pj3': 'hem', 'dress3': 'puff', 'jacket3': 'hem', 'gown3': 'hem',
+        'police': 'button', 'labcoat3': 'hem', 'neat3': 'hem'}
+
+
+def _arm_dir(angle):
+    a = math.radians(angle)
+    return math.sin(a), -math.cos(a)                    # from the wrist toward the elbow (fingers point the other way)
+
+
+def _tube_q(x0, y0, x1, y1, w0, w1):
+    return _sleeve_poly(x0, y0, x1, y1, w0, w1)
+
+
+def hero_sleeve(pen, who, wx, wy, ex, ey, k, bare=0.0, scratch=0.0, light=None, cuff=None, t=0.0):
+    """The forearm from the wrist (wx, wy) toward the elbow end (ex, ey) (off frame), k = design px per hand unit:
+    `bare` hand units of skin above the wrist (a pushed-up sleeve), then the sleeve with its cuff."""
+    sp = CH.CAST[who]
+    skin, skin_sh, skin_dp = CH._skin_cols(sp, CH.Pose(), light)
+    try:
+        sl, sl_sh = CH._limb_cols3(sp)[:2]
+    except Exception:
+        sl, sl_sh = SLEEVE.get(who, ('#8a8a8a', '#666666'))
+    L = math.hypot(ex - wx, ey - wy) or 1.0
+    ux, uy = (ex - wx) / L, (ey - wy) / L
+    nx, ny = -uy, ux
+    lw = max(1.6, 1.15 * k)
+    side_lit = 1.0 if (light or {}).get('side', -1) > 0 else -1.0
+    # bare forearm (skin): tapered from the wrist, shaded across, scratches when Mom has fought
+    b = clamp(bare * k, 0.0, L * 0.85)
+    if b > 2:
+        cx, cy = wx + ux * b, wy + uy * b
+        arm = _tube_q(wx, wy, cx + ux * 6 * k, cy + uy * 6 * k, 15.5 * k, 19.5 * k)
+        pen.fill(arm, skin)
+        pen.linear(arm, wx + nx * 18 * k * side_lit, wy + ny * 18 * k * side_lit, wx - nx * 18 * k * side_lit, wy - ny * 18 * k * side_lit,
+                   [(0, '#ffffff', 46), (0.45, skin, 0), (1, skin_sh, 175)])
+        if scratch > 0:
+            rng = np.random.default_rng(7)
+            for j in range(int(9 * scratch)):
+                u0 = rng.uniform(0.08, 0.92); off = rng.uniform(-0.75, 0.75)
+                ang = rng.uniform(-0.9, 0.9); ln = rng.uniform(5, 11) * k
+                px, py = wx + ux * b * u0 + nx * off * 15 * k, wy + uy * b * u0 + ny * off * 15 * k
+                dx_, dy_ = (ux * math.cos(ang) - nx * math.sin(ang)), (uy * math.cos(ang) - ny * math.sin(ang))
+                q0, q1 = (px - dx_ * ln / 2, py - dy_ * ln / 2), (px + dx_ * ln / 2, py + dy_ * ln / 2)
+                pen.seg(q0, q1, max(1.4, 1.5 * k), '#e9a39a', 150)              # the welt
+                pen.seg(q0, q1, max(0.8, 0.55 * k), '#8a1f24', 225)             # the cut
+        pen.line(arm, lw, CH.LINE, 230)
+        wx, wy = cx, cy
+    # the sleeve
+    w0, w1 = 21.0 * k, 26.0 * k
+    tube = _tube_q(wx, wy, ex, ey, w0, w1)
+    pen.fill(tube, sl)
+    pen.linear(tube, wx + nx * w0 * side_lit, wy + ny * w0 * side_lit, wx - nx * w0 * side_lit, wy - ny * w0 * side_lit,
+               [(0, '#ffffff', 40), (0.35, sl, 0), (0.8, sl_sh, 150), (1, sl_sh, 220)])
+    try:
+        pen.texture(tube, 'fabric', 0.32, 'overlay', max(0.6, k * 0.35))
+    except Exception:
+        pass
+    # folds where the sleeve bunches above the cuff
+    for j, (u0, d0) in enumerate(((0.18, 0.55), (0.30, -0.35), (0.46, 0.2))):
+        if u0 * L > L - 8 * k: break
+        px, py = wx + ux * (u0 * min(L, 140 * k)), wy + uy * (u0 * min(L, 140 * k))
+        a0 = (px + nx * w0 * 0.85, py + ny * w0 * 0.85); a1 = (px - nx * w0 * 0.85 + ux * 10 * k * d0, py - ny * w0 * 0.85 + uy * 10 * k * d0)
+        mid = ((a0[0] + a1[0]) / 2 + ux * 7 * k, (a0[1] + a1[1]) / 2 + uy * 7 * k)
+        pen.line(smooth([a0, mid, a1], False), max(1.0, 0.9 * k), sl_sh, 120)
+    pen.line(tube, lw, CH.LINE, 235)
+    # the cuff
+    kind = cuff or CUFF.get(sp.get('outfit'), 'hem')
+    cl = 15.0 * k if kind == 'rib' else 7.0 * k
+    band = _tube_q(wx - ux * 2 * k, wy - uy * 2 * k, wx + ux * cl, wy + uy * cl, w0 * 0.98, w0 * 1.02)
+    pen.fill(band, CH.mix(sl, sl_sh, 0.25))
+    if kind == 'rib':
+        for j in range(-6, 7):
+            o_ = j / 6.5 * w0 * 0.95
+            pen.seg((wx + nx * o_, wy + ny * o_), (wx + nx * o_ + ux * cl, wy + ny * o_ + uy * cl), max(0.8, 0.55 * k), sl_sh, 150)
+    else:
+        pen.line(_tube_q(wx + ux * cl * 0.55, wy + uy * cl * 0.55, wx + ux * cl * 0.56, wy + uy * cl * 0.56, w0 * 0.9, w0 * 0.9),
+                 max(0.8, 0.45 * k), sl_sh, 170)
+    pen.line(band, lw, CH.LINE, 235)
+
+
+def hero_hand(pen, who, x, y, size, shape='open', angle=0.0, side=1, sleeve_to=None, light=None, press=0.0, t=0.0,
+              bare=0.0, scratch=0.0, shadow=None, ring=None, cuff=None):
+    """One big hand: wrist at (x, y), size = wrist-to-fingertip length (design px), angle 0 = fingers down; the arm runs
+    to sleeve_to (off frame). shadow = (dx, dy, blur, alpha): the hand's soft shadow on what it lies on (a face)."""
+    sp = CH.CAST[who]
+    if sp.get('bunny'):
+        return hero_paw(pen, who, x, y, size, shape, angle, side, sleeve_to, light, t, shadow)
+    k = size / 66.0 * sp['body'].get('hand', 1.0)
+    G = CH._hand_cached(shape, side, round(press, 1))
+    u = G['union']
+    skin, skin_sh, skin_dp = CH._skin_cols(sp, CH.Pose(), light)
+    m = skia.Matrix(); m.setTranslate(x, y); m.preRotate(angle); m.preScale(k, k)
+    hu = skia.Path(u); hu.transform(m)
+    dxa, dya = _arm_dir(angle)
+    ex, ey = sleeve_to if sleeve_to is not None else (x + dxa * size * 3.0, y + dya * size * 3.0)
+    if shadow:
+        sdx, sdy, sbl, sa = shadow
+        pen.fill(moved(hu, sdx, sdy), '#120806', sa, blur=sbl)
+        sh_arm = _tube_q(x, y, ex, ey, 22 * k, 27 * k)
+        pen.fill(moved(sh_arm, sdx, sdy), '#120806', sa * 0.8, blur=sbl)
+    hero_sleeve(pen, who, x + dxa * 2 * k, y + dya * 2 * k, ex, ey, k, bare, scratch, light, cuff, t)
+    # the hand
+    c = CH.Ctx(pen, m, 1.0)
+    lit = 1.0 if (light or {}).get('side', -1) > 0 else -1.0
+    c.fill(u, skin)
+    c.grad(u, 22 * lit * side, 10, -22 * lit * side, 30, [(0, '#fff3ea', 70), (0.4, skin, 0), (0.85, skin_sh, 120), (1, skin_sh, 170)])
+    c.fill(G['shade'], skin_sh, 110)
+    # knuckles: soft highlights at the finger roots, a darker dimple between them
+    if shape in ('open', 'flat', 'wave', 'relaxed', 'palm4', 'point', 'fist', 'grip', 'knock'):
+        for j, off in enumerate((-1.45, -0.48, 0.48, 1.45)):
+            bx = -side * off * 9.6
+            by = 31.0 - abs(off) * 2.0 if shape not in ('fist', 'grip', 'knock') else 30.0
+            c.glow(bx, by - 1.5, 5.2, 3.0, '#fff4ec', 70)
+            c.fill(oval(bx + 4.6 * (1 if off < 1 else 0), by + 1.0, 1.0, 1.6), skin_sh, 70)
+    if G['seps'] is not None and shape != 'mitt':
+        c.line(G['seps'], 0.55, CH.mix(skin_dp, skin_sh, 0.5), 130)
+    if G['creases_p'] is not None:
+        c.line(G['creases_p'], 0.42, CH.mix(skin_sh, skin_dp, 0.35), 105)
+    if G['lines_p'] is not None:
+        c.line(G['lines_p'], 0.42, CH.mix(skin_sh, skin_dp, 0.35), 95)
+    nailc = CH.mix(skin, '#ffffff', 0.42)
+    for pth in G['nails']:
+        c.fill(pth, nailc, 235)
+        bb = pth.getBounds()
+        c.fill(oval(bb.centerX() - bb.width() * 0.15, bb.centerY() - bb.height() * 0.1, bb.width() * 0.18, bb.height() * 0.22), '#ffffff', 120)
+        c.line(pth, 0.35, CH.mix(skin_sh, skin_dp, 0.5), 170)
+    c.line(u, max(0.75, 1.5 / max(0.4, k)), CH.LINE, 240)
+    if ring and G['ring'] is not None:
+        CH._ring_band(c, G['ring'], 2, t)
+
+
+def _fluffy_tube(x0, y0, x1, y1, w0, w1, fl, n=40):
+    """A tube with plush, tufted edges (the Bunnyman's furry arm)."""
+    L = math.hypot(x1 - x0, y1 - y0) or 1.0
+    ux, uy = (x1 - x0) / L, (y1 - y0) / L; nx, ny = -uy, ux
+    left, right = [], []
+    for j in range(n + 1):
+        u_ = j / n; w_ = lerp(w0, w1, u_)
+        px, py = x0 + ux * L * u_, y0 + uy * L * u_
+        a_ = fl * (0.6 + 0.4 * math.sin(j * 2.1)) * (1 if j % 2 else -0.4)
+        b_ = fl * (0.6 + 0.4 * math.cos(j * 1.7)) * (1 if (j + 1) % 2 else -0.4)
+        left.append((px + nx * (w_ + a_), py + ny * (w_ + a_)))
+        right.append((px - nx * (w_ + b_), py - ny * (w_ + b_)))
+    return poly(left + right[::-1])
+
+
+def hero_paw(pen, who, x, y, size, shape='paw_flat', angle=0.0, side=1, sleeve_to=None, light=None, t=0.0, shadow=None):
+    """The Bunnyman's paw seen big: a plush mitten (the cast's paw geometry) with shaded fur, tufts along the edge, the
+    pads and, on the filthy suit, mud and matting; the furry arm runs to sleeve_to."""
+    sp = CH.CAST[who if who in CH.CAST else 'bunny']
+    cl = sp['cloth']; dirt = sp.get('dirt', 0.0)
+    k = size / 66.0 * sp['body'].get('hand', 1.0)
+    shp = shape if str(shape).startswith('paw') else 'paw_flat'
+    u, grooves, pad = CH._paw_geom(shp, side)
+    m = skia.Matrix(); m.setTranslate(x, y); m.preRotate(angle); m.preScale(k, k)
+    hu = skia.Path(u); hu.transform(m)
+    dxa, dya = _arm_dir(angle)
+    ex, ey = sleeve_to if sleeve_to is not None else (x + dxa * size * 3.0, y + dya * size * 3.0)
+    arm = _fluffy_tube(x + dxa * 4 * k, y + dya * 4 * k, ex, ey, 25 * k, 31 * k, 2.2 * k)
+    if shadow:
+        sdx, sdy, sbl, sa = shadow
+        pen.fill(moved(hu, sdx, sdy), '#100806', sa, blur=sbl)
+        pen.fill(moved(arm, sdx, sdy), '#100806', sa * 0.8, blur=sbl)
+    # the arm: plush fur, shaded, matted streaks
+    L = math.hypot(ex - x, ey - y) or 1.0
+    ux, uy = (ex - x) / L, (ey - y) / L; nx, ny = -uy, ux
+    pen.fill(arm, cl['fur'])
+    pen.linear(arm, x + nx * 26 * k, y + ny * 26 * k, x - nx * 26 * k, y - ny * 26 * k,
+               [(0, cl.get('fur_hi', '#ffffff'), 90), (0.4, cl['fur'], 0), (1, cl['fur_sh'], 200)])
+    try:
+        pen.texture(arm, 'fabric', 0.45, 'overlay', max(0.8, k * 0.5))
+    except Exception:
+        pass
+    rng = np.random.default_rng(11)
+    for j in range(int(26 + 30 * dirt)):
+        uu = rng.uniform(0.05, 0.95) * min(L, 300 * k); oo = rng.uniform(-0.9, 0.9) * 24 * k
+        px, py = x + ux * uu + nx * oo, y + uy * uu + ny * oo
+        ln = rng.uniform(5, 12) * k
+        pen.seg((px, py), (px + ux * ln, py + uy * ln), max(0.8, 0.6 * k), cl['fur_dp'] if j % 3 else cl.get('fur_hi', cl['fur']), 90)
+    if dirt > 0.2:
+        pen.fill(arm, cl.get('mud', '#3b2f24'), 70 * dirt)
+    pen.line(arm, max(1.6, 1.1 * k), CH.LINE, 230)
+    # the paw
+    c = CH.Ctx(pen, m, 1.0)
+    c.fill(u, cl['fur'])
+    c.grad(u, 26, 0, -26, 50, [(0, cl.get('fur_hi', '#ffffff'), 85), (0.45, cl['fur'], 0), (1, cl['fur_sh'], 190)])
+    c.fill(CH._crescent(u, -4, -2.5), cl['fur_sh'], 120)
+    if dirt > 0.2:
+        bb = u.getBounds()
+        c.grad(u, 0, bb.top(), 0, bb.bottom(), [(0, cl.get('mud', '#3b2f24'), 40 * dirt), (1, cl.get('mud', '#3b2f24'), 170 * dirt)])
+    if pad == 'pads':
+        pc = cl['inner'] if dirt < 0.5 else CH.mix(cl['inner'], '#5a4040', 0.45)
+        for (px, py, rx, ry) in ((0, 26, 15, 12), (-15, 50, 5.5, 6.5), (-5, 57, 5.5, 6.5), (6, 57, 5.5, 6.5), (16, 50, 5.5, 6.5)):
+            c.fill(oval(px, py, rx, ry), pc)
+            c.fill(oval(px - rx * 0.25, py - ry * 0.3, rx * 0.45, ry * 0.35), '#ffffff', 60)
+            c.line(oval(px, py, rx, ry), 0.45, CH.mix(pc, '#000000', 0.35), 200)
+    if grooves:
+        c.line(CH._multi(grooves), 0.6, cl['fur_dp'], 200)
+    # fur tufts along the silhouette
+    pm = skia.PathMeasure(u, True)
+    Ln = pm.getLength()
+    if Ln > 1:
+        n = int(Ln / 4.5)
+        for j in range(n):
+            pt, tg = pm.getPosTan(Ln * j / n)
+            nx2, ny2 = tg.y(), -tg.x()
+            l2 = 2.6 + 1.6 * ((j * 7) % 5) / 5.0
+            c.line(poly([(pt.x() - nx2 * 1.2, pt.y() - ny2 * 1.2), (pt.x() + nx2 * l2, pt.y() + ny2 * l2)], False), 0.55, cl['fur_sh'], 170)
+    c.line(u, max(0.75, 1.5 / max(0.4, k)), CH.LINE, 235)
+
+
+def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None, scratch=False, name='hand', paw=False,
+               light=None, shadow=True, bare=None):
+    """A hand in a close-up or an insert: fn(t) -> (x, y, angle, alpha[, size]) | None (design px, angle 0 = fingers
+    down); the arm runs from the wrist to sleeve_from (x, y) (off frame). Drawn by hero_hand / hero_paw (the cast's hand
+    geometry, shaded, with the character's own sleeve and cuff); scratch=True: Mom at dawn, her cardigan sleeve pushed
+    up over a scratched forearm. shadow: its soft shadow on what it lies on."""
+    who_ = who if who in CH.CAST else 'mom'
 
     def draw(pen, t):
         r = fn(t)
@@ -850,24 +1071,20 @@ def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None,
         if al <= 0.01: return
         cv = pen.cv
         if al < 0.999: cv.saveLayerAlpha(None, int(255 * al))
-        if sleeve_from is not None:
-            a_ = math.radians(ang)
-            wx, wy = x - math.sin(-a_) * sz * 0.05, y - math.cos(a_) * sz * 0.05
-            sx, sy = sleeve_from(t) if callable(sleeve_from) else sleeve_from
-            sl = _sleeve_poly(wx, wy, sx, sy, sz * 0.2, sz * 0.32)
-            pen.fill(sl, sc[0]); pen.line(sl, max(2.0, sz * 0.012), '#1a1418', 220)
-            pen.fill(_sleeve_poly(wx, wy, sx, sy, sz * 0.08, sz * 0.1), sc[1], 90)
-            if scratch:
-                for j in range(5):
-                    u0 = 0.15 + 0.15 * j
-                    px0, py0 = lerp(wx, sx, u0), lerp(wy, sy, u0)
-                    pen.seg((px0 - sz * 0.06, py0 - sz * 0.03), (px0 + sz * 0.07, py0 + sz * 0.04), max(1.5, sz * 0.008), '#a3262a', 200)
-        if paw or who in ('bunny', 'bunny87'):                         # the Bunnyman's mitten paws
-            sp_ = CH.CAST[who if who in CH.CAST else 'bunny']
-            c_ = CH.Ctx(pen, skia.Matrix(), CH._lw_for(sz * 3.5))
-            CH._draw_paw(c_, sp_, shape if str(shape).startswith('paw') else 'paw_flat', x, y, sz / 66.0, ang, side, 2)
+        sf = (sleeve_from(t) if callable(sleeve_from) else sleeve_from) if sleeve_from is not None else None
+        shd = (sz * 0.025, sz * 0.045, sz * 0.05, 95) if shadow else None
+        bl = r[5] if len(r) > 5 else 0.0                     # out of focus (a hand coming at the lens)
+        dk = r[6] if len(r) > 6 else 0.0                     # in its own shadow (blocking the light)
+        lt = dict(light or {}); lt['key'] = lt.get('key', 0.0) - 0.9 * dk
+        if bl > 0.5:
+            cv.saveLayer(None, skia.Paint(ImageFilter=skia.ImageFilters.Blur(bl * CFG.rw / 1920.0, bl * CFG.rw / 1920.0)))
+        if paw or CH.CAST[who_].get('bunny'):
+            hero_paw(pen, who_, x, y, sz, shape if str(shape).startswith('paw') else 'paw_flat', ang, side, sf, lt, t, shd)
         else:
-            CH.draw_hand(pen, who if who in CH.CAST else 'mom', x, y, sz, shape, ang, side)
+            b = bare if bare is not None else (34.0 if scratch else 0.0)
+            hero_hand(pen, who_, x, y, sz, shape, ang, side, sf, lt, 0.0, t, bare=b, scratch=1.0 if scratch else 0.0, shadow=shd,
+                      ring=(CH.CAST[who_].get('ring') == side))
+        if bl > 0.5: cv.restore()
         if al < 0.999: cv.restore()
     return Layer(depth, draw, name, blur=0)
 
@@ -1162,9 +1379,326 @@ def ins_lens_hand(pen, t, **kw):
     pass
 
 
+# ---------------------------------------------------------------- polish pass: inserts rebuilt around the cast's hands
+_TIPC = {}
+
+
+def hand_tip(shape, side):
+    """Local hand point (hand units, wrist at the origin) of the fingertip farthest from the wrist: the index tip of
+    'point', the middle fingertip of an open hand, the knuckles' far edge of a fist."""
+    key = (shape, side)
+    if key not in _TIPC:
+        u = CH._hand_cached(shape, side, 0.0)['union']
+        pm = skia.PathMeasure(u, True); L = pm.getLength(); best = (0.0, 0.0)
+        for j in range(240):
+            p_, _ = pm.getPosTan(L * j / 240)
+            if p_.y() > best[1]: best = (p_.x(), p_.y())
+        _TIPC[key] = best
+    return _TIPC[key]
+
+
+def hand_low(shape, side, angle, size, who='mom'):
+    """Design offset (dx, dy) from the wrist of the LOWEST point of a hand drawn at `angle` (where a knocking fist meets
+    the table)."""
+    k = size / 66.0 * CH.CAST[who]['body'].get('hand', 1.0)
+    u = skia.Path(CH._hand_cached(shape, side, 0.0)['union'])
+    m = skia.Matrix(); m.setRotate(angle); m.preScale(k, k); u.transform(m)
+    pm = skia.PathMeasure(u, True); L = pm.getLength(); best = (0.0, -1e9)
+    for j in range(240):
+        p_, _ = pm.getPosTan(L * j / 240)
+        if p_.y() > best[1]: best = (p_.x(), p_.y())
+    return best
+
+
+def wrist_for(tip, shape, side, angle, size, who='mom'):
+    """The wrist position that puts the fingertip of a hand (shape, side, angle, size) on design point `tip`."""
+    lx, ly = hand_tip(shape, side)
+    k = size / 66.0 * CH.CAST[who]['body'].get('hand', 1.0)
+    a = math.radians(angle)
+    return tip[0] - (lx * math.cos(a) - ly * math.sin(a)) * k, tip[1] - (lx * math.sin(a) + ly * math.cos(a)) * k
+
+
+def switch_finger(t0, on, who, t_flip=0.55, dur=0.22, hold=0.55, size=600.0):
+    """A fn for hand_layer: a finger that comes in, lands ON the toggle's lever tip, pushes it (up for on, down for off)
+    in step with the switch insert's flip, rests a moment and leaves; the wrist follows the fingertip (no floating
+    finger). Times are film time; the insert's toggle tip runs 680 -> 420 (on) / 420 -> 680 (off) at x 960."""
+    ang = 172.0 if on else 18.0
+    shape = 'point'
+    side = -1
+
+    def fn(tt):
+        r = tt - t0
+        a_in = ease_in_out(clamp((r - (t_flip - 0.55)) / 0.5))
+        a_out = ease_in_out(clamp((r - (t_flip + dur + hold)) / 0.45))
+        if a_in <= 0.0 or a_out >= 1.0: return None
+        f = ease_in_out(clamp((r - t_flip) / dur))
+        ty = (lerp(694, 434, f) if on else lerp(406, 666, f))
+        tip = (962.0, ty)
+        wx, wy = wrist_for(tip, shape, side, ang, size, who)
+        # in from / out to the lower right (on) or the upper right (off), along the forearm
+        dxa, dya = _arm_dir(ang)
+        off = (1.0 - a_in) + a_out
+        return (wx + dxa * 900 * off, wy + dya * 900 * off, ang, 1.0, size)
+    return fn
+
+
+def ins_knuckles2(pen, t, hits=(), **kw):
+    """Grandma's family knock, close (memory, warm daylight): her fist (the cast's hand: knuckles, the gold band, her
+    lavender cardigan's ribbed cuff) knocks the 2-3-2 on the red-and-white checked tablecloth of the kitchen table (the
+    same cloth as the wide), the cloth dimpling under each hit; a glass of milk and the narrator's small hands at the
+    far edge of the table."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#e8d8b8')
+    pen.linear(rect(-400, -300, 2720, 900), 0, -300, 0, 600, [(0, '#fff2d8', 255), (1, '#e2cfaa', 255)])
+    # the far wall: the kitchen's yellow wallpaper and the counter edge, out of focus
+    pen.fill(rect(-400, -300, 2720, 640), '#d9b878')
+    for i in range(-2, 12):
+        pen.fill(oval(i * 210 + 40, 160, 46, 30), '#e4c590', 150, blur=10)
+    pen.fill(rect(-400, 300, 2720, 70), '#8a6a42', 200, blur=8)
+    # the tablecloth in perspective: rows of checks growing toward us
+    Yh = 300.0
+    for j in range(16):
+        y0 = Yh + 340 * ((j / 16.0) ** 1.8); y1 = Yh + 340 * (((j + 1) / 16.0) ** 1.8)
+        y0 = 420 + (y0 - Yh) * 3.1; y1 = 420 + (y1 - Yh) * 3.1
+        for i in range(-20, 21):
+            def X(xx, yy): return 960 + (xx - 960) * (0.45 + 0.55 * (yy - 420) / 1060.0 + 0.55)
+            xa, xb = 960 + i * 120, 960 + (i + 1) * 120
+            q = [(X(xa, y0), y0), (X(xb, y0), y0), (X(xb, y1), y1), (X(xa, y1), y1)]
+            if (i + j) % 2 == 0: pen.fill(poly(q), '#c8323a')
+            else: pen.fill(poly(q), '#f6efe2')
+    cloth = rect(-400, 420, 2720, 1300)
+    pen.texture(cloth, 'fabric', 0.45, 'overlay', 2.2)
+    pen.linear(cloth, 0, 420, 0, 1400, [(0, '#000000', 60), (0.25, '#000000', 0), (1, '#3a2010', 70)])
+    pen.fill(rect(-400, 412, 2720, 14), '#5a3a22', 160, blur=6)                 # the cloth's far edge on the table
+    # the glass of milk and the six-year-old's hands at the far edge
+    g = rrect(470, 250, 120, 210, 18)
+    pen.fill(moved(g, 8, 10), '#000000', 60, blur=10)
+    pen.fill(g, '#f8f6f0', 235); pen.fill(rrect(478, 300, 104, 152, 14), '#ffffff', 255); pen.line(g, 3, '#7a7060', 200)
+    # the knock: lift between hits, the knuckles land on the cloth at each hit time
+    lift = 1.0
+    for th in hits:
+        dt = t - th
+        if -0.15 < dt < 0.0: lift = min(lift, ease_in_out(-dt / 0.15))
+        elif 0.0 <= dt < 0.2: lift = min(lift, ease_in_out(dt / 0.2))
+    contact_y = 760.0
+    ang = 78.0; size = 560.0
+    lo = hand_low('fist', 1, ang, size, 'grandma')
+    wx, wy = 1030.0 - lo[0], contact_y - lo[1] - 150.0 * lift
+    hit_k = max([0.0] + [math.exp(-abs(t - th) * 18.0) for th in hits])
+    pen.fill(oval(1010, contact_y + 12, 190 - 60 * lift, 30 - 8 * lift), '#2a0808', 120 - 80 * lift, blur=14)
+    if hit_k > 0.05:
+        pen.line(oval(1010, contact_y + 6, 150 + 60 * hit_k, 16 + 6 * hit_k), 3.0, '#7a1a1e', 120 * hit_k)
+    hero_hand(pen, 'grandma', wx, wy, size, 'fist', ang, 1, (2150, wy - 700), dict(side=-1, key=0.15),
+              shadow=None, ring=True)
+
+
+def ins_egg_gold_hands(pen, t, **kw):
+    """'She was holding a golden plastic egg.': Laurie's small hands (the cast's hands, bare forearms under the puffed
+    sleeves of the 1987 dress) cupping the golden Pemberton's egg against the yellow bodice, the white collar above,
+    sunrise light from the left, the egg's highlight moving as she breathes."""
+    cv = pen.cv
+    pen.fill(rect(-400, -300, 2720, 1680), '#e8b83a')
+    body = rect(-400, -300, 2720, 1680)
+    pen.texture(body, 'fabric', 0.55, 'overlay', 2.0)
+    pen.linear(body, -300, 0, 2300, 0, [(0, '#fff2c0', 120), (0.45, '#f2c84b', 0), (1, '#a8781c', 150)])
+    for k in range(-6, 8):                                                  # the bodice's gathers
+        pen.line(smooth([(k * 190 + 60, 260), (k * 190 + 90, 700), (k * 190 + 40, 1300)], False), 3.0, '#c99a24', 90)
+    col = smooth([(-300, -300), (2220, -300), (2220, 120), (1500, 210), (960, 250), (420, 210), (-300, 120)], True, 0.6)
+    pen.fill(moved(col, 0, 16), '#7a5a10', 70, blur=12)
+    pen.fill(col, '#fbf8ee'); pen.texture(col, 'fabric', 0.3, 'overlay', 1.4)
+    for k in range(26):
+        pen.fill(oval(-280 + k * 98, 150 + 70 * math.sin(k / 25 * math.pi), 34, 22), '#fbf8ee'); pen.line(oval(-280 + k * 98, 150 + 70 * math.sin(k / 25 * math.pi), 34, 22), 2, '#c9c4b2', 160)
+    pen.line(col, 3.5)
+    sash = rect(-400, 960, 2720, 160)
+    pen.fill(sash, '#fbf8ee'); pen.texture(sash, 'fabric', 0.3, 'overlay', 1.4); pen.line(sash, 3.5)
+    bob = 6.0 * math.sin(t * 2.0 * math.pi / 3.6)
+    cv.save(); cv.translate(0, bob)
+    lt = dict(side=-1, key=0.2)
+    # both small hands cupped under the egg, palms up, fingers curling up its sides; the egg rests in them
+    pen.fill(oval(965, 900, 300, 70), '#5a3a08', 110, blur=20)
+    hero_hand(pen, 'laurie87', 760, 1010, 360, 'relaxed', 205.0, 1, (380, 1600), lt, bare=999.0, shadow=(10, 16, 16, 80))
+    hero_hand(pen, 'laurie87', 1170, 1010, 360, 'relaxed', 155.0, -1, (1550, 1600), lt, bare=999.0, shadow=(10, 16, 16, 80))
+    ST.draw_egg(pen, 965, 610, 470, rot=-6.0, gold=True, stamp=True, shine=1.0)
+    pen.radial(None, 860 + 30 * math.sin(t * 0.7), 480, 140, [(0, '#ffffff', 110), (1, '#ffffff', 0)], clip=False)
+    cv.restore()
+
+
+def _new_dress(pen, cx, top, s=1.0, age=0.0):
+    """June's new yellow Easter dress on a white wire hanger (the dress_new insert's design, drawn on anything)."""
+    y = CH.mix('#f2c84b', '#b9b4a2', 0.72 * age); ysh = CH.mix('#c99a24', '#8a8676', 0.72 * age); wc = '#fbfaf4'
+    cv = pen.cv; cv.save(); cv.translate(cx, top); cv.scale(s, s)
+    pen.line(poly([(-150, 70), (0, 0), (150, 70)], False), 8, '#e8e8ec'); pen.line(oval(0, -40, 34), 7, '#e8e8ec')
+    bod = smooth([(-130, 40), (130, 40), (150, 200), (140, 330), (-140, 330), (-150, 200)], True, 0.5)
+    sk = smooth([(-140, 320), (140, 320), (330, 760), (160, 830), (0, 840), (-160, 830), (-330, 760)], True, 0.55)
+    pen.fill(moved(union(bod, sk), 18, 26), '#000000', 90, blur=18)
+    for sd in (-1, 1):
+        sl = ST._blob(sd * 190, 110, 90, 80, 9, 2 + sd, 0.12); pen.fill(sl, y); pen.line(sl, 4)
+    pen.fill(sk, y); pen.texture(sk, 'fabric', 0.5, 'overlay', 1.2)
+    pen.linear(sk, -330, 0, 330, 0, [(0, '#fff2c0', 70), (0.5, y, 0), (1, ysh, 140)])
+    for k in range(-4, 5): pen.line(poly([(k * 30, 340), (k * 70, 800)], False), 3, ysh, 180)
+    pen.fill(bod, y); pen.texture(bod, 'fabric', 0.5, 'overlay', 1.2)
+    for k in range(17):
+        lc = oval(-320 + k * 40, 800 + 30 * math.sin(k / 16 * math.pi), 26, 18); pen.fill(lc, wc); pen.line(lc, 2, '#8a8676', 160)
+    pen.fill(rect(-145, 300, 290, 42), wc); pen.line(rect(-145, 300, 290, 42), 3)
+    for sd in (-1, 1):
+        bw = ST._blob(sd * 90, 320, 70, 40, 8, 5 + sd, 0.2); pen.fill(bw, wc); pen.line(bw, 3)
+        cp = smooth([(0, 50), (sd * 110, 40), (sd * 125, 100), (sd * 25, 95)], True, 0.8); pen.fill(cp, wc); pen.line(cp, 3)
+    pen.line(sk, 4); pen.line(bod, 4)
+    cv.restore()
+
+
+def ins_dress_photo(pen, t, push=0.0, **kw):
+    """'Exactly like the one in the photo.': June's new yellow dress on its hanger on her closet door, and taped to the
+    door beside it the Courier clipping Mom kept, the 1987 photo of Laurie in the same dress holding the mascot's paw:
+    the same collar, the same sash, the same pleats."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#4a4a7a')
+    door = rect(-400, -300, 2720, 1680)
+    pen.texture(door, 'wood', 0.25, 'overlay', 3.0, 90)
+    for (x0, y0, w0, h0) in ((60, -120, 620, 560), (1240, -120, 620, 560), (60, 560, 620, 760), (1240, 560, 620, 760)):
+        pen.line(rect(x0, y0, w0, h0), 6, '#2a2a50', 150); pen.line(rect(x0 + 8, y0 + 8, w0, h0), 3, '#7a7aa8', 110)
+    pen.radial(None, 700, 240, 1500, [(0, '#ffe0b0', 130), (0.6, '#000000', 0), (1, '#000000', 150)], clip=False)
+    _new_dress(pen, 640, 120, 1.0)
+    # the clipping: newsprint, the photo, the caption, a strip of tape
+    cv = pen.cv
+    cv.save(); cv.translate(1390, 470); cv.rotate(3.5)
+    pw, ph = 560, 420
+    pen.fill(rect(-pw / 2 + 12, -ph / 2 + 18, pw, ph + 120), '#000000', 110, blur=14)
+    pen.fill(rect(-pw / 2 - 26, -ph / 2 - 26, pw + 52, ph + 140), '#e9e2cc'); pen.texture(rect(-pw / 2 - 26, -ph / 2 - 26, pw + 52, ph + 140), 'paper', 0.6, 'overlay', 1.2)
+    pen.fill(rect(-pw / 2, -ph / 2, pw, ph), '#8a8a84')
+    cv.save(); cv.clipPath(rect(-pw / 2, -ph / 2, pw, ph), skia.ClipOp.kIntersect, True)
+    ST._courier_photo(pen, -pw / 2, -ph / 2, pw, ph, t)
+    cv.restore()
+    pen.line(rect(-pw / 2, -ph / 2, pw, ph), 2.0, '#141414')
+    ST.btext(pen, 'Laurie Price, 7, holds the paw of the Pemberton\'s', -pw / 2, ph / 2 + 42, 'serif_i', 24, '#1a1a1a', 230)
+    ST.btext(pen, 'Bunnyman at Thursday\'s Easter parade.', -pw / 2, ph / 2 + 72, 'serif_i', 24, '#1a1a1a', 230)
+    tape = poly([(-90, -ph / 2 - 60), (90, -ph / 2 - 52), (84, -ph / 2 + 4), (-96, -ph / 2 - 4)])
+    pen.fill(tape, '#efe4b8', 210); pen.texture(tape, 'paper', 0.4, 'overlay', 0.8)
+    cv.restore()
+
+
+def _stairs_side(pen, ox, oy, n=7, run=230.0, rise=170.0, t=0.0):
+    """The hall flight seen from the side (a cutaway): treads with the red runner and its brass rods, white risers."""
+    for k in range(-2, n):
+        x0, y0 = ox + k * run, oy - k * rise
+        tread = rect(x0, y0, run + 2, 34)
+        riser = rect(x0 + run - 4, y0 - rise, 36, rise + 34)
+        pen.fill(rect(x0, y0, run + 40, 2000), '#2a1a1a')
+        pen.fill(riser, '#e8e2d4'); pen.line(riser, 3, '#1a1010', 200)
+        pen.fill(tread, '#8a2a32'); pen.texture(tread, 'fabric', 0.8, 'overlay', 2.0); pen.line(tread, 3, '#1a1010', 220)
+        pen.fill(rrect(x0 + run - 14, y0 - 8, 30, 16, 8), '#d8b45a'); pen.line(rrect(x0 + run - 14, y0 - 8, 30, 16, 8), 2, '#5a4010')
+        pen.fill(rect(x0 + run - 4, y0 - rise + 6, 36, rise - 10), '#7a2a30', 220)                # the runner over the nose
+        pen.texture(rect(x0 + run - 4, y0 - rise + 6, 36, rise - 10), 'fabric', 0.8, 'overlay', 2.0)
+
+
+def _hatchet(pen, x, y, ang, s=1.0, blood=0.7):
+    """The old hatchet: the head at (x, y) (blade toward local +x), the worn hickory handle along local -x; red paint
+    band on the handle (the woodpile's), rust, old blood."""
+    cv = pen.cv; cv.save(); cv.translate(x, y); cv.rotate(ang); cv.scale(s, s)
+    hdl = poly([(-40, -22), (-760, -40), (-760, 18), (-40, 22)])
+    pen.fill(moved(hdl, 8, 14), '#000000', 90, blur=10)
+    pen.fill(hdl, '#8a6440'); pen.texture(hdl, 'wood', 0.8, 'overlay', 2.0)
+    pen.fill(poly([(-40, 6), (-760, -4), (-760, 18), (-40, 22)]), '#5e4128', 170)
+    pen.fill(poly([(-470, -32), (-420, -31), (-420, 20), (-470, 20)]), '#b8282e', 230)              # the red paint band
+    pen.line(hdl, 4)
+    hd = poly([(-70, -48), (40, -50), (170, -110), (196, 6), (170, 128), (40, 56), (-70, 50)])
+    pen.fill(moved(hd, 8, 14), '#000000', 100, blur=10)
+    pen.fill(hd, '#5f6268'); pen.texture(hd, 'grunge', 0.8, 'overlay', 1.4)
+    pen.fill(poly([(150, -100), (170, -110), (196, 6), (170, 128), (150, 118)]), '#a8adb4')
+    pen.fill(ST._blob(10, 0, 60, 40, 9, 3, 0.4), '#7b3a20', 170)
+    pen.fill(ST._blob(110, 40, 34, 26, 9, 4, 0.4), '#5a1414', 200 * blood)
+    pen.line(hd, 4)
+    cv.restore()
+
+
+def ins_hatchet_steps(pen, t, hits=(), **kw):
+    """'And behind them, something hard knocking against every step.': the flight from the side, the hatchet dragged up
+    it by the matted paw at the top of frame: the head scrapes up each riser and drops onto the next tread (on each hit
+    time); the frame climbs with it."""
+    run, rise = 230.0, 170.0
+    k_ = 0.0
+    for j, th in enumerate(hits):
+        k_ = j + ease_in_out(clamp((t - (th - 0.55)) / 0.5)) if t >= th - 0.55 else k_
+    cv = pen.cv
+    cx = 760 + k_ * run; cy = 760 - k_ * rise
+    pen.fill(rect(-400, -300, 2720, 1680), '#1a0e10')
+    cv.save(); cv.translate(960 - cx, 600 - cy)
+    _stairs_side(pen, 300, 900, 9, run, rise, t)
+    # the head rides up the riser, drops onto the tread
+    hx = 300 + (int(k_) + 1) * run - 70 + (k_ - int(k_)) * run * 0.0
+    ph = k_ - int(k_)
+    up = math.sin(ph * math.pi) * 0.0
+    hx = 300 + k_ * run + 120; hy = 900 - k_ * rise - 34 - 120 * math.sin(clamp(ph) * math.pi) * (1.0 if ph > 0.02 else 0.0)
+    _hatchet(pen, hx, hy, -35.0 + 18.0 * math.sin(ph * math.pi), 0.75)
+    # dust where it lands
+    for th in hits:
+        dt = t - th
+        if 0.0 <= dt < 0.5:
+            for q in range(7):
+                a_ = math.pi * (0.1 + 0.8 * q / 6)
+                r_ = 30 + 160 * dt
+                pen.fill(oval(hx + 40 + math.cos(a_) * r_, hy + 40 - math.sin(a_) * r_ * 0.6, 7 - 8 * dt), '#c8b8a0', 200 * (1 - dt / 0.5))
+    cv.restore()
+    # the matted paw dragging the handle, top left
+    hero_paw(pen, 'bunny', 160, 60, 300, 'paw_grip', 238.0, -1, (-500, -400), dict(side=-1, key=-0.3))
+    pen.linear(rect(-400, -300, 2720, 1680), 0, -300, 0, 1380, [(0, '#000000', 120), (0.5, '#000000', 0), (1, '#000000', 160)])
+
+
+def ins_hatchet_thunk(pen, t, hit_t=0.6, **kw):
+    """'Thunk.': extreme close on one tread's nose: the blade comes down and bites the runner on the brass rod, carpet
+    fibres and wood splinters jump, the rod dents."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#140a0c')
+    face = rect(-400, 520, 2720, 1200)
+    pen.fill(face, '#e8e2d4'); pen.texture(face, 'wood', 0.3, 'overlay', 2.0)
+    pen.linear(face, 0, 520, 0, 1380, [(0, '#000000', 40), (1, '#000000', 180)])
+    top = poly([(-400, 520), (2320, 520), (2320, 120), (-400, 120)])
+    pen.fill(top, '#8a2a32'); pen.texture(top, 'fabric', 1.0, 'overlay', 3.0)
+    pen.fill(rrect(-400, 470, 2720, 70, 30), '#d8b45a'); pen.linear(rrect(-400, 470, 2720, 70, 30), 0, 470, 0, 540, [(0, '#fff0b8', 200), (1, '#6a4a1a', 200)])
+    pen.line(rrect(-400, 470, 2720, 70, 30), 4, '#3a2a10')
+    u = clamp((t - (hit_t - 0.25)) / 0.25)
+    dt = t - hit_t
+    by = lerp(-420, 330, ease_in_out(u)) if dt < 0 else 330 + 8 * math.exp(-dt * 10)
+    _hatchet(pen, 1160, by, 78.0, 1.6)
+    if dt >= 0:
+        pen.fill(oval(1080, 470, 70 + 30 * min(1, dt * 6), 16), '#3a2a10', 200)
+        rng = np.random.default_rng(5)
+        for q in range(26):
+            a_ = rng.uniform(0.15, 2.95); sp_ = rng.uniform(260, 900)
+            x = 1080 + math.cos(a_) * sp_ * dt; y = 450 - math.sin(a_) * sp_ * dt + 1400 * dt * dt
+            c_ = '#8a2a32' if q % 3 else '#c8a878'
+            pen.seg((x, y), (x + math.cos(a_) * 16, y - math.sin(a_) * 16), 4, c_, 240 * clamp(1 - dt / 0.7))
+    pen.radial(None, 1000, 400, 1400, [(0, '#000000', 0), (1, '#000000', 170)], clip=False)
+
+
+def ins_hatchet_pile(pen, t, **kw):
+    """'The old hatchet from our woodpile.': the hatchet dragged along the upstairs runner by a filthy, matted paw: the
+    worn hickory handle with the red paint band Dad put on everything from the woodpile, wood chips and bark still stuck
+    in the old blood on the head; it slides slowly out of frame."""
+    pen.fill(rect(-400, -300, 2720, 1680), '#3a3040')
+    floor = poly([(-400, 380), (2320, 300), (2320, 1380), (-400, 1380)])
+    pen.fill(floor, '#6a4628'); pen.texture(floor, 'wood', 0.8, 'overlay', 2.4)
+    run_ = poly([(-400, 520), (2320, 450), (2320, 1180), (-400, 1240)])
+    pen.fill(run_, '#2c3a6a'); pen.texture(run_, 'fabric', 0.9, 'overlay', 2.6)
+    for k in range(12):
+        pen.line(poly([(-400 + k * 260, 560), (-400 + k * 260 + 30, 1210)], False), 3, '#1a2448', 120)
+    pen.linear(rect(-400, -300, 2720, 1680), 0, -300, 0, 1380, [(0, '#ffd8b0', 40), (0.6, '#000000', 0), (1, '#000000', 160)])
+    dx = -70.0 * t
+    _hatchet(pen, 1280 + dx, 820, -8.0, 1.25)
+    rng = np.random.default_rng(9)
+    for q in range(9):
+        cx_, cy_ = 1280 + dx + rng.uniform(-60, 180), 820 + rng.uniform(-90, 110)
+        pen.fill(poly([(cx_, cy_), (cx_ + rng.uniform(14, 30), cy_ + rng.uniform(-6, 6)), (cx_ + rng.uniform(4, 20), cy_ + rng.uniform(8, 16))]), '#c8a070', 230)
+    hero_paw(pen, 'bunny', 330 + dx, 760, 320, 'paw_grip', 262.0, -1, (-700 + dx, 600), dict(side=-1, key=-0.2), shadow=(10, 16, 16, 90))
+    pen.fill(oval(1100 + dx, 905, 520, 40), '#000000', 70, blur=16)
+
+
+INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dress_photo': (ins_dress_photo, 'ins_lamp'),
+                    'hatchet_steps': (ins_hatchet_steps, 'ins_dark'), 'hatchet_thunk': (ins_hatchet_thunk, 'ins_dark'),
+                    'hatchet_pile': (ins_hatchet_pile, 'ins_dark')}
+
+
 INS_CUSTOM = {'badge': (ins_badge, 'ins_memory'), 'poster': (ins_poster, 'ins_memory'), 'wedding': (ins_wedding, 'ins_lamp'),
               'gran_photo': (ins_gran_photo, 'ins_lamp'), 'wristband': (ins_wristband, 'ins_hosp'), 'report': (ins_report, 'ins_lamp'),
-              'knuckles': (ins_knuckles, 'ins_memory'), 'desk': (ins_desk, 'ins_lamp'), 'hanger': (ins_hanger, 'ins_lamp')}
+              'knuckles': (ins_knuckles2, 'ins_memory'), 'desk': (ins_desk, 'ins_lamp'), 'hanger': (ins_hanger, 'ins_lamp')}
+INS_CUSTOM.update(INS_CUSTOM_EXTRA)
 
 
 def strike_layer(t0, x0, y0, x1, y1, w=26.0, dur=0.45, c='#d8262e'):
@@ -1962,10 +2496,14 @@ def plan_open(F):
     tc, ts = w(2, 'close'), w(2, 'seven')
 
     def lens_hand(tt, tc=tc, ts=ts):
+        # her open hand rises from below frame toward the lens; as it nears the glass it goes soft (out of focus) and dark
+        # (it blocks the light), and the palm covers the frame on 'seven'
         if tt < tc - 0.1: return None
         u = ease_in_out(clamp((tt - tc) / max(0.4, ts + 0.45 - tc)))
-        size = lerp(430.0, 3600.0, u ** 1.7)
-        return (lerp(1260.0, 980.0, u), lerp(1360.0, 520.0 + size * 0.42, u), 182.0, 1.0, size)
+        size = lerp(470.0, 2700.0, u ** 1.8)
+        blur = 34.0 * clamp((size - 1100.0) / 1500.0)
+        dark = 0.75 * clamp((size - 1300.0) / 1400.0)
+        return (lerp(1250.0, 990.0, u), lerp(1380.0, 560.0 + size * 0.40, u), 182.0, 1.0, size, blur, dark)
     C(T(2), 'bust', who='mom', bg=('hall', 'in'), set=dict(hall=0.0), bg_dim=0.5, expr='too_still', cx=960, cy=610, scale=0.88,
       act=_A(pose(t(2), None, 3.5, approach=0.16), tilt(w(2, 'anyone', 1), 9.0, 1.7), lookxy(960, 540, t(2) - 0.5, None, 0.5, z=400.0)),
       light=dict(rim='#ffcf8f', rim_a=55, side=-1, key=-0.3),
@@ -2084,6 +2622,10 @@ def plan_open(F):
 # ==================================================================================================== 1987 (65.75 - 122.2)
 BASKET = lambda a, s: (a.hold_prop('basket', -1), a.reach(-1.0, None, -1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01))
 PHOTO_CAM = None
+# the Courier photo's two-shot, IN FRONT of the float (the old 'photo' anchor stood them behind it: the float's deck hid
+# them): Laurie and the mascot by the float's front corner, Pemberton's behind them
+PHOTO_TWO = cm((0.25, 18.4, 1.2), (2.6, 21.6, 1.0), S=1150, sx=960, sy=560)
+PHOTO_TRICK = cm((0.6, 19.0, 1.0), (2.65, 21.65, 0.85), S=1500, sx=960, sy=560)
 
 
 def plan_1987(F):
@@ -2125,15 +2667,21 @@ def plan_1987(F):
     tf = w(25, 'paw') + 0.35
 
     def photo_acts(A, s, sp):
+        # posing for the Courier's photographer: hand in paw, Laurie looks up at him and back to the lens, he waves his
+        # free paw at the crowd; the flash pops on 'paw'
         b, l = A['bunny87'], A['laurie87']
         b.hold_hand(s.t0 - 1.0, -1, l, 1, dur=0.01)
-        l.look_at(s.t0 - 0.5, (960, 380), None, 0.3, z=500.0)
-        b.look_at(s.t0 - 0.5, (960, 380), None, 0.3, z=500.0)
+        l.look_at(s.t0 - 0.5, (b, 'eyes'), tf - 0.9, 0.35)
+        l.look_at(tf - 0.8, (900, 380), None, 0.35, z=500.0)
+        b.look_at(s.t0 - 0.5, (1500, 420), tf - 0.7, 0.4, z=400.0)
+        b.look_at(tf - 0.6, (900, 380), None, 0.4, z=500.0)
+        b.wave(s.t0 + 0.2, tf - 0.4, side=1, speed=0.9, height=1.0)
+        l.expr('kid_grin', tf - 0.7, None, 0.3)
         return []
-    C(T(25), 'set', room='parade', view='photo', era='1987', tape0=58.0,
-      ppl=[P('bunny87', (3.7, 25.6, 0.0), turn=-0.12, room_light=False, act=lambda a, s: (a.hold_prop('basket', 1), a.reach(-1.0, None, 1, out=40.0, down=230.0, fwd=150.0, shape='grip', up=0.0, fade=0.01))),
-           P('laurie87', (3.05, 25.35, 0.0), turn=0.15, expr='warm_smile', room_light=False)],
-      acts=photo_acts, c=dict(mv='push', f=1.65, rate=0.02, y=560),
+    C(T(25), 'set', room='parade', view='photo', era='1987', tape0=58.0, cam=PHOTO_TWO,
+      ppl=[P('bunny87', (2.95, 21.75, 0.0), turn=-0.15, room_light=False, dorder=-4.0),
+           P('laurie87', (2.25, 21.45, 0.0), turn=0.2, expr='warm_smile', room_light=False, dorder=-4.0)],
+      acts=photo_acts, c=dict(mv='push', f=1.0, rate=0.012),
       post_fn=lambda tt, tf=tf: dict(white=0.9 * clamp(1.0 - (tt - tf) / 0.25) if tt >= tf else 0.0),
       sfx=[(tf, 'camera_flash', -2, 0, 'vhs')])
     # 26 "Laurie Price."   27 "My mom."  (the same face, now)
@@ -2155,17 +2703,17 @@ def plan_1987(F):
         b.look_at(s.t0 - 1.0, (l, 'eyes'), None, 0.3)
         l.expr('kid_grin', tg + 0.3, None, 0.3)
         return []
-    C(T(28), 'set', room='parade', view='photo', era='1987', tape0=64.0,
-      ppl=[P('bunny87', (3.85, 25.65, 0.0), turn=-0.6, kind='kneel', knees=0, room_light=False),
-           P('laurie87', (3.05, 25.35, 0.0), turn=0.55, expr='warm_smile', room_light=False)],
-      acts=trick_acts, c=dict(mv='push', f=1.75, rate=0.02, y=560), sfx=[(tg + 0.2, 'magic_sparkle', -10, 0, 'vhs')])
+    C(T(28), 'set', room='parade', view='photo', era='1987', tape0=64.0, cam=PHOTO_TRICK,
+      ppl=[P('bunny87', (3.05, 21.8, 0.0), turn=-0.6, kind='kneel', knees=0, room_light=False, dorder=-4.0),
+           P('laurie87', (2.25, 21.45, 0.0), turn=0.55, expr='warm_smile', room_light=False, dorder=-4.0)],
+      acts=trick_acts, c=dict(mv='push', f=1.0, rate=0.012), sfx=[(tg + 0.2, 'magic_sparkle', -10, 0, 'vhs')])
     # 29 "Then he walked off into Holloway Woods."  30 "And she followed him."  (1987, overcast)
     C(T(29), 'set', room='woods', view='path', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
       ppl=[P('bunny87', (-4.6, -2.6, 0.0), path=[(T(29), (-4.6, -2.6, 0.0)), (T(30) + 0.3, (-1.8, 4.6, 0.0))], surface='grass', room_light=False, dimk=0.1)],
       c=dict(mv='push', f=1.1, rate=0.02))
     C(T(30), 'set', room='woods', view='path', set=dict(tod='day87'), era='1987', vhs=False, rim=MEMORY, grade='ob_memory',
       cam=cm((-6.3, -5.2, 0.9), (-2.4, 3.0, 0.7), S=1000, sx=960, sy=600),
-      ppl=[P('bunny87', (-1.6, 6.6, 0.0), path=[(T(30), (-1.6, 6.6, 0.0)), (T(31), (-1.2, 8.8, 0.0))], surface='grass_quiet', room_light=False, dimk=0.35),
+      ppl=[P('bunny87', (-2.0, 4.1, 0.0), path=[(T(30), (-2.0, 4.1, 0.0)), (T(31), (-1.3, 7.6, 0.0))], surface='grass_quiet', room_light=False, dimk=0.35),
            P('laurie87', (-4.9, -2.4, 0.0), path=[(T(30), (-4.9, -2.4, 0.0)), (T(31) + 0.2, (-3.0, 2.6, 0.0))], surface='grass', room_light=False)],
       c=dict(mv='push', f=1.0, rate=0.02))
     # 31 "The search dogs lost her scent at the old railroad bridge."  the trestle, overcast; then the Courier's sub-headline
@@ -2175,18 +2723,25 @@ def plan_1987(F):
       c=dict(mv='push', f=1.15, rate=0.02), sfx=[(T(31) + 0.2, 'dogs_bark_far', -10, 0.4, 'woods')])
     C(tb, 'ins', name='courier', c=dict(mv='keys', keys=[(tb, 1300, 470, 1.0, None, 2.2), (T(32), 1300, 470, 1.0, 'push', 2.4)]))
     # 32 "Three days later, at sunrise on Easter morning, she walked out of the trees alone."
+    tsw = w(32, 'walked') - 0.1
+    LAURIE_EGG = _A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01))
     C(T(32), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
-      ppl=[P('laurie87', (-2.5, 43.6, -0.45), path=[(T(32) + 0.6, (-2.5, 43.6, -0.45)), (T(33) + 0.2, (-2.6, 38.6, -0.45))], surface='grass_quiet', turn=0.0,
-             expr='too_still', room_light=False, act=_A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01)))],
-      c=dict(mv='push', f=1.45, rate=0.02), sfx=[(T(32) + 0.3, 'birds_dawn', -8, 0, 'outside')])
+      ppl=[P('laurie87', (-2.5, 44.6, -0.45), path=[(T(32) + 0.2, (-2.5, 44.6, -0.45)), (tsw, (-2.5, 42.9, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=LAURIE_EGG)],
+      c=dict(mv='push', f=1.45, rate=0.012), sfx=[(T(32) + 0.3, 'birds_dawn', -8, 0, 'outside')])
+    C(tsw, 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
+      cam=cm((-2.62, 36.2, 0.7), (-2.55, 41.0, 0.35), S=1250, sx=960, sy=600),
+      ppl=[P('laurie87', (-2.5, 42.9, -0.45), path=[(tsw, (-2.5, 42.9, -0.45)), (T(33) + 0.2, (-2.6, 39.0, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=LAURIE_EGG)],
+      c=dict(mv='push', f=1.0, rate=0.012))
     # 33 "Her dress was spotless."  medium, walking toward us in the gold light
     C(T(33), 'set', room='yard', view='close', set=dict(tod='sunrise87'), era='1987', vhs=False, rim=SUN87, grade='ob_sunrise87',
       cam=cm((-2.62, 34.6, 0.6), (-2.6, 38.2, 0.2), S=1300, sx=960, sy=600),
-      ppl=[P('laurie87', (-2.6, 38.6, -0.45), path=[(T(33), (-2.6, 38.6, -0.45)), (T(34), (-2.6, 37.6, -0.45))], surface='grass_quiet', turn=0.0,
-             expr='too_still', room_light=False, act=_A(lambda a, s: a.hold_prop('egg_gold', 1), lambda a, s: a.reach(-1.0, None, 1, out=0.0, down=160.0, fwd=130.0, shape='grip', up=0.0, fade=0.01)))],
+      ppl=[P('laurie87', (-2.6, 38.9, -0.45), path=[(T(33), (-2.6, 38.9, -0.45)), (T(34), (-2.6, 37.6, -0.45))], surface='grass_quiet', turn=0.0,
+             expr='too_still', room_light=False, act=LAURIE_EGG)],
       c=dict(mv='push', f=1.0, rate=0.02))
     # 34 the golden plastic egg;  35 "And she was humming."  36 "She didn't remember a thing."
-    C(T(34), 'ins', name='egg_gold', era='1987', c=dict(mv='push', rate=0.03))
+    C(T(34), 'ins', name='egg_gold_hands', era='1987', anim=True, c=dict(mv='push', rate=0.025))
     C(T(35), 'bust', who='laurie87', bg=('yard', 'close', None), set=dict(tod='sunrise87'), era='1987', vhs=False, cx=960, cy=590, scale=0.9,
       light=SUN87, expr='too_still', act=hum(t(35) - 0.2, None), grade='ob_sunrise87',
       sfx=[(t(35), 'hum', -10, 0, 'outside', dict(who='laurie87', dur=1.4))], music=[(t(35), 'jingle', 0.5, 2.0, dict(version='hum_child'))])
@@ -2239,16 +2794,18 @@ def plan_since(F):
             y = (lerp(560, 470, ease_in_out(clamp((tt - t46 - 0.55) / 0.25))) if on else lerp(470, 600, ease_in_out(clamp((tt - t46 - 0.55) / 0.25))))
             return (lerp(1500, 975, k), y + (1 - k) * 300, 168.0 if on else 200.0, 1.0)
         return fn
-    C(t46, 'ins', name='switch', era='memory', grade='ins_memory', kw=lambda tr: dict(flip=lambda tt: ease_in_out(clamp((tt - 0.55) / 0.2))),
-      hands=[dict(who='grandma', fn=gran_finger(True), size=420, shape='point', side=-1, sleeve_from=lambda tt: (1900, 900))],
+    # her finger lands on the lever's tip and pushes it up (the wrist follows the fingertip, the cardigan sleeve to the
+    # frame edge): no floating finger
+    C(t46, 'ins', name='switch', era='memory', grade='ins_memory', kw=lambda tr: dict(flip=lambda tt: ease_in_out(clamp((tt - 0.55) / 0.22))),
+      hands=[dict(who='grandma', fn=switch_finger(t46, True, 'grandma'), size=600, shape='point', side=-1,
+                  sleeve_from=lambda tt: (2250, 1500))],
       c=dict(mv='push', rate=0.02), sfx=[(t46 + 0.6, 'light_switch', -2, 0, 'close')])
     C(tp, 'set', room='yard', view='house', set=dict(back_light=1.0, kitchen=0.6), era='memory', grade='ob_ext', c=dict(mv='push', f=1.4, rate=0.02))
     # 47 "And every Easter, Mom switched it off."  her finger pushes the switch down; the porch light dies
     t47 = T(47); toff = w(47, 'switched')
-    C(t47, 'ins', name='switch', kw=lambda tr, a=toff - t47: dict(flip=lambda tt: 1.0 - ease_in_out(clamp((tt - a) / 0.15))),
-      hands=[dict(who='mom', fn=(lambda tt, a=toff: (lerp(1500, 975, ease_in_out(clamp((tt - a + 0.6) / 0.5))),
-                                                     lerp(760, 470, ease_in_out(clamp((tt - a + 0.6) / 0.5))) + 120 * ease_in_out(clamp((tt - a) / 0.15)),
-                                                     196.0, 1.0)), size=420, shape='point', side=-1, sleeve_from=lambda tt: (1900, 1000))],
+    C(t47, 'ins', name='switch', kw=lambda tr, a=toff - t47: dict(flip=lambda tt: 1.0 - ease_in_out(clamp((tt - a) / 0.22))),
+      hands=[dict(who='mom', fn=switch_finger(t47, False, 'mom', t_flip=toff - t47, hold=0.7), size=600, shape='point', side=-1,
+                  sleeve_from=lambda tt: (2300, -500))],
       c=dict(mv='push', rate=0.02), sfx=[(toff + 0.02, 'light_switch', -2, 0, 'close')])
     C(toff + 0.45, 'set', room='yard', view='house', set=dict(back_light=dict(off=toff + 0.85), kitchen=0.6), c=dict(mv='push', f=1.4, rate=0.02),
       sfx=[(toff + 0.85, 'bulb_tink', -10, 0, 'outside')])
@@ -2281,8 +2838,11 @@ def plan_since(F):
     C(T(53), 'bust', who='mom', bg=('front', 'porch'), set=dict(tod='blue'), cx=1000, cy=600, scale=0.9, turn=-0.3, expr='too_still', light=POLICE,
       act=pose(t(53) + 0.5, None, 0.8, smile=0.5), post_fn=lambda tt: {'flash': _epost.police_flash(tt, 0.35, 1.0, 'sweep')})
     # 54 "This Easter, my little sister June turned seven."  June on her bed, beaming
-    C(T(54), 'set', room='june', view='bed', set=dict(lamp=1.0, nightlight=1.0), rim=LAMP, cam=cm((0.2, 7.0, 4.05), (1.8, 7.75, 3.55), S=1050, sx=960, sy=520),
-      ppl=[P('june', 'bed_edge', expr='kid_grin', act=_A(lambda a, s: a.wave(t(54) + 0.3, t(54) + 1.6, side=1, speed=1.2)))],
+    # sitting on the edge of her bed, legs dangling, seen from the doorway at 3/4 (front-on, a seated child read as
+    # standing ON the bed)
+    C(T(54), 'set', room='june', view='bed', set=dict(lamp=1.0, nightlight=1.0), rim=LAMP, cam=cm((0.55, 6.05, 3.95), (1.8, 7.7, 3.45), S=1050, sx=960, sy=540),
+      ppl=[P('june', (2.05, 7.85, 3.37), kind='floor', face=(0.55, 6.05), expr='kid_grin', check=False, seat_ok=True,
+             act=_A(lambda a, s: a.wave(t(54) + 0.3, t(54) + 1.6, side=1, speed=1.2), lookxy(600, 420, -9, None, 0.3, z=400.0)))],
       tags=[(w(54, 'seven') - 0.1, 'JUNE  ·  7', 960, 200, 'white', 2.0)], c=dict(mv='push', f=1.0, rate=0.02))
     # 55 "The same age Mom was."  Laurie in 1987 -> June now, the same framing
     tm = w(55, 'mom') - 0.15
@@ -2296,10 +2856,13 @@ def plan_since(F):
       c=dict(mv='push', f=1.0, rate=0.02), sfx=[(t(56) - 0.2, 'hum', -8, 0, 'inside', dict(who='mom', dur=2.6)), (T(56), 'water_tap', -14, 0, 'inside', dict(dur=2.5))],
       music=[(t(56), 'jingle', 0.5, 2.6, dict(version='hum'))])
     # 57 "And yesterday, she bought June a new Easter dress."  58 "Yellow."  59 "Exactly like the one in the photo."
-    C(T(57), 'set', room='june', view='door', set=dict(dress=True, lamp=1.0), rim=LAMP, cam=cm((1.3, 8.6, 4.2), (-0.37, 6.45, 3.95), S=1100, sx=960, sy=520),
-      c=dict(mv='push', f=1.0, rate=0.025))
+    C(T(57), 'set', room='june', view='door', set=dict(dress=True, lamp=1.0), rim=LAMP, cam=cm((0.75, 7.75, 4.15), (-0.37, 6.45, 3.95), S=1000, sx=760, sy=520),
+      c=dict(mv='push', f=1.0, rate=0.02))
     C(T(58), 'ins', name='dress_new', c=dict(mv='push', rate=0.03))
-    C(T(59), 'ins', name='courier', c=dict(mv='keys', keys=[(T(59), 700, 760, 1.0, None, 2.4), (T(60), 700, 770, 1.0, 'push', 2.6)]))
+    # the new dress on the closet door and, taped beside it, the 1987 clipping: the same dress (a short move from one to
+    # the other, on 'photo')
+    C(T(59), 'ins', name='dress_photo', c=dict(mv='keys', keys=[(T(59), 860, 560, 1.0, None, 1.08), (w(59, 'photo') - 0.2, 860, 560, 1.0, None, 1.08),
+                                                             (T(60), 1240, 520, 1.0, 'in_out', 1.45)]))
     # 60 "At sundown, the rules went up on the fridge."  her hand presses the bunny magnet onto the sheet
     t60 = T(60); tup = w(60, 'rules')
     C(t60, 'ins', name='rules', kw=dict(hl=0, show=7, magnet=True),
@@ -2314,8 +2877,11 @@ def plan_since(F):
 JUNE_FROM_WINDOW = cm((1.55, 9.55, 4.15), (0.95, 6.6, 3.95), S=900, sx=960, sy=500)        # inside June's room, back to the window
 
 
+CURT0 = 0.8                         # the front curtains before 11:07: open, their edges within a teenager's reach of the middle
+
+
 def curtains_close(t0, dur=1.25):
-    return lambda tt: 1.0 - ease_in_out(clamp((tt - t0) / dur))
+    return lambda tt: CURT0 * (1.0 - ease_in_out(clamp((tt - t0) / dur)))
 
 
 def plan_rule1(F):
@@ -2326,11 +2892,11 @@ def plan_rule1(F):
     C(T(65), 'ins', name='clock', kw=dict(time=(11, 7)), c=dict(mv='push', rate=0.03), sfx=[(T(65) + 0.1, 'clock_tick', -10, 0, 'close', dict(dur=2.4))])
     C(T(66), 'set', room='yard', view='woods', set=dict(tod='night'), c=dict(mv='push', f=2.0, rate=0.03))
     # 67 "Slow and tinny, like a speaker with dying batteries."  the narrator alone on the couch looks up toward the back
-    C(T(67), 'set', room='living', view='wide2', set=dict(lamp=1.0, curtains=1.0), rim=LAMP,
+    C(T(67), 'set', room='living', view='wide2', set=dict(lamp=1.0, curtains=CURT0), rim=LAMP,
       ppl=[P('narrator', 'couch_mid', turn=0.62, expr='haunted', act=_A(lookxy(1700, 420, t(67) + 0.2, None, 0.45, z=400.0), blinks(t(67) + 1.6)))],
       c=dict(mv='push', f=1.05, rate=0.015))
     # 68 "Hop... hop... hop along."  close: listening, eyes to the back of the house
-    C(T(68), 'bust', who='narrator', bg=('living', 'wide2'), set=dict(lamp=1.0), cx=900, cy=600, scale=0.85, turn=0.4, h_turn=0.15, expr='haunted', light=LAMP,
+    C(T(68), 'bust', who='narrator', bg=('living', 'wide2'), set=dict(lamp=1.0, curtains=CURT0), cx=900, cy=600, scale=0.85, turn=0.4, h_turn=0.15, expr='haunted', light=LAMP,
       act=_A(lookxy(1750, 480, t(68) - 0.5, None, 0.4, z=500.0), blinks(t(68) + 1.3)))
     # 69 "I close the curtains downstairs, then run up to June's room."
     tcl = w(69, 'close') + 0.1; trun = w(69, 'then') - 0.1
@@ -2341,26 +2907,32 @@ def plan_rule1(F):
         cl, cr, mid = plan_xy(sp, 'curtain_front_l'), plan_xy(sp, 'curtain_front_r'), (-3.3, 0.12, 1.3)
         fl = lambda tt: scr(sp, tuple(lerp(cl[j], mid[j], 1.0 - cf(tt)) for j in range(3)), 30.0, 0)
         fr = lambda tt: scr(sp, tuple(lerp(cr[j], mid[j], 1.0 - cf(tt)) for j in range(3)), -30.0, 0)
-        n.reach_to(tcl - 0.1, 1, fr, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
-        n.reach_to(tcl - 0.05, -1, fl, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
+        # facing the window (back to us) her LEFT hand is on the east curtain (screen left), her right on the west one
+        # (the hands used to cross over to the far curtains and missed them by a hand's length)
+        n.reach_to(tcl - 0.1, 1, fl, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
+        n.reach_to(tcl - 0.05, -1, fr, t1=s.t1 + 0.5, dur=0.4, contact='palm', shape='grip', z=-90.0)
         return []
-    C(T(69), 'set', room='living', view='window', set=dict(lamp=1.0, curtains=1.0), curtains_fn=cf, rim=LAMP,
+    C(T(69), 'set', room='living', view='window', set=dict(lamp=1.0, curtains=CURT0), curtains_fn=cf, rim=LAMP,
       ppl=[P('narrator', 'window_front', expr='haunted')], acts=curtain_acts, c=dict(mv='push', f=1.05, rate=0.02),
       sfx=[(tcl + 0.3, 'curtain_draw', -4, 0, 'inside', dict(dur=1.2))])
     C(trun, 'set', room='hall', view='foot', set=dict(hall=1.0, upstairs=1.0), rim=LAMP,
-      ppl=[P('narrator', (-0.55, 1.75, 0.0), path=[(trun, (-0.55, 1.75, 0.0)), (trun + 0.55, (0.8, 1.2, 0.19)), (T(70) + 0.15, 'step13')], run=True, surface='stairs', turn=1.95)],
+      ppl=[P('narrator', (-1.6, 2.35, 0.0), path=[(trun, (-1.6, 2.35, 0.0)), (trun + 0.75, (0.8, 1.2, 0.19)), (T(70) + 0.15, 'step13')], run=True, surface='stairs',
+             turn=1.95, enter=True)],
       c=dict(mv='push', f=1.0, rate=0.02))
     # 70 "June is at her window in her pajamas, waving."  (the narrator comes in behind her)
     C(T(70), 'set', room='june', view='window', set=dict(nightlight=1.0, curtains=1.0, hall=1.0), rim=MOON,
       ppl=[P('june', 'window', expr='warm_smile', act=lambda a, s: a.wave(s.t0 - 0.5, s.t1 + 1.0, side=1, speed=0.8, height=1.1)),
-           P('narrator', (1.5, 8.35, 2.85), path=[(T(70) + 0.2, (1.5, 8.35, 2.85)), (T(70) + 1.6, 'window_side')], expr='haunted', turn=-1.8)],
+           P('narrator', (0.95, 6.75, 2.85), path=[(T(70) + 0.1, (0.95, 6.75, 2.85)), (T(70) + 1.9, 'window_side')], expr='haunted', turn=-1.8, enter=True)],
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='june')
     # 71 "At the treeline, under the moon, there he is."  through her window
     C(T(71), 'set', room='june', view='out', set=dict(curtains=1.0), rim=MOON,
       ppl=[P('bunny', 'bunny_treeline', room_light=False, dimk=0.25)], c=dict(mv='keys', keys=[(T(71), 960, 540, 1.0, None, 1.0), (w(71, 'there') + 0.6, 960, 540, 1.0, 'in_out', 2.4), (T(72), 960, 540, 1.0, 'lin', 2.5)]),
       music=[(w(71, 'there'), 'hit', 0.55)])
     # 72 "Taller than my dad."  73 "Black glass eyes that don't reflect anything."
-    C(T(72), 'set', room='yard', view='close', rim=MOON, ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15)], c=dict(mv='push', f=1.15, rate=0.015))
+    # low, at his feet, looking up: he towers (taller than Dad); his head tips down toward the house
+    C(T(72), 'set', room='yard', view='close', rim=MOON, cam=cm((-2.5, 36.6, 0.05), (-2.6, 39.6, 1.05), S=1150, sx=960, sy=600),
+      ppl=[P('bunny', 'treeline', room_light=False, dimk=0.15, act=_A(pose(-9, None, 0.1, h_tilt=-4.0), lambda a, s: a.head_down(t(72) + 0.2, None, 0.3, 1.0)))],
+      c=dict(mv='push', f=1.0, rate=0.012))
     C(T(73), 'bust', who='bunny', bg=('yard', 'close'), cx=960, cy=640, scale=1.5, light=MOON, c=dict(mv='push', x=960, y=540, zrate=0.025),
       act=pose(-9, None, 0.1, h_tilt=-3.0))
     # 74-75 "And he's waving back. Slowly."
@@ -2445,8 +3017,9 @@ def plan_rule2(F):
     # the door in the middle of the frame (it is what the line is about); the narrator at the side of the hall, knees up,
     # turning toward it at the tap
     C(w(104, 'one') - 0.1, 'set', room='hall', view='door', set=dict(hall=0.3, porch=0.0), rim=NIGHT,
-      ppl=[P('narrator', (-0.95, 2.45, 0.0), face=(0.3, 2.0), expr='haunted', act=lambda a, s: a.flinch(ttap + 0.05, 0.6))],
-      acts=lambda A, s, sp: [A['narrator'].turn(ttap + 0.12, sp.view.turn_for(-0.95, 2.45, 0.55, -2.45), 0.55),
+      ppl=[P('narrator', (-0.95, 2.45, 0.0), path=[(ttap + 0.55, (-0.95, 2.45, 0.0)), (T(105) + 0.15, (-0.5, 0.78, 0.0))], face=(0.3, 2.0), expr='haunted',
+             act=lambda a, s: a.flinch(ttap + 0.05, 0.6))],
+      acts=lambda A, s, sp: [A['narrator'].turn(ttap + 0.12, sp.view.turn_for(-0.95, 2.45, 0.55, -2.45), 0.45),
                              A['narrator'].look_at(ttap + 0.1, scr(sp, (-0.4, 0.0, 1.2)), None, 0.3)] and [],
       c=dict(mv='push', f=1.0, rate=0.015, hit=[(ttap, 1.2)]), focus=2.6,
       sfx=[(ttap, 'egg_tap', 0, 0, 'outside', dict(kind='one_tap'))], music=[(ttap, 'silence', 0.0, 1.0)])
@@ -2523,6 +3096,39 @@ def plan_rule2(F):
       set=dict(hall=0.3, porch=1.0, door=lambda tt, a=tcr: 20.0 * ease_in_out(clamp((tt - a) / 0.6))), rim=NIGHT,
       ppl=[P('narrator', (-0.2, 0.5, 0.0), face=(-0.2, 0.0), expr='haunted')], acts=door_acts, c=dict(mv='push', f=1.0, rate=0.02),
       sfx=[(tdb, 'deadbolt', -4, 0, 'inside'), (tcr, 'door_creak', -4, 0, 'inside', dict(kind='front_door', crack=True))])
+    # ... the egg is picked up through the crack: low on the doormat, the door ajar above, the narrator's hand (hoodie
+    # cuff) comes down out of the gap, closes on the egg and takes it inside
+    tpk = e(117) - 0.32
+
+    def pick_acts(A, s, sp, tpk=tpk):
+        v = sp.view
+        ex, ey, eY = ST.FD_CX + 0.02, -0.36, -0.03 + 0.012
+        px, py = v.p(ex, eY + 0.031, ey)
+        k_ = v.s(ex, ey) / 1000.0 * 1.0
+        size = 0.175 * v.s(ex, ey)
+        tg = tpk + 0.34                                   # the grip
+
+        def wrist(tt):
+            u_in = ease_out_cubic(clamp((tt - tpk) / 0.32))
+            u_out = ease_in_out(clamp((tt - tg - 0.06) / 0.38))
+            gx, gy = px + 0.02 * size, py - 0.62 * size     # wrist above the egg so the palm closes on it
+            return gx + 0.25 * size * (1 - u_in), gy - 1.6 * size * (1 - u_in) - 1.9 * size * u_out
+        def draw(pen, tt):
+            wx, wy = wrist(tt)
+            held = tt >= tg
+            if not held:
+                ST.porch_egg(pen, v, ex, ey, eY, rattle=0.0)
+            shape = 'grip' if held else 'open'
+            hero_hand(pen, 'narrator', wx, wy, size, shape, 6.0, 1, (wx - 0.3 * size, wy - 3.5 * size), dict(side=-1, key=-0.1),
+                      shadow=(0.03 * size, 0.05 * size, 0.06 * size, 80) if not held else None)
+            if held:
+                ST.draw_egg(pen, wx + 0.06 * size, wy + 0.62 * size, 0.38 * size, rot=-80.0, col='#e9a8b6', shine=0.8)
+                hero_hand(pen, 'narrator', wx, wy, size, 'grip', 6.0, 1, (wx - 0.3 * size, wy - 3.5 * size), dict(side=-1, key=-0.1))
+        lay = Layer(0.5, draw, 'pick_egg', blur=0)
+        lay.order = -1.0
+        return [lay]
+    C(tpk, 'set', room='front', view='egg', cam=cm((-0.18, -1.05, 0.30), (-0.38, -0.36, 0.0), S=1700, sx=960, sy=640), set=dict(egg=False, front_light=1.0),
+      acts=pick_acts, c=dict(mv='hold', f=1.0, shake=0.6), sfx=[(tpk + 0.34, 'egg_set', -6, 0, 'outside', dict(kind='pick_up'))])
     # 118 "And I open the egg."  (turned to us, the egg in front of the chest, the halves come apart)
     tsplit = w(118, 'egg') - 0.4
 
@@ -3160,14 +3766,10 @@ def plan_rule7(F):
     C(T(316), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=980, cy=660, scale=1.12, turn=0.3, expr='too_still', light=DAWN,
       act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.7), lookxy(1500, 680, -9, None, 0.3, z=300.0)), music=[(t(317), 'pulse_on', 0.6)])
     # 318-321 J "One," June whispers. "Two. Three."  Mom's hand over her eyes
-    def june_hand(c0):
-        def fn(tt):
-            ex_, ey_ = bust_eyes('june', 940, 620, 0.95)
-            return (ex_ - 330.0, ey_ - 10.0, 262.0, 1.0)
-        return fn
     C(T(318), 'bust', who='june', bg=('up', 'west', UP_DAWN), set=dict(wrecked=1.0, tod='dawn'), cx=940, cy=620, scale=0.95, turn=-0.2, expr='neutral', light=DAWN_L,
       act=lambda a, s: a.eyes_shut(-9, None, 0.0),
-      hands=[dict(who='mom', fn=june_hand(T(318)), size=520, shape='flat', side=-1, sleeve_from=lambda tt: (-200, 900), scratch=True, depth=0.95)],
+      hands=[dict(who='mom', fn=paw_eyes('june', 940, 620, 0.95, side=-1, size=430), size=430, shape='open', side=-1, sleeve_from=lambda tt: (-260, 1000),
+                  scratch=True, depth=0.95)],
       c=dict(mv='push', x=940, y=560, zrate=0.02))
 
 
@@ -3185,10 +3787,13 @@ def paw_eyes(who, cx, cy, sc, t_in=None, side=-1, size=560):
     """A paw (or a hand) laid over the eyes of a bust drawn at (cx, cy, sc), coming in from the side: the wrist sits
     0.6 of the hand's length out from the eyes, so the fingers end just past the far eye."""
     def fn(tt):
+        # the palm lies over BOTH eyes, its lower edge on the bridge of the nose: the mouth stays free (June's counting
+        # lips) and the hand comes from the side and from below, where the kneeling arm is
         ex_, ey_ = bust_eyes(who, cx, cy, sc)
         k = 1.0 if t_in is None else ease_out_cubic(clamp((tt - t_in) / 0.5))
-        x = ex_ + side * (0.6 * size + 600.0 * (1.0 - k))
-        return (x, ey_ - 6.0, 262.0 if side < 0 else 98.0, 1.0)
+        x = ex_ + side * (0.58 * size + 600.0 * (1.0 - k))
+        y = ey_ - 0.07 * size + 220.0 * (1.0 - k)
+        return (x, y, 264.0 if side < 0 else 96.0, 1.0)
     return fn
 
 
@@ -3218,12 +3823,12 @@ def plan_reveal(F):
     cx_, cy_, sc_ = 960, 600, 0.95
     C(T(325), 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_, scale=sc_,
       expr='warm_smile', light=MEMORY, act=lambda a, s: a.eyes_shut(-9, None, 0.0),
-      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_, sc_, size=330), size=330, shape='paw_flat', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
+      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_, sc_, size=330), size=330, shape='paw', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
       c=dict(mv='push', x=960, y=560, zrate=0.02))
     top = w(326, 'opens') - 0.05
     C(T(326), 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_ + 20, scale=sc_ * 1.12,
       expr='neutral', light=MEMORY, act=_A(lambda a, s: a.eyes_shut(-9, top, 0.0), lambda a, s: a.talk([(w(326, 'counts'), w(326, 'under'))], 0.25)),
-      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_ + 20, sc_ * 1.12, size=370), size=370, shape='paw_flat', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
+      hands=[dict(who='bunny87', fn=paw_eyes('laurie87', cx_, cy_ + 20, sc_ * 1.12, size=370), size=370, shape='paw', side=-1, sleeve_from=lambda tt: (-260, 980), depth=0.95)],
       c=dict(mv='push', x=960, y=560, zrate=0.025), music=[(w(326, 'seven'), 'heartbeat', 0.4, 1.6)])
     C(top, 'bust', who='laurie87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=cx_, cy=cy_ + 20, scale=sc_ * 1.12,
       expr='too_still', light=MEMORY, cut='white', act=_A(pose(-9, None, 0.01, still=0.9), lookxy(960, 560, -9, None, 0.01, z=600.0)),
@@ -3371,7 +3976,8 @@ def plan_reveal(F):
     jx, jy, js = 940, 620, 0.95
     C(T(351), 'bust', who='june', bg=('up', 'west', UP_DAWN), set=UPD, cx=jx, cy=jy, scale=js, turn=-0.2, expr='neutral', light=DAWN_L,
       act=lambda a, s: a.eyes_shut(-9, None, 0.0),
-      hands=[dict(who='mom', fn=paw_eyes('june', jx, jy, js, side=-1), size=520, shape='flat', side=-1, sleeve_from=lambda tt: (-200, 900), scratch=True, depth=0.95)],
+      hands=[dict(who='mom', fn=paw_eyes('june', jx, jy, js, side=-1, size=430), size=430, shape='open', side=-1, sleeve_from=lambda tt: (-260, 1000),
+                  scratch=True, depth=0.95)],
       c=dict(mv='push', x=940, y=560, zrate=0.02))
     # 354 "If it was going to take one of us, it wasn't going to be her."
     C(T(354), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=980, cy=610, scale=0.95, turn=0.15, expr='determined', light=DAWN_L,
@@ -3400,21 +4006,26 @@ def plan_reveal(F):
     nx, ny, ns = 980, 600, 1.0
     C(tpu, 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny, scale=ns, turn=0.1, expr='determined', light=DAWN_L,
       act=_A(lambda a, s: a.eyes_shut(w(355, 'squeeze') + 0.1, None, 0.15), pose(w(355, 'squeeze') + 0.1, None, 0.25, squint=0.8, brow_angry=0.5)),
-      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny, ns, t_in=tpu + 0.2, side=-1, size=560), size=560, shape='flat', side=-1,
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny, ns, t_in=tpu + 0.2, side=-1, size=500), size=500, shape='open', side=-1,
                   sleeve_from=lambda tt: (-220, 940), scratch=True, depth=0.95)],
       c=dict(mv='push', x=980, y=560, zrate=0.03))
     # 356 "I've been counting to seven in my head all night."  357 "It's the easiest thing in the world."  358 "Six."  359 "Seven."
     C(T(356), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 40, scale=ns * 1.25, turn=0.1, expr='determined', light=DAWN_L,
       act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.8, brow_angry=0.5)),
-      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 40, ns * 1.25, side=-1), size=700, shape='flat', side=-1,
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 40, ns * 1.25, side=-1, size=620), size=620, shape='open', side=-1,
                   sleeve_from=lambda tt: (-260, 1000), scratch=True, depth=0.95)],
       c=dict(mv='push', x=980, y=560, zrate=0.02))
-    C(T(357), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=640, scale=1.05, turn=0.3, expr='too_still', light=DAWN,
-      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6), pose(t(357), None, 1.2, smile=0.85), lookxy(1500, 680, -9, None, 0.3, z=300.0)),
-      c=dict(mv='push', x=960, y=600, zrate=0.025))
+    # "It's the easiest thing in the world.": the narrator's own face, eyes squeezed shut under Mom's scratched hand,
+    # from the other side (3/4, her wrist and forearm across the frame): who is under the hand is never in doubt
+    C(T(357), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=1010, cy=ny + 60, scale=ns * 1.35, turn=-0.3, h_turn=-0.05,
+      expr='determined', light=DAWN_L,
+      act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.9, brow_angry=0.55, h_nod=0.08)),
+      hands=[dict(who='mom', fn=paw_eyes('narrator', 1010, ny + 60, ns * 1.35, side=-1, size=680), size=680, shape='open', side=-1,
+                  sleeve_from=lambda tt: (-320, 1150), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=990, y=560, zrate=0.012))
     C(T(358), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 80, scale=ns * 1.5, turn=0.1, expr='determined', light=DAWN_L,
       act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=1.0, brow_angry=0.6)),
-      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 80, ns * 1.5, side=-1), size=840, shape='flat', side=-1,
+      hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 80, ns * 1.5, side=-1, size=740), size=740, shape='open', side=-1,
                   sleeve_from=lambda tt: (-300, 1080), scratch=True, depth=0.95)],
       c=dict(mv='push', x=980, y=540, zrate=0.03), music=[(t(358), 'heartbeat', 0.7, 1.6)])
     C(T(359), 'black', cut='white', quiet_cut=True, caption=True, sfx=[(t(359) + 0.05, 'impact_hit', 0, 0, None, dict(size=1.2))],

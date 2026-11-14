@@ -1870,7 +1870,7 @@ def sky_dir(v, az, el):
     return (v.cx + v.S * u / d, v.h - v.S * dY / d)
 
 
-def sky_dome(pen, v, tod='night', moon=True, stars=True, clouds=True, box=None, seed=3, moon_r=None, glow=1.0):
+def sky_dome(pen, v, tod='night', moon=True, stars=True, clouds=True, box=None, seed=3, moon_r=None, glow=1.0, moon_dir=None):
     """The sky as seen by camera v: a gradient tied to the horizon, stars and the moon at fixed world directions, a few
     soft clouds drifting nowhere."""
     x0, y0, x1, y1 = box or (-700, -500, 2620, 1600)
@@ -1901,7 +1901,7 @@ def sky_dome(pen, v, tod='night', moon=True, stars=True, clouds=True, box=None, 
             if tod in ('night', 'blue'): _cloud(pen, q[0], q[1], w, h, int(rng.integers(0, 999)), '#16204a', '#3a4a86', 170)
             else: _cloud(pen, q[0], q[1], w, h, int(rng.integers(0, 999)), mix(mid, '#ffffff', 0.25), '#ffe0c0', 150)
     if moon and tod in ('night', 'blue'):
-        q = sky_dir(v, MOON_AZ, MOON_EL)
+        q = sky_dir(v, *(moon_dir or (MOON_AZ, MOON_EL)))
         if q is not None:
             rr = moon_r or 0.048 * v.S
             pen.glow(q[0], q[1], rr * 9, '#4f64b0', 60 * glow)
@@ -2408,6 +2408,9 @@ def _art_parts(R, parts_fn):
     return lambda pen: parts_fn(pen)
 
 
+NIGHT_VEIL = ('#02050e', 145)                                 # the night through interior windows (colour, alpha)
+
+
 def build_view(vname, v, main, o, far=(), outside=None, lens='lens', grade='ob_night', focus=None, dof=0.8, cover=None, extra=None,
                dyn=None, info_extra=None):
     """Assemble a set from rooms seen by camera v: the outside (seen through windows, drawn first), far rooms (seen through
@@ -2421,7 +2424,17 @@ def build_view(vname, v, main, o, far=(), outside=None, lens='lens', grade='ob_n
     info = {'view': v, 'amb': amb, 'lights': steady, 'var_lights': var, 'floors': [main.poly], 'blocks': {}, 'rooms': {main.name: main.poly},
             'cam_env': getattr(v, 'env', None), 'floor_order': ORDER_SHELL, 'orders': {}, 'room': main.name}
     if outside is not None:
-        L.append(Layer(30.0, lambda pen, t: outside(pen, v), 'outside', cache=key + ':out', bounds=cover))
+        # polish pass: at night the world through an interior window is NIGHT (a dark veil over the sky, the lawn and the
+        # treeline: the lit room's grade had lifted it to a pale, daytime-looking field); dawn keeps its colours; the
+        # 'out' views (the yard seen through June's window: the outside IS the picture) keep their own exposure
+        tod_ = o.get('tod', 'night') or 'night'
+        veil = NIGHT_VEIL if (tod_ == 'night' and not o.get('no_veil') and not vname.endswith('_out')) else None
+
+        def _out_draw(pen, t, f=outside, veil=veil):
+            f(pen, v)
+            if veil:
+                pen.fill(rect(-3000, -2000, 8000, 6000), veil[0], veil[1])
+        L.append(Layer(30.0, _out_draw, 'outside', cache=key + (':out' if veil is None else ':outv'), bounds=cover))
         L[-1].order = ORDER_OUT
     for i, R in enumerate(far):
         famb, fst, fvar = R.lights(o)
@@ -2600,7 +2613,8 @@ def ob_living(view='wide', lamp=1.0, chair_lamp=0.0, hall=0.0, kitchen=0.0, curt
         sp = build_view('ob_living_back', v, KitchenRoom(), o, far=[LivingRoom(), HallRoom()], outside=lambda pen, v_: _outside_back(pen, v_, tod),
                         grade='ob_night' if (lamp or hall) else 'ob_dark')
         return sp
-    out = (lambda pen, v_: _outside_front(pen, v_, tod)) if view in ('wide', 'couch', 'window', 'hall') else (lambda pen, v_: _outside_back(pen, v_, tod))
+    # the window over the couch is the FRONT window (y 0): wide2 sees it too (it used to show the back yard through it)
+    out = (lambda pen, v_: _outside_front(pen, v_, tod)) if view in ('wide', 'couch', 'window', 'hall', 'wide2') else (lambda pen, v_: _outside_back(pen, v_, tod))
     sp = build_view('ob_living_' + view, v, main, o, far=far, outside=out, grade='ob_night', dyn=dynl)
     return sp
 
@@ -2722,10 +2736,10 @@ class KitchenRoom(Room):
     def spots(self, v, o):
         S = {}
         S['fridge'] = _mk_spot(v, 'fridge', FRIDGE.cx + 0.75, FRIDGE.cy, 0.0, 'stand', 'facing the fridge (the rules at eye level)', face=(-1, 0))
-        S['fridge_rules'] = _mk_spot(v, 'fridge_rules', FRIDGE.cx + FRIDGE.d / 2 + 0.01, FRIDGE.cy + 0.05, 1.42, 'point', 'the laminated rules under the bunny magnet')
+        S['fridge_rules'] = _mk_spot(v, 'fridge_rules', FRIDGE.cx + FRIDGE.d / 2 + 0.01, FRIDGE.cy + 0.05, 0.86, 'point', 'the laminated rules under the bunny magnet (the sheet is drawn at 0.84-0.9 m; the magnet at 1.09 m)')
         S['back_door'] = _mk_spot(v, 'back_door', -3.3, 9.45, 0.0, 'stand', 'at the back door (inside)', face=(0, 1))
-        S['back_door_knob'] = _mk_spot(v, 'back_door_knob', BDOOR[1] - 0.075, KNOB_Y, 9.99, 'point', 'the back door knob (inside)')
-        S['back_door_bolt'] = _mk_spot(v, 'back_door_bolt', BDOOR[1] - 0.075, KNOB_Y + 0.17, 9.99, 'point', 'the back door deadbolt (locked from the inside)')
+        S['back_door_knob'] = _mk_spot(v, 'back_door_knob', BDOOR[1] - 0.075, 9.99, KNOB_Y, 'point', 'the back door knob (inside)')
+        S['back_door_bolt'] = _mk_spot(v, 'back_door_bolt', BDOOR[1] - 0.075, 9.99, KNOB_Y + 0.17, 'point', 'the back door deadbolt (locked from the inside)')
         S['back_door_out'] = _mk_spot(v, 'back_door_out', -3.3, 10.6, 0.45, 'stand', 'on the back porch, outside the door')
         S['sink'] = _mk_spot(v, 'sink', -1.35, 9.0, 0.0, 'stand', 'at the sink under the window', face=(0, 1))
         S['counter'] = _mk_spot(v, 'counter', -0.45, 9.69, COUNTER_Y, 'surface', 'the counter top right of the sink')
@@ -2733,7 +2747,7 @@ class KitchenRoom(Room):
         for i, (u, n, f) in enumerate(((-0.32, 0.62, (0, -1)), (0.32, 0.62, (0, -1)), (-0.32, -0.62, (0, 1)), (0.32, -0.62, (0, 1)))):
             c = KTABLE.at(u, n * 1.0, 0)
             S['kchair%d' % i] = _mk_spot(v, 'kchair%d' % i, c[0], c[2], 0.0, 'seat', 'kitchen chair %d at the table' % i, face=f, seat_Y=0.46)
-        S['switch'] = _mk_spot(v, 'switch', KSWITCH[0], KSWITCH[1], 9.99, 'point', 'the back porch light switch')
+        S['switch'] = _mk_spot(v, 'switch', KSWITCH[0], 9.99, KSWITCH[1], 'point', 'the back porch light switch')
         S['kitchen_mid'] = _mk_spot(v, 'kitchen_mid', -2.6, 7.8, 0.0, 'stand', 'the middle of the kitchen')
         S['window'] = _mk_spot(v, 'window', -1.35, 9.98, 1.5, 'point', 'the window over the sink (centre of the glass)')
         return S
@@ -3907,8 +3921,8 @@ class UpstairsHall(Room):
         S['june_door'] = _mk_spot(v, 'june_door', 0.8, 5.55, Y0, 'stand', "outside June's door (facing it: face (0, 1))", face=(0, 1))
         S['june_doorway'] = _mk_spot(v, 'june_doorway', 0.8, 5.92, Y0, 'stand', "in June's doorway (Mom: 'I told you not to look')", face=(0, 1))
         S['bath_door'] = _mk_spot(v, 'bath_door', -1.62, 5.5, Y0, 'stand', 'outside the bathroom door', face=(0, 1))
-        S['bath_knob'] = _mk_spot(v, 'bath_knob', D_BATH[1] - 0.075, KNOB_Y + Y0, 5.79, 'point', 'the bathroom door knob (corridor side)')
-        S['bath_keyhole'] = _mk_spot(v, 'bath_keyhole', D_BATH[1] - 0.075, KNOB_Y - 0.13 + Y0, 5.79, 'point', 'the bathroom keyhole (corridor side): the key goes in here')
+        S['bath_knob'] = _mk_spot(v, 'bath_knob', D_BATH[1] - 0.075, 5.79, KNOB_Y + Y0, 'point', 'the bathroom door knob (corridor side)')
+        S['bath_keyhole'] = _mk_spot(v, 'bath_keyhole', D_BATH[1] - 0.075, 5.79, KNOB_Y - 0.13 + Y0, 'point', 'the bathroom keyhole (corridor side): the key goes in here')
         S['attic_door'] = _mk_spot(v, 'attic_door', -3.4, 5.17, Y0, 'stand', 'at the attic door (face (-1, 0))', face=(-1, 0))
         S['hall_east'] = _mk_spot(v, 'hall_east', 4.3, 5.17, Y0, 'stand', 'the end of the hall by the east window (Mom: GET OUT OF MY HOUSE)', face=(-1, 0))
         S['hall_west'] = _mk_spot(v, 'hall_west', -3.1, 5.17, Y0, 'stand', 'the west end, by the attic door')
@@ -4042,8 +4056,10 @@ class JuneRoom(Room):
         F, panes = window_unit(pen, v, (-0.4, 10.0), (2.6, 10.0), JWIN[0] + 0.4, JWIN[1] + 0.4, JWIN[2], JWIN[3], Y0, lites=(1, 1), frame='#fbf6ee')
         self._win = (F, panes)
         # the closet door with the NEW yellow Easter dress hanging on it (in a clear dry-cleaning bag)
-        cd = Door((-0.4 + 0.03, JCLOSET[1]), JCLOSET[1] - JCLOSET[0], 1.98, (0.0, -1.0), 1, Y0, art_a=_closet_dress_art(o.get('dress', True)),
-                  art_b=door_art('four', 'left', bolt=False))
+        # (polish pass: the dress hangs on the face toward the ROOM, the one every camera in June's room sees; it was on
+        # the closet's inside face, so 'she bought June a new Easter dress' showed a bare door)
+        cd = Door((-0.4 + 0.03, JCLOSET[1]), JCLOSET[1] - JCLOSET[0], 1.98, (0.0, -1.0), 1, Y0, art_a=door_art('four', 'left', bolt=False),
+                  art_b=_closet_dress_art(o.get('dress', True)))
         cd.draw(pen, v, 0.0)
 
     def wall_art(self, a, b, o):
@@ -4322,9 +4338,9 @@ class Bathroom(Room):
                                  face=(0, -1), seat_Y=0.0, legs_hidden=True)
         S['tub_right'] = _mk_spot(v, 'tub_right', TUB.cx + 0.32, TUB.cy, tY, 'seat', 'sitting in the tub (June)', face=(0, -1), seat_Y=0.0, legs_hidden=True)
         S['door_inside'] = _mk_spot(v, 'door_inside', -1.62, 6.15, Y0, 'stand', 'inside, at the door (locking it): face (0, -1)', face=(0, -1))
-        S['lock'] = _mk_spot(v, 'lock', D_BATH[1] - 0.075, Y0 + KNOB_Y + 0.17, 5.84, 'point', 'the little thumb-turn bolt (inside)')
-        S['knob'] = _mk_spot(v, 'knob', D_BATH[1] - 0.075, Y0 + KNOB_Y, 5.84, 'point', 'the knob (inside): it turns gently')
-        S['keyhole'] = _mk_spot(v, 'keyhole', D_BATH[1] - 0.075, Y0 + KNOB_Y - 0.13, 5.84, 'point', 'the keyhole (inside): Mom\'s key turns in it')
+        S['lock'] = _mk_spot(v, 'lock', D_BATH[1] - 0.075, 5.84, Y0 + KNOB_Y + 0.17, 'point', 'the little thumb-turn bolt (inside)')
+        S['knob'] = _mk_spot(v, 'knob', D_BATH[1] - 0.075, 5.84, Y0 + KNOB_Y, 'point', 'the knob (inside): it turns gently')
+        S['keyhole'] = _mk_spot(v, 'keyhole', D_BATH[1] - 0.075, 5.84, Y0 + KNOB_Y - 0.13, 'point', 'the keyhole (inside): Mom\'s key turns in it')
         S['gap'] = _mk_spot(v, 'gap', -1.62, 5.83, Y0, 'point', 'the gap under the door (the drawing slides in here)')
         S['gap_floor'] = _mk_spot(v, 'gap_floor', -1.62, 6.12, Y0, 'surface', 'the floor just inside the door (where the drawing comes to rest)')
         return S
@@ -4833,7 +4849,9 @@ def ob_june(view='window', nightlight=1.0, hall=0.0, lamp=0.0, curtains=1.0, bed
     o = dict(nightlight=nightlight, hall=hall, lamp=lamp, curtains=curtains, bed=bed, dress=dress, tod=tod, upstairs=hall, june_door=door)
     main = JuneRoom()
     far = [UpstairsHall()]
-    out = lambda pen, v_: _outside_yard_full(pen, v_, tod)
+    md = kw.get('moon_dir')
+    if md: o['moon_dir'] = '%.1f_%.1f' % tuple(md)
+    out = lambda pen, v_: _outside_yard_full(pen, v_, tod, moon_dir=md)
     grade = 'ob_night' if (hall or lamp) else 'ob_dark'
     sp = build_view('ob_june_' + view, v, main, o, far=far, outside=out, grade=grade)
     if view == 'out':
@@ -4842,10 +4860,11 @@ def ob_june(view='window', nightlight=1.0, hall=0.0, lamp=0.0, curtains=1.0, bed
     return sp
 
 
-def _outside_yard_full(pen, v, tod='night', porch_light=0.0):
-    """The back yard and the woods as seen from inside the house (June's window, the kitchen window, the back door)."""
+def _outside_yard_full(pen, v, tod='night', porch_light=0.0, moon_dir=None):
+    """The back yard and the woods as seen from inside the house (June's window, the kitchen window, the back door).
+    moon_dir = (azimuth, elevation): the moon placed where a window's frame shows it ('under the moon')."""
     tt = 'dawn' if tod == 'dawn' else ('day87' if tod == 'day87' else 'night')
-    sky_dome(pen, v, tt)
+    sky_dome(pen, v, tt, moon_dir=moon_dir)
     vg = lifted(v, GROUND_Y)
     ground(pen, vg, 10.0, 75.0, tod=tt, worn=[(-3.3, 12.9), (-5.5, 18.0), (-7.4, 25.6)])
     woods(pen, vg, tod=tt, clearing=(-3.8, -1.4))

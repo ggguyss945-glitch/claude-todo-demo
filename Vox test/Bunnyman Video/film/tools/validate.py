@@ -83,9 +83,15 @@ def _line_shot(i):
     return lambda s: s.t0 <= F.t(i) < s.t1
 
 
+def _masked(s, who):
+    """The Bunnyman's girl's-voice lines (L): the mask has no mouth."""
+    if who != 'bunny': return False
+    ls = F.lines_in(s.t0, s.t1)
+    return any(l['who'] == 'L' for l in ls) and not any(l['who'] == 'D' for l in ls)
+
+
 ALLOW = [
-    ('LIP', lambda s, who: who == 'bunny' and s.p.get('who') != 'bunny' or (who == 'bunny' and not (s.p.get('act') and 'unmask' in str(s.p))),
-     "the Bunnyman's mask has no mouth: the girl's voice comes from inside it (he tilts / sobs instead)"),
+    ('LIP', _masked, "the Bunnyman's mask has no mouth: the girl's voice comes from inside it (he tilts / sobs instead)"),
 ]
 
 # ---------------------------------------------------------------------------------------------------- build helpers
@@ -265,13 +271,15 @@ def check_shot(k):
             room_ok = PLAN_OF.get(p['room']) == 'house'
             for t in ([sh.t0 + 0.01, (sh.t0 + sh.t1) / 2, sh.t1 - 0.01] if q.get('path') else [sh.t0 + 0.01]):
                 X, Yp, Y = plan_pos(sp, q, t)
-                if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True):
+                outdoors = p['room'] in ('living', 'hall', 'up', 'june', 'bath', 'attic', 'kitchen') and (Yp > 10.05 or Yp < -0.05)
+                if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True) and not outdoors:
                     ok, why = sp.walkable(X, Yp)
                     if not ok and (sp.info.get('floors')):
                         add('ERROR', k, 'FLOOR', '%s at plan (%.2f, %.2f): %s' % (who, X, Yp, why), t)
                     if room_ok:
                         L = floor_level(sp, X, Yp, Y)
-                        if L is not None and abs(L - Y) > 0.12:
+                        tol = 0.2 if stair_Y(X, Yp) is not None else 0.12          # a ramp up the treads is within a riser
+                        if L is not None and abs(L - Y) > tol:
                             add('ERROR', k, 'LEVEL', '%s feet at %.2f m, the floor there is at %.2f m (plan %.2f, %.2f)' % (who, Y, L, X, Yp), t)
             if kind == 'seat':
                 at = q.get('at')
@@ -359,7 +367,9 @@ def check_cuts():
                 if ident in last:
                     k0, t1, plan0, pp, era0 = last[ident]
                     gap = sh.t0 - t1
-                    if plan0 == plan and era0 == era and gap < 8.0 and era not in ('recall',) and not sh.p.get('cut') in ('static', 'white'):
+                    entering = any(q.get('enter') and q.get('id', q['who']) == ident for q in sh.p.get('ppl', []))
+                    if plan0 == plan and era0 == era and gap < 8.0 and era not in ('recall',) and not sh.p.get('cut') in ('static', 'white') \
+                            and not entering and not sh.p.get('montage') and sh.p.get('room') != 'parade':
                         d = math.hypot(p0[0] - pp[0], p0[1] - pp[1])
                         dY = abs(p0[2] - pp[2])
                         if (d > 0.8 or dY > 0.5) and k in KS:
