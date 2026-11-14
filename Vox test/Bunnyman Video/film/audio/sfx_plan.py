@@ -412,7 +412,10 @@ def picture_pass(out, lines, log):
         elif nm == 'girl_cry' and girl:                   # her crying takes over from the broken song
             g = girl[0]; s0 = g['t'] + float(g.get('len') or 5.0) - 0.75
             e_ = at('s192+0.25', t + float(p.get('dur') or 6.0))
-            c = dict(c, t=round(max(t, s0), 3), params={'dur': round(max(1.5, e_ - max(t, s0)), 2)}, space='slot',
+            t_new = round(max(t, s0), 3); q = {'dur': round(max(1.5, e_ - t_new), 2)}
+            if p.get('sobs'):                             # keep the picture's sob catches, shifted by the cue's move
+                q['sobs'] = [round(x - (t_new - t), 3) for x in p['sobs'] if x - (t_new - t) >= 0.0]
+            c = dict(c, t=t_new, params=q, space='slot',
                      gain_db=12.0, seed=3)                # seed 3: a cry that starts at once (others open with gasps);
                                                           # fix round 1 (critic 3 m9): +6 dB, it sat 17 LU under in its gaps
             why = 'her cry after the song, through the open slot, until Mom shuts it'

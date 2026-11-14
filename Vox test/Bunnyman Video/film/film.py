@@ -5045,7 +5045,7 @@ def plan_rule6(F):
     # 243 "Lock."
     tlk = t(243)
     C(T(243), 'ins', name='lock', kw=lambda tr, a=tlk - T(243): dict(lock=lambda tt: ease_in_out(clamp((tt - a) / 0.15)), knob=0.0, key=0.0),
-      c=dict(mv='push', rate=0.04), sfx=[(tlk + 0.05, 'lock_turn', 0, 0, 'close', dict(kind='thumb_bolt'))])
+      c=dict(mv='push', rate=0.04), sfx=[(tlk + 0.15, 'lock_turn', -3, 0, 'close', dict(kind='thumb_bolt'))])  # click as the bolt seats, after the 'L'
     # 244 "We sit in the dark, in the empty bathtub, my hand over her mouth."
     C(T(244), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6, bath_light=0.0), rim=DARK, montage=True,
       ppl=TUB_KIDS, acts=lambda A, s, sp: tub_hand(A, s, sp, t0=w(244, 'my') - 0.6), c=dict(mv='push', f=1.0, rate=0.02))
@@ -6011,7 +6011,7 @@ def plan_after(F):
     t_c0 = w(370, 'dead') - 0.15; t_c1 = w(370, 'missing') - 0.12 if w(370, 'missing') else t_c0 + 2.2
     t_lift = (w(370, 'since') or t_c1 + 0.8) + 0.25
     C(t_c0, 'ins', name='body_cop', anim=True, kw=dict(hand_t=1.0, lift_t=t_lift - t_c0), c=dict(mv='push', rate=0.02),
-      sfx=[(t_c0, 'police_radio', -16, 0.4, 'inside', dict(dur=3.0)), (t_c0 + 0.1, 'footsteps_wood_inside', -10, 0.3, 'inside', dict(n=2)),
+      sfx=[(t_c0 + 0.1, 'footsteps_wood_inside', -10, 0.3, 'inside', dict(n=2)),
            (t_c0 + 0.6, 'cloth_rustle', -8, 0.2, 'close')])
     C(t_c1, 'ins', name='body_cop', anim=True, kw=dict(off=t_c1 - t_c0, hand_t=1.0, lift_t=t_lift - t_c0, zoom=1.9, cx=700.0, cy=600.0),
       c=dict(mv='push', rate=0.015))
@@ -6235,7 +6235,7 @@ def plan_globals(F):
     G.append(_ev(t(333) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(334) - t(333), 2), tod='day', birds=0.3, creek=0.6))
     G.append(_ev(t(334) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(337) - t(334), 2), tod='night', creek=0.4))
     G.append(_ev(t(340) - 0.1, 'ambience_woods', -10, 0, 'woods', dur=round(t(342) - t(340), 2), tod='night', creek=0.4))
-    G.append(_ev(t(370) - 0.1, 'police_radio', -18, 0.3, 'outside', dur=6.0))
+    # (one police radio only: the beds() one at t(370) + 2.0; three layers stacked into garbled dispatch)
 
 
 # ==================================================================================================== main
