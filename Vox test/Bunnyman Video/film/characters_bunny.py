@@ -1139,7 +1139,9 @@ CAST['narrator'] = _v3cast(
     cloth=dict(top='#7f957a', top_sh='#596c55', top_hi='#9eb299', hood='#73896e', hood_sh='#4f604b', string='#e9e4d8',
                trousers='#3a3c44', trousers_sh='#24262c', socks='#a8a8ae', socks_sh='#7b7b82'))
 CAST['narrator_new'] = dict(CAST['narrator'], lock=0.9, blink_rate=0.0, micro=0.25, talk=0.35, pupil=0.85, lid_rest=0.22)
-CAST['narrator_neat'] = dict(CAST['narrator_new'], outfit='neat3', hair='chin_neat', feet='flats',
+# (fix round 1, fixer C: critic 2 minor 14, it read as an adult) the narrator's own chin-length hair, combed tidy (tidy: no
+# mess) instead of slicked back behind the ears, and a sixteen-year-old's smile without the adult smile folds (fold_k)
+CAST['narrator_neat'] = dict(CAST['narrator_new'], outfit='neat3', hair='chin', tidy=True, fold_k=0.3, feet='flats',
                              cloth=dict(top='#e9dfc9', top_sh='#bfb299', top_hi='#f6efe0', collar='#ffffff', collar_sh='#d8d6d0',
                                         button='#8a7a5a', trousers='#3d4256', trousers_sh='#272b39', shoes='#2b2522', shoes_sh='#171311'))
 # Grandma (memory): kind, old; silver hair in a soft bun, glasses, a lavender cardigan over a flowered blouse, a brooch,
@@ -1602,7 +1604,8 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     hc = sp['hair_c']
     hsh = mix(hc, '#000000', 0.36); hhi = mix(hc, '#ffffff', 0.28)
     yf, grow = _hairline(style, sp['part'])
-    mess = clamp(getattr(P, 'mess', 0.0) + (0.7 if style == 'loose' else 0.0) + (0.45 if style == 'chin' else 0.0))
+    mess = clamp(getattr(P, 'mess', 0.0) + (0.7 if style == 'loose' else 0.0) + (0.45 if style == 'chin' and not sp.get('tidy') else 0.0)
+                 + 0.4 * clamp(getattr(P, 'scratch', 0.0)))          # (fix round 1, fixer C) after the fight: wilder hair
     if style in _HANG3:
         # face-framing styles: the hair volume minus a face window cut along the FRONT of the hairline (|phi| < 1.3),
         # extended straight down, so the hair frames the face in a U and hangs past the jaw at the sides
@@ -1914,9 +1917,22 @@ def _front_cardigan3(c, sp, B, rows, P, det, t):
         ed, v = _surf_poly(B, rows, [(sd * (b['neck'] + 8), yS - 30), (sd * 6, yC - 4), (sd * 3, B.y_hip - 22)], dz=3)
         if v > -0.2:
             c.line(poly(ed, False), lw * 2.4, LINE); c.line(poly(ed, False), lw * 1.2, cl['rib'])
+    torn = clamp(getattr(P, 'scratch', 0.0))                  # (fix round 1, fixer C: critic 2 minor 12) after the fight
     for k in range(5):
+        if torn > 0.5 and k == 1: continue                    # a button torn off
         X, Y, vv, s_ = B.surf(0, yC + 6 + k * (B.y_hip - 40 - yC) / 4.5, 6, False, rows)
         if vv > 0.12: c.shape(oval(X, Y, 5.0 * s_), cl['button'], lw * 0.4)
+    if torn > 0.5:
+        # the left shoulder seam ripped open (the blouse showing through), dark smears and spatter down the front
+        rp, v = _surf_poly(B, rows, [(b['neck'] + 10, yS - 22), (b['neck'] + 34, yS - 14), (b['neck'] + 30, yS + 18), (b['neck'] + 14, yS + 26),
+                                     (b['neck'] + 20, yS + 4)], dz=4)
+        if v > 0.05:
+            q = smooth(rp, True, 0.3); c.fill(q, cl['blouse_sh']); c.line(q, lw * 0.6, LINE, 220)
+        for (x_, y_, r_) in ((-22, yC + 30, 11), (-8, yC + 58, 7), (26, yC + 12, 8), (34, B.y_hip - 70, 10), (-30, B.y_hip - 60, 6)):
+            X, Y, vv, s_ = B.surf(x_, y_, 4, False, rows)
+            if vv > 0.1:
+                c.fill(oval(X, Y, r_ * s_ * 1.2, r_ * s_ * 0.8), '#4a1414', 150)
+                c.fill(oval(X + 3 * s_, Y + r_ * s_, 2.0 * s_, 4.0 * s_), '#4a1414', 140)
     # two patch pockets just above the ribbed hem (where the ring goes: "She puts it in her pocket.")
     for sd in (-1, 1):
         x0_, x1_ = sd * 17, sd * (b['hip'] * 0.78)

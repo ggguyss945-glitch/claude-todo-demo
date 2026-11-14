@@ -1421,29 +1421,89 @@ def ins_desk(pen, t, **kw):
         pen.fill(oval(sx, sy, 34 + 40 * u, 60 + 50 * u), '#ffffff', 60 * (1 - u) * min(1.0, u * 4), blur=18)
 
 
+def _costume_flat(pen, cx, top, back=False, zip_u=None, t=0.0):
+    """The empty Bunnyman costume hanging slack from a wooden hanger (top = the hanger's shoulder line): no head, the
+    dark empty neck hole between the shoulders, the sleeves hanging straight and limp with the mitten paws dangling, the
+    legs hanging with the floppy plush feet, sag folds under the shoulders; the cream belly panel on the front; from
+    behind (back=True) the zipper down the spine (zip_u 0..1: how far the pull has slid down) and the pompom tail."""
+    c1, c2, c3 = '#a9adb7', '#7f8490', '#cdd1d9'
+    sh_w, wa_w = 210.0, 160.0
+    body = smooth([(cx - sh_w, top + 30), (cx - sh_w + 20, top + 10), (cx - 70, top), (cx + 70, top), (cx + sh_w - 20, top + 10), (cx + sh_w, top + 30),
+                   (cx + sh_w - 10, top + 140), (cx + wa_w + 10, top + 330), (cx + wa_w + 20, top + 520), (cx + 150, top + 560),
+                   (cx + 150, top + 900), (cx + 30, top + 905), (cx + 12, top + 560), (cx - 12, top + 560), (cx - 30, top + 905),
+                   (cx - 150, top + 900), (cx - 150, top + 560), (cx - wa_w - 20, top + 520), (cx - wa_w - 10, top + 330), (cx - sh_w + 10, top + 140)],
+                  True, 0.5)
+    pen.fill(moved(body, 18, 22), '#000000', 90, blur=26)
+    for sd in (-1, 1):                                                       # the limp sleeves, behind the body's edge
+        sl = smooth([(cx + sd * (sh_w - 6), top + 26), (cx + sd * (sh_w + 52), top + 70), (cx + sd * (sh_w + 58), top + 470),
+                     (cx + sd * (sh_w - 22), top + 478), (cx + sd * (sh_w - 30), top + 120)], True, 0.6)
+        pen.fill(sl, c2); pen.texture(sl, 'fabric', 0.7, 'overlay', 3.0); pen.line(sl, 4, '#2a2c34')
+        pw = smooth([(cx + sd * (sh_w - 26), top + 462), (cx + sd * (sh_w + 62), top + 462), (cx + sd * (sh_w + 66), top + 560),
+                     (cx + sd * (sh_w + 18), top + 600), (cx + sd * (sh_w - 30), top + 556)], True, 0.8)       # the empty mitten, drooping
+        pen.fill(pw, c1); pen.texture(pw, 'fabric', 0.6, 'overlay', 3.0); pen.line(pw, 4, '#2a2c34')
+    pen.fill(body, c1); pen.texture(body, 'fabric', 0.75, 'overlay', 3.4)
+    pen.linear(body, cx - sh_w, 0, cx + sh_w, 0, [(0, '#000000', 70), (0.35, '#000000', 0), (0.7, '#ffffff', 20), (1, '#000000', 80)])
+    for sd in (-1, 1):                                                       # the floppy feet hanging off the ends of the legs
+        ft = smooth([(cx + sd * 30, top + 880), (cx + sd * 152, top + 880), (cx + sd * 175, top + 960), (cx + sd * 120, top + 1000),
+                     (cx + sd * 40, top + 990), (cx + sd * 22, top + 930)], True, 0.8)
+        pen.fill(ft, c3); pen.texture(ft, 'fabric', 0.6, 'overlay', 3.0); pen.line(ft, 4, '#2a2c34')
+    if not back:
+        bp = smooth([(cx - 95, top + 170), (cx + 95, top + 170), (cx + 120, top + 380), (cx + 70, top + 520), (cx - 70, top + 520), (cx - 120, top + 380)], True, 0.9)
+        pen.fill(bp, '#ece4d4'); pen.texture(bp, 'fabric', 0.5, 'overlay', 3.0); pen.line(bp, 3, '#8a8478', 200)
+    for sd in (-1, 1):                                                       # sag folds hanging from the hanger's ends
+        for k in range(3):
+            x0 = cx + sd * (sh_w - 40 - 34 * k)
+            pen.line(smooth([(x0, top + 40), (x0 + sd * 8, top + 160 + 30 * k), (x0 - sd * 6, top + 300 + 20 * k)], False), 3, '#6a6e7a', 150)
+    for sd in (-1, 1):                                                       # leg creases
+        pen.line(smooth([(cx + sd * 80, top + 600), (cx + sd * 92, top + 740), (cx + sd * 78, top + 860)], False), 3, '#6a6e7a', 140)
+    pen.line(body, 5, '#2a2c34')
+    nk = oval(cx, top + 8, 70, 22)                                           # the empty neck hole: dark inside
+    pen.fill(nk, '#16141a'); pen.fill(oval(cx, top + 14, 56, 12), '#000000', 200); pen.line(nk, 4, '#2a2c34')
+    if back:
+        pen.fill(oval(cx, top + 610, 46, 40), '#f4f4f0'); pen.texture(oval(cx, top + 610, 46, 40), 'fabric', 0.5, 'overlay', 3.0)
+        pen.line(oval(cx, top + 610, 46, 40), 3, '#2a2c34')
+        y0, y1 = top + 26, top + 560
+        pen.seg((cx, y0), (cx, y1), 7, '#3a3a40', 220)
+        u = 0.0 if zip_u is None else clamp(zip_u)
+        zy = lerp(y0 + 10, y1 - 30, u)
+        if u > 0.01:                                                         # the teeth parting behind the pull
+            pen.fill(poly([(cx - 4, y0), (cx + 4, y0), (cx + 4 + 22 * u, zy), (cx - 4 - 22 * u, zy)]), '#16121a', 230)
+        pen.fill(rrect(cx - 12, zy, 24, 58, 7), '#c8c8d0'); pen.line(rrect(cx - 12, zy, 24, 58, 7), 3, '#3a3a40')
+        pen.fill(oval(cx, zy + 46, 6, 6), '#3a3a40')
+
+
 def ins_hanger(pen, t, back=False, zip_t=None, **kw):
-    """The Bunnyman is just a costume: the clean suit hanging empty on a rail in a wardrobe room (back=True: from behind,
-    the zipper; zip_t = s when the pull slides down)."""
-    pen.fill(rect(-400, -300, 2720, 1680), '#2a2630'); pen.texture(rect(-400, -300, 2720, 1680), 'plaster', 0.5, 'overlay', 1.0)
-    pen.radial(None, 960, 120, 1300, [(0, '#fff0d0', 120), (1, '#000000', 140)])
-    pen.fill(rect(-400, 100, 2720, 26), '#8a8a90'); pen.line(rect(-400, 100, 2720, 26), 3, '#2a2a30')
-    P_ = CH.Pose(); P_.turn = 2.0 if back else 0.05; P_.still = 1.0; P_.life = 0.0
-    for side in ('hl_', 'hr_'):
-        setattr(P_, side + 'down', 330.0); setattr(P_, side + 'out', -6.0); setattr(P_, side + 'fwd', 20.0)
-    P_.h_nod = 0.35; P_.h_tilt = 6.0 * math.sin(t * 0.8)
-    pen.seg((960, 100), (960, 190), 6, '#b8b8c0')
-    pen.line(poly([(860, 230), (960, 175), (1060, 230)], False), 7, '#b8b8c0')
-    sway = 4.0 * math.sin(t * 0.9)
+    """The Bunnyman is just a costume (fix round 1, fixer C: critic 1 M20 / critic 2 M12: it stood upright with its head
+    on and live eyes, a jump scare): the empty suit hangs slack on a wooden hanger from the closet rod, sleeves and feet
+    dangling, the dark empty neck hole; the head sits on the shelf beside it, its glass eyes dull, the hollow showing
+    under it. back=True: from behind, the zipper (zip_t = s when the pull slides down). The suit sways a little."""
+    R = rect(-400, -300, 2720, 1680)
+    pen.fill(R, '#3a3038'); pen.texture(R, 'plaster', 0.5, 'overlay', 1.0)
+    for q in range(-4, 20):                                                  # the closet's tongue-and-groove boards
+        pen.seg((q * 140, -300), (q * 140, 1380), 3, '#2a2228', 160)
+    pen.radial(None, 900, 80, 1350, [(0, '#fff0d0', 120), (0.6, '#000000', 30), (1, '#000000', 150)])
+    shelf = rect(1180, 470, 900, 34)                                          # the shelf on the right
+    pen.fill(moved(shelf, 0, 26), '#000000', 90, blur=14); pen.fill(shelf, '#7a5a3a'); pen.texture(shelf, 'wood', 0.7, 'overlay', 1.2); pen.line(shelf, 3)
+    rod = rect(-400, 112, 2720, 22)
+    pen.fill(rod, '#9a9aa2'); pen.linear(rod, 0, 112, 0, 134, [(0, '#ffffff', 90), (1, '#000000', 80)]); pen.line(rod, 3, '#2a2a30')
+    # the head on the shelf: the clean mascot head, empty, its neck hole open toward us, the glass eyes dull
+    hx, hy = 1430, 318
+    P_ = CH.Pose(); P_.turn = -0.35 if not back else 0.6; P_.still = 1.0; P_.life = 0.0; P_.h_tilt = -8.0; P_.h_nod = 0.15
     cv = pen.cv
-    cv.save(); cv.rotate(0.3 * math.sin(t * 0.9)); cv.translate(sway, 0)
-    CH.draw(pen, 'bunny87', 960, 1240, 1180, P_, light=dict(rim='#fff0d0', rim_a=60, side=-1, key=0.0), t=t)
-    if back and zip_t is not None:
-        u = ease_in_out(clamp((t - zip_t) / 1.2))
-        x0, y0 = 960, 420
-        pen.seg((x0, y0), (x0, y0 + 520), 6, '#3a3a40', 200)
-        zy = y0 + 470 * u
-        pen.fill(poly([(x0 - 14, y0), (x0 + 14, y0), (x0 + 30 * u, zy), (x0 - 30 * u, zy)]), '#16121a', 220)
-        pen.fill(rrect(x0 - 11, zy, 22, 54, 6), '#c8c8d0'); pen.line(rrect(x0 - 11, zy, 22, 54, 6), 3, '#3a3a40')
+    cv.save(); cv.clipRect(skia.Rect.MakeLTRB(1100, -300, 2300, 455), skia.ClipOp.kIntersect, True)
+    CH.draw_bust(pen, 'bunny87', hx, hy, 0.55, P_, light=dict(rim='#fff0d0', rim_a=50, side=-1, key=-0.1), t=0.0)
+    cv.restore()
+    pen.fill(oval(hx, 452, 118, 22), '#16141a'); pen.fill(oval(hx, 456, 96, 12), '#000000', 200)          # the hollow under the head
+    pen.fill(oval(hx - 20, 210, 120, 70), '#000000', 40, blur=30)
+    # the hanger on the rod and the suit swaying a little from its hook
+    sway = 1.6 * math.sin(t * 0.9)
+    cv.save(); cv.translate(900, 120); cv.rotate(sway); cv.translate(-900, -120)
+    pen.line(smooth([(900, 128), (930, 104), (918, 86), (896, 92)], False), 7, '#b8b8c0')
+    hg = poly([(690, 236), (900, 170), (1110, 236), (1104, 252), (900, 192), (696, 252)])
+    pen.fill(hg, '#8a5a32'); pen.texture(hg, 'wood', 0.7, 'overlay', 1.2); pen.line(hg, 3)
+    pen.seg((900, 130), (900, 172), 6, '#b8b8c0')
+    zu = None if zip_t is None else ease_in_out(clamp((t - zip_t) / 1.2))
+    _costume_flat(pen, 900, 226, back=back, zip_u=zu, t=t)
     cv.restore()
 
 
@@ -1804,9 +1864,11 @@ def _hatchet(pen, x, y, ang, s=1.0, blood=0.7):
 
 
 def ins_hatchet_steps(pen, t, hits=(), **kw):
-    """'And behind them, something hard knocking against every step.': the flight from the side (rising to the right),
-    the hatchet dragged UP it by a matted paw ahead and above: its head trails on the tread below, is pulled up over each
-    riser and drops onto the next tread on each hit time (a puff of dust); the frame climbs with it."""
+    """'And behind them, something hard knocking against every step.': the hall flight from the side (rising to the
+    right): the white stringer, the red runner with its navy border over each tread and its brass rod, the navy hall
+    wallpaper; the filthy plush feet climb ahead (one tread a step) and the hatchet trails behind, dragged by the paw: its
+    head is pulled up over each riser and drops onto the next tread on each hit (a puff of dust); the near balusters and
+    the handrail slide past in the foreground. (fix round 1, critic 2 minor 11: it read as a diagram with a giant paw.)"""
     run, rise = 330.0, 230.0
     k_ = 0.0; ph = 0.0
     for j, th in enumerate(hits):
@@ -1814,12 +1876,31 @@ def ins_hatchet_steps(pen, t, hits=(), **kw):
             u = clamp((t - (th - 0.5)) / 0.5)
             k_ = j + ease_in_out(u); ph = u if u < 1.0 else 0.0
     cv = pen.cv
-    pen.fill(rect(-400, -300, 2720, 1680), '#2c3350'); pen.texture(rect(-400, -300, 2720, 1680), 'fabric', 0.35, 'overlay', 3.0)   # the hall wallpaper
+    R = rect(-400, -300, 2720, 1680)
+    pen.fill(R, '#26304e'); pen.texture(R, 'fabric', 0.35, 'overlay', 3.0)                  # the navy hall wallpaper
+    for q in range(-6, 14):                                                               # its faint stripe
+        pen.fill(rect(-400 + q * 190, -300, 8, 1680), '#3a4670', 70)
     ox, oy = 300.0, 980.0
     hx = ox + k_ * run + 150.0
     hy = oy - k_ * rise - 16.0 - 70.0 * math.sin(clamp(ph) * math.pi)
-    cv.save(); cv.translate(820 - hx, 640 - hy)
-    _stairs_side(pen, ox, oy, 9, run, rise, t)
+    tx_, ty_ = 820 - hx, 640 - hy
+    cv.save(); cv.translate(tx_, ty_)
+    _stairs_side(pen, ox, oy, 12, run, rise, t)
+    for kk in range(-2, 13):                                                              # the runner's navy border on each tread
+        x0, y0 = ox + kk * run, oy - kk * rise
+        pen.fill(rect(x0, y0 - 16, run, 7), '#22304a', 230)
+    # the feet climbing ahead: a step lands just before each hit, two treads above the hatchet's head
+    nsteps = sum(1 for th in hits if t >= th - 0.3)
+    for side_, lag in ((0, 0.0), (1, 0.48)):
+        jj = max(0, nsteps - side_) + 1
+        tl = (hits[min(len(hits) - 1, max(0, nsteps - 1))] - 0.3) if hits else 0.0
+        lift = 0.0
+        if nsteps < len(hits) and side_ == 0:
+            tn = hits[nsteps] - 0.3
+            lift = clamp((t - (tn - 0.45)) / 0.45)
+        fxp = ox + (jj + 1.4) * run + 40 * side_ + run * ease_in_out(lift)
+        fyp = oy - (jj + 1) * rise - rise * ease_in_out(lift) - 90 * math.sin(math.pi * lift)
+        _plush_foot(pen, fxp - 60, fyp - 14, 640.0, t, 0.8, 0.0)
     ang = 148.0 - 14.0 * math.sin(clamp(ph) * math.pi)
     _hatchet(pen, hx, hy, ang, 0.8)
     a = math.radians(ang)
@@ -1831,7 +1912,18 @@ def ins_hatchet_steps(pen, t, hits=(), **kw):
                 aa = math.pi * (0.08 + 0.84 * q / 7)
                 r_ = 30 + 220 * dt
                 pen.fill(oval(hx - 40 + math.cos(aa) * r_, hy + 6 - math.sin(aa) * r_ * 0.5, 9 - 12 * dt), '#c8b8a0', 210 * (1 - dt / 0.5))
-    hero_paw(pen, 'bunny', gx + 26, gy - 20, 215, 'paw_grip', 228.0, -1, (gx + 900, gy - 900), dict(side=-1, key=-0.3))
+    hero_paw(pen, 'bunny', gx + 20, gy - 16, 165, 'paw_grip', 228.0, -1, (gx + 900, gy - 900), dict(side=-1, key=-0.3))
+    cv.restore()
+    # the near balusters and the handrail, in the foreground (they slide past faster than the flight: parallax)
+    cv.save(); cv.translate(tx_ * 1.35, ty_ * 1.35)
+    for q in range(-4, 30):
+        bx = ox + q * run * 0.5 - 60
+        by = oy - q * rise * 0.5 + 40
+        bal = rrect(bx - 17, by - 980, 34, 1000, 12)
+        pen.fill(bal, '#0e0e18', 225, blur=9); pen.fill(rect(bx - 6, by - 980, 6, 1000), '#6a6a88', 50, blur=8)      # dark, out of focus
+    hr = poly([(ox - 2000, oy + 2000 * rise / run - 1010), (ox + 12000, oy - 12000 * rise / run - 1010),
+               (ox + 12000, oy - 12000 * rise / run - 940), (ox - 2000, oy + 2000 * rise / run - 940)])
+    pen.fill(hr, '#5a3420', 240, blur=6)
     cv.restore()
     pen.linear(rect(-400, -300, 2720, 1680), 0, -300, 0, 1380, [(0, '#000000', 110), (0.45, '#000000', 0), (1, '#000000', 150)])
 
@@ -2018,7 +2110,9 @@ INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dre
                     'under_bridge': (lambda pen, t, **kw: ins_under_bridge(pen, t, **kw), 'ob_vhs87'),
                     'egg_halves_hand': (ins_egg_halves_hand, 'ins_lamp'), 'ring_pocket': (ins_ring_pocket, 'ins_lamp'),
                     'hatchet_steps': (ins_hatchet_steps, 'ins_dark'), 'hatchet_thunk': (ins_hatchet_thunk, 'ins_dark'),
-                    'hatchet_pile': (ins_hatchet_pile, 'ins_dark')}
+                    'hatchet_pile': (ins_hatchet_pile, 'ins_dark'),
+                    # fix round 1, fixer C
+                    'wet_floor': (lambda pen, t, **kw: ins_wet_floor(pen, t, **kw), 'ob_dark')}
 
 
 INS_CUSTOM = {'badge': (ins_badge, 'ins_memory'), 'poster': (ins_poster, 'ins_memory'), 'wedding': (ins_wedding, 'ins_lamp'),
@@ -4518,6 +4612,182 @@ def plan_rule5(F):
       c=dict(mv='push', f=1.15, rate=0.015))
 
 
+# ==================================================================================================== fix round 1, fixer C: new inserts
+def _lino_persp(pen, horizon=150.0, f=1000.0, h=0.17, moon=1.0, t=0.0, seed=3):
+    """The kitchen's red-brick linoleum seen from a few centimetres above it (a pinhole at height h m over the floor,
+    looking along it: horizon y, focal f px): small printed bricks shrinking toward the horizon, the moonlight from the
+    open back door falling across it (upper left), glass from the smashed window glinting. Returns the projection
+    p(x, z) -> design px."""
+    def p(x, z):
+        return (960.0 + f * x / z, horizon + f * h / z)
+    pen.fill(rect(-400, -300, 2720, 1680), '#1c1416')                                  # the grout of the printed pattern
+    rng = np.random.default_rng(seed)
+    bw, bh = 0.15, 0.055
+    z = 0.13
+    j = 0
+    while z < 7.0:
+        z1 = z + bh
+        if p(0, z)[1] > -300:
+            off = (j % 2) * bw * 0.5
+            for x in np.arange(-5.0 - off, 5.0, bw):
+                q = [p(x + 0.006, z1 - 0.004), p(x + bw - 0.006, z1 - 0.004), p(x + bw - 0.006, z + 0.004), p(x + 0.006, z + 0.004)]
+                if q[1][0] < -420 or q[0][0] > 2340: continue
+                pen.fill(poly(q), mix('#6a1e1a', '#8a3226', rng.uniform(0, 1)))
+        z = z1; j += 1
+    floor = rect(-400, horizon, 2720, 1400)
+    pen.texture(floor, 'grunge', 0.35, 'multiply', 2.0)
+    pen.fill(rect(-400, -300, 2720, horizon + 300 + 6), '#07060a')                     # beyond the floor: the dark kitchen
+    pen.linear(floor, 0, horizon, 0, 1380, [(0, '#000000', 235), (0.3, '#000000', 150), (1, '#000000', 70)])
+    # the moonlight from the open back door: a pale wedge across the floor from the upper left
+    wedge = poly([p(-1.6, 5.0), p(-0.6, 5.0), p(0.55, 0.2), p(-0.9, 0.2)])
+    pen.fill(wedge, '#9fb6ff', 40 * moon, blur=40)
+    pen.fill(wedge, '#c8d6ff', 18 * moon, blur=8)
+    for k in range(46):                                                               # glass from the window
+        x, zz = rng.uniform(-1.2, 1.1), rng.uniform(0.3, 3.5)
+        px, py = p(x, zz)
+        s_ = 7.0 / zz
+        a_ = rng.uniform(0, 6.28)
+        sh_ = poly([(px + math.cos(a_) * s_, py + 0.35 * math.sin(a_) * s_), (px + math.cos(a_ + 2.3) * s_ * 0.6, py + 0.35 * math.sin(a_ + 2.3) * s_ * 0.6),
+                    (px + math.cos(a_ + 4.1) * s_ * 0.8, py + 0.35 * math.sin(a_ + 4.1) * s_ * 0.8)])
+        g = 0.5 + 0.5 * math.sin(t * 3.0 + k * 1.7)
+        pen.fill(sh_, '#cfe0ff', (70 + 140 * g) * moon)
+    return p
+
+
+def _wet_print(pen, p, x, z, k=1.0, t=0.0, seed=0, ang=0.0):
+    """A wet, filthy plush foot print on the lino at plan (x, z): a long rounded sole, mud and water pooling in it,
+    splashes round it, the moon glinting on the wet (k = how fresh, 0..1)."""
+    if k <= 0.01: return
+    rng = np.random.default_rng(40 + seed)
+    ca, sa = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    pts = []
+    for q in range(30):
+        a_ = q / 30.0 * 2 * math.pi
+        rx = 0.16 * (1.0 + 0.1 * math.cos(2 * a_)); rz = 0.07
+        jit = 1.0 + 0.08 * rng.uniform(-1, 1)
+        lx, lz = rx * math.cos(a_) * jit, rz * math.sin(a_) * jit
+        pts.append(p(x + lx * ca - lz * sa, z + lx * sa + lz * ca))
+    shp = smooth(pts, True, 0.8)
+    pen.fill(shp, '#120a08', 225 * k)
+    pen.fill(shp, '#3a2618', 110 * k, blur=3)
+    for q in range(12):                                                                # splashes round it
+        a_ = rng.uniform(0, 6.28); r_ = rng.uniform(0.18, 0.32)
+        px, py = p(x + math.cos(a_) * r_, z + math.sin(a_) * r_ * 0.4)
+        s_ = rng.uniform(3.0, 7.0) / max(0.3, z)
+        pen.fill(oval(px, py, s_, s_ * 0.4), '#160c08', 200 * k)
+    hx, hy = p(x - 0.03, z + 0.02)
+    pen.fill(oval(hx, hy, 50 / max(0.3, z), 3.5 / max(0.3, z)), '#cfe0ff', (28 + 14 * math.sin(t * 2.0)) * k, blur=5)     # the wet shine
+
+
+def _plush_foot(pen, x, y, s, t=0.0, wet=1.0, squash=0.0):
+    """The filthy suit's foot in profile (toe to the right), its sole at (x, y), s px per metre: a big plush slipper
+    foot (three toe bumps), the matted grey-brown fur gone dark and sodden with mud and water toward the sole, clumped
+    tufts all round its outline, the furry cuff of the leg rising out of frame; squash flattens it on landing."""
+    L, Hf = 0.38, 0.13 * (1.0 - 0.15 * squash)
+    top = [(-L * 0.5, -Hf * 0.55), (-L * 0.44, -Hf * 1.05), (-L * 0.25, -Hf * 1.3), (-0.02, -Hf * 1.25), (L * 0.14, -Hf * 1.12),
+           (L * 0.22, -Hf * 1.18), (L * 0.31, -Hf * 1.02), (L * 0.38, -Hf * 1.06), (L * 0.46, -Hf * 0.82), (L * 0.52, -Hf * 0.4)]
+    bot = [(L * 0.5, -0.004), (L * 0.2, 0.0), (-L * 0.3, 0.0), (-L * 0.5, -Hf * 0.12)]
+    foot = smooth([(x + u * s, y + v * s) for u, v in top + bot], True, 0.9)
+    lw0, lw1 = 0.13, 0.15
+    lpts_l = [(x - lw0 * s - 0.04 * s + 0.012 * s * math.sin(k_ * 2.1), lerp(y - Hf * 0.9 * s, y - 1.3 * s, k_ / 8.0)) for k_ in range(9)]
+    lpts_r = [(x + lw0 * s - 0.04 * s + 0.012 * s * math.cos(k_ * 1.7), lerp(y - Hf * 0.95 * s, y - 1.3 * s, k_ / 8.0)) for k_ in range(9)]
+    leg = smooth(lpts_l + lpts_r[::-1], True, 0.6)
+    pen.fill(oval(x, y + 2, L * 0.55 * s, 0.02 * s), '#000000', 150, blur=10)            # its contact shadow on the wet floor
+    for shp in (leg, foot):
+        pen.fill(shp, '#5e564c')
+        pen.texture(shp, 'fabric', 0.7, 'overlay', 4.0)
+        pen.texture(shp, 'grunge', 0.6, 'multiply', 1.4)
+    pen.linear(leg, x - 0.2 * s, 0, x + 0.1 * s, 0, [(0, '#000000', 10), (1, '#000000', 160)])
+    pen.linear(foot, 0, y - Hf * 1.35 * s, 0, y, [(0, '#24160c', 50 * wet), (0.5, '#24160c', 170 * wet), (1, '#100804', 240 * wet)])
+    pen.linear(leg, 0, y - 1.3 * s, 0, y, [(0, '#24160c', 30 * wet), (1, '#24160c', 170 * wet)])
+    for k_ in (0.14, 0.31):                                                           # the toe bumps' creases
+        cx_ = x + L * k_ * s
+        pen.line(smooth([(cx_ + 0.01 * s, y - Hf * 1.1 * s), (cx_ - 0.004 * s, y - Hf * 0.7 * s), (cx_ - 0.01 * s, y - Hf * 0.35 * s)], False), max(2.0, 0.005 * s), '#14100c', 200)
+    rng = np.random.default_rng(17)
+    pts = [(x + u * s, y + v * s) for u, v in top]
+    for q in range(40):                                                               # matted, clumped tufts all along the outline
+        i = rng.integers(0, len(pts) - 1); k_ = rng.uniform(0, 1)
+        tx, ty = lerp(pts[i][0], pts[i + 1][0], k_), lerp(pts[i][1], pts[i + 1][1], k_)
+        a_ = math.atan2(pts[i + 1][1] - pts[i][1], pts[i + 1][0] - pts[i][0]) - math.pi / 2 + rng.uniform(-0.6, 0.6)
+        ln = rng.uniform(0.012, 0.032) * s
+        pen.fill(poly([(tx - 0.009 * s * math.sin(a_), ty + 0.009 * s * math.cos(a_)), (tx + math.cos(a_) * ln, ty + math.sin(a_) * ln),
+                       (tx + 0.009 * s * math.sin(a_), ty - 0.009 * s * math.cos(a_))]), '#4e463c', 235)
+    cuff_y = y - Hf * 1.0 * s
+    for q in range(22):                                                               # the shaggy cuff where the leg meets the foot
+        u = rng.uniform(0, 1)
+        tx = lerp(x - 0.17 * s, x + 0.09 * s, u); ln = rng.uniform(0.015, 0.045) * s; w_ = rng.uniform(0.006, 0.014) * s
+        pen.fill(smooth([(tx - w_, cuff_y - 0.02 * s), (tx + rng.uniform(-0.012, 0.012) * s, cuff_y + ln), (tx + w_, cuff_y - 0.02 * s)], True, 0.5),
+                 mix('#3a322a', '#5a5246', rng.uniform(0, 1)), 230)
+    for q in range(4):                                                                # wet glints low on the sodden fur
+        bx = rng.uniform(-L * 0.38, L * 0.35); by = rng.uniform(0.02, 0.05)
+        pen.fill(oval(x + bx * s, y - by * s, 0.012 * s, 0.003 * s), '#cfe0ff', 55 * wet, blur=2)
+    pen.line(foot, max(2.0, 0.006 * s), '#0a0806', 230); pen.line(leg, max(2.0, 0.006 * s), '#0a0806', 200)
+
+
+def ins_wet_floor(pen, t, phase='wet', step=0.15, lift=0.4, drag0=0.0, drag1=0.95, **kw):
+    """'Wet.' / 'Dragging.' (fix round 1, critic 1 M7, critic 2 M8 / minor 10): low on the kitchen lino by the smashed
+    window and the open back door. phase 'wet': a filthy, sodden plush foot comes down into frame and plants (a splash,
+    mud and water squeezing out round it), drips fall from the matted fur above, it lifts away off a dark wet print
+    beside the last ones. phase 'drag': the line of wet prints going away from us and the old hatchet's head dragged
+    across the frame ON the floor (its handle rising out of frame to the paw), scraping a wet smear and a pale scratch
+    through the lino behind it."""
+    p = _lino_persp(pen, t=t)
+    if phase == 'wet':
+        _wet_print(pen, p, 0.42, 1.25, 0.9, t, seed=1, ang=4)
+        _wet_print(pen, p, -0.1, 2.0, 0.8, t, seed=2, ang=-3)
+        fx_, fz = 0.0, 0.44
+        down = ease_in_quad(clamp((t - (step - 0.22)) / 0.22))                        # the foot comes down fast and heavy
+        up = ease_in_out(clamp((t - lift) / 0.32))
+        _wet_print(pen, p, fx_ + 0.02, fz, clamp((t - step - 0.02) / 0.1), t, seed=3, ang=-2)
+        dt = t - step
+        if 0.0 <= dt < 0.6:                                                           # the splash where it lands
+            rng = np.random.default_rng(12)
+            for q in range(26):
+                a_ = rng.uniform(math.pi * 1.05, math.pi * 1.95); sp_ = rng.uniform(400, 1100)
+                px0, py0 = p(fx_ + rng.uniform(-0.17, 0.17), fz - 0.02)
+                x_ = px0 + math.cos(a_) * sp_ * dt * 0.9
+                y_ = py0 + math.sin(a_) * sp_ * dt + 2200 * dt * dt
+                if y_ > py0 + 20: continue
+                pen.fill(oval(x_, y_, 7, 7), '#24160e', 235 * clamp(1 - dt / 0.6))
+                pen.fill(oval(x_ - 2, y_ - 2, 2.5, 2.5), '#cfe0ff', 170 * clamp(1 - dt / 0.6))
+        if down > 0.0 and up < 1.0:
+            fx, fy = p(fx_, fz)
+            s_ = 1000.0 / fz
+            sq = math.exp(-max(0.0, dt) * 14.0) if dt >= 0 else 0.0
+            _plush_foot(pen, fx - 40 + 90 * up, fy + 8 - 0.42 * s_ * (1.0 - down) - 1.1 * s_ * up, s_, t, 1.0, sq)
+        rng = np.random.default_rng(31)                                               # drips from the matted fur above
+        for q in range(8):
+            ph = (t * 1.5 + q * 0.37) % 1.0
+            px0, py0 = p(fx_ + rng.uniform(-0.3, 0.3), fz + rng.uniform(-0.05, 0.4))
+            yy = lerp(-140, py0, ph * ph)
+            pen.fill(poly([(px0 - 4, yy), (px0, yy - 16), (px0 + 4, yy), (px0, yy + 5)]), '#2a1a12', 220)
+            if ph > 0.92: pen.fill(oval(px0, py0, 12, 3), '#cfe0ff', 120)
+    else:
+        for q, (x, z) in enumerate(((0.45, 0.6), (-0.05, 1.0), (0.35, 1.5), (-0.1, 2.1), (0.25, 2.9), (-0.05, 3.8))):
+            _wet_print(pen, p, x, z, 0.85, t, seed=10 + q, ang=4 if q % 2 else -4)
+        lin = clamp((t - drag0) / max(0.1, drag1 - drag0))
+        u = ease_in_out(lin) * 0.75 + lin * 0.25
+        hz = 0.72
+        x0, x1 = -0.62, 0.5
+        hx_ = lerp(x0, x1, u)
+        # the smear and the scratch behind the head: a wet band on the floor, blotchy at its edges
+        n_ = 24
+        top = [p(lerp(x0 - 0.5, hx_ - 0.02, k_ / n_), hz + 0.07 * min(1.0, 4.0 * (1 - k_ / n_)) + 0.012 * math.sin(k_ * 1.9)) for k_ in range(n_ + 1)]
+        bot = [p(lerp(x0 - 0.5, hx_ - 0.02, k_ / n_), hz - 0.06 * min(1.0, 4.0 * (1 - k_ / n_)) + 0.012 * math.cos(k_ * 1.3)) for k_ in range(n_ + 1)]
+        band = poly(top + bot[::-1])
+        pen.fill(band, '#140a06', 230); pen.fill(band, '#3a2216', 100, blur=4)
+        mid = [p(lerp(x0 - 0.5, hx_ - 0.02, k_ / n_), hz) for k_ in range(n_ + 1)]
+        pen.line(poly(mid, False), 3, '#d8b8a0', 140)
+        pen.line(poly([(x_, y_ - 9) for x_, y_ in mid], False), 5, '#9fb6ff', 110, blur=2)       # the moon on the wet smear
+        hx, hy = p(hx_, hz)
+        wob = 3.0 * math.sin(t * 31.0)
+        _hatchet(pen, hx + 94, hy - 122 + wob * 0.4, 128.0 + wob, 0.9, blood=0.9)          # the blade's lower corner ON the floor at (hx, hy)
+        rng = np.random.default_rng(int(t * 30))                                      # flecks of lino and grit at the blade
+        for q in range(7):
+            pen.fill(oval(hx - 70 - rng.uniform(0, 70), hy - rng.uniform(0, 26), 3, 3), '#c8a890', 180 * clamp(lin * 5))
+    pen.radial(None, 960, 640, 1350, [(0, '#000000', 0), (0.6, '#000000', 50), (1, '#000000', 190)], clip=False)
+
+
 # ==================================================================================================== RULE 6: THE BATHROOM (589.8 - 698.1)
 TUB_CAM = cm((-2.55, 6.3, 4.15), (-2.0, 8.2, 3.55), S=1050, sx=960, sy=560)            # into the tub from the left of the door
 FLOOR_CAM = cm((-2.15, 8.0, 0.22), (-3.05, 9.3, 0.18), S=900, sx=960, sy=720)            # low on the kitchen floor by the back door
@@ -4537,12 +4807,38 @@ def feet_gap(t0, t1, u=(0.42, 0.62), wob=0.03):
 
 
 def tub_hand(A, s, sp, t0=None):
+    """The two in the tub: the narrator (nearer the lens, left) has an arm round June and a palm clamped over her mouth.
+    (fix round 1, critic 1 M8: the hand lay on June's hair; June's face was turned away to the door, so the palm landed on
+    the back of her head. June now huddles into the narrator, her face turned to her (her mouth on the side the hand
+    comes from), her eyes going to the door; the palm sits on her mouth and chin, the fingers on her cheek.)"""
     n, j = A['narrator'], A['june']
-    n.hand_over(s.t0 - 2.0 if t0 is None else t0, -1, j, 'mouth', dur=0.01 if t0 is None else 0.5)
-    n.reach_to(s.t0 - 2.0, 1, (j, 'chest'), dur=0.01, contact='palm', shape='relaxed', z=80.0)
     gz = scr(sp, (-1.62, 5.85, 3.3))
-    n.look_at(s.t0 - 2.0, gz, None, 0.01, z=300.0); j.look_at(s.t0 - 2.0, gz, None, 0.01, z=300.0)
+    j.face(-0.75, 0.0, s.t0 - 2.0)
+    n.hand_over(s.t0 - 2.0 if t0 is None else t0, -1, j, 'mouth', dur=0.01 if t0 is None else 0.5, z=90.0)
+    n.reach_to(s.t0 - 2.0, 1, (j, 'shoulder_r'), dur=0.01, contact='palm', shape='relaxed', z=80.0)
+    n.look_at(s.t0 - 2.0, gz, None, 0.01, z=300.0)
+    j.look_at(s.t0 - 2.0, (n, 'eyes'), None, 0.01, z=200.0)
+    j.look_at(s.t0 + 0.6, gz, None, 0.35, z=300.0, head=0.35)                    # her eyes go to the door, her face stays in the hand
     return []
+
+
+def bust_mouth(who, cx, cy, scale):
+    """Design point of the mouth of a bust drawn at (cx, cy, scale) facing front (a hand over the mouth)."""
+    sp = CH.CAST[who]
+    k = 600.0 * scale / sp['hh']
+    return cx, cy + sp['mouth_y'] * k
+
+
+def hand_on_mouth(who, cx, cy, sc, size, side=-1, t_in=None, dx=0.0, dy=0.0):
+    """A hand clamped over the mouth of a bust (cx, cy, sc), coming in from the side: the palm on the mouth and chin, the
+    fingers across the far cheek; t_in = when it comes in (None: already there)."""
+    def fn(tt):
+        mx, my = bust_mouth(who, cx(tt) if callable(cx) else cx, cy(tt) if callable(cy) else cy, sc)
+        k = 1.0 if t_in is None else ease_out_cubic(clamp((tt - t_in) / 0.35))
+        x = mx + side * (0.5 * size + 500.0 * (1.0 - k)) + dx
+        y = my + 0.02 * size + 160.0 * (1.0 - k) + dy
+        return (x, y, 262.0 if side < 0 else 98.0, 1.0)
+    return fn
 
 
 def plan_rule6(F):
@@ -4563,49 +4859,115 @@ def plan_rule6(F):
       ppl=[P('bunny', (-3.3, 10.9, 0.45), path=[(T(238) + 0.2, (-3.3, 10.9, 0.45)), (T(238) + 1.0, (-3.3, 10.15, 0.45)), (T(239), (-3.25, 9.35, 0.0))],
              surface='heavy', sil=0.9, sil_rim='#9fb6ff', sil_rim_a=0.55, turn=0.0, act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
       c=dict(mv='push', f=1.0, rate=0.02), sfx=[(T(238) + 1.0, 'floor_creak_heavy', -2, 0, 'inside')])
-    # 239 "Wet."  240 "Dragging."  low on the floor: filthy wet feet, the hatchet head dragging on the linoleum
-    C(T(239), 'set', room='kitchen', view='back', cam=FLOOR_CAM, set=dict(kitchen=0.0, mud=1.0, smash=1.0, back_door=100.0), rim=MOON,
-      ppl=[P('bunny', (-3.2, 9.6, 0.0), path=[(T(239), (-3.2, 9.6, 0.0)), (T(241), (-2.55, 8.45, 0.0))], surface='heavy', dimk=0.35, room_light=False,
-             act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
-      c=dict(mv='push', f=1.0, rate=0.02), focus=1.4, sfx=[(t(239), 'wet_step', 0, 0, 'inside'), (t(240) - 0.05, 'wet_drag', 0, 0, 'inside', dict(dur=1.0, hatchet=True))])
-    # 241 "I grab June and run."  down the corridor toward us, to the bathroom
-    C(T(241), 'set', room='up', view='west', set=dict(upstairs=0.0, june_door=70.0), rim=NIGHT,
-      ppl=[P('narrator', (0.7, 5.45, 2.85), path=[(T(241), (0.7, 5.45, 2.85)), (T(242) + 0.3, (-1.25, 5.42, 2.85))], run=True, expr='terror'),
-           P('june', (1.05, 5.15, 2.85), path=[(T(241) + 0.1, (1.05, 5.15, 2.85)), (T(242) + 0.35, (-0.95, 5.12, 2.85))], run=True, expr='terror')],
-      c=dict(mv='push', f=1.1, rate=0.02))
-    # 242 "Bathroom."  they dash in, the door swings shut
-    tdoor = T(242) + 0.45
-    C(T(242), 'set', room='up', view='bath', set=dict(upstairs=0.0, bath_door=lambda tt, a=tdoor: 75.0 * (1.0 - ease_in_out(clamp((tt - a) / 0.25)))),
-      rim=NIGHT, ppl=[P('june', (-1.1, 5.35, 2.85), path=[(T(242), (-1.1, 5.35, 2.85)), (tdoor - 0.05, (-1.95, 6.65, 2.85))], run=True, surface='inside_quiet'),
-                      P('narrator', (-0.75, 5.3, 2.85), path=[(T(242), (-0.75, 5.3, 2.85)), (tdoor, (-1.55, 6.2, 2.85))], run=True, surface='inside_quiet')],
-      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(tdoor + 0.25, 'door_slam', -2, 0, 'inside', dict(kind='bathroom'))])
+    # 239 "Wet."  240 "Dragging."  (fix round 1, fixer C: critic 1 M7, critic 2 M8 / minor 10) two inserts low on the lino:
+    # "Wet.": a sodden, filthy plush foot plants beside its last prints with a splash, drips falling from the fur, and lifts
+    # away off a dark wet print; "Dragging.": the hatchet's head scraped across the floor ON the lino (the handle rising
+    # out of frame to the paw), a wet smear and a pale scratch behind it, the trail of prints going away
+    tst = t(239) + 0.05
+    C(T(239), 'ins', name='wet_floor', kw=dict(phase='wet', step=round(tst - T(239), 3), lift=round(t(240) - 0.4 - T(239), 3)), anim=True,
+      c=dict(mv='push', rate=0.02, hit=[(tst, 3.0)]), sfx=[(tst, 'wet_step', 0, 0, 'inside')])
+    tdr0 = t(240) - 0.1
+    C(w(240, 'dragging') - 0.12, 'ins', name='wet_floor', kw=dict(phase='drag', drag0=round(tdr0 - (w(240, 'dragging') - 0.12), 3),
+                                                                     drag1=round(T(241) + 0.15 - (w(240, 'dragging') - 0.12), 3)), anim=True,
+      c=dict(mv='push', rate=0.015), sfx=[(tdr0, 'wet_drag', 0, 0, 'inside', dict(dur=1.0, hatchet=True))])
+    # 241 "I grab June and run."  (fix round 1, fixer C: critic 1 M7, critic 2 M13) outside June's door: on "grab" the
+    # narrator lunges and closes a hand round June's wrist, spins, and the two RUN down the corridor at us (about 2.5 m/s,
+    # June pulled a step behind, hand in hand)
+    tg = w(241, 'grab')
+    tb = T(242) - 0.42                                                             # the cut to the bathroom, mid-run
+    tr0 = tg + 0.22
+
+    def grab_acts(A, s, sp):
+        n, j = A['narrator'], A['june']
+        n.reach_to(tg - 0.18, -1, (j, 'hand_r'), t1=tr0 + 0.05, dur=0.2, contact='grip', shape='grip', z=40.0, fade=0.15)
+        n.hold_hand(tr0, -1, j, 1, dur=0.12, fade=0.2)
+        n.look_at(s.t0, (j, 'eyes'), tg + 0.1, 0.2)
+        j.look_at(s.t0, (n, 'eyes'), tr0 + 0.1, 0.2)
+        n.set(tg - 0.2, tg + 0.15, 0.1, lean=0.25)                                 # the lunge (anticipation into the grab)
+        j.flinch(tg + 0.02, 0.8)
+        return []
+    C(T(241), 'set', room='up', view='west', cam=cm((-1.5, 4.92, 4.3), (0.7, 5.3, 3.95), S=1000, sx=960, sy=520), set=dict(upstairs=0.0, june_door=70.0),
+      rim=NIGHT,
+      ppl=[P('narrator', (0.55, 4.85, 2.85), path=[(T(241), (0.55, 4.85, 2.85)), (tr0, (0.6, 4.9, 2.85)), (tb + 0.05, (-0.6, 4.95, 2.85))], run=True,
+             expr='terror', face=(1.0, 5.55)),
+           P('june', (1.0, 5.55, 2.85), path=[(T(241), (1.0, 5.55, 2.85)), (tr0 + 0.08, (0.98, 5.5, 2.85)), (tb + 0.05, (-0.15, 5.42, 2.85))], run=True,
+             expr='terror', face=(0.55, 4.85))],
+      acts=grab_acts, c=dict(mv='push', f=1.0, rate=0.02))
+    # 242 "Bathroom."  from inside, by the tub: they burst in through the door at us (the opening is screen left of the
+    # leaf, which stands open into the room on the right); June runs on to the left, the narrator turns at the leaf's edge
+    # and shoves the door shut behind them: both cross the threshold in full view and the door closes over the corridor
+    tdoor = T(242) + 0.4
+
+    def shut_acts(A, s, sp):
+        n, j = A['narrator'], A['june']
+        # her palm on the leaf, two thirds of the way out from the hinge, riding it shut
+        edge = lambda tt: scr(sp, (-2.0 + 0.5 * math.cos(math.radians(75.0 * (1.0 - ease_in_out(clamp((tt - tdoor) / 0.22))))),
+                                   5.83 + 0.5 * math.sin(math.radians(75.0 * (1.0 - ease_in_out(clamp((tt - tdoor) / 0.22))))), 3.95))
+        n.reach_to(tdoor - 0.14, -1, edge, t1=tdoor + 0.6, dur=0.12, contact='palm', shape='flat', z=-40.0, fade=0.3)
+        n.turn(tdoor - 0.2, _turn_for(sp, -1.35, 6.35, (-1.6, 5.85)), 0.16)
+        n.set(tdoor + 0.05, None, 0.15, lean=0.25)                              # her weight thrown against it
+        n.look_at(tdoor - 0.1, edge, None, 0.15)
+        j.turn(tdoor + 0.0, _turn_for(sp, -1.05, 6.85, (-1.62, 5.85)), 0.3)
+        j.look_at(tdoor + 0.05, scr(sp, (-1.62, 5.85, 3.8)), None, 0.25)
+        return []
+    C(tb, 'set', room='bath', view='door', set=dict(gap=0.0, door=lambda tt, a=tdoor: 75.0 * (1.0 - ease_in_out(clamp((tt - a) / 0.22)))), rim=DARK,
+      ppl=[P('june', (-1.45, 5.3, 2.85), path=[(tb, (-1.45, 5.3, 2.85)), (tdoor - 0.1, (-1.05, 6.85, 2.85))], run=True, surface='inside_quiet', expr='terror'),
+           P('narrator', (-1.6, 4.95, 2.85), path=[(tb, (-1.6, 4.95, 2.85)), (tdoor - 0.16, (-1.35, 6.33, 2.85))], run=True, surface='inside_quiet',
+             expr='terror')],
+      acts=shut_acts, c=dict(mv='push', f=1.0, rate=0.02, hit=[(tdoor + 0.22, 5.0)]), sfx=[(tdoor + 0.22, 'door_slam', -2, 0, 'inside', dict(kind='bathroom'))])
     # 243 "Lock."
     tlk = t(243)
     C(T(243), 'ins', name='lock', kw=lambda tr, a=tlk - T(243): dict(lock=lambda tt: ease_in_out(clamp((tt - a) / 0.15)), knob=0.0, key=0.0),
       c=dict(mv='push', rate=0.04), sfx=[(tlk + 0.05, 'lock_turn', 0, 0, 'close', dict(kind='thumb_bolt'))])
     # 244 "We sit in the dark, in the empty bathtub, my hand over her mouth."
     C(T(244), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6, bath_light=0.0), rim=DARK, montage=True,
-      ppl=TUB_KIDS, acts=lambda A, s, sp: tub_hand(A, s, sp, t0=w(244, 'hand') - 0.2), c=dict(mv='push', f=1.0, rate=0.02))
-    # 245-246 "Footsteps on the stairs. Slow."  down the flight from the top: he climbs toward us, the hatchet hanging
-    steps = ['step1', 'step3', 'step5', 'step7']
-    t0s = T(245)
-    keys = [(t0s + 0.1 + 0.85 * k, st) for k, st in enumerate(steps)]
+      ppl=TUB_KIDS, acts=lambda A, s, sp: tub_hand(A, s, sp, t0=w(244, 'my') - 0.6), c=dict(mv='push', f=1.0, rate=0.02))
+    # "...my hand over her mouth.": close, cheek to cheek in the dark: June's wide wet eyes over the narrator's palm
+    # clamped on her mouth and chin, the narrator's face just behind hers, both staring at the door
+    jx2, jy2, js2 = 1060, 640, 1.0
+    C(w(244, 'my') - 0.1, 'bust', who='june', bg=('bath', 'tub', TUB_CAM), set=dict(gap=0.6), cx=jx2, cy=jy2, scale=js2, turn=-0.3, expr='shock_shut',
+      light=DARK, act=_A(pose(-9, None, 0.1, wide=1.0, brow_up=0.9, brow_sad=0.7, tears=0.6, wet=0.8, m_open=0.0, m_press=0.8),
+                         lookxy(1500, 420, -9, None, 0.3, z=500.0)),
+      busts=[dict(who='narrator', cx=700, cy=560, scale=0.95, turn=0.3, expr='terror', light=DARK, depth=1.04,
+                  act=_A(ex('shock_shut', -9, None, 0.1), pose(-9, None, 0.1, wide=0.9, brow_up=0.7), lookxy(1500, 400, -9, None, 0.3, z=500.0)))],
+      hands=[dict(who='narrator', fn=hand_on_mouth('june', jx2, jy2, js2, 310, side=-1, dx=-10, dy=78), size=310, shape='open', side=-1,
+                  sleeve_from=lambda tt: (470, 1200), depth=0.95)], bg_dim=0.45,
+      c=dict(mv='push', x=980, y=580, zrate=0.02))
+    # 245-246 "Footsteps on the stairs. Slow."  down the flight from the top: he climbs toward us, ONE heavy tread at a
+    # time (fix round 1, fixer C: critic 2 M13, critic 3 M10): a step every 0.95 s, the body rising onto the next tread
+    # and settling, the hatchet hanging from the paw and knocking the tread behind him 0.3 s after each step
+    STEP_T = [t(245) + 0.26 + 0.95 * k for k in range(7)]                         # landings: 616.85 .. 622.55 (the insert carries on the rhythm)
+    keys = [(T(245), STEP(1))]
+    for k, tl in enumerate(STEP_T[:4]):
+        keys += [(tl - 0.5, STEP(k + 1)), (tl, STEP(k + 2))]
     C(T(245), 'set', room='hall', view='top', set=dict(hall=0.0, upstairs=0.0), rim=NIGHT,
-      ppl=[P('bunny', 'step1', path=keys, surface='stairs', step_gain=-2.0, dimk=0.4, room_light=False, act=lambda a, s: a.drag_hatchet(-9, None, side=-1))],
-      c=dict(mv='push', f=1.0, rate=0.02), sfx=[(kk[0] + 0.3, 'hatchet_thunk', -3, 0, 'inside', dict(step=i)) for i, kk in enumerate(keys[1:])])
+      ppl=[P('bunny', STEP(1), path=keys, surface='stairs_quiet', dimk=0.4, room_light=False, linear=True,
+             act=_A(lambda a, s: a.drag_hatchet(-9, None, side=-1),
+                    lambda a, s: [a.set(tl - 0.06, tl + 0.3, 0.08, crouch=0.18, h_nod=0.08) for tl in STEP_T[:4]]))],
+      c=dict(mv='push', f=1.6, rate=0.015),
+      sfx=[(tl, 'footsteps_wood_inside', -2, 0, 'inside', dict(n=1, kind='stair', heavy=True, step=i)) for i, tl in enumerate(STEP_T[:3])] +
+          [(tl + 0.3, 'hatchet_thunk', -3, 0, 'inside', dict(step=i)) for i, tl in enumerate(STEP_T[:3])])
     # 247 "And behind them, something hard knocking against every step."  248 "Thunk."  249 "Thunk."  250 the old hatchet
     # three different pictures for the three hatchet lines: the flight from the side, the head knocking up each riser
     # (dragged by the matted paw); the blade biting one tread's nose on "Thunk."; the hatchet dragged along the
     # corridor runner on "the old hatchet from our woodpile" (the red paint band from the woodpile)
-    hits247 = [T(247) + 0.5 + 0.85 * k for k in range(4)]
+    hits247 = [tl + 0.3 for tl in STEP_T[3:7]]                                    # the same rhythm: 620.0, 620.95, 621.9, 622.85
     C(T(247), 'ins', name='hatchet_steps', kw=dict(hits=tuple(round(x - T(247), 3) for x in hits247)), anim=True,
-      c=dict(mv='hold', shake=0.8, hit=[(x, 4.0) for x in hits247]), sfx=[(x, 'hatchet_thunk', 0, 0, 'close', dict(step=k)) for k, x in enumerate(hits247)])
+      c=dict(mv='hold', shake=0.8, hit=[(x, 4.0) for x in hits247]),
+      sfx=[(STEP_T[3], 'footsteps_wood_inside', -4, 0, 'inside', dict(n=1, kind='stair', heavy=True, step=3))] +
+          [(x - 0.3, 'footsteps_wood_inside', -4, 0, 'inside', dict(n=1, kind='stair', heavy=True, step=4 + k)) for k, x in enumerate(hits247[1:])] +
+          [(x, 'hatchet_thunk', 0, 0, 'close', dict(step=k)) for k, x in enumerate(hits247)])
     C(T(248), 'ins', name='hatchet_thunk', kw=dict(hit_t=round(t(248) - T(248), 3)), anim=True,
       c=dict(mv='hold', shake=0.5, hit=[(t(248), 9.0)]), sfx=[(t(248), 'hatchet_thunk', 2, 0, 'close')])
     C(T(249), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6), rim=DARK, ppl=TUB_KIDS,
       acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].flinch(t(249) + 0.02, 0.8), A['june'].flinch(t(249) + 0.04, 1.0)) and [],
       c=dict(mv='push', f=1.05, rate=0.02, hit=[(t(249), 4.0)]), sfx=[(t(249), 'hatchet_thunk', 0, 0, 'inside', dict(far=True))])
     C(T(250), 'ins', name='hatchet_pile', anim=True, c=dict(mv='push', rate=0.012), sfx=[(T(250) + 0.1, 'wet_drag', -6, 0, 'inside', dict(dur=1.8, hatchet=True))])
+    # "...from our woodpile." (fix round 1, fixer C: critic 2 minor 11, the woodpile was never shown) the woodpile by the
+    # shed in the moonlight, the chopping block in front of it with a fresh pale gash where the hatchet always stood
+    C(w(250, 'woodpile') - 0.12, 'set', room='yard', view='barrel', set=dict(chop=False), rim=MOON,
+      cam=cm((-6.55, 21.6, 0.85), (-8.7, 24.4, -0.05), S=1050, sx=960, sy=600), c=dict(mv='push', f=1.0, rate=0.02),
+      sfx=[(w(250, 'woodpile') - 0.1, 'wind_gust', -16, 0, 'outside')])
     # 251 "The doorknob turns."  252 "Gently."
     tkn = t(251) + 0.3
     C(T(251), 'set', room='bath', view='lock', set=dict(gap=0.6, lock=1.0, knob=lambda tt, a=tkn: 38.0 * math.sin(math.pi * clamp((tt - a) / 2.6))), rim=DARK,
@@ -4623,19 +4985,36 @@ def plan_rule6(F):
     C(T(257), 'ins', name='drawing', kw=lambda tr: dict(slide=ease_out_cubic(clamp((tr - 0.2) / 1.2))), anim=True, c=dict(mv='push', rate=0.02),
       sfx=[(T(257) + 0.2, 'paper_slide', 0, 0, 'close', dict(dur=1.2))])
     C(T(258), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=[(T(258), 960, 560, 1.0, None, 1.05), (T(259), 960, 560, 1.0, 'push', 1.15)]))
-    DR = {259: (770, 470, 2.1), 260: (760, 640, 2.0), 261: (930, 520, 2.1), 262: (1080, 520, 2.2), 263: (780, 280, 2.2), 264: (800, 270, 2.6)}
-    for i, (x, y, f) in DR.items():
-        C(T(i), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=[(T(i), x, y, 1.0, None, f), (T(i + 1), x, y, 1.0, 'push', f * 1.06)]),
-          music=[(t(264), 'stinger', 0.7)] if i == 264 else [])
+    # (fix round 1, fixer C: critic 1 M9, critic 2 M6 / minor 13) each part framed on what the line names, from the
+    # drawing's own geometry (the page centred at (960, 600), 640 px wide, turned -3 degrees): the bridge; a tilt DOWN the
+    # page from the bridge to the tall man lying under it (he was cut off under the caption); the lady with the rock,
+    # pushing in to the wide smile; the grey bunny, pushing in to the blue tears; the shaky letters in the corner
+    DRK = {259: [(T(259), 858, 535, 1.0, None, 2.0), (T(260), 858, 540, 1.0, 'push', 2.1)],
+           260: [(T(260), 858, 545, 1.0, None, 2.1), (T(260) + 0.85, 838, 878, 1.0, 'in_out', 2.05), (T(261), 838, 885, 1.0, 'push', 2.15)],
+           261: [(T(261), 1035, 720, 1.0, None, 1.9), (w(261, 'wide') - 0.3, 1035, 700, 1.0, 'lin', 2.0), (T(262), 1028, 640, 1.0, 'in_out', 2.7)],
+           262: [(T(262), 1172, 700, 1.0, None, 2.15), (w(262, 'blue') - 0.3, 1172, 705, 1.0, 'lin', 2.25), (T(263), 1178, 745, 1.0, 'in_out', 3.0)],
+           263: [(T(263), 864, 260, 1.0, None, 2.2), (T(264), 864, 250, 1.0, 'push', 2.3)],
+           264: [(T(264), 864, 228, 1.0, None, 2.6), (T(265), 864, 228, 1.0, 'push', 2.75)]}
+    for i, ks in DRK.items():
+        C(T(i), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=ks), music=[(t(264), 'stinger', 0.7)] if i == 264 else [])
     # 265 "Then Mom's voice, from the end of the hall."  266 "A voice I've never heard her use."  267 M "GET OUT OF MY HOUSE."
+    # (fix round 1, fixer C: critic 2 M5, she stood as a far static A-pose) she strides out of her room at the end of the
+    # hall into the corridor, plants her feet and squares up toward the bathroom
     C(T(265), 'set', room='up', view='west', set=dict(upstairs=0.0), rim=NIGHT,
-      ppl=[P('mom', 'hall_east', turn=-0.05, expr='determined', dimk=0.35, room_light=False)], c=dict(mv='push', f=1.5, rate=0.03))
+      ppl=[P('mom', (4.4, 4.75, 2.85), path=[(T(265) + 0.15, (4.4, 4.75, 2.85)), (T(265) + 1.5, (4.15, 5.15, 2.85)), (t(266) - 0.2, (3.9, 5.17, 2.85))],
+             expr='determined', dimk=0.35, room_light=False, enter=True,
+             act=_A(pose(T(265) + 1.4, None, 0.4, lean=0.2, brow_angry=0.8, hunch=0.2),
+                    lambda a, s: [a.reach(T(265) + 1.6, None, sd, out=6.0, down=300.0, fwd=24.0, shape='fist', up=0.0, fade=0.3) for sd in (1, -1)]))],
+      c=dict(mv='push', f=1.5, rate=0.03))
     # (the voice she has never used: Mom squared up at the end of the hall, leaning forward, fists clenched, the brows
     # down; then the scream itself, close: jaw wide, teeth bared, head thrust at the lens, the frame shaking with it)
+    # (the medium: one heavy step toward us, the chest heaving, the head lowering, the fists tightening)
     C(T(266), 'set', room='up', view='west', cam=UPMID, set=dict(upstairs=0.0), rim=NIGHT_L,
-      ppl=[P('mom', 'hall_east', turn=0.0, expr='determined',
+      ppl=[P('mom', (3.9, 5.17, 2.85), path=[(T(266) + 0.5, (3.9, 5.17, 2.85)), (T(266) + 1.3, (3.6, 5.17, 2.85))], expr='determined',
              act=_A(pose(-9, None, 0.1, brow_angry=1.0, brow_sad=0.0, lean=0.3, m_press=0.8, lock=1.0, pupil=0.6, smile=-0.2),
+                    pose(T(266) + 1.2, None, 0.6, lean=0.42, h_nod=0.18, hunch=0.35, breath=1.6),
                     lambda a, s: [a.reach(-9, None, sd, out=4.0, down=300.0, fwd=18.0, shape='fist', up=0.0, fade=0.01) for sd in (1, -1)],
+                    lambda a, s: a._add(-9, None, lambda P_, tt: setattr(P_, 'tremble', P_.tremble + 0.25 * clamp((tt - T(266) - 1.2) / 0.6)), real=True),
                     lookxy(960, 500, -9, None, 0.3, z=500.0)))],
       c=dict(mv='push', f=1.0, rate=0.04))
     C(T(267), 'bust', who='mom', bg=('up', 'west', UPMID), set=dict(upstairs=0.0), cx=960, cy=620, scale=1.0, expr='fury', light=NIGHT_L,
@@ -4651,15 +5030,24 @@ def plan_rule6(F):
              pose(t(269) - 0.05, None, 0.14, h_nod=-0.22, approach=0.42, shrug=0.25), lambda a, s: a.flinch(t(269) + 0.25, 0.6)),
       c=dict(mv='push', x=960, y=600, zrate=0.06, shake=3.0))
     # 270 "The whole hallway shakes."  271 "Something slams into the bathroom door."  272 "Screaming."  273 "A wet, heavy crack."
+    # (fix round 1, fixer C: critic 2 M5, the fight had no picture) "The whole hallway shakes.": the door shudders in its
+    # frame against the bolt, plaster dust trickles from the top of the frame, the shadows of feet thrash in the light
+    # under it, the frame shakes; "Something slams into the bathroom door.": the leaf bows in hard and jolts, a shower of
+    # dust, a body's shadow blots out the light under the door; "Screaming.": the two flinch into each other, eyes
+    # squeezed shut
     tsl = w(271, 'slams') + 0.05
-    C(T(270), 'set', room='bath', view='door', set=dict(gap=0.8, feet=feet_gap(T(270), T(272), (0.3, 0.6), 0.12)), c=dict(mv='push', f=1.0, rate=0.02, shake=3.0,
-                                                                                                                        hit=[(t(270) + 0.1, 7.0), (t(270) + 0.7, 5.0)]),
+    thrash = lambda tt: [(0.22 + 0.18 * math.sin(tt * 9.0), 0.36 + 0.18 * math.sin(tt * 9.0)), (0.55 + 0.15 * math.sin(tt * 7.0 + 1.0), 0.7 + 0.15 * math.sin(tt * 7.0 + 1.0))]
+    C(T(270), 'set', room='bath', view='door', set=dict(gap=0.8, feet=thrash, rattle=(t(270) - 0.05, e(270) + 0.1)),
+      c=dict(mv='push', f=1.0, rate=0.02, shake=3.5, hit=[(t(270) + 0.1, 8.0), (t(270) + 0.7, 6.0), (t(270) + 1.2, 5.0)]),
       sfx=[(t(270), 'struggle', 2, 0, 'inside', dict(dur=1.6, through_door=True))])
-    C(T(271), 'set', room='bath', view='door', set=dict(gap=0.8, slam=tsl), c=dict(mv='push', f=1.05, rate=0.02, shake=2.0, hit=[(tsl, 12.0)]),
+    blot = lambda tt, a=tsl: [(0.05, 0.95)] if a - 0.05 <= tt <= a + 0.9 else ([(0.12, 0.62)] if tt > a + 0.9 else thrash(tt))
+    C(T(271), 'set', room='bath', view='door', set=dict(gap=0.8, slam=tsl, feet=blot), c=dict(mv='push', f=1.05, rate=0.02, shake=2.5, hit=[(tsl, 14.0)]),
       sfx=[(tsl, 'door_slam', 4, 0, 'inside', dict(kind='body'))], music=[(tsl, 'hit', 0.95)])
     C(T(272), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=0.6), rim=DARK, ppl=TUB_KIDS,
-      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].eyes_shut(s.t0, None, 1.0), A['june'].eyes_shut(s.t0, None, 1.0)) and [],
-      c=dict(mv='push', f=1.05, rate=0.02, shake=2.0), sfx=[(T(272), 'scream_far', 0, 0, 'inside', dict(through_door=True, dur=0.9))])
+      acts=lambda A, s, sp: (tub_hand(A, s, sp), A['narrator'].eyes_shut(s.t0 + 0.05, None, 1.0), A['june'].eyes_shut(s.t0 + 0.03, None, 1.0),
+                             A['narrator'].flinch(s.t0 + 0.04, 1.0), A['june'].flinch(s.t0 + 0.02, 1.2),
+                             A['narrator'].set(s.t0 + 0.05, None, 0.12, hunch=0.55, lean=0.12), A['june'].set(s.t0 + 0.03, None, 0.12, hunch=0.6)) and [],
+      c=dict(mv='push', f=1.05, rate=0.02, shake=2.5, hit=[(T(272) + 0.08, 5.0)]), sfx=[(T(272), 'scream_far', 0, 0, 'inside', dict(through_door=True, dur=0.9))])
     tck = t(273) + 0.1
     C(T(273), 'set', room='bath', view='gap', set=dict(gap=lambda tt, a=tck: 1.0 - 0.75 * ease_in_out(clamp((tt - a) / 0.15)),
                                                      feet=lambda tt, a=tck: [(0.05, 0.95)] if tt > a else [(0.35, 0.45), (0.55, 0.65)]),
@@ -4795,16 +5183,32 @@ def plan_rule7(F):
     C(T(288), 'set', room='front', view='house', set=dict(tod='dawn', front_light=0.0), c=dict(mv='push', f=1.0, rate=0.02))
     # 289 "Mom knocks, softly."  290-293 M "It's sunrise, babies. You did it. You followed every single rule. I'm so proud of you."
     kn = [t(289) + 0.95, t(289) + 1.2, t(289) + 1.45] if e(289) + 0.4 < t(290) else [e(289) + 0.05, e(289) + 0.2, e(289) + 0.35]
-    C(T(289), 'set', room='bath', view='door', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=feet_gap(T(289), T(294), (0.44, 0.58), 0.0)),
+    # (fix round 1, fixer C: critic 1 minor 8 / critic 2 minor 16) each soft knock shows: the leaf gives a hair in its
+    # frame and her shadow in the gold line under the door rocks forward with her knuckles
+    def knock_feet(tt, kn=kn):
+        sh_ = sum(0.025 * math.exp(-max(0.0, tt - k) * 9.0) for k in kn if tt >= k - 0.06)
+        lean = 0.012 * clamp((tt - (kn[0] - 0.3)) / 0.3)
+        return [(0.44 - lean - sh_, 0.52 - lean - sh_), (0.58 - lean - sh_ * 0.6, 0.66 - lean - sh_ * 0.6), (0.5 - lean - sh_ * 2.0, 0.53 - lean - sh_ * 2.0)] \
+            if kn[0] - 0.3 <= tt <= kn[-1] + 0.3 else [(0.44, 0.52), (0.58, 0.66)]
+    C(T(289), 'set', room='bath', view='door', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=knock_feet, knocks=list(kn)),
       c=dict(mv='push', f=1.0, rate=0.015, hit=[(k, 2.0) for k in kn]),
       sfx=[(k, 'knock_door', -6, 0, 'inside', dict(soft=True, index=i)) for i, k in enumerate(kn)])
     C(T(290), 'set', room='bath', view='gap', set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn', feet=feet_gap(T(290), T(294), (0.44, 0.58), 0.0)),
       c=dict(mv='push', f=1.0, rate=0.015))
+    # (fix round 1, fixer C: critic 1 minor 18) June starts to get up to go to her mother: she pushes up off the tub floor,
+    # her hands on the rim, rising onto her knees; the narrator's hand clamps on her shoulder and holds her down
+    def rise_acts(A, s, sp):
+        j, n = A['june'], A['narrator']
+        tr = t(292) + 0.15
+        j.set(tr, w(293, 'proud') if w(293, 'proud') else t(293) + 0.6, 0.55, lean=0.18, dy=-75.0, h_nod=-0.12)     # up onto her knees
+        j.reach_to(tr - 0.1, 1, scr(sp, (-1.55, 7.85, 3.41)), t1=t(293) + 0.4, dur=0.4, contact='palm', shape='flat', z=40.0, fade=0.5)
+        j.look_at(s.t0, scr(sp, (-1.62, 5.85, 3.2)), None, 0.3)
+        n.reach_to(tr + 0.55, -1, (j, 'chest'), dur=0.3, contact='palm', shape='grip', z=70.0)       # a fistful of her pyjama top
+        n.set(tr + 0.55, None, 0.3, lean=0.2)
+        n.look_at(s.t0, (j, 'eyes'), None, 0.3)
+        return []
     C(T(292), 'set', room='bath', view='tub', cam=TUB_CAM, set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), rim=DAWN, ppl=TUB_KIDS,
-      acts=lambda A, s, sp: (A['june'].set(t(292) + 0.2, None, 0.5, lean=0.25, crouch=-0.2),
-                             A['narrator'].reach_to(t(292) + 0.6, -1, (A['june'], 'shoulder_l'), dur=0.4, contact='palm', shape='grip', z=60.0),
-                             A['june'].look_at(s.t0, scr(sp, (-1.62, 5.85, 3.2)), None, 0.3), A['narrator'].look_at(s.t0, (A['june'], 'eyes'), None, 0.3)) and [],
-      c=dict(mv='push', f=1.0, rate=0.02))
+      acts=rise_acts, c=dict(mv='push', f=1.0, rate=0.02))
     # 294 "Before sunrise."  295 "That's what the rule said."  296 "And it isn't before sunrise anymore."
     C(T(294), 'bust', who='narrator', bg=('bath', 'tub', TUB_CAM), set=dict(gap=1.0, gap_col=ST.DAWN_C, tod='dawn'), cx=960, cy=620, scale=0.95, turn=-0.2,
       expr='haunted', light=DAWN_L, act=_A(pose(t(294) + 0.15, None, 0.45, wide=1.0, brow_up=0.95, brow_sad=0.35, blink=0.0), lookxy(1100, 380, -9, None, 0.3, z=600.0)))
@@ -4840,7 +5244,11 @@ def plan_rule7(F):
       ppl=[P('mom', (-1.05, 5.38, 2.85), face=(-1.4, 5.8), expr='too_still', act=_A(MOMD))], acts=key_acts,
       c=dict(mv='push', f=1.0, rate=0.012), sfx=[(top - 0.15, 'key_turn', -4, 0, 'inside'), (top, 'door_creak', -2, 0, 'inside', dict(kind='bathroom_open'))])
     # 300 "The hallway is wrecked."  301 "Mom's arms are scratched to ribbons, and she's smiling."
-    C(T(300), 'set', room='up', view='hall', set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), c=dict(mv='push', f=1.15, rate=0.03))
+    # (fix round 1, fixer C: critic 1 minor 9) the wreck from the end of the corridor, and Mom still at the open
+    # bathroom door where the last shot left her
+    C(T(300), 'set', room='up', view='hall', set=dict(wrecked=1.0, tod='dawn', bath_door=70.0), rim=DAWN,
+      ppl=[P('mom', (-1.05, 5.38, 2.85), face=(-1.6, 5.9), expr='proud', act=_A(MOMD, lookxy(700, 300, -9, None, 0.3, z=300.0)))],
+      c=dict(mv='push', f=1.15, rate=0.03))
     # her bare forearms first (the cardigan pushed up, scratched to ribbons, the little dress in her fist), then on
     # 'smiling' her face
     tsm2 = w(301, 'smiling') - 0.35
@@ -5002,8 +5410,10 @@ def plan_reveal(F):
       expr='too_still', light=MEMORY, cut='white', act=_A(pose(-9, None, 0.01, still=0.9), lookxy(960, 560, -9, None, 0.01, z=600.0)),
       c=dict(mv='push', x=960, y=560, zrate=0.02))
     # 327 "In someone else."  the mascot looking down at its own paws
+    # (fix round 1, fixer C: critic 1 minor 13) the mask bowed right down over the paws it holds up and turns (h_nod 0.6 left
+    # the glass eyes on the lens)
     C(T(327), 'bust', who='bunny87', bg=('woods', 'path', TRADE_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=560, scale=0.9,
-      light=MEMORY, act=_A(pose(-9, None, 0.3, h_nod=0.6), lookxy(960, 1020, -9, None, 0.3, z=200.0),
+      light=MEMORY, act=_A(pose(-9, None, 0.3, h_nod=1.7, h_tilt=-6.0), pose(T(327) + 0.6, None, 0.6, h_tilt=8.0),
                            lambda a, s: a.reach(-9, None, 1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4),
                            lambda a, s: a.reach(-9, None, -1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)),
       c=dict(mv='push', x=960, y=560, zrate=0.02))
@@ -5036,11 +5446,24 @@ def plan_reveal(F):
     C(T(333), 'ins', name='under_bridge', kw=dict(woke=round(w(333, 'woke') - T(333), 2)), anim=True, montage=True, **D87,
       c=dict(mv='push', rate=0.015), sfx=[(T(333), 'creek', -12, 0, 'woods', dict(dur=3.0))])
     tlift = w(333, 'take') - 0.4
-    C(tg, 'bust', who='bunny87', bg=('woods', 'under', UNDER_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=580, scale=0.95, light=MEMORY,
-      act=_A(pose(-9, None, 0.3, h_nod=0.5), lookxy(960, 1000, -9, tlift, 0.3, z=200.0), lookxy(1300, 500, tlift, None, 0.4, z=500.0),
-             lambda a, s: a.reach(-9, None, 1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4),
-             lambda a, s: a.reach(-9, None, -1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)),
-      c=dict(mv='push', x=960, y=560, zrate=0.02))
+    # (fix round 1, fixer C: critic 2 minor 18, no fear) a seven-year-old's terror in a man's body: hunched, trembling, the
+    # mask bowed over the strange big paws, then jerking round at the woods; on "too scared to take off" both paws come up
+    # to the head, grip it as if to pull it off... and can't; they slide away and the arms wrap round the body
+    def scared(a, s):
+        a.set(-9, None, 0.3, h_nod=1.6, hunch=0.6, shrug=0.4, tremble=0.7)
+        ts_ = w(333, 'suit')
+        for k_, (dt_, ht_) in enumerate(((-1.6, 0.45), (-1.05, -0.5), (-0.45, 0.3))):     # jerking round at the woods
+            a.set(ts_ + dt_, ts_ + dt_ + 0.45, 0.07, h_turn=ht_, h_nod=0.4)
+        a.reach(-9, tlift - 0.1, 1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)
+        a.reach(-9, tlift - 0.1, -1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)
+        for sd in (1, -1):                                   # the paws on the sides of the head, gripping it ... and letting go
+            a.reach_to(tlift - 0.1, sd, lambda tt, sd=sd: (a.where(tt, 'head', post=False)[0] + sd * 0.105 * a.height,
+                                                           a.where(tt, 'head', post=False)[1] - 0.01 * a.height),
+                       t1=tlift + 1.0, dur=0.3, contact='palm', shape='paw_grip', z=60.0, fade=0.5)
+            a.reach(tlift + 1.0, None, sd, out=-30.0, down=180.0, fwd=110.0, shape='paw', up=0.0, fade=0.6)
+        a.set(tlift - 0.1, None, 0.3, h_nod=0.6, tremble=1.0)
+    C(tg, 'bust', who='bunny87', bg=('woods', 'under', UNDER_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=600, scale=0.88, light=MEMORY,
+      act=scared, c=dict(mv='push', x=960, y=560, zrate=0.02))
     # 334 "For thirty-six years, she lived in those woods."  (now: the filthy suit, alone among the trees at night)
     C(T(334), 'set', room='woods', view='path', cam=WOODS_PATH, set=dict(tod='night', flashlight=0.0), rim=MOON,
       ppl=[P('bunny', (-3.4, 0.4, 0.0), path=[(T(334), (-3.4, 0.4, 0.0)), (T(335) + 0.4, (-2.9, 2.6, 0.0))], surface='grass_quiet', room_light=False, dimk=0.15)],
@@ -5087,10 +5510,25 @@ def plan_reveal(F):
       act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6), pose(-9, None, 0.1, still=0.85), lookxy(1300, 700, -9, None, 0.3, z=300.0)),
       c=dict(mv='push', x=960, y=580, zrate=0.025))
     # 340 "Last Easter, Dad went to the bridge and talked to her."
+    # (fix round 1, fixer C: critic 2 minor 18, the Bunnyman stood static while Dad talked) Dad talks with his hands, a
+    # step closer, nodding (his lips closed: it is the narrator's line); the Bunnyman's head tilts to him, it rocks, and a
+    # paw lifts slowly toward him
+    def dad_talk(a, s):
+        t0_ = t(340)
+        a.reach(-9, t0_ + 1.1, -1, out=40.0, down=60.0, fwd=150.0, shape='open', up=0.0, fade=0.5)
+        a.reach(t0_ + 1.1, t0_ + 2.2, -1, out=70.0, down=10.0, fwd=175.0, shape='open', up=0.0, fade=0.45)
+        a.reach(t0_ + 2.2, None, -1, out=30.0, down=95.0, fwd=150.0, shape='relaxed', up=0.0, fade=0.5)
+        a.reach(t0_ + 1.5, t0_ + 2.8, 1, out=40.0, down=40.0, fwd=150.0, shape='open', up=0.0, fade=0.5)
+        a._add(t0_, None, lambda P_, tt: setattr(P_, 'h_nod', P_.h_nod + 0.08 * math.sin((tt - t0_) * 4.2)), real=True)
+    def bunny_listen(a, s):
+        a.head_tilt(t(340) + 0.7, -14.0, 1.6)
+        a._add(t(340), None, lambda P_, tt: setattr(P_, 'sway', getattr(P_, 'sway', 0.0) + 0.5 * math.sin((tt - t(340)) * 1.7)), real=True)
+        a.reach(t(340) + 1.8, None, 1, out=40.0, down=110.0, fwd=170.0, shape='paw_open', up=0.0, fade=0.9)
+        a.set(t(340) + 1.8, None, 0.8, h_nod=0.3, hunch=0.3)
     C(T(340), 'set', room='woods', view='under', cam=UNDER_SIDE, set=dict(tod='night', flashlight=0.0), era='memory', rim=MOON,
-      ppl=[P('bunny', (0.45, 9.9, BY(9.9)), face=(-1.2, 9.7), room_light=False, dimk=0.15, act=tilt(t(340) + 1.0, -10.0, 2.0)),
-           P('dad', (-1.2, 9.7, BY(9.7)), face=(0.45, 9.9), expr='determined', room_light=False, talk=False,
-             act=lambda a, s: a.reach(-9, None, -1, out=40.0, down=60.0, fwd=150.0, shape='open', up=0.0, fade=0.6))],
+      ppl=[P('bunny', (0.45, 9.9, BY(9.9)), face=(-1.2, 9.7), room_light=False, dimk=0.15, act=bunny_listen),
+           P('dad', (-1.3, 9.7, BY(9.7)), path=[(t(340) + 0.6, (-1.3, 9.7, BY(9.7))), (t(340) + 1.4, (-1.05, 9.75, BY(9.75)))], face=(0.45, 9.9),
+             expr='determined', room_light=False, talk=False, surface='gravel', act=dad_talk)],
       c=dict(mv='push', f=1.0, rate=0.015))
     # 341 "And the thing that called itself my mother followed him there."
     C(T(341), 'set', room='woods', view='path', cam=WOODS_PATH, set=dict(tod='night', flashlight=0.0), era='memory', rim=MOON,
@@ -5236,14 +5674,19 @@ def plan_reveal(F):
       hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 40, ns * 1.25, side=-1, size=620), size=620, shape='open', side=-1,
                   sleeve_from=lambda tt: (-260, 1000), scratch=True, depth=0.95)],
       c=dict(mv='push', x=980, y=560, zrate=0.02))
-    # "It's the easiest thing in the world.": the narrator's own face, eyes squeezed shut under Mom's scratched hand,
-    # from the other side (3/4, her wrist and forearm across the frame): who is under the hand is never in doubt
-    C(T(357), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=1010, cy=ny + 60, scale=ns * 1.35, turn=-0.3, h_turn=-0.05,
-      expr='determined', light=DAWN_L,
-      act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.9, brow_angry=0.55, h_nod=0.08)),
-      hands=[dict(who='mom', fn=paw_eyes('narrator', 1010, ny + 60, ns * 1.35, side=-1, size=680), size=680, shape='open', side=-1,
-                  sleeve_from=lambda tt: (-320, 1150), scratch=True, depth=0.95)],
-      c=dict(mv='push', x=990, y=560, zrate=0.012))
+    # "It's the easiest thing in the world." (fix round 1, fixer C: critic 1 minor 10 / critic 2 M6, three near-identical
+    # close-ups cut on one axis) the reverse two-shot: Mom on her knees on the left, her face over the narrator's, smiling
+    # down, her scratched hand flat over the narrator's eyes; the narrator in profile on the right, face pushed into the
+    # palm, brows knotted, lips pressed. (Mom stays screen LEFT and the hand still comes from the left.)
+    rnx, rny, rns = 1290, 660, 0.95
+    C(T(357), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=640, cy=520, scale=0.92, turn=0.45, expr='proud', light=DAWN,
+      act=_A(lambda a, s: a.set(-9, None, 0.01, scratch=1.0, mess=0.6, smile=0.75), lookxy(1200, 640, -9, None, 0.3, z=300.0),
+             pose(T(357) + 0.4, None, 0.9, h_tilt=-8.0, smile=0.85)),
+      busts=[dict(who='narrator', cx=rnx, cy=rny, scale=rns, turn=-0.55, expr='determined', light=DAWN_L, depth=1.02,
+                  act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=0.9, brow_angry=0.55, brow_sad=0.4, m_press=0.7, h_nod=0.1)))],
+      hands=[dict(who='mom', fn=paw_eyes('narrator', rnx - 40, rny, rns, side=-1, size=470), size=470, shape='open', side=-1,
+                  sleeve_from=lambda tt: (960, 1330), scratch=True, depth=0.95)],
+      c=dict(mv='push', x=960, y=580, zrate=0.012))
     C(T(358), 'bust', who='narrator', bg=('up', 'west', UP_DAWN), set=UPD, cx=nx, cy=ny + 80, scale=ns * 1.5, turn=0.1, expr='determined', light=DAWN_L,
       act=_A(lambda a, s: a.eyes_shut(-9, None, 0.0), pose(-9, None, 0.1, squint=1.0, brow_angry=0.6)),
       hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 80, ns * 1.5, side=-1, size=740), size=740, shape='open', side=-1,
@@ -5281,8 +5724,10 @@ def plan_after(F):
         m.reach(-9, None, -1, out=40.0, down=150.0, fwd=210.0, shape='open', up=0.0, fade=0.01)
         m.look_at(-9, lambda tt: m.where(tt, 'hand_r', post=False), None, 0.01)
         return []
-    C(tar, 'set', room='up', view='west', cam=cm((0.5, 4.75, 4.05), (-0.6, 5.05, 3.7), S=950, sx=960, sy=560), set=UPD, rim=DAWN,
-      ppl=[P('mom', (-0.6, 5.05, 2.85), face=(0.35, 5.5), expr='terror', kind='kneel', knees=0, act=_A(MOMK, pose(-9, None, 0.1, h_nod=0.5)))],
+    # (fix round 1, fixer C: critic 1 M14) "I'm on my knees": Mom's body still kneeling where it knelt for the trick
+    # (SW_MOM, sitting back on the heels as in the climax), the scratched arms held out in front of her
+    C(tar, 'set', room='up', view='west', cam=cm((0.5, 4.8, 3.95), (-0.6, 5.3, 3.4), S=950, sx=960, sy=560), set=UPD, rim=DAWN,
+      ppl=[P('mom', SW_MOM, face=(0.35, 5.5), expr='terror', kind='kneel', knees=2, act=_A(MOMK, pose(-9, None, 0.1, h_nod=0.5)))],
       acts=arms_acts, c=dict(mv='push', f=1.0, rate=0.02))
     C(w(360, 'looking') - 0.2, 'set', room='up', view='west', cam=LOW_UP, set=UPD, rim=DAWN_L, ppl=[NEW(), JUNE_H()], acts=hand_in_hand,
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='narrator_new')
@@ -5307,21 +5752,26 @@ def plan_after(F):
     C(T(368), 'bust', who='mom', bg=('up', 'west', UP_DAWN), set=UPD, cx=960, cy=680, scale=1.35, expr='terror', light=DAWN,
       act=_A(MOMK, SCREAM(0.9), lookxy(1100, 300, -9, None, 0.3, z=300.0)), c=dict(mv='push', x=960, y=620, zrate=0.03, shake=0.5))
     # (screen-space looks are camera-bound: from behind the two, they look at Mom's eyes on the plan)
-    C(T(369), 'set', room='up', view='west', cam=SCREAM_CAM, set=UPD, rim=DAWN,
-      ppl=[P('mom', (-0.6, 5.05, 2.85), face=(0.35, 5.5), expr='terror', kind='kneel', knees=0, act=_A(MOMK, SCREAM(0.9))),
-           P('narrator_new', (0.35, 5.5, 2.85), face=(-0.6, 5.05), expr='wrong_smile'), P('june', (0.6, 5.15, 2.85), face=(-0.6, 5.05), expr='neutral')],
-      acts=lambda A, s, sp: [A['narrator_new'].hold_hand(s.t0 - 1.0, -1, A['june'], 1, dur=0.01),
-                             A['narrator_new'].look_at(s.t0 - 1.0, (A['mom'], 'eyes'), None, 0.3), A['june'].look_at(s.t0 - 1.0, (A['mom'], 'eyes'), None, 0.3),
-                             A['mom'].look_at(s.t0 - 1.0, (A['narrator_new'], 'eyes'), None, 0.3)] and [],
-      c=dict(mv='push', f=1.0, rate=0.015), focus_on='mom')
+    # (fix round 1, fixer C: critic 1 M14 / critic 2 M11: the screamer was tiny, mouth shut, between June's huge head and
+    # the old body's back) the reverse of "my own face looks down at me": from just over the narrator's old body, looking
+    # down at Mom's body on its knees where it knelt, screaming up into the lens, both scratched arms reaching up
+    C(T(369), 'set', room='up', view='west', cam=cm((1.15, 5.18, 4.05), (-0.6, 5.3, 3.62), S=1250, sx=960, sy=500), set=UPD, rim=DAWN,
+      ppl=[P('mom', SW_MOM, face=(1.15, 5.18), expr='terror', kind='kneel', knees=2,
+             act=_A(MOMK, SCREAM(1.0), pose(-9, None, 0.1, h_nod=-0.35, lean=0.2),
+                    lambda a, s: [a.reach(-9, None, sd, out=60.0, down=-40.0, fwd=230.0, shape='open', up=0.6, fade=0.01) for sd in (1, -1)],
+                    lookxy(960, 120, -9, None, 0.3, z=600.0)))],
+      c=dict(mv='push', f=1.0, rate=0.02, shake=0.6), focus_on='mom')
     # 370 "When the police came, they found a dead man in a bunny suit who'd been missing since 1987, and a mother who had
     # fought him off to save her children, and then lost her mind."
     C(T(370), 'set', room='front', view='house', set=dict(tod='dawn', police=dict(mode='sweep', strength=0.55)), c=dict(mv='push', f=1.15, rate=0.02))
     C(w(370, 'dead') - 0.15, 'set', room='hall', view='bottom', cam=cm((-1.0, 2.9, 1.5), (0.2, 0.4, 0.7), S=850, sx=960, sy=600), set=dict(tod='dawn', hall=0.0, door=60.0),
       rim=POLICE, ppl=[P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', act=_A(pose(-9, None, 0.01, unmask=0.6), lambda a, s: a.dead(-9, 0.01))),
-                       P('cop', (-0.3, 0.12, 0.0), path=[(w(370, 'dead') - 0.1, (-0.3, 0.12, 0.0)), (w(370, 'dead') + 1.3, (0.0, 0.42, 0.0))], face=(0.5, 0.45),
+                       # (fix round 1, fixer C: critic 1 M15 / critic 2 M8, he crouched INTO the body) in at the door and along
+                       # the wall past the head, then down on one knee on the far side of the body, facing it across its chest
+                       # (the body between him and us)
+                       P('cop', (-0.45, 0.1, 0.0), path=[(w(370, 'dead') - 0.1, (-0.45, 0.1, 0.0)), (w(370, 'dead') + 1.3, (0.4, 0.07, 0.0))], face=(0.45, 0.6),
                          expr='sad', act=_A(lookp((0.55, 0.45, 0.2), -9, None, 0.3),
-                                            lambda a, s: a.crouch(w(370, 'dead') + 1.5, 0.9, None, 0.8),
+                                            lambda a, s: a.kneel_down(w(370, 'dead') + 1.45, 0.8, knees=0),
                                             lambda a, s: a.head_down(w(370, 'since') - 0.2, None, 0.35, 0.8)))],
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='cop', sfx=[(w(370, 'dead') - 0.1, 'police_radio', -16, 0.4, 'inside', dict(dur=3.0))])
     C(w(370, 'mother') - 0.25, 'bust', who='mom', bg=('front', 'house'), set=dict(tod='dawn', police=dict(mode='sweep', strength=0.55)), cx=960, cy=620, scale=0.95,
@@ -5363,14 +5813,29 @@ def plan_after(F):
       act=_A(hum(t(380) - 0.1, None), lookxy(700, 560, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=970, y=580, zrate=0.02),
       sfx=[(t(380), 'hum', -8, 0, 'hospital', dict(who='narrator_neat', dur=1.6))], music=[(t(380), 'jingle', 0.45, 1.8, dict(version='hum'))])
     # 381 "Last Sunday, June climbed into my lap, put her mouth against my ear, and whispered,"  382 J "I know it's you."
-    # a close two-shot: June on her lap, leaning in to her ear (June's bust lower and in front, turned to her)
-    def lap(t_lean, k=1.0):
-        return [dict(who='june', cx=780, cy=700, scale=0.82 * k, turn=0.55, expr='neutral', light=HOSP, depth=0.98,
-                     act=_A(pose(t_lean, None, 0.6, h_tilt=8.0, h_nod=0.1, approach=0.25), lookxy(1200, 560, -9, None, 0.3, z=200.0)))]
-    C(T(381), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1150, cy=600, scale=0.9, turn=-0.3, expr='haunted', light=HOSP,
-      act=lookxy(1500, 560, -9, None, 0.3, z=400.0), busts=lap(w(381, 'put')), c=dict(mv='push', x=1000, y=580, zrate=0.02))
-    C(T(382), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1180, cy=620, scale=1.0, turn=-0.3, expr='haunted', light=HOSP,
-      act=_A(lookxy(1500, 560, -9, None, 0.3, z=400.0), pose(t(382) + 0.4, None, 0.5, wide=0.6)), busts=lap(-9, 1.12), c=dict(mv='push', x=1000, y=600, zrate=0.02))
+    # (fix round 1, fixer C: critic 1 M16 / critic 2 M11, June's mouth was at the chin, facing away) two beats: June climbs
+    # up into the frame onto her lap (the woman's arms come round her); then, close, June in profile with her lips at the
+    # woman's ear, one hand cupped round her mouth, whispering; the woman's eyes widen on it
+    tput = w(381, 'put') - 0.15
+    jy_ = lambda tt, t0=T(381): lerp(1380, 780, ease_out_cubic(clamp((tt - t0 - 0.25) / 1.3)))
+    C(T(381), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1180, cy=560, scale=0.88, turn=0.15, expr='haunted', light=HOSP,
+      act=_A(lookxy(840, 820, -9, None, 0.4, z=300.0), pose(T(381) + 1.0, None, 0.6, h_nod=0.15, h_tilt=-6.0)),
+      busts=[dict(who='june', cx=820, cy=jy_, scale=0.8, turn=0.35, expr='neutral', light=HOSP, depth=0.98,
+                  act=_A(lookxy(1180, 420, -9, None, 0.3, z=300.0), pose(T(381) + 0.3, T(381) + 1.5, 0.3, lean=0.3)))],
+      hands=[dict(who='mom_hosp', fn=lambda tt: (690, jy_(tt) + 260, 300.0, clamp((tt - T(381) - 1.0) / 0.4)), size=300, shape='relaxed', side=1,
+                  sleeve_from=lambda tt: (1060, 1250), depth=0.97)],
+      c=dict(mv='push', x=1000, y=580, zrate=0.015))
+    # the whisper: June's lips at the screen-left ear of the woman (she faces a little right, so that ear is toward June)
+    mx_, my_ = 985.0, 610.0                                                      # the woman's ear (mom_hosp at 1190, 600, 1.0)
+    jsc = 0.86; jcx = mx_ - 112.0; jcy = my_ - 64 * 600.0 * jsc / CH.CAST['june']['hh'] - 6.0
+    cup = lambda tt: (mx_ - 14.0, my_ + 158.0, 170.0, 1.0)
+    for t0_, k_ in ((tput, 0), (T(382), 1)):
+        C(t0_, 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=1190, cy=600, scale=1.0, turn=0.3, expr='haunted', light=HOSP,
+          act=_A(lookxy(1500, 600, -9, None, 0.3, z=400.0), pose(t(382) + 0.3, None, 0.5, wide=0.75, brow_up=0.6) if k_ else (lambda a, s: None)),
+          busts=[dict(who='june', cx=jcx, cy=jcy, scale=jsc, turn=0.95, expr='neutral', light=HOSP, depth=0.98,
+                      act=_A(pose(-9, None, 0.1, h_nod=0.05, approach=0.0), lookxy(1300, 600, -9, None, 0.3, z=300.0)))],
+          hands=[dict(who='june', fn=cup, size=170, shape='relaxed', side=-1, sleeve_from=lambda tt: (jcx + 40, jcy + 520), depth=0.97)],
+          c=dict(mv='push', x=1060, y=600, zrate=0.012 if k_ else 0.02))
     # 383 "Then she told me what my old body asked her in the car, on the way over."  384 X "Want to see a magic trick?"
     C(T(383), 'bust', who='mom_hosp', bg=('hosp', 'table'), cx=960, cy=620, scale=1.05, expr='haunted', light=HOSP,
       act=_A(pose(t(383) + 1.5, None, 1.2, wide=0.7, brow_up=0.6), lookxy(960, 560, -9, None, 0.3, z=600.0)), c=dict(mv='push', x=960, y=580, zrate=0.025))
@@ -5398,7 +5863,8 @@ def plan_outro(F):
     C(T(386) - 0.4, 'black', caption=True, sfx=[(t(387) + 0.1, 'breath', -12, 0, 'close', dict(kind='calm_exhale'))], music=[(T(386) - 0.4, 'silence', 0.0, 2.0)])
     # 388 "You can turn a light on now."  the switch flips ON; the frame floods warm
     ton = w(388, 'on') - 0.05
-    C(T(388), 'ins', name='switch', **O, kw=lambda tr, a=ton - T(388): dict(flip=lambda tt: ease_in_out(clamp((tt - a) / 0.15))),
+    # (fix round 1, fixer C: critic 2 M12) the living-room lamp switch, unlabelled: the porch light is kept for "subscribe"
+    C(T(388), 'ins', name='switch', **O, kw=lambda tr, a=ton - T(388): dict(room='living', flip=lambda tt: ease_in_out(clamp((tt - a) / 0.15))),
       post_fn=lambda tt, a=ton: dict(exposure=0.22 * ease_in_out(clamp((tt - a) / 0.5))), c=dict(mv='push', rate=0.02),
       sfx=[(ton, 'light_switch', -2, 0, 'close')], music=[(ton + 0.1, 'outro_warm', 0.4, 30.0)])
     # 389 "None of this happened."  the living room, every lamp on, empty and warm
@@ -5406,8 +5872,10 @@ def plan_outro(F):
     # 390 "There's no Holloway."  391 "No Pemberton's."  (struck through in red marker)
     C(T(390), 'ins', name='courier', **O, strike=(w(390, 'holloway') + 0.1, 690, 70, 1120, 40),
       c=dict(mv='keys', keys=[(T(390), 960, 190, 1.0, None, 1.7), (T(391), 960, 190, 1.0, 'lin', 1.75)]), sfx=[(w(390, 'holloway') + 0.1, 'marker_strike', -4, 0, 'close')])
-    C(T(391), 'ins', name='egg', **O, strike=(w(391, 'pemberton') + 0.05, 985, 465, 1150, 640),
-      c=dict(mv='keys', keys=[(T(391), 1060, 540, 1.0, None, 1.5), (T(392), 1060, 540, 1.0, 'lin', 1.55)]), sfx=[(w(391, 'pemberton') + 0.05, 'marker_strike', -4, 0, 'close')])
+    # (fix round 1, fixer C: critic 2 minor 22, the brief's "the egg empty") the egg lying open in its two halves on the
+    # desk under the lamp: nothing inside; the Pemberton's stamp on the bottom half struck through
+    C(T(391), 'ins', name='egg_empty', **O, strike=(w(391, 'pemberton') + 0.05, 600, 790, 800, 735),
+      c=dict(mv='keys', keys=[(T(391), 900, 640, 1.0, None, 1.15), (T(392), 860, 660, 1.0, 'lin', 1.25)]), sfx=[(w(391, 'pemberton') + 0.05, 'marker_strike', -4, 0, 'close')])
     # 392 "No bridge at the end of Orchard Road."  just a bridge, in daylight
     C(T(392), 'set', room='woods', view='bridge', set=dict(tod='day87'), **O, rim=MEMORY, grade='ob_ext', c=dict(mv='push', f=1.1, rate=0.015),
       sfx=[(T(392), 'birds_day', -12, 0, 'woods', dict(dur=2.5))])

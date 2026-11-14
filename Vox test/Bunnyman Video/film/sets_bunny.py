@@ -3520,6 +3520,24 @@ def chopping_block(pen, v, x=None, y=None, hatchet=True):
     x = CHOP[0] if x is None else x; y = CHOP[1] if y is None else y
     if v.d(x, y) < 0.3: return
     s = v.s(x, y)
+    def draw_log(dx, dy):
+        if v.d(x + dx, y + dy) < 0.6: return
+        # a split log lying on the grass: its long side in the plan (a box), its bark, the pale split face, a shadow
+        x0_, y0_ = x + dx - 0.2, y + dy - 0.06
+        q_top = [v.p(x0_, 0.1, y0_), v.p(x0_ + 0.4, 0.1, y0_), v.p(x0_ + 0.4, 0.1, y0_ + 0.12), v.p(x0_, 0.1, y0_ + 0.12)]
+        q_bot = [v.p(x0_, 0.0, y0_), v.p(x0_ + 0.4, 0.0, y0_), v.p(x0_ + 0.4, 0.0, y0_ + 0.12), v.p(x0_, 0.0, y0_ + 0.12)]
+        sx_, sy_ = v.p(x + dx, 0.0, y + dy)
+        pen.fill(oval(sx_, sy_, 0.26 * v.s(x + dx, y + dy), 0.05 * v.s(x + dx, y + dy)), '#000000', 110, blur=4)
+        hull = poly([q_bot[0], q_bot[1], q_top[1], q_top[2], q_top[3], q_top[0]]) if q_bot[0][1] > q_top[0][1] else poly(q_top)
+        pen.fill(hull, lit('#4a3624', (x + dx, 0.05, y + dy), None)); pen.texture(hull, 'wood', 0.6, 'overlay', 1.0)
+        pen.fill(poly(q_top), lit('#a8885a', (x + dx, 0.1, y + dy), (0, 1, 0))); pen.line(hull, 0.9)
+
+    LOGS = ((0.45, 0.2), (0.35, -0.3), (-0.4, 0.25))
+    dB = v.d(x, y)
+    for dx, dy in LOGS:
+        if v.d(x + dx, y + dy) > dB: draw_log(dx, dy)
+    bx_, by_ = v.p(x, 0.0, y)
+    pen.fill(oval(bx_, by_, 0.36 * v.s(x, y), 0.1 * v.s(x, y)), '#000000', 120, blur=6)        # its contact shadow
     r = 0.24; H = 0.48
     top = ellipse3(v, x, y, r, r, H); bot = ellipse3(v, x, y, r, r, 0.0)
     tb, bb = _rb(top), _rb(bot)
@@ -3528,6 +3546,14 @@ def chopping_block(pen, v, x=None, y=None, hatchet=True):
     pen.fill(top, lit('#b89a6a', (x, H, y), (0, 1, 0))); pen.line(top, 1.0)
     cx, cy = v.p(x, H, y)
     for rr in (0.3, 0.55, 0.8): pen.line(ellipse3(v, x, y, r * rr, r * rr, H), 0.7, '#6a5032', 150)
+    if not hatchet:                                          # (fix round 1, fixer C) the hatchet gone: the fresh pale gash it left
+        gx_, gy_ = v.p(x + 0.04, H + 0.003, y)
+        gs = v.s(x, y)
+        gash = poly([(gx_ - 0.075 * gs, gy_), (gx_ - 0.01 * gs, gy_ - 0.012 * gs), (gx_ + 0.075 * gs, gy_ + 0.002 * gs), (gx_ - 0.005 * gs, gy_ + 0.014 * gs)])
+        pen.fill(gash, '#1a120a'); pen.line(gash, 0.8, '#e8d0a0', 200)
+        for k in range(5):
+            cx_, cy_ = gx_ + (k - 2) * 0.03 * gs, gy_ + 0.02 * gs * (k % 2)
+            pen.fill(poly([(cx_, cy_), (cx_ + 0.02 * gs, cy_ - 0.004 * gs), (cx_ + 0.012 * gs, cy_ + 0.008 * gs)]), '#e8d0a0', 210)
     if hatchet:
         hx, hy = v.p(x + 0.04, H + 0.02, y)
         head = poly([(hx - 0.07 * s, hy), (hx + 0.07 * s, hy), (hx + 0.09 * s, hy - 0.1 * s), (hx - 0.03 * s, hy - 0.11 * s)])
@@ -3536,10 +3562,8 @@ def chopping_block(pen, v, x=None, y=None, hatchet=True):
         ex, ey = hx - 0.3 * s, hy - 0.32 * s
         pen.seg((hx, hy - 0.08 * s), (ex, ey), max(2.0, 0.03 * s) + 2, LINE); pen.seg((hx, hy - 0.08 * s), (ex, ey), max(1.6, 0.03 * s), lit('#8a6440', (x, 0.8, y), None))
     # split logs around it
-    for k, (dx, dy) in enumerate(((0.45, 0.2), (0.35, -0.3), (-0.4, 0.25))):
-        lx, ly = v.p(x + dx, 0.07, y + dy)
-        lg = oval(lx, ly, 0.16 * v.s(x + dx, y + dy), 0.06 * v.s(x + dx, y + dy))
-        pen.fill(lg, lit('#7a5a3a', (x + dx, 0.1, y + dy), None)); pen.line(lg, 0.9)
+    for dx, dy in LOGS:
+        if v.d(x + dx, y + dy) <= dB: draw_log(dx, dy)
 
 
 def woodpile(pen, v, x0=-9.55, x1=-9.1, y0=24.0, y1=27.0, h=1.15):
@@ -3955,6 +3979,39 @@ def _scratches_wall(p_, W, H, k, seed=2):
         x, y = rng.uniform(0.1 * W, 0.9 * W), rng.uniform(0.35 * H, 0.65 * H)
         g = poly([(x - 8, y), (x, y - 2), (x + 8, y + 1), (x, y + 2.5)])
         p_.fill(g, '#5a4a3a'); p_.line(g, 0.6, '#2a1a10', 220)
+    # (fix round 1, fixer C: critic 1 minor 9 / critic 2 minor 12, 'wrecked' read as a few smudges) the fight's real
+    # damage, readable from down the corridor: long raking claw tears through the wallpaper (four parallel gouges with
+    # the plaster white inside), deep hatchet chops with the lath showing, a dragged dark smear at hand height, a fist-size
+    # hole punched through with cracks running out of it
+    for i in range(int(5 * k)):
+        x, y = rng.uniform(0.08 * W, 0.92 * W), rng.uniform(0.25 * H, 0.55 * H)
+        ln = rng.uniform(40, 80); dx_ = rng.uniform(-18, 18)
+        for j in range(4):
+            o_ = j * 4.5
+            p_.seg((x + o_, y + j * 1.5), (x + o_ + dx_, y + ln - j * 4), 2.6, '#1e140e', 230)
+            p_.seg((x + o_ + 0.8, y + j * 1.5 + 2), (x + o_ + dx_ + 0.8, y + ln - j * 4 - 2), 0.9, '#e8e0d0', 170)
+    for i in range(int(4 * k)):
+        x, y = rng.uniform(0.1 * W, 0.9 * W), rng.uniform(0.3 * H, 0.7 * H)
+        a_ = rng.uniform(-0.6, 0.6)
+        ca, sa = math.cos(a_), math.sin(a_)
+        g = poly([(x - 14 * ca, y - 14 * sa), (x + 3 * sa, y - 3 * ca), (x + 14 * ca, y + 14 * sa), (x - 3 * sa, y + 5 * ca)])
+        p_.fill(g, '#2a1c12'); p_.line(g, 0.8, '#e8dcc0', 230)
+        p_.seg((x - 9 * ca, y - 9 * sa + 1), (x + 9 * ca, y + 9 * sa + 1), 1.2, '#b89a6a', 200)          # the lath in the cut
+    for i in range(int(2 * k)):
+        x, y = rng.uniform(0.15 * W, 0.85 * W), rng.uniform(0.42 * H, 0.6 * H)
+        L_ = rng.uniform(70, 150)
+        sm = poly([(x, y), (x + L_, y + rng.uniform(-8, 8)), (x + L_, y + 7), (x, y + 10)])
+        p_.fill(sm, '#2e1410', 150 * k)
+        for j in range(4):
+            p_.seg((x + rng.uniform(5, L_ - 5), y + 8), (x + rng.uniform(5, L_ - 5), y + rng.uniform(16, 34)), 1.2, '#2e1410', 160 * k)
+    if k > 0.6:
+        x, y = 0.62 * W, 0.48 * H                                   # the hole punched through the plaster
+        h_ = poly([(x - 7, y - 5), (x + 2, y - 8), (x + 8, y - 2), (x + 6, y + 6), (x - 3, y + 7), (x - 8, y + 1)])
+        p_.fill(h_, '#0c0806'); p_.line(h_, 1.0, '#e8e0d0', 220)
+        for j in range(6):
+            a_ = j * 1.05 + 0.3
+            p_.line(poly([(x + 8 * math.cos(a_), y + 7 * math.sin(a_)), (x + 16 * math.cos(a_ + 0.15), y + 13 * math.sin(a_ + 0.15)),
+                          (x + 24 * math.cos(a_ - 0.1), y + 20 * math.sin(a_ - 0.1))], False), 0.7, '#2a2018', 200)
 
 
 def _runner_wrecked(p_, W, H, x0, y1):
@@ -4894,17 +4951,20 @@ _cam('bath_lock', 1150, 540, UP_Y + 1.06, -1.3, 6.7, 184, dict(x=(920, 1000), y=
      'close on the knob, the little bolt and the keyhole from inside (the lock turns by itself)', 'bath')
 
 
-def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0.0, feet=None, door=0.0, tod='night', slam=None, key=0.0, **kw):
+def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0.0, feet=None, door=0.0, tod='night', slam=None, key=0.0,
+            rattle=None, knocks=None, **kw):
     """The upstairs bathroom: pink tile to 1.35 m with a black bullnose, the pink built-in tub (the kids sit IN it:
     anchors tub_left / tub_right, the tub's near wall is a layer in front of them), the pedestal sink, the toilet, the
     door with an old brass knob, a little thumb-turn bolt and a keyhole. view 'door' | 'tub' | 'gap' | 'lock'.
     gap = level of the line of light under the door (number or f(t)), gap_col (default warm; DAWN_C at sunrise), feet =
     f(t) -> [(u0, u1)] shadowed fractions (someone standing outside), lock 0..1 (or f(t): the bolt turning by itself),
-    knob = degrees (or f(t): it turns gently), slam = time of the slam (the door jumps in its frame)."""
+    knob = degrees (or f(t): it turns gently), slam = time of the slam (the door jumps in its frame, bows in, dust
+    showers from the frame), rattle = (t0, t1): the whole door shuddering in its frame against the bolt while the hallway
+    shakes (dust trickling), knocks = [t]: soft knocks (the leaf gives a little at each). (fix round 1, fixer C)"""
     v = cam('bath_' + view)
     gc = gap_col or ('#ffc070' if tod == 'dawn' else '#ffd9a0')
     o = dict(gap=gap, gap_col=gc, bath_light=bath_light, lock=lock, door=door, feet=feet, tod=tod)
-    live = callable(lock) or callable(knob) or slam is not None or callable(door) or key
+    live = callable(lock) or callable(knob) or slam is not None or callable(door) or key or rattle is not None or knocks
     if live: o['door'] = lambda t: 0.0
     main = Bathroom()
     sp_dyn = []
@@ -4914,7 +4974,15 @@ def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0
             ang = _val_t(door, t) if not callable(o['door']) or callable(door) else 0.0
             ang = _val_t(door, t)
             jolt = 0.0
-            if slam is not None and t >= slam: jolt = 0.012 * math.exp(-(t - slam) * 9.0) * math.cos((t - slam) * 60)
+            if slam is not None and t >= slam:                     # the slam: the leaf bows in hard against the bolt, then shudders
+                jolt = 0.05 * math.exp(-(t - slam) * 6.0) * math.cos((t - slam) * 48) - 0.06 * math.exp(-(t - slam) * 12.0)
+                ang += 4.5 * math.exp(-(t - slam) * 6.0) * abs(math.sin((t - slam) * 34 + 1.2))
+            if rattle is not None and rattle[0] <= t <= rattle[1] + 0.4:
+                k_ = clamp((t - rattle[0]) / 0.15) * clamp((rattle[1] + 0.4 - t) / 0.4)
+                jolt += 0.02 * k_ * math.sin(t * 61.0) * (0.6 + 0.4 * math.sin(t * 7.3))
+                ang += 2.4 * k_ * abs(math.sin(t * 23.0)) * (0.5 + 0.5 * abs(math.sin(t * 5.1)))
+            for kt in (knocks or ()):
+                if kt <= t < kt + 0.25: jolt += 0.004 * math.exp(-(t - kt) * 22.0)
             bd = bath_door_leaf(lock=_val_t(lock, t), knob_turn=_val_t(knob, t))
             bd.hinge = (bd.hinge[0], bd.hinge[1] + jolt)
             if abs(ang) < 1.0:                              # the floor beyond the gap, in the door's own layer (no parallax
@@ -4924,6 +4992,26 @@ def ob_bath(view='door', gap=1.0, gap_col=None, bath_light=0.0, lock=1.0, knob=0
                 if len(q) >= 3: pen.fill(poly([v_.p(*p3) for p3 in q]), mix('#0a0806', gc, 0.85 * gl))
             bd.draw(pen, v_, ang)
         sp_dyn.append(live_layer('door', v, (-1.62, UP_Y + 1.0, 5.85), door_fn, amb, steady, var))
+        if slam is not None or rattle is not None:
+            def dust_fn(pen, t, v_=v):
+                # plaster dust shaken loose from the top of the door frame: a burst at the slam, a trickle while it rattles
+                srcs = []
+                if slam is not None and slam <= t < slam + 2.2: srcs.append((t - slam, 60, 1.0))
+                if rattle is not None and rattle[0] <= t < rattle[1] + 1.6: srcs.append((t - rattle[0], 26, 0.55))
+                for dt, n_, a_ in srcs:
+                    rng = np.random.default_rng(77)
+                    for q in range(n_):
+                        x_ = rng.uniform(D_BATH[0] - 0.06, D_BATH[1] + 0.06); t0_ = rng.uniform(0.0, 0.9 if a_ < 1 else 0.25)
+                        u_ = dt - t0_
+                        if u_ < 0: continue
+                        Y_ = UP_Y + DOOR_H + 0.04 - 0.5 * 4.0 * u_ * u_ - 0.08 * u_
+                        if Y_ < UP_Y: continue
+                        px, py = v_.p(x_ + 0.03 * math.sin(q + u_ * 3.0), Y_, 5.87)
+                        r_ = max(1.2, 0.006 * v_.s(x_, 5.87)) * (0.6 + 0.8 * rng.uniform())
+                        pen.fill(oval(px, py, r_, r_), '#d8d0c0', 200 * a_ * clamp(1.0 - u_ / 1.6))
+            dl = Layer(max(0.3, v.d(-1.62, 6.0)), dust_fn, 'door_dust', blur=None)
+            dl.order = v.d(-1.62, 6.0) - 0.05
+            sp_dyn.append(dl)
     sp = build_view('ob_bath_' + view, v, main, o, far=[UpstairsHall()], outside=None, grade='ob_dawn' if tod == 'dawn' else 'ob_dark', dyn=sp_dyn,
                     focus=(v.d(-1.62, 5.8) if view in ('gap', 'lock', 'door') else None), dof=(2.5 if view in ('gap', 'lock') else 0.8),
                     cover=((-330, -400, 2250, 1310) if view == 'gap' else None))
@@ -5455,7 +5543,7 @@ class Yard(Room):
         if not self.front:
             for nm, (x, y), fn in (('shed', (SHED.cx, SHED.cy), lambda pen, v: shed(pen, lifted(v, GROUND_Y), tt)),
                                    ('woodpile', (-9.3, 25.5), lambda pen, v: woodpile(pen, lifted(v, GROUND_Y))),
-                                   ('chopping_block', CHOP, lambda pen, v: chopping_block(pen, lifted(v, GROUND_Y))),
+                                   ('chopping_block', CHOP, lambda pen, v, hk=o.get('chop', True): chopping_block(pen, lifted(v, GROUND_Y), hatchet=hk)),
                                    ('swing', SWING, lambda pen, v: swing_set(pen, lifted(v, GROUND_Y), tod=tt, rust=0.0 if tt in ('day87', 'sunrise87') else 1.0)),
                                    ('fence', (0.0, 37.6), lambda pen, v: _fence(pen, lifted(v, GROUND_Y), tt)),
                                    ('clothesline', (5.5, 22.0), lambda pen, v: _clothesline(pen, lifted(v, GROUND_Y)))):
@@ -5510,7 +5598,7 @@ _cam('peephole', 560, 540, PEEP_Y, FD_CX, -0.06, 180, dict(x=(940, 980), y=(520,
      pitch=38.0)
 
 
-def ob_yard(view='woods', tod='night', back_light=0.0, kitchen=0.0, june_light=0.0, fire=0.0, egg=None, moon=1.0, **kw):
+def ob_yard(view='woods', tod='night', back_light=0.0, kitchen=0.0, june_light=0.0, fire=0.0, egg=None, moon=1.0, chop=True, **kw):
     """The back yard and Holloway Woods' edge. view:
       'woods'  from the back porch to the treeline   'house'  from the treeline back at the house
       'wide'   establishing from the east side       'close'  telephoto on the treeline (anchor 'treeline')
@@ -5521,6 +5609,7 @@ def ob_yard(view='woods', tod='night', back_light=0.0, kitchen=0.0, june_light=0
     v = cam(name)
     glow = {'kitchen': _kfn(kitchen, 0)(0.0), 'june': _kfn(june_light, 0)(0.0)}
     o = dict(tod=tod, back_light=back_light, kitchen=kitchen, june_light=june_light, glow=glow, fire=fire, fire_light=0.0)
+    if not chop: o['chop'] = False                           # the chopping block without its hatchet (it was taken at 4:30)
     main = Yard()
     dynl = []
     if fire:
@@ -6680,6 +6769,9 @@ def _ins_egg(pen, t, state='whole', rattle=None, ring=True, bg='mat', gold=False
     if bg == 'mat':
         pen.fill(rect(-400, -300, 2720, 1680), '#6a5232'); pen.texture(rect(-400, -300, 2720, 1680), 'fabric', 0.9, 'overlay', 4.0)
         btext(pen, 'WELCOME', 960, 1010, 'sans_b', 210, '#2a1a10', 120, 'center', spacing=0.1)
+    elif bg == 'table':                                    # (the outro) on the desk's warm wood under the lamp
+        pen.fill(rect(-400, -300, 2720, 1680), '#6a4a32'); pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.8, 'overlay', 1.3, 0)
+        pen.radial(None, 1100, 300, 1500, [(0, '#ffe2b0', 110), (1, '#000000', 150)])
     else:
         pen.fill(rect(-400, -300, 2720, 1680), '#1a1416')
     r = rattle(t) if callable(rattle) else (rattle or 0.0)
@@ -7082,10 +7174,15 @@ def _ins_flashlight(pen, t, k=1.0, **kw):
     cv.restore()
 
 
-def _ins_switch(pen, t, on=True, flip=None, **kw):
+def _ins_switch(pen, t, on=True, flip=None, room='kitchen', **kw):
     """The porch light switch by the back door (Grandma's): an ivory toggle on a plate, a strip of masking tape with
-    PORCH in her handwriting. flip = f(t) -> 0..1 (the toggle moving)."""
-    pen.fill(rect(-400, -300, 2720, 1680), P_['kit_wall']); pat(pen, 1920, 1080, 'ditsy', '#d9a84a', 120, 7, '#e46a5a', 4.0)
+    PORCH in her handwriting. flip = f(t) -> 0..1 (the toggle moving). room='living' (fix round 1, fixer C: critic 2 M12,
+    the outro's 'turn a light on now' spent the porch-light payoff): the living-room lamp switch on the rose wallpaper,
+    no label."""
+    if room == 'living':
+        pen.fill(rect(-400, -300, 2720, 1680), P_['liv_paper']); pat(pen, 1920, 1080, 'roses', P_['liv_ink'], 120, 4, P_['liv_ink2'])
+    else:
+        pen.fill(rect(-400, -300, 2720, 1680), P_['kit_wall']); pat(pen, 1920, 1080, 'ditsy', '#d9a84a', 120, 7, '#e46a5a', 4.0)
     pen.radial(None, 960, 540, 900, [(0, '#000000', 0), (1, '#000000', 150)])
     plate = rrect(760, 240, 400, 620, 30)
     pen.fill(moved(plate, 10, 16), '#000000', 100, blur=14)
@@ -7097,9 +7194,10 @@ def _ins_switch(pen, t, on=True, flip=None, **kw):
     tog_y = lerp(640, 420, u)
     tog = rrect(925, min(tog_y, 545), 70, abs(tog_y - 545) + 40, 18)
     pen.fill(tog, '#fbf6ea'); pen.linear(tog, 925, 0, 995, 0, [(0, '#ffffff', 120), (1, '#000000', 60)]); pen.line(tog, 3)
-    tape = poly([(800, 900), (1120, 905), (1118, 965), (802, 960)])
-    pen.fill(tape, '#e8dca0'); pen.texture(tape, 'paper', 0.5, 'overlay', 0.8); pen.line(tape, 1.5, '#a89860')
-    btext(pen, 'PORCH', 960, 950, 'hand', 52, '#2a2a6a', 235, 'center')
+    if room != 'living':
+        tape = poly([(800, 900), (1120, 905), (1118, 965), (802, 960)])
+        pen.fill(tape, '#e8dca0'); pen.texture(tape, 'paper', 0.5, 'overlay', 0.8); pen.line(tape, 1.5, '#a89860')
+        btext(pen, 'PORCH', 960, 950, 'hand', 52, '#2a2a6a', 235, 'center')
 
 
 def _ins_clock(pen, t, time=(11, 7), kind='wall', run=False, **kw):
@@ -7327,6 +7425,8 @@ INSERTS_B = {
     'rules': (_ins_rules, 'ins_lamp', 'the laminated rules on the fridge under the bunny magnet (hl=n lights a rule, show=n)'),
     'courier': (_ins_courier, 'ins_memory', 'The Holloway Courier, April 17 1987: GIRL, 7, MISSING; the photo of Laurie and the Bunnyman'),
     'egg': (lambda pen, t, **kw: _ins_egg(pen, t, 'whole', **kw), 'ins_lamp', 'the Pemberton\'s egg on the doormat (rattle=f(t))'),
+    'egg_empty': (lambda pen, t, **kw: _ins_egg(pen, t, 'halves', ring=False, bg='table', **kw), 'ins_lamp',
+                  'the outro: the Pemberton\'s egg lying open in its two halves, EMPTY (fix round 1, fixer C)'),
     'egg_halves': (lambda pen, t, **kw: _ins_egg(pen, t, 'halves', **kw), 'ins_lamp', 'the egg opened: the two halves, Dad\'s ring rolling inside (k_open)'),
     'egg_gold': (lambda pen, t, **kw: _ins_egg(pen, t, 'whole', gold=True, bg='dark', **kw), 'ins_dawn', 'the golden egg Laurie carried out of the woods'),
     'egg_fire': (_ins_egg_fire, 'ins_dark', 'the egg melting in the burn barrel (melt 0..1 or f(t))'),

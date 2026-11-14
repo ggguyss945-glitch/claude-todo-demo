@@ -236,6 +236,10 @@ def acting_amount(acts, ts):
     return best
 
 
+LIERS = {}
+LIE_HALF = 0.85                          # half the length of a lying figure along its axis (m)
+
+
 def check_shot(k):
     sh = SH[k]
     p = sh.p
@@ -289,15 +293,27 @@ def check_shot(k):
             if kind == 'stand' and isinstance(q.get('at'), str) and sp.anchors.get(q['at']) is not None and sp.anchors[q['at']].kind == 'seat':
                 add('ERROR', k, 'FLOOR', '%s STANDS on the seat anchor %r (on the furniture)' % (who, q['at']))
             pos_end[ident] = (plan_pos(sp, q, sh.t0 + 0.01), plan_pos(sp, q, sh.t1 - 0.01), bool(q.get('path')))
-        # overlaps
+            if kind == 'lie': LIERS[ident] = True
+        # overlaps (fix round 1, fixer C: a lying body is a 1.8 m segment along its axis, not a point: the cop crouched
+        # INTO the body at the foot of the stairs and passed, because only its centre was checked)
         ids = list(pos_end)
+
+        def gap(A_, B_, a_lies, b_lies):
+            if not (a_lies or b_lies): return math.hypot(A_[0] - B_[0], A_[1] - B_[1]), 0.32
+            L_, P_ = (A_, B_) if a_lies else (B_, A_)
+            x0_, x1_ = L_[0] - LIE_HALF, L_[0] + LIE_HALF          # the bodies lie along plan x (the anchors' note)
+            cx_ = min(max(P_[0], x0_), x1_)
+            return math.hypot(P_[0] - cx_, P_[1] - L_[1]), 0.36
         for i1 in range(len(ids)):
             for i2 in range(i1 + 1, len(ids)):
                 for w_ in (0, 1):
                     A_, B_ = pos_end[ids[i1]][w_], pos_end[ids[i2]][w_]
-                    if abs(A_[2] - B_[2]) < 0.5 and math.hypot(A_[0] - B_[0], A_[1] - B_[1]) < 0.32:
-                        add('ERROR', k, 'OVERLAP', '%s and %s stand %.2f m apart on the plan (inside each other)' % (ids[i1], ids[i2], math.hypot(A_[0] - B_[0], A_[1] - B_[1])))
+                    d_, lim_ = gap(A_, B_, LIERS.get(ids[i1], False), LIERS.get(ids[i2], False))
+                    if abs(A_[2] - B_[2]) < 0.5 and d_ < lim_:
+                        add('ERROR', k, 'OVERLAP', '%s and %s are %.2f m apart on the plan (inside each other%s)' % (ids[i1], ids[i2], d_,
+                            ', the lying body counted along its length' if lim_ > 0.33 else ''))
                         break
+        LIERS.clear()
         sh._plan_pos = pos_end
     # ---- contact (reach misses) and props
     for act in acts:

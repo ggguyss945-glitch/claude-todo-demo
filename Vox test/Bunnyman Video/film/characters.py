@@ -1178,7 +1178,7 @@ def _mouth(c, hm, sp, P, det, t, skin, sh):
     LX, LY, _ = hm.map([p[0] for p in lo_d], [p[1] for p in lo_d], 6.0)
     sm, g, te = P.smile, P.grin, clamp(P.teeth)
     # folds that make smiles read: nasolabial lines, cheek bulges, dimples
-    fold_a = clamp(0.28 * sp['age'] + 0.55 * max(sm, 0) + 0.5 * g + 0.25 * P.m_wide)
+    fold_a = clamp(0.28 * sp['age'] + 0.55 * max(sm, 0) + 0.5 * g + 0.25 * P.m_wide) * sp.get('fold_k', 1.0)     # fold_k: young faces crease less
     if fold_a > 0.05:
         for s in (-1, 1):
             cx_ = s * (hw + 7)
