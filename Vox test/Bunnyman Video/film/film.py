@@ -8,7 +8,7 @@ line by line is W/shotmap.md (every timeline line -> the picture that shows it).
     from film import Film
     F = Film(timeline_dict)          # engine set_render_size(...) must be called first (render.py does it)
     F.frame(t, i) -> uint8 RGB       # one frame at the engine render size
-    F.duration                       # seconds (narration 1079.16 s + 3 s tail)
+    F.duration                       # seconds (narration 1079.16 s + TAIL 9.85 s: the end card holds for the outro song)
     F.shots                          # [Shot(t0, t1, kind, p)] hard cuts (a few white flashes / static / VHS cuts)
     F.cues(out_dir=None) -> (sfx, music)   writes W/cues/sfx_cues.json + music_cues.json + shots.json
     python3 film.py --list | --cues | --sheet PREFIX [--range a b] | --frames PREFIX | --lipcheck | --bench N [--shots ..]
@@ -47,7 +47,9 @@ Plan conventions (plan() at the end): F.cut(t, kind, **p) starts a shot that end
 start / end, F.w(i, 'word') the ASR start of a word inside line i; T(i) = F.t(i) - LEAD (cuts land 0.1 s before the word).
 Common p keys: c=dict(mv='push'|'keys'|'hold', f, rate, x, y, keys=[(t, x, y, z, ease, f)], hit=[t], shake), tags=[(t, text, x,
 y, style, hold)], sfx=[(t, name, gain_db, pan, space, params)], music=[(t, type, level, len)], cut='white'|'static'|'vhs',
-era='now'|'1987'|'memory'|'recall'|'outro', grade, post, focus, dof.
+era='now'|'1987'|'memory'|'recall'|'outro', grade, post, post_fn, focus (or focus_on=who), dof. Busts: bg_near (the draw
+order a background layer needs to stay behind the face, default 1.3), hands=[dict(who, fn(t) -> (x, y, angle, alpha[, size]),
+size, shape, side, sleeve_from, scratch)] (the Bunnyman's hands are paws). Inserts: kw = dict or f(time since the cut).
 """
 import bisect, hashlib, json, math, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -3415,7 +3417,7 @@ def plan_reveal(F):
       hands=[dict(who='mom', fn=paw_eyes('narrator', nx, ny + 80, ns * 1.5, side=-1), size=840, shape='flat', side=-1,
                   sleeve_from=lambda tt: (-300, 1080), scratch=True, depth=0.95)],
       c=dict(mv='push', x=980, y=540, zrate=0.03), music=[(t(358), 'heartbeat', 0.7, 1.6)])
-    C(T(359), 'black', cut='white', quiet_cut=True, sfx=[(t(359) + 0.05, 'impact_hit', 0, 0, None, dict(size=1.2))],
+    C(T(359), 'black', cut='white', quiet_cut=True, caption=True, sfx=[(t(359) + 0.05, 'impact_hit', 0, 0, None, dict(size=1.2))],
       music=[(t(359) + 0.05, 'sub_drop', 0.9), (t(359) + 0.1, 'silence', 0.0, 1.2)])
 
 
@@ -3483,7 +3485,7 @@ def plan_after(F):
     # 370 "When the police came, they found a dead man in a bunny suit who'd been missing since 1987, and a mother who had
     # fought him off to save her children, and then lost her mind."
     C(T(370), 'set', room='front', view='house', set=dict(tod='dawn', police=dict(mode='sweep', strength=0.55)), c=dict(mv='push', f=1.15, rate=0.02))
-    C(w(370, 'dead') - 0.15, 'set', room='hall', view='bottom', cam=cm((-0.9, 2.6, 1.6), (0.45, 0.45, 0.2), S=950, sx=960, sy=580), set=dict(tod='dawn', hall=0.0, door=60.0),
+    C(w(370, 'dead') - 0.15, 'set', room='hall', view='bottom', cam=cm((-1.0, 2.9, 1.5), (0.2, 0.4, 0.7), S=850, sx=960, sy=600), set=dict(tod='dawn', hall=0.0, door=60.0),
       rim=POLICE, ppl=[P('bunny', 'stairs_bottom_body', kind='lie', lie_face='up', arms='out', act=_A(pose(-9, None, 0.01, unmask=0.6), lambda a, s: a.dead(-9, 0.01))),
                        P('cop', (-0.15, 0.25, 0.0), face=(0.5, 0.45), expr='sad', act=lookp((0.55, 0.45, 0.2), -9, None, 0.3))],
       c=dict(mv='push', f=1.0, rate=0.02), focus_on='cop', sfx=[(w(370, 'dead') - 0.1, 'police_radio', -16, 0.4, 'inside', dict(dur=3.0))])
@@ -3558,7 +3560,7 @@ def plan_outro(F):
     T = lambda i, off=0.0: F.t(i) - LEAD + off
     O = dict(era='outro')
     # 386 "Okay."  387 "Breathe."  black, a breath
-    C(T(386) - 0.4, 'black', sfx=[(t(387) + 0.1, 'breath', -12, 0, 'close', dict(kind='calm_exhale'))], music=[(T(386) - 0.4, 'silence', 0.0, 2.0)])
+    C(T(386) - 0.4, 'black', caption=True, sfx=[(t(387) + 0.1, 'breath', -12, 0, 'close', dict(kind='calm_exhale'))], music=[(T(386) - 0.4, 'silence', 0.0, 2.0)])
     # 388 "You can turn a light on now."  the switch flips ON; the frame floods warm
     ton = w(388, 'on') - 0.05
     C(T(388), 'ins', name='switch', **O, kw=lambda tr, a=ton - T(388): dict(flip=lambda tt: ease_in_out(clamp((tt - a) / 0.15))),
@@ -3613,7 +3615,7 @@ def plan_outro(F):
     C(T(409), 'card', mode='next', **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
     # 410 "Sleep well."  411 "And if you hear a little song tonight... that's just the outro."
     C(T(410), 'card', mode='title', **O)
-    C(T(411), 'black', **O)
+    C(T(411), 'black', caption=True, **O)
     # the song IS the outro (the sound step's jingle 'outro' from e(411) + 0.1, 9.75 s, its last phrase a soft hum): the
     # channel's end card holds for it and fades out with the film
     C(e(411) + 0.35, 'card', mode='title', **O, music=[(e(411) + 0.1, 'jingle', 0.6, 9.75, dict(version='outro', stop='fade'))])
