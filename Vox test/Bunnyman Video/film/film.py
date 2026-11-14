@@ -1884,7 +1884,96 @@ def ins_hatchet_pile(pen, t, **kw):
     pen.fill(oval(1100 + dx, 905, 520, 40), '#000000', 70, blur=16)
 
 
+def ins_diary_lap(pen, t, **kw):
+    """'And in her lap is a diary with a pink plastic lock.' (fix round 1, critic 1 minor 7: it lay on the floor) looking
+    down at June's lap in the attic: her mint pajama knees, the pink diary lying across them, her small hands on its
+    sides, a thumb on the brass lock; the bulb's warm light from above, her breathing."""
+    br = math.sin(2.0 * math.pi * t / 3.0)
+    pen.fill(rect(-400, -300, 2720, 1680), '#3a2a20'); pen.texture(rect(-400, -300, 2720, 1680), 'wood', 0.6, 'overlay', 3.0, 90)
+    for k in range(-3, 12):                                              # the attic floorboards
+        pen.seg((k * 230 - 60, -300), (k * 230 + 40, 1400), 4, '#1e140e', 150)
+    cv = pen.cv
+    cv.save(); cv.translate(0, 5.0 * br)
+    pj, pj_sh = '#a6d8c6', '#76ad99'
+    for sd in (-1, 1):                                                   # her thighs, knees toward the top of frame
+        th = smooth([(960 + sd * 40, 1500), (960 + sd * 40, 700), (960 + sd * 120, 170), (960 + sd * 520, 120), (960 + sd * 760, 260),
+                     (960 + sd * 840, 900), (960 + sd * 860, 1500)], True, 0.7)
+        pen.fill(th, pj); pen.linear(th, 960 + sd * 840, 0, 960 + sd * 60, 0, [(0, pj_sh, 220), (0.6, pj, 0)])
+        pen.texture(th, 'fabric', 0.35, 'overlay', 2.0); pen.line(th, 4, CH.LINE, 200)
+        for i in range(10):                                              # the tiny egg print
+            ex_, ey_ = 960 + sd * (220 + (i * 137) % 520), 260 + (i * 211) % 1100
+            pen.fill(oval(ex_, ey_, 9, 12), '#f2a5b5' if i % 2 else '#f6d978', 200)
+    pen.fill(rrect(560, 150, 800, 840, 26), '#000000', 120, blur=26)          # the diary's shadow on her lap
+    cv.save(); cv.translate(960, 560); cv.rotate(-4.0); cv.translate(-960, -560)
+    cv.save(); cv.clipRRect(skia.RRect.MakeRectXY(skia.Rect.MakeXYWH(560, 140, 800, 840), 26, 26), True)
+    ST._ins_diary(pen, t, 'closed')
+    cv.restore()
+    pen.line(rrect(560, 140, 800, 840, 26), 4, CH.LINE, 230)
+    cv.restore()
+    lt = dict(side=-1, key=0.25)
+    hero_hand(pen, 'june', 540, 760, 300, 'relaxed', 62.0, 1, (-200, 1300), lt, shadow=(8, 12, 14, 70))     # left hand on the cover's edge
+    hero_hand(pen, 'june', 1420, 700, 300, 'relaxed', -64.0, -1, (2200, 1300), lt, shadow=(8, 12, 14, 70))  # right thumb by the lock
+    cv.restore()
+    pen.radial(None, 900, 120, 1400, [(0, '#ffd89a', 60), (1, '#000000', 120)])
+
+
+def ins_diary_turn(pen, t, dur=0.75, **kw):
+    """'Then Easter, 1987.' (fix round 1, critic 2 M6: a page turned by her hand) June's fingers take the right page by its
+    edge and turn it: the old crayon page swings over the spine and lands, its back is the new left page (Easter 1987, by
+    Laurie in crayon), and the first page of grown-up cursive is revealed on the right."""
+    u = ease_in_out(clamp(t / dur))
+    cv = pen.cv
+    ST._ins_diary(pen, t, 'flip')                                        # the new spread under everything
+    if u < 1.0:
+        xe = lerp(1620.0, 300.0, u)                                      # the turning page's free edge
+        if u < 0.5:                                                      # the old left page is still showing on the left
+            cv.save(); cv.clipRect(skia.Rect.MakeLTRB(-400, -300, 960, 1400))
+            ST._ins_diary(pen, t, 'crayon')
+            cv.restore()
+            k = (xe - 960.0) / 660.0                                     # the page's front (the old crayon right page)
+            cv.save(); cv.clipPath(poly([(960, 105 - 40 * (1 - k)), (xe, 115 - 70 * (1 - k)), (xe, 995 + 30 * (1 - k)), (960, 1000)]), doAntiAlias=True)
+            cv.translate(960, 0); cv.scale(max(0.02, k), 1.0); cv.translate(-960, 0)
+            ST._ins_diary(pen, t, 'crayon')
+            cv.restore()
+            pen.linear(rect(960, 0, max(1.0, xe - 960), 1100), 960, 0, xe, 0, [(0, '#000000', 90 * (1 - k)), (1, '#000000', 10)])
+        else:                                                            # past the spine: its back (the new left page) lands
+            k = (960.0 - xe) / 660.0
+            cv.save(); cv.clipRect(skia.Rect.MakeLTRB(-400, -300, xe, 1400))
+            ST._ins_diary(pen, t, 'crayon')                              # the old left page not yet covered
+            cv.restore()
+            pen.linear(rect(xe, 0, max(1.0, 960 - xe), 1100), xe, 0, 960, 0, [(0, '#ffffff', 40 * (1 - k)), (1, '#000000', 60 * (1 - k))])
+    if t < dur + 0.4:                                                    # her fingers on the page's edge, then away
+        r = ease_in_cubic(clamp((t - dur) / 0.4))
+        xe = lerp(1620.0, 300.0, u)
+        hx = xe + (30.0 if u < 0.5 else -30.0)
+        hero_hand(pen, 'june', hx + 60.0 + 260.0 * r, 640.0 + 40.0 * math.sin(math.pi * u) + 700.0 * r, 300, 'grip', 70.0 if u < 0.5 else -70.0,
+                  1 if u < 0.5 else -1, (hx + 600.0 + 260.0 * r, 1500.0 + 700.0 * r), dict(side=-1, key=0.2), shadow=(8, 14, 16, 60))
+
+
+def trace_finger(t0, t1, pts, size=330.0, ang=150.0, side=1, who='june'):
+    """June's fingertip running under the words as they are read: along the polyline pts (design points just under each
+    line, None to lift and jump to the next line) from t0 to t1; returns a hand_layer fn (wrist from the fingertip)."""
+    segs = []
+    for a, b in zip(pts, pts[1:]):
+        if a is None or b is None: continue
+        segs.append((a, b, math.hypot(b[0] - a[0], b[1] - a[1])))
+    tot = sum(sg[2] for sg in segs) or 1.0
+
+    def fn(tt):
+        u = ease_in_out(clamp((tt - t0) / max(0.2, t1 - t0)))
+        d = u * tot
+        tip = segs[-1][1]
+        for (a, b, L) in segs:
+            if d <= L:
+                tip = (lerp(a[0], b[0], d / L), lerp(a[1], b[1], d / L)); break
+            d -= L
+        wx, wy = wrist_for(tip, 'point', side, ang, size, who)
+        return (wx, wy, ang, 1.0)
+    return fn
+
+
 INS_CUSTOM_EXTRA = {'egg_gold_hands': (ins_egg_gold_hands, 'ob_sunrise87'), 'dress_photo': (ins_dress_photo, 'ins_lamp'),
+                    'diary_lap': (ins_diary_lap, 'ins_lamp'), 'diary_turn': (ins_diary_turn, 'ins_lamp'),
                     'body_above': (lambda pen, t, **kw: ins_body_above(pen, t, **kw), 'ob_dawn'),
                     'under_bridge': (lambda pen, t, **kw: ins_under_bridge(pen, t, **kw), 'ob_vhs87'),
                     'egg_halves_hand': (ins_egg_halves_hand, 'ins_lamp'), 'ring_pocket': (ins_ring_pocket, 'ins_lamp'),
@@ -4210,15 +4299,43 @@ def plan_rule5(F):
     C(T(196), 'rule', n=5)
     # 199 "June and I sleep on the couch, with Mom in the armchair facing the back door."
     twm = w(199, 'with') - 0.1
-    SLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-14.0, lean=-0.08, h_nod=0.15)
-    JSLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=18.0, lean=-0.1, h_nod=0.3)
-    C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=True), rim=NIGHT,
-      ppl=[P('narrator', 'couch_left', expr='sleep', act=SLEEP), P('june', 'couch_mid', expr='sleep', act=JSLEEP)],
-      c=dict(mv='push', f=1.45, rate=0.012))
-    C(twm, 'set', room='living', view='back', cam=BACKDOOR_POV, set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0), rim=LAMP,
-      ppl=[P('mom', 'armchair', expr='too_still', blink=False, hands='arms', act=_A(pose(-9, None, 0.1, still=0.8), lookxy(960, 380, -9, None, 0.3, z=900.0))),
-           P('narrator', 'couch_left', expr='sleep', act=SLEEP), P('june', 'couch_mid', expr='sleep', act=JSLEEP)],
-      c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
+    # (fix round 1, critics 1 minor 5 / 2 minor 21: the two sat bolt upright, hands in laps, the blanket folded on the seat)
+    # asleep and slumped: June curled against the narrator, her head on the narrator's shoulder, the narrator's head tipped
+    # back against the cushion, mouth a little open; June's blanket over the two of them; slow sleeping breath
+    SLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-16.0, lean=-0.16, h_nod=-0.12, tilt=-4.0, m_open=0.06, hunch=0.15)
+    JSLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-24.0, lean=-0.05, h_nod=0.22, tilt=-9.0, hunch=0.25)
+    KIDS_ASLEEP = [P('narrator', 'couch_left', expr='sleep', act=SLEEP, talk=False),
+                   P('june', (-3.08, 1.18, 0.0), kind='seat', seat=0.45, seat_ok=True, check=False, expr='sleep', act=JSLEEP, talk=False)]
+
+    def blanket_acts(A, s, sp):
+        n, j = A['narrator'], A['june']
+        o0 = min((s.I[k]['layer'].order(0.0) if callable(s.I[k]['layer'].order) else s.I[k]['layer'].order) for k in ('narrator', 'june'))
+
+        def draw(pen, tt):
+            nc, jc = n.where(tt, 'chest'), j.where(tt, 'chest')
+            nk, jk = n.where(tt, 'knee_r'), j.where(tt, 'knee_l')
+            hh = n.height
+            br = 0.006 * hh * math.sin(2.0 * math.pi * tt / 4.2)
+            xl, xr = min(nc[0], jc[0]) - 0.12 * hh, max(nc[0], jc[0]) + 0.1 * hh
+            ytop = (nc[1] + jc[1]) / 2 + 0.03 * hh
+            yk = max(nk[1], jk[1])
+            q = smooth([(xl, nc[1] + 0.04 * hh - br), ((xl + xr) / 2, ytop - 0.02 * hh - br), (xr, jc[1] + 0.06 * hh - br),
+                        (xr + 0.05 * hh, yk + 0.02 * hh), (xr + 0.02 * hh, yk + 0.2 * hh), ((xl + xr) / 2, yk + 0.24 * hh),
+                        (xl - 0.03 * hh, yk + 0.2 * hh), (xl - 0.05 * hh, yk)], True, 0.7)
+            pen.fill(q, '#8a76a6'); pen.texture(q, 'fabric', 0.5, 'overlay', 1.6)
+            for k in range(5):                                       # its folds over their knees
+                fx = lerp(xl, xr, (k + 0.6) / 5.4)
+                pen.line(smooth([(fx, ytop + 0.05 * hh), (fx + 0.02 * hh, yk), (fx - 0.01 * hh, yk + 0.2 * hh)], False), max(1.0, 0.004 * hh), '#5e4c78', 150)
+            pen.linear(q, 0, ytop, 0, yk + 0.24 * hh, [(0, '#ffffff', 26), (0.5, '#000000', 0), (1, '#000000', 90)])
+            pen.line(q, max(1.0, 0.005 * hh), CH.LINE, 210)
+        lay = Layer(s.I['narrator']['depth'], draw, 'blanket_over', blur=None)
+        lay.order = o0 - 0.03
+        return [lay]
+    C(T(199), 'set', room='living', view='wide2', set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=NIGHT,
+      ppl=KIDS_ASLEEP, acts=blanket_acts, c=dict(mv='push', f=1.45, rate=0.012))
+    C(twm, 'set', room='living', view='back', cam=BACKDOOR_POV, set=dict(lamp=0.0, chair_lamp=0.5, curtains=0.0, blanket=False), rim=LAMP,
+      ppl=[P('mom', 'armchair', expr='too_still', blink=False, hands='arms', act=_A(pose(-9, None, 0.1, still=0.8), lookxy(960, 380, -9, None, 0.3, z=900.0)))]
+      + KIDS_ASLEEP, acts=blanket_acts, c=dict(mv='push', f=1.0, rate=0.02), focus_on='mom')
     # 200 "At 2:47, I wake up."
     C(T(200), 'ins', name='clock', kw=dict(time=(2, 47)), c=dict(mv='push', rate=0.03))
     twk = w(200, 'i') - 0.1
@@ -4238,7 +4355,11 @@ def plan_rule5(F):
     C(T(203), 'set', room='living', view='chair', set=dict(lamp=0.0, chair_lamp=0.0, kitchen=0.0, curtains=0.0), rim=NIGHT, dof=0.0, c=dict(mv='push', f=1.2, rate=0.03))
     # 204 "And every door is still locked from the inside."  the back door (bolt + chain), then the front door's deadbolt
     C(T(204), 'set', room='kitchen', view='door', set=dict(kitchen=0.0, locked=1.0), c=dict(mv='push', f=1.3, rate=0.02))
-    C(w(204, 'locked') - 0.1, 'set', room='hall', view='peep', set=dict(hall=0.0), c=dict(mv='push', f=1.0, rate=0.03))
+    # (fix round 1, critic 1 minor 6: it showed the peephole) the front door's latch edge, close: the deadbolt thrown, the
+    # chain on, the knob; the narrator's hand tries the knob, the bolt holds
+    tlk = w(204, 'locked') - 0.1
+    C(tlk, 'set', room='hall', view='door', cam=cm((0.45, 0.62, 1.28), (-0.03, 0.0, 1.2), S=1500, sx=960, sy=560), set=dict(hall=0.0),
+      hands=[], c=dict(mv='push', f=1.0, rate=0.02))
     # 205 "There's a light under the attic door."
     C(T(205), 'set', room='up', view='hall', set=dict(upstairs=0.0, attic_gap=1.0), c=dict(mv='push', f=1.8, rate=0.03),
       sfx=[(T(205) + 0.2, 'house_settle', -12, 0, 'inside')])
@@ -4256,16 +4377,24 @@ def plan_rule5(F):
       c=dict(mv='push', f=1.0, rate=0.02))
     C(w(207, 'stiff') - 0.1, 'ins', name='dress_old', c=dict(mv='push', rate=0.03))
     # 208 the diary with the pink plastic lock;  209 "Laurie Price, age seven."
-    C(T(208), 'ins', name='diary', c=dict(mv='keys', keys=[(T(208), 960, 560, 1.0, None, 1.0), (T(209), 1100, 560, 1.0, 'push', 1.25)]))
+    C(T(208), 'ins', name='diary_lap', anim=True, c=dict(mv='keys', keys=[(T(208), 960, 560, 1.0, None, 1.0), (T(209), 1060, 560, 1.0, 'push', 1.12)]))
     C(T(209), 'ins', name='diary', c=dict(mv='keys', keys=[(T(209), 960, 410, 1.0, None, 1.7), (T(210), 960, 410, 1.0, 'push', 1.9)]))
     # 210 "The first half is crayon."  211 "Huge, crooked letters."  212-214 I love Mama. / I love my dog Biscuit. / Tomorrow is the Easter parade.
     C(T(210), 'ins', name='diary_crayon', c=dict(mv='push', rate=0.025), sfx=[(T(210) + 0.05, 'page_flip', -6, 0, 'close')])
     C(T(211), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(211), 960, 540, 1.0, None, 1.25), (T(212), 980, 540, 1.0, 'push', 1.35)]))
-    C(T(212), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(212), 560, 300, 1.0, None, 1.9), (T(213), 560, 300, 1.0, 'lin', 1.95)]))
-    C(T(213), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(213), 580, 560, 1.0, None, 1.75), (T(214), 600, 560, 1.0, 'lin', 1.8)]))
-    C(T(214), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(214), 1300, 420, 1.0, None, 1.6), (T(215), 1300, 440, 1.0, 'lin', 1.65)]))
+    # (fix round 1, critic 2 M6) June's fingertip runs under each crayon line as it is read
+    FING = dict(who='june', size=330, shape='point', side=1, sleeve_from=lambda tt: (2200, 1500))
+    C(T(212), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(212), 560, 300, 1.0, None, 1.9), (T(213), 560, 300, 1.0, 'lin', 1.95)]),
+      hands=[dict(FING, fn=trace_finger(t(212) - 0.05, e(212), [(392, 326), (690, 318), None, (392, 432), (680, 426)]))])
+    C(T(213), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(213), 580, 560, 1.0, None, 1.75), (T(214), 600, 560, 1.0, 'lin', 1.8)]),
+      hands=[dict(FING, fn=trace_finger(t(213) - 0.05, e(213), [(392, 604), (740, 596), None, (392, 702), (560, 700), None, (392, 800), (700, 796)]))])
+    C(T(214), 'ins', name='diary_crayon', c=dict(mv='keys', keys=[(T(214), 1300, 420, 1.0, None, 1.6), (T(215), 1300, 440, 1.0, 'lin', 1.65)]),
+      hands=[dict(FING, fn=trace_finger(t(214) - 0.05, e(214), [(1040, 326), (1520, 300), None, (1040, 432), (1330, 426), None,
+                                                                (1040, 538), (1380, 532), None, (1040, 644), (1410, 640)]))])
     # 215 "Then Easter, 1987."  216 "And the handwriting changes."  217 "Perfect, slanted cursive."
-    C(T(215), 'ins', name='diary_flip', c=dict(mv='keys', keys=[(T(215), 640, 420, 1.0, None, 1.6), (T(216), 650, 430, 1.0, 'push', 1.7)]),
+    #    her hand turns the page (diary_turn), then the move onto "Easter 1987"
+    C(T(215), 'ins', name='diary_turn', anim=True, c=dict(mv='keys', keys=[(T(215), 960, 540, 1.0, None, 1.0), (T(215) + 0.8, 960, 540, 1.0, None, 1.0),
+                                                                          (T(216), 650, 430, 1.0, 'in_out', 1.6)]),
       sfx=[(T(215) + 0.05, 'page_flip', -4, 0, 'close')], music=[(t(215), 'hit', 0.45)])
     C(T(216), 'ins', name='diary_flip', c=dict(mv='keys', keys=[(T(216), 960, 540, 1.0, None, 1.05), (T(217), 1280, 500, 1.0, 'in_out', 1.6)]))
     C(T(217), 'ins', name='diary_cursive', c=dict(mv='keys', keys=[(T(217), 1300, 400, 1.0, None, 1.7), (T(218), 1290, 420, 1.0, 'lin', 1.8)]),

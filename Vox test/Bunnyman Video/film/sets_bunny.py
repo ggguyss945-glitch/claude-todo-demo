@@ -6892,12 +6892,25 @@ def _ins_diary(pen, t, page='closed', **kw):
     pen.linear(rect(900, 110, 120, 890), 900, 0, 1020, 0, [(0, '#000000', 0), (0.5, '#000000', 100), (1, '#000000', 0)])
 
     def crayon(lines, x0, y0, col, size=100, dy=104, rot=-3.0):
+        # huge, crooked letters (fix round 1, critic 2 M6: the crayon was set in a neat font): a seven-year-old's hand,
+        # each letter its own size and lean, bouncing off the line, the spacing uneven, the line drifting uphill
         for i, l in enumerate(lines):
-            cv.save(); cv.translate(x0 + 16 * math.sin(i * 2.3 + x0), y0 + i * dy); cv.rotate(rot + 3.0 * math.sin(i * 1.7 + y0))
-            p = btext_path(l, 0, 0, 'kid', size)
-            pen.fill(moved(p, 2.0, 1.2), col, 110); pen.fill(p, col, 235)
-            pen.texture(p, 'grunge', 0.8, 'overlay', 0.7)
-            cv.restore()
+            x = x0 + 16 * math.sin(i * 2.3 + x0)
+            yb = y0 + i * dy
+            lr = rot + 3.0 * math.sin(i * 1.7 + y0)
+            for j, ch in enumerate(l):
+                if ch == ' ':
+                    x += size * 0.34; continue
+                sd = i * 31 + j * 7 + int(x0) % 97
+                sz = size * (1.0 + 0.16 * math.sin(sd * 2.3) + (0.12 if j == 0 else 0.0))
+                p = btext_path(ch, 0, 0, 'kid', sz)
+                b = p.getBounds()
+                cy_ = yb + 11.0 * math.sin(sd * 1.1) - math.tan(math.radians(lr)) * (x - x0)
+                cv.save(); cv.translate(x - b.left(), cy_); cv.rotate(lr + 10.0 * math.sin(sd * 1.7))
+                pen.fill(moved(p, 2.0, 1.2), col, 110); pen.fill(p, col, 235)
+                pen.texture(p, 'grunge', 0.8, 'overlay', 0.7)
+                cv.restore()
+                x += b.width() + size * (0.05 + 0.07 * (0.5 + 0.5 * math.sin(sd * 3.1)))
 
     def cursive(text_, x0, n, size=44, first=0):
         for i in range(first, first + n):
