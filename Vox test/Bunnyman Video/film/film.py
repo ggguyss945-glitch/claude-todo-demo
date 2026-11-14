@@ -4305,7 +4305,7 @@ def plan_rule5(F):
     SLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-16.0, lean=-0.16, h_nod=-0.12, tilt=-4.0, m_open=0.06, hunch=0.15)
     JSLEEP = lambda a, s: a.set(-9, None, 0.1, h_tilt=-24.0, lean=-0.05, h_nod=0.22, tilt=-9.0, hunch=0.25)
     KIDS_ASLEEP = [P('narrator', 'couch_left', expr='sleep', act=SLEEP, talk=False),
-                   P('june', (-3.08, 1.18, 0.0), kind='seat', seat=0.45, seat_ok=True, check=False, expr='sleep', act=JSLEEP, talk=False)]
+                   P('june', (-3.12, 1.18, 0.0), kind='seat', seat=0.45, seat_ok=True, check=False, expr='sleep', act=JSLEEP, talk=False)]
 
     def blanket_acts(A, s, sp):
         n, j = A['narrator'], A['june']
@@ -4319,14 +4319,15 @@ def plan_rule5(F):
             xl, xr = min(nc[0], jc[0]) - 0.12 * hh, max(nc[0], jc[0]) + 0.1 * hh
             ytop = (nc[1] + jc[1]) / 2 + 0.03 * hh
             yk = max(nk[1], jk[1])
+            # over their chests and laps, draped over the knees and falling to mid-shin (not to the floor), a soft hem
             q = smooth([(xl, nc[1] + 0.04 * hh - br), ((xl + xr) / 2, ytop - 0.02 * hh - br), (xr, jc[1] + 0.06 * hh - br),
-                        (xr + 0.05 * hh, yk + 0.02 * hh), (xr + 0.02 * hh, yk + 0.2 * hh), ((xl + xr) / 2, yk + 0.24 * hh),
-                        (xl - 0.03 * hh, yk + 0.2 * hh), (xl - 0.05 * hh, yk)], True, 0.7)
+                        (xr + 0.06 * hh, yk - 0.01 * hh), (xr + 0.035 * hh, yk + 0.12 * hh), ((xl + xr) * 0.5 + 0.03 * hh, yk + 0.105 * hh),
+                        ((xl + xr) / 2 - 0.02 * hh, yk + 0.135 * hh), (xl - 0.03 * hh, yk + 0.11 * hh), (xl - 0.06 * hh, yk - 0.01 * hh)], True, 0.7)
             pen.fill(q, '#8a76a6'); pen.texture(q, 'fabric', 0.5, 'overlay', 1.6)
             for k in range(5):                                       # its folds over their knees
                 fx = lerp(xl, xr, (k + 0.6) / 5.4)
-                pen.line(smooth([(fx, ytop + 0.05 * hh), (fx + 0.02 * hh, yk), (fx - 0.01 * hh, yk + 0.2 * hh)], False), max(1.0, 0.004 * hh), '#5e4c78', 150)
-            pen.linear(q, 0, ytop, 0, yk + 0.24 * hh, [(0, '#ffffff', 26), (0.5, '#000000', 0), (1, '#000000', 90)])
+                pen.line(smooth([(fx, ytop + 0.05 * hh), (fx + 0.02 * hh, yk), (fx - 0.01 * hh, yk + 0.1 * hh)], False), max(1.0, 0.004 * hh), '#5e4c78', 150)
+            pen.linear(q, 0, ytop, 0, yk + 0.13 * hh, [(0, '#ffffff', 26), (0.5, '#000000', 0), (1, '#000000', 90)])
             pen.line(q, max(1.0, 0.005 * hh), CH.LINE, 210)
         lay = Layer(s.I['narrator']['depth'], draw, 'blanket_over', blur=None)
         lay.order = o0 - 0.03
