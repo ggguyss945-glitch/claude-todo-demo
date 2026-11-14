@@ -310,12 +310,22 @@ def gasp(rng, dur=0.45):
 
 
 # ------------------------------------------------------------------------------------------------- crying
-def cry(dur=6.0, who='L', seed=0, intensity=0.8, src=(435.32, 435.95)):
+def line_span(tag, pad0=0.035, pad1=0.045):
+    """(start, end) of the timeline line with this tag in narration_clean.wav, padded (fix round 1: the sources were
+    absolute seconds of the 1077.99 s edit, and the re-split narration moved them onto silence)."""
+    tl = json.load(open(os.path.join(W, 'align', 'timeline.json')))['lines']
+    l = next(x for x in tl if x.get('tag') == tag)
+    return (float(l['t']) - pad0, float(l['end']) + pad1)
+
+
+def cry(dur=6.0, who='L', seed=0, intensity=0.8, src=None):
     """A lost child crying for `dur` s: wails ("aaah", "uuuh" on her own "Mama?" vowels: a rise, a long fall that
     cracks and shakes) and hiccup sobs between them, the character's voice (vo_voices: the real Laurie = a girl's
     pitch in a man's tract, the man an octave under). intensity 0..1 (more wails, higher, rougher)."""
     rng = np.random.default_rng(seed)
     s = VV.VOICES.get(who, VV.VOICES['L'])
+    if src is None:
+        src = line_span('mama')                          # her own "Mama?" (was the fixed span 435.32-435.95)
     x = vo(*src, which='clean')
     f0s, sps, aps = analyze(x)
     v = np.flatnonzero(f0s > 0)

@@ -25,7 +25,7 @@ The owner's raw TTS take (`W/narration/raw/narration_raw_24k.wav`, 970.8 s, two 
 - `tools/vo_edit.py analyze | pacing [--force] | build | check`: maps every line of `script/lines.py` onto the take's sound islands, drops breaths / clicks / lip thumps / the TTS's noises, repairs the TTS slips (FIXES: "eleven seven", "Ye knocks", "Yah. I I", "c-corner", "c-cup", "See leave well", the part seam), re-paces every line boundary from `W/narration/pacing_map.md` (the source of truth: edit a gap there and rebuild), levels each line (one gain per line), 70 Hz high-pass, a light de-esser, 48 kHz 24-bit -> `narration_clean.wav`; then `tools/vo_voices.py` re-voices the quoted words of Mom, June, the girl in the Bunnyman, Grandma, the dying man and the old body (WORLD pitch / formant / breath) -> `narration_en.wav`. Every source span and gap: `edit_list.json`.
 - `tools/vo_check.py` (or `vo_edit.py check`): before / after strips and scans (`W/narration/tests/`); `tools/vo_report.py` -> `W/narration/voice_report.md`.
 - Then `python3 tools/align.py --write-pauses` (rewrites the pause / pace of every row of `script/lines.py`). With silence between all lines, align.py places every boundary in the silence (to the millisecond) and places a line the recogniser cannot hear (June's "Yeah.") on the sound between its neighbours.
-- Order after any change: `vo_edit.py build`, `vo_edit.py check`, `rm -rf _work/align && align.py --write-pauses`, `vo_report.py` (about 6 min on 2 cores).
+- Order after any change: `vo_edit.py build`, `rm -rf _work/align && align.py --write-pauses`, `vo_edit.py check` (now also every line against the recogniser: it fails the check on a cut word), `vo_report.py` (about 7 min on 2 cores). A narration change moves the timeline: the picture follows its lines, and film.py's absolute-time tables follow through `timeline_authored.json`.
 - **The channel is NIGHT POLICY** (renamed by the owner after the take was recorded): the take says "Next time on" + the old channel name; FIXES `next` cuts "on" and the old name (956.576-958.201 in the raw take: "time" keeps its whole m murmur on a 25 ms fade, the breath before "If" goes too) and "if your doctor calls..." follows after 0.45 s, the edit's shortest ellipsis. `script/lines.py` and `script/narration_en.txt` read "Next time... if your doctor calls...". The edit is 1.175 s shorter (1077.99 s); every line after 409 moved, nothing before it. Parakeet hears the repaired line word for word.
 - **Fix round 1 (fixer D): no word is cut in half any more.** Critic 3 heard eleven line boundaries where the edit glued the next line's first 30-150 ms to the line before ("egg | In-side", "off | In-side", "door | A-t", "days | O-kay", "woods | T-wo", "face | I-n", "Seven" split in its v, "wood | pile", "She's | humming", "too | I-f", "things | Th-is" ...). Two causes in `line_spans`, both fixed: (1) the "word cut by a closure" extension let a line's last word claim the next island because the recogniser's END time runs on into the next word; now it never claims an island where the next line's first word starts (recognised start within 0.15 s of the island), and an island that is the next word's onset is not taken as a coda either (pass 1, when it sits nearer the next line's sound); (2) two lines in one sound island were split at the quietest point after the previous word's START (inside the word); `split_point` now anchors on the next line's first word and takes the LAST real dip (the lowest point within 25 ms, 20 dB under the island's p90) before it, and `SPLITS` hand-sets the four the TTS ran together with no dip (humming 445.285, hatchet 560.780, seven 816.620, liked_you 938.620: read on 2 ms spectrograms with the pitch and formant tracks). A line-final piece under 60 ms after a pause is dropped unless the line ends in a stop (one 19 ms tick, after "nothing."). "And count to seven." ends at the decay of its n (694.845, 25 ms fade: the stray vowel after it read "seven eyes"); the second "Thunk." reuses the first take (`FIXES['thunk2'] = {'reuse': 'thunk'}`: it read "Sunk"). The edit is 1.91 s shorter (1076.08 s); 38 line boundaries moved by 30-430 ms. film.py's absolute-time tables follow through `timeline_authored.json` (below).
 - **Every line against the recogniser** (`tools/vo_asrcheck.py`, run by `vo_edit.py check` once align.py has run on the build): a word goes to the line whose sound holds its start (a word starting in a gap goes to the next line when that starts within 0.35 s: Parakeet places the first word after a silence early), a line fails on a wrong first / last word, under 80 % read, nothing heard, or a word split across a boundary; a flagged line is then recognised again on its own, and passes if it reads there (the whole-file pass depends on the VAD's chunks). Now: 412 lines, 3 flagged in the whole-file pass (the chanted "Hop, hop, hop along.", the knock count "Seven.", "A crayon drawing."), all three read word for word on their own, 0 failures. Before: 11 failures.
@@ -211,10 +211,10 @@ bash "Vox test/Bunnyman Video/film/audio/final_mix.sh"          # cues -> mix ->
 5. The mix onto `W/preview/preview.mp4` -> `W/preview/preview_mix.mp4` (`--no-preview` skips it).
 
 - **If the picture changed**, re-render the preview first (the mix is muxed onto it; about 8 min): `rm -rf _work/preview_tmp && python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav && mv _work/preview_tmp/film.mp4 _work/preview/preview.mp4 && rm -rf _work/preview_tmp`, then `bash audio/final_mix.sh`.
-- **If the narration changed**: the Narration order (`vo_edit.py build`, `vo_edit.py check`, `rm -rf _work/align && python3 tools/align.py --write-pauses`, `vo_report.py`), then the preview, then `final_mix.sh`. The sound plans (`music_plan.py`, `sfx_plan.py`) are anchored to lines and words, so they follow the new timing.
+- **If the narration changed**: the Narration order (`vo_edit.py build`, `rm -rf _work/align && python3 tools/align.py --write-pauses`, `vo_edit.py check`, `vo_report.py`), then the preview, then `final_mix.sh`. The sound plans (`music_plan.py`, `sfx_plan.py`) are anchored to lines and words, so they follow the new timing.
 - `python3 audio/mix.py --check W/cues W/mix/final` says whether the mix is stale against the picture's sheets.
 
-**The final mix** (`W/mix/final/mix.wav` = `mix_en.wav`, 1087.84 s, 48 kHz 24-bit stereo; on the preview: `W/preview/preview_mix.mp4`):
+**The final mix** (`W/mix/final/mix.wav` = `mix_en.wav`, 48 kHz 24-bit stereo; on the preview: `W/preview/preview_mix.mp4`). The table and notes below are from before fix round 1 (1087.84 s); the current numbers are in the fixer D section:
 
 | measure (`measure.txt`) | value |
 |---|---|
@@ -390,6 +390,75 @@ masked lines #158, #167, #247). 397 shots. Evidence: `W/review/fixer_c/` (`sheet
 - **Validator** (`tools/validate.py`): OVERLAP measures a lying body along its 1.7 m length (the cop knelt INTO the body and passed
   because only its centre was checked).
 
+## Fix round 1, fixer D (every sound item, then the full rebuild)
+Critic 3's voice and sound items, the sound notes of fixers A-C, then the narration edit, the timeline, the preview, the cue
+sheets and the mix rebuilt on the final picture. Evidence: `W/review/fixer_d/` (`verify_00..07.jpg`: one still per picture
+fix of fixers A-C from the NEW preview, 88 tiles, each with its new time, the authored time and the fix; `stills/`;
+`vo_splits*.png`: the hand-set splits on 2 ms spectrograms with the pitch and formant tracks; `vo_tails_kept.png`).
+- **The narration** (`tools/vo_edit.py`, `tools/vo_voices.py`, `tools/vo_asrcheck.py`): see Narration above. All seven
+  blockers (B1-B7) and M1-M5 / m1 are gone; the recogniser check passes every line. "It" of "It has a zipper" (M3) was
+  never cut: the take has digital silence 906.40-906.60 and "It" starts at 906.62; Parakeet just puts it 0.3 s early.
+- **The timeline moved** (1077.99 -> 1076.08 s; up to -2.0 s near the end). The picture follows its lines (`t()`, `w()`),
+  and film.py's absolute-time tables (the story clock and corner labels, the VHS pause, THE END, the fear arcs, the
+  global look's red / dawn / climax ramps, INTENSITY, EXTRA_SIL) are now mapped through `timeline_authored.json` (the
+  line times they were written against) by `at()` / `authored()` (piecewise linear, line by line): never write a new
+  absolute time into those tables without it. The Courier push on line 323 stops at 3.8 s (the line grew 0.27 s).
+- **A crash fixed on the way**: a preview worker died on frame 840 (`skia.Op` "Failed to apply op" on the mascot's
+  head pads). `engine/core.py` `inter / union / minus` now retry with a 0.01 px nudge and fall back (union: the two
+  paths added; difference: the first); the two direct `skia.Op` calls in `characters.py` are guarded too. The final
+  render would have died on the same frame.
+- **The scares over the narration (M6)** (`audio/mix.py`): the narration gets a loudness cap (`voice_cap`, VOICE_CAP_LU
+  2.3: no 400 ms block more than 2.3 LU over its integrated level; a 4:1 ride over +1 LU before it; whole-word cuts,
+  1.3 dB at most) - before it the narration's own loudest lines were the loudest moments of the film (+5 LU); the
+  boosted scares get an absolute ceiling (-1 .. -2 dBFS by grade) and a 10 dB drive into the hits limiter inside a spare
+  window of at least 0.4 s, the glue leaves them alone, and the bed statistics the music gain is solved on leave them
+  out; boosts: the window (+ a 6 dB 1-4.5 kHz notch for 0.3 s so "explodes" reads), the back door, the crack 2.5-3;
+  "IT'S MY HOUSE!" and "key" moved after their words, the face reveal onto the cut 0.22 s before "It's" (spare 0.2);
+  `--hits-db` 4 -> 6. Measured: see the table below.
+- **Rule by rule (M7)**: ARC_TARGETS steers the bed in the gaps between lines (rule 1 -19 .. rule 6 -11.5 LU rel the
+  voice) by section offsets on the music bus, solved in the music gain loop (the shape: the mean stays the solver's);
+  the plan adds layers as the night goes on (a faint pulse under the mail slot in rule 4 and under June's
+  disappearance and the last diary page in rule 5) and more tension events in rules 5-6 (the diary, "I am Laurie.",
+  the hatchet, the voice under the door, the drawing).
+- **Character voices (M8, m3, m11)**: the girl x1.24 (above); June's "Yeah." x1.22; the girl's "Please." through the door
+  +4 dB (`LINE_TAG_DB`). The voice-made sounds were cached by duration and seed only, so the crying was still the old
+  man-tract girl: the caches (`sfx.r_girl_cry`, `sfx.r_jingle` for hum / hum_x / girl) are now keyed by the voices and
+  the edit (`_voice_sig`), and the cry's source is her own "Mama?" found by tag in the timeline (`voicesynth.line_span`;
+  the fixed 435.32-435.95 s had moved onto silence and the girl's broken song failed to render).
+- **Cues (M9, M10, m4-m10, fixers A-C)**: Grandma's 2-3-2 lands on the knuckle insert (7 knocks, checked in the cue
+  sheet); the stairs are the picture's 0.95 s treads with the thunk 0.3 s after (the plan's own 0.8/s treads that
+  doubled them are gone); the attic door creaks on the cut into the attic (not over the shut door); no mug_set_down over
+  the untouched mug; the curtains +0.25 s and the slot flap +0.2 s onto their eased motion; the "And it hums." stinger
+  moved to "My own face looks down at me." (it covered the hum); the riser before "He lifts one paw" ends 0.1 s before
+  the word; the quiet identity returns up 4-5 dB (Mr. Otter, Grandma's music box, Mary Had a Little Lamb: level 0.3 ->
+  0.85), Mom humming upstairs +5 dB, the girl's crying +6 dB; the trick's `magic_sparkle` has a recipe (a toy-chime
+  twinkle in D, on the tape) and plays (it was dropped as "a cartoon" before the picture drew a trick); the
+  next-episode phone rings on the picture's cadence (1.2 s on, 0.8 s off, `phone_ring(cycle=, on=)`) for the whole card;
+  `footsteps_gravel` maps to grass steps.
+- **The rebuild**: narration (`vo_edit.py build`, `align.py --write-pauses`, `vo_edit.py check` with the asr check,
+  `vo_report.py`), `tools/validate.py` (ERROR 0, WARN 4: #205, #294 the Courier photo's keyed push on line 323, #321,
+  #392; INFO 3 masked lines), `--lipcheck` (273 actor-shots, the 3 masked lines), the preview (`W/preview/preview.mp4`,
+  1085.93 s, 32,578 frames; worker 0 died on the skia crash above and its half was re-rendered as two quarter slices
+  and joined frame-exact), `audio/final_mix.sh` (cue sheets, mix, measure, scene sheets, `preview_mix.mp4`; 18.4 min).
+- **Measured** (`W/mix/final/measure.txt`, plus fixer D's own table: loudness K-weighted, 400 ms):
+
+  | | before (critic 3) | now |
+  |---|---|---|
+  | integrated / true peak / LRA | -14.05 LUFS / -1.67 dBTP / 3.2 | -14.04 LUFS / -1.70 dBTP / 2.7 |
+  | the film's loudest 400 ms | narrated lines, +5.1 to +5.4 LU over the mix | the fight (673.85 s), +4.2; the narration's loudest +3.1 to +3.2 |
+  | boosted scares (window, back door, GET OUT, IT'S MY HOUSE, crack, face reveal, swap, Seven, doorway, Back to bed) | +0.5 to +4.3 (most under +3) | +3.0 to +4.3, median +4.0 (over every narrated line) |
+  | the bed in the gaps by rule (LU rel the voice) | flat (critic's own measure: -15.4 / -19.2 / -17.3 / -14.2 / -15.1 / -14.9) | -20.1 / -19.1 / -17.5 / -16.0 / -15.1 / -12.8, then rule 7's false relief -16.7 |
+  | voice minus bed while speaking | p1 6.5 LU, under 6 LU 0.62 % | p1 6.3 LU, under 6 LU 0.97 % (the boosted scares ride over their words: 8 weak spots, all at those scares; in the 1-4 kHz band the words keep a median of +9 to +53 dB, single 100 ms frames dip to -4 .. -8 dB at "explodes", GET OUT, the crack, "IT'S MY HOUSE!") |
+  | quiet returns (bed in their gaps) | Mr. Otter -23, music box -18, Mary -20, Mom upstairs -18, the crying -17 | -20.5, -16.6, -15.2, -12.0, -11.0 |
+  | the girl's "Please." | 6.9 dB under the narration | 1.9 LU under the lines around it |
+  | the voice edit vs the recogniser | 11 lines wrong (cut words) | 0 (3 whole-file chunking misses read right on their own) |
+
+  The target the critic gave for the hardest scare (+8 to +10 LU momentary) is not reached: the score's hits are short
+  and the spare windows end at the next word; a louder scare needs denser hit material (a sustained impact layer), not
+  more gain (the master limiter already takes 1 dB or more on 4.1 % of the film, was 1.5 %).
+- **Not done**: the girl's crying is not matched to the Bunnyman's visible sob catches (`SOB_T`, #189/#190; the cry is
+  a synthesised phrase with its own timing); the four TTS re-takes (below) need the owner.
+
 ## Open problems
 - **Lying figures in a set view** (`pose.lie`) are still the front view turned 90 degrees, so they only read from straight
   above: the lying beats are custom top-down inserts (`ins_body_above`, `ins_under_bridge`); the set view of the body from the
@@ -400,11 +469,10 @@ masked lines #158, #167, #247). 397 shots. Evidence: `W/review/fixer_c/` (`sheet
 - **Keyed insert moves** that run a little over 4 s on purpose (the push down the peephole to the egg, the move across the diary's last page) and two outro holds are WARNs in the validator, checked by eye.
 - **Fixer B leftovers**: June at the slot close (#173, "Mom closes the mail slot") is drawn nearly frontal although she faces
   the door (the kneel pose's turn); the Mom armchair shot from the back door (#177) reads a little like standing in front of
-  the chair (the frontal seated figure's foreshortening); the sound cue `magic_sparkle` (#33, the trick) has no recipe in
-  `audio/sfx.py` yet (the mix skips it with a warning).
+  the chair (the frontal seated figure's foreshortening). (`magic_sparkle` has a recipe since fixer D.)
 - **Fixer C leftovers**: the lying body in the set view at the foot of the stairs is still the front-view figure turned 90 degrees
   (the cop shot reads, the top-down inserts carry the beat); Dale's hair has no wet, matted sheen; the whisper has no wide set
   shot of the lap (the climb into frame carries it); the bathroom door's slam jolt is small at preview size (the dust, the light
   blotted out and the camera hit carry it); the hatchet-steps insert is still a side cutaway (now through the banister).
-- **Sound** (the final mix is done and measured; nobody has listened to it): the riskiest by ear are the synthetic jingle timbres (toy piano, music box, the hums, the girl's singing and crying) and the clarity ceiling's dips under the end of a loud swell (up to 10 dB, 2 % of the speech blocks). Rules 2 and 3 sit about 0.6 LU under rule 1 (rule 1 carries the dying speaker on top of its drone); from rule 4 on every rule is thicker than the one before. The six remaining weak spots are scares landing on their own words by design (spare windows) and the stomach-drop sub in a comma.
-- **Narration re-takes** (from the voice report, still open): "Sleep well.", "At 11:07, the song starts.", "If he knocks, don't answer." and Mom's "And count to seven." (a recogniser hears "seven up") are repaired splices; a fresh TTS take of these four would be safer.
+- **Sound** (the final mix is done and measured; nobody has listened to it): the riskiest by ear are the synthetic jingle timbres (toy piano, music box, the hums, the girl's singing and crying, the girl's new x1.24 voice), the narration's loudness cap (whole-word cuts of up to 1.3 dB on about 1 % of the blocks) and the boosted scares riding over their own words ("explodes", GET OUT, the crack, "Seven.": listen that each word still reads). The hardest scare is +4.3 LU, not the +8-10 the critic asked (see the fixer D table). The bed in the gaps rises rule by rule (-20 .. -13 LU); the integrated bed of rule 1 is still high (-12.5: the dying speaker's jingle carries the scene).
+- **Narration re-takes** (from the voice report, still open): "Sleep well.", "At 11:07, the song starts." and "If he knocks, don't answer." are repaired splices (they read right); Mom's "And count to seven." now ends at the decay of its n and reads right too. A fresh TTS take of these would still be safer, and only the owner can make one.

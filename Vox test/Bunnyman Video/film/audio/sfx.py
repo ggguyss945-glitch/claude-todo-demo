@@ -3934,6 +3934,18 @@ def r_slot_flap(rng, sp, action='open', dur=None, **_):
 _CRY = {}
 
 
+def _voice_sig():
+    """A short hash of the character voices (tools/vo_voices.VOICES) and the narration edit: cached renders made of
+    the narrator's voice (the girl's crying, the hums, the girl's broken song) are keyed by it, so a voice or edit
+    change re-renders them (fix round 1: the crying was still the old x1.02 girl from the cache)."""
+    import voicesynth as VS
+    try:
+        st_ = os.stat(VS.VO_CLEAN); ed = f'{st_.st_size}_{int(st_.st_mtime)}'
+    except OSError:
+        ed = ''
+    return hashlib.md5((json.dumps(VS.VV.VOICES, sort_keys=True, default=str) + ed).encode()).hexdigest()[:8]
+
+
 def r_girl_cry(rng, sp, dur=6.0, intensity=0.75, seed_voice=None, **_):
     """DUR. 'On the other side of the door, the little girl starts to cry. Not like a monster. Like a kid who's been
     lost for a very, very long time.' The real Laurie's own voice (the narration's girl voice through vo_voices L:
@@ -3943,7 +3955,7 @@ def r_girl_cry(rng, sp, dur=6.0, intensity=0.75, seed_voice=None, **_):
     sv = int(seed_voice if seed_voice is not None else rng.integers(1 << 20))
     key = (round(float(dur), 2), round(float(intensity), 2), sv)
     if key not in _CRY:
-        p = os.path.join(CACHE, f'cry_{key[0]}_{key[1]}_{sv}.wav')
+        p = os.path.join(CACHE, f'cry_{key[0]}_{key[1]}_{sv}_{_voice_sig()}.wav')
         if os.path.exists(p):
             _CRY[key] = sf.read(p, dtype='float32')[0]
         else:
@@ -3960,8 +3972,8 @@ def r_jingle(rng, sp, version='speaker', dur=None, stop='fade', seed_tune=None, 
     tape dragging to a halt). Extra keys go to jingle.render (anchors, tempo, loops, speed...)."""
     import jingle as JG
     sv = int(seed_tune if seed_tune is not None else 3)
-    keyd = json.dumps({'v': version, 's': sv, **{k: v for k, v in kw.items() if k not in ('cue_t',)}}, sort_keys=True,
-                      default=str)
+    keyd = json.dumps({'v': version, 's': sv, 'voices': _voice_sig() if version in ('hum', 'hum_x', 'girl') else '',
+                       **{k: v for k, v in kw.items() if k not in ('cue_t',)}}, sort_keys=True, default=str)
     h = hashlib.md5(keyd.encode()).hexdigest()[:12]
     p = os.path.join(CACHE, f'jingle_{version}_{h}.wav')
     if os.path.exists(p):
