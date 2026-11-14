@@ -91,7 +91,9 @@ FIXES = {
     # Mom's "And count to seven" and June's "One": the stray "opt" between them (a weak vowel and a click) is dropped
     # (the n of "seven" runs straight into a "pt"-like burst: it ends on an 80 ms fade at the end of its voicing; a
     # 25 ms fade read as "seven up")
-    'count_to_seven': {'end': 694.950, 'end_fade': 0.080},
+    # (fix round 1: the 694.950 end on an 80 ms fade still carried the stray vowel's onset: a recogniser heard "seven
+    # eyes". "-ven" decays into its n murmur at 694.78-694.845 (about -27 dB) and the stray open vowel starts at 694.85)
+    'count_to_seven': {'end': 694.845, 'end_fade': 0.025},
     'count': {'start': 695.086},
     # the channel is NIGHT POLICY (the owner, after the build started): the take's "Next time on <the old channel
     # name>. If your doctor" loses "on" and the old name. The take runs "time on" together: the diphthong of "time"
@@ -99,6 +101,18 @@ FIXES = {
     # (957.935-958.130) goes with the cut. The m keeps its whole murmur on a 25 ms fade (cut_fo) and "If" (958.200)
     # comes in after the script's ellipsis ("Next time... if your doctor calls"): 0.45 s, the edit's shortest ellipsis
     'next': {'cuts': [(956.576, 958.201, 0.45)], 'cut_fo': 0.025},
+    # the second "Thunk." of the stairs was read as "Sunk" (both recognisers; its t burst is weak): it reuses the first
+    # take's "Thunk." (the same onomatopoeia, word for word)
+    'thunk2': {'reuse': 'thunk'},
+}
+# two lines the TTS ran together in one sound island: the split time (raw seconds) found by eye on 2 ms spectrograms
+# with the pitch and formant tracks (W/review/fixer_d/vo_splits.png), where split_point's dip search would land inside
+# a word (the recogniser's word starts are 80 ms frames, and inside a run there is no silence to find):
+SPLITS = {
+    'humming': 445.285,      # "She's humming | Rule": "humming" falls 190 -> 115 Hz and flattens on the r (was 444.909: "She's | humming")
+    'hatchet': 560.780,      # "woodpile | the": the -52 dB dip between the e of "pile" and "the" (was 560.350: "wood | pile")
+    'seven': 816.620,        # "Seven | When": the n murmur ends where the pitch drops 240 -> 140 Hz into the w (was 816.389: "Se | ven")
+    'liked_you': 938.620,    # "too | If": the strong vowel stops dead at 938.62; the weak I and f follow (was 938.677: "too I | f")
 }
 # pauses inside a line, by the word they follow (line tag -> {word index in the line: seconds})
 INTERNAL = {
@@ -385,6 +399,40 @@ def word_island(T, k):
     return near if bd <= 0.15 else None
 
 
+def split_point(T, i, isl_ab):
+    """Where to split line i from line i + 1 when the TTS ran them together in one sound island. A hand-set SPLITS time
+    wins. Else the window is anchored on the NEXT line's first word (its recognised start is the reliable anchor; the
+    end of line i's last word is not): [start - 0.30, start + 0.08], never closer than 0.10 s to the start of line i's
+    last word. In it, on a 10 ms envelope, the LAST real dip (the lowest point within +-25 ms, >= 20 dB under the
+    island's p90; never the window's edge) is the
+    boundary: a line's last word can hold its own dips (the closure before the z of "babie-s", the creak after
+    "mother,") while nothing but the next word follows the last one. No real dip: the quietest point, logged as a cut
+    inside running speech."""
+    tag = LINES[i]['tag']
+    if tag in SPLITS: return SPLITS[tag], 'hand-set (SPLITS)'
+    W_ = T.words
+    k_last = T.owned[i][-1]; k_next = T.owned[i + 1][0]
+    a_isl, b_isl = isl_ab
+    tn = W_[k_next][1]
+    lo = max(W_[k_last][1] + 0.10, a_isl + 0.03, tn - 0.30)
+    hi = min(tn + 0.08, b_isl - 0.03)
+    if hi <= lo: lo, hi = max(a_isl + 0.03, tn - 0.10), min(b_isl - 0.03, tn + 0.06)
+    seg = T.frames(a_isl, b_isl)
+    p90 = float(np.percentile(seg, 90)) if len(seg) else 0.0
+    win = T.frames(lo, hi)
+    if len(win) >= 25:
+        e = 10 * np.log10(np.convolve(10 ** (win / 10), np.ones(10) / 10, 'same') + 1e-20)
+        r = 25                                                     # a dip is the lowest point within +-25 ms
+        mins = [k for k in range(len(e)) if e[k] <= e[max(0, k - r):k + r + 1].min() + 1e-9 and e[k] <= p90 - 20
+                and 0 < k < len(e) - 1]
+        if mins:
+            k = mins[-1]
+            return lo + (k + 2.5) / 1000.0, 'last real dip, %.1f dB under the island p90' % (p90 - e[k])
+    t = T.quietest(lo, hi, smooth=10)
+    k = int(t * 1000); depth = p90 - float(T.db[max(0, k - 5):k + 5].mean())
+    return t, 'quietest point, %.1f dB under the island p90 (SHALLOW: inside running speech)' % depth
+
+
 def line_spans(T, verbose=False):
     """For every line: the source islands it is made of and what was removed inside it.
     Words own the island that holds their first token. A word-less island joins a line when it is speech: voiced and
@@ -402,7 +450,13 @@ def line_spans(T, verbose=False):
             if j is not None: owner_of[j].add(i); words_of[j].append(k)
     # a word cut by a closure ("emp-ty", "door-s") also owns the islands that follow inside its recognised span when
     # they are clearly speech (pitched and above -40 dBFS, or above -30 dBFS) and close (<= 0.12 s); a quiet unvoiced
-    # island there is the breath after the word and stays free
+    # island there is the breath after the word and stays free. Never an island where the next line's first word
+    # starts (its recognised start within 0.15 s of the island's): the recogniser's end time of a line's last word
+    # often runs into the next line's first word ("egg | In-side", "off | In-side", "door | At", "days | Okay", "woods |
+    # Two"), and claiming it glued that word's first 30-150 ms to the end of the line before (fix round 1: 11 such
+    # boundaries, the "In-" / "A-" / "O-" ticks). An island that starts well before the next word (a stop's release
+    # merged with the next line's first fricative: "knoc-k she said") is still claimed and split in its dip.
+    word_lines = [set(s_) for s_ in owner_of]                      # the lines whose words start in each island
     for i, ks in T.owned.items():
         for k in ks:
             j = word_island(T, k)
@@ -411,6 +465,9 @@ def line_spans(T, verbose=False):
             for m in range(j + 1, len(isl)):
                 a, b = isl[m]
                 if a >= t1 or a - prev_end > 0.12: break
+                if any(T.words[T.owned[o][0]][1] - a < 0.15 for o in word_lines[m] - {i} if T.owned.get(o)):
+                    break                                           # the next line's first word starts right here
+
                 pk = float(T.frames(a, b).max()); vp = float(T.voiced[int(a * 1000):int(b * 1000)].mean()) if b > a else 0.0
                 if (vp >= 0.2 and pk > -40) or (pk > -30 and is_speechlike(T, a, b)):
                     owner_of[m].add(i); prev_end = b
@@ -418,6 +475,7 @@ def line_spans(T, verbose=False):
                     break
     owned_isl = [j for j in range(len(isl)) if owner_of[j]]
     word_t0 = [(W_[k][1], k, i) for i, ks in T.owned.items() for k in ks]
+    tail_guard = []                                                # islands kept from the line before (logged)
     word_t0.sort()
     dropped = {}
     free = [j for j in range(len(isl)) if not owner_of[j]]
@@ -439,7 +497,15 @@ def line_spans(T, verbose=False):
         vl = float(T.lfdom[sl].mean()) if q > p else 0.0
         return q - p, vp, vl, float(T.frames(p, q).max())
 
-    # pass 1, forward: voiced sound next to a line, and codas (a release may follow another release: "snapped")
+    def next_line_t0(li):
+        """Recognised start of the first word of the line after li (None at the end)."""
+        if li is None or li + 1 >= len(LINES) or not T.owned.get(li + 1): return None
+        return W_[T.owned[li + 1][0]][1]
+
+    # pass 1, forward: voiced sound next to a line, and codas (a release may follow another release: "snapped").
+    # An island that starts within 0.15 s of the next line's first word and sits nearer to that line's sound than to
+    # the line before is never the previous line's coda or tail: it is the next word's onset (the breath onset of "A"
+    # after "Two knocks."); a release that sits nearer its own word stays ("Whitloc-k" | "There's")
     for j in free:
         if j in dropped or owner_of[j]: continue
         p, q = isl[j]; dur, vp, vl, pk = feats(j)
@@ -448,13 +514,23 @@ def line_spans(T, verbose=False):
         gn = isl[nj][0] - q if nj is not None else 9.0
         li_prev = max(owner_of[pj]) if pj is not None else None
         li_next = min(owner_of[nj]) if nj is not None else None
+        nt0 = next_line_t0(li_prev)
+        if nt0 is not None and li_next is not None and li_next != li_prev and nt0 - p < 0.15 and gn < gp:
+            li_prev_ok = False
+        else:
+            li_prev_ok = True
         wprev = next((W_[k][0] for t, k, i in reversed(word_t0) if t < p), '')
         near = li_prev if gp <= gn else li_next
+        if near == li_prev and not li_prev_ok: near = li_next
+        if not li_prev_ok and li_prev is not None:
+            tail_guard.append(round(p, 3))
         if vp >= 0.2:                                              # pitched: speech (a word timed late, a voiced tail)
-            if (min(gp, gn) <= 0.06 and pk > -55) or (pk > -40 and min(gp, gn) <= 0.35): owner_of[j].add(near)
-        elif vl >= 0.5 and ((min(gp, gn) <= 0.03 and pk > -55) or (gp <= 0.07 and pk > -40)):
-            owner_of[j].add(near if min(gp, gn) <= 0.03 else li_prev)  # a nasal / l murmur against its word ("smile")
-        elif li_prev is not None and coda_ok(wprev, gp, dur, pk):
+            if near is not None and ((min(gp, gn) <= 0.06 and pk > -55) or (pk > -40 and min(gp, gn) <= 0.35)):
+                owner_of[j].add(near)
+        elif vl >= 0.5 and ((min(gp, gn) <= 0.03 and pk > -55) or (gp <= 0.07 and pk > -40 and li_prev_ok)):
+            tgt = near if min(gp, gn) <= 0.03 else li_prev        # a nasal / l murmur against its word ("smile")
+            if tgt is not None: owner_of[j].add(tgt)
+        elif li_prev is not None and li_prev_ok and coda_ok(wprev, gp, dur, pk):
             owner_of[j].add(li_prev)
     # pass 2, backward: onsets (the s of "Stamped" before its closure, an initial s / f / h)
     for j in reversed(free):
@@ -483,22 +559,20 @@ def line_spans(T, verbose=False):
         if first[i + 1] < last[i]:
             raise SystemExit(f'lines {i} and {i + 1} overlap: islands {first[i]}-{last[i]} / {first[i + 1]}-{last[i + 1]}')
     bounds = {}
+    split_log = []
     for i in range(len(LINES)):
         bounds[i] = [isl[first[i]][0], isl[last[i]][1], False, False]
-    for i in range(len(LINES) - 1):                               # two lines in one island: split at the quietest point
+    for i in range(len(LINES) - 1):                               # two lines in one island: split in its real dip
         if last[i] == first[i + 1]:
-            k_last = T.owned[i][-1]; k_next = T.owned[i + 1][0]
-            a_isl, b_isl = isl[last[i]]
-            lo = max(W_[k_last][1] + 0.05, a_isl + 0.03)
-            hi = min(W_[k_next][1] + 0.06, b_isl - 0.03)
-            if hi <= lo: lo, hi = W_[k_next][1] - 0.10, W_[k_next][1] + 0.06
-            t = T.quietest(lo, hi)
+            t, how = split_point(T, i, isl[last[i]])
+            split_log.append({'line': i, 'tag': LINES[i]['tag'], 'at': round(t, 4), 'how': how})
             bounds[i][1] = t; bounds[i][3] = True
             bounds[i + 1][0] = t; bounds[i + 1][2] = True
     for i, f in fx.items():                                       # hand-set starts / ends (the slips)
         if 'start' in f: bounds[i][0] = f['start']; bounds[i][2] = True
         if 'end' in f: bounds[i][1] = f['end']; bounds[i][3] = True
     out = {}
+    short_tails = []
     for i in range(len(LINES)):
         a, b, ci, co = bounds[i]
         keep, removed = [], []
@@ -510,9 +584,27 @@ def line_spans(T, verbose=False):
                 removed.append({'src': [round(p2, 3), round(q2, 3)], 'why': dropped[j][0], 'peak_db': round(dropped[j][1], 1)})
             else:
                 keep.append([p2, q2, [k for k in words_of[j] if k in T.owned[i]]])
+        # a line-final piece under 60 ms after a pause is a breath onset or the next line's first sound, unless the
+        # line's last word ends in a stop (its release: "trick", "knocks")
+        last_w = re.sub(r'[^a-z]', '', text_words(i)[-1].lower()) if text_words(i) else ''
+        stop_end = bool(re.search(r'(t|k|p|d|b|ck|ct|pt|ght|ed|te|ke|pe|de|x|ts|ks|ps|ds|cks|cts|pts|kes|tes)$', last_w)) \
+            or (last_w.endswith('g') and not last_w.endswith('ng'))
+        while len(keep) > 1 and keep[-1][1] - keep[-1][0] < 0.06 and keep[-1][0] - keep[-2][1] > 0.015 and not stop_end \
+                and not FIXES.get(LINES[i]['tag'], {}).get('end'):
+            short_tails.append({'line': i, 'src': [round(keep[-1][0], 3), round(keep[-1][1], 3)]})
+            removed.append({'src': [round(keep[-1][0], 3), round(keep[-1][1], 3)], 'why': 'line-final tick (< 60 ms)', 'peak_db': 0.0})
+            keep.pop()
         if keep:                                                   # the span is the sound: no leading / trailing silence
             a = max(a, keep[0][0]); b = min(b, keep[-1][1])
         out[i] = {'span': [a, b], 'keep': keep, 'removed': removed, 'cut_in': ci, 'cut_out': co}
+    for i, f in fx.items():                                       # a line that reuses another line's take
+        if 'reuse' in f:
+            src_i = tag2i[f['reuse']]
+            out[i] = dict(out[src_i]); out[i]['reused_from'] = src_i; out[i]['removed'] = []
+    if verbose or split_log or short_tails or tail_guard:
+        for r in split_log: log('split L%d/%d at %.4f: %s' % (r['line'], r['line'] + 1, r['at'], r['how']))
+        for r in short_tails: log('dropped line-final tick L%d %.3f-%.3f' % (r['line'], r['src'][0], r['src'][1]))
+        for t in tail_guard: log('island at %.3f kept off the line before (the next line\'s onset)' % t)
     between = []
     for j, (why, pk) in dropped.items():
         p, q = isl[j]

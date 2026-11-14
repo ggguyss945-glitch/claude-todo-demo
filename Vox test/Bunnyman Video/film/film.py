@@ -2446,9 +2446,26 @@ def B_card(F, sh):
         u = t - t0
         pen = Pen(cv)
         if mode == 'trick':
-            text(cv, 'THE TRICK ONLY WORKS IF YOU', 960, 330, 800, 44, '#b8b8c4', 255 * clamp(u / 0.3), 0.12, 'center', 0.6)
+            # (fix round 1, fixer C: critic 2 minor 17, its first 4 s were a near-empty dark card with small type) THE TRICK
+            # big from the first frame, the two conditions as empty rows waiting to be filled; on "close" row 1 lights with an
+            # eye closing, on "count" row 2 lights with the count ticking 1..7
+            text(cv, 'THE TRICK', 960, 250, 900, 112, '#ffffff', 255 * clamp(u / 0.3), 0.14, 'center', 0.7)
+            tw = p.get('t_works', t0 + 1.5)
+            text(cv, 'ONLY WORKS IF YOU', 960, 352, 800, 46, '#b8b8c4', 255 * clamp((t - tw) / 0.3), 0.14, 'center', 0.6)
             for k, (tk, s_) in enumerate(p['steps']):
-                if t >= tk: H.tag(cv, s_, 960, 520 + k * 150, 'white', t - tk, size=58)
+                y_ = 520 + k * 190
+                box = rrect(430, y_ - 70, 1060, 140, 26)
+                lit = clamp((t - tk) / 0.25)
+                pen.fill(box, '#ffffff', 10 + 18 * lit); pen.line(box, 3, '#ffffff', 60 + 120 * lit)
+                if lit <= 0.0:
+                    pen.fill(rrect(520, y_ - 10, 820 * clamp((u - 0.4 - 0.3 * k) / 0.6), 20, 10), '#ffffff', 26)      # an empty line
+                    continue
+                if k == 0:
+                    _eye_icon(pen, 545, y_, 62, (0.0, 0.0), ease_in_out(clamp((t - tk - 0.2) / 0.5)), 255 * lit)
+                else:
+                    n_ = 1 + int(clamp((t - tk) / 0.95) * 6.999)
+                    text(cv, str(n_), 545, y_ + 30, 900, 92, '#e3262e' if n_ == 7 else '#ffffff', 255 * lit, 0.0, 'center', 0.5)
+                text(cv, s_.split('. ', 1)[-1], 1010, y_ + 22, 900, 64, '#ffffff', 255 * lit, 0.06, 'center', 0.6)
         elif mode == 'eye':
             look = (math.sin(u * 2.1) * 0.9, 0.3 * math.sin(u * 1.3))
             _eye_icon(pen, 960, 520, 300, look, 0.0, 255 * clamp(u / 0.25))
@@ -2457,20 +2474,65 @@ def B_card(F, sh):
             if u > 0.2:
                 text(cv, 'SO YOU NEVER DID.', 960, 800, 900, 78, '#ffffff', 255 * clamp((u - 0.2) / 0.2), 0.04, 'center', 0.7)
         elif mode == 'like':
+            # (fix round 1, fixer C: critic 2 M12, a generic red thumbs-up disc on navy) the like lands like a knock: close on
+            # the red front door, a knuckle raps it three times (knock-knock-KNOCK) and each rap fills a third of the like
+            # stencilled on the door; LIKE on the last
             th = p.get('hit_t', t0 + 0.4)
-            v = t - th
-            if v > -0.25:
-                s = 1.0 + 0.55 * clamp(-v / 0.25) if v < 0 else 1.0 + 0.06 * math.exp(-v * 9) * math.cos(v * 40)
-                a = 255 * clamp((v + 0.25) / 0.12)
-                cv.save(); cv.translate(960, 520); cv.scale(s, s); cv.translate(-960, -520)
-                pen.fill(oval(960, 520, 230), H.RED, a); _thumb(pen, 960, 520, 230, a)
+            ks = p.get('knocks') or [th - 0.36, th - 0.18, th]
+            dr = rect(-400, -300, 2720, 1680)
+            pen.fill(dr, '#6e1a1e'); pen.texture(dr, 'wood', 0.55, 'overlay', 2.2, 90)
+            for (x0, y0, w0, h0) in ((220, 90, 560, 380), (1140, 90, 560, 380), (220, 610, 560, 420), (1140, 610, 560, 420)):
+                pn = rect(x0, y0, w0, h0)
+                pen.line(pn, 14, '#4a0e12', 200); pen.line(moved(pn, 6, 6), 5, '#9a3a3a', 120)
+            pen.radial(None, 960, 480, 1200, [(0, '#ffd8a0', 70), (0.6, '#000000', 30), (1, '#000000', 170)])
+            nk = sum(1 for k_ in ks if t >= k_)
+            fill = nk / float(len(ks))
+            bump = sum(0.06 * math.exp(-(t - k_) * 14.0) for k_ in ks if t >= k_)
+            cv.save(); cv.translate(960, 500); cv.scale(1.0 + bump, 1.0 + bump); cv.translate(-960, -500)
+            pen.fill(oval(960, 500, 230), '#ffffff', 30); pen.line(oval(960, 500, 230), 10, '#ffffff', 170)
+            if fill > 0:
+                cv.save(); cv.clipRect(skia.Rect.MakeLTRB(700, 730 - 460 * fill, 1220, 740), skia.ClipOp.kIntersect, True)
+                pen.fill(oval(960, 500, 230), H.RED, 255)
                 cv.restore()
-                if v > 0.05: text(cv, 'LIKE', 960, 870, 900, 70, '#ffffff', 255 * clamp((v - 0.05) / 0.2), 0.2, 'center', 0.6)
+            _thumb(pen, 960, 500, 230, 255)
+            cv.restore()
+            # the knuckles: a fist swings in from the right and raps the door beside the icon on each knock
+            hit = 0.0
+            for k_ in ks:
+                d_ = t - k_
+                if -0.2 <= d_ <= 0.16: hit = max(hit, 1.0 - abs(d_ + 0.02) / 0.18)
+            vis = clamp((t - (ks[0] - 0.45)) / 0.2) * clamp((ks[-1] + 0.7 - t) / 0.3)
+            if vis > 0.01:
+                hx_ = 1430 + 90 * (1.0 - hit); hy_ = 560
+                hero_hand(pen, 'narrator', hx_, hy_, 300, 'fist', 262.0, -1, (2300, 800), dict(key=0.0), 0.0, t,
+                          shadow=(10, 14, 16, 80 * hit))
+            if t >= ks[-1] + 0.05: text(cv, 'LIKE', 960, 880, 900, 70, '#ffffff', 255 * clamp((t - ks[-1] - 0.05) / 0.2), 0.2, 'center', 0.6)
         elif mode == 'next':
+            # (fix round 1, fixer C: critic 2 minor 17, static for 8.9 s) the phone RINGS on the nightstand in the dark: rings
+            # in bursts (1.2 s on, 0.8 s off) from the doctor's line, it buzzes across the wood, its screen light pulses on the
+            # nightstand and the wall, ring waves go out; the clock's colon blinks; a slow push in
+            tr0 = p.get('ring_t', t0 + 0.8)
+            ph = (t - tr0) % 2.0 if t >= tr0 else 9.0
+            ringing = ph < 1.2
+            zm = 1.0 + 0.06 * clamp(u / max(1.0, sh.d))
+            cv.save(); cv.translate(960, 640); cv.scale(zm, zm); cv.translate(-960, -640)
+            ns = rect(-400, 800, 2720, 700)                                     # the nightstand top
+            pen.fill(ns, '#2a1c14'); pen.texture(ns, 'wood', 0.6, 'overlay', 1.5); pen.fill(rect(-400, 800, 2720, 10), '#4a3424')
+            glow_k = (0.55 + 0.45 * abs(math.sin(ph * 9.0))) if ringing else 0.35
+            pen.radial(None, 960, 760, 900, [(0, '#bcd4ff', 70 * glow_k), (0.5, '#5a7ab0', 25 * glow_k), (1, '#000000', 0)], clip=False)
+            jx, jy = (3.5 * math.sin(t * 91.0), 2.0 * math.sin(t * 73.0)) if ringing else (0.0, 0.0)
+            if ringing:
+                for q in range(3):                                               # ring waves
+                    r_ = 330 + 160 * ((ph * 1.6 + q * 0.33) % 1.0)
+                    pen.line(oval(960, 640, r_, r_ * 0.62), 4, '#bcd4ff', 90 * (1.0 - ((ph * 1.6 + q * 0.33) % 1.0)))
+            cv.save(); cv.translate(jx, jy)
+            H.phone(cv, 'incoming', u, name='DR. HALVERSON', x=960, y=640, scale=0.72, hand=False)
+            cv.restore()
+            cv.restore()
             text(cv, 'NEXT TIME ON', 960, 150, 800, 34, '#a8a8b8', 255 * clamp(u / 0.3), 0.3, 'center', 0.6)
             text(cv, CHANNEL, 960, 225, 900, 64, '#ffffff', 255 * clamp(u / 0.4), 0.12, 'center', 0.7)
-            H.phone(cv, 'incoming', u, name='DR. HALVERSON', x=960, y=640, scale=0.72, hand=False)
-            text(cv, '3:00 AM', 960, 335, 800, 44, '#e3262e', 255 * clamp((u - 0.6) / 0.3), 0.2, 'center', 0.6)   # above the phone (at 1000 the caption covered it)
+            clk = '3:00 AM' if (t % 1.0) < 0.6 else '3 00 AM'
+            text(cv, clk, 960, 335, 800, 44, '#e3262e', 255 * clamp((u - 0.6) / 0.3), 0.2, 'center', 0.6)   # above the phone (at 1000 the caption covered it)
         elif mode == 'title':
             text(cv, CHANNEL, 960, 560, 900, 96, '#ffffff', 255 * clamp(u / 0.6) * (1 - clamp((u - sh.d + 0.6) / 0.5)), 0.12, 'center', 0.7)
         elif mode == 'end':
@@ -2580,7 +2642,9 @@ def shot_common(F, sh, spec):
         if p.get('cue') is not None:
             sh.sfx.append(_ev(p['cue'], 'ui_pop', -4, 0, 'close', kind='comment'))
     if sh.kind == 'card' and p['mode'] == 'like':
-        sh.sfx.append(_ev(p.get('hit_t', sh.t0 + 0.4), 'knock_door', 2, 0, 'close', n=1, kind='like'))
+        th_ = p.get('hit_t', sh.t0 + 0.4)
+        for k_, tk_ in enumerate(p.get('knocks') or [th_ - 0.36, th_ - 0.18, th_]):     # knock-knock-KNOCK (fix round 1, fixer C)
+            sh.sfx.append(_ev(tk_, 'knock_door', 2 if k_ == 2 else -2, 0, 'close', n=1, kind='like', index=k_))
     tags = p.get('tags')
     if tags:
         prev = spec.hud
@@ -4888,9 +4952,9 @@ def plan_rule6(F):
         return []
     C(T(241), 'set', room='up', view='west', cam=cm((-1.5, 4.92, 4.3), (0.7, 5.3, 3.95), S=1000, sx=960, sy=520), set=dict(upstairs=0.0, june_door=70.0),
       rim=NIGHT,
-      ppl=[P('narrator', (0.55, 4.85, 2.85), path=[(T(241), (0.55, 4.85, 2.85)), (tr0, (0.6, 4.9, 2.85)), (tb + 0.05, (-0.6, 4.95, 2.85))], run=True,
+      ppl=[P('narrator', (0.62, 4.98, 2.85), path=[(T(241), (0.62, 4.98, 2.85)), (tr0, (0.66, 5.02, 2.85)), (tb + 0.05, (-0.85, 4.98, 2.85))], run=True,
              expr='terror', face=(1.0, 5.55)),
-           P('june', (1.0, 5.55, 2.85), path=[(T(241), (1.0, 5.55, 2.85)), (tr0 + 0.08, (0.98, 5.5, 2.85)), (tb + 0.05, (-0.15, 5.42, 2.85))], run=True,
+           P('june', (1.0, 5.55, 2.85), path=[(T(241), (1.0, 5.55, 2.85)), (tr0 + 0.08, (0.98, 5.5, 2.85)), (tb + 0.05, (-0.45, 5.42, 2.85))], run=True,
              expr='terror', face=(0.55, 4.85))],
       acts=grab_acts, c=dict(mv='push', f=1.0, rate=0.02))
     # 242 "Bathroom."  from inside, by the tub: they burst in through the door at us (the opening is screen left of the
@@ -4903,7 +4967,7 @@ def plan_rule6(F):
         # her palm on the leaf, two thirds of the way out from the hinge, riding it shut
         edge = lambda tt: scr(sp, (-2.0 + 0.5 * math.cos(math.radians(75.0 * (1.0 - ease_in_out(clamp((tt - tdoor) / 0.22))))),
                                    5.83 + 0.5 * math.sin(math.radians(75.0 * (1.0 - ease_in_out(clamp((tt - tdoor) / 0.22))))), 3.95))
-        n.reach_to(tdoor - 0.14, -1, edge, t1=tdoor + 0.6, dur=0.12, contact='palm', shape='flat', z=-40.0, fade=0.3)
+        n.reach_to(tdoor + 0.03, -1, edge, t1=tdoor + 0.6, dur=0.08, contact='palm', shape='flat', z=-40.0, fade=0.3)
         n.turn(tdoor - 0.2, _turn_for(sp, -1.35, 6.35, (-1.6, 5.85)), 0.16)
         n.set(tdoor + 0.05, None, 0.15, lean=0.25)                              # her weight thrown against it
         n.look_at(tdoor - 0.1, edge, None, 0.15)
@@ -4911,8 +4975,10 @@ def plan_rule6(F):
         j.look_at(tdoor + 0.05, scr(sp, (-1.62, 5.85, 3.8)), None, 0.25)
         return []
     C(tb, 'set', room='bath', view='door', set=dict(gap=0.0, door=lambda tt, a=tdoor: 75.0 * (1.0 - ease_in_out(clamp((tt - a) / 0.22)))), rim=DARK,
-      ppl=[P('june', (-1.45, 5.3, 2.85), path=[(tb, (-1.45, 5.3, 2.85)), (tdoor - 0.1, (-1.05, 6.85, 2.85))], run=True, surface='inside_quiet', expr='terror'),
-           P('narrator', (-1.6, 4.95, 2.85), path=[(tb, (-1.6, 4.95, 2.85)), (tdoor - 0.16, (-1.35, 6.33, 2.85))], run=True, surface='inside_quiet',
+      ppl=[P('june', (-0.42, 5.42, 2.85), path=[(tb, (-0.42, 5.42, 2.85)), (tb + 0.3, (-1.45, 5.5, 2.85)), (tdoor - 0.1, (-1.05, 6.85, 2.85))], run=True,
+             surface='inside_quiet', expr='terror'),
+           P('narrator', (-0.82, 4.98, 2.85), path=[(tb, (-0.82, 4.98, 2.85)), (tb + 0.35, (-1.5, 5.3, 2.85)), (tdoor - 0.16, (-1.35, 6.33, 2.85))], run=True,
+             surface='inside_quiet',
              expr='terror')],
       acts=shut_acts, c=dict(mv='push', f=1.0, rate=0.02, hit=[(tdoor + 0.22, 5.0)]), sfx=[(tdoor + 0.22, 'door_slam', -2, 0, 'inside', dict(kind='bathroom'))])
     # 243 "Lock."
@@ -4991,12 +5057,16 @@ def plan_rule6(F):
     # pushing in to the wide smile; the grey bunny, pushing in to the blue tears; the shaky letters in the corner
     DRK = {259: [(T(259), 858, 535, 1.0, None, 2.0), (T(260), 858, 540, 1.0, 'push', 2.1)],
            260: [(T(260), 858, 545, 1.0, None, 2.1), (T(260) + 0.85, 838, 878, 1.0, 'in_out', 2.05), (T(261), 838, 885, 1.0, 'push', 2.15)],
-           261: [(T(261), 1035, 720, 1.0, None, 1.9), (w(261, 'wide') - 0.3, 1035, 700, 1.0, 'lin', 2.0), (T(262), 1028, 640, 1.0, 'in_out', 2.7)],
-           262: [(T(262), 1172, 700, 1.0, None, 2.15), (w(262, 'blue') - 0.3, 1172, 705, 1.0, 'lin', 2.25), (T(263), 1178, 745, 1.0, 'in_out', 3.0)],
+           261: [(T(261), 1035, 720, 1.0, None, 1.9), (w(261, 'with') - 0.12, 1035, 705, 1.0, 'push', 2.0)],
+           262: [(T(262), 1172, 700, 1.0, None, 2.15), (w(262, 'with') - 0.12, 1172, 705, 1.0, 'push', 2.25)],
            263: [(T(263), 864, 260, 1.0, None, 2.2), (T(264), 864, 250, 1.0, 'push', 2.3)],
            264: [(T(264), 864, 228, 1.0, None, 2.6), (T(265), 864, 228, 1.0, 'push', 2.75)]}
     for i, ks in DRK.items():
         C(T(i), 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=ks), music=[(t(264), 'stinger', 0.7)] if i == 264 else [])
+        if i in (261, 262):                                   # a cut in closer: the wide smile / the blue tears
+            tw_ = w(i, 'with') - 0.12
+            cx_, cy_, z_ = (1028, 640, 2.6) if i == 261 else (1178, 745, 2.9)
+            C(tw_, 'ins', name='drawing', kw=dict(slide=1.0), c=dict(mv='keys', keys=[(tw_, cx_, cy_, 1.0, None, z_), (T(i + 1), cx_, cy_ - 5, 1.0, 'push', z_ * 1.06)]))
     # 265 "Then Mom's voice, from the end of the hall."  266 "A voice I've never heard her use."  267 M "GET OUT OF MY HOUSE."
     # (fix round 1, fixer C: critic 2 M5, she stood as a far static A-pose) she strides out of her room at the end of the
     # hall into the corridor, plants her feet and squares up toward the bathroom
@@ -5201,7 +5271,7 @@ def plan_rule7(F):
         j, n = A['june'], A['narrator']
         tr = t(292) + 0.15
         j.set(tr, w(293, 'proud') if w(293, 'proud') else t(293) + 0.6, 0.55, lean=0.18, dy=-75.0, h_nod=-0.12)     # up onto her knees
-        j.reach_to(tr - 0.1, 1, scr(sp, (-1.55, 7.85, 3.41)), t1=t(293) + 0.4, dur=0.4, contact='palm', shape='flat', z=40.0, fade=0.5)
+        j.reach(tr - 0.1, t(293) + 0.4, 1, out=40.0, down=150.0, fwd=210.0, shape='flat', up=0.0, fade=0.5)     # a hand out to the rim
         j.look_at(s.t0, scr(sp, (-1.62, 5.85, 3.2)), None, 0.3)
         n.reach_to(tr + 0.55, -1, (j, 'chest'), dur=0.3, contact='palm', shape='grip', z=70.0)       # a fistful of her pyjama top
         n.set(tr + 0.55, None, 0.3, lean=0.2)
@@ -5450,10 +5520,10 @@ def plan_reveal(F):
     # mask bowed over the strange big paws, then jerking round at the woods; on "too scared to take off" both paws come up
     # to the head, grip it as if to pull it off... and can't; they slide away and the arms wrap round the body
     def scared(a, s):
-        a.set(-9, None, 0.3, h_nod=1.6, hunch=0.6, shrug=0.4, tremble=0.7)
+        a.set(-9, None, 0.3, h_nod=1.6, hunch=0.6, shrug=0.4, tremble=0.25)
         ts_ = w(333, 'suit')
         for k_, (dt_, ht_) in enumerate(((-1.6, 0.45), (-1.05, -0.5), (-0.45, 0.3))):     # jerking round at the woods
-            a.set(ts_ + dt_, ts_ + dt_ + 0.45, 0.07, h_turn=ht_, h_nod=0.4)
+            a.set(ts_ + dt_, ts_ + dt_ + 0.45, 0.2, h_turn=ht_, h_nod=0.4)
         a.reach(-9, tlift - 0.1, 1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)
         a.reach(-9, tlift - 0.1, -1, out=50.0, down=70.0, fwd=220.0, shape='paw_open', up=0.0, fade=0.4)
         for sd in (1, -1):                                   # the paws on the sides of the head, gripping it ... and letting go
@@ -5461,7 +5531,7 @@ def plan_reveal(F):
                                                            a.where(tt, 'head', post=False)[1] - 0.01 * a.height),
                        t1=tlift + 1.0, dur=0.3, contact='palm', shape='paw_grip', z=60.0, fade=0.5)
             a.reach(tlift + 1.0, None, sd, out=-30.0, down=180.0, fwd=110.0, shape='paw', up=0.0, fade=0.6)
-        a.set(tlift - 0.1, None, 0.3, h_nod=0.6, tremble=1.0)
+        a.set(tlift - 0.1, None, 0.3, h_nod=0.6, tremble=0.4)
     C(tg, 'bust', who='bunny87', bg=('woods', 'under', UNDER_CAM), set=dict(tod='day87'), **dict(D87, rim=None), cx=960, cy=600, scale=0.88, light=MEMORY,
       act=scared, c=dict(mv='push', x=960, y=560, zrate=0.02))
     # 334 "For thirty-six years, she lived in those woods."  (now: the filthy suit, alone among the trees at night)
@@ -5848,6 +5918,29 @@ def plan_after(F):
 
 
 # ==================================================================================================== OUTRO (993.9 - end)
+def moths_layer(center, radius, n, size, depth, seed=0, a=220):
+    """Moths blundering round a light (fix round 1, fixer C): n of them on wobbling loops about center(t) (design px),
+    radius px, wings flickering (size px), warm-lit on the side toward the light, each throwing a faint glow."""
+    rng = np.random.default_rng(seed)
+    P_ = [(rng.uniform(0.6, 1.4), rng.uniform(0, 6.28), rng.uniform(0.5, 1.0), rng.uniform(0.6, 1.3), rng.uniform(0, 6.28)) for _ in range(n)]
+
+    def draw(pen, t):
+        cx, cy = center(t)
+        for (sp_, ph, rr, sz, wph) in P_:
+            a_ = t * 2.3 * sp_ + ph
+            x = cx + radius * rr * (math.cos(a_) + 0.35 * math.sin(a_ * 2.7 + wph))
+            y = cy + radius * rr * 0.6 * (math.sin(a_ * 1.3) + 0.3 * math.cos(a_ * 3.1 + wph)) + radius * 0.25
+            fl = abs(math.sin(t * 38.0 * sz + wph))
+            w_ = size * sz
+            pen.glow(x, y, w_ * 3.0, '#fff1c8', 26)
+            for sd in (-1, 1):
+                wing = poly([(x, y), (x + sd * w_ * (0.4 + 0.8 * fl), y - w_ * 0.5), (x + sd * w_ * (0.5 + 0.7 * fl), y + w_ * 0.25)])
+                pen.fill(wing, '#e8dcc0', a * (0.55 + 0.45 * fl))
+            pen.fill(oval(x, y, w_ * 0.18, w_ * 0.45), '#5a4a3a', a)
+    return Layer(depth, draw, 'moths', blur=0)
+
+
+
 MOM_DOOR_BG = ('june', 'door', cm((0.95, 7.6, 4.2), (0.8, 5.6, 4.1), S=900))
 
 
@@ -5890,7 +5983,8 @@ def plan_outro(F):
     C(T(395), 'ins', name='hanger', **O, kw=dict(back=True, zip_t=w(395, 'zipper') - T(395)), anim=True,
       c=dict(mv='keys', keys=[(T(395), 960, 540, 1.0, None, 1.0), (T(396), 960, 600, 1.0, 'in_out', 1.3)]), sfx=[(w(395, 'zipper'), 'zipper', -4, 0, 'close')])
     # 396 "...the trick only works if you close your eyes and count to seven."  397 "You've been watching this whole time."  398 "So you never did."
-    C(T(396), 'card', mode='trick', steps=[(w(396, 'close') - 0.05, '1. CLOSE YOUR EYES'), (w(396, 'count') - 0.05, '2. COUNT TO SEVEN')], **O)
+    C(T(396), 'card', mode='trick', steps=[(w(396, 'close') - 0.05, '1. CLOSE YOUR EYES'), (w(396, 'count') - 0.05, '2. COUNT TO SEVEN')],
+      t_works=w(396, 'trick') - 0.1, **O)
     C(T(397), 'card', mode='eye', **O)
     C(T(398), 'card', mode='safe', **O)
     # 399 "Now, go back to the comment you left before rule two."  the tape rewinds to the pause
@@ -5920,10 +6014,15 @@ def plan_outro(F):
     C(T(407), 'set', room='yard', view='house', set=dict(back_light=dict(on=t(407) + 0.35), kitchen=0.0), **O, rim=MOON, c=dict(mv='push', f=1.6, rate=0.015),
       sfx=[(t(407) + 0.35, 'light_switch', -6, 0, 'outside', dict(kind='porch'))])
     # 408 "...the next story comes to you, so you never have to go looking for it in the woods."
-    C(T(408), 'set', room='yard', view='woods', set=dict(back_light=1.0), **O, rim=PORCH, c=dict(mv='push', f=1.0, rate=0.012))
-    C(w(408, 'next') - 0.1, 'set', room='yard', view='house', set=dict(back_light=1.0, kitchen=0.6), **O, rim=MOON, c=dict(mv='push', f=2.2, rate=0.012))
+    # (fix round 1, fixer C: critic 2 M6, 9.7 s of static yard) the porch light breathes a little, moths blunder round it
+    # and through its light in front of us; from the treeline the lantern with its moths on the dark house
+    flick = lambda tt: 0.93 + 0.05 * math.sin(tt * 7.1) + 0.03 * math.sin(tt * 17.3) - (0.25 if (tt % 3.7) < 0.06 else 0.0)
+    C(T(408), 'set', room='yard', view='woods', set=dict(back_light=flick), **O, rim=PORCH, c=dict(mv='push', f=1.0, rate=0.012),
+      acts=lambda A, s, sp: [moths_layer(lambda tt: (960, 40), 620.0, 5, 46.0, 0.6, seed=3, a=235)])
+    C(w(408, 'next') - 0.1, 'set', room='yard', view='house', set=dict(back_light=flick, kitchen=0.6), **O, rim=MOON, c=dict(mv='push', f=2.2, rate=0.012),
+      acts=lambda A, s, sp: [moths_layer(lambda tt, p_=scr(sp, (ST.BACK_LIGHT[0], ST.BACK_LIGHT[2], ST.BACK_LIGHT[1])): p_, 40.0, 5, 6.0, 0.5, seed=5, a=235)])
     # 409 "Next time... if your doctor calls at three in the morning ..."  (the card: NEXT TIME ON NIGHT POLICY)
-    C(T(409), 'card', mode='next', **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
+    C(T(409), 'card', mode='next', ring_t=w(409, 'doctor') + 0.3, **O, sfx=[(w(409, 'doctor') + 0.3, 'phone_ring', -6, 0, 'close', dict(kind='old_nightstand', dur=3.0))])
     # 410 "Sleep well."  411 "And if you hear a little song tonight... that's just the outro."
     C(T(410), 'card', mode='title', **O)
     C(T(411), 'black', caption=True, **O)

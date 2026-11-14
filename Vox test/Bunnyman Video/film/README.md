@@ -41,7 +41,7 @@ python3 film.py --bench 1 --consec 10 --shots 0,10,57 --size 2560x1440 --threads
 ```
 (`W` stands for `_work`.) Each command builds the film once (about 5 s) and runs at 960x540 unless `--size` says otherwise. Review sheets are 960x540 frames in 320 px tiles, 8 shots a sheet, each row `#index kind start-end (length)` with the timeline lines it covers printed under it.
 
-- **391 shots** (after fix round 1, fixer B), median 2.44 s (p10 1.31, p90 4.66; longest 10.1 s: the rule cards, the next-episode card and the end card), 21.6 cuts/min (the police film runs 23.4).
+- **397 shots** (after fix round 1, fixer C), median 2.43 s (p10 1.27, p90 4.56; longest 10.1 s: the rule cards, the next-episode card and the end card), 21.9 cuts/min (the police film runs 23.4).
 - **The film is 1087.84 s** (65,270 frames at 60 fps): the narration (1077.99 s) + 9.85 s for the outro. The sound step's outro jingle starts 0.1 s after the last line ends and runs 9.75 s ("...that's just the outro." and the song IS the outro, `audio/music_plan.py`), so the NIGHT POLICY end card holds for it and the film fades out with its last soft hum.
 - **Story layout** (`plan_film`): `plan_open` (0-65.7 s: the cold open, the 1987 parade on tape, the Courier, Laurie walking out of the woods, the hospital, the house and the rules on the fridge), `plan_1987` (the float, the photo with Laurie holding his paw, the magic trick, the woods, the bridge, sunrise 1987, the missing poster), `plan_since` (every Easter since: the treeline, the burn barrel, Grandma's porch light, Dad and his flashlight, the police morning), `plan_rule1` (11:07, the song, the curtains, June at her window, the wave, "Past us.", Mom in the doorway), `plan_pause` (the comment prompt), `plan_rule2` .. `plan_rule7` (midnight's egg, 1:13's knock, 1:40's mail slot, 2:47's attic, 4:30's break-in and the bathroom, 6:12's sunrise and the body), `plan_reveal` (the trick, 1987 and now, the recalls of every rule, the swap), `plan_after` (Mom's body, the police, Holloway State Hospital, the visit, "Want to see a magic trick?"), `plan_outro`, `plan_globals` (the jingle by version, the count, the swap, the climax pulse and heartbeat, the beds the reveal needs).
 - **How it is staged** (the owner's notes on the last films):
@@ -333,6 +333,60 @@ masked lines). Shot numbers below are the current ones (`python3 film.py --list`
   hand all the way over, no flip at the spine) and leafs on through three cursive spreads on "page after page"
   (`ins_diary_pages`: the hand comes in, turns, travels back to the next leaf, turns; `_diary_page_turn`).
 
+## Fix round 1, fixer C (the picture majors and cheap minors from 600 s to the end, the outro included)
+All in `film.py` unless noted; `tools/validate.py` 0 errors (4 known WARNs: #110, #205, #321, #392), `--lipcheck` clean (only the
+masked lines #158, #167, #247). 397 shots. Evidence: `W/review/fixer_c/` (`sheet_NNN.jpg`: first | mid | last of every shot from
+#212; `strips/a_..m_*.jpg`: 4-15 fps strips of the changed actions).
+- **Rule 6, the break-in**: "Wet." / "Dragging." are two new inserts low on the kitchen lino (`ins_wet_floor`, `_lino_persp`,
+  `_plush_foot`, `_wet_print`): a sodden, filthy plush foot slams down beside its last prints (splash, drips from the fur) and lifts off
+  a dark wet print; then the hatchet's head is dragged across the frame ON the floor (the blade's corner on the lino, the handle
+  rising out of frame to the paw), a wet smear with the moon in it and a pale scratch behind it. "I grab June and run.": a closer
+  corridor camera; on "grab" the narrator lunges and closes a hand on June's wrist, spins and the two RUN at us hand in hand
+  (about 2.5 m/s); "Bathroom." is from inside, by the tub: they burst through the doorway (both cross the threshold in full view),
+  the narrator turns at the leaf and shoves the door shut with her palm riding it (`shut_acts`). The tub: June huddles turned to
+  the narrator so the palm lands on her MOUTH (`tub_hand`), and "my hand over her mouth" cuts to a close two-face shot: June's wet
+  wide eyes over the narrator's hand clamped on her mouth and chin (`hand_on_mouth`, `bust_mouth`). The stairs: one heavy
+  tread every 0.95 s (`STEP_T`: 616.85, 617.80, 618.75 ..., a settle on each landing, a footstep cue on each and a hatchet thunk
+  0.3 s after), the hatchet-steps insert carries the same rhythm (hits 620.0, 620.95, 621.9, 622.85) and now reads as the house's
+  flight seen through the dark banister with the filthy plush feet climbing ahead of the dragged hatchet (smaller paw). "...from
+  our woodpile.": a cut to the woodpile by the shed in the moonlight and the chopping block with a fresh pale gash where the
+  hatchet always stood (`sets_bunny.chopping_block(hatchet=False)`, `ob_yard(chop=False)`; the split logs are drawn in depth
+  order with shadows). The crayon drawing is framed from its own geometry: the bridge; a tilt DOWN the page to the tall man (no
+  longer under the caption); the lady with the rock, then a cut in to the wide smile; the bunny, then a cut in to the blue tears.
+  The fight: Mom strides out of her room at the end of the hall and squares up (fists, lean, heaving breath, a heavy step in the
+  medium); "The whole hallway shakes." the bathroom door shudders in its frame against the bolt with plaster dust trickling, the
+  feet shadows thrash under it (`ob_bath(rattle=)`); "slams" the leaf bows in hard (`slam`, stronger), a shower of dust, a body's
+  shadow blots out the light under the door; "Screaming." the two flinch into each other, hunched, eyes squeezed.
+- **Rule 7**: "Mom knocks, softly" shows: the leaf gives a hair on each knock (`ob_bath(knocks=)`) and her shadow under the door
+  rocks with her knuckles; on "You followed every single rule" June rises onto her knees, a hand out to the rim, and the
+  narrator grabs a fistful of her top and holds her down (`rise_acts`); the wreck is readable from the end of the corridor (claw
+  rakes, hatchet chops with the lath, a dragged smear, a hole punched through, `sets_bunny._scratches_wall`) and Mom stays in
+  the shot at the open bathroom door; after the fight her cardigan is torn at the shoulder, a button gone, dark spatter down
+  the front and her hair wilder (`characters_bunny._front_cardigan3`, `_hair_region` when `pose.scratch`).
+- **The reveal**: "In someone else." the mask bowed right down over the paws (h_nod 1.7); "...too scared to take off" a child's
+  terror in the suit: hunched and trembling, the mask jerking round at the woods, then both paws on the sides of the head,
+  gripping it ... and letting go (`scared`); Dad talks with his hands and steps closer (lips closed: the narrator's line), the
+  Bunnyman's head tilts to him, it rocks and lifts a paw toward him (`dad_talk`, `bunny_listen`); "It's the easiest thing in the
+  world." is now the reverse two-shot: Mom (screen left) smiling down, her scratched forearm rising from below to the hand over
+  the narrator's eyes (no more three identical busts on one axis).
+- **After**: "I'm on my knees" kneels Mom's body where it knelt for the trick (`SW_MOM`, knees 2) with the scratched arms out;
+  "I screamed my own name" is the reverse of "my own face looks down at me": Mom's body on its knees screaming up into the lens,
+  arms reaching (the wreck behind); the cop comes in along the wall past the head and kneels on the FAR side of the body, the
+  body between him and us; the whisper is two beats: June climbs up into frame onto her lap (the woman's arm comes round her),
+  then June's lips at the woman's ear with a cupped hand while the woman's eyes widen; `narrator_neat` (the old body at the
+  hospital) has the narrator's own chin-length hair combed tidy and a sixteen-year-old's smile (`CAST tidy`, `fold_k`).
+- **Outro**: "turn a light on now" flips the living-room lamp switch on the rose paper, unlabelled (`_ins_switch(room='living')`:
+  the porch light is kept for "subscribe"); "No Pemberton's." is the egg lying open and EMPTY in its two halves on the desk, the
+  stamp struck through (`egg_empty`); "just a costume" is the empty suit hanging slack on a wooden hanger from the closet rod
+  (sleeves and feet dangling, the dark empty neck hole) with the head on the shelf beside it, its hollow showing
+  (`_costume_flat`, `ins_hanger`), and from behind the zipper slides down; THE TRICK card is full from its first frame (the
+  title, the two empty rows that light on "close" with an eye closing and on "count" with the count ticking to a red 7); the
+  LIKE lands as three knuckle raps on the red front door, each filling a third of the like on it (`card like`, three
+  `knock_door` cues); the end holds have the porch light breathing and moths blundering in front of the lens (`moths_layer`); the
+  next-episode phone rings in bursts on the nightstand (buzzing, ring waves, its light pulsing, the colon of 3:00 blinking).
+- **Validator** (`tools/validate.py`): OVERLAP measures a lying body along its 1.7 m length (the cop knelt INTO the body and passed
+  because only its centre was checked).
+
 ## Open problems
 - **Lying figures in a set view** (`pose.lie`) are still the front view turned 90 degrees, so they only read from straight
   above: the lying beats are custom top-down inserts (`ins_body_above`, `ins_under_bridge`); the set view of the body from the
@@ -345,5 +399,9 @@ masked lines). Shot numbers below are the current ones (`python3 film.py --list`
   the door (the kneel pose's turn); the Mom armchair shot from the back door (#177) reads a little like standing in front of
   the chair (the frontal seated figure's foreshortening); the sound cue `magic_sparkle` (#33, the trick) has no recipe in
   `audio/sfx.py` yet (the mix skips it with a warning).
+- **Fixer C leftovers**: the lying body in the set view at the foot of the stairs is still the front-view figure turned 90 degrees
+  (the cop shot reads, the top-down inserts carry the beat); Dale's hair has no wet, matted sheen; the whisper has no wide set
+  shot of the lap (the climb into frame carries it); the bathroom door's slam jolt is small at preview size (the dust, the light
+  blotted out and the camera hit carry it); the hatchet-steps insert is still a side cutaway (now through the banister).
 - **Sound** (the final mix is done and measured; nobody has listened to it): the riskiest by ear are the synthetic jingle timbres (toy piano, music box, the hums, the girl's singing and crying) and the clarity ceiling's dips under the end of a loud swell (up to 10 dB, 2 % of the speech blocks). Rules 2 and 3 sit about 0.6 LU under rule 1 (rule 1 carries the dying speaker on top of its drone); from rule 4 on every rule is thicker than the one before. The six remaining weak spots are scares landing on their own words by design (spare windows) and the stomach-drop sub in a comma.
 - **Narration re-takes** (from the voice report, still open): "Sleep well.", "At 11:07, the song starts.", "If he knocks, don't answer." and Mom's "And count to seven." (a recogniser hears "seven up") are repaired splices; a fresh TTS take of these four would be safer.

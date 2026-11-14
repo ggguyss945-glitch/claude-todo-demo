@@ -135,3 +135,13 @@ These join the older events (`breath`, `cloth_rustle`, `paper`).
 - Laurie (1987) at the magic trick reacts with `shock_shut` then `kid_grin` (no open-mouth gasp on a narrated line).
 - Hero hands in the new inserts: June's in `diary_lap`, `diary_turn`, `diary_pages` and the crayon finger tracing
   (`trace_finger`); the narrator's on the front door's knob (`try_knob`).
+
+## Fix round 1 additions (fixer C)
+- `narrator_neat` (the thing in the narrator's body at the hospital): the narrator's own `chin` hair, combed (`tidy=True`: the
+  style's built-in mess is dropped) instead of `chin_neat` (slicked behind the ears, it read as an adult), and `fold_k=0.3`
+  (`characters._mouth`: a young face creases less when it smiles; the nasolabial folds aged it).
+- Mom after the fight (`pose.scratch` > 0.5): her cardigan's left shoulder seam ripped open on the blouse, a button torn off,
+  dark smears and spatter down the front (`_front_cardigan3`), and wilder hair (`_hair_region` adds 0.4 mess).
+- New staging helpers in `film.py`: `tub_hand` (June turned into the narrator, the palm on her mouth), `bust_mouth` /
+  `hand_on_mouth` (a hand clamped over a bust's mouth), `_plush_foot` (the filthy suit's foot in profile for inserts),
+  `_costume_flat` (the empty suit on its hanger, front or back with the zipper), `moths_layer`.

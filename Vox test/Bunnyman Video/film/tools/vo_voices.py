@@ -44,18 +44,26 @@ VOICES = {
                       eq=[('ls', 200, -4.0, 0.7)], lu=-3.0,
                       desc='June whispering: the same child voice, breathy (aperiodicity 0.62: a stage whisper that '
                            'keeps every word), softer'),
-    'L': dict(f0=262.0, rng=1.30, alpha=1.02, breath=0.45, trem=(6.5, 0.025), jit=0.010, under=-15.0,
-              eq=[('peak', 400, 1.5, 1.0)], lu=-1.5,
-              desc='the real Laurie in the Bunnyman: a little girl\'s pitch and sing-song intonation (262 Hz, x1.30) '
-                   'over a grown man\'s vocal tract (formants x1.02), breathy (0.45), shaking (6.5 Hz tremor, jitter), '
-                   'with the man\'s own voice an octave down 15 dB under it'),
-    'L_whisper': dict(f0=262.0, rng=1.20, alpha=1.02, breath=0.85, trem=(6.5, 0.02), jit=0.010, under=-18.0,
+    # fix round 1 (critic 3 M8): the girl's formants were x1.02 (a man's falsetto to the ear and to the measure); the
+    # narration calls it "A little girl's voice. Small, and scared." and June answers it as a child: a child's vocal
+    # tract now (x1.27, June is x1.30), the man kept only as the uncanny undertone an octave down, 16 dB under
+    'L': dict(f0=262.0, rng=1.30, alpha=1.27, breath=0.45, trem=(6.5, 0.025), jit=0.010, under=-16.0,
+              eq=[('peak', 400, 1.0, 1.0), ('ls', 160, -2.0, 0.7)], lu=-1.5,
+              desc='the real Laurie in the Bunnyman: a little girl (262 Hz, sing-song intonation x1.30, a child\'s '
+                   'formants x1.27), breathy (0.45), shaking (6.5 Hz tremor, jitter), with the grown man\'s own voice '
+                   'an octave down 16 dB under it (the body she is trapped in)'),
+    'L_whisper': dict(f0=262.0, rng=1.20, alpha=1.26, breath=0.85, trem=(6.5, 0.02), jit=0.010, under=-18.0,
                       eq=[('peak', 400, 1.0, 1.0)], lu=-3.0,
                       desc='the real Laurie whispering ("Is she humming?"): the same, mostly breath'),
-    'L_scream': dict(f0=330.0, rng=1.10, alpha=1.03, breath=0.30, trem=(7.0, 0.03), jit=0.020, under=-12.0,
+    'L_scream': dict(f0=330.0, rng=1.10, alpha=1.24, breath=0.30, trem=(7.0, 0.03), jit=0.020, under=-15.0,
                      eq=[('peak', 1800, 2.0, 1.0)], lu=0.5,
-                     desc='the real Laurie screaming IT\'S MY HOUSE: a girl\'s scream (330 Hz) in a man\'s body, '
-                          'rough (jitter 2 %), the man\'s voice 12 dB under it'),
+                     desc='the real Laurie screaming IT\'S MY HOUSE: a girl\'s scream (330 Hz, formants x1.24) from '
+                          'a man\'s body, rough (jitter 2 %), the man\'s voice 15 dB under it'),
+    # June's "Yeah." (fix round 1, critic 3 m3): at x1.30 the one short word was heard by no recogniser; x1.22 keeps
+    # her a child and keeps the word
+    'J_yeah': dict(f0=280.0, rng=1.10, alpha=1.22, breath=0.12, trem=None, jit=0.0, under=None,
+                   eq=[('ls', 180, -3.0, 0.7)], lu=-1.0,
+                   desc='June\'s "Yeah.": the same child, formants x1.22 so the short word reads'),
     'G': dict(f0=188.0, rng=0.85, alpha=1.10, breath=0.25, trem=(5.2, 0.022), jit=0.012, under=None,
               eq=[('hs', 5000, -2.0, 0.7), ('peak', 300, 1.0, 1.0)], lu=-1.0,
               desc='Grandma, remembered: an old woman (188 Hz, formants x1.10), a slow 5.2 Hz tremor and jitter, '
@@ -72,7 +80,7 @@ VOICES = {
 }
 # lines that use a variant (by tag)
 VARIANT = {'get_out': 'M_shout', 'happy_easter': 'M_dark', 'trick': 'M_dark', 'close_eyes': 'M_dark',
-           'count_to_seven': 'M_dark', 'my_house': 'L_scream', 'is_she_humming': 'L_whisper'}
+           'count_to_seven': 'M_dark', 'my_house': 'L_scream', 'is_she_humming': 'L_whisper', 'yeah': 'J_yeah'}
 WHISPER_FX = {'whisper'}
 
 
