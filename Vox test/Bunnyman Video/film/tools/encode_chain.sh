@@ -28,8 +28,10 @@ n_ok=$(ls "$S"/s*/OK 2>/dev/null | wc -l)
 [ "$n_ok" -eq "$K" ] || { echo "== only $n_ok of $K segments done"; exit 1; }
 echo "== segments done $(date -u +%H:%M)"
 for k in $(awk '{print $1}' "$S/ranges.txt"); do echo "file '$(realpath "$S/s$k/seg.mp4")'"; done > "$S/list.txt"
-ffmpeg -v error -nostdin -y -i "$MIX" -af alimiter=limit=0.708:attack=1:release=60:level=false \
-  -c:a aac -b:a 160k -ar 48000 "$S/audio.m4a"
+# 4x-oversampled limiter + 320k AAC: the plain -3 dBFS limiter at 160k let the AAC overshoot to +0.4 dBTP on the
+# saturated scare hits; this keeps the decoded file at about -1.5 dBTP and -14.6 LUFS
+ffmpeg -v error -nostdin -y -i "$MIX" -af aresample=192000,alimiter=limit=0.70:attack=1:release=60:level=false,aresample=48000 \
+  -c:a aac -b:a 320k -ar 48000 "$S/audio.m4a"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
   -metadata title="If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" \
