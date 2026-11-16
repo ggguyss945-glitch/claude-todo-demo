@@ -3887,3 +3887,307 @@ def dr_er_wait(view='wide', rock=0.0, **kw):
         x, y = [(q[2], q[3]) for q in dr_er_seats() if (q[0], q[1]) == W_ROCK][0]
         dyn.append(live_layer('chair_rock', v, (x, 0.45, y), lambda pen, v_, t: dr_single_chair(pen, v_, x, y, 180, rock=rock(t)), amb, steady, var))
     return _box_build(_er_wait_cfg(), name, o, outside=lambda pen, v: _outside_lot(pen, v), grade='dr_er', dyn=dyn)
+
+
+# ---------------------------------------------------------------------------------------------- Larkfield General: the ER entrance at night
+def dr_er_facade(pen, v, doors=0.0, t=0.0, part='all'):
+    """The ER entrance: a brick and concrete front, lit windows, the canopy over the drive on four columns, EMERGENCY in
+    red letters, the automatic sliding glass doors (doors 0 shut .. 1 open) with the bright lobby behind."""
+    G = 0.0
+    F = wall_face((-16.0, 0.0), (16.0, 0.0), G, 9.0)
+    if v.visible(F.O, F.n) and part in ('all', 'wall'):
+        def art(p_, W, H):
+            p_.fill(rect(0, H - 360, W, 360), '#8a4a3a'); p_.cv.save(); p_.cv.translate(0, H - 360); pat(p_, W, 360, 'brick', '#c8b8a0', 180, 4, '#8a4a3a'); p_.cv.restore()
+            p_.fill(rect(0, 0, W, H - 360), '#b8b4aa'); p_.texture(rect(0, 0, W, H - 360), 'grunge', 0.4, 'overlay', 1.5)
+            for k in range(14):                                               # the upper floors' windows (some lit)
+                for j in range(2):
+                    x_ = 120 + k * 220; y_ = 90 + j * 230
+                    if abs(x_ - 1600) < 300: continue
+                    lit_ = ((k * 3 + j) % 4) != 0
+                    p_.fill(rect(x_, y_, 140, 110), '#ffe8b8' if lit_ else '#1a2030')
+                    if lit_: p_.fill(rect(x_, y_ + 60, 140, 50), '#e8d0a0')
+                    p_.line(rect(x_, y_, 140, 110), 2.0, '#4a4a4a')
+            for x_ in (300, 700, 2500, 2900):                                 # ground-floor windows
+                p_.fill(rect(x_, H - 300, 260, 180), '#d8e8f0'); p_.line(rect(x_, H - 300, 260, 180), 2.0, '#3a3a3a')
+            p_.fill(rect(1600 - 150, H - 245, 300, 245), '#3a3a3a')            # the door surround
+        holes = [rect(1600 - 120, 900 - 230, 240, 230)]
+        draw_face(pen, v, F, art, '#b8b4aa', holes=holes, ao=False)
+        # the lobby behind the doors (bright, white, a desk), then the glass panels
+        L = Face((-1.2, 2.3, 0.6), (1, 0, 0), (0, -1, 0), 240, 230, (0, 0, -1), 'front')
+        draw_face(pen, v, L, lambda p_, W, H: (p_.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#fbfcfa', '#e8ecea']),
+                                               p_.fill(rect(W * 0.15, H * 0.6, W * 0.7, H * 0.4), '#7aa8b8'), p_.fill(rect(W * 0.15, H * 0.58, W * 0.7, 6), '#e8ecf0'),
+                                               p_.fill(rect(0, H - 4, W, 4), '#c8ccc8')), '#fbfcfa', ao=False, unlit=True)
+        for sd in (-1, 1):
+            k = clamp(doors)
+            x0 = (-1.2 if sd < 0 else 0.0) + sd * k * 1.15
+            Fd = Face((x0, 2.3, 0.02), (1, 0, 0), (0, -1, 0), 120, 230, (0, 0, -1), 'front')
+            draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#e8f4f8', 70), p_.line(rect(1, 1, W - 2, H - 2), 3.0, '#a8b0b8'),
+                                                    p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 0), (0.3, '#ffffff', 60), (0.36, '#ffffff', 0)])),
+                      '#e8f4f8', ao=False, unlit=True, lw=1.2)
+    if part in ('all', 'canopy'):
+        for (cx_, cy_) in ((-5.5, -0.6), (5.5, -0.6), (-5.5, -6.2), (5.5, -6.2)):
+            draw_box(pen, v, Box(cx_, cy_, 0.35, 0.35, 0.0, 3.6, 0), {'all': '#c8c4bc'})
+        cq = Box(0.0, -3.3, 12.4, 6.6, 3.6, 4.1, 0)
+        draw_box(pen, v, cq, {'all': '#d8d4cc', 'bottom': dict(fill='#c8c4bc', art=lambda p_, W, H: [p_.fill(rect(60 + k * 160, H / 2 - 20, 90, 40), '#fffbe8') for k in range(8)]),
+                              'front': dict(fill='#d8d4cc', art=lambda p_, W, H: (p_.fill(rect(W / 2 - 330, 6, 660, H - 12), '#ffffff'),
+                                                                                     btext(p_, 'EMERGENCY', W / 2, H * 0.78, 'sans_b', H * 0.7, '#d81e1e', 255, 'center')))})
+
+
+def _er_ext_cfg():
+    def lights(o):
+        canopy = [Lamp(x, 3.5, -3.3, 7.0, '#fff4e0', 1.3, (1.0, 0.6, 0.3), fall=1.3) for x in (-3.5, 3.5)]
+        lobby = Lamp(0.0, 1.4, 0.4, 7.0, '#f4fbff', 1.2, fall=1.4)
+        return '#2e3656', canopy + [lobby], [('sign', [Lamp(0.0, 3.85, -6.7, 6.0, '#ff2a2a', 0.8, fall=1.4)], _kfn(1.0, 291))]
+
+    def shell(pen, v, o):
+        dr_sky(pen, v, 'night')
+        dr_far_ring(pen, v, 'night', R=90.0, cx=0.0, cy=0.0, G=0.0)
+        F = floor_face(-90, 90, -90, 30, 0.0)
+        draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'asphalt', 0.7, 'overlay', 1.6), '#24262c', ao=False, line=False)
+        sw = floor_face(-16, 16, -1.2, 0.0, 0.12)
+        draw_face(pen, v, sw, lambda p_, W, H: [p_.fill(rect(k * 150, 0, 1.2, H), '#000000', 90) for k in range(22)], '#7a7c80', ao=False)
+        kerb = v.poly3([(-16, 0.12, -1.2), (16, 0.12, -1.2), (16, 0.0, -1.2), (-16, 0.0, -1.2)])
+        if not kerb.isEmpty(): pen.fill(kerb, lit('#8a8c90', (0, 0.06, -1.2), (0, 0, -1)))
+        for k in range(6):                                                    # painted bay lines + the red AMBULANCE ONLY
+            xx = -7.5 + k * 3.0
+            pen.fill(v.poly3([(xx - 0.05, 0.002, -1.4), (xx + 0.05, 0.002, -1.4), (xx + 0.05, 0.002, -7.0), (xx - 0.05, 0.002, -7.0)]), '#d8d4b8', 120)
+        dr_er_facade(pen, v, 0.0 if callable(o.get('doors', 0.0)) else o.get('doors', 0.0), part='wall' if callable(o.get('doors', 0.0)) else 'all')
+        if callable(o.get('doors', 0.0)): dr_er_facade(pen, v, 0.0, part='canopy')
+
+    def pieces(o):
+        P = []
+        if o.get('car'):
+            parts, seats, B = dr_car_parts(1.8, -3.4, fa=90, lights=True, Y0=0.0)
+            P.append(Piece('car', (B.cx, 0.6, B.cy), lambda pen, v, parts=parts: draw_parts(pen, v, parts), occupant=[seats['driver']], front=parts, block=B.footprint()))
+        P.append(Piece('ambulance', (-8.0, 1.2, -4.5), lambda pen, v: dr_ambulance(pen, v, -8.0, -4.5)))
+        return P
+
+    def glows(v, o):
+        def g(pen, t):
+            p_ = v.p(0.0, 3.85, -6.62)
+            if v.d(0.0, -6.62) > 0.5: pen.ellipse_glow(p_[0], p_[1], 3.5 * v.s(0, -6.62), 0.6 * v.s(0, -6.62), '#ff2020', 80)
+            for x in (-3.5, 3.5):
+                q = v.p(x, 3.58, -3.3)
+                if v.d(x, -3.3) > 0.5: pen.glow(q[0], q[1], 1.2 * v.s(x, -3.3), '#fff4e0', 70)
+            q = v.p(-0.6, 1.2, 0.3)
+            if v.d(0, 0.3) > 0.5: pen.ellipse_glow(q[0], q[1], 1.8 * v.s(0, 0.3), 1.4 * v.s(0, 0.3), '#f4fbff', 70)
+        return [('lights_glow', (0.0, 3.0, -3.0), g)]
+
+    def spots(v, o):
+        S = {}
+        S['doors'] = _mk_spot(v, 'doors', 0.0, -0.3, 0.12, 'stand', 'at the sliding doors (threshold)', face=(0, 1))
+        S['inside'] = _mk_spot(v, 'inside', 0.0, 1.2, 0.12, 'stand', 'just inside the doors (Mom with the wheelchair, running out)', face=(0, -1))
+        S['curb'] = _mk_spot(v, 'curb', 1.2, -1.6, 0.0, 'stand', 'at the kerb by the car', face=(0, 1))
+        S['car_stop'] = _mk_spot(v, 'car_stop', 1.8, -3.4, 0.0, 'point', "where Halverson's car stops under the canopy (car centre, facing -x)")
+        if o.get('car'):
+            _, seats, B = dr_car_parts(1.8, -3.4, fa=90, Y0=0.0)
+            for nm, (x, y) in seats.items():
+                S['car_' + nm] = _mk_spot(v, 'car_' + nm, x, y, 0.0, 'seat', 'the car under the canopy: %s seat' % nm, face=(-1, 0), seat_Y=0.42)
+        S['car_door_r'] = _mk_spot(v, 'car_door_r', 1.8, -2.4, 0.0, 'stand', 'outside the car\'s right-hand doors (kerb side)', face=(0, 1))
+        return S
+    return dict(name='er_ext', R=(-30.0, 30.0, -40.0, -0.05), lights=lights, shell=shell, pieces=pieces, glows=glows, spots=spots)
+
+
+def dr_ambulance(pen, v, x, y, fa=0):
+    """A parked ambulance: white box body with the red stripe and STAR OF LIFE, its light bar off."""
+    if v.d(x, y) < 0.5: return
+    B = Box(x, y, 2.2, 5.8, 0.0, 2.7, fa)
+    box = Box(*B.at(0, -0.7, 0)[0::2], 2.2, 4.0, 0.45, 2.7, fa)
+    cab = Box(*B.at(0, 2.1, 0)[0::2], 2.0, 1.6, 0.45, 2.1, fa)
+
+    def side_art(p_, W, H):
+        p_.fill(rect(0, H * 0.45, W, 18), '#d82a2a'); p_.fill(rect(0, H * 0.45 + 20, W, 6), '#2a5ad8')
+        cx_, cy_ = W * 0.5, H * 0.25
+        for a in (0, 60, 120):
+            p_.cv.save(); p_.cv.translate(cx_, cy_); p_.cv.rotate(a); p_.fill(rect(-8, -26, 16, 52), '#2a5ad8'); p_.cv.restore()
+    draw_box(pen, v, box, {'all': dict(fill='#f2f2ee', art=side_art), 'top': '#e8e8e4'})
+    draw_box(pen, v, cab, {'all': '#f2f2ee', 'top': '#e8e8e4', 'front': dict(fill='#f2f2ee', art=lambda p_, W, H: p_.fill(rect(10, 10, W - 20, H * 0.45), '#1a2230'))})
+    for (u, n) in ((-0.9, -2.2), (0.9, -2.2), (-0.9, 1.9), (0.9, 1.9)):
+        c = B.at(u * 1.12, n, 0.38)
+        if v.d(c[0], c[2]) < 0.3: continue
+        px, py = v.p(*c); s = v.s(c[0], c[2])
+        pen.fill(oval(px, py, 0.12 * s, 0.38 * s), '#121214')
+
+
+_dcam('dr_er_ext', 820, 520, 1.6, 7.5, -15.0, -24, _env(), 'Larkfield General: the ER entrance at night in the rain (canopy, EMERGENCY, the sliding doors)', 'er_ext')
+_dcam('dr_er_doors', 980, 520, 1.55, 2.4, -6.2, -8, _env(), 'the sliding doors from where the car stops (they open before we reach them; Mom running out)', 'er_ext')
+
+
+def dr_er_entrance(view='ext', doors=0.0, car=False, rain=True, **kw):
+    """The ER entrance at night. view 'ext' | 'doors'. doors 0..1 or f(t) (the automatic doors sliding open); car: the
+    car stopped under the canopy (facing -x)."""
+    cfg = _er_ext_cfg()
+    cfg['shell_x'] = None
+    o = dict(doors=doors if not callable(doors) else doors, car=car)
+
+    class _R(DrBox):
+        def shell(self, pen, v, o_): cfg['shell'](pen, v, o_)
+    v = cam('dr_er_' + view)
+    room = _R(dict(cfg, walls={}, floor={}))
+    dyn = []
+    if callable(doors):
+        lay = Layer(max(0.3, v.d(0.0, 0.0)), lambda pen, t: dr_er_facade(pen, v, doors(t), t, part='doors_only') or _er_doors_live(pen, v, doors(t)), 'doors_live', blur=None)
+        lay.order = v.d(0.0, 0.02) - 0.01
+        dyn.append(lay)
+    if rain:
+        def r1(pen, t): dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 9, 0.9, 0.1, '#a8b4cc', 24, 320, far=True)
+        def r2(pen, t): dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 10, 1.4, 0.12, '#c8d0e4', 34, 110)
+        l1 = Layer(30.0, r1, 'rain_far', blur=None); l1.order = ORDER_SHELL - 0.6
+        l2 = Layer(0.5, r2, 'rain_near', blur=None); l2.order = 0.2
+        dyn += [l1, l2]
+    o2 = dict(o); o2['doors'] = 'f' if callable(doors) else doors
+    sp = build_view('dr_er_' + view, v, room, dict(o, doors=doors), outside=None, grade='dr_ext', dyn=dyn)
+    return sp
+
+
+def _er_doors_live(pen, v, k):
+    L = Face((-1.2, 2.3, 0.6), (1, 0, 0), (0, -1, 0), 240, 230, (0, 0, -1), 'front')
+    draw_face(pen, v, L, lambda p_, W, H: (p_.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#fbfcfa', '#e8ecea']), p_.fill(rect(W * 0.15, H * 0.6, W * 0.7, H * 0.4), '#7aa8b8')),
+              '#fbfcfa', ao=False, unlit=True, line=False)
+    for sd in (-1, 1):
+        x0 = (-1.2 if sd < 0 else 0.0) + sd * clamp(k) * 1.15
+        Fd = Face((x0, 2.3, 0.02), (1, 0, 0), (0, -1, 0), 120, 230, (0, 0, -1), 'front')
+        draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#e8f4f8', 70), p_.line(rect(1, 1, W - 2, H - 2), 3.0, '#a8b0b8')), '#e8f4f8', ao=False, unlit=True, lw=1.2)
+
+
+# ---------------------------------------------------------------------------------------------- the long hospital hallway at night (one plastic chair at the end)
+HH_R = (0.0, 2.6, 0.0, 32.0)
+HH_LIGHTS = [2.0 + 4.0 * k for k in range(8)]                    # ceiling lights along the hall; only some are on at night
+HH_CHAIR = (1.3, 31.35)
+
+
+def _hosp_hall_cfg():
+    def lights(o):
+        steady = []
+        var = []
+        on = o.get('on', (0, 3, 6))
+        for i, y in enumerate(HH_LIGHTS):
+            if i in on: steady.append(Lamp(1.3, 2.6, y, 4.2, '#e8f0e8', 0.9, (1.0, 0.6, 0.3), fall=1.3))
+        var.append(('end', [Lamp(1.3, 2.6, 30.8, 4.0, '#d8f0b0', 1.1, (1.0, 0.6, 0.3), fall=1.3)], o.get('end_fn') or _kfn(1.0, 301)))
+        return '#1e2430', steady, var
+
+    def art(o):
+        def doors(p_, W, H, mirror=False):
+            for k, u in enumerate(np.arange(3.0, 30.0, 5.5)):
+                x_ = u * 100
+                p_.fill(rect(x_, H - 210, 95, 210), '#c8ccc4'); p_.line(rect(x_, H - 210, 95, 210), 1.0, '#5a605a')
+                p_.fill(rect(x_ + 30, H - 190, 36, 46), '#3a4450'); p_.fill(rrect(x_ + 80, H - 110, 7, 16, 2), '#a8acb0')
+                p_.fill(rect(x_ + 30, H - 230, 36, 14), '#2a5a7a'); btext(p_, '%d' % (310 + k * 2 + (1 if mirror else 0)), x_ + 48, H - 219, 'sans_b', 8, '#ffffff', 230, 'center')
+            p_.fill(rect(0, H - 95, W, 4), '#d8d8d0'); p_.fill(rect(0, H - 92, W, 1.2), '#000000', 70)
+        return {'west': lambda p_, W, H: doors(p_, W, H, False), 'east': lambda p_, W, H: doors(p_, W, H, True),
+                'back': lambda p_, W, H: (p_.fill(rect(W / 2 - 45, H - 200, 90, 100), '#0c1220'), p_.line(rect(W / 2 - 45, H - 200, 90, 100), 3.0, '#c8ccc4'))}
+
+    def pieces(o):
+        return [Piece('last_chair', (HH_CHAIR[0], 0.45, HH_CHAIR[1]), lambda pen, v: _plastic_chair(pen, v, HH_CHAIR[0], HH_CHAIR[1], 0, D_CHAIR_BLUE),
+                      occupant=[HH_CHAIR], block=_circ(HH_CHAIR[0], HH_CHAIR[1], 0.26))]
+
+    def shell_x(pen, v, o):
+        on = o.get('on', (0, 3, 6))
+        for i, y in enumerate(HH_LIGHTS):
+            _ceiling_panel_light(pen, v, 1.3, y, 2.7, 1.0 if i in on else 0.0, 0.6, 1.2, '#e8f0e8')
+
+    def glows(v, o):
+        f = o.get('end_fn') or _kfn(1.0, 301)
+        return [('end_glow', (1.3, 2.6, 30.8), lambda pen, t: _ceiling_panel_light(pen, v, 1.3, 30.8, 2.7, f(t), 0.6, 1.2, D_TUBE))]
+
+    def spots(v, o):
+        S = {}
+        S['last_chair'] = _mk_spot(v, 'last_chair', HH_CHAIR[0], HH_CHAIR[1] + 0.02, 0.0, 'seat', 'the last plastic chair at the end of the hall (something very tall folded up in it), facing us (-y)',
+                                   face=(0, -1), seat_Y=0.46)
+        S['hall_near'] = _mk_spot(v, 'hall_near', 1.3, 2.5, 0.0, 'stand', 'near end of the hall (the narrator stepping out of the office)', face=(0, 1))
+        S['hall_mid'] = _mk_spot(v, 'hall_mid', 1.3, 14.0, 0.0, 'stand', 'the middle of the hall')
+        S['office_door'] = _mk_spot(v, 'office_door', 0.35, 3.45, 0.0, 'stand', "the narrator's office door (west wall)", face=(1, 0))
+        return S
+    return dict(name='hosp_hall', R=HH_R, H=2.7, floor=dict(base='#a8aca4', kind='checker', ink='#949890', scale=1.4),
+                walls=dict(paper='#c8d4cc', wains=1.1, wcol='#a8bcb4', trim='#8aa094', base_h=0.1, seed=39), art=art,
+                ceil=dict(c='#d8dcd8', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#b8bcb8', 200, scale=4.0)),
+                lights=lights, pieces=pieces, glows=glows, spots=spots, shell_x=shell_x)
+
+
+_dcam('dr_hosp_hall', 900, 500, 1.6, 1.3, 0.6, 0, _env(f=(1.0, 3.0)), 'down the long hospital hallway at night: pools of light, then dark, one plastic chair at the end', 'hosp_hall')
+_dcam('dr_hosp_hall_chair', 3000, 520, 1.5, 1.3, 9.0, 0, _env(x=(910, 1010), y=(490, 570), zoom=(1.0, 1.05), f=(1.0, 1.5)),
+      'telephoto on the last chair under the flickering light', 'hosp_hall')
+
+
+def dr_hosp_hall(view='hall', on=(0, 3, 6), flicker_end=True, **kw):
+    """The long hospital hallway at night (the narrator's, years later). view 'hall' | 'chair'. on = which ceiling lights
+    burn (indices into HH_LIGHTS); the last one over the chair flickers."""
+    o = dict(on=tuple(on))
+    if flicker_end: o['end_fn'] = lambda t: dr_bus_flicker(t, 91)
+    return _box_build(_hosp_hall_cfg(), 'dr_hosp_hall' + ('' if view == 'hall' else '_chair'), o, grade='dr_hall_night',
+                      focus=(22.0 if view == 'chair' else None))
+
+
+# ---------------------------------------------------------------------------------------------- the cardiologist's office (morning)
+CD_R = (0.0, 3.6, 0.0, 3.4)
+CD_DESK = Box(1.8, 2.05, 1.6, 0.8, 0.0, 0.75, 0)
+CD_DOC = (1.8, 2.75)
+CD_PAT = [(1.3, 1.25), (2.35, 1.25)]
+
+
+def _cardio_cfg():
+    def lights(o):
+        sun = Lamp(kind='win', c='#ffd8a0', k=1.3, soft=16.0, panes=_panes_y(1.0, 2.6, 0.9, 2.1, 3.4), d=_norm3((0.35, -0.4, -1.0)))
+        return '#9a928a', [sun, Lamp(1.8, 2.6, 1.7, 5.0, '#fff4e8', 0.7, (1.0, 0.6, 0.3), fall=1.3)], []
+
+    def art(o):
+        return {'west': lambda p_, W, H: (_poster_art(p_, 120, H - 190, 50, 64, 'heart'), _poster_art(p_, 200, H - 186, 44, 34, 'diploma')),
+                'east': lambda p_, W, H: (_poster_art(p_, 140, H - 190, 44, 34, 'diploma'), _photo(p_, W, H, 220, H - 186, 40, 30, 'lake')),
+                'front': lambda p_, W, H: _office_clock(p_, 140, H - 220, 13, 8, 5)}
+
+    def pieces(o):
+        def desk(pen, v):
+            draw_parts(pen, v, table_parts(CD_DESK, '#7a4a2a', apron=0.15, legw=0.05))
+            Y = CD_DESK.Y1
+            dr_monitor(pen, v, CD_DESK.cx + 0.45, Y, CD_DESK.cy + 0.15, 180, 1.0, 'chart')
+            dr_mug(pen, v, CD_DESK.cx - 0.25, Y, CD_DESK.cy - 0.25, '#f2f2ee', steam=1.0)
+            dr_mug(pen, v, CD_DESK.cx + 0.05, Y, CD_DESK.cy + 0.1, '#3a6aa8', steam=0.8)
+            dr_papers(pen, v, CD_DESK.cx - 0.5, Y, CD_DESK.cy, 3, seed=8)
+            P = (CD_DESK.cx + 0.05, Y, CD_DESK.cy - 0.18)                    # the plastic heart model on its stand
+            if v.d(P[0], P[2]) > 0.2:
+                s = v.s(P[0], P[2]); px, py = v.p(*P)
+                pen.fill(rect(px - 0.05 * s, py - 0.02 * s, 0.1 * s, 0.02 * s), '#2a2a2a')
+                hh = union(oval(px - 0.03 * s, py - 0.11 * s, 0.045 * s, 0.05 * s), oval(px + 0.03 * s, py - 0.11 * s, 0.045 * s, 0.05 * s))
+                hh = union(hh, poly([(px - 0.07 * s, py - 0.1 * s), (px + 0.07 * s, py - 0.1 * s), (px, py - 0.025 * s)]))
+                pen.fill(hh, lit('#d84a4a', (P[0], Y + 0.1, P[2]), None)); pen.line(hh, 0.8)
+                pen.line(smooth([(px, py - 0.15 * s), (px - 0.01 * s, py - 0.19 * s), (px + 0.03 * s, py - 0.2 * s)], False), max(1.0, 0.012 * s), '#4a6ad8')
+        P = [Piece('desk', (CD_DESK.cx, 0.4, CD_DESK.cy), desk, block=CD_DESK.footprint()),
+             Piece('doc_chair', (CD_DOC[0], 0.45, CD_DOC[1]), lambda pen, v: dr_office_chair(pen, v, CD_DOC[0], CD_DOC[1], 180), block=_circ(CD_DOC[0], CD_DOC[1], 0.3)),
+             Piece('plant', (3.25, 0.4, 3.1), lambda pen, v: dr_plant(pen, v, 3.25, 3.1))]
+        for i, (x, y) in enumerate(CD_PAT):
+            P.append(Piece('pat_chair%d' % i, (x, 0.45, y), (lambda x_, y_: lambda pen, v: _kchair(pen, v, x_, y_, 180))(x, y), block=_circ(x, y, 0.25)))
+        P.append(Piece('shelf', (0.25, 1.0, 1.7), lambda pen, v: bookcase(pen, v, Box(0.2, 1.7, 1.1, 0.32, 0.0, 1.9, 90))))
+        return P
+
+    def spots(v, o):
+        S = {}
+        S['doctor_chair'] = _mk_spot(v, 'doctor_chair', CD_DOC[0], CD_DOC[1] - 0.05, 0.0, 'seat', 'the cardiologist behind the desk (faces -y)', face=(0, -1), seat_Y=0.48)
+        for i, (x, y) in enumerate(CD_PAT):
+            S['patient_chair%d' % i] = _mk_spot(v, 'patient_chair%d' % i, x, y + 0.02, 0.0, 'seat', 'a chair facing the desk (+y): Ruth in chair 0, Mom in chair 1',
+                                                face=(0, 1), seat_Y=0.46)
+        S['desk_top'] = _mk_spot(v, 'desk_top', CD_DESK.cx, CD_DESK.cy, CD_DESK.Y1, 'surface', 'the desk top (two coffees, the heart model)')
+        S['coffee'] = _mk_spot(v, 'coffee', CD_DESK.cx - 0.25, CD_DESK.cy - 0.25, CD_DESK.Y1, 'surface', "the coffee the cardiologist brought Ruth")
+        return S
+    return dict(name='cardio', R=CD_R, H=2.7, floor=dict(base='#b89a78', kind='boards', ink='#7a5a3a', scale=1.0, seed=7),
+                walls=dict(paper='#e8e0cc', wains=0.9, wcol='#c8d8c8', trim='#f4efe0', seed=41), art=art,
+                windows=[('back', (1.0, 3.4, 2.6, 3.4, 0.9, 2.1), (2, 2), '#f8f6f0')], ceil=dict(c='#f2efe8'),
+                lights=lights, pieces=pieces, spots=spots)
+
+
+_dcam('dr_cardio', 900, 500, 1.4, 3.35, 1.65, -88, _env(), "the cardiologist's office in the morning, from the side: Ruth and the doctor in profile across the desk, coffee", 'cardio')
+_dcam('dr_cardio_ruth', 1000, 500, 1.35, 2.95, 2.9, -137, _env(), 'over the desk at 3/4 on Ruth (turn ~0.5)', 'cardio')
+
+
+def _outside_morning(pen, v):
+    pen.linear(rect(-800, -600, 3600, 2400), 0, v.h - 1.0 * v.S, 0, v.h + 40, [(0, '#8ab0d8'), (0.65, '#f0d8c0'), (1, '#ffe8c8')])
+    vg = lifted(v, -8.0)
+    for i, x in enumerate(np.arange(-14.0, 18.0, 3.6)):
+        y = 20.0 + 4 * _h(i, 5)
+        if vg.d(x, y) < 1: continue
+        bx, by = vg.p(x, 0.0, y)
+        pen.fill(oval(bx, by - 3.0 * vg.s(x, y), 2.4 * vg.s(x, y), 2.2 * vg.s(x, y)), '#8aaa6a')
+
+
+def dr_cardio(view='side', **kw):
+    """The cardiologist's office, that same morning (warm sun): view 'side' | 'ruth'."""
+    return _box_build(_cardio_cfg(), 'dr_cardio' + ('' if view == 'side' else '_ruth'), dict(kw), outside=_outside_morning, grade='dr_morning')
