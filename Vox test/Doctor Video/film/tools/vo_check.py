@@ -2,8 +2,8 @@
     python3 vo_check.py [--no-strips] [--no-asr]
 Writes into W/narration/tests/:
   strip_XX_<name>.png   before / after: the raw take (top) and the edit (bottom) of the same lines, spectrogram + 5 ms
-                        RMS (dBFS) + line labels; 16 spots (rule transitions, reveal beats, the knocks, every character,
-                        the counts, the comment prompt, the outro, the repaired slips)
+                        RMS (dBFS) + line labels; 27 spots (rule transitions, reveal beats, every character voice, the counts,
+                        the comment prompt, the outro, every repaired slip)
   check.json            the scans below, read by voice_report.md
 Scans of narration_en.wav / narration_clean.wav:
   gaps      the silence between every two lines measured on the file (last sound above -60 dBFS to the next first
@@ -26,22 +26,40 @@ import vo_edit as V                                                # noqa: E402
 
 SR = V.SR
 SPOTS = [  # (name, first tag, last tag, why)
-    ('rule1', 'fridge', 'rule1_song', 'a rule transition: 1.4 s before "Rule number one.", the card text'),
-    ('pocket_rule3', 'no_fire', 'rule3_seven', 'reveal beat (held 1.3 s before "She puts it in her pocket.") into rule 3; '
-                                              'the "If he" splice'),
-    ('knocks', 'knock', 'thats_him', 'the knock fragments, spaced for the knocks'),
-    ('grandma', 'grandma', 'after_woods', 'Grandma (G) and the narrator\'s "she said."'),
-    ('slot', 'small_scared', 'come_home', 'the little-girl voice through the slot (L)'),
-    ('june_mom', 'june_slot', 'is_she_humming', 'June (J) and the whispered "Is she humming?" (L)'),
-    ('bedtime_humming', 'slot_close', 'rule5', 'Mom (M) then held dread before "She\'s humming."'),
-    ('rule6_action', 'window', 'bathtub', 'fast action: 0.25-0.3 s gaps'),
-    ('fight', 'never_heard', 'heavy_crack', 'Mom\'s shout (M) and the girl\'s scream (L) through the door'),
-    ('dying', 'lips_move', 'still', 'the dying man\'s "Mama." (D), 1.4 s before "Then he\'s still."'),
-    ('trick_counts', 'happy_easter', 'count_3', 'Mom dark (M), June\'s whispered counts (J), spaced like counting'),
-    ('six_seven', 'easiest', 'myself', 'held 1.3 s, "Six." "Seven." 0.95 s apart'),
-    ('cta', 'smiling', 'cta_question', 'Mom\'s line, about 1 s, then the comment prompt'),
-    ('x_end', 'car', 'breathe', 'the old body (X), 1.5 s, "Easter is in nine days.", 2.8 s, the outro'),
-    ('song_1107', 'from_woods', 'curtains', '"At 11:07" (an "O" spliced in), the slow song'),
+    ('cold_open', 'open_room', 'open_dont_sit', 'the hook: the spliced "and he", the Waiting Man (W) "Take a seat. It can '
+                                                'wait." (the "Takes" hiss cut), held 1.2 s'),
+    ('recording', 'open_dont_sit', 'seven_rules', 'the phone-system recording (R), 1.0 s in and out'),
+    ('g1979', 'voice_line', 'still_waiting', '"Calm. Patient. Kind." staccato, the 1979 voice (W, phone), the held '
+                                             '"Still waiting."'),
+    ('nurses', 'mom_noticed', 'halverson', 'the rebuilt "Nurses always notice." (Nurse + the "is" of "his pulse")'),
+    ('promise', 'blood', 'shift', 'Doctor Halverson (H) split from "she said." where the sh starts'),
+    ('rule1', 'nobody_sick', 'call', 'Grandma (G), 1.4 s before "Rule number one.", 1.0 s after the rule text, room '
+                                     'for the ring'),
+    ('call_3am', 'running_crying', 'hung_up', 'Doctor Halverson on the 3 AM call (H_call: rough, out of breath), '
+                                              'Grandma cuts her off (G_sharp)'),
+    ('cta', 'other_one', 'cta_forty', '1.0 s before the comment prompt and its rhythm'),
+    ('rule2_ever', 'rule2', 'rang_anyway', '"Ever." split from "The phone cord" (the take ran them together), 1.0 s '
+                                           'after the rule'),
+    ('chair_rule3', 'rooms_living', 'rule3_listening', '0.9 s before "From Grandpa\'s chair.", the "chair / Rule" split '
+                                                       'in their shared r, the rebuilt "Rule"'),
+    ('milo', 'eyes_big', 'pen_click', 'Milo (K: a child\'s whisper), Grandma hushing (G_hush), 1.0 s for the pen click'),
+    ('door', 'car_driveway', 'didnt_open', 'Doctor Halverson through the door (H_door), Grandma (G), the repaired '
+                                           '"said Doctor Halverson."'),
+    ('note_signs', 'marker', 'burn', 'the warning signs on the note, read as a list (0.4 s apart)'),
+    ('bench', 'bus_stop', 'rule5_text', '"Knees above his head. / Waiting. / Rule number five." (one run in the take): '
+                                        'held 1.3 s, 1.4 s before the rule'),
+    ('told_1979', 'g_wait2', 'stopped_rocking', 'Grandma rocking (G_soft), the narrator, the "in 1979" double cut'),
+    ('rows', 'waiting_room', 'tv', 'the rebuilt "Rows of plastic chairs"'),
+    ('grandpa_him', 'last_row', 'him', 'held 1.5 s before "Grandpa." and 1.3 s after it'),
+    ('take_a_seat', 'ticket_milo', 'rule7', 'the Waiting Man (W) in the waiting room, 1.4 s before rule 7'),
+    ('counts', 'began_count', 'one_thing', 'the counts (W_count) spaced like slow counting, slowing (1.0-1.3 s)'),
+    ('car', 'clicking_car', 'h_mirror', 'the Waiting Man in the back seat (W), "he said."'),
+    ('nurse_er', 'nurse', 'empty_chair', 'the ER nurse (U)'),
+    ('mom_call', 'dialed', 'grandma_fine', 'Mom (M)'),
+    ('twist', 'burned', 'pediatrician', 'held 1.0 s before and after "Not as a patient."'),
+    ('office', 'work_nights', 'nineteen_hours', 'the "I\'m s- I\'m sitting" repair'),
+    ('outro', 'very_patient', 'light_on', '1.3 s before "So are we.", 2.8 s before "Okay. Breathe."'),
+    ('voice_in_head', 'little_real', 'very_very_patient', 'the voice in your head (W_whisper)'),
     ('sleep_well', 'next', 'end', 'the rebuilt "Sleep well." and the last line'),
 ]
 
@@ -179,7 +197,8 @@ def scan_clicks(x, edl, raw48=None):
     """Discontinuities in the edit vs the same detector on the raw take (TTS plosive bursts trip it too: what matters
     is that the edit adds none), the ones within 5 ms of an edit point, and non-zero samples inside the gaps."""
     hits = step_clicks(x)
-    edges = np.array(sorted(int(round(t * SR)) for l in edl['lines'] for pc in l['pieces'] for t in pc['out']))
+    edges = np.array(sorted(int(round(t * SR)) for l in edl['lines'] if 'stretch' not in l
+                            for pc in l['pieces'] for t in pc['out']))
     near = []
     if len(hits) and len(edges):
         pos = np.searchsorted(edges, hits)

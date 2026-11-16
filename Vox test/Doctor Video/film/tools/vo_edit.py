@@ -74,10 +74,61 @@ DEESS_THR_DB, DEESS_MAX_DB = -7.0, 6.0                            # sibilants ab
 # Each was found by comparing two recognisers (Parakeet TDT, Whisper base.en) with the script, then cut by eye on 2 ms
 # spectrograms with the pitch track; every repaired phrase is re-recognised by both (voice_report.md).
 FIXES = {
+    # cold open: "his head wrapped round and round in old yellow tape... he looks up at you" (the take has no "and"):
+    # the "and" of "...all the way across the room, and tore a ticket" (621.785-621.945: said after a comma pause, as
+    # here after the ellipsis; 131 -> 113 Hz, into this "he" at 107 Hz; it ends where the voicing stops before the t
+    # closure of "tore") goes in front of "he", no gap (the d is unreleased into the h). Both recognisers: "tape and he
+    # looks up at you and says very".
+    'open_kindly': {'prepend': [(621.785, 621.945)]},
+    # "Nurse. Always notice." (script "Nurses always notice."): the s of "Nurse" is trimmed to 0.10 s (151.72), the "is"
+    # of "Let me take his pulse" (774.800-774.930: the vowel after the h, 208 -> 172 Hz, between this "Nurse" (ends
+    # rising to 241 Hz) and "always" (158-172 Hz); its z ends at the p closure of "pulse") joins it with a 6 ms
+    # equal-power crossfade, and "always notice." follows after 30 ms. Parakeet: "Nurses always notice."; Whisper:
+    # "nurse is always notice" (the same sounds: "nur-siz").
+    'nurses_notice': {'pieces': [(None, 151.72, 0.0, 0.003, 0.0), (774.800, 774.930, 0.0, 0.0, 0.008, 0.006),
+                                 (152.035, None, 0.030, 0.003, 0.010)]},
+    # "That's what the voice told you in 1979 in 1979.": the first "in 1979" already falls to a full stop (f0 -> 100 Hz
+    # on "nine"); the line ends there (501.335, in the dip before the second "in") on a 25 ms fade. Both recognisers:
+    # "That's what the voice told you in 1979."
+    'voice_told': {'end': 501.335, 'end_fade': 0.025},
+    # "rah-rahs of plastic chairs": the take has no usable "Rows" (its second syllable reads "ras"/"ross"). Built from
+    # the clean word-initial r of the first "rah" (528.675-528.745), the "ow" of "in the last row," (571.935-572.200,
+    # 165 -> 115 Hz) and the take's own "-z of plastic chairs" from 529.640, joined by 10 ms equal-power crossfades.
+    # Both recognisers: "rows of plastic chairs" (a grid of 9 joins tried: row end 572.18-572.24 and z start 529.62-529.66
+    # read right; later z starts read "row of", earlier row ends "ruff").
+    'chairs': {'start': 529.640, 'prepend': [(528.675, 528.745), (571.935, 572.200)], 'join': 'xfade'},
+    # "and I'm, s-, I'm sitting": the first "I'm" (945.71-946.08) and the stray "s" (946.13-946.27) go; "and" then the
+    # second "I'm", the one said into "sitting", 0.12 s later (as the take's own pause after "and"). Both: "...in the
+    # morning, I'm sitting in a little office".
+    'office': {'cuts': [(945.650, 946.330, 0.12)]},
+    # "Rule number four." and its text share one island only through a 10 ms blip in the silence (370.16): the line
+    # ends where "four" decays into digital silence and the rule text starts on the "I" of "If"
+    'rule4': {'end': 370.066},
+    'rule4_text': {'start': 370.385},
+    # "don't get on. the Sleemith well." (script "Sleep well."): the weak schwa before the S (1157.92-1158.01) goes;
+    # "slee" ends where its clean "ee" ends (1158.370, before the "m"-like glide), a 65 ms closure stands for the p, and
+    # the take's aspiration (1158.52-1158.61) is its release into "well". Both recognisers: "Don't get on. Sleep well."
+    # "Take a seat." (cold open): the k of "Take" releases into 50 ms of hissy aspiration that both recognisers hear as
+    # "Takes a seat"; 40 ms of it (29.565-29.605) go, joined by a 10 ms equal-power crossfade (the burst and 10 ms of
+    # aspiration stay). Both: "Take a seat."
+    'open_seat': {'cuts': [(29.565, 29.605, 0.0, 0.010)]},
+    # "From Grandpa's chair. Rule number three." ran together through one r ("chai-r-ule"): the split sits at the r's F3
+    # minimum (SPLITS) and "Rule" gets a clean word-initial r from "Rule number six." (515.225-515.285, 125-135 Hz)
+    # crossfaded (10 ms) into the take's "-ule number three." from 322.130. Both: "Rule number three."
+    'rule3': {'start': 322.130, 'prepend': [(515.225, 515.285)], 'join': 'xfade'},
+    # "said Doctor Halverson.": the d of "said" came out as a hissy z (Parakeet: "says"); the hiss (413.045-413.130) goes
+    # and 30 ms of silence join the d closure of "Doctor". Both: "said Doctor Halverson."
+    'said_halverson': {'cuts': [(413.045, 413.130, 0.03)]},
+    'sleep_well': {'pieces': [(1158.012, 1158.370, 0.0, 0.004, 0.010), (1158.520, None, 0.065, 0.002, 0.020)]},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word
 SPLITS = {
+    'grandpa_chair': 322.120,  # "chair | Rule": one shared r; the cut sits at its F3 minimum (1250-1390 Hz) (was 321.862: "ch | air")
+    'call_you': 174.295,       # "...come in, | she said": the n murmur of "in" ends where the sh starts (was 174.432: inside "she")
+    'rule2_ever': 280.600,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone")
+    'knees': 469.700,          # "head, | Waiting.": the middle of the dip before the w (was 469.721: on the w onset)
+    'waiting_bench': 470.005,  # "Waiting. | Rule": the "-ing" vowel ends (F2 2490 Hz) where F2 falls into the r (was 469.928: inside "-ing")
 }
 # a hand-set split sits in voiced sound, so the line before it fades out over SPLIT_FO and the line after fades in over
 # SPLIT_FI
@@ -616,6 +667,18 @@ def line_pieces(T, i, sp):
     'xfade_before' (s: overlap with the previous piece), 'why'}. Internal pauses get their punctuation clamp here."""
     l = LINES[i]; tag = l['tag']
     f = FIXES.get(tag, {})
+    if 'pieces' in f:                                              # a hand-built line (a slip repaired by splicing):
+        pcs = []                                                   # (a, b, gap before, fade in, fade out[, crossfade]) in
+        for spec in f['pieces']:                                   # seconds; None = the line's own first / last sound
+            a_, b_, g, fi, fo = spec[:5]; xf = spec[5] if len(spec) > 5 else 0.0
+            a_ = sp['span'][0] if a_ is None else a_
+            b_ = sp['span'][1] if b_ is None else b_
+            pc = {'src': [a_, b_], 'fi': fi, 'fo': fo, 'gap_before': 0.0 if xf else g, 'xfade_before': xf,
+                  'why': 'slip repair: hand-set piece'}
+            if xf and pcs:
+                pc['fi'] = xf; pc['xf_in'] = True; pcs[-1]['fo'] = xf; pcs[-1]['xf_out'] = True
+            pcs.append(pc)
+        return pcs
     a, b = sp['span']
     keep = [[k[0], k[1]] for k in sp['keep']]
     kw = [list(k[2]) if len(k) > 2 else [] for k in sp['keep']]
@@ -792,7 +855,7 @@ PACE = {
     'nurses_notice': (0.45, 'sentence', 'running'),
     'careful': (0.45, 'sentence', 'running'),
     'blood': (0.85, 'paragraph', 'into her promise'),
-    'call_you': (0.18, 'split', '"...come in," | "she said."'),
+    'call_you': (0.18, 'split', '"...come in," / "she said."'),
     'day_or_night': (0.35, 'dialogue', '"Day or night. I mean it."'),
     'mean_it': (0.90, 'paragraph', 'paragraph break: that night'),
     'watching_us': (0.85, 'paragraph', 'sundown'),
@@ -800,7 +863,7 @@ PACE = {
     'seven': (0.40, 'staccato', 'Seven rules. Typed on a typewriter.'),
     'typed': (0.40, 'staccato', 'fragments'),
     'weak_tea': (0.85, 'paragraph', 'Grandma speaks'),
-    'same_as_always': (0.18, 'split', '"Same as always," | "Grandma said."'),
+    'same_as_always': (0.18, 'split', '"Same as always," / "Grandma said."'),
     'nobody_sick': (1.40, 'before rule', 'rule card 1'),
     # rule 1
     'rule1_text': (1.00, 'after rule', 'the rule card holds, then the scene'),
@@ -817,7 +880,7 @@ PACE = {
     'this_is_halverson': (0.35, 'dialogue', 'her rushed call'),
     'sorry_hour': (0.35, 'dialogue', 'her rushed call'),
     'results_back': (0.25, 'cut off', 'Grandma cuts her off (still >= 0.15 s)'),
-    'dont_tell': (0.18, 'split', '"Don\'t tell me," | "Grandma said."'),
+    'dont_tell': (0.18, 'split', '"Don\'t tell me," / "Grandma said."'),
     'dont_dare': (0.85, 'paragraph', 'the hang-up'),
     'hung_up': (0.85, 'ring', 'room for the click and the ring'),
     'rang_again': (0.55, 'ring', 'a ring between'),
@@ -864,7 +927,7 @@ PACE = {
     'rule3_listening': (1.00, 'after rule', 'the rule card holds, then the scene'),
     'cracked': (0.40, 'staccato', 'description'),
     'eyes_big': (0.85, 'paragraph', 'Milo speaks'),
-    'so_thirsty': (0.18, 'split', '"I\'m so thirsty," | "he whispered."'),
+    'so_thirsty': (0.18, 'split', '"I\'m so thirsty," / "he whispered."'),
     'tummy': (0.35, 'dialogue', 'his whisper runs on'),
     'tummy_really': (0.30, 'cut off', 'Grandma\'s hand cuts him off'),
     'clapped': (0.35, 'dialogue', 'into "Shh."'),
@@ -893,8 +956,8 @@ PACE = {
     'very_high': (0.40, 'dialogue', 'her lines'),
     'needs_insulin': (0.40, 'dialogue', '"This can\'t wait."'),
     'cant_wait': (0.85, 'dialogue', 'Grandma answers through the door'),
-    'house_call': (0.18, 'split', '"...house calls," | "Grandma said through the door."'),
-    'i_know': (0.18, 'split', '"I know," | "said Doctor Halverson."'),
+    'house_call': (0.18, 'split', '"...house calls," / "Grandma said through the door."'),
+    'i_know': (0.18, 'split', '"I know," / "said Doctor Halverson."'),
     'making_one': (0.90, 'held', 'the door stays shut'),
     'didnt_open': (0.90, 'paragraph', 'the paper'),
     'lab_results': (0.45, 'sentence', 'running'),
@@ -929,11 +992,11 @@ PACE = {
     'until_morning': (0.40, 'dialogue', '"It can wait. It can wait."'),
     'g_wait1': (0.45, 'dialogue', 'repeated, rocking'),
     'g_wait2': (0.85, 'dialogue', 'I answer'),
-    'grandma_said': (0.18, 'split', '"Grandma," | "I said."'),
+    'grandma_said': (0.40, 'dialogue', 'my answer runs on'),
     'voice_told': (0.90, 'held', '"She stopped rocking."'),
     'stopped_rocking': (0.90, 'held', 'her question'),
     'how_do_you_know': (0.85, 'dialogue', 'I answer'),
-    'hear_it': (0.18, 'split', '"Because I can hear it," | "I said."'),
+    'hear_it': (0.40, 'dialogue', 'my answer runs on'),
     'right_now': (0.90, 'held', 'the rooms'),
     'every_room': (1.00, 'held', 'held dread before "It can wait." from every room'),
     'rooms_wait': (1.40, 'before rule', 'rule card 6'),
@@ -1023,13 +1086,13 @@ PACE = {
     'rule_seven_recall': (0.40, 'staccato', '"I almost pulled him away."'),
     'almost': (0.60, 'beat', 'the choice'),
     'gave_wrist': (0.90, 'held', 'she counts for real'),
-    'one_forty': (0.18, 'split', '"One-forty," | "she said."'),
+    'one_forty': (0.18, 'split', '"One-forty," / "she said."'),
     'fast_h': (0.35, 'dialogue', 'her calm, quick verdict'),
     'thats_okay': (0.35, 'dialogue', 'her verdict'),
     'fighting': (0.35, 'dialogue', 'her verdict'),
     'going': (0.90, 'paragraph', 'the drive'),
     'treatable': (0.85, 'paragraph', 'her line'),
-    'ask_me': (0.18, 'split', '"Ask me anything," | "she said."'),
+    'ask_me': (0.18, 'split', '"Ask me anything," / "she said."'),
     'questions_good': (0.35, 'dialogue', 'her lines'),
     'questions_win': (0.85, 'paragraph', 'I ask'),
     'so_i_asked': (0.40, 'staccato', 'fragments'),
@@ -1039,14 +1102,14 @@ PACE = {
     'back_seat': (0.45, 'sentence', 'running'),
     'folded_beside': (0.45, 'sentence', 'running'),
     'clicking_car': (0.90, 'held', 'his line'),
-    'car_wait': (0.18, 'split', '"It can wait," | "he said."'),
+    'car_wait': (0.18, 'split', '"It can wait," / "he said."'),
     'h_mirror': (0.45, 'beat', '"She saw him."'),
     'saw_him': (0.45, 'beat', 'not surprised'),
     'not_surprised': (0.85, 'paragraph', 'every doctor has seen him'),
     'every_waiting_room': (0.40, 'staccato', 'In every waiting room. In every chair.'),
     'every_chair_doc': (0.45, 'sentence', 'running'),
     'out_of_chairs': (0.90, 'paragraph', 'her line'),
-    'not_tonight': (0.18, 'split', '"Not tonight," | "she said."'),
+    'not_tonight': (0.18, 'split', '"Not tonight," / "she said."'),
     'not_my_shift': (0.60, 'beat', 'she drives faster'),
     'faster': (1.00, 'section', 'the ER'),
     'people_everywhere': (0.40, 'staccato', 'Bright lights. Fluids. Insulin.'),
@@ -1069,7 +1132,7 @@ PACE = {
     'not_a_word': (0.45, 'beat', '"Rule three."'),
     'rule_three_recall': (0.85, 'paragraph', 'Mom dials'),
     'dialed': (0.45, 'dialogue', 'Mom\'s line'),
-    'mom_dont_wait': (0.18, 'split', '"You don\'t wait," | "she said."'),
+    'mom_dont_wait': (0.18, 'split', '"You don\'t wait," / "she said."'),
     'you_call': (0.90, 'paragraph', 'Grandma\'s fine'),
     'cardiologist': (0.60, 'beat', 'the card'),
     'burned': (1.40, 'section', 'the twist'),
@@ -1189,10 +1252,13 @@ def write_pacing(force=False):
                 'The guide (from the brief): commas and running phrases inside a line keep a natural 0.12-0.30 s; '
                 'sentences in running narration 0.35-0.6 s; staccato fragments 0.3-0.5 s; dialogue 0.3-0.6 s; '
                 'paragraph breaks 0.7-1.0 s; before each "Rule number" 1.2-1.6 s and after its rule text 0.8-1.2 s; '
-                'held dread before the reveal lines 1.0-1.8 s; fast action (rule six, the window to the lock) '
-                '0.2-0.35 s; counts spaced like counting (0.9-1.0 s); about 1 s before the comment prompt and '
-                '2.5-3 s before the outro. Never under 0.15 s between sentences (a line split for its speaker, '
-                '"One," / "June whispers.", may sit at 0.15-0.2 s), never over 2 s except the outro.\n\n')
+                'held dread before the reveal lines ("Still waiting.", "Waiting.", "Grandpa.", "My ticket said: Milo.", '
+                '"It can wait.", "Doctor Later.", "Not as a patient.", "So are we.") 1.0-1.8 s; the counts "One... '
+                'Two... Three..." spaced like slow counting (1.0-1.3 s, slowing); the phone rings and the knock get '
+                'about 1 s where they sit; about 1 s before the comment prompt and 2.5-3 s before the outro ("Okay. '
+                'Breathe."). Never under 0.15 s between sentences (a line split for its speaker, "I\'ll call you the '
+                'second the results come in," / "she said.", sits at 0.18 s; a speaker cut off mid-line at 0.25-0.30 s), '
+                'never over 2 s except before the outro.\n\n')
         f.write('Pauses inside a line are not in this table: they keep the take\'s own timing, clamped by punctuation '
                 '(comma 0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.45-0.80 s, a mid-line full stop 0.30-0.55 s, '
                 'no mark <= 0.25 s), with these held exceptions (INTERNAL in vo_edit.py):\n\n')
@@ -1249,8 +1315,12 @@ def speech_level(y):
     return float(10 * np.log10(p[sel].mean() + 1e-20))
 
 
-def assemble(T, spans, gaps, lead=0.30, tail=0.60):
-    """Lay the lines end to end with the map's gaps. Returns the signal, the edit list and the line output times."""
+def assemble(T, spans, gaps, lead=0.30, tail=0.60, voice=None):
+    """Lay the lines end to end with the map's gaps. voice(y, line) -> (y', stats or None) gives a character line its
+    voice (tools/vo_voices.py); a voice may lengthen its line (the Waiting Man speaks slower), and the layout makes room:
+    the line slot is the voiced line's length in both files, so narration_clean.wav (the edit without voices) and
+    narration_en.wav keep identical line starts (the clean file holds the dry line and silence to the slot's end).
+    Returns (clean signal, voiced signal, edit list, line output times, narrator median level, voice report rows)."""
     x = T.x
     lines_out = []
     # line signals first (pieces with their internal gaps / crossfades)
@@ -1284,14 +1354,23 @@ def assemble(T, spans, gaps, lead=0.30, tail=0.60):
         d = med - lv[k]
         g = 0.0 if abs(d) < 1.5 else float(np.clip(0.6 * d, -3, 3))
         gains.append(round(g, 2))
-    total = int((lead + sum(len(s[0]) / SR for s in sigs) + sum(gaps[i][0] for i in range(len(LINES) - 1)) + tail) * SR) + 10
-    out = np.zeros(total)
+    dry, wet, vrep = [], [], []
+    for i, (buf, pcs, placed) in enumerate(sigs):
+        y = buf * 10 ** (gains[i] / 20)
+        yv, st = voice(y, LINES[i]) if voice else (y, None)
+        dry.append(y); wet.append(yv)
+        if st: vrep.append(dict(st, i=i))
+    total = int((lead + sum(max(len(a_), len(b_)) / SR for a_, b_ in zip(dry, wet))
+                 + sum(gaps[i][0] for i in range(len(LINES) - 1)) + tail) * SR) + 10
+    out = np.zeros(total); out_v = np.zeros(total)
     t = lead
     edl = []
     for i, (buf, pcs, placed) in enumerate(sigs):
         a = int(round(t * SR))
-        out[a:a + len(buf)] += buf * 10 ** (gains[i] / 20)
-        t0 = a / SR; t1 = (a + len(buf)) / SR
+        n_slot = max(len(dry[i]), len(wet[i]))
+        out[a:a + len(dry[i])] += dry[i]
+        out_v[a:a + len(wet[i])] += wet[i]
+        t0 = a / SR; t1 = (a + n_slot) / SR
         items = []
         for pc, (p, q) in zip(pcs, placed):
             it = {'src': [round(pc['src'][0], 4), round(pc['src'][1], 4)], 'out': [round(t0 + p / SR, 4), round(t0 + q / SR, 4)],
@@ -1302,14 +1381,18 @@ def assemble(T, spans, gaps, lead=0.30, tail=0.60):
             if 'orig_gap' in pc: it['pause_in_take'] = round(pc['orig_gap'], 3)
             items.append(it)
         g = gaps.get(i, (tail, 'end', 'end of the narration'))
-        edl.append({'i': i, 'who': LINES[i]['who'], 'tag': LINES[i]['tag'], 'fx': LINES[i]['fx'], 'en': LINES[i]['en'],
-                    'out': [round(t0, 4), round(t1, 4)], 'src_span': [round(spans[i]['span'][0], 4), round(spans[i]['span'][1], 4)],
-                    'gain_db': gains[i], 'level_db': round(float(lv[i]), 2), 'pieces': items,
-                    'removed_inside': spans[i]['removed'], 'gap_after': g[0], 'gap_kind': g[1], 'gap_why': g[2]})
+        e = {'i': i, 'who': LINES[i]['who'], 'tag': LINES[i]['tag'], 'fx': LINES[i]['fx'], 'en': LINES[i]['en'],
+             'out': [round(t0, 4), round(t1, 4)], 'src_span': [round(spans[i]['span'][0], 4), round(spans[i]['span'][1], 4)],
+             'gain_db': gains[i], 'level_db': round(float(lv[i]), 2), 'pieces': items,
+             'removed_inside': spans[i]['removed'], 'gap_after': g[0], 'gap_kind': g[1], 'gap_why': g[2]}
+        if len(wet[i]) != len(dry[i]):                             # a voice that changed the line's length
+            e['out_clean'] = [round(t0, 4), round(t0 + len(dry[i]) / SR, 4)]
+            e['stretch'] = round(len(wet[i]) / max(1, len(dry[i])), 3)
+        edl.append(e)
         lines_out.append((t0, t1))
         t = t1 + (gaps[i][0] if i in gaps else 0)
     end = int(round((lines_out[-1][1] + tail) * SR))
-    return out[:end], edl, lines_out, med
+    return out[:end], out_v[:end], edl, lines_out, med, vrep
 
 
 # ============================================================================ cleanup chain (whole file)
@@ -1418,18 +1501,19 @@ def cmd_analyze():
 
 def cmd_build():
     try:
-        from vo_voices import apply_voices                             # noqa
+        if os.environ.get('VO_NO_VOICES'): raise ImportError        # a quick clean-only build (narration_en = clean)
+        from vo_voices import voice_line                               # noqa
     except ImportError:
-        log('tools/vo_voices.py missing: narration_en.wav = narration_clean.wav')
-        apply_voices = lambda y, edl, sr: (y.copy(), [])
+        log('character voices off: narration_en.wav = narration_clean.wav')
+        voice_line = None
     T = Take()
     log(f'clip repair: {T.clip}; {len(T.isl)} islands; lines without words: {T.missing}')
     spans, between, _ = line_spans(T)
     gaps = read_pacing()
-    y, edl, lines_out, med = assemble(T, spans, gaps)
-    log(f'assembled: {len(y) / SR:.2f} s, narrator median speech level {med:.1f} dB')
-    clean, st = finish(y)
-    voiced, vrep = apply_voices(clean, edl, SR)                     # character voices on the quoted words only
+    y, yv, edl, lines_out, med, vrep = assemble(T, spans, gaps, voice=voice_line)
+    log(f'assembled: {len(y) / SR:.2f} s, narrator median speech level {med:.1f} dB, {len(vrep)} character lines voiced')
+    clean, st = finish(y)                                           # the narrator's cleanup runs on both files: the
+    voiced, _ = finish(yv)                                          # character lines are the narrator's own take too
     gate = silence_mask(edl, len(clean))                            # the gaps are digital silence (no filter tails)
     clean = clean * gate; voiced = voiced * gate
     pk = max(true_peak(clean), true_peak(voiced))
@@ -1443,7 +1527,7 @@ def cmd_build():
     log(f'narration_en.wav: {st_en}')
     json.dump({'source': os.path.relpath(RAW, FILM), 'asr': os.path.relpath(ASR, FILM), 'pacing_map': os.path.relpath(PACING, FILM),
                'sr': SR, 'duration': round(len(clean) / SR, 3), 'clip_repair': T.clip,
-               'fixes': {k: str(v) for k, v in FIXES.items()}, 'internal_pauses': INTERNAL,
+               'fixes': {k: str(v) for k, v in FIXES.items()}, 'splits': SPLITS, 'internal_pauses': INTERNAL,
                'narrator_median_level_db': round(med, 2), 'chain_clean': st, 'chain_en': st_en, 'voices': vrep,
                'lines': edl, 'removed_between_lines': between}, open(EDL, 'w'), indent=1)
     json.dump({'clean': st, 'en': st_en, 'duration': round(len(clean) / SR, 3), 'clip': T.clip,

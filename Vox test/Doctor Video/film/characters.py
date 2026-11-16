@@ -1,7 +1,9 @@
 """characters.py: the cast, their creepy faces and an acting timeline (police v2 cast, the delivery film cast, the
-dummy film cast: Mister Winks, Grandpa, the real Walter, young Walter 1974, Mom, Owen, you; and the Bunnyman film cast,
-which lives in characters_bunny.py and is run into this module at import: see its BUNNY_API, CAST.md, and the section
-"Bunnyman film additions" at the end of this docstring).
+dummy film cast: Mister Winks, Grandpa, the real Walter, young Walter 1974, Mom, Owen, you; the Bunnyman film cast,
+which lives in characters_bunny.py and is run into this module at import: see its BUNNY_API and the section "Bunnyman film
+additions" at the end of this docstring; and the doctor film's cast (Doctor Later, Ruth, Milo, the narrator, Doctor
+Halverson, Mom, the ER, the waiting room's people), which lives in characters_doctor.py, run in after it: see its
+DOCTOR_API and CAST.md).
 
 Everything draws with skia in the engine's 1920x1080 design space, on any canvas the engine hands a Layer (camera zoom and
 render size are already in the canvas matrix). Line weight follows the VISUAL_SPEC: about 8 design px on close-ups and

@@ -1,94 +1,114 @@
-"""Character voices for the edited narration: the quoted words of Mom, June, the little-girl voice in the Bunnyman,
-Grandma, the dying man and the thing in the narrator's old body are re-voiced from the narrator's own take; the
-narrator's lines are never touched (the quote / "she says" splits of script/lines.py are the cut points, so only the
-quoted words change).
+"""Character voices for the edited narration of the Doctor film: the quoted words of Grandma Ruth (G), Doctor Halverson
+(H), the Waiting Man / Doctor Later (W), Milo (K), Mom (M), the ER nurse (U) and the phone-system recording (R) are
+re-voiced from the narrator's own take; the narrator's lines are never touched (the quote / "she said" splits of
+script/lines.py are the cut points, so only the quoted words change). vo_edit.py calls voice_line(y, line) for every
+line before the layout (a voice may lengthen its line: the Waiting Man speaks slower).
 
-Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 5 ms frames). For each character:
-  - pitch: the line's F0 is moved to the character's median (geometric) and its excursions scaled (range), with an
-    optional tremor (an old voice, a frightened one) and jitter; never a plain resample, so no chipmunk;
+Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each character:
+  - pitch: the line's F0 is moved to the character's median (geometric) and its excursions scaled (rng), optionally
+    smoothed (an even, unhurried contour), with an optional tremor (an old voice) and jitter (a rough, tired one);
+    never a plain resample, so no chipmunk;
   - formants: the spectral envelope is warped along frequency (x alpha: a smaller or larger vocal tract), independent
     of the pitch;
-  - breath: the aperiodicity is raised (a breathy or whispered voice keeps its formants, loses some of its buzz);
-  - optional undertone: the real Laurie is a little girl's voice in a 55-year-old man's body, so a second copy of her
-    words an octave lower, with the man's formants, sits 15 dB under it;
-  - a gentle tone EQ (Mom's "close and dark" lines get more low-mid, Grandma loses a little top).
-Each processed line is loudness-matched to the same line dry (+ the character's offset), with 15 ms fades inside the
-silence around it. The narrator measures F0 104-256 Hz (5-95 %, median 150 Hz), F1/F2/F3 480/1510/2650 Hz: a young
-male voice, so every character is a real move away from him.
+  - breath: the aperiodicity is raised toward noise (breathy, out of breath, whispered) or, with a negative amount,
+    lowered toward pure voicing (the Waiting Man's airless, too-smooth voice);
+  - tempo: the voiced frames can be stretched (the Waiting Man: vowels 1.18x slower, consonants untouched, so the words
+    stay crisp and the speech is just too slow);
+  - undertone: a second copy an octave lower with a longer vocal tract sits under the voice (the Waiting Man's faint
+    second voice, 17 dB under);
+  - a gentle tone EQ (warmth, proximity, a softer top).
+Each processed line is loudness-matched to the same line dry (+ the character's offset), with 12 ms fades at its edges.
+The narrator measures F0 104-271 Hz (5-95 %, median 155 Hz), F1/F2/F3 518/1713/2775 Hz (voiced frames of the 393
+narrator lines of narration_clean.wav): a young adult male voice, so every character is a real move away from him.
 """
 import numpy as np
 
 SR = 48000
-NAR_F0 = 150.0                                         # the narrator's median F0 (Hz), measured on the take
-FP = 1.0                                               # WORLD frame period (ms): 1 ms keeps stop bursts sharp
+NAR_F0 = 155.0                                         # the narrator's median F0 (Hz), measured on the edit
+FP = 1.0                                               # WORLD frame period (ms)
+PAD = 0.040                                            # silence padded around a line for the analysis (s)
 
-# character -> settings. f0: target median Hz; rng: excursion scale; alpha: formant warp; breath: 0..1 aperiodicity mix
-# (1 = whisper); trem: (Hz, depth) of F0 tremor; jit: random F0 jitter (fraction); under: undertone level dB (or None);
-# eq: list of (kind, f, gain dB, q) for vo_edit's EQ; lu: loudness offset vs the dry line (dB)
+# character -> settings. f0: target median Hz; rng: excursion scale; smooth: F0 contour smoothing (s); alpha: formant
+# warp; breath: -1..1 aperiodicity move (+ noisier, - purer); trem: (Hz, depth) F0 tremor; jit: F0 jitter (fraction);
+# stretch: voiced-frame tempo factor (> 1 slower); under: (level dB, formant warp) of an octave-down copy, or None;
+# eq: (kind, f, gain dB, q) bands; lu: loudness offset vs the dry line (dB)
 VOICES = {
-    'M': dict(f0=198.0, rng=0.80, alpha=1.16, breath=0.10, trem=None, jit=0.0, under=None,
-              eq=[('peak', 260, 1.5, 0.9), ('hs', 6000, -1.5, 0.7)], lu=-0.5,
-              desc='Mom: an adult woman, warm and too calm (median 198 Hz, flattened intonation x0.8, formants x1.16, '
-                   'a touch of breath, warm low-mids)'),
-    'M_dark': dict(f0=172.0, rng=0.70, alpha=1.09, breath=0.18, trem=None, jit=0.0, under=None,
-                   eq=[('peak', 220, 3.0, 0.8), ('peak', 3200, -1.5, 1.0), ('hs', 6000, -2.5, 0.7)], lu=0.5,
-                   desc='Mom, darker and closer (her last lines): lower (172 Hz), flatter, formants only x1.09, more '
-                        'breath and chest, less top'),
-    'M_shout': dict(f0=215.0, rng=0.90, alpha=1.10, breath=0.08, trem=None, jit=0.006, under=None,
-                    eq=[('peak', 250, 2.5, 0.8), ('peak', 2500, 1.5, 1.0)], lu=0.5,
-                    desc='Mom shouting GET OUT OF MY HOUSE: a woman\'s shout, dark (formants x1.10), a little rough'),
-    'J': dict(f0=285.0, rng=1.15, alpha=1.30, breath=0.15, trem=None, jit=0.0, under=None,
-              eq=[('ls', 180, -3.0, 0.7)], lu=-1.0,
-              desc='June, 7: a small child (median 285 Hz, livelier intonation x1.15, formants x1.30, no chest)'),
-    'J_whisper': dict(f0=285.0, rng=1.10, alpha=1.28, breath=0.62, trem=None, jit=0.0, under=None,
-                      eq=[('ls', 200, -4.0, 0.7)], lu=-3.0,
-                      desc='June whispering: the same child voice, breathy (aperiodicity 0.62: a stage whisper that '
-                           'keeps every word), softer'),
-    # fix round 1 (critic 3 M8): the girl's formants were x1.02 (a man's falsetto to the ear and to the measure); the
-    # narration calls it "A little girl's voice. Small, and scared." and June answers it as a child: a child's vocal
-    # tract now (x1.24, June is x1.30; at x1.25 and up a recogniser hears her "Please." as "Prees"), the man kept only as the uncanny undertone an octave down, 16 dB under
-    'L': dict(f0=262.0, rng=1.30, alpha=1.24, breath=0.45, trem=(6.5, 0.025), jit=0.010, under=-16.0,
-              eq=[('peak', 400, 1.0, 1.0), ('ls', 160, -2.0, 0.7)], lu=-1.5,
-              desc='the real Laurie in the Bunnyman: a little girl (262 Hz, sing-song intonation x1.30, a child\'s '
-                   'formants x1.24), breathy (0.45), shaking (6.5 Hz tremor, jitter), with the grown man\'s own voice '
-                   'an octave down 16 dB under it (the body she is trapped in)'),
-    'L_whisper': dict(f0=262.0, rng=1.20, alpha=1.24, breath=0.85, trem=(6.5, 0.02), jit=0.010, under=-18.0,
-                      eq=[('peak', 400, 1.0, 1.0)], lu=-3.0,
-                      desc='the real Laurie whispering ("Is she humming?"): the same, mostly breath'),
-    'L_scream': dict(f0=330.0, rng=1.10, alpha=1.22, breath=0.30, trem=(7.0, 0.03), jit=0.020, under=-15.0,
-                     eq=[('peak', 1800, 2.0, 1.0)], lu=0.5,
-                     desc='the real Laurie screaming IT\'S MY HOUSE: a girl\'s scream (330 Hz, formants x1.22) from '
-                          'a man\'s body, rough (jitter 2 %), the man\'s voice 15 dB under it'),
-    # June's "Yeah." (fix round 1, critic 3 m3): at x1.30 the one short word was heard by no recogniser; x1.22 keeps
-    # her a child and keeps the word
-    'J_yeah': dict(f0=280.0, rng=1.10, alpha=1.22, breath=0.12, trem=None, jit=0.0, under=None,
-                   eq=[('ls', 180, -3.0, 0.7)], lu=-1.0,
-                   desc='June\'s "Yeah.": the same child, formants x1.22 so the short word reads'),
-    'G': dict(f0=188.0, rng=0.85, alpha=1.10, breath=0.25, trem=(5.2, 0.022), jit=0.012, under=None,
-              eq=[('hs', 5000, -2.0, 0.7), ('peak', 300, 1.0, 1.0)], lu=-1.0,
-              desc='Grandma, remembered: an old woman (188 Hz, formants x1.10), a slow 5.2 Hz tremor and jitter, '
-                   'a little breathy, softer top'),
-    'D': dict(f0=150.0, rng=1.0, alpha=0.95, breath=0.80, trem=(4.0, 0.03), jit=0.03, under=None, contour='crack',
-              eq=[('hs', 4500, -3.0, 0.7)], lu=-5.0,
-              desc='the dying man\'s "Mama": a weak, cracked whisper (aperiodicity 0.8) with a child\'s rise-fall '
-                   'contour that breaks on the second syllable and falls into creak, a grown man\'s formants (x0.95), '
-                   '5 dB under the narrator'),
-    'X': dict(f0=139.0, rng=0.55, alpha=0.97, breath=0.40, trem=None, jit=0.0, under=-20.0,
-              eq=[('peak', 180, 1.5, 0.9), ('hs', 7000, -1.5, 0.7)], lu=-1.5,
-              desc='the thing in the narrator\'s old body: the narrator\'s own voice made subtly wrong: a little lower '
-                   '(x0.93), almost no melody (x0.55), whispery (0.40), formants x0.97, a faint voice an octave down'),
+    'G': dict(f0=186.0, rng=0.85, smooth=0.0, alpha=1.11, breath=0.20, trem=(5.4, 0.024), jit=0.010, stretch=1.0, under=None,
+              eq=[('hs', 5500, -2.0, 0.7), ('peak', 300, 1.0, 1.0)], lu=-1.0,
+              desc='Grandma Ruth, 70s, firm and frightened: an old woman (median 186 Hz, formants x1.11), a slow 5.4 Hz '
+                   'tremor and 1 % jitter, a little breathy (0.20), a softer top'),
+    'G_sharp': dict(f0=198.0, rng=1.00, smooth=0.0, alpha=1.11, breath=0.14, trem=(5.4, 0.020), jit=0.014, stretch=1.0, under=None,
+                    eq=[('hs', 5500, -1.5, 0.7), ('peak', 1800, 1.5, 1.0)], lu=0.0,
+                    desc='Grandma cutting the doctor off ("Don\'t tell me... Don\'t you dare"): the same old woman, '
+                         'higher (198 Hz) and harder, livelier pitch, more edge (+1.5 dB at 1.8 kHz), rougher (1.4 %)'),
+    'G_hush': dict(f0=180.0, rng=0.70, smooth=0.0, alpha=1.11, breath=0.55, trem=(5.4, 0.030), jit=0.010, stretch=1.0, under=None,
+                   eq=[('hs', 6000, -2.0, 0.7), ('ls', 180, -2.0, 0.7)], lu=-3.5,
+                   desc='Grandma hushing Milo ("Shh. Not after dark. Not out loud."): a hissed, half-whispered old '
+                        'voice (aperiodicity +0.55), flatter, 3.5 dB softer'),
+    'G_soft': dict(f0=182.0, rng=0.80, smooth=0.0, alpha=1.11, breath=0.32, trem=(5.0, 0.032), jit=0.012, stretch=1.0, under=None,
+                   eq=[('hs', 5500, -2.5, 0.7), ('peak', 300, 1.0, 1.0)], lu=-2.0,
+                   desc='Grandma rocking Milo ("Just until morning, baby. It can wait."): soft and shaking (tremor 3.2 %), '
+                        'breathier (0.32), 2 dB softer'),
+    'H': dict(f0=196.0, rng=0.95, smooth=0.0, alpha=1.15, breath=0.12, trem=None, jit=0.004, stretch=1.0, under=None,
+              eq=[('peak', 250, 1.5, 0.9), ('hs', 7000, -1.0, 0.7)], lu=-0.5,
+              desc='Doctor Anna Halverson, 40s, warm and exhausted (in the car): an adult woman (196 Hz, formants x1.15), '
+                   'warm low-mids, a touch of breath'),
+    'H_call': dict(f0=192.0, rng=1.05, smooth=0.0, alpha=1.15, breath=0.36, trem=None, jit=0.016, stretch=1.0, under=None,
+                   eq=[('peak', 250, 1.0, 0.9), ('hs', 7000, -1.0, 0.7)], lu=-0.5,
+                   desc='Doctor Halverson on the 3 AM call ("rough, out of breath"): breathy (0.36) and rough (1.6 % '
+                        'jitter), a little lower (192 Hz)'),
+    'H_door': dict(f0=200.0, rng=1.05, smooth=0.0, alpha=1.15, breath=0.20, trem=None, jit=0.008, stretch=1.0, under=None,
+                   eq=[('peak', 250, 1.2, 0.9), ('peak', 2000, 1.0, 1.0)], lu=0.0,
+                   desc='Doctor Halverson on the porch: urgent and tired (200 Hz, breath 0.20, 0.8 % jitter), a little '
+                        'more presence to carry through the door'),
+    'W': dict(f0=116.0, rng=0.60, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
+              eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
+              desc='the Waiting Man / Doctor Later: a soft, kind, grandfatherly man (116 Hz, formants x0.93: a longer '
+                   'vocal tract) made subtly inhuman: too even (pitch range x0.60, contour smoothed over 60 ms), too '
+                   'slow (vowels stretched 1.18x, consonants not), airless (aperiodicity -0.40: no breath at all), close '
+                   '(+2.5 dB proximity at 160 Hz, softer top), and a faint second voice an octave under it (17 dB down)'),
+    'W_count': dict(f0=116.0, rng=1.00, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
+                    eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
+                    desc='the Waiting Man counting the pulse ("One... Two... Three..."): the same voice keeping the '
+                         'count\'s own pitch movement (x1.00; flattened to x0.60-0.80 the drawn-out "Two" reads as "Till")'),
+    'W_whisper': dict(f0=116.0, rng=0.55, smooth=0.06, alpha=0.93, breath=0.45, trem=None, jit=0.0, stretch=1.12, under=(-19.0, 0.90),
+                      eq=[('peak', 160, 2.0, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-3.0,
+                      desc='the Waiting Man as the voice in your head (outro): the same voice half-whispered (breath '
+                           '0.45), a little less slow (1.12x), 3 dB softer'),
+    'K': dict(f0=272.0, rng=1.10, smooth=0.0, alpha=1.33, breath=0.50, trem=None, jit=0.004, stretch=1.0, under=None,
+              eq=[('ls', 200, -4.0, 0.7)], lu=-3.0,
+              desc='Milo, 7, thirsty and weak, whispering: a small child (272 Hz, a child\'s vocal tract: formants x1.33), '
+                   'breathy whisper that keeps every word (0.50), no chest (-4 dB under 200 Hz), 3 dB softer'),
+    'M': dict(f0=205.0, rng=0.90, smooth=0.0, alpha=1.16, breath=0.08, trem=None, jit=0.0, stretch=1.0, under=None,
+              eq=[('peak', 260, 1.2, 0.9)], lu=0.0,
+              desc='Mom, 40s, a night-shift nurse, decisive and warm: an adult woman (205 Hz, formants x1.16), steady '
+                   'intonation (x0.90), warm low-mids'),
+    'U': dict(f0=188.0, rng=0.80, smooth=0.0, alpha=1.13, breath=0.06, trem=None, jit=0.0, stretch=1.0, under=None,
+              eq=[('peak', 300, 1.0, 0.9), ('hs', 6000, -1.0, 0.7)], lu=0.0,
+              desc='the ER nurse, calm and firm: an adult woman, lower and steadier than Mom (188 Hz, x0.80, formants '
+                   'x1.13)'),
+    'R': dict(f0=212.0, rng=0.65, smooth=0.05, alpha=1.18, breath=0.04, trem=None, jit=0.0, stretch=1.0, under=None,
+              eq=[('ls', 200, -3.0, 0.7), ('peak', 2500, 1.5, 1.0)], lu=-1.0,
+              desc='the phone-system recording: a polite automated lady (212 Hz, formants x1.18), flat and even '
+                   '(x0.65, contour smoothed over 50 ms), clean (breath 0.04), thin and present (the mix adds the '
+                   'phone band)'),
 }
 # lines that use a variant (by tag)
-VARIANT = {'get_out': 'M_shout', 'happy_easter': 'M_dark', 'trick': 'M_dark', 'close_eyes': 'M_dark',
-           'count_to_seven': 'M_dark', 'my_house': 'L_scream', 'is_she_humming': 'L_whisper', 'yeah': 'J_yeah'}
-WHISPER_FX = {'whisper'}
+VARIANT = {
+    'dont_tell': 'G_sharp', 'dont_dare': 'G_sharp',
+    'shh': 'G_hush', 'not_after_dark': 'G_hush', 'not_out_loud': 'G_hush',
+    'until_morning': 'G_soft', 'g_wait1': 'G_soft', 'g_wait2': 'G_soft',
+    'this_is_halverson': 'H_call', 'sorry_hour': 'H_call', 'results_back': 'H_call',
+    'count1': 'W_count', 'count2': 'W_count', 'count3': 'W_count',
+    'w_nothing': 'W_whisper', 'w_bother': 'W_whisper', 'w_wait': 'W_whisper',
+}
 
 
 def voice_for(line):
     who, tag, fx = line['who'], line.get('tag'), line.get('fx')
     if who == 'N': return None
     if tag in VARIANT: return VARIANT[tag]
-    if who == 'J' and fx in WHISPER_FX: return 'J_whisper'
+    if who == 'H' and fx == 'door': return 'H_door'
     return who
 
 
@@ -104,7 +124,7 @@ def warp_envelope(sp, alpha):
 
 
 def clean_f0(f0):
-    """The take's F0 with tracker slips removed: voiced runs shorter than 20 ms dropped, octave jumps folded back
+    """The take's F0 with tracker slips removed: voiced runs shorter than 4 frames dropped, octave jumps folded back
     toward the line's median, a 5-frame median filter inside each voiced run."""
     from scipy.signal import medfilt
     f = f0.copy(); v = f > 0
@@ -129,15 +149,17 @@ def new_f0(f0, s, t):
     out = np.zeros_like(f0)
     if not v.any(): return out
     lf = np.log(f0[v]); med = np.median(lf)
-    out[v] = np.exp(np.log(s['f0']) + s['rng'] * (lf - med))
+    lo = s['rng'] * (lf - med)
+    if s.get('smooth'):                                              # an even contour: smoothed inside each voiced run
+        from scipy.ndimage import uniform_filter1d
+        n = max(3, int(s['smooth'] * 1000 / FP))
+        full = np.zeros_like(f0); full[v] = lo
+        d = np.diff(np.concatenate([[0], v.astype(np.int8), [0]]))
+        for a, b in zip(np.where(d == 1)[0], np.where(d == -1)[0]):
+            if b - a > 3: full[a:b] = uniform_filter1d(full[a:b], size=min(n, b - a), mode='nearest')
+        lo = full[v]
+    out[v] = np.exp(np.log(s['f0']) + lo)
     out[v] = np.clip(out[v], s['f0'] * 0.62, s['f0'] * 1.6)
-    if s.get('contour') == 'crack':                                  # the dying "Ma-ma": rise, break, fall into creak
-        idx = np.where(v)[0]; n = len(idx); u = np.linspace(0, 1, n)
-        shape = np.where(u < 0.35, 1.0 + 0.30 * np.sin(np.pi * u / 0.35),                    # "Ma" rises and falls
-                np.where(u < 0.45, 1.25, 1.18 - 0.75 * (u - 0.45) / 0.55))                   # crack up, then sink
-        out[idx] = s['f0'] * shape
-        tail = idx[u > 0.8]
-        out[tail] = np.maximum(55.0, out[tail] * (0.6 + 0.4 * np.random.default_rng(7).random(len(tail))))   # creak
     if s.get('trem'):
         hz, depth = s['trem']
         out[v] *= 1 + depth * np.sin(2 * np.pi * hz * t[v] + 0.7)
@@ -147,11 +169,31 @@ def new_f0(f0, s, t):
 
 
 def breathe(ap, amount):
-    """Aperiodicity raised toward 1 (noise) by 'amount' (0..1), more in the upper bands."""
-    if amount <= 0: return ap
+    """Aperiodicity moved toward 1 (noise) by a positive amount (more in the upper bands), or toward 0 (pure voicing)
+    by a negative one."""
+    if amount == 0: return ap
+    if amount < 0: return np.clip(ap * (1 + amount), 1e-6, 1)
     n = ap.shape[1]; tilt = np.linspace(0.6, 1.0, n)[None, :]
     a = np.clip(amount * tilt, 0, 0.98)
     return np.clip(ap + (1 - ap) * a, 0, 1)
+
+
+def stretch_frames(f0, sp, ap, voiced, factor):
+    """Variable-rate time stretch of the WORLD frames: voiced frames last 'factor' times longer, unvoiced ones keep their
+    length (consonants stay crisp); the rate is smoothed over 15 ms so it never jumps."""
+    from scipy.ndimage import uniform_filter1d
+    w = np.where(voiced, factor, 1.0)
+    w = uniform_filter1d(w, size=max(3, int(15 / FP)), mode='nearest')
+    pos = np.concatenate([[0.0], np.cumsum(w)])                    # output position where source frame k starts
+    m = int(round(pos[-1]))
+    src = np.interp(np.arange(m), pos[:-1], np.arange(len(w)))
+    i0 = np.clip(np.floor(src).astype(int), 0, len(w) - 1); i1 = np.minimum(i0 + 1, len(w) - 1); fr = (src - i0)[:, None]
+    lsp = np.log(sp + 1e-20)
+    sp2 = np.exp(lsp[i0] * (1 - fr) + lsp[i1] * fr)
+    ap2 = ap[i0] * (1 - fr) + ap[i1] * fr
+    near = np.where(fr[:, 0] < 0.5, i0, i1)
+    f2 = np.where((f0[i0] > 0) & (f0[i1] > 0), f0[i0] * (1 - fr[:, 0]) + f0[i1] * fr[:, 0], f0[near])
+    return f2, sp2, ap2
 
 
 def eq(y, bands):
@@ -181,55 +223,95 @@ def speech_rms_db(y):
     return float(10 * np.log10(p[sel].mean() + 1e-20))
 
 
+def formants_median(y):
+    """Median F1/F2/F3 (Hz) over the voiced frames (Praat Burg, 5 formants up to 5.5 kHz) and the F0 median."""
+    import parselmouth
+    s = parselmouth.Sound(y, SR)
+    p = s.to_pitch_ac(time_step=0.01, pitch_floor=60, pitch_ceiling=600); f = p.selected_array['frequency']
+    fm = s.to_formant_burg(time_step=0.01, max_number_of_formants=5, maximum_formant=5500)
+    F = [[], [], []]
+    for t, fv in zip(p.xs(), f):
+        if fv > 0:
+            for k in range(3):
+                v = fm.get_value_at_time(k + 1, t)
+                if v == v: F[k].append(v)
+    return [round(float(np.median(v))) if v else 0 for v in F], (round(float(np.median(f[f > 0])), 1) if (f > 0).any() else 0)
+
+
 def revoice(x, key):
-    """One stretch of the narrator's voice -> the character 'key'. Returns (y, stats)."""
+    """One line of the narrator's voice -> the character 'key'. Returns (y, stats); y may be longer (stretch)."""
     import pyworld as pw
     s = VOICES[key]
-    x = np.ascontiguousarray(x, dtype=np.float64)
-    f0, t = pw.harvest(x, SR, f0_floor=60.0, f0_ceil=500.0, frame_period=FP)
-    sp = pw.cheaptrick(x, f0, t, SR)
-    ap = pw.d4c(x, f0, t, SR)
+    pad = np.zeros(int(PAD * SR))
+    xp = np.ascontiguousarray(np.concatenate([pad, x, pad]), dtype=np.float64)
+    f0, t = pw.harvest(xp, SR, f0_floor=60.0, f0_ceil=500.0, frame_period=FP)
+    sp = pw.cheaptrick(xp, f0, t, SR)
+    ap = pw.d4c(xp, f0, t, SR)
     f1 = new_f0(f0, s, t)
     sp1 = warp_envelope(sp, s['alpha'])
     ap1 = breathe(ap, s['breath'])
     C = np.ascontiguousarray
-    y = pw.synthesize(C(f1), C(sp1), C(ap1), SR, FP)[:len(x)]
-    if len(y) < len(x): y = np.concatenate([y, np.zeros(len(x) - len(y))])
-    if s.get('under') is not None:                                   # the man under the girl
-        f2 = f1 * 0.5
-        sp2 = warp_envelope(sp, 0.97)
-        y2 = pw.synthesize(C(f2), C(sp2), C(breathe(ap, 0.5)), SR, FP)[:len(x)]
-        if len(y2) < len(x): y2 = np.concatenate([y2, np.zeros(len(x) - len(y2))])
-        y = y + y2 * 10 ** (s['under'] / 20) * (np.sqrt(np.mean(y ** 2)) / (np.sqrt(np.mean(y2 ** 2)) + 1e-12))
+    voiced = f1 > 0
+    if s.get('stretch', 1.0) != 1.0:
+        f1, sp1, ap1 = stretch_frames(f1, sp1, ap1, voiced, s['stretch'])
+        _, sp_u, ap_u = stretch_frames(f0, sp, ap, voiced, s['stretch'])
+    else:
+        sp_u, ap_u = sp, ap
+    y = pw.synthesize(C(f1), C(sp1), C(ap1), SR, FP)
+    if s.get('under'):                                                # the faint second voice an octave down
+        lvl, al2 = s['under']
+        y2 = pw.synthesize(C(f1 * 0.5), C(warp_envelope(sp_u, al2)), C(breathe(ap_u, min(0.0, s['breath']))), SR, FP)
+        n = min(len(y), len(y2)); y2 = y2[:n]; y = y[:n]
+        y = y + y2 * 10 ** (lvl / 20) * (np.sqrt(np.mean(y ** 2)) / (np.sqrt(np.mean(y2 ** 2)) + 1e-12))
+    n_pad = len(pad)                                                  # the pads are unvoiced: they keep their length
+    y = y[n_pad:max(n_pad + 1, len(y) - n_pad)]
+    if s.get('stretch', 1.0) == 1.0:
+        y = y[:len(x)]
+        if len(y) < len(x): y = np.concatenate([y, np.zeros(len(x) - len(y))])
     if s.get('eq'): y = eq(y, s['eq'])
     y = y * 10 ** ((speech_rms_db(x) + s['lu'] - speech_rms_db(y)) / 20)
     v0 = f0[f0 > 0]; v1 = f1[f1 > 0]
     st = {'voice': key, 'f0_in_median': round(float(np.median(v0)), 1) if len(v0) else 0,
           'f0_out_median': round(float(np.median(v1)), 1) if len(v1) else 0,
           'f0_out_p5_p95': [round(float(np.percentile(v1, 5)), 1), round(float(np.percentile(v1, 95)), 1)] if len(v1) else [0, 0],
-          'formant_warp': s['alpha'], 'breath': s['breath'], 'loudness_offset_db': s['lu']}
+          'formant_warp': s['alpha'], 'breath': s['breath'], 'stretch': s.get('stretch', 1.0),
+          'loudness_offset_db': s['lu'], 'dur_in': round(len(x) / SR, 3), 'dur_out': round(len(y) / SR, 3)}
     return y, st
 
 
-def apply_voices(y, edl, sr=SR):
-    """Re-voice every character line of the edited narration in place. edl: vo_edit's edit list (line 'out' times).
-    Returns (new signal, report rows)."""
-    assert sr == SR
-    out = y.copy()
-    rep = []
-    for e in edl:
-        key = voice_for(e)
-        if key is None: continue
-        a, b = e['out']
-        m = 0.03                                                    # a little silence on each side (gaps are >= 0.15 s)
-        i0, i1 = max(0, int((a - m) * SR)), min(len(y), int((b + m) * SR))
-        seg = y[i0:i1]
-        z, st = revoice(seg, key)
-        f = int(0.012 * SR)
-        ramp = np.sin(np.linspace(0, np.pi / 2, f)) ** 2
-        z[:f] *= ramp; z[-f:] *= ramp[::-1]
-        out[i0:i1] = z
-        st.update({'i': e['i'], 'who': e['who'], 'tag': e['tag'], 'fx': e['fx'], 'en': e['en'], 'out': e['out'],
-                   'desc': VOICES[key]['desc']})
-        rep.append(st)
-    return out, rep
+def voice_line(y, line):
+    """vo_edit.py's hook: (voiced line, stats) for a character line, (y, None) for the narrator."""
+    key = voice_for(line)
+    if key is None: return y, None
+    z, st = revoice(y, key)
+    f = int(0.012 * SR)
+    ramp = np.sin(np.linspace(0, np.pi / 2, f)) ** 2
+    if len(z) > 2 * f: z[:f] *= ramp; z[-f:] *= ramp[::-1]
+    st.update({'who': line['who'], 'tag': line['tag'], 'fx': line['fx'], 'en': line['en'], 'desc': VOICES[key]['desc']})
+    return z, st
+
+
+def measure_warp(dry, wet):
+    """The formant shift actually achieved: the frequency warp alpha (0.75-1.55) that best maps the dry line's average
+    log spectral envelope (WORLD CheapTrick, voiced frames, 150-5500 Hz) onto the voiced line's; and both lines' median
+    F0. Independent of the F0 change (the envelope is pitch-adaptive), so a child voice that is only a raised pitch
+    (a falsetto) measures ~1.0 here."""
+    import pyworld as pw
+    def env(y):
+        y = np.ascontiguousarray(y, dtype=np.float64)
+        f0, t = pw.harvest(y, SR, f0_floor=60.0, f0_ceil=600.0, frame_period=5.0)
+        sp = pw.cheaptrick(y, f0, t, SR)
+        v = f0 > 0
+        if v.sum() < 3: return None, 0.0
+        return np.log(sp[v] + 1e-20).mean(0), float(np.median(f0[v]))
+    e0, f00 = env(dry); e1, f01 = env(wet)
+    if e0 is None or e1 is None: return None, f00, f01
+    n = len(e0); f = np.arange(n) * SR / 2 / (n - 1)
+    band = (f > 150) & (f < 5500)
+    best, ba = 1e9, 1.0
+    for a in np.arange(0.75, 1.551, 0.01):
+        w = np.interp(f / a, f, e0)                                  # dry envelope moved up by a
+        d = (w - w[band].mean()) - (e1 - e1[band].mean())
+        err = float(np.mean(d[band] ** 2))
+        if err < best: best, ba = err, a
+    return round(float(ba), 2), round(f00, 1), round(f01, 1)

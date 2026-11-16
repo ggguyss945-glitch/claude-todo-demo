@@ -3,7 +3,7 @@
     python3 align.py --asr-only ...      transcribe only (writes asr_cache.json + transcript.txt, no lines.py needed)
     python3 align.py --write-pauses ...  also rewrite each L(...) row of lines.py with the measured pause / pace
 Defaults: W/narration/narration_en.wav, the Parakeet TDT 0.6b v2 int8 dir ($PARAKEET_DIR or the scratchpad models dir),
-W/align, with W = Bunnyman Video/film/_work. Script: Bunnyman Video/script/lines.py (the recording is the truth).
+W/align, with W = Doctor Video/film/_work. Script: Doctor Video/script/lines.py (the recording is the truth).
 ASR: Silero VAD (vad.onnx beside the Parakeet dir) finds speech; neighbouring segments are merged into chunks of at most
 ~16 s, cut from the full recording with 0.3 s padding, and transcribed by Parakeet TDT with token timestamps. Words are
 cached in asr_cache.json ('en_words': [[word, t], ...] as film.py reads them, 'en_chunks': [[t0, t1, text], ...]);
@@ -28,7 +28,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Bunnyman Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Doctor Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -123,12 +123,14 @@ from lines import LINES
 
 NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5',
        'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12', 'thirty': '30',
-       'forty': '40', 'first': '1st', 'second': '2nd', 'fourth': '4th', 'twentyone': '21', 'fifteen': '15', 'sixty': '60',
-       'seventies': '70s', 'mr': 'mister', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19',
-       'mamma': 'mama', 'lori': 'laurie', 'gray': 'grey', 'aged': 'age', 'pembertons': 'pemberton'}   # spellings of this film
-JOIN = {('good', 'night'): 'goodnight', ('any', 'more'): 'anymore', ('head', 'stick'): 'headstick', ('t', 'v'): 'tv',
-        ('arm', 'chair'): 'armchair', ('note', 'paper'): 'notepaper', ('tree', 'line'): 'treeline',
-        ('bunny', 'man'): 'bunnyman', ('door', 'knob'): 'doorknob', ('grown', 'up'): 'grownup'}
+       'forty': '40', 'first': '1st', 'second': '2nd', 'fourth': '4th', 'fifteen': '15', 'sixty': '60',
+       'mr': 'mister', 'dr': 'doctor', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19', 'twenty': '20',
+       'seventy': '70', 'hundred': '100', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans'}   # spellings of this film
+JOIN = {('any', 'more'): 'anymore', ('arm', 'chair'): 'armchair', ('grown', 'up'): 'grownup', ('2', 'night'): 'tonight',
+        ('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('type', 'writer'): 'typewriter',
+        ('peep', 'hole'): 'peephole', ('street', 'light'): 'streetlight', ('wheel', 'chair'): 'wheelchair',
+        ('clip', 'board'): 'clipboard', ('drive', 'way'): 'driveway', ('head', 'lights'): 'headlights',
+        ('grass', 'hopper'): 'grasshopper', ('over', 'night'): 'overnight'}
 # words the recogniser splits or joins its own way
 
 
@@ -137,7 +139,7 @@ def toks(s):
     are written ('3:07', '3.07', '307', 'three oh seven' -> 3 7); 'a.m.' -> am; number words and to/too/two -> digits;
     possessive 's dropped; Mr -> mister; 'good night' / 'T V' / 'head stick' ... joined (JOIN)."""
     s = s.lower().replace('a.m.', 'am').replace('p.m.', 'pm').replace('-', ' ').replace('—', ' ').replace('’', "'")
-    s = re.sub(r'\b1987\b', 'nineteen eighty seven', s)              # the year as it is read
+    s = re.sub(r'\b1979\b', 'nineteen seventy nine', s)              # the year as it is read
     s = re.sub(r"(\w)'ve\b", r'\1 have', s)
     s = re.sub(r"(\w)'s\b", r'\1', s); s = re.sub(r"s'(?=\W|$)", 's', s)   # possessives: Winks's / Winks' -> winks
     s = re.sub(r'(\d+)[:.](\d\d)', r'\1 \2', s)

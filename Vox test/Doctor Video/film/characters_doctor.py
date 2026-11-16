@@ -21,14 +21,14 @@ Doctor film cast ids (this film's cast has its own ids; the Bunnyman film's 'mom
   'mom_rn'           Mom, 40s, night-shift nurse (scrubs, lanyard, watch).
   'er_nurse', 'er_doctor', 'chest_man', 'medic', 'medic2', 'cardio' (the cardiologist with a coffee)
   'ghost_chest', 'ghost_side', 'ghost_teen', 'ghost_girl'   the waiting room's grey, still people.
-Doctor Later acting (Acting('later', ...)): perch(seat_y, kind), click_pen(times), tilt_head(t0, deg), reach_far(t0, side,
-  target), tear_ticket(t0, side, machine_pt), offer(t0, side, target), take_wrist(t0, side, other, other_side),
-  count(t), loosen_tape(t0, t1), faces(keys), flinch_light(t), bend_to_roof(roof_y). Helpers: chair_rock(t, t0),
-  draw_later_far(...), later_point(actor, t, part).
-People acting added here: carry(t0, child, ...), take_pulse(t0, side, other, other_side), drive(t0, t1, wheel),
-  rock(t0, t1), breathe_fast(t0, t1), drink(t0, t1, side), strike_match(t0, side), receiver_to_ear(t0, t1, side, tilt_out),
-  hang_up(t0, side, cradle), pull_cord(t0, side, jack), slide_under_door(t0, side, door_x, floor_y), write_marker(t0, t1),
-  dial(t0, side, n), gone(t0), glasses(t0, on), sag(t0, t1), hold_up_pants(t0, t1, side).
+Doctor Later acting (Acting('later', ...)): perch(seat_y, kind), later_hands(t0, left, right), click_pen(times),
+  write_scratch(t0, t1), tilt_head(t0, deg), look_at (slow), reach_far / reach_to(t0, side, target), tear_ticket(t0, side,
+  slot, text, offer_to=), offer(t0, side, target), take_wrist(t0, side, other, other_side), count(t), loosen_tape(t0, t1,
+  frm, to), faces(keys), flinch_light(t), bend_to_roof(roof_y). Helpers: draw_bust('later', ...), later_bust_place,
+  draw_later_arm, draw_later_far, later_point, chair_rock(t, t0).
+People acting added here: receiver_to_ear(t0, t1, side, tilt_out, toward=), tap, pull_cord, strike_match, slide_under_door,
+  write_marker, dial, take_pulse, carry (+ draw_carry_child), drive, rock, breathe_fast, drink, gone, glasses, sag, hold_up,
+  hand_on, ticket_hold. Helpers: receiver_cord_end, draw_coil_cord, draw_wheelchair, draw_steering_wheel, carry_anchor.
 """
 
 import bisect as _bisect3
@@ -43,7 +43,7 @@ _DL_L = dict(thigh=90.0, shin=104.0, foot=26.0, upper=58.0, fore=56.0, palm=9.0)
 _DL_D = 640.0                                # mild perspective (cm) about the middle of the figure
 _DL_ELEV = 0.11                              # the camera looks a little down on him: hands flat on the carpet read
 _DL_BLACK, _DL_BLACK_SH, _DL_BLACK_HI = '#17171c', '#0a0a0d', '#474b57'
-_DL_COAT = dict(c='#94928a', sh='#67655f', dp='#45443f', hi='#b8b6ac', grime='#625a48', line='#1a1b20')
+_DL_COAT = dict(c='#8c8a82', sh='#5f5d57', dp='#42413c', hi='#adab a1'.replace(' ', ''), grime='#5a5242', line='#1a1b20')
 _DL_TAPE = ('#e8ddb2', '#ddd09e', '#efe6c4', '#d4c48e', '#e4d7a8', '#d9ca96', '#cfbd84')
 _DL_TAPE_EDGE = '#8c7a4e'
 
@@ -169,8 +169,8 @@ def _dl_rig(P):
         Hp = H0 + np.array([s * 8.0, 2.0, 3.0])
         near = -s                                          # the right leg (s = -1) sits a little higher and closer
         # the near (right) knee higher with its foot drawn back under it, the far knee lower with its foot reaching forward
-        Kd = np.array([s * (15.0 + 13.0 * sp_ + 5.0 * kk), -lerp(98.0, 116.0, kk) - 7.0 * near * (1.0 - 0.6 * kk),
-                       lerp(60.0, 36.0, kk) + 8.0 * s])
+        Kd = np.array([s * (15.0 + 13.0 * sp_ + 5.0 * kk), -lerp(88.0, 116.0, kk) - 7.0 * near * (1.0 - 0.6 * kk),
+                       lerp(72.0, 36.0, kk) + 8.0 * s])
         K = Hp + _unit3(Kd - Hp) * _DL_L['thigh']
         # the knee may not rise past the shin's reach of the floor (feet always on it)
         maxh = _DL_L['shin'] + 6.0
@@ -202,10 +202,10 @@ def _dl_rig(P):
             W = np.array([s * 10.0, -4.0, 44.0 + 5.0 * s])
         elif rest == 'knee':     # draped over the top of the knee
             W = K + np.array([-s * 2.0, -5.0, 2.0])
-        elif rest == 'lap':      # holding the clipboard upright against the knees
-            W = np.array([s * 6.0, -(hs + 36.0), 26.0])
-        elif rest == 'pen':      # the pen hand at the chest
-            W = np.array([s * 3.0, -(hs + 44.0), 30.0])
+        elif rest == 'lap':      # holding the clipboard upright in his lap
+            W = np.array([s * 7.0, -(hs + 28.0), 30.0])
+        elif rest == 'pen':      # the pen hand in front of his chest
+            W = np.array([s * 4.0, -(hs + 36.0), 32.0])
         elif rest == 'arm':      # on the armchair's arm
             W = np.array([s * 26.0, -(hs + 20.0), 14.0])
         elif rest == 'flinch':   # up before the face, as if from a light
@@ -213,34 +213,50 @@ def _dl_rig(P):
         else:
             W = np.array([s * 12.0, -(hs + 10.0), 20.0])
         w = clamp(getattr(P, 'dl_lw' if s > 0 else 'dl_rw'))
+        Tw_goal = None
         if w > 0.001:
             pre = 'dl_l' if s > 0 else 'dl_r'
             Tw = _dl_world_to_cm(P, getattr(P, pre + 'x'), getattr(P, pre + 'y'), getattr(P, pre + 'z'))
             if Tw is not None:
-                # the target is where the fingertips / pinch land: the wrist stops a hand's length short of it
-                Tw = Tw - _unit3(Tw - Sh) * 13.0
+                Tw_goal = Tw.copy()
+                # the target is where the pinch / fingertips / palm land: the wrist stops that far short of it
+                shp = getattr(P, 'hl_shape' if s > 0 else 'hr_shape') or 'relaxed'
+                off = {'pinch': 24.0, 'offer': 24.0, 'point': 24.0, 'grip': 7.0, 'flat': 17.0, 'reach': 21.0, 'claw': 17.0}.get(shp, 16.0)
+                Tw = Tw - _unit3(Tw - Sh) * off
                 W = W + (Tw - W) * w
         if fl > 0.01 and rest != 'flinch':
             W = W + ((hc + np.array([s * 7.0, 12.0, 16.0])) - W) * (0.65 * fl)
         Lu, Lf = _DL_L['upper'], _DL_L['fore']
-        d = float(np.linalg.norm(W - Sh))
-        k = max(1.0, d / ((Lu + Lf) * 0.985))
-        pole = _unit3(np.array([s * 0.75, 0.55, -0.45]) if rest == 'floor' else np.array([s * 0.5, 0.85, -0.3]))
-        if k > 1.0:              # the arm unfolds unnaturally long: a second elbow opens like a folding rule
-            L = (Lu + Lf) * k * 1.0
-            u = _unit3(W - Sh)
-            perp = _unit3(pole - u * float(np.dot(pole, u)))
-            sl = min(0.12, 0.35 / k) * L * 0.25
-            E1 = Sh + u * L * 0.34 + perp * sl
-            E2 = Sh + u * L * 0.68 - perp * sl * 0.6
-            arms[s] = dict(S=Sh, J=[E1, E2], W=W, k=k)
-        else:
+        # floor: elbows out and back like a spider's; lap / pen: the upper arm hangs and the forearm folds up (a mantis)
+        pole = _unit3({'floor': np.array([s * 0.75, 0.55, -0.45]), 'lap': np.array([s * 0.3, 1.0, 0.05]),
+                       'pen': np.array([s * 0.3, 1.0, 0.05])}.get(rest, np.array([s * 0.6, 0.6, -0.55])))
+
+        def solve(W):
+            d = float(np.linalg.norm(W - Sh))
+            k = max(1.0, d / ((Lu + Lf) * 0.985))
+            if k > 1.0:              # the arm unfolds unnaturally long: a second elbow opens like a folding rule
+                L = (Lu + Lf) * k * 1.0
+                u = _unit3(W - Sh)
+                perp = _unit3(pole - u * float(np.dot(pole, u)))
+                sl = min(0.12, 0.35 / k) * L * 0.25
+                E1 = Sh + u * L * 0.34 + perp * sl
+                E2 = Sh + u * L * 0.68 - perp * sl * 0.6
+                return dict(S=Sh, J=[E1, E2], W=W, k=k, rest=rest)
             E, Wr = _ik(Sh, W, Lu, Lf, pole)
-            arms[s] = dict(S=Sh, J=[E], W=Wr, k=1.0)
-        arms[s]['rest'] = rest
+            return dict(S=Sh, J=[E], W=Wr, k=1.0, rest=rest)
+        arms[s] = solve(W)
+        if w > 0.5 and Tw_goal is not None:
+            # correct for where the pinch / fingertips really land with this hand pose (two passes)
+            R['arms'] = arms
+            for _ in range(2):
+                hd_ = _dl_hand3(R, None, s, P)
+                tips = (hd_['fingers'][0][-1] + hd_['fingers'][1][-1]) / 2 if (getattr(P, 'hl_shape' if s > 0 else 'hr_shape') or '') != 'grip' \
+                    else hd_['W'] + hd_['f'] * 6.0
+                W = arms[s]['W'] + (Tw_goal - tips) * min(1.0, w)
+                arms[s] = solve(W)
     R['arms'] = arms
     # head orientation (relative to the camera): body yaw + head yaw, pitch (nod), roll (h_tilt)
-    R['h_yaw'] = (P.turn + P.h_turn) * PI / 2 - 0.55 * fl * (1 if P.h_turn >= 0 else -1)
+    R['h_yaw'] = (P.turn + P.h_turn) * PI / 2 - 0.55 * fl * (1 if P.turn >= 0 else -1)      # turns away (a stable side)
     R['h_pitch'] = 0.6 * P.h_nod + 0.12 + 0.06 * clamp(P.dl_count) - 0.35 * fl
     R['h_roll'] = P.h_tilt + 8.0 * fl
     if P.dl_roof > 0:
@@ -256,8 +272,8 @@ def _dl_rig(P):
         room = (hc[1] - roof) - 1.0
         if room < L_:
             ang = math.degrees(math.acos(clamp(room / L_, -1.0, 1.0)))
-            sg = 1.0 if R['h_roll'] >= 0 else -1.0
-            R['h_roll'] = sg * max(abs(R['h_roll']), ang)
+            sg = 1.0 if getattr(P, 'dl_roof_side', 1.0) >= 0 else -1.0       # a fixed side: no flip when the idle tilt
+            R['h_roll'] = sg * ang + 0.25 * R['h_roll']                     # crosses zero
             R['h_pitch'] += 0.1
     return R
 
@@ -446,7 +462,7 @@ def _dl_rows(R, P):
     sp = R['spine']; hs = P.dl_seat
     rows = []
     neck0 = R['neck'][0]
-    rows.append((sp[5] + np.array([0.0, -7.0, -9.0]), 8.0, 7.0))          # the hump of his back, above and behind the neck
+    rows.append((sp[5] + np.array([0.0, -6.0, -8.0]), 10.0, 8.0))         # the hump of his back, above and behind the neck
     rows.append((neck0 + np.array([0.0, 3.0, -3.0]), 7.0, 6.5))           # collar round the neck's root
     rows.append((sp[5] + np.array([0.0, 3.0, -3.0]), 13.0, 9.0))          # shoulders (the coat hangs off them)
     rows.append((sp[4] + np.array([0.0, 6.0, -3.0]), 13.5, 9.0))
@@ -650,7 +666,7 @@ def _dl_rings():
 _DL_RINGS = _dl_rings()
 # the order the strips come off when he is asked questions: the gap's neighbours first, out over the face, then up the cone
 _DL_EYE_BAND = 4                                                        # the band (between rings 4 and 5) holding the gap
-_DL_PEEL = sorted(range(len(_DL_RINGS) - 1), key=lambda i: (abs(i - _DL_EYE_BAND) if i < 8 else 20 + i))
+_DL_PEEL = sorted(range(len(_DL_RINGS) - 1), key=lambda i: (abs(i - _DL_EYE_BAND) if i < 7 else 100 - i))
 
 
 class _DLHead:
@@ -832,9 +848,11 @@ def _dl_tape(c, hd, P, det, t, light):
     nb = len(_DL_RINGS) - 1
     hang = []
     lsd = (light or {}).get('side', 1)
+    n_off = (1.0 - clamp(P.dl_tape)) * nb
     for i in range(nb):
         u = _dl_band_state(i, P.dl_tape)
-        if u >= 0.999:
+        v = n_off - _DL_PEEL.index(i)                      # > 1: fully off; the loose strip hangs on, then falls away
+        if u >= 0.999 and v >= 2.5:
             continue
         r0, r1 = _DL_RINGS[i], _DL_RINGS[i + 1]
         phis, ph0 = _dl_front_arc(hd, r0 if r0[4] == r1[4] else r1)
@@ -842,6 +860,12 @@ def _dl_tape(c, hd, P, det, t, light):
         ph = 0.9 * i + 0.6
         lo = _dl_ring_pts(hd, r0, phis, tilt, ph, 0.18)
         hi = _dl_ring_pts(hd, r1, phis, tilt, ph, 0.18)
+        if u >= 0.999:
+            side = 1 if i % 2 else -1
+            a0 = lo[1] if side > 0 else lo[-2]; b0 = hi[1] if side > 0 else hi[-2]
+            hang.append(((a0[0] + b0[0]) / 2, (a0[1] + b0[1]) / 2, math.hypot(b0[0] - a0[0], b0[1] - a0[1]), 1.0, i, side,
+                         clamp(1.0 - (v - 1.0) / 1.5)))
+            continue
         if u > 0.001:
             # the strip unwinds from one side: only the part still on is drawn; the loose end hangs from where it lifts
             m = max(2, int(round(len(phis) * (1.0 - u))))
@@ -851,7 +875,7 @@ def _dl_tape(c, hd, P, det, t, light):
             else:
                 lo, hi = lo[-m:], hi[-m:]
             ax_, ay_ = (lo[-1] if side > 0 else lo[0]); bx_, by_ = (hi[-1] if side > 0 else hi[0])
-            hang.append(((ax_ + bx_) / 2, (ay_ + by_) / 2, math.hypot(bx_ - ax_, by_ - ay_), u, i, side))
+            hang.append(((ax_ + bx_) / 2, (ay_ + by_) / 2, math.hypot(bx_ - ax_, by_ - ay_), u, i, side, 1.0))
         band = poly(lo + hi[::-1], True)
         colr = _DL_TAPE[(i * 7 + 3) % len(_DL_TAPE)]
         if r0[4] == 'cone':
@@ -889,8 +913,10 @@ def _dl_tape(c, hd, P, det, t, light):
 
 def _dl_hanging(c, hd, hang, t, det):
     """Loose strips of tape hanging from where they lifted, swaying."""
-    for (x, y, w, u, i, side) in hang[-6:]:
-        L = (4.0 + 22.0 * u) * hd.f
+    for (x, y, w, u, i, side, al) in hang:
+        if al <= 0.01: continue
+        if al < 0.999: c.cv.saveLayer(None, skia.Paint(Alphaf=float(al)))
+        L = (4.0 + 22.0 * u + 8.0 * (1.0 - al)) * hd.f
         sw = math.sin(t * 1.6 + i) * 2.0 * hd.f
         dx = side * (2.0 + 4.0 * u) * hd.f
         pts = [(x, y), (x + dx * 0.6 + sw * 0.2, y + L * 0.35), (x + dx + sw * 0.6, y + L * 0.7), (x + dx * 0.8 + sw, y + L)]
@@ -898,6 +924,7 @@ def _dl_hanging(c, hd, hang, t, det):
         rb = _tube(pts, [wd, wd * 0.95, wd * 0.9, wd * 0.8], 0.8)
         c.fill(rb, _DL_TAPE[i % len(_DL_TAPE)]); c.fill(_crescent(rb, side * 0.6, 0), '#a08a55', 160)
         c.line(rb, c.lw * 0.5, _DL_TAPE_EDGE, 230)
+        if al < 0.999: c.cv.restore()
 
 
 def _dl_head(c, R, P, view, det, t, light):
@@ -1045,6 +1072,11 @@ def _later_figure(c, who, P, det, t, light=None, upper_only=False):
     R = _dl_rig(P)
     pr = lambda q: view.p(q)[:2]                     # noqa: E731
     R['coat_path'] = _dl_coat_path(R, P, view)
+    R0 = None                                        # his rest pose, when the hand holding the clipboard reaches away
+    for s_ in (-1, 1):
+        if getattr(P, ('hl_' if s_ > 0 else 'hr_') + 'prop') == 'clipboard' and getattr(P, 'dl_lw' if s_ > 0 else 'dl_rw') > 0.0:
+            P0 = P.copy(); P0.dl_lw = 0.0; P0.dl_rw = 0.0
+            R0 = _dl_rig(P0)
     items = []
     layer = getattr(P, 'dl_layer', 'all') or 'all'
     for s in (-1, 1):
@@ -1083,7 +1115,7 @@ def _later_figure(c, who, P, det, t, light=None, upper_only=False):
             prop = getattr(P, pre + 'prop')
             if prop == 'pen': _dl_pen(cx_, R, view, s, P, det)
             hd = _dl_draw_hand(cx_, R, view, s, P, det, light, t)
-            if prop == 'clipboard': _dl_clipboard(cx_, R, view, s, P, det); _dl_draw_hand(cx_, R, view, s, P, det, light, t)
+            if prop == 'clipboard' and R0 is None: _dl_clipboard(cx_, R, view, s, P, det); _dl_draw_hand(cx_, R, view, s, P, det, light, t)
             if prop == 'ticket':
                 f1, f2 = hd['fingers'][0][-1], hd['fingers'][1][-1]
                 mid = (f1 + f2) / 2 - hd['f'] * 1.2
@@ -1098,6 +1130,9 @@ def _later_figure(c, who, P, det, t, light=None, upper_only=False):
                     cx_.fill(tp, _DL_BLACK); cx_.line(tp, cx_.lw * 0.55, '#060608')
         zarm = sum(view.depth_of(q) for q in [arm['S']] + arm['J'] + [arm['W']]) / (2 + len(arm['J']))
         items.append((zarm + 0.02 * s, 'arm', armf))
+        if R0 is not None and getattr(P, ('hl_' if s > 0 else 'hr_') + 'prop') == 'clipboard':
+            # the clipboard hand is reaching: the clipboard stays where it was, leaning upright against his knees
+            items.append((view.depth_of(R0['arms'][s]['W']) + 0.015 * s, 'clip', lambda cx_, s=s: _dl_clipboard(cx_, R0, view, s, P, det)))
     zb = view.depth_of(R['spine'][3])
     items.append((zb, 'body', lambda cx_: _dl_body(cx_, R, P, view, det, light, t)))
     zh = view.depth_of(R['head'])
@@ -1197,7 +1232,7 @@ def _ghost_of(sp):
     for k in ('skin', 'skin_sh', 'skin_dp', 'blush', 'lip', 'hair_c', 'brow_c', 'iris_c', 'stubble', 'moustache'):
         if d.get(k): d[k] = _greyed(d[k], 0.9)
     d['cloth'] = {k: _greyed(v, 0.85) for k, v in sp['cloth'].items()}
-    d.update(blink_rate=0.02, lock=0.0, micro=0.12, breath=0.15, ghost=True, lid_rest=max(sp.get('lid_rest', 0.2), 0.42), bags=0.7)
+    d.update(blink_rate=0.02, lock=0.0, micro=0.12, breath=0.15, ghost=True, lid_rest=max(sp.get('lid_rest', 0.2), 0.3), bags=0.7)
     return d
 
 
@@ -1356,7 +1391,9 @@ def _front_housecoat(c, sp, B, rows, P, det, t):
             if v > 0.1: q.append(poly(pts, False))
             pts, v = _surf_poly(B, rows, [(k * 28 + 60, yC - 20), (k * 28 - 60, B.y_hip - 10)], dz=1)
             if v > 0.1: q.append(poly(pts, False))
-        if q: c.line(_multi(q), lw * 0.28, cl['top_sh'], 150)
+        if q:
+            torso, _L, _R = _torso_path(B, rows)
+            with c.clip(torso): c.line(_multi(q), lw * 0.28, cl['top_sh'], 150)
 
 
 def _front_cardi_brown(c, sp, B, rows, P, det, t):
@@ -1866,14 +1903,15 @@ def _p_receiver(c, det, t, P=None):
     """The kitchen wall phone's handset (cream plastic, 1980s): the earpiece toward -y, the mouthpiece toward +y, the
     coiled cord leaving the mouthpiece end (the scene draws the cord with draw_coil_cord between receiver_cord_end() and
     the base)."""
-    body = smooth([(-1.6, -7.5), (1.6, -7.5), (1.8, 7.5), (-1.8, 7.5)], True, 0.4)
-    ear = smooth([(-3.4, -11.5), (3.4, -11.5), (3.8, -7.0), (2.0, -5.6), (-2.0, -5.6), (-3.8, -7.0)], True, 0.7)
-    mouth = smooth([(-3.6, 5.8), (3.6, 5.8), (3.4, 11.0), (0.0, 12.2), (-3.4, 11.0)], True, 0.7)
+    o = 5.0                                      # the hand holds it nearer the earpiece end
+    body = smooth([(-1.6, -7.5 + o), (1.6, -7.5 + o), (1.8, 7.5 + o), (-1.8, 7.5 + o)], True, 0.4)
+    ear = smooth([(-3.4, -11.5 + o), (3.4, -11.5 + o), (3.8, -7.0 + o), (2.0, -5.6 + o), (-2.0, -5.6 + o), (-3.8, -7.0 + o)], True, 0.7)
+    mouth = smooth([(-3.6, 5.8 + o), (3.6, 5.8 + o), (3.4, 11.0 + o), (0.0, 12.2 + o), (-3.4, 11.0 + o)], True, 0.7)
     for p_ in (body, ear, mouth):
         c.fill(p_, '#e9e0c8'); c.fill(_crescent(p_, 0.6, 0.4), '#bfb398', 200); c.line(p_, c.lw * 0.6)
     if det >= 1:
-        c.line(_multi([oval(-1.2 + 1.2 * k, -9.2, 0.35, 0.35) for k in range(3)]), c.lw * 0.3, '#7a7058')
-        c.line(_multi([oval(-1.2 + 1.2 * k, 9.4, 0.35, 0.35) for k in range(3)]), c.lw * 0.3, '#7a7058')
+        c.line(_multi([oval(-1.2 + 1.2 * k, -9.2 + o, 0.35, 0.35) for k in range(3)]), c.lw * 0.3, '#7a7058')
+        c.line(_multi([oval(-1.2 + 1.2 * k, 9.4 + o, 0.35, 0.35) for k in range(3)]), c.lw * 0.3, '#7a7058')
 
 
 def _p_card(c, det, t, P=None, back=False):
@@ -2092,7 +2130,7 @@ EXPR.update({
     'warm': dict(smile=0.45, squint=0.15, brow_up=0.1),
     'calm_firm': dict(brow_angry=0.18, m_press=0.32, smile=0.05),
     'grief_still': dict(eye_open=0.84, brow_sad=0.7, smile=-0.3, still=0.5, wet=0.6),
-    'waiting': dict(eye_open=0.6, still=1.0, brow_sad=0.22, m_press=0.3, pupil=0.95),
+    'waiting': dict(eye_open=0.86, still=1.0, brow_sad=0.22, m_press=0.3, pupil=0.95),
     'brave': dict(m_press=0.6, brow_up=0.32, brow_sad=0.2, squint=0.22),
     'focused': dict(brow_angry=0.22, squint=0.15, m_press=0.25),
     'fierce_kind': dict(brow_angry=0.42, squint=0.12, m_press=0.4, smile=0.08),
@@ -2484,3 +2522,571 @@ def draw_later_far(pen, x, y_floor, height, pose, t=0.0, lamp=(0.0, 0.0), flicke
     side = 1 if lamp[0] >= x else -1
     draw_silhouette(pen, 'later', x, y_floor, height, pose, t=t, colr=colr, a=0.97, rim='#cfe0ff', rim_a=0.55 * clamp(flicker),
                     rim_side=side)
+
+
+# ====================================================================================================== ACTING: PEOPLE
+def _p_receiver_ear(self, t0, t1=None, side=1, tilt_out=0.0, fade=0.5, tilt=6.0, toward=None):
+    """The wall phone's handset at the ear (prop 'receiver': earpiece at the ear, mouthpiece toward the mouth).
+    tilt_out 0..1 tips it away from the ear; with toward=(other actor) the handset comes out to a point between her ear
+    and theirs, so they can hear too (Ruth, rule 1: 'she tilted it so I could hear')."""
+    pre = 'hl_' if side > 0 else 'hr_'
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade, ease)
+        if w <= 0: return
+        k = clamp(tilt_out) if toward is None else 0.0
+        self._arm(P, side, w, 30.0 * k, -20.0 + 30.0 * k, 40.0 + 60.0 * k, 'grip', up=1.0, prop='receiver')
+        setattr(P, pre + 'ear', max(getattr(P, pre + 'ear'), w * (1.0 - 0.45 * k)))
+        setattr(P, pre + 'rot', getattr(P, pre + 'rot') - side * 28.0 * k * w)
+        P.h_tilt += tilt * side * w * (1.0 - k)
+        P.shrug += 0.06 * w
+    self._add(t0, None if t1 is None else t1 + fade, fn)
+    if toward is not None and tilt_out > 0:
+        def tgt(t):
+            ax, ay = self.where(t, 'head', post=False); bx, by = toward.where(t, 'head', post=False)
+            return ax + (bx - ax) * 0.38, ay + (by - ay) * 0.38 + 6.0 * self.height / 1000.0
+        def fn2(P, t):
+            w = _env(t, t0, t1, fade, fade, ease) * clamp(tilt_out)
+            if w > 0: setattr(P, pre + 'ear', getattr(P, pre + 'ear') * (1.0 - w))
+        self._add(t0, None if t1 is None else t1 + fade, fn2)
+        self.reach_to(t0, side, tgt, t1=t1, dur=fade + 0.3, z=60.0, contact='grip', shape='grip', fade=fade, prop='receiver',
+                      rot=-side * 70.0)
+        self.look_at(t0 + 0.2, (toward, 'eyes'), t1=t1, dur=0.5)
+    return self
+
+
+def receiver_cord_end(actor, t, side=1):
+    """Design point of the mouthpiece end of the handset held in a hand (draw_coil_cord from here to the phone base)."""
+    gx, gy = actor.grip_point(t, side, 'receiver')
+    wx, wy = actor.where(t, 'wrist_l' if side > 0 else 'wrist_r')
+    d = math.hypot(gx - wx, gy - wy) or 1.0
+    ppc = actor.height / (actor.sp.get('m', 1.7) * 100.0)
+    return gx - (gx - wx) / d * 16.0 * ppc, gy - (gy - wy) / d * 16.0 * ppc
+
+
+def _p_tap(self, t0, side, target, n=3, gap=0.3, z=0.0, kind='card_tap'):
+    """Tap a target with the index finger n times (Grandma tapping the yellow card inside the medicine cabinet)."""
+    t_in = t0 + 0.55
+    times = [t_in + i * gap for i in range(n)]
+    t_end = times[-1] + 0.35
+    def tgt(t):
+        x, y = _target_xy(target, t)
+        v = 0.0
+        for tk in times:
+            d = t - tk
+            if -0.14 < d < 0.0: v = max(v, 1.0 + d / 0.14)
+            elif 0.0 <= d < 0.1: v = max(v, 1.0 - d / 0.1)
+        return x, y - 8.0 * (1.0 - v) * (self.height / 700.0)
+    self.reach_to(t0, side, tgt, t1=t_end, dur=0.55, z=z, contact='tips', shape='point', fade=0.5)
+    return [self._ev(tk, kind, -2.0, pan=0.0) for tk in times]
+
+
+def _p_pull_cord(self, t0, side, jack, dur=1.6, z=20.0):
+    """Reach down to the phone jack low on the wall, grip the cord and yank it out ('cord_yank'), the hand flying back."""
+    ty = t0 + 0.65 * dur
+    ppc = self.height / (self.sp.get('m', 1.7) * 100.0)
+    def tgt(t):
+        x, y = _target_xy(jack, t)
+        k = ease_out_cubic(prog(t, ty, ty + 0.18))
+        return x - 28.0 * ppc * k * (1 if self.at(t0).turn < 0 else -1), y - 6.0 * ppc * k
+    self.reach_to(t0, side, tgt, t1=ty + 0.35, dur=0.55 * dur, z=z, contact='grip', shape='grip', fade=0.6)
+    return [self._ev(ty, 'cord_yank', 0.0, pan=0.0)]
+
+
+def _p_strike_match(self, t0, side=1, dur=1.4):
+    """Strike a kitchen match on its box in front of the chest: the box in one hand, the match in the other, one quick
+    stroke and it lights ('match_strike'); the lit match stays in the hand (prop 'match_lit'). Returns the strike time."""
+    ts = t0 + 0.6 * dur
+    box_side = -side
+    self.hold_prop('matchbox', box_side, t0, ts + 0.9)
+    self.hold_prop('match', side, t0, ts)
+    self.hold_prop('match_lit', side, ts, None)
+    self.reach(t0, ts + 0.9, box_side, out=-40.0, down=150.0, fwd=170.0, shape='grip', up=0.0, fade=0.4)
+    def fn(P, t):
+        w = _env(t, t0, None, 0.4, 0.4)
+        stroke = ease_in_out(prog(t, ts - 0.12, ts + 0.06))
+        self._arm(P, side, w, -30.0 + 70.0 * stroke, 140.0 - 25.0 * stroke, 185.0, 'pinch', up=0.0)
+    self._add(t0, None, fn)
+    return ts, [self._ev(ts, 'match_strike', 0.0, pan=0.0)]
+
+
+def _p_slide_under(self, t0, side, track, door_x, floor_y, dur=2.2):
+    """Kneel at the door and slide a paper under it: the hand brings the held PropTrack down to the floor at the door and
+    pushes it through; it is gone under the door at the end ('paper_slide'). Returns the time it is gone."""
+    self.kneel_down(t0, 0.8, knees=0)
+    ppc = self.height / (self.sp.get('m', 1.7) * 100.0)
+    tg = t0 + dur
+    def tgt(t):
+        u = ease_in_out(prog(t, t0 + 0.9, tg))
+        dirn = 1.0 if door_x >= self.x0 else -1.0
+        return door_x - dirn * (18.0 - 26.0 * u) * ppc, floor_y - 3.0 * ppc
+    self.reach_to(t0 + 0.3, side, tgt, t1=tg, dur=0.7, z=40.0, contact='grip', shape='flat', fade=0.6, prop=track.name)
+    track.gone(tg)
+    pre = 'hl_' if side > 0 else 'hr_'
+    self._add(tg, None, lambda P, t: setattr(P, pre + 'prop', None) if t >= tg else None, late=True)
+    return tg, [self._ev(t0 + 1.0, 'paper_slide', 0.0, pan=0.0)]
+
+
+def _p_write_marker(self, t0, t1, side, paper, z=60.0):
+    """Write on a paper (held against the door, a clipboard) with a marker: small, careful letter strokes, line by line;
+    'marker_write' events."""
+    ppc = self.height / (self.sp.get('m', 1.7) * 100.0)
+    def tgt(t):
+        x, y = _target_xy(paper, t)
+        u = max(0.0, t - t0)
+        line = int(u / 1.6)
+        ph = (u % 1.6) / 1.6
+        return x + (-6.0 + 12.0 * ph) * ppc + 0.8 * ppc * math.sin(u * 19.0), y + (line % 4) * 2.2 * ppc + 0.6 * ppc * math.sin(u * 23.0)
+    self.reach_to(t0, side, tgt, t1=t1, dur=0.5, z=z, contact='tips', shape='grip', fade=0.5, prop='marker')
+    self.hold_prop('marker', side, t0 - 0.5, t1 + 0.5)
+    evs, tt = [], t0 + 0.5
+    while tt < t1:
+        evs.append(self._ev(tt, 'marker_write', -4.0, pan=0.0)); tt += 0.8
+    return evs
+
+
+def _p_take_pulse(self, t0, side, other, other_side=1, t1=None, dur=0.7):
+    """Two fingers on the inside of the other's wrist, the other arm up in front with her watch, eyes on the watch
+    (Doctor Halverson counting Milo's pulse)."""
+    part = 'wrist_l' if other_side > 0 else 'wrist_r'
+    self.reach_to(t0, side, (other, part), t1=t1, dur=dur, z=50.0, contact='tips', shape='point', fade=0.5)
+    self.reach(t0 + 0.2, t1, -side, out=-30.0, down=140.0, fwd=190.0, shape='relaxed', up=0.0, fade=0.5)
+    self.look_at(t0 + 0.5, (self, 'wrist_l' if -side > 0 else 'wrist_r'), t1=t1, dur=0.35)
+    return self
+
+
+def _p_carry(self, t0, child, t1=None, fade=0.6):
+    """Carry a child in front: the near arm under the child's seat, the far arm round its back; the child's arms on the
+    carrier's shoulders, legs dangling, head on the shoulder. Draw with draw_carry_child (it places the child)."""
+    self._carry = child
+    for side, part, sh in ((1, 'hip', 'grip'), (-1, 'chest', 'open')):
+        self.reach_to(t0, side, (child, part), t1=t1, dur=fade, z=40.0, contact='palm', shape=sh, fade=fade, lean=False)
+    child._carried_by = self
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        P.sit = max(P.sit, 0.85 * w); P.crouch = 0.0
+        for side in (-1, 1): child._arm(P, side, w, 40.0, 90.0, 160.0, 'relaxed', up=0.0)
+        P.h_tilt += 14.0 * w; P.h_nod += 0.2 * w
+        P.lid_l = max(P.lid_l, 0.4 * w); P.lid_r = max(P.lid_r, 0.4 * w)
+    child._add(t0, None if t1 is None else t1 + fade, fn)
+    return self
+
+
+def carry_anchor(carrier, t):
+    """Design (x, y_feet) to draw a carried child so its seat sits in the carrier's arms against the chest."""
+    cx, cy = carrier.where(t, 'chest', post=False)
+    bx, by = carrier.where(t, 'belly', post=False)
+    P = carrier._raw(t, False)
+    face = math.sin(P.turn * PI / 2)
+    s = carrier.height / 1000.0
+    return cx + face * 120.0 * s, by + 40.0 * s
+
+
+def draw_carry_child(pen, carrier, child, t, light=None, clight=None):
+    """Draw a child carried in front (carrier.carry(t0, child)): the carrier with its far arm, the child sitting in its
+    arms (child placed at carry_anchor), then the carrier's near arm over the child."""
+    x, y = carry_anchor(carrier, t)
+    ch_h = child.height
+    # the child's figure: seated pose, its seat at the anchor
+    child.place(x, y + 0.36 * ch_h * 0.0)
+    Pc = child.at(t)
+    Pcar = carrier.at(t)
+    near = 1 if math.sin(Pcar.turn * PI / 2) <= 0 else -1
+    Pa = Pcar.copy()
+    draw(pen, carrier.who, carrier.x0, carrier.y0, carrier.height, Pa, light=light, t=t)
+    draw(pen, child.who, x, y, ch_h, Pc, light=clight or light, t=t)
+    draw_arm(pen, carrier.who, near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
+
+
+def _p_drive(self, t0, t1, g10, g2, fade=0.5, steer=None):
+    """Both hands on the steering wheel at ten and two (grip points from draw_steering_wheel; callables follow a turning
+    wheel), small corrections, eyes ahead."""
+    self.reach_to(t0, 1, g2, t1=t1, dur=fade, z=120.0, contact='grip', shape='grip', fade=fade)
+    self.reach_to(t0, -1, g10, t1=t1, dur=fade, z=120.0, contact='grip', shape='grip', fade=fade)
+    return self
+
+
+def _p_rock(self, t0, t1=None, amount=1.0, rate=0.45, fade=0.8, hum=True):
+    """Rock back and forth sitting on the floor with a child in the lap (Grandma on the kitchen floor), humming."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade) * amount
+        if w <= 0: return
+        ph = math.sin(2 * PI * rate * (t - t0))
+        P.lean += 0.12 * w * ph; P.h_nod += 0.06 * w * ph; P.h_tilt += 3.0 * w * ph
+        P.sway += 4.0 * w * ph
+    self._add(t0, None if t1 is None else t1 + fade, fn)
+    if hum: self.hum(t0, t1, 0.8, fade, rate * 2.2)
+    return self
+
+
+def _p_breathe_fast(self, t0, t1=None, rate=0.9, fade=0.8):
+    """Deep, fast breathing (like running in his sleep): the chest heaves, the shoulders lift on each breath, the mouth
+    opens a little on the in-breath. 'breath_fast' events on each breath."""
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        ph = 0.5 + 0.5 * math.sin(2 * PI * (t - t0) / rate)
+        P.breath = lerp(P.breath, 0.05 + 1.25 * ph, w)
+        P.shrug += 0.22 * w * ph; P.m_open = max(P.m_open, 0.16 * w * ph); P.h_nod -= 0.04 * w * ph
+    self._add(t0, None if t1 is None else t1 + fade, fn)
+    evs, tt = [], t0
+    end = t1 if t1 is not None else t0 + 8.0
+    while tt < end:
+        evs.append(self._ev(tt + rate * 0.25, 'breath_fast', -6.0, pan=0.0)); tt += rate
+    return evs
+
+
+POSE_DEFAULTS.update(bottle_tilt=0.0, drink_lvl=0.6)
+_held_prop_prev = _held_prop
+
+
+def _held_prop(c, sp, prop, wx, wy, hang, hs, side, det, t, P, front_part=False):
+    if prop in ('cell', 'phone') and _ear_weight(P, side) > 0.5:
+        if front_part: return
+        k = 10.0 / sp.get('m', 1.7); hk = sp['body'].get('hand', 1.0)
+        reach = 30.0 * hs * hk
+        gx_, gy_ = wx + math.sin(math.radians(-hang)) * reach, wy + math.cos(math.radians(hang)) * reach
+        pc = c.sub(gx_, gy_, -side * 12.0, k); pc.lw = c.lw / k
+        r = rrect(-3.5, -9.5, 7.0, 15.0, 1.0)
+        pc.fill(r, '#17181d'); pc.grad(r, -3.5, 0, 3.5, 0, [(0, '#3a3d47', 255), (0.4, '#1c1d23', 255), (1, '#0b0b0e', 255)])
+        pc.line(r, pc.lw * 0.8)
+        return
+    if prop == 'bottle' and abs(getattr(P, 'bottle_tilt', 0.0)) > 0.5 and not front_part:
+        k = 10.0 / sp.get('m', 1.7); hk = sp['body'].get('hand', 1.0)
+        reach = 36.0 * hs * hk
+        gx_, gy_ = wx + math.sin(math.radians(-hang)) * reach, wy + math.cos(math.radians(hang)) * reach
+        pc = c.sub(gx_, gy_, P.bottle_tilt, k); pc.lw = c.lw / k
+        _p_bottle(pc, det, t, P); return
+    return _held_prop_prev(c, sp, prop, wx, wy, hang, hs, side, det, t, P, front_part)
+
+
+def _p_drink(self, t0, t1, side=1, gulps=4):
+    """Drink from the water bottle: it comes up to the mouth, tips up, the head tips back, gulps ('gulp' events)."""
+    self.hold_prop('bottle', side, t0 - 1.0, None)
+    self.reach_to(t0, side, (self, 'mouth'), t1=t1, dur=0.6, z=90.0, contact='grip', shape='grip', fade=0.6, prop='bottle')
+    def fn(P, t):
+        w = _env(t, t0 + 0.4, t1, 0.5, 0.5)
+        if w <= 0: return
+        P.h_nod -= 0.35 * w; P.bottle_tilt = -side * 110.0 * w
+        P.drink_lvl = 0.6 - 0.5 * clamp((t - t0) / max(0.1, t1 - t0))
+        P.m_open = max(P.m_open, 0.2 * w)
+    self._add(t0, t1 + 0.6, fn)
+    return [self._ev(t0 + 0.8 + i * 0.5, 'gulp', -6.0, pan=0.0) for i in range(gulps) if t0 + 0.8 + i * 0.5 < t1]
+
+
+def _p_dial(self, t0, side, keypad, n=10, gap=0.32):
+    """Dial a phone: the index finger presses a keypad target n times ('dial_beep' events)."""
+    return _p_tap(self, t0, side, keypad, n, gap, z=80.0, kind='dial_beep')
+
+
+def _p_gone(self, t0, fade=2.5, tilt=9.0):
+    """Gently gone (Grandpa at sunrise, 1979): the eyes close, the head settles a little to one side, the breathing stops,
+    nothing moves any more. Nothing frightening: he looks asleep in his chair."""
+    def fn(P, t):
+        w = ease_in_out(prog(t, t0, t0 + fade))
+        if w <= 0: return
+        P.lid_l = max(P.lid_l, w); P.lid_r = max(P.lid_r, w)
+        P.still = max(P.still, w); P.life *= (1.0 - w); P._noblink = max(getattr(P, '_noblink', 0.0), w)
+        P.h_tilt += tilt * w; P.h_nod += 0.14 * w; P.breath = lerp(P.breath, 0.5, w)
+        P.m_open = lerp(P.m_open, 0.04, w); P.smile *= (1.0 - w); P.brow_sad *= (1.0 - w); P.brow_up *= (1.0 - w)
+        P.tremble *= (1.0 - w)
+    return self._add(t0, None, fn)
+
+
+def _p_glasses(self, t0, on=True, side=1, dur=0.9):
+    """Put the reading glasses on (on=True) or let them drop onto their chain: the hand goes to the temple, the glasses
+    move at the middle of the gesture."""
+    tm = t0 + dur * 0.5
+    self.reach_to(t0, side, (self, 'eye_l' if side > 0 else 'eye_r'), t1=tm + 0.1, dur=dur * 0.45, z=60.0, contact='tips',
+                  shape='pinch', fade=dur * 0.45)
+    def fn(P, t):
+        P.specs = (1.0 if t >= tm else 0.0) if on else (0.0 if t >= tm else 1.0)
+    return self._add(t0 - 5.0, None, fn, late=True)
+
+
+def _p_sag(self, t0, t1=None, amount=1.0, fade=0.6):
+    """The jeans slip down (Milo has lost weight): pose.sag."""
+    return self.set(t0, t1, fade, sag=amount)
+
+
+def _p_hold_up(self, t0, t1=None, side=1, fade=0.4):
+    """A hand grabs the waistband to hold the falling jeans up."""
+    tg = lambda t: (lambda h: (h[0] + 18.0 * self.height / 1000.0 * side, h[1] - 10.0 * self.height / 1000.0))(self.where(t, 'hip', post=False))  # noqa: E731
+    return self.reach_to(t0, side, tg, t1=t1, dur=0.4, z=70.0, contact='grip', shape='grip', fade=fade)
+
+
+def _p_hand_on(self, t0, part='chest', t1=None, side=-1, dur=0.8, z=115.0, fade=0.6, shape='open'):
+    """A hand pressed to the body: 'chest' (chest pain), 'belly' (my tummy hurts), 'side' (holding her side)."""
+    def tg(t):
+        if part == 'side':
+            hx, hy = self.where(t, 'belly', post=False)
+            return hx - side * 40.0 * self.height / 1000.0, hy - 20.0 * self.height / 1000.0
+        return self.where(t, part, post=False)
+    return self.reach_to(t0, side, tg, t1=t1, dur=dur, z=z, contact='palm', shape=shape, fade=fade)
+
+
+def _p_ticket_hold(self, t0, text_='', t1=None, side=1, lap=True):
+    """Hold a paper waiting-room ticket in the lap (text_ '' = the ink long gone: Grandpa's; 'RUTH' at sunrise)."""
+    def fn(P, t):
+        if t >= t0 and (t1 is None or t < t1): P.dl_ticket = text_
+    self._add(t0, t1, fn, late=True)
+    self.hold_prop('ticket', side, t0, t1)
+    if lap: self.reach_to(t0, side, (self, 'lap'), t1=t1, dur=0.6, z=90.0, contact='grip', shape='grip', fade=0.5, prop='ticket')
+    return self
+
+
+Acting.receiver_to_ear = _p_receiver_ear
+Acting.tap = _p_tap
+Acting.pull_cord = _p_pull_cord
+Acting.strike_match = _p_strike_match
+Acting.slide_under_door = _p_slide_under
+Acting.write_marker = _p_write_marker
+Acting.take_pulse = _p_take_pulse
+Acting.carry = _p_carry
+Acting.drive = _p_drive
+Acting.rock = _p_rock
+Acting.breathe_fast = _p_breathe_fast
+Acting.drink = _p_drink
+Acting.dial = _p_dial
+Acting.gone = _p_gone
+Acting.glasses = _p_glasses
+Acting.sag = _p_sag
+Acting.hold_up = _p_hold_up
+Acting.hand_on = _p_hand_on
+
+
+_HAND_OVER_SHAPE = 'cover'
+_COVERC = {}
+
+
+def _cover_geom(side):
+    """'cover': the relaxed hand with its fingers closed together (a hand laid over a mouth or eyes). The crevices
+    between the fingers are filled in up to just short of the tips, so the outline runs round the outside only and the
+    finger joins are thin skin-coloured lines: at film scale the spread-finger outline met in the gaps and read black."""
+    if side not in _COVERC:
+        G = dict(_hand_cached('relaxed', side, 0.0))
+        th = -side
+        cl = []                                     # the relaxed fingers' centre lines (as _hand_geom builds them)
+        for off, lens, w, spl in _FING:
+            cl.append(_finger_pts(th * off * 9.6, 31.0 - abs(off) * 2.0, th * spl * 0.4, lens, 0.0, -th * spl * 0.12))
+        closed = G['union']
+        for a_, b_ in zip(cl[:-1], cl[1:]):         # fill the gap between neighbours from the knuckles to the tips
+            closed = union(closed, poly(list(a_) + list(reversed(b_)), True))
+        G['closed'] = closed
+        G['shade_c'] = _crescent(closed, -5, -2.5)
+        _COVERC[side] = G
+    return _COVERC[side]
+
+
+_draw_hand_prev = _draw_hand
+
+
+def _draw_hand(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring=False, press=0.0, t=0.0):
+    if shape != 'cover':
+        return _draw_hand_prev(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring, press, t)
+    hc = c.sub(x, y, angle, scale * sp['body'].get('hand', 1.0))
+    G = _cover_geom(side)
+    u = G['closed']
+    hc.fill(u, skin)
+    hc.fill(G['shade_c'], sh, 150)
+    if det >= 1:
+        with hc.clip(u):
+            hc.line(G['seps'], hc.lw * 0.32, sp['skin_dp'], 120)
+        nailc = mix(skin, '#ffffff', 0.38)
+        for p in G['nails']:
+            hc.fill(p, nailc, 200); hc.line(p, hc.lw * 0.22, sp['skin_dp'], 170)
+    hc.line(u, hc.lw * 0.9)
+    if ring and G['ring'] is not None:
+        _ring_band(hc, G['ring'], det, t)
+
+
+
+
+def _p_hand_over(self, t0, side, other, part='eyes', t1=None, dur=0.7, z=60.0, fade=0.5):
+    """Lay a hand over another actor's eyes / mouth / head, the fingers closed and cupped ('relaxed'): spread 'open' or
+    'flat' fingers show the face through gaps narrower than their outlines, and at film scale read as a black glove."""
+    return self.reach_to(t0, side, (other, part), t1=t1, dur=dur, z=z, contact='palm', shape=_HAND_OVER_SHAPE, fade=fade)
+
+
+Acting.hand_over = _p_hand_over
+Acting.ticket_hold = _p_ticket_hold
+
+
+# ---------------------------------------------------------------------------------------------------- fixes after the clip review
+_draw_bust_prev = draw_bust
+
+
+def draw_bust(pen, who, cx, cy, scale=1.0, pose=None, detail=None, light=None, t=None):
+    """Close-up. Doctor Later: scale 1 = his face (chin to the top of the face, 21 cm) 600 design px tall, its centre at
+    (cx, cy); the cone rises above it and the rest of him is drawn too (the frame crops it). Everyone else as before."""
+    if not CAST[who].get('later'): return _draw_bust_prev(pen, who, cx, cy, scale, pose, detail, light, t)
+    P = _as_pose(pose); t = P.t if t is None else t
+    s = 600.0 * scale / (2 * _DL_FACE[1] * _DLU)          # design px per body unit
+    hx, hy = _later_pts(P)['head']
+    c = Ctx(pen, skia.Matrix(), _lw_for(600.0 * scale)).sub(cx - hx * s, cy - hy * s, 0.0, s)
+    det = _auto_detail(pen, 600.0 * scale) if detail is None else detail
+    return _later_figure(c, who, P, det, t, light)
+
+
+def later_bust_place(actor, t, cx, cy, scale=1.0):
+    """(x, y_floor, height) that draw() would need to put Doctor Later's face where draw_bust(cx, cy, scale) puts it (use
+    it to stage targets for a close-up in the same coordinates)."""
+    P = actor.at(t)
+    s = 600.0 * scale / (2 * _DL_FACE[1] * _DLU)
+    hx, hy = _later_pts(P)['head']
+    return cx - hx * s - P.dx, cy - hy * s - P.dy, 1000.0 * s
+
+
+_skirts3_doc_prev = _skirts3
+
+
+def _skirts3(c, sp, B, P, det, t, rows):
+    """Seated in a skirt (Ruth in the armchair, at the cardiologist; 1979 Ruth): the skirt drapes over both thighs to
+    the knees and hangs a little below them, so neither leg shows through beside it."""
+    o = sp['outfit']
+    st = clamp(B.sit + 0.8 * B.kneel)
+    if o in ('cardi_ruth', 'housecoat') and st > 0.25:
+        cl = sp['cloth']; b = sp['body']
+        colr, colsh = (cl['skirt'], cl['skirt_sh']) if o == 'cardi_ruth' else (cl['top'], cl['top_sh'])
+        pts = []
+        for side in (-1, 1):
+            X, Y, s_, _ = B.p3(side * b['wa'] * 1.02, B.y_wa + 10, 0)
+            pts.append((X, Y))
+            H, K, A, pitch = _leg_chain(sp, B, P, side)
+            lw = b['leg'][0] * 0.9
+            for dx, dy, dz in ((side * lw, 0.0, 0.0), (side * lw, -lw * 0.6, 0.0), (side * lw, 70.0, 0.0), (-side * lw * 0.5, 70.0, 0.0)):
+                Q = K + np.array([dx, dy, dz])
+                X, Y, _, _ = B.p3(Q[0], Q[1] - B.bob, Q[2], upper=False)
+                pts.append((X, Y))
+            X, Y, _, _ = B.p3(H[0] + side * lw, H[1] - B.bob, H[2], upper=False)
+            pts.append((X, Y))
+        sk = smooth(_hull(pts), True, 0.5)
+        c.fill(sk, colr); _cloth_shade(c, sk, colsh, 150, 1.0, 20)
+        if det >= 1: c.texture(sk, 'fabric', 0.12, 0.6)
+        c.line(sk, c.lw)
+        return
+    return _skirts3_doc_prev(c, sp, B, P, det, t, rows)
+
+
+def carry_anchor(carrier, t):
+    """Design point where a carried child's hips sit: in the carrier's arms, against the front of the belly."""
+    bx, by = carrier.where(t, 'belly', post=False)
+    P = carrier._raw(t, False)
+    face = math.sin(P.turn * PI / 2)
+    s = carrier.height / 1000.0
+    return bx + face * 95.0 * s, by + 25.0 * s
+
+
+def draw_carry_child(pen, carrier, child, t, light=None, clight=None):
+    """Draw a child carried in front (carrier.carry(t0, child)): the child's hips placed in the carrier's arms
+    (carry_anchor), the carrier with its far arm, the child, then the carrier's near arm over the child."""
+    ax, ay = carry_anchor(carrier, t)
+    child.place(0.0, 0.0)
+    hx, hy = child.where(t, 'hip', post=False)
+    child.place(ax - hx, ay - hy)
+    Pc = child.at(t)
+    Pcar = carrier.at(t)
+    near = 1 if math.sin(Pcar.turn * PI / 2) <= 0 else -1
+    draw(pen, carrier.who, carrier.x0, carrier.y0, carrier.height, Pcar, light=light, t=t)
+    draw(pen, child.who, child.x0, child.y0, child.height, Pc, light=clight or light, t=t)
+    draw_arm(pen, carrier.who, near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
+
+
+# ====================================================================================================== self-test
+def _selftest_doctor():
+    """The doctor film's checks: every new id draws in every view (full and close), Doctor Later in every perch, tape
+    stage and face; his feet stay on the floor; his pinch lands on far targets (the arm unfolds) and his fingers close on a
+    wrist; the ticket tears into his fingers; the tape comes off strip by strip; he never lip-syncs; the people's new
+    contacts land (the handset, a hand over a mouth, two fingers on a wrist, a seat, a perch)."""
+    out = []
+    set_render_size(480, 270)
+    surf = skia.Surface(CFG.rw, CFG.rh); pen = Pen(surf.getCanvas()); surf.getCanvas().scale(CFG.k, CFG.k)
+    people = [w for w in DOCTOR_CAST if w != 'later']
+    for who in people:
+        for yaw in (0.0, 0.5, -0.5, 1.0, 1.5, 2.0):
+            draw(pen, who, 960, 1000, 700, Pose(turn=yaw, sit=0.6 if yaw == 1.0 else 0.0, seat=250.0 if yaw == 1.0 else 0.0))
+            draw_bust(pen, who, 960, 540, 0.6, Pose(h_turn=yaw))
+    for kind in ('plastic', 'armchair', 'bench', 'car', 'low'):
+        for yaw in (0.0, 0.5, -0.5, 1.0, 1.5, 2.0):
+            a = Acting('later', seed=1, height=height_px('later', 300.0)).place(960, 1000)
+            a.perch(None, kind); a.face(yaw)
+            if kind == 'car': a.bend_to_roof(1000 - 1.15 * 300)
+            draw(pen, 'later', 960, 1000, a.height, a.at(1.0), t=1.0)
+            assert a.foot_gap(1.0) < 0.5, ('later feet', kind, yaw, a.foot_gap(1.0))
+    for tp in (1.0, 0.7, 0.4, 0.0):
+        for fc in range(6):
+            draw_bust(pen, 'later', 960, 540, 0.3, Pose(dl_tape=tp, dl_face=float(fc)), t=1.0)
+    for nm in ('receiver', 'card', 'card_back', 'match', 'match_lit', 'matchbox', 'note', 'marker', 'ticket', 'bottle', 'mug', 'cup', 'vial',
+               'cell', 'cell_glucose', 'keys'):
+        draw_prop3(pen, nm, 960, 540, 5.0)
+    out.append('%d people draw in 6 views full and close; Doctor Later in 5 perches x 6 views (feet on the floor in every one), '
+               '4 tape stages x 6 faces; 16 props' % len(people))
+    # his pinch lands on targets near and far across the room (the arm unfolds)
+    errs = []
+    for tg in ((1300, 640), (1700, 700), (2200, 600), (1100, 900)):
+        a = Acting('later', seed=2, height=height_px('later', 300.0)).place(800, 1000)
+        a.perch(None, 'armchair', hands=('lap', 'floor')); a.face(0.5)
+        a.reach_far(0.0, -1, tg, dur=0.3, shape='pinch')
+        tx, ty = a.where(1.0, 'tips_r')
+        errs.append(math.hypot(tx - tg[0], ty - tg[1]))
+    assert max(errs) < 25.0, ('later reach', errs)
+    out.append('reach_far: his pinch within %.1f px of 4 targets up to 1400 px away (the arm unfolds)' % max(errs))
+    # the ticket tears into his fingers; the tape comes off strip by strip; he never moves his mouth
+    a = Acting('later', seed=3, height=height_px('later', 300.0)).place(800, 1000)
+    a.perch(None, 'armchair'); tt, ev = a.tear_ticket(0.0, -1, (1500, 640), 'MILO', dur=1.0)
+    assert a.at(tt - 0.05).hr_prop != 'ticket' and a.at(tt + 0.05).hr_prop == 'ticket' and ev[0]['name'] == 'ticket_tear'
+    ev = a.loosen_tape(3.0, 6.0, 1.0, 0.4)
+    tps = [a.at(t).dl_tape for t in np.arange(2.5, 7.0, 0.25)]
+    assert all(tps[i] >= tps[i + 1] - 1e-6 for i in range(len(tps) - 1)) and tps[0] > 0.99 and abs(tps[-1] - 0.4) < 0.05
+    assert sum(1 for e in ev if e['name'] == 'tape_peel') >= 10
+    a.talk([(7.0, 8.0, 'Take a seat. It can wait.')], env=None, words=None)
+    assert max(a.at(t).m_open for t in np.arange(7.0, 8.0, 0.05)) < 0.02
+    out.append('tear_ticket: the ticket appears in his fingers at the tear; loosen_tape: %d strips, monotonic; no lip sync' %
+               sum(1 for e in ev if e['name'] == 'tape_peel'))
+    # his fingers close on the narrator's wrist
+    n = Acting('narr14', seed=4, height=height_px('narr14', 300.0)).place(1300, 1000); n.face(-0.6)
+    n.reach(-1.0, None, 1, out=40.0, down=150.0, fwd=200.0, shape='open', up=0.0, fade=0.01)
+    a = Acting('later', seed=5, height=height_px('later', 300.0)).place(800, 1000); a.perch(None, 'armchair'); a.face(0.5)
+    a.take_wrist(0.0, -1, n, 1, dur=0.4)
+    tx, ty = a.where(1.0, 'hand_r'); wx, wy = n.where(1.0, 'wrist_l')
+    assert math.hypot(tx - wx, ty - wy) < 25.0, ('wrist', tx, ty, wx, wy)
+    out.append('take_wrist: his palm %.1f px from the narrator\'s wrist, the fingers wrapped round it' % math.hypot(tx - wx, ty - wy))
+    # look_at: his head turns slowly toward the target
+    a = Acting('later', seed=6, height=height_px('later', 300.0)).place(800, 1000); a.perch(None, 'plastic'); a.face(0.0)
+    a.look_at(0.0, (1600, 500), dur=0.6)
+    assert a.at(2.0).h_turn > 0.25
+    # people: the handset comes off the wall phone without a jump; Ruth's hand lands on Milo's mouth; two fingers on a wrist
+    r = Acting('ruth', seed=7, height=height_px('ruth', 380.0)).place(900, 1000); r.face(0.5)
+    rec = PropTrack('receiver', 1080, 1000 - 1.45 * 380 + 9 * 3.8, 3.8)
+    tc = r.pick_up(rec, 0.3, side=1, dur=1.0)
+    b0, b1 = rec.pos(tc - 1e-3), rec.pos(tc + 1e-3)
+    assert math.hypot(b1[0] - b0[0], b1[1] - b0[1]) < 10.0, ('receiver jump', b0, b1)
+    m = Acting('milo', seed=8, height=height_px('milo', 380.0)).place(1150, 1000); m.face(-0.5)
+    r2 = Acting('ruth', seed=9, height=height_px('ruth', 380.0)).place(900, 1000); r2.face(0.6); r2.hand_over(0.0, 1, m, 'mouth', dur=0.3)
+    hx, hy = r2.where(1.0, 'hand_l'); mx, my = m.where(1.0, 'mouth')
+    assert math.hypot(hx - mx, hy - my) < 12.0, ('hand over mouth', hx, hy, mx, my)
+    h = Acting('halverson', seed=10, height=height_px('halverson', 380.0)).place(850, 1000); h.face(0.55)
+    m2 = Acting('milo_sick', seed=11, height=height_px('milo', 380.0)).place(1100, 1000); m2.face(-0.5)
+    m2.reach(-1.0, None, 1, out=10.0, down=150.0, fwd=200.0, shape='relaxed', up=0.0, fade=0.01)
+    h.take_pulse(0.0, -1, m2, 1)
+    P = h.at(1.0); B = Body(h.sp, P); _, E, W = _arm_data(h.sp, B, P, -1)
+    ox, oy, s = _origin(h, P); X, Y, _, _ = B.p3(*W)
+    wx, wy = m2.where(1.0, 'wrist_l')
+    assert math.hypot(ox + X * s - wx, oy + Y * s - wy) < 80.0
+    out.append('people: handset pick-up jump %.1f px; Ruth\'s palm %.1f px from Milo\'s mouth; Halverson\'s fingers on his wrist'
+               % (math.hypot(b1[0] - b0[0], b1[1] - b0[1]), math.hypot(hx - mx, hy - my)))
+    # seats: Ruth in the armchair keeps her feet on the floor; a perched child's legs hang (no floor contact needed)
+    a = Acting('ruth', seed=12, height=height_px('ruth', 380.0)).place(900, 1000); a.face(0.6); a.sit_on(0.0, 1000 - 0.43 * 380, dur=0.8)
+    for t in np.arange(0.0, 2.0, 0.1): assert a.foot_gap(float(t)) < 0.5, ('ruth seat feet', t)
+    out.append('sit_on: Ruth into the armchair, feet on the floor all the way down')
+    for o_ in out: print(o_)
+    print('doctor film self-test ok')
+
+
+_selftest_bunny_full = _selftest
+
+
+def _selftest():
+    """python3 characters.py --selftest: the older films' checks, the Bunnyman film's checks, then the doctor film's."""
+    _selftest_bunny_full()
+    _selftest_doctor()
