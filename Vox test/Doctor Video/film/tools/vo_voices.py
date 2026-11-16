@@ -71,6 +71,10 @@ VOICES = {
                     eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
                     desc='the Waiting Man counting the pulse ("One... Two... Three..."): the same voice keeping the '
                          'count\'s own pitch movement (x1.00; flattened to x0.60-0.80 the drawn-out "Two" reads as "Till")'),
+    'W_count2': dict(f0=116.0, rng=1.00, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.70, under=(-17.0, 0.90),
+                     eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
+                     desc='the Waiting Man\'s "Two...": the same voice on the short falling "two" of "Rule number two:" '
+                          '(the take\'s own count rose like a question and read as "Till"), its vowel drawn out 1.7x'),
     'W_whisper': dict(f0=116.0, rng=0.55, smooth=0.06, alpha=0.93, breath=0.45, trem=None, jit=0.0, stretch=1.12, under=(-19.0, 0.90),
                       eq=[('peak', 160, 2.0, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-3.0,
                       desc='the Waiting Man as the voice in your head (outro): the same voice half-whispered (breath '
@@ -99,7 +103,7 @@ VARIANT = {
     'shh': 'G_hush', 'not_after_dark': 'G_hush', 'not_out_loud': 'G_hush',
     'until_morning': 'G_soft', 'g_wait1': 'G_soft', 'g_wait2': 'G_soft',
     'this_is_halverson': 'H_call', 'sorry_hour': 'H_call', 'results_back': 'H_call',
-    'count1': 'W_count', 'count2': 'W_count', 'count3': 'W_count',
+    'count1': 'W_count', 'count2': 'W_count2', 'count3': 'W_count',
     'w_nothing': 'W_whisper', 'w_bother': 'W_whisper', 'w_wait': 'W_whisper',
 }
 

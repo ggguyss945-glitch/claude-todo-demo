@@ -3,7 +3,7 @@
 Like align.py's ASR (Silero VAD chunks of at most ~16 s, 0.3 s padding), but every word also carries the TDT token
 durations, so a word has [text, start, end] (80 ms encoder resolution: use them as anchors, not as cut points).
 A rescue pass then decodes every stretch louder than -40 dB that no VAD chunk covered (the VAD skips an isolated short
-word or a quiet line: "don't" and the first "hop" of the cold open, the little girl's "Can I come home now?").
+word or a quiet line: the comment prompt's lone "Ask.").
 Writes {'words': [[w, t0, t1], ...], 'chunks': [[lo, hi, text], ...], 'sr_in': ..., 'duration': ...}.
 """
 import json, os, re, sys

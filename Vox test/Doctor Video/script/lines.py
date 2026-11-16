@@ -12,13 +12,18 @@ film/_work/narration/pacing_map.md) follows script/narration_en.txt word for wor
     1979"; the second "in 1979" is cut (the first one already falls to a full stop);
   - "She'd been having chest pain since midnight." (script: "chest pains"): both recognisers hear "pain"; the plural z
     is not in the take (it merges into "since"); kept;
-  - "We're calling at three in the morning": the take reduces "at" (recognisers: "calling it three"); kept.
+  - "We're calling at three in the morning": the take reduces "at" (recognisers: "calling it three"); kept;
+  - "The emergency doors open before we even reach them." (script: "opened ... reached"): the take says both verbs in
+    the present (both recognisers, every padding); kept, a vivid present that reads the same.
 TTS slips repaired in the edit (vo_edit.py FIXES; voice_report.md lists each one with its check):
   - "Nurse. Always notice." (script: "Nurses always notice."): "Nurse" + the "is" of "He is very, very patient" make
     "Nurses", run straight into "always";
   - "rah-rahs of plastic chairs" (script: "Rows of plastic chairs"): the long open "rah" goes, the line starts on the
     second syllable's r ("rows");
-  - "and I'm, s-, I'm sitting": the first "I'm" and the stray "s" go;
+  - "and I'm, s-, I'm sitting": the stray "s" and the second "I'm" go;
+  - the Waiting Man's count "Two..." (read as a rising "Two?", which in his voice reads as "Till") is the falling "two" of
+    "Rule number two:" drawn out;
+  - "Grandma never wrote those rules. She-": a false start of "She" right after "rules" is cut;
   - "don't get on. the Sleemith well" (script: "Sleep well."): the weak "uh" before the S is cut and the "mth" between
     "slee" and "well" becomes a p closure; the gap after "don't get on." is the pacing map's, not the take's 0.15 s;
   - the TTS breaths and noises the recognisers read as "Mm." (825.6), "Uh" (920.2) and "Mm-hmm." (942.3) are dropped
@@ -74,8 +79,8 @@ LINES = [
     L('N', "By sunrise, there would be a doctor knocking at our door, a stranger sitting in my grandfather's chair, and a phone that kept ringing with its cord pulled out of the wall.", '', 0.84, tag='tease'),
     L('N', "This is the night I learned the difference between a scary voice... and a dangerous one.", '', 1.30, tag='difference'),
     # ---------------------------------------------------------------- Ruth, 1979
-    L('N', "My grandmother, Ruth, didn't trust doctors.", '', 0.45, tag='ruth'),
-    L('N', "She wouldn't even say the word \"hospital.\"", '', 0.45, pace=1.25, tag='hospital_word'),
+    L('N', "My grandmother, Ruth, didn't trust doctors.", '', 0.44, tag='ruth'),
+    L('N', "She wouldn't even say the word \"hospital.\"", '', 0.44, pace=1.25, tag='hospital_word'),
     L('N', "She called it \"that place.\"", '', 0.85, tag='that_place'),
     L('N', "In 1979, my grandfather woke up at three in the morning with a pain in his chest.", '', 0.45, tag='g1979'),
     L('N', "Grandma called that place.", '', 0.45, pace=1.25, tag='called_that_place'),
@@ -139,7 +144,7 @@ LINES = [
     L('N', "Rough.", '', 0.40, tag='rough'),
     L('N', "Out of breath.", '', 0.40, tag='out_of_breath'),
     L('N', "Like she'd been running, or crying, or hadn't slept in a day.", '', 0.85, tag='running_crying'),
-    L('H', "This is Doctor Halverson.", '', 0.36, fx='phone', tag='this_is_halverson'),
+    L('H', "This is Doctor Halverson.", '', 0.35, fx='phone', tag='this_is_halverson'),
     L('H', "I'm so sorry about the hour.", '', 0.35, fx='phone', tag='sorry_hour'),
     L('H', "Milo's results came back, and I need you to...", '', 0.26, fx='phone', tag='results_back'),
     L('G', "Don't tell me,", '', 0.18, tag='dont_tell'),
@@ -199,7 +204,7 @@ LINES = [
     L('K', "And my tummy hurts.", '', 0.35, fx='whisper', tag='tummy'),
     L('K', "Grandma, my tummy really...", '', 0.30, fx='whisper', pace=0.80, tag='tummy_really'),
     L('N', "Grandma clapped her hand over his mouth.", '', 0.35, pace=1.30, tag='clapped'),
-    L('G', "Shh.", '', 0.36, fx='whisper', tag='shh'),
+    L('G', "Shh.", '', 0.35, fx='whisper', tag='shh'),
     L('G', "Not after dark.", '', 0.36, fx='whisper', tag='not_after_dark'),
     L('G', "Not out loud.", '', 1.00, fx='whisper', tag='not_out_loud'),
     L('N', "And from the dark hallway, very clearly, I heard a pen click.", '', 0.90, pace=1.20, tag='pen_click'),
@@ -250,7 +255,7 @@ LINES = [
     L('N', "Sitting in her car, in our driveway, at four in the morning, after a nineteen-hour shift.", '', 0.45, tag='car_waiting'),
     L('N', "Phone pressed to her ear.", '', 0.45, tag='phone_ear'),
     L('N', "Calling our house again, and again.", '', 0.85, tag='calling_again'),
-    L('N', "She wasn't leaving.", '', 0.45, tag='not_leaving'),
+    L('N', "She wasn't leaving.", '', 0.44, tag='not_leaving'),
     L('N', "She was never going to leave.", '', 0.90, tag='never_leave'),
     L('N', "And at the end of our street, past her car, at the bus stop under the flickering streetlight... someone was sitting on the bench.", '', 0.60, tag='bus_stop'),
     L('N', "Very tall.", '', 0.39, tag='very_tall'),
@@ -283,10 +288,10 @@ LINES = [
     L('N', "Rule number six.", '', 0.55, tag='rule6'),
     L('N', "If you see him sitting in the chair, take a number, and wait your turn.", '', 0.99, tag='rule6_text'),
     L('N', "Grandma's car keys were in the living room.", '', 0.84, tag='car_keys'),
-    L('N', "When I opened the door, the living room wasn't there anymore.", '', 0.90, tag='opened_door'),
-    L('N', "It was a waiting room.", '', 0.91, tag='waiting_room'),
+    L('N', "When I opened the door, the living room wasn't there anymore.", '', 0.89, tag='opened_door'),
+    L('N', "It was a waiting room.", '', 0.90, tag='waiting_room'),
     L('N', "Rows of plastic chairs, bolted together.", '', 0.40, pace=0.75, tag='chairs'),
-    L('N', "Fluorescent lights buzzing, half of them dead.", '', 0.40, tag='lights'),
+    L('N', "Fluorescent lights buzzing, half of them dead.", '', 0.39, tag='lights'),
     L('N', "A television on the wall, showing nothing.", '', 0.40, tag='tv'),
     L('N', "A red ticket machine on a pole, like the ones at the deli counter.", '', 0.45, tag='ticket_machine'),
     L('N', "And a sign, in red numbers that had stopped moving a long time ago:", '', 0.59, tag='sign'),
@@ -297,7 +302,7 @@ LINES = [
     L('N', "A teenager holding his arm in his lap.", '', 0.40, tag='ghost_teen'),
     L('N', "A little girl in a coat that was too small for her.", '', 0.45, tag='ghost_girl'),
     L('N', "All of them gray.", '', 0.35, tag='all_gray'),
-    L('N', "All of them still.", '', 0.34, tag='all_still'),
+    L('N', "All of them still.", '', 0.35, tag='all_still'),
     L('N', "All of them holding paper tickets, waiting for their number to be called.", '', 0.60, tag='tickets'),
     L('N', "People who had decided it could wait.", '', 1.00, tag='decided'),
     L('N', "And in the last row, by the window, in a brown cardigan, holding a ticket so old the ink was gone...", '', 1.49, tag='last_row'),
@@ -315,7 +320,7 @@ LINES = [
     L('N', "He reached out, without standing up, all the way across the room, and tore a ticket from the machine.", '', 0.45, tag='reach'),
     L('N', "He held it out to me between two long fingers.", '', 1.20, tag='held_out'),
     L('N', "My ticket said: Milo.", '', 1.00, pace=0.55, tag='ticket_milo'),
-    L('N', "He tilted his head.", '', 0.45, tag='tilt'),
+    L('N', "He tilted his head.", '', 0.44, tag='tilt'),
     L('N', "And in the kindest voice I have ever heard, like a grandfather at bedtime, he said:", '', 0.85, tag='kindest'),
     L('W', "Take a seat.", '', 0.60, tag='take_a_seat'),
     L('W', "It can wait.", '', 1.40, tag='take_a_seat_wait'),
@@ -323,12 +328,12 @@ LINES = [
     L('N', "Rule number seven.", '', 0.55, tag='rule7'),
     L('N', "Never, ever let him take your pulse.", '', 1.00, tag='rule7_text'),
     L('N', "I didn't take the ticket.", '', 0.45, pace=1.50, tag='didnt_take'),
-    L('N', "So he took my wrist instead.", '', 0.84, tag='pulse'),
+    L('N', "So he took my wrist instead.", '', 0.85, tag='pulse'),
     L('N', "His fingers were cold and smooth, like a stethoscope left in a car overnight.", '', 0.45, tag='cold'),
     L('N', "He pressed them to the inside of my wrist, and he began to count.", '', 1.00, tag='began_count'),
     L('W', "One...", '', 1.00, tag='count1'),
     L('N', "The hold music slowed down.", '', 1.10, tag='music_slowed'),
-    L('W', "Two...", '', 1.20, tag='count2'),
+    L('W', "Two...", '', 1.24, tag='count2'),
     L('N', "The clock on the wall slowed down.", '', 0.89, tag='clock_slowed'),
     L('N', "That's what he does.", '', 0.40, tag='what_he_does'),
     L('N', "He doesn't hurt you.", '', 0.39, tag='doesnt_hurt'),
@@ -417,7 +422,7 @@ LINES = [
     L('N', "she said.", '', 0.40),
     L('H', "Not on my shift.", '', 0.60, tag='not_my_shift'),
     L('N', "And she drove faster.", '', 1.00, tag='faster'),
-    L('N', "The emergency doors opened before we even reached them.", '', 0.45, pace=1.25, tag='er'),
+    L('N', "The emergency doors open before we even reach them.", '', 0.45, pace=1.25, tag='er'),
     L('N', "My mom was there, in her scrubs, running, pushing a wheelchair.", '', 0.45, tag='mom_wheelchair'),
     L('N', "There were people everywhere.", '', 0.40, pace=1.45, tag='people_everywhere'),
     L('N', "Bright lights.", '', 0.35, tag='bright_lights'),
@@ -438,14 +443,14 @@ LINES = [
     L('N', "When we got home at sunrise, Grandma was sitting in Grandpa's armchair.", '', 0.45, tag='home_sunrise'),
     L('N', "There was a paper ticket in her hand.", '', 0.60, pace=1.35, tag='ticket_hand'),
     L('N', "It said: Ruth.", '', 1.00, tag='ticket_ruth'),
-    L('N', "She'd been having chest pain since midnight.", '', 0.44, pace=1.30, tag='chest_pains'),
+    L('N', "She'd been having chest pain since midnight.", '', 0.45, pace=1.30, tag='chest_pains'),
     L('N', "She hadn't said a word.", '', 0.45, tag='not_a_word'),
     L('N', "Rule three.", '', 0.85, tag='rule_three_recall'),
     L('N', "My mom picked up the phone and dialed.", '', 0.45, tag='dialed'),
     L('M', "You don't wait,", '', 0.18, tag='mom_dont_wait'),
     L('N', "she said.", '', 0.39),
     L('M', "You call.", '', 0.90, tag='you_call'),
-    L('N', "Grandma's fine.", '', 0.45, tag='grandma_fine'),
+    L('N', "Grandma's fine.", '', 0.44, tag='grandma_fine'),
     L('N', "Her heart doctor fixed her up that same morning.", '', 0.45, pace=1.25, tag='heart_doctor'),
     L('N', "She asks so many questions now that her cardiologist brings her coffee, just to keep up.", '', 0.59, tag='cardiologist'),
     L('N', "She burned the yellow card herself.", '', 1.39, tag='burned'),
@@ -473,10 +478,10 @@ LINES = [
     L('N', "He's very patient.", '', 1.30, tag='very_patient'),
     L('N', "So are we.", '', 2.80, tag='so_are_we'),
     # ---------------------------------------------------------------- outro
-    L('N', "Okay.", '', 0.45, tag='outro'),
-    L('N', "Breathe.", '', 0.49, tag='breathe'),
+    L('N', "Okay.", '', 0.44, tag='outro'),
+    L('N', "Breathe.", '', 0.50, tag='breathe'),
     L('N', "You can turn a light on now.", '', 0.85, tag='light_on'),
-    L('N', "None of this happened.", '', 0.44, pace=1.30, tag='none_happened'),
+    L('N', "None of this happened.", '', 0.45, pace=1.30, tag='none_happened'),
     L('N', "There's no Doctor Later.", '', 0.35, tag='no_later'),
     L('N', "There's no waiting room behind your medicine cabinet.", '', 0.45, pace=1.20, tag='no_room'),
     L('N', "Ruth, and Milo, and Doctor Halverson were made up by someone who used to be scared of every doctor they ever met... until one of them sat in a cold car for an hour, waiting for a door to open.", '', 0.89, tag='made_up'),
@@ -511,13 +516,13 @@ LINES = [
     L('N', "If you said \"ask\"... you'd have saved Milo by three-oh-one.", '', 0.45, pace=0.80, tag='said_ask'),
     L('N', "Thank you.", '', 0.85, tag='thank_you'),
     L('N', "If you said \"don't\"... that's okay.", '', 0.45, pace=0.80, tag='said_dont'),
-    L('N', "That was the Waiting Man talking.", '', 0.40, tag='waiting_talking'),
+    L('N', "That was the Waiting Man talking.", '', 0.39, tag='waiting_talking'),
     L('N', "He's very convincing.", '', 0.60, tag='convincing'),
     L('N', "Edit your comment.", '', 0.40, tag='edit_ask'),
     L('N', "Change it to \"ask.\"", '', 0.44, pace=0.75, tag='change_ask'),
     L('N', "It's the only time on this channel I'll ever tell you to change your answer.", '', 0.85, tag='only_time'),
-    L('N', "And under it, write the first name of a doctor, or a nurse, who once helped you.", '', 0.45, tag='names'),
-    L('N', "Just the first name.", '', 0.44, tag='first_name'),
+    L('N', "And under it, write the first name of a doctor, or a nurse, who once helped you.", '', 0.44, tag='names'),
+    L('N', "Just the first name.", '', 0.45, tag='first_name'),
     L('N', "Let's make this the longest waiting list he's ever had to read... where every single name is someone who didn't make anybody wait.", '', 0.90, tag='waiting_list'),
     L('N', "If this story made you want to call someone, your grandma, your doctor, that friend who keeps saying \"it's nothing,\" call them.", '', 0.45, tag='call_someone'),
     L('N', "Then come back and leave a like, so I know you did.", '', 0.85, tag='like'),

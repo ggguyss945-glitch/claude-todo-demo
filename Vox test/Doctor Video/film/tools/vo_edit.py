@@ -1,4 +1,4 @@
-"""The voiceover edit: the owner's raw TTS take -> a clean, paced narration (English only).
+"""The voiceover edit of the Doctor film: the owner's raw TTS take -> a clean, paced narration (English only).
     python3 vo_edit.py analyze        per-line source spans, what gets removed, internal pauses (prints; writes nothing)
     python3 vo_edit.py pacing [--force]   write W/narration/pacing_map.md from the rules + PACE below (keeps an existing
                                       map unless --force: the map is the source of truth, edit it by hand if you like)
@@ -8,24 +8,27 @@
     python3 vo_edit.py check          scan the edited files (residual breaths, clicks, gaps vs the map, peaks, loudness)
                                       and draw the before/after strips into W/narration/tests/; after align.py, also
                                       every line against the recogniser (tools/vo_asrcheck.py; fails the check)
-Source: W/narration/raw/narration_raw_24k.wav (24 kHz mono 16-bit, two uploaded parts joined at 454.0587 s inside
-"...facing | the back door"); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
-80 ms resolution, used as anchors); script: script/lines.py.
+Source: W/narration/raw/narration_raw_44k.wav (44.1 kHz mono float: the owner's seven TTS parts joined by
+tools/vo_join.py, 1165.67 s); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
+80 ms resolution, used as anchors); script: script/lines.py (456 lines).
+Run order: vo_join.py -> vo_asr.py raw/narration_raw_44k.wav asr_raw.json -> vo_edit.py pacing (once; then edit the
+map by hand) -> vo_edit.py build -> align.py --write-pauses -> vo_edit.py check -> vo_report.py.
 
 How the edit works
-  1. Repair: every clipped run (|x| >= 0.999: 149 runs of 1-2 samples) is redrawn with a cubic spline through the
-     4 good samples on each side (peaks come back above full scale; the final gain makes room); then 24 -> 48 kHz with
-     soxr VHQ (linear phase).
+  1. Repair: the take is hard-limited at 0.705; every flat-topped run at >= 0.700 (185 runs of 1-2 samples) is redrawn
+     with a cubic spline through the 4 good samples on each side (peaks come back up to 0.776; the final gain makes
+     room); then 44.1 -> 48 kHz with soxr VHQ (linear phase).
   2. Map: every line of lines.py is matched to the recogniser's words (difflib on normalised words, as align.py does).
      Sound "islands" = stretches above -60 dBFS (5 ms RMS, 1 ms hop) merged across gaps under 15 ms; the TTS leaves
      digital silence between most phrases, so islands are clean units. A word owns the island at its recognised start
      (word_island) and the clearly-speech islands right after it inside its span (a word cut by a closure: "emp-ty").
      A word-less island joins a line only when it is speech: pitched and touching a word, a nasal / l murmur against
-     its word ("smile"), the release of a final stop or the s after a stop closure ("suit", "six"), a loud final s
-     ("since", "sense"), an initial s before its closure; everything else (breaths, mouth clicks, low lip thumps, the
-     TTS's "huh" / "yah" / "mm-hmm" noises) is dropped, between lines and inside them. Two lines in one island are split
-     in the last real dip before the next line's first word (split_point; SPLITS hand-sets the four the TTS ran together
-     with no dip). An island where the next line's first word starts is never claimed by the line before, and a
+     its word, the release of a final stop or the s after a stop closure ("music", "doctors"), a loud final s, a
+     devoiced final v ("twelve"), a stop's release between its closure and the rest of the word ("doc-k-tors"), the
+     creaky decay of a word ("anyway"), an initial s or a voiced stop's prevoicing; everything else (breaths, mouth
+     clicks, low lip thumps, the TTS's inhales and "mm-hmm" noises) is dropped, between lines and inside them; a nasal
+     ending ("morning") never claims the breath after it. Two lines in one island are split in the last real dip before
+     the next line's first word (split_point; SPLITS hand-sets the ones the TTS ran together with no dip). An island where the next line's first word starts is never claimed by the line before, and a
      line-final piece under 60 ms is dropped unless the line ends in a stop (fix round 1: the "In-" / "A-" / "O-" ticks
      and the words cut in half, "wood | pile", "Se | ven"). A loud pitched island that would be dropped stops the build.
   3. Fix the TTS slips (FIXES below; each one checked with two recognisers, see voice_report.md).
@@ -38,8 +41,9 @@ How the edit works
      (only where the 4.5 kHz+ band rises above the neighbouring vowel - 7 dB, at most 6 dB); the gaps gated to digital
      silence; one gain for both files puts the true peak at -1 dBTP (no limiter: the dynamics stay the take's; mix.py
      brings the voice to -14 LUFS itself). The narrator's pitch, formants and tone are not touched.
-  6. Character voices (tools/vo_voices.py) on the quoted words only -> narration_en.wav. narration_clean.wav is the
-     same edit without them (identical timing).
+  6. Character voices (tools/vo_voices.py) on the quoted words only, applied per line before the layout (the Waiting
+     Man's slower lines get longer slots) -> narration_en.wav. narration_clean.wav is the same edit without them
+     (identical line starts; the clean file holds the dry line and silence to the end of each slot).
 Cuts are made at low-energy points (island edges sit at <= -60 dBFS) with raised-cosine fades: 2 ms at island edges,
 6-10 ms where a cut falls inside sound, 8-12 ms equal-power crossfades where two pieces join without a gap. Tails are
 kept down to -60 dBFS (deeper than the -50 dB the brief asks for).
@@ -97,10 +101,14 @@ FIXES = {
     # Both recognisers: "rows of plastic chairs" (a grid of 9 joins tried: row end 572.18-572.24 and z start 529.62-529.66
     # read right; later z starts read "row of", earlier row ends "ruff").
     'chairs': {'start': 529.640, 'prepend': [(528.675, 528.745), (571.935, 572.200)], 'join': 'xfade'},
-    # "and I'm, s-, I'm sitting": the first "I'm" (945.71-946.08) and the stray "s" (946.13-946.27) go; "and" then the
-    # second "I'm", the one said into "sitting", 0.12 s later (as the take's own pause after "and"). Both: "...in the
-    # morning, I'm sitting in a little office".
-    'office': {'cuts': [(945.650, 946.330, 0.12)]},
+    # "and I'm, s-, I'm sitting": the stray "s" (946.13-946.27) and the second "I'm" (946.33-946.50) go; the first
+    # "I'm" (said after "and") meets "sitting" after 60 ms. Both: "...in the morning and I'm sitting in a little office"
+    # (cutting the first "I'm" instead lost "and" for both recognisers).
+    'office': {'cuts': [(946.075, 946.505, 0.06)]},
+    # the count "Two..." was read as a rising "Two?" (277 Hz) that reads as "Till" once it has the Waiting Man's voice
+    # (2-3 of 6 paddings); the falling "two" of "Rule number two:" (276.950-277.230, 110-120 Hz, his own register) takes
+    # its place, drawn out by the voice (W_count2: vowel 1.7x). Both: "Two" at every padding tried.
+    'count2': {'pieces': [(276.950, 277.230, 0.0, 0.003, 0.030)]},
     # "Rule number four." and its text share one island only through a 10 ms blip in the silence (370.16): the line
     # ends where "four" decays into digital silence and the rule text starts on the "I" of "If"
     'rule4': {'end': 370.066},
@@ -119,6 +127,13 @@ FIXES = {
     # "said Doctor Halverson.": the d of "said" came out as a hissy z (Parakeet: "says"); the hiss (413.045-413.130) goes
     # and 30 ms of silence join the d closure of "Doctor". Both: "said Doctor Halverson."
     'said_halverson': {'cuts': [(413.045, 413.130, 0.03)]},
+    # "Grandma never wrote those rules. [She-]": the TTS starts "She" straight out of the z of "rules" (a rising sh and
+    # a vowel, 751.22-751.47) before the real "She wrote them down."; the line ends before the false start (751.220, a
+    # 25 ms fade on the z). Both: "Grandma never wrote those rules." (with it, both heard "...rules. She").
+    'never_wrote': {'end': 751.220, 'end_fade': 0.025},
+    # "Ruth?" (Doctor Halverson through the door): the line keeps 9 ms more onset and 19 ms more of the th's decay than
+    # its sound island, so "th" survives the voice (with the island's edges Parakeet heard "Rose?" on its own)
+    'ruth_door': {'pieces': [(394.760, 395.235, 0.0, 0.003, 0.010)]},
     'sleep_well': {'pieces': [(1158.012, 1158.370, 0.0, 0.004, 0.010), (1158.520, None, 0.065, 0.002, 0.020)]},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
@@ -363,6 +378,7 @@ def coda_ok(word, gap, dur, peak=-99.0):
     s that is already there, "spotless", "eggs") is much quieter than an s (-35..-45 dB against -17..-27 dB)."""
     w = re.sub(r'[^a-z]', '', word.lower())
     if re.search(r'(x|ts|ks|ps|ds|cks|cts|pts|kes|tes|pes|des|xes)$', w): return gap <= 0.17 and dur <= 0.40
+    if w.endswith('ng'): return False                                      # a nasal: no release after it ("morning")
     if re.search(r'(t|k|p|c|ck|ct|pt|ed|d|de|te|ke|pe|g|b|ght)$', w): return gap <= 0.10 and dur <= 0.20
     if re.search(r've$', w): return gap <= 0.04 and dur <= 0.30 and peak > -52       # a devoiced final v ("twelve")
     if re.search(r'(s|ce|se|z|ze|sh|ch)$', w): return gap <= 0.09 and dur <= 0.40 and peak > -32
@@ -1548,7 +1564,7 @@ if __name__ == '__main__':
         cache = os.path.join(W, 'align', 'asr_cache.json')
         if os.path.exists(cache) and os.path.getmtime(cache) >= os.path.getmtime(OUT):
             from vo_asrcheck import main as asr_main                  # noqa
-            if asr_main(): raise SystemExit('vo_asrcheck: a line does not read as its script (see above)')
+            if asr_main(every=True): raise SystemExit('vo_asrcheck: a line does not read as its script (see above)')
         else:
             log('asrcheck skipped: run tools/align.py --write-pauses on this build, then vo_edit.py check again')
     else: raise SystemExit(__doc__)

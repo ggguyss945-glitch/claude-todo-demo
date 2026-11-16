@@ -1,14 +1,15 @@
-"""Every line of the edited narration against what the recogniser hears in it (fix round 1, from critic 3's asrcheck).
-    python3 tools/vo_asrcheck.py [--whole-file-only]   exit 1 on any mismatch that is not in ALLOW
+"""Every line of the edited narration (the Doctor film) against what the recogniser hears in it.
+    python3 tools/vo_asrcheck.py [--whole-file-only] [--every]   exit 1 on any mismatch that is not in ALLOW
+    --every: also recognise EVERY line on its own (50 ms margins, 0.3 s of silence padding) and judge it the same way
 Reads W/narration/edit_list.json (each line's output span) and W/align/asr_cache.json (Parakeet on narration_en.wav,
 written by align.py: run align.py after every vo_edit.py build, then this). A recognised word belongs to the line whose
 sound holds its start (out span - 40 ms .. + 20 ms); a word that starts in a gap goes to the next line when that line
-starts within 0.35 s (Parakeet puts the first word after a silence up to ~0.3 s early: "It has a zipper"), else to the
+starts within 0.35 s (Parakeet puts the first word after a silence up to ~0.3 s early), else to the
 line before. A line fails when its first or last word is wrong, when it reads under 80 % of its script, when it is not
 heard at all, or when a word is split across a line boundary ("wood" | "pile", "door at" | "At six"): exactly the
 fragments a mis-placed cut leaves. A line flagged in the whole-file pass is then recognised again on its own (50 ms
-margins, from narration_en.wav): the whole-file pass depends on where the VAD cut its chunks (a short "Seven." skipped,
-the chanted "Hop, hop" read "pop"), so a line that reads right on its own is reported as "chunking" and passes.
+margins, from narration_en.wav): the whole-file pass depends on where the VAD cut its chunks (a last word cut off at a
+chunk edge, "weak T."), so a line that reads right on its own is reported as "chunking" and passes.
 """
 import difflib, json, os, re, sys
 
@@ -18,11 +19,14 @@ sys.path.insert(0, HERE)
 from vo_edit import toks                                           # noqa: E402  (the edit's own word normaliser)
 
 # what the recogniser cannot help hearing its own way (homophones and spellings: not edit faults)
-SAME = {'lori': 'laurie', 'gray': 'grey', 'mamma': 'mama', 'stockboy': 'stock', 'pembertons': 'pemberton',
-        'mr': 'mister', 'aged': 'age', 'oh': '0', 'sixteen': '16', 'fortythree': '43'}
-JOIN2 = {('wood', 'pile'): 'woodpile', ('door', 'knob'): 'doorknob', ('bunny', 'man'): 'bunnyman', ('tree', 'line'): 'treeline'}
-# lines that may fail, with the reason (checked by ear on the spectrogram, not an edit fault)
-ALLOW = {
+SAME = {'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 'genes': 'jeans', 'colour': 'color',
+        'twentytwo': '22'}
+JOIN2 = {('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('arm', 'chair'): 'armchair'}
+# lines that may fail, by tag, with the reason (checked on the spectrogram and with a second recogniser, not an edit fault)
+ALLOW_TAGS = {
+    'shh': 'Grandma\'s "Shh." is a hush with no word in it: the recogniser rightly writes nothing',
+    'pick_up': 'the take says "We\'ll" with a reduced vowel: Parakeet writes "will" on its own (also on the dry take, '
+               'every padding), "We\'ll" in context; Whisper hears "We\'ll"',
 }
 
 
@@ -39,8 +43,9 @@ def norm(s):
     return out
 
 
-def main(quiet_iso=False):
+def main(quiet_iso=False, every=False):
     el = json.load(open(os.path.join(W, 'narration', 'edit_list.json')))['lines']
+    ALLOW = {e['i']: ALLOW_TAGS[e['tag']] for e in el if e['tag'] in ALLOW_TAGS}
     words = json.load(open(os.path.join(W, 'align', 'asr_cache.json')))['en_words']
     heard = {e['i']: [] for e in el}
     for w, t in words:
@@ -80,6 +85,17 @@ def main(quiet_iso=False):
             txt = iso.get(b[0], '')
             if not judge(norm(txt), norm(el[b[0]]['en'])) and 'split' not in b[1]:
                 b[4] = txt
+    if every:                                                       # every line on its own as well, not only the flagged
+        iso_all = isolated([e['i'] for e in el], el)
+        flagged = {b[0] for b in bad}
+        for e in el:
+            i = e['i']
+            txt = iso_all.get(i, '')
+            why = judge(norm(txt), norm(e['en']))
+            if why and i not in flagged:
+                bad.append([i, 'on its own: ' + ', '.join(why), e['en'], txt, None])
+        n_iso_ok = sum(1 for e in el if not judge(norm(iso_all.get(e['i'], '')), norm(e['en'])))
+        print('every line on its own: %d/%d read as their script' % (n_iso_ok, len(el)))
     fails = [b for b in bad if b[0] not in ALLOW and b[4] is None]
     for i, why, s_, h, iso_txt in bad:
         tag = ('ALLOWED (%s)' % ALLOW[i]) if i in ALLOW else ('chunking: on its own it reads "%s"' % iso_txt if iso_txt is not None else 'FAIL')
@@ -110,4 +126,4 @@ def isolated(idx, el):
 
 
 if __name__ == '__main__':
-    sys.exit(main('--whole-file-only' in sys.argv))
+    sys.exit(main('--whole-file-only' in sys.argv, '--every' in sys.argv))

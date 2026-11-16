@@ -156,26 +156,35 @@ def scan_gaps(edl, x):
                                            (1.0, 1.5), (1.5, 2.0), (2.0, 3.5)]}}
 
 
-def scan_breaths(x):
-    """Isolated unvoiced sound islands >= 80 ms in the edited file (what a breath looks like)."""
+def scan_breaths(x, edl=None):
+    """Isolated unvoiced sound islands >= 80 ms in the edited file (what a breath looks like): sound islands (> -60 dBFS)
+    that sit >= 60 ms from any other sound and whose own pitch track (Praat, on the island +-20 ms alone, so a quiet
+    passage is not judged against the loudest one) is voiced in under 20 % of its frames. With the edit list, each is
+    classed: 'final consonant' (it ends its line and the line's last word ends in a stop / fricative / affricate: the
+    release or the s the take spells out after a closure), 'the whole line' (an unvoiced line, "Shh."), or 'check'."""
     import parselmouth
     db = V.envelope(x)
     isl = V.islands(db)
-    x24 = x[::2]
-    p = parselmouth.Sound(x24, sampling_frequency=24000).to_pitch_ac(time_step=0.005, pitch_floor=70, pitch_ceiling=600)
-    f0 = p.selected_array['frequency']; tp = p.xs()
-    voiced = np.zeros(len(db), bool)
-    for t, f in zip(tp, f0):
-        if f > 0: voiced[max(0, int(t * 1000) - 3):int(t * 1000) + 3] = True
     out = []
     for j, (a, b) in enumerate(isl):
         if b - a < 0.08: continue
-        vf = voiced[int(a * 1000):int(b * 1000)].mean()
-        if vf >= 0.2: continue
         gp = a - isl[j - 1][1] if j else 9; gn = isl[j + 1][0] - b if j + 1 < len(isl) else 9
         if min(gp, gn) < 0.06: continue
-        out.append({'t': [round(a, 3), round(b, 3)], 'peak_db': round(float(db[int(a * 1000):int(b * 1000)].max()), 1),
-                    'gap_before': round(gp, 3), 'gap_after': round(gn, 3)})
+        seg = x[max(0, int((a - 0.02) * SR)):int((b + 0.02) * SR)]
+        p = parselmouth.Sound(seg, sampling_frequency=SR).to_pitch_ac(time_step=0.005, pitch_floor=70, pitch_ceiling=600)
+        f0 = p.selected_array['frequency']
+        if len(f0) and (f0 > 0).mean() >= 0.2: continue
+        r = {'t': [round(a, 3), round(b, 3)], 'peak_db': round(float(db[int(a * 1000):int(b * 1000)].max()), 1),
+             'gap_before': round(gp, 3), 'gap_after': round(gn, 3), 'kind': 'check'}
+        if edl:
+            l = next((l for l in edl['lines'] if l['out'][0] - 0.05 <= a <= l['out'][1] + 0.05), None)
+            if l:
+                r['line'] = l['i']
+                lw = re.sub(r'[^a-z]', '', l['en'].split()[-1].lower())
+                if b - a > 0.5 * (l['out'][1] - l['out'][0]): r['kind'] = 'the whole line'
+                elif b >= l['out'][1] - 0.06 and re.search(r'(s|z|t|k|p|c|ch|sh|f|th|d|g|x|ce|se|te|ke)$', lw):
+                    r['kind'] = 'final consonant'
+        out.append(r)
     return out
 
 
@@ -261,8 +270,8 @@ def main():
     if '--no-strips' not in sys.argv:
         res['strips'] = [os.path.basename(strip(n, a, b, w, edl, en, raw, raw_sr, k + 1)) for k, (n, a, b, w) in enumerate(SPOTS)]
     res['gaps'] = scan_gaps(edl, en)
-    res['breaths_en'] = scan_breaths(en)
-    res['breaths_clean'] = scan_breaths(cl)
+    res['breaths_en'] = scan_breaths(en, edl)
+    res['breaths_clean'] = scan_breaths(cl, edl)
     import soxr
     raw48 = soxr.resample(raw, raw_sr, SR, quality='VHQ')
     res['clicks_en'] = scan_clicks(en, edl)
@@ -278,7 +287,8 @@ def main():
     print(f"gaps: {g['n']} boundaries, max |measured - map| {g['max_abs_dev_vs_map']} s, {g['n_off_map']} off by > 30 ms, "
           f"{len(g['under_0.15'])} under 0.15 s, {len(g['over_2.0'])} over 2 s; histogram {g['histogram_s']}")
     print(f"breath-like islands: en {len(res['breaths_en'])}, clean {len(res['breaths_clean'])}")
-    for b in res['breaths_en'][:20]: print('   ', b)
+    for b in res['breaths_en']:
+        if b['kind'] == 'check': print('   check:', b)
     for k in ('clicks_en', 'clicks_clean'):
         c = res[k]
         print(f"{k}: {c['n_discontinuities']} step detections (raw take: {c.get('n_discontinuities_raw_take', '-')}), "

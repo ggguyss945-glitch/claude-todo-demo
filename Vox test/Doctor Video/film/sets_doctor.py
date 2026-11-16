@@ -1,0 +1,2942 @@
+"""sets_doctor.py: the sets of "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND".
+
+Run inside sets.py's namespace at import, after sets_bunny.py (like characters_doctor.py inside characters.py), so it
+reuses the Bunnyman film's set engine (BView cameras on a plan in metres, per-face light maps, BSet staging API) and
+everything here is part of `sets`:  import sets as ST;  sp = ST.dr_living('wide', state='wait').  The older films'
+builders are unchanged; every new name starts with dr_ / DR_ / D_ / _d. See SETS.md (staging guide) and DR_API below.
+
+RUTH'S HOUSE: one floor plan in metres. x = east (right when you face the back of the house), y = from the front wall
+(Larch Street, y 0) back toward the yard, Y = up; floor Y 0, ceiling D_CEIL 2.55, the yard / driveway D_GROUND -0.5.
+Living room (Grandpa's brown armchair by the picture window; the waiting room is this room transformed), hall (front door
+with peephole; the living-room DOOR, the kitchen doorway, the bathroom door), kitchen (wall phone + cord + jack, counter,
+sink under the window, fridge, wall clock), bathroom (the mirrored medicine cabinet with the yellow card inside its door).
+Outside: the porch, the driveway with Doctor Halverson's car (nose to the house, headlights on), Larch Street and, at its
+west end, the bus stop under the flickering streetlight. Every view is a camera on this plan (DR_CAMS / ST.plan_map), so
+a cut keeps every wall, door, lamp and chair where the last shot had it.
+
+STAGING DATA (sp = any builder's result; same API as the Bunnyman sets):
+  sp.anchors[name] -> Spot (.x .y design px of the feet / point, .depth, .ppm px per metre there, .height of a 1.85 m adult,
+                     .X .Yp .Y plan point, .kind 'stand'|'seat'|'kneel'|'lie'|'surface'|'point'|'floor_sit', .turn, .seat_y)
+  sp.spot(x, y, Y), sp.ppm_at(x, y), sp.floor_y(x, y), sp.pick(sx, sy), sp.turn_for(x, y, fx, fy), sp.walkable(x, y),
+  sp.order_at(x, y) (furniture-aware draw order), sp.light_kw(x, y, Y) (figure tint / dim), sp.shadow(x, y)
+  ST.stage_figure(sp, who, spot, ...) -> (Layer, Acting): the one-call staging recipe (height, feet, facing, seat, light).
+  Depth-to-scale rule: ppm = S / depth (depth along the view axis); a figure of real height m is m * ppm px tall at its feet.
+  sp.info: 'view' (BView), 'cam_env' (allowed camera move), 'floors', 'blocks' (furniture footprints), plus per set:
+  'mirror_quad' (bathroom / car mirror screen quads), 'roof_y' (car), 'wheel' (car steering wheel centre + radius), ...
+"""
+import math
+import numpy as np
+import skia
+
+# ====================================================================================================== plan + palette
+D_CEIL = 2.55
+D_GROUND = -0.5                                               # the yard, the driveway and the street are 0.5 m below the floor
+D_HOUSE = (-5.6, 4.6, 0.0, 9.6)
+D_LIV = (-5.6, -1.2, 0.0, 5.4)
+D_HALL = (-1.2, 0.4, 0.0, 9.6)
+D_KIT = (-5.6, -1.2, 5.4, 9.6)
+D_BATH = (0.4, 2.8, 5.8, 9.6)
+D_FDOOR = (-0.85, 0.05, 2.03)        # front door on y 0 (x0, x1, h): hinge at x0 (west), swings into the hall; knob east
+D_LDOOR = (2.2, 3.1, 2.03)           # the living-room door on x -1.2 (y0, y1, h): hinge at y0, swings into the living room
+D_KDOOR = (6.0, 6.9, 2.05)           # the kitchen doorway on x -1.2 (no leaf)
+D_BDOOR = (6.3, 7.05, 2.03)          # the bathroom door on x 0.4: hinge at y1, swings into the bathroom
+D_RDOOR = (3.4, 4.2, 2.03)           # Ruth's bedroom door on x 0.4 (closed; the room is not built)
+D_LWIN = (-4.6, -2.2, 0.75, 2.1)     # the living-room picture window on y 0 (x0, x1, sill, top)
+D_SWIN = (3.9, 4.9, 0.85, 2.05)      # the living-room side window on x -5.6 (y0, y1, sill, top): Grandpa's last row
+D_KWIN = (-3.9, -2.7, 1.0, 2.0)      # the kitchen window over the sink on y 9.6
+D_HWIN = (-0.78, -0.02, 0.95, 1.95)  # the little window at the end of the hall on y 9.6
+D_BWIN = (1.0, 1.6, 1.4, 1.95)       # the bathroom's frosted window on y 9.6 (over the tub)
+D_RWIN = (1.6, 2.8, 0.85, 2.05)      # Ruth's bedroom front window on y 0 (seen from outside)
+D_PEEP_Y, D_KNOB_Y = 1.5, 0.97
+
+# living room furniture ('now'; 1979 swaps colours; the waiting room takes the couch, table and rug out)
+D_ARM = Box(-3.95, 0.98, 0.95, 0.92, 0.0, 1.02, 180)          # Grandpa's brown armchair: back to the picture window, facing +y
+D_ARM_SEAT = 0.46
+D_SIDE = (-5.0, 0.72, 0.25, 0.62)                            # round side table left of the armchair (x, y, r, h): lamp, coffee
+D_COUCH = Box(-3.45, 4.92, 2.0, 0.88, 0.0, 0.84, 0)          # couch along the back wall, facing the window
+D_COUCH_SEAT = 0.45
+D_COFFEE = Box(-3.45, 3.72, 1.05, 0.52, 0.0, 0.42, 0)
+D_TV = Box(-1.78, 0.62, 0.86, 0.52, 0.0, 0.74, -160)         # the console TV in the front-east corner, facing the couch
+D_CURIO = Box(-5.38, 2.0, 0.9, 0.4, 0.0, 1.8, 90)             # curio cabinet on the west wall, facing into the room (+x)
+D_RUG = (-3.45, 3.0, 1.55, 1.05)
+D_LCLOCK = (-1.2, 1.95, 4.35)                                # living-room wall clock on the east wall (x, Y, y)
+# the waiting room (rule 6): three rows of four bolted plastic chairs facing the armchair, the ticket machine near the door,
+# NOW SERVING 1979 over the armchair, the TV on a bracket in the front-east corner, four troffers (two dead, one flickering)
+D_ROWS_Y = (2.35, 3.45, 4.55)
+D_ROW_X = (-4.78, -4.26, -3.74, -3.22)
+D_SEAT_H = 0.45
+D_TICKET = (-1.72, 1.45)                                      # the take-a-number machine on its pole (x, y), dispenser at 1.18 m
+D_TICKET_Y = 1.18
+D_SIGN = (-3.95, 0.3, 2.06, 2.46)                            # NOW SERVING sign: centre x, y, bottom, top (hung from the ceiling)
+D_TROFFERS = [(-4.55, 1.65), (-2.6, 1.65), (-4.55, 3.95), (-2.6, 3.95)]
+# kitchen
+D_KCOUNTER = (-5.6, -1.2, 8.98, 9.6)                         # the counter run along the back wall
+D_KRETURN = (-1.82, -1.2, 8.0, 9.6)                          # the counter return along the east wall (under the phone's reach)
+D_KSINK = (-3.72, -2.88)                                     # the sink bowl x range under the window
+D_FRIDGE = Box(-5.24, 7.95, 0.78, 0.72, 0.0, 1.66, 90)        # the fridge on the west wall, facing +x
+D_STOVE = Box(-4.62, 9.29, 0.76, 0.62, 0.0, 0.91, 0)         # in the back counter run, its front facing the room (-y)
+D_KTABLE = Box(-3.55, 7.05, 1.1, 0.76, 0.0, 0.75, 0)
+D_PHONE = (-1.2, 1.42, 7.45)                                 # the wall phone on the kitchen's east wall (x, Y of the base centre, y)
+D_JACK = (-1.2, 0.3, 7.8)                                    # its wall jack on the baseboard (the line cord runs down to it)
+D_KCLOCK = (-4.55, 1.98, 5.4)                                # the kitchen clock on the front wall (x, Y, y)
+D_COUNTER_Y = 0.92
+# bathroom
+D_CAB = (2.8, 6.47, 7.03, 1.25, 1.95)                        # medicine cabinet on the east wall: x, y0 (hinge), y1, Y0, Y1
+D_BSINK = (2.55, 6.75)                                       # the pedestal sink under it (front edge x 2.32)
+D_TOILET = (2.42, 7.75)
+D_TUB = Box(1.25, 9.22, 1.7, 0.76, 0.0, 0.56, 0)              # along the back wall, its long side facing -y
+# outside
+D_DRIVE = (-8.7, -5.95, -12.2, -0.6)                         # the driveway (x0, x1, y0, y1) at D_GROUND, west of the house
+D_CAR = (-7.3, -4.6)                                          # Halverson's car: centre (x, y) parked nose to the house
+D_STREET = (-12.2, -19.0)                                    # Larch Street: kerb y (north) .. y (south); centre y -15.6
+D_BUS = (-46.0, -20.4)                                       # the bus-stop bench at the west end, under the flickering light
+D_PORCH = (-1.6, 0.85, -1.9, 0.0)                            # the front porch deck (x0, x1, y0, y1) at floor level
+D_PLIGHT = (0.32, 1.95, -0.06)                               # the porch light by the door (x, Y, y)
+
+DP = dict(
+    trim='#f0e9da', ceil='#e6dfd2',
+    liv_paper='#cdbf9e', liv_ink='#a0644a', liv_ink2='#7e8a62', carpet='#8a6a52', carpet_ink='#6a4c3a',
+    liv79_paper='#d9a64a', liv79_ink='#a8481e', liv79_ink2='#6e5a1e', shag='#b05a26',
+    wait_paper='#a8ad86', wait_ink='#7a7a52',
+    hall_paper='#4a6258', hall_ink='#7a9486', hall_wains='#efe8d8', runner='#7a2630',
+    kit_wall='#cfe3d2', kit_ink='#e8f2ea', cab='#f1ead8', cab_d='#c8bea6', counter='#f2d77a', floor_a='#ece6d8', floor_b='#33363c',
+    bath_tile='#a8d0d8', bath_wall='#e8eef0', bath_floor='#f2f0ea',
+    arm='#6e4128', arm_d='#4a2a18', arm79='#8e5432', arm79_d='#62361e',
+    couch='#7a7a5a', couch_d='#55553c', couch79='#c87a2a', couch79_d='#8a4e18',
+    siding='#b8c4cc', siding_d='#8e9aa4', roof='#3e3c42', door_red='#7e2a2a', brick='#8e4a3a',
+)
+D_NIGHT_AMB = '#2c3354'              # inside at night, lamps off (streetlight + moon through the windows)
+D_LAMP = '#ffc98a'                   # tungsten
+D_TUBE = '#d8f2a0'                   # the villain's fluorescent light: sickly green-yellow
+D_HEAD = '#fff2d6'                   # Halverson's headlights
+D_SODIUM = '#ffb060'                 # streetlights
+D_SUN = '#ffbe72'                    # sunrise
+D_CLINIC = '#fff6e8'                 # the doctors' world: warm, bright
+
+
+# ====================================================================================================== grades
+_GR = _epost.GRADES
+_GR.setdefault('dr_night', dict(contrast=1.08, pivot=0.24, gamma=1.06, sat=1.12, wb=(1.0, 1.0, 1.02), floor='#070a16',
+                                bloom=0.85, bloom_thr=226, vignette=0.38, grain=0.7, shoulder=0.45))
+_GR.setdefault('dr_dark', dict(contrast=1.06, pivot=0.24, gamma=1.08, sat=1.05, wb=(0.95, 0.99, 1.08), floor='#05070f',
+                               bloom=0.9, bloom_thr=224, vignette=0.34, grain=0.8, shoulder=0.45))
+# the villain's world: sickly fluorescent green-yellow, crushed and dirty, the blacks lifted green
+_GR.setdefault('dr_wait', dict(exposure=-0.02, contrast=1.14, pivot=0.26, gamma=1.0, sat=0.78, wb=(1.0, 1.06, 0.82), floor='#0c1008',
+                               bloom=0.8, bloom_thr=222, vignette=0.32, grain=1.2, shoulder=0.5))
+_GR.setdefault('dr_1979', dict(exposure=0.06, contrast=0.96, pivot=0.26, gamma=1.04, sat=0.82, wb=(1.08, 1.0, 0.84), floor='#160e0a',
+                               bloom=0.8, bloom_thr=224, vignette=0.42, grain=1.3, soft=0.5, shoulder=0.5))
+_GR.setdefault('dr_sunrise79', dict(exposure=0.12, contrast=0.98, pivot=0.26, gamma=1.04, sat=0.86, wb=(1.12, 1.0, 0.82), floor='#1a120c',
+                                    bloom=1.0, bloom_thr=218, vignette=0.4, grain=1.2, soft=0.5, shoulder=0.55))
+_GR.setdefault('dr_sunrise', dict(exposure=0.1, contrast=1.02, pivot=0.25, gamma=1.04, sat=1.04, wb=(1.08, 1.0, 0.9), floor='#120c10',
+                                  bloom=0.95, bloom_thr=220, vignette=0.38, grain=0.6, shoulder=0.5))
+_GR.setdefault('dr_ext', dict(contrast=1.1, pivot=0.22, gamma=1.0, sat=1.1, wb=(0.97, 1.0, 1.05), floor='#04060e',
+                              bloom=1.0, bloom_thr=226, vignette=0.36, grain=0.8, shoulder=0.45))
+# the doctors' world: warm, bright, clean, safe
+_GR.setdefault('dr_clinic', dict(exposure=0.12, contrast=1.02, pivot=0.27, gamma=1.06, sat=1.08, wb=(1.04, 1.0, 0.96), floor='#141210',
+                                 bloom=0.6, bloom_thr=236, vignette=0.55, grain=0.4, shoulder=0.55))
+_GR.setdefault('dr_er', dict(exposure=0.1, contrast=1.04, pivot=0.26, gamma=1.05, sat=1.06, wb=(1.02, 1.0, 0.98), floor='#0e1012',
+                             bloom=0.7, bloom_thr=234, vignette=0.5, grain=0.4, shoulder=0.55))
+_GR.setdefault('dr_office', dict(contrast=1.06, pivot=0.24, gamma=1.06, sat=1.06, wb=(1.04, 1.0, 0.96), floor='#0a0a12',
+                                 bloom=0.85, bloom_thr=226, vignette=0.4, grain=0.6, shoulder=0.5))
+_GR.setdefault('dr_car', dict(contrast=1.1, pivot=0.22, gamma=1.02, sat=1.12, wb=(0.98, 1.0, 1.04), floor='#04060c',
+                              bloom=1.0, bloom_thr=224, vignette=0.36, grain=0.7, shoulder=0.45))
+_GR.setdefault('dr_hall_night', dict(contrast=1.1, pivot=0.24, gamma=1.0, sat=0.9, wb=(0.98, 1.03, 0.96), floor='#06080a',
+                                     bloom=0.8, bloom_thr=226, vignette=0.3, grain=0.9, shoulder=0.5))
+_GR.setdefault('dr_morning', dict(exposure=0.14, contrast=1.02, pivot=0.26, gamma=1.05, sat=1.1, wb=(1.06, 1.0, 0.92), floor='#14100c',
+                                  bloom=0.9, bloom_thr=226, vignette=0.5, grain=0.4, shoulder=0.55))
+_GR.setdefault('dr_ins', dict(contrast=1.04, pivot=0.25, gamma=1.04, sat=1.02, wb=(1.02, 1.0, 0.97), floor='#0a0808',
+                              bloom=0.4, bloom_thr=240, vignette=0.5, grain=0.5, shoulder=0.5))
+_GR.setdefault('dr_ins_wait', dict(contrast=1.12, pivot=0.26, gamma=1.0, sat=0.8, wb=(1.0, 1.05, 0.84), floor='#0a0e08',
+                                   bloom=0.6, bloom_thr=230, vignette=0.36, grain=1.0, shoulder=0.5))
+_GR.setdefault('dr_ins_bright', dict(exposure=0.08, contrast=1.02, pivot=0.27, gamma=1.05, sat=1.06, wb=(1.03, 1.0, 0.97), floor='#121010',
+                                     bloom=0.4, bloom_thr=240, vignette=0.6, grain=0.3, shoulder=0.55))
+
+
+# ====================================================================================================== small helpers
+DR_CAMS = []                                                  # the names of this film's cameras (in CAMS)
+
+
+def _dcam(name, S, h, eye, x, y, yaw, env=None, note='', room='', pitch=0.0):
+    _cam(name, S, h, eye, x, y, yaw, env, note, room, pitch)
+    if name not in DR_CAMS: DR_CAMS.append(name)
+
+
+def _env(x=(880, 1040), y=(450, 600), zoom=(1.0, 1.12), f=(1.0, 1.8)):
+    return dict(x=x, y=y, zoom=zoom, f=f)
+
+
+def _r4p(r):
+    x0, x1, y0, y1 = r
+    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+
+
+def _walls_of(r):
+    """The four inside wall runs of a room rectangle, visible side inward: [(side, a, b, u(x, y))], side in
+    front (y0) / west (x0) / back (y1) / east (x1); u = metres along a -> b."""
+    x0, x1, y0, y1 = r
+    return [('front', (x1, y0), (x0, y0), lambda x, y: x1 - x), ('west', (x0, y0), (x0, y1), lambda x, y: y - y0),
+            ('back', (x0, y1), (x1, y1), lambda x, y: x - x0), ('east', (x1, y1), (x1, y0), lambda x, y: y1 - y)]
+
+
+def _hole_x(u_of, xa, xb, ya, yb, v0, v1):
+    """A hole (u0, v0, u1, v1) in a wall run for a plan span (xa, ya) .. (xb, yb)."""
+    ua, ub = u_of(xa, ya), u_of(xb, yb)
+    return (min(ua, ub), v0, max(ua, ub), v1)
+
+
+def _box_pts(cx, cy, hw, hd):
+    return [(cx - hw, cy - hd), (cx + hw, cy - hd), (cx + hw, cy + hd), (cx - hw, cy + hd)]
+
+
+def _lvl(spec, seed, t=0.0):
+    return _kfn(spec, seed)(t)
+
+
+def _carpet_art(base, ink, seed=1, shag=False):
+    def art(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'fabric', 0.7, 'overlay', 2.2)
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.35, 'overlay', 3.0)
+        rng = np.random.default_rng(seed)
+        n = int(W * H / (60 if shag else 420))
+        for _ in range(min(n, 9000)):
+            x, y = rng.uniform(0, W), rng.uniform(0, H)
+            if shag:
+                a = rng.uniform(0, 6.28); L = rng.uniform(1.0, 2.4)
+                p_.seg((x, y), (x + math.cos(a) * L, y + math.sin(a) * L), 0.7, mix(ink, '#ffffff', rng.uniform(0, 0.25)), 90)
+            else:
+                p_.fill(oval(x, y, rng.uniform(0.4, 1.0)), ink, 50)
+    return art
+
+
+def _rug_braided(p_, cx, cy, rx, ry, cols=('#6e3a2c', '#9a7a52', '#4a5a4a', '#b8a888', '#7a4a34', '#5a4a3a', '#8a6a4a')):
+    rug_oval(p_, cx, cy, rx, ry, cols)
+
+
+def _photo(p_, W, H, x, y, w, h, kind='grandpa', frame='#4a2e1c'):
+    """A framed picture on a wall (cm frame, x, y = top-left): 'grandpa' (his portrait: moustache, brown cardigan),
+    'wedding' (Ruth and Grandpa, 1960s), 'nurse' (Mom's nursing-school graduation, the cap), 'kids' (the narrator and
+    Milo, school photo), 'milo' (Milo with a dinosaur), 'landscape', 'lake'."""
+    def fn(q, w_, h_):
+        if kind in ('grandpa', 'wedding', 'nurse', 'kids', 'milo'):
+            q.linear(rect(0, 0, w_, h_), 0, 0, 0, h_, ['#b8a68a', '#7e6c56'] if kind in ('grandpa', 'wedding') else ['#8ab0d0', '#4a6a90'])
+            people = {'grandpa': [(0.5, '#5a3a24', '#6e4128', 1.0, 'm')], 'wedding': [(0.33, '#5a3a24', '#2a2a30', 0.9, 'm'), (0.67, '#4a2a1a', '#f2efe6', 0.85, 'f')],
+                      'nurse': [(0.5, '#3a2418', '#f4f4f0', 0.95, 'cap')], 'kids': [(0.36, '#4a3020', '#7a2430', 0.9, ''), (0.68, '#a87a4a', '#5aa070', 0.7, '')],
+                      'milo': [(0.5, '#a87a4a', '#5aa070', 0.8, 'dino')]}[kind]
+            for (u, hair, top, sz, tag) in people:
+                x_ = w_ * u
+                q.fill(smooth([(x_ - w_ * 0.2 * sz, h_), (x_ - w_ * 0.17 * sz, h_ * 0.64), (x_, h_ * 0.58), (x_ + w_ * 0.17 * sz, h_ * 0.64), (x_ + w_ * 0.2 * sz, h_)], True, 0.6), top)
+                q.fill(oval(x_, h_ * (0.44 + 0.1 * (1 - sz)), w_ * 0.11 * sz, h_ * 0.12 * sz), '#e6c4a8')
+                q.fill(oval(x_, h_ * (0.36 + 0.1 * (1 - sz)), w_ * 0.12 * sz, h_ * 0.06 * sz), hair)
+                if tag == 'm': q.seg((x_ - w_ * 0.04, h_ * 0.5), (x_ + w_ * 0.04, h_ * 0.5), max(0.5, w_ * 0.02), '#4a2e1c')
+                if tag == 'f': q.fill(oval(x_ + w_ * 0.1, h_ * 0.34, w_ * 0.12, h_ * 0.05), '#ffffff', 170)
+                if tag == 'cap': q.fill(rect(x_ - w_ * 0.09, h_ * 0.27, w_ * 0.18, h_ * 0.05), '#ffffff')
+                if tag == 'dino':
+                    q.fill(smooth([(x_ + w_ * 0.12, h_ * 0.85), (x_ + w_ * 0.2, h_ * 0.7), (x_ + w_ * 0.32, h_ * 0.66), (x_ + w_ * 0.36, h_ * 0.75), (x_ + w_ * 0.26, h_ * 0.86)], True, 0.7), '#4aa86a')
+        elif kind == 'lake':
+            q.linear(rect(0, 0, w_, h_), 0, 0, 0, h_, ['#9ab8d0', '#e8d8b0'])
+            q.fill(poly([(0, h_ * 0.6), (w_ * 0.3, h_ * 0.35), (w_ * 0.55, h_ * 0.55), (w_ * 0.8, h_ * 0.4), (w_, h_ * 0.55), (w_, h_ * 0.62), (0, h_ * 0.62)]), '#5a6a5a')
+            q.fill(rect(0, h_ * 0.62, w_, h_ * 0.38), '#6a90b0')
+        else:
+            q.linear(rect(0, 0, w_, h_), 0, 0, 0, h_, ['#7a9ab0', '#d8c48a'])
+            q.fill(poly([(0, h_ * 0.7), (w_ * 0.4, h_ * 0.45), (w_ * 0.7, h_ * 0.62), (w_, h_ * 0.5), (w_, h_), (0, h_)]), '#4a5a3a')
+    _hframe(p_, W, H, x, y, w, h, 'poster', frame=frame, fn=fn)
+
+
+def _sunburst_clock(p_, x, y, r, hh=3, mm=0, c='#c8a04a', face='#f4ecd8'):
+    """A 1960s sunburst wall clock (cm frame centre x, y, radius r of the face)."""
+    for k in range(16):
+        a = 2 * math.pi * k / 16
+        L = r * (2.2 if k % 2 == 0 else 1.7)
+        p_.seg((x + math.cos(a) * r, y + math.sin(a) * r), (x + math.cos(a) * L, y + math.sin(a) * L), max(0.8, r * 0.12), c)
+        p_.fill(oval(x + math.cos(a) * L, y + math.sin(a) * L, r * 0.1), _lighten(c, 0.2))
+    p_.fill(oval(x + 0.8, y + 1.5, r), '#000000', 70)
+    p_.fill(oval(x, y, r), c); p_.fill(oval(x, y, r * 0.86), face)
+    _hands(p_, x, y, r * 0.86, hh, mm)
+
+
+def _hands(p_, x, y, r, hh, mm, ss=None, col_='#1a1a1a'):
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        p_.seg((x + math.sin(a) * r * 0.78, y - math.cos(a) * r * 0.78), (x + math.sin(a) * r * 0.92, y - math.cos(a) * r * 0.92), max(0.5, r * 0.06), '#2a2a2a')
+    am = 2 * math.pi * mm / 60; ah = 2 * math.pi * ((hh % 12) + mm / 60) / 12
+    p_.seg((x, y), (x + math.sin(ah) * r * 0.5, y - math.cos(ah) * r * 0.5), max(0.8, r * 0.1), col_)
+    p_.seg((x, y), (x + math.sin(am) * r * 0.78, y - math.cos(am) * r * 0.78), max(0.6, r * 0.065), col_)
+    if ss is not None:
+        a_ = 2 * math.pi * ss / 60
+        p_.seg((x - math.sin(a_) * r * 0.15, y + math.cos(a_) * r * 0.15), (x + math.sin(a_) * r * 0.85, y - math.cos(a_) * r * 0.85), max(0.4, r * 0.03), '#c82a2a')
+    p_.fill(oval(x, y, max(0.6, r * 0.07)), '#a8262a')
+
+
+def _office_clock(p_, x, y, r, hh=3, mm=0, ss=None):
+    """An institutional wall clock: black rim, white face, numerals (the waiting room's: 'the clock on the wall')."""
+    p_.fill(oval(x + 1.0, y + 1.8, r * 1.08), '#000000', 80)
+    p_.fill(oval(x, y, r * 1.08), '#1e2024'); p_.fill(oval(x, y, r * 0.98), '#f2f0e8')
+    p_.radial(oval(x, y, r * 0.98), x - r * 0.3, y - r * 0.4, r * 1.4, [(0, '#ffffff', 60), (1, '#000000', 30)])
+    for k in range(1, 13):
+        a = 2 * math.pi * k / 12
+        btext(p_, str(k), x + math.sin(a) * r * 0.74, y - math.cos(a) * r * 0.74 + r * 0.07, 'sans_b', r * 0.19, '#1a1a1a', 230, 'center')
+    _hands(p_, x, y, r * 0.98, hh, mm, ss)
+
+
+def _notice(p_, x, y, w, h, title, lines=(), c='#f4f0e2', ink='#2a3a3a', accent='#3a6a5a', tape=True, font='sans_b'):
+    """A paper notice pinned / taped on a wall (cm frame)."""
+    p_.fill(rect(x + 0.6, y + 1.0, w, h), '#000000', 70)
+    p_.fill(rect(x, y, w, h), c)
+    p_.texture(rect(x, y, w, h), 'paper', 0.5, 'multiply', 0.4)
+    p_.fill(rect(x, y, w, h * 0.2), accent)
+    btext(p_, title, x + w / 2, y + h * 0.15, font, h * 0.1, '#ffffff', 240, 'center')
+    for i, s in enumerate(lines):
+        btext(p_, s, x + w / 2, y + h * (0.36 + 0.15 * i), 'sans', h * 0.075, ink, 220, 'center')
+    if tape:
+        for sx in (x + 1, x + w - 5):
+            p_.fill(rect(sx, y - 1.2, 4, 2.6), '#f2e8b8', 170)
+
+
+def _wall_jack(p_, x, y, plugged=True):
+    p_.fill(rrect(x - 3.2, y - 4.2, 6.4, 8.4, 0.8), '#ece4d0'); p_.line(rrect(x - 3.2, y - 4.2, 6.4, 8.4, 0.8), 0.5, '#000000', 140)
+    p_.fill(rect(x - 1.2, y - 0.9, 2.4, 1.8), '#1a1a1a')
+    if plugged: p_.fill(rect(x - 1.4, y - 1.1, 2.8, 2.2), '#d8d2c0'); p_.line(rect(x - 1.4, y - 1.1, 2.8, 2.2), 0.4, '#000000', 160)
+
+
+# ---------------------------------------------------------------------------------------------- rain (live, screen space)
+def dr_rain(pen, t, box=(-400, -300, 2720, 1680), k=1.0, seed=3, speed=1.0, angle=0.12, c='#c8d4ec', a=46, n=420, far=False):
+    """Falling rain streaks over a design-space box (a live layer; cheap: n short lines). far=True: thin, slow, dense haze."""
+    x0, y0, x1, y1 = box
+    if k <= 0.01: return
+    rng = np.random.default_rng(seed)
+    W, H = x1 - x0, y1 - y0
+    N = int(n * k)
+    xs = rng.uniform(0, 1, N); ys = rng.uniform(0, 1, N); ln = rng.uniform(0.6, 1.4, N)
+    sp = (1.8 if not far else 0.9) * speed
+    L = (60 if not far else 26)
+    w = 1.6 if not far else 1.0
+    path = skia.Path()
+    for i in range(N):
+        yy = y0 + ((ys[i] + t * sp * (0.8 + 0.4 * ln[i])) % 1.0) * (H + L) - L
+        xx = x0 + xs[i] * W + (yy - y0) * angle
+        xx = x0 + ((xx - x0) % W)
+        path.moveTo(xx, yy); path.lineTo(xx + L * ln[i] * angle, yy + L * ln[i])
+    p = skia.Paint(Color=col(c, int(a * (1.0 if not far else 0.8))), AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=w,
+                   StrokeCap=skia.Paint.kRound_Cap)
+    pen.cv.drawPath(path, p)
+
+
+def dr_glass_rain(pen, t, quad_path, bounds, k=1.0, seed=5, lit_c='#9aa8c8'):
+    """Raindrops on a window pane and a few rivulets running down it (live; clipped to the projected glass)."""
+    if k <= 0.01 or quad_path is None or quad_path.isEmpty(): return
+    x0, y0, x1, y1 = bounds
+    rng = np.random.default_rng(seed)
+    cv = pen.cv
+    cv.save(); cv.clipPath(quad_path, skia.ClipOp.kIntersect, True)
+    W, H = x1 - x0, y1 - y0
+    s = max(3.0, W / 90.0)
+    for i in range(int(260 * k)):
+        x, y = x0 + rng.uniform(0, W), y0 + rng.uniform(0, H)
+        r = s * rng.uniform(0.08, 0.26)
+        pen.fill(oval(x, y, r * 0.7, r * 0.85), lit_c, 48)
+        pen.fill(oval(x, y + r * 0.35, r * 0.5, r * 0.35), '#000000', 30)
+        pen.fill(oval(x - r * 0.15, y - r * 0.25, r * 0.2), '#ffffff', 60)
+    for i in range(int(6 * k)):
+        x = x0 + rng.uniform(0.05, 0.95) * W
+        ph = (t * rng.uniform(0.06, 0.16) + rng.uniform(0, 1)) % 1.0
+        ya, yb = y0 + H * max(0.0, ph - 0.3), y0 + H * ph
+        pts = [(x + s * 0.4 * math.sin(yy * 0.05 + i), yy) for yy in np.linspace(ya, yb, 8)]
+        pen.line(smooth(pts, False, 0.8), s * 0.1, lit_c, 70)
+        pen.fill(oval(pts[-1][0], pts[-1][1], s * 0.16, s * 0.22), lit_c, 110)
+    cv.restore()
+
+
+# ====================================================================================================== furniture
+def dr_armchair_parts(B=None, c=None, cd=None, era='now', doily=True, afghan=False):
+    """Grandpa's brown armchair: a deep club recliner (since 1979). Short dark feet, a skirted base, a puffy seat cushion,
+    padded rolled arms, a tall rounded back with a pillow-top cushion, the wooden recline lever on its right side; 'now'
+    it is worn (rubbed arms, a crocheted doily on the headrest); era '1979' it is new (brighter velour)."""
+    B = B or D_ARM
+    c = c or (DP['arm79'] if era == '1979' else DP['arm'])
+    cd = cd or (DP['arm79_d'] if era == '1979' else DP['arm_d'])
+    w2, d2 = B.w / 2, B.d / 2
+    P = []
+    for (u, n) in ((-w2 + 0.09, -d2 + 0.09), (w2 - 0.09, -d2 + 0.09), (-w2 + 0.09, d2 - 0.09), (w2 - 0.09, d2 - 0.09)):
+        P.append(Part(sub(B, u - 0.03, u + 0.03, n - 0.03, n + 0.03, 0.0, 0.07), {'all': '#2a180c'}))
+    P.append(Part(sub(B, -w2 + 0.04, w2 - 0.04, -d2 + 0.05, d2 - 0.03, 0.07, 0.3), {'all': dict(fill=cd, art=_cushion_art(cd)),
+                                                                                   'front': dict(fill=c, art=_skirt_art(c))}))
+    seat_c = _lighten(c, 0.06)
+    P.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -w2 + 0.2, w2 - 0.2, -d2 + 0.24, d2 - 0.01, 0.3, D_ARM_SEAT,
+                                                 lambda W, H: rounded_rect_pts(W, H, 6.0, 2.0, bulge=2.2), seat_c, _darken(c, 0.04),
+                                                 _cushion_art(seat_c, cd)), ref=B.at(0, 0.1, 0.38), tag='seat'))
+
+    def back(pen, v):
+        U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1])
+        W, H = (B.w - 0.06) * 100, (B.Y1 - 0.3) * 100
+
+        def art(p_, W_, H_):
+            _cushion_art(c, cd)(p_, W_, H_)
+            for k in (0.3, 0.55):                                          # channel tufting
+                p_.line(poly([(W_ * 0.22, H_ * k), (W_ * 0.78, H_ * k)], False), 1.2, cd, 120)
+            if era != '1979':
+                p_.fill(oval(W_ * 0.5, H_ * 0.16, W_ * 0.2, H_ * 0.07), '#000000', 30)       # the dark patch where his head rested
+            if doily and era != '1979': _doily_shape(p_, W_ * 0.5, 16, 15, 10)
+        extrude(pen, v, B.at(-w2 + 0.03, -d2 + 0.26, B.Y1), U3, (0.0, -1.0, 0.0), rounded_rect_pts(W, H, 22.0, 2.0, bulge=1.5),
+                _scale3(N3, -0.24), c, _darken(c, 0.15), art, art_back=_cushion_art(_darken(c, 0.06), cd))
+    P.append(Part(fn=back, ref=B.at(0, -d2 + 0.12, 0.7), tag='back'))
+    for s_ in (-1, 1):
+        u0, u1 = (-w2, -w2 + 0.2) if s_ < 0 else (w2 - 0.2, w2)
+
+        def arm(pen, v, u0=u0, u1=u1):
+            def art(p_, W, H):
+                _arm_roll_art(c, cd)(p_, W, H)
+                if era != '1979': p_.fill(oval(W / 2, H * 0.12, W * 0.32, H * 0.06), '#e8d0b0', 34)      # rubbed shiny
+            box_extrude(pen, v, B, u0, u1, -d2 + 0.12, d2, 0.07, 0.66, lambda W, H: _arm_profile(W, H), c, _darken(c, 0.1), art)
+        P.append(Part(fn=arm, ref=B.at((u0 + u1) / 2, 0.12, 0.4), tag='arm_l' if s_ < 0 else 'arm_r'))
+    # the recline lever (the chair's right side = screen left when it faces the camera)
+    def lever(pen, v):
+        p0 = B.at(w2 + 0.012, 0.18, 0.36); p1 = B.at(w2 + 0.03, 0.26, 0.52)
+        if v.d(p0[0], p0[2]) < 0.2: return
+        a_, b_ = v.p(*p0), v.p(*p1); s = v.s(p0[0], p0[2])
+        pen.seg(a_, b_, max(2.0, 0.03 * s) + 2, LINE); pen.seg(a_, b_, max(1.5, 0.03 * s), lit('#7a4a24', p0, None))
+        pen.fill(oval(b_[0], b_[1], max(1.5, 0.022 * s)), lit('#8a5a2c', p1, None))
+    P.append(Part(fn=lever, ref=B.at(w2 + 0.02, 0.2, 0.4), tag='lever'))
+    if afghan:
+        P.append(Part(fn=lambda pen, v: _afghan_over(pen, v, B), ref=B.at(0, -d2 + 0.3, 0.8), tag='back'))
+    return P
+
+
+def _afghan_over(pen, v, B):
+    F = Face(B.at(-0.3, -B.d / 2 + 0.29, B.Y1 - 0.02), (B.U[0], 0, B.U[1]), (0, -1, 0), 60.0, 30.0, (B.N[0], 0, B.N[1]), 'front')
+    shape = poly([(0, 0), (60, 0), (60, 20), (52, 30), (44, 20), (36, 30), (28, 20), (20, 30), (12, 20), (4, 30), (0, 22)])
+    draw_face(pen, v, F, _afghan_art, '#2a1e1a', shape=shape, ao=False, lw=1.0)
+
+
+def dr_arm_seat():
+    p_ = D_ARM.at(0, -D_ARM.d / 2 + 0.42, 0)
+    return (p_[0], p_[2])
+
+
+def _round_table(pen, v, x, y, r, h, top='#6a3e22'):
+    """A small round wooden side table (three splayed legs)."""
+    s = v.s(x, y)
+    for k in range(3):
+        a = 2 * math.pi * k / 3 + 0.4
+        fx, fy = x + math.cos(a) * r * 0.75, y + math.sin(a) * r * 0.75
+        p0 = v.p(x + math.cos(a) * r * 0.35, h - 0.05, y + math.sin(a) * r * 0.35); p1 = v.p(fx, 0.0, fy)
+        pen.seg(p0, p1, max(2.0, 0.035 * s) + 2, LINE); pen.seg(p0, p1, max(1.4, 0.035 * s), lit(_darken(top, 0.15), (fx, 0.3, fy), None))
+    pen.fill(ellipse3(v, x, y, r, r, h - 0.03), lit(_darken(top, 0.25), (x, h, y), None))
+    tp = ellipse3(v, x, y, r, r, h)
+    pen.fill(tp, lit(top, (x, h, y), (0, 1, 0))); pen.line(tp, 1.2)
+
+
+def dr_table_lamp(pen, v, x, y, Y, k=0.0, shade='#efe2c4', base='#b89a5a', h=0.52):
+    """A table lamp standing at (x, Y, y): ginger-jar base, harp, pleated drum shade (k = lit)."""
+    s = v.s(x, y)
+    bx, by = v.p(x, Y, y)
+    jar = smooth([(bx - 0.06 * s, by), (bx - 0.085 * s, by - 0.1 * s), (bx - 0.05 * s, by - 0.2 * s), (bx + 0.05 * s, by - 0.2 * s),
+                  (bx + 0.085 * s, by - 0.1 * s), (bx + 0.06 * s, by)], True, 0.7)
+    pen.fill(jar, lit(base, (x, Y + 0.1, y), None)); pen.line(jar, 1.0)
+    pen.linear(jar, bx - 0.09 * s, 0, bx + 0.09 * s, 0, [(0, '#ffffff', 60), (0.4, '#ffffff', 0), (1, '#000000', 60)])
+    pen.seg(v.p(x, Y + 0.2, y), v.p(x, Y + h - 0.2, y), max(1.0, 0.01 * s), lit('#c8a860', (x, Y + 0.3, y), None))
+    _shade(pen, v, x, y, Y + h - 0.24, Y + h, 0.17, 0.12, shade, k)
+
+
+def dr_lamp_glow(pen, v, x, y, Y, k, h=0.52, c='#ffd9a0'):
+    if k <= 0.01: return
+    _shade(pen, v, x, y, Y + h - 0.24, Y + h, 0.17, 0.12, '#efe2c4', k)
+    gx, gy = v.p(x, Y + h - 0.12, y); s = v.s(x, y)
+    pen.glow(gx, gy, 0.9 * s, c, 70 * k)
+    pen.glow(gx, gy, 0.25 * s, '#fff2d8', 60 * k)
+
+
+def dr_cup(pen, v, x, Y, y, c='#f2ece0', steam=0.0, t=0.0, coffee=True):
+    """A coffee cup on its saucer at (x, Y, y) (vertex-lit), with a curl of steam (steam 0..1)."""
+    s = v.s(x, y)
+    if v.d(x, y) < 0.15: return
+    sau = ellipse3(v, x, y, 0.075, 0.075, Y + 0.008)
+    pen.fill(sau, lit(c, (x, Y, y), (0, 1, 0))); pen.line(sau, 0.8)
+    top = ellipse3(v, x, y, 0.043, 0.043, Y + 0.085)
+    b = _rb(top)
+    cx_, cy_ = v.p(x, Y + 0.01, y)
+    body = union(top, poly([(b[0], (b[1] + b[3]) / 2), (b[2], (b[1] + b[3]) / 2), (cx_ + 0.035 * s, cy_), (cx_ - 0.035 * s, cy_)]))
+    pen.fill(body, lit(c, (x, Y + 0.05, y), None)); pen.line(body, 0.9)
+    hx_, hy_ = v.p(x + 0.052, Y + 0.05, y)
+    pen.line(oval(hx_, hy_, 0.016 * s, 0.022 * s), max(1.0, 0.009 * s), lit(c, (x, Y, y), None))
+    pen.fill(top, '#e8e2d4'); pen.fill(ellipse3(v, x, y, 0.036, 0.036, Y + 0.082), '#4a2a16' if coffee else '#e8e2d4'); pen.line(top, 0.8)
+    if steam > 0.01:
+        for j in range(2):
+            pts = [(cx_ + (j - 0.5) * 0.02 * s + 0.012 * s * math.sin(t * 1.6 + q * 0.9 + j * 2), cy_ - (0.1 + q * 0.035) * s) for q in range(7)]
+            pen.line(smooth(pts, False, 0.8), max(1.0, 0.006 * s), '#ffffff', 60 * steam)
+
+
+def dr_console_tv(pen, v, B=None, era='now', screen=0.0, t=0.0, wait=False):
+    """The wooden console TV (four tapered legs, the screen, speaker cloth, knobs); era 1979 newer walnut; screen 0..1 =
+    a dead grey-blue glow ('showing nothing')."""
+    B = B or D_TV
+    wood = '#5a3a22' if era == '1979' else '#4a3020'
+
+    def front(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 0.8, 90)
+        sx, sy, sw, sh = W * 0.06, H * 0.12, W * 0.62, H * 0.62
+        p_.fill(rrect(sx - 2, sy - 2, sw + 4, sh + 4, 5), '#2a1a10')
+        p_.fill(rrect(sx, sy, sw, sh, 6), '#1c2226')
+        p_.radial(rrect(sx, sy, sw, sh, 6), sx + sw * 0.35, sy + sh * 0.35, sw, [(0, '#5a6a72', 120), (1, '#000000', 0)])
+        p_.fill(rect(W * 0.73, H * 0.12, W * 0.21, H * 0.45), '#3a2a1e'); pat(p_, W, H, 'stripe', '#000000', 0)
+        for k in range(8): p_.seg((W * 0.74, H * (0.15 + k * 0.05)), (W * 0.93, H * (0.15 + k * 0.05)), 0.6, '#1a120a', 160)
+        for k in range(2): p_.fill(oval(W * 0.835, H * (0.66 + k * 0.1), 2.0), '#c8b080'); p_.line(oval(W * 0.835, H * (0.66 + k * 0.1), 2.0), 0.5, '#000000', 160)
+    body = Box(B.cx, B.cy, B.w, B.d, 0.22, B.Y1, B.fa)
+    draw_box(pen, v, body, {'front': dict(fill=wood, art=front), 'top': dict(fill=_lighten(wood, 0.08), art=_wood_art), 'all': _darken(wood, 0.1)})
+    w2, d2 = B.w / 2, B.d / 2
+    for (u, n) in ((-w2 + 0.06, -d2 + 0.06), (w2 - 0.06, -d2 + 0.06), (-w2 + 0.06, d2 - 0.06), (w2 - 0.06, d2 - 0.06)):
+        p0 = B.at(u, n, 0.22); p1 = B.at(u * 1.08, n * 1.05, 0.0)
+        if v.d(p0[0], p0[2]) < 0.2: continue
+        s = v.s(p0[0], p0[2])
+        pen.seg(v.p(*p0), v.p(*p1), max(2.0, 0.025 * s) + 2, LINE); pen.seg(v.p(*p0), v.p(*p1), max(1.5, 0.025 * s), lit(wood, p0, None))
+    # a framed photo of Grandpa and a little plant on top
+    if era != '1979':
+        P = B.at(-0.18, -0.05, B.Y1)
+        if v.d(P[0], P[2]) > 0.3:
+            s = v.s(P[0], P[2]); px, py = v.p(*P)
+            fr = rect(px - 0.08 * s, py - 0.2 * s, 0.16 * s, 0.2 * s)
+            pen.fill(fr, lit('#c8a860', P, None)); pen.fill(rect(px - 0.065 * s, py - 0.185 * s, 0.13 * s, 0.17 * s), lit('#8a7a64', P, None))
+            pen.fill(oval(px, py - 0.12 * s, 0.025 * s, 0.03 * s), lit('#d8b8a0', P, None)); pen.line(fr, 0.9)
+
+
+def dr_tv_screen_quad(B=None):
+    """The console TV's screen as a 3D quad [(x, Y, y)] (for the glow)."""
+    B = B or D_TV
+    w2, d2 = B.w / 2, B.d / 2
+    H = B.Y1 - 0.22
+    u0, u1 = -w2 + B.w * 0.06, -w2 + B.w * 0.68
+    Y1, Y0 = B.Y1 - H * 0.12, B.Y1 - H * 0.74
+    n = d2 + 0.004
+    return [B.at(u0, n, Y1), B.at(u1, n, Y1), B.at(u1, n, Y0), B.at(u0, n, Y0)]
+
+
+def dr_curio(pen, v, B=None, era='now'):
+    """Grandma's curio cabinet: dark wood, glass doors, plates and teacups on three shelves, photos on top."""
+    B = B or D_CURIO
+
+    def front(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'wood', 0.6, 'overlay', 0.8, 90)
+        gx, gw = 6, W - 12
+        for k, (y0, y1) in enumerate(((8, H * 0.32), (H * 0.35, H * 0.6), (H * 0.63, H * 0.85))):
+            p_.fill(rect(gx, y0, gw, y1 - y0), '#2a2420')
+            for j in range(3):                                            # plates on edge + cups
+                cx_ = gx + gw * (0.2 + 0.3 * j)
+                if k == 0: p_.fill(oval(cx_, y1 - 12, 10.5), '#f2ece0'); p_.line(oval(cx_, y1 - 12, 8), 0.7, '#4a7aa8', 200)
+                else: p_.fill(rrect(cx_ - 5, y1 - 10, 10, 9, 2), ['#f2ece0', '#e8c8c8', '#c8d8e8'][j]); p_.line(rrect(cx_ - 5, y1 - 10, 10, 9, 2), 0.5, '#000000', 120)
+            p_.fill(rect(gx, y1 - 1.2, gw, 1.2), '#5a4030')
+            p_.linear(rect(gx, y0, gw, y1 - y0), gx, y0, gx + gw, y1, [(0, '#ffffff', 0), (0.3, '#ffffff', 40), (0.36, '#ffffff', 0)])
+        p_.fill(rect(W / 2 - 0.8, 8, 1.6, H * 0.85 - 8), '#3a2418')
+        p_.fill(rect(4, H * 0.88, W - 8, H * 0.1), '#4a3020'); p_.fill(oval(W / 2, H * 0.93, 1.5), '#c8a860')
+    draw_box(pen, v, B, {'front': dict(fill='#5a3a26', art=front), 'top': dict(fill='#6a4630', art=_wood_art), 'all': '#4a2e1c'})
+
+
+# ---------------------------------------------------------------------------------------------- plastic waiting-room chairs
+D_CHAIR_BLUE = '#4a7aa0'
+D_CHAIR_ER = '#3f8f8a'
+
+
+def dr_chair_row(cx, cy, n=4, pitch=0.52, fa=0, c=D_CHAIR_BLUE, frame='#8a9098', empty=(), worn=0.0):
+    """A row of n moulded plastic chairs bolted to one steel beam (Box frame fa: 0 = the seats face -y). Returns the
+    parts and the seat plan points [(x, y)] (left to right seen from the front)."""
+    L = n * pitch
+    B = Box(cx, cy, L, 0.5, 0.0, 0.85, fa)
+    P = []
+    for u in (-L / 2 + 0.05, L / 2 - 0.05) + tuple(-L / 2 + pitch * k for k in range(1, n)):
+        for nn in (-0.17, 0.17):                                           # splayed steel legs at the ends and between seats
+            P.append(Part(sub(B, u - 0.018, u + 0.018, nn - 0.018, nn + 0.018, 0.0, 0.36), {'all': frame}, tag='leg'))
+    P.append(Part(sub(B, -L / 2 + 0.03, L / 2 - 0.03, -0.04, 0.04, 0.33, 0.38), {'all': _darken(frame, 0.2)}, tag='beam'))
+    seats = []
+    for k in range(n):
+        u = -L / 2 + pitch * (k + 0.5)
+        cc = mix(c, '#9a9a8a', worn * _h(k, int(cx * 10)))
+        P.append(Part(fn=(lambda u_, cc_: lambda pen, v: box_extrude(pen, v, B, u_ - pitch / 2 + 0.025, u_ + pitch / 2 - 0.025, -0.2, 0.23, 0.38, D_SEAT_H,
+                                                                       lambda W, H: rounded_rect_pts(W, H, 2.5, 3.0, bulge=-1.2), cc_, _darken(cc_, 0.18)))(u, cc),
+                      ref=B.at(u, 0.02, 0.42), tag='seat'))
+        # the back: a curved moulded shell tilted back, on a steel spine
+        def back(pen, v, u_=u, cc_=cc):
+            U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1])
+            tilt = 0.16
+            V3 = _norm3((-N3[0] * tilt, -1.0, -N3[2] * tilt))
+            O = B.at(u_ - pitch / 2 + 0.035, -0.2 - tilt * 0.4, 0.84)
+            extrude(pen, v, O, U3, V3, rounded_rect_pts((pitch - 0.07) * 100, 34.0, 6.0, 3.0, bulge=1.0), _scale3(N3, -0.025), cc_, _darken(cc_, 0.2),
+                    lambda p_, W, H, c_=cc_: p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 40), (0.5, '#ffffff', 0), (1, '#000000', 40)]))
+            a_, b_ = B.at(u_, -0.21, 0.4), B.at(u_, -0.25, 0.52)
+            if v.d(a_[0], a_[2]) > 0.2:
+                s = v.s(a_[0], a_[2]); pen.seg(v.p(*a_), v.p(*b_), max(1.5, 0.02 * s) + 1.5, LINE); pen.seg(v.p(*a_), v.p(*b_), max(1.2, 0.02 * s), lit(frame, a_, None))
+        P.append(Part(fn=back, ref=B.at(u, -0.22, 0.65), tag='back'))
+        sp_ = B.at(u, -0.02, 0)
+        seats.append((sp_[0], sp_[2]))
+    return P, seats, B
+
+
+def dr_rows_layout():
+    """The waiting room's rows: [(row index, Box centre (x, y))]: three rows of four facing the armchair (-y)."""
+    cx = sum(D_ROW_X) / len(D_ROW_X)
+    return [(i, (cx, y)) for i, y in enumerate(D_ROWS_Y)]
+
+
+# ---------------------------------------------------------------------------------------------- the waiting room's fixtures
+def dr_ticket_machine(pen, v, x=None, y=None, ticket='', tear=0.0, era='wait'):
+    """The red take-a-number dispenser on its chrome pole with a heavy round base and a TAKE A NUMBER plate; a strip of
+    tickets hangs from the slot (ticket = the text on the hanging one; tear 0..1 = the front ticket pulled away)."""
+    x = D_TICKET[0] if x is None else x; y = D_TICKET[1] if y is None else y
+    if v.d(x, y) < 0.25: return
+    s = v.s(x, y)
+    base = ellipse3(v, x, y, 0.2, 0.2, 0.0)
+    pen.fill(ellipse3(v, x, y, 0.2, 0.2, 0.03), lit('#3a3c40', (x, 0.03, y), (0, 1, 0)))
+    pen.fill(base, lit('#2a2c30', (x, 0.0, y), None)); pen.line(base, 1.0)
+    p0, p1 = v.p(x, 0.03, y), v.p(x, D_TICKET_Y - 0.1, y)
+    pen.seg(p0, p1, max(2.0, 0.035 * s) + 2, LINE); pen.seg(p0, p1, max(1.5, 0.035 * s), lit('#c8ccd0', (x, 0.6, y), None))
+    pen.seg((p0[0] - 0.006 * s, p0[1]), (p1[0] - 0.006 * s, p1[1]), max(0.6, 0.006 * s), '#ffffff', 90)
+    # the TAKE A NUMBER plate on the pole
+    pl = v.p(x, 0.98, y)
+    plate = rrect(pl[0] - 0.13 * s, pl[1] - 0.05 * s, 0.26 * s, 0.1 * s, 0.012 * s)
+    pen.fill(plate, lit('#f2efe6', (x, 0.98, y), None)); pen.line(plate, 0.9)
+    btext(pen, 'TAKE A NUMBER', pl[0], pl[1] + 0.012 * s, 'sans_b', 0.036 * s, '#b8201e', 240, 'center')
+    # the dispenser: a red rounded body with a black nose and the ticket slot
+    cx_, cy_ = v.p(x, D_TICKET_Y, y)
+    body = smooth([(cx_ - 0.12 * s, cy_ + 0.07 * s), (cx_ - 0.14 * s, cy_ - 0.04 * s), (cx_ - 0.07 * s, cy_ - 0.11 * s), (cx_ + 0.07 * s, cy_ - 0.11 * s),
+                   (cx_ + 0.14 * s, cy_ - 0.04 * s), (cx_ + 0.12 * s, cy_ + 0.07 * s)], True, 0.8)
+    pen.fill(body, lit('#c41e22', (x, D_TICKET_Y, y), None)); pen.line(body, 1.2)
+    pen.linear(body, cx_ - 0.14 * s, 0, cx_ + 0.14 * s, 0, [(0, '#ffffff', 50), (0.35, '#ffffff', 0), (1, '#000000', 70)])
+    pen.fill(oval(cx_ - 0.06 * s, cy_ - 0.07 * s, 0.03 * s, 0.015 * s), '#ffffff', 90)
+    nose = rrect(cx_ - 0.05 * s, cy_ + 0.03 * s, 0.1 * s, 0.05 * s, 0.01 * s)
+    pen.fill(nose, '#1a1a1c'); pen.line(nose, 0.9)
+    # the ticket strip: a few tickets hanging out of the slot, the front one with its number / name
+    tw, th = 0.055 * s, 0.075 * s
+    for k in range(3):
+        ty = cy_ + 0.08 * s + k * th
+        if k == 0 and tear > 0.0: continue
+        tk = rect(cx_ - tw / 2, ty, tw, th - 0.004 * s)
+        cc = '#f2ead2' if era == 'wait' else '#f4f0e4'
+        pen.fill(tk, lit(cc, (x, D_TICKET_Y - 0.1, y), None)); pen.line(tk, 0.6, '#3a3a3a', 160)
+        if k == 0 and ticket:
+            btext(pen, ticket, cx_, ty + th * 0.6, 'sans_b', max(3.0, th * 0.32), '#9a1a1a', 220, 'center')
+        pen.dashed(poly([(cx_ - tw / 2, ty + th - 0.004 * s), (cx_ + tw / 2, ty + th - 0.004 * s)], False), max(0.5, 0.004 * s), '#5a5a5a', 160, 2, 2)
+
+
+def dr_now_serving(pen, v, digits='1979', k=1.0, lit_=True, x=None, y=None, Y0=None, Y1=None, label=True):
+    """The NOW SERVING sign hung on two chains from the ceiling: a black box, the label in white, four red seven-segment
+    digits that stopped a long time ago (k = their glow)."""
+    x = D_SIGN[0] if x is None else x; y = D_SIGN[1] if y is None else y
+    Y0 = D_SIGN[2] if Y0 is None else Y0; Y1 = D_SIGN[3] if Y1 is None else Y1
+    w = 1.0
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    for sx in (-0.38, 0.38):                                             # chains
+        a_, b_ = v.p(x + sx, D_CEIL, y), v.p(x + sx, Y1, y)
+        pen.dashed(poly([a_, b_], False), max(0.8, 0.008 * s), '#5a5a5a', 230, max(1.5, 0.012 * s), max(0.8, 0.006 * s))
+    if v.hy > y: F = Face((x + w / 2, Y1, y + 0.03), (-1, 0, 0), (0, -1, 0), w * 100, (Y1 - Y0) * 100, (0, 0, 1), 'front')
+    else: F = Face((x - w / 2, Y1, y - 0.03), (1, 0, 0), (0, -1, 0), w * 100, (Y1 - Y0) * 100, (0, 0, -1), 'front')
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#141416')
+        p_.fill(rect(2, 2, W - 4, H - 4), '#0a0a0c')
+        if label:
+            btext(p_, 'NOW SERVING', W / 2, H * 0.27, 'sans_b', H * 0.17, '#e8e4dc', 235, 'center', spacing=0.08)
+        dh = H * 0.5
+        dw = len(digits) * (dh * 0.52 + dh * 0.22) - dh * 0.22
+        _seg7_text(p_, digits, W / 2 - dw / 2, H * 0.38, dh, '#ff2a1e' if lit_ else '#3a0c0a', '#2a0a08')
+    draw_face(pen, v, F, art, '#141416', ao=False, unlit=True, lw=1.4)
+    # the box's depth (top edge)
+    top = v.poly3([(x - w / 2, Y1, y - 0.03), (x + w / 2, Y1, y - 0.03), (x + w / 2, Y1, y + 0.03), (x - w / 2, Y1, y + 0.03)])
+    if not top.isEmpty(): pen.fill(top, '#2a2a2e'); pen.line(top, 0.8)
+
+
+_SEG = {'0': 'abcfed', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc', '5': 'afgcd', '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg',
+        '-': 'g', ' ': ''}
+
+
+def _seg7(p_, ch, x, y, h, on, off, slant=0.08):
+    """One seven-segment digit (top-left x, y; height h) in a cm / px frame."""
+    w = h * 0.52; t = h * 0.11
+    segs = {'a': ((t * 0.6, 0), (w - t * 0.6, 0)), 'g': ((t * 0.6, h / 2), (w - t * 0.6, h / 2)), 'd': ((t * 0.6, h), (w - t * 0.6, h)),
+            'f': ((0, t * 0.6), (0, h / 2 - t * 0.6)), 'b': ((w, t * 0.6), (w, h / 2 - t * 0.6)),
+            'e': ((0, h / 2 + t * 0.6), (0, h - t * 0.6)), 'c': ((w, h / 2 + t * 0.6), (w, h - t * 0.6))}
+    lit_s = _SEG.get(ch, '')
+    for nm, (a_, b_) in segs.items():
+        pa = (x + a_[0] + slant * (h - a_[1]), y + a_[1]); pb = (x + b_[0] + slant * (h - b_[1]), y + b_[1])
+        p_.seg(pa, pb, t, on if nm in lit_s else off, 255 if nm in lit_s else 200)
+
+
+def _seg7_text(p_, s, x, y, h, on, off):
+    w = h * 0.52
+    for i, ch in enumerate(s):
+        _seg7(p_, ch, x + i * (w + h * 0.22), y, h, on, off)
+
+
+def dr_sign_glow(pen, v, k=1.0):
+    """The red digits' glow (emissive, drawn over the light map)."""
+    if k <= 0.01: return
+    x, y, Y0, Y1 = D_SIGN
+    if v.d(x, y) < 0.3: return
+    gx, gy = v.p(x + 0.12, (Y0 + Y1) / 2, y)
+    s = v.s(x, y)
+    pen.ellipse_glow(gx, gy, 0.6 * s, 0.2 * s, '#ff2a1e', 70 * k)
+
+
+def dr_troffer(pen, v, x, y, k=0.0, w=1.2, d=0.6, c=D_TUBE, dead=False):
+    """A 2 x 4 fluorescent ceiling troffer: steel frame, two tubes behind a prismatic diffuser (k = lit; dead tubes are
+    grey with blackened ends)."""
+    q = [(x - w / 2, D_CEIL - 0.005, y - d / 2), (x + w / 2, D_CEIL - 0.005, y - d / 2), (x + w / 2, D_CEIL - 0.005, y + d / 2), (x - w / 2, D_CEIL - 0.005, y + d / 2)]
+    path = v.poly3(q)
+    if path.isEmpty(): return
+    pen.fill(path, '#d8dad4' if not dead else '#a8aaa4'); pen.line(path, 1.0, '#6a6c68')
+    for j in (-1, 1):
+        qq = [(x - w / 2 + 0.06, D_CEIL - 0.01, y + j * d * 0.22 - 0.05), (x + w / 2 - 0.06, D_CEIL - 0.01, y + j * d * 0.22 - 0.05),
+              (x + w / 2 - 0.06, D_CEIL - 0.01, y + j * d * 0.22 + 0.05), (x - w / 2 + 0.06, D_CEIL - 0.01, y + j * d * 0.22 + 0.05)]
+        tp = v.poly3(qq)
+        if tp.isEmpty(): continue
+        if dead or k <= 0.01:
+            pen.fill(tp, '#9a9c94')
+            for e in (0, 1):
+                ex = x + (-w / 2 + 0.1 if e == 0 else w / 2 - 0.1)
+                ep = v.poly3([(ex - 0.05, D_CEIL - 0.011, y + j * d * 0.22 - 0.05), (ex + 0.05, D_CEIL - 0.011, y + j * d * 0.22 - 0.05),
+                              (ex + 0.05, D_CEIL - 0.011, y + j * d * 0.22 + 0.05), (ex - 0.05, D_CEIL - 0.011, y + j * d * 0.22 + 0.05)])
+                if not ep.isEmpty(): pen.fill(ep, '#3a3a34', 180)
+        else:
+            pen.fill(tp, mix('#9a9c94', '#fbfff0', k))
+
+
+def dr_troffer_glow(pen, v, x, y, k, w=1.2, d=0.6, c=D_TUBE):
+    if k <= 0.01: return
+    q = [(x - w / 2 + 0.04, D_CEIL - 0.012, y - d / 2 + 0.04), (x + w / 2 - 0.04, D_CEIL - 0.012, y - d / 2 + 0.04),
+         (x + w / 2 - 0.04, D_CEIL - 0.012, y + d / 2 - 0.04), (x - w / 2 + 0.04, D_CEIL - 0.012, y + d / 2 - 0.04)]
+    path = v.poly3(q)
+    if path.isEmpty(): return
+    pen.fill(path, mix(c, '#ffffff', 0.55), 235 * k)
+    b = _rb(path); s = v.s(x, y)
+    pen.ellipse_glow((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, max(20.0, (b[2] - b[0]) * 0.8), max(10.0, (b[3] - b[1]) * 1.6), c, 80 * k)
+
+
+def dr_wall_tv(pen, v, P=(-1.5, 2.08, 0.42), facing=(-0.62, 0.78), k=0.0, t=0.0):
+    """A CRT TV on a ceiling-corner bracket (the waiting room's: 'showing nothing': a dull blue-grey glow, k 0..1)."""
+    x, Y, y = P
+    if v.d(x, y) < 0.3: return
+    fa = math.degrees(math.atan2(facing[0], -facing[1]))
+    B = Box(x, y, 0.56, 0.46, Y - 0.22, Y + 0.2, fa)
+
+    def front(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#2a2c30')
+        sc = rrect(4, 4, W - 8, H - 12, 5)
+        p_.fill(sc, mix('#1a2024', '#6a7c88', k))
+        if k > 0.01:
+            p_.radial(sc, W / 2, H / 2 - 4, W * 0.6, [(0, '#b8c8d0', 90 * k), (1, '#000000', 0)])
+            for yy in np.arange(6, H - 10, 2.0): p_.fill(rect(4, yy, W - 8, 0.6), '#000000', 40)
+        p_.fill(oval(W - 8, H - 4, 1.4), '#c82a2a' if k > 0 else '#3a1010')
+    draw_box(pen, v, B, {'front': dict(fill='#2a2c30', art=front), 'all': '#202226'})
+    br = v.p(x - facing[0] * 0.2, Y + 0.2, y - facing[1] * 0.2); bt = v.p(x - facing[0] * 0.2, D_CEIL, y - facing[1] * 0.2)
+    pen.seg(br, bt, max(2.0, 0.03 * v.s(x, y)), '#3a3c40')
+
+
+def dr_wall_tv_glow(pen, v, P=(-1.5, 2.08, 0.42), facing=(-0.62, 0.78), k=0.0, t=0.0):
+    if k <= 0.01: return
+    x, Y, y = P
+    if v.d(x, y) < 0.3: return
+    fx, fy = x + facing[0] * 0.3, y + facing[1] * 0.3
+    gx, gy = v.p(fx, Y, fy)
+    fl = 0.85 + 0.15 * noise1(t * 9.0, 41)
+    pen.glow(gx, gy, 0.9 * v.s(x, y), '#8aa0b0', 50 * k * fl)
+
+
+# ---------------------------------------------------------------------------------------------- the kitchen wall phone
+D_RECEIVER = (-1.5, D_COUNTER_Y, 8.32)                       # where Grandma lays the receiver on the counter ("like a sleeping baby")
+D_PLUG_FLOOR = (-1.42, 0.0, 7.55)                            # the pulled line cord's plug lying on the floor
+
+
+def _coil_cord(pen, pts, s, c='#e8dcbe', r=0.012, pitch=0.012, w=None):
+    """A coiled telephone cord along a screen polyline pts (design px): s = px per metre there."""
+    path = smooth(pts, False, 0.8)
+    meas = skia.PathMeasure(path, False)
+    L = meas.getLength()
+    if L <= 1: return
+    rr = max(1.2, r * s); step = max(1.5, pitch * s)
+    w = w or max(0.8, 0.0045 * s)
+    pen.line(path, rr * 1.6 + 1.5, LINE, 200)
+    pen.line(path, rr * 1.6, _darken(c, 0.2))
+    d = 0.0
+    loops = skia.Path()
+    while d < L:
+        ok = meas.getPosTan(d)
+        if not ok: break
+        (px, py), (tx, ty) = ok
+        nx, ny = -ty, tx
+        loops.moveTo(px - nx * rr - tx * rr * 0.4, py - ny * rr - ty * rr * 0.4)
+        loops.quadTo(px + tx * rr * 0.9, py + ty * rr * 0.9, px + nx * rr - tx * rr * 0.4, py + ny * rr - ty * rr * 0.4)
+        d += step
+    p = skia.Paint(Color=col(c), AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=w, StrokeCap=skia.Paint.kRound_Cap)
+    pen.cv.drawPath(loops, p)
+    p2 = skia.Paint(Color=col('#ffffff', 70), AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=max(0.5, w * 0.4))
+    pen.cv.drawPath(loops, p2)
+
+
+def _sag(a, b, n=12, sag=0.0):
+    """Points of a hanging curve from a to b (3D) sagging `sag` metres below the chord (a parabola)."""
+    out = []
+    for i in range(n + 1):
+        u = i / n
+        out.append((a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u - sag * 4 * u * (1 - u), a[2] + (b[2] - a[2]) * u))
+    return out
+
+
+def dr_phone_points():
+    """Plan points of the wall phone: base centre, the hook (handset hung), the coil cord's socket at the base bottom,
+    the line cord's exit, the jack."""
+    x, Y, y = D_PHONE
+    return dict(base=(x - 0.045, Y, y), hook=(x - 0.1, Y + 0.02, y - 0.03), cord_base=(x - 0.07, Y - 0.115, y - 0.035),
+                line_out=(x - 0.04, Y - 0.115, y + 0.035), jack=D_JACK, receiver_counter=D_RECEIVER, plug_floor=D_PLUG_FLOOR)
+
+
+def dr_wall_phone(pen, v, phone='hung', cord='in', ring=0.0, t=0.0, era='now'):
+    """The kitchen wall phone (a cream rotary wall set: the handset hung vertically on its left, the dial on the right),
+    its coiled handset cord and the grey line cord down the wall to the jack on the baseboard.
+    phone 'hung' | 'off' (the handset is in someone's hand: the cast draws the coil cord to anchors['phone_cord_base'])
+    | 'counter' (the handset lying on the counter, the coil stretched to it); cord 'in' | 'out' (pulled from the wall: it
+    hangs down and lies on the floor, plug and all, the jack empty); ring 0..1 = the ringing shiver."""
+    x, Y, y = D_PHONE
+    if v.d(x, y) < 0.2: return
+    body_c = '#efe3c4' if era == 'now' else '#d9a640'
+    sh = 0.0015 * ring * math.sin(t * 2 * math.pi * 20)
+    jig = 0.004 * ring * math.sin(t * 2 * math.pi * 17 + 1.0)
+    B = Box(x - 0.045 + sh, y, 0.13, 0.09, Y - 0.115, Y + 0.105, -90)
+    s = v.s(x, y)
+    P = dr_phone_points()
+
+    # the line cord first (behind the body)
+    lo = (P['line_out'][0] + sh, P['line_out'][1], P['line_out'][2])
+    if cord == 'in':
+        pts = _sag(lo, (D_JACK[0] - 0.012, D_JACK[1] + 0.02, D_JACK[2]), 10, 0.0)
+        pts = [lo, (lo[0] + 0.005, lo[1] - 0.3, lo[2] + 0.06), (D_JACK[0] - 0.01, D_JACK[1] + 0.35, D_JACK[2] - 0.02), (D_JACK[0] - 0.012, D_JACK[1] + 0.03, D_JACK[2])]
+        sp = [v.p(*q) for q in pts]
+        pen.line(smooth(sp, False, 0.8), max(1.4, 0.006 * s) + 1.6, LINE, 200); pen.line(smooth(sp, False, 0.8), max(1.0, 0.006 * s), lit('#c8c4bc', lo, None))
+    else:
+        fl = D_PLUG_FLOOR
+        pts = [lo, (lo[0] - 0.01, lo[1] - 0.4, lo[2] + 0.02), (lo[0] - 0.03, 0.25, lo[2] + 0.05), (fl[0] + 0.05, 0.01, fl[2] - 0.15),
+               (fl[0] - 0.08, 0.005, fl[2] - 0.05), (fl[0] + 0.02, 0.005, fl[2] + 0.06), (fl[0], 0.005, fl[2])]
+        sp = [v.p(*q) for q in pts]
+        pen.line(smooth(sp, False, 0.8), max(1.4, 0.006 * s) + 1.6, LINE, 200); pen.line(smooth(sp, False, 0.8), max(1.0, 0.006 * s), lit('#c8c4bc', lo, None))
+        px_, py_ = v.p(*fl)
+        plug = rrect(px_ - 0.012 * s, py_ - 0.008 * s, 0.024 * s, 0.014 * s, 0.003 * s)
+        pen.fill(plug, lit('#e8e4d8', fl, (0, 1, 0))); pen.line(plug, 0.8)
+
+    def front(p_, W, H):
+        p_.linear(rect(0, 0, W, H), 0, 0, W, 0, [(0, '#ffffff', 50), (0.4, '#ffffff', 0), (1, '#000000', 40)])
+        dx_, dy_, dr = W * 0.66, H * 0.62, W * 0.27
+        p_.fill(oval(dx_, dy_, dr), _darken(body_c, 0.08)); p_.line(oval(dx_, dy_, dr), 0.5, '#000000', 160)
+        for k in range(10):                                                # finger wheel holes
+            a = math.radians(-60 + k * 30)
+            p_.fill(oval(dx_ + math.cos(a) * dr * 0.7, dy_ + math.sin(a) * dr * 0.7, dr * 0.15), '#f8f4ea'); p_.line(oval(dx_ + math.cos(a) * dr * 0.7, dy_ + math.sin(a) * dr * 0.7, dr * 0.15), 0.3, '#000000', 160)
+        p_.fill(oval(dx_, dy_, dr * 0.38), '#f8f4ea'); p_.line(oval(dx_, dy_, dr * 0.38), 0.3, '#000000', 120)
+        btext(p_, '555-0179', dx_, dy_ + 0.6, 'sans', dr * 0.16, '#3a3a3a', 200, 'center')
+        p_.fill(rect(dx_ + dr * 0.55, dy_ + dr * 0.3, dr * 0.15, dr * 0.5), '#b8b0a0')                   # finger stop
+    draw_box(pen, v, B, {'front': dict(fill=body_c, art=front), 'all': _darken(body_c, 0.12), 'top': _lighten(body_c, 0.05)})
+    if phone == 'hung':
+        hx, hY, hy = x - 0.105 + sh + jig, Y + 0.0, y - 0.035
+        top, bot = v.p(hx, hY + 0.105, hy), v.p(hx, hY - 0.105, hy)
+        hs = v.s(hx, hy)
+        hand = union(union(oval(top[0], top[1] + 0.02 * hs, 0.028 * hs, 0.03 * hs), oval(bot[0], bot[1] - 0.02 * hs, 0.028 * hs, 0.03 * hs)),
+                     rrect(top[0] - 0.014 * hs, top[1], 0.028 * hs, bot[1] - top[1], 0.01 * hs))
+        pen.fill(hand, lit(_lighten(body_c, 0.04), (hx, hY, hy), (-1, 0, 0))); pen.line(hand, max(0.8, 0.005 * hs))
+        pen.linear(hand, top[0] - 0.03 * hs, 0, top[0] + 0.03 * hs, 0, [(0, '#ffffff', 60), (0.45, '#ffffff', 0), (1, '#000000', 50)])
+        for q, sg in ((top, 1), (bot, -1)):
+            for k in range(3): pen.fill(oval(q[0] - 0.008 * hs + k * 0.008 * hs, q[1] + sg * 0.02 * hs, 0.002 * hs), '#5a5040', 160)
+        cb = (x - 0.075 + sh, Y - 0.115, y - 0.035)
+        tail = [v.p(hx, hY - 0.135, hy), v.p(hx - 0.01, hY - 0.4, hy + 0.01), v.p(cb[0] - 0.005, cb[1] - 0.12, cb[2]), v.p(*cb)]
+        _coil_cord(pen, tail, hs, lit(body_c, (hx, 1.1, hy), None), r=0.009, pitch=0.01)
+    elif phone == 'counter':
+        rx, rY, ry = D_RECEIVER
+        cb = (x - 0.075 + sh, Y - 0.115, y - 0.035)
+        pts = [v.p(*cb), v.p(cb[0] - 0.02, cb[1] - 0.25, cb[2] + 0.2), v.p(rx + 0.12, rY + 0.03, ry - 0.2), v.p(rx + 0.04, rY + 0.02, ry - 0.1)]
+        _coil_cord(pen, pts, s, lit(body_c, (x, 1.1, y), None), r=0.009, pitch=0.012)
+        dr_receiver_lying(pen, v, rx, rY, ry, body_c)
+
+
+def dr_receiver_lying(pen, v, x, Y, y, c='#efe3c4', ang=20.0):
+    """The handset lying on its side on a surface at (x, Y, y), turned `ang` degrees about the vertical."""
+    if v.d(x, y) < 0.15: return
+    a = math.radians(ang)
+    ex, ey = math.sin(a) * 0.1, math.cos(a) * 0.1
+    pa, pb = (x - ex, Y + 0.03, y - ey), (x + ex, Y + 0.03, y + ey)
+    sa, sb = v.p(*pa), v.p(*pb); s = v.s(x, y)
+    sh = shadow_on_floor
+    pen.fill(ellipse3(v, x, y, 0.13, 0.05, Y + 0.001), '#000000', 70)
+    hand = union(union(oval(sa[0], sa[1], 0.032 * s, 0.026 * s), oval(sb[0], sb[1], 0.032 * s, 0.026 * s)),
+                 poly([(sa[0], sa[1] - 0.012 * s), (sb[0], sb[1] - 0.012 * s), (sb[0], sb[1] + 0.01 * s), (sa[0], sa[1] + 0.01 * s)]))
+    pen.fill(hand, lit(c, (x, Y + 0.03, y), (0, 1, 0))); pen.line(hand, max(0.8, 0.005 * s))
+    pen.linear(hand, 0, min(sa[1], sb[1]) - 0.03 * s, 0, max(sa[1], sb[1]) + 0.03 * s, [(0, '#ffffff', 60), (0.5, '#ffffff', 0), (1, '#000000', 60)])
+
+
+# ---------------------------------------------------------------------------------------------- kitchen pieces
+def _chrome_pulls(p_, W, H, n, y, inset=0.0):
+    dw = W / n
+    for i in range(n):
+        r = rect(i * dw + 2, 3 + inset, dw - 4, H - 6 - inset)
+        p_.line(r, 0.9, '#8a8270', 170)
+        kx = i * dw + (dw - 9 if i % 2 == 0 else 9)
+        p_.fill(rrect(kx - 3.5, y - 0.8, 7, 1.6, 0.8), '#d8dce0'); p_.line(rrect(kx - 3.5, y - 0.8, 7, 1.6, 0.8), 0.4, '#3a3a3a', 200)
+
+
+def dr_counters(pen, v, o):
+    """The kitchen's cream cabinets with chrome pulls, the butter-yellow counter with its chrome edge, the white tile
+    splash, the stainless sink under the window, the stove with its hood light, the upper cabinets."""
+    x0, x1, y0, y1 = D_KCOUNTER
+    cab = DP['cab'] if o.get('era') != '1979' else '#e8d098'
+    ctop = DP['counter'] if o.get('era') != '1979' else '#d89a3a'
+
+    def base_art(n):
+        def art(p_, W, H):
+            p_.texture(rect(0, 0, W, H), 'grunge', 0.18, 'overlay', 0.6)
+            _chrome_pulls(p_, W, H, n, 12)
+        return art
+    runs = [((x0 + 0.0, D_STOVE.cx - D_STOVE.w / 2), 'back'), ((D_STOVE.cx + D_STOVE.w / 2, x1 - 0.62), 'back')]
+    for ((a_, b_), _) in runs:
+        if b_ - a_ < 0.05: continue
+        B = Box((a_ + b_) / 2, (y0 + y1) / 2, b_ - a_, y1 - y0, 0.1, D_COUNTER_Y - 0.04, 0)
+        draw_box(pen, v, B, {'front': dict(fill=cab, art=base_art(max(1, int(round((b_ - a_) / 0.45))))), 'all': _darken(cab, 0.18)})
+        draw_box(pen, v, Box((a_ + b_) / 2, (y0 + y1) / 2 + 0.04, b_ - a_, y1 - y0 - 0.08, 0.0, 0.1, 0), {'all': '#2a2622'})
+        draw_box(pen, v, Box((a_ + b_) / 2, (y0 + y1) / 2 - 0.01, b_ - a_, y1 - y0 + 0.03, D_COUNTER_Y - 0.04, D_COUNTER_Y, 0),
+                 {'all': '#c8ccd0', 'top': dict(fill=ctop, art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 0.6))})
+    # the return along the east wall (under the phone's reach): front faces -x
+    rx0, rx1, ry0, ry1 = D_KRETURN
+    B = Box((rx0 + rx1) / 2, (ry0 + y0) / 2, y0 - ry0, rx1 - rx0, 0.1, D_COUNTER_Y - 0.04, -90)
+    draw_box(pen, v, B, {'front': dict(fill=cab, art=base_art(2)), 'all': _darken(cab, 0.18)})
+    draw_box(pen, v, Box((rx0 + rx1) / 2 + 0.04, (ry0 + y0) / 2, y0 - ry0, rx1 - rx0 - 0.08, 0.0, 0.1, -90), {'all': '#2a2622'})
+    draw_box(pen, v, Box((rx0 + rx1) / 2 - 0.01, (ry0 + y1) / 2, y1 - ry0, rx1 - rx0 + 0.03, D_COUNTER_Y - 0.04, D_COUNTER_Y, -90),
+             {'all': '#c8ccd0', 'top': dict(fill=ctop, art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 0.6))})
+    # splash tiles on the back wall and the east wall above the counter
+    for (O, U, W_, nrm) in (((x0, 1.42, 9.598), (1, 0, 0), (x1 - x0) * 100, (0, 0, -1)), ((-1.202, 1.42, 9.6), (0, 0, -1), (9.6 - ry0) * 100, (-1, 0, 0))):
+        F = Face(O, U, (0, -1, 0), W_, (1.42 - D_COUNTER_Y) * 100, nrm, 'wall')
+        holes = [rect((D_KWIN[0] - x0) * 100, 0, (D_KWIN[1] - D_KWIN[0]) * 100, (1.42 - D_KWIN[2]) * 100)] if nrm == (0, 0, -1) else None
+        draw_face(pen, v, F, lambda p_, W, H: (pat(p_, W, H, 'tile', '#d8d8d0', 255, scale=0.72), p_.fill(rect(0, 0, W, 2.2), '#2a6a5a')),
+                  '#f4f2ea', holes=holes, ao={'bottom': 6}, line=False)
+    # the sink: a stainless double bowl inset in the counter, a chrome faucet
+    if v.cam_h > D_COUNTER_Y:
+        q = [(D_KSINK[0], D_COUNTER_Y + 0.001, 9.08), (D_KSINK[1], D_COUNTER_Y + 0.001, 9.08), (D_KSINK[1], D_COUNTER_Y + 0.001, 9.5), (D_KSINK[0], D_COUNTER_Y + 0.001, 9.5)]
+        pen.fill(v.poly3(q), lit('#b8bcc4', (-3.3, D_COUNTER_Y, 9.3), (0, 1, 0)))
+        for (a_, b_) in ((D_KSINK[0] + 0.03, -3.32), (-3.28, D_KSINK[1] - 0.03)):
+            q2 = [(a_, D_COUNTER_Y + 0.002, 9.11), (b_, D_COUNTER_Y + 0.002, 9.11), (b_, D_COUNTER_Y + 0.002, 9.47), (a_, D_COUNTER_Y + 0.002, 9.47)]
+            pen.fill(v.poly3(q2), lit('#5a6068', (-3.3, D_COUNTER_Y, 9.3), (0, 1, 0)))
+        pen.line(v.poly3(q), 1.0)
+    fx_, fy_ = v.p(-3.3, D_COUNTER_Y, 9.53); s = v.s(-3.3, 9.53)
+    tip = v.p(-3.3, D_COUNTER_Y + 0.26, 9.36)
+    path = smooth([(fx_, fy_), v.p(-3.3, D_COUNTER_Y + 0.3, 9.53), tip], False, 1.0)
+    pen.line(path, max(2.0, 0.022 * s) + 2, LINE); pen.line(path, max(1.5, 0.022 * s), lit('#d0d4da', (-3.3, 1.1, 9.5), None))
+    for sx in (-0.1, 0.1):
+        hp = v.p(-3.3 + sx, D_COUNTER_Y + 0.05, 9.53)
+        pen.fill(oval(hp[0], hp[1], max(2.0, 0.018 * s)), lit('#e0e4ea', (-3.3, 1.0, 9.5), None)); pen.line(oval(hp[0], hp[1], max(2.0, 0.018 * s)), 0.8)
+    # upper cabinets either side of the window, over the stove a hood with its light
+    for (a_, b_) in ((x0, -4.05), (-2.55, -1.2)):
+        B = Box((a_ + b_) / 2, 9.43, b_ - a_, 0.34, 1.45, 2.25, 0)
+        draw_box(pen, v, B, {'front': dict(fill=cab, art=lambda p_, W, H, n=max(1, int(round((b_ - a_) / 0.42))): (p_.texture(rect(0, 0, W, H), 'grunge', 0.18, 'overlay', 0.6),
+                                                                                                                         _chrome_pulls(p_, W, H, n, H - 9))),
+                             'all': _darken(cab, 0.2), 'bottom': _darken(cab, 0.35)})
+    dr_stove(pen, v, o)
+
+
+def dr_stove(pen, v, o):
+    B = D_STOVE
+    era = o.get('era')
+    c = '#f4f2ec' if era != '1979' else '#c8a040'
+
+    def front(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.15, 'overlay', 0.5)
+        p_.fill(rrect(8, 22, W - 16, H - 36, 2), _darken(c, 0.05)); p_.line(rrect(8, 22, W - 16, H - 36, 2), 0.9, '#3a3a3a', 160)
+        p_.fill(rect(16, 30, W - 32, 18), '#1a1c20', 220)
+        p_.fill(rrect(12, 15, W - 24, 3.4, 1.5), '#d8dce0')
+        for k in range(4): p_.fill(oval(12 + k * (W - 24) / 3, 6, 2.6), '#2a2a2a'); p_.fill(oval(12 + k * (W - 24) / 3, 6, 1.2), '#d8dce0')
+        p_.fill(rect(0, H - 9, W, 9), '#2a2a2a')
+
+    def top(p_, W, H):
+        for (cx_, cy_) in ((W * 0.27, H * 0.32), (W * 0.73, H * 0.32), (W * 0.27, H * 0.72), (W * 0.73, H * 0.72)):
+            p_.fill(oval(cx_, cy_, 9.0), '#1a1a18'); p_.line(oval(cx_, cy_, 5.5), 0.8, '#5a5a50'); p_.line(oval(cx_, cy_, 2.5), 0.8, '#5a5a50')
+    draw_box(pen, v, B, {'front': dict(fill=c, art=front), 'top': dict(fill='#e8e8e2', art=top), 'all': _darken(c, 0.15)})
+    draw_box(pen, v, Box(B.cx, B.cy + 0.28, B.w, 0.06, B.Y1, B.Y1 + 0.14, 0), {'all': c})
+    hood = Box(B.cx, 9.38, B.w + 0.04, 0.44, 1.62, 1.76, 0)
+    draw_box(pen, v, hood, {'all': '#c8ccd0', 'bottom': '#2a2a2c', 'front': dict(fill='#d8dce0', art=lambda p_, W, H: p_.fill(rect(4, H - 4, W - 8, 1.2), '#8a8a8a'))})
+    # a kettle on the back burner
+    kx, ky = B.cx + 0.17, B.cy + 0.12
+    if v.d(kx, ky) > 0.3:
+        s = v.s(kx, ky); px, py = v.p(kx, B.Y1, ky)
+        k_ = smooth([(px - 0.1 * s, py), (px - 0.11 * s, py - 0.08 * s), (px - 0.05 * s, py - 0.15 * s), (px + 0.05 * s, py - 0.15 * s), (px + 0.11 * s, py - 0.08 * s), (px + 0.1 * s, py)], True, 0.8)
+        pen.fill(k_, lit('#c8342a' if era != '1979' else '#e88a2a', (kx, B.Y1 + 0.1, ky), None)); pen.line(k_, 1.0)
+        pen.line(smooth([(px - 0.06 * s, py - 0.15 * s), (px, py - 0.22 * s), (px + 0.06 * s, py - 0.15 * s)], False, 1.0), max(1.0, 0.012 * s), '#2a2a2a')
+
+
+def dr_fridge(pen, v, o):
+    """The rounded cream fridge (1960s, Grandma kept it): chrome handle, Mom's schedule, Milo's dinosaur drawing,
+    magnets; 1979 it is avocado green."""
+    B = D_FRIDGE
+    era = o.get('era')
+    c = '#efe8d6' if era != '1979' else '#9aa04a'
+
+    def front(p_, W, H):
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.2, 'overlay', 0.5)
+        p_.linear(rect(0, 0, W, H), 0, 0, W, 0, [(0, '#ffffff', 40), (0.3, '#ffffff', 0), (1, '#000000', 45)])
+        p_.fill(rect(0, H * 0.3, W, 1.2), '#6a6250')
+        p_.fill(rrect(W - 12, H * 0.38, 4.5, H * 0.16, 2), '#d8dce0'); p_.line(rrect(W - 12, H * 0.38, 4.5, H * 0.16, 2), 0.5, '#3a3a3a', 200)
+        p_.fill(rrect(W - 12, H * 0.12, 4.5, H * 0.1, 2), '#d8dce0')
+        if era != '1979':
+            # Milo's dinosaur drawing, Mom's shift schedule, a Larkfield General magnet
+            p_.fill(rect(8, H * 0.08, 24, 18), '#fbf7ee'); p_.fill(rect(8.6, H * 0.08 + 0.8, 24, 18), '#000000', 30)
+            p_.fill(smooth([(12, H * 0.08 + 14), (16, H * 0.08 + 8), (22, H * 0.08 + 7), (28, H * 0.08 + 10), (26, H * 0.08 + 15)], True, 0.7), '#4aa86a')
+            p_.fill(oval(30, H * 0.08 + 4, 1.4), '#e84a5a')
+            p_.fill(rect(10, H * 0.42, 30, 38), '#ffffff')
+            btext(p_, 'MOM - NIGHTS', 25, H * 0.42 + 5, 'hand', 3.6, '#2a3a8a', 230, 'center')
+            for k in range(7):
+                p_.seg((12, H * 0.42 + 9 + k * 4), (38 - (k % 3) * 3, H * 0.42 + 9 + k * 4), 0.5, '#5a6aa8', 170)
+            p_.fill(oval(25, H * 0.42 - 0.5, 1.6), '#4a8ad8')
+            p_.fill(rrect(36, H * 0.64, 10, 6, 1.5), '#2a6aa8'); btext(p_, 'LGH', 41, H * 0.64 + 4.2, 'sans_b', 3.0, '#ffffff', 230, 'center')
+        p_.fill(rect(0, H - 6, W, 6), '#2a2622')
+    fs = B.faces()
+    draw_face(pen, v, fs['front'], front, c, ao=False)
+    for nm in ('left', 'right', 'top'):
+        draw_face(pen, v, fs[nm], None, _darken(c, 0.1) if nm != 'top' else _lighten(c, 0.04), ao=False)
+
+
+def dr_kitchen_table(pen, v, o):
+    """The formica table with its chrome band and legs, a sugar bowl, Milo's water glass."""
+    B = D_KTABLE
+    era = o.get('era')
+    top = '#f2e6c8' if era != '1979' else '#e8b86a'
+    parts = table_parts(B, top, leg='#c8ccd0', apron=0.0, thick=0.04, legw=0.035)
+    draw_parts(pen, v, parts)
+    edge = Box(B.cx, B.cy, B.w + 0.01, B.d + 0.01, B.Y1 - 0.035, B.Y1 - 0.005, B.fa)
+    draw_box(pen, v, edge, {'all': '#d8dce2'}, skip=('top', 'bottom'))
+    gx, gy = B.cx + 0.3, B.cy - 0.12
+    if v.d(gx, gy) > 0.3:
+        s = v.s(gx, gy); px, py = v.p(gx, B.Y1, gy)
+        gl = poly([(px - 0.032 * s, py - 0.12 * s), (px + 0.032 * s, py - 0.12 * s), (px + 0.026 * s, py), (px - 0.026 * s, py)])
+        pen.fill(gl, '#c8dce8', 110); pen.fill(rect(px - 0.028 * s, py - 0.05 * s, 0.056 * s, 0.05 * s), '#a8c8e0', 90); pen.line(gl, 0.8, '#5a6a7a')
+        pen.seg((px - 0.022 * s, py - 0.11 * s), (px - 0.018 * s, py - 0.01 * s), max(0.6, 0.004 * s), '#ffffff', 140)
+
+
+def dr_kitchen_chairs():
+    """The three red vinyl kitchen chairs round the table: [(name, x, y, fa, face)]."""
+    B = D_KTABLE
+    out = []
+    for i, (u, n, fa, face) in enumerate(((-0.3, -0.6, 0, (0, 1)), (0.3, -0.6, 0, (0, 1)), (-0.82, 0.0, 90, (1, 0)))):
+        if i == 2:
+            c = (B.cx - 0.82, B.cy)
+        else:
+            q = B.at(u, n, 0); c = (q[0], q[2])
+        out.append(('kchair%d' % i, c[0], c[1], fa, face))
+    return out
+
+
+def _cafe_curtain_d(pen, v, era='now'):
+    """Red-check cafe curtains on a tension rod across the lower half of the sink window."""
+    rodY = (D_KWIN[2] + D_KWIN[3]) / 2 + 0.02
+    O = (D_KWIN[0] - 0.02, rodY, 9.6 - 0.07)
+    F = Face(O, (1, 0, 0), (0, -1, 0), (D_KWIN[1] - D_KWIN[0] + 0.04) * 100, (rodY - D_KWIN[2] + 0.02) * 100, (0, 0, -1), 'front')
+    W, H = F.W, F.H
+    shape = poly([(0, 0), (W, 0)] + [(x, H - 1.2 * abs(math.sin(x * 0.25))) for x in np.linspace(W, 0, 24)])
+    ink = '#c83a3a' if era != '1979' else '#d87a2a'
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#f2ead8')
+        pat(p_, W, H, 'gingham', ink, 200, scale=1.0)
+        for k in range(int(W / 6)):
+            p_.linear(rect(k * 6, 0, 6, H), k * 6, 0, k * 6 + 6, 0, [(0, '#000000', 40), (0.5, '#ffffff', 20), (1, '#000000', 40)])
+        p_.fill(rect(W * 0.48, 0, W * 0.04, H), '#000000', 30)
+        p_.fill(rect(0, 0, W, 1.4), '#c8ccd0')
+    draw_face(pen, v, F, art, '#f2ead8', shape=shape, ao=False, lw=0.9)
+
+
+# ---------------------------------------------------------------------------------------------- the bathroom pieces
+CARD_FACE = '#d8c088'                                        # the card: "the paper so old it had gone the colour of weak tea"
+
+
+def _card_art_small(p_, x, y, w, h, k=1.0, tape=True):
+    """The yellow rules card as seen in the room (cm frame, top-left x, y): typed lines too small to read, the tape."""
+    p_.fill(rect(x + 0.3, y + 0.5, w, h), '#000000', 70 * k)
+    p_.fill(rect(x, y, w, h), CARD_FACE, 255 * k)
+    p_.texture(rect(x, y, w, h), 'paper', 0.6 * k, 'multiply', 0.3)
+    p_.linear(rect(x, y, w, h), x, y, x + w, y + h, [(0, '#8a6a30', 0), (0.7, '#8a6a30', 0), (1, '#8a6a30', 60 * k)])
+    p_.fill(rect(x + w * 0.2, y + h * 0.07, w * 0.6, h * 0.05), '#2a2420', 200 * k)
+    for i in range(7):
+        yy = y + h * (0.2 + 0.1 * i)
+        p_.fill(rect(x + w * 0.08, yy, w * (0.8 - 0.12 * ((i * 3) % 4) / 3), h * 0.03), '#2a2420', 170 * k)
+    if tape:
+        for (tx, ty) in ((x - 0.6, y - 0.6), (x + w - 2.4, y - 0.6)):
+            p_.fill(rect(tx, ty, 3.0, 1.6), '#f0e2a8', 190 * k)
+
+
+def dr_cabinet_door(o):
+    """The medicine cabinet's mirrored door (Door: hinge at its front edge y0; opens toward the room). Face a = inside
+    (the yellow card taped to it), face b = the mirror."""
+    x, y0, y1, Y0, Y1 = D_CAB
+    card = o.get('card', True)
+    marks = o.get('card_marks', not card)
+
+    def inside(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#e8e6e0')
+        p_.fill(rect(2, 2, W - 4, H - 4), '#d0ccc4')
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.3, 'overlay', 0.5)
+        if card:
+            _card_art_small(p_, W * 0.5 - 6.2, H * 0.22, 12.4, 7.6 * 1.25)
+        elif marks:
+            for (tx, ty) in ((W * 0.5 - 6.8, H * 0.22 - 0.6), (W * 0.5 + 3.8, H * 0.22 - 0.6)):
+                p_.fill(rect(tx, ty, 3.0, 1.6), '#c8b880', 120)                    # the old tape's ghosts
+            p_.line(rect(W * 0.5 - 6.2, H * 0.22, 12.4, 9.5), 0.4, '#a89a70', 60)
+
+    def mirror(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#c8ccd0')
+        p_.fill(rect(1.5, 1.5, W - 3, H - 3), '#5a6670')
+        p_.linear(rect(1.5, 1.5, W - 3, H - 3), 0, 0, W, H, [(0, '#8a9aa8', 255), (0.45, '#4a5660', 255), (1, '#3a444c', 255)])
+        p_.linear(rect(1.5, 1.5, W - 3, H - 3), 0, 0, W, H, [(0, '#ffffff', 0), (0.3, '#ffffff', 50), (0.36, '#ffffff', 0), (0.5, '#ffffff', 25), (0.54, '#ffffff', 0)])
+        p_.fill(rect(1.5, H - 7, W - 3, 5.5), '#000000', 40)
+    D = Door((x - 0.02, y0), y1 - y0, Y1 - Y0, (0.0, 1.0), 1, Y0, art_a=inside, art_b=mirror, thick=0.025, col='#d8dade')
+    return D
+
+
+def dr_cabinet_box(pen, v, o):
+    """The cabinet's recess (shelves, amber pill bottles, a toothbrush glass, bandages) and its chrome frame."""
+    x, y0, y1, Y0, Y1 = D_CAB
+    dep = 0.13
+    empty = o.get('cab_empty', False)
+    # the back and the shelves (faces inside the wall)
+    back = Face((x + dep, Y1, y0), (0, 0, 1), (0, -1, 0), (y1 - y0) * 100, (Y1 - Y0) * 100, (-1, 0, 0), 'wall')
+    draw_face(pen, v, back, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'plaster', 0.4, 'overlay', 0.5), '#e4e2dc', ao={'top': 6, 'bottom': 6, 'left': 6, 'right': 6})
+    for (ya, yb) in ((y0, y0), (y1, y1)):
+        F = Face((x, Y1, ya), (1, 0, 0), (0, -1, 0), dep * 100, (Y1 - Y0) * 100, (0, 0, 1) if ya == y0 else (0, 0, -1), 'side')
+        draw_face(pen, v, F, None, '#d8d6d0', ao=False, lw=0.8)
+    for sY in (Y0 + 0.005, Y0 + 0.24, Y0 + 0.47):
+        F = Face((x, sY, y0), (0, 0, 1), (1, 0, 0), (y1 - y0) * 100, dep * 100, (0, 1, 0), 'top')
+        draw_face(pen, v, F, None, '#f0f0ec', ao=False, lw=0.7)
+        if empty and sY > Y0 + 0.1: continue
+        rng = np.random.default_rng(int(sY * 100))
+        yy = y0 + 0.04
+        while yy < y1 - 0.05:
+            w_ = rng.uniform(0.03, 0.05); h_ = rng.uniform(0.07, 0.15)
+            kind = rng.uniform()
+            cxx = x + dep * 0.5
+            if v.d(cxx, yy) > 0.1:
+                px, py = v.p(cxx, sY, yy + w_ / 2); s = v.s(cxx, yy)
+                r = rrect(px - w_ * 0.5 * s, py - h_ * s, w_ * s, h_ * s, w_ * 0.2 * s)
+                cc = '#c8782a' if kind < 0.5 else ('#f2f2ee' if kind < 0.8 else '#8ab0d0')
+                pen.fill(r, lit(cc, (cxx, sY + h_ / 2, yy), (-1, 0, 0))); pen.line(r, 0.7)
+                pen.fill(rect(px - w_ * 0.5 * s, py - h_ * s, w_ * s, h_ * 0.22 * s), lit('#f2f2ee' if kind < 0.5 else '#3a6aa8', (cxx, sY + h_, yy), None))
+                if kind < 0.5: pen.fill(rect(px - w_ * 0.42 * s, py - h_ * 0.65 * s, w_ * 0.84 * s, h_ * 0.3 * s), lit('#fbf7ee', (cxx, sY + h_ / 2, yy), None))
+            yy += w_ + rng.uniform(0.01, 0.03)
+    # chrome frame round the recess
+    fr = Face((x - 0.012, Y1 + 0.02, y0 - 0.02), (0, 0, 1), (0, -1, 0), (y1 - y0 + 0.04) * 100, (Y1 - Y0 + 0.04) * 100, (-1, 0, 0), 'front')
+    draw_face(pen, v, fr, lambda p_, W, H: p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#f8f8f8', 255), (0.5, '#a8acb0', 255), (1, '#e8eaec', 255)]),
+              '#c8ccd0', holes=[rect(2, 2, (y1 - y0) * 100, (Y1 - Y0) * 100)], ao=False, lw=0.9)
+
+
+def dr_vanity_light(pen, v, k=0.0):
+    """The bar light over the cabinet: a chrome bar with three frosted globes."""
+    x, y0, y1, Y0, Y1 = D_CAB
+    for j in range(3):
+        yy = y0 + (y1 - y0) * (0.18 + 0.32 * j)
+        P = (x - 0.08, Y1 + 0.16, yy)
+        if v.d(P[0], P[2]) < 0.15: continue
+        s = v.s(P[0], P[2]); px, py = v.p(*P)
+        pen.fill(oval(px, py, 0.05 * s), mix(lit('#e8e4dc', P, None), '#fff8e8', k)); pen.line(oval(px, py, 0.05 * s), 0.9)
+    a_, b_ = v.p(x - 0.03, Y1 + 0.2, y0 + 0.02), v.p(x - 0.03, Y1 + 0.2, y1 - 0.02)
+    pen.seg(a_, b_, max(2.0, 0.02 * v.s(x, y0)), '#b8bcc0')
+
+
+def dr_pedestal_sink(pen, v):
+    x, y = D_BSINK
+    B = Box(x, y, 0.56, 0.44, 0.78, 0.88, -90)
+    s = v.s(x, y)
+    a_, b_ = v.p(x + 0.02, 0.0, y), v.p(x + 0.02, 0.78, y)
+    col_ = lit('#f4f2ee', (x, 0.4, y), None)
+    ped = poly([(a_[0] - 0.09 * s, a_[1]), (a_[0] + 0.09 * s, a_[1]), (b_[0] + 0.06 * s, b_[1]), (b_[0] - 0.06 * s, b_[1])])
+    pen.fill(ped, col_); pen.line(ped, 1.0)
+    draw_box(pen, v, B, {'all': '#ecebe6', 'top': dict(fill='#f8f6f2', art=lambda p_, W, H: (p_.fill(oval(W / 2, H * 0.55, W * 0.36, H * 0.32), '#d8dce0'),
+                                                                                                 p_.line(oval(W / 2, H * 0.55, W * 0.36, H * 0.32), 0.6, '#5a5a5a', 160)))})
+    for sy in (-0.12, 0.12):
+        P = (x + 0.17, 0.9, y + sy)
+        if v.d(P[0], P[2]) > 0.15:
+            q = v.p(*P); pen.fill(oval(q[0], q[1], max(1.5, 0.018 * v.s(P[0], P[2]))), lit('#e8eaec', P, None)); pen.line(oval(q[0], q[1], max(1.5, 0.018 * v.s(P[0], P[2]))), 0.7)
+
+
+def dr_toilet(pen, v):
+    x, y = D_TOILET
+    tank = Box(x + 0.12, y, 0.48, 0.2, 0.42, 0.78, -90)
+    bowl = Box(x - 0.08, y, 0.38, 0.5, 0.0, 0.4, -90)
+    draw_box(pen, v, bowl, {'all': '#f0eeea', 'top': '#f6f4f0'})
+    draw_box(pen, v, tank, {'all': '#f0eeea', 'top': '#f8f6f2'})
+
+
+def dr_tub(pen, v):
+    B = D_TUB
+    draw_box(pen, v, B, {'front': dict(fill='#eef2f2', art=lambda p_, W, H: p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 40), (1, '#000000', 40)])),
+                         'top': dict(fill='#f4f6f6', art=lambda p_, W, H: (p_.fill(rrect(6, 6, W - 12, H - 12, 10), '#c8d0d4'))), 'all': '#e0e6e6'})
+    # the shower curtain (aqua, pulled half across)
+    F = Face((B.cx - B.w / 2, 2.0, B.cy - B.d / 2 - 0.02), (1, 0, 0), (0, -1, 0), B.w * 55, 135.0, (0, 0, -1), 'front')
+    sh = poly([(0, 0), (B.w * 55, 0)] + [(x, 135 - 2 * abs(math.sin(x * 0.2))) for x in np.linspace(B.w * 55, 0, 16)])
+
+    def art(p_, W, H):
+        for i in range(int(W / 7)):
+            p_.linear(rect(i * 7, 0, 7, H), i * 7, 0, i * 7 + 7, 0, [(0, '#000000', 40), (0.5, '#ffffff', 40), (1, '#000000', 40)])
+        for (cx_, cy_) in ((12, 30), (40, 60), (22, 95), (60, 40), (70, 110)): p_.line(oval(cx_, cy_, 5), 1.0, '#ffffff', 90)
+    draw_face(pen, v, F, art, '#8ac8c8', shape=sh, ao=False, lw=0.9)
+    a_, b_ = v.p(B.cx - B.w / 2, 2.02, B.cy - B.d / 2 - 0.02), v.p(B.cx + B.w / 2, 2.02, B.cy - B.d / 2 - 0.02)
+    pen.seg(a_, b_, max(1.5, 0.012 * v.s(B.cx, B.cy)), '#c8ccd0')
+
+
+# ---------------------------------------------------------------------------------------------- hall pieces
+def dr_front_door_art(side='in', lite_k=0.0):
+    """The front door: deep red outside / white inside, four panels, a little half-moon lite at the top, the peephole at
+    1.5 m, the deadbolt and the brass knob (on the east side)."""
+    col_ = DP['door_red'] if side == 'out' else '#efe9dc'
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), col_)
+        p_.texture(rect(0, 0, W, H), 'wood', 0.25, 'overlay', 0.6, 90)
+        sw = 11.0
+        for (y0, y1) in ((H * 0.24, H * 0.58), (H * 0.63, H - 12)):
+            for (x0, x1) in ((sw, W / 2 - 3.5), (W / 2 + 3.5, W - sw)):
+                pr = rect(x0, y0, x1 - x0, y1 - y0)
+                p_.fill(pr, _darken(col_, 0.05)); p_.fill(rect(x0 + 3, y0 + 3, x1 - x0 - 6, y1 - y0 - 6), _lighten(col_, 0.03))
+                p_.line(pr, 0.9, '#000000', 90); p_.fill(rect(x0, y1 - 1.2, x1 - x0, 1.2), '#ffffff', 70)
+        # the half-moon lite (a hole would show the porch: drawn as glass lit by the porch light)
+        lite = inter(oval(W / 2, H * 0.17, W * 0.3, H * 0.09), rect(0, 0, W, H * 0.17))
+        p_.fill(lite, mix('#141a2a', '#ffdca0', lite_k)); p_.line(lite, 1.2, '#2a2420', 200)
+        for k in (-1, 0, 1): p_.seg((W / 2, H * 0.17), (W / 2 + k * W * 0.2, H * 0.17 - H * 0.07 * (1 - abs(k) * 0.3)), 0.8, '#2a2420', 200)
+        kx = 7.5 if side == 'in' else W - 7.5                     # face a (outside) runs hinge -> latch, face b latch -> hinge
+        ky = H - D_KNOB_Y * 100
+        p_.fill(rrect(kx - 3.2, ky - 9, 6.4, 18, 2.6), '#a8843a'); p_.fill(oval(kx, ky, 3.4), '#c9a24a'); p_.fill(oval(kx - 1.0, ky - 1.2, 1.3), '#fff0c0', 200)
+        p_.line(oval(kx, ky, 3.4), 0.7, '#3a2a10', 220)
+        by = H - (D_KNOB_Y + 0.17) * 100
+        p_.fill(oval(kx, by, 3.0), '#b8944a'); p_.line(oval(kx, by, 3.0), 0.7, '#3a2a10', 220)
+        p_.seg((kx - 2.2, by), (kx + 2.2, by), 1.6, '#6a4a1a')
+        py_ = H - D_PEEP_Y * 100
+        p_.fill(oval(W / 2, py_, 2.2), '#b8944a'); p_.fill(oval(W / 2, py_, 1.1), '#1a1c22'); p_.fill(oval(W / 2 - 0.4, py_ - 0.4, 0.4), '#c8d0e8', 220)
+        p_.line(oval(W / 2, py_, 2.2), 0.6, '#3a2a10', 220)
+        if side == 'out':
+            p_.fill(rect(W / 2 - 9, H * 0.6, 18, 3), '#c9a24a')                    # a brass kick plate / number
+            btext(p_, '27', W / 2, H * 0.22, 'serif_b', 9, '#c9a24a', 230, 'center')
+        p_.line(rect(0, 0, W, H), 1.0, '#000000', 120)
+    return art
+
+
+def dr_front_door(o):
+    ang = o.get('front_door', 0.0)
+    ang = ang if not callable(ang) else 0.0
+    D = Door((D_FDOOR[0], 0.03), D_FDOOR[1] - D_FDOOR[0], D_FDOOR[2], (1.0, 0.0), 1, 0.0,
+             art_a=dr_front_door_art('out'), art_b=dr_front_door_art('in', o.get('porch_lite', 0.0)), col='#efe9dc')
+    return D, ang
+
+
+def dr_panel_door(hinge, width, cd, swing, latch_a='right', col_='#efe9dc', kind='six'):
+    return Door(hinge, width, 2.03, cd, swing, 0.0, art_a=door_art(kind, latch_a, bolt=False), art_b=door_art(kind, 'left' if latch_a == 'right' else 'right', bolt=False), col=col_)
+
+
+def dr_coat_rack(pen, v, x=0.18, y=0.75):
+    """A bentwood coat stand by the front door: Ruth's grey coat, Mom's navy scrub jacket, a scarf, an umbrella."""
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    a_, b_ = v.p(x, 0.0, y), v.p(x, 1.85, y)
+    for k in range(3):
+        ang = 2 * math.pi * k / 3
+        f = v.p(x + math.cos(ang) * 0.22, 0.0, y + math.sin(ang) * 0.22)
+        pen.seg(v.p(x, 0.25, y), f, max(1.5, 0.02 * s) + 2, LINE); pen.seg(v.p(x, 0.25, y), f, max(1.2, 0.02 * s), lit('#5a3a22', (x, 0.2, y), None))
+    pen.seg(a_, b_, max(2.0, 0.032 * s) + 2, LINE); pen.seg(a_, b_, max(1.5, 0.032 * s), lit('#6a4228', (x, 1.0, y), None))
+    for (dx, dy, c_, ln) in ((-0.14, 0.03, '#6a6a70', 1.0), (0.12, -0.04, '#2a3a5a', 0.75), (0.02, 0.12, '#8a2a3a', 0.5)):
+        top = v.p(x + dx * 0.4, 1.72, y + dy * 0.4)
+        bot = v.p(x + dx, 1.72 - ln * 0.95, y + dy)
+        coat = smooth([(top[0] - 0.05 * s, top[1]), (top[0] + 0.05 * s, top[1]), (bot[0] + 0.17 * s * ln, bot[1]), (bot[0] - 0.17 * s * ln, bot[1])], True, 0.5)
+        pen.fill(coat, lit(c_, (x + dx, 1.3, y + dy), None)); pen.line(coat, 1.0)
+        pen.linear(coat, bot[0] - 0.17 * s, 0, bot[0] + 0.17 * s, 0, [(0, '#000000', 70), (0.5, '#000000', 0), (1, '#000000', 80)])
+    um = [v.p(x + 0.2, 0.0, y - 0.05), v.p(x + 0.17, 0.85, y - 0.04)]
+    pen.seg(um[0], um[1], max(2.0, 0.03 * s) + 2, LINE); pen.seg(um[0], um[1], max(1.5, 0.03 * s), lit('#2a2a30', (x, 0.4, y), None))
+
+
+def dr_hall_table(pen, v, x=-0.95, y=1.35):
+    """A narrow demilune table against the hall's west wall: a doily, a bowl, a small lamp, Grandpa's photo."""
+    B = Box(x, y, 0.75, 0.3, 0.0, 0.78, 90)
+    draw_parts(pen, v, table_parts(B, '#5a3620', apron=0.06, legw=0.035))
+    P = (x + 0.02, 0.78, y - 0.2)
+    if v.d(P[0], P[2]) > 0.3:
+        s = v.s(P[0], P[2]); px, py = v.p(*P)
+        bowl = smooth([(px - 0.08 * s, py - 0.04 * s), (px + 0.08 * s, py - 0.04 * s), (px + 0.05 * s, py), (px - 0.05 * s, py)], True, 0.6)
+        pen.fill(bowl, lit('#6a8aa8', P, None)); pen.line(bowl, 0.9)
+
+
+# ====================================================================================================== the rooms
+def _win_glass_quads(wall_pts, u0, u1, sill, top, inset=0.06):
+    """3D quads of a window's glass (one quad for the whole opening, slightly inside the wall plane)."""
+    a, b = wall_pts
+    dx, dy = b[0] - a[0], b[1] - a[1]; L = math.hypot(dx, dy); fx, fy = dx / L, dy / L
+    nx, ny = fy, -fx
+    def P(u, Y): return (a[0] + fx * u - nx * inset, Y, a[1] + fy * u - ny * inset)
+    return [P(u0, top), P(u1, top), P(u1, sill), P(u0, sill)]
+
+
+def _glass_layer(name, v, quads, order, k=1.0, seed=5, c='#9aa8c8'):
+    """A live layer: rain on the window glass (drops + rivulets) clipped to the projected panes."""
+    paths = []
+    for q in quads:
+        pth = v.poly3(q)
+        if not pth.isEmpty(): paths.append(pth)
+    if not paths: return None
+    clip = paths[0]
+    for p_ in paths[1:]: clip = union(clip, p_)
+    b = _rb(clip)
+    d = max(0.3, min(v.d(q[0][0], q[0][2]) for q in quads))
+
+    def draw(pen, t):
+        dr_glass_rain(pen, t, clip, (b[0], b[1], b[2], b[3]), k, seed, c)
+    lay = Layer(d, draw, name, blur=None)
+    lay.order = order
+    return lay
+
+
+def _rain_out_layer(v, name='rain_out', k=1.0, box=None, seed=3, order=None, c='#b8c4dc', a=50):
+    """Live rain beyond the windows: drawn right after the cached outside (so walls hide it, windows show it)."""
+    def draw(pen, t):
+        dr_rain(pen, t, box or (-500, -400, 2900, 1800), k, seed, 1.0, 0.1, c, a * 0.32, 260, far=True)
+        dr_rain(pen, t, box or (-500, -400, 2900, 1800), k * 0.4, seed + 1, 1.25, 0.12, c, a * 0.4, 90)
+    lay = Layer(30.0, draw, name, blur=None)
+    lay.order = ORDER_OUT - 1.0 if order is None else order
+    return lay
+
+
+class DrRoom(Room):
+    """A room of Ruth's house: far=True when it is seen through a doorway of another room (its door leaves are then left
+    to the main room, so nothing is drawn twice)."""
+    R = (0, 1, 0, 1)
+
+    def __init__(self, far=False):
+        self.far = far
+        self.poly = _r4p(self.R)
+
+
+def _wall_runs(pen, v, R, holes, paper, ink=None, kind=None, art=None, **kw):
+    """Draw a room's four walls: holes = {side: [(xa, ya, xb, yb, v0, v1), ...]} in plan coordinates; art = {side: fn}."""
+    for (side, a, b, u_of) in _walls_of(R):
+        hs = [_hole_x(u_of, xa, xb, ya, yb, v0, v1) for (xa, ya, xb, yb, v0, v1) in holes.get(side, [])]
+        wall(pen, v, a, b, 0.0, D_CEIL, paper, ink, kind, hs, art=(art or {}).get(side), **kw)
+
+
+# ---------------------------------------------------------------------------------------------- living room
+class DrLiving(DrRoom):
+    """The living room. o['state']: 'now' | '1979' | 'wait' (the waiting room). o['tod']: 'night' | 'sunrise'."""
+    name = 'living'
+    R = D_LIV
+
+    def lights(self, o):
+        st, tod = o.get('state', 'now'), o.get('tod', 'night')
+        amb = {'now': D_NIGHT_AMB, '1979': '#3a3248', 'wait': '#2e3626'}[st]
+        street = Lamp(kind='win', c='#8a9ad8' if st != '1979' else '#a8a0c8', k=0.55, soft=10.0,
+                      panes=_panes_y(D_LWIN[0], D_LWIN[1], D_LWIN[2], D_LWIN[3], 0.0), d=_norm3((-0.35, -0.45, 1.0)),
+                      only={'floor', 'wall', 'top', 'front', 'side'})
+        side = Lamp(kind='win', c='#8a9ad8', k=0.4, soft=10.0, panes=_panes_x(D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3], -5.6),
+                    d=_norm3((1.0, -0.4, -0.2)), only={'floor', 'wall', 'top', 'front', 'side'})
+        steady = [street, side]
+        if tod == 'sunrise':
+            amb = '#5e5258' if st != '1979' else '#6a5450'
+            steady = [Lamp(kind='win', c=D_SUN, k=1.25, soft=14.0, panes=_panes_y(D_LWIN[0], D_LWIN[1], D_LWIN[2], D_LWIN[3], 0.0),
+                           d=_norm3((0.3, -0.32, 1.0))),
+                      Lamp(kind='win', c='#ffd8a8', k=0.5, soft=14.0, panes=_panes_x(D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3], -5.6),
+                           d=_norm3((1.0, -0.3, -0.3)))]
+        lampL = [Lamp(D_SIDE[0], D_SIDE[3] + 0.4, D_SIDE[1], 4.6, D_LAMP, 1.9, (1.0, 0.75, 0.85), fall=1.6)]
+        ceilL = [Lamp(-3.4, D_CEIL - 0.15, 2.7, 6.5, '#ffe2b8', 1.5, (1.0, 0.6, 0.2), fall=1.3)]
+        headL = [Lamp(kind='win', c=D_HEAD, k=1.4, soft=16.0, panes=_panes_y(D_LWIN[0], D_LWIN[1], D_LWIN[2], D_LWIN[3], 0.0),
+                      d=_norm3((0.62, 0.16, 1.0)), only={'floor', 'wall', 'ceil', 'top', 'front', 'side'}),
+                 Lamp(-3.4, 1.0, 0.6, 3.5, D_HEAD, 0.35, fall=1.4)]
+        hallL = [Lamp(-1.0, 2.0, 2.65, 3.4, '#ffd8a0', 0.7, fall=1.5)]
+        var = [('lamp', lampL, _kfn(o.get('lamp', 0.0), 201)), ('ceiling', ceilL, _kfn(o.get('ceiling', 0.0), 202)),
+               ('headlights', headL, _kfn(o.get('headlights', 0.0), 203)), ('hall', hallL, _kfn(o.get('hall', 0.0), 204))]
+        if st == 'wait':
+            tubes = o.get('tubes')
+            for i, (x, y) in enumerate(D_TROFFERS):
+                spec = (tubes[i] if tubes else (1.0, 0.0, dict(flick=None, k=1.0, amount=1.0), 0.0)[i])
+                if spec in (0, 0.0, None): continue
+                var.append(('tube%d' % i, [Lamp(x, D_CEIL - 0.08, y, 5.2, D_TUBE, 1.55, (1.0, 0.7, 0.25), fall=1.35)], _dr_tube_kfn(spec, 210 + i)))
+            var.append(('sign_red', [Lamp(D_SIGN[0], (D_SIGN[2] + D_SIGN[3]) / 2, D_SIGN[1] + 0.2, 1.8, '#ff3a2a', 0.5, fall=1.6)], _kfn(o.get('sign', 1.0), 215)))
+            var.append(('tv', [Lamp(-1.75, 1.9, 0.75, 2.8, '#9ab0c0', 0.35, fall=1.6)], _kfn(o.get('tv', 1.0), 216)))
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        st = o.get('state', 'now')
+        x0, x1, y0, y1 = D_LIV
+        if st == '1979':
+            floor_rect(pen, v, x0, x1, y0, y1, 0.0, DP['shag'], None, art=_carpet_art(DP['shag'], '#7a3010', 3, shag=True))
+        else:
+            rug = st == 'now'
+            def fart(p_, W, H, rug=rug, st=st):
+                _carpet_art(DP['carpet'], DP['carpet_ink'], 2)(p_, W, H)
+                if rug: _rug_braided(p_, *floor_uv(x0, y1, D_RUG[0], D_RUG[1]), D_RUG[2] * 100, D_RUG[3] * 100)
+                if st == 'wait':
+                    p_.texture(rect(0, 0, W, H), 'grunge', 0.3, 'multiply', 2.2)
+                    for (rx, ry) in ((D_ARM.cx, D_ARM.cy), (-2.0, 2.9)):              # worn paths in the pile
+                        u_, w_ = floor_uv(x0, y1, rx, ry)
+                        p_.fill(oval(u_, w_, 60, 40), '#000000', 30)
+            floor_rect(pen, v, x0, x1, y0, y1, 0.0, DP['carpet'] if st == 'now' else '#6e6448', None, art=fart)
+        paper, ink, ink2, kind, wc = {'now': (DP['liv_paper'], DP['liv_ink'], DP['liv_ink2'], 'ditsy', '#d8ccb0'),
+                                      '1979': (DP['liv79_paper'], DP['liv79_ink'], DP['liv79_ink2'], 'roses', '#6a4024'),
+                                      'wait': (DP['wait_paper'], DP['wait_ink'], '#6a6e4a', 'ditsy', '#9a9a7a')}[st]
+        holes = {'front': [(D_LWIN[0], 0.0, D_LWIN[1], 0.0, D_LWIN[2], D_LWIN[3])],
+                 'west': [(-5.6, D_SWIN[0], -5.6, D_SWIN[1], D_SWIN[2], D_SWIN[3])],
+                 'east': [(-1.2, D_LDOOR[0], -1.2, D_LDOOR[1], 0.0, D_LDOOR[2])]}
+        _wall_runs(pen, v, D_LIV, holes, paper, ink, kind, art=self.wall_art(o), wains=0.9, wcol=wc, seed=21, ink2=ink2,
+                   scale=1.6 if st == '1979' else 1.15, trim='#efe6d4' if st != '1979' else '#7a4a28', rail=None)
+        ceil_rect(pen, v, x0, x1, y0, y1, D_CEIL, c=DP['ceil'] if st != 'wait' else '#c8ccb8',
+                  art=(lambda p_, W, H: pat(p_, W, H, 'tile', '#a8ac98', 160, scale=4.0)) if st == 'wait' else None)
+        F, panes = window_unit(pen, v, (-1.2, 0.0), (-5.6, 0.0), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0], D_LWIN[2], D_LWIN[3], lites=(3, 1),
+                               frame='#efe9dc' if st != '1979' else '#e8dcc0')
+        window_unit(pen, v, (-5.6, 0.0), (-5.6, 5.4), D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3], lites=(2, 2), frame='#efe9dc')
+        if st != 'wait':
+            fx_ = v.p(-3.4, D_CEIL, 2.7)                                         # the ceiling fixture (frosted dome)
+            if v.cam_h < D_CEIL and v.d(-3.4, 2.7) > 0.3:
+                pen.fill(ellipse3(v, -3.4, 2.7, 0.22, 0.22, D_CEIL - 0.06), lit('#efe8d8', (-3.4, D_CEIL - 0.1, 2.7), (0, -1, 0)))
+                pen.line(ellipse3(v, -3.4, 2.7, 0.22, 0.22, D_CEIL - 0.06), 1.0)
+
+    def wall_art(self, o):
+        st = o.get('state', 'now')
+        clk = o.get('clock', (3, 0))
+        live_clock = callable(clk)
+
+        def east(p_, W, H):
+            u = 5.4 - D_LCLOCK[2]
+            if not live_clock:
+                h_, m_ = clk[0], clk[1]
+                if st == 'wait': _office_clock(p_, u * 100, H - D_LCLOCK[1] * 100, 15, h_, m_, clk[2] if len(clk) > 2 else None)
+                else: _sunburst_clock(p_, u * 100, H - D_LCLOCK[1] * 100, 10, h_, m_, '#c8a04a' if st == 'now' else '#d87a2a')
+            _light_switch(p_, (5.4 - D_LDOOR[0] + 0.18) * 100, H - 120)
+            if st == 'wait':
+                _notice(p_, 40, H - 175, 42, 52, 'PLEASE', ('TAKE A NUMBER', 'AND WAIT', 'YOUR TURN'), accent='#8a2a22')
+            else:
+                _photo(p_, W, H, 30, H - 190, 46, 36, 'lake')
+        def back(p_, W, H):
+            if st == 'wait':
+                _notice(p_, 140, H - 190, 60, 48, 'YOUR CALL', ('IS IMPORTANT', 'TO US', 'PLEASE HOLD'), accent='#3a5a4a')
+                _notice(p_, 300, H - 182, 34, 44, 'IT CAN', ('WAIT', '', ''), accent='#5a5a3a', c='#e8e2c8')
+                _photo(p_, W, H, 380, H - 200, 40, 50, 'grandpa', frame='#3a3428')
+            else:
+                _photo(p_, W, H, 160, H - 205, 40, 50, 'grandpa')
+                _photo(p_, W, H, 215, H - 196, 52, 40, 'wedding')
+                _photo(p_, W, H, 280, H - 205, 36, 46, 'nurse' if st == 'now' else 'lake')
+                if st == 'now': _photo(p_, W, H, 330, H - 196, 46, 36, 'kids')
+        def west(p_, W, H):
+            if st == 'wait':
+                _notice(p_, 50, H - 200, 50, 40, 'NO PHONE', ('CALLS AFTER', 'MIDNIGHT', ''), accent='#2a3a5a', c='#e8e4d0')
+        def front(p_, W, H):
+            if st != '1979':
+                _photo(p_, W, H, 30, H - 196, 36, 46, 'milo' if st == 'now' else 'landscape')
+        return {'east': east, 'back': back, 'west': west, 'front': front}
+
+    def pieces(self, o):
+        st = o.get('state', 'now')
+        era = '1979' if st == '1979' else 'now'
+        P = []
+        ap = dr_armchair_parts(era=era)
+        P.append(Piece('armchair', (D_ARM.cx, 0.5, D_ARM.cy), lambda pen, v, parts=ap: draw_parts(pen, v, parts),
+                       occupant=[dr_arm_seat()], front=ap, block=D_ARM.footprint()))
+        lamp_k = o.get('lamp', 0.0)
+        cup = o.get('coffee', False)
+        keys = o.get('keys', st != '1979')
+
+        def side(pen, v):
+            _round_table(pen, v, D_SIDE[0], D_SIDE[1], D_SIDE[2], D_SIDE[3], '#5a3420' if era == 'now' else '#7a4a2a')
+            dr_table_lamp(pen, v, D_SIDE[0] - 0.06, D_SIDE[1] - 0.05, D_SIDE[3], 0.0, '#efe2c4' if era == 'now' else '#e8a84a',
+                          '#b89a5a' if era == 'now' else '#c86a2a')
+            if cup: dr_cup(pen, v, D_SIDE[0] + 0.1, D_SIDE[3], D_SIDE[1] + 0.08)
+            if keys: dr_keys(pen, v, D_SIDE[0] + 0.11, D_SIDE[3], D_SIDE[1] - 0.1)
+        P.append(Piece('sidetable', (D_SIDE[0], 0.4, D_SIDE[1]), side, block=_circ(D_SIDE[0], D_SIDE[1], D_SIDE[2] + 0.04)))
+        P.append(Piece('curio', (D_CURIO.cx, 0.9, D_CURIO.cy), lambda pen, v: dr_curio(pen, v, era=era), block=D_CURIO.footprint()))
+        dc = {'now': '#7e6a3e', '1979': '#c8742a', 'wait': '#5e6046'}[st]
+        P.append(Piece('curtains', (-3.4, 1.5, 0.12), lambda pen, v: curtain_pair(pen, v, (-1.2, 0.0), (-5.6, 0.0), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0],
+                                                                                 D_LWIN[3], 2.0, 0.0, o.get('curtains', 1.0), dc, seed=3)))
+        P.append(Piece('curtains_side', (-5.48, 1.5, 4.4), lambda pen, v: curtain_pair(pen, v, (-5.6, 0.0), (-5.6, 5.4), D_SWIN[0], D_SWIN[1], D_SWIN[3], 1.9, 0.0,
+                                                                                      o.get('curtains', 1.0), dc, seed=4)))
+        if not self.far:
+            ang = o.get('door', 0.0)
+            ang = 0.0 if callable(ang) else ang
+            D = dr_living_door()
+            P.append(Piece('door', (-1.23 - 0.45 * math.sin(math.radians(ang)), 1.0, 2.2 + 0.45 * math.cos(math.radians(ang))),
+                           lambda pen, v, D=D, ang=ang: D.draw(pen, v, ang)))
+        if st in ('now', '1979'):
+            cp = couch_parts(D_COUCH, DP['couch'] if era == 'now' else DP['couch79'], DP['couch_d'] if era == 'now' else DP['couch79_d'], afghan=era == 'now')
+            P.append(Piece('couch', (D_COUCH.cx, 0.45, D_COUCH.cy), lambda pen, v, parts=cp: draw_parts(pen, v, parts),
+                           occupant=[(s_[1], s_[2]) for s_ in couch_seats(D_COUCH)], front=cp, block=D_COUCH.footprint()))
+            P.append(Piece('coffee', (D_COFFEE.cx, 0.3, D_COFFEE.cy), lambda pen, v: draw_parts(pen, v, table_parts(D_COFFEE, '#6a3e22' if era == 'now' else '#8a5a2a', apron=0.06)),
+                           block=D_COFFEE.footprint()))
+            P.append(Piece('tv', (D_TV.cx, 0.4, D_TV.cy), lambda pen, v: dr_console_tv(pen, v, era=era), block=D_TV.footprint()))
+        else:
+            for (ri, (cx, cy)) in dr_rows_layout():
+                parts, seats, B = dr_chair_row(cx, cy, len(D_ROW_X), D_ROW_X[1] - D_ROW_X[0], 0, D_CHAIR_BLUE, worn=0.5)
+                P.append(Piece('row%d' % ri, (cx, 0.45, cy), lambda pen, v, parts=parts: draw_parts(pen, v, parts), occupant=seats, front=parts,
+                               block=B.footprint()))
+            tk = o.get('ticket', '')
+            if not callable(tk):
+                P.append(Piece('ticket_machine', (D_TICKET[0], 0.6, D_TICKET[1]), lambda pen, v: dr_ticket_machine(pen, v, ticket=tk, tear=o.get('tear', 0.0)),
+                               block=_circ(D_TICKET[0], D_TICKET[1], 0.22)))
+            P.append(Piece('sign', (D_SIGN[0], 2.2, D_SIGN[1]), lambda pen, v: dr_now_serving(pen, v, o.get('serving', '1979'), lit_=True)))
+            P.append(Piece('wall_tv', (-1.5, 2.0, 0.42), lambda pen, v: dr_wall_tv(pen, v, k=0.0)))
+            P.append(Piece('troffers', (-3.4, D_CEIL, 2.8), lambda pen, v: [dr_troffer(pen, v, x, y, 0.0, dead=(i in (1, 3))) for i, (x, y) in enumerate(D_TROFFERS)]))
+        return P
+
+    def glows(self, v, o):
+        st = o.get('state', 'now')
+        G = []
+        kl = _kfn(o.get('lamp', 0.0), 201)
+        G.append(('sidetable_glow', (D_SIDE[0], 0.9, D_SIDE[1]), lambda pen, t: dr_lamp_glow(pen, v, D_SIDE[0] - 0.06, D_SIDE[1] - 0.05, D_SIDE[3], kl(t))))
+        kc = _kfn(o.get('ceiling', 0.0), 202)
+        if st != 'wait':
+            def ceil_glow(pen, t):
+                k = kc(t)
+                if k <= 0.01 or v.cam_h > D_CEIL or v.d(-3.4, 2.7) < 0.3: return
+                pen.fill(ellipse3(v, -3.4, 2.7, 0.2, 0.2, D_CEIL - 0.065), '#fff6e4', 230 * k)
+                gx, gy = v.p(-3.4, D_CEIL - 0.08, 2.7); pen.glow(gx, gy, 0.8 * v.s(-3.4, 2.7), '#ffe8c0', 80 * k)
+            G.append(('ceiling_glow', (-3.4, D_CEIL, 2.7), ceil_glow))
+        if st == 'wait':
+            tubes = o.get('tubes')
+            for i, (x, y) in enumerate(D_TROFFERS):
+                spec = (tubes[i] if tubes else (1.0, 0.0, dict(flick=None, k=1.0, amount=1.0), 0.0)[i])
+                if spec in (0, 0.0, None): continue
+                kf = _dr_tube_kfn(spec, 210 + i)
+                G.append(('troffers_glow%d' % i, (x, D_CEIL, y), (lambda x_, y_, kf_: lambda pen, t: dr_troffer_glow(pen, v, x_, y_, kf_(t)))(x, y, kf)))
+            ks = _kfn(o.get('sign', 1.0), 215)
+            G.append(('sign_glow', (D_SIGN[0], 2.2, D_SIGN[1]), lambda pen, t: dr_sign_glow(pen, v, ks(t))))
+            kt = _kfn(o.get('tv', 1.0), 216)
+            G.append(('wall_tv_glow', (-1.5, 2.0, 0.42), lambda pen, t: (dr_wall_tv(pen, v, k=kt(t), t=t), dr_wall_tv_glow(pen, v, k=kt(t), t=t))))
+        if o.get('tod') == 'sunrise':
+            def sun_glow(pen, t):
+                c_ = v.p(-3.4, 1.45, 0.0)
+                if v.d(-3.4, 0.0) < 0.3: return
+                pen.ellipse_glow(c_[0], c_[1], 1.6 * v.s(-3.4, 0.0), 0.7 * v.s(-3.4, 0.0), '#ffd8a0', 90)
+            G.append(('sun_glow', (-3.4, 1.4, 0.05), sun_glow))
+        return G
+
+    def spots(self, v, o):
+        st = o.get('state', 'now')
+        S = {}
+        cx, cy = dr_arm_seat()
+        S['armchair'] = _mk_spot(v, 'armchair', cx, cy, 0.0, 'seat', "Grandpa's brown armchair by the window, facing into the room (+y); seat 0.46 m",
+                                 face=(0, 1), seat_Y=D_ARM_SEAT)
+        S['armchair_front'] = _mk_spot(v, 'armchair_front', D_ARM.cx + 0.1, 1.95, 0.0, 'stand', 'in front of the armchair (bringing the coffee, the narrator facing HIM): faces -y', face=(0, -1))
+        S['armchair_arm_r'] = _mk_spot(v, 'armchair_arm_r', D_ARM.cx + D_ARM.w / 2 - 0.1, D_ARM.cy + 0.15, 0.66, 'surface', "the chair's right arm top (his near hand / the ticket)")
+        S['side_top'] = _mk_spot(v, 'side_top', D_SIDE[0] + 0.1, D_SIDE[1] + 0.08, D_SIDE[3], 'surface', 'the side table top by the chair (the coffee cup sits here)')
+        S['keys'] = _mk_spot(v, 'keys', D_SIDE[0] + 0.11, D_SIDE[1] - 0.1, D_SIDE[3], 'surface', "Grandma's car keys on the side table")
+        S['window'] = _mk_spot(v, 'window', -2.45, 0.42, 0.0, 'stand', 'at the picture window right of the chair, looking out at the driveway and down the street (faces -x -y)',
+                               face=(-0.7, -0.7))
+        S['window_glass'] = _mk_spot(v, 'window_glass', -2.72, 0.0, 1.45, 'point', 'the glass at the narrator\'s eye line')
+        S['door'] = _mk_spot(v, 'door', -1.55, 2.65, 0.0, 'stand', 'just inside the living-room door (opening it: faces -x into the room)', face=(-1, 0))
+        S['door_knob'] = _mk_spot(v, 'door_knob', -1.24, 3.02, D_KNOB_Y, 'point', 'the living-room door knob (room side, door closed)')
+        S['room_mid'] = _mk_spot(v, 'room_mid', -2.7, 2.8, 0.0, 'stand', 'the middle of the room (in the waiting room: the aisle east of the rows)')
+        S['clock'] = _mk_spot(v, 'clock', D_LCLOCK[0] - 0.02, D_LCLOCK[2], D_LCLOCK[1], 'point', 'the wall clock on the east wall')
+        S['window_side'] = _mk_spot(v, 'window_side', -5.2, 4.4, 0.0, 'stand', 'at the side window', face=(-1, 0))
+        if st in ('now', '1979'):
+            for (nm, x, y) in couch_seats(D_COUCH):
+                S['couch_' + nm] = _mk_spot(v, 'couch_' + nm, x, y, 0.0, 'seat', 'on the couch (%s seat), facing the window' % nm, face=(0, -1), seat_Y=D_COUCH_SEAT)
+            S['coffee_top'] = _mk_spot(v, 'coffee_top', D_COFFEE.cx, D_COFFEE.cy, D_COFFEE.Y1, 'surface', 'the coffee table top')
+            S['tv_screen'] = _mk_spot(v, 'tv_screen', D_TV.cx, D_TV.cy, 0.5, 'point', 'the console TV screen')
+        else:
+            for (ri, (cx_, cy_)) in dr_rows_layout():
+                _, seats, _ = dr_chair_row(cx_, cy_, len(D_ROW_X), D_ROW_X[1] - D_ROW_X[0], 0)
+                for i, (sx, sy) in enumerate(seats):
+                    nm = 'seat_r%d_%d' % (ri, i)
+                    S[nm] = _mk_spot(v, nm, sx, sy, 0.0, 'seat', 'waiting-room chair: row %d (0 front, 2 last), seat %d from the west (window) end; faces the armchair (-y)' % (ri, i),
+                                     face=(0, -1), seat_Y=D_SEAT_H, row=ri, col=i)
+            S['grandpa_seat'] = S['seat_r2_0']
+            S['grandpa_seat'].note = 'GRANDPA: the last row, by the window (seat_r2_0); faces the armchair (-y)'
+            S['ticket_slot'] = _mk_spot(v, 'ticket_slot', D_TICKET[0], D_TICKET[1], D_TICKET_Y - 0.06, 'point', 'the ticket machine slot (where he tears the ticket: the strip hangs below)')
+            S['ticket_machine'] = _mk_spot(v, 'ticket_machine', D_TICKET[0] + 0.25, D_TICKET[1] + 0.3, 0.0, 'stand', 'beside the ticket machine (the narrator by the door)', face=(-1, -0.4))
+            S['sign'] = _mk_spot(v, 'sign', D_SIGN[0], D_SIGN[1], (D_SIGN[2] + D_SIGN[3]) / 2, 'point', 'NOW SERVING 1979 over the armchair')
+            S['carpet_l'] = _mk_spot(v, 'carpet_l', D_ARM.cx - 0.85, 1.75, 0.0, 'surface', "his left hand flat on the carpet (screen right in a front view)")
+            S['carpet_r'] = _mk_spot(v, 'carpet_r', D_ARM.cx + 0.85, 1.75, 0.0, 'surface', 'his right hand flat on the carpet')
+            S['aisle_front'] = _mk_spot(v, 'aisle_front', -2.55, 1.85, 0.0, 'stand', 'the narrator in front of the front row, facing HIM', face=(-0.8, -0.6))
+            S['tv'] = _mk_spot(v, 'tv', -1.5, 0.42, 2.05, 'point', 'the TV on its bracket (showing nothing)')
+        return S
+
+
+def _dr_tube_kfn(spec, seed):
+    """A troffer's level: a number, f(t), or dict(flick=None (random bursts) | [(t0, dur)], k, amount) -> f(t). A flickering
+    tube stutters like a starter that never quite catches."""
+    if isinstance(spec, dict) and 'flick' in spec and spec['flick'] is None:
+        k = spec.get('k', 1.0); amt = spec.get('amount', 1.0)
+
+        def f(t):
+            u = math.floor(t * 14.0)
+            h = _h(int(u), seed)
+            base = 1.0 if h > 0.22 else (0.15 + 0.4 * _h(int(u), seed + 3))
+            slow = 0.5 + 0.5 * math.sin(t * 0.7 + seed)
+            if slow < 0.18: base *= 0.2
+            return k * (1 - amt + amt * base)
+        return f
+    return _kfn(spec, seed)
+
+
+def dr_living_door():
+    """The living-room door (hinge on the hall wall at y 2.2, swinging into the living room)."""
+    return Door((-1.23, D_LDOOR[0]), D_LDOOR[1] - D_LDOOR[0], D_LDOOR[2], (0.0, 1.0), 1, 0.0,
+                art_a=door_art('six', 'right', bolt=False), art_b=door_art('six', 'left', bolt=False), col='#efe9dc')
+
+
+def dr_keys(pen, v, x, Y, y):
+    """Grandma's car keys on a ring with a red plastic tag."""
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y); px, py = v.p(x, Y, y)
+    pen.line(oval(px, py - 0.004 * s, 0.022 * s, 0.009 * s), max(0.8, 0.004 * s), lit('#c8ccd0', (x, Y, y), None))
+    for k, a in enumerate((-0.6, 0.3)):
+        kx, ky = px + math.cos(a) * 0.04 * s, py - 0.004 * s + math.sin(a) * 0.01 * s
+        key = poly([(kx - 0.012 * s, ky - 0.004 * s), (kx + 0.03 * s, ky - 0.003 * s), (kx + 0.03 * s, ky + 0.003 * s), (kx - 0.012 * s, ky + 0.004 * s)])
+        pen.fill(key, lit('#d8c070' if k else '#c8ccd0', (x, Y, y), (0, 1, 0))); pen.line(key, 0.6)
+    pen.fill(rrect(px - 0.04 * s, py - 0.01 * s, 0.025 * s, 0.014 * s, 0.004 * s), lit('#c82a2a', (x, Y, y), (0, 1, 0)))
+
+
+# ---------------------------------------------------------------------------------------------- hall
+class DrHall(DrRoom):
+    name = 'hall'
+    R = D_HALL
+
+    def lights(self, o):
+        amb = o.get('amb_h', '#262c46')
+        endwin = Lamp(kind='win', c='#7a8ac8', k=0.5, soft=10.0, panes=_panes_y(D_HWIN[0], D_HWIN[1], D_HWIN[2], D_HWIN[3], 9.6),
+                      d=_norm3((0.0, -0.5, -1.0)), only={'floor', 'wall', 'top', 'front', 'side'})
+        steady = [endwin]
+        if o.get('tod') == 'sunrise':
+            amb = '#5a5060'
+            steady = [Lamp(kind='win', c=D_SUN, k=0.9, soft=12.0, panes=_panes_y(D_HWIN[0], D_HWIN[1], D_HWIN[2], D_HWIN[3], 9.6), d=_norm3((0.0, -0.45, -1.0)))]
+        hallL = [Lamp(-0.4, D_CEIL - 0.1, 2.2, 4.0, '#ffd8a0', 1.3, (1.0, 0.6, 0.3), fall=1.4), Lamp(-0.4, D_CEIL - 0.1, 6.8, 4.0, '#ffd8a0', 1.1, (1.0, 0.6, 0.3), fall=1.4)]
+        porchL = [Lamp(-0.4, 1.9, 0.15, 2.4, '#ffc888', 0.55, fall=1.5)]
+        kitL = [Lamp(-1.45, 1.6, 6.45, 2.6, '#ffd0a0', 0.55, fall=1.4)]
+        livL = [Lamp(-1.35, 1.6, 2.65, 2.4, o.get('living_c', '#ffd0a0'), 0.6, fall=1.4)]
+        headL = [Lamp(kind='win', c=D_HEAD, k=0.6, soft=6.0, panes=[[(-0.62, 1.95, 0.0), (-0.18, 1.95, 0.0), (-0.18, 1.78, 0.0), (-0.62, 1.78, 0.0)]],
+                      d=_norm3((0.45, -0.05, 1.0)), only={'ceil', 'wall', 'floor'})]
+        var = [('hall', hallL, _kfn(o.get('hall', 0.0), 221)), ('porch', porchL, _kfn(o.get('porch', 0.0), 222)),
+               ('kitchen', kitL, _kfn(o.get('kitchen', 0.0), 223)), ('living', livL, _kfn(o.get('living', 0.0), 224)),
+               ('headlights', headL, _kfn(o.get('headlights', 0.0), 225))]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = D_HALL
+
+        def fart(p_, W, H):
+            p_.texture(rect(0, 0, W, H), 'wood', 0.55, 'overlay', 0.9, 90)
+            pat(p_, W, H, 'boards', '#3a2412', 150, 31)
+            u0, w0 = floor_uv(x0, y1, -0.92, 9.3); u1, w1 = floor_uv(x0, y1, 0.12, 0.35)
+            rr = rect(u0, w0, u1 - u0, w1 - w0)
+            p_.fill(rr, DP['runner']); p_.texture(rr, 'fabric', 0.6, 'overlay', 1.0)
+            p_.line(rect(u0 + 4, w0 + 4, u1 - u0 - 8, w1 - w0 - 8), 2.0, '#d8b860', 160)
+            for k in range(int((w1 - w0) / 60)):
+                p_.line(oval((u0 + u1) / 2, w0 + 30 + k * 60, 14, 9), 1.4, '#d8b860', 120)
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, '#8a5a34', None, art=fart)
+        holes = {'front': [(D_FDOOR[0], 0.0, D_FDOOR[1], 0.0, 0.0, D_FDOOR[2])],
+                 'west': [(-1.2, D_LDOOR[0], -1.2, D_LDOOR[1], 0.0, D_LDOOR[2]), (-1.2, D_KDOOR[0], -1.2, D_KDOOR[1], 0.0, D_KDOOR[2])],
+                 'back': [(D_HWIN[0], 9.6, D_HWIN[1], 9.6, D_HWIN[2], D_HWIN[3])],
+                 'east': [(0.4, D_BDOOR[0], 0.4, D_BDOOR[1], 0.0, D_BDOOR[2]), (0.4, D_RDOOR[0], 0.4, D_RDOOR[1], 0.0, D_RDOOR[2])]}
+
+        def west(p_, W, H):
+            _photo(p_, W, H, 40, H - 185, 34, 44, 'grandpa')
+            _photo(p_, W, H, 420, H - 180, 30, 38, 'nurse')
+            _light_switch(p_, (D_LDOOR[1] + 0.12) * 100, H - 120)
+        def east(p_, W, H):
+            _photo(p_, W, H, 160, H - 178, 40, 30, 'kids')
+            _photo(p_, W, H, 520, H - 182, 32, 40, 'milo')
+            _photo(p_, W, H, 760, H - 186, 36, 46, 'wedding')
+        def front(p_, W, H):
+            _light_switch(p_, (0.4 - 0.25) * 100, H - 120)
+        _wall_runs(pen, v, D_HALL, holes, DP['hall_paper'], DP['hall_ink'], 'stripe', art={'west': west, 'east': east, 'front': front},
+                   wains=0.95, wcol=DP['hall_wains'], seed=23, scale=0.9, pa=60)
+        ceil_rect(pen, v, x0, x1, y0, y1, D_CEIL)
+        window_unit(pen, v, (x0, 9.6), (x1, 9.6), D_HWIN[0] - x0, D_HWIN[1] - x0, D_HWIN[2], D_HWIN[3], lites=(1, 1))
+        for yy in (2.2, 6.8):
+            if v.cam_h < D_CEIL and v.d(-0.4, yy) > 0.3:
+                e = ellipse3(v, -0.4, yy, 0.16, 0.16, D_CEIL - 0.05)
+                pen.fill(e, lit('#efe8d8', (-0.4, D_CEIL - 0.1, yy), (0, -1, 0))); pen.line(e, 1.0)
+        # the doors' frames into the kitchen doorway: nothing (open cased opening)
+
+    def pieces(self, o):
+        P = []
+        if not self.far:
+            D, ang = dr_front_door(o)
+            P.append(Piece('front_door', (-0.4 + 0.45 * math.sin(math.radians(ang)) * 0, 1.0, 0.05 + 0.45 * math.sin(math.radians(ang))),
+                           lambda pen, v, D=D, ang=ang: D.draw(pen, v, ang)))
+            la = o.get('door', 0.0); la = 0.0 if callable(la) else la
+            DL = dr_living_door()
+            P.append(Piece('living_door', (-1.25 - 0.45 * math.sin(math.radians(la)), 1.0, 2.2 + 0.45 * math.cos(math.radians(la))),
+                           lambda pen, v, D=DL, ang=la: D.draw(pen, v, ang)))
+            ba = o.get('bath_door', 0.0); ba = 0.0 if callable(ba) else ba
+            DB = dr_bath_door()
+            P.append(Piece('bath_door', (0.43 + 0.37 * math.sin(math.radians(ba)), 1.0, 7.05 - 0.37 * math.cos(math.radians(ba))),
+                           lambda pen, v, D=DB, ang=ba: D.draw(pen, v, ang)))
+            DR = Door((0.43, D_RDOOR[1]), D_RDOOR[1] - D_RDOOR[0], 2.03, (0.0, -1.0), 1, 0.0, art_a=door_art('six', 'right', bolt=False),
+                      art_b=door_art('six', 'left', bolt=False), col='#efe9dc')
+            P.append(Piece('ruth_door', (0.43, 1.0, 3.8), lambda pen, v, D=DR: D.draw(pen, v, 0.0)))
+        P.append(Piece('coat_rack', (0.12, 1.0, 0.75), lambda pen, v: dr_coat_rack(pen, v, 0.12, 0.75), block=_circ(0.12, 0.75, 0.22)))
+        P.append(Piece('hall_table', (-1.05, 0.5, 1.35), lambda pen, v: dr_hall_table(pen, v, -1.05, 1.35), block=_box_pts(-1.05, 1.35, 0.15, 0.38)))
+        return P
+
+    def glows(self, v, o):
+        kh = _kfn(o.get('hall', 0.0), 221)
+
+        def g(pen, t):
+            k = kh(t)
+            if k <= 0.01 or v.cam_h > D_CEIL: return
+            for yy in (2.2, 6.8):
+                if v.d(-0.4, yy) < 0.3: continue
+                pen.fill(ellipse3(v, -0.4, yy, 0.14, 0.14, D_CEIL - 0.055), '#fff6e4', 230 * k)
+                gx, gy = v.p(-0.4, D_CEIL - 0.08, yy); pen.glow(gx, gy, 0.7 * v.s(-0.4, yy), '#ffe8c0', 70 * k)
+        kp = _kfn(o.get('porch', 0.0), 222)
+
+        def lite(pen, t):                                                       # the porch light through the half-moon lite
+            k = kp(t)
+            if k <= 0.01 or self.far: return
+            fa = o.get('front_door', 0.0)
+            if callable(fa) or fa > 2: return
+            cx_, cy_ = v.p(-0.4, 1.78, 0.04)
+            if v.d(-0.4, 0.04) < 0.3: return
+            s = v.s(-0.4, 0.04)
+            path = inter(oval(cx_, cy_, 0.27 * s, 0.183 * s), rect(cx_ - 0.3 * s, cy_ - 0.2 * s, 0.6 * s, 0.2 * s))
+            pen.fill(path, '#ffdca0', 200 * k)
+            pen.glow(cx_, cy_ - 0.06 * s, 0.6 * s, '#ffc880', 60 * k)
+        return [('hall_glow', (-0.4, D_CEIL, 4.5), g), ('front_door_glow', (-0.4, 1.8, 0.06), lite)]
+
+    def spots(self, v, o):
+        S = {}
+        S['door_inside'] = _mk_spot(v, 'door_inside', -0.4, 0.5, 0.0, 'stand', 'inside the front door, facing it (-y)', face=(0, -1))
+        S['peephole_eye'] = _mk_spot(v, 'peephole_eye', -0.4, 0.3, 0.0, 'stand', 'eye to the peephole (the narrator on tiptoe: 1.5 m)', face=(0, -1))
+        S['peephole'] = _mk_spot(v, 'peephole', -0.4, 0.07, D_PEEP_Y, 'point', 'the peephole (inside face)')
+        S['knob'] = _mk_spot(v, 'knob', D_FDOOR[1] - 0.075, 0.07, D_KNOB_Y, 'point', 'the front door knob (inside, east side)')
+        S['deadbolt'] = _mk_spot(v, 'deadbolt', D_FDOOR[1] - 0.075, 0.07, D_KNOB_Y + 0.17, 'point', 'the deadbolt thumb-turn')
+        S['under_door'] = _mk_spot(v, 'under_door', -0.35, 0.12, 0.0, 'surface', 'the floor just inside the door: the results slide under here')
+        S['door_through'] = _mk_spot(v, 'door_through', -0.35, -0.3, 0.0, 'stand', 'in the open front doorway (the narrator stepping out)', face=(0, -1))
+        S['hall_mid'] = _mk_spot(v, 'hall_mid', -0.4, 4.5, 0.0, 'stand', 'the middle of the hall')
+        S['hall_back'] = _mk_spot(v, 'hall_back', -0.4, 8.7, 0.0, 'stand', 'the dark end of the hall (where the pen clicks)')
+        S['living_door'] = _mk_spot(v, 'living_door', -0.85, 2.65, 0.0, 'stand', 'at the living-room door, facing it (-x): "When I opened the door..."', face=(-1, 0))
+        S['living_knob'] = _mk_spot(v, 'living_knob', -1.18, 3.02, D_KNOB_Y, 'point', 'the living-room door knob (hall side)')
+        S['kitchen_door'] = _mk_spot(v, 'kitchen_door', -0.85, 6.45, 0.0, 'stand', 'at the kitchen doorway', face=(-1, 0))
+        S['bath_door'] = _mk_spot(v, 'bath_door', 0.0, 6.68, 0.0, 'stand', 'at the bathroom door', face=(1, 0))
+        return S
+
+
+def dr_bath_door():
+    return Door((0.43, D_BDOOR[1]), D_BDOOR[1] - D_BDOOR[0], 2.03, (0.0, -1.0), 1, 0.0, art_a=door_art('six', 'right', bolt=False),
+                art_b=door_art('six', 'left', bolt=False), col='#efe9dc')
+
+
+# ---------------------------------------------------------------------------------------------- kitchen
+class DrKitchen(DrRoom):
+    name = 'kitchen'
+    R = D_KIT
+
+    def lights(self, o):
+        era = o.get('era', 'now')
+        amb = '#2a3150' if era != '1979' else '#34304a'
+        win = Lamp(kind='win', c='#8a9ad8', k=0.6, soft=8.0, panes=_panes_y(D_KWIN[0], D_KWIN[1], D_KWIN[2], D_KWIN[3], 9.6),
+                   d=_norm3((0.15, -0.5, -1.0)), only={'floor', 'top', 'front', 'side', 'wall'})
+        steady = [win]
+        if o.get('tod') == 'sunrise':
+            amb = '#5e5460'
+            steady = [Lamp(kind='win', c=D_SUN, k=1.0, soft=12.0, panes=_panes_y(D_KWIN[0], D_KWIN[1], D_KWIN[2], D_KWIN[3], 9.6), d=_norm3((0.35, -0.4, -1.0)))]
+        hood = [Lamp(D_STOVE.cx, 1.55, 9.3, 3.4, '#ffcf90', 1.25, (1.0, 0.7, 0.5), fall=1.5)]
+        ceil_ = [Lamp(D_KTABLE.cx, 2.0, D_KTABLE.cy, 6.0, '#ffe0b0', 1.7, (1.0, 0.75, 0.6), fall=1.35)]
+        hall_ = [Lamp(-1.0, 1.7, 6.45, 2.4, '#ffd8a0', 0.5, fall=1.5)]
+        fire = [Lamp(-3.3, 1.15, 9.25, 3.0, '#ff9a48', 1.6, fall=1.5)]
+        night = [Lamp(-1.24, 1.05, 8.3, 1.9, '#ffd8a0', 0.75, fall=1.4)]
+        var = [('hood', hood, _kfn(o.get('hood', 1.0), 231)), ('ceiling', ceil_, _kfn(o.get('ceiling', 0.0), 232)),
+               ('hall', hall_, _kfn(o.get('hall', 0.0), 233)), ('fire', fire, _kfn(o.get('fire', 0.0), 234)),
+               ('nightlight', night, _kfn(o.get('nightlight', 1.0), 235))]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = D_KIT
+        era = o.get('era', 'now')
+        fa, fb = (DP['floor_a'], DP['floor_b']) if era != '1979' else ('#e8c880', '#8a5a2a')
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, fa, 'checker', fb, seed=41, scale=1.0)
+        holes = {'back': [(D_KWIN[0], 9.6, D_KWIN[1], 9.6, D_KWIN[2], D_KWIN[3])],
+                 'east': [(-1.2, D_KDOOR[0], -1.2, D_KDOOR[1], 0.0, D_KDOOR[2])]}
+        clk = o.get('clock', (3, 0))
+
+        def front(p_, W, H):
+            if not callable(clk):
+                u = -1.2 - D_KCLOCK[0]
+                _kitchen_clock(p_, u * 100, H - D_KCLOCK[1] * 100, 13, clk[0], clk[1], era)
+            _calendar_d(p_, (-1.2 - (-2.4)) * 100 - 15, H - 178, 30, 42, era)
+        def east(p_, W, H):
+            u = 9.6 - D_JACK[2]
+            _wall_jack(p_, u * 100, H - D_JACK[1] * 100, plugged=o.get('cord', 'in') == 'in')
+            _light_switch(p_, (9.6 - 5.85) * 100, H - 120)
+            nx_ = (9.6 - 8.3) * 100                                                  # outlet + the shell nightlight above the counter
+            p_.fill(rrect(nx_ - 3.5, H - 112, 7, 11, 0.8), '#ece4d0'); p_.line(rrect(nx_ - 3.5, H - 112, 7, 11, 0.8), 0.4, '#000000', 140)
+            p_.fill(oval(nx_, H - 109, 3.2, 3.6), '#f8ecd0')
+            # Ruth's numbers card pinned by the phone ("IMPORTANT NUMBERS" in her hand; LARKFIELD GENERAL crossed out)
+            cx_ = (9.6 - 7.05) * 100
+            p_.fill(rect(cx_ - 8, H - 170, 16, 22), '#000000', 60); p_.fill(rect(cx_ - 8.6, H - 171, 16, 22), '#f4efe0')
+            btext(p_, 'NUMBERS', cx_ - 0.6, H - 166, 'hand', 2.4, '#2a3a8a', 230, 'center')
+            for k in range(5): p_.seg((cx_ - 7, H - 162 + k * 3.2), (cx_ + 5 - (k % 3) * 2, H - 162 + k * 3.2), 0.4, '#3a4a9a', 180)
+            p_.seg((cx_ - 7.5, H - 155.6), (cx_ + 5.5, H - 155.6), 0.6, '#2a2a2a', 220)
+            p_.fill(oval(cx_ - 0.6, H - 170, 0.8), '#c82a2a')
+        def west(p_, W, H):
+            _photo(p_, W, H, 110, H - 200, 30, 38, 'milo')
+        paper = DP['kit_wall'] if era != '1979' else '#e8d498'
+        _wall_runs(pen, v, D_KIT, holes, paper, DP['kit_ink'] if era != '1979' else '#d8a850', 'ditsy', art={'front': front, 'east': east, 'west': west},
+                   wains=0.0, seed=25, scale=1.0, pa=90)
+        ceil_rect(pen, v, x0, x1, y0, y1, D_CEIL)
+        window_unit(pen, v, (x0, 9.6), (x1, 9.6), D_KWIN[0] - x0, D_KWIN[1] - x0, D_KWIN[2], D_KWIN[3], lites=(2, 1))
+        _cafe_curtain_d(pen, v, era)
+        dr_counters(pen, v, o)
+        if v.cam_h < D_CEIL and v.d(D_KTABLE.cx, D_KTABLE.cy) > 0.3:          # the schoolhouse pendant over the table
+            top = v.p(D_KTABLE.cx, D_CEIL, D_KTABLE.cy); bot = v.p(D_KTABLE.cx, 2.1, D_KTABLE.cy)
+            pen.seg(top, bot, max(1.0, 0.008 * v.s(D_KTABLE.cx, D_KTABLE.cy)), '#2a2a2a')
+            pen.fill(ellipse3(v, D_KTABLE.cx, D_KTABLE.cy, 0.17, 0.17, 2.02), lit('#efe8d8', (D_KTABLE.cx, 2.05, D_KTABLE.cy), None))
+            sh = v.poly3([(D_KTABLE.cx - 0.08, 2.15, D_KTABLE.cy), (D_KTABLE.cx + 0.08, 2.15, D_KTABLE.cy), (D_KTABLE.cx + 0.17, 2.02, D_KTABLE.cy), (D_KTABLE.cx - 0.17, 2.02, D_KTABLE.cy)])
+            pen.fill(sh, lit('#f2ece0', (D_KTABLE.cx, 2.08, D_KTABLE.cy), None)); pen.line(sh, 1.0)
+        paper_ = o.get('paper')
+        if paper_ == 'ash' and v.cam_h > D_COUNTER_Y:
+            px, py = v.p(-3.5, D_COUNTER_Y - 0.15, 9.3); s = v.s(-3.5, 9.3)
+            pen.fill(_blob(px, py, 0.08 * s, 0.03 * s, 9, 3, 0.4), '#1a1614', 230)
+            pen.fill(_blob(px + 0.02 * s, py - 0.004 * s, 0.05 * s, 0.018 * s, 9, 4, 0.4), '#3a3632', 200)
+
+    def pieces(self, o):
+        era = o.get('era', 'now')
+        P = [Piece('fridge', (D_FRIDGE.cx, 0.9, D_FRIDGE.cy), lambda pen, v: dr_fridge(pen, v, o), block=D_FRIDGE.footprint()),
+             Piece('table', (D_KTABLE.cx, 0.4, D_KTABLE.cy), lambda pen, v: dr_kitchen_table(pen, v, o), block=D_KTABLE.footprint())]
+        for (nm, x, y, fa, face) in dr_kitchen_chairs():
+            P.append(Piece(nm, (x, 0.45, y), (lambda x_, y_, fa_: lambda pen, v: _kchair(pen, v, x_, y_, fa_))(x, y, fa), block=_circ(x, y, 0.24)))
+        ph = o.get('phone', 'hung'); rg = o.get('ring', 0.0)
+        if not callable(ph) and not callable(rg):
+            P.append(Piece('phone', (D_PHONE[0] - 0.05, 1.3, D_PHONE[2]), lambda pen, v: dr_wall_phone(pen, v, ph, o.get('cord', 'in'), rg, 0.0, era)))
+        return P
+
+    def glows(self, v, o):
+        kh = _kfn(o.get('hood', 1.0), 231)
+
+        def hood(pen, t):
+            k = kh(t)
+            if k <= 0.01: return
+            q = v.poly3([(D_STOVE.cx - 0.3, 1.619, 9.2), (D_STOVE.cx + 0.3, 1.619, 9.2), (D_STOVE.cx + 0.3, 1.619, 9.5), (D_STOVE.cx - 0.3, 1.619, 9.5)])
+            if not q.isEmpty() and v.cam_h < 1.62: pen.fill(q, '#fff2d8', 220 * k)
+            gx, gy = v.p(D_STOVE.cx, 1.58, 9.35)
+            if v.d(D_STOVE.cx, 9.35) > 0.3: pen.glow(gx, gy, 0.5 * v.s(D_STOVE.cx, 9.35), '#ffe0b0', 70 * k)
+        kc = _kfn(o.get('ceiling', 0.0), 232)
+
+        def pend(pen, t):
+            k = kc(t)
+            if k <= 0.01 or v.d(D_KTABLE.cx, D_KTABLE.cy) < 0.3: return
+            gx, gy = v.p(D_KTABLE.cx, 2.0, D_KTABLE.cy)
+            pen.fill(ellipse3(v, D_KTABLE.cx, D_KTABLE.cy, 0.16, 0.16, 2.015), '#fff6e4', 240 * k)
+            pen.glow(gx, gy, 0.8 * v.s(D_KTABLE.cx, D_KTABLE.cy), '#ffe8c0', 80 * k)
+        return [('hood_glow', (D_STOVE.cx, 1.6, 9.35), hood), ('pendant_glow', (D_KTABLE.cx, 2.05, D_KTABLE.cy), pend)]
+
+    def spots(self, v, o):
+        S = {}
+        P = dr_phone_points()
+        S['phone'] = _mk_spot(v, 'phone', -1.58, 7.42, 0.0, 'stand', 'Grandma at the wall phone, facing it (+x); the receiver at her right ear', face=(1, 0))
+        S['phone_beside'] = _mk_spot(v, 'phone_beside', -1.8, 6.95, 0.0, 'stand', 'the narrator beside her, leaning in to hear the tilted receiver', face=(0.55, 0.85))
+        S['phone_base'] = _mk_spot(v, 'phone_base', *P['base'][::2], P['base'][1], kind='point', note='the wall phone body (centre)')
+        S['phone_hook'] = _mk_spot(v, 'phone_hook', P['hook'][0], P['hook'][2], P['hook'][1], 'point', 'the handset hung on its hook (the grip centre: pick up here)')
+        S['phone_cord_base'] = _mk_spot(v, 'phone_cord_base', P['cord_base'][0], P['cord_base'][2], P['cord_base'][1], 'point',
+                                        "the coil cord's socket at the base bottom (CH.draw_coil_cord's base end)")
+        S['jack'] = _mk_spot(v, 'jack', D_JACK[0] + 0.01, D_JACK[2], D_JACK[1], 'point', 'the wall jack on the baseboard (the line cord: "pulled the cord out of the wall")')
+        S['receiver_counter'] = _mk_spot(v, 'receiver_counter', D_RECEIVER[0], D_RECEIVER[2], D_RECEIVER[1], 'surface', 'the receiver laid on the counter like a sleeping baby')
+        S['plug_floor'] = _mk_spot(v, 'plug_floor', D_PLUG_FLOOR[0], D_PLUG_FLOOR[2], 0.0, 'surface', '"The phone cord was lying on the kitchen floor" (the plug end)')
+        S['counter'] = _mk_spot(v, 'counter', -1.5, 8.75, D_COUNTER_Y, 'surface', 'the counter return under the phone')
+        S['sink'] = _mk_spot(v, 'sink', -3.3, 8.6, 0.0, 'stand', 'at the sink under the window (burning the paper): faces +y', face=(0, 1))
+        S['sink_bowl'] = _mk_spot(v, 'sink_bowl', -3.52, 9.29, D_COUNTER_Y - 0.17, 'surface', 'the bottom of the left sink bowl (the paper burns here)')
+        S['window'] = _mk_spot(v, 'window', -3.3, 9.58, 1.5, 'point', 'the window over the sink')
+        S['floor_rock'] = _mk_spot(v, 'floor_rock', -2.55, 8.62, 0.0, 'floor_sit', 'Grandma sitting on the floor, back against the sink cabinets, rocking Milo (faces -y)',
+                                   face=(0, -1))
+        S['milo_enter'] = _mk_spot(v, 'milo_enter', -1.45, 6.45, 0.0, 'stand', 'Milo coming in from the hall doorway (faces -x)', face=(-1, 0.2))
+        S['hall_doorway'] = _mk_spot(v, 'hall_doorway', -1.2, 6.45, 0.0, 'stand', 'in the doorway to the dark hall')
+        S['table_top'] = _mk_spot(v, 'table_top', D_KTABLE.cx, D_KTABLE.cy, D_KTABLE.Y1, 'surface', 'the kitchen table top (Milo\'s water glass at +0.3, -0.12)')
+        for (nm, x, y, fa, face) in dr_kitchen_chairs():
+            S[nm] = _mk_spot(v, nm, x, y, 0.0, 'seat', 'a red kitchen chair at the table', face=face, seat_Y=0.46)
+        S['kitchen_mid'] = _mk_spot(v, 'kitchen_mid', -2.3, 7.9, 0.0, 'stand', 'the open floor between the table and the sink')
+        S['fridge'] = _mk_spot(v, 'fridge', D_FRIDGE.cx + 0.75, D_FRIDGE.cy, 0.0, 'stand', 'at the fridge', face=(-1, 0))
+        S['clock'] = _mk_spot(v, 'clock', D_KCLOCK[0], D_KCLOCK[2] + 0.02, D_KCLOCK[1], 'point', 'the kitchen clock')
+        return S
+
+
+def _kitchen_clock(p_, x, y, r, hh, mm, era='now'):
+    """A red plastic kitchen clock (1979: harvest gold)."""
+    c = '#c83a32' if era != '1979' else '#d8a040'
+    p_.fill(oval(x + 1.0, y + 1.6, r * 1.12), '#000000', 80)
+    p_.fill(oval(x, y, r * 1.12), c); p_.fill(oval(x, y, r * 0.92), '#f6f2e6')
+    p_.fill(oval(x - r * 0.4, y - r * 0.6, r * 0.5, r * 0.25), '#ffffff', 50)
+    _hands(p_, x, y, r * 0.92, hh, mm)
+
+
+def _calendar_d(p_, x, y, w, h, era='now'):
+    """The Larkfield General calendar (Mom's hospital); 1979 a feed-store calendar."""
+    p_.fill(rect(x + 1, y + 1.5, w, h), '#000000', 70)
+    p_.fill(rect(x, y, w, h), '#f4efe2'); p_.fill(rect(x, y, w, h * 0.42), '#3a7aa8' if era != '1979' else '#a86a2a')
+    btext(p_, 'LARKFIELD GENERAL' if era != '1979' else 'MILLER FEED & SEED', x + w / 2, y + h * 0.12, 'sans_b', h * 0.055, '#ffffff', 230, 'center')
+    if era != '1979':
+        p_.fill(rect(x + w * 0.45, y + h * 0.17, w * 0.1, h * 0.18), '#ffffff'); p_.fill(rect(x + w * 0.37, y + h * 0.23, w * 0.26, h * 0.06), '#ffffff')
+    btext(p_, 'APRIL' if era != '1979' else 'MARCH 1979', x + w / 2, y + h * 0.5, 'sans_b', h * 0.06, '#3a3a3a', 230, 'center')
+    for r in range(5):
+        for c in range(7):
+            p_.fill(rect(x + 2 + c * (w - 4) / 7, y + h * 0.56 + r * h * 0.085, (w - 4) / 7 - 0.6, h * 0.075), '#e8e2d2')
+
+
+# ---------------------------------------------------------------------------------------------- bathroom
+class DrBath(DrRoom):
+    name = 'bath'
+    R = D_BATH
+
+    def lights(self, o):
+        amb = '#2c3452'
+        win = Lamp(kind='win', c='#8a9ad8', k=0.4, soft=12.0, panes=_panes_y(D_BWIN[0], D_BWIN[1], D_BWIN[2], D_BWIN[3], 9.6), d=_norm3((0.0, -0.5, -1.0)))
+        steady = [win]
+        if o.get('tod') == 'sunrise':
+            amb = '#5a5462'
+        van = [Lamp(2.55, 2.2, 6.75, 3.4, '#fff0d4', 0.95, (1.0, 0.8, 0.7), fall=1.6)]
+        ceil_ = [Lamp(1.6, D_CEIL - 0.1, 7.6, 4.5, '#fff0d8', 1.2, (1.0, 0.6, 0.3), fall=1.4)]
+        hall_ = [Lamp(0.25, 1.6, 6.67, 2.4, '#ffd8a0', 0.6, fall=1.5)]
+        lamp_ = [Lamp(2.55, 1.15, 7.25, 3.0, D_LAMP, 1.2, fall=1.5)]
+        var = [('vanity', van, _kfn(o.get('vanity', 1.0), 241)), ('ceiling', ceil_, _kfn(o.get('ceiling', 0.0), 242)),
+               ('hall', hall_, _kfn(o.get('hall', 0.0), 243)), ('lamp', lamp_, _kfn(o.get('lamp', 0.0), 244))]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        x0, x1, y0, y1 = D_BATH
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, DP['bath_floor'], 'hex', '#3a6a7a', '#f2f0ea', seed=43)
+        holes = {'west': [(0.4, D_BDOOR[0], 0.4, D_BDOOR[1], 0.0, D_BDOOR[2])],
+                 'back': [(D_BWIN[0], 9.6, D_BWIN[1], 9.6, D_BWIN[2], D_BWIN[3])],
+                 'east': [(2.8, D_CAB[1], 2.8, D_CAB[2], D_CAB[3], D_CAB[4], )]}
+
+        def tile_art(side):
+            def art(p_, W, H):
+                th = 120.0
+                p_.fill(rect(0, H - th, W, th), DP['bath_tile'])
+                p_.cv.save(); p_.cv.translate(0, H - th); pat(p_, W, th, 'tile', '#6a9aa4', 220, scale=1.0); p_.cv.restore()
+                p_.fill(rect(0, H - th - 3, W, 3), '#1a2a30'); p_.fill(rect(0, H - th - 3, W, 0.8), '#ffffff', 60)
+                if side == 'front':
+                    p_.fill(rect(60, H - 140, 50, 2.5), '#c8ccd0'); p_.fill(rect(64, H - 138, 42, 40), '#e8c8d0')   # towel bar + towel
+                    p_.line(rect(64, H - 138, 42, 40), 0.6, '#000000', 120)
+            return art
+        for (side, a, b, u_of) in _walls_of(D_BATH):
+            hs = []
+            for (xa, ya, xb, yb, v0, v1) in holes.get(side, []):
+                hs.append(_hole_x(u_of, xa, xb, ya, yb, v0, v1) + ((('nocase',) if side == 'east' else ())))
+            hs = [((h[0], h[1], h[2], h[3], '', 'nocase') if len(h) > 4 else h) for h in hs]
+            wall(pen, v, a, b, 0.0, D_CEIL, DP['bath_wall'], None, None, hs, art=tile_art(side), wains=0.0, base_h=0.0, crown=0.04, seed=27,
+                 thick=(0.0 if side == 'east' else WT))
+        ceil_rect(pen, v, x0, x1, y0, y1, D_CEIL)
+        window_unit(pen, v, (x0, 9.6), (x1, 9.6), D_BWIN[0] - x0, D_BWIN[1] - x0, D_BWIN[2], D_BWIN[3], lites=(1, 1))
+        F = Face((D_BWIN[0], D_BWIN[3], 9.55), (1, 0, 0), (0, -1, 0), (D_BWIN[1] - D_BWIN[0]) * 100, (D_BWIN[3] - D_BWIN[2]) * 100, (0, 0, -1), 'front')
+        draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 0.4), '#a8b4c8', ao=False, lw=0.8)
+        # mirror-cabinet recess (clipped to its hole in the wall)
+        q = [(2.8, D_CAB[4], D_CAB[1]), (2.8, D_CAB[4], D_CAB[2]), (2.8, D_CAB[3], D_CAB[2]), (2.8, D_CAB[3], D_CAB[1])]
+        clip = v.poly3(q)
+        if not clip.isEmpty() and v.hx < 2.8:
+            pen.cv.save(); pen.cv.clipPath(clip, skia.ClipOp.kIntersect, True)
+            dr_cabinet_box(pen, v, o)
+            pen.cv.restore()
+            fr = Face((2.788, D_CAB[4] + 0.025, D_CAB[1] - 0.025), (0, 0, 1), (0, -1, 0), (D_CAB[2] - D_CAB[1] + 0.05) * 100, (D_CAB[4] - D_CAB[3] + 0.05) * 100, (-1, 0, 0), 'front')
+            draw_face(pen, v, fr, lambda p_, W, H: p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#f8f8f8', 255), (0.5, '#a8acb0', 255), (1, '#e8eaec', 255)]),
+                      '#c8ccd0', holes=[rect(2.5, 2.5, W_ - 5, H_ - 5) for (W_, H_) in [((D_CAB[2] - D_CAB[1] + 0.05) * 100, (D_CAB[4] - D_CAB[3] + 0.05) * 100)]], ao=False, lw=0.9)
+        dr_vanity_light(pen, v, 0.0)
+
+    def pieces(self, o):
+        ang = o.get('cabinet', 0.0)
+        ang = 0.0 if callable(ang) else ang * 105.0 if ang <= 1.0 else ang
+        D = dr_cabinet_door(o)
+        P = [Piece('sink', (D_BSINK[0], 0.6, D_BSINK[1]), lambda pen, v: dr_pedestal_sink(pen, v), block=_box_pts(D_BSINK[0], D_BSINK[1], 0.22, 0.28)),
+             Piece('toilet', (D_TOILET[0], 0.4, D_TOILET[1]), lambda pen, v: dr_toilet(pen, v), block=_box_pts(D_TOILET[0], D_TOILET[1], 0.35, 0.22)),
+             Piece('tub', (D_TUB.cx, 0.3, D_TUB.cy), lambda pen, v: dr_tub(pen, v), block=D_TUB.footprint()),
+             Piece('cabinet_door', (D_CAB[0] - 0.28 * math.sin(math.radians(ang)) - 0.02, 1.6, D_CAB[1] + 0.28 * math.cos(math.radians(ang))),
+                   lambda pen, v, D=D, ang=ang: D.draw(pen, v, ang))]
+        if not self.far:
+            ba = o.get('bath_door', 80.0); ba = 80.0 if callable(ba) else ba
+            DB = dr_bath_door()
+            P.append(Piece('bath_door', (0.43 + 0.37 * math.sin(math.radians(ba)), 1.0, 7.05 - 0.37 * math.cos(math.radians(ba))),
+                           lambda pen, v, D=DB, ang=ba: D.draw(pen, v, ang)))
+        if o.get('lamp_prop'):
+            P.append(Piece('lamp_prop', (2.55, 1.0, 7.25), lambda pen, v: dr_table_lamp(pen, v, 2.6, 7.28, 0.9, 0.0, h=0.42)))
+        return P
+
+    def glows(self, v, o):
+        kv = _kfn(o.get('vanity', 1.0), 241)
+        kl = _kfn(o.get('lamp', 0.0), 244)
+
+        def g(pen, t):
+            k = kv(t)
+            if k > 0.01:
+                x, y0, y1, Y0, Y1 = D_CAB
+                for j in range(3):
+                    yy = y0 + (y1 - y0) * (0.18 + 0.32 * j)
+                    if v.d(x - 0.08, yy) < 0.15: continue
+                    px, py = v.p(x - 0.08, Y1 + 0.16, yy); s = v.s(x - 0.08, yy)
+                    pen.fill(oval(px, py, 0.048 * s), '#fffaf0', 240 * k)
+                    pen.glow(px, py, 0.3 * s, '#fff0d0', 90 * k)
+            if o.get('lamp_prop'): dr_lamp_glow(pen, v, 2.6, 7.28, 0.9, kl(t), h=0.42)
+        return [('vanity_glow', (D_CAB[0] - 0.1, 2.1, 6.75), g)]
+
+    def spots(self, v, o):
+        S = {}
+        S['sink'] = _mk_spot(v, 'sink', 2.02, 6.75, 0.0, 'stand', 'at the sink facing the medicine cabinet (+x)', face=(1, 0))
+        S['sink_watch'] = _mk_spot(v, 'sink_watch', 1.55, 7.45, 0.0, 'stand', 'the narrator watching Grandma at the cabinet', face=(0.75, -0.65))
+        S['door_in'] = _mk_spot(v, 'door_in', 0.75, 6.68, 0.0, 'stand', 'just inside the bathroom door', face=(1, 0))
+        S['mirror'] = _mk_spot(v, 'mirror', D_CAB[0] - 0.03, (D_CAB[1] + D_CAB[2]) / 2, (D_CAB[3] + D_CAB[4]) / 2, 'point', 'the cabinet mirror centre (closed)')
+        ang = o.get('cabinet', 0.0)
+        ang = 0.0 if callable(ang) else ang * 105.0 if ang <= 1.0 else ang
+        D = dr_cabinet_door(o)
+        cp = D.point(ang, (D_CAB[2] - D_CAB[1]) * 0.5, 0.33, 'a', 0.003)
+        S['card'] = _mk_spot(v, 'card', cp[0], cp[2], cp[1], 'point', 'the yellow card taped inside the cabinet door (at the current door angle): "tapped the little yellow card"')
+        S['cab_shelf'] = _mk_spot(v, 'cab_shelf', D_CAB[0] + 0.06, (D_CAB[1] + D_CAB[2]) / 2, D_CAB[3] + 0.245, 'surface', 'the middle shelf inside')
+        S['tub_edge'] = _mk_spot(v, 'tub_edge', D_TUB.cx, D_TUB.cy - 0.32, 0.0, 'seat', 'sitting on the tub edge', face=(0, -1), seat_Y=0.56)
+        return S
+
+
+# ====================================================================================================== outside: Larch Street
+D_EAVE = 2.85
+D_RIDGE = 5.2
+D_LAMPS = [(-30.0, -12.6), (-6.0, -12.6), (18.0, -12.6), (42.0, -12.6)]       # sodium streetlights on the north kerb
+D_BUS_LAMP = (-44.6, -21.1)                                                   # the flickering streetlight over the bus stop
+D_MAPLE = (3.2, -6.2)
+D_NEIGH = [(-21.0, -15.0, 0.0, 'w'), (8.4, 17.5, 0.0, 'e'), (-30.0, -20.0, 0.0, 'w2')]   # neighbours (x0, x1, front y, tag)
+D_ACROSS = [(-38.0, -27.0), (-22.0, -11.0), (-6.0, 5.0), (10.0, 21.0)]          # houses across the street (x0, x1), front at y -24.5
+D_CAR_FA = 180                                                                 # the car faces +y (nose to the house)
+DCAR = dict(L=4.45, W=1.78, H=1.46, wb=2.62, hood=0.92, belt=0.98)
+
+
+def _ext_light_d(tod):
+    if tod in ('sunrise', 'dawn'):
+        return '#7a6a78', [Lamp(kind='dir', c='#ffc890', k=0.9, d=_norm3((-0.75, -0.25, 0.6)))]
+    return '#2e3a62', [Lamp(kind='dir', c='#8a9ad8', k=0.35, d=_norm3((0.3, -0.8, 0.5)))]
+
+
+def dr_house_ext(pen, v, tod='night', glow=None, porch_light=1.0, door_open=0.0):
+    """Ruth's house from outside: a one-storey bungalow, pale blue-grey clapboard over a brick foundation, white trim,
+    a hip roof of dark shingles, the picture window (living room) left of the porch, Ruth's bedroom window right, the red
+    front door under a little gabled porch roof on two posts, three steps, the porch light. glow = {'living': k,
+    'bedroom': k, 'hall': k} windows lit from inside."""
+    glow = glow or {}
+    G = D_GROUND
+    x0, x1, y0, y1 = D_HOUSE
+    sid = DP['siding'] if tod == 'night' else '#c8d0d6'
+    walls = [('front', (x0, y0), (x1, y0)), ('west', (x0, y1), (x0, y0)), ('east', (x1, y0), (x1, y1)), ('back', (x1, y1), (x0, y1))]
+    walls.sort(key=lambda w: -v.d((w[1][0] + w[2][0]) / 2, (w[1][1] + w[2][1]) / 2))
+    wins = {'front': [(D_LWIN[0] - x0, D_LWIN[1] - x0, D_LWIN[2], D_LWIN[3], 'living'), (D_RWIN[0] - x0, D_RWIN[1] - x0, D_RWIN[2], D_RWIN[3], 'bedroom')],
+            'west': [(y1 - D_SWIN[1], y1 - D_SWIN[0], D_SWIN[2], D_SWIN[3], 'living'), (y1 - 8.3, y1 - 7.3, 1.0, 2.0, 'kitchen')],
+            'east': [(1.0, 2.2, 0.9, 2.0, 'bedroom'), (6.6, 7.6, 1.0, 2.0, 'kids')], 'back': []}
+    for (nm, a, b) in walls:
+        F = wall_face(a, b, G, D_EAVE)
+        if not v.visible(F.O, F.n): continue
+        holes = []
+        for (u0, u1, sill, top, room) in wins[nm]:
+            holes.append(rect(u0 * 100, (D_EAVE - top) * 100, (u1 - u0) * 100, (top - sill) * 100))
+        if nm == 'front':
+            holes.append(rect((D_FDOOR[0] - x0) * 100, (D_EAVE - D_FDOOR[2]) * 100, (D_FDOOR[1] - D_FDOOR[0]) * 100, D_FDOOR[2] * 100))
+
+        def art(p_, W, H, nm=nm):
+            pat(p_, W, H, 'clapboard', '#000000', 150)
+            p_.texture(rect(0, 0, W, H), 'grunge', 0.3, 'overlay', 1.2)
+            fh = (0.0 - G) * 100
+            p_.fill(rect(0, H - fh, W, fh), DP['brick'])
+            p_.cv.save(); p_.cv.translate(0, H - fh); pat(p_, W, fh, 'brick', '#c8b8a0', 200, 3, DP['brick']); p_.cv.restore()
+            p_.fill(rect(0, 0, W, 10), DP['trim']); p_.fill(rect(0, H - fh - 4, W, 4), DP['trim'])
+            for (u0, u1, sill, top, room) in wins[nm]:
+                p_.fill(rect(u0 * 100 - 7, (D_EAVE - top) * 100 - 8, (u1 - u0) * 100 + 14, (top - sill) * 100 + 16), DP['trim'])
+                for sx_ in ((u0 * 100 - 34, u1 * 100 + 8) if (u1 - u0) < 1.5 else ()):
+                    sh = rect(sx_, (D_EAVE - top) * 100, 26, (top - sill) * 100)
+                    p_.fill(sh, '#2e4a5a'); p_.line(sh, 0.8, '#000000', 160)
+                    for k in range(int((top - sill) * 100 / 9)): p_.fill(rect(sx_ + 3, (D_EAVE - top) * 100 + 4 + k * 9, 20, 2.0), '#000000', 70)
+            if nm == 'front':
+                p_.fill(rect((D_FDOOR[0] - x0) * 100 - 9, (D_EAVE - D_FDOOR[2]) * 100 - 9, (D_FDOOR[1] - D_FDOOR[0]) * 100 + 18, D_FDOOR[2] * 100 + 9), DP['trim'])
+                btext(p_, '27', (0.55 - x0) * 100, (D_EAVE - 1.75) * 100, 'serif_b', 13, '#2a2a2a', 230, 'center')
+        draw_face(pen, v, F, art, sid, holes=holes, ao=False)
+        for (u0, u1, sill, top, room) in wins[nm]:
+            _ext_window(pen, v, a, b, u0, u1, sill, top, glow.get(room, 0.0), 'night' if tod == 'night' else 'dawn')
+        if nm == 'front':
+            Fd = Face((D_FDOOR[0], D_FDOOR[2], -0.02), (1, 0, 0), (0, -1, 0), (D_FDOOR[1] - D_FDOOR[0]) * 100, D_FDOOR[2] * 100, (0, 0, -1), 'front')
+            if door_open <= 0.01:
+                draw_face(pen, v, Fd, dr_front_door_art('out'), DP['door_red'], ao=False)
+            else:
+                draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#ffd8a0'), p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 60), (1, '#c87a3a', 90)])),
+                          '#ffd8a0', ao=False, unlit=True)
+    _dr_hip_roof(pen, v, tod)
+
+
+def _dr_hip_roof(pen, v, tod):
+    x0, x1, y0, y1 = D_HOUSE
+    ov = 0.4
+    a0, a1, b0, b1 = x0 - ov, x1 + ov, y0 - ov, y1 + ov
+    ym = (y0 + y1) / 2
+    r0, r1 = x0 + (y1 - y0) / 2, x1 - (y1 - y0) / 2                       # the ridge ends (45 degree hips)
+    E, R = D_EAVE - 0.05, D_RIDGE
+    planes = [([(a0, E, b0), (a1, E, b0), (r1, R, ym), (r0, R, ym)], (0, 0, -1)), ([(a1, E, b1), (a0, E, b1), (r0, R, ym), (r1, R, ym)], (0, 0, 1)),
+              ([(a0, E, b1), (a0, E, b0), (r0, R, ym)], (-1, 0, 0)), ([(a1, E, b0), (a1, E, b1), (r1, R, ym)], (1, 0, 0))]
+    planes.sort(key=lambda p_: -v.d(sum(q[0] for q in p_[0]) / len(p_[0]), sum(q[2] for q in p_[0]) / len(p_[0])))
+    for (q, nn) in planes:
+        cen = (sum(p_[0] for p_ in q) / len(q), sum(p_[1] for p_ in q) / len(q), sum(p_[2] for p_ in q) / len(q))
+        nrm = _norm3((nn[0] * (R - E), (y1 - y0) / 2, nn[2] * (R - E)))
+        if not v.visible(cen, nrm): continue
+        path = v.poly3(q)
+        if path.isEmpty(): continue
+        pen.fill(path, lit(DP['roof'], cen, nrm))
+        b = _rb(path)
+        pen.cv.save(); pen.cv.clipPath(path, skia.ClipOp.kIntersect, True)
+        step = max(3.0, 0.16 * v.s(cen[0], cen[2]))
+        yy = b[1]
+        while yy < b[3]:
+            pen.seg((b[0], yy), (b[2], yy), max(0.6, step * 0.08), '#000000', 70); yy += step
+        pen.texture(path, 'grunge', 0.35, 'overlay', 1.0)
+        if tod == 'night': pen.linear(path, 0, b[1], 0, b[3], [(0, '#8a9ad8', 40), (1, '#000000', 0)])
+        pen.cv.restore()
+        pen.line(path, 1.2)
+    fa = v.poly3([(a0, E, b0), (a1, E, b0), (a1, E - 0.2, b0), (a0, E - 0.2, b0)])                       # the fascia board
+    if not fa.isEmpty() and v.hy < b0: pen.fill(fa, lit(DP['trim'], (0, E, b0), (0, 0, -1))); pen.line(fa, 1.0)
+
+
+def dr_porch(pen, v, tod='night', light=1.0):
+    """The front porch: concrete deck and steps (three risers down to the walk), wrought-iron rails, two white posts and
+    a little gable roof over the door, the doormat."""
+    G = D_GROUND
+    x0, x1, y0, y1 = D_PORCH
+    for k in range(2):                                                      # two steps (three risers of 1/6 m) down to the walk
+        ya, yb = y0 - 0.3 * (k + 1), y0 - 0.3 * k
+        draw_box(pen, v, Box(-0.38, (ya + yb) / 2, 1.3, yb - ya, G, -(0.5 / 3) * (k + 1), 0),
+                 {'all': '#8a8c8e', 'top': dict(fill='#a8aaa8', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'asphalt', 0.4, 'overlay', 0.8))})
+    deck = Box((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, G, 0.0, 0)
+    draw_box(pen, v, deck, {'all': '#7e8082', 'top': dict(fill='#9a9c9a', art=lambda p_, W, H: (p_.texture(rect(0, 0, W, H), 'asphalt', 0.4, 'overlay', 0.8),
+                                                                                              p_.fill(rect((-0.85 - x0) * 100, 10, 90, 55), '#6a3a2a'),
+                                                                                              btext(p_, 'WELCOME', (-0.4 - x0) * 100, 42, 'serif_b', 9, '#c8a870', 200, 'center')))})
+    for px in (x0 + 0.08, x1 - 0.08):
+        draw_box(pen, v, Box(px, y0 + 0.08, 0.1, 0.1, 0.0, 2.45, 0), {'all': '#f2ece0'})
+    for px in (-0.38 - 0.62, -0.38 + 0.62):                                 # iron hand rails down both sides of the steps
+        if v.d(px, y0) < 0.3: continue
+        a_, b_ = v.p(px, 0.85, y0 + 0.05), v.p(px, 0.85 + G, y0 - 0.6)
+        pen.seg(a_, b_, max(1.5, 0.02 * v.s(px, y0)) + 1.5, LINE); pen.seg(a_, b_, max(1.2, 0.02 * v.s(px, y0)), '#1a1a1c')
+        for k in range(4):
+            u = k / 3
+            yy = y0 + 0.05 - 0.65 * u
+            fl = 0.0 if yy > y0 else -(0.5 / 3) * min(3, int((y0 - yy) / 0.3) + 1)
+            pen.seg(v.p(px, 0.85 + G * u * 0.92, yy), v.p(px, fl, yy), max(1.0, 0.01 * v.s(px, yy)), '#1a1a1c')
+    # the gabled porch roof
+    E, R = 2.5, 3.15
+    ya, yb = y0 - 0.15, 0.0
+    for (q, nn) in (([(x0 - 0.1, E, ya), (-0.38, R, ya), (-0.38, R, yb), (x0 - 0.1, E, yb)], (-1, 1, 0)), ([(-0.38, R, ya), (x1 + 0.1, E, ya), (x1 + 0.1, E, yb), (-0.38, R, yb)], (1, 1, 0))):
+        cen = (sum(p_[0] for p_ in q) / 4, sum(p_[1] for p_ in q) / 4, sum(p_[2] for p_ in q) / 4)
+        nrm = _norm3((nn[0] * (R - E), (x1 - x0) / 2, 0))
+        path = v.poly3(q)
+        if not path.isEmpty():
+            pen.fill(path, lit(DP['roof'], cen, nrm)); pen.line(path, 1.0)
+    tri = v.poly3([(x0 - 0.1, E, ya), (-0.38, R, ya), (x1 + 0.1, E, ya)])
+    if not tri.isEmpty() and v.hy < ya:
+        pen.fill(tri, lit(DP['trim'], (-0.38, 2.7, ya), (0, 0, -1))); pen.line(tri, 1.0)
+        und = v.poly3([(x0 - 0.1, E, ya), (x1 + 0.1, E, ya), (x1 + 0.1, E - 0.12, ya), (x0 - 0.1, E - 0.12, ya)])
+        pen.fill(und, lit(DP['trim'], (-0.38, 2.45, ya), (0, 0, -1))); pen.line(und, 0.8)
+
+
+def dr_porch_light_draw(pen, v, k=1.0):
+    porch_lantern(pen, v, D_PLIGHT, k, facing=(0, 0, -1))
+
+
+def dr_ground_front(pen, v, tod='night'):
+    """Lawns, the front walk, the driveway (wet concrete), the sidewalk, Larch Street (wet asphalt with the streetlights
+    and Halverson's headlights shining in it), the far sidewalk, lawns across."""
+    G = D_GROUND
+    wet = tod == 'night'
+    grass = '#1c2a26' if wet else '#4a6a3a'
+    F = floor_face(-90.0, 90.0, -40.0, 9.5, G)
+
+    def lawn(p_, W, H):
+        p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, grass, 255), (1, _darken(grass, 0.3), 255)])
+        p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0)
+        p_.texture(rect(0, 0, W, H), 'fabric', 0.4, 'overlay', 0.8)
+    draw_face(pen, v, F, lawn, grass, ao=False, line=False)
+
+    def strip(x0, x1, y0, y1, c, kind='asphalt', Y=G + 0.004, ink=None, refl=()):
+        Fs = floor_face(x0, x1, y0, y1, Y)
+
+        def art(p_, W, H):
+            p_.texture(rect(0, 0, W, H), kind, 0.6, 'overlay', 1.6 if kind == 'asphalt' else 0.8)
+            if ink: ink(p_, W, H)
+            if wet:
+                for (rx, ry, rc, ra) in refl:                                      # streaks of reflected light on the wet surface
+                    u_, w_ = floor_uv(x0, y1, rx, ry)
+                    p_.linear(rect(u_ - 40, w_ - 600, 80, 700), u_ - 40, 0, u_ + 40, 0, [(0, rc, 0), (0.5, rc, ra), (1, rc, 0)])
+        draw_face(pen, v, Fs, art, c, ao=False, line=False)
+    # the street, kerbs, sidewalks
+    refl = [(lx, ly - 2.5, '#ffb060', 70) for (lx, ly) in D_LAMPS] + [(D_BUS_LAMP[0], D_BUS_LAMP[1] + 1.5, '#c8f0a0', 50)]
+
+    def street_ink(p_, W, H):
+        x0 = -90.0
+        for k in range(36):                                                       # the yellow centre line, dashed
+            u_ = (k * 5.0) * 100
+            p_.fill(rect(u_, (D_STREET[0] - (D_STREET[0] + D_STREET[1]) / 2) * -100 + 0, 300, 9), '#c8a83a', 120)
+        p_.fill(rect(0, 0, W, 6), '#5a5a5a', 120); p_.fill(rect(0, H - 6, W, 6), '#5a5a5a', 120)
+    strip(-90.0, 90.0, D_STREET[1], D_STREET[0], '#26282e' if wet else '#4a4c50', 'asphalt', G - 0.12, street_ink, refl)
+    strip(-90.0, 90.0, D_STREET[0], D_STREET[0] + 1.25, '#5a5c60' if wet else '#a8a8a0', 'asphalt', G + 0.002,
+          lambda p_, W, H: [p_.fill(rect(k * 150, 0, 1.2, H), '#000000', 90) for k in range(int(W / 150))])
+    strip(-90.0, 90.0, D_STREET[1] - 1.4, D_STREET[1], '#5a5c60' if wet else '#a8a8a0', 'asphalt', G + 0.002,
+          lambda p_, W, H: [p_.fill(rect(k * 150, 0, 1.2, H), '#000000', 90) for k in range(int(W / 150))])
+    # the driveway (concrete, a puddle catching the headlights) and the front walk
+    dx0, dx1, dy0, dy1 = D_DRIVE
+
+    def drive_ink(p_, W, H):
+        p_.fill(rect(0, H * 0.5, W, 1.2), '#000000', 90)
+        if wet:
+            u_, w_ = floor_uv(dx0, dy1, -6.6, -1.6)
+            p_.fill(_blob(u_, w_, 70, 30, 11, 5, 0.3), '#8a96b8', 60)
+    strip(dx0, dx1, dy0, dy1, '#5e6064' if wet else '#a8a49a', 'asphalt', G + 0.006, drive_ink)
+    strip(-0.75, 0.0, D_STREET[0] + 1.25, D_PORCH[2] - 0.9, '#5e6064' if wet else '#a8a49a', 'asphalt', G + 0.006,
+          lambda p_, W, H: [p_.fill(rect(0, k * 90, W, 1.0), '#000000', 90) for k in range(int(H / 90))])
+    # the opposite kerb lawns
+    if wet:
+        pass
+
+
+def dr_streetlight(pen, v, x, y, k=1.0, c=D_SODIUM, arm=1.0, h=6.2, cone=True, G=D_GROUND):
+    """A streetlight: a grey pole, a curved arm reaching over the street, the cobra-head lamp; k = brightness (cone and
+    pool are drawn by dr_streetlight_glow)."""
+    if v.d(x, y) < 0.5: return
+    s = v.s(x, y)
+    b_, t_ = v.p(x, G, y), v.p(x, G + h, y)
+    pen.seg(b_, t_, max(1.5, 0.16 * s) + 2, LINE); pen.seg(b_, t_, max(1.2, 0.16 * s), '#4a4c52')
+    ex, ey = x, y - 1.6 * arm
+    pts = [t_, v.p(x, G + h + 0.35, y - 0.5 * arm), v.p(ex, G + h + 0.25, ey)]
+    pen.line(smooth(pts, False, 0.9), max(1.2, 0.1 * s) + 2, LINE); pen.line(smooth(pts, False, 0.9), max(1.0, 0.1 * s), '#4a4c52')
+    hx, hy = v.p(ex, G + h + 0.18, ey); hs = v.s(ex, ey)
+    head = rrect(hx - 0.32 * hs, hy - 0.08 * hs, 0.64 * hs, 0.16 * hs, 0.06 * hs)
+    pen.fill(head, '#3a3c40'); pen.line(head, 1.0)
+    pen.fill(oval(hx, hy + 0.06 * hs, 0.24 * hs, 0.05 * hs), mix('#3a3a3a', '#fff0d0', k))
+
+
+def dr_streetlight_glow(pen, v, x, y, k=1.0, c=D_SODIUM, arm=1.0, h=6.2, G=D_GROUND, rain=True, t=0.0):
+    """The lamp's glow, its cone through the rain and the pool on the ground (emissive; drawn live)."""
+    if k <= 0.01 or v.d(x, y) < 0.5: return
+    ex, ey = x, y - 1.6 * arm
+    hx, hy = v.p(ex, G + h + 0.12, ey); hs = v.s(ex, ey)
+    pen.glow(hx, hy, 1.4 * hs, c, 110 * k)
+    pen.glow(hx, hy, 0.35 * hs, '#fff6e0', 220 * k)
+    gx, gy = v.p(ex, G, ey)
+    pen.ellipse_glow(gx, gy, 3.4 * hs, max(4.0, 0.9 * hs * clamp(abs(v.h - gy) / max(1.0, 3.4 * hs), 0.12, 1.0)), c, 60 * k)
+    # a soft column of light under the head (the rain makes the beam visible), no hard edges
+    cw = 1.2 * hs
+    pen.linear(rect(hx - cw, hy, 2 * cw, max(1.0, gy - hy)), hx - cw, 0, hx + cw, 0, [(0, c, 0), (0.5, c, 26 * k), (1, c, 0)])
+    if rain:
+        cv = pen.cv
+        clip = oval(hx, (hy + gy) / 2, 1.3 * hs, max(4.0, (gy - hy) * 0.55))
+        cv.save(); cv.clipPath(clip, skia.ClipOp.kIntersect, True)
+        dr_rain(pen, t, (hx - 1.4 * hs, hy, hx + 1.4 * hs, gy), k, abs(int(x * 7)) % 97, 1.2, 0.1, mix(c, '#ffffff', 0.4), 70, max(24, int(hs * 1.2)))
+        cv.restore()
+
+
+def dr_bus_stop(pen, v, G=D_GROUND):
+    """The bus stop at the west end of Larch Street (south side, facing the street +y): a slatted bench on two concrete
+    legs, the BUS STOP sign on its pole, a bin."""
+    x, y = D_BUS
+    if v.d(x, y) < 0.5: return
+    B = Box(x, y, 1.8, 0.5, G, G + 0.45, 180)
+    for u in (-0.7, 0.7):
+        draw_box(pen, v, sub(B, u - 0.06, u + 0.06, -0.2, 0.2, G, G + 0.42), {'all': '#8a8a86'})
+    for k in range(4):
+        n = -0.2 + k * 0.13
+        draw_box(pen, v, sub(B, -0.9, 0.9, n - 0.05, n + 0.05, G + 0.42, G + 0.46), {'all': '#6a4a30', 'top': '#7a5a3a'})
+    for k in range(3):                                                      # the backrest slats
+        Yb = G + 0.62 + k * 0.13
+        draw_box(pen, v, sub(B, -0.9, 0.9, -0.26, -0.21, Yb, Yb + 0.09), {'all': '#6a4a30'})
+    sx, sy = x + 1.3, y - 0.1
+    if v.d(sx, sy) > 0.5:
+        s = v.s(sx, sy)
+        a_, b_ = v.p(sx, G, sy), v.p(sx, G + 2.6, sy)
+        pen.seg(a_, b_, max(1.2, 0.05 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.0, 0.05 * s), '#7a7c80')
+        px, py = v.p(sx, G + 2.35, sy)
+        sg = rrect(px - 0.24 * s, py - 0.2 * s, 0.48 * s, 0.4 * s, 0.03 * s)
+        pen.fill(sg, '#e8e4d8'); pen.line(sg, 1.0)
+        pen.fill(rect(px - 0.2 * s, py - 0.16 * s, 0.4 * s, 0.12 * s), '#1a5a8a')
+        btext(pen, 'BUS', px, py - 0.06 * s, 'sans_b', 0.09 * s, '#ffffff', 240, 'center')
+        btext(pen, 'STOP', px, py + 0.1 * s, 'sans_b', 0.1 * s, '#1a1a1a', 240, 'center')
+        btext(pen, '14', px, py + 0.18 * s, 'sans_b', 0.06 * s, '#c82a2a', 240, 'center')
+    bx_, by_ = x - 1.25, y - 0.05
+    if v.d(bx_, by_) > 0.5:
+        draw_box(pen, v, Box(bx_, by_, 0.42, 0.42, G, G + 0.8, 180), {'all': '#3a5a3a', 'top': '#1a2a1a'})
+
+
+def dr_neighbour(pen, v, x0, x1, yf=0.0, depth=9.0, tod='night', lit_room=None, seed=0, G=D_GROUND, c='#9a9488'):
+    """A neighbour's one-storey house (front at yf, facing -y; or across the street facing +y when yf < -20)."""
+    facing_n = yf < -20
+    y0, y1 = (yf - depth, yf) if facing_n else (yf, yf + depth)
+    sid = mix(c, '#2a2e40', 0.35) if tod == 'night' else c
+    front = (x1, y1) if facing_n else (x0, y0)
+    walls = [((x1, y1), (x0, y1)) if facing_n else ((x0, y0), (x1, y0)), ((x0, y0), (x0, y1)) if facing_n else ((x0, y1), (x0, y0)),
+             ((x1, y1), (x1, y0)) if facing_n else ((x1, y0), (x1, y1))]
+    for (a, b) in walls:
+        F = wall_face(a, b, G, 2.8)
+        if not v.visible(F.O, F.n): continue
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        rng = np.random.default_rng(abs(int(seed)))
+        wins = []
+        for k in range(int(L / 3.2)):
+            u = 1.0 + k * 3.2 + rng.uniform(0, 0.5)
+            if u + 1.1 < L - 0.4: wins.append((u, u + 1.1))
+
+        def art(p_, W, H, wins=wins):
+            pat(p_, W, H, 'clapboard', '#000000', 140)
+            p_.texture(rect(0, 0, W, H), 'grunge', 0.3, 'overlay', 1.2)
+            for (u0, u1) in wins:
+                p_.fill(rect(u0 * 100 - 6, H - 215, (u1 - u0) * 100 + 12, 125), '#e8e4d8', 200)
+        draw_face(pen, v, F, art, sid, ao=False)
+        for i, (u0, u1) in enumerate(wins):
+            k = 1.0 if (lit_room is not None and i == lit_room and a == walls[0][0]) else 0.0
+            _ext_window(pen, v, a, b, u0, u1, 0.95, 2.05, k, 'night' if tod == 'night' else 'dawn')
+    yr = (y0 + y1) / 2
+    q = [(x0 - 0.3, 2.8, y0 - 0.3), (x1 + 0.3, 2.8, y0 - 0.3), ((x0 + x1) / 2, 4.6, yr), ]
+    for (qq, nn) in (([(x0 - 0.3, 2.75, y0 - 0.3), (x1 + 0.3, 2.75, y0 - 0.3), (x1 + 0.3, 4.6, yr), (x0 - 0.3, 4.6, yr)], (0, 1, -1)),
+                     ([(x1 + 0.3, 2.75, y1 + 0.3), (x0 - 0.3, 2.75, y1 + 0.3), (x0 - 0.3, 4.6, yr), (x1 + 0.3, 4.6, yr)], (0, 1, 1))):
+        cen = (sum(p_[0] for p_ in qq) / 4, sum(p_[1] for p_ in qq) / 4, sum(p_[2] for p_ in qq) / 4)
+        if not v.visible(cen, _norm3(nn)): continue
+        path = v.poly3(qq)
+        if not path.isEmpty(): pen.fill(path, lit('#3a3a40', cen, _norm3(nn))); pen.line(path, 1.0)
+
+
+def dr_mailbox(pen, v, x=-1.5, y=-11.4, G=D_GROUND):
+    if v.d(x, y) < 0.4: return
+    s = v.s(x, y)
+    a_, b_ = v.p(x, G, y), v.p(x, G + 1.0, y)
+    pen.seg(a_, b_, max(1.2, 0.08 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.0, 0.08 * s), '#5a4a3a')
+    B = Box(x, y, 0.2, 0.45, G + 1.0, G + 1.22, 90)
+    draw_box(pen, v, B, {'all': '#2a3a5a', 'top': '#3a4a6a'})
+
+
+# ---------------------------------------------------------------------------------------------- Doctor Halverson's car
+def _car_profile(L, H, hood, belt):
+    """The car's side silhouette below the beltline (cm, x from the rear bumper, y down from the beltline...): returns
+    (lower body pts, greenhouse pts) in a frame with x along the car (0 = rear) and y down from the roof (cm)."""
+    l, h, hd, bt = L * 100, H * 100, hood * 100, belt * 100
+    ground = h - 4
+    lower = [(0, h - bt + 6), (6, h - bt), (l * 0.18, h - bt - 2), (l * 0.76, h - bt - 2), (l * 0.86, h - hd), (l - 8, h - hd + 4), (l, h - hd + 16),
+             (l, ground - 22), (l - 6, ground - 10), (l - 8, ground - 10), (0, ground - 12), (0, h - bt + 6)]
+    # greenhouse: rear window slope, roof, windshield
+    gh = [(l * 0.06, h - bt + 1), (l * 0.2, 4), (l * 0.56, 0), (l * 0.76, h - bt - 4)]
+    return lower, gh
+
+
+def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=D_GROUND, glass_k=0.45):
+    """Halverson's car (a small dark-teal hatchback) as furniture Parts on the plan: lower body, the four wheels, the cabin
+    (roof, windshield, rear glass, both side windows as separate glass parts so a seated figure sorts between the far and
+    the near window), headlights / tail lights. Returns (parts, seats {name: (x, y)}, Box). fa 180 = facing +y."""
+    cx = D_CAR[0] if cx is None else cx; cy = D_CAR[1] if cy is None else cy
+    L, W, H = DCAR['L'], DCAR['W'], DCAR['H']
+    B = Box(cx, cy, L, W, Y0, Y0 + H, fa - 90)       # Box 'u' runs along the car (rear -> front), 'n' across (+n = the car's right side)
+    P = []
+    belt = Y0 + DCAR['belt']
+    hood = Y0 + DCAR['hood']
+    u_r, u_f = -L / 2, L / 2
+
+    def body(pen, v):
+        U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1])
+        prof = [(0, 30), (8, 22), (L * 100 * 0.18, 20), (L * 100 * 0.76, 20), (L * 100 * 0.88, (belt - hood) * 100 + 22), (L * 100 - 6, (belt - hood) * 100 + 26),
+                (L * 100, (belt - hood) * 100 + 38), (L * 100, (belt - Y0) * 100 - 26), (L * 100 - 8, (belt - Y0) * 100 - 14), (L * 100 * 0.83, (belt - Y0) * 100 - 14),
+                (L * 100 * 0.83, (belt - Y0) * 100 - 30), (L * 100 * 0.68, (belt - Y0) * 100 - 30), (L * 100 * 0.68, (belt - Y0) * 100 - 14),
+                (L * 100 * 0.3, (belt - Y0) * 100 - 14), (L * 100 * 0.3, (belt - Y0) * 100 - 30), (L * 100 * 0.15, (belt - Y0) * 100 - 30),
+                (L * 100 * 0.15, (belt - Y0) * 100 - 14), (6, (belt - Y0) * 100 - 14), (0, (belt - Y0) * 100 - 26)]
+        O = B.at(u_r, W / 2 - 0.02, belt + 0.2)
+
+        def side_art(p_, Wc, Hc):
+            p_.linear(rect(0, 0, Wc, Hc), 0, 0, 0, Hc, [(0, '#ffffff', 50), (0.35, '#ffffff', 0), (0.6, '#000000', 0), (1, '#000000', 70)])
+            p_.seg((Wc * 0.42, 24), (Wc * 0.42, Hc - 32), 0.8, '#000000', 140)              # door seams
+            p_.seg((Wc * 0.65, 24), (Wc * 0.65, Hc - 32), 0.8, '#000000', 140)
+            for hx_ in (Wc * 0.47, Wc * 0.7): p_.fill(rrect(hx_, 36, 9, 2.4, 1.0), '#c8ccd0')
+        extrude(pen, v, O, U3, (0.0, -1.0, 0.0), prof, _scale3(N3, -(W - 0.04)), col_, _darken(col_, 0.15), side_art)
+        for side in (1, -1):                                               # wet sheen along the shoulder line (streetlight / sky)
+            n = (B.N[0] * side, 0.0, B.N[1] * side)
+            if not v.visible(B.at(0, side * W / 2, belt), n): continue
+            pts = [v.p(*B.at(u_r + 0.1 + (L - 0.2) * k / 10, side * (W / 2 - 0.01), belt + 0.17 - (0.0 if k < 8 else (k - 7) * 0.08))) for k in range(11)]
+            pen.line(smooth(pts, False, 0.8), max(1.0, 0.012 * v.s(B.cx, B.cy)), '#b8c8e8', 110)
+        hpts = [v.p(*B.at(u_f - 1.0 + 0.95 * k / 6, 0.0, hood + 0.02 + 0.01 * k)) for k in range(7)]
+        pen.line(smooth(hpts, False, 0.8), max(1.0, 0.01 * v.s(B.cx, B.cy)), '#a8b8d8', 90)
+    P.append(Part(fn=body, ref=B.at(0, 0, Y0 + 0.5), tag='body'))
+    for (uw, side) in ((u_r + 0.82, 1), (u_r + 0.82, -1), (u_f - 0.88, 1), (u_f - 0.88, -1)):
+        def wheel(pen, v, uw=uw, side=side):
+            c = B.at(uw, side * (W / 2 + 0.01), Y0 + 0.31)
+            n = (B.N[0] * side, 0.0, B.N[1] * side)
+            if not v.visible(c, n) and v.d(c[0], c[2]) > 0.3:
+                pass
+            pts = []
+            for k in range(20):
+                a = 2 * math.pi * k / 20
+                du = math.cos(a) * 0.31; dY = math.sin(a) * 0.31
+                pts.append(B.at(uw + du, side * (W / 2 + 0.01), Y0 + 0.31 + dY))
+            q = _clip_near3(v, pts)
+            if len(q) < 3: return
+            tire = poly([v.p(*p_) for p_ in q])
+            pen.fill(tire, '#121214'); pen.line(tire, 1.0)
+            hub = []
+            for k in range(14):
+                a = 2 * math.pi * k / 14
+                hub.append(B.at(uw + math.cos(a) * 0.18, side * (W / 2 + 0.02), Y0 + 0.31 + math.sin(a) * 0.18))
+            qh = _clip_near3(v, hub)
+            if len(qh) >= 3:
+                hp = poly([v.p(*p_) for p_ in qh]); pen.fill(hp, lit('#9aa0a8', c, n)); pen.line(hp, 0.8)
+        P.append(Part(fn=wheel, ref=B.at(uw, side * (W / 2 + 0.2), Y0 + 0.3), tag='wheel'))
+    # the cabin: roof + glass (each its own part)
+    gh = [(u_r + 0.12, belt), (u_r + 0.62, Y0 + H - 0.02), (u_f - 1.95, Y0 + H), (u_f - 1.02, belt + 0.02)]
+    hw = W / 2 - 0.1
+
+    def quad(pts, mat, glass=False):
+        def fn(pen, v):
+            path = v.poly3(pts)
+            if path.isEmpty(): return
+            cen = (sum(p_[0] for p_ in pts) / 4, sum(p_[1] for p_ in pts) / 4, sum(p_[2] for p_ in pts) / 4)
+            if glass:
+                pen.fill(path, '#0e141c', int(255 * glass_k))
+                b = _rb(path)
+                pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 0), (0.35, '#9ab0d8', 55), (0.42, '#9ab0d8', 10), (0.6, '#9ab0d8', 0), (0.7, '#9ab0d8', 30), (1, '#9ab0d8', 0)])
+                pen.line(path, 1.4, '#0a0c10', 230)
+            else:
+                pen.fill(path, lit(mat, cen, None)); pen.line(path, 1.0)
+        return fn
+    def side_pts(side, g0, g1):
+        return [B.at(g0[0], side * hw, g0[1]), B.at(g1[0], side * hw, g1[1])]
+    roof = [B.at(gh[1][0], hw, gh[1][1]), B.at(gh[2][0], hw, gh[2][1]), B.at(gh[2][0], -hw, gh[2][1]), B.at(gh[1][0], -hw, gh[1][1])]
+    P.append(Part(fn=quad(roof, col_), ref=B.at((gh[1][0] + gh[2][0]) / 2, 0, Y0 + H), tag='roof'))
+    wind = [B.at(gh[2][0], hw, gh[2][1]), B.at(gh[3][0], hw + 0.08, gh[3][1]), B.at(gh[3][0], -hw - 0.08, gh[3][1]), B.at(gh[2][0], -hw, gh[2][1])]
+    P.append(Part(fn=quad(wind, None, True), ref=B.at((gh[2][0] + gh[3][0]) / 2, 0, belt + 0.25), tag='windshield'))
+    rear = [B.at(gh[0][0], hw + 0.08, gh[0][1]), B.at(gh[1][0], hw, gh[1][1]), B.at(gh[1][0], -hw, gh[1][1]), B.at(gh[0][0], -hw - 0.08, gh[0][1])]
+    P.append(Part(fn=quad(rear, None, True), ref=B.at((gh[0][0] + gh[1][0]) / 2, 0, belt + 0.25), tag='rear_glass'))
+    for side in (1, -1):
+        sw = [B.at(gh[0][0] + 0.06, side * (hw + 0.07), belt + 0.02), B.at(gh[1][0], side * hw, gh[1][1] - 0.03), B.at(gh[2][0], side * hw, gh[2][1] - 0.03),
+              B.at(gh[3][0] - 0.04, side * (hw + 0.07), belt + 0.03)]
+
+        def sidewin(pen, v, sw=sw, side=side):
+            path = v.poly3(sw)
+            if path.isEmpty(): return
+            pen.fill(path, '#0e141c', int(255 * glass_k))
+            b = _rb(path)
+            pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 0), (0.3, '#9ab0d8', 40), (0.36, '#9ab0d8', 0), (1, '#9ab0d8', 0)])
+            # the B pillar
+            pb0, pb1 = B.at(u_f - 2.15, side * (hw + 0.06), belt + 0.02), B.at(u_f - 2.15, side * hw, Y0 + H - 0.03)
+            pen.seg(v.p(*pb0), v.p(*pb1), max(2.0, 0.07 * v.s(pb0[0], pb0[2])), _darken(col_, 0.4))
+            pen.line(path, 1.6, _darken(col_, 0.5), 255)
+        P.append(Part(fn=sidewin, ref=B.at(-0.2, side * (W / 2 + 0.05), belt + 0.3), tag='window_r' if side > 0 else 'window_l'))
+    # the lamps: headlights at the front corners, tail lights at the rear
+    def lamps(pen, v):
+        for side in (1, -1):
+            hl = B.at(u_f + 0.005, side * (W / 2 - 0.22), hood - 0.12)
+            if v.d(hl[0], hl[2]) > 0.3 and v.visible(hl, (B.U[0], 0, B.U[1])):
+                s = v.s(hl[0], hl[2]); px, py = v.p(*hl)
+                e = oval(px, py, 0.15 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]) + 0.03 * s, 0.06 * s)
+                pen.fill(e, '#fff6e0' if lights else '#c8ccd0'); pen.line(e, 0.9)
+            tl = B.at(u_r - 0.005, side * (W / 2 - 0.12), belt - 0.18)
+            if v.d(tl[0], tl[2]) > 0.3 and v.visible(tl, (-B.U[0], 0, -B.U[1])):
+                s = v.s(tl[0], tl[2]); px, py = v.p(*tl)
+                r_ = rrect(px - 0.06 * s, py - 0.1 * s, 0.12 * s, 0.2 * s, 0.03 * s)
+                pen.fill(r_, '#ff3a2a' if lights else '#8a2a2a'); pen.line(r_, 0.9)
+        # the plate and the grille
+        g = B.at(u_f + 0.004, 0.0, hood - 0.22)
+        if v.d(g[0], g[2]) > 0.3 and v.visible(g, (B.U[0], 0, B.U[1])):
+            s = v.s(g[0], g[2]); px, py = v.p(*g)
+            pen.fill(rrect(px - 0.32 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]), py - 0.05 * s, 0.64 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]), 0.08 * s, 0.02 * s), '#1a1c20')
+    P.append(Part(fn=lamps, ref=B.at(u_f + 0.1, 0, hood), tag='lamps'))
+    seats = {'driver': B.at(-0.05, -0.37, 0)[0::2], 'passenger': B.at(-0.05, 0.37, 0)[0::2], 'back_l': B.at(-1.05, -0.38, 0)[0::2], 'back_r': B.at(-1.05, 0.38, 0)[0::2]}
+    return P, seats, B
+
+
+def dr_headlight_beams(pen, v, B, k=1.0, t=0.0, rain=True, reach=9.0):
+    """Two headlight beams from the car (Box from dr_car_parts) through the rain: soft cones on the ground + the glare."""
+    if k <= 0.01: return
+    W = DCAR['W']; hood = B.Y0 + DCAR['hood']
+    fwd = (B.U[0], B.U[1])
+    for side in (1, -1):
+        hl = B.at(B.w / 2 + 0.01, side * (W / 2 - 0.22), hood - 0.12)
+        if v.d(hl[0], hl[2]) < 0.2: continue
+        far_c = (hl[0] + fwd[0] * reach, hl[2] + fwd[1] * reach)
+        sp_ = 0.42 * reach
+        pa = (far_c[0] - fwd[1] * sp_ * side * -1, far_c[1] + fwd[0] * sp_ * side * -1)
+        q = [(hl[0], B.Y0 + 0.02, hl[2]), (far_c[0] + fwd[1] * sp_, B.Y0 + 0.01, far_c[1] - fwd[0] * sp_), (far_c[0] - fwd[1] * sp_, B.Y0 + 0.01, far_c[1] + fwd[0] * sp_)]
+        path = v.poly3(q)
+        if not path.isEmpty():
+            a_, b_ = v.p(*q[0]), v.p(far_c[0], B.Y0, far_c[1])
+            pen.cv.save(); pen.cv.clipPath(path, skia.ClipOp.kIntersect, True)
+            pen.linear(None, a_[0], a_[1], b_[0], b_[1], [(0, '#fff2d6', 60 * k), (0.4, '#fff2d6', 18 * k), (1, '#fff2d6', 0)])
+            pen.cv.restore()
+        qa = [(hl[0], hl[1] + 0.05, hl[2]), (far_c[0] + fwd[1] * sp_ * 0.6, hl[1] + 0.9, far_c[1] - fwd[0] * sp_ * 0.6),
+              (far_c[0] - fwd[1] * sp_ * 0.6, hl[1] - 0.3, far_c[1] + fwd[0] * sp_ * 0.6)]
+        cone = v.poly3(qa)
+        if not cone.isEmpty():
+            a_, b_ = v.p(*qa[0]), v.p(far_c[0], hl[1], far_c[1])
+            pen.linear(cone, a_[0], a_[1], b_[0], b_[1], [(0, '#fff2d6', 70 * k), (0.4, '#fff2d6', 22 * k), (1, '#fff2d6', 0)])
+            if rain:
+                bb = _rb(cone)
+                pen.cv.save(); pen.cv.clipPath(cone, skia.ClipOp.kIntersect, True)
+                dr_rain(pen, t, (bb[0], bb[1], bb[2], bb[3]), k, 11 + side, 1.3, 0.08, '#ffffff', 150, max(40, int((bb[2] - bb[0]) * (bb[3] - bb[1]) / 2500)))
+                pen.cv.restore()
+        px, py = v.p(*hl); s = v.s(hl[0], hl[2])
+        facing = clamp((-(hl[0] - v.hx) * fwd[0] - (hl[2] - v.hy) * fwd[1]) / max(1e-3, math.hypot(hl[0] - v.hx, hl[2] - v.hy)), 0, 1)
+        pen.glow(px, py, (0.5 + 2.2 * facing ** 3) * s, '#fff2d6', (90 + 150 * facing ** 2) * k)
+        pen.glow(px, py, 0.12 * s, '#ffffff', 230 * k)
+
+
+def dr_taillight_glow(pen, v, B, k=1.0):
+    if k <= 0.01: return
+    W = DCAR['W']; belt = B.Y0 + DCAR['belt']
+    for side in (1, -1):
+        tl = B.at(-B.w / 2 - 0.01, side * (W / 2 - 0.12), belt - 0.18)
+        if v.d(tl[0], tl[2]) < 0.3 or not v.visible(tl, (-B.U[0], 0.0, -B.U[1])): continue
+        px, py = v.p(*tl); s = v.s(tl[0], tl[2])
+        pen.glow(px, py, 0.6 * s, '#ff3020', 100 * k)
+
+
+def dr_exhaust(pen, v, B, t=0.0, k=1.0):
+    """Puffs of exhaust from the tailpipe curling up into the rain (the engine is running)."""
+    if k <= 0.01: return
+    tp = B.at(-B.w / 2 - 0.05, -0.5, B.Y0 + 0.22)
+    if v.d(tp[0], tp[2]) < 0.3: return
+    s = v.s(tp[0], tp[2])
+    for i in range(6):
+        ph = (t * 0.45 + i / 6.0) % 1.0
+        P = (tp[0] - B.U[0] * ph * 1.2, tp[1] + ph * 0.9, tp[2] - B.U[1] * ph * 1.2)
+        px, py = v.p(*P)
+        r = (0.08 + 0.35 * ph) * s
+        pen.fill(oval(px + 0.1 * s * math.sin(t + i), py, r, r * 0.8), '#c8d0e0', 46 * k * (1 - ph) * min(1, ph * 6), blur=r * 0.5)
+
+
+def dr_car_in_view(v, name='car', lights=True, beams=True, exhaust=True, order_fn=None, amb=None, steady=None, cx=None, cy=None):
+    """Halverson's car as layers for a view: the car split into the parts behind and in front of the driver's seat
+    (cached), plus live layers (beams with rain, tail glow, exhaust). order_fn(depth) -> draw order (outside a window:
+    ORDER_SHELL + 20 + 0.1 d, like BSet.order_at for points outside)."""
+    parts, seats, B = dr_car_parts(cx, cy, lights=lights)
+    amb = amb or '#3e4a76'
+    steady = steady if steady is not None else [Lamp(kind='dir', c='#9aa8e0', k=0.45, d=_norm3((0.3, -0.8, 0.5))),
+                                                Lamp(-6.0, D_GROUND + 6.0, -14.2, 14.0, D_SODIUM, 0.7, fall=1.3)]
+    occ = seats['driver']
+    do = v.d(occ[0], occ[1])
+    of = order_fn or (lambda d_: d_)
+    back = [p_ for p_ in parts if p_.depth(v) >= do - 0.14]
+    front = [p_ for p_ in parts if p_.depth(v) < do - 0.14]
+    L = []
+    key = 'drcar:%s:%.2f,%.2f,%.1f,%.1f,%d' % (v.name, v.hx, v.hy, v.yaw, v.S, int(lights))
+    L += blit(max(0.3, do + 0.1), (lambda ps: lambda pen: draw_parts(pen, v, ps))(back), name + '_back', key + ':b', FRAME, amb, steady, (), order=of(do + 0.1))
+    if front:
+        L += blit(max(0.3, do - 0.2), (lambda ps: lambda pen: draw_parts(pen, v, ps))(front), name + '_front', key + ':f', FRAME, amb, steady, (), order=of(do - 0.15))
+    if beams:
+        lay = Layer(max(0.3, do), lambda pen, t: (dr_headlight_beams(pen, v, B, 1.0, t), dr_taillight_glow(pen, v, B, 1.0)), name + '_beams', blur=None)
+        lay.order = of(do - 0.2); L.append(lay)
+    if exhaust:
+        lay = Layer(max(0.3, do), lambda pen, t: dr_exhaust(pen, v, B, t), name + '_exhaust', blur=None)
+        lay.order = of(do - 0.18); L.append(lay)
+    return L, seats, B
+
+
+def _dr_outside_front(pen, v, tod='night', car=False, glow=None, bus=True):
+    """Everything seen from inside the front rooms through their windows (cached): the sky, the street, the houses
+    across, the streetlights (their glow is live), the bus stop. The car is NOT here (dr_car_in_view adds it as its own
+    layers so Halverson can sit in it)."""
+    tt = 'night' if tod == 'night' else 'dawn'
+    sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
+    with lighting(*_ext_light_d(tod)):
+        dr_ground_front(pen, v, tod)
+        for (x0, x1) in D_ACROSS:
+            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -22.0 else None), seed=int(x0))
+        for (x0, x1, yf, tag) in D_NEIGH[:2]:
+            dr_neighbour(pen, v, x0, x1, yf, 10.0, tod, seed=int(x0) + 5)
+        for i, (x, y) in enumerate([(-14.0, -21.5), (2.0, -21.0), (24.0, -21.8), (-36.0, -22.0), D_MAPLE]):
+            if v.d(x, y) < 1.0: continue
+            bx, by = v.p(x, D_GROUND, y)
+            draw_tree(pen, bx, by, (7.5 if i < 4 else 8.5) * v.s(x, y), 0.0, 500 + i, 0.0, '#0e1218' if tod == 'night' else '#3a3a34', None, 5)
+        for (x, y) in D_LAMPS + [D_BUS_LAMP]:
+            dr_streetlight(pen, v, x, y, 1.0, arm=1.0 if y > -15 else -1.0)
+        dr_bus_stop(pen, v)
+        dr_mailbox(pen, v)
+
+
+def _dr_outside_back(pen, v, tod='night'):
+    """The back yard through the kitchen / bathroom / hall windows: a fence, the neighbour's garage light, wet trees."""
+    tt = 'night' if tod == 'night' else 'dawn'
+    sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
+    with lighting(*_ext_light_d(tod)):
+        F = floor_face(-40.0, 40.0, 9.6, 40.0, D_GROUND)
+        draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0), '#1a2622', ao=False, line=False)
+        for i, x in enumerate(np.arange(-12.0, 12.0, 0.15)):
+            if v.d(x, 18.0) < 1: continue
+            pen.seg(v.p(x, D_GROUND, 18.0), v.p(x, D_GROUND + 1.8, 18.0), max(1.0, 0.1 * v.s(x, 18.0)), '#2a2a26' if i % 12 else '#1a1a18')
+        for i, (x, y) in enumerate([(-6.0, 21.0), (3.0, 24.0), (9.0, 22.0)]):
+            if v.d(x, y) < 1: continue
+            bx, by = v.p(x, D_GROUND, y)
+            draw_tree(pen, bx, by, 8.0 * v.s(x, y), 0.0, 600 + i, 0.0, '#0e1218', None, 5)
+        gx, gy = v.p(6.0, 2.0, 26.0)
+        if v.d(6.0, 26.0) > 1: pen.glow(gx, gy, 2.0 * v.s(6.0, 26.0), '#ffc880', 50)
+
+
+def _street_glows(v, tod='night', flicker_bus=True, rain=True):
+    """Live layer: the streetlights' glow, cones and pools (and the bus-stop light flickering)."""
+    if tod != 'night': return None
+
+    def draw(pen, t):
+        for (x, y) in D_LAMPS:
+            dr_streetlight_glow(pen, v, x, y, 1.0, D_SODIUM, 1.0, rain=rain, t=t)
+        k = dr_bus_flicker(t) if flicker_bus else 1.0
+        dr_streetlight_glow(pen, v, D_BUS_LAMP[0], D_BUS_LAMP[1], k, '#d0f0b0', -1.0, rain=rain, t=t)
+    lay = Layer(30.0, draw, 'street_glow', blur=None)
+    lay.order = ORDER_OUT - 0.5
+    return lay
+
+
+def dr_bus_flicker(t, seed=77):
+    """The bus-stop streetlight: mostly on, buzzing, dropping out in short stutters every few seconds."""
+    return flicker(t, seed, 1.0, None, 0.35) * (0.25 if (math.floor(t * 0.37) % 3 == 1 and (t * 0.37) % 1.0 < 0.08) else 1.0)
+
+
+# ====================================================================================================== house cameras + builders
+# living room (the narrator's eye ~1.5 m; seated people need the seat at |turn| >= 0.5 from the camera: noted per camera)
+_dcam('dr_liv_wide', 760, 470, 1.55, -1.55, 5.05, -140, _env(), "from the back-east corner: Grandpa's armchair by the picture window (3/4), "
+      'the side table and lamp, the couch (or the rows), the curio; the door is behind camera-left', 'living')
+_dcam('dr_liv_chair', 980, 500, 1.3, -2.25, 2.85, -138, _env(), 'medium on the armchair at 3/4 (seated figure turn ~0.6): the window behind it', 'living')
+_dcam('dr_liv_window', 860, 520, 1.5, -2.1, 0.75, 222, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08), f=(1.0, 1.6)),
+      "the narrator's eyes at the picture window: the driveway (Halverson's car, headlights, rain), Larch Street, the bus stop at its west end", 'living')
+_dcam('dr_liv_door', 880, 480, 1.5, -4.55, 1.85, 78, _env(), 'from beside the armchair toward the living-room door (it opens: the narrator in the doorway, the hall behind)', 'living')
+_dcam('dr_liv_sunrise', 860, 480, 1.45, -2.0, 3.6, -125, _env(), 'sunrise: the armchair against the glowing window (Grandpa still; Ruth with her ticket)', 'living')
+# the waiting room
+_dcam('dr_wait_wide', 700, 470, 1.55, -1.45, 3.95, -118, _env(), "the narrator's view from the door: the rows (3/4), HIM in the armchair under NOW SERVING, "
+      'the TV in the corner', 'living')
+_dcam('dr_wait_front', 680, 480, 1.6, -2.05, 5.2, -158, _env(), 'from behind the last row: the backs of the waiting, HIM facing us at the front', 'living')
+_dcam('dr_wait_rows', 820, 480, 1.45, -1.65, 1.05, -58, _env(), 'the rows at 3/4 from the front-east (the grey people turn ~-0.65; Grandpa at the far end by the window)', 'living')
+_dcam('dr_wait_him', 1000, 520, 1.3, -2.35, 2.75, -132, _env(), 'HIM in the armchair at 3/4 under the sign (the ticket held out)', 'living')
+_dcam('dr_wait_grandpa', 1100, 500, 1.3, -2.55, 4.05, -78, _env(), 'Grandpa in the last row by the window (turn ~-0.8)', 'living')
+_dcam('dr_wait_side', 760, 480, 1.4, -5.15, 2.75, 112, _env(), 'from the west wall across the room: HIM (left) reaching all the way to the ticket machine by the door (right)', 'living')
+_dcam('dr_wait_machine', 1150, 520, 1.3, -2.75, 2.45, 128, _env(), 'the ticket machine by the door (the long arm comes in from the left)', 'living')
+# hall
+_dcam('dr_hall_door', 820, 480, 1.5, -0.4, 4.6, 180, _env(), 'down the hall to the front door (peephole, deadbolt): the living-room door on the right', 'hall')
+_dcam('dr_hall_back', 820, 480, 1.5, -0.42, 0.55, 0, _env(), 'from the front door down the dark hall: living-room door and kitchen doorway left, bathroom door right', 'hall')
+_dcam('dr_hall_livdoor', 900, 490, 1.5, 0.15, 1.2, -55, _env(), 'the living-room door from the hall (3/4): "When I opened the door..."', 'hall')
+_dcam('dr_hall_peep', 2100, 560, 1.48, -0.2, 0.6, 196, _env(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)), 'close on the peephole and deadbolt', 'hall')
+_dcam('dr_hall_floor', 1300, 300, 0.32, -0.15, 0.95, 186, _env(x=(900, 1020), y=(240, 380), zoom=(1.0, 1.08), f=(1.0, 1.6)),
+      'low at the bottom of the front door: the paper sliding under it', 'hall')
+# kitchen
+_dcam('dr_kit_phone', 980, 500, 1.45, -3.35, 7.85, 98, _env(), 'the phone wall: Ruth at the wall phone (profile / 3/4), the dark hall doorway beside it, the counter', 'kitchen')
+_dcam('dr_kit_wide', 760, 470, 1.55, -1.5, 6.15, -62, _env(), 'from the hall doorway: the table, the fridge, the sink under the window', 'kitchen')
+_dcam('dr_kit_sink', 960, 500, 1.5, -2.15, 7.55, -32, _env(), 'the sink under the window (the paper burning, the match)', 'kitchen')
+_dcam('dr_kit_floor', 860, 380, 0.85, -1.5, 7.9, -60, _env(y=(340, 460)), 'low on the kitchen floor: Ruth rocking Milo against the sink cabinets (turn ~-0.65)', 'kitchen')
+_dcam('dr_kit_hall', 980, 500, 1.4, -3.75, 6.5, 90, _env(), 'from the table to the doorway into the dark hall (the pen click, the scratching)', 'kitchen')
+_dcam('dr_kit_front', 820, 480, 1.5, -2.8, 9.0, 205, _env(), 'from the sink toward the front wall: the clock, the table, the doorway', 'kitchen')
+# bathroom
+_dcam('dr_bath_sink', 900, 500, 1.5, 1.0, 8.6, 128, _env(), 'the sink and the medicine cabinet at 3/4 from the tub end', 'bath')
+_dcam('dr_bath_mirror', 980, 520, 1.55, 2.72, 6.75, -90, _env(), "from the mirror's place: Ruth's face as she swings it aside, the doorway behind", 'bath')
+_dcam('dr_bath_cabinet', 1500, 540, 1.6, 1.6, 6.88, 93, _env(x=(910, 1010), y=(490, 590), zoom=(1.0, 1.06), f=(1.0, 1.5)),
+      'the cabinet straight on: the mirror / the open door with the yellow card', 'bath')
+_dcam('dr_bath_door', 900, 490, 1.55, 0.05, 6.7, 95, _env(), 'from the hall through the bathroom door', 'bath')
+
+
+def _house_extras(sp, v, o, wins, car=False, rain=True, tod='night', glass=True):
+    """Live layers every view with windows gets: rain beyond the glass, rain on the glass, the streetlights' glow, and
+    (car=True) Halverson's car in the driveway as its own layers (so she can sit in it, order = BSet.order_at)."""
+    L = []
+    if rain and tod == 'night':
+        L.append(_rain_out_layer(v))
+        if glass and wins:
+            g = _glass_layer('glass_rain', v, wins, ORDER_SHELL - 0.05)
+            if g is not None: L.append(g)
+    sg = _street_glows(v, tod)
+    if sg is not None: L.append(sg)
+    if car:
+        cl, seats, B = dr_car_in_view(v, order_fn=lambda d_: ORDER_SHELL + 20.0 + 0.1 * d_)
+        L += cl
+        sp.info['car_seats'] = seats
+        for nm, (x, y) in seats.items():
+            sp.anchors['car_' + nm] = _mk_spot(v, 'car_' + nm, x, y, D_GROUND, 'seat', "Halverson's car, %s seat (outside: order = sp.order_at)" % nm,
+                                               face=(0, 1), seat_Y=0.42)
+    return sp.add(*L)
+
+
+def dr_living(view='wide', state='now', tod='night', lamp=None, ceiling=0.0, headlights=0.0, hall=0.0, door=0.0, coffee=False, keys=None,
+              clock=(3, 0), tubes=None, sign=1.0, tv=1.0, ticket='', tear=0.0, rain=None, car=None, serving='1979', **kw):
+    """Ruth's living room. state 'now' | '1979' | 'wait' (the waiting room: rows of bolted chairs, the ticket machine,
+    NOW SERVING 1979, the TV on a bracket, troffers: tubes = [spec x 4] (default on, dead, flickering, dead)).
+    view 'wide' | 'chair' | 'window' | 'door' | 'sunrise' (state now / 1979) or, for the waiting room,
+    'wide' | 'front' | 'rows' | 'him' | 'grandpa' | 'side' | 'machine' (also 'chair' / 'window' / 'door' work there).
+    tod 'night' | 'sunrise'. Lights (level specs): lamp (side-table lamp; default on in 1979, off now), ceiling,
+    headlights (Halverson's beams through the picture window, rule 4-5), hall (light through the open door).
+    door: the living-room door angle (deg, 0 shut .. 95 open into the room). coffee: the cup on the side table.
+    car: Halverson's car in the driveway (default: now + night); rain (default: night)."""
+    if state == 'wait' and view in ('wide', 'front', 'rows', 'him', 'grandpa', 'side', 'machine'):
+        name = 'dr_wait_' + view
+    else:
+        name = 'dr_liv_' + view
+    v = cam(name)
+    if lamp is None: lamp = 1.0 if (state == '1979' and tod == 'night') else 0.0
+    if car is None: car = False
+    if rain is None: rain = (tod == 'night' and state != '1979')
+    if keys is None: keys = state != '1979'
+    o = dict(state=state, tod=tod, lamp=lamp, ceiling=ceiling, headlights=headlights, hall=hall, door=door, coffee=coffee, keys=keys,
+             clock=clock if not callable(clock) else 'f', sign=sign, tv=tv, ticket=ticket if not callable(ticket) else 'f', tear=tear, serving=serving)
+    if tubes is not None: o['tubes'] = tubes
+    main = DrLiving()
+    far = [DrHall(far=True)] if (door and not callable(door) and door > 3) or callable(door) else []
+    grade = {'now': 'dr_night', '1979': 'dr_1979', 'wait': 'dr_wait'}[state]
+    if tod == 'sunrise': grade = 'dr_sunrise79' if state == '1979' else 'dr_sunrise'
+    if state == 'now' and tod == 'night' and not (lamp or ceiling or headlights): grade = 'dr_dark'
+    out = lambda pen, v_: _dr_outside_front(pen, v_, tod if state != '1979' else ('night' if tod == 'night' else 'sunrise'))
+    dyn = []
+    if callable(clock):
+        dyn.append(dr_live_wall_clock(v, 'living', clock, state))
+    if callable(door):
+        dyn.append(_live_door_layer('door_live', v, dr_living_door(), door, main, o))
+    sp = build_view(name, v, main, o, far=far, outside=out, grade=grade, dyn=dyn, info_extra=dict(state=state, tod=tod))
+    wins = [_win_glass_quads(((-1.2, 0.0), (-5.6, 0.0)), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0], D_LWIN[2], D_LWIN[3]),
+            _win_glass_quads(((-5.6, 0.0), (-5.6, 5.4)), D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3])]
+    sp = _house_extras(sp, v, o, wins, car=car, rain=rain, tod='night' if tod == 'night' else 'sunrise')
+    if callable(ticket) or callable(tear):
+        tkf = ticket if callable(ticket) else (lambda t: ticket)
+        trf = tear if callable(tear) else (lambda t: tear)
+        amb, steady, var = main.lights(o)
+        sp = sp.add(live_layer('ticket_machine', v, (D_TICKET[0], 0.6, D_TICKET[1]), lambda pen, v_, t: dr_ticket_machine(pen, v_, ticket=tkf(t), tear=trf(t)),
+                               amb, steady, var))
+    sp.info['note'] = ('Seated people need |turn| >= 0.5: the armchair reads in wide / chair / him / side; the rows in rows / grandpa / side '
+                       '(front-on in front: the chair backs hide them); stage with ST.stage_figure(sp, who, spot).')
+    return sp
+
+
+def _live_door_layer(name, v, D, ang_fn, room, o):
+    amb, steady, var = room.lights(o)
+    return live_layer(name, v, (D.hinge[0], 1.0, D.hinge[1]), lambda pen, v_, t: D.draw(pen, v_, ang_fn(t)), amb, steady, var)
+
+
+def dr_live_wall_clock(v, room, clock, state='now'):
+    """A wall clock whose time is f(t) -> (h, m) or (h, m, s) (the clock slowing down, rule 7): drawn live on its wall."""
+    if room == 'living':
+        F = Face((-1.2 - 0.005, D_LCLOCK[1] + 0.2, D_LCLOCK[2] + 0.2), (0, 0, -1), (0, -1, 0), 40.0, 40.0, (-1, 0, 0), 'wall')
+        kind = 'office' if state == 'wait' else 'sunburst'
+    else:
+        F = Face((D_KCLOCK[0] + 0.2, D_KCLOCK[1] + 0.2, 5.4 + 0.005), (-1, 0, 0), (0, -1, 0), 40.0, 40.0, (0, 0, 1), 'wall')
+        kind = 'kitchen'
+
+    def draw(pen, t):
+        tm = clock(t)
+        if not v.visible(F.O, F.n): return
+        m, _ = fmat(v, F.O, _scale3(F.Uu, 0.01), _scale3(F.Vu, 0.01))
+        pen.cv.save(); pen.cv.concat(m)
+        if kind == 'office': _office_clock(pen, 20, 20, 15, tm[0], tm[1], tm[2] if len(tm) > 2 else None)
+        elif kind == 'sunburst': _sunburst_clock(pen, 20, 20, 10, tm[0], tm[1])
+        else: _kitchen_clock(pen, 20, 20, 13, tm[0], tm[1])
+        pen.cv.restore()
+    c = F.centre()
+    lay = Layer(max(0.3, v.d(c[0], c[2])), draw, 'clock_live', blur=None)
+    lay.order = ORDER_SHELL - 0.04
+    return lay
+
+
+def dr_hall(view='door', hall=0.0, porch=1.0, kitchen=0.3, living=0.0, door=0.0, front_door=0.0, bath_door=0.0, headlights=0.0, tod='night',
+            living_state='now', **kw):
+    """The hall: view 'door' (to the front door), 'back' (down the dark hall), 'livdoor' (the living-room door at 3/4),
+    'peep' (close on the peephole), 'floor' (low at the door: the paper slides under it). door = the living-room door
+    angle (0..95 or f(t)); living_state 'wait' shows the waiting room through it (green-yellow light spills out)."""
+    v = cam('dr_hall_' + view)
+    o = dict(hall=hall, porch=porch, kitchen=kitchen, living=living, door=door if not callable(door) else 'f', front_door=front_door,
+             bath_door=bath_door, headlights=headlights, tod=tod, porch_lite=_lvl(porch, 0) if not callable(porch) else 0.6)
+    if living_state == 'wait':
+        o['living_c'] = D_TUBE
+        if not living: o['living'] = 0.8
+    main = DrHall()
+    far = [DrKitchen(far=True)]
+    if callable(door) or door > 3: far.append(_far_living(living_state))
+    if bath_door and (callable(bath_door) or bath_door > 3): far.append(DrBath(far=True))
+    dyn = []
+    if callable(door): dyn.append(_live_door_layer('living_door_live', v, dr_living_door(), door, main, o))
+    sp = build_view('dr_hall_' + view, v, main, o, far=far, outside=lambda pen, v_: _dr_outside_front(pen, v_, tod),
+                    grade='dr_hall_night' if tod == 'night' else 'dr_sunrise', dyn=dyn, focus=None)
+    return sp
+
+
+class _FarLiving(DrLiving):
+    pass
+
+
+def _far_living(state):
+    R = DrLiving(far=True)
+    R._state = state
+    orig = R.lights, R.shell, R.pieces, R.glows, R.spots
+
+    def wrap(f):
+        return lambda *a: f(*a[:-1], dict(a[-1], state=state))
+    R.lights = lambda o: orig[0](dict(o, state=state))
+    R.shell = lambda pen, v, o: orig[1](pen, v, dict(o, state=state))
+    R.pieces = lambda o: orig[2](dict(o, state=state))
+    R.glows = lambda v, o: orig[3](v, dict(o, state=state))
+    R.spots = lambda v, o: orig[4](v, dict(o, state=state))
+    return R
+
+
+def dr_kitchen(view='phone', era='now', tod='night', hood=1.0, ceiling=0.0, hall=0.0, fire=0.0, phone='hung', cord='in', ring=0.0, clock=(3, 0),
+               paper=None, rain=None, **kw):
+    """The kitchen. view 'phone' | 'wide' | 'sink' | 'floor' | 'hall' | 'front'. era 'now' | '1979' (harvest gold, the same
+    wall phone). phone 'hung' | 'off' | 'counter' or f(t); cord 'in' | 'out' (pulled from the wall: it lies on the floor);
+    ring = f(t) 0..1 (the phone shivers); hood = the stove light (on all night); fire = the paper burning in the sink
+    (level spec: lights the window and Ruth); paper None | 'ash'. clock = (h, m) or f(t)."""
+    v = cam('dr_kit_' + view)
+    if rain is None: rain = tod == 'night' and era == 'now'
+    o = dict(era=era, tod=tod, hood=hood, ceiling=ceiling, hall=hall, fire=fire, phone=phone if not callable(phone) else 'f', cord=cord,
+             ring=ring if not callable(ring) else 'f', clock=clock if not callable(clock) else 'f', paper=paper)
+    main = DrKitchen()
+    far = [DrHall(far=True)]
+    dyn = []
+    if callable(phone) or callable(ring):
+        phf = phone if callable(phone) else (lambda t: phone)
+        rgf = ring if callable(ring) else (lambda t: ring)
+        amb, steady, var = main.lights(o)
+        dyn.append(live_layer('phone_live', v, (D_PHONE[0] - 0.05, 1.3, D_PHONE[2]), lambda pen, v_, t: dr_wall_phone(pen, v_, phf(t), cord, rgf(t), t, era),
+                              amb, steady, var))
+    if callable(clock): dyn.append(dr_live_wall_clock(v, 'kitchen', clock))
+    grade = 'dr_1979' if era == '1979' else ('dr_night' if tod == 'night' else 'dr_sunrise')
+    sp = build_view('dr_kit_' + view, v, main, o, far=far, outside=lambda pen, v_: _dr_outside_back(pen, v_, tod), grade=grade, dyn=dyn)
+    wins = [_win_glass_quads(((-5.6, 9.6), (-1.2, 9.6)), D_KWIN[0] + 5.6, D_KWIN[1] + 5.6, D_KWIN[2], D_KWIN[3])]
+    if rain and tod == 'night':
+        sp = sp.add(_rain_out_layer(v), _glass_layer('glass_rain', v, wins, ORDER_SHELL - 0.05))
+    return sp
+
+
+def dr_bath(view='sink', cabinet=0.0, card=True, vanity=1.0, ceiling=0.0, hall=0.0, bath_door=80.0, tod='night', lamp=0.0, lamp_prop=False,
+            cab_empty=False, **kw):
+    """The bathroom and the medicine cabinet. view 'sink' | 'mirror' | 'cabinet' | 'door'. cabinet = the mirror door open
+    0..1 (or degrees > 1; 1 = 105 deg) or f(t); card: the yellow card taped inside the door (False after the narrator tears it
+    out: the tape ghosts stay); cab_empty: the shelves cleared (the outro). vanity = the light bar over it."""
+    v = cam('dr_bath_' + view)
+    o = dict(cabinet=cabinet if not callable(cabinet) else 0.0, card=card, vanity=vanity, ceiling=ceiling, hall=hall, bath_door=bath_door, tod=tod,
+             lamp=lamp, lamp_prop=lamp_prop, cab_empty=cab_empty)
+    main = DrBath()
+    dyn = []
+    if callable(cabinet):
+        D = dr_cabinet_door(o)
+        dyn.append(live_layer('cabinet_door_live', v, (D_CAB[0] - 0.15, 1.6, D_CAB[1] + 0.2),
+                              lambda pen, v_, t: D.draw(pen, v_, (lambda a_: a_ * 105.0 if a_ <= 1.0 else a_)(cabinet(t))), *main.lights(o)))
+        sp = build_view('dr_bath_' + view, v, main, o, far=[DrHall(far=True)], outside=lambda pen, v_: _dr_outside_back(pen, v_, tod), grade='dr_night', dyn=dyn)
+        return sp.without('cabinet_door')
+    return build_view('dr_bath_' + view, v, main, o, far=[DrHall(far=True)], outside=lambda pen, v_: _dr_outside_back(pen, v_, tod), grade='dr_night', dyn=dyn)
+
+
+# ---------------------------------------------------------------------------------------------- outside views (the street as a room)
+class DrStreet(Room):
+    """Larch Street as a 'room' for the generic builder: the shell holds the sky, the ground, the houses, the streetlights
+    and Ruth's house + porch; the car is a piece (Halverson sits in it: the windows / body sort round her)."""
+    name = 'street'
+    poly = [(-90.0, -40.0), (90.0, -40.0), (90.0, -0.02), (-90.0, -0.02)]
+
+    def lights(self, o):
+        tod = o.get('tod', 'night')
+        amb, steady = _ext_light_d(tod)
+        steady = list(steady)
+        if tod == 'night':
+            for (x, y) in D_LAMPS:
+                steady.append(Lamp(x, D_GROUND + 6.0, y - 1.6, 13.0, D_SODIUM, 1.1, (1.0, 0.6, 0.2), fall=1.4))
+        porch = [Lamp(D_PLIGHT[0], D_PLIGHT[1], D_PLIGHT[2] - 0.3, 6.5, '#ffc888', 1.6, fall=1.5)]
+        heads = [Lamp(D_CAR[0], D_GROUND + 0.7, D_CAR[1] + 3.2, 6.5, D_HEAD, 1.5, (1.0, 1.0, 0.6), fall=1.4)]
+        hall = [Lamp(-0.4, 1.2, -0.6, 3.5, '#ffd8a0', 1.2, fall=1.5)]
+        bus = [Lamp(D_BUS_LAMP[0], D_GROUND + 6.0, D_BUS_LAMP[1] + 1.6, 9.0, '#c8f0b0', 1.4, (1.0, 0.6, 0.2), fall=1.4)]
+        var = [('porch', porch, _kfn(o.get('porch', 1.0), 251)), ('headlights', heads, _kfn(o.get('headlights', 1.0 if o.get('car') else 0.0), 252)),
+               ('door_light', hall, _kfn(o.get('door_light', 0.0), 253)), ('bus_light', bus, o.get('bus_fn') or _kfn(1.0 if tod == 'night' else 0.0, 254))]
+        return amb, steady, var
+
+    def shell(self, pen, v, o):
+        tod = o.get('tod', 'night')
+        tt = 'night' if tod == 'night' else 'dawn'
+        sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
+        if tod != 'night':
+            sp_ = sky_dir(v, 100.0, 4.0)
+            if sp_: pen.radial(None, sp_[0], sp_[1], 1.3 * v.S, [(0, '#ffe0b0', 210), (0.3, '#ff9a6a', 90), (1, '#ff9a6a', 0)], sy=0.45, clip=False)
+        dr_ground_front(pen, v, tod)
+        for (x0, x1) in D_ACROSS:
+            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -22.0 else None), seed=int(x0))
+        for (x0, x1, yf, tag) in D_NEIGH[:2]:
+            dr_neighbour(pen, v, x0, x1, yf, 10.0, tod, seed=int(x0) + 5)
+        trees = [(-14.0, -21.5, 7.5), (2.0, -21.0, 7.5), (24.0, -21.8, 7.5), (-36.0, -22.0, 7.5), (-52.0, -22.5, 7.0)]
+        trees.sort(key=lambda q: -v.d(q[0], q[1]))
+        for i, (x, y, h) in enumerate(trees):
+            if v.d(x, y) < 1.0: continue
+            bx, by = v.p(x, D_GROUND, y)
+            draw_tree(pen, bx, by, h * v.s(x, y), 0.0, 500 + i, 0.0, '#0e1218' if tod == 'night' else '#3a3a34', None, 5)
+        for (x, y) in D_LAMPS + [D_BUS_LAMP]:
+            if v.d(x, y) > 0.8: dr_streetlight(pen, v, x, y, 1.0, arm=1.0 if y > -15 else -1.0)
+        dr_bus_stop(pen, v)
+        dr_mailbox(pen, v)
+        dr_house_ext(pen, v, tod, glow=o.get('glow', {}), door_open=o.get('front_door', 0.0) if not callable(o.get('front_door', 0.0)) else 0.0)
+        dr_porch(pen, v, tod)
+        if v.d(D_MAPLE[0], D_MAPLE[1]) > 1.0:
+            bx, by = v.p(D_MAPLE[0], D_GROUND, D_MAPLE[1])
+            draw_tree(pen, bx, by, 8.5 * v.s(D_MAPLE[0], D_MAPLE[1]), 0.0, 504, 0.0, '#0e1218' if tod == 'night' else '#3a3a34', None, 5)
+
+    def pieces(self, o):
+        P = []
+        if o.get('car'):
+            parts, seats, B = dr_car_parts(lights=o.get('car_lights', True))
+            P.append(Piece('car', (B.cx, D_GROUND + 0.6, B.cy), lambda pen, v, parts=parts: draw_parts(pen, v, parts),
+                           occupant=[seats['driver']], front=parts, block=B.footprint()))
+        return P
+
+    def glows(self, v, o):
+        tod = o.get('tod', 'night')
+        G = []
+        kp = _kfn(o.get('porch', 1.0), 251)
+        G.append(('porch_lantern', (D_PLIGHT[0], D_PLIGHT[1], D_PLIGHT[2] - 0.05), lambda pen, t: dr_porch_light_draw(pen, v, kp(t))))
+        return G
+
+    def spots(self, v, o):
+        S = {}
+        G = D_GROUND
+        S['porch_door'] = _mk_spot(v, 'porch_door', -0.4, -0.55, 0.0, 'stand', 'on the porch at the front door, facing it (Halverson knocking: +y)', face=(0, 1))
+        S['porch_knock'] = _mk_spot(v, 'porch_knock', -0.15, -0.02, 1.45, 'point', 'where her knuckles meet the door')
+        S['porch_step'] = _mk_spot(v, 'porch_step', -0.38, -2.05, -0.5 / 3, 'stand', 'on the top step', face=(0, 1))
+        S['walk'] = _mk_spot(v, 'walk', -0.38, -4.2, G, 'stand', 'on the front walk', face=(0, 1))
+        S['walk_run'] = _mk_spot(v, 'walk_run', -2.6, -3.4, G, 'stand', 'Halverson running from her car to the steps (path: car door -> walk_run -> porch_step)', face=(0.7, 0.7))
+        S['car_door'] = _mk_spot(v, 'car_door', D_CAR[0] - 1.25, D_CAR[1] + 0.05, G, 'stand', "beside the driver's door (outside)", face=(1, 0))
+        S['driveway'] = _mk_spot(v, 'driveway', -6.2, -1.8, G, 'stand', 'the top of the driveway, by the car\'s nose')
+        S['lawn'] = _mk_spot(v, 'lawn', -3.4, -2.2, G, 'stand', 'the lawn under the picture window')
+        S['window_out'] = _mk_spot(v, 'window_out', -2.6, -0.02, 1.45, 'point', 'the picture window from outside (the narrator\'s face at the glass)')
+        S['bus_bench'] = _mk_spot(v, 'bus_bench', D_BUS[0], D_BUS[1] - 0.04, G, 'seat', 'the bus-stop bench (HIM folded on it, facing the street +y; knees above his head)',
+                                  face=(0, 1), seat_Y=0.45)
+        S['bus_lamp'] = _mk_spot(v, 'bus_lamp', D_BUS_LAMP[0], D_BUS_LAMP[1] + 1.6, G + 6.0, 'point', 'the flickering streetlight over the bus stop (lamp head)')
+        S['street_mid'] = _mk_spot(v, 'street_mid', -6.0, -15.6, G - 0.12, 'stand', 'the middle of Larch Street')
+        if o.get('car'):
+            _, seats, B = dr_car_parts()
+            for nm, (x, y) in seats.items():
+                S['car_' + nm] = _mk_spot(v, 'car_' + nm, x, y, G, 'seat', "Halverson's car: %s seat (hip point; seat top 0.42 m above the ground)" % nm,
+                                          face=(0, 1), seat_Y=0.42)
+        return S
+
+
+_dcam('dr_ext_house', 820, 500, D_GROUND + 1.6, -1.6, -27.0, 2, _env(f=(1.0, 2.6)), "Ruth's house from across Larch Street: the porch, the picture window, the car in the driveway", 'street')
+_dcam('dr_ext_porch', 980, 520, D_GROUND + 1.62, 1.45, -2.75, -38, _env(), 'the porch from the walk at 3/4: the red door, the porch light, Halverson knocking', 'street')
+_dcam('dr_ext_door', 900, 500, D_GROUND + 1.55, -0.2, -4.6, 2, _env(), 'up the steps to the front door (open: the narrator in the doorway with Milo)', 'street')
+_dcam('dr_ext_driveway', 900, 520, 1.55, -0.6, -0.75, -122, _env(), 'from the porch to the driveway: the car nose-in, headlights in our eyes, the rain in the beams', 'street')
+_dcam('dr_ext_car', 1050, 520, D_GROUND + 1.35, -5.15, -1.85, -150, _env(), "the car from the front-right: Halverson in the driver's seat through the windshield, phone at her ear", 'street')
+_dcam('dr_ext_street', 1200, 520, D_GROUND + 1.5, -3.0, -10.8, -103, _env(f=(1.0, 2.4)), 'down Larch Street to the west: the bus stop under its flickering light at the end', 'street')
+_dcam('dr_ext_bus', 2600, 520, D_GROUND + 1.6, -24.0, -13.2, -108, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
+      'telephoto on the bus-stop bench under the flickering streetlight (HIM folded there, waiting)', 'street')
+_dcam('dr_ext_peephole', 560, 540, D_PEEP_Y, -0.4, -0.06, 180, _env(x=(940, 980), y=(520, 560), zoom=(1.0, 1.02), f=(1.0, 1.2)),
+      "through the peephole: the fisheye porch, Halverson in the rain, her car's headlights beyond", 'street', pitch=24.0)
+
+
+def dr_front(view='house', tod='night', car=None, rain=None, porch=1.0, headlights=None, front_door=0.0, glow=None, bus_flicker=True, **kw):
+    """Outside Ruth's house on Larch Street. view 'house' (from across the street), 'porch' (the door at 3/4), 'door' (up the
+    steps to the open door), 'driveway' (from the porch to the car), 'car' (Halverson through the windshield), 'street'
+    (down the street to the bus stop), 'bus' (telephoto on the bench), 'peephole' (the fisheye from inside the door).
+    car: Halverson's car in the driveway, engine running, headlights on (default: night); rain (default: night);
+    tod 'night' | 'sunrise' (the end: the rain gone, wet and gold, no car); front_door: open (> 0) = warm hall light."""
+    v = cam('dr_ext_' + view)
+    if car is None: car = tod == 'night'
+    if rain is None: rain = tod == 'night'
+    if headlights is None: headlights = 1.0 if car else 0.0
+    glow = dict(glow or {})
+    o = dict(tod=tod, car=car, porch=porch, headlights=headlights, front_door=front_door if not callable(front_door) else 0.0, glow=glow,
+             door_light=1.0 if (front_door and not callable(front_door)) else 0.0)
+    if bus_flicker and tod == 'night': o['bus_fn'] = dr_bus_flicker
+    main = DrStreet()
+    dyn = []
+    if car:
+        _, _, B = dr_car_parts()
+        lay = Layer(max(0.3, v.d(B.cx, B.cy)), lambda pen, t: (dr_headlight_beams(pen, v, B, _lvl(headlights, 252, t), t, rain), dr_taillight_glow(pen, v, B, 1.0)),
+                    'car_beams', blur=None)
+        lay.order = v.d(B.cx, B.cy) - 0.25
+        dyn.append(lay)
+        lay2 = Layer(max(0.3, v.d(B.cx, B.cy)), lambda pen, t: dr_exhaust(pen, v, B, t), 'car_exhaust', blur=None)
+        lay2.order = v.d(B.cx, B.cy) - 0.2
+        dyn.append(lay2)
+    if tod == 'night':
+        def glows(pen, t):
+            for (x, y) in D_LAMPS:
+                dr_streetlight_glow(pen, v, x, y, 1.0, D_SODIUM, 1.0, rain=rain, t=t)
+            dr_streetlight_glow(pen, v, D_BUS_LAMP[0], D_BUS_LAMP[1], dr_bus_flicker(t) if bus_flicker else 1.0, '#d0f0b0', -1.0, rain=rain, t=t)
+        lay = Layer(40.0, glows, 'street_glow', blur=None); lay.order = ORDER_SHELL - 0.5
+        dyn.append(lay)
+    if rain:
+        def far_rain(pen, t): dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 7, 0.9, 0.1, '#a8b4cc', 22, 320, far=True)
+        def near_rain(pen, t): dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 8, 1.4, 0.12, '#c8d0e4', 34, 120)
+        l1 = Layer(30.0, far_rain, 'rain_far', blur=None); l1.order = ORDER_SHELL - 0.6
+        l2 = Layer(0.5, near_rain, 'rain_near', blur=None); l2.order = 0.2
+        dyn += [l1, l2]
+    lens, grade, cover = 'lens', ('dr_ext' if tod == 'night' else 'dr_sunrise'), None
+    if view == 'peephole':
+        lens, grade, cover = (PEEPHOLE_LENS or _peep_lens()), 'porch_warm', PEEP
+    sp = build_view('dr_ext_' + view, v, main, o, outside=None, lens=lens, grade=grade, dyn=dyn, cover=cover,
+                    focus=(v.d(-0.4, -0.6) if view == 'peephole' else None), dof=0.6)
+    sp.info['note'] = 'Outside: figures order = sp.order_at(x, y); Halverson in the car: stage at anchors car_driver (the windshield / near window sort round her).'
+    return sp

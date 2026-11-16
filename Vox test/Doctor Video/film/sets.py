@@ -10054,3 +10054,11 @@ __all__ += ['HView', 'gp_hall', 'gp_kitchen', 'gp_living', 'gp_den', 'gp_studio'
 # See its docstring and SETS.md.
 _BUNNY_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_bunny.py')
 exec(compile(open(_BUNNY_SETS_SRC).read(), _BUNNY_SETS_SRC, 'exec'))
+
+
+# ---------------------------------------------------------------------------------------------- Doctor film additions
+# "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND": Ruth's house on one floor plan, the waiting room, Larch
+# Street, the car, the hospitals and the inserts live in sets_doctor.py, run here in this module's namespace after
+# sets_bunny.py (it reuses its set engine). See its docstring and SETS.md.
+_DOCTOR_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_doctor.py')
+exec(compile(open(_DOCTOR_SETS_SRC).read(), _DOCTOR_SETS_SRC, 'exec'))
