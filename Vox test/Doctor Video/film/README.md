@@ -185,4 +185,7 @@ python3 audio/music_plan.py --table
   beats: Mom runs out of the lobby straight at us through the open doors, then ("pushing a wheelchair") the profile run.
 - Line 334: the car pen insert has its own dark blue car background (`_ins_pen(bg='car')`, grade `dr_car`).
 - Knocks (line 149) start 0.5 s after the word "knocked" starts (in the gap); tags and camera hits follow.
-- `tools/validate.py --part A`: 0 errors, 13 warnings. Cues rebuilt, mix rebuilt (`audio/final_mix.sh`).
+- `tools/validate.py --part A`: 0 errors, 12 warnings. Cues rebuilt; mix rebuilt (`audio/final_mix.sh`: -14.1 LUFS, -1.69 dBTP);
+  whole preview re-rendered (bloom changed every shot) and `preview_mix.mp4` re-muxed with the new mix.
+- Open: on line 349a Mom runs at us without the wheelchair (it is with her from "pushing" on); the in-hand ticket is
+  stylised at 2.2x life size.
