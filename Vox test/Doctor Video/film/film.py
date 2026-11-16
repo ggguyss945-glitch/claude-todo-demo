@@ -1048,8 +1048,32 @@ def hero_hand(pen, who, x, y, size, shape='open', angle=0.0, side=1, sleeve_to=N
         CH._ring_band(c, G['ring'], 2, t)
 
 
+def pen_geom(x, y, ang, sz, tilt=-34.0):
+    """A ballpoint held in a 'grip' hero hand (wrist (x, y), angle ang, size sz): (tip, back) design points; the pen runs
+    through the fist, tilted `tilt` degrees off the fingers' direction, its tip just beyond the curled fingers."""
+    a = math.radians(ang); dx, dy = -math.sin(a), math.cos(a)
+    b = math.radians(ang + tilt); px, py = -math.sin(b), math.cos(b)
+    cx, cy = x + dx * sz * 0.52, y + dy * sz * 0.52
+    return (cx + px * sz * 0.42, cy + py * sz * 0.42), (cx - px * sz * 0.62, cy - py * sz * 0.62)
+
+
+def draw_pen(pen, tip, back, sz, body='#1d3f8a'):
+    """A plain blue ballpoint from its tip to its back end (design px)."""
+    (x0, y0), (x1, y1) = tip, back
+    L = math.hypot(x1 - x0, y1 - y0) or 1.0
+    ux, uy = (x1 - x0) / L, (y1 - y0) / L
+    w = sz * 0.034
+    cone = sz * 0.07
+    bx, by = x0 + ux * cone, y0 + uy * cone
+    pen.fill(_sleeve_poly(bx, by, x1, y1, w, w), body)
+    pen.fill(_sleeve_poly(bx, by, x1, y1, w * 0.35, w * 0.35), '#5f86d8', 120)
+    pen.fill(poly([(x0, y0), (bx - uy * w, by + ux * w), (bx + uy * w, by - ux * w)]), '#c9ccd2')
+    pen.fill(_sleeve_poly(x1 - ux * sz * 0.05, y1 - uy * sz * 0.05, x1 + ux * sz * 0.03, y1 + uy * sz * 0.03, w * 0.6, w * 0.6), '#d8dbe2')
+    pen.line(_sleeve_poly(bx, by, x1, y1, w, w), max(1.2, sz * 0.006), '#0d1530')
+
+
 def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None, scratch=False, name='hand', paw=False,
-               light=None, shadow=True, bare=None):
+               light=None, shadow=True, bare=None, held_pen=False):
     """A hand in a close-up or an insert: fn(t) -> (x, y, angle, alpha[, size]) | None (design px, angle 0 = fingers
     down); the arm runs from the wrist to sleeve_from (x, y) (off frame). Drawn by hero_hand / hero_paw (the cast's hand
     geometry, shaded, with the character's own sleeve and cuff); scratch=True: Mom at dawn, her cardigan sleeve pushed
@@ -1072,6 +1096,9 @@ def hand_layer(who, fn, size, shape='open', side=1, depth=0.9, sleeve_from=None,
         if bl > 0.5:
             cv.saveLayer(None, skia.Paint(ImageFilter=skia.ImageFilters.Blur(bl * CFG.rw / 1920.0, bl * CFG.rw / 1920.0)))
         b = bare if bare is not None else (34.0 if scratch else 0.0)
+        if held_pen:
+            tip, back = pen_geom(x, y, ang, sz)
+            draw_pen(pen, tip, back, sz)
         hero_hand(pen, who_, x, y, sz, shape, ang, side, sf, lt, 0.0, t, bare=b, scratch=1.0 if scratch else 0.0, shadow=shd,
                   ring=(CH.CAST[who_].get('ring') == side))
         if bl > 0.5: cv.restore()
@@ -1142,7 +1169,7 @@ def B_bust(F, sh):
         extra.append(l2); sh.A[b.get('id', b['who'])] = a2
     for hd in p.get('hands', []):
         extra.append(hand_layer(hd['who'], hd['fn'], hd['size'], hd.get('shape', 'open'), hd.get('side', 1), hd.get('depth', 0.9),
-                                hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand')))
+                                hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand'), held_pen=hd.get('pen', False)))
     if p.get('acts'):
         extra += [l for l in (p['acts'](sh.A, sh, None) or []) if l is not None]
     cxs, cys = (cx(sh.t0) if callable(cx) else cx), (cy(sh.t0) if callable(cy) else cy)
@@ -1202,7 +1229,7 @@ def B_ins(F, sh):
         layers.append(strike_layer(*p['strike']))
     for hd in p.get('hands', []):
         layers.append(hand_layer(hd['who'], hd['fn'], hd['size'], hd.get('shape', 'open'), hd.get('side', 1), hd.get('depth', 0.9),
-                                 hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand')))
+                                 hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand'), held_pen=hd.get('pen', False)))
     for lf in p.get('layers', []):
         layers.append(lf(F, sh))
     c = dict(p.get('c') or dict(mv='push', rate=0.03))
@@ -2249,7 +2276,7 @@ K_FLOOR_MED = cm((-2.75, 6.3, 1.35), (-2.1, 8.3, 0.5), S=820, sx=960, sy=560)   
 K_FLOOR_NARR = cm((-1.6, 7.35, 0.95), (-2.45, 8.45, 0.6), S=820, sx=980, sy=560)        # over the narrator kneeling, toward Ruth
 OFFICE_C = dict(mv='push', f=1.7, x=900, y=430, rate=0.012)                               # the office view, optically closer on Halverson at her desk
 HOSP_FAR = cm((1.3, 21.5, 1.45), (1.3, 31.37, 1.0), S=1500, sx=960, sy=520)             # down the corridor: him in the last chair, the empty chairs
-K_MILO_SIDE = cm((-3.05, 7.75, 1.2), (-2.3, 7.68, 1.0), S=700, sx=960, sy=560)            # Milo and Ruth in profile, from the table
+K_MILO_SIDE = cm((-3.05, 7.75, 1.25), (-2.3, 7.68, 1.07), S=700, sx=960, sy=560)            # Milo and Ruth in profile, from the table
 K_TABLE = cm((-2.55, 6.35, 1.3), (-3.25, 7.65, 0.8), S=900, sx=960, sy=560)              # the kitchen table: asleep at dinner
 K_LAP = cm((-2.85, 6.7, 1.75), (-1.95, 8.3, 0.3), S=900, sx=960, sy=560)            # Ruth on the floor in profile, Milo across her lap
 RUTH_LAP = (-1.85, 8.3, 0.0)           # Ruth sitting on the floor, back to the east cabinets, facing west
@@ -2833,16 +2860,17 @@ def plan_rule3(F):
     C(T(129), 'bust', who='milo_sick', bg=('kitchen', 'wide'), set=K3, cx=1000, cy=640, scale=1.2, turn=0.25, expr='dazed', light=NIGHT_L,
       act=_A(lookxy(1400, 300, T(129), None, 0.3, z=300.0), lambda a, s: a.set(-9, None, 0.1, wide=0.4)))
     C(T(130), 'set', room='kitchen', view='wide', cam=K_MILO_SIDE, set=K3,
-      ppl=[P('milo_sick', (-2.25, 7.25, 0.0), face=(-2.35, 7.95), expr='thirsty', act=_A(lambda a, s: a.hand_on(s.t0 - 0.5, 'belly', side=-1))),
-           P('ruth', (-2.35, 7.95, 0.0), face=(-2.25, 7.25), expr='stern_afraid')],
+      ppl=[P('milo_sick', (-2.25, 7.25, 0.0), face=(-2.3, 7.64), expr='thirsty', act=_A(lambda a, s: a.hand_on(s.t0 - 0.5, 'belly', side=-1))),
+           P('ruth', (-2.3, 7.64, 0.0), face=(-2.25, 7.25), expr='stern_afraid')],
       acts=lambda A, s, sp: (A['milo_sick'].look_at(s.t0, (A['ruth'], 'eyes'), dur=0.3), A['ruth'].look_at(s.t0, (A['milo_sick'], 'eyes'), dur=0.3), [])[-1],
       c=dict(mv='push', f=1.0, rate=0.012))
     C(T(132), 'bust', who='milo_sick', bg=('kitchen', 'wide', K_MILO_SIDE), set=K3, cx=1000, cy=600, scale=1.0, turn=-0.4, h_turn=-0.1, expr='thirsty', light=NIGHT_L,
       act=_A(lookxy(560, 380, T(132), None, 0.3, z=300.0), lambda a, s: a.hand_on(s.t0 - 0.5, 'belly', side=-1)))
     C(T(134), 'set', room='kitchen', view='wide', cam=K_MILO_SIDE, set=K3,
-      ppl=[P('milo_sick', (-2.25, 7.25, 0.0), face=(-2.35, 7.95), expr='thirsty', act=_A(lambda a, s: a.hand_on(s.t0 - 0.5, 'belly', side=-1))),
-           P('ruth', (-2.35, 7.95, 0.0), face=(-2.25, 7.25), expr='stern_afraid')],
+      ppl=[P('milo_sick', (-2.25, 7.25, 0.0), face=(-2.3, 7.64), expr='thirsty', act=_A(lambda a, s: a.hand_on(s.t0 - 0.5, 'belly', side=-1))),
+           P('ruth', (-2.3, 7.64, 0.0), face=(-2.25, 7.25), expr='stern_afraid')],
       acts=lambda A, s, sp: (A['milo_sick'].look_at(s.t0, (A['ruth'], 'eyes'), dur=0.3), A['ruth'].look_at(s.t0, (A['milo_sick'], 'eyes'), dur=0.3),
+                             A['ruth'].reach_to(WD(134, 'clapped') - 0.3, -1, (A['milo_sick'], 'shoulder_r'), dur=0.35, z=20.0),
                              A['ruth'].hand_over(WD(134, 'clapped') - 0.15, 1, A['milo_sick'], 'mouth', dur=0.22),
                              A['milo_sick'].expr('fear', WD(134, 'clapped'), None, 0.2), [])[-1],
       c=dict(mv='push', f=1.0, rate=0.012), sfx=[(WD(134, 'clapped') + 0.08, 'hand_slap_soft', -6, 0, 'inside')])
@@ -2878,7 +2906,7 @@ def plan_rule4(F):
     FRONT = dict(rain=1.0, car=True, headlights=1.0)
     C(T(146), 'rule', n=4)
     C(T(149), 'ins', name='clock', kw=dict(time=(3, 40, 0), bg='kitchen'), c=dict(mv='push', rate=0.03))
-    kn = [WD(149, 'knocked') + 0.05 + 0.34 * k for k in range(3)]
+    kn = [WD(149, 'knocked') + 0.5 + 0.34 * k for k in range(3)]       # after the word, in the gap (sound review)
     C(W(149, 'someone'), 'set', room='hall', view='door', cam=HALL_KNOCK, set=HALLN, rim=PORCH, c=dict(mv='push', f=1.0, rate=0.015, hit=kn),
       tags=[(k_, 'KNOCK', 960 + (j - 1) * 260, 420 + 40 * j, 'white', 0.8) for j, k_ in enumerate(kn)],
       sfx=[(k_, 'knock_door', 0, 0, 'inside', dict(n=1, index=j)) for j, k_ in enumerate(kn)])
@@ -2904,8 +2932,11 @@ def plan_rule4(F):
       light=RAIN, act=_A(lookxy(1250, 480, T(158), None, 0.3, z=300.0), blinks(e(158) + 0.1)),
       tags=[(WD(158, 'six'), 'BLOOD SUGAR: 612', 560, 360, 'red', 3.2)])
     C(T(160), 'set', room='front', view='porch', cam=PORCH_MED, set=FRONT, rim=RAIN,
-      ppl=[P('halverson_rain', 'porch_door', face=(-0.4, 0.2), expr='pleading',
-             act=_A(lambda a, s: a.reach_to(T(160) + 0.1, 1, scr(s.sp, 'porch_knock', 40, 40), dur=0.5, contact='palm', shape='flat', z=0.0)))],
+      ppl=[P('halverson_rain', 'porch_door', path=[(T(160), 'porch_door'), (T(160) + 0.45, (-0.3, -0.3, 0.0))], face=(-0.4, 0.2), expr='pleading',
+             surface='porch',
+             # pleading at the door, close to it: a hand to her chest, leaning in toward the door (no stiff arm on the door)
+             act=_A(lambda a, s: a.hand_on(T(160) + 0.35, 'chest', side=-1, dur=0.6),
+                    lambda a, s: a.lean_in(T(160) + 0.5, 0.7, None, 0.3)))],
       c=dict(mv='push', f=1.0, rate=0.015))
     C(T(161), 'bust', who='halverson_rain', bg=('front', 'porch', PORCH_MED), set=FRONT, cx=960, cy=600, scale=0.96, turn=0.2, expr='set_jaw', light=RAIN,
       act=lookxy(1250, 480, T(161), None, 0.3, z=300.0))
@@ -3063,8 +3094,10 @@ if 'grandpa_ghost' in CH.CAST:
     CH.CAST['grandpa_ghost']['cloth'].update(top='#6e5640', top_sh='#4c3b2c', top_hi='#86704f')
 
 WAIT = dict(state='wait')
-NURSE_AT = (1.72, 2.02, 0.0)            # the ER waiting room: the nurse at the man's side (her face to the camera)
-ER_LEAVE = ((1.42, 1.98, 0.0), (0.2, 2.5, 0.0), (0.5, 2.7, 0.0))   # 359: the man and the nurse walking off together (start, man end, nurse end)
+ER_CHEST_CAM = cm((3.55, 3.5, 1.4), (2.0, 2.55, 0.95), S=640, sx=980, sy=520)   # the ER chest-pain man from the front (his hand on his chest reads)
+NURSE_AT = (1.62, 2.95, 0.0)            # the ER waiting room: the nurse at the man's side (her face to the camera)
+ER_MOM0, ER_MOM1 = (0.0, 2.6, 0.0), (0.0, -0.7, 0.0)     # 349: Mom runs out of the lobby through the open doors toward us
+ER_LEAVE = ((2.2, 2.85, 0.0), (0.2, 3.05, 0.0), (0.5, 3.2, 0.0))   # 359: the man and the nurse walking off together (start, man end, nurse end)
 WAIT_DEAD = dict(state='wait', tubes=[0.35, 0.0, dict(flick=None, k=0.6, amount=1.0), 0.0])
 NARR_W = (-2.72, 1.85, 0.0)            # the narrator before HIM, in the aisle at the front (faces the armchair)
 NARR_WF = (-3.95, 0.95)
@@ -3183,7 +3216,9 @@ def offer_acts(t_tear=None, t_offer=None, hands_down=None, t_torn=None):
     def acts(A, s, sp):
         a, n = A['later'], A['narr14']
         slot = scr(sp, 'ticket_slot')
-        tgt = lambda t: (lambda p_: (p_[0] + 30, p_[1] - 10))(n.where(t, 'chest', post=False))   # noqa: E731
+        side_ = 1.0 if a.where(s.t0, 'head', post=False)[0] > n.where(s.t0, 'chest', post=False)[0] else -1.0
+        # in front of the narrator's chest, on HIS side of the narrator's body (never hidden behind it)
+        tgt = lambda t: (lambda p_: (p_[0] + side_ * 0.16 * n.height, p_[1] - 10))(n.where(t, 'chest', post=False))   # noqa: E731
         t0 = t_tear if t_tear is not None else s.t0 - 6.0
         dur_ = max(1.2, t_torn - t0 - 0.25) if t_torn is not None else 1.8      # the tear lands ON "tore"
         tt, ev = a.tear_ticket(t0, -1, slot, 'MILO', dur=dur_, offer_to=tgt, offer_t=t_offer if t_offer is not None else t0 + 2.6, offer_dur=1.4)
@@ -3210,15 +3245,19 @@ def card_at(anchor, dx, dy):
     return acts
 
 
-def write_card(t0, t1, who='ruth79'):
+def write_card(t0, t1, who='ruth79', side=-1):
     """acts (1979): she writes the rules down on the yellow card held against the wall by the phone, the receiver at her ear."""
     def acts(A, s, sp):
         a = A[who]
         c = a.where(s.t0 - 0.5, 'chest', post=False)
         px = scr(sp, 'phone')[0]
         dx = 1.0 if px > c[0] else -1.0
-        pt = (c[0] + dx * 0.11 * a.height, c[1] + 0.17 * a.height)
-        a.write_marker(t0, t1, -1, pt)
+        if side > 0:                                          # the near hand: the card on the wall beside her, by the phone
+            hk = scr(sp, 'phone_hook')[0]
+            pt = (c[0] + (1.0 if hk > c[0] else -1.0) * 0.17 * a.height, c[1] + 0.09 * a.height)
+        else:
+            pt = (c[0] + dx * 0.11 * a.height, c[1] + 0.17 * a.height)
+        a.write_marker(t0, t1, side, pt)
         a.look_at(s.t0 - 0.5, pt, dur=0.3)
         d, o = _fig_depth(s, who)
         tr = CH.PropTrack('card', pt[0], pt[1] + 0.012 * a.height, a.height / 160.0, 0.0)
@@ -3668,9 +3707,12 @@ def plan_rule7(F):
             u = (t - t0) * rate
             if u < 0: return None
             k = min(6.0, u); ln = int(k); fr = k - ln
-            x = lerp(720, 1180, fr) + 6.0 * math.sin(t * 31.0)
-            return (x, 400 + 58 * ln + 3.0 * math.sin(t * 23.0), 150.0, 1.0)
-        return dict(who='ruth79', fn=fn, size=270.0, shape='grip', side=1, sleeve_from=(1900, 1250))
+            tx = lerp(720, 1180, fr) + 6.0 * math.sin(t * 31.0)
+            ty = 400 + 58 * ln + 3.0 * math.sin(t * 23.0) - 4.0 * abs(math.sin(t * 17.0))
+            tip0, _ = pen_geom(0.0, 0.0, ANG, SZ)                  # the pen's tip on the line being written
+            return (tx - tip0[0], ty - tip0[1], ANG, 1.0)
+        return dict(who='ruth79', fn=fn, size=SZ, shape='grip', side=1, sleeve_from=(1900, 1250), pen=True)
+    ANG, SZ = 136.0, 235.0
     # 300 she wrote them down: the card being written, line by line, the pen in her hand
     C(T(300), 'ins', name='card', kw=lambda u: dict(hl=0, show=1 + int(clamp(u * 2.6 / 6.0) * 6), bg='dark', tilt=-1.0), era='1979',
       hands=[write_hand(T(300) + 0.1)], c=dict(mv='push', rate=0.02), sfx=[(T(300) + 0.15, 'pen_scratch', -10, 0, 'close', dict(dur=1.2))])
@@ -3679,7 +3721,7 @@ def plan_rule7(F):
     C(T(302), 'set', room='kitchen', view='phone', set=K79, era='1979', rim=HARVEST, cam=K_PHONE_TWO,
       ppl=[P('ruth79', AT_PHONE, face=PHONE_PT, expr='grief_still',
              )],
-      acts=_AA(phone_rig('ruth79', None, held=True), write_card(t(302) - 1.0, e(302) + 0.8), notes_at('phone_hook', T(302) - 1.0, None, size=24.0, slow=1.3)), c=dict(mv='push', f=1.0, rate=0.015),
+      acts=_AA(phone_rig('ruth79', None, held=True, side=-1), write_card(t(302) - 1.0, e(302) + 0.8, side=1), notes_at('phone_hook', T(302) - 1.0, None, size=24.0, slow=1.3)), c=dict(mv='push', f=1.0, rate=0.015),
       music=[(T(302), 'hold', 0.45, 3.0, dict(version='tinny_1979'))])
 
 
@@ -3711,12 +3753,12 @@ def plan_rescue(F):
     C(T(306), 'set', room='hall', view='door', cam=HALL_DOOR_MED, set=HALLN, rim=PORCH,
       acts=carry_layer('door_inside', light=PORCH, turn=-1.0), c=dict(mv='push', f=1.0, rate=0.015),
       sfx=[(W(306, 'front') - 0.1, 'door_open', -4, 0, 'inside'), (W(306, 'front'), 'rain', -6, 0, 'outside', dict(dur=1.5, burst=True))])
+    # 306-307 one shot up the steps: the door opens on the narrator with Milo; Halverson, already out of her car, runs in
+    # from the walk (left) and up the steps (on the porch_step mark by "steps")
     C(W(306, 'front'), 'set', room='front', view='door', set=dict(rain=1.0, car=True, headlights=1.0, front_door=90.0), rim=PORCH,
-      acts=carry_layer('porch_door', light=PORCH, turn=1.0), c=dict(mv='push', f=1.0, rate=0.015))
-    # 307 Halverson already out of her car, running up the steps
-    C(T(307), 'set', room='front', view='porch', set=dict(rain=1.0, car=True, headlights=1.0, front_door=90.0), rim=RAIN,
-      ppl=[P('halverson_rain', 'walk_run', path=[(T(307) - 0.4, 'walk_run'), (W(307, 'steps') - 0.1, 'porch_step')], run=True, surface='porch', expr='set_jaw',
-             act=lambda a, s: a.look_at(T(307), (900, 400), dur=0.3, z=400.0))],
+      ppl=[P('halverson_rain', (-3.9, -3.7, 0.0), path=[(T(307) - 0.5, (-3.9, -3.7, 0.0)), (T(307) + 0.6, 'walk_run'),
+                                                     (W(307, 'steps') + 0.25, 'porch_step')], face=(-0.38, 0.0), run=True, surface='porch',
+             expr='set_jaw', act=lambda a, s: a.look_at(T(307), (950, 300), dur=0.3, z=-200.0))],
       acts=carry_layer('porch_door', light=PORCH, turn=1.0), c=dict(mv='push', f=1.0, rate=0.012))
     C(W(307, 'like'), 'bust', who='halverson_rain', bg=('front', 'porch', PORCH_MED), set=dict(rain=1.0, car=True, headlights=1.0), cx=980, cy=600, scale=0.92,
       turn=0.25, h_turn=0.1, expr='fierce_kind', light=RAIN, act=_A(lookxy(1300, 520, W(307, 'like'), None, 0.3, z=300.0), blinks(W(307, 'like') + 1.2)))
@@ -3786,7 +3828,7 @@ def plan_rescue(F):
     def roof(a, s): a.bend_to_roof(s.sp.info['roof_y']['back_l'] - 120.0)       # the headliner over his seat (the anchor sat under it)
     LAT_B = lambda *x: P('later', 'back_l', act=_A(roof, pose(-9, None, 0.1, h_tilt=8.0), *x), talk=False)   # noqa: E731
     C(T(333), 'set', room='car', view='back', set=dict(CARM, dome=0.15), rim=DASH, ppl=[MILO_B(), LAT_B()], c=dict(mv='push', f=1.0, rate=0.012))
-    C(T(334), 'ins', name='pen', kw=dict(click=lambda u: 1.0 if (0.2 < u < 0.32 or 0.7 < u < 0.82) else 0.0), c=dict(mv='push', rate=0.02),
+    C(T(334), 'ins', name='pen', kw=dict(click=lambda u: 1.0 if (0.2 < u < 0.32 or 0.7 < u < 0.82) else 0.0, bg='car'), grade='dr_car', c=dict(mv='push', rate=0.02),
       sfx=[(T(334) + 0.2, 'pen_click', -3, 0, 'close'), (T(334) + 0.7, 'pen_click', -3, 0, 'close')])
     C(T(335), 'set', room='car', view='back', set=dict(CARM, dome=0.15), rim=DASH,
       ppl=[MILO_B(), LAT_B(pose(t(335) + 0.05, t(335) + 0.6, 0.25, h_nod=0.12), lambda a, s: a.click_pen([e(336) + 0.1]))],
@@ -3802,7 +3844,7 @@ def plan_rescue(F):
       c=dict(mv='push', f=1.0, rate=0.01))
     C(T(342), 'set', room='hosp_hall', view='chair', rim=WAITR, ppl=[P('later', 'last_chair', act=_A(pose(-9, None, 0.1, h_tilt=12.0), lambda a, s: a.click_pen([T(342) + 0.6])), talk=False)],
       c=dict(mv='push', f=1.0, rate=0.015))
-    C(T(343), 'set', room='er_wait', view='chairs', rim=HOSP,
+    C(T(343), 'set', room='er_wait', view='chairs', cam=ER_CHEST_CAM, rim=HOSP,
       ppl=[P('dad', 'chest_seat', expr='stern_afraid', stand_t=W(343, 'out') - 0.2, hands='lap',
              act=lambda a, s: a.look_at(T(343) + 0.5, (1500, 380), dur=0.4, z=300.0)),
            P('er_nurse', NURSE_AT, face='chest_seat', expr='calm_firm', talk=False,
@@ -3818,10 +3860,18 @@ def plan_rescue(F):
     # 348 the ER doors open before we reach them; 349 Mom running with a wheelchair
     C(T(348), 'set', room='er', view='doors', set=dict(doors=lambda tt: ease_in_out(clamp((tt - W(348, 'open')) / 0.9)), rain=1.0), rim=HOSP,
       c=dict(mv='push', f=1.0, rate=0.02), sfx=[(W(348, 'open'), 'er_doors', -4, 0, 'outside')])
+    # 349a "my mom was there, in her scrubs, running": straight on through the open doors, Mom runs out of the lobby
+    # toward us; 349b ("pushing a wheelchair") outside, the wheelchair ahead of her
+    ER_OUT = cm((0.0, -2.9, 1.42), (0.0, 1.2, 1.32), S=1250, sx=960, sy=520)
+    C(T(349), 'set', room='er', view='doors', cam=ER_OUT, set=dict(doors=1.0, rain=1.0), rim=HOSP,
+      ppl=[P('mom_rn', ER_MOM0, path=[(T(349) + 0.2, ER_MOM0), (W(349, 'pushing') + 0.1, ER_MOM1)], run=True, face=(0.0, -3.0), expr='set_jaw',
+             surface='inside', order=lambda t: -1e6,
+             act=lambda a, s: a.look_at(T(349), (960, 420), dur=0.3, z=400.0))],
+      c=dict(mv='push', f=1.0, rate=0.01))
     ER_RUN = cm((0.9, -5.2, 1.15), (0.9, -0.7, 0.95), S=900, sx=960, sy=560)
-    C(T(349), 'set', room='er', view='doors', cam=ER_RUN, set=dict(doors=1.0, rain=1.0), rim=HOSP,
-      ppl=[P('mom_rn', (-0.6, -0.8, 0.0), face=(2.0, -0.8), expr='set_jaw', act=lambda a, s: a.look_at(T(349), (1600, 520), dur=0.3, z=400.0))],
-      acts=wheelchair_run(T(349) + 0.2, T(349) + 3.4, 4.6), c=dict(mv='push', f=1.0, rate=0.01), sfx=[(T(349) + 0.3, 'wheelchair_roll', -6, 0, 'outside', dict(dur=3.5))])
+    C(W(349, 'pushing'), 'set', room='er', view='doors', cam=ER_RUN, set=dict(doors=1.0, rain=1.0), rim=HOSP,
+      ppl=[P('mom_rn', (-0.6, -0.8, 0.0), face=(2.0, -0.8), expr='set_jaw', act=lambda a, s: a.look_at(W(349, 'pushing'), (1600, 520), dur=0.3, z=400.0))],
+      acts=wheelchair_run(W(349, 'pushing') - 0.3, W(349, 'pushing') + 2.6, 3.8), c=dict(mv='push', f=1.0, rate=0.01), sfx=[(T(349) + 0.3, 'wheelchair_roll', -6, 0, 'outside', dict(dur=3.5))])
     # 350-355 people everywhere; bright lights; fluids; insulin; machines beeping like they were cheering; nobody told us to wait
     MILO_BED = lambda *x: P('milo_er', 'bed_lie', kind='lie', expr='sleepy', act=_A(lambda a, s: a.set(-1, None, 0.01, iv=1.0), *x))   # noqa: E731
     C(T(350), 'set', room='er_bay', view='side', rim=HOSP,
@@ -3841,12 +3891,12 @@ def plan_rescue(F):
            P('mom_rn', 'nurse', face='bed_lie', expr='warm', act=lambda a, s: a.look_at(T(355) + 0.2, scr(s.sp, 'bed_lie'), dur=0.5))],
       c=dict(mv='push', f=1.0, rate=0.01))
     # 356-358 a man sits down holding his chest; a nurse walks straight up: "Sir, you don't wait. You come with me, right now."
-    C(T(356), 'set', room='er_wait', view='chairs', rim=HOSP,
+    C(T(356), 'set', room='er_wait', view='chairs', cam=ER_CHEST_CAM, rim=HOSP,
       ppl=[P('chest_man', 'chest_seat', expr='stern_afraid', sit_t=T(356) + 0.3, sit_dur=1.0, hands=None,
              act=_A(lambda a, s: a.hand_on(T(356), 'chest', side=-1), lambda a, s: a.look_at(W(356, 'nurse'), (1500, 380), dur=0.4, z=300.0))),
            P('er_nurse', (1.05, 1.75, 0.0), path=[(W(356, 'nurse'), (1.05, 1.75, 0.0)), (W(356, 'up') + 0.4, NURSE_AT)], face='chest_seat', expr='calm_firm')],
       set=dict(rock=lambda tt: 0.0), c=dict(mv='push', f=1.0, rate=0.01))
-    C(T(357), 'set', room='er_wait', view='chairs', rim=HOSP,
+    C(T(357), 'set', room='er_wait', view='chairs', cam=ER_CHEST_CAM, rim=HOSP,
       ppl=[P('chest_man', 'chest_seat', expr='stern_afraid', hands=None, stand_t=W(358, 'come') + 0.2,
              act=_A(lambda a, s: a.hand_on(-1.0, 'chest', side=-1, dur=0.01), lambda a, s: a.look_at(T(357) - 0.5, (1500, 380), dur=0.4, z=300.0))),
            P('er_nurse', NURSE_AT, face='chest_seat', expr='calm_firm')],
@@ -3987,7 +4037,7 @@ def plan_outro(F):
       c=dict(mv='push', f=1.0, rate=0.01))
     C(T(431), 'set', room='office', view='desk', set=dict(owner='halverson'), rim=OFFICE, era='outro',
       ppl=[P('halverson', 'desk_chair', expr='exhausted', talk=False, act=_A(lambda a, s: a.look_at(s.t0, scr(s.sp, 'results'), dur=0.3), blinks(T(431) + 1.0)))], c=OFFICE_C)
-    C(T(432), 'set', room='er_wait', view='chairs', rim=HOSP, era='outro',
+    C(T(432), 'set', room='er_wait', view='chairs', cam=ER_CHEST_CAM, rim=HOSP, era='outro',
       ppl=[P('chest_man', 'chest_seat', expr='neutral', hands=None, stand_t=T(433) + 0.2), P('er_nurse', NURSE_AT, face='chest_seat', expr='warm', talk=False)],
       acts=lambda A, s, sp: (A['er_nurse'].reach_to(T(432) + 0.2, 1, (A['chest_man'], 'shoulder_l'), dur=0.5, contact='palm', shape='open', z=40.0), [])[-1],
       c=dict(mv='push', f=1.1, rate=0.01))

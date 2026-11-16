@@ -1540,7 +1540,8 @@ def _later_figure(c, who, P, det, t, light=None, upper_only=False):
                 X, Y, Z, f = view.p(mid)
                 d2 = view.p(mid + hd['f'])
                 ang = math.degrees(math.atan2(d2[1] - Y, d2[0] - X)) - 90.0
-                _dl_ticket(cx_, X, Y + 1.0, ang * 0.35, f, getattr(P, 'dl_ticket', 'MILO'), det)
+                # drawn a little larger than life (2.2x) so the name card reads between his fingers in a wide shot
+                _dl_ticket(cx_, X, Y + 1.0 + 4.0 * f, ang * 0.35, f * 2.2, getattr(P, 'dl_ticket', 'MILO'), max(det, 1))
                 # the two long fingers pinch it: draw them again over the ticket
                 for fp in hd['fingers'][:2]:
                     p2_ = [pr(q) for q in fp]

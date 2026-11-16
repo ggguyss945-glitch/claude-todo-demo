@@ -165,3 +165,24 @@ python3 audio/music_plan.py --table
   and Mom crosses sideways (348-349); the pen insert in the car keeps the green waiting-room background (334);
   Ruth's receiver covers her face (302). Sound: knocks still start on the word "knocked." (minor).
 - Preview AAC true peak reads -0.9 dBTP (encoder overshoot); the delivery mix `mix.wav` is -14.1 LUFS, -1.69 dBTP.
+
+## Open-items round (after the verify)
+- Red halos round heads (160 s, 256 s and every bright close-up): the cause was the grade's bloom (`engine/post.py bloom_src`):
+  the bright pass was per channel, so lit skin (R ~240, B ~170) bloomed in its red channel alone and the top-hat left the
+  face's edges and brows. The bright pass is now gated on the darkest channel (only near-white light cores bloom), so the
+  fix applies to every shot; lamp, porch-light, receiver and headlight blooms are kept.
+- Stiff straight-arm holds: 383 s Ruth now stands close to Milo, one hand on his shoulder, the other over his mouth (both
+  arms bent); 451-454 s Halverson steps in to the door, a hand to her chest, leaning in (no frozen arm on the door);
+  990 s the ER chest-pain man is seen from the front (`ER_CHEST_CAM`, also lines 343 and 432), hand on his chest, the
+  nurse in front of him with a bent arm on his shoulder; they walk off along the aisle (`ER_LEAVE`).
+- "She wrote them down": the insert hand holds a real ballpoint (`pen_geom` / `draw_pen`, `hands=[dict(..., pen=True)]`),
+  its tip on the line being written; line 302 Ruth holds the receiver in her far hand (face visible) and writes on the
+  card by the phone with her near hand (`write_card(side=1)`).
+- Line 246: the MILO ticket is drawn 2.2x life size between his fingers and offered on his side of the narrator's body
+  (it was hidden behind the narrator).
+- Line 307: one shot up the steps (the door view): Halverson runs in from the walk and is on the top step, facing the
+  door, by "steps". Lines 348-349: the sliding leaves have steel frames and kick plates (the slide reads); 349 is two
+  beats: Mom runs out of the lobby straight at us through the open doors, then ("pushing a wheelchair") the profile run.
+- Line 334: the car pen insert has its own dark blue car background (`_ins_pen(bg='car')`, grade `dr_car`).
+- Knocks (line 149) start 0.5 s after the word "knocked" starts (in the gap); tags and camera hits follow.
+- `tools/validate.py --part A`: 0 errors, 13 warnings. Cues rebuilt, mix rebuilt (`audio/final_mix.sh`).

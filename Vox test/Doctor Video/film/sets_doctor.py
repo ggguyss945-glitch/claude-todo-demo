@@ -4162,18 +4162,22 @@ def _er_door_panels(pen, v, k=0.0):
     lights), the steel frame."""
     x0, x1, s0, s1 = ER_OPEN
     k = clamp(k)
-    def glass(xa, xb, y, a=46):
+    def glass(xa, xb, y, a=46, leaf=False):
         qq = v.poly3([(xa, s0, y), (xb, s0, y), (xb, s1 - 0.2, y), (xa, s1 - 0.2, y)])
         if qq.isEmpty(): return
         pen.fill(qq, '#dff2f6', a)
         b = _rb(qq)
         pen.linear(qq, b[0], b[1], b[2], b[3], [(0, '#ffffff', 0), (0.3, '#ffffff', 46), (0.36, '#ffffff', 0), (0.7, '#ffffff', 0), (0.76, '#ffffff', 26), (0.8, '#ffffff', 0)])
-        pen.line(qq, 2.2, '#8a949c', 255)
         s = v.S / max(0.3, v.d((xa + xb) / 2, y))
+        if leaf:                                   # a sliding leaf: a solid steel frame and a kick plate, so the slide reads
+            pen.line(qq, max(3.0, 0.05 * s), '#4e5860', 255)
+            kq = v.poly3([(xa, s0, y), (xb, s0, y), (xb, s0 + 0.22, y), (xa, s0 + 0.22, y)])
+            if not kq.isEmpty(): pen.fill(kq, '#6c767e', 230); pen.line(kq, 1.2, '#3a4248')
+        pen.line(qq, 2.2, '#8a949c', 255)
         ym = s0 + 1.05
         _seg3(pen, v, (xa + 0.06, ym, y), (xb - 0.06, ym, y), max(1.5, 0.03 * s), '#b4bcc4', 255, False)              # the push rail
     glass(x0, -1.2, 0.0); glass(1.2, x1, 0.0)
-    glass(-1.2 - k * 1.14, 0.0 - k * 1.14, -0.04, 40); glass(0.0 + k * 1.14, 1.2 + k * 1.14, -0.04, 40)
+    glass(-1.2 - k * 1.14, 0.0 - k * 1.14, -0.04, 58, True); glass(0.0 + k * 1.14, 1.2 + k * 1.14, -0.04, 58, True)
     hq = v.poly3([(x0, s1 - 0.2, -0.05), (x1, s1 - 0.2, -0.05), (x1, s1, -0.05), (x0, s1, -0.05)])
     if not hq.isEmpty(): pen.fill(hq, '#6a747c'); pen.line(hq, 1.0)
     sq = v.poly3([(-0.25, s1 - 0.14, -0.06), (0.25, s1 - 0.14, -0.06), (0.25, s1 - 0.06, -0.06), (-0.25, s1 - 0.06, -0.06)])
@@ -6169,12 +6173,15 @@ def _click_pen(pen, k=0.0, L=620.0):
         pen.fill(tip, '#d8c080'); pen.line(tip, 2)
 
 
-def _ins_pen(pen, t, click=None, **kw):
+def _ins_pen(pen, t, click=None, bg='wait', **kw):
     """'And he was clicking his pen.' The click pen held in HIS long black fingers, the thumb on the button (click = f(t)
     0..1: the thumb presses, the point comes out)."""
     k = clamp(click(t) if callable(click) else (click or 0.0), 0.0, 1.0)
-    _ibg(pen, '#3c4630', '#10140c', 160)
-    pen.radial(None, 1300, 150, 1400, [(0, D_TUBE, 80), (1, D_TUBE, 0)])
+    if bg == 'car':                                  # in the back seat at night: dark blue-grey, the dash's cool light
+        _ibg(pen, '#26303e', '#0a0d14', 160); pen.radial(None, 1500, 260, 1100, [(0, '#9fd0ff', 26), (1, '#9fd0ff', 0)])
+    else:
+        _ibg(pen, '#3c4630', '#10140c', 160)
+        pen.radial(None, 1300, 150, 1400, [(0, D_TUBE, 80), (1, D_TUBE, 0)])
     cv = pen.cv
     # the fingers behind the pen (index and middle wrapped round the barrel)
     _later_finger(pen, [(2300, 1400), (1700, 1040), (1250, 800), (980, 690), (800, 706)], 70.0, 34.0)

@@ -233,6 +233,11 @@ def bloom_src(img, thr, tophat=90.0):
     h, w = img.shape[:2]
     small = cv2.resize(img, (max(8, w // 4), max(8, h // 4)), interpolation=cv2.INTER_AREA).astype(np.float32)
     b = cv2.max(small - float(thr), 0.0) * (1.0 / max(1.0, 255.0 - thr))
+    # only near-white light cores bloom: gate on the darkest channel, so a bright warm surface (lit skin: R ~240 but
+    # B ~170) never blooms in its red channel alone (that drew red halos round heads and brows in close-ups)
+    mn = small.min(axis=2) if small.ndim == 3 else small
+    gate = np.clip((mn - (float(thr) - 30.0)) * (1.0 / 30.0), 0.0, 1.0)
+    b = b * (gate[:, :, None] if b.ndim == 3 else gate)
     if tophat:
         k = int(max(3, tophat * small.shape[1] / 1920.0)) | 1
         b = cv2.morphologyEx(b, cv2.MORPH_TOPHAT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
