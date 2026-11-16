@@ -1,4 +1,4 @@
-"""Scene sheets of a finished mix (the Bunnyman film): one PNG per scene window, so a mix can be checked by eye against
+"""Scene sheets of a finished mix (the Doctor film): one PNG per scene window, so a mix can be checked by eye against
 the picture and the narration.
 
     python3 audio/mix_scenes.py [_work/mix/final] [--scenes name,name] [--out DIR]       (from film/)
@@ -18,22 +18,23 @@ sys.path.insert(0, HERE)
 SR = 48000
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 
-# (name, t0, t1): the film's scenes, narration seconds (W/align/timeline.json, 1077.99 s edit: the channel rename cut
-# 1.175 s from line 409, so only the last window moved)
-SCENES = [
-    ('cold_open', 0.0, 34.0), ('hospital_rules', 33.0, 66.0), ('parade_1987', 65.0, 99.0),
-    ('woods_sunrise', 98.0, 137.0), ('house_dad', 136.0, 172.0), ('june_dress', 170.0, 201.0),
-    ('song_woods', 199.0, 232.0), ('treeline_mom', 230.0, 260.0), ('comment_vhs', 256.0, 288.0),
-    ('egg_peephole', 286.0, 317.0), ('rattle_ring', 316.0, 345.0), ('ring_pocket', 343.0, 371.0),
-    ('knocks', 368.0, 390.0), ('grandma_knock', 386.0, 418.0), ('slot_open', 424.0, 446.0),
-    ('slot_june', 444.0, 478.0), ('girl_cry', 476.0, 500.0), ('wake_attic', 502.0, 538.0),
-    ('diary', 536.0, 576.0), ('attic_corner', 572.0, 602.0), ('window_door', 598.0, 628.0),
-    ('hatchet_knob', 614.0, 642.0), ('drawing_fight', 660.0, 688.0), ('dont_open', 685.0, 712.0),
-    ('sunrise_key', 708.0, 740.0), ('body_face', 737.0, 772.0), ('trick_count', 768.0, 800.0),
-    ('reveal', 788.0, 830.0), ('recap', 850.0, 892.0), ('swap_seven', 888.0, 920.0),
-    ('scream_police', 912.0, 952.0), ('hospital_visits', 950.0, 980.0), ('ending', 970.0, 1000.0),
-    ('outro_a', 993.0, 1030.0), ('outro_b', 1026.0, 1063.0), ('outro_end', 1058.0, 1088.0),
-]
+# (name, first line, last line): the Doctor film's scenes by narration line (W/align/timeline.json), so the windows
+# follow any re-edit; each window runs from 1 s before its first line to 1.5 s after its last line's end
+_SC = [('cold_open', 0, 14), ('1979', 15, 35), ('milo_clinic', 36, 57), ('cabinet_rules', 58, 66),
+       ('rule1_call', 67, 90), ('comment_prompt', 91, 104), ('rule2_hold', 104, 124), ('rule3_pen', 124, 146),
+       ('rule4_door', 146, 168), ('rule4_note_match', 168, 186), ('busstop_rule5', 187, 212),
+       ('rule6_waiting', 213, 235), ('rule6_him', 235, 252), ('rule7_pulse', 252, 270), ('questions_tape', 270, 286),
+       ('faces_card', 285, 303), ('carry_car', 303, 330), ('mirror_er', 330, 350), ('er_after', 348, 372),
+       ('twist', 372, 401), ('outro_a', 401, 430), ('outro_b', 430, 455)]
+
+
+def _scenes():
+    tl = json.load(open(os.path.join(W, 'align', 'timeline.json')))
+    L = tl['lines']; end = float(tl.get('duration_en') or L[-1]['end'])
+    return [(n, max(0.0, L[a]['t'] - 1.0), min(end + 14.0, L[b]['end'] + (14.0 if b == len(L) - 1 else 1.5)))
+            for n, a, b in _SC]
+
+
 HIT_T = ('hit', 'stinger', 'braam', 'sub_drop', 'rule')
 
 
@@ -66,7 +67,7 @@ def main():
     mc = json.load(open(os.path.join(used, 'music_cues.json')))
     out = A.out or os.path.join(d, 'scenes'); os.makedirs(out, exist_ok=True)
     want = set(A.scenes.split(',')) if A.scenes else None
-    for k, (name, t0, t1) in enumerate(SCENES):
+    for k, (name, t0, t1) in enumerate(_scenes()):
         if want and name not in want:
             continue
         a, b = int(t0 * SR), min(len(mix), int(t1 * SR))

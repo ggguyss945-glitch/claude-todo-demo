@@ -341,7 +341,7 @@ def check_shot(k):
                 pr = getattr(P, pre + 'prop', None)
                 if pr: held.setdefault(pr, set()).add((act.who, side))
     for pr, holders in held.items():
-        if len(holders) > 1 and pr not in ('basket',):
+        if len(holders) > 1 and pr not in ('basket', 'ticket'):        # every waiting-room ghost holds a ticket of their own
             # two holders over a shot is fine when it changes hands (give); check the same instant
             for t in ts:
                 now = [(act.who, side) for act in acts for side, pre in ((1, 'hl_'), (-1, 'hr_')) if getattr(act.at(t), pre + 'prop', None) == pr]

@@ -1,29 +1,29 @@
-"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet (the Bunnyman film).
+"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If Your Doctor Calls At 3 AM...
+DON'T ASK WHAT THEY FOUND").
 
 film.py writes W/cues/sfx_cues.json from the picture: every drawn action at its frame. That sheet stays the source
 and its timings are never moved (they are the picture's sync). This pass, applied by mix.py with `--plan full`
 (audio/final_mix.sh), only
-  0. maps the picture's names onto this film's recipes (PICTURE, the final mix: film.py names some sounds the recipes
-     know by other names or not at all, e.g. footsteps_grass, hatchet_thunk, mail_slot, count_thump, hum), drops the
-     picture's cues that another layer already carries (its 'hum' / 'jingle' / 'count_thump' cues where the score's
-     identity layer plays that version: music_plan.IDENTITY), and drops the library scream the owner rejected,
-  1. re-levels picture cues that measure buried or too busy in the full-length checks (EDIT: empty until those
-     checks are run on this film),
-  2. adds the sounds the picture does not draw (ADD): the beds of every place (the woods at night, the house, the
-     attic bulb, the bathroom, the dawn, the hospital), the off-screen sounds the narration hears (the soft tap at
-     midnight, the egg rattling on the mat, the knocks, the window exploding in the kitchen, the back door, the drag,
-     the hatchet on the stairs, the fight in the hall, the key from outside, the sirens), and the small foley of
-     close-ups (the peephole, the egg, the ring, the diary's lock and pages, the light switch, the zipper).
+  0. maps the picture's names onto this film's recipes (PICTURE / picture_pass: film.py names some sounds the recipes
+     know by other names or not at all: phone_ring -> the old landline's bell (one ring per cue), phone_pickup /
+     phone_hangup -> receiver_up / receiver_down, cabinet_open -> medicine_cabinet, typing -> the typewriter of the
+     rule cards, room_tone kinds -> house_night / er_bustle, the fluorescent bed -> waiting_room from the door's
+     opening, breath_fast runs -> one breathing bed per run, tape_peel -> one strip per question (q 1..4)); drops
+     what another layer carries (the pulse count: one ADD event with its three counts; the car's rain: drive_rain),
+  1. re-levels picture cues that measure buried or too busy in the full-length checks (EDIT),
+  2. adds the sounds the picture does not draw (ADD): the waiting room under the cold open, the 1979 rotary dial and
+     the coffee at sunrise, the line hiss under Halverson's call, the receiver laid down like a sleeping baby, the
+     streetlight at the bus stop, the NOW SERVING sign, the clipboard, the pulse count, the carry, Halverson's car
+     idling and the drive in the rain, the ER, the dawn at Grandma's, the 3 AM office of the final twist, the
+     outro's instantly connected call.
      An ADD row is skipped when the picture's sheet already has a cue of the same sound within 2 s of it (the same
-     recipe after resolving, or the same FAMILY: knock_door / knock_family, mail_slot / slot_flap, the lock and key
-     sounds, footsteps and hatchet treads...; the picture wins: no doubled sounds). A row with 'snap': name moves onto
-     the picture's nearest cue of that name (within 1.2 s).
+     recipe after resolving, or the same FAMILY; the picture wins: no doubled sounds). A row with 'snap': name moves
+     onto the picture's nearest cue of that name (within 1.2 s).
 Every added cue is anchored to the narration (music_plan.resolve: 'sN' / 'eN' / 'wN:word' +- s, or seconds), so it
-follows the recording, not a shot list, and survives picture changes. The 8 sound tests (audio/sfx_tests.py) use
-the same cues.
+follows the recording, not a shot list, and survives picture changes.
 
     apply(cues, lines) -> (cues, log)      cues: the picture's list (not modified); log: what changed, one line each
-    python3 sfx_plan.py [--cues W/cues] [--table]     prints the pass (dry run)
+    python3 sfx_plan.py [--cues W/cues]     prints the pass (dry run)
 """
 import copy, json, os, sys
 
@@ -34,53 +34,9 @@ import music_plan as MP                                   # noqa: E402
 
 # --------------------------------------------------------------------------------------------- EDIT (picture cues)
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
-# change: {'add_db': x} | {'gain_db': x} | {'min_db': x} (raise to at least x) | {'params': {...}} | {'space': s} |
-# {'drop': True}
+# change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 EDIT = [
-    # the porch switch inserts: Grandma's fingertip pushes it up (on), Mom's pushes it down (off); film.py gives no kind
-    ('light_switch', 's46-0.5', 's46+1.5', {}, {'params': {'kind': 'porch'}}, 'Grandma: the porch light on'),
-    ('light_switch', 's47-0.5', 'e47', {}, {'params': {'kind': 'porch_off'}}, 'Mom: the porch light off'),
-    # the attic's bare bulb under the whole attic scene: present, not a hum you notice (-14 was 26 LU under the voice)
-    ('bulb', 's206-0.5', 's206+0.5', {'dur': 4.0}, {'drop': True}, 'a second bulb buzz on the first one'),
-    ('bulb', 's206-0.5', 's206+0.5', {'kind': 'buzz'}, {'gain_db': -8.0}, 'the attic bulb'),
-    # the first full mix (measure_mix.py): buried cues raised, cues over the narration lowered
-    ('paper', 's12', 'e12', {}, {'add_db': 6.0}, 'the laminated rules pressed on the fridge (23 LU under)'),
-    ('paper', 's24-0.3', 'e24', {}, {'add_db': 6.0}, 'the Courier (24 LU under)'),
-    ('footsteps_grass', 's29-0.3', 's31', {}, {'gain_db': 1.0}, 'the mascot and Laurie walking into the woods (22 LU under; '
-     'at -2 still 19-20 LU under the braam and the line)'),
-    ('footsteps_wood_inside', 'w69:then-0.2', 's70', {}, {'add_db': -3.0}, 'the run up the stairs (19 LU under at +0; fix '
-     'round 2: at +3 they sat 9 dB over "June\'s room" in 1-4 kHz)'),
-    ('knock_family', 'w337:knocked-0.6', 'w337:waved', {}, {'gain_db': -9.0}, 'her knock under the line (6.5 LU over it '
-     'at -1; 19.2 LU under at -13; mix.py\'s clarity ceiling now keeps it under the words)'),
-    ('knock_door', 's345', 'e345', {}, {'add_db': 4.0}, 'the recalled count under the line (19 LU under)'),
-    ('window_smash', 's236', 'e236+0.3', {}, {'gain_db': 1.0}, '"explodes" stays readable (+1.1 LU over the line)'),
-    ('door_crash', 's237', 'e237', {}, {'gain_db': 0.0}, '"crashes open" stays readable (+2 LU over the line)'),
-    ('sirens_arrive', 's370-0.5', 'e370', {}, {'add_db': 10.0}, 'the patrol cars arriving (24 LU under)'),
-    ('paper', 's323-0.3', 'e323', {}, {'add_db': 4.0}, 'the Courier at the reveal (20 LU under)'),
-    ('breath', 's386', 'e387+0.3', {}, {'gain_db': -8.0}, '"Breathe." (masked at -12)'),
-    ('knock_door', 's406', 'e406', {}, {'gain_db': -4.0}, 'the like that lands like a knock (5.9 LU over the line)'),
-    ('light_switch', 's407-0.3', 'e407', {}, {'gain_db': 0.0}, 'Grandma\'s porch light on at "And subscribe." (19 LU under)'),
-    # the final mix after the channel rename (measure_mix.py on the 04:45 mix): masked foley raised, a useless gust
-    # dropped, the 1987 trade's flash kept under the end of its line
-    ('wind_gust', 0.0, 's0+1.0', {}, {'add_db': 3.0}, 'the gust over the treeline in the cold open (19.4 LU under)'),
-    ('wind_gust', 's38-0.2', 'e38', {}, {'add_db': 6.0}, 'the gust on "Neither was the suit." (23.3 LU under)'),
-    ('flashlight_click', 's48-0.2', 's48+0.6', {}, {'space': 'memory'}, 'Dad\'s flashlight in the yard: the memory '
-     'space of his steps, not through the closed front door'),
-    ('footsteps_grass', 's48', 'e48+1.0', {'who': 'dad'}, {'add_db': 4.0}, 'Dad walking to the treeline (21.4 LU under)'),
-    ('wood_creak', 's180-0.3', 's180+1.0', {}, {'add_db': 3.0}, 'the stair under June\'s socks (19.4 LU under)'),
-    ('impact_hit', 'w326:opens-0.4', 'w326:opens+0.2', {}, {'gain_db': -4.0}, 'the 1987 trade\'s flash: its tail sat '
-     '1.6 LU over "...in someone else." (the face reveal and the swap stay the hardest hits)'),
-    ('footsteps_wood_inside', 's313-0.2', 's313+1.5', {'who': 'mom'}, {'add_db': 4.0}, 'Mom stepping to June with the '
-     'dress (20.4 LU under)'),
-    ('wind_gust', 's334-0.3', 's334+0.5', {}, {'drop': True}, 'a gust 32.5 LU under the reveal\'s music and line: '
-     'inaudible, the woods bed carries the place'),
-    ('footsteps_wood_inside', 's370', 'e370', {'who': 'cop'}, {'add_db': 4.0}, 'the cop crossing the hall (22.3 LU under)'),
-    ('footsteps_wood_inside', 's104', 's106', {'who': 'narrator'}, {'add_db': 2.0}, 'to the front door at midnight (18.3 LU '
-     'under)'),
-    ('footsteps_wood_inside', 's376', 'e377', {}, {'add_db': 2.0}, 'June and my old body in the hospital corridor (18.4 LU '
-     'under)'),
 ]
-
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
 THIN_GAIN = {'tv': -13.0, None: -10.0}
 THIN_QUIET = []
@@ -88,190 +44,75 @@ THIN_QUIET = []
 # --------------------------------------------------------------------------------------------- ADD
 # (anchor, name, gain_db, space, params, why). params 'dur': 'until:<anchor>' -> seconds to that anchor.
 ADD = [
-    # ---- cold open: the treeline at night, the 1987 tape, the hospital
-    ('s0', 'ambience_woods', 2.0, 'porch', {'dur': 'until:e2+0.4', 'owl': 0.7, 'wind': 0.5}, 'the edge of the woods'),
-    ('s0+5.3', 'owl_hoot', -2.0, 'woods', {}, 'an owl in the trees'),
-    ('e2-0.3', 'tape_glitch', 0.0, 'tv', {'kind': 'tracking', 'dur': 1.1, 'keep': True},
-     '"don\'t." over black and VHS static, into the 1987 tape (the picture cuts to it at 17.84)'),
-    ('s7+1.55', 'tape_glitch', -5.0, 'tv', {'kind': 'stop', 'dur': 0.7}, 'the tape stops'),
-    ('s7+1.9', 'ambience_woods', 0.0, 'window', {'dur': 'until:s16', 'owl': 0.4, 'wind': 0.4}, 'the night again'),
-    ('s12', 'room_tone_house', 0.0, None, {'dur': 'until:s16', 'hum': 0.25}, 'the rules on the fridge: the house'),
-    ('s16', 'hospital_room', 0.0, None, {'dur': 'until:s19'}, '"I\'m telling you this from a hospital."'),
-    # ---- 1987
-    ('s29', 'ambience_woods', 0.0, 'porch', {'dur': 'until:s32', 'owl': 0.4, 'wind': 0.6}, 'Holloway Woods, 1987'),
-    ('s31+0.4', 'dogs_search', 2.0, 'woods', {'dur': 5.0}, '"The search dogs lost her scent..."'),
-    ('s32', 'ambience_dawn', -4.0, 'porch', {'dur': 'until:s36', 'birds': 0.5}, 'sunrise on Easter morning, 1987'),
-    ('s36', 'ambience_woods', -2.0, 'porch', {'dur': 'until:s45', 'owl': 0.5, 'wind': 0.6}, 'the sightings'),
-    # ---- the house, Dad, June
-    ('s45', 'room_tone_house', 0.0, None, {'dur': 'until:s61', 'hum': 0.25}, 'the last house on Orchard Road'),
-    ('s45', 'ambience_woods', -4.0, 'outside', {'dur': 'until:s61', 'owl': 0.2}, 'the woods behind it'),
-    ('w46:porch+0.2', 'light_switch', 0.0, 'close', {'kind': 'porch'}, 'Grandma left the porch light on'),
-    ('w47:switched+0.15', 'light_switch', 0.0, 'close', {'kind': 'porch_off'}, 'Mom switched it off'),
-    ('s60+0.3', 'fridge_paper', 0.0, 'close', {}, '"At sundown, the rules went up on the fridge."'),
+    # ---- cold open
+    ('s2+1.0', 'waiting_room', -2.0, 'waiting', {'dur': 'until:e6+0.6', 'flicker': 0.5, 'tv': 0.0, 'buzz': 0.6},
+     'the waiting room under the very tall man'),
+    ('w2:folded+0.2', 'sit_down', -6.0, 'waiting', {'kind': 'plastic'}, 'folded into one of those little chairs'),
+    # ---- 1979
+    ('e18-1.4', 'rotary_dial', -4.0, 'inside', {'digits': 3}, 'Grandma dials that place (1979)'),
+    ('w29:coffee+0.3', 'mug_set', -4.0, 'close', {'kind': 'down'}, 'the cup of coffee at sunrise'),
+    ('s29', 'ambience_dawn', -8.0, 'window', {'dur': 'until:s32', 'birds': 0.5}, 'sunrise, 1979: quiet birds'),
     # ---- rule 1
-    ('w62:lock+0.1', 'lock_turn', -2.0, 'inside', {}, '"Lock every door at sundown."'),
-    ('s61', 'room_tone_house', 0.0, None, {'dur': 'until:s92', 'hum': 0.25}, 'the house at night'),
-    ('s61', 'house_creaks', -2.0, None, {'dur': 'until:s92', 'density': 0.08}, 'the house settling'),
-    ('s61', 'ambience_woods', 0.0, 'outside', {'dur': 'until:s70+0.5', 'owl': 0.3, 'wind': 0.4}, 'outside, shut out'),
-    ('s70', 'ambience_woods', 2.0, 'window', {'dur': 'until:s92', 'owl': 0.6, 'wind': 0.5}, 'June\'s open window'),
-    ('w69:curtains+0.1', 'curtain_close', 0.0, None, {'dur': 1.1}, '"I close the curtains downstairs"'),
-    ('w69:run+0.05', 'footsteps_wood_inside', -2.0, None, {'stairs': True, 'run': True, 'direction': 'up', 'n': 7},
-     '"then run up to June\'s room"'),
-    ('s70+0.05', 'door_creak', -6.0, None, {'dur': 0.9}, 'June\'s door pushed open as the narrator comes in'),
-    ('s73+0.8', 'owl_hoot', -3.0, 'woods', {}, 'the owl while he stands there'),
-    ('s87-0.35', 'wood_creak', -4.0, 'inside', {'kind': 'creak', 'dur': 0.6}, 'the board behind us ("I turn around.")'),
-    # ---- the comment prompt: the tape is paused
-    ('s92-0.05', 'vhs_pause', 0.0, None, {'kind': 'pause', 'dur': 'until:s100-0.25'}, 'the VHS pause'),
+    ('s78-0.5', 'line_hiss', -8.0, None, {'dur': 'until:e80+0.6'}, 'Halverson on the line'),
     # ---- rule 2
-    ('s100', 'room_tone_house', 0.0, None, {'dur': 'until:s130', 'hum': 0.25}, 'the house'),
-    ('s100', 'old_clock', -3.0, None, {'dur': 'until:s109', 'bpm': 60}, 'midnight'),
-    ('s100', 'ambience_woods', -2.0, 'outside', {'dur': 'until:s109', 'owl': 0.3, 'wind': 0.3}, 'outside'),
-    ('w104:tap+0.05', 'egg_tap', 0.0, None, {}, '"...one soft tap on the front door."'),
-    ('w105:porch-0.3', 'peephole', 0.0, None, {}, '"Through the peephole" (the eye goes to it after the last step)'),
-    ('s109-0.2', 'ambience_woods', -4.0, 'porch', {'dur': 'until:s113', 'owl': 0.2}, 'the backyard (memory)'),
-    ('w109:carries+0.1', 'oven_mitt', -2.0, None, {'dur': 1.4}, 'in oven mitts'),
-    ('w109:fire-0.4', 'burn_barrel', 2.0, None, {'dur': 'until:s113+0.6', 'ignite': True}, '"...and sets it on fire"'),
-    ('s112+0.3', 'plastic_melt', 2.0, None, {'dur': 2.6}, '"They smell sweet when they melt."'),
-    ('s113', 'ambience_woods', -2.0, 'outside', {'dur': 'until:s130', 'owl': 0.3, 'wind': 0.3}, 'outside again'),
-    ('w114:rattles+0.12', 'egg_rattle', 2.0, 'outside', {'dur': 1.5}, '"...the egg rattles."'),
-    ('s116+0.25', 'door_creak', -2.0, None, {'dur': 1.4, 'slow': 1.3}, '"I open the door."'),
-    ('w118:egg+0.05', 'egg_open', 2.0, None, {}, '"And I open the egg."'),
-    ('w119:rolling', 'ring_roll', 2.0, None, {'dur': 2.0}, '"Inside, rolling around, is a gold ring."'),
-    ('w127:takes+0.7', 'ring_hand', 0.0, None, {'kind': 'take'}, '"takes the ring out of my hand" (the give, film.py)'),
-    ('w129:pocket', 'ring_hand', 2.0, None, {'kind': 'pocket', 'snap': 'cloth_rustle'}, '"She puts it in her pocket."'),
-    # ---- rule 3
-    ('s130', 'room_tone_house', 0.0, None, {'dur': 'until:s160', 'hum': 0.25}, 'the house'),
-    ('s130', 'old_clock', -3.0, None, {'dur': 'until:s160', 'bpm': 60}, '1:13'),
-    ('s130', 'ambience_woods', -4.0, 'outside', {'dur': 'until:s160', 'owl': 0.2, 'wind': 0.3}, 'outside'),
-    ('e135+0.08', 'knock_family', 2.0, 'inside', {'groups': 'gaps:e135+0.08,e137+0.03,e139+0.02'},
-     'the 2-3-2 knock in the narration\'s gaps ("Two knocks. A pause. Three more. A pause. Two.")'),
-    ('w147:knock+0.35', 'knock_family', -2.0, 'close', {'soft': True, 'memory': True, 'beat': 0.42},
-     'Grandma taps it on her kitchen table'),
-    ('s155-0.05', 'knock_family', 0.0, 'inside', {'soft': True, 'groups': 'gaps:s155-0.05,s156-0.5,s157-0.53'},
-     '"Two. Three. Two." recalled'),
+    ('w117:set+0.3', 'receiver_down', -2.0, 'close', {'kind': 'set'}, 'set down on the counter like a sleeping baby'),
     # ---- rule 4
-    ('s160', 'room_tone_house', 0.0, None, {'dur': 'until:s196', 'hum': 0.25}, 'the house'),
-    ('s160', 'ambience_woods', -4.0, 'outside', {'dur': 'until:s196', 'owl': 0.2, 'wind': 0.3}, 'outside'),
-    ('w164:creaks-0.2', 'slot_flap', 0.0, None, {'action': 'open'}, 'the brass flap creaks open'),
-    ('s180+0.3', 'footsteps_stairs', -8.0, None, {'direction': 'down', 'n': 6, 'rate': 1.75, 'weight': 0.25},
-     'June creeps down the stairs in her socks (the last tread before she kneels)'),
-    ('w180:kneels', 'cloth_rustle', -4.0, None, {'kind': 'rustle'}, 'she kneels at the slot'),
-    ('s192+0.35', 'slot_flap', 2.0, None, {'action': 'snap'}, '"Mom closes the mail slot."'),
-    ('w193:smooths', 'cloth_rustle', -2.0, None, {'kind': 'rustle'}, 'she smooths June\'s hair'),
-    # ---- rule 5
-    ('s196', 'room_tone_house', 0.0, None, {'dur': 'until:s206', 'hum': 0.25}, 'the house'),
-    ('s200-0.4', 'clock_tick', -6.0, 'inside', {'dur': 3.0}, '"At 2:47, I wake up."'),
-    ('w201:blanket', 'cloth_rustle', -4.0, None, {'kind': 'rustle'}, 'June\'s blanket'),
-    ('s205', 'bulb', -6.0, 'inside', {'kind': 'buzz', 'dur': 'until:s206'}, 'the light under the attic door'),
-    ('s206-0.12', 'attic_door', 0.0, 'inside', {'action': 'open'}, 'the attic door, on the cut into the attic (fix round '
-     '1: at s206-0.9 it creaked over the shut door of "There\'s a light under the attic door.")'),
-    ('s206', 'bulb', -2.0, 'attic', {'kind': 'buzz', 'dur': 'until:s232'}, 'the attic\'s bare bulb'),
-    ('s206', 'room_tone_house', -4.0, 'attic', {'dur': 'until:s232', 'hum': 0.1}, 'the attic'),
-    ('w207:dress', 'cloth_rustle', -6.0, 'attic', {'kind': 'rustle'}, 'the tiny yellow dress'),
-    ('w208:lock', 'diary_lock', 0.0, 'attic', {}, '"a diary with a pink plastic lock"'),
-    ('s210', 'page_flip', 0.0, 'attic', {'n': 1}, '"The first half is crayon."'),
-    ('s215', 'page_flip', 0.0, 'attic', {'n': 2, 'rate': 2.5}, '"Then Easter, 1987."'),
-    ('s219', 'page_flip', -2.0, 'attic', {'n': 4, 'rate': 1.6}, '"page after page"'),
-    ('s224', 'page_flip', 0.0, 'attic', {'n': 1}, '"And on the very last page"'),
-    ('s229+0.4', 'wood_creak', -8.0, 'attic', {'kind': 'creak', 'dur': 0.8}, 'Mom rocking in the dark corner'),
-    ('s229+1.95', 'wood_creak', -9.0, 'attic', {'kind': 'creak', 'dur': 0.8}, 'the rocker, back'),
-    ('s229+3.5', 'wood_creak', -10.0, 'attic', {'kind': 'creak', 'dur': 0.8}, 'the rocker, forward'),
+    ('s187', 'streetlight', -6.0, 'outside', {'dur': 'until:e191+1.0', 'flicker': 0.7}, 'the bus stop\'s light'),
     # ---- rule 6
-    ('s232', 'room_tone_house', 0.0, None, {'dur': 'until:s242', 'hum': 0.25}, 'the house'),
-    ('s232', 'ambience_woods', -4.0, 'outside', {'dur': 'until:s242', 'owl': 0.0, 'wind': 0.4}, 'outside'),
-    ('w236:explodes', 'window_smash', 0.0, None, {}, '"...the kitchen window explodes."'),
-    ('w237:crashes', 'door_crash', 0.0, None, {}, '"The back door crashes open."'),
-    ('s238+0.2', 'wet_drag', 0.0, None, {'dur': 'until:e240+0.6'}, '"Something heavy comes inside. Wet. Dragging."'),
-    ('s241+0.35', 'cloth_rustle', -2.0, None, {'kind': 'grab'}, '"I grab June"'),
-    ('w241:run', 'footsteps_wood_inside', 0.0, None, {'run': True, 'n': 6}, '"and run."'),
-    ('s242+0.35', 'attic_door', -2.0, 'close', {'action': 'close'}, 'the bathroom door shut'),
-    ('s243+0.05', 'lock_turn', 2.0, 'close', {}, '"Lock."'),
-    ('s242', 'room_tone_house', -2.0, 'bathroom', {'dur': 'until:s286', 'hum': 0.2}, 'the dark bathroom'),
-    ('s244+1.2', 'bathtub', 0.0, None, {'kind': 'settle'}, 'in the empty bathtub'),
-    ('w244:hand+0.1', 'breath', -6.0, None, {'kind': 'held', 'dur': 2.0}, 'my hand over her mouth'),
-    # (fix round 1: "Footsteps on the stairs. Slow." is the picture's now: one tread every 0.95 s with the thunk 0.3 s
-    # after, film.py STEP_T; this row's own four treads at 0.8 / s doubled them on another rhythm)
-    ('s248-0.3', 'hatchet_step', 2.0, None, {'n': 1}, '"Thunk." (the head lands on the word)'),
-    ('s249-0.3', 'hatchet_step', 2.0, None, {'n': 1}, '"Thunk."'),
-    ('s250+0.6', 'hatchet_step', 0.0, None, {'n': 2, 'rate': 0.8}, 'up to the landing'),
-    ('w251:turns-0.2', 'doorknob', 2.0, None, {'kind': 'turn'}, '"The doorknob turns. Gently."'),
-    ('s257+0.35', 'paper_under_door', 2.0, None, {'dur': 1.3}, '"Something slides under the door."'),
-    ('s270', 'struggle', 0.0, None, {'kind': 'shake'}, '"The whole hallway shakes."'),
-    ('s271+1.0', 'struggle', 2.0, None, {'kind': 'slam'}, '"Something slams into the bathroom door."'),
-    ('s272', 'struggle', -4.0, None, {'kind': 'wall'}, '"Screaming."'),
-    ('w273:crack+0.05', 'struggle', 0.0, None, {'kind': 'crack'}, '"A wet, heavy crack."'),
-    # ---- rule 7
-    ('s286', 'ambience_dawn', -6.0, 'outside', {'dur': 'until:s313', 'birds': 0.5}, 'the dawn birds outside'),
-    ('s289+1.0', 'knock_door', 0.0, 'door', {'soft': True, 'n': 3}, '"Mom knocks, softly."'),
-    ('w297:turns-0.6', 'key_outside', 2.0, None, {}, '"The lock turns by itself. From the outside."'),
-    ('s300', 'room_tone_house', 0.0, None, {'dur': 'until:s322', 'hum': 0.2}, 'the wrecked hall'),
-    ('w313:kneels', 'cloth_rustle', -4.0, None, {'kind': 'rustle'}, 'Mom kneels with the dress'),
-    ('w313:hand+0.2', 'cloth_rustle', -8.0, None, {'kind': 'rustle'}, 'her hand over June\'s eyes'),
-    ('w355:pull', 'cloth_rustle', 0.0, None, {'kind': 'grab'}, '"I pull June\'s face out"'),
-    ('w355:push+0.1', 'cloth_rustle', -2.0, None, {'kind': 'grab'}, '"and push my own face into it"'),
+    ('s223-0.25', 'now_serving', 0.0, 'waiting', {'sour': 0.7}, '"Now serving: 1979."'),
+    ('w243:clipboard+0.3', 'clipboard', -4.0, 'waiting', {}, 'his clipboard'),
+    # ---- rule 7: one pulse event, the picture's per-count cues dropped (picture_pass)
+    ('w258:one', 'pulse_count', 0.0, 'tight', {'dur': 'until:w270:what-0.05', 'counts': 'gaps:w258:one,w260:two,w267:three',
+     'bpm': [62, 48, 36, 27], 'clock': 0.7}, 'the count: the heartbeat and the clock slow with every number'),
+    # ---- the rescue
+    ('s303+0.2', 'carry_child', -4.0, 'inside', {}, 'I picked Milo up off the kitchen floor'),
+    ('s306+0.6', 'rain_house', -2.0, 'porch', {'dur': 'until:s308+0.1'}, 'the front door open: the rain outside'),
+    ('s308', 'halverson_car', -6.0, 'car', {'dur': 'until:w318:going+0.3', 'rain': 0.8}, 'parked: the engine running'),
+    ('w318:going+0.2', 'drive_rain', 0.0, 'car', {'dur': 'until:s348-0.2', 'speed': 'fast'}, 'the drive in the rain'),
+    ('s348+0.2', 'er_bustle', 0.0, 'er', {'dur': 'until:s362', 'monitors': 0.7, 'gurney': 0.5}, 'the ER, alive'),
     # ---- after
-    ('s360+0.1', 'tinnitus', -6.0, None, {'dur': 4.0}, '"When I open my eyes..."'),
-    ('s370+0.3', 'sirens_arrive', 0.0, 'street', {'dur': 9.0}, '"When the police came"'),
-    ('s371', 'hospital_room', 0.0, None, {'dur': 'until:s386'}, 'Holloway State Hospital'),
-    ('s376', 'hospital_corridor', -8.0, None, {'dur': 'until:s386', 'busy': 0.2}, 'the visiting room\'s corridor'),
-    # ---- the outro
-    ('w388:light+0.25', 'light_switch', 0.0, 'close', {'kind': 'wall'}, '"You can turn a light on now."'),
-    ('w395:zipper+0.1', 'zipper', -2.0, 'close', {'dur': 1.0}, '"It has a zipper in the back"'),
+    ('s365', 'ambience_dawn', -8.0, 'window', {'dur': 'until:s372', 'birds': 0.6}, 'home at sunrise'),
+    ('s379', 'office_3am', 0.0, 'office', {'dur': 'until:e400+0.6'}, 'a little office at Larkfield General, 3 AM'),
+    # ---- outro
+    ('w450:call-0.4', 'phone_connect', -6.0, 'close', {}, 'the one call that never puts you on hold'),
 ]
 DEDUP_S = 2.0                                             # an ADD row yields to a picture cue of its sound this close
 
-# --------------------------------------------------------------------------------------------- PICTURE (the final mix)
-# film.py's names -> (recipe, params set over the cue's, gain_db or None to keep the picture's, why). None drops it.
+# picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
-    'footsteps_grass': ('footsteps_grass', {}, None, 'grass, not a wooden porch'),
-    'footsteps_heavy': ('footsteps_wood_inside', {'weight': 1.0}, None, 'the Bunnyman on the kitchen floor'),
-    'wet_step': ('footsteps_wood_inside', {'weight': 1.0, 'n': 1}, -2.0, 'a wet, heavy step'),
-    'floor_creak_heavy': ('wood_creak', {'kind': 'creak', 'dur': 0.8}, -4.0, 'the boards under his weight'),
-    'stairs_creak': ('wood_creak', {'kind': 'creak', 'dur': 0.6}, -10.0, 'a stair under June\'s socks'),
-    'hatchet_thunk': ('hatchet_step', {'thunk_only': True, 'n': 1}, None, 'the head on the tread (n=4 was four steps a cue)'),
-    'wind_gust': ('wind_gust', {}, None, 'a gust in the trees'),
-    'pen_write': None,                                    # a pen under "They just don't believe a word I say": nothing fits
-    # fix round 1 (fixer B's trick: the egg appears in the empty paw in a little burst of light): a faint toy-chime
-    # twinkle in the jingle's key, on the tape (sfx.r_magic_sparkle); it was dropped as "a cartoon" when the picture had
-    # no visible trick, now the picture draws one and the twinkle is the trick the ending pays off
-    'magic_sparkle': ('magic_sparkle', {}, -4.0, 'the egg appears in the empty paw'),
-    'footsteps_gravel': ('footsteps_grass', {}, None, 'the gravel by the bridge (no gravel recipe: grass, not a porch)'),
-    'birds_dawn': ('ambience_dawn', {'dur': 3.0, 'birds': 0.9}, None, 'dawn birds'),
-    'birds_day': ('ambience_dawn', {'dur': 2.5, 'birds': 0.8}, None, 'birds by day'),
-    'creek': ('creek', {}, -2.0, 'the creek in the ravine'),
-    'police_radio': ('police_radio', {}, -6.0, 'the patrol cars\' radios'),
-    'deadbolt': ('lock_turn', {}, -2.0, 'the front door\'s deadbolt'),
-    'wet_crack': ('struggle', {'kind': 'crack'}, None, 'a wet, heavy crack'),
-    'swap': ('swap', {}, None, 'the trade'),
-    'marker_strike': ('marker_strike', {}, None, 'struck through'),
-    'water_tap': ('water_tap', {}, -2.0, 'Mom at the sink'),
-    'magnet_click': ('magnet_click', {}, None, 'the bunny magnet (radio_click was a radio\'s key)'),
-    'key_turn': ('key_in_lock', {}, -8.0, 'Mom\'s key, seen from the hall (the lock already turned)'),
-    'count_thump': None,                                  # the score's count notes (music_plan IDENTITY) carry the count
-    'scream_far': None,                                   # the owner rejected the library screams: the narration screams
-    'dogs_bark_far': ('dogs_search', {'dur': 4.0}, None, 'the search dogs'),
-    'crowd_cheer': ('crowd_parade', {'dur': 3.5, 'cheer': 1.0, 'swell_at': 1.2}, None, 'a cheer (not a 20 s bed)'),
-    'camera_flash': ('flash_pop', {}, None, 'the 1987 flash'),
-    'vhs_glitch': ('tape_glitch', {'kind': 'tracking', 'dur': 0.3}, None, 'the tape\'s tracking (not a VCR clunk)'),
-    'paper_slide': ('paper_under_door', {}, None, 'the drawing under the door'),
-    'knob_turn': ('doorknob', {'kind': 'turn'}, None, 'the bathroom knob'),
-    'bulb_hum': ('bulb', {'kind': 'buzz'}, None, 'the attic bulb'),
-    'bulb_tink': ('lamp_out', {'kind': 'out'}, None, 'the porch bulb going dark (bulb was a pull chain)'),
-    'curtain_draw': ('curtain_close', {}, None, 'the curtains'),
-    'fire_whoosh': ('burn_barrel', {'ignite': True, 'dur': 2.0}, None, 'the egg flaring in the barrel (not 15 s of fire)'),
-    'sirens': ('sirens_arrive', {}, None, 'the patrol cars arriving'),
+    'phone_pickup': ('receiver_up', {}, -2.0, 'the old receiver lifted'),
+    'phone_hangup': ('receiver_down', {'kind': 'hang'}, -2.0, 'hung up'),
+    'cabinet_open': ('medicine_cabinet', {'action': 'open'}, -4.0, 'the mirror swung aside'),
+    'typing': ('typewriter', {}, -8.0, 'the rules typed on a typewriter (the rule cards)'),
+    'card_tap': ('touch_tap', {}, -8.0, 'a fingertip on the yellow card'),
+    'key_press': ('touch_tap', {}, -6.0, 'a key'),
+    'paper_flutter': ('paper', {'dur': 0.6}, -12.0, 'the rule card'),
+    'paper_rustle': ('paper', {'dur': 0.9}, -10.0, 'the note'),
+    'paper_slide': ('paper_under_door', {'dur': 1.3}, -2.0, 'the paper under the door'),
+    'peephole_cover': ('peephole', {}, -6.0, 'the peephole cover'),
+    'door_open': ('doorknob', {}, -6.0, 'the front door opened'),
+    'door_knob': ('doorknob', {}, -8.0, 'the knob'),
+    'hand_slap_soft': ('cloth_rustle', {'kind': 'grab', 'dur': 0.6}, -4.0, 'a hand over his mouth'),
+    'flinch': ('cloth_rustle', {'dur': 0.5}, -12.0, 'his coat as he flinches'),
+    'marker_write': ('pen_scratch', {'dur': 0.7}, -8.0, 'Ruth writing on hold (1979)'),
+    'chair_creak': ('chair_rock', {'dur': 3.5}, -4.0, 'the empty chair still rocking'),
+    'car_idle': ('halverson_car', {'rain': 0.0}, -14.0, 'her car in the driveway, engine running'),
+    'monitor_beep': ('heart_monitor', {}, None, 'the monitor'),
+    'wheelchair_roll': ('wheelchair', {}, None, 'Mom with the wheelchair'),
+    'fluorescent_flicker': ('lamp_flicker', {}, None, 'a dying tube'),
+    'lamp_click': ('light_switch', {}, None, 'turn a light on'),
+    'ui_pop': ('ui_pop', {}, -9.0, 'card pops, under the voice'),
+    'hold_click': None,                                   # the hold music itself (music_plan IDENTITY) starts there
+    'cold_breath': None,                                  # nothing fits a cold touch; the wrist insert plays dry
+    'car_drive': None,                                    # drive_rain (ADD) is the drive
+    'car_accelerate': None,                               # "she drove faster": the score's riser carries it
 }
-WHO_HUM = {'mom': ('hum', 'M', -5.0), 'laurie87': ('hum', 'J', 0.0), 'june': ('hum', 'J', 0.0),
-           'narrator_new': ('hum_x', 'X', None), 'narrator_neat': ('hum_x', 'X', None)}
-FAMILY = {'knock_door': 'knock', 'knock_family': 'knock', 'egg_tap': 'knock', 'mail_slot': 'slot', 'slot_flap': 'slot',
-          'curtain_close': 'curtain', 'curtain_flutter': 'curtain', 'paper_slide': 'paper_door',
-          'paper_under_door': 'paper_door', 'lock_turn': 'lock', 'key_outside': 'lock', 'key_in_lock': 'lock',
-          'sirens_arrive': 'siren', 'siren_far': 'siren', 'footsteps_wood_inside': 'steps', 'footsteps_stairs': 'steps',
-          'footsteps_porch': 'steps', 'footsteps_hall': 'steps', 'footsteps_grass': 'steps', 'hatchet_step': 'steps',
-          'struggle': 'struggle', 'attic_door': 'door_shut', 'burn_barrel': 'fire', 'light_switch': 'switch',
-          'lamp_out': 'switch', 'flashlight_click': 'flashlight', 'bulb': 'bulb', 'dogs_search': 'dogs',
-          'doorknob': 'knob', 'flash_pop': 'flash', 'camera_shutter': 'flash', 'tape_glitch': 'tape', 'vcr': 'tape',
-          'vhs_pause': 'vhs', 'wet_drag': 'drag', 'hospital_room': 'hospital', 'hospital_tone': 'hospital'}
+WHO_HUM = {}
+FAMILY = {'receiver_up': 'receiver', 'phone_pickup': 'receiver', 'receiver_down': 'hang', 'medicine_cabinet': 'cabinet',
+          'paper_slide': 'paper_door', 'paper_under_door': 'paper_door', 'footsteps_wood_inside': 'steps',
+          'footsteps_porch': 'steps', 'footsteps_hall': 'steps', 'doorknob': 'knob', 'light_switch': 'switch',
+          'rain_house': 'rain', 'drive_rain': 'car', 'halverson_car': 'car', 'er_bustle': 'er',
+          'waiting_room': 'waiting', 'ambience_dawn': 'dawn', 'office_3am': 'office', 'phone_connect': 'connect'}
 
 
 def _t(a, lines):
@@ -312,39 +153,43 @@ def _span(cn, params):
             return max(0.0, (n - 1) / r + (0.3 if cn == 'hatchet_step' else 0.0))
         if p.get('dur') and cn in ('struggle', 'wet_drag', 'paper_under_door', 'ambience_woods', 'ambience_dawn',
                                    'ambience_night', 'room_tone', 'room_tone_house', 'burn_barrel', 'bulb', 'dogs_search',
-                                   'crowd_parade', 'hospital_room', 'hospital_corridor', 'house_creaks', 'old_clock'):
+                                   'crowd_parade', 'hospital_room', 'hospital_corridor', 'house_creaks', 'old_clock',
+                                   'house_night', 'waiting_room', 'drive_rain', 'halverson_car', 'er_bustle',
+                                   'office_3am', 'rain_house', 'streetlight', 'breath', 'line_hiss'):
             return float(p['dur'])
     except (TypeError, ValueError):
         pass
     return 0.0
 
 
+ROOM = {'house_night': ('house_night', {'fridge': 0.6, 'clock': 0.6, 'creaks': 0.3}, 0.0),
+        'house_1979': ('house_night', {'fridge': 0.3, 'clock': 0.7, 'creaks': 0.2}, -4.0),
+        'house_evening': ('house_night', {'fridge': 0.5, 'clock': 0.3, 'creaks': 0.2}, -4.0),
+        'warm_room': ('house_night', {'fridge': 0.4, 'clock': 0.3, 'creaks': 0.1}, -4.0),
+        'er_busy': ('er_bustle', {'monitors': 0.7, 'gurney': 0.5}, 0.0)}
+
+
 def picture_pass(out, lines, log):
-    """PICTURE: film.py's names onto this film's recipes, the identity layer's versions dropped from the SFX sheet."""
-    try:
-        idt = MP.identity_events(lines)
-    except Exception as e:
-        idt = []; log.append(f'PICTURE: no identity events ({e!r})')
-    def ident(vers, a, b):
-        return [e for e in idt if e.get('type') == 'jingle' and e.get('version') in vers
-                and e['t'] - 1.5 < b and e['t'] + float(e.get('len') or 3.0) + 1.5 > a]
+    """PICTURE: film.py's names onto this film's recipes; what another layer carries is dropped."""
     def at(a, default=None):
         try:
             return MP.resolve(a, lines)
         except Exception:
             return default
     res, n0 = [], len(out)
-    girl = [e for e in idt if e.get('type') == 'jingle' and e.get('version') == 'girl']
-    bath = (at('s242'), at('s286')) if at('s242') and at('s286') else None   # locked in the bathroom: 4:30 -> 6:12
-    try:                                                  # the picture's shots: an 'outside' cue on an exterior shot is
-        shots = json.load(open(os.path.join(MP.W, 'cues', 'shots.json')))   # heard out there, not through the door
-    except Exception:
-        shots = []
-    def exterior(tt):
-        for sh in shots:
-            if sh.get('t0', 0) <= tt < sh.get('t1', 0):
-                return sh.get('space') == 'outside'
-        return False
+    pulse = (at('s256', 0.0) - 0.5, at('w270:what', 0.0) + 0.3)      # the ADD pulse event carries counts and clock
+    door6 = at('s216', 0.0)                                           # the living-room door opens on the waiting room
+    office = at('s379', 1e9)
+    rings = sorted(float(c['t']) for c in out if c.get('name') == 'phone_ring')
+    runs, last = [], None                                              # breath_fast runs -> one breathing bed each
+    for c in sorted([c for c in out if c.get('name') == 'breath_fast'], key=lambda c: float(c['t'])):
+        t = float(c['t'])
+        if runs and t - last < 1.6:
+            runs[-1][1] = t
+        else:
+            runs.append([t, t, c.get('space')])
+        last = t
+    gulp_n = 0; dial_seen = False; peel_q = 0
     for c in out:
         nm = c.get('name'); p = dict(c.get('params') or {}) if isinstance(c.get('params'), dict) else {}
         try:
@@ -352,77 +197,55 @@ def picture_pass(out, lines, log):
         except (KeyError, TypeError, ValueError):
             res.append(c); continue
         why = None
-        if nm == 'hum':                                   # the hums: the score's identity hum where it plays one
-            d = float(p.get('dur') or 2.5)
-            if ident(('hum', 'hum_x'), t, t + d):
-                log.append(f'PIC  hum   {t:7.2f} dropped: the identity layer hums here'); continue
-            ver, who, tr = WHO_HUM.get(str(p.get('who')), ('hum', 'M', -5.0))
-            np_ = {'version': ver, 'who': who, 'phrases': [0, 1] if d > 2.4 else [0], 'dur': round(d + 1.0, 2),
-                   'stop': 'fade'}
-            if tr is not None:
-                np_['transpose'] = tr
-            c = dict(c, name='jingle', params=np_, gain_db=4.0 + (5.0 if p.get('far') else 0.0),
-                     space='inside' if c.get('space') != 'close' else 'close')   # fix round 1: Mom humming upstairs
-                                                                                  # (far) +5 dB: 18 LU under in its gap
-            why = f'hum -> jingle {ver} ({who}), the picture\'s humming'
-        elif nm == 'jingle' and p.get('version') in ('tinny_woods', 'speaker', None):
-            if ident(('speaker',), t, t + float(p.get('dur') or 10.0)):
-                log.append(f'PIC  jingle {t:7.2f} dropped: the identity layer plays the dying speaker'); continue
-            p['version'] = 'speaker'; c = dict(c, params=p); why = 'tinny_woods -> speaker'
-        elif nm == 'knock_door':                          # every knock on its frame, one knock per cue
-            if p.get('kind') == 'table':                  # Grandma's knuckles on the kitchen table (the memory)
-                c = dict(c, name='knock_family', params={'times': [0.0], 'soft': True}); why = 'Grandma\'s table knock'
-            elif p.get('pattern') == '2-3-2':             # the family knock on the front door
-                f = 0.75 if not p.get('soft') else 0.5
-                c = dict(c, name='knock_family', params={'times': [0.0], 'force': f}); why = 'the family knock (2-3-2)'
-            elif p.get('index') is not None or p.get('group') is not None:
-                p.setdefault('n', 1); c = dict(c, params=p); why = 'one knock per cue'
-        elif nm == 'mail_slot':                           # police mail_slot = open AND snap shut in one cue
-            k = p.get('kind')
-            c = dict(c, name='slot_flap', params={'action': 'open' if 'open' in str(k) else 'snap'},
-                     gain_db=0.0 if 'open' in str(k) else -2.0)
-            why = f'mail_slot {k} -> slot_flap'
-        elif nm == 'door_slam':                           # struggle's default was the 5 s fight
-            if p.get('kind') == 'bathroom':
-                c = dict(c, name='attic_door', params={'action': 'close'}, gain_db=-2.0); why = 'the bathroom door shut'
-            else:
-                c = dict(c, name='struggle', params={'kind': 'slam'}); why = 'one slam'
-        elif nm == 'struggle' and not p.get('kind'):      # "The whole hallway shakes." (default was the full fight)
-            c = dict(c, params={'kind': 'shake'}); why = 'the hallway shakes'
-        elif nm == 'vhs_pause' and p.get('kind', 'pause') == 'pause' and not p.get('dur'):
-            nxt = [float(x['t']) for x in out if x.get('name') == 'vhs_pause' and float(x.get('t', 0)) > t + 1.0
-                   and (x.get('params') or {}).get('kind') in ('play', 'resume')]
-            if nxt:                                       # the paused tape hums until PLAY (the default was 2.5 s)
-                p['dur'] = round(min(nxt) - t, 2); c = dict(c, params=p); why = 'the pause holds until PLAY'
-        elif nm == 'vhs_pause' and p.get('kind') == 'rewind':
-            c = dict(c, name='vcr', params={'action': 'rewind', 'dur': p.get('dur', 3.0)}); why = 'the tape rewinds'
-        elif nm == 'egg_tap':                              # we are in the hall when it taps: inside, and it must read
-            c = dict(c, space='inside', gain_db=2.0); why = 'the one soft tap, heard in the hall'
-        elif nm in ('key_in_lock', 'key_turn'):            # Mom's one key: no bunch jingling before the click
-            q = dict(p); q['jingle'] = False
-            c = dict(c, name='key_in_lock', params=q, gain_db=-8.0 if nm == 'key_turn' else c.get('gain_db', 0.0))
-            why = 'one key, the click on the frame'
-        elif nm == 'room_tone' and p.get('kind') in ('hospital_hum', 'hospital'):
-            log.append(f'PIC  room_tone {t:7.2f} dropped: hospital_room (sfx_plan ADD) is the hospital'); continue
-        elif nm == 'ambience_night' and t < 130.0:        # the cold open and the sightings: the woods bed (ADD) is the night
-            log.append(f'PIC  ambience_night {t:7.2f} dropped: ambience_woods (ADD) covers it'); continue
-        elif nm == 'fire_crackle':                        # the barrel burns from the shot until the bedroom (s113)
-            e_ = at('s113', t + float(p.get('dur') or 6.0))
-            c = dict(c, name='burn_barrel', params={'dur': round(max(1.0, e_ - t), 2)}); why = 'the barrel until s113'
-        elif nm == 'girl_cry' and girl:                   # her crying takes over from the broken song
-            g = girl[0]; s0 = g['t'] + float(g.get('len') or 5.0) - 0.75
-            e_ = at('s192+0.25', t + float(p.get('dur') or 6.0))
-            t_new = round(max(t, s0), 3); q = {'dur': round(max(1.5, e_ - t_new), 2)}
-            if p.get('sobs'):                             # keep the picture's sob catches, shifted by the cue's move
-                q['sobs'] = [round(x - (t_new - t), 3) for x in p['sobs'] if x - (t_new - t) >= 0.0]
-            c = dict(c, t=t_new, params=q, space='slot',
-                     gain_db=12.0, seed=3)                # seed 3: a cry that starts at once (others open with gasps);
-                                                          # fix round 1 (critic 3 m9): +6 dB, it sat 17 LU under in its gaps
-            why = 'her cry after the song, through the open slot, until Mom shuts it'
-        elif nm == 'swap':                                # the trade's thump on the picture's flash (its impact_hit)
-            imp = [float(x['t']) for x in out if x.get('name') == 'impact_hit' and abs(float(x.get('t', -9)) - t) <= 0.3]
-            t2 = min(imp, key=lambda x: abs(x - t)) if imp else t
-            c = dict(c, name='swap', t=round(t2, 3), params=p); why = f'the trade, on the flash at {t2:.2f}'
+        if nm == 'breath_fast':
+            run = next((r for r in runs if abs(r[0] - t) < 1e-6), None)
+            if run is None:
+                continue                                  # inside a run: the run's bed plays it
+            d = round(run[1] - run[0] + 1.0, 2)
+            g = -18.0 if run[2] == 'car' else (-14.0 if 820 < t < 870 else -12.0)
+            c = dict(c, name='breath', params={'kind': 'panting', 'dur': d}, gain_db=g,
+                     space='inside' if run[2] in (None, 'car') else run[2] if run[2] != 'close' else 'inside')
+            why = f'Milo breathing fast and deep: one bed of {d} s'
+        elif nm == 'phone_ring':
+            if t >= office - 30.0:                        # the narrator's phone now: the modern ring stays
+                res.append(c); continue
+            nxt = [x for x in rings if x > t + 0.05]
+            gap = (min(nxt) - t) if nxt else 2.0
+            on = round(max(0.3, min(1.2, gap - 0.12)), 2)
+            c = dict(c, name='landline_ring', params={'n': 1, 'on': on}); why = f'the old landline\'s bell, one ring ({on} s)'
+        elif nm == 'room_tone' and p.get('kind') in ROOM:
+            rn, extra, g = ROOM[p['kind']]
+            q = dict(extra); q['dur'] = p.get('dur', 10.0)
+            if p['kind'] == 'warm_room':                  # home after the ER; the final twist is the office (ADD)
+                q['dur'] = round(max(1.0, office - t), 2)
+            c = dict(c, name=rn, params=q, gain_db=g); why = f'room tone {p["kind"]} -> {rn}'
+        elif nm == 'fluorescent_buzz':
+            d = float(p.get('dur') or 2.0)
+            if d < 5.0:
+                c = dict(c, name='lamp_flicker', params={'dur': d}, gain_db=-6.0); why = 'the tubes stutter on'
+            else:                                         # the bed starts when the door opens on it
+                t1 = t + d; t0 = max(t, door6 + 1.2)
+                c = dict(c, t=round(t0, 3), name='waiting_room', params={'dur': round(t1 - t0, 2), 'flicker': 0.6,
+                         'tv': 0.5, 'buzz': 0.7}, gain_db=0.0, space='waiting')
+                why = f'the waiting room from the door ({t0:.2f}) on'
+        elif nm == 'pulse_count' or (nm == 'clock_tick' and pulse[0] <= t <= pulse[1]):
+            log.append(f'PIC  {nm:18s} {t:7.2f} dropped: the ADD pulse_count carries the counts and the clock'); continue
+        elif nm == 'rain' and p.get('inside_car'):
+            log.append(f'PIC  rain(car)          {t:7.2f} dropped: halverson_car / drive_rain (ADD) carry the car\'s rain')
+            continue
+        elif nm == 'tape_peel':
+            peel_q = min(4, peel_q + 1)
+            c = dict(c, params={'q': peel_q}, space='tight', gain_db=0.0); why = f'strip {peel_q}'
+        elif nm == 'gulp':
+            gulp_n += 1
+            if gulp_n % 2 == 0:
+                continue
+            c = dict(c, name='sip', params={}, gain_db=-8.0, space='close'); why = 'a swallow of water'
+        elif nm == 'dial_beep':
+            if dial_seen:
+                continue
+            dial_seen = True
+            c = dict(c, name='phone_connect', params={}, gain_db=-4.0, space='close'); why = 'Mom dials, it connects'
         elif nm in PICTURE:
             m = PICTURE[nm]
             if m is None:
@@ -432,12 +255,6 @@ def picture_pass(out, lines, log):
             c = dict(c, name=rn, params=q)
             if g is not None:
                 c['gain_db'] = g
-        if c.get('space') == 'outside' and not (c.get('params') or {}).get('through_walls') and exterior(t) \
-                and not (c.get('name') in ('ambience_night', 'ambience_dawn', 'ambience_woods', 'room_tone')
-                         and float((c.get('params') or {}).get('dur') or 30.0) > 4.0):
-            c = dict(c, space='porch'); why = (why or c.get('name')) + ', on an exterior shot: porch, not through the door'
-        if c.get('name') == 'struggle' and bath and bath[0] <= t <= bath[1] and c.get('space') in (None, 'inside'):
-            c = dict(c, space='door'); why = (why or 'the fight') + ', heard through the bathroom door'
         if why:
             log.append(f'PIC  {nm:18s} {t:7.2f} -> {c["name"]} {c.get("params")} {c.get("gain_db", 0):+.1f} dB  ({why})')
         res.append(c)
@@ -516,9 +333,10 @@ def apply(cues, lines):
             p = dict(params)
             if isinstance(p.get('dur'), str) and p['dur'].startswith('until:'):
                 p['dur'] = round(max(0.3, _t(p['dur'][6:], lines) - t), 2)
-            if isinstance(p.get('groups'), str) and p['groups'].startswith('gaps:'):
-                gs = [_t(x, lines) for x in p['groups'][5:].split(',')]
-                p['groups'] = [round(x - gs[0], 3) for x in gs]
+            for k_ in ('groups', 'counts'):           # 'gaps:a,b,c' -> seconds from the first anchor
+                if isinstance(p.get(k_), str) and p[k_].startswith('gaps:'):
+                    gs = [_t(x, lines) for x in p[k_][5:].split(',')]
+                    p[k_] = [round(x - gs[0], 3) for x in gs]
         except Exception as e:
             log.append(f'ADD {name} at {a}: bad anchor ({e!r}): skipped'); continue
         cn = _canon(name, p)

@@ -1468,7 +1468,7 @@ class DrLiving(DrRoom):
                 P.append(Piece('row%d' % ri, (cx, 0.45, cy), lambda pen, v, parts=parts: draw_parts(pen, v, parts), occupant=seats, front=parts,
                                block=B.footprint()))
             tk = o.get('ticket', '')
-            if not callable(tk):
+            if tk != 'f' and o.get('tear', 0.0) != 'f':          # a live ticket / tear: the live layer draws the machine
                 P.append(Piece('ticket_machine', (D_TICKET[0], 0.6, D_TICKET[1]), lambda pen, v: dr_ticket_machine(pen, v, ticket=tk, tear=o.get('tear', 0.0)),
                                block=_circ(D_TICKET[0], D_TICKET[1], 0.22)))
             P.append(Piece('sign', (D_SIGN[0], 2.2, D_SIGN[1]), lambda pen, v: dr_now_serving(pen, v, o.get('serving', '1979'), lit_=True)))
@@ -2890,7 +2890,7 @@ def dr_living(view='wide', state='now', tod='night', lamp=None, ceiling=0.0, hea
     if rain is None: rain = (tod == 'night' and state != '1979')
     if keys is None: keys = state != '1979'
     o = dict(state=state, tod=tod, lamp=lamp, ceiling=ceiling, headlights=headlights, hall=hall, door=door, coffee=coffee, keys=keys,
-             clock=clock if not callable(clock) else 'f', sign=sign, tv=tv, ticket=ticket if not callable(ticket) else 'f', tear=tear, serving=serving)
+             clock=clock if not callable(clock) else 'f', sign=sign, tv=tv, ticket=ticket if not callable(ticket) else 'f', tear=tear if not callable(tear) else 'f', serving=serving)
     if tubes is not None: o['tubes'] = tubes
     main = DrLiving()
     far = [DrHall(far=True)] if (door and not callable(door) and door > 3) or callable(door) else []
@@ -4014,7 +4014,7 @@ def _er_wait_cfg():
             if (ri, i) == W_ROCK and (callable(rock) or rock): continue
             P.append(Piece('chair_r%d_%d' % (ri, i), (x, 0.45, y), (lambda x_, y_: lambda pen, v: dr_single_chair(pen, v, x_, y_, 180))(x, y),
                            occupant=[(x, y + 0.02)], front=None, block=_circ(x, y, 0.24)))
-        if not callable(rock) and rock:
+        if not callable(rock) and rock and rock != 'f':
             x, y = [(q[2], q[3]) for q in dr_er_seats() if (q[0], q[1]) == W_ROCK][0]
             P.append(Piece('chair_rock', (x, 0.45, y), lambda pen, v: dr_single_chair(pen, v, x, y, 180, rock=rock)))
 

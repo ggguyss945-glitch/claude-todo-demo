@@ -1,4 +1,4 @@
-"""Measure a mix of this film (mix.py output dir; the dummy film, built on the delivery film's) against the final-mix
+"""Measure a mix of this film (mix.py output dir; the Doctor film, built on the earlier films' measures) against the final-mix
 targets and list misfires.
 
     python3 audio/measure_mix.py _work/mix/final [--cues _work/cues] [--mix mix.wav] [--no-cues] [--plot]   (from film/)
@@ -49,6 +49,12 @@ SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'phone_vibrate', 'curtain_flutt
               # grass steps are swishes like the other footsteps above (no single transient; the recipe puts the
               # -12 dB onset of the dry step on the cue, the woods / memory space moves it 10-60 ms)
               'footsteps_grass')
+# the Doctor film: beds, rings, slides, peels and swells with no single transient
+SLOW_ONSET = SLOW_ONSET + ('house_night', 'landline_ring', 'line_hiss', 'pen_scratch', 'paper_burn', 'rain_house',
+                           'halverson_car', 'waiting_room', 'pulse_count', 'tape_peel', 'drive_rain', 'er_doors',
+                           'er_bustle', 'wheelchair', 'sit_down', 'now_serving', 'typewriter', 'office_3am', 'streetlight',
+                           'chair_rock', 'carry_child', 'medicine_cabinet', 'lamp_flicker', 'paper_under_door', 'hold_music',
+                           'ambience_dawn', 'phone_connect', 'rotary_dial')
 HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit', 'window_smash', 'door_crash', 'swap')
 
 

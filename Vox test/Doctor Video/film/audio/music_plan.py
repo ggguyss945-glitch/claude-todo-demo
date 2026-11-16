@@ -224,24 +224,24 @@ EVENTS = [
     ('s212', 'hit', 0.75, None),                                      # "It can wait." (from every room)
     # rule 6
     ('s213-0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ('s217', 'braam', 0.6, 3.0),                                      # "It was a waiting room."
+    ('s217', 'braam', 0.7, 3.0, {'boost': 3.0}),                                      # "It was a waiting room."
     ('s223', 'stinger', 0.5, None),                                   # "Now serving: 1979."
     ('s234-0.3', 'silence', 0.8, 1.5), ('e234', 'sub_drop', 0.5, None),     # "Grandpa."
     ('s235', 'swell', 0.6, 14.0),                                     # HIM in the armchair -> his head
     ('s240', 'braam', 0.7, 3.5),                                      # "And his head... long, and narrow..."
-    ('s250', 'hit', 0.8, None),                                       # "Take a seat."
+    ('s250', 'hit', 0.85, None, {'boost': 3.0}),                                       # "Take a seat."
     # rule 7
     ('s252-0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('w270:what-0.9', 'silence', 0.9, 0.9),                           # the count stops; the question
-    ('w270:what', 'hit', 0.85, None),                                 # "What did you find?"
+    ('w270:what', 'hit', 0.85, None, {'boost': 3.0}),                                 # "What did you find?"
     ('s276', 'swell', 0.7, 10.0),                                     # every question, the tape looser ->
-    ('s280', 'braam', 0.85, 3.5),                                     # "...under the tape, there was no doctor."
-    ('s285', 'stinger', 0.8, None),                                   # "Then... me."
+    ('s280', 'braam', 0.9, 3.5, {'boost': 3.5}),                                     # "...under the tape, there was no doctor."
+    ('s285', 'stinger', 0.85, None, {'boost': 3.5}),                                   # "Then... me."
     ('s293', 'sub_drop', 0.5, None),                                  # "It can wait." (the one thing...)
     ('s298-0.3', 'silence', 0.8, 1.0), ('s298', 'hit', 0.7, None),    # "Doctor Later."
     ('e302', 'sub_drop', 0.4, None),                                  # "While she was on hold."
     # the rescue
-    ('s331-0.3', 'silence', 0.7, 1.0), ('s332', 'stinger', 0.65, None),    # "He was in the back seat."
+    ('s331-0.3', 'silence', 0.7, 1.0), ('s332', 'stinger', 0.75, None, {'boost': 3.0}),    # "He was in the back seat."
     ('s335', 'hit', 0.6, None),                                       # "It can wait," (the back seat)
     ('s344', 'riser', 0.5, 4.5),                                      # -> "Not on my shift."
     ('e346', 'sub_drop', 0.3, None),
