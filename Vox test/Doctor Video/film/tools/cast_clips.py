@@ -999,7 +999,7 @@ def _c_narr_asks():
     n.expr('asking_hard', 3.0, None, 1.5)
     n.lean_in(3.0, 3.0, None, 0.3)
     ev = []
-    taped = [1.0, 0.86, 0.72, 0.58, 0.44, 0.3]
+    taped = [1.0, 0.875, 0.75, 0.625, 0.5, 0.375]            # one of his 8 strips per question: the face's three first
     for i, (q0, q1, _) in enumerate(qs):
         ev += a.loosen_tape(q1 - 0.1, q1 + 0.25, taped[i], taped[i + 1], flinch=True)
     def draw(pen, t):
@@ -1015,7 +1015,7 @@ def _c_later_faces():
     a.place(900, FLOOR)
     a.perch(None, 'plastic', hands=('lap', 'pen'))
     a.face(0.15, -0.1)
-    a.set(-1, None, 0.01, dl_tape=0.45, h_tilt=8.0)
+    a.set(-1, None, 0.01, dl_tape=0.5, h_tilt=8.0)          # 4 of his 8 strips off: the face's three and the wisp at the top
     a.faces([(0.0, 1.0), (1.1, 2.0), (2.2, 3.0), (3.3, 4.0), (4.6, 5.0)], fade=0.6)
     a.tilt_head(0.5, 10.0, 4.0)
     def draw(pen, t):

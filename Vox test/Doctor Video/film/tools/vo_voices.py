@@ -68,6 +68,11 @@ VOICES = {
                    eq=[('peak', 250, 1.2, 0.9), ('peak', 2000, 1.0, 1.0)], lu=0.0,
                    desc='Doctor Halverson on the porch: urgent and tired (200 Hz, breath 0.20, 0.8 % jitter), a little '
                         'more presence to carry through the door'),
+    'H_ruth': dict(f0=200.0, rng=1.05, comp=0.35, smooth=0.0, alpha=1.10, breath=0.20, trem=None, jit=0.008, stretch=1.0, under=None,
+                   eq=[('peak', 250, 1.2, 0.9), ('peak', 2000, 1.0, 1.0)], lu=0.0,
+                   desc='Doctor Halverson calling "Ruth?" through the door: her porch voice with the formants at x1.10 and '
+                        'the question\'s rise held inside +-0.35 octave (at x1.15 the "oo" of this one word drifts and both '
+                        'recognisers hear "Rose" / "Room"; at x1.10 both hear "Ruth" at every padding)'),
     'W': dict(f0=116.0, rng=0.60, comp=0.18, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
               eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
               desc='the Waiting Man / Doctor Later: a soft, kind, grandfatherly man (116 Hz, formants x0.93: a longer '
@@ -107,6 +112,7 @@ VARIANT = {
     'shh': 'G_hush', 'not_after_dark': 'G_hush', 'not_out_loud': 'G_hush',
     'until_morning': 'G_soft', 'g_wait1': 'G_soft', 'g_wait2': 'G_soft',
     'this_is_halverson': 'H_call', 'sorry_hour': 'H_call', 'results_back': 'H_call',
+    'ruth_door': 'H_ruth',
     'count1': 'W_count', 'count2': 'W_count', 'count3': 'W_count',
     'w_nothing': 'W_whisper', 'w_bother': 'W_whisper', 'w_wait': 'W_whisper',
 }

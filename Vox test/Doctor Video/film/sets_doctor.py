@@ -138,6 +138,8 @@ _GR.setdefault('dr_er', dict(exposure=0.1, contrast=1.04, pivot=0.26, gamma=1.05
                              bloom=0.7, bloom_thr=234, vignette=0.5, grain=0.4, shoulder=0.55))
 _GR.setdefault('dr_office', dict(contrast=1.06, pivot=0.24, gamma=1.06, sat=1.06, wb=(1.04, 1.0, 0.96), floor='#0a0a12',
                                  bloom=0.85, bloom_thr=226, vignette=0.4, grain=0.6, shoulder=0.5))
+_GR.setdefault('dr_er_night', dict(exposure=0.06, contrast=1.08, pivot=0.23, gamma=1.03, sat=1.12, wb=(1.03, 1.0, 0.97), floor='#05070e',
+                                   bloom=0.9, bloom_thr=228, vignette=0.38, grain=0.6, shoulder=0.5))
 _GR.setdefault('dr_car', dict(contrast=1.1, pivot=0.22, gamma=1.02, sat=1.12, wb=(0.98, 1.0, 1.04), floor='#04060c',
                               bloom=1.0, bloom_thr=224, vignette=0.36, grain=0.7, shoulder=0.45))
 _GR.setdefault('dr_hall_night', dict(contrast=1.1, pivot=0.24, gamma=1.0, sat=0.9, wb=(0.98, 1.03, 0.96), floor='#06080a',
@@ -1806,7 +1808,7 @@ class DrKitchen(DrRoom):
         for (nm, x, y, fa, face) in dr_kitchen_chairs():
             P.append(Piece(nm, (x, 0.45, y), (lambda x_, y_, fa_: lambda pen, v: _kchair(pen, v, x_, y_, fa_))(x, y, fa), block=_circ(x, y, 0.24)))
         ph = o.get('phone', 'hung'); rg = o.get('ring', 0.0)
-        if not callable(ph) and not callable(rg):
+        if not callable(ph) and not callable(rg) and ph != 'f' and rg != 'f':
             P.append(Piece('phone', (D_PHONE[0] - 0.05, 1.3, D_PHONE[2]), lambda pen, v: dr_wall_phone(pen, v, ph, o.get('cord', 'in'), rg, 0.0, era)))
         return P
 
@@ -4086,40 +4088,110 @@ def dr_er_wait(view='wide', rock=0.0, **kw):
 
 
 # ---------------------------------------------------------------------------------------------- Larkfield General: the ER entrance at night
+ER_OPEN = (-2.4, 2.4, 0.12, 2.6)                                # the glazed entrance: x0, x1, sill (the sidewalk), head
+ER_LOBBY = (-3.4, 3.4, 0.05, 6.6)
+
+
+def _er_wall_art(lit_only=False):
+    def art(p_, W, H):
+        if not lit_only:
+            p_.fill(rect(0, H - 360, W, 360), '#8a4a3a'); p_.cv.save(); p_.cv.translate(0, H - 360); pat(p_, W, 360, 'brick', '#c8b8a0', 180, 4, '#8a4a3a'); p_.cv.restore()
+            p_.fill(rect(0, 0, W, H - 360), '#b8b4aa'); p_.texture(rect(0, 0, W, H - 360), 'grunge', 0.4, 'overlay', 1.5)
+        for k in range(14):                                               # the upper floors' windows: most of them lit, people working
+            for j in range(2):
+                x_ = 120 + k * 220; y_ = 90 + j * 230
+                if abs(x_ - 1600) < 300 and j == 1: continue
+                lit_ = ((k * 3 + j) % 4) != 0
+                if lit_only and not lit_: continue
+                p_.fill(rect(x_, y_, 140, 110), '#ffe2a8' if lit_ else '#1a2030')
+                if lit_:
+                    p_.fill(rect(x_, y_ + 62, 140, 48), '#f2c888'); p_.fill(rect(x_ + 68, y_, 4, 110), '#8a7a5a')
+                    if (k + j) % 3 == 0: p_.fill(oval(x_ + 40, y_ + 58, 12, 16), '#6a5a4a', 200)      # someone at a window
+                if not lit_only: p_.line(rect(x_, y_, 140, 110), 2.0, '#4a4a4a')
+        for x_ in (300, 700, 2500, 2900):                                 # ground-floor windows (lit: the ER never sleeps)
+            p_.fill(rect(x_, H - 300, 260, 180), '#ffecc0')
+            p_.fill(rect(x_, H - 300, 260, 40), '#f4d8a0'); p_.fill(rect(x_ + 128, H - 300, 4, 180), '#8a7a5a')
+            if not lit_only: p_.line(rect(x_, H - 300, 260, 180), 2.0, '#3a3a3a')
+        if not lit_only:
+            p_.fill(rect(1600 - 262, H - 284, 524, 284), '#e8e4da')            # the entrance surround (pale stone)
+            p_.line(rect(1600 - 262, H - 284, 524, 284), 2.0, '#3a3a3a')
+        hd = rect(1600 - 240, H - 276, 480, 20)                              # the lit header over the doors
+        p_.fill(hd, '#fff6e0'); btext(p_, 'EMERGENCY  ENTRANCE', 1600, H - 261, 'sans_b', 13, '#c81e1e', 250, 'center', spacing=0.12)
+    return art
+
+
+def _er_lobby(pen, v):
+    """The lobby behind the glass: warm and bright (the doctors' world): terrazzo, a triage desk, a corridor door, the
+    ceiling panels. Drawn clipped to the entrance opening."""
+    x0, x1, s0, s1 = ER_OPEN
+    q = v.poly3([(x0, s0, 0.0), (x1, s0, 0.0), (x1, s1, 0.0), (x0, s1, 0.0)])
+    if q.isEmpty(): return
+    cv = pen.cv
+    cv.save(); cv.clipPath(q, skia.ClipOp.kIntersect, True)
+    pen.fill(q, '#f4ead8')
+    try:
+        with lighting('#e2d6c2', [Lamp(0.0, 2.9, 2.2, 7.0, '#fff2d8', 1.1, (1.0, 0.7, 0.4), fall=1.2), Lamp(0.0, 2.9, 5.0, 6.0, '#fff2d8', 0.9, (1.0, 0.7, 0.4), fall=1.2)]):
+            lx0, lx1, ly0, ly1 = ER_LOBBY
+            floor_rect(pen, v, lx0, lx1, ly0, ly1, 0.12, '#efe4d0', 'checker', '#dccdb4', seed=5, scale=1.4)
+            for (side, a, b, u_of) in _walls_of((lx0, lx1, ly0, ly1)):
+                if side == 'front': continue
+                def wart(p_, W, H, side=side):
+                    p_.fill(rect(0, H - 110, W, 110), '#9ec8c0'); p_.fill(rect(0, H - 114, W, 6), '#f4efe0')
+                    if side == 'back':
+                        p_.fill(rect(W / 2 - 150, H - 215, 110, 215), '#dfe6e2'); p_.line(rect(W / 2 - 150, H - 215, 110, 215), 2, '#5a6a66')       # the doors to the bays
+                        p_.fill(rect(W / 2 - 96, H - 205, 4, 205), '#5a6a66'); p_.fill(rect(W / 2 - 132, H - 170, 26, 44), '#bfe0ea'); p_.fill(rect(W / 2 - 86, H - 170, 26, 44), '#bfe0ea')
+                        sg = rect(W / 2 + 40, H - 236, 250, 46)
+                        p_.fill(sg, '#3f8f8a'); btext(p_, 'TRIAGE', W / 2 + 165, H - 204, 'sans_b', 28, '#ffffff', 250, 'center', spacing=0.1)
+                        p_.fill(rect(W / 2 - 300, H - 230, 90, 90), '#ffffff'); p_.fill(rect(W / 2 - 266, H - 220, 22, 70), '#d8423a'); p_.fill(rect(W / 2 - 290, H - 196, 70, 22), '#d8423a')
+                wall(pen, v, a, b, 0.12, 3.0, '#f6efe0', None, None, [], art=wart)
+            ceil_rect(pen, v, lx0, lx1, ly0, ly1, 3.0, c='#f2ece0')
+            draw_box(pen, v, Box(1.2, 4.9, 2.6, 0.7, 0.12, 1.17, 0), {'all': '#3f8f8a', 'top': '#f2f4f0', 'front': dict(fill='#4a9a94', art=lambda p_, W, H: btext(
+                p_, 'WE ARE HERE', W / 2, H * 0.6, 'sans_b', 17, '#e8f6f2', 235, 'center', spacing=0.1))})
+            for (cx_, cy_) in ((-1.9, 4.2), (-1.9, 3.5)):                         # two waiting chairs, a plant
+                draw_box(pen, v, Box(cx_, cy_, 0.5, 0.5, 0.12, 0.58, 90), {'all': D_CHAIR_ER, 'top': _lighten(D_CHAIR_ER, 0.15)})
+                draw_box(pen, v, Box(cx_ - 0.24, cy_, 0.5, 0.06, 0.58, 1.0, 90), {'all': D_CHAIR_ER})
+        for (cx_, cy_) in ((0.0, 2.0), (0.0, 4.6)):                               # the ceiling panels (emissive)
+            pq = v.poly3([(cx_ - 0.6, 2.99, cy_ - 0.3), (cx_ + 0.6, 2.99, cy_ - 0.3), (cx_ + 0.6, 2.99, cy_ + 0.3), (cx_ - 0.6, 2.99, cy_ + 0.3)])
+            if not pq.isEmpty() and v.cam_h < 2.99: pen.fill(pq, '#fffbee')
+    finally:
+        cv.restore()
+
+
+def _er_door_panels(pen, v, k=0.0):
+    """The glazed entrance: two fixed side lights, the two sliding leaves (k 0 shut .. 1 open: they slide behind the side
+    lights), the steel frame."""
+    x0, x1, s0, s1 = ER_OPEN
+    k = clamp(k)
+    def glass(xa, xb, y, a=46):
+        qq = v.poly3([(xa, s0, y), (xb, s0, y), (xb, s1 - 0.2, y), (xa, s1 - 0.2, y)])
+        if qq.isEmpty(): return
+        pen.fill(qq, '#dff2f6', a)
+        b = _rb(qq)
+        pen.linear(qq, b[0], b[1], b[2], b[3], [(0, '#ffffff', 0), (0.3, '#ffffff', 46), (0.36, '#ffffff', 0), (0.7, '#ffffff', 0), (0.76, '#ffffff', 26), (0.8, '#ffffff', 0)])
+        pen.line(qq, 2.2, '#8a949c', 255)
+        s = v.S / max(0.3, v.d((xa + xb) / 2, y))
+        ym = s0 + 1.05
+        _seg3(pen, v, (xa + 0.06, ym, y), (xb - 0.06, ym, y), max(1.5, 0.03 * s), '#b4bcc4', 255, False)              # the push rail
+    glass(x0, -1.2, 0.0); glass(1.2, x1, 0.0)
+    glass(-1.2 - k * 1.14, 0.0 - k * 1.14, -0.04, 40); glass(0.0 + k * 1.14, 1.2 + k * 1.14, -0.04, 40)
+    hq = v.poly3([(x0, s1 - 0.2, -0.05), (x1, s1 - 0.2, -0.05), (x1, s1, -0.05), (x0, s1, -0.05)])
+    if not hq.isEmpty(): pen.fill(hq, '#6a747c'); pen.line(hq, 1.0)
+    sq = v.poly3([(-0.25, s1 - 0.14, -0.06), (0.25, s1 - 0.14, -0.06), (0.25, s1 - 0.06, -0.06), (-0.25, s1 - 0.06, -0.06)])
+    if not sq.isEmpty(): pen.fill(sq, '#1a1c20'); pen.fill(oval(*v.p(0.0, s1 - 0.1, -0.06), max(1.5, 0.02 * v.S / max(0.3, v.d(0, 0)))), '#3ae06a' if k > 0.02 else '#e04a3a')
+
+
 def dr_er_facade(pen, v, doors=0.0, t=0.0, part='all'):
-    """The ER entrance: a brick and concrete front, lit windows, the canopy over the drive on four columns, EMERGENCY in
-    red letters, the automatic sliding glass doors (doors 0 shut .. 1 open) with the bright lobby behind."""
+    """The ER entrance: a brick and concrete front with its windows lit, the canopy over the drive on four columns,
+    EMERGENCY in red letters, the glazed entrance with automatic sliding doors (doors 0 shut .. 1 open) and the bright,
+    warm lobby behind. part 'all' | 'wall' (no doors: they are a live layer) | 'canopy'."""
     G = 0.0
     F = wall_face((-16.0, 0.0), (16.0, 0.0), G, 9.0)
     if v.visible(F.O, F.n) and part in ('all', 'wall'):
-        def art(p_, W, H):
-            p_.fill(rect(0, H - 360, W, 360), '#8a4a3a'); p_.cv.save(); p_.cv.translate(0, H - 360); pat(p_, W, 360, 'brick', '#c8b8a0', 180, 4, '#8a4a3a'); p_.cv.restore()
-            p_.fill(rect(0, 0, W, H - 360), '#b8b4aa'); p_.texture(rect(0, 0, W, H - 360), 'grunge', 0.4, 'overlay', 1.5)
-            for k in range(14):                                               # the upper floors' windows (some lit)
-                for j in range(2):
-                    x_ = 120 + k * 220; y_ = 90 + j * 230
-                    if abs(x_ - 1600) < 300: continue
-                    lit_ = ((k * 3 + j) % 4) != 0
-                    p_.fill(rect(x_, y_, 140, 110), '#ffe8b8' if lit_ else '#1a2030')
-                    if lit_: p_.fill(rect(x_, y_ + 60, 140, 50), '#e8d0a0')
-                    p_.line(rect(x_, y_, 140, 110), 2.0, '#4a4a4a')
-            for x_ in (300, 700, 2500, 2900):                                 # ground-floor windows
-                p_.fill(rect(x_, H - 300, 260, 180), '#d8e8f0'); p_.line(rect(x_, H - 300, 260, 180), 2.0, '#3a3a3a')
-            p_.fill(rect(1600 - 150, H - 245, 300, 245), '#3a3a3a')            # the door surround
-        holes = [rect(1600 - 120, 900 - 230, 240, 230)]
-        draw_face(pen, v, F, art, '#b8b4aa', holes=holes, ao=False)
-        # the lobby behind the doors (bright, white, a desk), then the glass panels
-        L = Face((-1.2, 2.3, 0.6), (1, 0, 0), (0, -1, 0), 240, 230, (0, 0, -1), 'front')
-        draw_face(pen, v, L, lambda p_, W, H: (p_.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#fbfcfa', '#e8ecea']),
-                                               p_.fill(rect(W * 0.15, H * 0.6, W * 0.7, H * 0.4), '#7aa8b8'), p_.fill(rect(W * 0.15, H * 0.58, W * 0.7, 6), '#e8ecf0'),
-                                               p_.fill(rect(0, H - 4, W, 4), '#c8ccc8')), '#fbfcfa', ao=False, unlit=True)
-        for sd in (-1, 1):
-            k = clamp(doors)
-            x0 = (-1.2 if sd < 0 else 0.0) + sd * k * 1.15
-            Fd = Face((x0, 2.3, 0.02), (1, 0, 0), (0, -1, 0), 120, 230, (0, 0, -1), 'front')
-            draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#e8f4f8', 70), p_.line(rect(1, 1, W - 2, H - 2), 3.0, '#a8b0b8'),
-                                                    p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 0), (0.3, '#ffffff', 60), (0.36, '#ffffff', 0)])),
-                      '#e8f4f8', ao=False, unlit=True, lw=1.2)
+        _er_lobby(pen, v)
+        x0, x1, s0, s1 = ER_OPEN
+        holes = [rect(1600 + x0 * 100, 900 - s1 * 100, (x1 - x0) * 100, (s1 - s0) * 100 + 14)]
+        draw_face(pen, v, F, _er_wall_art(), '#b8b4aa', holes=holes, ao=False)
+        if part == 'all': _er_door_panels(pen, v, doors)
     if part in ('all', 'canopy'):
         for (cx_, cy_) in ((-5.5, -0.6), (5.5, -0.6), (-5.5, -6.2), (5.5, -6.2)):
             draw_box(pen, v, Box(cx_, cy_, 0.35, 0.35, 0.0, 3.6, 0), {'all': '#c8c4bc'})
@@ -4129,11 +4201,41 @@ def dr_er_facade(pen, v, doors=0.0, t=0.0, part='all'):
                                                                                      btext(p_, 'EMERGENCY', W / 2, H * 0.78, 'sans_b', H * 0.7, '#d81e1e', 255, 'center')))})
 
 
+def _er_emissive(pen, v, k=1.0):
+    """Everything at the ER that makes its own light, drawn over the night: the lit windows, the header and the lobby
+    seen through the glass stay as bright as they are; the EMERGENCY sign, the canopy's down-lights and their warm pools
+    on the wet tarmac."""
+    F = wall_face((-16.0, 0.0), (16.0, 0.0), 0.0, 9.0)
+    if v.visible(F.O, F.n):
+        draw_face(pen, v, F, _er_wall_art(True), None, ao=False, unlit=True, line=False)
+    Ff = Face((-3.3, 4.04, -6.602), (1, 0, 0), (0, -1, 0), 660, 38, (0, 0, -1), 'front')
+    if v.visible(Ff.O, Ff.n):
+        draw_face(pen, v, Ff, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#fff8ec'), btext(p_, 'EMERGENCY', W / 2, H * 0.84, 'sans_b', H * 0.86, '#e01e1e', 255, 'center')),
+                  '#fff8ec', ao=False, unlit=True, lw=1.0)
+        p_ = v.p(0.0, 3.85, -6.62)
+        if v.d(0.0, -6.62) > 0.5: pen.ellipse_glow(p_[0], p_[1], 3.8 * v.s(0, -6.62), 0.7 * v.s(0, -6.62), '#ff3020', 70 * k)
+    if v.cam_h < 3.6:
+        for i in range(8):
+            x = -5.4 + i * 1.6
+            pq = v.poly3([(x - 0.45, 3.595, -3.5), (x + 0.45, 3.595, -3.5), (x + 0.45, 3.595, -3.1), (x - 0.45, 3.595, -3.1)])
+            if not pq.isEmpty(): pen.fill(pq, '#fffbe8', 240)
+    for x in (-3.5, 0.0, 3.5):
+        if v.d(x, -3.3) > 0.5:
+            q = v.p(x, 3.55, -3.3); pen.glow(q[0], q[1], 1.4 * v.s(x, -3.3), '#fff0d0', 60 * k)
+            g = v.p(x, 0.0, -3.3); s = v.s(x, -3.3)
+            pen.ellipse_glow(g[0], g[1], 3.2 * s, max(4.0, 0.8 * s * clamp(abs(v.h - g[1]) / max(1.0, 3.2 * s), 0.15, 1.0)), '#ffe8c0', 50 * k)
+    if v.d(0.0, 0.3) > 0.5:                                                   # the lobby's light spilling out of the doors
+        q = v.p(0.0, 1.3, 0.0); s = v.s(0.0, 0.0)
+        pen.ellipse_glow(q[0], q[1], 3.4 * s, 1.8 * s, '#fff0d0', 46 * k)
+        g = v.p(0.0, 0.12, -1.0)
+        pen.ellipse_glow(g[0], g[1], 3.0 * s, max(4.0, 0.9 * s * clamp(abs(v.h - g[1]) / max(1.0, 3.0 * s), 0.15, 1.0)), '#fff0d0', 70 * k)
+
+
 def _er_ext_cfg():
     def lights(o):
         canopy = [Lamp(x, 3.5, -3.3, 7.0, '#fff4e0', 1.3, (1.0, 0.6, 0.3), fall=1.3) for x in (-3.5, 3.5)]
-        lobby = Lamp(0.0, 1.4, 0.4, 7.0, '#f4fbff', 1.2, fall=1.4)
-        return '#2e3656', canopy + [lobby], [('sign', [Lamp(0.0, 3.85, -6.7, 6.0, '#ff2a2a', 0.8, fall=1.4)], _kfn(1.0, 291))]
+        lobby = Lamp(0.0, 1.4, -0.4, 8.0, '#fff0d0', 1.7, fall=1.3)
+        return '#3a4468', canopy + [lobby, Lamp(0.0, 3.5, -3.3, 7.0, '#fff4e0', 1.2, (1.0, 0.6, 0.3), fall=1.3)], [('sign', [Lamp(0.0, 3.85, -6.7, 6.0, '#ff2a2a', 0.8, fall=1.4)], _kfn(1.0, 291))]
 
     def shell(pen, v, o):
         dr_sky(pen, v, 'night')
@@ -4160,19 +4262,14 @@ def _er_ext_cfg():
 
     def glows(v, o):
         def g(pen, t):
-            p_ = v.p(0.0, 3.85, -6.62)
-            if v.d(0.0, -6.62) > 0.5: pen.ellipse_glow(p_[0], p_[1], 3.5 * v.s(0, -6.62), 0.6 * v.s(0, -6.62), '#ff2020', 80)
-            for x in (-3.5, 3.5):
-                q = v.p(x, 3.58, -3.3)
-                if v.d(x, -3.3) > 0.5: pen.glow(q[0], q[1], 1.2 * v.s(x, -3.3), '#fff4e0', 70)
-            q = v.p(-0.6, 1.2, 0.3)
-            if v.d(0, 0.3) > 0.5: pen.ellipse_glow(q[0], q[1], 1.8 * v.s(0, 0.3), 1.4 * v.s(0, 0.3), '#f4fbff', 70)
-        return [('lights_glow', (0.0, 3.0, -3.0), g)]
+            _er_emissive(pen, v)
+        return [('lights_glow', (0.0, 3.0, 20.0), g)]
 
     def spots(v, o):
         S = {}
         S['doors'] = _mk_spot(v, 'doors', 0.0, -0.3, 0.12, 'stand', 'at the sliding doors (threshold)', face=(0, 1))
-        S['inside'] = _mk_spot(v, 'inside', 0.0, 1.2, 0.12, 'stand', 'just inside the doors (Mom with the wheelchair, running out)', face=(0, -1))
+        S['inside'] = _mk_spot(v, 'inside', 0.0, 1.6, 0.12, 'stand', 'in the lobby just inside the doors (Mom with the wheelchair, running out): give the figure '
+                               'layer order = sp.info["inside_order"] (behind the glass, in front of the lobby)', face=(0, -1))
         S['curb'] = _mk_spot(v, 'curb', 1.2, -1.6, 0.0, 'stand', 'at the kerb by the car', face=(0, 1))
         S['car_stop'] = _mk_spot(v, 'car_stop', 1.8, -3.4, 0.0, 'point', "where Halverson's car stops under the canopy (car centre, facing -x)")
         if o.get('car'):
@@ -4222,8 +4319,8 @@ def dr_er_entrance(view='ext', doors=0.0, car=False, rain=True, **kw):
     room = _R(dict(cfg, walls={}, floor={}))
     dyn = []
     if callable(doors):
-        lay = Layer(max(0.3, v.d(0.0, 0.0)), lambda pen, t: dr_er_facade(pen, v, doors(t), t, part='doors_only') or _er_doors_live(pen, v, doors(t)), 'doors_live', blur=None)
-        lay.order = v.d(0.0, 0.02) - 0.01
+        lay = Layer(max(0.3, v.d(0.0, 0.0)), lambda pen, t: _er_doors_live(pen, v, doors(t)), 'doors_live', blur=None)
+        lay.order = ORDER_SHELL - 0.45
         dyn.append(lay)
     if rain:
         def r1(pen, t): dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 9, 0.9, 0.1, '#a8b4cc', 24, 320, far=True)
@@ -4232,18 +4329,17 @@ def dr_er_entrance(view='ext', doors=0.0, car=False, rain=True, **kw):
         l2 = Layer(0.5, r2, 'rain_near', blur=None); l2.order = 0.2
         dyn += [l1, l2]
     o2 = dict(o); o2['doors'] = 'f' if callable(doors) else doors
-    sp = build_view('dr_er_' + view, v, room, dict(o, doors=doors), outside=None, grade='dr_ext', dyn=dyn)
+    sp = build_view('dr_er_' + view, v, room, dict(o, doors=doors), outside=None, grade='dr_er_night', dyn=dyn)
+    for l_ in sp:
+        if l_.name == 'lights_glow': l_.order = ORDER_SHELL - 0.2          # the emissive pass sits right on the building, under everyone
+    sp.info['inside_order'] = ORDER_SHELL - 0.3
+    sp.info['note'] = ('Figures in the lobby (anchor inside): layer.order = sp.info["inside_order"] (the glass doors are drawn over them: live doors at '
+                       'ORDER_SHELL - 0.45). Outside figures: sp.order_at(x, y).')
     return sp
 
 
 def _er_doors_live(pen, v, k):
-    L = Face((-1.2, 2.3, 0.6), (1, 0, 0), (0, -1, 0), 240, 230, (0, 0, -1), 'front')
-    draw_face(pen, v, L, lambda p_, W, H: (p_.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#fbfcfa', '#e8ecea']), p_.fill(rect(W * 0.15, H * 0.6, W * 0.7, H * 0.4), '#7aa8b8')),
-              '#fbfcfa', ao=False, unlit=True, line=False)
-    for sd in (-1, 1):
-        x0 = (-1.2 if sd < 0 else 0.0) + sd * clamp(k) * 1.15
-        Fd = Face((x0, 2.3, 0.02), (1, 0, 0), (0, -1, 0), 120, 230, (0, 0, -1), 'front')
-        draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#e8f4f8', 70), p_.line(rect(1, 1, W - 2, H - 2), 3.0, '#a8b0b8')), '#e8f4f8', ao=False, unlit=True, lw=1.2)
+    _er_door_panels(pen, v, k)
 
 
 # ---------------------------------------------------------------------------------------------- the long hospital hallway at night (one plastic chair at the end)
@@ -5261,3 +5357,1209 @@ def dr_outro(view='table', lamp=1.0, phone='off', **kw):
     o = dict(lamp=lamp, phone=phone, screen=(lambda t: 1.0 if (phone(t) if callable(phone) else phone) != 'off' else 0.0) if (callable(phone) or phone != 'off') else 0.0)
     sp = _box_build(_outro_cfg(), 'dr_outro_' + view, o, outside=_outside_plain_night, grade='dr_night', rain=False)
     return sp
+
+
+# ====================================================================================================== inserts
+# Close-ups of the film's props, drawn flat in design space (1920 x 1080, margin for a camera drift). Every insert is
+# ST.dr_insert(name, prop_kw=dict | f(t) -> dict, motion=f(t) -> (dx, dy, dscale, drot)); DR_INSERTS lists them.
+_IBG = (-520, -420, 2960, 1920)
+D_RULES = [(1, "If the doctor calls after midnight, don't ask what they found."),
+           (2, "If they put you on hold, don't hang up. Ever."),
+           (3, "Never say what hurts out loud after dark. He's listening."),
+           (4, "If someone in a white coat knocks, don't open the door. Real doctors don't make house calls."),
+           (5, "Nobody goes to the hospital before sunrise. It can wait."),
+           (6, "If you see him sitting in the chair, take a number, and wait your turn."),
+           (7, "Never, ever let him take your pulse.")]
+D_SIGNS = ['Very thirsty.', 'Peeing a lot.', 'Tired.', 'Losing weight.', 'Sweet-smelling breath.', 'Breathing fast and deep.']
+D_SIGNS_END = ["If you see these, don't wait.", "I'll be in my car."]
+D_ADVICE = [("Something feels wrong?", "Say it out loud to someone you trust."),
+            ("Always thirsty, always tired, peeing a lot, losing weight?", "Tell a doctor."),
+            ("Chest pain. Trouble breathing. A face that droops. The worst headache of your life.", "Don't wait. Call your emergency number."),
+            ("Ask questions.", "All of them."),
+            ("A call feels strange?", "Hang up. Find the real number. Call back.")]
+
+
+def _ibg(pen, c1, c2=None, vign=120):
+    r = rect(*_IBG)
+    if c2 is None: pen.fill(r, c1)
+    else: pen.linear(r, 0, _IBG[1], 0, _IBG[1] + _IBG[3], [c1, c2])
+    if vign: pen.radial(None, 960, 540, 1500, [(0, '#000000', 0), (0.55, '#000000', 0), (1, '#000000', vign)])
+
+
+def _ins_drop(pen, path, dx=10, dy=18, a=100, blur=14):
+    cv = pen.cv
+    cv.save(); cv.translate(dx, dy); pen.fill(path, '#000000', a, blur=blur); cv.restore()
+
+
+def _typed(pen, s, x, y, size=30, c='#2a2018', a=230, seed=0, font='mono', align='left'):
+    """Typewriter text: each letter sits a hair off the line and takes the ribbon unevenly."""
+    f = skia.Font(bfont(font), size)
+    f.setSubpixel(True); f.setEdging(skia.Font.Edging.kAntiAlias)
+    g = f.textToGlyphs(s); ws = f.getWidths(g)
+    w = sum(ws)
+    xx = x - (w / 2 if align == 'center' else (w if align == 'right' else 0.0))
+    for i, (ch_, wd) in enumerate(zip(s, ws)):
+        h = _h(i * 7 + seed * 131, 17)
+        p = skia.Paint(Color=col(c, int(a * (0.72 + 0.28 * h))), AntiAlias=True)
+        pen.cv.drawString(ch_, xx + (h - 0.5) * 0.6, y + (_h(i * 3 + seed, 5) - 0.5) * size * 0.07, f, p)
+        if h > 0.86: pen.cv.drawString(ch_, xx + 0.9, y + 0.3, f, skia.Paint(Color=col(c, int(a * 0.3)), AntiAlias=True))
+        xx += wd
+    return w
+
+
+def _tea_paper(pen, r, seed=1, edge=1.0, c=None):
+    """Paper gone the colour of weak tea: fibres, foxing, darker edges, an old fold."""
+    c = c or CARD_FACE
+    b = _rb(r)
+    pen.fill(r, c)
+    pen.texture(r, 'paper', 0.55, 'multiply', 0.9)
+    pen.texture(r, 'grunge', 0.22, 'multiply', 2.2)
+    cv = pen.cv
+    cv.save(); cv.clipPath(r, skia.ClipOp.kIntersect, True)
+    cx_, cy_ = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    pen.radial(None, cx_, cy_, max(b[2] - b[0], b[3] - b[1]) * 0.72, [(0, '#8a5a20', 0), (0.62, '#8a5a20', 0), (1, '#6a4418', int(120 * edge))])
+    rng = np.random.default_rng(seed)
+    for i in range(26):
+        fx, fy = rng.uniform(b[0], b[2]), rng.uniform(b[1], b[3])
+        rr = rng.uniform(3, 16)
+        pen.fill(_blob(fx, fy, rr, rr * rng.uniform(0.6, 1.0), 9, int(rng.integers(0, 99)), 0.35), '#7a4a1c', int(rng.uniform(14, 44)))
+    pen.linear(None, b[0], b[1], b[2], b[3], [(0, '#ffffff', 40), (0.35, '#ffffff', 0), (1, '#3a2408', 40)])
+    cv.restore()
+
+
+def _tape(pen, x, y, w, h, rot=0.0, c='#e8d68a', a=190, torn=True, seed=0):
+    """A strip of old yellowed tape (centre x, y)."""
+    cv = pen.cv
+    cv.save(); cv.translate(x, y); cv.rotate(rot)
+    rng = np.random.default_rng(seed + 3)
+    if torn:
+        n = 7
+        l = [(-w / 2 + rng.uniform(-3, 3), -h / 2 + h * k / n) for k in range(n + 1)]
+        r_ = [(w / 2 + rng.uniform(-3, 3), h / 2 - h * k / n) for k in range(n + 1)]
+        path = poly(l + r_)
+    else:
+        path = rect(-w / 2, -h / 2, w, h)
+    pen.fill(path, '#000000', 40, blur=4)
+    pen.fill(path, c, a)
+    pen.linear(path, 0, -h / 2, 0, h / 2, [(0, '#ffffff', 60), (0.3, '#ffffff', 0), (1, '#8a6a20', 60)])
+    pen.texture(path, 'grunge', 0.3, 'multiply', 1.0)
+    pen.line(path, 1.0, '#6a5420', 90)
+    cv.restore()
+
+
+def _ins_card(pen, t, hl=0, show=7, back=False, reveal=1.0, bg='door', tilt=-1.4, torn=False, k=1.0, **kw):
+    """The yellow rules card. Front: seven rules typed on a typewriter on paper the colour of weak tea, taped by its top
+    corners inside the medicine cabinet's door (hl = rule lit by the lamp, show = rules shown). back=True: the back of
+    the card in the narrator's light: the squares the tape left, and, in faded ink from 1979, the signature Doctor Later
+    (reveal 0..1 brings the ink up). bg 'door' (the cabinet door's white enamel) | 'dark' (held in the dark)."""
+    if bg == 'door':
+        _ibg(pen, '#dfe4e6', '#b8c0c6', 90)
+        pen.texture(rect(*_IBG), 'grunge', 0.2, 'multiply', 2.0)
+        pen.linear(rect(*_IBG), 0, 0, 1920, 0, [(0, '#000000', 50), (0.2, '#000000', 0), (0.85, '#ffffff', 0), (1, '#ffffff', 40)])
+        for (rx, ry) in ((140, 180), (1790, 860), (1700, 120)):                 # rust freckles in the enamel
+            pen.fill(_blob(rx, ry, 9, 6, 9, rx, 0.4), '#8a4a20', 90)
+        pen.fill(rect(_IBG[0], 1010, _IBG[2], 10), '#8a9298'); pen.fill(rect(_IBG[0], 1020, _IBG[2], 400), '#aab2b8')
+    else:
+        _ibg(pen, '#1a1c26', '#0c0d14', 160)
+        pen.radial(None, 960, 500, 1100, [(0, '#ffe2b0', 60), (1, '#ffe2b0', 0)])
+    W, H = 1180, 720
+    x0, y0 = 960 - W / 2, 540 - H / 2 + 10
+    cv = pen.cv
+    cv.save(); cv.translate(960, 540); cv.rotate(tilt); cv.translate(-960, -540)
+    card = rrect(x0, y0, W, H, 6)
+    if torn:                                                                   # the top edge torn where it came off the tape
+        rng = np.random.default_rng(12)
+        top = [(x0 + W * k_ / 40, y0 + (rng.uniform(0, 9) if (k_ < 6 or k_ > 34) else rng.uniform(0, 2))) for k_ in range(41)]
+        card = poly(top + [(x0 + W, y0 + H), (x0, y0 + H)])
+    _ins_drop(pen, card, 8, 14, 110, 12)
+    _tea_paper(pen, card, 3)
+    ink = '#2a2018'
+    if not back:
+        _typed(pen, 'FOR WHEN THE DOCTOR CALLS AT NIGHT', x0 + W / 2, y0 + 78, 33, ink, 235, 1, align='center')
+        cv.drawLine(x0 + W / 2 - 345, y0 + 90, x0 + W / 2 + 345, y0 + 90, skia.Paint(Color=col(ink, 170), AntiAlias=True, StrokeWidth=2.2))
+        y = y0 + 150
+        size, lh = 29, 39
+        maxc = 57
+        hls = hl if isinstance(hl, (tuple, list)) else ((hl,) if hl else ())
+        for (n, txt) in D_RULES[:int(show)]:
+            words = txt.split(' '); lines = []; cur = ''
+            for w_ in words:
+                t_ = (cur + ' ' + w_).strip()
+                if len(t_) <= maxc: cur = t_
+                else: lines.append(cur); cur = w_
+            if cur: lines.append(cur)
+            if n in hls:
+                band = rrect(x0 + 44, y - 30, W - 88, lh * len(lines) + 10, 6)
+                pen.fill(band, '#fff2c0', 120); pen.line(band, 1.2, '#b8862a', 110)
+            _typed(pen, '%d.' % n, x0 + 62, y, size, ink, 240, n)
+            for i, l_ in enumerate(lines):
+                _typed(pen, l_, x0 + 122, y + i * lh, size, ink, 238 if n in hls else 225, n * 10 + i)
+            y += lh * len(lines) + 19
+    else:
+        for (tx, ty) in ((x0 + 70, y0 + 34), (x0 + W - 70, y0 + 34)):          # where the tape was: paler squares, a shred left
+            sq = rect(tx - 62, ty - 30, 124, 60)
+            pen.fill(sq, '#f2e2b0', 110); pen.line(sq, 1.0, '#8a6a30', 70)
+            _tape(pen, tx - 20, ty - 4, 60, 34, 6, a=150, seed=int(tx))
+        a_ = int(255 * clamp(reveal, 0.0, 1.0))
+        inkc = '#4a3620'
+        btext(pen, 'Doctor Later', x0 + W / 2, y0 + H * 0.62, 'formal', 190, inkc, int(a_ * 0.72), 'center')
+        fl = smooth([(x0 + 250, y0 + H * 0.72), (x0 + 520, y0 + H * 0.745), (x0 + 820, y0 + H * 0.725), (x0 + 960, y0 + H * 0.7)], False, 0.9)
+        pen.line(fl, 3.2, inkc, int(a_ * 0.55))
+        btext(pen, '1979', x0 + W - 120, y0 + H - 60, 'cursive', 56, inkc, int(a_ * 0.5), 'right')
+        for k_ in range(7):                                                    # the typed side ghosting through the old paper
+            pen.fill(rect(x0 + 90, y0 + 150 + k_ * 62, W - 220 - (k_ * 53) % 180, 3), '#5a4020', 26)
+    cv.restore()
+    if not back and bg == 'door' and not torn:
+        cv.save(); cv.translate(960, 540); cv.rotate(tilt); cv.translate(-960, -540)
+        _tape(pen, x0 + 70, y0 + 6, 150, 62, -8, seed=1); _tape(pen, x0 + W - 70, y0 + 6, 150, 62, 7, seed=2)
+        cv.restore()
+
+
+def _ins_phone(pen, t, state='hung', ring=None, cord='in', night=0.4, era='now', **kw):
+    """The kitchen wall phone, close: the cream rotary set on the mint wallpaper, the handset hung on its cradle (state
+    'hung' | 'off'), the coiled cord; ring = f(t) 0..1 (it shivers on the wall, the bell lines); cord 'out': the line cord
+    hangs loose (pulled from the jack)."""
+    rg = ring(t) if callable(ring) else (ring or 0.0)
+    wall = DP['kit_wall'] if era != '1979' else '#e8d498'
+    _ibg(pen, wall, None, 0)
+    pat(pen, 1920, 1080, 'ditsy', DP['kit_ink'] if era != '1979' else '#d8a850', 150, 25, None, 3.0)
+    body_c = '#efe3c4' if era != '1979' else '#d9a640'
+    sh = 5.0 * rg * math.sin(t * 2 * math.pi * 20)
+    cv = pen.cv
+    # the line cord down the wall
+    if cord == 'in':
+        pen.line(smooth([(1010, 800), (1016, 960), (1004, 1200), (1010, 1500)], False, 0.8), 10, LINE, 200)
+        pen.line(smooth([(1010, 800), (1016, 960), (1004, 1200), (1010, 1500)], False, 0.8), 7, '#c8c4bc')
+    else:
+        pen.line(smooth([(1010, 800), (1030, 930), (1150, 1010), (1260, 1060), (1330, 1150)], False, 0.9), 10, LINE, 200)
+        pen.line(smooth([(1010, 800), (1030, 930), (1150, 1010), (1260, 1060), (1330, 1150)], False, 0.9), 7, '#c8c4bc')
+    cv.save(); cv.translate(sh, 0)
+    body = rrect(720, 200, 520, 620, 46)
+    _ins_drop(pen, body, 16, 22, 110, 18)
+    pen.fill(body, body_c)
+    pen.linear(body, 720, 0, 1240, 0, [(0, '#ffffff', 70), (0.3, '#ffffff', 0), (1, '#000000', 60)])
+    pen.linear(body, 0, 200, 0, 820, [(0, '#ffffff', 40), (0.2, '#ffffff', 0), (1, '#000000', 50)])
+    pen.line(body, 4)
+    # the dial
+    dx_, dy_, dr = 1040, 560, 168
+    pen.fill(oval(dx_ + 4, dy_ + 6, dr + 4), '#000000', 60, blur=6)
+    pen.fill(oval(dx_, dy_, dr), _darken(body_c, 0.1)); pen.line(oval(dx_, dy_, dr), 3)
+    for k_ in range(10):
+        a = math.radians(-60 + k_ * 30)
+        hx_, hy_ = dx_ + math.cos(a) * dr * 0.7, dy_ + math.sin(a) * dr * 0.7
+        pen.fill(oval(hx_, hy_, dr * 0.14), '#f8f4ea'); pen.line(oval(hx_, hy_, dr * 0.14), 2.2)
+        btext(pen, str((k_ + 1) % 10), hx_, hy_ + 9, 'sans_b', 26, '#3a3630', 220, 'center')
+    pen.fill(oval(dx_, dy_, dr * 0.38), '#f8f4ea'); pen.line(oval(dx_, dy_, dr * 0.38), 2.2)
+    btext(pen, '555-0179', dx_, dy_ + 9, 'sans_b', 25, '#3a3a3a', 220, 'center')
+    pen.fill(rrect(dx_ + dr * 0.56, dy_ + dr * 0.34, 22, 78, 6), '#b8b0a0'); pen.line(rrect(dx_ + dr * 0.56, dy_ + dr * 0.34, 22, 78, 6), 2)
+    # the cradle and the handset
+    for cy_ in (300, 720):
+        hook = rrect(742, cy_ - 22, 150, 44, 16)
+        pen.fill(hook, _darken(body_c, 0.14)); pen.line(hook, 2.5)
+    if state == 'hung':
+        jig = 7.0 * rg * math.sin(t * 2 * math.pi * 17 + 1.0)
+        cv.save(); cv.translate(jig, 0)
+        hs = union(union(rrect(770, 240, 96, 150, 40), rrect(770, 630, 96, 150, 40)), rrect(792, 300, 52, 420, 20))
+        _ins_drop(pen, hs, 12, 14, 90, 10)
+        pen.fill(hs, _lighten(body_c, 0.05))
+        pen.linear(hs, 770, 0, 866, 0, [(0, '#ffffff', 80), (0.4, '#ffffff', 0), (1, '#000000', 60)])
+        pen.line(hs, 4)
+        for cy_ in (300, 720):
+            for i in range(7):
+                a = 2 * math.pi * i / 6
+                px_, py_ = (818, cy_) if i == 6 else (818 + math.cos(a) * 20, cy_ + math.sin(a) * 20)
+                pen.fill(oval(px_, py_, 4.2), '#5a5040', 190)
+        cv.restore()
+        tail = [(818 + jig, 780), (800, 930), (850, 1010), (905, 900), (912, 822)]
+        _coil2d(pen, tail, body_c)
+    else:
+        tail = [(912, 822), (900, 960), (760, 1100), (520, 1240)]
+        _coil2d(pen, tail, body_c)
+    cv.restore()
+    if rg > 0.02:                                                              # the bell's lines
+        for side in (-1, 1):
+            for k_ in range(3):
+                r_ = 380 + k_ * 46 + 16 * math.sin(t * 40 + k_)
+                a0 = (200 if side < 0 else -20)
+                arc = skia.Path(); arc.addArc(skia.Rect.MakeLTRB(980 - r_, 510 - r_, 980 + r_, 510 + r_), a0, 40)
+                pen.line(arc, 7 - k_ * 1.5, '#3a3a3a', int(150 * rg * (1 - k_ * 0.25)))
+    if night:
+        pen.fill(rect(*_IBG), '#0c1230', int(190 * night))
+        pen.radial(None, 700, 700, 1200, [(0, '#ffd8a0', int(60 * night)), (1, '#ffd8a0', 0)])
+
+
+def _coil2d(pen, pts, c='#efe3c4', r=13.0, pitch=9.0):
+    """A coiled handset cord along a 2D curve (screen px)."""
+    path = smooth(pts, False, 0.9)
+    m = skia.PathMeasure(path, False)
+    L = m.getLength()
+    n = max(8, int(L / pitch))
+    P = []
+    for i in range(n + 1):
+        d = L * i / n
+        pos, tan = m.getPosTan(d)
+        nx, ny = -tan.y(), tan.x()
+        o = math.sin(i * math.pi) * 0.0
+        s_ = 1 if i % 2 == 0 else -1
+        P.append((pos.x() + nx * r * s_, pos.y() + ny * r * s_))
+    cp = smooth(P, False, 1.0)
+    pen.line(cp, 7.5, LINE, 220); pen.line(cp, 4.6, c); pen.line(cp, 1.4, '#ffffff', 70)
+
+
+def _ins_phone_counter(pen, t, music=1.0, night=0.35, **kw):
+    """The receiver laid on the butter-yellow counter 'like a sleeping baby', its coiled cord trailing back to the wall;
+    the hold music still coming out of it (music 0..1: small shivers of sound from the earpiece)."""
+    _ibg(pen, DP['counter'], _darken(DP['counter'], 0.25), 60)
+    pen.texture(rect(*_IBG), 'grunge', 0.3, 'multiply', 2.0)
+    for i in range(40):                                                        # the counter's little boomerang flecks
+        x, y = _h(i, 1) * 2400 - 240, _h(i, 2) * 1500 - 210
+        pen.line(smooth([(x, y), (x + 14, y - 8), (x + 26, y + 3)], False), 3, ['#c8a04a', '#e8f0d8', '#b8c8a0'][i % 3], 120)
+    pen.fill(rect(_IBG[0], _IBG[1], _IBG[2], 190 - _IBG[1]), '#f4f2ea'); pat(pen, 1920, 190, 'tile', '#d8d8d0', 255, 0, None, 3.0)   # the splash tiles
+    pen.fill(rect(_IBG[0], 176, _IBG[2], 22), '#c8ccd0'); pen.line(rect(_IBG[0], 176, _IBG[2], 22), 2)
+    body_c = '#efe3c4'
+    _coil2d(pen, [(1500, -200), (1560, 120), (1420, 330), (1250, 470), (1195, 560)], body_c, 15, 10)
+    cv = pen.cv
+    cv.save(); cv.translate(940, 600); cv.rotate(-14)
+    hs = union(union(rrect(-430, -86, 240, 172, 70), rrect(190, -86, 240, 172, 70)), rrect(-300, -46, 600, 92, 34))
+    _ins_drop(pen, hs, 14, 30, 110, 22)
+    pen.fill(hs, _lighten(body_c, 0.04))
+    pen.linear(hs, 0, -86, 0, 86, [(0, '#ffffff', 90), (0.4, '#ffffff', 0), (1, '#000000', 80)])
+    pen.line(hs, 5)
+    for cx_ in (-310, 310):
+        pen.fill(oval(cx_, 0, 70, 62), _darken(body_c, 0.06)); pen.line(oval(cx_, 0, 70, 62), 3)
+        for i in range(7):
+            a = 2 * math.pi * i / 6
+            px_, py_ = (cx_, 0) if i == 6 else (cx_ + math.cos(a) * 30, math.sin(a) * 27)
+            pen.fill(oval(px_, py_, 6.5), '#4a4234', 200)
+    if music > 0.02:                                                           # the thin tune leaking from the earpiece
+        for k_ in range(3):
+            ph = (t * 0.9 + k_ / 3.0) % 1.0
+            r_ = 90 + ph * 150
+            arc = skia.Path(); arc.addArc(skia.Rect.MakeLTRB(-310 - r_, -r_, -310 + r_, r_), 150, 60)
+            pen.line(arc, 6, '#5a4a2a', int(120 * music * (1 - ph)))
+    cv.restore()
+    if night:
+        pen.fill(rect(*_IBG), '#0c1230', int(190 * night))
+        pen.radial(None, 1500, 240, 900, [(0, '#ffd8a0', int(90 * night)), (1, '#ffd8a0', 0)])
+
+
+def _ins_phone_cord(pen, t, night=0.5, **kw):
+    """'The phone cord was lying on the kitchen floor': the line cord and its little clear plug on the checker tiles, the
+    empty jack on the baseboard above it."""
+    _ibg(pen, DP['floor_a'], None, 0)
+    cv = pen.cv
+    cv.save(); cv.translate(960, 760); cv.rotate(-18); cv.translate(-960, -760)
+    S_ = 300
+    for i in range(-6, 12):
+        for j in range(-2, 8):
+            if (i + j) % 2 == 0: pen.fill(rect(i * S_ - 300, 380 + j * S_, S_, S_), DP['floor_b'])
+    cv.restore()
+    pen.texture(rect(*_IBG), 'grunge', 0.25, 'multiply', 2.0)
+    wall = rect(_IBG[0], _IBG[1], _IBG[2], 250 - _IBG[1])
+    pen.fill(wall, DP['kit_wall']); pat(pen, 1920, 250, 'ditsy', DP['kit_ink'], 150, 25, None, 3.0)
+    base = rect(_IBG[0], 250, _IBG[2], 150)
+    pen.fill(base, '#ece6d6'); pen.linear(base, 0, 250, 0, 400, [(0, '#ffffff', 60), (0.2, '#ffffff', 0), (1, '#000000', 70)])
+    pen.line(poly([(_IBG[0], 250), (_IBG[0] + _IBG[2], 250)], False), 3); pen.fill(rect(_IBG[0], 392, _IBG[2], 26), '#000000', 70, blur=10)
+    jk = rrect(1180, 268, 150, 110, 10)                                         # the jack: empty
+    pen.fill(jk, '#e4dcc8'); pen.line(jk, 3)
+    pen.fill(rrect(1226, 300, 58, 46, 5), '#1a1a1a'); pen.fill(rect(1244, 336, 22, 12), '#1a1a1a')
+    for sx in (1196, 1314): pen.fill(oval(sx, 323, 6), '#a8a090'); pen.line(oval(sx, 323, 6), 1.5)
+    pts = [(760, -420), (790, 60), (700, 420), (430, 640), (560, 860), (900, 800), (1120, 700)]
+    cord = smooth(pts, False, 0.9)
+    cv.save(); cv.translate(6, 12); pen.line(cord, 16, '#000000', 80, blur=6); cv.restore()
+    pen.line(cord, 15, LINE, 220); pen.line(cord, 10.5, '#c8c4bc'); pen.line(cord, 3, '#ffffff', 80)
+    cv.save(); cv.translate(1120, 700); cv.rotate(-24)
+    plug = rrect(-6, -26, 96, 52, 8)
+    _ins_drop(pen, plug, 6, 10, 90, 8)
+    pen.fill(plug, '#e8e8e0', 235); pen.linear(plug, 0, -26, 0, 26, [(0, '#ffffff', 120), (0.5, '#ffffff', 0), (1, '#000000', 50)])
+    pen.line(plug, 3)
+    for k_ in range(4): pen.fill(rect(54 + k_ * 9, -16, 4.5, 32), '#c8a040')
+    pen.fill(poly([(10, -26), (52, -40), (60, -34), (24, -22)]), '#e8e8e0', 235); pen.line(poly([(10, -26), (52, -40), (60, -34), (24, -22)]), 2)
+    cv.restore()
+    if night:
+        pen.fill(rect(*_IBG), '#0c1230', int(190 * night))
+        pen.radial(None, 1300, 100, 1000, [(0, '#ffd8a0', int(70 * night)), (1, '#ffd8a0', 0)])
+
+
+def _ins_badge(pen, t, wet=1.0, swing=None, **kw):
+    """Doctor Halverson's hospital badge clipped crooked to the pocket of her wet raincoat: LARKFIELD GENERAL, her photo,
+    Dr. Anna Halverson, PEDIATRICS, and two dinosaur stickers stuck on by patients."""
+    coat = '#5a6a4a'
+    _ibg(pen, coat, _darken(coat, 0.35), 110)
+    pen.texture(rect(*_IBG), 'fabric', 0.55, 'overlay', 1.6)
+    pen.line(smooth([(300, -400), (360, 300), (330, 1500)], False), 9, _darken(coat, 0.4), 200)                 # the coat's front edge
+    pk = poly([(520, 300), (1560, 250), (1600, 1500), (500, 1500)])                                               # the breast pocket flap
+    pen.fill(pk, _lighten(coat, 0.05)); pen.line(pk, 5, _darken(coat, 0.5))
+    pen.dashed(poly([(540, 330), (1545, 282)], False), 3, _darken(coat, 0.45), 200, 16, 10)
+    sw = (swing(t) if callable(swing) else (swing or 0.0))
+    cv = pen.cv
+    cv.save(); cv.translate(1000, 300); cv.rotate(-7.5 + sw)
+    clip_ = rrect(-60, -66, 120, 110, 12)
+    pen.fill(clip_, '#b8bcc4'); pen.linear(clip_, 0, -66, 0, 44, [(0, '#ffffff', 120), (0.5, '#ffffff', 0), (1, '#000000', 80)]); pen.line(clip_, 4)
+    pen.fill(rrect(-30, 30, 60, 70, 8), '#3a3e46'); pen.line(rrect(-30, 30, 60, 70, 8), 3)
+    W, H = 640, 440
+    card = rrect(-W / 2, 90, W, H, 26)
+    _ins_drop(pen, card, 10, 18, 120, 14)
+    pen.fill(card, '#f6f6f2'); pen.line(card, 4)
+    cv.save(); cv.clipPath(card, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(-W / 2, 90, W, 96), '#1e6a8a')
+    btext(pen, 'LARKFIELD GENERAL', -W / 2 + 34, 152, 'sans_b', 44, '#ffffff', 245, 'left', spacing=0.03)
+    pen.fill(rect(W / 2 - 96, 106, 64, 64), '#ffffff'); pen.fill(rect(W / 2 - 72, 112, 16, 52), '#d8423a'); pen.fill(rect(W / 2 - 90, 130, 52, 16), '#d8423a')
+    ph = rrect(-W / 2 + 34, 216, 190, 232, 10)                                                                    # her photo
+    pen.fill(ph, '#c8d8e4')
+    cv.save(); cv.clipPath(ph, skia.ClipOp.kIntersect, True)
+    px_, py_ = -W / 2 + 129, 330
+    pen.fill(oval(px_, py_ + 150, 110, 90), '#5a9ac8')                                                            # scrubs
+    pen.fill(rect(px_ - 22, py_ + 40, 44, 50), '#e8bfa4')
+    pen.fill(oval(px_, py_ - 62, 34, 28), '#b8904a')                                                              # the messy bun
+    pen.fill(oval(px_, py_, 62, 72), '#f0c8ac')
+    hair = smooth([(px_ - 66, py_ + 6), (px_ - 60, py_ - 56), (px_, py_ - 82), (px_ + 60, py_ - 56), (px_ + 66, py_ + 6), (px_ + 44, py_ - 30), (px_, py_ - 44), (px_ - 44, py_ - 30)], True, 0.7)
+    pen.fill(hair, '#b8904a')
+    for ex in (-22, 22): pen.fill(oval(px_ + ex, py_ - 2, 6, 7), '#4a3020')
+    pen.line(smooth([(px_ - 20, py_ + 30), (px_, py_ + 40), (px_ + 20, py_ + 30)], False), 4, '#8a4a3a')
+    for (fx, fy) in ((-30, 14), (-18, 18), (20, 15), (31, 12)): pen.fill(oval(px_ + fx, py_ + fy, 2.4), '#c8946a')
+    cv.restore(); pen.line(ph, 3)
+    btext(pen, 'Dr. Anna Halverson', -W / 2 + 248, 282, 'sans_b', 37, '#1a2a3a', 245)
+    pen.fill(rrect(-W / 2 + 252, 312, 250, 50, 8), '#e8f2f6')
+    btext(pen, 'PEDIATRICS', -W / 2 + 266, 349, 'sans_b', 34, '#1e6a8a', 245, spacing=0.05)
+    for i in range(12): pen.fill(rect(-W / 2 + 254 + i * 13, 398, 5 + (i * 7) % 5, 44), '#1a1a1a')                # the barcode
+    cv.restore()
+    # the dinosaur stickers (one green long-neck, one orange T-rex: curling at a corner)
+    for (sx, sy, kind, c_, rot) in ((W / 2 - 78, 478, 0, '#4aa86a', 14), (W / 2 - 196, 440, 1, '#e8823a', -11)):
+        cv.save(); cv.translate(sx, sy); cv.rotate(rot)
+        st = rrect(-58, -44, 116, 88, 20)
+        pen.fill(st, '#000000', 50, blur=4); pen.fill(st, '#fffdf2'); pen.line(st, 2.5)
+        cv.save(); cv.scale(4.4, 4.4); _dino_sil(pen, 0, 2, 9, kind, c_); cv.restore()
+        cv.restore()
+    cv.restore()
+    if wet:                                                                     # rain on the coat and the badge
+        rng = np.random.default_rng(8)
+        for i in range(int(130 * wet)):
+            x, y = rng.uniform(-200, 2100), rng.uniform(-150, 1250)
+            r = rng.uniform(3, 9)
+            pen.fill(oval(x, y, r * 0.8, r), '#dfeaf4', 60); pen.fill(oval(x - r * 0.25, y - r * 0.3, r * 0.3), '#ffffff', 150)
+        for i in range(9):
+            x = rng.uniform(100, 1800); y = rng.uniform(-100, 700); L = rng.uniform(120, 420)
+            pen.line(smooth([(x, y), (x + 6, y + L * 0.5), (x - 4, y + L)], False), 4, '#dfeaf4', 60)
+    pen.radial(None, 1500, 100, 1300, [(0, '#ffc888', 70), (1, '#ffc888', 0)])                                     # the porch light
+    pen.fill(rect(*_IBG), '#0a1028', 60)
+
+
+def _lab_sheet(pen, W=820, H=1060, show=8, marker=True, faint=1.0):
+    """Milo's lab results as a sheet in its own px frame (0, 0)-(W, H): the printed report on top, and under it, in marker,
+    in big careful letters, the warning signs (show = how many of the 8 marker lines are written)."""
+    sheet = rect(0, 0, W, H)
+    pen.fill(sheet, '#fbfaf5'); pen.texture(sheet, 'paper', 0.3, 'multiply', 0.8)
+    ink = '#2a2e38'
+    a = int(235 * faint)
+    pen.fill(rect(40, 36, 46, 46), '#1e6a8a', a); pen.fill(rect(57, 42, 12, 34), '#ffffff', a); pen.fill(rect(46, 53, 34, 12), '#ffffff', a)
+    btext(pen, 'LARKFIELD GENERAL', 100, 62, 'sans_b', 27, '#1e6a8a', a, spacing=0.03)
+    btext(pen, 'Laboratory report', 100, 86, 'sans', 17, ink, int(a * 0.8))
+    btext(pen, 'STAT', W - 46, 70, 'sans_b', 30, '#c8302a', a, 'right', spacing=0.08)
+    pen.fill(rect(40, 100, W - 80, 2.5), ink, a)
+    rows = [('Patient', 'MILO, 7 y'), ('Ordered by', 'A. HALVERSON, MD  Pediatrics'), ('Reported', '02:41')]
+    for i, (k_, v_) in enumerate(rows):
+        btext(pen, k_, 44, 132 + i * 26, 'sans', 17, ink, int(a * 0.7)); btext(pen, v_, 190, 132 + i * 26, 'sans_b', 17, ink, a)
+    pen.fill(rect(40, 200, W - 80, 30), '#e4ecf0', a)
+    for (x_, s_) in ((50, 'TEST'), (360, 'RESULT'), (560, 'RANGE')): btext(pen, s_, x_, 221, 'sans_b', 15, ink, int(a * 0.8), spacing=0.06)
+    tests = [('GLUCOSE', '612 mg/dL', '70 - 140', True), ('KETONES', 'LARGE', 'negative', True), ('pH (venous)', '7.21', '7.32 - 7.42', True),
+             ('BICARBONATE', '11 mmol/L', '22 - 29', True), ('SODIUM', '131 mmol/L', '135 - 145', False)]
+    for i, (n_, r_, rg_, hi) in enumerate(tests):
+        y = 258 + i * 31
+        btext(pen, n_, 50, y, 'sans', 18, ink, a)
+        btext(pen, r_, 360, y, 'sans_b', 20 if i == 0 else 18, '#c8302a' if hi else ink, a)
+        btext(pen, rg_, 560, y, 'sans', 16, ink, int(a * 0.7))
+        if hi: btext(pen, 'H' if i < 2 else 'L', 520, y, 'sans_b', 17, '#c8302a', a)
+        pen.fill(rect(40, y + 9, W - 80, 1), ink, 40)
+    if marker:
+        mk = '#1c2c6a'
+        circ = smooth([(346, 236), (500, 228), (538, 250), (500, 272), (350, 270), (336, 252)], True, 0.9)   # 612 ringed in marker
+        pen.line(circ, 6, '#c8302a', 215)
+        y0 = 474
+        n = int(show)
+        for i, s_ in enumerate(D_SIGNS[:max(0, min(6, n))]):
+            y = y0 + i * 72
+            pen.line(smooth([(52, y - 22), (64, y - 8), (86, y - 38)], False), 7, mk, 225)                  # a tick
+            btext(pen, s_, 108, y, 'hand', 62, mk, 238, skew=-0.03)
+        if n > 6:
+            pen.fill(rect(48, y0 + 6 * 72 - 36, W - 96, 5), mk, 200)
+            btext(pen, D_SIGNS_END[0], W / 2, y0 + 6 * 72 + 28, 'hand', 56, '#c8302a', 240, 'center')
+            pen.line(smooth([(250, y0 + 6 * 72 + 42), (420, y0 + 6 * 72 + 47), (560, y0 + 6 * 72 + 41)], False), 6, '#c8302a', 220)
+        if n > 7:
+            btext(pen, D_SIGNS_END[1], W / 2, y0 + 6 * 72 + 96, 'hand', 52, mk, 238, 'center')
+    pen.linear(sheet, 0, 0, W, H, [(0, '#ffffff', 0), (0.6, '#ffffff', 0), (1, '#8a8a7a', 50)])
+    pen.line(sheet, 2.5, '#3a3a3a', 190)
+
+
+def _ins_results(pen, t, show=8, slide=1.0, bg='floor', zoom='page', tilt=-3.0, **kw):
+    """Milo's lab results with Doctor Halverson's marker note: 'Very thirsty. Peeing a lot. Tired. Losing weight.
+    Sweet-smelling breath. Breathing fast and deep. If you see these, don't wait. I'll be in my car.' show = marker lines
+    written (0..8: the six signs, then the two last lines); bg 'floor' (the hall floor: slide 0..1 brings the sheet in
+    under the front door) | 'hand' (held up in the dark hall) | 'sink' (lying in the steel sink); zoom 'page' | 'note'
+    (the marker lines fill the frame: legible at any size)."""
+    cv = pen.cv
+    if bg == 'floor':
+        _ibg(pen, '#8a5a34', None, 0)
+        cv.save(); cv.translate(960, 540); cv.rotate(90); cv.translate(-960, -540)
+        pen.texture(rect(-800, -800, 3600, 2700), 'wood', 0.55, 'overlay', 1.2)
+        cv.restore()
+        for k_ in range(-3, 14): pen.fill(rect(k_ * 205 - 60, _IBG[1], 4, _IBG[3]), '#3a2412', 170)
+        door = rect(_IBG[0], _IBG[1], _IBG[2], 150 - _IBG[1])
+        pen.fill(door, '#e6e0d2'); pen.linear(door, 0, -420, 0, 150, [(0, '#000000', 0), (0.8, '#000000', 20), (1, '#000000', 90)])
+        pen.fill(rect(_IBG[0], 150, _IBG[2], 20), '#0a0a0c')                                    # the gap under the door: the porch light in it
+        pen.fill(rect(_IBG[0], 150, _IBG[2], 20), '#ffc888', 150)
+        pen.linear(rect(_IBG[0], 170, _IBG[2], 330), 0, 170, 0, 500, [(0, '#ffc888', 120), (1, '#ffc888', 0)])
+        pen.fill(rect(_IBG[0], 132, _IBG[2], 20), '#b8b0a0'); pen.line(poly([(_IBG[0], 152), (_IBG[0] + _IBG[2], 152)], False), 3)
+    elif bg == 'sink':
+        _sink_bg(pen)
+    else:
+        _ibg(pen, '#20222e', '#0e0f16', 150)
+        pen.radial(None, 960, 420, 1200, [(0, '#ffd8a0', 70), (1, '#ffd8a0', 0)])
+    W, H = 820, 1060
+    if zoom == 'note':
+        sc, ox, oy = 1.6, 960, 540 - (738 - H / 2) * 1.6
+    elif bg == 'floor':
+        sc, ox, oy = 0.85, 960, 622
+    else:
+        sc, ox, oy = 0.98, 960, 560
+    if bg == 'floor':
+        oy += -(1.0 - clamp(slide, 0.0, 1.0)) * (H * sc + 200)
+    cv.save(); cv.translate(ox, oy); cv.rotate(tilt if zoom != 'note' else tilt * 0.4); cv.scale(sc, sc); cv.translate(-W / 2, -H / 2)
+    _ins_drop(pen, rect(0, 0, W, H), 10 / sc, 16 / sc, 110, 14 / sc)
+    _lab_sheet(pen, W, H, show)
+    cv.restore()
+    if bg == 'floor':                                                             # the door's bottom edge covers the part still outside
+        pen.fill(rect(_IBG[0], _IBG[1], _IBG[2], 132 - _IBG[1]), '#e6e0d2')
+        pen.linear(rect(_IBG[0], _IBG[1], _IBG[2], 150 - _IBG[1]), 0, -420, 0, 150, [(0, '#000000', 0), (0.8, '#000000', 20), (1, '#000000', 90)])
+        pen.fill(rect(_IBG[0], 132, _IBG[2], 20), '#b8b0a0'); pen.line(poly([(_IBG[0], 152), (_IBG[0] + _IBG[2], 152)], False), 3)
+        pen.fill(rect(*_IBG), '#0a1030', 70)
+
+
+def _sink_bg(pen):
+    """The kitchen's stainless sink from above: the yellow counter round it, one bowl, the drain."""
+    _ibg(pen, DP['counter'], None, 0)
+    pen.texture(rect(*_IBG), 'grunge', 0.3, 'multiply', 2.0)
+    rim = rrect(150, 60, 1620, 960, 70)
+    pen.fill(rim, '#c4c8ce'); pen.line(rim, 5)
+    bowl = rrect(210, 120, 1500, 840, 90)
+    pen.fill(bowl, '#8e949c')
+    pen.radial(bowl, 960, 540, 900, [(0, '#b8bec6', 255), (0.7, '#8a9098', 255), (1, '#5e646c', 255)])
+    pen.linear(bowl, 210, 120, 1710, 960, [(0, '#ffffff', 60), (0.3, '#ffffff', 0), (1, '#000000', 60)])
+    for k_ in range(26): pen.line(poly([(260 + k_ * 56, 150), (240 + k_ * 56, 930)], False), 1.2, '#ffffff', 26)
+    pen.line(bowl, 4, '#3a3e44')
+    pen.fill(oval(1420, 300, 62), '#4a4e56'); pen.line(oval(1420, 300, 62), 4)
+    for k_ in range(6):
+        a = k_ * math.pi / 3
+        pen.fill(oval(1420 + math.cos(a) * 30, 300 + math.sin(a) * 30, 8), '#16181c')
+    pen.fill(oval(1420, 300, 9), '#16181c')
+
+
+def _flame(pen, x, y, h, w, t, seed=0, a=235):
+    """One flame (base x, y): a flickering tongue, yellow core, orange skin."""
+    k1 = noise1(t * 7.0, seed); k2 = noise1(t * 9.0, seed + 7)
+    tip = (x + w * 0.5 * k1, y - h * (0.85 + 0.25 * k2))
+    out = smooth([(x - w * 0.5, y), (x - w * 0.42, y - h * 0.4), tip, (x + w * 0.4, y - h * 0.38), (x + w * 0.5, y)], True, 0.9)
+    pen.fill(out, '#ff7a1e', int(a * 0.85)); pen.linear(out, 0, y - h, 0, y, [(0, '#ff3a10', 120), (0.5, '#ff9a2a', 0)])
+    core = smooth([(x - w * 0.24, y), (x - w * 0.16, y - h * 0.3), (x + w * 0.2 * k1, y - h * 0.58), (x + w * 0.18, y - h * 0.28), (x + w * 0.24, y)], True, 0.9)
+    pen.fill(core, '#ffe27a', a); pen.fill(oval(x, y - h * 0.1, w * 0.12, h * 0.1), '#fffbe0', a)
+
+
+def _ins_burn(pen, t, burn=0.0, match=1.0, **kw):
+    """'Grandma put the paper in the sink and lit it with a match.' The lab sheet in the steel sink, a lit match at its
+    corner (match 0..1), the fire eating the sheet from that corner (burn 0..1; at 1 only curled ash is left). The
+    flames flicker with t."""
+    _sink_bg(pen)
+    cv = pen.cv
+    b = clamp(burn, 0.0, 1.0)
+    W, H = 820, 1060
+    sc = 0.7
+    cv.save(); cv.translate(880, 560); cv.rotate(68); cv.scale(sc, sc); cv.translate(-W / 2, -H / 2)
+    # the fire front: a ragged disc growing from the sheet's corner (W, H)
+    R = 80 + b * 1500
+    rng = np.random.default_rng(5)
+    front = [(W + 60 + math.cos(a_) * R * (1 + 0.1 * rng.uniform(-1, 1)), H + 60 + math.sin(a_) * R * (1 + 0.1 * rng.uniform(-1, 1))) for a_ in np.linspace(0, 2 * math.pi, 40, endpoint=False)]
+    burnt = smooth(front, True, 0.8) if b > 0.001 else None
+    sheet = rect(0, 0, W, H)
+    _ins_drop(pen, sheet, 12, 18, 110, 16)
+    if burnt is not None:
+        ash = inter(sheet, burnt)
+        pen.fill(ash, '#1c1a18'); pen.texture(ash, 'grunge', 0.5, 'overlay', 1.0)
+        for i in range(14):
+            ax, ay = rng.uniform(0, W), rng.uniform(0, H)
+            pen.line(smooth([(ax, ay), (ax + rng.uniform(-60, 60), ay + rng.uniform(-60, 60)), (ax + rng.uniform(-90, 90), ay + rng.uniform(-90, 90))], False), 2, '#4a4642', 120)
+    cv.save()
+    cv.clipPath(sheet, skia.ClipOp.kIntersect, True)
+    if burnt is not None: cv.clipPath(burnt, skia.ClipOp.kDifference, True)
+    _lab_sheet(pen, W, H, 8)
+    if burnt is not None:                                                         # the scorched margin ahead of the fire
+        for (w_, c_, a_) in ((150, '#6a4a20', 60), (90, '#3a2410', 120), (44, '#120c08', 220)):
+            pen.line(burnt, w_, c_, a_, blur=w_ * 0.25)
+    cv.restore()
+    if burnt is not None:
+        edge = skia.Path(burnt)
+        cv.save(); cv.clipPath(sheet, skia.ClipOp.kIntersect, True)
+        pen.line(edge, 9, '#ff8a2a', int(230 * (0.7 + 0.3 * noise1(t * 6, 3)))); pen.line(edge, 3.5, '#ffe9a0', 230)
+        cv.restore()
+    cv.restore()
+    # flames along the fire front (in screen space, so they always rise)
+    if 0.001 < b < 0.999:
+        m = skia.Matrix(); m.setTranslate(880, 560); m.preRotate(68); m.preScale(sc, sc); m.preTranslate(-W / 2, -H / 2)
+        vis = []
+        for i, (fx, fy) in enumerate(front):
+            if 0 <= fx <= W and 0 <= fy <= H:
+                q = m.mapXY(fx, fy); vis.append((q.x(), q.y(), i))
+        for (qx, qy, i) in sorted(vis, key=lambda q_: q_[1]):
+            hh = (120 + 150 * _h(i, 3)) * (0.6 + 0.8 * math.sin(math.pi * b))
+            _flame(pen, qx, qy, hh, hh * 0.5, t, i)
+        if vis:
+            cx_ = sum(q_[0] for q_ in vis) / len(vis); cy_ = sum(q_[1] for q_ in vis) / len(vis)
+            pen.radial(None, cx_, cy_ - 60, 900, [(0, '#ffb060', 130), (1, '#ffb060', 0)])
+    if match > 0.01 and b < 0.35:                                                 # the match at the corner
+        mx, my = 1210, 880
+        cv.save(); cv.translate(mx, my); cv.rotate(-38)
+        pen.fill(rrect(0, -7, 330, 14, 4), '#e8d8a8', int(255 * match)); pen.line(rrect(0, -7, 330, 14, 4), 2.5, LINE, int(255 * match))
+        pen.fill(rrect(-6, -9, 70, 18, 8), '#2a1a12', int(255 * match))
+        pen.fill(oval(-8, 0, 17, 14), '#3a1410', int(255 * match))
+        cv.restore()
+        _flame(pen, mx - 12, my + 6, 150, 70, t, 91, int(240 * match))
+        pen.radial(None, mx, my - 60, 520, [(0, '#ffc070', int(120 * match)), (1, '#ffc070', 0)])
+    pen.fill(rect(*_IBG), '#0a1030', int(110 * (1 - 0.6 * math.sin(math.pi * b))))
+
+
+def _ins_ticket(pen, t, text='MILO', old=0.0, bg='wait', tilt=4.0, number='', **kw):
+    """A paper ticket from the take-a-number machine: text = what it says ('MILO', 'RUTH', or '' for Grandpa's: so old
+    the ink is gone, only a ghost where it was); old 0..1 yellows and softens the paper; bg 'wait' (the sick green dark of
+    the waiting room) | 'dawn' (the armchair's arm in the sunrise) | 'dark'."""
+    if bg == 'wait':
+        _ibg(pen, '#3c4630', '#141a10', 150); pen.radial(None, 960, 300, 1300, [(0, D_TUBE, 60), (1, D_TUBE, 0)])
+    elif bg == 'dawn':
+        _ibg(pen, DP['arm'], _darken(DP['arm'], 0.4), 120); pen.texture(rect(*_IBG), 'fabric', 0.6, 'overlay', 1.6)
+        pen.radial(None, 300, 200, 1500, [(0, D_SUN, 110), (1, D_SUN, 0)])
+    else:
+        _ibg(pen, '#1e2028', '#0c0d12', 150)
+    if not text: old = max(old, 0.85)
+    paper = mix('#f6f0e2', '#cdb78a', old)
+    W, H = 560, 760
+    cv = pen.cv
+    cv.save(); cv.translate(960, 550); cv.rotate(tilt); cv.translate(-W / 2, -H / 2)
+    rng = np.random.default_rng(4)
+    top = [(W * k_ / 28, (6 if k_ % 2 else 0) + rng.uniform(-1.5, 1.5)) for k_ in range(29)]                   # the torn perforation
+    tk = poly(top + [(W, H - 14), (W - 14, H), (14, H), (0, H - 14)])
+    _ins_drop(pen, tk, 10, 18, 120, 14)
+    if old > 0.3: _tea_paper(pen, tk, 9, 0.8, paper)
+    else:
+        pen.fill(tk, paper); pen.texture(tk, 'paper', 0.35, 'multiply', 0.8)
+    a = int(255 * (1 - 0.55 * old))
+    red = mix('#c4201e', '#9a6a4a', old)
+    band = inter(tk, rect(0, 0, W, 150))
+    pen.fill(band, red, a)
+    btext(pen, 'PLEASE TAKE A SEAT', W / 2, 96, 'sans_b', 38, paper, a, 'center', spacing=0.05)
+    btext(pen, 'YOUR TURN', W / 2, 226, 'sans_b', 40, red, int(a * 0.9), 'center', spacing=0.12)
+    pen.fill(rect(60, 250, W - 120, 4), red, int(a * 0.8))
+    if text:
+        size = 210 if len(text) <= 4 else 170
+        btext(pen, text, W / 2 + 3, 470, 'head', size, red, 70, 'center', spacing=0.02)                        # the stamp's double strike
+        btext(pen, text, W / 2, 466, 'head', size, '#1a1414', 235, 'center', spacing=0.02)
+    else:
+        btext(pen, '0000', W / 2, 466, 'head', 200, '#6a5430', 26, 'center', spacing=0.02)                       # a ghost of where the ink was
+    pen.fill(rect(60, 520, W - 120, 4), red, int(a * 0.8))
+    btext(pen, 'IT CAN WAIT', W / 2, 600, 'sans_b', 44, red, int(a * 0.85), 'center', spacing=0.1)
+    btext(pen, 'No. ' + (number or ('%04d' % (1979 if not text else (7 if text == 'MILO' else 12)))), W / 2, 680, 'mono', 34, '#3a3028', int(a * 0.7), 'center')
+    pen.linear(tk, 0, 0, W, H, [(0, '#ffffff', 40), (0.4, '#ffffff', 0), (1, '#000000', 50)])
+    pen.line(tk, 3, '#2a2420', 200)
+    cv.restore()
+
+
+def _ins_sign(pen, t, digits='1979', k=1.0, flick=None, **kw):
+    """NOW SERVING: 1979. The sign hung on its chains: red numbers that stopped moving a long time ago (k = glow;
+    flick = f(t) 0..1 multiplies it: a tired segment stutter)."""
+    kk = k * (flick(t) if callable(flick) else 1.0)
+    _ibg(pen, '#4a5236', '#1c2214', 150)
+    pat(pen, 1920, 1080, 'ditsy', '#6a6e4a', 120, 21, None, 3.2)
+    pen.fill(rect(*_IBG), '#0c1008', 90)
+    for cx_ in (520, 1400):
+        pen.dashed(poly([(cx_, -420), (cx_, 250)], False), 12, '#6a6a66', 240, 26, 12)
+        pen.dashed(poly([(cx_ + 5, -420), (cx_ + 5, 250)], False), 4, '#2a2a28', 200, 12, 26, 13)
+    box = rrect(300, 240, 1320, 600, 16)
+    _ins_drop(pen, box, 18, 30, 140, 26)
+    pen.fill(box, '#141416'); pen.line(box, 6)
+    pen.fill(rrect(330, 270, 1260, 540, 8), '#08080a')
+    btext(pen, 'NOW SERVING', 960, 400, 'sans_b', 112, '#e8e4dc', 240, 'center', spacing=0.1)
+    pen.fill(rect(420, 440, 1080, 5), '#3a3a3a')
+    dh = 290.0
+    dw = len(digits) * (dh * 0.52 + dh * 0.22) - dh * 0.22
+    on = mix('#3a0c0a', '#ff2a1e', clamp(kk, 0, 1))
+    _seg7_text(pen, digits, 960 - dw / 2 - 12, 480, dh, on, '#240a08')
+    if kk > 0.02:
+        pen.radial(None, 960, 625, 900, [(0, '#ff2a1e', int(90 * kk)), (1, '#ff2a1e', 0)], sy=0.5, clip=False)
+    pen.linear(box, 300, 240, 1620, 840, [(0, '#ffffff', 30), (0.25, '#ffffff', 0), (1, '#000000', 40)])
+    for (sx, sy) in ((330, 262), (1590, 262), (330, 818), (1590, 818)): pen.fill(oval(sx, sy, 7), '#5a5a5a')
+
+
+def _later_finger(pen, pts, w0=46.0, w1=20.0, c='#141418'):
+    """One of HIS fingers: long, thin, black, jointed (pts = the joints from the knuckle to the tip, screen px)."""
+    n = len(pts)
+    for i in range(n - 1):
+        a_, b_ = pts[i], pts[i + 1]
+        wa = w0 + (w1 - w0) * i / (n - 1); wb = w0 + (w1 - w0) * (i + 1) / (n - 1)
+        dx, dy = b_[0] - a_[0], b_[1] - a_[1]; L = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / L, dx / L
+        seg = smooth([(a_[0] + nx * wa / 2, a_[1] + ny * wa / 2), ((a_[0] + b_[0]) / 2 + nx * (wa + wb) * 0.21, (a_[1] + b_[1]) / 2 + ny * (wa + wb) * 0.21),
+                      (b_[0] + nx * wb / 2, b_[1] + ny * wb / 2), (b_[0] - nx * wb / 2, b_[1] - ny * wb / 2),
+                      ((a_[0] + b_[0]) / 2 - nx * (wa + wb) * 0.21, (a_[1] + b_[1]) / 2 - ny * (wa + wb) * 0.21), (a_[0] - nx * wa / 2, a_[1] - ny * wa / 2)], True, 0.6)
+        pen.fill(seg, c); pen.line(seg, 3, '#000000', 230)
+        pen.line(poly([(a_[0] + nx * wa * 0.22, a_[1] + ny * wa * 0.22), (b_[0] + nx * wb * 0.22, b_[1] + ny * wb * 0.22)], False), max(2.0, wa * 0.12), '#5a6078', 110)
+    for i, q in enumerate(pts[:-1]):                                             # the knuckles
+        w = (w0 + (w1 - w0) * i / (n - 1)) * 0.62
+        pen.fill(oval(q[0], q[1], w, w), c); pen.line(oval(q[0], q[1], w, w), 2.5, '#000000', 230)
+        pen.fill(oval(q[0] - w * 0.25, q[1] - w * 0.3, w * 0.3), '#6a7088', 110)
+    tip = pts[-1]; pr = pts[-2]
+    dx, dy = tip[0] - pr[0], tip[1] - pr[1]; L = math.hypot(dx, dy) or 1.0
+    nail = smooth([(tip[0] - dy / L * w1 * 0.4, tip[1] + dx / L * w1 * 0.4), (tip[0] + dx / L * w1 * 0.9, tip[1] + dy / L * w1 * 0.9), (tip[0] + dy / L * w1 * 0.4, tip[1] - dx / L * w1 * 0.4)], True, 0.5)
+    pen.fill(nail, '#2a2c36'); pen.line(nail, 2, '#000000', 230)
+
+
+def _ins_wrist(pen, t, press=1.0, count=0, cold=1.0, free=0.0, **kw):
+    """Rule seven: the narrator's forearm, palm up, the hoodie cuff pushed back, and HIS two long black fingers pressed to
+    the inside of the wrist, counting (press 0..1 lowers them onto the skin; count = 1, 2, 3: a slow beat ring under the
+    tips; cold: the skin blanches blue round them; free 0..1: the wrist pulls away)."""
+    _ibg(pen, '#3c4630', '#12170e', 160)
+    pen.radial(None, 700, 200, 1400, [(0, D_TUBE, 70), (1, D_TUBE, 0)])
+    cv = pen.cv
+    fr = clamp(free, 0.0, 1.0)
+    cv.save(); cv.translate(-520 * fr, 60 * fr)
+    cv.save(); cv.translate(560, 600); cv.rotate(-90)
+    s = 430.0
+    cuff = '#7a2434'
+    sl = poly([(-0.72 * s, 2.3 * s), (0.76 * s, 2.3 * s), (0.84 * s, 5.0 * s), (-0.8 * s, 5.0 * s)])        # the sleeve runs on out of frame
+    pen.fill(sl, cuff); pen.linear(sl, -0.8 * s, 0, 0.84 * s, 0, [(0, '#ffffff', 30), (0.5, '#000000', 0), (1, '#000000', 120)])
+    cv.restore()
+    _hand_palm(pen, 560, 600, s, cuff=cuff, curl=0.28, ang=-90.0)
+    # the inside of the wrist: tendons, two veins
+    cv.save(); cv.translate(560, 600); cv.rotate(-90)
+    for (x_, c_, w_) in ((-0.1, '#c4927d', 5), (0.08, '#c4927d', 5)):
+        pen.line(smooth([(x_ * s, 0.66 * s), (x_ * s * 0.9, 0.9 * s), (x_ * s, 1.15 * s)], False), w_, c_, 110)
+    for pts in ([(-0.2, 0.7), (-0.14, 0.92), (-0.2, 1.16)], [(0.2, 0.66), (0.24, 0.9), (0.15, 1.15)]):
+        pen.line(smooth([(a_ * s, b_ * s) for (a_, b_) in pts], False), 7, '#6a8ab0', 90, blur=2)
+    cv.restore()
+    wx, wy = 560 + 0.9 * s, 600.0                                               # the pulse point on the wrist (screen)
+    if cold > 0.01:
+        pen.radial(None, wx, wy - 20, 210, [(0, '#bcd0f0', int(120 * cold * press)), (1, '#bcd0f0', 0)])
+    if count:
+        ph = (t * 0.55) % 1.0
+        pen.line(oval(wx, wy - 10, 60 + 120 * ph, 44 + 90 * ph), 5, '#e8f0ff', int(150 * (1 - ph)))
+    cv.restore()
+    # HIS fingers: down out of the dark above, the two tips flat on the wrist
+    lift = (1.0 - clamp(press, 0.0, 1.0)) * 150.0 + 240.0 * fr
+    for i, dx in enumerate((-46.0, 44.0)):
+        tipx, tipy = wx + dx, wy - 26 + i * 16 - lift
+        pts = [(tipx + 760 + i * 70, tipy - 980), (tipx + 470 + i * 40, tipy - 560), (tipx + 200 + i * 16, tipy - 250), (tipx + 44, tipy - 60), (tipx, tipy)]
+        cv.save(); cv.translate(14, 22)
+        pen.line(smooth(pts[2:], False, 0.8), 40, '#000000', int(110 * press * (1 - fr)), blur=14); cv.restore()
+        _later_finger(pen, pts, 84.0, 40.0)
+    pen.fill(rect(*_IBG), '#0c1008', 50)
+
+
+def _ins_clipboard(pen, t, pen_=True, click=None, **kw):
+    """His clipboard with no paper on it: brown board, the steel clip holding only a torn corner; it lies on the grey
+    white coat across his knees, the click pen beside it (click = f(t) 0..1 presses the button)."""
+    _ibg(pen, '#8a8c88', '#4a4c4a', 140)
+    pen.texture(rect(*_IBG), 'fabric', 0.6, 'overlay', 1.8); pen.texture(rect(*_IBG), 'grunge', 0.4, 'multiply', 2.4)
+    for pts in ([(-300, 300), (500, 420), (1200, 380), (2300, 500)], [(-300, 900), (700, 980), (1500, 900), (2300, 1000)]):
+        pen.line(smooth(pts, False, 0.9), 14, '#2a2c2a', 70, blur=6)
+    pen.fill(rect(*_IBG), '#1a200e', 70)
+    cv = pen.cv
+    cv.save(); cv.translate(900, 560); cv.rotate(-6)
+    W, H = 640, 880
+    bd = rrect(-W / 2, -H / 2, W, H, 26)
+    _ins_drop(pen, bd, 16, 26, 130, 20)
+    pen.fill(bd, '#7a5230'); pen.texture(bd, 'wood', 0.5, 'overlay', 1.0, 90); pen.texture(bd, 'grunge', 0.35, 'multiply', 1.4)
+    pen.linear(bd, -W / 2, -H / 2, W / 2, H / 2, [(0, '#ffffff', 36), (0.3, '#ffffff', 0), (1, '#000000', 70)])
+    pen.line(bd, 4)
+    ghost = rrect(-W / 2 + 46, -H / 2 + 110, W - 92, H - 170, 4)                 # the paler rectangle where paper lay for years
+    pen.fill(ghost, '#f2e0c0', 30); pen.line(ghost, 1.5, '#3a2410', 60)
+    scrap = poly([(-90, -H / 2 + 60), (86, -H / 2 + 60), (98, -H / 2 + 150), (52, -H / 2 + 132), (20, -H / 2 + 166), (-30, -H / 2 + 138), (-70, -H / 2 + 158)])
+    pen.fill(scrap, '#e8dcc0'); pen.texture(scrap, 'paper', 0.4, 'multiply', 0.8); pen.line(scrap, 2, '#5a4a30', 190)
+    cl = rrect(-150, -H / 2 - 16, 300, 120, 18)
+    pen.fill(cl, '#b4b8c0'); pen.linear(cl, 0, -H / 2 - 16, 0, -H / 2 + 104, [(0, '#ffffff', 130), (0.4, '#ffffff', 0), (1, '#000000', 90)]); pen.line(cl, 4)
+    pen.fill(rrect(-70, -H / 2 - 40, 140, 52, 20), '#9a9ea6'); pen.line(rrect(-70, -H / 2 - 40, 140, 52, 20), 4)
+    pen.fill(oval(0, -H / 2 - 14, 13), '#3a3e46')
+    for sx in (-124, 124): pen.fill(oval(sx, -H / 2 + 80, 7), '#6a6e76')
+    cv.restore()
+    if pen_:
+        cv.save(); cv.translate(1500, 600); cv.rotate(74)
+        _click_pen(pen, click(t) if callable(click) else (click or 0.0))
+        cv.restore()
+
+
+def _click_pen(pen, k=0.0, L=620.0):
+    """A retractable ballpoint lying along +x from (0, 0) (the button end) to (L, 0) (the tip): k 0..1 = the button down,
+    the point out."""
+    k = clamp(k, 0.0, 1.0)
+    barrel = rrect(70, -22, L - 190, 44, 14)
+    _ins_drop(pen, rrect(0, -22, L, 44, 14), 8, 14, 110, 10)
+    btn = rrect(18 * k, -12, 62, 24, 8)
+    pen.fill(btn, '#b4b8c0'); pen.line(btn, 3)
+    pen.fill(barrel, '#1c2030'); pen.linear(barrel, 0, -22, 0, 22, [(0, '#ffffff', 80), (0.35, '#ffffff', 0), (1, '#000000', 90)]); pen.line(barrel, 3.5)
+    clip_ = rrect(84, -34, 220, 16, 6)
+    pen.fill(clip_, '#b4b8c0'); pen.linear(clip_, 0, -34, 0, -18, [(0, '#ffffff', 130), (1, '#000000', 60)]); pen.line(clip_, 3)
+    ring = rect(70, -24, 26, 48); pen.fill(ring, '#b4b8c0'); pen.line(ring, 3)
+    cone = poly([(L - 120, -22), (L - 30, -9), (L - 30, 9), (L - 120, 22)])
+    pen.fill(cone, '#b4b8c0'); pen.linear(cone, 0, -22, 0, 22, [(0, '#ffffff', 130), (0.4, '#ffffff', 0), (1, '#000000', 90)]); pen.line(cone, 3)
+    if k > 0.05:
+        tip = poly([(L - 30, -5), (L - 30 + 26 * k, -2.5), (L - 30 + 26 * k, 2.5), (L - 30, 5)])
+        pen.fill(tip, '#d8c080'); pen.line(tip, 2)
+
+
+def _ins_pen(pen, t, click=None, **kw):
+    """'And he was clicking his pen.' The click pen held in HIS long black fingers, the thumb on the button (click = f(t)
+    0..1: the thumb presses, the point comes out)."""
+    k = clamp(click(t) if callable(click) else (click or 0.0), 0.0, 1.0)
+    _ibg(pen, '#3c4630', '#10140c', 160)
+    pen.radial(None, 1300, 150, 1400, [(0, D_TUBE, 80), (1, D_TUBE, 0)])
+    cv = pen.cv
+    # the fingers behind the pen (index and middle wrapped round the barrel)
+    _later_finger(pen, [(2300, 1400), (1700, 1040), (1250, 800), (980, 690), (800, 706)], 70.0, 34.0)
+    _later_finger(pen, [(2300, 1150), (1760, 880), (1340, 660), (1090, 560), (930, 575)], 66.0, 32.0)
+    cv.save(); cv.translate(560, 330); cv.rotate(26)
+    _click_pen(pen, k, 900.0)
+    cv.restore()
+    # the thumb over the button end
+    tx, ty = 560 + 30 * k * math.cos(math.radians(26)) - 4, 330 + 30 * k * math.sin(math.radians(26)) - 2
+    _later_finger(pen, [(2300, 300), (1500, 120), (980, 110), (700, 200), (tx + 30, ty + 6)], 76.0, 40.0)
+    if k > 0.5: pen.line(oval(tx, ty, 60, 60), 4, '#e8f0d0', int(120 * (k - 0.5) * 2))
+    pen.fill(rect(*_IBG), '#0c1008', 40)
+
+
+def _ins_tape(pen, t, loose=0.0, eyes=1.0, gap=4, **kw):
+    """His head, close: old yellowed medical tape wound round and round, one thin gap, and in the gap two pale, patient
+    eyes (eyes 0..1). loose 0..1: the strips come away one by one from the top (each lifts at one end, curls and
+    hangs), and there is only dark under them."""
+    _ibg(pen, '#2c3424', '#0c100a', 170)
+    cv = pen.cv
+    head = smooth([(560, 1500), (500, 700), (640, 60), (960, -420), (1280, 60), (1420, 700), (1360, 1500)], True, 0.7)
+    pen.fill(head, '#0a0b0c')
+    N = 11
+    rng = np.random.default_rng(6)
+    lo = clamp(loose, 0.0, 1.0)
+    strips = []
+    for i in range(N):
+        y = -60 + i * 108 + rng.uniform(-10, 10)
+        strips.append((i, y, rng.uniform(-3.5, 3.5), 118 + rng.uniform(-8, 14)))
+    cv.save(); cv.clipPath(head, skia.ClipOp.kIntersect, True)
+    strips[gap] = (strips[gap][0], strips[gap][1] - 30, strips[gap][2] * 0.3, strips[gap][3])
+    strips[gap + 1] = (strips[gap + 1][0], strips[gap + 1][1] + 30, strips[gap + 1][2] * 0.3, strips[gap + 1][3])
+    if eyes > 0.01:                                                              # the gap: his eyes in their dark sockets
+        gy = (strips[gap][1] + strips[gap][3] / 2 + strips[gap + 1][1] - strips[gap + 1][3] / 2) / 2
+        for ex in (800, 1120):
+            pen.fill(oval(ex, gy, 96, 46), '#050506')
+            eye = oval(ex, gy, 58, 26)
+            pen.fill(eye, '#d8dcd0', int(255 * eyes)); pen.fill(oval(ex, gy, 22, 22), '#aab4b8', int(255 * eyes)); pen.fill(oval(ex, gy, 8.5), '#0a0a0c', int(255 * eyes))
+            pen.fill(oval(ex - 8, gy - 7, 4.5), '#ffffff', int(230 * eyes))
+            pen.line(smooth([(ex - 66, gy - 6), (ex, gy - 31), (ex + 66, gy - 6)], False), 7, '#050506', int(255 * eyes))
+    cv.restore()
+    for (i, y, rot, h) in strips:
+        k = clamp(lo * (N + 1.5) - i, 0.0, 1.0)                                  # this strip's own peel 0..1
+        cv.save(); cv.translate(960, y); cv.rotate(rot)
+        w = 1700.0
+        if k < 0.999:
+            x_cut = -w / 2 + w * (1 - k)                                         # what is still stuck (from the left)
+            st = rect(-w / 2, -h / 2, x_cut + w / 2, h)
+            cv.save()
+            inv = skia.Matrix(); inv.setRotate(-rot); inv.preTranslate(-960, -y)
+            hp = skia.Path(head); hp.transform(inv)
+            cv.clipPath(hp, skia.ClipOp.kIntersect, True)
+            pen.fill(st, '#000000', 60, blur=5)
+            pen.fill(st, mix('#d8c47a', '#c0a85a', _h(i, 3)))
+            pen.texture(st, 'fabric', 0.5, 'overlay', 0.9); pen.texture(st, 'grunge', 0.4, 'multiply', 1.6)
+            pen.linear(st, 0, -h / 2, 0, h / 2, [(0, '#ffffff', 50), (0.25, '#ffffff', 0), (0.8, '#3a2a08', 0), (1, '#3a2a08', 110)])
+            for xx in np.arange(-w / 2, x_cut, 26.0): pen.fill(rect(xx, -h / 2, 1.2, h), '#6a5420', 40)
+            pen.line(poly([(-w / 2, -h / 2), (x_cut, -h / 2)], False), 2.5, '#5a4418', 170); pen.line(poly([(-w / 2, h / 2), (x_cut, h / 2)], False), 3, '#3a2a0c', 200)
+            cv.restore()
+        if k > 0.001:                                                            # the lifted end: a curl hanging off the head
+            x_cut = -w / 2 + w * (1 - k)
+            L = min(520.0, w * k)
+            sway = 10 * math.sin(t * 1.3 + i)
+            curl = smooth([(x_cut, 0), (x_cut + L * 0.3, -40 - 60 * k), (x_cut + L * 0.62 + sway, 30 + 120 * k), (x_cut + L * 0.5 + sway, 150 + 240 * k)], False, 0.9)
+            pen.line(curl, h * 0.82, '#000000', 70, blur=6)
+            pen.line(curl, h * 0.8, '#8a7434', 255, cap='butt'); pen.line(curl, h * 0.8 - 8, '#b89e58', 255, cap='butt')
+            pen.line(curl, 3, '#5a4418', 160)
+        cv.restore()
+    pen.radial(None, 700, 250, 1500, [(0, D_TUBE, 60), (1, D_TUBE, 0)])
+    pen.linear(rect(*_IBG), 0, 0, 1920, 0, [(0, '#000000', 110), (0.3, '#000000', 0), (0.7, '#000000', 0), (1, '#000000', 130)])
+
+
+def _ins_glucose(pen, t, value=104, bg='morning', trend='flat', name='Milo', **kw):
+    """Milo's phone, fifteen years on: his glucose sensor's app: the big number (value, mg/dL), 'In range', the last
+    three hours running along the green band. bg 'morning' (the river and the sunrise behind, out of focus) | 'dark'."""
+    if bg == 'morning':
+        _ibg(pen, '#a8c0dc', '#ffe0b8', 60)
+        pen.fill(rect(_IBG[0], 620, _IBG[2], 900), '#7a98bc'); pen.fill(rect(_IBG[0], 880, _IBG[2], 700), '#6a8a4a')
+        pen.radial(None, 1500, 560, 700, [(0, '#fff2c8', 230), (0.3, '#ffd8a0', 120), (1, '#ffd8a0', 0)], clip=False)
+        pen.fill(rect(*_IBG), '#ffffff', 26, blur=0)
+    else:
+        _ibg(pen, '#20222e', '#0c0d14', 150)
+    cv = pen.cv
+    cv.save(); cv.translate(960, 560); cv.rotate(-5.0)
+    W, H = 520, 1020
+    body = rrect(-W / 2, -H / 2, W, H, 62)
+    _ins_drop(pen, body, 14, 24, 130, 22)
+    pen.fill(body, '#14161b'); pen.line(body, 4)
+    sc = rrect(-W / 2 + 16, -H / 2 + 16, W - 32, H - 32, 48)
+    pen.fill(sc, '#f6f8f4')
+    cv.save(); cv.clipPath(sc, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(-W / 2, -H / 2, W, 250), '#2f9a6a')
+    btext(pen, '6:42', -W / 2 + 46, -H / 2 + 62, 'sans_b', 26, '#ffffff', 235)
+    btext(pen, 'Good morning, %s' % name, 0, -H / 2 + 128, 'sans_b', 34, '#ffffff', 245, 'center')
+    btext(pen, 'sensor active', 0, -H / 2 + 172, 'sans', 24, '#d8f2e4', 230, 'center')
+    disc = oval(0, -H / 2 + 400, 176)
+    pen.fill(disc, '#ffffff'); pen.line(disc, 14, '#2f9a6a')
+    btext(pen, str(value), -10, -H / 2 + 438, 'sans_b', 150, '#1a3a2c', 250, 'center')
+    btext(pen, 'mg/dL', 0, -H / 2 + 500, 'sans', 30, '#4a6a5a', 230, 'center')
+    ax, ay = 196, -H / 2 + 400                                                    # the trend arrow
+    da = {'flat': 0.0, 'up': -45.0, 'down': 45.0}.get(trend, 0.0)
+    cv.save(); cv.translate(ax, ay); cv.rotate(da)
+    pen.fill(oval(0, 0, 34), '#2f9a6a'); pen.line(poly([(-16, 0), (14, 0)], False), 7, '#ffffff'); pen.line(poly([(4, -11), (16, 0), (4, 11)], False), 7, '#ffffff')
+    cv.restore()
+    btext(pen, 'In range', 0, -H / 2 + 650, 'sans_b', 44, '#2f9a6a', 245, 'center')
+    gx0, gx1, gy0, gy1 = -W / 2 + 50, W / 2 - 50, -H / 2 + 700, -H / 2 + 900       # the graph
+    pen.fill(rrect(gx0, gy0, gx1 - gx0, gy1 - gy0, 12), '#eef2ee')
+    pen.fill(rect(gx0, gy0 + 60, gx1 - gx0, 80), '#c8ecd4')
+    pts = []
+    for i in range(37):
+        u = i / 36.0
+        vv = 118 + 20 * math.sin(u * 5.2 + 0.6) - 14 * u + 6 * math.sin(u * 17)
+        if i == 36: vv = float(value)
+        pts.append((gx0 + u * (gx1 - gx0), gy0 + 60 + 80 * (1 - (vv - 70) / 110.0)))
+    pen.line(smooth(pts, False, 0.9), 6, '#1a6a4a')
+    pen.fill(oval(pts[-1][0], pts[-1][1], 11), '#1a6a4a'); pen.line(oval(pts[-1][0], pts[-1][1], 11), 3, '#ffffff')
+    for i, s_ in enumerate(('3 h', '2 h', '1 h', 'now')): btext(pen, s_, gx0 + i * (gx1 - gx0) / 3, gy1 + 34, 'sans', 20, '#6a7a72', 220, 'center')
+    cv.restore()
+    pen.linear(sc, -W / 2, -H / 2, W / 2, H / 2, [(0, '#ffffff', 46), (0.3, '#ffffff', 0), (1, '#000000', 20)])
+    cam_ = oval(0, -H / 2 + 36, 9); pen.fill(cam_, '#14161b')
+    cv.restore()
+
+
+def _ins_clock_d(pen, t, time=(4, 12, 0), slow=0.0, bg='wait', **kw):
+    """The clock on the waiting room's wall (a plain institutional dial, a red second hand). time = (h, m, s) or f(t) ->
+    (h, m, s): give it a second hand that brakes ('the clock on the wall slowed down'); slow 0..1 adds the after-image of
+    a hand dragging through thick time. bg 'wait' | 'kitchen' (Ruth's red kitchen clock at night)."""
+    tm = time(t) if callable(time) else time
+    hh, mm = tm[0], tm[1]; ss = tm[2] if len(tm) > 2 else 0.0
+    if bg == 'wait':
+        _ibg(pen, '#8a9068', '#3e4430', 150)
+        pat(pen, 1920, 1080, 'ditsy', '#6a6e4a', 130, 21, None, 3.2)
+        pen.fill(rect(*_IBG), '#141a08', 110)
+        rimc = '#2a2c2a'
+    else:
+        _ibg(pen, DP['kit_wall'], None, 0); pat(pen, 1920, 1080, 'ditsy', DP['kit_ink'], 150, 25, None, 3.0)
+        pen.fill(rect(*_IBG), '#0c1230', 120)
+        rimc = '#c83a32'
+    R = 420.0
+    pen.fill(oval(985, 570, R + 14), '#000000', 130, blur=22)
+    pen.fill(oval(960, 540, R), rimc); pen.fill(oval(960, 540, R * 0.9), '#f2f0e4' if bg == 'wait' else '#f8f4e8'); pen.line(oval(960, 540, R), 6)
+    if bg == 'wait': pen.texture(oval(960, 540, R * 0.9), 'grunge', 0.35, 'multiply', 1.6)
+    for k_ in range(60):
+        a = 2 * math.pi * k_ / 60
+        r0 = R * (0.76 if k_ % 5 == 0 else 0.82)
+        pen.seg((960 + math.sin(a) * r0, 540 - math.cos(a) * r0), (960 + math.sin(a) * R * 0.86, 540 - math.cos(a) * R * 0.86), 7 if k_ % 5 == 0 else 2.5, '#1a1a1a')
+    for k_ in range(1, 13):
+        a = 2 * math.pi * k_ / 12
+        btext(pen, str(k_), 960 + math.sin(a) * R * 0.63, 540 - math.cos(a) * R * 0.63 + 26, 'sans_b', 74, '#1a1a1a', 240, 'center')
+    am = 2 * math.pi * (mm + ss / 60.0) / 60; ah = 2 * math.pi * ((hh % 12) + mm / 60.0) / 12; asec = 2 * math.pi * ss / 60
+    pen.seg((960, 540), (960 + math.sin(ah) * R * 0.46, 540 - math.cos(ah) * R * 0.46), 20, '#1a1a1a')
+    pen.seg((960, 540), (960 + math.sin(am) * R * 0.7, 540 - math.cos(am) * R * 0.7), 12, '#1a1a1a')
+    if slow > 0.01:
+        for k_ in range(1, 7):
+            a2 = asec - k_ * 0.045 * slow * 3.0
+            pen.seg((960, 540), (960 + math.sin(a2) * R * 0.78, 540 - math.cos(a2) * R * 0.78), 5, '#c82a2a', int(90 * slow * (1 - k_ / 7.0)))
+    pen.seg((960 - math.sin(asec) * 70, 540 + math.cos(asec) * 70), (960 + math.sin(asec) * R * 0.78, 540 - math.cos(asec) * R * 0.78), 5, '#c82a2a')
+    pen.fill(oval(960, 540, 20), '#c82a2a'); pen.line(oval(960, 540, 20), 3)
+    pen.linear(oval(960, 540, R * 0.9), 560, 160, 1360, 920, [(0, '#ffffff', 80), (0.35, '#ffffff', 0), (1, '#000000', 30)])
+    if bg == 'wait': pen.radial(None, 500, 100, 1500, [(0, D_TUBE, 70), (1, D_TUBE, 0)])
+
+
+def _ins_coffee(pen, t, steam=1.0, cold=0.0, tod='sunrise', **kw):
+    """'At sunrise, Grandma brought him a cup of coffee.' The cup and saucer on the little round table by the armchair in
+    the first sun (steam 0..1; cold 0..1: no steam, a skin on the coffee: he never drank it)."""
+    _ibg(pen, DP['liv79_paper'], _darken(DP['liv79_paper'], 0.3), 100)
+    pat(pen, 1920, 1080, 'roses', DP['liv79_ink'], 140, 21, DP['liv79_ink2'], 3.0)
+    pen.fill(rect(*_IBG), '#3a1e10', 70)
+    arm = rrect(1380, 380, 1200, 1300, 150)                                      # the brown armchair's arm at the edge of frame
+    pen.fill(arm, DP['arm79']); pen.texture(arm, 'fabric', 0.6, 'overlay', 1.6)
+    pen.linear(arm, 1380, 0, 2400, 0, [(0, '#ffffff', 40), (0.2, '#000000', 0), (1, '#000000', 120)]); pen.line(arm, 5)
+    top = oval(820, 930, 900, 300)
+    pen.fill(oval(840, 965, 900, 300), '#000000', 100, blur=20)
+    pen.fill(top, '#7a4a2a'); pen.texture(top, 'wood', 0.5, 'overlay', 1.2)
+    pen.linear(top, 0, 630, 0, 1230, [(0, '#ffffff', 40), (0.4, '#000000', 0), (1, '#000000', 90)]); pen.line(top, 5)
+    pen.fill(oval(840, 870, 380, 96), '#000000', 90, blur=14)
+    sau = oval(820, 846, 380, 100)
+    pen.fill(sau, '#d8cdb8'); pen.line(sau, 4); pen.line(oval(820, 842, 300, 76), 5, '#b86a2a', 200)
+    cup = smooth([(590, 560), (600, 760), (680, 836), (960, 836), (1040, 760), (1050, 560)], True, 0.5)
+    hd = smooth([(1040, 610), (1150, 600), (1180, 690), (1110, 770), (1030, 750)], False, 0.9)
+    pen.line(hd, 40, LINE); pen.line(hd, 30, '#d8cdb8')
+    pen.fill(cup, '#d8cdb8'); pen.linear(cup, 590, 0, 1050, 0, [(0, '#ffffff', 60), (0.3, '#ffffff', 0), (1, '#000000', 80)])
+    cv = pen.cv
+    cv.save(); cv.clipPath(cup, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(560, 640, 520, 44), '#b86a2a'); pen.fill(rect(560, 696, 520, 14), '#d8a040')
+    cv.restore(); pen.line(cup, 5)
+    rim = oval(820, 560, 230, 62)
+    pen.fill(rim, '#e2d8c4'); pen.line(rim, 5)
+    cof = oval(820, 566, 204, 50)
+    pen.fill(cof, mix('#3a1e10', '#4a2e1c', cold)); pen.linear(cof, 620, 520, 1020, 610, [(0, '#ffffff', 60), (0.4, '#ffffff', 0)])
+    if cold > 0.3: pen.line(oval(800, 566, 150, 34), 3, '#8a6a4a', int(120 * cold))
+    st = clamp(steam * (1 - cold), 0.0, 1.0)
+    if st > 0.02:
+        for i in range(3):
+            x = 740 + i * 80
+            ph = t * 0.35 + i * 0.37
+            pts = [(x + 26 * math.sin(ph * 2 + k_ * 0.9), 520 - k_ * 86) for k_ in range(6)]
+            pen.line(smooth(pts, False, 1.0), 26, '#ffffff', int(70 * st), blur=10)
+    pen.radial(None, 200, 100, 1700, [(0, D_SUN, 130), (0.6, D_SUN, 30), (1, D_SUN, 0)])            # the first sun through the window
+    pen.linear(rect(*_IBG), 0, 0, 1920, 1080, [(0, '#ffe2b0', 50), (0.5, '#ffe2b0', 0)])
+
+
+def _ins_advice(pen, t, show=5, hl=0, **kw):
+    """The outro's list, written on a notepad under the lamp: how to beat the Waiting Man, for real (show = items written,
+    hl = item lit). Big enough to read on a phone."""
+    _ibg(pen, '#8a5a38', '#4a2e1c', 120)
+    pen.texture(rect(*_IBG), 'wood', 0.5, 'overlay', 1.4)
+    pen.radial(None, 300, 60, 1900, [(0, D_LAMP, 150), (0.6, D_LAMP, 30), (1, D_LAMP, 0)])
+    x0, y0, W, H = 170, 26, 1580, 1030
+    pad = rrect(x0, y0, W, H, 10)
+    _ins_drop(pen, pad, 12, 20, 130, 18)
+    pen.fill(pad, '#fbf6e6'); pen.texture(pad, 'paper', 0.3, 'multiply', 0.8)
+    pen.fill(rect(x0, y0, W, 96), '#1e6a8a')
+    btext(pen, 'HOW TO BEAT THE WAITING MAN', x0 + W / 2, y0 + 68, 'sans_b', 56, '#ffffff', 248, 'center', spacing=0.05)
+    y = y0 + 168
+    for i, (lead, ans) in enumerate(D_ADVICE[:int(show)]):
+        ll = _wrap_hand(lead, 'sans_b', 43, W - 230)
+        hgt = len(ll) * 52 + 66
+        if hl == i + 1:
+            pen.fill(rrect(x0 + 30, y - 46, W - 60, hgt + 6, 12), '#ffe9a0', 170)
+        pen.fill(oval(x0 + 84, y - 12, 30), '#1e6a8a'); btext(pen, str(i + 1), x0 + 84, y + 2, 'sans_b', 38, '#ffffff', 250, 'center')
+        for k_, l_ in enumerate(ll): btext(pen, l_, x0 + 140, y + k_ * 52, 'sans_b', 43, '#22303a', 245)
+        btext(pen, ans, x0 + 140, y + len(ll) * 52 + 6, 'hand', 58, '#c8302a', 245, skew=-0.03)
+        y += hgt + 34
+    pen.linear(pad, x0, y0, x0 + W, y0 + H, [(0, '#ffffff', 0), (0.7, '#ffffff', 0), (1, '#8a6a3a', 40)])
+    pen.line(pad, 3, '#3a3a3a', 200)
+
+
+DR_INSERTS = {
+    'card': (_ins_card, 'dr_ins', 'the yellow typed card taped inside the medicine cabinet: the seven rules (hl=n, show=n)'),
+    'card_back': (lambda pen, t, **kw: _ins_card(pen, t, **dict(dict(back=True, bg='dark', torn=True, tilt=2.0), **kw)), 'dr_ins',
+                  'the back of the card: in faded ink from 1979, signed Doctor Later (reveal 0..1)'),
+    'phone': (_ins_phone, 'dr_ins', 'the kitchen wall phone (ring=f(t), state hung | off, cord in | out)'),
+    'phone_counter': (_ins_phone_counter, 'dr_ins', 'the receiver laid on the counter like a sleeping baby, the hold music still playing (music 0..1)'),
+    'phone_cord': (_ins_phone_cord, 'dr_ins', 'the line cord and its plug lying on the kitchen floor, the jack empty'),
+    'badge': (_ins_badge, 'dr_ins', "Doctor Halverson's badge clipped crooked to her wet raincoat: Dr. Anna Halverson, Pediatrics (two dinosaur stickers)"),
+    'results': (_ins_results, 'dr_ins', "Milo's lab results with the marker note (show=0..8 marker lines, slide 0..1 under the door, bg floor | hand | sink)"),
+    'note': (lambda pen, t, **kw: _ins_results(pen, t, **dict(dict(zoom='note', bg='hand'), **kw)), 'dr_ins',
+             'the marker note filling the frame: the six warning signs, "If you see these, don\'t wait. I\'ll be in my car." (show=0..8)'),
+    'burn': (_ins_burn, 'dr_ins', 'the paper burning in the sink (burn 0..1, match 0..1; flames flicker with t)'),
+    'ticket': (_ins_ticket, 'dr_ins_wait', "a paper ticket: text 'MILO' | 'RUTH' | '' (Grandpa's: the ink gone); bg wait | dawn | dark"),
+    'sign': (_ins_sign, 'dr_ins_wait', 'NOW SERVING: 1979 (digits, k, flick=f(t))'),
+    'clipboard': (_ins_clipboard, 'dr_ins_wait', 'his clipboard with no paper on it, the click pen beside it (click=f(t))'),
+    'pen': (_ins_pen, 'dr_ins_wait', 'the click pen in HIS long black fingers, the thumb on the button (click=f(t))'),
+    'wrist': (_ins_wrist, 'dr_ins_wait', "the narrator's wrist, HIS two long black fingers on the pulse (press, count, cold, free)"),
+    'tape': (_ins_tape, 'dr_ins_wait', 'the old yellow tape round his head, the thin gap, two pale patient eyes (loose 0..1: strip by strip; eyes)'),
+    'glucose': (_ins_glucose, 'dr_ins_bright', "Milo's phone at 22: his blood sugar, in range (value, trend, bg morning | dark)"),
+    'clock': (_ins_clock_d, 'dr_ins_wait', 'the wall clock slowing down (time=(h, m, s) or f(t), slow 0..1; bg wait | kitchen)'),
+    'coffee': (_ins_coffee, 'dr_ins', '1979, sunrise: the cup of coffee on the little table by the armchair (steam, cold)'),
+    'advice': (_ins_advice, 'dr_ins_bright', 'the outro list on a notepad: how to beat the Waiting Man (show=0..5, hl=n)'),
+}
+
+
+def dr_insert(name, prop_kw=None, motion=None, t0=0.0, grade=None):
+    """A close-up insert from DR_INSERTS: prop_kw = dict or f(t) -> dict for the drawing (a dict may hold f(t) values for
+    the keys that take one: ring, click, flick, time), motion = f(t) -> (dx, dy, dscale, drot) drifting the whole insert
+    (a slow handheld float; keep |dx|, |dy| < 300 px, the art carries that margin). One sharp plane: no lens, no DOF."""
+    fn, gr, note = DR_INSERTS[name]
+    static = not callable(prop_kw) and motion is None and not any(callable(v_) for v_ in (prop_kw or {}).values()) and name not in ('burn', 'phone_counter', 'tape', 'coffee')
+
+    def draw(pen, t):
+        kw = prop_kw(t) if callable(prop_kw) else dict(prop_kw or {})
+        cv = pen.cv
+        if motion is not None:
+            dx, dy, ds, dr = motion(t)
+            cv.save(); cv.translate(960 + dx, 540 + dy); cv.rotate(dr); cv.scale(1 + ds, 1 + ds); cv.translate(-960, -540)
+        fn(pen, t - t0, **kw)
+        if motion is not None: cv.restore()
+    key = 'drins:%s:%s' % (name, _okey(prop_kw or {}) if isinstance(prop_kw, dict) else 'f')
+    lay = Layer(1.0, draw, 'insert', cache=key if static else False, bounds=(-460, -320, 2380, 1400), blur=0)
+    return BSet('dr_ins_' + name, [lay], {}, {}, lens=None, grade=grade or gr, focus=1.0, dof=0.0, cover=(-460, -320, 2380, 1400), info={'note': note})
+
+
+# ====================================================================================================== staging: Doctor Later, the plan map, the registry
+_stage_figure_base = stage_figure
+
+
+def stage_figure(sp, who, spot, act=None, turn=None, seed=1, expr='neutral', name=None, light=True, acting=None, perch=None):
+    """One cast member on a set the way the staging data says (see sets_bunny.stage_figure). Doctor film addition: Doctor
+    Later ('later') on a seat Spot is perched with his own rig, a.perch(seat_y, perch): perch = 'armchair' | 'plastic' |
+    'bench' | 'car' | 'low' (default from the spot's name), so he folds onto the armchair, the bus bench or the back seat."""
+    s = sp.anchors[spot] if isinstance(spot, str) else spot
+    if who == 'later' and s.kind == 'seat':
+        nm = spot if isinstance(spot, str) else ''
+        kind = perch or ('armchair' if 'armchair' in nm else ('bench' if 'bus' in nm else ('car' if 'back_' in nm else 'plastic')))
+
+        def act2(a, acting=acting):
+            a.perch(s.seat_y if s.seat_y is not None else s.y - 0.45 * s.ppm, kind)
+            if acting: acting(a)
+        return _stage_figure_base(sp, who, s, 'stand', turn, seed, expr, name, light, act2)
+    return _stage_figure_base(sp, who, spot, act, turn, seed, expr, name, light, acting)
+
+
+def _dr_plan_panels():
+    """The Doctor film's plan panels (same dict as sets_bunny._plan_panels): Ruth's house, the waiting room, Larch Street,
+    then every other location on its own little plan, each with its furniture footprints and its cameras."""
+    def blocks(*sets_, drop=()):
+        b = {}
+        for sp_ in sets_:
+            for k_, q in (sp_.info.get('blocks') or {}).items():
+                if k_ not in drop and not k_.startswith('far_'): b[k_] = q
+        return b
+
+    def marks(sp_, names):
+        return [(sp_.anchors[n].X, sp_.anchors[n].Yp, n) for n in names if n in sp_.anchors]
+    lv, hl, kt, bt = dr_living('wide'), dr_hall('door'), dr_kitchen('wide'), dr_bath('sink')
+    wt = dr_living('wide', state='wait')
+    P = []
+    P.append(dict(title="RUTH'S HOUSE  (27 Larch Street; floor Y 0)", ext=(-6.3, 5.2, -2.6, 10.3), ray=1.5,
+                  floors=[('bedrooms (not built: no camera looks there)', _r4p((0.4, 4.6, 0.0, 5.8))), ('(not built)', _r4p((2.8, 4.6, 5.8, 9.6))),
+                          ('LIVING ROOM', _r4p(D_LIV)), ('HALL', _r4p(D_HALL)), ('KITCHEN', _r4p(D_KIT)), ('BATHROOM', _r4p(D_BATH)), ('porch', _r4p(D_PORCH))],
+                  blocks=dict(blocks(lv, kt, bt, hl), counter=_r4p(D_KCOUNTER), counter_return=_r4p(D_KRETURN)),
+                  doors=[((D_FDOOR[0], 0.0), (D_FDOOR[1], 0.0), 'front door'), ((-1.2, D_LDOOR[0]), (-1.2, D_LDOOR[1]), 'living-room door'),
+                         ((-1.2, D_KDOOR[0]), (-1.2, D_KDOOR[1]), 'kitchen doorway'), ((0.4, D_BDOOR[0]), (0.4, D_BDOOR[1]), 'bath'),
+                         ((0.4, D_RDOOR[0]), (0.4, D_RDOOR[1]), "Ruth's room")],
+                  windows=[((D_LWIN[0], 0.0), (D_LWIN[1], 0.0)), ((-5.6, D_SWIN[0]), (-5.6, D_SWIN[1])), ((D_KWIN[0], 9.6), (D_KWIN[1], 9.6)),
+                           ((D_HWIN[0], 9.6), (D_HWIN[1], 9.6)), ((D_BWIN[0], 9.6), (D_BWIN[1], 9.6)), ((D_RWIN[0], 0.0), (D_RWIN[1], 0.0))],
+                  lines=[], marks=[(D_PHONE[0] - 0.02, D_PHONE[2], 'wall phone'), (D_JACK[0] - 0.02, D_JACK[2] + 0.25, 'jack'), (D_CAB[0] - 0.05, (D_CAB[1] + D_CAB[2]) / 2, 'medicine cabinet'),
+                                   (-3.3, 9.3, 'sink'), (D_RECEIVER[0], D_RECEIVER[2], 'receiver'), (-2.1, 8.5, 'floor_rock'), (-0.4, 0.1, 'peephole')],
+                  cams=[k for k in DR_CAMS if CAMS[k]['room'] in ('living', 'hall', 'kitchen', 'bath') and not k.startswith('dr_wait')]))
+    P.append(dict(title='THE WAITING ROOM  (the living room, rule 6)', ext=(-6.2, -0.6, -0.5, 5.9), ray=1.3,
+                  floors=[('WAITING ROOM', _r4p(D_LIV))], blocks=blocks(wt),
+                  doors=[((-1.2, D_LDOOR[0]), (-1.2, D_LDOOR[1]), 'door')], windows=[((D_LWIN[0], 0.0), (D_LWIN[1], 0.0)), ((-5.6, D_SWIN[0]), (-5.6, D_SWIN[1]))],
+                  lines=[], marks=[(D_SIGN[0], D_SIGN[1] - 0.1, 'NOW SERVING'), (-1.5, 0.42, 'TV'), (D_ROW_X[0], D_ROWS_Y[2], 'Grandpa')] +
+                  [(x, y, 'tube%d%s' % (i, '' if i in (0, 2) else ' (dead)')) for i, (x, y) in enumerate(D_TROFFERS)],
+                  cams=[k for k in DR_CAMS if k.startswith('dr_wait')]))
+    ex = dr_front('house')
+    _, _, CB = dr_car_parts()
+    P.append(dict(title='LARCH STREET  (ground Y %.1f)' % D_GROUND, ext=(-50.0, 12.0, -30.0, 11.0), ray=7.0,
+                  floors=[("Ruth's house", _r4p(D_HOUSE)), ('driveway', _r4p(D_DRIVE)), ('Larch Street', [(-50, D_STREET[1]), (12, D_STREET[1]), (12, D_STREET[0]), (-50, D_STREET[0])]),
+                          ('porch', _r4p(D_PORCH))] + [('', [(x0, 0.0), (x1, 0.0), (x1, 10.0), (x0, 10.0)]) for (x0, x1, yf, tag) in D_NEIGH[:2]] +
+                  [('', [(x0, -33.5), (x1, -33.5), (x1, -24.5), (x0, -24.5)]) for (x0, x1) in D_ACROSS],
+                  blocks={'car': CB.footprint()}, doors=[((D_FDOOR[0], 0.0), (D_FDOOR[1], 0.0), '')], windows=[((D_LWIN[0], 0.0), (D_LWIN[1], 0.0))],
+                  lines=[], marks=[(D_BUS[0], D_BUS[1], 'bus stop bench'), (D_BUS_LAMP[0], D_BUS_LAMP[1], 'flickering lamp')] + [(x, y, 'lamp') for (x, y) in D_LAMPS if -50 < x < 12] +
+                  [(D_MAPLE[0], D_MAPLE[1], 'maple')],
+                  cams=[k for k in DR_CAMS if CAMS[k]['room'] == 'street'] + ['dr_liv_window_bus']))
+    for (title, sp_, R_, ray, room, mk) in (
+            ("DOCTOR HALVERSON'S EXAM ROOM", dr_clinic('wide'), C_R, 1.0, 'clinic', ('exam_table', 'stool', 'parent_chair', 'door')),
+            ('A HOSPITAL OFFICE AT 3 AM', dr_office('desk'), O_R, 1.0, 'office', ('desk_chair', 'phone', 'results', 'door')),
+            ('ER BAY', dr_er_bay('bay'), E_R, 1.0, 'er_bay', ('bed_lie', 'bed_edge', 'monitor', 'iv_bag')),
+            ('ER WAITING ROOM', dr_er_wait('wide'), W_R, 1.8, 'er_wait', ('chest_seat', 'rock_seat', 'desk_front', 'entrance')),
+            ("THE CARDIOLOGIST'S OFFICE", dr_cardio('side'), CD_R, 1.0, 'cardio', ('doctor_chair', 'patient_chair0', 'patient_chair1', 'coffee')),
+            ('THE OUTRO: A BEDSIDE', dr_outro('table'), OU_R, 1.0, 'outro', ('phone', 'lamp_switch', 'bed_edge'))):
+        P.append(dict(title=title, ext=(R_[0] - 0.5, R_[1] + 0.5, R_[2] - 0.6, R_[3] + 0.5), ray=ray, floors=[('', _r4p(R_))], blocks=blocks(sp_), doors=[], windows=[], lines=[],
+                      marks=marks(sp_, mk), cams=[k for k in DR_CAMS if CAMS[k]['room'] == room]))
+    hh = dr_hosp_hall('hall')
+    P.append(dict(title='THE LONG HOSPITAL HALLWAY', ext=(-6.0, 8.6, -1.0, 33.0), ray=5.0, floors=[('', _r4p(HH_R))], blocks=blocks(hh), doors=[], windows=[], lines=[],
+                  marks=[(HH_CHAIR[0], HH_CHAIR[1], 'the last chair')], cams=[k for k in DR_CAMS if CAMS[k]['room'] == 'hosp_hall']))
+    ee = dr_er_entrance('ext')
+    P.append(dict(title='LARKFIELD GENERAL: THE ER ENTRANCE', ext=(-10.0, 16.0, -18.0, 4.0), ray=4.0, floors=[('hospital', [(-10, 0), (16, 0), (16, 4), (-10, 4)])],
+                  blocks=blocks(ee), doors=[], windows=[], lines=[], marks=marks(ee, tuple(ee.anchors)[:6]), cams=[k for k in DR_CAMS if CAMS[k]['room'] == 'er_ext']))
+    ck = dr_car('front')
+    P.append(dict(title="INSIDE HALVERSON'S CAR  (+y = forward)", ext=(-1.6, 2.8, -2.3, 3.3), ray=0.9,
+                  floors=[('cabin', DrCarCabin.poly), ('bonnet', [(-0.8, 1.04), (0.8, 1.04), (0.76, 1.95), (-0.76, 1.95)])], blocks=blocks(ck), doors=[],
+                  windows=[((-K_HW, -1.2), (-K_HW, 0.95)), ((K_HW, -1.2), (K_HW, 0.95)), ((-0.6, 1.0), (0.6, 1.0)), ((-0.55, -1.72), (0.55, -1.72))], lines=[],
+                  marks=[(x, y, nm) for nm, (x, y) in list(K_FRONT.items()) + list(K_BACK.items())] + [(K_WHEEL[0], K_WHEEL[2], 'wheel'), (K_MIRROR[0], K_MIRROR[2], 'mirror')],
+                  cams=[k for k in DR_CAMS if CAMS[k]['room'] == 'car']))
+    P.append(dict(title='MILO AT 22: THE RIVER PATH  (he runs +x)', ext=(-9.0, 9.0, -8.0, 6.0), ray=3.0,
+                  floors=[('path', [(-9, RN_PATH[0]), (9, RN_PATH[0]), (9, RN_PATH[1]), (-9, RN_PATH[1])]), ('river', [(-9, RN_RAIL + 1.2), (9, RN_RAIL + 1.2), (9, 6), (-9, 6)])],
+                  blocks={}, doors=[], windows=[], lines=[[(-9, RN_RAIL), (9, RN_RAIL)]], marks=[(0.0, 0.0, 'runner'), (0.6, RN_RAIL - 0.45, 'rail_stand')],
+                  cams=[k for k in DR_CAMS if CAMS[k]['room'] == 'run']))
+    return P
+
+
+def dr_plan_map(path, pw=900, ph=1000, cols=4):
+    """The Doctor film's floor plans with every camera (lens dot, direction, horizontal field of view of the 1920 design
+    frame, the CAMS name), the furniture footprints (the walk-blocking polygons of sp.walkable) and the main marks -> JPEG."""
+    import cv2
+    tiles = []
+    for P in _dr_plan_panels():
+        surf = skia.Surface(pw, ph); cv = surf.getCanvas(); pen = Pen(cv)
+        cv.clear(skia.Color4f(0.97, 0.96, 0.93, 1.0))
+        x0, x1, y0, y1 = P['ext']
+        k = min((pw - 60) / (x1 - x0), (ph - 120) / (y1 - y0))
+        ox = (pw - k * (x1 - x0)) / 2; oy = 80 + (ph - 100 - k * (y1 - y0)) / 2
+
+        def S(x, y): return (ox + (x - x0) * k, oy + (y1 - y) * k)
+
+        def Q(pts, closed=True): return poly([S(x, y) for x, y in pts], closed)
+        btext(pen, P['title'], 24, 44, 'sans_b', 26, '#202020', 255)
+        btext(pen, '1 m = %.0f px   +y up the page   +x right' % k, 24, 68, 'sans', 16, '#505050', 255)
+        for nm, q in P['floors']:
+            nb = 'not built' in nm
+            pen.fill(Q(q), '#d4d0ca' if nb else '#e6dccb'); pen.line(Q(q), 1.5 if nb else 3.0, '#8a847c' if nb else '#3a3530', 255)
+        for nm, q in P['floors']:
+            if nm:
+                cx_ = sum(p_[0] for p_ in q) / len(q); cy_ = max(p_[1] for p_ in q)
+                sx_, sy_ = S(cx_, cy_)
+                btext(pen, nm, sx_, sy_ + 20, 'sans_b', 15, '#6a5a48', 255, 'center')
+        for l_ in P['lines']: pen.line(Q(l_, False), 1.6, '#7a7068', 220)
+        for (a_, b_, nm) in P['doors']:
+            pen.line(Q([a_, b_], False), 7.0, '#e6dccb', 255); pen.line(Q([a_, b_], False), 2.0, '#b0602a', 255)
+            if nm:
+                sx_, sy_ = S((a_[0] + b_[0]) / 2, (a_[1] + b_[1]) / 2)
+                btext(pen, nm, sx_ + 4, sy_ - 6, 'sans', 13, '#b0602a', 255)
+        for (a_, b_) in P['windows']: pen.line(Q([a_, b_], False), 7.0, '#9cc4e4', 255)
+        for nm, q in P['blocks'].items():
+            if q is None: continue
+            pen.fill(Q(q), '#a89c8c', 200); pen.line(Q(q), 1.2, '#4a4038', 255)
+            if not nm.startswith(('kchair', 'row', 'pat_chair', 'seat_', 'chair')) and k > 20:
+                sx_ = sum(S(*p_)[0] for p_ in q) / len(q); sy_ = sum(S(*p_)[1] for p_ in q) / len(q)
+                btext(pen, nm, sx_, sy_ + 4, 'sans', 12, '#1a1a1a', 255, 'center')
+        for (mx, my, nm) in P['marks']:
+            sx_, sy_ = S(mx, my)
+            pen.fill(oval(sx_, sy_, 3.5), '#2a6a3a'); btext(pen, nm, sx_ + 6, sy_ + 4, 'sans', 12, '#2a6a3a', 255)
+        for nm in P['cams']:
+            c = CAMS[nm]
+            hf = math.atan(960.0 / c['S']); yaw = math.radians(c['yaw'])
+            L = P['ray']
+            cx_, cy_ = c['x'], c['y']
+            pa = (cx_ + L * math.sin(yaw - hf), cy_ + L * math.cos(yaw - hf))
+            pb = (cx_ + L * math.sin(yaw + hf), cy_ + L * math.cos(yaw + hf))
+            pen.fill(Q([(cx_, cy_), pa, pb]), '#d83a2a', 40); pen.line(Q([(cx_, cy_), pa], False), 1.3, '#c0281a', 220)
+            pen.line(Q([(cx_, cy_), pb], False), 1.3, '#c0281a', 220)
+            sx_, sy_ = S(cx_, cy_)
+            pen.fill(oval(sx_, sy_, 4.5), '#c0281a')
+            bx_, by_ = S(cx_ - 0.3 * L * math.sin(yaw), cy_ - 0.3 * L * math.cos(yaw))
+            btext(pen, nm.replace('dr_', ''), bx_, by_ + 4, 'sans_b', 12, '#8a1a10', 255, 'center')
+        img = surf.makeImageSnapshot().toarray()[:, :, :3]
+        tiles.append(np.ascontiguousarray(img))
+    while len(tiles) % cols: tiles.append(np.full_like(tiles[0], 240))
+    rows = [np.hstack(tiles[i:i + cols]) for i in range(0, len(tiles), cols)]
+    cv2.imwrite(path, np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 88])
+    return path
+
+
+DR_SETS = {'dr_living': dr_living, 'dr_hall': dr_hall, 'dr_kitchen': dr_kitchen, 'dr_bath': dr_bath, 'dr_front': dr_front, 'dr_clinic': dr_clinic,
+           'dr_office': dr_office, 'dr_er_bay': dr_er_bay, 'dr_er_wait': dr_er_wait, 'dr_er_entrance': dr_er_entrance, 'dr_hosp_hall': dr_hosp_hall,
+           'dr_cardio': dr_cardio, 'dr_car': dr_car, 'dr_run': dr_run, 'dr_outro': dr_outro}
+# builder -> its views (the 'view' argument); DR_INSERTS lists the inserts; DR_CAMS the cameras (CAMS[name] = S, h, eye, x, y, yaw, env, note, room)
+DR_API = {
+    'dr_living': dict(views=('wide', 'chair', 'window', 'window_bus', 'door', 'sunrise'), wait_views=('wide', 'front', 'rows', 'him', 'grandpa', 'side', 'machine'),
+                      states=('now', '1979', 'wait'), tod=('night', 'sunrise')),
+    'dr_hall': dict(views=('door', 'back', 'livdoor', 'peep', 'floor')),
+    'dr_kitchen': dict(views=('phone', 'phone_side', 'wide', 'sink', 'floor', 'hall', 'front'), era=('now', '1979'), tod=('night', 'sunrise')),
+    'dr_bath': dict(views=('sink', 'mirror', 'cabinet', 'door')),
+    'dr_front': dict(views=('house', 'porch', 'door', 'driveway', 'car', 'street', 'bus', 'bus_far', 'peephole'), tod=('night', 'sunrise')),
+    'dr_clinic': dict(views=('wide', 'table', 'door')), 'dr_office': dict(views=('desk', 'wide', 'door'), owner=('halverson', 'narrator')),
+    'dr_er_bay': dict(views=('bay', 'side', 'monitor')), 'dr_er_wait': dict(views=('wide', 'chairs', 'desk')), 'dr_er_entrance': dict(views=('ext', 'doors')),
+    'dr_hosp_hall': dict(views=('hall', 'chair')), 'dr_cardio': dict(views=('side', 'ruth')),
+    'dr_car': dict(views=('front', 'driver', 'back', 'mirror', 'windshield')), 'dr_run': dict(views=('side', 'front', 'rail')),
+    'dr_outro': dict(views=('table', 'phone', 'wide')),
+}
+SETS.update(DR_SETS)
+__all__ += list(DR_SETS) + ['dr_insert', 'DR_INSERTS', 'DR_CAMS', 'DR_API', 'DR_SETS', 'dr_plan_map', 'stage_figure', 'D_RULES', 'D_SIGNS', 'D_SIGNS_END', 'D_ADVICE',
+            'dr_car_parts', 'dr_car_in_view', 'dr_rain', 'dr_glass_rain', 'dr_wipers', 'dr_cell', 'k_reflect', 'dr_bus_flicker']

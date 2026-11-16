@@ -36,8 +36,9 @@ How the edit works
      line's first sound); pauses inside a line keep the take's natural timing, clamped by their punctuation (comma
      0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.45-0.80 s, mid-line full stop 0.30-0.55 s, no punctuation <= 0.25 s)
      and by INTERNAL overrides; a pause inside a word (before its release or final s) is never touched.
-  5. Level and clean: one gain per line (60 % of its distance from the narrator's median speech level, +-3 dB, nothing
-     inside 1.5 dB) so no gain moves inside a phrase (no pumping); 70 Hz high-pass (4th order); a split-band de-esser
+  5. Level and clean: one gain per line (narrator: 60 % of its distance from the narrator's median speech level, +-3 dB,
+     nothing inside 1.5 dB; a character line: the whole distance, so a voice keeps one level) so no gain moves inside a
+     phrase (no pumping); 70 Hz high-pass (4th order); a split-band de-esser
      (only where the 4.5 kHz+ band rises above the neighbouring vowel - 7 dB, at most 6 dB); the gaps gated to digital
      silence; one gain for both files puts the true peak at -1 dBTP (no limiter: the dynamics stay the take's; mix.py
      brings the voice to -14 LUFS itself). The narrator's pitch, formants and tone are not touched.
@@ -142,18 +143,21 @@ FIXES = {
     # its sound island, so "th" survives the voice (with the island's edges Parakeet heard "Rose?" on its own)
     'ruth_door': {'pieces': [(394.760, 395.235, 0.0, 0.003, 0.010)]},
     'sleep_well': {'pieces': [(1158.012, 1158.370, 0.0, 0.004, 0.010), (1158.520, None, 0.065, 0.002, 0.020)]},
-    # "Ever." (rule 2) runs straight into "The phone cord" in the take: after the hand-set split (SPLITS) its "-er" fades
-    # over 50 ms (the default 30 ms left an edge both recognisers sometimes read as "Every")
-    'rule2_ever': {'end_fade': 0.050},
+    # "Ever." (rule 2) runs straight into "The phone cord" in the take ("Ever-the", one voiced run, the dip between them
+    # only 14 dB deep). Cut in the dip (280.600-280.620) the start of the th stays on the end of "Ever": Whisper writes
+    # "ever th-" in context and Parakeet "Every" / "Everything". "Ever." now ends at 280.560 on a 40 ms fade (its "-er",
+    # 280.50-280.60, decays instead of meeting the th) and "The phone cord" starts at 280.610, after the dip. Both
+    # recognisers, alone (paddings 0.05-0.5 s) and inside "...don't hang up. | Ever. | The phone cord...": "Ever" every time.
+    'rule2_ever': {'end': 280.560, 'end_fade': 0.040},
+    'cord_floor': {'start': 280.610, 'start_fade': 0.010},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word
 SPLITS = {
     'grandpa_chair': 322.120,  # "chair | Rule": one shared r; the cut sits at its F3 minimum (1250-1390 Hz) (was 321.862: "ch | air")
     'call_you': 174.295,       # "...come in, | she said": the n murmur of "in" ends where the sh starts (was 174.432: inside "she")
-    'rule2_ever': 280.610,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone";
-                               # then 280.600: Parakeet read "Every" at half the paddings; at 280.610 with a 50 ms fade
-                               # (FIXES) both recognisers read "Ever" at every padding, and "The phone cord" is whole)
+    'rule2_ever': 280.600,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone");
+                               # the two lines then keep clear of the dip itself (FIXES 'rule2_ever' / 'cord_floor')
     'knees': 469.700,          # "head, | Waiting.": the middle of the dip before the w (was 469.721: on the w onset)
     'waiting_bench': 470.005,  # "Waiting. | Rule": the "-ing" vowel ends (F2 2490 Hz) where F2 falls into the r (was 469.928: inside "-ing")
 }
@@ -1383,14 +1387,18 @@ def assemble(T, spans, gaps, lead=0.30, tail=0.60, voice=None):
                 nb = np.zeros(start + len(y)); nb[:len(buf)] = buf; nb[start:] = y
                 buf = nb; placed.append((start, start + len(y)))
         sigs.append((buf, pcs, placed))
-    # per-line gain (narrator lines; characters are levelled after their voice transform)
+    # per-line gain. Narrator: 60 % of the distance to the narrator's median, nothing inside 1.5 dB (gentle: the reading
+    # keeps its dynamics). Character lines: the whole distance (+-6 dB), so every line of a voice sits at one level
+    # before its transform, which then adds the voice's own offset (the take read "One..." 4 dB louder than "Two..." and
+    # "Three...", and the three phrases of the voice in your head 3 dB apart: a count and a litany want one level)
     lv = np.array([speech_level(s[0]) for s in sigs])
     nar = [k for k in range(len(LINES)) if LINES[k]['who'] == 'N' and len(LINES[k]['en']) >= 12]
     med = float(np.median(lv[nar]))
     gains = []
     for k in range(len(LINES)):
         d = med - lv[k]
-        g = 0.0 if abs(d) < 1.5 else float(np.clip(0.6 * d, -3, 3))
+        if LINES[k]['who'] != 'N': g = float(np.clip(d, -6, 6))
+        else: g = 0.0 if abs(d) < 1.5 else float(np.clip(0.6 * d, -3, 3))
         gains.append(round(g, 2))
     dry, wet, vrep = [], [], []
     for i, (buf, pcs, placed) in enumerate(sigs):

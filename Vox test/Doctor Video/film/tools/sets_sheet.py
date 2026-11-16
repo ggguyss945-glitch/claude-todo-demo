@@ -343,7 +343,12 @@ def stage_run():
     for name, build, figs, note in (STAGE_BUNNY if a.bunny else STAGE):
         t0 = time.time()
         sp = build()
-        lays = [ST.stage_figure(sp, who, spot, **kw)[0] for who, spot, kw in figs]
+        lays = []
+        for who, spot, kw in figs:
+            try:
+                lays.append(ST.stage_figure(sp, who, spot, **kw)[0])
+            except Exception as e:                                             # a missing anchor / cast change must not stop the sheet
+                print('  STAGE FAIL %s %s at %s: %r' % (name, who, spot, e), flush=True)
         sp2 = sp.add(*lays)
         img = render_frame(list(sp2), None, 0.5, 0, **sp2.render_kw(), post=sp2.fx(0.5))
         cv2.imwrite(os.path.join(a.out, 'stage_' + name + '.jpg'), img[:, :, ::-1], [cv2.IMWRITE_JPEG_QUALITY, 90])
