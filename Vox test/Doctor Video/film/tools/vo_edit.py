@@ -107,7 +107,7 @@ FIXES = {
     'office': {'cuts': [(946.075, 946.505, 0.06)]},
     # the count "Two..." was read as a rising "Two?" (277 Hz) that reads as "Till" once it has the Waiting Man's voice
     # (2-3 of 6 paddings); the falling "two" of "Rule number two:" (276.950-277.230, 110-120 Hz, his own register) takes
-    # its place, drawn out by the voice (W_count2: vowel 1.7x). Both: "Two" at every padding tried.
+    # its place, drawn out by the voice (W_count2: vowel 1.5x). Both: "Two" at every padding tried.
     'count2': {'pieces': [(276.950, 277.230, 0.0, 0.003, 0.030)]},
     # "Rule number four." and its text share one island only through a 10 ms blip in the silence (370.16): the line
     # ends where "four" decays into digital silence and the rule text starts on the "I" of "If"

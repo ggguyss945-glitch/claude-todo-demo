@@ -61,7 +61,7 @@ SLIPS = [  # (where in the joined take, what the TTS did, what the edit does, ho
      'for both recognisers)', 'both: "It\'s three in the morning and I\'m sitting in a little office"'),
     ('658.65-659.13 the count "Two..."', 'read as a rising "Two?" (277 Hz); in the Waiting Man\'s voice it reads as '
      '"Till" at 2-3 of 6 paddings', 'the falling "two" of "Rule number two:" (276.950-277.230, 110-120 Hz: his own '
-     'register) takes its place, its vowel drawn out 1.7x by the voice (W_count2)', 'both: "Two" at every padding '
+     'register) takes its place, its vowel drawn out 1.5x by the voice (W_count2)', 'both: "Two" at every padding '
      'tried (0.05-0.5 s)'),
     ('1157.77-1159.10 "don\'t get on. the Sleemith well."', 'run into the line before (0.15 s) with a schwa before the '
      'S and an "m-th" glide for the p of "Sleep"', 'the schwa goes (the line starts on the S, 1158.012); "slee" ends with '

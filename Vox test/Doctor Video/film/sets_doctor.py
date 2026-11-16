@@ -1441,9 +1441,9 @@ class DrLiving(DrRoom):
         P.append(Piece('curio', (D_CURIO.cx, 0.9, D_CURIO.cy), lambda pen, v: dr_curio(pen, v, era=era), block=D_CURIO.footprint()))
         dc = {'now': '#7e6a3e', '1979': '#c8742a', 'wait': '#5e6046'}[st]
         P.append(Piece('curtains', (-3.4, 1.5, 0.12), lambda pen, v: curtain_pair(pen, v, (-1.2, 0.0), (-5.6, 0.0), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0],
-                                                                                 D_LWIN[3], 2.0, 0.0, o.get('curtains', 1.0), dc, seed=3)))
+                                                                                 D_LWIN[3], 2.0, 0.0, o.get('curtains', 1.0), dc, seed=3, sheer=False)))
         P.append(Piece('curtains_side', (-5.48, 1.5, 4.4), lambda pen, v: curtain_pair(pen, v, (-5.6, 0.0), (-5.6, 5.4), D_SWIN[0], D_SWIN[1], D_SWIN[3], 1.9, 0.0,
-                                                                                      o.get('curtains', 1.0), dc, seed=4)))
+                                                                                      o.get('curtains', 1.0), dc, seed=4, sheer=False)))
         if not self.far:
             ang = o.get('door', 0.0)
             ang = 0.0 if callable(ang) else ang
@@ -1988,6 +1988,61 @@ D_CAR_FA = 180                                                                 #
 DCAR = dict(L=4.45, W=1.78, H=1.46, wb=2.62, hood=0.92, belt=0.98)
 
 
+def dr_sky(pen, v, tod='night', box=(-800, -600, 2720, 1680)):
+    """The sky over Larch Street: a low overcast night (dark, the sodium glow of the town on the cloud bottoms near the
+    horizon, rain-cloud texture) or a washed sunrise after the rain."""
+    x0, y0, x1, y1 = box
+    r = rect(x0, y0, x1 - x0, y1 - y0)
+    H = v.h
+    if tod == 'night':
+        pen.linear(r, 0, H - 1.0 * v.S, 0, H + 20, [(0, '#05070c'), (0.55, '#0b0e18'), (0.85, '#1a1824'), (1, '#33262a')])
+        rng = np.random.default_rng(13)
+        for i in range(14):
+            az = rng.uniform(-180, 180); el = rng.uniform(4, 28)
+            q = sky_dir(v, az, el)
+            if q is None: continue
+            w = rng.uniform(0.4, 0.9) * v.S; h = w * 0.1
+            _cloud(pen, q[0], q[1], w, h, int(rng.integers(0, 999)), '#0c0f1a', '#2a2834', 120)
+    else:
+        pen.linear(r, 0, H - 1.0 * v.S, 0, H + 20, [(0, '#5a6a98'), (0.6, '#c8a0a0'), (1, '#ffd0a0')])
+        sp_ = sky_dir(v, 100.0, 4.0)
+        if sp_: pen.radial(None, sp_[0], sp_[1], 1.3 * v.S, [(0, '#fff0c8', 220), (0.3, '#ffb070', 100), (1, '#ff9a6a', 0)], sy=0.45, clip=False)
+
+
+def dr_far_ring(pen, v, tod='night', R=85.0, cx=-8.0, cy=-10.0, G=D_GROUND):
+    """Closes the horizon all round: two rings of distant tree crowns and roofs (rounded silhouettes in the haze)."""
+    c_far = '#0e111a' if tod == 'night' else '#8a7a86'
+    c_near = '#080a10' if tod == 'night' else '#5e4e5c'
+    for (RR, col_, hs, seed) in ((R * 1.3, c_far, 0.9, 3), (R, c_near, 1.15, 5)):
+        rng = np.random.default_rng(seed)
+        N = 720
+        hgt = np.full(N, 4.0)
+        az = np.arange(N) / 2.0
+        for _ in range(170):                                               # tree crowns: rounded bumps
+            c_ = rng.uniform(0, 360); w_ = rng.uniform(0.8, 2.6); A = rng.uniform(4.0, 10.0)
+            dd = (az - c_ + 180) % 360 - 180
+            hgt = np.maximum(hgt, 4.0 + A * np.sqrt(np.clip(1 - (dd / w_) ** 2, 0, 1)))
+        for _ in range(40):                                                # roofs: low gables
+            c_ = rng.uniform(0, 360); w_ = rng.uniform(1.2, 2.2); A = rng.uniform(5.0, 6.5)
+            dd = np.abs((az - c_ + 180) % 360 - 180)
+            hgt = np.maximum(hgt, np.where(dd < w_, A - (dd / w_) * 1.6, 0))
+        segs, cur = [], []
+        for i in range(N + 1):
+            a = math.radians(az[i % N])
+            x, y = cx + math.sin(a) * RR, cy + math.cos(a) * RR
+            if v.d(x, y) < 2.0:
+                if cur: segs.append(cur); cur = []
+                continue
+            cur.append((v.p(x, G + hgt[i % N] * hs, y), v.p(x, G - 1.0, y)))
+        if cur: segs.append(cur)
+        for sg in segs:
+            if len(sg) < 2: continue
+            path = poly([a_ for (a_, b_) in sg] + [sg[-1][1], sg[0][1]])
+            pen.fill(path, col_)
+    if tod == 'night':
+        pen.linear(rect(-800, v.h - 0.06 * v.S, 3500, 0.12 * v.S), 0, v.h - 0.06 * v.S, 0, v.h + 0.06 * v.S, [(0, '#3a2a2a', 0), (0.5, '#3a2a2a', 50), (1, '#3a2a2a', 0)])
+
+
 def _ext_light_d(tod):
     if tod in ('sunrise', 'dawn'):
         return '#7a6a78', [Lamp(kind='dir', c='#ffc890', k=0.9, d=_norm3((-0.75, -0.25, 0.6)))]
@@ -2127,7 +2182,7 @@ def dr_ground_front(pen, v, tod='night'):
     G = D_GROUND
     wet = tod == 'night'
     grass = '#1c2a26' if wet else '#4a6a3a'
-    F = floor_face(-90.0, 90.0, -40.0, 9.5, G)
+    F = floor_face(-130.0, 130.0, -130.0, 9.5, G)
 
     def lawn(p_, W, H):
         p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, grass, 255), (1, _darken(grass, 0.3), 255)])
@@ -2222,10 +2277,12 @@ def dr_bus_stop(pen, v, G=D_GROUND):
         draw_box(pen, v, sub(B, u - 0.06, u + 0.06, -0.2, 0.2, G, G + 0.42), {'all': '#8a8a86'})
     for k in range(4):
         n = -0.2 + k * 0.13
-        draw_box(pen, v, sub(B, -0.9, 0.9, n - 0.05, n + 0.05, G + 0.42, G + 0.46), {'all': '#6a4a30', 'top': '#7a5a3a'})
+        draw_box(pen, v, sub(B, -0.9, 0.9, n - 0.05, n + 0.05, G + 0.42, G + 0.46), {'all': '#7a7462', 'top': '#9a947e'})
     for k in range(3):                                                      # the backrest slats
         Yb = G + 0.62 + k * 0.13
-        draw_box(pen, v, sub(B, -0.9, 0.9, -0.26, -0.21, Yb, Yb + 0.09), {'all': '#6a4a30'})
+        draw_box(pen, v, sub(B, -0.9, 0.9, -0.26, -0.21, Yb, Yb + 0.09), {'all': '#8a846e'})
+    for u in (-0.7, 0.7):                                                   # the backrest posts
+        draw_box(pen, v, sub(B, u - 0.04, u + 0.04, -0.27, -0.2, G + 0.42, G + 1.0), {'all': '#6a6a66'})
     sx, sy = x + 1.3, y - 0.1
     if v.d(sx, sy) > 0.5:
         s = v.s(sx, sy)
@@ -2233,8 +2290,8 @@ def dr_bus_stop(pen, v, G=D_GROUND):
         pen.seg(a_, b_, max(1.2, 0.05 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.0, 0.05 * s), '#7a7c80')
         px, py = v.p(sx, G + 2.35, sy)
         sg = rrect(px - 0.24 * s, py - 0.2 * s, 0.48 * s, 0.4 * s, 0.03 * s)
-        pen.fill(sg, '#e8e4d8'); pen.line(sg, 1.0)
-        pen.fill(rect(px - 0.2 * s, py - 0.16 * s, 0.4 * s, 0.12 * s), '#1a5a8a')
+        pen.fill(sg, lit('#e8e4d8', (sx, G + 2.35, sy), (0, 0, 1))); pen.line(sg, 1.0)
+        pen.fill(rect(px - 0.2 * s, py - 0.16 * s, 0.4 * s, 0.12 * s), lit('#1a5a8a', (sx, G + 2.35, sy), (0, 0, 1)))
         btext(pen, 'BUS', px, py - 0.06 * s, 'sans_b', 0.09 * s, '#ffffff', 240, 'center')
         btext(pen, 'STOP', px, py + 0.1 * s, 'sans_b', 0.1 * s, '#1a1a1a', 240, 'center')
         btext(pen, '14', px, py + 0.18 * s, 'sans_b', 0.06 * s, '#c82a2a', 240, 'center')
@@ -2302,7 +2359,18 @@ def _car_profile(L, H, hood, belt):
     return lower, gh
 
 
-def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=D_GROUND, glass_k=0.45):
+class _DPart(Part):
+    """A Part whose sort depth is a function of the view (dfn(v) -> depth): car glass sorts by its nearest corner, the
+    interior always behind the near glass, the roof always over the interior."""
+
+    def __init__(self, dfn, **kw):
+        Part.__init__(self, **kw)
+        self.dfn = dfn
+
+    def depth(self, v): return self.dfn(v)
+
+
+def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=D_GROUND, glass_k=0.62, interior=True):
     """Halverson's car (a small dark-teal hatchback) as furniture Parts on the plan: lower body, the four wheels, the cabin
     (roof, windshield, rear glass, both side windows as separate glass parts so a seated figure sorts between the far and
     the near window), headlights / tail lights. Returns (parts, seats {name: (x, y)}, Box). fa 180 = facing +y."""
@@ -2370,7 +2438,7 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
             if path.isEmpty(): return
             cen = (sum(p_[0] for p_ in pts) / 4, sum(p_[1] for p_ in pts) / 4, sum(p_[2] for p_ in pts) / 4)
             if glass:
-                pen.fill(path, '#0e141c', int(255 * glass_k))
+                pen.fill(path, '#0a0e14', int(255 * glass_k))
                 b = _rb(path)
                 pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 0), (0.35, '#9ab0d8', 55), (0.42, '#9ab0d8', 10), (0.6, '#9ab0d8', 0), (0.7, '#9ab0d8', 30), (1, '#9ab0d8', 0)])
                 pen.line(path, 1.4, '#0a0c10', 230)
@@ -2380,11 +2448,12 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
     def side_pts(side, g0, g1):
         return [B.at(g0[0], side * hw, g0[1]), B.at(g1[0], side * hw, g1[1])]
     roof = [B.at(gh[1][0], hw, gh[1][1]), B.at(gh[2][0], hw, gh[2][1]), B.at(gh[2][0], -hw, gh[2][1]), B.at(gh[1][0], -hw, gh[1][1])]
-    P.append(Part(fn=quad(roof, col_), ref=B.at((gh[1][0] + gh[2][0]) / 2, 0, Y0 + H), tag='roof'))
+    nearest = lambda pts: (lambda v: min(v.d(q[0], q[2]) for q in pts))
+    P.append(_DPart(lambda v: v.d(B.cx, B.cy) - 0.3, fn=quad(roof, col_), ref=B.at((gh[1][0] + gh[2][0]) / 2, 0, Y0 + H), tag='roof'))
     wind = [B.at(gh[2][0], hw, gh[2][1]), B.at(gh[3][0], hw + 0.08, gh[3][1]), B.at(gh[3][0], -hw - 0.08, gh[3][1]), B.at(gh[2][0], -hw, gh[2][1])]
-    P.append(Part(fn=quad(wind, None, True), ref=B.at((gh[2][0] + gh[3][0]) / 2, 0, belt + 0.25), tag='windshield'))
+    P.append(_DPart(nearest(wind), fn=quad(wind, None, True), ref=B.at((gh[2][0] + gh[3][0]) / 2, 0, belt + 0.25), tag='windshield'))
     rear = [B.at(gh[0][0], hw + 0.08, gh[0][1]), B.at(gh[1][0], hw, gh[1][1]), B.at(gh[1][0], -hw, gh[1][1]), B.at(gh[0][0], -hw - 0.08, gh[0][1])]
-    P.append(Part(fn=quad(rear, None, True), ref=B.at((gh[0][0] + gh[1][0]) / 2, 0, belt + 0.25), tag='rear_glass'))
+    P.append(_DPart(nearest(rear), fn=quad(rear, None, True), ref=B.at((gh[0][0] + gh[1][0]) / 2, 0, belt + 0.25), tag='rear_glass'))
     for side in (1, -1):
         sw = [B.at(gh[0][0] + 0.06, side * (hw + 0.07), belt + 0.02), B.at(gh[1][0], side * hw, gh[1][1] - 0.03), B.at(gh[2][0], side * hw, gh[2][1] - 0.03),
               B.at(gh[3][0] - 0.04, side * (hw + 0.07), belt + 0.03)]
@@ -2399,7 +2468,24 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
             pb0, pb1 = B.at(u_f - 2.15, side * (hw + 0.06), belt + 0.02), B.at(u_f - 2.15, side * hw, Y0 + H - 0.03)
             pen.seg(v.p(*pb0), v.p(*pb1), max(2.0, 0.07 * v.s(pb0[0], pb0[2])), _darken(col_, 0.4))
             pen.line(path, 1.6, _darken(col_, 0.5), 255)
-        P.append(Part(fn=sidewin, ref=B.at(-0.2, side * (W / 2 + 0.05), belt + 0.3), tag='window_r' if side > 0 else 'window_l'))
+        P.append(_DPart((lambda pts: lambda v: min(v.d(q[0], q[2]) for q in pts))(sw), fn=sidewin, ref=B.at(-0.2, side * (W / 2 + 0.05), belt + 0.3),
+                        tag='window_r' if side > 0 else 'window_l'))
+    if interior:                                                            # what you see through the glass: seats, dash, wheel
+        dk = '#1c1e24'
+        for n_ in (-0.37, 0.37):
+            P.append(Part(sub(B, -0.42, -0.22, n_ - 0.24, n_ + 0.24, belt - 0.45, belt + 0.38), {'all': dk, 'top': '#2a2c32'}, tag='seat_back'))
+        P.append(Part(sub(B, -1.62, -1.45, -0.7, 0.7, belt - 0.45, belt + 0.28), {'all': dk, 'top': '#2a2c32'}, tag='rear_seat'))
+        P.append(Part(sub(B, u_f - 1.45, u_f - 1.08, -0.78, 0.78, belt - 0.3, belt + 0.0), {'all': '#16181c', 'top': '#202228'}, tag='dash'))
+
+        def wheel_ring(pen, v):
+            c = B.at(0.42, -0.37, belt + 0.08)
+            if v.d(c[0], c[2]) < 0.2: return
+            pts = [B.at(0.42 + 0.06 * math.sin(2 * math.pi * k / 18), -0.37 + 0.18 * math.cos(2 * math.pi * k / 18), belt + 0.08 + 0.17 * math.sin(2 * math.pi * k / 18)) for k in range(19)]
+            pen.line(poly([v.p(*q) for q in pts], False), max(1.5, 0.03 * v.s(c[0], c[2])), '#0e0f12')
+        P.append(Part(fn=wheel_ring, ref=B.at(0.42, -0.37, belt), tag='wheel'))
+        cen = (B.cx, B.cy)
+        P = [(_DPart((lambda v, c=cen: v.d(c[0], c[1]) + 0.08), box=p_.box, mats=p_.mats, fn=p_.fn, ref=p_.ref, tag=p_.tag, skip=p_.skip)
+              if p_.tag in ('seat_back', 'rear_seat', 'dash', 'wheel') else p_) for p_ in P]
     # the lamps: headlights at the front corners, tail lights at the rear
     def lamps(pen, v):
         for side in (1, -1):
@@ -2514,7 +2600,8 @@ def _dr_outside_front(pen, v, tod='night', car=False, glow=None, bus=True):
     across, the streetlights (their glow is live), the bus stop. The car is NOT here (dr_car_in_view adds it as its own
     layers so Halverson can sit in it)."""
     tt = 'night' if tod == 'night' else 'dawn'
-    sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
+    dr_sky(pen, v, tt)
+    dr_far_ring(pen, v, tt)
     with lighting(*_ext_light_d(tod)):
         dr_ground_front(pen, v, tod)
         for (x0, x1) in D_ACROSS:
@@ -2534,9 +2621,10 @@ def _dr_outside_front(pen, v, tod='night', car=False, glow=None, bus=True):
 def _dr_outside_back(pen, v, tod='night'):
     """The back yard through the kitchen / bathroom / hall windows: a fence, the neighbour's garage light, wet trees."""
     tt = 'night' if tod == 'night' else 'dawn'
-    sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
+    dr_sky(pen, v, tt)
+    dr_far_ring(pen, v, tt, cy=10.0)
     with lighting(*_ext_light_d(tod)):
-        F = floor_face(-40.0, 40.0, 9.6, 40.0, D_GROUND)
+        F = floor_face(-90.0, 90.0, 9.6, 90.0, D_GROUND)
         draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0), '#1a2622', ao=False, line=False)
         for i, x in enumerate(np.arange(-12.0, 12.0, 0.15)):
             if v.d(x, 18.0) < 1: continue
@@ -2573,8 +2661,10 @@ def dr_bus_flicker(t, seed=77):
 _dcam('dr_liv_wide', 760, 470, 1.55, -1.55, 5.05, -140, _env(), "from the back-east corner: Grandpa's armchair by the picture window (3/4), "
       'the side table and lamp, the couch (or the rows), the curio; the door is behind camera-left', 'living')
 _dcam('dr_liv_chair', 980, 500, 1.3, -2.25, 2.85, -138, _env(), 'medium on the armchair at 3/4 (seated figure turn ~0.6): the window behind it', 'living')
-_dcam('dr_liv_window', 860, 520, 1.5, -2.1, 0.75, 222, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08), f=(1.0, 1.6)),
+_dcam('dr_liv_window', 860, 520, 1.5, -2.6, 0.95, 216, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08), f=(1.0, 1.6)),
       "the narrator's eyes at the picture window: the driveway (Halverson's car, headlights, rain), Larch Street, the bus stop at its west end", 'living')
+_dcam('dr_liv_window_bus', 3200, 540, 1.5, -2.45, 0.62, 244.5, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.5)),
+      "past her car, down Larch Street through the glass: the bus stop under the flickering streetlight (telephoto POV)", 'living')
 _dcam('dr_liv_door', 880, 480, 1.5, -4.55, 1.85, 78, _env(), 'from beside the armchair toward the living-room door (it opens: the narrator in the doorway, the hall behind)', 'living')
 _dcam('dr_liv_sunrise', 860, 480, 1.45, -2.0, 3.6, -125, _env(), 'sunrise: the armchair against the glowing window (Grandpa still; Ruth with her ticket)', 'living')
 # the waiting room
@@ -2662,7 +2752,8 @@ def dr_living(view='wide', state='now', tod='night', lamp=None, ceiling=0.0, hea
         dyn.append(dr_live_wall_clock(v, 'living', clock, state))
     if callable(door):
         dyn.append(_live_door_layer('door_live', v, dr_living_door(), door, main, o))
-    sp = build_view(name, v, main, o, far=far, outside=out, grade=grade, dyn=dyn, info_extra=dict(state=state, tod=tod))
+    fk = dict(focus=45.0, dof=1.4) if view == 'window_bus' else (dict(focus=8.0, dof=0.9) if view == 'window' else {})
+    sp = build_view(name, v, main, o, far=far, outside=out, grade=grade, dyn=dyn, info_extra=dict(state=state, tod=tod), **fk)
     wins = [_win_glass_quads(((-1.2, 0.0), (-5.6, 0.0)), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0], D_LWIN[2], D_LWIN[3]),
             _win_glass_quads(((-5.6, 0.0), (-5.6, 5.4)), D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3])]
     sp = _house_extras(sp, v, o, wins, car=car, rain=rain, tod='night' if tod == 'night' else 'sunrise')
@@ -2807,7 +2898,7 @@ class DrStreet(Room):
         steady = list(steady)
         if tod == 'night':
             for (x, y) in D_LAMPS:
-                steady.append(Lamp(x, D_GROUND + 6.0, y - 1.6, 13.0, D_SODIUM, 1.1, (1.0, 0.6, 0.2), fall=1.4))
+                steady.append(Lamp(x, D_GROUND + 6.0, y - 1.6, 14.0, D_SODIUM, 1.9, (1.0, 0.6, 0.2), fall=1.35))
         porch = [Lamp(D_PLIGHT[0], D_PLIGHT[1], D_PLIGHT[2] - 0.3, 6.5, '#ffc888', 1.6, fall=1.5)]
         heads = [Lamp(D_CAR[0], D_GROUND + 0.7, D_CAR[1] + 3.2, 6.5, D_HEAD, 1.5, (1.0, 1.0, 0.6), fall=1.4)]
         hall = [Lamp(-0.4, 1.2, -0.6, 3.5, '#ffd8a0', 1.2, fall=1.5)]
@@ -2819,10 +2910,8 @@ class DrStreet(Room):
     def shell(self, pen, v, o):
         tod = o.get('tod', 'night')
         tt = 'night' if tod == 'night' else 'dawn'
-        sky_dome(pen, v, tt, moon=False, stars=False, clouds=True)
-        if tod != 'night':
-            sp_ = sky_dir(v, 100.0, 4.0)
-            if sp_: pen.radial(None, sp_[0], sp_[1], 1.3 * v.S, [(0, '#ffe0b0', 210), (0.3, '#ff9a6a', 90), (1, '#ff9a6a', 0)], sy=0.45, clip=False)
+        dr_sky(pen, v, tt)
+        dr_far_ring(pen, v, tt)
         dr_ground_front(pen, v, tod)
         for (x0, x1) in D_ACROSS:
             dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -22.0 else None), seed=int(x0))
@@ -2883,14 +2972,16 @@ class DrStreet(Room):
         return S
 
 
-_dcam('dr_ext_house', 820, 500, D_GROUND + 1.6, -1.6, -27.0, 2, _env(f=(1.0, 2.6)), "Ruth's house from across Larch Street: the porch, the picture window, the car in the driveway", 'street')
+_dcam('dr_ext_house', 820, 520, D_GROUND + 1.6, -1.8, -19.9, 4, _env(f=(1.0, 2.6)), "Ruth's house from across Larch Street: the porch, the picture window, the car in the driveway", 'street')
 _dcam('dr_ext_porch', 980, 520, D_GROUND + 1.62, 1.45, -2.75, -38, _env(), 'the porch from the walk at 3/4: the red door, the porch light, Halverson knocking', 'street')
 _dcam('dr_ext_door', 900, 500, D_GROUND + 1.55, -0.2, -4.6, 2, _env(), 'up the steps to the front door (open: the narrator in the doorway with Milo)', 'street')
-_dcam('dr_ext_driveway', 900, 520, 1.55, -0.6, -0.75, -122, _env(), 'from the porch to the driveway: the car nose-in, headlights in our eyes, the rain in the beams', 'street')
-_dcam('dr_ext_car', 1050, 520, D_GROUND + 1.35, -5.15, -1.85, -150, _env(), "the car from the front-right: Halverson in the driver's seat through the windshield, phone at her ear", 'street')
+_dcam('dr_ext_driveway', 900, 520, 1.55, -1.3, -0.45, -124, _env(), 'from the porch to the driveway: the car nose-in, headlights in our eyes, the rain in the beams', 'street')
+_dcam('dr_ext_car', 1000, 520, D_GROUND + 1.45, -5.1, -1.3, -146, _env(), "the car from the front-right: Halverson in the driver's seat through the windshield, phone at her ear", 'street')
 _dcam('dr_ext_street', 1200, 520, D_GROUND + 1.5, -3.0, -10.8, -103, _env(f=(1.0, 2.4)), 'down Larch Street to the west: the bus stop under its flickering light at the end', 'street')
-_dcam('dr_ext_bus', 2600, 520, D_GROUND + 1.6, -24.0, -13.2, -108, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
+_dcam('dr_ext_bus', 2300, 560, D_GROUND + 1.45, -35.6, -15.0, -116, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
       'telephoto on the bus-stop bench under the flickering streetlight (HIM folded there, waiting)', 'street')
+_dcam('dr_ext_bus_far', 2900, 540, D_GROUND + 1.6, -6.5, -11.3, -110, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
+      'from the end of the driveway down the street: the bus stop small and far under its light', 'street')
 _dcam('dr_ext_peephole', 560, 540, D_PEEP_Y, -0.4, -0.06, 180, _env(x=(940, 980), y=(520, 560), zoom=(1.0, 1.02), f=(1.0, 1.2)),
       "through the peephole: the fisheye porch, Halverson in the rain, her car's headlights beyond", 'street', pitch=24.0)
 
@@ -2940,3 +3031,859 @@ def dr_front(view='house', tod='night', car=None, rain=None, porch=1.0, headligh
                     focus=(v.d(-0.4, -0.6) if view == 'peephole' else None), dof=0.6)
     sp.info['note'] = 'Outside: figures order = sp.order_at(x, y); Halverson in the car: stage at anchors car_driver (the windshield / near window sort round her).'
     return sp
+
+
+# ====================================================================================================== other locations
+class DrBox(Room):
+    """A generic rectangular room for the other locations (each on its own little plan, metres): cfg = dict(name, R (x0,
+    x1, y0, y1), H (ceiling), floor=dict(base, kind, ink, ink2, scale, art), walls=dict(paper, ink, kind, wains, wcol, trim,
+    rail, base_h, pa, scale, ink2), holes={side: [(xa, ya, xb, yb, v0, v1)]}, art={side: fn}, windows=[(side, (xa, ya, xb, yb,
+    sill, top), lites, frame)], ceil=dict(c, art), lights=fn(o), pieces=fn(o), spots=fn(v, o), glows=fn(v, o), shell_x=fn(pen,
+    v, o) (extra static drawing after the walls))."""
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.name = cfg['name']
+        self.poly = _r4p(cfg['R'])
+
+    def lights(self, o): return self.cfg['lights'](o)
+
+    def shell(self, pen, v, o):
+        c = self.cfg
+        x0, x1, y0, y1 = c['R']
+        H = c.get('H', 2.7)
+        fl = dict(c.get('floor', {}))
+        floor_rect(pen, v, x0, x1, y0, y1, 0.0, fl.get('base', '#c8c0b0'), fl.get('kind', 'tile'), fl.get('ink', '#a89e88'), fl.get('ink2'),
+                   seed=fl.get('seed', 3), art=fl.get('art'), scale=fl.get('scale', 1.0))
+        wk = dict(c.get('walls', {}))
+        paper = wk.pop('paper', '#d8d4c8'); ink = wk.pop('ink', None); kind = wk.pop('kind', None)
+        arts = c.get('art', {})
+        if callable(arts): arts = arts(o)
+        for (side, a, b, u_of) in _walls_of(c['R']):
+            hs = [_hole_x(u_of, xa, xb, ya, yb, v0, v1) for (xa, ya, xb, yb, v0, v1) in c.get('holes', {}).get(side, [])]
+            hs += [_hole_x(u_of, xa, xb, ya, yb, sill, top) for (sd, (xa, ya, xb, yb, sill, top), lites, fr) in c.get('windows', []) if sd == side]
+            wall(pen, v, a, b, 0.0, H, paper, ink, kind, hs, art=arts.get(side), **wk)
+        cl = c.get('ceil', {})
+        ceil_rect(pen, v, x0, x1, y0, y1, H, c=cl.get('c', '#e8e6e0'), art=cl.get('art'))
+        for (sd, (xa, ya, xb, yb, sill, top), lites, fr) in c.get('windows', []):
+            for (side, a, b, u_of) in _walls_of(c['R']):
+                if side != sd: continue
+                ua, ub = sorted((u_of(xa, ya), u_of(xb, yb)))
+                window_unit(pen, v, a, b, ua, ub, sill, top, lites=lites, frame=fr)
+        if c.get('shell_x'): c['shell_x'](pen, v, o)
+
+    def pieces(self, o): return self.cfg.get('pieces', lambda o: [])(o)
+
+    def glows(self, v, o): return self.cfg.get('glows', lambda v, o: [])(v, o)
+
+    def spots(self, v, o): return self.cfg.get('spots', lambda v, o: {})(v, o)
+
+
+def _box_build(cfg, view, o, outside=None, grade='dr_clinic', dyn=None, wins=(), rain=False, focus=None, dof=0.8, extra_info=None):
+    v = cam(view)
+    room = DrBox(cfg)
+    sp = build_view(view, v, room, o, outside=outside, grade=grade, dyn=dyn, focus=focus, dof=dof, info_extra=extra_info)
+    if rain:
+        L = [_rain_out_layer(v)]
+        g = _glass_layer('glass_rain', v, list(wins), ORDER_SHELL - 0.05) if wins else None
+        if g is not None: L.append(g)
+        sp = sp.add(*L)
+    return sp
+
+
+def _ceiling_panel_light(pen, v, x, y, Y, k=1.0, w=1.2, d=0.6, c='#fff8ec'):
+    """A lit ceiling panel (emissive): the warm, even light of the doctors' world."""
+    q = [(x - w / 2, Y - 0.006, y - d / 2), (x + w / 2, Y - 0.006, y - d / 2), (x + w / 2, Y - 0.006, y + d / 2), (x - w / 2, Y - 0.006, y + d / 2)]
+    path = v.poly3(q)
+    if path.isEmpty() or v.cam_h > Y: return
+    pen.fill(path, mix('#d8d8d0', '#fffdf6', k)); pen.line(path, 1.0, '#9a9a90')
+    if k > 0.01:
+        b = _rb(path)
+        pen.ellipse_glow((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, max(20.0, (b[2] - b[0]) * 0.75), max(10.0, (b[3] - b[1]) * 1.4), c, 70 * k)
+
+
+def _dino_sil(p_, x, y, s, kind=0, c='#4aa86a', a=255):
+    """A cute dinosaur silhouette (cm frame; s = height cm): 0 long-neck, 1 T-rex, 2 triceratops, 3 stegosaurus."""
+    if kind == 0:
+        body = union(oval(x, y, s * 0.5, s * 0.28), smooth([(x + s * 0.3, y - s * 0.1), (x + s * 0.5, y - s * 0.7), (x + s * 0.62, y - s * 0.95), (x + s * 0.78, y - s * 0.93),
+                                                          (x + s * 0.66, y - s * 0.78), (x + s * 0.5, y - s * 0.05)], True, 0.8))
+        body = union(body, poly([(x - s * 0.4, y - s * 0.05), (x - s * 1.0, y + s * 0.12), (x - s * 0.45, y + s * 0.1)]))
+        for lx in (-0.3, -0.12, 0.15, 0.32): body = union(body, rect(x + lx * s - s * 0.05, y + s * 0.1, s * 0.1, s * 0.32))
+    elif kind == 1:
+        body = smooth([(x - s * 0.8, y + s * 0.05), (x - s * 0.2, y - s * 0.35), (x + s * 0.2, y - s * 0.75), (x + s * 0.58, y - s * 0.78), (x + s * 0.62, y - s * 0.55),
+                       (x + s * 0.3, y - s * 0.5), (x + s * 0.25, y - s * 0.15), (x + s * 0.1, y + s * 0.15), (x - s * 0.2, y + s * 0.1)], True, 0.7)
+        for lx in (-0.12, 0.08): body = union(body, rect(x + lx * s, y + s * 0.05, s * 0.1, s * 0.4))
+    elif kind == 2:
+        body = union(oval(x, y, s * 0.55, s * 0.3), poly([(x + s * 0.45, y - s * 0.3), (x + s * 0.85, y - s * 0.55), (x + s * 0.9, y + s * 0.05), (x + s * 0.5, y + s * 0.1)]))
+        body = union(body, poly([(x + s * 0.8, y - s * 0.2), (x + s * 1.1, y - s * 0.4), (x + s * 0.85, y - s * 0.12)]))
+        for lx in (-0.35, -0.15, 0.15, 0.32): body = union(body, rect(x + lx * s - s * 0.06, y + s * 0.12, s * 0.12, s * 0.28))
+    else:
+        body = union(oval(x, y, s * 0.6, s * 0.3), poly([(x - s * 0.5, y), (x - s * 1.05, y + s * 0.15), (x - s * 0.5, y + s * 0.12)]))
+        for k in range(5):
+            px = x - s * 0.4 + k * s * 0.2
+            body = union(body, poly([(px - s * 0.09, y - s * 0.22), (px, y - s * 0.5 + 0.06 * s * abs(k - 2)), (px + s * 0.09, y - s * 0.22)]))
+        for lx in (-0.35, -0.12, 0.15, 0.35): body = union(body, rect(x + lx * s - s * 0.06, y + s * 0.15, s * 0.12, s * 0.28))
+    p_.fill(body, c, a)
+    p_.fill(oval(x + s * (0.62 if kind == 0 else (0.45 if kind == 1 else (0.8 if kind == 2 else 0.5))), y - s * (0.88 if kind == 0 else (0.68 if kind == 1 else (0.2 if kind == 2 else 0.05))), s * 0.03), '#1a1a1a', a)
+
+
+def _poster_art(p_, x, y, w, h, kind):
+    """Clinic / hospital posters (cm frame): 'dinos' (DINOSAURS!), 'wash' (WASH YOUR HANDS), 'fast' (stroke signs),
+    'heart' (the heart diagram), 'chart' (an eye chart), 'diploma', 'drawing' (a kid's crayon drawing), 'breathe'."""
+    def fn(q, W, H):
+        if kind == 'dinos':
+            q.fill(rect(0, 0, W, H), '#fff4d8')
+            btext(q, 'DINOSAURS!', W / 2, H * 0.14, 'head', H * 0.1, '#d8582a', 240, 'center')
+            for i, (cx_, cy_, k_, c_) in enumerate(((W * 0.3, H * 0.42, 0, '#4aa86a'), (W * 0.72, H * 0.45, 1, '#d8582a'), (W * 0.28, H * 0.8, 2, '#4a8ad8'), (W * 0.7, H * 0.82, 3, '#a85ad8'))):
+                _dino_sil(q, cx_, cy_, H * 0.16, k_, c_)
+        elif kind == 'wash':
+            q.fill(rect(0, 0, W, H), '#e8f4f8')
+            btext(q, 'WASH YOUR', W / 2, H * 0.16, 'head', H * 0.1, '#2a6aa8', 240, 'center')
+            btext(q, 'HANDS!', W / 2, H * 0.29, 'head', H * 0.12, '#2a6aa8', 240, 'center')
+            q.fill(oval(W / 2, H * 0.62, W * 0.26, H * 0.18), '#f4c8a8'); q.line(oval(W / 2, H * 0.62, W * 0.26, H * 0.18), 0.6, '#5a3a2a', 200)
+            for k in range(7): q.line(oval(W * (0.3 + 0.07 * k), H * (0.5 + 0.04 * (k % 3)), W * 0.03), 0.5, '#4a9ad8', 220)
+        elif kind == 'fast':
+            q.fill(rect(0, 0, W, H), '#ffffff')
+            q.fill(rect(0, 0, W, H * 0.16), '#c82a2a'); btext(q, 'STROKE? ACT F.A.S.T.', W / 2, H * 0.11, 'sans_b', H * 0.065, '#ffffff', 245, 'center')
+            for i, (L, s_) in enumerate((('F', 'Face drooping'), ('A', 'Arm weakness'), ('S', 'Speech'), ('T', 'Time to call'))):
+                yy = H * (0.28 + 0.18 * i)
+                q.fill(oval(W * 0.16, yy, H * 0.06), '#c82a2a'); btext(q, L, W * 0.16, yy + H * 0.025, 'sans_b', H * 0.07, '#ffffff', 250, 'center')
+                btext(q, s_, W * 0.3, yy + H * 0.02, 'sans_b', H * 0.05, '#2a2a2a', 240)
+        elif kind == 'heart':
+            q.fill(rect(0, 0, W, H), '#f8f2ea')
+            btext(q, 'YOUR HEART', W / 2, H * 0.13, 'sans_b', H * 0.08, '#8a2a2a', 240, 'center')
+            hh = union(oval(W * 0.42, H * 0.45, W * 0.17, H * 0.14), oval(W * 0.58, H * 0.45, W * 0.17, H * 0.14))
+            hh = union(hh, poly([(W * 0.27, H * 0.5), (W * 0.73, H * 0.5), (W * 0.5, H * 0.85)]))
+            q.fill(hh, '#d84a4a'); q.line(hh, 0.8, '#6a1a1a', 220)
+            q.line(smooth([(W * 0.5, H * 0.3), (W * 0.48, H * 0.2), (W * 0.56, H * 0.15)], False), 2.0, '#4a6ad8', 230)
+        elif kind == 'chart':
+            q.fill(rect(0, 0, W, H), '#ffffff')
+            for i, row in enumerate(('E', 'F P', 'T O Z', 'L P E D', 'P E C F D')):
+                btext(q, row, W / 2, H * (0.15 + 0.16 * i), 'sans_b', H * (0.14 - 0.022 * i), '#1a1a1a', 240, 'center')
+        elif kind == 'diploma':
+            q.fill(rect(0, 0, W, H), '#f8f0dc')
+            btext(q, 'Doctor of Medicine', W / 2, H * 0.4, 'formal', H * 0.12, '#2a2a3a', 240, 'center')
+            q.fill(oval(W * 0.78, H * 0.78, H * 0.1), '#c8a040')
+            for k in range(4): q.seg((W * 0.2, H * (0.55 + 0.08 * k)), (W * 0.65, H * (0.55 + 0.08 * k)), 0.4, '#5a5a5a', 160)
+        elif kind == 'breathe':
+            q.linear(rect(0, 0, W, H), 0, 0, 0, H, ['#bfe0f0', '#f0e8c8'])
+            btext(q, 'Questions are', W / 2, H * 0.4, 'caveat_b', H * 0.13, '#2a4a6a', 240, 'center')
+            btext(q, 'welcome here', W / 2, H * 0.58, 'caveat_b', H * 0.13, '#2a4a6a', 240, 'center')
+            q.fill(oval(W * 0.5, H * 0.8, H * 0.06), '#f2c84a')
+        else:                                                                           # a kid's crayon drawing
+            q.fill(rect(0, 0, W, H), '#fbf8ee')
+            _dino_sil(q, W * 0.45, H * 0.6, H * 0.35, (int(x) % 4), ['#4aa86a', '#d8582a', '#4a8ad8', '#a85ad8'][int(y) % 4], 200)
+            q.fill(oval(W * 0.85, H * 0.18, H * 0.1), '#f2c84a')
+            btext(q, 'THANK YOU', W / 2, H * 0.12, 'kid', H * 0.1, '#c83a3a', 220, 'center')
+    _hframe(p_, 0, 0, x, y, w, h, 'poster', frame='#e8e4dc' if kind not in ('diploma', 'heart') else '#5a3a24', fn=fn)
+
+
+def _stickers(p_, x0, y0, w, h, n=8, seed=0):
+    """Dinosaur stickers scattered on a surface (cm frame)."""
+    rng = np.random.default_rng(seed)
+    for i in range(n):
+        x, y = x0 + rng.uniform(0, w), y0 + rng.uniform(0, h)
+        s = rng.uniform(3.0, 5.0)
+        p_.fill(oval(x, y, s * 0.8), '#ffffff', 230)
+        _dino_sil(p_, x - s * 0.15, y + s * 0.1, s * 0.6, int(rng.integers(0, 4)), ['#4aa86a', '#d8582a', '#4a8ad8', '#a85ad8', '#e8b83a'][i % 5])
+
+
+# ---------------------------------------------------------------------------------------------- props for the doctors' world
+def dr_exam_table(pen, v, B):
+    """The pediatric exam table: a cream padded top with the paper roll pulled over it, a pull-out step, drawers in the
+    base covered in dinosaur stickers."""
+    w2, d2 = B.w / 2, B.d / 2
+
+    def base_front(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#e8eef2')
+        for k in range(3):
+            r = rect(4 + k * (W - 8) / 3, 6, (W - 8) / 3 - 4, H * 0.5)
+            p_.line(r, 0.8, '#7a8a94', 200); p_.fill(rrect(4 + k * (W - 8) / 3 + (W - 8) / 6 - 6, 10, 12, 2.2, 1), '#a8b0b8')
+        _stickers(p_, 6, 8, W - 12, H * 0.5, 9, 4)
+    base = Box(B.cx, B.cy, B.w, B.d, 0.0, 0.62, B.fa)
+    draw_box(pen, v, base, {'front': dict(fill='#e8eef2', art=base_front), 'all': '#d0d8de', 'top': '#c8d0d6'})
+    top = Box(B.cx, B.cy, B.w, B.d + 0.02, 0.62, 0.8, B.fa)
+    draw_box(pen, v, top, {'all': '#5a8aa8', 'top': dict(fill='#6a9ab8', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.5, 'overlay', 0.6))})
+    paper = Box(B.cx, B.cy, B.w - 0.02, B.d * 0.62, 0.8, 0.806, B.fa)
+    draw_box(pen, v, paper, {'all': '#f8f8f4', 'top': dict(fill='#fbfbf8', art=lambda p_, W, H: [p_.seg((0, k * 9), (W, k * 9), 0.3, '#c8c8c0', 120) for k in range(int(H / 9))])})
+    head = Box(*B.at(-w2 + 0.22, 0, 0)[0::2], 0.44, B.d, 0.8, 0.95, B.fa)
+    draw_box(pen, v, head, {'all': '#5a8aa8', 'top': '#6a9ab8'})
+    step = Box(*B.at(0.1, d2 + 0.18, 0)[0::2], 0.6, 0.3, 0.0, 0.28, B.fa)
+    draw_box(pen, v, step, {'all': '#d0d8de', 'top': '#8a9aa4'})
+
+
+def dr_stool(pen, v, x, y, seat=0.55, c='#3a3a40'):
+    """A doctor's rolling stool: five castor legs, a gas column, a round black seat."""
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    for k in range(5):
+        a = 2 * math.pi * k / 5
+        pen.seg(v.p(x, 0.08, y), v.p(x + math.cos(a) * 0.28, 0.04, y + math.sin(a) * 0.28), max(1.5, 0.025 * s), '#2a2a2e')
+        q = v.p(x + math.cos(a) * 0.28, 0.02, y + math.sin(a) * 0.28); pen.fill(oval(q[0], q[1], max(1.5, 0.02 * s)), '#1a1a1c')
+    pen.seg(v.p(x, 0.08, y), v.p(x, seat - 0.06, y), max(2.0, 0.035 * s) + 2, LINE); pen.seg(v.p(x, 0.08, y), v.p(x, seat - 0.06, y), max(1.5, 0.035 * s), '#a8acb0')
+    pen.fill(ellipse3(v, x, y, 0.2, 0.2, seat - 0.06), lit(_darken(c, 0.3), (x, seat, y), None))
+    tp = ellipse3(v, x, y, 0.2, 0.2, seat)
+    pen.fill(tp, lit(c, (x, seat, y), (0, 1, 0))); pen.line(tp, 1.0)
+
+
+def dr_office_chair(pen, v, x, y, fa=0, c='#2a2c34'):
+    """A rolling office chair (fa: 0 = the sitter faces -y)."""
+    if v.d(x, y) < 0.3: return
+    B = Box(x, y, 0.5, 0.48, 0.0, 0.5, fa)
+    dr_stool(pen, v, x, y, 0.42, c)
+    seat = sub(B, -0.24, 0.24, -0.22, 0.22, 0.42, 0.5)
+    draw_box(pen, v, seat, {'all': _darken(c, 0.1), 'top': c})
+    back = sub(B, -0.22, 0.22, -0.27, -0.2, 0.56, 1.05)
+    draw_box(pen, v, back, {'all': c})
+
+
+def dr_monitor(pen, v, x, Y, y, fa=0, k=1.0, kind='chart', w=0.52, h=0.32):
+    """A flat computer monitor on its stand at (x, Y, y), screen facing direction fa (Box convention); kind 'chart' (a
+    patient chart), 'results' (a list of lab results), 'off'."""
+    B = Box(x, y, w, 0.04, Y + 0.1, Y + 0.1 + h, fa)
+
+    def front(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#16181c')
+        if kind != 'off':
+            p_.fill(rect(2, 2, W - 4, H - 4), mix('#20262e', '#e8eef4', k))
+            p_.fill(rect(2, 2, W - 4, 4), mix('#20262e', '#3a6aa8', k))
+            for i in range(9):
+                yy = 9 + i * (H - 12) / 9
+                p_.fill(rect(4, yy, (W - 10) * (0.4 + 0.5 * ((i * 7) % 5) / 5), 1.4), mix('#20262e', '#5a6a7a', k))
+                if kind == 'results' and i % 3 == 1: p_.fill(rect(W - 14, yy - 0.2, 9, 1.8), mix('#20262e', '#d84a3a', k))
+    draw_box(pen, v, B, {'front': dict(fill='#16181c', art=front), 'all': '#1e2024'})
+    sb = Box(x, y, 0.06, 0.06, Y, Y + 0.12, fa)
+    draw_box(pen, v, sb, {'all': '#2a2c30'})
+    draw_box(pen, v, Box(x, y, 0.22, 0.16, Y, Y + 0.015, fa), {'all': '#2a2c30'})
+
+
+def dr_monitor_glow(pen, v, x, Y, y, k=1.0, w=0.52, h=0.32, c='#cfe0f4'):
+    if k <= 0.01 or v.d(x, y) < 0.3: return
+    gx, gy = v.p(x, Y + 0.1 + h / 2, y)
+    pen.glow(gx, gy, 0.7 * v.s(x, y), c, 50 * k)
+
+
+def dr_papers(pen, v, x, Y, y, n=8, c='#f4f4ee', seed=0, folders=True, ang=0.0):
+    """A stack of lab results / folders on a desk at (x, Y, y)."""
+    if v.d(x, y) < 0.2: return
+    rng = np.random.default_rng(seed)
+    hh = 0.0
+    for i in range(n):
+        th = 0.008 if not folders else 0.012
+        a = math.radians(ang + rng.uniform(-8, 8))
+        dx, dy = rng.uniform(-0.01, 0.01), rng.uniform(-0.01, 0.01)
+        q = []
+        for (u, w) in ((-0.15, -0.11), (0.15, -0.11), (0.15, 0.11), (-0.15, 0.11)):
+            q.append((x + dx + u * math.cos(a) - w * math.sin(a), Y + hh + th, y + dy + u * math.sin(a) + w * math.cos(a)))
+        path = v.poly3(q)
+        if path.isEmpty(): continue
+        cc = c if not folders or i % 2 else ['#e8c86a', '#8ab0d8', '#d88a8a', '#a8d0a0'][i % 4]
+        pen.fill(path, lit(cc, (x, Y + hh, y), (0, 1, 0))); pen.line(path, 0.7)
+        hh += th
+
+
+def dr_desk_phone(pen, v, x, Y, y):
+    """A hospital desk phone with its keypad and the handset in its cradle."""
+    B = Box(x, y, 0.22, 0.2, Y, Y + 0.06, 0)
+    draw_box(pen, v, B, {'all': '#2a2c30', 'top': dict(fill='#3a3c42', art=lambda p_, W, H: [p_.fill(rect(W * 0.55 + (k % 3) * 2.6, H * 0.25 + (k // 3) * 2.6, 2.0, 1.8), '#8a8c92') for k in range(12)])})
+    hs = Box(x - 0.05, y, 0.06, 0.2, Y + 0.06, Y + 0.1, 0)
+    draw_box(pen, v, hs, {'all': '#2a2c30', 'top': '#34363c'})
+
+
+def dr_mug(pen, v, x, Y, y, c='#d84a3a', steam=0.0, t=0.0):
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    top = ellipse3(v, x, y, 0.045, 0.045, Y + 0.1)
+    b = _rb(top); bx, by = v.p(x, Y, y)
+    body = union(top, poly([(b[0], (b[1] + b[3]) / 2), (b[2], (b[1] + b[3]) / 2), (bx + 0.045 * s, by), (bx - 0.045 * s, by)]))
+    pen.fill(body, lit(c, (x, Y + 0.05, y), None)); pen.line(body, 0.9)
+    pen.fill(ellipse3(v, x, y, 0.038, 0.038, Y + 0.098), '#3a2010')
+    hx, hy = v.p(x + 0.055, Y + 0.05, y)
+    pen.line(oval(hx, hy, 0.015 * s, 0.025 * s), max(1.0, 0.01 * s), lit(c, (x, Y, y), None))
+    if steam > 0.01:
+        for j in range(2):
+            pts = [(bx + (j - 0.5) * 0.02 * s + 0.012 * s * math.sin(t * 1.6 + q * 0.9 + j * 2), by - (0.13 + q * 0.035) * s) for q in range(7)]
+            pen.line(smooth(pts, False, 0.8), max(1.0, 0.006 * s), '#ffffff', 60 * steam)
+
+
+def dr_desk_lamp(pen, v, x, Y, y, k=1.0, c='#2a5a6a'):
+    """An adjustable desk lamp (k = on)."""
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    p0, p1, p2 = v.p(x, Y, y), v.p(x - 0.05, Y + 0.32, y + 0.04), v.p(x + 0.12, Y + 0.45, y - 0.02)
+    pen.fill(ellipse3(v, x, y, 0.07, 0.07, Y + 0.005), lit(c, (x, Y, y), (0, 1, 0)))
+    pen.line(poly([p0, p1, p2], False), max(1.5, 0.012 * s) + 1.5, LINE); pen.line(poly([p0, p1, p2], False), max(1.2, 0.012 * s), lit('#a8acb0', (x, Y + 0.3, y), None))
+    hd = poly([(p2[0] - 0.04 * s, p2[1] - 0.03 * s), (p2[0] + 0.05 * s, p2[1] - 0.04 * s), (p2[0] + 0.08 * s, p2[1] + 0.05 * s), (p2[0] - 0.06 * s, p2[1] + 0.06 * s)])
+    pen.fill(hd, lit(c, (x + 0.12, Y + 0.45, y), None)); pen.line(hd, 1.0)
+    if k > 0.01:
+        pen.fill(oval(p2[0] + 0.01 * s, p2[1] + 0.055 * s, 0.065 * s, 0.015 * s), '#fff6e0', 230 * k)
+        pen.glow(p2[0], p2[1] + 0.07 * s, 0.4 * s, '#ffe0b0', 90 * k)
+
+
+def dr_white_coat_hook(pen, v, x, Y, y, fa_dir=(1, 0)):
+    """A white coat hanging on a wall hook (the narrator's office / Halverson's office)."""
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    top = v.p(x, Y, y); bot = v.p(x + fa_dir[0] * 0.05, Y - 1.05, y + fa_dir[1] * 0.05)
+    coat = smooth([(top[0] - 0.06 * s, top[1]), (top[0] + 0.06 * s, top[1]), (bot[0] + 0.24 * s, bot[1]), (bot[0] - 0.24 * s, bot[1])], True, 0.5)
+    pen.fill(coat, lit('#f4f4f0', (x, Y - 0.5, y), None)); pen.line(coat, 1.0)
+    pen.linear(coat, bot[0] - 0.24 * s, 0, bot[0] + 0.24 * s, 0, [(0, '#000000', 50), (0.5, '#000000', 0), (1, '#000000', 60)])
+    pen.seg((top[0], top[1] + 0.05 * s), (bot[0], bot[1]), max(0.6, 0.004 * s), '#c8c8c0')
+    pen.fill(rect(bot[0] + 0.06 * s, top[1] + 0.32 * s, 0.1 * s, 0.07 * s), lit('#e8e8e4', (x, Y - 0.35, y), None))
+    pen.fill(rect(bot[0] + 0.08 * s, top[1] + 0.3 * s, 0.012 * s, 0.05 * s), '#2a4a8a'); pen.fill(rect(bot[0] + 0.1 * s, top[1] + 0.3 * s, 0.012 * s, 0.05 * s), '#c82a2a')
+
+
+def dr_plant(pen, v, x, y, Y=0.0, h=0.9, c='#3a7a4a'):
+    if v.d(x, y) < 0.3: return
+    s = v.s(x, y)
+    px, py = v.p(x, Y, y)
+    pot = poly([(px - 0.15 * s, py - 0.32 * s), (px + 0.15 * s, py - 0.32 * s), (px + 0.11 * s, py), (px - 0.11 * s, py)])
+    pen.fill(pot, lit('#c86a4a', (x, Y + 0.2, y), None)); pen.line(pot, 1.0)
+    for k in range(11):
+        a = -math.pi / 2 + (k - 5) * 0.24
+        L_ = (h * 0.7 + h * 0.3 * _h(k, 5)) * s
+        tip = (px + math.cos(a) * L_ * 0.6, py - 0.32 * s + math.sin(a) * L_)
+        lf = smooth([(px, py - 0.32 * s), ((px + tip[0]) / 2 - 0.05 * s, (py - 0.32 * s + tip[1]) / 2), tip, ((px + tip[0]) / 2 + 0.05 * s, (py - 0.32 * s + tip[1]) / 2)], True, 0.9)
+        pen.fill(lf, lit(c if k % 3 else _lighten(c, 0.15), (x, Y + 0.6, y), None)); pen.line(lf, 0.8)
+
+
+# ---------------------------------------------------------------------------------------------- Doctor Halverson's clinic (day)
+C_R = (0.0, 3.8, 0.0, 3.4)
+C_TABLE = Box(3.32, 1.85, 1.8, 0.7, 0.0, 0.8, -90)            # along the east wall, its long side facing the room (-x)
+C_STOOL = (2.35, 1.55)
+C_CHAIR = (0.5, 2.15)
+
+
+def _clinic_cfg():
+    def lights(o):
+        win = Lamp(kind='win', c='#fff4e0', k=1.2, soft=16.0, panes=_panes_y(1.6, 2.8, 0.9, 2.0, 3.4), d=_norm3((-0.2, -0.45, -1.0)))
+        panels = [Lamp(1.3, 2.55, 1.7, 5.5, '#fff6ea', 0.72, (1.0, 0.7, 0.4), fall=1.3), Lamp(2.8, 2.55, 1.7, 5.5, '#fff6ea', 0.72, (1.0, 0.7, 0.4), fall=1.3)]
+        return '#948c84', [win] + panels, []
+
+    def art(o):
+        def frieze(p_, W, H):
+            p_.fill(rect(0, H - 190, W, 16), '#f4e8c8'); p_.fill(rect(0, H - 190, W, 1.2), '#c8a870'); p_.fill(rect(0, H - 175, W, 1.2), '#c8a870')
+            for k in range(int(W / 30)):
+                _dino_sil(p_, 15 + k * 30, H - 181, 8, k % 4, ['#4aa86a', '#e8783a', '#4a8ad8', '#a85ad8'][k % 4], 230)
+        def west(p_, W, H):
+            frieze(p_, W, H)
+            p_.fill(rect(70, H - 160, 22, 150), '#fff8e8'); p_.line(rect(70, H - 160, 22, 150), 0.6, '#c8a870', 200)       # the height chart
+            for k in range(16):
+                p_.seg((70, H - 10 - k * 10), (76 + (4 if k % 2 == 0 else 0), H - 10 - k * 10), 0.6, '#5a4a3a', 220)
+            _dino_sil(p_, 88, H - 168, 16, 0, '#4aa86a')
+            _poster_art(p_, 140, H - 180, 50, 66, 'wash')
+            _poster_art(p_, 230, H - 190, 70, 52, 'breathe')
+        def back(p_, W, H):
+            frieze(p_, W, H)
+            _poster_art(p_, 20, H - 175, 56, 72, 'dinos')
+            for i in range(3): _poster_art(p_, 300 + i * 26, H - 160 + (i % 2) * 8, 22, 18, 'drawing')
+        def front(p_, W, H):
+            frieze(p_, W, H)
+            _poster_art(p_, 40, H - 175, 36, 50, 'chart')
+            _light_switch(p_, 3.8 * 100 - 140, H - 120)
+        def east(p_, W, H):
+            frieze(p_, W, H)
+            for i in range(4): _poster_art(p_, 60 + i * 50, H - 158 - (i % 2) * 6, 34, 26, 'drawing')
+        return {'west': west, 'back': back, 'front': front, 'east': east}
+
+    def pieces(o):
+        P = [Piece('exam_table', (C_TABLE.cx, 0.5, C_TABLE.cy), lambda pen, v: dr_exam_table(pen, v, C_TABLE), block=C_TABLE.footprint()),
+             Piece('stool', (C_STOOL[0], 0.3, C_STOOL[1]), lambda pen, v: dr_stool(pen, v, C_STOOL[0], C_STOOL[1]), block=_circ(C_STOOL[0], C_STOOL[1], 0.25)),
+             Piece('chair', (C_CHAIR[0], 0.4, C_CHAIR[1]), lambda pen, v: _kchair(pen, v, C_CHAIR[0], C_CHAIR[1], 90), block=_circ(C_CHAIR[0], C_CHAIR[1], 0.25))]
+
+        def counter(pen, v):
+            B = Box(0.85, 3.1, 1.5, 0.6, 0.0, 0.9, 0)
+            draw_box(pen, v, B, {'front': dict(fill='#f0e8d8', art=lambda p_, W, H: (_chrome_pulls(p_, W, H, 3, 12), _stickers(p_, 4, 18, W - 8, H - 30, 7, 2))),
+                                 'all': '#d8d0c0', 'top': '#e8dcc0'})
+            for (dx, c_) in ((-0.5, '#f2f2ee'), (-0.35, '#c8e0f0'), (0.45, '#f2f2ee')):
+                Px = (0.85 + dx, 0.9, 3.15)
+                if v.d(Px[0], Px[2]) > 0.3:
+                    s = v.s(Px[0], Px[2]); px_, py_ = v.p(*Px)
+                    jar = rrect(px_ - 0.05 * s, py_ - 0.16 * s, 0.1 * s, 0.16 * s, 0.015 * s)
+                    pen.fill(jar, lit(c_, (Px[0], 1.0, Px[2]), None)); pen.line(jar, 0.8)
+            fx_, fy_ = v.p(1.2, 0.9, 3.3); s = v.s(1.2, 3.3)
+            pen.line(smooth([(fx_, fy_), v.p(1.2, 1.18, 3.3), v.p(1.2, 1.15, 3.12)], False), max(1.5, 0.02 * s), '#c8ccd2')
+            UB = Box(0.85, 3.22, 1.5, 0.35, 1.5, 2.2, 0)
+            draw_box(pen, v, UB, {'front': dict(fill='#f0e8d8', art=lambda p_, W, H: (_chrome_pulls(p_, W, H, 3, H - 8), _stickers(p_, 4, 6, W - 8, H - 14, 5, 7))),
+                                  'all': '#d8d0c0', 'bottom': '#c8c0b0'})
+        P.append(Piece('counter', (0.85, 0.5, 3.1), counter, block=_box_pts(0.85, 3.1, 0.75, 0.3)))
+
+        def desk(pen, v):
+            B = Box(2.7, 0.3, 1.0, 0.5, 0.0, 0.76, 180)
+            draw_parts(pen, v, table_parts(B, '#d8c8a8', apron=0.05, legw=0.04))
+            dr_monitor(pen, v, 2.7, 0.76, 0.22, 180, 1.0, 'chart')
+            dr_mug(pen, v, 3.05, 0.76, 0.35, '#4a8ad8')
+            dr_papers(pen, v, 2.35, 0.76, 0.35, 4, seed=3)
+        P.append(Piece('desk', (2.7, 0.4, 0.3), desk, block=_box_pts(2.7, 0.3, 0.5, 0.25)))
+        P.append(Piece('plant', (0.3, 0.4, 0.35), lambda pen, v: dr_plant(pen, v, 0.3, 0.35)))
+        return P
+
+    def glows(v, o):
+        return [('panels', (2.0, 2.6, 1.7), lambda pen, t: [_ceiling_panel_light(pen, v, x, 1.7, 2.6, 1.0) for x in (1.3, 2.8)]),
+                ('monitor_glow', (2.7, 1.0, 0.22), lambda pen, t: dr_monitor_glow(pen, v, 2.7, 0.76, 0.22, 0.8))]
+
+    def spots(v, o):
+        S = {}
+        tc = C_TABLE.at(0.15, C_TABLE.d / 2 - 0.08, 0)
+        S['exam_table'] = _mk_spot(v, 'exam_table', tc[0], tc[2], 0.0, 'seat', 'Milo sitting on the exam table edge, legs dangling (perch: seat 0.81 m; faces -x)',
+                                   face=(-1, 0), seat_Y=0.81, perch=True)
+        S['table_lie'] = _mk_spot(v, 'table_lie', C_TABLE.cx + 0.05, C_TABLE.cy, 0.81, 'lie', 'lying on the exam table (head north: +y)')
+        S['stool'] = _mk_spot(v, 'stool', C_STOOL[0], C_STOOL[1], 0.0, 'seat', "Halverson on her rolling stool, facing Milo (+x)", face=(1, 0.25), seat_Y=0.55)
+        S['parent_chair'] = _mk_spot(v, 'parent_chair', C_CHAIR[0], C_CHAIR[1], 0.0, 'seat', 'Mom on the chair by the west wall (faces +x)', face=(1, 0), seat_Y=0.46)
+        S['stand_table'] = _mk_spot(v, 'stand_table', 2.45, 2.1, 0.0, 'stand', 'standing at the table (Halverson taking blood)', face=(1, 0))
+        S['counter_top'] = _mk_spot(v, 'counter_top', 0.85, 3.05, 0.9, 'surface', 'the counter by the sink (vials, cotton)')
+        S['door'] = _mk_spot(v, 'door', 0.85, 0.45, 0.0, 'stand', 'just inside the door', face=(0, 1))
+        S['desk_top'] = _mk_spot(v, 'desk_top', 2.6, 0.32, 0.76, 'surface', 'her desk by the door (the chart on the screen)')
+        return S
+    return dict(name='clinic', R=C_R, H=2.6, floor=dict(base='#e8e2d4', kind='checker', ink='#d4c8b0', scale=1.0),
+                walls=dict(paper='#f2ead8', ink='#e8d8b8', kind='ditsy', wains=0.9, wcol='#bfe0d8', trim='#f8f4ea', pa=60, seed=31),
+                holes={'front': [(0.4, 0.0, 1.3, 0.0, 0.0, 2.1)]}, windows=[('back', (1.6, 3.4, 2.8, 3.4, 0.9, 2.0), (2, 1), '#f8f8f4')],
+                art=art, ceil=dict(c='#f4f2ec', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#d8d8d0', 200, scale=4.0)),
+                lights=lights, pieces=pieces, glows=glows, spots=spots,
+                shell_x=lambda pen, v, o: _blinds(pen, v, 1.6, 2.8, 2.0, 0.9, 3.36, 0.3))
+
+
+_dcam('dr_clinic_wide', 760, 480, 1.55, 0.35, 0.45, 52, _env(), "Halverson's exam room from the door: Milo on the table (3/4), her stool, Mom's chair, the dinosaur frieze", 'clinic')
+_dcam('dr_clinic_table', 1000, 500, 1.3, 1.25, 2.85, 118, _env(), 'medium on the exam table: Milo perched, Halverson on her stool ("her smile went careful")', 'clinic')
+_dcam('dr_clinic_door', 820, 480, 1.5, 3.0, 3.05, -140, _env(), 'reverse: from the table end toward the door and her desk', 'clinic')
+
+
+def _outside_day(pen, v):
+    """Daylight outside a clinic window: a soft sky, a parking lot's trees, spring green."""
+    pen.linear(rect(-800, -600, 3600, 2400), 0, v.h - 1.0 * v.S, 0, v.h + 40, [(0, '#8ab4dc'), (0.7, '#c8dcec'), (1, '#eef2f0')])
+    vg = lifted(v, -3.0)
+    ground(pen, vg, 8.0, 90.0, -40.0, 60.0, tod='day87', c='#7a9a6a')
+    for i, x in enumerate(np.arange(-12.0, 16.0, 3.8)):
+        y = 16.0 + 3 * _h(i, 3)
+        if vg.d(x, y) < 1: continue
+        bx, by = vg.p(x, 0.0, y)
+        pen.fill(oval(bx, by - 3.2 * vg.s(x, y), 2.2 * vg.s(x, y), 2.0 * vg.s(x, y)), '#6a9a5a')
+        pen.seg((bx, by), (bx, by - 2.0 * vg.s(x, y)), max(1.0, 0.25 * vg.s(x, y)), '#5a4a3a')
+
+
+def dr_clinic(view='wide', **kw):
+    """Doctor Halverson's pediatric exam room (day, bright and warm): view 'wide' | 'table' | 'door'."""
+    return _box_build(_clinic_cfg(), 'dr_clinic_' + view, dict(kw), outside=_outside_day, grade='dr_clinic')
+
+
+# ---------------------------------------------------------------------------------------------- the 3 AM offices (Halverson's, the narrator's)
+O_R = (0.0, 3.0, 0.0, 3.4)
+O_DESK = Box(1.5, 2.15, 1.5, 0.75, 0.0, 0.75, 0)              # the desk faces the door (-y); the sitter is behind it
+O_CHAIR = (1.5, 2.85)
+
+
+def _office_cfg(owner='halverson', door_ang=35.0):
+    narr = owner == 'narrator'
+
+    def lights(o):
+        amb = '#262a40'
+        lot = Lamp(kind='win', c=D_SODIUM, k=0.45, soft=14.0, panes=_panes_x(1.2, 2.6, 0.9, 2.0, 3.0), d=_norm3((-1.0, -0.4, 0.1)))
+        lamp_ = [Lamp(O_DESK.cx + 0.5, 1.3, O_DESK.cy, 3.4, '#ffd8a0', 1.0, (1.0, 0.7, 0.6), fall=1.6)]
+        mon = [Lamp(O_DESK.cx - 0.25, 1.0, O_DESK.cy - 0.1, 2.4, '#bcd0f0', 0.7, fall=1.5)]
+        ceil_ = [Lamp(1.5, 2.5, 1.7, 5.0, '#fff4e4', 1.2, (1.0, 0.6, 0.3), fall=1.3)]
+        hall = [Lamp(0.75, 1.5, -0.4, 3.0, '#d8e8d0', 0.4, fall=1.5)]
+        return amb, [lot], [('lamp', lamp_, _kfn(o.get('lamp', 1.0), 261)), ('monitor', mon, _kfn(o.get('monitor', 1.0), 262)),
+                            ('ceiling', ceil_, _kfn(o.get('ceiling', 0.0), 263)), ('hall', hall, _kfn(o.get('hall', 0.3), 264))]
+
+    def art(o):
+        def back(p_, W, H):
+            _poster_art(p_, 30, H - 200, 44, 34, 'diploma')
+            if narr:
+                _photo(p_, W, H, 90, H - 196, 40, 30, 'milo', frame='#2a2a2a')            # Milo, 22, at a finish line
+                _poster_art(p_, 150, H - 196, 46, 36, 'breathe')
+            else:
+                for i in range(4): _poster_art(p_, 90 + i * 30, H - 188 + (i % 2) * 8, 24, 20, 'drawing')
+            p_.fill(rect(220, H - 175, 60, 42), '#f4f4f0'); p_.line(rect(220, H - 175, 60, 42), 0.8, '#8a8a8a')      # whiteboard
+            for k in range(4): p_.seg((225, H - 168 + k * 8), (265 - k * 4, H - 168 + k * 8), 0.6, ['#2a4a9a', '#c82a2a', '#2a8a4a', '#2a4a9a'][k], 200)
+        def west(p_, W, H):
+            _poster_art(p_, 120, H - 190, 46, 60, 'wash' if not narr else 'dinos')
+            p_.fill(rect(200, H - 175, 70, 50), '#c8a070'); p_.line(rect(200, H - 175, 70, 50), 0.8, '#5a3a20')      # cork board
+            for k in range(5): p_.fill(rect(205 + (k % 3) * 21, H - 170 + (k // 3) * 22, 17, 18), ['#fff8e0', '#e8f0ff', '#ffe8e8'][k % 3])
+        def front(p_, W, H):
+            _office_clock(p_, 230, H - 220, 14, 3, 2)
+            _light_switch(p_, (3.0 - 1.35) * 100, H - 120)
+        return {'back': back, 'west': west, 'front': front}
+
+    def pieces(o):
+        stack = o.get('stack', 1.0)
+
+        def desk(pen, v):
+            draw_parts(pen, v, table_parts(O_DESK, '#8a6a4a', apron=0.12, legw=0.05))
+            Y = O_DESK.Y1
+            dr_monitor(pen, v, O_DESK.cx - 0.25, Y, O_DESK.cy + 0.15, 180, 1.0, 'results')
+            dr_desk_lamp(pen, v, O_DESK.cx + 0.55, Y, O_DESK.cy + 0.2, 0.0)
+            if stack: dr_papers(pen, v, O_DESK.cx + 0.3, Y, O_DESK.cy - 0.05, int(12 * stack), seed=5)
+            dr_desk_phone(pen, v, O_DESK.cx - 0.6, Y, O_DESK.cy - 0.1)
+            dr_mug(pen, v, O_DESK.cx + 0.05, Y, O_DESK.cy - 0.22, '#f2f2ee' if narr else '#3a6aa8')
+            dr_mug(pen, v, O_DESK.cx - 0.05, Y, O_DESK.cy + 0.05, '#d8a83a')
+            P = (O_DESK.cx + 0.6, Y, O_DESK.cy - 0.25)                          # a little plastic T-rex
+            if v.d(P[0], P[2]) > 0.2:
+                s = v.s(P[0], P[2]); px, py = v.p(*P)
+                pen.cv.save(); pen.cv.translate(px, py); pen.cv.scale(0.008 * s, 0.008 * s)
+                _dino_sil(pen, 0, -8, 10, 1, '#4aa86a'); pen.cv.restore()
+        P = [Piece('desk', (O_DESK.cx, 0.4, O_DESK.cy), desk, block=O_DESK.footprint()),
+             Piece('chair', (O_CHAIR[0], 0.45, O_CHAIR[1]), lambda pen, v: dr_office_chair(pen, v, O_CHAIR[0], O_CHAIR[1], 180), block=_circ(O_CHAIR[0], O_CHAIR[1], 0.3)),
+             Piece('file_cab', (0.3, 0.6, 2.9), lambda pen, v: draw_box(pen, v, Box(0.3, 2.95, 0.5, 0.6, 0.0, 1.3, 90),
+                                                                         {'front': dict(fill='#9aa0a8', art=lambda p_, W, H: [p_.fill(rrect(W / 2 - 8, 12 + k * H / 4, 16, 2.5, 1), '#d8dce0') for k in range(4)]),
+                                                                          'all': '#8a9098'}), block=_box_pts(0.3, 2.95, 0.3, 0.25)),
+             Piece('coat', (0.12, 1.4, 1.6), lambda pen, v: dr_white_coat_hook(pen, v, 0.06, 1.85, 1.6)),
+             Piece('plant', (2.75, 0.4, 0.35), lambda pen, v: dr_plant(pen, v, 2.75, 0.35, 0.0, 0.7, '#5a7a4a'))]
+        if not callable(o.get('door', door_ang)):
+            D = Door((1.2, -0.02), 0.9, 2.03, (-1.0, 0.0), 1, 0.0, art_a=_hosp_door_art(), art_b=_hosp_door_art(), col='#d8d4c8')
+            P.append(Piece('door', (0.9, 1.0, 0.2), lambda pen, v, D=D: D.draw(pen, v, o.get('door', door_ang))))
+        return P
+
+    def glows(v, o):
+        kl = _kfn(o.get('lamp', 1.0), 261); km = _kfn(o.get('monitor', 1.0), 262)
+        return [('desk_glow', (O_DESK.cx, 1.0, O_DESK.cy), lambda pen, t: (dr_desk_lamp(pen, v, O_DESK.cx + 0.55, O_DESK.Y1, O_DESK.cy + 0.2, kl(t)),
+                                                                           dr_monitor_glow(pen, v, O_DESK.cx - 0.25, O_DESK.Y1, O_DESK.cy + 0.15, km(t))))]
+
+    def spots(v, o):
+        S = {}
+        S['desk_chair'] = _mk_spot(v, 'desk_chair', O_CHAIR[0], O_CHAIR[1] - 0.05, 0.0, 'seat', 'at the desk, facing the door (-y)', face=(0, -1), seat_Y=0.48)
+        S['desk_top'] = _mk_spot(v, 'desk_top', O_DESK.cx, O_DESK.cy - 0.1, O_DESK.Y1, 'surface', 'the desk top')
+        S['results'] = _mk_spot(v, 'results', O_DESK.cx + 0.3, O_DESK.cy - 0.05, O_DESK.Y1 + 0.1, 'surface', 'the stack of test results that came back late')
+        S['phone'] = _mk_spot(v, 'phone', O_DESK.cx - 0.6, O_DESK.cy - 0.1, O_DESK.Y1 + 0.08, 'point', 'the desk phone (handset)')
+        S['door'] = _mk_spot(v, 'door', 0.75, 0.4, 0.0, 'stand', 'in the doorway', face=(0, 1))
+        S['window'] = _mk_spot(v, 'window', 2.6, 1.9, 0.0, 'stand', 'at the window (rain, the parking lot)', face=(1, 0))
+        return S
+    return dict(name='office', R=O_R, H=2.6, floor=dict(base='#9aa098', kind='tile', ink='#7a8078', scale=2.0),
+                walls=dict(paper='#d8dcd0' if not narr else '#d4dce0', wains=0.0, trim='#b8c0b8', base_h=0.1, seed=33),
+                holes={'front': [(0.3, 0.0, 1.2, 0.0, 0.0, 2.05)]}, windows=[('east', (3.0, 1.2, 3.0, 2.6, 0.9, 2.0), (2, 1), '#e8ece6')],
+                art=art, ceil=dict(c='#e8e8e2', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#c8ccc4', 200, scale=4.0)),
+                lights=lights, pieces=pieces, glows=glows, spots=spots,
+                shell_x=lambda pen, v, o: _blinds(pen, v, 1.2, 2.6, 2.0, 0.9, 2.96, 0.25) if False else None)
+
+
+_dcam('dr_office_desk', 980, 500, 1.35, 0.45, 0.75, 32, _env(), 'the doctor at the desk at 3/4 (lamp, screen, the stack of results, the phone)', 'office')
+_dcam('dr_office_wide', 760, 480, 1.55, 0.7, 0.3, 22, _env(), 'the little office from the door', 'office')
+_dcam('dr_office_door', 820, 480, 1.45, 2.2, 3.05, -150, _env(), 'from behind the desk to the door ajar on the dark hallway', 'office')
+
+
+def _outside_lot(pen, v, tod='night'):
+    """The hospital parking lot at night through the office window: sodium lamps, wet cars, rain."""
+    dr_sky(pen, v, 'night')
+    with lighting('#2a3050', [Lamp(kind='dir', c='#8a9ad8', k=0.3, d=_norm3((0.3, -0.8, 0.5)))]):
+        F = floor_face(-60, 60, -60, 60, -6.0)
+        draw_face(pen, v, F, lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'asphalt', 0.6, 'overlay', 3.0), '#1e2026', ao=False, line=False)
+    vg = lifted(v, -6.0)
+    for i, (x, y) in enumerate(((12, 4), (12, 18), (24, 10), (24, 26), (36, 6))):
+        if vg.d(x, y) < 1: continue
+        dr_streetlight(pen, vg, x, y, 1.0, h=7.0, G=0.0)
+        hx, hy = vg.p(x, 7.0, y - 1.6); pen.glow(hx, hy, 1.4 * vg.s(x, y), D_SODIUM, 120)
+
+
+def dr_office(view='desk', owner='halverson', lamp=1.0, monitor=1.0, ceiling=0.0, stack=1.0, door=35.0, rain=True, **kw):
+    """A small hospital office at 3 AM (owner 'halverson': her office when she calls; 'narrator': the narrator's, years
+    later: Milo's photo, 'Questions are welcome here'). view 'desk' | 'wide' | 'door'. door = angle of the door (open onto
+    the dark hall), stack 0..1 = the pile of late results."""
+    o = dict(lamp=lamp, monitor=monitor, ceiling=ceiling, stack=stack, door=door, owner=owner)
+    wins = [_win_glass_quads(((3.0, 3.4), (3.0, 0.0)), 3.4 - 2.6, 3.4 - 1.2, 0.9, 2.0)]
+    return _box_build(_office_cfg(owner, door), 'dr_office_' + view, o, outside=_outside_lot, grade='dr_office', wins=wins, rain=rain)
+
+
+# ---------------------------------------------------------------------------------------------- Larkfield General: the ER bay
+E_R = (0.0, 3.2, 0.0, 3.6)
+E_BED = Box(1.55, 2.2, 0.95, 2.05, 0.0, 0.66, 0)              # the stretcher, head at the back wall (+y)
+E_IV = (2.35, 2.95)
+E_MON = (2.25, 1.55, 3.55)                                    # the monitor on its arm (x, Y, y), screen facing -y
+
+
+def dr_ecg(pen, x, y, w, h, t=0.0, bpm=140, c='#5aff8a', a=255):
+    """A scrolling ECG trace in a box (design px), beating at bpm."""
+    period = 60.0 / bpm
+    pts = []
+    n = 120
+    for i in range(n + 1):
+        u = i / n
+        tt = (t * 0.9 - (1 - u) * 1.6)
+        ph = (tt % period) / period
+        val = 0.0
+        if 0.1 < ph < 0.14: val = -0.15
+        elif 0.14 < ph < 0.17: val = 1.0 - (ph - 0.14) * 20
+        elif 0.17 < ph < 0.2: val = -0.35
+        elif 0.35 < ph < 0.48: val = 0.18 * math.sin((ph - 0.35) / 0.13 * math.pi)
+        pts.append((x + u * w, y + h * 0.6 - val * h * 0.5))
+    pen.line(poly(pts, False), max(1.0, h * 0.04), c, a)
+    pen.fill(oval(pts[-1][0], pts[-1][1], max(1.5, h * 0.05)), '#ffffff', a)
+
+
+def dr_er_monitor(pen, v, t=0.0, live=True, bpm=140, P=E_MON):
+    """The bedside monitor on its wall arm: ECG, SpO2 and the numbers (HR 140)."""
+    x, Y, y = P
+    if v.d(x, y) < 0.2: return
+    B = Box(x, y - 0.06, 0.46, 0.08, Y - 0.17, Y + 0.17, 0)
+    draw_box(pen, v, B, {'all': '#2a2c32', 'front': '#2a2c32'})
+    F = Face((x - 0.21, Y + 0.15, y - 0.101), (1, 0, 0), (0, -1, 0), 42.0, 30.0, (0, 0, -1), 'front')
+    if not v.visible(F.O, F.n): return
+    m, _ = fmat(v, F.O, _scale3(F.Uu, 0.01), _scale3(F.Vu, 0.01))
+    pen.cv.save(); pen.cv.concat(m)
+    pen.fill(rect(0, 0, 42, 30), '#05080a')
+    dr_ecg(pen, 1.5, 3, 28, 9, t if live else 0.6, bpm, '#5aff8a')
+    dr_ecg(pen, 1.5, 13, 28, 7, t * 0.7 + 0.3 if live else 0.3, bpm, '#5ad8ff', 200)
+    btext(pen, str(bpm), 36, 10, 'sans_b', 7, '#5aff8a', 255, 'center')
+    btext(pen, '98', 36, 20, 'sans_b', 5.5, '#5ad8ff', 255, 'center')
+    btext(pen, 'HR', 36, 3.5, 'sans', 2.2, '#5aff8a', 220, 'center'); btext(pen, 'SpO2', 36, 14, 'sans', 2.2, '#5ad8ff', 220, 'center')
+    pen.fill(rect(1.5, 23, 28, 0.4), '#3a3a3a')
+    btext(pen, 'NIBP 98/62', 2, 28, 'sans', 3, '#f2d84a', 230)
+    pen.cv.restore()
+
+
+def dr_iv_pole(pen, v, x=None, y=None, bag=True, Y0=0.0):
+    x = E_IV[0] if x is None else x; y = E_IV[1] if y is None else y
+    if v.d(x, y) < 0.2: return
+    s = v.s(x, y)
+    for k in range(5):
+        a = 2 * math.pi * k / 5
+        pen.seg(v.p(x, Y0 + 0.06, y), v.p(x + math.cos(a) * 0.25, Y0 + 0.03, y + math.sin(a) * 0.25), max(1.2, 0.02 * s), '#8a8e94')
+    a_, b_ = v.p(x, Y0 + 0.05, y), v.p(x, Y0 + 2.0, y)
+    pen.seg(a_, b_, max(1.5, 0.02 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.2, 0.02 * s), '#c8ccd0')
+    hk = v.p(x, Y0 + 1.95, y)
+    pen.seg((hk[0] - 0.12 * s, hk[1]), (hk[0] + 0.12 * s, hk[1]), max(1.0, 0.012 * s), '#c8ccd0')
+    if bag:
+        bx, by = hk[0] - 0.1 * s, hk[1] + 0.03 * s
+        bg = rrect(bx - 0.07 * s, by, 0.14 * s, 0.24 * s, 0.03 * s)
+        pen.fill(bg, '#dcecf4', 200); pen.fill(rect(bx - 0.06 * s, by + 0.08 * s, 0.12 * s, 0.15 * s), '#c8e4f0', 160); pen.line(bg, 0.9)
+        pen.fill(rect(bx - 0.04 * s, by + 0.03 * s, 0.08 * s, 0.04 * s), '#ffffff')
+        btext(pen, 'NS', bx, by + 0.065 * s, 'sans_b', 0.025 * s, '#2a4a8a', 230, 'center')
+        pen.line(smooth([(bx, by + 0.24 * s), (bx - 0.05 * s, by + 0.5 * s), v.p(E_BED.cx + 0.25, 0.75, E_BED.cy - 0.1)], False, 0.8), max(0.8, 0.005 * s), '#e8f0f4', 200)
+
+
+def _er_bay_cfg():
+    def lights(o):
+        panels = [Lamp(1.6, 2.65, 1.6, 5.0, '#fff6ea', 0.8, (1.0, 0.7, 0.4), fall=1.25), Lamp(1.6, 2.65, 2.8, 4.0, '#fff6ea', 0.55, (1.0, 0.7, 0.4), fall=1.3)]
+        return '#7c8288', panels, [('exam', [Lamp(E_BED.cx, 2.4, E_BED.cy, 2.6, '#ffffff', 0.8, (1.0, 0.5, 0.2), fall=1.5)], _kfn(o.get('exam', 1.0), 271))]
+
+    def art(o):
+        def back(p_, W, H):
+            p_.fill(rect(60, H - 175, 200, 40), '#c8d0d8'); p_.line(rect(60, H - 175, 200, 40), 0.8, '#6a7480')                    # the headwall rail
+            for k, c_ in enumerate(('#2a8a4a', '#ffffff', '#f2d84a', '#2a2a2a')):                                                   # O2, air, vac outlets
+                p_.fill(oval(85 + k * 22, H - 155, 5.5), c_); p_.line(oval(85 + k * 22, H - 155, 5.5), 0.6, '#3a3a3a')
+            p_.fill(rect(270, H - 150, 26, 34), '#e84a3a'); p_.fill(rect(273, H - 147, 20, 6), '#ffffff')                         # sharps box
+            p_.fill(rect(20, H - 140, 30, 18), '#f2f2f0'); p_.line(rect(20, H - 140, 30, 18), 0.6, '#7a7a7a')                       # glove box
+            for k, c_ in enumerate(('#8ab0e8', '#e8a8c8', '#a8e8b8')): p_.fill(rect(22 + k * 9, H - 144, 8, 4), c_)
+        def west(p_, W, H):
+            _poster_art(p_, 130, H - 185, 46, 60, 'fast')
+            _office_clock(p_, 240, H - 215, 14, 4, 22)
+        def east(p_, W, H):
+            p_.fill(rect(40, H - 210, 150, 80), '#e8ecf0'); p_.line(rect(40, H - 210, 150, 80), 0.8, '#8a929a')                    # supply cabinet glass
+            for k in range(3):
+                for j in range(6): p_.fill(rect(46 + j * 24, H - 204 + k * 26, 20, 18), ['#c8e0f0', '#f0e0c8', '#e0f0d8'][(j + k) % 3])
+        return {'back': back, 'west': west, 'east': east}
+
+    def pieces(o):
+        bp = hosp_bed_parts(E_BED)
+        P = [Piece('bed', (E_BED.cx, 0.4, E_BED.cy), lambda pen, v: draw_parts(pen, v, bp), occupant=[(E_BED.cx, E_BED.cy)], front=bp, block=E_BED.footprint()),
+             Piece('iv', (E_IV[0], 1.0, E_IV[1]), lambda pen, v: dr_iv_pole(pen, v), block=_circ(E_IV[0], E_IV[1], 0.25)),
+             Piece('counter', (0.3, 0.5, 2.6), lambda pen, v: draw_box(pen, v, Box(0.3, 2.6, 1.2, 0.55, 0.0, 0.9, 90),
+                                                                        {'front': dict(fill='#e8ecf0', art=lambda p_, W, H: _chrome_pulls(p_, W, H, 3, 12)),
+                                                                         'all': '#c8d0d8', 'top': '#d8e0e8'}), block=_box_pts(0.3, 2.6, 0.28, 0.6)),
+             Piece('stool', (0.85, 0.3, 1.2), lambda pen, v: dr_stool(pen, v, 0.85, 1.2))]
+        if not o.get('live_monitor'):
+            P.append(Piece('monitor', (E_MON[0], E_MON[1], E_MON[2] - 0.1), lambda pen, v: dr_er_monitor(pen, v, 0.0, False)))
+        return P
+
+    def shell_x(pen, v, o):
+        # the curtain track across the open front and the curtain pulled back to the east side
+        a_, b_ = v.p(0.0, 2.6, 0.05), v.p(3.2, 2.6, 0.05)
+        pen.seg(a_, b_, max(1.5, 0.015 * v.s(1.6, 0.05)), '#a8acb0')
+        F = Face((2.55, 2.55, 0.06), (1, 0, 0), (0, -1, 0), 65.0, 230.0, (0, 0, -1), 'front')
+        shp = poly([(0, 0), (65, 0)] + [(x, 230 - 3 * abs(math.sin(x * 0.3))) for x in np.linspace(65, 0, 14)])
+        draw_face(pen, v, F, lambda p_, W, H: [p_.linear(rect(k * 8, 0, 8, H), k * 8, 0, k * 8 + 8, 0, [(0, '#000000', 40), (0.5, '#ffffff', 30), (1, '#000000', 40)])
+                                               for k in range(int(W / 8) + 1)], '#9ac8d8', shape=shp, ao=False, lw=0.9)
+        for x in (1.0, 2.2):
+            _ceiling_panel_light(pen, v, x, 1.8, 2.7, 1.0, 0.6, 1.2)
+
+    def spots(v, o):
+        S = {}
+        S['bed_lie'] = _mk_spot(v, 'bed_lie', E_BED.cx, E_BED.cy, 0.66, 'lie', 'Milo lying on the stretcher (head at the back wall, +y)')
+        S['bed_edge'] = _mk_spot(v, 'bed_edge', E_BED.cx - 0.3, E_BED.cy - 0.4, 0.0, 'seat', 'sitting on the stretcher edge (faces -x)', face=(-1, 0), seat_Y=0.66, perch=True)
+        S['nurse'] = _mk_spot(v, 'nurse', 0.75, 2.0, 0.0, 'stand', "at the bed's left (Mom / the nurse, starting the IV)", face=(1, 0))
+        S['doctor'] = _mk_spot(v, 'doctor', 2.45, 1.55, 0.0, 'stand', "at the bed's right (the ER doctor)", face=(-1, 0.2))
+        S['foot'] = _mk_spot(v, 'foot', E_BED.cx, 0.75, 0.0, 'stand', 'at the foot of the bed (the narrator / Halverson)', face=(0, 1))
+        S['monitor'] = _mk_spot(v, 'monitor', E_MON[0], E_MON[2] - 0.11, E_MON[1], 'point', 'the monitor screen (HR 140)')
+        S['iv_bag'] = _mk_spot(v, 'iv_bag', E_IV[0] - 0.1, E_IV[1], 1.8, 'point', 'the IV bag (fluids)')
+        S['iv_hand'] = _mk_spot(v, 'iv_hand', E_BED.cx + 0.28, E_BED.cy - 0.15, 0.74, 'point', "Milo's right hand on the sheet (where the IV line goes)")
+        return S
+    return dict(name='er_bay', R=E_R, H=2.7, floor=dict(base='#d8dce0', kind='tile', ink='#b8c0c8', scale=2.0),
+                walls=dict(paper='#d6e6e8', wains=1.0, wcol='#a8ccd2', trim='#e8c86a', base_h=0.12, seed=35),
+                holes={'front': [(0.05, 0.0, 3.15, 0.0, 0.0, 2.6)]}, art=art, ceil=dict(c='#eef0ee', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#ccd2d0', 200, scale=4.0)),
+                lights=lights, pieces=pieces, spots=spots, shell_x=shell_x,
+                glows=lambda v, o: [])
+
+
+_dcam('dr_er_bay', 900, 500, 1.55, 0.35, 0.25, 32, _env(), 'the ER bay at 3/4 from the curtain: Milo on the stretcher, the IV pole, the monitor; Mom on the left', 'er_bay')
+_dcam('dr_er_bay_side', 960, 500, 1.4, 2.9, 0.6, -28, _env(), 'the bay from the right: Mom and the nurse working at the bed, the monitor above', 'er_bay')
+_dcam('dr_er_monitor', 2600, 560, 1.5, 1.6, 1.4, 30, _env(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.05), f=(1.0, 1.4)), 'close on the monitor ("beeped like they were cheering")', 'er_bay')
+
+
+def _outside_er_floor(pen, v):
+    """Beyond the open curtain: the bright ER floor (the nurses' station, the opposite bays' curtains, people)."""
+    pen.fill(rect(-800, -600, 3600, 2400), '#e8eef0')
+    with lighting('#c8d0d4', [Lamp(1.6, 2.6, -3.0, 9.0, '#ffffff', 0.6, fall=1.2)]):
+        F = floor_face(-12, 15, -9, 0, 0.0)
+        draw_face(pen, v, F, lambda p_, W, H: pat(p_, W, H, 'tile', '#b8c0c8', 200, scale=2.0), '#d8dce0', ao=False, line=False)
+        wall(pen, v, (15, -9), (-12, -9), 0.0, 2.8, '#dce6ea', None, None, [], wains=1.0, wcol='#b8d0d8', seed=36)
+        ceil_rect(pen, v, -12, 15, -9, 0, 2.8, c='#eef0ee')
+        B = Box(1.6, -6.0, 4.5, 0.8, 0.0, 1.1, 0)
+        draw_box(pen, v, B, {'front': dict(fill='#7aa8b8', art=lambda p_, W, H: btext(p_, 'NURSES', W / 2, H * 0.5, 'sans_b', 14, '#ffffff', 220, 'center')), 'all': '#6a98a8', 'top': '#e8ecf0'})
+        for x in (-6.0, 9.0):
+            F2 = Face((x - 1.2, 2.5, -4.0), (1, 0, 0), (0, -1, 0), 240, 230, (0, 0, 1), 'front')
+            draw_face(pen, v, F2, lambda p_, W, H: [p_.linear(rect(k * 10, 0, 10, H), k * 10, 0, k * 10 + 10, 0, [(0, '#000000', 30), (0.5, '#ffffff', 20), (1, '#000000', 30)]) for k in range(24)],
+                      '#9ac8d8', ao=False)
+        for (x, y) in ((-1.0, -5.0), (3.5, -5.2)):
+            dr_monitor(pen, v, x, 1.1, y, 0, 1.0, 'chart')
+
+
+def dr_er_bay(view='bay', live_monitor=True, bpm=140, exam=1.0, **kw):
+    """The ER bay (bright, safe): the stretcher, the IV pole with fluids, the monitor (live ECG at bpm), the curtain pulled
+    back onto the busy ER floor. view 'bay' | 'side' | 'monitor'."""
+    name = 'dr_er_' + ('monitor' if view == 'monitor' else ('bay_side' if view == 'side' else 'bay'))
+    o = dict(live_monitor=live_monitor, exam=exam)
+    dyn = []
+    if live_monitor:
+        v = cam(name)
+        lay = Layer(max(0.3, v.d(E_MON[0], E_MON[2])), lambda pen, t: dr_er_monitor(pen, v, t, True, bpm), 'monitor_live', blur=None)
+        lay.order = v.d(E_MON[0], E_MON[2] - 0.1)
+        dyn.append(lay)
+    return _box_build(_er_bay_cfg(), name, o, outside=_outside_er_floor, grade='dr_er', dyn=dyn)
+
+
+# ---------------------------------------------------------------------------------------------- Larkfield General: the ER waiting room (bright and real)
+W_R = (0.0, 9.0, 0.0, 7.0)
+W_ROWS = [(1.1, 2.5), (1.1, 3.75), (1.1, 5.0)]                  # (x of the first seat, y) three rows of seven facing the TV (+y)
+W_PITCH = 0.6
+W_DESK = Box(8.45, 3.6, 2.6, 0.7, 0.0, 1.05, -90)               # the triage desk along the east wall, facing -x
+W_CHEST, W_ROCK = (0, 2), (0, 3)                                # the man with chest pain, the empty chair still rocking
+
+
+def dr_single_chair(pen, v, x, y, fa=180, c=D_CHAIR_ER, rock=0.0):
+    """A free-standing moulded plastic chair (fa: 180 = faces +y); rock (degrees) tips it back and forth on its back legs."""
+    if abs(rock) < 0.01:
+        _plastic_chair(pen, v, x, y, fa, c)
+        return
+    # tilt by drawing in a lifted / shifted view: approximate the rock as a small forward-back shift of the seat and back
+    th = math.radians(rock)
+    B = Box(x, y, 0.46, 0.46, 0.0, 0.46, fa)
+    nx, ny = B.N
+    parts = []
+    for (u, n) in ((-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2)):
+        lift = max(0.0, math.sin(th) * (n + 0.2)) if rock > 0 else max(0.0, -math.sin(th) * (0.2 - n))
+        parts.append(Part(sub(B, u - 0.015, u + 0.015, n - 0.015, n + 0.015, lift, 0.43 + lift), {'all': '#9aa0a8'}))
+    lift_s = abs(math.sin(th)) * 0.2
+    parts.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -0.22, 0.22, -0.22, 0.22, 0.42 + lift_s, 0.47 + lift_s, lambda W, H: rounded_rect_pts(W, H, 2.0), c, _darken(c, 0.2)),
+                      ref=B.at(0, 0, 0.45)))
+    sh = math.sin(th) * 0.3
+    parts.append(Part(fn=lambda pen, v: box_extrude(pen, v, B, -0.22, 0.22, -0.24 - sh, -0.2 - sh, 0.62 + lift_s, 0.88 + lift_s, lambda W, H: rounded_rect_pts(W, H, 5.0, 2.0), c, _darken(c, 0.2)),
+                      ref=B.at(0, -0.22, 0.75)))
+    draw_parts(pen, v, parts)
+
+
+def dr_er_seats():
+    out = []
+    for ri, (x0, y) in enumerate(W_ROWS):
+        for i in range(7):
+            out.append((ri, i, x0 + i * W_PITCH, y))
+    return out
+
+
+def _er_wait_cfg():
+    def lights(o):
+        panels = [Lamp(x, 2.75, y, 5.5, '#fff8ee', 0.7, (1.0, 0.7, 0.4), fall=1.25) for x in (2.0, 5.0, 8.0) for y in (2.0, 5.0)]
+        door = Lamp(kind='win', c='#3a4a7a', k=0.4, soft=12.0, panes=[[(6.5, 2.2, 0.0), (8.3, 2.2, 0.0), (8.3, 0.1, 0.0), (6.5, 0.1, 0.0)]], d=_norm3((0.0, -0.3, 1.0)))
+        return '#8a8e94', panels + [door], [('tv', [Lamp(4.5, 2.0, 6.7, 3.0, '#ffc89a', 0.4, fall=1.5)], _kfn(o.get('tv', 1.0), 281))]
+
+    def art(o):
+        def back(p_, W, H):
+            _poster_art(p_, 60, H - 190, 46, 60, 'fast')
+            _poster_art(p_, 120, H - 185, 46, 60, 'heart')
+            p_.fill(rect(560, H - 200, 160, 46), '#2a6aa8'); btext(p_, 'CHEST PAIN?', 640, H - 182, 'sans_b', 14, '#ffffff', 250, 'center')
+            btext(p_, 'TELL THE NURSE RIGHT AWAY', 640, H - 164, 'sans_b', 8.5, '#ffffff', 245, 'center')
+            _office_clock(p_, 760, H - 225, 15, 5, 12)
+        def west(p_, W, H):
+            _poster_art(p_, 220, H - 185, 50, 60, 'wash')
+            _poster_art(p_, 320, H - 190, 70, 52, 'breathe')
+        def front(p_, W, H):
+            p_.fill(rect(30, H - 240, 160, 40), '#c82a2a'); btext(p_, 'EMERGENCY', 110, H - 212, 'sans_b', 22, '#ffffff', 250, 'center')
+        def east(p_, W, H):
+            p_.fill(rect(200, H - 240, 180, 36), '#3a7a8a'); btext(p_, 'TRIAGE', 290, H - 214, 'sans_b', 20, '#ffffff', 250, 'center')
+        return {'back': back, 'west': west, 'front': front, 'east': east}
+
+    def pieces(o):
+        P = []
+        rock = o.get('rock', 0.0)
+        for (ri, i, x, y) in dr_er_seats():
+            if (ri, i) == W_ROCK and (callable(rock) or rock): continue
+            P.append(Piece('chair_r%d_%d' % (ri, i), (x, 0.45, y), (lambda x_, y_: lambda pen, v: dr_single_chair(pen, v, x_, y_, 180))(x, y),
+                           occupant=[(x, y + 0.02)], front=None, block=_circ(x, y, 0.24)))
+        if not callable(rock) and rock:
+            x, y = [(q[2], q[3]) for q in dr_er_seats() if (q[0], q[1]) == W_ROCK][0]
+            P.append(Piece('chair_rock', (x, 0.45, y), lambda pen, v: dr_single_chair(pen, v, x, y, 180, rock=rock)))
+
+        def desk(pen, v):
+            draw_box(pen, v, W_DESK, {'front': dict(fill='#7aa8b8', art=lambda p_, W, H: (p_.fill(rect(0, 0, W, 8), '#e8ecf0'), btext(p_, 'PLEASE CHECK IN HERE', W / 2, H * 0.55, 'sans_b', 7, '#ffffff', 240, 'center'))),
+                                      'all': '#6a98a8', 'top': '#e8ecf0'})
+            gl = Face((W_DESK.cx - 0.3, 2.1, W_DESK.cy - 1.25), (0, 0, 1), (0, -1, 0), 250, 100, (-1, 0, 0), 'front')
+            draw_face(pen, v, gl, lambda p_, W, H: p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 40), (0.4, '#ffffff', 10), (1, '#ffffff', 40)]), '#d8e8f0',
+                      ao=False, unlit=True, lw=1.0, holes=None) if False else None
+            dr_monitor(pen, v, W_DESK.cx + 0.1, 1.05, W_DESK.cy - 0.6, -90, 1.0, 'chart')
+        P.append(Piece('desk', (W_DESK.cx, 0.5, W_DESK.cy), desk, block=W_DESK.footprint()))
+        P.append(Piece('vending', (0.45, 0.9, 6.4), lambda pen, v: draw_box(pen, v, Box(0.45, 6.4, 0.9, 0.75, 0.0, 1.85, 90),
+                                                                             {'front': dict(fill='#2a6aa8', art=lambda p_, W, H: [p_.fill(rect(6 + (k % 4) * W * 0.15, 10 + (k // 4) * H * 0.13, W * 0.11, H * 0.08),
+                                                                                                                                         ['#d84a3a', '#4a8ad8', '#e8c84a', '#5ab85a'][k % 4]) for k in range(20)]),
+                                                                              'all': '#1a4a7a'}), block=_box_pts(0.45, 6.4, 0.38, 0.45)))
+        P.append(Piece('plant', (8.6, 0.4, 6.5), lambda pen, v: dr_plant(pen, v, 8.6, 6.5)))
+        P.append(Piece('plant2', (0.4, 0.4, 0.5), lambda pen, v: dr_plant(pen, v, 0.4, 0.5, 0.0, 1.0, '#4a8a5a')))
+        P.append(Piece('magazines', (6.0, 0.3, 3.8), lambda pen, v: (draw_parts(pen, v, table_parts(Box(6.0, 3.8, 0.6, 0.6, 0.0, 0.45, 0), '#c8a878', apron=0.04)),
+                                                                     dr_papers(pen, v, 6.0, 0.45, 3.8, 4, '#e8d8c8', 9, True, 20)), block=_box_pts(6.0, 3.8, 0.3, 0.3)))
+        P.append(Piece('cooler', (8.6, 0.6, 5.6), lambda pen, v: (draw_box(pen, v, Box(8.6, 5.6, 0.35, 0.35, 0.0, 1.0, -90), {'all': '#e8ecf0'}),
+                                                                  draw_box(pen, v, Box(8.6, 5.6, 0.28, 0.28, 1.0, 1.45, -90), {'all': '#a8d0f0'}))))
+        P.append(Piece('tv', (4.5, 2.2, 6.9), lambda pen, v: draw_box(pen, v, Box(4.5, 6.95, 1.2, 0.08, 1.75, 2.45, 0),
+                                                                       {'all': '#1a1a1e', 'front': dict(fill='#1a1a1e', art=lambda p_, W, H: (p_.linear(rect(3, 3, W - 6, H - 6), 0, 0, W, H, ['#f2b86a', '#e85a4a', '#4a8ad8']),
+                                                                                                                                              p_.fill(oval(W * 0.35, H * 0.6, W * 0.12), '#f8e8c8')))})))
+        return P
+
+    def shell_x(pen, v, o):
+        for x in (2.0, 5.0, 8.0):
+            for y in (2.0, 5.0):
+                _ceiling_panel_light(pen, v, x, y, 2.8, 1.0)
+        # the automatic sliding doors (glass, night outside)
+        F = Face((6.5, 2.2, 0.02), (1, 0, 0), (0, -1, 0), 180, 220, (0, 0, 1), 'front')
+        draw_face(pen, v, F, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#1a2234', 160), p_.fill(rect(W / 2 - 1, 0, 2, H), '#a8b0b8'),
+                                               p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 0), (0.3, '#ffffff', 40), (0.36, '#ffffff', 0)])), '#1a2234', ao=False, unlit=True)
+
+    def spots(v, o):
+        S = {}
+        for (ri, i, x, y) in dr_er_seats():
+            S['seat_r%d_%d' % (ri, i)] = _mk_spot(v, 'seat_r%d_%d' % (ri, i), x, y + 0.02, 0.0, 'seat', 'ER waiting chair row %d seat %d (faces the TV, +y)' % (ri, i),
+                                                   face=(0, 1), seat_Y=0.46)
+        S['chest_seat'] = S['seat_r%d_%d' % W_CHEST]; S['chest_seat'].note = 'the man holding his chest sits here'
+        S['rock_seat'] = S['seat_r%d_%d' % W_ROCK]; S['rock_seat'].note = 'the empty chair still rocking (rock=f(t) degrees; CH.chair_rock)'
+        S['desk_nurse'] = _mk_spot(v, 'desk_nurse', 8.85, 3.6, 0.0, 'stand', 'the triage nurse behind the desk', face=(-1, 0))
+        S['desk_front'] = _mk_spot(v, 'desk_front', 7.6, 3.6, 0.0, 'stand', 'at the desk', face=(1, 0))
+        S['nurse_walk'] = _mk_spot(v, 'nurse_walk', 3.0, 2.0, 0.0, 'stand', 'the nurse walking straight up to him ("Sir, you don\'t wait"): in front of row 0', face=(-0.3, 1))
+        S['entrance'] = _mk_spot(v, 'entrance', 7.4, 0.8, 0.0, 'stand', 'just inside the sliding doors', face=(0, 1))
+        return S
+    return dict(name='er_wait', R=W_R, H=2.8, floor=dict(base='#d8d4c8', kind='checker', ink='#c4bca8', scale=1.6),
+                walls=dict(paper='#e6ece4', wains=1.0, wcol='#a8c8c0', trim='#8ab0a8', base_h=0.1, seed=37),
+                holes={'front': [(6.5, 0.0, 8.3, 0.0, 0.0, 2.2)]}, art=art, ceil=dict(c='#f0f0ea', art=lambda p_, W, H: pat(p_, W, H, 'tile', '#d0d4cc', 200, scale=4.0)),
+                lights=lights, pieces=pieces, spots=spots, shell_x=shell_x)
+
+
+_dcam('dr_er_wait', 760, 480, 1.6, 8.3, 0.6, -48, _env(), 'the ER waiting room from the doors: rows of chairs, the TV, the triage desk (bright, real)', 'er_wait')
+_dcam('dr_er_wait_chairs', 1050, 500, 1.35, 3.6, 1.15, -32, _env(), 'the man holding his chest and the empty chair beside him at 3/4 (seated turn ~0.55)', 'er_wait')
+_dcam('dr_er_desk', 900, 500, 1.55, 6.2, 1.6, 70, _env(), 'the triage desk', 'er_wait')
+
+
+def dr_er_wait(view='wide', rock=0.0, **kw):
+    """The ER waiting room: bright and real. view 'wide' | 'chairs' | 'desk'. rock = the empty chair's tilt (degrees, or
+    f(t) -> degrees: use CH.chair_rock(t, t_left))."""
+    name = {'wide': 'dr_er_wait', 'chairs': 'dr_er_wait_chairs', 'desk': 'dr_er_desk'}[view]
+    o = dict(rock=rock if not callable(rock) else 'f')
+    dyn = []
+    if callable(rock):
+        v = cam(name)
+        room = DrBox(_er_wait_cfg()); amb, steady, var = room.lights(o)
+        x, y = [(q[2], q[3]) for q in dr_er_seats() if (q[0], q[1]) == W_ROCK][0]
+        dyn.append(live_layer('chair_rock', v, (x, 0.45, y), lambda pen, v_, t: dr_single_chair(pen, v_, x, y, 180, rock=rock(t)), amb, steady, var))
+    return _box_build(_er_wait_cfg(), name, o, outside=lambda pen, v: _outside_lot(pen, v), grade='dr_er', dyn=dyn)

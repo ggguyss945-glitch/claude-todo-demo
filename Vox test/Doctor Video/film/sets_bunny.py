@@ -1816,8 +1816,11 @@ def curtain_pair(pen, v, a, b, u0, u1, top, drop, Y0=0.0, open_=1.0, c='#a35a60'
             if open_ > 0.6:                                     # a tie-back
                 p_.fill(rect(0, H * 0.58, W, 4), _darken(c, 0.3))
         draw_face(pen, v, F, art, c, shape=shape, ao=False, lw=1.2)
-    pen.seg(s0, s1, sw + 2, LINE); pen.seg(s0, s1, sw, '#8a6a3a')
-    for q in (s0, s1): pen.fill(oval(q[0], q[1], sw * 1.4), '#8a6a3a')
+    # (doctor film fix: each end of the rod and its finial is sized by its own distance; the near end used to set both)
+    sw1 = max(1.2, 0.018 * v.s(p1[0], p1[2]))
+    pen.fill(poly([(s0[0], s0[1] - sw / 2 - 1), (s1[0], s1[1] - sw1 / 2 - 1), (s1[0], s1[1] + sw1 / 2 + 1), (s0[0], s0[1] + sw / 2 + 1)]), LINE)
+    pen.fill(poly([(s0[0], s0[1] - sw / 2), (s1[0], s1[1] - sw1 / 2), (s1[0], s1[1] + sw1 / 2), (s0[0], s0[1] + sw / 2)]), '#8a6a3a')
+    for q, w_ in ((s0, sw), (s1, sw1)): pen.fill(oval(q[0], q[1], w_ * 1.4), '#8a6a3a')
 
 
 def gap_glow(pen, v, door_a, door_b, Y=0.0, k=1.0, c='#ffd9a0', reach=0.9, feet=(), side_n=1.0, line_only=False):
