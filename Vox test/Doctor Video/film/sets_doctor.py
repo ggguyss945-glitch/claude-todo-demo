@@ -6020,6 +6020,63 @@ def _later_finger(pen, pts, w0=46.0, w1=20.0, c='#141418'):
     pen.fill(nail, '#2a2c36'); pen.line(nail, 2, '#000000', 230)
 
 
+def _ins_blood(pen, t, draw=1.0, done=0.0, **kw):
+    """'She took some blood.' Milo's arm lying palm up on the exam-table paper, a blue band above the elbow; Halverson's
+    purple-gloved hand (blue scrubs cuff) holds a small capped tube labelled MILO at the crook of the elbow (draw 0..1:
+    the tube fills, dark and small; kid-safe, no needle shown). done 0..1: the band is off, the tube lifts away and a
+    green dinosaur bandage sits on the crook."""
+    _ibg(pen, '#7fb6b0', '#3c6a66', 110)
+    paper = poly([(-40, 330), (2600, 230), (2600, 1290), (-40, 1350)])
+    pen.fill(paper, '#f6f4ec'); pen.texture(paper, 'paper', 0.6, 'overlay', 1.4)
+    for k in range(7):
+        y0 = 400 + k * 135
+        pen.line(smooth([(-40, y0 + 20), (800, y0 - 8 + 10 * math.sin(k)), (1700, y0 + 12), (2600, y0 - 30)], False), 3, '#c8c4b4', 70)
+    pen.line(paper, 4, '#9a968a', 120)
+    cv = pen.cv
+    s = 250.0
+    hx, hy = 330.0, 650.0
+    skin, sh_, dp = '#f2cfb2', '#d4a487', '#8a5a48'
+    _hand_palm(pen, hx, hy, s, skin=skin, sh=sh_, dp=dp, cuff=skin, curl=0.35, ang=-90.0)
+    cv.save(); cv.translate(hx, hy); cv.rotate(-90)
+    arm = poly([(-0.5 * s, 0.9 * s), (0.5 * s, 0.9 * s), (0.72 * s, 1.9 * s), (0.78 * s, 3.3 * s), (0.9 * s, 7.6 * s), (-0.9 * s, 7.6 * s), (-0.78 * s, 3.3 * s), (-0.72 * s, 1.9 * s)])
+    cv.save(); cv.translate(16, 26); pen.fill(arm, '#000000', 60, blur=18); cv.restore()
+    pen.fill(arm, skin); pen.linear(arm, -0.86 * s, 0, 0.86 * s, 0, [(0, '#ffffff', 40), (0.5, '#000000', 0), (1, sh_, 150)])
+    pen.line(smooth([(0.05 * s, 3.05 * s), (0.22 * s, 3.25 * s), (0.08 * s, 3.45 * s)], False), 5, sh_, 150)          # the crook of the elbow
+    pen.line(arm, 4, dp, 160)
+    sl = poly([(-0.96 * s, 4.6 * s), (0.96 * s, 4.6 * s), (1.04 * s, 7.8 * s), (-1.04 * s, 7.8 * s)])                      # the yellow T-shirt sleeve
+    pen.fill(sl, '#e8bf30'); pen.linear(sl, 0, 4.6 * s, 0, 5.2 * s, [(0, '#ffffff', 50), (1, '#000000', 40)]); pen.line(sl, 5, '#7a5a10', 170)
+    band = clamp(1.0 - 2.0 * done)
+    if band > 0.01:
+        bd = poly([(-0.86 * s, 3.85 * s), (0.86 * s, 3.85 * s), (0.88 * s, 4.15 * s), (-0.88 * s, 4.15 * s)])
+        pen.fill(bd, '#3f8ad8', int(255 * band)); pen.line(bd, 4, '#1c4a80', int(200 * band))
+    cv.restore()
+    ex_, ey_ = hx + 3.25 * s, hy                                                       # the crook of the elbow on screen
+    if done > 0.05:                                                                    # the dinosaur bandage
+        a = int(255 * clamp((done - 0.05) / 0.3))
+        bb = rrect(ex_ - 120, ey_ - 58, 240, 116, 50)
+        pen.fill(bb, '#7cc46a', a); pen.line(bb, 4, '#3a7a30', a)
+        pen.fill(rrect(ex_ - 44, ey_ - 38, 88, 76, 12), '#a8dc96', a)
+        _dino_sil(pen, ex_ - 2, ey_ + 20, 58, kind=1, c='#2e6a26', a=a)
+    # the gloved hand with the tube, down from the top of frame
+    lift = 520.0 * ease_in_out(clamp((done - 0.25) / 0.6))
+    gx, gy = ex_ + 30, ey_ - 120 - lift
+    _hand_palm(pen, gx + 50, gy - 200, 250, skin='#a99be6', sh='#8576cc', dp='#4c3f94', cuff='#5b8fd0', curl=0.55, ang=165.0)
+    cv.save(); cv.translate(gx, gy); cv.rotate(-12)
+    tube = rrect(-190, -42, 380, 84, 38)
+    cv.save(); cv.translate(14, 22); pen.fill(tube, '#000000', 70, blur=14); cv.restore()
+    pen.fill(tube, '#eef4f8', 235)
+    fill_w = 320 * clamp(draw)
+    if fill_w > 4: pen.fill(rrect(-180, -30, fill_w, 60, 28), '#7a1e2a', 230)
+    lab = rect(-80, -42, 160, 84); pen.fill(lab, '#ffffff', 240); pen.line(lab, 2, '#8a8a8a', 160)
+    btext(pen, 'MILO', 0, 15, 'sans_b', 38, '#1a1a1a', 230, 'center', spacing=0.06)
+    cap = rrect(180, -52, 86, 104, 18); pen.fill(cap, '#d8382e'); pen.line(cap, 3, '#6a1410', 200)
+    pen.line(tube, 3, '#7a8a94', 200)
+    cv.restore()
+    for k_, (dx, dy) in enumerate(((-120, -40), (-40, -48))):                         # two gloved fingertips over the tube
+        pen.fill(oval(gx + dx, gy + dy, 46, 34), '#a99be6', 250); pen.line(oval(gx + dx, gy + dy, 46, 34), 3, '#4c3f94', 200)
+    pen.fill(rect(*_IBG), '#ffffff', 10)
+
+
 def _ins_wrist(pen, t, press=1.0, count=0, cold=1.0, free=0.0, **kw):
     """Rule seven: the narrator's forearm, palm up, the hoodie cuff pushed back, and HIS two long black fingers pressed to
     the inside of the wrist, counting (press 0..1 lowers them onto the skin; count = 1, 2, 3: a slow beat ring under the
@@ -6362,6 +6419,7 @@ DR_INSERTS = {
     'sign': (_ins_sign, 'dr_ins_wait', 'NOW SERVING: 1979 (digits, k, flick=f(t))'),
     'clipboard': (_ins_clipboard, 'dr_ins_wait', 'his clipboard with no paper on it, the click pen beside it (click=f(t))'),
     'pen': (_ins_pen, 'dr_ins_wait', 'the click pen in HIS long black fingers, the thumb on the button (click=f(t))'),
+    'blood': (_ins_blood, 'dr_ins', "Milo's arm on the exam-table paper, Halverson's gloved hand with the small MILO tube (draw 0..1, done 0..1: bandage)"),
     'wrist': (_ins_wrist, 'dr_ins_wait', "the narrator's wrist, HIS two long black fingers on the pulse (press, count, cold, free)"),
     'tape': (_ins_tape, 'dr_ins_wait', 'the old yellow tape round his head, the thin gap, two pale patient eyes (loose 0..1: strip by strip; eyes)'),
     'glucose': (_ins_glucose, 'dr_ins_bright', "Milo's phone at 22: his blood sugar, in range (value, trend, bg morning | dark)"),

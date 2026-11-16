@@ -19,6 +19,20 @@ All commands run from this folder (`Vox test/Doctor Video/film`). The work dir i
 | `tools/final_chain.sh`, `tools/encode_chain.sh` (+ `enc_seg.sh`), `tools/deliver.sh` | The final render in chunks + the HEVC deliverable `W/deliver/If_Your_Doctor_Calls_At_3AM_EN_1440p60_HEVC.mp4` (title "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"). |
 | `audio/` | The sound step (reads `W/cues/*.json`). |
 
+## Picture fix round (critic review of preview_mix.mp4)
+- `lap_layer()` (film.py): Ruth sitting on the kitchen floor (`sit_floor`, the skirt now drapes over the knees) with Milo
+  sitting between her knees, her arms round him, rocking; camera `K_LAP`. Line 303: the narrator kneels, takes him, rises
+  (`carry_layer(..., rise=t)`).
+- `crowd_for()` / `_is_wait()`: every view of the waiting-room living room (sets and bust backgrounds) gets the grey
+  people automatically unless the shot stages them itself (`no_crowd=True` to opt out).
+- characters_doctor.py: perched seats too high for the feet (Milo on the exam table) dangle the shins (`_leg_chain`);
+  Doctor Later's limbs are thin and black (thin rim), shins 128 cm (knees above the head), short thin sleeves; in the
+  car the cone bows forward against the roof; `halverson_rain` keeps the bun; `careful_smile`, `pleading`, `set_jaw`
+  read unsmiling.
+- sets_doctor.py: insert `blood` (Milo's arm, the gloved hand, the MILO tube; kid-safe).
+- New cameras: `K_LAP`, `CLINIC_SIDE`, `K_JEANS`, `W_REACH` (his reach across to the machine), re-aimed `K_PHONE_LOW`,
+  `W_HANDS`, `CLINIC_TWO`.
+
 ## Inputs
 - `W/align/timeline.json` (456 lines, 1295.17 s; film 1305.17 s with the end card), `W/align/asr_cache.json` (word times),
   `W/align/vo_en.wav` (the voiceover). Voice: `W/narration/voice_report.md`.

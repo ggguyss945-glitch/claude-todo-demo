@@ -41,7 +41,7 @@ import bisect as _bisect3
 # He is 2.9 m standing (he never stands while watched); the cone of his head adds about half a metre on top.
 _DL_M = 2.9
 _DLU = 1000.0 / (_DL_M * 100.0)              # body units per cm (draw() works in body units: 1000 = his standing height)
-_DL_L = dict(thigh=90.0, shin=104.0, foot=26.0, upper=58.0, fore=56.0, palm=9.0)
+_DL_L = dict(thigh=100.0, shin=128.0, foot=26.0, upper=58.0, fore=56.0, palm=9.0)
 _DL_D = 640.0                                # mild perspective (cm) about the middle of the figure
 _DL_ELEV = 0.11                              # the camera looks a little down on him: hands flat on the carpet read
 _DL_BLACK, _DL_BLACK_SH, _DL_BLACK_HI = '#181616', '#0b0a0a', '#4d4844'      # warm brown-black (the photo's)
@@ -277,8 +277,8 @@ def _dl_rig(P):
         if room < L_:
             ang = math.degrees(math.acos(clamp(room / L_, -1.0, 1.0)))
             sg = 1.0 if getattr(P, 'dl_roof_side', 1.0) >= 0 else -1.0       # a fixed side: no flip when the idle tilt
-            R['h_roll'] = sg * ang + 0.25 * R['h_roll']                     # crosses zero
-            R['h_pitch'] += 0.1
+            R['h_roll'] = sg * ang * 0.62 + 0.25 * R['h_roll']              # crosses zero; the head bows forward too:
+            R['h_pitch'] += 0.1 + 0.0085 * ang                             # the cone pressed up against the roof, not lying flat
     return R
 
 
@@ -326,10 +326,10 @@ def _dl_tube(c, pts, widths, det, light=None, fib=0, seed=0, col=None):
     tp = _dense_tube(pts, widths)
     c.fill(tp, col or _DL_BLACK)
     c.fill(_crescent(tp, 0.9 * widths[0] * 0.35, 0.6 * widths[0] * 0.2), _DL_BLACK_SH, 200)
-    c.fill(_crescent(tp, -widths[0] * 0.28, widths[0] * 0.1), _DL_BLACK_HI, 120)
-    if light and light.get('rim'):
+    c.fill(_crescent(tp, -widths[0] * 0.16, widths[0] * 0.06), _DL_BLACK_HI, 90)
+    if light and light.get('rim'):                     # a thin rim only: the limbs read black and thin, never pale planks
         rs = light.get('side', 1)
-        c.fill(_crescent(tp, -rs * widths[0] * 0.3, 0), light['rim'], light.get('rim_a', 70) * 1.2)
+        c.fill(_crescent(tp, -rs * widths[0] * 0.13, 0), light['rim'], light.get('rim_a', 70) * 0.75)
     if det >= 1 and fib:
         ls = []
         for i in range(len(pts) - 1):
@@ -620,7 +620,7 @@ def _dl_sleeve(c, R, view, s, det, light):
     end = E + (J[1] - E) * 0.12 if len(J) > 1 else E + (W - E) * 0.28
     top = S + np.array([0.0, -3.0, 0.0])
     pts = [view.p(top)[:2], view.p(S)[:2], view.p(E)[:2], view.p(end)[:2]]
-    ws = [8.6, 7.6, 6.6, 6.2]
+    ws = [6.6, 5.8, 5.0, 4.7]                          # a thin, too-short sleeve on a thin arm (no planks)
     sl = _dense_tube(pts, ws)
     cl = _DL_COAT
     c.fill(sl, mix(cl['c'], cl['sh'], 0.35)); _cloth_shade(c, sl, cl['sh'], 190, 1.0, 3.0)
@@ -1509,10 +1509,10 @@ def _later_figure(c, who, P, det, t, light=None, upper_only=False):
             m1 = pr(Hp + kn * 0.45)
             cp_ = R.get('coat_path')
             if cp_ is not None and view.depth_of(Hp) > view.depth_of(R['spine'][1]) - 30:
-                with cx_.clip(cp_, diff=True): _dl_tube(cx_, [h2, m1, k2], [10.0, 7.0, 4.6], det, light, 3, 10 + s)
+                with cx_.clip(cp_, diff=True): _dl_tube(cx_, [h2, m1, k2], [8.0, 5.6, 4.0], det, light, 3, 10 + s)
             else:
-                _dl_tube(cx_, [h2, m1, k2], [10.0, 7.0, 4.6], det, light, 3, 10 + s)
-            _dl_tube(cx_, [k2, calf, a2], [4.6, 4.4, 2.6], det, light, 3, 20 + s)
+                _dl_tube(cx_, [h2, m1, k2], [8.0, 5.6, 4.0], det, light, 3, 10 + s)
+            _dl_tube(cx_, [k2, calf, a2], [4.0, 3.7, 2.3], det, light, 3, 20 + s)
             kb = poly([(k2[0] + (k2[0] - kp[0]) * 0.2 - (kp[1] - k2[1]) * 0.8, k2[1] + (k2[1] - kp[1]) * 0.2 + (kp[0] - k2[0]) * 0.8), kp,
                        (k2[0] + (k2[0] - kp[0]) * 0.2 + (kp[1] - k2[1]) * 0.8, k2[1] + (k2[1] - kp[1]) * 0.2 - (kp[0] - k2[0]) * 0.8)], True)
             cx_.fill(kb, _DL_BLACK)
@@ -1996,7 +1996,7 @@ def _skirts3(c, sp, B, P, det, t, rows):
     """Ruth's skirts (her cardigan over a mid-calf skirt; the 1979 housecoat to the calves), the raincoat's and the white
     coats' tails, the gown; seated they drape forward over the thighs."""
     o = sp['outfit']; cl = sp['cloth']; b = sp['body']
-    st = clamp(B.sit + 0.8 * B.kneel)
+    st = clamp(B.sit + 0.8 * B.kneel + getattr(B, 'floor', 0.0))
     if o == 'cardi_ruth':
         _skirt(c, sp, B, det, B.y_wa + 10, -190 + 130 * st, b['hip'] * 1.0, b['hip'] * 1.16 + 40 * st, cl['skirt'], cl['skirt_sh'], t=t, P=P)
         return
@@ -2204,7 +2204,7 @@ _HAL = dict(sex='f', hh=182.0, m=1.68, head_ws=[0, 50, 72, 88, 93, 91, 83, 67, 4
 _SCRUBS_BLUE = dict(top='#6f9cc8', top_sh='#4c78a2', top_hi='#93bce0', under='#e8e6e0', trousers='#6f9cc8', trousers_sh='#4c78a2',
                     shoes='#e9edf0', shoes_sh='#b6bec4', lanyard='#2d4a8a', badge='#ffffff', scrubs='#6f9cc8', scrubs_sh='#4c78a2')
 CAST['halverson'] = _v3cast(outfit='scrubs_doc', hair='gran_bun', feet='clogs', hair_c='#a6804e', **_HAL, cloth=dict(_SCRUBS_BLUE))
-CAST['halverson_rain'] = _v3cast(outfit='raincoat', hair='loose', feet='clogs', hair_c='#6a5232', wet=1.0, **_HAL,
+CAST['halverson_rain'] = _v3cast(outfit='raincoat', hair='gran_bun', feet='clogs', hair_c='#8c6c40', wet=1.0, **_HAL,
                                  cloth=dict(_SCRUBS_BLUE, top='#3e4a3e', top_sh='#262e26', top_hi='#6f7f70'))
 CAST['halverson_rain']['cloth'].update(trousers='#6f9cc8', trousers_sh='#4c78a2')
 # Mom, 40s, a night-shift nurse at Larkfield General: warm, decisive; dark hair in a low ponytail, brown eyes; wine
@@ -2525,11 +2525,11 @@ def draw_steering_wheel(pen, cx, cy, r, angle=0.0, detail=2):
 EXPR.update({
     'stern': dict(brow_angry=0.32, brow_sad=0.12, m_press=0.5, smile=-0.22, squint=0.14, pupil=0.9),
     'stern_afraid': dict(brow_angry=0.12, brow_sad=0.6, brow_up=0.25, m_press=0.6, smile=-0.28, wide=0.22, tremble=0.12),
-    'careful_smile': dict(smile=0.3, m_press=0.25, brow_sad=0.32, brow_up=0.18, squint=0.08),
+    'careful_smile': dict(smile=0.1, m_press=0.35, brow_sad=0.45, brow_up=0.22, brow_in=0.2, squint=0.05),
     'kind_smile': dict(smile=0.6, teeth=0.25, squint=0.2, brow_up=0.15),
     'exhausted': dict(eye_open=0.76, brow_sad=0.5, brow_up=0.1, smile=-0.1, h_nod=0.05),
-    'pleading': dict(brow_sad=0.9, brow_up=0.6, wide=0.22, smile=-0.18),
-    'set_jaw': dict(brow_angry=0.5, brow_sad=0.1, m_press=0.7, squint=0.16),
+    'pleading': dict(brow_sad=0.9, brow_up=0.6, wide=0.22, smile=-0.42, m_press=0.15),
+    'set_jaw': dict(brow_angry=0.5, brow_sad=0.1, m_press=0.7, squint=0.16, smile=-0.3),
     'thirsty': dict(eye_open=0.8, brow_sad=0.55, brow_up=0.15, m_open=0.07, smile=-0.15),
     'sleepy': dict(eye_open=0.5, brow_sad=0.3, h_nod=0.12, m_open=0.03),
     'dazed': dict(eye_open=0.86, pupil=1.3, brow_sad=0.22, m_open=0.12, lock=0.0),
@@ -3354,7 +3354,7 @@ def _skirts3(c, sp, B, P, det, t, rows):
     """Seated in a skirt (Ruth in the armchair, at the cardiologist; 1979 Ruth): the skirt drapes over both thighs to
     the knees and hangs a little below them, so neither leg shows through beside it."""
     o = sp['outfit']
-    st = clamp(B.sit + 0.8 * B.kneel)
+    st = clamp(B.sit + 0.8 * B.kneel + getattr(B, 'floor', 0.0))
     if o in ('cardi_ruth', 'housecoat') and st > 0.25:
         cl = sp['cloth']; b = sp['body']
         colr, colsh = (cl['skirt'], cl['skirt_sh']) if o == 'cardi_ruth' else (cl['top'], cl['top_sh'])
@@ -3400,6 +3400,25 @@ def draw_carry_child(pen, carrier, child, t, light=None, clight=None):
     draw(pen, carrier.who, carrier.x0, carrier.y0, carrier.height, Pcar, light=light, t=t)
     draw(pen, child.who, child.x0, child.y0, child.height, Pc, light=clight or light, t=t)
     draw_arm(pen, carrier.who, near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
+
+
+# ====================================================================================================== perched legs
+_leg_chain_doc_prev = _leg_chain
+
+
+def _leg_chain(sp, B, P, side):
+    """A seat too high for the feet to reach the floor (Milo on the exam-table edge): the thighs lie forward along the
+    seat and the shins hang from the knees, the feet dangling, instead of a leg stretched straight down to the floor."""
+    H, K, A, pitch = _leg_chain_doc_prev(sp, B, P, side)
+    seat = float(getattr(P, 'seat', 0.0) or 0.0)
+    if B.sit > 0.5 and seat > 0 and B.kneel < 0.01 and B.floor < 0.5:
+        over = -H[1] - 38.0 - _SHIN - 0.8 * _THIGH
+        if over > 0:
+            w = clamp(over / 80.0) * clamp((B.sit - 0.5) * 2.0)
+            sw = 0.04 * math.sin(2.1 * getattr(P, 't', 0.0) + side)                   # a small idle swing of the feet
+            Ad = _v3(A[0], H[1] + _SHIN * 0.97, _THIGH * (0.9 + sw) + 8.0 * side)
+            K, A = _ik(H, A + (Ad - A) * w, _THIGH, _SHIN, _v3(0.08 * side, -0.15, 1.0))
+    return H, K, A, pitch
 
 
 # ====================================================================================================== self-test
