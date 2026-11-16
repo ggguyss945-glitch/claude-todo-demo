@@ -1,5 +1,8 @@
-"""score.py: the music for "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" (the police film's
-v2 score engine, as the delivery and dummy films used it), rendered from music_cues.json. The arrangement for this
+"""score.py: the music for "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND" (the police film's v2 score
+engine, as the delivery, dummy and Bunnyman films used it), rendered from music_cues.json. This film's identity is
+the ORIGINAL HOLD MUSIC (audio/hold.py): 'hold' events (version, len, stop, counts, loops, phrases, tempo) render
+like the jingle below (render_jingle, module hold.py; SHOW_DUCK['hold'], HOLD_LIFT); its map is music_plan.py.
+The Bunnyman notes follow (kept: the code still renders 'jingle' events). The arrangement for this
 film is pinned by audio/music_plan.py (cues['track_map'], and the film's own sound identity, the 'jingle' events: the
 ORIGINAL Pemberton's jingle of audio/jingle.py in its versions, and two of the owner's children's tunes as 'show'
 events, which mix.py adds when film.py's cue sheet has none).
@@ -156,6 +159,16 @@ TRACKS = {
     'annihilated_blue_saga': 0,                  # mirror: D major, pale pad
     'midnight_wanderer_luella_gren': -2,         # mirror: E minor -> D minor
     'escalation_jon_bjork': 2,                   # mirror: C minor -> D minor, a steady escalation
+    # the Doctor film: the owner's new tracks (keys: catalog_epidemic_doctor.json; _work/mix/sfx_review.md)
+    'the_forgotten_memories_luella_gren': 2,     # doctor: C minor -> D minor, sparse sad piano (1979, the card)
+    'it_s_late_riverworn': 2,                    # doctor: C minor -> D minor, quiet then a slow pulse (rule 3)
+    'meet_me_in_the_backroom_lope': 0,           # doctor: D minor, a quiet steady groove (kept in reserve)
+    'lens_flare_3_peter_sandberg': -1,           # doctor: A# minor -> A minor, a building cinematic drive (rescue)
+    'beauty_lives_in_me_instrumental_version_johannes_bornlof': 0,   # doctor: F# major, warm (the ER)
+    'prosper_megan_wofford': 2,                  # doctor: C major -> D major, warm and grateful (Milo lived)
+    'in_those_hazel_eyes_tall_oak_town': 0,      # doctor: D major, warm acoustic (the outro)
+    'follow_your_feet_a_month_of_sleep': 0,      # doctor: G major, bright (the outro's call to action)
+    'caffeinated_and_motivated_airae': 0,        # doctor: G major, upbeat (reserve)
 }
 # The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
 # warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
@@ -179,6 +192,13 @@ SHOW_DUCK = {'show': -10.0, 'winks': -7.0,  # the dark track bed steps back whil
              # the Bunnyman film: how far the dark bed steps back under each jingle version
              'jingle': {'vhs': -14.0, 'parade': -12.0, 'speaker': -6.0, 'hum': -4.0, 'hum_x': -4.0, 'musicbox': -5.0,
                         'girl': -6.0, 'climax': -3.0, 'count': -1.5, 'outro': -9.0, 'knocks': -4.0, 'studio': -10.0}}
+# the Doctor film: the HOLD MUSIC (audio/hold.py) is the identity ('hold' events, rendered like the jingle): how far
+# the dark bed steps back under each version, and its level trim (dB on IDENTITY_LIFT)
+SHOW_DUCK['hold'] = {'studio': -10.0, 'phone_1979': -6.0, 'landline': -6.0, 'rooms': -5.0, 'hum': -4.0, 'pulse': -3.0,
+                     'ceiling': -6.0, 'car_radio': -4.0, 'far_hall': -2.0, 'warm': -12.0}
+HOLD_LIFT = {'studio': -2.0, 'phone_1979': 0.0, 'landline': -2.0,   # test 1: landline -7 LU rel voice under the rules
+             'rooms': -1.0, 'hum': -3.0, 'pulse': 0.0,
+             'ceiling': 1.0, 'car_radio': -1.0, 'far_hall': -4.0, 'warm': -1.0}   # test 6: ceiling -15.7 LU: +2
 JINGLE_LIFT = {'vhs': -2.0, 'parade': -1.0, 'speaker': 0.0, 'hum': -3.0, 'hum_x': -3.0, 'musicbox': -2.0, 'girl': 0.0,
                'climax': -1.0, 'count': 1.0, 'outro': 0.0}  # dB on IDENTITY_LIFT per version (test 1: the VHS jingle sat
 #   at +2.5 LU over the narration speaking its words, Mom's hum at -3.5: both down so the voice stays on top)
@@ -196,7 +216,7 @@ FLATTEN = 0.3                    # share of each track's own dynamics flattened 
 DEFAULT_LEN = {'braam': 3.5, 'riser': 6.0, 'silence': 1.7, 'swell': 12.0, 'end': 12.0, 'show': 10.0, 'winks': 8.0,
                'theme': 5.0, 'drone': 8.0}
 KNOWN_EVENTS = ('hit', 'stinger', 'braam', 'riser', 'sub_drop', 'silence', 'motif', 'swell', 'pulse_on', 'pulse_off',
-                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone', 'jingle')
+                'rule', 'end', 'scene', 'show', 'winks', 'theme', 'drone', 'jingle', 'hold')
 
 
 # ----------------------------------------------------------------------------------------------------------- utils
@@ -311,7 +331,7 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
+        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
                                                      'catalog_epidemic_delivery.json', 'catalog_epidemic.json')
                    if os.path.exists(os.path.join(HERE, f))))
         epi = json.load(open(cp))
@@ -1515,11 +1535,15 @@ class Score:
         own keys (tempo, loops, phrases, who, transpose, n, minor, wind_down, speed, pass_at, far). Level: the version's
         short-term max at REF_LUFS + 4 + 8 * (level - 0.5) + IDENTITY_LIFT + JINGLE_LIFT; the dark bed steps back by
         SHOW_DUCK['jingle'][version] while it plays."""
-        import jingle as JG
+        hold = e.get('type') == 'hold'                     # the Doctor film's hold music (audio/hold.py)
+        if hold:
+            import hold as JG
+        else:
+            import jingle as JG
         t, lv = e['t'], e['level']
-        ver = str(e.get('version') or 'musicbox')
+        ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
-                'cut', 'phrase3_only', 'wind')
+                'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose')
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
         if 'phrases' in kw:
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
@@ -1527,6 +1551,10 @@ class Score:
             kw['anchors'] = [(float(b), float(x) - t) for b, x in e['anchors']]
         if e.get('melody_anchors'):
             kw['melody_anchors'] = [(float(b), float(x) - t) for b, x in e['melody_anchors']]
+        if hold and e.get('counts'):                       # the pulse count: film seconds -> seconds into the render
+            kw['counts'] = [float(c) - t for c in e['counts']]
+            if e.get('len'):
+                kw['dur'] = float(e['len']) + 1.0
         y, info = JG.render(ver, seed=int(e.get('seed', 3)), **kw)
         y = _st(np.asarray(y, np.float32))
         off = float(e.get('off', 0.0) or 0.0)
@@ -1553,13 +1581,16 @@ class Score:
             except Exception as ex:
                 print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
         st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
-        target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + JINGLE_LIFT.get(ver, 0.0)
+        target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + (HOLD_LIFT if hold else JINGLE_LIFT).get(ver, 0.0)
         y = (y * np.float32(db(target - st))).astype(np.float32)
-        rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio') else \
-            ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
+        if hold:                                           # hold.py versions carry their own space: almost dry
+            rev = {'recital': 0.05} if ver in ('studio', 'warm') else {}
+        else:
+            rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio') else \
+                ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
         self.bus['show'].add(t, y, rev=rev)
-        self._duck_span(t, t + len(y) / SR, SHOW_DUCK['jingle'].get(ver, -4.0))
-        self.log(f'jingle {ver} {t:.1f}-{t + len(y) / SR:.1f}s stop {stop}')
+        self._duck_span(t, t + len(y) / SR, SHOW_DUCK['hold' if hold else 'jingle'].get(ver, -4.0))
+        self.log(f'{"hold" if hold else "jingle"} {ver} {t:.1f}-{t + len(y) / SR:.1f}s stop {stop}')
 
     def _duck_span(self, a, b, depth):
         tt = np.arange(self.nc) / CR
@@ -1845,7 +1876,7 @@ class Score:
             # (the Bunnyman's final mix: only a cue that plays on into the silence spares it: the count's "Seven" note
             # starts 0.3 s before the cut to silence and stops there, so it no longer kept the show stem ungated and
             # the "Six" note rang on through the silence after "Seven.")
-            if not any(x['type'] in ('jingle', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0
+            if not any(x['type'] in ('jingle', 'hold', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0
                        and float(x['t']) + float(x.get('len') or 4.0) > t0 + 0.5 for x in self.ev):
                 self.gate_show = np.minimum(self.gate_show, g)
             gh = np.interp(tt, [t0 - 0.05, t0 + 0.2, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
@@ -1880,7 +1911,7 @@ class Score:
                 self.render_rule(e)
             elif ty == 'drone':                           # film.py: a held swell under the ending
                 self.render_swell(dict(e, len=max(2.0, float(e.get('len') or 8.0))))
-            elif ty == 'jingle':
+            elif ty in ('jingle', 'hold'):
                 if any(x['type'] == 'end' and x['t'] <= e['t'] for x in self.ev):
                     continue
                 try:

@@ -406,9 +406,9 @@ def sheet_later_states():
 def sheet_later_tape():
     surf, cv, pen = canvas(bg=(60, 70, 52))
     title(cv, 'DOCTOR LATER: THE TAPE AND THE FACES UNDER IT',
-          'Top: a few strips of old tape, one thin gap, two pale patient eyes; each question loosens a strip (pose.dl_tape 1 -> 0, 8 strips). Bottom: the faces under it (pose.dl_face 0..5)')
+          'Top: a few strips of old tape, one thin gap, two pale patient eyes; each question loosens a strip (pose.dl_tape 1 -> 0, 5 strips: cone first, face last). Bottom: the faces under it (pose.dl_face 0..5)')
     a = CH.Acting('later', seed=7, height=CH.height_px('later', 380.0)).place(900, FLOOR)
-    a.perch(None, 'plastic'); a.face(0.12, -0.08); a.set(-1, None, 0.01, h_tilt=6.0)
+    a.perch(None, 'plastic'); a.face(0.12, -0.08); a.set(-1, None, 0.01, h_tilt=16.0)
     P0 = a.at(1.0)
     tapes = (1.0, 0.875, 0.75, 0.625, 0.375, 0.0)                  # all 8 on; 1, 2, 3 off (the face's); 5 off; all off
     cw = 1920 / 6
@@ -421,7 +421,7 @@ def sheet_later_tape():
         label(cv, 'dl_tape %.3f' % tp, i * cw + cw / 2, 600, 14)
     names = ('his own face', 'Grandpa, gray and patient', 'a man I never saw', 'a little girl', 'my grandmother', '...me')
     for i in range(6):
-        P = P0.copy(); P.dl_tape = 0.5; P.dl_face = float(i)
+        P = P0.copy(); P.dl_tape = 0.2 if i == 0 else 0.0; P.dl_face = float(i)        # the face's strips go last, on the first face
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(i * cw + 4, 620, cw - 8, 420))
         pen.fill(rect(i * cw + 4, 620, cw - 8, 420), '#4a5640')
         CH.draw_bust(pen, 'later', i * cw + cw / 2, 900, 0.36, P, t=1.0, light=FLUO)

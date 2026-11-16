@@ -1,42 +1,21 @@
-"""Bunnyman film sound tests: 8 renders in W/mix/tests/ (W = film/_work), each through the whole pipeline: mix.py on a
-window of the film (the narration with its line voicing: door / slot / memory / whisper; this test's SFX cue sheet;
-the score with music_plan.py's full plan: the dark track map, the tension events and the film's identity, the
-ORIGINAL Pemberton's jingle in its versions), as the final mix will run it.
+"""Doctor film sound tests ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"): 8 renders in W/mix/tests/
+(W = film/_work), each through the whole pipeline: mix.py on a window of the film (the narration with its line voicing:
+phone / recording / door / whisper / rooms; this test's SFX cue sheet; the score with music_plan.py's plan: the
+dark track map, the tension events and the film's identity, the ORIGINAL HOLD MUSIC of audio/hold.py), as the final
+mix will run it.
 
     python3 sfx_tests.py [1 2 ... 8] [--jobs 1]     (default: all, one mix at a time: the machine is shared)
-    python3 sfx_tests.py --sheet                     W/mix/tests/tests_sheet.png: every test's spectrogram (cues marked,
-                                                     identity spans shaded) over its 1 s voice / music / SFX / jingle profile
+    python3 sfx_tests.py --sheet                     W/mix/tests/tests_sheet.png
 
-    1 cold_open          0-47        the night at the treeline, the three warnings, a tape glitch into the 1987 VHS
-                                     commercial under the narrator's own "Hop, hop, hop along..." (every word on its
-                                     note), the tape stopping, "humming it ever since" (Mom's hum), the seven rules
-    2 song_from_woods    196-258     rule 1: "At 11:07, the song starts. From the woods." -- the dying speaker far
-                                     across the yard, the curtains, running upstairs, June at her open window, the owl,
-                                     he waves back, the song dies as he stops waving, he points, the board behind us,
-                                     Mom in the doorway, "I told you not to look at the treeline." ('door' off)
-    3 egg_and_ring       285-358     rule 2: one soft tap, the peephole, the egg on the mat, the burn barrel (oven
-                                     mitts, the fire, the plastic melting), the rattle, the door, the egg opened, the
-                                     ring rolling, "You opened it.", Mom on the stairs, the ring taken, the pocket
-    4 family_knock       366-416     rule 3: the 2-3-2 knock on the jingle's beat in the narration's gaps, "Seven.",
-                                     Grandma remembered ('memory' voice, her table knock, her music box), "Two. Three.
-                                     Two." recalled, the secret knock
-    5 slot_and_cry       424-499     rule 4: the brass flap creaking open, "Mama?" through the slot ('slot' voice),
-                                     June in her socks on the stairs, "Is she humming?" "Yeah.", the real Laurie
-                                     trying to sing the jingle and crying through the slot, the flap snapped shut,
-                                     "Bedtime, bunny.", Mom humming
-    6 window_to_lock     598-618     rule 6: the kitchen window explodes, the back door crashes in, something heavy,
-                                     wet, dragging; I grab June and run; the bathroom door, the lock, the empty tub
-    7 hatchet_and_fight  615-698     the slow steps up the stairs with the hatchet knocking every step ("Thunk.
-                                     Thunk."), the doorknob, the girl under the door ('door' voice), the drawing slid
-                                     under it, GET OUT OF MY HOUSE / IT'S MY HOUSE, the hallway shaking, the slam on
-                                     the door, the wet heavy crack, then nothing, Mom softly
-    8 climax_count       768-917     Mom kneels with the yellow dress, "Close your eyes. And count to seven." on the
-                                     minor music box, One / Two / Three on the count's scale, the reveal, Four / Five,
-                                     the swap, Six / Seven -> cut to silence; plus the fallback checks (an alias, a
-                                     keyword guess, an unknown space, a name nothing fits, bad params / time / gain:
-                                     warn, never crash)
+    1 cold_open             0-58      the 3 AM ring, the waiting room, "Take a seat.", the phone system and the hold music
+    2 call_3am              219-282   rule 1: seven rings, the receiver, Halverson on the line, hung up, the cord
+    3 unplugged_hold        305-362   rule 2: the unplugged phone rings, the hold music, the receiver on the counter, rooms
+    4 pen_click_hall        359-414   rule 3: "I'm so thirsty", the hand, the pen click alone, the pen scratching
+    5 knock_note_match      418-497   rule 4: the knock, the peephole, the rain and her car, the note, the match, the fire
+    6 waiting_room_ticket   590-718   rule 6: the tubes, the TV, the ceiling's hold music, NOW SERVING, the ticket
+    7 pulse_to_question     717-790   rule 7: the count slowing the hold music, the heartbeat and the clock, the cut, tape
+    8 car_to_er             918-980   the back seat, the warped car radio, "Not on my shift.", the ER doors, the ER
 
-Each test writes <name>.wav (the mix of the window, 48 kHz 24-bit) and <name>.json: the cue sheet, mix.py's report
 and the measurements:
     per one-shot SFX cue (rendered alone with the same seed): transient_ms (its loudest transient vs the cue time: the
     picture's sync), phone_band_db (loudness left above 300 Hz: what a phone speaker plays), vs_voice_LU (the cue's
@@ -71,7 +50,10 @@ SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'cloth_rustle', 'riser', 'whoos
               'ambience_woods', 'owl_hoot', 'crowd_parade', 'hospital_corridor', 'hospital_room', 'burn_barrel',
               'plastic_melt', 'egg_rattle', 'ring_roll', 'ring_hand', 'oven_mitt', 'girl_cry', 'jingle', 'attic_door',
               'chest_lid', 'page_flip', 'wet_drag', 'doorknob', 'paper_under_door', 'sirens_arrive', 'vhs_pause',
-              'music_box_wind', 'dogs_search', 'zipper', 'curtain_close', 'slot_flap', 'struggle', 'bathtub')
+              'music_box_wind', 'dogs_search', 'zipper', 'curtain_close', 'slot_flap', 'struggle', 'bathtub',
+              'house_night', 'landline_ring', 'line_hiss', 'pen_scratch', 'paper_burn', 'rain_house', 'halverson_car',
+              'waiting_room', 'pulse_count', 'tape_peel', 'drive_rain', 'er_doors', 'er_bustle', 'wheelchair',
+              'sit_down', 'tiny_steps', 'now_serving')
 TESTS = {}
 
 
@@ -93,159 +75,134 @@ def ev(t, name, gain_db=0.0, space=None, pan=0.0, **params):
     return e
 
 
-def house(a, b, tone=True, creaks=True, clock=False):
-    out = []
-    if tone:
-        out.append(ev(a, 'room_tone_house', 0.0, dur=round(b - a, 2), hum=0.25))
-    if creaks:
-        out.append(ev(a, 'house_creaks', -2.0, dur=round(b - a, 2), density=0.08))
-    if clock:
-        out.append(ev(a, 'old_clock', -3.0, dur=round(b - a, 2), bpm=60))
-    return out
+def house(a, b, fridge=0.6, clock=0.5, rain=0.0, creaks=0.3):
+    """Grandma's house at night (sfx house_night: room tone, the fridge, the wall clock, creaks, rain)."""
+    return [ev(a, 'house_night', 0.0, dur=round(b - a, 2), fridge=fridge, clock=clock, rain=rain, creaks=creaks)]
 
 
 @test
 def t01_cold_open():
-    a, b = 0.0, 47.0
+    """The trailer and the hold music: the 3 AM ring, the waiting room's tubes under the very tall man, "Take a seat.
+    It can wait." "Don't sit down.", the phone system ("Your call is important to us. Please hold.") and the hold
+    music under the rules in the medicine cabinet"""
+    a, b = 0.0, 58.0
     return a, b, [
-        ev(0.0, 'ambience_woods', 2.0, 'porch', dur=17.6, owl=0.7, wind=0.5, crickets=0.6),
-        ev(5.6, 'owl_hoot', -2.0, 'woods', pan=-0.4),
-        ev(17.05, 'tape_glitch', 2.0, 'tv', kind='tracking', dur=0.35),           # into the 1987 tape
-        ev(A('s7') + 1.55, 'tape_glitch', -5.0, 'tv', kind='stop', dur=0.7),       # the tape stops: back to the night
-        ev(A('s7') + 1.9, 'ambience_woods', 0.0, 'window', dur=round(b - A('s7') - 1.9, 2), owl=0.4, wind=0.4),
-    ] + house(A('s7') + 1.9, b, creaks=False)
-
-
-@test
-def t02_song_from_woods():
-    a, b = 196.0, 258.2
-    open_w = A('s70')                                                              # June's window is open
-    return a, b, house(a, b) + [
-        ev(a, 'ambience_woods', 0.0, 'outside', dur=round(open_w - a + 0.5, 2), owl=0.3, wind=0.4),
-        ev(open_w, 'ambience_woods', 2.0, 'window', dur=round(b - open_w, 2), owl=0.6, wind=0.5),
-        ev(A('w69:curtains') + 0.1, 'curtain_close', 0.0, dur=1.1),                # "I close the curtains downstairs"
-        ev(A('w69:curtains') + 1.6, 'curtain_close', -2.0, dur=0.9, pan=0.4),
-        ev(A('w69:run') + 0.05, 'footsteps_wood_inside', -2.0, stairs=True, run=True, direction='up', n=7),
-        ev(open_w - 0.6, 'door_creak', -4.0, dur=1.0),                             # June's door
-        ev(A('s73') + 0.8, 'owl_hoot', -3.0, 'woods', pan=0.5),
-        ev(A('s87') - 0.35, 'wood_creak', -4.0, 'inside', kind='creak', dur=0.6),   # the board behind us
+        ev(0.05, 'landline_ring', -3.0, 'next_room', n=1, on=1.2),            # three in the morning
+        ev(A('s2') + 1.0, 'waiting_room', 0.0, dur=round(A('e6') + 0.6 - A('s2') - 1.0, 2), flicker=0.5),
+        ev(A('w2:folded') + 0.2, 'sit_down', -6.0, 'waiting', kind='plastic'),   # folded into the little chair
+        ev(A('w4:take') - 0.6, 'pen_click', -4.0, 'waiting', n=2, spacing=0.3),
+        ev(A('e6') + 0.6, 'house_night', 0.0, dur=round(b - A('e6') - 0.6, 2), fridge=0.6, clock=0.6),
+        ev(A('w10:medicine') - 0.4, 'medicine_cabinet', -2.0, action='open'),  # behind the mirror
     ]
 
 
 @test
-def t03_egg_and_ring():
-    a, b = 285.0, 358.5
-    tap = A('w104:tap')
-    rattle = A('w114:rattles')
-    return a, b, house(a, b, clock=True) + [
-        ev(a, 'ambience_woods', -2.0, 'outside', dur=round(A('s109') - a, 2), owl=0.3, wind=0.3),
-        ev(tap + 0.05, 'egg_tap', 0.0),                                             # "...one soft tap on the front door."
-        ev(A('s105') + 0.35, 'peephole', 0.0),                                      # "Through the peephole"
-        # the memory: every Easter, the burn barrel in the backyard
-        ev(A('s109') - 0.2, 'ambience_woods', -4.0, 'porch', dur=round(A('s113') - A('s109'), 2), owl=0.2),
-        ev(A('w109:carries') + 0.1, 'oven_mitt', -2.0, dur=1.4),
-        ev(A('w109:fire') - 0.4, 'burn_barrel', 2.0, dur=round(A('s113') - A('w109:fire') + 0.6, 2), ignite=True),
-        ev(A('s112') + 0.3, 'plastic_melt', 2.0, dur=2.6),                          # "They smell sweet when they melt."
-        ev(A('s113'), 'ambience_woods', -2.0, 'outside', dur=round(b - A('s113'), 2), owl=0.3, wind=0.3),
-        ev(rattle + 0.12, 'egg_rattle', 2.0, 'outside', dur=1.5),                   # "...the egg rattles."
-        ev(A('s116') + 0.25, 'door_creak', -2.0, dur=1.4, slow=1.3),                # "I open the door."
-        ev(A('s117') + 0.1, 'chain_lock', -6.0, kind='rattle'),                     # "Just a crack."
-        ev(A('w118:egg') + 0.05, 'egg_open', 2.0),                                  # "And I open the egg."
-        ev(A('w119:rolling'), 'ring_roll', 2.0, dur=2.0),                           # "Inside, rolling around..."
-        ev(A('s126') + 0.2, 'footsteps_wood_inside', -4.0, stairs=True, direction='down', n=6, rate=1.4),
-        ev(A('w127:takes') + 0.05, 'ring_hand', 0.0, kind='take'),                  # "takes the ring out of my hand"
-        ev(A('w129:pocket'), 'ring_hand', 2.0, kind='pocket'),                      # "She puts it in her pocket."
+def t02_call_3am():
+    """Rule 1: the landline at 3 AM (seven rings), the receiver lifted and tilted, Halverson on the line ('phone'
+    voice), "Don't you dare tell me what you found.", hung up, ringing again, the cord yanked out of the wall"""
+    a, b = 219.0, 282.0
+    r0 = A('e67') + 0.1
+    return a, b, house(a, b, fridge=0.6, clock=0.7) + [
+        ev(r0, 'landline_ring', 0.0, 'close', n=7, cycle=1.75, on=1.1),
+        ev(A('w73:picked') + 0.05, 'receiver_up', 0.0),
+        ev(A('s78') - 0.5, 'line_hiss', -6.0, dur=round(A('e80') + 0.6 - A('s78') + 0.5, 2)),
+        ev(A('e83') + 0.25, 'receiver_down', 0.0, kind='hang'),
+        ev(A('e84') + 0.15, 'landline_ring', 0.0, 'close', n=3, cycle=1.55, on=1.0),
+        ev(A('w88:pulled') + 0.1, 'cord_yank', 0.0),
     ]
 
 
 @test
-def t04_family_knock():
-    a, b = 366.0, 416.3
-    # the knock's three groups sit in the narration's gaps, each group on the jingle's beat (0.476 s quarter)
-    g1 = A('e135') + 0.08; g2 = A('e137') + 0.03; g3 = A('e139') + 0.02
-    t0 = g1
-    mem = A('s147')
-    return a, b, house(a, b, clock=True) + [
-        ev(a, 'ambience_woods', -4.0, 'outside', dur=round(b - a, 2), owl=0.2, wind=0.3),
-        ev(t0, 'knock_family', 2.0, 'inside', groups=[0.0, round(g2 - t0, 3), round(g3 - t0, 3)]),
-        # Grandma remembered: she taps the family knock on her kitchen table (soft, memory)
-        ev(A('w147:knock') + 0.35, 'knock_family', -2.0, 'close', soft=True, memory=True, beat=0.42),
-        # "Two. Three. Two." -- recalled in my head: the knock again, soft, far, on the words
-        ev(A('s155') - 0.05, 'knock_family', 0.0, 'inside', soft=True,
-           groups=[0.0, round(A('s156') - A('s155'), 3) - 0.45, round(A('s157') - A('s155'), 3) - 0.48]),
+def t03_unplugged_hold():
+    """Rule 2: the cord on the floor, the phone rings anyway, Grandma picks it up: no voice, just hold music (the
+    landline version), the recorded lady ('recording' voice), the receiver set down on the counter like a sleeping
+    baby, the music playing all night, then from the hallway, the living room, Grandpa's chair ('rooms')"""
+    a, b = 305.0, 362.0
+    return a, b, house(a, b, fridge=0.5, clock=0.6) + [
+        ev(A('s107') - 0.7, 'landline_ring', 0.0, 'close', n=1, on=1.2),
+        ev(A('e108') - 0.35, 'receiver_up', 0.0),
+        ev(A('w117:set') + 0.3, 'receiver_down', 0.0, kind='set'),
     ]
 
 
 @test
-def t05_slot_and_cry():
-    a, b = 424.0, 499.0
-    return a, b, house(a, b, clock=True) + [
-        ev(a, 'ambience_woods', -4.0, 'outside', dur=round(b - a, 2), owl=0.2, wind=0.3),
-        ev(A('w164:creaks') - 0.2, 'slot_flap', 0.0, action='open'),                # the brass flap creaks open
-        ev(A('s180') + 1.4, 'footsteps_stairs', -6.0, direction='down', n=6, rate=1.2, weight=0.3),   # in her socks
-        ev(A('w180:kneels'), 'cloth_rustle', -4.0, kind='rustle'),
-        ev(A('s192') + 0.35, 'slot_flap', 2.0, action='snap'),                      # "Mom closes the mail slot."
-        ev(A('w193:smooths'), 'cloth_rustle', -2.0, kind='rustle'),
+def t04_pen_click_hall():
+    """Rule 3: Milo in the kitchen ("I'm so thirsty", 'whisper'), Grandma's hand over his mouth, "Not out loud.",
+    then from the dark hallway a pen click (alone in a silence), the scratch of a pen on paper"""
+    a, b = 359.0, 414.0
+    return a, b, house(a, b, fridge=0.7, clock=0.7) + [
+        ev(A('s127') + 1.0, 'tiny_steps', -6.0, 'inside', n=6),
+        ev(A('s135') - 0.25, 'cloth_rustle', -4.0, kind='grab', dur=0.6),     # the hand over his mouth
+        ev(A('w138:click') + 0.35, 'pen_click', 2.0, 'inside', n=1, pan=-0.35),
+        ev(A('w139:scratch') + 0.2, 'pen_scratch', 0.0, 'inside', dur=3.4, pan=-0.35),
     ]
 
 
 @test
-def t06_window_to_lock():
-    a, b = 597.5, 618.0
-    return a, b, house(a, b, creaks=False) + [
-        ev(a, 'ambience_woods', -4.0, 'outside', dur=round(b - a, 2), owl=0.0, wind=0.4),
-        ev(A('w236:explodes'), 'window_smash', 0.0),                               # "the kitchen window explodes."
-        ev(A('w237:crashes'), 'door_crash', 0.0),                                   # "The back door crashes open."
-        ev(A('s238') + 0.2, 'wet_drag', 0.0, dur=round(A('e240') - A('s238') + 0.6, 2)),   # heavy... wet... dragging
-        ev(A('s241') + 0.35, 'cloth_rustle', -2.0, kind='grab'),                    # "I grab June"
-        ev(A('w241:run'), 'footsteps_wood_inside', 0.0, run=True, n=6),             # "and run."
-        ev(A('s242') + 0.35, 'attic_door', -2.0, 'close', action='close'),          # the bathroom door shut
-        ev(A('s243') + 0.05, 'lock_turn', 2.0, 'close'),                            # "Lock."
-        ev(A('s244') + 1.2, 'bathtub', 0.0, kind='settle'),                         # in the empty bathtub
-        ev(A('w244:hand') + 0.1, 'breath', -6.0, kind='held', dur=2.0),             # my hand over her mouth
+def t05_knock_note_match():
+    """Rule 4: the knock at 3:40, the peephole, Halverson on the porch in the rain ('door' voice), her car idling in
+    the driveway, the paper sliding under the door, the warning signs, the match struck over the sink, the paper
+    burning"""
+    a, b = 418.0, 497.0
+    return a, b, house(a, b, fridge=0.4, clock=0.5, rain=0.0) + [
+        ev(a, 'rain_house', 0.0, dur=round(b - a, 2)),
+        ev(a, 'halverson_car', -2.0, 'outside', dur=round(b - a, 2), rain=0.0),
+        ev(A('w149:knocked') + 0.1, 'knock_door', 0.0, 'inside', n=4, force=0.8),
+        ev(A('s150') + 0.2, 'peephole', 0.0),
+        ev(A('w168:slid') - 0.3, 'paper_under_door', 0.0, 'close', dur=1.3),
+        ev(A('w179:match') + 0.15, 'match_strike', 0.0),
+        ev(A('w179:match') + 1.3, 'paper_burn', 0.0, dur=round(b - A('w179:match') - 1.3, 2)),
     ]
 
 
 @test
-def t07_hatchet_and_fight():
-    a, b = 615.0, 698.0
-    th1, th2 = A('s248'), A('s249')                                                # "Thunk." "Thunk."
-    shake, slam, crack = A('s270'), A('s271') + 1.0, A('w273:crack')
+def t06_waiting_room_ticket():
+    """Rule 6: the living room is a waiting room: buzzing tubes half dead, the dead TV, the ceiling speaker's hold
+    music, "Now serving: 1979." (the sign's sour ding), the still grey people, Grandpa, HIM in the armchair, his pen,
+    the ticket torn from the machine across the room, "Take a seat. It can wait." """
+    a, b = 590.0, 718.0
     return a, b, [
-        ev(a, 'room_tone_house', -2.0, 'bathroom', dur=round(b - a, 2), hum=0.2),
-        ev(A('s245') + 0.3, 'hatchet_step', 0.0, n=4, rate=0.8),                    # "Footsteps on the stairs. Slow."
-        ev(th1 - 0.3, 'hatchet_step', 2.0, n=1),                                    # the Thunk lands on the word
-        ev(th2 - 0.3, 'hatchet_step', 2.0, n=1),
-        ev(A('s250') + 0.6, 'hatchet_step', 0.0, n=2, rate=0.8),
-        ev(A('w251:turns') - 0.2, 'doorknob', 2.0, kind='turn'),                    # "The doorknob turns. Gently."
-        ev(A('s257') + 0.35, 'paper_under_door', 2.0, dur=1.3),                     # "Something slides under the door."
-        ev(shake, 'struggle', 0.0, kind='shake'),                                   # "The whole hallway shakes."
-        ev(slam, 'struggle', 2.0, kind='slam'),                                     # "Something slams into the bathroom door."
-        ev(A('s272'), 'struggle', -4.0, kind='wall'),                               # "Screaming."
-        ev(crack + 0.05, 'struggle', 0.0, kind='crack'),                            # "A wet, heavy crack."
+        ev(a, 'waiting_room', 0.0, dur=round(b - a, 2), flicker=0.6, tv=0.6, buzz=0.7),
+        ev(A('s223') - 0.25, 'now_serving', 0.0, sour=0.7),
+        ev(A('w244:clicking') + 0.4, 'pen_click', 0.0, 'waiting', n=3, spacing=0.32),
+        ev(A('s245') + 3.6, 'ticket_tear', 0.0),
+        ev(A('w243:clipboard') + 0.3, 'clipboard', -4.0, 'waiting'),
     ]
 
 
 @test
-def t08_climax_count():
-    a, b = 768.0, 917.0
-    return a, b, house(a, b, creaks=False) + [
-        ev(a, 'ambience_dawn', -8.0, 'window', dur=round(A('s322') - a, 2), birds=0.4),
-        ev(A('w313:kneels'), 'cloth_rustle', -4.0, kind='rustle'),                  # Mom kneels with the dress
-        ev(A('w313:hand') + 0.2, 'cloth_rustle', -8.0, kind='rustle'),              # her hand over June's eyes
-        ev(A('w355:pull'), 'cloth_rustle', 0.0, kind='grab'),                       # I pull June's face out
-        ev(A('w355:push') + 0.1, 'cloth_rustle', -2.0, kind='grab'),                # and push my own face into it
-        # fallback checks (must warn, not crash): an alias, a keyword guess, an unknown space, a name nothing fits,
-        # params that are not a dict, a cue without a time, a gain that is not a number, a space that is not a name
-        ev(a + 1.0, 'secret_knock', -40.0), ev(a + 1.2, 'creepy_owl_call', -40.0),
-        ev(a + 1.4, 'egg_tap', -40.0, space='the_moon'), ev(a + 1.6, 'zzz_not_a_sound', 0.0),
-        {'t': a + 1.8, 'name': 'ring_drop', 'gain_db': -40.0, 'params': [1, 2]},
-        {'name': 'egg_open', 'gain_db': 0.0}, {'t': a + 2.0, 'name': 'peephole', 'gain_db': 'loud'},
-        {'t': a + 2.2, 'name': 'page_flip', 'gain_db': -40.0, 'space': {'x': 1}},
+def t07_pulse_to_question():
+    """Rule 7: he takes the wrist; "One... Two... Three...": the hold music slows and sags at every count, the
+    heartbeat through the wrist and the wall clock slow with it; cut dead on "What did you find?"; one strip of tape
+    per question"""
+    a, b = 717.0, 790.0
+    c1, c2, c3 = A('w258:one'), A('w260:two'), A('w267:three')
+    cues = [ev(a, 'waiting_room', -4.0, dur=round(A('w270:what') - a, 2), flicker=0.4, tv=0.0, buzz=0.4),
+            ev(c1, 'pulse_count', 0.0, dur=round(A('w270:what') - 0.05 - c1, 2),
+               counts=[0.0, round(c2 - c1, 3), round(c3 - c1, 3)], bpm=[62, 48, 36, 27], clock=0.7)]
+    for q, ln in enumerate((272, 273, 274, 275), 1):
+        cues.append(ev(A(f'e{ln}') + 0.12, 'tape_peel', 0.0, 'tight', q=q))
+    cues.append(ev(A('e270') + 0.15, 'tape_peel', -3.0, 'tight', q=1))
+    return a, b, cues
+
+
+@test
+def t08_car_to_er():
+    """The rescue: in the car in the rain ("Every question I had. And she answered every single one."), the
+    rear-view mirror, Doctor Later in the back seat clicking his pen, "It can wait," (the car radio's warped hold
+    music), "Not tonight. Not on my shift.", she drives faster, the ER doors open, Mom with a wheelchair, the ER warm
+    and alive"""
+    a, b = 918.0, 980.0
+    er = A('s348')
+    return a, b, [
+        ev(a, 'drive_rain', 0.0, dur=round(er - a + 0.6, 2), speed='fast'),
+        ev(A('w334:clicking') + 0.3, 'pen_click', -2.0, 'car', n=3, spacing=0.34, pan=0.25),
+        ev(er - 0.4, 'er_doors', 0.0, 'er'),
+        ev(er + 0.2, 'er_bustle', 0.0, dur=round(b - er - 0.2, 2), monitors=0.7, gurney=0.5),
+        ev(A('w349:running') + 0.2, 'wheelchair', 0.0, 'er', dur=3.5),
     ]
 
 
-# ------------------------------------------------------------------------------------------------- measurement
 def _mom(x):
     return -0.691 + 10 * np.log10(SX._blocks(SX.st(x), 0.4, 0.05) + 1e-20)
 
@@ -307,8 +264,8 @@ def measure(name, a, b, cues, odir):
     if show is not None:
         sm = -0.691 + 10 * np.log10(SX._blocks(SX.st(show), 1.0, 0.25) + 1e-20)
         for e in MP.identity_events(LINES):
-            if e['type'] not in ('show', 'winks', 'jingle') or e['t'] + e.get('len', 0) < a or e['t'] > b:
-                continue
+            if e['type'] not in ('show', 'winks', 'jingle', 'hold') or e['t'] + e.get('len', 0) < a + 1.0 or e['t'] > b - 1.0:
+                continue                                   # (less than 1 s inside the window: nothing to measure)
             i0 = max(0, int((max(e['t'], a) - a + 0.5) / 0.25)); i1 = int((min(e['t'] + e.get('len', 0), b) - a - 0.5) / 0.25)
             seg = sm[i0:max(i0 + 1, i1)]
             seg = seg[seg > -70]

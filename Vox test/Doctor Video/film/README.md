@@ -150,6 +150,25 @@ P=2 bash tools/final_chain.sh > W/logs/final_chain.log 2>&1      # FINAL: 2560x1
 - **Event names** (the sound step maps them; `audio/sfx.py` `BUNNY_NAMES` and its aliases): the knocks `knock_door` (`pattern` 2-3-2, `group`, `index`; soft at sunrise; the LIKE's knock), `egg_tap`, `egg_rattle`, `egg_open`, `ring_roll`, `fire_crackle` / `fire_whoosh` (the burn barrel), `mail_slot` (creak_open / close), `girl_cry` (`through_door`), `bulb_hum` / `bulb_tink` (the attic), `page_flip`, `paper`, `paper_slide` (the drawing under the door), `window_smash`, `door_crash`, `wet_step` / `wet_drag`, `hatchet_thunk` (one per stair), `knob_turn`, `door_slam`, `struggle` (the fight on the other side of the door), `wet_crack`, `lock_turn` (`by_itself`), `key_in_lock`, `door_creak` (`front_door` crack, `bathroom_open`), `deadbolt`, `light_switch` (wall / porch), `marker_strike`, `zipper`, `mug_set_down`, `phone_ring`, `count_thump` (one per number of the count, `n` of 7), `swap` (`1987` / `now`), `sirens`, `police_radio`, `heart_monitor`, `hum` (`who`), `breath` (gasp / calm_exhale), footsteps by surface and weight (`footsteps_*`, quiet on the stairs in socks), beds (`ambience_night`, `ambience_woods`, `ambience_dawn`, `room_tone`, `crowd_parade`, `tape_hiss`), and the UI (`ui_pop`, `typing`, `magnet_click`, `vhs_pause` pause / play / rewind, `vhs_glitch`, `glitch`).
 - **Music events** (suggestions on the picture's frames; `audio/music_plan.py` places the score and its word-anchored events win): `jingle` by `version` (girl_broken, hum, hum_child, outro, vhs_parade; the tinny one from the woods is a bed in the sfx sheet, `version` tinny_woods), `rule` (card stings), `riser`, `swell`, `hit`, `stinger`, `braam`, `sub_drop`, `silence` (drop-outs before the scares, and the VHS pause), `pulse_on` / `pulse_off` (Mom's hand over June's eyes to "Seven."), `heartbeat` (under the counts), `drone`, `outro_warm`.
 
+## Sound prep (the Doctor film)
+
+- Catalogue: `python3 audio/epidemic_catalog.py --doctor` -> `audio/catalog_epidemic_doctor.json` (the doctor set
+  `_work/samples/epidemic`, one flat folder, first; then the bunny, dummy, delivery, police and mirror sets).
+  `audio/library.py` and `audio/score.py` read it first.
+- Review of every new file: `_work/mix/sfx_review.md` (measured by `audio/review_doctor.py`: `_work/mix/review/`).
+- The HOLD MUSIC (the film's returning tune, original): `audio/hold.py`; `python3 audio/hold.py` renders every
+  version to `_work/mix/hold/` with `hold_check.json` (a pitch check of every melody note) and `hold_sheet.png`.
+  Versions: studio, phone_1979, landline, rooms, hum (Grandma), pulse (slows at each count), ceiling, car_radio,
+  far_hall, warm (the outro).
+- SFX names for this film: `sfx.DOCTOR_NAMES` (plus `pen_click` rebuilt on the new ballpoints, and the aliases at
+  the end of sfx.py). `python3 audio/sfx_doctor_check.py [names]` renders and measures each to `_work/mix/sfx_doctor/`
+  (`sheet.jpg`). New spaces: 'waiting', 'er', 'office'.
+- Voice FX (lines.py fx codes, `audio/mix.py`): 'phone' (landline band, grit, hiss), 'recording' (the phone system's
+  lady), 'rooms' (every room: delayed copies in the voice plus a wide stereo wash on the events bus), with 'door',
+  'whisper', 'memory' as before; an unknown fx stays dry with a warning.
+- Music map: `audio/music_plan.py` (`--table` prints it); the score renders its 'hold' events with hold.py.
+- Tests: `python3 audio/sfx_tests.py [1..8] [--jobs 2]` -> `_work/mix/tests/` (wav + json per test, `--sheet`).
+
 ## Sound prep (the Bunnyman film)
 Everything below is in `audio/`; run from `film/`. The verdicts, the music map and the tests are measured, not guessed.
 - **Catalogue**: `python3 audio/epidemic_catalog.py --bunny` -> `audio/catalog_epidemic_bunny.json` (the bunny set

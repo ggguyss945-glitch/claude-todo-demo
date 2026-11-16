@@ -2,13 +2,22 @@
 
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
-This film ("If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN") uses five Epidemic sets (catalogued
-in audio/catalog_epidemic_bunny.json, never copied out of _work/samples, never committed): the bunny set
-(_work/samples/epidemic: 70 effects and 10 tracks, each judged in _work/mix/sfx_review.md: 29 used, 21 used only after
-processing, 20 rejected; 6 tracks used, 4 rejected), and the dummy, delivery, police and mirror sets through the
-symlinks in _work/samples. Keep the channel connected in the Epidemic account so Content ID does not claim the
-tracks (The Haunted, Sleep Forever, The Cursed Path of Everlasting Loneliness, Mermaid's Story, Mary Had a Little
-Lamb, Mr. Otter's Rainy Day and the earlier sets' dark tracks).
+This film ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND") uses six Epidemic sets (catalogued in
+audio/catalog_epidemic_doctor.json, never copied out of _work/samples, never committed): the doctor set
+(_work/samples/epidemic: 90 effects and 12 tracks, each judged in _work/mix/sfx_review.md: 52 effects used, 15 used
+only after processing, 22 rejected; 8 tracks used, 2 in reserve, 2 rejected), and the bunny, dummy, delivery, police
+and mirror sets through the symlinks in _work/samples. Keep the channel connected in the Epidemic account so Content
+ID does not claim the tracks (The Forgotten Memories, It's Late, Lens Flare 3, Beauty Lives in Me, Prosper, In Those
+Hazel Eyes, Follow Your Feet, and the earlier sets' dark tracks: Are You Alone, Haunted Mind, When the Sun Sets, Dark
+Tunnels, In Continuum, Irene, The Haunted, Come Closer, Escalation, Turning Stones, A Massive Mist, Don't Look, Dark
+Forebodings, End of Rain).
+
+Our own material (no licence needed): the HOLD MUSIC (audio/hold.py: an original 8-bar lounge melody written for this
+film, every version synthesised: vibraphone, tine e-piano, synth bass, brushes, pad; no melody of any existing song;
+the celesta doubling in its warm version is the CC0 "A Sampled Celesta" below) and Grandma humming it (audio/voicesynth.py:
+the narrator's own recording resynthesised in the cast's 'G' voice). Synthesised sound (sfx.py): the landline bell's
+gongs, the fluorescent ballast hum, the dead TV, the dial tone, the wipers, the ring-back, and the modal bodies.
+The Bunnyman film's notes follow.
 
 No new third-party sound was downloaded for this film: the free hosts (Freesound, OpenGameArt, Wikimedia Commons) are
 not reachable from the work machine, and nothing the film needed was missing. What the recordings could not give is

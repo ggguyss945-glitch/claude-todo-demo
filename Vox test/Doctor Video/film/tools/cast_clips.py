@@ -999,7 +999,7 @@ def _c_narr_asks():
     n.expr('asking_hard', 3.0, None, 1.5)
     n.lean_in(3.0, 3.0, None, 0.3)
     ev = []
-    taped = [1.0, 0.875, 0.75, 0.625, 0.5, 0.375]            # one of his 8 strips per question: the face's three first
+    taped = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]                    # one of his 5 strips per question: the cone's from the top down, the face's last
     for i, (q0, q1, _) in enumerate(qs):
         ev += a.loosen_tape(q1 - 0.1, q1 + 0.25, taped[i], taped[i + 1], flinch=True)
     def draw(pen, t):
@@ -1015,8 +1015,9 @@ def _c_later_faces():
     a.place(900, FLOOR)
     a.perch(None, 'plastic', hands=('lap', 'pen'))
     a.face(0.15, -0.1)
-    a.set(-1, None, 0.01, dl_tape=0.5, h_tilt=8.0)          # 4 of his 8 strips off: the face's three and the wisp at the top
-    a.faces([(0.0, 1.0), (1.1, 2.0), (2.2, 3.0), (3.3, 4.0), (4.6, 5.0)], fade=0.6)
+    a.set(-1, None, 0.01, dl_tape=0.2, h_tilt=14.0)         # 4 of his 5 strips off (the cone bare): only the cheek strip left
+    ev = a.loosen_tape(0.15, 0.15, 0.2, 0.0, flinch=False)  # the last strip comes away and Grandpa's face is there
+    a.faces([(0.0, 0.0), (0.75, 1.0), (1.8, 2.0), (2.85, 3.0), (3.9, 4.0), (5.0, 5.0)], fade=0.6)
     a.tilt_head(0.5, 10.0, 4.0)
     def draw(pen, t):
         pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#5a6a4a'), (1, '#2a3024')])

@@ -1,5 +1,5 @@
-"""Sound effects for "If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN" (the police film's v2 SFX
-engine, as the delivery and dummy films extended it): recorded, layered, perspective-processed, 48 kHz stereo float.
+"""Sound effects for "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND" (the police film's v2 SFX engine, as
+the delivery, dummy and Bunnyman films extended it; this film's names are DOCTOR_NAMES, near the end of the file): recorded, layered, perspective-processed, 48 kHz stereo float.
 
 Every sound is built from the recorded library (the owner's Epidemic files first, then the free CC0/CC-BY library in
 catalog.json via library.py), cut into single events ("grains") automatically, layered 2-3 deep (e.g. a knock =
@@ -4578,6 +4578,651 @@ def r_magic_sparkle(rng, sp, **_):
 
 
 # ---------------------------------------------------------------------------------------- names: aliases + fallbacks
+
+# ======================================================================================== Doctor film recipes
+# "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND". The owner's doctor set first (W/samples/epidemic, flat:
+# the old telephone, the classic electric bells, ballpoint pens, the crocodile clip, masking tape, the cinema ticket,
+# the match strikes, burning paper, fridge hums, electric buzz, rain in a car, the car idling and driving, the
+# automatic glass doors, gurneys, wheelchairs, heart monitors, the hospital waiting room; the verdict on every file
+# is in W/mix/sfx_review.md), then the bunny, dummy, delivery, police and mirror sets and the free library; synthesis
+# only for the bell's gongs, the plastic and wood bodies, the ballast hum, the wipers and the tones. The HOLD MUSIC
+# (audio/hold.py) is reachable here as 'hold_music' (version=...) for the picture's diegetic placements; the score's
+# identity events play it too (score.py 'hold').
+DOCTOR_NAMES = ('house_night', 'fridge_hum', 'wall_clock', 'landline_ring', 'receiver_up', 'receiver_down',
+                'cord_yank', 'dial_tone', 'line_hiss', 'rotary_dial', 'hold_music', 'pen_scratch', 'clipboard',
+                'match_strike', 'paper_burn', 'rain_house', 'halverson_car', 'streetlight', 'waiting_room',
+                'tv_dead', 'ticket_tear', 'now_serving', 'pulse_count', 'tape_peel', 'medicine_cabinet',
+                'carry_child', 'drive_rain', 'er_doors', 'wheelchair', 'er_bustle', 'chair_rock', 'sit_down',
+                'office_3am', 'phone_connect', 'typewriter', 'card_tear')
+NAMES = NAMES + DOCTOR_NAMES
+# one-shots: momentary max, LU rel the voice at gain_db 0; beds (BEDS, and DUR_BEDS given a dur): integrated
+# (test 7: tape_peel -3 peaked -2.7 LU over... the voice and drove the limiter 3 dB: -6)
+# (test 1: house_night -30 and waiting_room -27 measured -30 LU momentary under the voice, masked by the music: +3)
+LEVEL_LU.update(house_night=-27, fridge_hum=-31, wall_clock=-20, landline_ring=-4, receiver_up=-7, receiver_down=-5,
+                cord_yank=-3, dial_tone=-20, line_hiss=-26, rotary_dial=-8, hold_music=-17, pen_scratch=-12,
+                clipboard=-7, match_strike=-5, paper_burn=-19, rain_house=-27, halverson_car=-29, streetlight=-31,
+                waiting_room=-24, tv_dead=-31, ticket_tear=-3, now_serving=-5, pulse_count=-11, tape_peel=-6,
+                medicine_cabinet=-6, carry_child=-11, drive_rain=-23, er_doors=-8, wheelchair=-14, er_bustle=-23,
+                chair_rock=-9, sit_down=-8, office_3am=-31, phone_connect=-8, typewriter=-12, card_tear=-3,
+                pen_click=-6)
+# transients (clicks, peels, clacks) read 6-10 dB under their momentary target at the default -7 dBFS cap (the
+# check render: pen_click -30.7 for -19, tape_peel -25 for -17): their caps are raised so they reach their level
+PEAK_CAP.update(landline_ring=-5.0, cord_yank=-3.0, receiver_down=-4.0, receiver_up=-4.0, ticket_tear=-3.0,
+                tape_peel=-2.0, match_strike=-4.0, now_serving=-6.0, card_tear=-3.0, chair_rock=-5.0, er_doors=-6.0,
+                pen_click=-3.0, clipboard=-4.0, medicine_cabinet=-4.0, sit_down=-4.0)
+BEDS = BEDS + ('house_night', 'fridge_hum', 'dial_tone', 'line_hiss', 'rain_house', 'halverson_car', 'streetlight',
+               'waiting_room', 'tv_dead', 'drive_rain', 'er_bustle', 'office_3am')
+DUR_BEDS = DUR_BEDS + ('wall_clock', 'hold_music', 'pen_scratch', 'paper_burn', 'pulse_count', 'wheelchair',
+                       'typewriter', 'carry_child')
+BED_BUS = BED_BUS + ('house_night', 'fridge_hum', 'dial_tone', 'line_hiss', 'rain_house', 'halverson_car',
+                     'streetlight', 'waiting_room', 'tv_dead', 'drive_rain', 'er_bustle', 'office_3am', 'wall_clock',
+                     'hold_music')
+# spaces: 'kitchen_far' (the kitchen heard from the hall / living room), 'waiting' (the villain's waiting room: hard,
+# low, fluorescent), 'er' (the bright, busy ER), 'office' (the narrator's small office at 3 AM)
+SPACE_LU.update(waiting=0.0, er=0.0, office=0.0)
+SPACE_ALIAS.update(waiting_room='waiting', villain='waiting', living_room_waiting='waiting', emergency='er',
+                   er_bay='er', ward_er='er', night_office='office', doctors_office='office', driveway='window',
+                   porch_out='outside', front_door_out='outside', car_interior='car', back_seat='car', sink='close',
+                   counter='close', medicine='close', bathroom_cab='close')
+SPACES = tuple(SPACE_LU)
+DEFAULT_SPACE.update(house_night='dry', fridge_hum='next_room', wall_clock='inside', landline_ring='close',
+                     receiver_up='close', receiver_down='close', cord_yank='close', dial_tone='dry', line_hiss='dry',
+                     rotary_dial='close', hold_music='dry', pen_scratch='inside', clipboard='close',
+                     match_strike='close', paper_burn='close', rain_house='dry', halverson_car='window',
+                     streetlight='window', waiting_room='dry', tv_dead='waiting', ticket_tear='waiting',
+                     now_serving='waiting', pulse_count='dry', tape_peel='tight', medicine_cabinet='close',
+                     carry_child='close', drive_rain='dry', er_doors='er', wheelchair='er', er_bustle='dry',
+                     chair_rock='er', sit_down='close', office_3am='dry', phone_connect='close', typewriter='close',
+                     card_tear='close', pen_click='close')
+
+
+def _space_doctor(y, kind, seed=0, wet=None):
+    if kind == 'waiting':                             # low ceiling, hard floor, chairs: short, bright-ish, a flutter
+        x = reverb(lp(y, 9000, 1), 'hallway', 0.42 if wet is None else wet, 0.003)
+        return eq(x, ('peak', 1800, 1.5, 1.0))
+    if kind == 'er':                                  # a big, busy, hard room: wider, longer
+        return reverb(y, 'hall', 0.28 if wet is None else wet, 0.006)
+    if kind == 'office':                              # a small office: close, a little room
+        return reverb(y, 'living', 0.14 if wet is None else wet, 0.002)
+    return None
+
+
+_space_prev = space
+
+
+def space(y, kind, seed=0, wet=None):             # noqa: F811 (the doctor spaces first, then every earlier one)
+    r = _space_doctor(st(y), kind, seed, wet)
+    return r if r is not None else _space_prev(y, kind, seed, wet)
+
+
+def _dp(key, name, keys=(), mode='onset', **seg):
+    """A grain pool over the files serving `name` (those whose id has any of keys, when given)."""
+    return pool('doc_' + key, lambda: (_has(name, *keys) if keys else src(name)), mode, **seg)
+
+
+def _dx(name, keys, dur, rng, xfade=1.5):
+    """A dur-second stretch of one of the files serving `name` (keys narrow it), looped if short."""
+    E = _has(name, *keys) if keys else src(name)
+    if not E:
+        E = src(name)
+    return excerpt(_pick(rng, E), float(dur), rng, xfade)
+
+
+def _loop(y, n, rng, xf=0.9):
+    """Loop a stereo array to n samples with long equal-power crossfades from random points (an idle engine, a
+    hum: no seam you can hear)."""
+    y = st(y); xf = min(n_(xf), len(y) // 3)
+    out = np.zeros((n + len(y), 2), np.float32); i = 0
+    win = np.sin(np.linspace(0, np.pi / 2, xf)) ** 2
+    while i < n:
+        off = int(rng.integers(0, max(1, len(y) // 3)))
+        c = y[off:].copy()
+        if i > 0:
+            c[:xf] *= np.sqrt(win)[:, None]
+        c[-xf:] *= np.sqrt(win[::-1])[:, None]
+        place(out, c, i); i += len(c) - xf
+    return out[:n]
+
+
+def _lv(y, lufs):
+    L = lufs_int(y) if len(y) > n_(0.6) else mom_max(y)
+    return (y * 10 ** ((lufs - L) / 20)).astype(np.float32) if np.isfinite(L) and L > -90 else y
+
+
+def r_fridge_hum(rng, sp, dur=20.0, **_):
+    """BED: the kitchen fridge: the compressor's low hum (the doctor set's two fridges), its 120 Hz, a faint rattle."""
+    y = lp(_dx('fridge_hum', (), dur, rng, 2.0), 1800, 2)
+    return fade(y, 0.8, 1.0), 0.0, 0.0, False
+
+
+def r_wall_clock(rng, sp, dur=8.0, bpm=60.0, bpm_end=None, sag=0.0, **_):
+    """The kitchen wall clock. bpm_end slows it over dur (the pulse count: the clock slowing); sag (semitones) drags
+    its pitch down as it slows. Ticks from the earlier sets' wall clocks, a small wooden case under each."""
+    P = pool('clock_old', lambda: src('old_clock', has=['wall_clock']) or src('old_clock') or src('clock_tick'),
+             'onset', gap=0.3, max_len=0.25, keep=-14)
+    d = float(dur); b0 = float(bpm); b1 = float(bpm_end or bpm)
+    ev = []; t = 0.0; k = 0
+    while t < d:
+        f = t / max(d, 1e-3)
+        g = rate(P.get(rng, rj=0.0, tilt=0.0, fo=0.04, avoid=0), semis(-2.0 - (1.0 if k % 2 else 0.0) - sag * f))
+        case = st(modal([260.0, 640.0, 1150.0], [0.05, 0.03, 0.015], [1.0, 0.5, 0.25], 0.15, 3 + k % 2)) * 0.3
+        a = 1.0 if k % 2 == 0 else 0.72
+        ev += [(t, hp(g, 250, 2) * a), (t, case * a)]
+        t += 60.0 / (b0 + (b1 - b0) * f) + rng.normal(0, 0.002); k += 1
+    return _seq(ev, 0.3)[:n_(d + 0.3)], 0.0, 0.0, False
+
+
+def r_house_night(rng, sp, dur=30.0, fridge=0.6, clock=0.5, rain=0.0, creaks=0.3, **_):
+    """BED: Grandma's house at night (the kitchen, the hall): the room's tone, the fridge's hum from the kitchen, the
+    wall clock, a creak now and then, and rain on the windows when rain > 0. Calibrated as one bed."""
+    d = float(dur)
+    base = _lv(r_room_tone_house(rng, sp, dur=d, hum=0.25)[0], -40)
+    lay = [(0, base)]
+    if fridge > 0:
+        fr = space(r_fridge_hum(rng, sp, dur=d)[0], 'next_room', 1)[:n_(d)]
+        lay.append((0, _lv(fr, -44) * (fridge / 0.6)))
+    if clock > 0:
+        c = space(r_wall_clock(rng, sp, dur=d, bpm=60)[0], 'inside', 2)[:n_(d)]
+        lay.append((0, _lv(c, -47) * (clock / 0.5)))
+    if creaks > 0:
+        try:
+            cr = r_house_creaks(rng, sp, dur=d, density=0.08)[0][:n_(d)]
+            lay.append((0, _lv(cr, -50) * creaks / 0.3))
+        except Exception:
+            pass
+    if rain > 0:
+        lay.append((0, _lv(r_rain_house(rng, sp, dur=d)[0], -42) * rain))
+    y = _seq(lay, 0.0)[:n_(d)]
+    return fade(y, 0.8, 1.2), 0.0, 0.0, False
+
+
+def _gong(f, dur, rng):
+    """One gong of an old telephone bell (a struck steel dome: inharmonic partials, long ring)."""
+    return modal([f, f * 2.76, f * 5.40, f * 8.93], [1.4, 0.6, 0.25, 0.1], [1.0, 0.45, 0.2, 0.08], dur,
+                 int(rng.integers(1 << 20)))
+
+
+def _bell_burst(rng, on=2.0):
+    """One ring of the old landline: the clapper hammering two gongs at ~20 Hz for `on` seconds (synthesised:
+    two detuned domes) under a recorded electric bell (the doctor set's classic doorbell / its long ring) for the
+    metal and the buzz, then the ring-out."""
+    n = n_(on + 0.9)
+    out = np.zeros((n, 2), np.float32)
+    g1 = st(_gong(1180.0 + rng.uniform(-8, 8), 1.2, rng)); g2 = st(_gong(1410.0 + rng.uniform(-8, 8), 1.2, rng))
+    t = 0.0; k = 0
+    while t < on:
+        a = 0.55 + 0.1 * rng.uniform()
+        place(out, (g1 if k % 2 == 0 else g2) * a, n_(t))
+        t += 1 / 20.0 + rng.normal(0, 0.0015); k += 1
+    out = hp(out, 600, 2) * 0.25
+    try:
+        P = _dp('bell', 'landline_ring', ('classic', 'electric'), 'phrase', gap=0.3, max_len=4.0, keep=-18)
+        g = P.get(rng, rj=0.0, tilt=0.0, fo=0.05)
+        g = eq(lp(hp(g, 500, 2), 7000, 2), ('peak', 1300, 3.0, 1.0))
+        rec = _fit(g, n_(on), rng)
+        rec[-n_(0.05):] *= np.linspace(1, 0, n_(0.05))[:, None]
+        place(out, pnorm(rec) * 0.8, 0)
+    except KeyError:
+        pass
+    env = np.ones(n, np.float32); env[n_(on):] = np.exp(-np.arange(n - n_(on)) / n_(0.22))
+    return out * env[:, None]
+
+
+def r_landline_ring(rng, sp, n=1, cycle=6.0, on=2.0, count=None, **_):
+    """The old kitchen landline's bell: n rings (count= is the same), each `on` s of bell then silence, one every
+    `cycle` s (the US cadence 2 on / 4 off). Each ring is its own event: cue it per ring to count them on picture,
+    or give n. Rule 1: seven rings, then nine; rule 2: the unplugged phone rings anyway."""
+    n = int(count or n)
+    ev = [(k * float(cycle), _bell_burst(rng, float(on))) for k in range(max(1, n))]
+    return _seq(ev, 0.2), 0.0, 0.0, False
+
+
+def _phone_pool():
+    return _dp('handset', 'receiver_up', ('telephone_pick_up', 'old_reciever', 'intercom'), 'onset', gap=0.18,
+               max_len=0.6, keep=-18)
+
+
+def r_receiver_up(rng, sp, **_):
+    """Lifting the old receiver off its cradle: the hook switch's clack, the handset's plastic, a tiny bell tink."""
+    E = _has('receiver_up', 'old_reciever_lift')
+    if E:
+        y = audio(_pick(rng, E)); y = fade(pnorm(y[:n_(0.5)]), 0.001, 0.05)
+    else:
+        y = _phone_pool().get(rng, rj=0.03)
+    tink = st(_gong(1180.0, 0.4, rng)) * 0.04
+    return _seq([(0, y), (0.01, tink)], 0.2), onset_s(y, -12), 0.0, False
+
+
+def r_receiver_down(rng, sp, kind='hang', **_):
+    """'hang': the receiver slammed onto the cradle (Grandma hangs up: the clack, the bell's jolt). 'set': laid down on
+    the kitchen counter "like a sleeping baby" (a soft plastic touch on laminate, no clack)."""
+    g = _phone_pool().get(rng, rj=0.03)
+    if kind == 'set':
+        y = lp(g, 2500, 2) * 0.35
+        body = st(modal([210.0, 480.0, 950.0], [0.06, 0.04, 0.02], [1.0, 0.4, 0.15], 0.2, 5)) * 0.25
+        return _seq([(0, y), (0.004, body)], 0.2), onset_s(y, -12), -6.0, False
+    jolt = st(_gong(1410.0, 0.7, rng)) * 0.10
+    body = st(modal([180.0, 410.0], [0.08, 0.05], [1.0, 0.5], 0.25, 6)) * 0.35
+    y = _seq([(0, g), (0.003, jolt), (0.0, body)], 0.3)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_cord_yank(rng, sp, **_):
+    """Grandma pulls the phone cord out of the wall: the cord whipping taut (a short tear, its paper taken off), the
+    plastic jack snapping out of the socket, the phone jerking on the counter (its bell's tink)."""
+    T = _dp('tear', 'paper_tear', ('tear_11', 'tear_08'), 'onset', gap=0.08, max_len=0.25, keep=-14)
+    whip = lp(hp(T.get(rng, rj=0.1), 600, 2), 4000, 2) * 0.45
+    snap = st(modal([2800.0, 4100.0, 6900.0], [0.012, 0.008, 0.004], [1.0, 0.6, 0.3], 0.05, 9)) * 0.8
+    thump = st(modal([140.0, 330.0], [0.06, 0.04], [1.0, 0.4], 0.2, 4)) * 0.5
+    tink = st(_gong(1180.0, 0.5, rng)) * 0.06
+    y = _seq([(0, whip), (0.11, snap), (0.13, thump), (0.135, tink)], 0.3)
+    return y, onset_s(y, -12), 0.0, False         # (test 2: a fixed 0.11 s put the loud whip 77 ms early)
+
+
+def r_dial_tone(rng, sp, dur=4.0, **_):
+    """BED: the dial tone (350 + 440 Hz, the doctor set's recording looped), in the telephone band."""
+    # synthesised: the doctor set's 1.8 s recording loops with audible seams (beating at every crossfade)
+    tt = np.arange(n_(float(dur))) / SR
+    y = st((np.sin(2 * np.pi * 350 * tt) + np.sin(2 * np.pi * 440 * tt)).astype(np.float32) * 0.3)
+    y = y + st(bp(noise(float(dur), int(rng.integers(1 << 30))), 300, 3400, 2)[:len(tt)]) * 0.004
+    return fade(bp(y, 300, 3400, 2), 0.01, 0.05), 0.0, 0.0, False
+
+
+def r_line_hiss(rng, sp, dur=4.0, **_):
+    """BED: an open line that has gone quiet (the outro's warning): the walkie-talkie's white noise squeezed into the
+    telephone band, a faint mains hum, a crackle."""
+    y = bp(_dx('line_hiss', (), dur, rng, 1.0), 300, 3400, 3)
+    tt = np.arange(len(y)) / SR
+    hm = st((np.sin(2 * np.pi * 60 * tt) * 0.02 + np.sin(2 * np.pi * 180 * tt) * 0.01).astype(np.float32)) * peak(y)
+    return fade(y + hm, 0.05, 0.2), 0.0, 0.0, False
+
+
+def r_rotary_dial(rng, sp, digits=7, **_):
+    """The rotary dial turning and running back, one gesture per digit (the doctor set's old dials)."""
+    P = _dp('rotary', 'rotary_dial', (), 'phrase', gap=0.25, max_len=1.6, keep=-16)
+    ev = []; t = 0.0
+    for k in range(int(digits)):
+        g = P.get(rng, rj=0.03)
+        ev.append((t, g)); t += len(g) / SR + rng.uniform(0.15, 0.35)
+    return _seq(ev, 0.2), 0.0, 0.0, False
+
+
+def r_hold_music(rng, sp, version='landline', dur=None, off=0.0, **kw):
+    """The hold music (audio/hold.py) as a sound in the scene: version ('landline' the receiver on the counter,
+    'phone_1979', 'rooms', 'ceiling', 'car_radio', 'far_hall', 'hum', 'pulse', 'studio', 'warm'); dur crops it (with
+    a fade), off skips into it. Already processed: space 'dry'."""
+    import hold as HM
+    keys = {k: kw[k] for k in ('tempo', 'loops', 'phrases', 'transpose', 'counts', 'speeds', 'who') if k in kw}
+    y, info = HM.render(str(version), seed=int(rng.integers(1, 9)), **keys)
+    y = st(y)[n_(float(off)):]
+    if dur:
+        y = _fit(y, n_(float(dur)), None)
+    return fade(y, 0.02, 0.6), 0.0, 0.0, True
+
+
+def r_pen_click(rng, sp, n=1, spacing=None, **_):  # noqa: F811 (the doctor set's ballpoints first)
+    """A ballpoint pen clicking (Doctor Later's pen in the dark hallway; Halverson's pen): the doctor set's ballpoint
+    and retractable clicks (the clipped 'pen_ballpoint_pen_click' file excluded), n clicks."""
+    P = pool('pen_doc', lambda: (_has('pen_click', 'ballpoint_pen_click', 'retractable_click', 'pen_click_open')
+                                  or src('pen_click')), 'onset', gap=0.05, max_len=0.18, keep=-16)
+    ev = []; t = 0.0
+    for k in range(int(n)):
+        a = eq(lp(hp(P.get(rng, rj=0.04), 400, 2), 7000, 2), ('hs', 4500, -4.0, 0.7))
+        body = st(modal([1250.0, 2100.0, 3300.0], [0.012, 0.008, 0.005], [1.0, 0.6, 0.3], 0.04, 11)) * 0.45
+        ev += [(t, a), (t, body)]
+        t += float(spacing) if spacing else rng.uniform(0.3, 0.45)
+    y = _seq(ev, 0.05)
+    y = sat(y / (peak(y) + 1e-9), 3.0) * 0.5          # shave the 5 ms spike so the click reaches its level
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_pen_scratch(rng, sp, dur=2.5, **_):
+    """A pen scratching on paper (something in the hallway writing down what Milo said; Halverson's marker note):
+    the doctor set's ballpoint writing on paper, its brightest air taken off."""
+    E = _has('pen_scratch', 'write_on_paper') or src('pen_scratch')
+    y = excerpt(_pick(rng, E), float(dur), rng, 0.3)
+    y = eq(lp(hp(y, 250, 2), 7000, 2), ('peak', 1800, 2.0, 1.0))
+    return fade(y, 0.05, 0.15), 0.0, 0.0, False
+
+
+def r_clipboard(rng, sp, **_):
+    """The clipboard's metal clip snapping (the doctor set's crocodile clip, a bigger spring: 3 semitones down) on a
+    hardboard (its body thump)."""
+    P = _dp('clip', 'clipboard', (), 'onset', gap=0.06, max_len=0.2, keep=-14)
+    g = lp(rate(P.get(rng, rj=0.03), semis(-3.0)), 8000, 2)
+    board = st(modal([190.0, 430.0, 910.0], [0.05, 0.03, 0.015], [1.0, 0.5, 0.2], 0.15, 8)) * 0.4
+    y = _seq([(0, g), (0.002, board)], 0.1)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_match_strike(rng, sp, **_):
+    """Grandma strikes a match over the sink: the scrape on the box (the doctor set's match strikes), the flare
+    catching (a soft burst of air), a little sputter."""
+    P = _dp('match', 'match_strike', ('match_strike', 'strike_box'), 'phrase', gap=0.25, max_len=1.4, keep=-18)
+    g = lp(P.get(rng, rj=0.02), 11000, 2)
+    fl = st(lp(noise(0.6, int(rng.integers(1 << 30))), 1800, 2)) * np.exp(-np.arange(n_(0.6)) / n_(0.15))[:, None]
+    y = _seq([(0, g), (len(g) / SR * 0.55, fl * 0.08 * peak(g) / (peak(fl) + 1e-9))], 0.3)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_paper_burn(rng, sp, dur=6.0, **_):
+    """The folded results burning in the sink: the paper catching and crackling (the doctor set's small pile of paper
+    burning indoors), close, its low rumble kept small."""
+    y = _dx('paper_burn', (), dur, rng, 1.0)
+    y = eq(hp(y, 120, 2), ('peak', 2500, 2.0, 1.0))
+    ramp = np.clip(np.arange(len(y)) / n_(0.8), 0, 1) ** 1.5
+    return fade(y * ramp[:, None].astype(np.float32), 0.02, 0.8), 0.0, 0.0, False
+
+
+def r_rain_house(rng, sp, dur=30.0, heavy=0.6, **_):
+    """BED: rain outside Grandma's house, heard inside: steady rain on the roof (the doctor set's rain on a car roof
+    and on a windshield, darkened to the house's walls and glass), drips at the window now and then."""
+    a = _dx('rain_car', ('car_on_roof',), dur, rng, 2.0)
+    b = _dx('rain_car', ('windshield',), dur, rng, 2.0)
+    y = lp(a, 2600, 2) * 0.8 + lp(hp(b, 300, 2), 5000, 2) * 0.35 * (0.5 + heavy)
+    return fade(width(y, 1.2), 1.2, 1.5), 0.0, 0.0, False
+
+
+def r_halverson_car(rng, sp, dur=30.0, start=False, rain=0.5, **_):
+    """BED: Doctor Halverson's car in the driveway, engine running, rain on its roof: the doctor set's car idling
+    (its idle looped; start=True plays the start at the head), outside."""
+    E = src('halverson_car')
+    if not E:
+        return r_car_idle(rng, sp, dur=dur)
+    x = audio(_pick(rng, E, 1.0))
+    idle = x[n_(1.6):]
+    y = _loop(idle, n_(float(dur)), rng, 0.9)
+    if start:
+        y = np.concatenate([fade(x[:n_(1.6)], 0.002, 0.02), y])[:n_(float(dur))]
+    y = lp(y, 3500, 2)
+    if rain > 0:
+        y = y + _lv(lp(_dx('rain_car', ('car_on_roof',), dur, rng, 2.0), 3500, 2), lufs_int(y) - 6) * rain
+    return fade(y, 0.4, 1.0), 0.0, 0.0, False
+
+
+def r_streetlight(rng, sp, dur=20.0, flicker=0.6, **_):
+    """BED: the flickering streetlight at the bus stop: an electric buzz (the doctor set's interference buzz) that
+    stutters with the lamp, the starter's ticks on each flicker."""
+    d = float(dur)
+    y = hp(_dx('fluorescent', ('interference',), d, rng, 1.0), 90, 2)
+    n = len(y); tt = np.arange(n) / SR
+    g = np.ones(n, np.float32); ev = []
+    t = rng.uniform(0.5, 2.0)
+    while t < d - 0.5:
+        k = int(rng.integers(2, 6))
+        for j in range(k):
+            a = n_(t + j * 0.07); b = min(n, a + n_(rng.uniform(0.02, 0.05)))
+            g[a:b] *= 0.15
+            ev.append((t + j * 0.07, st(modal([3100.0, 5200.0], [0.004, 0.003], [1.0, 0.5], 0.02, j)) * 0.05))
+        t += rng.uniform(1.5, 5.0) / max(flicker, 0.1)
+    from scipy.ndimage import uniform_filter1d
+    g = uniform_filter1d(g, n_(0.006))
+    y = y * g[:, None]
+    tick = _seq(ev, 0.0) if ev else np.zeros((1, 2), np.float32)
+    out = np.zeros_like(y); out += y; out[:min(n, len(tick))] += tick[:n] * peak(y) * 3
+    return fade(out, 0.5, 0.8), 0.0, 0.0, False
+
+
+def _ballast(d, rng, flicker=0.4):
+    """Fluorescent tubes: 120 Hz ballast hum with its odd harmonics, a little beating between two tubes, and (with
+    flicker) a half-dead tube's stutter (the hum dips and ticks)."""
+    n = n_(d); tt = np.arange(n) / SR
+    h = sum(a * np.sin(2 * np.pi * f * tt + rng.uniform(0, 6)) for f, a in ((120, 1.0), (240, 0.35), (360, 0.3),
+                                                                             (600, 0.12), (1080, 0.05)))
+    h2 = sum(a * np.sin(2 * np.pi * f * 1.004 * tt) for f, a in ((120, 0.6), (360, 0.2)))
+    y = (h + h2).astype(np.float32)
+    if flicker > 0:
+        g = np.ones(n, np.float32); t = rng.uniform(0.5, 2.0)
+        while t < d - 0.3:
+            for j in range(int(rng.integers(1, 4))):
+                a = n_(t + j * 0.09); g[a:a + n_(0.03)] *= 0.3
+            t += rng.uniform(2.0, 6.0) / flicker
+        from scipy.ndimage import uniform_filter1d
+        y = y * uniform_filter1d(g, n_(0.005))
+    return y
+
+
+def r_waiting_room(rng, sp, dur=30.0, flicker=0.5, tv=0.0, buzz=0.6, **_):
+    """BED: the living room that has become a waiting room (the villain's world): the fluorescent tubes' ballast hum,
+    half of them dying (stutters), the recorded electric buzz under it, the dead air of a room full of people who do
+    not move (no walla), and the dead TV's hiss when tv > 0. Sickly, low, still."""
+    d = float(dur)
+    bal = st(_ballast(d, rng, flicker))
+    bz = hp(_dx('fluorescent', ('buzz_hum_buzz_hum',), d, rng, 1.0), 80, 2)
+    air = st(lp(noise(d, int(rng.integers(1 << 30))), 300, 2))
+    lay = [(0, _lv(bal, -40)), (0, _lv(bz, -46) * buzz / 0.6), (0, _lv(air, -50))]
+    if tv > 0:
+        lay.append((0, _lv(r_tv_dead(rng, sp, dur=d)[0], -46) * tv))
+    y = reverb(_seq(lay, 0.0)[:n_(d)], 'hallway', 0.35)[:n_(d)]
+    return fade(width(y, 0.8), 1.0, 1.0), 0.0, 0.0, False
+
+
+def r_tv_dead(rng, sp, dur=10.0, **_):
+    """BED: a television on the wall showing nothing: the snow's hiss (soft, darkened), the tube's faint 15.7 kHz
+    whine kept very low, a 60 Hz hum."""
+    d = float(dur); n = n_(d); tt = np.arange(n) / SR
+    z = lp(hp(noise(d, int(rng.integers(1 << 30))), 400, 2), 6500, 2)
+    wh = (np.sin(2 * np.pi * 15734 * tt) * 0.004 + np.sin(2 * np.pi * 60 * tt) * 0.02).astype(np.float32)
+    y = st(z * 0.3 + wh)
+    return fade(y, 0.3, 0.5), 0.0, 0.0, False
+
+
+def r_ticket_tear(rng, sp, **_):
+    """A ticket torn off the take-a-number machine: the dispenser's ratchet click, the perforated paper tearing (the
+    doctor set's cinema ticket)."""
+    P = _dp('ticket', 'ticket_tear', (), 'onset', gap=0.08, max_len=0.4, keep=-16)
+    g = P.get(rng, rj=0.03)
+    ratchet = st(modal([1400.0, 2600.0, 4300.0], [0.01, 0.006, 0.004], [1.0, 0.5, 0.3], 0.04, 12)) * 0.25
+    y = _seq([(0, ratchet), (0.06, g)], 0.2)
+    return y, 0.06, 0.0, False
+
+
+def r_card_tear(rng, sp, **_):
+    """The narrator tears the yellow card out of the medicine cabinet: old tape letting go, card stock ripping."""
+    T = _dp('cardtear', 'paper_tear', ('paper_bag', 'tear_08'), 'phrase', gap=0.15, max_len=0.9, keep=-16)
+    Pp = _dp('peel', 'tape_peel', ('masking_tape_peel_off', 'sticky_tape_peel_off'), 'onset', gap=0.1, max_len=0.6,
+             keep=-16)
+    y = _seq([(0, Pp.get(rng, rj=0.05) * 0.6), (0.12, lp(T.get(rng, rj=0.04), 9000, 2))], 0.2)
+    return y, 0.12, 0.0, False
+
+
+def r_now_serving(rng, sp, sour=0.0, **_):
+    """The NOW SERVING sign's ding: a two-note electronic chime (the doctor set's ting, pitched to G6 then E6);
+    sour (0..1) drags the second note down toward a tritone and slows it (the sign frozen on 1979)."""
+    P = _dp('ting', 'now_serving', ('high_tings',), 'onset', gap=0.15, max_len=0.6, keep=-20)
+    g = P.get(rng, rj=0.0, tilt=0.0)
+    f0 = 2793.0
+    a = rate(g, 1567.98 / f0)
+    b = rate(g, (1318.5 * 2 ** (-3.0 * sour / 12)) / f0 * (1 - 0.15 * sour))
+    y = _seq([(0, a), (0.42 + 0.2 * sour, b * 0.85)], 0.6)
+    return reverb(lp(y, 7000, 2), 'living', 0.15), 0.0, 0.0, False
+
+
+def r_pulse_count(rng, sp, dur=14.0, counts=(0.0, 4.5, 9.0), bpm=(64, 50, 38, 28), clock=0.7, **_):
+    """The pulse count (rule 7): he takes the narrator's wrist and counts. A heartbeat felt through the wrist (low,
+    close) that steps slower at each count (counts: seconds from the start, bpm: the rate before / after each), the
+    kitchen clock slowing with it (its pitch sagging). Cue it on "One..." with counts at "One", "Two", "Three"."""
+    d = float(dur); counts = list(counts); bpm = list(bpm)
+    P = pool('heart', lambda: src('heartbeat'), 'onset', gap=0.12, max_len=0.35, keep=-16)
+
+    def rate_at(t):
+        k = sum(1 for c in counts[1:] if t >= c)
+        return bpm[min(k, len(bpm) - 1)] * (1 - 0.0 * t)
+    ev = []; t = 0.0
+    while t < d:
+        per = 60.0 / rate_at(t)
+        lub = lp(P.get(rng, rj=0.02, tilt=0.5, fo=0.04), 700, 2)
+        sub = st(sub_boom(58, 40, 0.25, 0.0)) * 0.7
+        ev += [(t, lub), (t, sub), (t + 0.3 * per ** 0.5, lp(P.get(rng, rj=0.02, fo=0.04), 900, 2) * 0.5)]
+        t += per
+    y = _seq(ev, 0.4)[:n_(d + 0.4)]
+    if clock > 0:
+        c = r_wall_clock(rng, sp, dur=d, bpm=60.0, bpm_end=24.0, sag=4.0)[0]
+        y = _seq([(0, y), (0, reverb(c, 'hallway', 0.35)[:len(y)] * clock * peak(y) / (peak(c) + 1e-9) * 0.35)], 0.0)
+    return y, 0.0, 0.0, False
+
+
+def r_tape_peel(rng, sp, q=1, **_):
+    """One question, one strip: old yellow tape peeling off his head (the doctor set's masking tape peeling, its long
+    strip ripping). q = 1..4, the question's number: each strip longer, slower to start, louder at the end."""
+    q = int(max(1, min(4, q)))
+    P = _dp('peelp', 'tape_peel', ('masking_tape', 'sticky_tape_rip_from_roll_long'), 'phrase', gap=0.2,
+            max_len=1.2, keep=-18)
+    ev = []; t = 0.0
+    for k in range(1 + q):                            # the strip comes away in 2..5 pulls, each a little lower
+        g = lp(hp(rate(P.get(rng, rj=0.03), semis(-1.5 - 0.5 * q - 0.4 * k)), 200, 2), 9000, 2)
+        ev.append((t, g * (0.7 + 0.3 * k / max(1, q))))
+        t += len(g) / SR * rng.uniform(0.55, 0.8)
+    y = _seq(ev, 0.1)
+    return fade(y, 0.01, 0.06), onset_s(y, -16), 0.0, False
+
+
+def r_medicine_cabinet(rng, sp, action='open', **_):
+    """The medicine cabinet's mirror door swinging aside ('open') or shut ('close'): the hinge and the catch (the
+    doctor set's kitchen cabinet), the mirror's glass and the bottles inside rattling (its medicine cabinet)."""
+    C = _dp('cab', 'kitchen_cabinet', (), 'onset', gap=0.15, max_len=0.6, keep=-18)
+    G = _dp('medcab', 'medicine_cabinet', (), 'onset', gap=0.12, max_len=0.4, keep=-14)
+    h = C.get(rng, rj=0.04)
+    glass = hp(G.get(rng, rj=0.05), 900, 2) * 0.35
+    ring = st(modal([2250.0, 3720.0, 5600.0], [0.18, 0.1, 0.05], [1.0, 0.5, 0.2], 0.4, 13)) * 0.04
+    lay = [(0, h), (0.02, glass), (0.01, ring)] if action == 'open' else [(0, h * 1.1), (0.0, glass), (0.0, ring)]
+    y = _seq(lay, 0.3)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_carry_child(rng, sp, dur=3.0, **_):
+    """The narrator lifts Milo and carries him (cloth, quick steps on the hall boards, a strained breath)."""
+    d = float(dur)
+    cl = r_cloth_rustle(rng, sp, dur=d)[0]
+    fs = r_footsteps_hall(rng, sp, dur=d, rate=2.2, weight=0.7)[0]
+    br = r_breath(rng, sp, kind='nervous', dur=min(d, 3.0))[0]
+    y = _seq([(0, _lv(cl, -30)), (0.3, _lv(fs, -28)), (0.1, _lv(br, -34))], 0.2)[:n_(d + 0.2)]
+    return fade(y, 0.05, 0.3), 0.0, 0.0, False
+
+
+def _wipers(d, rng, period=1.1):
+    ev = []; t = 0.2
+    while t < d:
+        sw = lp(hp(noise(0.35, int(rng.integers(1 << 30))), 400, 2), 2500, 2)
+        sw = st(sw * np.sin(np.linspace(0, np.pi, len(sw))) ** 2) * 0.05
+        th = st(modal([95.0, 210.0], [0.05, 0.03], [1.0, 0.4], 0.12, int(t * 10))) * 0.25
+        ev += [(t, sw), (t + 0.36, th)]
+        t += period
+    return _seq(ev, 0.2)
+
+
+def r_drive_rain(rng, sp, dur=30.0, speed='fast', wipers=True, **_):
+    """BED: inside Halverson's car, driving fast at night in the rain: the doctor set's interior night drive (road
+    and engine), rain on the roof and on the windshield, the wipers' sweep and thunk."""
+    d = float(dur)
+    road = _dx('drive_rain', ('fast_driving',) if speed == 'fast' else ('driving_steady',), d, rng, 2.0)
+    roof = _dx('rain_car', ('car_on_roof',), d, rng, 2.0)
+    wind = _dx('rain_car', ('windshield',), d, rng, 2.0)
+    lay = [(0, _lv(road, -30)), (0, _lv(lp(roof, 6000, 2), -35)), (0, _lv(wind, -38))]
+    if wipers:
+        lay.append((0, _lv(_wipers(d, rng), -40)))
+    y = _seq(lay, 0.0)[:n_(d)]
+    return fade(y, 0.8, 1.2), 0.0, 0.0, False
+
+
+def r_er_doors(rng, sp, **_):
+    """The ER's automatic glass doors sliding open before they reach them (the doctor set's automatic doors)."""
+    E = src('er_doors')
+    if not E:
+        return r_van_door_slide(rng, sp)
+    x = audio(_pick(rng, E, 1.0))
+    y = fade(x[:n_(3.2)], 0.01, 0.4)
+    return y, 0.0, 0.0, False
+
+
+def r_wheelchair(rng, sp, dur=3.0, **_):
+    """Mom running with a wheelchair: its wheels on the hospital floor (the doctor set's empty wheelchair passes),
+    lifted (it was recorded quiet)."""
+    y = hp(_dx('wheelchair', ('empty_chair',), dur, rng, 0.5), 70, 2)
+    return fade(y, 0.1, 0.4), 0.0, 0.0, False
+
+
+def r_er_bustle(rng, sp, dur=30.0, monitors=0.6, gurney=0.4, warm=1.0, **_):
+    """BED: the ER, warm and alive: a waiting room with people talking softly (the doctor set's hospital waiting
+    room and its walla, kept far and low so no word reads), heart monitors beeping steadily, a gurney now and then.
+    Nobody is waiting here: it moves."""
+    d = float(dur)
+    a = lp(_dx('waiting_room', ('hospital_waiting',), d, rng, 2.0), 5000, 2)
+    b = lp(_dx('waiting_room', ('walla',), d, rng, 2.0), 3000, 2)
+    lay = [(0, _lv(a, -36)), (0, _lv(b, -40) * warm)]
+    if monitors > 0:
+        m = _dx('heart_monitor_er', ('steady_distant',), d, rng, 1.0)
+        lay.append((0, _lv(m, -42) * monitors / 0.6))
+    if gurney > 0:
+        g = _dx('gurney', ('approach', 'away', 'turning'), min(d, 8.0), rng, 0.5)
+        lay.append((rng.uniform(0, max(0.1, d - 8.0)), _lv(g, -40) * gurney / 0.4))
+    y = reverb(_seq(lay, 0.0)[:n_(d)], 'hall', 0.15)[:n_(d)]
+    return fade(width(y, 1.1), 1.0, 1.5), 0.0, 0.0, False
+
+
+def r_chair_rock(rng, sp, dur=3.5, **_):
+    """The empty plastic chair next to his, still rocking a little: its legs tapping the tile, slower and softer,
+    a faint dry creak on the swing."""
+    d = float(dur); ev = []; t = 0.0; k = 0; per = 0.42
+    Cr = _dp('creak', 'chair_creak', ('short_dry',), 'onset', gap=0.15, max_len=0.4, keep=-18)
+    while t < d:
+        a = np.exp(-t / (d * 0.45))
+        foot = st(modal([340.0, 910.0, 1750.0], [0.04, 0.025, 0.012], [1.0, 0.5, 0.25], 0.12, k)) * 0.5 * a
+        ev.append((t, foot))
+        if k % 2 == 0:
+            ev.append((t + 0.05, lp(Cr.get(rng, rj=0.05), 4000, 2) * 0.12 * a))
+        t += per; per *= 1.06; k += 1
+    return _seq(ev, 0.3), 0.0, 0.0, False
+
+
+def r_sit_down(rng, sp, kind='plastic', **_):
+    """Someone sitting down: 'plastic' (a bolted plastic waiting-room chair: the office-chair sit, its padding
+    thinned, a plastic creak), 'armchair' (Grandpa's chair: the sofa springs), 'office'."""
+    if kind == 'armchair':
+        E = _has('sit_down', 'sofa') or src('sit_down')
+    else:
+        E = _has('sit_down', 'office_chair') or src('sit_down')
+    y = fade(pnorm(audio(_pick(rng, E))), 0.005, 0.2)
+    if kind == 'plastic':
+        y = hp(y, 180, 2)
+        y = _seq([(0, y), (0.08, st(modal([620.0, 1450.0], [0.05, 0.03], [1.0, 0.4], 0.12, 3)) * 0.2)], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_office_3am(rng, sp, dur=30.0, **_):
+    """BED: the narrator's office at 3 AM (Larkfield General): the building's ventilation and the lamp's faint buzz
+    (hospital_tone), a heart monitor far down the hall."""
+    d = float(dur)
+    a = r_hospital_tone(rng, sp, dur=d)[0]
+    lay = [(0, _lv(a, -40))]
+    E = _has('heart_monitor_er', 'steady_distant')
+    if E:
+        m = lp(excerpt(_pick(rng, E), d, rng, 1.0), 2500, 2)
+        lay.append((0, _lv(reverb(m, 'hall', 0.6)[:len(m)], -50)))
+    return fade(_seq(lay, 0.0)[:n_(d)], 1.0, 1.0), 0.0, 0.0, False
+
+
+def r_phone_connect(rng, sp, **_):
+    """The outro's phone that connects instantly: three quick keypad tones (the doctor set's speed-dial tones), one
+    ring-back purr, the pick-up click."""
+    E = _has('phone_connect', 'speed_dial')
+    lay = []
+    if E:
+        lay.append((0, lp(audio(_pick(rng, E))[:n_(1.0)], 4000, 2)))
+    tt = np.arange(n_(0.6)) / SR
+    rb = st(((np.sin(2 * np.pi * 440 * tt) + np.sin(2 * np.pi * 480 * tt)) * 0.15).astype(np.float32))
+    rb = fade(bp(rb, 300, 3400, 2), 0.02, 0.05)
+    lay.append((1.1, rb))
+    lay.append((1.9, _phone_pool().get(rng, rj=0.03) * 0.6))
+    return _seq(lay, 0.2), 0.0, 0.0, False
+
+
+def r_typewriter(rng, sp, dur=3.0, **_):
+    """Typing on an old typewriter (the rules, typed on a typewriter, paper the colour of weak tea)."""
+    y = _dx('typewriter', ('hermes',), dur, rng, 0.3)
+    return fade(lp(y, 9000, 2), 0.02, 0.2), 0.0, 0.0, False
+
+
 ALIASES = {
     'ding_dong': ('doorbell_dingdong', {}), 'doorbell': ('doorbell_dingdong', {}), 'doorbell_ring': ('doorbell_dingdong', {}),
     'doorbell_ding_dong': ('doorbell_dingdong', {}), 'house_chime': ('doorbell_dingdong', {}),
@@ -4745,6 +5390,39 @@ KEYWORDS = [('jingle', 'jingle'), ('pemberton', 'jingle'), ('hum', 'jingle'), ('
             ('chain', 'chain_lock'), ('glitch', 'glitch'), ('beep', 'bodycam_beep'), ('ui', 'ui_pop'),
             ('click', 'radio_click'), ('heart', 'heartbeat'), ('clock', 'clock_tick'), ('tick', 'clock_tick'),
             ('whisper', 'crowd_whisper')]
+# the Doctor film's aliases and keywords (looser words a cue sheet may use)
+ALIASES.update({
+    'phone_ring_old': ('landline_ring', {}), 'landline': ('landline_ring', {}), 'old_phone_ring': ('landline_ring', {}),
+    'kitchen_phone': ('landline_ring', {}), 'bell_ring': ('landline_ring', {}), 'receiver_lift': ('receiver_up', {}),
+    'pick_up': ('receiver_up', {}), 'hang_up': ('receiver_down', {}), 'receiver_hang': ('receiver_down', {}),
+    'receiver_set': ('receiver_down', {'kind': 'set'}), 'set_receiver': ('receiver_down', {'kind': 'set'}),
+    'cord_pull': ('cord_yank', {}), 'unplug': ('cord_yank', {}), 'hold': ('hold_music', {}),
+    'hold_line': ('hold_music', {'version': 'landline'}), 'pen_write': ('pen_scratch', {}),
+    'pen_scribble': ('pen_scratch', {}), 'writing': ('pen_scratch', {}), 'clip_board': ('clipboard', {}),
+    'match': ('match_strike', {}), 'burn_paper': ('paper_burn', {}), 'sink_fire': ('paper_burn', {}),
+    'rain': ('rain_house', {}), 'car_engine': ('halverson_car', {}), 'engine_idle': ('halverson_car', {}),
+    'fluorescent': ('waiting_room', {}), 'fluorescent_hum': ('waiting_room', {}), 'tv_hiss': ('tv_dead', {}),
+    'ticket': ('ticket_tear', {}), 'take_a_number': ('ticket_tear', {}), 'ding': ('now_serving', {}),
+    'serving_ding': ('now_serving', {}), 'pulse': ('pulse_count', {}), 'tape_rip_head': ('tape_peel', {}),
+    'unmask': ('tape_peel', {}), 'mirror_cabinet': ('medicine_cabinet', {}), 'cabinet': ('medicine_cabinet', {}),
+    'carry': ('carry_child', {}), 'drive': ('drive_rain', {}), 'driving': ('drive_rain', {}),
+    'wipers': ('drive_rain', {}), 'sliding_doors': ('er_doors', {}), 'automatic_doors': ('er_doors', {}),
+    'er': ('er_bustle', {}), 'hospital_bustle': ('er_bustle', {}), 'monitors': ('er_bustle', {}),
+    'rocking_chair': ('chair_rock', {}), 'empty_chair': ('chair_rock', {}), 'sit': ('sit_down', {}),
+    'office': ('office_3am', {}), 'hospital_night': ('office_3am', {}), 'call_connect': ('phone_connect', {}),
+    'knock_front': ('knock_door', {'n': 4, 'force': 0.75}), 'knock_halverson': ('knock_door', {'n': 4, 'force': 0.8}),
+    'dawn': ('ambience_dawn', {}), 'lamp_click': ('light_switch', {}), 'coffee_set': ('mug_set', {}),
+    'office_phone': ('phone_ring', {}), 'ambulance_far': ('siren_far', {}), 'house': ('house_night', {}),
+    'room_tone_night': ('house_night', {}), 'clock_slow': ('wall_clock', {'bpm_end': 24.0, 'sag': 4.0}),
+    'tear_card': ('card_tear', {}), 'card_rip': ('card_tear', {}), 'type': ('typewriter', {}),
+})
+KEYWORDS = [('landline', 'landline_ring'), ('receiver', 'receiver_up'), ('cord', 'cord_yank'),
+            ('hold', 'hold_music'), ('fridge', 'fridge_hum'), ('clock', 'wall_clock'), ('pen', 'pen_click'),
+            ('match', 'match_strike'), ('burn', 'paper_burn'), ('rain', 'rain_house'), ('ticket', 'ticket_tear'),
+            ('serving', 'now_serving'), ('pulse', 'pulse_count'), ('tape', 'tape_peel'),
+            ('cabinet', 'medicine_cabinet'), ('wheelchair', 'wheelchair'), ('streetlight', 'streetlight'),
+            ('buzz', 'waiting_room'), ('waiting', 'waiting_room'), ('drive', 'drive_rain')] + KEYWORDS
+
 _WARNED = set()
 
 

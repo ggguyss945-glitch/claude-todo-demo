@@ -1,154 +1,139 @@
-# Bunnyman film sets (sets.py + sets_bunny.py)
+# SETS.md: the sets of "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"
 
-"If The Bunnyman Asks You To Close Your Eyes... DON'T COUNT TO SEVEN". All new code is `sets_bunny.py`, executed at the end
-of `sets.py` (so everything is `import sets as ST; ST.ob_living(...)`). The older films' builders are unchanged. The module
-docstring of `sets_bunny.py` is the API reference; this file is the staging guide.
+Code: `sets_doctor.py` (exec'd inside `sets.py` after `sets_bunny.py`; its module docstring and `DR_API` are the API
+reference). Every name is `dr_* / DR_* / D_*`; use `import sets as ST`. Stills, contact sheets, the floor plan and the
+stage tests live in `_work/sets/` (`index.json` holds every still's anchors with plan and screen data).
 
-## How to run
 ```
-python3 tools/sets_sheet.py                    # every set / variant / insert / rule card (1280x720) + contact_sheet.jpg,
-                                               #   index.json (each variant's anchors with plan + screen data), floorplan.jpg
-python3 tools/sets_sheet.py --only kit_,ins_   # a subset (names containing any of these)
-python3 tools/sets_sheet.py --stage            # staging test stills: cast figures placed only from the Spots -> stage_*.jpg
-python3 tools/sets_sheet.py --frame            # + framing check at every camera's widest move -> frame_check.json / .jpg
-python3 tools/sets_sheet.py --bench            # + bench_2560.json (2560x1440, 1 OpenCV thread, warm caches, 2.5 %/s push)
-python3 tools/sets_sheet.py --dummy            # the dummy film's sets (regression); --delivery, --police likewise
+python3 tools/sets_sheet.py              # all 130 Doctor stills (1280x720) + contact_sheet.jpg + index.json + floorplan.jpg
+python3 tools/sets_sheet.py --only er_   # just the variants whose name contains er_
+python3 tools/sets_sheet.py --stage      # cast placed only from Spots -> stage_*.jpg + stage_sheet.jpg
+python3 tools/sets_sheet.py --frame      # widest-camera-move edge check;  --bench  draw time at 2560x1440
 ```
-Everything lands in `film/_work/sets/`. `ST.plan_map(path)` redraws the floor plan with every camera.
+Variants are listed in `tools/sets_sheet_doctor.py` (DOCTOR list: name, builder call, note) and are the best examples of
+every state below. `--bunny / --dummy / --delivery / --police` render the older films' regressions.
 
-## The house: one floor plan (metres)
-x = right when you face the back of the house, y = from the front wall (Orchard Road, y 0) back toward the woods, Y = up.
-Ground floor Y 0, upstairs `UP_Y` 2.85, attic `ATTIC_Y` 5.45, the yard `GROUND_Y` -0.45. The house is 10 x 10 m (x -5..5).
-Every view is a camera (`BView`, any yaw: 0 looks toward the woods, 90 east, 180 toward the road) placed in this plan, so
-a cut keeps every wall, door, lamp and chair where the last shot had it. `_work/sets/floorplan.jpg` shows it all.
+## 1. Builders, views and states
 
-| where | plan | what is there |
+| builder | views | states / keyword arguments |
 |---|---|---|
-| living room | x -5..-1.4, y 0..5.8 | couch under the front window (centre (-3.3, 1.22), facing the back) with the floor lamp at its left end, coffee table (-3.3, 2.42), braided rug, fireplace on the west wall (y 2.1..3.9), Mom's wingback (-3.3, 4.55) with its back to the couch, facing the back door, the little lamp + side table by it, side window (west wall, y 4.25..5.25), bookcase |
-| hall | x -1.4..1.3, y 0..5.8 | front door x -0.85..0.05 on y 0 (peephole 1.52 m, brass mail slot 0.95 m, deadbolt, chain, knob), console table, coat hooks, stairs on the east side x 0.35..1.3 rising from y 0.9 (15 risers of 0.19 m, treads 0.26 m) to the corridor at y 4.54; opening to the living room on x -1.4 (y 1.5..3.1); doorway to the kitchen on y 5.8 (x -1.2..-0.3) |
-| kitchen | x -5..1.3, y 5.8..10 | back door x -3.75..-2.85 on y 10 (opens in), window over the sink x -1.95..-0.75 (sill 1.02), harvest-gold fridge (-4.6, 7.75, facing east) with the rules under the bunny magnet, table + 4 chairs under the pendant (-0.75, 7.75), wall clock on the front wall, Grandma's porch-light switch by the back door; opening to the living room y 5.8, x -4.25..-2.35 |
-| back porch / front porch | x -4.7..-2.0, y 10..12.1 / x -3.1..1.9, y -2.4..0 | Grandma's porch light by the back door; the lantern by the front door, the doormat (the egg) |
-| upstairs corridor | x -3.8..5.0, y 4.54..5.8 | June's door (x 0.4..1.2) faces the head of the stairs; the bathroom door (x -2.0..-1.25) next to it on y 5.8; Mom's and the narrator's doors on y 4.54; the attic door at the west end; the east window (sunrise); hall table |
-| June's room | x -0.4..2.6, y 5.8..10 | window x 0.55..1.65 on y 10 looking at the treeline, bed along the east wall (2.08, 7.9), moon nightlight on the nightstand, dresser, closet (the new yellow dress) |
-| bathroom | x -2.9..-0.4, y 5.8..8.6 | the pink built-in tub along the back wall (-2.0, 8.22; the kids sit IN it), pedestal sink, toilet, hex mosaic floor; the door's old knob, thumb-turn bolt, keyhole |
-| attic | floor x -5..5, headroom y 1.45..8.55 | bare bulb, Mom's toy chest (LAURIE), boxes, Grandma's rocker in the dark corner, round gable window, stair opening at the west end |
-| yard | y 10..46 | the shed + woodpile + chopping block, the burn barrel (-7.6, 26.3), swing set, clothesline, old fence at y 37.5, the treeline y 40 |
-| front | y < 0 | Orchard Road (y -9..-16), the dead end, woods round it; patrol cars at y -15.3 |
+| `dr_living(view, state, tod, ...)` | now/1979: wide, chair, window, window_bus, door, sunrise; wait: wide, front, rows, him, grandpa, side, machine | state 'now' / '1979' (harvest gold) / 'wait' (the waiting room); tod night / sunrise; lamp, ceiling, headlights, car, hall, door (deg), coffee, keys, clock=(h,m), tubes=[4 levels], sign, tv, ticket ('MILO'), tear, serving ('1979'), rain |
+| `dr_hall(view, ...)` | door, back, livdoor, peep, floor | hall, porch, kitchen, living (light levels), door / front_door / bath_door (deg), headlights, living_state ('wait' shows the waiting room through the door) |
+| `dr_kitchen(view, ...)` | phone, phone_side, wide, sink, floor, hall, front | era now / 1979, tod, hood, ceiling, fire (burn in the sink), phone hung / off, cord in / out, ring 0..1 or f(t), clock, paper |
+| `dr_bath(view, ...)` | sink, mirror, cabinet, door | cabinet 0..1 (or deg, or f(t)) the mirror door open, card (False after it is torn out), cab_empty, vanity, bath_door |
+| `dr_front(view, ...)` | house, porch, door, driveway, car, street, bus, bus_far, peephole | tod night / sunrise, car, rain, porch, headlights, front_door, glow, bus_flicker |
+| `dr_car(view, ...)` | front, driver, back, mirror, windshield | speed 1 driving / 0 parked, dome (level spec), dash, wheel (False: draw CH.draw_steering_wheel), wipers, rain, clock |
+| `dr_clinic(view)` | wide, table, door | (bright day) |
+| `dr_office(view, owner, ...)` | desk, wide, door | owner 'halverson' / 'narrator' (the final twist), lamp, monitor, ceiling, stack, door, rain |
+| `dr_er_entrance(view, doors, car, rain)` | ext, doors | doors 0 shut .. 1 open or f(t) (live layer); lobby figures use `layer.order = sp.info['inside_order']` |
+| `dr_er_bay(view, ...)` | bay, side, monitor | live_monitor, bpm (140), exam |
+| `dr_er_wait(view, rock)` | wide, chairs, desk | rock = the empty chair still rocking (deg amplitude) |
+| `dr_hosp_hall(view, on, flicker_end)` | hall, chair | on = indices of lit ceiling lights; the last plastic chair at the end |
+| `dr_cardio(view)` | side, ruth | warm morning |
+| `dr_run(view, speed)` | side, front, rail | Milo at 22, the marathon |
+| `dr_outro(view, lamp, phone)` | table, phone, wide | lamp level spec (dict(on=t)), phone 'off' / lit |
+| `dr_insert(name, prop_kw, motion)` | card, card_back, phone, phone_counter, phone_cord, badge, results, note, burn, ticket, sign, clipboard, pen, wrist, tape, glucose, clock, coffee, advice | see `DR_INSERTS` notes; prop_kw may hold f(t) for ring / click / flick / time; motion f(t) -> (dx, dy, dscale, drot), keep |dx|,|dy| < 300 px |
 
-Unbuilt (no camera may look there): the ground floor east of x 1.3, the upstairs bedrooms in front of y 4.54, the rooms
-east of June's. Separate plans: Holloway Woods + the old railroad bridge (`ob_woods`), Holloway State Hospital
-(`ob_hospital`), Main Street 1987 (`ob_parade`).
+Level specs (lamp, dome...) accept a number or f(t). Cameras are `DR_CAMS` on one plan in metres (x east, y back from
+Larch Street, Y up; floor 0, ceiling 2.55, ground -0.5): a cut between views keeps every wall, door and chair in place.
+See `_work/sets/floorplan.jpg` before choosing a reverse angle.
 
-## Staging data (nothing floats, nobody stands on furniture, props stay on surfaces)
-- `sp.anchors[name]` -> `Spot`: `.x, .y` = design px of the feet / point at the home camera, `.depth` = layer depth,
-  `.ppm` = design px per metre there, `.height` = px of a 1.85 m adult, `.X, .Yp, .Y` = plan position, `.kind`
-  ('stand' | 'seat' | 'kneel' | 'lie' | 'surface' | 'point'), `.turn` = the cast `turn` the set expects there,
-  `.seat_y` (seats) = design y of the seat top, `.note`. Plain names are the main room's; spots of rooms seen through
-  openings are also under `'room.name'` (e.g. `ob_living(...).anchors['kitchen.window']`).
-- **Depth-to-scale rule:** `ppm = S / depth`; a figure of real height m is `m * ppm` px tall where its feet are
-  (`CH.height_px(who, spot.ppm)`). `sp.ppm_at(x, y)`, `sp.floor_y(x, y)`, `sp.spot(x, y, Y)` for any plan point,
-  `sp.pick(sx, sy)` (screen -> plan), `sp.turn_for(x, y, fx, fy)` (facing a plan direction -> cast turn),
-  `sp.walkable(x, y)` (inside a floor, clear of every furniture footprint), `sp.shadow(x, y)` (contact shadow layer),
-  `sp.light_kw(X, Y, h)` (Layer tint / dim so a figure takes the room's light), `sp.order_at(X, Y)` (draw order:
-  furniture between the camera and the figure is drawn over it).
-- **One call does all of it:** `lay, a = ST.stage_figure(sp, 'mom', 'armchair', expr='too_still')` -> the Layer and the
-  `CH.Acting` (height, feet, facing, seated / kneeling / lying from the spot's kind, light, order). It warns when a seat
-  is seen nearly front-on (|turn| < 0.4, unless the spot says `legs_hidden`, like the tub): seated cast figures read as
-  standing from the front (cast limitation), so
-  seat people where the seat is at 3/4: `liv_wide2` / `liv_couch` for the couch, `liv_wide` / `liv_back` for the
-  wingback, `kit_table`, `bath_tub` (the tub's near wall hides the legs), `hosp_table`.
-- Doors face the camera in these sets: at the peephole, mail slot, fridge, window a figure has its back to us
-  (`turn` ~ -1.9, given by the spot) and `head_to`s the point spot (`peephole`, `mail_slot`, `fridge_rules`, ...).
-- `_work/sets/index.json` lists every variant's anchors with kind, screen x/y, depth, ppm, plan position, turn, seat_y.
-- Main anchors: living: `armchair`, `couch_left/mid/right`, `couch_lie`, `window_front`, `curtain_front_l/r`, `room_mid`,
-  `coffee_top`, `endtable_top`, `sidetable_top`, `mantel`, `fireplace`. Hall: `door_inside`, `peephole`, `peephole_eye`,
-  `mail_slot`, `mail_slot_kneel`, `deadbolt`, `chain`, `knob`, `hall_mid`, `hall_back`, `stairs_foot`, `step1..step14`,
-  `stairs_bottom_body`, `console_top`, `switch`. Kitchen: `fridge`, `fridge_rules`, `sink`, `counter`, `table_top`,
-  `kchair0..3`, `back_door`, `back_door_knob/bolt/out`, `porch_switch`, `window`, `kitchen_mid`. Upstairs: `stair_head`,
-  `hall_mid/east/west`, `june_door`, `june_doorway`, `bath_door`, `bath_knob`, `bath_keyhole`, `attic_door`, `mom_door`.
-  June: `window`, `sill`, `bed_edge`, `bed_lie`, `bed_side`, `dress`, `room_mid`, and in 'out' `bunny_treeline` /
-  `bunny_clearing`. Bath: `tub_left`, `tub_right`, `door_inside`, `gap`, `gap_floor`, `lock`, `keyhole`, `knob`.
-  Attic: `chest_floor`, `chest_top`, `corner_seat`, `mid`, `stair_top`. Yard: `treeline`, `treeline_deep`,
-  `porch_top`, `yard_mid`, `yard_near_trees`, `barrel`, `barrel_top`, `chopping_block`, `window_june`, `porch_light`.
-  Front: `doormat`, `porch_door`, `cop_porch`, `walk`, `road`. Woods: `deck`, `under_bridge`, `flashlight`, `bank_far`,
-  `path`. Hospital: `bed_edge`, `bed_lie`, `chair`, `calendar`, `window`, `seat0..2`, `table`, `door`. Parade:
-  `float_deck`, `float_side`, `photo`, `curb_l/r`.
+## 2. Anchors per view (from `_work/sets/index.json`)
 
-## Screen direction (from the camera table; the plan map draws each camera's field of view)
-| camera | looks toward | screen-right is | camera | looks toward | screen-right is |
-|---|---|---|---|---|---|
-| liv_wide | front-west | back-west | kit_back / kit_door | back (woods) | east |
-| liv_wide2 | front-west | back-west | kit_fridge | west | back |
-| liv_back | front (road) | west | kit_table | back-west | back-east |
-| liv_chair | back (woods) | east | up_hall | west | back |
-| liv_couch | front-west | back-west | up_west / up_from_bath | east | front |
-| liv_window | front | west | up_bath | back-west | back-east |
-| liv_hall | west | back | up_june | back | east |
-| hall_door / slot / peep / bottom / top | front | west | june_window / june_out | back (woods) | east |
-| hall_in / hall_foot | back | east | june_door | front | west |
-| bath_door / gap / lock | front | west | bath_tub | back | east |
-| yard_woods / treeline_close | back (woods) | east | yard_house | front (road) | west |
-| front_house / porch_egg | back | east | peephole | front | west |
-So: the woods / back door are screen-right in the living-room wide and couch shots (Mom's wingback faces right), the front
-door is straight ahead in the hall shots, and June's door is straight ahead at the top of the stairs.
+Anchor = `Spot`: `.x .y` (screen px of the feet / point), `.ppm`, `.depth`, `.height` (a 1.85 m adult), `.X .Yp .Y`
+(plan), `.kind` stand / seat / kneel / lie / surface / point / floor_sit, `.turn`, `.seat_y`.
 
-## Sets and variants
-| builder | views | variants (all lights are level specs: number, f(t) or dict(flick=, out=, on=, off=)) |
+| stills (same anchors) | anchors |
+|---|---|
+| liv_wide, liv_wide_lamp, liv_chair, liv_window_bus, liv_door, liv79_wide, liv79_chair, liv79_sunrise, liv_sunrise | armchair, armchair_arm_r, armchair_front, clock, coffee_top, couch_left, couch_mid, couch_right, door, door_knob, keys, room_mid, side_top, tv_screen, window, window_glass, window_side |
+| liv_wide_headlights, liv_window | armchair, armchair_arm_r, armchair_front, car_back_l, car_back_r, car_driver, car_passenger, clock, coffee_top, couch_left, couch_mid, couch_right, door, door_knob, keys, room_mid, side_top, tv_screen, window, window_glass, window_side |
+| liv_door_open | armchair, armchair_arm_r, armchair_front, bath_door, clock, coffee_top, couch_left, couch_mid, couch_right, deadbolt, door, door_inside, door_knob, door_through, hall_back, hall_mid, keys, kitchen_door, knob, living_door, living_knob, peephole, peephole_eye, room_mid, side_top, tv_screen, under_door, window, window_glass, window_side, + hall.* (the neighbouring room's anchors, prefixed) |
+| wait_wide, wait_front, wait_rows, wait_him, wait_grandpa, wait_side, wait_machine, wait_wide_dead | aisle_front, armchair, armchair_arm_r, armchair_front, carpet_l, carpet_r, clock, door, door_knob, grandpa_seat, keys, room_mid, side_top, sign, ticket_machine, ticket_slot, tv, window, window_glass, window_side, seat_r<row>_<n> (12 seats) |
+| hall_door, hall_door_lit, hall_door_open, hall_back, hall_livdoor, hall_peep, hall_floor | bath_door, clock, counter, deadbolt, door_inside, door_through, floor_kneel, floor_rock, fridge, hall_back, hall_doorway, hall_mid, jack, kchair0, kchair1, kchair2, kitchen_door, kitchen_mid, knob, living_door, living_knob, milo_enter, peephole, peephole_eye, phone, phone_base, phone_beside, phone_cord_base, phone_hook, plug_floor, receiver_counter, sink, sink_bowl, table_top, under_door, window, + kitchen.* (the neighbouring room's anchors, prefixed) |
+| hall_livdoor_wait | aisle_front, armchair, armchair_arm_r, armchair_front, bath_door, carpet_l, carpet_r, clock, counter, deadbolt, door, door_inside, door_knob, door_through, floor_kneel, floor_rock, fridge, grandpa_seat, hall_back, hall_doorway, hall_mid, jack, kchair0, kchair1, kchair2, keys, kitchen_door, kitchen_mid, knob, living_door, living_knob, milo_enter, peephole, peephole_eye, phone, phone_base, phone_beside, phone_cord_base, phone_hook, plug_floor, receiver_counter, room_mid, side_top, sign, sink, sink_bowl, table_top, ticket_machine, ticket_slot, tv, under_door, window, window_glass, window_side, seat_r<row>_<n> (12 seats), + kitchen.*, living.* (the neighbouring room's anchors, prefixed) |
+| kit_phone, kit_phone_ring, kit_phone_side, kit_phone_side_counter, kit_wide, kit_wide_light, kit_sink, kit_sink_fire, kit_floor, kit_hall, kit_front, kit79_phone, kit_sunrise | bath_door, clock, counter, deadbolt, door_inside, door_through, floor_kneel, floor_rock, fridge, hall_back, hall_doorway, hall_mid, jack, kchair0, kchair1, kchair2, kitchen_door, kitchen_mid, knob, living_door, living_knob, milo_enter, peephole, peephole_eye, phone, phone_base, phone_beside, phone_cord_base, phone_hook, plug_floor, receiver_counter, sink, sink_bowl, table_top, under_door, window, + hall.* (the neighbouring room's anchors, prefixed) |
+| bath_sink, bath_sink_open, bath_mirror, bath_cabinet, bath_cabinet_open, bath_cabinet_nocard, bath_door | bath_door, cab_shelf, card, deadbolt, door_in, door_inside, door_through, hall_back, hall_mid, kitchen_door, knob, living_door, living_knob, mirror, peephole, peephole_eye, sink, sink_watch, tub_edge, under_door, + hall.* (the neighbouring room's anchors, prefixed) |
+| ext_house, ext_porch, ext_door, ext_door_open, ext_driveway, ext_car, ext_street, ext_bus, ext_bus_far, ext_peephole | bus_bench, bus_lamp, car_back_l, car_back_r, car_door, car_driver, car_passenger, driveway, lawn, porch_door, porch_knock, porch_step, street_mid, walk, walk_run, window_out |
+| ext_house_sunrise | bus_bench, bus_lamp, car_door, driveway, lawn, porch_door, porch_knock, porch_step, street_mid, walk, walk_run, window_out |
+| clinic_wide, clinic_table, clinic_door | counter_top, desk_top, door, exam_table, parent_chair, stand_table, stool, table_lie |
+| office_desk, office_wide, office_door, office_narrator | desk_chair, desk_top, door, phone, results, window |
+| car_front, car_driver, car_back, car_back_dome, car_mirror | back_l, back_r, driver, lap_back_r, mirror, mirror_back_l, mirror_back_r, narrator_eye, passenger, roof_back_l, wheel, wheel_10, wheel_2 |
+| car_windshield | back_l, back_r, driver, lap_back_r, mirror, narrator_eye, passenger, roof_back_l, wheel, wheel_10, wheel_2 |
+| er_ext, er_doors, er_doors_open | car_door_r, car_stop, curb, doors, inside |
+| er_bay, er_bay_side, er_monitor | bed_edge, bed_lie, doctor, foot, iv_bag, iv_hand, monitor, nurse |
+| er_wait, er_wait_chairs, er_desk | chest_seat, desk_front, desk_nurse, entrance, nurse_walk, rock_seat, seat_r<row>_<n> (21 seats) |
+| hosp_hall, hosp_hall_chair | hall_mid, hall_near, last_chair, office_door |
+| cardio, cardio_ruth | coffee, desk_top, doctor_chair, patient_chair0, patient_chair1 |
+| run_side, run_front, run_rail | rail, rail_stand, runner, runner_ahead, runner_behind |
+| outro_table, outro_table_dark, outro_phone, outro_wide | bed_edge, floor, lamp_switch, phone, stand_top |
+
+Inserts have no anchors (one sharp plane).
+
+## 3. Staging recipe
+
+```python
+import sets as ST, characters as CH
+sp = ST.dr_living('wide', state='wait')
+lay, a = ST.stage_figure(sp, 'later', 'armchair')              # HIM folded into Grandpa's armchair (perch='armchair')
+lay2, b = ST.stage_figure(sp, 'grandpa', 'grandpa_seat', seed=2)  # Grandpa seated in the last row
+# acting=lambda a: ... adds beats (CH.Acting API: CAST.md) before the figure is drawn
+```
+`ST.stage_figure(sp, who, spot, act=None, turn=None, seed=1, expr='neutral', name=None, light=True, acting=None, perch=None)`
+returns `(Layer, Acting)`: height from the spot's ppm (`CH.height_px`), feet on the spot's floor point, facing `.turn`,
+the room light at that point (`sp.light_kw`) and the furniture-aware draw order (`sp.order_at`). `act` defaults from the
+spot's kind (seat / kneel / lie). Doctor Later ('later') on a seat Spot is perched with his own rig: `perch` =
+'armchair' | 'plastic' | 'bench' | 'car' | 'low' (default from the spot name: armchair*, bus*, back_*, else plastic).
+Off-anchor positions: `sp.spot(x, y, Y)` (plan metres) and `sp.walkable(x, y)`; never place a figure by hand-typed pixels.
+Lying figures (Grandpa 1979 is SITTING; Milo on the ER bed uses `bed_lie`) use a 'lie' Spot, never a rotated stand.
+
+## 4. Depth-to-scale rule
+
+`ppm = S / depth` (depth along the view axis); a figure m metres tall is `m * ppm` px at its feet. Always take ppm from
+the anchor or `sp.ppm_at(x, y)`; a walking figure re-reads ppm every frame from its plan point. Props held in hands use
+the holder's ppm. Feet on `sp.floor_y(x, y)`; nothing floats, nobody stands on furniture (`sp.info['blocks']` are the
+furniture footprints; `walkable` is False inside them).
+
+## 5. Mirror and roof data (car, bathroom)
+
+- `dr_car('mirror')`: `sp.info['mirror_quad']` (screen quad of the rear-view glass); anchors `mirror_back_l` /
+  `mirror_back_r` are where Milo and HIM appear in the glass: draw them flipped left-right, clipped to the quad, using the
+  reflection's ppm and seat_y; `sp.info['mirror_roof_y']` is the reflected roof line (HIM's bent head touches it).
+- every car view: `sp.info['roof_y']` = screen y of the roof lining over each seat (driver, passenger, back_l, back_r);
+  Doctor Later in the back seat bends his head to `roof_y['back_l']` (anchor `roof_back_l`). `sp.info['wheel']` = the
+  steering-wheel centre and radius (`wheel_10`, `wheel_2` hand anchors).
+- bathroom: the medicine cabinet's mirror door is `cabinet` (0 shut, 1 = 105 deg); the card is drawn on its inside
+  (anchor `card`); `card=False` leaves the tape ghosts after the narrator tears it out; `cab_shelf` for hands reaching in.
+
+## 6. Script beat -> set and view
+
+| beat | set / view (state) | inserts |
 |---|---|---|
-| `ob_living(view)` | wide, wide2, back, chair, couch, window, hall | lamp, chair_lamp, hall, kitchen, curtains (0 closed .. 1 open, or f(t)), blanket, moon, back_door |
-| `ob_hall(view)` | door, in, foot, top, slot, peep, bottom | hall, console, porch, upstairs, living, kitchen, door (degrees or f(t)), flap, bolt, chain, knob, tod 'dawn' |
-| `ob_upstairs(view)` | hall, west, bath, june, from_bath | upstairs, attic_gap, june_gap, bath/june/attic_door, wrecked 0..1, tod 'dawn' |
-| `ob_june(view)` | window, door, out, bed | nightlight, hall, lamp, curtains, bed 'made/turned/empty/over', dress |
-| `ob_bath(view)` | door, tub, gap, lock | gap, gap_col (DAWN_C at 6:12), bath_light, lock 0..1 or f(t), knob, key, feet=f(t), slam, door |
-| `ob_attic(view)` | chest, corner, mom | bulb, chest 'open/closed' |
-| `ob_kitchen(view)` | back, fridge, table, door | kitchen, porch, smash / smash_t (the window explodes), back_door / crash_t (crashes open), rules, mud, clock, locked, porch_switch, tod 'memory' |
-| `ob_yard(view)` | woods, house, wide, close, barrel | tod night/dawn/sunrise87/day87, back_light (Grandma's porch light), kitchen, june_light, fire, egg (melt) |
-| `ob_front(view)` | house, porch, egg, peephole | front_light, egg, egg_rattle=f(t), police=dict(mode, speed, strength 0.55), tod 'dawn' / 'blue' |
-| `ob_woods(view)` | bridge, under, path | flashlight (Dad's, still on), tod 'day87' (the 1987 search) |
-| `ob_hospital(view)` | room, bed, visit, table, corridor | blinds, month, circle |
-| `ob_parade(view)` | street, store, photo | float_y (or f(t): it drives), vhs (tape look; draw `ST.vhs_stamp(cv, t)` in the HUD for the date) |
-| `ob_insert(name, prop_kw, motion)` | see `ST.INSERTS_B` | rules (hl=n, show=n), courier, egg (rattle), egg_halves (k_open, ring), egg_gold, egg_fire (melt), ring, ring_inside, diary, diary_crayon, diary_flip, diary_cursive, diary_last, drawing (slide), dress_old, dress_new, hatchet (hit=f(t)), flashlight, switch (on / flip), clock (time=(h, m), kind 'digital'), calendar, slot (flap, eyes), peep, lock (lock, key, knob) |
-| `rule_card_bunny(cv, n, t)` | rule cards 1..7 | the police-style card (engine.hud.rule_card) with an icon per rule; texts in `ST.RULE_CARDS` match the narration word for word |
+| Cold open: phone at 3 AM, hold, waiting room, "Take a seat" | kit_phone_ring; wait_wide, wait_him; hosp_hall_chair | ins_phone_ring, ins_ticket, ins_tape, ins_card |
+| 1979: chest pain, Grandma calls, "It can wait until morning" | dr_kitchen era=1979 'phone'; dr_living state=1979 wide / chair | ins_clock_kitchen |
+| 1979 sunrise: coffee, the still chair | liv79_sunrise (coffee=True) | ins_coffee, ins_coffee_cold |
+| Milo's symptoms; Halverson's clinic, blood taken | dr_clinic wide / table / door | ins_badge |
+| Sundown: the cabinet, the yellow card | dr_bath mirror / cabinet (cabinet open) | ins_card (hl=n per rule) |
+| Rule 1: 3 AM call, seven rings, "Don't you dare", cord pulled | dr_kitchen phone / phone_side / wide / floor; dr_office desk (Halverson calling) | ins_phone_ring, ins_phone_cord, ins_clock_kitchen |
+| Comment prompt | ins_phone / kitchen hold | ins_phone_counter |
+| Rule 2: unplugged phone rings, hold music everywhere | kit_phone_side_counter; hall_back, liv_wide, liv_chair | ins_phone_counter, ins_phone_cord |
+| Rule 3: Milo thirsty, hand over mouth, pen click in hall | kit_wide / kit_front; hall_back | ins_pen_click |
+| Rule 4: knock, peephole, house call, paper under door, burn | hall_door / hall_peep / hall_floor; ext_peephole, ext_porch, ext_door; kit_sink_fire | ins_badge, ins_results_slide, ins_note, ins_burn(_half/_ash) |
+| Rule 4: Halverson in her car at 4 AM; the bus stop | liv_window / liv_wide_headlights; ext_driveway, ext_car; liv_window_bus, ext_bus, ext_bus_far | |
+| Rule 5: Milo breathing fast, Grandma rocking on the floor | kit_floor, kit_hall | ins_clock |
+| Rule 6: the waiting room, the patients, Grandpa, the ticket MILO | hall_livdoor_wait; wait_wide, wait_front, wait_rows, wait_grandpa, wait_him, wait_side, wait_machine | ins_sign, ins_ticket(MILO), ins_ticket_grandpa, ins_clipboard |
+| Rule 7: pulse, questions, the tape loosens, faces | wait_him, wait_wide_dead (tubes dying), wait_side | ins_wrist(_count/_free), ins_clock_slow, ins_tape(_loose) |
+| The card's back, "Doctor Later" | dr_bath cabinet (card torn: card=False) | ins_card_back |
+| Rescue: out the door, Halverson on the steps | hall_door_open, ext_door_open, ext_porch, ext_driveway | |
+| The car: pulse, rain, diabetes talk, HIM in the mirror | car_front, car_driver, car_back(_dome), car_mirror, car_windshield | |
+| ER: doors open, Mom with the wheelchair, the bay | er_ext, er_doors -> er_doors_open (doors=f(t)), er_bay, er_bay_side, er_monitor | |
+| The man holding his chest; the empty chair rocking | er_wait, er_wait_chairs (rock), er_desk | |
+| After: Milo at 22 | run_side / run_front / run_rail | ins_glucose |
+| Grandma's ticket at sunrise; the cardiologist | liv_sunrise; ext_house_sunrise; cardio, cardio_ruth | ins_ticket_ruth |
+| Final twist: the narrator's night office; the last chair | office_narrator (owner='narrator'); hosp_hall, hosp_hall_chair | |
+| Outro: lights on, the advice list, like / subscribe, next time | outro_table_dark -> outro_table, outro_phone, outro_wide | ins_advice (show=0..5), ins_advice_3 |
 
-Grades: `ob_night`, `ob_dark`, `ob_dawn`, `ob_ext`, `ob_memory`, `ob_vhs87`, `ob_sunrise87`, `ob_hospital`, `ob_police`;
-inserts use `ins_lamp`, `ins_dark`, `ins_dawn`, `ins_memory`, `ins_hosp` (no bloom on paper).
+## 7. Notes
 
-## Draw order and depth
-Outside (order 900) -> rooms seen through openings (80 + i) -> the main room's shell (50) -> each furniture piece as its own
-layer at its real depth (seats split into the parts behind and in front of the occupant) -> animated layers. Figures use
-`sp.order_at(X, Y)`. A shell is one plate at the room's middle depth; where a camera drift could slide it off the far end of
-a floor (the bathroom door) a backfill plate sits behind it.
-
-## Engine changes (all opt-in or invisible)
-- `engine/post.py`: `post['vhs']['tube']` (default True): False = the tape look without the rounded CRT mask (1987 parade).
-- `engine/scene.py`: a cached layer keeps only its painted part (`_crop_to_content`); pictures are unchanged, memory per
-  piece of furniture drops from a whole frame to its own size, so the 700 MB layer cache no longer thrashes at 2560
-  (a living-room frame went from 2.5 s to 0.17 s).
-
-## Results
-- 126 variants (every set, view, light / time-of-day state, insert and rule card) rendered to `_work/sets/*.jpg`,
-  `contact_sheet.jpg`, `index.json`; `floorplan.jpg` (the plan with all 54 cameras); `stage_sheet.jpg` (13 staging tests).
-- Framing check: 78 views at the four corners of their `cam_env` (+-8 px handheld) and the deepest push, over
-  magenta (blends counted too): no holes > 0.02 % (fixed on the way: the egg view's and the bathroom gap view's plates,
-  the floor under the bathroom door).
-- Bench at 2560x1440 (warm caches, 1 OpenCV thread, 2.5 %/s push): mean 0.174 s/frame over 125 variants, worst
-  0.505 s (`front_police`: two light bars + flash), then `hall_slot_open` 0.34, the parade views ~0.3; budget 0.6 s.
-  A set's first frame (building its caches) takes 2-5 s.
-
-## Polish pass (film staging review)
-- Eight point anchors had their plan y and their height swapped (the back door's `back_door_knob` / `back_door_bolt` /
-  `switch`, the bathroom's `bath_knob` / `bath_keyhole` and, inside, `lock` / `knob` / `keyhole`): they pointed into the
-  hall at attic height. Fixed in `KitchenRoom.spots`, `UpstairsHall.spots`, `Bathroom.spots`; `fridge_rules` now sits on
-  the drawn sheet (0.86 m). `tools/validate.py` (ANCHOR) checks every anchor against the floor levels.
-- Interior views at night put a dark veil (`NIGHT_VEIL`) over the outside layer seen through their windows; the '_out'
-  views (the yard through June's window as the picture itself) keep their exposure. `ob_living('wide2')` sees the front
-  yard through the front window. `ob_june(moon_dir=(az, el))` can place the moon in a window's frame.
-- June's closet door hangs the new dress on its room-side face (`art_b`).
-
-## Known limits
-- Seated figures seen front-on read as standing (cast). Use the 3/4 views listed above; `stage_figure` warns.
-- `hall_top`: the stairwell is narrow, its west wall fills the right of frame; stage people on the runner.
-- The lock / slot / peephole views through the room model are context shots; for readable hardware use the inserts.
-- The police dawn keeps a pink haze (`tod='blue'` is darker and moodier). The ring-on-palm hand is simple.
-- Serif / sans text uses the system Liberation fonts (`/usr/share/fonts/truetype/liberation`); the hand / crayon /
-  cursive / blackletter faces are in `fonts/extra` (OFL, licences beside them).
+- The ER entrance lobby haze scales with distance (close 'doors' view keeps TRIAGE legible); the lobby lamp is 1.25.
+- Villain world grades are sickly green-yellow (wait states, `dr_ins_wait`); hospital, clinic and ER grades are bright
+  and warm (`dr_ins_bright`, `dr_er_night` lobby). Keep the doctors' spaces bright.

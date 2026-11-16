@@ -1,7 +1,8 @@
-"""tools/validate.py: the staging validator for the Bunnyman film's shot list (film.py).
+"""tools/validate.py: the staging validator for the Doctor film's shot list (film.py: "If Your Doctor Calls At 3 AM...").
 
     python3 tools/validate.py                      # every check on every shot; exit code 1 on any ERROR
     python3 tools/validate.py --shots 100-140      # a range (the cut / state checks still look at the neighbours)
+    python3 tools/validate.py --part A             # part A only (timeline lines 0-212: the cold open .. rule 5); --part B
     python3 tools/validate.py --json W/tests/polish/validate.json --fps 10
 
 It reads the plan the way the renderer builds it (Film(timeline) -> shots -> builders: sets with their anchors, floors and
@@ -19,16 +20,16 @@ furniture footprints, actors with their clips, props) and checks what can be che
   CUTPOS  continuity across cuts: the same person on the same plan (the house and its yard / the woods / the hospital)
           in consecutive set shots, or with only close-ups / inserts between them (< 8 s), stands > 0.8 m from where the
           last shot left them, with no walk to explain it
-  STATE   the story's states shot by shot: the living-room curtains (open until 11:07, then shut), the back porch light
-          (off at night, now), the mail-slot flap (open from 1:40 until Mom shuts it), the front door (a crack at
-          midnight), the kitchen window and the back door (whole until 4:30, then smashed / open), the bathroom door
-          (locked from 4:30 until the key), Mom's arms (scratched from dawn), the light under the bathroom door
+  STATE   the story's states shot by shot (keyed to lines): the phone's line cord (in until Ruth pulls it, L88, then on
+          the floor), the handset (on the counter from L117 until the rescue), the yellow card (taped in the cabinet
+          until the narrator tears it out, L296), Halverson's car in the driveway with its headlights on (L154 .. L307),
+          the paper burning in the sink (from L179)
   CAM     camera: a move (> 10 % magnification or > 120 design px of pan) that lasts > 4.2 s; a set shot > 3 s whose
           camera moves while nobody in it acts (only the camera moves over still figures); an empty set held > 5 s
           under a moving camera
   LEN     shot lengths (< 0.6 s outside flashes / blacks; > 7 s outside rule cards, cards and the VHS pause) + the
           median / cuts per minute against the police film's pace
-  LIP     lips move only on the actor's own lines (film.lip_check), except the allowed ones (the masked Bunnyman)
+  LIP     lips move only on the actor's own lines (film.lip_check); Doctor Later never moves a mouth
 Severity: ERROR (a visible mistake: fix it), WARN (look at it on the strips), INFO. Allowed exceptions are listed in ALLOW
 with the reason. The result table goes to stdout and --json.
 """
@@ -44,6 +45,7 @@ ap.add_argument('--fps', type=float, default=8.0, help='sampling rate of the act
 ap.add_argument('--json', default=os.path.join(HERE, '_work', 'tests', 'polish', 'validate.json'))
 ap.add_argument('--quiet', action='store_true')
 ap.add_argument('--no-lip', action='store_true')
+ap.add_argument('--part', default=None, help='A (lines 0-212) or B (213-455)')
 a = ap.parse_args()
 
 from engine.core import set_render_size
@@ -69,6 +71,9 @@ def sel():
 
 
 KS = sel()
+if a.part:
+    tb = F.t(FM.PART_B) - FM.LEAD - 0.01
+    KS = [k for k in KS if (SH[k].t0 < tb) == (a.part.upper() == 'A')]
 issues = []
 
 
@@ -83,23 +88,22 @@ def _line_shot(i):
     return lambda s: s.t0 <= F.t(i) < s.t1
 
 
-def _masked(s, who):
-    """The Bunnyman's girl's-voice lines (L): the mask has no mouth."""
-    if who != 'bunny': return False
-    ls = F.lines_in(s.t0, s.t1)
-    return any(l['who'] == 'L' for l in ls) and not any(l['who'] == 'D' for l in ls)
+def _later(s, who):
+    """Doctor Later has no mouth to move (his voice comes from behind the tape): never a lip error for him."""
+    return who == 'later'
 
 
 ALLOW = [
-    ('LIP', _masked, "the Bunnyman's mask has no mouth: the girl's voice comes from inside it (he tilts / sobs instead)"),
+    ('LIP', _later, "Doctor Later never moves a mouth (his voice comes from behind the tape: head dips / pen clicks)"),
 ]
 
 # ---------------------------------------------------------------------------------------------------- build helpers
-HOUSE = ('living', 'hall', 'up', 'june', 'bath', 'attic', 'kitchen', 'yard', 'front')
+HOUSE = ('living', 'hall', 'bath', 'kitchen', 'front')
 PLAN_OF = {r: 'house' for r in HOUSE}
-PLAN_OF.update(woods='woods', hosp='hosp', parade='parade')
-LEVELS = {'living': 0.0, 'hall': 0.0, 'kitchen': 0.0, 'upstairs': 2.85, 'june': 2.85, 'bath': 2.85, 'attic': 5.45}
-STAIR = dict(x0=0.5, x1=1.15, y0=0.9, y1=4.85)
+PLAN_OF.update(clinic='clinic', office='office', car='car', er='er', er_bay='er_bay', er_wait='er_wait', hosp_hall='hosp_hall', cardio='cardio',
+               run='run', outro='outro')
+LEVELS = {'living': 0.0, 'hall': 0.0, 'kitchen': 0.0, 'bath': 0.0, 'LIVING ROOM': 0.0, 'HALL': 0.0, 'KITCHEN': 0.0, 'BATHROOM': 0.0}
+STAIR = dict(x0=99.0, x1=98.0, y0=0.0, y1=0.0)              # Ruth's house is one storey: no stairs
 
 
 def stair_Y(x, y):
@@ -275,7 +279,7 @@ def check_shot(k):
             room_ok = PLAN_OF.get(p['room']) == 'house'
             for t in ([sh.t0 + 0.01, (sh.t0 + sh.t1) / 2, sh.t1 - 0.01] if q.get('path') else [sh.t0 + 0.01]):
                 X, Yp, Y = plan_pos(sp, q, t)
-                outdoors = p['room'] in ('living', 'hall', 'up', 'june', 'bath', 'attic', 'kitchen') and (Yp > 10.05 or Yp < -0.05)
+                outdoors = p['room'] in ('living', 'hall', 'bath', 'kitchen') and (Yp > 9.65 or Yp < -0.05)
                 if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True) and not outdoors:
                     ok, why = sp.walkable(X, Yp)
                     if not ok and (sp.info.get('floors')):
@@ -405,63 +409,38 @@ def T(i): return F.t(i)
 
 
 def states():
-    t_curt = F.w(69, 'close') + 1.8                       # the curtains shut at 11:07
-    t_smash = F.w(236, 'explodes')
-    t_crash = F.w(237, 'crashes')
-    t_flap0 = F.w(164, 'creaks') + 1.3
-    t_flap1 = F.t(192) + 0.3
-    t_lock0 = F.t(243) + 0.2
-    t_key = F.t(297) + 0.25                               # the lock turns by itself (then the key, then the door opens)
-    t_dawn = F.t(300) - 0.2
-    t_swap = F.t(359)
+    t_cord = F.w(88, 'pulled') + 0.6                      # Ruth pulls the line cord out of the wall
+    t_counter = F.w(117, 'counter')                       # the handset lies on the counter (hold music) from here
+    t_rescue = F.t(303)
+    t_tear = F.t(296) + 1.0                               # the narrator tears the card out
+    t_car0, t_car1 = F.t(154) - 0.2, F.t(307)
+    t_fire = F.w(179, 'lit') + 0.5
     for k in KS:
         sh = SH[k]; p = sh.p; st = p.get('set', {}) or {}
         era = p.get('era', 'now')
         room = p.get('room') or ((p.get('bg') or [None])[0])
-        live = era in ('now', None) and sh.t0 < 993.0
-        if not live: continue
-        if room == 'living' and sh.t0 > t_curt:
-            v = st.get('curtains', 1.0)
-            if not callable(v) and v > 0.2 and not p.get('curtains_fn'):
-                add('ERROR', k, 'STATE', 'living room: the front curtains are open (curtains=%s) after the narrator shut them at 11:07' % v)
-        if room == 'yard' and 187.0 < sh.t0 < 993.0:
-            v = st.get('back_light', 0.0)
-            if not callable(v) and not isinstance(v, dict) and v > 0.2 and st.get('tod', 'night') == 'night':
-                add('ERROR', k, 'STATE', "yard: Grandma's porch light is on (Mom switches it off every Easter)")
-        if room == 'hall' and t_flap0 < sh.t0 < t_flap1 and p.get('view') in ('door', 'slot', 'in') or (sh.kind == 'bust' and room == 'hall' and t_flap0 < sh.t0 < t_flap1):
-            v = st.get('flap', 0.0)
-            if not callable(v) and v < 0.5:
-                add('WARN' if sh.kind == 'bust' else 'ERROR', k, 'STATE', 'the mail-slot flap is shut (flap=%s) between 1:40 and Mom shutting it' % v)
-        if room == 'kitchen' and sh.t0 > t_smash + 0.5 and sh.t0 < t_dawn + 200:
-            if not (st.get('smash') or st.get('smash_t')) and p.get('view') in ('back', 'window', 'table', 'fridge'):
-                add('ERROR', k, 'STATE', 'kitchen: the window is whole after it exploded at 4:30')
-        if room == 'kitchen' and sh.t0 > t_crash + 0.5 and sh.t0 < t_dawn + 200:
-            if not (st.get('back_door') or st.get('crash_t')) and p.get('view') in ('door', 'back'):
-                add('WARN', k, 'STATE', 'kitchen: the back door is shut after it crashed open at 4:30')
-        if room == 'bath' and t_lock0 < sh.t0 < t_key:
-            v = st.get('lock', 1.0)
-            if not callable(v) and v < 0.5:
-                add('ERROR', k, 'STATE', 'the bathroom door is unlocked before the key turns')
-            if st.get('door', 0.0) and not callable(st.get('door')):
-                add('ERROR', k, 'STATE', 'the bathroom door is open before 6:12')
-        if room == 'bath' and sh.t0 > t_key + 1.0 and sh.t0 < t_swap:
-            v = st.get('door', 0.0)
-            if not callable(v) and v < 20:
-                add('WARN', k, 'STATE', 'the bathroom door is shut after Mom opened it')
-        if room == 'up' and t_lock0 < sh.t0 < t_key:
-            v = st.get('bath_door', 0.0)
-            if not callable(v) and v > 5:
-                add('ERROR', k, 'STATE', 'upstairs: the bathroom door stands open (%s) while the kids are locked in' % v)
-        if room in ('up', 'hall') and sh.t0 > t_key and sh.t0 < t_swap + 60 and p.get('view') in ('west', 'hall', 'bottom', 'foot') and era == 'now':
-            if sh.t0 > t_dawn and not st.get('wrecked') and room == 'up':
-                add('WARN', k, 'STATE', 'upstairs at dawn: the corridor is not wrecked (wrecked=1.0)')
-        # Mom's arms
-        if sh.t0 > t_dawn and sh.t0 < 993.0:
-            for act in (getattr(sh, 'actors', []) or []):
-                if act.who == 'mom':
-                    P = act.at(sh.t0 + 0.1)
-                    if float(getattr(P, 'scratch', 0.0) or 0.0) < 0.5:
-                        add('ERROR', k, 'STATE', "Mom's arms are clean after the fight (scratch=1.0 from dawn)")
+        if era not in ('now', None) or p.get('placeholder'): continue
+        if room == 'kitchen' and sh.kind in ('set', 'bust'):
+            cord = st.get('cord', 'in')
+            if not callable(cord):
+                if sh.t0 > t_cord and sh.t0 < t_rescue + 60 and cord != 'out':
+                    add('ERROR', k, 'STATE', 'kitchen: the line cord is plugged in (cord=%r) after Ruth pulled it out (L88)' % cord)
+                if sh.t0 < t_cord - 2.0 and cord == 'out' and sh.t0 > F.t(15):
+                    add('ERROR', k, 'STATE', 'kitchen: the line cord is out before Ruth pulls it (L88)')
+            ph = st.get('phone', 'hung')
+            if not callable(ph) and t_counter + 1.0 < sh.t0 < t_rescue and ph != 'counter':
+                add('ERROR', k, 'STATE', 'kitchen: the handset is %r; it lies on the counter playing hold music from L117 until the rescue' % ph)
+            if p.get('view') == 'sink' and t_fire < sh.t0 < t_rescue + 60 and not st.get('fire'):
+                add('WARN', k, 'STATE', 'kitchen sink: the burned paper is gone (fire=1 after L179)')
+        if room == 'bath' and sh.kind in ('set', 'bust'):
+            card = st.get('card', True)
+            if sh.t0 < t_tear and not card:
+                add('ERROR', k, 'STATE', 'bathroom: the yellow card is missing before the narrator tears it out (L296)')
+            if sh.t0 > t_tear and card and st.get('cabinet', 0.0):
+                add('ERROR', k, 'STATE', 'bathroom: the yellow card is back in the cabinet after the narrator tore it out (L296)')
+        if room == 'front' and sh.kind in ('set', 'bust') and t_car0 < sh.t0 < t_car1:
+            if not st.get('car') or not st.get('headlights'):
+                add('ERROR', k, 'STATE', "outside: Halverson's car must be in the driveway, engine running, headlights on (L154 .. L307)")
 
 
 # ---------------------------------------------------------------------------------------------------- lips

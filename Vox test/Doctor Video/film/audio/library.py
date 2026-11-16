@@ -1,8 +1,11 @@
 """Query and load the recorded sample library (the owner's Epidemic files + free CC0/CC-BY files).
 
 Two catalogues, Epidemic first:
-    audio/catalog_epidemic_bunny.json   (audio/epidemic_catalog.py --bunny) the owner's Epidemic files for THIS film
-        (the Bunnyman): the bunny set W/samples/epidemic (mp3: parade crowds, knuckle knocks, glass, door kick-ins,
+    audio/catalog_epidemic_doctor.json  (audio/epidemic_catalog.py --doctor) the owner's Epidemic files for THIS film
+        ("If Your Doctor Calls At 3 AM..."): the doctor set W/samples/epidemic first (flat: phones, bells, pens,
+        tape, hospital, car, rain, match, typewriter + 12 tracks), then the bunny, dummy, delivery, police and mirror
+        sets. Falls back to the Bunnyman's catalogue below when it is missing.
+    audio/catalog_epidemic_bunny.json   (audio/epidemic_catalog.py --bunny) the Bunnyman film's: the bunny set W/samples/epidemic (mp3: parade crowds, knuckle knocks, glass, door kick-ins,
         axes, fights, bones, fire, plastic boxes, rings, coins, books, music boxes, owls, hospital ambiences, 10
         tracks), then the dummy, delivery, police and mirror sets (W/samples/epidemic_dummy, epidemic_delivery,
         epidemic_police, epidemic_mirror). Paths are absolute (through W/samples). These entries come FIRST in
@@ -40,7 +43,7 @@ _CAT = None
 _BY_ID = None
 
 
-EPI_CATALOGS = (os.path.join(HERE, 'catalog_epidemic_bunny.json'), os.path.join(HERE, 'catalog_epidemic_dummy.json'),
+EPI_CATALOGS = (os.path.join(HERE, 'catalog_epidemic_doctor.json'), os.path.join(HERE, 'catalog_epidemic_bunny.json'), os.path.join(HERE, 'catalog_epidemic_dummy.json'),
                 os.path.join(HERE, 'catalog_epidemic_delivery.json'))
 EPI_CATALOG = next((p for p in EPI_CATALOGS if os.path.exists(p)), EPI_CATALOGS[0])
 

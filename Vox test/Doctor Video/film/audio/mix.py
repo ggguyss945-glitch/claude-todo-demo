@@ -57,7 +57,11 @@ Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness
                presence, porch slap-back, light compression and grit, a faint camera hiss (-1 LU)
     box        a voice from INSIDE the cardboard box: dull (2.4 kHz), boxy cavity resonances (190 / 430 Hz), the tiny
                carton IR, and a hollow double 3 semitones down, 25 ms late, under it (-1.5 LU)
-    phone      DRY: in this film 'phone' lines are app / notification text read by the narrator
+    phone      (the Doctor film) the old landline: 320-3300 Hz, carbon grit, 1 kHz honk, line hiss (-1 LU); the delivery
+               film's 'phone' was dry app text
+    recording  (the Doctor film) the phone system's recorded lady: telephone band, compressed, a voicemail grain (-1 LU)
+    rooms      (the Doctor film) "It can wait." from every room: delayed, darker, wetter copies in the mono voice plus
+               a wide stereo wash on the events bus (rooms_wash) (-1 LU)
     phone_call the police film's phone line (was 'phone'); phone_far; radio (police film)
     hall       a voice behind you in the hallway (short hall reverb, a little dull); not in the script's fx, offered for
                the X lines ("Hey, buddy"): mix.py's default --who-fx X=hall (lines with their own fx, the box
@@ -128,7 +132,8 @@ def band(x, lo, hi, order=4):
 LINE_FX_LU = {'radio': -2.0, 'phone_call': -1.0, 'phone_far': -2.0, 'doorbell': -1.0, 'box': -1.5, 'hall': -1.0,
               'tv': -1.0, 'dummy': -1.0, 'memory': -1.5, 'upstairs': -3.0,
               'door': -3.0, 'through_door': -3.0, 'slot': -1.5, 'mail_slot': -1.5, 'whisper': 0.0, 'whispered': 0.0,
-              'grandma': -1.5}
+              'grandma': -1.5, 'phone': -1.0, 'recording': -1.0, 'rooms': -1.0, 'phone_system': -1.0,
+              'every_room': -1.0, 'landline': -1.0}
 # processed line vs the same line dry (K-weighted)
 
 
@@ -269,13 +274,72 @@ def upstairs_fx(x):
     return SX.mono(SX.reverb(y, 'hallway', 0.45, 0.006))[:len(x)].astype(np.float32)
 
 
+# ---- the Doctor film's voice FX (script/lines.py fx codes: phone, recording, rooms; door, whisper, memory as above)
+def phone_line_fx(x):
+    """'phone': a voice on the old landline (Doctor Halverson at 3 AM, the calm voice of 1979): telephone band
+    320-3300 Hz, the carbon earpiece's small grit and 1 kHz honk, line hiss under it. Intelligible (-1 LU)."""
+    y = band(x, 320, 3300, 6)
+    y = SX.eq(y, ('peak', 1000, 3.0, 1.0), ('peak', 2300, 1.5, 1.4))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = np.tanh(y / pk * 1.8) / np.tanh(1.8) * pk
+    hiss = band(np.random.default_rng(5).normal(0, 1, len(y)).astype(np.float32), 400, 3300, 2) * pk * 0.006
+    return (y + hiss).astype(np.float32)
+
+
+def recording_fx(x):
+    """'recording': the phone system's recorded lady ("Your call is important to us. Please hold."): the telephone
+    band, a produced, compressed, slightly too-clean voice (tight 3:1, presence at 1.8 kHz), a faint digital
+    graininess (light companding), no room at all (-1 LU)."""
+    y = band(x, 300, 3400, 6)
+    y = SX.eq(y, ('peak', 1800, 2.5, 1.0), ('peak', 500, -1.5, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = SX.compress(y, SX.db(pk) - 16, 3.0, 0.002, 0.06)
+    mu = 255.0; q = 64.0                                   # mu-law with a coarse step: the voicemail grain
+    c = np.sign(y) * np.log1p(mu * np.abs(y) / (np.abs(y).max() + 1e-9)) / np.log1p(mu)
+    c = np.round(c * q) / q
+    y = np.sign(c) * (np.expm1(np.abs(c) * np.log1p(mu)) / mu) * (np.abs(y).max() + 1e-9)
+    return y.astype(np.float32)
+
+
+def rooms_fx(x):
+    """'rooms': the Waiting Man's "It can wait." from every room of the house at once: the line itself a little
+    back, and three more of it from the hallway, the living room and Grandpa's chair (37 / 81 / 133 ms late, each
+    darker and wetter: further away). The mono voice carries the sum; mix.py adds rooms_wash() (the same copies
+    spread wide in stereo) on the events bus so it surrounds the listener (-1 LU)."""
+    y = x * 0.6
+    for d, lp_hz, ir, wet, g in ((0.037, 3200, 'hallway', 0.6, 0.45), (0.081, 2300, 'living', 0.7, 0.4),
+                                 (0.133, 1700, 'hall', 0.85, 0.35)):
+        k = int(d * SR); c = np.zeros_like(x); c[k:] = x[:-k]
+        c = SX.mono(SX.reverb(SX.lp(c, lp_hz, 2), ir, wet, 0.004))[:len(x)]
+        y = y + c * g
+    return y.astype(np.float32)
+
+
+def rooms_wash(y):
+    """The stereo garnish of a 'rooms' line: three decorrelated copies of the processed line panned hard left,
+    hard right and far centre, delayed and darkened (the house speaking from everywhere)."""
+    out = np.zeros((len(y) + int(0.4 * SR), 2), np.float32)
+    for d, p, lp_hz, g in ((0.051, -0.95, 2600, 0.5), (0.097, 0.95, 2200, 0.5), (0.17, 0.0, 1500, 0.35)):
+        k = int(d * SR)
+        c = SX.mono(SX.reverb(SX.lp(y, lp_hz, 2), 'hall', 0.8, 0.01))
+        c = SX.st(SX.pan(c, p))
+        n = min(len(c), len(out) - k); out[k:k + n] += c[:n] * g
+    return out
+
+
+ROOMS_WASH = []                                      # (start sample, stereo) collected by apply_line_fx
+
+
 LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: phone_fx(x, True), 'doorbell': doorbell_fx,
            'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None,
            'tv': tv_fx, 'dummy': dummy_fx, 'memory': memory_voice_fx, 'upstairs': upstairs_fx, 'letter': None,
            'television': tv_fx, 'tape': tv_fx, 'flashback': memory_voice_fx, 'ceiling': upstairs_fx,
            # the Bunnyman film (script/lines.py fx codes)
            'door': door_fx, 'slot': slot_fx, 'whisper': whisper_fx, 'mail_slot': slot_fx, 'through_door': door_fx,
-           'grandma': memory_voice_fx, 'whispered': whisper_fx}
+           'grandma': memory_voice_fx, 'whispered': whisper_fx,
+           # the Doctor film: 'phone' is a real phone line again (the delivery film's 'phone' was dry app text)
+           'phone': phone_line_fx, 'recording': recording_fx, 'rooms': rooms_fx, 'phone_system': recording_fx,
+           'every_room': rooms_fx, 'landline': phone_line_fx}
 _FX_WARNED = set()
 
 
@@ -312,6 +376,11 @@ def apply_line_fx(vo, spans):
             y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(key, -1.0) - Ly) / 20))
         f = int(0.01 * SR); w = np.ones(len(seg), np.float32); w[:f] = np.linspace(0, 1, f); w[-f:] = np.linspace(1, 0, f)
         out[i0:i1] = seg * (1 - w) + y[:len(seg)] * w
+        if fx is rooms_fx:
+            try:
+                ROOMS_WASH.append((i0, rooms_wash(y[:len(seg)])))
+            except Exception as e:
+                log(f'WARNING: rooms wash at {a:.2f} s failed ({repr(e)[:60]})')
     return out
 
 
@@ -767,7 +836,7 @@ def with_plan(mcues, tl):
             ev = MP.events(lines)
             out['intensity'] = MP.intensity(lines, float(mcues.get('duration') or tl['duration_en'] + 2.5))
             what.append('events + intensity')
-        if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks', 'jingle') for e in ev):
+        if hasattr(MP, 'identity_events') and not any(e.get('type') in ('show', 'winks', 'jingle', 'hold') for e in ev):
             idt = MP.identity_events(lines)
             have_motif = any(e.get('type') == 'motif' for e in ev)
             add = [e for e in idt if not (have_motif and e['type'] == 'motif')]
@@ -897,6 +966,11 @@ def main():
     # ---------------- SFX
     SX.reset()
     buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits', 'knocks')}
+    for j0, wash in ROOMS_WASH:                      # the Doctor film: "It can wait." from every room (stereo)
+        a = j0 - i0
+        if a < N and a + len(wash) > 0:
+            lo = max(0, -a); hi = min(len(wash), N - a)
+            buses['events'][a + lo:a + hi] += wash[lo:hi]
     hit_times = []; knock_times = []; counts = {'hits': 0, 'events': 0, 'beds': 0}; skipped = []; fallbacks = {}
     def fb(key, what):
         fallbacks.setdefault(key, {'what': what, 'n': 0})['n'] += 1

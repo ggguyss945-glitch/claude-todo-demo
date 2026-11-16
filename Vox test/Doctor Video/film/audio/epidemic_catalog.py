@@ -1,7 +1,11 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
-    python3 epidemic_catalog.py --bunny               THIS film (the Bunnyman): writes audio/catalog_epidemic_bunny.json
+    python3 epidemic_catalog.py --doctor              THIS film (the Doctor film): writes audio/catalog_epidemic_doctor.json
+                                                      from W/samples/epidemic (the doctor set: ONE flat folder, 90
+                                                      effects + 12 tracks, music told apart by name) then the bunny,
+                                                      dummy, delivery, police and mirror sets (read only)
+    python3 epidemic_catalog.py --bunny               the Bunnyman film: writes audio/catalog_epidemic_bunny.json
                                                       from all five sets, in this order (first set wins on duplicates):
                                                       W/samples/epidemic (the bunny set: 70 mp3 effects, parade crowds,
                                                       knuckle knocks, glass, door kick-ins, axes, fights, bones, fire,
@@ -65,6 +69,15 @@ BUNNY_SETS = [('bunny', os.path.join(W, 'samples', 'epidemic')),
               ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 BUNNY_OUT = os.path.join(HERE, 'catalog_epidemic_bunny.json')
 BUNNY_FIRST = os.path.join(W, 'catalog_bunny_new.json')          # the first analysis of the bunny set (reused)
+# the Doctor film ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"): the new set is ONE flat folder
+# (effects and music side by side: a music file is "ES_<Title> - <Artist>.mp3", an effect ends "- Epidemic Sound")
+DOCTOR_SETS = [('doctor', os.path.join(W, 'samples', 'epidemic')),
+               ('bunny', os.path.join(W, 'samples', 'epidemic_bunny')),
+               ('dummy', os.path.join(W, 'samples', 'epidemic_dummy')),
+               ('delivery', os.path.join(W, 'samples', 'epidemic_delivery')),
+               ('police', os.path.join(W, 'samples', 'epidemic_police')),
+               ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
+DOCTOR_OUT = os.path.join(HERE, 'catalog_epidemic_doctor.json')
 AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
@@ -229,6 +242,41 @@ MAP = {
     'fridge_paper': [['tape', 'rip'], ['paper', 'handle']],
     'curtain_close': [['cloth', 'flap'], ['cloth', 'handle']],
     'peephole': [['metal_click'], ['flightcase', 'latch']],
+    # ---- the Doctor film (sfx.py DOCTOR_NAMES): the doctor set first (W/samples/epidemic, flat), the earlier sets
+    # as layers. Files the review rejected (_work/mix/sfx_review.md) are vetoed in NOT or simply matched by no name.
+    'landline_ring': [['bells', 'doorbell', 'classic', 'electric'], ['alarms', 'bell', 'school_bell']],
+    'receiver_up': [['telephone', 'old', 'reciever', 'lift'], ['telephone', 'pick_up', 'hang_up'],
+                    ['intercom_handset']],
+    'receiver_down': [['telephone', 'pick_up', 'hang_up'], ['intercom_handset']],
+    'rotary_dial': [['telephone', 'old', 'dial']],
+    'dial_tone': [['telephone', 'dial_tone']],
+    'busy_tone': [['busy_tone']],
+    'line_hiss': [['walkie_talkie', 'white_noise']],
+    'pen_click': [['ballpoint_pen', 'click'], ['pen', 'retractable'], ['pen', 'click', 'open']],
+    'pen_scratch': [['pen_on_paper'], ['pen', 'write_on_paper']],
+    'clipboard': [['crocodile_clip']],
+    'typewriter': [['typewriter']],
+    'medicine_cabinet': [['medicine_cabinet']],
+    'kitchen_cabinet': [['cabinet_doors', 'kitchen']],
+    'fridge_hum': [['fridge', 'hum'], ['refrigerator', 'low_hum']],
+    'fluorescent': [['electricity', 'buzz_hum', 'buzz_hum'], ['electricity', 'buzz_hum', 'interference']],
+    'match_strike': [['ignite', 'match']],
+    'paper_burn': [['burning', 'paper']],
+    'ticket_tear': [['cinema_ticket']],
+    'paper_tear': [['paper_bag', 'tear'], ['tear_08'], ['tear_11']],
+    'tape_peel': [['masking_tape', 'peel'], ['sticky_tape', 'peel'], ['sticky_tape', 'rip'], ['tape', 'rip', 'long']],
+    'now_serving': [['pings', 'tings']],
+    'waiting_room': [['hospital', 'waiting', 'room'], ['waiting_room', 'walla']],
+    'heart_monitor_er': [['heart_monitor'], ['beeps', 'medical', 'heart']],
+    'er_doors': [['automatic', 'glass', 'slide']],
+    'gurney': [['gurney']],
+    'wheelchair': [['wheelchair', 'int']],
+    'halverson_car': [['car', 'start', 'idle', 'external']],
+    'drive_rain': [['interior', 'fast_driving'], ['interior', 'car', 'driving_steady']],
+    'rain_car': [['rain', 'car', 'roof'], ['rain', 'windshield']],
+    'chair_creak': [['chair', 'creak'], ['wooden_creak', 'rock'], ['wood', 'friction', 'creak']],
+    'sit_down': [['person_sit_down']],
+    'phone_connect': [['speed_dial_tone'], ['telephone', 'device', 'grab', 'button']],
 }
 # name -> slug words that veto a match (the bunny set's sword whooshes are blade hits, not air; the metal valve door and
 # the battle-axe shield hits are clangs, not the film's impacts; the metal-staircase body falls never land in this
@@ -236,7 +284,14 @@ MAP = {
 NOT = {'whoosh': ['blade', 'sword', 'axe'], 'impact_hit': ['valve', 'shield', 'axe'], 'van_step': ['valve'],
        'box_knock': ['knuckles'], 'wood_knock': ['knuckles'], 'struggle': ['metal_plate', 'staircase'],
        'crowd_parade': ['horse', 'fight'], 'hospital_room': ['speakerphone'], 'owen_cry': ['crying_boy'],
-       'snort': ['crying'], 'owen_giggle': ['crying']}
+       'snort': ['crying'], 'owen_giggle': ['crying'],
+       # the Doctor film: the lighters are not a match; the bicycle bell / small buzzer are not the landline;
+       # the pedal-FX hum is a guitar pedal (a musical drone, not a lamp); the multiple fast clicks are a frantic pen
+       'match_strike': ['lighter'], 'landline_ring': ['bicycle', 'buzzer'], 'fluorescent': ['pedal'],
+       'chair_creak': ['office_chair', 'bed_old_rock'], 'wheelchair': ['scooter'],
+       # the review's rejects (W/mix/sfx_review.md): the clipped 15.5 kHz pen click, the phone-notification ting,
+       # the cellphone busy tone
+       'pen_click': ['pen_ballpoint_pen_click'], 'now_serving': ['notification'], 'busy_tone': ['cellphone']}
 
 
 def slugify(name):
@@ -246,6 +301,11 @@ def slugify(name):
     name = re.sub(r'\s*-\s*Epidemic Sound\s*$', '', name, flags=re.I)
     s = re.sub(r'[^0-9a-z]+', '_', name.lower()).strip('_')
     return re.sub(r'_+', '_', s)
+
+
+def _is_music(fname):
+    """A flat set's music file: 'ES_<Title> - <Artist>.mp3' (effects end '- Epidemic Sound')."""
+    return 'epidemic sound' not in fname.lower()
 
 
 def serves(slug):
@@ -362,9 +422,14 @@ def build(sets, out, sfx_only=False, reuse=()):
             continue
         for set_name, d in sets:
             sub = os.path.join(d, kind)
-            if not os.path.isdir(sub):
+            if os.path.isdir(sub):
+                files = sorted(os.listdir(sub))
+            elif os.path.isdir(d) and not os.path.isdir(os.path.join(d, 'sfx')):      # a flat set (the doctor set)
+                sub = d
+                files = [f for f in sorted(os.listdir(d)) if (kind == 'music') == _is_music(f)]
+            else:
                 continue
-            for f in sorted(os.listdir(sub)):
+            for f in files:
                 stem, ext = os.path.splitext(f)
                 if ext.lower() not in AUDIO_EXT:
                     continue
@@ -407,7 +472,10 @@ def build(sets, out, sfx_only=False, reuse=()):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--bunny' in sys.argv:
+    if '--doctor' in sys.argv:
+        build(DOCTOR_SETS, DOCTOR_OUT, so, reuse=() if '--no-reuse' in sys.argv else (
+            DOCTOR_OUT, os.path.join(HERE, 'catalog_epidemic_bunny.json'), DUMMY_OUT, DELIVERY_OUT))
+    elif '--bunny' in sys.argv:
         build(BUNNY_SETS, BUNNY_OUT, so, reuse=() if '--no-reuse' in sys.argv else (BUNNY_OUT, BUNNY_FIRST, DUMMY_OUT,
                                                                                      DELIVERY_OUT))
     elif '--dummy' in sys.argv:

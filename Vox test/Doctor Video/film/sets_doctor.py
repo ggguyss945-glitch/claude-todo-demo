@@ -4226,7 +4226,8 @@ def _er_emissive(pen, v, k=1.0):
             pen.ellipse_glow(g[0], g[1], 3.2 * s, max(4.0, 0.8 * s * clamp(abs(v.h - g[1]) / max(1.0, 3.2 * s), 0.15, 1.0)), '#ffe8c0', 50 * k)
     if v.d(0.0, 0.3) > 0.5:                                                   # the lobby's light spilling out of the doors
         q = v.p(0.0, 1.3, 0.0); s = v.s(0.0, 0.0)
-        pen.ellipse_glow(q[0], q[1], 3.4 * s, 1.8 * s, '#fff0d0', 46 * k)
+        kc = clamp(v.d(0.0, 0.0) / 16.0, 0.4, 1.0)                           # close views: less haze over the lobby (keeps TRIAGE legible)
+        pen.ellipse_glow(q[0], q[1], 3.4 * s, 1.8 * s, '#fff0d0', 46 * k * kc)
         g = v.p(0.0, 0.12, -1.0)
         pen.ellipse_glow(g[0], g[1], 3.0 * s, max(4.0, 0.9 * s * clamp(abs(v.h - g[1]) / max(1.0, 3.0 * s), 0.15, 1.0)), '#fff0d0', 70 * k)
 
@@ -4234,7 +4235,7 @@ def _er_emissive(pen, v, k=1.0):
 def _er_ext_cfg():
     def lights(o):
         canopy = [Lamp(x, 3.5, -3.3, 7.0, '#fff4e0', 1.3, (1.0, 0.6, 0.3), fall=1.3) for x in (-3.5, 3.5)]
-        lobby = Lamp(0.0, 1.4, -0.4, 8.0, '#fff0d0', 1.7, fall=1.3)
+        lobby = Lamp(0.0, 1.4, -0.4, 8.0, '#fff0d0', 1.25, fall=1.3)
         return '#3a4468', canopy + [lobby, Lamp(0.0, 3.5, -3.3, 7.0, '#fff4e0', 1.2, (1.0, 0.6, 0.3), fall=1.3)], [('sign', [Lamp(0.0, 3.85, -6.7, 6.0, '#ff2a2a', 0.8, fall=1.4)], _kfn(1.0, 291))]
 
     def shell(pen, v, o):
