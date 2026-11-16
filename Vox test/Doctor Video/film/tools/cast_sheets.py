@@ -3,6 +3,7 @@
     cd "Vox test/Doctor Video/film" && python3 tools/cast_sheets.py [names...]     (default: all sheets)
 
 Sheets (1920x1080 JPEG): later_likeness (Doctor Later beside the owner's reference photo and the fan drawing),
+later_compare (silhouette and value comparison with the photo: same pose, same size, thresholded, the head measured),
 later_turn (turnaround), later_states (every state the script needs), later_tape (the tape loosening strip by strip and
 the faces under it), lineup, lineup2 (everyone to scale), turn_family, faces_ruth, faces_milo, faces_narrator,
 faces_halverson, faces_others (expressions per beat), mouths (lip-sync shapes), props, staging. The Bunnyman film's
@@ -150,7 +151,7 @@ def sheet_later_likeness():
     x = 980
     k = ppm / 100.0
     _chair(pen, x, y, ppm, 'plastic', facing=1.0, c='#2a2626')
-    a = _later(x, y, ppm, 'plastic', knee=0.0, hands=('floor', 'floor'), props=False, turn=1.0, h_turn=-1.0, h_tilt=24.0)
+    a = _ref_pose(x, y, ppm)
     CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2)
     label(cv, 'the reference pose', x + 120, 140, 17, '#3a3434')
     # the film version: waiting-room chair, tape, coat, clipboard and pen, looking up at you
@@ -172,6 +173,133 @@ def sheet_later_likeness():
     cv2.putText(out, 'fan drawing', (370, 1050), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (40, 40, 40), 2, cv2.LINE_AA)
     os.makedirs(OUT, exist_ok=True)
     cv2.imwrite(os.path.join(OUT, 'later_likeness.jpg'), out, [cv2.IMWRITE_JPEG_QUALITY, 90]); print('wrote later_likeness')
+
+
+def _ref_pose(x, y, ppm, **kw):
+    """Doctor Later in the reference photo's pose: folded on a small chair in profile, the long neck reaching forward,
+    the face turned to us, the cone leaning 27 degrees, hands flat on the carpet."""
+    d = dict(turn=1.0, h_turn=-1.0, h_tilt=24.0)
+    d.update(kw)
+    return _later(x, y, ppm, 'plastic', knee=0.0, hands=('floor', 'floor'), props=False, **d)
+
+
+def _snap(w, h, bg, fn):
+    """Render fn(pen, k) on its own w x h image (k = design px per image px) and return it as an array."""
+    surf, cv, pen = canvas(w, h, bg)
+    fn(pen, 1920.0 / w)
+    return surf.makeImageSnapshot().toarray()[:, :, :3].copy()
+
+
+REF_CM_PX = 0.89            # cm per photo px, matched on the torso (seat to hump)
+
+
+def later_head_profile(tilt=24.0):
+    """Width of his head (photo px) at steps along its axis, measured on our silhouette in the reference pose exactly as
+    on the photo (rotated upright about the brow), beside the photo's numbers: [(dy, ours, photo)], and (lean deg, eye to
+    tip px) of ours."""
+    photo = [(-60, 2.8), (-50, 4.8), (-40, 7.2), (-30, 11.1), (-20, 16.0), (-10, 20.1), (-2, 23.6), (4, 24.5), (10, 24.1), (12, 22.8)]
+    K = 8
+    W, H = 236 * K, 251 * K
+    kd = 1920.0 / W
+    ppm = 100.0 / REF_CM_PX * K * kd
+    a = _ref_pose(0, 0, ppm, h_tilt=tilt)
+    hx, hy = a.where(1.0, 'head')
+    ox, oy = 117.5 * K * kd - hx, 75.8 * K * kd - hy
+    a = _ref_pose(ox, oy, ppm, h_tilt=tilt)
+    P = a.at(1.0); P.dl_tape = 0.0
+    im = _snap(W, H, (255, 255, 255), lambda pen, k: CH.draw_silhouette(pen, 'later', ox, oy, a.height, P, t=1.0, colr='#000000', a=1.0, rim_a=0.0))
+    g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    tx, ty = a.where(1.0, 'cone_tip'); ex, ey = a.where(1.0, 'eyes')
+    lean = math.degrees(math.atan2(tx - ex, -(ty - ey))); e2t = math.hypot(tx - ex, ty - ey) / kd / K
+    M = cv2.getRotationMatrix2D((118.0 * K, 71.0 * K), 27.12, 1.0)
+    rot = cv2.warpAffine(g, M, (g.shape[1], g.shape[0]), flags=cv2.INTER_LINEAR, borderValue=255)
+    out = []
+    for dy, pw in photo:
+        row = rot[int((71.0 + dy) * K), int((118 - 30) * K):int((118 + 30) * K)]
+        idx = np.nonzero(row < 128)[0]
+        w = 0.0
+        if len(idx):
+            runs = np.split(idx, np.nonzero(np.diff(idx) > 3)[0] + 1)
+            best = min(runs, key=lambda r: abs((r[0] + r[-1]) / 2 - 30 * K))
+            w = (best[-1] - best[0]) / K
+        out.append((dy, w, pw))
+    return out, (lean, e2t)
+
+
+def sheet_later_compare():
+    """Silhouette and value comparison with the owner's photo: our creature in the photo's pose at the photo's size, both
+    as thresholded silhouettes, then the head ten times larger with its values in three levels (black / mid / pale) and
+    our outline laid over the photo; the measured widths of the head along its axis under them."""
+    ph = cv2.imread(os.path.join(REF, 'doctor_later_reference_photo.jpg'))
+    wall, carpet = (214, 160, 150), '#5a4444'
+    # row 1: the whole figure, 460 x 489 per panel (the photo is 236 x 251)
+    PW, PH = 460, 489
+    k1 = PW / 236.0
+
+    def fig(pen, k, sil=False):
+        ppm = 100.0 / REF_CM_PX * k1 * k
+        x, y = 52 * k1 * k, 232 * k1 * k
+        a = _ref_pose(x, y, ppm)
+        if sil:
+            CH.draw_silhouette(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, colr='#000000', a=1.0, rim_a=0.0); return
+        pen.fill(rect(0, 205 * k1 * k, 1920, 3000), carpet)
+        _chair(pen, x, y, ppm, 'plastic', facing=1.0, c='#2a2626')
+        CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2)
+    photo1 = cv2.resize(ph, (PW, PH), interpolation=cv2.INTER_CUBIC)
+    ours1 = _snap(PW, PH, wall, fig)
+    sil1 = _snap(PW, PH, (255, 255, 255), lambda pen, k: fig(pen, k, True))
+    g = cv2.cvtColor(photo1, cv2.COLOR_BGR2GRAY)
+    psil = np.where(g < 95, 0, 255).astype(np.uint8); psil[int(205 * k1):] = 255          # the carpet is dark too: cut it
+    psil = cv2.cvtColor(psil, cv2.COLOR_GRAY2BGR)
+    # row 2: the head, 80 x 100 photo px from (84, 0), 3.9 x
+    x0, y0, w, h = 84, 0, 80, 100
+    k2 = 3.9
+    HW, HH = int(w * k2), int(h * k2)
+    crop = cv2.resize(ph[y0:y0 + h, x0:x0 + w], (HW, HH), interpolation=cv2.INTER_CUBIC)
+
+    def head(pen, k, tape=1.0, sil=False):
+        ppm = 100.0 / REF_CM_PX * k2 * k
+        a = _ref_pose(0, 0, ppm)
+        hx, hy = a.where(1.0, 'head')
+        ox, oy = (117.5 - x0) * k2 * k - hx, (75.8 - y0) * k2 * k - hy              # our eye line on the photo's (between its sockets)
+        a = _ref_pose(ox, oy, ppm)
+        P = a.at(1.0); P.dl_tape = tape
+        if sil: CH.draw_silhouette(pen, 'later', ox, oy, a.height, P, t=1.0, colr='#000000', a=1.0, rim_a=0.0)
+        else: CH.draw(pen, 'later', ox, oy, a.height, P, t=1.0, detail=2)
+    h_tape = _snap(HW, HH, wall, head)
+    h_bare = _snap(HW, HH, wall, lambda pen, k: head(pen, k, 0.0))
+    m = (cv2.cvtColor(_snap(HW, HH, (255, 255, 255), lambda pen, k: head(pen, k, 1.0, True)), cv2.COLOR_BGR2GRAY) < 128).astype(np.uint8)
+    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    over = crop.copy(); cv2.drawContours(over, cnts, -1, (0, 255, 0), 1)
+
+    def levels(im, bgv):
+        gg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype(float)
+        o = np.full(gg.shape, 255, np.uint8)
+        o[gg < bgv - 14] = 150
+        o[gg < 60] = 0
+        return cv2.cvtColor(o, cv2.COLOR_GRAY2BGR)
+    prof, (lean, e2t) = later_head_profile()
+    surf, cv, pen = canvas()
+    title(cv, 'DOCTOR LATER: SILHOUETTE AND VALUES AGAINST THE REFERENCE PHOTO',
+          'Same pose, same size (1 photo px = 0.89 cm on his torso). Top: the figure and its silhouette. Bottom: the head ten times larger, its values in three levels, our outline over the photo')
+    xs1 = [16 + i * (PW + 16) for i in range(4)]
+    for x, lb in zip(xs1, ('the owner\'s photo', 'ours, the photo\'s pose and size', 'the photo, thresholded', 'ours, as a silhouette')):
+        label(cv, lb, x + PW / 2, 108 + PH + 20, 14)
+    xs2 = [16 + i * (HW + 4) for i in range(6)]
+    for x, lb in zip(xs2, ('photo: the head', 'ours (dl_tape 1)', 'ours (dl_tape 0)', 'photo: 3 levels', 'ours: 3 levels', 'our outline on the photo')):
+        label(cv, lb, x + HW / 2, 636 + HH + 17, 13)
+    text(cv, 'width of the head along its axis, photo px, ours / photo (dy from the brow):   ' +
+         '    '.join('%+d: %.1f / %.1f' % t for t in prof) + '      lean %.1f deg / 27.1      eye to tip %.1f / 73.6 px' % (lean, e2t),
+         960, 1072, 600, 12.5, '#c8ccd8', 255, 0.0, 'center')
+    out = surf.makeImageSnapshot().toarray()[:, :, :3].copy()
+    for x, im in zip(xs1, (photo1, ours1, psil, sil1)):
+        out[108:108 + PH, x:x + PW] = im
+    for x, im in zip(xs2, (crop, h_tape, h_bare, levels(crop, 178), levels(h_tape, 170), over)):
+        out[636:636 + HH, x:x + HW] = im
+    os.makedirs(OUT, exist_ok=True)
+    p = os.path.join(OUT, 'later_compare.jpg')
+    cv2.imwrite(p, out, [cv2.IMWRITE_JPEG_QUALITY, 92]); print('wrote', p)
+    print('head width profile (dy, ours, photo):', ['%d %.1f/%.1f' % t for t in prof], 'lean %.1f eye-to-tip %.1f' % (lean, e2t))
 
 
 def sheet_later_turn():
@@ -278,22 +406,22 @@ def sheet_later_states():
 def sheet_later_tape():
     surf, cv, pen = canvas(bg=(60, 70, 52))
     title(cv, 'DOCTOR LATER: THE TAPE AND THE FACES UNDER IT',
-          'Top: old yellow medical tape wound round and round, a thin gap, two pale patient eyes; each question loosens a strip (pose.dl_tape 1 -> 0). Bottom: faces under it (pose.dl_face 0..5)')
+          'Top: a few strips of old tape, one thin gap, two pale patient eyes; each question loosens a strip (pose.dl_tape 1 -> 0, 8 strips). Bottom: the faces under it (pose.dl_face 0..5)')
     a = CH.Acting('later', seed=7, height=CH.height_px('later', 380.0)).place(900, FLOOR)
     a.perch(None, 'plastic'); a.face(0.12, -0.08); a.set(-1, None, 0.01, h_tilt=6.0)
     P0 = a.at(1.0)
-    tapes = (1.0, 0.86, 0.72, 0.58, 0.4, 0.0)
+    tapes = (1.0, 0.875, 0.75, 0.625, 0.375, 0.0)                  # all 8 on; 1, 2, 3 off (the face's); 5 off; all off
     cw = 1920 / 6
     for i, tp in enumerate(tapes):
         P = P0.copy(); P.dl_tape = tp
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(i * cw + 4, 110, cw - 8, 470))
         pen.fill(rect(i * cw + 4, 110, cw - 8, 470), '#4a5640')
-        CH.draw_bust(pen, 'later', i * cw + cw / 2, 470, 0.27, P, t=1.0, light=FLUO)
+        CH.draw_bust(pen, 'later', i * cw + cw / 2 - 12, 478, 0.175, P, t=1.0, light=FLUO)
         cv.restore()
-        label(cv, 'dl_tape %.2f' % tp, i * cw + cw / 2, 600, 14)
+        label(cv, 'dl_tape %.3f' % tp, i * cw + cw / 2, 600, 14)
     names = ('his own face', 'Grandpa, gray and patient', 'a man I never saw', 'a little girl', 'my grandmother', '...me')
     for i in range(6):
-        P = P0.copy(); P.dl_tape = 0.42; P.dl_face = float(i)
+        P = P0.copy(); P.dl_tape = 0.5; P.dl_face = float(i)
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(i * cw + 4, 620, cw - 8, 420))
         pen.fill(rect(i * cw + 4, 620, cw - 8, 420), '#4a5640')
         CH.draw_bust(pen, 'later', i * cw + cw / 2, 900, 0.36, P, t=1.0, light=FLUO)
@@ -501,7 +629,8 @@ def sheet_staging():
     save(surf, 'staging')
 
 
-SHEETS = dict(later_likeness=sheet_later_likeness, later_turn=sheet_later_turn, later_states=sheet_later_states, later_tape=sheet_later_tape,
+SHEETS = dict(later_likeness=sheet_later_likeness, later_compare=sheet_later_compare, later_turn=sheet_later_turn, later_states=sheet_later_states,
+              later_tape=sheet_later_tape,
               lineup=sheet_lineup, lineup2=sheet_lineup2, turn_family=sheet_turn_family, faces_ruth=sheet_faces_ruth,
               faces_milo=sheet_faces_milo, faces_narrator=sheet_faces_narrator, faces_halverson=sheet_faces_halverson,
               faces_others=sheet_faces_others, mouths=sheet_mouths, props=sheet_props, staging=sheet_staging)

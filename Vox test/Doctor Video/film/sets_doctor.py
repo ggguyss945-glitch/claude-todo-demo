@@ -78,7 +78,7 @@ D_STOVE = Box(-4.62, 9.29, 0.76, 0.62, 0.0, 0.91, 0)         # in the back count
 D_KTABLE = Box(-3.55, 7.05, 1.1, 0.76, 0.0, 0.75, 0)
 D_PHONE = (-1.2, 1.42, 7.45)                                 # the wall phone on the kitchen's east wall (x, Y of the base centre, y)
 D_JACK = (-1.2, 0.3, 7.8)                                    # its wall jack on the baseboard (the line cord runs down to it)
-D_KCLOCK = (-4.55, 1.98, 5.4)                                # the kitchen clock on the front wall (x, Y, y)
+D_KCLOCK = (-2.7, 1.98, 5.4)                                 # the kitchen clock on the front wall (x, Y, y)
 D_COUNTER_Y = 0.92
 # bathroom
 D_CAB = (2.8, 6.47, 7.03, 1.25, 1.95)                        # medicine cabinet on the east wall: x, y0 (hinge), y1, Y0, Y1
@@ -299,8 +299,9 @@ def _wall_jack(p_, x, y, plugged=True):
 
 
 # ---------------------------------------------------------------------------------------------- rain (live, screen space)
-def dr_rain(pen, t, box=(-400, -300, 2720, 1680), k=1.0, seed=3, speed=1.0, angle=0.12, c='#c8d4ec', a=46, n=420, far=False):
-    """Falling rain streaks over a design-space box (a live layer; cheap: n short lines). far=True: thin, slow, dense haze."""
+def dr_rain(pen, t, box=(-400, -300, 2720, 1680), k=1.0, seed=3, speed=1.0, angle=0.12, c='#c8d4ec', a=46, n=420, far=False, L=None, w=None):
+    """Falling rain streaks over a design-space box (a live layer; cheap: n short lines). far=True: thin, slow, dense haze.
+    L / w: streak length / width in px (rain seen far away, in a lamp's cone or a headlight beam, is short and fine)."""
     x0, y0, x1, y1 = box
     if k <= 0.01: return
     rng = np.random.default_rng(seed)
@@ -308,8 +309,8 @@ def dr_rain(pen, t, box=(-400, -300, 2720, 1680), k=1.0, seed=3, speed=1.0, angl
     N = int(n * k)
     xs = rng.uniform(0, 1, N); ys = rng.uniform(0, 1, N); ln = rng.uniform(0.6, 1.4, N)
     sp = (1.8 if not far else 0.9) * speed
-    L = (60 if not far else 26)
-    w = 1.6 if not far else 1.0
+    L = (60 if not far else 26) if L is None else L
+    w = (1.6 if not far else 1.0) if w is None else w
     path = skia.Path()
     for i in range(N):
         yy = y0 + ((ys[i] + t * sp * (0.8 + 0.4 * ln[i])) % 1.0) * (H + L) - L
@@ -543,14 +544,16 @@ def dr_chair_row(cx, cy, n=4, pitch=0.52, fa=0, c=D_CHAIR_BLUE, frame='#8a9098',
     for u in (-L / 2 + 0.05, L / 2 - 0.05) + tuple(-L / 2 + pitch * k for k in range(1, n)):
         for nn in (-0.17, 0.17):                                           # splayed steel legs at the ends and between seats
             P.append(Part(sub(B, u - 0.018, u + 0.018, nn - 0.018, nn + 0.018, 0.0, 0.36), {'all': frame}, tag='leg'))
-    P.append(Part(sub(B, -L / 2 + 0.03, L / 2 - 0.03, -0.04, 0.04, 0.33, 0.38), {'all': _darken(frame, 0.2)}, tag='beam'))
     seats = []
     for k in range(n):
         u = -L / 2 + pitch * (k + 0.5)
         cc = mix(c, '#9a9a8a', worn * _h(k, int(cx * 10)))
-        P.append(Part(fn=(lambda u_, cc_: lambda pen, v: box_extrude(pen, v, B, u_ - pitch / 2 + 0.025, u_ + pitch / 2 - 0.025, -0.2, 0.23, 0.38, D_SEAT_H,
-                                                                       lambda W, H: rounded_rect_pts(W, H, 2.5, 3.0, bulge=-1.2), cc_, _darken(cc_, 0.18)))(u, cc),
-                      ref=B.at(u, 0.02, 0.42), tag='seat'))
+        def seat_fn(pen, v, u_=u, cc_=cc):
+            # the steel beam the row is bolted to runs under every seat: drawn first, so the pan always covers it
+            draw_box(pen, v, sub(B, u_ - pitch / 2 - 0.004, u_ + pitch / 2 + 0.004, -0.04, 0.04, 0.33, 0.385), {'all': _darken(frame, 0.2)})
+            box_extrude(pen, v, B, u_ - pitch / 2 + 0.025, u_ + pitch / 2 - 0.025, -0.2, 0.23, 0.38, D_SEAT_H,
+                        lambda W, H: rounded_rect_pts(W, H, 2.5, 3.0, bulge=-1.2), cc_, _darken(cc_, 0.18))
+        P.append(Part(fn=seat_fn, ref=B.at(u, 0.02, 0.42), tag='seat'))
         # the back: a curved moulded shell tilted back, on a steel spine
         def back(pen, v, u_=u, cc_=cc):
             U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1])
@@ -891,15 +894,15 @@ def dr_counters(pen, v, o):
     for ((a_, b_), _) in runs:
         if b_ - a_ < 0.05: continue
         B = Box((a_ + b_) / 2, (y0 + y1) / 2, b_ - a_, y1 - y0, 0.1, D_COUNTER_Y - 0.04, 0)
+        draw_box(pen, v, Box((a_ + b_) / 2, (y0 + y1) / 2 + 0.04, b_ - a_, y1 - y0 - 0.08, 0.0, 0.1, 0), {'all': '#2a2622'}, skip=('top',))   # the recessed toe kick first
         draw_box(pen, v, B, {'front': dict(fill=cab, art=base_art(max(1, int(round((b_ - a_) / 0.45))))), 'all': _darken(cab, 0.18)})
-        draw_box(pen, v, Box((a_ + b_) / 2, (y0 + y1) / 2 + 0.04, b_ - a_, y1 - y0 - 0.08, 0.0, 0.1, 0), {'all': '#2a2622'})
         draw_box(pen, v, Box((a_ + b_) / 2, (y0 + y1) / 2 - 0.01, b_ - a_, y1 - y0 + 0.03, D_COUNTER_Y - 0.04, D_COUNTER_Y, 0),
                  {'all': '#c8ccd0', 'top': dict(fill=ctop, art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 0.6))})
     # the return along the east wall (under the phone's reach): front faces -x
     rx0, rx1, ry0, ry1 = D_KRETURN
     B = Box((rx0 + rx1) / 2, (ry0 + y0) / 2, y0 - ry0, rx1 - rx0, 0.1, D_COUNTER_Y - 0.04, -90)
+    draw_box(pen, v, Box((rx0 + rx1) / 2 + 0.04, (ry0 + y0) / 2, y0 - ry0, rx1 - rx0 - 0.08, 0.0, 0.1, -90), {'all': '#2a2622'}, skip=('top',))
     draw_box(pen, v, B, {'front': dict(fill=cab, art=base_art(2)), 'all': _darken(cab, 0.18)})
-    draw_box(pen, v, Box((rx0 + rx1) / 2 + 0.04, (ry0 + y0) / 2, y0 - ry0, rx1 - rx0 - 0.08, 0.0, 0.1, -90), {'all': '#2a2622'})
     draw_box(pen, v, Box((rx0 + rx1) / 2 - 0.01, (ry0 + y1) / 2, y1 - ry0, rx1 - rx0 + 0.03, D_COUNTER_Y - 0.04, D_COUNTER_Y, -90),
              {'all': '#c8ccd0', 'top': dict(fill=ctop, art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.25, 'overlay', 0.6))})
     # splash tiles on the back wall and the east wall above the counter
@@ -1748,7 +1751,19 @@ class DrKitchen(DrRoom):
             if not callable(clk):
                 u = -1.2 - D_KCLOCK[0]
                 _kitchen_clock(p_, u * 100, H - D_KCLOCK[1] * 100, 13, clk[0], clk[1], era)
-            _calendar_d(p_, (-1.2 - (-2.4)) * 100 - 15, H - 178, 30, 42, era)
+            _calendar_d(p_, (-1.2 - (-3.75)) * 100 - 15, H - 178, 30, 42, era)
+            # a plate rail by the hall doorway: three of Ruth's good plates and the egg timer (the wall was bare)
+            sx_ = (-1.2 - (-1.95)) * 100
+            p_.fill(rect(sx_ - 36, H - 150, 72, 3.2), '#6a4a2e' if era != '1979' else '#7a4a22'); p_.fill(rect(sx_ - 36, H - 146.8, 72, 1.2), '#000000', 70)
+            for k, pc in enumerate(('#e8eef4', '#f2e8d0', '#e8eef4')):
+                px_ = sx_ - 22 + k * 22
+                p_.fill(oval(px_ + 0.8, H - 159.2, 9.6), '#000000', 60)
+                p_.fill(oval(px_, H - 160, 9.6), pc); p_.line(oval(px_, H - 160, 9.6), 0.5, '#000000', 150)
+                p_.line(oval(px_, H - 160, 6.2), 0.9, '#3a5a8a' if k != 1 else '#a86a3a', 190)
+                p_.fill(oval(px_, H - 160, 2.0), '#3a5a8a' if k != 1 else '#a86a3a', 150)
+            for k in range(2):                                                  # the brackets
+                bx_ = sx_ - 28 + k * 56
+                p_.fill(poly([(bx_ - 1.5, H - 146.8), (bx_ + 1.5, H - 146.8), (bx_ + 1.5, H - 138)]), '#4a321e')
         def east(p_, W, H):
             u = 9.6 - D_JACK[2]
             _wall_jack(p_, u * 100, H - D_JACK[1] * 100, plugged=o.get('cord', 'in') == 'in')
@@ -1831,8 +1846,9 @@ class DrKitchen(DrRoom):
         S['sink'] = _mk_spot(v, 'sink', -3.3, 8.6, 0.0, 'stand', 'at the sink under the window (burning the paper): faces +y', face=(0, 1))
         S['sink_bowl'] = _mk_spot(v, 'sink_bowl', -3.52, 9.29, D_COUNTER_Y - 0.17, 'surface', 'the bottom of the left sink bowl (the paper burns here)')
         S['window'] = _mk_spot(v, 'window', -3.3, 9.58, 1.5, 'point', 'the window over the sink')
-        S['floor_rock'] = _mk_spot(v, 'floor_rock', -2.55, 8.62, 0.0, 'floor_sit', 'Grandma sitting on the floor, back against the sink cabinets, rocking Milo (faces -y)',
-                                   face=(0, -1))
+        S['floor_rock'] = _mk_spot(v, 'floor_rock', -2.1, 8.5, 0.0, 'floor_sit', "Grandma sitting on the floor, her back against the counter return's cabinets (under the "
+                                   'receiver that plays the hold music), rocking Milo: faces -x', face=(-1, 0))
+        S['floor_kneel'] = _mk_spot(v, 'floor_kneel', -2.95, 8.25, 0.0, 'kneel', 'the narrator crouching in front of them (picking Milo up): faces +x', face=(1, 0.3))
         S['milo_enter'] = _mk_spot(v, 'milo_enter', -1.45, 6.45, 0.0, 'stand', 'Milo coming in from the hall doorway (faces -x)', face=(-1, 0.2))
         S['hall_doorway'] = _mk_spot(v, 'hall_doorway', -1.2, 6.45, 0.0, 'stand', 'in the doorway to the dark hall')
         S['table_top'] = _mk_spot(v, 'table_top', D_KTABLE.cx, D_KTABLE.cy, D_KTABLE.Y1, 'surface', 'the kitchen table top (Milo\'s water glass at +0.3, -0.12)')
@@ -2019,7 +2035,7 @@ def dr_far_ring(pen, v, tod='night', R=85.0, cx=-8.0, cy=-10.0, G=D_GROUND):
         hgt = np.full(N, 4.0)
         az = np.arange(N) / 2.0
         for _ in range(170):                                               # tree crowns: rounded bumps
-            c_ = rng.uniform(0, 360); w_ = rng.uniform(0.8, 2.6); A = rng.uniform(4.0, 10.0)
+            c_ = rng.uniform(0, 360); w_ = rng.uniform(2.2, 5.5); A = rng.uniform(3.0, 7.5)
             dd = (az - c_ + 180) % 360 - 180
             hgt = np.maximum(hgt, 4.0 + A * np.sqrt(np.clip(1 - (dd / w_) ** 2, 0, 1)))
         for _ in range(40):                                                # roofs: low gables
@@ -2096,8 +2112,20 @@ def dr_house_ext(pen, v, tod='night', glow=None, porch_light=1.0, door_open=0.0)
             if door_open <= 0.01:
                 draw_face(pen, v, Fd, dr_front_door_art('out'), DP['door_red'], ao=False)
             else:
-                draw_face(pen, v, Fd, lambda p_, W, H: (p_.fill(rect(0, 0, W, H), '#ffd8a0'), p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 60), (1, '#c87a3a', 90)])),
-                          '#ffd8a0', ao=False, unlit=True)
+                q = v.poly3([(D_FDOOR[0], 0.0, 0.0), (D_FDOOR[1], 0.0, 0.0), (D_FDOOR[1], D_FDOOR[2], 0.0), (D_FDOOR[0], D_FDOOR[2], 0.0)])
+                if not q.isEmpty():
+                    pen.cv.save(); pen.cv.clipPath(q, skia.ClipOp.kIntersect, True)
+                    pen.fill(q, '#3a2a20')
+                    try:
+                        with lighting('#5a483c', [Lamp(-0.4, D_CEIL - 0.1, 2.2, 4.2, '#ffd8a0', 1.7, (1.0, 0.6, 0.3), fall=1.4),
+                                                  Lamp(-0.4, D_CEIL - 0.1, 6.8, 4.0, '#ffd8a0', 0.7, (1.0, 0.6, 0.3), fall=1.4)]):
+                            H_ = DrHall(far=True)
+                            H_.shell(pen, v, dict(hall=1.0))
+                            for P_ in sorted(H_.pieces(dict()), key=lambda p_: -v.d(p_.ref[0], p_.ref[2])): P_.draw(pen, v)
+                            Dd, _ = dr_front_door(dict(front_door=door_open))
+                            Dd.draw(pen, v, door_open)
+                    finally:
+                        pen.cv.restore()
     _dr_hip_roof(pen, v, tod)
 
 
@@ -2237,10 +2265,12 @@ def dr_streetlight(pen, v, x, y, k=1.0, c=D_SODIUM, arm=1.0, h=6.2, cone=True, G
     if v.d(x, y) < 0.5: return
     s = v.s(x, y)
     b_, t_ = v.p(x, G, y), v.p(x, G + h, y)
-    pen.seg(b_, t_, max(1.5, 0.16 * s) + 2, LINE); pen.seg(b_, t_, max(1.2, 0.16 * s), '#4a4c52')
+    pc = lit('#6e7078', (x, G + 3.0, y), None)
+    pen.seg(b_, t_, max(1.5, 0.16 * s) + 2, LINE); pen.seg(b_, t_, max(1.2, 0.16 * s), pc)
+    pen.seg((b_[0] - 0.04 * s, b_[1]), (t_[0] - 0.04 * s, t_[1]), max(0.6, 0.03 * s), '#ffffff', 26)
     ex, ey = x, y - 1.6 * arm
     pts = [t_, v.p(x, G + h + 0.35, y - 0.5 * arm), v.p(ex, G + h + 0.25, ey)]
-    pen.line(smooth(pts, False, 0.9), max(1.2, 0.1 * s) + 2, LINE); pen.line(smooth(pts, False, 0.9), max(1.0, 0.1 * s), '#4a4c52')
+    pen.line(smooth(pts, False, 0.9), max(1.2, 0.1 * s) + 2, LINE); pen.line(smooth(pts, False, 0.9), max(1.0, 0.1 * s), pc)
     hx, hy = v.p(ex, G + h + 0.18, ey); hs = v.s(ex, ey)
     head = rrect(hx - 0.32 * hs, hy - 0.08 * hs, 0.64 * hs, 0.16 * hs, 0.06 * hs)
     pen.fill(head, '#3a3c40'); pen.line(head, 1.0)
@@ -2255,7 +2285,7 @@ def dr_streetlight_glow(pen, v, x, y, k=1.0, c=D_SODIUM, arm=1.0, h=6.2, G=D_GRO
     pen.glow(hx, hy, 1.4 * hs, c, 110 * k)
     pen.glow(hx, hy, 0.35 * hs, '#fff6e0', 220 * k)
     gx, gy = v.p(ex, G, ey)
-    pen.ellipse_glow(gx, gy, 3.4 * hs, max(4.0, 0.9 * hs * clamp(abs(v.h - gy) / max(1.0, 3.4 * hs), 0.12, 1.0)), c, 60 * k)
+    pen.ellipse_glow(gx, gy, 3.4 * hs, max(4.0, 0.9 * hs * clamp(abs(v.h - gy) / max(1.0, 3.4 * hs), 0.12, 1.0)), c, 85 * k)
     # a soft column of light under the head (the rain makes the beam visible), no hard edges
     cw = 1.2 * hs
     pen.linear(rect(hx - cw, hy, 2 * cw, max(1.0, gy - hy)), hx - cw, 0, hx + cw, 0, [(0, c, 0), (0.5, c, 26 * k), (1, c, 0)])
@@ -2263,7 +2293,8 @@ def dr_streetlight_glow(pen, v, x, y, k=1.0, c=D_SODIUM, arm=1.0, h=6.2, G=D_GRO
         cv = pen.cv
         clip = oval(hx, (hy + gy) / 2, 1.3 * hs, max(4.0, (gy - hy) * 0.55))
         cv.save(); cv.clipPath(clip, skia.ClipOp.kIntersect, True)
-        dr_rain(pen, t, (hx - 1.4 * hs, hy, hx + 1.4 * hs, gy), k, abs(int(x * 7)) % 97, 1.2, 0.1, mix(c, '#ffffff', 0.4), 70, max(24, int(hs * 1.2)))
+        dr_rain(pen, t, (hx - 1.4 * hs, hy, hx + 1.4 * hs, gy), k, abs(int(x * 7)) % 97, 1.2, 0.1, mix(c, '#ffffff', 0.4), 60, max(24, int(hs * 1.2)),
+                L=clamp(hs * 0.55, 5.0, 60.0), w=clamp(hs * 0.016, 0.7, 1.6))
         cv.restore()
 
 
@@ -2287,7 +2318,7 @@ def dr_bus_stop(pen, v, G=D_GROUND):
     if v.d(sx, sy) > 0.5:
         s = v.s(sx, sy)
         a_, b_ = v.p(sx, G, sy), v.p(sx, G + 2.6, sy)
-        pen.seg(a_, b_, max(1.2, 0.05 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.0, 0.05 * s), '#7a7c80')
+        pen.seg(a_, b_, max(1.2, 0.05 * s) + 1.5, LINE); pen.seg(a_, b_, max(1.0, 0.05 * s), lit('#8a8c90', (sx, G + 1.5, sy), None))
         px, py = v.p(sx, G + 2.35, sy)
         sg = rrect(px - 0.24 * s, py - 0.2 * s, 0.48 * s, 0.4 * s, 0.03 * s)
         pen.fill(sg, lit('#e8e4d8', (sx, G + 2.35, sy), (0, 0, 1))); pen.line(sg, 1.0)
@@ -2370,10 +2401,42 @@ class _DPart(Part):
     def depth(self, v): return self.dfn(v)
 
 
-def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=D_GROUND, glass_k=0.62, interior=True):
-    """Halverson's car (a small dark-teal hatchback) as furniture Parts on the plan: lower body, the four wheels, the cabin
-    (roof, windshield, rear glass, both side windows as separate glass parts so a seated figure sorts between the far and
-    the near window), headlights / tail lights. Returns (parts, seats {name: (x, y)}, Box). fa 180 = facing +y."""
+def _hull2(pts):
+    """Convex hull of 2D points (monotone chain)."""
+    P = sorted(set((round(p_[0], 2), round(p_[1], 2)) for p_ in pts))
+    if len(P) < 3: return P
+
+    def cr(o, a, b): return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p_ in P:
+        while len(lo) >= 2 and cr(lo[-2], lo[-1], p_) <= 0: lo.pop()
+        lo.append(p_)
+    for p_ in reversed(P):
+        while len(up) >= 2 and cr(up[-2], up[-1], p_) <= 0: up.pop()
+        up.append(p_)
+    return lo[:-1] + up[:-1]
+
+
+def _seg3(pen, v, a, b, w, c, alpha=255, outline=True):
+    """A 3D segment (x, Y, y) -> (x, Y, y) drawn with a screen width w, clipped at the near plane."""
+    da, db = v.d3(*a), v.d3(*b); nr = v.near + 0.02
+    if da < nr and db < nr: return
+    if da < nr:
+        t_ = (nr - da) / (db - da); a = tuple(a[i] + (b[i] - a[i]) * t_ for i in range(3))
+    elif db < nr:
+        t_ = (nr - db) / (da - db); b = tuple(b[i] + (a[i] - b[i]) * t_ for i in range(3))
+    pa, pb = v.p(*a), v.p(*b)
+    if outline: pen.seg(pa, pb, w + 2.0, LINE, alpha)
+    pen.seg(pa, pb, w, c, alpha)
+
+
+def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=D_GROUND, glass_k=0.62, interior=True, plate='KID DOC'):
+    """Halverson's car (a small dark-teal hatchback, ten years old, a hospital parking permit on the glass) as furniture
+    Parts on the plan: the lower body (an extruded side profile with round wheel arches), the nose and tail (grille,
+    headlamps, bumpers, the plate), four wheels with tread width and alloy rims, the cabin (roof, windshield with wipers,
+    rear glass, both side windows as separate glass parts with their pillars, so a seated figure sorts between the far and
+    the near window), door mirrors, the seats with headrests, the dash and the wheel. Returns (parts, seats {name: (x,
+    y)}, Box). fa 180 = facing +y."""
     cx = D_CAR[0] if cx is None else cx; cy = D_CAR[1] if cy is None else cy
     L, W, H = DCAR['L'], DCAR['W'], DCAR['H']
     B = Box(cx, cy, L, W, Y0, Y0 + H, fa - 90)       # Box 'u' runs along the car (rear -> front), 'n' across (+n = the car's right side)
@@ -2381,22 +2444,70 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
     belt = Y0 + DCAR['belt']
     hood = Y0 + DCAR['hood']
     u_r, u_f = -L / 2, L / 2
+    U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1]); DN = (0.0, -1.0, 0.0)
+    l = L * 100.0
+    gnd = (belt + 0.2 - Y0) * 100.0                  # the profile's y of the ground (y runs down from belt + 0.2)
+    bot = gnd - 17.0                                 # the sills: 17 cm clear of the road
+    hd = (belt - hood) * 100.0 + 20.0
+
+    def arch(xc, r=35.0, n=9):
+        cy_ = gnd - 31.0
+        b0 = math.asin(clamp((bot - cy_) / r, -1.0, 1.0))
+        return [(xc + r * math.cos(a), cy_ + r * math.sin(a)) for a in np.linspace(b0, -math.pi - b0, n)]
+
+    WHEELS = ((u_r + 0.82, 1), (u_r + 0.82, -1), (u_f - 0.88, 1), (u_f - 0.88, -1))
+
+    def wheel_vis(v, uw, side):
+        return v.visible(B.at(uw, side * (W / 2 + 0.015), Y0 + 0.31), (B.N[0] * side, 0.0, B.N[1] * side))
+
+    def draw_wheel(pen, v, uw, side):
+        r_t, r_r = 0.31, 0.2
+        Yc = Y0 + r_t
+
+        def ring(r, nn, n=22):
+            pts = [B.at(uw + math.cos(2 * math.pi * k / n) * r, side * nn, Yc + math.sin(2 * math.pi * k / n) * r) for k in range(n)]
+            q = _clip_near3(v, pts)
+            return [v.p(*p_) for p_ in q] if len(q) >= 3 else None
+        outer = ring(r_t, W / 2 + 0.015); inner = ring(r_t, W / 2 - 0.2)
+        if outer is None: return
+        if inner is not None:                                           # the tyre's tread width (the hull of its two faces)
+            hull = _hull2(outer + inner)
+            if len(hull) >= 3:
+                hp = poly(hull); pen.fill(hp, '#0c0c0e'); pen.line(hp, 1.0)
+        n = (B.N[0] * side, 0.0, B.N[1] * side)
+        c = B.at(uw, side * (W / 2 + 0.015), Yc)
+        if not v.visible(c, n): return
+        tp = poly(outer); pen.fill(tp, '#17171a'); pen.line(tp, 1.0)
+        s = v.s(c[0], c[2])
+        rim = ring(r_r, W / 2 + 0.02)
+        if rim:
+            rp = poly(rim); pen.fill(rp, lit('#aeb2ba', c, n)); pen.line(rp, 0.8)
+            cx_, cy_ = v.p(*c)
+            for k in range(5):
+                a = 2 * math.pi * k / 5 + 0.3
+                e = B.at(uw + math.cos(a) * r_r * 0.94, side * (W / 2 + 0.02), Yc + math.sin(a) * r_r * 0.94)
+                if v.d3(*e) > v.near: pen.seg((cx_, cy_), v.p(*e), max(1.0, 0.045 * s), lit('#5e626a', c, n))
+            hub = ring(0.055, W / 2 + 0.025, 10)
+            if hub: pen.fill(poly(hub), lit('#32343a', c, n)); pen.line(poly(hub), 0.5)
 
     def body(pen, v):
-        U3 = (B.U[0], 0.0, B.U[1]); N3 = (B.N[0], 0.0, B.N[1])
-        prof = [(0, 30), (8, 22), (L * 100 * 0.18, 20), (L * 100 * 0.76, 20), (L * 100 * 0.88, (belt - hood) * 100 + 22), (L * 100 - 6, (belt - hood) * 100 + 26),
-                (L * 100, (belt - hood) * 100 + 38), (L * 100, (belt - Y0) * 100 - 26), (L * 100 - 8, (belt - Y0) * 100 - 14), (L * 100 * 0.83, (belt - Y0) * 100 - 14),
-                (L * 100 * 0.83, (belt - Y0) * 100 - 30), (L * 100 * 0.68, (belt - Y0) * 100 - 30), (L * 100 * 0.68, (belt - Y0) * 100 - 14),
-                (L * 100 * 0.3, (belt - Y0) * 100 - 14), (L * 100 * 0.3, (belt - Y0) * 100 - 30), (L * 100 * 0.15, (belt - Y0) * 100 - 30),
-                (L * 100 * 0.15, (belt - Y0) * 100 - 14), (6, (belt - Y0) * 100 - 14), (0, (belt - Y0) * 100 - 26)]
+        for (uw, side) in WHEELS:
+            if not wheel_vis(v, uw, side): draw_wheel(pen, v, uw, side)
+        prof = [(0, 34), (3, 24), (10, 20), (l * 0.74, 20), (l * 0.8, 22), (l * 0.9, hd + 2), (l - 10, hd + 6), (l - 2, hd + 14), (l, hd + 24),
+                (l, bot - 16), (l - 4, bot - 4), (l - 10, bot)] + arch(l - 88.0) + arch(82.0) + [(8, bot), (2, bot - 6), (0, bot - 18)]
         O = B.at(u_r, W / 2 - 0.02, belt + 0.2)
 
         def side_art(p_, Wc, Hc):
-            p_.linear(rect(0, 0, Wc, Hc), 0, 0, 0, Hc, [(0, '#ffffff', 50), (0.35, '#ffffff', 0), (0.6, '#000000', 0), (1, '#000000', 70)])
-            p_.seg((Wc * 0.42, 24), (Wc * 0.42, Hc - 32), 0.8, '#000000', 140)              # door seams
-            p_.seg((Wc * 0.65, 24), (Wc * 0.65, Hc - 32), 0.8, '#000000', 140)
-            for hx_ in (Wc * 0.47, Wc * 0.7): p_.fill(rrect(hx_, 36, 9, 2.4, 1.0), '#c8ccd0')
-        extrude(pen, v, O, U3, (0.0, -1.0, 0.0), prof, _scale3(N3, -(W - 0.04)), col_, _darken(col_, 0.15), side_art)
+            p_.linear(rect(0, 0, Wc, Hc), 0, 0, 0, Hc, [(0, '#ffffff', 60), (0.3, '#ffffff', 0), (0.55, '#000000', 0), (1, '#000000', 80)])
+            p_.fill(rect(0, 40, Wc, 1.4), '#000000', 70)                                   # the swage line
+            p_.fill(rect(0, 41.4, Wc, 1.0), '#ffffff', 40)
+            for sx_ in (Wc * 0.36, Wc * 0.565, Wc * 0.745):                                # door seams
+                p_.seg((sx_, 23), (sx_, bot - 3), 0.9, '#000000', 150)
+            for hx_ in (Wc * 0.395, Wc * 0.6): p_.fill(rrect(hx_, 33, 11, 2.6, 1.2), '#c8ccd0'); p_.line(rrect(hx_, 33, 11, 2.6, 1.2), 0.4, '#000000', 150)
+            p_.fill(rect(10, bot - 7, Wc - 20, 7), '#000000', 90)                          # the dark sill
+            p_.fill(oval(Wc * 0.88, 30, 2.4, 1.6), '#ffb040')                              # the side repeater
+            p_.fill(rrect(Wc * 0.2, 27, 9, 6, 2), '#000000', 110)                          # the fuel flap
+        extrude(pen, v, O, U3, DN, prof, _scale3(N3, -(W - 0.04)), col_, _darken(col_, 0.15), side_art)
         for side in (1, -1):                                               # wet sheen along the shoulder line (streetlight / sky)
             n = (B.N[0] * side, 0.0, B.N[1] * side)
             if not v.visible(B.at(0, side * W / 2, belt), n): continue
@@ -2404,35 +2515,60 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
             pen.line(smooth(pts, False, 0.8), max(1.0, 0.012 * v.s(B.cx, B.cy)), '#b8c8e8', 110)
         hpts = [v.p(*B.at(u_f - 1.0 + 0.95 * k / 6, 0.0, hood + 0.02 + 0.01 * k)) for k in range(7)]
         pen.line(smooth(hpts, False, 0.8), max(1.0, 0.01 * v.s(B.cx, B.cy)), '#a8b8d8', 90)
+        # the nose and the tail (art on the vertical end faces of the extrusion)
+        hwf = W / 2 - 0.03
+
+        def nose(p_, Wc, Hc):
+            p_.fill(rect(0, 0, Wc, Hc), col_)
+            p_.linear(rect(0, 0, Wc, Hc), 0, 0, 0, Hc, [(0, '#ffffff', 40), (0.4, '#000000', 0), (1, '#000000', 70)])
+            gr = rrect(50, 3, Wc - 100, 11, 3)
+            p_.fill(gr, '#101216'); p_.line(gr, 0.6, '#000000', 200)
+            for k in range(3): p_.fill(rect(53, 5.4 + k * 3.0, Wc - 106, 0.8), '#3a3e46')
+            p_.fill(oval(Wc / 2, 8.5, 3.6, 3.0), '#c8ccd2'); p_.line(oval(Wc / 2, 8.5, 3.6, 3.0), 0.4, '#000000', 180)
+            for x_ in (5, Wc - 47):
+                bz = rrect(x_ - 1.5, 1.5, 45, 15, 5)
+                p_.fill(bz, '#8e949c'); p_.line(bz, 0.6, '#000000', 200)
+                lm = rrect(x_ + 1, 3.5, 40, 11, 4)
+                p_.fill(lm, '#fff6e0' if lights else '#c8ccd0'); p_.line(lm, 0.5, '#000000', 160)
+                p_.fill(oval(x_ + (12 if x_ < 20 else 30), 9, 5.5, 4.4), '#ffffff' if lights else '#e2e4e8')
+                p_.fill(oval(x_ + (33 if x_ < 20 else 9), 9.4, 3.2, 3.0), '#ffc060' if lights else '#d8a850', 230)   # the indicator
+            bm = rect(0, 19, Wc, 14)
+            p_.fill(bm, '#22252a'); p_.linear(bm, 0, 19, 0, 33, [(0, '#ffffff', 36), (0.3, '#ffffff', 0), (1, '#000000', 60)])
+            p_.fill(rrect(36, 34.5, Wc - 72, 4.6, 2), '#0c0d10')
+            pl = rrect(Wc / 2 - 26, 20.2, 52, 11.6, 1.6)
+            p_.fill(pl, '#f2f0e6'); p_.line(pl, 0.5, '#000000', 200)
+            btext(p_, plate, Wc / 2, 29.2, 'sans_b', 8.6, '#1c2a5a', 240, 'center', spacing=0.06)
+
+        def tail(p_, Wc, Hc):
+            p_.fill(rect(0, 0, Wc, Hc), col_)
+            p_.linear(rect(0, 0, Wc, Hc), 0, 0, 0, Hc, [(0, '#ffffff', 36), (0.4, '#000000', 0), (1, '#000000', 70)])
+            for x_ in (3, Wc - 21):
+                tl = rrect(x_, 2, 18, 24, 4)
+                p_.fill(tl, '#ff3a2a' if lights else '#8a2a2a'); p_.line(tl, 0.5, '#000000', 200)
+                p_.fill(rrect(x_ + 3, 17, 12, 6, 2), '#ffe8d8' if lights else '#b8a8a0', 200)
+            p_.seg((24, 3), (Wc - 24, 3), 0.9, '#000000', 150)                               # the hatch shut line
+            p_.fill(rrect(Wc / 2 - 9, 6, 18, 3.4, 1.5), '#c8ccd0')
+            pl = rrect(Wc / 2 - 26, 13, 52, 11.6, 1.6)
+            p_.fill(pl, '#f2f0e6'); p_.line(pl, 0.5, '#000000', 200)
+            btext(p_, plate, Wc / 2, 22, 'sans_b', 8.6, '#1c2a5a', 240, 'center', spacing=0.06)
+            bm = rect(0, 31, Wc, 15)
+            p_.fill(bm, '#22252a'); p_.linear(bm, 0, 31, 0, 46, [(0, '#ffffff', 36), (0.3, '#ffffff', 0), (1, '#000000', 60)])
+            for x_ in (10, Wc - 22): p_.fill(rrect(x_, 35, 12, 4, 1.5), '#c82a22', 200)       # reflectors
+        Fn = Face(B.at(u_f + 0.006, hwf, Y0 + 0.7), _scale3(N3, -1), DN, 2 * hwf * 100, 40.0, U3, 'front')
+        if v.visible(Fn.O, U3): draw_face(pen, v, Fn, nose, col_, ao=False, lw=1.0)
+        Ft = Face(B.at(u_r - 0.006, -hwf, Y0 + 0.84), N3, DN, 2 * hwf * 100, 49.0, _scale3(U3, -1), 'back')
+        if v.visible(Ft.O, _scale3(U3, -1)): draw_face(pen, v, Ft, tail, col_, ao=False, lw=1.0)
     P.append(Part(fn=body, ref=B.at(0, 0, Y0 + 0.5), tag='body'))
-    for (uw, side) in ((u_r + 0.82, 1), (u_r + 0.82, -1), (u_f - 0.88, 1), (u_f - 0.88, -1)):
+    for (uw, side) in WHEELS:
         def wheel(pen, v, uw=uw, side=side):
-            c = B.at(uw, side * (W / 2 + 0.01), Y0 + 0.31)
-            n = (B.N[0] * side, 0.0, B.N[1] * side)
-            if not v.visible(c, n) and v.d(c[0], c[2]) > 0.3:
-                pass
-            pts = []
-            for k in range(20):
-                a = 2 * math.pi * k / 20
-                du = math.cos(a) * 0.31; dY = math.sin(a) * 0.31
-                pts.append(B.at(uw + du, side * (W / 2 + 0.01), Y0 + 0.31 + dY))
-            q = _clip_near3(v, pts)
-            if len(q) < 3: return
-            tire = poly([v.p(*p_) for p_ in q])
-            pen.fill(tire, '#121214'); pen.line(tire, 1.0)
-            hub = []
-            for k in range(14):
-                a = 2 * math.pi * k / 14
-                hub.append(B.at(uw + math.cos(a) * 0.18, side * (W / 2 + 0.02), Y0 + 0.31 + math.sin(a) * 0.18))
-            qh = _clip_near3(v, hub)
-            if len(qh) >= 3:
-                hp = poly([v.p(*p_) for p_ in qh]); pen.fill(hp, lit('#9aa0a8', c, n)); pen.line(hp, 0.8)
-        P.append(Part(fn=wheel, ref=B.at(uw, side * (W / 2 + 0.2), Y0 + 0.3), tag='wheel'))
+            if wheel_vis(v, uw, side): draw_wheel(pen, v, uw, side)
+        P.append(_DPart((lambda uw_, side_: lambda v: min(v.d(B.cx, B.cy), v.d(*B.at(uw_, side_ * (W / 2 + 0.2), 0)[0::2])) - 0.05)(uw, side),
+                        fn=wheel, ref=B.at(uw, side * (W / 2 + 0.2), Y0 + 0.3), tag='wheel'))
     # the cabin: roof + glass (each its own part)
     gh = [(u_r + 0.12, belt), (u_r + 0.62, Y0 + H - 0.02), (u_f - 1.95, Y0 + H), (u_f - 1.02, belt + 0.02)]
     hw = W / 2 - 0.1
 
-    def quad(pts, mat, glass=False):
+    def quad(pts, mat, glass=False, extra=None):
         def fn(pen, v):
             path = v.poly3(pts)
             if path.isEmpty(): return
@@ -2443,15 +2579,28 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
                 pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 0), (0.35, '#9ab0d8', 55), (0.42, '#9ab0d8', 10), (0.6, '#9ab0d8', 0), (0.7, '#9ab0d8', 30), (1, '#9ab0d8', 0)])
                 pen.line(path, 1.4, '#0a0c10', 230)
             else:
-                pen.fill(path, lit(mat, cen, None)); pen.line(path, 1.0)
+                pen.fill(path, lit(mat, cen, (0, 1, 0)))
+                b = _rb(path)
+                pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#b8c8e8', 0), (0.4, '#b8c8e8', 46), (0.55, '#b8c8e8', 0)])
+                pen.line(path, 1.0)
+            if extra: extra(pen, v)
         return fn
-    def side_pts(side, g0, g1):
-        return [B.at(g0[0], side * hw, g0[1]), B.at(g1[0], side * hw, g1[1])]
     roof = [B.at(gh[1][0], hw, gh[1][1]), B.at(gh[2][0], hw, gh[2][1]), B.at(gh[2][0], -hw, gh[2][1]), B.at(gh[1][0], -hw, gh[1][1])]
     nearest = lambda pts: (lambda v: min(v.d(q[0], q[2]) for q in pts))
     P.append(_DPart(lambda v: v.d(B.cx, B.cy) - 0.3, fn=quad(roof, col_), ref=B.at((gh[1][0] + gh[2][0]) / 2, 0, Y0 + H), tag='roof'))
     wind = [B.at(gh[2][0], hw, gh[2][1]), B.at(gh[3][0], hw + 0.08, gh[3][1]), B.at(gh[3][0], -hw - 0.08, gh[3][1]), B.at(gh[2][0], -hw, gh[2][1])]
-    P.append(_DPart(nearest(wind), fn=quad(wind, None, True), ref=B.at((gh[2][0] + gh[3][0]) / 2, 0, belt + 0.25), tag='windshield'))
+
+    def wipers(pen, v):
+        s = v.s(B.cx, B.cy)
+        if not v.visible(B.at(gh[3][0], 0, belt + 0.2), _norm3((U3[0], 0.9, U3[2]))): return
+        for (n0, n1) in ((-0.62, -0.1), (0.02, 0.56)):
+            a_ = B.at(gh[3][0] - 0.03, n0, gh[3][1] + 0.025); b_ = B.at(gh[3][0] - 0.16, n1, gh[3][1] + 0.115)
+            _seg3(pen, v, a_, b_, max(1.0, 0.014 * s), '#0c0d10', 255, False)
+        # the hospital parking permit low in the corner of the glass
+        pq = v.poly3([B.at(gh[3][0] - 0.05, 0.56, gh[3][1] + 0.04), B.at(gh[3][0] - 0.05, 0.7, gh[3][1] + 0.04), B.at(gh[3][0] - 0.15, 0.69, gh[3][1] + 0.105),
+                      B.at(gh[3][0] - 0.15, 0.55, gh[3][1] + 0.105)])
+        if not pq.isEmpty() and False: pen.fill(pq, '#8aa0b8', 130)
+    P.append(_DPart(nearest(wind), fn=quad(wind, None, True, wipers), ref=B.at((gh[2][0] + gh[3][0]) / 2, 0, belt + 0.25), tag='windshield'))
     rear = [B.at(gh[0][0], hw + 0.08, gh[0][1]), B.at(gh[1][0], hw, gh[1][1]), B.at(gh[1][0], -hw, gh[1][1]), B.at(gh[0][0], -hw - 0.08, gh[0][1])]
     P.append(_DPart(nearest(rear), fn=quad(rear, None, True), ref=B.at((gh[0][0] + gh[1][0]) / 2, 0, belt + 0.25), tag='rear_glass'))
     for side in (1, -1):
@@ -2464,17 +2613,31 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
             pen.fill(path, '#0e141c', int(255 * glass_k))
             b = _rb(path)
             pen.linear(path, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 0), (0.3, '#9ab0d8', 40), (0.36, '#9ab0d8', 0), (1, '#9ab0d8', 0)])
-            # the B pillar
+            pen.line(path, 1.2, '#0a0c10', 230)
+            # the pillars and the roof rail round this side's glass (body colour), and the door mirror
+            s = v.s(B.cx, B.cy)
+            nrm = (B.N[0] * side, 0.3, B.N[1] * side)
+            pc = _darken(lit(col_, B.at(0.0, side * hw, belt + 0.3), _norm3(nrm)), 0.3)
+            wpx = max(2.0, 0.06 * s)
             pb0, pb1 = B.at(u_f - 2.15, side * (hw + 0.06), belt + 0.02), B.at(u_f - 2.15, side * hw, Y0 + H - 0.03)
-            pen.seg(v.p(*pb0), v.p(*pb1), max(2.0, 0.07 * v.s(pb0[0], pb0[2])), _darken(col_, 0.4))
-            pen.line(path, 1.6, _darken(col_, 0.5), 255)
+            _seg3(pen, v, pb0, pb1, max(2.0, 0.075 * s), _darken(col_, 0.45), 255, False)          # the B pillar (black-out)
+            _seg3(pen, v, sw[3], sw[2], wpx, pc)                                                   # the A pillar
+            _seg3(pen, v, sw[0], sw[1], wpx * 1.5, pc)                                             # the C pillar
+            _seg3(pen, v, sw[1], sw[2], wpx * 0.8, pc)                                             # the roof rail
+            _seg3(pen, v, sw[0], sw[3], max(1.5, 0.03 * s), _darken(col_, 0.3), 255, False)        # the belt-line rubber
+            mq = [B.at(gh[3][0] - 0.2, side * (hw + 0.08), belt + 0.03), B.at(gh[3][0] - 0.2, side * (hw + 0.27), belt + 0.05),
+                  B.at(gh[3][0] - 0.2, side * (hw + 0.27), belt + 0.17), B.at(gh[3][0] - 0.2, side * (hw + 0.1), belt + 0.17)]
+            mp = v.poly3(mq)
+            if not mp.isEmpty():
+                pen.fill(mp, _darken(lit(col_, mq[1], None), 0.45)); pen.line(mp, 1.0)
         P.append(_DPart((lambda pts: lambda v: min(v.d(q[0], q[2]) for q in pts))(sw), fn=sidewin, ref=B.at(-0.2, side * (W / 2 + 0.05), belt + 0.3),
                         tag='window_r' if side > 0 else 'window_l'))
     if interior:                                                            # what you see through the glass: seats, dash, wheel
-        dk = '#1c1e24'
+        dk = '#23262e'
         for n_ in (-0.37, 0.37):
-            P.append(Part(sub(B, -0.42, -0.22, n_ - 0.24, n_ + 0.24, belt - 0.45, belt + 0.38), {'all': dk, 'top': '#2a2c32'}, tag='seat_back'))
-        P.append(Part(sub(B, -1.62, -1.45, -0.7, 0.7, belt - 0.45, belt + 0.28), {'all': dk, 'top': '#2a2c32'}, tag='rear_seat'))
+            P.append(Part(sub(B, -0.42, -0.22, n_ - 0.24, n_ + 0.24, belt - 0.45, belt + 0.3), {'all': dk, 'top': '#30343c'}, tag='seat_back'))
+            P.append(Part(sub(B, -0.4, -0.27, n_ - 0.12, n_ + 0.12, belt + 0.33, belt + 0.5), {'all': dk, 'top': '#30343c'}, tag='seat_back'))
+        P.append(Part(sub(B, -1.62, -1.45, -0.7, 0.7, belt - 0.45, belt + 0.28), {'all': dk, 'top': '#30343c'}, tag='rear_seat'))
         P.append(Part(sub(B, u_f - 1.45, u_f - 1.08, -0.78, 0.78, belt - 0.3, belt + 0.0), {'all': '#16181c', 'top': '#202228'}, tag='dash'))
 
         def wheel_ring(pen, v):
@@ -2485,26 +2648,7 @@ def dr_car_parts(cx=None, cy=None, fa=D_CAR_FA, col_='#4a6e80', lights=True, Y0=
         P.append(Part(fn=wheel_ring, ref=B.at(0.42, -0.37, belt), tag='wheel'))
         cen = (B.cx, B.cy)
         P = [(_DPart((lambda v, c=cen: v.d(c[0], c[1]) + 0.08), box=p_.box, mats=p_.mats, fn=p_.fn, ref=p_.ref, tag=p_.tag, skip=p_.skip)
-              if p_.tag in ('seat_back', 'rear_seat', 'dash', 'wheel') else p_) for p_ in P]
-    # the lamps: headlights at the front corners, tail lights at the rear
-    def lamps(pen, v):
-        for side in (1, -1):
-            hl = B.at(u_f + 0.005, side * (W / 2 - 0.22), hood - 0.12)
-            if v.d(hl[0], hl[2]) > 0.3 and v.visible(hl, (B.U[0], 0, B.U[1])):
-                s = v.s(hl[0], hl[2]); px, py = v.p(*hl)
-                e = oval(px, py, 0.15 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]) + 0.03 * s, 0.06 * s)
-                pen.fill(e, '#fff6e0' if lights else '#c8ccd0'); pen.line(e, 0.9)
-            tl = B.at(u_r - 0.005, side * (W / 2 - 0.12), belt - 0.18)
-            if v.d(tl[0], tl[2]) > 0.3 and v.visible(tl, (-B.U[0], 0, -B.U[1])):
-                s = v.s(tl[0], tl[2]); px, py = v.p(*tl)
-                r_ = rrect(px - 0.06 * s, py - 0.1 * s, 0.12 * s, 0.2 * s, 0.03 * s)
-                pen.fill(r_, '#ff3a2a' if lights else '#8a2a2a'); pen.line(r_, 0.9)
-        # the plate and the grille
-        g = B.at(u_f + 0.004, 0.0, hood - 0.22)
-        if v.d(g[0], g[2]) > 0.3 and v.visible(g, (B.U[0], 0, B.U[1])):
-            s = v.s(g[0], g[2]); px, py = v.p(*g)
-            pen.fill(rrect(px - 0.32 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]), py - 0.05 * s, 0.64 * s * abs(v.fx * B.U[0] + v.fy * B.U[1]), 0.08 * s, 0.02 * s), '#1a1c20')
-    P.append(Part(fn=lamps, ref=B.at(u_f + 0.1, 0, hood), tag='lamps'))
+              if p_.tag in ('seat_back', 'rear_seat', 'dash') or (p_.tag == 'wheel' and p_.fn is wheel_ring) else p_) for p_ in P]
     seats = {'driver': B.at(-0.05, -0.37, 0)[0::2], 'passenger': B.at(-0.05, 0.37, 0)[0::2], 'back_l': B.at(-1.05, -0.38, 0)[0::2], 'back_r': B.at(-1.05, 0.38, 0)[0::2]}
     return P, seats, B
 
@@ -2515,8 +2659,9 @@ def dr_headlight_beams(pen, v, B, k=1.0, t=0.0, rain=True, reach=9.0):
     W = DCAR['W']; hood = B.Y0 + DCAR['hood']
     fwd = (B.U[0], B.U[1])
     for side in (1, -1):
-        hl = B.at(B.w / 2 + 0.01, side * (W / 2 - 0.22), hood - 0.12)
+        hl = B.at(B.w / 2 + 0.01, side * (W / 2 - 0.28), B.Y0 + 0.61)
         if v.d(hl[0], hl[2]) < 0.2: continue
+        s = v.s(hl[0], hl[2])
         far_c = (hl[0] + fwd[0] * reach, hl[2] + fwd[1] * reach)
         sp_ = 0.42 * reach
         pa = (far_c[0] - fwd[1] * sp_ * side * -1, far_c[1] + fwd[0] * sp_ * side * -1)
@@ -2536,7 +2681,8 @@ def dr_headlight_beams(pen, v, B, k=1.0, t=0.0, rain=True, reach=9.0):
             if rain:
                 bb = _rb(cone)
                 pen.cv.save(); pen.cv.clipPath(cone, skia.ClipOp.kIntersect, True)
-                dr_rain(pen, t, (bb[0], bb[1], bb[2], bb[3]), k, 11 + side, 1.3, 0.08, '#ffffff', 150, max(40, int((bb[2] - bb[0]) * (bb[3] - bb[1]) / 2500)))
+                dr_rain(pen, t, (bb[0], bb[1], bb[2], bb[3]), k, 11 + side, 1.3, 0.08, '#fff6e0', 90, max(40, int((bb[2] - bb[0]) * (bb[3] - bb[1]) / 2500)),
+                        L=clamp(s * 0.5, 5.0, 60.0), w=clamp(s * 0.014, 0.7, 1.6))
                 pen.cv.restore()
         px, py = v.p(*hl); s = v.s(hl[0], hl[2])
         facing = clamp((-(hl[0] - v.hx) * fwd[0] - (hl[2] - v.hy) * fwd[1]) / max(1e-3, math.hypot(hl[0] - v.hx, hl[2] - v.hy)), 0, 1)
@@ -2548,7 +2694,7 @@ def dr_taillight_glow(pen, v, B, k=1.0):
     if k <= 0.01: return
     W = DCAR['W']; belt = B.Y0 + DCAR['belt']
     for side in (1, -1):
-        tl = B.at(-B.w / 2 - 0.01, side * (W / 2 - 0.12), belt - 0.18)
+        tl = B.at(-B.w / 2 - 0.01, side * (W / 2 - 0.15), B.Y0 + 0.7)
         if v.d(tl[0], tl[2]) < 0.3 or not v.visible(tl, (-B.U[0], 0.0, -B.U[1])): continue
         px, py = v.p(*tl); s = v.s(tl[0], tl[2])
         pen.glow(px, py, 0.6 * s, '#ff3020', 100 * k)
@@ -2605,7 +2751,7 @@ def _dr_outside_front(pen, v, tod='night', car=False, glow=None, bus=True):
     with lighting(*_ext_light_d(tod)):
         dr_ground_front(pen, v, tod)
         for (x0, x1) in D_ACROSS:
-            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -22.0 else None), seed=int(x0))
+            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -38.0 else None), seed=int(x0))
         for (x0, x1, yf, tag) in D_NEIGH[:2]:
             dr_neighbour(pen, v, x0, x1, yf, 10.0, tod, seed=int(x0) + 5)
         for i, (x, y) in enumerate([(-14.0, -21.5), (2.0, -21.0), (24.0, -21.8), (-36.0, -22.0), D_MAPLE]):
@@ -2668,7 +2814,7 @@ _dcam('dr_liv_window_bus', 3200, 540, 1.5, -2.45, 0.62, 244.5, _env(x=(900, 1020
 _dcam('dr_liv_door', 880, 480, 1.5, -4.55, 1.85, 78, _env(), 'from beside the armchair toward the living-room door (it opens: the narrator in the doorway, the hall behind)', 'living')
 _dcam('dr_liv_sunrise', 860, 480, 1.45, -2.0, 3.6, -125, _env(), 'sunrise: the armchair against the glowing window (Grandpa still; Ruth with her ticket)', 'living')
 # the waiting room
-_dcam('dr_wait_wide', 700, 470, 1.55, -1.45, 3.95, -118, _env(), "the narrator's view from the door: the rows (3/4), HIM in the armchair under NOW SERVING, "
+_dcam('dr_wait_wide', 680, 470, 1.55, -1.45, 3.95, -125, _env(), "the narrator's view from the door: the rows (3/4), HIM in the armchair under NOW SERVING, "
       'the TV in the corner', 'living')
 _dcam('dr_wait_front', 680, 480, 1.6, -2.05, 5.2, -158, _env(), 'from behind the last row: the backs of the waiting, HIM facing us at the front', 'living')
 _dcam('dr_wait_rows', 820, 480, 1.45, -1.65, 1.05, -58, _env(), 'the rows at 3/4 from the front-east (the grey people turn ~-0.65; Grandpa at the far end by the window)', 'living')
@@ -2685,9 +2831,12 @@ _dcam('dr_hall_floor', 1300, 300, 0.32, -0.15, 0.95, 186, _env(x=(900, 1020), y=
       'low at the bottom of the front door: the paper sliding under it', 'hall')
 # kitchen
 _dcam('dr_kit_phone', 980, 500, 1.45, -3.35, 7.85, 98, _env(), 'the phone wall: Ruth at the wall phone (profile / 3/4), the dark hall doorway beside it, the counter', 'kitchen')
-_dcam('dr_kit_wide', 760, 470, 1.55, -1.5, 6.15, -62, _env(), 'from the hall doorway: the table, the fridge, the sink under the window', 'kitchen')
+_dcam('dr_kit_wide', 760, 470, 1.55, -1.42, 6.3, -47, _env(), 'from the hall doorway: the table, the fridge, the sink under the window', 'kitchen')
 _dcam('dr_kit_sink', 960, 500, 1.5, -2.15, 7.55, -32, _env(), 'the sink under the window (the paper burning, the match)', 'kitchen')
-_dcam('dr_kit_floor', 860, 380, 0.85, -1.5, 7.9, -60, _env(y=(340, 460)), 'low on the kitchen floor: Ruth rocking Milo against the sink cabinets (turn ~-0.65)', 'kitchen')
+_dcam('dr_kit_floor', 820, 440, 0.8, -2.75, 7.45, 31, _env(y=(400, 500)), 'low on the kitchen floor: Ruth rocking Milo against the counter-return cabinets at 3/4 '
+      '(turn ~0.65), the sink and its window behind them', 'kitchen')
+_dcam('dr_kit_phone_side', 980, 500, 1.45, -2.42, 8.82, 152, _env(), 'along the phone wall: Ruth at the phone in PROFILE (facing screen-left), the narrator beside her, '
+      'the receiver counter in the foreground left, the dark hall doorway behind them', 'kitchen')
 _dcam('dr_kit_hall', 980, 500, 1.4, -3.75, 6.5, 90, _env(), 'from the table to the doorway into the dark hall (the pen click, the scratching)', 'kitchen')
 _dcam('dr_kit_front', 820, 480, 1.5, -2.8, 9.0, 205, _env(), 'from the sink toward the front wall: the clock, the table, the doorway', 'kitchen')
 # bathroom
@@ -2757,6 +2906,7 @@ def dr_living(view='wide', state='now', tod='night', lamp=None, ceiling=0.0, hea
     wins = [_win_glass_quads(((-1.2, 0.0), (-5.6, 0.0)), -1.2 - D_LWIN[1], -1.2 - D_LWIN[0], D_LWIN[2], D_LWIN[3]),
             _win_glass_quads(((-5.6, 0.0), (-5.6, 5.4)), D_SWIN[0], D_SWIN[1], D_SWIN[2], D_SWIN[3])]
     sp = _house_extras(sp, v, o, wins, car=car, rain=rain, tod='night' if tod == 'night' else 'sunrise')
+    _to_wall(sp, ('curtains', 'curtains_side'))
     if callable(ticket) or callable(tear):
         tkf = ticket if callable(ticket) else (lambda t: ticket)
         trf = tear if callable(tear) else (lambda t: tear)
@@ -2765,6 +2915,41 @@ def dr_living(view='wide', state='now', tod='night', lamp=None, ceiling=0.0, hea
                                amb, steady, var))
     sp.info['note'] = ('Seated people need |turn| >= 0.5: the armchair reads in wide / chair / him / side; the rows in rows / grandpa / side '
                        '(front-on in front: the chair backs hide them); stage with ST.stage_figure(sp, who, spot).')
+    return sp
+
+
+def _far_clipped(R, quad):
+    """A room seen through a doorway (quad: four (x, Y, y) corners of the opening): its furniture is clipped to that
+    opening, so it can never show through another far room that stands in front of it (far furniture is drawn over every
+    far shell)."""
+    orig = R.pieces
+
+    def pieces(o):
+        out = []
+        for P in orig(o):
+            def draw(pen, v, P=P):
+                path = v.poly3(quad)
+                if path.isEmpty(): return
+                pen.cv.save(); pen.cv.clipPath(path, skia.ClipOp.kIntersect, True)
+                try:
+                    P.draw(pen, v)
+                finally:
+                    pen.cv.restore()
+            out.append(Piece(P.name, P.ref, draw, block=P.block, vis=P.vis))
+        return out
+    R.pieces = pieces
+    return R
+
+
+D_KDOOR_QUAD = [(-1.2, 0.0, D_KDOOR[0]), (-1.2, 0.0, D_KDOOR[1]), (-1.2, D_KDOOR[2], D_KDOOR[1]), (-1.2, D_KDOOR[2], D_KDOOR[0])]
+D_LDOOR_QUAD = [(-1.2, 0.0, D_LDOOR[0]), (-1.2, 0.0, D_LDOOR[1]), (-1.2, D_LDOOR[2], D_LDOOR[1]), (-1.2, D_LDOOR[2], D_LDOOR[0])]
+
+
+def _to_wall(sp, names, order=None):
+    """Things that hang flat on a wall (curtains) sort wrongly by their centre when the wall is oblique to the lens:
+    draw them straight after the shell and the rain on the glass, before every piece of furniture."""
+    for l_ in sp:
+        if l_.name.split(':')[0] in names: l_.order = (ORDER_SHELL - 0.06) if order is None else order
     return sp
 
 
@@ -2809,8 +2994,9 @@ def dr_hall(view='door', hall=0.0, porch=1.0, kitchen=0.3, living=0.0, door=0.0,
         o['living_c'] = D_TUBE
         if not living: o['living'] = 0.8
     main = DrHall()
-    far = [DrKitchen(far=True)]
-    if callable(door) or door > 3: far.append(_far_living(living_state))
+    far = []
+    if callable(door) or door > 3: far.append(_far_living(living_state))       # first = drawn last: nearer than the kitchen
+    far.append(_far_clipped(DrKitchen(far=True), D_KDOOR_QUAD))
     if bath_door and (callable(bath_door) or bath_door > 3): far.append(DrBath(far=True))
     dyn = []
     if callable(door): dyn.append(_live_door_layer('living_door_live', v, dr_living_door(), door, main, o))
@@ -2914,7 +3100,7 @@ class DrStreet(Room):
         dr_far_ring(pen, v, tt)
         dr_ground_front(pen, v, tod)
         for (x0, x1) in D_ACROSS:
-            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -22.0 else None), seed=int(x0))
+            dr_neighbour(pen, v, x0, x1, -24.5, 9.0, tod, lit_room=(1 if x0 == -38.0 else None), seed=int(x0))
         for (x0, x1, yf, tag) in D_NEIGH[:2]:
             dr_neighbour(pen, v, x0, x1, yf, 10.0, tod, seed=int(x0) + 5)
         trees = [(-14.0, -21.5, 7.5), (2.0, -21.0, 7.5), (24.0, -21.8, 7.5), (-36.0, -22.0, 7.5), (-52.0, -22.5, 7.0)]
@@ -2977,8 +3163,8 @@ _dcam('dr_ext_porch', 980, 520, D_GROUND + 1.62, 1.45, -2.75, -38, _env(), 'the 
 _dcam('dr_ext_door', 900, 500, D_GROUND + 1.55, -0.2, -4.6, 2, _env(), 'up the steps to the front door (open: the narrator in the doorway with Milo)', 'street')
 _dcam('dr_ext_driveway', 900, 520, 1.55, -1.3, -0.45, -124, _env(), 'from the porch to the driveway: the car nose-in, headlights in our eyes, the rain in the beams', 'street')
 _dcam('dr_ext_car', 1000, 520, D_GROUND + 1.45, -5.1, -1.3, -146, _env(), "the car from the front-right: Halverson in the driver's seat through the windshield, phone at her ear", 'street')
-_dcam('dr_ext_street', 1200, 520, D_GROUND + 1.5, -3.0, -10.8, -103, _env(f=(1.0, 2.4)), 'down Larch Street to the west: the bus stop under its flickering light at the end', 'street')
-_dcam('dr_ext_bus', 2300, 560, D_GROUND + 1.45, -35.6, -15.0, -116, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
+_dcam('dr_ext_street', 1200, 520, D_GROUND + 1.5, -9.6, -11.4, -100, _env(f=(1.0, 2.4)), 'down Larch Street to the west: the bus stop under its flickering light at the end', 'street')
+_dcam('dr_ext_bus', 2300, 600, D_GROUND + 1.45, -39.0, -15.6, -124, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
       'telephoto on the bus-stop bench under the flickering streetlight (HIM folded there, waiting)', 'street')
 _dcam('dr_ext_bus_far', 2900, 540, D_GROUND + 1.6, -6.5, -11.3, -110, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.06), f=(1.0, 1.6)),
       'from the end of the driveway down the street: the bus stop small and far under its light', 'street')
@@ -3004,8 +3190,18 @@ def dr_front(view='house', tod='night', car=None, rain=None, porch=1.0, headligh
     dyn = []
     if car:
         _, _, B = dr_car_parts()
-        lay = Layer(max(0.3, v.d(B.cx, B.cy)), lambda pen, t: (dr_headlight_beams(pen, v, B, _lvl(headlights, 252, t), t, rain), dr_taillight_glow(pen, v, B, 1.0)),
-                    'car_beams', blur=None)
+        def _beams(pen, t):
+            cut = None
+            if v.hy < -0.05 and v.hx > D_HOUSE[0]:               # from in front of the house its front wall hides the beams behind it
+                cut = v.poly3([(D_HOUSE[0], D_GROUND, 0.0), (D_HOUSE[1], D_GROUND, 0.0), (D_HOUSE[1], D_RIDGE, 0.0), (D_HOUSE[0], D_RIDGE, 0.0)])
+                if cut.isEmpty(): cut = None
+            if cut is not None:
+                pen.cv.save(); pen.cv.clipPath(cut, skia.ClipOp.kDifference, True)
+            try:
+                dr_headlight_beams(pen, v, B, _lvl(headlights, 252, t), t, rain); dr_taillight_glow(pen, v, B, 1.0)
+            finally:
+                if cut is not None: pen.cv.restore()
+        lay = Layer(max(0.3, v.d(B.cx, B.cy)), _beams, 'car_beams', blur=None)
         lay.order = v.d(B.cx, B.cy) - 0.25
         dyn.append(lay)
         lay2 = Layer(max(0.3, v.d(B.cx, B.cy)), lambda pen, t: dr_exhaust(pen, v, B, t), 'car_exhaust', blur=None)
@@ -4191,3 +4387,877 @@ def _outside_morning(pen, v):
 def dr_cardio(view='side', **kw):
     """The cardiologist's office, that same morning (warm sun): view 'side' | 'ruth'."""
     return _box_build(_cardio_cfg(), 'dr_cardio' + ('' if view == 'side' else '_ruth'), dict(kw), outside=_outside_morning, grade='dr_morning')
+
+
+# ====================================================================================================== the car interior
+# Halverson's car from inside, on its own little plan (metres): x across (+x = the passenger's side; left-hand drive),
+# y along the car (+y = forward), Y up from the cabin floor. Night and rain: parked in Ruth's driveway (speed 0, the dome
+# light on for the pulse) or driving to Larkfield General (speed 1: streetlights pass, the wipers beat).
+K_HW = 0.72                                                  # half the cabin's width
+K_ROOF = 1.24
+K_BELT = 0.64                                                # the window sills
+K_SEAT_Y = 0.33                                              # the seat cushions' top
+K_FRONT = {'driver': (-0.37, 0.0), 'passenger': (0.37, 0.0)}
+K_BACK = {'back_l': (-0.38, -1.02), 'back_r': (0.38, -1.02)}
+K_MIRROR = (0.0, 1.08, 0.5)                                  # the rear-view mirror's centre (x, Y, y)
+K_WHEEL = (-0.37, 0.76, 0.5, 0.185)                          # the steering wheel: centre x, Y, y and radius
+K_EYE = (0.37, 1.04, 0.06)                                   # the front passenger's (the narrator's) eye
+K_WS = [(-0.66, 0.74, 1.0), (0.66, 0.74, 1.0), (0.56, 1.2, 0.48), (-0.56, 1.2, 0.48)]       # the windshield glass
+K_RW = [(0.6, 0.82, -1.72), (-0.6, 0.82, -1.72), (-0.5, 1.2, -1.28), (0.5, 1.2, -1.28)]      # the rear window glass
+K_SPEED = 13.0                                               # m/s on the way to the hospital
+K_LAMP_GAP = 30.0
+K_COL = dict(seat='#7a84a4', seat_d='#5c6686', trim='#4a5068', card='#666e8c', dash='#3c4052', liner='#b4b8c6', carpet='#30323e', body='#4a6e80')
+
+
+def _k_seat_profile(part='back'):
+    """A car seat's side view in two convex pieces (extrude needs convex profiles): the reclined back and the cushion,
+    as (cm forward from the seat's rear, cm down from the top of the back at Y 0.9)."""
+    if part == 'back': return [(0, 7), (3, 1), (9, 0), (14, 3), (27, 57), (14, 64), (11, 60)]
+    return [(12, 57), (58, 54), (70, 55), (74, 62), (73, 74), (16, 78), (11, 70)]
+
+
+def _k_seat_parts(x, y_rear, w=0.5, rests=None, tag='seat'):
+    """A seat as Parts: the extruded profile (cushion + reclined back) and its headrests (x centres)."""
+    P = []
+
+    def body(pen, v):
+        def cap(p_, W, H):
+            p_.linear(rect(0, 0, W, H), 0, 0, W, 0, [(0, '#000000', 50), (0.5, '#000000', 0), (1, '#ffffff', 20)])
+            p_.line(smooth([(12, 6), (22, 52), (62, 52)], False, 0.6), 0.9, '#000000', 90)         # the bolster seam
+        for part in (('back', 'cushion') if v.hy > y_rear + 0.3 else ('cushion', 'back')):
+            extrude(pen, v, (x - w / 2, 0.9, y_rear), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), _k_seat_profile(part), (w, 0.0, 0.0), K_COL['seat_d'], K_COL['seat'], cap)
+        # the upholstery seams on the back's face and across the cushion
+        if v.hy > y_rear + 0.2:
+            sw_ = max(0.8, 0.006 * v.S / max(0.3, v.d(x, y_rear + 0.2)))
+            xs = [x - w / 2 + 0.07, x + w / 2 - 0.07] + ([x] if w > 1.0 else [])
+            for sx in xs:
+                _seg3(pen, v, (sx, 0.86, y_rear + 0.145), (sx, 0.37, y_rear + 0.265), sw_, '#000000', 70, False)
+                _seg3(pen, v, (sx, 0.355, y_rear + 0.3), (sx, 0.35, y_rear + 0.7), sw_, '#000000', 70, False)
+            _seg3(pen, v, (x - w / 2 + 0.03, 0.62, y_rear + 0.205), (x + w / 2 - 0.03, 0.62, y_rear + 0.205), sw_, '#000000', 60, False)
+    P.append(Part(fn=body, ref=(x, 0.5, y_rear + 0.32), tag=tag))
+    for hx in (rests if rests is not None else (x,)):
+        def rest(pen, v, hx=hx):
+            for dx in (-0.06, 0.06):
+                _seg3(pen, v, (hx + dx, 0.88, y_rear + 0.07), (hx + dx, 0.98, y_rear + 0.06), max(1.5, 0.012 * v.s(hx, y_rear)), lit('#8a909a', (hx, 0.95, y_rear), None))
+            box_extrude(pen, v, Box(hx, y_rear + 0.06, 0.27, 0.11, 0.96, 1.14, 180), -0.135, 0.135, -0.055, 0.055, 0.96, 1.14,
+                        lambda W, H: rounded_rect_pts(W, H, 5.0, 4.0), K_COL['seat'], K_COL['seat_d'])
+        P.append(Part(fn=rest, ref=(hx, 1.05, y_rear + 0.06), tag=tag + '_rest'))
+    return P
+
+
+def _k_lamp_ys(t, speed, side):
+    """The y (car frame) of the streetlights on one side (+1 right / -1 left) at time t: they slide back as the car drives."""
+    off = (K_SPEED * speed * t + (0.0 if side > 0 else K_LAMP_GAP * 0.5)) % K_LAMP_GAP
+    return [k * K_LAMP_GAP - off for k in range(-3, 5)]
+
+
+def _k_pass_level(side, speed, base=0.0):
+    """f(t) 0..1: how much of a passing sodium lamp falls into the cabin from one side."""
+    if not speed:
+        f = lambda t: base
+        f.const = base
+        return f
+
+    def f(t):
+        k = 0.0
+        for y in _k_lamp_ys(t, speed, side):
+            k = max(k, math.exp(-((y - 1.0) / 5.5) ** 2))
+        return base + (1.0 - base) * k
+    return f
+
+
+def dr_car_outside(pen, v, t=0.0, speed=1.0, static=False):
+    """The night outside the car windows. static=True: the sky, the wet road and the dark edge of town (cached);
+    else the live part: the streetlights sliding past (their glow, pole and streak on the wet road) and a few lit windows."""
+    H = v.h
+    if static:
+        pen.linear(rect(-900, -700, 3800, 2600), 0, H - 0.9 * v.S, 0, H, [(0, '#04060c'), (0.6, '#0a0e1a'), (1, '#1c1a26')])
+        pen.linear(rect(-900, H, 3800, 2000), 0, H, 0, H + 0.6 * v.S, [(0, '#12141c'), (1, '#07080c')])
+        rng = np.random.default_rng(31)
+        pts = [(-900, H + 2)]
+        x = -900.0
+        while x < 2900:
+            w = rng.uniform(60, 220); h = rng.uniform(0.02, 0.075) * v.S
+            pts += [(x, H - h * 0.6), (x + w * 0.5, H - h), (x + w, H - h * 0.7)]
+            x += w
+        pts.append((2900, H + 2))
+        pen.fill(poly(pts), '#06080e')
+        pen.linear(rect(-900, H - 0.05 * v.S, 3800, 0.1 * v.S), 0, H - 0.05 * v.S, 0, H + 0.05 * v.S, [(0, '#3a3040', 0), (0.5, '#3a3040', 70), (1, '#3a3040', 0)])
+        if v.fy > 0.2:                                                       # looking forward: the wet road in our own headlights
+            G = -0.42
+            q = [(-1.6, G, 2.4), (1.6, G, 2.4), (9.0, G, 46.0), (-9.0, G, 46.0)]
+            pth = v.poly3(q)
+            if not pth.isEmpty():
+                a_, b_ = v.p(0.0, G, 3.0), v.p(0.0, G, 46.0)
+                pen.linear(pth, a_[0], a_[1], b_[0], b_[1], [(0, '#fff2d6', 150), (0.35, '#fff2d6', 70), (1, '#fff2d6', 0)])
+        return
+    for side in (1, -1):
+        for y in _k_lamp_ys(t, speed, side):
+            x = side * 6.2
+            if v.d3(x, 5.4, y) < 1.0: continue
+            d = v.d3(x, 5.4, y)
+            hx, hy = v.p(x, 5.4, y)
+            if hx < -700 or hx > 2620: continue
+            s = v.S / d
+            bx, by = v.p(x + side * 1.4, 0.0 - 0.45, y)
+            pen.seg((bx, by), (bx, hy), max(1.0, 0.1 * s), '#0c0e14', 220)
+            pen.glow(hx, hy, 1.6 * s, D_SODIUM, 120)
+            pen.glow(hx, hy, 0.4 * s, '#fff6e0', 230)
+            gx, gy = v.p(x * 0.55, -0.45, y)
+            pen.ellipse_glow(gx, gy, 3.2 * s, max(3.0, 0.5 * s), D_SODIUM, 55)
+    if v.fy > 0.2:                                                          # the centre line running under the car
+        G = -0.42
+        for k in range(12):
+            y0 = ((k * 9.0 - K_SPEED * speed * t) % 108.0) + 2.5
+            pq = v.poly3([(-1.75, G, y0), (-1.6, G, y0), (-1.6, G, y0 + 3.2), (-1.75, G, y0 + 3.2)])
+            if not pq.isEmpty(): pen.fill(pq, '#e8d890', int(150 * clamp(1.2 - y0 / 45.0, 0.0, 1.0)))
+    dr_rain(pen, t, (-500, -400, 2900, 1800), 1.0, 21, 1.0 + 0.6 * speed, 0.1 + 0.25 * speed * (1.0 if abs(v.fx) > 0.5 else 0.0) * (-1.0 if v.fx < 0 else 1.0), '#a8b4cc', 30, 260, far=True)
+    rng = np.random.default_rng(57)
+    for i in range(7):                                                      # a few windows still lit, far back from the road
+        side = 1 if i % 2 else -1
+        y = ((i * 37.0 - K_SPEED * speed * t * 0.999) % 200.0) - 80.0
+        x = side * rng.uniform(13.0, 19.0)
+        if v.d3(x, 1.4, y) < 2.0: continue
+        px, py = v.p(x, 1.4, y); s = v.S / v.d3(x, 1.4, y)
+        pen.fill(rect(px - 0.5 * s, py - 0.45 * s, 1.0 * s, 0.9 * s), '#ffca80', 150)
+        pen.glow(px, py, 1.2 * s, '#ffb060', 40)
+
+
+def dr_car_glass_rain(pen, t, clip, bounds, k=1.0, speed=1.0, dirx=0.0, seed=7, c='#b8c8e8'):
+    """Rain on the car's glass: fine beads; at speed they crawl back along the side windows (dirx = their screen direction)
+    leaving short tails, a few rivulets run down. Live; clipped to the projected panes."""
+    if k <= 0.01 or clip is None or clip.isEmpty(): return
+    x0, y0, x1, y1 = bounds[0], bounds[1], bounds[2], bounds[3]
+    W, H = max(1.0, x1 - x0), max(1.0, y1 - y0)
+    rng = np.random.default_rng(seed)
+    cv = pen.cv
+    cv.save(); cv.clipPath(clip, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(x0, y0, W, H), '#0a1020', 46)                                   # the glass's tint
+    n = int(clamp(W * H / 5200.0, 60, 520) * k)
+    xs = rng.uniform(0, 1, n); ys = rng.uniform(0, 1, n); rs = rng.uniform(1.3, 3.4, n); vs = rng.uniform(0.3, 1.0, n)
+    mv = 90.0 * speed
+    for i in range(n):
+        x = x0 + ((xs[i] * W + dirx * mv * vs[i] * t) % W)
+        y = y0 + ((ys[i] * H + (12.0 + 30.0 * speed * (0.0 if dirx else 1.0)) * vs[i] * t * 0.4) % H)
+        r = rs[i]
+        if dirx and speed:
+            pen.seg((x, y), (x - dirx * r * 5.0 * vs[i], y - r * 0.6), r * 0.7, c, 34)
+        pen.fill(oval(x, y, r * 0.8, r), c, 70)
+        pen.fill(oval(x - r * 0.25, y - r * 0.3, r * 0.3), '#ffffff', 90)
+    for i in range(int(7 * k)):
+        x = x0 + rng.uniform(0.04, 0.96) * W
+        ph = (t * rng.uniform(0.08, 0.2) + rng.uniform(0, 1)) % 1.0
+        ya, yb = y0 + H * max(0.0, ph - 0.25), y0 + H * ph
+        pts = [(x + 6.0 * math.sin(yy * 0.03 + i) + dirx * (yy - ya) * 0.35 * speed, yy) for yy in np.linspace(ya, yb, 8)]
+        pen.line(smooth(pts, False, 0.8), 1.6, c, 60)
+        pen.fill(oval(pts[-1][0], pts[-1][1], 2.4, 3.2), c, 110)
+    cv.restore()
+
+
+def dr_wipers(pen, v, t=0.0, k=1.0, period=1.25):
+    """The two wipers sweeping the windshield (k 0 = parked at the bottom)."""
+    G = _norm3((0.0, 0.46, -0.52))
+    ph = 0.5 * (1.0 - math.cos(2.0 * math.pi * (t / period))) if k > 0.01 else 0.0
+    th = math.radians(8.0 + 96.0 * ph)
+    for px in (-0.38, 0.22):
+        P0 = (px, 0.765, 0.975)
+        d = (math.cos(th), math.sin(th) * G[1], math.sin(th) * G[2])
+        a_ = _add3(P0, d, 0.12); b_ = _add3(P0, d, 0.56)
+        s = v.S / max(0.3, v.d3(*P0))
+        _seg3(pen, v, P0, a_, max(1.2, 0.012 * s), '#0a0b0e', 255, False)
+        _seg3(pen, v, a_, b_, max(1.8, 0.02 * s), '#0a0b0e', 255, False)
+
+
+class DrCarCabin(Room):
+    """The inside of Halverson's car (see the constants above). o: speed, dome, dash, wheel (draw the steering wheel), view."""
+    name = 'car'
+    poly = [(-K_HW, -1.7), (K_HW, -1.7), (K_HW, 1.0), (-K_HW, 1.0)]
+
+    def lights(self, o):
+        sp = o.get('speed', 1.0)
+        amb = '#46507c'
+        dash = [Lamp(-0.3, 0.82, 0.5, 1.9, '#8ad8d0', 0.8, fall=1.3), Lamp(0.2, 0.7, 0.6, 1.4, '#ffb070', 0.4, fall=1.4)]
+        dome = [Lamp(0.0, 1.16, -0.25, 2.6, '#ffe2b8', 1.5, (1.0, 0.8, 0.3), fall=1.25)]
+        sl = [Lamp(-1.5, 1.7, 0.3, 3.4, D_SODIUM, 1.25, fall=1.2)]
+        sr = [Lamp(1.5, 1.7, 0.3, 3.4, D_SODIUM, 1.25, fall=1.2)]
+        var = [('dash', dash, _kfn(o.get('dash', 1.0), 271)), ('dome', dome, _kfn(o.get('dome', 0.0), 272)),
+               ('street_l', sl, _k_pass_level(-1, sp, 0.18)), ('street_r', sr, _k_pass_level(1, sp, 0.3 if not sp else 0.12))]
+        fill = [Lamp(0.0, 1.05, 0.2, 3.4, '#7a88c4', 0.45, fall=1.1),                # the night through the windshield
+                Lamp(0.0, 1.5, -2.3, 3.0, '#8a9ad8', 0.5, fall=1.2)]                 # and through the rear window (a rim on the headrests)
+        return amb, fill, var
+
+    def shell(self, pen, v, o):
+        C = K_COL
+        # floor and roof liner
+        draw_face(pen, v, floor_face(-K_HW, K_HW, -1.72, 1.02, 0.0), lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.5, 'overlay', 0.8), C['carpet'], ao=14)
+        draw_face(pen, v, ceil_face(-K_HW, K_HW, -1.3, 0.5, K_ROOF), lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.3, 'overlay', 0.6), C['liner'], ao=10)
+        # the two side walls: door cards below the belt, pillars, the roof rail; the windows are holes
+        for side in (-1, 1):
+            a, b = ((-K_HW, -1.72), (-K_HW, 1.05)) if side < 0 else ((K_HW, 1.05), (K_HW, -1.72))
+            F = wall_face(a, b, 0.0, K_ROOF)
+            if not v.visible(F.O, F.n): continue
+            W_ = 277.0
+
+            def uu(y, side=side): return (y + 1.72) * 100.0 if side < 0 else (1.05 - y) * 100.0
+            fr = [(uu(-0.26), 60), (uu(1.0), 60), (uu(0.47), 8), (uu(-0.26), 8)]
+            rr = [(uu(-1.22), 60), (uu(-0.38), 60), (uu(-0.38), 8), (uu(-1.04), 8)]
+
+            def art(p_, W, H, uu=uu):
+                p_.fill(rect(0, 60, W, H - 60), C['card'])
+                p_.linear(rect(0, 60, W, H - 60), 0, 60, 0, H, [(0, '#ffffff', 26), (0.3, '#000000', 0), (1, '#000000', 80)])
+                for (y0, y1) in ((-1.26, -0.34), (-0.3, 0.98)):                       # the two doors: armrest, pull, speaker, shut lines
+                    u0, u1 = sorted((uu(y0), uu(y1)))
+                    p_.line(rrect(u0 + 2, 62, u1 - u0 - 4, H - 68, 4), 0.8, '#000000', 120)
+                    ar = rrect(u0 + 12, 76, (u1 - u0) * 0.62, 9, 4)
+                    p_.fill(ar, C['trim']); p_.line(ar, 0.6, '#000000', 160)
+                    p_.fill(rrect(u0 + (u1 - u0) * 0.42, 68, 13, 3.4, 1.6), '#b8bcc4')
+                    cx_ = u0 + (u1 - u0) * 0.76
+                    p_.fill(oval(cx_, 100, 9), '#15171d')
+                    for k in range(5): p_.line(oval(cx_, 100, 1.6 + k * 1.6), 0.4, '#3a3e48', 200)
+                p_.fill(rect(0, 58.5, W, 3.0), '#12141a')                               # the belt-line rubber
+            draw_face(pen, v, F, art, C['trim'], holes=[poly(fr), poly(rr)], ao=8)
+        # the rear: the C pillars either side of the rear glass, the header over it
+        for side in (-1, 1):
+            q = [(side * K_HW, 0.82, -1.72), (side * 0.6, 0.82, -1.72), (side * 0.5, 1.2, -1.28), (side * K_HW, K_ROOF, -1.28)]
+            pth = v.poly3(q)
+            if not pth.isEmpty() and v.hy > -1.5: pen.fill(pth, lit(C['liner'], q[0], None, 0.7)); pen.line(pth, 0.8)
+        hq = v.poly3([(-0.5, 1.2, -1.28), (0.5, 1.2, -1.28), (K_HW, K_ROOF, -1.28), (-K_HW, K_ROOF, -1.28)])
+        if not hq.isEmpty() and v.hy > -1.2: pen.fill(hq, lit(C['liner'], (0, 1.22, -1.28), None, 0.75))
+        shelf = v.poly3([(-K_HW, 0.82, -1.72), (K_HW, 0.82, -1.72), (K_HW, 0.82, -1.4), (-K_HW, 0.82, -1.4)])
+        if not shelf.isEmpty() and v.cam_h > 0.82: pen.fill(shelf, lit('#262a34', (0, 0.82, -1.55), (0, 1, 0)))
+        # the windshield's header and the A pillars seen from inside
+        if v.hy < 0.9:
+            for side in (-1, 1):
+                _seg3(pen, v, (side * 0.69, 0.74, 1.0), (side * 0.59, 1.2, 0.48), max(3.0, 0.07 * v.S / max(0.3, v.d(side * 0.64, 0.74))), lit(C['trim'], (side * 0.6, 1.0, 0.7), None))
+            _seg3(pen, v, (-0.58, 1.215, 0.48), (0.58, 1.215, 0.48), max(3.0, 0.05 * v.S / max(0.3, v.d(0.0, 0.48))), lit(C['trim'], (0, 1.2, 0.48), None))
+        # the dome light
+        dq = v.poly3([(-0.09, K_ROOF - 0.004, -0.31), (0.09, K_ROOF - 0.004, -0.31), (0.09, K_ROOF - 0.004, -0.19), (-0.09, K_ROOF - 0.004, -0.19)])
+        if not dq.isEmpty() and v.cam_h < K_ROOF: pen.fill(dq, lit('#8a8c94', (0.0, K_ROOF, -0.25), None, 0.7)); pen.line(dq, 0.8)
+
+    def pieces(self, o):
+        C = K_COL
+        P = []
+        view = o.get('view', 'front')
+        for nm, (x, y) in K_FRONT.items():
+            if view == 'back' or (view == 'driver' and nm == 'passenger'): continue      # the lens sits where these would be
+            parts = _k_seat_parts(x, y - 0.38)
+            P.append(Piece('seat_' + nm, (x, 0.5, y - 0.06), lambda pen, v, parts=parts: draw_parts(pen, v, parts), occupant=[(x, y)], front=parts,
+                           block=_box_pts(x, y - 0.02, 0.25, 0.37)))
+        bench = _k_seat_parts(0.0, -1.42, 1.4, rests=(-0.38, 0.38), tag='bench')
+        P.append(Piece('bench', (0.0, 0.5, -1.1), lambda pen, v: draw_parts(pen, v, bench), occupant=list(K_BACK.values()), front=bench,
+                       block=_box_pts(0.0, -1.05, 0.7, 0.37)))
+
+        def console(pen, v):
+            draw_box(pen, v, Box(0.0, 0.1, 0.2, 0.9, 0.0, 0.34, 180), {'all': C['dash'], 'top': '#2a2e38'})
+            gx = (0.0, 0.34, 0.32)
+            if v.d(gx[0], gx[2]) > 0.2:
+                s = v.s(gx[0], gx[2])
+                _seg3(pen, v, gx, (0.0, 0.5, 0.3), max(1.5, 0.018 * s), '#14161a')
+                kx, ky = v.p(0.0, 0.52, 0.3); pen.fill(oval(kx, ky, 0.028 * s), '#2a2c34'); pen.line(oval(kx, ky, 0.028 * s), 0.8)
+        if view != 'back': P.append(Piece('console', (0.0, 0.2, 0.1), console, block=_box_pts(0.0, 0.1, 0.1, 0.45)))
+        if view == 'front':
+            P.append(Piece('near_side', (0.9, 0.9, 0.3), lambda pen, v: dr_car_near_side(pen, v)))
+
+        def dash(pen, v):
+            B = Box(0.0, 0.83, 2 * K_HW, 0.4, 0.0, 0.74, 180)                  # the dash: its face toward the cabin (-y) is the box 'back'... fa 180: front faces +y
+
+            def face(p_, W, H):
+                p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 22), (0.25, '#000000', 0), (1, '#000000', 90)])
+                # (art x runs from the passenger's side to the driver's as seen from the seats)
+                cl = rrect(W - 62, 3, 44, 15, 6)                                   # the instrument cluster in front of the driver
+                p_.fill(cl, '#0a0c10'); p_.line(cl, 0.6, '#000000', 220)
+                for (cx_, r_) in ((W - 51, 6.0), (W - 31, 6.0)):
+                    p_.line(oval(cx_, 10.5, r_), 0.8, '#7ae0d8', 220)
+                    p_.seg((cx_, 10.5), (cx_ + r_ * 0.7, 10.5 - r_ * 0.5), 0.8, '#ff6a4a', 240)
+                st = rrect(W / 2 - 13, 6, 26, 30, 3)                                # the centre stack: vents, the radio's clock
+                p_.fill(st, '#0e1014'); p_.line(st, 0.6, '#000000', 220)
+                p_.fill(rrect(W / 2 - 10, 9, 20, 6, 1.5), '#1a1c22')
+                p_.fill(rrect(W / 2 - 10, 18, 20, 7, 1.5), '#0a1a18')
+                btext(p_, o.get('clock', '4:07'), W / 2, 24, 'vhs', 7.5, '#7af0e0', 235, 'center')
+                for k in range(3): p_.fill(oval(W / 2 - 7 + k * 7, 31, 2.0), '#2a2e38')
+                gb = rrect(10, 16, 46, 20, 3)                                       # the glove box
+                p_.line(gb, 0.7, '#000000', 150); p_.fill(rrect(30, 19, 7, 2.4, 1), '#3a3e48')
+                for x_ in (6, W - 16): p_.fill(rrect(x_, 4, 10, 6, 2), '#0c0e12')    # the outer vents
+            draw_box(pen, v, B, {'back': dict(fill=C['dash'], art=face), 'all': C['dash'], 'top': dict(fill='#262a34', art=lambda p_, W, H: p_.linear(
+                rect(0, 0, W, H), 0, 0, 0, H, [(0, '#000000', 70), (1, '#ffffff', 14)]))})
+            # the cowl over the cluster
+            hq = v.poly3([(-0.6, 0.74, 0.64), (-0.14, 0.74, 0.64), (-0.18, 0.8, 0.72), (-0.56, 0.8, 0.72)])
+            if not hq.isEmpty(): pen.fill(hq, lit('#1c1f28', (-0.37, 0.78, 0.68), (0, 0.5, -0.5))); pen.line(hq, 0.8)
+        P.append(Piece('dash', (0.0, 0.5, 0.7), dash, block=_box_pts(0.0, 0.83, K_HW, 0.2)))
+        if o.get('wheel', True):
+            P.append(Piece('wheel', (K_WHEEL[0], K_WHEEL[1], K_WHEEL[2] - 0.02), lambda pen, v: dr_car_wheel(pen, v)))
+        P.append(Piece('mirror', (K_MIRROR[0], K_MIRROR[1], K_MIRROR[2]), lambda pen, v: dr_car_mirror(pen, v, o)))
+        return P
+
+    def glows(self, v, o):
+        kd = _kfn(o.get('dome', 0.0), 272)
+
+        def dome(pen, t):
+            k = kd(t)
+            if k <= 0.01 or v.cam_h > K_ROOF: return
+            dq = v.poly3([(-0.085, K_ROOF - 0.005, -0.305), (0.085, K_ROOF - 0.005, -0.305), (0.085, K_ROOF - 0.005, -0.195), (-0.085, K_ROOF - 0.005, -0.195)])
+            if dq.isEmpty(): return
+            pen.fill(dq, '#fff2d8', 235 * k)
+            b = _rb(dq); pen.ellipse_glow((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, max(20.0, (b[2] - b[0]) * 1.2), max(12.0, (b[3] - b[1]) * 2.0), '#ffe2b8', 80 * k)
+        return [('dome_glow', (0.0, K_ROOF, -0.25), dome)]
+
+    def spots(self, v, o):
+        S = {}
+        for nm, (x, y) in K_FRONT.items():
+            S[nm] = _mk_spot(v, nm, x, y, 0.0, 'seat', 'the %s seat (hip point; faces forward +y; seat top %.2f m above the cabin floor)' % (nm, K_SEAT_Y), face=(0, 1), seat_Y=K_SEAT_Y)
+        for nm, (x, y) in K_BACK.items():
+            S[nm] = _mk_spot(v, nm, x, y, 0.0, 'seat', 'the back seat, %s (back_r: Milo, behind the narrator; back_l: HIM, folded, behind the driver)' % ('left' if x < 0 else 'right'),
+                             face=(0, 1), seat_Y=K_SEAT_Y)
+        S['wheel'] = _mk_spot(v, 'wheel', K_WHEEL[0], K_WHEEL[2], K_WHEEL[1], 'point', 'the steering wheel hub')
+        for nm, a in (('wheel_10', 150.0), ('wheel_2', 30.0)):
+            P = _k_wheel_pt(math.radians(a))
+            S[nm] = _mk_spot(v, nm, P[0], P[2], P[1], 'point', "the wheel rim at %s o'clock (her hands)" % nm.split('_')[1])
+        S['mirror'] = _mk_spot(v, 'mirror', K_MIRROR[0], K_MIRROR[2], K_MIRROR[1], 'point', 'the rear-view mirror')
+        S['roof_back_l'] = _mk_spot(v, 'roof_back_l', K_BACK['back_l'][0], K_BACK['back_l'][1], K_ROOF, 'point', 'the roof liner over the back-left seat (his head bends against it)')
+        S['lap_back_r'] = _mk_spot(v, 'lap_back_r', K_BACK['back_r'][0], K_BACK['back_r'][1] + 0.2, K_SEAT_Y + 0.14, 'surface', "Milo's lap / wrist on the back seat")
+        S['narrator_eye'] = _mk_spot(v, 'narrator_eye', K_EYE[0], K_EYE[2], K_EYE[1], 'point', "the narrator's eye (front passenger): looks up-left at the mirror")
+        return S
+
+
+def dr_car_near_side(pen, v):
+    """The passenger side of the car from outside (for the lens at the passenger's window): the door skins, the roof and
+    the pillars with the two window openings (no glass in them: the faces must read), the door mirror."""
+    col_ = K_COL['body']
+    F = wall_face((0.9, -2.4), (0.9, 2.05), -0.25, 1.3)
+    def uu(y): return (y + 2.4) * 100.0
+    def bb(Y): return (1.3 - Y) * 100.0
+    shape = poly([(uu(-2.36), bb(0.3)), (uu(-2.34), bb(0.72)), (uu(-1.8), bb(0.86)), (uu(-1.32), bb(1.275)), (uu(0.44), bb(1.285)), (uu(1.04), bb(0.74)),
+                  (uu(1.9), bb(0.58)), (uu(1.99), bb(0.4)), (uu(1.99), bb(-0.25)), (uu(-2.36), bb(-0.25))])
+    fr = poly([(uu(-0.24), bb(0.67)), (uu(0.97), bb(0.67)), (uu(0.5), bb(1.19)), (uu(-0.24), bb(1.19))])
+    rr = poly([(uu(-1.2), bb(0.67)), (uu(-0.36), bb(0.67)), (uu(-0.36), bb(1.19)), (uu(-1.0), bb(1.19))])
+
+    def art(p_, W, H):
+        p_.linear(rect(0, 0, W, H), 0, 0, 0, H, [(0, '#ffffff', 50), (0.12, '#ffffff', 0), (0.5, '#000000', 0), (1, '#000000', 90)])
+        p_.fill(rect(0, bb(0.665), W, 2.4), '#12141a')                                   # the belt-line rubber
+        p_.fill(rect(0, bb(0.63), W, 1.2), '#b8c8e8', 90)                                # the wet shoulder line
+        for y_ in (-1.26, -0.3, 1.0):
+            p_.seg((uu(y_), bb(0.66)), (uu(y_), bb(-0.2)), 1.0, '#000000', 150)
+        p_.fill(rect(uu(-0.36), bb(1.19), 12, bb(0.67) - bb(1.19)), '#101216')           # the B pillar (black-out)
+        for y_ in (-0.5, 0.72):
+            hd = rrect(uu(y_), bb(0.56), 12, 3.0, 1.4)
+            p_.fill(hd, '#c8ccd0'); p_.line(hd, 0.5, '#000000', 160)
+        mr = rrect(uu(0.78), bb(0.86), 21, 14, 4)                                        # the door mirror
+        p_.fill(mr, _darken(col_, 0.2)); p_.line(mr, 0.8, '#000000', 200)
+        for w_ in (fr, rr): p_.line(w_, 1.6, '#0c0e12', 255)
+        rng = np.random.default_rng(4)                                                   # beads of rain on the paint
+        for i in range(160):
+            x_, y_ = rng.uniform(0, W), rng.uniform(bb(1.28), bb(0.3))
+            p_.fill(oval(x_, y_, 0.35, 0.5), '#c8d8f0', 70)
+    draw_face(pen, v, F, art, col_, holes=[fr, rr], shape=shape, ao=False, lw=1.4)
+
+
+def _k_wheel_pt(a, r=None):
+    """A point on the steering wheel rim: a = angle (rad) from 3 o'clock, counter-clockwise seen from the driver."""
+    x, Y, y, R = K_WHEEL
+    r = R if r is None else r
+    up = _norm3((0.0, 0.9, 0.42))                                # the wheel plane leans toward the dash at the top
+    return (x + math.cos(a) * r, Y + math.sin(a) * r * up[1], y + math.sin(a) * r * up[2])
+
+
+def dr_car_wheel(pen, v):
+    """The steering wheel on its column: a thick rim, three spokes, the horn pad."""
+    x, Y, y, R = K_WHEEL
+    if v.d(x, y) < 0.15: return
+    s = v.S / max(0.2, v.d(x, y))
+    _seg3(pen, v, (x, Y - 0.02, y + 0.04), (x, Y - 0.1, y + 0.22), max(3.0, 0.07 * s), '#15171c')
+    rim = [_k_wheel_pt(2 * math.pi * k / 28) for k in range(28)]
+    q = _clip_near3(v, rim)
+    if len(q) < 3: return
+    pts = [v.p(*p_) for p_ in q]
+    for a in (math.radians(180), math.radians(0), math.radians(270)):
+        _seg3(pen, v, (x, Y, y), _k_wheel_pt(a, R * 0.95), max(2.0, 0.035 * s), '#1e2028', 255, False)
+    pen.line(poly(pts), max(3.0, 0.036 * s) + 2.0, LINE)
+    pen.line(poly(pts), max(3.0, 0.036 * s), '#2a2d36')
+    pen.line(poly(pts), max(1.0, 0.008 * s), '#5a5e6a', 120)
+    hx, hy = v.p(x, Y, y)
+    hub = [v.p(*_k_wheel_pt(2 * math.pi * k / 14, R * 0.3)) for k in range(14)]
+    pen.fill(poly(hub), '#22252d'); pen.line(poly(hub), 1.0)
+
+
+def _k_mirror_frame(o=None):
+    """The mirror glass as a Face tilted toward the front passenger: (Face, unit normal). The normal bisects the lines
+    from the mirror to the narrator's eye and to the middle of the back seat, so that seat is what the narrator sees."""
+    M = K_MIRROR
+    E = (K_EYE[0], K_EYE[1], K_EYE[2]); T = (0.0, 0.92, -1.02)
+    n = _norm3(_add3(_norm3(_sub3(E, M)), _norm3(_sub3(T, M))))
+    Uu = _norm3(_cross3((0.0, 1.0, 0.0), n))                        # along the mirror's width
+    if _dot3(Uu, (1.0, 0.0, 0.0)) > 0: Uu = _scale3(Uu, -1.0)        # art x runs from +x (passenger) to -x: Uu x Vu = n
+    Vu = _norm3(_cross3(n, Uu))
+    if Vu[1] > 0: Vu = _scale3(Vu, -1.0)
+    W, H = 25.0, 7.6
+    O = _add3(_add3(M, Uu, -W / 200.0), Vu, -H / 200.0)
+    return Face(O, Uu, Vu, W, H, n, 'front'), n
+
+
+def k_reflect(P):
+    """A cabin point mirrored in the rear-view mirror (where its reflection appears to be, behind the glass)."""
+    F, n = _k_mirror_frame()
+    d = _dot3(_sub3(P, K_MIRROR), n)
+    return _add3(P, n, -2.0 * d)
+
+
+def _k_mirror_uv(P, eye=K_EYE):
+    """Mirror-frame (cm) position where cabin point P is seen reflected from `eye`."""
+    F, n = _k_mirror_frame()
+    Pr = k_reflect(P)
+    E = (eye[0], eye[1], eye[2])
+    dv = _sub3(Pr, E)
+    den = _dot3(dv, n)
+    if abs(den) < 1e-6: return None
+    tt = _dot3(_sub3(K_MIRROR, E), n) / den
+    X = _add3(E, dv, tt)
+    return F.uv(X)
+
+
+def dr_car_mirror(pen, v, o=None):
+    """The rear-view mirror on its stalk: a dark shell; in its glass, the back seat as the narrator sees it (the bench
+    and its headrests against the rain-streaked rear window). The film draws Milo and HIM into it at the 'mirror_*' spots,
+    clipped to info['mirror_quad']."""
+    F, n = _k_mirror_frame()
+    M = K_MIRROR
+    if v.d(M[0], M[2]) < 0.12: return
+    s = v.S / max(0.15, v.d(M[0], M[2]))
+    _seg3(pen, v, (M[0], M[1] + 0.02, M[2] + 0.01), (0.0, 1.2, 0.5), max(2.0, 0.02 * s), '#14161b')
+    back = _clip_near3(v, [F.pt(-0.8, -0.8), F.pt(F.W + 0.8, -0.8), F.pt(F.W + 0.8, F.H + 0.8), F.pt(-0.8, F.H + 0.8)])
+    if len(back) >= 3:
+        bp = poly([v.p(*p_) for p_ in back])
+        pen.fill(bp, '#101216'); pen.line(bp, 1.2)
+    if not v.visible(F.O, F.n): return
+
+    def art(p_, W, H):
+        p_.fill(rect(0, 0, W, H), '#0a0c12')
+        def U(P):
+            q = _k_mirror_uv(P)
+            return q if q is not None else (0.0, 0.0)
+        rw = [U(P) for P in K_RW]
+        p_.fill(poly(rw), '#0e1322')
+        b = _rb(poly(rw))
+        p_.linear(poly(rw), 0, b[1], 0, b[3], [(0, '#1a2440', 200), (1, '#0a0e18', 200)])
+        rng = np.random.default_rng(9)
+        p_.cv.save(); p_.cv.clipPath(poly(rw), skia.ClipOp.kIntersect, True)
+        for i in range(2):
+            gx, gy = rng.uniform(b[0] + 2, b[2] - 2), rng.uniform(b[1] + 0.5, b[3] - 1.2)
+            p_.radial(None, gx, gy, 1.6, [(0, D_SODIUM, 150), (1, D_SODIUM, 0)])
+        for i in range(60):
+            x_, y_ = rng.uniform(b[0], b[2]), rng.uniform(b[1], b[3])
+            p_.fill(oval(x_, y_, 0.07, 0.1), '#9ab0d8', 110)
+        p_.cv.restore()
+        p_.line(poly(rw), 0.12, '#000000', 220)
+        # the bench's back and the two headrests against it
+        top = [U((x_, 0.9, -1.36)) for x_ in (-0.72, -0.4, 0.0, 0.4, 0.72)]
+        bot = [U((x_, 0.3, -1.1)) for x_ in (0.72, -0.72)]
+        p_.fill(poly(top + bot), '#1e2334'); p_.line(poly(top, False), 0.1, '#000000', 200)
+        for hx in (-0.38, 0.38):
+            c0 = U((hx - 0.135, 1.14, -1.36)); c1 = U((hx + 0.135, 0.96, -1.36))
+            x0, x1 = sorted((c0[0], c1[0])); y0, y1 = sorted((c0[1], c1[1]))
+            hr = rrect(x0, y0, x1 - x0, y1 - y0, 0.35)
+            p_.fill(hr, '#2a3048'); p_.line(hr, 0.1, '#000000', 200)
+            p_.linear(hr, 0, y0, 0, y1, [(0, '#8a9ad8', 70), (0.4, '#8a9ad8', 0)])
+        p_.linear(rect(0, 0, W, H), 0, 0, W, H, [(0, '#ffffff', 26), (0.3, '#ffffff', 0), (0.7, '#ffffff', 0), (1, '#ffffff', 16)])
+    draw_face(pen, v, F, art, '#0a0c12', ao=False, unlit=True, lw=1.4)
+
+
+def dr_car_ext_front(pen, v):
+    """What the lens on the hood sees of the car itself: the bonnet, the cowl and the wiper spindles, the A pillars, the
+    roof's leading edge and the door mirrors (the glass and the wipers are their own live layer)."""
+    col_ = K_COL['body']
+    hood = [(-0.8, 0.74, 1.04), (0.8, 0.74, 1.04), (0.76, 0.56, 1.95), (-0.76, 0.56, 1.95)]
+    hp = v.poly3(hood)
+    if not hp.isEmpty():
+        pen.fill(hp, lit(col_, (0.0, 0.66, 1.5), (0.0, 1.0, 0.2)))
+        b = _rb(hp)
+        pen.linear(hp, 0, b[1], 0, b[3], [(0, '#b8c8e8', 60), (0.3, '#b8c8e8', 0), (1, '#000000', 60)])
+        pen.line(hp, 1.2)
+        for sx in (-0.42, 0.42):
+            _seg3(pen, v, (sx, 0.735, 1.08), (sx * 0.9, 0.57, 1.93), 1.2, '#000000', 90, False)
+    cowl = v.poly3([(-0.8, 0.74, 1.04), (0.8, 0.74, 1.04), (0.7, 0.745, 0.99), (-0.7, 0.745, 0.99)])
+    if not cowl.isEmpty(): pen.fill(cowl, '#101216')
+    for side in (-1, 1):
+        s = v.S / max(0.3, v.d(side * 0.65, 0.8))
+        pc = _darken(lit(col_, (side * 0.64, 1.0, 0.75), (side * 0.6, 0.3, 0.7)), 0.15)
+        _seg3(pen, v, (side * 0.71, 0.74, 1.0), (side * 0.6, 1.215, 0.48), max(4.0, 0.085 * s), pc)
+        fq = [(side * 0.8, 0.74, 1.04), (side * 0.71, 0.74, 1.0), (side * 0.6, 1.215, 0.48), (side * 0.76, 1.215, 0.3), (side * 0.9, 0.74, 0.5)]
+        fp = v.poly3(fq)
+        if not fp.isEmpty(): pen.fill(fp, _darken(pc, 0.25)); pen.line(fp, 1.0)
+        mq = [(side * 0.86, 0.76, 0.86), (side * 1.07, 0.78, 0.86), (side * 1.07, 0.9, 0.86), (side * 0.88, 0.9, 0.86)]
+        mp = v.poly3(mq)
+        if not mp.isEmpty(): pen.fill(mp, _darken(pc, 0.2)); pen.line(mp, 1.0)
+    s = v.S / max(0.3, v.d(0.0, 0.48))
+    _seg3(pen, v, (-0.6, 1.225, 0.47), (0.6, 1.225, 0.47), max(4.0, 0.06 * s), _darken(lit(col_, (0.0, 1.22, 0.47), (0.0, 0.6, 0.6)), 0.1))
+
+
+_dcam('dr_car_front', 1700, 520, 1.0, 2.25, 0.3, -90, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1), f=(1.0, 1.5)),
+      "the front seats from outside the passenger's window: the narrator near, Halverson at the wheel beyond; the car faces screen-right", 'car')
+_dcam('dr_car_back', 640, 500, 0.98, 0.0, -0.1, 180, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1), f=(1.0, 1.5)),
+      'the back seat from between the front seats: Milo on screen-left (back_r), HIM folded on screen-right (back_l), the rear window behind', 'car')
+_dcam('dr_car_mirror', 2500, 540, K_EYE[1], K_EYE[0], K_EYE[2], math.degrees(math.atan2(K_MIRROR[0] - K_EYE[0], K_MIRROR[2] - K_EYE[2])),
+      _env(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.06), f=(1.0, 1.4)), "the rear-view mirror from the narrator's seat: the back seat in the glass", 'car')
+_dcam('dr_car_windshield', 1500, 440, 1.2, 0.0, 2.25, 180, _env(x=(900, 1020), y=(400, 500), zoom=(1.0, 1.1), f=(1.0, 1.5)),
+      'through the windshield from the bonnet: Halverson driving on screen-right, the narrator on screen-left, the wipers beating', 'car')
+_dcam('dr_car_driver', 900, 520, 1.02, 0.68, -0.1, -105, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1), f=(1.0, 1.5)),
+      "Halverson at the wheel from the passenger's side at 3/4 (the narrator's look at her): the wheel at the right edge, her window and the rain "
+      'behind her, the back seat (HIM, back_l) over her shoulder on the left', 'car')
+
+
+def dr_car(view='front', speed=1.0, dome=0.0, dash=1.0, wheel=True, wipers=None, rain=1.0, clock='4:07', **kw):
+    """Inside Halverson's car at night in the rain. view 'front' (the two front seats from the passenger side), 'driver'
+    (her at the wheel, 3/4, from the passenger seat), 'back' (the back seat), 'mirror' (the rear-view mirror close-up),
+    'windshield' (both of them through the windshield from the bonnet). speed 1 = driving (streetlights pass, wipers), 0 =
+    parked in the driveway; dome = the dome light (level spec: on while she takes Milo's pulse); wheel=False leaves the
+    steering wheel to CH.draw_steering_wheel (info['wheel'] = its screen centre and radius). Anchors: driver, passenger,
+    back_l, back_r (seats), wheel, wheel_10, wheel_2, mirror, roof_back_l, lap_back_r; in 'mirror': mirror_back_l /
+    mirror_back_r (where the back-seat people appear in the glass: their ppm and seat_y are those of the reflection)."""
+    v = cam('dr_car_' + view)
+    if wipers is None: wipers = 1.0 if speed else 0.0
+    o = dict(speed=speed, dome=dome, dash=dash, wheel=wheel, clock=clock, no_veil=True, tod='night', view=view)
+    main = DrCarCabin()
+    dyn = []
+    lay = Layer(40.0, lambda pen, t: dr_car_outside(pen, v, t, speed), 'car_pass', blur=None)
+    lay.order = ORDER_OUT - 1.0
+    dyn.append(lay)
+    amb, steady, var = main.lights(o)
+    # the glass: tint, rain, the wipers on the windshield
+    panes = []
+    if v.hx > -K_HW: panes.append([(-K_HW, K_BELT, -1.22), (-K_HW, K_BELT, 0.98), (-K_HW, 1.16, 0.47), (-K_HW, 1.16, -1.04)])
+    if v.hx < K_HW: panes.append([(K_HW, K_BELT, 0.98), (K_HW, K_BELT, -1.22), (K_HW, 1.16, -1.04), (K_HW, 1.16, 0.47)])
+    if v.hy > -1.2: panes.append(K_RW)
+    if view != 'windshield': panes.append(K_WS)
+    if rain:
+        clips = [pth for pth in (v.poly3(q) for q in panes) if not pth.isEmpty()]
+        if clips:
+            clip = clips[0]
+            for p_ in clips[1:]: clip = union(clip, p_)
+            cb = _rb(clip)
+            gl_ = Layer(max(0.3, v.d(0.0, 0.0)), lambda pen, t: dr_car_glass_rain(pen, t, clip, cb, rain, speed, -v.ry if abs(v.ry) > 0.5 else 0.0), 'glass_rain', blur=None)
+            gl_.order = ORDER_SHELL - 0.05
+            dyn.append(gl_)
+    if view != 'windshield' and v.hy < 0.9:
+        wl = Layer(max(0.3, v.d(0.0, 0.8)), lambda pen, t: dr_wipers(pen, v, t, wipers), 'wipers', blur=None)
+        wl.order = ORDER_SHELL - 0.04
+        dyn.append(wl)
+    sp = build_view('dr_car_' + view, v, main, o, outside=lambda pen, v_: dr_car_outside(pen, v_, static=True), grade='dr_car', dyn=dyn,
+                    focus=max(0.6, v.d(0.0, 0.0)) if view != 'mirror' else 0.6, dof=0.7)
+    if view == 'windshield':
+        dq = v.d(0.0, 0.75)
+        sp = sp.add(*blit(max(0.3, dq), lambda pen: dr_car_ext_front(pen, v), 'car_ext', 'drcar:ext:%s' % v.name, FRAME, '#3e4a76',
+                          [Lamp(kind='dir', c='#9aa8e0', k=0.45, d=_norm3((0.3, -0.8, -0.5)))], [('street_l', var[2][1], var[2][2]), ('street_r', var[3][1], var[3][2])],
+                          order=0.9))
+        wsp = v.poly3(K_WS)
+
+        def glass(pen, t):
+            if wsp.isEmpty(): return
+            b = _rb(wsp)
+            pen.fill(wsp, '#0a1020', 70)
+            pen.cv.save(); pen.cv.clipPath(wsp, skia.ClipOp.kIntersect, True)
+            for side in (1, -1):                                             # the streetlights slide up the glass as reflections
+                for y in _k_lamp_ys(t, speed, side):
+                    u = (y + 40.0) / 80.0
+                    if not (0.0 < u < 1.0): continue
+                    gx = (b[0] + b[2]) / 2 + side * (b[2] - b[0]) * 0.28
+                    gy = b[3] - (b[3] - b[1]) * (1.0 - u) * 1.2
+                    pen.ellipse_glow(gx, gy, (b[2] - b[0]) * 0.16, (b[3] - b[1]) * 0.1, D_SODIUM, 46)
+            pen.linear(None, b[0], b[1], b[2], b[3], [(0, '#9ab0d8', 30), (0.3, '#9ab0d8', 0), (0.75, '#9ab0d8', 0), (1, '#9ab0d8', 22)])
+            pen.cv.restore()
+            dr_car_glass_rain(pen, t, wsp, b, rain * 0.8, speed, 0.0, 9)
+            dr_wipers(pen, v, t, wipers)
+        gl = Layer(max(0.3, dq), glass, 'windshield', blur=None); gl.order = 1.0
+        sp = sp.add(gl)
+    # staging extras
+    hx, hy = v.p(K_WHEEL[0], K_WHEEL[1], K_WHEEL[2])
+    sp.info['wheel'] = dict(x=hx, y=hy, r=K_WHEEL[3] * v.S / max(0.2, v.d(K_WHEEL[0], K_WHEEL[2])), plan=K_WHEEL)
+    sp.info['roof_y'] = {nm: v.p(x, K_ROOF, y)[1] for nm, (x, y) in list(K_FRONT.items()) + list(K_BACK.items())}
+    F, n = _k_mirror_frame()
+    if v.visible(F.O, F.n):
+        sp.info['mirror_quad'] = [v.p(*c) for c in F.corners()]
+        for nm, (x, y) in K_BACK.items():
+            Pr = k_reflect((x, 0.0, y)); Ps = k_reflect((x, K_SEAT_Y, y))
+            d = max(0.2, v.d3(*Pr))
+            px, py = v.p(*Pr)
+            s_ = v.spot(Pr[0], Pr[2], Pr[1], 'the reflection of %s in the rear-view mirror: draw the figure here (flipped left-right), clipped to '
+                        'info["mirror_quad"]; ppm and seat_y are the reflection\'s' % nm, 'seat')
+            s_.seat_y = v.p(*Ps)[1]
+            s_.turn = 0.0
+            sp.anchors['mirror_' + nm] = s_
+        sp.info['mirror_roof_y'] = v.p(*k_reflect((K_BACK['back_l'][0], K_ROOF, K_BACK['back_l'][1])))[1]
+    sp.info['note'] = ('The car faces screen-right in front / driver; in back and windshield the camera looks backward, so the driver\'s side is '
+                       'screen-right. Seated figures: sp.anchors[seat], order = sp.order_at(x, y); the roof: info["roof_y"][seat].')
+    return sp
+
+
+# ====================================================================================================== Milo at 22: the morning run
+# "He's twenty-two now. He checks his blood sugar on his phone, and he runs marathons." A riverside path at sunrise on its
+# own plan (metres): the path runs along x (the runner goes +x), the river behind it (+y), the lens on the near verge.
+RN_PATH = (-1.5, 1.5)                                        # the path's y range
+RN_RAIL = 2.1                                                # the guard rail between the path and the river
+RN_BANK = 62.0                                               # the far bank
+
+
+class DrRunPath(Room):
+    name = 'run'
+    poly = [(-60.0, RN_PATH[0]), (60.0, RN_PATH[0]), (60.0, RN_PATH[1]), (-60.0, RN_PATH[1])]
+
+    def lights(self, o):
+        return '#a8948c', [Lamp(kind='dir', c='#ffcf98', k=0.95, d=_norm3((-0.5, -0.32, -0.8)))], []
+
+    def shell(self, pen, v, o):
+        H = v.h
+        box = rect(-900, -700, 3800, 2600)
+        pen.linear(box, 0, H - 1.0 * v.S, 0, H + 10, [(0, '#5a86c8'), (0.45, '#a8c0dc'), (0.8, '#ffd8b0'), (1, '#ffe8c0')])
+        sun = sky_dir(v, 18.0, 5.0)
+        if sun:
+            pen.radial(None, sun[0], sun[1], 1.5 * v.S, [(0, '#fff6d8', 255), (0.12, '#ffe2a0', 190), (0.45, '#ffb878', 60), (1, '#ff9a6a', 0)], clip=False)
+            pen.fill(oval(sun[0], sun[1], 0.09 * v.S), '#fffbe8')
+        rng = np.random.default_rng(5)
+        for i in range(9):
+            q = sky_dir(v, rng.uniform(-170, 170), rng.uniform(8, 30))
+            if q is None: continue
+            w = rng.uniform(0.5, 1.1) * v.S
+            _cloud(pen, q[0], q[1], w, w * 0.1, int(rng.integers(0, 999)), '#f2c8b0', '#fff2dc', 150)
+        # the far hills and the far bank's trees (two hazy ridges)
+        for (R, hgt, c_, seed) in ((420.0, 46.0, '#9aa8c4', 3), (190.0, 22.0, '#7a94a8', 7)):
+            rng = np.random.default_rng(seed)
+            pts = []
+            for a in np.arange(-178.0, 180.0, 2.0):
+                x, y = math.sin(math.radians(a)) * R, math.cos(math.radians(a)) * R
+                if v.d(x, y) < 5.0: continue
+                hh = hgt * (0.55 + 0.45 * math.sin(a * 0.07 + seed) * math.sin(a * 0.031 + 1.3 * seed)) + rng.uniform(0, hgt * 0.08)
+                pts.append(v.p(x, max(2.0, hh), y))
+            if len(pts) > 2:
+                pts.sort(key=lambda q: q[0])
+                pen.fill(poly([(pts[0][0], H + 4)] + pts + [(pts[-1][0], H + 4)]), c_)
+        # the river: a broad band of light back to the far bank
+        Fw = floor_face(-400.0, 400.0, RN_RAIL + 1.2, 400.0, -1.2)
+
+        def water(p_, W, Hh):
+            p_.linear(rect(0, 0, W, Hh), 0, 0, 0, Hh, [(0, '#d8b89a'), (0.04, '#a8b0c8'), (0.3, '#7a98bc'), (1, '#5a7aa8')])
+        draw_face(pen, v, Fw, water, '#8aa0c0', ao=False, line=False, unlit=True)
+        if sun:
+            gx = sun[0]
+            pen.linear(rect(gx - 0.22 * v.S, H, 0.44 * v.S, 0.3 * v.S), gx - 0.22 * v.S, 0, gx + 0.22 * v.S, 0, [(0, '#ffe2b0', 0), (0.5, '#ffe2b0', 70), (1, '#ffe2b0', 0)])
+        # the near ground: grass both sides, the path
+        Fg = floor_face(-400.0, 400.0, -60.0, RN_RAIL + 1.2, 0.0)
+
+        def grass(p_, W, Hh):
+            p_.texture(rect(0, 0, W, Hh), 'grunge', 0.5, 'overlay', 4.0)
+        draw_face(pen, v, Fg, grass, '#6a8a4a', ao=False, line=False)
+
+    def spots(self, v, o):
+        S = {}
+        S['runner'] = _mk_spot(v, 'runner', 0.0, 0.0, 0.0, 'stand', 'Milo, 22, running along the path (+x: screen-right in side; toward the lens in front)', face=(1, 0))
+        S['runner_ahead'] = _mk_spot(v, 'runner_ahead', 3.0, 0.2, 0.0, 'stand', 'three metres further on', face=(1, 0))
+        S['runner_behind'] = _mk_spot(v, 'runner_behind', -3.0, -0.2, 0.0, 'stand', 'three metres back', face=(1, 0))
+        S['rail'] = _mk_spot(v, 'rail', 0.6, RN_RAIL, 0.9, 'point', 'the guard rail top (he stops, leans, checks his phone)')
+        S['rail_stand'] = _mk_spot(v, 'rail_stand', 0.6, RN_RAIL - 0.45, 0.0, 'stand', 'standing at the rail, facing the river (+y)', face=(0, 1))
+        return S
+
+
+def _rn_scroll(pen, v, t, speed):
+    """The path and everything that slides past a runner who stays in frame: the tarmac with its edge lines and the
+    kilometre paint, the guard rail and its posts, the lamp posts, the bank's reeds and the young trees."""
+    off = speed * t
+    x_lo, x_hi = v.hx - 46.0, v.hx + 46.0
+    # the path
+    pq = v.poly3([(x_lo, 0.004, RN_PATH[0]), (x_hi, 0.004, RN_PATH[0]), (x_hi, 0.004, RN_PATH[1]), (x_lo, 0.004, RN_PATH[1])])
+    if not pq.isEmpty():
+        pen.fill(pq, lit('#8a8c94', (v.hx, 0.0, 0.0), (0, 1, 0)))
+        b = _rb(pq); pen.linear(pq, 0, b[1], 0, b[3], [(0, '#ffd8a8', 90), (1, '#3a3a4a', 40)])
+    for yy in (RN_PATH[0] + 0.12, RN_PATH[1] - 0.12):
+        lq = v.poly3([(x_lo, 0.006, yy - 0.04), (x_hi, 0.006, yy - 0.04), (x_hi, 0.006, yy + 0.04), (x_lo, 0.006, yy + 0.04)])
+        if not lq.isEmpty(): pen.fill(lq, '#f2ecd8', 170)
+    k0 = math.floor((x_lo + off) / 6.0)
+    for k in range(int(k0), int(k0) + 17):                                    # the centre dashes
+        x = k * 6.0 - off
+        dq = v.poly3([(x, 0.006, -0.05), (x + 2.2, 0.006, -0.05), (x + 2.2, 0.006, 0.05), (x, 0.006, 0.05)])
+        if not dq.isEmpty(): pen.fill(dq, '#f2ecd8', 150)
+    # long morning shadows of the rail posts across the path, the rail, the posts
+    items = []
+    k0 = math.floor((x_lo + off) / 2.4)
+    for k in range(int(k0), int(k0) + 40):
+        x = k * 2.4 - off
+        items.append((v.d(x, RN_RAIL), 'post', x, k))
+    k0 = math.floor((x_lo + off) / 23.0)
+    for k in range(int(k0), int(k0) + 5):
+        x = k * 23.0 - off + 3.0
+        items.append((v.d(x, RN_RAIL + 0.75), 'tree', x, k))
+        items.append((v.d(x + 11.5, RN_RAIL + 0.5), 'lamp', x + 11.5, k))
+    for (d, kind, x, k) in sorted(items, key=lambda q: -q[0]):
+        if d < 0.6: continue
+        if kind == 'post':
+            s = v.S / d
+            sh = v.poly3([(x - 0.04, 0.007, RN_RAIL), (x + 0.04, 0.007, RN_RAIL), (x + 0.9, 0.007, RN_RAIL - 1.9), (x + 0.82, 0.007, RN_RAIL - 1.9)])
+            if not sh.isEmpty(): pen.fill(sh, '#2a2a4a', 50)
+            _seg3(pen, v, (x, 0.0, RN_RAIL), (x, 0.92, RN_RAIL), max(1.5, 0.07 * s), '#a8acb4')
+        elif kind == 'tree':
+            bx, by = v.p(x, 0.0, RN_RAIL + 0.75); s = v.S / d
+            hh = (3.6 + 1.0 * _h(int(k), 3)) * s
+            pen.seg((bx, by), (bx, by - hh * 0.5), max(1.5, 0.16 * s), '#5a4a3a')
+            for (dx, dy, r, c_) in ((0, -0.62, 0.34, '#4a7a3a'), (-0.16, -0.5, 0.26, '#5a8a44'), (0.17, -0.52, 0.27, '#42703a'), (0.02, -0.82, 0.24, '#6a9a4c')):
+                pen.fill(oval(bx + dx * hh, by + dy * hh, r * hh, r * hh * 0.92), c_)
+            pen.fill(oval(bx - 0.12 * hh, by - 0.74 * hh, 0.14 * hh, 0.1 * hh), '#ffe8b0', 70)
+        else:
+            s = v.S / d
+            _seg3(pen, v, (x, 0.0, RN_RAIL + 0.5), (x, 3.6, RN_RAIL + 0.5), max(1.5, 0.09 * s), '#3e424c')
+            hx, hy = v.p(x, 3.7, RN_RAIL + 0.3)
+            pen.fill(rrect(hx - 0.28 * s, hy - 0.07 * s, 0.56 * s, 0.14 * s, 0.05 * s), '#3a3e48')
+    for (Y, w_) in ((0.9, 0.07), (0.5, 0.05)):
+        s = v.S / max(0.6, v.d(v.hx, RN_RAIL))
+        _seg3(pen, v, (x_lo, Y, RN_RAIL), (x_hi, Y, RN_RAIL), max(1.5, w_ * s), '#b4b8c0')
+    # the kilometre paint on the tarmac: 21 K (he runs marathons)
+    xk = ((30.0 - off) % 84.0) - 30.0 + v.hx
+    for i, ch_ in enumerate('21K'):
+        cq = [(xk + i * 0.6, 0.007, -0.9), (xk + i * 0.6 + 0.45, 0.007, -0.9), (xk + i * 0.6 + 0.45, 0.007, -0.35), (xk + i * 0.6, 0.007, -0.35)]
+        if min(v.d(q[0], q[2]) for q in cq) < 0.6: continue
+        m_, _ = fmat(v, (xk + i * 0.6, 0.007, -0.35), (0.01, 0.0, 0.0), (0.0, 0.0, -0.01))
+        pen.cv.save(); pen.cv.concat(m_)
+        btext(pen, ch_, 22, 50, 'sans_b', 56, '#f2ecd8', 170, 'center')
+        pen.cv.restore()
+
+
+_dcam('dr_run_side', 1300, 610, 1.25, 0.0, -6.5, 0, _env(x=(900, 1020), y=(560, 660), zoom=(1.0, 1.1), f=(1.0, 1.4)),
+      'Milo at 22 running in profile (screen-right), the river and the sunrise behind him', 'run')
+_dcam('dr_run_front', 1500, 600, 1.3, 7.2, -2.3, -72, _env(x=(900, 1020), y=(550, 650), zoom=(1.0, 1.1), f=(1.0, 1.4)),
+      'he runs toward the lens at 3/4, the path and the rail receding behind him', 'run')
+_dcam('dr_run_rail', 1700, 560, 1.35, 2.6, -1.9, -27, _env(x=(900, 1020), y=(510, 610), zoom=(1.0, 1.08), f=(1.0, 1.4)),
+      'he stops at the rail and checks his blood sugar on his phone (3/4, the river behind)', 'run')
+
+
+def dr_run(view='side', speed=3.4, **kw):
+    """Milo at 22 on his morning run: a riverside path at sunrise (the doctors' world: warm and bright). view 'side'
+    (profile; the scenery scrolls at `speed` m/s while he stays on anchors['runner']), 'front' (3/4 from ahead), 'rail' (he
+    stops at the rail with his phone: speed 0). Anchors: runner, runner_ahead, runner_behind, rail, rail_stand."""
+    v = cam('dr_run_' + view)
+    if view == 'rail': speed = 0.0
+    o = dict(tod='day', no_veil=True, speed=speed)
+    main = DrRunPath()
+    amb, steady, var = main.lights(o)
+
+    def scroll(pen, t):
+        with lighting(amb, steady, 1.0): _rn_scroll(pen, v, t, speed)
+    lay = Layer(max(0.5, v.d(0.0, RN_RAIL)), scroll, 'run_scroll', blur=None)
+    lay.order = ORDER_SHELL - 0.5
+    fx_, fy_ = (0.6, RN_RAIL - 0.45) if view == 'rail' else (0.0, 0.0)
+    sp = build_view('dr_run_' + view, v, main, o, outside=None, grade='dr_morning', dyn=[lay], focus=max(1.0, v.d(fx_, fy_)), dof=0.25)
+    sp.info['note'] = 'Stage him with ST.stage_figure(sp, "milo22", "runner"); the ground scrolls under him (speed m/s), so his run cycle stays in place.'
+    return sp
+
+
+# ====================================================================================================== the outro: a lamp, a phone
+# "Okay. Breathe. You can turn a light on now." A bedside corner (its own plan): the lamp, a phone face-up beside it, a
+# glass of water, the bed's edge; the night outside the window is only night.
+OU_R = (0.0, 3.2, 0.0, 3.0)
+OU_STAND = Box(1.25, 2.72, 0.62, 0.44, 0.0, 0.62, 0)          # the nightstand against the back wall, facing -y
+OU_BED = Box(2.45, 2.0, 1.3, 2.0, 0.0, 0.56, 0)               # the bed: its head against the back wall
+OU_PHONE = (1.38, OU_STAND.Y1, 2.62)
+OU_LAMP = (1.08, OU_STAND.Y1, 2.78)
+
+
+def dr_cell(pen, v, P, state='off', t=0.0, name='Dr. Halverson', ang=12.0):
+    """A phone lying face-up on a surface (P = x, Y, y): state 'off' | 'ring' (an incoming call: the name, the two
+    buttons, the screen pulsing) | 'lock' (3:00 on the lock screen)."""
+    x, Y, y = P
+    if v.d(x, y) < 0.2: return
+    a = math.radians(ang)
+    U = (math.cos(a), 0.0, math.sin(a)); V = (math.sin(a), 0.0, -math.cos(a))          # art x along U, art y toward the viewer (-V... away = up the screen)
+    O = (x - U[0] * 0.0375 + V[0] * 0.08, Y + 0.009, y - U[2] * 0.0375 + V[2] * 0.08)
+    F = Face(O, U, _scale3(V, -1.0), 7.5, 16.0, (0.0, 1.0, 0.0), 'top')
+
+    def art(p_, W, H):
+        body = rrect(0, 0, W, H, 1.0)
+        p_.fill(body, '#15171c')
+        sc = rrect(0.35, 0.35, W - 0.7, H - 0.7, 0.75)
+        if state == 'off':
+            p_.fill(sc, '#0a0b0e'); p_.linear(sc, 0, 0, W, H, [(0, '#ffffff', 26), (0.4, '#ffffff', 0)])
+        elif state == 'lock':
+            p_.fill(sc, '#1a2440'); p_.linear(sc, 0, 0, 0, H, [(0, '#3a4a7a', 255), (1, '#141a2c', 255)])
+            btext(p_, '3:00', W / 2, 5.4, 'sans', 2.6, '#f2f4f8', 240, 'center')
+        else:
+            pulse = 0.75 + 0.25 * math.sin(t * 6.0)
+            p_.fill(sc, mix('#1c3a2c', '#2a5a40', pulse))
+            p_.fill(oval(W / 2, 4.6, 1.5), '#e8f0e8'); p_.fill(oval(W / 2, 4.2, 0.6), '#5a8a6a'); p_.fill(oval(W / 2, 5.5, 1.0, 0.6), '#5a8a6a')
+            btext(p_, name, W / 2, 8.0, 'sans_b', 0.95, '#ffffff', 245, 'center')
+            btext(p_, 'incoming call', W / 2, 9.2, 'sans', 0.62, '#c8e8d0', 220, 'center')
+            p_.fill(oval(1.9, 13.3, 0.95), '#e04a3a'); p_.fill(oval(W - 1.9, 13.3, 0.95 * (0.9 + 0.1 * pulse)), '#3ad06a')
+    draw_face(pen, v, F, art, '#15171c', ao=False, unlit=state != 'off', lw=1.0, shape=rrect(0, 0, 7.5, 16.0, 1.0))
+
+
+def _outro_cfg():
+    def lights(o):
+        amb = '#343a58'
+        win = Lamp(kind='win', c='#8a9ad8', k=0.5, soft=12.0, panes=_panes_x(1.0, 2.0, 0.9, 2.0, 0.0), d=_norm3((1.0, -0.45, 0.2)),
+                   only={'floor', 'wall', 'top', 'front', 'side'})
+        lamp_ = [Lamp(OU_LAMP[0], OU_LAMP[1] + 0.42, OU_LAMP[2] - 0.06, 4.2, D_LAMP, 2.0, (1.0, 0.8, 0.9), fall=1.45)]
+        scr = [Lamp(OU_PHONE[0], OU_PHONE[1] + 0.15, OU_PHONE[2], 1.3, '#9af0b8', 0.7, fall=1.4)]
+        return amb, [win], [('lamp', lamp_, _kfn(o.get('lamp', 1.0), 281)), ('screen', scr, _kfn(o.get('screen', 0.0), 282))]
+
+    def art(o):
+        def back(p_, W, H):
+            _photo(p_, W, H, 60, H - 196, 36, 46, 'kids')
+            _photo(p_, W, H, 196, H - 190, 40, 30, 'lake')
+        def west(p_, W, H):
+            _photo(p_, W, H, 222, H - 190, 34, 44, 'milo')
+        return {'back': back, 'west': west}
+
+    def pieces(o):
+        def stand(pen, v):
+            draw_box(pen, v, OU_STAND, {'front': dict(fill='#7a4e30', art=lambda p_, W, H: (p_.texture(rect(0, 0, W, H), 'wood', 0.4, 'overlay', 0.8),
+                                                                                           p_.line(rrect(4, 5, W - 8, 22, 2), 0.8, '#000000', 150), p_.fill(oval(W / 2, 16, 2.2), '#c8a060'),
+                                                                                           p_.line(rrect(4, 31, W - 8, H - 36, 2), 0.8, '#000000', 150), p_.fill(oval(W / 2, 44, 2.2), '#c8a060'))),
+                                        'top': dict(fill='#8a5a38', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'wood', 0.4, 'overlay', 0.8)), 'all': '#6a4228'})
+            dr_table_lamp(pen, v, OU_LAMP[0], OU_LAMP[2], OU_LAMP[1], 0.0, '#f2e4c4', '#5a8a8a')
+            dr_cell(pen, v, OU_PHONE, o.get('phone', 'off') if not callable(o.get('phone')) else 'off')
+            gx, gy = v.p(OU_STAND.cx + 0.22, OU_STAND.Y1, OU_STAND.cy - 0.1)                 # a glass of water
+            if v.d(OU_STAND.cx + 0.22, OU_STAND.cy - 0.1) > 0.2:
+                s = v.s(OU_STAND.cx + 0.22, OU_STAND.cy - 0.1)
+                g = poly([(gx - 0.034 * s, gy - 0.12 * s), (gx + 0.034 * s, gy - 0.12 * s), (gx + 0.028 * s, gy), (gx - 0.028 * s, gy)])
+                pen.fill(g, '#c8d8e8', 90); pen.fill(poly([(gx - 0.032 * s, gy - 0.085 * s), (gx + 0.032 * s, gy - 0.085 * s), (gx + 0.028 * s, gy), (gx - 0.028 * s, gy)]), '#a8c8e8', 110)
+                pen.line(g, 0.9, '#3a4a5a', 200)
+        P = [Piece('nightstand', (OU_STAND.cx, 0.4, OU_STAND.cy), stand, block=OU_STAND.footprint())]
+        bp = bed_parts(OU_BED, 0.0, 'made')
+        P.append(Piece('bed', (OU_BED.cx, 0.4, OU_BED.cy), lambda pen, v: draw_parts(pen, v, bp), block=OU_BED.footprint()))
+        P.append(Piece('rug', (1.3, 0.0, 1.4), lambda pen, v: None))
+        return P
+
+    def glows(v, o):
+        kl = _kfn(o.get('lamp', 1.0), 281)
+        G = [('nightstand_glow', (OU_LAMP[0], OU_LAMP[1] + 0.4, OU_LAMP[2]), lambda pen, t: dr_lamp_glow(pen, v, OU_LAMP[0], OU_LAMP[2], OU_LAMP[1], kl(t)))]
+        ph = o.get('phone', 'off')
+        if callable(ph) or ph != 'off':
+            G.append(('phone_live', (OU_PHONE[0], OU_PHONE[1], OU_PHONE[2] - 0.02), lambda pen, t: dr_cell(pen, v, OU_PHONE, ph(t) if callable(ph) else ph, t)))
+        return G
+
+    def spots(v, o):
+        S = {}
+        S['phone'] = _mk_spot(v, 'phone', OU_PHONE[0], OU_PHONE[2], OU_PHONE[1] + 0.01, 'surface', 'the phone on the nightstand (a hand picks it up)')
+        S['lamp_switch'] = _mk_spot(v, 'lamp_switch', OU_LAMP[0] + 0.02, OU_LAMP[2] - 0.08, OU_LAMP[1] + 0.2, 'point', "the lamp's switch (a hand turns the light on)")
+        S['bed_edge'] = _mk_spot(v, 'bed_edge', OU_BED.cx - OU_BED.w / 2 + 0.12, 2.1, 0.0, 'seat', 'sitting on the edge of the bed by the nightstand (faces -x)', face=(-1, 0), seat_Y=0.56)
+        S['stand_top'] = _mk_spot(v, 'stand_top', OU_STAND.cx, OU_STAND.cy - 0.05, OU_STAND.Y1, 'surface', 'the nightstand top')
+        S['floor'] = _mk_spot(v, 'floor', 1.3, 1.5, 0.0, 'stand', 'standing by the bed', face=(0, 1))
+        return S
+    return dict(name='outro', R=OU_R, H=2.6, floor=dict(base='#8a6a4a', kind='boards', ink='#5a4028', seed=9),
+                walls=dict(paper='#c8b8a0', ink='#a88a6a', kind='ditsy', wains=0.0, trim='#efe6d4', seed=51, scale=1.2),
+                windows=[('west', (0.0, 1.0, 0.0, 2.0, 0.9, 2.0), (2, 2), '#efe9dc')], art=art, ceil=dict(c='#e6dfd2'),
+                lights=lights, pieces=pieces, glows=glows, spots=spots)
+
+
+_dcam('dr_outro_table', 1050, 520, 1.15, 1.0, 0.75, 8, _env(), 'the bedside: the lamp, the phone beside it, the glass of water, the bed (the lamp comes on)', 'outro')
+_dcam('dr_outro_phone', 1500, 540, 1.07, 1.4, 1.98, 2, _env(x=(920, 1000), y=(500, 580), zoom=(1.0, 1.06), f=(1.0, 1.4)),
+      'close, looking down at the phone under the lamp ("if your phone rings at three in the morning... pick up")', 'outro', pitch=33.0)
+_dcam('dr_outro_wide', 780, 500, 1.4, 0.45, 0.4, 32, _env(), 'the room: window, nightstand, bed', 'outro')
+
+
+def _outside_plain_night(pen, v):
+    dr_sky(pen, v, 'night')
+
+
+def dr_outro(view='table', lamp=1.0, phone='off', **kw):
+    """The outro's quiet set: a bedside table with a lamp (lamp = level spec: dict(on=t) turns the light on at t), a phone
+    lying beside it (phone 'off' | 'lock' | 'ring' or f(t)), a glass of water, the bed. view 'table' | 'phone' | 'wide'.
+    The empty medicine cabinet is ST.dr_bath('cabinet', cabinet=1.0, card=False)."""
+    o = dict(lamp=lamp, phone=phone, screen=(lambda t: 1.0 if (phone(t) if callable(phone) else phone) != 'off' else 0.0) if (callable(phone) or phone != 'off') else 0.0)
+    sp = _box_build(_outro_cfg(), 'dr_outro_' + view, o, outside=_outside_plain_night, grade='dr_night', rain=False)
+    return sp

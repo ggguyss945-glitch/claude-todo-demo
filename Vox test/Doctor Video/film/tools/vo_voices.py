@@ -5,9 +5,14 @@ script/lines.py are the cut points, so only the quoted words change). vo_edit.py
 line before the layout (a voice may lengthen its line: the Waiting Man speaks slower).
 
 Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each character:
-  - pitch: the line's F0 is moved to the character's median (geometric) and its excursions scaled (rng), optionally
-    smoothed (an even, unhurried contour), with an optional tremor (an old voice) and jitter (a rough, tired one);
-    never a plain resample, so no chipmunk;
+  - pitch: the line's F0 is moved to the character's median (geometric), its excursions scaled (rng) and softly
+    limited (comp: the narrator slides up to 1.5 octaves inside one sentence, 270 -> 90 Hz; a character keeps the
+    shape of that melody inside a believable range), optionally smoothed (an even, unhurried contour), with an
+    optional tremor (an old voice) and jitter (a rough, tired one); never a plain resample, so no chipmunk. The
+    contour is Harvest's own: it agrees with a second tracker (Praat) on 99 % of the voiced frames and has no
+    octave slips on this take, so nothing is "folded" (an earlier version folded every frame more than 0.6 octave
+    from the line's median by an octave: 17 % of the voiced time, the high emphases and the low sentence ends, came
+    out an octave off, a scrambled melody);
   - formants: the spectral envelope is warped along frequency (x alpha: a smaller or larger vocal tract), independent
     of the pitch;
   - breath: the aperiodicity is raised toward noise (breathy, out of breath, whispered) or, with a negative amount,
@@ -28,70 +33,69 @@ NAR_F0 = 155.0                                         # the narrator's median F
 FP = 1.0                                               # WORLD frame period (ms)
 PAD = 0.040                                            # silence padded around a line for the analysis (s)
 
-# character -> settings. f0: target median Hz; rng: excursion scale; smooth: F0 contour smoothing (s); alpha: formant
+# character -> settings. f0: target median Hz; rng: excursion scale; comp: soft limit of the scaled excursions in
+# octaves (e -> comp * tanh(e / comp): small movements pass, the narrator's octave slides are held inside
+# f0 * 2^(+-comp)); smooth: F0 contour smoothing (s); alpha: formant
 # warp; breath: -1..1 aperiodicity move (+ noisier, - purer); trem: (Hz, depth) F0 tremor; jit: F0 jitter (fraction);
 # stretch: voiced-frame tempo factor (> 1 slower); under: (level dB, formant warp) of an octave-down copy, or None;
 # eq: (kind, f, gain dB, q) bands; lu: loudness offset vs the dry line (dB)
 VOICES = {
-    'G': dict(f0=186.0, rng=0.85, smooth=0.0, alpha=1.11, breath=0.20, trem=(5.4, 0.024), jit=0.010, stretch=1.0, under=None,
+    'G': dict(f0=186.0, rng=0.85, comp=0.45, smooth=0.0, alpha=1.11, breath=0.20, trem=(5.4, 0.024), jit=0.010, stretch=1.0, under=None,
               eq=[('hs', 5500, -2.0, 0.7), ('peak', 300, 1.0, 1.0)], lu=-1.0,
               desc='Grandma Ruth, 70s, firm and frightened: an old woman (median 186 Hz, formants x1.11), a slow 5.4 Hz '
                    'tremor and 1 % jitter, a little breathy (0.20), a softer top'),
-    'G_sharp': dict(f0=198.0, rng=1.00, smooth=0.0, alpha=1.11, breath=0.14, trem=(5.4, 0.020), jit=0.014, stretch=1.0, under=None,
+    'G_sharp': dict(f0=198.0, rng=1.00, comp=0.50, smooth=0.0, alpha=1.11, breath=0.14, trem=(5.4, 0.020), jit=0.014, stretch=1.0, under=None,
                     eq=[('hs', 5500, -1.5, 0.7), ('peak', 1800, 1.5, 1.0)], lu=0.0,
                     desc='Grandma cutting the doctor off ("Don\'t tell me... Don\'t you dare"): the same old woman, '
                          'higher (198 Hz) and harder, livelier pitch, more edge (+1.5 dB at 1.8 kHz), rougher (1.4 %)'),
-    'G_hush': dict(f0=180.0, rng=0.70, smooth=0.0, alpha=1.11, breath=0.55, trem=(5.4, 0.030), jit=0.010, stretch=1.0, under=None,
+    'G_hush': dict(f0=180.0, rng=0.70, comp=0.30, smooth=0.0, alpha=1.11, breath=0.55, trem=(5.4, 0.030), jit=0.010, stretch=1.0, under=None,
                    eq=[('hs', 6000, -2.0, 0.7), ('ls', 180, -2.0, 0.7)], lu=-3.5,
                    desc='Grandma hushing Milo ("Shh. Not after dark. Not out loud."): a hissed, half-whispered old '
                         'voice (aperiodicity +0.55), flatter, 3.5 dB softer'),
-    'G_soft': dict(f0=182.0, rng=0.80, smooth=0.0, alpha=1.11, breath=0.32, trem=(5.0, 0.032), jit=0.012, stretch=1.0, under=None,
+    'G_soft': dict(f0=182.0, rng=0.80, comp=0.40, smooth=0.0, alpha=1.11, breath=0.32, trem=(5.0, 0.032), jit=0.012, stretch=1.0, under=None,
                    eq=[('hs', 5500, -2.5, 0.7), ('peak', 300, 1.0, 1.0)], lu=-2.0,
                    desc='Grandma rocking Milo ("Just until morning, baby. It can wait."): soft and shaking (tremor 3.2 %), '
                         'breathier (0.32), 2 dB softer'),
-    'H': dict(f0=196.0, rng=0.95, smooth=0.0, alpha=1.15, breath=0.12, trem=None, jit=0.004, stretch=1.0, under=None,
+    'H': dict(f0=196.0, rng=0.95, comp=0.50, smooth=0.0, alpha=1.15, breath=0.12, trem=None, jit=0.004, stretch=1.0, under=None,
               eq=[('peak', 250, 1.5, 0.9), ('hs', 7000, -1.0, 0.7)], lu=-0.5,
               desc='Doctor Anna Halverson, 40s, warm and exhausted (in the car): an adult woman (196 Hz, formants x1.15), '
                    'warm low-mids, a touch of breath'),
-    'H_call': dict(f0=192.0, rng=1.05, smooth=0.0, alpha=1.15, breath=0.36, trem=None, jit=0.016, stretch=1.0, under=None,
+    'H_call': dict(f0=192.0, rng=1.05, comp=0.50, smooth=0.0, alpha=1.15, breath=0.36, trem=None, jit=0.016, stretch=1.0, under=None,
                    eq=[('peak', 250, 1.0, 0.9), ('hs', 7000, -1.0, 0.7)], lu=-0.5,
                    desc='Doctor Halverson on the 3 AM call ("rough, out of breath"): breathy (0.36) and rough (1.6 % '
                         'jitter), a little lower (192 Hz)'),
-    'H_door': dict(f0=200.0, rng=1.05, smooth=0.0, alpha=1.15, breath=0.20, trem=None, jit=0.008, stretch=1.0, under=None,
+    'H_door': dict(f0=200.0, rng=1.05, comp=0.50, smooth=0.0, alpha=1.15, breath=0.20, trem=None, jit=0.008, stretch=1.0, under=None,
                    eq=[('peak', 250, 1.2, 0.9), ('peak', 2000, 1.0, 1.0)], lu=0.0,
                    desc='Doctor Halverson on the porch: urgent and tired (200 Hz, breath 0.20, 0.8 % jitter), a little '
                         'more presence to carry through the door'),
-    'W': dict(f0=116.0, rng=0.60, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
+    'W': dict(f0=116.0, rng=0.60, comp=0.18, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
               eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
               desc='the Waiting Man / Doctor Later: a soft, kind, grandfatherly man (116 Hz, formants x0.93: a longer '
                    'vocal tract) made subtly inhuman: too even (pitch range x0.60, contour smoothed over 60 ms), too '
                    'slow (vowels stretched 1.18x, consonants not), airless (aperiodicity -0.40: no breath at all), close '
                    '(+2.5 dB proximity at 160 Hz, softer top), and a faint second voice an octave under it (17 dB down)'),
-    'W_count': dict(f0=116.0, rng=1.00, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
+    'W_count': dict(f0=116.0, rng=1.00, comp=0.28, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.18, under=(-17.0, 0.90),
                     eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
-                    desc='the Waiting Man counting the pulse ("One... Two... Three..."): the same voice keeping the '
-                         'count\'s own pitch movement (x1.00; flattened to x0.60-0.80 the drawn-out "Two" reads as "Till")'),
-    'W_count2': dict(f0=116.0, rng=1.00, smooth=0.06, alpha=0.93, breath=-0.40, trem=None, jit=0.0, stretch=1.50, under=(-17.0, 0.90),
-                     eq=[('peak', 160, 2.5, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-1.5,
-                     desc='the Waiting Man\'s "Two...": the same voice on the short falling "two" of "Rule number two:" '
-                          '(the take\'s own count rose like a question and read as "Till"), its vowel drawn out 1.5x'),
-    'W_whisper': dict(f0=116.0, rng=0.55, smooth=0.06, alpha=0.93, breath=0.45, trem=None, jit=0.0, stretch=1.12, under=(-19.0, 0.90),
+                    desc='the Waiting Man counting the pulse ("One... Two... Three..."): the same voice keeping more '
+                         'of each count\'s own pitch movement (x1.00, held inside +-0.28 octave), so the three counts '
+                         'rise and fall like slow counting'),
+    'W_whisper': dict(f0=116.0, rng=0.55, comp=0.18, smooth=0.06, alpha=0.93, breath=0.45, trem=None, jit=0.0, stretch=1.12, under=(-19.0, 0.90),
                       eq=[('peak', 160, 2.0, 0.8), ('hs', 6500, -2.0, 0.7)], lu=-3.0,
                       desc='the Waiting Man as the voice in your head (outro): the same voice half-whispered (breath '
                            '0.45), a little less slow (1.12x), 3 dB softer'),
-    'K': dict(f0=272.0, rng=1.10, smooth=0.0, alpha=1.33, breath=0.50, trem=None, jit=0.004, stretch=1.0, under=None,
+    'K': dict(f0=272.0, rng=1.10, comp=0.42, smooth=0.0, alpha=1.33, breath=0.50, trem=None, jit=0.004, stretch=1.0, under=None,
               eq=[('ls', 200, -4.0, 0.7)], lu=-3.0,
               desc='Milo, 7, thirsty and weak, whispering: a small child (272 Hz, a child\'s vocal tract: formants x1.33), '
                    'breathy whisper that keeps every word (0.50), no chest (-4 dB under 200 Hz), 3 dB softer'),
-    'M': dict(f0=205.0, rng=0.90, smooth=0.0, alpha=1.16, breath=0.08, trem=None, jit=0.0, stretch=1.0, under=None,
+    'M': dict(f0=205.0, rng=0.90, comp=0.45, smooth=0.0, alpha=1.16, breath=0.08, trem=None, jit=0.0, stretch=1.0, under=None,
               eq=[('peak', 260, 1.2, 0.9)], lu=0.0,
               desc='Mom, 40s, a night-shift nurse, decisive and warm: an adult woman (205 Hz, formants x1.16), steady '
                    'intonation (x0.90), warm low-mids'),
-    'U': dict(f0=188.0, rng=0.80, smooth=0.0, alpha=1.13, breath=0.06, trem=None, jit=0.0, stretch=1.0, under=None,
+    'U': dict(f0=188.0, rng=0.80, comp=0.40, smooth=0.0, alpha=1.13, breath=0.06, trem=None, jit=0.0, stretch=1.0, under=None,
               eq=[('peak', 300, 1.0, 0.9), ('hs', 6000, -1.0, 0.7)], lu=0.0,
               desc='the ER nurse, calm and firm: an adult woman, lower and steadier than Mom (188 Hz, x0.80, formants '
                    'x1.13)'),
-    'R': dict(f0=212.0, rng=0.65, smooth=0.05, alpha=1.18, breath=0.04, trem=None, jit=0.0, stretch=1.0, under=None,
+    'R': dict(f0=212.0, rng=0.65, comp=0.28, smooth=0.05, alpha=1.18, breath=0.04, trem=None, jit=0.0, stretch=1.0, under=None,
               eq=[('ls', 200, -3.0, 0.7), ('peak', 2500, 1.5, 1.0)], lu=-1.0,
               desc='the phone-system recording: a polite automated lady (212 Hz, formants x1.18), flat and even '
                    '(x0.65, contour smoothed over 50 ms), clean (breath 0.04), thin and present (the mix adds the '
@@ -103,7 +107,7 @@ VARIANT = {
     'shh': 'G_hush', 'not_after_dark': 'G_hush', 'not_out_loud': 'G_hush',
     'until_morning': 'G_soft', 'g_wait1': 'G_soft', 'g_wait2': 'G_soft',
     'this_is_halverson': 'H_call', 'sorry_hour': 'H_call', 'results_back': 'H_call',
-    'count1': 'W_count', 'count2': 'W_count2', 'count3': 'W_count',
+    'count1': 'W_count', 'count2': 'W_count', 'count3': 'W_count',
     'w_nothing': 'W_whisper', 'w_bother': 'W_whisper', 'w_wait': 'W_whisper',
 }
 
@@ -128,21 +132,23 @@ def warp_envelope(sp, alpha):
 
 
 def clean_f0(f0):
-    """The take's F0 with tracker slips removed: voiced runs shorter than 4 frames dropped, octave jumps folded back
-    toward the line's median, a 5-frame median filter inside each voiced run."""
+    """Harvest's F0 with its rare slips removed: voiced runs shorter than 4 frames dropped; a frame more than half an
+    octave from the median of the voiced frames within +-40 ms (a spike at an onset) takes that median; a 5-frame median
+    filter inside each voiced run. Nothing is folded toward the line's median: the narrator's real range is wide (104-271
+    Hz, single sentences slide from 270 to 90 Hz) and Harvest follows it (99 % agreement with Praat, no abrupt jumps)."""
     from scipy.signal import medfilt
+    from scipy.ndimage import median_filter
     f = f0.copy(); v = f > 0
     d = np.diff(np.concatenate([[0], v.astype(np.int8), [0]]))
     st, en = np.where(d == 1)[0], np.where(d == -1)[0]
     for a, b in zip(st, en):
-        if b - a < 4: f[a:b] = 0.0
-    v = f > 0
-    if not v.any(): return f
-    med = np.median(np.log2(f[v]))
-    oc = np.round(np.log2(f[v]) - med)
-    f[v] = f[v] * 2.0 ** (-np.where(np.abs(np.log2(f[v]) - med) > 0.6, oc, 0))
-    for a, b in zip(st, en):
-        if b - a >= 5 and (f[a:b] > 0).all(): f[a:b] = medfilt(f[a:b], 5)
+        if b - a < 4: f[a:b] = 0.0; continue
+        lf = np.log2(f[a:b])
+        loc = median_filter(lf, size=min(81, 2 * ((b - a) // 2) + 1), mode='nearest')
+        bad = np.abs(lf - loc) > 0.5
+        lf[bad] = loc[bad]
+        f[a:b] = 2.0 ** lf
+        if b - a >= 5: f[a:b] = medfilt(f[a:b], 5)
     return f
 
 
@@ -154,6 +160,9 @@ def new_f0(f0, s, t):
     if not v.any(): return out
     lf = np.log(f0[v]); med = np.median(lf)
     lo = s['rng'] * (lf - med)
+    if s.get('comp'):                                                # soft limit: small movements pass, big slides bend
+        c = s['comp'] * np.log(2.0)
+        lo = c * np.tanh(lo / c)
     if s.get('smooth'):                                              # an even contour: smoothed inside each voiced run
         from scipy.ndimage import uniform_filter1d
         n = max(3, int(s['smooth'] * 1000 / FP))

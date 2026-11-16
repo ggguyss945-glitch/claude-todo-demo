@@ -95,20 +95,27 @@ FIXES = {
     # on "nine"); the line ends there (501.335, in the dip before the second "in") on a 25 ms fade. Both recognisers:
     # "That's what the voice told you in 1979."
     'voice_told': {'end': 501.335, 'end_fade': 0.025},
-    # "rah-rahs of plastic chairs": the take has no usable "Rows" (its second syllable reads "ras"/"ross"). Built from
-    # the clean word-initial r of the first "rah" (528.675-528.745), the "ow" of "in the last row," (571.935-572.200,
-    # 165 -> 115 Hz) and the take's own "-z of plastic chairs" from 529.640, joined by 10 ms equal-power crossfades.
-    # Both recognisers: "rows of plastic chairs" (a grid of 9 joins tried: row end 572.18-572.24 and z start 529.62-529.66
-    # read right; later z starts read "row of", earlier row ends "ruff").
-    'chairs': {'start': 529.640, 'prepend': [(528.675, 528.745), (571.935, 572.200)], 'join': 'xfade'},
+    # "rah-rahs of plastic chairs": the take has no usable "Rows" (its second syllable reads "ras"/"ross"). Rebuilt from
+    # ONE source for the whole "row": the "row" of "in the last row," from where its voicing starts after the t
+    # (571.935, the r still in it: F3 rises from 2.0 to 2.5 kHz; 175 -> 115 Hz) to 572.200, faded in over 30 ms (a soft
+    # sonorant onset: with 6-15 ms the recognisers hear a stop, "Bros"), crossfaded (10 ms equal-power) into the take's
+    # own "-z of plastic chairs" from 529.640 (the join sits where the z starts, where the voicing is weakest). Both
+    # recognisers, paddings 0.05-0.5 s: "Rows of plastic chairs, bolted together." 8/8. (Fix round 2: the first repair put
+    # the 70 ms r of the "rah" (105-115 Hz) in front of this "ow" (175 Hz): a 60 % pitch step inside one syllable. An r
+    # + "o" of "never wrote" was tried too: the r is fused with "-ver", both recognisers heard "for rows" / "Verros".)
+    'chairs': {'start': 529.640, 'prepend': [(571.935, 572.200)], 'join': 'xfade', 'prepend_fade': 0.030},
     # "and I'm, s-, I'm sitting": the stray "s" (946.13-946.27) and the second "I'm" (946.33-946.50) go; the first
     # "I'm" (said after "and") meets "sitting" after 60 ms. Both: "...in the morning and I'm sitting in a little office"
     # (cutting the first "I'm" instead lost "and" for both recognisers).
     'office': {'cuts': [(946.075, 946.505, 0.06)]},
-    # the count "Two..." was read as a rising "Two?" (277 Hz) that reads as "Till" once it has the Waiting Man's voice
-    # (2-3 of 6 paddings); the falling "two" of "Rule number two:" (276.950-277.230, 110-120 Hz, his own register) takes
-    # its place, drawn out by the voice (W_count2: vowel 1.5x). Both: "Two" at every padding tried.
-    'count2': {'pieces': [(276.950, 277.230, 0.0, 0.003, 0.030)]},
+    # the count "Two..." was read as a rising "Two?" (180 -> 330 Hz) that reads as "Till" once it has the Waiting Man's
+    # voice (2-3 of 6 paddings). It is replaced by the sentence-final "Two." of "...the comment you left before rule
+    # two." (1094.495-1094.982: from the t closure, -54 dB, to the end of its own decay at -60 dB; 0.49 s, falling
+    # 135 -> 100 Hz like "One..." and "Three...", already in his register), in the same voice as the other two counts
+    # (W_count): 0.57 s, between "One..." (0.54 s) and "Three..." (0.80 s). Both recognisers, paddings 0.05-0.5 s: "Two".
+    # (Fix round 2: the first repair used the "two" of "Rule number two:", 0.28 s: a clipped word that Parakeet read as
+    # "Yeah." on its own, whatever its stretch.)
+    'count2': {'pieces': [(1094.495, 1094.982, 0.0, 0.003, 0.030)]},
     # "Rule number four." and its text share one island only through a 10 ms blip in the silence (370.16): the line
     # ends where "four" decays into digital silence and the rule text starts on the "I" of "If"
     'rule4': {'end': 370.066},
@@ -135,13 +142,18 @@ FIXES = {
     # its sound island, so "th" survives the voice (with the island's edges Parakeet heard "Rose?" on its own)
     'ruth_door': {'pieces': [(394.760, 395.235, 0.0, 0.003, 0.010)]},
     'sleep_well': {'pieces': [(1158.012, 1158.370, 0.0, 0.004, 0.010), (1158.520, None, 0.065, 0.002, 0.020)]},
+    # "Ever." (rule 2) runs straight into "The phone cord" in the take: after the hand-set split (SPLITS) its "-er" fades
+    # over 50 ms (the default 30 ms left an edge both recognisers sometimes read as "Every")
+    'rule2_ever': {'end_fade': 0.050},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word
 SPLITS = {
     'grandpa_chair': 322.120,  # "chair | Rule": one shared r; the cut sits at its F3 minimum (1250-1390 Hz) (was 321.862: "ch | air")
     'call_you': 174.295,       # "...come in, | she said": the n murmur of "in" ends where the sh starts (was 174.432: inside "she")
-    'rule2_ever': 280.600,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone")
+    'rule2_ever': 280.610,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone";
+                               # then 280.600: Parakeet read "Every" at half the paddings; at 280.610 with a 50 ms fade
+                               # (FIXES) both recognisers read "Ever" at every padding, and "The phone cord" is whole)
     'knees': 469.700,          # "head, | Waiting.": the middle of the dip before the w (was 469.721: on the w onset)
     'waiting_bench': 470.005,  # "Waiting. | Rule": the "-ing" vowel ends (F2 2490 Hz) where F2 falls into the r (was 469.928: inside "-ing")
 }
@@ -150,6 +162,14 @@ SPLITS = {
 SPLIT_FO, SPLIT_FI = 0.030, 0.010
 # pauses inside a line, by the word they follow (line tag -> {word: seconds})
 INTERNAL = {
+    # the reveals inside a line: the take hurries them (0.06-0.27 s), the punctuation clamp alone would give 0.25 / 0.45
+    'now_serving': {'serving': 0.40},   # "Now serving: | 1979." (the take: 0.06 s)
+    'him': {'them': 0.80},              # "...facing all of them... | him." (0.18 s): the villain's entrance
+    'ticket_milo': {'said': 0.45},      # "My ticket said: | Milo." (0.17 s)
+    'face_me': {'then': 0.70},          # "Then... | me." (0.13 s): the last face under the tape
+    'ticket_ruth': {'said': 0.45},      # "It said: | Ruth." (0.20 s)
+    'last_chair': {'up': 0.70},         # "...is folded up... | waiting." (0.27 s)
+    'next': {'name': 0.70},             # "...and the driver knows your name... | don't get on." (0.43 s): the teaser's hook
 }
 NOISE_WORDS = {'yes', 'huh', 'yeah', 'mmhmm', 'yah', 'opt', 'c', 'hmm', 'mm', 'uh', 'um', 'ah', 'oh'}
 
@@ -372,13 +392,15 @@ KNOWN_NOISE = [825.85, 920.35, 942.55]
 def coda_ok(word, gap, dur, peak=-99.0):
     """Can an unvoiced island 'gap' s after a word's last sound be that word's own ending? The TTS often leaves a short
     dip before a final consonant: a stop's release with its aspiration ("suit", "night", "it", "Lock", "Thunk") comes
-    up to 0.10 s later and lasts up to 0.20 s; a final s ("since", "sense", "use", "Silence") up to 0.09 s later and
+    up to 0.10 s later (a final p: 0.13 s) and lasts up to 0.20 s; a final s ("since", "sense", "use", "Silence") up to 0.09 s later and
     louder than -32 dB; the s of a stop + s ending
     ("six", "knocks") comes after the closure, up to 0.17 s later. A breath comes later, lasts longer, or (after an
     s that is already there, "spotless", "eggs") is much quieter than an s (-35..-45 dB against -17..-27 dB)."""
     w = re.sub(r'[^a-z]', '', word.lower())
     if re.search(r'(x|ts|ks|ps|ds|cks|cts|pts|kes|tes|pes|des|xes)$', w): return gap <= 0.17 and dur <= 0.40
     if w.endswith('ng'): return False                                      # a nasal: no release after it ("morning")
+    if re.search(r'(p|pe)$', w): return gap <= 0.13 and dur <= 0.20      # a final p holds its closure longest: the releases of
+    #                                                                     "hang up." (x2), "Folded up." and "deep." come 0.10-0.125 s later
     if re.search(r'(t|k|p|c|ck|ct|pt|ed|d|de|te|ke|pe|g|b|ght)$', w): return gap <= 0.10 and dur <= 0.20
     if re.search(r've$', w): return gap <= 0.04 and dur <= 0.30 and peak > -52       # a devoiced final v ("twelve")
     if re.search(r'(s|ce|se|z|ze|sh|ch)$', w): return gap <= 0.09 and dur <= 0.40 and peak > -32
@@ -784,7 +806,7 @@ def line_pieces(T, i, sp):
         first_pc['fi'] = 0.010 if f.get('join') == 'xfade' else first_pc['fi']
         first_pc['xf_in'] = f.get('join') == 'xfade'
         first_pc['why'] = 'slip repair: joined to the spliced words'
-        pieces.insert(0, {'src': [p, q], 'fi': 0.004, 'fo': 0.010, 'gap_before': 0.0, 'xfade_before': 0.0,
+        pieces.insert(0, {'src': [p, q], 'fi': f.get('prepend_fade', 0.004), 'fo': 0.010, 'gap_before': 0.0, 'xfade_before': 0.0,
                           'xf_out': f.get('join') == 'xfade', 'why': 'spliced in (slip repair)'})
     # inserted material (the "O" of 11:07): split the piece holding t_at
     for t_at, (p, q), g0, g1 in f.get('inserts', []):
@@ -802,8 +824,8 @@ def line_pieces(T, i, sp):
 
 # ============================================================================ pacing map
 def paragraphs():
-    """Paragraph index of every line: lines are found in order in script/narration_en.txt (one word may differ: the
-    recording's "and a" for the script's "in a")."""
+    """Paragraph index of every line: lines are found in order in script/narration_en.txt (one word may differ, two in
+    a line of eight or more: the recording is the truth for the words, lines.py follows it)."""
     paras = [p for p in open(SCRIPT_TXT).read().split('\n\n') if p.strip()]
     ptok = [toks(p) for p in paras]
     out, pi, pos = [], 0, 0
@@ -814,7 +836,7 @@ def paragraphs():
             seq = ptok[pj]
             for s0 in range(pos if pj == pi else 0, len(seq) - len(t) + 1):
                 miss = sum(1 for a, b in zip(seq[s0:s0 + len(t)], t) if a != b)
-                if miss == 0 or (miss == 1 and len(t) >= 4):
+                if miss == 0 or (miss == 1 and len(t) >= 4) or (miss == 2 and len(t) >= 8):   # "open ... reach" (the take) for "opened ... reached"
                     hit = (pj, s0); break
             if hit: break
         if hit is None:

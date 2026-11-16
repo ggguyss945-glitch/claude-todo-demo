@@ -7,11 +7,16 @@ Bunnyman film's CAST.md is in the Bunnyman Video project.
 
 - **Self-test:** `python3 characters.py --selftest` (about 30 s). It runs the older films' checks, then this film's:
   every id in 6 views full and close, Doctor Later in 5 perches x 6 views with his feet on the floor, tape stages x faces,
-  his reach (pinch within 7 px of targets up to 1400 px away), the ticket tear, the tape coming off monotonically, no lip
-  sync for him, his palm on the narrator's wrist (3 px), the handset pick-up (0.5 px jump), Ruth's palm on Milo's mouth,
-  Halverson's fingers on Milo's wrist, Ruth sitting down with her feet on the floor.
+  his head in 8 views x 5 tape stages x 3 detail levels, the head's proportions (cone length : rim width 2.9, the head
+  under the rim no wider than the cone, a small face), the tape as a detail (at full tape more than 60% of the black
+  head stays black in every view), his reach (pinch within 7 px of targets up to 1400 px away), the ticket tear, the tape
+  coming off monotonically (8 strips, the face's 3 first, one `tape_peel` event each), no lip sync for him, his palm on
+  the narrator's wrist (3 px), the handset pick-up (0.5 px jump), Ruth's palm on Milo's mouth, Halverson's fingers on
+  Milo's wrist, Ruth sitting down with her feet on the floor.
 - **Sheets:** `python3 tools/cast_sheets.py [names]` writes `_work/cast/*.jpg`: `later_likeness` (beside the owner's photo
-  and the fan drawing), `later_turn`, `later_states`, `later_tape`, `lineup`, `lineup2`, `turn_family`, `turn_doctors`,
+  and the fan drawing), `later_compare` (the same pose at the photo's size, both as thresholded silhouettes, the head ten
+  times larger with its values in three levels, our outline over the photo, the measured widths), `later_turn`,
+  `later_states`, `later_tape`, `lineup`, `lineup2`, `turn_family`, `turn_doctors`,
   `faces_ruth`, `faces_milo`, `faces_narrator`, `faces_halverson`, `faces_others`, `mouths`, `props`, `staging`.
 - **Acting clips:** `python3 tools/cast_clips.py [names] [--fps 60] [--strip-only] [--review]` writes 46 clips at 960x540
   to `_work/cast/clips/<name>.mp4`, each with an 8-frame `<name>_strip.jpg`; `clips.json` (or `$CLIPS_JSON`) holds each
@@ -20,7 +25,7 @@ Bunnyman film's CAST.md is in the Bunnyman Video project.
 ## Who's who (draw height = `CH.height_px(who, px_per_m)` at the same depth)
 | id | look | notes |
 |---|---|---|
-| `later` | **Doctor Later, the Waiting Man.** The owner's creature: an impossibly thin black body folded on a small chair, a hunched ribbed back, a long ribbed neck reaching forward, long jointed spider limbs with bony knees and long pointed feet, long thin black fingers, a small face under a tall pointed cone. The narration's adaptations: the whole head (face and cone) wrapped round and round in old yellowed medical tape with one thin gap and two pale patient eyes in dark sockets; a white coat gone grey (lapels, pens, a blank cracked badge, frayed hem) hanging off the narrow shoulders, its sleeves far too short; a clipboard with no paper (a torn scrap under the clip); a click pen. 2.9 m standing; never stands; never lip-syncs. | Own 3D rig in centimetres (`_dl_rig`), any yaw. Pose: `dl_seat`, `dl_knee` (0 = the photo's knees .. 1 = above his head), `dl_spread`, `dl_tape` (1 -> 0 strip by strip: the face's strips first, the cone from the tip), `dl_face` (0 his own pale face, 1 Grandpa, 2 a stranger, 3 a little girl, 4 Ruth, 5 the narrator: grey, crossfading), `dl_flinch`, `dl_roof`, `dl_click`, `dl_rock`, `dl_ticket` (text), `dl_layer` ('back' / 'front': sandwich an armrest or car seat). Hands rest `dl_lrest` / `dl_rrest`: 'lap' (clipboard), 'pen', 'floor' (flat on the carpet), 'knee', 'arm'. |
+| `later` | **Doctor Later, the Waiting Man.** The owner's creature: an impossibly thin black body folded on a small chair, a hunched ribbed back, a long ribbed neck reaching forward, long jointed spider limbs with bony knees and long pointed feet, long thin black fingers, and the reference's head: a tall, narrow, **black** cone (58 cm long, 20 cm across its rim; nearly straight sides low down, a hollow needle above, the top bent a little back and crooked; a dull grey sheen up its lit side; folds twisting up it like wrung cloth), its rim sitting low round the face like a hood; under the rim the head is no wider than the cone and ends in a long black jaw. In the hood's opening a **small pale grey face, skull-like and sunken**: two deep dark sockets with two small pale patient eyes far inside, the rim's shadow across the brow, hollow cheeks, two small nose holes, a thin dark mouth line, the chin lost in black. The long neck is ringed like a spine and joins the head low, under the back of the jaw. The narration's adaptations: **a few narrow strips of old medical tape** (8: yellowed, stained brown-grey, frayed, half see-through, lying flat) wound loosely round the head in a slanted, irregular spiral with wide gaps of black: three cross the face (the brow, under the eyes, the jaw) and leave one thin gap at the eyes, five wind up the cone (two cross low down, a short patch, a wisp near the top); a torn end lifts here and there and one hangs at the jaw. The tape is a detail: at a glance and in silhouette he is the black pointed head with the small pale face. A white coat gone grey (lapels, pens, a blank cracked badge, frayed hem) hanging off the narrow shoulders, its sleeves far too short; a clipboard with no paper (a torn scrap under the clip); a click pen. 2.9 m standing; never stands; never lip-syncs. | Own 3D rig in centimetres (`_dl_rig`), any yaw. Pose: `dl_seat`, `dl_knee` (0 = the photo's knees .. 1 = above his head), `dl_spread`, `dl_tape` (1 -> 0 strip by strip, 8 strips: the face's 3 first (off at 0.625), then the cone's from the tip down; a peeling strip unwinds and hangs as a flat ribbon, then slips away; at 0 the last one still hangs beside the head), `dl_face` (0 his own pale face, 1 Grandpa, 2 a stranger, 3 a little girl, 4 Ruth, 5 the narrator: grey, crossfading, filling the hood's opening from hairline to chin), `dl_flinch`, `dl_roof`, `dl_click`, `dl_rock`, `dl_ticket` (text), `dl_layer` ('back' / 'front': sandwich an armrest or car seat). Hands rest `dl_lrest` / `dl_rrest`: 'lap' (clipboard), 'pen', 'floor' (flat on the carpet), 'knee', 'arm'. |
 | `ruth` / `ruth_sick` | **Grandma Ruth, 70s.** Short silver set curls, pale grey-blue eyes, reading glasses on a gold chain (`pose.specs` 1 on the nose / 0 hanging on the chain), a sage cardigan buttoned to the top, a white blouse collar, a charcoal skirt (it drapes over her knees when she sits), stockings. `ruth_sick`: pale at sunrise. | Expressions `stern`, `stern_afraid`, `grief_still`, `pale_hidden`, `asking`. |
 | `ruth79` | Ruth at 40, 1979: a dark brown flipped bob, a quilted rose housecoat with a round collar. | On hold at the wall phone; the coffee at sunrise. |
 | `grandpa79` / `grandpa_ghost` | Grandpa, about 50: brown hair greying, a moustache, a brown V-neck cardigan over a checked shirt, grey trousers, socks. The ghost: the same, drained grey and still. | `a.gone(t0)`: eyes close, head settles, breath stops (gentle: he looks asleep). |
@@ -59,7 +64,9 @@ a.bend_to_roof(roof_y)                 # the car: the head bends over against th
   clear `hl_prop` / `hr_prop` mid-shot unless a hand puts the thing somewhere.
 - `a.where(t, part)` / `CH.later_point(a, t, part)`: 'head', 'eyes', 'mouth', 'cone_tip', 'chest', 'lap', 'hand_l/_r',
   'tips_l/_r' (the pinch), 'wrist_l/_r', 'elbow_l/_r', 'shoulder_l/_r', 'knee_l/_r', 'foot_l/_r'.
-- Close-ups: `CH.draw_bust(pen, 'later', cx, cy, scale, pose)` (scale 1 = his face 600 px; use 0.25-0.6 so the cone fits);
+- Close-ups: `CH.draw_bust(pen, 'later', cx, cy, scale, pose)` (scale 1 = 21 cm of his head 600 px tall, centred on his
+  eye line: the hood's opening is 17 cm wide and 16 cm tall, the rim 4 cm above the eyes, the cone 58 cm above that; use
+  0.25-0.6 so the cone fits; `pose.look_x` / `look_y` move the two pale points in the sockets);
   `CH.later_bust_place(a, t, cx, cy, scale)` gives the matching (x, y_floor, height) to stage targets in the same frame.
 - Far: `CH.draw_later_far(pen, x, y, h, pose, t, lamp=(x, y), flicker=0..1)` (the bus stop). The empty chair:
   `CH.chair_rock(t, t_left)` (deg) for the set; the same value in `pose.dl_rock` rocks him with his chair.
@@ -111,7 +118,8 @@ run, pick_up / put_down / give with PropTrack, hand_over, head_to, hum, eyes_shu
 plus the older `knock_door`, `footsteps_*`.
 
 ## Results (this pass)
-- Self-test passes (numbers above). All 46 clips render at 60 fps with 0 reach misses; the planted foot never leaves the
+- Self-test passes (numbers above). The 10 clips with Doctor Later were re-rendered with the new head (the other 36 are
+  unchanged). All 46 clips render at 60 fps with 0 reach misses; the planted foot never leaves the
   floor except in the runs' flight phase (`halverson_run_steps`, `mom_wheelchair_run`, `milo22_run_phone`: about 28 px
   at the top of a stride) and the narrator up on tiptoe at the peephole (heels 16 px up, toes down, on purpose). Every strip was checked by eye
   for contact, eyelines, feet and props.
@@ -119,6 +127,12 @@ plus the older `knock_door`, `footsteps_*`.
 ## Limits and open problems
 - Doctor Later's front views fold his arms like a mantis (elbows out at the seat); his likeness is closest in profile and
   3/4 (see `later_likeness.jpg`); the coat the narration needs makes him lighter than the all-black reference.
+- His head against the photo (`later_compare.jpg`; 1 photo px = 0.89 cm on his torso): cone length : rim width 2.9 (photo
+  2.9), the head's width along its axis within 0.7 photo px of the photo's from the jaw to the tip, lean 27 deg in the
+  reference pose (`h_tilt` 24). In front views the head is nearer the camera than the body, so it draws about 1.14 x
+  larger than in profile (the rig's perspective), as it would on a real lens.
+- The tape is deliberately sparse (the first version read as a mummy): about 7% of the black head is taped at full tape
+  in a close-up. If a shot needs the tape to read from far, come closer rather than adding strips.
 - The faces under the tape are the cast's own heads, greyed and clipped into his face; in very close shots make the
   crossfades quick (0.4-0.6 s) so no in-between reads as a double face.
 - The stand-in scenery in the clips is not the sets: in the film the armchair's arm and the car seat sit between his
