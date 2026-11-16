@@ -2587,7 +2587,7 @@ def _p_pull_cord(self, t0, side, jack, dur=1.6, z=20.0):
     def tgt(t):
         x, y = _target_xy(jack, t)
         k = ease_out_cubic(prog(t, ty, ty + 0.18))
-        return x - 28.0 * ppc * k * (1 if self.at(t0).turn < 0 else -1), y - 6.0 * ppc * k
+        return x - 28.0 * ppc * k * (1 if self.at(t0).turn >= 0 else -1), y - 6.0 * ppc * k     # back toward her body
     self.reach_to(t0, side, tgt, t1=ty + 0.35, dur=0.55 * dur, z=z, contact='grip', shape='grip', fade=0.6)
     return [self._ev(ty, 'cord_yank', 0.0, pan=0.0)]
 

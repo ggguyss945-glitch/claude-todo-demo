@@ -54,6 +54,9 @@ a.bend_to_roof(roof_y)                 # the car: the head bends over against th
 - `a.reach_far(t0, side, target, t1, dur, z, shape, arc)` lands his pinch on any world point; past arm's length the arm
   unfolds (a second elbow opens). `a.reach_to` on him does the same. Shapes: 'flat', 'relaxed', 'pinch', 'offer' (the
   ticket between two fingers), 'grip' (round a wrist), 'pen', 'clip', 'reach', 'claw', 'point'.
+- His props never leave or jump: when the clipboard hand reaches away the clipboard stays leaning against his knees
+  (drawn from his rest pose); the pen stays in the pen hand (it is in his fingers when he takes the wrist). Do not
+  clear `hl_prop` / `hr_prop` mid-shot unless a hand puts the thing somewhere.
 - `a.where(t, part)` / `CH.later_point(a, t, part)`: 'head', 'eyes', 'mouth', 'cone_tip', 'chest', 'lap', 'hand_l/_r',
   'tips_l/_r' (the pinch), 'wrist_l/_r', 'elbow_l/_r', 'shoulder_l/_r', 'knee_l/_r', 'foot_l/_r'.
 - Close-ups: `CH.draw_bust(pen, 'later', cx, cy, scale, pose)` (scale 1 = his face 600 px; use 0.25-0.6 so the cone fits);
@@ -75,6 +78,8 @@ run, pick_up / put_down / give with PropTrack, hand_over, head_to, hum, eyes_shu
 - `carry(t0, child)` + `CH.draw_carry_child(pen, carrier, child, t)`: the child's hips in the carrier's arms.
 - `drive(t0, t1, g10, g2)` with `CH.draw_steering_wheel(...)` (returns the grips; draw the arms over the wheel with
   `CH.draw_arm`); `CH.draw_wheelchair(...)` returns its handles for a pusher's `reach_to`.
+- `hand_over(t0, side, other, 'mouth' | 'eyes')` lays a closed, cupped hand ('cover' shape: no gaps between the fingers,
+  so it never reads as a black glove on a face).
 - `rock(t0, t1)` (floor rocking + humming), `breathe_fast(t0, t1)` ('breath_fast'), `drink(t0, t1, side)` ('gulp'),
   `gone(t0)`, `glasses(t0, on)`, `sag` / `hold_up`, `hand_on(t0, 'chest' | 'belly' | 'side')`, `ticket_hold(t0, text)`.
 - Sitting on something high (the exam table, the ER bed edge): `a.set(-1, None, 0.01, perch=1.0, sit=1.0)` and place the
@@ -104,6 +109,12 @@ run, pick_up / put_down / give with PropTrack, hand_over, head_to, hum, eyes_shu
 `pen_click`, `pen_scratch`, `ticket_tear`, `tape_peel`, `flinch`, `pulse_count` (a marker, no sound of its own),
 `card_tap`, `cord_yank`, `match_strike`, `paper_slide`, `marker_write`, `dial_beep`, `breath_fast`, `gulp`, `card_tear`,
 plus the older `knock_door`, `footsteps_*`.
+
+## Results (this pass)
+- Self-test passes (numbers above). All 46 clips render at 60 fps with 0 reach misses; the planted foot never leaves the
+  floor except in the runs' flight phase (`halverson_run_steps`, `mom_wheelchair_run`, `milo22_run_phone`: about 28 px
+  at the top of a stride) and the narrator up on tiptoe at the peephole (heels 16 px up, toes down, on purpose). Every strip was checked by eye
+  for contact, eyelines, feet and props.
 
 ## Limits and open problems
 - Doctor Later's front views fold his arms like a mantis (elbows out at the seat); his likeness is closest in profile and

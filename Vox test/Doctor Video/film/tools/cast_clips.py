@@ -561,7 +561,7 @@ def _c_hal_clinic():
     m.face(-0.55); m.set(-1, None, 0.01, perch=1.0, sit=1.0)
     m.reach(-1.0, None, 1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
     m.reach(-1.0, None, -1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
-    h = actor('halverson', 720, FLOOR, ppm, seed=10, expr='kind_smile')
+    h = actor('halverson', 745, FLOOR, ppm, seed=10, expr='kind_smile')
     h.face(0.6)
     h.look_at(0.0, (m, 'eyes'), dur=0.3)
     m.look_at(0.0, (h, 'eyes'), dur=0.3)
@@ -584,7 +584,7 @@ def _c_hal_clinic():
 def _c_ruth_cab():
     ppm = 380.0; ppc = ppm / 100.0
     cx0, cy0 = 960, FLOOR - 1.66 * ppm
-    r = actor('ruth', 760, FLOOR, ppm, seed=11, expr='stern')
+    r = actor('ruth', 852, FLOOR, ppm, seed=11, expr='stern')
     r.face(0.55)
     sw = lambda t: min(1.0, max(0.0, (t - 0.9) / 0.9))       # noqa: E731
     edge = lambda t: (cx0 + 40 * ppc * (1.0 - 0.92 * sw(t)) - 2 * ppc, cy0 + 30 * ppc)     # noqa: E731
@@ -629,7 +629,7 @@ def _c_ruth_tilt():
 @clip('ruth_hangup_cord', 6.0, '"Don\'t you dare tell me what you found." She hangs up; it rings again, nine times; she pulls the cord out of the wall and the house goes quiet')
 def _c_ruth_cord():
     ppm = 380.0; ppc = ppm / 100.0
-    r = actor('ruth', 900, FLOOR, ppm, seed=14, expr='stern')
+    r = actor('ruth', 985, FLOOR, ppm, seed=14, expr='stern')
     r.face(0.5)
     base_x, base_y = 1110, FLOOR - 1.45 * ppm
     rec = CH.PropTrack('receiver', 0, 0, ppc)
@@ -778,7 +778,7 @@ def _c_hal_write():
 def _c_ruth_burn():
     ppm = 380.0; ppc = ppm / 100.0
     top = FLOOR - 0.92 * ppm
-    r = actor('ruth', 780, FLOOR, ppm, seed=22, expr='stern')
+    r = actor('ruth', 850, FLOOR, ppm, seed=22, expr='stern')
     r.face(0.55)
     ts, ev = r.strike_match(0.3, side=1, dur=1.4)
     r.look_at(0.3, lambda t: r.grip_point(t, 1, 'match'), t1=1.6, dur=0.3)
