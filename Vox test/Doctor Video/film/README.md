@@ -69,6 +69,30 @@ part B: ceiling (the waiting room), pulse (slows at each count, `slow_at`), far_
 - Tests: `python3 audio/sfx_tests.py [1..8] [--jobs 2]` -> `_work/mix/tests/` (wav + json per test, `--sheet`).
 
 
+## Sound: the final mix
+Rebuild after any picture or narration change (about 15 min, peaks near 12 GB: no render at the same time):
+```
+bash audio/final_mix.sh            # film.py --cues -> mix.py --plan full -> measure_mix.py -> mix_scenes.py -> preview_mix.mp4
+python3 audio/sfx_plan.py          # dry run of the SFX pass (what is renamed, dropped, added)
+python3 audio/music_plan.py --table
+```
+- Out: `W/mix/final/mix_en.wav` (= `mix.wav`, hard link), stems in `W/mix/final/stems/` (1.4 GB, read by
+  measure_mix.py; delete them after the last measure if disk is short), `measure.txt`, `scenes/NN_name.png` (one
+  sheet per scene, `_SC` in mix_scenes.py by line number), `cues_used/` (both sheets as mixed). Preview with the mix:
+  `W/preview/preview_mix.mp4`.
+- `audio/sfx_plan.py` is this film's: film.py's names -> recipes (phone_ring -> landline_ring one ring per cue until
+  the final twist, typing -> typewriter, room_tone kinds -> house_night / er_bustle, the fluorescent bed ->
+  waiting_room from the door, breath_fast runs -> one breathing bed per run, tape_peel -> q 1..4), drops (the
+  per-count pulse cues, the car rain, hold_click, cold_breath, car_drive / car_accelerate), EDIT re-levels and ADD
+  (waiting room under the cold open, 1979 dial and coffee, line hiss, receiver set down, streetlight, NOW SERVING,
+  clipboard, one pulse_count with the three counts, carry, rain at the door, the car idling then the drive, dawn,
+  the 3 AM office, the outro's call), all anchored to line / word times.
+- Boosted scares (`music_plan.EVENTS`, `boost`): the waiting room (e217), "Take a seat." (e250), the first question
+  (e270, after a silence that kills the pulse-slowed hold music through the whole question), the face under the tape
+  (e280), "Then... me." (e285), the back seat (e332). Hits sit in the gap after the line, not on the words.
+- Measured (pass 3): -14.1 LUFS, -1.7 dBTP, scares +6.5..+8.8 LU momentary over the integrated level, narrated
+  lines elsewhere at most +3.2 LU, no voice weak spot, music present 95 % (> -26 LU), hold music 13 returns.
+
 ## Results (part B and the finish of the picture)
 - 396 shots, 1305.17 s; median 2.73 s, p10 1.49, p90 5.32, 18.2 cuts/min (`python3 film.py --list`).
 - `python3 tools/validate.py`: **0 ERROR**, 28 WARN for the whole film (long held cards / inserts, cross-room moves between

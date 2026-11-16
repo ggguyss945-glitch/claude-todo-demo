@@ -36,6 +36,12 @@ import music_plan as MP                                   # noqa: E402
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 EDIT = [
+    # first full mix (measure_mix.py): buried picture cues raised
+    ('er_doors', 's348-1.0', 's348+2.0', {}, {'add_db': 7.0}, 'the ER doors opening (20.9 LU under)'),
+    ('whoosh', 's295-0.5', 'e295', {}, {'add_db': 6.0}, '"I pulled my wrist free." (21.7 LU under)'),
+    ('lamp_flicker', 's219-0.5', 'e219', {}, {'add_db': 4.0}, 'a dying tube (18 LU under)'),
+    ('footsteps_porch', 's150-1.0', 'e150+2.0', {}, {'add_db': 4.0}, 'Halverson on the porch (18.7 LU under)'),
+    ('paper', 's0', 'e455', {'dur': 0.6}, {'add_db': 4.0}, 'the rule cards\' paper (18-22 LU under)'),
 ]
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
 THIN_GAIN = {'tv': -13.0, None: -10.0}

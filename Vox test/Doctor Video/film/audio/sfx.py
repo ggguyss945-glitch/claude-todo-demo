@@ -4625,6 +4625,7 @@ SPACE_ALIAS.update(waiting_room='waiting', villain='waiting', living_room_waitin
                    porch_out='outside', front_door_out='outside', car_interior='car', back_seat='car', sink='close',
                    counter='close', medicine='close', bathroom_cab='close')
 SPACES = tuple(SPACE_LU)
+SPACE_ALIAS.update(wait='waiting', waitingroom='waiting', bath='bathroom', clinic='hospital')   # film.py's short names
 DEFAULT_SPACE.update(house_night='dry', fridge_hum='next_room', wall_clock='inside', landline_ring='close',
                      receiver_up='close', receiver_down='close', cord_yank='close', dial_tone='dry', line_hiss='dry',
                      rotary_dial='close', hold_music='dry', pen_scratch='inside', clipboard='close',
