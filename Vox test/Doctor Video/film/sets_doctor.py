@@ -5082,7 +5082,7 @@ def _rn_scroll(pen, v, t, speed):
         items.append((v.d(x, RN_RAIL), 'post', x, k))
     k0 = math.floor((x_lo + off) / 23.0)
     for k in range(int(k0), int(k0) + 5):
-        x = k * 23.0 - off + 3.0
+        x = k * 23.0 - off + 12.0
         items.append((v.d(x, RN_RAIL + 0.75), 'tree', x, k))
         items.append((v.d(x + 11.5, RN_RAIL + 0.5), 'lamp', x + 11.5, k))
     for (d, kind, x, k) in sorted(items, key=lambda q: -q[0]):
@@ -5104,9 +5104,9 @@ def _rn_scroll(pen, v, t, speed):
             _seg3(pen, v, (x, 0.0, RN_RAIL + 0.5), (x, 3.6, RN_RAIL + 0.5), max(1.5, 0.09 * s), '#3e424c')
             hx, hy = v.p(x, 3.7, RN_RAIL + 0.3)
             pen.fill(rrect(hx - 0.28 * s, hy - 0.07 * s, 0.56 * s, 0.14 * s, 0.05 * s), '#3a3e48')
-    for (Y, w_) in ((0.9, 0.07), (0.5, 0.05)):
-        s = v.S / max(0.6, v.d(v.hx, RN_RAIL))
-        _seg3(pen, v, (x_lo, Y, RN_RAIL), (x_hi, Y, RN_RAIL), max(1.5, w_ * s), '#b4b8c0')
+    for (Y, w_) in ((0.9, 0.07), (0.5, 0.05)):                                # the two rails: true quads (they run past the lens)
+        rq = v.poly3([(x_lo, Y - w_ / 2, RN_RAIL), (x_hi, Y - w_ / 2, RN_RAIL), (x_hi, Y + w_ / 2, RN_RAIL), (x_lo, Y + w_ / 2, RN_RAIL)])
+        if not rq.isEmpty(): pen.fill(rq, '#b4b8c0'); pen.line(rq, 0.8, '#3a3a44', 200)
     # the kilometre paint on the tarmac: 21 K (he runs marathons)
     xk = ((30.0 - off) % 84.0) - 30.0 + v.hx
     for i, ch_ in enumerate('21K'):
@@ -5163,8 +5163,8 @@ def dr_cell(pen, v, P, state='off', t=0.0, name='Dr. Halverson', ang=12.0):
     if v.d(x, y) < 0.2: return
     a = math.radians(ang)
     U = (math.cos(a), 0.0, math.sin(a)); V = (math.sin(a), 0.0, -math.cos(a))          # art x along U, art y toward the viewer (-V... away = up the screen)
-    O = (x - U[0] * 0.0375 + V[0] * 0.08, Y + 0.009, y - U[2] * 0.0375 + V[2] * 0.08)
-    F = Face(O, U, _scale3(V, -1.0), 7.5, 16.0, (0.0, 1.0, 0.0), 'top')
+    O = (x - U[0] * 0.0375 - V[0] * 0.08, Y + 0.009, y - U[2] * 0.0375 - V[2] * 0.08)
+    F = Face(O, U, V, 7.5, 16.0, (0.0, 1.0, 0.0), 'top')
 
     def art(p_, W, H):
         body = rrect(0, 0, W, H, 1.0)
@@ -5214,7 +5214,7 @@ def _outro_cfg():
             if v.d(OU_STAND.cx + 0.22, OU_STAND.cy - 0.1) > 0.2:
                 s = v.s(OU_STAND.cx + 0.22, OU_STAND.cy - 0.1)
                 g = poly([(gx - 0.034 * s, gy - 0.12 * s), (gx + 0.034 * s, gy - 0.12 * s), (gx + 0.028 * s, gy), (gx - 0.028 * s, gy)])
-                pen.fill(g, '#c8d8e8', 90); pen.fill(poly([(gx - 0.032 * s, gy - 0.085 * s), (gx + 0.032 * s, gy - 0.085 * s), (gx + 0.028 * s, gy), (gx - 0.028 * s, gy)]), '#a8c8e8', 110)
+                pen.fill(g, '#8a98a8', 60); pen.fill(poly([(gx - 0.032 * s, gy - 0.085 * s), (gx + 0.032 * s, gy - 0.085 * s), (gx + 0.028 * s, gy), (gx - 0.028 * s, gy)]), '#6a88a8', 80)
                 pen.line(g, 0.9, '#3a4a5a', 200)
         P = [Piece('nightstand', (OU_STAND.cx, 0.4, OU_STAND.cy), stand, block=OU_STAND.footprint())]
         bp = bed_parts(OU_BED, 0.0, 'made')
