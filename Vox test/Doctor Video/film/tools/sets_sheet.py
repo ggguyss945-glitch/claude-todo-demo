@@ -1,9 +1,10 @@
-"""Bunnyman-film sets (and the dummy / delivery / police regressions): stills of every set / variant, a contact sheet,
+"""Doctor-film sets (default; variants in tools/sets_sheet_doctor.py) plus the Bunnyman / dummy / delivery / police regressions: stills of every set / variant, a contact sheet,
 the floor plan with every camera, the framing check at each view's widest camera move and the draw-time bench.
 
-    python3 tools/sets_sheet.py                       # bunny-film stills (1280x720) + contact_sheet.jpg + index.json
+    python3 tools/sets_sheet.py                       # doctor-film stills (1280x720) + contact_sheet.jpg + index.json
                                                       #   (anchors with plan / screen data per variant) + floorplan.jpg -> W/sets/
     python3 tools/sets_sheet.py --dummy               # the dummy film's variants (regression)
+    python3 tools/sets_sheet.py --bunny               # the Bunnyman film's variants (regression)
     python3 tools/sets_sheet.py --stage               # staging test stills: cast figures placed only from the sets' Spots
                                                       #   (ST.stage_figure) -> W/sets/stage_*.jpg + stage_sheet.jpg
     python3 tools/sets_sheet.py --only hall,ins_      # variants whose name contains any of these
