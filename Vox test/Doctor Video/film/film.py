@@ -2611,7 +2611,7 @@ def plan_family(F):
       c=dict(mv='push', f=1.0, rate=0.012))
     # 50 her smile went careful
     C(T(50), 'bust', who='halverson', bg=('clinic', 'table'), cx=1000, cy=610, scale=0.86, turn=-0.3, h_turn=-0.1, expr='kind_smile', light=HOSP,
-      act=_A(lookxy(560, 640, T(50), None, 0.4, z=300.0), ex('careful_smile', WD(50, 'smile') - 0.2, None, 0.7), blinks(T(50) + 0.9)))
+      act=_A(lookxy(560, 640, T(50), None, 0.4, z=300.0), ex('careful_smile', WD(50, 'smile') - 0.9, None, 0.5), blinks(T(50) + 0.9)))
     # 51 she took some blood: Milo perched on the table edge, Halverson takes his arm; the insert of the draw
     C(T(51), 'set', room='clinic', view='wide', cam=CLINIC_SIDE, rim=HOSP,
       ppl=[P('milo_jeans', 'exam_table', face=(2.45, 2.1), expr='brave', hands='lap',
@@ -3064,6 +3064,7 @@ if 'grandpa_ghost' in CH.CAST:
 
 WAIT = dict(state='wait')
 NURSE_AT = (1.72, 2.02, 0.0)            # the ER waiting room: the nurse at the man's side (her face to the camera)
+ER_LEAVE = ((1.42, 1.98, 0.0), (0.2, 2.5, 0.0), (0.5, 2.7, 0.0))   # 359: the man and the nurse walking off together (start, man end, nurse end)
 WAIT_DEAD = dict(state='wait', tubes=[0.35, 0.0, dict(flick=None, k=0.6, amount=1.0), 0.0])
 NARR_W = (-2.72, 1.85, 0.0)            # the narrator before HIM, in the aisle at the front (faces the armchair)
 NARR_WF = (-3.95, 0.95)
@@ -3611,8 +3612,8 @@ def plan_rule7(F):
       act=_A(pose(-9, None, 0.1, h_tilt=14.0, dl_tape=0.2), lambda a, s: a.loosen_tape(W(280, 'under') - 0.1, W(280, 'under') + 0.3, 0.2, 0.0, flinch=False)),
       c=dict(mv='push', rate=0.0, zrate=0.015), music=[(W(280, 'no'), 'hit', 0.6)])
     # 281-285 the faces: Grandpa, a stranger, a little girl, Grandma, me (quick crossfades, varied framings, the room behind)
-    FACES = [(281, 'grandfather', 1, 960, 640, 0.6, 0.0), (282, 'man', 2, 1040, 620, 0.5, 0.2), (283, 'little', 3, 900, 660, 0.66, -0.15),
-             (284, 'grandmother', 4, 1000, 640, 0.52, 0.1), (285, 'me', 5, 960, 600, 0.75, 0.0)]
+    FACES = [(281, 'grandfather', 1, 900, 560, 0.95, 0.0), (282, 'man', 2, 1120, 520, 1.2, 0.25), (283, 'little', 3, 820, 600, 0.8, -0.2),
+             (284, 'grandmother', 4, 1060, 540, 1.05, 0.12), (285, 'me', 5, 960, 470, 1.4, 0.0)]
     prev = 0
     for (i, wd, idx, cx, cy, sc, tr) in FACES:
         tf = W(i, wd)
@@ -3855,6 +3856,9 @@ def plan_rescue(F):
     # 359-361 the chair next to his: empty, still rocking, as if something very tall had just got up and left
     t_left = T(359) - 0.6
     C(T(359), 'set', room='er_wait', view='chairs', set=dict(rock=lambda tt: CH.chair_rock(tt, t_left, amp=9.0, decay=4.0)), rim=HOSP, c=dict(mv='push', f=1.25, x=1000, y=600, rate=0.012),
+      ppl=[P('chest_man', None, path=[(T(359) - 0.3, ER_LEAVE[0]), (T(359) + 3.2, ER_LEAVE[1])], expr='stern_afraid', hands=None,
+             act=_A(lambda a, s: a.hand_on(-1.0, 'chest', side=-1, dur=0.01))),
+           P('er_nurse', None, path=[(T(359) - 0.3, NURSE_AT), (T(359) + 3.2, ER_LEAVE[2])], expr='calm_firm')],
       sfx=[(T(359) + 0.1, 'chair_creak', -8, 0, 'hospital', dict(n=3))])
     C(T(361), 'set', room='er_wait', view='chairs', set=dict(rock=lambda tt: CH.chair_rock(tt, t_left, amp=9.0, decay=4.0)), rim=HOSP, c=dict(mv='push', f=1.15, x=1000, y=560, rate=0.008),
       music=[(W(361, 'tall'), 'hit', 0.35)])

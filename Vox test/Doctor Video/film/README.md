@@ -19,6 +19,32 @@ All commands run from this folder (`Vox test/Doctor Video/film`). The work dir i
 | `tools/final_chain.sh`, `tools/encode_chain.sh` (+ `enc_seg.sh`), `tools/deliver.sh` | The final render in chunks + the HEVC deliverable `W/deliver/If_Your_Doctor_Calls_At_3AM_EN_1440p60_HEVC.mp4` (title "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"). |
 | `audio/` | The sound step (reads `W/cues/*.json`). |
 
+## Sound fix round (critic review of the final mix)
+- M1 rings: `mix.py` RING_DUCK_DB (9 dB): every `landline_ring` / `phone_ring` dips under the narration, keyed on the
+  voice (10 ms attack, 0.12 s hold). `sfx_plan.py`: rings closer than 1 s (the nine in 4 s) are short bursts (0.5 x the
+  spacing) and `sfx.py _bell_burst` damps a short ring's tail (70 ms), so the nine count as nine.
+- M2 arc: `mix.py ARC_TARGETS` re-keyed to this film's 'Rule number N.' lines (65, 103, 124, 146, 192, 213, 252; the
+  old indices were a rule off), targets -19 / -17.5 / -16 / -14.5 / -13 / -11.8 / -10.6 LU (bed in the gaps, re voice),
+  ARC_MAX_DB 6.
+- M3 warm hold: `music_plan.IDENTITY` plays the warm arrangement from "Change it to 'ask.'" (s442-0.5) to the end card,
+  three times round, a tone up (G) over the bright track; `score.py` HOLD_LIFT warm +2.5 (was -1), SHOW_DUCK warm -15;
+  car_radio +2 (was -1).
+- M4 tear / match: already on "tore" / "lit" from the picture round (cues checked: 697.25, 491.66).
+- Scares: true silences (level 0.95) added before "It was a waiting room.", "Take a seat." and "He was in the back
+  seat."; true silences now dip the room tone 15 dB (was 6). The boosted hits sit at line end + 0.17 s (nosnap).
+- Grandma's voice: `tools/vo_voices.py` G 162 Hz, formants x1.08, jitter 2 % (G_sharp 166, G_hush 164, G_soft 166);
+  re-voiced in place (her 12 lines from narration_clean.wav, same slots) into narration_en.wav and W/align/vo_en.wav:
+  measured 160-168 Hz against Halverson's 187-196 Hz (x1.15).
+- Three line-final "p" releases the TTS spat out as ticks (540.88, 626.64, 815.69 s) softened (3.5 kHz low-pass, -5 dB,
+  16 ms) in narration_en.wav and vo_en.wav.
+- Result (`_work/mix/final/measure.txt`): -14.1 LUFS, true peak -1.7 dBTP, no voice weak spot (was 2), bed in the gaps
+  rule 1..7 -19.3 / -17.7 / -16.4 / -14.9 / -13.5 / -12.2 / -11.3 LU re voice (rising every rule), loudest scare +9.1 LU
+  momentary at 714.9 ("Take a seat."), rings 1-4 kHz under the voice: p10 7-12 dB, median 19-30 dB. Not done: the
+  knocks still start on "knocked." and the boosted hits sit +0.08..0.17 s after the line (moving the knocks moves the
+  picture's KNOCK tags: needs a preview re-render).
+- `sfx_plan.EDIT` (new `at` key: move a cue onto a word): the KNOCK tags' pops dropped, the 1979 steps -5 dB, the porch
+  steps full weight +2 dB, the card tear on "tore".
+
 ## Picture fix round (critic review of preview_mix.mp4)
 - `lap_layer()` (film.py): Ruth sitting on the kitchen floor (`sit_floor`, the skirt now drapes over the knees) with Milo
   sitting between her knees, her arms round him, rocking; camera `K_LAP`. Line 303: the narrator kneels, takes him, rises
@@ -126,3 +152,16 @@ python3 audio/music_plan.py --table
 - The advice list and the comment card hold long (animated, every item lit as it is read).
 - Mixing: the sound step reads `W/cues`; the hold-music part B versions (ceiling, pulse, far_hall, warm) are named in
   `music_cues.json`.
+
+## Verify round (after the picture and sound fix rounds)
+- Checked every blocker and major on `_work/preview/preview_mix.mp4` (stills/strips) and the mix stems (ring ducking, warm hold music, cue onsets); 1 fps scan of the whole preview: nothing newly broken.
+- Small picture fixes (no sound cue moved): line 50 Halverson's careful smile now lands on "took one look" (`WD(50,'smile') - 0.9`);
+  lines 281-285 faces under the tape in five varied, closer framings (scale 0.8-1.4, offsets, turns);
+  line 359 the chest-pain man and the nurse walk off together (`ER_LEAVE`) while the empty chair rocks.
+- Preview patched in place: ranges 179-186, 786-801, 993-999 re-rendered with `render.py --from_ --to` at 640x360/30
+  and spliced into `preview.mp4`; `preview_mix.mp4` re-muxed with the existing mix audio (mix not re-run, cues unchanged).
+- Still open (picture): stiff straight-arm holds (383, 451-454, 990 s); no ticket between his fingers on line 246; no pen
+  in the "She wrote them down" insert (crude arm); Halverson not on the steps on line 307; ER doors do not visibly slide
+  and Mom crosses sideways (348-349); the pen insert in the car keeps the green waiting-room background (334);
+  Ruth's receiver covers her face (302). Sound: knocks still start on the word "knocked." (minor).
+- Preview AAC true peak reads -0.9 dBTP (encoder overshoot); the delivery mix `mix.wav` is -14.1 LUFS, -1.69 dBTP.

@@ -40,19 +40,19 @@ PAD = 0.040                                            # silence padded around a
 # stretch: voiced-frame tempo factor (> 1 slower); under: (level dB, formant warp) of an octave-down copy, or None;
 # eq: (kind, f, gain dB, q) bands; lu: loudness offset vs the dry line (dB)
 VOICES = {
-    'G': dict(f0=186.0, rng=0.85, comp=0.45, smooth=0.0, alpha=1.11, breath=0.20, trem=(5.4, 0.024), jit=0.010, stretch=1.0, under=None,
+    'G': dict(f0=162.0, rng=0.85, comp=0.45, smooth=0.0, alpha=1.08, breath=0.24, trem=(5.4, 0.030), jit=0.020, stretch=1.0, under=None,
               eq=[('hs', 5500, -2.0, 0.7), ('peak', 300, 1.0, 1.0)], lu=-1.0,
-              desc='Grandma Ruth, 70s, firm and frightened: an old woman (median 186 Hz, formants x1.11), a slow 5.4 Hz '
-                   'tremor and 1 % jitter, a little breathy (0.20), a softer top'),
-    'G_sharp': dict(f0=198.0, rng=1.00, comp=0.50, smooth=0.0, alpha=1.11, breath=0.14, trem=(5.4, 0.020), jit=0.014, stretch=1.0, under=None,
+              desc='Grandma Ruth, 70s, firm and frightened: an old woman (median 162 Hz, formants x1.08: sound fix round, '
+                   'apart from Halverson at 196 Hz / x1.15), a slow 5.4 Hz tremor and 2 % jitter (creak), a little breathy (0.20), a softer top'),
+    'G_sharp': dict(f0=166.0, rng=1.00, comp=0.50, smooth=0.0, alpha=1.08, breath=0.18, trem=(5.4, 0.026), jit=0.022, stretch=1.0, under=None,
                     eq=[('hs', 5500, -1.5, 0.7), ('peak', 1800, 1.5, 1.0)], lu=0.0,
                     desc='Grandma cutting the doctor off ("Don\'t tell me... Don\'t you dare"): the same old woman, '
                          'higher (198 Hz) and harder, livelier pitch, more edge (+1.5 dB at 1.8 kHz), rougher (1.4 %)'),
-    'G_hush': dict(f0=180.0, rng=0.70, comp=0.30, smooth=0.0, alpha=1.11, breath=0.55, trem=(5.4, 0.030), jit=0.010, stretch=1.0, under=None,
+    'G_hush': dict(f0=164.0, rng=0.70, comp=0.30, smooth=0.0, alpha=1.08, breath=0.55, trem=(5.4, 0.034), jit=0.018, stretch=1.0, under=None,
                    eq=[('hs', 6000, -2.0, 0.7), ('ls', 180, -2.0, 0.7)], lu=-3.5,
                    desc='Grandma hushing Milo ("Shh. Not after dark. Not out loud."): a hissed, half-whispered old '
                         'voice (aperiodicity +0.55), flatter, 3.5 dB softer'),
-    'G_soft': dict(f0=182.0, rng=0.80, comp=0.40, smooth=0.0, alpha=1.11, breath=0.32, trem=(5.0, 0.032), jit=0.012, stretch=1.0, under=None,
+    'G_soft': dict(f0=166.0, rng=0.80, comp=0.40, smooth=0.0, alpha=1.08, breath=0.34, trem=(5.0, 0.036), jit=0.020, stretch=1.0, under=None,
                    eq=[('hs', 5500, -2.5, 0.7), ('peak', 300, 1.0, 1.0)], lu=-2.0,
                    desc='Grandma rocking Milo ("Just until morning, baby. It can wait."): soft and shaking (tremor 3.2 %), '
                         'breathier (0.32), 2 dB softer'),

@@ -226,24 +226,27 @@ EVENTS = [
     ('s212', 'hit', 0.75, None),                                      # "It can wait." (from every room)
     # rule 6
     ('s213-0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ('e217+0.02', 'braam', 0.8, 3.0, {'boost': 3.5}),   # final mix: after the words, not on them                                      # "It was a waiting room."
+    ('e216+0.05', 'silence', 0.95, 0.8),                              # sound fix round: dead air before the reveal
+    ('e217+0.17', 'braam', 0.8, 3.0, {'boost': 3.5, 'nosnap': True}),   # final mix: after the words, not on them                                      # "It was a waiting room."
     ('s223', 'stinger', 0.5, None),                                   # "Now serving: 1979."
     ('s234-0.3', 'silence', 0.8, 1.5), ('e234', 'sub_drop', 0.5, None),     # "Grandpa."
     ('s235', 'swell', 0.6, 14.0),                                     # HIM in the armchair -> his head
     ('s240', 'braam', 0.7, 3.5),                                      # "And his head... long, and narrow..."
-    ('e250+0.02', 'hit', 0.9, None, {'boost': 3.5}),                                       # "Take a seat."
+    ('e249+0.05', 'silence', 0.95, 0.75),                             # sound fix round: dead air before "Take a seat."
+    ('e250+0.10', 'hit', 0.9, None, {'boost': 3.5, 'nosnap': True}),   # +0.10: "It can wait." follows 0.6 s later                                       # "Take a seat."
     # rule 7
     ('s252-0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('w270:what-0.9', 'silence', 0.9, 1.9),   # final mix: dead through the whole question                           # the count stops; the question
-    ('e270+0.02', 'hit', 0.85, None, {'boost': 3.0}),                                 # "What did you find?"
+    ('e270+0.17', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),                                 # "What did you find?"
     ('s276', 'swell', 0.7, 10.0),                                     # every question, the tape looser ->
-    ('e280+0.02', 'braam', 0.9, 3.5, {'boost': 3.5}),                                     # "...under the tape, there was no doctor."
-    ('e285+0.02', 'stinger', 0.85, None, {'boost': 3.5}),                                   # "Then... me."
+    ('e280+0.17', 'braam', 0.9, 3.5, {'boost': 3.5, 'nosnap': True}),                                     # "...under the tape, there was no doctor."
+    ('e285+0.17', 'stinger', 0.85, None, {'boost': 3.5, 'nosnap': True}),                                   # "Then... me."
     ('s293', 'sub_drop', 0.5, None),                                  # "It can wait." (the one thing...)
     ('s298-0.3', 'silence', 0.8, 1.0), ('s298', 'hit', 0.7, None),    # "Doctor Later."
     ('e302', 'sub_drop', 0.4, None),                                  # "While she was on hold."
     # the rescue
-    ('s331-0.3', 'silence', 0.7, 1.0), ('e332+0.02', 'stinger', 0.75, None, {'boost': 3.0}),    # "He was in the back seat."
+    ('s331-0.3', 'silence', 0.7, 1.0), ('e331+0.05', 'silence', 0.95, 0.9),
+    ('e332+0.08', 'stinger', 0.75, None, {'boost': 3.0, 'nosnap': True}),   # +0.08: "Folded up..." follows 0.44 s later    # "He was in the back seat."
     ('s335', 'hit', 0.6, None),                                       # "It can wait," (the back seat)
     ('s344', 'riser', 0.5, 4.5),                                      # -> "Not on my shift."
     ('e346', 'sub_drop', 0.3, None),
@@ -286,7 +289,9 @@ IDENTITY = [
     ('s397', 'hold', 0.55, None, dict(version='far_hall', until='e400+0.3', stop='fade', fade=1.0)),
     # the outro: the motif redeemed (warm), and the film's last bars on the end card
     ('s401+0.2', 'hold', 0.5, None, dict(version='warm', until='s404+3.0', stop='fade', fade=0.8)),
-    ('e455+0.2', 'hold', 0.6, 10.3, dict(version='warm', phrases=(2, 3), tempo=106.0, stop='fade', fade=0.6)),   # final mix: ends with the picture (1305.17 s)
+    # sound fix round (M3): the warm arrangement from "Change it to 'ask.'" to the end card, three times round (69.6 s,
+    # its own gentle ending on the end card), a tone up to G to sit on the bright track it takes over from
+    ('s442-0.5', 'hold', 0.6, None, dict(version='warm', loops=3, transpose=2, until='e455+10.4', stop='fade', fade=2.5)),
 ]
 
 

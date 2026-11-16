@@ -195,10 +195,10 @@ SHOW_DUCK = {'show': -10.0, 'winks': -7.0,  # the dark track bed steps back whil
 # the Doctor film: the HOLD MUSIC (audio/hold.py) is the identity ('hold' events, rendered like the jingle): how far
 # the dark bed steps back under each version, and its level trim (dB on IDENTITY_LIFT)
 SHOW_DUCK['hold'] = {'studio': -10.0, 'phone_1979': -6.0, 'landline': -6.0, 'rooms': -5.0, 'hum': -4.0, 'pulse': -3.0,
-                     'ceiling': -6.0, 'car_radio': -4.0, 'far_hall': -2.0, 'warm': -12.0}
+                     'ceiling': -6.0, 'car_radio': -6.0, 'far_hall': -2.0, 'warm': -15.0}
 HOLD_LIFT = {'studio': -2.0, 'phone_1979': 0.0, 'landline': -2.0,   # test 1: landline -7 LU rel voice under the rules
              'rooms': -1.0, 'hum': -3.0, 'pulse': 0.0,
-             'ceiling': 1.0, 'car_radio': -1.0, 'far_hall': -4.0, 'warm': -1.0}   # test 6: ceiling -15.7 LU: +2
+             'ceiling': 1.0, 'car_radio': 2.0, 'far_hall': -4.0, 'warm': 2.5}   # sound fix round: warm +3.5, car_radio +3 (both measured unheard)   # test 6: ceiling -15.7 LU: +2
 JINGLE_LIFT = {'vhs': -2.0, 'parade': -1.0, 'speaker': 0.0, 'hum': -3.0, 'hum_x': -3.0, 'musicbox': -2.0, 'girl': 0.0,
                'climax': -1.0, 'count': 1.0, 'outro': 0.0}  # dB on IDENTITY_LIFT per version (test 1: the VHS jingle sat
 #   at +2.5 LU over the narration speaking its words, Mom's hum at -3.5: both down so the voice stays on top)

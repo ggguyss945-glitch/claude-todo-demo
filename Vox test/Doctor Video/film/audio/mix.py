@@ -742,8 +742,14 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # offset it needs (closed loop on the mix itself, clamped to +-ARC_MAX_DB, 2 s crossfades), then the music gain is
 # solved again. (first line of the section, target LU); the section ends at the next row; rule 7 (false relief) and
 # everything else are left alone
-ARC_TARGETS = [(61, -19.0), (92, None), (100, -17.5), (130, -16.0), (160, -14.5), (196, -13.0), (232, -11.5), (282, None)]   # (92: the VHS pause)
-ARC_MAX_DB = 5.0
+# the rule-by-rule arc, by line index of each 'Rule number N.' line (sound fix round, M2: the old indices were the
+# Bunnyman's and drifted a rule; rules 3 and 4 measured under rule 2). (92: the comment prompt; 303: the rescue)
+ARC_TARGETS = [(65, -19.0), (92, None), (103, -17.5), (124, -16.0), (146, -14.5), (192, -13.0), (213, -11.8), (252, -10.6), (303, None)]
+ARC_MAX_DB = 6.0
+# sound fix round (M1): the old landline's bell sat 5-10 dB under the voice peaks in the speech band and level with the
+# voice between syllables: each ring dips this much while the narration speaks (voice-keyed, 10 ms attack, 0.12 s hold)
+RING_DUCK_DB = 9.0
+RING_DUCK_NAMES = ('landline_ring', 'phone_ring')
 TRUE_SILENCE_LEVEL = 0.95   # silence events at or over this level are true silences: the SFX events and hits buses
                             # (hit tails, the swap's ring) are cut with the score, the room tone (beds) stays at -6 dB
 
@@ -966,6 +972,7 @@ def main():
     # ---------------- SFX
     SX.reset()
     buses = {b: np.zeros((N, 2), np.float32) for b in ('beds', 'events', 'hits', 'knocks')}
+    ring_act = None
     for j0, wash in ROOMS_WASH:                      # the Doctor film: "It can wait." from every room (stereo)
         a = j0 - i0
         if a < N and a + len(wash) > 0:
@@ -1039,6 +1046,14 @@ def main():
                 y = SX.pan(y, float(c['pan']))
         except (TypeError, ValueError):
             fb(f'pan:{name}', f'{name}: pan {c.get("pan")!r} is not a number: centred')
+        if name in RING_DUCK_NAMES and RING_DUCK_DB > 0:   # sound fix round (M1): the landline's bell dips under the words
+            if ring_act is None:
+                ring_act = voice_activity(key if key.ndim == 1 else key.mean(1), att=0.01, rel=0.12, hold=0.12)
+            i_ = int(round((tt - pre) * SR)); j_ = max(0, i_); k_ = min(N, i_ + len(y))
+            if k_ > j_:
+                y = y.copy()
+                y[j_ - i_:k_ - i_] *= (10 ** (-RING_DUCK_DB * ring_act[j_:k_] / 20)).astype(np.float32)[:, None] \
+                    if y.ndim == 2 else (10 ** (-RING_DUCK_DB * ring_act[j_:k_] / 20)).astype(np.float32)
         knock = name in ('knock_door', 'box_knock')
         b = 'hits' if name in SX.HITS else 'beds' if name in getattr(SX, 'BED_BUS', SX.BEDS) else 'knocks' if knock else 'events'
         SX.place(buses[b], y, int(round((tt - pre) * SR)))
@@ -1088,7 +1103,10 @@ def main():
     # So: music gets pre-hit dips for SFX-cue hits; SFX beds get silences + dips for every hit.
     # final mix: the SFX beds (room tone, the night outside, the house settling) dip 6 dB in the drop-outs (was 9: the
     # 3 s drop-out before "Click, click." read as dead air; the house must stay audible when the music goes)
-    sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -6.0, 0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
+    # (sound fix round: the true silences before the big scares take the room tone down 15 dB: the buzz and the rain
+    # kept the drop-outs only 8-10 LU under the scene)
+    sil = [(e['t'], e['t'] + float(e.get('len', 1.7)), -15.0 if float(e.get('level') or 0.0) >= TRUE_SILENCE_LEVEL else -6.0,
+            0.08, 0.4) for e in mc['events'] if e['type'] == 'silence']
     mus_hits = [e['t'] for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop', 'rule')]
     dip = lambda ts: [(h - 0.05, h, -8.0, 0.4, 0.6) for h in ts]
     kt = sorted(set(round(x, 3) for x in knock_times))

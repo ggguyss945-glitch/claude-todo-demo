@@ -4765,7 +4765,7 @@ def _bell_burst(rng, on=2.0):
         place(out, pnorm(rec) * 0.8, 0)
     except KeyError:
         pass
-    env = np.ones(n, np.float32); env[n_(on):] = np.exp(-np.arange(n - n_(on)) / n_(0.22))
+    env = np.ones(n, np.float32); env[n_(on):] = np.exp(-np.arange(n - n_(on)) / n_(0.22 if on >= 0.4 else 0.07))   # short rings (the nine): a hand-damped ring-out
     return out * env[:, None]
 
 

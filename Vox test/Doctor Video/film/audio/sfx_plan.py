@@ -42,6 +42,11 @@ EDIT = [
     ('lamp_flicker', 's219-0.5', 'e219', {}, {'add_db': 4.0}, 'a dying tube (18 LU under)'),
     ('footsteps_porch', 's150-1.0', 'e150+2.0', {}, {'add_db': 4.0}, 'Halverson on the porch (18.7 LU under)'),
     ('paper', 's0', 'e455', {'dur': 0.6}, {'add_db': 4.0}, 'the rule cards\' paper (18-22 LU under)'),
+    # sound fix round (critic minors)
+    ('ui_pop', 's149', 'e149+1.5', {}, {'drop': True}, 'the KNOCK tags: the knocks speak for themselves (pops stacked on them)'),
+    ('footsteps_wood_inside', 's27', 'e29', {}, {'add_db': -5.0}, '1979 steps sat close to the words (106, 115)'),
+    ('footsteps_porch', 's150-1.0', 'e150+2.0', {}, {'params': {'weight': 1.0}, 'add_db': 2.0}, 'porch steps thin on a phone: full-weight treads, +2 dB'),
+    ('card_tear', 's296', 'e296', {}, {'at': 'w296:tore'}, 'the card tear on "tore" (was 65 ms early)'),
 ]
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
 THIN_GAIN = {'tv': -13.0, None: -10.0}
@@ -217,7 +222,9 @@ def picture_pass(out, lines, log):
                 res.append(c); continue
             nxt = [x for x in rings if x > t + 0.05]
             gap = (min(nxt) - t) if nxt else 2.0
-            on = round(max(0.3, min(1.2, gap - 0.12)), 2)
+            # sound fix round (M1): close rings (the nine in 4 s) are short bursts with air between them, so they count
+            # as nine instead of blurring into one long ring
+            on = round(max(0.3, min(1.2, gap - 0.12)), 2) if gap >= 1.0 else round(max(0.16, 0.5 * gap), 2)
             c = dict(c, name='landline_ring', params={'n': 1, 'on': on}); why = f'the old landline\'s bell, one ring ({on} s)'
         elif nm == 'room_tone' and p.get('kind') in ROOM:
             rn, extra, g = ROOM[p['kind']]
@@ -294,6 +301,8 @@ def apply(cues, lines):
                 c['params'] = dict(c.get('params') or {}, **ch['params'])
             if 'space' in ch:
                 c['space'] = ch['space']
+            if 'at' in ch:                                # moved onto a word (sound fix round)
+                c['t'] = round(_t(ch['at'], lines), 3)
         log.append(f'EDIT {name:18s} {ta:7.2f}-{tb:7.2f} {sub or ""} {ch}: {len(hit)} cue(s)  ({why[:70]})')
     out = [c for c in out if not c.get('_drop')]
     # THIN the speech ticks
