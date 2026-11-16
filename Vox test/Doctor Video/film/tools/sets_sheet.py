@@ -31,6 +31,7 @@ ap.add_argument('--bench_frames', type=int, default=6)
 ap.add_argument('--police', action='store_true')
 ap.add_argument('--delivery', action='store_true')
 ap.add_argument('--dummy', action='store_true')
+ap.add_argument('--bunny', action='store_true')
 ap.add_argument('--stage', action='store_true')
 ap.add_argument('--frame', action='store_true')
 ap.add_argument('--no_sheet', action='store_true')
@@ -308,8 +309,12 @@ BUNNY += [
 ] + [('card_rule%d' % n, rcard(n), 0.0, None, 'rule card %d (typed on, key words in red)' % n) for n in range(1, 8)]
 
 
+# ---------------------------------------------------------------------------------------------- the Doctor film
+exec(open(os.path.join(HERE, 'sets_sheet_doctor.py')).read())
+
+
 # staging test stills: (name, set builder, [(who, spot, stage_figure kwargs)], note)
-STAGE = [
+STAGE_BUNNY = [
     ('liv_wide', lambda: ST.ob_living('wide'), [('mom', 'armchair', dict(expr='too_still'))], 'Mom in the wingback (the couch is front-on here)'),
     ('liv_wide2', lambda: ST.ob_living('wide2'), [('narrator', 'couch_mid', dict(seed=3)), ('june', 'couch_right', dict(seed=4))],
      'the kids on the couch at 3/4'),
@@ -335,7 +340,7 @@ STAGE = [
 def stage_run():
     set_render_size(W0, H0)
     tiles = []
-    for name, build, figs, note in STAGE:
+    for name, build, figs, note in (STAGE_BUNNY if a.bunny else STAGE):
         t0 = time.time()
         sp = build()
         lays = [ST.stage_figure(sp, who, spot, **kw)[0] for who, spot, kw in figs]
@@ -347,6 +352,10 @@ def stage_run():
     cols = 3
     rows = [np.hstack(tiles[i:i + cols] + [np.zeros_like(tiles[0])] * (cols - len(tiles[i:i + cols]))) for i in range(0, len(tiles), cols)]
     cv2.imwrite(os.path.join(a.out, 'stage_sheet.jpg'), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 86])
+
+
+def _pre():
+    return 'police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ('bunny_' if a.bunny else '')))
 
 
 def cam_for(sp, mode):
@@ -374,7 +383,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     if a.stage:
         stage_run(); return
-    vs = POLICE if a.police else (DELIVERY if a.delivery else (DUMMY if a.dummy else BUNNY))
+    vs = POLICE if a.police else (DELIVERY if a.delivery else (DUMMY if a.dummy else (BUNNY if a.bunny else DOCTOR)))
     if a.only: vs = [v for v in vs if any(k in v[0] for k in a.only.split(','))]
     thumbs, index = [], []
     for name, build, t, cm, note in vs:
@@ -396,9 +405,10 @@ def main():
         cols = 5
         rows = [np.hstack(thumbs[i:i + cols] + [np.zeros_like(thumbs[0])] * (cols - len(thumbs[i:i + cols]))) for i in range(0, len(thumbs), cols)]
         sheet = np.vstack(rows)
-        pre = 'police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ''))
+        pre = _pre()
         cv2.imwrite(os.path.join(a.out, pre + 'contact_sheet.jpg'), sheet, [cv2.IMWRITE_JPEG_QUALITY, 86])
-        if not (a.police or a.delivery or a.dummy): ST.plan_map(os.path.join(a.out, 'floorplan.jpg'))
+        if a.bunny: ST.plan_map(os.path.join(a.out, 'bunny_floorplan.jpg'))
+        elif not (a.police or a.delivery or a.dummy): ST.dr_plan_map(os.path.join(a.out, 'floorplan.jpg'))
         if not a.only: json.dump(index, open(os.path.join(a.out, pre + 'index.json'), 'w'), indent=1)
     if a.frame:
         frame_check(vs)
@@ -463,7 +473,7 @@ def bench(vs):
             t0 = time.perf_counter(); render(sp, opt, tt, cam, k + 1); ts.append(time.perf_counter() - t0)
         res.append(dict(name=name, mean_s=round(float(np.mean(ts)), 3), max_s=round(float(np.max(ts)), 3)))
         print('bench %-32s mean %.3f s  max %.3f s' % (name, res[-1]['mean_s'], res[-1]['max_s']), flush=True)
-    json.dump(res, open(os.path.join(a.out, ('police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ''))) + 'bench_2560.json'), 'w'), indent=1)
+    json.dump(res, open(os.path.join(a.out, _pre() + 'bench_2560.json'), 'w'), indent=1)
     ms = [r['mean_s'] for r in res]
     print('bench: %d variants, mean %.3f s/frame, worst %.3f s (%s); police budget 0.6 s/frame' %
           (len(ms), float(np.mean(ms)), max(ms), res[int(np.argmax(ms))]['name']))

@@ -44,8 +44,8 @@ _DL_D = 640.0                                # mild perspective (cm) about the m
 _DL_ELEV = 0.11                              # the camera looks a little down on him: hands flat on the carpet read
 _DL_BLACK, _DL_BLACK_SH, _DL_BLACK_HI = '#17171c', '#0a0a0d', '#474b57'
 _DL_COAT = dict(c='#8c8a82', sh='#5f5d57', dp='#42413c', hi='#adab a1'.replace(' ', ''), grime='#5a5242', line='#1a1b20')
-_DL_TAPE = ('#e8ddb2', '#ddd09e', '#efe6c4', '#d4c48e', '#e4d7a8', '#d9ca96', '#cfbd84')
-_DL_TAPE_EDGE = '#8c7a4e'
+_DL_TAPE = ('#cfc08f', '#c2b07e', '#d5c99f', '#b6a474', '#c9b988', '#bcab7b', '#ad9a6c')     # old, yellowed, grimy
+_DL_TAPE_EDGE = '#5e5136'
 
 POSE_DEFAULTS.update(
     dl_seat=45.0,       # seat height above the floor (cm): plastic chair 45, armchair 42, bench 46, car seat 30
@@ -635,38 +635,85 @@ def _dl_sleeve(c, R, view, s, det, light):
 
 
 # ------------------------------------------------------------------------------------------------- the head
-_DL_FACE = (8.2, 10.6, 8.0)              # his small face (half width, half height, half depth), cm
-_DL_CONE = dict(base_y=-7.2, base_z=-1.6, rx=12.6, rz=11.4, L=62.0, lean=0.12)
+# Measured on the owner's reference photo (px): cone 67 long from the rim over the brow to the tip, 23 across at its base
+# (length : base = 2.9), the same width as the face (the rim sits round the face like a hood, no flare); the cone's sides
+# are slightly hollow (a spire: width 0.80 / 0.39 / 0.09 of the base at 15 / 50 / 84 % of its length), its top bends a
+# little; the pale face is about 23 wide x 21 tall (brow to chin), the lower third lost in black; the neck is 0.4 of the
+# face's width, ringed. Head-local cm: x right, y down, z forward (the face); the eye line is y = -1.
+_DL_FACE = (9.4, 10.6, 8.8)              # the skull under the hood (half width, half height, half depth), cm
+_DL_OPEN = dict(rx=7.7, y0=-4.4, y1=9.3)  # the pale face showing in the hood's opening (half width, top, chin)
+_DL_CONE = dict(base_y=-1.0, base_z=-0.6, rx=9.7, rz=9.2, L=58.0, lean=-0.04, bend=6.0, crook=1.7)
 _DL_FACES = (None, 'grandpa_ghost', 'stranger_face', 'ghost_girl', 'ruth', 'narr14')
 POSE_DISCRETE.update(dl_layer='all')
 
 
-def _dl_rings():
-    """The rings the tape is wound on, chin to cone tip: (centre (x, y, z) head-local cm, axis, half width, half depth,
-    part ('face' | 'cone'))."""
-    fx, fy, fz = _DL_FACE
-    rings = []
-    ys = np.linspace(fy * 0.93, _DL_CONE['base_y'] + 0.4, 8)
-    ys[1:-1] += np.array([(hash01(k, 871) - 0.5) * 0.8 for k in range(1, len(ys) - 1)])
-    ys[4] = 0.25; ys[5] = -2.6                                          # the eye band (the gap) sits on the eye line
-    for y in ys:
-        k = math.sqrt(max(0.0, 1.0 - (y / fy) ** 2))
-        rings.append((np.array([0.0, y, 0.6]), np.array([0.0, -1.0, 0.0]), fx * k + 0.25, fz * k + 0.25, 'face'))
+def _dl_cone_c(s):
+    """Centre line of the cone at s (0 base .. 1 tip; array or scalar): up from the eye line, the upper part bending back
+    and a little to one side (it is not a geometric cone)."""
     cn = _DL_CONE
-    u = np.array([0.0, -math.cos(cn['lean']), math.sin(cn['lean'])])
-    b = np.array([0.0, cn['base_y'], cn['base_z']])
-    ss = np.linspace(0.0, cn['L'] * 0.985, 18)
-    ss[1:-1] += np.array([(hash01(k, 873) - 0.5) * 1.6 for k in range(1, len(ss) - 1)])
-    for s_ in ss:
-        k = 1.0 - s_ / cn['L']
-        rings.append((b + u * s_, u, cn['rx'] * k + 0.3, cn['rz'] * k + 0.3, 'cone'))
-    return rings
+    s = np.asarray(s, float)
+    d = s * cn['L']
+    sc = np.clip(s, 0.0, 1.2)
+    out = np.empty(s.shape + (3,))
+    out[..., 0] = cn['crook'] * np.sin(sc * 3.3) * sc
+    out[..., 1] = cn['base_y'] - d * math.cos(cn['lean'])
+    out[..., 2] = cn['base_z'] + d * math.sin(cn['lean']) - cn['bend'] * sc ** 2.4
+    return out
 
 
-_DL_RINGS = _dl_rings()
-# the order the strips come off when he is asked questions: the gap's neighbours first, out over the face, then up the cone
-_DL_EYE_BAND = 4                                                        # the band (between rings 4 and 5) holding the gap
-_DL_PEEL = sorted(range(len(_DL_RINGS) - 1), key=lambda i: (abs(i - _DL_EYE_BAND) if i < 7 else 100 - i))
+def _dl_cone_frame(s):
+    """(centre, tangent, ex, ez, rx, rz) of the cone's cross-section at s (arrays)."""
+    cn = _DL_CONE
+    s = np.atleast_1d(np.asarray(s, float))
+    C = _dl_cone_c(s)
+    T = _dl_cone_c(s + 0.004) - _dl_cone_c(s - 0.004)
+    T /= np.linalg.norm(T, axis=-1, keepdims=True)
+    ex = -T * T[..., 0:1]; ex[..., 0] += 1.0
+    ex /= np.linalg.norm(ex, axis=-1, keepdims=True)
+    ez = np.cross(T, ex)
+    k = np.clip(1.0 - s, 0.0, 1.0)
+    f = (0.9 * k ** 1.4 + 0.1 * k) * (1.0 + 0.03 * np.sin(s * 21.0 + 0.7))       # a hollow-sided spire, slightly lumpy
+    return C, T, ex, ez, cn['rx'] * f, cn['rz'] * f
+
+
+def _dl_cone_q(s, phi, grow=0.0):
+    """Points on the cone's surface: s along it, phi round it (pi/2 = the front)."""
+    C, T, ex, ez, rx, rz = _dl_cone_frame(s)
+    phi = np.asarray(phi, float)
+    return C + ex * ((rx + grow) * np.cos(phi))[:, None] + ez * ((rz + grow) * np.sin(phi))[:, None]
+
+
+def _dl_skull_q(y, phi, grow=0.0):
+    """Points on the skull (the hooded head below the cone's rim): y down it, phi round it (pi/2 = the front)."""
+    fx, fy, fz = _DL_FACE
+    y = np.atleast_1d(np.asarray(y, float)); phi = np.asarray(phi, float)
+    k = np.sqrt(np.clip(1.0 - (y / fy) ** 2, 0.03, 1.0))
+    out = np.empty(k.shape + (3,))
+    out[..., 0] = (fx * k + grow) * np.cos(phi)
+    out[..., 1] = y
+    out[..., 2] = (fz * k + grow) * np.sin(phi)
+    return out
+
+
+# The tape: a few narrow strips of old medical tape wound loosely round the black head, slanted, with wide gaps where the
+# black shows. part 'cone': pos = cm up the cone from its rim; part 'skull': pos = y on the face. w = width (cm); tilt (cm)
+# and ph slant the loop; gap = (phi, half width) where the strip is torn open, its end lifting ('loose' = which side).
+# grp 'face' strips cross the face (brow, cheeks, jaw) and leave the one thin gap at the eyes; they come off first.
+_DL_STRIPS = (
+    dict(grp='face', part='cone', pos=3.35, w=2.3, tilt=0.75, ph=1.80),                                    # the brow
+    dict(grp='face', part='skull', pos=2.05, w=2.3, tilt=0.70, ph=1.57),                                   # under the eyes
+    dict(grp='face', part='skull', pos=6.90, w=2.2, tilt=1.00, ph=1.25, gap=(2.75, 0.34), loose=-1),       # the jaw
+    dict(grp='cone', part='cone', pos=8.2, w=2.3, tilt=-1.9, ph=1.20),
+    dict(grp='cone', part='cone', pos=16.0, w=2.5, tilt=2.3, ph=0.50, gap=(0.55, 0.42), loose=1),
+    dict(grp='cone', part='cone', pos=24.5, w=2.3, tilt=-2.1, ph=2.30),
+    dict(grp='cone', part='cone', pos=33.0, w=2.1, tilt=2.4, ph=1.00, gap=(2.45, 0.50), loose=-1),
+    dict(grp='cone', part='cone', pos=41.5, w=1.9, tilt=-1.8, ph=0.20),
+    dict(grp='cone', part='cone', pos=49.5, w=1.5, tilt=1.6, ph=1.90),
+)
+_DL_NSTRIP = len(_DL_STRIPS)
+# the order the strips come off when he is asked questions: the face's (brow, under the eyes, jaw), then down from the tip
+_DL_PEEL = [0, 1, 2] + list(range(_DL_NSTRIP - 1, 2, -1))
+_DL_PHI_STEP = 2 * PI / 48
 
 
 class _DLHead:
@@ -678,98 +725,122 @@ class _DLHead:
         self.X, self.Y, self.Z, self.f = X, Y, Z, f
         self.roll = math.radians(R['h_roll']) + view.tilt
         self.cr, self.sr = math.cos(self.roll), math.sin(self.roll)
+        self.M = np.array([self.tf((1.0, 0.0, 0.0)), self.tf((0.0, 1.0, 0.0)), self.tf((0.0, 0.0, 1.0))])   # rows: images
+        self._sil = None
 
     def p(self, q):
         v = self.tf(q)
         x, y = v[0] * self.f, v[1] * self.f
         return (self.X + x * self.cr - y * self.sr, self.Y + x * self.sr + y * self.cr, v[2])
 
+    def pn(self, Q):
+        """Project an (N, 3) array of head-local points: list of (x, y)."""
+        V = np.asarray(Q, float) @ self.M
+        x, y = V[:, 0] * self.f, V[:, 1] * self.f
+        return list(zip((self.X + x * self.cr - y * self.sr).tolist(), (self.Y + x * self.sr + y * self.cr).tolist()))
+
     def vis(self, d):
         """Depth (toward the camera) of a head-local direction."""
         return float(self.tf(d)[2])
 
 
-def _dl_ring_pts(hd, ring, phis, tilt=0.0, phase=0.0, grow=0.0):
-    c3, ax, rx, rz, part = ring
-    # in-ring basis: ex = head x, ez = perpendicular to the axis toward the face
-    ex = np.array([1.0, 0.0, 0.0])
-    ez = _unit3(np.cross(ex, ax)) * -1.0
-    if ez[2] < 0: ez = -ez
-    pts = []
-    for ph in phis:
-        q = c3 + ex * (rx + grow) * math.cos(ph) + ez * (rz + grow) * math.sin(ph) + ax * (tilt * math.sin(ph + phase))
-        pts.append(hd.p(q)[:2])
-    return pts
-
-
-def _dl_front_arc(hd, ring, n=17):
-    """phi samples (silhouette to silhouette) over the half of a ring facing the camera."""
-    c3, ax, rx, rz, part = ring
-    ex = np.array([1.0, 0.0, 0.0])
-    ez = _unit3(np.cross(ex, ax)) * -1.0
-    if ez[2] < 0: ez = -ez
-    A = hd.vis(ex); B = hd.vis(ez)
-    ph0 = math.atan2(B, A)
-    return np.linspace(ph0 - 1.53, ph0 + 1.53, n), ph0
+def _dl_open_path(hd):
+    """The opening of the hood: the pale face's outline on the front of the skull (None when he faces away)."""
+    if hd.vis((0.0, 0.0, 1.0)) < -0.2: return None
+    fx, fy, fz = _DL_FACE
+    o = _DL_OPEN
+    a = np.linspace(0.0, 2 * PI, 28, endpoint=False)
+    sn = np.sin(a)
+    x = o['rx'] * np.cos(a) * (1.0 - 0.24 * np.clip(sn, 0.0, 1.0) ** 2)          # narrower at the chin
+    y = (o['y0'] + o['y1']) / 2 + (o['y1'] - o['y0']) / 2 * sn
+    z = fz * np.sqrt(np.clip(1.0 - (x / fx) ** 2 - (y / fy) ** 2, 0.04, 1.0))
+    return smooth(hd.pn(np.stack([x, y, z], 1)), True)
 
 
 def _dl_silhouettes(hd):
-    """(face hull path, cone hull path) of the head."""
-    face_pts, cone_pts = [], []
-    phs = np.linspace(0, 2 * PI, 20, endpoint=False)
-    for r in _DL_RINGS:
-        pts = _dl_ring_pts(hd, r, phs)
-        (face_pts if r[4] == 'face' else cone_pts).extend(pts)
+    """(the face opening's path or None, the black head's path: cone + hooded skull, the tip's point), cached on hd."""
+    if hd._sil is not None: return hd._sil
+    # the cone's outline: per cross-section the two points furthest across the projected centre line
+    ss = np.linspace(0.0, 0.985, 20)
+    cen = hd.pn(_dl_cone_c(ss))
+    phs = np.linspace(0.0, 2 * PI, 16, endpoint=False)
+    left, right = [], []
+    for i, s_ in enumerate(ss):
+        ring = np.asarray(hd.pn(_dl_cone_q(np.full(16, s_), phs)))
+        a = cen[max(i - 1, 0)]; b = cen[min(i + 1, len(ss) - 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(dx, dy)
+        if L < 1e-6: dx, dy, L = 0.0, -1.0, 1.0
+        d = (ring[:, 0] - cen[i][0]) * (-dy / L) + (ring[:, 1] - cen[i][1]) * (dx / L)
+        left.append(tuple(ring[int(np.argmax(d))])); right.append(tuple(ring[int(np.argmin(d))]))
+        if i == 0: base = _hull([tuple(p) for p in ring])
+    tip = hd.pn(_dl_cone_c(np.array([1.0])))[0]
+    cone = poly(left + [tip] + right[::-1], True)
+    cone = union(cone, smooth(base, True, 0.6)) or cone
+    # the hooded skull under the rim
     fx, fy, fz = _DL_FACE
-    face_pts.append(hd.p(np.array([0.0, fy, 0.0]))[:2])
-    cn = _DL_CONE
-    u = np.array([0.0, -math.cos(cn['lean']), math.sin(cn['lean'])])
-    tip = np.array([0.0, cn['base_y'], cn['base_z']]) + u * cn['L']
-    cone_pts.append(hd.p(tip)[:2])
-    return smooth(_hull(face_pts), True, 0.6), poly(_hull(cone_pts), True), hd.p(tip)[:2]
+    ys = np.repeat(np.linspace(-fy * 0.5, fy, 8), 16)
+    sk = _hull(hd.pn(_dl_skull_q(ys, np.tile(phs, 8))))
+    head = union(cone, smooth(sk, True, 0.6)) or cone
+    hd._sil = (_dl_open_path(hd), head, tip)
+    return hd._sil
 
 
 def _dl_own_face(c, hd, P, det, t):
-    """His own face under the tape (the reference's): pale and bony, two deep dark sockets, two pale patient eyes in them
-    (they follow look_x / look_y, half-lidded), the lower face darker."""
+    """His own face in the hood (the reference's): small, pale grey, skull-like and sunken; two deep dark sockets with two
+    small pale patient eyes in them (they follow look_x / look_y, half-lidded), hollow cheeks, a hint of a nose, a thin
+    dark mouth line, the lower face lost in black."""
     fx, fy, fz = _DL_FACE
-    face_hull = _dl_silhouettes(hd)[0]
-    c.fill(face_hull, '#cfc7b5')
-    bb = face_hull.getBounds()
-    c.grad(face_hull, 0, bb.top(), 0, bb.bottom(), [(0, '#e0d9c8', 120), (0.45, '#cfc7b5', 0), (0.75, '#4a403a', 150), (1, '#1d1714', 230)])
+    op = _dl_silhouettes(hd)[0]
+    if op is None: return None
+    f = hd.f
+    c.fill(op, '#b4b6b0')
+    x0, y0, _ = hd.p(np.array([0.0, _DL_OPEN['y0'], fz])); x1, y1, _ = hd.p(np.array([0.0, _DL_OPEN['y1'], fz * 0.6]))
+    c.grad(op, x0, y0, x1, y1, [(0, '#6f716e', 150), (0.14, '#cfd1ca', 110), (0.42, '#b4b6b0', 0), (0.66, '#4b4947', 150),
+                                (0.84, '#151313', 225), (1, '#070606', 245)])
     vis = hd.vis(np.array([0.0, 0.0, 1.0]))
+
+    def on(x, y, k=1.0):
+        return np.array([x, y, fz * k * math.sqrt(max(0.04, 1.0 - (x / fx) ** 2 - (y / fy) ** 2))])
     out = {}
-    for sd in (-1, 1):
-        ex, ey = sd * 3.3, -1.0
-        ez = fz * math.sqrt(max(0.0, 1.0 - (ex / fx) ** 2 - (ey / fy) ** 2))
-        X, Y, V = hd.p(np.array([ex, ey, ez]))
-        n = hd.vis(_unit3(np.array([ex / fx ** 2, ey / fy ** 2, ez / fz ** 2])))
-        if n < -0.15: continue
-        k = clamp(0.35 + n, 0.25, 1.0)
-        sock = oval(X, Y + 0.2, 2.5 * k * hd.f, 2.2 * hd.f)
-        c.radial(sock, X, Y + 0.2, 3.0 * hd.f, [(0, '#060404', 255), (0.6, '#160f0d', 240), (1, '#3a302a', 0)])
-        out[sd] = (X, Y, k)
-    # the eyes: pale, half-lidded, patient
-    lid = clamp(0.42 + 0.58 * P.blink + 0.25 * P.squint - 0.3 * P.wide)
-    for sd, (X, Y, k) in out.items():
-        rx, ry = 1.25 * k * hd.f, 0.75 * hd.f
-        eye = oval(X, Y, rx, ry)
-        lx = clamp(P.look_x, -1, 1) * 0.55 * rx; ly = clamp(P.look_y, -1, 1) * 0.35 * ry
-        with c.clip(eye):
-            c.fill(eye, '#c9ccbf')
-            c.fill(oval(X + lx, Y + ly, 0.62 * hd.f * k, 0.62 * hd.f), '#aeb3a6')
-            c.fill(oval(X + lx, Y + ly, 0.22 * hd.f * k, 0.22 * hd.f), '#141312')
-            c.fill(oval(X + lx - 0.2 * hd.f, Y + ly - 0.22 * hd.f, 0.12 * hd.f, 0.1 * hd.f), '#ffffff', 220)
-            c.fill(rect(X - rx - 1, Y - ry - 1, 2 * rx + 2, (2 * ry + 1) * lid + 0.2), '#2a221e')
-        c.line(poly([(X - rx, Y - ry + (2 * ry) * lid), (X + rx, Y - ry + (2 * ry) * lid)], False), c.lw * 0.5, '#0a0807', 230)
-    # nose holes and a thin dark mouth line (only on his own face, seen in close-ups once the tape is off)
-    if det >= 1 and vis > 0.1:
+    with c.clip(op):
+        for sd in (-1, 1):                                                # gaunt cheeks: a hollow under each socket
+            X, Y, V = hd.p(on(sd * 5.0, 3.4))
+            c.radial(oval(X, Y, 2.6 * f, 3.6 * f), X, Y, 3.6 * f, [(0, '#2a2726', 150), (0.6, '#3a3735', 70), (1, '#3a3735', 0)])
+        if det >= 1 and vis > 0.1:                                        # the nose: a faint bridge, two dark holes
+            b0 = hd.p(on(0.0, -0.4, 1.02))[:2]; b1 = hd.p(on(0.25, 2.3, 1.05))[:2]
+            c.line(poly([b0, b1], False), 0.9 * f, '#8c8e88', 150)
+            c.line(poly([(b0[0] + 0.5 * f, b0[1]), (b1[0] + 0.55 * f, b1[1])], False), 0.4 * f, '#d6d8d0', 110)
         for sd in (-1, 1):
-            X, Y, V = hd.p(np.array([sd * 0.55, 3.0, fz * 0.95]))
-            c.fill(oval(X, Y, 0.32 * hd.f, 0.22 * hd.f), '#1d1512', 220)
-        m = [hd.p(np.array([x, 5.6 + 0.15 * abs(x), fz * 0.86]))[:2] for x in np.linspace(-2.4, 2.4, 6)]
-        c.line(smooth(m, False), c.lw * 0.6, '#140f0d', 230)
-    return face_hull
+            ex, ey = sd * 3.3, -1.0
+            q = on(ex, ey)
+            X, Y, V = hd.p(q)
+            n = hd.vis(_unit3(np.array([ex / fx ** 2, ey / fy ** 2, q[2] / fz ** 2])))
+            if n < -0.15: continue
+            k = clamp(0.35 + n, 0.25, 1.0)
+            sock = oval(X, Y + 0.25 * f, 2.75 * k * f, 2.45 * f)
+            c.radial(sock, X, Y + 0.25 * f, 3.2 * f, [(0, '#040303', 255), (0.62, '#100d0c', 245), (1, '#35312e', 0)])
+            out[sd] = (X, Y, k)
+        # the eyes: small, pale, half-lidded, patient
+        lid = clamp(0.42 + 0.58 * P.blink + 0.25 * P.squint - 0.3 * P.wide)
+        for sd, (X, Y, k) in out.items():
+            rx, ry = 1.2 * k * f, 0.72 * f
+            eye = oval(X, Y, rx, ry)
+            lx = clamp(P.look_x, -1, 1) * 0.55 * rx; ly = clamp(P.look_y, -1, 1) * 0.35 * ry
+            with c.clip(eye):
+                c.fill(eye, '#c6cabf')
+                c.fill(oval(X + lx, Y + ly, 0.6 * f * k, 0.6 * f), '#a9afa3')
+                c.fill(oval(X + lx, Y + ly, 0.2 * f * k, 0.2 * f), '#121110')
+                c.fill(rect(X - rx - 1, Y - ry - 1, 2 * rx + 2, (2 * ry + 1) * lid + 0.2), '#1c1716')
+            c.line(poly([(X - rx, Y - ry + (2 * ry) * lid), (X + rx, Y - ry + (2 * ry) * lid)], False), c.lw * 0.5, '#070505', 230)
+        if det >= 1 and vis > 0.1:
+            for sd in (-1, 1):
+                X, Y, V = hd.p(on(sd * 0.6, 3.1, 1.0))
+                c.fill(oval(X, Y, 0.34 * f, 0.24 * f), '#120e0d', 230)
+            m = [hd.p(on(x, 5.7 + 0.12 * abs(x), 0.98))[:2] for x in np.linspace(-2.7, 2.7, 6)]
+            c.line(smooth(m, False), c.lw * 0.6, '#040303', 240)
+            c.line(smooth([(px_, py_ + 0.5 * f) for px_, py_ in m[1:-1]], False), c.lw * 0.4, '#5a5855', 110)
+    return op
 
 
 def _grey_layer(c, a=1.0, tint=(0.80, 0.83, 0.82)):
@@ -787,14 +858,15 @@ def _grey_layer(c, a=1.0, tint=(0.80, 0.83, 0.82)):
 
 
 def _dl_under_face(c, hd, R, P, det, t, light):
-    """What is under the tape on the face: his own face (dl_face 0) or the faces of the people who said "it's probably
+    """What is in the hood's opening: his own face (dl_face 0) or the faces of the people who said "it's probably
     nothing" (1 Grandpa, 2 a stranger, 3 a little girl, 4 Ruth, 5 the narrator), grey and patient, crossfading."""
-    fhull, chull, tip = _dl_silhouettes(hd)
+    op, head, tip = _dl_silhouettes(hd)
+    if op is None: return
     v = clamp(P.dl_face, 0.0, len(_DL_FACES) - 1.0)
     i0 = int(math.floor(v)); u = v - i0
     i1 = min(i0 + 1, len(_DL_FACES) - 1)
     layers = [(i0, 1.0)] if u < 0.02 else ([(i1, 1.0)] if u > 0.98 else [(i0, 1.0), (i1, ease_in_out(u))])
-    with c.clip(fhull):
+    with c.clip(op):
         for idx, a in layers:
             who = _DL_FACES[idx]
             if who is None:
@@ -805,152 +877,188 @@ def _dl_under_face(c, hd, R, P, det, t, light):
                     _dl_own_face(c, hd, P, det, t)
                 continue
             sp = CAST[who]
-            # their face (eyes to chin) fills his small face: about 0.073 cm per head unit
-            k = 0.074 * (1.0 + 0.04 * math.sin(t * 2.0 + idx))
+            # their face (brow to chin) fills the hood's opening: about 0.07 cm per head unit
+            k = 0.070 * (1.0 + 0.04 * math.sin(t * 2.0 + idx))
             yaw = R['h_yaw'] * 0.9
             Q = Pose('neutral')
             Q.lid_l = Q.lid_r = 0.0
             Q.eye_open = 0.82; Q.pupil = 0.9; Q.m_press = 0.35; Q.smile = 0.05; Q.brow_sad = 0.25
             Q.look_x = P.look_x * 0.6; Q.look_y = P.look_y * 0.6
-            cx, cy, _ = hd.p(np.array([0.0, 0.6, _DL_FACE[2] * 0.4]))
+            cx, cy, _ = hd.p(np.array([0.0, 1.4, _DL_FACE[2] * 0.4]))
             hc = c.sub(cx, cy, math.degrees(hd.roll), k * hd.f)
             _grey_layer(c, a)
-            c.fill(fhull, mix(sp['skin'], '#9a9a9a', 0.4))
+            c.fill(op, mix(sp['skin'], '#9a9a9a', 0.4))
             draw_head_local(hc, who, Q, yaw, R['h_pitch'] * 0.8, det, t, None, sp)
             c.cv.restore()
-        # the face sits in the hollow of the wrapping: shade its edge
-        bb = fhull.getBounds()
-        c.radial(fhull, bb.centerX(), bb.centerY(), max(bb.width(), bb.height()) * 0.62,
-                 [(0, '#000000', 0), (0.7, '#000000', 40), (1, '#000000', 170)])
+        # the face sits deep in the hood: shade its edge, most under the rim
+        bb = op.getBounds()
+        c.radial(op, bb.centerX(), bb.centerY(), max(bb.width(), bb.height()) * 0.6,
+                 [(0, '#000000', 0), (0.68, '#000000', 45), (1, '#000000', 190)])
+    c.line(op, c.lw * 0.75, '#050506')
 
 
 def _dl_cone_under(c, hd, det, light):
-    """The cone under the tape: black like the reference, a dull sheen down one side."""
-    fhull, chull, tip = _dl_silhouettes(hd)
-    c.fill(chull, '#121216')
-    bb = chull.getBounds()
-    c.grad(chull, bb.left(), 0, bb.right(), 0, [(0, '#000000', 120), (0.35, '#3d404a', 150), (0.55, '#1b1c22', 0), (1, '#000000', 160)])
-    if det >= 1: c.texture(chull, 'grunge', 0.18, 0.18)
+    """The black head: the cone and the hood round the skull, black like the reference with a dull sheen, and the creases
+    twisting up the cone like wrung cloth or dry skin."""
+    op, head, tip = _dl_silhouettes(hd)
+    c.fill(head, '#131317')
+    if det < 1: return
+    c.texture(head, 'grunge', 0.16, 0.18)
+    # creases: lines that climb the cone while winding round it; only where they face the camera
+    A = hd.vis((1.0, 0.0, 0.0)); B = hd.vis((0.0, 0.0, 1.0))
+    dark, lite = [], []
+    for j in range(7):
+        ph0 = j * 0.9 + 0.35 + 0.5 * hash01(j, 881)
+        s0 = 0.02 + 0.10 * hash01(j, 882); s1 = min(0.97, s0 + 0.5 + 0.45 * hash01(j, 883))
+        ss = np.linspace(s0, s1, 18)
+        ph = ph0 + 2.6 * ss + 0.25 * np.sin(ss * 9.0 + j)
+        front = (A * np.cos(ph) + B * np.sin(ph)) > 0.12
+        pa = hd.pn(_dl_cone_q(ss, ph, 0.05)); pb = hd.pn(_dl_cone_q(ss, ph + 0.10 + 0.25 * ss, 0.05))
+        run_a, run_b = [], []
+        for i in range(len(ss) + 1):
+            if i < len(ss) and front[i]:
+                run_a.append(pa[i]); run_b.append(pb[i])
+            else:
+                if len(run_a) >= 3: dark.append(smooth(run_a, False)); lite.append(smooth(run_b, False))
+                run_a, run_b = [], []
+    with c.clip(head):
+        if lite: c.line(_multi(lite), c.lw * 0.5, '#454954', 150)
+        if dark: c.line(_multi(dark), c.lw * 0.6, '#030304', 235)
 
 
 def _dl_band_state(i, tape):
     """0 = the strip is wound on, 1 = it is off (peel progress in between)."""
     if tape >= 0.999: return 0.0
-    n_off = (1.0 - clamp(tape)) * (len(_DL_RINGS) - 1)
+    n_off = (1.0 - clamp(tape)) * _DL_NSTRIP
     k = _DL_PEEL.index(i)
     return clamp(n_off - k)
 
 
+def _dl_strip_edges(hd, st, i, phis):
+    """The two edges of strip i over the angles phis: lists of 2D points (frayed a little; fixed to the head)."""
+    off = st['tilt'] * np.sin(phis + st['ph'])
+    f0 = 0.20 * (0.6 * np.sin(phis * 9.0 + i * 1.7) + 0.4 * np.sin(phis * 17.0 + i * 3.1))
+    f1 = 0.20 * (0.6 * np.sin(phis * 8.0 + i * 2.9 + 1.0) + 0.4 * np.sin(phis * 19.0 + i * 1.3))
+    h = st['w'] / 2
+    if st['part'] == 'cone':
+        L = _DL_CONE['L']
+        return (hd.pn(_dl_cone_q((st['pos'] - h + off + f0) / L, phis, 0.22)),
+                hd.pn(_dl_cone_q((st['pos'] + h + off + f1) / L, phis, 0.22)))
+    return (hd.pn(_dl_skull_q(st['pos'] + h + off + f0, phis, 0.22)), hd.pn(_dl_skull_q(st['pos'] - h + off + f1, phis, 0.22)))
+
+
 def _dl_tape(c, hd, P, det, t, light):
-    """The old yellow medical tape wound round and round the head: one band per pair of rings, each overlapping the one
-    below, a slight spiral, darker edges and grime; the eye band has a thin gap in front. Peeling strips unwind and
-    hang. Returns the list of hanging strips' anchor points."""
-    nb = len(_DL_RINGS) - 1
+    """The old medical tape: a few narrow, yellowed, stained strips wound loosely round the black head (slanted, wide gaps
+    between them, frayed edges, partly translucent), the face's strips leaving one thin gap at the eyes. Peeling strips
+    unwind and hang. Returns the list of hanging strips' anchor points."""
     hang = []
-    lsd = (light or {}).get('side', 1)
-    n_off = (1.0 - clamp(P.dl_tape)) * nb
-    for i in range(nb):
+    n_off = (1.0 - clamp(P.dl_tape)) * _DL_NSTRIP
+    ph0 = math.atan2(hd.vis((0.0, 0.0, 1.0)), hd.vis((1.0, 0.0, 0.0)))
+    a0, a1 = ph0 - 1.53, ph0 + 1.53
+    k0 = int(math.ceil(a0 / _DL_PHI_STEP + 1e-6)); k1 = int(math.floor(a1 / _DL_PHI_STEP - 1e-6))
+    phis = np.array([a0] + [k * _DL_PHI_STEP for k in range(k0, k1 + 1)] + [a1])       # inner samples stay fixed to the head
+    n = len(phis)
+    for i, st in enumerate(_DL_STRIPS):
         u = _dl_band_state(i, P.dl_tape)
         v = n_off - _DL_PEEL.index(i)                      # > 1: fully off; the loose strip hangs on, then falls away
         if u >= 0.999 and v >= 2.5:
             continue
-        r0, r1 = _DL_RINGS[i], _DL_RINGS[i + 1]
-        phis, ph0 = _dl_front_arc(hd, r0 if r0[4] == r1[4] else r1)
-        tilt = (0.45 if r0[4] == 'face' else 0.9) * (1.0 if i % 2 else -0.7)    # wraps criss-cross a little
-        ph = 0.9 * i + 0.6
-        lo = _dl_ring_pts(hd, r0, phis, tilt, ph, 0.18)
-        hi = _dl_ring_pts(hd, r1, phis, tilt, ph, 0.18)
+        lo, hi = _dl_strip_edges(hd, st, i, phis)
+        side = 1 if i % 2 else -1
+        wpx = st['w'] * hd.f
         if u >= 0.999:
-            side = 1 if i % 2 else -1
-            a0 = lo[1] if side > 0 else lo[-2]; b0 = hi[1] if side > 0 else hi[-2]
-            hang.append(((a0[0] + b0[0]) / 2, (a0[1] + b0[1]) / 2, math.hypot(b0[0] - a0[0], b0[1] - a0[1]), 1.0, i, side,
-                         clamp(1.0 - (v - 1.0) / 1.5)))
+            a_ = lo[1] if side > 0 else lo[-2]; b_ = hi[1] if side > 0 else hi[-2]
+            hang.append(((a_[0] + b_[0]) / 2, (a_[1] + b_[1]) / 2, wpx, 1.0, i, side, clamp(1.0 - (v - 1.0) / 1.5)))
             continue
+        keep = list(range(n))
         if u > 0.001:
             # the strip unwinds from one side: only the part still on is drawn; the loose end hangs from where it lifts
-            m = max(2, int(round(len(phis) * (1.0 - u))))
-            side = 1 if i % 2 else -1
-            if side > 0:
-                lo, hi = lo[:m], hi[:m]
-            else:
-                lo, hi = lo[-m:], hi[-m:]
-            ax_, ay_ = (lo[-1] if side > 0 else lo[0]); bx_, by_ = (hi[-1] if side > 0 else hi[0])
-            hang.append(((ax_ + bx_) / 2, (ay_ + by_) / 2, math.hypot(bx_ - ax_, by_ - ay_), u, i, side, 1.0))
-        band = poly(lo + hi[::-1], True)
-        colr = _DL_TAPE[(i * 7 + 3) % len(_DL_TAPE)]
-        if r0[4] == 'cone':
-            colr = mix(colr, '#8f7a4c', clamp((i - 7) / 18.0) * 0.6)    # grimier toward the tip
-        if i == _DL_EYE_BAND and P.dl_tape > 0.0:
-            # the gap: in front only; tape on either side of it
-            gap_w = 0.62
-            keep = [k for k, p_ in enumerate(phis) if abs(((p_ - (PI / 2)) + PI) % (2 * PI) - PI) > gap_w]
-            if keep and u < 0.001:
-                runs, cur = [], [keep[0]]
-                for k in keep[1:]:
-                    if k == cur[-1] + 1: cur.append(k)
-                    else: runs.append(cur); cur = [k]
-                runs.append(cur)
-                for run in runs:
-                    if len(run) < 2: continue
-                    seg = poly([lo[k] for k in run] + [hi[k] for k in run[::-1]], True)
-                    c.fill(seg, colr); c.line(seg, c.lw * 0.45, _DL_TAPE_EDGE, 220)
-                continue
-        c.fill(band, colr)
-        if det >= 1:
-            c.texture(band, 'fabric', 0.22, 0.12)
-            c.fill(_crescent(band, 0.0, 0.5 * hd.f), _DL_TAPE_EDGE, 90)
-            if hash01(i, 851) > 0.55:                                    # a grimy smudge on some wraps
-                j = int(hash01(i, 852) * (len(lo) - 2)) + 1 if len(lo) > 2 else 0
-                if j < len(lo) and j < len(hi):
-                    mx, my = (lo[j][0] + hi[j][0]) / 2, (lo[j][1] + hi[j][1]) / 2
-                    c.fill(oval(mx, my, 1.4 * hd.f, 0.7 * hd.f), '#6f5e3a', 70)
-        # the lower edge of each wrap casts a thin shadow onto the one below; the top edge catches light
-        c.line(smooth(lo, False), c.lw * 0.55, _DL_TAPE_EDGE, 230)
-        if det >= 1: c.line(smooth(hi, False), c.lw * 0.3, '#efe2b4', 120)
-    # shading over the whole wrap: the head is round
+            m = max(2, int(round(n * (1.0 - u))))
+            keep = keep[:m] if side > 0 else keep[-m:]
+            j = keep[-1] if side > 0 else keep[0]
+            hang.append(((lo[j][0] + hi[j][0]) / 2, (lo[j][1] + hi[j][1]) / 2, wpx, u, i, side, 1.0))
+        gap = st.get('gap')
+        if gap:
+            gk = [k for k in keep if abs(((phis[k] - gap[0]) + PI) % (2 * PI) - PI) > gap[1]]
+            if len(gk) < len(keep) and gk and u <= 0.001:
+                # a torn end shows: the tape's end lifts off the head there
+                ls = st.get('loose', 1)
+                cut = [k for k in keep if k not in gk]
+                j = (cut[0] - 1) if ls < 0 else (cut[-1] + 1)
+                if j in gk and 1 <= j <= n - 2:
+                    hang.append(((lo[j][0] + hi[j][0]) / 2, (lo[j][1] + hi[j][1]) / 2, wpx, 0.10 + 0.08 * hash01(i, 861), i, -ls, 1.0))
+            keep = gk
+        runs, cur = [], []
+        for k in keep:
+            if cur and k != cur[-1] + 1: runs.append(cur); cur = []
+            cur.append(k)
+        if cur: runs.append(cur)
+        colr = _DL_TAPE[(i * 5 + 3) % len(_DL_TAPE)]
+        for run in runs:
+            if len(run) < 2: continue
+            band = poly([lo[k] for k in run] + [hi[k] for k in run[::-1]], True)
+            c.fill(band, colr, 214)
+            if det >= 1:
+                c.texture(band, 'fabric', 0.2, 0.12)
+                for j in range(3):                                   # old stains: brown-grey patches fixed to the tape
+                    kc = int(round((1.2 + j * 2.1 + 5.0 * hash01(i * 3 + j, 852)) / _DL_PHI_STEP)) * _DL_PHI_STEP
+                    ks = [k for k in run if abs(((phis[k] - kc) + PI) % (2 * PI) - PI) < _DL_PHI_STEP * (1.6 + j * 0.5)]
+                    if len(ks) >= 2:
+                        c.fill(poly([lo[k] for k in ks] + [hi[k] for k in ks[::-1]], True), ('#5c4d33', '#4a443c', '#6b5a3a')[j], 105)
+            c.line(poly([lo[k] for k in run], False), c.lw * 0.5, _DL_TAPE_EDGE, 235)
+            c.line(poly([hi[k] for k in run], False), c.lw * 0.35, _DL_TAPE_EDGE, 190)
+            if det >= 2:                                             # frayed threads off the edges
+                th = []
+                for k in run[1:-1]:
+                    h_ = hash01(int(round(phis[k] / _DL_PHI_STEP)) + 31 * i, 853)
+                    if h_ > 0.62:
+                        e = lo if h_ > 0.81 else hi
+                        o = hi if h_ > 0.81 else lo
+                        dx, dy = e[k][0] - o[k][0], e[k][1] - o[k][1]
+                        th.append(poly([e[k], (e[k][0] + dx * 0.28 + dy * 0.12, e[k][1] + dy * 0.28 - dx * 0.12)], False))
+                if th: c.line(_multi(th), c.lw * 0.28, '#a3946a', 210)
     return hang
 
 
 def _dl_hanging(c, hd, hang, t, det):
-    """Loose strips of tape hanging from where they lifted, swaying."""
+    """Loose ends and strips of tape hanging from where they lifted, swaying."""
     for (x, y, w, u, i, side, al) in hang:
         if al <= 0.01: continue
         if al < 0.999: c.cv.saveLayer(None, skia.Paint(Alphaf=float(al)))
-        L = (4.0 + 22.0 * u + 8.0 * (1.0 - al)) * hd.f
-        sw = math.sin(t * 1.6 + i) * 2.0 * hd.f
-        dx = side * (2.0 + 4.0 * u) * hd.f
+        L = (3.0 + 24.0 * u + 8.0 * (1.0 - al)) * hd.f
+        sw = math.sin(t * 1.6 + i) * (0.6 + 1.6 * u) * hd.f
+        dx = side * (1.6 + 4.0 * u) * hd.f
         pts = [(x, y), (x + dx * 0.6 + sw * 0.2, y + L * 0.35), (x + dx + sw * 0.6, y + L * 0.7), (x + dx * 0.8 + sw, y + L)]
-        wd = max(1.2, w * 0.85)
+        wd = max(1.0, w * 0.9)
         rb = _tube(pts, [wd, wd * 0.95, wd * 0.9, wd * 0.8], 0.8)
-        c.fill(rb, _DL_TAPE[i % len(_DL_TAPE)]); c.fill(_crescent(rb, side * 0.6, 0), '#a08a55', 160)
-        c.line(rb, c.lw * 0.5, _DL_TAPE_EDGE, 230)
+        c.fill(rb, _DL_TAPE[(i * 5 + 3) % len(_DL_TAPE)], 228); c.fill(_crescent(rb, side * 0.6, 0), '#6b5a3a', 150)
+        c.line(rb, c.lw * 0.45, _DL_TAPE_EDGE, 230)
         if al < 0.999: c.cv.restore()
 
 
 def _dl_head(c, R, P, view, det, t, light):
     hd = _DLHead(R, view)
-    fhull, chull, tip = _dl_silhouettes(hd)
-    # under the tape: the black cone, the face
+    op, sil, tip = _dl_silhouettes(hd)
+    # the black cone and hood, the face in its opening, then the few strips of tape
     _dl_cone_under(c, hd, det, light)
     _dl_under_face(c, hd, R, P, det, t, light)
     hang = _dl_tape(c, hd, P, det, t, light)
-    sil = union(fhull, chull) or chull
-    # soft roundness over the wrapping: lit on one side
+    # the head is round: a dull cold sheen down one side, dark toward the edges and the tip
     lsd = (light or {}).get('side', 1)
     bb = sil.getBounds()
     with c.clip(sil):
         cx0, cy0 = hd.X, hd.Y
         ax_ = (tip[0] - cx0, tip[1] - cy0); al = math.hypot(*ax_) or 1.0
         nx_, ny_ = -ax_[1] / al, ax_[0] / al                       # across the head (perpendicular to the cone's axis)
-        w_ = 16.0 * hd.f
-        c.grad(rect(bb.left() - 2, bb.top() - 2, bb.width() + 4, bb.height() + 4), cx0 - nx_ * w_, cy0 - ny_ * w_, cx0 + nx_ * w_, cy0 + ny_ * w_,
-               [(0, '#1a1408', 150 if lsd > 0 else 60), (0.35, '#1a1408', 0), (0.62, '#fff6d8', 40), (0.8, '#1a1408', 30), (1, '#1a1408', 190 if lsd < 0 else 110)])
-        c.grad(rect(bb.left() - 2, bb.top() - 2, bb.width() + 4, bb.height() + 4), cx0, cy0, tip[0], tip[1],
-               [(0, '#000000', 0), (0.7, '#3a2a10', 40), (1, '#3a2a10', 120)])
-        if det >= 1: c.texture(sil, 'grunge', 0.16, 0.2)
+        w_ = 12.5 * hd.f
+        box = rect(bb.left() - 2, bb.top() - 2, bb.width() + 4, bb.height() + 4)
+        c.grad(box, cx0 - nx_ * w_, cy0 - ny_ * w_, cx0 + nx_ * w_, cy0 + ny_ * w_,
+               [(0, '#000000', 170 if lsd > 0 else 80), (0.34, '#000000', 0), (0.6, '#b4bccf', 36), (0.8, '#000000', 30),
+                (1, '#000000', 190 if lsd < 0 else 120)])
+        c.grad(box, cx0, cy0, tip[0], tip[1], [(0, '#000000', 0), (0.6, '#000000', 30), (1, '#000000', 110)])
         if light and light.get('rim'):
             c.fill(_crescent(sil, -lsd * 1.0 * hd.f, 0), light['rim'], light.get('rim_a', 70))
-    c.line(sil, c.lw * 0.9, '#0c0b0a')
+    c.line(sil, c.lw * 0.9, '#060608')
     _dl_hanging(c, hd, hang, t, det)
     return hd
 
@@ -2165,9 +2273,7 @@ def _later_pts(P):
     out = {'head': (hd.X * _DLU, hd.Y * _DLU)}
     ex, ey, _ = hd.p(np.array([0.0, -1.0, _DL_FACE[2]]))
     out['eyes'] = (ex * _DLU, ey * _DLU)
-    cn = _DL_CONE
-    u = np.array([0.0, -math.cos(cn['lean']), math.sin(cn['lean'])])
-    tx, ty, _ = hd.p(np.array([0.0, cn['base_y'], cn['base_z']]) + u * cn['L'])
+    tx, ty, _ = hd.p(_dl_cone_c(1.0))
     out['cone_tip'] = (tx * _DLU, ty * _DLU)
     out['crown'] = out['cone_tip']
     out['mouth'] = tuple(v * _DLU for v in hd.p(np.array([0.0, 5.6, _DL_FACE[2] * 0.85]))[:2])
@@ -2419,7 +2525,7 @@ def _later_count(self, t, n=1):
 def _later_loosen_tape(self, t0, t1, frm=1.0, to=0.0, flinch=True):
     """With every question the tape comes looser, strip by strip: dl_tape steps from frm to to between t0 and t1 (each
     strip unwinds over 0.3 s); a 'tape_peel' event per strip and (flinch) a recoil on the first."""
-    n = len(_DL_RINGS) - 1
+    n = _DL_NSTRIP
     k0 = int(round((1.0 - frm) * n)); k1 = int(round((1.0 - to) * n))
     steps = max(1, k1 - k0)
     times = [t0 + (t1 - t0) * (i / max(1, steps - 1) if steps > 1 else 0.0) for i in range(steps)]
