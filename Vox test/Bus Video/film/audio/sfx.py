@@ -1,5 +1,6 @@
-"""Sound effects for "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND" (the police film's v2 SFX engine, as
-the delivery, dummy and Bunnyman films extended it; this film's names are DOCTOR_NAMES, near the end of the file): recorded, layered, perspective-processed, 48 kHz stereo float.
+"""Sound effects for "If The School Bus Stops At Midnight... DON'T GET ON" (the police film's v2 SFX engine, as the
+delivery, dummy, Bunnyman and Doctor films extended it; this film's names are BUS_NAMES, the last block before
+RECIPES; the Doctor film's DOCTOR_NAMES and every earlier name stay available): recorded, layered, perspective-processed, 48 kHz stereo float.
 
 Every sound is built from the recorded library (the owner's Epidemic files first, then the free CC0/CC-BY library in
 catalog.json via library.py), cut into single events ("grains") automatically, layered 2-3 deep (e.g. a knock =
@@ -5468,6 +5469,806 @@ def resolve_space(sp, name):
     d = DEFAULT_SPACE[name]
     warn(f'unknown space {sp!r} for {name!r}: using {d!r}')
     return d
+
+
+# ======================================================================================== Bus film recipes
+# "If The School Bus Stops At Midnight... DON'T GET ON". The owner's bus set first (W/samples/epidemic_bus/sfx: the
+# air brakes, idles, folding doors, horns, pass-bys, bus interiors, skids, metal scrapes, car-window glass, PA /
+# megaphone / spring feedback, walkie-talkies, tapes, the CRT, the VHS eject, glitches, referee whistles, hole
+# punches, seat belts, the flag cable and the rope on a mast, the bendy pole, wood snaps, cloth rips, latex gloves,
+# big cats, school walla), then the doctor (school bell, buzz, phones, the night interstate), police (suburban
+# crickets and the far dog, the deadbolt), mirror (bare feet, stairs), dummy (VHS insert / rewind) and bunny sets;
+# synthesis only for the bodies (door slap, mirror housing, clipboard board), the mains thump, the tape transport,
+# DTMF and the roger beep. Every verdict on a new file is in W/mix/sfx_review.md. The PSA jingle is not an SFX: it is
+# audio/jingle_bus.py, placed by score.py ('jingle' events of music_plan.IDENTITY).
+BUS_NAMES = ('suburb_night', 'dog_far', 'street_flicker', 'bus_air_brake', 'bus_idle', 'bus_door', 'his_unfold',
+             'pa_crackle', 'bus_pull_away', 'bus_horn', 'bus9_start', 'bus9_drive', 'bus_swerve', 'mirror_rip',
+             'bus_fast_night', 'dash_radio', 'tire_screech', 'whistle', 'ticket_punch', 'deadbolt', 'walkie',
+             'power_down', 'power_up', 'run_asphalt', 'cat_rumble', 'glove_squeak', 'tape_skip', 'crt_on',
+             'vhs_tape', 'tape_ff', 'tape_slide', 'seatbelt', 'flag_rope', 'broom_bend', 'broom_crack', 'cloth_rip',
+             'school_bell', 'bus_rewind', 'clipboard_drop', 'morning_bus', 'dial_911', 'his_bus_interior',
+             'school_night', 'mailbox_unscrew')
+NAMES = NAMES + BUS_NAMES
+# one-shots: momentary max, LU rel the voice at gain_db 0; beds (BEDS, and DUR_BEDS given a dur): integrated
+LEVEL_LU.update(suburb_night=-27, dog_far=-14, street_flicker=-12, bus_air_brake=-5, bus_idle=-24, bus_door=-6,
+                his_unfold=-8, pa_crackle=-9, bus_pull_away=-10, bus_horn=-6, bus9_start=-8, bus9_drive=-24,
+                bus_swerve=-1, mirror_rip=0, bus_fast_night=-23, dash_radio=-18, tire_screech=-4, whistle=-3,
+                ticket_punch=-3, deadbolt=-4, walkie=-8, power_down=-3, power_up=-4, run_asphalt=-8,
+                cat_rumble=-26, glove_squeak=-10, tape_skip=-7, crt_on=-8, vhs_tape=-7, tape_ff=-12, tape_slide=-10,
+                seatbelt=-5, flag_rope=-20, broom_bend=-6, broom_crack=-2, cloth_rip=-4, school_bell=-6,
+                bus_rewind=-4, clipboard_drop=-4, morning_bus=-24, dial_911=-10, his_bus_interior=-27,
+                school_night=-27, mailbox_unscrew=-11)
+PEAK_CAP.update(bus_air_brake=-5.0, bus_door=-4.0, bus_horn=-5.0, bus_swerve=-3.0, mirror_rip=-2.0, tire_screech=-4.0,
+                whistle=-4.0, ticket_punch=-2.0, deadbolt=-3.0, walkie=-5.0, power_down=-3.0, power_up=-4.0,
+                tape_skip=-4.0, seatbelt=-3.0, broom_crack=-3.0, cloth_rip=-4.0, bus_rewind=-3.0,
+                clipboard_drop=-2.0, glove_squeak=-5.0, street_flicker=-6.0, crt_on=-5.0, vhs_tape=-4.0,
+                run_asphalt=-5.0, mailbox_unscrew=-5.0, dial_911=-6.0)
+BEDS = BEDS + ('suburb_night', 'bus_idle', 'bus9_drive', 'bus_fast_night', 'morning_bus', 'his_bus_interior',
+               'school_night')
+DUR_BEDS = DUR_BEDS + ('dash_radio', 'cat_rumble', 'flag_rope', 'tape_ff', 'run_asphalt')
+BED_BUS = BED_BUS + ('suburb_night', 'bus_idle', 'bus9_drive', 'bus_fast_night', 'morning_bus', 'his_bus_interior',
+                     'school_night', 'dash_radio', 'cat_rumble', 'flag_rope')
+HITS = HITS + ('mirror_rip', 'bus_swerve', 'power_down', 'bus_rewind')
+# spaces: 'bus' (inside a bus: a small metal box, seats), 'school' (the schoolyard at night: brick walls, a flat slap),
+# 'pa' (heard through his loudspeaker horn), 'lawn' (out on the front lawn, the house behind)
+SPACE_LU.update(bus=0.0, school=-3.0, pa=-2.0, lawn=-3.0)
+SPACE_ALIAS.update(bus_9='bus', bus9='bus', cab='bus', aisle='bus', his_bus='bus', on_bus='bus', schoolyard='school',
+                   school_doors='school', parking='school', loudspeaker='pa', speakerhorn='pa', front_lawn='lawn',
+                   driveway_out='lawn', mailbox='lawn', curtains='window', living='close', grandma_room='close',
+                   bedroom_door='inside', stair='inside', upstairs_hallway='upstairs', road_chase='street')
+SPACES = tuple(SPACE_LU)
+DEFAULT_SPACE.update(suburb_night='dry', dog_far='street', street_flicker='street', bus_air_brake='street',
+                     bus_idle='street', bus_door='street', his_unfold='street', pa_crackle='pa', bus_pull_away='street',
+                     bus_horn='street', bus9_start='lawn', bus9_drive='dry', bus_swerve='bus', mirror_rip='bus',
+                     bus_fast_night='dry', dash_radio='bus', tire_screech='street', whistle='close',
+                     ticket_punch='close', deadbolt='close', walkie='close', power_down='inside', power_up='inside',
+                     run_asphalt='lawn', cat_rumble='dry', glove_squeak='close', tape_skip='dry', crt_on='close',
+                     vhs_tape='close', tape_ff='close', tape_slide='dry', seatbelt='bus', flag_rope='school',
+                     broom_bend='school', broom_crack='school', cloth_rip='close', school_bell='school',
+                     bus_rewind='school', clipboard_drop='school', morning_bus='dry', dial_911='close',
+                     his_bus_interior='dry', school_night='dry', mailbox_unscrew='lawn')
+
+
+def _space_bus(y, kind, seed=0, wet=None):
+    if kind == 'bus':                                   # a bus: hard seats and metal, a short boxy slap, a rattle
+        x = reverb(lp(y, 11000, 1), 'car', 0.3 if wet is None else wet, 0.001)
+        return eq(x, ('peak', 320, 2.0, 1.2), ('peak', 2400, -1.5, 1.0))
+    if kind == 'school':                                # the schoolyard: brick walls, a flat slap, open sky
+        x = reverb(y, 'street', 0.32 if wet is None else wet, 0.004)
+        sl = np.zeros_like(x); k = n_(0.085); sl[k:] = x[:-k] * 0.22
+        return x + lp(sl, 3500, 2)
+    if kind == 'pa':                                    # through his loudspeaker horn, out on the street
+        m = mono(y)
+        m = eq(lp(hp(m, 420, 4), 3600, 4), ('peak', 1900, 5.0, 1.3))
+        pk = peak(m) + 1e-9
+        m = (np.tanh(2.0 * m / pk) / np.tanh(2.0) * pk).astype(np.float32)
+        return reverb(st(m), 'street', 0.3 if wet is None else wet, 0.01)
+    if kind == 'lawn':                                  # out front: the house fronts, the street beyond
+        return reverb(y, 'porch', 0.28 if wet is None else wet, 0.002)
+    return None
+
+
+_space_prev_bus = space
+
+
+def space(y, kind, seed=0, wet=None):             # noqa: F811 (the bus spaces first, then every earlier one)
+    r = _space_bus(st(y), kind, seed, wet)
+    return r if r is not None else _space_prev_bus(y, kind, seed, wet)
+
+
+def _bp(key, name, keys=(), mode='onset', **seg):
+    """A grain pool over the files serving `name` (those whose id has any of keys)."""
+    return pool('bus_' + key + '|' + ','.join(keys), lambda: (_has(name, *keys) if keys else src(name)), mode, **seg)
+
+
+def _bx(name, keys, dur, rng, xfade=1.5):
+    E = _has(name, *keys) if keys else src(name)
+    return excerpt(_pick(rng, E or src(name)), float(dur), rng, xfade)
+
+
+def _grain_list(name, keys, mode='phrase', **seg):
+    """[(entry, (s0, s1))] of every grain of the files serving name (keys narrow it), file order kept."""
+    out = []
+    for e in (_has(name, *keys) if keys else src(name)):
+        for g in grains(e, mode, **seg):
+            out.append((e, g))
+    return out
+
+
+def _cut(e, g):
+    return audio(e)[g[0]:g[1]]
+
+
+def _dom_hz(y, lo=1500.0, hi=5000.0):
+    m = mono(y); n = min(len(m), n_(0.5))
+    s = np.abs(np.fft.rfft(m[:n] * np.hanning(n))); f = np.fft.rfftfreq(n, 1 / SR)
+    k = (f > lo) & (f < hi)
+    return float(f[k][np.argmax(s[k])]) if k.any() else 0.0
+
+
+def r_suburb_night(rng, sp, dur=30.0, dog=0.35, inside=False, **_):
+    """BED: Larch Street at midnight: crickets and the far suburb (the police set's suburban nights), a far dog now and
+    then, a whisper of wind. inside=True: heard in the living room through the glass (dark, 9 dB down, the house's
+    room tone under it)."""
+    d = float(dur)
+    y = lp(hp(_bx('suburb_night', ('crickets',), d, rng, 2.0), 120, 2), 9000, 2)
+    if dog > 0:
+        P = _bp('dog', 'dog_far', (), 'onset', gap=0.25, max_len=1.2, keep=-18)
+        t = rng.uniform(3, 9)
+        while t < d - 2:
+            if rng.uniform() < dog:
+                for j in range(int(rng.integers(1, 3))):
+                    g = lp(P.get(rng, rj=0.04), 3500, 2) * 0.35
+                    place(y, reverb(g, 'street', 0.6), n_(t + j * rng.uniform(0.4, 0.7)))
+            t += rng.uniform(8, 18)
+    if inside:
+        y = lp(y, 2200, 2) * 0.35 + st(lp(noise(d, int(rng.integers(1 << 30))), 180, 2)) * 0.004
+    return fade(y, 1.0, 1.5), 0.0, 0.0, False
+
+
+def r_dog_far(rng, sp, n=2, **_):
+    """A dog two streets away: n barks (the police set's distant dog barks)."""
+    P = _bp('dog', 'dog_far', (), 'onset', gap=0.25, max_len=1.2, keep=-18)
+    y = _seq([(j * rng.uniform(0.45, 0.8), P.get(rng, rj=0.04)) for j in range(int(n))], 0.4)
+    return lp(y, 4000, 2), onset_s(y, -14), 0.0, False
+
+
+def r_street_flicker(rng, sp, n=3, dur=None, **_):
+    """'The streetlight flickers.' The sodium lamp's ballast buzz stuttering (the doctor set's interference buzz),
+    n quick drop-outs with the starter's ticks, a low ballast thunk on the last."""
+    d = float(dur or 0.35 + 0.16 * n)
+    y = hp(_dx('fluorescent', ('interference',), d + 0.4, rng, 0.5), 90, 2)[:n_(d + 0.4)]
+    g = np.ones(len(y), np.float32); ev = []
+    for j in range(int(n)):
+        t = 0.12 + j * rng.uniform(0.11, 0.2)
+        a = n_(t); b = a + n_(rng.uniform(0.03, 0.07))
+        g[a:b] = 0.05
+        ev.append((t, st(modal([3100.0, 5200.0, 900.0], [0.004, 0.003, 0.01], [1.0, 0.5, 0.4], 0.03, j)) * 0.4))
+    from scipy.ndimage import uniform_filter1d
+    y = y * uniform_filter1d(g, n_(0.004))[:, None]
+    y = y / (peak(y) + 1e-9)
+    tick = _seq(ev + [(ev[-1][0] + 0.03, st(sub_boom(70, 45, 0.25, 0.1, 3)) * 0.5)], 0.2)
+    out = np.zeros((max(len(y), len(tick)), 2), np.float32); out[:len(y)] += y; out[:len(tick)] += tick
+    return fade(out, 0.03, 0.15), 0.1, 0.0, False
+
+
+def r_bus_air_brake(rng, sp, **_):
+    """'Air brakes hiss outside.' The bus set's stationary air-brake releases (the compressor's burst, the long hiss),
+    the chassis settling on its springs (a low creak and thump under it)."""
+    E = _has('bus_air_brake', 'compressor')
+    gl = []
+    for e in E:
+        gl += [(e, g) for g in grains(e, 'phrase', gap=0.35, max_len=4.0, keep=-14) if (g[1] - g[0]) > n_(0.6)]
+    if not gl:
+        gl = _grain_list('bus_air_brake', (), 'phrase', gap=0.35, max_len=4.0, keep=-14)
+    e, g = gl[int(rng.integers(len(gl)))]
+    y = pnorm(fade(_cut(e, g), 0.003, 0.25))
+    y = eq(hp(y, 150, 2), ('hs', 7000, -3.0, 0.7))
+    body = st(sub_boom(62, 40, 0.7, 0.05, int(rng.integers(1 << 20)))) * 0.5
+    y = _seq([(0, y), (0.02, body)], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def _sick_rattle(d, rng, amount=0.6):
+    """A loose panel and something loose in the engine bay: bursts of band-passed noise through panel modes at an
+    unsteady ~11 Hz, coming and going."""
+    n = n_(d); t = np.arange(n) / SR
+    rate_ = 11.0 * (1 + 0.15 * np.sin(2 * np.pi * 0.23 * t + rng.uniform(0, 6)))
+    ph = np.cumsum(rate_) / SR
+    gate = (np.sin(2 * np.pi * ph) > 0.55).astype(np.float32)
+    from scipy.ndimage import uniform_filter1d
+    gate = uniform_filter1d(gate, n_(0.003))
+    swell = 0.5 + 0.5 * np.clip(np.sin(2 * np.pi * 0.11 * t + rng.uniform(0, 6)) * 1.6, -1, 1)
+    z = bp(noise(d, int(rng.integers(1 << 30))), 700, 2600, 2)[:n] * gate * swell * amount
+    z = eq(z, ('peak', 1150, 6.0, 4.0), ('peak', 1730, 4.0, 5.0))
+    return st(z.astype(np.float32))
+
+
+def r_bus_idle(rng, sp, dur=20.0, rattle=0.6, kind='his', **_):
+    """BED: a school bus idling. kind 'his': HIS old bus at the curb, a bigger, sicker diesel (the bus set's idles,
+    1.5 semitones down, a loping 0.7 Hz miss) with a loose rattle; kind 'bus9': Grandma's bus 9 idling in the driveway
+    (clean, steady)."""
+    d = float(dur)
+    E = _has('bus_idle', 'engine_idle', 'engine_perspective', 'standing_still') or src('bus_idle')
+    x = audio(_pick(rng, E, 1.0))
+    x = x[n_(2.0):-n_(3.0)] if len(x) > n_(10) else x                    # skip the start / the engine-off tail
+    y = _loop(x, n_(d + 1.0), rng, 1.2)
+    if kind == 'his':
+        y = rate(y, semis(-1.5))[:n_(d)]
+        t = np.arange(len(y)) / SR
+        lope = 1 - 0.18 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.7 * t + rng.uniform(0, 6))) ** 4
+        y = y * lope[:, None].astype(np.float32)
+        y = lp(y, 3200, 2)
+        if rattle > 0:
+            y = y + _lv(_sick_rattle(len(y) / SR, rng, 1.0), lufs_int(y) - 9) * rattle
+    else:
+        y = lp(y[:n_(d)], 5000, 2)
+    return fade(y[:n_(d)], 0.8, 1.0), 0.0, 0.0, False
+
+
+def r_bus_door(rng, sp, action='open', slap=1.0, **_):
+    """The folding bus door. 'open': the air valve's burst and the two leaves folding back (the bus set's door
+    takes, first phrase); 'close': the leaves swinging in and SLAPPING shut on the rubber (last phrase + a rubber and
+    sheet-metal slap)."""
+    gl = _grain_list('bus_door', ('no_engine', 'compressor_air', 'no_passengers'), 'phrase', gap=0.45, max_len=3.0,
+                     keep=-18)
+    byfile = {}
+    for e, g in gl:
+        byfile.setdefault(e['id'], []).append((e, g))
+    files = [v for v in byfile.values() if len(v) >= 2] or list(byfile.values())
+    f = files[int(rng.integers(len(files)))]
+    e, g = f[0] if action == 'open' else f[-1]
+    y = pnorm(fade(_cut(e, g), 0.003, 0.08))
+    if action != 'open' and slap > 0:
+        s = st(modal([118.0, 290.0, 640.0, 1460.0], [0.07, 0.05, 0.025, 0.01], [1.0, 0.7, 0.4, 0.15], 0.35,
+                     int(rng.integers(1 << 20))))
+        s = s * 0.8 / (peak(s) + 1e-9)
+        k = int(np.argmax(np.abs(mono(y)) > 0.5 * peak(y)))
+        y = _seq([(0, y), (k / SR, s * slap)], 0.3)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_his_unfold(rng, sp, n=5, spacing=0.34, **_):
+    """'Something unfolds out of it. Like a ladder. Up, and up, and up.' n segments: each a long joint creak (the
+    bus set's bendy pole, a fifth down) ending in a latch click, each one higher than the last."""
+    P = _bp('pole', 'broom_bend', ('bendy_pole',), 'phrase', gap=0.15, max_len=1.2, keep=-20)
+    ev = []
+    for j in range(int(n)):
+        c = rate(P.get(rng, rj=0.03), semis(-7.0 + 1.2 * j))
+        c = fade(c[:n_(spacing * 1.4)], 0.01, 0.06) * 0.7
+        clk = st(modal([1900.0 + 150 * j, 3400.0, 760.0], [0.006, 0.004, 0.02], [1.0, 0.5, 0.6], 0.05, j)) * 0.6
+        ev += [(j * spacing, c), (j * spacing + spacing * 0.8, clk)]
+    y = _seq(ev, 0.3)
+    return y, 0.0, 0.0, False
+
+
+def r_pa_crackle(rng, sp, kind='on', dur=None, **_):
+    """His bus loudspeaker. 'on': keyed open (a pop, crackle, a breath of feedback rising); 'off': keyed shut (a
+    crackle and the pop); 'feedback': a feedback ring (the bus set's microphone / megaphone feedback, band-passed in
+    the horn's range) for dur (default 1.6)."""
+    C = _bp('crk', 'vinyl_crackle', (), 'phrase', gap=0.3, max_len=2.0, keep=-30)
+    crk = hp(C.get(rng, rj=0.05)[:n_(0.5)], 900, 2) * 0.5
+    pop = st(sub_boom(120, 60, 0.08, 0.3, int(rng.integers(1 << 20)))) * 0.6
+    if kind == 'feedback':
+        d = float(dur or 1.6)
+        F = _has('pa_crackle', 'feedback_single', 'feedback_resonance', 'megaphone') or src('pa_crackle')
+        y = excerpt(_pick(rng, F, 1.0), d, rng, 0.3)
+        y = bp(y, 600, 4000, 2)
+        return fade(y, 0.15, 0.3), 0.0, 0.0, False
+    F = _has('pa_crackle', 'feedback_single', 'megaphone') or src('pa_crackle')
+    fb = bp(excerpt(_pick(rng, F, 1.0), 0.6, rng, 0.2), 900, 3600, 2)
+    fb = fb * (0.25 / (peak(fb) + 1e-9)) * np.linspace(0, 1, len(fb))[:, None].astype(np.float32) ** 2
+    if kind == 'off':
+        y = _seq([(0, crk[:n_(0.25)]), (0.2, pop)], 0.2)
+    else:
+        y = _seq([(0, pop), (0.01, crk), (0.15, fb)], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_bus_pull_away(rng, sp, dur=7.0, kind='his', **_):
+    """'The bus pulls away with no lights on.' A bus moving off and away down the street (the bus set's start /
+    drive-away take, the drive part); kind 'his': a semitone down and darker."""
+    E = _has('bus_pull_away', 'drive_away') or src('bus_pull_away')
+    x = audio(_pick(rng, E, 1.0))
+    y = x[n_(2.5):n_(2.5 + float(dur))] if len(x) > n_(2.5 + dur) else _fit(x, n_(dur), rng)
+    if kind == 'his':
+        y = lp(rate(y, semis(-1.0)), 3500, 2)
+    y = y * np.linspace(1.0, 0.15, len(y))[:, None].astype(np.float32) ** 1.5
+    return fade(y, 0.2, 1.2), 0.0, 0.0, False
+
+
+def r_bus_horn(rng, sp, kind='short', **_):
+    """A bus horn: 'short' (a short blast from the bus set's horns), 'long' (the long blast)."""
+    gl = _grain_list('bus_horn', (), 'phrase', gap=0.2, max_len=4.0, keep=-12)
+    gl = sorted(gl, key=lambda eg: eg[1][1] - eg[1][0])
+    pickf = gl[:max(1, len(gl) // 2)] if kind == 'short' else gl[len(gl) // 2:]
+    e, g = pickf[int(rng.integers(len(pickf)))]
+    y = fade(pnorm(_cut(e, g)), 0.004, 0.08)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_bus9_start(rng, sp, **_):
+    """Bus 9 starting in the driveway: the starter and the diesel catching (the bus set's start take, first 3.5 s)."""
+    E = _has('bus9_drive', 'engine_start') or _has('bus_pull_away', 'engine_start')
+    x = audio(_pick(rng, E, 1.0))
+    y = fade(x[:n_(3.5)], 0.01, 0.6)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_bus9_drive(rng, sp, dur=30.0, speed='medium', **_):
+    """BED: inside Grandma's bus 9 on the road at night (the bus set's on-board drive and the double-decker's rattle);
+    speed 'fast': the night interstate under it (the doctor set) and the wind at the windows."""
+    d = float(dur)
+    y = lp(_bx('bus9_drive', ('on_board_driving',), d, rng, 2.0), 6000, 2)
+    r = _has('bus9_drive', 'double_decker')
+    if r:
+        y = y + _lv(lp(excerpt(_pick(rng, r, 1.0), d, rng, 2.0), 5000, 2), lufs_int(y) - 7)
+    if speed == 'fast':
+        f = _bx('bus_fast_night', ('fast_driving',), d, rng, 2.0)
+        y = y * 0.8 + _lv(lp(f, 4500, 2), lufs_int(y) - 2)
+    return fade(y, 1.0, 1.0), 0.0, 0.0, False
+
+
+def r_bus_fast_night(rng, sp, dur=30.0, **_):
+    """BED: the chase: bus 9 flat out at night (the doctor set's night interstate, the bus interior's rattle and
+    hum over it)."""
+    return r_bus9_drive(rng, sp, dur=dur, speed='fast')
+
+
+def r_tire_screech(rng, sp, dur=1.4, **_):
+    """Tyres screeching (the bus set's skids), cut to dur, a little lower (a heavy vehicle)."""
+    P = _bp('skid', 'tire_screech', ('skid',), 'phrase', gap=0.3, max_len=3.0, keep=-12)
+    y = rate(P.get(rng, rj=0.02, tilt=0), semis(-2.0))
+    y = fade(y[:n_(dur)], 0.02, 0.25)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_bus_swerve(rng, sp, **_):
+    """'Grandma swerves.' The tyres screeching, the body leaning (a low lurch and the seats' metal creak), everything
+    loose in the bus rattling at once."""
+    sc, _p, _o, _s = r_tire_screech(rng, sp, dur=1.2)
+    lurch = st(sub_boom(55, 32, 1.0, 0.05, int(rng.integers(1 << 20)))) * 0.7
+    rat = _sick_rattle(0.8, rng, 1.0)
+    rat = rat * (0.35 / (peak(rat) + 1e-9)) * np.exp(-np.arange(len(rat)) / n_(0.3))[:, None].astype(np.float32)
+    y = _seq([(0, sc), (0.05, lurch), (0.1, rat)], 0.3)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_mirror_rip(rng, sp, **_):
+    """'His bumper rips our side mirror off.' The housing torn off its arm: a big metal scrape (the bus set's large
+    loud scrapes, 0.7 s), the mirror glass smashing (a car-window smash, its first hit and the debris), the plastic
+    housing cracking, the bits skittering away behind."""
+    S = _bp('scrape', 'metal_scrape', ('large_loud',), 'phrase', gap=0.2, max_len=2.0, keep=-12)
+    sc = S.get(rng, rj=0.03)[:n_(0.75)]
+    sc = fade(sc, 0.005, 0.2)
+    G = _bp('glass', 'glass_break', ('car_window',), 'onset', gap=0.08, max_len=1.6, keep=-8)
+    gl = G.get(rng, rj=0.02)
+    crack = st(modal([420.0, 1150.0, 2600.0], [0.03, 0.015, 0.006], [1.0, 0.6, 0.4], 0.12, int(rng.integers(1 << 20))))
+    crack = crack * 0.7 / (peak(crack) + 1e-9)
+    boom = st(sub_boom(60, 34, 1.2, 0.2, int(rng.integers(1 << 20)))) * 0.6
+    y = _seq([(0, sc), (0.06, crack), (0.08, gl * 0.9), (0.0, boom)], 0.5)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_dash_radio(rng, sp, dur=3.0, kind='crackle', **_):
+    """Bus 9's radio to the depot: 'crackle' (the dash speaker's static between stations, band-limited, squelch pops
+    at the edges, dur); 'key' (one squelch-and-crackle burst: before / after his voice)."""
+    if kind == 'key':
+        y, *_r = r_walkie(rng, sp, kind='squelch')
+        return y, onset_s(y, -14), 0.0, False
+    d = float(dur)
+    y = _bx('dash_radio', ('station_search',), d, rng, 0.6)
+    y = eq(bp(y, 350, 3200, 2), ('peak', 1300, 3.0, 1.0))
+    pop = st(sub_boom(160, 80, 0.06, 0.4, 1)) * peak(y) * 1.2
+    y = _seq([(0, y), (0, pop), (max(0.0, d - 0.08), pop)], 0.1)
+    return fade(y, 0.01, 0.05), 0.0, 0.0, False
+
+
+def r_whistle(rng, sp, kind='short', n=2, spacing=0.22, far=False, tune=True, **_):
+    """His silver whistle (the bus set's referee whistles). kind 'short': "Fweet-fweet" = n short blasts (spacing s
+    apart, the jingle's hook rhythm); 'long': one long, loud blast (about 2.2 s: drowning the calling out). tune=True
+    pitches each blast so its whistle tone sits on A7 (3520 Hz), the jingle's hook an octave pair up; far=True: the
+    10-metre take."""
+    keys = ('10_metres',) if far else ('referee_whistle_01', 'referee_whistle_02')
+    gl = _grain_list('whistle', keys, 'onset', gap=0.12, max_len=2.5, keep=-14)
+    if not gl:
+        gl = _grain_list('whistle', ('referee',), 'onset', gap=0.12, max_len=2.5, keep=-14)
+    gl = sorted(gl, key=lambda eg: eg[1][1] - eg[1][0])
+    def tuned(y):
+        if not tune:
+            return y
+        f = _dom_hz(y, 2000, 4800)
+        return rate(y, 3520.0 / f) if f > 0 and 0.7 < 3520.0 / f < 1.45 else y
+    if kind == 'long':
+        e, g = gl[-1]
+        y = tuned(pnorm(_cut(e, g)))
+        a = n_(0.12); body = y[a:]
+        y = np.concatenate([y[:a], _fit(body, n_(2.1), rng)])
+        env = np.ones(len(y), np.float32); k = n_(0.15); env[-k:] = np.linspace(1, 0, k)
+        y = y * env[:, None]
+        return fade(y, 0.003, 0.05), onset_s(y, -12), 0.0, False
+    short = [eg for eg in gl if (eg[1][1] - eg[1][0]) < n_(0.6)] or gl[:3]
+    ev = []
+    for j in range(int(n)):
+        e, g = short[int(rng.integers(len(short)))]
+        b = tuned(pnorm(_cut(e, g)))[:n_(0.2)]
+        ev.append((j * spacing, fade(b, 0.002, 0.03) * (1.0 if j else 0.92)))
+    y = _seq(ev, 0.4)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_ticket_punch(rng, sp, **_):
+    """"Click-clack." His ticket punch: the jaws biting through the card (the bus set's hole punches: the click) and
+    springing back (a second grain, higher: the clack), a little metal ring."""
+    P = _bp('punch', 'ticket_punch', ('single',), 'onset', gap=0.06, max_len=0.35, keep=-16)
+    a = rate(P.get(rng, rj=0.02), semis(-1.0))
+    b = rate(P.get(rng, rj=0.02), semis(2.0)) * 0.8
+    ring = st(modal([2650.0, 4100.0], [0.03, 0.02], [1.0, 0.5], 0.08, 3)) * 0.12
+    y = _seq([(0, a), (0.0, ring), (0.13, b)], 0.15)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_deadbolt(rng, sp, action='slide', **_):
+    """Grandma's deadbolt: 'slide' (the bolt sliding back: the police set's deadbolt / mortise turns, the long one),
+    'lock' (thrown shut)."""
+    P = _bp('bolt', 'deadbolt', (), 'phrase', gap=0.15, max_len=1.2, keep=-16)
+    y = P.get(rng, rj=0.02)
+    if action == 'slide':
+        y = rate(y, 0.85)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_walkie(rng, sp, kind='squelch', dur=None, **_):
+    """The kids' walkie-talkies: 'engage' (the PTT key), 'squelch' (the squelch tail), 'beep' (a roger beep:
+    1.1 kHz then 1.6 kHz, 70 ms each, through the little speaker), 'glitch' (a stuttering, glitchy squelch: HIS voice
+    on the walkie), 'hiss' (the open channel, dur)."""
+    if kind == 'beep':
+        t = np.arange(n_(0.07)) / SR
+        b = np.concatenate([np.sin(2 * np.pi * 1100 * t), np.sin(2 * np.pi * 1600 * t)]).astype(np.float32)
+        b = bp(b * np.hanning(len(b)) ** 0.2, 500, 3500, 2)
+        y = st(b) * 0.5
+        return y, 0.0, 0.0, False
+    if kind == 'hiss':
+        d = float(dur or 2.0)
+        y = st(bp(noise(d, int(rng.integers(1 << 30))), 400, 3600, 2)) * 0.1
+        return fade(y, 0.02, 0.05), 0.0, 0.0, False
+    keys = {'engage': ('engage',), 'glitch': ('glitchy',), 'squelch': ('glitchy_short', 'engage')}.get(kind, ())
+    P = _bp('wk_' + kind, 'walkie', keys, 'phrase', gap=0.12, max_len=1.6 if kind == 'glitch' else 0.6, keep=-18)
+    y = P.get(rng, rj=0.03)
+    if kind == 'squelch':
+        y = y[:n_(0.35)]
+    return fade(y, 0.002, 0.03), onset_s(y, -12), 0.0, False
+
+
+def _mains(direction, rng):
+    """The house's mains: 'down' (the fridge and the lights' hum falling in pitch and dying, a sub thunk), 'up' (a
+    thunk and the hum snapping back)."""
+    d = 0.9
+    t = np.arange(n_(d)) / SR
+    if direction == 'down':
+        f = 120 * (1 - 0.45 * np.clip(t / 0.6, 0, 1))
+        env = np.clip(1 - t / 0.7, 0, 1) ** 1.5
+    else:
+        f = np.full_like(t, 120.0)
+        env = np.clip(t / 0.02, 0, 1) * np.exp(-t / 0.5)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    h = (np.sin(ph) + 0.4 * np.sin(3 * ph) + 0.15 * np.sin(5 * ph)) * env * 0.12
+    th = sub_boom(55, 35, 0.6, 0.12, int(rng.integers(1 << 20))) * 0.9
+    out = np.zeros(max(len(h), len(th)), np.float32)
+    out[:len(h)] += h.astype(np.float32); out[:len(th)] += th
+    return st(out)
+
+
+def r_power_down(rng, sp, **_):
+    """'Every light dies. Total black.' The lights' switch-off clank (the bus set's fluorescent light switch, its
+    off edge), the house's hum diving and dying, a mains thunk you feel more than hear; then nothing."""
+    P = _bp('fl', 'power_flicker', (), 'phrase', gap=0.2, max_len=1.2, keep=-18)
+    sw = P.get(rng, rj=0.02)[:n_(0.4)]
+    y = _seq([(0, sw * 0.7), (0.01, _mains('down', rng))], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_power_up(rng, sp, **_):
+    """'The lights snap back on.' The thunk of the mains returning, the switch's clank, the fluorescent tink and buzz
+    coming back (the bus set's fluorescent power-up)."""
+    P = _bp('fl', 'power_flicker', (), 'phrase', gap=0.2, max_len=1.2, keep=-18)
+    sw = P.get(rng, rj=0.02)
+    y = _seq([(0, _mains('up', rng)), (0.02, sw * 0.8)], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_run_asphalt(rng, sp, n=None, dur=2.5, rate_=3.2, **_):
+    """Running on the road (the bus set's running takes on asphalt): footfalls at rate_ per second, dur s."""
+    P = _bp('runasph', 'run_asphalt', (), 'onset', gap=0.12, max_len=0.35, keep=-16)
+    k = int(n or max(2, round(float(dur) * rate_)))
+    ev = [(j / rate_ + rng.uniform(-0.015, 0.015), P.get(rng, rj=0.03) * rng.uniform(0.75, 1.0)) for j in range(k)]
+    y = _seq(ev, 0.3)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_cat_rumble(rng, sp, dur=6.0, **_):
+    """Under his closest moments, barely there: a big cat's low rumble (the bus set's lion / tiger growls), a fourth
+    down, low-passed at 350 Hz (felt, not heard), slow in and out."""
+    d = float(dur)
+    y = _bx('cat_rumble', ('low_rumble', 'deep_rumble'), d / 0.75 + 0.5, rng, 1.5)
+    y = lp(rate(y, semis(-5.0)), 350, 4)[:n_(d)]
+    env = np.sin(np.pi * np.clip(np.arange(len(y)) / max(1, len(y) - 1), 0, 1)) ** 0.7
+    return y * env[:, None].astype(np.float32), 0.0, 0.0, False
+
+
+def r_glove_squeak(rng, sp, kind='stretch', knuckles=True, **_):
+    """His white gloves: 'stretch' (latex stretching and squeaking as the fingers curl: the bus set's latex glove
+    takes), 'squeak' (one short squeak); knuckles=True adds the too-many joints: three tiny dry pops."""
+    P = _bp('glove', 'glove_squeak', (), 'phrase', gap=0.15, max_len=1.4 if kind == 'stretch' else 0.4, keep=-18)
+    y = P.get(rng, rj=0.04)
+    ev = [(0, y)]
+    if knuckles:
+        for j in range(3):
+            ev.append((0.12 + 0.11 * j, st(modal([2300.0 + 400 * j, 5100.0], [0.003, 0.002], [1.0, 0.4], 0.02, j)) * 0.3))
+    y = _seq(ev, 0.15)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_tape_skip(rng, sp, amount=0.7, frames=3, **_):
+    """His tape-skip, one per jump closer: the VHS stutter (a 40 ms slice of a glitch / tape take repeated `frames`
+    times, each a little lower), a tracking crackle (noise torn at 30 Hz with the head buzz), a soft low 'thup'."""
+    P = _bp('skip', 'tape_skip', (), 'phrase', gap=0.1, max_len=1.0, keep=-20)
+    g = P.get(rng, rj=0.05)
+    a = int(rng.integers(0, max(1, len(g) - n_(0.05))))
+    sl = g[a:a + n_(0.042)]
+    st_ = np.concatenate([fade(rate(sl, 1 - 0.04 * j), 0.002, 0.004) for j in range(int(frames))])
+    t = np.arange(n_(0.22)) / SR
+    tear = bp(noise(0.22, int(rng.integers(1 << 30))), 1500, 7000, 2)[:len(t)] * (np.sin(2 * np.pi * 30 * t) > 0.2)
+    tear = st((tear * np.exp(-t / 0.08) * 0.25 * amount).astype(np.float32))
+    thup = st(sub_boom(90, 50, 0.25, 0.1, int(rng.integers(1 << 20)))) * 0.35 * amount
+    y = _seq([(0, st_), (0.0, thup), (0.03, tear)], 0.1)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_crt_on(rng, sp, **_):
+    """The TV cart's CRT switching on (the bus set's Commodore monitor power-on, its first phrase): the relay clunk,
+    the degauss thoom, the screen's static charge; a faint 15.7 kHz whine settling in."""
+    gl = _grain_list('crt_on', ('crt_monitor',), 'phrase', gap=0.4, max_len=3.0, keep=-20)
+    if gl:
+        e, g = gl[0]
+        y = pnorm(fade(_cut(e, g), 0.003, 0.2))
+    else:
+        y, *_r = r_tv_on(rng, sp)
+    t = np.arange(n_(1.6)) / SR
+    wh = st((np.sin(2 * np.pi * 15734 * t) * np.clip(t / 0.4, 0, 1) * np.clip((1.6 - t) / 0.4, 0, 1) * 0.006).astype(np.float32))
+    thoom = st(sub_boom(60, 50, 0.5, 0.0, 2)) * 0.4
+    y = _seq([(0, y), (0.05, thoom), (0.1, wh)], 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_vhs_tape(rng, sp, action='insert', **_):
+    """The tape in the TV cart's VCR: 'insert' (pushed in and threaded: the dummy set's into-VHS), 'eject' (the bus
+    set's VHS eject)."""
+    key = ('eject',) if action == 'eject' else ('into_vhs',)
+    E = _has('vhs', *key) or src('vhs')
+    e = _pick(rng, E, 1.0)
+    y = fade(pnorm(audio(e)[:n_(3.0)]), 0.003, 0.2)
+    return y, onset_s(y, -14), 0.0, False
+
+
+def r_tape_ff(rng, sp, dur=2.5, stop=True, **_):
+    """Fast-forwarding the 1994 tape: the transport's whine (the bus set's tape camera fast-forward / edit / stop,
+    the FF part), dur s, and the stop clunk at the end."""
+    E = _has('tape_ff', 'fast_forward') or src('tape_ff')
+    x = audio(_pick(rng, E, 1.0))
+    gl = grains(E[0], 'phrase', gap=0.25, max_len=6.0, keep=-20) if E else []
+    body = x[gl[0][0]:gl[0][1]] if gl else x
+    y = _fit(body, n_(float(dur)), rng)
+    ev = [(0, fade(y, 0.02, 0.05))]
+    if stop:
+        clunk = st(modal([180.0, 520.0, 1300.0], [0.03, 0.015, 0.006], [1.0, 0.5, 0.3], 0.1, 4)) * peak(y) * 1.4
+        ev.append((float(dur) - 0.02, clunk))
+    return _seq(ev, 0.15), 0.0, 0.0, False
+
+
+def r_tape_slide(rng, sp, dur=1.2, **_):
+    """The slowing-tape slide that ends an imitation ("...Clever."): the tape's hiss and the 60 Hz hum diving half a
+    speed down over dur, the capstan's flutter wobbling (laid under the voice FX 'mimic', which slides the voice)."""
+    d = float(dur); n = n_(d); t = np.arange(n) / SR
+    r = 1 - 0.5 * np.clip(t / d, 0, 1) ** 1.3
+    ph = 2 * np.pi * np.cumsum(60 * r * (1 + 0.01 * np.sin(2 * np.pi * 6 * t))) / SR
+    hum = (np.sin(ph) + 0.5 * np.sin(3 * ph)) * 0.05
+    hs = bp(noise(d + 0.1, int(rng.integers(1 << 30))), 1500, 7000, 2)[:n]
+    hs = SX_lp_var(hs, r)
+    y = st(((hum + hs * 0.08) * np.clip(t / 0.05, 0, 1)).astype(np.float32))
+    return fade(y, 0.02, 0.15), 0.0, 0.0, False
+
+
+def SX_lp_var(x, r):
+    """A crude falling low-pass on noise (two fixed low-passes cross-faded by r): the hiss darkening as it slows."""
+    a = lp(x, 7000, 2); b = lp(x, 2000, 2)
+    w = np.clip((r - 0.5) / 0.5, 0, 1)
+    return (a * w + b * (1 - w)).astype(np.float32)
+
+
+def r_seatbelt(rng, sp, **_):
+    """'Belt on.' A seat belt pulled and clicked into its lock (the bus set's seat belt clicks)."""
+    P = _bp('belt', 'seatbelt', (), 'phrase', gap=0.15, max_len=1.0, keep=-14)
+    y = P.get(rng, rj=0.02)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_flag_rope(rng, sp, dur=8.0, **_):
+    """'A flag rope, clinking.' The school's flagpole: the halyard's clip clanking on the hollow pole in the night
+    wind (the bus set's post-flag cable and the mast rope), dur s."""
+    y = _bx('flag_rope', ('cable_clanking', 'rope_clanking'), float(dur), rng, 1.0)
+    return fade(hp(y, 200, 2), 0.3, 0.6), 0.0, 0.0, False
+
+
+def r_broom_bend(rng, sp, dur=1.6, **_):
+    """'The handle bends.' The broom handle caught in the closing doors, bowing and creaking (the bus set's bendy
+    pole stretch and creak, a fourth down: a thicker stick), the rubber door edges squeezing it."""
+    P = _bp('pole', 'broom_bend', ('bendy_pole',), 'phrase', gap=0.15, max_len=2.0, keep=-20)
+    y = rate(P.get(rng, rj=0.03), semis(-5.0))
+    y = _fit(y, n_(float(dur)), rng)
+    y = fade(y, 0.05, 0.2) * np.linspace(0.6, 1.0, len(y))[:, None].astype(np.float32)
+    return y, 0.0, 0.0, False
+
+
+def r_broom_crack(rng, sp, **_):
+    """'The broom cracks.' The handle snapping (the bus set's stick snap), a splinter tail, a low thump."""
+    P = _bp('snap', 'broom_crack', ('stick_branch', 'snapping'), 'onset', gap=0.1, max_len=1.2, keep=-10)
+    y = P.get(rng, rj=0.02)
+    th = st(sub_boom(85, 50, 0.35, 0.2, int(rng.integers(1 << 20)))) * 0.4
+    y = _seq([(0, y), (0.0, th)], 0.3)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_cloth_rip(rng, sp, dur=0.55, **_):
+    """'Rip.' Sami's pajamas tearing in the glove (the bus set's T-shirt / thin-material rips), cut to dur."""
+    P = _bp('rip', 'cloth_rip', (), 'phrase', gap=0.2, max_len=1.5, keep=-14)
+    y = P.get(rng, rj=0.03)
+    y = fade(y[:n_(dur)], 0.003, 0.12)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_school_bell(rng, sp, dur=4.0, **_):
+    """'Three o'clock. The school bell rings.' The classic electric school bell (the doctor set's), heard outside
+    the building at night, dur s."""
+    E = _has('school_bell') or src('school_bell')
+    x = audio(_pick(rng, E, 1.0))
+    a = int(np.argmax(np.abs(mono(x)) > 0.2 * peak(x)))
+    y = _fit(x[a:], n_(float(dur)), None)
+    return fade(y, 0.003, 0.4), 0.0, 0.0, False
+
+
+def r_bus_rewind(rng, sp, dur=2.8, **_):
+    """'The bus rewinds into the dark.' His bus played backwards and speeding up (the bus set's pass-by, reversed,
+    varispeed 0.8 -> 3x), the VHS rewind whine on top (the dummy set's rewinds), a tracking tear; it cuts dead."""
+    d = float(dur)
+    E = _has('bus_pull_away', 'pass_by') or src('bus_pull_away')
+    x = audio(_pick(rng, E, 1.0))[::-1]
+    y = _varispeed(np.concatenate([x, x]), 0.8, 3.0, n_(d))
+    y = lp(y, 5000, 2)
+    R = _has('tape_ff', 'vhs_rewind')
+    if R:
+        w = excerpt(_pick(rng, R, 1.0), d, rng, 0.3)
+        y = y + _lv(hp(w, 500, 2), lufs_int(y) - 4) * np.linspace(0.3, 1.0, n_(d))[:len(w), None].astype(np.float32)
+    sk, *_r = r_tape_skip(rng, sp, amount=1.0, frames=3)
+    y = _seq([(0, y * np.linspace(0.6, 1.0, len(y))[:, None].astype(np.float32)), (d - 0.1, sk)], 0.0)
+    env = np.ones(len(y), np.float32); env[n_(d):] = 0.0
+    return fade(y * env[:, None], 0.15, 0.01), 0.0, 0.0, False
+
+
+def r_clipboard_drop(rng, sp, **_):
+    """'His clipboard clatters onto the asphalt.' A hardboard clipboard landing flat and bouncing twice (board
+    modes), the metal clip clacking (the doctor set's crocodile clip), the asphalt's grit."""
+    rng2 = int(rng.integers(1 << 20))
+    ev = []
+    for j, (t, g) in enumerate(((0.0, 1.0), (0.16, 0.45), (0.27, 0.2))):
+        b = st(modal([150.0, 340.0, 760.0, 1650.0], [0.05, 0.03, 0.012, 0.006], [1.0, 0.7, 0.4, 0.2], 0.2, rng2 + j))
+        grit = st(bp(noise(0.05, rng2 + 10 + j), 1500, 7000, 2) * np.exp(-np.arange(n_(0.05)) / n_(0.012))) * 0.3
+        ev += [(t, b * g / (peak(b) + 1e-9)), (t, grit * g)]
+    try:
+        P = _bp('clipb', 'clipboard', (), 'onset', gap=0.06, max_len=0.2, keep=-14)
+        ev.append((0.008, rate(P.get(rng, rj=0.03), semis(-3.0)) * 0.5))
+    except KeyError:
+        pass
+    y = _seq(ev, 0.3)
+    return y, onset_s(y, -12), 0.0, False
+
+
+def r_morning_bus(rng, sp, dur=30.0, kids=0.5, **_):
+    """BED: the morning bus: bus 9 driving in daylight (the on-board drive), the kids' chatter around (the bus set's
+    school walla, low-passed: inside the bus), warm."""
+    d = float(dur)
+    y = lp(_bx('bus9_drive', ('on_board_driving',), d, rng, 2.0), 5000, 2)
+    k = _has('kids_chatter') or []
+    if k and kids > 0:
+        w = lp(excerpt(_pick(rng, k, 1.0), d, rng, 2.0), 4500, 2)
+        y = y + _lv(w, lufs_int(y) + 2) * kids
+    return fade(y, 1.0, 1.5), 0.0, 0.0, False
+
+
+def r_dial_911(rng, sp, kind='call', **_):
+    """'Call 911.' kind 'call': the three DTMF keys (9, 1, 1), one ring-back (440 + 480 Hz, 2 s) and the operator's
+    pickup click, through the phone's speaker; 'fail': no bars: the call drops (two short low error tones)."""
+    def dt(lo, hi, d=0.11):
+        t = np.arange(n_(d)) / SR
+        return ((np.sin(2 * np.pi * lo * t) + np.sin(2 * np.pi * hi * t)) * 0.25 * np.hanning(len(t)) ** 0.1).astype(np.float32)
+    if kind == 'fail':
+        t = np.arange(n_(0.18)) / SR
+        a = (np.sin(2 * np.pi * 480 * t) * 0.3).astype(np.float32); b = (np.sin(2 * np.pi * 380 * t) * 0.3).astype(np.float32)
+        y = _seq([(0, st(dt(852, 1477))), (0.22, st(dt(697, 1209))), (0.44, st(dt(697, 1209))), (1.0, st(a)), (1.25, st(b))], 0.2)
+    else:
+        t = np.arange(n_(2.0)) / SR
+        ring = ((np.sin(2 * np.pi * 440 * t) + np.sin(2 * np.pi * 480 * t)) * 0.15).astype(np.float32)
+        click = st(modal([900.0, 2200.0], [0.004, 0.002], [1.0, 0.5], 0.02, 5)) * 0.4
+        y = _seq([(0, st(dt(852, 1477))), (0.22, st(dt(697, 1209))), (0.44, st(dt(697, 1209))), (0.9, st(fade(ring, 0.02, 0.05))),
+                  (3.1, click)], 0.2)
+    y = eq(bp(y, 300, 3400, 2), ('peak', 1800, 2.0, 1.0))
+    return y, 0.0, 0.0, False
+
+
+def r_his_bus_interior(rng, sp, dur=20.0, **_):
+    """BED: inside HIS bus (amber light, every seat dark): his diesel idling far forward, an old fluorescent ballast
+    humming in the ceiling, the tape's hiss under everything (his world is a tape)."""
+    d = float(dur)
+    y, *_r = r_bus_idle(rng, sp, dur=d, rattle=0.4, kind='his')
+    y = lp(y, 1800, 2)
+    b = st(_ballast(d, rng, 0.3)[:len(y)]) * 0.01
+    h = st(bp(noise(d, int(rng.integers(1 << 30))), 1500, 7000, 2)[:len(y)]) * 0.004
+    out = y + _lv(b, lufs_int(y) - 6) + _lv(h, lufs_int(y) - 10)
+    return fade(out, 0.8, 1.0), 0.0, 0.0, False
+
+
+def r_school_night(rng, sp, dur=20.0, **_):
+    """BED: Larkfield Elementary at 2:57 a.m.: the empty schoolyard (crickets far off, the night air), the flag rope
+    clinking on the pole now and then."""
+    d = float(dur)
+    y, *_r = r_suburb_night(rng, sp, dur=d, dog=0.0)
+    y = lp(y, 6000, 2) * 0.7
+    f, *_r = r_flag_rope(rng, sp, dur=d)
+    y = y + _lv(f, lufs_int(y) - 3)
+    return fade(y, 1.0, 1.0), 0.0, 0.0, False
+
+
+def r_mailbox_unscrew(rng, sp, n=2, **_):
+    """'Grandma unscrews the letters off our mailbox.' A small screw backing out (the bus set's flashlight-cap and
+    screwdriver unscrews: the threads' little squeaks), then the tin letter coming off with a tink, n times."""
+    P = _bp('screw', 'unscrew', ('flashlight',), 'phrase', gap=0.15, max_len=1.0, keep=-18)
+    ev = []
+    for j in range(int(n)):
+        ev.append((j * 1.1, P.get(rng, rj=0.03)))
+        ev.append((j * 1.1 + 0.75, st(modal([3100.0, 5400.0, 1250.0], [0.05, 0.03, 0.02], [1.0, 0.5, 0.4], 0.15, j)) * 0.3))
+    y = _seq(ev, 0.3)
+    return y, onset_s(y, -14), 0.0, False
+
+
+ALIASES.update({
+    'crickets': ('suburb_night', {}), 'night_street': ('suburb_night', {}), 'larch_street': ('suburb_night', {}),
+    'house_night_bus': ('suburb_night', {'inside': True}), 'dog': ('dog_far', {}), 'dog_bark': ('dog_far', {}),
+    'streetlight_flicker': ('street_flicker', {}), 'flicker': ('street_flicker', {}),
+    'air_brake': ('bus_air_brake', {}), 'air_brakes': ('bus_air_brake', {}), 'brakes_hiss': ('bus_air_brake', {}),
+    'diesel_idle': ('bus_idle', {}), 'his_bus_idle': ('bus_idle', {'kind': 'his'}),
+    'bus9_idle': ('bus_idle', {'kind': 'bus9', 'rattle': 0.0}),
+    'bus_door_open': ('bus_door', {'action': 'open'}), 'bus_door_close': ('bus_door', {'action': 'close'}),
+    'doors_slap': ('bus_door', {'action': 'close'}), 'door_fold': ('bus_door', {'action': 'open'}),
+    'unfold': ('his_unfold', {}), 'ladder': ('his_unfold', {}), 'loudspeaker': ('pa_crackle', {}),
+    'pa_on': ('pa_crackle', {'kind': 'on'}), 'pa_off': ('pa_crackle', {'kind': 'off'}),
+    'pa_feedback': ('pa_crackle', {'kind': 'feedback'}), 'pull_away': ('bus_pull_away', {}),
+    'horn': ('bus_horn', {}), 'bus9_drive_fast': ('bus_fast_night', {}), 'chase': ('bus_fast_night', {}),
+    'swerve': ('bus_swerve', {}), 'side_mirror': ('mirror_rip', {}), 'mirror_ripped': ('mirror_rip', {}),
+    'screech': ('tire_screech', {}), 'skid': ('tire_screech', {}), 'depot_radio': ('dash_radio', {}),
+    'radio_crackle': ('dash_radio', {}), 'fweet': ('whistle', {'kind': 'short'}),
+    'fweet_fweet': ('whistle', {'kind': 'short', 'n': 2}), 'whistle_long': ('whistle', {'kind': 'long'}),
+    'long_whistle': ('whistle', {'kind': 'long'}), 'click_clack': ('ticket_punch', {}), 'punch': ('ticket_punch', {}),
+    'bolt': ('deadbolt', {}), 'walkie_squelch': ('walkie', {'kind': 'squelch'}),
+    'walkie_engage': ('walkie', {'kind': 'engage'}), 'walkie_beep': ('walkie', {'kind': 'beep'}),
+    'walkie_glitch': ('walkie', {'kind': 'glitch'}), 'lights_out': ('power_down', {}),
+    'power_out': ('power_down', {}), 'lights_die': ('power_down', {}), 'lights_on': ('power_up', {}),
+    'power_back': ('power_up', {}), 'lights_back': ('power_up', {}), 'run_road': ('run_asphalt', {}),
+    'running': ('run_asphalt', {}), 'run_grass': ('footsteps_grass', {'rate': 3.0}),
+    'bare_feet': ('footsteps_stairs', {}), 'bare_feet_stairs': ('footsteps_stairs', {}),
+    'purr': ('cat_rumble', {}), 'rumble': ('cat_rumble', {}), 'glove': ('glove_squeak', {}),
+    'gloves': ('glove_squeak', {}), 'knuckles': ('glove_squeak', {}), 'tape_jump': ('tape_skip', {}),
+    'skip': ('tape_skip', {}), 'tracking': ('tape_skip', {}), 'tv_cart': ('crt_on', {}), 'crt': ('crt_on', {}),
+    'vhs_insert': ('vhs_tape', {'action': 'insert'}), 'vhs_eject': ('vhs_tape', {'action': 'eject'}),
+    'fast_forward': ('tape_ff', {}), 'tape_stop': ('tape_glitch', {'kind': 'stop'}), 'slowing_tape': ('tape_slide', {}),
+    'seat_belt': ('seatbelt', {}), 'belt_click': ('seatbelt', {}), 'flagpole': ('flag_rope', {}),
+    'flag': ('flag_rope', {}), 'broom': ('broom_bend', {}), 'broom_snap': ('broom_crack', {}),
+    'rip': ('cloth_rip', {}), 'pajama_rip': ('cloth_rip', {}), 'tail_rip': ('cloth_rip', {}),
+    'bell': ('school_bell', {}), 'three_oclock': ('school_bell', {}), 'rewind': ('bus_rewind', {}),
+    'clipboard_clatter': ('clipboard_drop', {}), 'porch_light': ('light_switch', {'kind': 'porch'}),
+    'kids_bus': ('morning_bus', {}), 'call_911': ('dial_911', {}), 'no_bars': ('dial_911', {'kind': 'fail'}),
+    'his_bus': ('his_bus_interior', {}), 'amber_bus': ('his_bus_interior', {}), 'school': ('school_night', {}),
+    'unscrew': ('mailbox_unscrew', {}), 'mailbox': ('mailbox_unscrew', {}),
+    'ticket_slide': ('paper_under_door', {'dur': 0.8}), 'ticket_under_door': ('paper_under_door', {'dur': 0.8}),
+    'knock_three': ('knock_door', {'n': 3, 'force': 0.75}), 'knocks': ('knock_door', {'n': 3, 'force': 0.75}),
+    'knock_knock': ('knock_door', {'n': 2, 'force': 0.6}),
+})
+KEYWORDS = [('whistle', 'whistle'), ('punch', 'ticket_punch'), ('walkie', 'walkie'), ('brake', 'bus_air_brake'),
+            ('bus_door', 'bus_door'), ('fold', 'bus_door'), ('idle', 'bus_idle'), ('horn', 'bus_horn'),
+            ('screech', 'tire_screech'), ('mirror', 'mirror_rip'), ('radio', 'dash_radio'), ('glove', 'glove_squeak'),
+            ('skip', 'tape_skip'), ('tracking', 'tape_skip'), ('crt', 'crt_on'), ('vhs', 'vhs_tape'),
+            ('broom', 'broom_bend'), ('flag', 'flag_rope'), ('bell', 'school_bell'), ('rip', 'cloth_rip'),
+            ('clipboard', 'clipboard_drop'), ('belt', 'seatbelt'), ('cricket', 'suburb_night'),
+            ('purr', 'cat_rumble'), ('power', 'power_down')] + KEYWORDS
 
 
 RECIPES = {k: globals()['r_' + k] for k in NAMES}

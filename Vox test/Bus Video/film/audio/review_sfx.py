@@ -1,4 +1,5 @@
-"""review_sfx.py: measure the owner's new Epidemic files for this film (W/samples/epidemic: the bunny set) so each one
+"""review_sfx.py: measure the owner's new Epidemic files for this film (the Bus film: W/samples/epidemic_bus, sfx/ and
+music/; the Bunnyman film's verdicts below are kept for reference, BUS_DECISIONS are this film's) so each one
 can be judged before it is used (use / process / reject: the decisions and reasons are in W/mix/sfx_review.md).
 
     python3 audio/review_sfx.py [--kind sfx|music|all] [--no-asr] [--only <substring>]      (from film/)
@@ -26,11 +27,13 @@ sys.path.insert(0, HERE)
 import sfx as SX                                            # noqa: E402
 
 W = SX.W
-SET = os.path.join(W, 'samples', 'epidemic')
+SET = os.path.join(W, 'samples', 'epidemic_bus')
 OUT = os.path.join(W, 'mix', 'review')
 MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 SR = 48000
-ASR_WORDS = ('crowd', 'voices', 'hospital', 'ambience', 'fight', 'efforts', 'cheer')
+ASR_WORDS = ('crowd', 'voices', 'hospital', 'ambience', 'fight', 'efforts', 'cheer', 'school', 'kids', 'announcement',
+             'megaphone', 'walkie', 'pa_system')
+# music: the recogniser also listens to every track (a song with vocals must never play under the narration)
 
 
 def slug(f):
@@ -43,10 +46,12 @@ def measure(path):
     if sr != SR:
         import soxr
         x = soxr.resample(x, sr, SR).astype(np.float32)
+    full = len(x)
+    x = x[:SR * 200]                                    # long takes: the first 200 s is enough (memory)
     st = x[:, :2] if x.shape[1] > 1 else np.repeat(x, 2, 1)
     m = st.mean(1)
     n = len(m)
-    r = {'dur': round(n / SR, 2), 'channels': int(x.shape[1])}
+    r = {'dur': round(full / SR, 2), 'channels': int(x.shape[1])}
     r['lufs'] = round(SX.lufs_int(st), 1) if n > SR * 0.4 else round(SX.mom_max(st), 1)
     r['peak_db'] = round(float(SX.db(np.abs(st).max())), 1)
     up = signal.resample_poly(st[:SR * 120], 4, 1, axis=0) if n > 0 else st
@@ -361,11 +366,14 @@ def main():
         for si in range(0, len(files), per):
             fig = plt.figure(figsize=(16, 2.0 * per), dpi=100)
             gs = fig.add_gridspec(per * 3, 1, hspace=0.9)
-            for j, fn in enumerate(files[si:si + per]):
+            todo = files[si:si + per]
+            if '--resume' in sys.argv and all(f'{kd}:{slug(f)}' in res for f in todo):
+                plt.close(fig); continue
+            for j, fn in enumerate(todo):
                 sl = slug(fn)
                 r, m, rdb = measure(os.path.join(SET, kd, fn))
-                if do_asr and kd == 'sfx' and any(w in sl for w in ASR_WORDS):
-                    r['speech_pct'], r['asr'] = asr(m)
+                if do_asr and (kd == 'music' or any(w in sl for w in ASR_WORDS) or 'epidemic sound' not in fn.lower()):
+                    r['speech_pct'], r['asr'] = asr(m if kd == 'sfx' else m[:SR * 150])
                 res[f'{kd}:{sl}'] = dict(r, file=fn, kind=kd)
                 print(kd, sl, json.dumps({k: v for k, v in r.items() if k != 'asr'}), flush=True)
                 if r.get('asr'):

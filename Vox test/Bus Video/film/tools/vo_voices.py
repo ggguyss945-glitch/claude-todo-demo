@@ -13,7 +13,8 @@ Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicit
     below the new median instead of being compressed into a voiced vowel;
     f0 None keeps the line's own median (his imitation of Mina is her own pitch);
   - formants: the spectral envelope is warped along frequency (x alpha: a smaller or larger vocal tract), independent
-    of the pitch; voiceless frames (s, h, th, f) keep only a third of the move (UNV), easing over 15 ms, because a full
+    of the pitch; piecewise-linear (x alpha up to 4.5 kHz, then straight to Nyquist), so a strong top band of the take
+    is not stretched into a hiss (Sami's practice "HERE!" has one at 6 kHz: a plain x1.32 put it at 8 kHz, "static"); voiceless frames (s, h, th, f) keep only a third of the move (UNV), easing over 15 ms, because a full
     child warp pushes their noise up into an "s" ("He..." was heard as "See", "Theo." as "See ya");
   - breath: the aperiodicity is raised toward noise (breathy, whispered) or, with a negative amount, lowered toward pure
     voicing (Whistlestop's airless, too-smooth voice);
@@ -48,6 +49,7 @@ NAR_F0 = 172.0                                         # the narrator's median F
 FP = 1.0                                               # WORLD frame period (ms)
 PAD = 0.040                                            # silence padded around a line for the analysis (s)
 FRY = 0.8                                              # frames this many octaves under the line's median are creak
+WARP_FC = 4500.0                                       # formant-warp knee (Hz of the source): see warp_envelope
 XF = 8.0                                               # dry <-> converted crossfade at voicing edges (ms)
 QATT = -10.0                                           # level of a quiet voiced run (a hum after a word), kept dry (dB)
 UNV = 0.35                                             # share of the formant warp kept on voiceless frames (consonants)
@@ -179,15 +181,22 @@ def warp_envelope(sp, alpha):
     f = np.arange(n, dtype=np.float64)
     a = np.asarray(alpha, dtype=np.float64)
     lsp = np.log(sp + 1e-20)
+    fc = WARP_FC / (SR / 2) * (n - 1)                                 # the knee (bins)
+
+    def source(aa):                                                   # piecewise-linear warp: x alpha up to the knee,
+        aa = np.asarray(aa)[..., None]                                # then straight to Nyquist (the top band is not
+        k = fc * aa                                                   # stretched into a hiss band)
+        hi = fc + (f - k) * (n - 1 - fc) / (n - 1 - k)
+        return np.clip(np.where(f <= k, f / aa, hi), 0, n - 1)
     if a.ndim == 0:
-        src = np.clip(f / a, 0, n - 1)
+        src = source(a)
         i0 = np.floor(src).astype(int); i1 = np.minimum(i0 + 1, n - 1); w = src - i0
         return np.exp(lsp[:, i0] * (1 - w) + lsp[:, i1] * w)
     if np.ptp(a) < 1e-9: return warp_envelope(sp, float(a[0]))
     out = np.empty_like(lsp)
     for k in range(0, len(a), 1000):                                 # in blocks: a long line stays small in memory
         aa = a[k:k + 1000]; lk = lsp[k:k + 1000]
-        src = np.clip(f[None, :] / aa[:, None], 0, n - 1)
+        src = source(aa)
         i0 = np.floor(src).astype(np.int32); i1 = np.minimum(i0 + 1, n - 1); w = src - i0
         r = np.arange(len(aa))[:, None]
         out[k:k + 1000] = lk[r, i0] * (1 - w) + lk[r, i1] * w
@@ -342,10 +351,10 @@ def revoice(x, key):
         y = y + y2 * g * 10 ** (lvl / 20) * (np.sqrt(np.mean(y ** 2)) / (np.sqrt(np.mean(y2 ** 2)) + 1e-12))
     n = min(len(y), len(xp)); y = y[:n]                              # voiceless sounds pass through dry
     fr = np.arange(n) * 1000.0 / (FP * SR)                           # sample -> frame position
-    from scipy.ndimage import maximum_filter1d                     # the ramp lies on the voiceless side: only noise
-    wv = maximum_filter1d(v.astype(np.float64), size=int(XF / FP) + 1, mode='nearest')    # meets noise (centred on
-    wv = uniform_filter1d(wv, size=int(XF / FP), mode='nearest')     # the edge, dry and converted voicing overlapped
-    g = np.interp(fr, np.arange(len(wv)), wv)                        # out of phase: "Hi, Mina." read "Hi Mita")
+    from scipy.ndimage import maximum_filter1d                     # the ramp lies on the voiceless side, so only
+    wv = maximum_filter1d(v.astype(np.float64), size=int(XF / FP) + 1, mode='nearest')    # noise meets noise (centred
+    wv = uniform_filter1d(wv, size=int(XF / FP), mode='nearest')     # on the edge, the dry and the converted voicing
+    g = np.interp(fr, np.arange(len(wv)), wv)                        # would overlap out of phase)
     qd = np.interp(fr, np.arange(len(q)), uniform_filter1d(q.astype(np.float64), size=int(XF / FP), mode='nearest'))
     y = y * g + xp[:n] * (1 - g) * (1 - (1 - 10 ** (QATT / 20)) * qd)
     n_pad = len(pad)

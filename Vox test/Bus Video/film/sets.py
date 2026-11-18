@@ -10062,3 +10062,11 @@ exec(compile(open(_BUNNY_SETS_SRC).read(), _BUNNY_SETS_SRC, 'exec'))
 # sets_bunny.py (it reuses its set engine). See its docstring and SETS.md.
 _DOCTOR_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_doctor.py')
 exec(compile(open(_DOCTOR_SETS_SRC).read(), _DOCTOR_SETS_SRC, 'exec'))
+
+
+# ---------------------------------------------------------------------------------------------- Bus film additions
+# "If The School Bus Stops At Midnight... DON'T GET ON": Grandma Della's house on one floor plan (Larch Street), his bus,
+# bus 9, the chase road, Larkfield Elementary, the 1994 tape and the inserts live in sets_bus.py, run here in this
+# module's namespace after sets_doctor.py (it reuses its set engine). See its docstring and SETS.md.
+_BUS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_bus.py')
+exec(compile(open(_BUS_SETS_SRC).read(), _BUS_SETS_SRC, 'exec'))

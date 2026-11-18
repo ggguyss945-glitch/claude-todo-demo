@@ -24,6 +24,7 @@ SAME = {'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 
 JOIN2 = {('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('arm', 'chair'): 'armchair'}
 # lines that may fail, by tag, with the reason (checked on the spectrogram and with a second recogniser, not an edit fault)
 ALLOW_TAGS = {
+    'post_street': 'the take says "Large street" (raw take too, both recognisers: the r of Larch is weak); kept',
     'hook_knows': 'the take reduces "And" to a nasal "\'nd": Parakeet writes "Then" for the line on its own, "And" with the line before (raw take too); Whisper also "Then"',   # L2 "And if he knows it... don't op"
     'tape_ride_right': '"Ride" is spliced from the title; Parakeet merges the d into the r of "right" on any "ride right" ("Right, right" on the raw title phrase in isolation too); Whisper: "Ride right kids"',   # L19 '"Ride right, kids!"'
     'mailbox_letters': 'Parakeet writes "mail box" as two words (raw take too); Whisper: "mailbox"',   # L63 'Grandma unscrews the letters o'

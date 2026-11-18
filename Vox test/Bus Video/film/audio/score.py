@@ -331,7 +331,7 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
+        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_bus.json', 'catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
                                                      'catalog_epidemic_delivery.json', 'catalog_epidemic.json')
                    if os.path.exists(os.path.join(HERE, f))))
         epi = json.load(open(cp))

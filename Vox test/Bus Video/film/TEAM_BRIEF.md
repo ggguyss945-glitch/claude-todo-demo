@@ -125,3 +125,9 @@ Every step re-reads your whole context, so its size is the cost.
 - Make edits as small targeted patches.
 - Trust what teammates finished and documented.
 - Final report under 350 words: what you did, results, open problems, paths and commands.
+
+## Ownership notes (coordinator, 18 Nov 16:40 UTC)
+- A teammate is REDESIGNING Mister Whistlestop's head, face, fur and posture in characters_bus.py now (until about 19:00 UTC). The public API stays the same.
+  - The film team must not edit the Whistlestop drawing functions in characters_bus.py.
+  - Use his staging calls as they are. Write any change you need into `_work/handoff/requests.md`.
+- Another teammate is re-pacing the voice edit to about 13 minutes and will re-align. Always read times from `_work/align/timeline.json` at run time; never copy times into film.py.

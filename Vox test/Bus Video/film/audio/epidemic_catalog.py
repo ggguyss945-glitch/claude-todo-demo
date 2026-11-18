@@ -1,6 +1,14 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
+    python3 epidemic_catalog.py --bus                 THIS film ("If The School Bus Stops At Midnight... DON'T GET ON"):
+                                                      writes audio/catalog_epidemic_bus.json from W/samples/epidemic_bus
+                                                      (the bus set: sfx/ 98 effects, music/ 11 tracks) FIRST, then the
+                                                      doctor (W/samples/epidemic, flat), bunny, dummy, delivery, police
+                                                      and mirror sets (read only; rows of unchanged files are reused
+                                                      from the doctor / bunny / dummy / delivery catalogues). A music
+                                                      file found in sfx/ is kept out of every name (stray: true).
+
     python3 epidemic_catalog.py --doctor              THIS film (the Doctor film): writes audio/catalog_epidemic_doctor.json
                                                       from W/samples/epidemic (the doctor set: ONE flat folder, 90
                                                       effects + 12 tracks, music told apart by name) then the bunny,
@@ -78,6 +86,15 @@ DOCTOR_SETS = [('doctor', os.path.join(W, 'samples', 'epidemic')),
                ('police', os.path.join(W, 'samples', 'epidemic_police')),
                ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 DOCTOR_OUT = os.path.join(HERE, 'catalog_epidemic_doctor.json')
+# the Bus film: the owner's new set (sfx/ + music/) first, then every earlier set linked beside it
+BUS_SETS = [('bus', os.path.join(W, 'samples', 'epidemic_bus')),
+            ('doctor', os.path.join(W, 'samples', 'epidemic')),
+            ('bunny', os.path.join(W, 'samples', 'epidemic_bunny')),
+            ('dummy', os.path.join(W, 'samples', 'epidemic_dummy')),
+            ('delivery', os.path.join(W, 'samples', 'epidemic_delivery')),
+            ('police', os.path.join(W, 'samples', 'epidemic_police')),
+            ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
+BUS_OUT = os.path.join(HERE, 'catalog_epidemic_bus.json')
 AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
@@ -277,6 +294,46 @@ MAP = {
     'chair_creak': [['chair', 'creak'], ['wooden_creak', 'rock'], ['wood', 'friction', 'creak']],
     'sit_down': [['person_sit_down']],
     'phone_connect': [['speed_dial_tone'], ['telephone', 'device', 'grab', 'button']],
+    # ---- the Bus film (sfx.py BUS_NAMES): the bus set first (W/samples/epidemic_bus/sfx), the earlier sets as
+    # layers. The verdicts on every new file are in W/mix/sfx_review.md; rejected files match no name (or NOT vetoes).
+    'suburb_night': [['suburban', 'night', 'crickets'], ['night', 'crickets']],
+    'dog_far': [['dog_barks_distant']],
+    'bus_air_brake': [['bus', 'air_brake']],
+    'bus_idle': [['bus', 'engine', 'idle'], ['bus', 'standing_still_idle'], ['bus', 'slowly_stops_idle']],
+    'bus_door': [['bus', 'door', 'open', 'close']],
+    'pa_crackle': [['microphone', 'feedback'], ['megaphone', 'feedback'], ['spring_feedback'], ['pa_system']],
+    'bus_pull_away': [['bus', 'start', 'drive_away'], ['bus', 'pass_by']],
+    'bus_horn': [['horn', 'bus']],
+    'bus9_drive': [['bus', 'on_board_driving'], ['bus', 'double_decker'], ['bus', 'start', 'drive_away']],
+    'bus_fast_night': [['interior', 'fast_driving'], ['bus', 'pass_by', 'fast']],
+    'tire_screech': [['skid'], ['tire', 'screech']],
+    'metal_scrape': [['metal', 'scrape']],
+    'glass_break': [['glass_break', 'car_window']],
+    'dash_radio': [['static_radio'], ['radio', 'station_search']],
+    'whistle': [['referee_whistle'], ['wooden', 'blow_single_note']],
+    'ticket_punch': [['hole_punch'], ['hole_puncher']],
+    'deadbolt': [['deadbolt'], ['mortise_lock']],
+    'walkie': [['transceiver', 'walkie_talkie'], ['walkie_talkie', 'squelch_beep']],
+    'power_flicker': [['fluorescent_light', 'light_switch']],
+    'bare_feet': [['barefoot'], ['running_over_wood_stairs']],
+    'run_asphalt': [['asphalt', 'running']],
+    'cat_rumble': [['cat_wild']],
+    'glove_squeak': [['latex', 'glove'], ['surgical_glove']],
+    'tape_skip': [['glitch_glitch'], ['user_interface_glitch'], ['tape_play_stop']],
+    'crt_on': [['crt_monitor'], ['hifi', 'old', 'turn_on']],
+    'vhs': [['videotape', 'vhs']],
+    'tape_ff': [['tape_hand_camera', 'fast_forward'], ['master_tape'], ['vhs_rewind']],
+    'vinyl_crackle': [['vinyl', 'crackle']],
+    'seatbelt': [['seat_belt']],
+    'flag_rope': [['cable_clanking', 'flag'], ['rope_clanking']],
+    'broom_bend': [['bendy_pole'], ['plywood', 'bend']],
+    'broom_crack': [['wood_break', 'snap'], ['plywood', 'splinter']],
+    'cloth_rip': [['cloth_rip']],
+    'school_bell': [['school_bell']],
+    'kids_chatter': [['school', 'children_talking'], ['school', 'big_crowd_of_kids']],
+    'unscrew': [['electric_screwdriver'], ['flashlight', 'unscrew']],
+    'ticket_slide': [['cinema_ticket']],
+    'phone_911': [['telephone_digital_grab_handset'], ['speed_dial_tone'], ['digital_phone_ringing']],
 }
 # name -> slug words that veto a match (the bunny set's sword whooshes are blade hits, not air; the metal valve door and
 # the battle-axe shield hits are clangs, not the film's impacts; the metal-staircase body falls never land in this
@@ -292,6 +349,12 @@ NOT = {'whoosh': ['blade', 'sword', 'axe'], 'impact_hit': ['valve', 'shield', 'a
        # the review's rejects (W/mix/sfx_review.md): the clipped 15.5 kHz pen click, the phone-notification ting,
        # the cellphone busy tone
        'pen_click': ['pen_ballpoint_pen_click'], 'now_serving': ['notification'], 'busy_tone': ['cellphone']}
+# the Bus film (W/mix/sfx_review.md): the kids' playground take ends in a scream (no library screams); the guitar
+# feedback is an instrument; the Aztec death whistles are a cheesy human scream; the toy whistle is a slide whistle;
+# the AI "hitech" walkie carries a robot voice; the reversing beeps are a modern truck alarm; the velcro is not cloth
+NOT.update({'kids_chatter': ['scream', 'playground'], 'pa_crackle': ['guitar'], 'whistle': ['aztec', 'toy'],
+            'walkie': ['voices_futzed_ai'], 'bus_pull_away': ['reverse_beeps'], 'cloth_rip': ['velcro'],
+            'tape_skip': ['sega']})
 
 
 def slugify(name):
@@ -444,13 +507,15 @@ def build(sets, out, sfx_only=False, reuse=()):
                 r = prev.get((kind, set_name, slug))
                 if r is not None and os.path.exists(r.get('path', '')) and os.path.getsize(r['path']) == os.path.getsize(p):
                     e = dict(r, path=p, set=set_name)          # unchanged file: keep its analysis, path through W/samples
-                    e.pop('also_in', None)
+                    e.pop('also_in', None); e.pop('stray', None)
                     if kind == 'sfx':
                         e['serves'] = serves(slug)
                     n_reused += 1
                 else:
                     print(f'  {kind} {set_name}: {f}', flush=True)
                     e = (sfx_entry if kind == 'sfx' else music_entry)(meter, p, set_name, slug)
+                if kind == 'sfx' and set_name == 'bus' and _is_music(f):
+                    e['stray'] = 'a music track in the effects folder'; e['serves'] = []   # never an SFX
                 cat[kind].append(e)
                 seen_slug[(kind, slug)] = e; seen_fp[(kind, fp)] = e
     if n_reused:
@@ -472,7 +537,10 @@ def build(sets, out, sfx_only=False, reuse=()):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--doctor' in sys.argv:
+    if '--bus' in sys.argv:
+        build(BUS_SETS, BUS_OUT, so, reuse=() if '--no-reuse' in sys.argv else (
+            BUS_OUT, DOCTOR_OUT, os.path.join(HERE, 'catalog_epidemic_bunny.json'), DUMMY_OUT, DELIVERY_OUT))
+    elif '--doctor' in sys.argv:
         build(DOCTOR_SETS, DOCTOR_OUT, so, reuse=() if '--no-reuse' in sys.argv else (
             DOCTOR_OUT, os.path.join(HERE, 'catalog_epidemic_bunny.json'), DUMMY_OUT, DELIVERY_OUT))
     elif '--bunny' in sys.argv:
