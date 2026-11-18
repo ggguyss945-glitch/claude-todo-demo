@@ -179,13 +179,13 @@ EVENTS = [
     ('s111', 'hit', 0.5, None),                                       # my hand slaps over his mouth
     ('s112', 'silence', 0.9, 2.0),                                    # "Silence."
     ('s114', 'stinger', 0.75, None),                                  # "Here!" in Sami's voice
-    ('e106+0.03', 'hit', 0.6, None, {'boost': 3.0, 'nosnap': True}),  # the roll call reaches "Mina?" (r3: after the word, in its scare beat)
+    ('e106+0.06', 'hit', 0.85, None, {'boost': 3.5, 'nosnap': True}),  # the roll call reaches "Mina?" (r3: after the word, in its scare beat)
     ('e115', 'silence', 0.85, 1.2), ('e116+0.03', 'hit', 0.75, None, {'boost': 3.5, 'nosnap': True}),  # "Almost." (r3: the score drops out under it, the hit after it)
     ('s121', 'sub_drop', 0.55, None),                                 # "Last stop, three a.m."
     # rule 3
     ('s122-0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('s133', 'sub_drop', 0.5, None),                                  # the flashlight goes out
-    ('s141-0.2', 'silence', 0.8, 1.4), ('e143+0.03', 'hit', 0.75, None, {'boost': 3.0, 'nosnap': True}),   # "...Clever." (r3: after the word)
+    ('s141-0.2', 'silence', 0.8, 1.4), ('e143+0.15', 'hit', 0.75, None, {'boost': 3.0, 'nosnap': True}),   # "...Clever." (r3: after the word; at +0.03 the recogniser heard "Cleveland")
     ('s144', 'stinger', 0.7, None),                                   # the peephole goes white
     ('s149', 'hit', 0.5, None),                                       # "DON'T OPEN THE DOOR!"
     # rule 4
@@ -244,7 +244,7 @@ IDENTITY = [
     # 1994: the tape on the TV cart, from "Ride Right with Mister Whistlestop", dragged to a halt on "pulled"
     ('s10-0.4', 'jingle', 0.55, None, dict(version='tv1994', loops=2, until='w20:pulled+0.3', stop='drag', fade=0.05)),
     # rule 1: the loudspeaker crackles -> the first bars on his PA, cut by his reading voice
-    ('s70+0.7', 'jingle', 0.85, None, dict(version='pa', until='s72-0.05', stop='cut', fade=0.05)),
+    ('s70+0.7', 'jingle', 1.0, None, dict(version='pa', until='s72-0.05', stop='cut', fade=0.05)),
     # rule 2: the door unfolds, the tape-skips across the lawn (the slow, warped music box), until the roll call
     ('s88', 'jingle', 0.5, None, dict(version='musicbox', until='s104', stop='fade', fade=1.0)),
     # rule 5: the bus pulls away with no lights on, the tune on his PA going off down the street

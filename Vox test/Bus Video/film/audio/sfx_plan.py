@@ -177,7 +177,8 @@ SPACE_MAP = {'classroom': 'inside'}
 # (bus_door open -183 ms, his_unfold +200 ms, broom_bend +350 ms, tire_screech +126 ms, bus_pull_away +95 ms): the
 # cue moves by the opposite so the transient lands on the frame
 SHIFT = {'bus_door_fold': 0.18, 'bus_door_spring': 0.18, 'ws_unfold_clack': -0.2, 'broom_rip': -0.34, 'broom_jam': -0.34,
-         'tyre_screech': -0.12, 'engine_rev_bus': -0.09, 'bus_pull_away': -0.09}
+         'tyre_screech': -0.12, 'engine_rev_bus': -0.09, 'bus_pull_away': -0.09,
+         'school_bell': -0.4}   # sound fix r3: the bell rings in the beat after "Three o'clock." (a 0.2 s near-digital hole there)
 
 
 def picture_pass(out, lines, log):

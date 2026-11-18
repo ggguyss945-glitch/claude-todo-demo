@@ -2699,7 +2699,7 @@ def plan_rule3(F):
       post=dict(dim=0.1), sfx=[(W(147, 'pounding') + 0.12 + 0.45 * k, 'glass_pound', -2, 0, 'outside', dict(index=k)) for k in range(6)],
       c=dict(mv='push', rate=0.0, zrate=0.01))
     # 148 "Trapped in her own cab, our porch broom wedged through her folding doors."
-    C(T(148), 'set', room='front', view='bus9door', post=dict(exposure=0.9), set=B9, rim=NIGHT, sfx=[(T(148) + 0.3 + 0.45 * k, 'glass_pound', -8, 0, 'outside', dict(index=k)) for k in range(5)],
+    C(T(148), 'set', room='bus', view='doors', post=dict(exposure=1.7), set=dict(kind='bus9', tod='night', door=0.15, broom=1.0, bend=0.15), rim=NIGHT, sfx=[(T(148) + 0.3 + 0.45 * k, 'glass_pound', -8, 0, 'outside', dict(index=k)) for k in range(5)],
       c=dict(mv='push', f=1.0, rate=0.03, y=600))
     # 149 D "DON'T OPEN THE DOOR!"
     C(T(149), 'bust', who='della', bg=('front', 'bus9door'), set=B9, expr='shout', cx=960, cy=640, scale=0.85, light=NIGHT, post=dict(blur=1),
@@ -3715,9 +3715,11 @@ def plan_after(F):
     # 394 "It's the name on his last page."
     C(T(394), 'ins', name='clipboard', kw=dict(page='last'), cut='white', motion=lambda u: (0.0, 0.0, 0.4, 0.0), sfx=[(T(394), 'sting_name', 0, 0, None)], c=dict(mv='push', rate=0.04))
     # 395 "Out the back window, something very tall in a crooked yellow hat lifts a new clipboard."  396 "Draws a line ... and starts writing the next."
-    C(T(395), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', c=PU(0.04, 1.9, x=1000, y=560),
+    C(T(395), 'set', room='bus', view='back_window', set=dict(B9M, far_figure=False), rim=MORNING, era='morning', c=PU(0.04, 1.9, x=1000, y=560),
+      ppl=[ws((0.4, 19.0), face=(0.4, 0.0), light=MORNING, check=False, act=lambda a, s: a.clipboard(-9, 1))],
       post_fn=lambda tt: dict(glitch=0.12 if (tt * 3.0) % 1.0 < 0.06 else 0.0))
-    C(W(395, 'lifts'), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', cut='vhs', c=PU(0.04, 3.4, x=1005, y=540),
+    C(W(395, 'lifts'), 'set', room='bus', view='back_window', set=dict(B9M, far_figure=False), rim=MORNING, era='morning', cut='vhs', c=PU(0.04, 2.6, x=1005, y=470),
+      ppl=[ws((0.4, 19.0), face=(0.4, 0.0), light=MORNING, check=False, act=lambda a, s: a.clipboard(W(395, 'lifts'), 1))],
       sfx=[(W(395, 'lifts'), 'tape_skip', -4, 0, None)])
     C(T(396), 'ins', name='clipboard', kw=lambda u: dict(page='last', write=clamp((u - 0.3) / 2.8)), cut='vhs', sfx=[(T(396) + 0.3, 'pencil_line', -4, 0, 'close', dict(dur=2.8))],
       c=dict(mv='push', rate=0.03))

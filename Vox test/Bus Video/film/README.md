@@ -108,6 +108,39 @@ Outputs in `W/mix/final/`: `mix_en.wav` (read by render.py / deliver.sh / encode
   sliding in, Grandma at the back door / crossing the yard, a hand on the mailbox letters, Sami's jolt, the palm on a
   visible window, Theo's raincoat reads yellow, the end card holds 4 s.
 
+## Review round 3: sound (18 Nov)
+- Scare beats in the voice edit (`W/narration/pacing_map.md`, rows marked "sound fix r3"): 0.40-0.50 s of room tone
+  before and after "Mina?", "Almost.", "...Clever.", the hand, "LIGHTHOUSE!", "The deadbolt slides." / the hallway,
+  the doors, seat 22, "Backwards.", "Two of me.", "Three o'clock." / the bell, "It slips."; L261 0.28 s. The voice is
+  796.9 s (+5.0 s), the film 800.9 s; re-aligned, `vo_edit.py check`: 0 recogniser failures (L261 "answer_him"
+  allowed: the take itself reads "they stay out"). The picture follows timeline.json; the preview was re-rendered.
+- `music_plan.py`: every boosted hit lands AFTER its word (`eN+0.03`, 'nosnap'; "...Clever." +0.15) in that beat;
+  room-tone silences (level < 0.95, beds stay) before "Almost.", LIGHTHOUSE, the hallway, the doors, "Backwards.",
+  "Two of me." and the bell (the bell's true silence made a 0.26 s dropout); the deadbolt riser ends on "slides";
+  roll call / "Almost." / the hand / "Backwards." / the bell boost 3.5. `mix.py`: boosted release 0.75 s (was 0.35),
+  the hit duck returns over 0.6 s (was 0.25); rule 7 bed target -9.0 LU. `score.py`: his PA jingle +8 dB
+  (`JINGLE_LIFT_BUS['pa']` 5.0) and L70 level 0.85.
+- Voices (`tools/vo_voices.py`): Della 168 Hz / formants x1.03 (story 164, shout 212; her imitations 164-176); his
+  "Here!" imitation 270 Hz set; "Almost." (W_flat) +4 dB at 3 kHz, second voice 21 dB down; `mix.py` 'door_clear'
+  (softer top cut, more glass) on "Almost.", "Mina?", "...Clever.".
+- `sfx_plan.py` / `sfx.py`: a real `hand_slap` recipe; the neck ratchet keeps the picture's three clicks; light
+  switches deduplicated under 0.3 s; like pops -7 dB (were -14); the bus rewind 1.6 s long and 0.5 s earlier (it
+  peaked 2.4 s late).
+- `sfx_plan.py` SHIFT: the school bell -0.4 s, so it rings in the beat after "Three o'clock." (a 0.2 s hole at -70 dBFS).
+- Result: -14.09 LUFS, -1.7 dBTP, 800.9 s; every boosted scare +7.3..+9.9 LU (400 ms) over the voice, in its own beat;
+  bed in the gaps by rule -22.4 -21.1 -19.4 -18.2 -16.7 -15.6 -13.2 LU; his PA -16.6 / -13.6 LU rel the mix (L70 is
+  held by the clarity margin under "A loudspeaker crackles"); the bell beat never under -40 dBFS.
+  Open: "...Clever." reads "Cleveland" in the mix (word heard; the tape slide's tail adds a syllable).
+- Check: `python3 tools/scarecheck.py` (his PA level, the bell beat, and Parakeet on each scare line cut from the
+  mix); the scares' loudness is in `W/mix/final/mix.log` ("boosted scare" lines).
+
+## Review round 3: verify (18 Nov)
+- Final sting (L395, two shots): the placeholder post is replaced by the cast figure (`ws((0.4, 19.0), check=False)`
+  on the road behind bus 9, clipboard lifted on "lifts"; the set's `far_figure=False`); the second push is 2.6x on his face.
+- L148 "Trapped in her own cab": now the bus 9 doors from inside with the porch broom wedged through them (exposure 1.7).
+- Both spliced into the preview (clips rendered with `render.py --clip`, re-encoded into preview.mp4, the existing mix
+  re-muxed into preview_mix.mp4); no sound cue moved. Upload text: `W/deliver/YouTube_upload.txt`.
+
 ## Open problems
 - Interiors seen from outside (his bus from the lot) only show figures through the open door: the steps / aisle beats
   are staged from inside views or the school lot.
