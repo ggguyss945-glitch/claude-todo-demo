@@ -5839,12 +5839,12 @@ def r_dash_radio(rng, sp, dur=3.0, kind='crackle', **_):
     d = float(dur)
     y = _bx('dash_radio', ('station_search',), d, rng, 0.6)
     y = eq(bp(y, 350, 3200, 2), ('peak', 1300, 3.0, 1.0))
-    pop = st(sub_boom(160, 80, 0.06, 0.4, 1)) * peak(y) * 1.2
+    pop = hp(st(sub_boom(160, 80, 0.06, 0.4, 1)), 300, 2) * peak(y) * 0.25
     y = _seq([(0, y), (0, pop), (max(0.0, d - 0.08), pop)], 0.1)
     return fade(y, 0.01, 0.05), 0.0, 0.0, False
 
 
-def r_whistle(rng, sp, kind='short', n=2, spacing=0.22, far=False, tune=True, **_):
+def r_whistle(rng, sp, kind='short', n=2, spacing=0.27, far=False, tune=True, **_):
     """His silver whistle (the bus set's referee whistles). kind 'short': "Fweet-fweet" = n short blasts (spacing s
     apart, the jingle's hook rhythm); 'long': one long, loud blast (about 2.2 s: drowning the calling out). tune=True
     pitches each blast so its whistle tone sits on A7 (3520 Hz), the jingle's hook an octave pair up; far=True: the
@@ -5871,8 +5871,8 @@ def r_whistle(rng, sp, kind='short', n=2, spacing=0.22, far=False, tune=True, **
     ev = []
     for j in range(int(n)):
         e, g = short[int(rng.integers(len(short)))]
-        b = tuned(pnorm(_cut(e, g)))[:n_(0.2)]
-        ev.append((j * spacing, fade(b, 0.002, 0.03) * (1.0 if j else 0.92)))
+        b = tuned(pnorm(_cut(e, g)))[:n_(0.17)]
+        ev.append((j * spacing, fade(b, 0.002, 0.025) * (1.0 if j else 0.92)))
     y = _seq(ev, 0.4)
     return y, onset_s(y, -12), 0.0, False
 
@@ -6011,11 +6011,11 @@ def r_crt_on(rng, sp, **_):
     gl = _grain_list('crt_on', ('crt_monitor',), 'phrase', gap=0.4, max_len=3.0, keep=-20)
     if gl:
         e, g = gl[0]
-        y = pnorm(fade(_cut(e, g), 0.003, 0.2))
+        y = lp(pnorm(fade(_cut(e, g), 0.003, 0.2)), 9000, 2)
     else:
         y, *_r = r_tv_on(rng, sp)
     t = np.arange(n_(1.6)) / SR
-    wh = st((np.sin(2 * np.pi * 15734 * t) * np.clip(t / 0.4, 0, 1) * np.clip((1.6 - t) / 0.4, 0, 1) * 0.006).astype(np.float32))
+    wh = st((np.sin(2 * np.pi * 15734 * t) * np.clip(t / 0.4, 0, 1) * np.clip((1.6 - t) / 0.4, 0, 1) * 0.0015).astype(np.float32))
     thoom = st(sub_boom(60, 50, 0.5, 0.0, 2)) * 0.4
     y = _seq([(0, y), (0.05, thoom), (0.1, wh)], 0.2)
     return y, onset_s(y, -14), 0.0, False
@@ -6038,7 +6038,7 @@ def r_tape_ff(rng, sp, dur=2.5, stop=True, **_):
     x = audio(_pick(rng, E, 1.0))
     gl = grains(E[0], 'phrase', gap=0.25, max_len=6.0, keep=-20) if E else []
     body = x[gl[0][0]:gl[0][1]] if gl else x
-    y = _fit(body, n_(float(dur)), rng)
+    y = lp(_fit(body, n_(float(dur)), rng), 8000, 2)
     ev = [(0, fade(y, 0.02, 0.05))]
     if stop:
         clunk = st(modal([180.0, 520.0, 1300.0], [0.03, 0.015, 0.006], [1.0, 0.5, 0.3], 0.1, 4)) * peak(y) * 1.4
@@ -6113,7 +6113,7 @@ def r_school_bell(rng, sp, dur=4.0, **_):
     E = _has('school_bell') or src('school_bell')
     x = audio(_pick(rng, E, 1.0))
     a = int(np.argmax(np.abs(mono(x)) > 0.2 * peak(x)))
-    y = _fit(x[a:], n_(float(dur)), None)
+    y = lp(_fit(x[a:], n_(float(dur)), None), 7000, 2)
     return fade(y, 0.003, 0.4), 0.0, 0.0, False
 
 

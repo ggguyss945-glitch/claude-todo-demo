@@ -34,7 +34,7 @@ How the edit works
   3. Fix the TTS slips (FIXES below; each one checked with two recognisers, see voice_report.md).
   4. Pace: every line boundary gets the gap of pacing_map.md (silence from the end of one line's decay to the next
      line's first sound); pauses inside a line keep the take's natural timing, clamped by their punctuation (comma
-     0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.45-0.80 s, mid-line full stop 0.30-0.55 s, no punctuation <= 0.25 s)
+     0.12-0.30 s, colon 0.20-0.35 s, ellipsis 0.30-0.50 s, mid-line full stop 0.15-0.30 s, no punctuation <= 0.25 s)
      and by INTERNAL overrides; a pause inside a word (before its release or final s) is never touched.
   5. Level and clean: one gain per line (narrator: 60 % of its distance from the narrator's median speech level, +-3 dB,
      nothing inside 1.5 dB; a character line: the whole distance, so a voice keeps one level) so no gain moves inside a
@@ -828,10 +828,10 @@ def line_pieces(T, i, sp):
         word = re.sub(r'[^a-z]', '', text_words(i)[wi].lower()) if wi >= 0 else ''
         ov = INTERNAL.get(tag, {}).get(word)
         if ov is not None: g, why = ov, f'held pause after "{word}" ({pu or "no mark"})'
-        elif pu == '...': g, why = min(max(og, 0.35), 0.65), 'ellipsis 0.35-0.65'
-        elif pu == ':': g, why = min(max(og, 0.25), 0.45), 'colon 0.25-0.45'
+        elif pu == '...': g, why = min(max(og, 0.30), 0.50), 'ellipsis 0.30-0.50'
+        elif pu == ':': g, why = min(max(og, 0.20), 0.35), 'colon 0.20-0.35'
         elif pu in (',', ';'): g, why = min(max(og, 0.12), 0.30), 'comma 0.12-0.30'
-        elif pu in ('.', '?', '!'): g, why = min(max(og, 0.25), 0.45), 'sentence inside a line 0.25-0.45'
+        elif pu in ('.', '?', '!'): g, why = min(max(og, 0.15), 0.30), 'sentence inside a line 0.15-0.30'
         else: g, why = min(og, 0.25), 'between words: as read, <= 0.25'
         pc['gap_before'] = round(g, 3); pc['why'] = why; pc['after_word'] = word; pc['punct'] = pu
     # prepended material (the "If he" of rule three)
@@ -887,247 +887,249 @@ def rule_no(tag):
 
 
 # gap after the line with this tag: (seconds, kind, reason). Everything not listed here follows the rules in
-# pacing_rows(): 1.15 s before each "Rule number"; "Rule number N." 0.45 s then its text; 0.40 s between the rule
-# text's sentences; 0.75 s after the rule text; 0.18 s where one sentence is split for its speaker (quote / "she says.");
-# 0.50 s at a paragraph break; 0.32 s between short fragments; dialogue 0.33-0.38 s; 0.38 s in running narration.
-# This film must feel FAST: running 0.3-0.5 s, held dread only where it pays (0.9-1.4 s).
+# pacing_rows(), and every PACE value follows the same scheme (the owner, 18 Nov: about 12.5 minutes is right; never pad,
+# never lengthen gaps): 0.70 s before each "Rule number"; "Rule number N." 0.30 s then its text; 0.16 s between the rule
+# text's sentences; 0.45 s after the rule text; 0.15 s inside a paragraph (0.20 s for a marked beat); 0.15 s where one
+# sentence is split for its speaker or a speaker is cut off; dialogue 0.15 s (0.18 s across a paragraph break);
+# staccato fragments 0.15 s (0.22 s across a paragraph break); 0.30 s at a paragraph break (0.36 s at a section end);
+# held dread only at the six HOLD beats, 0.75-0.85 s. Never under 0.15 s.
 PACE = {
     # hook
-    'hook': (0.55, 'beat', 'first rule of the hook lands'),
-    'hook_grandma': (0.50, 'beat', 'second rule of the hook'),
-    'hook_knows': (0.45, 'beat', 'into his voice'),
-    'hook_voice': (0.60, 'beat', 'his line hangs, then who he is'),
-    'thats_whistlestop': (0.32, 'sentence', 'running'),
-    'took_brother': (0.40, 'sentence', 'running'),
-    'needed_name': (0.55, 'beat', 'before the guilt line'),
-    'i_gave_it': (0.90, 'section', 'end of the hook: room for the title sting'),
+    'hook': (0.30, 'paragraph', 'first rule of the hook lands'),
+    'hook_grandma': (0.30, 'paragraph', 'second rule of the hook'),
+    'hook_knows': (0.18, 'dialogue', 'into his voice'),
+    'hook_voice': (0.18, 'dialogue', 'his line hangs, then who he is'),
+    'thats_whistlestop': (0.15, 'sentence', 'running'),
+    'took_brother': (0.15, 'sentence', 'running'),
+    'needed_name': (0.30, 'paragraph', 'before the guilt line'),
+    'i_gave_it': (0.36, 'section', 'end of the hook: room for the title sting'),
     # the tape
-    'tape_title': (0.30, 'staccato', 'Ride Right... / Channel 6.'),
-    'channel6': (0.50, 'paragraph', 'the cat'),
-    'grin_never_moves': (0.45, 'dialogue', 'into the tape'),
-    'tape_card': (0.40, 'dialogue', 'the tape'),
-    'kids_cards': (0.35, 'dialogue', 'the tape'),
-    'tape_ride_right': (0.55, 'beat', 'out of the tape'),
-    'nobody_remembers': (0.65, 'section', 'out of 1994 into now'),
+    'tape_title': (0.15, 'staccato', 'Ride Right... / Channel 6.'),
+    'channel6': (0.30, 'paragraph', 'the cat'),
+    'grin_never_moves': (0.18, 'dialogue', 'into the tape'),
+    'tape_card': (0.18, 'dialogue', 'the tape'),
+    'kids_cards': (0.18, 'dialogue', 'the tape'),
+    'tape_ride_right': (0.18, 'dialogue', 'out of the tape'),
+    'nobody_remembers': (0.36, 'section', 'out of 1994 into now'),
     # della, seat 22, sami, post
-    'she_says': (0.20, 'split', '"she says." / "That\'s the job."'),
-    'one_kid': (0.35, 'beat', '"Seat twenty-two." lands'),
-    'seat22': (0.40, 'beat', 'the raincoat'),
-    'hi_mina_memory': (0.50, 'beat', 'his line, then the guilt'),
-    'sami_here_practice': (0.45, 'paragraph', 'the walkies'),
-    'post_sami': (0.28, 'staccato', 'the chalkboard, read crisp'),
-    'post_first_grade': (0.28, 'staccato', 'the chalkboard'),
-    'post_school': (0.28, 'staccato', 'the chalkboard'),
-    'post_bus': (0.28, 'staccato', 'the chalkboard'),
-    'post_street': (0.40, 'staccato', 'the likes'),
-    'post_comment': (0.32, 'staccato', 'the avatar'),
-    'hat_avatar': (0.45, 'beat', 'his comment'),
-    'great_smile_comment': (0.55, 'beat', 'the comment lands'),
-    'take_it_down': (0.45, 'beat', '"I didn\'t."'),
-    'i_didnt': (0.70, 'section', 'the guilt lands; the rules'),
+    'she_says': (0.15, 'split', '"she says." / "That\'s the job."'),
+    'one_kid': (0.20, 'beat', '"Seat twenty-two." lands'),
+    'seat22': (0.20, 'beat', 'the raincoat'),
+    'hi_mina_memory': (0.18, 'dialogue', 'his line, then the guilt'),
+    'sami_here_practice': (0.18, 'dialogue', 'the walkies'),
+    'post_sami': (0.15, 'staccato', 'the chalkboard, read crisp'),
+    'post_first_grade': (0.15, 'staccato', 'the chalkboard'),
+    'post_school': (0.15, 'staccato', 'the chalkboard'),
+    'post_bus': (0.15, 'staccato', 'the chalkboard'),
+    'post_street': (0.15, 'staccato', 'the likes'),
+    'post_comment': (0.15, 'staccato', 'the avatar'),
+    'hat_avatar': (0.30, 'paragraph', 'his comment'),
+    'great_smile_comment': (0.30, 'paragraph', 'the comment lands'),
+    'take_it_down': (0.18, 'dialogue', '"I didn\'t."'),
+    'i_didnt': (0.36, 'section', 'the guilt lands; the rules'),
     # midnight
-    'lights_off': (0.60, 'paragraph', 'Midnight.'),
-    'midnight': (0.40, 'staccato', 'the air brakes'),
-    'tv_voice_reads': (0.40, 'dialogue', 'into the PA'),
-    'reads_post': (0.50, 'beat', '"A pause."'),
-    'a_pause': (0.60, 'beat', 'the pause the line names'),
-    'great_smile_mina': (0.60, 'beat', 'the realisation'),
-    'not_off_house': (1.05, 'held', 'held dread before "He read it off my phone."'),
-    'off_my_phone': (0.50, 'beat', 'his catchphrase'),
-    'know_your_name_bus': (0.40, 'beat', 'the whistle'),
-    'whistle1': (0.85, 'held', 'the whistle sound, then the comment prompt'),
-    'cta': (0.35, 'sentence', 'the prompt'),
-    'cta_knows': (0.30, 'sentence', 'the prompt'),
-    'cta_friend': (0.35, 'sentence', 'the prompt'),
+    'lights_off': (0.22, 'staccato', 'Midnight.'),
+    'midnight': (0.15, 'staccato', 'the air brakes'),
+    'tv_voice_reads': (0.18, 'dialogue', 'into the PA'),
+    'reads_post': (0.18, 'dialogue', '"A pause."'),
+    'a_pause': (0.18, 'dialogue', 'the pause the line names'),
+    'great_smile_mina': (0.18, 'dialogue', 'the realisation'),
+    'not_off_house': (0.80, 'held', 'held dread before "He read it off my phone."'),
+    'off_my_phone': (0.18, 'dialogue', 'his catchphrase'),
+    'know_your_name_bus': (0.18, 'dialogue', 'the whistle'),
+    'whistle1': (0.30, 'paragraph', 'the whistle sound, then the comment prompt'),
+    'cta': (0.15, 'sentence', 'the prompt'),
+    'cta_knows': (0.15, 'sentence', 'the prompt'),
+    'cta_friend': (0.15, 'sentence', 'the prompt'),
     # he comes
-    'up_and_up': (0.50, 'paragraph', 'the streetlight'),
-    'streetlight': (0.40, 'staccato', 'the first skip'),
-    'at_mailbox': (0.40, 'staccato', 'Flicker.'),
-    'flicker_lawn_a': (0.28, 'staccato', 'Flicker. The middle of the lawn.'),
-    'flicker_lawn': (0.40, 'staccato', 'Flicker.'),
-    'flicker_steps_a': (0.28, 'staccato', 'Flicker. The porch steps.'),
-    'flicker_steps': (0.45, 'beat', 'He never walks.'),
-    'and_that_grin': (0.40, 'beat', 'He calls roll.'),
-    'calls_roll': (0.45, 'dialogue', 'roll call through the door'),
-    'roll_della': (0.40, 'dialogue', 'roll call'),
-    'roll_mina': (0.40, 'dialogue', 'roll call'),
-    'roll_sami': (0.45, 'dialogue', 'Sami wakes'),
-    'takes_breath': (0.30, 'dialogue', 'the breath to answer'),
-    'sami_he': (0.20, 'cut off', 'the hand cuts him off (still >= 0.15 s)'),
-    'hand_slaps': (0.45, 'beat', 'Silence.'),
-    'silence': (0.95, 'held', 'the silence the line names'),
-    'porch_voice': (0.30, 'dialogue', 'into his imitation'),
-    'mimic_sami_here': (0.50, 'beat', 'the fake "Here!" hangs'),
-    'in_his_own': (0.30, 'dialogue', 'into "Almost."'),
-    'almost': (0.75, 'beat', '"Almost." lands; the ticket punch'),
-    'click_clack1': (0.40, 'sentence', 'the ticket'),
-    'ticket': (0.35, 'sentence', 'the ticket text'),
-    'ticket_sami': (0.28, 'staccato', 'the ticket text'),
-    'ticket_seat': (0.28, 'staccato', 'the ticket text'),
+    'up_and_up': (0.30, 'paragraph', 'the streetlight'),
+    'streetlight': (0.22, 'staccato', 'the first skip'),
+    'at_mailbox': (0.22, 'staccato', 'Flicker.'),
+    'flicker_lawn_a': (0.15, 'staccato', 'Flicker. The middle of the lawn.'),
+    'flicker_lawn': (0.22, 'staccato', 'Flicker.'),
+    'flicker_steps_a': (0.15, 'staccato', 'Flicker. The porch steps.'),
+    'flicker_steps': (0.22, 'staccato', 'He never walks.'),
+    'and_that_grin': (0.22, 'staccato', 'He calls roll.'),
+    'calls_roll': (0.18, 'dialogue', 'roll call through the door'),
+    'roll_della': (0.18, 'dialogue', 'roll call'),
+    'roll_mina': (0.18, 'dialogue', 'roll call'),
+    'roll_sami': (0.18, 'dialogue', 'Sami wakes'),
+    'takes_breath': (0.15, 'dialogue', 'the breath to answer'),
+    'sami_he': (0.15, 'cut off', 'the hand cuts him off (still >= 0.15 s)'),
+    'hand_slaps': (0.30, 'paragraph', 'Silence.'),
+    'silence': (0.30, 'paragraph', 'the silence the line names'),
+    'porch_voice': (0.15, 'dialogue', 'into his imitation'),
+    'mimic_sami_here': (0.18, 'dialogue', 'the fake "Here!" hangs'),
+    'in_his_own': (0.15, 'dialogue', 'into "Almost."'),
+    'almost': (0.18, 'dialogue', '"Almost." lands; the ticket punch'),
+    'click_clack1': (0.30, 'paragraph', 'the ticket'),
+    'ticket': (0.15, 'sentence', 'the ticket text'),
+    'ticket_sami': (0.15, 'staccato', 'the ticket text'),
+    'ticket_seat': (0.15, 'staccato', 'the ticket text'),
     # the door
-    'goes_out': (0.60, 'beat', 'the knocks'),
-    'three_knocks': (0.60, 'beat', 'room for the three knocks'),
-    'voice_slides': (0.30, 'dialogue', 'into the slide-down'),
-    'mimic_della_clever': (0.60, 'beat', 'the slide lands'),
-    'grin_peephole': (0.50, 'paragraph', 'across the yard'),
-    'trapped': (0.30, 'dialogue', 'Grandma shouts'),
-    'della_dont_open': (0.50, 'beat', '"So I don\'t."'),
-    'not_even_run': (0.45, 'paragraph', 'the peephole'),
-    'grin_whispers': (0.25, 'dialogue', 'into his whisper'),
+    'goes_out': (0.30, 'paragraph', 'the knocks'),
+    'three_knocks': (0.18, 'dialogue', 'room for the three knocks'),
+    'voice_slides': (0.18, 'dialogue', 'into the slide-down'),
+    'mimic_della_clever': (0.18, 'dialogue', 'the slide lands'),
+    'grin_peephole': (0.30, 'paragraph', 'across the yard'),
+    'trapped': (0.15, 'dialogue', 'Grandma shouts'),
+    'della_dont_open': (0.18, 'dialogue', '"So I don\'t."'),
+    'not_even_run': (0.30, 'paragraph', 'the peephole'),
+    'grin_whispers': (0.15, 'dialogue', 'into his whisper'),
     # blackout
-    'be_right_back': (0.30, 'dialogue', 'running'),
-    'walkie_cushion': (0.55, 'beat', 'Two ten.'),
-    'two_ten': (0.35, 'staccato', 'clock time, crisp'),
-    'cold': (0.50, 'beat', 'Mina speaks'),
-    'that_was_fast': (0.60, 'beat', '"No answer."'),
-    'no_answer': (0.45, 'beat', 'from upstairs'),
-    'talking_walkie': (1.15, 'held', 'held dread before "I\'m still holding a hand."'),
-    'still_holding': (0.55, 'beat', 'the phone light'),
-    'phone_light': (0.40, 'beat', 'the glove'),
-    'too_tight': (0.45, 'beat', 'the walkie'),
-    'pressed_grin': (0.45, 'beat', 'I rip free.'),
-    'neither_walkie': (0.50, 'paragraph', 'upstairs'),
-    'told_me_walkie': (0.40, 'dialogue', 'Mina asks'),
-    'what_did_you_say': (0.40, 'dialogue', 'the shout'),
-    'lighthouse': (0.80, 'held', 'the word is gone'),
+    'be_right_back': (0.15, 'dialogue', 'running'),
+    'walkie_cushion': (0.30, 'paragraph', 'Two ten.'),
+    'two_ten': (0.15, 'staccato', 'clock time, crisp'),
+    'cold': (0.30, 'paragraph', 'Mina speaks'),
+    'that_was_fast': (0.30, 'paragraph', '"No answer."'),
+    'no_answer': (0.22, 'staccato', 'from upstairs'),
+    'talking_walkie': (0.80, 'held', 'held dread before "I\'m still holding a hand."'),
+    'still_holding': (0.30, 'paragraph', 'the phone light'),
+    'phone_light': (0.30, 'paragraph', 'the glove'),
+    'too_tight': (0.30, 'paragraph', 'the walkie'),
+    'pressed_grin': (0.30, 'paragraph', 'I rip free.'),
+    'neither_walkie': (0.30, 'paragraph', 'upstairs'),
+    'told_me_walkie': (0.18, 'dialogue', 'Mina asks'),
+    'what_did_you_say': (0.18, 'dialogue', 'the shout'),
+    'lighthouse': (0.18, 'dialogue', 'the word is gone'),
     # deadbolt
-    'word_dead': (0.50, 'paragraph', 'Two thirty-one.'),
-    'two_thirty_one': (0.35, 'staccato', 'clock time, crisp'),
-    'just_a_second': (0.50, 'beat', 'the knock'),
-    'knock_knock': (0.40, 'dialogue', 'his imitation'),
-    'mimic_della_sweetheart': (0.30, 'dialogue', '"Grandma\'s voice."'),
-    'warm': (0.40, 'dialogue', 'the word'),
-    'mimic_della_lighthouse': (0.40, 'dialogue', 'Sami jumps up'),
-    'thats_the_rule': (0.20, 'cut off', 'Mina cuts in'),
-    'sami_no': (0.55, 'beat', 'the deadbolt slides'),
-    'deadbolt_slides': (0.60, 'beat', 'the reveal'),
-    'gloves_walls': (0.50, 'dialogue', 'roll call in the hall'),
-    'hall_roll_sami': (0.45, 'beat', 'his reflex'),
-    'mouth_answers': (0.30, 'dialogue', 'the shout'),
-    'sami_here_hall': (0.45, 'beat', 'Click-clack.'),
-    'click_clack2': (0.40, 'sentence', 'running'),
-    'blink_stairs': (0.30, 'staccato', 'the blinks, rhythmic'),
-    'blink_a': (0.25, 'staccato', 'the blinks'),
-    'blink_b': (0.25, 'staccato', 'the blinks'),
-    'the_lawn': (0.30, 'staccato', 'the blinks'),
-    'blink_c': (0.25, 'staccato', 'the blinks'),
-    'bus_steps': (0.45, 'beat', 'Sami\'s hand slips'),
-    'doors_slap': (0.55, 'beat', 'the window'),
-    'way_back': (0.45, 'paragraph', 'the loudspeaker'),
-    'over_loudspeaker': (0.30, 'dialogue', 'into the PA'),
-    'seats_saved': (0.55, 'beat', 'the bus pulls away'),
+    'word_dead': (0.30, 'paragraph', 'Two thirty-one.'),
+    'two_thirty_one': (0.15, 'staccato', 'clock time, crisp'),
+    'just_a_second': (0.30, 'paragraph', 'the knock'),
+    'knock_knock': (0.18, 'dialogue', 'his imitation'),
+    'mimic_della_sweetheart': (0.15, 'dialogue', '"Grandma\'s voice."'),
+    'warm': (0.15, 'dialogue', 'the word'),
+    'mimic_della_lighthouse': (0.18, 'dialogue', 'Sami jumps up'),
+    'thats_the_rule': (0.15, 'cut off', 'Mina cuts in'),
+    'sami_no': (0.22, 'staccato', 'the deadbolt slides'),
+    'deadbolt_slides': (0.30, 'paragraph', 'the reveal'),
+    'gloves_walls': (0.18, 'dialogue', 'roll call in the hall'),
+    'hall_roll_sami': (0.18, 'dialogue', 'his reflex'),
+    'mouth_answers': (0.18, 'dialogue', 'the shout'),
+    'sami_here_hall': (0.18, 'dialogue', 'Click-clack.'),
+    'click_clack2': (0.30, 'paragraph', 'running'),
+    'blink_stairs': (0.15, 'staccato', 'the blinks, rhythmic'),
+    'blink_a': (0.15, 'staccato', 'the blinks'),
+    'blink_b': (0.15, 'staccato', 'the blinks'),
+    'the_lawn': (0.15, 'staccato', 'the blinks'),
+    'blink_c': (0.15, 'staccato', 'the blinks'),
+    'bus_steps': (0.30, 'paragraph', 'Sami\'s hand slips'),
+    'doors_slap': (0.30, 'paragraph', 'the window'),
+    'way_back': (0.30, 'paragraph', 'the loudspeaker'),
+    'over_loudspeaker': (0.15, 'dialogue', 'into the PA'),
+    'seats_saved': (0.18, 'dialogue', 'the bus pulls away'),
     # the chase
-    'at_wheel': (0.35, 'sentence', 'running'),
-    'bars_back': (0.30, 'dialogue', 'Grandma'),
-    'call_911': (0.40, 'dialogue', 'the call'),
-    'tell_everything': (0.35, 'dialogue', 'the dispatcher'),
-    'officers': (0.40, 'dialogue', 'running'),
-    'hits_gas': (0.30, 'dialogue', 'Grandma'),
-    'so_are_we': (0.55, 'paragraph', 'Mina'),
-    'kid_back_seat': (0.40, 'dialogue', 'Grandma'),
-    'della_mina': (0.95, 'held', 'held dread before "Seat twenty-two has been empty..."'),
-    'seat22_empty': (0.60, 'beat', 'it lands'),
-    'answer_him': (0.45, 'dialogue', 'running'),
-    'got_two_back': (0.55, 'paragraph', 'the dash radio'),
-    'grandmas_own_voice': (0.30, 'dialogue', 'into the radio voice'),
-    'mimic_della_radio': (0.70, 'beat', 'it lands'),
-    'manners': (0.60, 'paragraph', 'up ahead'),
-    'backwards': (0.35, 'staccato', 'Grinning at us.'),
-    'mirror_off': (0.50, 'paragraph', 'the road'),
-    'road_empty': (0.45, 'beat', 'the twist'),
-    'behind_us': (0.40, 'beat', 'his whistle'),
-    'whistle2': (0.45, 'beat', 'Two forty-one.'),
+    'at_wheel': (0.30, 'paragraph', 'running'),
+    'bars_back': (0.15, 'dialogue', 'Grandma'),
+    'call_911': (0.18, 'dialogue', 'the call'),
+    'tell_everything': (0.15, 'dialogue', 'the dispatcher'),
+    'officers': (0.18, 'dialogue', 'running'),
+    'hits_gas': (0.15, 'dialogue', 'Grandma'),
+    'so_are_we': (0.18, 'dialogue', 'Mina'),
+    'kid_back_seat': (0.18, 'dialogue', 'Grandma'),
+    'della_mina': (0.75, 'held', 'held dread before "Seat twenty-two has been empty..."'),
+    'seat22_empty': (0.18, 'dialogue', 'it lands'),
+    'answer_him': (0.15, 'dialogue', 'running'),
+    'got_two_back': (0.18, 'dialogue', 'the dash radio'),
+    'grandmas_own_voice': (0.18, 'dialogue', 'into the radio voice'),
+    'mimic_della_radio': (0.18, 'dialogue', 'it lands'),
+    'manners': (0.18, 'dialogue', 'up ahead'),
+    'backwards': (0.15, 'staccato', 'Grinning at us.'),
+    'mirror_off': (0.30, 'paragraph', 'the road'),
+    'road_empty': (0.30, 'paragraph', 'the twist'),
+    'behind_us': (0.22, 'staccato', 'his whistle'),
+    'whistle2': (0.22, 'staccato', 'Two forty-one.'),
     # last stop
-    'two_fifty_seven': (0.35, 'staccato', 'clock time, crisp'),
-    'top_of_steps': (0.40, 'dialogue', 'his line'),
-    'last_stop': (0.45, 'dialogue', 'Mina at the step'),
-    'bottom_step': (0.35, 'dialogue', 'her shout'),
-    'mina_sami_shout': (0.35, 'dialogue', 'the fake her'),
-    'my_own_voice': (0.25, 'dialogue', 'into his imitation'),
-    'mimic_mina_back_here': (0.50, 'beat', '"Two of me."'),
-    'two_of_me': (0.55, 'beat', 'it lands'),
-    'foot_lifts': (0.55, 'beat', 'rule seven echoes'),
-    'not_even_sami': (0.55, 'beat', 'she pulls back'),
-    'scream_name': (0.40, 'sentence', 'running'),
-    'at_face': (0.30, 'dialogue', 'the shout'),
-    'sami_here_bus': (0.40, 'beat', 'he scrambles'),
-    'rip': (0.30, 'staccato', 'into my arms'),
-    'tumbles': (0.55, 'paragraph', 'Two fifty-eight.'),
-    'two_fifty_eight': (0.60, 'paragraph', 'seat twenty-two glows'),
+    'two_fifty_seven': (0.15, 'staccato', 'clock time, crisp'),
+    'top_of_steps': (0.18, 'dialogue', 'his line'),
+    'last_stop': (0.18, 'dialogue', 'Mina at the step'),
+    'bottom_step': (0.18, 'dialogue', 'her shout'),
+    'mina_sami_shout': (0.18, 'dialogue', 'the fake her'),
+    'my_own_voice': (0.15, 'dialogue', 'into his imitation'),
+    'mimic_mina_back_here': (0.18, 'dialogue', '"Two of me."'),
+    'two_of_me': (0.30, 'paragraph', 'it lands'),
+    'foot_lifts': (0.30, 'paragraph', 'rule seven echoes'),
+    'not_even_sami': (0.30, 'paragraph', 'she pulls back'),
+    'scream_name': (0.30, 'paragraph', 'running'),
+    'at_face': (0.18, 'dialogue', 'the shout'),
+    'sami_here_bus': (0.18, 'dialogue', 'he scrambles'),
+    'rip': (0.15, 'staccato', 'into my arms'),
+    'tumbles': (0.30, 'paragraph', 'Two fifty-eight.'),
+    'two_fifty_eight': (0.30, 'paragraph', 'seat twenty-two glows'),
     # the aisle
-    'long_arm': (0.40, 'dialogue', 'his speech'),
-    'nobody_knows': (0.18, 'split', '"Nobody knows his name," / "he says."'),
-    'he_says': (0.30, 'dialogue', 'his speech'),
-    'kind': (0.40, 'dialogue', 'the lure'),
-    'want_to': (0.50, 'paragraph', 'Grandma'),
-    'real_one': (0.30, 'dialogue', 'Grandma'),
-    'nobody_who_loves': (0.55, 'paragraph', 'I step back.'),
-    'i_step_back': (0.50, 'paragraph', 'his taunt'),
-    'two_fifty_nine': (0.50, 'paragraph', 'the memory'),
-    'hi_mina_morning': (0.45, 'beat', 'the memory'),
-    'never_asked_his': (0.50, 'paragraph', 'she asks'),
-    'call_up_aisle': (0.30, 'dialogue', 'the question'),
-    'whats_your_name': (0.70, 'beat', 'the question hangs; the whistle'),
-    'whistle3': (0.35, 'sentence', 'running'),
-    'handle_bends': (0.45, 'paragraph', 'his imitation'),
-    'in_my_voice': (0.25, 'dialogue', 'into his imitation'),
-    'mimic_mina_dont_answer': (0.50, 'paragraph', 'the glove'),
-    'then_at_me': (0.40, 'dialogue', 'Theo'),
-    'long_time': (0.50, 'beat', 'the broom'),
-    'broom_cracks': (1.15, 'held', 'held dread before "Theo."'),
-    'theo': (0.75, 'beat', 'the name lands'),
-    'all_three': (0.25, 'dialogue', 'the shout'),
-    'theo_shout': (0.50, 'beat', 'the clock'),
-    'long_whistle': (0.40, 'beat', 'room for the whistle; Theo answers'),
-    'theo_here': (0.50, 'beat', 'he twists free'),
-    'doors_slam': (0.50, 'paragraph', 'Three o\'clock.'),
-    'bell': (0.35, 'staccato', 'the bell'),
-    'bell_rings': (0.90, 'section', 'room for the school bell'),
+    'long_arm': (0.18, 'dialogue', 'his speech'),
+    'nobody_knows': (0.15, 'split', '"Nobody knows his name," / "he says."'),
+    'he_says': (0.15, 'dialogue', 'his speech'),
+    'kind': (0.18, 'dialogue', 'the lure'),
+    'want_to': (0.30, 'paragraph', 'Grandma'),
+    'real_one': (0.15, 'dialogue', 'Grandma'),
+    'nobody_who_loves': (0.30, 'paragraph', 'I step back.'),
+    'i_step_back': (0.18, 'dialogue', 'his taunt'),
+    'two_fifty_nine': (0.18, 'dialogue', 'the memory'),
+    'hi_mina_morning': (0.15, 'dialogue', 'the memory'),
+    'never_asked_his': (0.30, 'paragraph', 'she asks'),
+    'call_up_aisle': (0.18, 'dialogue', 'the question'),
+    'whats_your_name': (0.22, 'staccato', 'the question hangs; the whistle'),
+    'whistle3': (0.15, 'sentence', 'running'),
+    'handle_bends': (0.30, 'paragraph', 'his imitation'),
+    'in_my_voice': (0.15, 'dialogue', 'into his imitation'),
+    'mimic_mina_dont_answer': (0.18, 'dialogue', 'the glove'),
+    'then_at_me': (0.18, 'dialogue', 'Theo'),
+    'long_time': (0.18, 'dialogue', 'the broom'),
+    'broom_cracks': (0.85, 'held', 'held dread before "Theo."'),
+    'theo': (0.18, 'dialogue', 'the name lands'),
+    'all_three': (0.15, 'dialogue', 'the shout'),
+    'theo_shout': (0.30, 'paragraph', 'the clock'),
+    'long_whistle': (0.18, 'dialogue', 'room for the whistle; Theo answers'),
+    'theo_here': (0.18, 'dialogue', 'he twists free'),
+    'doors_slam': (0.30, 'paragraph', 'Three o\'clock.'),
+    'bell': (0.15, 'staccato', 'the bell'),
+    'bell_rings': (0.36, 'section', 'room for the school bell'),
     # the end of him
-    'it_slips': (0.35, 'sentence', 'running'),
-    'rewinds': (0.60, 'paragraph', 'the clipboard'),
-    'she_kneels': (0.30, 'dialogue', 'Grandma'),
-    'it_does': (0.90, 'held', 'the light comes on'),
-    'two_words': (0.40, 'beat', 'Sat alone.'),
-    'sat_alone': (0.55, 'beat', 'the list'),
-    'someone_sat': (0.55, 'paragraph', 'the last page'),
-    'one_name': (0.32, 'staccato', 'Nobody I know.'),
-    'nobody_i_know': (0.85, 'section', 'into the morning'),
+    'it_slips': (0.15, 'sentence', 'running'),
+    'rewinds': (0.30, 'paragraph', 'the clipboard'),
+    'she_kneels': (0.15, 'dialogue', 'Grandma'),
+    'it_does': (0.30, 'paragraph', 'the light comes on'),
+    'two_words': (0.30, 'paragraph', 'Sat alone.'),
+    'sat_alone': (0.30, 'paragraph', 'the list'),
+    'someone_sat': (0.30, 'paragraph', 'the last page'),
+    'one_name': (0.15, 'staccato', 'Nobody I know.'),
+    'nobody_i_know': (0.36, 'section', 'into the morning'),
     # morning
-    'she_hugs': (0.30, 'dialogue', 'Grandma'),
-    'brakes_mirrors_end': (0.65, 'paragraph', 'the new girl'),
-    'sit_next': (0.40, 'dialogue', 'Mina'),
-    'hi_im_mina': (0.50, 'beat', 'She tells me.'),
-    'she_tells': (1.20, 'held', 'held dread before "It\'s the name on his last page."'),
-    'last_page_name': (0.70, 'beat', 'the window'),
-    'next_name': (0.85, 'section', 'that night'),
-    'that_night': (1.00, 'before rule', 'rule card 8'),
-    'rule8_text_b': (1.50, 'outro', 'about 1.5 s before the outro'),
+    'she_hugs': (0.15, 'dialogue', 'Grandma'),
+    'brakes_mirrors_end': (0.18, 'dialogue', 'the new girl'),
+    'sit_next': (0.18, 'dialogue', 'Mina'),
+    'hi_im_mina': (0.30, 'paragraph', 'She tells me.'),
+    'she_tells': (0.80, 'held', 'held dread before "It\'s the name on his last page."'),
+    'last_page_name': (0.30, 'paragraph', 'the window'),
+    'next_name': (0.36, 'section', 'that night'),
+    'that_night': (0.70, 'before rule', 'rule card 8'),
+    'rule8_text_b': (0.75, 'held', 'held dread: the outro lead-in'),
     # outro
-    'trick_real': (0.50, 'beat', 'the advice'),
-    'advice_name': (0.45, 'advice', 'one card each'),
-    'advice_code_word': (0.35, 'advice', 'one card each'),
-    'advice_grownup': (0.30, 'advice', 'one card each'),
-    'advice_change': (0.45, 'advice', 'one card each'),
-    'advice_ride': (0.45, 'advice', 'one card each'),
-    'advice_tell': (0.45, 'advice', 'one card each'),
-    'thank_driver': (0.28, 'staccato', 'By name.'),
-    'by_name': (0.70, 'beat', 'the comment callback'),
-    'said_yes': (0.30, 'sentence', 'the callback'),
-    'what_he_wanted': (0.60, 'beat', 'like / subscribe'),
-    'like': (0.35, 'sentence', 'running'),
-    'subscribe': (0.70, 'beat', 'the teaser'),
-    'next': (0.45, 'ellipsis', 'the teaser\'s own "..." before "don\'t go outside."'),
-    'front_hall': (0.30, 'staccato', 'the blinks'),
-    'radio_depot': (0.33, 'dialogue', 'running'),
-    'aisle_speech': (0.60, 'paragraph', 'he bends down'),
-    'trade_lure': (0.85, 'held', 'the lure hangs before "For one second..."'),
-    'step_back': (0.55, 'paragraph', 'the echo'),
-    'hurry_secret': (0.40, 'beat', 'the lesson'),
-    'call_him_then': (0.70, 'paragraph', 'Two fifty-nine.'),
-    'six_mornings': (0.55, 'paragraph', 'the porch light'),
-    'advice_secret': (0.30, 'staccato', "That's when you tell."),
-    'advice_parents': (0.45, 'advice', 'one card each'),
+    'trick_real': (0.30, 'paragraph', 'the advice'),
+    'advice_name': (0.30, 'paragraph', 'one card each'),
+    'advice_code_word': (0.15, 'sentence', 'one card each'),
+    'advice_grownup': (0.15, 'sentence', 'one card each'),
+    'advice_change': (0.30, 'paragraph', 'one card each'),
+    'advice_ride': (0.30, 'paragraph', 'one card each'),
+    'advice_tell': (0.30, 'paragraph', 'one card each'),
+    'thank_driver': (0.15, 'staccato', 'By name.'),
+    'by_name': (0.30, 'paragraph', 'the comment callback'),
+    'said_yes': (0.15, 'sentence', 'the callback'),
+    'what_he_wanted': (0.30, 'paragraph', 'like / subscribe'),
+    'like': (0.15, 'sentence', 'running'),
+    'subscribe': (0.30, 'paragraph', 'the teaser'),
+    'next': (0.22, 'ellipsis', 'the teaser\'s own "..." before "don\'t go outside."'),
+    'front_hall': (0.15, 'staccato', 'the blinks'),
+    'radio_depot': (0.18, 'dialogue', 'running'),
+    'aisle_speech': (0.18, 'dialogue', 'he bends down'),
+    'trade_lure': (0.18, 'dialogue', 'the lure hangs before "For one second..."'),
+    'step_back': (0.18, 'dialogue', 'the echo'),
+    'hurry_secret': (0.20, 'beat', 'the lesson'),
+    'call_him_then': (0.18, 'dialogue', 'Two fifty-nine.'),
+    'six_mornings': (0.18, 'dialogue', 'the porch light'),
+    'advice_secret': (0.15, 'staccato', "That's when you tell."),
+    'advice_parents': (0.30, 'paragraph', 'one card each'),
 }
 
 
@@ -1141,26 +1143,28 @@ def pacing_rows():
         same_para = para[i] == para[i + 1]
         ra, rb = rule_no(A['tag']), rule_no(B['tag'])
         if A['tag'] and re.fullmatch(r'rule\d_text', A['tag']): rule_text_open = para[i]
+        dlg = A['who'] != 'N' or B['who'] != 'N'
+        short = len(A['en'].split()) <= 3 and len(B['en'].split()) <= 3
         if A['tag'] in PACE:
             g, kind, why = PACE[A['tag']]
         elif rb:
-            g, kind, why = 1.15, 'before rule', f'rule card {rb}'
+            g, kind, why = 0.70, 'before rule', f'rule card {rb}'
         elif ra:
-            g, kind, why = 0.45, 'rule title', '"Rule number %d." then the rule itself' % ra
+            g, kind, why = 0.30, 'rule title', '"Rule number %d." then the rule itself' % ra
         elif rule_text_open is not None and para[i] == rule_text_open and same_para:
-            g, kind, why = 0.40, 'rule text', 'the rule card text'
+            g, kind, why = 0.16, 'rule text', 'the rule card text'
         elif rule_text_open is not None and para[i] == rule_text_open:
-            g, kind, why = 0.75, 'after rule', 'the rule card holds, then the scene'
+            g, kind, why = 0.45, 'after rule', 'the rule card holds, then the scene'
         elif not re.search(r'[.?!]["\']?$|\.\.\.$', A['en'].strip()):
-            g, kind, why = 0.18, 'split', 'one sentence split for the speaker (quote / "she says")'
+            g, kind, why = 0.15, 'split', 'one sentence split for the speaker (quote / "she says")'
+        elif dlg:
+            g, kind, why = (0.15 if same_para else 0.18), 'dialogue', 'dialogue exchange, tight'
+        elif short:
+            g, kind, why = (0.15 if same_para else 0.22), 'staccato', 'short fragments'
         elif not same_para:
-            g, kind, why = 0.46, 'paragraph', 'paragraph break'
-        elif A['who'] != 'N' or B['who'] != 'N':
-            g, kind, why = 0.30 if A['who'] == B['who'] else 0.34, 'dialogue', 'dialogue'
-        elif len(A['en'].split()) <= 3 and len(B['en'].split()) <= 3:
-            g, kind, why = 0.30, 'staccato', 'short fragments'
+            g, kind, why = 0.30, 'paragraph', 'paragraph break'
         else:
-            g, kind, why = 0.34, 'sentence', 'running narration'
+            g, kind, why = 0.15, 'sentence', 'running narration'
         if rule_text_open is not None and para[i + 1] != rule_text_open: rule_text_open = None
         rows.append((i, round(g, 3), kind, why))
     return rows
@@ -1176,16 +1180,14 @@ def write_pacing(force=False):
         f.write('Written by `film/tools/vo_edit.py pacing` from the rules in that file (PACE, pacing_rows) and read back by '
                 '`vo_edit.py build`: **this table is the source of truth**; change a gap here and rebuild.\n\n')
         f.write('A gap is the silence from the end of one line\'s natural decay (-60 dBFS) to the first sound of the next. '
-                'This film must feel FAST and tense (the owner: the last film was too long). The guide: running sentences '
-                '0.3-0.5 s; staccato fragments ("Flicker. The middle of the lawn.", "Two of me.", the blinks, the '
-                'chalkboard) 0.25-0.45 s, rhythmic; dialogue 0.25-0.45 s; paragraph breaks 0.45-0.65 s; before each '
-                '"Rule number" 1.0-1.3 s and after its rule text 0.6-0.9 s; held dread only where it pays (before "He '
-                'read it off my phone.", "I\'m still holding a hand.", "Seat twenty-two has been empty...", "Theo.", '
-                '"It\'s the name on his last page.") 0.9-1.4 s; the clock times and the roll call crisp; about 1.5 s '
-                'before the outro. Never under 0.15 s (a sentence split for its speaker sits at 0.18-0.20 s; a speaker '
-                'cut off at 0.20 s), never over 1.6 s.\n\n')
+                'The owner (18 Nov): about 12.5 minutes is right; never pad, never slow the voice, never lengthen gaps to gain '
+                'time. The guide: inside a paragraph 0.15-0.25 s (running 0.15, a marked beat 0.20); paragraph breaks '
+                '0.30-0.36 s; staccato fragments 0.15-0.22 s; dialogue exchanges 0.15-0.18 s; 0.70 s before each "Rule number", '
+                '0.30 s after "Rule number N.", 0.16 s inside the rule text and 0.45 s after it; held dread only at six beats '
+                '(before "He read it off my phone.", "I\'m still holding a hand.", "Seat twenty-two has been empty...", '
+                '"Theo.", "It\'s the name on his last page." and the outro lead-in) 0.75-0.85 s. Never under 0.15 s.\n\n')
         f.write('Pauses inside a line are not in this table: they keep the take\'s own timing, clamped by punctuation '
-                '(comma 0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.35-0.65 s, a mid-line full stop 0.25-0.45 s, '
+                '(comma 0.12-0.30 s, colon 0.20-0.35 s, ellipsis 0.30-0.50 s, a mid-line full stop 0.15-0.30 s, '
                 'no mark <= 0.25 s), with these held exceptions (INTERNAL in vo_edit.py):\n\n')
         for tag, d in INTERNAL.items():
             i = next(k for k, l in enumerate(L_) if l['tag'] == tag)

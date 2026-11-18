@@ -1,7 +1,7 @@
-"""Doctor-film sets (default; variants in tools/sets_sheet_doctor.py) plus the Bunnyman / dummy / delivery / police regressions: stills of every set / variant, a contact sheet,
+"""Bus-film sets (default; variants in tools/sets_sheet_bus.py; --doctor for the Doctor film's in tools/sets_sheet_doctor.py) plus the Bunnyman / dummy / delivery / police regressions: stills of every set / variant, a contact sheet,
 the floor plan with every camera, the framing check at each view's widest camera move and the draw-time bench.
 
-    python3 tools/sets_sheet.py                       # doctor-film stills (1280x720) + contact_sheet.jpg + index.json
+    python3 tools/sets_sheet.py                       # bus-film stills (1280x720) + contact_sheet.jpg + index.json
                                                       #   (anchors with plan / screen data per variant) + floorplan.jpg -> W/sets/
     python3 tools/sets_sheet.py --dummy               # the dummy film's variants (regression)
     python3 tools/sets_sheet.py --bunny               # the Bunnyman film's variants (regression)
@@ -33,6 +33,7 @@ ap.add_argument('--police', action='store_true')
 ap.add_argument('--delivery', action='store_true')
 ap.add_argument('--dummy', action='store_true')
 ap.add_argument('--bunny', action='store_true')
+ap.add_argument('--doctor', action='store_true')
 ap.add_argument('--stage', action='store_true')
 ap.add_argument('--frame', action='store_true')
 ap.add_argument('--no_sheet', action='store_true')
@@ -313,6 +314,9 @@ BUNNY += [
 # ---------------------------------------------------------------------------------------------- the Doctor film
 exec(open(os.path.join(HERE, 'sets_sheet_doctor.py')).read())
 
+# ---------------------------------------------------------------------------------------------- the Bus film (default)
+exec(open(os.path.join(HERE, 'sets_sheet_bus.py')).read())
+
 
 # staging test stills: (name, set builder, [(who, spot, stage_figure kwargs)], note)
 STAGE_BUNNY = [
@@ -341,7 +345,7 @@ STAGE_BUNNY = [
 def stage_run():
     set_render_size(W0, H0)
     tiles = []
-    for name, build, figs, note in (STAGE_BUNNY if a.bunny else STAGE):
+    for name, build, figs, note in (STAGE_BUNNY if a.bunny else (STAGE if a.doctor else STAGE_BUS)):
         t0 = time.time()
         sp = build()
         lays = []
@@ -361,7 +365,7 @@ def stage_run():
 
 
 def _pre():
-    return 'police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ('bunny_' if a.bunny else '')))
+    return 'police_' if a.police else ('delivery_' if a.delivery else ('dummy_' if a.dummy else ('bunny_' if a.bunny else ('doctor_' if a.doctor else ''))))
 
 
 def cam_for(sp, mode):
@@ -389,7 +393,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     if a.stage:
         stage_run(); return
-    vs = POLICE if a.police else (DELIVERY if a.delivery else (DUMMY if a.dummy else (BUNNY if a.bunny else DOCTOR)))
+    vs = POLICE if a.police else (DELIVERY if a.delivery else (DUMMY if a.dummy else (BUNNY if a.bunny else (DOCTOR if a.doctor else BUS))))
     if a.only: vs = [v for v in vs if any(k in v[0] for k in a.only.split(','))]
     thumbs, index = [], []
     for name, build, t, cm, note in vs:
@@ -414,7 +418,8 @@ def main():
         pre = _pre()
         cv2.imwrite(os.path.join(a.out, pre + 'contact_sheet.jpg'), sheet, [cv2.IMWRITE_JPEG_QUALITY, 86])
         if a.bunny: ST.plan_map(os.path.join(a.out, 'bunny_floorplan.jpg'))
-        elif not (a.police or a.delivery or a.dummy): ST.dr_plan_map(os.path.join(a.out, 'floorplan.jpg'))
+        elif a.doctor: ST.dr_plan_map(os.path.join(a.out, 'doctor_floorplan.jpg'))
+        elif not (a.police or a.delivery or a.dummy) and hasattr(ST, 'bu_plan_map'): ST.bu_plan_map(os.path.join(a.out, 'floorplan.jpg'))
         if not a.only: json.dump(index, open(os.path.join(a.out, pre + 'index.json'), 'w'), indent=1)
     if a.frame:
         frame_check(vs)

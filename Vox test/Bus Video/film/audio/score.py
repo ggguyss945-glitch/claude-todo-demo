@@ -1,6 +1,10 @@
-"""score.py: the music for "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND" (the police film's v2 score
-engine, as the delivery, dummy and Bunnyman films used it), rendered from music_cues.json. This film's identity is
-the ORIGINAL HOLD MUSIC (audio/hold.py): 'hold' events (version, len, stop, counts, loops, phrases, tempo) render
+"""score.py: the music for "If The School Bus Stops At Midnight... DON'T GET ON" (the police film's v2 score engine, as
+the delivery, dummy, Bunnyman and Doctor films used it), rendered from music_cues.json. THIS film's identity is the
+ORIGINAL "Ride Right with Mister Whistlestop!" PSA jingle (audio/jingle_bus.py): 'jingle' events (version sting /
+tv1994 / pa / musicbox / tapestop / warm / studio, len, stop, loops, stop_beat, space) render through render_jingle
+with JINGLE_MODULE = 'jingle_bus' (SHOW_DUCK['jingle'], JINGLE_LIFT_BUS); the map and the owner's new tracks
+(TRACKS, "the Bus film") are pinned by audio/music_plan.py. The Doctor film's identity was the ORIGINAL HOLD MUSIC
+(audio/hold.py): 'hold' events (version, len, stop, counts, loops, phrases, tempo) render
 like the jingle below (render_jingle, module hold.py; SHOW_DUCK['hold'], HOLD_LIFT); its map is music_plan.py.
 The Bunnyman notes follow (kept: the code still renders 'jingle' events). The arrangement for this
 film is pinned by audio/music_plan.py (cues['track_map'], and the film's own sound identity, the 'jingle' events: the
@@ -169,6 +173,18 @@ TRACKS = {
     'in_those_hazel_eyes_tall_oak_town': 0,      # doctor: D major, warm acoustic (the outro)
     'follow_your_feet_a_month_of_sleep': 0,      # doctor: G major, bright (the outro's call to action)
     'caffeinated_and_motivated_airae': 0,        # doctor: G major, upbeat (reserve)
+    # the Bus film: the owner's new tracks (keys: catalog_epidemic_bus.json; verdicts: _work/mix/sfx_review.md).
+    # Sweeter (Blood Harmony) is a song with vocals (the recogniser hears its lyrics): never loaded.
+    'through_the_portal_anthony_earls': 0,       # bus: bass G (C major 0.50, ambiguous): the iv of D minor; the hook
+    'terra_firma_dream_cave': 1,                 # bus: C# minor -> D minor, a dark pulse (rule 1)
+    'can_they_see_us_experia': -1,               # bus: bass D# -> D, dark (rules 3 and 7)
+    'chronometer_guy_copeland': -2,              # bus: E minor -> D minor, the ticking build to 3:00
+    'all_exits_closed_guy_copeland': 0,          # bus: D, a driving pulse (the chase)
+    'the_last_horizon_aerian': 0,                # bus: D major, warm (Theo goes home, the porch light)
+    'at_first_light_gavin_luke': 0,              # bus: A major, the morning
+    'a_sky_unveiled_megan_wofford': -3,          # bus: F major -> D major, rule eight
+    'wait_for_me_on_the_other_side_instrumental_version_clngr': 0,   # bus: G major, the outro tips
+    'just_a_little_sunshine_instrumental_version_staffan_carlen': 0,  # bus: D major, bright: the short outro
 }
 # The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
 # warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
@@ -199,6 +215,13 @@ SHOW_DUCK['hold'] = {'studio': -10.0, 'phone_1979': -6.0, 'landline': -6.0, 'roo
 HOLD_LIFT = {'studio': -2.0, 'phone_1979': 0.0, 'landline': -2.0,   # test 1: landline -7 LU rel voice under the rules
              'rooms': -1.0, 'hum': -3.0, 'pulse': 0.0,
              'ceiling': 1.0, 'car_radio': 2.0, 'far_hall': -4.0, 'warm': 2.5}   # sound fix round: warm +3.5, car_radio +3 (both measured unheard)   # test 6: ceiling -15.7 LU: +2
+# the Bus film: 'jingle' events render audio/jingle_bus.py ("Ride Right with Mister Whistlestop!"); how far the dark
+# bed steps back under each version and its level trim (dB on IDENTITY_LIFT)
+JINGLE_MODULE = 'jingle_bus'
+SHOW_DUCK['jingle'].update({'sting': -3.0, 'tv1994': -12.0, 'pa': -6.0, 'musicbox': -5.0, 'tapestop': -10.0,
+                            'warm': -12.0})
+JINGLE_LIFT_BUS = {'sting': 0.0, 'tv1994': -2.0, 'pa': -1.0, 'musicbox': -1.0, 'tapestop': 0.0, 'warm': 1.0,
+                   'studio': -2.0}
 JINGLE_LIFT = {'vhs': -2.0, 'parade': -1.0, 'speaker': 0.0, 'hum': -3.0, 'hum_x': -3.0, 'musicbox': -2.0, 'girl': 0.0,
                'climax': -1.0, 'count': 1.0, 'outro': 0.0}  # dB on IDENTITY_LIFT per version (test 1: the VHS jingle sat
 #   at +2.5 LU over the narration speaking its words, Mom's hum at -3.5: both down so the voice stays on top)
@@ -1539,11 +1562,12 @@ class Score:
         if hold:
             import hold as JG
         else:
-            import jingle as JG
+            import importlib
+            JG = importlib.import_module(JINGLE_MODULE)    # this film: jingle_bus (the Bunnyman's: 'jingle')
         t, lv = e['t'], e['level']
         ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
-                'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose')
+                'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat')
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
         if 'phrases' in kw:
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
@@ -1581,12 +1605,14 @@ class Score:
             except Exception as ex:
                 print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
         st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
-        target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + (HOLD_LIFT if hold else JINGLE_LIFT).get(ver, 0.0)
+        lifts = HOLD_LIFT if hold else (JINGLE_LIFT_BUS if JINGLE_MODULE == 'jingle_bus' else JINGLE_LIFT)
+        target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + lifts.get(ver, 0.0)
         y = (y * np.float32(db(target - st))).astype(np.float32)
         if hold:                                           # hold.py versions carry their own space: almost dry
             rev = {'recital': 0.05} if ver in ('studio', 'warm') else {}
         else:
-            rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio') else \
+            rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio', 'warm') else {} if ver in (
+                'tv1994', 'pa', 'tapestop', 'sting') else \
                 ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
         self.bus['show'].add(t, y, rev=rev)
         self._duck_span(t, t + len(y) / SR, SHOW_DUCK['hold' if hold else 'jingle'].get(ver, -4.0))
