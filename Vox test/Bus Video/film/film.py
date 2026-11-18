@@ -3029,7 +3029,7 @@ def plan_rule5(F):
     wbust(T(237), ('front', 'curb'), dict(FRONT_B9, his_door=0.0), cx=1000, cy=860, scale=0.95,
           act=_A(pose(-9, None, 0.1, h_tilt=-10.0), lambda a, s: a.head_tilt(W(237, 'right'), 18.0, 0.5)), post=dict(glitch=0.05))
     # 238 "The bus pulls away with no lights on."  it skips away down the street, dark
-    for k, (tk, hx) in enumerate([(T(238), -0.2), (W(238, 'no'), -9.0), (W(238, 'lights') + 0.1, -18.0)]):
+    for k, (tk, hx) in enumerate([(T(238), -0.2), (T(238) + 0.75, -9.0), (T(238) + 1.45, -18.0)]):
         C(tk, 'set', room='front', view='street', set=dict(FRONT_B9, his_x=hx, his_win=0.0, his_heads=0.0, his_door=0.0), rim=NIGHT, cut='vhs' if k else None,
           ppl=[P('mina', 'walk', face='street_mid', expr='terrified_call', act=lambda a, s: a.look_at(-9, scr(s.sp, 'street_mid', dx=-300, dy=-100), dur=0.3))],
           sfx=[(tk, 'bus_pull_away', -2, 0, 'outside')] if k == 0 else [(tk, 'tape_skip', -4, 0, None)], c=PU(0.015))

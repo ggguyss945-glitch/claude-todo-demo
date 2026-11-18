@@ -1,8 +1,8 @@
-"""tools/validate.py: the staging validator for the Doctor film's shot list (film.py: "If Your Doctor Calls At 3 AM...").
+"""tools/validate.py: the staging validator for the bus film's shot list (film.py: "If The School Bus Stops At Midnight... DON'T GET ON").
 
     python3 tools/validate.py                      # every check on every shot; exit code 1 on any ERROR
     python3 tools/validate.py --shots 100-140      # a range (the cut / state checks still look at the neighbours)
-    python3 tools/validate.py --part A             # part A only (timeline lines 0-212: the cold open .. rule 5); --part B
+    python3 tools/validate.py --part A             # part A only (timeline lines 0-189: the cold open .. rule 4); --part B
     python3 tools/validate.py --json W/tests/polish/validate.json --fps 10
 
 It reads the plan the way the renderer builds it (Film(timeline) -> shots -> builders: sets with their anchors, floors and
@@ -20,10 +20,12 @@ furniture footprints, actors with their clips, props) and checks what can be che
   CUTPOS  continuity across cuts: the same person on the same plan (the house and its yard / the woods / the hospital)
           in consecutive set shots, or with only close-ups / inserts between them (< 8 s), stands > 0.8 m from where the
           last shot left them, with no walk to explain it
-  STATE   the story's states shot by shot (keyed to lines): the phone's line cord (in until Ruth pulls it, L88, then on
-          the floor), the handset (on the counter from L117 until the rescue), the yellow card (taped in the cabinet
-          until the narrator tears it out, L296), Halverson's car in the driveway with its headlights on (L154 .. L307),
-          the paper burning in the sink (from L179)
+  STATE   the story's states shot by shot (keyed to lines): the mailbox letters (off from L63), the backpack (turned to
+          the wall from L64), Mina's walkie (on the cushion L160-L179, then gone), the porch broom (through bus 9's doors
+          L148 .. Mina rips it out, L245), Grandma's deadbolt (thrown L193 .. slid L211), his bus at the kerb (gone after he
+          pulls away, L238), Sami's tail (whole until the rip, L315: 'sami_torn' after), Theo faded until three o'clock
+          ('theo_color' only after L370), the school clock (before 3:00 until the bell, L364), his bus at the school (gone
+          once it rewinds, L369), the broom in his doors (from L345 until the rewind)
   CAM     camera: a move (> 10 % magnification or > 120 design px of pan) that lasts > 4.2 s; a set shot > 3 s whose
           camera moves while nobody in it acts (only the camera moves over still figures); an empty set held > 5 s
           under a moving camera
@@ -45,7 +47,7 @@ ap.add_argument('--fps', type=float, default=8.0, help='sampling rate of the act
 ap.add_argument('--json', default=os.path.join(HERE, '_work', 'tests', 'polish', 'validate.json'))
 ap.add_argument('--quiet', action='store_true')
 ap.add_argument('--no-lip', action='store_true')
-ap.add_argument('--part', default=None, help='A (lines 0-212) or B (213-455)')
+ap.add_argument('--part', default=None, help='A (lines 0-189) or B (190-418)')
 a = ap.parse_args()
 
 from engine.core import set_render_size
@@ -88,29 +90,36 @@ def _line_shot(i):
     return lambda s: s.t0 <= F.t(i) < s.t1
 
 
-def _later(s, who):
-    """Doctor Later has no mouth to move (his voice comes from behind the tape): never a lip error for him."""
-    return who == 'later'
+def _ws(s, who):
+    """Mister Whistlestop's grin never moves (head bob only): never a lip error for him."""
+    return who in ('whistle', 'whistle94')
+
+
+def _new_girl(s, who):
+    """393 'She tells me.': the new girl says her name to Mina; we never hear it (the narration covers it), so her mouth
+    moves on a narrator line on purpose."""
+    return who == 'new_girl' and s.t0 <= F.t(393) < s.t1
 
 
 ALLOW = [
-    ('LIP', _later, "Doctor Later never moves a mouth (his voice comes from behind the tape: head dips / pen clicks)"),
+    ('LIP', _ws, "Mister Whistlestop never lip-syncs (the grin never moves; his lines are a head bob)"),
+    ('LIP', _new_girl, "the new girl tells Mina her name under the narration (L393): the name stays unheard"),
 ]
 
 # ---------------------------------------------------------------------------------------------------- build helpers
-HOUSE = ('living', 'hall', 'bath', 'kitchen', 'front')
+HOUSE = ('living', 'hall', 'upstairs', 'gran', 'sami', 'front')
 PLAN_OF = {r: 'house' for r in HOUSE}
-PLAN_OF.update(clinic='clinic', office='office', car='car', er='er', er_bay='er_bay', er_wait='er_wait', hosp_hall='hosp_hall', cardio='cardio',
-               run='run', outro='outro')
-LEVELS = {'living': 0.0, 'hall': 0.0, 'kitchen': 0.0, 'bath': 0.0, 'LIVING ROOM': 0.0, 'HALL': 0.0, 'KITCHEN': 0.0, 'BATHROOM': 0.0}
-STAIR = dict(x0=99.0, x1=98.0, y0=0.0, y1=0.0)              # Ruth's house is one storey: no stairs
+PLAN_OF.update(bus='bus', road='road', school='school', theo='theo', class_='class', outro='outro')
+LEVELS = {'living': 0.0, 'hall': 0.0, 'kitchen': 0.0, 'uphall': 2.95, 'gran': 2.95, 'sami': 2.95}
+STAIR = dict(x0=-5.6, x1=-4.6, y0=3.2, y1=7.2)             # the hall flight along the west wall, rising +y to the landing (2.95 m)
 
 
 def stair_Y(x, y):
-    """The tread height under (x, y) on the hall flight (None: not on the stairs)."""
+    """The tread height under (x, y) on the hall flight (None: not on the stairs); treads 0.26 m deep, 0.197 m risers
+    (sets_bus: stair2 at y 3.85 is 0.59 m up)."""
     if not (STAIR['x0'] <= x <= STAIR['x1'] and STAIR['y0'] <= y <= STAIR['y1']): return None
-    k = int(math.floor((y - 0.9) / 0.26)) + 1
-    return max(0.0, min(15, k)) * 0.19
+    k = round((y - 3.85) / 0.26) + 2
+    return max(0.0, min(2.95, 0.197 * k + 0.196)) if y > 3.25 else 0.0
 
 
 def in_poly(pt, q, pad=0.0):
@@ -279,7 +288,7 @@ def check_shot(k):
             room_ok = PLAN_OF.get(p['room']) == 'house'
             for t in ([sh.t0 + 0.01, (sh.t0 + sh.t1) / 2, sh.t1 - 0.01] if q.get('path') else [sh.t0 + 0.01]):
                 X, Yp, Y = plan_pos(sp, q, t)
-                outdoors = p['room'] in ('living', 'hall', 'bath', 'kitchen') and (Yp > 9.65 or Yp < -0.05)
+                outdoors = p['room'] in ('living', 'hall', 'upstairs', 'gran', 'sami') and (Yp > 9.65 or Yp < -0.05)
                 if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True) and not outdoors:
                     ok, why = sp.walkable(X, Yp)
                     if not ok and (sp.info.get('floors')):
@@ -369,7 +378,7 @@ def check_shot(k):
     # ---- length
     if sh.d < 0.6 and sh.kind not in ('black',) and not p.get('flash'):
         add('WARN', k, 'LEN', 'a %.2f s shot (too short to read?)' % sh.d)
-    lim = 10.5 if sh.kind in ('rule', 'card', 'pause') else 7.0
+    lim = 10.5 if sh.kind in ('rule', 'card', 'pause') else (24.0 if sh.kind == 'outro' else 7.0)
     if sh.d > lim and not p.get('long_ok'):
         add('WARN', k, 'LEN', 'a %.2f s %s shot (long: does it keep acting?)' % (sh.d, sh.kind))
 
@@ -382,6 +391,7 @@ def check_cuts():
         pos = getattr(sh, '_plan_pos', None)
         if sh.kind == 'set' and pos is not None:
             plan = PLAN_OF.get(sh.p['room'])
+            if plan == 'bus': plan = 'bus:%s' % (sh.p.get('set', {}) or {}).get('kind', 'his')      # two buses on one plan
             era = sh.p.get('era', 'now')
             for ident, (p0, p1, walks) in pos.items():
                 if ident in last:
@@ -408,39 +418,64 @@ def check_cuts():
 def T(i): return F.t(i)
 
 
+def _lv(v, t):
+    return v(t) if callable(v) else v
+
+
 def states():
-    t_cord = F.w(88, 'pulled') + 0.6                      # Ruth pulls the line cord out of the wall
-    t_counter = F.w(117, 'counter')                       # the handset lies on the counter (hold music) from here
-    t_rescue = F.t(303)
-    t_tear = F.t(296) + 1.0                               # the narrator tears the card out
-    t_car0, t_car1 = F.t(154) - 0.2, F.t(307)
-    t_fire = F.w(179, 'lit') + 0.5
+    """The story's prop / light / cast states against the lines (see the docstring)."""
+    t_letters, t_pack = F.t(63) + 2.5, F.t(65)
+    t_walkie0, t_walkie1 = F.t(160), F.t(180)
+    t_broom1 = F.w(245, 'toss')
+    t_bolt0, t_bolt1 = F.w(193, 'deadbolt'), F.w(211, 'slides')
+    t_gone = F.t(243) - 0.2
+    t_rip, t_bell, t_rewind = F.t(315), F.t(364), F.w(369, 'rewinds')
+    t_jam = F.w(345, 'jams') + 0.3
     for k in KS:
         sh = SH[k]; p = sh.p; st = p.get('set', {}) or {}
         era = p.get('era', 'now')
         room = p.get('room') or ((p.get('bg') or [None])[0])
-        if era not in ('now', None) or p.get('placeholder'): continue
-        if room == 'kitchen' and sh.kind in ('set', 'bust'):
-            cord = st.get('cord', 'in')
-            if not callable(cord):
-                if sh.t0 > t_cord and sh.t0 < t_rescue + 60 and cord != 'out':
-                    add('ERROR', k, 'STATE', 'kitchen: the line cord is plugged in (cord=%r) after Ruth pulled it out (L88)' % cord)
-                if sh.t0 < t_cord - 2.0 and cord == 'out' and sh.t0 > F.t(15):
-                    add('ERROR', k, 'STATE', 'kitchen: the line cord is out before Ruth pulls it (L88)')
-            ph = st.get('phone', 'hung')
-            if not callable(ph) and t_counter + 1.0 < sh.t0 < t_rescue and ph != 'counter':
-                add('ERROR', k, 'STATE', 'kitchen: the handset is %r; it lies on the counter playing hold music from L117 until the rescue' % ph)
-            if p.get('view') == 'sink' and t_fire < sh.t0 < t_rescue + 60 and not st.get('fire'):
-                add('WARN', k, 'STATE', 'kitchen sink: the burned paper is gone (fire=1 after L179)')
-        if room == 'bath' and sh.kind in ('set', 'bust'):
-            card = st.get('card', True)
-            if sh.t0 < t_tear and not card:
-                add('ERROR', k, 'STATE', 'bathroom: the yellow card is missing before the narrator tears it out (L296)')
-            if sh.t0 > t_tear and card and st.get('cabinet', 0.0):
-                add('ERROR', k, 'STATE', 'bathroom: the yellow card is back in the cabinet after the narrator tore it out (L296)')
-        if room == 'front' and sh.kind in ('set', 'bust') and t_car0 < sh.t0 < t_car1:
-            if not st.get('car') or not st.get('headlights'):
-                add('ERROR', k, 'STATE', "outside: Halverson's car must be in the driveway, engine running, headlights on (L154 .. L307)")
+        if sh.kind not in ('set', 'bust') or era in ('1994', 'morning', 'outro'): continue
+        tm = sh.t0 + 0.05
+        who = [q['who'] for q in p.get('ppl', [])] + ([p.get('who')] if sh.kind == 'bust' else []) + [b['who'] for b in p.get('busts', [])]
+        if 'sami' in who and sh.t0 > t_rip + 0.3:
+            add('ERROR', k, 'STATE', "Sami's tail is whole after the rip (L315): use 'sami_torn'")
+        if 'sami_torn' in who and sh.t1 < t_rip:
+            add('ERROR', k, 'STATE', "Sami's tail is torn before the rip (L315)")
+        if 'theo_color' in who and sh.t0 < F.t(370) - 0.5:
+            add('ERROR', k, 'STATE', 'Theo in colour before three o\'clock (only after L370)')
+        if room == 'front':
+            if F.t(66) < sh.t0 and _lv(st.get('letters', 1.0), tm) > 0.5 and (sh.t0 > t_letters):
+                add('ERROR', k, 'STATE', 'the mailbox letters are back on after Mina took them off (L63)')
+            b = st.get('broom', 'porch')
+            if F.t(149) < sh.t0 < t_broom1 - 0.05 and b != 'bus9':
+                add('ERROR', k, 'STATE', "the porch broom must be through bus 9's doors (L148 .. L245), broom=%r" % b)
+            if sh.t0 > t_broom1 + 0.05 and b == 'bus9':
+                add('ERROR', k, 'STATE', "the broom is back in bus 9's doors after Mina ripped it out (L245)")
+            if sh.t0 > t_gone and st.get('his', True) and _lv(st.get('his_win', 1.0), tm) > 0.1 and sh.t0 < F.t(370):
+                add('ERROR', k, 'STATE', 'his bus is lit at the kerb after it pulled away (L238)')
+        if room == 'living' and sh.t0 > t_pack and sh.t0 < F.t(386) and st.get('backpack', 'window') == 'window':
+            add('ERROR', k, 'STATE', 'the backpack faces the street (SAMI) after Mina turned it to the wall (L64)')
+        if room == 'living' and sh.t0 > t_walkie1 + 0.3 and sh.t0 < F.t(386) and st.get('walkie'):
+            add('ERROR', k, 'STATE', "Mina's walkie is back on the cushion after he took it (L177)")
+        if room in ('gran', 'upstairs'):
+            bolt = st.get('bolt', 1.0)
+            if not callable(bolt):
+                if t_bolt0 + 0.05 < sh.t0 < t_bolt1 - 0.05 and room == 'gran' and bolt < 0.5:
+                    add('ERROR', k, 'STATE', "Grandma's deadbolt is open between L193 (thrown) and L211 (slides)")
+                if sh.t0 > t_bolt1 + 0.05 and sh.t0 < F.t(240) and bolt > 0.5 and room == 'gran':
+                    add('ERROR', k, 'STATE', "Grandma's deadbolt is thrown again after Sami slid it (L211)")
+        if room == 'school':
+            clk = st.get('clock', (2, 57))
+            if isinstance(clk, tuple):
+                if sh.t0 < t_bell - 0.05 and tuple(clk[:2]) >= (3, 0):
+                    add('ERROR', k, 'STATE', 'the school clock reads 3:00 before the bell (L364)')
+                if sh.t0 > t_bell + 0.05 and tuple(clk[:2]) < (3, 0):
+                    add('ERROR', k, 'STATE', 'the school clock is before 3:00 after the bell (L364)')
+            if sh.t0 > t_rewind + 0.05 and st.get('his', True):
+                add('ERROR', k, 'STATE', 'his bus is still at the school after it rewound into the dark (L369)')
+            if sh.kind == 'set' and t_jam < sh.t0 < t_rewind and st.get('his', True) and not st.get('broom9'):
+                add('ERROR', k, 'STATE', "the broom is missing from his doors (Grandma jammed it in at L345)")
 
 
 # ---------------------------------------------------------------------------------------------------- lips
