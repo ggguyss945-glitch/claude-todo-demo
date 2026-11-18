@@ -131,3 +131,12 @@ Every step re-reads your whole context, so its size is the cost.
   - The film team must not edit the Whistlestop drawing functions in characters_bus.py.
   - Use his staging calls as they are. Write any change you need into `_work/handoff/requests.md`.
 - Another teammate is re-pacing the voice edit to about 13 minutes and will re-align. Always read times from `_work/align/timeline.json` at run time; never copy times into film.py.
+
+## Coordinator's spot-check of the first preview (18 Nov 18:30 UTC): MUST be fixed in the review round
+- Captions show literal markdown asterisks around quoted or emphasised lines, for example `**BRAKES, MIRRORS, NAMES.**`, `**GRANDMA, THE KID IN HIS BACK SEAT.` and `NOBODY ASKS.**`.
+  - Strip every `*` (and any other markup) from caption text at the source.
+  - Check that no caption anywhere shows `*`, `_` or brackets.
+- Whistlestop close-ups at the school bus doors (around the aisle speech and "He blows the whistle"): the hat fills most of the frame and his face is cut off at the bottom.
+  - Frame on the FACE and grin (the eyes about a third from the top). Let the hat leave the top of the frame.
+- Rule card 1: a red bar covers part of the rule text. Every rule's full text must be legible while the narration reads it.
+- Several night shots are too dark to read the action (the hallway "gloves flat on both walls", Grandma's room). Lift the key light on the subject, not the whole frame.

@@ -101,7 +101,13 @@ def _new_girl(s, who):
     return who == 'new_girl' and s.t0 <= F.t(393) < s.t1
 
 
+def _slap(s, who):
+    """111 'My hand slaps over his mouth.': Sami's open shout snaps shut under Mina's hand (acting, not speech)."""
+    return who == 'sami' and s.t0 <= F.t(111) < s.t1
+
+
 ALLOW = [
+    ('LIP', _slap, "the hand slaps over Sami's mouth (L111): the shout snaps shut under it"),
     ('LIP', _ws, "Mister Whistlestop never lip-syncs (the grin never moves; his lines are a head bob)"),
     ('LIP', _new_girl, "the new girl tells Mina her name under the narration (L393): the name stays unheard"),
 ]
@@ -109,6 +115,7 @@ ALLOW = [
 # ---------------------------------------------------------------------------------------------------- build helpers
 HOUSE = ('living', 'hall', 'upstairs', 'gran', 'sami', 'front')
 PLAN_OF = {r: 'house' for r in HOUSE}
+PLAN_OF['front'] = 'yard'                                 # outside is its own plan for the cut check (a scene change in / out)
 PLAN_OF.update(bus='bus', road='road', school='school', theo='theo', class_='class', outro='outro')
 LEVELS = {'living': 0.0, 'hall': 0.0, 'kitchen': 0.0, 'uphall': 2.95, 'gran': 2.95, 'sami': 2.95}
 STAIR = dict(x0=-5.6, x1=-4.6, y0=3.2, y1=7.2)             # the hall flight along the west wall, rising +y to the landing (2.95 m)
@@ -291,6 +298,12 @@ def check_shot(k):
                 outdoors = p['room'] in ('living', 'hall', 'upstairs', 'gran', 'sami') and (Yp > 9.65 or Yp < -0.05)
                 if kind in ('stand', 'kneel', 'floor') and not q.get('sil') and q.get('check', True) and not outdoors:
                     ok, why = sp.walkable(X, Yp)
+                    if not ok and stair_Y(X, Yp) is not None and 'stairs' in why: ok = True        # standing on the treads
+                    if not ok and 'porch' in why and (Y > -0.15 or any(nm.startswith('porch') and math.hypot(s_.X - X, s_.Yp - Yp) < 0.3
+                                                                      for nm, s_ in sp.anchors.items())): ok = True   # on the porch deck / its steps
+                    if not ok and any(nm.endswith(('_step', '_top', '_door')) and math.hypot(s_.X - X, s_.Yp - Yp) < 0.75
+                                      for nm, s_ in sp.anchors.items() if '.' not in nm and ('his_' in nm or 'b9_' in nm)):
+                        ok = True                                  # on a bus's door steps (the footprint covers its steps)
                     if not ok and (sp.info.get('floors')):
                         add('ERROR', k, 'FLOOR', '%s at plan (%.2f, %.2f): %s' % (who, X, Yp, why), t)
                     if room_ok:
@@ -398,8 +411,9 @@ def check_cuts():
                     k0, t1, plan0, pp, era0 = last[ident]
                     gap = sh.t0 - t1
                     entering = any(q.get('enter') and q.get('id', q['who']) == ident for q in sh.p.get('ppl', []))
-                    if plan0 == plan and era0 == era and gap < 8.0 and era not in ('recall',) and not sh.p.get('cut') in ('static', 'white') \
-                            and not entering and not sh.p.get('montage') and sh.p.get('room') != 'parade':
+                    if ident in ('whistle', 'whistle94'): pass               # he never walks: every cut is a tape-skip (CAST.md)
+                    elif plan0 == plan and era0 == era and gap < 8.0 and era not in ('recall',) and not sh.p.get('cut') in ('static', 'white') \
+                            and not entering and not sh.p.get('montage') and sh.p.get('cut') != 'blink' and sh.p.get('room') != 'parade':
                         d = math.hypot(p0[0] - pp[0], p0[1] - pp[1])
                         dY = abs(p0[2] - pp[2])
                         if (d > 0.8 or dY > 0.5) and k in KS:
@@ -426,8 +440,8 @@ def states():
     """The story's prop / light / cast states against the lines (see the docstring)."""
     t_letters, t_pack = F.t(63) + 2.5, F.t(65)
     t_walkie0, t_walkie1 = F.t(160), F.t(180)
-    t_broom1 = F.w(245, 'toss')
-    t_bolt0, t_bolt1 = F.w(193, 'deadbolt'), F.w(211, 'slides')
+    t_broom1 = F.w(245, 'rip')
+    t_bolt0, t_bolt1 = F.w(193, 'deadbolt'), F.w(211, 'slides') - 0.15
     t_gone = F.t(243) - 0.2
     t_rip, t_bell, t_rewind = F.t(315), F.t(364), F.w(369, 'rewinds')
     t_jam = F.w(345, 'jams') + 0.3

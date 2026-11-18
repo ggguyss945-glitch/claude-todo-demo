@@ -1,5 +1,5 @@
 #!/bin/bash
-# Resumable HEVC delivery for the Doctor film, from the finished picture and the final mix (run from film/):
+# Resumable HEVC delivery for the bus film, from the finished picture and the final mix (run from film/):
 #   P=2 bash tools/encode_chain.sh > _work/logs/encode_chain.log 2>&1
 # Same x265 settings as tools/deliver.sh except rate control (capped CRF 20 for this film, see below and tools/enc_seg.sh), but the picture is encoded as K frame-exact segments with OK markers, so a
 # container restart only loses the segments in flight: re-running skips every finished segment. The segments are joined
@@ -9,10 +9,10 @@ set -e
 cd "$(dirname "$0")/.."
 W=_work; PIC=$(realpath $W/picture/picture.mp4); MIX=$W/mix/final/mix_en.wav
 S=${S:-$W/deliver/segments_crf20}; K=${K:-24}; P=${P:-2}
-# This 21:45 film at capped CRF 17 measured about 480 MiB on the first segments; capped CRF 20 made the delivered file
-# 332 MiB (under the 400 MiB limit), -14.8 LUFS, -1.5 dBFS peak. RC still overrides it.
+# Capped CRF 20, as on the Doctor film (its 21:45 cut came to 332 MiB, -14.8 LUFS, -1.5 dBFS peak); this 13:18 film
+# should land near 200 MiB. RC still overrides it.
 export RC=${RC:--crf 20}
-B=If_Your_Doctor_Calls_At_3AM; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
+B=If_The_School_Bus_Stops_At_Midnight; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
 mkdir -p "$S"
 NT=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$PIC")
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
@@ -33,12 +33,12 @@ echo "== segments done $(date -u +%H:%M)"
 for k in $(awk '{print $1}' "$S/ranges.txt"); do echo "file '$(realpath "$S/s$k/seg.mp4")'"; done > "$S/list.txt"
 # Delivery audio: 16.5 kHz low-pass, 4x-oversampled limiter at 0.66, 192k AAC. The plain -3 dBFS limiter at 160k let
 # the AAC overshoot to +0.4 dBTP on the saturated scare hits; this decodes at about -0.9 dBTP and -14.8 LUFS and keeps
-# the 18-minute HEVC under 500 MiB (320k measured -1.5 dBTP but made the file 506 MiB)
+# AAC 192k with the -3 dBFS limiter (320k measured -1.5 dBTP but made the files too big)
 ffmpeg -v error -nostdin -y -i "$MIX" -af lowpass=f=16500:poles=2,aresample=192000,alimiter=limit=0.66:attack=1:release=60:level=false,aresample=48000 \
   -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "$S/audio.m4a"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
-  -metadata title="If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND" \
+  -metadata title="If The School Bus Stops At Midnight... DON'T GET ON" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"
 mv "$H.tmp.mp4" "$H"
 echo "== joined $(date -u +%H:%M)"

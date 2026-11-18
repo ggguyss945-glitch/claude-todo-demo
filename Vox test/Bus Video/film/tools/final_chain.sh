@@ -1,12 +1,12 @@
 #!/bin/bash
-# Final render + delivery + checks for the Doctor film ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"),
+# Final render + delivery + checks for the bus film ("If The School Bus Stops At Midnight... DON'T GET ON"),
 # in one chain (run from film/):
 #   bash tools/final_chain.sh > _work/logs/final_chain.log 2>&1
 # In a cloud session run it as a harness-tracked background task, not with nohup: the container is reclaimed about
 # 5 minutes after the session goes idle, and that kills detached processes.
 # The picture is rendered as K short chunks (frame-exact boundaries), 3 at a time, so a container restart only loses
 # the chunks in flight: re-running skips every chunk with an OK marker. Then the chunks are joined (stream copy) into
-# _work/picture/picture.mp4, checked, and tools/deliver.sh makes _work/deliver/If_Your_Doctor_Calls_At_3AM_EN_1440p60_HEVC.mp4.
+# _work/picture/picture.mp4, checked, and tools/deliver.sh makes _work/deliver/If_The_School_Bus_Stops_At_Midnight_EN_1440p60_HEVC.mp4.
 set -e
 cd "$(dirname "$0")/.."
 W=_work; C=$W/picture/chunks; K=${K:-24}; P=${P:-3}
@@ -53,7 +53,7 @@ rm -rf "$C"/c*/
 [ -n "$PICTURE_ONLY" ] && { echo "== picture only: stop here, next: bash tools/encode_chain.sh"; exit 0; }
 echo "== deliver start $(date -u +%H:%M)"
 bash tools/deliver.sh $W/picture/picture.mp4 $W/mix/final $W/deliver
-H=$W/deliver/If_Your_Doctor_Calls_At_3AM_EN_1440p60_HEVC.mp4
+H=$W/deliver/If_The_School_Bus_Stops_At_Midnight_EN_1440p60_HEVC.mp4
 echo "== deliver done $(date -u +%H:%M)"
 ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,r_frame_rate -of compact "$H"
 echo "== HEVC frames $(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$H")"
