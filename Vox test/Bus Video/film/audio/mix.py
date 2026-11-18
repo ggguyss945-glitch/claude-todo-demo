@@ -971,7 +971,11 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # everything else are left alone
 # the rule-by-rule arc, by line index of each 'Rule number N.' line (sound fix round, M2: the old indices were the
 # Bunnyman's and drifted a rule; rules 3 and 4 measured under rule 2). (92: the comment prompt; 303: the rescue)
-ARC_TARGETS = [(65, -19.0), (92, None), (103, -17.5), (124, -16.0), (146, -14.5), (192, -13.0), (213, -11.8), (252, -10.6), (303, None)]
+# Bus film (final mix): the rows name the timeline's line TAGS (resolved at run time, so a re-paced or re-cut voice
+# edit needs no change here); the Doctor film's line indices had been left in and steered the wrong stretches.
+# rule 1 .. rule 7 rise; the comment prompt ('cta') and everything from the 3:00 bell on are left alone
+ARC_TARGETS = [('rule1', -19.0), ('cta', None), ('rule2', -17.5), ('rule3', -16.0), ('rule4', -14.5), ('rule5', -13.0),
+               ('rule6', -11.8), ('rule7', -10.6), ('bell_rings', None)]
 ARC_MAX_DB = 6.0
 # sound fix round (M1): the old landline's bell sat 5-10 dB under the voice peaks in the speech band and level with the
 # voice between syllables: each ring dips this much while the narration speaks (voice-keyed, 10 ms attack, 0.12 s hold)
@@ -1592,9 +1596,11 @@ def main():
     # same loop as the music gain (each pass measures the bed once)
     vbl_g = -0.691 + 10 * np.log10(SX._blocks(key, 0.4, 0.1) + 1e-20)
     arc_secs = []
-    for k_, (li, tgt) in enumerate(ARC_TARGETS[:-1]):
+    _tagi = {l.get('tag'): j for j, l in enumerate(tl['lines'])}
+    _arc = [(_tagi[a] if isinstance(a, str) else a, g) for a, g in ARC_TARGETS if not isinstance(a, str) or a in _tagi]
+    for k_, (li, tgt) in enumerate(_arc[:-1]):
         if tgt is None or li >= len(tl['lines']): continue
-        a_ = float(tl['lines'][li]['t']); b_ = float(tl['lines'][ARC_TARGETS[k_ + 1][0]]['t'])
+        a_ = float(tl['lines'][li]['t']); b_ = float(tl['lines'][_arc[k_ + 1][0]]['t'])
         if b_ > t0 and a_ < t1: arc_secs.append([a_ - t0, b_ - t0, tgt, 0.0])        # window time, target, offset dB
 
     def gap_levels(bed):

@@ -1,21 +1,18 @@
-"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If Your Doctor Calls At 3 AM...
-DON'T ASK WHAT THEY FOUND").
+"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If The School Bus Stops At
+Midnight... DON'T GET ON").
 
 film.py writes W/cues/sfx_cues.json from the picture: every drawn action at its frame. That sheet stays the source
 and its timings are never moved (they are the picture's sync). This pass, applied by mix.py with `--plan full`
 (audio/final_mix.sh), only
-  0. maps the picture's names onto this film's recipes (PICTURE / picture_pass: film.py names some sounds the recipes
-     know by other names or not at all: phone_ring -> the old landline's bell (one ring per cue), phone_pickup /
-     phone_hangup -> receiver_up / receiver_down, cabinet_open -> medicine_cabinet, typing -> the typewriter of the
-     rule cards, room_tone kinds -> house_night / er_bustle, the fluorescent bed -> waiting_room from the door's
-     opening, breath_fast runs -> one breathing bed per run, tape_peel -> one strip per question (q 1..4)); drops
-     what another layer carries (the pulse count: one ADD event with its three counts; the car's rain: drive_rain),
+  0. maps the picture's names onto this film's recipes (PICTURE / picture_pass): sfx.py's keyword guesses sent many
+     of this film's names to the wrong sound (glass_pound -> a window smash, metal_rip -> cloth, door_slap ->
+     a creak, bus_drive -> rain, lights_blink -> an eyelid click) or to nothing (deadbolt_slide, engine_start_bus,
+     marker_x); every name is mapped here on purpose. Drops what another layer carries (the rule cards' typing: the
+     rules are Grandma's handwriting; his amber hum and the room-tone drop) and doubled ticks (a vhs_glitch on a
+     tape_skip frame, a second glove slap or neck ratchet within a few frames),
   1. re-levels picture cues that measure buried or too busy in the full-length checks (EDIT),
-  2. adds the sounds the picture does not draw (ADD): the waiting room under the cold open, the 1979 rotary dial and
-     the coffee at sunrise, the line hiss under Halverson's call, the receiver laid down like a sleeping baby, the
-     streetlight at the bus stop, the NOW SERVING sign, the clipboard, the pulse count, the carry, Halverson's car
-     idling and the drive in the rain, the ER, the dawn at Grandma's, the 3 AM office of the final twist, the
-     outro's instantly connected call.
+  2. adds the sounds the picture does not draw (ADD): bus 9's warm morning cabin (Della's "good morning" and the
+     new girl), the 911 call going through, the sirens coming to the school lot, the morning birds.
      An ADD row is skipped when the picture's sheet already has a cue of the same sound within 2 s of it (the same
      recipe after resolving, or the same FAMILY; the picture wins: no doubled sounds). A row with 'snap': name moves
      onto the picture's nearest cue of that name (within 1.2 s).
@@ -35,18 +32,8 @@ import music_plan as MP                                   # noqa: E402
 # --------------------------------------------------------------------------------------------- EDIT (picture cues)
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
+# Names here are the names AFTER the picture pass (the recipes).
 EDIT = [
-    # first full mix (measure_mix.py): buried picture cues raised
-    ('er_doors', 's348-1.0', 's348+2.0', {}, {'add_db': 7.0}, 'the ER doors opening (20.9 LU under)'),
-    ('whoosh', 's295-0.5', 'e295', {}, {'add_db': 6.0}, '"I pulled my wrist free." (21.7 LU under)'),
-    ('lamp_flicker', 's219-0.5', 'e219', {}, {'add_db': 4.0}, 'a dying tube (18 LU under)'),
-    ('footsteps_porch', 's150-1.0', 'e150+2.0', {}, {'add_db': 4.0}, 'Halverson on the porch (18.7 LU under)'),
-    ('paper', 's0', 'e455', {'dur': 0.6}, {'add_db': 4.0}, 'the rule cards\' paper (18-22 LU under)'),
-    # sound fix round (critic minors)
-    ('ui_pop', 's149', 'e149+1.5', {}, {'drop': True}, 'the KNOCK tags: the knocks speak for themselves (pops stacked on them)'),
-    ('footsteps_wood_inside', 's27', 'e29', {}, {'add_db': -5.0}, '1979 steps sat close to the words (106, 115)'),
-    ('footsteps_porch', 's150-1.0', 'e150+2.0', {}, {'params': {'weight': 1.0}, 'add_db': 2.0}, 'porch steps thin on a phone: full-weight treads, +2 dB'),
-    ('card_tear', 's296', 'e296', {}, {'at': 'w296:tore'}, 'the card tear on "tore" (was 65 ms early)'),
 ]
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
 THIN_GAIN = {'tv': -13.0, None: -10.0}
@@ -55,75 +42,79 @@ THIN_QUIET = []
 # --------------------------------------------------------------------------------------------- ADD
 # (anchor, name, gain_db, space, params, why). params 'dur': 'until:<anchor>' -> seconds to that anchor.
 ADD = [
-    # ---- cold open
-    ('s2+1.0', 'waiting_room', -2.0, 'waiting', {'dur': 'until:e6+0.6', 'flicker': 0.5, 'tv': 0.0, 'buzz': 0.6},
-     'the waiting room under the very tall man'),
-    ('w2:folded+0.2', 'sit_down', -6.0, 'waiting', {'kind': 'plastic'}, 'folded into one of those little chairs'),
-    # ---- 1979
-    ('e18-1.4', 'rotary_dial', -4.0, 'inside', {'digits': 3}, 'Grandma dials that place (1979)'),
-    ('w29:coffee+0.3', 'mug_set', -4.0, 'close', {'kind': 'down'}, 'the cup of coffee at sunrise'),
-    ('s29', 'ambience_dawn', -8.0, 'window', {'dur': 'until:s32', 'birds': 0.5}, 'sunrise, 1979: quiet birds'),
-    # ---- rule 1
-    ('s78-0.5', 'line_hiss', -8.0, None, {'dur': 'until:e80+0.6'}, 'Halverson on the line'),
-    # ---- rule 2
-    ('w117:set+0.3', 'receiver_down', -2.0, 'close', {'kind': 'set'}, 'set down on the counter like a sleeping baby'),
-    # ---- rule 4
-    ('s187', 'streetlight', -6.0, 'outside', {'dur': 'until:e191+1.0', 'flicker': 0.7}, 'the bus stop\'s light'),
-    # ---- rule 6
-    ('s223-0.25', 'now_serving', 0.0, 'waiting', {'sour': 0.7}, '"Now serving: 1979."'),
-    ('w243:clipboard+0.3', 'clipboard', -4.0, 'waiting', {}, 'his clipboard'),
-    # ---- rule 7: one pulse event, the picture's per-count cues dropped (picture_pass)
-    ('w258:one', 'pulse_count', 0.0, 'tight', {'dur': 'until:w270:what-0.05', 'counts': 'gaps:w258:one,w260:two,w267:three',
-     'bpm': [62, 48, 36, 27], 'clock': 0.7}, 'the count: the heartbeat and the clock slow with every number'),
-    # ---- the rescue
-    ('s303+0.2', 'carry_child', -4.0, 'inside', {}, 'I picked Milo up off the kitchen floor'),
-    ('s306+0.6', 'rain_house', -2.0, 'porch', {'dur': 'until:s308+0.1'}, 'the front door open: the rain outside'),
-    ('s308', 'halverson_car', -6.0, 'car', {'dur': 'until:w318:going+0.3', 'rain': 0.8}, 'parked: the engine running'),
-    ('w318:going+0.2', 'drive_rain', 0.0, 'car', {'dur': 'until:s348-0.2', 'speed': 'fast'}, 'the drive in the rain'),
-    ('s348+0.2', 'er_bustle', 0.0, 'er', {'dur': 'until:s362', 'monitors': 0.7, 'gurney': 0.5}, 'the ER, alive'),
-    # ---- after
-    ('s365', 'ambience_dawn', -8.0, 'window', {'dur': 'until:s372', 'birds': 0.6}, 'home at sunrise'),
-    ('s379', 'office_3am', 0.0, 'office', {'dur': 'until:e400+0.6'}, 'a little office at Larkfield General, 3 AM'),
-    # ---- outro
-    ('w450:call-0.4', 'phone_connect', -6.0, 'close', {}, 'the one call that never puts you on hold'),
+    # ---- Grandma Della and bus 9 (warm, never a threat)
+    ('s27-0.3', 'morning_bus', -4.0, None, {'dur': 'until:e28+0.4', 'kids': 0.5},
+     'bus 9 in the morning: every kid gets a good morning, by name'),
+    # ---- rule 6: the call goes through
+    ('e249+0.1', 'dial_911', -8.0, 'close', {'kind': 'call'}, '"Call 911.": the keys, one ring, the operator picks up'),
+    # ---- after the bell: the real adults arrive
+    ('s371', 'siren_far', -12.0, 'outside', {'dur': 'until:s376', 'dist': 1.0}, 'the officers coming to the school lot'),
+    # ---- the morning
+    ('s386', 'ambience_dawn', -8.0, 'window', {'dur': 'until:s389', 'birds': 0.6}, 'the morning at home: birds'),
+    ('s389-0.4', 'morning_bus', -4.0, None, {'dur': 'until:e396+0.5', 'kids': 0.4}, 'bus 9, the new girl in seat 21'),
 ]
 DEDUP_S = 2.0                                             # an ADD row yields to a picture cue of its sound this close
 
 # picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
-    'phone_pickup': ('receiver_up', {}, -2.0, 'the old receiver lifted'),
-    'phone_hangup': ('receiver_down', {'kind': 'hang'}, -2.0, 'hung up'),
-    'cabinet_open': ('medicine_cabinet', {'action': 'open'}, -4.0, 'the mirror swung aside'),
-    'typing': ('typewriter', {}, -8.0, 'the rules typed on a typewriter (the rule cards)'),
-    'card_tap': ('touch_tap', {}, -8.0, 'a fingertip on the yellow card'),
-    'key_press': ('touch_tap', {}, -6.0, 'a key'),
-    'paper_flutter': ('paper', {'dur': 0.6}, -12.0, 'the rule card'),
-    'paper_rustle': ('paper', {'dur': 0.9}, -10.0, 'the note'),
-    'paper_slide': ('paper_under_door', {'dur': 1.3}, -2.0, 'the paper under the door'),
-    'peephole_cover': ('peephole', {}, -6.0, 'the peephole cover'),
-    'door_open': ('doorknob', {}, -6.0, 'the front door opened'),
-    'door_knob': ('doorknob', {}, -8.0, 'the knob'),
-    'hand_slap_soft': ('cloth_rustle', {'kind': 'grab', 'dur': 0.6}, -4.0, 'a hand over his mouth'),
-    'flinch': ('cloth_rustle', {'dur': 0.5}, -12.0, 'his coat as he flinches'),
-    'marker_write': ('pen_scratch', {'dur': 0.7}, -8.0, 'Ruth writing on hold (1979)'),
-    'chair_creak': ('chair_rock', {'dur': 3.5}, -4.0, 'the empty chair still rocking'),
-    'car_idle': ('halverson_car', {'rain': 0.0}, -14.0, 'her car in the driveway, engine running'),
-    'monitor_beep': ('heart_monitor', {}, None, 'the monitor'),
-    'wheelchair_roll': ('wheelchair', {}, None, 'Mom with the wheelchair'),
-    'fluorescent_flicker': ('lamp_flicker', {}, None, 'a dying tube'),
-    'lamp_click': ('light_switch', {}, None, 'turn a light on'),
+    'neck_tick': ('wood_creak', {'kind': 'tick', 'dur': 0.15}, None, 'his neck, one tick'),
+    'neck_ratchet': ('wood_creak', {'kind': 'grind', 'dur': 1.1}, -2.0, 'his head turning all the way round'),
+    'bus_rumble': ('bus_idle', {'kind': 'bus9', 'rattle': 0.3}, -10.0, 'the 1994 tape\'s bus'),
+    'cart_squeak': ('wheelchair', {}, -12.0, 'the TV cart rolled in'),
+    'vcr_insert': ('vhs_tape', {'action': 'insert'}, -4.0, 'the tape into the VCR'),
+    'tape_warble': ('tape_glitch', {'kind': 'warble'}, None, 'the tape warbles'),
+    'tape_slowdown': ('tape_slide', {}, -4.0, 'the voice slides down like a slowing tape'),
+    'vhs_noise': ('tape_glitch', {'kind': 'tracking'}, -8.0, 'snow after the tape'),
+    'like_pop': ('ui_pop', {}, -14.0, 'the likes on the post'),
+    'tape_press': ('touch_tap', {}, -10.0, 'the tape pressed flat on the door'),
+    'fabric_turn': ('cloth_rustle', {}, -10.0, 'the backpack turned to the wall'),
+    'loudspeaker_crackle': ('pa_crackle', {'kind': 'on'}, -4.0, 'his loudspeaker comes on'),
+    'loudspeaker_click': ('pa_crackle', {'kind': 'on'}, -4.0, 'over the loudspeaker'),
+    'ws_unfold_clack': ('his_unfold', {'n': 1}, None, 'one joint of him unfolding, like a ladder'),
+    'clipboard_lift': ('clipboard', {}, -8.0, 'his clipboard'),
+    'hand_slap': ('cloth_rustle', {'kind': 'grab', 'dur': 0.6}, -2.0, 'my hand slaps over his mouth'),
+    'paper_slide': ('paper_under_door', {'dur': 1.0}, -2.0, 'the yellow ticket under the door'),
+    'dial_beep': ('touch_tap', {}, -10.0, 'a key on the phone'),
+    'call_fail': ('dial_911', {'kind': 'fail'}, -6.0, 'no bars: the call drops'),
+    'keys_jingle': ('keys_jangle', {}, -6.0, 'Grandma grabs her keys'),
+    'door_open': ('doorknob', {'kind': 'turn'}, -6.0, 'the back door'),
+    'door_creak_open': ('door_creak', {'dur': 1.2}, -6.0, 'Grandma\'s door opens on the hallway'),
+    'glass_pound': ('knock_door', {'n': 1, 'force': 0.8}, None, 'Grandma\'s fists on bus 9\'s glass doors, across the yard'),
+    'skin_slide': ('hand_squeeze', {}, -6.0, 'a small hand slides into mine'),
+    'kid_laugh_far': ('owen_giggle', {}, -12.0, 'Sami laughing upstairs'),
+    'phone_light_click': ('flashlight_click', {}, -6.0, 'the phone light on'),
+    'deadbolt_slide': ('deadbolt', {}, 0.0, 'the deadbolt slides'),
+    'hat_crumple': ('cloth_rustle', {'kind': 'grab', 'dur': 0.5}, -6.0, 'the hat crushed on the ceiling'),
+    'glove_slap_wall': ('knock_door', {'n': 1, 'force': 0.55, 'soft': True}, -2.0, 'a glove slaps the wall'),
+    'lights_blink': ('lamp_flicker', {'dur': 0.4, 'buzz': 0.4}, -6.0, 'the lights blink'),
+    'hand_slip': ('cloth_rustle', {'dur': 0.5}, -4.0, 'Sami\'s hand slips out of mine'),
+    'bus_door_fold': ('bus_door', {'action': 'open'}, None, 'his bus doors fold open'),
+    'bus_door_spring': ('bus_door', {'action': 'open'}, None, 'bus 9\'s doors spring open'),
+    'door_slap': ('bus_door',{'action': 'close', 'slap': 1.0}, 2.0, 'his doors slap shut an inch from my fingers'),
+    'broom_clatter_in': ('wood_knock', {'n': 2, 'spacing': 0.14}, -6.0, 'the broom tossed in, clattering'),
+    'bus_drive': ('bus9_drive', {'speed': 'fast'}, -4.0, 'bus 9 on the night road'),
+    'engine_start_bus': ('bus9_start', {}, -2.0, 'bus 9 starts'),
+    'engine_rev_bus': ('bus_pull_away', {}, 0.0, 'Grandma hits the gas'),
+    'metal_rip': ('mirror_rip', {}, 2.0, 'his bumper rips our side mirror off'),
+    'amber_hum': None,                                    # his doors' amber light: the score's bed carries it
+    'body_catch': ('cloth_rustle', {'kind': 'grab'}, -2.0, 'he tumbles into my arms'),
+    'arm_stretch_creak': ('wood_creak', {'kind': 'grind', 'dur': 2.0}, -6.0, 'his arm stretching down the aisle'),
+    'door_motor': ('bus_door', {'action': 'close', 'slap': 0.0}, -2.0, 'the doors start folding shut'),
+    'wood_crack': ('broom_crack', {}, 2.0, 'the broom cracks'),
+    'door_slam_bus': ('bus_door', {'action': 'close', 'slap': 1.0}, 2.0, 'the doors slam on an empty aisle'),
+    'paper_flip': ('page_flip', {}, -6.0, 'his clipboard\'s pages'),
+    'pencil_line': ('pen_scratch', {'dur': 1.6}, -6.0, 'a line through one name'),
+    'marker_write': ('pen_scratch', {'dur': 2.0}, -6.0, 'rule eight written under Grandma\'s seven'),
+    'marker_x': ('marker_strike', {}, -4.0, 'the 1994 tape crossed out'),
+    'paper_flutter': ('paper', {'dur': 0.6}, -12.0, 'the rules paper'),
+    'typing': None,                                       # the rules are handwritten: the paper and the sting carry it
+    'room_tone_drop': None,                               # the power_down cue is the moment; the dead tone follows
     'ui_pop': ('ui_pop', {}, -9.0, 'card pops, under the voice'),
-    'hold_click': None,                                   # the hold music itself (music_plan IDENTITY) starts there
-    'cold_breath': None,                                  # nothing fits a cold touch; the wrist insert plays dry
-    'car_drive': None,                                    # drive_rain (ADD) is the drive
-    'car_accelerate': None,                               # "she drove faster": the score's riser carries it
 }
 WHO_HUM = {}
-FAMILY = {'receiver_up': 'receiver', 'phone_pickup': 'receiver', 'receiver_down': 'hang', 'medicine_cabinet': 'cabinet',
-          'paper_slide': 'paper_door', 'paper_under_door': 'paper_door', 'footsteps_wood_inside': 'steps',
-          'footsteps_porch': 'steps', 'footsteps_hall': 'steps', 'doorknob': 'knob', 'light_switch': 'switch',
-          'rain_house': 'rain', 'drive_rain': 'car', 'halverson_car': 'car', 'er_bustle': 'er',
-          'waiting_room': 'waiting', 'ambience_dawn': 'dawn', 'office_3am': 'office', 'phone_connect': 'connect'}
+FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
+          'doorknob': 'knob', 'light_switch': 'switch', 'morning_bus': 'bus9_morning', 'ambience_dawn': 'dawn',
+          'dial_911': 'call', 'siren_far': 'siren'}
 
 
 def _t(a, lines):
@@ -166,7 +157,8 @@ def _span(cn, params):
                                    'ambience_night', 'room_tone', 'room_tone_house', 'burn_barrel', 'bulb', 'dogs_search',
                                    'crowd_parade', 'hospital_room', 'hospital_corridor', 'house_creaks', 'old_clock',
                                    'house_night', 'waiting_room', 'drive_rain', 'halverson_car', 'er_bustle',
-                                   'office_3am', 'rain_house', 'streetlight', 'breath', 'line_hiss'):
+                                   'office_3am', 'rain_house', 'streetlight', 'breath', 'line_hiss',
+                                   'morning_bus', 'bus9_drive', 'bus_idle', 'siren_far', 'suburb_night', 'tape_hiss'):
             return float(p['dur'])
     except (TypeError, ValueError):
         pass
@@ -174,97 +166,64 @@ def _span(cn, params):
 
 
 ROOM = {'house_night': ('house_night', {'fridge': 0.6, 'clock': 0.6, 'creaks': 0.3}, 0.0),
-        'house_1979': ('house_night', {'fridge': 0.3, 'clock': 0.7, 'creaks': 0.2}, -4.0),
         'house_evening': ('house_night', {'fridge': 0.5, 'clock': 0.3, 'creaks': 0.2}, -4.0),
-        'warm_room': ('house_night', {'fridge': 0.4, 'clock': 0.3, 'creaks': 0.1}, -4.0),
-        'er_busy': ('er_bustle', {'monitors': 0.7, 'gurney': 0.5}, 0.0)}
+        'house_dead': ('house_night', {'fridge': 0.0, 'clock': 0.6, 'creaks': 0.4}, 0.0),   # the power is out
+        'morning': ('house_night', {'fridge': 0.5, 'clock': 0.2, 'creaks': 0.0}, -4.0)}
+SPACE_MAP = {'classroom': 'inside'}
 
 
 def picture_pass(out, lines, log):
     """PICTURE: film.py's names onto this film's recipes; what another layer carries is dropped."""
-    def at(a, default=None):
-        try:
-            return MP.resolve(a, lines)
-        except Exception:
-            return default
     res, n0 = [], len(out)
-    pulse = (at('s256', 0.0) - 0.5, at('w270:what', 0.0) + 0.3)      # the ADD pulse event carries counts and clock
-    door6 = at('s216', 0.0)                                           # the living-room door opens on the waiting room
-    office = at('s379', 1e9)
-    rings = sorted(float(c['t']) for c in out if c.get('name') == 'phone_ring')
-    runs, last = [], None                                              # breath_fast runs -> one breathing bed each
-    for c in sorted([c for c in out if c.get('name') == 'breath_fast'], key=lambda c: float(c['t'])):
-        t = float(c['t'])
-        if runs and t - last < 1.6:
-            runs[-1][1] = t
-        else:
-            runs.append([t, t, c.get('space')])
-        last = t
-    gulp_n = 0; dial_seen = False; peel_q = 0
-    for c in out:
+    skips = [float(c['t']) for c in out if c.get('name') == 'tape_skip']
+    last = {}                                             # name -> last kept t (doubled ticks)
+    first_letter = True
+    for c in sorted(out, key=lambda c: float(c.get('t', 0.0)) if isinstance(c.get('t'), (int, float)) else 1e9):
         nm = c.get('name'); p = dict(c.get('params') or {}) if isinstance(c.get('params'), dict) else {}
         try:
             t = float(c['t'])
         except (KeyError, TypeError, ValueError):
             res.append(c); continue
+        if c.get('space') in SPACE_MAP:
+            c = dict(c, space=SPACE_MAP[c['space']])
         why = None
-        if nm == 'breath_fast':
-            run = next((r for r in runs if abs(r[0] - t) < 1e-6), None)
-            if run is None:
-                continue                                  # inside a run: the run's bed plays it
-            d = round(run[1] - run[0] + 1.0, 2)
-            g = -18.0 if run[2] == 'car' else (-14.0 if 820 < t < 870 else -12.0)
-            c = dict(c, name='breath', params={'kind': 'panting', 'dur': d}, gain_db=g,
-                     space='inside' if run[2] in (None, 'car') else run[2] if run[2] != 'close' else 'inside')
-            why = f'Milo breathing fast and deep: one bed of {d} s'
-        elif nm == 'phone_ring':
-            if t >= office - 30.0:                        # the narrator's phone now: the modern ring stays
-                res.append(c); continue
-            nxt = [x for x in rings if x > t + 0.05]
-            gap = (min(nxt) - t) if nxt else 2.0
-            # sound fix round (M1): close rings (the nine in 4 s) are short bursts with air between them, so they count
-            # as nine instead of blurring into one long ring
-            on = round(max(0.3, min(1.2, gap - 0.12)), 2) if gap >= 1.0 else round(max(0.16, 0.5 * gap), 2)
-            c = dict(c, name='landline_ring', params={'n': 1, 'on': on}); why = f'the old landline\'s bell, one ring ({on} s)'
-        elif nm == 'room_tone' and p.get('kind') in ROOM:
+        if nm == 'vhs_glitch' and any(abs(t - s) < 0.15 for s in skips):
+            log.append(f'PIC  vhs_glitch         {t:7.2f} dropped: the tape_skip on this frame plays it'); continue
+        if nm in ('glove_slap_wall', 'neck_ratchet') and t - last.get(nm, -9.0) < 0.6:
+            log.append(f'PIC  {nm:18s} {t:7.2f} dropped: doubled ({t - last[nm]:.2f} s after the last)'); continue
+        last[nm] = t
+        if nm == 'bus_ambience':
+            log.append(f'PIC  bus_ambience       {t:7.2f} dropped: the ADD morning_bus bed carries bus 9\'s mornings')
+            continue
+        if nm == 'room_tone' and p.get('kind') in ROOM:
             rn, extra, g = ROOM[p['kind']]
             q = dict(extra); q['dur'] = p.get('dur', 10.0)
-            if p['kind'] == 'warm_room':                  # home after the ER; the final twist is the office (ADD)
-                q['dur'] = round(max(1.0, office - t), 2)
-            c = dict(c, name=rn, params=q, gain_db=g); why = f'room tone {p["kind"]} -> {rn}'
-        elif nm == 'fluorescent_buzz':
-            d = float(p.get('dur') or 2.0)
-            if d < 5.0:
-                c = dict(c, name='lamp_flicker', params={'dur': d}, gain_db=-6.0); why = 'the tubes stutter on'
-            else:                                         # the bed starts when the door opens on it
-                t1 = t + d; t0 = max(t, door6 + 1.2)
-                c = dict(c, t=round(t0, 3), name='waiting_room', params={'dur': round(t1 - t0, 2), 'flicker': 0.6,
-                         'tv': 0.5, 'buzz': 0.7}, gain_db=0.0, space='waiting')
-                why = f'the waiting room from the door ({t0:.2f}) on'
-        elif nm == 'pulse_count' or (nm == 'clock_tick' and pulse[0] <= t <= pulse[1]):
-            log.append(f'PIC  {nm:18s} {t:7.2f} dropped: the ADD pulse_count carries the counts and the clock'); continue
-        elif nm == 'rain' and p.get('inside_car'):
-            log.append(f'PIC  rain(car)          {t:7.2f} dropped: halverson_car / drive_rain (ADD) carry the car\'s rain')
-            continue
-        elif nm == 'tape_peel':
-            peel_q = min(4, peel_q + 1)
-            c = dict(c, params={'q': peel_q}, space='tight', gain_db=0.0); why = f'strip {peel_q}'
-        elif nm == 'gulp':
-            gulp_n += 1
-            if gulp_n % 2 == 0:
-                continue
-            c = dict(c, name='sip', params={}, gain_db=-8.0, space='close'); why = 'a swallow of water'
-        elif nm == 'dial_beep':
-            if dial_seen:
-                continue
-            dial_seen = True
-            c = dict(c, name='phone_connect', params={}, gain_db=-4.0, space='close'); why = 'Mom dials, it connects'
+            c = dict(c, name=rn, params=q, gain_db=float(c.get('gain_db', 0.0) or 0.0) + g)
+            why = f'room tone {p["kind"]} -> {rn}'
+        elif nm == 'letter_clink':
+            if first_letter:                              # the first letter: the screw backing out, then the tink
+                first_letter = False
+                c = dict(c, t=round(t - 0.75, 3), name='mailbox_unscrew', params={'n': 1}, gain_db=-6.0)
+                why = 'Grandma unscrews the first letter (the tink on the picture\'s frame)'
+            else:
+                c = dict(c, name='spoon_clink', params={'n': 1}, gain_db=-14.0); why = 'a tin letter comes off'
+        elif nm == 'glass_pound':
+            g = float(c.get('gain_db', 0.0) or 0.0) - 4.0
+            c = dict(c, name='knock_door', params={'n': 1, 'force': 0.8}, gain_db=g, space='street')
+            why = 'Grandma\'s fists on bus 9\'s glass doors, across the yard'
+        elif nm == 'tape_rewind':
+            if p.get('dur'):
+                c = dict(c, name='tape_glitch', params={'kind': 'warble', 'dur': p['dur']}); why = 'the tape slips'
+            else:
+                c = dict(c, name='bus_rewind', params={}); why = 'the bus rewinds into the dark'
         elif nm in PICTURE:
             m = PICTURE[nm]
             if m is None:
                 log.append(f'PIC  {nm:18s} {t:7.2f} dropped'); continue
             rn, extra, g, why = m
             q = dict(p); q.update(extra)
+            for k in ('index', 'who', 'step'):
+                q.pop(k, None)
             c = dict(c, name=rn, params=q)
             if g is not None:
                 c['gain_db'] = g

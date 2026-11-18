@@ -18,14 +18,13 @@ sys.path.insert(0, HERE)
 SR = 48000
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 
-# (name, first line, last line): the Doctor film's scenes by narration line (W/align/timeline.json), so the windows
+# (name, first line, last line): the Bus film's scenes by narration line (W/align/timeline.json), so the windows
 # follow any re-edit; each window runs from 1 s before its first line to 1.5 s after its last line's end
-_SC = [('cold_open', 0, 14), ('1979', 15, 35), ('milo_clinic', 36, 57), ('cabinet_rules', 58, 66),
-       ('rule1_call', 67, 90), ('comment_prompt', 91, 104), ('rule2_hold', 104, 124), ('rule3_pen', 124, 146),
-       ('rule4_door', 146, 168), ('rule4_note_match', 168, 186), ('busstop_rule5', 187, 212),
-       ('rule6_waiting', 213, 235), ('rule6_him', 235, 252), ('rule7_pulse', 252, 270), ('questions_tape', 270, 286),
-       ('faces_card', 285, 303), ('carry_car', 303, 330), ('mirror_er', 330, 350), ('er_after', 348, 372),
-       ('twist', 372, 401), ('outro_a', 401, 430), ('outro_b', 430, 455)]
+_SC = [('cold_open', 0, 8), ('tape_1994', 9, 21), ('della_post', 22, 55), ('rules_paper', 56, 58),
+       ('rule1_midnight', 59, 78), ('comment_prompt', 79, 82), ('rule2_rollcall', 83, 121), ('rule3_fake_grandma', 122, 153),
+       ('rule4_hand_dark', 154, 189), ('rule5_hallway', 190, 238), ('rule6_chase', 239, 285),
+       ('rule7_last_stop', 286, 330), ('rule7_climax', 331, 364), ('bell_defeat', 365, 371), ('theo_home', 372, 385),
+       ('morning', 386, 397), ('rule8_outro', 398, 418)]
 
 
 def _scenes():
