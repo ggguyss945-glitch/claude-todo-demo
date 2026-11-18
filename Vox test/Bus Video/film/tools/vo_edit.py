@@ -89,8 +89,12 @@ FIXES = {
     #   "roll" of "practiced roll call." (88.735-88.975: from the r, after the t release of "practiced" (read "Droll");: 135 -> 162 -> 133 Hz, ends before the k closure of "call").
     'and_that_grin': {'pieces': [(39.845, 39.935, 0.0, 0.004, 0.008), (42.050, 42.290, 0.030, 0.006, 0.012),
                                  (313.275, 313.680, 0.040, 0.004, 0.020)]},
-    'calls_roll': {'pieces': [(168.125, 168.290, 0.0, 0.006, 0.010), (613.305, 613.625, 0.020, 0.004, 0.012),
-                              (88.735, 88.990, 0.050, 0.008, 0.015)]},
+    # (18 Nov) "He calls roll." re-spliced: the "he" of "If he" carried the f of "If" ("If he" / "V calls") and the "roll"
+    # of "roll call" its k ("broke" / "Rogue" to Whisper). Now "He" of "He took" (441.095-441.345: a sentence start, cut
+    # in the t closure), "calls" as before, and "roll" of "rolled out" (29.140-29.340: from the r after the d of
+    # "Larkfield" to the start of the d closure, 30 ms fade). Parakeet and Whisper: "He calls roll" at 0.2-0.6 s padding.
+    'calls_roll': {'pieces': [(441.095, 441.345, 0.0, 0.004, 0.015), (613.305, 613.625, 0.020, 0.004, 0.012),
+                              (29.140, 29.340, 0.050, 0.008, 0.030)]},
     # the shouted "HERE!"s start straight on the vowel (no h: Parakeet "Er" / "Ere" / "There", Whisper "Error" / "Eric"):
     # each gets the h of the porch "Here!" (209.968-210.035: 57 ms of breathy noise and 10 ms of its voicing onset,
     # 306 Hz) joined by a 10 ms equal-power crossfade. Theo's "...HERE!" starts on 30 ms of th-like noise (heard
@@ -144,11 +148,12 @@ FIXES = {
     # "Backwards.": after its z the take murmurs at 98 Hz for 60 ms (474.80-474.86: read "and"): the line ends on the z
     'backwards': {'end': 474.800, 'end_fade': 0.020},
     'advice_parents': {'start': 722.488, 'start_fade': 0.004},
-    # Della's last "Brakes, mirrors, names.": the sound island starts at 672.887, after the b's prevoicing (672.84-672.887,
-    # under -60 dB), and the voiced line read "Branks" / "Frank's". One hand-set piece from 672.840 ("She hugs me."
-    # ends at 672.705) to the line's own end: voiced, Parakeet "Breaks mirrors names" and Whisper "breaks mirrors
-    # names" at 0.2-0.6 s padding ("breaks" is the recognisers' spelling of brakes)
-    'brakes_mirrors_end': {'pieces': [(672.840, None, 0.0, 0.006, 0.020)]},
+    # Della's last "Brakes, mirrors, names.": the take runs "Brakes mirrors" together (no comma pause; the b starts out of
+    # digital silence at 672.88) and the voiced line reads "Branks" / "Franks" to Parakeet. Her first "Brakes," (the
+    # brakes_mirrors line, 64.100-64.380, to its comma dip at -49 dB) then 0.12 s (the comma) and this take's "mirrors,
+    # names." from the dip before its m (673.105). Voiced: "Breaks mirrors names" to both at 0.2-0.6 s padding
+    # ("breaks" is the recognisers' spelling of brakes)
+    'brakes_mirrors_end': {'pieces': [(64.100, 64.380, 0.0, 0.004, 0.012), (673.105, None, 0.120, 0.006, 0.020)]},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word

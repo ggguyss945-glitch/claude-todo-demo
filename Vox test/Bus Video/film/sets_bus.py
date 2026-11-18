@@ -119,7 +119,7 @@ def _bcam(name, S, h, eye, x, y, yaw, env=None, note='', room='', pitch=0.0):
     if name not in BU_CAMS: BU_CAMS.append(name)
 
 
-def _lv(spec, seed, t=0.0):
+def _bu_lv(spec, seed, t=0.0):
     return _kfn(spec, seed)(t)
 
 
@@ -1115,7 +1115,7 @@ def bu_bus_seat_pt(b, which='driver'):
     return (P[0], P[2])
 
 
-_bcam('bu_ext_house', 820, 520, BU_G + 1.6, -1.6, -24.0, 4, _env(f=(1.0, 2.6)), "the house from across Larch Street: porch, picture window, bus 9 in the driveway, his bus at the kerb", 'street')
+_bcam('bu_ext_house', 820, 470, BU_G + 3.0, -1.6, -24.0, 4, _env(f=(1.0, 2.6)), "the house from across Larch Street: porch, picture window, bus 9 in the driveway, his bus at the kerb", 'street')
 _bcam('bu_ext_street', 900, 470, 1.5, -3.6, -1.5, 188, _env(f=(1.0, 2.2)), 'from the porch down the walk: the lawn, our mailbox, his bus at the kerb under the flickering light (the tape-skips)', 'street')
 _bcam('bu_ext_curb', 960, 520, BU_G + 1.35, -1.0, -8.6, -150, _env(), 'across the lawn at his bus door (folding open: he unfolds out of it)', 'street')
 _bcam('bu_ext_mailbox', 1500, 520, BU_G + 1.25, -2.0, -9.6, -158, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'close on our mailbox (the letters on / unscrewed)', 'street')
@@ -1244,7 +1244,7 @@ def _bu_photo(p_, x, y, w, h, kind='bus', frame='#5a3a20'):
     p_.linear(r, x - w / 2, y - h / 2, x + w / 2, y + h / 2, [(0, '#ffffff', 50), (0.4, '#ffffff', 0), (1, '#ffffff', 0)])
 
 
-def _rug_art(x0, y1, cx, cy, rx, ry, cols):
+def _bu_rug_art(x0, y1, cx, cy, rx, ry, cols):
     def art(p_, W, H):
         u, w = floor_uv(x0, y1, cx, cy)
         _rug_braided(p_, u, w, rx * 100, ry * 100, cols)
@@ -1301,7 +1301,7 @@ def _liv_cfg(o):
     holes = {'west': [(-3.2, BU_LOPEN[0], -3.2, BU_LOPEN[1], 0.0, BU_LOPEN[2])], 'back': [(BU_KDOOR[0], 5.8, BU_KDOOR[1], 5.8, 0.0, BU_KDOOR[2])]}
     wins = {'front': [(BU_PWIN[0], 0.0, BU_PWIN[1], 0.0, BU_PWIN[2], BU_PWIN[3], (3, 2))]}
     runs = _rect_runs(BU_LIV, holes, wins, {'east': east, 'back': back, 'west': west})
-    rug = _rug_art(BU_LIV[0], BU_LIV[3], -0.6, 3.5, 1.5, 1.0, ('#6e3a2c', '#9a7a52', '#3a4a5a', '#b8a888', '#7a4a34', '#5a4a3a', '#8a6a4a'))
+    rug = _bu_rug_art(BU_LIV[0], BU_LIV[3], -0.6, 3.5, 1.5, 1.0, ('#6e3a2c', '#9a7a52', '#3a4a5a', '#b8a888', '#7a4a34', '#5a4a3a', '#8a6a4a'))
 
     def pieces(o):
         parts = couch_parts(BU_COUCH, '#8a4a32', '#5a2e20', afghan=True)
@@ -1760,7 +1760,7 @@ def _gran_cfg(o):
     wins = {'west': [(-5.6, BU_GWIN[0], -5.6, BU_GWIN[1], BU_GWIN[2], BU_GWIN[3], (2, 2))],
             'front': [(BU_GFWIN[0], 0.0, BU_GFWIN[1], 0.0, BU_GFWIN[2], BU_GFWIN[3], (2, 2))]}
     runs = _rect_runs(BU_GRAN, holes, wins, {'east': east, 'front': front})
-    rug = _rug_art(BU_GRAN[0], BU_GRAN[3], -4.2, 1.6, 0.8, 0.55, ('#7a4a5a', '#c8a888', '#5a6a7a', '#e8d8c0', '#8a5a4a'))
+    rug = _bu_rug_art(BU_GRAN[0], BU_GRAN[3], -4.2, 1.6, 0.8, 0.55, ('#7a4a5a', '#c8a888', '#5a6a7a', '#e8d8c0', '#8a5a4a'))
 
     def pieces(o):
         bp = bu_bed_parts(BU_GBED, U, o.get('bed', 'made'), '#6a4428', ('#8a4a5a', '#e8d8b0', '#5a6a8a', '#c8a888', '#7a8a5a'), '#8a4a5a')
@@ -1874,7 +1874,7 @@ def _sami_cfg(o):
     holes = {'west': [(-3.4, BU_SDOOR[0], -3.4, BU_SDOOR[1], 0.0, BU_SDOOR[2])]}
     wins = {'back': [(BU_SWIN[0], 9.6, BU_SWIN[1], 9.6, BU_SWIN[2], BU_SWIN[3], (2, 2))]}
     runs = _rect_runs(BU_SAMI, holes, wins, {'east': east, 'front': south})
-    rug = _rug_art(BU_SAMI[0], BU_SAMI[3], -1.4, 7.4, 0.9, 0.7, ('#4aa06a', '#e8d870', '#4a8ad8', '#f4f0e0'))
+    rug = _bu_rug_art(BU_SAMI[0], BU_SAMI[3], -1.4, 7.4, 0.9, 0.7, ('#4aa06a', '#e8d870', '#4a8ad8', '#f4f0e0'))
 
     def pieces(o):
         bp = bu_bed_parts(BU_SBED, U, o.get('bed', 'turned'), '#e8e4dc', quilt_c='#3a6a9a', dino=True)
@@ -2226,8 +2226,8 @@ class BuBusInterior(Room):
         P.append(Piece('driver_seat', (-0.65, 0.5, 0.65), driver, occupant=[(-0.65, 0.62)], front=[Part(fn=driver, ref=(-0.65, 0.5, 0.65))], block=_r4p((-0.9, -0.4, 0.37, 0.96))))
         P.append(Piece('dash', (-0.2, 0.8, -0.05), lambda pen, v: _bus_dash(pen, v, o), block=_r4p((-BU_IW, BU_IW, -0.2, 0.1))))
         P.append(Piece('wheel', (-0.65, 1.0, 0.15), lambda pen, v: _bus_wheel(pen, v)))
-        P.append(Piece('stanchion', (0.32, 1.0, 1.05), lambda pen, v: (pen.seg(v.p(0.32, 0.0, 1.05), v.p(0.32, BU_IWALL + 0.2, 1.05), max(1.5, 0.035 * v.s(0.32, 1.05)),
-                                                                                lit('#c8c8c0', (0.32, 1.0, 1.05), None)) if v.d(0.32, 1.05) > 0.25 else None)))
+        P.append(Piece('stanchion', (0.52, 1.0, 0.98), lambda pen, v: (pen.seg(v.p(0.52, 0.0, 0.98), v.p(0.52, BU_IWALL + 0.2, 0.98), max(1.5, 0.035 * v.s(0.52, 0.98)),
+                                                                                lit('#a8a8a0', (0.52, 1.0, 0.98), None)) if v.d(0.52, 0.98) > 0.6 else None)))
         dk = o.get('door', 0.0)
         if not callable(dk):
             P.append(Piece('doors', (BU_IW, 0.6, 0.4), lambda pen, v: _bus_doors_in(pen, v, o, _static(dk))))
@@ -2438,8 +2438,8 @@ def bu_bus_in(view='aisle', kind='his', tod='night', **kw):
     amb, steady, var = main.lights(o)
     if callable(o.get('door')) or o.get('broom'):
         dk = o['door']
-        dyn.append(live_layer('doors', v, (BU_IW, 0.6, 0.4), lambda pen, v_, t: _bus_doors_in(pen, v_, o, dk(t) if callable(dk) else dk, _lv(o.get('broom', 0.0), 381, t),
-                                                                                           _lv(o.get('bend', 0.0), 382, t), _lv(o.get('crack', 0.0), 383, t)), amb, steady, var))
+        dyn.append(live_layer('doors', v, (BU_IW, 0.6, 0.4), lambda pen, v_, t: _bus_doors_in(pen, v_, o, dk(t) if callable(dk) else dk, _bu_lv(o.get('broom', 0.0), 381, t),
+                                                                                           _bu_lv(o.get('bend', 0.0), 382, t), _bu_lv(o.get('crack', 0.0), 383, t)), amb, steady, var))
     drive = o.get('drive', 0.0)
     outside = _bus_outside(o)
     if drive or o.get('his_ahead') is not None or view in ('windshield', 'cab', 'back_window'):
@@ -2447,7 +2447,7 @@ def bu_bus_in(view='aisle', kind='his', tod='night', **kw):
             if tod == 'morning':
                 return
             pen.fill(rect(-800, -600, 3600, 2400), '#040508')
-            bu_road_scroll(pen, v, t, drive, BU_IG, o.get('his_ahead'), 'his', 'ahead', 0.0 if o.get('his_dark', True) else 1.0, _lv(o.get('brake', 0.0), 384, t))
+            bu_road_scroll(pen, v, t, drive, BU_IG, o.get('his_ahead'), 'his', 'ahead', 0.0 if o.get('his_dark', True) else 1.0, _bu_lv(o.get('brake', 0.0), 384, t))
         lay = Layer(30.0, road, 'road', blur=None); lay.order = ORDER_OUT - 1.0
         dyn.append(lay)
     sp = build_view('bu_bus_' + view, v, main, o, outside=outside, grade=grade, dyn=dyn)
@@ -2484,8 +2484,8 @@ _bcam('bu_bus_seat21', 1050, 540, 1.25, 0.35, 8.4, -32, _env(), 'seat 21 at the 
 _bcam('bu_bus_steps', 900, 380, 1.5, 0.05, 0.35, 92, _env(), 'from the top of the steps down and out of the door', 'bus', pitch=24.0)
 _bcam('bu_bus_doors', 1000, 520, 1.05, 0.05, 0.42, 90, _env(), 'the folding doors from inside', 'bus')
 _bcam('bu_bus_driver', 900, 520, 1.45, 0.42, 2.4, -152, _env(), "the driver's seat and the steps from the aisle", 'bus')
-_bcam('bu_bus_cab', 800, 520, 1.42, 0.35, 1.65, -165, _env(), "bus 9 driving: behind Grandma at the wheel, the windshield, the road", 'bus')
-_bcam('bu_bus_seat1', 1000, 540, 1.18, 0.85, 1.25, -112, _env(), 'Mina belted in seat 1, Grandma at the wheel beyond', 'bus')
+_bcam('bu_bus_cab', 800, 520, 1.42, 0.05, 1.75, -172, _env(), "bus 9 driving: behind Grandma at the wheel, the windshield, the road", 'bus')
+_bcam('bu_bus_seat1', 950, 540, 1.2, 0.95, 2.05, -122, _env(), 'Mina belted in seat 1, Grandma at the wheel beyond', 'bus')
 _bcam('bu_bus_radio', 1500, 540, 1.3, -0.15, 0.5, -170, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'close on the dash radio', 'bus')
 _bcam('bu_bus_windshield', 820, 500, 1.45, -0.62, 0.5, 180, _env(), "the driver's POV through the windshield: the road, his bus ahead", 'bus')
 _bcam('bu_bus_back_window', 1100, 520, 1.2, 0.0, 9.7, 0, _env(), 'out of the rear window (morning: the far tall figure at the last stop)', 'bus')
@@ -2547,7 +2547,7 @@ class BuRoad(Room):
     def glows(self, v, o):
         hp = o.get('his_pos', (0.0, -24.0))
         kw = _kfn(o.get('his_win', 0.0), 392); kb = _kfn(o.get('brake', 0.0), 393)
-        G = [('bus9_emit', (0.0, 1.5, 0.0), lambda pen, t: bu_bus_emit(pen, v, 0.0, 0.0, 0.0, 'bus9', 0.0, _lv(o.get('heads9', 1.0), 391, t), 0.0, 0.8, 0.0, G=0.0))]
+        G = [('bus9_emit', (0.0, 1.5, 0.0), lambda pen, t: bu_bus_emit(pen, v, 0.0, 0.0, 0.0, 'bus9', 0.0, _bu_lv(o.get('heads9', 1.0), 391, t), 0.0, 0.8, 0.0, G=0.0))]
         if not callable(hp):
             G.append(('his_emit', (hp[0], 1.5, hp[1]), lambda pen, t: bu_bus_emit(pen, v, hp[0], hp[1], 0.0, 'his', kw(t), 0.0, 0.0, 0.0, kb(t), G=0.0)))
         return G
@@ -2573,7 +2573,7 @@ def bu_road(view='side', his_pos=(0.0, -24.0), his_win=0.0, brake=0.0, speed=16.
     main = BuRoad()
     def ground(pen, t):
         off = (t * speed) % 9.0
-        with lighting('#1e2440', [Lamp(0.0, 0.8, -9.0, 14.0, '#fff2d6', 1.6 * _lv(heads9, 391, t), (1.0, 1.0, 0.5), fall=1.3)]):
+        with lighting('#1e2440', [Lamp(0.0, 0.8, -9.0, 14.0, '#fff2d6', 1.6 * _bu_lv(heads9, 391, t), (1.0, 1.0, 0.5), fall=1.3)]):
             draw_face(pen, v, floor_face(-80.0, 80.0, -300.0, 300.0, -0.02), lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.6, 'overlay', 5.0), '#141c18', ao=False, line=False)
             draw_face(pen, v, floor_face(-5.4, 2.1, -300.0, 300.0, 0.0), lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'asphalt', 0.6, 'overlay', 1.6), '#24262c', ao=False, line=False)
         for k in range(-30, 30):
@@ -2595,7 +2595,7 @@ def bu_road(view='side', his_pos=(0.0, -24.0), his_win=0.0, brake=0.0, speed=16.
         def hb(pen, v_, t):
             x, y = his_pos(t)
             draw_parts(pen, v_, bu_bus_parts(x, y, 0.0, 'his', 0.0))
-            bu_bus_emit(pen, v_, x, y, 0.0, 'his', _lv(his_win, 392, t), 0.0, 0.0, 0.0, _lv(brake, 393, t), G=0.0)
+            bu_bus_emit(pen, v_, x, y, 0.0, 'his', _bu_lv(his_win, 392, t), 0.0, 0.0, 0.0, _bu_lv(brake, 393, t), G=0.0)
         hp0 = his_pos(0.0)
         dyn.append(live_layer('his_bus', v, (hp0[0], 1.5, hp0[1]), hb, amb, steady, var))
     sp = build_view('bu_road_' + view, v, main, o, grade='bu_road', dyn=dyn)
@@ -2780,8 +2780,8 @@ def bu_school(view='wide', clock=(2, 57), his=True, his_door=1.0, his_win=1.0, h
     dyn = [live_layer('flag', v, (BU_SCH_FLAG[0], 4.0, BU_SCH_FLAG[1] + 0.01), lambda pen, v_, t: _flagpole(pen, v_, t, wind), amb, steady, var)]
     if his and callable(his_door):
         b = BU_SCH_HIS; q = bu_bus_door_quad(b[0], b[1], b[2], 0.0)
-        dyn.append(live_layer('his_door', v, q[1], lambda pen, v_, t: bu_bus_door(pen, v_, b[0], b[1], b[2], 'his', his_door(t), 0.0, broom=_lv(broom9, 511, t), bend=_lv(bend, 512, t),
-                                                                              crack=_lv(crack, 513, t)), amb, steady, var, order=v.d(q[1][0], q[1][2]) - 0.05))
+        dyn.append(live_layer('his_door', v, q[1], lambda pen, v_, t: bu_bus_door(pen, v_, b[0], b[1], b[2], 'his', his_door(t), 0.0, broom=_bu_lv(broom9, 511, t), bend=_bu_lv(bend, 512, t),
+                                                                              crack=_bu_lv(crack, 513, t)), amb, steady, var, order=v.d(q[1][0], q[1][2]) - 0.05))
     if police:
         def pol(pen, t):
             for k in range(3):
@@ -3127,7 +3127,7 @@ def _chalkboard(pen, x, y, w, h, kid=True):
         btext(pen, s_, bx + bw / 2, yy, 'kid', bh * sz, '#f4f2ea', 240, 'center'); yy += bh * (sz + 0.06)
 
 
-def _ins_post(pen, t, show=2, hl=None, **kw):
+def _bui_post(pen, t, show=2, hl=None, **kw):
     _ibg_b(pen, '#1a1820', '#0a0a10')
     scr = _phone_frame(pen)
     x0, y0, w, h = -262, -532, 524, 1064
@@ -3154,7 +3154,7 @@ def _ins_post(pen, t, show=2, hl=None, **kw):
     pen.cv.restore(); pen.cv.restore()
 
 
-def _ins_comment(pen, t, **kw):
+def _bui_comment(pen, t, **kw):
     _ibg_b(pen, '#f4f2ee', None, 60)
     cx, cy = 560, 540
     pen.fill(oval(cx, cy, 150), '#6a6a6a')
@@ -3169,7 +3169,7 @@ def _ins_comment(pen, t, **kw):
     btext(pen, 'Great smile!', 780, 600, 'sans', 92, '#1a1a1a', 255)
 
 
-def _ins_phone_call(pen, t, state='nobars', **kw):
+def _bui_phone_call(pen, t, state='nobars', **kw):
     _ibg_b(pen, '#0e1018', '#05060a')
     scr = _phone_frame(pen, tilt=2.0)
     x0, y0, w, h = -262, -532, 524, 1064
@@ -3189,7 +3189,7 @@ def _ins_phone_call(pen, t, state='nobars', **kw):
     pen.cv.restore(); pen.cv.restore()
 
 
-def _ins_rules(pen, t, show=7, hl=0, eighth=False, **kw):
+def _bui_rules(pen, t, show=7, hl=0, eighth=False, **kw):
     """The rules taped inside the front door (Grandma's print on lined paper; rule 8 in Mina's hand)."""
     _ibg_b(pen, BU_PAL['door'], _darken(BU_PAL['door'], 0.3), 140)
     pen.texture(rect(*_IBGB), 'wood', 0.35, 'overlay', 1.2, 90)
@@ -3220,7 +3220,7 @@ def _ins_rules(pen, t, show=7, hl=0, eighth=False, **kw):
     pen.cv.restore()
 
 
-def _ins_ticket(pen, t, slide=1.0, bg='floor', **kw):
+def _bui_ticket(pen, t, slide=1.0, bg='floor', **kw):
     """The yellow punched ticket: SAMI. SEAT 4. LAST STOP 3 A.M. (slide 0..1: under the door onto the boards)."""
     if bg == 'floor':
         _ibg_b(pen, '#6a4428', '#3a2414', 120)
@@ -3244,7 +3244,7 @@ def _ins_ticket(pen, t, slide=1.0, bg='floor', **kw):
     pen.cv.restore()
 
 
-def _ins_walkie(pen, t, talk=0.0, bg='couch', **kw):
+def _bui_walkie(pen, t, talk=0.0, bg='couch', **kw):
     _ibg_b(pen, '#7a3a28' if bg == 'couch' else '#3a3a3e', '#3a1a10', 150)
     pen.texture(rect(*_IBGB), 'fabric', 0.7, 'overlay', 1.2)
     pen.cv.save(); pen.cv.translate(960, 560); pen.cv.rotate(-18)
@@ -3261,7 +3261,7 @@ def _ins_walkie(pen, t, talk=0.0, bg='couch', **kw):
     pen.cv.restore()
 
 
-def _ins_punch(pen, t, click=0.0, **kw):
+def _bui_punch(pen, t, click=0.0, **kw):
     _ibg_b(pen, '#3a2410', '#120a04', 160)
     pen.cv.save(); pen.cv.translate(960, 560); pen.cv.rotate(-12)
     a = 10 * click
@@ -3280,7 +3280,7 @@ BU_CLIP_NAMES = [('Kayla R.', 3, True), ('Jordan P.', 7, True), ('Lucas M.', 2, 
                  ('Theo', 9, False), ('Maddie K.', 4, True), ('Sam W.', 6, True), ('Priya D.', 8, True), ('Eli G.', 3, True), ('Rosa V.', 2, True)]
 
 
-def _ins_clipboard(pen, t, page='list', write=1.0, **kw):
+def _bui_clipboard(pen, t, page='list', write=1.0, **kw):
     """His clipboard: page 'list' (names from every bus in Larkfield, each 'Sat alone', most crossed out; Theo's not) |
     'last' (today's date and one name, an unreadable scrawl: her name is never shown or said)."""
     _ibg_b(pen, '#1a1410', '#0a0806', 160)
@@ -3309,7 +3309,7 @@ def _ins_clipboard(pen, t, page='list', write=1.0, **kw):
     pen.cv.restore()
 
 
-def _ins_flashlight(pen, t, on=1.0, **kw):
+def _bui_flashlight(pen, t, on=1.0, **kw):
     """Down in the driveway: a flashlight blinking inside bus 9's dark cab (seen through its windshield)."""
     _ibg_b(pen, '#05070c', None, 80)
     pen.fill(rrect(380, 220, 1160, 560, 30), '#0a0e16'); pen.line(rrect(380, 220, 1160, 560, 30), 10, '#c8a020')
@@ -3321,7 +3321,7 @@ def _ins_flashlight(pen, t, on=1.0, **kw):
     pen.fill(rect(-520, 780, 2960, 400), '#c8a020'); btext(pen, 'LARKFIELD SCHOOL DISTRICT', 960, 900, 'head', 70, '#1a1a1a', 220, 'center')
 
 
-def _ins_clock(pen, t, time=(2, 57), **kw):
+def _bui_clock(pen, t, time=(2, 57), **kw):
     _ibg_b(pen, '#4a2a22', '#1a0e0a', 160)
     pat(pen, 1920, 1080, 'brick', '#1a0c08', 120)
     tm = time(t) if callable(time) else time
@@ -3342,7 +3342,7 @@ def _ins_clock(pen, t, time=(2, 57), **kw):
     pen.linear(oval(cx, cy, R), cx - R, cy - R, cx + R, cy + R, [(0, '#ffffff', 70), (0.4, '#ffffff', 0), (1, '#ffffff', 0)])
 
 
-def _ins_backpack(pen, t, side='front', **kw):
+def _bui_backpack(pen, t, side='front', **kw):
     _ibg_b(pen, '#2a2420', '#120e0c', 150)
     pen.fill(rect(-520, 760, 2960, 600), '#c8bca0')
     pen.cv.save(); pen.cv.translate(960, 500)
@@ -3362,7 +3362,7 @@ def _ins_backpack(pen, t, side='front', **kw):
     pen.cv.restore()
 
 
-def _ins_tail(pen, t, bg='asphalt', **kw):
+def _bui_tail(pen, t, bg='asphalt', **kw):
     _ibg_b(pen, '#26282c', '#0e0f12', 160)
     pen.texture(rect(*_IBGB), 'asphalt', 0.7, 'overlay', 2.0)
     pen.cv.save(); pen.cv.translate(960, 560); pen.cv.rotate(-8)
@@ -3377,7 +3377,7 @@ def _ins_tail(pen, t, bg='asphalt', **kw):
     pen.cv.restore()
 
 
-def _ins_mailbox(pen, t, letters=1.0, **kw):
+def _bui_mailbox(pen, t, letters=1.0, **kw):
     _ibg_b(pen, '#0c1018', '#05070c', 120)
     pen.fill(rrect(160, 300, 1600, 520, 40), '#1e2226'); pen.texture(rrect(160, 300, 1600, 520, 40), 'grunge', 0.5, 'overlay', 1.5); pen.line(rrect(160, 300, 1600, 520, 40), 5)
     n_on = clamp(letters) * len(BU_NAME)
@@ -3393,27 +3393,27 @@ def _ins_mailbox(pen, t, letters=1.0, **kw):
     pen.glow(1500, 200, 600, BU_SODIUM, 60)
 
 
-def _ins_chalkboard(pen, t, **kw):
+def _bui_chalkboard(pen, t, **kw):
     _ibg_b(pen, '#1a1a1a', None, 0)
     _chalkboard(pen, 0, 0, 1920, 1080)
 
 
 BU_INSERTS = {
-    'post': (_ins_post, 'bu_ins', "Mina's post: the first-day chalkboard photo, 41 likes, the faceless comment 'Great smile!' (show 0..2, hl 'comment')"),
-    'comment': (_ins_comment, 'bu_ins', "the comment close: the crooked-yellow-hat avatar, 'Great smile!'"),
-    'nobars': (lambda pen, t, **kw: _ins_phone_call(pen, t, 'nobars', **kw), 'bu_ins', '911: Call Failed, No bars'),
-    'call911': (lambda pen, t, **kw: _ins_phone_call(pen, t, 'call', **kw), 'bu_ins', "the 911 call connected (Grandma's phone, bars back)"),
-    'rules': (_ins_rules, 'bu_ins', 'the seven rules taped inside the door (show n, hl k, eighth: rule 8 in Mina\'s hand)'),
-    'ticket': (_ins_ticket, 'bu_ins_amber', 'the yellow ticket punched through: SAMI. SEAT 4. LAST STOP 3 A.M. (slide 0..1 under the door)'),
-    'walkie': (_ins_walkie, 'bu_ins', "Mina's walkie on the couch cushion (talk 0..1: the red LED)"),
-    'punch': (_ins_punch, 'bu_ins_amber', 'his chrome ticket punch (click 0..1)'),
-    'clipboard': (_ins_clipboard, 'bu_ins_amber', "his clipboard: page 'list' (Sat alone, crossed out; Theo not) | 'last' (today's date, one unreadable name; write 0..1)"),
-    'flashlight': (_ins_flashlight, 'bu_ins', "a flashlight blinking in bus 9's dark cab (on 0..1 or f(t))"),
-    'clock': (_ins_clock, 'bu_ins_amber', 'the school clock close (time=(h, m[, s]) or f(t))'),
-    'backpack': (_ins_backpack, 'bu_ins', "Sami's dinosaur backpack: side 'front' (SAMI) | 'back' (turned to the wall)"),
-    'tail': (_ins_tail, 'bu_ins_amber', 'the torn half of the dinosaur tail on the asphalt'),
-    'mailbox': (_ins_mailbox, 'bu_ins', 'the mailbox letters (letters 0..1: being unscrewed)'),
-    'chalkboard': (_ins_chalkboard, 'bu_ins', 'the first-day chalkboard photo full frame'),
+    'post': (_bui_post, 'bu_ins', "Mina's post: the first-day chalkboard photo, 41 likes, the faceless comment 'Great smile!' (show 0..2, hl 'comment')"),
+    'comment': (_bui_comment, 'bu_ins', "the comment close: the crooked-yellow-hat avatar, 'Great smile!'"),
+    'nobars': (lambda pen, t, **kw: _bui_phone_call(pen, t, 'nobars', **kw), 'bu_ins', '911: Call Failed, No bars'),
+    'call911': (lambda pen, t, **kw: _bui_phone_call(pen, t, 'call', **kw), 'bu_ins', "the 911 call connected (Grandma's phone, bars back)"),
+    'rules': (_bui_rules, 'bu_ins', 'the seven rules taped inside the door (show n, hl k, eighth: rule 8 in Mina\'s hand)'),
+    'ticket': (_bui_ticket, 'bu_ins_amber', 'the yellow ticket punched through: SAMI. SEAT 4. LAST STOP 3 A.M. (slide 0..1 under the door)'),
+    'walkie': (_bui_walkie, 'bu_ins', "Mina's walkie on the couch cushion (talk 0..1: the red LED)"),
+    'punch': (_bui_punch, 'bu_ins_amber', 'his chrome ticket punch (click 0..1)'),
+    'clipboard': (_bui_clipboard, 'bu_ins_amber', "his clipboard: page 'list' (Sat alone, crossed out; Theo not) | 'last' (today's date, one unreadable name; write 0..1)"),
+    'flashlight': (_bui_flashlight, 'bu_ins', "a flashlight blinking in bus 9's dark cab (on 0..1 or f(t))"),
+    'clock': (_bui_clock, 'bu_ins_amber', 'the school clock close (time=(h, m[, s]) or f(t))'),
+    'backpack': (_bui_backpack, 'bu_ins', "Sami's dinosaur backpack: side 'front' (SAMI) | 'back' (turned to the wall)"),
+    'tail': (_bui_tail, 'bu_ins_amber', 'the torn half of the dinosaur tail on the asphalt'),
+    'mailbox': (_bui_mailbox, 'bu_ins', 'the mailbox letters (letters 0..1: being unscrewed)'),
+    'chalkboard': (_bui_chalkboard, 'bu_ins', 'the first-day chalkboard photo full frame'),
 }
 
 
