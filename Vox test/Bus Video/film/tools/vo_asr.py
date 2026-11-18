@@ -9,7 +9,7 @@ Writes {'words': [[w, t0, t1], ...], 'chunks': [[lo, hi, text], ...], 'sr_in': .
 import json, os, re, sys
 import numpy as np, soundfile as sf, soxr
 
-MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
+MODELS = os.environ.get("VO_MODELS", "/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models")
 IN, OUT = sys.argv[1], sys.argv[2]
 PK = sys.argv[3] if len(sys.argv) > 3 else os.environ.get('PARAKEET_DIR', os.path.join(MODELS, 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8'))
 VAD = os.path.join(os.path.dirname(PK.rstrip('/')), 'vad.onnx')
