@@ -11,7 +11,9 @@ everything as `import characters as CH`. The older casts are unchanged; this fil
   standing / bent / under a ceiling; `lean_to` (grin 28 cm from Mina's eyes); the crossing-guard hold (11 px); red
   pixels 0.005 % (the STOP pin only); Mina's foot onto the step.
 - **Sheets:** `python3 tools/cast_sheets.py [names]` -> `_work/cast/`: `ws_turn`, `ws_mood` (beside the owner's refs),
-  `ws_limits` (every hard limit, measured), `ws_states`, `ws_head`, `lineup`, `turn_family`, `turn_others`, `faces_mina`,
+  `ws_limits` (every hard limit, measured), `ws_states`, `ws_head`, `ws_creepy` (doorframe peek with half a face and one
+  glove, peephole fisheye, frosted glass, amber up-light, near darkness, far silhouette in a bus door, the 1994 TV, down
+  and down), `lineup`, `turn_family`, `turn_others`, `faces_mina`,
   `faces_sami`, `faces_della`, `faces_others`, `props`, `props2`.
 - **Acting clips:** `python3 tools/cast_clips.py [names] [--strip-only]` -> `_work/cast/clips/<name>.mp4` + `_strip.jpg`
   (44 clips, 960x540, 60 fps); `clips.json` holds sound events and the contact report. Scenery there is a stand-in.
@@ -19,7 +21,7 @@ everything as `import characters as CH`. The older casts are unchanged; this fil
 ## Who's who (draw height = `CH.height_px(who, px_per_m)`)
 | id | look | notes |
 |---|---|---|
-| `whistle` | **MISTER WHISTLESTOP** (original; the bible's spec). 2.44 m to the crown, legs 55 %, narrow torso, arms to the knees; a mascot head (1/7 of his height) sitting crooked: off-white matted mask yellowed and stained at the edges, grey-brown tabby back and ears, a TICKET-PUNCH HOLE through his left ear (a real hole), painted eyes with tiny black pupils (his left one higher; no lids, never blink), THE GRIN: too wide, past the cheeks, a flat row of too many painted teeth (never moves). A 92 cm stovepipe in faded school-bus yellow with TWO helical black hazard bands (diagonal from every side), dented halfway, ragged brim, leaning 12 deg to his left. Mustard driver jacket (short sleeves: tabby wrists; oval WHISTLESTOP patch, brass buttons), BLACK bow tie with a red STOP-sign pin, silver whistle on an orange lanyard, white gloves with four segments per finger, too-short trousers, long worn shoes, a thin tabby tail hanging straight. | Own 3D rig in cm (`_ws_rig`), any yaw, `ws_elev` for low angles. `whistle94` = the 1994 host: clean bright colours, hat nearly upright. Never walks, never lip-syncs. |
+| `whistle` | **MISTER WHISTLESTOP** (original; the bible's spec, head redesigned 18 Nov to read as a creepy furry CAT mascot). 2.44 m to the crown, legs 55 %, narrow torso, arms to the knees, a predator's forward hunch (rounded shoulders, neck pushed forward, head tilted 7 deg). THE HEAD: a big furry cat-mascot costume head, about 1/5 of his height (41 cm crown to chin, 47 cm across the cheeks, ~55 cm with the fur): a cat skull with broad flaring CHEEK RUFFS (jagged fur tufts anchored in 3D, so they never crawl when he turns), tall pointed ears with tip tufts and dusty pink-grey insides (a TICKET-PUNCH HOLE through the left one), a tabby crown with dark stripes running down the forehead into the off-white matted face (yellowed, stained edges), layered cheek fur, fur strokes everywhere; a MUZZLE: two puffy whisker pads with follicle dots, a small dark triangular cat nose, long pale whiskers with a dark edge (two bent, one snapped); painted almond CAT EYES (sickly yellow, thick dark rims flicked up, tiny pinprick pupils, his left one higher, a hard glint, no lids, never blink); THE GRIN: a cat's mouth stretched from under the whisker pads up into the cheeks, dark inside, a flat row of too many white teeth with small canines and a short lower row, corners dug into the cheeks (never moves; slips out of register only at the defeat). Off-white chest ruff under the bow tie, tabby fur tufts at the wrists, a furry tabby tail hanging straight. A 92 cm stovepipe in faded school-bus yellow with TWO helical black hazard bands (diagonal from every side), dented halfway, ragged brim, leaning 12 deg to his left. Mustard driver jacket (short sleeves; oval WHISTLESTOP patch, brass buttons), BLACK bow tie with a red STOP-sign pin, silver whistle on an orange lanyard, white gloves with four segments per finger, too-short trousers, long worn shoes. | Own 3D rig in cm (`_ws_rig`), any yaw, `ws_elev` for low angles. `whistle94` = the 1994 host: clean bright colours, hat nearly upright. Never walks, never lip-syncs. |
 | `mina` / `mina_bare` | **Mina, 13** (narrator): dark low ponytail, brown eyes, oversized grey-green hoodie over plum pajama bottoms, socks (`_bare`: barefoot for the chase). | fear, hush_fear, resolve, guilt, kind_ask, tempted, terrified_call, relief, tender. |
 | `sami` / `sami_torn` | **Sami, 6**: round face, gap-toothed proud grin, green dinosaur pajamas with a spiked hood and a tail to the floor (`_torn`: half the tail ripped off, frayed). Props `rex`, `walkie`, `dino_pack`. | proud_grin, shout_here ("HERE!"), sleepy, dazed, cry. |
 | `della` | **Grandma Della, 63**: warm brown skin, grey curls under a burgundy knit cap, reading glasses on a cord, navy driver jacket open over a cream sweater, white DELLA name tape. Props `keys`, `maglite`, `cell`, `broom`. | warm, calm_firm, set_jaw, grim_drive, shout, tender, whisper. |
@@ -51,6 +53,9 @@ a.say([(t0, t1, text)]) / a.talk(...)      # head bob only: the grin never moves
 a.defeat(t0)                               # grin slips out of register, tracking tears, rewinds away ('tape_warble', 'tape_rewind')
 a.look_at(t0, target, snap=True)           # painted eyes: the head turns (slowly, or one hard tick)
 ```
+Light keys he understands (the `light` dict of `CH.draw` / `draw_bust`): `rim`, `rim_a`, `side`; `under` + `under_a`
+(lit from below: a phone, the dash, sodium amber); `dark` 0..1 (near darkness: the figure sinks into the dark and only
+the painted eyes and the teeth catch light; `dark=1` = a black silhouette with glinting eyes and grin).
 Points: `a.where(t, part)` with 'head', 'eyes', 'mouth'/'grin', 'chin', 'crown', 'hat_top', 'chest', 'hand_l/_r',
 'tips_l/_r', 'wrist_*', 'elbow_*', 'shoulder_*', 'knee_*', 'foot_*'. Close-ups: `CH.draw_bust(pen, 'whistle', ...)`.
 Props stay in the holding glove (`hl_prop` / `hr_prop`: 'ws_clipboard', 'ws_clipboard_new', 'walkie', 'ticket_y',
@@ -86,3 +91,9 @@ step and back: 'step_touch', 'step_off'), `hug_prop(t0, prop)` (Rex, the backpac
 - Front views read his bend by foreshortening only; stage "bent double" at 3/4 (as `ws_hallway_bent`).
 - Several props are small at wide framings (whistle, walkie, ticket): cut to an insert for "my walkie", the ticket, the punch.
 - The defeat's grin slip reads best in a close-up (`ws_head` slip cells); in wides it is the tears and the fade.
+- The head is bigger now (1/5): framings made for the old 1/7 head may need a little more headroom; `CAST['whistle']['hh']`
+  is 200 body units, so `draw_bust` scales are smaller for the same `scale` value.
+- In a near-profile, his near ear is drawn over the hat crown (it is nearer the lens); from far away the ears and ruffs
+  merge into the head silhouette (the hat and the long body carry the far read).
+- Peephole / frosted glass / doorframe-peek treatments in `ws_creepy` are sheet comps (tools/cast_sheets.py `_peek`,
+  fisheye remap, blur); the sets team owns the final versions.

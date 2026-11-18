@@ -312,15 +312,134 @@ DECISIONS = {
 }
 
 
+# ------------------------------------------------------------------------------------------------ the Bus film verdicts
+# slug -> (verdict, sfx.py names / music_plan role, reason). Measured by this tool (review_measure.json) and judged by
+# name; REJECT = mapped to no Bus name (epidemic_catalog.NOT vetoes the ones an older name would pick up).
+BUS_DECISIONS = {
+    'air_burst_bus_air_brake_compressor_no_engine': ('USE', 'bus_air_brake', 'a clean stationary release, 40 dB SNR, 75 % above 4 kHz: the hiss itself'),
+    'vehicles_bus_air_brake_compressor_no_engine': ('USE', 'bus_air_brake', 'the same release, louder take (-19 LUFS), 40 dB SNR'),
+    'vehicles_bus_air_brake_pass_by_slow_microphone_whip': ('PROCESS', 'bus_air_brake (reserve)', 'a passing bus with a brake squeal and a mic whip (47 % low): only its hiss phrase, never the whip'),
+    'vehicles_bus_reversing_pass_by_slow_stops_air_brake': ('PROCESS', 'bus_air_brake (reserve)', 'reversing and stopping: the final brake release only'),
+    'air_burst_bus_door_open_close_compressor_air': ('USE', 'bus_door', 'the door valve: a sharp air burst (centroid 6 kHz), 35 dB SNR'),
+    'vehicles_bus_door_open_close_no_engine_01': ('USE', 'bus_door', 'two clean phrases (open, close), 45 dB SNR, no engine under it'),
+    'vehicles_bus_door_open_close_no_engine_03': ('USE', 'bus_door', 'several open / close cycles on true silence (floor -200 dB: edited)'),
+    'vehicles_bus_door_open_close_no_engine_04': ('USE', 'bus_door', 'a brighter folding-leaf take (3 kHz centroid)'),
+    'vehicles_bus_interior_door_open_close_no_passengers': ('PROCESS', 'bus_door', '146 s from inside a running bus (89 % < 250 Hz, SNR 14): door phrases only, high-passed by the grain cutter'),
+    'vehicles_bus_engine_idle_engine_off': ('USE', 'bus_idle', 'a steady diesel idle (150 s, harmonic 85 %); the engine-off tail is skipped'),
+    'vehicles_bus_engine_perspective_idle_engine_off': ('USE', 'bus_idle', 'the idle from the engine side (893 Hz centroid: more clatter): his sick bus'),
+    'vehicles_bus_long_journey_part_03_standing_still_idle': ('USE', 'bus_idle', 'standing still, idling (a low, continuous take: SNR 4 because it is all engine)'),
+    'vehicles_bus_onboard_exterior_slowly_stops_idle_engine_perspective': ('PROCESS', 'bus_idle (reserve)', 'stops then idles: the idle part only'),
+    'vehicles_bus_engine_start_drive_away_fade_out': ('USE', 'bus9_start, bus_pull_away, bus9_drive', 'the starter, the diesel catching, then the bus driving away (38 dB SNR)'),
+    'vehicles_bus_interior_on_board_driving': ('USE', 'bus9_drive, morning_bus', 'inside a moving bus (95 % < 250 Hz): bus 9 on the road'),
+    'vehicles_bus_interior_double_decker_ride_variying_speed_stops_doors_open_close_heavy_rattle_berlin': ('PROCESS', 'bus9_drive (rattle layer)', 'a Berlin double-decker (113 s): only as a low-passed rattle layer 7 LU under the drive; its doors and stops are never heard'),
+    'vehicles_bus_reverse_beeps_back_up_pull_out_back_up_again_engine_off_engine_bus_at_the_end_in_background': ('REJECT', '-', 'a modern reversing alarm beeping (not in the story; it dates the bus wrong)'),
+    'vehicles_generic_by_bus_pass_by_fast_asphalt_02': ('USE', 'bus_pull_away, bus_rewind', 'a fast pass-by (82 % mid band): reversed for the rewind'),
+    'vehicles_generic_by_bus_pass_by_fast_asphalt_03': ('USE', 'bus_pull_away, bus_rewind', 'a shorter fast pass-by, 37 dB SNR'),
+    'vehicles_generic_by_bus_pass_by_medium_speed_asphalt': ('USE', 'bus_pull_away, bus_rewind', 'a slower pass (84 % low): his bus going off down Larch Street'),
+    'vehicles_horn_bus_close_long': ('USE', 'bus_horn', 'one long close blast, 72 dB SNR'),
+    'vehicles_horn_bus_many_short': ('USE', 'bus_horn', 'short blasts (kind short)'),
+    'vehicles_horn_bus_very_long': ('PROCESS', 'bus_horn', 'a 22 s blast (SNR 1.2: all horn); cut to length'),
+    'car_brake_tire_skid_05': ('USE', 'tire_screech, bus_swerve', 'a hard skid (-10.5 LUFS, tonal 5.1: the tyre squeal); band-limited 16 kHz, fine'),
+    'vehicles_skid_car_drive_depart_slip_tire_drift_screech_far': ('USE', 'tire_screech', 'a far screech (perspective for his bus)'),
+    'vehicles_skid_peugeot_drive_accelerate_depart_slip_tire_drift_screech_02': ('PROCESS', 'tire_screech', 'a car accelerating while it drifts: 2 st down (a heavier vehicle), the engine kept low'),
+    'vehicles_skid_peugeot_drive_accelerate_depart_slip_tire_drift_screech_03': ('PROCESS', 'tire_screech', 'as 02'),
+    'metal_friction_scrape_large_loud_01': ('USE', 'mirror_rip', 'a big loud scrape, 51 dB SNR: the bumper on the mirror arm'),
+    'metal_friction_scrape_large_loud_03': ('USE', 'mirror_rip', 'as 01, more tonal (2.1)'),
+    'metal_friction_scrape_plate_or_panel': ('USE', 'mirror_rip (layer)', 'a lighter panel scrape'),
+    'glass_break_car_window_hit_repeatedly_until_break_smash_mkh_50_02': ('PROCESS', 'mirror_rip', 'the repeated hits before the break are cut away (grains): only the smash; 3 clipped samples, inaudible'),
+    'glass_break_car_window_hit_repeatedly_until_break_smash_sanken_01': ('PROCESS', 'mirror_rip', 'as above, the second mic'),
+    'glass_break_car_window_break_in_smash_remove_edges_debris_interior_sanken': ('PROCESS', 'mirror_rip (debris)', 'the smash and debris; the edge-clearing (a person at work) never used; 7 clipped samples on the smash'),
+    'communications_static_radio_station_search_crackling_wrong_frequency_02': ('USE', 'dash_radio', 'radio static between stations (177 s, 96 % mid band): bus 9\'s dash speaker'),
+    'whistles_mechanical_sport_referee_whistle_01': ('USE', 'whistle', 'one short pea-whistle blast (2.9 kHz, 61 dB SNR): "Fweet", tuned to A7'),
+    'whistles_mechanical_sport_referee_whistle_02': ('USE', 'whistle', 'blasts incl. a longer one (the long blast is looped from it)'),
+    'whistles_mechanical_sport_referee_whistle_10_metres_distance': ('USE', 'whistle (far=True)', 'the whistle from 10 m'),
+    'whistles_mechanical_wooden_blow_single_note_long': ('REJECT', '-', 'a wooden whistle: a flute / train tone (tonal 8.6) with a noisy floor (SNR 8.7), not his silver whistle'),
+    'whistles_misc_aztec_death_whistle_blow_04': ('REJECT', '-', 'the Aztec death whistle is a human scream imitation: a cheesy library scream (brief: no cheesy screams)'),
+    'whistles_misc_aztec_death_whistle_blow_05': ('REJECT', '-', 'as 04'),
+    'whistles_misc_toy_blow_long': ('REJECT', '-', 'a toy slide whistle (tonal 9.1, -2.6 LUFS): comic, not his'),
+    'objects_office_office_supplies_hole_punch_single': ('USE', 'ticket_punch', 'a clean punch (53 dB SNR): the click'),
+    'office_supplies_hole_punch_single_02': ('USE', 'ticket_punch', 'a second punch: the clack (2 st up)'),
+    'objects_office_office_supplies_hole_punch_through_multiple_pages_of_paper': ('USE', 'ticket_punch', 'through pages: a heavier click'),
+    'kanex_250_paper_hole_puncher_02': ('USE', 'ticket_punch', 'a desk puncher, 69 dB SNR'),
+    'paper_rip_cinema_ticket_perforated_01': ('PROCESS', 'ticket_slide (reserve)', 'a perforated ticket tearing: reserve for the yellow ticket'),
+    'communications_transceiver_walkie_talkie_engage': ('USE', 'walkie (engage)', 'the PTT key, edited on silence'),
+    'communications_transceiver_walkie_talkie_squelch_stuttering_glitchy_long': ('USE', 'walkie (glitch)', 'a stuttering glitchy squelch (13 kHz top): his voice on the walkie'),
+    'communications_transceiver_walkie_talkie_squelch_stuttering_glitchy_short': ('USE', 'walkie (squelch, glitch)', 'short squelches'),
+    'voices_futzed_ai_hitech_radio_walkie_talkie_squelch_beep': ('REJECT', '-', 'a "hi-tech AI" radio texture (6.2 kHz band, digital): modern sci-fi, wrong for 1990s kids\' walkies; the roger beep is synthesised'),
+    'voices_futzed_announcement_jail_pa_system_close': ('REJECT', '-', 'a man\'s PA announcement: the recogniser hears "2609... check in at the speaker" (34 % speech): a stray voice'),
+    'voices_futzed_breath_megaphone_feedback': ('PROCESS', 'pa_crackle', 'megaphone breath and feedback: the feedback phrases only (one "uh" at 42.8 s is never cut in)'),
+    'communications_microphone_feedback_single': ('USE', 'pa_crackle', 'one feedback ring (tonal 8.5): band-passed into the horn'),
+    'communications_microphone_speaker_feedback_resonance_tonal_harsh': ('USE', 'pa_crackle (feedback)', 'a harsh resonance, 52 dB SNR'),
+    'electricity_misc_long_spring_feedback': ('PROCESS', 'pa_crackle (reserve)', 'a 91 s spring feedback drone: only a band-passed second if the PA needs more'),
+    'electricity_misc_bursts_long_spring_feedback': ('PROCESS', 'pa_crackle (reserve)', 'as above, in bursts'),
+    'communications_phonograph_vinyl_crackle_authentic': ('USE', 'pa_crackle (crackle)', 'crackle, high-passed 900 Hz'),
+    'communications_phonograph_vinyl_crackle_01': ('PROCESS', 'pa_crackle', '98 % below 250 Hz (rumble) and 5 clipped samples: only above 900 Hz'),
+    'musical_plucked_guitar_electric_od_amplified_feedback_short_pitch_bend_to_feedback': ('REJECT', '-', 'an electric guitar (an instrument, tonal 7.6): it would be heard as music in the wrong key'),
+    'electricity_buzz_hum_fluorescent_light_buzz_short_power_up_light_switch_on_off': ('USE', 'power_down, power_up', 'switch, tink and buzz edges, 38 dB SNR'),
+    'electricity_buzz_hum_fluorescent_light_buzz_short_soft_power_up_light_switch_on_off': ('USE', 'power_down, power_up', 'a softer take'),
+    'footsteps_human_asphalt_sneaker_running': ('USE', 'run_asphalt', 'running on asphalt, 51 dB SNR'),
+    'footsteps_human_asphalt_male_sneakers_running': ('PROCESS', 'run_asphalt', 'quiet (-41 LUFS) and heavy (a man): levelled, used as the second voice of the pool'),
+    'animals_cat_wild_lion_growling_low_rumble_bubbly_02': ('PROCESS', 'cat_rumble', 'a lion\'s low rumble: a fourth down, low-passed 350 Hz, barely there'),
+    'animals_cat_wild_lion_growling_low_rumble_bubbly_03': ('PROCESS', 'cat_rumble', 'as 02'),
+    'animals_cat_wild_tiger_defensive_growling_deep_rumble': ('PROCESS', 'cat_rumble', 'deep (96 % < 250 Hz); its snarls stay under the 350 Hz low-pass'),
+    'rubber_friction_latex_glove_pull_stretch_squeak': ('USE', 'glove_squeak', 'latex stretch and squeak, edited on silence'),
+    'rubber_handle_surgical_glove_pull_off_stretch_squeak_slap': ('PROCESS', 'glove_squeak', 'the stretch and squeak phrases; the final slap is a grain the pool may pick (kept quiet)'),
+    'user_interface_glitch_glitch_crackle_03': ('USE', 'tape_skip', 'a crackle glitch: the stutter source'),
+    'user_interface_glitch_glitch_databend_04': ('USE', 'tape_skip', 'a databend (36 % > 4 kHz): sliced to 42 ms'),
+    'user_interface_glitch_glitches': ('USE', 'tape_skip', 'glitch bursts'),
+    'communications_audio_visual_tape_play_stop_electrical_hum_static': ('USE', 'tape_skip', 'a tape play / stop with hum and static (87 % harmonic hum)'),
+    'computers_hard_drive_vintage_crt_monitor_commodore_1084s_power_on_off': ('PROCESS', 'crt_on', '98 % of the energy is the 15.7 kHz line whine (centroid 15.5 kHz): the power-on phrase only, low-passed 9 kHz; the whine is resynthesised quietly'),
+    'communications_audio_visual_hifi_old_turn_on_fan_whir_turn_off': ('USE', 'crt_on (fallback)', 'an old set\'s power-on and fan'),
+    'communications_audio_visual_videotape_vhs_eject': ('USE', 'vhs_tape (eject)', 'a VHS eject, 33 dB SNR'),
+    'communications_audio_visual_tape_hand_camera_fast_forward_edit_mode_stop': ('USE', 'tape_ff', 'the FF whine and the stop (the owner\'s pick in the brief)'),
+    'communications_audio_visual_master_tape_studer_a820_master_tape_playback': ('PROCESS', 'tape_ff (reserve)', 'a studio reel deck (SNR 3, 4 clipped samples): reserve, the hand camera is used first'),
+    'communications_audio_visual_cd_case_drop_on_carpet': ('REJECT', '-', 'a CD case on carpet: wrong object and surface for the clipboard on asphalt (built instead)'),
+    'games_video_sega_saturn_turn_on_loading_laser_turn_off': ('REJECT', '-', 'a game console\'s laser and loading (centroid 6.4 kHz): the TV cart is a CRT and a VCR'),
+    'vehicles_mechanism_car_seat_belt_click_into_lock': ('USE', 'seatbelt', 'a belt clicked into the lock (1 clipped sample on the click: inaudible after the level)'),
+    'vehicles_mechanism_car_seat_belt_click_lock_01': ('USE', 'seatbelt', 'as above (2 clipped samples)'),
+    'vehicles_mechanism_car_seat_belt_click_lock_03': ('USE', 'seatbelt', 'a clean click, 67 dB SNR'),
+    'metal_movement_cable_clanking_post_flag_flapping_02': ('PROCESS', 'flag_rope, school_night', 'the flag cable on the pole (120 s); its flag-flap rumble (96 % < 250 Hz) is high-passed at 200 Hz'),
+    'boats_sailboat_rope_clanking_mast': ('USE', 'flag_rope', 'a halyard clinking on a mast: the "flag rope, clinking"'),
+    'bendy_pole_light_stretch_bend_creak_03': ('PROCESS', 'broom_bend, his_unfold', 'a pole bending and creaking (54 dB SNR): a fourth down for the broom handle, a fifth down per segment for his unfolding'),
+    'wood_break_stick_branch_snap_in_two': ('USE', 'broom_crack', 'a stick snapping in two'),
+    'wood_break_snapping_branches_trees_sticks': ('USE', 'broom_crack', 'snaps (edited on silence)'),
+    'wood_break_panel_plywood_bend_splinter_snap_03': ('PROCESS', 'broom_crack (reserve)', 'plywood bending and splintering: too sheet-like for a broom handle; reserve'),
+    'cloth_rip_t_shirt_tear': ('USE', 'cloth_rip', 'a T-shirt tearing, 0.5 s, clean: Sami\'s pajamas'),
+    'cloth_rip_shorts_thin_material_tear_02': ('USE', 'cloth_rip', 'thin fabric tear'),
+    'cloth_rip_tear_02': ('USE', 'cloth_rip', 'a longer tear (cut to 0.55 s)'),
+    'cloth_rip_velcro_tear_long': ('REJECT', '-', 'velcro (5.8 kHz centroid, 14 s): not cloth'),
+    'ambience_school_school_children_talking_shouting': ('PROCESS', 'kids_chatter (morning_bus)', 'school walla (no words heard: VAD 0 %): low-passed 4.5 kHz, under the morning bus'),
+    'ambience_school_few_close_big_crowd_of_kids_background_walla': ('PROCESS', 'kids_chatter (morning_bus)', 'as above'),
+    'ambience_school_kids_playground_group_of_kids_walk_by_scream': ('REJECT', '-', 'ends in a child\'s scream (brief: no library screams; a scream in a bus-safety film for kids reads wrong)'),
+    'equipment_tactical_flashlight_torch_small_head_cap_unscrew': ('USE', 'mailbox_unscrew', 'a small cap unscrewing by hand (82 dB SNR): the mailbox letters\' screws'),
+    'tools_power_electric_screwdriver_unscrew_screw': ('REJECT', '-', 'an electric screwdriver\'s motor whine (5 kHz centroid): Grandma unscrews by hand at midnight'),
+    'deep_down_in_the_caverns_trailer_worx': ('REJECT', '-', 'a STRAY: a trailer music track (60 s, -10.3 LUFS, CLIP 156) inside the effects zip; flagged stray in the catalogue, never an SFX'),
+    # music
+    'through_the_portal_anthony_earls': ('USE', 'music_plan: the hook', 'dark, pulsing (bass G, pulse 0.84), no vocals (VAD 0 %): dread from the first line'),
+    'terra_firma_dream_cave': ('USE', 'music_plan: rule 1', 'C# minor -> D minor (+1), 91 % < 250 Hz, steady pulse'),
+    'can_they_see_us_experia': ('USE', 'music_plan: rules 3 and 7', 'dark (bass D# -> D, -1), percussive (harmonic 71 %); 64 clipped samples on decode: levelled down'),
+    'chronometer_guy_copeland': ('USE', 'music_plan: 2:58 -> 3:00', 'a ticking build (pulse 0.885), E minor -> D minor (-2)'),
+    'all_exits_closed_guy_copeland': ('USE', 'music_plan: the chase', 'D, driving (pulse 0.87); its 68-81 s drop is skipped (offset 32 s)'),
+    'the_last_horizon_aerian': ('USE', 'music_plan: the warm turn', 'D major (0.93), quiet start then a swell at 48 s placed on the porch light; 294 clipped samples: levelled'),
+    'at_first_light_gavin_luke': ('USE', 'music_plan: the morning', 'A major, gentle (-18 LUFS), no vocals'),
+    'a_sky_unveiled_megan_wofford': ('USE', 'music_plan: rule eight', 'F major -> D major (-3), warm; 32 clipped samples'),
+    'wait_for_me_on_the_other_side_instrumental_version_clngr': ('PROCESS', 'music_plan: the outro tips', 'G major, bright and loud (-9.5 LUFS, 2.4 kHz centroid, 2306 clipped samples on decode): -6 dB and flattened so it never sits on the voice; VAD 3.7 % = no words recognised (instrumental)'),
+    'just_a_little_sunshine_instrumental_version_staffan_carlen': ('PROCESS', 'music_plan: the short outro', 'D major, bright (-9 LUFS, 2.3 kHz centroid, 5377 clipped samples): -7 dB, under the call to action only; no vocals'),
+    'sweeter_clean_version_blood_harmony': ('REJECT', '-', 'a SONG WITH VOCALS: the recogniser hears its lyrics (84.7 % speech: "You\'re driving me mad...") -- music with vocals never plays under the narration'),
+}
+DECISIONS = BUS_DECISIONS
+
+
 def write_md(res):
     """W/mix/sfx_review.md from the measurements and DECISIONS."""
-    out = ['# The owner\'s new Epidemic files: review', '',
-           'Every file of `_work/samples/epidemic` (the bunny set: 70 effects, 10 tracks) was measured by '
+    out = ['# The owner\'s new Epidemic files (the Bus film): review', '',
+           'Every file of `_work/samples/epidemic_bus` (the bus set: 98 effects, 11 tracks; the earlier sets were '
+           'judged in their own films) was measured by '
            '`audio/review_sfx.py` (loudness, peaks and clipping, noise floor, spectrum, codec low-pass, onsets, '
            'harmonic share, tonal clarity, stereo, and for crowds / voices / hospital ambiences the speech share and '
            'what a recogniser hears) and looked at as a spectrogram with its envelope (`_work/mix/review/sheet_*.png`). '
            'Verdicts: **USE** as recorded (cut into grains, levelled, placed in a space), **PROCESS** only after the '
-           'processing named, **REJECT** never used (mapped to no bunny SFX name; `epidemic_catalog.NOT` also keeps the '
+           'processing named, **REJECT** never used (mapped to no Bus SFX name; `epidemic_catalog.NOT` also keeps the '
            'older names from picking a rejected file up). Licence: the owner\'s Epidemic subscription (the files stay '
            'in `_work/samples`, never copied or committed).', '']
     for kd, title in (('sfx', 'Effects'), ('music', 'Music')):

@@ -733,9 +733,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bus Video/film/_work/samples/epidemic_bus/sfx/ES_Tools, Power, Electric Screwdriver, Unscrew Screw - Epidemic Sound.mp3",
    "set": "bus",
    "slug": "tools_power_electric_screwdriver_unscrew_screw",
-   "serves": [
-    "unscrew"
-   ],
+   "serves": [],
    "dur": 35.61,
    "sr": 48000,
    "lufs": -23.0,
@@ -1152,9 +1150,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bus Video/film/_work/samples/epidemic_bus/sfx/ES_Voices, Futzed, AI, Hitech, Radio, Walkie Talkie, Squelch, Beep - Epidemic Sound.mp3",
    "set": "bus",
    "slug": "voices_futzed_ai_hitech_radio_walkie_talkie_squelch_beep",
-   "serves": [
-    "police_radio_squelch"
-   ],
+   "serves": [],
    "dur": 10.87,
    "sr": 48000,
    "lufs": -23.0,
@@ -1165,9 +1161,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bus Video/film/_work/samples/epidemic_bus/sfx/ES_Voices, Futzed, Announcement, Jail, PA System Close - Epidemic Sound.mp3",
    "set": "bus",
    "slug": "voices_futzed_announcement_jail_pa_system_close",
-   "serves": [
-    "pa_crackle"
-   ],
+   "serves": [],
    "dur": 63.29,
    "sr": 48000,
    "lufs": -29.2,
@@ -1231,9 +1225,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Bus Video/film/_work/samples/epidemic_bus/sfx/ES_Whistles, Mechanical, Wooden, Blow Single Note, Long - Epidemic Sound.mp3",
    "set": "bus",
    "slug": "whistles_mechanical_wooden_blow_single_note_long",
-   "serves": [
-    "whistle"
-   ],
+   "serves": [],
    "dur": 2.23,
    "sr": 48000,
    "lufs": -20.4,

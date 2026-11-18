@@ -9,8 +9,11 @@ PropTrack, PROPS3...). The older casts are unchanged. See BUS_API below and CAST
 
 BUS_API = """
 Bus film cast ids:
-  'whistle'      MISTER WHISTLESTOP (original): 8 ft, legs 55 %, arms to the knees (they stretch), a crooked mascot head with a
-                 fixed painted grin, no blinking painted pupils (his left one higher), a ticket-punch hole in his left ear, a
+  'whistle'      MISTER WHISTLESTOP (original): 8 ft, a forward predator's hunch, legs 55 %, arms to the knees (they stretch), a
+                 big furry cat-mascot head (about 1/5 of his height, tilted): jagged cheek ruffs, tufted ears, tabby crown fading
+                 into a matted off-white face, muzzle with whisker pads, cat nose and long (some bent) whiskers, painted almond
+                 cat eyes that never blink (his left pupil higher), THE GRIN (a cat's mouth stretched up into the cheeks, dark
+                 inside, a flat row of teeth; never moves), an off-white chest ruff, a ticket-punch hole in his left ear, a
                  far-too-tall dented stovepipe hat in faded school-bus yellow with two DIAGONAL black hazard bands leaning
                  12 deg to his left, a mustard driver jacket (short sleeves, tabby wrists, WHISTLESTOP patch), a black bow tie
                  with a red STOP pin, a silver whistle on an orange lanyard, white gloves with four segments per finger, a thin
@@ -43,11 +46,11 @@ _WS_PAL = dict(
     fur='#7a6a55', fur_dk='#5a4c3d', fur_hi='#958670', mask='#ebe4d0', mask_edge='#c9b98a', mask_sh='#b9ae93',
     jacket='#a88a3a', jacket_sh='#77612a', jacket_hi='#c2a55c', trim='#5e4c22', trousers='#3a352f', trousers_sh='#24211d',
     shoe='#221d19', glove='#e2ded2', glove_sh='#a9a495', glove_dirt='#8f8878', bow='#141212', pin='#b3241e',
-    lanyard='#e07a1f', whistle='#c9ced5', line='#1b1512', teeth='#efe8d3', eye='#eee8d2', pupil='#0b0a09',
-    ear_in='#a3887a', patch='#e0d6b8', patch_rim='#6e4a22', button='#b4964c', nose='#7c5c50', grime=0.75)
+    lanyard='#e07a1f', whistle='#c9ced5', line='#1b1512', teeth='#efe8d3', eye='#d4c35e', pupil='#0b0a09',
+    ear_in='#a88c8a', mouth='#1e1210', pad='#f1ecdd', whisk='#ece6d4', patch='#e0d6b8', patch_rim='#6e4a22', button='#b4964c', nose='#7c5c50', grime=0.75)
 _WS_PAL94 = dict(_WS_PAL, hat='#dfb23a', hat_sh='#a8822a', hat_hi='#f2d47a', fur='#8a7a62', fur_dk='#665640',
                  mask='#f7f3e8', mask_edge='#e2d8bc', mask_sh='#cfc6ae', jacket='#c2a043', jacket_sh='#8f7530',
-                 jacket_hi='#dcbe6a', glove='#f8f7f2', glove_sh='#c4c1b6', teeth='#fbf9f0', eye='#fbf8ee', grime=0.0)
+                 jacket_hi='#dcbe6a', glove='#f8f7f2', glove_sh='#c4c1b6', teeth='#fbf9f0', eye='#e6d86c', pad='#fbf9f2', grime=0.0)
 
 POSE_DEFAULTS.update(
     ws_unfold=1.0,      # 0 folded small (in the bus door) .. 1 standing: unfolds segment by segment like a ladder
@@ -215,6 +218,18 @@ def _ws_hand3(R, s, P):
 
 
 # ---------------------------------------------------------------------------------------------------- the rig
+_WS_HUNCH = 0.30      # rad: rounded shoulders, the neck pushed forward (the 1994 host stands straighter)
+_WS_HUP = 12.0         # cm from the neck's top to the head's centre (the crown at 244 cm)
+
+
+def _ws_headpos(R, a, npitch):
+    """Neck top, head 'up' vector and head centre for a waist pitch a and a neck pitch."""
+    jut = 0.55 * (1.0 if R.get('hunch', _WS_HUNCH) > 0.1 else 0.3)
+    Nt = R['Nb'] + _rx(np.array([0.0, -4.0, 0.8]), a + npitch + jut)
+    up = _rx(np.array([0.0, -1.0, 0.0]), a + npitch)
+    return Nt, up, Nt + up * _WS_HUP + _rx(np.array([0.0, 0.0, 5.0 if jut > 0.3 else 2.0]), a)
+
+
 def _ws_spine(P, crouch, bend):
     """Legs, hips and spine for a crouch and a waist bend."""
     R = {}
@@ -236,9 +251,10 @@ def _ws_spine(P, crouch, bend):
     a1, a2 = 0.72 * a, 0.28 * a
     Wst = Hc + _rx(np.array([0.0, -16.0, 0.0]), a1)
     Ch = Wst + _rx(np.array([0.0, -30.0, 1.0]), a1 + a2)
-    Sc = Ch + _rx(np.array([0.0, -24.0, -1.5]), a)
-    Nb = Sc + _rx(np.array([0.0, -4.0, 0.5]), a)
-    R.update(Hc=Hc, Wst=Wst, Ch=Ch, Sc=Sc, Nb=Nb, a=a, a1=a1, a2=a2)
+    hunch = 0.07 if P.__dict__.get('_ws94') else _WS_HUNCH          # a predator's forward hunch inside the suit
+    Sc = Ch + _rx(np.array([0.0, -24.0, -1.5]), a + hunch)
+    Nb = Sc + _rx(np.array([0.0, -4.0, 0.5]), a + hunch * 1.5)
+    R.update(Hc=Hc, Wst=Wst, Ch=Ch, Sc=Sc, Nb=Nb, a=a, a1=a1, a2=a2, hunch=hunch)
     return R
 
 
@@ -258,29 +274,27 @@ def _ws_rig(P, _depth=0):
     if ceil > 0 and _depth == 0:
         for _ in range(48):
             a_ = R['a']; np_ = -0.55 * a_ * clamp(P.ws_face_up) + nfold - 0.25 * blow
-            hd_ = R['Nb'] + _rx(np.array([0.0, -4.0, 0.8]), a_ + np_) + _rx(np.array([0.0, -1.0, 0.0]), a_ + np_) * 15.0
-            top = -hd_[1] + 17.0                                            # the crown's height
+            hd_ = _ws_headpos(R, a_, np_)[2]
+            top = -hd_[1] + _WS_CROWN                                       # the crown's height
             if top < ceil - 22.0: break                                     # room for the crushed, folded hat
             bend += 0.045; crouch = min(crouch + 0.02, 1.0)
             R = _ws_spine(P, crouch, bend)
     a = R['a']
     Nb = R['Nb']
     npitch = -0.55 * a * clamp(P.ws_face_up) + nfold - 0.25 * blow
-    Nt = Nb + _rx(np.array([0.0, -4.0, 0.8]), a + npitch)
-    up = _rx(np.array([0.0, -1.0, 0.0]), a + npitch)
-    Hd = Nt + up * 15.0
+    Nt, up, Hd = _ws_headpos(R, a, npitch)
     bob = 0.06 * P.ws_bob
     R['neck'] = [Nb, Nt]
     R['head'] = Hd + np.array([P.h_dx * 0.06, P.h_dy * 0.06, 0.0])
     yaw = P.h_turn * PI / 2
     pitch = (a + npitch) * (1.0 - clamp(P.ws_face_up)) + 0.6 * P.h_nod + bob - 0.3 * blow
-    roll = math.radians(P.h_tilt - 3.0 + 9.0 * nfold)
+    roll = math.radians(P.h_tilt - (2.0 if P.__dict__.get('_ws94') else 7.0) + 9.0 * nfold)     # the head sits tilted
     R['hrot'] = _rot3(yaw, pitch, roll)
     R['hat_ext'] = hat_ext
     R['crouch'], R['bend'] = crouch, bend
     # hat: base on the crown, leaning 12 deg to his left (3 deg on the 1994 tape), dented halfway, folding under a ceiling
-    lean = math.radians(6.0 if P.__dict__.get('_ws94') else 15.0)      # 12 (3 on the tape) once the head's crook is added
-    hb_l = np.array([0.0, -15.6, -1.2])
+    lean = math.radians(5.0 if P.__dict__.get('_ws94') else 19.0)      # 12 (3 on the tape) once the head's crook is added
+    hb_l = np.array([0.0, -(_WS_CROWN - 1.0), -1.5])
     ax_l = np.array([math.sin(lean), -math.cos(lean), -0.06])
     M = R['hrot']
     hb = R['head'] + M @ hb_l
@@ -305,7 +319,7 @@ def _ws_rig(P, _depth=0):
     a12 = R['a1'] + R['a2']
     arms = {}
     afold = 1.0 - ease_in_out(prog(u, 0.5, 0.92))
-    mouth = R['head'] + M @ np.array([0.0, 7.5, 13.5])
+    mouth = R['head'] + M @ (_ws_head_local(0.0, -0.47) + np.array([0.0, 0.0, 1.0]))
     R['mouth'] = mouth
     for s in (-1, 1):
         S = Sc + _rx(np.array([s * 19.0, 1.5, -1.0]), a12)
@@ -371,19 +385,43 @@ def _ws_rig(P, _depth=0):
 
 
 # ---------------------------------------------------------------------------------------------------- the head
+# The mascot costume head: a big furry cat skull (about a fifth of his height): broad flaring cheek ruffs, a flat broad
+# crown between pointed tufted ears, a muzzle with two puffy whisker pads and a small triangular nose, painted almond cat
+# eyes, and THE GRIN: a cat's mouth stretched from the whisker pads up into the cheeks, dark inside, a flat row of teeth.
+_WS_HR = (18.0, 24.5, 16.0)          # cranium radii (cm): x half-width, y up (crown), z depth
+_WS_CHIN = 20.5                      # chin depth below the head centre (cm)
+
+
 def _ws_head_local(lon, lat, grow=0.0):
-    """Mascot head surface points (cm, head frame: x his left, y down, z forward) at longitude/latitude arrays (lon 0 =
-    the front, lat + up): wide jowly cheeks below the eyes, a flatter crown, a soft muzzle under the nose."""
+    """Head surface points (cm, head frame: x his left, y down, z forward) at longitude/latitude arrays (lon 0 = the
+    front, lat + up): a cat skull with wide cheek ruffs, a flat crown, a muzzle and whisker pads, a small chin."""
     lon = np.asarray(lon, float); lat = np.asarray(lat, float)
-    cl = np.cos(lat)
-    cheek = 1.0 + 0.17 * np.exp(-((lat + 0.30) / 0.34) ** 2)
-    rx = (15.2 + grow) * cheek; ry = 17.0 + grow; rz = (13.8 + grow) * (1.0 + 0.04 * cheek)
-    sl = np.sin(lat)
-    y = -ry * sl * np.where(lat > 0.45, 1.0 - 0.09 * (lat - 0.45), 1.0)
+    cl = np.cos(lat); sl = np.sin(lat)
+    rx0, ry0, rz0 = _WS_HR
+    cheek = 1.0 + 0.30 * np.exp(-((lat + 0.30) / 0.42) ** 2)
+    rx = (rx0 + grow) * cheek
+    ry = np.where(lat > 0, ry0 * (1.0 - 0.10 * np.clip(lat - 0.5, 0.0, None)), _WS_CHIN) + grow
+    rz = (rz0 + grow) * (1.0 + 0.03 * cheek)
+    y = -ry * sl
     x = rx * cl * np.sin(lon)
     z = rz * cl * np.cos(lon)
-    z = z + 2.0 * np.exp(-(lon / 0.36) ** 2 - ((lat + 0.30) / 0.2) ** 2)
+    fr = np.clip(np.cos(lon), 0.0, None)
+    z = z + fr * (4.6 * np.exp(-(lon / 0.40) ** 2 - ((lat + 0.28) / 0.24) ** 2)                       # the muzzle
+                  + 1.6 * np.exp(-(lon / 0.12) ** 2 - ((lat + 0.15) / 0.09) ** 2)                     # the nose
+                  + 1.4 * np.exp(-((np.abs(lon) - 0.17) / 0.12) ** 2 - ((lat + 0.31) / 0.11) ** 2)     # whisker pads
+                  + 0.9 * np.exp(-((lat - 0.30) / 0.12) ** 2)                                         # brow ridge
+                  - 2.2 * np.exp(-((lat + 0.95) / 0.22) ** 2))                                        # small chin
     return np.stack([x, y, z], -1)
+
+
+_WS_CROWN = float(-_ws_head_local(0.0, PI / 2)[1])
+
+
+def _ws_hp(R, lon, lat, out=0.0):
+    """A point on his head (body frame) at lon/lat, pushed out by `out` cm along the radius."""
+    L = _ws_head_local(lon, lat)
+    if out: L = L + _u3(L) * out
+    return R['head'] + R['hrot'] @ L
 
 
 class _WSHead:
@@ -396,17 +434,20 @@ class _WSHead:
     def body(self, L):
         return self.C + (self.M @ np.asarray(L, float).reshape(-1, 3).T).T
 
+    def normal(self, L):
+        rx, ry, rz = _WS_HR
+        n = L / np.array([(rx * 1.15) ** 2, ry ** 2, rz ** 2])
+        n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
+        return (self.M @ n.T).T
+
     def proj(self, lon, lat, grow=0.0):
         L = _ws_head_local(lon, lat, grow).reshape(-1, 3)
         B = self.body(L)
         X, Y, zd, f = self.view.pa(B)
-        # outward normal: the gradient of the (near-)ellipsoid, rotated
-        n = L / np.array([15.2 ** 2, 17.0 ** 2, 13.8 ** 2])
-        nb = (self.M @ n.T).T
-        return X, Y, self.view.face(nb), zd
+        return X, Y, self.view.face(self.normal(L)), zd
 
     def sil(self):
-        lo, la = np.meshgrid(np.linspace(-PI, PI, 37), np.linspace(-1.5, 1.5, 15))
+        lo, la = np.meshgrid(np.linspace(-PI, PI, 41), np.linspace(-1.55, 1.55, 19))
         X, Y, _, _ = self.proj(lo.ravel(), la.ravel())
         return poly(_hull(np.stack([X, Y], -1)), True)
 
@@ -427,7 +468,6 @@ class _WSHead:
                 fs = F[i, j] + F[i + 1, j] + F[i, j + 1] + F[i + 1, j + 1]
                 if fs <= thr * 4: continue
                 q = [(X[i, j], Y[i, j]), (X[i + 1, j], Y[i + 1, j]), (X[i + 1, j + 1], Y[i + 1, j + 1]), (X[i, j + 1], Y[i, j + 1])]
-                # keep one winding: front-facing quads all project the same way round; flip any folded one
                 ar = sum(q[k][0] * q[(k + 1) % 4][1] - q[(k + 1) % 4][0] * q[k][1] for k in range(4))
                 if ar < 0: q = q[::-1]
                 p.addPoly([skia.Point(*v) for v in q], True); any_ = True
@@ -451,26 +491,278 @@ class _WSHead:
         X, Y, F, _ = self.proj(lon + rl * np.cos(a) / max(math.cos(lat), 0.3), lat + rt * np.sin(a), grow)
         return smooth(list(zip(X.tolist(), Y.tolist())), True, 0.9), float(np.mean(F))
 
+    def shape(self, lons, lats, grow=0.15, k=0.6):
+        X, Y, F, _ = self.proj(np.asarray(lons, float), np.asarray(lats, float), grow)
+        return smooth(list(zip(X.tolist(), Y.tolist())), True, k), float(np.mean(F))
+
+
+def _ws_masky(lon, lat):
+    """1 where the off-white face (mask and cheek ruffs) is, 0 on the tabby (lon/lat arrays)."""
+    lon = np.abs(np.asarray(lon, float)); lat = np.asarray(lat, float)
+    top = 0.50 - 0.26 * lon ** 2
+    return (lon < 1.55) & (lat < top) & (lat > -1.45)
+
+
+# the fur tufts round the head (lon, lat anchors; fixed in 3D so they never crawl when he turns)
+def _ws_tuft_grid():
+    out = []
+    k = 0
+    for la in np.arange(-1.42, 1.50, 0.13):
+        n = max(8, int(round(52 * math.cos(la) + 6)))
+        for i in range(n):
+            lo = -PI + 2 * PI * (i + 0.5 * (k % 2)) / n
+            out.append((lo, la + 0.035 * (hash01(k * 3 + i, 1301) - 0.5), hash01(k * 7 + i, 1302), hash01(k * 5 + i, 1303)))
+        k += 1
+    return np.array(out)
+
+
+_WS_TUFTS = _ws_tuft_grid()
+
+
+def _ws_tuft_len(lon, lat, r):
+    """Tuft length (cm) by place: long flaring cheek ruffs, a shaggy ruff under the jaw, short fur on the crown."""
+    alon = np.abs(lon)
+    cheek = np.exp(-((lat + 0.35) / 0.46) ** 2) * np.clip((alon - 0.55) / 0.5, 0, 1) * np.clip((2.4 - alon) / 0.6, 0, 1)
+    jaw = np.exp(-((lat + 1.15) / 0.3) ** 2)
+    base = 1.3 + 0.6 * np.clip(-lat, 0, 1)
+    return (base + 6.2 * cheek + 2.6 * jaw) * (0.55 + 0.75 * r)
+
+
+def _ws_fur_tufts(c, hd, pal, det, lw):
+    """Jagged fur round the head's outline: tufts anchored in 3D, drawn only where they stand off the silhouette; the
+    face-coloured cheek ruffs flare out and down, the tabby ones behind."""
+    T = _WS_TUFTS
+    lon, lat, r1, r2 = T[:, 0], T[:, 1], T[:, 2], T[:, 3]
+    L = _ws_head_local(lon, lat)
+    Bn = hd.normal(L)
+    F = hd.view.face(Bn)
+    keep = (F < 0.42) & (F > -0.62)
+    if det < 1: keep &= (r1 > 0.45)
+    if not keep.any(): return
+    lon, lat, r1, r2, L, Bn = lon[keep], lat[keep], r1[keep], r2[keep], L[keep], Bn[keep]
+    ln = _ws_tuft_len(lon, lat, r1)
+    nb = Bn / np.maximum(np.linalg.norm(Bn, axis=1, keepdims=True), 1e-6)
+    down = (hd.M @ np.array([0.0, 1.0, 0.0]))
+    back = (hd.M @ np.array([0.0, 0.0, -1.0]))
+    drop = 0.25 + 0.5 * np.exp(-((lat + 0.3) / 0.5) ** 2)
+    d = nb + down[None, :] * drop[:, None] + back[None, :] * 0.15 + (r2[:, None] - 0.5) * 0.4 * (hd.M @ np.array([1.0, 0.0, 0.0]))[None, :]
+    d = d / np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
+    B0 = hd.body(L)
+    B1 = B0 + d * ln[:, None]
+    X0, Y0, _, _ = hd.view.pa(B0); X1, Y1, _, _ = hd.view.pa(B1)
+    mk = _ws_masky(lon, lat)
+    paths = {True: skia.Path(), False: skia.Path()}
+    for i in range(len(lon)):
+        dx, dy = X1[i] - X0[i], Y1[i] - Y0[i]
+        Ln = math.hypot(dx, dy)
+        if Ln < 0.6: continue
+        w = (1.5 + 0.9 * r2[i]) * (1.0 + 0.25 * min(ln[i] / 6.0, 1.0))
+        nx, ny = -dy / Ln * w, dx / Ln * w
+        bend = (r2[i] - 0.5) * 0.35
+        tip = (X1[i] + ny * bend * 0, Y1[i] - nx * bend * 0)
+        q = [(X0[i] - nx - dx * 0.15, Y0[i] - ny - dy * 0.15), (X0[i] + dx * 0.55 - nx * 0.45 + nx * bend, Y0[i] + dy * 0.55 - ny * 0.45 + ny * bend),
+             tip, (X0[i] + dx * 0.5 + nx * 0.5 + nx * bend, Y0[i] + dy * 0.5 + ny * 0.5 + ny * bend), (X0[i] + nx - dx * 0.15, Y0[i] + ny - dy * 0.15)]
+        paths[bool(mk[i])].addPoly([skia.Point(*v) for v in q], True)
+    for m_, col, sh in ((False, pal['fur'], pal['fur_dk']), (True, pal['mask_edge'], pal['mask_sh'])):
+        p = paths[m_]
+        if p.countPoints() == 0: continue
+        c.line(p, lw * 1.5, pal['line'], 235)
+        if det >= 1:                 # a darker under-layer, the tuft itself nudged up-left over it (cheap shade, no path ops)
+            c.fill(p, sh)
+            q = skia.Path(p); q.offset(-0.45, -0.6); c.fill(q, col)
+        else:
+            c.fill(p, col)
+
+
+def _ws_fur_strokes(c, hd, pal, det, lw, n=260):
+    """Short fur strokes over the head (flowing out from the nose, back over the crown), a darker and a lighter set."""
+    if det < 1: return
+    n = n if det >= 2 else n // 2
+    i = np.arange(n)
+    lon = -PI + 2 * PI * np.array([hash01(k, 1311) for k in i])
+    lat = -1.35 + 2.75 * np.array([hash01(k, 1312) for k in i])
+    lat = np.where(np.abs(lon) > 2.2, lat, lat)
+    sgn = np.sign(lon); sgn[sgn == 0] = 1
+    mk = _ws_masky(lon, lat)
+    dlo = 0.075 * np.sin(lon) * np.where(np.abs(lon) < 1.7, 1.0, 0.4)
+    dla = np.where(lat > 0.45, 0.07, -0.05 - 0.03 * np.abs(np.sin(lon)))
+    X0, Y0, F0, _ = hd.proj(lon, lat, 0.1)
+    X1, Y1, F1, _ = hd.proj(lon + dlo, lat + dla, 0.1)
+    sets = {('m', 0): skia.Path(), ('m', 1): skia.Path(), ('f', 0): skia.Path(), ('f', 1): skia.Path()}
+    for k in range(n):
+        if F0[k] < 0.12 or F1[k] < 0.05: continue
+        key = ('m' if mk[k] else 'f', k % 2)
+        p = sets[key]
+        mx, my = (X0[k] + X1[k]) / 2 + (Y1[k] - Y0[k]) * 0.15, (Y0[k] + Y1[k]) / 2 - (X1[k] - X0[k]) * 0.15
+        p.moveTo(X0[k], Y0[k]); p.quadTo(mx, my, X1[k], Y1[k])
+    c.line(sets[('m', 0)], lw * 0.55, pal['mask_sh'], 150)
+    c.line(sets[('m', 1)], lw * 0.45, '#fffbf0', 90 if pal['grime'] > 0 else 130)
+    c.line(sets[('f', 0)], lw * 0.6, pal['fur_dk'], 190)
+    c.line(sets[('f', 1)], lw * 0.5, pal['fur_hi'], 140)
+
 
 def _grin_lat(lon, slip=0.0):
-    k = (np.asarray(lon) / 1.5) ** 2
-    return -0.30 + 0.17 * k - 0.0 * slip, -0.63 + 0.48 * k
+    """THE GRIN's upper and lower lip (lat) at lon: from under the whisker pads up into the cheeks (corners at +-1.12)."""
+    a = np.clip(np.abs(np.asarray(lon, float)) / 1.12, 0.0, 1.0)
+    up = -0.39 + 0.30 * a ** 1.6 + 0.035 * np.exp(-(np.asarray(lon, float) / 0.07) ** 2)
+    lo = -0.72 + 0.63 * a ** 1.8
+    return up, lo
+
+
+def _ws_grin(c, hd, pal, det, lw, dlo, dla, colr=None, a=255, glow=0.0):
+    """The mouth: dark inside, a flat row of white painted teeth along the upper lip, small pointed canines, a short lower
+    row; thick painted lips; the corners pushed up into the cheeks with a crease."""
+    def up_f(lon): return _grin_lat(lon - dlo)[0] + dla
+    def lo_f(lon): return _grin_lat(lon - dlo)[1] + dla
+    g = hd.region(-1.12 + dlo, 1.12 + dlo, lo_f, up_f, 32, 4, 0.2, 0.0)
+    if g is None: return
+    ghost = colr is not None
+    if ghost:
+        c.fill(g, colr, a); return
+    c.fill(g, pal['mouth'])
+    with c.clip(g):
+        cx, cy = hd.view.p2(hd.body(_ws_head_local(dlo, -0.62 + dla))[0])
+        c.radial(g, cx, cy, 9.0, [(0, '#000000', 160), (1, '#000000', 0)])
+        # upper teeth: a flat painted row, too many of them; small pointed canines
+        tu = hd.region(-0.98 + dlo, 0.98 + dlo, lambda lon: up_f(lon) - 0.12, lambda lon: up_f(lon) + 0.02, 26, 1, 0.22, -0.05)
+        tl = hd.region(-0.80 + dlo, 0.80 + dlo, lambda lon: lo_f(lon) - 0.02, lambda lon: lo_f(lon) + 0.06, 20, 1, 0.22, -0.05)
+        tcol = pal['teeth'] if glow <= 0 else '#fffbe8'
+        for tp in (tu, tl):
+            if tp is not None: c.fill(tp, tcol)
+        for s in (-1, 1):
+            for lk, top, dd in ((0.40, True, 0.085), (0.52, False, 0.07)):
+                lo_ = s * lk + dlo
+                if top:
+                    u0 = up_f(np.array([lo_ - 0.05, lo_ + 0.05]))
+                    pth, fc = hd.shape([lo_ - 0.05, lo_ + 0.05, lo_ + 0.008 * s], [u0[0] - 0.115, u0[1] - 0.115, u0[0] - 0.115 - dd])
+                else:
+                    l0 = lo_f(np.array([lo_ - 0.045, lo_ + 0.045]))
+                    pth, fc = hd.shape([lo_ - 0.045, lo_ + 0.045, lo_], [l0[0] + 0.055, l0[1] + 0.055, l0[0] + 0.055 + dd])
+                if fc > 0.02:
+                    c.fill(pth, tcol); c.line(pth, lw * 0.45, pal['line'], 200)
+        if det >= 1:
+            for k in range(-11, 12):          # tooth gaps
+                lk = k * 0.085 + dlo
+                if abs(k * 0.085) > 0.96: continue
+                u_ = up_f(np.array([lk]))[0]
+                for run in hd.curve(np.array([lk, lk]), np.array([u_ - 0.12, u_ + 0.01]), 0.25):
+                    c.line(poly(run, False), lw * 0.55, pal['line'], 200)
+                if abs(k * 0.085) < 0.78:
+                    l_ = lo_f(np.array([lk]))[0]
+                    for run in hd.curve(np.array([lk, lk]), np.array([l_ - 0.01, l_ + 0.06]), 0.25):
+                        c.line(poly(run, False), lw * 0.5, pal['line'], 190)
+            if pal['grime'] > 0:
+                for k in range(6):            # old paint: chips and stains on the teeth
+                    lo_ = -0.9 + 1.8 * hash01(k, 621)
+                    d_, fd = hd.disc(lo_ + dlo, up_f(np.array([lo_ + dlo]))[0] - 0.05, 0.03, 0.025, 6, 0.3)
+                    if fd > 0.05: c.fill(d_, '#a99a74', 170)
+            if tu is not None: c.fill(_crescent(tu, 0, -1.0), '#5a4a3a', 90)
+    lon = np.linspace(-1.12, 1.12, 61) + dlo
+    up, lo_ = _grin_lat(lon - dlo)
+    for run in hd.curve(lon, up + dla, 0.25) + hd.curve(lon, lo_ + dla, 0.25):
+        c.line(smooth(run, False), lw * 1.5, pal['line'])
+    for s in (-1, 1):                         # the corners dig up into the cheeks
+        lo0 = s * 1.12 + dlo; la0 = _grin_lat(np.array([s * 1.12]))[0][0] + dla
+        for run in hd.curve(np.array([lo0 - s * 0.06, lo0 + s * 0.02, lo0 + s * 0.04]), np.array([la0 - 0.06, la0, la0 + 0.09]), 0.25):
+            c.line(smooth(run, False), lw * 1.1, pal['line'], 230)
+
+
+def _ws_eyes(c, hd, pal, det, lw, glow=0.0):
+    """Painted almond cat eyes (yellow, no lids, never blink): thick dark rims flicked up at the outer corner, tiny
+    pinprick pupils (his left one higher), a hard glint that catches any light."""
+    out = []
+    for s, la0, pdl in ((1, 0.165, 0.03), (-1, 0.13, -0.005)):
+        lo0 = s * 0.37
+        x = np.linspace(-1, 1, 15)
+        upl = 0.10 * (1 - x ** 2) ** 0.85; lol = -0.065 * (1 - x ** 2) ** 0.9
+        tilt = 0.055 * x                    # outer corner up (x = +1 is the outer corner)
+        lons = np.concatenate([lo0 + s * 0.19 * x, lo0 + s * 0.19 * x[::-1]])
+        lats = np.concatenate([la0 + upl + tilt, la0 + (lol + tilt)[::-1]])
+        e, fe = hd.shape(lons, lats, 0.2, 0.35)
+        if fe <= 0.02: continue
+        so, fso = hd.disc(lo0, la0 + 0.01, 0.26, 0.17, 16, 0.12)
+        if glow <= 0 and det >= 1 and fso > 0.03: c.fill(so, pal['mask_sh'], 110)
+        c.fill(e, pal['eye'] if glow <= 0 else '#f6ec9a')
+        if glow <= 0: c.fill(_crescent(e, 0, 1.2), '#6a5a1a', 120)
+        pu, fp = hd.shape([lo0 + s * pdl + 0.026 * math.cos(a_) for a_ in np.linspace(0, 2 * PI, 10, endpoint=False)],
+                          [la0 + 0.015 + 0.036 * math.sin(a_) for a_ in np.linspace(0, 2 * PI, 10, endpoint=False)], 0.25, 0.8)
+        if fp > 0.02: c.fill(pu, pal['pupil'])
+        gl, fg = hd.disc(lo0 + s * 0.06, la0 + 0.06, 0.028, 0.022, 8, 0.3)
+        if fg > 0.02: c.fill(gl, '#ffffff', 235)
+        c.line(e, lw * (1.25 if glow <= 0 else 0.6), pal['line'])
+        for run in hd.curve(np.array([lo0 + s * 0.17, lo0 + s * 0.27]), np.array([la0 + 0.06, la0 + 0.12]), 0.2):
+            c.line(smooth(run, False), lw * 1.0, pal['line'])
+        out.append(e)
+    return out
+
+
+def _ws_muzzle(c, hd, pal, det, lw):
+    """The whisker pads (two puffy ovals over the top of the grin, follicle dots), the small dark triangular cat nose
+    and the philtrum."""
+    for s in (-1, 1):
+        pd, fp = hd.disc(s * 0.16, -0.32, 0.165, 0.105, 18, 0.35)
+        if fp <= 0.02: continue
+        c.fill(pd, pal['pad'])
+        c.fill(_crescent(pd, 0.0, -1.3), pal['mask_sh'], 170)
+        if det >= 1:
+            for r_ in range(3):
+                for k in range(3):
+                    d_, fd = hd.disc(s * (0.11 + 0.055 * k), -0.29 - 0.035 * r_ + 0.012 * k, 0.012, 0.010, 6, 0.4)
+                    if fd > 0.05: c.fill(d_, '#5a4a3e', 200)
+        for run in hd.curve(s * np.array([0.02, 0.10, 0.22, 0.31]), np.array([-0.28, -0.24, -0.25, -0.31]), 0.35):
+            c.line(smooth(run, False), lw * 0.8, pal['line'], 200)
+    nz, fn = hd.shape([-0.10, 0.10, 0.0], [-0.115, -0.115, -0.215], 0.45, 0.45)
+    if fn > 0.02:
+        c.fill(nz, pal['nose']); c.fill(_crescent(nz, 0, -0.8), '#000000', 90)
+        hl, fh = hd.disc(-0.03, -0.14, 0.03, 0.015, 6, 0.5)
+        if fh > 0.02: c.fill(hl, '#c9a8a0', 160)
+        c.line(nz, lw * 0.8, pal['line'])
+    for run in hd.curve(np.array([0.0, 0.0]), np.array([-0.215, -0.27]), 0.45):
+        c.line(poly(run, False), lw * 0.9, pal['line'])
+
+
+def _ws_whiskers(c, hd, pal, det, lw, near):
+    """Long whiskers out of the pads, past the cheek ruffs: pale with a dark edge (they read on the face and on the
+    dark); two bent, one snapped short. near: draw the side facing the lens (else the far side, behind the head)."""
+    view = hd.view
+    for s in (-1, 1):
+        root = hd.body(_ws_head_local(s * 0.24, -0.31))[0]
+        fc = float(view.face(hd.normal(_ws_head_local(s * 0.6, -0.3)[None, :]))[0])
+        if (fc > -0.15) != near: continue
+        if not near and float(view.face(hd.normal(_ws_head_local(0.0, -0.3)[None, :]))[0]) < -0.3: continue
+        for k, (dy, ln, kink) in enumerate(((-0.30, 30.0, 0.0), (-0.08, 34.0, 0.25), (0.14, 31.0, 0.0), (0.36, 22.0, -0.5))):
+            if det < 1 and k % 2: continue
+            d = hd.M @ _u3(np.array([s * 1.0, dy, 0.30]))
+            dn = hd.M @ np.array([0.0, 1.0, 0.0])
+            p0 = root + hd.M @ np.array([0.0, (k - 1.5) * 0.9, 0.5])
+            pts = [p0, p0 + d * ln * 0.45 + dn * 0.6]
+            if kink > 0:   # bent
+                pts.append(pts[-1] + _u3(d + dn * 0.9) * ln * 0.55)
+            elif kink < 0: # snapped: a short stub hanging down
+                pts.append(pts[-1] + _u3(d * 0.3 + dn) * ln * 0.18)
+            else:
+                pts.append(p0 + d * ln + dn * 2.5)
+            p2 = [view.p2(q) for q in pts]
+            pth = smooth(p2, False, 0.4 if kink == 0 else 0.0) if kink == 0 else poly(p2, False)
+            c.line(pth, lw * 0.95, pal['line'], 230)
+            c.line(pth, lw * 0.42, pal['whisk'], 255)
 
 
 def _ws_head_draw(c, R, view, P, det, t, light, pal, tv=False):
-    """The mascot head: tabby base, matted off-white mask, painted eyes (no lids; his left pupil higher), painted brows,
-    nose, whisker dots, THE GRIN (flat white painted teeth past the cheeks; it never moves), ears (a ticket-punch hole
-    through the left one), tabby stripes; under VHS slip the grin slides out of register."""
+    """The mascot head: ears behind, the jagged fur outline (cheek ruffs flaring out and down), the tabby crown with
+    dark stripes fading into the off-white matted face, layered cheek fur, fur strokes, soft shading, the painted cat
+    eyes, the muzzle and nose, THE GRIN (it never moves), whiskers; ears in front (a ticket-punch hole through the left
+    one); under the VHS slip the grin slides out of register."""
     hd = _WSHead(R, view, P, pal)
     lw = c.lw
     sil = hd.sil()
-    # ears (behind first when they face away)
     ears = []
     for s in (-1, 1):
-        b1 = _ws_head_local(s * 0.42, 0.88)[None, :]; b2 = _ws_head_local(s * 1.22, 0.38)[None, :]
-        mid = _ws_head_local(s * 0.80, 0.70)[None, :]
-        tip = mid[0] + np.array([s * 10.0, -13.0, -2.0])
-        pts_l = np.vstack([b1, tip[None, :], b2])
+        b1 = _ws_head_local(s * 0.42, 0.98)[None, :]; b2 = _ws_head_local(s * 1.30, 0.42)[None, :]
+        mid = _ws_head_local(s * 0.86, 0.78)[None, :]
+        tip = mid[0] + np.array([s * 11.0, -15.0, -2.5])
+        b3 = _ws_head_local(s * 0.95, 0.95)[None, :] + np.array([[0.0, 0.0, -7.0]])
+        pts_l = np.vstack([b1, tip[None, :], b2, b3])
         B = hd.body(pts_l)
         X, Y, zd, _ = view.pa(B)
         nrm = np.cross(B[1] - B[0], B[2] - B[0]) * (-s)
@@ -479,127 +771,155 @@ def _ws_head_draw(c, R, view, P, det, t, light, pal, tv=False):
     hz = view.depth(hd.C)
     for z_, s, pts, fc, B in ears:
         if z_ < hz - 2.0: _ws_ear(c, view, pts, fc, s, pal, det, B)
+    _ws_whiskers(c, hd, pal, det, lw, near=False)
+    c.line(sil, lw * 2.2, pal['line'])
+    _ws_fur_tufts(c, hd, pal, det, lw)
     c.fill(sil, pal['fur'])
     rim = light.get('rim') if light else None
     with c.clip(sil):
-        # the tabby: dark stripes on the back and sides, the "M" on the brow above the mask
-        if det >= 1:
+        if det >= 1:                           # tabby bands round the back and sides
             st = []
-            for k, la in enumerate((0.55, 0.12, -0.32, -0.76)):
-                for lo0 in (1.35, -1.35 - 1.55):
-                    p = hd.region(lo0, lo0 + 1.55, lambda lo, la=la, k=k: la - 0.05 + 0.07 * np.sin(4.0 * lo + k),
-                                  lambda lo, la=la, k=k: la + 0.06 + 0.07 * np.sin(4.0 * lo + k) - 0.05 * np.cos(7.0 * lo), 10, 1, 0.08)
+            for k, la in enumerate((0.78, 0.40, 0.02, -0.40, -0.85)):
+                for lo0 in (1.25, -1.25 - 1.75):
+                    p = hd.region(lo0, lo0 + 1.75, lambda lo, la=la, k=k: la - 0.06 + 0.08 * np.sin(4.0 * lo + k),
+                                  lambda lo, la=la, k=k: la + 0.07 + 0.08 * np.sin(4.0 * lo + k) - 0.06 * np.cos(7.0 * lo), 12, 1, 0.08)
                     if p is not None: st.append(p)
-            for lo0 in (-0.24, -0.04, 0.16):
-                p = hd.region(lo0, lo0 + 0.08, 0.66, 1.05, 1, 3, 0.08)
-                if p is not None: st.append(p)
-            for p in st: c.fill(p, pal['fur_dk'], 230)
-        # the mask: yellowed, matted edge, then the off-white face
-        mk = hd.region(-1.36, 1.36, lambda lo: -1.35 + 1.1 * np.clip((np.abs(lo) - 0.95) / 0.41, 0, 1) ** 2,
-                       lambda lo: 0.66 - 0.16 * lo ** 2 - 0.25 * np.clip((np.abs(lo) - 1.0) / 0.36, 0, 1) ** 2, 24, 10, 0.06)
+            for p in st: c.fill(p, pal['fur_dk'], 225)
+        # the face: a dirty yellowed edge, then the off-white matted mask (jagged where it meets the tabby)
+        mk = hd.region(-1.62, 1.62, -1.5, lambda lo: 0.56 - 0.26 * lo ** 2 + 0.035 * np.abs(np.sin(13 * lo)), 30, 12, 0.06)
         if mk is not None:
             c.fill(mk, pal['mask_edge'])
-            mk2 = hd.region(-1.22, 1.22, lambda lo: -1.25 + 1.0 * np.clip((np.abs(lo) - 0.85) / 0.37, 0, 1) ** 2 + 0.03 * np.sin(11 * lo),
-                            lambda lo: 0.58 - 0.17 * lo ** 2 - 0.03 * np.sin(9 * lo) - 0.2 * np.clip((np.abs(lo) - 0.9) / 0.32, 0, 1) ** 2, 22, 10, 0.07)
+            mk2 = hd.region(-1.42, 1.42, lambda lo: -1.40 + 0.5 * np.clip((np.abs(lo) - 1.0) / 0.42, 0, 1) ** 2,
+                            lambda lo: 0.47 - 0.26 * lo ** 2 - 0.04 * np.abs(np.sin(11 * lo + 0.5)) - 0.12 * np.clip((np.abs(lo) - 1.0) / 0.42, 0, 1) ** 2,
+                            28, 12, 0.07)
             if mk2 is not None: c.fill(mk2, pal['mask'])
-            if det >= 1 and pal['grime'] > 0:
-                for k in range(7):        # matted clumps along the mask's edge
-                    lo_ = -1.2 + 2.4 * hash01(k, 611); la_ = 0.62 - 0.17 * lo_ ** 2 - 0.05 + 0.04 * hash01(k, 612)
-                    pth, fc = hd.disc(lo_, la_, 0.06, 0.05, 7, 0.08)
-                    if fc > 0.05: c.fill(pth, pal['mask_edge'], 200)
-                c.texture(mk, 'fabric', 0.1 * pal['grime'] + 0.03, 0.5)
-        # shading: the face's turned-away side and below the chin
-        c.radial(sil, *view.p2(hd.body(np.array([[-6.0, -8.0, 14.0]]))), 28.0,
-                 [(0, '#ffffff', 40), (0.6, '#000000', 0), (1, '#000000', 110)])
+            if det >= 1:
+                # forehead: darker tabby stripes coming down from the crown and fading into the face
+                for lo0, la0, la1, w in ((0.0, 0.28, 1.0, 0.075), (-0.15, 0.36, 1.0, 0.055), (0.15, 0.36, 1.0, 0.055),
+                                         (-0.36, 0.38, 0.9, 0.05), (0.36, 0.38, 0.9, 0.05), (-0.75, 0.10, 0.5, 0.05), (0.75, 0.10, 0.5, 0.05)):
+                    p = hd.region(lo0 - w, lo0 + w, lambda lo, lo0=lo0, w=w, la0=la0: la0 + 0.30 * np.abs((lo - lo0) / w) ** 1.5, la1, 6, 4, 0.08)
+                    if p is not None: c.fill(p, pal['fur_dk'], 215)
+                for s in (-1, 1):              # painted tabby cheek bars out from the eyes
+                    for k_, la_ in enumerate((0.02, -0.12)):
+                        p = hd.region(s * 1.02 if s < 0 else 0.86, s * 0.86 if s < 0 else 1.02,
+                                      lambda lo, la_=la_: la_ - 0.03 + 0.0 * lo, lambda lo, la_=la_, s=s: la_ + 0.02 - 0.2 * (np.abs(lo) - 0.86), 4, 1, 0.08)
+                        if p is not None: c.fill(p, pal['fur_dk'], 170)
+                # layered cheek fur: zigzag clump edges down each cheek
+                for s in (-1, 1):
+                    for off in (0.0, 0.17):
+                        las = np.linspace(0.12, -0.95, 13)
+                        los = s * (0.92 + off + 0.06 * (np.arange(13) % 2) - 0.12 * np.abs(las + 0.4))
+                        for run in hd.curve(los, las, 0.1, 0.05):
+                            c.line(poly(run, False), lw * 0.7, pal['mask_sh'], 220 if off == 0 else 170)
+                if pal['grime'] > 0:
+                    for k in range(9):         # matted clumps and old stains
+                        lo_ = -1.3 + 2.6 * hash01(k, 611); la_ = -1.1 + 1.4 * hash01(k, 612)
+                        pth, fc = hd.disc(lo_, la_, 0.08 + 0.06 * hash01(k, 613), 0.05, 7, 0.08)
+                        if fc > 0.05: c.fill(pth, '#8a7650', int(70 * pal['grime']))
+                c.texture(mk, 'fabric', 0.12 * pal['grime'] + 0.04, 0.45)
+        _ws_fur_strokes(c, hd, pal, det, lw)
+        # soft shading: lit from the front-left, darker toward the outline and under the jaw
+        c.radial(sil, *view.p2(hd.body(np.array([[-5.0, -6.0, 16.0]]))[0]), 34.0,
+                 [(0, '#ffffff', 45), (0.55, '#000000', 0), (1, '#000000', 125)])
+        cy_ = view.p2(hd.body(np.array([[0.0, 0.0, 0.0]]))[0])[1]
+        c.grad(sil, 0, cy_ + 8.0, 0, cy_ + 24.0, [(0, '#000000', 0), (1, '#000000', 90)])
+        if light and light.get('under'):     # lit from below (a phone, a dashboard, the sodium glow)
+            ua = light.get('under_a', 150)
+            c.grad(sil, 0, cy_ - 26.0, 0, cy_ + 24.0, [(0, '#000000', 0.75 * ua), (0.4, '#000000', 0.15 * ua), (0.7, light['under'], 0.35 * ua), (1, light['under'], 0.8 * ua)])
         if rim:
-            c.fill(_crescent(sil, -light.get('side', 1) * 1.6, 0.4), rim, light.get('rim_a', 60))
-    # features (painted): eyes, pupils, brows, nose, whisker dots
-    feats = []
-    eyes = []
-    for s, (lo, la, plo, pla) in ((1, (0.38, 0.20, 0.385, 0.25)), (-1, (-0.38, 0.17, -0.38, 0.13))):
-        e, fe = hd.disc(lo, la, 0.115, 0.16, 18)
-        pu, fp = hd.disc(plo, pla, 0.032, 0.036, 10, 0.25)
-        so, fso = hd.disc(lo, la - 0.01, 0.2, 0.25, 16, 0.1)
-        if fso > 0.03 and det >= 1: c.fill(so, pal['mask_sh'], 120)
-        eyes.append((e, fe, pu, fp))
-    for e, fe, pu, fp in eyes:
-        if fe > 0.03:
-            c.fill(e, pal['eye']); c.line(e, lw * 0.55, pal['line'], 200)
-            if fp > 0.03: c.fill(pu, pal['pupil'])
-            if det >= 2: c.fill(_crescent(e, 0, 0.6), '#000000', 40)
-    nz = hd.curve(np.array([-0.08, 0.0, 0.08, -0.08]), np.array([-0.05, -0.15, -0.05, -0.05]), 0.6)
-    for run in nz:
-        q = smooth(run, True, 0.5); c.fill(q, pal['nose']); c.line(q, lw * 0.6, pal['line'])
-    if det >= 1 and pal['grime'] > 0:          # old stains: under the eyes, at the grin's corners, on one cheek
-        for lo, la, rl, rt, a_ in ((0.40, 0.02, 0.12, 0.07, 70), (-0.36, -0.01, 0.10, 0.06, 60), (1.25, -0.20, 0.16, 0.10, 80),
-                                   (-1.22, -0.18, 0.14, 0.09, 70), (0.70, -0.62, 0.2, 0.12, 50), (-0.2, 0.45, 0.16, 0.08, 40)):
-            d_, fd = hd.disc(lo, la, rl, rt, 12, 0.2)
-            if fd > 0.05: c.fill(d_, '#8a7650', int(a_ * pal['grime']))
-    # THE GRIN
+            c.fill(_crescent(sil, -light.get('side', 1) * 1.8, 0.4), rim, light.get('rim_a', 60))
+    # the painted face
+    _ws_eyes(c, hd, pal, det, lw)
     slip = clamp(P.ws_slip)
     dlo, dla = 0.45 * slip + 0.04 * slip * math.sin(t * 37.0), -0.24 * slip
-    def grin(dlo, dla, fill=True, colr=None, a=255):
-        def lo_f(lon): return _grin_lat(lon - dlo)[1] + dla
-        def hi_f(lon): return _grin_lat(lon - dlo)[0] + dla
-        g = hd.region(-1.5 + dlo, 1.5 + dlo, lo_f, hi_f, 30, 3, 0.2, 0.01)
-        if g is None: return
-        if fill: c.fill(g, colr or pal['teeth'], a)
-        lc = colr if colr else pal['line']
-        lon = np.linspace(-1.5, 1.5, 61) + dlo
-        up, lo_ = _grin_lat(lon - dlo)
-        for run in hd.curve(lon, up + dla, 0.25) + hd.curve(lon, lo_ + dla, 0.25):
-            c.line(smooth(run, False), lw * 1.35, lc, a)
-        mid = (up + lo_) / 2 + dla + 0.01
-        for run in hd.curve(lon[3:-3], mid[3:-3], 0.25):
-            c.line(smooth(run, False), lw * 0.75, lc, a)
-        for k in range(-12, 13):           # the flat row of painted teeth: too many of them
-            lk = k * 0.118 + dlo
-            u_, l_ = _grin_lat(np.array([lk - dlo]))
-            for run in hd.curve(np.array([lk, lk]), np.array([u_[0], l_[0]]) + dla, 0.25):
-                c.line(poly(run, False), lw * 0.95, lc, a)
     if slip > 0.02:
-        c.cv.save()
-        grin(dlo + 0.07, dla, True, '#ff2a3a', int(120 * slip))
-        grin(dlo - 0.07, dla + 0.02, True, '#2ae0ff', int(120 * slip))
-        c.cv.restore()
-    grin(dlo, dla)
-    if det >= 1 and pal['grime'] > 0:      # old paint: a few chips and stains on the teeth
-        for k in range(5):
-            lo_ = -1.1 + 2.2 * hash01(k, 621); u_, l_ = _grin_lat(np.array([lo_]))
-            d_, fd = hd.disc(lo_ + dlo, (u_[0] + l_[0]) / 2 + dla, 0.035, 0.03, 6, 0.3)
-            if fd > 0.05: c.fill(d_, '#b9ab86', 160)
-    c.line(sil, lw * 1.05, pal['line'])
+        _ws_grin(c, hd, pal, det, lw, dlo + 0.07, dla, '#ff2a3a', int(120 * slip))
+        _ws_grin(c, hd, pal, det, lw, dlo - 0.07, dla + 0.02, '#2ae0ff', int(120 * slip))
+    _ws_grin(c, hd, pal, det, lw, dlo, dla)
+    _ws_muzzle(c, hd, pal, det, lw)
+    if light and light.get('under') and det >= 1:
+        with c.clip(sil):
+            cy_ = view.p2(hd.body(np.array([[0.0, 0.0, 0.0]]))[0])[1]
+            c.grad(sil, 0, cy_ - 4.0, 0, cy_ + 24.0, [(0, light['under'], 0), (1, light['under'], 0.22 * light.get('under_a', 150))])
+    _ws_whiskers(c, hd, pal, det, lw, near=True)
     if slip > 0.05:
-        bx = [view.p2(hd.body(np.array([[x_, y_, 0.0]]))[0]) for x_, y_ in ((-22, -20), (22, 20))]
+        bx = [view.p2(hd.body(np.array([[x_, y_, 0.0]]))[0]) for x_, y_ in ((-26, -24), (26, 22))]
         with c.clip(sil):
             ws_tracking(c, min(bx[0][0], bx[1][0]) - 5, min(bx[0][1], bx[1][1]), abs(bx[1][0] - bx[0][0]) + 10, abs(bx[1][1] - bx[0][1]), slip, t, 7)
+    hatz = view.depth(R['hat']['base'])
+    late = []
     for z_, s, pts, fc, B in ears:
-        if z_ >= hz - 2.0: _ws_ear(c, view, pts, fc, s, pal, det, B)
+        if z_ >= hatz + 10.0: late.append((s, pts, fc, B))          # an ear nearer the lens than the hat: over the hat
+        elif z_ >= hz - 2.0: _ws_ear(c, view, pts, fc, s, pal, det, B)
+    R['_ears_late'] = lambda cc: [_ws_ear(cc, view, pts, fc, s, pal, det, B) for s, pts, fc, B in late]
     return hd
 
 
+def _ws_glow_feats(c, R, view, P, det, t, pal, amount):
+    """In near darkness only his painted eyes and the teeth catch the light."""
+    hd = _WSHead(R, view, P, pal)
+    lw = c.lw
+    c.cv.saveLayer(None, skia.Paint(Alphaf=float(clamp(amount))))
+    _ws_eyes(c, hd, pal, det, lw, glow=1.0)
+    slip = clamp(P.ws_slip)
+    dlo, dla = 0.45 * slip, -0.24 * slip
+    mouth = hd.region(-1.12 + dlo, 1.12 + dlo, lambda lon: _grin_lat(lon - dlo)[1] + dla, lambda lon: _grin_lat(lon - dlo)[0] + dla, 32, 4, 0.2, 0.0)
+    if mouth is not None:
+        with c.clip(mouth):
+            _ws_grin(c, hd, pal, det, lw, dlo, dla, glow=1.0)
+    c.cv.restore()
+
+
 def _ws_ear(c, view, pts, facing, s, pal, det, B):
-    tri = smooth(pts + [pts[0]], True, 0.25)
+    """A tall pointed cat ear: tabby outside, dusty pink-grey inside with pale fur tufts, a tuft at the tip, a worn
+    notch; the ticket-punch hole through his left ear."""
+    (x0, y0), (xt, yt), (x2, y2), (x3, y3) = pts
+    pts = pts[:3]
+    ext = (xt + (xt - (x0 + x2) / 2) * 0.16, yt + (yt - (y0 + y2) / 2) * 0.16)
+    m1 = (x0 * 0.45 + xt * 0.55 - (y2 - y0) * 0.03, y0 * 0.45 + yt * 0.55)
+    nt = 0.62
+    n0 = (x2 * (1 - nt) + xt * nt, y2 * (1 - nt) + yt * nt)
+    n1 = (x2 * (1 - nt + 0.06) + xt * (nt - 0.06), y2 * (1 - nt + 0.06) + yt * (nt - 0.06))
+    nc = ((n0[0] + n1[0]) / 2 + ((x0 + x2) / 2 - xt) * 0.06, (n0[1] + n1[1]) / 2 + ((y0 + y2) / 2 - yt) * 0.06)
+    outer = smooth([pts[0], m1, (xt, yt), ext, (xt, yt), n0, nc, n1, pts[2]], False, 0.15)
+    tri = poly([pts[0], m1, (xt, yt), n0, nc, n1, pts[2]], True)
+    try:
+        tri = union(tri, poly(_hull([pts[0], (xt, yt), pts[2], (x3, y3)]), True))
+    except Exception:
+        pass
     hole = None
-    if s > 0:                                # the ticket-punch hole through his left ear
-        cpt = B[0] * 0.25 + B[1] * 0.45 + B[2] * 0.30
+    if s > 0:
+        cpt = B[0] * 0.22 + B[1] * 0.40 + B[2] * 0.38
         X, Y = view.p2(cpt)
         _, _, _, f = view.p(cpt)
-        r = 2.1 * f
+        r = 2.3 * f
         hole = oval(X, Y, r, r)
     ctxm = c.clip(hole, diff=True) if hole is not None else _noop()
     with ctxm:
         c.fill(tri, pal['fur'])
         if facing > 0:
-            inner = smooth([(pts[0][0] * 0.7 + pts[1][0] * 0.15 + pts[2][0] * 0.15, pts[0][1] * 0.7 + pts[1][1] * 0.15 + pts[2][1] * 0.15),
-                            (pts[1][0] * 0.75 + pts[0][0] * 0.125 + pts[2][0] * 0.125, pts[1][1] * 0.75 + pts[0][1] * 0.125 + pts[2][1] * 0.125),
-                            (pts[2][0] * 0.7 + pts[0][0] * 0.15 + pts[1][0] * 0.15, pts[2][1] * 0.7 + pts[0][1] * 0.15 + pts[1][1] * 0.15)], True, 0.3)
+            cx, cy = (x0 + x2 + xt) / 3, (y0 + y2 + yt) / 3
+            inner = smooth([(x0 * 0.72 + cx * 0.28, y0 * 0.72 + cy * 0.28), (xt * 0.78 + cx * 0.22, yt * 0.78 + cy * 0.22),
+                            (x2 * 0.72 + cx * 0.28, y2 * 0.72 + cy * 0.28)], True, 0.3)
             c.fill(inner, pal['ear_in'])
+            c.fill(_crescent(inner, 0, 1.2), '#6e5655', 150)
+            if det >= 1:                        # pale tufts sprouting from inside the ear
+                bx, by = (x0 + x2) / 2, (y0 + y2) / 2
+                for k in range(5):
+                    u = (k + 0.5) / 5
+                    sx, sy = x0 + (x2 - x0) * u, y0 + (y2 - y0) * u
+                    ex, ey = sx + (xt - bx) * (0.42 + 0.15 * hash01(k, 1321)), sy + (yt - by) * (0.42 + 0.15 * hash01(k, 1321))
+                    c.line(smooth([(sx, sy), ((sx + ex) / 2 + (cx - sx) * 0.15, (sy + ey) / 2), (ex, ey)], False), c.lw * 0.8, pal['mask'], 220)
         elif det >= 1:
-            c.line(poly([pts[0], ((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2)], False), c.lw * 1.4, pal['fur_dk'])
-        c.line(tri, c.lw, pal['line'])
+            for k in range(3):
+                u = 0.25 + 0.25 * k
+                c.line(poly([(x0 + (x2 - x0) * u, y0 + (y2 - y0) * u), (x0 + (x2 - x0) * u + (xt - x0) * 0.3, y0 + (y2 - y0) * u + (yt - y0) * 0.3)], False),
+                       c.lw * 1.4, pal['fur_dk'])
+        c.line(tri, c.lw * 1.05, pal['line'])
+        c.line(poly([(xt, yt), ext], False), c.lw * 1.3, pal['line'])
+        c.line(poly([(xt, yt), ext], False), c.lw * 0.5, pal['fur_hi'])
     if hole is not None:
-        c.line(hole, c.lw * 0.7, pal['line'])
+        c.line(hole, c.lw * 0.75, pal['line'])
 
 
 # ---------------------------------------------------------------------------------------------------- the hat
@@ -612,7 +932,7 @@ def _ws_hat_ring(hat, s, phi, rad=1.0):
     side = _u3(np.cross(ax, fwd))                       # toward his left (+x) for an upright head
     if float(np.dot(side, M @ np.array([1.0, 0.0, 0.0]))) < 0: side = -side
     phi = np.asarray(phi, float)
-    r = (10.4 + 1.2 * s) * rad * (1.0 - 0.07 * math.exp(-((s - 0.5) / 0.06) ** 2))       # pinched at the dent
+    r = (11.6 + 1.3 * s) * rad * (1.0 - 0.07 * math.exp(-((s - 0.5) / 0.06) ** 2))       # pinched at the dent
     off = r * (np.cos(phi)[:, None] * fwd[None, :] + np.sin(phi)[:, None] * side[None, :])
     sq = hat['squash']
     if s <= 0.5:
@@ -750,7 +1070,20 @@ def _ws_leg(c, view, R, s, pal, det, light):
 
 
 def _ws_tail(c, view, R, pal, det, light):
-    tp, p2 = _ws_tube3(c, view, R['tail'], [3.0, 2.4, 1.6], pal['fur'], pal['fur_dk'], c.lw, light)
+    X, Y, _, f = view.pa(np.asarray(R['tail']))
+    bases, dirs, lens = [], [], []
+    n = 16
+    for i in range(n):
+        u = (i + 0.5) / n
+        k = min(int(u * 2), 1); fr = u * 2 - k
+        x = X[k] + (X[k + 1] - X[k]) * fr; y = Y[k] + (Y[k + 1] - Y[k]) * fr
+        dx, dy = X[k + 1] - X[k], Y[k + 1] - Y[k]; d = math.hypot(dx, dy) or 1.0
+        s_ = 1 if i % 2 else -1
+        bases.append((x, y)); dirs.append((-dy / d * s_ + dx / d * 0.9, dx / d * s_ + dy / d * 0.9))
+        lens.append((3.0 + 1.6 * hash01(i, 1351)) * f[k])
+    bases.append((X[-1], Y[-1])); dirs.append((X[-1] - X[-2], Y[-1] - Y[-2])); lens.append(4.0 * f[-1])
+    _ws_tufts2d(c, bases, dirs, lens, 1.0 * f[0], pal['fur'], pal, c.lw, det)
+    tp, p2 = _ws_tube3(c, view, R['tail'], [3.6, 3.0, 2.2], pal['fur'], pal['fur_dk'], c.lw, light)
     if det >= 1: _ws_stripes(c, tp, p2, pal['fur_dk'], 5, c.lw * 1.4)
 
 
@@ -765,9 +1098,10 @@ def _ws_spine_pt(R, h):
         return Hc + _rx(np.array([0.0, -h, 0.0]), a1), a1
     if h <= 46.0:
         k = (h - 16.0) / 30.0; return Wst + (Ch - Wst) * k, a1 + R['a2'] * k
+    hn = R.get('hunch', 0.0)
     if h <= 70.0:
-        k = (h - 46.0) / 24.0; return Ch + (Sc - Ch) * k, a
-    return Sc + _rx(np.array([0.0, -(h - 70.0), 0.0]), a), a
+        k = (h - 46.0) / 24.0; return Ch + (Sc - Ch) * k, a + hn * k
+    return Sc + _rx(np.array([0.0, -(h - 70.0), 0.0]), a + hn), a + hn
 
 
 def _ws_surf(R, h, xr, out=1.0, front=True):
@@ -844,13 +1178,66 @@ def _ws_torso(c, view, R, P, pal, det, t, light, tv=False):
     return body, fz
 
 
+def _ws_tufts2d(c, bases, dirs, lens, w, colr, pal, lw, det, a=255):
+    """Jagged fur tufts (2D): from base points along directions; one path, a dark rim, a shade."""
+    p = skia.Path()
+    for (x, y), (dx, dy), L in zip(bases, dirs, lens):
+        d = math.hypot(dx, dy) or 1.0; ux, uy = dx / d, dy / d
+        nx, ny = -uy * w, ux * w
+        p.addPoly([skia.Point(x - nx, y - ny), skia.Point(x + ux * L * 0.55 - nx * 0.35, y + uy * L * 0.55 - ny * 0.35),
+                   skia.Point(x + ux * L, y + uy * L), skia.Point(x + ux * L * 0.5 + nx * 0.45, y + uy * L * 0.5 + ny * 0.45),
+                   skia.Point(x + nx, y + ny)], True)
+    if p.countPoints() == 0: return
+    c.line(p, lw * 1.2, pal['line'], int(220 * a / 255))
+    if det >= 1:
+        c.fill(p, pal['fur_dk'] if colr == pal['fur'] else pal['mask_sh'], a)
+        q = skia.Path(p); q.offset(-0.3, -0.45); c.fill(q, colr, a)
+    else:
+        c.fill(p, colr, a)
+
+
+def _ws_chest_ruff(c, view, R, P, pal, det):
+    """The off-white chest ruff spilling out of the jacket's neck under the bow tie: matted, jagged, a little dirty."""
+    lw = c.lw
+    side = []
+    for s in (-1, 1):
+        pts = []
+        for i in range(15):
+            u = i / 14.0
+            h = 74.0 - 30.0 * u
+            xb = 0.92 * (1.0 - u) ** 0.75
+            if i % 2:   # a tuft tip hanging down and out
+                xr, h = xb + 0.05, h - (3.0 + 2.5 * hash01(i + 20 * (s + 1), 1336))
+            else:       # the valley between two tufts
+                xr, h = xb - 0.10 * (1.0 - u) - 0.02, h + 1.5
+            pts.append(view.p2(_ws_surf(R, h, clamp(s * xr, -0.99, 0.99), 1.4)[0]))
+        side.append(pts)
+    out = side[0] + side[1][::-1]
+    rf = poly(out, True)
+    c.line(rf, lw * 2.0, pal['line'])
+    c.fill(rf, pal['mask_edge'])
+    inner = poly([view.p2(_ws_surf(R, 74.0 - 25.0 * (i / 8.0), s * 0.62 * (1 - i / 8.0) ** 0.8 + (0.06 * s if i % 2 else 0.0), 1.6)[0])
+                  for s, rng in ((-1, range(9)), (1, range(8, -1, -1))) for i in rng], True)
+    c.fill(inner, pal['mask'])
+    if det >= 1:
+        for k in range(22):
+            u = hash01(k, 1331); xr = (hash01(k, 1332) - 0.5) * 1.4 * (1 - u)
+            a_ = view.p2(_ws_surf(R, 73.0 - 24.0 * u, xr, 1.7)[0]); b_ = view.p2(_ws_surf(R, 73.0 - 24.0 * u - 4.0, xr * 1.12, 1.7)[0])
+            c.line(poly([a_, b_], False), lw * 0.55, pal['mask_sh'] if k % 3 else '#fffbf0', 200)
+        c.fill(_crescent(rf, 0, -1.5), pal['mask_sh'], 150)
+        if pal['grime'] > 0:
+            c.texture(rf, 'fabric', 0.14, 0.45)
+            d_ = view.p2(_ws_surf(R, 56.0, 0.25, 1.7)[0]); c.fill(oval(d_[0], d_[1], 2.6, 1.6), '#8a7650', 70)
+
+
 def _ws_collar(c, view, R, P, pal, det, fz):
     """Bow tie (black, the red STOP-sign pin) and the lanyard with the whistle (drawn after the head is not needed: the
     tie sits under the chin)."""
     if fz < -0.05: return None
     lw = c.lw
-    a = R['a']
-    B = R['Nb'] + _rx(np.array([0.0, 2.0, 7.2]), a)
+    _ws_chest_ruff(c, view, R, P, pal, det)
+    a = R['a'] + R.get('hunch', 0.0)
+    B = R['Sc'] + _rx(np.array([0.0, 5.0, 10.5]), a)
     tx = _rx(np.array([1.0, 0.0, 0.0]), a); ty = _rx(np.array([0.0, 1.0, 0.0]), a)
     pr = lambda q: view.p2(q)                                          # noqa: E731
     for s in (-1, 1):
@@ -907,6 +1294,14 @@ def _ws_arm(c, view, R, P, s, pal, det, t, light, hands=True, arm_only=False):
         c.line(poly([(X - nx, Y - ny), (X + nx, Y + ny)], False), lw * 2.2, pal['trim'])
         tw, p2 = _ws_tube3(c, view, [cuff, (cuff + W) / 2, W], [4.6, 4.0, 4.0], pal['fur'], pal['fur_dk'], lw, light)
         if det >= 1: _ws_stripes(c, tw, p2, pal['fur_dk'], max(2, int(3 * arm['k'])), lw * 1.3)
+        Xw, Yw, _, fw = view.p(cuff + (W - cuff) * 0.08)
+        Xk, Yk = view.p2(W)
+        dx, dy = Xk - Xw, Yk - Yw; dd = math.hypot(dx, dy) or 1.0
+        px, py = -dy / dd, dx / dd
+        bases = [(Xw + px * k * 1.5 * fw, Yw + py * k * 1.5 * fw) for k in (-2, -1, 0, 1, 2)]
+        dirs = [(dx / dd + px * k * 0.35, dy / dd + py * k * 0.35) for k in (-2, -1, 0, 1, 2)]
+        lens = [(3.2 + 2.0 * hash01(k + 3 * (s + 1), 1341)) * fw for k in range(5)]
+        _ws_tufts2d(c, bases, dirs, lens, 1.1 * fw, pal['fur'], pal, lw, det)
     if hands: _ws_glove(c, view, R, P, s, pal, det, t, light)
 
 
@@ -1033,6 +1428,7 @@ def _ws_body_items(c, view, R, P, pal, det, t, light, upper_only=False, skip_han
             _ws_collar(cc, view, R, P, pal, det, st.get('fz', 1))
             _ws_lanyard(cc, view, R, P, pal, det)
         _ws_hat_draw(cc, R, view, P, det, t, light, pal)
+        if R.get('_ears_late'): R['_ears_late'](cc)
     items.append((max(zh, zt + 1.0) if view.depth(_rx(np.array([0.0, 0.0, 1.0]), R['a'])) > -0.2 else zh - 2.0, head))
     for s in (-1, 1):
         arm = R['arms'][s]
@@ -1082,6 +1478,16 @@ def _whistle_figure(c, who, P, det, t, light=None, upper_only=False):
         for z, fn in items: fn(cx_)
     g = clamp(P.ws_glitch); rw = clamp(P.ws_rewind)
     amt = max(g, rw)
+    dark = clamp((light or {}).get('dark', 0.0))
+    if amt < 0.01 and dark > 0.01:      # near darkness: the figure sinks into the dark; only his eyes and teeth catch light
+        cv = cc.cv
+        cv.saveLayer(None, None)
+        draw_all(cc)
+        cv.drawPaint(skia.Paint(Color=skia.Color4f(0.02, 0.018, 0.03, float(dark)), BlendMode=skia.BlendMode.kSrcATop))
+        cv.restore()
+        if not upper_only or True:
+            _ws_glow_feats(cc, R, view, P, det, t, pal, 0.35 + 0.65 * dark)
+        return R
     if amt < 0.01:
         draw_all(cc)
         return R
@@ -1120,7 +1526,7 @@ def _figure(c, who, P, det, t, light=None, upper_only=False):
     return _figure_bus_prev(c, who, P, det, t, light, upper_only)
 
 
-CAST['whistle'] = dict(whistle=True, m=_WS_M, hh=139.0, blink_rate=0.0, lock=0.0, micro=0.12, talk=0.0,
+CAST['whistle'] = dict(whistle=True, m=_WS_M, hh=200.0, blink_rate=0.0, lock=0.0, micro=0.12, talk=0.0,
                        breath=0.15, body=dict(sh=40, ch=40, wa=30, hip=30, arm=(20, 18), leg=(25, 20), neck=20, hand=1.0),
                        outfit='whistle', sex='m', ring=0, skin='#ebe4d0', skin_sh='#b9ae93', cloth={}, eye_y=0, mouth_y=60,
                        eye_dx=40)
@@ -1153,9 +1559,9 @@ def _ws_pts(P):
     k = _WSU * max(P.ws_scale, 1e-3)
     pr = lambda q: tuple(v * k for v in view.p2(q))            # noqa: E731
     M = R['hrot']
-    out = {'head': pr(R['head']), 'eyes': pr(R['head'] + M @ np.array([0.0, -3.0, 13.0])), 'mouth': pr(R['mouth']),
-           'grin': pr(R['mouth']), 'chin': pr(R['head'] + M @ np.array([0.0, 15.0, 8.0])),
-           'crown': pr(R['head'] + M @ np.array([0.0, -16.0, 0.0])),
+    out = {'head': pr(R['head']), 'eyes': pr(R['head'] + M @ _ws_head_local(0.0, 0.15)), 'mouth': pr(R['mouth']),
+           'grin': pr(R['mouth']), 'chin': pr(R['head'] + M @ _ws_head_local(0.0, -1.2)),
+           'crown': pr(R['head'] + M @ np.array([0.0, -_WS_CROWN, 0.0])),
            'hat_top': pr(_ws_hat_ring(R['hat'], 1.0, np.array([0.0]))[0]),
            'chest': pr(R['Ch'] + _rx(np.array([0.0, 0.0, 11.0]), R['a'])), 'neck': pr(R['Nb']), 'hip': pr(R['Hc']),
            'belly': pr(R['Wst'] + _rx(np.array([0.0, 0.0, 10.0]), R['a1']))}
@@ -2058,7 +2464,7 @@ def _selftest_bus():
     out.append('all %d bus ids draw in 6 views (full + bust)' % len(BUS_CAST))
     # his proportions
     P = Pose(); R = _ws_rig(P)
-    hip = -R['Hc'][1]; crown = -(R['head'] + R['hrot'] @ np.array([0.0, -17.0, 0.0]))[1]
+    hip = -R['Hc'][1]; crown = -(R['head'] + R['hrot'] @ np.array([0.0, -_WS_CROWN, 0.0]))[1]
     knee = -R['legs'][1][1][1]; tip = -_ws_hand3(R, 1, P)['fingers'][1][-1][1]
     hat = R['hat']; lean = math.degrees(math.atan2(hat['ax'][0], -hat['ax'][1]))
     assert 0.53 < hip / 244.0 < 0.57, ('legs', hip)

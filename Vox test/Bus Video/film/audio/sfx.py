@@ -5490,11 +5490,13 @@ BUS_NAMES = ('suburb_night', 'dog_far', 'street_flicker', 'bus_air_brake', 'bus_
              'school_night', 'mailbox_unscrew')
 NAMES = NAMES + BUS_NAMES
 # one-shots: momentary max, LU rel the voice at gain_db 0; beds (BEDS, and DUR_BEDS given a dur): integrated
+# (test 1: pa_crackle -9 sat 20-22 LU under his loudspeaker voice through the window: -4; tests 2-4: glove_squeak
+# -10 sat 22-26 LU under the narration: -6)
 LEVEL_LU.update(suburb_night=-27, dog_far=-14, street_flicker=-12, bus_air_brake=-5, bus_idle=-24, bus_door=-6,
-                his_unfold=-8, pa_crackle=-9, bus_pull_away=-10, bus_horn=-6, bus9_start=-8, bus9_drive=-24,
+                his_unfold=-8, pa_crackle=-4, bus_pull_away=-10, bus_horn=-6, bus9_start=-8, bus9_drive=-24,
                 bus_swerve=-1, mirror_rip=0, bus_fast_night=-23, dash_radio=-18, tire_screech=-4, whistle=-3,
                 ticket_punch=-3, deadbolt=-4, walkie=-8, power_down=-3, power_up=-4, run_asphalt=-8,
-                cat_rumble=-26, glove_squeak=-10, tape_skip=-7, crt_on=-8, vhs_tape=-7, tape_ff=-12, tape_slide=-10,
+                cat_rumble=-26, glove_squeak=-6, tape_skip=-7, crt_on=-8, vhs_tape=-7, tape_ff=-12, tape_slide=-10,
                 seatbelt=-5, flag_rope=-20, broom_bend=-6, broom_crack=-2, cloth_rip=-4, school_bell=-6,
                 bus_rewind=-4, clipboard_drop=-4, morning_bus=-24, dial_911=-10, his_bus_interior=-27,
                 school_night=-27, mailbox_unscrew=-11)

@@ -30,6 +30,19 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
+  THIS film, the Bus film (script/lines.py fx codes, placed by TAG_FX per line tag first; 'a+b' chains a then b;
+  speaker W with no fx gets --who-fx W=his):
+    tv          the 1994 Channel 6 tape on a school TV cart: VHS wow / flutter, the CRT speaker 160 Hz-5.8 kHz, hiss, buzz
+    his         Mister Whistlestop in the room: tape hiss, 110 Hz-9 kHz (his warble is baked by tools/vo_voices.py)
+    loudspeaker his bus PA horn: 430 Hz-3.5 kHz, driven, slap-back off the houses, a feedback ring on loud syllables
+    door        through the front door with its frosted glass (wood boom, a glass leak of consonants, porch + hall)
+    walkie      a kid's walkie: 300 Hz-3 kHz, clipped AGC, gated hiss, a squelch tail
+    radio       bus 9's dash radio: 350 Hz-3.2 kHz, driven, static crackle, hum
+    phone       the 911 operator on a cell phone: narrowband, light codec grain, gentle (the landline: 'landline')
+    his_bus     a voice from inside his bus heard from the steps (Mina's voice imitated)
+    mimic / mimic_slide  an imitation's wrong double + wobble / the slowing-tape slide (for a line that arrives
+                unbaked; vo_voices.py already bakes both into this film's imitations, so TAG_FX gives them places only)
+    memory, whisper  as below
   this film, the Bunnyman (script/lines.py fx codes; the character voices themselves are baked into vo_en.wav by
   tools/vo_voices.py, these only put them in their place):
     door       through the shut bathroom door (the girl under the door, Mom from the hall): 2.4 kHz top, the panel's
@@ -330,6 +343,177 @@ def rooms_wash(y):
 ROOMS_WASH = []                                      # (start sample, stereo) collected by apply_line_fx
 
 
+# ---- the Bus film's voice FX (script/lines.py fx codes: tv, loudspeaker, door, mimic, whisper, memory, phone; plus
+# walkie, radio and the per-line places in TAG_FX). Chains: an fx 'a+b' runs a then b (e.g. 'mimic+door').
+def tv1994_fx(x):
+    """'tv': Mister Whistlestop on the 1994 Channel 6 tape, played off a school TV cart (and in the hook): a VHS
+    linear track (wow 0.35 % at 0.45 Hz, flutter at 6.5 Hz), the CRT's small speaker (160 Hz-5.8 kHz, a 1.5 kHz
+    cone peak, a 420 Hz box), soft tape saturation, tape hiss and the 60 Hz head-switch buzz under it (-1 LU)."""
+    y = _wow(x, 0.0035, 0.45, 0.0008, 6.5, 21)
+    y = SX.lp(SX.hp(y, 160, 4), 5800, 4)
+    y = SX.eq(y, ('peak', 1500, 3.0, 1.0), ('peak', 420, 2.0, 1.6), ('peak', 3200, -1.5, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(y / pk * 1.6) / np.tanh(1.6) * pk).astype(np.float32)
+    rng = np.random.default_rng(22); t = np.arange(len(y)) / SR
+    hiss = band(rng.normal(0, 1, len(y)).astype(np.float32), 1800, 7500) * pk * 0.008
+    buzz = (np.sign(np.sin(2 * np.pi * 59.94 * t)) * 0.3 + np.sin(2 * np.pi * 59.94 * t)).astype(np.float32)
+    return (y + hiss + SX.lp(buzz, 400, 2) * pk * 0.004).astype(np.float32)
+
+
+def his_fx(x):
+    """'his': Mister Whistlestop speaking in the room (the default for W lines with no fx: "Last stop! Everybody
+    counted?", the aisle speech, the lure, the taunt): his bright 1994 voice still on tape: a breath of hiss under
+    it, slightly band-limited (110 Hz-9 kHz), never so dirty that a word goes; the warble itself is baked into the
+    voice by tools/vo_voices.py (W: wow 0.3 %), so none is added here (-0.5 LU)."""
+    y = SX.eq(SX.lp(SX.hp(x, 110, 2), 9000, 2), ('peak', 1700, 1.5, 1.0))   # (tools/vo_voices.py bakes his wow)
+    pk = float(np.abs(y).max()) + 1e-9
+    hiss = band(np.random.default_rng(24).normal(0, 1, len(y)).astype(np.float32), 2500, 8000) * pk * 0.004
+    return (y + hiss).astype(np.float32)
+
+
+def loudspeaker_fx(x):
+    """'loudspeaker': his bus PA horn at the curb ("Sami. First grade...", "Great smile, Mina!", "Seat's saved"):
+    the horn's narrow band (430 Hz-3.5 kHz, a 1.9 kHz honk), driven hard, slap-back off the house fronts (58 / 131 ms),
+    the street around it, and a touch of feedback: a 2.35 kHz ring that follows the loudest syllables (-1.5 LU)."""
+    y = SX.eq(band(x, 430, 3500, 4), ('peak', 1900, 6.0, 1.3), ('peak', 850, 2.0, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(y / pk * 2.4) / np.tanh(2.4) * pk).astype(np.float32)
+    env = SX.follow(np.abs(y), SX.coef(0.01), SX.coef(0.25))
+    t = np.arange(len(y)) / SR
+    ring = np.sin(2 * np.pi * 2350 * t * (1 + 0.003 * np.sin(2 * np.pi * 2.5 * t))).astype(np.float32)
+    y = y + ring * np.clip(env / (env.max() + 1e-9) - 0.6, 0, 1) * pk * 0.25
+    sl = np.zeros_like(y)
+    for d, g in ((0.058, 0.3), (0.131, 0.18), (0.22, 0.08)):
+        k = int(d * SR); sl[k:] += y[:-k] * g
+    y = y + SX.lp(sl, 2600, 2)
+    return SX.mono(SX.reverb(y, 'street', 0.28, 0.01))[:len(x)].astype(np.float32)
+
+
+def front_door_fx(x):
+    """'door': a voice on the porch heard through the front door with its frosted-glass panel (the roll call,
+    "Almost.", the fake Grandma): the wood takes the top (2.6 kHz, -4 dB shelf from 1.6 kHz) and booms (230 Hz), the
+    glass panel leaks a thin band of consonants (1.6-4.5 kHz, 14 %), the porch's air behind the voice, the front hall
+    around us. Clearly outside, every word clear (-2.5 LU)."""
+    d = SX.eq(SX.lp(x, 2600, 2), ('peak', 230, 3.5, 1.1), ('peak', 560, 1.5, 1.3), ('hs', 1600, -4.0, 0.7))
+    glass = band(x, 1600, 4500, 2) * 0.14
+    y = SX.mono(SX.reverb(d + glass, 'porch', 0.22, 0.002))[:len(x)]
+    return SX.mono(SX.reverb(y, 'hallway', 0.22, 0.002))[:len(x)].astype(np.float32)
+
+
+def walkie_fx(x):
+    """'walkie': a kid's walkie-talkie: 300 Hz-3 kHz, hard-clipped through a little AGC, the channel's hiss gated
+    with the voice, a squelch tail after the last word (-1 LU)."""
+    y = band(x, 300, 3000, 6)
+    pk = float(np.abs(y).max()) + 1e-9
+    y = SX.compress(y, SX.db(pk) - 18, 4.0, 0.002, 0.08)
+    pk = float(np.abs(y).max()) + 1e-9
+    y = np.clip(y / pk * 2.2, -1, 1) * pk * 0.7
+    env = SX.follow(np.abs(y), SX.coef(0.005), SX.coef(0.12))
+    rng = np.random.default_rng(25)
+    hiss = band(rng.normal(0, 1, len(y)).astype(np.float32), 500, 3500) * pk * 0.03 * (env / (env.max() + 1e-9) > 0.05)
+    y = (y + hiss).astype(np.float32)
+    k = min(len(y), int(0.16 * SR))
+    tail = band(rng.normal(0, 1, k).astype(np.float32), 600, 4000) * pk * 0.25 * np.exp(-np.arange(k) / (0.05 * SR))
+    last = int(np.flatnonzero(env > env.max() * 0.05)[-1]) if (env > env.max() * 0.05).any() else len(y) - k
+    a = min(last, len(y) - k); y[a:a + k] += tail.astype(np.float32)[:len(y) - a]
+    return y
+
+
+def dash_radio_fx(x):
+    """'radio': bus 9's dash radio to the depot (his voice in Grandma's voice: "The third was a boy in the back."):
+    an AM-ish band 350-3200 Hz, a 1.3 kHz cone peak, driven, the static crackling under it and a soft 120 Hz hum
+    (-2 LU)."""
+    y = SX.eq(band(x, 350, 3200, 4), ('peak', 1300, 3.0, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(y / pk * 2.0) / np.tanh(2.0) * pk).astype(np.float32)
+    rng = np.random.default_rng(26); t = np.arange(len(y)) / SR
+    st_ = band(rng.normal(0, 1, len(y)).astype(np.float32), 800, 4000) * pk * 0.02
+    cr = np.zeros(len(y), np.float32)
+    for i in rng.integers(0, len(y), int(len(y) / SR * 25)):
+        cr[i:i + 40] += rng.uniform(-1, 1) * pk * 0.15
+    hum = (np.sin(2 * np.pi * 120 * t) * pk * 0.01).astype(np.float32)
+    return (y + st_ + band(cr, 1000, 5000, 2) + hum).astype(np.float32)
+
+
+def cell_fx(x):
+    """'phone': the 911 operator on Grandma's cell phone, held at Mina's ear ("Officers are on the way."): a clean
+    narrowband call (300-3400 Hz), light codec grain, a gentle 2:1: warm and competent, never harsh (-1 LU)."""
+    y = SX.eq(band(x, 300, 3400, 6), ('peak', 1200, 1.5, 1.0), ('peak', 2600, 1.0, 1.4))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = SX.compress(y, SX.db(pk) - 14, 2.0, 0.004, 0.1)
+    mu = 255.0; q = 96.0
+    a = np.abs(y).max() + 1e-9
+    c = np.sign(y) * np.log1p(mu * np.abs(y) / a) / np.log1p(mu)
+    c = np.round(c * q) / q
+    return (np.sign(c) * (np.expm1(np.abs(c) * np.log1p(mu)) / mu) * a).astype(np.float32)
+
+
+def _pitch(x, semis):
+    try:
+        import librosa, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            return np.nan_to_num(librosa.effects.pitch_shift(x.astype(np.float32), sr=SR, n_steps=semis)).astype(np.float32)
+    except Exception as e:
+        log('pitch shift skipped:', repr(e)[:80]); return None
+
+
+def mimic_fx(x):
+    """'mimic': his imitations (Sami's "Here!", Grandma at the door, "It's me, sweetheart.", Mina's "Sami! Back
+    here!"): the imitated voice almost perfect, with a faint WRONG double (the same words 0.45 semitone sharp, 14 ms
+    late, 15 dB down: two mouths not quite agreeing) and a slight tape wobble (0.3 % at 0.8 Hz) (-0.5 LU)."""
+    y = _wow(x, 0.003, 0.8, 0.0004, 5.5, 27)
+    d = _pitch(x, 0.45)
+    if d is not None:
+        k = int(0.014 * SR); dd = np.zeros_like(y); dd[k:] = d[:len(y) - k]
+        y = y + SX.lp(dd, 6000, 2) * 0.18
+    return y.astype(np.float32)
+
+
+MIMIC_SLIDE_EXTRA = 0.55                     # s the slide may run past the line's end (the gap before the next line)
+
+
+def mimic_slide_fx(x):
+    """'mimic_slide': "...Clever.": the imitation ends and the voice slides down like a slowing tape: the first 15 %
+    at speed, then the tape decelerates to half speed (an octave down) by the end, so the word stretches (the output
+    is longer than the line, up to MIMIC_SLIDE_EXTRA s into the gap after it), with the mimic's wobble (-0.5 LU)."""
+    y = mimic_fx(x)
+    n_in = len(y)
+    n_out = int(n_in * 1.32)
+    u = np.linspace(0, 1, n_out)
+    r = 1.0 - 0.5 * np.clip((u - 0.15) / 0.85, 0, 1) ** 1.2
+    pos = np.cumsum(r); pos = pos / pos[-1] * (n_in - 2)
+    i = pos.astype(np.int64); f = (pos - i).astype(np.float32)
+    z = y[i] * (1 - f) + y[i + 1] * f
+    z = SX.lp(z, 9000, 2)
+    w = np.ones(len(z), np.float32); k = int(0.08 * SR); w[-k:] = np.linspace(1, 0, k)
+    return (z * w).astype(np.float32)
+
+
+def his_bus_fx(x):
+    """'his_bus': a voice from inside his bus, heard from the steps (Mina's voice from inside: "Sami! Back here!",
+    "Don't answer her."): a small hard metal box (the car IR, 26 %), a little dull, his tape's hiss (-1 LU)."""
+    y = SX.eq(SX.lp(x, 7500, 2), ('peak', 320, 1.5, 1.2))
+    y = SX.mono(SX.reverb(y, 'car', 0.26, 0.001))[:len(x)]
+    pk = float(np.abs(y).max()) + 1e-9
+    return (y + band(np.random.default_rng(28).normal(0, 1, len(y)).astype(np.float32), 2500, 8000) * pk * 0.003).astype(np.float32)
+
+
+# TAG_FX: the timeline's line tags -> the place each line is heard in (lines.py gives the voice's kind). The
+# imitations' "wrong" second voice, warble and sag, and the "...Clever." tape slide, are BAKED into the voice by
+# tools/vo_voices.py (W_della_*, W_sami_*, W_mina_*, W_della_clever: _WRONG and tape=(0.40, 0.60)), so the imitation
+# lines get only their place here; mix.py's own 'mimic' / 'mimic_slide' stay for a line that arrives unbaked.
+TAG_FX = {
+    'mimic_sami_here': 'door', 'mimic_della_door': 'door', 'mimic_della_no_time': 'door',
+    'mimic_della_clever': 'door', 'mimic_della_sweetheart': 'door', 'mimic_della_lighthouse': 'door',
+    'mimic_della_radio': 'radio', 'mimic_mina_back_here': 'his_bus', 'mimic_mina_dont_answer': 'his_bus',
+    'smart_one': 'whisper+door',
+    'roll_della': 'his+door', 'roll_mina': 'his+door', 'roll_sami': 'his+door', 'almost': 'his+door',
+    'reads_post': 'his+loudspeaker', 'great_smile_mina': 'his+loudspeaker', 'know_your_name_bus': 'his+loudspeaker',
+    'seats_saved': 'his+loudspeaker', 'officers': 'phone', 'hook_voice': 'tv', 'tape_card': 'tv',
+    'tape_ride_right': 'tv'}
+
+
 LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: phone_fx(x, True), 'doorbell': doorbell_fx,
            'box': box_fx, 'hall': hall_fx, 'phone': None, 'dry': None, 'none': None,
            'tv': tv_fx, 'dummy': dummy_fx, 'memory': memory_voice_fx, 'upstairs': upstairs_fx, 'letter': None,
@@ -340,7 +524,39 @@ LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: pho
            # the Doctor film: 'phone' is a real phone line again (the delivery film's 'phone' was dry app text)
            'phone': phone_line_fx, 'recording': recording_fx, 'rooms': rooms_fx, 'phone_system': recording_fx,
            'every_room': rooms_fx, 'landline': phone_line_fx}
+# the Bus film: 'tv' is the 1994 tape, 'door' the front door with its frosted glass, 'radio' bus 9's dash radio,
+# 'phone' the 911 call on a cell phone (the landline stays reachable as 'landline'); 'his' is W's default
+LINE_FX.update({'tv': tv1994_fx, 'tape': tv1994_fx, 'television': tv1994_fx, 'his': his_fx,
+                'loudspeaker': loudspeaker_fx, 'pa': loudspeaker_fx, 'speaker_horn': loudspeaker_fx,
+                'door': front_door_fx, 'front_door': front_door_fx, 'through_door': front_door_fx,
+                'walkie': walkie_fx, 'walkie_talkie': walkie_fx, 'radio': dash_radio_fx, 'dash_radio': dash_radio_fx,
+                'police_radio': radio_fx, 'phone': cell_fx, 'cell': cell_fx, '911': cell_fx, 'mimic': mimic_fx,
+                'mimic_slide': mimic_slide_fx, 'slide': mimic_slide_fx, 'his_bus': his_bus_fx})
+LINE_FX_LU.update({'tv': -1.0, 'his': -0.5, 'loudspeaker': -1.5, 'pa': -1.5, 'door': -2.5, 'front_door': -2.5,
+                   'walkie': -1.0, 'radio': -2.0, 'dash_radio': -2.0, 'phone': -1.0, 'cell': -1.0, 'mimic': -0.5,
+                   'mimic_slide': -0.5, 'slide': -0.5, 'his_bus': -1.0})
 _FX_WARNED = set()
+
+
+def _chain(keys):
+    """'a+b' -> one function running a then b (unknown parts are skipped with a warning); None if nothing is left."""
+    fs = []
+    for k in keys:
+        f = LINE_FX.get(k, 'unknown')
+        if f == 'unknown':
+            if k not in _FX_WARNED:
+                _FX_WARNED.add(k); log(f'WARNING: unknown line fx part {k!r}: skipped')
+            continue
+        if f is not None:
+            fs.append(f)
+    if not fs:
+        return None
+    def run(x):
+        for f in fs:
+            y = np.asarray(f(x), np.float32)
+            x = y if len(y) >= len(x) else np.pad(y, (0, len(x) - len(y)))
+        return x
+    return run
 
 
 def apply_line_fx(vo, spans):
@@ -348,7 +564,8 @@ def apply_line_fx(vo, spans):
     out = vo.copy()
     for a, b, kind in spans:
         key = str(kind).strip().lower() if isinstance(kind, (str, int, float)) else repr(kind)
-        fx = LINE_FX.get(key, 'unknown')
+        fx = _chain(key.split('+')) if '+' in key else LINE_FX.get(key, 'unknown')
+        lu_key = key.split('+')[-1] if '+' in key else key
         if fx == 'unknown':
             if key not in _FX_WARNED:
                 _FX_WARNED.add(key); log(f'WARNING: unknown line fx {kind!r}: left dry')
@@ -373,9 +590,19 @@ def apply_line_fx(vo, spans):
         # loudness-match: band-limiting + saturation made these lines 2.6-6.5 LU hotter than the narration (critic)
         Ls, Ly = SX.lufs_int(seg), SX.lufs_int(y[:len(seg)])
         if Ls > -70 and Ly > -70:
-            y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(key, -1.0) - Ly) / 20))
+            y = y * np.float32(10 ** ((Ls + LINE_FX_LU.get(lu_key, -1.0) - Ly) / 20))
         f = int(0.01 * SR); w = np.ones(len(seg), np.float32); w[:f] = np.linspace(0, 1, f); w[-f:] = np.linspace(1, 0, f)
         out[i0:i1] = seg * (1 - w) + y[:len(seg)] * w
+        if len(y) > len(seg) and 'slide' in key:          # the slowing tape runs on into the gap after the line
+            ex = y[len(seg):len(seg) + int(MIMIC_SLIDE_EXTRA * SR)]
+            ex = ex[:max(0, len(out) - i1)].copy()
+            loud = np.flatnonzero(np.abs(out[i1:i1 + len(ex)]) > 0.03 * (np.abs(seg).max() + 1e-9))
+            if len(loud):                                   # never over the next words: stop where they begin
+                ex = ex[:max(0, int(loud[0]) - int(0.02 * SR))]
+                if len(ex) > 64:
+                    ex[-min(len(ex), int(0.03 * SR)):] *= np.linspace(1, 0, min(len(ex), int(0.03 * SR)))
+            if len(ex):
+                out[i1:i1 + len(ex)] = out[i1:i1 + len(ex)] * 0.0 + ex
         if fx is rooms_fx:
             try:
                 ROOMS_WASH.append((i0, rooms_wash(y[:len(seg)])))
@@ -395,7 +622,7 @@ def load_vo(path, n):
 def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
     L = tl['lines']
     who_fx = who_fx or {}
-    fx_of = lambda l: l.get('fx') or who_fx.get(l.get('who'))
+    fx_of = lambda l: TAG_FX.get(l.get('tag')) or l.get('fx') or who_fx.get(l.get('who'))   # the Bus film: TAG_FX first
     en_spans = [(l['t'], l['end'], fx_of(l)) for l in L if fx_of(l) and l.get('found_en', True)]
     ru_start = {}
     for g in tl.get('dub', []):
@@ -896,9 +1123,9 @@ def main():
     ap.add_argument('--t0', type=float, default=0.0); ap.add_argument('--t1', type=float, default=None)
     ap.add_argument('--langs', default='en'); ap.add_argument('--fallback', action='store_true')
     ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
-    ap.add_argument('--who-fx', default='',
-                    help='line fx for a speaker whose lines have none, e.g. X=hall (default: none; the Bunnyman film '
-                         'gives every line its own fx in script/lines.py, and X is the old body in the car: dry)')
+    ap.add_argument('--who-fx', default='W=his',
+                    help='line fx for a speaker whose lines have none (default W=his: Mister Whistlestop always on his '
+                         'warbling tape; TAG_FX and the lines\' own fx come first)')
     ap.add_argument('--plan', default='auto', choices=('auto', 'full', 'off'),
                     help='auto: a music_cues.json without track_map gets music_plan.py\'s arrangement (and its '
                          'intensity / events when the sheet has none); full (the final mix, final_mix.sh): the score '

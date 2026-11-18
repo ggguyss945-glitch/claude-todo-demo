@@ -66,7 +66,7 @@ def _turn(name, rows, ttl, sub, ppm=330.0):
     save(surf, name)
 
 
-def _faces(name, items, ttl, sub, light=None, cols=6, bg=None):
+def _faces(name, items, ttl, sub, light=None, cols=6, bg=None, cyk=0.48, sk=0.62):
     surf, cv, pen = canvas()
     title(cv, ttl, sub)
     n = len(items)
@@ -80,7 +80,11 @@ def _faces(name, items, ttl, sub, light=None, cols=6, bg=None):
         pen.fill(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), '#232633')
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
         P = pose if isinstance(pose, CH.Pose) else CH.Pose(**pose) if isinstance(pose, dict) else CH.Pose(pose)
-        CH.draw_bust(pen, who, x0 + cw / 2, y0 + ch * 0.48, ch / 600.0 * 0.62, P, t=0.6, light=lt, detail=2)
+        dxh = 0.0
+        if CH.CAST[who].get('whistle'):           # keep his head centred when the body turns (the neck juts forward)
+            hx = CH._WSView(P).p2(CH._ws_rig(P)['head'])[0]
+            dxh = hx * CH._WSU * (600.0 * ch / 600.0 * sk) / CH.CAST[who]['hh']
+        CH.draw_bust(pen, who, x0 + cw / 2 - dxh, y0 + ch * cyk, ch / 600.0 * sk, P, t=0.6, light=lt, detail=2)
         cv.restore()
         pen.fill(rect(x0 + 4, y0 + ch - 34, cw - 8, 30), '#000000', 140)
         label(cv, lb, x0 + cw / 2, y0 + ch - 13, 15)
@@ -113,7 +117,7 @@ def _box(pen, x, y, w, h, c='#232633'):
 def sheet_ws_turn():
     surf, cv, pen = canvas()
     title(cv, 'MISTER WHISTLESTOP: turnaround (2.44 m to the crown, the hat +0.9 m)',
-          'legs 55 % of his height, arms to the knees, crooked mascot head, hat leaning 12 deg to his left, dented halfway; never walks')
+          'a predator in a mascot suit: forward hunch, head tilted, furry cat-mascot head (about 1/5 of his height), arms to the knees, hat leaning 12 deg to his left; never walks')
     views = [(0.0, 'FRONT'), (0.5, '3/4 RIGHT'), (1.0, 'PROFILE'), (1.5, '3/4 BACK'), (2.0, 'BACK'), (-0.5, '3/4 LEFT')]
     floor(pen, 1030)
     for i, (yw, lb) in enumerate(views):
@@ -122,7 +126,7 @@ def sheet_ws_turn():
         label(cv, lb, x, 1062, 15, '#9aa3b8')
     # proportion marks on the front view
     h = 640.0; ppc = h / 244.0
-    for cm, lb in ((134, 'hip 55 %'), (70, 'knee: fingertips'), (209, 'chin (head 1/7)'), (244, 'crown'), (244 + 90, 'hat top +40 %')):
+    for cm, lb in ((134, 'hip 55 %'), (70, 'knee: fingertips'), (202, 'chin (head ~1/5)'), (244, 'crown'), (244 + 90, 'hat top +40 %')):
         y = 1030 - cm * ppc
         pen.line(poly([(20, y), (120, y)], False), 2, '#7a8296')
         text(cv, lb, 22, y - 4, 600, 12, '#9aa3b8', 255, 0.0, 'left')
@@ -132,7 +136,7 @@ def sheet_ws_turn():
 def sheet_ws_mood():
     surf, cv, pen = canvas()
     title(cv, 'MISTER WHISTLESTOP beside the owner\'s mood references (mood only: nothing copied)',
-          'kept: a tall grinning mascot, the frozen grin, white gloves curling round a doorframe, VHS grain and tracking lines. changed: every design element (see ws_limits)')
+          'kept: a big furry grinning cat-mascot head (cheek fur, ears, whiskers, cat eyes), white gloves round a doorframe, VHS grain, a long thin dark body. changed: every protected specific (see ws_limits)')
     x = 30
     for i in (1, 2, 3):
         p = os.path.join(REF, 'owner_mood_cat_%d.jpg' % i)
@@ -144,27 +148,21 @@ def sheet_ws_mood():
         cv.drawImage(img, x, 130)
         label(cv, 'mood ref %d' % i, x + ww / 2, 450, 14, '#9aa3b8')
         x += ww + 20
-    # ours: peeking round a doorframe (gloves curled), the grin through VHS tear, the bust
-    a = _ws(585, 1240, 560)
-    a.set(-1, None, 0.01, tilt=16.0, turn=0.3, ws_hands_front=3)
-    a.curl_door(-2.0, 1, (640, 700), dur=0.01, z=-8.0)
-    a.curl_door(-2.0, -1, (640, 860), dur=0.01, z=-8.0)
+    # ours: peeking round a doorframe (half the face, one glove), the grin in the dark, the 1994 tape
     pen.fill(rect(30, 480, 1860, 580), '#141018')
-    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(30, 480, 620, 580))
-    pen.fill(rect(30, 480, 620, 580), '#2a2018'); pen.glow(500, 700, 400, '#ffa030', 70)
-    CH.draw(pen, 'whistle', a.x0, a.y0, a.height, a.at(0.0), light=AMBER, t=0.0)
-    pen.fill(rect(30, 480, 610, 580), '#4a3c30'); pen.fill(rect(600, 480, 44, 580), '#d8cfb8')
-    CH.draw_whistle_hands(pen, a, 0.0, (1, -1), AMBER)
-    cv.restore()
+    _peek(pen, cv, 30, 480, 620, 580, 1.2)
+    _vhs(surf, cv, 30, 480, 620, 580, 1.0, 11, 0.35)
     cv.save(); cv.clipRect(skia.Rect.MakeXYWH(660, 480, 600, 580))
     pen.fill(rect(660, 480, 600, 580), '#0c0a10')
-    CH.draw_bust(pen, 'whistle', 960, 760, 0.62, CH.Pose(h_turn=0.1, ws_glitch=0.0, ws_slip=0.35), light=AMBER, t=0.3)
+    CH.draw_bust(pen, 'whistle', 960, 740, 0.62, CH.Pose(turn=0.1, h_tilt=-12.0), light=dict(under='#ff9a2a', under_a=170, rim='#ff8a20', rim_a=70, side=1), t=0.3)
     cv.restore()
+    _vhs(surf, cv, 660, 480, 600, 580, 0.9, 12, 0.2)
     cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1270, 480, 620, 580))
     pen.fill(rect(1270, 480, 620, 580), '#3a8acb')
     CH.draw(pen, 'whistle94', 1580, 1040, 360, CH.Pose(turn=-0.2, ws_glitch=0.35), light=STUDIO, t=0.4)
     cv.restore()
-    for x_, s_ in ((340, 'gloves curl round the frame, the head peeks'), (960, 'the frozen grin, slipping out of register'), (1580, 'the 1994 tape: a VHS tear')):
+    _vhs(surf, cv, 1270, 480, 620, 580, 1.0, 13, 0.1)
+    for x_, s_ in ((340, 'half a face round the frame, one glove curled on it'), (960, 'the furry cat head and the frozen grin, lit from below'), (1580, 'the 1994 tape: a VHS tear')):
         label(cv, s_, x_, 1050, 15)
     save(surf, 'ws_mood')
 
@@ -224,9 +222,10 @@ def sheet_ws_limits():
               'bow tie black; body fur grey-brown tabby (never black); off-white mask only on the face',
               'no rhyming verse, no fish, no helper creatures, no umbrella or balancing tricks, no Seuss names or words',
               'his own props: whistle on orange lanyard, ticket punch, clipboard watchlist (Sat alone), a stolen walkie',
-              'grin painted and frozen (never lip-syncs); no blinking painted pupils, his left one higher; punch hole in the left ear']
+              'grin painted and frozen (never lip-syncs); painted almond cat eyes, no lids, his left pupil higher; punch hole in the left ear',
+              'his own cat: dusty grey-brown TABBY (stripes), off-white matted face and ruffs, mustard jacket; no black body / white face / white gloves scheme']
     for i, s_ in enumerate(checks):
-        text(cv, ('OK  ' + s_), 60, 850 + i * 34, 700, 19, '#b8f0b0', 255, 0.0, 'left')
+        text(cv, ('OK  ' + s_), 60, 846 + i * 31, 700, 18, '#b8f0b0', 255, 0.0, 'left')
     save(surf, 'ws_limits')
     return reds
 
@@ -267,12 +266,12 @@ def sheet_ws_states():
 def sheet_ws_head():
     items = []
     for yw, lb in ((0.0, 'front'), (0.4, '3/4'), (1.0, 'profile'), (1.6, 'behind 3/4'), (2.0, 'back'), (-0.4, '3/4 left')):
-        items.append(('whistle', dict(h_turn=yw), lb, AMBER))
+        items.append(('whistle', dict(turn=yw), lb, AMBER))
     for sl, lb in ((0.3, 'slip 30 %'), (0.7, 'slip 70 %'), (1.0, 'slip 100 %')):
         items.append(('whistle', dict(ws_slip=sl), lb, AMBER))
     items += [('whistle', dict(h_tilt=-16.0, ws_bob=0.6), 'talk bob (no jaw)', AMBER), ('whistle94', dict(), '1994 tape', STUDIO),
               ('whistle', dict(h_nod=0.5, h_turn=0.3), 'looking down at you', AMBER)]
-    _faces('ws_head', items, 'MISTER WHISTLESTOP: the head', 'painted grin (never moves), painted pupils (his left one higher, never blink), punch hole in the left ear; the VHS slip only at the defeat', cols=6)
+    _faces('ws_head', items, 'MISTER WHISTLESTOP: the head', 'a furry cat-mascot head: cheek ruffs, muzzle, whisker pads, cat nose, whiskers, painted almond cat eyes (never blink), THE GRIN (never moves; slips only at the defeat), punch hole in the left ear', cols=6, cyk=0.60, sk=0.56)
 
 
 def sheet_lineup():
@@ -344,7 +343,188 @@ def sheet_props():
     save(surf, 'props2')
 
 
-SHEETS = dict(ws_turn=sheet_ws_turn, ws_mood=sheet_ws_mood, ws_limits=sheet_ws_limits, ws_states=sheet_ws_states, ws_head=sheet_ws_head,
+# ---------------------------------------------------------------------------------------------------- ws_creepy
+def _grab(surf, x, y, w, h):
+    a = surf.makeImageSnapshot().toarray()
+    return np.ascontiguousarray(a[int(y):int(y + h), int(x):int(x + w), [2, 1, 0, 3]]).copy()     # BGRA -> RGBA
+
+
+def _put(cv, arr, x, y, clip_path=None):
+    img = skia.Image.fromarray(np.ascontiguousarray(arr.astype(np.uint8)))
+    cv.save()
+    if clip_path is not None: cv.clipPath(clip_path, skia.ClipOp.kIntersect, True)
+    cv.drawImage(img, float(x), float(y))
+    cv.restore()
+
+
+def _vhs(surf, cv, x, y, w, h, amt=1.0, seed=0, desat=0.25, warm=False):
+    """Cheap VHS look on a region: chroma offset, desaturation, scanlines, grain, a tracking band."""
+    a = _grab(surf, x, y, w, h).astype(np.float32)
+    rgb = a[:, :, :3]
+    g = rgb.mean(2, keepdims=True)
+    rgb = rgb * (1 - desat) + g * desat
+    sh = int(2 + 2 * amt)
+    rgb[:, sh:, 0] = rgb[:, :-sh, 0] * 0.8 + rgb[:, sh:, 0] * 0.2
+    rgb[:, :-sh, 2] = rgb[:, sh:, 2] * 0.8 + rgb[:, :-sh, 2] * 0.2
+    rng = np.random.default_rng(seed)
+    rgb += rng.normal(0, 14 * amt, rgb.shape[:2])[:, :, None]
+    rgb[::3] *= 0.86
+    yb = int(h * (0.72 + 0.2 * rng.random()))
+    rgb[yb:yb + 6] = rgb[yb:yb + 6] * 0.5 + 120
+    rgb[yb:yb + 6] = np.roll(rgb[yb:yb + 6], int(12 * amt), axis=1)
+    if warm: rgb *= np.array([1.06, 0.98, 0.86])
+    a[:, :, :3] = np.clip(rgb, 0, 255)
+    _put(cv, a, x, y)
+
+
+def _cell(pen, cv, i, j, bg):
+    x0, y0, w, h = 10 + i * 477, 118 + j * 474, 467, 462
+    pen.fill(rect(x0, y0, w, h), bg)
+    return x0, y0, w, h
+
+
+def _cap(pen, cv, x0, y0, w, h, s_):
+    pen.fill(rect(x0, y0 + h - 30, w, 30), '#000000', 170)
+    label(cv, s_, x0 + w / 2, y0 + h - 10, 15)
+
+
+def _peek(pen, cv, x0, y0, w, h, k=1.0):
+    """He peeks round a doorframe: half the face, one glove curled on the frame edge (the mood of ref 1)."""
+    pen.fill(rect(x0, y0, w, h), '#120f14')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h))
+    pen.glow(x0 + 60 * k, y0 + 160 * k, 380 * k, '#ffa030', 55)
+    ex = x0 + w * 0.61
+    a = _ws(0, 0, 1650 * k)
+    a.set(-1, None, 0.01, tilt=-9.0, turn=-0.12, h_tilt=-16.0, ws_hands_front=3)
+    hx, hy = a.where(0.0, 'head')
+    a.place(ex + 4 * k - hx, y0 + h * 0.43 - hy)
+    hx, hy = a.where(0.0, 'head')
+    a.curl_door(-2.0, 1, (ex + 30 * k, hy + 175 * k), dur=0.01, z=-4.0)
+    lt = dict(rim='#ffa030', rim_a=80, side=-1, key=-0.3)
+    CH.draw(pen, 'whistle', a.x0, a.y0, a.height, a.at(0.0), light=lt, t=0.0, detail=2)
+    pen.fill(rect(ex, y0, x0 + w - ex, h), '#3b2f27'); pen.fill(rect(ex, y0, 30 * k, h), '#cbbd9c'); pen.fill(rect(ex + 24 * k, y0, 6 * k, h), '#8f8166')
+    pen.linear(rect(ex, y0, x0 + w - ex, h), ex, 0, x0 + w, 0, [(0, '#000000', 0), (1, '#000000', 150)])
+    CH.draw_whistle_hands(pen, a, 0.0, (1,), lt, detail=2)
+    cv.restore()
+
+
+def sheet_ws_creepy():
+    """The creepiness checks: the framings the film puts him in."""
+    surf, cv, pen = canvas()
+    title(cv, 'MISTER WHISTLESTOP: creepiness checks (film framings)',
+          'doorframe peek, peephole fisheye, frosted glass, amber up-light, near darkness, far silhouette in the bus door, the 1994 tape, down and down')
+    # 1 the doorframe peek: half the face round the frame and one glove curled on the edge (mood ref 1)
+    x0, y0, w, h = _cell(pen, cv, 0, 0, '#120f14')
+    _peek(pen, cv, x0, y0, w, h)
+    _vhs(surf, cv, x0, y0, w, h, 1.0, 1, 0.35)
+    _cap(pen, cv, x0, y0, w, h, 'round the doorframe: half a face, one glove')
+    # 2 the peephole: a fisheye of his face filling the lens
+    x0, y0, w, h = _cell(pen, cv, 1, 0, '#2a1d14')
+    cx, cy, R = x0 + w / 2, y0 + h / 2 - 12, 190
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(cx - R, cy - R, 2 * R, 2 * R))
+    pen.fill(rect(cx - R, cy - R, 2 * R, 2 * R), '#1a120c'); pen.glow(cx, cy - 160, 240, '#ffb040', 120)
+    CH.draw_bust(pen, 'whistle', cx + 6, cy + 10, 0.47, CH.Pose(turn=0.04, h_nod=0.25, h_tilt=-8.0), light=dict(rim='#ffb040', rim_a=70, side=1, under='#ff9a2a', under_a=60), t=0.0, detail=2)
+    cv.restore()
+    a_ = _grab(surf, cx - R, cy - R, 2 * R, 2 * R)
+    yy, xx = np.mgrid[0:2 * R, 0:2 * R].astype(np.float32)
+    dx, dy = (xx - R) / R, (yy - R) / R
+    r = np.sqrt(dx * dx + dy * dy) + 1e-6
+    rs = np.clip(r, 0, 1) ** 1.75 * 1.05
+    mx = (R + dx / r * rs * R).astype(np.float32); my = (R + dy / r * rs * R).astype(np.float32)
+    fe = cv2.remap(a_, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE).astype(np.float32)
+    fe[:, :, :3] *= np.clip(1.15 - 0.75 * r ** 2.2, 0, 1)[:, :, None]
+    lens = oval(cx, cy, R, R)
+    _put(cv, fe, cx - R, cy - R, lens)
+    door = skia.Path(); door.addRect(skia.Rect.MakeXYWH(x0, y0, w, h)); door = skia.Op(door, lens, skia.PathOp.kDifference_PathOp)
+    pen.fill(door, '#24170f'); pen.line(oval(cx, cy, R + 6, R + 6), 12, '#8a6a3a'); pen.line(oval(cx, cy, R + 12, R + 12), 3, '#000000')
+    _vhs(surf, cv, x0, y0, w, h, 0.5, 2, 0.15)
+    _cap(pen, cv, x0, y0, w, h, 'the peephole: the grin fills the lens')
+    # 3 frosted glass: the shape behind the door panel
+    x0, y0, w, h = _cell(pen, cv, 2, 0, '#2b2018')
+    gx, gy, gw, gh = x0 + 70, y0 + 40, w - 140, h - 110
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(gx, gy, gw, gh))
+    pen.fill(rect(gx, gy, gw, gh), '#3a2a1a'); pen.glow(gx + gw * 0.8, gy, 260, '#ffb14a', 160)
+    CH.draw_bust(pen, 'whistle', gx + gw / 2, gy + 170, 0.36, CH.Pose(turn=0.0, h_tilt=-12.0), light=dict(rim='#ffc060', rim_a=110, side=-1), t=0.0, detail=2)
+    cv.restore()
+    a_ = _grab(surf, gx, gy, gw, gh).astype(np.float32)
+    rng = np.random.default_rng(5)
+    nx = cv2.GaussianBlur(rng.normal(0, 1, (gh, gw)).astype(np.float32), (0, 0), 2.0) * 9
+    ny = cv2.GaussianBlur(rng.normal(0, 1, (gh, gw)).astype(np.float32), (0, 0), 2.0) * 9
+    yy, xx = np.mgrid[0:gh, 0:gw].astype(np.float32)
+    a_ = cv2.remap(a_, xx + nx, yy + ny, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    a_ = cv2.GaussianBlur(a_, (0, 0), 4.5)
+    a_[:, :, :3] = a_[:, :, :3] * 0.8 + np.array([70, 60, 52]) * 0.35
+    _put(cv, a_, gx, gy)
+    for k in range(0, gw, 9): pen.line(poly([(gx + k, gy), (gx + k, gy + gh)], False), 1.5, '#ffffff', 18)
+    fr = skia.Path(); fr.addRect(skia.Rect.MakeXYWH(x0, y0, w, h)); fr = skia.Op(fr, rect(gx, gy, gw, gh), skia.PathOp.kDifference_PathOp)
+    pen.fill(fr, '#5a3f28'); pen.line(rect(gx, gy, gw, gh), 6, '#2a1a10')
+    _cap(pen, cv, x0, y0, w, h, 'frosted glass: ears, hat, a pale face, the grin')
+    # 4 amber light from below
+    x0, y0, w, h = _cell(pen, cv, 3, 0, '#08070a')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h))
+    pen.glow(x0 + w / 2, y0 + h + 40, 300, '#ff9020', 90)
+    CH.draw_bust(pen, 'whistle', x0 + w / 2, y0 + 250, 0.5, CH.Pose(turn=0.15, h_tilt=-10.0, h_nod=-0.15),
+                 light=dict(under='#ff9a2a', under_a=200, rim='#ff8a20', rim_a=70, side=1), t=0.0, detail=2)
+    cv.restore()
+    _vhs(surf, cv, x0, y0, w, h, 0.6, 4, 0.1)
+    _cap(pen, cv, x0, y0, w, h, 'sodium amber from below')
+    # 5 near darkness: only the eyes and the grin
+    x0, y0, w, h = _cell(pen, cv, 0, 1, '#050407')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h))
+    CH.draw_bust(pen, 'whistle', x0 + w / 2 + 20, y0 + 230, 0.5, CH.Pose(turn=-0.1, h_tilt=-14.0), light=dict(dark=0.93, rim='#8fa6ff', rim_a=40, side=1), t=0.0, detail=2)
+    cv.restore()
+    _vhs(surf, cv, x0, y0, w, h, 0.8, 5, 0.3)
+    _cap(pen, cv, x0, y0, w, h, 'the blackout: eyes and grin catch the light')
+    # 6 far silhouette against the lit bus door
+    x0, y0, w, h = _cell(pen, cv, 1, 1, '#0b0d14')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h))
+    ppm = 92.0; fy = y0 + h - 50
+    pen.glow(x0 + w * 0.7, y0 + 30, 220, '#ffb050', 60)
+    pen.fill(rect(x0, fy - 3.0 * ppm, w, 3.0 * ppm), '#2a2416')
+    for k in range(4): pen.fill(rect(x0 + 10 + k * 120, fy - 2.45 * ppm, 92, 0.8 * ppm), '#d9902e')
+    dxl = x0 + w / 2 - 55
+    pen.fill(rect(dxl, fy - 2.25 * ppm, 110, 2.25 * ppm), '#f0b04a'); pen.glow(dxl + 55, fy - 1.2 * ppm, 160, '#ffc060', 90)
+    pen.line(rect(dxl, fy - 2.25 * ppm, 110, 2.25 * ppm), 6, '#1a1408')
+    pen.fill(rect(x0, fy, w, 60), '#090a0e')
+    CH.draw(pen, 'whistle', dxl + 55, fy, CH.height_px('whistle', ppm), CH.Pose(turn=0.1), light=dict(dark=1.0), t=0.0, detail=2)
+    cv.restore()
+    _vhs(surf, cv, x0, y0, w, h, 0.7, 6, 0.2)
+    _cap(pen, cv, x0, y0, w, h, 'far: chimney hat, ears, ruff, long arms')
+    # 7 the 1994 tape on the TV cart
+    x0, y0, w, h = _cell(pen, cv, 2, 1, '#100e12')
+    tvx, tvy, tvw, tvh = x0 + 30, y0 + 40, w - 60, h - 110
+    pen.fill(rrect(tvx - 16, tvy - 16, tvw + 32, tvh + 32, 26), '#3a3633'); pen.line(rrect(tvx - 16, tvy - 16, tvw + 32, tvh + 32, 26), 4, '#000000')
+    scr = rrect(tvx, tvy, tvw, tvh, 34)
+    cv.save(); cv.clipPath(scr, skia.ClipOp.kIntersect, True)
+    pen.fill(rect(tvx, tvy, tvw, tvh), '#3d8fd6'); pen.fill(rect(tvx, tvy + tvh * 0.78, tvw, tvh * 0.22), '#e2b93a')
+    text(cv, 'RIDE', tvx + tvw * 0.76, tvy + 90, 900, 40, '#ffe66a', 255, 0.06, 'center')
+    text(cv, 'RIGHT!', tvx + tvw * 0.76, tvy + 136, 900, 40, '#ffe66a', 255, 0.06, 'center')
+    pen.fill(rrect(tvx + tvw * 0.6, tvy + tvh * 0.55, 120, 70, 8), '#f2c230'); pen.line(rrect(tvx + tvw * 0.6, tvy + tvh * 0.55, 120, 70, 8), 3, '#2a2a2a')
+    a = _ws(tvx + tvw * 0.36, tvy + tvh * 0.95, 280, 'whistle94', seed=3)
+    a.set(-1, None, 0.01, turn=-0.12, ws_lrest='host', ws_rrest='hang', hl_shape='host')
+    CH.draw(pen, 'whistle94', a.x0, a.y0, a.height, a.at(0.0), light=STUDIO, t=0.0, detail=2)
+    cv.restore()
+    _vhs(surf, cv, tvx, tvy, tvw, tvh, 1.0, 7, 0.1)
+    pen.line(scr, 8, '#111111')
+    pen.radial(scr, tvx + tvw / 2, tvy + tvh / 2, tvw * 0.62, [(0, '#000000', 0), (0.7, '#000000', 20), (1, '#000000', 150)])
+    _cap(pen, cv, x0, y0, w, h, '1994: bright, cheap, wholesome, wrong')
+    # 8 down, and down: he bends to your face (from below, tracking lines)
+    x0, y0, w, h = _cell(pen, cv, 3, 1, '#0d0b0e')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0, y0, w, h))
+    pen.glow(x0 + w * 0.3, y0 + h, 300, '#ff9a2a', 70)
+    a = _ws(0, 0, 1500)
+    a.set(-1, None, 0.01, turn=-0.3, ws_bend=1.05, ws_crouch=0.3, ws_face_up=1.0, ws_elev=-0.22, h_tilt=-18.0, ws_lrest='chest')
+    hx, hy = a.where(0.0, 'head')
+    a.place(x0 + w * 0.55 - hx, y0 + 215 - hy)
+    CH.draw(pen, 'whistle', a.x0, a.y0, a.height, a.at(0.0), light=dict(under='#ff9a2a', under_a=120, rim='#ffa030', rim_a=80, side=1), t=0.0, detail=2)
+    CH.ws_tracking(pen, x0, y0, w, h, 0.5, 1.3, 3)
+    cv.restore()
+    _vhs(surf, cv, x0, y0, w, h, 0.8, 8, 0.25)
+    _cap(pen, cv, x0, y0, w, h, '"down, and down": the grin a foot from you')
+    save(surf, 'ws_creepy')
+
+
+SHEETS = dict(ws_turn=sheet_ws_turn, ws_mood=sheet_ws_mood, ws_limits=sheet_ws_limits, ws_states=sheet_ws_states, ws_head=sheet_ws_head, ws_creepy=sheet_ws_creepy,
               lineup=sheet_lineup, turn_people=sheet_turn_people, faces=sheet_faces, props=sheet_props)
 
 if __name__ == '__main__':

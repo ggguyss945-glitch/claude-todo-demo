@@ -2,6 +2,68 @@
 
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
+
+## This film: "If The School Bus Stops At Midnight... DON'T GET ON"
+
+Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_bus.json, never copied out of
+_work/samples, never committed). The bus set (_work/samples/epidemic_bus: 98 effects, 11 tracks, each judged in
+_work/mix/sfx_review.md) first, then the doctor, bunny, dummy, delivery, police and mirror sets through the symlinks
+in _work/samples. Keep the channel connected in the Epidemic account so Content ID does not claim the tracks:
+Through the Portal (Anthony Earls), The Last Horizon (Aerian), At First Light (Gavin Luke), A Sky Unveiled (Megan
+Wofford), Terra Firma (Dream Cave), Chronometer and All Exits Closed (Guy Copeland), Can They See Us (Experia), Wait
+for Me on the Other Side (Instrumental, CLNGR), Just a Little Sunshine (Instrumental, Staffan Carlen), and the
+earlier sets' Afterthoughts, End of Rain, The Haunted, Midnight Wanderer, Dark Tunnels, Dark Forebodings, Annihilated,
+Come Closer, Don't Look, Escalation, Irene, Code of Violence. Rejected: Sweeter (Blood Harmony: a song with vocals)
+and Deep Down in the Caverns (a trailer track found in the effects zip).
+
+Where each SFX name of this film (audio/sfx.py BUS_NAMES) comes from:
+| name | source (Epidemic set: file) | processing / synthesis |
+|---|---|---|
+| suburb_night | police: Ambience Suburban Night (crickets, distant traffic / train), police: suburban night with distant dog barks | low/high-passed; inside=True darkened through the glass |
+| dog_far | police: the distant dog barks | grains, low-passed, street reverb |
+| street_flicker | doctor: Electricity Buzz Hum, Interference Buzz | gated drop-outs; starter ticks and ballast thunk synthesised |
+| bus_air_brake | bus: Air Burst Bus Air Brake Compressor; Vehicles Bus Air Brake Compressor | longest hiss grain; chassis thump synthesised |
+| bus_idle, his_bus_interior | bus: Bus Engine Idle; Engine Perspective Idle; Long Journey Standing Still Idle | looped; his: 1.5 st down, loping miss, synthesised panel rattle; interior: ballast hum and tape hiss synthesised |
+| bus_door | bus: Bus Door Open Close No Engine 01/03/04; Interior Door Open Close; Air Burst Door | first phrase = open, last = close; rubber and sheet-metal slap synthesised |
+| his_unfold | bus: Bendy Pole Light Stretch Bend Creak 03 | a fifth down, rising per segment; latch clicks synthesised |
+| pa_crackle | bus: Microphone Feedback Single; Speaker Feedback Resonance; Megaphone Feedback; Phonograph Vinyl Crackle (authentic) | band-passed to the horn; pops synthesised |
+| bus_pull_away, bus_rewind | bus: Bus Engine Start Drive Away; Generic By Bus Pass By (fast / medium); dummy: Videotape VHS Rewind | rewind: reversed, varispeed 0.8-3x, tape-skip tail |
+| bus_horn | bus: Horn Bus Close Long; Many Short; Very Long | grains |
+| bus9_start, bus9_drive, bus_fast_night, morning_bus | bus: Engine Start Drive Away; Interior On Board Driving; Double Decker Ride (rattle); doctor: Car Interior Fast Driving at night; bus: School Children Talking / Big Crowd of Kids walla | layered, low-passed |
+| tire_screech, bus_swerve | bus: Car Brake Tire Skid 05; Skid Peugeot / Far | 2 st down; lurch and rattle synthesised |
+| mirror_rip | bus: Metal Friction Scrape Large Loud 01/03; Glass Break Car Window (MKH 50 / Sanken) | housing crack and sub boom synthesised |
+| dash_radio | bus: Static Radio Station Search Crackling | band-limited; squelch pops synthesised |
+| whistle | bus: Referee Whistle 01, 02, 10 Metres Distance | each blast tuned to A7 (the jingle's hook); long blast looped |
+| ticket_punch | bus: Office Supplies Hole Punch Single (x2), Hole Punch Through Pages, Kanex Paper Hole Puncher | click + clack grains; metal ring synthesised |
+| deadbolt | police: Door Deadbolt Open Close Turn; Mortise Lock Turn | grains |
+| walkie | bus: Transceiver Walkie Talkie Engage; Squelch Stuttering Glitchy (short / long) | roger beep synthesised |
+| power_down, power_up | bus: Fluorescent Light Buzz Short Power Up Light Switch (2 takes) | the mains hum dive and thunk synthesised |
+| run_asphalt | bus: Footsteps Asphalt Sneaker Running (2 takes) | grains |
+| cat_rumble | bus: Cat Wild Lion Growling Low Rumble 02/03; Tiger Defensive Growling Deep Rumble | a fourth down, low-passed 350 Hz |
+| glove_squeak | bus: Rubber Latex Glove Pull Stretch Squeak; Surgical Glove Pull Off Stretch Squeak Slap | knuckle pops synthesised |
+| tape_skip | bus: UI Glitch Crackle 03, Databend 04, Glitches; Tape Play Stop Electrical Hum Static | 42 ms stutter; tracking tear synthesised |
+| crt_on | bus: Vintage CRT Monitor Commodore 1084S Power On Off (power-on phrase, low-passed 9 kHz); Hifi Old Turn On | degauss and 15.7 kHz whine synthesised |
+| vhs_tape, tape_ff | bus: Videotape VHS Eject; Tape Hand Camera Fast Forward Edit Mode Stop; dummy: Videotape Into VHS | stop clunk synthesised |
+| tape_slide | synthesised (hiss and hum diving half a speed) | |
+| seatbelt | bus: Car Seat Belt Click Into Lock; Click Lock 01/03 | grains |
+| flag_rope, school_night | bus: Cable Clanking Post Flag Flapping 02; Sailboat Rope Clanking Mast; police crickets | |
+| broom_bend, broom_crack | bus: Bendy Pole Creak (a fourth down); Wood Break Stick Branch Snap In Two; Snapping Branches | thump synthesised |
+| cloth_rip | bus: Cloth Rip T Shirt Tear; Shorts Thin Material Tear 02; Tear 02 | cut to 0.55 s |
+| school_bell | doctor: Alarms Bell School Bell Classic Ringing | low-passed 7 kHz, schoolyard space |
+| clipboard_drop | doctor: crocodile clip | board bounces and asphalt grit synthesised |
+| mailbox_unscrew | bus: Flashlight Torch Small Head Cap Unscrew | tin letter tink synthesised |
+| dial_911 | synthesised (DTMF 9-1-1, US ring-back 440+480 Hz, the error tones) | |
+| porch light, peephole, knocks, ticket under the door, bare feet on the stairs, running on grass, tape hiss | the earlier films' recipes (light_switch, peephole, knock_door, paper_under_door, footsteps_stairs (mirror: barefoot walk, wood stairs), footsteps_grass, tape_hiss) | |
+
+Our own material (no licence needed): the "Ride Right with Mister Whistlestop!" PSA jingle (audio/jingle_bus.py) is an
+ORIGINAL 8-bar tune written for this film (no melody of any existing song): its FM synth brass, pea whistle, toy piano,
+music box, tine e-piano, synth bass, drums, string pad and flute tone are synthesised; its glockenspiel (VS Chamber
+Orchestra CE), celesta (A Sampled Celesta), hand claps (Body Percussion) and soft piano (Scary Piano) are CC0 samples
+already in the library (credits below). The voice FX (mix.py: tv, his, loudspeaker, door, walkie, radio, phone,
+mimic, mimic_slide) are processing only.
+
+## The Doctor film (kept for reference)
+
 This film ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND") uses six Epidemic sets (catalogued in
 audio/catalog_epidemic_doctor.json, never copied out of _work/samples, never committed): the doctor set
 (_work/samples/epidemic: 90 effects and 12 tracks, each judged in _work/mix/sfx_review.md: 52 effects used, 15 used

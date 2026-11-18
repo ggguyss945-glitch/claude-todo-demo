@@ -107,7 +107,7 @@ FLATTEN = {'end_of_rain_beyza': 0.6, 'the_haunted_luella_gren': 0.45, 'through_t
 # both clip on decode): down so they never sit on the voice
 GAIN = {'dark_tunnels_ethan_sloan': 3.0, 'dark_forebodings_ethan_sloan': 2.5, 'end_of_rain_beyza': 3.0,
         'escalation_jon_bjork': 3.5, 'irene_kevin_dailey': 1.0, 'the_haunted_luella_gren': 0.5,
-        'come_closer_belladonna_strings': 0.0, 'don_t_look_belladonna_strings': 3.0, 'terra_firma_dream_cave': 1.5,
+        'come_closer_belladonna_strings': 0.0, 'don_t_look_belladonna_strings': 3.0, 'terra_firma_dream_cave': 3.5,
         'chronometer_guy_copeland': 0.5, 'can_they_see_us_experia': -1.5, 'through_the_portal_anthony_earls': -1.5,
         'all_exits_closed_guy_copeland': -1.0, 'the_last_horizon_aerian': -1.0, 'at_first_light_gavin_luke': 1.0,
         'a_sky_unveiled_megan_wofford': -2.0, 'wait_for_me_on_the_other_side_instrumental_version_clngr': -6.0,

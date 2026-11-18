@@ -228,17 +228,15 @@ def main():
              f'difference from the map {g["max_abs_dev_vs_map"]} s ({g["n_off_map"]} over 30 ms: a line whose quiet tail '
              f'sits near -60 dBFS), {len(g["under_0.15"])} under 0.15 s, {len(g["over_2.0"])} over 2 s (the outro pause).\n')
     w.append('## Character voices (narration_en.wav only)\n')
-    w.append('The narrator measures F0 104-271 Hz (5-95 %, median 155 Hz) and F1/F2/F3 about 518/1713/2775 Hz (voiced '
-             'frames of his 393 lines): a young adult male voice. Each quoted line is re-voiced with the WORLD vocoder '
-             '(`tools/vo_voices.py`: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames) before the layout: '
-             'its F0 is cleaned and moved to the character\'s median with its excursions scaled (and smoothed for the '
-             'too-even voices), the spectral envelope is warped (formants) independently of the pitch, the aperiodicity '
-             'is raised (breath, a whisper) or lowered (the Waiting Man\'s airless voice), the Waiting Man\'s vowels are '
-             'stretched 1.18x (consonants untouched; his line slots grow, so both files keep identical line starts) and '
-             'a second copy of him an octave down sits 17 dB under; then a gentle EQ and a loudness match to the dry line '
-             '(+ the character\'s offset). Only the quoted words change: the "she said." / "he whispered." splits are the '
-             'cut points. Spatial effects (phone, door, recording band, rooms, whisper) are left to the mix through the '
-             '`fx` tags of lines.py.\n')
+    w.append('The narrator (Mina) measures F0 104-276 Hz (median 171 Hz) and F1/F2/F3 about 546/1724/2725 Hz. Each '
+             'quoted line of Grandma Della (D), Sami (S), Theo (T), Mister Whistlestop (W, and his imitations) and the '
+             '911 dispatcher (X) is re-voiced with the WORLD vocoder (`tools/vo_voices.py`: Harvest F0, CheapTrick '
+             'envelope, D4C aperiodicity, 1 ms frames) before the layout: its F0 is moved to the character\'s median with '
+             'its excursions scaled and softly limited, the spectral envelope is warped (formants) independently of the '
+             'pitch, and the aperiodicity is raised for breath or a whisper; only "...Clever." (the slowing tape) changes '
+             'length, and its slot grows so both files keep identical line starts. Only the quoted words change: the '
+             '"she says." splits are the cut points. Spatial effects (tv, loudspeaker, door, phone, memory, whisper) are '
+             'left to the mix through the `fx` tags of lines.py.\n')
     w.append('Measured formant shift = the frequency warp that best maps the dry lines\' average spectral envelope onto '
              'the voiced ones\' (pitch-independent: a falsetto would measure 1.0); F0 from the voiced lines.\n')
     try:
@@ -260,9 +258,8 @@ def main():
         w.append('')
     except Exception as ex:
         w.append(f'(voice table unavailable: {ex})\n')
-    w.append('Milo measures x1.34 on the envelope: a child\'s vocal tract, not a raised man\'s voice (Praat on his three '
-             'lines: F1/F2/F3 694/2480/3995 Hz with the child setting, 8 kHz formant ceiling, against 468/1567/2606 Hz for '
-             'the same words dry with the adult-male setting; typical of a 7-year-old), at a 272 Hz median.\n')
+    w.append('The children (Sami S*, Theo T*) are set to a x1.24-1.32 envelope warp: a child\'s vocal tract, not a '
+             'raised adult voice (the measured shift is in the table above).\n')
     w.append('| # | who | fx | line | voice | F0 median in -> out | duration in -> out (s) |')
     w.append('|---:|---|---|---|---|---|---|')
     for v in e['voices']:

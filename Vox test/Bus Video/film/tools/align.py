@@ -47,6 +47,9 @@ DUR = len(en48) / SR
 # ------------------------------------------------------------------ ASR: VAD chunks -> Parakeet word timestamps
 CACHE = os.path.join(OUT, 'asr_cache.json')
 cache = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
+if abs(cache.get('en_duration', DUR) - DUR) > 0.01:                 # a new build: the cached words are another edit's
+    print(f'ASR cache is for a {cache["en_duration"]:.2f} s file, vo_en.wav is {DUR:.2f} s: re-running the ASR')
+    cache = {}
 if 'en_words' not in cache:
     import sherpa_onnx
     cfg = sherpa_onnx.VadModelConfig(); cfg.silero_vad.model = VAD
@@ -110,6 +113,7 @@ if 'en_words' not in cache:
     words.sort(key=lambda w: w[1]); ctext.sort()
     cache = {'en_words': words, 'en_chunks': ctext}
     json.dump(cache, open(CACHE, 'w'), ensure_ascii=False)
+cache['en_duration'] = round(DUR, 3)
 words = cache['en_words']
 with open(os.path.join(OUT, 'transcript.txt'), 'w') as f:
     for a, b, txt in cache.get('en_chunks', []):
@@ -126,7 +130,8 @@ NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 't
        'forty': '40', 'first': '1st', 'second': '2nd', 'fourth': '4th', 'fifteen': '15', 'sixty': '60',
        'mr': 'mister', 'dr': 'doctor', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19', 'twenty': '20',
        'seventy': '70', 'hundred': '100', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans', 'ninety': '90', 'thirty': '30', 'forty': '40',
-       'sammy': 'sami', 'sammys': 'sami', 'breaks': 'brakes', 'wrex': 'rex'}   # spellings of this film
+       'sammy': 'sami', 'sammys': 'sami', 'breaks': 'brakes', 'wrex': 'rex',
+       'umina': 'mina', 'tomina': 'mina'}   # spellings of this film ("Umina": Della's "Mina.", the take's swallowed "two Mina")
 JOIN = {('any', 'more'): 'anymore', ('arm', 'chair'): 'armchair', ('grown', 'up'): 'grownup', ('2', 'night'): 'tonight',
         ('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('type', 'writer'): 'typewriter',
         ('peep', 'hole'): 'peephole', ('street', 'light'): 'streetlight', ('wheel', 'chair'): 'wheelchair',

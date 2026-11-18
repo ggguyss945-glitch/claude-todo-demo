@@ -301,7 +301,7 @@ MAP = {
     'bus_air_brake': [['bus', 'air_brake']],
     'bus_idle': [['bus', 'engine', 'idle'], ['bus', 'standing_still_idle'], ['bus', 'slowly_stops_idle']],
     'bus_door': [['bus', 'door', 'open', 'close']],
-    'pa_crackle': [['microphone', 'feedback'], ['megaphone', 'feedback'], ['spring_feedback'], ['pa_system']],
+    'pa_crackle': [['microphone', 'feedback'], ['megaphone', 'feedback'], ['spring_feedback']],
     'bus_pull_away': [['bus', 'start', 'drive_away'], ['bus', 'pass_by']],
     'bus_horn': [['horn', 'bus']],
     'bus9_drive': [['bus', 'on_board_driving'], ['bus', 'double_decker'], ['bus', 'start', 'drive_away']],
@@ -310,7 +310,7 @@ MAP = {
     'metal_scrape': [['metal', 'scrape']],
     'glass_break': [['glass_break', 'car_window']],
     'dash_radio': [['static_radio'], ['radio', 'station_search']],
-    'whistle': [['referee_whistle'], ['wooden', 'blow_single_note']],
+    'whistle': [['referee_whistle']],
     'ticket_punch': [['hole_punch'], ['hole_puncher']],
     'deadbolt': [['deadbolt'], ['mortise_lock']],
     'walkie': [['transceiver', 'walkie_talkie'], ['walkie_talkie', 'squelch_beep']],
@@ -331,7 +331,7 @@ MAP = {
     'cloth_rip': [['cloth_rip']],
     'school_bell': [['school_bell']],
     'kids_chatter': [['school', 'children_talking'], ['school', 'big_crowd_of_kids']],
-    'unscrew': [['electric_screwdriver'], ['flashlight', 'unscrew']],
+    'unscrew': [['flashlight', 'unscrew']],
     'ticket_slide': [['cinema_ticket']],
     'phone_911': [['telephone_digital_grab_handset'], ['speed_dial_tone'], ['digital_phone_ringing']],
 }
@@ -354,7 +354,14 @@ NOT = {'whoosh': ['blade', 'sword', 'axe'], 'impact_hit': ['valve', 'shield', 'a
 # the AI "hitech" walkie carries a robot voice; the reversing beeps are a modern truck alarm; the velcro is not cloth
 NOT.update({'kids_chatter': ['scream', 'playground'], 'pa_crackle': ['guitar'], 'whistle': ['aztec', 'toy'],
             'walkie': ['voices_futzed_ai'], 'bus_pull_away': ['reverse_beeps'], 'cloth_rip': ['velcro'],
-            'tape_skip': ['sega']})
+            'tape_skip': ['sega'], 'kids_chatter_': []})
+# every REJECT of W/mix/sfx_review.md stays out of every name, older names included
+for _k in MAP:
+    NOT.setdefault(_k, [])
+    NOT[_k] = list(NOT[_k]) + ['sweeter_clean_version', 'deep_down_in_the_caverns', 'aztec_death_whistle',
+                                'electric_screwdriver', 'jail_pa_system', 'voices_futzed_ai_hitech', 'sega_saturn',
+                                'guitar_electric_od', 'velcro_tear', 'kids_walk_by_scream', 'cd_case_drop',
+                                'wooden_blow_single_note', 'toy_blow_long', 'reverse_beeps']
 
 
 def slugify(name):
