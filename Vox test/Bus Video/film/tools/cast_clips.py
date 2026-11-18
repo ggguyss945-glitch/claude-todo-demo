@@ -1,8 +1,7 @@
-"""cast_clips.py: acting clips of the doctor film's cast ("If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND",
-characters_doctor.py run by characters.py), one per scripted action, written to W/cast/clips/
-(W = Doctor Video/film/_work).
+"""cast_clips.py: acting clips of the bus film's cast ("If The School Bus Stops At Midnight... DON'T GET ON",
+characters_bus.py run by characters.py), one per scripted action, written to W/cast/clips/ (W = Bus Video/film/_work).
 
-    cd "Vox test/Doctor Video/film" && python3 tools/cast_clips.py [names...] [--fps 60] [--strip-only] [--review]
+    cd "Vox test/Bus Video/film" && python3 tools/cast_clips.py [names...] [--fps 60] [--strip-only] [--review]
 
 Each clip is 3-6 s at 960x540: <name>.mp4 plus <name>_strip.jpg (8 frames) and a line in clips.json with the actors'
 sound events and the contact report (reach misses: frames where a hand did not reach its target; feet: the lowest
@@ -247,7 +246,10 @@ def main():
         try: allr = json.load(open(rpath))
         except Exception: allr = {}
     for nm in names:
-        r = render(nm, '--strip-only' in sys.argv)
+        try:
+            r = render(nm, '--strip-only' in sys.argv)
+        except Exception:
+            import traceback; print('FAILED', nm); traceback.print_exc(limit=-3); continue
         allr[nm] = r
         print('%-28s %4.1fs  %.3f s/frame  misses %d (worst %.1f)  feet %s' % (nm, r['dur'], r['sec_per_frame'], r['reach_misses'],
                                                                            r['worst_miss'], r['feet_off_floor_px']))
@@ -256,99 +258,33 @@ def main():
         for p in review(names): print('review', p)
 
 
-# ================================================================================================ doctor film stand-ins
-KITCHEN = ('#3a4038', '#4a3e34')        # night kitchen wall / floor
-WAIT = ('#7d8a6a', '#5a5a4a')           # the waiting room: sickly fluorescent green-yellow
+from engine.core import clamp, ease_out_cubic, ease_in_out, union      # noqa: E402
+PI = math.pi
+INF = float('inf')
 WARM2 = dict(rim='#ffd9a0', rim_a=55, side=-1, key=0.1)
-NIGHT2 = dict(rim='#8fa6e8', rim_a=55, side=1, key=-0.3)
-FLUO = dict(rim='#d8f0a0', rim_a=70, side=1, key=-0.1)
-ER = dict(rim='#ffffff', rim_a=40, side=-1, key=0.2)
 
 
-def wall_phone(pen, x, y, ppc, has_receiver=True):
-    """A cream wall phone: the base on the wall at (x, y) (its top), the cradle hook; returns the cradle (receiver grip)
-    point and the cord socket at the bottom of the base."""
-    w, h = 9.0 * ppc, 20.0 * ppc
-    b = rrect(x - w / 2, y, w, h, 1.5 * ppc)
-    pen.fill(b, '#e3d9bf'); pen.line(b, 3)
-    for r in range(4):
-        for k in range(3):
-            pen.fill(oval(x - 2.2 * ppc + k * 2.2 * ppc, y + 7 * ppc + r * 2.6 * ppc, 0.8 * ppc), '#cfc4a6')
-    cradle = (x, y + 9.0 * ppc)
-    if has_receiver:
-        CH.draw_prop3(pen, 'receiver', cradle[0], cradle[1], ppc)
-    return cradle, (x, y + h)
+# ================================================================================================ bus film stand-ins
+SODIUM = dict(rim='#ffb050', rim_a=75, side=1, key=-0.25)
+AMBER = dict(rim='#ffa030', rim_a=95, side=1, key=-0.3)
+PHONE = dict(rim='#dfeaff', rim_a=85, side=-1, key=-0.45)
+STUDIO = dict(rim='#ffffff', rim_a=45, side=-1, key=0.3)
+MORNING = dict(rim='#ffe2a8', rim_a=55, side=-1, key=0.2)
+NIGHTB = dict(rim='#8fa6e8', rim_a=55, side=1, key=-0.3)
 
 
-def phone_jack(pen, x, y, ppc, plugged=True):
-    pen.fill(rrect(x - 3 * ppc, y - 3.5 * ppc, 6 * ppc, 7 * ppc, ppc * 0.6), '#e8e2d2'); pen.line(rrect(x - 3 * ppc, y - 3.5 * ppc, 6 * ppc, 7 * ppc, ppc * 0.6), 2.5)
-    return (x, y)
+def ws(x, y, ppm, seed=1, who='whistle', h=None):
+    a = CH.Acting(who, seed=seed, height=h or CH.height_px(who, ppm))
+    a.place(x, y)
+    return a
 
 
-def cabinet(pen, x, y, ppc, swing=0.0, card=True):
-    """The bathroom medicine cabinet (top-left at (x, y)): the mirror door swings aside (swing 0..1), the little yellow card
-    taped inside. Returns the card's centre."""
-    w, h = 40.0 * ppc, 55.0 * ppc
-    pen.fill(rect(x, y, w, h), '#d9d6ce'); pen.line(rect(x, y, w, h), 3)
-    pen.fill(rect(x + 2 * ppc, y + 2 * ppc, w - 4 * ppc, h - 4 * ppc), '#a8a49a')
-    for k in range(2): pen.line(poly([(x + 2 * ppc, y + (18 + 17 * k) * ppc), (x + w - 2 * ppc, y + (18 + 17 * k) * ppc)], False), 3, '#7a766e')
-    cx, cy = x + w * 0.55, y + 10 * ppc
-    if card: CH.draw_prop3(pen, 'card', cx, cy, ppc)
-    dw = w * (1.0 - 0.92 * swing)
-    m = rect(x - (w - dw) * 0.0 + (w - dw) * 0.0, y, dw, h)
-    pen.fill(m, '#9fb4c0'); pen.linear(m, x, y, x + dw, y + h, [(0, '#c8d8e0', 255), (0.5, '#8fa4b0', 255), (1, '#6f8490', 255)])
-    pen.line(m, 3)
-    return (cx, cy)
-
-
-def counter(pen, x, top, w=520, y=FLOOR, sink=True, c='#6a5a4a'):
-    pen.fill(rect(x - w / 2, top, w, y - top), c); pen.line(rect(x - w / 2, top, w, y - top), 3)
-    pen.fill(rect(x - w / 2 - 10, top - 14, w + 20, 18), '#cfc8b8'); pen.line(rect(x - w / 2 - 10, top - 14, w + 20, 18), 3)
-    for k in range(3): pen.line(rect(x - w / 2 + 14 + k * (w - 28) / 3, top + 20, (w - 28) / 3 - 10, y - top - 40), 2.5, mix(c, '#000000', 0.3))
-    if sink:
-        pen.fill(rrect(x - 90, top - 12, 180, 14, 4), '#9aa2aa'); pen.line(rrect(x - 90, top - 12, 180, 14, 4), 2.5)
-        return (x, top - 6)
-    return (x, top - 14)
-
-
-def plastic_chair(pen, x, y=FLOOR, ppm=380.0, facing=1.0, c='#3f6a8a', rock=0.0, front=False):
-    """A molded plastic waiting-room chair (side view, facing +1 = screen right, or front=True), rocking by `rock` deg
-    about its front feet. Returns the seat top y."""
-    k = ppm / 100.0
-    sy = y - 45 * k
-    cv = pen.cv
-    cv.save()
-    if rock:
-        fx = x + facing * 20 * k
-        cv.translate(fx, y); cv.rotate(rock * facing); cv.translate(-fx, -y)
-    if front:
-        pen.line(poly([(x - 20 * k, y), (x - 18 * k, sy)], False), 4, '#2a2c32'); pen.line(poly([(x + 20 * k, y), (x + 18 * k, sy)], False), 4, '#2a2c32')
-        pen.fill(rrect(x - 23 * k, sy - 4 * k, 46 * k, 7 * k, 2 * k), c); pen.line(rrect(x - 23 * k, sy - 4 * k, 46 * k, 7 * k, 2 * k), 3)
-        pen.fill(rrect(x - 21 * k, sy - 44 * k, 42 * k, 30 * k, 6 * k), mix(c, '#000000', 0.15)); pen.line(rrect(x - 21 * k, sy - 44 * k, 42 * k, 30 * k, 6 * k), 3)
-    else:
-        f = facing
-        for dx in (-18, 18): pen.line(poly([(x + f * dx * k, y), (x + f * dx * 0.9 * k, sy)], False), 4, '#2a2c32')
-        seat = smooth([(x - f * 22 * k, sy - 2 * k), (x + f * 22 * k, sy - 3 * k), (x + f * 23 * k, sy + 3 * k), (x - f * 22 * k, sy + 3 * k)], True, 0.4)
-        pen.fill(seat, c); pen.line(seat, 3)
-        back = smooth([(x - f * 20 * k, sy - 2 * k), (x - f * 26 * k, sy - 40 * k), (x - f * 21 * k, sy - 42 * k), (x - f * 15 * k, sy - 4 * k)], True, 0.5)
-        pen.fill(back, mix(c, '#000000', 0.15)); pen.line(back, 3)
-    cv.restore()
-    return sy
-
-
-def ticket_machine(pen, x, y=FLOOR, ppm=380.0):
-    """The red take-a-number machine on its pole (deli counter); returns the slot where the ticket comes out."""
-    k = ppm / 100.0
-    pen.line(poly([(x, y), (x, y - 110 * k)], False), 3 * k, '#6a6e76')
-    pen.fill(oval(x, y, 14 * k, 3 * k), '#4a4e56')
-    body = smooth([(x - 9 * k, y - 140 * k), (x + 9 * k, y - 140 * k), (x + 11 * k, y - 112 * k), (x - 11 * k, y - 112 * k)], True, 0.5)
-    pen.fill(body, '#c0392f'); pen.line(body, 3)
-    pen.fill(rect(x - 7 * k, y - 120 * k, 14 * k, 2 * k), '#2a1a18')
-    return (x, y - 119 * k)
-
-
-def armchair2(pen, x, seat_y, w=330, back_h=320, y=FLOOR, c='#6a4a32', front=True):
-    armchair(pen, x, seat_y, w, back_h, y, c)
+def night_yard(pen, hz=560, lamp=None):
+    pen.linear(rect(0, 0, 1920, hz), 0, 0, 0, hz, [(0, '#06070c'), (1, '#1a1a22')])
+    pen.fill(rect(0, hz, 1920, 1080 - hz), '#1d2a1c')
+    pen.linear(rect(0, hz, 1920, 1080 - hz), 0, hz, 0, 1080, [(0, '#000000', 120), (1, '#000000', 0)])
+    pen.fill(rect(0, hz - 8, 1920, 30), '#2a2a2e')
+    if lamp is not None: pen.glow(lamp[0], lamp[1], 520, '#ffb050', 55 * lamp[2])
 
 
 def streetlight(pen, x, y, h=520, flicker=1.0):
@@ -361,972 +297,988 @@ def streetlight(pen, x, y, h=520, flicker=1.0):
     return (x + 65, y - h)
 
 
-def bench(pen, x, seat_y, w=300, y=FLOOR):
-    pen.fill(rect(x - w / 2, seat_y - 6, w, 12), '#3a3226')
-    for dx in (-w / 2 + 20, w / 2 - 20): pen.line(poly([(x + dx, seat_y), (x + dx, y)], False), 6, '#22201c')
-    pen.fill(rect(x - w / 2, seat_y - 80, w, 10), '#3a3226')
+def mailbox(pen, x, y, ppm, letters=1.0):
+    h = 1.1 * ppm
+    pen.fill(rect(x - 0.04 * ppm, y - h, 0.08 * ppm, h), '#3a3028'); pen.line(rect(x - 0.04 * ppm, y - h, 0.08 * ppm, h), 3)
+    b = rrect(x - 0.24 * ppm, y - h - 0.22 * ppm, 0.48 * ppm, 0.24 * ppm, 0.1 * ppm)
+    pen.fill(b, '#4a5058'); pen.line(b, 3)
+    n = int(round(5 * letters))
+    for k in range(n):
+        pen.fill(rect(x - 0.2 * ppm + k * 0.08 * ppm, y - h - 0.17 * ppm, 0.06 * ppm, 0.12 * ppm), '#e8e2c8')
 
 
-def car_back(pen, x, floor, ppm, roof_y, seat_y, inside='#1a1c22'):
-    """A car's back seat seen from the front (the rear-view mirror's view): the seat back, the cushion, the low roof."""
-    k = ppm / 100.0
-    pen.fill(rect(0, 0, 1920, 1080), inside)
-    pen.fill(rect(0, 0, 1920, roof_y), '#2a2c34'); pen.line(poly([(0, roof_y), (1920, roof_y)], False), 4)
-    pen.fill(rrect(x - 140 * k, seat_y - 75 * k, 280 * k, 80 * k, 10 * k), '#3a3a40'); pen.line(rrect(x - 140 * k, seat_y - 75 * k, 280 * k, 80 * k, 10 * k), 3)
-    pen.fill(rrect(x - 140 * k, seat_y - 4, 280 * k, floor - seat_y, 8 * k), '#45454c'); pen.line(rrect(x - 140 * k, seat_y - 4, 280 * k, floor - seat_y, 8 * k), 3)
-    pen.fill(rect(0, floor, 1920, 1080 - floor), '#121318')
+def bus_side(pen, x0, y_floor, ppm, door_x, door_open=1.0, glow='#ffa040', lit=True, color='#b89a3a', w=None):
+    """An old rounded school bus seen side-on (stand-in): a folding door at door_x (open 0..1) with steps and an amber
+    glow inside."""
+    w = w or 9.0 * ppm
+    h = 2.9 * ppm
+    top = y_floor - 0.35 * ppm - h
+    body = rrect(x0, top, w, h, 0.45 * ppm)
+    pen.fill(body, color); pen.line(body, 4)
+    pen.fill(rect(x0, top + h * 0.62, w, 0.12 * ppm), '#1a1a1a')
+    for k in range(6):
+        wx = x0 + 0.35 * ppm + k * 1.1 * ppm
+        if abs(wx + 0.45 * ppm - door_x) < 0.9 * ppm: continue
+        win = rrect(wx, top + 0.35 * ppm, 0.9 * ppm, 0.8 * ppm, 0.08 * ppm)
+        pen.fill(win, '#2a1a0a' if lit else '#0c0d12')
+        if lit: pen.fill(win, glow, 90)
+        pen.line(win, 3)
+    dw = 0.95 * ppm
+    dr = rect(door_x - dw / 2, top + 0.2 * ppm, dw, y_floor - 0.25 * ppm - top - 0.2 * ppm)
+    pen.fill(dr, '#140c06')
+    if lit: pen.linear(dr, 0, top, 0, y_floor, [(0, glow, 140), (1, glow, 40)])
+    for k in range(3):                                              # steps
+        sy = y_floor - 0.25 * ppm - k * 0.28 * ppm
+        pen.fill(rect(door_x - dw / 2, sy - 0.05 * ppm, dw, 0.05 * ppm), '#3a3028')
+    pf = dw / 2 * (1.0 - 0.8 * door_open)
+    for sd in (-1, 1):
+        pnl = rect(door_x + sd * dw / 2 - (pf if sd > 0 else 0), top + 0.2 * ppm, pf, y_floor - 0.25 * ppm - top - 0.2 * ppm)
+        pen.fill(pnl, '#2a2c30', 230); pen.line(pnl, 3)
+    for wx in (x0 + 1.2 * ppm, x0 + w - 1.6 * ppm):
+        pen.fill(oval(wx, y_floor - 0.45 * ppm, 0.48 * ppm, 0.48 * ppm), '#141414'); pen.fill(oval(wx, y_floor - 0.45 * ppm, 0.2 * ppm, 0.2 * ppm), '#6a6a6a')
+    return dict(step_top=(door_x, y_floor - 0.25 * ppm - 2 * 0.28 * ppm), step_bot=(door_x, y_floor - 0.25 * ppm), door=dr, top=top)
 
 
-def car_front_seat(pen, x, floor, ppm, seat_y):
-    k = ppm / 100.0
-    pen.fill(rrect(x - 30 * k, seat_y - 70 * k, 22 * k, 75 * k, 8 * k), '#3a3a40'); pen.line(rrect(x - 30 * k, seat_y - 70 * k, 22 * k, 75 * k, 8 * k), 3)
-    pen.fill(rrect(x - 30 * k, seat_y - 4, 55 * k, 14 * k, 5 * k), '#45454c'); pen.line(rrect(x - 30 * k, seat_y - 4, 55 * k, 14 * k, 5 * k), 3)
+def frame_vignette(pen, a=170):
+    pen.radial(rect(0, 0, 1920, 1080), 960, 540, 1150, [(0, '#000000', 0), (0.7, '#000000', 40), (1, '#000000', a)])
 
 
-def er_bed(pen, x, top, w=560, y=FLOOR):
-    pen.fill(rect(x - w / 2, top, w, 30), '#e8eef0'); pen.line(rect(x - w / 2, top, w, 30), 3)
-    pen.fill(rect(x - w / 2, top + 30, w, 24), '#9aa4ac'); pen.line(rect(x - w / 2, top + 30, w, 24), 3)
-    for dx in (-w / 2 + 30, w / 2 - 30): pen.line(poly([(x + dx, top + 54), (x + dx, y - 20)], False), 6, '#8a929a'); pen.fill(oval(x + dx, y - 12, 12), '#2a2c32')
-    pen.fill(rrect(x - w / 2 - 10, top - 90, 20, 140, 6), '#b9c2ca'); pen.line(rrect(x - w / 2 - 10, top - 90, 20, 140, 6), 3)
+def dark_over(pen, hole=None, a=235):
+    cv = pen.cv
+    cv.save()
+    if hole is not None: cv.clipPath(hole, skia.ClipOp.kDifference, True)
+    pen.fill(rect(0, 0, 1920, 1080), '#000000', a)
+    cv.restore()
 
 
-def monitor(pen, x, y, t=0.0):
-    pen.fill(rrect(x - 90, y - 70, 180, 130, 10), '#2a2e36'); pen.line(rrect(x - 90, y - 70, 180, 130, 10), 3)
-    pen.fill(rect(x - 75, y - 58, 150, 100), '#0d1a14')
-    pts = []
-    for i in range(60):
-        u = i / 59.0; ph = (u * 3 + t * 1.5) % 1.0
-        v = -30 if 0.48 < ph < 0.52 else (12 if 0.52 <= ph < 0.56 else 0)
-        pts.append((x - 72 + 144 * u, y - 10 + v))
-    pen.line(poly(pts, False), 3, '#4ae07a')
+def blurred(pen, fn, sigma=14.0):
+    cv = pen.cv
+    cv.saveLayer(None, skia.Paint(ImageFilter=skia.ImageFilters.Blur(sigma, sigma)))
+    fn()
+    cv.restore()
 
 
-def desk(pen, x, top, w=520, y=FLOOR):
-    pen.fill(rect(x - w / 2, top, w, 22), '#8a8478'); pen.line(rect(x - w / 2, top, w, 22), 3)
-    for dx in (-w / 2 + 20, w / 2 - 30): pen.fill(rect(x + dx, top + 22, 12, y - top - 22), '#5a564e')
-    for k in range(6): pen.fill(rect(x + 60 + k * 2, top - 6 - k * 5, 150, 5), '#f6f4ee'); pen.line(rect(x + 60 + k * 2, top - 6 - k * 5, 150, 5), 1.5)
+def bus_aisle(pen, vp=(960, 430), lit=True):
+    """The midnight bus seen down its aisle: dark seats both sides, an amber glow."""
+    pen.fill(rect(0, 0, 1920, 1080), '#120b06')
+    pen.fill(poly([(0, 1080), (1920, 1080), (vp[0] + 60, vp[1] + 60), (vp[0] - 60, vp[1] + 60)]), '#2a1e14')
+    pen.fill(poly([(0, 0), (1920, 0), (vp[0] + 90, vp[1] - 90), (vp[0] - 90, vp[1] - 90)]), '#1e140c')
+    pen.fill(rect(vp[0] - 90, vp[1] - 90, 180, 150), '#0a0604')
+    for k in range(7):
+        f = 1.0 / (1.0 + 0.55 * k)
+        for sd in (-1, 1):
+            x = vp[0] + sd * (130 + 760 * f); y = vp[1] + 60 + 560 * f
+            seat = rrect(x - (0 if sd > 0 else 300 * f) - (300 * f if sd > 0 else 0) * 0, y - 300 * f, 300 * f, 300 * f, 20 * f)
+            seat = rrect(x - 150 * f, y - 320 * f, 300 * f, 330 * f, 24 * f)
+            pen.fill(seat, '#4a2a1c'); pen.line(seat, max(1.5, 4 * f))
+    if lit: pen.radial(rect(0, 0, 1920, 1080), vp[0], vp[1], 900, [(0, '#ffa030', 70), (1, '#ffa030', 0)])
 
 
-def fluo_room(pen, t=0.0):
-    room(pen, WAIT[0], WAIT[1])
+def clock_face(pen, x, y, r, hh=3, mm=0):
+    pen.fill(oval(x, y, r, r), '#e9e2cc'); pen.line(oval(x, y, r, r), 5)
+    for a, L, w in ((PI * 2 * (hh % 12 + mm / 60) / 12, 0.5, 7), (PI * 2 * mm / 60, 0.8, 4)):
+        pen.line(poly([(x, y), (x + math.sin(a) * r * L, y - math.cos(a) * r * L)], False), w)
+
+
+def cardboard_bus(pen, x, y, ppm):
+    w, h = 3.6 * ppm, 1.9 * ppm
+    b = rrect(x - w / 2, y - h, w, h, 0.3 * ppm)
+    pen.fill(b, '#f2c43a'); pen.line(b, 4)
     for k in range(4):
-        on = 1.0 if k % 2 == 0 else (0.3 + 0.7 * (math.sin(t * 37.0 + k) > 0.6))
-        pen.fill(rect(160 + k * 450, 40, 260, 18), '#f4ffd8' if on > 0.5 else '#6a7058'); pen.glow(290 + k * 450, 50, 260, '#e8ffb0', 50 * on)
+        wr = rrect(x - w / 2 + 0.3 * ppm + k * 0.8 * ppm, y - h + 0.3 * ppm, 0.6 * ppm, 0.5 * ppm, 0.06 * ppm)
+        pen.fill(wr, '#bfe0f2'); pen.line(wr, 3)
+    pen.fill(rect(x - w / 2, y - h * 0.38, w, 0.1 * ppm), '#1a1a1a')
+    for wx in (x - w * 0.3, x + w * 0.3):
+        pen.fill(oval(wx, y - 0.1 * ppm, 0.32 * ppm, 0.32 * ppm), '#222222'); pen.line(oval(wx, y - 0.1 * ppm, 0.32 * ppm, 0.32 * ppm), 3)
+    text(pen.cv, 'RIDE RIGHT', x, y - h * 0.5, 800, 0.32 * ppm, '#c43a2a', 255, 0.05)
 
 
-def door_open_room(pen, x, y=FLOOR, ppm=380.0):
-    pass
+def jump(a, t, ddx=0.0, ddy=0.0):
+    """Cut an actor's position at t (a tape skip carries Sami along)."""
+    a._add(t, None, lambda P, tt: (setattr(P, 'dx', P.dx + ddx), setattr(P, 'dy', P.dy + ddy)) if tt >= t else None)
 
 
-# ================================================================================================ the clips
-def lat(x, y, ppm, seed=1, **kw):
-    a = CH.Acting('later', seed=seed, height=CH.height_px('later', ppm), **kw)
-    a.place(x, y)
-    return a
-
-
-@clip('later_wait_plastic', 5.0, 'Cold open: a very tall man folded into a little plastic chair, knees up past his shoulders, the clipboard with no paper, clicking his pen; he looks up at you and tilts his head: "Take a seat. It can wait."')
-def _c_later_wait():
-    ppm = 300.0
-    a = lat(900, FLOOR, ppm, seed=1)
-    a.perch(None, 'plastic')
-    a.face(0.35, -0.2)
-    a.set(-1, None, 0.01, h_nod=0.45, h_tilt=4.0)
-    ev = a.click_pen([0.5, 0.9, 1.6, 2.0])
-    a.look_at(2.3, (1400, 560), dur=1.2, z=300.0)             # looks up at "you" (the lens side)
-    a.tilt_head(3.2, 20.0, 1.4)
+# ------------------------------------------------------------------------------------------------ Mister Whistlestop
+@clip('ws_tv_host_1994', 5.0, '1994, Channel 6: a cat taller than the cardboard bus behind him, crooked yellow hat, whistle, the grin that never moves: "Write your name, your school and your bus on your card! Hold it up to the camera! Ride right, kids!"')
+def _c_ws_tv():
+    ppm = 210.0
+    a = ws(1080, 980, ppm, 1, 'whistle94')
+    a.face(-0.15)
+    a.host(0.2, 2.2)
+    a.say([(0.3, 2.1, 'Write your name your school and your bus on your card'), (2.4, 3.4, 'Hold it up to the camera'),
+           (3.8, 4.6, 'Ride right kids')])
+    a.reach_far(2.3, -1, (760, 330), t1=3.5, dur=0.45, z=260.0, shape='point')
+    a.ws_rest(3.6, 1, 'host', 4.9, 0.4); a.ws_rest(3.6, -1, 'host', 4.9, 0.4)
     def draw(pen, t):
-        fluo_room(pen, t)
-        for i, xx in enumerate((520, 1280, 1500)): plastic_chair(pen, xx, FLOOR, ppm, front=True)
-        plastic_chair(pen, 900, FLOOR, ppm, facing=1.0)
-        fig(pen, a, t, FLUO)
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#5ab0e0'), (1, '#2a78b8')])
+        pen.fill(rect(0, 980, 1920, 100), '#3a8a4a')
+        cardboard_bus(pen, 620, 980, ppm)
+        fig(pen, a, t, STUDIO)
     return dict(draw=draw, actors=[a], grounded=[a])
 
 
-@clip('later_likeness_profile', 4.0, 'Reference pose (the owner\'s photo): folded on a small chair in profile, the long neck reaching forward, the face turned to us, the cone tipped, hands flat on the carpet')
-def _c_later_profile():
-    ppm = 300.0
-    a = lat(700, FLOOR, ppm, seed=2)
-    a.perch(None, 'plastic', knee=0.0, hands=('floor', 'floor'), props=False)
-    a.face(1.0, -1.0)
-    a.set(-1, None, 0.01, h_tilt=24.0)
-    a.tilt_head(1.5, 6.0, 1.5)
+@clip('kids94_cards', 4.0, 'The kids hold up their cards (name, school, bus) to the camera; at the end of the row, a small boy in a yellow raincoat, his card unreadable')
+def _c_kids94():
+    ppm = 330.0
+    ks = []
+    texts = ('AMY R.|LARKFIELD EL.|BUS 4', 'DEVON|LARKFIELD EL.|BUS 9', 'KATIE M.|LARKFIELD EL.|BUS 2', ' | | ')
+    for i, w in enumerate(('kid94_a', 'kid94_b', 'kid94_c', 'theo_color')):
+        k = actor(w, 420 + i * 380, FLOOR, ppm, seed=60 + i, expr='proud_grin' if i < 3 else 'lonely')
+        k.face(0.0)
+        k.base['card_text'] = texts[i]
+        t0 = 0.3 + 0.35 * i if i < 3 else 1.6
+        k.hold_prop('name_card', 1, -1.0, None)
+        k.reach_to(t0, 1, lambda t, k=k: (k.where(t, 'chin', post=False)[0] + 0.03 * k.height, k.where(t, 'chin', post=False)[1] + 0.13 * k.height),
+                   dur=0.5, contact='grip', shape='grip', z=150.0)
+        k.reach_to(t0 + 0.05, -1, lambda t, k=k: (k.where(t, 'chin', post=False)[0] - 0.07 * k.height, k.where(t, 'chin', post=False)[1] + 0.19 * k.height),
+                   dur=0.5, contact='palm', shape='grip', z=150.0)
+        k.set(-1.0, None, 0.01, lock=1.0 if i < 3 else 0.0)
+        if i == 3: k.look_at(0.0, (1300, 700), dur=0.4)
+        ks.append(k)
     def draw(pen, t):
-        room(pen, '#c6b4ac', '#3a3434')
-        plastic_chair(pen, 700, FLOOR, ppm, facing=1.0, c='#2a2626')
-        fig(pen, a, t)
-    return dict(draw=draw, actors=[a], grounded=[a])
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#4aa0d0'), (1, '#2a68a8')])
+        pen.fill(rect(0, FLOOR, 1920, 140), '#3a8a4a')
+        for k in ks: fig(pen, k, t, STUDIO)
+    return dict(draw=draw, actors=ks, grounded=ks)
 
 
-@clip('ruth79_phone_hold', 5.0, '1979, 3 AM: Grandma calls that place, a recording puts her on hold; she waits with the receiver at her ear, the cord coiling to the wall phone; then she listens: "It can wait until morning."')
-def _c_ruth79_phone():
-    ppm = 380.0; ppc = ppm / 100.0
-    r = actor('ruth79', 860, FLOOR, ppm, seed=3, expr='stern_afraid')
-    r.face(0.6)
-    rec = CH.PropTrack('receiver', 1060, FLOOR - 1.45 * ppm + 9 * ppc, ppc)
-    tc = r.pick_up(rec, 0.2, side=1, dur=1.0, carry=None)
-    r.receiver_to_ear(tc + 0.2, None, side=1)
-    r.look_at(0.0, rec, t1=tc, dur=0.3)
-    r.look_at(tc + 0.6, (1300, 600), dur=0.6)                # eyes off into the dark while she waits
-    r.expr('fear', 3.6, None, 0.6)                           # the calm voice: "It can wait until morning."
+@clip('ws_unfold_door', 5.0, 'Through a gap in the curtains: his bus door folds open; something unfolds out of it, like a ladder: up, and up, and up')
+def _c_ws_unfold():
+    ppm = 165.0
+    bus = dict(x0=900.0, door_x=1180.0)
+    a = ws(1180, 1010, ppm, 2)
+    a.face(-0.35)
+    ev = a.unfold(0.6, 3.0)
+    a.look_at(3.9, (300, 600), dur=0.9)
     def draw(pen, t):
-        room(pen, '#2c2a36', '#3a3028')
-        cr, sock = wall_phone(pen, 1060, FLOOR - 1.45 * ppm, ppc, has_receiver=False)
-        rec.draw(pen, t)
-        fig(pen, r, t, NIGHT2)
-        if rec.holder(t):
-            e = CH.receiver_cord_end(r, t, 1)
-            CH.draw_coil_cord(pen, e[0], e[1], sock[0], sock[1], ppc, 0.35, t)
-        else:
-            CH.draw_coil_cord(pen, cr[0], cr[1] + 11 * ppc, sock[0], sock[1], ppc, 0.2, t)
-    return dict(draw=draw, actors=[r], grounded=[r])
-
-
-@clip('grandpa79_sits_armchair', 5.0, '1979: Grandpa, a hand on his chest, sits down in his armchair, the brown one by the window, to wait for the sun')
-def _c_grandpa_sits():
-    ppm = 380.0
-    seat = FLOOR - 0.43 * ppm
-    g = actor('grandpa79', 600, FLOOR, ppm, seed=4, expr='stern_afraid')
-    g.face(1.0)
-    g.walk(0.0, 1.4, -200.0, 160.0, surface='inside')
-    g.hand_on(0.0, 'chest', t1=4.6, side=-1)
-    g.turn(1.4, -0.5, 0.6)
-    g.sit_on(1.9, seat, dur=1.2, hands=None)
-    g.look_at(3.4, (1300, 380), dur=0.8)                     # out of the window, toward where the sun will come up
-    def draw(pen, t):
-        room(pen, '#2a2c3a', '#3a2e26')
-        window(pen, 1250, 260, 360, 400, night=True)
-        armchair(pen, 780, seat, 340, c='#6a4a30')
-        fig(pen, g, t, NIGHT2)
-    return dict(draw=draw, actors=[g], grounded=[g])
-
-
-@clip('ruth79_coffee_sunrise', 6.0, 'At sunrise Grandma brings him a cup of coffee; he is still sitting there, still waiting (gently: eyes closed, as if asleep)')
-def _c_ruth79_coffee():
-    ppm = 380.0; ppc = ppm / 100.0
-    seat = FLOOR - 0.43 * ppm
-    g = actor('grandpa79', 1150, FLOOR, ppm, seed=5)
-    g.face(-0.5); g.seated(seat, hands='arms'); g.gone(-5.0, 0.1)
-    r = actor('ruth79', 420, FLOOR, ppm, seed=6, expr='warm')
-    r.face(1.0)
-    r.hold_prop('mug', -1, -1.0, None)
-    r.reach(-1.0, None, -1, out=-30.0, down=130.0, fwd=170.0, shape='grip', up=0.0, fade=0.01)
-    r.walk(0.4, 2.7, 0.0, 530.0, surface='inside')
-    r.look_at(0.4, (g, 'head'), dur=0.5)
-    r.expr('stern_afraid', 3.6, None, 0.8)                  # she stops: he has not moved
-    r.reach_to(3.8, 1, (g, 'shoulder_l'), dur=0.9, z=60.0, contact='palm', shape='open')      # the free hand, the mug still in the other
-    def draw(pen, t):
-        room(pen, '#5a4a40', '#3a2e26')
-        window(pen, 1500, 240, 360, 420, night=False)
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 1920, 0, [(0, '#ffb070', 0), (1, '#ffb070', 60)])
-        armchair(pen, 1170, seat, 340, c='#6a4a30')
-        fig(pen, g, t, WARM2); fig(pen, r, t, WARM2)
-    return dict(draw=draw, actors=[g, r], grounded=[r])
-
-
-@clip('milo_drink', 4.0, 'Milo is thirsty all the time: he drinks a whole bottle of water and asks for another')
-def _c_milo_drink():
-    ppm = 380.0
-    m = actor('milo', 900, FLOOR, ppm, seed=7, expr='thirsty')
-    m.face(0.45)
-    ev = m.drink(0.4, 2.8, side=1)
-    m.look_at(3.0, (1500, 400), dur=0.4)
-    m.talk([(3.1, 3.8, 'Can I have another')], env=None, words=None)
-    def draw(pen, t):
-        room(pen, '#5a6a7a', '#6a5a4a')
-        fig(pen, m, t, WARM)
-    return dict(draw=draw, actors=[m], grounded=[m])
-
-
-@clip('milo_jeans_sag', 4.0, 'His favorite dinosaur jeans started falling off him: they slip, he grabs the waistband and hitches them up')
-def _c_milo_sag():
-    ppm = 380.0
-    m = actor('milo_jeans', 900, FLOOR, ppm, seed=8, expr='sleepy')
-    m.face(0.3)
-    m.sag(0.3, None, 1.0, 1.0)
-    m.look_at(1.0, (m, 'hip'), t1=2.6, dur=0.3)
-    m.hold_up(1.4, None, side=1)
-    m.set(2.0, None, 0.4, sag=0.35)
-    def draw(pen, t):
-        room(pen, '#6a7a8a', '#6a5a4a')
-        fig(pen, m, t, WARM)
-    return dict(draw=draw, actors=[m], grounded=[m])
-
-
-@clip('halverson_clinic_blood', 5.0, 'Doctor Halverson takes one look at Milo and her smile goes careful; she takes some blood (a capped tube), Milo brave on the exam table')
-def _c_hal_clinic():
-    ppm = 380.0
-    top = FLOOR - 0.78 * ppm
-    m = actor('milo', 1060, top, ppm, seed=9, expr='brave')
-    m.face(-0.55); m.set(-1, None, 0.01, perch=1.0, sit=1.0)
-    m.reach(-1.0, None, 1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
-    m.reach(-1.0, None, -1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
-    h = actor('halverson', 745, FLOOR, ppm, seed=10, expr='kind_smile')
-    h.face(0.6)
-    h.look_at(0.0, (m, 'eyes'), dur=0.3)
-    m.look_at(0.0, (h, 'eyes'), dur=0.3)
-    h.expr('careful_smile', 1.0, None, 0.6)
-    m.reach(1.6, None, 1, out=20.0, down=200.0, fwd=230.0, shape='open', up=0.0, fade=0.6)     # holds out his arm
-    h.reach_to(2.0, -1, (m, 'elbow_l'), dur=0.7, z=80.0, contact='palm', shape='grip')        # steadies it
-    h.hold_prop('vial', 1, 2.0, None)
-    h.reach(2.2, None, 1, out=-30.0, down=120.0, fwd=200.0, shape='grip', up=0.0, fade=0.6)
-    h.look_at(2.0, (m, 'elbow_l'), dur=0.3)
-    m.look_at(2.4, (1500, 380), dur=0.3)                       # looks away, being brave
-    def draw(pen, t):
-        room(pen, '#d8e6ee', '#b8c4cc')
-        pen.fill(rect(920, top - 6, 380, 24), '#e8eef0'); pen.line(rect(920, top - 6, 380, 24), 3)
-        for x_ in (940, 1280): pen.line(poly([(x_, top + 18), (x_, FLOOR)], False), 6, '#9aa2aa')
-        fig(pen, m, t, ER); fig(pen, h, t, ER)
-    return dict(draw=draw, actors=[m, h], grounded=[h])
-
-
-@clip('ruth_cabinet_tap', 5.0, 'At sundown Grandma opens the medicine cabinet, swings the mirror aside and taps the little yellow card: "Nobody gets sick in this house after dark."')
-def _c_ruth_cab():
-    ppm = 380.0; ppc = ppm / 100.0
-    cx0, cy0 = 960, FLOOR - 1.66 * ppm
-    r = actor('ruth', 852, FLOOR, ppm, seed=11, expr='stern')
-    r.face(0.55)
-    sw = lambda t: min(1.0, max(0.0, (t - 0.9) / 0.9))       # noqa: E731
-    edge = lambda t: (cx0 + 40 * ppc * (1.0 - 0.92 * sw(t)) - 2 * ppc, cy0 + 30 * ppc)     # noqa: E731
-    r.reach_to(0.2, 1, edge, t1=1.8, dur=0.6, contact='grip', shape='grip', z=0.0)
-    card = (cx0 + 40 * ppc * 0.55, cy0 + 10 * ppc)
-    r.look_at(1.6, card, dur=0.4)
-    ev = r.tap(2.2, 1, card, n=3)
-    r.look_at(3.6, (1500, 520), dur=0.5)                     # to the kids: "Same as always."
-    r.talk([(3.9, 4.8, 'Same as always')], env=None, words=None)
-    def draw(pen, t):
-        room(pen, '#8a7a6a', '#4a4038')
-        cabinet(pen, cx0, cy0, ppc, swing=sw(t))
-        fig(pen, r, t, WARM2)
-    return dict(draw=draw, actors=[r], grounded=[r])
-
-
-@clip('ruth_phone_tilt', 6.0, 'Rule 1, 3 AM: the landline rings; Grandma, already beside it, lets it ring, picks it up and tilts the receiver so I can hear; I lean in')
-def _c_ruth_tilt():
-    ppm = 380.0; ppc = ppm / 100.0
-    r = actor('ruth', 880, FLOOR, ppm, seed=12, expr='stern')
-    n = actor('narr14', 1200, FLOOR, ppm, seed=13, expr='fear')
-    r.face(0.45); n.face(-0.55)
-    rec = CH.PropTrack('receiver', 1080, FLOOR - 1.45 * ppm + 9 * ppc, ppc)
-    r.look_at(0.0, rec, t1=1.2, dur=0.3)
-    tc = r.pick_up(rec, 0.8, side=1, dur=1.0)
-    r.receiver_to_ear(tc + 0.1, None, side=1, tilt_out=0.0)
-    r.receiver_to_ear(2.6, None, side=1, tilt_out=1.0, fade=0.7, toward=n)
-    n.look_at(0.0, rec, dur=0.3)
-    n.set(3.0, None, 0.8, lean=0.18, h_tilt=-10.0)
-    n.look_at(3.0, lambda t: r.grip_point(t, 1, 'receiver'), dur=0.3)
-    n.set(3.0, None, 0.8, h_turn=-0.5)                       # turns an ear to it
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        cr, sock = wall_phone(pen, 1080, FLOOR - 1.45 * ppm, ppc, has_receiver=False)
-        rec.draw(pen, t)
-        fig(pen, n, t, NIGHT2); fig(pen, r, t, NIGHT2)
-        e = CH.receiver_cord_end(r, t, 1) if rec.holder(t) else (cr[0], cr[1] + 11 * ppc)
-        CH.draw_coil_cord(pen, e[0], e[1], sock[0], sock[1], ppc, 0.3, t)
-    return dict(draw=draw, actors=[r, n], grounded=[r, n])
-
-
-@clip('ruth_hangup_cord', 6.0, '"Don\'t you dare tell me what you found." She hangs up; it rings again, nine times; she pulls the cord out of the wall and the house goes quiet')
-def _c_ruth_cord():
-    ppm = 380.0; ppc = ppm / 100.0
-    r = actor('ruth', 985, FLOOR, ppm, seed=14, expr='stern')
-    r.face(0.5)
-    base_x, base_y = 1110, FLOOR - 1.45 * ppm
-    rec = CH.PropTrack('receiver', 0, 0, ppc)
-    rec.held(-1e9, r, 1)
-    r.receiver_to_ear(-1.0, 0.6, side=1)
-    r.talk([(0.0, 0.9, "Don't you dare tell me")], env=None, words=None)
-    tc = r.put_down(rec, 1.0, 1, base_x, base_y + 9 * ppc, dur=1.0)
-    r.look_at(1.0, (base_x, base_y + 9 * ppc), dur=0.3)
-    jack = (base_x + 90, FLOOR - 1.02 * ppm)
-    r.look_at(2.6, jack, dur=0.4)
-    ev = r.pull_cord(2.8, 1, jack, dur=1.6)
-    r.expr('set_jaw', 2.8, None, 0.4)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        cr, sock = wall_phone(pen, base_x, base_y, ppc, has_receiver=False)
-        rec.draw(pen, t)
-        yank = 2.8 + 0.65 * 1.6
-        phone_jack(pen, jack[0], jack[1], ppc)
-        fig(pen, r, t, NIGHT2)
-        e = CH.receiver_cord_end(r, t, 1) if rec.holder(t) else (cr[0], cr[1] + 11 * ppc)
-        CH.draw_coil_cord(pen, e[0], e[1], sock[0], sock[1], ppc, 0.3, t)
-        # the wall cord from the base down to the jack, then (pulled) hanging from her hand
-        if t < yank:
-            pen.line(smooth([(sock[0], sock[1]), (sock[0] + 30, jack[1] - 120), (jack[0], jack[1])], False), 3, '#d9cfb4')
-        else:
-            hx, hy = r.where(t, 'hand_l')
-            pen.line(smooth([(sock[0], sock[1]), (sock[0] + 20, (sock[1] + hy) / 2 + 60), (hx, hy)], False), 3, '#d9cfb4')
-    return dict(draw=draw, actors=[r], grounded=[r])
-
-
-@clip('halverson_office_phone', 4.0, '3 AM at Larkfield General: Doctor Halverson, rough and out of breath, nineteen hours awake, on the phone in a little office')
-def _c_hal_office():
-    ppm = 380.0
-    seat = FLOOR - 0.47 * ppm
-    h = actor('halverson', 900, FLOOR, ppm, seed=15, expr='exhausted')
-    h.face(0.55); h.seated(seat, hands='lap')
-    h.phone_to_ear(-1.0, None, side=-1)
-    h.hold_prop('cell', -1, -1.0, None)
-    h.talk([(0.6, 3.4, "This is Doctor Halverson. I'm so sorry about the hour")], env=None, words=None)
-    h.reach(1.0, None, 1, out=10.0, down=230.0, fwd=230.0, shape='point', up=0.0, fade=0.6)
-    def draw(pen, t):
-        room(pen, '#c8d4dc', '#8a949c')
-        desk(pen, 1240, FLOOR - 0.75 * ppm, 520)
-        pen.fill(rect(820, seat - 8, 170, 20), '#4a5a6a')
-        fig(pen, h, t, ER)
-    return dict(draw=draw, actors=[h], grounded=[h])
-
-
-@clip('ruth_receiver_counter', 4.0, 'Rule 2: no voice, just hold music; Grandma does not hang up: she sets the receiver down on the counter gently, like a sleeping baby')
-def _c_ruth_counter():
-    ppm = 380.0; ppc = ppm / 100.0
-    top = FLOOR - 0.92 * ppm
-    r = actor('ruth', 780, FLOOR, ppm, seed=16, expr='stern_afraid')
-    r.face(0.55)
-    rec = CH.PropTrack('receiver', 0, 0, ppc); rec.held(-1e9, r, 1)
-    r.receiver_to_ear(-1.0, 1.0, side=1)
-    r.look_at(0.8, (1040, top - 10), dur=0.4)
-    tc = r.put_down(rec, 1.2, 1, 1040, top - 4 * ppc, dur=1.8, angle=-80.0)
-    r.crouch(1.3, 0.12, 3.2, 0.8)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        counter(pen, 1100, top, 560, sink=False)
-        rec.draw(pen, t)
-        fig(pen, r, t, NIGHT2)
-    return dict(draw=draw, actors=[r], grounded=[r])
-
-
-@clip('milo_thirsty_mouth', 5.0, 'Rule 3: Milo in his dinosaur pajamas, lips cracked: "I\'m so thirsty. And my tummy hurts. Grandma, my tummy really..." Grandma claps her hand over his mouth')
-def _c_milo_mouth():
-    ppm = 380.0
-    m = actor('milo_sick', 1000, FLOOR, ppm, seed=17, expr='thirsty')
-    r = actor('ruth', 760, FLOOR, ppm, seed=18, expr='stern_afraid')
-    m.face(-0.5); r.face(0.6)
-    m.hand_on(0.1, 'belly', side=-1, t1=None)
-    m.look_at(0.0, (r, 'eyes'), dur=0.3)
-    m.talk([(0.4, 1.5, "I'm so thirsty"), (1.7, 3.0, 'And my tummy hurts Grandma my tummy really')], env=None, words=None)
-    r.look_at(0.0, (m, 'eyes'), dur=0.3)
-    r.hand_over(3.0, 1, m, 'mouth', dur=0.25)
-    r.talk([(3.6, 4.5, 'Shh. Not after dark')], env=None, words=None)
-    m.expr('fear', 3.1, None, 0.2)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        fig(pen, m, t, NIGHT2); fig(pen, r, t, NIGHT2)
-    return dict(draw=draw, actors=[m, r], grounded=[m, r])
-
-
-@clip('narr_peephole', 4.0, 'Rule 4, 3:40: someone knocks; through the peephole I see a woman on our porch (the narrator from behind, an eye to the peephole)')
-def _c_narr_peep():
-    ppm = 380.0
-    n = actor('narr14', 860, FLOOR, ppm, seed=19, expr='fear')
-    d_ = door_pts(760, ppm)
-    n.face(-0.9)
-    n.walk(0.0, 0.8, 260.0, 0.0, facing=-0.9)
-    n.turn(0.8, -1.7, 0.5)
-    n.head_to(1.1, (d_['peep'][0], d_['peep'][1]), 'eyes', dur=0.8, max_lean=0.2)
-    n.reach_to(1.1, 1, (d_['peep'][0] - 60, d_['peep'][1] + 70), dur=0.7, contact='palm', shape='flat', z=-60.0)
-    n.set(1.6, None, 0.2, lid_l=0.85)
-    def draw(pen, t):
-        room(pen, '#262c3a', '#3a2f2a')
-        door(pen, 760, FLOOR, ppm=ppm)
-        fig(pen, n, t)
-    return dict(draw=draw, actors=[n], grounded=[n])
-
-
-@clip('halverson_porch_plead', 5.0, 'Through the peephole: a raincoat over blue scrubs, hair soaked flat, badge crooked; she knocks on the door (the lens), then pleads: "Milo\'s blood sugar is six hundred and twelve..."')
-def _c_hal_porch():
-    ppm = 420.0
-    h = actor('halverson_rain', 960, FLOOR + 40, ppm, seed=20, expr='pleading')
-    h.face(0.0)
-    ev = h.knock(0.3, n=3, spacing=0.34, side=0.0)
-    h.look_at(0.0, (960, 380), dur=0.3, z=400.0)
-    h.talk([(2.0, 4.6, "Milo's blood sugar is six hundred and twelve")], env=None, words=None)
-    h.reach(1.9, None, 1, out=60.0, down=-40.0, fwd=280.0, shape='flat', up=0.6, fade=0.6)   # a hand flat on the door
-    def draw(pen, t):
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#1a2030'), (1, '#262a34')])
-        for k in range(40):                                      # rain behind her
-            x = (k * 97 + t * 900) % 1920; y = (k * 53 + t * 1700) % 1080
-            pen.line(poly([(x, y), (x - 8, y + 40)], False), 2, '#9fb0d0', 90)
-        fig(pen, h, t, dict(rim='#ffd9a0', rim_a=60, side=-1, key=-0.15))
-    return dict(draw=draw, actors=[h])
-
-
-@clip('halverson_write_slide', 6.5, 'She writes in marker, big careful letters, the paper against the door, kneels and slides it under the door')
-def _c_hal_write():
-    ppm = 380.0; ppc = ppm / 100.0
-    h = actor('halverson_rain', 980, FLOOR, ppm, seed=21, expr='set_jaw')
-    h.face(-0.9)
-    d_ = door_pts(700, ppm)
-    note = CH.PropTrack('note', 0, 0, ppc); note.held(-1e9, h, -1)
-    h.hold_prop('note', -1, -1.0, 5.6)
-    paper = (d_['knob'][0] + 110, FLOOR - 1.2 * ppm)
-    h.reach_to(0.0, -1, (paper[0] - 10, paper[1] - 60), t1=3.0, dur=0.5, contact='grip', shape='grip', z=0.0, prop='note')
-    ev = h.write_marker(0.4, 2.8, 1, (paper[0] - 5, paper[1] - 10), z=10.0)
-    h.look_at(0.4, (paper[0], paper[1] + 20), t1=3.0, dur=0.3)
-    tg, ev2 = h.slide_under_door(3.2, -1, note, 790, FLOOR, dur=2.4)
-    h.look_at(3.2, (790, FLOOR), dur=0.4)
-    def draw(pen, t):
-        room(pen, '#1c2230', '#24262c')
-        door(pen, 700, FLOOR, c='#4a3a2e', ppm=ppm)
-        note.draw(pen, t)
-        fig(pen, h, t, dict(rim='#ffd9a0', rim_a=60, side=-1, key=-0.25))
-    return dict(draw=draw, actors=[h], grounded=[h])
-
-
-@clip('ruth_burn_note', 5.0, 'Grandma puts the paper in the sink and lights it with a match')
-def _c_ruth_burn():
-    ppm = 380.0; ppc = ppm / 100.0
-    top = FLOOR - 0.92 * ppm
-    r = actor('ruth', 850, FLOOR, ppm, seed=22, expr='stern')
-    r.face(0.55)
-    ts, ev = r.strike_match(0.3, side=1, dur=1.4)
-    r.look_at(0.3, lambda t: r.grip_point(t, 1, 'match'), t1=1.6, dur=0.3)
-    r.reach_to(2.2, 1, (1060, top - 6), t1=None, dur=0.9, contact='grip', shape='pinch', z=80.0, prop='match_lit')
-    r.look_at(2.2, (1060, top - 6), dur=0.4)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        sk = counter(pen, 1080, top, 560, sink=True)
-        fire = max(0.0, min(1.0, (t - 3.1) / 0.5))
-        if fire < 1.0:
-            pen.fill(smooth([(1000, top - 8), (1030, top - 26), (1062, top - 20), (1090, top - 30), (1104, top - 8)], True, 0.6), '#f2efe6', 255 * (1 - fire))
-            pen.line(smooth([(1000, top - 8), (1030, top - 26), (1062, top - 20), (1090, top - 30), (1104, top - 8)], True, 0.6), 2.5, '#1d1f26', 255 * (1 - fire))
-        if fire > 0: pen.glow(1050, top - 20, 140 * fire, '#ffa040', 170 * fire); pen.fill(oval(1050, top - 26, 40 * fire, 30 * fire), '#ffcf5a', 200 * fire)
-        fig(pen, r, t, dict(rim='#ffb060', rim_a=50 + 80 * fire, side=1, key=-0.2))
-    return dict(draw=draw, actors=[r], grounded=[r])
-
-
-@clip('narr_window', 4.0, 'But I went to the window: Doctor Halverson was still there, in her car in our driveway (the narrator at the window, from behind, a hand on the frame)')
-def _c_narr_window():
-    ppm = 380.0
-    n = actor('narr14', 900, FLOOR, ppm, seed=23, expr='fear')
-    n.face(-1.6)
-    n.walk(0.0, 1.2, 300.0, 0.0, facing=-1.6)
-    n.reach_to(1.4, -1, (760, 470), dur=0.6, contact='palm', shape='flat', z=-40.0)
-    n.look_at(1.2, (900, 420), dur=0.5, z=-300.0)
-    def draw(pen, t):
-        room(pen, '#1c2030', '#2a2420')
-        window(pen, 900, 260, 420, 420, night=True)
-        pen.glow(1000, 600, 120, '#fff2c0', 120)
-        fig(pen, n, t, NIGHT2)
-    return dict(draw=draw, actors=[n], grounded=[n])
-
-
-@clip('halverson_car_phone', 4.0, 'Sitting in her car in our driveway at four in the morning after a nineteen-hour shift, phone pressed to her ear, calling our house again and again')
-def _c_hal_car():
-    ppm = 380.0
-    seat = FLOOR - 0.3 * ppm
-    h = actor('halverson_rain', 900, FLOOR, ppm, seed=24, expr='exhausted')
-    h.face(-0.4); h.seated(seat, hands='lap')
-    h.phone_to_ear(-1.0, None, side=1)
-    h.hold_prop('cell', 1, -1.0, None)
-    h.look_at(0.0, (300, 380), dur=0.3, z=300.0)
-    h.set(2.0, None, 0.5, h_nod=0.15)
-    def draw(pen, t):
-        pen.fill(rect(0, 0, 1920, 1080), '#141821')
-        car_front_seat(pen, 900, FLOOR, ppm, seat)
-        fig(pen, h, t, dict(rim='#9fb6ff', rim_a=60, side=1, key=-0.35))
-        pen.fill(rect(0, FLOOR - 0.95 * ppm, 1920, 30), '#22252c')
-    return dict(draw=draw, actors=[h], grounded=[])
-
-
-@clip('later_bus_stop_far', 4.0, 'At the end of our street, at the bus stop under the flickering streetlight, someone sitting on the bench: very tall, folded up, knees above his head. Waiting.')
-def _c_later_bus():
-    ppm = 120.0
-    a = lat(1100, 900, ppm, seed=25)
-    a.perch(900 - 0.46 * ppm, 'bench', knee=1.1)
-    a.face(-0.4, 0.3)
-    a.set(-1, None, 0.01, h_tilt=-10.0)
-    def draw(pen, t):
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#05070e'), (1, '#121624')])
-        fl = 0.35 + 0.65 * (1.0 if math.sin(t * 13.0) + math.sin(t * 7.1) > -0.6 else 0.15)
-        lp = streetlight(pen, 980, 900, 420, fl)
-        pen.fill(rect(0, 900, 1920, 180), '#0c0e14')
-        bench(pen, 1100, 900 - 0.46 * ppm, 0.9 * ppm)
-        CH.draw_later_far(pen, a.x0, a.y0, a.height, a.at(t), t=t, lamp=lp, flicker=fl)
-    return dict(draw=draw, actors=[a], grounded=[a])
-
-
-@clip('ruth_rock_milo', 6.0, 'Rule 5, by four: Milo breathing deep and fast; Grandma sits on the kitchen floor with him in her arms, rocking, humming along with the hold music: "It can wait. It can wait."')
-def _c_ruth_rock():
-    ppm = 380.0
-    r = actor('ruth', 860, FLOOR, ppm, seed=26, expr='stern_afraid')
-    m = actor('milo_sick', 1010, FLOOR, ppm, seed=27, expr='dazed')
-    r.face(0.8); m.face(0.75)
-    r.sit_floor(-1.0, None, 0.01)
-    m.sit_floor(-1.0, None, 0.01)
-    r.rock(0.2, None, 1.0, 0.45)
-    m.rock(0.2, None, 0.8, 0.45, hum=False)
-    ev = m.breathe_fast(0.0, 6.0, 0.95)
-    m.set(-1, None, 0.01, lean=-0.18, h_tilt=-8.0)
-    r.reach_to(0.0, 1, (m, 'chest'), dur=0.4, contact='palm', shape='open', z=110.0)
-    r.reach_to(0.0, -1, (m, 'belly'), dur=0.4, contact='palm', shape='open', z=90.0)
-    r.look_at(0.0, (m, 'head'), dur=0.3)
-    r.talk([(3.6, 5.2, 'It can wait. It can wait.')], env=None, words=None, intensity=0.5)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        fig(pen, r, t, NIGHT2); fig(pen, m, t, NIGHT2)
-        for sd in (1, -1): CH.draw_arm(pen, 'ruth', sd, r.at(t), x=r.x0, y_feet=r.y0, height=r.height, light=NIGHT2, t=t)
-    return dict(draw=draw, actors=[r, m], grounded=[])
-
-
-@clip('narr_tells_ruth', 5.0, '"Grandma, that\'s what the voice told you. In 1979." She stops rocking: "How do you know what the voice said?"')
-def _c_narr_tells():
-    ppm = 380.0
-    r = actor('ruth', 1000, FLOOR, ppm, seed=28, expr='stern_afraid')
-    n = actor('narr14', 640, FLOOR, ppm, seed=29, expr='asking')
-    r.face(-0.75); n.face(0.6)
-    r.sit_floor(-1.0, None, 0.01)
-    r.rock(-1.0, 1.4, 1.0, 0.45, hum=True)
-    n.kneel_down(-1.0, 0.01, knees=0)
-    n.look_at(0.0, (r, 'eyes'), dur=0.3)
-    n.talk([(0.2, 1.9, "Grandma. That's what the voice told you. In 1979.")], env=None, words=None)
-    r.look_at(1.6, (n, 'eyes'), dur=0.8)
-    r.expr('fear', 2.0, None, 0.6)
-    r.talk([(2.8, 4.4, 'How do you know what the voice said')], env=None, words=None, intensity=0.7)
-    def draw(pen, t):
-        room(pen, *KITCHEN)
-        fig(pen, n, t, NIGHT2); fig(pen, r, t, NIGHT2)
-    return dict(draw=draw, actors=[r, n], grounded=[n])
-
-
-@clip('later_armchair_front', 5.0, 'Rule 6: at the front of the room, in Grandpa\'s armchair, facing all of them: so tall the armchair looks like a toy, knees higher than his head, hands... the clipboard with no paper, clicking his pen')
-def _c_later_arm():
-    ppm = 260.0
-    seat = FLOOR - 0.42 * ppm
-    a = lat(960, FLOOR, ppm, seed=30)
-    a.perch(seat, 'armchair')
-    a.face(0.0, 0.0)
-    a.set(-1, None, 0.01, h_tilt=8.0)
-    ev = a.click_pen([0.6, 1.0, 2.2, 2.6, 3.8])
-    a.tilt_head(1.4, 10.0, 1.6)
-    def draw(pen, t):
-        fluo_room(pen, t)
-        armchair(pen, 960, seat, 0.95 * ppm, back_h=0.9 * ppm, c='#6a4a30')
-        fig(pen, a, t, FLUO)
-    return dict(draw=draw, actors=[a], grounded=[a])
-
-
-@clip('ghosts_row', 4.0, 'Every chair taken: a man holding his chest, a woman holding her side, a teenager holding his arm in his lap, a little girl in a coat too small for her; all gray, all still, holding paper tickets; and in the last row, Grandpa, his ticket\'s ink long gone')
-def _c_ghosts():
-    ppm = 300.0
-    seat = FLOOR - 0.45 * ppm
-    xs = (330, 620, 910, 1200, 1560)
-    who = ('ghost_chest', 'ghost_side', 'ghost_teen', 'ghost_girl', 'grandpa_ghost')
-    acts = []
-    for i, (x, w) in enumerate(zip(xs, who)):
-        a = actor(w, x, FLOOR, ppm, seed=40 + i, expr='waiting')
-        a.face(0.6 if i < 4 else 0.4)
-        s_y = seat if w != 'ghost_girl' else FLOOR - 0.45 * ppm
-        a.seated(s_y, hands=None)
-        txt = '' if w == 'grandpa_ghost' else str(40 + 7 * i)
-        if w == 'ghost_chest': a.hand_on(-1.0, 'chest', side=-1, dur=0.01)
-        if w == 'ghost_side': a.hand_on(-1.0, 'side', side=1, dur=0.01)
-        if w == 'ghost_teen': a.reach(-1.0, None, 1, out=-40.0, down=280.0, fwd=200.0, shape='relaxed', up=0.0, fade=0.01)
-        a.ticket_hold(-1.0, txt, side=-1 if w != 'ghost_chest' else 1)
-        acts.append(a)
-    def draw(pen, t):
-        fluo_room(pen, t)
-        for x in xs: plastic_chair(pen, x, FLOOR, ppm, facing=1.0, c='#5a6a7a')
-        for a in acts: fig(pen, a, t, FLUO)
-    return dict(draw=draw, actors=acts, grounded=acts)
-
-
-@clip('later_tear_ticket', 7.0, 'Without standing up he reaches all the way across the room, tears a ticket from the red machine and holds it out to me between two long fingers: MILO. I do not take it.')
-def _c_later_ticket():
-    ppm = 240.0
-    seat = FLOOR - 0.42 * ppm
-    a = lat(520, FLOOR, ppm, seed=31)
-    a.perch(seat, 'armchair', hands=('lap', 'floor'))
-    a.face(0.45, 0.0)
-    n = actor('narr14', 1560, FLOOR, ppm, seed=32, expr='fear')
-    n.face(-0.6)
-    slot = (1220, FLOOR - 1.19 * ppm)
-    a.look_at(0.0, (n, 'eyes'), dur=0.8)
-    hands_of_n = lambda t: (lambda p: (p[0] - 80, p[1] - 30))(n.where(t, 'chest', post=False))   # noqa: E731
-    tt, ev = a.tear_ticket(0.4, -1, slot, 'MILO', dur=1.8, offer_to=hands_of_n, offer_t=2.9, offer_dur=1.6)
-    n.look_at(0.4, lambda t: a.where(t, 'tips_r'), dur=0.3)
-    n.reach(4.8, None, 1, out=0.0, down=260.0, fwd=40.0, shape='fist', up=0.0, fade=0.5)   # hands stay down: I don't take it
-    n.reach(4.8, None, -1, out=0.0, down=260.0, fwd=40.0, shape='fist', up=0.0, fade=0.5)
-    n.lean_in(4.6, 0.6, None, -0.4)
-    def draw(pen, t):
-        fluo_room(pen, t)
-        ticket_machine(pen, slot[0], FLOOR, ppm)
-        armchair(pen, 520, seat, 0.95 * ppm, back_h=0.9 * ppm, c='#6a4a30')
-        fig(pen, a, t, FLUO); fig(pen, n, t, FLUO)
-    return dict(draw=draw, actors=[a, n], grounded=[n])
-
-
-@clip('later_take_wrist_count', 6.0, 'Rule 7: I don\'t take the ticket, so he takes my wrist instead: cold, smooth fingers on the inside of my wrist; he counts. "One..." "Two..." "Three..."')
-def _c_later_wrist():
-    ppm = 260.0
-    seat = FLOOR - 0.42 * ppm
-    a = lat(700, FLOOR, ppm, seed=33)
-    a.perch(seat, 'armchair', hands=('lap', 'pen'))
-    a.face(0.5, 0.0)
-    n = actor('narr14', 1230, FLOOR, ppm, seed=34, expr='fear')
-    n.face(-0.55)
-    n.reach(0.0, None, 1, out=40.0, down=150.0, fwd=200.0, shape='open', up=0.0, fade=0.5)     # the wrist, held out
-    tc = a.take_wrist(0.6, -1, n, 1, dur=1.2)
-    a.look_at(0.0, (n, 'eyes'), dur=0.8)
-    ev = []
-    for i, tt in enumerate((2.2, 3.5, 4.9)): ev += a.count(tt, i + 1)
-    n.look_at(0.8, (n, 'wrist_l'), t1=2.0, dur=0.3)
-    n.look_at(2.2, (a, 'eyes'), dur=0.4)
-    n.lean_in(3.0, 2.5, None, -0.2)
-    def draw(pen, t):
-        fluo_room(pen, t)
-        armchair(pen, 700, seat, 0.95 * ppm, back_h=0.9 * ppm, c='#6a4a30')
-        fig(pen, a, t, FLUO); fig(pen, n, t, FLUO)
-        CH.draw_later_arm(pen, a, t, -1, FLUO)
-    return dict(draw=draw, actors=[a, n], grounded=[n])
-
-
-@clip('narr_asks_tape', 7.0, 'I asked. "What did you find?" He stops counting. "What\'s wrong with my brother? What do we do? How long is too long? Who are you?" With every question the tape comes looser, one strip, then another; he flinches like the questions are light')
-def _c_narr_asks():
-    ppm = 300.0
-    seat = FLOOR - 0.42 * ppm
-    a = lat(760, FLOOR, ppm, seed=35)
-    a.perch(seat, 'armchair', hands=('lap', 'pen'))
-    a.face(0.45, 0.05)
-    n = actor('narr14', 1360, FLOOR, ppm, seed=36, expr='asking')
-    n.face(-0.55)
-    n.look_at(0.0, (a, 'eyes'), dur=0.3)
-    a.look_at(0.0, (n, 'eyes'), dur=0.8)
-    qs = [(0.3, 1.2, 'What did you find'), (1.6, 2.7, "What's wrong with my brother"), (3.0, 3.8, 'What do we do'),
-          (4.1, 5.0, 'How long is too long'), (5.3, 6.1, 'Who are you')]
-    n.talk(qs, env=None, words=None)
-    n.expr('asking_hard', 3.0, None, 1.5)
-    n.lean_in(3.0, 3.0, None, 0.3)
-    ev = []
-    taped = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]                    # one of his 5 strips per question: the cone's from the top down, the face's last
-    for i, (q0, q1, _) in enumerate(qs):
-        ev += a.loosen_tape(q1 - 0.1, q1 + 0.25, taped[i], taped[i + 1], flinch=True)
-    def draw(pen, t):
-        fluo_room(pen, t)
-        armchair(pen, 760, seat, 0.95 * ppm, back_h=0.9 * ppm, c='#6a4a30')
-        fig(pen, a, t, FLUO); fig(pen, n, t, FLUO)
-    return dict(draw=draw, actors=[a, n], grounded=[n])
-
-
-@clip('later_faces', 6.0, 'Under the tape there is no doctor: Grandpa\'s face, gray and patient; then a man I never saw; then a little girl; then my grandmother; then... me (close)')
-def _c_later_faces():
-    a = CH.Acting('later', seed=37, height=CH.height_px('later', 380.0))
-    a.place(900, FLOOR)
-    a.perch(None, 'plastic', hands=('lap', 'pen'))
-    a.face(0.15, -0.1)
-    a.set(-1, None, 0.01, dl_tape=0.2, h_tilt=14.0)         # 4 of his 5 strips off (the cone bare): only the cheek strip left
-    ev = a.loosen_tape(0.15, 0.15, 0.2, 0.0, flinch=False)  # the last strip comes away and Grandpa's face is there
-    a.faces([(0.0, 0.0), (0.75, 1.0), (1.8, 2.0), (2.85, 3.0), (3.9, 4.0), (5.0, 5.0)], fade=0.6)
-    a.tilt_head(0.5, 10.0, 4.0)
-    def draw(pen, t):
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#5a6a4a'), (1, '#2a3024')])
-        CH.draw_bust(pen, 'later', 960, 700, 0.62, a.at(t), t=t, light=FLUO)
+        night_yard(pen, 640, (1500, 300, 1.0))
+        bus_side(pen, 900, 1010, ppm, 1180, door_open=clamp(t / 0.5))
+        fig(pen, a, t, AMBER)
+        frame_vignette(pen, 200)
     return dict(draw=draw, actors=[a])
 
 
-@clip('narr_pull_free_card', 6.0, 'I pull my wrist free; on the way out I tear Grandma\'s rules out of the medicine cabinet: on the back of the card, in faded ink from 1979, someone signed it: Doctor Later')
-def _c_narr_card():
-    ppm = 380.0; ppc = ppm / 100.0
-    cx0, cy0 = 940, FLOOR - 1.62 * ppm
-    n = actor('narr14', 800, FLOOR, ppm, seed=38, expr='determined')
-    n.face(0.55)
-    card = CH.PropTrack('card', cx0 + 40 * ppc * 0.55, cy0 + 10 * ppc, ppc)
-    n.look_at(0.0, card, dur=0.3)
-    tc = n.pick_up(card, 0.3, side=1, dur=1.2, carry=None)
-    ev = [n._ev(tc, 'card_tear', 0.0, pan=0.0)]
-    n.reach(tc + 0.4, None, 1, out=-40.0, down=60.0, fwd=220.0, shape='grip', up=0.0, fade=0.6)
-    n.set(tc + 1.4, None, 0.01, hl_prop='card_back')
-    n.look_at(tc + 0.5, lambda t: n.grip_point(t, 1, 'card'), dur=0.3)
-    n.expr('shock_shut', tc + 1.5, None, 0.4)
+@clip('ws_skip_lawn', 5.0, 'The streetlight flickers: he\'s at our mailbox. Flicker: the middle of the lawn. Flicker: the porch steps. He never walks; he skips, like a tape')
+def _c_ws_skip():
+    a = ws(1400, 610, 0, 3, h=150.0)
+    ks = [(0.0, dict(x=1400, y=610, h=150.0, turn=-0.4, h_turn=0.3)),
+          (1.2, dict(x=560, y=700, h=215.0, turn=0.25, h_turn=0.15, ws_elev=0.0)),
+          (2.5, dict(x=1080, y=840, h=345.0, turn=-0.15, h_turn=0.0, ws_elev=-0.03)),
+          (3.7, dict(x=840, y=1110, h=600.0, turn=0.0, h_turn=0.0, ws_elev=-0.07))]
+    ev = a.tape_skip(ks)
+    a.reach_far(3.95, -1, (760, 600), t1=None, dur=0.8, z=330.0, shape='claw')
+    flick = [k_[0] for k_ in ks[1:]]
     def draw(pen, t):
-        room(pen, '#8a7a6a', '#4a4038')
-        cabinet(pen, cx0, cy0, ppc, swing=1.0, card=False)
-        card.draw(pen, t)
-        fig(pen, n, t, WARM2)
-    return dict(draw=draw, actors=[n], grounded=[n])
+        fl = 0.0 if any(-0.08 < t - f < 0.05 for f in flick) else 1.0
+        night_yard(pen, 560, (1650, 180, fl))
+        streetlight(pen, 1600, 600, 420, fl)
+        mailbox(pen, 470, 712, 200, 0.0)
+        pen.fill(poly([(520, 1080), (1400, 1080), (1180, 940), (740, 940)]), '#2a2420')
+        fig(pen, a, t, SODIUM)
+        if fl < 0.5: pen.fill(rect(0, 0, 1920, 1080), '#000000', 150)
+        for sd in (-1, 1):
+            pen.fill(rect(960 + sd * 960 - (380 if sd > 0 else 0), 0, 380, 1080), '#3a1e22')
+        frame_vignette(pen, 220)
+    return dict(draw=draw, actors=[a])
 
 
-@clip('narr_carry_milo', 5.0, 'I pick Milo up off the kitchen floor and carry him out; Grandma does not stop me')
-def _c_carry():
-    ppm = 380.0
-    n = actor('narr14', 700, FLOOR, ppm, seed=39, expr='determined')
-    m = actor('milo_sick', 0, 0, ppm, seed=40, expr='sleepy')
-    n.face(1.0)
-    n.carry(-1.0, m)
-    n.walk(0.6, 4.4, 0.0, 600.0, surface='inside')
-    m.face(-0.75)
+@clip('ws_door_curl', 4.5, 'White gloves curl around our doorframe. Too many knuckles. (He peeks round the frame; every finger folds on four hinges)')
+def _c_ws_curl():
+    ppm = 330.0
+    a = ws(930, 1180, ppm, 4)
+    a.face(0.3)
+    a.set(-1.0, None, 0.01, ws_hands_front=3)
+    a.set(0.0, None, 1.6, tilt=11.0)
+    a.curl_door(0.3, 1, (1010, 300), dur=0.9, z=-8.0)
+    a.curl_door(0.8, -1, (1010, 520), dur=0.9, z=-8.0)
+    a.look_at(1.8, (1500, 450), dur=0.9)
+    a.look_at(3.2, (1250, 520), dur=0.05, snap=True)
     def draw(pen, t):
-        room(pen, *KITCHEN)
-        CH.draw_carry_child(pen, n, m, t, NIGHT2)
-    return dict(draw=draw, actors=[n, m], grounded=[n])
+        pen.fill(rect(0, 0, 1920, 1080), '#2a2422')
+        pen.fill(rect(1000, 0, 920, 1080), '#141418')
+        pen.fill(rect(0, FLOOR, 1920, 140), '#2a201a')
+        fig(pen, a, t, SODIUM)
+        pen.fill(rect(0, 0, 1000, 1080), '#5a4a3e'); pen.line(rect(0, -10, 1000, 1100), 4)
+        pen.fill(rect(960, 0, 60, 1080), '#e2d8c4'); pen.line(rect(960, -10, 60, 1100), 4)
+        CH.draw_whistle_hands(pen, a, t, (1, -1), SODIUM)
+        frame_vignette(pen, 160)
+    return dict(draw=draw, actors=[a])
 
 
-@clip('halverson_run_steps', 3.0, 'Doctor Halverson is already out of her car and running up the steps, like that open door was all she\'d been waiting for')
-def _c_hal_run():
-    ppm = 380.0
-    h = actor('halverson_rain', 300, FLOOR, ppm, seed=41, expr='set_jaw')
-    h.face(1.0)
-    ev = h.run(0.2, 2.6, 0.0, 1100.0, surface='porch')
-    h.look_at(0.0, (1700, 420), dur=0.3)
+@clip('ws_frosted_glass', 4.0, 'Through the frosted glass: a crooked hat, and that grin. He calls roll: "Della? Long time!" "Mina?" "Sami?"')
+def _c_ws_frost():
+    ppm = 260.0
+    a = ws(960, 1190, ppm, 5)
+    a.face(0.0)
+    a.set(-1.0, None, 0.01, ws_bend=0.12)
+    a.say([(0.4, 1.4, 'Della Long time'), (1.9, 2.4, 'Mina'), (3.0, 3.5, 'Sami')])
+    a.set(1.8, 2.6, 0.2, h_tilt=-14.0); a.set(2.9, None, 0.2, h_tilt=12.0)
+    glass = rrect(720, 160, 480, 640, 10)
     def draw(pen, t):
-        room(pen, '#1c2230', '#24262c')
-        fig(pen, h, t, dict(rim='#ffd9a0', rim_a=60, side=-1, key=-0.2))
-    return dict(draw=draw, actors=[h], grounded=[h])
+        pen.fill(rect(0, 0, 1920, 1080), '#3a2a20')
+        pen.cv.save(); pen.cv.clipPath(glass, skia.ClipOp.kIntersect, True)
+        pen.fill(glass, '#6a5a44')
+        pen.glow(960, 300, 500, '#ffb050', 120)
+        blurred(pen, lambda: fig(pen, a, t, SODIUM), 7.0)
+        pen.fill(glass, '#e8e2d4', 70)
+        pen.cv.restore()
+        pen.line(glass, 8, '#1a1410')
+        pen.fill(rect(660, 120, 600, 40), '#4a3424'); pen.fill(rect(660, 800, 600, 280), '#4a3424')
+    return dict(draw=draw, actors=[a])
 
 
-@clip('halverson_pulse_car', 5.0, 'In the car she reaches for Milo\'s wrist: two fingers on it, her watch up, counting: "One-forty. Fast. That\'s okay. He\'s fighting. We\'re going."')
-def _c_hal_pulse():
-    ppm = 380.0
-    seat = FLOOR - 0.3 * ppm
-    m = actor('milo_sick', 1020, FLOOR, ppm, seed=42, expr='sleepy')
-    m.face(-0.4); m.seated(seat, hands=None)
-    m.reach(-1.0, None, 1, out=10.0, down=220.0, fwd=150.0, shape='relaxed', up=0.0, fade=0.01)
-    h = actor('halverson_rain', 760, FLOOR, ppm, seed=43, expr='focused')
-    h.face(0.5); h.seated(seat, hands=None)
-    h.take_pulse(0.3, -1, m, 1, t1=None)                     # the watch is on her left wrist
-    h.talk([(2.6, 4.6, "One-forty. Fast. That's okay. He's fighting.")], env=None, words=None)
-    h.look_at(2.5, (m, 'eyes'), dur=0.4)
+@clip('ws_peephole', 3.5, 'The peephole goes white. Fur. Grin. (The fisheye: he is pressed against the door, then eases back so the grin fills it)')
+def _c_ws_peep():
+    a = ws(0, 0, 300.0, 6)
     def draw(pen, t):
-        pen.fill(rect(0, 0, 1920, 1080), '#141821')
-        pen.fill(rect(600, seat - 8, 640, 26), '#45454c')
-        fig(pen, h, t, NIGHT2); fig(pen, m, t, NIGHT2)
-    return dict(draw=draw, actors=[h, m], grounded=[])
+        pen.fill(rect(0, 0, 1920, 1080), '#000000')
+        circ = oval(960, 540, 470, 470)
+        pen.cv.save(); pen.cv.clipPath(circ, skia.ClipOp.kIntersect, True)
+        pen.fill(circ, '#1a1408'); pen.glow(960, 400, 600, '#ffb050', 90)
+        k = 1.0 - ease_out_cubic(clamp((t - 0.5) / 1.8))
+        P = a.at(t); P.h_tilt += 8.0 * k; P.approach = 0.15 + 0.85 * k
+        kk = 1.0 + 1.1 * P.approach
+        CH.draw_bust(pen, 'whistle', 960 + 40 * k, 540 - 105 * kk, 0.95, P, light=SODIUM, t=t)
+        if t < 0.6: pen.fill(circ, '#efe8d6', 255 * (1.0 - t / 0.6) ** 0.5)
+        pen.radial(circ, 960, 540, 470, [(0, '#000000', 0), (0.7, '#000000', 30), (1, '#000000', 230)])
+        pen.cv.restore()
+    return dict(draw=draw, actors=[a])
 
 
-@clip('halverson_drive_mirror', 5.0, 'She drives and talks the whole way; she looks in the mirror, sees him, is not surprised; she sets her jaw: "Not tonight. Not on my shift." and drives faster')
-def _c_hal_drive():
-    ppm = 380.0
-    seat = FLOOR - 0.3 * ppm
-    h = actor('halverson_rain', 900, FLOOR, ppm, seed=44, expr='focused')
-    h.face(0.0); h.seated(seat, hands=None)
-    wc = (900, FLOOR - 0.78 * ppm)
-    g10, g2 = (wc[0] - 120, wc[1] - 40), (wc[0] + 120, wc[1] - 40)
-    h.drive(0.0, None, g10, g2)
-    h.talk([(0.3, 1.6, 'Questions are good. Questions are how we win')], env=None, words=None)
-    h.look_at(1.9, (960, 160), t1=3.3, dur=0.35, z=200.0)           # up to the rear-view mirror
-    h.expr('set_jaw', 2.8, None, 0.4)
-    h.talk([(3.5, 4.6, 'Not tonight. Not on my shift')], env=None, words=None)
+@clip('ws_dark_grip', 5.5, 'Two ten, total black: a small hand slides into mine. Cold. I turn on my phone light: a white glove, one knuckle too many, folded small around my fingers; in his other glove, my walkie, pressed to the grin. I rip free')
+def _c_ws_grip():
+    ppm = 270.0
+    seat = FLOOR - 0.45 * ppm
+    m = actor('mina', 760, FLOOR, ppm, seed=7, expr='hush_fear')
+    m.face(0.55); m.seated(seat, hands=None)
+    m.reach_to(-1.0, -1, (930, seat - 10), t1=4.2, dur=0.01, contact='palm', shape='open', z=40.0)
+    m.hold_prop('cell', 1, -1.0, None)
+    m.reach(-1.0, None, 1, out=-30.0, down=120.0, fwd=200.0, shape='grip', up=0.0, fade=0.01)
+    m.look_at(0.0, (1300, 400), t1=1.9, dur=0.3)
+    m.look_at(2.3, (m, 'hand_r'), t1=3.9, dur=0.25)
+    m.expr('shock', 2.5, 4.0, 0.15)
+    m.reach_to(4.2, -1, (m, 'chest'), dur=0.25, contact='palm', shape='grip', z=60.0)
+    m.expr('fear', 4.2, None, 0.2)
+    a = ws(1230, FLOOR, ppm, 8)
+    a.face(-0.55)
+    a.set(-1.0, None, 0.01, ws_bend=0.35, ws_crouch=0.25)
+    a.grip_small(0.4, 1, m, -1, t1=4.25, dur=0.9)
+    a.walkie_to_grin(-1.0, -1, None, 0.01)
+    a.say([(1.2, 2.0, 'heh heh')])
     def draw(pen, t):
-        pen.fill(rect(0, 0, 1920, 1080), '#141821')
-        pen.fill(rrect(860, 120, 200, 60, 10), '#2a2c34'); pen.line(rrect(860, 120, 200, 60, 10), 3)
-        fig(pen, h, t, NIGHT2)
-        CH.draw_steering_wheel(pen, wc[0], wc[1], 150)
-        for side in (1, -1): CH.draw_arm(pen, h.who, side, h.at(t), x=h.x0, y_feet=h.y0, height=h.height, light=NIGHT2, t=t)
-    return dict(draw=draw, actors=[h])
+        room(pen, '#2a2622', '#2a201a')
+        couch(pen, 860, seat, 640)
+        if t < 4.4: fig(pen, a, t, PHONE)
+        fig(pen, m, t, PHONE)
+        if t < 4.4:
+            if t > 2.1:
+                hx, hy = m.where(t, 'hand_r')
+                gx, gy = a.where(t, 'mouth')
+                pen.radial(rect(0, 0, 1920, 1080), (hx + gx) / 2, (hy + gy) / 2 + 60, 560,
+                           [(0, '#000000', 0), (0.45, '#000000', 90), (1, '#000000', 238)], sy=0.85)
+                pen.glow(hx, hy, 160, '#dfeaff', 60)
+            else:
+                dark_over(pen, None, 246)
+    return dict(draw=draw, actors=[m, a], grounded=[m])
 
 
-@clip('later_car_backseat', 5.0, 'In the rear-view mirror: he is in the back seat, folded up beside Milo, his head bent against the roof, his clipboard in his lap, clicking his pen: "It can wait."')
-def _c_later_car():
+@clip('ws_walkie_grin', 4.0, 'In his other glove: my walkie-talkie, pressed to the grin (Sami\'s voice comes out of it); the grin never moves')
+def _c_ws_walkie():
+    ppm = 420.0
+    a = ws(980, 1520, ppm, 9)
+    a.face(-0.25)
+    a.set(-1.0, None, 0.01, ws_bend=0.15)
+    a.walkie_to_grin(0.3, -1, None, 0.7)
+    a.say([(1.3, 3.4, 'say our word so I know it is really me')])
+    a.set(1.0, None, 0.6, h_tilt=-10.0)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#0c0c10')
+        pen.glow(700, 900, 700, '#dfeaff', 60)
+        fig(pen, a, t, PHONE)
+    return dict(draw=draw, actors=[a])
+
+
+@clip('ws_hallway_bent', 4.5, 'The hallway is full of him: bent double, hat crushed against the ceiling, gloves flat on both walls. "Sami?"')
+def _c_ws_hall():
+    ppm = 250.0
+    ceil = FLOOR - 2.4 * ppm
+    a = ws(960, FLOOR, ppm, 10)
+    a.face(0.3)
+    a.bend_double(-1.0, ceil, None, 0.01, crouch=0.4, bend=1.0)
+    a.walls_flat(0.4, (690, 690), (1230, 690), dur=0.9)
+    a.say([(2.4, 2.9, 'Sami')])
+    a.set(2.2, None, 0.35, h_tilt=-18.0)
+    a.look_at(3.3, (1300, 700), dur=0.05, snap=True)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#2e2620')
+        pen.fill(poly([(0, 0), (680, ceil), (1240, ceil), (1920, 0)]), '#3c322a')
+        pen.fill(poly([(0, 0), (680, ceil), (680, FLOOR), (0, 1080)]), '#4a3c30')
+        pen.fill(poly([(1920, 0), (1240, ceil), (1240, FLOOR), (1920, 1080)]), '#4a3c30')
+        pen.fill(poly([(0, 1080), (680, FLOOR), (1240, FLOOR), (1920, 1080)]), '#3a2a1e')
+        for p_ in ((680, ceil, 680, FLOOR), (1240, ceil, 1240, FLOOR), (680, ceil, 1240, ceil), (680, FLOOR, 1240, FLOOR)):
+            pen.line(poly([(p_[0], p_[1]), (p_[2], p_[3])], False), 3)
+        fig(pen, a, t, AMBER)
+        frame_vignette(pen, 170)
+    return dict(draw=draw, actors=[a], grounded=[a])
+
+
+@clip('ws_crossing_guard', 5.0, 'He takes Sami\'s hand, like a crossing guard; I grab the other. The lights blink and we\'re on the stairs... Sami\'s hand slips out of mine')
+def _c_ws_guard():
+    ppm = 230.0
+    a = ws(700, FLOOR, ppm, 11)
+    s_ = actor('sami', 960, FLOOR, ppm, seed=12, expr='dazed')
+    m = actor('mina', 1130, FLOOR, ppm, seed=13, expr='fear')
+    a.face(0.45); s_.face(0.45); m.face(-0.45)
+    a.hold_child(0.2, 1, s_, -1, dur=0.8)
+    m.hold_hand(0.5, -1, s_, 1, t1=3.0, dur=0.5)
+    s_.look_at(0.0, (a, 'head'), dur=0.4)
+    m.look_at(0.0, (s_, 'eyes'), dur=0.3)
+    m.expr('terrified_call', 3.1, None, 0.15)
+    m.reach_to(3.4, -1, (930, 780), dur=0.3, contact='palm', shape='open', z=60.0)
+    ev = a.tape_skip([(0.0, dict()), (3.3, dict(x=480))])
+    jump(s_, 3.3, -220.0)
+    def draw(pen, t):
+        blink = any(-0.06 < t - b < 0.06 for b in (1.4, 2.2, 3.3))
+        room(pen, '#3a3028', '#2a201a')
+        fig(pen, a, t, AMBER); fig(pen, s_, t, AMBER); fig(pen, m, t, AMBER)
+        if blink: pen.fill(rect(0, 0, 1920, 1080), '#000000', 235)
+    return dict(draw=draw, actors=[a, s_, m], grounded=[a, s_, m])
+
+
+@clip('ws_window_backwards', 4.0, 'His head comes out of the driver\'s window, and turns. Backwards. Grinning at us')
+def _c_ws_back():
+    ppm = 600.0
+    a = ws(900, 1640, ppm, 14)
+    a.face(1.0)
+    a.set(-1.0, None, 0.01, ws_crouch=0.35, ws_bend=0.1)
+    ev = a.head_backwards(1.0, 1.6)
+    win_y = 600
+    def draw(pen, t):
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#05060a'), (1, '#12141a')])
+        sh = 6 * math.sin(t * 13.0)
+        pen.fill(rect(0, win_y + sh, 1920, 1080), '#7a6a30')
+        pen.fill(rect(560, win_y - 480 + sh, 800, 480), '#1a0e06')
+        pen.linear(rect(560, win_y - 480 + sh, 800, 480), 0, win_y - 480, 0, win_y, [(0, '#ffa030', 60), (1, '#ffa030', 20)])
+        pen.cv.save(); pen.cv.clipPath(rect(0, -400, 1920, win_y + sh + 400), skia.ClipOp.kIntersect, True)
+        fig(pen, a, t, AMBER, y=a.y0 + sh)
+        pen.cv.restore()
+        pen.line(rect(560, win_y - 480 + sh, 800, 480), 6)
+        pen.fill(rect(0, win_y + sh, 1920, 16), '#3a3010')
+    return dict(draw=draw, actors=[a])
+
+
+@clip('ws_steps_clipboard', 4.5, 'Doors open. Amber light. He\'s at the top of the steps, with his clipboard: "Last stop! Everybody counted?"')
+def _c_ws_steps():
+    ppm = 250.0
+    y_top = FLOOR - 0.25 * ppm - 2 * 0.28 * ppm
+    a = ws(1180, y_top, ppm, 15)
+    a.face(-0.35)
+    a.clipboard(-INF, 1)
+    top = FLOOR - 0.35 * ppm - 2.9 * ppm + 0.2 * ppm
+    a.bend_double(-1.0, top, None, 0.01, crouch=0.15, bend=0.3)
+    a.say([(0.8, 2.6, 'Last stop Everybody counted')])
+    a.set(0.6, None, 1.2, ws_bend=0.25)
+    m = actor('mina_bare', 860, FLOOR, ppm, seed=16, expr='fear')
+    m.face(0.7)
+    m.look_at(0.0, (a, 'head'), dur=0.3)
+    a.look_at(0.4, (m, 'eyes'), dur=0.8)
+    def draw(pen, t):
+        night_yard(pen, 600)
+        bus_side(pen, 860, FLOOR, ppm, 1180)
+        fig(pen, a, t, AMBER); fig(pen, m, t, AMBER)
+    return dict(draw=draw, actors=[a, m], grounded=[m])
+
+
+@clip('ws_glove_snap', 4.5, 'Sami scrambles for the door; a glove snaps shut on his pajamas. Rip. He tumbles into my arms, half his dinosaur tail gone')
+def _c_ws_snap():
+    ppm = 200.0
+    y_top = FLOOR - 0.25 * ppm - 2 * 0.28 * ppm
+    a = ws(1380, y_top, ppm, 17)
+    a.face(-0.5)
+    s_ = actor('sami', 1180, FLOOR, ppm, seed=18, expr='shout_here')
+    s_.face(-1.0)
+    s_.run(0.2, 2.0, 0.0, -380.0, surface='porch')
+    tail_pt = lambda t: (s_.where(t, 'hip', post=False)[0] + 0.25 * s_.height, s_.where(t, 'hip', post=False)[1] + 0.12 * s_.height)   # noqa: E731
+    ev = a.snap_glove(0.55, -1, tail_pt, t1=1.0)
+    a.ws_hold(1.0, -1, 'tail_piece', None, 'snap')
+    a.reach_far(1.0, -1, (1260, 520), dur=0.6, z=40.0, shape='snap')
+    m = actor('mina_bare', 640, FLOOR, ppm, seed=19, expr='terrified_call')
+    m.face(0.6)
+    m.look_at(0.0, (s_, 'eyes'), dur=0.3)
+    m.crouch(1.6, 0.6, None, 0.5)
+    m.reach_to(1.7, 1, (s_, 'chest'), t1=None, dur=0.4, contact='palm', shape='open', z=60.0)
+    m.reach_to(1.75, -1, (s_, 'belly'), t1=None, dur=0.4, contact='palm', shape='open', z=70.0)
+    m.expr('relief', 2.6, None, 0.5)
+    s_.expr('cry', 1.4, None, 0.3)
+    def draw(pen, t):
+        night_yard(pen, 600)
+        bus_side(pen, 1060, FLOOR, ppm, 1380)
+        fig(pen, a, t, AMBER)
+        CH.draw(pen, 'sami' if t < 1.0 else 'sami_torn', s_.x0, s_.y0, s_.height, s_.at(t), light=AMBER, t=t)
+        fig(pen, m, t, AMBER)
+    return dict(draw=draw, actors=[a, s_, m], grounded=[s_])
+
+
+@clip('ws_aisle_reach', 5.0, 'At the back, seat twenty-two glows: the boy in the yellow raincoat. One impossibly long arm reaches down the aisle, and a glove settles on his shoulder')
+def _c_ws_aisle():
+    ppm_t = 150.0
+    th = actor('theo', 1060, 640, ppm_t, seed=20, expr='lonely')
+    th.face(-0.2); th.seated(640 - 0.42 * ppm_t, hands='lap')
+    a = ws(470, 1330, 340.0, 21)
+    a.face(0.55)
+    a.set(-1.0, None, 0.01, ws_bend=0.1)
+    a.reach_far(0.6, 1, lambda t: th.where(t, 'shoulder_r', post=False), t1=None, dur=2.4, z=-40.0, shape='hang', ease=ease_in_out)
+    th.look_at(3.1, (th, 'shoulder_r'), dur=0.6)
+    th.expr('hush_fear', 3.1, None, 0.6)
+    def draw(pen, t):
+        bus_aisle(pen, (960, 430))
+        pen.glow(1060, 520, 160, '#ffd070', 120)
+        fig(pen, th, t, AMBER)
+        fig(pen, a, t, AMBER)
+        frame_vignette(pen, 180)
+    return dict(draw=draw, actors=[a, th])
+
+
+@clip('ws_lean_to_mina', 5.0, 'He bends down, and down, until the grin is a foot from my face. Soft. Kind. "Trade seats with him, Mina... Hurry. Just you. Our secret."')
+def _c_ws_lean():
+    ppm = 230.0
+    m = actor('mina_bare', 760, FLOOR, ppm, seed=22, expr='fear')
+    m.face(0.55)
+    a = ws(1010, FLOOR, ppm, 23)
+    a.face(-0.55)
+    a.lean_to(0.3, (m, 'eyes'), gap=32.0, dur=2.6, beats=2)
+    a.ws_rest(0.6, 1, 'chest', None, 0.8)
+    a.say([(3.0, 4.6, 'Hurry Just you Our secret')], amount=0.6)
+    a.look_at(0.0, (m, 'eyes'), dur=0.8)
+    m.look_at(0.0, (a, 'eyes'), dur=0.4)
+    m.expr('tempted', 3.0, None, 0.8)
+    m.set(1.6, None, 0.8, lean=-0.08)
+    def draw(pen, t):
+        night_yard(pen, 600)
+        fig(pen, m, t, AMBER); fig(pen, a, t, AMBER)
+    return dict(draw=draw, actors=[a, m], grounded=[m])
+
+
+@clip('ws_whistle_two', 3.0, 'Fweet-fweet: the silver whistle rides up its orange lanyard to the grin, two short blasts')
+def _c_ws_wh2():
     ppm = 300.0
-    floor = 980.0
-    seat = floor - 0.30 * ppm
-    roof = floor - 1.18 * ppm
-    a = lat(1100, floor, ppm, seed=45)
-    a.perch(seat, 'car')
-    a.bend_to_roof(roof)
-    a.face(0.0, 0.0)
-    ev = a.click_pen([0.6, 1.0, 2.4, 2.8, 4.0])
-    m = actor('milo_sick', 640, floor, ppm, seed=46, expr='sleepy')
-    m.face(0.2); m.seated(seat, hands='lap'); m.set(-1, None, 0.01, h_tilt=-14.0, lid_l=0.6, lid_r=0.6)
+    a = ws(960, 1240, ppm, 24)
+    a.face(0.2)
+    ev = a.blow_whistle(0.5, 'two', -1)
     def draw(pen, t):
-        car_back(pen, 860, floor, ppm, roof, seat)
-        fig(pen, m, t, NIGHT2)
-        fig(pen, a, t, NIGHT2)
-    return dict(draw=draw, actors=[a, m])
+        pen.fill(rect(0, 0, 1920, 1080), '#140c06'); pen.glow(960, 300, 800, '#ffa030', 70)
+        fig(pen, a, t, AMBER)
+    return dict(draw=draw, actors=[a])
 
 
-@clip('mom_wheelchair_run', 4.0, 'The emergency doors open before we reach them: Mom in her scrubs, running, pushing a wheelchair')
-def _c_mom_wc():
-    ppm = 380.0; ppc = ppm / 100.0
-    m = actor('mom_rn', 400, FLOOR, ppm, seed=47, expr='set_jaw')
-    m.face(1.0)
-    ev = m.run(0.2, 3.4, 0.0, 900.0, surface='inside')
-    def wc_at(t):
-        P = m._raw(t, False)
-        return 400 + P.dx + 0.62 * ppm
-    for side in (1, -1):
-        m.reach_to(0.0, side, lambda t: (wc_at(t) - 34 * ppc, FLOOR - 97 * ppc), dur=0.3, contact='grip', shape='grip', z=-10.0 * side)
+@clip('ws_whistle_long_clock', 4.0, 'The grin swings to the school clock. He blows the whistle, long and loud, to drown us out')
+def _c_ws_wh_long():
+    ppm = 230.0
+    a = ws(900, FLOOR, ppm, 25)
+    a.face(-0.3)
+    a.look_at(0.5, (1550, 220), dur=0.05, snap=True)
+    ev = a.blow_whistle(1.0, 'long', 1)
     def draw(pen, t):
-        room(pen, '#dfe8ee', '#b8c4cc')
-        fig(pen, m, t, ER)
-        CH.draw_wheelchair(pen, wc_at(t), FLOOR, ppc, facing=1.0, t=t, roll=wc_at(t))
-        CH.draw_arm(pen, m.who, -1, m.at(t), x=m.x0, y_feet=m.y0, height=m.height, light=ER, t=t)
+        pen.fill(rect(0, 0, 1920, 1080), '#14100c'); pen.fill(rect(1300, 0, 620, 520), '#2a2420')
+        clock_face(pen, 1550, 220, 90, 2, 59 + clamp(t / 4.0))
+        pen.fill(rect(0, FLOOR, 1920, 140), '#1a1a1c')
+        fig(pen, a, t, AMBER)
+    return dict(draw=draw, actors=[a], grounded=[a])
+
+
+@clip('ws_defeat', 5.5, 'Three o\'clock. His bus is empty. The grin doesn\'t fit his face; it slips. Tracking lines tear through him, and the bus rewinds into the dark. His clipboard clatters onto the asphalt')
+def _c_ws_defeat():
+    ppm = 210.0
+    a = ws(1000, FLOOR, ppm, 26)
+    a.face(-0.2)
+    a.clipboard(-INF, 1)
+    drop = 1.6
+    a._add(drop, None, lambda P, t: (setattr(P, 'hl_prop', None), setattr(P, 'hl_shape', 'open')) if t >= drop else None)
+    ev = a.defeat(0.3, 1.4, 1.8)
+    a._ev(drop + 0.42, 'clipboard_clatter', 0.0)
+    st = {}
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#0a0a0e'); pen.fill(rect(0, FLOOR, 1920, 140), '#26262a')
+        if 'hand' not in st and t >= drop: st['hand'] = a.where(drop - 1 / 60.0, 'hand_l')
+        fig(pen, a, t, AMBER)
+        if t >= drop:
+            hx, hy = st['hand']
+            u = clamp((t - drop) / 0.42)
+            y = hy + (FLOOR - 8 - hy) * u * u
+            ang = 80.0 * u
+            c = CH.Ctx(pen, skia.Matrix(), 3.0).sub(hx + 30 * u, y, ang if u < 1 else 86.0, ppm / 100.0)
+            c.lw = 3.0 / (ppm / 100.0)
+            CH._ws_clipboard(c, 2, t, None)
+    return dict(draw=draw, actors=[a])
+
+
+@clip('ws_final_sting', 5.0, 'Out the back window, something very tall in a crooked yellow hat lifts a new clipboard; draws a line through one name, and starts writing the next')
+def _c_ws_sting():
+    a = ws(1100, 760, 0, 27, h=210.0)
+    a.face(-0.1)
+    a.clipboard(0.6, 1, new=True)
+    ev = a.write_line(2.0, 3.0)
+    def draw(pen, t):
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 760, [(0, '#c8d8e8'), (1, '#e8e0cc')])
+        pen.fill(rect(0, 760, 1920, 320), '#8a8a84')
+        fig(pen, a, t, MORNING)
+        win = rrect(420, 160, 1080, 700, 60)
+        pen.cv.save(); pen.cv.clipPath(win, skia.ClipOp.kDifference, True)
+        pen.fill(rect(0, 0, 1920, 1080), '#c9a23a'); pen.fill(rect(0, 0, 1920, 1080), '#000000', 60)
+        pen.cv.restore()
+        pen.line(win, 10, '#1a1a1a')
+    return dict(draw=draw, actors=[a])
+
+
+@clip('ws_punch_ticket', 3.0, 'Click-clack: the chrome ticket punch bites through a yellow ticket (SAMI. SEAT 4. LAST STOP 3 A.M.)')
+def _c_ws_punch():
+    ppm = 420.0
+    a = ws(960, 1500, ppm, 28)
+    a.face(-0.1)
+    a.ws_hold(-INF, 1, 'ticket_y', None, 'pinch')
+    a.ws_rest(0.0, 1, 'clip', None, 0.01)
+    ev = a.punch(1.0, -1)
+    a.reach_far(0.3, -1, lambda t: a.where(t, 'hand_l', post=False), t1=None, dur=0.6, z=10.0, shape='hold')
+    a.look_at(0.0, (900, 760), dur=0.6)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#140c06'); pen.glow(960, 500, 700, '#ffa030', 60)
+        fig(pen, a, t, AMBER)
+    return dict(draw=draw, actors=[a])
+
+
+# ------------------------------------------------------------------------------------------------ the people
+@clip('della_brakes_names', 4.0, 'Grandma Della at bus 9, morning: "Brakes, mirrors, names," she says. "That\'s the job." A good morning, by name')
+def _c_della_job():
+    ppm = 300.0
+    d = actor('della', 900, FLOOR, ppm, seed=30, expr='warm')
+    d.face(0.4)
+    d.talk([(0.3, 1.8, 'Brakes mirrors names'), (2.2, 3.0, "That's the job")], env=None, words=None)
+    d.point_at(0.4, (1500, 380), t1=1.8, side=1)
+    d.look_at(0.4, (1500, 380), t1=1.9, dur=0.3)
+    d.look_at(2.1, (1300, 700), dur=0.3)
+    d.wave(2.4, 3.8, side=-1, slow=True)
+    def draw(pen, t):
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#bcd6ef'), (1, '#e8e0cc')])
+        bus_side(pen, 1150, FLOOR, ppm * 0.7, 1500, door_open=1.0, lit=False, color='#e2b43a', w=2000)
+        pen.fill(rect(0, FLOOR, 1920, 140), '#8a8a84')
+        fig(pen, d, t, MORNING)
+    return dict(draw=draw, actors=[d], grounded=[d])
+
+
+@clip('della_mailbox', 4.0, 'Grandma unscrews the letters off our mailbox')
+def _c_della_mail():
+    ppm = 340.0
+    d = actor('della', 870, FLOOR, ppm, seed=31, expr='set_jaw')
+    d.face(0.55)
+    bx = (1080, FLOOR - 1.2 * ppm)
+    for k in range(3):
+        d.reach_to(0.2 + k * 1.1, 1, (bx[0] - 60 + 45 * k, bx[1] + 5), t1=0.9 + k * 1.1, dur=0.35, contact='grip', shape='grip', z=40.0)
+    d.reach_to(0.2, -1, (bx[0] - 40, bx[1] + 30), dur=0.4, contact='palm', shape='flat', z=60.0)
+    d.look_at(0.0, bx, dur=0.3)
+    def draw(pen, t):
+        night_yard(pen, 520, (300, 200, 0.6))
+        mailbox(pen, 1080, FLOOR, ppm, letters=1.0 - clamp((t - 0.7) / 3.0))
+        fig(pen, d, t, NIGHTB)
+    return dict(draw=draw, actors=[d], grounded=[d])
+
+
+@clip('della_rules_door', 4.5, 'The night before the first day, Grandma tapes seven rules inside the front door; this year she also whispers our family word')
+def _c_della_rules():
+    ppm = 330.0
+    d = actor('della', 920, FLOOR, ppm, seed=32, expr='calm_firm')
+    dp = door_pts(700, ppm)
+    d.face(-0.6)
+    sheet = (720, FLOOR - 1.3 * ppm)
+    d.reach_to(0.2, 1, (sheet[0] + 60, sheet[1] - 70), t1=1.6, dur=0.5, contact='palm', shape='flat', z=-40.0)
+    d.reach_to(0.3, -1, (sheet[0] - 50, sheet[1] - 70), t1=1.6, dur=0.5, contact='palm', shape='flat', z=-40.0)
+    d.look_at(0.0, sheet, t1=1.8, dur=0.3)
+    s_ = actor('sami', 1180, FLOOR, ppm, seed=33, expr='sleepy')
+    s_.face(-0.4)
+    d.turn(2.0, 0.5, 0.6)
+    d.crouch(2.3, 0.45, None, 0.6)
+    d.look_at(2.3, (s_, 'eyes'), dur=0.3)
+    d.expr('whisper', 2.6, None, 0.3)
+    d.talk([(2.9, 3.8, 'family word')], env=None, words=None, intensity=0.4)
+    s_.look_at(2.5, (d, 'eyes'), dur=0.3)
+    def draw(pen, t):
+        room(pen, '#4a3a30', '#3a2a20')
+        door(pen, 700, FLOOR, ppm=ppm)
+        if t > 0.6: pen.fill(rect(sheet[0] - 70, sheet[1] - 100, 140, 190), '#f6f2e6'); pen.line(rect(sheet[0] - 70, sheet[1] - 100, 140, 190), 2.5)
+        fig(pen, s_, t, WARM2); fig(pen, d, t, WARM2)
+    return dict(draw=draw, actors=[d, s_], grounded=[d, s_])
+
+
+@clip('della_keys_leave', 4.5, 'Grandma grabs her keys: "Bus 9 has a radio to the depot. Lock this behind me." She slips out the back, her flashlight on')
+def _c_della_keys():
+    ppm = 300.0
+    d = actor('della', 1100, FLOOR, ppm, seed=34, expr='set_jaw')
+    d.face(-0.4)
+    hook = (990, FLOOR - 1.45 * ppm)
+    d.hold_prop('maglite', -1, -1.0, None)
+    d.reach_to(0.2, 1, hook, t1=0.8, dur=0.5, contact='grip', shape='grip', z=-30.0)
+    d.hold_prop('keys', 1, 0.7, None)
+    d.look_at(0.0, hook, t1=0.8, dur=0.3)
+    d.look_at(1.0, (1500, 560), dur=0.3)
+    d.talk([(1.0, 2.6, 'Bus 9 has a radio to the depot'), (2.8, 3.6, 'Lock this behind me')], env=None, words=None)
+    d.walk(3.4, 4.5, 0.0, -420.0, facing=-1.0, surface='inside')
+    def draw(pen, t):
+        room(pen, '#3a3028', '#2a201a')
+        pen.fill(rect(hook[0] - 30, hook[1] - 10, 60, 12), '#6a4a2a')
+        if t < 0.7: CH.draw_prop3(pen, 'keys', hook[0], hook[1] + 10, ppm / 100.0)
+        fig(pen, d, t, NIGHTB)
+    return dict(draw=draw, actors=[d], grounded=[d])
+
+
+@clip('della_trapped_pound', 4.0, 'Across the yard, the real Grandma is pounding on the glass of bus 9, trapped in her own cab, our porch broom wedged through her folding doors: "DON\'T OPEN THE DOOR!"')
+def _c_della_pound():
+    ppm = 330.0
+    d = actor('della', 960, FLOOR, ppm, seed=35, expr='shout')
+    d.face(0.0)
+    glass_y = FLOOR - 1.3 * ppm
+    ev = d.knock_pattern(0.2, (3,), side=1, beat=0.3, gap=0.5, target=(1060, glass_y), z=120.0, kind='glass')
+    d.reach_to(0.2, -1, (840, glass_y - 40), t1=None, dur=0.4, contact='palm', shape='flat', z=120.0)
+    d.talk([(1.8, 3.4, "DON'T OPEN THE DOOR")], env=None, words=None)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#1a1a20'); pen.fill(rect(0, FLOOR - 0.2 * ppm, 1920, 400), '#2a2620')
+        fig(pen, d, t, NIGHTB)
+        g = rect(560, 220, 800, 860)
+        pen.fill(g, '#9ab8d0', 40); pen.line(g, 10, '#2a2c30'); pen.line(poly([(960, 220), (960, 1080)], False), 8, '#2a2c30')
+        pen.line(poly([(500, 820), (1420, 760)], False), 16, '#a87a4a'); pen.line(poly([(500, 820), (1420, 760)], False), 3)
+    return dict(draw=draw, actors=[d])
+
+
+@clip('della_drive_swerve', 4.5, 'Grandma hits the gas: "So are we." His brake lights flash; she swerves')
+def _c_della_drive():
+    ppm = 380.0
+    seat = FLOOR - 0.3 * ppm
+    d = actor('della', 900, FLOOR, ppm, seed=36, expr='grim_drive')
+    d.face(0.0); d.seated(seat, hands=None)
+    wc = (900, FLOOR - 0.78 * ppm)
+    ang = lambda t: 38.0 * math.sin(PI * clamp((t - 2.4) / 1.0)) if t > 2.4 else 0.0     # noqa: E731
+    def grip(sd):
+        def f(t):
+            a_ = math.radians(ang(t) + (-60 if sd < 0 else 60))
+            return (wc[0] + 150 * math.sin(a_), wc[1] - 150 * math.cos(a_))
+        return f
+    d.drive(0.0, None, grip(-1), grip(1))
+    d.talk([(0.4, 1.2, 'So are we')], env=None, words=None)
+    d.expr('shock', 2.3, 3.4, 0.15)
+    d.look_at(0.0, (960, 300), dur=0.3, z=300.0)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#101218')
+        if 2.2 < t < 2.6: pen.fill(rect(700, 100, 520, 200), '#ff2a20', 120)
+        fig(pen, d, t, NIGHTB)
+        CH.draw_steering_wheel(pen, wc[0], wc[1], 150, ang(t))
+        for side in (1, -1): CH.draw_arm(pen, d.who, side, d.at(t), x=d.x0, y_feet=d.y0, height=d.height, light=NIGHTB, t=t)
+    return dict(draw=draw, actors=[d])
+
+
+@clip('della_broom_jam', 4.0, 'The doors start folding shut. Grandma jams our porch broom between them. The handle bends')
+def _c_della_broom():
+    ppm = 300.0
+    d = actor('della', 960, FLOOR, ppm, seed=37, expr='set_jaw')
+    d.face(0.8)
+    d.hold_prop('broom', 1, -1.0, None)
+    gap_x = 1260
+    d.reach_to(0.3, 1, (gap_x - 90, FLOOR - 1.05 * ppm), t1=None, dur=0.45, contact='grip', shape='grip', z=30.0)
+    d.reach_to(0.3, -1, (gap_x - 220, FLOOR - 0.95 * ppm), t1=None, dur=0.45, contact='grip', shape='grip', z=60.0)
+    d.set(0.3, None, 0.4, lean=0.15)
+    d.expr('shout', 1.0, 1.8, 0.2)
+    def draw(pen, t):
+        night_yard(pen, 560)
+        u = clamp(t / 0.6)
+        for sd in (-1, 1):
+            pnl = rect(gap_x + sd * (30 + 160 * (1 - u)) - (0 if sd > 0 else 220), FLOOR - 2.2 * ppm, 220, 2.0 * ppm)
+            pen.fill(pnl, '#2a2c30'); pen.fill(pnl, '#ffa030', 60); pen.line(pnl, 4)
+        fig(pen, d, t, AMBER)
+    return dict(draw=draw, actors=[d], grounded=[d])
+
+
+@clip('della_kneel_theo', 5.0, 'Grandma gasps; now she can see Theo. She kneels: "Six mornings, you said thank you. And I never asked your name."')
+def _c_della_kneel():
+    ppm = 330.0
+    d = actor('della', 820, FLOOR, ppm, seed=38, expr='shock')
+    th = actor('theo_color', 1180, FLOOR, ppm, seed=39, expr='lonely')
+    d.face(0.6); th.face(-0.6)
+    d.kneel_down(0.6, 1.0, 0)
+    d.look_at(0.0, (th, 'eyes'), dur=0.3)
+    d.expr('tender', 1.4, None, 0.6)
+    d.talk([(1.8, 3.0, 'Six mornings you said thank you'), (3.3, 4.6, 'And I never asked your name')], env=None, words=None)
+    th.look_at(0.0, (d, 'eyes'), dur=0.4)
+    th.expr('tender', 3.6, None, 0.6)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#0e0e14'); pen.fill(rect(0, FLOOR, 1920, 140), '#26262a')
+        pen.glow(300, 300, 500, '#3a6aff', 50 + 30 * math.sin(t * 6))
+        fig(pen, th, t, NIGHTB); fig(pen, d, t, NIGHTB)
+    return dict(draw=draw, actors=[d, th], grounded=[th])
+
+
+@clip('della_hug_mina', 4.0, 'In the morning I delete the post and tell Grandma I\'m sorry. She hugs me: "Brakes, mirrors, names."')
+def _c_della_hug():
+    ppm = 330.0
+    d = actor('della', 1020, FLOOR, ppm, seed=40, expr='tender')
+    m = actor('mina', 760, FLOOR, ppm, seed=41, expr='guilt')
+    d.face(-0.7); m.face(0.7)
+    m.talk([(0.2, 1.0, "I'm sorry")], env=None, words=None, intensity=0.6)
+    m.walk(1.0, 1.7, 0.0, 90.0, facing=0.7)
+    d.reach_to(1.4, 1, lambda t: (m.where(t, 'shoulder_r', post=False)[0] - 10, m.where(t, 'shoulder_r', post=False)[1] + 20), dur=0.6, contact='palm', shape='open', z=-20.0)
+    d.reach_to(1.5, -1, lambda t: (m.where(t, 'shoulder_l', post=False)[0] - 20, m.where(t, 'shoulder_l', post=False)[1] + 60), dur=0.6, contact='palm', shape='open', z=40.0)
+    m.reach_to(1.6, -1, lambda t: (d.where(t, 'chest', post=False)[0] + 10, d.where(t, 'chest', post=False)[1] + 30), dur=0.5, contact='palm', shape='open', z=40.0)
+    m.expr('relief', 1.8, None, 0.5)
+    d.talk([(2.4, 3.6, 'Brakes mirrors names')], env=None, words=None, intensity=0.6)
+    d.look_at(0.0, (m, 'eyes'), dur=0.3); m.look_at(0.0, (d, 'eyes'), t1=1.3, dur=0.3)
+    def draw(pen, t):
+        room(pen, '#d8c8a8', '#a8885a')
+        fig(pen, d, t, MORNING); fig(pen, m, t, MORNING)
+    return dict(draw=draw, actors=[d, m], grounded=[d, m])
+
+
+@clip('mina_post_phone', 4.0, 'Today, I posted his first-day chalkboard (Sami, first grade, Larkfield Elementary, bus 9, Larch Street); forty-one likes; one comment')
+def _c_mina_post():
+    ppm = 360.0
+    m = actor('mina', 900, FLOOR, ppm, seed=42, expr='kind_smile')
+    m.face(0.3)
+    m.hold_prop('cell', 1, -1.0, None)
+    m.reach(-1.0, None, 1, out=-30.0, down=120.0, fwd=230.0, shape='grip', up=0.0, fade=0.01)
+    m.tap(0.6, -1, lambda t: m.grip_point(t, 1, 'cell', post=False), n=3, gap=0.3)
+    m.look_at(0.0, lambda t: m.grip_point(t, 1, 'cell'), dur=0.3)
+    m.expr('suspicious', 2.6, None, 0.5)
+    def draw(pen, t):
+        room(pen, '#d8c8a8', '#a8885a')
+        fig(pen, m, t, MORNING)
     return dict(draw=draw, actors=[m], grounded=[m])
 
 
-@clip('nurse_chest_man', 5.0, 'In the waiting room a man sits down holding his chest, and a nurse walks straight up to him: "Sir, you don\'t wait. You come with me, right now."')
-def _c_nurse_man():
+@clip('mina_hush_sami', 3.5, 'Sami jolts awake, takes a breath: "He..." My hand slaps over his mouth. Silence')
+def _c_mina_hush():
+    ppm = 330.0
+    seat = FLOOR - 0.42 * ppm
+    s_ = actor('sami', 1000, FLOOR, ppm, seed=43, expr='sleepy')
+    m = actor('mina', 760, FLOOR, ppm, seed=44, expr='hush_fear')
+    s_.face(-0.5); s_.seated(seat, hands='lap')
+    m.face(0.6); m.seated(seat, hands=None)
+    s_.set(0.6, None, 0.15, h_dy=-6.0)
+    s_.expr('shout_here', 0.8, None, 0.2)
+    s_.talk([(0.9, 1.2, 'He')], env=None, words=None)
+    m.hand_over(1.15, 1, s_, 'mouth', dur=0.15)
+    s_.expr('shock', 1.3, None, 0.15)
+    m.look_at(0.0, (1500, 400), t1=0.9, dur=0.3); m.look_at(1.0, (s_, 'eyes'), dur=0.15)
+    s_.look_at(1.4, (m, 'eyes'), dur=0.3)
+    def draw(pen, t):
+        room(pen, '#2a2a34', '#2a201a')
+        couch(pen, 880, seat, 640)
+        fig(pen, s_, t, NIGHTB); fig(pen, m, t, NIGHTB)
+    return dict(draw=draw, actors=[m, s_])
+
+
+@clip('mina_911_nobars', 4.0, 'I dial 911. No bars. Not since his headlights came')
+def _c_mina_911():
     ppm = 360.0
-    seat = FLOOR - 0.45 * ppm
-    c_ = actor('chest_man', 760, FLOOR, ppm, seed=48, expr='stern_afraid')
-    c_.face(0.5); c_.sit_on(0.2, seat, dur=1.0, hands=None)
-    c_.hand_on(0.0, 'chest', side=-1)
-    nu = actor('er_nurse', 1500, FLOOR, ppm, seed=49, expr='calm_firm')
-    nu.face(-1.0)
-    nu.walk(1.0, 2.8, 0.0, -480.0, surface='inside')
-    nu.look_at(1.0, (c_, 'eyes'), dur=0.3)
-    nu.reach_to(3.0, 1, (c_, 'shoulder_l'), dur=0.5, contact='palm', shape='open', z=40.0)
-    nu.talk([(3.0, 4.8, "Sir, you don't wait. You come with me, right now.")], env=None, words=None)
-    c_.look_at(2.4, (nu, 'eyes'), dur=0.4)
+    m = actor('mina', 900, FLOOR, ppm, seed=45, expr='resolve')
+    m.face(0.35)
+    m.hold_prop('cell', -1, -1.0, None)
+    m.reach(-1.0, None, -1, out=-40.0, down=100.0, fwd=230.0, shape='grip', up=0.0, fade=0.01)
+    ev = m.dial(0.3, 1, lambda t: m.grip_point(t, -1, 'cell', post=False), n=3, gap=0.3)
+    m.look_at(0.0, lambda t: m.grip_point(t, -1, 'cell'), dur=0.3)
+    m.phone_to_ear(1.8, None, side=-1)
+    m.expr('fear', 2.6, None, 0.3)
+    m.look_at(2.2, (1500, 450), dur=0.4)
     def draw(pen, t):
-        room(pen, '#dfe8ee', '#b8c4cc')
-        for x in (520, 760): plastic_chair(pen, x, FLOOR, ppm, facing=1.0, c='#5a7a9a')
-        fig(pen, c_, t, ER); fig(pen, nu, t, ER)
-    return dict(draw=draw, actors=[c_, nu], grounded=[c_, nu])
+        room(pen, '#2a2a34', '#2a201a')
+        fig(pen, m, t, NIGHTB)
+    return dict(draw=draw, actors=[m], grounded=[m])
 
 
-@clip('empty_chair_rocking', 3.0, 'The chair next to his is empty, still rocking a little, like something very tall had just gotten up and left')
-def _c_empty():
-    ppm = 380.0
+@clip('mina_whats_the_word', 4.0, '"Mina, open up! It\'s Grandma!" Her voice, exactly. "What\'s the word, Grandma?" (my palm flat on the door, not opening it)')
+def _c_mina_word():
+    ppm = 360.0
+    m = actor('mina', 920, FLOOR, ppm, seed=46, expr='fear')
+    dp = door_pts(720, ppm)
+    m.face(-1.6)
+    m.reach_to(0.3, 1, (dp['knob'][0] + 40, dp['peep'][1] + 90), dur=0.6, contact='palm', shape='flat', z=-80.0)
+    m.head_to(0.5, (dp['peep'][0] + 40, dp['peep'][1] + 60), 'mouth', dur=0.8, max_lean=0.15)
+    m.expr('resolve', 1.0, None, 0.3)
+    m.talk([(1.3, 2.4, "What's the word Grandma")], env=None, words=None)
     def draw(pen, t):
-        room(pen, '#dfe8ee', '#b8c4cc')
-        plastic_chair(pen, 760, FLOOR, ppm, facing=1.0, c='#5a7a9a')
-        plastic_chair(pen, 1100, FLOOR, ppm, facing=1.0, c='#5a7a9a', rock=CH.chair_rock(t, -0.3, amp=5.0))
-    return dict(draw=draw, actors=[])
+        room(pen, '#2a2a34', '#2a201a')
+        door(pen, 720, FLOOR, ppm=ppm)
+        fig(pen, m, t, NIGHTB)
+    return dict(draw=draw, actors=[m], grounded=[m])
 
 
-@clip('milo_er_bed', 4.0, 'Bright lights, fluids, insulin, machines that beep like they are cheering: Milo on the bed with an IV and monitor leads; his eyes open; he smiles')
-def _c_milo_er():
-    ppm = 380.0
-    top = FLOOR - 0.62 * ppm
-    m = actor('milo_er', 900, top, ppm, seed=50, expr='sleepy')
-    m.face(0.55); m.set(-1, None, 0.01, perch=1.0, sit=1.0)
-    m.reach(-1.0, None, 1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
-    m.reach(-1.0, None, -1, out=-20.0, down=300.0, fwd=170.0, shape='relaxed', up=0.0, fade=0.01)
-    m.set(-1, None, 0.01, iv=1.0)
-    m.expr('kid_grin', 2.2, None, 0.8)
-    m.look_at(1.6, (1400, 420), dur=0.5)
+@clip('mina_deadbolt_floor', 4.0, 'Grandma\'s room has the only deadbolt. I sit with my back against it: "The word\'s dead, Sami. Nobody opens."')
+def _c_mina_floor():
+    ppm = 330.0
+    m = actor('mina', 860, FLOOR, ppm, seed=47, expr='resolve')
+    m.face(0.6)
+    m.sit_floor(-1.0)
+    m.talk([(0.8, 2.6, "The word's dead Sami Nobody opens")], env=None, words=None)
+    m.look_at(0.0, (1400, 700), dur=0.3)
     def draw(pen, t):
-        room(pen, '#e8f0f4', '#c8d2d8')
-        er_bed(pen, 900, top, 560)
-        monitor(pen, 1450, 380, t)
-        fig(pen, m, t, ER)
+        room(pen, '#2a2a34', '#2a201a')
+        door(pen, 640, FLOOR, ppm=ppm)
+        fig(pen, m, t, NIGHTB)
     return dict(draw=draw, actors=[m])
 
 
-@clip('milo22_run_phone', 4.0, 'Milo is twenty-two now: he runs marathons, he checks his blood sugar on his phone (a sensor on his arm)')
-def _c_milo22():
-    ppm = 360.0
-    m = actor('milo22', 400, FLOOR, ppm, seed=51, expr='kind_smile')
+@clip('mina_step_scream', 5.0, 'Not even for Sami: my foot lifts onto the first step... I pull it back, and SCREAM his name: "SAMI!"')
+def _c_mina_step():
+    ppm = 280.0
+    m = actor('mina_bare', 950, FLOOR, ppm, seed=48, expr='fear')
+    m.face(0.9)
+    ev = m.step_up(0.5, 1, up=0.8, hold=0.6, back=0.7, h=95.0, f=150.0)
+    m.look_at(0.0, (1400, 300), dur=0.3)
+    m.expr('resolve', 2.6, None, 0.3)
+    m.expr('terrified_call', 3.0, None, 0.15)
+    m.talk([(3.1, 4.3, 'SAMI')], env=None, words=None)
+    def draw(pen, t):
+        night_yard(pen, 600)
+        b = bus_side(pen, 1000, FLOOR, ppm, 1080)
+        fig(pen, m, t, AMBER)
+    return dict(draw=draw, actors=[m], grounded=[m])
+
+
+@clip('mina_asks_name', 3.5, 'From the bottom step, I call up the aisle: "What\'s your name?"')
+def _c_mina_ask():
+    ppm = 340.0
+    m = actor('mina_bare', 900, FLOOR, ppm, seed=49, expr='brave')
+    m.face(0.7)
+    m.look_at(0.0, (1500, 260), dur=0.3)
+    m.set(0.6, None, 0.5, lean=0.12)
+    m.expr('kind_ask', 0.8, None, 0.4)
+    m.talk([(1.0, 2.2, "What's your name")], env=None, words=None)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#140c06'); pen.glow(1500, 300, 700, '#ffa030', 90)
+        fig(pen, m, t, AMBER)
+    return dict(draw=draw, actors=[m], grounded=[m])
+
+
+@clip('mina_sits_new_girl', 6.0, 'In seat twenty-one, a new girl sits alone; no name on her backpack. I walk past my usual seat and sit down next to her: "Hi. I\'m Mina. What\'s your name?"')
+def _c_mina_girl():
+    ppm = 300.0
+    seat = FLOOR - 0.42 * ppm
+    g = actor('new_girl', 1400, FLOOR, ppm, seed=50, expr='lonely')
+    g.face(-0.45); g.seated(seat, hands=None)
+    g.hug_prop(-1.0, 'backpack', dur=0.01, part='lap')
+    g.look_at(0.0, (g, 'lap'), t1=4.4, dur=0.3)
+    m = actor('mina', 420, FLOOR, ppm, seed=51, expr='kind_smile')
     m.face(1.0)
-    ev = m.run(0.0, 1.8, 0.0, 700.0, surface='porch')
-    m.hold_prop('cell_glucose', 1, 2.2, None)
-    m.reach(2.2, None, 1, out=-40.0, down=60.0, fwd=230.0, shape='grip', up=0.0, fade=0.6)
-    m.turn(2.0, 0.3, 0.6)
-    m.look_at(2.5, lambda t: m.grip_point(t, 1, 'cell_glucose'), dur=0.3)
+    m.walk(0.2, 2.1, 0.0, 760.0, facing=1.0, surface='inside')
+    m.sit_on(2.3, seat, dur=0.9)
+    m.turn(2.4, 0.5, 0.7)
+    m.look_at(3.0, (g, 'eyes'), dur=0.3)
+    m.expr('kind_ask', 3.2, None, 0.4)
+    m.talk([(3.4, 3.8, 'Hi'), (3.9, 4.6, "I'm Mina"), (4.8, 5.7, "What's your name")], env=None, words=None)
+    g.look_at(4.6, (m, 'eyes'), dur=0.5)
+    g.expr('kind_smile', 5.3, None, 0.6)
     def draw(pen, t):
-        room(pen, '#bfe0f0', '#8aa070')
-        fig(pen, m, t, dict(rim='#fff2c0', rim_a=60, side=-1, key=0.2))
-    return dict(draw=draw, actors=[m], grounded=[m])
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#e8e0cc'), (1, '#c8b896')])
+        for sx in (320, 1100):
+            pen.fill(rrect(sx - 20, seat - 330, 40, 360, 12), '#7a3a2a'); pen.fill(rect(sx, seat - 10, 420, 26), '#8a4a34')
+        fig(pen, g, t, MORNING); fig(pen, m, t, MORNING)
+    return dict(draw=draw, actors=[m, g], grounded=[m])
 
 
-@clip('ruth_sick_ticket', 4.0, 'Sunrise: Grandma sitting in Grandpa\'s armchair, a paper ticket in her hand: RUTH. Chest pains since midnight; she hadn\'t said a word')
-def _c_ruth_sick():
+@clip('sami_here', 3.0, 'Say his name, and he shouts "HERE!" (his hand up, proud)')
+def _c_sami_here():
     ppm = 380.0
-    seat = FLOOR - 0.43 * ppm
-    r = actor('ruth_sick', 900, FLOOR, ppm, seed=52, expr='pale_hidden')
-    r.face(0.45); r.seated(seat, hands=None)
-    r.ticket_hold(-1.0, 'RUTH', side=1)
-    r.hand_on(-1.0, 'chest', side=-1, dur=0.01)
-    r.look_at(0.4, (r, 'lap'), t1=2.4, dur=0.6)
-    r.look_at(2.6, (1500, 500), dur=0.6)
+    s_ = actor('sami', 960, FLOOR, ppm, seed=52, expr='proud_grin')
+    s_.face(0.25)
+    s_.reach_to(0.6, 1, lambda t: (s_.where(t, 'head', post=False)[0] + 0.12 * s_.height, s_.where(t, 'head', post=False)[1] - 0.1 * s_.height),
+                t1=2.4, dur=0.3, contact='palm', shape='open', z=20.0)
+    s_.expr('shout_here', 0.6, 1.6, 0.15)
+    s_.talk([(0.65, 1.3, 'HERE')], env=None, words=None)
+    s_.set(0.6, 1.4, 0.2, bob=-12.0)
     def draw(pen, t):
-        room(pen, '#8a7060', '#4a3a30')
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 1920, 0, [(0, '#ffb070', 0), (1, '#ffb070', 70)])
-        armchair(pen, 920, seat, 340, c='#6a4a30')
-        fig(pen, r, t, WARM2)
-    return dict(draw=draw, actors=[r])
+        room(pen, '#d8c8a8', '#a8885a')
+        fig(pen, s_, t, MORNING)
+    return dict(draw=draw, actors=[s_], grounded=[s_])
 
 
-@clip('mom_dials', 4.0, 'My mom picks up the phone and dials: "You don\'t wait," she says. "You call."')
-def _c_mom_dials():
+@clip('sami_lighthouse', 4.0, 'Upstairs, Sami\'s hugging Rex, proud of himself: "You told me on the walkie to say our word... So I did! LIGHTHOUSE!"')
+def _c_sami_rex():
     ppm = 380.0
-    m = actor('mom_rn', 900, FLOOR, ppm, seed=53, expr='set_jaw')
-    m.face(0.4)
-    m.hold_prop('cell', -1, -1.0, None)
-    m.reach(-1.0, None, -1, out=-40.0, down=70.0, fwd=220.0, shape='grip', up=0.0, fade=0.01)
-    ev = m.dial(0.3, 1, lambda t: m.grip_point(t, -1, 'cell', post=False), n=3, gap=0.3)
-    m.look_at(0.0, lambda t: m.grip_point(t, -1, 'cell'), t1=1.8, dur=0.3)
-    m.phone_to_ear(2.0, None, side=-1)
-    m.look_at(2.2, (1500, 520), dur=0.4)
-    m.talk([(2.6, 3.8, "You don't wait. You call.")], env=None, words=None)
+    s_ = actor('sami', 960, FLOOR, ppm, seed=53, expr='proud_grin')
+    s_.face(0.3)
+    s_.hug_prop(-1.0, 'rex', dur=0.01)
+    s_.talk([(0.4, 1.8, 'So I did'), (2.2, 3.2, 'LIGHTHOUSE')], env=None, words=None)
+    s_.expr('shout_here', 2.2, 3.0, 0.15)
+    s_.set(2.2, 3.0, 0.2, bob=-10.0)
     def draw(pen, t):
-        room(pen, '#8a7060', '#4a3a30')
-        fig(pen, m, t, WARM2)
-    return dict(draw=draw, actors=[m], grounded=[m])
+        room(pen, '#4a4a6a', '#3a2a20')
+        fig(pen, s_, t, WARM2)
+    return dict(draw=draw, actors=[s_], grounded=[s_])
 
 
-@clip('ruth_cardio_coffee', 5.0, 'Grandma asks so many questions now that her cardiologist brings her coffee, just to keep up')
-def _c_ruth_cardio():
+@clip('sami_walkie', 3.5, 'From upstairs, Sami, laughing, talking to someone on his walkie')
+def _c_sami_walkie():
     ppm = 380.0
-    seat = FLOOR - 0.47 * ppm
-    r = actor('ruth', 700, FLOOR, ppm, seed=54, expr='asking')
-    r.face(0.5); r.seated(seat, hands=None)
-    c_ = actor('cardio', 1180, FLOOR, ppm, seed=55, expr='kind_smile')
-    c_.face(-0.5)
-    c_.hold_prop('cup', 1, -1.0, None)
-    c_.reach(-1.0, None, 1, out=-30.0, down=120.0, fwd=180.0, shape='grip', up=0.0, fade=0.01)
-    r.look_at(0.0, (c_, 'eyes'), dur=0.3); c_.look_at(0.0, (r, 'eyes'), dur=0.3)
-    r.talk([(0.3, 1.4, 'And what does that one do'), (1.8, 2.8, 'And how long')], env=None, words=None)
-    r.reach(0.3, 2.8, 1, out=40.0, down=150.0, fwd=180.0, shape='point', up=0.0, fade=0.5)
-    c_.talk([(3.0, 4.4, 'Here. You will need this.')], env=None, words=None)
+    s_ = actor('sami', 960, FLOOR, ppm, seed=54, expr='proud_grin')
+    s_.face(-0.3)
+    s_.hold_prop('walkie', -1, -1.0, None)
+    s_.radio_to_mouth(0.3, 3.4, side=-1)
+    s_.talk([(0.6, 1.6, 'hee hee okay'), (2.0, 3.0, 'I know it')], env=None, words=None)
     def draw(pen, t):
-        room(pen, '#e8eef0', '#c8d0d4')
-        pen.fill(rect(600, seat - 8, 220, 22), '#5a7a9a')
-        fig(pen, r, t, ER); fig(pen, c_, t, ER)
-    return dict(draw=draw, actors=[r, c_], grounded=[c_])
+        room(pen, '#4a4a6a', '#3a2a20')
+        fig(pen, s_, t, WARM2)
+    return dict(draw=draw, actors=[s_], grounded=[s_])
 
 
-@clip('narr29_desk', 5.0, 'I\'m a pediatrician now; I work nights: three in the morning, a little office at Larkfield General, a stack of test results that came back late, the phone; nineteen hours awake')
-def _c_narr29():
-    ppm = 380.0
-    seat = FLOOR - 0.47 * ppm
-    n = actor('narr29', 760, FLOOR, ppm, seed=56, expr='tired_kind')
-    n.face(0.55); n.seated(seat, hands=None)
-    n.reach(-1.0, 1.6, 1, out=10.0, down=200.0, fwd=250.0, shape='point', up=0.0, fade=0.01)
-    n.look_at(0.0, (1180, FLOOR - 0.8 * 380), t1=1.8, dur=0.3)
-    n.hold_prop('cell', -1, 1.8, None)
-    n.phone_to_ear(2.2, None, side=-1)
-    n.look_at(2.6, (1500, 520), dur=0.5)
+@clip('sami_palm_window', 3.5, 'Sami\'s palm presses against the window of seat four. Every other seat is dark')
+def _c_sami_glass():
+    s_ = actor('sami', 0, 0, 380.0, seed=55, expr='terrified_call')
     def draw(pen, t):
-        room(pen, '#c8d4dc', '#8a949c')
-        desk(pen, 1180, FLOOR - 0.75 * ppm, 520)
-        pen.fill(rect(680, seat - 8, 170, 20), '#4a5a6a')
-        fig(pen, n, t, ER)
-    return dict(draw=draw, actors=[n], grounded=[n])
+        pen.fill(rect(0, 0, 1920, 1080), '#7a6a30')
+        win = rrect(560, 160, 800, 700, 30)
+        pen.cv.save(); pen.cv.clipPath(win, skia.ClipOp.kIntersect, True)
+        pen.fill(win, '#2a1a0a'); pen.glow(960, 400, 500, '#ffa030', 90)
+        P = s_.at(t); P.h_turn = 0.0
+        CH.draw_bust(pen, 'sami', 960, 520, 0.85, P, light=AMBER, t=t)
+        pen.fill(win, '#c8d8e8', 30)
+        pen.cv.restore()
+        pen.line(win, 10, '#1a1a1a')
+        CH.draw_palm_on_glass(pen, 'sami', 1250, 640, 300, press=clamp((t - 0.5) / 0.3), t=t)
+    return dict(draw=draw, actors=[s_])
 
 
-@clip('hall_last_chair', 4.0, 'Some nights, when the hallways are empty, I hear a pen click; at the end of the hall, in the last plastic chair, something very tall is folded up, waiting')
-def _c_hall():
-    ppm = 110.0
-    a = lat(1500, 760, ppm, seed=57)
-    a.perch(None, 'plastic')
-    a.face(-0.5, 0.3)
-    ev = a.click_pen([1.0, 1.4])
+@clip('theo_hi_mina', 4.0, 'Seat twenty-two: a boy in a yellow raincoat, even in June. Every day he says, "Hi, Mina."')
+def _c_theo_hi():
+    ppm = 330.0
+    seat = FLOOR - 0.42 * ppm
+    th = actor('theo', 960, FLOOR, ppm, seed=56, expr='lonely')
+    th.face(0.35); th.seated(seat, hands='lap')
+    th.look_at(0.0, (th, 'lap'), t1=1.0, dur=0.3)
+    th.look_at(1.1, (1500, 520), dur=0.4)
+    th.expr('kind_smile', 1.3, None, 0.5)
+    th.talk([(1.6, 2.4, 'Hi Mina')], env=None, words=None, intensity=0.6)
+    th.wave(1.6, 3.0, side=1, slow=True, height=0.6)
     def draw(pen, t):
-        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#c8d0d0'), (1, '#9aa4a4')])
-        pen.fill(poly([(0, 1080), (1920, 1080), (1700, 760), (1250, 760)]), '#8a948c')
-        for k in range(3): plastic_chair(pen, 1340 + k * 55, 760, ppm, facing=-1.0, c='#5a7a9a')
-        plastic_chair(pen, 1500, 760, ppm, facing=-1.0, c='#5a7a9a')
-        fig(pen, a, t, FLUO)
-    return dict(draw=draw, actors=[a])
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#e8e0cc'), (1, '#c8b896')])
+        pen.fill(rrect(760, seat - 330, 40, 360, 12), '#7a3a2a'); pen.fill(rect(780, seat - 10, 420, 26), '#8a4a34')
+        fig(pen, th, t, MORNING)
+    return dict(draw=draw, actors=[th])
 
 
-@clip('ruth_door_refuse', 4.0, '"Doctors don\'t make house calls," Grandma says through the door (her back to us, a hand flat on the door, not opening it)')
-def _c_ruth_door():
-    ppm = 380.0
-    r = actor('ruth', 900, FLOOR, ppm, seed=58, expr='stern')
-    d_ = door_pts(760, ppm)
-    r.face(-1.75)
-    r.reach_to(0.3, 1, (d_['knob'][0] + 40, d_['peep'][1] + 80), dur=0.7, contact='palm', shape='flat', z=-80.0)
-    r.head_to(0.5, (d_['peep'][0] + 40, d_['peep'][1] + 60), 'mouth', dur=0.8, max_lean=0.15)
-    r.talk([(1.2, 2.6, "Doctors don't make house calls")], env=None, words=None)
+@clip('theo_twist_free', 4.5, 'The glove squeezes his shoulder. He looks at it. Then at me: "Theo." ... "HERE!" He twists out from under the glove, and through the gap')
+def _c_theo_free():
+    ppm = 300.0
+    th = actor('theo', 1100, FLOOR, ppm, seed=57, expr='hush_fear')
+    th.face(-0.4)
+    a = ws(1450, FLOOR, ppm, 58)
+    a.face(-0.6)
+    a.set(-1.0, None, 0.01, ws_bend=0.25)
+    a.reach_far(-1.0, 1, lambda t: th.where(t, 'shoulder_r', post=False), t1=2.3, dur=0.01, z=-10.0, shape='hang')
+    th.look_at(0.0, (th, 'shoulder_r'), t1=0.8, dur=0.4)
+    th.look_at(0.9, (500, 500), dur=0.3)
+    th.expr('brave', 1.0, None, 0.4)
+    th.talk([(1.1, 1.6, 'Theo'), (2.0, 2.5, 'HERE')], env=None, words=None)
+    th.expr('shout_here', 2.0, 2.8, 0.15)
+    th.run(2.3, 4.2, 0.0, -700.0, surface='porch')
     def draw(pen, t):
-        room(pen, '#262c3a', '#3a2f2a')
-        door(pen, 760, FLOOR, ppm=ppm)
-        fig(pen, r, t, NIGHT2)
-    return dict(draw=draw, actors=[r], grounded=[r])
+        pen.fill(rect(0, 0, 1920, 1080), '#140c06'); pen.glow(960, 400, 800, '#ffa030', 60)
+        pen.fill(rect(0, FLOOR, 1920, 140), '#2a1e14')
+        fig(pen, th, t, AMBER); fig(pen, a, t, AMBER)
+    return dict(draw=draw, actors=[th, a], grounded=[th])
 
 
 if __name__ == '__main__':

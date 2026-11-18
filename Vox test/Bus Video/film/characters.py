@@ -7512,6 +7512,10 @@ exec(compile(open(_BUNNY_SRC).read(), _BUNNY_SRC, 'exec'))
 # characters_doctor.py, run here the same way (see DOCTOR_API / CAST.md).
 _DOCTOR_SRC = os.path.join(_HERE, 'characters_doctor.py')
 exec(compile(open(_DOCTOR_SRC).read(), _DOCTOR_SRC, 'exec'))
+# The bus film's cast ("If The School Bus Stops At Midnight... DON'T GET ON") and its staging tools live in
+# characters_bus.py, run here the same way (see BUS_API / CAST.md).
+_BUS_SRC = os.path.join(_HERE, 'characters_bus.py')
+exec(compile(open(_BUS_SRC).read(), _BUS_SRC, 'exec'))
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:

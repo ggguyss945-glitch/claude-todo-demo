@@ -1,4 +1,4 @@
-"""Every line of the edited narration (the Doctor film) against what the recogniser hears in it.
+"""Every line of the edited narration (the Bus film) against what the recogniser hears in it.
     python3 tools/vo_asrcheck.py [--whole-file-only] [--every]   exit 1 on any mismatch that is not in ALLOW
     --every: also recognise EVERY line on its own (50 ms margins, 0.3 s of silence padding) and judge it the same way
 Reads W/narration/edit_list.json (each line's output span) and W/align/asr_cache.json (Parakeet on narration_en.wav,
@@ -20,13 +20,27 @@ from vo_edit import toks                                           # noqa: E402 
 
 # what the recogniser cannot help hearing its own way (homophones and spellings: not edit faults)
 SAME = {'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 'genes': 'jeans', 'colour': 'color',
-        'twentytwo': '22'}
+        'twentytwo': '22', 'sammy': 'sami', 'breaks': 'brakes'}
 JOIN2 = {('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('arm', 'chair'): 'armchair'}
 # lines that may fail, by tag, with the reason (checked on the spectrogram and with a second recogniser, not an edit fault)
 ALLOW_TAGS = {
-    'shh': 'Grandma\'s "Shh." is a hush with no word in it: the recogniser rightly writes nothing',
-    'pick_up': 'the take says "We\'ll" with a reduced vowel: Parakeet writes "will" on its own (also on the dry take, '
-               'every padding), "We\'ll" in context; Whisper hears "We\'ll"',
+    'hook_knows': 'the take reduces "And" to a nasal "\'nd": Parakeet writes "Then" for the line on its own, "And" with the line before (raw take too); Whisper also "Then"',   # L2 "And if he knows it... don't op"
+    'tape_ride_right': '"Ride" is spliced from the title; Parakeet merges the d into the r of "right" on any "ride right" ("Right, right" on the raw title phrase in isolation too); Whisper: "Ride right kids"',   # L19 '"Ride right, kids!"'
+    'mailbox_letters': 'Parakeet writes "mail box" as two words (raw take too); Whisper: "mailbox"',   # L63 'Grandma unscrews the letters o'
+    'whistle1': '"Fweet-fweet." is an invented whistle word: Parakeet "Free t freed", Whisper "Tweet, tweet" (raw take too)',   # L78 'Fweet-fweet.'
+    'never_walks': 'the take says "walks" with a weak s before the full stop: both recognisers "walked" on the raw take too',   # L98 'He never walks.'
+    'peephole_white': 'Parakeet and Whisper both write "people" for this "peephole" (raw take too)',   # L144 'The peephole goes white.'
+    'pads_upstairs': '"Rex" read as "wrecks" (a homophone; raw take too)',   # L157 'Sami pads upstairs for his din'
+    'pressed_grin': '"Pressed" with its d fused into "to": both recognisers "Press to" (raw take too)',   # L178 'Pressed to the grin.'
+    'practiced_all_week': '"Samis" for "Sami\'s" (the possessive written without an apostrophe; Whisper "Sami\'s")',   # L217 "Sami's practiced all week."
+    'grab_other': 'the take says "grab" with a released b before "the": Parakeet "grabbed" (raw take too); Whisper "grabbed"',   # L222 'I grab the other.'
+    'doors_slap': 'the take fuses "doors slap" ("door slapped", raw take too); Whisper: "The doors slap shut"',   # L231 'The doors slap shut an inch fr'
+    'over_loudspeaker': 'the colon reading lifts "loudspeaker" (Parakeet "loudspeakers", raw take too; Whisper "loudspeaker")',   # L236 'Over the loudspeaker:'
+    'della_mina': 'the TTS swallowed the "two" of "twenty-two" into this "Mina" (raw: "To Mina"); the line before now carries a spliced "Seat twenty-two."; re-record wanted',   # L255 '"Mina.'
+    'whistle2': '"Fweet-fweet." (invented whistle word, see rule above)',   # L284 'Fweet-fweet.'
+    'cobwebs': '"in the" read "and the" (raw take too); Whisper "Cobb Web\'s in the wipers"',   # L295 'Cobwebs in the wipers.'
+    'whistle3': '"Fweet-fweet." (invented whistle word)',   # L343 'Fweet-fweet.'
+    'theo_shout': 'the take\'s group shout "THEO!" is unreadable to both recognisers even on the raw take; re-record wanted (or layer with the mix)',   # L358 '"THEO!"'
 }
 
 

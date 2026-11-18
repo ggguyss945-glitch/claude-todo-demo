@@ -26,41 +26,18 @@ import vo_edit as V                                                # noqa: E402
 
 SR = V.SR
 SPOTS = [  # (name, first tag, last tag, why)
-    ('cold_open', 'open_room', 'open_dont_sit', 'the hook: the spliced "and he", the Waiting Man (W) "Take a seat. It can '
-                                                'wait." (the "Takes" hiss cut), held 1.2 s'),
-    ('recording', 'open_dont_sit', 'seven_rules', 'the phone-system recording (R), 1.0 s in and out'),
-    ('g1979', 'voice_line', 'still_waiting', '"Calm. Patient. Kind." staccato, the 1979 voice (W, phone), the held '
-                                             '"Still waiting."'),
-    ('nurses', 'mom_noticed', 'halverson', 'the rebuilt "Nurses always notice." (Nurse + the "is" of "his pulse")'),
-    ('promise', 'blood', 'shift', 'Doctor Halverson (H) split from "she said." where the sh starts'),
-    ('rule1', 'nobody_sick', 'call', 'Grandma (G), 1.4 s before "Rule number one.", 1.0 s after the rule text, room '
-                                     'for the ring'),
-    ('call_3am', 'running_crying', 'hung_up', 'Doctor Halverson on the 3 AM call (H_call: rough, out of breath), '
-                                              'Grandma cuts her off (G_sharp)'),
-    ('cta', 'other_one', 'cta_forty', '1.0 s before the comment prompt and its rhythm'),
-    ('rule2_ever', 'rule2', 'rang_anyway', '"Ever." split from "The phone cord" (the take ran them together), 1.0 s '
-                                           'after the rule'),
-    ('chair_rule3', 'rooms_living', 'rule3_listening', '0.9 s before "From Grandpa\'s chair.", the "chair / Rule" split '
-                                                       'in their shared r, the rebuilt "Rule"'),
-    ('milo', 'eyes_big', 'pen_click', 'Milo (K: a child\'s whisper), Grandma hushing (G_hush), 1.0 s for the pen click'),
-    ('door', 'car_driveway', 'didnt_open', 'Doctor Halverson through the door (H_door), Grandma (G), the repaired '
-                                           '"said Doctor Halverson."'),
-    ('note_signs', 'marker', 'burn', 'the warning signs on the note, read as a list (0.4 s apart)'),
-    ('bench', 'bus_stop', 'rule5_text', '"Knees above his head. / Waiting. / Rule number five." (one run in the take): '
-                                        'held 1.3 s, 1.4 s before the rule'),
-    ('told_1979', 'g_wait2', 'stopped_rocking', 'Grandma rocking (G_soft), the narrator, the "in 1979" double cut'),
-    ('rows', 'waiting_room', 'tv', 'the rebuilt "Rows of plastic chairs"'),
-    ('grandpa_him', 'last_row', 'him', 'held 1.5 s before "Grandpa." and 1.3 s after it'),
-    ('take_a_seat', 'ticket_milo', 'rule7', 'the Waiting Man (W) in the waiting room, 1.4 s before rule 7'),
-    ('counts', 'began_count', 'one_thing', 'the counts (W_count) spaced like slow counting, slowing (1.0-1.3 s)'),
-    ('car', 'clicking_car', 'h_mirror', 'the Waiting Man in the back seat (W), "he said."'),
-    ('nurse_er', 'nurse', 'empty_chair', 'the ER nurse (U)'),
-    ('mom_call', 'dialed', 'grandma_fine', 'Mom (M)'),
-    ('twist', 'burned', 'pediatrician', 'held 1.0 s before and after "Not as a patient."'),
-    ('office', 'work_nights', 'nineteen_hours', 'the "I\'m s- I\'m sitting" repair'),
-    ('outro', 'very_patient', 'light_on', '1.3 s before "So are we.", 2.8 s before "Okay. Breathe."'),
-    ('voice_in_head', 'little_real', 'very_very_patient', 'the voice in your head (W_whisper)'),
-    ('sleep_well', 'next', 'end', 'the rebuilt "Sleep well." and the last line'),
+    ('hook', 'hook', 'bus_safety_cat', 'the hook: three rules, his TV voice (W, tv), the intro'),
+    ('loudspeaker', 'reads_post', 'cta', 'his PA reading the post (W), held 1.05 s before "He read it off my phone.", the comment prompt'),
+    ('roll_call', 'frosted_glass', 'click_clack1', 'the spliced "And that grin." / "He calls roll.", roll call (W, door), '
+                                                     'Sami\'s whisper (S_whisper), his Sami (M_sami), "Almost."'),
+    ('door_mimic', 'three_knocks', 'peephole_white', 'his Della at the door (M_della) and the "...Clever." slide'),
+    ('blackout', 'talking_walkie', 'folded_small', 'held 1.15 s before "I\'m still holding a hand."'),
+    ('lighthouse', 'told_me_walkie', 'word_secret', 'Sami (S) and his shout (S_shout)'),
+    ('seat22', 'so_are_we', 'della_1994', 'Della (D_firm, D) and the held 0.95 s before "Seat twenty-two has been empty..."'),
+    ('two_of_me', 'top_of_steps', 'at_face', 'his "Last stop!", his Mina (M_mina), the staccato'),
+    ('lure', 'bends_down', 'step_back', 'the trade lure (W_lure) and Della (D_firm)'),
+    ('theo', 'looks_at_it', 'theo_twists', 'Theo (T), held 1.15 s before "Theo.", the shout, Theo\'s "...HERE!" (T_shout + lent h)'),
+    ('outro', 'advice_tell', 'end', '"That\'s when you tell." / "Post the smile..." (the mangled "Parents" cut), the CTA, the teaser'),
 ]
 
 

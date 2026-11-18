@@ -1,13 +1,11 @@
-"""cast_sheets.py: model sheets of the doctor film's cast (characters.py + characters_doctor.py), written to W/cast/.
+"""cast_sheets.py: model sheets of the bus film's cast (characters.py + characters_bus.py), written to W/cast/.
 
-    cd "Vox test/Doctor Video/film" && python3 tools/cast_sheets.py [names...]     (default: all sheets)
+    cd "Vox test/Bus Video/film" && python3 tools/cast_sheets.py [names...]     (default: all sheets)
 
-Sheets (1920x1080 JPEG): later_likeness (Doctor Later beside the owner's reference photo and the fan drawing),
-later_compare (silhouette and value comparison with the photo: same pose, same size, thresholded, the head measured),
-later_turn (turnaround), later_states (every state the script needs), later_tape (the tape loosening strip by strip and
-the faces under it), lineup, lineup2 (everyone to scale), turn_family, faces_ruth, faces_milo, faces_narrator,
-faces_halverson, faces_others (expressions per beat), mouths (lip-sync shapes), props, staging. The Bunnyman film's
-sheets live in the Bunnyman Video project.
+Sheets (1920x1080 JPEG): ws_turn (Mister Whistlestop turnaround with proportion marks), ws_mood (beside the owner's mood
+references), ws_limits (every hard limit checked, with a red-pixel measurement), ws_states (every state the script
+needs), ws_head (the head in 6 views, the defeat slip, the 1994 tape), lineup (everyone to scale), turn_family,
+turn_others, faces_mina, faces_sami, faces_della, faces_others, props, props2.
 """
 import os, sys, math
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,545 +94,259 @@ def P_(expr=None, **kw):
 
 
 FLOOR = 940.0
+
+
 REF = os.path.join(HERE, '_work', 'ref')
-FLUO = dict(rim='#d8f0a0', rim_a=70, side=1, key=-0.1)
+AMBER = dict(rim='#ffa030', rim_a=90, side=1, key=-0.3)
+STUDIO = dict(rim='#ffffff', rim_a=45, side=-1, key=0.3)
+MORN = dict(rim='#ffe2a8', rim_a=55, side=-1, key=0.2)
 
 
-def _later(x, y, ppm, seat='plastic', knee=None, hands=('lap', 'pen'), props=True, seed=1, **kw):
-    a = CH.Acting('later', seed=seed, height=CH.height_px('later', ppm)).place(x, y)
-    a.perch(None if seat in ('plastic', 'armchair', 'bench', 'low') else seat, seat if isinstance(seat, str) else 'plastic', knee=knee,
-            hands=hands, props=props)
-    if kw: a.set(-1, None, 0.01, **kw)
-    return a
+def _ws(x, y, h, who='whistle', seed=1):
+    return CH.Acting(who, seed=seed, height=h).place(x, y)
 
 
-def _chair(pen, x, y, ppm, kind='plastic', facing=1.0, front=False, rock=0.0, c='#3f6a8a'):
-    k = ppm / 100.0
-    if kind == 'armchair':
-        seat = y - 42 * k
-        w = 95 * k
-        pen.fill(rrect(x - w / 2 + 6 * k, seat - 55 * k, w - 12 * k, 62 * k, 8 * k), '#5a3e28'); pen.line(rrect(x - w / 2 + 6 * k, seat - 55 * k, w - 12 * k, 62 * k, 8 * k), 3)
-        pen.fill(rrect(x - w / 2, seat - 3 * k, w, y - seat - 4 * k, 6 * k), '#6a4a30'); pen.line(rrect(x - w / 2, seat - 3 * k, w, y - seat - 4 * k, 6 * k), 3)
-        for sd in (-1, 1):
-            pen.fill(rrect(x + sd * (w / 2 - 8 * k) - 9 * k, seat - 22 * k, 18 * k, y - seat + 18 * k, 6 * k), '#74523a')
-            pen.line(rrect(x + sd * (w / 2 - 8 * k) - 9 * k, seat - 22 * k, 18 * k, y - seat + 18 * k, 6 * k), 3)
-        return seat
-    sy = y - 45 * k
-    cv = pen.cv; cv.save()
-    if rock: fx = x + facing * 20 * k; cv.translate(fx, y); cv.rotate(rock * facing); cv.translate(-fx, -y)
-    if front:
-        for sd in (-1, 1): pen.line(poly([(x + sd * 20 * k, y), (x + sd * 18 * k, sy)], False), 4, '#2a2c32')
-        pen.fill(rrect(x - 23 * k, sy - 4 * k, 46 * k, 7 * k, 2 * k), c); pen.line(rrect(x - 23 * k, sy - 4 * k, 46 * k, 7 * k, 2 * k), 3)
-        pen.fill(rrect(x - 21 * k, sy - 44 * k, 42 * k, 30 * k, 6 * k), mix(c, '#000000', 0.15)); pen.line(rrect(x - 21 * k, sy - 44 * k, 42 * k, 30 * k, 6 * k), 3)
-    else:
-        f = facing
-        for dx in (-18, 18): pen.line(poly([(x + f * dx * k, y), (x + f * dx * 0.9 * k, sy)], False), 4, '#2a2c32')
-        seat = smooth([(x - f * 22 * k, sy - 2 * k), (x + f * 22 * k, sy - 3 * k), (x + f * 23 * k, sy + 3 * k), (x - f * 22 * k, sy + 3 * k)], True, 0.4)
-        pen.fill(seat, c); pen.line(seat, 3)
-        back = smooth([(x - f * 20 * k, sy - 2 * k), (x - f * 26 * k, sy - 40 * k), (x - f * 21 * k, sy - 42 * k), (x - f * 15 * k, sy - 4 * k)], True, 0.5)
-        pen.fill(back, mix(c, '#000000', 0.15)); pen.line(back, 3)
-    cv.restore()
-    return sy
+def _box(pen, x, y, w, h, c='#232633'):
+    pen.fill(rect(x, y, w, h), c)
 
 
-def sheet_later_likeness():
-    """Doctor Later beside the owner's reference photo (and the fan drawing of the same creature): the same pose (folded on
-    a small chair in profile, the long neck reaching forward, the face turned to us, the cone tipped, hands flat on the
-    carpet), then the narration's adaptations (tape, coat, clipboard and pen) in the waiting room."""
-    surf, cv, pen = canvas(bg=(198, 182, 176))
-    img = surf.makeImageSnapshot().toarray()[:, :, :3]
-    title(cv, 'DOCTOR LATER: LIKENESS TO THE REFERENCE', 'Left: the owner\'s photo and the fan drawing. Right: our creature in the photo\'s pose and in the film (tape, grey coat, clipboard, pen)')
-    # our creature in the photo's pose, same scale as the photo panel
-    y = 1040
-    pen.fill(rect(640, y, 1280, 40), '#3a3434')
-    ppm = 420.0
-    x = 980
-    k = ppm / 100.0
-    _chair(pen, x, y, ppm, 'plastic', facing=1.0, c='#2a2626')
-    a = _ref_pose(x, y, ppm)
-    CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2)
-    label(cv, 'the reference pose', x + 120, 140, 17, '#3a3434')
-    # the film version: waiting-room chair, tape, coat, clipboard and pen, looking up at you
-    pen.fill(rect(1460, 120, 460, 920), '#7d8a6a')
-    pen.fill(rect(1460, 900, 460, 140), '#5a5a4a')
-    x2, y2, ppm2 = 1680, 900, 230.0
-    _chair(pen, x2, y2, ppm2, 'plastic', facing=1.0)
-    b = _later(x2, y2, ppm2, 'plastic', turn=0.45, h_turn=-0.25, h_tilt=14.0)
-    CH.draw(pen, 'later', x2, y2, b.height, b.at(1.0), t=1.0, detail=2, light=FLUO)
-    label(cv, 'in the film (waiting room)', x2, 150, 17, '#1d1f26')
-    out = surf.makeImageSnapshot().toarray()[:, :, :3].copy()
-    ref = cv2.imread(os.path.join(REF, 'doctor_later_reference_photo.jpg'))
-    r = cv2.resize(ref, (int(236 * 600 / 251), 600), interpolation=cv2.INTER_CUBIC)
-    out[110:110 + 600, 30:30 + r.shape[1]] = r
-    dr = cv2.imread(os.path.join(REF, 'doctor_later_reference_drawing.jpg'))
-    d2 = cv2.resize(dr, (330, 330), interpolation=cv2.INTER_AREA)
-    out[730:730 + 330, 30:30 + 330] = d2
-    cv2.putText(out, 'owner reference photo', (40, 735 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (40, 40, 40), 2, cv2.LINE_AA)
-    cv2.putText(out, 'fan drawing', (370, 1050), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (40, 40, 40), 2, cv2.LINE_AA)
-    os.makedirs(OUT, exist_ok=True)
-    cv2.imwrite(os.path.join(OUT, 'later_likeness.jpg'), out, [cv2.IMWRITE_JPEG_QUALITY, 90]); print('wrote later_likeness')
-
-
-def _ref_pose(x, y, ppm, **kw):
-    """Doctor Later in the reference photo's pose: folded on a small chair in profile, the long neck reaching forward,
-    the face turned to us, the cone leaning 27 degrees, hands flat on the carpet."""
-    d = dict(turn=1.0, h_turn=-1.0, h_tilt=24.0)
-    d.update(kw)
-    return _later(x, y, ppm, 'plastic', knee=0.0, hands=('floor', 'floor'), props=False, **d)
-
-
-def _snap(w, h, bg, fn):
-    """Render fn(pen, k) on its own w x h image (k = design px per image px) and return it as an array."""
-    surf, cv, pen = canvas(w, h, bg)
-    fn(pen, 1920.0 / w)
-    return surf.makeImageSnapshot().toarray()[:, :, :3].copy()
-
-
-REF_CM_PX = 0.89            # cm per photo px, matched on the torso (seat to hump)
-
-
-def later_head_profile(tilt=24.0):
-    """Width of his head (photo px) at steps along its axis, measured on our silhouette in the reference pose exactly as
-    on the photo (rotated upright about the brow), beside the photo's numbers: [(dy, ours, photo)], and (lean deg, eye to
-    tip px) of ours."""
-    photo = [(-60, 2.8), (-50, 4.8), (-40, 7.2), (-30, 11.1), (-20, 16.0), (-10, 20.1), (-2, 23.6), (4, 24.5), (10, 24.1), (12, 22.8)]
-    K = 8
-    W, H = 236 * K, 251 * K
-    kd = 1920.0 / W
-    ppm = 100.0 / REF_CM_PX * K * kd
-    a = _ref_pose(0, 0, ppm, h_tilt=tilt)
-    hx, hy = a.where(1.0, 'head')
-    ox, oy = 117.5 * K * kd - hx, 75.8 * K * kd - hy
-    a = _ref_pose(ox, oy, ppm, h_tilt=tilt)
-    P = a.at(1.0); P.dl_tape = 0.0
-    im = _snap(W, H, (255, 255, 255), lambda pen, k: CH.draw_silhouette(pen, 'later', ox, oy, a.height, P, t=1.0, colr='#000000', a=1.0, rim_a=0.0))
-    g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    tx, ty = a.where(1.0, 'cone_tip'); ex, ey = a.where(1.0, 'eyes')
-    lean = math.degrees(math.atan2(tx - ex, -(ty - ey))); e2t = math.hypot(tx - ex, ty - ey) / kd / K
-    M = cv2.getRotationMatrix2D((118.0 * K, 71.0 * K), 27.12, 1.0)
-    rot = cv2.warpAffine(g, M, (g.shape[1], g.shape[0]), flags=cv2.INTER_LINEAR, borderValue=255)
-    out = []
-    for dy, pw in photo:
-        row = rot[int((71.0 + dy) * K), int((118 - 30) * K):int((118 + 30) * K)]
-        idx = np.nonzero(row < 128)[0]
-        w = 0.0
-        if len(idx):
-            runs = np.split(idx, np.nonzero(np.diff(idx) > 3)[0] + 1)
-            best = min(runs, key=lambda r: abs((r[0] + r[-1]) / 2 - 30 * K))
-            w = (best[-1] - best[0]) / K
-        out.append((dy, w, pw))
-    return out, (lean, e2t)
-
-
-def sheet_later_compare():
-    """Silhouette and value comparison with the owner's photo: our creature in the photo's pose at the photo's size, both
-    as thresholded silhouettes, then the head ten times larger with its values in three levels (black / mid / pale) and
-    our outline laid over the photo; the measured widths of the head along its axis under them."""
-    ph = cv2.imread(os.path.join(REF, 'doctor_later_reference_photo.jpg'))
-    wall, carpet = (214, 160, 150), '#5a4444'
-    # row 1: the whole figure, 460 x 489 per panel (the photo is 236 x 251)
-    PW, PH = 460, 489
-    k1 = PW / 236.0
-
-    def fig(pen, k, sil=False):
-        ppm = 100.0 / REF_CM_PX * k1 * k
-        x, y = 52 * k1 * k, 232 * k1 * k
-        a = _ref_pose(x, y, ppm)
-        if sil:
-            CH.draw_silhouette(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, colr='#000000', a=1.0, rim_a=0.0); return
-        pen.fill(rect(0, 205 * k1 * k, 1920, 3000), carpet)
-        _chair(pen, x, y, ppm, 'plastic', facing=1.0, c='#2a2626')
-        CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2)
-    photo1 = cv2.resize(ph, (PW, PH), interpolation=cv2.INTER_CUBIC)
-    ours1 = _snap(PW, PH, wall, fig)
-    sil1 = _snap(PW, PH, (255, 255, 255), lambda pen, k: fig(pen, k, True))
-    g = cv2.cvtColor(photo1, cv2.COLOR_BGR2GRAY)
-    psil = np.where(g < 95, 0, 255).astype(np.uint8); psil[int(205 * k1):] = 255          # the carpet is dark too: cut it
-    psil = cv2.cvtColor(psil, cv2.COLOR_GRAY2BGR)
-    # row 2: the head, 80 x 100 photo px from (84, 0), 3.9 x
-    x0, y0, w, h = 84, 0, 80, 100
-    k2 = 3.9
-    HW, HH = int(w * k2), int(h * k2)
-    crop = cv2.resize(ph[y0:y0 + h, x0:x0 + w], (HW, HH), interpolation=cv2.INTER_CUBIC)
-
-    def head(pen, k, tape=1.0, sil=False):
-        ppm = 100.0 / REF_CM_PX * k2 * k
-        a = _ref_pose(0, 0, ppm)
-        hx, hy = a.where(1.0, 'head')
-        ox, oy = (117.5 - x0) * k2 * k - hx, (75.8 - y0) * k2 * k - hy              # our eye line on the photo's (between its sockets)
-        a = _ref_pose(ox, oy, ppm)
-        P = a.at(1.0); P.dl_tape = tape
-        if sil: CH.draw_silhouette(pen, 'later', ox, oy, a.height, P, t=1.0, colr='#000000', a=1.0, rim_a=0.0)
-        else: CH.draw(pen, 'later', ox, oy, a.height, P, t=1.0, detail=2)
-    h_tape = _snap(HW, HH, wall, head)
-    h_bare = _snap(HW, HH, wall, lambda pen, k: head(pen, k, 0.0))
-    m = (cv2.cvtColor(_snap(HW, HH, (255, 255, 255), lambda pen, k: head(pen, k, 1.0, True)), cv2.COLOR_BGR2GRAY) < 128).astype(np.uint8)
-    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    over = crop.copy(); cv2.drawContours(over, cnts, -1, (0, 255, 0), 1)
-
-    def levels(im, bgv):
-        gg = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype(float)
-        o = np.full(gg.shape, 255, np.uint8)
-        o[gg < bgv - 14] = 150
-        o[gg < 60] = 0
-        return cv2.cvtColor(o, cv2.COLOR_GRAY2BGR)
-    prof, (lean, e2t) = later_head_profile()
+def sheet_ws_turn():
     surf, cv, pen = canvas()
-    title(cv, 'DOCTOR LATER: SILHOUETTE AND VALUES AGAINST THE REFERENCE PHOTO',
-          'Same pose, same size (1 photo px = 0.89 cm on his torso). Top: the figure and its silhouette. Bottom: the head ten times larger, its values in three levels, our outline over the photo')
-    xs1 = [16 + i * (PW + 16) for i in range(4)]
-    for x, lb in zip(xs1, ('the owner\'s photo', 'ours, the photo\'s pose and size', 'the photo, thresholded', 'ours, as a silhouette')):
-        label(cv, lb, x + PW / 2, 108 + PH + 20, 14)
-    xs2 = [16 + i * (HW + 4) for i in range(6)]
-    for x, lb in zip(xs2, ('photo: the head', 'ours (dl_tape 1)', 'ours (dl_tape 0)', 'photo: 3 levels', 'ours: 3 levels', 'our outline on the photo')):
-        label(cv, lb, x + HW / 2, 636 + HH + 17, 13)
-    text(cv, 'width of the head along its axis, photo px, ours / photo (dy from the brow):   ' +
-         '    '.join('%+d: %.1f / %.1f' % t for t in prof) + '      lean %.1f deg / 27.1      eye to tip %.1f / 73.6 px' % (lean, e2t),
-         960, 1072, 600, 12.5, '#c8ccd8', 255, 0.0, 'center')
-    out = surf.makeImageSnapshot().toarray()[:, :, :3].copy()
-    for x, im in zip(xs1, (photo1, ours1, psil, sil1)):
-        out[108:108 + PH, x:x + PW] = im
-    for x, im in zip(xs2, (crop, h_tape, h_bare, levels(crop, 178), levels(h_tape, 170), over)):
-        out[636:636 + HH, x:x + HW] = im
-    os.makedirs(OUT, exist_ok=True)
-    p = os.path.join(OUT, 'later_compare.jpg')
-    cv2.imwrite(p, out, [cv2.IMWRITE_JPEG_QUALITY, 92]); print('wrote', p)
-    print('head width profile (dy, ours, photo):', ['%d %.1f/%.1f' % t for t in prof], 'lean %.1f eye-to-tip %.1f' % (lean, e2t))
-
-
-def sheet_later_turn():
-    surf, cv, pen = canvas(bg=(125, 138, 106))
-    title(cv, 'DOCTOR LATER: TURNAROUND (FOLDED ON A WAITING-ROOM CHAIR)',
-          '2.9 m standing (he never stands while watched); folded, the cone tip is about 2 m up. Same pose in every view: knees above the face, the neck reaching forward')
-    y = 980; floor(pen, y - 95, '#5a5a4a')   # the floor plane reaches back: feet behind the chair land on it too
-    ppm = 250.0
+    title(cv, 'MISTER WHISTLESTOP: turnaround (2.44 m to the crown, the hat +0.9 m)',
+          'legs 55 % of his height, arms to the knees, crooked mascot head, hat leaning 12 deg to his left, dented halfway; never walks')
     views = [(0.0, 'FRONT'), (0.5, '3/4 RIGHT'), (1.0, 'PROFILE'), (1.5, '3/4 BACK'), (2.0, 'BACK'), (-0.5, '3/4 LEFT')]
+    floor(pen, 1030)
     for i, (yw, lb) in enumerate(views):
-        x = 170 + i * 316
-        _chair(pen, x, y, ppm, 'plastic', facing=1.0 if math.sin(yw * math.pi / 2) >= 0 else -1.0, front=abs(math.sin(yw * math.pi / 2)) < 0.3)
-        a = _later(x, y, ppm, 'plastic', turn=yw, h_tilt=10.0)
-        CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2, light=FLUO)
-        label(cv, lb, x, 128, 15, '#1d1f26')
-    save(surf, 'later_turn')
+        x = 175 + i * 314
+        CH.draw(pen, 'whistle', x, 1030, 640, CH.Pose(turn=yw), t=0.0, light=AMBER, detail=2)
+        label(cv, lb, x, 1062, 15, '#9aa3b8')
+    # proportion marks on the front view
+    h = 640.0; ppc = h / 244.0
+    for cm, lb in ((134, 'hip 55 %'), (70, 'knee: fingertips'), (209, 'chin (head 1/7)'), (244, 'crown'), (244 + 90, 'hat top +40 %')):
+        y = 1030 - cm * ppc
+        pen.line(poly([(20, y), (120, y)], False), 2, '#7a8296')
+        text(cv, lb, 22, y - 4, 600, 12, '#9aa3b8', 255, 0.0, 'left')
+    save(surf, 'ws_turn')
 
 
-def sheet_later_states():
-    surf, cv, pen = canvas(bg=(40, 44, 40))
-    title(cv, 'DOCTOR LATER: STATES', 'Every state the narration needs. He never stands, never lip-syncs; his arm unfolds unnaturally long when he reaches')
-    cw, ch = 1920 / 4, (1080 - 120) / 2
-    def panel(i, bg, fn, lb):
-        c, r = i % 4, i // 4
-        x0, y0 = c * cw, 120 + r * ch
-        pen.fill(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), bg)
+def sheet_ws_mood():
+    surf, cv, pen = canvas()
+    title(cv, 'MISTER WHISTLESTOP beside the owner\'s mood references (mood only: nothing copied)',
+          'kept: a tall grinning mascot, the frozen grin, white gloves curling round a doorframe, VHS grain and tracking lines. changed: every design element (see ws_limits)')
+    x = 30
+    for i in (1, 2, 3):
+        p = os.path.join(REF, 'owner_mood_cat_%d.jpg' % i)
+        im = cv2.imread(p)
+        if im is None: continue
+        hh = 300; ww = int(im.shape[1] * hh / im.shape[0])
+        im = cv2.cvtColor(cv2.resize(im, (ww, hh)), cv2.COLOR_BGR2RGBA)
+        img = skia.Image.fromarray(im)
+        cv.drawImage(img, x, 130)
+        label(cv, 'mood ref %d' % i, x + ww / 2, 450, 14, '#9aa3b8')
+        x += ww + 20
+    # ours: peeking round a doorframe (gloves curled), the grin through VHS tear, the bust
+    a = _ws(585, 1240, 560)
+    a.set(-1, None, 0.01, tilt=16.0, turn=0.3, ws_hands_front=3)
+    a.curl_door(-2.0, 1, (640, 700), dur=0.01, z=-8.0)
+    a.curl_door(-2.0, -1, (640, 860), dur=0.01, z=-8.0)
+    pen.fill(rect(30, 480, 1860, 580), '#141018')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(30, 480, 620, 580))
+    pen.fill(rect(30, 480, 620, 580), '#2a2018'); pen.glow(500, 700, 400, '#ffa030', 70)
+    CH.draw(pen, 'whistle', a.x0, a.y0, a.height, a.at(0.0), light=AMBER, t=0.0)
+    pen.fill(rect(30, 480, 610, 580), '#4a3c30'); pen.fill(rect(600, 480, 44, 580), '#d8cfb8')
+    CH.draw_whistle_hands(pen, a, 0.0, (1, -1), AMBER)
+    cv.restore()
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(660, 480, 600, 580))
+    pen.fill(rect(660, 480, 600, 580), '#0c0a10')
+    CH.draw_bust(pen, 'whistle', 960, 760, 0.62, CH.Pose(h_turn=0.1, ws_glitch=0.0, ws_slip=0.35), light=AMBER, t=0.3)
+    cv.restore()
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1270, 480, 620, 580))
+    pen.fill(rect(1270, 480, 620, 580), '#3a8acb')
+    CH.draw(pen, 'whistle94', 1580, 1040, 360, CH.Pose(turn=-0.2, ws_glitch=0.35), light=STUDIO, t=0.4)
+    cv.restore()
+    for x_, s_ in ((340, 'gloves curl round the frame, the head peeks'), (960, 'the frozen grin, slipping out of register'), (1580, 'the 1994 tape: a VHS tear')):
+        label(cv, s_, x_, 1050, 15)
+    save(surf, 'ws_mood')
+
+
+def _hat_red_white(img):
+    """Fraction of saturated red pixels and of red/white alternation in a picture of the hat region."""
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    red = ((hsv[:, :, 0] < 8) | (hsv[:, :, 0] > 172)) & (hsv[:, :, 1] > 120) & (hsv[:, :, 2] > 90)
+    return float(red.mean())
+
+
+def sheet_ws_limits():
+    """Proof that every hard limit is respected, with measurements."""
+    surf, cv, pen = canvas()
+    title(cv, 'MISTER WHISTLESTOP: the hard limits, checked', 'original design: an archetype only (tall cat, top hat, gloves, bow tie); none of the protected specifics')
+    # hat close-ups from 3 views
+    for i, yw in enumerate((0.0, 0.6, -1.2)):
+        cv.save(); cv.clipRect(skia.Rect.MakeXYWH(30 + i * 300, 120, 290, 520))
+        pen.fill(rect(30 + i * 300, 120, 290, 520), '#232633')
+        CH.draw_bust(pen, 'whistle', 175 + i * 300, 600, 0.32, CH.Pose(h_turn=yw), light=AMBER, t=0.0)
+        cv.restore()
+    label(cv, 'hat: faded yellow, TWO DIAGONAL black bands from every side', 465, 665, 15)
+    # bow tie + pin close-up
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(960, 120, 440, 520))
+    pen.fill(rect(960, 120, 440, 520), '#232633')
+    CH.draw_bust(pen, 'whistle', 1180, 170, 1.0, CH.Pose(), light=AMBER, t=0.0)
+    cv.restore()
+    label(cv, 'BLACK bow tie, red STOP-sign pin (the only red)', 1180, 665, 15)
+    # glove: 4 segments per finger (two gloves: open, and curled round an edge)
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1420, 120, 470, 520))
+    pen.fill(rect(1420, 120, 470, 520), '#232633')
+    for k, (shape, cx, cy, roll) in enumerate((('flat', 1540, 330, 0.0), ('curl', 1770, 470, 0.0))):
+        a = _ws(0, 0, 2600)
+        a.set(-1, None, 0.01, turn=0.15, ws_lrest='host', hl_shape=shape, ws_lroll=roll)
+        hx, hy = a.where(0.0, 'hand_l')
+        a.place(cx - hx, cy - hy)
+        CH.draw_whistle_hands(pen, a, 0.0, (1,), AMBER, detail=2)
+    cv.restore()
+    label(cv, 'white glove: 4 segments per finger', 1655, 665, 15)
+    # colour swatches and the measured checks
+    sw = [('hat', '#c49f3f'), ('bands', '#1d1a16'), ('body fur (tabby)', '#7a6a55'), ('stripes', '#5a4c3d'), ('mask', '#ebe4d0'),
+          ('jacket', '#a88a3a'), ('bow tie', '#141212'), ('STOP pin', '#b3241e'), ('lanyard', '#e07a1f'), ('gloves', '#e2ded2')]
+    for i, (n, c) in enumerate(sw):
+        x = 40 + i * 186
+        pen.fill(rrect(x, 700, 170, 60, 6), c); pen.line(rrect(x, 700, 170, 60, 6), 2, '#000000')
+        label(cv, n, x + 85, 785, 13)
+    # measure: render the full figure in 6 views and count red pixels outside the pin
+    reds = []
+    for yw in (0.0, 0.5, 1.0, 1.5, 2.0, -0.5):
+        s2, c2, p2 = canvas(480, 270, (26, 28, 36))
+        CH.draw(p2, 'whistle', 960, 1040, 900, CH.Pose(turn=yw), t=0.0, detail=2)
+        im = s2.makeImageSnapshot().toarray()[:, :, :3]
+        reds.append(_hat_red_white(im))
+    set_render_size(1920, 1080)
+    checks = ['no red-and-white stripes: red pixels in 6 views %.3f %% max (the pin only)' % (100 * max(reds)),
+              'hat bands helical: they slant on every side (never horizontal), no stripes on the brim',
+              'bow tie black; body fur grey-brown tabby (never black); off-white mask only on the face',
+              'no rhyming verse, no fish, no helper creatures, no umbrella or balancing tricks, no Seuss names or words',
+              'his own props: whistle on orange lanyard, ticket punch, clipboard watchlist (Sat alone), a stolen walkie',
+              'grin painted and frozen (never lip-syncs); no blinking painted pupils, his left one higher; punch hole in the left ear']
+    for i, s_ in enumerate(checks):
+        text(cv, ('OK  ' + s_), 60, 850 + i * 34, 700, 19, '#b8f0b0', 255, 0.0, 'left')
+    save(surf, 'ws_limits')
+    return reds
+
+
+def sheet_ws_states():
+    surf, cv, pen = canvas()
+    title(cv, 'MISTER WHISTLESTOP: every state the script needs', 'each cell is the rig at that beat (see the acting clips for the motion)')
+    cells = [
+        ('1994 host', dict(who='whistle94', turn=-0.15, ws_lrest='host', ws_rrest='host'), STUDIO, '#3a8acb'),
+        ('unfolding: 30 %', dict(ws_unfold=0.3, turn=0.4), AMBER, None),
+        ('unfolding: 70 %', dict(ws_unfold=0.7, turn=0.4), AMBER, None),
+        ('tape skip (tear)', dict(ws_glitch=0.8, turn=0.1), AMBER, None),
+        ('bent double, hat crushed', dict(ws_ceil=235.0, ws_bend=1.0, ws_crouch=0.4, turn=0.3), AMBER, None),
+        ('head turned backwards', dict(turn=1.0, h_turn=2.0), AMBER, None),
+        ('clipboard (roll call)', dict(turn=-0.3, ws_lrest='clip', hl_prop='ws_clipboard', hl_shape='clip'), AMBER, None),
+        ('the whistle (fweet-fweet)', dict(turn=0.2, ws_whistle=1.0, ws_blow=1.0), AMBER, None),
+        ('walkie to the grin', dict(turn=-0.2, ws_rrest='mouth', hr_prop='walkie', hr_shape='hold'), AMBER, None),
+        ('down, and down (the lure)', dict(turn=-0.6, ws_bend=1.25, ws_crouch=0.5, ws_lrest='chest'), AMBER, None),
+        ('defeat: the grin slips', dict(ws_slip=0.85, ws_glitch=0.3, turn=0.0), AMBER, None),
+        ('rewinding away', dict(ws_rewind=0.6, ws_slip=1.0, turn=0.0), AMBER, None),
+    ]
+    cols, cw, ch = 6, 320, 470
+    for i, (lb, d, lt, bg) in enumerate(cells):
+        c_, r_ = i % cols, i // cols
+        x0, y0 = c_ * cw, 115 + r_ * ch
+        pen.fill(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), bg or '#1c1a20')
+        d = dict(d); who = d.pop('who', 'whistle')
+        P = CH.Pose(**d)
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
-        fn(x0, y0)
+        CH.draw(pen, who, x0 + cw / 2, y0 + ch - 50, 290, P, light=lt, t=0.5)
+        if 'ws_ceil' in d: pen.fill(rect(x0 + 4, y0 + ch - 50 - 235 * 290 / 244 - 8, cw - 8, 8), '#8a8a8a')
         cv.restore()
-        pen.fill(rect(x0 + 4, y0 + ch - 34, cw - 8, 30), '#000000', 150)
-        label(cv, lb, x0 + cw / 2, y0 + ch - 13, 14)
-    def p0(x0, y0):
-        y = y0 + ch - 40; ppm = 150.0
-        pen.fill(rect(x0, y, cw, 40), '#5a5a4a')
-        _chair(pen, x0 + 240, y, ppm, front=True)
-        a = _later(x0 + 240, y, ppm, 'plastic', turn=0.2, h_tilt=12.0)
-        CH.draw(pen, 'later', x0 + 240, y, a.height, a.at(1.0), t=1.0, light=FLUO)
-    def p1(x0, y0):
-        y = y0 + ch - 40; ppm = 140.0
-        pen.fill(rect(x0, y, cw, 40), '#5a5a4a')
-        seat = _chair(pen, x0 + 240, y, ppm, 'armchair')
-        a = _later(x0 + 240, y, ppm, 'armchair', turn=0.0, h_tilt=8.0)
-        CH.draw(pen, 'later', x0 + 240, y, a.height, a.at(1.0), t=1.0, light=FLUO)
-    def p2(x0, y0):
-        y = y0 + ch - 60; ppm = 95.0
-        pen.linear(rect(x0, y0, cw, ch), 0, y0, 0, y0 + ch, [(0, '#05070e'), (1, '#121624')])
-        lx = x0 + 180
-        pen.line(poly([(lx, y), (lx, y - 300), (lx + 40, y - 306)], False), 5, '#2a2c32')
-        pen.glow(lx + 50, y - 300, 160, '#cfe0ff', 110)
-        pen.fill(rect(x0 + 230, y - 0.46 * ppm - 4, 150, 8), '#3a3226')
-        a = _later(x0 + 300, y, ppm, 'bench', knee=1.1, turn=-0.4, h_turn=0.3, h_tilt=-10.0)
-        CH.draw_later_far(pen, x0 + 300, y, a.height, a.at(1.0), t=1.0, lamp=(lx + 50, y - 300), flicker=1.0)
-    def p3(x0, y0):
-        y = y0 + ch - 40; ppm = 150.0
-        roof = y - 1.18 * ppm
-        pen.fill(rect(x0, y0, cw, ch), '#1a1c22'); pen.fill(rect(x0, y0, cw, roof - y0), '#2a2c34')
-        pen.fill(rrect(x0 + 120, y - 0.30 * ppm - 4, 260, y - (y - 0.30 * ppm), 8), '#45454c')
-        a = CH.Acting('later', seed=4, height=CH.height_px('later', ppm)).place(x0 + 240, y)
-        a.perch(y - 0.30 * ppm, 'car'); a.bend_to_roof(roof); a.face(0.0, 0.0)
-        CH.draw(pen, 'later', x0 + 240, y, a.height, a.at(1.0), t=1.0, light=NIGHT)
-    def p4(x0, y0):
-        y = y0 + ch - 40; ppm = 110.0
-        pen.fill(rect(x0, y, cw, 40), '#5a5a4a')
-        _chair(pen, x0 + 90, y, ppm, 'armchair')
-        mx = x0 + 400
-        pen.line(poly([(mx, y), (mx, y - 1.1 * ppm)], False), 4, '#6a6e76'); pen.fill(rrect(mx - 12, y - 1.4 * ppm, 24, 0.3 * ppm, 4), '#c0392f')
-        a = _later(x0 + 90, y, ppm, 'armchair', hands=('lap', 'floor'), turn=0.6, h_turn=-0.1)
-        a.reach_far(0.0, -1, (mx, y - 1.19 * ppm), dur=0.5, shape='pinch', arc=0.0)
-        CH.draw(pen, 'later', x0 + 90, y, a.height, a.at(1.0), t=1.0, light=FLUO)
-    def p5(x0, y0):
-        y = y0 + ch - 40; ppm = 120.0
-        pen.fill(rect(x0, y, cw, 40), '#4a5640')
-        a = _later(x0 + 110, y, ppm, 'plastic', hands=('lap', 'floor'), turn=0.5, h_turn=-0.2, h_tilt=12.0)
-        a.offer(-1.0, -1, (x0 + 400, y - 1.15 * ppm), dur=0.1, text_='MILO')
-        _chair(pen, x0 + 110, y, ppm)
-        CH.draw(pen, 'later', x0 + 110, y, a.height, a.at(1.0), t=1.0, light=FLUO)
-        m = CH.Ctx(pen, skia.Matrix(), 3.0)
-        tx, ty = a.where(1.0, 'tips_r')
-        # close-up callout: a ring round his fingertips, a framed inset of the ticket they hold
-        pen.fill(rrect(x0 + 286, y0 + 36, 142, 160, 10), '#2c3326')
-        pen.line(rrect(x0 + 286, y0 + 36, 142, 160, 10), 2, '#ffd479', 220)
-        CH._dl_ticket(m, x0 + 360, y0 + 120, -8.0, 16.0, 'MILO', 2)
-        pen.line(oval(tx, ty, 22), 2, '#ffd479', 220)
-        pen.line(poly([(tx - 8, ty - 22), (x0 + 330, y0 + 196)], False), 2, '#ffd479', 220)
-        text(cv, 'close-up', x0 + 357, y0 + 214, 700, 13, '#ffd479', 230, 0.02, 'center')
-    def p6(x0, y0):
-        a = CH.Acting('later', seed=6, height=CH.height_px('later', 380.0)).place(900, FLOOR)
-        a.perch(None, 'plastic'); a.face(0.3, -0.2)
-        P = a.at(1.0); P.dl_flinch = 0.9
-        CH.draw_bust(pen, 'later', x0 + 240, y0 + 260, 0.34, P, t=1.0, light=FLUO)
-    def p7(x0, y0):
-        y = y0 + ch - 40; ppm = 230.0
-        pen.fill(rect(x0, y, cw, 40), '#c8d0d4'); pen.fill(rect(x0, y0, cw, y - y0), '#dfe8ee')
-        for i, xx in enumerate((x0 + 140, x0 + 330)):
-            _chair(pen, xx, y, ppm, facing=1.0, rock=CH.chair_rock(0.45, 0.0, 5.0) if i else 0.0, c='#5a7a9a')
-    for i, (bg, fn, lb) in enumerate((('#7d8a6a', p0, 'folded in a plastic waiting-room chair'), ('#7d8a6a', p1, 'in Grandpa\'s armchair: knees above his head'),
-                                       ('#0a0c12', p2, 'far: the bus-stop bench, the flickering light'), ('#1a1c22', p3, 'the back seat: head bent against the roof'),
-                                       ('#7d8a6a', p4, 'reaching across the room (the arm unfolds)'), ('#5a6a4a', p5, 'the ticket between two long fingers'),
-                                       ('#5a6a4a', p6, 'flinching from a question, as if from light'), ('#dfe8ee', p7, 'gone: the empty chair still rocking (chair_rock)'))):
-        panel(i, bg, fn, lb)
-    save(surf, 'later_states')
+        pen.fill(rect(x0 + 4, y0 + ch - 36, cw - 8, 32), '#000000', 150)
+        label(cv, lb, x0 + cw / 2, y0 + ch - 14, 15)
+    save(surf, 'ws_states')
 
 
-def sheet_later_tape():
-    surf, cv, pen = canvas(bg=(60, 70, 52))
-    title(cv, 'DOCTOR LATER: THE TAPE AND THE FACES UNDER IT',
-          'Top: a few strips of old tape, one thin gap, two pale patient eyes; each question loosens a strip (pose.dl_tape 1 -> 0, 5 strips: cone first, face last). Bottom: the faces under it (pose.dl_face 0..5)')
-    a = CH.Acting('later', seed=7, height=CH.height_px('later', 380.0)).place(900, FLOOR)
-    a.perch(None, 'plastic'); a.face(0.12, -0.08); a.set(-1, None, 0.01, h_tilt=16.0)
-    P0 = a.at(1.0)
-    tapes = (1.0, 0.875, 0.75, 0.625, 0.375, 0.0)                  # all 8 on; 1, 2, 3 off (the face's); 5 off; all off
-    cw = 1920 / 6
-    for i, tp in enumerate(tapes):
-        P = P0.copy(); P.dl_tape = tp
-        cv.save(); cv.clipRect(skia.Rect.MakeXYWH(i * cw + 4, 110, cw - 8, 470))
-        pen.fill(rect(i * cw + 4, 110, cw - 8, 470), '#4a5640')
-        CH.draw_bust(pen, 'later', i * cw + cw / 2 - 12, 478, 0.175, P, t=1.0, light=FLUO)
-        cv.restore()
-        label(cv, 'dl_tape %.3f' % tp, i * cw + cw / 2, 600, 14)
-    names = ('his own face', 'Grandpa, gray and patient', 'a man I never saw', 'a little girl', 'my grandmother', '...me')
-    for i in range(6):
-        P = P0.copy(); P.dl_tape = 0.2 if i == 0 else 0.0; P.dl_face = float(i)        # the face's strips go last, on the first face
-        cv.save(); cv.clipRect(skia.Rect.MakeXYWH(i * cw + 4, 620, cw - 8, 420))
-        pen.fill(rect(i * cw + 4, 620, cw - 8, 420), '#4a5640')
-        CH.draw_bust(pen, 'later', i * cw + cw / 2, 900, 0.36, P, t=1.0, light=FLUO)
-        cv.restore()
-        label(cv, names[i], i * cw + cw / 2, 1062, 14)
-    save(surf, 'later_tape')
+def sheet_ws_head():
+    items = []
+    for yw, lb in ((0.0, 'front'), (0.4, '3/4'), (1.0, 'profile'), (1.6, 'behind 3/4'), (2.0, 'back'), (-0.4, '3/4 left')):
+        items.append(('whistle', dict(h_turn=yw), lb, AMBER))
+    for sl, lb in ((0.3, 'slip 30 %'), (0.7, 'slip 70 %'), (1.0, 'slip 100 %')):
+        items.append(('whistle', dict(ws_slip=sl), lb, AMBER))
+    items += [('whistle', dict(h_tilt=-16.0, ws_bob=0.6), 'talk bob (no jaw)', AMBER), ('whistle94', dict(), '1994 tape', STUDIO),
+              ('whistle', dict(h_nod=0.5, h_turn=0.3), 'looking down at you', AMBER)]
+    _faces('ws_head', items, 'MISTER WHISTLESTOP: the head', 'painted grin (never moves), painted pupils (his left one higher, never blink), punch hole in the left ear; the VHS slip only at the defeat', cols=6)
 
 
 def sheet_lineup():
     surf, cv, pen = canvas()
-    title(cv, 'THE DOCTOR FILM CAST: TO SCALE', 'Draw each one with height = CH.height_px(who, px_per_m) at the same depth; Doctor Later is 2.9 m standing (folded here on a 45 cm chair)')
-    y = 960; floor(pen, y)
-    ppm = 330.0
-    whos = [('later', 'DOCTOR LATER'), ('ruth', 'RUTH (70s)'), ('narr14', 'THE NARRATOR (14)'), ('milo', 'MILO (7)'), ('mom_rn', 'MOM (NURSE)'),
-            ('halverson', 'DR ANNA HALVERSON'), ('halverson_rain', '...AT 3:40 AM'), ('grandpa79', 'GRANDPA, 1979'), ('ruth79', 'RUTH, 1979')]
-    for i, (who, lb) in enumerate(whos):
-        x = 1920 / (len(whos) + 1) * (i + 1) + (-2 if i == 0 else 30 + 25 * (len(whos) - i) / len(whos))
-        if who == 'later':
-            _chair(pen, x, y, ppm, front=True)
-            a = _later(x, y, ppm, 'plastic', turn=0.25, h_tilt=8.0)
-            CH.draw(pen, 'later', x, y, a.height, a.at(1.0), t=1.0, detail=2)
-            label(cv, lb, x, y + 40); label(cv, '2.90 m standing', x, y + 64, 14, '#9aa3b8')
-            continue
-        CH.draw(pen, who, x, y, CH.height_px(who, ppm), CH.Pose(turn=0.12 if i % 2 else -0.12), t=0.4, detail=2)
-        label(cv, lb, x, y + 40)
-        label(cv, '%.2f m' % CH.CAST[who]['m'], x, y + 64, 14, '#9aa3b8')
+    title(cv, 'The cast to scale (same depth)', 'Whistlestop 2.44 m (+ hat), Della 1.63, Mina 1.57, new girl 1.42, Theo 1.38, 1994 kids 1.30, Sami 1.16')
+    ppm = 250.0
+    ids = [('whistle', 0.0), ('della', 0.3), ('mina', 0.2), ('new_girl', -0.2), ('theo', 0.2), ('theo_color', -0.2), ('kid94_a', 0.1),
+           ('kid94_b', -0.1), ('kid94_c', 0.1), ('sami', 0.25), ('sami_torn', 1.5)]
+    floor(pen, 1000)
+    for i, (w, yw) in enumerate(ids):
+        x = 110 + i * 170
+        CH.draw(pen, w, x, 1000, CH.height_px(w, ppm), CH.Pose(turn=yw), light=MORN, t=0.3)
+        label(cv, w, x, 1040, 14, '#9aa3b8')
+    for m in (1.0, 2.0, 3.0):
+        y = 1000 - m * ppm
+        pen.line(poly([(0, y), (1920, y)], False), 1, '#3a3e4a')
+        text(cv, '%.0f m' % m, 1880, y - 4, 600, 12, '#7a8296', 255, 0.0, 'right')
     save(surf, 'lineup')
 
 
-def sheet_lineup2():
-    surf, cv, pen = canvas()
-    title(cv, 'THE HOSPITAL, THE WAITING ROOM, LATER: TO SCALE', 'The ER (warm, competent, kind); the waiting room\'s people (grey, still); Milo in the ER and at 22; the narrator at 29')
-    y = 960; floor(pen, y)
-    ppm = 330.0
-    whos = [('er_nurse', 'ER NURSE'), ('er_doctor', 'ER DOCTOR'), ('medic', 'PARAMEDIC'), ('medic2', 'PARAMEDIC 2'), ('cardio', 'CARDIOLOGIST'),
-            ('chest_man', 'MAN, CHEST PAIN'), ('milo_er', 'MILO, ER'), ('milo_jeans', 'MILO, DINO JEANS'), ('milo22', 'MILO AT 22'), ('narr29', 'ME AT 29'),
-            ('ghost_chest', 'WAITING: CHEST'), ('ghost_side', 'WAITING: SIDE'), ('ghost_teen', 'WAITING: ARM'), ('ghost_girl', 'WAITING: GIRL'), ('grandpa_ghost', 'GRANDPA, LAST ROW')]
-    for i, (who, lb) in enumerate(whos):
-        x = 1920 / (len(whos) + 1) * (i + 1)
-        CH.draw(pen, who, x, y, CH.height_px(who, ppm * 0.92), CH.Pose(turn=0.12 if i % 2 else -0.12, **({'eye_open': 0.86, 'still': 1.0} if 'ghost' in who else {})), t=0.4, detail=2)
-        label(cv, lb, x, y + 40, 12)
-    save(surf, 'lineup2')
+def sheet_turn_people():
+    _turn('turn_family', [('mina', MORN), ('della', MORN), ('sami', MORN)], 'Mina, Grandma Della, Sami: turnaround',
+          'Mina: low ponytail, oversized hoodie over pajamas. Della: knit cap, glasses on a cord, navy driver jacket (DELLA). Sami: dinosaur pajamas, hood, tail', ppm=230.0)
+    _turn('turn_others', [('theo', MORN), ('theo_color', MORN), ('new_girl', MORN)], 'Theo (faded, then in colour) and the new girl: turnaround',
+          'Theo: yellow raincoat, 1994; nobody sees him until three o\'clock. The new girl: a hair clip, a plain backpack with no name', ppm=250.0)
 
 
-def sheet_turn_family():
-    _turn('turn_family', [('ruth', None), ('narr14', None), ('milo', None)], 'RUTH, THE NARRATOR (14), MILO: TURNAROUNDS',
-          'Ruth: set silver curls, reading glasses on a chain, buttoned cardigan; the narrator: neither clearly a boy nor a girl; Milo: dinosaur pajamas')
-    _turn('turn_doctors', [('halverson', None), ('halverson_rain', None), ('mom_rn', None)], 'DOCTOR HALVERSON, MOM: TURNAROUNDS',
-          'Halverson: coffee-stained blue scrubs, dinosaur stickers on her badge, a watch; at 3:40 AM a raincoat, hair soaked flat; Mom: night-shift nurse')
-
-
-def sheet_faces_ruth():
-    _faces('faces_ruth', [
-        ('ruth', P_('stern'), 'stern (as always)'), ('ruth', P_('stern', h_turn=0.3, look_x=0.4), 'tapping the yellow card'),
-        ('ruth', P_('stern_afraid', h_turn=-0.2), 'by the phone, already waiting'), ('ruth', P_('angry', h_turn=0.2, m_open=0.3), '"Don\'t you dare tell me"'),
-        ('ruth', P_('set_jaw', h_turn=0.3), 'pulling the cord out'), ('ruth', P_('stern_afraid', h_nod=0.15), 'the receiver down, like a baby'),
-        ('ruth', P_('stern', h_turn=-0.35, m_open=0.2), '"Doctors don\'t make house calls"'), ('ruth', P_('stern_afraid', hum=1.0, m_press=0.5, h_tilt=7), 'rocking Milo, humming'),
-        ('ruth', P_('stern_afraid', wide=0.6, m_open=0.3, h_turn=0.2), '"How do you know what the voice said?"'), ('ruth', P_('grief_still', h_nod=0.25), 'staring at the burned paper'),
-        ('ruth_sick', P_('pale_hidden', h_turn=0.25, specs=0.0), 'sunrise: chest pains, says nothing'), ('ruth', P_('asking', h_turn=0.3, smile=0.3), 'asking her cardiologist everything'),
-    ], 'GRANDMA RUTH (70s): FACES', 'Stern and neat, frightened underneath; the reading glasses go on and off their chain (pose.specs)', WARM)
-
-
-def sheet_faces_milo():
-    _faces('faces_milo', [
-        ('milo', P_(None), 'Milo'), ('milo', P_('kid_grin', h_turn=0.3), 'his favourite dinosaur'), ('milo', P_('thirsty'), 'thirsty all the time'),
-        ('milo', P_('sleepy', h_tilt=-10), 'falling asleep everywhere'), ('milo', P_('brave', h_turn=0.4), 'brave (the blood test)'),
-        ('milo_sick', P_('thirsty', m_open=0.3), '"I\'m so thirsty" (cracked lips)'), ('milo_sick', P_('fear', h_turn=0.2), 'the hand over his mouth'),
-        ('milo_sick', P_('dazed', m_open=0.25, breath=1.2), 'breathing deep and fast'), ('milo_sick', P_('dazed', look_x=0.3), '"Who are you?"'),
-        ('milo_er', P_('sleepy'), 'the ER: fluids, insulin'), ('milo_er', P_('kid_grin'), 'he smiles'), ('milo22', P_('kind_smile', h_turn=0.3), 'Milo at 22'),
-    ], 'MILO (7) AND MILO AT 22: FACES', 'A seven-year-old with a light-brown mop and big brown eyes; sick: cracked lips, the eyes too big for his face')
-
-
-def sheet_faces_narrator():
-    _faces('faces_narrator', [
-        ('narr14', P_(None), 'neutral'), ('narr14', P_('fear', h_turn=0.3), 'listening at the receiver'), ('narr14', P_('shock_shut', h_turn=-0.2), 'the pen click in the hall'),
-        ('narr14', P_('fear', h_turn=-1.6), 'at the peephole (from behind)'), ('narr14', P_('asking', m_open=0.4), '"Grandma, that\'s what the voice told you"'),
-        ('narr14', P_('terror'), 'the waiting room'), ('narr14', P_('asking', m_open=0.5, m_round=0.3), '"What did you find?"'),
-        ('narr14', P_('asking_hard', m_open=0.55), '"Who are you?" (growing force)'), ('narr14', P_('determined', h_turn=0.25), 'pulling free'),
-        ('narr14', P_('relief', h_turn=0.2), 'he lived'), ('narr29', P_('tired_kind', h_turn=0.3), 'at 29: nineteen hours awake'),
-        ('narr29', P_('kind_smile', h_turn=-0.2), '"Ask what we found."'),
-    ], 'THE NARRATOR (14, AND 29): FACES', 'Neither clearly a boy nor a girl: a shaggy cut with curtain bangs, a soft jaw, warm hazel eyes; at 29 the same face, tired and kind')
-
-
-def sheet_faces_halverson():
-    _faces('faces_halverson', [
-        ('halverson', P_('kind_smile'), 'knows every kid\'s favourite dinosaur'), ('halverson', P_('careful_smile', h_turn=0.3), 'her smile goes careful'),
-        ('halverson', P_('kind_smile', h_turn=-0.3, m_open=0.3), '"Day or night. I mean it."'), ('halverson', P_('exhausted', h_turn=0.2), '3 AM, nineteen hours awake'),
-        ('halverson_rain', P_('pleading'), 'at the door, pleading'), ('halverson_rain', P_('pleading', m_open=0.35), '"This can\'t wait."'),
-        ('halverson_rain', P_('set_jaw', h_nod=0.2), 'writing in marker'), ('halverson_rain', P_('exhausted', h_turn=0.4), 'in her car, calling again'),
-        ('halverson_rain', P_('focused', h_turn=0.3), '"One-forty. Fast. That\'s okay."'), ('halverson_rain', P_('kind_smile', m_open=0.3), '"Questions are how we win."'),
-        ('halverson_rain', P_('set_jaw', look_y=-0.5), 'she sees him in the mirror'), ('halverson_rain', P_('fierce_kind', m_open=0.25), '"Not tonight. Not on my shift."'),
-    ], 'DOCTOR ANNA HALVERSON: FACES', 'Kind, quick, tired; freckles, a messy bun (soaked flat in the rain); the heroes of this film are drawn warm and competent', WARM)
-
-
-def sheet_faces_others():
-    _faces('faces_others', [
-        ('mom_rn', P_('warm'), 'Mom, night shift'), ('mom_rn', P_('set_jaw', h_turn=0.3), 'running with the wheelchair'), ('mom_rn', P_('calm_firm', m_open=0.3), '"You don\'t wait. You call."'),
-        ('er_nurse', P_('calm_firm', h_turn=0.3, m_open=0.3), '"Sir, you don\'t wait."'), ('er_doctor', P_('kind_smile', h_turn=-0.2), 'ER doctor'),
-        ('cardio', P_('kind_smile', h_turn=0.3), 'the cardiologist (coffee)'), ('chest_man', P_('stern_afraid', h_turn=0.3), 'the man holding his chest'),
-        ('ruth79', P_('stern_afraid'), 'Ruth, 1979: on hold'), ('ruth79', P_('warm', h_turn=0.3), 'bringing the coffee'),
-        ('grandpa79', P_('stern_afraid', h_turn=-0.3), 'Grandpa, chest pain'), ('grandpa79', P_(None, lid_l=1, lid_r=1, still=1, h_tilt=9, h_nod=0.14), 'at sunrise (gently gone)'),
-        ('grandpa_ghost', P_('waiting'), 'the last row, gray and patient'),
-    ], 'MOM, THE ER, 1979, THE WAITING ROOM: FACES', 'The people who answer at three in the morning; 1979; the grey, still people who decided it could wait')
-
-
-def sheet_mouths():
-    surf, cv, pen = canvas()
-    title(cv, 'MOUTH SHAPES (LIP SYNC ON CHARACTER LINES ONLY)', 'a.talk([(t0, t1, text)]) maps letters to these shapes; nobody\'s lips move on the narrator\'s lines; Doctor Later never lip-syncs (his mouth is under the tape)')
-    vis = ['rest', 'M', 'F', 'L', 'E', 'I', 'A', 'O', 'U']
-    whos = ['ruth', 'halverson_rain', 'narr14', 'milo']
-    cw = 1920 / len(vis); ch = 230
-    for r, who in enumerate(whos):
-        for i, v in enumerate(vis):
-            o, wd, rd, te, pr = CH.VISEMES[v]
-            P = CH.Pose(m_open=o, m_wide=wd, m_round=rd, teeth=te, m_press=pr)
-            x = cw * i + cw / 2; y = 150 + r * ch + 95
-            CH.draw_head(pen, who, x, y, 170, P, detail=2, t=0.5)
-            if r == 0: label(cv, v, x, 128, 18, '#ffd479')
-        label(cv, who.upper(), 70, 150 + r * ch + 200, 15, '#9aa3b8')
-    save(surf, 'mouths')
+def sheet_faces():
+    _faces('faces_mina', [('mina', P_(e), e, AMBER) for e in ('neutral', 'kind_smile', 'guilt', 'fear', 'hush_fear', 'resolve', 'shock',
+                                                             'terrified_call', 'tempted', 'brave', 'kind_ask', 'relief')],
+           'Mina: expressions per beat', 'fear, resolve, guilt (the post, the boy she never asked), kindness (the new girl)')
+    _faces('faces_sami', [('sami', P_(e), e, MORN) for e in ('neutral', 'proud_grin', 'shout_here', 'sleepy', 'dazed', 'shock', 'fear',
+                                                            'cry', 'relief', 'terrified_call', 'kind_smile', 'hush_fear')],
+           'Sami: expressions per beat', 'a proud rule-follower: his mouth answers before his head does ("HERE!")')
+    _faces('faces_della', [('della', P_(e), e, MORN) for e in ('warm', 'calm_firm', 'set_jaw', 'stern_afraid', 'shout', 'fear', 'grim_drive',
+                                                              'shock', 'tender', 'whisper', 'sad', 'kind_smile')],
+           'Grandma Della: expressions per beat', 'warm, firm, frightened underneath; 32 years a school-bus driver: "Brakes, mirrors, names"')
+    _faces('faces_others', [('theo', P_('lonely'), 'Theo lonely', MORN), ('theo', P_('kind_smile'), 'Theo "Hi, Mina"', MORN),
+                            ('theo', P_('hush_fear'), 'Theo, the glove', AMBER), ('theo_color', P_('brave'), 'Theo "Theo."', AMBER),
+                            ('theo_color', P_('shout_here'), 'Theo "HERE!"', AMBER), ('theo_color', P_('tender'), 'Theo, seen', MORN),
+                            ('new_girl', P_('lonely'), 'new girl alone', MORN), ('new_girl', P_('kind_smile'), 'new girl, asked', MORN),
+                            ('kid94_a', P_('proud_grin'), '1994 kid', STUDIO), ('kid94_b', P_('proud_grin'), '1994 kid', STUDIO),
+                            ('kid94_c', P_('kind_smile'), '1994 kid', STUDIO), ('mina', P_('tender'), 'Mina, sorry', MORN)],
+           'Theo, the new girl, the 1994 kids', 'Theo stays faded and desaturated until three o\'clock; then full colour')
 
 
 def sheet_props():
     surf, cv, pen = canvas()
-    title(cv, 'PROPS (ONE SCALE, IN CENTIMETRES)', 'Held props sit in the gripping hand (PROPS3); on a surface draw_prop3(pen, name, x, y, px_per_cm) draws the same size; the coiled cord, wheelchair and steering wheel are helpers')
+    title(cv, 'Props (same size in a hand and on a surface)', 'cm scale 1:1 at 9 px/cm')
     ppc = 9.0
-    items = ['receiver', 'card', 'card_back', 'match', 'match_lit', 'matchbox', 'marker', 'ticket', 'bottle', 'mug', 'cup', 'vial', 'cell', 'cell_glucose', 'keys']
-    for i, nm in enumerate(items):
-        x = 90 + i * 125; y = 400
-        P = CH.Pose(); P.dl_ticket = 'MILO'
-        CH.draw_prop3(pen, nm, x, y, ppc, 0.0, 2, 0.4, pose=P)
-        label(cv, nm, x, 590, 14, '#9aa3b8')
-    CH.draw_prop3(pen, 'note', 160, 640, 9.0 * 0.8, 0.0, 2, 0.4); label(cv, 'note (results + marker)', 160, 1000, 14, '#9aa3b8')
-    CH.draw_coil_cord(pen, 420, 700, 760, 820, 9.0, 0.3, 0.0); label(cv, 'draw_coil_cord', 590, 900, 14, '#9aa3b8')
-    h, s = CH.draw_wheelchair(pen, 1050, 1000, 4.0, 1.0); label(cv, 'draw_wheelchair (returns the handles)', 1050, 1040, 14, '#9aa3b8')
-    pen.fill(oval(h[0], h[1], 6), '#ffd479')
-    g10, g2 = CH.draw_steering_wheel(pen, 1440, 800, 130); label(cv, 'draw_steering_wheel (hands at 10 and 2)', 1440, 1000, 14, '#9aa3b8')
-    for g in (g10, g2): pen.fill(oval(g[0], g[1], 6), '#ffd479')
-    for i, (txt, ink) in enumerate((('MILO', 1.0), ('RUTH', 1.0), ('', 0.0))):
-        m = CH.Ctx(pen, skia.Matrix(), 3.0)
-        CH._dl_ticket(m, 1760 + 0 * i, 640 + i * 120, -6 + 6 * i, 13.0, txt, 2, ink=ink)
-    label(cv, 'tickets: MILO, RUTH,', 1770, 985, 13, '#9aa3b8'); label(cv, 'Grandpa\'s (ink gone)', 1770, 1005, 13, '#9aa3b8')
+    items = [('walkie', 'walkie-talkie'), ('rex', 'Rex'), ('dino_pack', 'Sami\'s backpack'), ('backpack', 'new girl\'s backpack (no name)'),
+             ('ticket_y', 'his ticket (punched)'), ('punch', 'ticket punch'), ('name_card', '1994 name card'), ('tail_piece', 'torn tail'),
+             ('pencil', 'pencil'), ('keys', 'Della\'s keys'), ('maglite', 'flashlight'), ('cell', 'phone')]
+    for i, (n, lb) in enumerate(items):
+        x = 140 + (i % 6) * 300; y = 380 + (i // 6) * 420
+        CH.draw_prop3(pen, n, x, y, ppc)
+        label(cv, lb, x, y + 230, 15)
+    c = CH.Ctx(pen, skia.Matrix(), 3.0).sub(1780, 120, 0.0, 5.0)
+    c.lw = 0.6
     save(surf, 'props')
-
-
-def sheet_staging():
     surf, cv, pen = canvas()
-    title(cv, 'STAGING TOOLS: FEET ON THE FLOOR, HANDS ON TARGET, EYES ON TARGET',
-          'sit_on / seated keep the feet on the floor; perch (a high table: legs dangle); reach_to and look_at on world points; carry; take_pulse; receiver_to_ear(toward=); Doctor Later\'s reach')
-    y = 520; floor(pen, y, '#1f222b')
-    ppm = 200.0
-    # 1 Ruth sits in the armchair, feet on the floor
-    seat = y - 0.43 * ppm
-    pen.fill(rrect(160 - 70, seat - 4, 140, y - seat, 8), '#6a4a30'); pen.line(rrect(160 - 70, seat - 4, 140, y - seat, 8), 3)
-    a = CH.Acting('ruth', seed=1, height=CH.height_px('ruth', ppm)).place(160, y); a.face(0.6); a.seated(seat, hands='lap')
-    CH.draw(pen, 'ruth', 160, y, a.height, a.at(1.0), t=1.0); label(cv, 'seated (skirt drapes the knees)', 160, y + 30, 13, '#9aa3b8')
-    # 2 Milo perched on the exam table
-    top = y - 0.78 * ppm
-    pen.fill(rect(330, top - 4, 170, 14), '#e8eef0'); pen.line(rect(330, top - 4, 170, 14), 2)
-    m = CH.Acting('milo', seed=2, height=CH.height_px('milo', ppm)).place(410, top); m.face(0.5); m.set(-1, None, 0.01, perch=1.0, sit=1.0)
-    CH.draw(pen, 'milo', 410, top, m.height, m.at(1.0), t=1.0); label(cv, 'perch: legs dangle', 410, y + 30, 13, '#9aa3b8')
-    # 3 carry
-    n = CH.Acting('narr14', seed=3, height=CH.height_px('narr14', ppm)).place(640, y); n.face(1.0)
-    k = CH.Acting('milo_sick', seed=4, height=CH.height_px('milo', ppm)); k.face(-0.75)
-    n.carry(-1.0, k)
-    CH.draw_carry_child(pen, n, k, 1.0); label(cv, 'carry + draw_carry_child', 640, y + 30, 13, '#9aa3b8')
-    # 4 take_pulse
-    m2 = CH.Acting('milo_sick', seed=5, height=CH.height_px('milo', ppm)).place(980, y); m2.face(-0.5)
-    m2.reach(-1.0, None, 1, out=10.0, down=150.0, fwd=200.0, shape='relaxed', up=0.0, fade=0.01)
-    h = CH.Acting('halverson', seed=6, height=CH.height_px('halverson', ppm)).place(860, y); h.face(0.55)
-    h.take_pulse(-1.0, -1, m2, 1)
-    CH.draw(pen, 'milo_sick', 980, y, m2.height, m2.at(1.0), t=1.0); CH.draw(pen, 'halverson', 860, y, h.height, h.at(1.0), t=1.0)
-    label(cv, 'take_pulse (two fingers, the watch)', 920, y + 30, 13, '#9aa3b8')
-    # 5 receiver tilted toward the narrator
-    r = CH.Acting('ruth', seed=7, height=CH.height_px('ruth', ppm)).place(1180, y); r.face(0.5)
-    n2 = CH.Acting('narr14', seed=8, height=CH.height_px('narr14', ppm)).place(1360, y); n2.face(-0.55)
-    r.receiver_to_ear(-1.0, None, 1, tilt_out=1.0, toward=n2)
-    n2.look_at(-1.0, lambda t: r.grip_point(t, 1, 'receiver'), dur=0.1)
-    CH.draw(pen, 'narr14', 1360, y, n2.height, n2.at(1.0), t=1.0); CH.draw(pen, 'ruth', 1180, y, r.height, r.at(1.0), t=1.0)
-    label(cv, 'receiver_to_ear(toward=)', 1270, y + 30, 13, '#9aa3b8')
-    # 6 hand over mouth
-    m3 = CH.Acting('milo_sick', seed=9, height=CH.height_px('milo', ppm)).place(1700, y); m3.face(-0.5); m3.expr('fear', -1.0)
-    r2 = CH.Acting('ruth', seed=10, height=CH.height_px('ruth', ppm)).place(1580, y); r2.face(0.6); r2.hand_over(-1.0, 1, m3, 'mouth', dur=0.1)
-    CH.draw(pen, 'milo_sick', 1700, y, m3.height, m3.at(1.0), t=1.0); CH.draw(pen, 'ruth', 1580, y, r2.height, r2.at(1.0), t=1.0)
-    label(cv, 'hand_over(\'mouth\')', 1640, y + 30, 13, '#9aa3b8')
-    # bottom: Doctor Later reaches across the room and takes a wrist
-    y2 = 1010; floor(pen, y2, '#1b1e26')
-    ppm2 = 150.0
-    L = CH.Acting('later', seed=11, height=CH.height_px('later', ppm2)).place(220, y2); L.perch(None, 'armchair', hands=('lap', 'floor')); L.face(0.5)
-    N = CH.Acting('narr14', seed=12, height=CH.height_px('narr14', ppm2)).place(980, y2); N.face(-0.6)
-    N.reach(-1.0, None, 1, out=40.0, down=150.0, fwd=200.0, shape='open', up=0.0, fade=0.01)
-    L.take_wrist(-2.0, -1, N, 1, dur=0.5)
-    _chair(pen, 220, y2, ppm2, 'armchair')
-    CH.draw(pen, 'later', 220, y2, L.height, L.at(1.0), t=1.0); CH.draw(pen, 'narr14', 980, y2, N.height, N.at(1.0), t=1.0)
-    CH.draw_later_arm(pen, L, 1.0, -1)
-    wx, wy = N.where(1.0, 'wrist_l'); pen.fill(oval(wx, wy, 5), '#ffd479')
-    label(cv, 'Doctor Later: take_wrist (the arm unfolds to reach; draw_later_arm on top)', 600, y2 + 34, 13, '#9aa3b8')
-    L2 = CH.Acting('later', seed=13, height=CH.height_px('later', ppm2)).place(1330, y2); L2.perch(None, 'plastic'); L2.face(0.45)
-    tg = (1800, y2 - 1.2 * ppm2); L2.reach_far(-1.0, -1 if False else 1, tg, dur=0.1, shape='pinch')
-    _chair(pen, 1330, y2, ppm2, 'plastic', facing=1.0)
-    CH.draw(pen, 'later', 1330, y2, L2.height, L2.at(1.0), t=1.0)
-    pen.fill(oval(tg[0], tg[1], 7), '#ff5a6a', 220)
-    tp = L2.where(1.0, 'tips_l'); pen.fill(oval(tp[0], tp[1], 4), '#ffd479')
-    label(cv, 'reach_far: the pinch (yellow) on the target (red)', 1560, y2 + 34, 13, '#9aa3b8')
-    save(surf, 'staging')
+    title(cv, 'The broom and his clipboard watchlist', '')
+    CH.draw_prop3(pen, 'broom', 300, 160, 6.0, angle=0.0)
+    c = CH.Ctx(pen, skia.Matrix(), 3.0).sub(1100, 400, 0.0, 14.0); c.lw = 0.25
+    CH._ws_clipboard(c, 2, 0.0, None)
+    c = CH.Ctx(pen, skia.Matrix(), 3.0).sub(1600, 400, 0.0, 14.0); c.lw = 0.25
+    CH._ws_clipboard(c, 2, 0.0, CH.Pose(ws_write=0.7), new=True)
+    label(cv, 'the watchlist (most names crossed out)', 1100, 920, 16); label(cv, 'the new clipboard (a line drawn)', 1600, 920, 16)
+    save(surf, 'props2')
 
 
-SHEETS = dict(later_likeness=sheet_later_likeness, later_compare=sheet_later_compare, later_turn=sheet_later_turn, later_states=sheet_later_states,
-              later_tape=sheet_later_tape,
-              lineup=sheet_lineup, lineup2=sheet_lineup2, turn_family=sheet_turn_family, faces_ruth=sheet_faces_ruth,
-              faces_milo=sheet_faces_milo, faces_narrator=sheet_faces_narrator, faces_halverson=sheet_faces_halverson,
-              faces_others=sheet_faces_others, mouths=sheet_mouths, props=sheet_props, staging=sheet_staging)
+SHEETS = dict(ws_turn=sheet_ws_turn, ws_mood=sheet_ws_mood, ws_limits=sheet_ws_limits, ws_states=sheet_ws_states, ws_head=sheet_ws_head,
+              lineup=sheet_lineup, turn_people=sheet_turn_people, faces=sheet_faces, props=sheet_props)
 
 if __name__ == '__main__':
-    names = sys.argv[1:] or list(SHEETS)
+    names = [a for a in sys.argv[1:] if not a.startswith('--')] or list(SHEETS)
     for n in names: SHEETS[n]()

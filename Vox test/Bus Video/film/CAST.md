@@ -1,141 +1,88 @@
-# CAST: "If Your Doctor Calls At 3 AM... DON'T ASK WHAT THEY FOUND"
+# CAST: "If The School Bus Stops At Midnight... DON'T GET ON"
 
-The cast lives in `characters.py`. This film's cast and staging tools are in `characters_doctor.py`, which `characters.py`
-runs in its own namespace at import, after `characters_bunny.py`. Use everything as `import characters as CH`. The older
-casts (`mom`, `narrator`, `grandma`... of the Bunnyman film) are unchanged; this film's people have their own ids. The
-Bunnyman film's CAST.md is in the Bunnyman Video project.
+The cast lives in `characters.py`. This film's cast and staging tools are in `characters_bus.py`, which `characters.py`
+runs in its own namespace at import, after `characters_bunny.py` and `characters_doctor.py` (see `BUS_API`). Use
+everything as `import characters as CH`. The older casts are unchanged; this film's people have their own ids.
 
-- **Self-test:** `python3 characters.py --selftest` (about 30 s). It runs the older films' checks, then this film's:
-  every id in 6 views full and close, Doctor Later in 5 perches x 6 views with his feet on the floor, tape stages x faces,
-  his head in 8 views x 5 tape stages x 3 detail levels, the head's proportions (cone length : rim width 2.9, the head
-  under the rim no wider than the cone, a small face), the tape as a detail (at full tape it covers at most 10% of
-  the head in each of 8 views; 5 strips, none over 0.6 turn, the cone's low, the face's 2 last), his reach (pinch within 7 px of targets up to 1400 px away), the ticket tear, the tape
-  coming off monotonically (5 strips, the cone's first, the face's 2 last, one `tape_peel` event each), no lip sync for him, his palm on
-  the narrator's wrist (3 px), the handset pick-up (0.5 px jump), Ruth's palm on Milo's mouth, Halverson's fingers on
-  Milo's wrist, Ruth sitting down with her feet on the floor.
-- **Sheets:** `python3 tools/cast_sheets.py [names]` writes `_work/cast/*.jpg`: `later_likeness` (beside the owner's photo
-  and the fan drawing), `later_compare` (the same pose at the photo's size, both as thresholded silhouettes, the head ten
-  times larger with its values in three levels, our outline over the photo, the measured widths), `later_turn`,
-  `later_states`, `later_tape`, `lineup`, `lineup2`, `turn_family`, `turn_doctors`,
-  `faces_ruth`, `faces_milo`, `faces_narrator`, `faces_halverson`, `faces_others`, `mouths`, `props`, `staging`.
-- **Acting clips:** `python3 tools/cast_clips.py [names] [--fps 60] [--strip-only] [--review]` writes 46 clips at 960x540
-  to `_work/cast/clips/<name>.mp4`, each with an 8-frame `<name>_strip.jpg`; `clips.json` (or `$CLIPS_JSON`) holds each
-  clip's sound events and its contact report (reach misses, foot gap). The scenery there is a flat stand-in.
+- **Self-test:** `python3 characters.py --selftest` runs the older films' checks, then this film's (`_selftest_bus`):
+  every id in 6 views full and bust; his proportions (legs 55 %, crown 244 cm, fingertips at the knee, hat 92 cm leaning
+  12 deg); no lip sync and no blinks (a head bob on his lines); a 1400 px stretching reach (0 px miss); the hat crushed
+  under 2.35 / 2.0 / 1.6 m ceilings; the tape skip (hard cut, one stutter frame back, tear, events); feet on the floor
+  standing / bent / under a ceiling; `lean_to` (grin 28 cm from Mina's eyes); the crossing-guard hold (11 px); red
+  pixels 0.005 % (the STOP pin only); Mina's foot onto the step.
+- **Sheets:** `python3 tools/cast_sheets.py [names]` -> `_work/cast/`: `ws_turn`, `ws_mood` (beside the owner's refs),
+  `ws_limits` (every hard limit, measured), `ws_states`, `ws_head`, `lineup`, `turn_family`, `turn_others`, `faces_mina`,
+  `faces_sami`, `faces_della`, `faces_others`, `props`, `props2`.
+- **Acting clips:** `python3 tools/cast_clips.py [names] [--strip-only]` -> `_work/cast/clips/<name>.mp4` + `_strip.jpg`
+  (44 clips, 960x540, 60 fps); `clips.json` holds sound events and the contact report. Scenery there is a stand-in.
 
-## Who's who (draw height = `CH.height_px(who, px_per_m)` at the same depth)
+## Who's who (draw height = `CH.height_px(who, px_per_m)`)
 | id | look | notes |
 |---|---|---|
-| `later` | **Doctor Later, the Waiting Man.** The owner's creature: an impossibly thin black body folded on a small chair, a hunched ribbed back, a long ribbed neck reaching forward, long jointed spider limbs with bony knees and long pointed feet, long thin black fingers, and the reference's head: a tall, narrow, **black** cone (58 cm long, 20 cm across its rim; nearly straight sides low down, a hollow needle above, the top bent a little back and crooked; warm brown-black like the photo, a dull dusty sheen up its lit side, narrow folds and many fine creases like dry bark, no hard rim light), its rim sitting low round the face like a hood; under the rim the head is no wider than the cone and ends in a long black jaw. In the hood's opening a **small pale grey face, skull-like and sunken**: two deep, soft, drooping dark sockets with uneven edges and two small pale patient eyes far inside, the rim's soft shadow across the brow (the opening's top arched, no drawn outline), a faint nose bridge, no mouth: black from under the nose down. The long neck is lumpy like vertebrae (uneven rings, thicker toward the hump, two thin dark wire loops: behind the head and under the neck) and joins the head low, under the back of the jaw. The narration's adaptations: **a few strips of old medical tape** (5, none longer than 0.6 of a turn, lying flat, frayed): two dull yellow-grey strips across the face (the brow under the rim; the nose and cheeks, 2.7 cm wide, opaque on the face) leave the one thin gap at the eyes, so the tape and the gap together read as the photo's pale face patch; two dark, dirty, translucent strips low on the cone at different slants (one nearly flat, one a stuck diagonal; the top 40% of the cone bare) and a wisp round the back, all close to the cone's value so they vanish in wides; a torn end lifts on the cone and a short end hangs off the cheek strip. The tape is a detail: at a glance and in silhouette he is the black pointed head with the small pale face. A white coat gone grey (lapels, pens, a blank cracked badge, frayed hem) hanging off the narrow shoulders, its sleeves far too short; a clipboard with no paper (a torn scrap under the clip); a click pen. 2.9 m standing; never stands; never lip-syncs. | Own 3D rig in centimetres (`_dl_rig`), any yaw. Pose: `dl_seat`, `dl_knee` (0 = the photo's knees .. 1 = above his head), `dl_spread`, `dl_tape` (1 -> 0 strip by strip, 5 strips, one per question: the cone's from the top down (wisp, diagonal, low; all off at 0.4), then the brow, the cheek strip last (it bares the face: land it on the first face); within its step a strip unwinds (first 55%), hangs as a flat ribbon and drops away, so nothing hangs at a whole step or at 0), `dl_face` (0 his own pale face, 1 Grandpa, 2 a stranger, 3 a little girl, 4 Ruth, 5 the narrator: grey, crossfading, their features filling the hood's opening, softened, greyed and sunk like his: the rim's shadow on top, black from 70% down, dark sides and dark rings round the eyes), `dl_flinch`, `dl_roof`, `dl_click`, `dl_rock`, `dl_ticket` (text), `dl_layer` ('back' / 'front': sandwich an armrest or car seat). Hands rest `dl_lrest` / `dl_rrest`: 'lap' (clipboard), 'pen', 'floor' (flat on the carpet), 'knee', 'arm'. |
-| `ruth` / `ruth_sick` | **Grandma Ruth, 70s.** Short silver set curls, pale grey-blue eyes, reading glasses on a gold chain (`pose.specs` 1 on the nose / 0 hanging on the chain), a sage cardigan buttoned to the top, a white blouse collar, a charcoal skirt (it drapes over her knees when she sits), stockings. `ruth_sick`: pale at sunrise. | Expressions `stern`, `stern_afraid`, `grief_still`, `pale_hidden`, `asking`. |
-| `ruth79` | Ruth at 40, 1979: a dark brown flipped bob, a quilted rose housecoat with a round collar. | On hold at the wall phone; the coffee at sunrise. |
-| `grandpa79` / `grandpa_ghost` | Grandpa, about 50: brown hair greying, a moustache, a brown V-neck cardigan over a checked shirt, grey trousers, socks. The ghost: the same, drained grey and still. | `a.gone(t0)`: eyes close, head settles, breath stops (gentle: he looks asleep). |
-| `milo` / `milo_sick` / `milo_jeans` / `milo_er` | **Milo, 7.** A light-brown mop with a cowlick, big brown eyes. Green dinosaur pajamas; `milo_sick` has cracked lips; `milo_jeans` a T-rex T-shirt and dinosaur-patch jeans (`pose.sag` slides them down); `milo_er` a gown with monitor leads (`pose.iv` 1: the IV in his hand). | `thirsty`, `sleepy`, `dazed`, `brave`, `kid_grin`; `drink`, `breathe_fast`, `sag` + `hold_up`. |
-| `milo22` | Milo at 22: lean, a runner's tee and shorts, a glucose sensor on his left upper arm, the phone (`cell_glucose`). | |
-| `narr14` | **The narrator at 14** ("I"; never said if boy or girl): dark brown shaggy hair with curtain bangs, a soft jaw, hazel eyes, an oversized burgundy hoodie, grey sweatpants, socks. | `asking` -> `asking_hard` as the questions grow. |
-| `narr29` | The narrator at 29, a pediatrician on nights: the same face, tired and kind, ceil-blue scrubs under a white coat, a badge with a dinosaur sticker, a stethoscope, a watch. | `tired_kind`. |
-| `halverson` / `halverson_rain` | **Doctor Anna Halverson**, pediatrician, 40s: dark-blonde messy bun, warm brown eyes, freckles; blue scrubs with a coffee stain, pens in the pocket, her badge clipped crooked with two dinosaur stickers, a watch on her left wrist. `_rain`: an olive raincoat open over the scrubs, hair soaked flat, wet streaks. | `careful_smile`, `exhausted`, `pleading`, `set_jaw`, `focused`, `fierce_kind`. Drawn warm and competent. |
-| `mom_rn` | Mom, a night-shift nurse: dark low ponytail, wine scrubs, a lanyard and badge, a watch. | `warm`, `calm_firm`, `set_jaw`. |
-| `er_nurse`, `er_doctor`, `medic`, `medic2`, `cardio`, `chest_man` | A calm, firm nurse (navy scrubs); a doctor (white coat over green scrubs, glasses); paramedics (navy, reflective bands, radio, patch); the cardiologist (grey bob, glasses, white coat; `cup`); the man with chest pain (work jacket). | |
-| `ghost_chest`, `ghost_side`, `ghost_teen`, `ghost_girl` | The waiting room's people: an old man in an overcoat and tie, a woman in a cardigan, a teenager in a hoodie, a little girl in a coat too small for her (sleeves halfway up, buttons straining). All drained grey, still, eyes open (`waiting`). | `ticket_hold(t0, text)`, `hand_on(t0, 'chest' / 'side')`. |
+| `whistle` | **MISTER WHISTLESTOP** (original; the bible's spec). 2.44 m to the crown, legs 55 %, narrow torso, arms to the knees; a mascot head (1/7 of his height) sitting crooked: off-white matted mask yellowed and stained at the edges, grey-brown tabby back and ears, a TICKET-PUNCH HOLE through his left ear (a real hole), painted eyes with tiny black pupils (his left one higher; no lids, never blink), THE GRIN: too wide, past the cheeks, a flat row of too many painted teeth (never moves). A 92 cm stovepipe in faded school-bus yellow with TWO helical black hazard bands (diagonal from every side), dented halfway, ragged brim, leaning 12 deg to his left. Mustard driver jacket (short sleeves: tabby wrists; oval WHISTLESTOP patch, brass buttons), BLACK bow tie with a red STOP-sign pin, silver whistle on an orange lanyard, white gloves with four segments per finger, too-short trousers, long worn shoes, a thin tabby tail hanging straight. | Own 3D rig in cm (`_ws_rig`), any yaw, `ws_elev` for low angles. `whistle94` = the 1994 host: clean bright colours, hat nearly upright. Never walks, never lip-syncs. |
+| `mina` / `mina_bare` | **Mina, 13** (narrator): dark low ponytail, brown eyes, oversized grey-green hoodie over plum pajama bottoms, socks (`_bare`: barefoot for the chase). | fear, hush_fear, resolve, guilt, kind_ask, tempted, terrified_call, relief, tender. |
+| `sami` / `sami_torn` | **Sami, 6**: round face, gap-toothed proud grin, green dinosaur pajamas with a spiked hood and a tail to the floor (`_torn`: half the tail ripped off, frayed). Props `rex`, `walkie`, `dino_pack`. | proud_grin, shout_here ("HERE!"), sleepy, dazed, cry. |
+| `della` | **Grandma Della, 63**: warm brown skin, grey curls under a burgundy knit cap, reading glasses on a cord, navy driver jacket open over a cream sweater, white DELLA name tape. Props `keys`, `maglite`, `cell`, `broom`. | warm, calm_firm, set_jaw, grim_drive, shout, tender, whisper. |
+| `theo` / `theo_color` | **Theo** (1994, 12 forever): yellow raincoat with black toggles, hood down, a 1994 side cut. `theo` faded and desaturated (nobody sees him); `theo_color` after three o'clock. | lonely, kind_smile ("Hi, Mina"), brave, shout_here. |
+| `new_girl` | The new girl (~11): pink hair clip, mustard cardigan, oversized plain `backpack` with NO name. | lonely -> kind_smile. |
+| `kid94_a/b/c` | 1994 studio kids in bright early-90s hoodies; `name_card` with `pose.card_text` ('NAME|SCHOOL|BUS'). | proud_grin, lock on the lens. |
 
-Heights: Doctor Later 2.90 (folded: the cone tip about 2 m up), Grandpa 1.78, Halverson 1.68, Mom 1.66, narrator 1.62
-(1.70 at 29), Ruth 1.60 (1.62 in 1979), Milo 1.22 (1.80 at 22).
+Heights: Whistlestop 2.44 (+0.9 hat), Della 1.63, Mina 1.57, new girl 1.42, Theo 1.38, 1994 kids 1.30, Sami 1.16.
 
-## Doctor Later: staging
+## Mister Whistlestop: staging (every beat: he moves, closes, reaches, grabs)
 ```python
-a = CH.Acting('later', seed=1, height=CH.height_px('later', ppm)).place(chair_x, floor_y)
-a.perch(seat_y, 'armchair')            # 'plastic' | 'armchair' | 'bench' | 'car' | 'low'; knee=, hands=('lap', 'pen'), props=
-a.click_pen([t1, t2, ...])             # -> 'pen_click' events
-a.look_at(t0, (narr, 'eyes'))          # slow, patient head turn (never darts)
-a.tilt_head(t0, 18.0, 1.4)             # "He tilted his head."
-tt, ev = a.tear_ticket(t0, -1, slot_xy, 'MILO', offer_to=target)   # reach across the room, tear ('ticket_tear'), hold it out
-a.take_wrist(t0, -1, narr, 1)          # then draw him, the narrator, and CH.draw_later_arm(pen, a, t, -1) on top
-a.count(t, 1)                          # "One..." head dips, fingers press ('pulse_count')
-ev = a.loosen_tape(t0, t1, 1.0, 0.4)   # strip by strip ('tape_peel' each) with a flinch
-a.faces([(t, 1), (t2, 2), ...])        # the faces under the tape
-a.flinch_light(t)                      # as if a question were light
-a.bend_to_roof(roof_y)                 # the car: the head bends over against the roof
+a = CH.Acting('whistle', seed=1, height=CH.height_px('whistle', ppm)).place(x, floor_y)
+a.unfold(t0, 2.6)                          # out of the bus door like a ladder: knees, waist, neck, hat ('ws_unfold_clack' x4)
+a.tape_skip([(t, dict(x=, y=, h=, turn=, ...)), ...])   # every flicker: cut closer, 1 stutter frame, tear ('tape_skip')
+a.curl_door(t0, side, edge_xy)             # gloves curl round a doorframe; pose ws_hands_front=3 + CH.draw_whistle_hands on top
+a.bend_double(t0, ceil_y)                  # indoors: hat crushed/folded on the ceiling, bent double
+a.walls_flat(t0, left_xy, right_xy)        # gloves flat on both hallway walls
+a.lean_to(t0, (mina, 'eyes'), gap=30)      # "down, and down": solved waist bend + crouch, in slow beats
+a.reach_far(t0, side, target, dur=2.4)     # the arm stretches (down the aisle to Theo's shoulder)
+a.hold_child(t0, side, sami, sami_side)    # like a crossing guard (the child reaches up)
+a.grip_small(t0, side, mina, mina_side)    # the glove folded small round her fingers, too tight
+a.walkie_to_grin(t0, side)                 # her walkie pressed to the grin
+a.blow_whistle(t0, 'two' | 'long', side)   # fweet-fweet / one long blast ('whistle_two' / 'whistle_long')
+a.snap_glove(t0, side, target)             # snaps shut on fabric ('glove_snap'); then a.ws_hold(t, side, 'tail_piece')
+a.head_backwards(t0)                       # 180 deg in three ratchet ticks ('neck_ratchet')
+a.clipboard(t0, 1) ; a.punch(t0) ; a.write_line(t0, t1)   # roll call; click-clack; a line through a name
+a.host(t0, t1)                             # the 1994 presenter
+a.say([(t0, t1, text)]) / a.talk(...)      # head bob only: the grin never moves
+a.defeat(t0)                               # grin slips out of register, tracking tears, rewinds away ('tape_warble', 'tape_rewind')
+a.look_at(t0, target, snap=True)           # painted eyes: the head turns (slowly, or one hard tick)
 ```
-- `a.reach_far(t0, side, target, t1, dur, z, shape, arc)` lands his pinch on any world point; past arm's length the arm
-  unfolds (a second elbow opens). `a.reach_to` on him does the same. Shapes: 'flat', 'relaxed', 'pinch', 'offer' (the
-  ticket between two fingers), 'grip' (round a wrist), 'pen', 'clip', 'reach', 'claw', 'point'.
-- His props never leave or jump: when the clipboard hand reaches away the clipboard stays leaning against his knees
-  (drawn from his rest pose); the pen stays in the pen hand (it is in his fingers when he takes the wrist). Do not
-  clear `hl_prop` / `hr_prop` mid-shot unless a hand puts the thing somewhere.
-- `a.where(t, part)` / `CH.later_point(a, t, part)`: 'head', 'eyes', 'mouth', 'cone_tip', 'chest', 'lap', 'hand_l/_r',
-  'tips_l/_r' (the pinch), 'wrist_l/_r', 'elbow_l/_r', 'shoulder_l/_r', 'knee_l/_r', 'foot_l/_r'.
-- Close-ups: `CH.draw_bust(pen, 'later', cx, cy, scale, pose)` (scale 1 = 21 cm of his head 600 px tall, centred on his
-  eye line: the hood's opening is 17 cm wide and 16 cm tall, the rim 4 cm above the eyes, the cone 58 cm above that; use
-  0.25-0.6 so the cone fits; `pose.look_x` / `look_y` move the two pale points in the sockets);
-  `CH.later_bust_place(a, t, cx, cy, scale)` gives the matching (x, y_floor, height) to stage targets in the same frame.
-- Far: `CH.draw_later_far(pen, x, y, h, pose, t, lamp=(x, y), flicker=0..1)` (the bus stop). The empty chair:
-  `CH.chair_rock(t, t_left)` (deg) for the set; the same value in `pose.dl_rock` rocks him with his chair.
-- Rules for him: never standing; never lip-sync (`talk` leaves his mouth shut: say his lines with a head dip or a pen
-  click); look slow; tape strips come off only when the narrator asks (one per question); the faces only once the cheek strip is off.
+Points: `a.where(t, part)` with 'head', 'eyes', 'mouth'/'grin', 'chin', 'crown', 'hat_top', 'chest', 'hand_l/_r',
+'tips_l/_r', 'wrist_*', 'elbow_*', 'shoulder_*', 'knee_*', 'foot_*'. Close-ups: `CH.draw_bust(pen, 'whistle', ...)`.
+Props stay in the holding glove (`hl_prop` / `hr_prop`: 'ws_clipboard', 'ws_clipboard_new', 'walkie', 'ticket_y',
+'punch', 'pencil', 'tail_piece'); a dropped prop is drawn by the shot from the hand's last point (see `ws_defeat`).
+`CH.ws_tracking(pen, x, y, w, h, amount, t)` draws VHS tracking lines for sets and transitions.
 
-## People: staging (the Bunnyman film's tools all still work: place, look_at, reach_to, sit_on / seated, kneel_down, walk,
-run, pick_up / put_down / give with PropTrack, hand_over, head_to, hum, eyes_shut...)
-- `receiver_to_ear(t0, t1, side, tilt_out, toward=other)`: the wall phone's handset at the ear; with `toward` it comes out
-  between her ear and theirs ("tilted it so I could hear"). The cord: `CH.draw_coil_cord(pen, *CH.receiver_cord_end(a, t,
-  side), base_x, base_y, px_per_cm)`. Use a `PropTrack('receiver', ...)` on the cradle and `pick_up` / `put_down`.
-- `tap(t0, side, target, n)` ('card_tap'), `pull_cord(t0, side, jack)` ('cord_yank'), `strike_match(t0, side)`
-  ('match_strike'; 'match' -> 'match_lit', the box in the other hand), `slide_under_door(t0, side, track, door_x, floor_y)`
-  ('paper_slide'), `write_marker(t0, t1, side, paper)` ('marker_write'), `dial(t0, side, keypad, n)` ('dial_beep').
-- `take_pulse(t0, side, other, other_side)`: two fingers on the inside of the wrist, the watch arm up, eyes on the watch.
-- `carry(t0, child)` + `CH.draw_carry_child(pen, carrier, child, t)`: the child's hips in the carrier's arms.
-- `drive(t0, t1, g10, g2)` with `CH.draw_steering_wheel(...)` (returns the grips; draw the arms over the wheel with
-  `CH.draw_arm`); `CH.draw_wheelchair(...)` returns its handles for a pusher's `reach_to`.
-- `hand_over(t0, side, other, 'mouth' | 'eyes')` lays a closed, cupped hand ('cover' shape: no gaps between the fingers,
-  so it never reads as a black glove on a face).
-- `rock(t0, t1)` (floor rocking + humming), `breathe_fast(t0, t1)` ('breath_fast'), `drink(t0, t1, side)` ('gulp'),
-  `gone(t0)`, `glasses(t0, on)`, `sag` / `hold_up`, `hand_on(t0, 'chest' | 'belly' | 'side')`, `ticket_hold(t0, text)`.
-- Sitting on something high (the exam table, the ER bed edge): `a.set(-1, None, 0.01, perch=1.0, sit=1.0)` and place the
-  actor at the surface's y: the legs dangle. Floor sitting (`sit_floor`) and seats read only at |turn| >= 0.5.
-- Props (PROPS3, centimetres, same size in a hand and on a surface): receiver, card, card_back (signed "Doctor Later"),
-  match, match_lit, matchbox, note (results + marker), marker, ticket (`pose.dl_ticket` text; '' = ink gone), bottle,
-  mug, cup, vial, cell (a phone at the ear draws as its dark back on the cheek), cell_glucose, keys; the older clipboard.
+## People: staging
+All the Bunnyman / Doctor tools work (place, look_at, reach_to, hold_prop, sit_on / seated, kneel_down, crouch, walk,
+run, hold_hand, hand_over, carry, drive + draw_steering_wheel, dial, tap, phone_to_ear, radio_to_mouth, knock_pattern,
+point_at, wave, sit_floor, draw_palm_on_glass). New: `step_up(t0, side, up, hold, back)` (a foot onto the bus's first
+step and back: 'step_touch', 'step_off'), `hug_prop(t0, prop)` (Rex, the backpack).
 
 ## Beat map: script beat -> clips (tools/cast_clips.py)
 | beat | clips |
 |---|---|
-| cold open: the tall man folded in a plastic chair, the pen, "Take a seat" | `later_wait_plastic`, `later_likeness_profile` |
-| 1979: on hold; Grandpa sits to wait; the coffee at sunrise | `ruth79_phone_hold`, `grandpa79_sits_armchair`, `ruth79_coffee_sunrise` |
-| Milo thirsty, jeans falling off; the clinic, the blood test | `milo_drink`, `milo_jeans_sag`, `halverson_clinic_blood` |
-| sundown: the medicine cabinet, the card | `ruth_cabinet_tap` |
-| rule 1: the receiver tilted; hung up; the cord pulled; Halverson at 3 AM | `ruth_phone_tilt`, `ruth_hangup_cord`, `halverson_office_phone` |
-| rule 2: the receiver down like a sleeping baby | `ruth_receiver_counter` |
-| rule 3: "I'm so thirsty", the hand over his mouth | `milo_thirsty_mouth` |
-| rule 4: peephole, knock and plea, the note, the match, the window, the car, the bus stop | `narr_peephole`, `halverson_porch_plead`, `ruth_door_refuse`, `halverson_write_slide`, `ruth_burn_note`, `narr_window`, `halverson_car_phone`, `later_bus_stop_far` |
-| rule 5: rocking on the floor; "that's what the voice told you" | `ruth_rock_milo`, `narr_tells_ruth` |
-| rule 6: him in the armchair; the grey people; the ticket | `later_armchair_front`, `ghosts_row`, `later_tear_ticket` |
-| rule 7: the wrist and the count; the questions and the tape; the faces; the card | `later_take_wrist_count`, `narr_asks_tape`, `later_faces`, `narr_pull_free_card` |
-| the rescue: carry, run, pulse, drive, the mirror, the back seat, the ER | `narr_carry_milo`, `halverson_run_steps`, `halverson_pulse_car`, `halverson_drive_mirror`, `later_car_backseat`, `mom_wheelchair_run`, `nurse_chest_man`, `empty_chair_rocking`, `milo_er_bed` |
-| after: Milo at 22; Ruth's ticket; Mom dials; the cardiologist; the narrator at 29; the hall | `milo22_run_phone`, `ruth_sick_ticket`, `mom_dials`, `ruth_cardio_coffee`, `narr29_desk`, `hall_last_chair` |
+| 1994 tape | `ws_tv_host_1994`, `kids94_cards` |
+| Grandma's job, the post, the rules | `della_brakes_names`, `mina_post_phone`, `della_rules_door`, `della_mailbox`, `sami_here` |
+| rule 2: the bus, the skips, the door | `ws_unfold_door`, `ws_skip_lawn`, `ws_door_curl`, `ws_frosted_glass`, `mina_hush_sami`, `ws_punch_ticket` |
+| rule 3: 911, the fake Grandma | `mina_911_nobars`, `della_keys_leave`, `mina_whats_the_word`, `ws_peephole`, `della_trapped_pound` |
+| rule 4: the dark hand, the walkie | `ws_dark_grip`, `ws_walkie_grin`, `sami_walkie`, `sami_lighthouse` |
+| rule 5-6: the deadbolt, the hallway, the guard | `mina_deadbolt_floor`, `ws_hallway_bent`, `ws_crossing_guard`, `sami_palm_window` |
+| the chase | `della_drive_swerve`, `ws_window_backwards`, `ws_whistle_two` |
+| rule 7: the last stop | `ws_steps_clipboard`, `mina_step_scream`, `ws_glove_snap`, `ws_aisle_reach`, `ws_lean_to_mina`, `mina_asks_name`, `della_broom_jam`, `theo_twist_free`, `ws_whistle_long_clock`, `ws_defeat` |
+| after | `della_kneel_theo`, `della_hug_mina`, `theo_hi_mina`, `mina_sits_new_girl`, `ws_final_sting` |
 
-## Sound events the cast emits (in `a.events`)
-`pen_click`, `pen_scratch`, `ticket_tear`, `tape_peel`, `flinch`, `pulse_count` (a marker, no sound of its own),
-`card_tap`, `cord_yank`, `match_strike`, `paper_slide`, `marker_write`, `dial_beep`, `breath_fast`, `gulp`, `card_tear`,
-plus the older `knock_door`, `footsteps_*`.
-
-## Results (this pass)
-- Self-test passes (numbers above). The 10 clips with Doctor Later were re-rendered with the new head (the other 36 are
-  unchanged). All 46 clips render at 60 fps with 0 reach misses; the planted foot never leaves the
-  floor except in the runs' flight phase (`halverson_run_steps`, `mom_wheelchair_run`, `milo22_run_phone`: about 28 px
-  at the top of a stride) and the narrator up on tiptoe at the peephole (heels 16 px up, toes down, on purpose). Every strip was checked by eye
-  for contact, eyelines, feet and props.
+## Sound events the cast emits
+`ws_unfold_clack`, `tape_skip`, `whistle_two`, `whistle_long`, `glove_snap`, `neck_ratchet`, `punch_clack`,
+`pencil_line`, `tape_warble`, `tape_rewind`, `clipboard_clatter`, `step_touch`, `step_off`, plus the older
+`knock_door` (kind 'glass'), `dial_beep`, `card_tap`, `footsteps_*`.
 
 ## Limits and open problems
-- Doctor Later's front views fold his arms like a mantis (elbows out at the seat); his likeness is closest in profile and
-  3/4 (see `later_likeness.jpg`); the coat the narration needs makes him lighter than the all-black reference.
-- His head against the photo (`later_compare.jpg`; 1 photo px = 0.89 cm on his torso): cone length : rim width 2.9 (photo
-  2.9), the head's width along its axis within 0.7 photo px of the photo's from the jaw to the tip, lean 28 deg in the
-  reference pose (`h_tilt` 24). In front views the head is nearer the camera than the body, so it draws about 1.14 x
-  larger than in profile (the rig's perspective), as it would on a real lens.
-- The tape is deliberately sparse and dull (the first versions read as a mummy, then as a striped beehive): measured 8.4%
-  of the head at the front, under 6% from 3/4, about 0 from behind; the face strips are the only pale tape. If a shot
-  needs the tape to read from far, come closer rather than adding strips. Busts and close-ups: use `h_tilt` 14-20 so
-  the cone leans like the photo (27-28 deg in the reference pose; a near-vertical cone reads as a dunce cap).
-- The faces under the tape are the cast's own heads, greyed and clipped into his face; in very close shots make the
-  crossfades quick (0.4-0.6 s) so no in-between reads as a double face.
-- The stand-in scenery in the clips is not the sets: in the film the armchair's arm and the car seat sit between his
-  far and near limbs (`pose.dl_layer`).
+- The clips' scenery is a flat stand-in; the bus door, aisle, windows, peephole fisheye and hallway are sets' work.
+- Front views read his bend by foreshortening only; stage "bent double" at 3/4 (as `ws_hallway_bent`).
+- Several props are small at wide framings (whistle, walkie, ticket): cut to an insert for "my walkie", the ticket, the punch.
+- The defeat's grin slip reads best in a close-up (`ws_head` slip cells); in wides it is the tears and the fade.

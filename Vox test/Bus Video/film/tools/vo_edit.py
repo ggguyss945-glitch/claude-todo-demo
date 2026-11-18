@@ -79,10 +79,86 @@ DEESS_THR_DB, DEESS_MAX_DB = -7.0, 6.0                            # sibilants ab
 # Each was found by comparing two recognisers (Parakeet TDT, Whisper base.en) with the script, then cut by eye on 2 ms
 # spectrograms with the pitch track; every repaired phrase is re-recognised by both (voice_report.md).
 FIXES = {
+    # "And that grin." / "He calls roll." are not in the take (the TTS skipped them: 0.7 s of silence between "...a crooked
+    # hat." and "Della?"). Spliced from the same words said elsewhere, on 10 ms envelopes and the pitch track:
+    #   "And" of "Silver whistle. And a grin" (39.845-39.935: 171-174 Hz, cut in the d closure before "a"),
+    #   "That" of "That never moves." (42.050-42.290: rises 114 -> 175 Hz, ends in its unreleased t closure),
+    #   "grin." of "Pressed to the grin." (313.275-313.680: 122 -> 79 Hz, a sentence-final fall, decayed to -60 dB);
+    #   "he" of "If he calls your name" (168.125-168.290: the h noise to the k closure of "calls"),
+    #   "calls" of "She calls anyway." (613.305-613.625: from its k closure, 149 -> 114 Hz falling, through its s),
+    #   "roll" of "practiced roll call." (88.735-88.975: from the r, after the t release of "practiced" (read "Droll");: 135 -> 162 -> 133 Hz, ends before the k closure of "call").
+    'and_that_grin': {'pieces': [(39.845, 39.935, 0.0, 0.004, 0.008), (42.050, 42.290, 0.030, 0.006, 0.012),
+                                 (313.275, 313.680, 0.040, 0.004, 0.020)]},
+    'calls_roll': {'pieces': [(168.125, 168.290, 0.0, 0.006, 0.010), (613.305, 613.625, 0.020, 0.004, 0.012),
+                              (88.735, 88.990, 0.050, 0.008, 0.015)]},
+    # the shouted "HERE!"s start straight on the vowel (no h: Parakeet "Er" / "Ere" / "There", Whisper "Error" / "Eric"):
+    # each gets the h of the porch "Here!" (209.968-210.035: 57 ms of breathy noise and 10 ms of its voicing onset,
+    # 306 Hz) joined by a 10 ms equal-power crossfade. Theo's "...HERE!" starts on 30 ms of th-like noise (heard
+    # "There"): it goes, the h comes in its place.
+    'sami_here_practice': {'start': 90.680, 'prepend': [(209.968, 210.035)], 'join': 'xfade', 'prepend_fade': 0.010},
+    'sami_here_hall': {'start': 376.410, 'prepend': [(209.968, 210.035)], 'join': 'xfade', 'prepend_fade': 0.010},
+    'sami_here_bus': {'start': 529.270, 'prepend': [(209.968, 210.035)], 'join': 'xfade', 'prepend_fade': 0.010},
+    'theo_here': {'start': 622.108, 'prepend': [(209.968, 210.035)], 'join': 'xfade', 'prepend_fade': 0.010},
+    # "That's when you tell. Parents: post the smile": "Parents" is mangled (a weak p heard as d, an 80 ms hole inside
+    # the word: both recognisers "dot crens"; closing the hole still reads "doc rents"). "tell." ends at 721.755 (its l
+    # decayed to -38 dB, before the p burst) and the next line starts on the p burst of "Post" (722.488).
+    'advice_tell': {'end': 721.755, 'end_fade': 0.015},
+    # "Ride right, kids!": the take says "Right, right, kids" (both recognisers); the "Ride" of the title "Ride Right with
+    # Mister Whistlestop" (31.495-31.800: 120 -> 233 Hz, as this line's 89 -> 263 Hz, cut before its d closure) replaces
+    # the first word (51.711-51.88), 20 ms of closure, then the take's "right, kids!" from the dip at 51.895. Whisper:
+    # "Ride right kids"; Parakeet still merges the d into the r ("Right, right, kids") as it does on any "ride right".
+    'tape_ride_right': {'pieces': [(31.495, 31.800, 0.0, 0.008, 0.012), (51.895, None, 0.020, 0.006, 0.020)]},
+    # "He calls roll.": the r of "roll" starts after the t release of "practiced" (the release read as "Droll"):
+    # set below in 'calls_roll' from 88.735 (Parakeet: "He calls roll.")
+    # the hall roll call "Sami?" (W): the TTS breathed it (371.62-371.95: 0.3 s of hiss, no voicing; recognisers hear
+    # nothing) and the line had taken the narrator's next "Sami" instead. It is his roll-call "Sami?" through the door
+    # (201.535-202.157, the same words in the same voice), and the next line starts on its own S (372.305).
+    'hall_roll_sami': {'pieces': [(201.535, 202.157, 0.0, 0.004, 0.020)]},
+    'practiced_all_week': {'start': 372.305, 'start_fade': 0.008},
+    # "...fingers. Sami's palm": the S of "Sami's" is missing (a 10 ms tick: Parakeet "Tommy's" / "Domi's"): the S of
+    # "Sami's practiced all week" (372.305-372.425) is lent, 10 ms equal-power crossfade. Parakeet: "Sami's palm presses".
+    'palm_window': {'start': 392.425, 'prepend': [(372.305, 372.425)], 'join': 'xfade', 'prepend_fade': 0.010},
+    # "Mina." (Della): a 40 ms hiss (434.70-434.74) before the m read as "two, Mina": the line starts on the voicing
+    # "He rides OUR bus. Seat twenty-two." / "Mina.": the TTS swallowed the "two" into "Mina" (Parakeet: "Seat 20" | "Two
+    # mida", on the raw take too). The line ends after "bus." (433.995, its s decayed) and its "Seat twenty-two." is the
+    # take's own sentence-final "Seat twenty-two." (the seat22 line, 74.661-75.709) after 0.30 s; "Mina." starts on its
+    # voicing past the t burst (434.760).
+    'kid_back_seat': {'pieces': [(None, 433.995, 0.0, 0.004, 0.020), (74.661, 75.709, 0.300, 0.004, 0.020)]},
+    'della_mina': {'start': 434.760, 'start_fade': 0.008},
+    # "Theo." (the name at last): the line started after its "Th" (610.56-610.66: Parakeet "See ya."): from 610.550
+    'theo': {'start': 610.550, 'start_fade': 0.006},
+    # "Backwards.": after its z the take murmurs at 98 Hz for 60 ms (474.80-474.86: read "and"): the line ends on the z
+    'backwards': {'end': 474.800, 'end_fade': 0.020},
+    'advice_parents': {'start': 722.488, 'start_fade': 0.004},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word
 SPLITS = {
+    # the TTS ran these sentences together; split_point's dip landed inside the next line's first word (fix round 1,
+    # found by vo_asrcheck --every: the isolated line read a word of its neighbour). Set on 10 ms envelopes, zero
+    # crossings and the pitch track:
+    'hook': 6.195,               # "...don't get on. | If it": the n of "on" glides (224 -> 220 Hz) into the i of "If" (was 6.2965: in the f)
+    'sami_here_practice': 91.050,  # "HERE! | I gave": the shout's falling tail ends where the weak "I" starts (was 91.1745:
+                                 # the line read "Here I"; at 91.05 "HERE!" and "I gave him..." each read right)
+    'grin_peephole': 261.815,    # "Grin. | Across": the n of "Grin" ends where the a- of "across" starts (190 Hz from 261.82)
+                                 # (was 261.9635: after the a-; "Grin across")
+    'answer_him': 450.785,       # "they stay. | I got": "stay" (its vowel 135 -> 100 Hz) ends in creak at 450.75-450.78 (was
+                                 # 450.5885: between the st and the ay of "stay")
+    'seat22_glows': 540.305,     # "glows. | The boy": the closure between the s and "The" (was 540.4895: after "The")
+    'nobody_knows': 548.255,     # "name, | he says.": where the h of "he" starts (was 548.4055: after "he")
+    'knows_his_stop': 649.595,   # "stop. | She won't": after the p release, before the sh (was 649.5515: in the p closure,
+                                 # the release then opened the next line as "But she")
+    'i_gave_it': 25.845,         # "...gave it to him. | In 1994": "him" falls 180 -> 123 Hz to 25.83 (was 25.7965: inside its vowel)
+    'brakes_mirrors': 65.530,    # "names, | she says.": the z of "names" runs into the sh of "she" (one fricative, 65.44-65.57):
+                                 # cut inside it (was 65.5785: the sh stayed with "names", "Who says"); both lines read right
+    'post_bus': 100.520,         # "Bus 9. | Larch Street.": the n of "nine" glides into the L (101 -> 186 Hz): cut where the
+                                 # pitch turns up (was 100.4715: the n opened the next line, "The large street")
+    'hits_gas': 428.875,         # "the gas. | So are we.": the s of "gas" and the S of "So" are one 0.23 s fricative: cut in
+                                 # its middle (was 428.7585: at its start, "the gap"); both lines read right
+    'grab_other': 381.770,       # "the other. | The lights": before the th burst (was 381.7765: "the other th")
+    'post_street': 101.265,  # "Larch Street. | Forty-one": the t release of "Street" runs into the f of "Forty" (one 150 ms
+                                 # noise); cut in its 20 ms dip (-53 dB) (was 101.3405: "Larch Street f")
+    'hi_im_mina': 683.720,       # "name? | She tells me.": before the sh (was 683.8755: after "She")
 }
 # a hand-set split sits in voiced sound, so the line before it fades out over SPLIT_FO and the line after fades in over
 # SPLIT_FI
@@ -1078,13 +1154,13 @@ def pacing_rows():
         elif not re.search(r'[.?!]["\']?$|\.\.\.$', A['en'].strip()):
             g, kind, why = 0.18, 'split', 'one sentence split for the speaker (quote / "she says")'
         elif not same_para:
-            g, kind, why = 0.50, 'paragraph', 'paragraph break'
+            g, kind, why = 0.46, 'paragraph', 'paragraph break'
         elif A['who'] != 'N' or B['who'] != 'N':
-            g, kind, why = 0.33 if A['who'] == B['who'] else 0.38, 'dialogue', 'dialogue'
+            g, kind, why = 0.30 if A['who'] == B['who'] else 0.34, 'dialogue', 'dialogue'
         elif len(A['en'].split()) <= 3 and len(B['en'].split()) <= 3:
-            g, kind, why = 0.32, 'staccato', 'short fragments'
+            g, kind, why = 0.30, 'staccato', 'short fragments'
         else:
-            g, kind, why = 0.38, 'sentence', 'running narration'
+            g, kind, why = 0.34, 'sentence', 'running narration'
         if rule_text_open is not None and para[i + 1] != rule_text_open: rule_text_open = None
         rows.append((i, round(g, 3), kind, why))
     return rows
