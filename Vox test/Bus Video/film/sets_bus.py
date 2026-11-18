@@ -2530,6 +2530,7 @@ class BuRoad(Room):
         amb = '#1e2440'
         heads9 = [Lamp(0.0, 0.8, -9.0, 14.0, '#fff2d6', 1.6, (1.0, 1.0, 0.5), fall=1.3)]
         hp = o.get('his_pos', (0.0, -24.0))
+        hp = hp(0.0) if callable(hp) else hp                 # his_pos may be f(t): the light keeps its start point
         his_in = [Lamp(hp[0], 2.0, hp[1], 6.0, BU_AMBER, 1.3, fall=1.4)]
         return amb, [Lamp(kind='dir', c='#7a8ac8', k=0.35, d=_norm3((0.3, -0.8, 0.5)))], [('heads9', heads9, _kfn(o.get('heads9', 1.0), 391)),
                                                                                          ('his_in', his_in, _kfn(o.get('his_win', 0.0), 392))]

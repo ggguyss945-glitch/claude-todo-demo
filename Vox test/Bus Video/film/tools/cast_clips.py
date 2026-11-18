@@ -484,20 +484,30 @@ def _c_ws_skip():
 
 @clip('ws_door_curl', 4.5, 'White gloves curl around our doorframe. Too many knuckles. (He peeks round the frame; every finger folds on four hinges)')
 def _c_ws_curl():
-    ppm = 330.0
+    ppm = 700.0                                      # close: the head and gloves big in frame (mood ref 1)
     a = ws(930, 1180, ppm, 4)
     a.face(0.3)
-    a.set(-1.0, None, 0.01, ws_hands_front=3)
-    a.set(0.0, None, 1.6, tilt=11.0)
-    a.curl_door(0.3, 1, (1010, 300), dur=0.9, z=-8.0)
-    a.curl_door(0.8, -1, (1010, 520), dur=0.9, z=-8.0)
+    a.set(-1.0, None, 0.01, ws_hands_front=3, tilt=9.0, h_tilt=-14.0)
+    hx0, hy0 = a.where(0.0, 'head')
+    a.place(930 + (975 - hx0), 1180 + (440 - hy0))   # his body stays hidden behind the wall; only the head leans out
+    a.set(0.4, None, 1.3, tilt=11.0)                 # ...and slides further round the frame
+    hy0 = a.where(0.0, 'head')[1]
+    a.curl_door(0.3, 1, (1010, hy0 - 150), dur=0.9, z=-8.0)
+    a.curl_door(0.8, -1, (1010, hy0 + 300), dur=0.9, z=-8.0)
     a.look_at(1.8, (1500, 450), dur=0.9)
     a.look_at(3.2, (1250, 520), dur=0.05, snap=True)
     def draw(pen, t):
         pen.fill(rect(0, 0, 1920, 1080), '#2a2422')
         pen.fill(rect(1000, 0, 920, 1080), '#141418')
+        pen.glow(1150, 420, 420, '#ffa040', 40)
         pen.fill(rect(0, FLOOR, 1920, 140), '#2a201a')
+        hx, hy = a.where(t, 'head'); cx_, cy_ = a.where(t, 'chin')
+        rr = 1.45 * max(cy_ - hy, 30.0)
+        pen.cv.save()                                # nothing of him past the frame but the half face, an ear, the hat
+        mask = union(rect(960, -10, max(1.0, hx + rr - 960), max(1.0, hy + 10)), oval(hx, hy, rr * 1.15, (cy_ - hy) * 1.45))
+        pen.cv.clipPath(mask, skia.ClipOp.kIntersect, True)
         fig(pen, a, t, SODIUM)
+        pen.cv.restore()
         pen.fill(rect(0, 0, 1000, 1080), '#5a4a3e'); pen.line(rect(0, -10, 1000, 1100), 4)
         pen.fill(rect(960, 0, 60, 1080), '#e2d8c4'); pen.line(rect(960, -10, 60, 1100), 4)
         CH.draw_whistle_hands(pen, a, t, (1, -1), SODIUM)
@@ -530,18 +540,56 @@ def _c_ws_frost():
 @clip('ws_peephole', 3.5, 'The peephole goes white. Fur. Grin. (The fisheye: he is pressed against the door, then eases back so the grin fills it)')
 def _c_ws_peep():
     a = ws(0, 0, 300.0, 6)
+    UNDER = dict(SODIUM, under='#c98a3a', under_a=180)
+    # white fur pressed to the lens, then he is back on the porch; every tape skip puts him closer, the last one the
+    # grin filling the lens (the barrel warp of the peephole bulges the middle: k ~ 0.35)
+    stages = ((0.30, 'full', 900.0, 0.0, 6.0), (1.10, 'full', 1500.0, 0.0, -7.0), (1.85, 'bust', 0.95, 0.45, 9.0), (2.55, 'bust', 0.95, 1.0, -3.0))
+    cache = {}
+
+    def warp_maps(w, h, k1=0.35):
+        if (w, h) not in cache:
+            yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+            cx, cy, R = w / 2.0, h / 2.0, 470.0 * w / 1920.0
+            dx, dy = xx - cx, yy - cy
+            r2 = np.clip((dx * dx + dy * dy) / (R * R), 0, 1.0)
+            s = (1.0 - k1) + k1 * r2
+            cache[(w, h)] = ((cx + dx * s).astype(np.float32), (cy + dy * s).astype(np.float32))
+        return cache[(w, h)]
+
     def draw(pen, t):
-        pen.fill(rect(0, 0, 1920, 1080), '#000000')
+        W, H, kz = CFG.rw, CFG.rh, CFG.k
+        surf = skia.Surface(W, H); c2 = surf.getCanvas(); c2.clear(skia.Color(14, 10, 6)); c2.scale(kz, kz)
+        p2 = Pen(c2)
+        p2.fill(rect(0, 640, 1920, 440), '#1e150c'); p2.glow(980, 260, 700, '#ffb050', 70)
+        si = max([i for i, s in enumerate(stages) if t >= s[0]] or [0])
+        t0, kind, sz, appr, tilt = stages[si]
+        nxt = stages[si + 1][0] if si + 1 < len(stages) else 3.6
+        creep = clamp((t - t0) / max(nxt - t0, 0.1))
+        P = a.at(t); P.h_tilt += tilt
+        if t - t0 < 0.05 and si > 0: P.ws_glitch = 0.85          # 3 frames of tape tear on every skip
+        if kind == 'full':
+            hpx = sz * (1.0 + 0.06 * creep)
+            P.approach = 0.0
+            CH.draw(p2, 'whistle', 960, 560 + 0.82 * hpx, hpx, P, light=UNDER, t=t)
+        else:
+            P.approach = min(1.0, appr + 0.08 * creep)
+            kk = 1.0 + 1.1 * P.approach
+            CH.draw_bust(p2, 'whistle', 960 + 18 * (1 - P.approach), 540 - 105 * kk - 150 * P.approach ** 2, sz * (1.0 + 0.04 * creep), P, light=UNDER, t=t)
+        # the porch light is below him: the top of the lens falls off to black, an amber pool from under the chin
+        p2.linear(rect(0, 0, 1920, 1080), 0, 60, 0, 620, [(0, '#000000', 200), (1, '#000000', 0)])
+        p2.linear(rect(0, 0, 1920, 1080), 0, 700, 0, 1080, [(0, '#c98a3a', 0), (1, '#c98a3a', 70)])
+        img = surf.makeImageSnapshot().toarray()
+        mx, my = warp_maps(img.shape[1], img.shape[0])
+        img = cv2.remap(img, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        cv = pen.cv
+        cv.save(); cv.resetMatrix()
+        cv.drawImage(skia.Image.fromarray(np.ascontiguousarray(img[:, :, [2, 1, 0, 3]])), 0, 0)
+        cv.restore()
         circ = oval(960, 540, 470, 470)
-        pen.cv.save(); pen.cv.clipPath(circ, skia.ClipOp.kIntersect, True)
-        pen.fill(circ, '#1a1408'); pen.glow(960, 400, 600, '#ffb050', 90)
-        k = 1.0 - ease_out_cubic(clamp((t - 0.5) / 1.8))
-        P = a.at(t); P.h_tilt += 8.0 * k; P.approach = 0.15 + 0.85 * k
-        kk = 1.0 + 1.1 * P.approach
-        CH.draw_bust(pen, 'whistle', 960 + 40 * k, 540 - 105 * kk, 0.95, P, light=SODIUM, t=t)
-        if t < 0.6: pen.fill(circ, '#efe8d6', 255 * (1.0 - t / 0.6) ** 0.5)
+        if t < 0.30: pen.fill(circ, '#efe8d6', 255 * (1.0 - t / 0.30) ** 0.4 if t > 0.12 else 255)    # fur pressed to the glass
+        if si > 0 and t - t0 < 0.05: CH.ws_tracking(pen, 490, 300, 940, 480, 0.9, t, si)
         pen.radial(circ, 960, 540, 470, [(0, '#000000', 0), (0.7, '#000000', 30), (1, '#000000', 230)])
-        pen.cv.restore()
+        dark_over(pen, circ, 255)
     return dict(draw=draw, actors=[a])
 
 
@@ -568,7 +616,7 @@ def _c_ws_grip():
     def draw(pen, t):
         room(pen, '#2a2622', '#2a201a')
         couch(pen, 860, seat, 640)
-        if t < 4.4: fig(pen, a, t, PHONE)
+        if t < 4.4: fig(pen, a, t, dict(PHONE, under='#dfe8ff', under_a=200, dark=0.6) if t > 2.1 else PHONE)
         fig(pen, m, t, PHONE)
         if t < 4.4:
             if t > 2.1:
