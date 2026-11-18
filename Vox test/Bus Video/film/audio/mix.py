@@ -957,7 +957,9 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.35
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
 BOOST_SAT_DB = 14.0
 BOOST_TARGET_LU = {1.0: 10.0, 0.75: 9.0, 0.5: 8.0}
-BOOST_VCUT_DB = 8.0
+BOOST_VCUT_DB = 16.0  # Bus final mix: 8 dB left 'Almost.', '...Clever.', the hand, the doors and 'Two of me.' 4-13 dB
+                      # under the scare in 1-4.5 kHz; the cut now also sits inside the drive search (the loudness target
+                      # is met with the cut in place)
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
 LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the
                                 # narration with the bed 7.9 dB under it (critic 3 m11)
@@ -976,7 +978,7 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # rule 1 .. rule 7 rise; the comment prompt ('cta') and everything from the 3:00 bell on are left alone
 ARC_TARGETS = [('rule1', -19.0), ('cta', None), ('rule2', -17.5), ('rule3', -16.0), ('rule4', -14.5), ('rule5', -13.0),
                ('rule6', -11.8), ('rule7', -10.6), ('bell_rings', None)]
-ARC_MAX_DB = 6.0
+ARC_MAX_DB = 8.0     # Bus final mix: 6 dB clamped rules 1 and 6 short of the rule-by-rule rise
 # sound fix round (M1): the old landline's bell sat 5-10 dB under the voice peaks in the speech band and level with the
 # voice between syllables: each ring dips this much while the narration speaks (voice-keyed, 10 ms attack, 0.12 s hold)
 RING_DUCK_DB = 9.0
@@ -1523,7 +1525,7 @@ def main():
                 def _sat(d):
                     pre = (cl * 10 ** (d / 20)) / pk_in
                     gp = (10 ** (w * 20 * np.log10(pre) / 20)).astype(np.float32)[:, None]
-                    return (cl * np.tanh(seg * gp / cl)).astype(np.float32)
+                    return dyn_cut((cl * np.tanh(seg * gp / cl)).astype(np.float32), act_h[a0:b1], BOOST_VCUT_DB)
                 def _loud(y):
                     yc = y[ca:cb_] * w[ca:cb_, None]
                     return float(-0.691 + 10 * np.log10(SX._blocks(yc, 0.4, 0.05).max() + 1e-20))
@@ -1535,7 +1537,6 @@ def main():
                 sat = _sat(d_ok)
                 if l_ok is not None and l_ok > tgt:                  # already over its target at no drive: down to it
                     sat *= np.float32(10 ** ((tgt - l_ok) / 20))
-                sat = dyn_cut(sat, act_h[a0:b1], BOOST_VCUT_DB)
                 hx[a0:b1] = seg * (1.0 - w)[:, None] + sat * w[:, None]
                 if boost_log is not None:
                     boost_log.append((round((a + int(0.03 * SR)) / SR + t0, 2), gd, d_ok, round(l_ok - Lv_b, 1) if l_ok else None,
@@ -1612,7 +1613,8 @@ def main():
         out = []
         for a_, b_, tgt, off in arc_secs:
             sel = gap & (tb >= a_ + 0.5) & (tb < b_ - 0.5)
-            out.append(float(np.median(bl[:n_][sel])) - Lv if sel.sum() >= 20 else None)
+            # Bus film: the tight voice edit leaves few >= 0.4 s gaps; 0.6 s of them is enough for a median
+            out.append(float(np.median(bl[:n_][sel])) - Lv if sel.sum() >= 6 else None)
         return out
 
     def arc_env(secs):
@@ -1634,7 +1636,11 @@ def main():
         Li, P50 = bstat(bed)
         gl = gap_levels(bed) if arc_secs else []; del bed
         err = min(A.bed_p50 - P50, (A.bed_rel + 1.5) - Li)
-        aerr = [(sec[2] - g) if g is not None else 0.0 for sec, g in zip(arc_secs, gl)]
+        aerr = [(sec[2] - g) if g is not None else None for sec, g in zip(arc_secs, gl)]
+        # a section with no measurable gaps keeps the shape's mean (it was 0.0, and the shape step then pushed every
+        # unmeasured rule to -6 dB, so rules 5 and 6 played quieter than 3 and 4)
+        _known = [x for x in aerr if x is not None]
+        aerr = [x if x is not None else (float(np.mean(_known)) if _known else 0.0) for x in aerr]
         log(f'  music gain iter {it}: music {20 * np.log10(gm):+.1f} dB, bed integrated {Li:+.2f} LU, p50 {P50:+.2f} LU rel voice'
             + ('; bed in gaps by rule ' + ' '.join('%+.1f' % g if g is not None else '-' for g in gl) +
                ' (arc offsets ' + ' '.join('%+.1f' % sec[3] for sec in arc_secs) + ' dB)' if arc_secs else ''))

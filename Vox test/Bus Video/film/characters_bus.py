@@ -2387,7 +2387,8 @@ CAST['theo_color'] = _v3cast(outfit='raincoat_kid', feet='shoes', **_THEO, cloth
 _t_ = dict(CAST['theo_color'])
 for _k in ('skin', 'skin_sh', 'skin_dp', 'blush', 'lip', 'hair_c', 'brow_c', 'iris_c'):
     _t_[_k] = _greyed(_t_[_k], 0.5, '#9aa4a8', 0.04)
-_t_['cloth'] = {k: _greyed(v, 0.55, '#9aa4a8', 0.05) for k, v in _THEO_CLOTH.items()}
+# review r3: the raincoat must still read YELLOW under the bus's amber (it read beige at 0.55): the coat fades less
+_t_['cloth'] = {k: _greyed(v, 0.22 if k in ('top', 'top_sh', 'top_hi', 'hood', 'hood_sh') else 0.55, '#9aa4a8', 0.05) for k, v in _THEO_CLOTH.items()}
 _t_.update(lid_rest=0.2, micro=0.5)
 CAST['theo'] = _t_
 # The new girl, about 11: hair in a clip, an oversized plain backpack with no name on it, a mustard cardigan; looks down

@@ -60,6 +60,29 @@ events}`) and `shots.json` (the cut list).
   L364, music_box_warm again at Theo's stop L375, morning_warm L386, outro_warm L401..end), the `name_sting` at L394,
   plus `hit`, `riser`, `rule` and `silence` events, and the tension curve (`intensity`).
 
+## Sound: the final mix
+Rebuild after any picture change (about 15 min; peaks near 12 GB RAM, so never while a render runs):
+```
+python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav   # only if the picture changed: new preview, then move film.mp4 to _work/preview/preview.mp4
+bash audio/final_mix.sh            # film.py --cues -> audio/mix.py (--plan full) -> mix_en.wav + mix.wav -> measure_mix.py -> mix_scenes.py -> preview_mix.mp4
+```
+Outputs in `W/mix/final/`: `mix_en.wav` (read by render.py / deliver.sh / encode_chain.sh), `mix.wav` (hard link),
+`stems/`, `cues_used/` (both sheets as mixed), `measure.txt` / `measure.json`, `scenes/NN_name.png`; and
+`W/preview/preview_mix.mp4`.
+- `audio/sfx_plan.py` is this film's pass over the picture's SFX sheet (name -> recipe map, transient shifts, ADD beds:
+  bus 9 mornings, the 911 call, the sirens, the morning birds). Every picture name is mapped on purpose: sfx.py's
+  keyword guesses had sent glass_pound to a window smash, metal_rip to cloth, door_slap to a creak, bus_drive to rain.
+- `audio/music_plan.py` EVENTS: `{'boost': dB}` marks the biggest scares (mix.py grades them to +8 / +9 / +10 LU
+  momentary over the voice); a silence must end before the scare it sets up. `mix.py` ARC_TARGETS name line tags
+  (rule1..rule7), so the rule-by-rule bed follows any voice re-edit.
+
+- Result (18 Nov, after two remix passes): -14.03 LUFS integrated, -1.7 dBTP, voice = mix -0.01 LU, bed -12.2 LU under
+  the voice; scares +6..+8.5 LU momentary over the integrated level (the hallway +7.7, LIGHTHOUSE +8.5, the lure +7.6,
+  his defeat +6.7); outside the scares the mix never passes +2.8 LU. Bed in the gaps rises rule by rule -20.6, -20.8,
+  -19.3, -17.9, -16.4, -16.3, -14.0 LU (rules 1-7). Open: "Almost.", "...Clever.", the hand, the doors and "Two of me."
+  still cover their own words 2-9 dB in 1-4.5 kHz for 0.3-0.5 s (the tight voice edit leaves 0.15-0.3 s gaps); the 3:00
+  bell peaks at +4.4 LU and "Almost." / "Backwards." / the hand at +4.8..+5.5 (target +6).
+
 ## Results (part B, 18 Nov)
 - `plan_partb` adds 205 shots (L190..L418): 378 shots in all, median 1.76 s, 13:18 with the end card.
 - `tools/validate.py`: 0 ERROR over all 378 shots (WARNs: a few sub-0.6 s cutaways, small reach gaps in hand-holds,

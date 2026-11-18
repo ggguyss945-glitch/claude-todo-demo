@@ -34,6 +34,9 @@ import music_plan as MP                                   # noqa: E402
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
 EDIT = [
+    # first full mix: the walks sat 18-22 LU under the voice + music (masked)
+    ('footsteps_wood_inside', 0.0, 1e4, {}, {'add_db': 3.0}, 'house steps masked (18-22 LU under)'),
+    ('footsteps_grass', 0.0, 1e4, {}, {'add_db': 3.0}, 'lawn steps masked (18-20 LU under)'),
 ]
 THIN_MIN_GAP = 0.26                                       # (the dummy film's jaw ticks: no such cues in this film)
 THIN_GAIN = {'tv': -13.0, None: -10.0}
@@ -170,6 +173,11 @@ ROOM = {'house_night': ('house_night', {'fridge': 0.6, 'clock': 0.6, 'creaks': 0
         'house_dead': ('house_night', {'fridge': 0.0, 'clock': 0.6, 'creaks': 0.4}, 0.0),   # the power is out
         'morning': ('house_night', {'fridge': 0.5, 'clock': 0.2, 'creaks': 0.0}, -4.0)}
 SPACE_MAP = {'classroom': 'inside'}
+# first full mix (measure_mix.py): these recipes' transients sat off the picture's frame by a fixed amount
+# (bus_door open -183 ms, his_unfold +200 ms, broom_bend +350 ms, tire_screech +126 ms, bus_pull_away +95 ms): the
+# cue moves by the opposite so the transient lands on the frame
+SHIFT = {'bus_door_fold': 0.18, 'bus_door_spring': 0.18, 'ws_unfold_clack': -0.2, 'broom_rip': -0.34, 'broom_jam': -0.34,
+         'tyre_screech': -0.12, 'engine_rev_bus': -0.09, 'bus_pull_away': -0.09}
 
 
 def picture_pass(out, lines, log):
@@ -186,6 +194,9 @@ def picture_pass(out, lines, log):
             res.append(c); continue
         if c.get('space') in SPACE_MAP:
             c = dict(c, space=SPACE_MAP[c['space']])
+        if nm in SHIFT:
+            c = dict(c, t=round(t + SHIFT[nm], 3))
+            log.append(f'PIC  {nm:18s} {t:7.2f} moved {SHIFT[nm]:+.2f} s (its transient onto the frame)')
         why = None
         if nm == 'vhs_glitch' and any(abs(t - s) < 0.15 for s in skips):
             log.append(f'PIC  vhs_glitch         {t:7.2f} dropped: the tape_skip on this frame plays it'); continue

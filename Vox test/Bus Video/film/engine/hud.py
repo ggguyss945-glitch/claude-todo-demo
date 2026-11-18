@@ -133,7 +133,7 @@ def rule_times(text_, type_dur=None):
     return {'pop': 0.0, 'line': 0.05, 'type0': 0.35, 'type1': 0.35 + td, 'end': 0.35 + td + RULE_HOLD}
 
 
-def rule_card(cv, n, text_, t, total=7, icon=None, type_dur=None, scrim=0.35, alpha=255, y=0.0):
+def rule_card(cv, n, text_, t, total=7, icon=None, type_dur=None, scrim=0.35, alpha=255, y=0.0, accent=None, plate=0.0):
     if t < 0: return
     pen = Pen(cv)
     tm = rule_times(text_, type_dur)
@@ -152,13 +152,17 @@ def rule_card(cv, n, text_, t, total=7, icon=None, type_dur=None, scrim=0.35, al
         hw = 150 * lu
         pen.fill(rrect(DW / 2 - hw, 556 + y0, hw * 2, 4, 2), RED, alpha)
     lines = wrap_rich(text_.upper(), 800, 31, 760, 0.045)
+    if plate > 0:                                   # a dark plate behind the text block: the key phrase reads over any paper
+        pw = max(text_width(l.replace('*', ''), 800, 31, 0.045) for l in lines) + 96
+        pa = alpha * plate * clamp(t / 0.2)
+        pen.fill(rrect(DW / 2 - pw / 2, 600 + y0, pw, (len(lines) - 1) * 44 + 76, 18), '#0b0c12', pa)
     total_chars = sum(len(l.replace('*', '')) for l in lines)
     shown = total_chars * clamp((t - tm['type0']) / max(1e-6, tm['type1'] - tm['type0']))
     used = 0
     for i, l in enumerate(lines):
         n_l = len(l.replace('*', ''))
         rv = clamp(shown - used, 0, n_l)
-        if rv > 0: rich_text(cv, l, DW / 2, 648 + y0 + i * 44, 800, 31, '#ffffff', RED, alpha, 0.045, 'center', 0.6, reveal=rv)
+        if rv > 0: rich_text(cv, l, DW / 2, 648 + y0 + i * 44, 800, 31, '#ffffff', accent or RED, alpha, 0.045, 'center', 0.6, reveal=rv)
         used += n_l
     da = alpha * clamp((t - 0.1) / 0.15)
     if da > 0:

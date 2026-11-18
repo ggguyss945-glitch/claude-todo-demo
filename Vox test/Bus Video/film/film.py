@@ -69,7 +69,7 @@ TESTS = os.path.join(W, 'tests', 'film')
 WORDS = os.path.join(ALIGN, 'asr_cache.json')
 FPS = 60
 LEAD = 0.10                      # cut a moment before the word
-TAIL = 6.0                       # the end card holds after the last line
+TAIL = 4.0                       # the end card holds after the last line
 TITLE = "If The School Bus Stops At Midnight... DON'T GET ON"
 BASE = 'If_The_School_Bus_Stops_At_Midnight'
 CHANNEL = 'NIGHT POLICY'           # the channel's name on every card
@@ -336,6 +336,8 @@ class Film:
         k, ch = self.chunk_at(l, t)
         txt = ch[k]
         if l['who'] != 'N' or l['en'].lstrip().startswith(('"', '\u201c')):
+            if k == 0: txt = txt.lstrip('"\u201c\u201d ')                     # the line's own quote marks: never doubled
+            if k == len(ch) - 1: txt = txt.rstrip('"\u201c\u201d ')
             if k == 0: txt = '“' + txt
             if k == len(ch) - 1: txt = txt + '”'
         H.caption(cv, txt)
@@ -443,6 +445,15 @@ def scam(sh, env=None, c=None, depth=None):
         x, y = P(c.get('x', 960), c.get('y', 540))
         x1, y1 = P(c.get('x1', c.get('x', 960)), c.get('y1', c.get('y', 540)))
         f0 = c.get('f', 1.0)
+        # review r3: a push the plan asks for (f 2-4: inserts, close-ups inside a wide set) was silently clamped to the
+        # view's f range (1.8) and its centre range, leaving tiny wides. A zoom-in never shows past the set's edges, so the
+        # f cap rises to the request (max 4) and the centre may move as far as the zoom keeps the frame inside the set.
+        if not free and env.get('f') and f0 > env['f'][1]:
+            fz_ = min(f0, 4.0)
+            env['f'] = (env['f'][0], fz_)
+            hx, hy = 960.0 * (1.0 - 1.0 / fz_), 540.0 * (1.0 - 1.0 / fz_)
+            if env.get('x'): env['x'] = (min(env['x'][0], 960 - hx), max(env['x'][1], 960 + hx))
+            if env.get('y'): env['y'] = (min(env['y'][0], 540 - hy), max(env['y'][1], 540 + hy))
         rate = c.get('rate', 0.02) if mv == 'push' else 0.0
         f1 = c.get('f1', f0 * (1.0 + rate) ** max(0.3, sh.d))
         z0 = c.get('z', 1.0); z1 = c.get('z1', z0)
@@ -1116,6 +1127,11 @@ def B_bust(F, sh):
         sp = None; lens = None; grade = p.get('grade', 'face_close'); sfx_fn = None
     fr = BUST_FRAMES['default'][sh.idx % 4]
     cx, cy, sc = p.get('cx', fr[0]), p.get('cy', fr[1]), p.get('scale', fr[2])
+    # review round 3: HIS close-ups frame the FACE (eyes about a third from the top; the tall hat leaves the frame).
+    # His rest head centre sits on his eyes, so cy is lifted to eye_to; hands / acts / extra busts move with it.
+    fdy = 0.0
+    if who in ('whistle', 'whistle94') and not callable(cy) and p.get('face_fix', True):
+        fdy = min(0.0, p.get('eye_to', 430.0) - cy); cy = cy + fdy
     tr, ht = p.get('turn', 0.0), p.get('h_turn', 0.0)
     base = lambda a, s: a.set(s.t0 - 3, None, 0.1, turn=tr, h_turn=ht)
     act = p.get('act')
@@ -1145,6 +1161,12 @@ def B_bust(F, sh):
                                 hd.get('sleeve_from'), hd.get('scratch', False), hd.get('name', 'hand'), held_pen=hd.get('pen', False)))
     if p.get('acts'):
         extra += [l for l in (p['acts'](sh.A, sh, None) or []) if l is not None]
+    if fdy:
+        for l_ in extra:
+            if getattr(l_, 'name', '').startswith('bust'): continue
+            def mdraw(pen, t, d0=l_.draw, dy=fdy):
+                pen.cv.save(); pen.cv.translate(0.0, dy); d0(pen, t); pen.cv.restore()
+            l_.draw = mdraw
     cxs, cys = (cx(sh.t0) if callable(cx) else cx), (cy(sh.t0) if callable(cy) else cy)
     c = dict(p.get('c') or dict(mv='push', x=960 + (cxs - 960) * 0.25, y=cys - 40, rate=0.0))
     c.setdefault('free', True)
@@ -1339,8 +1361,8 @@ def B_rule(F, sh):
                 for (x0, x1, y_) in segs:
                     pen.fill(rrect(x0 - 10, y_ - 30, (x1 - x0) + 20, 40, 8), '#ffffff', 26 * k_)
                     L_ = clamp(run, 0.0, x1 - x0); run -= (x1 - x0)
-                    if L_ > 0: pen.fill(rrect(x0, y_ + 9, L_, 4, 2), H.RED, 230 * k_)
-        H.rule_card(cv, n, RULE_TEXT[n], tt_, total=8 if n == 8 else 7, icon=None, scrim=0.35)
+                    if L_ > 0: pen.fill(rrect(x0, y_ + 9, L_, 4, 2), '#ffd23a', 230 * k_)
+        H.rule_card(cv, n, RULE_TEXT[n], tt_, total=8 if n == 8 else 7, icon=None, scrim=0.45, accent='#ffd23a', plate=0.86)
     cam = scam(sh, None, dict(mv='push', rate=0.012, free=True))
 
     def fx(t):
@@ -2160,7 +2182,9 @@ def plan_open(F):
     t, e, C = F.t, F.e, F.cut
     # 0 "If the school bus stops outside your house at midnight, and the driver knows your name... don't get on."
     C(T(0), 'set', room='front', view='house', set=dict(his=True, his_heads=1.0, his_win=1.0, porch=0.0, letters=1.0), rim=AMBER,
-      c=dict(mv='push', f=1.0, rate=0.03), sfx=[(T(0) + 0.35, 'air_brakes', -2, -0.2, 'outside'), (T(0), 'bus_idle', -10, 0, 'outside', dict(dur=6.0, kind='his'))])
+      c=dict(mv='push', f=1.2, rate=0.06, x=880, y=600), sfx=[(T(0) + 0.35, 'air_brakes', -2, -0.2, 'outside'), (T(0), 'bus_idle', -10, 0, 'outside', dict(dur=6.0, kind='his'))])
+    # review r3: the hook's first wide was a static 3.3 s: a cut closer on "midnight" (his bus at our kerb, the door shut)
+    C(W(0, 'midnight'), 'set', room='front', view='curb', set=dict(his=True, his_heads=1.0, his_win=1.0), rim=AMBER, c=dict(mv='push', f=1.1, rate=0.05))
     C(W(0, 'driver'), 'bust', who='whistle', bg=('front', 'curb'), set=dict(his=True, his_heads=1.0, his_win=1.0), cx=900, cy=760, scale=0.85,
       turn=0.6, light=WS_DARK, act=_A(pose(-9, None, 0.1, h_turn=0.5), wlook(WD(0, 'knows') - 0.05, (1500, 420)), wlook(WD(0, 'name') + 0.1, (960, 520))),
       sfx=[(WD(0, 'knows') - 0.05, 'neck_tick', -4, 0, 'outside'), (WD(0, 'name') + 0.1, 'neck_tick', -2, 0, 'outside')], c=dict(mv='push', rate=0.0, zrate=0.03))
@@ -2192,7 +2216,7 @@ def plan_open(F):
     # 4 "That's Mister Whistlestop."  by his bus under the streetlight; a flicker and he is at the mailbox
     C(T(4), 'set', room='front', view='street', set=dict(FRONT_HIS, letters=1.0, street=ST.bu_flicker(WD(4, 'whistlestop'))), rim=AMBER,
       ppl=[ws('his_step', act=skip_to((-9, 'his_step'), (WD(4, 'whistlestop') + 0.1, 'mailbox', dict(h_tilt=10.0))))],
-      tags=[tagc(WD(4, 'mister'), 'MISTER WHISTLESTOP', 'red', 960, 170, 2.0)], c=dict(mv='push', f=1.0, rate=0.02))
+      tags=[tagc(WD(4, 'mister'), 'MISTER WHISTLESTOP', 'red', 960, 170, 2.0)], c=dict(mv='push', f=2.3, rate=0.02, x=770, y=560))
     # 5 "A bus-safety cat from a 1994 kids' show."
     C(T(5), 'flat', set=lambda: ST.bu_tape94('full'), cut='vhs', era='1994',
       ppl=[dict(who='whistle94', x=860, y=860, h=CH.height_px('whistle94', 290.0), turn=-0.15, act=lambda a, s: a.host(s.t0 + 0.1, s.t1 + 0.5))],
@@ -2201,7 +2225,7 @@ def plan_open(F):
     C(T(6), 'set', room='bus', view='seat4', set=dict(kind='his', seat_lit={4: 1.0, 22: 1.0}, drive=6.0), rim=AMBER,
       ppl=[P('sami', 'seat4_win', kind='seat', expr='dazed', act=_A(lambda a, s: a.look_at(s.t0, scr(s.sp, 'window4', dy=-40), dur=0.5),
                                                                lambda a, s: a.reach_to(s.t0 + 0.3, -1, scr(s.sp, 'window4'), dur=0.6, contact='palm', shape='flat', z=20.0)))],
-      sfx=[(T(6), 'bus_rumble', -10, 0, 'bus', dict(dur=2.0))], c=dict(mv='push', f=1.0, rate=0.02))
+      sfx=[(T(6), 'bus_rumble', -10, 0, 'bus', dict(dur=2.0))], c=dict(mv='push', f=1.9, rate=0.02, x=860, y=520))
     # 7 "All he needed was his name."
     C(T(7), 'ins', name='chalkboard', c=dict(mv='push', rate=0.05))
     # 8 "And I gave it to him."
@@ -2401,7 +2425,15 @@ def plan_rule1(F):
                     *[(lambda k: lambda a, s: a.reach_to(s.t0 + 0.2 + k * 0.7, 1, scr(s.sp, 'mailbox_box', dx=-40 + 40 * k), t1=s.t0 + 0.75 + k * 0.7, dur=0.3, contact='grip', shape='grip', z=30.0))(k)
                       for k in range(2)]))],
       c=dict(mv='push', f=1.0, rate=0.02))
-    C(W(63, 'letters'), 'ins', name='mailbox', kw=lambda u: dict(letters=1.0 - clamp(u / 1.8)),
+    t_l = W(63, 'letters')
+    n_l = len(ST.BU_NAME)
+
+    def letter_hand(tt):                       # review r3: Grandma's hand on the letter coming off (the insert's own letter grid)
+        k_ = min(n_l - 1, int((1.0 - clamp((tt - t_l) / 1.8)) * n_l))
+        x_ = 280 + (1360 / n_l) * (k_ + 0.5)
+        return (x_ + 40, 640, -75.0, 1.0, 300)
+    C(t_l, 'ins', name='mailbox', kw=lambda u: dict(letters=1.0 - clamp(u / 1.8)),
+      hands=[dict(who='della', fn=letter_hand, size=300, shape='grip', side=1, sleeve_from=(1500, 1400), depth=0.9)],
       sfx=[(W(63, 'letters') + 0.3 + 0.45 * k, 'letter_clink', -8, 0, 'close', dict(index=k)) for k in range(4)], c=dict(mv='push', rate=0.02))
     # 64 "She turns Sami's dinosaur backpack to face the wall."
     C(T(64), 'set', room='living', view='window', set=dict(lamp=1.0, ceil=0.0, backpack='window'), rim=LAMP,
@@ -2539,8 +2571,9 @@ def plan_rule2(F):
     C(T(106), 'bust', who='mina', bg=('living', 'couch3q'), set=LIV_HEADS, expr='hush_fear', cx=1000, cy=640, scale=0.85, turn=-0.3, light=HEADS,
       act=_A(lambda a, s: a.look_at(s.t0, (200, 460), dur=0.15)), c=dict(mv='push', rate=0.0, zrate=0.02))
     # 107-110 "Sami?" "Sami jolts awake." "Takes a breath." S "He..."
-    C(T(107), 'bust', who='sami', bg=('living', 'couch3q'), set=LIV_HEADS, expr='sleepy', cx=960, cy=660, scale=0.9, turn=0.2, light=HEADS,
-      act=_A(pose(-9, None, 0.1, h_tilt=-14.0), pose(WD(108, 'jolts') - 0.05, None, 0.12, h_tilt=0.0, wide=0.6),
+    C(T(107), 'bust', who='sami', bg=('living', 'couch3q'), set=LIV_HEADS, expr=None, cx=960, cy=660, scale=0.9, turn=0.2, light=HEADS,
+      act=_A(ex('sleepy', T(107) - 1.0, WD(108, 'jolts') - 0.05, 0.08), pose(-9, None, 0.1, h_tilt=-14.0), pose(WD(108, 'jolts') - 0.05, None, 0.12, h_tilt=0.0, wide=0.6),
+             ex('fear', WD(108, 'jolts') - 0.05, None, 0.1),
              pose(T(109) + 0.1, None, 0.5, chest_up=0.6), lambda a, s: a.talk([(t(110), e(110), 'He')], env=None, words=None)),
       c=dict(mv='push', rate=0.0, zrate=0.02, hit=[(WD(108, 'jolts'), 3.0)]))
     # 111 "My hand slaps over his mouth."
@@ -2571,8 +2604,9 @@ def plan_rule2(F):
       sfx=[(T(117) + 0.15, 'punch_clack', 0, 0, 'close')], c=dict(mv='push', rate=0.03))
     # 118 "A yellow ticket slides under the door, punched through the middle."
     C(T(118), 'set', room='hall', view='doorclose', set=dict(HALL_NIGHT, ticket=lambda tt: clamp((tt - T(118) - 0.3) / 1.4)), rim=NIGHT,
-      sfx=[(T(118) + 0.3, 'paper_slide', -6, 0, 'inside', dict(dur=1.4))], c=dict(mv='push', f=1.0, rate=0.02, y=600))
-    C(W(118, 'punched'), 'ins', name='ticket', kw=dict(slide=1.0), c=dict(mv='push', rate=0.025))
+      sfx=[(T(118) + 0.3, 'paper_slide', -6, 0, 'inside', dict(dur=1.4))], c=dict(mv='push', f=2.0, rate=0.02, x=960, y=1350, free=True))
+    # review r3: the ticket SLIDES under the door (an insert at the door's foot, animated), punched through the middle
+    C(W(118, 'slides'), 'ins', name='ticket', kw=lambda u: dict(slide=ease_out_cubic(clamp(u / 1.3))), c=dict(mv='push', rate=0.025))
     # 119-121 "Sami." "Seat four." "Last stop, three a.m."
     C(T(119), 'ins', name='ticket', kw=dict(slide=1.0), motion=lambda u: (0.0, -30.0 * ease_in_out(clamp(u / 3.0)), 0.25, 0.0),
       tags=[(t(119), 'SAMI', 1500, 330, 'red', 0.8), (t(120), 'SEAT 4', 1500, 330, 'red', 0.9), (t(121), 'LAST STOP 3 A.M.', 1500, 330, 'red', 1.6)], tag_sound=False,
@@ -2602,13 +2636,13 @@ def plan_rule3(F):
     # 131 "She slips out the back."
     bd = lambda tt: 80.0 * ease_in_out(clamp((tt - (E(131) - 0.6)) / 0.5))
     C(T(131), 'set', room='hall', view='stairs', set=dict(HALL_NIGHT, back_door=bd), rim=NIGHT,
-      ppl=[P('della', 'stairs_foot', path=[(T(131), 'stairs_foot'), (E(131) + 0.3, 'back_door')], expr='set_jaw',
-             act=lambda a, s: a.hold_prop('keys', 1, -9, None))],
-      sfx=[(E(131) - 0.6, 'door_open', -6, 0, 'inside', dict(kind='back'))], c=dict(mv='push', f=1.0, rate=0.01))
+      ppl=[P('della', 'back_door', face=(-4.2, 12.0), expr='set_jaw', act=_A(lambda a, s: a.hold_prop('keys', 1, -9, None),
+                                                                            lambda a, s: a.look_at(T(131) + 0.2, scr(s.sp, 'stairs_foot', dy=-500), dur=0.4, body=0.3)))],
+      sfx=[(E(131) - 0.6, 'door_open', -6, 0, 'inside', dict(kind='back'))], c=dict(mv='push', f=2.2, rate=0.02, x=1010, y=560))
     # 132-133 "Her flashlight crosses the yard." "Halfway there, it goes out."
     beam = lambda tt: 0.9 if tt < WD(133, 'out') else 0.0
     C(T(132), 'set', room='front', view='sideyard', set=dict(his=True, his_heads=1.0, porch=0.0, letters=0.0, broom='porch'), rim=NIGHT,
-      ppl=[P('della', 'yard_west', path=[(T(132), 'yard_west'), (E(133) + 0.6, 'b9_door')], expr='set_jaw', surface='grass',
+      ppl=[P('della', (-6.3, 4.4), path=[(T(132), (-6.3, 4.4)), (E(133) + 0.6, (-6.5, 2.3))], expr='set_jaw', surface='grass',
              torch=dict(side=1, a=beam, ground=2.0, spread=12.0), act=lambda a, s: a.hold_prop('maglite', 1, -9, None))],
       sfx=[(WD(133, 'out'), 'flashlight_off', -4, 0, 'outside')], c=dict(mv='push', f=1.0, rate=0.012))
     # 134 "Three knocks on the front door."
@@ -2659,13 +2693,13 @@ def plan_rule3(F):
         return fn
     pound = lambda a, s: a.knock_pattern(s.t0 + 0.1, (3, 3, 3), 1, beat=0.22, gap=0.3, target=scr(s.sp, 'b9_door', dx=40, dy=-330), kind='glass')
     C(T(147), 'set', room='front', view='driveway', set=B9, rim=NIGHT, c=dict(mv='push', f=1.0, rate=0.015))
-    C(W(147, 'pounding'), 'bust', who='della', bg=('front', 'bus9door'), set=B9, expr='shout', cx=960, cy=700, scale=0.8, light=NIGHT, talk=False,
+    C(W(147, 'real'), 'bust', who='della', bg=('front', 'bus9door'), set=B9, expr='shout', cx=960, cy=700, scale=0.8, light=NIGHT, talk=False,
       hands=[dict(who='della', fn=pound_fn(W(147, 'pounding'), x, ph), size=300, shape='grip', side=sd, sleeve_from=(x, 1500), depth=0.8)
              for x, ph, sd in ((560, 0.0, 1), (1360, 0.22, -1))],
       post=dict(dim=0.1), sfx=[(W(147, 'pounding') + 0.12 + 0.45 * k, 'glass_pound', -2, 0, 'outside', dict(index=k)) for k in range(6)],
       c=dict(mv='push', rate=0.0, zrate=0.01))
     # 148 "Trapped in her own cab, our porch broom wedged through her folding doors."
-    C(T(148), 'set', room='front', view='bus9door', set=B9, rim=NIGHT, sfx=[(T(148) + 0.3 + 0.45 * k, 'glass_pound', -8, 0, 'outside', dict(index=k)) for k in range(5)],
+    C(T(148), 'set', room='front', view='bus9door', post=dict(exposure=0.9), set=B9, rim=NIGHT, sfx=[(T(148) + 0.3 + 0.45 * k, 'glass_pound', -8, 0, 'outside', dict(index=k)) for k in range(5)],
       c=dict(mv='push', f=1.0, rate=0.03, y=600))
     # 149 D "DON'T OPEN THE DOOR!"
     C(T(149), 'bust', who='della', bg=('front', 'bus9door'), set=B9, expr='shout', cx=960, cy=640, scale=0.85, light=NIGHT, post=dict(blur=1),
@@ -2736,36 +2770,60 @@ def plan_rule4(F):
       light=lambda tt: PHONE if tt >= WD(172, 'phone') else DARK, act=_A(lambda a, s: a.look_at(WD(172, 'phone'), (900, 1000), dur=0.2)),
       sfx=[(WD(172, 'phone'), 'phone_light_click', -6, 0, 'close')], c=dict(mv='push', rate=0.0, zrate=0.01))
     # 173-177 the glove in the phone light, folded small round her fingers (one knuckle too many); then HIM lifting her walkie
-    def glove_acts(press0, push=0.0):
+    def glove_acts(press0, push=0.0, arrive=None, curl=0.7):
+        """review r3: HIS glove (mustard sleeve + tabby wrist from the dark, upper left) folded small AROUND her fingers,
+        over them, not beside them; arrive = the cut time it slides in from the dark (L173)."""
         def acts(A, sh, sp):
             def pool(pen, t):
                 pen.glow(1120, 760, 520, '#dfeaff', 70)
-            def glove(pen, t):
-                pr = clamp(press0 + (t - sh.t0) * push)
-                _glove_cursor(pen, 1150, 790, 5.2, 255, press=pr, curl=0.55)
+            def drift(t):
+                if arrive is None: return (0.0, 0.0)
+                u = ease_out_cubic(clamp((t - arrive) / 0.9))
+                return (-260.0 * (1 - u), -200.0 * (1 - u))
+            def curl_at(t):
+                if arrive is None: return curl
+                return lerp(0.15, curl, ease_in_out(clamp((t - arrive - 0.6) / 0.5)))
+            gl = glove_on(1300, 815, 4.6, press0, clamp(press0 + push * sh.d), sh.t0, sh.t1, curl=curl, drift=drift)
+            d0 = gl.draw
+
+            def gdraw(pen, t, d0=d0):
+                gl_c = curl_at(t)
+                # re-draw with the curl of the moment (glove_on takes a fixed curl)
+                g2 = glove_on(1300, 815, 4.6, press0, clamp(press0 + push * sh.d), sh.t0, sh.t1, curl=gl_c, drift=drift)
+                g2.draw(pen, t)
+            gl.draw = gdraw
             L_ = [Layer(0.95, pool, 'phone_pool', blur=0),
                   hand_layer('mina', lambda tt: (1180, 800, -100.0, 1.0, 340), 340, 'grip', 1, sleeve_from=(1750, 1100), light=PHONE),
-                  Layer(0.85, glove, 'glove', blur=0)]
+                  gl]
             return L_
         return acts
-    C(T(173), 'set', room='living', view='hand', set=LIV_BLACK, rim=PHONE, acts=glove_acts(0.0), sfx=[(T(173) + 0.1, 'glove_creak', -6, 0.2, 'close')],
+    C(T(173), 'set', room='living', view='hand', set=LIV_BLACK, rim=PHONE, acts=glove_acts(0.0, arrive=T(173) + 0.05), sfx=[(T(173) + 0.1, 'glove_creak', -6, 0.2, 'close')],
       c=dict(mv='push', f=1.0, rate=0.03))
-    C(T(174), 'set', room='living', view='hand', set=LIV_BLACK, rim=PHONE, acts=glove_acts(0.0), c=dict(mv='push', f=1.45, rate=0.03, x=1120, y=600))
+    C(T(174), 'set', room='living', view='hand', set=LIV_BLACK, rim=PHONE, acts=glove_acts(0.0), c=dict(mv='push', f=1.45, rate=0.03, x=1180, y=640))
     C(T(175), 'set', room='living', view='hand', set=LIV_BLACK, rim=PHONE, acts=glove_acts(0.2, 0.6), sfx=[(T(175) + 0.3, 'glove_squeeze', -4, 0, 'close')],
-      c=dict(mv='push', f=1.2, rate=0.04, x=1100, y=620))
+      c=dict(mv='push', f=1.2, rate=0.04, x=1180, y=660))
     C(T(176), 'bust', who='mina', bg=('living', 'couch3q'), set=LIV_BLACK, expr='terrified_call', cx=900, cy=640, scale=0.9, turn=0.35, light=PHONE,
       act=_A(lambda a, s: a.look_at(s.t0, (1400, 900), dur=0.1)), c=dict(mv='push', rate=0.0, zrate=0.03))
-    C(T(177), 'bust', who='whistle', bg=('living', 'couch3q'), set=LIV_BLACK, cx=1000, cy=900, scale=0.85, turn=-0.3, light=dict(PHONE, dark=0.35),
-      act=lambda a, s: a.walkie_to_grin(WD(177, 'walkie') - 0.3, -1, None, 0.6), sfx=[(WD(177, 'walkie'), 'walkie_squelch', -6, 0.2, 'inside')],
-      c=dict(mv='push', rate=0.0, zrate=0.015))
+    # 177 the reveal in the phone light: HIM crouched by the couch, one glove folded round her fingers, the other lifting
+    # her walkie off the cushion to the grin (review r3: he was never seen; the walkie was out of frame)
+    def phone_pool(A, sh, sp):
+        return [Layer(0.97, lambda pen, t: pen.glow(980, 640, 700, '#dfeaff', 60), 'phone_pool', blur=0)]
+    C(T(177), 'set', room='living', view='couch3q', set=dict(LIV_NIGHT, hall=0.0, walkie=False), rim=PHONE,
+      ppl=[P('mina', 'couch_right', expr='terrified_call', light=PHONE, act=_A(lambda a, s: a.look_at(-9, (1090, 470), dur=0.2),
+                                                                          lambda a, s: a.set(-9, None, 0.1, lean=-0.25))),
+           ws((-0.75, 3.95, 0.0), face='couch_right', light=PHONE,
+              act=_A(pose(-9, None, 0.1, ws_crouch=0.75, ws_bend=0.55), lambda a, s: a.grip_small(-9, 1, s.A['mina'], -1, dur=0.01),
+                     lambda a, s: a.walkie_to_grin(T(177) + 0.35, -1, None, 1.1), lambda a, s: a.head_tilt(WD(177, 'walkie'), -14.0, 0.5)))],
+      sfx=[(WD(177, 'walkie'), 'walkie_squelch', -6, 0.2, 'inside')], c=PU(0.03, 1.55, x=1120, y=560))
     C(T(178), 'bust', who='whistle', bg=('living', 'couch3q'), set=LIV_BLACK, cx=960, cy=820, scale=1.0, light=dict(PHONE, dark=0.3),
-      act=lambda a, s: a.walkie_to_grin(-9, -1, None, 0.01), hit=[T(178) + 0.05], c=dict(mv='push', rate=0.0, zrate=0.02))
+      act=_A(lambda a, s: a.walkie_to_grin(-9, -1, None, 0.01), lambda a, s: a.head_tilt(T(178) + 0.1, 14.0, 0.35)), hit=[T(178) + 0.05],
+      c=dict(mv='push', rate=0.0, zrate=0.05))
     # 179 "I rip free."
     C(T(179), 'bust', who='mina', bg=('living', 'couch3q'), set=LIV_BLACK, expr='terrified_call', cx=960, cy=640, scale=0.9, light=PHONE,
       act=_A(lambda a, s: a.set(WD(179, 'rip') - 0.1, None, 0.2, lean=-0.3, h_tilt=-8.0)), sfx=[(WD(179, 'rip'), 'rip_free', -2, 0, 'close')],
       c=dict(mv='push', rate=0.0, zrate=0.0, hit=[(WD(179, 'rip'), 4.0)]))
     # 180-181 "The lights snap back on." "Nobody's there."
-    LIV_BACK = dict(LIV_NIGHT, hall=0.8, walkie=False)
+    LIV_BACK = dict(LIV_NIGHT, hall=1.0, ceil=0.8, walkie=False)                 # review r3: the power is back, the room reads lit
     C(T(180), 'set', room='living', view='couch3q', set=LIV_BACK, rim=NIGHT, cut='white', quiet_cut=True,
       ppl=[P('mina', 'couch_right', expr='terrified_call', act=_A(lambda a, s: a.look_at(s.t0 + 0.2, scr(s.sp, 'couch_front', dx=200, dy=-300), dur=0.25),
                                                                   lambda a, s: a.look_at(T(181), scr(s.sp, 'couch_front', dx=-300, dy=-350), dur=0.35)))],
@@ -2855,6 +2913,12 @@ def glove_on(x, y, s=4.2, press0=0.0, press1=0.0, t0=0.0, t1=1.0, a=255, curl=0.
 
 def palm_glass(x, y, size, t_on, who='sami'):
     def draw(pen, t):
+        # review r3: the window the palm is pressed on (glass, frame, a reflection), so the hand never floats
+        gx0, gy0, gw, gh = x - 1.1 * size, y - 1.3 * size, 2.6 * size, 2.6 * size
+        pen.fill(rrect(gx0, gy0, gw, gh, 26), '#2a2f3a', 120)
+        pen.fill(poly([(gx0 + 0.15 * gw, gy0), (gx0 + 0.35 * gw, gy0), (gx0 + 0.05 * gw, gy0 + gh), (gx0 - 0.15 * gw, gy0 + gh)]), '#ffffff', 22)
+        pen.line(rrect(gx0, gy0, gw, gh, 26), 22, '#3b3226', 255)
+        pen.line(rrect(gx0, gy0, gw, gh, 26), 4, LINE, 200)
         CH.draw_palm_on_glass(pen, who, x, y, size, press=clamp((t - t_on) / 0.3), t=t)
     lay = Layer(0.8, draw, 'palm', blur=0)
     lay.order = -9.0
@@ -2895,7 +2959,8 @@ def plan_rule5(F):
     # 197 "Down in the driveway, a flashlight blinks inside bus 9."  198 "Three times."
     b0 = WD(197, 'blinks')
     fl = blinkf((b0, b0 + 0.18))
-    C(T(197), 'set', room='front', view='granout', set=dict(FRONT_B9, flash=fl), rim=AMBER,
+    C(T(197), 'set', room='front', view='bus9door', set=dict(FRONT_B9, flash=fl), rim=AMBER,
+      acts=lambda A, sh, sp: [Layer(0.9, lambda pen, t: pen.glow(1340, 330, 260, '#fff4c8', 230 * fl(t)) if fl(t) > 0 else None, 'flash9', blur=0)],
       sfx=[(b0, 'flashlight_click', -8, 0, 'outside')], c=PU(0.02))
     C(T(198), 'ins', name='flashlight', kw=lambda u: dict(on=1.0 if (u < 0.12 or 0.24 <= u < 0.36 or 0.48 <= u < 0.6) else 0.0),
       sfx=[(T(198) + 0.24 * k, 'flashlight_click', -6, 0, 'close') for k in range(3)], c=dict(mv='push', rate=0.04))
@@ -2948,26 +3013,31 @@ def plan_rule5(F):
       sfx=[(WD(211, 'slides'), 'deadbolt_slide', 0, 0, 'inside')], c=PU(0.03, 2.2, x=901, y=560))
     # 212-215 the hallway is full of him: bent double, the hat crushed against the ceiling, gloves flat on both walls
     UPH = dict(up=0.0, gran=0.6, gran_door=95)
+    UPH_LIT = dict(up=0.25, gran=1.0, gran_door=95)                     # review r3: Grandma's lamp behind us lights him
+    LOWCAM = cm((-4.0, 2.75, UPF + 0.95), (-4.0, 4.6, UPF + 1.75), 760.0)   # low in her doorway, tilted up: floor to ceiling
 
-    def bent(t_walls=None, skip=None, look=None):
+    def bent(t_walls=None, skip=None, look=None, y=4.2):
+        """review r3: he FILLS the hall a metre from her door: bent double under the ceiling, the hat crushed on it,
+        both gloves flat on the two walls beside him (plan points at his own depth, not a screen offset)."""
         def f(a, s):
-            a.bend_double(-1.0, scr(s.sp, 'ceiling')[1], None, 0.01, crouch=0.4, bend=1.0)
+            cy_ = spot_of(s.sp, 'ceiling').Y
+            a.bend_double(-1.0, scr(s.sp, (-4.0, y, cy_))[1], None, 0.01, crouch=0.2, bend=0.55)
             if t_walls is not None:
-                a.walls_flat(t_walls, scr(s.sp, 'wall_l', dy=270), scr(s.sp, 'wall_r', dy=270), dur=0.35)
+                a.walls_flat(t_walls, scr(s.sp, (-4.6, y - 0.15, UPF + 1.55)), scr(s.sp, (-3.4, y - 0.15, UPF + 1.55)), dur=0.3)
             if skip: skip(a, s)
             if look: look(a, s)
         return f
-    C(T(212), 'set', room='upstairs', view='hall', set=UPH, rim=AMBER, hit=[T(212) + 0.05],
-      ppl=[ws((-4.0, 6.0, UPF), face=(-4.0, 2.0), act=bent(-9, skip_to((-9, (-4.0, 6.4, UPF)), (T(212) + 0.55, (-4.0, 5.6, UPF))), lambda a, s: a.head_tilt(T(212) + 0.7, 12.0, 0.6)))],
+    C(T(212), 'set', room='upstairs', view='hall', set=UPH_LIT, rim=AMBER, hit=[T(212) + 0.05],
+      ppl=[ws((-4.0, 5.3, UPF), face=(-4.0, 2.0), act=bent(-9, skip_to((-9, (-4.0, 5.3, UPF)), (T(212) + 0.55, (-4.0, 4.8, UPF))), lambda a, s: a.head_tilt(T(212) + 0.7, 12.0, 0.6), y=4.8))],
       sfx=[(T(212), 'door_creak_open', -6, 0, 'inside')], c=PU(0.02))
-    C(T(213), 'set', room='upstairs', view='hall', set=UPH, rim=AMBER, cut='vhs',
-      ppl=[ws((-4.0, 5.2, UPF), face=(-4.0, 2.0), act=bent(-9, None, pose(T(213) + 0.1, None, 0.5, ws_bend=1.15)))],
-      sfx=[(T(213), 'tape_skip', 0, 0, None)], c=PU(0.03, 1.15))
-    C(T(214), 'set', room='upstairs', view='hall', set=UPH, rim=AMBER,
-      ppl=[ws((-4.0, 5.2, UPF), face=(-4.0, 2.0), act=bent(-9, None, lambda a, s: a.head_tilt(T(214) + 0.2, -10.0, 0.9)))],
-      sfx=[(T(214) + 0.2, 'hat_crumple', -6, 0, 'inside')], c=PU(0.03, 1.9, x=960, y=330))
-    C(T(215), 'set', room='upstairs', view='hall', set=UPH, rim=AMBER,
-      ppl=[ws((-4.0, 5.2, UPF), face=(-4.0, 2.0), act=bent(WD(215, 'gloves') - 0.1))],
+    C(T(213), 'set', room='upstairs', view='hall', set=UPH_LIT, rim=AMBER, cut='vhs',
+      ppl=[ws((-4.0, 4.75, UPF), face=(-4.0, 2.0), act=bent(-9, None, pose(T(213) + 0.1, None, 0.5, ws_bend=0.9), y=4.75))],
+      sfx=[(T(213), 'tape_skip', 0, 0, None)], c=PU(0.03, 1.0))
+    C(T(214), 'set', room='upstairs', view='hall', set=UPH_LIT, rim=AMBER,
+      ppl=[ws((-4.0, 4.75, UPF), face=(-4.0, 2.0), act=bent(-9, None, lambda a, s: a.head_tilt(T(214) + 0.2, -10.0, 0.9), y=4.75))],
+      sfx=[(T(214) + 0.2, 'hat_crumple', -6, 0, 'inside')], c=PU(0.03, 1.5, x=960, y=300))
+    C(T(215), 'set', room='upstairs', view='hall', set=UPH_LIT, rim=AMBER,
+      ppl=[ws((-4.0, 4.6, UPF), face=(-4.0, 2.0), act=bent(WD(215, 'gloves') - 0.1, None, lambda a, s: a.lean_in(WD(215, 'walls'), 1.0, None, 0.4), y=4.6))],
       sfx=[(WD(215, 'gloves') + 0.25, 'glove_slap_wall', -2, -0.4, 'inside'), (WD(215, 'gloves') + 0.3, 'glove_slap_wall', -2, 0.4, 'inside')],
       c=PU(0.02, 1.0, hit=[(WD(215, 'gloves') + 0.25, 3.0)]))
     # 216 W "Sami?"
@@ -2986,10 +3056,12 @@ def plan_rule5(F):
     HCAM = cm((-4.0, 1.75, 4.15), (-4.0, 5.0, 3.95), 1000.0)
 
     def capture(t_hold, t_grab, hk=1.0, f=1.0, x=960, y=540):
-        return dict(room='upstairs', view='hall', cam=HCAM, set=UPH, rim=AMBER,
-                    ppl=[P('sami', (-4.05, 4.35, UPF), face=(-4.0, 6.0), expr='proud_grin'),
-                         ws((-4.0, 5.35, UPF), face=(-4.0, 2.0), act=bent(-9, None, lambda a, s: a.hold_child(t_hold, 1, s.A['sami'], -1, dur=0.8))),
-                         P('mina', (-4.38, 3.95, UPF), face=(-4.0, 6.0), expr='terrified_call',
+        # review r3: side by side, not in a line: Sami on the left, HIM on the right (the full bent height of him, a head
+        # above the ceiling line of the kids), his glove coming down to take Sami's hand; Mina behind Sami, grabbing the other
+        return dict(room='upstairs', view='hall', cam=HCAM, set=UPH_LIT, rim=AMBER,
+                    ppl=[P('sami', (-4.25, 4.5, UPF), face=(-3.8, 5.2), expr='proud_grin'),
+                         ws((-3.75, 5.15, UPF), face=(-4.25, 4.5), act=bent(-9, None, lambda a, s: a.hold_child(t_hold, 1, s.A['sami'], -1, dur=0.8), y=5.15)),
+                         P('mina', (-4.45, 4.0, UPF), face=(-4.0, 6.0), expr='terrified_call',
                            act=_A(lambda a, s: a.look_at(-9, (s.A['sami'], 'eyes'), dur=0.3),
                                   lambda a, s: a.hold_hand(t_grab, -1, s.A['sami'], 1, dur=0.4)))],
                     c=PU(0.02, f, x=x, y=y))
@@ -3046,7 +3118,11 @@ def plan_rule5(F):
            P('mina', 'his_door', face='his_driver', expr='terrified_call', act=lambda a, s: a.look_at(T(236), scr(s.sp, 'his_driver', dy=-120), dur=0.3))],
       sfx=[(T(236) + 0.6, 'loudspeaker_click', -4, 0, 'outside')], c=PU(0.02, 1.4, x=900, y=650))
     wbust(T(237), ('front', 'curb'), dict(FRONT_B9, his_door=0.0), cx=1000, cy=860, scale=0.95,
-          act=_A(pose(-9, None, 0.1, h_tilt=-10.0), lambda a, s: a.head_tilt(W(237, 'right'), 18.0, 0.5)), post=dict(glitch=0.05))
+          act=_A(pose(-9, None, 0.1, h_tilt=-10.0), lambda a, s: a.head_tilt(W(237, 'right'), 18.0, 0.5),
+                 pose(T(237) + 0.2, None, 1.1, approach=0.35), pose(W(237, 'right'), None, 0.08, approach=0.75)),
+          acts=lambda A, sh, sp: [glove_on(1500, 1000, 5.0, 0.0, 0.4, T(237) + 0.4, E(237), curl=0.2, down=False,
+                                           drift=lambda tt: (240 * (1 - ease_out_cubic(clamp((tt - T(237) - 0.3) / 0.9))), 380 * (1 - ease_out_cubic(clamp((tt - T(237) - 0.3) / 0.9)))))],
+          post=dict(glitch=0.05), sfx=[(W(237, 'right'), 'tape_skip', -6, 0, None)])
     # 238 "The bus pulls away with no lights on."  it skips away down the street, dark
     for k, (tk, hx) in enumerate([(T(238), -0.2), (T(238) + 0.75, -9.0), (T(238) + 1.45, -18.0)]):
         C(tk, 'set', room='front', view='street', set=dict(FRONT_B9, his_x=hx, his_win=0.0, his_heads=0.0, his_door=0.0), rim=NIGHT, cut='vhs' if k else None,
@@ -3228,7 +3304,7 @@ def plan_rule7(F):
     # 299 "He's at the top of the steps, with his clipboard."  (her eyes, from the bottom step) he skips in from the aisle
     SO = dict(kind='his', door=1.0)
     C(T(298), 'set', room='school', view='doors', set=dict(SCH0, his_door=1.0), rim=AMBER, cut='vhs',
-      ppl=[ws('his_top', face='bottom_step', act=_A(lambda a, s: a.clipboard(W(299, 'clipboard') - 0.4, 1), lambda a, s: a.head_tilt(T(299) + 0.2, 14.0, 0.6),
+      ppl=[ws('his_top', face='bottom_step', act=_A(lambda a, s: a.clipboard(-9, 1), lambda a, s: a.head_tilt(T(299) + 0.2, 14.0, 0.6),
                                                    wlook(T(298) + 0.3, (900, 760))))],
       sfx=[(T(298), 'amber_hum', -10, 0, 'bus', dict(dur=3.0)), (T(298), 'tape_skip', -4, 0, None)], c=PU(0.02, 2.7, x=958, y=590))
     # 300 W "Last stop! Everybody counted?"
@@ -3258,13 +3334,17 @@ def plan_rule7(F):
     C(T(306), 'set', room='bus', view='seat4', set=dict(HIS, seat_lit={4: 1.0, 22: 0.8}), rim=AMBER,
       ppl=[P('sami', 'seat4', kind='seat', expr='dazed', act=lambda a, s: a.look_at(T(306) + 0.3, (-500, 700), dur=0.7, body=0.6))], c=PU(0.015))
     # 307 "My foot lifts onto the first step."  (from inside, down the steps: her foot on the first step)
-    C(T(307), 'set', room='school', view='doors', set=SD, rim=HEADS9, c=PU(0.02, 3.0, x=905, y=640),
-      ppl=[P('mina_bare', 'bottom_step', face='his_top', expr='tempted', act=lambda a, s: a.step_up(T(307) + 0.3, 1, up=0.9, hold=3.0, back=0.5))],
+    MINA_STEP = lambda a, s: a.step_up(T(307) + 0.3, 1, up=0.9, hold=3.0, back=0.5)
+    C(T(307), 'set', room='school', view='doors', set=SD, rim=HEADS9, c=PU(0.02, 2.6, x=905, y=560, free=True),
+      ppl=[P('mina_bare', 'bottom_step', face='his_top', expr='tempted', act=MINA_STEP)])
+    # review r3: an insert of the foot lifting onto the first step (the env had clamped the 3x push to a wide)
+    C(W(307, 'first'), 'set', room='school', view='doors', set=SD, rim=HEADS9, c=PU(0.03, 6.0, x=865, y=1250, free=True),
+      ppl=[P('mina_bare', 'bottom_step', face='his_top', expr='tempted', act=MINA_STEP)],
       sfx=[(T(307) + 1.1, 'step_touch', -4, 0, 'bus')])
     # 308 "Not even for Sami."  (rule 7, a white flash)
     C(T(308), 'ins', name='rules', kw=dict(show=7, hl=7), cut='white', sfx=[(T(308), 'sting_rule', -2, 0, None)], c=dict(mv='push', rate=0.03))
     # 309 "I pull it back... and SCREAM his name."
-    C(T(309), 'set', room='school', view='doors', set=SD, rim=HEADS9, c=PU(0.02, 3.0, x=905, y=640),
+    C(T(309), 'set', room='school', view='doors', set=SD, rim=HEADS9, c=PU(0.02, 4.2, x=905, y=660, free=True),
       ppl=[P('mina_bare', 'bottom_step', face='his_top', expr='resolve', act=lambda a, s: a.step_up(T(309) - 1.5, 1, up=0.9, hold=1.6, back=0.5))],
       sfx=[(T(309) + 0.2, 'step_off', -4, 0, 'bus')])
     bust(W(309, 'scream'), 'mina_bare', ('school', 'reverse'), SD, 'terrified_call', HEADS9, cx=960, cy=650, scale=1.0, turn=-0.1,
@@ -3275,16 +3355,65 @@ def plan_rule7(F):
     bust(T(312), 'sami', ('bus', 'aisle'), HIS, 'shout_here', AMBER, cx=960, cy=660, scale=0.95, turn=0.2, act=lambda a, s: a.look_at(s.t0, (1300, 1000), dur=0.1),
          hit=[WD(312, 'here')], c=BZ(0.03, hit=[(WD(312, 'here'), 4.0)]))
     # 313-314 "He scrambles for the door." "A glove snaps shut on his pajamas."
-    tail_pt = lambda s: (lambda tt: (s.A['sami'].where(tt, 'hip', post=False)[0] + 0.25 * s.A['sami'].height,
+    tail_pt = lambda s: (lambda tt: (s.A['sami'].where(tt, 'hip', post=False)[0] + 0.36 * s.A['sami'].height,
                                      s.A['sami'].where(tt, 'hip', post=False)[1] + 0.12 * s.A['sami'].height))
+    SAMI_RUN = [(T(313), (0.0, 4.6)), (WD(314, 'snaps') + 0.1, (0.0, 3.0))]
+    WS_SNAP = lambda a, s: (a.snap_glove(WD(314, 'snaps'), -1, tail_pt(s), t1=WD(314, 'snaps') + 0.5),
+                            a.ws_hold(WD(314, 'snaps') + 0.5, -1, 'tail_piece', None, 'snap'),
+                            a.look_at(T(313), (s.A['sami'], 'eyes'), dur=0.05, snap=True))
     C(T(313), 'set', room='bus', view='aisle', set=dict(HIS, door=1.0), rim=AMBER,
-      ppl=[P('sami', (0.0, 4.6), path=[(T(313), (0.0, 4.6)), (WD(314, 'snaps') + 0.1, (0.0, 3.0))], run=True, surface='inside', expr='shout_here'),
-           ws('aisle5', face='top_step', act=_A(lambda a, s: a.snap_glove(WD(314, 'snaps'), -1, tail_pt(s), t1=WD(314, 'snaps') + 0.5),
-                                                          lambda a, s: a.ws_hold(WD(314, 'snaps') + 0.5, -1, 'tail_piece', None, 'snap'),
-                                                          lambda a, s: a.look_at(T(313), (s.A['sami'], 'eyes'), dur=0.05, snap=True)))],
+      ppl=[P('sami', (0.0, 4.6), path=SAMI_RUN, run=True, surface='inside', expr='shout_here'), ws('aisle5', face='top_step', act=WS_SNAP)],
       c=PU(0.02))
-    # 315 "Rip."
-    C(T(315), 'ins', name='tail', kw=dict(), hit=[T(315) + 0.02], sfx=[(T(315), 'fabric_rip', 2, 0, 'close')], c=dict(mv='push', rate=0.05, hit=[(T(315) + 0.02, 5.0)]))
+    # review r3: from the back of the aisle (HE is between us and Sami, just off frame on the near side): his stretched arm
+    # comes in over our shoulder and the glove snaps shut on the tail of Sami's dinosaur pajamas; "Rip." in the same
+    # framing: Sami tears free toward the door, half the tail stays in the glove.
+    def tail_piece(pen, x, y, k, a=255, ang=-20.0):
+        cv = pen.cv; cv.save(); cv.translate(x, y); cv.rotate(ang); cv.scale(k, k)
+        tl = smooth([(-60, -10), (0, -18), (70, -6), (110, 4), (70, 14), (0, 18), (-60, 12)], True, 0.8)
+        pen.fill(tl, '#4aa06a', a); pen.line(tl, 2.5, LINE, a)
+        for j in range(3):
+            x_ = -30 + j * 38
+            sp_ = poly([(x_ - 12, -14), (x_, -40), (x_ + 12, -14)]); pen.fill(sp_, '#e88a3a', a); pen.line(sp_, 2, LINE, a)
+        for j in range(6):
+            pen.seg((-60, -8 + j * 4), (-74 - 6 * math.sin(j), -6 + j * 5), 1.6, '#e8e4d8', a)
+        cv.restore()
+
+    def ws_arm(t_snap, follow=True, hold_at=None):
+        def acts(A, sh, sp):
+            sa = A.get('sami') or A.get('sami_torn')
+
+            def where(t):
+                if hold_at is not None: return hold_at(t) if callable(hold_at) else hold_at
+                tt = min(t, t_snap) if follow else t
+                hx, hy = sa.where(tt, 'hip', post=False)[:2]
+                return (hx + 0.08 * sa.height, hy + 0.16 * sa.height)
+
+            def draw(pen, t):
+                gx, gy = where(t)
+                u = ease_out_cubic(clamp((t - (t_snap - 0.45)) / 0.4)) if hold_at is None else 1.0
+                ox, oy = 1500 + 700 * (1 - u), 1300 + 400 * (1 - u)          # the shoulder: off frame, near side
+                X = lerp(ox, gx, 1.0); Y = lerp(oy, gy, 1.0)
+                X, Y = gx + (1 - u) * 260, gy + (1 - u) * 160
+                pen.seg((X + 9, Y + 12), (X + 700, Y + 620), 13, LINE)                   # the mustard sleeve, stretched thin
+                pen.seg((X + 9, Y + 12), (X + 700, Y + 620), 10, '#a88a3a')
+                pen.seg((X + 2, Y + 4), (X + 12, Y + 16), 8, '#7a6a55')                  # tabby wrist
+                curl = 0.15 if t < t_snap else 0.85
+                if hold_at is not None or t >= t_snap + 0.05:
+                    tail_piece(pen, gx - 12, gy + 2, 0.34, 255, 160.0)
+                cv = pen.cv; cv.save(); cv.translate(X, Y); cv.rotate(205); cv.translate(-X, -Y)
+                _glove_cursor(pen, X, Y, 0.8, 255, press=0.4 if t >= t_snap else 0.0, curl=curl)
+                cv.restore()
+            lay = Layer(1.0, draw, 'ws_arm', blur=0)
+            lay.order = -9.0
+            return [lay]
+        return acts
+    BK = dict(HIS, door=1.0)
+    C(W(314, 'glove'), 'set', room='bus', view='back', set=BK, rim=AMBER, acts=ws_arm(WD(314, 'snaps')),
+      ppl=[P('sami', (0.0, 4.2), path=[(W(314, 'glove'), (0.0, 4.2)), (WD(314, 'snaps') + 0.05, (0.0, 3.55))], run=True, surface='inside', expr='shout_here')],
+      sfx=[(WD(314, 'snaps'), 'glove_snap', 0, 0.2, 'close')], c=PU(0.03, 3.6, x=960, y=600, free=True, hit=[(WD(314, 'snaps'), 4.0)]))
+    C(T(315), 'set', room='bus', view='back', set=BK, rim=AMBER, hit=[T(315) + 0.02], acts=ws_arm(T(315) - 5.0, hold_at=lambda tt: (975 + 70 * ease_out_cubic(clamp((tt - T(315)) / 0.25)), 628 + 40 * ease_out_cubic(clamp((tt - T(315)) / 0.25)))),
+      ppl=[P('sami_torn', (0.0, 3.55), path=[(T(315), (0.0, 3.55)), (T(315) + 0.6, (0.0, 2.3))], run=True, surface='inside', expr='cry')],
+      sfx=[(T(315), 'fabric_rip', 2, 0, 'close')], c=PU(0.05, 3.6, x=960, y=600, free=True, hit=[(T(315) + 0.02, 5.0)]))
     # 316 "He tumbles into my arms, half his dinosaur tail gone."
     C(T(316), 'set', room='school', view='doors', set=SD, rim=HEADS9,
       ppl=[P('sami_torn', 'his_step', path=[(T(316), 'his_step'), (T(316) + 0.55, (-2.0, -5.15))], run=True, surface='asphalt', expr='cry'),
@@ -3294,7 +3423,7 @@ def plan_rule7(F):
                     lambda a, s: a.reach_to(T(316) + 0.5, -1, (s.A['sami_torn'], 'belly'), dur=0.3, contact='palm', shape='open', z=70.0),
                     ex('relief', T(316) + 1.4, None, 0.5))),
            ws('his_top', face='bottom_step', act=_A(lambda a, s: a.ws_hold(-9, -1, 'tail_piece', None, 'snap'), lambda a, s: a.head_tilt(T(316) + 0.6, 18.0, 0.8)))],
-      sfx=[(T(316) + 0.55, 'body_catch', -2, 0, 'outside')], c=PU(0.02, 2.8, x=920, y=640))
+      sfx=[(T(316) + 0.55, 'body_catch', -2, 0, 'outside')], c=PU(0.02, 3.4, x=830, y=720, free=True))
     # 317 "Two fifty-eight."
     C(T(317), 'ins', name='clock', kw=dict(time=(2, 58)), sfx=[(T(317) + 0.1, 'clock_tick', -6, 0, 'close')], c=dict(mv='push', rate=0.04))
     # 318-319 "At the back, seat twenty-two glows." "The boy in the yellow raincoat."
@@ -3304,28 +3433,56 @@ def plan_rule7(F):
     bust(T(319), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=960, cy=640, scale=0.85, turn=0.35,
          act=_A(lambda a, s: a.look_at(s.t0, (400, 560), dur=0.4), blinks(T(319) + 0.9)))
     # 320 "One impossibly long arm reaches down the aisle, and a glove settles on his shoulder."
-    C(T(320), 'set', room='bus', view='aisle', set=dict(HIS, seat_lit={22: 1.0}), rim=AMBER,
-      ppl=[P('theo', 'seat22', kind='seat', expr='lonely', alpha=0.7),
-           ws('aisle2', face='seat22', act=_A(lambda a, s: a.set(-1.0, None, 0.01, ws_bend=0.1),
-                                              lambda a, s: a.reach_far(T(320) + 0.3, 1, lambda tt: s.A['theo'].where(tt, 'shoulder_r', post=False), t1=None,
-                                                                       dur=max(1.6, W(320, 'glove') - T(320) - 0.2), z=-40.0, shape='hang', ease=ease_in_out)))],
-      sfx=[(T(320) + 0.3, 'arm_stretch_creak', -4, 0, 'bus', dict(dur=2.0))], c=PU(0.02))
+    # review r3: from the back of the aisle, so the arm comes AT us down the aisle (his body no longer hides it); then a
+    # close cut on Theo's shoulder as the glove settles
+    def long_arm(t0, t1):
+        """HIS impossibly long arm coming up the aisle from the front of the bus (off frame left), over the seat backs, the
+        glove opening as it reaches Theo's shoulder."""
+        def acts(A, sh, sp):
+            th = A['theo']
+
+            def draw(pen, t):
+                u = ease_in_out(clamp((t - t0) / max(0.3, t1 - t0)))
+                if u <= 0: return
+                sx, sy = th.where(min(t, t1), 'shoulder_r', post=False)[:2]
+                ex, ey = -200.0, 300.0                                   # where the arm enters (the aisle, toward the front)
+                gx, gy = lerp(ex, sx, u), lerp(ey, sy - 30, u) - 60 * math.sin(math.pi * u)
+                mx, my = (ex + gx) / 2, min(ey, gy) - 90 * u
+                path = smooth([(ex, ey), (mx, my), (gx - 20, gy - 18)], False, 0.6)
+                pen.line(path, 24, LINE); pen.line(path, 19, '#a88a3a')
+                pen.seg((gx - 26, gy - 22), (gx - 6, gy - 4), 14, '#7a6a55')
+                cv = pen.cv; cv.save(); cv.translate(gx, gy); cv.rotate(130); cv.translate(-gx, -gy)
+                _glove_cursor(pen, gx, gy, 1.6, 255, press=0.0, curl=0.15 + 0.3 * clamp((t - t1 + 0.3) / 0.3))
+                cv.restore()
+            lay = Layer(1.0, draw, 'long_arm', blur=0)
+            lay.order = -9.0
+            return [lay]
+        return acts
+    C(T(320), 'set', room='bus', view='seat22', set=dict(HIS, seat_lit={22: 1.0}), rim=AMBER, acts=long_arm(T(320) + 0.3, W(320, 'glove')),
+      ppl=[P('theo', 'seat22', kind='seat', expr='lonely', alpha=0.85, act=lambda a, s: a.look_at(T(320) + 1.2, (300, 380), dur=0.6))],
+      sfx=[(T(320) + 0.3, 'arm_stretch_creak', -4, 0, 'bus', dict(dur=2.0))], c=PU(0.02, 0.85, free=True))
+    bust(W(320, 'glove'), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=960, cy=620, scale=0.8, turn=0.3,
+         act=_A(lambda a, s: a.look_at(s.t0, (400, 700), dur=0.4), lambda a, s: a.look_at(WD(320, 'settles') + 0.2, (1150, 990), dur=0.5)),
+         acts=lambda A, sh, sp: [glove_on(1150, 990, 4.4, 0.0, 0.35, WD(320, 'settles'), WD(320, 'settles') + 0.6, curl=0.45,
+                                          drift=lambda tt: (-420 * (1 - ease_out_cubic(clamp((tt - W(320, 'glove')) / 0.6))),
+                                                            -380 * (1 - ease_out_cubic(clamp((tt - W(320, 'glove')) / 0.6)))))],
+         sfx=[(WD(320, 'settles') + 0.1, 'glove_squeeze', -6, 0, 'close')])
     # 321-322 W "Nobody knows his name," he says.  323 W "Not his mother. Not Della. Not you. Every morning ... nobody asks."
     wbust(T(321), ('bus', 'aisle'), HIS, cx=900, cy=860, scale=0.9, act=_A(pose(-9, None, 0.1, h_tilt=-12.0), lambda a, s: a.head_tilt(T(321) + 0.3, 18.0, 1.0)))
-    SH = (1210, 760)
+    SH = (1150, 990)                                                      # review r3: ON his shoulder, not beside his chest
 
     def theo_glove(t_on, press=(0.0, 0.0), dur=0.5):
         return lambda A, sh, sp: [glove_on(SH[0], SH[1], 4.4, press[0], press[1], t_on, t_on + dur, curl=0.45)]
     bust(W(323, 'every'), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=960, cy=620, scale=0.8, turn=0.3,
          act=_A(lambda a, s: a.look_at(s.t0, (400, 700), dur=0.4), blinks(W(323, 'every') + 1.2)), acts=theo_glove(-9))
     bust(W(323, 'one'), 'mina_bare', ('school', 'reverse'), SD, 'fear', HEADS9, cx=960, cy=650, scale=0.9, turn=-0.1, act=_A(lambda a, s: a.look_at(s.t0, (1020, 450), dur=0.2), blinks(W(323, 'chance'))))
-    wbust(W(323, 'and'), ('bus', 'step_out'), SO, cx=960, cy=880, scale=1.15, cut='vhs', act=_A(pose(-9, None, 0.1, ws_bend=0.45), lambda a, s: a.head_tilt(W(323, 'nobody') - 0.2, -16.0, 0.5)),
+    wbust(W(323, 'and'), ('bus', 'step_out'), SO, cx=960, cy=880, scale=1.15, eye_to=330, cut='vhs', act=_A(pose(-9, None, 0.1, ws_bend=0.45), lambda a, s: a.head_tilt(W(323, 'nobody') - 0.2, -16.0, 0.5)),
           sfx=[(W(323, 'and'), 'tape_skip', -2, 0, None)])
     # 324 "He bends down, and down, until the grin is a foot from my face."  (her eyes: he leans out of the door at the lens)
     C(T(324), 'set', room='bus', view='step_out', set=SO, rim=AMBER,
       ppl=[ws('top_step', face='bottom_step', act=_A(lambda a, s: a.clipboard(-9, 1), lambda a, s: a.lean_to(T(324) + 0.2, (900, 1180), gap=30.0, dur=2.8, beats=2),
                                                       wlook(T(324), (900, 1300), snap=False, dur=0.6)))],
-      sfx=[(T(324) + 0.2, 'joint_creak', -6, 0, 'bus', dict(dur=2.6))], c=PU(0.02))
+      sfx=[(T(324) + 0.2, 'joint_creak', -6, 0, 'bus', dict(dur=2.6))], c=PU(0.03, 1.9, x=930, y=700))
     # 325 "Soft."  326 "Kind."
     wbust(T(325), ('school', 'doors'), SD, cx=960, cy=960, scale=1.45, light=dict(AMBER, under='#ffb040', under_a=80), act=_A(pose(-9, None, 0.1, h_tilt=14.0), lambda a, s: a.head_tilt(T(325) + 0.1, 22.0, 1.2)), z=0.01)
     bust(T(326), 'mina_bare', ('school', 'reverse'), SD, 'tempted', HEADS9, cx=700, cy=650, scale=0.9, turn=0.3, act=_A(lambda a, s: a.look_at(s.t0, (1500, 520), dur=0.3), blinks(T(326) + 0.3)),
@@ -3366,7 +3523,7 @@ def plan_rule7(F):
     # 335 W "Call him, then. Go on. You can't."  (his glove reaches for the lens)
     gl_reach = lambda A, sh, sp: [glove_on(1400, 900, 3.0, 0.0, 0.0, T(335), T(335) + 1.2, curl=0.2, down=False,
                                            drift=lambda tt: (-300 * ease_in_out(clamp((tt - T(335)) / 1.6)), -150 * ease_in_out(clamp((tt - T(335)) / 1.6))), name='reach')]
-    wbust(T(335), ('bus', 'step_out'), SO, cx=960, cy=880, scale=1.1, act=_A(pose(-9, None, 0.1, ws_bend=0.4), lambda a, s: a.head_tilt(W(335, 'go'), 16.0, 0.5)), acts=gl_reach)
+    wbust(T(335), ('bus', 'step_out'), SO, cx=960, cy=880, scale=1.1, eye_to=340, act=_A(pose(-9, None, 0.1, ws_bend=0.4), lambda a, s: a.head_tilt(W(335, 'go'), 16.0, 0.5)), acts=gl_reach)
     # 336 "Two fifty-nine."
     C(T(336), 'ins', name='clock', kw=dict(time=(2, 59)), sfx=[(T(336) + 0.1, 'clock_tick', -6, 0, 'close')], c=dict(mv='push', rate=0.05))
     # 337 T "Hi, Mina." (memory: morning, seat 22)  338-340 "Every single morning." "He knew my name." "I never asked his."
@@ -3388,7 +3545,7 @@ def plan_rule7(F):
     wbust(T(343), ('bus', 'step_out'), SO, cx=960, cy=860, scale=1.0, act=lambda a, s: a.blow_whistle(T(343) + 0.02, 'two', -1), z=0.03)
     # 344 "The doors start folding shut."  345 "Grandma jams our porch broom between them."  346 "The handle bends."  (+ 353 cracks)
     cls = lambda tt: lerp(1.0, 0.45, ease_in_out(clamp((tt - T(344) - 0.1) / 1.6)))
-    C(T(344), 'set', room='bus', view='doors', set=dict(HIS, door=cls), rim=AMBER, sfx=[(T(344) + 0.1, 'door_motor', -2, 0, 'bus', dict(dur=1.6))], c=PU(0.02))
+    C(T(344), 'set', room='bus', view='doors', post=dict(exposure=1.8), set=dict(HIS, door=cls), rim=AMBER, sfx=[(T(344) + 0.1, 'door_motor', -2, 0, 'bus', dict(dur=1.6))], c=PU(0.02))
     jam = lambda tt: 1.0 if tt >= WD(345, 'jams') + 0.25 else 0.0
     C(T(345), 'set', room='school', view='doors', set=dict(SD, his_door=0.45, broom9=jam), rim=HEADS9,
       ppl=[P('della', (-1.8, -5.15), face='his_step', expr='set_jaw',
@@ -3397,9 +3554,9 @@ def plan_rule7(F):
                     pose(WD(345, 'jams'), None, 0.2, lean=0.15))),
            P('mina_bare', (-1.55, -5.75), face='his_step', expr='resolve'),
            P('sami_torn', (-2.6, -5.9), face='his_top', expr='cry')],
-      sfx=[(WD(345, 'jams') + 0.25, 'broom_jam', 0, 0, 'outside')], c=PU(0.02, 2.0, x=930, y=630, hit=[(WD(345, 'jams') + 0.25, 4.0)]))
+      sfx=[(WD(345, 'jams') + 0.25, 'broom_jam', 0, 0, 'outside')], c=PU(0.02, 2.8, x=830, y=600, hit=[(WD(345, 'jams') + 0.25, 4.0)]))
     bnd = lambda tt: 0.6 * ease_in_out(clamp((tt - T(346)) / 1.0))
-    C(T(346), 'set', room='bus', view='doors', set=dict(HIS, door=0.42, broom=1.0, bend=bnd), rim=AMBER, sfx=[(T(346) + 0.1, 'wood_creak', -2, 0, 'bus', dict(dur=1.0))], c=PU(0.03, 1.2))
+    C(T(346), 'set', room='bus', view='doors', post=dict(exposure=1.8), set=dict(HIS, door=0.42, broom=1.0, bend=bnd), rim=AMBER, sfx=[(T(346) + 0.1, 'wood_creak', -2, 0, 'bus', dict(dur=1.0))], c=PU(0.03, 1.2))
     # 347 "From inside, in MY voice:"  348 W "Don't answer her. She never talked to you before."
     C(T(347), 'set', room='bus', view='back', set=dict(HIS, door=0.42, broom=1.0, bend=0.6, seat_lit={22: 1.0}), rim=AMBER,
       ppl=[P('mina_bare', 'aisle8', face='aisle_back', expr='tender', light=FAKE, id='fake', act=lambda a, s: a.head_tilt(T(347) + 0.4, 14.0, 0.8)),
@@ -3417,7 +3574,7 @@ def plan_rule7(F):
          act=_A(lambda a, s: a.look_at(s.t0, (300, 560), dur=0.3), blinks(T(352) + 1.5)), acts=lambda A, sh, sp: [glove_on(1290, 800, 4.6, 1.0, 1.0, -9, 0.0, curl=0.45)])
     # 353 "The broom cracks."
     crk = lambda tt: 1.0 if tt >= WD(353, 'cracks') else 0.0
-    C(T(353), 'set', room='bus', view='doors', set=dict(HIS, door=0.4, broom=1.0, bend=0.75, crack=crk), rim=AMBER,
+    C(T(353), 'set', room='bus', view='doors', post=dict(exposure=1.8), set=dict(HIS, door=0.4, broom=1.0, bend=0.75, crack=crk), rim=AMBER,
       sfx=[(WD(353, 'cracks'), 'wood_crack', 2, 0, 'bus')], c=PU(0.03, 1.25, hit=[(WD(353, 'cracks'), 5.0)]))
     # 354 T "Theo."
     bust(T(354), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'brave', AMBER, cx=960, cy=620, scale=0.95, turn=0.2,
@@ -3435,7 +3592,7 @@ def plan_rule7(F):
                 dict(who='sami_torn', cx=1380, cy=760, scale=0.62, turn=-0.25, expr='shout_here', light=HEADS9, act=lambda a, s: a.look_at(s.t0, (1020, 450), dur=0.1))],
          hit=[T(358) + 0.05], c=BZ(0.03, hit=[(T(358) + 0.05, 4.0)]))
     # 359 "The grin swings to the school clock."
-    wbust(T(359), ('bus', 'step_out'), SO, cx=900, cy=860, scale=1.0, act=_A(pose(-9, None, 0.1, ws_bend=0.3), lambda a, s: a.look_at(T(359) + 0.3, (1700, 200), dur=0.06, snap=True)),
+    wbust(T(359), ('bus', 'step_out'), SO, cx=900, cy=860, scale=1.0, eye_to=360, act=_A(pose(-9, None, 0.1, ws_bend=0.3), lambda a, s: a.look_at(T(359) + 0.3, (1700, 200), dur=0.06, snap=True)),
           sfx=[(T(359) + 0.3, 'neck_tick', -2, 0, 'bus')])
     C(W(359, 'clock'), 'set', room='school', view='clock', set=dict(SD, clock=(2, 59, 52), his_door=0.4, broom9=1.0, bend=0.75, crack=1.0), rim=NIGHT, sfx=[(W(359, 'clock') + 0.1, 'clock_tick', -4, 0, 'outside')], c=PU(0.05, 1.3))
     # 360 "He blows the whistle, long and loud, to drown us out."
@@ -3454,7 +3611,7 @@ def plan_rule7(F):
     C(W(362, 'through'), 'set', room='school', view='doors', set=dict(SD, his_door=0.4, broom9=1.0, bend=0.75, crack=1.0), rim=HEADS9,
       ppl=[P('theo', 'his_step', path=[(W(362, 'through'), 'his_step'), (W(362, 'through') + 0.7, (-2.0, -5.3))], run=True, surface='asphalt', expr='brave', alpha=0.8),
            P('mina_bare', (-1.85, -5.75), face='his_step', expr='terrified_call'), P('della', (-1.4, -6.0), face='his_step', expr='set_jaw')],
-      c=PU(0.03, 2.0, x=920, y=630))
+      c=PU(0.03, 2.8, x=830, y=600))
     # 363 "The doors slam on an empty aisle."
     C(T(363), 'set', room='bus', view='aisle', set=dict(HIS, seat_lit={22: 0.0, 4: 0.0}), rim=AMBER, sfx=[(T(363) + 0.05, 'door_slam_bus', 2, 0, 'bus')],
       c=PU(0.02, hit=[(T(363) + 0.05, 6.0)]))
@@ -3491,10 +3648,16 @@ def plan_after(F):
     # 372-373 "Now she can see Theo." "She kneels."
     C(T(372), 'set', room='school', view='lot', set=LOT, rim=HEADS9,
       ppl=[P('theo_color', (-1.4, -5.45), face='lot_kneel', expr='kind_smile'),
-           P('della', 'lot_kneel', kind='stand', face=(-1.4, -5.45), expr='tender', act=lambda a, s: a.kneel_down(T(373) + 0.05, 0.9)),
-           P('mina_bare', (-0.6, -6.6), face=(-1.4, -5.45), expr='relief'),
-           P('sami_torn', (-0.25, -6.3), face=(-1.4, -5.45), expr='dazed')],
-      c=PU(0.015, 1.25, x=760, y=640))
+           P('della', 'lot_kneel', kind='stand', face=(-1.4, -5.45), expr='tender', act=lambda a, s: a.kneel_down(T(373) - 0.05, 0.7, knees=1)),
+           P('sami_torn', (0.15, -6.55), face=(-1.4, -5.45), expr='dazed', act=lambda a, s: a.look_at(T(372) + 0.3, scr(s.sp, (-1.4, -5.45), dy=-120), dur=0.5)),
+           P('mina_bare', (-0.2, -6.9), face=(-1.4, -5.45), expr='relief',
+             act=_A(lambda a, s: a.hold_hand(-9, -1, s.A['sami_torn'], 1, dur=0.01), blinks(T(372) + 0.8)))],
+      c=PU(0.02, 2.2, x=760, y=640))
+    # 373 "She kneels."  review r3: cut on the line to her kneeling on the asphalt, eye to eye with Theo
+    C(T(373), 'set', room='school', view='lot', set=LOT, rim=HEADS9,
+      ppl=[P('theo_color', (-1.4, -5.45), face='lot_kneel', expr='kind_smile', act=lambda a, s: a.look_at(-9, scr(s.sp, 'lot_kneel', dy=-170), dur=0.01)),
+           P('della', 'lot_kneel', kind='kneel', face=(-1.4, -5.45), expr='tender', act=lambda a, s: a.look_at(-9, scr(s.sp, (-1.4, -5.45), dy=-210), dur=0.01))],
+      c=PU(0.02, 3.2, x=700, y=600))
     # 374 D "Six mornings, you said thank you. And I never asked your name."
     bust(T(374), 'della', ('school', 'lot'), LOT, 'tender', HEADS9_L, cx=900, cy=680, scale=0.85, turn=0.35, act=_A(lambda a, s: a.look_at(s.t0, (1500, 520), dur=0.3), blinks(T(374) + 1.0)))
     bust(W(374, 'and'), 'theo_color', ('school', 'lot'), LOT, 'kind_smile', HEADS9, cx=1000, cy=620, scale=0.85, turn=-0.3, act=_A(lambda a, s: a.look_at(s.t0, (500, 760), dur=0.3), blinks(W(374, 'name'))))
@@ -3551,9 +3714,9 @@ def plan_after(F):
     # 394 "It's the name on his last page."
     C(T(394), 'ins', name='clipboard', kw=dict(page='last'), cut='white', motion=lambda u: (0.0, 0.0, 0.4, 0.0), sfx=[(T(394), 'sting_name', 0, 0, None)], c=dict(mv='push', rate=0.04))
     # 395 "Out the back window, something very tall in a crooked yellow hat lifts a new clipboard."  396 "Draws a line ... and starts writing the next."
-    C(T(395), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', c=PU(0.04, 1.0, x=980, y=520),
+    C(T(395), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', c=PU(0.04, 1.9, x=1000, y=560),
       post_fn=lambda tt: dict(glitch=0.12 if (tt * 3.0) % 1.0 < 0.06 else 0.0))
-    C(W(395, 'lifts'), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', cut='vhs', c=PU(0.04, 2.2, x=980, y=520),
+    C(W(395, 'lifts'), 'set', room='bus', view='back_window', set=B9M, rim=MORNING, era='morning', cut='vhs', c=PU(0.04, 3.4, x=1005, y=540),
       sfx=[(W(395, 'lifts'), 'tape_skip', -4, 0, None)])
     C(T(396), 'ins', name='clipboard', kw=lambda u: dict(page='last', write=clamp((u - 0.3) / 2.8)), cut='vhs', sfx=[(T(396) + 0.3, 'pencil_line', -4, 0, 'close', dict(dur=2.8))],
       c=dict(mv='push', rate=0.03))
