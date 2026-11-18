@@ -179,43 +179,43 @@ EVENTS = [
     ('s111', 'hit', 0.5, None),                                       # my hand slaps over his mouth
     ('s112', 'silence', 0.9, 2.0),                                    # "Silence."
     ('s114', 'stinger', 0.75, None),                                  # "Here!" in Sami's voice
-    ('s106', 'hit', 0.55, None, {'boost': 2.0}),                     # the roll call reaches "Mina?"
-    ('s116', 'hit', 0.6, None, {'boost': 3.0}),                                       # "Almost."
+    ('e106+0.03', 'hit', 0.6, None, {'boost': 3.0, 'nosnap': True}),  # the roll call reaches "Mina?" (r3: after the word, in its scare beat)
+    ('e115', 'silence', 0.85, 1.2), ('e116+0.03', 'hit', 0.75, None, {'boost': 3.5, 'nosnap': True}),  # "Almost." (r3: the score drops out under it, the hit after it)
     ('s121', 'sub_drop', 0.55, None),                                 # "Last stop, three a.m."
     # rule 3
     ('s122-0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('s133', 'sub_drop', 0.5, None),                                  # the flashlight goes out
-    ('s141-0.2', 'silence', 0.8, 1.4), ('s143', 'hit', 0.75, None, {'boost': 3.0}),   # "...Clever."
+    ('s141-0.2', 'silence', 0.8, 1.4), ('e143+0.03', 'hit', 0.75, None, {'boost': 3.0, 'nosnap': True}),   # "...Clever." (r3: after the word)
     ('s144', 'stinger', 0.7, None),                                   # the peephole goes white
     ('s149', 'hit', 0.5, None),                                       # "DON'T OPEN THE DOOR!"
     # rule 4
     ('s154-0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('s162', 'silence', 1.0, 2.25),                                    # "Every light dies. Total black."
-    ('s171-0.4', 'silence', 0.85, 1.2), ('s171+0.3', 'hit', 0.85, None, {'boost': 3.0}),   # "I'm still holding a hand."
+    ('s171-0.6', 'silence', 0.85, 1.8), ('e171+0.03', 'hit', 0.9, None, {'boost': 3.5, 'nosnap': True}),   # "I'm still holding a hand." (r3: after the word)
     ('s173', 'stinger', 0.8, None),                                   # "A white glove."
     ('s179', 'hit', 0.7, None),                                       # "I rip free."
-    ('e186', 'silence', 0.85, 1.0), ('s187', 'hit', 0.9, None, {'boost': 3.0}),       # "LIGHTHOUSE!"
+    ('e186', 'silence', 0.85, 0.42), ('e187+0.03', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),       # "LIGHTHOUSE!" (r3: room tone before the shout, the hit after it)
     # rule 5
     ('s190-0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('s202', 'hit', 0.45, None),                                      # "Knock, knock."
-    ('s211', 'riser', 0.55, 6.0),                                     # ... "The deadbolt slides."
-    ('s211', 'silence', 0.9, 1.4), ('s212', 'hit', 1.0, None, {'boost': 4.0}),       # "The hallway is full of him."
+    ('e211', 'riser', 0.55, 6.0),                                     # ... "The deadbolt slides." (r3: ends on its last word, before the drop-out)
+    ('e211+0.02', 'silence', 0.9, 1.65), ('e212+0.03', 'hit', 1.0, None, {'boost': 4.0, 'nosnap': True}),       # "The hallway is full of him." (r3: room tone, the line, then the hit)
     ('s219', 'stinger', 0.75, None),                                  # "HERE!"
-    ('s231', 'hit', 0.7, None, {'boost': 3.0}),                                       # the doors slap shut an inch from my fingers
+    ('e230', 'silence', 0.8, 0.42), ('e231+0.03', 'hit', 0.8, None, {'boost': 3.0, 'nosnap': True}),   # the doors slap shut an inch from my fingers (r3)
     ('s232', 'swell', 0.5, 6.0),                                      # Sami's palm on the window of seat four
     ('s237', 'sub_drop', 0.5, None),                                  # "Seat's saved, Mina."
     # rule 6
     ('s239-0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ('s256-0.6', 'silence', 0.8, 1.2), ('w256:empty', 'hit', 0.85, None, {'boost': 3.0}),   # seat 22 empty for thirty-two years
+    ('s256-0.6', 'silence', 0.8, 1.2), ('e256+0.03', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),   # seat 22 empty for thirty-two years (r3: after the line)
     ('s263-0.3', 'silence', 0.7, 1.0), ('s265', 'stinger', 0.75, None),     # the radio, in Grandma's voice
-    ('s275', 'hit', 0.7, None, {'boost': 3.0}),                                       # "Backwards."
+    ('e274', 'silence', 0.85, 0.38), ('e275+0.03', 'hit', 0.85, None, {'boost': 3.5, 'nosnap': True}),   # "Backwards." (r3)
     ('s279', 'hit', 0.65, None),                                      # the mirror ripped off
     ('s280', 'silence', 0.7, 1.4), ('s283', 'stinger', 0.85, None),   # "He's behind us."
     ('s285', 'sub_drop', 0.5, None),                                  # "Two forty-one."
     # rule 7
     ('s286-0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('s294', 'sub_drop', 0.5, None),                                  # his bus is already parked at the doors
-    ('s305', 'hit', 0.75, None, {'boost': 3.0}),                                      # "Two of me."
+    ('e304', 'silence', 0.85, 0.38), ('e305+0.03', 'hit', 0.8, None, {'boost': 3.0, 'nosnap': True}),   # "Two of me." (r3)
     ('s308', 'silence', 0.8, 1.6), ('s309', 'riser', 0.5, 2.5),       # "Not even for Sami." -> the SCREAM
     ('s314', 'hit', 0.65, None),                                      # a glove snaps shut on his pajamas
     ('s320', 'swell', 0.55, 6.0),                                     # one impossibly long arm
@@ -225,9 +225,9 @@ EVENTS = [
     ('s354', 'hit', 0.9, None),                                       # "Theo."
     ('s358', 'stinger', 0.8, None),                                   # "THEO!"
     ('e327', 'stinger', 0.7, None, {'boost': 2.0}),                 # the trade lure lands
-    ('s364-0.3', 'silence', 1.0, 1.25),                                # "Three o'clock." (the bell, alone)
-    ('s365', 'hit', 0.9, None, {'boost': 3.0}),                      # the 3:00 bell after the silence
-    ('s369', 'hit', 0.95, None, {'boost': 4.0}),                     # his defeat: tracking lines tear through him
+    ('s364-0.3', 'silence', 0.9, 1.7),                                 # "Three o'clock." (the bell, alone; r3: room tone, not a 0.26 s dropout)
+    ('e365+0.03', 'hit', 0.95, None, {'boost': 3.5, 'nosnap': True}),  # the 3:00 bell after the silence (r3: after "The school bell rings.")
+    ('e368+0.03', 'hit', 0.95, None, {'boost': 4.0, 'nosnap': True}),  # his defeat: "It slips." -> the hit -> tracking lines tear through him (r3)
     ('s370', 'hit', 0.6, None),                                       # his clipboard clatters
     ('s384', 'sub_drop', 0.45, None),                                 # "One name. Nobody I know."
     ('s394', 'stinger', 0.7, None),                                   # the name on his last page
@@ -244,11 +244,11 @@ IDENTITY = [
     # 1994: the tape on the TV cart, from "Ride Right with Mister Whistlestop", dragged to a halt on "pulled"
     ('s10-0.4', 'jingle', 0.55, None, dict(version='tv1994', loops=2, until='w20:pulled+0.3', stop='drag', fade=0.05)),
     # rule 1: the loudspeaker crackles -> the first bars on his PA, cut by his reading voice
-    ('s70+0.7', 'jingle', 0.55, None, dict(version='pa', until='s72-0.05', stop='cut', fade=0.05)),
+    ('s70+0.7', 'jingle', 0.85, None, dict(version='pa', until='s72-0.05', stop='cut', fade=0.05)),
     # rule 2: the door unfolds, the tape-skips across the lawn (the slow, warped music box), until the roll call
     ('s88', 'jingle', 0.5, None, dict(version='musicbox', until='s104', stop='fade', fade=1.0)),
     # rule 5: the bus pulls away with no lights on, the tune on his PA going off down the street
-    ('s238', 'jingle', 0.5, None, dict(version='pa', until='s239-0.2', stop='fade', fade=0.2, space='street')),
+    ('s238', 'jingle', 0.45, None, dict(version='pa', until='s239-0.2', stop='fade', fade=0.2, space='street')),
     # rule 7: the lure ("Soft. Kind.") -- the music box, slow, under the kind voice
     ('s324', 'jingle', 0.45, None, dict(version='musicbox', until='s328+1.0', stop='fade', fade=1.5)),
     # 3:00: the grin slips -- the tape plays, stops dead on "It slips." and REWINDS under "the bus rewinds"

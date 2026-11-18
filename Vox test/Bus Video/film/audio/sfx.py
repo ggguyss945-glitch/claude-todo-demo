@@ -5488,6 +5488,7 @@ BUS_NAMES = ('suburb_night', 'dog_far', 'street_flicker', 'bus_air_brake', 'bus_
              'vhs_tape', 'tape_ff', 'tape_slide', 'seatbelt', 'flag_rope', 'broom_bend', 'broom_crack', 'cloth_rip',
              'school_bell', 'bus_rewind', 'clipboard_drop', 'morning_bus', 'dial_911', 'his_bus_interior',
              'school_night', 'mailbox_unscrew')
+BUS_NAMES = BUS_NAMES + ('hand_slap',)                # sound fix round 3
 NAMES = NAMES + BUS_NAMES
 # one-shots: momentary max, LU rel the voice at gain_db 0; beds (BEDS, and DUR_BEDS given a dur): integrated
 # (test 1: pa_crackle -9 sat 20-22 LU under his loudspeaker voice through the window: -4; tests 2-4: glove_squeak
@@ -6117,6 +6118,21 @@ def r_school_bell(rng, sp, dur=4.0, **_):
     a = int(np.argmax(np.abs(mono(x)) > 0.2 * peak(x)))
     y = lp(_fit(x[a:], n_(float(dur)), None), 7000, 2)
     return fade(y, 0.003, 0.4), 0.0, 0.0, False
+
+
+def r_hand_slap(rng, sp, **_):
+    """'My hand slaps over his mouth.' (sound fix round 3: the cloth grab alone read as no slap): a palm smacking onto
+    a small face, close: a bright skin crack (band noise 900-6000 Hz, 18 ms decay), the palm's dull thump under it
+    (140 Hz, 35 ms) and the pajama sleeve's rustle after."""
+    r2 = int(rng.integers(1 << 20))
+    k = n_(0.09); tt = np.arange(k) / SR
+    crack = bp(noise(0.09, r2), 900, 6000, 2)[:k] * np.exp(-tt / 0.018)
+    thump = lp((np.sin(2 * np.pi * 140 * tt) * np.exp(-tt / 0.035)).astype(np.float32), 400, 2) * 0.7
+    y = (crack / (peak(crack) + 1e-9) + thump).astype(np.float32)
+    y = st(fade(y / (peak(y) + 1e-9) * 0.7, 0.002, 0.02))
+    g = _cloth_pool().get(rng, rj=0.05, fo=0.06)
+    g = fade(lp(hp(g[:n_(0.3)], 200, 2), 3000, 2), 0.02, 0.1)
+    return _seq([(0.0, y), (0.05, g * (peak(y) / (peak(g) + 1e-9)) * 0.3)], 0.05), 0.0, 0.0, False
 
 
 def r_bus_rewind(rng, sp, dur=2.8, **_):

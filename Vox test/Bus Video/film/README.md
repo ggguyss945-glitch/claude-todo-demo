@@ -94,6 +94,20 @@ Outputs in `W/mix/final/`: `mix_en.wav` (read by render.py / deliver.sh / encode
   frame: the whole film is about 3 hours on 2 workers). `W/tests/render5/`.
 - `sets_bus.py`: one fix, `BuRoad.lights` accepts `his_pos` as f(t) (the doc promised it; it crashed).
 
+## Review round 3: picture (18 Nov)
+- Rule cards: the key phrase is yellow on a dark plate (engine `hud.rule_card(accent=, plate=)`); the reading underline is yellow.
+- His busts frame the FACE: `B_bust` lifts any Whistlestop bust so the eyes sit about 0.4 H from the top (`eye_to`, default
+  430; hands / acts move with it). Captions never double a line's own quote marks.
+- `scam`: a push the plan asks for (f above the view's f range, up to 4) is no longer clamped to the view's 1.8 / centre box
+  (many "3x" pushes had rendered as wides).
+- Restaged: the phone-light scare (glove folded over her fingers; L177 reveal: him crouched by the couch, her hand in one
+  glove, the walkie rising to the grin), the hallway (he fills it 1.6-1.9 m from her door, bent under the ceiling, hat
+  folded on it, gloves on both walls, lit by her room), the rescue (foot insert, the glove snapping on the tail and the
+  rip from the back of the aisle, a tighter catch), the long arm to Theo (from his seat, then the glove on his shoulder),
+  the seat-saved bust (he creeps in, a glove at the lens), the crossing guard, the kneel cut (L373), the ticket insert
+  sliding in, Grandma at the back door / crossing the yard, a hand on the mailbox letters, Sami's jolt, the palm on a
+  visible window, Theo's raincoat reads yellow, the end card holds 4 s.
+
 ## Open problems
 - Interiors seen from outside (his bus from the lot) only show figures through the open door: the steps / aisle beats
   are staged from inside views or the school lot.

@@ -2892,16 +2892,17 @@ def blinkf(*wins):
     return lambda tt: 1.0 if any(a <= tt < b for (a, b) in wins) else 0.0
 
 
-def glove_on(x, y, s=4.2, press0=0.0, press1=0.0, t0=0.0, t1=1.0, a=255, curl=0.35, drift=None, name='glove', down=True):
+def glove_on(x, y, s=4.2, press0=0.0, press1=0.0, t0=0.0, t1=1.0, a=255, curl=0.35, drift=None, name='glove', down=True, flip=False):
     """HIS glove as a flat graphic settled on something (a shoulder) in a close-up; press ramps press0 -> press1."""
     def draw(pen, t):
         u = ease_in_out(clamp((t - t0) / max(1e-3, t1 - t0)))
         dx, dy = drift(t) if drift else (0.0, 0.0)
         gx, gy = x + dx, y + dy
         if down:
-            pen.seg((gx - 40 * s, gy - 60 * s), (gx - 900, gy - 900), 22 * s, '#a88a3a', a)          # the mustard sleeve, off frame
-            pen.seg((gx - 12 * s, gy - 22 * s), (gx - 40 * s, gy - 60 * s), 15 * s, '#7a6a55', a)   # tabby wrist
-            cv = pen.cv; cv.save(); cv.translate(gx, gy); cv.rotate(150); cv.translate(-gx, -gy)
+            fx_ = -1.0 if flip else 1.0                                       # flip: the arm comes from the upper RIGHT
+            pen.seg((gx - fx_ * 40 * s, gy - 60 * s), (gx - fx_ * 900, gy - 900), 22 * s, '#a88a3a', a)          # the mustard sleeve, off frame
+            pen.seg((gx - fx_ * 12 * s, gy - 22 * s), (gx - fx_ * 40 * s, gy - 60 * s), 15 * s, '#7a6a55', a)   # tabby wrist
+            cv = pen.cv; cv.save(); cv.translate(gx, gy); cv.rotate(210 if flip else 150); cv.translate(-gx, -gy)
             _glove_cursor(pen, gx, gy, s, a, press=lerp(press0, press1, u), curl=curl)
             cv.restore()
         else:
@@ -3463,8 +3464,8 @@ def plan_rule7(F):
       sfx=[(T(320) + 0.3, 'arm_stretch_creak', -4, 0, 'bus', dict(dur=2.0))], c=PU(0.02, 0.85, free=True))
     bust(W(320, 'glove'), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=960, cy=620, scale=0.8, turn=0.3,
          act=_A(lambda a, s: a.look_at(s.t0, (400, 700), dur=0.4), lambda a, s: a.look_at(WD(320, 'settles') + 0.2, (1150, 990), dur=0.5)),
-         acts=lambda A, sh, sp: [glove_on(1150, 990, 4.4, 0.0, 0.35, WD(320, 'settles'), WD(320, 'settles') + 0.6, curl=0.45,
-                                          drift=lambda tt: (-420 * (1 - ease_out_cubic(clamp((tt - W(320, 'glove')) / 0.6))),
+         acts=lambda A, sh, sp: [glove_on(1150, 990, 4.4, 0.0, 0.35, WD(320, 'settles'), WD(320, 'settles') + 0.6, curl=0.45, flip=True,
+                                          drift=lambda tt: (420 * (1 - ease_out_cubic(clamp((tt - W(320, 'glove')) / 0.6))),
                                                             -380 * (1 - ease_out_cubic(clamp((tt - W(320, 'glove')) / 0.6)))))],
          sfx=[(WD(320, 'settles') + 0.1, 'glove_squeeze', -6, 0, 'close')])
     # 321-322 W "Nobody knows his name," he says.  323 W "Not his mother. Not Della. Not you. Every morning ... nobody asks."
@@ -3472,7 +3473,7 @@ def plan_rule7(F):
     SH = (1150, 990)                                                      # review r3: ON his shoulder, not beside his chest
 
     def theo_glove(t_on, press=(0.0, 0.0), dur=0.5):
-        return lambda A, sh, sp: [glove_on(SH[0], SH[1], 4.4, press[0], press[1], t_on, t_on + dur, curl=0.45)]
+        return lambda A, sh, sp: [glove_on(SH[0], SH[1], 4.4, press[0], press[1], t_on, t_on + dur, curl=0.45, flip=True)]
     bust(W(323, 'every'), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=960, cy=620, scale=0.8, turn=0.3,
          act=_A(lambda a, s: a.look_at(s.t0, (400, 700), dur=0.4), blinks(W(323, 'every') + 1.2)), acts=theo_glove(-9))
     bust(W(323, 'one'), 'mina_bare', ('school', 'reverse'), SD, 'fear', HEADS9, cx=960, cy=650, scale=0.9, turn=-0.1, act=_A(lambda a, s: a.look_at(s.t0, (1020, 450), dur=0.2), blinks(W(323, 'chance'))))
@@ -3568,17 +3569,17 @@ def plan_rule7(F):
     # 349-351 "The glove squeezes his shoulder." "He looks at it." "Then at me."
     bust(T(349), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'lonely', AMBER, cx=900, cy=620, scale=0.92, turn=0.3,
          act=_A(lambda a, s: a.look_at(s.t0, (400, 640), dur=0.3), lambda a, s: a.look_at(T(350) + 0.05, (1200, 860), dur=0.4), lambda a, s: a.look_at(T(351) + 0.05, (300, 560), dur=0.4)),
-         acts=lambda A, sh, sp: [glove_on(1290, 800, 4.8, 0.0, 1.0, T(349) + 0.2, T(349) + 1.0, curl=0.45)], sfx=[(T(349) + 0.3, 'glove_squeeze', -4, 0, 'close')])
+         acts=lambda A, sh, sp: [glove_on(1150, 990, 4.8, 0.0, 1.0, T(349) + 0.2, T(349) + 1.0, curl=0.45, flip=True)], sfx=[(T(349) + 0.3, 'glove_squeeze', -4, 0, 'close')])
     # 352 T "Nobody's asked me that in a really long time..."
     bust(T(352), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'kind_smile', AMBER, cx=900, cy=620, scale=0.88, turn=0.3,
-         act=_A(lambda a, s: a.look_at(s.t0, (300, 560), dur=0.3), blinks(T(352) + 1.5)), acts=lambda A, sh, sp: [glove_on(1290, 800, 4.6, 1.0, 1.0, -9, 0.0, curl=0.45)])
+         act=_A(lambda a, s: a.look_at(s.t0, (300, 560), dur=0.3), blinks(T(352) + 1.5)), acts=lambda A, sh, sp: [glove_on(1150, 990, 4.6, 1.0, 1.0, -9, 0.0, curl=0.45, flip=True)])
     # 353 "The broom cracks."
     crk = lambda tt: 1.0 if tt >= WD(353, 'cracks') else 0.0
     C(T(353), 'set', room='bus', view='doors', post=dict(exposure=1.8), set=dict(HIS, door=0.4, broom=1.0, bend=0.75, crack=crk), rim=AMBER,
       sfx=[(WD(353, 'cracks'), 'wood_crack', 2, 0, 'bus')], c=PU(0.03, 1.25, hit=[(WD(353, 'cracks'), 5.0)]))
     # 354 T "Theo."
     bust(T(354), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'brave', AMBER, cx=960, cy=620, scale=0.95, turn=0.2,
-         act=_A(lambda a, s: a.look_at(s.t0, (300, 560), dur=0.2)), acts=lambda A, sh, sp: [glove_on(1330, 800, 4.6, 1.0, 1.0, -9, 0.0, curl=0.45)])
+         act=_A(lambda a, s: a.look_at(s.t0, (300, 560), dur=0.2)), acts=lambda A, sh, sp: [glove_on(1150, 990, 4.6, 1.0, 1.0, -9, 0.0, curl=0.45, flip=True)])
     # 355-356 "Grandma can't see him." "She calls anyway."  357 "All three of us:"  358 "THEO!"
     bust(T(355), 'della', ('school', 'reverse'), SD, 'calm_firm', HEADS9_L, cx=960, cy=640, scale=0.88, turn=-0.25,
          act=_A(lambda a, s: a.look_at(s.t0, (1300, 560), dur=0.3), lambda a, s: a.look_at(T(355) + 0.7, (1650, 640), dur=0.3), lambda a, s: a.look_at(T(356) + 0.2, (1500, 600), dur=0.3),
@@ -3602,12 +3603,12 @@ def plan_rule7(F):
          busts=[dict(who='della', cx=1300, cy=620, scale=0.75, turn=-0.3, expr='shout', light=HEADS9_L, act=lambda a, s: a.look_at(s.t0, (1020, 450), dur=0.1))])
     # 361 T "...HERE!"
     bust(T(361), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'shout_here', AMBER, cx=960, cy=620, scale=1.0, turn=0.15,
-         act=lambda a, s: a.look_at(s.t0, (300, 560), dur=0.1), acts=lambda A, sh, sp: [glove_on(1340, 800, 4.6, 1.0, 0.6, -9, 0.0, curl=0.45)], hit=[WD(361, 'here')],
+         act=lambda a, s: a.look_at(s.t0, (300, 560), dur=0.1), acts=lambda A, sh, sp: [glove_on(1150, 990, 4.6, 1.0, 0.6, -9, 0.0, curl=0.45, flip=True)], hit=[WD(361, 'here')],
          c=BZ(0.03, hit=[(WD(361, 'here'), 5.0)]))
     # 362 "Theo twists out from under the glove, and through the gap."
     bust(T(362), 'theo', ('bus', 'seat22'), dict(HIS, seat_lit={22: 1.0}), 'brave', AMBER, cx=lambda tt: 960 - 500 * ease_in_cubic(clamp((tt - T(362) - 0.2) / 0.8)), cy=620, scale=0.95, turn=-0.4,
          act=lambda a, s: a.look_at(s.t0, (200, 600), dur=0.1),
-         acts=lambda A, sh, sp: [glove_on(1340, 800, 4.6, 0.6, 1.4, T(362) + 0.2, T(362) + 0.6, curl=0.5)], sfx=[(T(362) + 0.25, 'glove_snap', -2, 0, 'close')])
+         acts=lambda A, sh, sp: [glove_on(1150, 990, 4.6, 0.6, 1.4, T(362) + 0.2, T(362) + 0.6, curl=0.5, flip=True)], sfx=[(T(362) + 0.25, 'glove_snap', -2, 0, 'close')])
     C(W(362, 'through'), 'set', room='school', view='doors', set=dict(SD, his_door=0.4, broom9=1.0, bend=0.75, crack=1.0), rim=HEADS9,
       ppl=[P('theo', 'his_step', path=[(W(362, 'through'), 'his_step'), (W(362, 'through') + 0.7, (-2.0, -5.3))], run=True, surface='asphalt', expr='brave', alpha=0.8),
            P('mina_bare', (-1.85, -5.75), face='his_step', expr='terrified_call'), P('della', (-1.4, -6.0), face='his_step', expr='set_jaw')],

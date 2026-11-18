@@ -220,7 +220,8 @@ HOLD_LIFT = {'studio': -2.0, 'phone_1979': 0.0, 'landline': -2.0,   # test 1: la
 JINGLE_MODULE = 'jingle_bus'
 SHOW_DUCK['jingle'].update({'sting': -3.0, 'tv1994': -12.0, 'pa': -6.0, 'musicbox': -5.0, 'tapestop': -10.0,
                             'warm': -12.0})
-JINGLE_LIFT_BUS = {'sting': 0.0, 'tv1994': -2.0, 'pa': -3.0, 'musicbox': -4.0, 'tapestop': 0.0, 'warm': -3.5,
+JINGLE_LIFT_BUS = {'sting': 0.0, 'tv1994': -2.0, 'pa': 5.0,   # pa: sound fix r3 (-3: his PA sat -23 / -18.6 LU under the voice)
+                   'musicbox': -4.0, 'tapestop': 0.0, 'warm': -3.5,
                    'studio': -2.0}
 # (tests 1, 2, 8: the PA burst sat -4.4 LU rel the voice under "A bright TV voice starts to read", the music box -7
 # with 90 % of its energy in the voice band, the warm version +1.9 over "...it does.": -2, -3, -4.5 dB)

@@ -61,21 +61,21 @@ DEDUP_S = 2.0                                             # an ADD row yields to
 # picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
     'neck_tick': ('wood_creak', {'kind': 'tick', 'dur': 0.15}, None, 'his neck, one tick'),
-    'neck_ratchet': ('wood_creak', {'kind': 'grind', 'dur': 1.1}, -2.0, 'his head turning all the way round'),
+    'neck_ratchet': ('wood_creak', {'kind': 'grind', 'dur': 0.16}, 1.0, 'his head turning all the way round: one click per step of the picture\'s three-step ratchet (sound fix r3: the three were deduplicated to one creak)'),
     'bus_rumble': ('bus_idle', {'kind': 'bus9', 'rattle': 0.3}, -10.0, 'the 1994 tape\'s bus'),
     'cart_squeak': ('wheelchair', {}, -12.0, 'the TV cart rolled in'),
     'vcr_insert': ('vhs_tape', {'action': 'insert'}, -4.0, 'the tape into the VCR'),
     'tape_warble': ('tape_glitch', {'kind': 'warble'}, None, 'the tape warbles'),
     'tape_slowdown': ('tape_slide', {}, -4.0, 'the voice slides down like a slowing tape'),
     'vhs_noise': ('tape_glitch', {'kind': 'tracking'}, -8.0, 'snow after the tape'),
-    'like_pop': ('ui_pop', {}, -14.0, 'the likes on the post'),
+    'like_pop': ('ui_pop', {}, -7.0, 'the likes on the post (sound fix r3: at -14 they sat 19-25 LU under the voice)'),
     'tape_press': ('touch_tap', {}, -10.0, 'the tape pressed flat on the door'),
     'fabric_turn': ('cloth_rustle', {}, -10.0, 'the backpack turned to the wall'),
     'loudspeaker_crackle': ('pa_crackle', {'kind': 'on'}, -4.0, 'his loudspeaker comes on'),
     'loudspeaker_click': ('pa_crackle', {'kind': 'on'}, -4.0, 'over the loudspeaker'),
     'ws_unfold_clack': ('his_unfold', {'n': 1}, None, 'one joint of him unfolding, like a ladder'),
     'clipboard_lift': ('clipboard', {}, -8.0, 'his clipboard'),
-    'hand_slap': ('cloth_rustle', {'kind': 'grab', 'dur': 0.6}, -2.0, 'my hand slaps over his mouth'),
+    'hand_slap': ('hand_slap', {}, -4.0, 'my hand slaps over his mouth (sound fix r3: a real slap, was a cloth grab)'),
     'paper_slide': ('paper_under_door', {'dur': 1.0}, -2.0, 'the yellow ticket under the door'),
     'dial_beep': ('touch_tap', {}, -10.0, 'a key on the phone'),
     'call_fail': ('dial_911', {'kind': 'fail'}, -6.0, 'no bars: the call drops'),
@@ -200,7 +200,7 @@ def picture_pass(out, lines, log):
         why = None
         if nm == 'vhs_glitch' and any(abs(t - s) < 0.15 for s in skips):
             log.append(f'PIC  vhs_glitch         {t:7.2f} dropped: the tape_skip on this frame plays it'); continue
-        if nm in ('glove_slap_wall', 'neck_ratchet') and t - last.get(nm, -9.0) < 0.6:
+        if (nm == 'glove_slap_wall' and t - last.get(nm, -9.0) < 0.6) or (nm == 'light_switch' and t - last.get(nm, -9.0) < 0.3):
             log.append(f'PIC  {nm:18s} {t:7.2f} dropped: doubled ({t - last[nm]:.2f} s after the last)'); continue
         last[nm] = t
         if nm == 'bus_ambience':
@@ -226,7 +226,8 @@ def picture_pass(out, lines, log):
             if p.get('dur'):
                 c = dict(c, name='tape_glitch', params={'kind': 'warble', 'dur': p['dur']}); why = 'the tape slips'
             else:
-                c = dict(c, name='bus_rewind', params={}); why = 'the bus rewinds into the dark'
+                c = dict(c, t=round(t - 0.5, 3), name='bus_rewind', params={'dur': 1.6})   # sound fix r3: at 2.8 s it peaked 2.4 s late, on the clipboard
+                why = 'the bus rewinds into the dark (peak about 1 s into the rewind shot)'
         elif nm in PICTURE:
             m = PICTURE[nm]
             if m is None:

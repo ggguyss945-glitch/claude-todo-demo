@@ -61,22 +61,22 @@ UNV = 0.35                                             # share of the formant wa
 # Tape (optional): wow: (Hz, depth) pitch+formant warble; sag: (s, semitones) pitch+formant fall over the line's last
 # voiced seconds; morph: (voice, from, to) a glide into another voice over that share of the voiced span; tape: (from,
 # speed) playback slowed from that share of the speech to its end, down to that speed (the word gets longer).
-_D = dict(rng=0.85, comp=0.42, smooth=0.0, alpha=1.11, jit=0.010, under=None,
+_D = dict(rng=0.85, comp=0.42, smooth=0.0, alpha=1.03, jit=0.010, under=None,
           eq=[('peak', 280, 1.2, 0.9), ('hs', 6000, -1.5, 0.7)])
 _W = dict(alpha=0.93, under=(-19.0, 0.86), eq=[('peak', 150, 2.5, 0.8), ('peak', 2800, 2.0, 1.0), ('hs', 9000, -1.0, 0.7)])
 _WRONG = dict(wow=(0.8, 0.010), sag=(0.28, 1.2), under=(-22.0, 0.86))         # what gives an imitation away
 _S = dict(alpha=1.32, smooth=0.0, trem=None, jit=0.004, under=None)
 _T = dict(alpha=1.24, trem=None, jit=0.0, under=None)
 VOICES = {
-    'D': dict(_D, f0=184.0, breath=0.16, trem=(5.0, 0.014), lu=-0.5,
-              desc='Grandma Della, 63, 32 years a bus driver: a warm, firm older woman (184 Hz, formants x1.11), a '
+    'D': dict(_D, f0=168.0, breath=0.16, trem=(5.0, 0.014), lu=-0.5,
+              desc='Grandma Della, 63, 32 years a bus driver: a warm, firm older woman (168 Hz, formants x1.03: sound fix round 3, at 184 Hz / x1.11 she sounded younger than Mina), a '
                    "driver's calm (pitch range x0.85), a faint 5 Hz tremor (1.4 %) and 1 % jitter of age, a touch of "
                    'breath (0.16), warm low-mids, a softer top'),
-    'D_story': dict(_D, f0=178.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.5,
+    'D_story': dict(_D, f0=164.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.5,
                     desc='Della telling 1994 (seat 22, "I got two back", "You thought that was manners?") and thanking '
-                         'Theo: the same woman with the fear under it: lower (178 Hz), shakier (tremor 2.4 %), breathier '
+                         'Theo: the same woman with the fear under it: lower (164 Hz; sound fix r3, was 178), shakier (tremor 2.4 %), breathier '
                          '(0.24), 1.5 dB softer'),
-    'D_shout': dict(_D, f0=228.0, rng=1.0, comp=0.45, breath=0.08, trem=None, jit=0.016, lu=1.0,
+    'D_shout': dict(_D, f0=212.0, rng=1.0, comp=0.45, breath=0.08, trem=None, jit=0.016, lu=1.0,
                     eq=[('peak', 280, 1.0, 0.9), ('peak', 2200, 2.0, 1.0)],
                     desc='Della shouting "DON\'T OPEN THE DOOR!" through the house: higher (228 Hz), full range, '
                          'rougher (1.6 % jitter), +2 dB edge at 2.2 kHz'),
@@ -114,31 +114,33 @@ VOICES = {
                       desc='at the peephole ("Smart one. I\'ll ask Sami."): his voice half-whispered (0.50) and very close '
                            '(+3 dB at 150 Hz), 3 dB softer, the second voice 20 dB down'),
     'W_flat': dict(_W, f0=128.0, rng=0.40, comp=0.15, smooth=0.06, breath=-0.45, trem=None, jit=0.0, wow=(0.55, 0.003),
-                   under=(-16.0, 0.86), lu=-1.5,
-                   desc='"Almost." through the door: the smile gone: lower (128 Hz), nearly flat (x0.40), the second '
+                   under=(-21.0, 0.86), lu=-1.0, eq=[('peak', 150, 1.5, 0.8), ('peak', 3000, 4.0, 1.0), ('hs', 9000, -1.0, 0.7)],
+                   desc='"Almost." through the door: the smile gone: lower (128 Hz), nearly flat (x0.40), clearer for the '
+                        'recogniser (sound fix round 3: +4 dB presence at 3 kHz, the second voice 21 dB down: at 16 dB down '
+                        'it read "And most"); the second '
                         'voice louder (16 dB down)'),
     'W_lure': dict(_W, f0=136.0, rng=0.70, comp=0.28, smooth=0.05, breath=0.06, trem=None, jit=0.0, wow=(0.55, 0.003),
                    under=(-21.0, 0.86), eq=[('peak', 200, 2.0, 0.8), ('hs', 6000, -2.0, 0.7)], lu=-2.0,
                    desc='the trade-seats lure, the only "kind" voice he uses: softer and warmer (136 Hz, a little air, a '
                         'softer top, 2 dB down), the second voice pulled back (21 dB down)'),
-    'W_della': dict(_D, **_WRONG, f0=192.0, rng=1.0, comp=0.45, breath=0.14, trem=(5.0, 0.012), jit=0.008, lu=0.0,
-                    desc='his imitation of Grandma at the front door: Della\'s voice, urgent (192 Hz, formants x1.11), '
+    'W_della': dict(_D, **_WRONG, f0=176.0, rng=1.0, comp=0.45, breath=0.14, trem=(5.0, 0.012), jit=0.008, lu=0.0,
+                    desc='his imitation of Grandma at the front door: Della\'s voice, urgent (176 Hz, formants x1.03), '
                          'but wrong: a tape warble (0.8 Hz, 1 %, with drift) on pitch and formants together, the line '
                          'sinking 1.2 semitones over its last 0.28 s, his second voice faint under it (22 dB down)'),
-    'W_della_soft': dict(_D, **_WRONG, f0=180.0, rng=0.85, comp=0.40, breath=0.22, trem=(5.0, 0.016), lu=-1.5,
+    'W_della_soft': dict(_D, **_WRONG, f0=166.0, rng=0.85, comp=0.40, breath=0.22, trem=(5.0, 0.016), lu=-1.5,
                          desc='his imitation of Grandma at the bedroom door ("It\'s me, sweetheart." "Lighthouse."): her '
                               'soft voice (180 Hz, breath 0.22, 1.5 dB down) with the same warble, sag and second voice'),
-    'W_della_radio': dict(_D, **_WRONG, f0=178.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.0,
+    'W_della_radio': dict(_D, **_WRONG, f0=164.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.0,
                           desc='his imitation on the bus 9 dash radio ("The third was a boy in the back."): Della\'s '
                                'story voice, so the hijack is seamless, with the warble, sag and second voice; the mix '
                                'adds the radio'),
-    'W_della_clever': dict(_D, f0=184.0, breath=0.16, trem=(5.0, 0.014), lu=0.0, wow=(0.8, 0.010), under=None,
+    'W_della_clever': dict(_D, f0=168.0, breath=0.16, trem=(5.0, 0.014), lu=0.0, wow=(0.8, 0.010), under=None,
                            morph=('W', 0.15, 0.70), tape=(0.40, 0.60),
                            desc='"...Clever.": Della\'s voice gliding into his own (pitch, formants, breath and second '
                                 'voice morph over 15-70 % of the word) while the tape slows from 40 % of the word to 0.60x '
                                 'speed at its end (pitch and formants fall together, the word lengthens): an imitation '
                                 'sliding down into his TV voice'),
-    'W_sami': dict(_S, **_WRONG, f0=330.0, rng=0.9, comp=0.40, breath=0.06, eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 1.5, 1.0)],
+    'W_sami': dict(_S, **_WRONG, f0=270.0, rng=0.9, comp=0.40, breath=0.06, eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 1.5, 1.0)],
                    lu=0.0,
                    desc='his imitation of Sami\'s "Here!" on the porch: Sami\'s shout (330 Hz, x1.38) with the warble, '
                         'sag and second voice'),

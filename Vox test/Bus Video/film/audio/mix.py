@@ -400,6 +400,16 @@ def front_door_fx(x):
     return SX.mono(SX.reverb(y, 'hallway', 0.22, 0.002))[:len(x)].astype(np.float32)
 
 
+def front_door_clear_fx(x):
+    """'door_clear' (sound fix round 3): the front door for the scare words ("Almost.", the roll call's "Mina?",
+    "...Clever."): the same wood and porch, but a softer top cut (4.2 kHz, -2 dB shelf from 2.5 kHz), the glass panel's
+    consonants louder (1.6-4.5 kHz, 35 %) and +3 dB presence at 3 kHz, so the recogniser reads the word under the hit."""
+    d = SX.eq(SX.lp(x, 4200, 2), ('peak', 230, 2.5, 1.1), ('peak', 3000, 3.0, 1.0), ('hs', 2500, -2.0, 0.7))
+    glass = band(x, 1600, 4500, 2) * 0.35
+    y = SX.mono(SX.reverb(d + glass, 'porch', 0.16, 0.002))[:len(x)]
+    return SX.mono(SX.reverb(y, 'hallway', 0.14, 0.002))[:len(x)].astype(np.float32)
+
+
 def walkie_fx(x):
     """'walkie': a kid's walkie-talkie: 300 Hz-3 kHz, hard-clipped through a little AGC, the channel's hiss gated
     with the voice, a squelch tail after the last word (-1 LU)."""
@@ -505,10 +515,10 @@ def his_bus_fx(x):
 # lines get only their place here; mix.py's own 'mimic' / 'mimic_slide' stay for a line that arrives unbaked.
 TAG_FX = {
     'mimic_sami_here': 'door', 'mimic_della_door': 'door', 'mimic_della_no_time': 'door',
-    'mimic_della_clever': 'door', 'mimic_della_sweetheart': 'door', 'mimic_della_lighthouse': 'door',
+    'mimic_della_clever': 'door_clear', 'mimic_della_sweetheart': 'door', 'mimic_della_lighthouse': 'door',
     'mimic_della_radio': 'radio', 'mimic_mina_back_here': 'his_bus', 'mimic_mina_dont_answer': 'his_bus',
     'smart_one': 'whisper+door',
-    'roll_della': 'his+door', 'roll_mina': 'his+door', 'roll_sami': 'his+door', 'almost': 'his+door',
+    'roll_della': 'his+door', 'roll_mina': 'his+door_clear', 'roll_sami': 'his+door', 'almost': 'his+door_clear',
     'reads_post': 'his+loudspeaker', 'great_smile_mina': 'his+loudspeaker', 'know_your_name_bus': 'his+loudspeaker',
     'seats_saved': 'his+loudspeaker', 'officers': 'phone', 'hook_voice': 'tv', 'tape_card': 'tv',
     'tape_ride_right': 'tv'}
@@ -528,11 +538,11 @@ LINE_FX = {'radio': radio_fx, 'phone_call': phone_fx, 'phone_far': lambda x: pho
 # 'phone' the 911 call on a cell phone (the landline stays reachable as 'landline'); 'his' is W's default
 LINE_FX.update({'tv': tv1994_fx, 'tape': tv1994_fx, 'television': tv1994_fx, 'his': his_fx,
                 'loudspeaker': loudspeaker_fx, 'pa': loudspeaker_fx, 'speaker_horn': loudspeaker_fx,
-                'door': front_door_fx, 'front_door': front_door_fx, 'through_door': front_door_fx,
+                'door': front_door_fx, 'door_clear': front_door_clear_fx, 'front_door': front_door_fx, 'through_door': front_door_fx,
                 'walkie': walkie_fx, 'walkie_talkie': walkie_fx, 'radio': dash_radio_fx, 'dash_radio': dash_radio_fx,
                 'police_radio': radio_fx, 'phone': cell_fx, 'cell': cell_fx, '911': cell_fx, 'mimic': mimic_fx,
                 'mimic_slide': mimic_slide_fx, 'slide': mimic_slide_fx, 'his_bus': his_bus_fx})
-LINE_FX_LU.update({'tv': -1.0, 'his': -0.5, 'loudspeaker': -1.5, 'pa': -1.5, 'door': -2.5, 'front_door': -2.5,
+LINE_FX_LU.update({'tv': -1.0, 'his': -0.5, 'loudspeaker': -1.5, 'pa': -1.5, 'door': -2.5, 'door_clear': -1.5, 'front_door': -2.5,
                    'walkie': -1.0, 'radio': -2.0, 'dash_radio': -2.0, 'phone': -1.0, 'cell': -1.0, 'mimic': -0.5,
                    'mimic_slide': -0.5, 'slide': -0.5, 'his_bus': -1.0})
 _FX_WARNED = set()
@@ -947,7 +957,7 @@ BOOST_SPARE_S = 0.4   # a boosted scare's spare window lasts at least this long 
 # fix round 2 (verify r1, major 2: the boosted windows were rectangular, so at each window's end the hits bus fell 7-14 dB
 # in 20 ms and the scares' tails were chopped): every boosted window now has a raised-cosine attack (BOOST_ATT_S) and
 # release (BOOST_REL_S) on its drive, its ceiling (blended in dB), the glue's exemption and the bed statistics' mask
-BOOST_ATT_S, BOOST_REL_S = 0.010, 0.35
+BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-edged block (critic M1: 0.6-1.2 s)
 # fix round 2 (verify r1, major 1 / critic 3 M6: the scares only reached +4.3 LU momentary, about 1 LU over the loudest
 # narration, because the hits limiter pinned them at its ceiling with a crest factor of about 8 dB): inside a boosted
 # window the hits bus is scaled so its peak meets the ceiling up to BOOST_SAT_DB over it and soft-clipped (tanh) to the
@@ -977,7 +987,7 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # edit needs no change here); the Doctor film's line indices had been left in and steered the wrong stretches.
 # rule 1 .. rule 7 rise; the comment prompt ('cta') and everything from the 3:00 bell on are left alone
 ARC_TARGETS = [('rule1', -19.0), ('cta', None), ('rule2', -17.5), ('rule3', -16.0), ('rule4', -14.5), ('rule5', -13.0),
-               ('rule6', -11.8), ('rule7', -10.6), ('bell_rings', None)]
+               ('rule6', -11.8), ('rule7', -9.0), ('bell_rings', None)]   # r3: rule 7 -10.6 measured under rule 6
 ARC_MAX_DB = 8.0     # Bus final mix: 6 dB clamped rules 1 and 6 short of the rule-by-rule rise
 # sound fix round (M1): the old landline's bell sat 5-10 dB under the voice peaks in the speech band and level with the
 # voice between syllables: each ring dips this much while the narration speaks (voice-keyed, 10 ms attack, 0.12 s hold)
@@ -1419,7 +1429,7 @@ def main():
         w = (np.sin(w * np.pi / 2) ** 2).astype(np.float32)
         bshape[a0:b1] = np.maximum(bshape[a0:b1], w)
         bgr[a0:b1] = np.where(w > 0, np.maximum(bgr[a0:b1], gd), bgr[a0:b1])
-        r_ = min(N, b + int(0.25 * SR)) - b
+        r_ = min(N, b + int(0.6 * SR)) - b          # sound fix r3: 0.25 -> 0.6 s (a smooth release)
         if r_ > 0:
             spare[b:b + r_] = np.minimum(spare[b:b + r_], np.linspace(0, 1, r_, dtype=np.float32) ** 1.5)
     if bwins:
