@@ -1,4 +1,4 @@
-"""The voiceover edit of the Doctor film: the owner's raw TTS take -> a clean, paced narration (English only).
+"""The voiceover edit of the Bus film ("If The School Bus Stops At Midnight..."; adapted from the Doctor film's tool): the owner's raw TTS take -> a clean, paced narration (English only).
     python3 vo_edit.py analyze        per-line source spans, what gets removed, internal pauses (prints; writes nothing)
     python3 vo_edit.py pacing [--force]   write W/narration/pacing_map.md from the rules + PACE below (keeps an existing
                                       map unless --force: the map is the source of truth, edit it by hand if you like)
@@ -8,16 +8,16 @@
     python3 vo_edit.py check          scan the edited files (residual breaths, clicks, gaps vs the map, peaks, loudness)
                                       and draw the before/after strips into W/narration/tests/; after align.py, also
                                       every line against the recogniser (tools/vo_asrcheck.py; fails the check)
-Source: W/narration/raw/narration_raw_44k.wav (44.1 kHz mono float: the owner's seven TTS parts joined by
-tools/vo_join.py, 1165.67 s); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
-80 ms resolution, used as anchors); script: script/lines.py (456 lines).
-Run order: vo_join.py -> vo_asr.py raw/narration_raw_44k.wav asr_raw.json -> vo_edit.py pacing (once; then edit the
+Source: W/narration/raw/narration_raw_24k.wav (24 kHz mono float: the owner's two TTS parts joined by
+tools/vo_join.py, 741.83 s); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
+80 ms resolution, used as anchors); script: script/lines.py (420 lines).
+Run order: vo_join.py -> vo_asr.py raw/narration_raw_24k.wav asr_raw.json -> vo_edit.py pacing (once; then edit the
 map by hand) -> vo_edit.py build -> align.py --write-pauses -> vo_edit.py check -> vo_report.py.
 
 How the edit works
-  1. Repair: the take is hard-limited at 0.705; every flat-topped run at >= 0.700 (185 runs of 1-2 samples) is redrawn
-     with a cubic spline through the 4 good samples on each side (peaks come back up to 0.776; the final gain makes
-     room); then 44.1 -> 48 kHz with soxr VHQ (linear phase).
+  1. Repair: the take hits digital full scale; every flat-topped run at >= 0.999 (902 runs of 1-2 samples) is redrawn
+     with a cubic spline through the 4 good samples on each side (the final gain makes room); then 24 -> 48 kHz with
+     soxr VHQ (linear phase).
   2. Map: every line of lines.py is matched to the recogniser's words (difflib on normalised words, as align.py does).
      Sound "islands" = stretches above -60 dBFS (5 ms RMS, 1 ms hop) merged across gaps under 15 ms; the TTS leaves
      digital silence between most phrases, so islands are clean units. A word owns the island at its recognised start
@@ -57,8 +57,8 @@ FILM = os.path.dirname(HERE)
 ROOT = os.path.dirname(FILM)
 W = os.path.join(FILM, '_work')
 N = os.path.join(W, 'narration')
-RAW = os.path.join(N, 'raw', 'narration_raw_44k.wav')     # tools/vo_join.py: the seven parts as one take
-SRC_SR = 44100                                                    # the take's rate
+RAW = os.path.join(N, 'raw', 'narration_raw_24k.wav')     # tools/vo_join.py: the two parts as one take
+SRC_SR = 24000                                                    # the take's rate
 ASR = os.path.join(N, 'asr_raw.json')
 PACING = os.path.join(N, 'pacing_map.md')
 OUT_CLEAN = os.path.join(N, 'narration_clean.wav')
@@ -72,109 +72,46 @@ from lines import LINES                                           # noqa: E402
 
 SR = 48000
 PEAK_CEIL = -1.0                                                  # dBTP: one gain for both files puts the true peak here
-CLIP_THR = 0.700                                                  # the take is hard-limited at 0.705: flat 1-2 sample tops at >= 0.700 are redrawn
+CLIP_THR = 0.9995                                                 # the take is hard-limited at 0.705: flat 1-2 sample tops at >= 0.700 are redrawn
 DEESS_THR_DB, DEESS_MAX_DB = -7.0, 6.0                            # sibilants above (vowel level - 7 dB) come down
 
 # ============================================================================ the TTS slips (raw-file seconds)
 # Each was found by comparing two recognisers (Parakeet TDT, Whisper base.en) with the script, then cut by eye on 2 ms
 # spectrograms with the pitch track; every repaired phrase is re-recognised by both (voice_report.md).
 FIXES = {
-    # cold open: "his head wrapped round and round in old yellow tape... he looks up at you" (the take has no "and"):
-    # the "and" of "...all the way across the room, and tore a ticket" (621.785-621.945: said after a comma pause, as
-    # here after the ellipsis; 131 -> 113 Hz, into this "he" at 107 Hz; it ends where the voicing stops before the t
-    # closure of "tore") goes in front of "he", no gap (the d is unreleased into the h). Both recognisers: "tape and he
-    # looks up at you and says very".
-    'open_kindly': {'prepend': [(621.785, 621.945)]},
-    # "Nurse. Always notice." (script "Nurses always notice."): the s of "Nurse" is trimmed to 0.10 s (151.72), the "is"
-    # of "Let me take his pulse" (774.800-774.930: the vowel after the h, 208 -> 172 Hz, between this "Nurse" (ends
-    # rising to 241 Hz) and "always" (158-172 Hz); its z ends at the p closure of "pulse") joins it with a 6 ms
-    # equal-power crossfade, and "always notice." follows after 30 ms. Parakeet: "Nurses always notice."; Whisper:
-    # "nurse is always notice" (the same sounds: "nur-siz").
-    'nurses_notice': {'pieces': [(None, 151.72, 0.0, 0.003, 0.0), (774.800, 774.930, 0.0, 0.0, 0.008, 0.006),
-                                 (152.035, None, 0.030, 0.003, 0.010)]},
-    # "That's what the voice told you in 1979 in 1979.": the first "in 1979" already falls to a full stop (f0 -> 100 Hz
-    # on "nine"); the line ends there (501.335, in the dip before the second "in") on a 25 ms fade. Both recognisers:
-    # "That's what the voice told you in 1979."
-    'voice_told': {'end': 501.335, 'end_fade': 0.025},
-    # "rah-rahs of plastic chairs": the take has no usable "Rows" (its second syllable reads "ras"/"ross"). Rebuilt from
-    # ONE source for the whole "row": the "row" of "in the last row," from where its voicing starts after the t
-    # (571.935, the r still in it: F3 rises from 2.0 to 2.5 kHz; 175 -> 115 Hz) to 572.200, faded in over 30 ms (a soft
-    # sonorant onset: with 6-15 ms the recognisers hear a stop, "Bros"), crossfaded (10 ms equal-power) into the take's
-    # own "-z of plastic chairs" from 529.640 (the join sits where the z starts, where the voicing is weakest). Both
-    # recognisers, paddings 0.05-0.5 s: "Rows of plastic chairs, bolted together." 8/8. (Fix round 2: the first repair put
-    # the 70 ms r of the "rah" (105-115 Hz) in front of this "ow" (175 Hz): a 60 % pitch step inside one syllable. An r
-    # + "o" of "never wrote" was tried too: the r is fused with "-ver", both recognisers heard "for rows" / "Verros".)
-    'chairs': {'start': 529.640, 'prepend': [(571.935, 572.200)], 'join': 'xfade', 'prepend_fade': 0.030},
-    # "and I'm, s-, I'm sitting": the stray "s" (946.13-946.27) and the second "I'm" (946.33-946.50) go; the first
-    # "I'm" (said after "and") meets "sitting" after 60 ms. Both: "...in the morning and I'm sitting in a little office"
-    # (cutting the first "I'm" instead lost "and" for both recognisers).
-    'office': {'cuts': [(946.075, 946.505, 0.06)]},
-    # the count "Two..." was read as a rising "Two?" (180 -> 330 Hz) that reads as "Till" once it has the Waiting Man's
-    # voice (2-3 of 6 paddings). It is replaced by the sentence-final "Two." of "...the comment you left before rule
-    # two." (1094.495-1094.982: from the t closure, -54 dB, to the end of its own decay at -60 dB; 0.49 s, falling
-    # 135 -> 100 Hz like "One..." and "Three...", already in his register), in the same voice as the other two counts
-    # (W_count): 0.57 s, between "One..." (0.54 s) and "Three..." (0.80 s). Both recognisers, paddings 0.05-0.5 s: "Two".
-    # (Fix round 2: the first repair used the "two" of "Rule number two:", 0.28 s: a clipped word that Parakeet read as
-    # "Yeah." on its own, whatever its stretch.)
-    'count2': {'pieces': [(1094.495, 1094.982, 0.0, 0.003, 0.030)]},
-    # "Rule number four." and its text share one island only through a 10 ms blip in the silence (370.16): the line
-    # ends where "four" decays into digital silence and the rule text starts on the "I" of "If"
-    'rule4': {'end': 370.066},
-    'rule4_text': {'start': 370.385},
-    # "don't get on. the Sleemith well." (script "Sleep well."): the weak schwa before the S (1157.92-1158.01) goes;
-    # "slee" ends where its clean "ee" ends (1158.370, before the "m"-like glide), a 65 ms closure stands for the p, and
-    # the take's aspiration (1158.52-1158.61) is its release into "well". Both recognisers: "Don't get on. Sleep well."
-    # "Take a seat." (cold open): the k of "Take" releases into 50 ms of hissy aspiration that both recognisers hear as
-    # "Takes a seat"; 40 ms of it (29.565-29.605) go, joined by a 10 ms equal-power crossfade (the burst and 10 ms of
-    # aspiration stay). Both: "Take a seat."
-    'open_seat': {'cuts': [(29.565, 29.605, 0.0, 0.010)]},
-    # "From Grandpa's chair. Rule number three." ran together through one r ("chai-r-ule"): the split sits at the r's F3
-    # minimum (SPLITS) and "Rule" gets a clean word-initial r from "Rule number six." (515.225-515.285, 125-135 Hz)
-    # crossfaded (10 ms) into the take's "-ule number three." from 322.130. Both: "Rule number three."
-    'rule3': {'start': 322.130, 'prepend': [(515.225, 515.285)], 'join': 'xfade'},
-    # "said Doctor Halverson.": the d of "said" came out as a hissy z (Parakeet: "says"); the hiss (413.045-413.130) goes
-    # and 30 ms of silence join the d closure of "Doctor". Both: "said Doctor Halverson."
-    'said_halverson': {'cuts': [(413.045, 413.130, 0.03)]},
-    # "Grandma never wrote those rules. [She-]": the TTS starts "She" straight out of the z of "rules" (a rising sh and
-    # a vowel, 751.22-751.47) before the real "She wrote them down."; the line ends before the false start (751.220, a
-    # 25 ms fade on the z). Both: "Grandma never wrote those rules." (with it, both heard "...rules. She").
-    'never_wrote': {'end': 751.220, 'end_fade': 0.025},
-    # "Ruth?" (Doctor Halverson through the door): the line keeps 9 ms more onset and 19 ms more of the th's decay than
-    # its sound island, so "th" survives the voice (with the island's edges Parakeet heard "Rose?" on its own)
-    'ruth_door': {'pieces': [(394.760, 395.235, 0.0, 0.003, 0.010)]},
-    'sleep_well': {'pieces': [(1158.012, 1158.370, 0.0, 0.004, 0.010), (1158.520, None, 0.065, 0.002, 0.020)]},
-    # "Ever." (rule 2) runs straight into "The phone cord" in the take ("Ever-the", one voiced run, the dip between them
-    # only 14 dB deep). Cut in the dip (280.600-280.620) the start of the th stays on the end of "Ever": Whisper writes
-    # "ever th-" in context and Parakeet "Every" / "Everything". "Ever." now ends at 280.560 on a 40 ms fade (its "-er",
-    # 280.50-280.60, decays instead of meeting the th) and "The phone cord" starts at 280.610, after the dip. Both
-    # recognisers, alone (paddings 0.05-0.5 s) and inside "...don't hang up. | Ever. | The phone cord...": "Ever" every time.
-    'rule2_ever': {'end': 280.560, 'end_fade': 0.040},
-    'cord_floor': {'start': 280.610, 'start_fade': 0.010},
 }
 # two lines the TTS ran together in one sound island: the split time (raw seconds), set by eye where split_point's dip
 # search would land inside a word
 SPLITS = {
-    'grandpa_chair': 322.120,  # "chair | Rule": one shared r; the cut sits at its F3 minimum (1250-1390 Hz) (was 321.862: "ch | air")
-    'call_you': 174.295,       # "...come in, | she said": the n murmur of "in" ends where the sh starts (was 174.432: inside "she")
-    'rule2_ever': 280.600,     # "Ever. | The phone cord": the dip where the voiced th of "The" starts (was 280.752: "The | phone");
-                               # the two lines then keep clear of the dip itself (FIXES 'rule2_ever' / 'cord_floor')
-    'knees': 469.700,          # "head, | Waiting.": the middle of the dip before the w (was 469.721: on the w onset)
-    'waiting_bench': 470.005,  # "Waiting. | Rule": the "-ing" vowel ends (F2 2490 Hz) where F2 falls into the r (was 469.928: inside "-ing")
 }
 # a hand-set split sits in voiced sound, so the line before it fades out over SPLIT_FO and the line after fades in over
 # SPLIT_FI
 SPLIT_FO, SPLIT_FI = 0.030, 0.010
 # pauses inside a line, by the word they follow (line tag -> {word: seconds})
 INTERNAL = {
-    # the reveals inside a line: the take hurries them (0.06-0.27 s), the punctuation clamp alone would give 0.25 / 0.45
-    'now_serving': {'serving': 0.40},   # "Now serving: | 1979." (the take: 0.06 s)
-    'him': {'them': 0.80},              # "...facing all of them... | him." (0.18 s): the villain's entrance
-    'ticket_milo': {'said': 0.45},      # "My ticket said: | Milo." (0.17 s)
-    'face_me': {'then': 0.70},          # "Then... | me." (0.13 s): the last face under the tape
-    'ticket_ruth': {'said': 0.45},      # "It said: | Ruth." (0.20 s)
-    'last_chair': {'up': 0.70},         # "...is folded up... | waiting." (0.27 s)
-    'next': {'name': 0.70},             # "...and the driver knows your name... | don't get on." (0.43 s): the teaser's hook
 }
+# the recogniser's misses in the raw take, fixed before the lines are mapped (checked by hand with both recognisers):
+#  - the VAD skipped two sentences; decoded on their own (Parakeet) they read as the script, word times below;
+#  - the shouted "HERE!"s lose their h (Parakeet "Er" / "Ere" / "There"; Whisper "Error" / "Eric" / "area"): the
+#    word is relabelled so the line owns it (the h is lent by FIXES); the shouted "THEO!" reads "Thu" (relabelled).
+ASR_ADD = [
+    ['Bus', 234.09, 234.41], ['nine', 234.41, 234.73], ['has', 234.73, 234.81], ['a', 234.81, 234.89],
+    ['radio', 234.89, 235.29], ['to', 235.29, 235.45], ['the', 235.45, 235.53], ['depot.', 235.53, 235.95],
+    ['Knowing', 707.31, 707.63], ['your', 707.63, 707.79], ['name', 707.79, 708.03], ["doesn't", 708.03, 708.43],
+    ['make', 708.43, 708.59], ['someone', 708.59, 708.99], ['safe.', 708.99, 709.40],
+]
+ASR_RELABEL = {90.694: 'Here!', 376.35: 'Here!', 529.222: 'Here!', 622.078: 'Here!', 615.438: 'Theo!'}
+
+
+def asr_words():
+    ws = [list(w) for w in json.load(open(ASR))['words']]
+    for w in ws:
+        for t, new in ASR_RELABEL.items():
+            if abs(w[1] - t) < 0.005: w[0] = new
+    ws += [list(w) for w in ASR_ADD]
+    return sorted(ws, key=lambda w: w[1])
+
+
 NOISE_WORDS = {'yes', 'huh', 'yeah', 'mmhmm', 'yah', 'opt', 'c', 'hmm', 'mm', 'uh', 'um', 'ah', 'oh'}
 
 
@@ -254,19 +191,24 @@ def islands(db, thr=-60.0, merge=15):
 NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5',
        'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
        'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'seventy': '70', 'eighty': '80', 'nineteen': '19',
-       'hundred': '100', 'mr': 'mister', 'dr': 'doctor', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans'}
+       'sixty': '60', 'ninety': '90', 'hundred': '100', 'mr': 'mister', 'breaks': 'brakes', 'sammy': 'sami',
+       'wrex': 'rex', 'lighthose': 'lighthouse', 'fuet': 'fweet', 'dr': 'doctor', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans', 'ninety': '90', 'sammy': 'sami', 'sammys': 'sami', 'breaks': 'brakes', 'wrex': 'rex'}
 JOIN = {('any', 'more'): 'anymore', ('arm', 'chair'): 'armchair', ('grown', 'up'): 'grownup', ('2', 'night'): 'tonight',
         ('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('type', 'writer'): 'typewriter',
         ('cardi', 'gan'): 'cardigan', ('peep', 'hole'): 'peephole', ('street', 'light'): 'streetlight',
         ('wheel', 'chair'): 'wheelchair', ('clip', 'board'): 'clipboard', ('drive', 'way'): 'driveway',
-        ('head', 'lights'): 'headlights', ('grass', 'hopper'): 'grasshopper', ('over', 'night'): 'overnight'}
+        ('head', 'lights'): 'headlights', ('whistle', 'stop'): 'whistlestop', ('door', 'frame'): 'doorframe',
+        ('loud', 'speaker'): 'loudspeaker', ('t', 'v'): 'tv', ('light', 'house'): 'lighthouse', ('walkie', 'talkie'): 'walkietalkie',
+        ('walkie', 'talkies'): 'walkietalkies', ('grass', 'hopper'): 'grasshopper', ('over', 'night'): 'overnight', ('whistle', 'stop'): 'whistlestop',
+        ('loud', 'speaker'): 'loudspeaker', ('door', 'frame'): 'doorframe', ('light', 'house'): 'lighthouse',
+        ('safety', 'cat'): 'safetycat'}
 
 
 def toks(s, keep_index=False):
     """Normalised word tokens (as align.py: lower case, clock times split, number words -> digits, possessives dropped)
     and, with keep_index, the index of the text word each token came from."""
     s = s.lower().replace('’', "'").replace('—', ' ')
-    s = re.sub(r'\b1979\b', 'nineteen seventy-nine', s)                   # the year as it is read
+    s = re.sub(r'\b1994\b', 'nineteen ninety-four', s); s = re.sub(r'\b911\b', 'nine one one', s)                   # the year as it is read
     s = re.sub(r"(\w)'ve\b", r'\1 have', s)                               # would've = would have
     words = s.split()
     out, src = [], []
@@ -285,6 +227,12 @@ def toks(s, keep_index=False):
                 continue
             if out and (out[-1], n) in JOIN: out[-1] = JOIN[(out[-1], n)]; continue
             out.append(n); src.append(wi)
+    o2, s2 = [], []                                                       # '32' (the recogniser) = 'thirty two' -> 30 2
+    for n, wi in zip(out, src):
+        m = re.fullmatch(r'([2-9])([1-9])', n)
+        if m: o2 += [m.group(1) + '0', m.group(2)]; s2 += [wi, wi]
+        else: o2.append(n); s2.append(wi)
+    out, src = o2, s2
     return (out, src) if keep_index else out
 
 
@@ -363,7 +311,7 @@ class Take:
         self.voiced, self.f0 = voicing_1ms(self.x24, nf)
         lf = lowband_ratio(self.x, nf)
         self.lfdom = (lf > self.db - 6) & (self.db > -50)                  # low-band dominant frames: voiced-ish
-        self.words = json.load(open(ASR))['words']
+        self.words = asr_words()
         self.isl = islands(self.db)
         self.owned, self.wline, self.unowned = map_lines(self.words)
         self.missing = [i for i in range(len(LINES)) if not self.owned[i]]
@@ -637,15 +585,21 @@ def line_spans(T, verbose=False):
         for i in s_:
             first.setdefault(i, j); last[i] = j
     for i in range(len(LINES)):
+        if i not in first and 'pieces' in fx.get(i, {}): continue   # not in the take: built from FIXES pieces only
         if i not in first: raise SystemExit(f'line {i} has no island: {LINES[i]["en"]}')
-    for i in range(len(LINES) - 1):
-        if first[i + 1] < last[i]:
-            raise SystemExit(f'lines {i} and {i + 1} overlap: islands {first[i]}-{last[i]} / {first[i + 1]}-{last[i + 1]}')
+    synth = {i for i in range(len(LINES)) if i not in first}
+    real = [i for i in range(len(LINES)) if i not in synth]
+    for i, i2 in zip(real, real[1:]):
+        if first[i2] < last[i]:
+            raise SystemExit(f'lines {i} and {i2} overlap: islands {first[i]}-{last[i]} / {first[i2]}-{last[i2]}')
     bounds = {}
     split_log = []
     for i in range(len(LINES)):
+        if i in synth:
+            pcs = fx[i]['pieces']; bounds[i] = [pcs[0][0], pcs[-1][1], True, True]; continue
         bounds[i] = [isl[first[i]][0], isl[last[i]][1], False, False]
     for i in range(len(LINES) - 1):                               # two lines in one island: split in its real dip
+        if i in synth or i + 1 in synth: continue
         if last[i] == first[i + 1]:
             t, how = split_point(T, i, isl[last[i]])
             split_log.append({'line': i, 'tag': LINES[i]['tag'], 'at': round(t, 4), 'how': how})
@@ -658,6 +612,8 @@ def line_spans(T, verbose=False):
     short_tails = []
     for i in range(len(LINES)):
         a, b, ci, co = bounds[i]
+        if i in synth:
+            out[i] = {'span': [a, b], 'keep': [], 'removed': [], 'cut_in': True, 'cut_out': True, 'synthetic': True}; continue
         keep, removed = [], []
         for j, (p, q) in enumerate(isl):
             if q <= a or p >= b: continue
@@ -693,7 +649,7 @@ def line_spans(T, verbose=False):
     between = []
     for j, (why, pk) in dropped.items():
         p, q = isl[j]
-        if any(out[i]['span'][0] <= (p + q) / 2 <= out[i]['span'][1] for i in out): continue
+        if any(out[i]['span'][0] <= (p + q) / 2 <= out[i]['span'][1] for i in out if not out[i].get('synthetic')): continue
         between.append({'src': [round(p, 3), round(q, 3)], 'why': why, 'peak_db': round(pk, 1)})
     between.sort(key=lambda r: r['src'][0])
     loud = [r for r in between if r['why'] == 'voiced noise' and r['peak_db'] > -35]
@@ -796,10 +752,10 @@ def line_pieces(T, i, sp):
         word = re.sub(r'[^a-z]', '', text_words(i)[wi].lower()) if wi >= 0 else ''
         ov = INTERNAL.get(tag, {}).get(word)
         if ov is not None: g, why = ov, f'held pause after "{word}" ({pu or "no mark"})'
-        elif pu == '...': g, why = min(max(og, 0.45), 0.80), 'ellipsis 0.45-0.80'
+        elif pu == '...': g, why = min(max(og, 0.35), 0.65), 'ellipsis 0.35-0.65'
         elif pu == ':': g, why = min(max(og, 0.25), 0.45), 'colon 0.25-0.45'
         elif pu in (',', ';'): g, why = min(max(og, 0.12), 0.30), 'comma 0.12-0.30'
-        elif pu in ('.', '?', '!'): g, why = min(max(og, 0.30), 0.55), 'sentence inside a line 0.30-0.55'
+        elif pu in ('.', '?', '!'): g, why = min(max(og, 0.25), 0.45), 'sentence inside a line 0.25-0.45'
         else: g, why = min(og, 0.25), 'between words: as read, <= 0.25'
         pc['gap_before'] = round(g, 3); pc['why'] = why; pc['after_word'] = word; pc['punct'] = pu
     # prepended material (the "If he" of rule three)
@@ -855,394 +811,247 @@ def rule_no(tag):
 
 
 # gap after the line with this tag: (seconds, kind, reason). Everything not listed here follows the rules in
-# pacing_rows(): "Rule number N." 0.55 s then its text; 1.40 s before each "Rule number"; 1.00 s after the rule text;
-# 0.18 s where one sentence is split for its speaker (quote / "she said."); 0.85 s at a paragraph break; 0.40 s
-# between short fragments; dialogue 0.35-0.40 s; 0.45 s in running narration.
+# pacing_rows(): 1.15 s before each "Rule number"; "Rule number N." 0.45 s then its text; 0.40 s between the rule
+# text's sentences; 0.75 s after the rule text; 0.18 s where one sentence is split for its speaker (quote / "she says.");
+# 0.50 s at a paragraph break; 0.32 s between short fragments; dialogue 0.33-0.38 s; 0.38 s in running narration.
+# This film must feel FAST: running 0.3-0.5 s, held dread only where it pays (0.9-1.4 s).
 PACE = {
-    # cold open
-    'open': (0.60, 'beat', 'first rule of the hook: let "don\'t ask what they found" land'),
-    'open_hold': (0.60, 'beat', 'second rule of the hook'),
-    'open_room': (0.50, 'ellipsis', 'the sentence\'s own "..." before "and he looks up at you"'),
-    'open_kindly': (0.35, 'dialogue', 'into his line, as said'),
-    'open_seat': (0.45, 'dialogue', '"Take a seat." ... "It can wait.": slow, even, too calm'),
-    'open_wait': (1.20, 'held', 'held dread after his line before "Don\'t sit down."'),
-    'open_dont_sit': (1.00, 'paragraph', 'the hook ends; the phone-system recording comes in'),
-    'hold_open': (0.35, 'dialogue', 'the automated recording\'s own rhythm'),
-    'hold_open_please': (1.00, 'paragraph', 'out of the recording into the story (room for the hold-music sting)'),
-    'about_waiting': (0.85, 'paragraph', 'beat before "And on the night my little brother almost died"'),
-    'all_wrong': (0.85, 'paragraph', 'the tease'),
-    'tease': (0.85, 'paragraph', 'the thesis line'),
-    'difference': (1.30, 'section', 'end of the cold open: room for the title sting before Ruth'),
-    # 1979
-    'that_place': (0.85, 'paragraph', '1979'),
-    'tinny_music': (0.45, 'sentence', 'running'),
-    'voice_line': (0.45, 'beat', 'into "Calm. Patient. Kind."'),
-    'calm': (0.40, 'staccato', 'Calm. Patient. Kind.: rhythmic'),
-    'patient': (0.40, 'staccato', 'Calm. Patient. Kind.: rhythmic'),
-    'kind': (0.90, 'held', 'hold before the 1979 voice ("It can wait until morning.")'),
-    'it_can_wait_1979': (1.00, 'held', 'his line hangs before "So they waited."'),
-    'waited': (0.45, 'sentence', 'running'),
-    'armchair': (0.85, 'paragraph', 'paragraph break: sunrise'),
-    'coffee': (0.85, 'held', 'the coffee: the gentle reveal starts'),
-    'still_sitting': (1.00, 'held', 'held dread before "Still waiting."'),
-    'still_waiting': (1.20, 'held', 'Grandpa died: a long, quiet beat'),
-    'proved_it': (0.40, 'staccato', '"They were hiding something." follows'),
-    'hiding': (0.85, 'paragraph', 'paragraph break'),
-    'never_forgave': (0.90, 'section', 'out of 1979 into now'),
-    # now: Mom, Milo, Halverson
-    'didnt_speak': (0.85, 'paragraph', 'paragraph break: Milo'),
-    'thirsty': (0.40, 'staccato', '"All the time."'),
-    'all_the_time': (0.45, 'sentence', 'the symptoms list'),
-    'mom_noticed': (0.40, 'staccato', '"Nurses always notice."'),
-    'nurses_notice': (0.45, 'sentence', 'running'),
-    'careful': (0.45, 'sentence', 'running'),
-    'blood': (0.85, 'paragraph', 'into her promise'),
-    'call_you': (0.18, 'split', '"...come in," / "she said."'),
-    'day_or_night': (0.35, 'dialogue', '"Day or night. I mean it."'),
-    'mean_it': (0.90, 'paragraph', 'paragraph break: that night'),
-    'watching_us': (0.85, 'paragraph', 'sundown'),
-    'card': (0.85, 'held', 'the card is shown'),
-    'seven': (0.40, 'staccato', 'Seven rules. Typed on a typewriter.'),
-    'typed': (0.40, 'staccato', 'fragments'),
-    'weak_tea': (0.85, 'paragraph', 'Grandma speaks'),
-    'same_as_always': (0.18, 'split', '"Same as always," / "Grandma said."'),
-    'nobody_sick': (1.40, 'before rule', 'rule card 1'),
-    # rule 1
-    'rule1_text': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'call': (1.00, 'ring', 'room for the phone ring'),
-    'landline': (0.40, 'staccato', '"Nobody calls the landline."'),
-    'nobody_calls': (0.85, 'paragraph', 'paragraph break'),
-    'whole_life': (0.85, 'paragraph', 'the rings'),
-    'ring_seven': (0.60, 'ring', 'a ring sits here'),
-    'tilted': (0.85, 'paragraph', 'the voice on the line'),
-    'womans_voice': (0.40, 'staccato', 'A woman\'s voice. Rough. Out of breath.'),
-    'rough': (0.40, 'staccato', 'fragments'),
-    'out_of_breath': (0.40, 'staccato', 'fragments'),
-    'running_crying': (0.85, 'paragraph', 'Doctor Halverson on the phone'),
-    'this_is_halverson': (0.35, 'dialogue', 'her rushed call'),
-    'sorry_hour': (0.35, 'dialogue', 'her rushed call'),
-    'results_back': (0.25, 'cut off', 'Grandma cuts her off (still >= 0.15 s)'),
-    'dont_tell': (0.18, 'split', '"Don\'t tell me," / "Grandma said."'),
-    'dont_dare': (0.85, 'paragraph', 'the hang-up'),
-    'hung_up': (0.85, 'ring', 'room for the click and the ring'),
-    'rang_again': (0.55, 'ring', 'a ring between'),
-    'and_again': (0.55, 'ring', 'a ring between'),
-    'nine_times': (0.55, 'beat', 'the cord'),
-    'cord': (1.00, 'held', 'the house goes quiet'),
-    'scariest': (0.60, 'beat', '"I was wrong."'),
-    'was_wrong': (0.50, 'beat', 'the tease'),
-    'other_one': (1.00, 'before prompt', 'about 1 s before the comment prompt'),
-    # the comment prompt
-    'cta': (0.40, 'staccato', '"Okay. Hold on."'),
-    'cta_hold': (0.40, 'staccato', 'the hold joke'),
-    'cta_important': (0.85, 'paragraph', 'the ask'),
-    'cta_word': (0.40, 'staccato', 'In the comments. Right now.'),
-    'cta_comments': (0.40, 'staccato', 'fragments'),
-    'cta_now': (0.85, 'paragraph', 'the question'),
-    'cta_question': (0.60, 'beat', 'the two choices'),
-    'cta_choice': (0.85, 'paragraph', 'let the choice sit'),
-    'cta_one_word': (0.40, 'staccato', 'One word. Choose carefully.'),
-    'cta_carefully': (0.45, 'beat', 'the sting: forty years'),
-    'cta_forty': (1.40, 'before rule', 'rule card 2'),
-    # rule 2
-    'rule2_text': (0.45, 'rule text', '"Ever." completes the rule'),
-    'rule2_ever': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'cord_floor': (0.85, 'held', 'the cord on the floor'),
-    'rang_anyway': (1.00, 'ring', 'room for the impossible ring'),
-    'picked_up': (0.45, 'sentence', 'running'),
-    'no_voice': (0.45, 'beat', 'Just music. Hold music.'),
-    'just_music': (0.40, 'staccato', 'fragments'),
-    'hold_music': (0.60, 'beat', 'the hold music enters'),
-    'tune': (0.85, 'paragraph', 'the recording'),
-    'under_it': (0.45, 'beat', 'into the recording'),
-    'recording_important': (0.40, 'dialogue', 'the recording\'s rhythm'),
-    'recording_hold': (0.90, 'paragraph', 'out of the recording'),
-    'receiver': (0.45, 'sentence', 'running'),
-    'kept_playing': (0.40, 'staccato', '"All night."'),
-    'all_night': (0.85, 'paragraph', 'time passes'),
-    'not_only_phone': (0.60, 'beat', 'the rooms'),
-    'rooms': (0.45, 'beat', 'From the hallway. From the living room.'),
-    'rooms_living': (0.90, 'held', 'held dread before "From Grandpa\'s chair."'),
-    'grandpa_chair': (1.40, 'before rule', 'rule card 3'),
-    # rule 3
-    'rule3_text': (0.45, 'rule text', '"He\'s listening." completes the rule'),
-    'rule3_listening': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'cracked': (0.40, 'staccato', 'description'),
-    'eyes_big': (0.85, 'paragraph', 'Milo speaks'),
-    'so_thirsty': (0.18, 'split', '"I\'m so thirsty," / "he whispered."'),
-    'tummy': (0.35, 'dialogue', 'his whisper runs on'),
-    'tummy_really': (0.30, 'cut off', 'Grandma\'s hand cuts him off'),
-    'clapped': (0.35, 'dialogue', 'into "Shh."'),
-    'shh': (0.35, 'dialogue', 'her hushed lines'),
-    'not_after_dark': (0.35, 'dialogue', 'her hushed lines'),
-    'not_out_loud': (1.00, 'held', 'silence before the pen click'),
-    'pen_click': (0.90, 'sfx', 'room for the pen click'),
-    'scratch': (0.45, 'sfx', 'the scratching'),
-    'writing_down': (0.90, 'paragraph', 'the sweet breath'),
-    'sweet_breath': (0.40, 'staccato', 'Like fruit. Like nail-polish remover.'),
-    'fruit': (0.40, 'staccato', 'fragments'),
-    'nail_polish': (0.60, 'beat', 'hold'),
-    'didnt_know': (0.85, 'held', 'held before "Doctor Halverson did."'),
-    'halverson_did': (1.40, 'before rule', 'rule card 4'),
-    # rule 4
-    'rule4_text': (0.45, 'rule text', 'second sentence of the rule'),
-    'rule4_house_calls': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'knock': (1.00, 'knock', 'room for the knock'),
-    'raincoat': (0.40, 'staccato', 'description'),
-    'soaked': (0.40, 'staccato', 'description'),
-    'car_driveway': (0.85, 'paragraph', 'her voice through the door'),
-    'ruth_door': (0.35, 'dialogue', 'her urgent, tired lines'),
-    'anna': (0.35, 'dialogue', 'her lines'),
-    'tried_to_call': (0.40, 'dialogue', 'the number'),
-    'glucose': (0.40, 'dialogue', 'her lines'),
-    'very_high': (0.40, 'dialogue', 'her lines'),
-    'needs_insulin': (0.40, 'dialogue', '"This can\'t wait."'),
-    'cant_wait': (0.85, 'dialogue', 'Grandma answers through the door'),
-    'house_call': (0.18, 'split', '"...house calls," / "Grandma said through the door."'),
-    'i_know': (0.18, 'split', '"I know," / "said Doctor Halverson."'),
-    'making_one': (0.90, 'held', 'the door stays shut'),
-    'didnt_open': (0.90, 'paragraph', 'the paper'),
-    'lab_results': (0.45, 'sentence', 'running'),
-    'marker': (0.60, 'beat', 'the note is read'),
-    'note_thirsty': (0.40, 'list', 'the warning signs, one by one'),
-    'note_peeing': (0.40, 'list', 'the warning signs'),
-    'note_tired': (0.40, 'list', 'the warning signs'),
-    'note_weight': (0.40, 'list', 'the warning signs'),
-    'note_breath': (0.40, 'list', 'the warning signs'),
-    'note_fast_deep': (0.50, 'list', 'the instruction'),
-    'note_dont_wait': (0.45, 'list', 'her last line'),
-    'note_car': (0.90, 'held', 'the match'),
-    'burn': (0.90, 'paragraph', 'the window'),
-    'calling_again': (0.85, 'paragraph', 'she isn\'t leaving'),
-    'not_leaving': (0.45, 'beat', '"She was never going to leave."'),
-    'never_leave': (0.90, 'paragraph', 'the bus stop'),
-    'bus_stop': (0.60, 'beat', 'Very tall. Folded up. Knees above his head.'),
-    'very_tall': (0.40, 'staccato', 'fragments'),
-    'folded': (0.40, 'staccato', 'fragments'),
-    'knees': (1.30, 'held', 'held dread before "Waiting."'),
-    'waiting_bench': (1.40, 'before rule', 'rule card 5'),
-    # rule 5
-    'rule5_text': (0.45, 'rule text', '"It can wait." completes the rule'),
-    'rule5_wait': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'breathing': (0.45, 'beat', 'Deep. Fast.'),
-    'deep': (0.35, 'staccato', 'Deep. Fast.: like breaths'),
-    'fast': (0.40, 'staccato', 'fragments'),
-    'running_sleep': (0.40, 'staccato', 'the two "Like" lines'),
-    'not_enough_air': (0.85, 'paragraph', 'he doesn\'t know me'),
-    'who_i_was': (0.90, 'held', 'held: he doesn\'t know who I am'),
-    'rocking': (0.45, 'dialogue', 'Grandma speaks'),
-    'until_morning': (0.40, 'dialogue', '"It can wait. It can wait."'),
-    'g_wait1': (0.45, 'dialogue', 'repeated, rocking'),
-    'g_wait2': (0.85, 'dialogue', 'I answer'),
-    'grandma_said': (0.40, 'dialogue', 'my answer runs on'),
-    'voice_told': (0.90, 'held', '"She stopped rocking."'),
-    'stopped_rocking': (0.90, 'held', 'her question'),
-    'how_do_you_know': (0.85, 'dialogue', 'I answer'),
-    'hear_it': (0.40, 'dialogue', 'my answer runs on'),
-    'right_now': (0.90, 'held', 'the rooms'),
-    'every_room': (1.00, 'held', 'held dread before "It can wait." from every room'),
-    'rooms_wait': (1.40, 'before rule', 'rule card 6'),
-    # rule 6
-    'rule6_text': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'opened_door': (0.90, 'held', 'held before "It was a waiting room."'),
-    'waiting_room': (0.90, 'held', 'the room is revealed'),
-    'chairs': (0.40, 'list', 'the room\'s inventory'),
-    'lights': (0.40, 'list', 'the room\'s inventory'),
-    'tv': (0.40, 'list', 'the room\'s inventory'),
-    'ticket_machine': (0.45, 'list', 'the sign'),
-    'sign': (0.60, 'beat', 'the sign\'s numbers'),
-    'now_serving': (1.00, 'held', 'NOW SERVING: 1979 sits'),
-    'every_chair': (0.60, 'beat', 'the ghosts'),
-    'ghosts': (0.40, 'list', 'the ghosts, one by one'),
-    'ghost_woman': (0.40, 'list', 'the ghosts'),
-    'ghost_teen': (0.40, 'list', 'the ghosts'),
-    'ghost_girl': (0.45, 'list', 'All of them gray. All of them still.'),
-    'all_gray': (0.35, 'staccato', 'fragments'),
-    'all_still': (0.35, 'staccato', 'fragments'),
-    'tickets': (0.60, 'beat', 'who they are'),
-    'decided': (1.00, 'paragraph', 'the last row'),
-    'last_row': (1.50, 'held', 'held dread before "Grandpa."'),
-    'grandpa': (1.30, 'held', 'Grandpa: a long beat'),
-    'him': (1.00, 'held', 'HIM'),
-    'white_coat': (0.60, 'beat', 'his head'),
-    'tape_head': (0.60, 'beat', 'the gap'),
-    'eyes': (0.85, 'paragraph', 'the clipboard'),
-    'clipboard': (0.40, 'staccato', 'clicking'),
-    'clicking': (0.85, 'paragraph', 'the reach'),
-    'held_out': (1.20, 'held', 'held dread before "My ticket said: Milo."'),
-    'ticket_milo': (1.00, 'held', 'the name sinks in'),
-    'kindest': (0.85, 'held', 'his line'),
-    'take_a_seat': (0.60, 'dialogue', '"Take a seat." ... "It can wait.": slow, too calm'),
-    'take_a_seat_wait': (1.40, 'before rule', 'rule card 7'),
-    # rule 7
-    'rule7_text': (1.00, 'after rule', 'the rule card holds, then the scene'),
-    'pulse': (0.85, 'held', 'his fingers'),
-    'began_count': (1.00, 'count', 'spaced like slow counting'),
-    'count1': (1.00, 'count', '"One..." then the music slows'),
-    'music_slowed': (1.10, 'count', 'slowing'),
-    'count2': (1.20, 'count', '"Two..." then the clock slows'),
-    'clock_slowed': (0.90, 'paragraph', 'what he does'),
-    'what_he_does': (0.40, 'staccato', 'He doesn\'t hurt you. He just counts.'),
-    'doesnt_hurt': (0.40, 'staccato', 'fragments'),
-    'just_counts': (0.45, 'sentence', 'running'),
-    'every_number': (0.45, 'sentence', 'running'),
-    'longer_chair': (1.20, 'count', 'slowing before "Three..."'),
-    'count3': (1.30, 'count', 'the slowest count, then the turn'),
-    'one_thing': (0.90, 'held', 'held before "I asked."'),
-    'ask': (0.90, 'held', 'held before the question'),
-    'what_did_you_find': (1.00, 'held', 'he stops counting'),
-    'stopped_counting': (0.85, 'paragraph', 'the questions tumble out'),
-    'questions': (0.35, 'questions', 'the questions come fast'),
-    'q_do': (0.35, 'questions', 'fast'),
-    'q_long': (0.40, 'questions', 'fast'),
-    'q_who': (0.90, 'paragraph', 'the tape loosens'),
-    'strip1': (0.40, 'staccato', 'One strip. Then another.'),
-    'strip2': (0.45, 'sentence', 'running'),
-    'flinched': (0.90, 'paragraph', 'under the tape'),
-    'no_doctor': (1.00, 'held', 'the faces'),
-    'faces': (0.50, 'list', 'the faces, one after another'),
-    'face_man': (0.45, 'list', 'the faces'),
-    'face_girl': (0.45, 'list', 'the faces'),
-    'face_grandma': (0.60, 'list', 'held before "Then... me."'),
-    'face_me': (0.90, 'held', 'my own face'),
-    'every_face': (0.25, 'split', 'the quote follows its "who ever said,"'),
-    'probably_nothing': (0.45, 'sentence', 'running'),
-    'made_of_them': (0.90, 'paragraph', 'what he is'),
-    'not_a_doctor': (0.40, 'staccato', '"He had never been one."'),
-    'never_been': (0.60, 'beat', 'what he is'),
-    'no_real_doctor': (1.20, 'held', 'held dread before his "It can wait."'),
-    'later_wait': (1.20, 'held', 'his line hangs'),
-    'pulled_free': (0.85, 'paragraph', 'the card'),
-    'signature': (1.30, 'held', 'held dread before "Doctor Later."'),
-    'doctor_later': (1.20, 'held', 'the name sinks in'),
-    'never_wrote': (0.45, 'beat', 'She wrote them down. Over the phone. While she was on hold.'),
-    'wrote_down': (0.40, 'staccato', 'fragments'),
-    'over_phone': (0.40, 'staccato', 'fragments'),
-    'on_hold': (1.00, 'section', 'the rescue'),
-    # the rescue
-    'burned_paper': (0.85, 'paragraph', 'the front door'),
-    'front_door': (0.60, 'beat', 'she is already running'),
-    'running_up': (0.90, 'paragraph', 'the car'),
-    'reached_wrist': (0.40, 'dialogue', 'her line'),
-    'pulse_real': (0.85, 'held', 'rule seven recalled'),
-    'rule_seven_recall': (0.40, 'staccato', '"I almost pulled him away."'),
-    'almost': (0.60, 'beat', 'the choice'),
-    'gave_wrist': (0.90, 'held', 'she counts for real'),
-    'one_forty': (0.18, 'split', '"One-forty," / "she said."'),
-    'fast_h': (0.35, 'dialogue', 'her calm, quick verdict'),
-    'thats_okay': (0.35, 'dialogue', 'her verdict'),
-    'fighting': (0.35, 'dialogue', 'her verdict'),
-    'going': (0.90, 'paragraph', 'the drive'),
-    'treatable': (0.85, 'paragraph', 'her line'),
-    'ask_me': (0.18, 'split', '"Ask me anything," / "she said."'),
-    'questions_good': (0.35, 'dialogue', 'her lines'),
-    'questions_win': (0.85, 'paragraph', 'I ask'),
-    'so_i_asked': (0.40, 'staccato', 'fragments'),
-    'every_question': (0.40, 'staccato', 'fragments'),
-    'answered': (0.90, 'paragraph', 'the mirror'),
-    'mirror': (1.00, 'held', 'held before "He was in the back seat."'),
-    'back_seat': (0.45, 'sentence', 'running'),
-    'folded_beside': (0.45, 'sentence', 'running'),
-    'clicking_car': (0.90, 'held', 'his line'),
-    'car_wait': (0.18, 'split', '"It can wait," / "he said."'),
-    'h_mirror': (0.45, 'beat', '"She saw him."'),
-    'saw_him': (0.45, 'beat', 'not surprised'),
-    'not_surprised': (0.85, 'paragraph', 'every doctor has seen him'),
-    'every_waiting_room': (0.40, 'staccato', 'In every waiting room. In every chair.'),
-    'every_chair_doc': (0.45, 'sentence', 'running'),
-    'out_of_chairs': (0.90, 'paragraph', 'her line'),
-    'not_tonight': (0.18, 'split', '"Not tonight," / "she said."'),
-    'not_my_shift': (0.60, 'beat', 'she drives faster'),
-    'faster': (1.00, 'section', 'the ER'),
-    'people_everywhere': (0.40, 'staccato', 'Bright lights. Fluids. Insulin.'),
-    'bright_lights': (0.35, 'staccato', 'the ER montage'),
-    'fluids': (0.35, 'staccato', 'the ER montage'),
-    'insulin': (0.40, 'staccato', 'the ER montage'),
-    'cheering': (0.90, 'held', 'held before "Nobody told us to wait."'),
-    'nobody_wait': (1.00, 'paragraph', 'the waiting room'),
-    'nurse': (0.25, 'split', 'the nurse\'s line follows her "and said,"'),
-    'sir': (0.35, 'dialogue', 'her lines'),
-    'come_with_me': (0.90, 'paragraph', 'the empty chair'),
-    'empty_chair': (0.50, 'beat', 'still rocking'),
-    'still_rocking': (0.45, 'beat', 'gotten up and left'),
-    'gotten_up': (1.30, 'section', 'the story turns: Milo lived'),
-    # after
-    'milo_lived': (0.90, 'held', 'let it land'),
-    'marathons': (0.90, 'paragraph', 'sunrise, Grandma'),
-    'ticket_hand': (0.60, 'held', 'held before "It said: Ruth."'),
-    'ticket_ruth': (1.00, 'held', 'the name sinks in'),
-    'not_a_word': (0.45, 'beat', '"Rule three."'),
-    'rule_three_recall': (0.85, 'paragraph', 'Mom dials'),
-    'dialed': (0.45, 'dialogue', 'Mom\'s line'),
-    'mom_dont_wait': (0.18, 'split', '"You don\'t wait," / "she said."'),
-    'you_call': (0.90, 'paragraph', 'Grandma\'s fine'),
-    'cardiologist': (0.60, 'beat', 'the card'),
-    'burned': (1.40, 'section', 'the twist'),
-    # the twist
-    'twist': (1.00, 'held', 'held before "Not as a patient."'),
-    'not_patient': (1.00, 'held', 'the twist lands'),
-    'terrible': (0.40, 'staccato', 'Rough. Out of breath. Probably a little scary.'),
-    'rough_me': (0.35, 'staccato', 'fragments (an echo of the 3 AM call)'),
-    'breath_me': (0.40, 'staccato', 'fragments'),
-    'scary_me': (0.85, 'paragraph', 'calling you'),
-    'calling_you': (0.90, 'paragraph', 'the hook line, flipped'),
-    'if_your_doctor': (0.70, 'ellipsis', 'its own "..." before "Ask what we found."'),
-    'ask_what_we_found': (0.60, 'beat', '"Please."'),
-    'please': (0.60, 'beat', 'why'),
-    'cant_wait_we': (0.90, 'paragraph', 'the hold-music warning'),
-    'call_back': (0.40, 'staccato', '"We\'ll pick up."'),
-    'pick_up': (0.90, 'paragraph', 'the last chair'),
-    'pen_click_now': (0.60, 'beat', 'the hall'),
-    'last_chair': (1.20, 'held', 'he\'s waiting'),
-    'very_patient': (1.30, 'held', 'held dread before "So are we."'),
-    'so_are_we': (2.80, 'before outro', 'the story ends: about 2.5-3 s of silence before "Okay. Breathe."'),
+    # hook
+    'hook': (0.55, 'beat', 'first rule of the hook lands'),
+    'hook_grandma': (0.50, 'beat', 'second rule of the hook'),
+    'hook_knows': (0.45, 'beat', 'into his voice'),
+    'hook_voice': (0.60, 'beat', 'his line hangs, then who he is'),
+    'thats_whistlestop': (0.32, 'sentence', 'running'),
+    'took_brother': (0.40, 'sentence', 'running'),
+    'needed_name': (0.55, 'beat', 'before the guilt line'),
+    'i_gave_it': (0.90, 'section', 'end of the hook: room for the title sting'),
+    # the tape
+    'tape_title': (0.30, 'staccato', 'Ride Right... / Channel 6.'),
+    'channel6': (0.50, 'paragraph', 'the cat'),
+    'grin_never_moves': (0.45, 'dialogue', 'into the tape'),
+    'tape_card': (0.40, 'dialogue', 'the tape'),
+    'kids_cards': (0.35, 'dialogue', 'the tape'),
+    'tape_ride_right': (0.55, 'beat', 'out of the tape'),
+    'nobody_remembers': (0.65, 'section', 'out of 1994 into now'),
+    # della, seat 22, sami, post
+    'she_says': (0.20, 'split', '"she says." / "That\'s the job."'),
+    'one_kid': (0.35, 'beat', '"Seat twenty-two." lands'),
+    'seat22': (0.40, 'beat', 'the raincoat'),
+    'hi_mina_memory': (0.50, 'beat', 'his line, then the guilt'),
+    'sami_here_practice': (0.45, 'paragraph', 'the walkies'),
+    'post_sami': (0.28, 'staccato', 'the chalkboard, read crisp'),
+    'post_first_grade': (0.28, 'staccato', 'the chalkboard'),
+    'post_school': (0.28, 'staccato', 'the chalkboard'),
+    'post_bus': (0.28, 'staccato', 'the chalkboard'),
+    'post_street': (0.40, 'staccato', 'the likes'),
+    'post_comment': (0.32, 'staccato', 'the avatar'),
+    'hat_avatar': (0.45, 'beat', 'his comment'),
+    'great_smile_comment': (0.55, 'beat', 'the comment lands'),
+    'take_it_down': (0.45, 'beat', '"I didn\'t."'),
+    'i_didnt': (0.70, 'section', 'the guilt lands; the rules'),
+    # midnight
+    'lights_off': (0.60, 'paragraph', 'Midnight.'),
+    'midnight': (0.40, 'staccato', 'the air brakes'),
+    'tv_voice_reads': (0.40, 'dialogue', 'into the PA'),
+    'reads_post': (0.50, 'beat', '"A pause."'),
+    'a_pause': (0.60, 'beat', 'the pause the line names'),
+    'great_smile_mina': (0.60, 'beat', 'the realisation'),
+    'not_off_house': (1.05, 'held', 'held dread before "He read it off my phone."'),
+    'off_my_phone': (0.50, 'beat', 'his catchphrase'),
+    'know_your_name_bus': (0.40, 'beat', 'the whistle'),
+    'whistle1': (0.85, 'held', 'the whistle sound, then the comment prompt'),
+    'cta': (0.35, 'sentence', 'the prompt'),
+    'cta_knows': (0.30, 'sentence', 'the prompt'),
+    'cta_friend': (0.35, 'sentence', 'the prompt'),
+    # he comes
+    'up_and_up': (0.50, 'paragraph', 'the streetlight'),
+    'streetlight': (0.40, 'staccato', 'the first skip'),
+    'at_mailbox': (0.40, 'staccato', 'Flicker.'),
+    'flicker_lawn_a': (0.28, 'staccato', 'Flicker. The middle of the lawn.'),
+    'flicker_lawn': (0.40, 'staccato', 'Flicker.'),
+    'flicker_steps_a': (0.28, 'staccato', 'Flicker. The porch steps.'),
+    'flicker_steps': (0.45, 'beat', 'He never walks.'),
+    'and_that_grin': (0.40, 'beat', 'He calls roll.'),
+    'calls_roll': (0.45, 'dialogue', 'roll call through the door'),
+    'roll_della': (0.40, 'dialogue', 'roll call'),
+    'roll_mina': (0.40, 'dialogue', 'roll call'),
+    'roll_sami': (0.45, 'dialogue', 'Sami wakes'),
+    'takes_breath': (0.30, 'dialogue', 'the breath to answer'),
+    'sami_he': (0.20, 'cut off', 'the hand cuts him off (still >= 0.15 s)'),
+    'hand_slaps': (0.45, 'beat', 'Silence.'),
+    'silence': (0.95, 'held', 'the silence the line names'),
+    'porch_voice': (0.30, 'dialogue', 'into his imitation'),
+    'mimic_sami_here': (0.50, 'beat', 'the fake "Here!" hangs'),
+    'in_his_own': (0.30, 'dialogue', 'into "Almost."'),
+    'almost': (0.75, 'beat', '"Almost." lands; the ticket punch'),
+    'click_clack1': (0.40, 'sentence', 'the ticket'),
+    'ticket': (0.35, 'sentence', 'the ticket text'),
+    'ticket_sami': (0.28, 'staccato', 'the ticket text'),
+    'ticket_seat': (0.28, 'staccato', 'the ticket text'),
+    # the door
+    'goes_out': (0.60, 'beat', 'the knocks'),
+    'three_knocks': (0.60, 'beat', 'room for the three knocks'),
+    'voice_slides': (0.30, 'dialogue', 'into the slide-down'),
+    'mimic_della_clever': (0.60, 'beat', 'the slide lands'),
+    'grin_peephole': (0.50, 'paragraph', 'across the yard'),
+    'trapped': (0.30, 'dialogue', 'Grandma shouts'),
+    'della_dont_open': (0.50, 'beat', '"So I don\'t."'),
+    'not_even_run': (0.45, 'paragraph', 'the peephole'),
+    'grin_whispers': (0.25, 'dialogue', 'into his whisper'),
+    # blackout
+    'be_right_back': (0.30, 'dialogue', 'running'),
+    'walkie_cushion': (0.55, 'beat', 'Two ten.'),
+    'two_ten': (0.35, 'staccato', 'clock time, crisp'),
+    'cold': (0.50, 'beat', 'Mina speaks'),
+    'that_was_fast': (0.60, 'beat', '"No answer."'),
+    'no_answer': (0.45, 'beat', 'from upstairs'),
+    'talking_walkie': (1.15, 'held', 'held dread before "I\'m still holding a hand."'),
+    'still_holding': (0.55, 'beat', 'the phone light'),
+    'phone_light': (0.40, 'beat', 'the glove'),
+    'too_tight': (0.45, 'beat', 'the walkie'),
+    'pressed_grin': (0.45, 'beat', 'I rip free.'),
+    'neither_walkie': (0.50, 'paragraph', 'upstairs'),
+    'told_me_walkie': (0.40, 'dialogue', 'Mina asks'),
+    'what_did_you_say': (0.40, 'dialogue', 'the shout'),
+    'lighthouse': (0.80, 'held', 'the word is gone'),
+    # deadbolt
+    'word_dead': (0.50, 'paragraph', 'Two thirty-one.'),
+    'two_thirty_one': (0.35, 'staccato', 'clock time, crisp'),
+    'just_a_second': (0.50, 'beat', 'the knock'),
+    'knock_knock': (0.40, 'dialogue', 'his imitation'),
+    'mimic_della_sweetheart': (0.30, 'dialogue', '"Grandma\'s voice."'),
+    'warm': (0.40, 'dialogue', 'the word'),
+    'mimic_della_lighthouse': (0.40, 'dialogue', 'Sami jumps up'),
+    'thats_the_rule': (0.20, 'cut off', 'Mina cuts in'),
+    'sami_no': (0.55, 'beat', 'the deadbolt slides'),
+    'deadbolt_slides': (0.60, 'beat', 'the reveal'),
+    'gloves_walls': (0.50, 'dialogue', 'roll call in the hall'),
+    'hall_roll_sami': (0.45, 'beat', 'his reflex'),
+    'mouth_answers': (0.30, 'dialogue', 'the shout'),
+    'sami_here_hall': (0.45, 'beat', 'Click-clack.'),
+    'click_clack2': (0.40, 'sentence', 'running'),
+    'blink_stairs': (0.30, 'staccato', 'the blinks, rhythmic'),
+    'blink_a': (0.25, 'staccato', 'the blinks'),
+    'blink_b': (0.25, 'staccato', 'the blinks'),
+    'the_lawn': (0.30, 'staccato', 'the blinks'),
+    'blink_c': (0.25, 'staccato', 'the blinks'),
+    'bus_steps': (0.45, 'beat', 'Sami\'s hand slips'),
+    'doors_slap': (0.55, 'beat', 'the window'),
+    'way_back': (0.45, 'paragraph', 'the loudspeaker'),
+    'over_loudspeaker': (0.30, 'dialogue', 'into the PA'),
+    'seats_saved': (0.55, 'beat', 'the bus pulls away'),
+    # the chase
+    'at_wheel': (0.35, 'sentence', 'running'),
+    'bars_back': (0.30, 'dialogue', 'Grandma'),
+    'call_911': (0.40, 'dialogue', 'the call'),
+    'tell_everything': (0.35, 'dialogue', 'the dispatcher'),
+    'officers': (0.40, 'dialogue', 'running'),
+    'hits_gas': (0.30, 'dialogue', 'Grandma'),
+    'so_are_we': (0.55, 'paragraph', 'Mina'),
+    'kid_back_seat': (0.40, 'dialogue', 'Grandma'),
+    'della_mina': (0.95, 'held', 'held dread before "Seat twenty-two has been empty..."'),
+    'seat22_empty': (0.60, 'beat', 'it lands'),
+    'answer_him': (0.45, 'dialogue', 'running'),
+    'got_two_back': (0.55, 'paragraph', 'the dash radio'),
+    'grandmas_own_voice': (0.30, 'dialogue', 'into the radio voice'),
+    'mimic_della_radio': (0.70, 'beat', 'it lands'),
+    'manners': (0.60, 'paragraph', 'up ahead'),
+    'backwards': (0.35, 'staccato', 'Grinning at us.'),
+    'mirror_off': (0.50, 'paragraph', 'the road'),
+    'road_empty': (0.45, 'beat', 'the twist'),
+    'behind_us': (0.40, 'beat', 'his whistle'),
+    'whistle2': (0.45, 'beat', 'Two forty-one.'),
+    # last stop
+    'two_fifty_seven': (0.35, 'staccato', 'clock time, crisp'),
+    'top_of_steps': (0.40, 'dialogue', 'his line'),
+    'last_stop': (0.45, 'dialogue', 'Mina at the step'),
+    'bottom_step': (0.35, 'dialogue', 'her shout'),
+    'mina_sami_shout': (0.35, 'dialogue', 'the fake her'),
+    'my_own_voice': (0.25, 'dialogue', 'into his imitation'),
+    'mimic_mina_back_here': (0.50, 'beat', '"Two of me."'),
+    'two_of_me': (0.55, 'beat', 'it lands'),
+    'foot_lifts': (0.55, 'beat', 'rule seven echoes'),
+    'not_even_sami': (0.55, 'beat', 'she pulls back'),
+    'scream_name': (0.40, 'sentence', 'running'),
+    'at_face': (0.30, 'dialogue', 'the shout'),
+    'sami_here_bus': (0.40, 'beat', 'he scrambles'),
+    'rip': (0.30, 'staccato', 'into my arms'),
+    'tumbles': (0.55, 'paragraph', 'Two fifty-eight.'),
+    'two_fifty_eight': (0.60, 'paragraph', 'seat twenty-two glows'),
+    # the aisle
+    'long_arm': (0.40, 'dialogue', 'his speech'),
+    'nobody_knows': (0.18, 'split', '"Nobody knows his name," / "he says."'),
+    'he_says': (0.30, 'dialogue', 'his speech'),
+    'kind': (0.40, 'dialogue', 'the lure'),
+    'want_to': (0.50, 'paragraph', 'Grandma'),
+    'real_one': (0.30, 'dialogue', 'Grandma'),
+    'nobody_who_loves': (0.55, 'paragraph', 'I step back.'),
+    'i_step_back': (0.50, 'paragraph', 'his taunt'),
+    'two_fifty_nine': (0.50, 'paragraph', 'the memory'),
+    'hi_mina_morning': (0.45, 'beat', 'the memory'),
+    'never_asked_his': (0.50, 'paragraph', 'she asks'),
+    'call_up_aisle': (0.30, 'dialogue', 'the question'),
+    'whats_your_name': (0.70, 'beat', 'the question hangs; the whistle'),
+    'whistle3': (0.35, 'sentence', 'running'),
+    'handle_bends': (0.45, 'paragraph', 'his imitation'),
+    'in_my_voice': (0.25, 'dialogue', 'into his imitation'),
+    'mimic_mina_dont_answer': (0.50, 'paragraph', 'the glove'),
+    'then_at_me': (0.40, 'dialogue', 'Theo'),
+    'long_time': (0.50, 'beat', 'the broom'),
+    'broom_cracks': (1.15, 'held', 'held dread before "Theo."'),
+    'theo': (0.75, 'beat', 'the name lands'),
+    'all_three': (0.25, 'dialogue', 'the shout'),
+    'theo_shout': (0.50, 'beat', 'the clock'),
+    'long_whistle': (0.40, 'beat', 'room for the whistle; Theo answers'),
+    'theo_here': (0.50, 'beat', 'he twists free'),
+    'doors_slam': (0.50, 'paragraph', 'Three o\'clock.'),
+    'bell': (0.35, 'staccato', 'the bell'),
+    'bell_rings': (0.90, 'section', 'room for the school bell'),
+    # the end of him
+    'it_slips': (0.35, 'sentence', 'running'),
+    'rewinds': (0.60, 'paragraph', 'the clipboard'),
+    'she_kneels': (0.30, 'dialogue', 'Grandma'),
+    'it_does': (0.90, 'held', 'the light comes on'),
+    'two_words': (0.40, 'beat', 'Sat alone.'),
+    'sat_alone': (0.55, 'beat', 'the list'),
+    'someone_sat': (0.55, 'paragraph', 'the last page'),
+    'one_name': (0.32, 'staccato', 'Nobody I know.'),
+    'nobody_i_know': (0.85, 'section', 'into the morning'),
+    # morning
+    'she_hugs': (0.30, 'dialogue', 'Grandma'),
+    'brakes_mirrors_end': (0.65, 'paragraph', 'the new girl'),
+    'sit_next': (0.40, 'dialogue', 'Mina'),
+    'hi_im_mina': (0.50, 'beat', 'She tells me.'),
+    'she_tells': (1.20, 'held', 'held dread before "It\'s the name on his last page."'),
+    'last_page_name': (0.70, 'beat', 'the window'),
+    'next_name': (0.85, 'section', 'that night'),
+    'that_night': (1.00, 'before rule', 'rule card 8'),
+    'rule8_text_b': (1.50, 'outro', 'about 1.5 s before the outro'),
     # outro
-    'outro': (0.45, 'beat', '"Okay." "Breathe."'),
-    'breathe': (0.50, 'beat', 'calming'),
-    'light_on': (0.85, 'paragraph', 'none of this happened'),
-    'none_happened': (0.45, 'list', 'the list of things that aren\'t real'),
-    'no_later': (0.35, 'list', 'the list'),
-    'no_room': (0.45, 'sentence', 'who made it up'),
-    'made_up': (0.90, 'paragraph', 'but he is a little bit real'),
-    'voice_in_head': (0.25, 'split', 'the voice in your head follows its "that says,"'),
-    'w_nothing': (0.35, 'list', 'his three phrases'),
-    'w_bother': (0.35, 'list', 'his three phrases'),
-    'w_wait': (0.60, 'beat', 'back to the narrator'),
-    'sounds_kind': (0.35, 'staccato', 'He sounds kind. He sounds sensible.'),
-    'sensible': (0.40, 'staccato', 'fragments'),
-    'very_very_patient': (0.85, 'paragraph', 'how to beat him'),
-    'beat_him': (0.40, 'staccato', '"For real."'),
-    'for_real': (0.85, 'paragraph', 'the advice'),
-    'kids': (0.40, 'staccato', 'Kids... Grown-ups...'),
-    'grownups': (0.85, 'paragraph', 'the warning signs'),
-    'signs': (0.40, 'list', '"Tell a doctor."'),
-    'signs_doctor': (0.60, 'beat', 'the emergency signs'),
-    'emergency': (0.40, 'list', '"Don\'t wait."'),
-    'emergency_dont_wait': (0.40, 'staccato', '"Call your emergency number."'),
-    'emergency_call': (0.85, 'paragraph', 'ask questions'),
-    'ask_questions': (0.40, 'staccato', '"All of them."'),
-    'all_of_them': (0.45, 'sentence', 'running'),
-    'hundred': (0.85, 'paragraph', 'the strange call'),
-    'real_number': (0.85, 'paragraph', 'the night shift'),
-    'not_monster': (0.40, 'staccato', 'the two "They\'re" lines'),
-    'out_of_his_chair': (0.90, 'paragraph', 'back to the comments'),
-    'comment_back': (0.40, 'staccato', '"Now." "Go back..."'),
-    'go_back': (0.60, 'beat', 'the two answers'),
-    'said_ask': (0.45, 'beat', '"Thank you."'),
-    'thank_you': (0.85, 'paragraph', 'the other answer'),
-    'waiting_talking': (0.40, 'sentence', 'running'),
-    'convincing': (0.60, 'beat', 'the edit'),
-    'edit_ask': (0.40, 'staccato', '"Change it to \'ask.\'"'),
-    'only_time': (0.85, 'paragraph', 'the names'),
-    'first_name': (0.45, 'sentence', 'running'),
-    'waiting_list': (0.90, 'paragraph', 'call someone'),
-    'like': (0.85, 'paragraph', 'subscribe'),
-    'subscribe': (0.40, 'sentence', 'the reason'),
-    'never_hold': (0.40, 'sentence', 'running'),
-    'next_story': (0.90, 'paragraph', 'next time'),
-    'next': (1.00, 'paragraph', 'the goodbye (the take ran it into "Sleep well." with 0.15 s)'),
-    'sleep_well': (0.55, 'beat', 'the last line'),
-    'pick_up_end': (0.50, 'beat', 'the last sentence'),
+    'trick_real': (0.50, 'beat', 'the advice'),
+    'advice_name': (0.45, 'advice', 'one card each'),
+    'advice_code_word': (0.35, 'advice', 'one card each'),
+    'advice_grownup': (0.30, 'advice', 'one card each'),
+    'advice_change': (0.45, 'advice', 'one card each'),
+    'advice_ride': (0.45, 'advice', 'one card each'),
+    'advice_tell': (0.45, 'advice', 'one card each'),
+    'thank_driver': (0.28, 'staccato', 'By name.'),
+    'by_name': (0.70, 'beat', 'the comment callback'),
+    'said_yes': (0.30, 'sentence', 'the callback'),
+    'what_he_wanted': (0.60, 'beat', 'like / subscribe'),
+    'like': (0.35, 'sentence', 'running'),
+    'subscribe': (0.70, 'beat', 'the teaser'),
+    'next': (0.45, 'ellipsis', 'the teaser\'s own "..." before "don\'t go outside."'),
+    'front_hall': (0.30, 'staccato', 'the blinks'),
+    'radio_depot': (0.33, 'dialogue', 'running'),
+    'aisle_speech': (0.60, 'paragraph', 'he bends down'),
+    'trade_lure': (0.85, 'held', 'the lure hangs before "For one second..."'),
+    'step_back': (0.55, 'paragraph', 'the echo'),
+    'hurry_secret': (0.40, 'beat', 'the lesson'),
+    'call_him_then': (0.70, 'paragraph', 'Two fifty-nine.'),
+    'six_mornings': (0.55, 'paragraph', 'the porch light'),
+    'advice_secret': (0.30, 'staccato', "That's when you tell."),
+    'advice_parents': (0.45, 'advice', 'one card each'),
 }
 
 
@@ -1259,23 +1068,23 @@ def pacing_rows():
         if A['tag'] in PACE:
             g, kind, why = PACE[A['tag']]
         elif rb:
-            g, kind, why = 1.40, 'before rule', f'rule card {rb}'
+            g, kind, why = 1.15, 'before rule', f'rule card {rb}'
         elif ra:
-            g, kind, why = 0.55, 'rule title', '"Rule number %d." then the rule itself' % ra
+            g, kind, why = 0.45, 'rule title', '"Rule number %d." then the rule itself' % ra
         elif rule_text_open is not None and para[i] == rule_text_open and same_para:
-            g, kind, why = 0.45, 'rule text', 'the rule card text'
+            g, kind, why = 0.40, 'rule text', 'the rule card text'
         elif rule_text_open is not None and para[i] == rule_text_open:
-            g, kind, why = 1.00, 'after rule', 'the rule card holds, then the scene'
+            g, kind, why = 0.75, 'after rule', 'the rule card holds, then the scene'
         elif not re.search(r'[.?!]["\']?$|\.\.\.$', A['en'].strip()):
             g, kind, why = 0.18, 'split', 'one sentence split for the speaker (quote / "she says")'
         elif not same_para:
-            g, kind, why = 0.85, 'paragraph', 'paragraph break'
+            g, kind, why = 0.50, 'paragraph', 'paragraph break'
         elif A['who'] != 'N' or B['who'] != 'N':
-            g, kind, why = 0.35 if A['who'] == B['who'] else 0.40, 'dialogue', 'dialogue'
+            g, kind, why = 0.33 if A['who'] == B['who'] else 0.38, 'dialogue', 'dialogue'
         elif len(A['en'].split()) <= 3 and len(B['en'].split()) <= 3:
-            g, kind, why = 0.40, 'staccato', 'short fragments'
+            g, kind, why = 0.32, 'staccato', 'short fragments'
         else:
-            g, kind, why = 0.45, 'sentence', 'running narration'
+            g, kind, why = 0.38, 'sentence', 'running narration'
         if rule_text_open is not None and para[i + 1] != rule_text_open: rule_text_open = None
         rows.append((i, round(g, 3), kind, why))
     return rows
@@ -1291,18 +1100,16 @@ def write_pacing(force=False):
         f.write('Written by `film/tools/vo_edit.py pacing` from the rules in that file (PACE, pacing_rows) and read back by '
                 '`vo_edit.py build`: **this table is the source of truth**; change a gap here and rebuild.\n\n')
         f.write('A gap is the silence from the end of one line\'s natural decay (-60 dBFS) to the first sound of the next. '
-                'The guide (from the brief): commas and running phrases inside a line keep a natural 0.12-0.30 s; '
-                'sentences in running narration 0.35-0.6 s; staccato fragments 0.3-0.5 s; dialogue 0.3-0.6 s; '
-                'paragraph breaks 0.7-1.0 s; before each "Rule number" 1.2-1.6 s and after its rule text 0.8-1.2 s; '
-                'held dread before the reveal lines ("Still waiting.", "Waiting.", "Grandpa.", "My ticket said: Milo.", '
-                '"It can wait.", "Doctor Later.", "Not as a patient.", "So are we.") 1.0-1.8 s; the counts "One... '
-                'Two... Three..." spaced like slow counting (1.0-1.3 s, slowing); the phone rings and the knock get '
-                'about 1 s where they sit; about 1 s before the comment prompt and 2.5-3 s before the outro ("Okay. '
-                'Breathe."). Never under 0.15 s between sentences (a line split for its speaker, "I\'ll call you the '
-                'second the results come in," / "she said.", sits at 0.18 s; a speaker cut off mid-line at 0.25-0.30 s), '
-                'never over 2 s except before the outro.\n\n')
+                'This film must feel FAST and tense (the owner: the last film was too long). The guide: running sentences '
+                '0.3-0.5 s; staccato fragments ("Flicker. The middle of the lawn.", "Two of me.", the blinks, the '
+                'chalkboard) 0.25-0.45 s, rhythmic; dialogue 0.25-0.45 s; paragraph breaks 0.45-0.65 s; before each '
+                '"Rule number" 1.0-1.3 s and after its rule text 0.6-0.9 s; held dread only where it pays (before "He '
+                'read it off my phone.", "I\'m still holding a hand.", "Seat twenty-two has been empty...", "Theo.", '
+                '"It\'s the name on his last page.") 0.9-1.4 s; the clock times and the roll call crisp; about 1.5 s '
+                'before the outro. Never under 0.15 s (a sentence split for its speaker sits at 0.18-0.20 s; a speaker '
+                'cut off at 0.20 s), never over 1.6 s.\n\n')
         f.write('Pauses inside a line are not in this table: they keep the take\'s own timing, clamped by punctuation '
-                '(comma 0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.45-0.80 s, a mid-line full stop 0.30-0.55 s, '
+                '(comma 0.12-0.30 s, colon 0.25-0.45 s, ellipsis 0.35-0.65 s, a mid-line full stop 0.25-0.45 s, '
                 'no mark <= 0.25 s), with these held exceptions (INTERNAL in vo_edit.py):\n\n')
         for tag, d in INTERNAL.items():
             i = next(k for k, l in enumerate(L_) if l['tag'] == tag)
