@@ -67,6 +67,10 @@ Read this whole file first. It is short on purpose; the script and the story bib
 6. NEW from the Doctor film: the villain was too passive and the film too long.
    - In every beat with Whistlestop, he moves, closes distance, reaches, grabs or invades.
    - Scares land hard and fast. Never linger. The outro and the comment prompt are short and creative.
+   - Length (the owner, 18 Nov): about 12.5 minutes is exactly right.
+     - Never pad toward 15 minutes.
+     - Never slow down or time-stretch the voice, and never lengthen gaps or hold shots to gain time.
+     - The film's length is the tight voice edit plus only the short beats a card or a scare truly needs.
 
 ### Sound
 7. Voiceover:
