@@ -277,7 +277,7 @@ EVENTS = [
     ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),
     ('The hallway hatch drops open', 'silence', 0.8, 1.45),               # minor 14: the dip before the hatch
     ('end:The hallway hatch drops open', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # after "drops open."
-    ('end:A leg reaches between us', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    ('end:A leg reaches between us', 'hit', 0.75, None, {'nosnap': True}),   # not boosted: "Prying." follows 50 ms after it and was masked (read as "Crying."); the hatch drop just before is the boosted scare
     ("end:leg tip slides in. Feeling for Lina's sock", 'riser', 0.55, 3.0),
     ("end:leg tip slides in. Feeling for Lina's sock", 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),   # after "...Lina's sock." (0.28 s)
     ('end:I jam the towel down on it. Hard', 'hit', 0.7, None, {'nosnap': True}),   # after "Hard.": Adam's blow, not a scare

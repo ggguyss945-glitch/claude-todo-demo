@@ -96,6 +96,20 @@ then run `final_mix.sh`. The stems (`W/mix/final/stems/`, 0.9 GB) are written fo
     bed (50 ms segments); the critic's 24 lines min +4.6..+30 LU (were -10.6..+0.1) and all recognised word for word
     (L52 "Out of tune." reads "two" only at 50 ms margins, with the bed 13.6 LU under it; right with 0.2 s).
 
+- Final remix (21 Nov, 20:28, on the picture fixers' cue sheets; the delivery uses `W/mix/final/mix_en.wav`, which
+  `tools/join_chain.sh` muxes): -14.04 LUFS, true peak -1.70 dBTP, LRA 3.3 LU, 0 unknown SFX; 21 boosted scares +6.4..+9.9 LU
+  momentary over the integrated level; the words after every hit >= 6 LU over the bed (50 ms segments) except one dip inside
+  "doorknob" after the face at the glass (5.1 LU; the bed is 12 LU under the word); the critic's 24 lines now min +3.1..+28.5 /
+  median +7..+44 LU over the bed (400 ms; were -10.6..+0.1). Recogniser on the mix: 9 of 428 lines differ from the dry voice,
+  6 of them digits or tense; open: L297 "Prying." (read "Crying.": the boosted leg hit at 525.54 ends 50 ms before the P),
+  L52 "Out of tune." and L200 "Keeps waving." (read right with 0.2 s margins). Fixes in this remix: grade-1.0 boost target
+  11.5 -> 10.5 (mix.py BOOST_TARGET_LU), the pull-back taps 0.6 s so the clicking stops on "The clicking stops." (sfx_plan.py
+  leg_withdraw), the doorknob sub drop 0.55 -> 0.4 (music_plan.py).
+- Memory: `final_mix.sh` renders the score first in its own process (`mix.py --score-only`, peak 7.1 GB) into a RAM cache
+  (`MIX_SCORE_CACHE`, default `/dev/shm/ice_score_cache`, unlinked as soon as the mix has loaded it), then the mix (peak
+  8.2 GB) loads it: bit-identical to rendering the score inside the mix (tested on a 40 s window), which peaked at 9.5 GB
+  and was killed twice beside the running render.
+
 ### The final remix (run once the new cue sheets exist; from `film/`, `free -g` >= 8 GB available)
 ```
 python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav   # if the picture changed
