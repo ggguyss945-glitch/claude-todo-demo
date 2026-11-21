@@ -1624,24 +1624,32 @@ def _hair_new(c, hm, sp, P, det, sil, t):
         vol = union(vol, oval(fx, fy - 4, 70 * max(0.6, hm.sx(-14, -104, 16)), 26))
     else:                                                       # bald: a fluffy fringe between two lines round the back
         vol = _bumpy(hm, grow, 22, 6.0, -100.0, 84.0, spiky=False)
-        def yu(ph):
-            a = np.abs(ph)
-            return np.interp(a, [0, 1.16, 1.24, 1.4, 1.65, 2.0, 2.6, PI], [400.0, 400.0, -8.0, -26.0, -42.0, -54.0, -60.0, -62.0])
+        if P.__dict__.get('dome_clip', 0.0) > 0.5:             # (opt-in, Kessler's busts) the fringe starts lower and further
+            def yu(ph):                                         # back: no pointed sliver at the temple in a 3/4 turn
+                a = np.abs(ph)
+                return np.interp(a, [0, 1.30, 1.42, 1.6, 1.8, 2.1, 2.6, PI], [400.0, 400.0, 14.0, -12.0, -34.0, -52.0, -60.0, -62.0])
+        else:
+            def yu(ph):
+                a = np.abs(ph)
+                return np.interp(a, [0, 1.16, 1.24, 1.4, 1.65, 2.0, 2.6, PI], [400.0, 400.0, -8.0, -26.0, -42.0, -54.0, -60.0, -62.0])
         Xu, Yu = hm.arc_phi(yu, 120)
         if len(Xu) < 3: return
         Yu = Yu + 4.5 * np.sin(Xu * 0.33) + 2.5 * np.sin(Xu * 0.71 + 1.0)       # a wispy, uneven top edge
         region = inter(region, _region_above(Xu, Yu, 420.0))
     hair = inter(union(vol, sil), region)
+    # opt-in pose flag dome_clip (ice film: Mr. Kessler's busts only): the dome's spots, shine and wisps stay inside the head
+    dome_sil = hm.silhouette(grow=0.0) if (style == 'bald' and P.__dict__.get('dome_clip', 0.0) > 0.5) else None
     if style == 'bald':                                         # the dome: liver spots and a shine (under the fringe)
-        if det >= 1:
-            spots = [(-58, -76, 7), (48, -88, 5), (-26, -100, 4.5), (66, -58, 4), (-74, -40, 3.5), (12, -108, 3.5)]
-            Xs, Ys, Vs = hm.map([p[0] for p in spots], [p[1] for p in spots], 1.0)
-            ds = [oval(float(Xs[i]), float(Ys[i]), spots[i][2] * hm.sx(spots[i][0], spots[i][1]), spots[i][2] * 0.8) for i in range(len(spots)) if Vs[i] > 0.1]
-            if ds: c.fill(_multi(ds), '#9c7258', 120 * sp.get('spots', 1.0))
-        gx, gy, gv = hm.map1(-28, -96, 2)
-        if gv > -0.2:
-            c.glow(gx, gy, 34, 16, '#ffffff', 80)
-            c.line(smooth([(gx - 20, gy + 4), (gx - 4, gy - 4), (gx + 16, gy - 2)], False), c.lw * 0.5, '#ffffff', 120)
+        with (c.clip(dome_sil) if dome_sil is not None else _noop()):
+            if det >= 1:
+                spots = [(-58, -76, 7), (48, -88, 5), (-26, -100, 4.5), (66, -58, 4), (-74, -40, 3.5), (12, -108, 3.5)]
+                Xs, Ys, Vs = hm.map([p[0] for p in spots], [p[1] for p in spots], 1.0)
+                ds = [oval(float(Xs[i]), float(Ys[i]), spots[i][2] * hm.sx(spots[i][0], spots[i][1]), spots[i][2] * 0.8) for i in range(len(spots)) if Vs[i] > 0.1]
+                if ds: c.fill(_multi(ds), '#9c7258', 120 * sp.get('spots', 1.0))
+            gx, gy, gv = hm.map1(-28, -96, 2)
+            if gv > -0.2:
+                c.glow(gx, gy, 34, 16, '#ffffff', 80)
+                c.line(smooth([(gx - 20, gy + 4), (gx - 4, gy - 4), (gx + 16, gy - 2)], False), c.lw * 0.5, '#ffffff', 120)
     c.fill(hair, hc)
     with c.clip(hair):
         c.radial(None, -30, -90, 175, [(0, hhi, 120), (0.5, hc, 0), (1, hsh, 200)], clip=False)
@@ -1703,9 +1711,10 @@ def _hair_new(c, hm, sp, P, det, sil, t):
                 q = _pts_path(X_[m] + sd * 3.0 * np.sin(np.linspace(0, 3, int(m.sum()))), Y_[m], False)
                 c.line(q, c.lw * 0.8, LINE); c.line(q, c.lw * 0.4, hhi)
     if style == 'bald' and det >= 1:                            # two wisps of white hair on the dome
-        for sd in (-1, 1):
-            X_, Y_, V_ = hm.map([sd * 6, sd * 16, sd * 24, sd * 20], [-100, -108, -104, -98], 0.5)   # lying flat ON the scalp
-            if V_.min() > -0.3: c.line(_pts_path(X_, Y_, False), c.lw * 0.4, mix(hc, '#9a958e', 0.3), 200)
+        with (c.clip(dome_sil) if dome_sil is not None else _noop()):
+            for sd in (-1, 1):
+                X_, Y_, V_ = hm.map([sd * 6, sd * 16, sd * 24, sd * 20], [-100, -108, -104, -98], 0.5)   # lying flat ON the scalp
+                if V_.min() > -0.3: c.line(_pts_path(X_, Y_, False), c.lw * 0.4, mix(hc, '#9a958e', 0.3), 200)
 
 
 def _hair_region(c, hm, sp, P, det, sil, t):

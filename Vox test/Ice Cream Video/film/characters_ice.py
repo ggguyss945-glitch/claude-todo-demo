@@ -1536,7 +1536,9 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         return R
     if P.sh_legs_only > 0.5:
         lf = set(id(q[1]) for q in (li if st['legs'] > 0.01 else []))
-        if mon: lf.add(id(head))       # the face stays in front of his own legs in the front pass too
+        if mon and not P.__dict__.get('sh_front_nohead', 0.0) > 0.5:
+            lf.add(id(head))           # the face stays in front of his own legs in the front pass too (opt-in sh_front_nohead:
+                                       # the ice film's cage shots keep the skull behind the kids he cages)
         items = [q for q in items if id(q[1]) in lf]
     for z, fn in items: fn(cc)
     return R

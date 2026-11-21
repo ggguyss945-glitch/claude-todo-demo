@@ -3726,6 +3726,7 @@ def legs_front(sid='shiver', over=('adam', 'lina'), light=None):
 
         def draw(pen, t):
             P_ = _copy.copy(a.at(t)); P_.sh_legs_only = 1.0
+            P_.sh_front_nohead = 1.0        # fullsize QA: only the legs come in front; his skull stays behind the kids
             CH.draw(pen, a.who, a.x0, a.y0, a.height, P_, light=lt, t=t)
         lay = Layer(L0.depth, draw, 'legs_front', ref_depth=L0.ref_depth, blur=None)
         ov = lambda o, t: o(t) if callable(o) else o
@@ -4165,8 +4166,10 @@ def plan_rule7(F):
     # 358 He swings around, jaw down, legs arched over us like a cage.  359 S "Inside, children. Rule seven."
     tcg = WD(358, 'arched')
     xc3 = cm((1.6, -22.6, 1.3), (-0.5, -17.6, 1.2), 950)
-    cage_sh = lambda t_sw: P('shiver', (-1.5, -17.4, FOOT), light=SH_NIGHT, talk=False, breath=False, face=(-0.3, -21.0), dorder=-0.5,
-                             act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0), lambda a, s: a.scuttle(t_sw - 0.8, t_sw + 0.2, _line(s.sp, (-1.9, -16.6, FOOT), (-0.6, -18.1, FOOT)), None),
+    # fullsize QA (his skull stacked on the kids): he ends the swing BEHIND them (about a metre further back) and is drawn
+    # behind them; only the legs are drawn again in front (legs_front), so they arch over the pair like a cage
+    cage_sh = lambda t_sw: P('shiver', (-1.5, -17.4, FOOT), light=SH_NIGHT, talk=False, breath=False, face=(-0.3, -21.0), dorder=0.4,
+                             act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0), lambda a, s: a.scuttle(t_sw - 0.8, t_sw + 0.2, _line(s.sp, (-1.9, -16.6, FOOT), (-1.3, -17.5, FOOT)), None),
                                     lambda a, s: a.cage(t_sw, scr(s.sp, (-0.5, -18.6, FOOT))[0], 1.55 * spot_of(s.sp, 'cage').ppm, scr(s.sp, (-0.5, -18.9, FOOT))[1], dur=0.5, lift=150.0),
                                     lambda a, s: a.jaw_gape(WD(358, 'jaw'), E(359) + 3)))
     kids_c = lambda t0, ea='terror', el='terror': pair(t0 - 2, t0 - 1, (-0.4, -18.3, FOOT - 0.15), (-0.4, -18.4, FOOT - 0.15), el=el, ea=ea)
@@ -4196,7 +4199,7 @@ def plan_rule7(F):
     S(T(363), 'street', 'kdoor', st=KP, ppl=huddle(lact=_A()), acts=cloak(('adam', 'lina', 'kessler')), cold=True, c=Z(1.0, 0.02),
       sfx=[(T(363) + 0.1, 'blanket_wrap', -4, 0, 'outside')])
     BU(T(364), 'kessler_out', 'street', 'kdoor', KP, cx=1150, cy=470, scale=0.8, turn=-0.35, light=PINK_L, expr='dazed', cold=True,
-       act=_A(lk(T(364) + 0.3, (800, 760), dur=0.6)),
+       act=_A(KCLIP(), klk(T(364) + 0.3, (800, 760), dur=0.6)),
        busts=[dict(who='lina', cx=820, cy=760, scale=0.8, turn=0.5, expr='cry_shut', light=PINK_L,
                    act=_A(lambda a, s: a._add(T(364), None, lambda P_, t: setattr(P_, 'dx', P_.dx + 60 * ease_out_back(clamp((t - T(364) - 0.1) / 0.4))))))],
        c=BZ(0.02))
@@ -4215,7 +4218,7 @@ def plan_rule7(F):
     BU(T(370), 'lina', 'street', 'kdoor', KP, cx=960, cy=620, scale=0.95, turn=0.3, light=PINK_L, expr='kind_smile', cold=True, act=_A(lk(T(370), (1300, 200), dur=0.4)),
        c=BZ(0.015))
     BU(T(371), 'kessler_out', 'street', 'kdoor', KP, cx=960, cy=600, scale=0.95, turn=-0.3, light=PINK_L, expr='sad', cold=True,
-       act=_A(lk(T(371), (700, 900), dur=0.6), tremblef(WD(371, 'shiver') - 0.1, None, 3.2)), c=BZ(0.02, shake=1.6))
+       act=_A(KCLIP(), klk(T(371), (700, 640), dur=0.6), tremblef(WD(371, 'shiver') - 0.1, None, 3.2)), c=BZ(0.02, shake=1.6))
     # 372 The song reaches the empty beat... and hangs there.  373 His jaw gapes for the last note... and can't close.
     S(T(372), 'street', 'kout', st=KP, ppl=[SHB(m=1.0, legs=True, lean=0.25, act=_A(lambda a, s: a.slow_wave(T(372) - 1, WD(372, 'hangs'), 1), lk(T(372), 'kdoor')))],
       c=Z(1.6, 0.03, 640, 520))
@@ -4226,6 +4229,22 @@ def plan_rule7(F):
        act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.2), lambda a, s: a.slow_wave(th_ - 2, E(372) + 2, 1, period=60.0), lk(th_, (960, 760)),
               lambda a, s: a.jaw_gape(th_ + 0.1, E(372) + 2), lambda a, s: a.head_tilt(th_ + 0.3, 9.0, 0.25)), c=BZ(0.03))
     sbm(T(373), 1.0, 640, mscale=0.26, meye=320.0, acts_=[lambda a, s: a.jaw_gape(WD(373, 'gapes') - 0.1, E(373) + 2)])
+
+
+def klk(t0, target, dur=0.35, mh=0.25):
+    """lk with the head's own turn capped at mh (quarter turns): Mr. Kessler's busts (fullsize QA: turn -0.3 plus a full
+    head turn put his face past profile, the far lens and the dome's wisps off the head); the eyes do the rest."""
+    def f(a, s):
+        tg = target
+        if isinstance(tg, tuple) and len(tg) == 2 and isinstance(tg[0], str):
+            tg = (s.A[tg[0]], tg[1])
+        elif isinstance(tg, str) or (isinstance(tg, tuple) and len(tg) == 3):
+            tg = scr(s.sp, tg)
+        a.look_at(t0, tg, None, dur, max_head=mh)
+    return f
+
+
+KCLIP = lambda: pose(-9, None, 0.1, specs_clip=1.0, dome_clip=1.0)   # Kessler busts: lenses + dome details kept on the head
 
 
 # ==================================================================================================== THE PLOW, THE PORCH LIGHTS, BYE BENNY, MORNING (374-401)
@@ -4274,7 +4293,9 @@ def plan_dawn(F):
        c=dict(mv='push', x=960, y=430, rate=0.0, z1=2.2, free=True),
        sfx=[(T(386) + 0.1, 'skin_stretch', -4, 0, 'outside')])
     BU(T(387), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=0.95, light=dict(SH_PINK, rim='#ffa040'),
-       act=_A(pose(-9, None, 0.1, ws_bend=0.2), lambda a, s: a.slow_wave(T(387), E(387) + 1, 1), lk(T(387), (1400, 700))), c=BZ(0.02))
+       # fullsize QA (a glove floating with no arm): the wave is held higher (lift) so the striped sleeve reads from the
+       # shoulder to the glove above the counter, and the glove eases up (ws_soft_reach) instead of popping in
+       act=_A(pose(-9, None, 0.1, ws_bend=0.2, ws_soft_reach=1.0), lambda a, s: a.slow_wave(T(387), E(387) + 1, 1, lift=28.0), lk(T(387), (1400, 700))), c=BZ(0.02))
     # 388 The truck glides into the white.
     S(T(388), 'street', 'kout', st=dict(KP, truck=None, porches=1.0, kporch=1.0),
       acts=lambda A, sh, sp: truck_live(sp, glide(T(388) - 0.2, E(388) + 2.5, ST.IC_TRUCK_B[0], -30.0), y=ST.IC_TRUCK_B[1], fa=-90.0),
@@ -4292,9 +4313,9 @@ def plan_dawn(F):
     IN(T(391), 'mittens', dict(lina=True, drop=1.0), motion=lambda u: (700.0, 0.0, 1.1, 4.0 * math.sin(u * 4.0)), c=dict(mv='hold'))
     # 392 Mr. Kessler whispers,  393 K "Bye, Benny."
     BU(T(392), 'kessler_out', 'street', 'kdoor', dict(KP, truck=None, kporch=1.0), cx=960, cy=600, scale=0.9, turn=-0.3, light=dict(LAMP, rim_a=90), expr='sad', cold=True,
-       act=_A(lk(T(392), (300, 500), dur=0.8), tremblef(T(392) - 2, None, 0.8)), c=BZ(0.015))
+       act=_A(KCLIP(), klk(T(392), (300, 500), dur=0.8), tremblef(T(392) - 2, None, 0.8)), c=BZ(0.015))
     BU(T(393), 'kessler_out', 'street', 'kdoor', dict(KP, truck=None, kporch=1.0), cx=960, cy=580, scale=1.2, turn=-0.3, light=dict(LAMP, rim_a=90), expr='tender', cold=True,
-       act=_A(lk(T(393), (300, 500)), tremblef(T(393) - 2, None, 0.6)), c=BZ(0.015))
+       act=_A(KCLIP(), klk(T(393), (300, 500)), tremblef(T(393) - 2, None, 0.6)), c=BZ(0.015))
     # 394 Paramedics said twenty more minutes, and he wouldn't have woken up.
     S(T(394), 'street', 'kdoor', st=dict(KP, truck=None, kporch=1.0, porches=1.0),
       ppl=[kess((1.4, -23.55, 0.0), id='kessler', face=(1.4, -20.0), expr='tender', light=dict(rim='#ff5050', rim_a=110, side=1, key=-0.15)),
@@ -4326,13 +4347,15 @@ def plan_dawn(F):
     # review (neither the chimney nor its smoke was in frame): from our yard across the lane, his chimney smoking
     S(T(396), 'morning', 'kessler', st={}, era='morning', grade=MG, c=Z(1.9, 0.03, 720, 400))
     S(T(397), 'morning', 'kporch', st={}, era='morning', cold=True, grade=MG,
-      ppl=[kess('kporch', who='kessler_am', id='kessler', face=(1.4, -21.0), expr='tender', act=_A(lk(T(397), ('lina', 'head')))),
-           lina((1.2, -21.9, -0.17), who='lina', id='lina', face=(1.4, -23.1), expr='kid_grin', extras=[mug_fx('hand_r')],
+      # fullsize QA (an empty fist, the mug floating at her hip): the mug rides in the hand she reaches out with (side 1 =
+      # hand_l), a little bigger so it reads in the wide; his look keeps a gentle 3/4 (the features stay on his head)
+      ppl=[kess('kporch', who='kessler_am', id='kessler', face=(1.4, -21.0), expr='tender', act=_A(KCLIP(), klk(T(397), ('lina', 'head'), mh=0.3))),
+           lina((1.2, -21.9, -0.17), who='lina', id='lina', face=(1.4, -23.1), expr='kid_grin', extras=[mug_fx('hand_l', 1.5)],
                 path=[(T(397) - 0.3, (1.2, -21.3, -0.3)), (E(397) + 0.2, (1.2, -22.55, -0.1))],
                 act=_A(lk(T(397), ('kessler', 'head')), reach(T(397) - 0.2, 1, ('kessler', 'hip'), dur=0.6)))], c=Z(1.3, 0.02, 960, 620))
     # 398 K "Sixty-eight years I taped rules on every door on this street. First time anyone knocked on mine."
     BU(T(398), 'kessler_am', 'morning', 'kporch', {}, cx=960, cy=600, scale=0.9, turn=-0.3, light=MORNING, expr='tender', era='morning', cold=True, grade=MG,
-       act=_A(lk(T(398), (500, 760))), c=BZ(0.012))
+       act=_A(KCLIP(), klk(T(398), (500, 760))), c=BZ(0.012))
     S(W(398, 'first'), 'morning', 'kporch', st={}, era='morning', cold=True, grade=MG, cam=cm((0.4, -20.6, 1.0), (1.35, -23.0, 1.0), 1250),
       ppl=[kess('kporch', who='kessler_am', id='kessler', face=(1.0, -22.6), expr='tender', extras=[mug_fx('hand_l')],
                 act=_A(lk(W(398, 'first'), ('lina', 'head')), reach(-9, -1, ('kessler', 'chest'), dur=0.1))),
