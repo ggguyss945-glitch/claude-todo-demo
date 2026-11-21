@@ -222,7 +222,7 @@ EVENTS = [
     ('I slap it#slap', 'hit', 0.8, None, {'boost': 2.5}),
     ('Click. -0.9', 'silence', 0.95, 1.0),                                # the furnace relay alone
     ('The furnace stops', 'sub_drop', 0.6, None),
-    ('Every light in the house goes out#out', 'hit', 0.9, None, {'boost': 2.5}),   # the power dies (picture power_cut)
+    ('end:Every light in the house goes out', 'hit', 0.9, None, {'boost': 2.5, 'nosnap': True}),   # just after 'out.'   # the power dies (picture power_cut)
     ('in the curtain crack... a long white skull#skull -0.9', 'silence', 0.8, 1.1),
     ('in the curtain crack... a long white skull#skull +0.25', 'hit', 1.0, None, {'boost': 3.5}),   # glimpse 2 (reveal cut)
     ('I spin around', 'stinger', 0.6, None),
@@ -246,8 +246,8 @@ EVENTS = [
     ('Like a mask made of bone#bone +0.35', 'riser', 0.6, 6.0),
     ('Like a mask made of bone#bone +0.35', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
     ('and come back red#red', 'hit', 0.8, None),
-    ('His jaw drops#drops -0.7', 'silence', 0.8, 0.7),
-    ('His jaw drops#drops', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),
+    ('His jaw drops#drops -0.15', 'silence', 0.8, 0.6),
+    ('end:His jaw drops', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # just after 'drops.'
     ('A long brown leg punches out#punches', 'hit', 0.95, None, {'boost': 3.0}),
     ('He pours out of the window', 'braam', 0.8, None),
     # the chase
@@ -261,7 +261,7 @@ EVENTS = [
     ('Static. And bells', 'stinger', 0.55, None),
     # rule 5
     ('Rule number five -0.1', 'rule', 0.75, None, {'nosnap': True}),
-    ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp#cloud', 'hit', 0.85, None, {'boost': 2.5}),
+    ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp#cloud +0.55', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # just after 'No cloud.'
     ('Let me in, baby -1.4', 'silence', 0.95, 1.4),
     ('Red eyes. The doorknob grows frost', 'riser', 0.6, 4.5),            # the face slides up the glass ...
     ('Red eyes. The doorknob grows frost', 'hit', 1.0, None, {'boost': 3.5}),   # ... pressed to it: red eyes
@@ -270,14 +270,14 @@ EVENTS = [
     ('Rule number six -0.1', 'rule', 0.8, None, {'nosnap': True}),
     ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),
     ('The hallway hatch drops open#drops', 'hit', 1.0, None, {'boost': 3.5}),
-    ('A leg reaches between us#between', 'hit', 0.85, None, {'boost': 2.5}),
-    ('Under the door, a needle-thin#tip', 'riser', 0.55, 3.0),
-    ('Under the door, a needle-thin#tip', 'hit', 0.8, None, {'boost': 2.5}),
+    ('end:A leg reaches between us', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    ('end:Under the door, a needle-thin leg tip slides in', 'riser', 0.55, 3.0),
+    ('end:Under the door, a needle-thin leg tip slides in', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
     ('I jam the towel#jam', 'hit', 0.85, None, {'boost': 2.5}),
     ('The clicking stops', 'silence', 0.8, 1.5),
     # the twist
-    ("To Kessler's door -0.45", 'silence', 0.8, 0.85),
-    ("To Kessler's door#door", 'hit', 0.9, None, {'boost': 3.0}),       # the big twist: the truck at HIS door
+    ("To Kessler's door +0.1", 'silence', 0.8, 0.95),
+    ("end:To Kessler's door", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),       # the big twist: the truck at HIS door
     ('Not shivering. Smiling', 'hit', 0.65, None),
     ('And nobody checked', 'sub_drop', 0.6, None),
     ("Whoever's coldest... was across -1.0", 'silence', 0.85, 1.1),
@@ -294,7 +294,7 @@ EVENTS = [
     ('And the old man starts to shiver', 'swell', 0.55, 4.0),
     ("Dad's plow roars", 'swell', 0.8, 4.0),
     ('jaw gapes for the last note +0.37', 'hit', 0.85, None, {'boost': 2.5}),   # the hung note: his jaw gapes
-    ('The song falls apart#apart', 'hit', 0.8, None, {'boost': 2.5}),     # his defeat
+    ('end:The song falls apart', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),     # his defeat
     ('The red one stays', 'sub_drop', 0.35, None),
     # stinger and the teaser
     ('The truck slows at a house', 'hit', 0.7, None),

@@ -1171,8 +1171,9 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # THIS film (the Ice Cream film): the rows name a line TAG or a script PHRASE (music_plan.line_index finds it in the
 # timeline's text), so nothing depends on lines.py's tags; the comment prompt and everything from the plow's arrival
 # (the warm turn) are left alone; the climax's crossing is the loudest gap bed
-ARC_TARGETS = [('Rule number one', -19.0), ('Stop. His song is playing', None), ('Rule number two', -17.5),
-               ('Rule number three', -16.5), ('Rule number four', -15.0), ('Rule number five', -13.5),
+# Ice Cream first mix: rules 1 and 3 read 2-4 LU under their neighbours in speech (the arc pulled them -5 / -8 dB): +0.5..+1
+ARC_TARGETS = [('Rule number one', -18.5), ('Stop. His song is playing', None), ('Rule number two', -17.0),
+               ('Rule number three', -15.5), ('Rule number four', -14.5), ('Rule number five', -13.5),
                ('Rule number six', -12.5), ('Then the song moves', -14.0), ('Rule number seven', -11.5),
                ("Mr. Kessler is halfway to the window", -9.5), ("Dad's plow roars", None)]
 ARC_MAX_DB = 8.0     # Bus final mix: 6 dB clamped rules 1 and 6 short of the rule-by-rule rise

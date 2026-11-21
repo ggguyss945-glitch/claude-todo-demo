@@ -3019,7 +3019,7 @@ def plan_rule4(F):
                                               lambda a, s: a.reach_far(T(195) - 1, 1, (scr(s.sp, 'lina_window')[0] + 20, scr(s.sp, 'lina_window')[1] - 0.95 * spot_of(s.sp, 'lina_window').ppm),
                                                                        t1=tyk + 0.2, dur=0.5, z=30.0))),
            lina('lina_window', who='lina', id='lina', face=(0.27, -8.6), expr='dazed', light=PINK,
-                act=_A(reach(T(195) - 1, 1, (0.15, -8.15, 1.0), t1=tyk, dur=0.4, shape='reach'), ex('fear', tyk + 0.05), lambda a, s: a._add(tyk, None, _pull(tyk, LINA_PULL))),
+                act=_A(reach(T(195) - 1, 1, (0.15, -8.15, 1.0), t1=tyk - 0.12, dur=0.4, shape='reach'), ex('fear', tyk + 0.05), lambda a, s: a._add(tyk, None, _pull(tyk, LINA_PULL))),
                 until=tyk + 0.14),                                     # yanked: from here she is in Adam's arms (carry)
            kid('adam', (-1.6, -6.4, FOOT), id='adam', path=[(T(195) - 0.3, (-1.9, -6.0, FOOT)), (tyk, (-0.9, -7.45, FOOT)), (E(195) + 0.4, (-1.4, -6.9, FOOT))],
                run=True, surface='snow', expr='terrified_call', act=_A(reach(tyk - 0.25, -1, ('lina', 'chest'), t1=tyk + 0.1, dur=0.15)),
