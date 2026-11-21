@@ -1,5 +1,5 @@
 #!/bin/bash
-# Resumable HEVC delivery for the bus film, from the finished picture and the final mix (run from film/):
+# Resumable HEVC delivery for the ice cream film, from the finished picture and the final mix (run from film/):
 #   P=2 bash tools/encode_chain.sh > _work/logs/encode_chain.log 2>&1
 # Same x265 settings as tools/deliver.sh except rate control (capped CRF 20 for this film, see below and tools/enc_seg.sh), but the picture is encoded as K frame-exact segments with OK markers, so a
 # container restart only loses the segments in flight: re-running skips every finished segment. The segments are joined
@@ -9,10 +9,10 @@ set -e
 cd "$(dirname "$0")/.."
 W=_work; PIC=$(realpath $W/picture/picture.mp4); MIX=$W/mix/final/mix_en.wav
 S=${S:-$W/deliver/segments_crf20}; K=${K:-24}; P=${P:-2}
-# Capped CRF 20, as on the Doctor film (its 21:45 cut came to 332 MiB, -14.8 LUFS, -1.5 dBFS peak); this 13:18 film
+# Capped CRF 20, as on the Doctor film (its 21:45 cut came to 332 MiB, -14.8 LUFS, -1.5 dBFS peak); this 13:07 film
 # should land near 200 MiB. RC still overrides it.
 export RC=${RC:--crf 20}
-B=If_The_School_Bus_Stops_At_Midnight; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
+B=If_The_Ice_Cream_Truck_Plays_In_Winter; H=$W/deliver/${B}_EN_1440p60_HEVC.mp4
 mkdir -p "$S"
 NT=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$PIC")
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
@@ -38,7 +38,7 @@ ffmpeg -v error -nostdin -y -i "$MIX" -af lowpass=f=16500:poles=2,aresample=1920
   -c:a aac -b:a 192k -cutoff 18000 -ar 48000 "$S/audio.m4a"
 ffmpeg -v error -nostdin -y -f concat -safe 0 -i "$S/list.txt" -i "$S/audio.m4a" -map 0:v -map 1:a -c copy \
   -tag:v hvc1 -metadata:s:a:0 language=eng \
-  -metadata title="If The School Bus Stops At Midnight... DON'T GET ON" \
+  -metadata title="If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" \
   -t "$DUR" -movflags +faststart "$H.tmp.mp4"
 mv "$H.tmp.mp4" "$H"
 echo "== joined $(date -u +%H:%M)"

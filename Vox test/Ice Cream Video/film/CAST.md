@@ -27,11 +27,15 @@ eyes sink, red, jaw to chest with icicle teeth, uniform splits + legs punch out,
 `sh_long`, `sh_sink`, `sh_red`, `sh_jaw`, `sh_gape`, `sh_split`, `sh_legs` (0..8, they punch out one PAIR at a time),
 `sh_glim` (glimpse), `sh_lift` (cm, body slung in the leg cage; use 80-90; the torso pitches ~60 deg, the head is thrust
 FORWARD at the lens and only nods by `sh_hang` (default 0.15, capped 0.15), his own legs tuck away above 40 cm), `sh_spread`,
-`sh_legcap`, `sh_nolegs` (human legs hidden), `ws_bend` (lean / down and down).
-Legs (round 2): 8 jointed harvestman legs, ~35% shorter and thicker than round 1 (coxa/femur/tibia/tarsus 30/165/175/95 cm),
-knees ~1.4-1.6x his crown height; roots spread down the back (shoulder blades to waist) so the pairs frame the body; the HEAD
-GROWS x1.4 as the legs come out (never a pin-head) and the red eyes fill ~45% of the sockets with a bloom >= 4 px on output;
-the dropped jaw's cheek walls are opaque; in the cage the arms claw forward at jaw height and the gloves go frost-grey.
+`sh_legcap`, `sh_nolegs` (human legs hidden), `ws_bend` (lean / down and down), `sh_menace` (default 1: the monster idle,
+see below; 0 = off), `sh_legs_only` (draw only the spider legs: lay them IN FRONT of people he cages).
+Legs (round 3): 8 THICK jointed harvestman legs bent close round the body (coxa/femur/tibia/tarsus 30/125/135/70 cm, widths
+24/24-16/16-8/8-0.6), knees at their own heights (fanned in depth per pair), tarsi splayed (never parallel stilts), tips near
+z=0 so planted tips sit ON the ground line (leg_to / legs_plant default zd=0); dimmer knee rime (#c4d3e0, ~60%); the HEAD
+GROWS x1.8 with the legs and gets a x1.15 thrust toward the lens, drawn IN FRONT of the front leg pair (claws beside the jaw) and the red eyes fill ~45% of the sockets with a bloom >= 4 px on output;
+the dropped jaw is its OWN bone mandible (~0.85 of the mask wide, ~0.22 tall, outline + frost crack, 6 icicles standing up, 2
+fangs) under a dark #120A10 falloff gap crossed by sinew/frost strands (no capsule outline); the mouth never closes again once
+the icicles come (sh_m > 0.4); at sh_smile > 0.5 the slit runs PAST the face outline; in the cage the arms claw forward at jaw height and the gloves go frost-grey.
 Femur bowed out and tibia bowed in (an organic S), spindles tapering from thick at the body to a pale needle,
 lit/shadow edges + rim light, telescoping rings, bristles, dark ball joints under flared segment ends, frost rime crusted on
 top of every knee with tiny icicles, torn stripe flaps round each root. The mask: zygoma planes, temple hollows, brow ridge,
@@ -39,7 +43,13 @@ big sockets with a frost rim, the lower mask tapering ~2x long; the jaw drops ~o
 frost strands at the mouth's sides, icicle teeth with 3 long fangs above and 2 below. FRAME ON THE FACE: the legs may leave
 the frame edges (they bracket the mask); never frame so wide that the head is under ~8% of the frame height (sh_mood, the
 medium-wide in sh_transform_legs). Normal form: arms are tapered striped cylinders (6 wrapping stripes), one-piece trousers
-#4d4556 with a hem break, no forehead creases (frost sparkles), smile clipped to the head until the transformation.
+#4d4556 with a hem break, no forehead creases (frost sparkles), smile clipped to the head until the transformation. Normal form is friendly-wrong: faint cool sockets (#aeb9c9), lit cheek
+apples, the lower lids pushed up (smiling eyes), a big catchlight, 4 separate lower teeth with 2 gaps; the face is the top
+value (white stripes #E4D8DE, gloves #DEDAD4, a cool #dfeaff rim, the coat darkens below the badge). Gloves x0.85, thumb
+turned in, soft knit ribs (no V-stitch 'bones').
+**Menace idle (automatic for sh_m >= 0.9):** the head tilts in 0.4 s moves with holds, creeps toward the lens on a 5 s
+cycle, one needle lifts and re-plants every 0.58 s (same spot). `a.menace(t0, t1)` adds its soft leg_click events.
+`a.fear_body(t0, t1=None, k=1)` (people): shoulders up, chin down, a 0.9 Hz breath; no jiggle.
 ```python
 a = CH.Acting('shiver', seed=1, height=CH.height_px('shiver', ppm)).place(x, floor_y)
 a.transform(t0, times)          # 8 times keyed to the words; events sh_smile_creak, sh_bone_crack, sh_eyes_sink, sh_eyes_red, sh_jaw_drop, sh_uniform_split, leg_click x8
@@ -48,7 +58,8 @@ a.glimpse(t0, 0.13)             # one flicker: long white face, red eyes
 a.slow_wave(t0, t1, side)       # the over-long wave beside his head (open glove)
 a.reach_far(t0, side, target)   # the glove down to Lina's hand; reach_to / look_at / lean_to from the bus rig work
 a.leg_to(t0, i, target, dur, hold, back, ev='leg_stab')   # one needle tip to a world point (snow, coat, blanket, under a door)
-a.legs_plant(t0, {i: (x, y)})   # plant legs (truck roof)  ;  a.cage(t0, cx, width, ground_y)  legs arched over people
+a.legs_plant(t0, {i: (x, y)})   # plant legs (truck roof)  ;  a.cage(t0, cx, width, ground_y)  legs arched over people (lift clamped 80-90, human legs tucked; draw him BEHIND them, then
+#   again with P.sh_legs_only=1 in front: see sh_hook_blanket_cage)
 a.scuttle(t0, t1, path(u)->(x,y), ground(x)->y)           # gait with planted tips, clicks
 a.drop_to(t0, dur, from_dy)     # from a roof edge   ;  a.pour_out(t0, dur, sill_dy, ground_dy, roof_dy=, frame_w=, ground=)  head first, legs last (see below)
 a.hang_hatch(t0, dur, lower)    # upside down from the attic hatch (pair with sh_legcap=1 and leg_to)
@@ -97,7 +108,26 @@ bathroom `sh_under_door`; climax `sh_hook_blanket_cage`; defeat `sh_defeat_shrin
   fleece trim; walter58 a 1958 flat cap. Kessler's wisps lie flat on the scalp.
 - Benny's ONE red mitten is on his right hand in `benny_1958` and drops at the curb at the end of the walk.
 
-## Open issues
+## Round 3 clip stagings
+`sh_transform_face`: over Adam's shoulder (red hat left fifth), window frame + bunting ends, a monotonic camera so the mask
+grows 30% -> 55% of the frame, the body cut by the real sill/wall. `sh_hook_blanket_cage`: ppm 360, three under one opaque
+blanket (Kessler `hypo`, Lina, Adam), he scuttles in slung low, hooks the corner and pulls (they lean back, Adam grips the
+hem), snap back, then the legs in front, jaw gape, head creep. `sh_legs_spear_coat`: ppm 330 tracking, mask at the lens,
+gap closes ~600 -> ~300 px, the hem pinned (stretched, Adam jerked back, a flap stays), the pry between arm and back.
+`sh_defeat_shrink`: ppm 450 for the gape, cut wide for the fold. `sh_under_door` / `sh_pluck_mitten`: close inserts with
+tapered jointed legs (towel brought by Adam's hand and cuff; the mitten hooked on the needle, hung in the same frame).
+EXPR: `lina_grin` (two front teeth, gap), `hypo` (severe cold, slack oval), `terrified_call` a wide D shout; kids' mouths
+have a dark-red interior and one flat upper tooth band. Dad's flaps are knit trapezoids with an inner fleece border.
+
+## Still open (next pass)
+- `sh_hatch_upside_down` is still eye level (no low-angle trapezoid hatch); `sh_lean_down_reach`, `lina_walk_humming`,
+  `kessler_shuffle_out`, `benny_1958`, `adam_run_carry_lina` wides keep faces under 8%: cut a medium for the acting.
+- No automated needle-to-ground contact check in render() yet (tips now resolve at z=0); scuttle body bob/pitch not added.
+- Shared hand system (thin fingers, Kessler's mitten hands) untouched to protect the other films; Benny's stripes and red
+  mitten in the lineup; sepia at shot level; `adam_radio_over` handset covering the face.
+- pour_out has no z-advance toward the lens yet (framed lower instead).
+
+## Older open issues
 - Lina's mittens and Benny's red mitten are props for the shot, not on the rig; Kessler's blanket is a shot overlay.
 - Not done in round 2 (left for the next pass): Adam's coat baffles still read flat; Benny's pyjama stripes; walter58's sepia grade
   in the lineup (apply the sepia grade at shot level) and Kessler's ear scale; Dad's grip on the wheel / horn presses

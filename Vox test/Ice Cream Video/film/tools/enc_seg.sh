@@ -3,11 +3,11 @@
 #   usage: enc_seg.sh <picture.mp4> <segment dir> <first frame> <frame count>
 # Writes <dir>/seg.mp4 and an OK marker. The seek point is half a frame before the first frame, so float rounding can
 # never drop or add a frame; timestamps are then rebuilt as N/60 from zero, so every segment starts clean.
-# Rate control comes from RC (default capped CRF 17). Do not use a bitrate target (-b:v) here: x265's ABR starts every
+# Rate control comes from RC (default capped CRF 20, this film; encode_chain.sh exports the same). Do not use a bitrate target (-b:v) here: x265's ABR starts every
 # segment cautiously, so quality drops ~12 dB for the first ~0.3 s after each join (a visible softness pulse every 30 s).
 # Capped CRF 17 holds a flat ~50 dB from the first frame and matches the steady quality of the old 4000k ABR encode.
 set -e
-PIC=$1; D=$2; F0=$3; N=$4; RC=${RC:--crf 17}
+PIC=$1; D=$2; F0=$3; N=$4; RC=${RC:--crf 20}
 [ -f "$D/OK" ] && exit 0
 rm -rf "$D"; mkdir -p "$D"
 SS=$(python3 -c "print(f'{($F0 - 0.5) / 60:.6f}' if $F0 > 0 else '0')")

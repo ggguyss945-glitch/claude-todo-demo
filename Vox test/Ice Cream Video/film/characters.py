@@ -1223,13 +1223,13 @@ def _mouth(c, hm, sp, P, det, t, skin, sh):
     if det >= 1:
         lip = _pts_path(np.concatenate([LX, LX[::-1]]), np.concatenate([LY, (LY + 9 + 4 * P.m_open)[::-1]]), True, 0.8)
         c.fill(lip, mix(sp['lip'], skin, 0.4), 110)
-    c.fill(inner, '#2a0e11')
+    c.fill(inner, sp.get('mouth_in', '#2a0e11'))
     mid_x = float(np.mean(ring_x)); bot = float(LY[len(LY) // 2]); top = float(UY[len(UY) // 2])
     with c.clip(inner):
         if oh > 16 and g < 0.8:
             c.fill(oval(mid_x, bot - oh * 0.08, hw * 0.62 * hm.sx(0, sp['mouth_y']), oh * 0.32), '#93434d')
             if det >= 1: c.line(smooth([(mid_x, bot - oh * 0.3), (mid_x, bot - oh * 0.05)], False), c.lw * 0.35, '#5e2129', 150)
-        c.glow(mid_x, top + oh * 0.55, hw * 0.9, oh * 0.6, '#000000', 140)
+        c.glow(mid_x, top + oh * 0.55, hw * 0.9, oh * 0.6, '#000000', 140 * sp.get('mouth_dk', 1.0))
         tshow = max(te, 0.85 * clamp(g * 1.4))
         if tshow > 0.02:
             gum = 7.0 * clamp(P.gums) + 2.0 * g
@@ -1243,10 +1243,10 @@ def _mouth(c, hm, sp, P, det, t, skin, sh):
             _teeth_row(c, hm, sp, UX, UY + gum, th_u, +1, det, P, hw)
             if th_l > 1.0:
                 _teeth_row(c, hm, sp, LX[::-1], LY[::-1], th_l, -1, det, P, hw)
-    c.line(inner, c.lw)
+    c.line(inner, c.lw, sp.get('mouth_line', LINE))
     for s, i in ((-1, 0), (1, -1)):                                   # corner tucks
         x_, y_ = UX[i], UY[i]
-        c.line(smooth([(x_ + s * 1, y_ - 7), (x_ + s * 4, y_), (x_ + s * 1, y_ + 7)], False), c.lw * 0.55)
+        c.line(smooth([(x_ + s * 1, y_ - 7), (x_ + s * 4, y_), (x_ + s * 1, y_ + 7)], False), c.lw * 0.55, sp.get('mouth_line', LINE), sp.get('tuck_a', 255))
 
 
 def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):

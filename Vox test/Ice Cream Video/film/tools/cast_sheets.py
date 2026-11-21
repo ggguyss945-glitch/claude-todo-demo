@@ -140,7 +140,7 @@ def sheet_sh_head():
              ('shiver', dict(h_turn=0.0, sh_m=0.56), 'red eyes, long bone mask'), ('shiver', dict(h_turn=0.25, sh_m=0.72), 'jaw to the chest, 3/4'),
              ('shiver', dict(h_turn=0.0, sh_m=1.0, sh_gape=1.0), 'the hung note: jaw gapes'), ('shiver', dict(h_turn=-0.3, sh_m=0.72), 'icicle teeth, 3/4'),
              ('shiver', dict(h_turn=0.0, sh_m=0.30), 'halfway back (shrinking)'), ('shiver', dict(h_turn=0.15), 'back to the smile')]
-    items = [(w, P_(**kw), lb) for w, kw, lb in items]
+    items = [(w, P_(sh_legcap=0.0, **kw), lb) for w, kw, lb in items]     # head states at one scale (no leg growth)
     _faces('sh_head', items, 'MISTER SHIVER: head states', 'never blinks, never lip-syncs; frost flecks on the brow; cracks like ice on a pond on the mask', light=PINKW, cols=6, cyk=0.36, sk=0.62)
 
 
@@ -257,11 +257,11 @@ def sheet_lineup():
 def sheet_faces():
     kids = [('adam', 'neutral', 'Adam: neutral'), ('adam', 'fear', 'fear'), ('adam', 'resolve', 'resolve'), ('adam', 'terrified_call', '"Dad!"'),
             ('adam', 'tender', '"Good. Shivering..."'), ('adam_in', 'guilt', '"Old people like it cold"'),
-            ('lina', 'kid_grin', 'Lina: gap-toothed grin'), ('lina', 'sleepy', 'sleepy (cold)'), ('lina', 'cold_warm', '"I\'m warm, Adam"'),
+            ('lina', 'lina_grin', 'Lina: gap-toothed grin'), ('lina', 'sleepy', 'sleepy (cold)'), ('lina', 'cold_warm', '"I\'m warm, Adam"'),
             ('lina', 'fear', 'fear'), ('lina', 'pleading', '"Don\'t leave me"'), ('lina_pj', 'kind_smile', '"You\'re not by yourself"')]
     _faces('faces_kids', [(w, P_(e), lb) for w, e, lb in kids], 'Adam and Lina: expressions', 'v3 faces: brows, lids, eyes lock on what the line is about', light=NIGHTI, cols=6)
     ads = [('dad', 'warm', 'Dad: warm ("Over.")'), ('dad', 'grim_drive', 'in the cab'), ('dad', 'shout', 'horn, again and again'),
-           ('kessler', 'stern', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', dict(expr='dazed', lid_l=0.55, lid_r=0.55, m_open=0.18, brow_up=0.0), 'out in the snow: NOT shivering (heavy lids, slack, blue-grey)'),
+           ('kessler', 'stern', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', 'hypo', 'out in the snow: NOT shivering (heavy lids, slack, blue-grey)'),
            ('kessler_out', 'sad', '"Bye, Benny."'), ('kessler', 'tender', 'cocoa: "First time anyone knocked"'), ('mom_photo', 'warm_smile', 'Mom (photo)'),
            ('shiver_mom', 'still_smile', 'HIS copy at the glass: no breath'), ('medic_a', 'focused', 'paramedic'), ('medic_b', 'calm_firm', 'paramedic')]
     _faces('faces_adults', [(w, (P_(e.pop('expr'), **e) if isinstance(e, dict) else P_(e)), lb) for w, e, lb in ads], 'Dad, Mr. Kessler, Mom, paramedics', '', light=NIGHTI, cols=6)

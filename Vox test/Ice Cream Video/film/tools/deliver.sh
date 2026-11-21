@@ -1,19 +1,19 @@
 #!/bin/bash
-# Final deliverable for the bus film from the rendered picture and the final mix (English only, no dub):
-#   <out>/If_The_School_Bus_Stops_At_Midnight_EN_1440p60_HEVC.mp4   one HEVC file (about 200 MB for the 13.3 min film at capped CRF 20 (tools/encode_chain.sh)) for upload / transfer
+# Final deliverable for the ice cream film from the rendered picture and the final mix (English only, no dub):
+#   <out>/If_The_Ice_Cream_Truck_Plays_In_Winter_EN_1440p60_HEVC.mp4   one HEVC file (about 200 MB for the 13.1 min film at capped CRF 20 (tools/encode_chain.sh)) for upload / transfer
 # The near-lossless master is the rendered picture itself (W/picture/picture.mp4, H.264 CRF 16) + mix_en.wav; no MOV copy
 # or split parts are made here, to save disk (they are three more copies of a ~4-5 GB file).
 # usage: deliver.sh <picture.mp4> <mix dir with mix_en.wav> <out dir>
 set -e
 PIC=$(realpath "$1"); MIX=$(realpath "$2"); OUT=$(realpath -m "$3")
 mkdir -p "$OUT"
-B=If_The_School_Bus_Stops_At_Midnight
+B=If_The_Ice_Cream_Truck_Plays_In_Winter
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$PIC")
 # HEVC at capped CRF 20 (as tools/encode_chain.sh: never an ABR target, it starts every file soft) keeps the grain; the AAC gets a -3 dBFS sample limiter (AAC overshoots at -1.7 dBTP)
 ffmpeg -v error -stats -y -i "$PIC" -i "$MIX/mix_en.wav" -map 0:v -map 1:a -c:v libx265 -preset faster -crf 20 \
   -x265-params log-level=error:vbv-maxrate=8000:vbv-bufsize=16000:keyint=120 -pix_fmt yuv420p -tag:v hvc1 \
   -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
   -af alimiter=limit=0.708:attack=1:release=60:level=false -c:a aac -b:a 160k -ar 48000 \
-  -metadata:s:a:0 language=eng -metadata title="If The School Bus Stops At Midnight... DON'T GET ON" \
+  -metadata:s:a:0 language=eng -metadata title="If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" \
   -t "$DUR" -movflags +faststart "$OUT/${B}_EN_1440p60_HEVC.mp4"
 ls -la "$OUT"

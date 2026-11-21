@@ -29,13 +29,13 @@ _SH_M = 1.93
 _SH_PAL = dict(
     skin='#E9E4DC', skin_sh='#B9C3CF', skin_dk='#8593a6', skin_hi='#fbf9f5', eye='#4FB3FF', eye_dk='#1f6fb8', teeth='#F3EEDC',
     teeth_sh='#c9c0a6', lip='#D9C6C6', lip_dk='#a88f93', mouth='#3a1620', mouth_m='#120A10', socket='#6f7f96',
-    pink='#E58FB4', pink_sh='#b0607f', pink_hi='#f4b4cf', white='#F7F2F4', white_sh='#c9bec8', bow='#e0709e', bow_sh='#a84a72',
+    pink='#E58FB4', pink_sh='#b0607f', pink_hi='#f4b4cf', white='#E4D8DE', white_sh='#b8acb6', bow='#e0709e', bow_sh='#a84a72',
     pin='#C9D6E3', badge='#eef3f8', badge_rim='#7f93a8', bone='#EFE9DD', bone_sh='#aeb3b8', crack='#9FB4C8', crack_dk='#5d7690',
     red='#FF2A2A', icicle='#DDEFFF', icicle_rim='#9fd0ff', leg='#6B4A32', leg_dk='#3E2A1C', leg_hi='#8f6a4a', rime='#DCE8F2',
     tip='#e3e9ee', line='#1a1418', frost='#e8f4ff')
 # the reused whistle-rig pieces (sleeves, gloves, trousers) read these keys
 _SH_WSPAL = dict(_WS_PAL, jacket=_SH_PAL['pink'], jacket_sh=_SH_PAL['pink_sh'], jacket_hi=_SH_PAL['pink_hi'],
-                 trim=_SH_PAL['white'], fur='#e9e9e6', fur_dk='#b6b9c0', fur_hi='#ffffff', glove='#EDEDED', glove_sh='#b3b8c2',
+                 trim=_SH_PAL['white'], fur='#e9e9e6', fur_dk='#b6b9c0', fur_hi='#ffffff', glove='#DEDAD4', glove_sh='#b3b8c2',
                  glove_dirt='#b3b8c2', grime=0.0, trousers='#efe9ec', trousers_sh='#bfb3bc', shoe='#3b3337', line='#1a1418')
 _SH_WSPAL['glove_sh'] = '#cdd2da'
 
@@ -57,6 +57,8 @@ POSE_DEFAULTS.update(
     sh_legcap=8.0,   # at most this many legs drawn (pour_out: the legs come last)
     sh_nolegs=0.0,   # 1: his human legs not drawn (inside the truck below the window, during the pour)
     sh_hang=0.15,    # how far the head hangs (h_nod added) when he is slung in the legs (sh_lift)
+    sh_menace=1.0,   # the monster's idle (on when sh_m >= 0.9): head tilts in moves-and-holds, the head creeps, a leg re-plants
+    sh_legs_only=0.0,  # draw only the spider legs (to lay them IN FRONT of people he cages)
 )
 for _i in range(8):
     POSE_DEFAULTS.update({'sh_t%dw' % _i: 0.0, 'sh_t%dx' % _i: 0.0, 'sh_t%dy' % _i: 0.0, 'sh_t%dz' % _i: 0.0,
@@ -81,6 +83,8 @@ def _sh_state(P):
     if g > 0:
         out['smile'] = max(out['smile'], g); out['long'] = max(out['long'], g); out['red'] = max(out['red'], g)
         out['sink'] = max(out['sink'], g)
+    if m > 0.40:     # the mouth never closes again once the icicles come (no flat 'lid' between step 4 and the jaw drop)
+        out['jaw'] = max(out['jaw'], 0.17 * ease_in_out(prog(m, 0.40, 0.50)))
     out['jaw'] = clamp(out['jaw'] + 0.12 * P.sh_gape)
     return out
 
@@ -91,7 +95,7 @@ _SH_CHIN = 14.2
 _SH_HS = 1.2                      # the head a little too big for the neck
 
 
-def _sh_mouth(W, L, sm):
+def _sh_mouth(W, L, sm, J=0.0):
     """Lip latitudes for the smile: upper(lon), lower(lon) and the corner latitude."""
     def up(lon):
         q = np.clip(np.abs(np.asarray(lon, float)) / W, 0, 1)
@@ -99,7 +103,7 @@ def _sh_mouth(W, L, sm):
 
     def lo(lon):
         q = np.clip(np.abs(np.asarray(lon, float)) / W, 0, 1)
-        return up(lon) - (0.25 + 0.10 * sm) * (1.0 - q ** 2) ** 0.75
+        return up(lon) - (0.25 + 0.10 * sm) * (1.0 - 0.55 * clamp(J / 0.6)) * (1.0 - q ** 2) ** 0.75   # dropped: a real mandible under the lip
     return up, lo
 
 
@@ -129,17 +133,23 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
 _SH_CROWN = float(-_sh_head_local(0.0, PI / 2)[1])
 
 
+def _sh_hk(st):
+    """The monster's head grows with the legs (x1.8) and is thrust toward the lens (x1.15 perspective)."""
+    nl = float(st['legs'])
+    return (1.0 + 0.80 * clamp(nl / 8.0)) * (1.0 + 0.15 * ease_in_out(prog(nl, 4.0, 7.0)))
+
+
 class _SHHead:
     """His head in the body frame, projected. The jaw (below the lower lip and its line back toward the ears) drops."""
 
     def __init__(self, R, view, P, st):
         self.R, self.view, self.P, self.st = R, view, P, st
         self.M = R['hrot']
-        self.hk = 1.0 + 0.40 * clamp(st['legs'] / 8.0)          # the monster's head grows with the legs (never a pin-head)
+        self.hk = _sh_hk(st)
         self.C = R['head'] + self.M @ np.array([0.0, -10.0 * (self.hk - 1.0), 4.0 * (self.hk - 1.0)])
         self.L = st['long']; self.J = st['jaw']; self.sm = st['smile']
         self.W = 0.98 + 0.95 * self.sm + 0.10 * self.L
-        self.up, self.lo = _sh_mouth(self.W, self.L, self.sm)
+        self.up, self.lo = _sh_mouth(self.W, self.L, self.sm, self.J)
 
     def jaw_w(self, lon, lat):
         lon = np.asarray(lon, float); lat = np.asarray(lat, float)
@@ -152,7 +162,7 @@ class _SHHead:
         L_ = _sh_head_local(lon, lat, grow, self.L).reshape(-1, 3)
         if self.J > 1e-3:
             w = self.jaw_w(np.ravel(lon), np.ravel(lat)) if jaw is None else np.full(L_.shape[0], float(jaw))
-            drop = self.J * (20.0 + 5.0 * self.L)
+            drop = self.J * (19.0 + 4.0 * self.L)
             L_ = L_ + np.stack([np.zeros_like(w), w * drop, w * (3.0 * self.J)], -1)
         return L_
 
@@ -195,7 +205,11 @@ class _SHHead:
         w = self.jaw_w(lo, la)
         self.hull_all = poly(_hull(P2), True)       # skull + dropped jaw: the cheek walls between them are filled dark
         out = []
-        for m in (w < 0.5, w >= 0.5):
+        jl = 2.3 - 1.25 * prog(self.J, 0.3, 0.8)        # the dropped jaw is its own mandible (~0.85 of the mask wide)
+        sk = w < 0.5
+        if self.J > 0.3:     # the skull ends at the jaw hinge: the back of the head no longer wraps the mouth like a capsule
+            sk = sk & ~((np.abs(lo) > min(self.W, 1.6)) & (la < float(self.lo(self.W)) - 0.08))
+        for m in (sk, (w >= 0.5) & (np.abs(lo) <= jl)):
             if m.sum() > 3: out.append(poly(_hull(P2[m]), True))
         return out
 
@@ -282,6 +296,69 @@ def _sh_tooth(c, view, hd, root, d_down, tang, wid, ln, colr, rim, lw, icy, a=25
     return path
 
 
+def _sh_icicle2d(c, x, y, ux, uy, w, ln, lw, a=255):
+    """A screen-space icicle tooth from root (x, y) along (ux, uy): thin, see-through, a pale blue rim."""
+    nx, ny = -uy, ux
+    bend = 0.12 * ln
+    pts = [(x - nx * w, y - ny * w), (x + ux * ln * 0.55 + nx * (w * 0.45 + bend * 0.3), y + uy * ln * 0.55 + ny * (w * 0.45 + bend * 0.3)),
+           (x + ux * ln + nx * bend * 0.4, y + uy * ln + ny * bend * 0.4),
+           (x + ux * ln * 0.55 - nx * (w * 0.35 - bend * 0.3), y + uy * ln * 0.55 - ny * (w * 0.35 - bend * 0.3)), (x + nx * w, y + ny * w)]
+    p = smooth(pts, True, 0.35)
+    c.fill(p, _SH_PAL['icicle'], int(225 * a / 255))
+    c.fill(_crescent(p, w * 0.35, 0), '#9fb8d6', int(150 * a / 255))
+    c.line(p, lw * 0.6, '#5d7690', int(220 * a / 255))
+    c.line(poly([(x - nx * w * 0.2 + ux * ln * 0.1, y - ny * w * 0.2 + uy * ln * 0.1), (x + ux * ln * 0.6, y + uy * ln * 0.6)], False), lw * 0.45, '#ffffff', int(200 * a / 255))
+
+
+def _sh_mandible(c, hd, view, Xu, Yu, Fu, Xl, Yl, J, k, det, light):
+    """The dropped jaw as its OWN bone piece (~0.85 of the mask wide, ~0.22 of it tall): its own outline and frost
+    crack, a dark gap up to the skull crossed by sinew and frost strands, a lower row of icicles standing up from it."""
+    pal = _SH_PAL; lw = c.lw
+    a = int(255 * k)
+    cr = np.array(view.p2(hd.p3(0.0, 1.5, 0.0, 0.0))); ch0 = np.array(view.p2(hd.p3(0.0, -1.45, 0.0, 0.0)))
+    H = float(np.linalg.norm(ch0 - cr)) or 1.0
+    ey = (ch0 - cr) / H; ex = np.array([ey[1], -ey[0]])
+    sl = np.array(view.p2(hd.p3(-1.5, -0.1, 0.0, 0.0))); sr = np.array(view.p2(hd.p3(1.5, -0.1, 0.0, 0.0)))
+    Wd = abs(float(np.dot(sr - sl, ex))) or 1.0
+    i0 = len(Xl) // 2
+    top = np.array([float(Xl[i0]), float(Yl[i0])]) - ey * 0.02 * H
+    top = top + ex * float(np.dot((sl + sr) / 2 - top, ex)) * 0.6        # centred under the mask
+    hw, hh = 0.50 * Wd, 0.22 * H
+    L_ = lambda u, v: tuple(top + ex * u + ey * v)       # noqa: E731
+    out = [L_(-hw, -0.10 * hh), L_(-hw * 0.55, 0.0), L_(0.0, 0.03 * hh), L_(hw * 0.55, 0.0), L_(hw, -0.10 * hh),
+           L_(hw * 0.92, 0.35 * hh), L_(hw * 0.70, 0.78 * hh), L_(hw * 0.32, 1.0 * hh), L_(-hw * 0.32, 1.0 * hh),
+           L_(-hw * 0.70, 0.78 * hh), L_(-hw * 0.92, 0.35 * hh)]
+    md = smooth(out, True, 0.45)
+    # sinews and frost strands across the dark gap: skull lip corners -> mandible top corners
+    ur = [(float(x), float(y)) for x, y, f in zip(Xu, Yu, Fu) if f > -0.1]
+    if len(ur) > 4:
+        for sg, run in ((-1, ur[:len(ur) // 2]), (1, ur[len(ur) // 2:][::-1])):
+            for q in range(3):
+                p0 = run[min(len(run) - 1, 1 + q * 2)]
+                p1 = L_(sg * hw * (0.95 - 0.16 * q), -0.06 * hh)
+                mid = ((p0[0] + p1[0]) / 2 + ex[0] * sg * (6 + 4 * q) * lw, (p0[1] + p1[1]) / 2 + ex[1] * sg * (6 + 4 * q) * lw)
+                c.line(smooth([p0, mid, p1], False), lw * (1.1 - 0.25 * q), '#8d98a8' if q != 1 else '#c4d3e0', int(a * 0.6))
+    c.line(md, lw * 2.0, pal['line'], a)
+    c.fill(md, pal['bone'], a)
+    bb = md.getBounds()
+    c.grad(md, top[0], top[1], top[0] + ey[0] * hh, top[1] + ey[1] * hh, [(0, '#ffffff', int(0.4 * a)), (0.4, pal['bone'], 0), (1.0, pal['bone_sh'], int(0.9 * a))])
+    if light and light.get('rim'):
+        c.fill(_crescent(md, -light.get('side', 1) * 1.6, 0), light['rim'], int(light.get('rim_a', 60) * k))
+    # the frost crack and the chin cleft
+    c.line(poly([L_(-hw * 0.30, 0.08 * hh), L_(-hw * 0.18, 0.40 * hh), L_(-hw * 0.26, 0.62 * hh), L_(-hw * 0.12, 0.90 * hh)], False), lw * 0.8, pal['crack_dk'], a)
+    c.line(poly([L_(hw * 0.45, 0.20 * hh), L_(hw * 0.32, 0.45 * hh), L_(hw * 0.40, 0.66 * hh)], False), lw * 0.6, pal['crack_dk'], int(a * 0.8))
+    c.line(smooth([L_(-hw * 0.5, 0.55 * hh), L_(0, 0.70 * hh), L_(hw * 0.5, 0.55 * hh)], False), lw * 0.7, pal['bone_sh'], int(a * 0.7))
+    c.line(md, lw * 1.2, pal['line'], a)
+    # the lower icicle row: 6 teeth standing up from the mandible's rim, 2 long fangs
+    n = 6
+    for i in range(n):
+        u = (i + 0.5) / n * 2 - 1
+        fang = i in (1, 4)
+        x0, y0 = L_(u * hw * 0.86, -0.10 * hh * u * u + 0.01 * hh)
+        ln = (0.17 if fang else 0.06 + 0.04 * hash01(i, 3711)) * H * (0.4 + 0.6 * k)
+        _sh_icicle2d(c, x0, y0, -ey[0], -ey[1], (0.045 if fang else 0.032) * Wd, ln, lw, a)
+
+
 def _sh_head_draw(c, R, view, P, det, t, light, st):
     pal = _SH_PAL
     hd = _SHHead(R, view, P, st)
@@ -318,20 +395,41 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
         idx = np.where(vm)[0]
         i0, i1 = int(idx.min()), int(idx.max()) + 1
         Xu, Yu, Fu, Xl, Yl, Fl = Xu[i0:i1], Yu[i0:i1], Fu[i0:i1], Xl[i0:i1], Yl[i0:i1], Fl[i0:i1]
+    lons_v = np.linspace(-W, W, 31)[i0:i1] if (J < 0.05 and 3 < vm.sum() < len(vm)) else lons
+    ks_ = 0.40 * ease_in_out(prog(sm, 0.5, 1.0))      # step 1: the slit runs 15-20% of the head width PAST the outline, corners hooked up
+    if ks_ > 1e-3:
+        ax_, ay_ = (Xu[0] + Xl[0]) / 2, (Yu[0] + Yl[0]) / 2; bx_, by_ = (Xu[-1] + Xl[-1]) / 2, (Yu[-1] + Yl[-1]) / 2
+        mx_, my_ = (ax_ + bx_) / 2, (ay_ + by_) / 2
+        dl_ = math.hypot(bx_ - ax_, by_ - ay_) or 1.0; ux_, uy_ = (bx_ - ax_) / dl_, (by_ - ay_) / dl_
+        q_ = (np.abs(lons_v) / max(float(np.abs(lons_v).max()), 1e-3)) ** 3
+        for XX, YY in ((Xu, Yu), (Xl, Yl)):
+            al_ = (XX - mx_) * ux_ + (YY - my_) * uy_
+            XX += ux_ * al_ * ks_ * q_; YY += uy_ * al_ * ks_ * q_
+            hook = np.abs(al_) * ks_ * 0.55 * q_ ** 1.3          # the corners hook upward (perpendicular to the slit)
+            XX += uy_ * hook; YY += -ux_ * hook
     mouth_pts = list(zip(Xu.tolist(), Yu.tolist())) + list(zip(Xl[::-1].tolist(), Yl[::-1].tolist()))
     mouth = smooth(mouth_pts, True, 0.5)
     try: mouth.setFillType(skia.PathFillType.kWinding)     # a folded lip line must never punch a see-through hole
     except Exception: pass
     ha = getattr(hd, 'hull_all', None) if J > 0.02 else None
-    if ha is not None:
-        c.line(ha, lw * 2.2, pal['line'])
-    for sp_ in sils:
+    kgap = prog(J, 0.3, 0.7)
+    if ha is not None and kgap < 0.99:
+        c.line(ha, lw * 2.2, pal['line'], int(255 * (1 - kgap)))
+    kman = prog(J, 0.3, 0.55)
+    for sp_ in (sils if kman <= 0.0 else sils[:1]):
         c.line(sp_, lw * 2.2, pal['line'])
-    if ha is not None:
-        c.fill(ha, pal['mouth_m'])         # opaque: nothing shows through the cheeks when the jaw hangs
+    if ha is not None:     # the cheek walls: a #120A10 falloff (a dark gap between skull and mandible, not a capsule)
+        c.fill(ha, pal['mouth_m'], int(255 * (1 - 0.35 * kgap)))
+        if kgap > 0.01:
+            bbh = ha.getBounds()
+            c.radial(ha, bbh.centerX(), bbh.centerY(), bbh.width() * 0.5, [(0, pal['mouth_m'], int(200 * kgap)), (0.55, pal['mouth_m'], int(150 * kgap)), (1.0, pal['mouth_m'], 0)], sy=bbh.height() / max(bbh.width(), 1.0))
     if J > 0.02:
         c.fill(mouth, pal['mouth_m'])      # under the skin silhouettes: shows in the gap between skull and jaw
-    for sp_ in sils:
+    kman = prog(J, 0.3, 0.55)
+    for k_, sp_ in enumerate(sils):
+        if k_ == 1 and kman > 0.0:
+            if kman < 1.0: c.fill(sp_, skin, int(255 * (1 - kman)))
+            continue
         c.fill(sp_, skin)
     sil_all = sils[0]
     for sp_ in sils[1:]: sil_all = union(sil_all, sp_)
@@ -363,10 +461,19 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             # the socket: a heavy dark hollow, darkest under the brow (the owner's reference)
             x_, y_, f_ = P2(s * 0.27, 0.14)
             if f_ > -0.1:
-                c.glow(x_, y_ - 0.4 * cm, 4.6 * cm * (1 + 0.25 * L), 3.4 * cm * (1 + 0.4 * L), '#3c4a63', 150 + int(100 * max(L, sink)))
-                c.glow(x_, y_ - 0.2 * cm, 2.6 * cm * (1 + 0.3 * L), 2.0 * cm * (1 + 0.5 * L), '#1a2133', 140 + int(115 * max(L, sink)))
+                kso = max(L, sink)        # normal form: only a faint cool hollow (friendly-wrong, not dead)
+                c.glow(x_, y_ - 0.4 * cm, 4.6 * cm * (1 + 0.25 * L), 3.4 * cm * (1 + 0.4 * L), mix('#aeb9c9', '#3c4a63', kso), int(90 + 160 * kso))
+                if kso > 0.01: c.glow(x_, y_ - 0.2 * cm, 2.6 * cm * (1 + 0.3 * L), 2.0 * cm * (1 + 0.5 * L), '#1a2133', int(255 * kso))
+            kap = clamp(1.0 - L / 0.5) * clamp(1.0 - sink / 0.4)
+            if kap > 0.01:            # smile-driven cheek apples: lit, raised under the eyes
+                x_, y_, f_ = P2(s * 0.30, -0.10)
+                if f_ > 0: c.glow(x_, y_, 3.8 * cm, 2.6 * cm, '#FFFDF8', int(170 * kap))
+                for run in hd.curve(s * np.linspace(0.12, 0.46, 8), -0.08 + 0.06 * np.sin(np.linspace(0, PI, 8)), 0.3):
+                    c.line(smooth(run, False), lw * 0.9, pal['skin_sh'], int(150 * kap))
         x_, y_, f_ = P2(0.0, 0.30)
         if f_ > 0: c.glow(x_, y_ - 1.5 * cm, 7.5 * cm, 1.8 * cm, '#ffffff', 70)                  # brow ridge catches the light
+        x_, y_, f_ = P2(-0.10, 0.48)
+        if f_ > 0: c.glow(x_, y_, 9.5 * cm, 4.0 * cm, '#FFFDF8', int(150 * (1 - 0.5 * L)))       # the face is the top value
         if L > 0.05:
             # the hard skull under the mask: zygoma planes under the sockets, deep temple hollows, the cheek cut-in
             for s in (-1, 1):
@@ -465,7 +572,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                         mid = (a0 + b0) / 2 + R['hrot'] @ np.array([-sg * (1.5 + 1.2 * hash01(k, 3612)), 0.0, -2.0])
                         pp = [view.p2(a0), view.p2(mid), view.p2(b0)]
                         if hd.facing(sg * W * u0, float(hd.up(W * u0))) < -0.15: continue
-                        c.line(smooth(pp, False), lw * (0.5 + 0.5 * hash01(k, 3613)), '#8f99a6', int(110 * ks))
+                        c.line(smooth(pp, False), lw * (0.9 + 0.7 * hash01(k, 3613)), '#9aa6b4', int(200 * ks))
             elif icy < 0.5:   # the gum line behind the teeth
                 for run in hd.curve(lons * 0.9, hd.up(lons * 0.9) - 0.03, 0.0, -1.0):
                     c.line(smooth(run, False), lw * 2.0, '#6e2a3a', 200)
@@ -488,18 +595,18 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                     ln = ((15.0 + 3.0 * hash01(i, 3202)) if fang else (4.5 + 3.5 * hash01(i, 3202))) * (1 - 0.30 * abs(u)) * (0.5 + 0.9 * J)
                 _sh_tooth(c, view, hd, root, dn, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
             # lower teeth (gap-toothed in the vendor grin)
-            n_lo = 7
-            for i in range(n_lo):
+            n_lo = 6 if icy < 0.5 else 7
+            for i in (range(n_lo) if kman < 0.5 else ()):
                 u = (i + 0.5) / n_lo * 2 - 1
-                if icy < 0.5 and i in (2, 4): continue            # the gaps in his lower row
+                if icy < 0.5 and i in (1, 4): continue            # 4 big separate teeth, 2 clear gaps (never a comb)
                 lon_ = u * W * 0.8
                 if hd.facing(lon_, float(hd.lo(lon_))) < -0.05: continue
                 root = hd.p3(lon_, float(hd.lo(lon_)) - 0.015, 0.0, jaw=1.0)
                 tg = _u3(hd.p3(lon_ + 0.02, float(hd.lo(lon_ + 0.02)), 0.0, 1.0) - hd.p3(lon_ - 0.02, float(hd.lo(lon_ - 0.02)), 0.0, 1.0))
                 if icy < 0.5:
                     dl_ = W * 0.8 / n_lo
-                    wid = 0.9 * float(np.linalg.norm(hd.p3(lon_ + dl_, float(hd.lo(lon_ + dl_)), 0.0, 1.0) - hd.p3(lon_ - dl_, float(hd.lo(lon_ - dl_)), 0.0, 1.0)))
-                    ln = 2.1 * (1 - 0.4 * abs(u))
+                    wid = 0.70 * float(np.linalg.norm(hd.p3(lon_ + dl_, float(hd.lo(lon_ + dl_)), 0.0, 1.0) - hd.p3(lon_ - dl_, float(hd.lo(lon_ - dl_)), 0.0, 1.0)))
+                    ln = 2.6 * (1 - 0.35 * abs(u))
                 else:
                     fang = i in (1, 5)
                     wid = (2.6 if fang else 1.8 + 0.5 * hash01(i, 3204))
@@ -522,8 +629,12 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             lo_run = [(float(x), float(y)) for x, y, f in zip(Xl, Yl, Fl) if f > -0.05]
             if len(up_run) > 1: c.line(smooth(up_run, False), lw * 1.3, pal['lip'], a_)
             if len(lo_run) > 1: c.line(smooth(lo_run, False), lw * 1.8, pal['lip'], a_)
-        c.line(mouth, lw * 1.1, pal['line'])
-        if J > 0.3:
+        if J > 0.3:      # the inner cheek walls are a falloff, never stroked: only the skull's lip edge keeps a line
+            ur_ = [(float(x), float(y)) for x, y, f in zip(Xu, Yu, Fu) if f > -0.05]
+            if len(ur_) > 1: c.line(smooth(ur_, False), lw * 1.1, pal['line'])
+        else:
+            c.line(mouth, lw * 1.1, pal['line'])
+        if 0.3 < J and kman < 0.0:   # (replaced by the explicit mandible below)
             # the dropped jaw ends in a bone mandible: a U band under the lower teeth, cracked, its own shading
             kj = prog(J, 0.3, 0.7)
             Wm = W * 0.98
@@ -541,6 +652,8 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                             c.line(poly(run, False), lw * 0.6, pal['crack_dk'], int(220 * kj))
                 c.line(band, lw * 1.1, pal['line'], int(255 * kj))
     _ms.close()
+    if kman > 0.0 and vis > -0.2:
+        _sh_mandible(c, hd, view, Xu, Yu, Fu, Xl, Yl, J, kman, det, light)
     # frost: flecks on the brow (normal), frost cracks across the mask (monster)
     if det >= 1:
         for i in range(34):
@@ -577,7 +690,12 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             c.fill(oval(x0, y0, rr * (0.55 + 0.45 * kb) * 1.15, rr * (0.55 + 0.45 * kb)), '#0d1b2a', int(255 * kb))
             c.fill(oval(x0, y0, rr * 0.8 * kb, rr * 0.75 * kb), pal['eye'], int(255 * kb))
             c.fill(oval(x0 + 0.1 * rr, y0 + 0.1 * rr, rr * 0.38 * kb, rr * 0.38 * kb), pal['eye_dk'], int(255 * kb))
-            c.fill(oval(x0 - 0.25 * rr, y0 - 0.25 * rr, rr * 0.16, rr * 0.16), '#ffffff', int(255 * kb))
+            c.fill(oval(x0 - 0.22 * rr, y0 - 0.22 * rr, rr * 0.25, rr * 0.25), '#ffffff', int(255 * kb))
+            kc_ = kb * clamp(1.0 - L / 0.5)
+            if kc_ > 0.02:       # the lower lid pushed up by the cheek: the eyes 'smile' (tiny, bright, unblinking)
+                cr_ = oval(x0, y0 + rr * 1.12, rr * 1.45, rr * 0.66)
+                c.fill(cr_, mix(pal['skin'], pal['skin_sh'], 0.12), int(255 * kc_))
+                c.line(smooth([(x0 - rr * 1.15, y0 + rr * 0.78), (x0, y0 + rr * 0.42), (x0 + rr * 1.15, y0 + rr * 0.78)], False), lw * 0.7, pal['skin_dk'], int(190 * kc_))
         if red > 0.02:
             g = red
             ri = rr * (1.0 + 1.3 * g)                    # the red iris fills ~45% of the socket
@@ -591,8 +709,11 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     if light and light.get('rim'):
         with c.clip(sil_all):
             c.fill(_crescent(sil_all, -light.get('side', 1) * 1.6, 0), light['rim'], light.get('rim_a', 60))
+    with c.clip(sil_all):     # a cool rim on the far side: the face stays the brightest thing in frame
+        rw_ = max(0.045 * r_, 1.2 * c.lw)
+        c.fill(_crescent(sil_all, -rw_, rw_ * 0.3), '#dfeaff', 200)
     with c.clip(mouth, diff=True):
-        for sp_ in sils:
+        for sp_ in (sils if kman <= 0.0 else sils[:1]):
             c.line(sp_, lw * 1.2, pal['line'])
     for dz, s, ep, pts in ears:
         if dz >= 0.45:
@@ -669,7 +790,9 @@ def _sh_torso(c, view, R, P, det, t, light, st):
                 e1 = [view.p2(_sh_surf(R, h_, math.sin(a1), 0.3, side_)[0]) for h_ in hs[::-1]]
                 c.fill(poly(e0 + e1, True), pal['pink'])
         xs = np.concatenate([r[:, 0] for r in rings])
-        c.grad(body, xs.min(), 0, xs.max(), 0, [(0, '#ffffff', 60), (0.45, pal['white'], 0), (1, pal['pink_sh'], 150)])
+        c.grad(body, xs.min(), 0, xs.max(), 0, [(0, '#ffffff', 40), (0.45, pal['white'], 0), (1, pal['pink_sh'], 150)])
+        yb_ = view.p2(_ws_spine_pt(R, 52.0)[0])[1]; yh_ = view.p2(_ws_spine_pt(R, -25.0)[0])[1]
+        c.grad(body, 0, yb_, 0, yh_, [(0, '#2a1622', 0), (1, '#2a1622', 64)])     # darker below the badge: the face leads
         if det >= 1: c.texture(body, 'fabric', 0.10, 0.6)
         # volume: the coat turns away at both sides, a cold shadow under the chest and in the waist
         c.fill(_crescent(body, 0.0, -6.0), pal['pink_sh'], 70)
@@ -853,11 +976,15 @@ def _sh_glove(c, view, R, P, s, det, t, light):
     clw = float(R['arms'][s].get('claw', 0.0))
     if clw > 0.5 and (getattr(P, 'hl_shape' if s > 0 else 'hr_shape') or 'hang') == 'hang':
         P = P.copy(); setattr(P, 'hl_shape' if s > 0 else 'hr_shape', 'claw')
-    h = _ws_hand3(R, s, P)
+    h = dict(_ws_hand3(R, s, P))
+    Wp_ = h['W']; sc_ = lambda q: Wp_ + (np.asarray(q, float) - Wp_) * 0.85      # noqa: E731  (a child's glove, not a flipper)
+    h['palm'] = [sc_(q) for q in h['palm']]; h['fingers'] = [np.array([sc_(q) for q in f]) for f in h['fingers']]
+    pc_ = np.mean(np.array(h['palm']), 0); th_ = [sc_(q) for q in h['thumb']]
+    h['thumb'] = np.array([q + (pc_ - q) * 0.38 * (k / max(len(th_) - 1, 1)) for k, q in enumerate(th_)])   # thumb turned in to the palm
     lw = c.lw
     W, f_, nb = h['W'], h['f'], h['nb']
     mk = clamp(_sh_state(P)['legs'] / 8.0)          # monster: frost-grey, dirty wool, so the mask stays the brightest value
-    g, gsh = mix('#EDEDED', '#b9bec8', mk), mix('#cdd2da', '#8f96a3', mk)
+    g, gsh = mix('#DEDAD4', '#b9bec8', mk), mix('#c4c3c4', '#8f96a3', mk)
     back = view.face(nb)[0] > 0
     paths = []
     # ribbed cuff (2 rows)
@@ -905,8 +1032,8 @@ def _sh_glove(c, view, R, P, s, det, t, light):
                     c.line(poly([(Xc[1] - uy * 6 * fc[1], Yc[1] + ux * 6 * fc[1]), (Xc[1] + uy * 6 * fc[1], Yc[1] - ux * 6 * fc[1])], False), lw * 0.6, gsh, 255)
             c.line(pth, lw * 0.5, gsh, 200)
         elif kind == 'palm':
-            if det >= 1:
-                with c.clip(pth):      # V-stitch knit texture
+            if det >= 9:
+                with c.clip(pth):      # (V-stitch read as finger bones at film size: dropped)
                     bb = pth.getBounds()
                     st_ = max(bb.width(), bb.height()) / 7.0
                     for iy in range(9):
@@ -927,12 +1054,15 @@ def _sh_glove(c, view, R, P, s, det, t, light):
                     dx, dy = p2[k + 1][0] - p2[k - 1][0], p2[k + 1][1] - p2[k - 1][1]; d = math.hypot(dx, dy) or 1.0
                     nx, ny = -dy / d * ws[k] * 0.40, dx / d * ws[k] * 0.40
                     c.line(smooth([(p2[k][0] - nx, p2[k][1] - ny), (p2[k][0] + dx / d * ws[k] * 0.16, p2[k][1] + dy / d * ws[k] * 0.16),
-                                   (p2[k][0] + nx, p2[k][1] + ny)], False), lw * 0.55, gsh, 200)
-                with c.clip(pth):
-                    for k in range(len(p2) - 1):
-                        mx, my = (p2[k][0] + p2[k + 1][0]) / 2, (p2[k][1] + p2[k + 1][1]) / 2
-                        w_ = ws[k] * 0.22
-                        c.line(poly([(mx - w_, my - w_ * 0.6), (mx, my + w_ * 0.4), (mx + w_, my - w_ * 0.6)], False), lw * 0.35, '#9aa2ae', 60)
+                                   (p2[k][0] + nx, p2[k][1] + ny)], False), lw * 0.55, gsh, 90)
+                with c.clip(pth):     # soft knit ribs along the finger (30%), never cross-stitches
+                    for off in (-0.32, 0.0, 0.32):
+                        rib = []
+                        for k in range(len(p2)):
+                            k0, k1 = max(k - 1, 0), min(k + 1, len(p2) - 1)
+                            dx, dy = p2[k1][0] - p2[k0][0], p2[k1][1] - p2[k0][1]; d = math.hypot(dx, dy) or 1.0
+                            rib.append((p2[k][0] - dy / d * ws[k] * off, p2[k][1] + dx / d * ws[k] * off))
+                        c.line(smooth(rib, False), lw * 0.4, '#9aa2ae', 75)
             c.line(pth, lw * 0.6, gsh, 230)               # finger separation: soft grey, the wool between
     if mk > 0.05 and sil is not None and det >= 1:      # frost-grey grime in the wool
         bb = sil.getBounds()
@@ -986,7 +1116,7 @@ def _sh_leg_h(c, view, R, s, det, light):
 
 
 # ---------------------------------------------------------------------------------------------------- spider legs
-_SH_LEG_L = (30.0, 165.0, 175.0, 95.0)        # coxa, femur, tibia, tarsus (cm, rig units; the rig is 244 tall): ~1.9x his height
+_SH_LEG_L = (30.0, 125.0, 135.0, 70.0)        # coxa, femur, tibia, tarsus (cm, rig units; the rig is 244 tall): ~1.9x his height
 _SH_LEG_ORDER = (1, 0, 3, 2, 5, 4, 7, 6)       # the order they punch out (his right top first)
 
 
@@ -1004,8 +1134,8 @@ def _sh_leg_rest(R, P, i):
     s = 1 if i % 2 == 0 else -1
     k = i // 2
     sp = float(P.sh_spread)
-    zz = (80.0, 30.0, -30.0, -80.0)[k]
-    xx = s * (115.0 + 30.0 * (1.5 - abs(k - 1.5))) * sp
+    zz = (28.0, 10.0, -10.0, -28.0)[k]          # tips near z=0 so they sit ON the ground line (the knees fan in depth)
+    xx = s * (70.0 + 65.0 * k) * sp
     return np.array([xx, 0.0, zz]) + np.array([0.0, 0.0, R['Hc'][2]])
 
 
@@ -1031,14 +1161,15 @@ def _sh_leg_chain(R, P, i, e):
     hd = T - C1; hd[1] = 0.0
     hdl = float(np.linalg.norm(hd))
     oh = hd / hdl if hdl > 1e-6 else out
-    kh = 0.50 + 0.24 * hash01(i, 3601)                 # every knee at its own height: never a neat row
+    kh = 0.35 + 0.60 * hash01(i, 3601)                 # every knee at its own height: never a neat row
     x_ = min(0.50 * hdl + 40.0, a_ * 0.92)
     y_ = math.sqrt(max(a_ * a_ - x_ * x_, 0.0)) * kh
-    K = C1 + oh * x_ + upv * y_
+    K = C1 + oh * x_ + upv * y_ + _rx(np.array([0.0, 0.0, (34.0, 12.0, -12.0, -34.0)[k]]), a) \
+        + upv * (18.0, 6.0, -6.0, -18.0)[k]               # each pair fans at its own angle (front pair forward-up)
     if K[1] > min(C1[1], T[1]) - 40.0:                 # keep the knee the highest point
         K[1] = min(C1[1], T[1]) - 40.0
     # the ankle joint between the knee and the needle tip, bent a little outward so all three joints read
-    A = K + (T - K) * 0.58 + _u3(out + upv * 0.5) * 24.0
+    A = K + (T - K) * 0.55 + _u3(out + upv * 0.35) * (26.0 + 16.0 * hash01(i, 3602))   # the tarsus splayed, never a stilt
     full = [Rt, C1, K, A, T]
     if e >= 0.999: return full
     # folded: the leg pressed up the back, the knee over the shoulder (punching out = unfolding fast)
@@ -1054,7 +1185,7 @@ def _sh_leg_chain(R, P, i, e):
     return out_l
 
 
-_SH_LEG_W = ((18.0, 15.0), (15.0, 9.5), (10.0, 5.0), (5.0, 0.4))     # coxa, femur, tibia, tarsus: heavy, to a needle
+_SH_LEG_W = ((24.0, 19.0), (24.0, 16.0), (16.0, 8.0), (8.0, 0.6))     # coxa, femur, tibia, tarsus: heavy, to a needle
 
 
 def _sh_leg_e(n, j):
@@ -1208,7 +1339,7 @@ def _sh_rime(c, X, Y, r, seed, px, lw):
     """Frost rime crusted on the top half of a joint: an irregular crust of small blobs, a soft cold glow, and two or
     three tiny icicles hanging from its lower edge."""
     pal = _SH_PAL
-    c.glow(X, Y - r * 0.2, r * 1.6, r * 1.3, '#e8f4ff', 40)
+    c.glow(X, Y - r * 0.2, r * 1.4, r * 1.1, '#c4d3e0', 22)
     crust = None
     nbl = 5 + int(4 * hash01(seed, 3521))
     for k in range(nbl):
@@ -1218,7 +1349,7 @@ def _sh_rime(c, X, Y, r, seed, px, lw):
         crust = b if crust is None else union(crust, b)
     cap = oval(X, Y - r * 0.35, r * 0.75, r * 0.45)
     crust = union(crust, cap)
-    c.fill(crust, pal['rime'], 230)
+    c.fill(crust, '#c4d3e0', 150)
     c.fill(_crescent(crust, 0, -r * 0.18), '#9fb4c8', 150)
     c.line(crust, max(lw * 0.45, 0.7 * px), '#7f93a8', 200)
     for k in range(2 + int(hash01(seed, 3524) * 2)):
@@ -1229,7 +1360,7 @@ def _sh_rime(c, X, Y, r, seed, px, lw):
         ln = min(ln, 4.0 * px) if r < 8 * px else ln
         w_ = max(ln * 0.32, 0.9 * px)
         ic = poly([(x0 - w_, y0), (x0 + w_, y0), (x0 + 0.1 * w_, y0 + ln)], True)
-        c.fill(ic, '#eef6ff', 240); c.line(ic, max(lw * 0.3, 0.5 * px), '#7f93a8', 180)
+        c.fill(ic, '#c4d3e0', 160); c.line(ic, max(lw * 0.3, 0.5 * px), '#7f93a8', 140)
 
 
 # ---------------------------------------------------------------------------------------------------- the figure
@@ -1249,8 +1380,8 @@ def _sh_rig(P, st):
     R['head'] = R['head'] + ext
     R['neck'] = [R['neck'][0], R['neck'][1] + ext]
     R['mouth'] = R['mouth'] + ext
-    if kf > 0.01:           # the head pushed forward toward the lens and a little down, out of the leg cage
-        fw = np.array([0.0, 12.0 * kf, 28.0 * kf])
+    if kf > 0.01:           # the head pushed forward toward the lens and down: the crown overlaps the chest, never the reverse
+        fw = np.array([0.0, 30.0 * kf, 40.0 * kf]) if P.sh_lift > 40.0 else np.array([0.0, 12.0 * kf, 28.0 * kf])
         R['head'] = R['head'] + fw; R['mouth'] = R['mouth'] + fw
         R['neck'] = [R['neck'][0], R['neck'][1] + fw]
     a12 = R['a1'] + R['a2']
@@ -1260,7 +1391,8 @@ def _sh_rig(P, st):
         if clamp(getattr(P, 'ws_lw' if s_ > 0 else 'ws_rw')) > 0.05: continue
         S = arm['S']; W = arm['W']
         if kf > 0.01:
-            Wc = R['head'] + np.array([s_ * 30.0, 22.0, 10.0])
+            hk_ = _sh_hk(st)       # claws at the sides of the dropped jaw, never across the face
+            Wc = R['head'] + np.array([s_ * (55.0 + 34.0 * (hk_ - 1.0)), 50.0 + 40.0 * (hk_ - 1.0), 18.0])   # beside the mandible
             W = W + (Wc - W) * kf
             pole = _u3(np.array([s_ * 0.85, 0.45, -0.25]))
         else:
@@ -1321,14 +1453,27 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         if stt.get('fz', 1) <= -0.05: _sh_neck(cc_, view, R, st)
         if stt.get('fz', 1) > -0.05: _sh_collar(cc_, view, R, P, det, stt.get('fz', 1))
         _sh_head_draw(cc_, R, view, P, det, t, light, st)
-    items.append((max(zh, zt + 1.0) if view.depth(_rx(np.array([0.0, 0.0, 1.0]), R['a'])) > -0.2 else zh - 2.0, head))
+    back_view = abs(float(P.turn)) > 1.22          # |yaw| > 110 deg: the only time the body may cover the head
+    mon = (st['legs'] > 0.01 or float(P.sh_m) > 0.48) and not back_view
+    items.append((max(zh, zt + 1.0) if (mon or view.depth(_rx(np.array([0.0, 0.0, 1.0]), R['a'])) > -0.2) and not back_view else zh - 2.0, head))
+    arm_fns = []
     for s in (-1, 1):
         arm = R['arms'][s]
         za = (view.depth(arm['S']) + view.depth(arm['J'][0]) + 2 * view.depth(arm['W'])) / 4
         hands = not (skip in (2, s))
         items.append((za + 0.02 * s, lambda cc_, s=s, hands=hands: _sh_arm(cc_, view, R, P, s, det, t, light, hands)))
+        arm_fns.append(items[-1][1])
+    li = []
     if st['legs'] > 0.01:
-        items += _sh_leg_items(view, R, P, st, det, light, zt)
+        li = _sh_leg_items(view, R, P, st, det, light, zt)
+        items += li
+        if st['legs'] > 4.0 and li:     # the arms beside the jaw IN FRONT of the front leg pair
+            zmax = max(q[0] for q in li) + 1.0
+            clawed = max(float(R['arms'][s_].get('claw', 0.0) or 0.0) for s_ in (-1, 1)) > 0.3
+            items = [((zmax + 0.2 if (clawed and q[1] in arm_fns) else q[0]), q[1]) for q in items]
+    if mon:     # the monster's face is the point: the head is ALWAYS drawn last (nothing of his own ever crosses the mask)
+        zmax = max(q[0] for q in items)
+        items = [((zmax + 1.0 if q[1] is head else q[0]), q[1]) for q in items]
     items.sort(key=lambda q: q[0])
     dark = clamp((light or {}).get('dark', 0.0))
     if dark > 0.01:
@@ -1339,6 +1484,9 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         cv.restore()
         _sh_glow_feats(cc, R, view, P, st, 0.4 + 0.6 * dark)
         return R
+    if P.sh_legs_only > 0.5:
+        lf = set(id(q[1]) for q in (li if st['legs'] > 0.01 else []))
+        items = [q for q in items if id(q[1]) in lf]
     for z, fn in items: fn(cc)
     return R
 
@@ -1683,7 +1831,8 @@ for _w in ('kessler', 'kessler_out', 'kessler_am'):
 CAST['kessler_out'].update(skin=mix(CAST['kessler_out']['skin'], '#B9C3CF', 0.38), skin_sh=mix(CAST['kessler_out'].get('skin_sh', '#a88a7c'), '#8593a6', 0.4),
                            blush=mix(CAST['kessler_out'].get('blush', '#d98d80'), '#B9C3CF', 0.6))
 # Dad: heavier stubble
-CAST['dad']['stub'] = 0.85
+CAST['dad']['stub'] = 1.0
+CAST['dad']['stubble'] = '#2e2018'
 
 
 ICE_CAST = ('shiver', 'adam', 'adam_in', 'adam_sock', 'lina', 'lina_pj', 'dad', 'kessler', 'kessler_out', 'kessler_am',
@@ -1783,7 +1932,7 @@ def _sh_world_cm(self, P, wx, wy, zd=0.0):
     return q if q is not None else np.zeros(3)
 
 
-def _sh_leg_to(self, t0, i, target, dur=0.35, hold=0.8, back=0.5, arc=70.0, zd=40.0, ev='leg_stab'):
+def _sh_leg_to(self, t0, i, target, dur=0.35, hold=0.8, back=0.5, arc=70.0, zd=0.0, ev='leg_stab'):
     """Leg i's needle tip goes to a world target (x, y) / callable / (actor, part): a fast stab (snow, a coat, a
     blanket, under a door), holds, and goes back (back=None: stays). 'leg_stab' at contact."""
     t1 = t0 + dur; t2 = t1 + hold
@@ -1800,7 +1949,7 @@ def _sh_leg_to(self, t0, i, target, dur=0.35, hold=0.8, back=0.5, arc=70.0, zd=4
     return [self._ev(t1, ev, 0.0, leg=i)]
 
 
-def _sh_legs_plant(self, t0, targets, stagger=0.07, dur=0.22, zd=40.0):
+def _sh_legs_plant(self, t0, targets, stagger=0.07, dur=0.22, zd=0.0):
     """Plant several legs on world points {i: (x, y)} (a roof, the snow round the kids), one click each."""
     evs = []
     for k, (i, tg) in enumerate(sorted(targets.items())):
@@ -1852,7 +2001,7 @@ def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.42, lift=6
             sw = clamp((fr - (1 - swing)) / swing)
             tipx = self.x0 + ox + spot0 + (spot1 - spot0) * ease_in_out(sw)
             gy = ground(tipx) if ground is not None else by
-            q = _sh_world_cm(self, P, tipx, gy, rc[2])
+            q = _sh_world_cm(self, P, tipx, gy, 0.0)      # planted tips at z=0: on the surface line, never floating
             setattr(P, 'sh_t%dw' % i, 1.0); setattr(P, 'sh_t%dx' % i, q[0]); setattr(P, 'sh_t%dy' % i, q[1]); setattr(P, 'sh_t%dz' % i, q[2])
             setattr(P, 'sh_t%dlift' % i, 55.0 * math.sin(PI * sw))
     self._add(t0, None, fn)
@@ -1891,10 +2040,16 @@ def _sh_drop_to(self, t0, dur=0.45, from_dy=-400.0, land=None):
     return [self._ev(t0 + dur, 'sh_land', 2.0)] + [self._ev(t0 + dur + 0.04 * k, 'leg_click', -3.0, leg=k) for k in range(4)]
 
 
-def _sh_cage(self, t0, center, width, ground_y, dur=0.5, lift=150.0):
-    """Legs arched over people like a cage: tips planted in a ring round `center` (world x) on ground_y; he hangs above."""
+def _sh_cage(self, t0, center, width, ground_y, dur=0.5, lift=85.0):
+    """Legs arched over people like a cage: tips planted in a ring round `center` (world x) on ground_y; he hangs slung
+    in the legs (lift clamped 80-90 cm, his own legs tucked, the torso pitched, the head brought down to their heads).
+    Draw him BEHIND the people, then the legs again in front with sh_legs_only=1 (see clip sh_hook_blanket_cage)."""
+    lift = min(max(float(lift), 80.0), 90.0)
+
     def fl(P, t):
-        if t >= t0: P.sh_lift = max(P.sh_lift, lift * ease_in_out(prog(t, t0, t0 + dur)))
+        if t >= t0:
+            k = ease_in_out(prog(t, t0, t0 + dur))
+            P.sh_lift = max(P.sh_lift, lift * k); P.sh_nolegs = max(P.sh_nolegs, k); P.sh_hang = max(P.sh_hang, 0.15)
     self._add(t0, None, fl)
     tg = {}
     for j, i in enumerate(_SH_LEG_ORDER):
@@ -1990,6 +2145,57 @@ Acting.hang_hatch = _sh_hang
 Acting.jaw_gape = _sh_jaw_gape
 
 
+def _sh_menace_layer(P, t):
+    """The monster never holds still (on by default once sh_m >= 0.9 or legs are out; sh_menace=0 turns it off): the head
+    tilts in quick 0.4 s moves with holds (+-6 deg), the head creeps toward the lens and back on a slow 5 s cycle, the
+    jaw strains, and one needle lifts and re-plants every ~0.58 s (never sliding: the same spot)."""
+    k = float(P.sh_menace)
+    if k <= 0.01 or max(float(P.sh_m), float(P.sh_legs) / 8.0, float(P.sh_glim)) < 0.9: return
+    seg = math.floor(t / 1.1); u = ease_in_out(prog(t - seg * 1.1, 0.0, 0.4)); seg += 100000
+    a0 = (hash01(seg, 3801) - 0.5) * 12.0; a1 = (hash01(seg + 1, 3801) - 0.5) * 12.0
+    P.h_tilt += k * (a0 + (a1 - a0) * u)
+    P.h_nod += k * 0.04 * ((hash01(seg, 3802) - 0.5) + (hash01(seg + 1, 3802) - hash01(seg, 3802)) * u)
+    P.sh_neck += k * 9.0 * (0.5 - 0.5 * math.cos(2 * PI * t / 5.0))
+    per = 0.58; sg = math.floor(t / per); uu = prog(t - sg * per, 0.0, 0.24); sg += 100000
+    i = int(hash01(sg, 3803) * 8) % 8
+    if 0.0 < uu < 1.0:
+        setattr(P, 'sh_t%dlift' % i, getattr(P, 'sh_t%dlift' % i) + k * 28.0 * math.sin(PI * uu))
+
+
+_sh_acting_init_prev = Acting.__init__
+
+
+def _sh_acting_init(self, who='officer', *a, **kw):
+    _sh_acting_init_prev(self, who, *a, **kw)
+    if CAST.get(who, {}).get('shiver'): self._add(-INF, None, _sh_menace_layer, late=True)
+
+
+Acting.__init__ = _sh_acting_init
+
+
+def _sh_menace(self, t0, t1, every=0.58):
+    """Sound events for the default menace idle's re-plants between t0 and t1 ('leg_click', soft)."""
+    evs = []
+    tt = math.ceil(t0 / every) * every
+    while tt < t1:
+        evs.append(self._ev(tt + 0.24, 'leg_click', -9.0, leg=int(hash01(math.floor(tt / every + 1e-6) + 100000, 3803) * 8) % 8))
+        tt += every
+    return evs
+
+
+def _fear_body(self, t0, t1=None, k=1.0, sib=None):
+    """Kids' fear in the BODY (not a scared jiggle): shoulders up, chin down, knees soft, a quick 0.9 Hz breath."""
+    def fn(P, t):
+        w = k * ease_in_out(prog(t, t0, t0 + 0.35)) * (1.0 if t1 is None else 1.0 - ease_in_out(prog(t, t1, t1 + 0.4)))
+        P.shrug += 0.40 * w + 0.07 * w * math.sin(2 * PI * 0.9 * t)
+        P.h_nod += 0.07 * w; P.lean -= 0.02 * w
+    return self._add(t0, None if t1 is None else t1 + 0.4, fn, real=True)
+
+
+Acting.menace = _sh_menace
+Acting.fear_body = _fear_body
+
+
 # ---------------------------------------------------------------------------------------------------- ICE face overrides
 # (this film only: characters_ice.py is exec'd in the characters namespace, so these rebinds reach the shared drawing)
 for _k, _v in EXPR.items():                   # no cartoon sweat drops at minus forty
@@ -1999,9 +2205,13 @@ EXPR.update({
     'sleepy': dict(eye_open=0.55, brow_sad=0.3, h_nod=0.12, m_open=0.07, smile=-0.12, pale=0.6, blush=-1.1),
     'cold_warm': dict(eye_open=0.6, pupil=1.25, brow_sad=0.2, m_open=0.12, smile=0.06, pale=0.6, blush=-1.1, lock=0.0),
     # "Dad!": a wide open shout with the upper teeth, not a narrow slot
-    'terrified_call': dict(m_open=0.85, m_round=0.5, m_wide=0.45, teeth=0.55, brow_sad=0.9, brow_up=0.7, wide=0.7, pupil=0.4, tremble=0.3),
+    'terrified_call': dict(m_open=0.85, m_round=0.2, m_wide=0.85, teeth=0.55, brow_sad=0.9, brow_up=0.7, wide=0.7, pupil=0.4, tremble=0.3),
     # fear: more white round a smaller iris, the mouth corners pulled down
-    'fear': dict(EXPR.get('fear', {}), wide=0.8, pupil=0.36, smile=-0.55, sweat=0.0),
+    'fear': dict(EXPR.get('fear', {}), wide=0.8, pupil=0.36, smile=-0.55, sweat=0.0, m_open=0.15, m_round=0.2),
+    # Lina's big gap-toothed grin (two front teeth, a clear centre gap)
+    'lina_grin': dict(smile=0.9, teeth=1.0, m_open=0.42, m_wide=0.3, brow_up=0.35, squint=0.12, pupil=1.0),
+    # severe hypothermia (NOT shivering): drowsy half-lids, a slack oval mouth with the corners down, pale blue-grey
+    'hypo': dict(eye_open=0.5, brow_sad=0.3, smile=-0.3, m_open=0.18, m_round=0.4, h_nod=0.1, pale=0.6, blush=-1.1),
     # grumpy (Kessler): heavy upper lids over the iris, inner brows down, mouth corners down
     'grumpy': dict(eye_open=0.68, squint=0.2, brow_angry=0.5, brow_sad=0.1, smile=-0.3, m_press=0.45, pupil=0.95),
 })
@@ -2029,7 +2239,49 @@ def _wrinkles(c, hm, sp, P, det, sh):
 
 
 for _w in ('adam', 'adam_in', 'adam_sock', 'lina', 'lina_pj', 'walter58', 'benny'):
-    if _w in CAST: CAST[_w].update(kidface=True, fold_k=0.0)
+    if _w in CAST: CAST[_w].update(kidface=True, fold_k=0.0, mouth_in='#5a2a30', mouth_dk=0.55, mouth_line='#4a2428', tuck_a=110)
+
+_mouth_geom_base = _mouth_geom
+
+
+def _mouth_geom(sp, P, t):
+    """Kids: a wide-open shout is a rounded D (never a narrow V 'tongue' slot)."""
+    upper, lower, cy, hw, oh = _mouth_geom_base(sp, P, t)
+    o = clamp(P.m_open)
+    if sp.get('kidface') and o > 0.45:
+        k = clamp((o - 0.45) / 0.3)
+        (xr, yr), (x1, y1), (x0, y0), (x3, y3), (xl, yl) = lower
+        lower = [(xr, yr), (x1 + (hw * 0.88 - x1) * k, y1 + (y0 - 0.12 * (y0 - yr) - y1) * k), (x0, y0),
+                 (x3 + (-hw * 0.88 - x3) * k, y3 + (y0 - 0.12 * (y0 - yl) - y3) * k), (xl, yl)]
+    return upper, lower, cy, hw, oh
+
+_teeth_row_base = _teeth_row
+
+
+def _teeth_row(c, hm, sp, X, Y, th, direction, det, P, hw):
+    """Kids: the upper teeth as ONE flat band (never triangular corner 'fangs'); Lina's two front teeth with a clear
+    centre gap; no lower comb."""
+    if not sp.get('kidface'): return _teeth_row_base(c, hm, sp, X, Y, th, direction, det, P, hw)
+    if direction < 0: return
+    X = np.asarray(X, float); Y = np.asarray(Y, float)
+    n = len(X)
+    if n < 3 or abs(X[-1] - X[0]) < 4: return
+    k0, k1 = int(n * 0.12), int(math.ceil(n * 0.88))
+    Xs, Ys = X[k0:k1], Y[k0:k1]
+    hgt = th * (1.25 if sp.get('gap') else 0.95)
+    band = _pts_path(np.concatenate([Xs, Xs[::-1]]), np.concatenate([Ys - 3, (Ys + hgt)[::-1]]), True, 0.6)
+    c.fill(band, '#f1ece0')
+    if det >= 1: c.fill(_crescent(band, 0, -hgt * 0.25), '#c9bfae', 150)
+    xm = float(np.mean(X)); ym = float(np.interp(xm, Xs if Xs[-1] > Xs[0] else Xs[::-1], Ys if Xs[-1] > Xs[0] else Ys[::-1]))
+    tw = max(abs(Xs[-1] - Xs[0]) * 0.16, 3.0)
+    if sp.get('gap'):          # Lina: two big front teeth and the gap between them
+        gw = tw * 0.32
+        c.fill(rect(xm - gw / 2, ym - 2, gw, hgt * 1.1), sp.get('mouth_in', '#2a0e11'))
+        for s in (-1, 1):
+            c.line(poly([(xm + s * (gw / 2 + tw), ym), (xm + s * (gw / 2 + tw), ym + hgt * 0.9)], False), c.lw * 0.35, '#a99d88', 200)
+    else:
+        c.line(poly([(xm, ym), (xm, ym + hgt * 0.9)], False), c.lw * 0.35, '#a99d88', 160)
+    c.line(_pts_path(Xs, Ys + hgt, False, 0.6), c.lw * 0.4, '#8e8470', 200)
 
 
 # ---------------------------------------------------------------------------------------------------- ICE knit hats
@@ -2130,15 +2382,18 @@ def _hair_region(c, hm, sp, P, det, sil, t):
             for yy in np.linspace(-58.0, 30.0, 9):
                 w_ = float(hm.W(min(yy, 119.0)))
                 rb = clamp((yy - 10.0) / 20.0)                     # rounded bottom
-                xo, yo, vo = hm.map1(s * (w_ + 13.0 - 6.0 * rb), yy, 4.0)
-                xi, yi, vi = hm.map1(s * max(w_ - 3.0 + 4.0 * rb, 6.0), yy, 6.0)
+                tp = clamp((yy + 58.0) / 40.0)                     # a rounded trapezoid: narrow at the cuff, wide at the jaw
+                xo, yo, vo = hm.map1(s * (w_ + 8.0 + 14.0 * tp - 8.0 * rb), yy, 4.0)
+                xi, yi, vi = hm.map1(s * max(w_ - 6.0 - 10.0 * tp + 6.0 * rb, 6.0), yy, 6.0)
                 pts_o.append((xo, yo)); pts_i.append((xi, yi))
             xs = [p[0] for p in pts_o]
             flap = smooth(pts_o + pts_i[::-1], True, 0.7)
-            c.fill(flap, cc)
+            c.fill(flap, '#5a3d28')                          # the crown's knit colour, hanging from the cuff
             with c.clip(flap):
                 c.fill(_crescent(flap, -s * 6, 0), csh, 120)
-            c.line(smooth(pts_o[3:] + [pts_i[-1]], False), c.lw * 2.6, fl)  # fleece trim round the lower edge
+                c.line(smooth(pts_i[2:] + pts_o[-2:][::-1], False), c.lw * 3.4, fl, 235)   # cream fleece: an inner border only
+                for k in range(1, 4):                       # knit ribs
+                    c.line(smooth([(pts_o[j][0] * (1 - k / 4) + pts_i[j][0] * k / 4, pts_o[j][1] * (1 - k / 4) + pts_i[j][1] * k / 4) for j in range(1, 8)], False), c.lw * 0.4, csh, 150)
             c.line(flap, c.lw)
 
 CAST['adam']['ice_hat'] = 'cuff'; CAST['adam_sock']['ice_hat'] = 'cuff'
@@ -2146,3 +2401,9 @@ CAST['lina']['ice_hat'] = 'pom'
 CAST['dad']['ice_hat'] = 'flaps'
 CAST['walter58']['ice_hat'] = 'flat'
 CAST['kessler']['hair_c'] = CAST['kessler_out']['hair_c'] = CAST['kessler_am']['hair_c'] = '#cfcac2'
+
+
+# kids' legs ~30% fuller at the thigh (never stick-legged dolls beside the adults)
+for _w in ('adam', 'adam_in', 'adam_sock', 'lina', 'lina_pj', 'walter58', 'benny'):
+    if _w in CAST and isinstance(CAST[_w].get('body'), dict) and 'leg' in CAST[_w]['body']:
+        _b = dict(CAST[_w]['body']); _l0, _l1 = _b['leg']; _b['leg'] = (_l0 * 1.3, _l1 * 1.1); CAST[_w]['body'] = _b
