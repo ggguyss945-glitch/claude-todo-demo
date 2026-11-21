@@ -1,6 +1,14 @@
 """Catalogue of the owner's Epidemic Sound downloads (licensed through the owner's subscription; never commit or copy
 the audio out of the sample folders).
 
+    python3 epidemic_catalog.py --ice                 THIS film ("If The Ice Cream Truck Plays Its Song In Winter...
+                                                      DON'T GO OUTSIDE"): writes audio/catalog_epidemic_ice.json from
+                                                      W/samples/epidemic_ice (the owner's new set: sfx/ 54 effects, music/
+                                                      14 tracks) FIRST, then the bus, doctor, bunny, dummy, delivery,
+                                                      police and mirror sets linked beside it (read only; rows of
+                                                      unchanged files are reused from the bus catalogue). The film's
+                                                      source names are ICE_MAP (sfx.py's ICE block draws on them).
+
     python3 epidemic_catalog.py --bus                 THIS film ("If The School Bus Stops At Midnight... DON'T GET ON"):
                                                       writes audio/catalog_epidemic_bus.json from W/samples/epidemic_bus
                                                       (the bus set: sfx/ 98 effects, music/ 11 tracks) FIRST, then the
@@ -95,6 +103,16 @@ BUS_SETS = [('bus', os.path.join(W, 'samples', 'epidemic_bus')),
             ('police', os.path.join(W, 'samples', 'epidemic_police')),
             ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
 BUS_OUT = os.path.join(HERE, 'catalog_epidemic_bus.json')
+# the Ice Cream film: the owner's new set (sfx/ + music/) first, then every earlier set linked beside it
+ICE_SETS = [('ice', os.path.join(W, 'samples', 'epidemic_ice')),
+            ('bus', os.path.join(W, 'samples', 'epidemic_bus')),
+            ('doctor', os.path.join(W, 'samples', 'epidemic_doctor')),
+            ('bunny', os.path.join(W, 'samples', 'epidemic_bunny')),
+            ('dummy', os.path.join(W, 'samples', 'epidemic_dummy')),
+            ('delivery', os.path.join(W, 'samples', 'epidemic_delivery')),
+            ('police', os.path.join(W, 'samples', 'epidemic_police')),
+            ('mirror', os.path.join(W, 'samples', 'epidemic_mirror'))]
+ICE_OUT = os.path.join(HERE, 'catalog_epidemic_ice.json')
 AUDIO_EXT = ('.wav', '.mp3', '.flac', '.ogg')
 NOTES = 'C C# D D# E F F# G G# A A# B'.split()
 
@@ -355,6 +373,47 @@ NOT = {'whoosh': ['blade', 'sword', 'axe'], 'impact_hit': ['valve', 'shield', 'a
 NOT.update({'kids_chatter': ['scream', 'playground'], 'pa_crackle': ['guitar'], 'whistle': ['aztec', 'toy'],
             'walkie': ['voices_futzed_ai'], 'bus_pull_away': ['reverse_beeps'], 'cloth_rip': ['velcro'],
             'tape_skip': ['sega'], 'kids_chatter_': []})
+# the Ice Cream film: source names (sfx_ice.py recipes draw on these through sfx._has / src); the bus film's keys
+# above stay for the older recipes only. Verdicts and reasons: W/mix/sfx_review.md (audio/review_sfx.py ICE_DECISIONS)
+ICE_MAP = {
+    'ice_wind': [['wind', 'winter']],
+    'ice_creaks': [['eerie_wood_creaks'], ['abandoned_wooden_house', 'creaks']],
+    'ice_snow_walk': [['footsteps', 'snow', 'walk'], ['boots_snow_walk']],
+    'ice_snow_run': [['footsteps', 'snow', 'run']],
+    'ice_snow_scuff': [['snow_scuff']],
+    'ice_shovel_scrape': [['manual_snow_plow', 'metal'], ['manual_snow_plow_plastic']],
+    'ice_shovel_dig': [['shovel_dig_in_snow']],
+    'ice_metal_scrape': [['metal_friction_scrape']],
+    'ice_lorry': [['freight_truck_lorry_moving'], ['truck_passby']],
+    'ice_air_horn': [['air_horn']],
+    'ice_van_idle': [['van', 'idle']],
+    'ice_serving_window': [['plastic_sliding_window']],
+    'ice_house_window': [['windows_wood']],
+    'ice_glass_break': [['glass_break']],
+    'ice_ice_break': [['ice_break']],
+    'ice_ice_crackle': [['ice_friction'], ['ice_movement_ice_crackle'], ['ice_cracking_push']],
+    'ice_furnace': [['wall_heater_furnace'], ['hvac_boiler']],
+    'ice_power_down': [['power_down']],
+    'ice_light_switch': [['light_switch']],
+    'ice_static': [['static_radio_station_search'], ['walkie_talkie_white_noise_hiss']],
+    'ice_squelch': [['walkie_talkie_squelch_stuttering'], ['walkie_talkie_engage'], ['radio_device_turn_on']],
+    'ice_bone': [['gore', 'bone']],
+    'ice_hatch': [['wood_hatch'], ['metal_hatch']],
+    'ice_towel': [['towel']],
+    'ice_cloth': [['cloth_movement'], ['cloth_misc_scrape'], ['cloth_flap_towel'], ['fight_grab_punch_cloth']],
+    'ice_cloth_rip': [['cloth_rip']],
+    'ice_siren': [['siren_ambulance']],
+    'ice_mug': [['cup_mug'], ['teacup'], ['tea_cup']],
+    'ice_door_creak': [['doors_creak']],
+    'ice_metal_click': [['mechanical_click_metal'], ['crocodile_clip'], ['seat_belt_click']],
+    'ice_door_kick': [['doors_wood_kick_open_internal'], ['doors_wood_impact_light_door']],
+    'ice_fridge_hum': [['refrigerator_low_hum'], ['fridge_hum']],
+}
+MAP.update(ICE_MAP)
+# the Ice Cream film's rejects (W/mix/sfx_review.md): the skip lorry's reverse tone is a modern beeper; the rural
+# ambience carries cicadas (summer insects on a minus-thirty night); the 'scifi' power-down is a laser-gun sweep
+NOT.update({'ice_lorry': ['reverse_tone'], 'ice_creaks': ['cicadas'], 'ice_power_down': ['scifi'],
+            'ice_cloth': ['hugging']})
 # every REJECT of W/mix/sfx_review.md stays out of every name, older names included
 for _k in MAP:
     NOT.setdefault(_k, [])
@@ -521,7 +580,7 @@ def build(sets, out, sfx_only=False, reuse=()):
                 else:
                     print(f'  {kind} {set_name}: {f}', flush=True)
                     e = (sfx_entry if kind == 'sfx' else music_entry)(meter, p, set_name, slug)
-                if kind == 'sfx' and set_name == 'bus' and _is_music(f):
+                if kind == 'sfx' and set_name in ('bus', 'ice') and _is_music(f):
                     e['stray'] = 'a music track in the effects folder'; e['serves'] = []   # never an SFX
                 cat[kind].append(e)
                 seen_slug[(kind, slug)] = e; seen_fp[(kind, fp)] = e
@@ -544,7 +603,9 @@ def build(sets, out, sfx_only=False, reuse=()):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     so = '--sfx-only' in sys.argv
-    if '--bus' in sys.argv:
+    if '--ice' in sys.argv:
+        build(ICE_SETS, ICE_OUT, so, reuse=() if '--no-reuse' in sys.argv else (ICE_OUT, BUS_OUT, DOCTOR_OUT))
+    elif '--bus' in sys.argv:
         build(BUS_SETS, BUS_OUT, so, reuse=() if '--no-reuse' in sys.argv else (
             BUS_OUT, DOCTOR_OUT, os.path.join(HERE, 'catalog_epidemic_bunny.json'), DUMMY_OUT, DELIVERY_OUT))
     elif '--doctor' in sys.argv:

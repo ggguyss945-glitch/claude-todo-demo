@@ -140,3 +140,11 @@ Every step re-reads your whole context, so its size is the cost.
 - The camera code capped planned pushes at 1.8x, so wide shots kept people tiny. That is fixed (max 4x): use it.
 - Scares covered their own words. Leave short scare beats in the voice edit so a hit lands just after its word.
 - Two agents once edited the same voice files at the same time. Each teammate owns only the files its job names.
+
+## TIMING (owner, 21 Nov): the owner hoped for 13:00 UTC, but said "do not lose quality chasing speed"
+- QUALITY COMES FIRST. Never skip a quality check, a self-review of your renders, or a fix you know is needed.
+- Speed comes only from parallel work and from not gold-plating:
+  - no optional extra sheets;
+  - no third polish passes on things that already look right;
+  - no long idle waits.
+- Targets: voice about 10:15, cast about 10:40, sets about 10:45, film by about 12:00, then the mix, a review round and the final render.

@@ -27,7 +27,7 @@ sys.path.insert(0, HERE)
 import sfx as SX                                            # noqa: E402
 
 W = SX.W
-SET = os.path.join(W, 'samples', 'epidemic_bus')
+SET = os.path.join(W, 'samples', 'epidemic_ice')     # THIS film: the Ice Cream film's new set
 OUT = os.path.join(W, 'mix', 'review')
 MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 SR = 48000

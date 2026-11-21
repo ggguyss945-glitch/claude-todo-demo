@@ -45,7 +45,7 @@ Test: python3 tools/vo_voices.py --test [who|tag|voice ...]
 import numpy as np
 
 SR = 48000
-NAR_F0 = 172.0                                         # the narrator's median F0 (Hz), measured on the take
+NAR_F0 = 168.5                                         # the narrator's median F0 (Hz), measured on the take
 FP = 1.0                                               # WORLD frame period (ms)
 PAD = 0.040                                            # silence padded around a line for the analysis (s)
 FRY = 0.8                                              # frames this many octaves under the line's median are creak
@@ -61,118 +61,75 @@ UNV = 0.35                                             # share of the formant wa
 # Tape (optional): wow: (Hz, depth) pitch+formant warble; sag: (s, semitones) pitch+formant fall over the line's last
 # voiced seconds; morph: (voice, from, to) a glide into another voice over that share of the voiced span; tape: (from,
 # speed) playback slowed from that share of the speech to its end, down to that speed (the word gets longer).
-_D = dict(rng=0.85, comp=0.42, smooth=0.0, alpha=1.03, jit=0.010, under=None,
-          eq=[('peak', 280, 1.2, 0.9), ('hs', 6000, -1.5, 0.7)])
-_W = dict(alpha=0.93, under=(-19.0, 0.86), eq=[('peak', 150, 2.5, 0.8), ('peak', 2800, 2.0, 1.0), ('hs', 9000, -1.0, 0.7)])
-_WRONG = dict(wow=(0.8, 0.010), sag=(0.28, 1.2), under=(-22.0, 0.86))         # what gives an imitation away
-_S = dict(alpha=1.32, smooth=0.0, trem=None, jit=0.004, under=None)
-_T = dict(alpha=1.24, trem=None, jit=0.0, under=None)
+_B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, under=None, eq=None,
+          lu=0.0, wow=None, sag=None, morph=None, tape=None)
+_WRONG = dict(wow=(0.8, 0.008), sag=(0.30, 1.0), under=(-22.0, 0.86))         # what gives a copy away
+_DAD = dict(_B, f0=112.0, rng=0.75, comp=0.35, alpha=0.89, breath=0.16, jit=0.008,
+            eq=[('peak', 180, 1.5, 0.8), ('peak', 350, 1.0, 0.9), ('hs', 6500, -2.0, 0.7)])
+_MOM = dict(_B, f0=208.0, rng=0.95, comp=0.45, alpha=1.13, breath=0.14, jit=0.006,
+            eq=[('ls', 180, -2.0, 0.7), ('peak', 2800, 1.0, 1.0)])
+_LINA = dict(_B, f0=298.0, rng=0.95, comp=0.42, alpha=1.34, breath=0.12, jit=0.004,
+             eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)])
+_SH = dict(_B, alpha=0.95, breath=-0.40, jit=0.0, smooth=0.05, under=(-19.0, 0.86), wow=(0.55, 0.003),
+           eq=[('peak', 160, 2.0, 0.8), ('peak', 2800, 2.5, 1.0), ('hs', 9000, -1.0, 0.7)])
 VOICES = {
-    'D': dict(_D, f0=168.0, breath=0.16, trem=(5.0, 0.014), lu=-0.5,
-              desc='Grandma Della, 63, 32 years a bus driver: a warm, firm older woman (168 Hz, formants x1.03: sound fix round 3, at 184 Hz / x1.11 she sounded younger than Mina), a '
-                   "driver's calm (pitch range x0.85), a faint 5 Hz tremor (1.4 %) and 1 % jitter of age, a touch of "
-                   'breath (0.16), warm low-mids, a softer top'),
-    'D_story': dict(_D, f0=164.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.5,
-                    desc='Della telling 1994 (seat 22, "I got two back", "You thought that was manners?") and thanking '
-                         'Theo: the same woman with the fear under it: lower (164 Hz; sound fix r3, was 178), shakier (tremor 2.4 %), breathier '
-                         '(0.24), 1.5 dB softer'),
-    'D_shout': dict(_D, f0=212.0, rng=1.0, comp=0.45, breath=0.08, trem=None, jit=0.016, lu=1.0,
-                    eq=[('peak', 280, 1.0, 0.9), ('peak', 2200, 2.0, 1.0)],
-                    desc='Della shouting "DON\'T OPEN THE DOOR!" through the house: higher (228 Hz), full range, '
-                         'rougher (1.6 % jitter), +2 dB edge at 2.2 kHz'),
-    'S': dict(_S, f0=290.0, rng=1.0, comp=0.45, breath=0.10, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)], lu=-1.0,
-              desc="Sami, 6, proud and bright: a small child (290 Hz; a child's vocal tract, formants x1.38), a lively "
-                   'melody (x1.0), no chest (-4 dB under 220 Hz), 1 dB softer'),
-    'S_shout': dict(_S, f0=330.0, rng=0.9, comp=0.40, breath=0.06, eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 1.5, 1.0)], lu=0.0,
-                    desc='Sami\'s shouted "HERE!", "LIGHTHOUSE!", "That\'s the RULE!": the same child at full voice '
-                         '(330 Hz), +1.5 dB at 3 kHz'),
-    'S_small': dict(_S, f0=272.0, rng=0.8, comp=0.35, breath=0.38, eq=[('ls', 220, -5.0, 0.7)], lu=-3.0,
-                    desc='Sami\'s frightened "He...": small and breathy (272 Hz, 0.38), 3 dB softer'),
-    'T': dict(_T, f0=232.0, rng=0.70, comp=0.32, smooth=0.02, breath=0.30, eq=[('ls', 200, -3.0, 0.7), ('hs', 5000, -3.0, 0.7)], lu=-2.5,
-              desc="Theo, 12 forever: a quiet, shy boy (232 Hz; a boy's vocal tract, formants x1.24), a small melody "
-                   '(x0.70, smoothed over 20 ms), airy (0.30), slightly distant (-3 dB above 5 kHz, a thin chest), '
-                   '2.5 dB softer'),
-    'T_shout': dict(_T, f0=272.0, rng=0.9, comp=0.40, smooth=0.0, breath=0.14, eq=[('ls', 200, -3.0, 0.7), ('hs', 5000, -2.0, 0.7)], lu=0.0,
-                    desc='Theo\'s "...HERE!": the same boy answering out loud at last (272 Hz, breath 0.14)'),
-    'X': dict(f0=200.0, rng=0.75, comp=0.35, smooth=0.0, alpha=1.15, breath=0.05, trem=None, jit=0.0, under=None,
-              eq=[('peak', 300, 1.0, 0.9)], lu=0.0,
-              desc='the 911 dispatcher: a calm adult woman, unlike Della (200 Hz, formants x1.15), steady (x0.75), clean '
-                   '(the mix adds the phone band)'),
-    'W': dict(_W, f0=140.0, rng=0.80, comp=0.30, smooth=0.04, breath=-0.40, trem=None, jit=0.0, wow=(0.55, 0.003), lu=-1.0,
-              desc="Mister Whistlestop: a bright 1994 kids'-TV host (140 Hz, formants x0.93: a big man behind a smile) "
-                   'made subtly wrong: too even (melody x0.80 held inside +-0.30 octave, contour smoothed over 40 ms), '
-                   'airless (aperiodicity -0.40: no breath at all), too close (+2.5 dB proximity at 150 Hz) with a fixed '
-                   "smile's presence (+2 dB at 2.8 kHz), a faint tape wow (0.3 %), and a second voice an octave under "
-                   'it (19 dB down, formants x0.86: at 16 dB down a pitch tracker already locks onto it on short lines)'),
-    'W_tv': dict(_W, f0=150.0, rng=1.0, comp=0.45, smooth=0.0, breath=-0.30, trem=None, jit=0.0, under=(-21.0, 0.86),
-                 eq=[('peak', 150, 1.5, 0.8), ('peak', 2800, 2.5, 1.0)], lu=0.0,
-                 desc='the 1994 tape ("I know your name!", "Hold it up to the camera!", "Ride right, kids!"): the clean '
-                      'bright host, livelier (full melody, 150 Hz), the second voice barely there (21 dB down); the mix '
-                      'adds the VHS tape'),
-    'W_whisper': dict(_W, f0=140.0, rng=0.60, comp=0.25, smooth=0.04, breath=0.50, trem=None, jit=0.0, wow=(0.55, 0.003),
-                      under=(-20.0, 0.86), eq=[('peak', 150, 3.0, 0.8), ('hs', 7000, -1.5, 0.7)], lu=-3.0,
-                      desc='at the peephole ("Smart one. I\'ll ask Sami."): his voice half-whispered (0.50) and very close '
-                           '(+3 dB at 150 Hz), 3 dB softer, the second voice 20 dB down'),
-    'W_flat': dict(_W, f0=128.0, rng=0.40, comp=0.15, smooth=0.06, breath=-0.45, trem=None, jit=0.0, wow=(0.55, 0.003),
-                   under=(-21.0, 0.86), lu=-1.0, eq=[('peak', 150, 1.5, 0.8), ('peak', 3000, 4.0, 1.0), ('hs', 9000, -1.0, 0.7)],
-                   desc='"Almost." through the door: the smile gone: lower (128 Hz), nearly flat (x0.40), clearer for the '
-                        'recogniser (sound fix round 3: +4 dB presence at 3 kHz, the second voice 21 dB down: at 16 dB down '
-                        'it read "And most"); the second '
-                        'voice louder (16 dB down)'),
-    'W_lure': dict(_W, f0=136.0, rng=0.70, comp=0.28, smooth=0.05, breath=0.06, trem=None, jit=0.0, wow=(0.55, 0.003),
-                   under=(-21.0, 0.86), eq=[('peak', 200, 2.0, 0.8), ('hs', 6000, -2.0, 0.7)], lu=-2.0,
-                   desc='the trade-seats lure, the only "kind" voice he uses: softer and warmer (136 Hz, a little air, a '
-                        'softer top, 2 dB down), the second voice pulled back (21 dB down)'),
-    'W_della': dict(_D, **_WRONG, f0=176.0, rng=1.0, comp=0.45, breath=0.14, trem=(5.0, 0.012), jit=0.008, lu=0.0,
-                    desc='his imitation of Grandma at the front door: Della\'s voice, urgent (176 Hz, formants x1.03), '
-                         'but wrong: a tape warble (0.8 Hz, 1 %, with drift) on pitch and formants together, the line '
-                         'sinking 1.2 semitones over its last 0.28 s, his second voice faint under it (22 dB down)'),
-    'W_della_soft': dict(_D, **_WRONG, f0=166.0, rng=0.85, comp=0.40, breath=0.22, trem=(5.0, 0.016), lu=-1.5,
-                         desc='his imitation of Grandma at the bedroom door ("It\'s me, sweetheart." "Lighthouse."): her '
-                              'soft voice (180 Hz, breath 0.22, 1.5 dB down) with the same warble, sag and second voice'),
-    'W_della_radio': dict(_D, **_WRONG, f0=164.0, rng=0.80, comp=0.38, breath=0.24, trem=(5.0, 0.024), jit=0.012, lu=-1.0,
-                          desc='his imitation on the bus 9 dash radio ("The third was a boy in the back."): Della\'s '
-                               'story voice, so the hijack is seamless, with the warble, sag and second voice; the mix '
-                               'adds the radio'),
-    'W_della_clever': dict(_D, f0=168.0, breath=0.16, trem=(5.0, 0.014), lu=0.0, wow=(0.8, 0.010), under=None,
-                           morph=('W', 0.15, 0.70), tape=(0.40, 0.60),
-                           desc='"...Clever.": Della\'s voice gliding into his own (pitch, formants, breath and second '
-                                'voice morph over 15-70 % of the word) while the tape slows from 40 % of the word to 0.60x '
-                                'speed at its end (pitch and formants fall together, the word lengthens): an imitation '
-                                'sliding down into his TV voice'),
-    'W_sami': dict(_S, **_WRONG, f0=270.0, rng=0.9, comp=0.40, breath=0.06, eq=[('ls', 220, -4.0, 0.7), ('peak', 3000, 1.5, 1.0)],
-                   lu=0.0,
-                   desc='his imitation of Sami\'s "Here!" on the porch: Sami\'s shout (330 Hz, x1.38) with the warble, '
-                        'sag and second voice'),
-    'W_mina': dict(_WRONG, f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, eq=None, lu=0.0,
-                   desc='his imitation of Mina in his bus ("Sami! Back here!", "Don\'t answer her..."): her own (the '
-                        "narrator's) voice, pitch and formants untouched, made wrong only by the warble, the end sag "
-                        'and his faint second voice (22 dB down)'),
+    'L': dict(_LINA, lu=-1.0,
+              desc="Lina, 6: a real small girl (298 Hz; a child's vocal tract, formants x1.34 measured on the take), a "
+                   'lively melody (x0.95), a little breath (0.12), no chest (-4 dB under 220 Hz), 1 dB softer'),
+    'L_small': dict(_LINA, f0=286.0, rng=0.80, comp=0.35, breath=0.32, eq=[('ls', 220, -5.0, 0.7)], lu=-2.5,
+                    desc='Lina frightened ("Don\'t leave me."): the same girl, small and breathy (286 Hz, 0.32), 2.5 dB softer'),
+    'L_dreamy': dict(_LINA, f0=288.0, rng=0.65, comp=0.30, smooth=0.03, breath=0.30, eq=[('ls', 220, -5.0, 0.7),
+                     ('hs', 6000, -2.0, 0.7)], lu=-2.5,
+                     desc='Lina hypothermic and calling back ("I\'m warm, Adam," / "I\'m not even shivering."): the same girl, '
+                          'dreamy and flat (melody x0.65, smoothed), breathy (0.30), a softer top, 2.5 dB softer'),
+    'D': dict(_DAD, lu=-0.5,
+              desc='Dad: a warm, tired adult man (112 Hz; a larger vocal tract, formants x0.89), an even, tired melody '
+                   '(x0.75), a little breath (0.16) and roughness (0.8 % jitter), warm low-mids (+1.5 dB at 180 Hz), a '
+                   'softer top; the mix adds the radio for fx radio'),
+    'K': dict(_B, f0=124.0, rng=0.70, comp=0.32, alpha=0.93, breath=0.34, trem=(5.5, 0.030), jit=0.022, lu=-2.0,
+              eq=[('ls', 150, -3.0, 0.7), ('peak', 1800, 1.0, 1.0), ('hs', 6000, -2.5, 0.7)],
+              desc='Mr. Kessler, about 80: a frail, kind old man (124 Hz, formants x0.93), a small melody (x0.70), an '
+                   "old man's tremor (5.5 Hz, 3 %) and roughness (2.2 % jitter), breathy (0.34), a thin chest (-3 dB under "
+                   '150 Hz), 2 dB softer'),
+    'K_whisper': dict(_B, f0=120.0, rng=0.55, comp=0.25, alpha=0.93, breath=0.62, trem=(5.5, 0.030), jit=0.022, lu=-4.0,
+                      eq=[('ls', 150, -4.0, 0.7), ('hs', 6000, -2.0, 0.7)],
+                      desc='Mr. Kessler whispering "Bye, Benny.": the same old man, half-whispered (0.62), 4 dB softer'),
+    'S': dict(_SH, f0=158.0, rng=1.30, comp=0.55, lu=-1.0,
+              desc='Mister Shiver, the too-friendly vendor: a sing-song, sugary voice (158 Hz, formants x0.95; the melody '
+                   'stretched x1.30 into a sing-song but smoothed over 50 ms: too even), airless (aperiodicity -0.40: no '
+                   'breath at all), too close (+2 dB at 160 Hz) with a fixed smile\'s presence (+2.5 dB at 2.8 kHz), a '
+                   'faint wow (0.3 %) and a second voice an octave under it (19 dB down, formants x0.86)'),
+    'S_monster': dict(_SH, f0=96.0, rng=0.85, comp=0.40, alpha=0.84, breath=-0.55, smooth=0.04, under=(-12.0, 0.78),
+                      wow=(0.40, 0.006), lu=0.5, eq=[('peak', 110, 3.0, 0.8), ('peak', 2400, 1.5, 1.0), ('hs', 7000, -3.0, 0.7)],
+                      desc='Mister Shiver in monster form ("Who\'s the coldest? YOU are!", "Inside, children. Rule seven."): '
+                           'the same sing-song words, deeper (96 Hz, formants x0.84: a far larger body), airless (-0.55), '
+                           'the second voice up to 12 dB under (formants x0.78), a slow wow, +3 dB at 110 Hz, a dull top'),
+    'S_dad': dict(_DAD, **_WRONG, lu=-0.5,
+                  desc='his copy of Dad on the radio: Dad\'s voice (112 Hz, x0.89) but wrong: a warble on pitch and '
+                       'formants together (0.8 Hz, 0.8 %), the line sinking 1 semitone over its last 0.3 s, his second '
+                       'voice faint under it (22 dB down); the mix adds the radio static and the bells'),
+    'S_mom': dict(_MOM, **_WRONG, lu=0.0,
+                  desc='his copy of Mom at the front door: an adult woman, urgent (208 Hz, formants x1.13), with the same '
+                       'warble, sag and second voice; the mix puts it through the door'),
+    'S_mom_soft': dict(_MOM, **_WRONG, f0=196.0, rng=0.75, comp=0.35, breath=0.24, lu=-1.5,
+                       desc='his copy of Mom, soft ("...Let me in, baby. I\'m so cold."): lower and breathier (196 Hz, '
+                            '0.24), 1.5 dB down, the same warble, sag and second voice'),
+    'S_boy': dict(_B, **_WRONG, f0=284.0, rng=0.80, comp=0.35, alpha=1.32, breath=0.26, jit=0.004, lu=-2.0,
+                  eq=[('ls', 220, -5.0, 0.7), ('hs', 6000, -1.5, 0.7)],
+                  desc='his copy of a little boy (Benny) from the window ("Walter, I\'m cold."): a small boy (284 Hz, '
+                       'formants x1.32), breathy (0.26), 2 dB softer, with the warble, sag and second voice'),
 }
-_STORY = ('della_mina', 'seat22_empty', 'della_1994', 'sixth_day', 'three_kids', 'last_stop_rule', 'answer_him',
-          'got_two_back', 'didnt_know_name', 'nobody_remembered', 'not_his_mother', 'learn_every_name', 'manners',
-          'six_mornings')
 # lines that use a variant (by tag, from script/lines.py)
-VARIANT = dict({t: 'D_story' for t in _STORY},
-               della_dont_open='D_shout',
-               sami_here_practice='S_shout', lighthouse='S_shout', thats_the_rule='S_shout', sami_here_hall='S_shout',
-               sami_here_bus='S_shout', sami_he='S_small',
-               theo_here='T_shout',
-               almost='W_flat', trade_lure='W_lure',
-               mimic_della_sweetheart='W_della_soft', mimic_della_lighthouse='W_della_soft',
-               mimic_della_radio='W_della_radio', mimic_della_clever='W_della_clever')
+VARIANT = dict(lina_dont_leave='L_small', lina_warm='L_dreamy', lina_not_shivering='L_dreamy',
+               bye_benny='K_whisper', coldest_you='S_monster', inside_children='S_monster',
+               fake_dad='S_dad', fake_dad_sleep='S_dad', fake_mom='S_mom', fake_mom_cold='S_mom_soft',
+               mimic_benny='S_boy')
 
 
 def voice_for(line):
-    who, tag, fx = line['who'], line.get('tag') or '', line.get('fx')
+    who, tag = line['who'], line.get('tag') or ''
     if who == 'N': return None
     if tag in VARIANT: return VARIANT[tag]
-    if fx == 'mimic':
-        for k in ('della', 'sami', 'mina'):
-            if tag.startswith('mimic_' + k): return 'W_' + k
-        return 'W'
-    if who == 'W' and fx == 'tv': return 'W_tv'
-    if who == 'W' and fx == 'whisper': return 'W_whisper'
     return who if who in VOICES else None
 
 

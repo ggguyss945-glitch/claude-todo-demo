@@ -1,6 +1,11 @@
 """Query and load the recorded sample library (the owner's Epidemic files + free CC0/CC-BY files).
 
 Two catalogues, Epidemic first:
+    audio/catalog_epidemic_ice.json     (audio/epidemic_catalog.py --ice) THIS film ("If The Ice Cream Truck Plays Its
+        Song In Winter... DON'T GO OUTSIDE"): the owner's new set W/samples/epidemic_ice (sfx/: winter wind, snow
+        footsteps, shovels, ice cracks, a van idle, sliding windows, air horns, bone cracks, furnace, light switches;
+        music/: 14 tracks) first, then the bus, doctor, bunny, dummy, delivery, police and mirror sets. Falls back to
+        the bus film's catalogue below when it is missing.
     audio/catalog_epidemic_bus.json     (audio/epidemic_catalog.py --bus) THIS film ("If The School Bus Stops At
         Midnight... DON'T GET ON"): the bus set W/samples/epidemic_bus (sfx/: buses, air brakes, folding doors, horns,
         PA feedback, walkie-talkies, tapes, CRT, whistles, hole punches, cloth rips, glass, metal scrapes, big cats;
@@ -48,7 +53,7 @@ _CAT = None
 _BY_ID = None
 
 
-EPI_CATALOGS = (os.path.join(HERE, 'catalog_epidemic_bus.json'), os.path.join(HERE, 'catalog_epidemic_doctor.json'), os.path.join(HERE, 'catalog_epidemic_bunny.json'), os.path.join(HERE, 'catalog_epidemic_dummy.json'),
+EPI_CATALOGS = (os.path.join(HERE, 'catalog_epidemic_ice.json'), os.path.join(HERE, 'catalog_epidemic_bus.json'), os.path.join(HERE, 'catalog_epidemic_doctor.json'), os.path.join(HERE, 'catalog_epidemic_bunny.json'), os.path.join(HERE, 'catalog_epidemic_dummy.json'),
                 os.path.join(HERE, 'catalog_epidemic_delivery.json'))
 EPI_CATALOG = next((p for p in EPI_CATALOGS if os.path.exists(p)), EPI_CATALOGS[0])
 
