@@ -32,7 +32,7 @@ see below; 0 = off), `sh_legs_only` (draw only the spider legs: lay them IN FRON
 Legs (round 3): 8 THICK jointed harvestman legs bent close round the body (coxa/femur/tibia/tarsus 30/125/135/70 cm, widths
 24/24-16/16-8/8-0.6), knees at their own heights (fanned in depth per pair), tarsi splayed (never parallel stilts), tips near
 z=0 so planted tips sit ON the ground line (leg_to / legs_plant default zd=0); dimmer knee rime (#c4d3e0, ~60%); the HEAD
-GROWS x1.8 with the legs and gets a x1.15 thrust toward the lens, drawn IN FRONT of the front leg pair (claws beside the jaw) and the red eyes fill ~45% of the sockets with a bloom >= 4 px on output;
+GROWS x1.8 with the legs and gets a x1.15 thrust toward the lens, drawn LAST, in front of everything of his own (claws beside the mandible) and the red eyes fill ~45% of the sockets with a bloom >= 4 px on output;
 the dropped jaw is its OWN bone mandible (~0.85 of the mask wide, ~0.22 tall, outline + frost crack, 6 icicles standing up, 2
 fangs) under a dark #120A10 falloff gap crossed by sinew/frost strands (no capsule outline); the mouth never closes again once
 the icicles come (sh_m > 0.4); at sh_smile > 0.5 the slit runs PAST the face outline; in the cage the arms claw forward at jaw height and the gloves go frost-grey.
@@ -119,13 +119,48 @@ tapered jointed legs (towel brought by Adam's hand and cuff; the mitten hooked o
 EXPR: `lina_grin` (two front teeth, gap), `hypo` (severe cold, slack oval), `terrified_call` a wide D shout; kids' mouths
 have a dark-red interior and one flat upper tooth band. Dad's flaps are knit trapezoids with an inner fleece border.
 
+## Round 4 (fix pass 2)
+- **The face is never covered:** in monster form (`sh_m > 0.48` or any legs out) the head is ALWAYS drawn last, the
+  arms just under it (only a true back view, |turn| > 1.22, puts the body over the head); `sh_legs_only` passes keep the
+  head on top too. Caged claws hang BESIDE the mandible (`_sh_rig` target head + [55, 50, 18] cm scaled by the head growth);
+  slung (`sh_lift` > 40) the head drops and pushes forward (crown over the chest).
+- **Maw:** the jaw drop is ~0.9 of the mask (`drop = J*(19+4L)`); the dark maw is its own path, inset ~13% of the head
+  width at each side (skull, a notch, then the jaw), filled with a radial #120A10 -> #2A1420 falloff; 2 sinew strands a side
+  INSIDE it at half alpha; the mandible is a squared jaw block (0.92 of the mask wide at the top, 0.8 at the chin, corner
+  radius ~0.15) with 6 icicles standing up (2 long).
+- **Step 1:** the slit runs ~20% of the head width past the outline with corners hooked up (fades as the jaw drops). The
+  transformation sheet waves through steps 0-6 (`cast_sheets.wave_pose`).
+- **Legs:** per pair femur length (1.0/0.92/1.06/0.97), angle 56-68 deg plus a knee lift (0/16/26/8 cm): the knees arch
+  at clearly different heights; tarsi splay +-24-30 deg alternating per pair; dark #3E2A1C knee/ankle knobs; the rime is
+  2-3 small crusts at ~0.55x the joint (no mushroom caps).
+- **Vendor face:** no nasolabial lines, one smooth smiling arc under each eye; collar #E4D8DE, buttons #D8D2DA, skin_hi
+  #FFFDF8 (the face is the top value). `grumpy` is sour and closed (lids 40% down, brows in and down, corners down);
+  Kessler's ears x1.85. Dad's trapper hat: flaps 1.3x longer past the jaw, tilted out, wider at the bottom, fuzzy fleece on
+  the brim and round the flaps, a tie cord from each tip.
+- **Scuttle:** a 20 px bob at twice the stride rate, +-6 deg pitch, the head lagging 0.12 s.
+- **Clips:** `sh_transform_face` cuts IN three times (medium 0-1.0, close 1.0-2.6 with a push, close-up from 3.2 s),
+  framed on crown-to-mouth (28% -> 42% -> 50%+, eyes at y 360), never shrinking; Adam drawn in the same world with a 0.35
+  parallax, Lina's pom-pom hat and cheek at his shoulder (carried), a 25 px / 6 deg flinch at the red eyes.
+  `sh_lean_down_reach` hinges (bend <= 0.75, neck +60) and cuts to a medium at 1.5 s (glove, her hand, both faces).
+  `sh_transform_legs` 0-1.4 s has the window frame, bunting end and striped wall behind him; the medium-wide is ppm 635
+  (mask >= 25%, the jaw and mandible clear the sill); the tight wide (4.2-5.0 s) plants every tip ON the roof span.
+  `sh_pour_out` ppm 290, snow at y 840 with the truck's lower body and wheels, tips and gloves land on it, needle holes
+  (`snow_holes` now works), a 1.0 -> 1.25 push over the last 1.2 s. `sh_hook_blanket_cage`: the blanket lies flat until
+  the leg hooks it, wraps the fronts of their shoulders and torsos (hem at the front, Kessler grips both edges), the three
+  angled 3/4 and staggered, Lina looks then hides her face in Adam's coat, Adam steps half in front, all hunch as the cage
+  lands. `sh_legs_spear_coat`: a real run (~9 px/frame scroll), the needle through the hem INTO the snow, the coat
+  stretched over Adam, a 0.45 s pin with a 35 px jerk back and ~12 deg lean, then the tear (flap stays). Dad's car in
+  `sh_scuttle_fence_car_roof` is drawn from the same profile the tips walk on (windows, wheels). Family clips cut from a
+  <= 1.5 s wide to a medium (`_medium`): benny (from behind, sepia at shot level), lina_walk, adam_run_carry, kessler
+  shuffle and cocoa; `lina_hug_kessler`: he looks down at her, his hand settles on her back at 1.2 s, the shoulders drop
+  with a long breath and closed eyes at 1.8 s; her cheek turned out.
+
 ## Still open (next pass)
-- `sh_hatch_upside_down` is still eye level (no low-angle trapezoid hatch); `sh_lean_down_reach`, `lina_walk_humming`,
-  `kessler_shuffle_out`, `benny_1958`, `adam_run_carry_lina` wides keep faces under 8%: cut a medium for the acting.
-- No automated needle-to-ground contact check in render() yet (tips now resolve at z=0); scuttle body bob/pitch not added.
-- Shared hand system (thin fingers, Kessler's mitten hands) untouched to protect the other films; Benny's stripes and red
-  mitten in the lineup; sepia at shot level; `adam_radio_over` handset covering the face.
-- pour_out has no z-advance toward the lens yet (framed lower instead).
+- Hero insert hands (ice-only thicker fingers, knuckles, nails) not built; the people's hands are still the shared thin ones.
+- The raised waving glove still reads as a closed club at close scale (no separate finger tubes / palm-to-lens roll).
+- Benny's pyjama stripes and red mitten on the rig, walter58 as a boy, Adam's puffy baffles, the profile cheek/jaw mass.
+- `sh_face_glass` door frame + coat silhouette, `sh_hatch_upside_down` low angle, `sh_pluck_mitten` heavy leg.
+- Buck teeth still smaller than the bible's (not resized this pass).
 
 ## Older open issues
 - Lina's mittens and Benny's red mitten are props for the shot, not on the rig; Kessler's blanket is a shot overlay.

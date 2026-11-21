@@ -144,6 +144,18 @@ def sheet_sh_head():
     _faces('sh_head', items, 'MISTER SHIVER: head states', 'never blinks, never lip-syncs; frost flecks on the brow; cracks like ice on a pond on the mask', light=PINKW, cols=6, cyk=0.36, sk=0.62)
 
 
+def wave_pose(P, side=1):
+    """The bible's slow wave on a sheet pose (no Acting): the open glove up beside the head (as Acting.slow_wave)."""
+    P.ws_scale = max(P.ws_scale, 1e-3); P.ws_ph = 1000.0 / (CH._WSU * P.ws_scale); P.ws_px0 = P.ws_py0 = 0.0; P.dx = P.dy = 0.0
+    R = CH._sh_rig(P, CH._sh_state(P)); V = CH._WSView(P)
+    hx, hy = V.p2(R['head']); sx, sy = V.p2(R['arms'][side]['S'])
+    out = 1.0 if sx >= hx else -1.0
+    pre = 'ws_l' if side > 0 else 'ws_r'
+    setattr(P, pre + 'w', 1.0); setattr(P, pre + 'x', hx + out * 46.0); setattr(P, pre + 'y', hy - 18.0); setattr(P, pre + 'z', 25.0)
+    setattr(P, ('hl_' if side > 0 else 'hr_') + 'shape', 'host')
+    return P
+
+
 def sheet_sh_transform():
     surf, cv, pen = canvas()
     title(cv, 'THE TRANSFORMATION: one parameter (pose.sh_m), the bible\'s steps', 'Acting.transform(t0, times) keys these 8 states to the narration; he keeps waving; the chime keeps playing')
@@ -155,6 +167,7 @@ def sheet_sh_transform():
         pen.linear(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), 0, y0, 0, y0 + ch, [(0, '#ffb3d2', 255), (1, '#c8487e', 255)])
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
+        if m < 0.9: wave_pose(P, 1)      # he keeps waving through the change (the bible's read test)
         if m >= 0.8:     # the same medium, eased out a little: the head stays put and big, the legs frame the mask
             P.turn = 0.08; P.sh_spread = 0.9; P.sh_lift = 85.0 * CH.clamp((m - 0.84) / 0.16)
             sh_bust_at(pen, x0 + cw / 2, y0 + ch * 0.32, ch / 600.0 * (0.30 if m < 0.95 else 0.27), P)   # x1.4 monster head: same face size as step 5
@@ -261,7 +274,7 @@ def sheet_faces():
             ('lina', 'fear', 'fear'), ('lina', 'pleading', '"Don\'t leave me"'), ('lina_pj', 'kind_smile', '"You\'re not by yourself"')]
     _faces('faces_kids', [(w, P_(e), lb) for w, e, lb in kids], 'Adam and Lina: expressions', 'v3 faces: brows, lids, eyes lock on what the line is about', light=NIGHTI, cols=6)
     ads = [('dad', 'warm', 'Dad: warm ("Over.")'), ('dad', 'grim_drive', 'in the cab'), ('dad', 'shout', 'horn, again and again'),
-           ('kessler', 'stern', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', 'hypo', 'out in the snow: NOT shivering (heavy lids, slack, blue-grey)'),
+           ('kessler', 'grumpy', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', 'hypo', 'out in the snow: NOT shivering (heavy lids, slack, blue-grey)'),
            ('kessler_out', 'sad', '"Bye, Benny."'), ('kessler', 'tender', 'cocoa: "First time anyone knocked"'), ('mom_photo', 'warm_smile', 'Mom (photo)'),
            ('shiver_mom', 'still_smile', 'HIS copy at the glass: no breath'), ('medic_a', 'focused', 'paramedic'), ('medic_b', 'calm_firm', 'paramedic')]
     _faces('faces_adults', [(w, (P_(e.pop('expr'), **e) if isinstance(e, dict) else P_(e)), lb) for w, e, lb in ads], 'Dad, Mr. Kessler, Mom, paramedics', '', light=NIGHTI, cols=6)
