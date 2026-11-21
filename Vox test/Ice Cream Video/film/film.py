@@ -2721,7 +2721,7 @@ def plan_rule2(F):
     # 105-106 the window open a crack, the cone gone; Lina's step-stool under it
     S(T(105), 'kitchen', 'wide', st=dict(KIT_A, sash=0.28, stool='window'), ppl=[adam('doorway', face='sill_out', expr='shock', act=_A(lk(T(105), 'sill_out')))],
       c=Z(2.1, 0.03, 250, 480, free=True), sfx=[(T(105) + 0.2, 'window_crack', -12, -0.3, 'inside')])
-    S(T(106), 'kitchen', 'window', st=dict(KIT_A, sash=0.28, stool='window'), c=Z(1.15, 0.02, 960, 860, free=True))     # (review: the stool in frame, above the caption)
+    S(T(106), 'kitchen', 'window', st=dict(KIT_A, sash=0.28, stool='window', table=False), c=Z(1.0, 0.02, 960, 820, free=True))     # (review: the stool in frame, above the caption)
     # 107-109 Lina on the couch holding the cone; tongue out; an inch away
     TG108, TG109 = (470, 695, 960), (330, 671, 1035)          # bust cy, her mouth y, the cone's swirl base y
     S(T(107), 'living', 'couch3q', st=LIV_CRACK, ppl=[lina('couch_right', kind='seat', expr='tempted',
@@ -3211,7 +3211,7 @@ def plan_rule4(F):
     S(T(238), 'street', 'roof', st=dict(ST_DARK),
       ppl=[P('shiver', 'eave', light=SH_NIGHT, talk=False, breath=False, face=(-2.1, -0.3),
              act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_spread=0.7), lambda a, s: scut(a, s, T(238), E(238) + 0.3, ['eave', 'roof_edge_door'])))],
-      c=Z(1.15, 0.02, 1200, 270, free=True), sfx=[(T(238) + 0.1, 'scuttle', -2, 0, 'outside', dict(surface='roof', dur=1.2))])
+      c=Z(1.15, 0.02, 1200, 190, free=True), sfx=[(T(238) + 0.1, 'scuttle', -2, 0, 'outside', dict(surface='roof', dur=1.2))])
     # 239-241 And drops. Right in front of our door. Jaw hanging.
     S(T(239), 'street', 'door', st=dict(ST_DARK, props=MIT),
       ppl=[P('shiver', 'drop', light=SH_NIGHT, talk=False, breath=False, face=(-2.1, -8.0), act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_lift=80.0),
@@ -3358,6 +3358,18 @@ def _pull(t0, dx, dur=0.3, lift=0.0):
     def fn(P_, t):
         u = ease_in_out(clamp((t - t0) / dur)); P_.dx -= dx * u; P_.dy -= lift * u
         if lift: P_.turn *= 1.0 - u                    # she swings round to face out as he lifts her (the carry faces out)
+    return fn
+
+
+def _shrink_curve(t0, dur):
+    """L386 (review: the shrink read as a 0.2 s pop): sh_m over the same span as shrink_back (its cues stay), but it
+    lingers through 1.0 -> 0.9 where the head shrinks, so the shrink plays over about a second."""
+    def fn(P_, t):
+        x = clamp((t - t0) / max(0.1, dur))
+        if t < t0: return
+        if x < 0.5: m = lerp(1.0, 0.9, x / 0.5)      # the head shrinks between 0.98 and 0.9: spread evenly over ~1 s
+        else: m = lerp(0.9, 0.0, ease_in_out((x - 0.5) / 0.5))
+        P_.sh_m = m
     return fn
 
 
@@ -4211,7 +4223,8 @@ def plan_dawn(F):
     S(T(385), 'street', 'kout', st=dict(KP, kporch=1.0), ppl=[SHB(m=1.0, legs=True, lean=0.2, act=_A(lambda a, s: a.jaw_gape(T(385) - 2, E(385) + 1), lk(T(385), 'kdoor')))],
       c=Z(1.5, 0.02, 640, 520))
     BU(T(386), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=1.05, light=dict(SH_PINK, rim='#ffa040'),
-       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.1), lambda a, s: a.shrink_back(T(386) + 0.1, E(386) - T(386))),
+       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.1), lambda a, s: a.shrink_back(T(386) + 0.1, E(386) - T(386)),
+              lambda a, s: a._add(T(386) + 0.1, None, _shrink_curve(T(386) + 0.1, E(386) - T(386)))),
        # review (it read as a cut to a medium): the camera pushes in WITH the shrink, holding on the skull as it shrinks
        # back into the smile, landing on his face (the L387 close-up's size)
        c=dict(mv='push', x=960, y=430, rate=0.0, z1=2.2, free=True),

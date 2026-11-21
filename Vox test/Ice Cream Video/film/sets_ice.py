@@ -1024,7 +1024,7 @@ def ic_smoke(pen, v, x, Y, y, t, k=1.0, seed=0, tod='night'):
     if k <= 0.01 or v.d(x, y) < 0.6: return
     rng = np.random.default_rng(abs(int(seed)))
     day = tod not in ('night', '1958')
-    c = '#aab4cc' if not day else '#8c8482'                       # day smoke: a warm grey that reads on the pale sky (darker: film pass 2)
+    c = '#aab4cc' if not day else ('#6c6462' if tod == 'morning' else '#8c8482')   # day smoke: a warm grey that reads on the pale sky (darker: film pass 2; morning darker still, verify pass)
     n = 9 if not day else 14
     for i in range(n):
         ph = (t * 0.22 + i / float(n) + rng.uniform(0, 0.05)) % 1.0
@@ -1034,7 +1034,7 @@ def ic_smoke(pen, v, x, Y, y, t, k=1.0, seed=0, tod='night'):
         rr = (0.25 + ph * 0.9) * s * (1.35 if day else 1.0)
         al = (110 if not day else 225) * k * (1 - ph) ** 1.0
         pen.fill(oval(px, py, rr, rr * 0.8), c, al, blur=rr * 0.5)
-        if day: pen.fill(oval(px - 0.15 * rr, py - 0.2 * rr, rr * 0.6, rr * 0.48), '#f4eee8', al * 0.8, blur=rr * 0.4)
+        if day: pen.fill(oval(px - 0.15 * rr, py - 0.2 * rr, rr * 0.6, rr * 0.48), '#f4eee8', al * (0.3 if tod == 'morning' else 0.8), blur=rr * 0.4)
 
 
 def ic_breath_air(pen, v, t, box=(0, 0, 1920, 1080), n=70, seed=3, k=1.0, c='#ffffff'):
@@ -2148,7 +2148,8 @@ def _ic_kit_cfg(o):
                                   'all': '#d8d4cc'}, lw=1.0)
         P.append(Piece('stove', (st.cx, 0.5, st.cy), stove, block=st.footprint()))
         tb = Box(-4.3, 2.5, 1.1, 0.8, 0.0, 0.75, 0)
-        P.append(Piece('table', (tb.cx, 0.4, tb.cy), lambda pen, v: draw_parts(pen, v, table_parts(tb, '#a8845a', apron=0.06)), block=tb.footprint()))
+        if o.get('table', True):                    # table=False: a low 'window' framing would put the camera inside its corner
+            P.append(Piece('table', (tb.cx, 0.4, tb.cy), lambda pen, v: draw_parts(pen, v, table_parts(tb, '#a8845a', apron=0.06)), block=tb.footprint()))
         stl = o.get('stool', 'window')
         if stl:
             sx, sy = IC_STOOL if stl == 'window' else (-5.8, 1.6)

@@ -1220,7 +1220,8 @@ SHOW_VCUT_DB = 10.0   # sound fix (critic minor 15: "Out of tune.", "Remember yo
                       # under the chime): the identity stem's 1-4.5 kHz dips this much more under the voice (keyed)
 BOOST_BED_MARGIN_LU = 7.0
 BOOST_DUCK_MAX_DB = 36.0
-BOOST_DUCK_LOOK_S = 0.01   # the gaps are digital silence: a word's onset needs only 10 ms of look-ahead
+BOOST_DUCK_LOOK_S = 0.04   # the hit is down 40 ms before the next word: a loud hit masks a soft onset after it
+                           # (forward masking: 10 ms left "Prying." heard as "Crying.")
 BOOST_DUCK_REL_S = 0.12
 BOOST_ZONE_S = 1.6
 BOOST_DUCK_FREE_S = 0.06
@@ -1715,9 +1716,13 @@ def main():
                     continue
                 ext = max(0.03, (0.7 - (le - lt)) / 2)
                 # the gap between the hit and the next word is the hit's own (the voice edit's scare beat): the zone
-                # starts 10 ms before that word, never earlier (a short word is only widened after it)
-                z0 = max(lt - 0.01, h + BOOST_DUCK_FREE_S) if lt > h else h + BOOST_DUCK_FREE_S
-                z1 = min(le + ext, h + BOOST_ZONE_S)
+                # starts at that word (the duck's look-ahead takes the hit down 50 ms before it), never earlier
+                if lt > h:
+                    z0, z1 = max(lt - 0.01, h + BOOST_DUCK_FREE_S), min(le + ext, h + BOOST_ZONE_S)
+                elif le - h < 0.15:                   # the hit lands in this line's last decay: nothing left to hold
+                    continue
+                else:                                 # a hit inside a line: the rest of the line, not widened
+                    z0, z1 = h + BOOST_DUCK_FREE_S, min(le, h + BOOST_ZONE_S)
                 if z1 > z0:
                     bzone[max(0, int(z0 * SR)):max(0, min(N, int(z1 * SR)))] = True
         log(f'boost duck: {bzone.sum() / SR:.1f} s of words after the {len(bwins)} boosted hits: the hits '
@@ -1804,7 +1809,8 @@ def main():
             # shaped window, so the ceiling and the drive come down over BOOST_REL_S after the window, not in 20 ms
             hx = hx * (10 ** (BOOST_DRIVE_DB * bgr * bshape / 20)).astype(np.float32)[:, None]
             cdb = 20 * np.log10(np.maximum(ceil, 1e-9))
-            cbd = -1.0 - 2.0 * (1.0 - bgr)
+            cbd = -1.0 - 1.0 * (1.0 - bgr)          # sound fix: -1.0 / -1.25 / -1.5 dBFS (was -1 / -1.5 / -2: the hits now
+                                                    # have only the scare beat before the next word to be heard in)
             ceil = (10 ** ((cdb + bshape * np.maximum(cbd - cdb, 0.0)) / 20)).astype(np.float32)
             # fix round 2: density (see BOOST_SAT_DB): per window, scale the bus so its peak sits BOOST_SAT_DB x grade
             # over the ceiling, soft-clip to the ceiling (tanh), cut the clip's 1-4.5 kHz under the voice; all faded by
@@ -1815,7 +1821,7 @@ def main():
                 if b1 - a0 < 64: continue
                 seg = hx[a0:b1]
                 w = bshape[a0:b1]
-                cl = 10 ** ((-1.0 - 2.0 * (1.0 - gd)) / 20)
+                cl = 10 ** ((-1.0 - 1.0 * (1.0 - gd)) / 20)
                 pk_in = float(np.abs(hx[max(0, a):min(N, b)]).max()) if b > a else 0.0
                 if pk_in <= 1e-6: continue
                 tgt = Lv_b + next((v for k, v in sorted(BOOST_TARGET_LU.items()) if gd <= k + 1e-6), 8.5)

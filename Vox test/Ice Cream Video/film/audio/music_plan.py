@@ -227,7 +227,7 @@ EVENTS = [
     ('The furnace stops', 'sub_drop', 0.6, None),
     ('end:Every light in the house goes out', 'hit', 0.9, None, {'boost': 2.5, 'nosnap': True}),   # just after 'out.'   # the power dies (picture power_cut)
     ('in the curtain crack... a long white skull#skull -0.2', 'silence', 0.8, 1.4),   # under 'skull. Red eyes.', up to the hit
-    ('end:a long white skull. Red eyes', 'riser', 0.6, 3.0),
+    ('end:a long white skull. Red eyes', 'riser', 0.45, 3.0),
     ('end:a long white skull. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # glimpse 2: after "Red eyes."
     # ('I spin around', 'stinger'): dropped (sound fix: 0.45 s after the moved glimpse-2 hit it doubled it)
     # rule 3, the fake Dad, twist 1
@@ -258,7 +258,8 @@ EVENTS = [
     # the chase
     ('I rip my foot out', 'pulse_on', 0.8, None),
     ('One spears my coat', 'hit', 0.75, None),
-    ('And drops#drops -0.5', 'silence', 0.95, 0.7),                      # minor 14: a true drop-out (the scuttle stops)
+    ('And drops#drops -0.85', 'silence', 0.95, 0.55),                    # minor 14: a true drop-out (the scuttle stops); it
+                                                                          # ends 0.65 s before the hit (its 0.5 s release)
     ('end:Up onto our roof. And drops', 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # after "And drops."
     ('and slam the door', 'hit', 0.8, None),
     ('One leg plucks', 'pulse_off', 0.5, None),
@@ -277,15 +278,16 @@ EVENTS = [
     ('The hallway hatch drops open', 'silence', 0.8, 1.45),               # minor 14: the dip before the hatch
     ('end:The hallway hatch drops open', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # after "drops open."
     ('end:A leg reaches between us', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    ('end:Under the door, a needle-thin leg tip slides in', 'riser', 0.55, 3.0),
-    ('end:Under the door, a needle-thin leg tip slides in', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
-    ('end:I jam the towel down on it. Hard', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "Hard." (its 0.17 s gap)
+    ("end:leg tip slides in. Feeling for Lina's sock", 'riser', 0.55, 3.0),
+    ("end:leg tip slides in. Feeling for Lina's sock", 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),   # after "...Lina's sock." (0.28 s)
+    ('end:I jam the towel down on it. Hard', 'hit', 0.7, None, {'nosnap': True}),   # after "Hard.": Adam's blow, not a scare
+    # (sound fix: no longer boosted: 2.3 s after the leg-tip scare, in a 0.17 s gap it could not reach +6 LU)
     ('The clicking stops', 'silence', 0.8, 1.5),
     # the twist
     ("To Kessler's door +0.1", 'silence', 0.8, 0.95),
     ("end:To Kessler's door", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),       # the big twist: the truck at HIS door
     ('Not shivering. Smiling', 'hit', 0.65, None),
-    ('And nobody checked', 'sub_drop', 0.6, None),
+    ('end:And nobody checked', 'sub_drop', 0.6, None),          # after the line (it sat on "And nobody checked.")
     ("Whoever's coldest... was across -1.0", 'silence', 0.85, 1.1),
     ("end:Whoever's coldest... was across the street", 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # into the 0.85 s hold
     ('Rule number seven -0.1', 'rule', 0.8, None, {'nosnap': True}),
