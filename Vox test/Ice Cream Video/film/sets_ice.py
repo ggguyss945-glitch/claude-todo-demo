@@ -785,6 +785,14 @@ def ic_truck_parts(cx, cy, fa, G=IC_G, era='now', window_open=0.0):
             pen.fill(oval(mx, my, 0.1 * hs, 0.13 * hs), '#5a5e68'); pen.line(oval(mx, my, 0.1 * hs, 0.13 * hs), 1.0, '#e8ecf4')
             pen.fill(oval(x, y, 0.06 * hs), '#e8ecf4'); pen.line(oval(x, y, 0.06 * hs), 0.8)
     P.append(Part(fn=flake_fn, ref=body.at(0, -0.1, body.Y1 + 0.8), tag='flake'))
+    # the serving-side wall again as its own part with the window cut through, so a figure standing inside at the
+    # window (anchor truck_vendor) sorts BEHIND the wall and shows only through the window
+    def side_fn(pen, v):
+        F = body.faces()['left']
+        n0, n1, Y0, Y1 = IC_SWIN
+        xa = (Lb / 2 + n0) * 100; xb = (Lb / 2 + n1) * 100; ya = (IC_TRUCK_Y1 - Y1) * 100; yb = (IC_TRUCK_Y1 - Y0) * 100
+        draw_face(pen, v, F, _truck_side_art(True, Lb, era), IC_STRIPE, holes=[rrect(xa, ya, xb - xa, yb - ya, 8)], lw=1.3, shape=rshape(F.W, F.H, 30))
+    P.append(Part(fn=side_fn, ref=body.at(-body.w / 2, 0.0, G + 1.5), tag='side_front'))
     return P
 
 
@@ -872,7 +880,8 @@ def ic_truck_piece(name, pos, G=IC_G, era='now'):
     parts = ic_truck_parts(cx, cy, fa, G, era)
     body, cab, Lb = ic_truck_frame(cx, cy, fa, G)
     foot = [(body.at(u, n, 0)[0], body.at(u, n, 0)[2]) for (u, n) in ((-1.15, -Lb / 2 - 0.1), (1.15, -Lb / 2 - 0.1), (1.15, Lb / 2 + IC_TRUCK_LC + 0.1), (-1.15, Lb / 2 + IC_TRUCK_LC + 0.1))]
-    return Piece(name, (cx, G + 1.5, cy), lambda pen, v, ps=parts: draw_parts(pen, v, ps), block=foot)
+    vend = body.at(-(body.w / 2 - 0.45), (IC_SWIN[0] + IC_SWIN[1]) / 2, 0)
+    return Piece(name, (cx, G + 1.5, cy), lambda pen, v, ps=parts: draw_parts(pen, v, ps), occupant=[(vend[0], vend[2])], front=parts, block=foot)
 
 
 def ic_truck_spots(v, pre, pos, G=IC_G):
@@ -1100,7 +1109,7 @@ class IcStreet(Room):
             if pos:
                 body, cab, Lb = ic_truck_frame(*pos)
                 P = body.at(-(body.w / 2 + 0.5), (IC_SWIN[0] + IC_SWIN[1]) / 2, IC_G + 1.9)
-                var.append(('pink', [Lamp(P[0], P[1], P[2], 9.0, IC_PINK, 1.7, (1.0, 1.0, 0.7), fall=1.25)], _kfn(o.get('truck_win', 1.0), 504)))
+                var.append(('pink', [Lamp(P[0], P[1], P[2], 8.0, IC_PINK, 1.15, (1.0, 1.0, 0.7), fall=1.4)], _kfn(o.get('truck_win', 1.0), 504)))
             pl = o.get('plow')
             if pl:
                 x = pl.get('x', 0.0)

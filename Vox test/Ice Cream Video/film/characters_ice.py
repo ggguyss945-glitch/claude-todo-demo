@@ -106,7 +106,7 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
     lon = np.asarray(lon, float); lat = np.asarray(lat, float)
     cl, sl = np.cos(lat), np.sin(lat)
     dn = np.clip(-sl, 0.0, 1.0)
-    rx = (_SH_HR[0] + grow) * (1.0 - 0.15 * dn - 0.16 * L * dn) * (1.0 - 0.03 * L)
+    rx = (_SH_HR[0] + grow) * (1.0 - 0.15 * dn - 0.34 * L * dn ** 1.3) * (1.0 - 0.03 * L)
     ry = np.where(lat > 0, _SH_HR[1] * (1.0 + 0.05 * L), _SH_CHIN * (1.0 + 1.25 * L)) + grow
     rz = (_SH_HR[2] + grow) * (1.0 - 0.06 * L * dn)
     x = rx * cl * np.sin(lon)
@@ -114,9 +114,11 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
     z = rz * cl * np.cos(lon)
     fr = np.clip(np.cos(lon), 0.0, None)
     z = z + fr * (3.8 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
-                  + 1.2 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
+                  + 2.0 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
+                  + 0.7 * (1.0 - L) * np.exp(-(lon / 0.30) ** 2 - ((lat + 0.33) / 0.08) ** 2)                   # upper lip
+                  - 0.8 * np.exp(-(lon / 0.18) ** 2 - ((lat - 0.14) / 0.06) ** 2)                               # nasal bridge
                   + (1.1 + 0.8 * L) * np.exp(-((np.abs(lon) - 0.52) / 0.24) ** 2 - ((lat + 0.06) / 0.13) ** 2)  # cheekbones
-                  + (0.9 + 0.6 * L) * np.exp(-((lat - 0.31) / 0.10) ** 2) * np.exp(-(lon / 0.6) ** 2)        # brow ridge
+                  + (1.5 + 0.9 * L) * np.exp(-((lat - 0.29) / 0.09) ** 2) * np.exp(-(lon / 0.6) ** 2)        # brow ridge
                   - (1.3 + 2.2 * L) * np.exp(-((np.abs(lon) - 0.27) / 0.13) ** 2 - ((lat - 0.13) / 0.11) ** 2)  # sockets
                   - (0.9 + 1.4 * L) * np.exp(-((np.abs(lon) - 0.66) / 0.20) ** 2 - ((lat + 0.36) / 0.17) ** 2))  # hollows
     x = x - np.sign(lon) * (0.9 + 0.6 * L) * np.exp(-((np.abs(lon) - 1.25) / 0.30) ** 2 - ((lat - 0.22) / 0.22) ** 2)  # temples
@@ -173,7 +175,20 @@ class _SHHead:
         X, Y, _, _ = self.proj(lo, la)
         P2 = np.stack([X, Y], -1)
         if self.J < 0.02:
-            return [poly(_hull(P2), True)]
+            side = abs(self.facing(0.0, 0.0))
+            if side >= 0.75:
+                return [poly(_hull(P2), True)]
+            # turned: the face's profile shows on the silhouette (brow, nasal bridge, nose, lip, chin)
+            keep = ~((np.abs(lo) < 0.78) & (la < 0.62))
+            sil = poly(_hull(P2[keep]), True)
+            if True:
+                Xc, Yc = self.view.p2(self.C)
+                las = np.linspace(0.80, -1.54, 44)
+                for lo_ in np.linspace(-0.80, 0.80, 13):
+                    Xf, Yf, _, _ = self.proj(np.full_like(las, lo_), las)
+                    try: sil = union(sil, poly([(Xc, Yc)] + list(zip(Xf.tolist(), Yf.tolist())), True))
+                    except Exception: pass
+            return [sil]
         w = self.jaw_w(lo, la)
         out = []
         for m in (w < 0.5, w >= 0.5):
@@ -272,17 +287,20 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     # ears (small, flat, human), behind first
     ears = []
     for s in (-1, 1):
-        Ec = hd.body(_sh_head_local(s * 1.50, -0.02, 0.4, L)[None, :])[0]
+        ek = 1.0 - 0.5 * L
+        Ec = hd.body(_sh_head_local(s * 1.46, -0.03, 0.15, L)[None, :])[0]
         M = R['hrot']
-        out_ = M @ np.array([s * 1.0, 0.0, 0.0]); upv = M @ np.array([0.0, -1.0, 0.0]); bk = M @ np.array([0.0, 0.0, -1.0])
-        bk = _u3(bk * 0.75 + out_ * 0.65)
-        ring = [Ec + upv * (3.7 * math.cos(a_) - 0.5) * (1.0 if math.cos(a_) > 0 else 0.8) + bk * (2.3 * math.sin(a_) + 0.6) + out_ * 0.4
+        out_ = M @ np.array([s * 1.0, 0.0, 0.0]); up0 = M @ np.array([0.0, -1.0, 0.0]); bk0 = M @ np.array([0.0, 0.0, -1.0])
+        c15, s15 = math.cos(0.26), math.sin(0.26)
+        upv = _u3(up0 * c15 + bk0 * s15)                 # tilted back 15 degrees
+        bk = _u3(bk0 * c15 - up0 * s15 + out_ * 0.22)    # nearly flat to the skull
+        ring = [Ec + upv * (2.75 * ek * math.cos(a_) - 0.3) * (1.0 if math.cos(a_) > 0 else 0.82) + bk * (1.55 * ek * math.sin(a_) + 0.35) + out_ * 0.35
                 for a_ in np.linspace(0, 2 * PI, 12, endpoint=False)]
         pts = [view.p2(q) for q in ring]
         ears.append((view.depth(out_), s, smooth(pts, True, 0.8), pts))
     for dz, s, ep, pts in ears:
         if dz < 0.45:
-            c.line(ep, lw * 2.2, pal['line']); c.fill(ep, skin); c.fill(_crescent(ep, -s * 0.8, 0.3), skin_sh, 170)
+            c.line(ep, lw * 2.2, pal['line']); c.fill(ep, skin); c.fill(_crescent(ep, -s * 0.8, 0.3), skin_sh, 200)
     sils = hd.sils()
     # mouth hole (behind the skin when the jaw drops: the dark between skull and jaw)
     W = hd.W
@@ -505,13 +523,35 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             c.line(sp_, lw * 1.2, pal['line'])
     for dz, s, ep, pts in ears:
         if dz >= 0.45:
-            c.fill(ep, skin); c.fill(_crescent(ep, s * 0.8, 0.4), skin_sh, 160); c.line(ep, lw, pal['line'])
-            ce = smooth([(pts[i][0] * 0.55 + pts[(i + 6) % 12][0] * 0.45, pts[i][1] * 0.55 + pts[(i + 6) % 12][1] * 0.45) for i in (1, 2, 3, 4)], False)
-            c.line(ce, lw * 0.6, pal['skin_dk'], 200)
+            c.fill(ep, skin); c.fill(_crescent(ep, s * 0.6, 0.4), skin_sh, 190); c.line(ep, lw, pal['line'])
+            # the helix: a C inside the rim, and the dark little hollow of the ear canal
+            ce = smooth([(pts[i][0] * 0.62 + pts[(i + 6) % 12][0] * 0.38, pts[i][1] * 0.62 + pts[(i + 6) % 12][1] * 0.38) for i in (11, 0, 1, 2, 3, 4)], False)
+            c.line(ce, lw * 0.7, pal['skin_dk'], 220)
+            cx_ = sum(q[0] for q in pts) / 12; cy_ = sum(q[1] for q in pts) / 12
+            ex_ = math.hypot(pts[0][0] - pts[6][0], pts[0][1] - pts[6][1])
+            c.fill(oval(cx_, cy_ + ex_ * 0.08, ex_ * 0.10, ex_ * 0.13), pal['skin_dk'], 200)
     return hd, sil_all
 
 
 # ---------------------------------------------------------------------------------------------------- the body
+# his vendor coat: shoulders squared and widened, a waist, the hem flared to mid-thigh (h in cm above the hip centre)
+_SH_ROWS = ((-25.0, 17.2, 12.6), (-12.0, 15.6, 11.4), (0.0, 14.2, 10.1), (16.0, 12.4, 9.1), (46.0, 15.6, 10.6), (60.0, 18.9, 9.6),
+            (68.0, 16.25, 8.6), (73.5, 8.2, 6.8))
+
+
+def _sh_surf(R, h, xr, out=1.0, front=True):
+    """Point + normal on the coat's surface at height h, across fraction xr (-1 his right .. 1 his left)."""
+    rows = _SH_ROWS
+    hs = [r[0] for r in rows]
+    w = float(np.interp(h, hs, [r[1] for r in rows])); d = float(np.interp(h, hs, [r[2] for r in rows]))
+    p, a = _ws_spine_pt(R, h)
+    xr = clamp(xr, -1, 1)
+    z = d * math.sqrt(max(0.0, 1 - xr * xr)) * (1 if front else -1)
+    loc = np.array([xr * w, 0.0, z + (out if front else -out)])
+    n = _u3(np.array([xr / max(w, 1), 0.0, (z / max(d * d, 1))]))
+    return p + _rx(loc, a), _rx(n, a)
+
+
 def _sh_torso(c, view, R, P, det, t, light, st):
     """The vendor jacket: pink and white VERTICAL stripes, buttoned to the throat, a round white collar; when he
     transforms the back bulges and splits along the stripes."""
@@ -519,7 +559,7 @@ def _sh_torso(c, view, R, P, det, t, light, st):
     lw = c.lw
     bul = st['split']
     rings = []
-    for hrow, w, d in _WS_ROWS:
+    for hrow, w, d in _SH_ROWS:
         p, a = _ws_spine_pt(R, hrow)
         ph = np.linspace(0, 2 * PI, 24, endpoint=False)
         k = 1.0 + 0.16 * bul * math.exp(-((hrow - 50.0) / 18.0) ** 2)
@@ -539,33 +579,52 @@ def _sh_torso(c, view, R, P, det, t, light, st):
     front = fz >= 0.0
     with c.clip(body):
         # stripes: even in angle round the body so they wrap like real vertical stripes
-        hs = np.linspace(-12.0, 72.0, 14)
+        hs = np.linspace(-25.0, 72.0, 16)
         nst = 9
         for side_ in (False, True):          # both halves; a stripe is drawn where its surface faces the lens
             for i in range(nst):
                 a0 = -PI / 2 + (i + 0.25) * PI / nst; a1 = -PI / 2 + (i + 0.75) * PI / nst
-                nrm = _ws_surf(R, 40.0, math.sin((a0 + a1) / 2), 0.3, side_)[1]
+                nrm = _sh_surf(R, 40.0, math.sin((a0 + a1) / 2), 0.3, side_)[1]
                 if view.face(nrm)[0] < -0.02: continue
-                e0 = [view.p2(_ws_surf(R, h_, math.sin(a0), 0.3, side_)[0]) for h_ in hs]
-                e1 = [view.p2(_ws_surf(R, h_, math.sin(a1), 0.3, side_)[0]) for h_ in hs[::-1]]
+                e0 = [view.p2(_sh_surf(R, h_, math.sin(a0), 0.3, side_)[0]) for h_ in hs]
+                e1 = [view.p2(_sh_surf(R, h_, math.sin(a1), 0.3, side_)[0]) for h_ in hs[::-1]]
                 c.fill(poly(e0 + e1, True), pal['pink'])
         xs = np.concatenate([r[:, 0] for r in rings])
         c.grad(body, xs.min(), 0, xs.max(), 0, [(0, '#ffffff', 60), (0.45, pal['white'], 0), (1, pal['pink_sh'], 150)])
         if det >= 1: c.texture(body, 'fabric', 0.10, 0.6)
-        hem = [view.p2(_ws_surf(R, -8.0, x_)[0]) for x_ in np.linspace(-1, 1, 9)]
-        c.line(smooth(hem, False), lw * 3.0, pal['white_sh'], 120)
+        # volume: the coat turns away at both sides, a cold shadow under the chest and in the waist
+        c.fill(_crescent(body, 0.0, -6.0), pal['pink_sh'], 70)
+        for h_, a_ in ((40.0, 70), (16.0, 60)):
+            q0 = view.p2(_sh_surf(R, h_, 0.0)[0]); _, _, _, f0 = view.p(_sh_surf(R, h_, 0.0)[0])
+            c.glow(q0[0], q0[1], 16.0 * f0, 3.0 * f0, pal['pink_sh'], a_)
+        if front and fz > 0.05 and det >= 1:
+            # tension folds pulling from the buttons at the waist, two lower patch pockets with flaps, the hem turned up
+            for h_ in (4.0, 18.0, 32.0):
+                for sg in (-1, 1):
+                    e = [view.p2(_sh_surf(R, h_ + dh, sg * xr_, 1.0)[0]) for dh, xr_ in ((0.0, 0.08), (3.5, 0.30), (6.0, 0.55))]
+                    c.line(smooth(e, False), lw * 0.8, pal['pink_sh'], 150)
+            for sg in (-1, 1):
+                pk = [view.p2(_sh_surf(R, h_, sg * xr_, 1.4)[0]) for h_, xr_ in ((-6.0, 0.25), (-6.0, 0.78), (-20.0, 0.80), (-20.0, 0.27))]
+                c.fill(poly(pk, True), '#ffffff', 60); c.line(poly(pk, True), lw * 0.8, pal['pink_sh'], 230)
+                fl = [view.p2(_sh_surf(R, -9.0, sg * xr_, 1.5)[0]) for xr_ in (0.25, 0.52, 0.79)]
+                c.line(smooth(fl, False), lw * 0.8, pal['pink_sh'], 230)
+        hem = [view.p2(_sh_surf(R, -22.5, x_)[0]) for x_ in np.linspace(-1, 1, 11)]
+        c.line(smooth(hem, False), lw * 0.8, pal['white_sh'], 200)
+        for sg in (-1, 1):                       # side vents
+            v = [view.p2(_sh_surf(R, h_, sg * 0.97, 0.3, front)[0]) for h_ in (-25.0, -14.0)]
+            c.line(poly(v, False), lw * 1.2, pal['line'], 200)
         if light and light.get('rim'):
             c.fill(_crescent(body, -light.get('side', 1) * 1.5, 0), light['rim'], light.get('rim_a', 60))
         if front and fz > 0.05:
-            cf = [view.p2(_ws_surf(R, h_, 0.0)[0]) for h_ in (-12.0, 10.0, 30.0, 50.0, 66.0)]
+            cf = [view.p2(_sh_surf(R, h_, 0.0)[0]) for h_ in (-25.0, -8.0, 10.0, 30.0, 50.0, 66.0)]
             c.line(smooth(cf, False), lw * 0.8, pal['line'], 200)
             for h_ in (4.0, 18.0, 32.0, 46.0, 60.0):
-                q, n = _ws_surf(R, h_, 0.07, 1.2)
+                q, n = _sh_surf(R, h_, 0.07, 1.2)
                 X, Y = view.p2(q); _, _, _, f = view.p(q)
                 bt = oval(X, Y, 1.2 * f, 1.2 * f)
                 c.fill(bt, '#fdfbfc'); c.line(bt, lw * 0.5, pal['line'])
             # the snowflake SHIVER badge on his left chest
-            q, n = _ws_surf(R, 50.0, 0.55, 1.2)
+            q, n = _sh_surf(R, 50.0, 0.55, 1.2)
             if view.face(n)[0] > 0.1:
                 X0, Y0, _, f = view.p(q)
                 r0 = 4.2 * f
@@ -581,8 +640,8 @@ def _sh_torso(c, view, R, P, det, t, light, st):
         if not front and bul > 0.02:
             # the back splits along a stripe seam: torn edges, a dark gap where the legs come out
             gap_w = 0.05 + 0.30 * bul
-            e0 = [view.p2(_ws_surf(R, h_, -gap_w * (0.6 + 0.4 * hash01(int(h_), 3401)), 0.5, False)[0]) for h_ in np.linspace(14, 68, 9)]
-            e1 = [view.p2(_ws_surf(R, h_, gap_w * (0.6 + 0.4 * hash01(int(h_), 3402)), 0.5, False)[0]) for h_ in np.linspace(68, 14, 9)]
+            e0 = [view.p2(_sh_surf(R, h_, -gap_w * (0.6 + 0.4 * hash01(int(h_), 3401)), 0.5, False)[0]) for h_ in np.linspace(14, 68, 9)]
+            e1 = [view.p2(_sh_surf(R, h_, gap_w * (0.6 + 0.4 * hash01(int(h_), 3402)), 0.5, False)[0]) for h_ in np.linspace(68, 14, 9)]
             gp = poly(e0 + e1, True)
             c.fill(gp, '#140c10', int(255 * clamp(bul * 1.6)))
             c.line(gp, lw * 0.8, pal['white_sh'], int(255 * bul))
@@ -590,7 +649,7 @@ def _sh_torso(c, view, R, P, det, t, light, st):
     if bul > 0.02 and front:
         # seen from the front: the shoulders bulge, torn stripe ends lift behind the collar line
         for s in (-1, 1):
-            q = _ws_surf(R, 66.0, s * 0.75, 0.0, False)[0] + _rx(np.array([0.0, -6.0 * bul, -2.0]), R['a'])
+            q = _sh_surf(R, 66.0, s * 0.75, 0.0, False)[0] + _rx(np.array([0.0, -6.0 * bul, -2.0]), R['a'])
             X, Y, _, f = view.p(q)
             for k in range(3):
                 ang = -PI / 2 + s * (0.4 + 0.25 * k)
@@ -659,40 +718,160 @@ def _sh_stripe_tube(c, view, pts, widths, light, n=2):
 
 
 def _sh_arm(c, view, R, P, s, det, t, light, hands=True):
-    """Long striped sleeve to the wrist, a white cuff, the ribbed cuff of a white knitted wool glove, the glove."""
+    """A full set-in sleeve (rounded shoulder cap, seam), creases at the inner elbow, a wide white turned-back cuff, the
+    ribbed cuff of a white knitted wool glove, the glove."""
     pal = _SH_PAL
     arm = R['arms'][s]
     S, E, W = arm['S'], arm['J'][0], arm['W']
+    a = R['a'] + R.get('hunch', 0.0)
+    upv = _rx(np.array([0.0, -1.0, 0.0]), a)
+    Sc = S + upv * 2.5 + _rx(np.array([s * 1.5, 0.0, 0.0]), a)          # the shoulder cap sits a little up and out
     cuff = E + (W - E) * 0.80
-    _sh_stripe_tube(c, view, [S, (S + E) / 2, E], [10.5, 9.4, 8.4], light)
-    _sh_stripe_tube(c, view, [E, (E + cuff) / 2, cuff], [8.4, 7.8, 7.4], light)
+    _sh_stripe_tube(c, view, [Sc, (S + E) / 2, E, (E + cuff) / 2, cuff], [13.0, 11.6, 10.4, 9.6, 9.0], light)
     X, Y, _, f = view.p(cuff)
-    Xe, Ye, _, _ = view.p(E)
+    Xe, Ye, _, fe = view.p(E)
     d = math.hypot(X - Xe, Y - Ye) or 1.0
     ux, uy = (X - Xe) / d, (Y - Ye) / d
-    nx, ny = -uy * 4.0 * f, ux * 4.0 * f
-    c.line(poly([(X - nx, Y - ny), (X + nx, Y + ny)], False), c.lw * 2.4, '#fbf8f9')
-    # knitted rib cuff
-    tw, p2 = _ws_tube3(c, view, [cuff, W], [4.6, 4.4], _SH_WSPAL['glove'], _SH_WSPAL['glove_sh'], c.lw, light)
     if det >= 1:
-        with c.clip(tw):
-            for k in range(-3, 4):
-                ox, oy = -uy * k * 1.1 * f, ux * k * 1.1 * f
-                c.line(poly([(X + ox, Y + oy), (p2[-1][0] + ox, p2[-1][1] + oy)], False), c.lw * 0.5, '#b9bec8', 200)
-    if hands: _ws_glove(c, view, R, P, s, _SH_WSPAL, det, t, light)
+        # the set-in sleeve seam round the shoulder cap and the creases bunched at the inner elbow
+        Xs, Ys, _, fs = view.p(Sc + (E - Sc) * 0.10)
+        dxs, dys = Xe - Xs, Ye - Ys; ds = math.hypot(dxs, dys) or 1.0
+        nx, ny = -dys / ds, dxs / ds
+        w_ = 6.3 * fs
+        c.line(smooth([(Xs - nx * w_, Ys - ny * w_), (Xs - dxs / ds * 2.2 * fs, Ys - dys / ds * 2.2 * fs), (Xs + nx * w_, Ys + ny * w_)], False),
+               c.lw * 0.8, pal['pink_sh'], 220)
+        inner = -s if True else s
+        for k in range(3):
+            o = (k - 1) * 1.7 * fe
+            cx_, cy_ = Xe + ux * o, Ye + uy * o
+            nx2, ny2 = -uy, ux
+            sg = 1.0 if (nx2 * (view.p2(R['Ch'])[0] - Xe) + ny2 * (view.p2(R['Ch'])[1] - Ye)) > 0 else -1.0
+            p0 = (cx_ + nx2 * sg * 1.0 * fe, cy_ + ny2 * sg * 1.0 * fe)
+            p1 = (cx_ + nx2 * sg * 3.6 * fe + ux * 0.9 * fe, cy_ + ny2 * sg * 3.6 * fe + uy * 0.9 * fe)
+            p3 = (cx_ + nx2 * sg * 5.0 * fe, cy_ + ny2 * sg * 5.0 * fe)
+            c.line(smooth([p0, p1, p3], False), c.lw * 0.7, pal['pink_sh'], 200)
+    # the turned-back cuff: a wide white band at the sleeve end
+    c0 = cuff - (cuff - E) * 0.16
+    tc, _ = _ws_tube3(c, view, [c0, cuff], [10.0, 10.4], '#fbf8f9', pal['white_sh'], c.lw, light)
+    if det >= 1:
+        Xa, Ya = view.p2(c0)
+        c.line(poly([(Xa - uy * 4.8 * f, Ya + ux * 4.8 * f), (Xa + uy * 4.8 * f, Ya - ux * 4.8 * f)], False), c.lw * 0.6, pal['white_sh'], 220)
+    if hands: _sh_glove(c, view, R, P, s, det, t, light)
+
+
+def _sh_glove(c, view, R, P, s, det, t, light):
+    """His white KNITTED WOOL glove (a child's winter glove on a long hand): plump fingers with round tips, separated by
+    soft grey shading (never dark gaps), knuckle bumps, a soft thumb pad, a V-stitch knit texture and a two-row ribbed
+    cuff. Only the outer silhouette gets the dark line."""
+    pal = _SH_WSPAL
+    h = _ws_hand3(R, s, P)
+    lw = c.lw
+    W, f_, nb = h['W'], h['f'], h['nb']
+    g, gsh = '#EDEDED', '#cdd2da'
+    back = view.face(nb)[0] > 0
+    paths = []
+    # ribbed cuff (2 rows)
+    cA, cB = W - f_ * 6.5, W - f_ * 0.3
+    Xc, Yc, _, fc = view.pa(np.array([cA, (cA + cB) / 2, cB]))
+    cuff = _tube(list(zip(Xc.tolist(), Yc.tolist())), [8.6 * fc[0], 8.2 * fc[1], 7.6 * fc[2]], 0.8)
+    paths.append((view.depth(W - f_ * 3.0) - 0.5, 'cuff', cuff, None))
+    Xp, Yp, zp, fp = view.pa(np.array(h['palm']))
+    gc = np.array([float(np.mean(Xp)), float(np.mean(Yp))])
+    palm = smooth(_hull([tuple(gc + (np.array(q) - gc) * 1.22) for q in zip(Xp.tolist(), Yp.tolist())]), True, 0.6)
+    pz = float(np.mean(zp))
+    paths.append((pz, 'palm', palm, None))
+    for j, fing in enumerate(list(h['fingers']) + [h['thumb']]):
+        X, Y, zd, f = view.pa(np.array(fing))
+        p2 = list(zip(X.tolist(), Y.tolist()))
+        n = len(p2)
+        ws = [(4.4 - 0.5 * k / (n - 1)) * 1.35 * f[k] for k in range(n)]
+        tp = _tube(p2, ws, 0.75)
+        try: tp = union(tp, oval(p2[-1][0], p2[-1][1], ws[-1] * 0.55, ws[-1] * 0.55))
+        except Exception: pass
+        paths.append((view.depth(np.mean(fing, 0)) + (0.3 if j == 1 else 0.0), 'thumb' if j == len(h['fingers']) else 'finger', tp, (p2, ws)))
+    paths.sort(key=lambda q: q[0])
+    # one dark outline round the whole glove (under the fills: only the silhouette edge stays dark)
+    for _, kind, pth, _ in paths:
+        c.line(pth, lw * 2.0, pal['line'])
+    prop = getattr(P, 'hl_prop' if s > 0 else 'hr_prop')
+    drew = False
+    for z_, kind, pth, extra in paths:
+        if prop and not drew and kind != 'cuff' and z_ >= pz - 0.5 and not back:
+            _ws_held(c, view, h, P, s, prop, pal, det, t); drew = True
+        c.fill(pth, g)
+        c.fill(_crescent(pth, 0.9, 0.9), gsh, 190)
+        if light and light.get('rim'): c.fill(_crescent(pth, -light.get('side', 1) * 0.8, 0), light['rim'], light.get('rim_a', 60) * 0.6)
+        if kind == 'cuff':
+            if det >= 1:
+                with c.clip(pth):
+                    dx, dy = Xc[2] - Xc[0], Yc[2] - Yc[0]; d = math.hypot(dx, dy) or 1.0
+                    ux, uy = dx / d, dy / d
+                    for k in range(-4, 5):
+                        ox, oy = -uy * k * 1.0 * fc[1], ux * k * 1.0 * fc[1]
+                        c.line(poly([(Xc[0] + ox, Yc[0] + oy), (Xc[2] + ox, Yc[2] + oy)], False), lw * 0.45, gsh, 230)
+                    c.line(poly([(Xc[1] - uy * 6 * fc[1], Yc[1] + ux * 6 * fc[1]), (Xc[1] + uy * 6 * fc[1], Yc[1] - ux * 6 * fc[1])], False), lw * 0.6, gsh, 255)
+            c.line(pth, lw * 0.5, gsh, 200)
+        elif kind == 'palm':
+            if det >= 1:
+                with c.clip(pth):      # V-stitch knit texture
+                    bb = pth.getBounds()
+                    st_ = max(bb.width(), bb.height()) / 7.0
+                    for iy in range(9):
+                        for ix in range(9):
+                            x0 = bb.left() + (ix + 0.5 * (iy % 2)) * st_ * 0.9; y0 = bb.top() + iy * st_ * 0.8
+                            c.line(poly([(x0 - st_ * 0.25, y0 - st_ * 0.2), (x0, y0 + st_ * 0.15), (x0 + st_ * 0.25, y0 - st_ * 0.2)], False), lw * 0.35, '#9aa2ae', 60)
+                if back:                  # knuckle bumps across the back of the hand
+                    for fing in h['fingers']:
+                        x_, y_ = view.p2(fing[0]); _, _, _, ff = view.p(fing[0])
+                        c.line(smooth([(x_ - 2.2 * ff, y_ + 0.6 * ff), (x_, y_ - 0.9 * ff), (x_ + 2.2 * ff, y_ + 0.6 * ff)], False), lw * 0.6, gsh, 230)
+                else:                     # the soft thumb pad
+                    tx_, ty_ = view.p2(h['W'] + h['th'] * 2.8 + f_ * 3.5); _, _, _, ff = view.p(h['W'])
+                    c.glow(tx_, ty_, 3.2 * ff, 2.4 * ff, gsh, 150)
+        else:
+            p2, ws = extra
+            if det >= 1:
+                for k in range(1, len(p2) - 1):          # soft creases at the bends (grey, not dark)
+                    dx, dy = p2[k + 1][0] - p2[k - 1][0], p2[k + 1][1] - p2[k - 1][1]; d = math.hypot(dx, dy) or 1.0
+                    nx, ny = -dy / d * ws[k] * 0.40, dx / d * ws[k] * 0.40
+                    c.line(smooth([(p2[k][0] - nx, p2[k][1] - ny), (p2[k][0] + dx / d * ws[k] * 0.16, p2[k][1] + dy / d * ws[k] * 0.16),
+                                   (p2[k][0] + nx, p2[k][1] + ny)], False), lw * 0.55, gsh, 200)
+                with c.clip(pth):
+                    for k in range(len(p2) - 1):
+                        mx, my = (p2[k][0] + p2[k + 1][0]) / 2, (p2[k][1] + p2[k + 1][1]) / 2
+                        w_ = ws[k] * 0.22
+                        c.line(poly([(mx - w_, my - w_ * 0.6), (mx, my + w_ * 0.4), (mx + w_, my - w_ * 0.6)], False), lw * 0.35, '#9aa2ae', 60)
+            c.line(pth, lw * 0.6, gsh, 230)               # finger separation: soft grey, the wool between
+    if prop and not drew:
+        _ws_held(c, view, h, P, s, prop, pal, det, t)
+    return h
 
 
 def _sh_leg_h(c, view, R, s, det, light):
-    """His human legs: pink-striped vendor trousers to the shoe, plain dark shoes."""
+    """His human legs: charcoal vendor trousers with a pressed front crease, long black shoes (about 30 cm) with a shine."""
     Hp, K, A, fd = R['legs'][s]
-    tr, tr_sh = '#d9d0d6', '#a89aa4'
-    _ws_tube3(c, view, [Hp, (Hp + K) / 2, K], [15.0, 13.5, 12.0], tr, tr_sh, c.lw, light)
-    _ws_tube3(c, view, [K, (K + A) / 2, A + np.array([0.0, 3.0, 0.0])], [12.0, 11.2, 10.8], tr, tr_sh, c.lw, light)
-    X, Y, _, f = view.p(A + np.array([0.0, 6.0, 0.0]))
-    Xt, Yt, _, _ = view.p(A + fd * 26.0 + np.array([0.0, 7.0, 0.0]))
-    if math.hypot(Xt - X, Yt - Y) < 4 * f: sh = oval((X + Xt) / 2, (Y + Yt) / 2, 6 * f, 3.5 * f)
-    else: sh = _tube([(X, Y), ((X + Xt) / 2, (Y + Yt) / 2 - 0.5 * f), (Xt, Yt)], [7.0 * f, 6.5 * f, 5.0 * f], 0.9)
-    c.fill(sh, '#2e2629'); c.fill(_crescent(sh, 0, -1.2), '#5a4c52', 120); c.line(sh, c.lw, _SH_PAL['line'])
+    tr, tr_sh = '#3a3540', '#24212a'
+    t1, p1 = _ws_tube3(c, view, [Hp, (Hp + K) / 2, K], [15.0, 13.5, 12.0], tr, tr_sh, c.lw, light)
+    t2, p2 = _ws_tube3(c, view, [K, (K + A) / 2, A + np.array([0.0, 3.0, 0.0])], [12.0, 11.4, 11.2], tr, tr_sh, c.lw, light)
+    if det >= 1:
+        for pp, tp in ((p1, t1), (p2, t2)):
+            with c.clip(tp):
+                c.line(smooth(pp, False), c.lw * 0.6, '#5a5462', 200)          # the pressed crease
+    heel = A + np.array([0.0, 7.0, 0.0]) - fd * 5.0
+    toe = A + fd * 27.0 + np.array([0.0, 7.5, 0.0])
+    top = A + np.array([0.0, 2.5, 0.0]) + fd * 3.0
+    X, Y, _, f = view.pa(np.array([heel, top, A + fd * 15.0 + np.array([0.0, 4.0, 0.0]), toe, A + fd * 16.0 + np.array([0.0, 9.0, 0.0])]))
+    pts = list(zip(X.tolist(), Y.tolist()))
+    if math.hypot(pts[3][0] - pts[0][0], pts[3][1] - pts[0][1]) < 8 * float(f[0]):
+        sh = oval((pts[0][0] + pts[3][0]) / 2, (pts[0][1] + pts[3][1]) / 2, 6.5 * f[0], 4.0 * f[0])
+    else:
+        hull = poly(_hull(pts + [(x_ + 2.6 * f[0], y_) for x_, y_ in pts[:1]]), True)
+        sh = _tube([pts[0], pts[2], pts[3]], [8.5 * f[0], 7.8 * f[0], 5.5 * f[0]], 0.9)
+        try: sh = union(sh, hull)
+        except Exception: pass
+    c.fill(sh, '#141216'); c.fill(_crescent(sh, 0, 1.4), '#2c2830', 160)
+    bb = sh.getBounds()
+    c.glow(bb.centerX() + (pts[3][0] - pts[0][0]) * 0.18, bb.top() + bb.height() * 0.35, bb.width() * 0.16, bb.height() * 0.12, '#ffffff', 90)
+    c.line(sh, c.lw, _SH_PAL['line'])
 
 
 # ---------------------------------------------------------------------------------------------------- spider legs
@@ -704,7 +883,7 @@ def _sh_leg_root(R, i):
     s = 1 if i % 2 == 0 else -1
     k = i // 2
     h = 66.0 - 9.0 * k
-    q, n = _ws_surf(R, h, s * 0.42, -1.0, False)
+    q, n = _sh_surf(R, h, s * 0.42, -1.0, False)
     return q, s, k
 
 
@@ -763,62 +942,156 @@ def _sh_leg_chain(R, P, i, e):
     return out_l
 
 
+_SH_LEG_W = ((16.0, 13.0), (13.0, 7.5), (7.0, 3.5), (3.5, 0.35))     # coxa, femur, tibia, tarsus: thick to a needle
+
+
 def _sh_leg_items(view, R, P, st, det, light, zt):
-    """Depth-sorted draw items for the legs (each segment its own item)."""
-    pal = _SH_PAL
+    """Depth-sorted draw items for the legs: the coxa (always behind the torso: it comes out of the split back) and the
+    rest of each leg (femur, tibia, tarsus and their joints) as one item, so the joints overlap in the right order."""
     n = st['legs']
     items = []
+    Bx, By = view.p2(R['Ch'])
     for j, i in enumerate(_SH_LEG_ORDER):
         e = clamp(n - j)
         if e <= 0.01: continue
         ch = _sh_leg_chain(R, P, i, e)
-        widths = ((13.0, 11.5), (11.5, 8.5), (8.0, 5.0), (4.6, 0.6))
-        for sgi in range(4):
-            a3, b3 = ch[sgi], ch[sgi + 1]
-            z = (view.depth(a3) + view.depth(b3)) / 2
-            if sgi == 0: z = min(z, zt - 3.0)
-            items.append((z + 0.001 * i, lambda cc, a3=a3, b3=b3, sgi=sgi, ch=ch, i=i: _sh_leg_seg(cc, view, a3, b3, sgi, widths[sgi], det, light, i)))
+        zc = min((view.depth(ch[0]) + view.depth(ch[1])) / 2, zt - 3.0)
+        items.append((zc + 0.001 * i, lambda cc, ch=ch, i=i: _sh_leg_draw(cc, view, ch, det, light, i, (Bx, By), (0,))))
+        zr = (view.depth(ch[1]) + view.depth(ch[2]) + view.depth(ch[3])) / 3
+        items.append((zr + 0.001 * i, lambda cc, ch=ch, i=i: _sh_leg_draw(cc, view, ch, det, light, i, (Bx, By), (3, 2, 1))))
     return items
 
 
-def _sh_leg_seg(c, view, a3, b3, sgi, wd, det, light, i):
+def _sh_seg2d(view, a3, b3, sgi, Bc, wd):
+    """The segment in screen space: a bowed spindle centre line (femur bows outward, tibia inward: an organic S) and
+    its widths (thickest at 30%)."""
+    X, Y, _, f = view.pa(np.array([a3, b3]))
+    ax, ay, bx, by = float(X[0]), float(Y[0]), float(X[1]), float(Y[1])
+    fa, fb = float(f[0]), float(f[1])
+    dx, dy = bx - ax, by - ay
+    L = math.hypot(dx, dy) or 1e-6
+    nx, ny = -dy / L, dx / L
+    mx, my = (ax + bx) / 2, (ay + by) / 2
+    away = (mx - Bc[0]) * nx + (my - Bc[1]) * ny
+    sg = 1.0 if away >= 0 else -1.0
+    if sgi == 2: sg = -sg                                   # the tibia bows back in
+    bow = 0.0 if sgi in (0, 3) else sg * (0.6 * wd[0] * (fa + fb) / 2 + 0.035 * L)
+    us = (0.0, 0.3, 0.6, 0.85, 1.0)
+    w0, w1 = wd[0] * fa, wd[1] * fb
+    pts, ws = [], []
+    for u in us:
+        b = bow * math.sin(PI * u)
+        pts.append((ax + dx * u + nx * b, ay + dy * u + ny * b))
+        if u <= 0.3: w = w0 * (1.0 + 0.1 * u / 0.3)
+        else: w = w0 * 1.1 + (w1 - w0 * 1.1) * ((u - 0.3) / 0.7) ** 1.15
+        ws.append(max(w, 0.05))
+    return pts, ws, (nx * sg, ny * sg), L
+
+
+def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
+    """One spider leg: dark-brown chitin spindles with lit and shadow edges, telescoping rings, bristles on the outer
+    edge, dark ball joints under flared segment ends, frost rime crusted on the top of every joint (icicles hanging),
+    and a needle tip that fades from dark to pale."""
     pal = _SH_PAL
     lw = c.lw
-    mid = (a3 + b3) / 2
-    if sgi == 3:
-        # tarsus: brown into a pale needle tip
-        q = a3 + (b3 - a3) * 0.62
-        tp, p2 = _ws_tube3(c, view, [a3, q], [wd[0], wd[0] * 0.55], pal['leg'], pal['leg_dk'], lw, light)
-        X, Y, _, f = view.pa(np.array([q, b3]))
-        tp2 = _tube([(float(X[0]), float(Y[0])), (float(X[1]), float(Y[1]))], [wd[0] * 0.55 * float(f[0]), 0.25], 0.8)
-        c.fill(tp2, pal['tip']); c.line(tp2, lw * 0.7, pal['line'])
-    else:
-        bend = (b3 - a3)
-        tp, p2 = _ws_tube3(c, view, [a3, mid + _u3(np.cross(bend, np.array([0.0, 0.0, 1.0])) + 1e-9) * wd[0] * 0.25, b3],
-                           [wd[0], (wd[0] + wd[1]) / 2 * 0.92, wd[1]], pal['leg'], pal['leg_dk'], lw, light)
-        if det >= 1:
-            with c.clip(tp):
-                c.line(poly(p2, False), lw * 0.8, pal['leg_hi'], 120)
-                # bristles / chitin bands
-                for k in range(3):
-                    u = (k + 1) / 4.0
-                    X, Y = view.p2(a3 + (b3 - a3) * u)
-                    c.fill(oval(X, Y, wd[0] * 0.9, wd[0] * 0.35), pal['leg_dk'], 70)
-    # the joint at the start of this segment: a dark knuckle with frost rime
-    if sgi >= 1:
-        X, Y, _, f = view.p(a3)
-        r = wd[0] * 0.58 * f
-        c.fill(oval(X, Y, r, r * 0.9), pal['leg_dk']); c.line(oval(X, Y, r, r * 0.9), lw * 0.7, pal['line'])
-        if det >= 1:
-            for k in range(6):
-                ang = hash01(i * 17 + sgi * 5 + k, 3501) * 2 * PI
-                rr = r * (0.6 + 0.6 * hash01(i * 17 + sgi * 5 + k, 3502))
-                cx_, cy_ = X + math.cos(ang) * r * 0.55, Y + math.sin(ang) * r * 0.55 - r * 0.25
-                c.fill(poly([(cx_ - rr * 0.28, cy_ + rr * 0.1), (cx_, cy_ - rr * 0.3), (cx_ + rr * 0.24, cy_ + rr * 0.12)], True), pal['rime'], 215)
-            for k in range(3):
-                ang = -PI / 2 + (k - 1) * 0.6
-                c.line(poly([(X + math.cos(ang) * r * 0.6, Y + math.sin(ang) * r * 0.6),
-                             (X + math.cos(ang) * r * 1.15, Y + math.sin(ang) * r * 1.15)], False), lw * 0.4, '#ffffff', 140)
+    side = (light or {}).get('side', 1)
+    px = 1.0 / max(getattr(c, 's', 1.0), 1e-6)            # one screen pixel in these units
+    joints = []
+    for sgi in segs:                                       # drawn distal first: each proximal end flares over its joint
+        a3, b3 = ch[sgi], ch[sgi + 1]
+        wd = _SH_LEG_W[sgi]
+        pts, ws, (ox, oy), L = _sh_seg2d(view, a3, b3, sgi, Bc, wd)
+        _, _, _, fa = view.p(a3)
+        if sgi == 3:
+            # tarsus: half brown chitin, half a pale needle (dark into pale)
+            mid = len(pts) // 2
+            q = (pts[0][0] + (pts[-1][0] - pts[0][0]) * 0.5, pts[0][1] + (pts[-1][1] - pts[0][1]) * 0.5)
+            wq = ws[0] * 0.55
+            tp = _tube([pts[0], ((pts[0][0] + q[0]) / 2, (pts[0][1] + q[1]) / 2), q], [ws[0], ws[0] * 0.78, wq], 0.8)
+            c.fill(tp, pal['leg'])
+            c.fill(_crescent(tp, side * 0.2 * ws[0], 0.25 * ws[0]), pal['leg_dk'], 170)
+            c.line(tp, lw * 0.8, pal['line'])
+            nd = _tube([q, ((q[0] + pts[-1][0]) / 2, (q[1] + pts[-1][1]) / 2), pts[-1]], [wq, wq * 0.45, max(ws[-1], 0.05)], 0.8)
+            c.grad(nd, q[0], q[1], pts[-1][0], pts[-1][1], [(0, pal['leg_dk'], 255), (0.45, '#9a8f86', 255), (1, pal['tip'], 255)])
+            c.line(nd, lw * 0.6, pal['line'], 220)
+            continue
+        tp = _tube(pts, ws, 0.85)
+        c.fill(tp, pal['leg'])
+        with c.clip(tp):
+            c.fill(_crescent(tp, side * 0.22 * ws[1], 0.30 * ws[1]), pal['leg_hi'], 160)       # the lit edge
+            c.fill(_crescent(tp, -side * 0.20 * ws[1], -0.26 * ws[1]), pal['leg_dk'], 170)     # the shadow edge
+            if det >= 1:
+                dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]
+                Ld = math.hypot(dx, dy) or 1.0
+                tx, ty = dx / Ld, dy / Ld
+                for u in (0.88, 0.96):                    # telescoping rings near the far end
+                    k = int(u * (len(pts) - 1)); fr = u * (len(pts) - 1) - k
+                    k = min(k, len(pts) - 2)
+                    cx_ = pts[k][0] + (pts[k + 1][0] - pts[k][0]) * fr; cy_ = pts[k][1] + (pts[k + 1][1] - pts[k][1]) * fr
+                    w_ = ws[k] + (ws[k + 1] - ws[k]) * fr
+                    c.line(smooth([(cx_ - ty * w_ * 0.6 - tx * w_ * 0.08, cy_ + tx * w_ * 0.6 - ty * w_ * 0.08), (cx_ + tx * w_ * 0.12, cy_ + ty * w_ * 0.12),
+                                   (cx_ + ty * w_ * 0.6 - tx * w_ * 0.08, cy_ - tx * w_ * 0.6 - ty * w_ * 0.08)], False), lw * 0.55, pal['leg_dk'], 230)
+        c.line(tp, lw * 0.9, pal['line'])
+        if det >= 1:                                       # short dark bristles along the outer edge, raked toward the tip
+            nb = 6 + int(4 * hash01(i * 5 + sgi, 3511))
+            dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]
+            Ld = math.hypot(dx, dy) or 1.0
+            tx, ty = dx / Ld, dy / Ld
+            ca, sa = math.cos(0.52), math.sin(0.52)
+            for k in range(nb):
+                u = 0.12 + 0.76 * (k + 0.5 * hash01(i * 13 + sgi * 7 + k, 3512)) / nb
+                kk = min(int(u * (len(pts) - 1)), len(pts) - 2); fr = u * (len(pts) - 1) - kk
+                bx_ = pts[kk][0] + (pts[kk + 1][0] - pts[kk][0]) * fr; by_ = pts[kk][1] + (pts[kk + 1][1] - pts[kk][1]) * fr
+                w_ = (ws[kk] + (ws[kk + 1] - ws[kk]) * fr) * 0.5
+                sx_, sy_ = bx_ + ox * w_ * 0.9, by_ + oy * w_ * 0.9
+                ln = w_ * (0.55 + 0.4 * hash01(i * 3 + k, 3513)) + 2.0 * px
+                vx, vy = ox * sa + tx * ca, oy * sa + ty * ca
+                c.line(poly([(sx_, sy_), (sx_ + vx * ln, sy_ + vy * ln)], False), max(lw * 0.45, 0.8 * px), pal['leg_dk'], 230)
+        # the flared end cap over the joint at this segment's far end (the next segment's ball sits under it)
+        if sgi < 3:
+            ex, ey = pts[-1]
+            rr = ws[-1] * 0.5 * 1.15
+            cap = oval(ex, ey, rr, rr)
+            c.fill(cap, pal['leg']); c.fill(_crescent(cap, -side * rr * 0.35, -rr * 0.3), pal['leg_dk'], 150)
+            c.line(cap, lw * 0.8, pal['line'])
+            joints.append((ex, ey, wd[1], sgi + 1))
+        # the dark ball joint at the start of this segment, under the previous segment's flare
+        if sgi >= 1:
+            X, Y = view.p2(a3)
+            rb = 0.42 * wd[0] * fa
+            ball = oval(X, Y, rb, rb)
+            c.fill(ball, pal['leg_dk']); c.line(ball, lw * 0.7, pal['line'])
+    if det >= 1:
+        for ex, ey, w_cm, jn in joints:
+            _sh_rime(c, ex, ey, w_cm * view.p(ch[jn])[3] * 0.62, i * 11 + jn, px, lw)
+
+
+def _sh_rime(c, X, Y, r, seed, px, lw):
+    """Frost rime crusted on the top half of a joint: an irregular crust of small blobs, a soft cold glow, and two or
+    three tiny icicles hanging from its lower edge."""
+    pal = _SH_PAL
+    c.glow(X, Y - r * 0.2, r * 1.6, r * 1.3, '#e8f4ff', 40)
+    crust = None
+    nbl = 5 + int(4 * hash01(seed, 3521))
+    for k in range(nbl):
+        a_ = PI + PI * (k + 0.5) / nbl + (hash01(seed * 7 + k, 3522) - 0.5) * 0.4      # over the top half
+        rr = r * (0.30 + 0.22 * hash01(seed * 5 + k, 3523))
+        b = oval(X + math.cos(a_) * r * 0.78, Y + math.sin(a_) * r * 0.70 - r * 0.08, rr, rr * 0.85)
+        crust = b if crust is None else union(crust, b)
+    cap = oval(X, Y - r * 0.35, r * 0.75, r * 0.45)
+    crust = union(crust, cap)
+    c.fill(crust, pal['rime'], 230)
+    c.fill(_crescent(crust, 0, -r * 0.18), '#9fb4c8', 150)
+    c.line(crust, max(lw * 0.45, 0.7 * px), '#7f93a8', 200)
+    for k in range(2 + int(hash01(seed, 3524) * 2)):
+        u = (k + 0.5) / 3.0 - 0.5
+        x0 = X + u * r * 1.3
+        y0 = Y - r * 0.05 + abs(u) * r * 0.35
+        ln = max(r * (0.35 + 0.35 * hash01(seed * 3 + k, 3525)), 2.0 * px)
+        ln = min(ln, 4.0 * px) if r < 8 * px else ln
+        w_ = max(ln * 0.32, 0.9 * px)
+        ic = poly([(x0 - w_, y0), (x0 + w_, y0), (x0 + 0.1 * w_, y0 + ln)], True)
+        c.fill(ic, '#eef6ff', 240); c.line(ic, max(lw * 0.3, 0.5 * px), '#7f93a8', 180)
 
 
 # ---------------------------------------------------------------------------------------------------- the figure

@@ -102,3 +102,16 @@ Figures outside the front door in hall views sort between the outside layer and 
 | the morning: shoveling, smoke, cocoa | `ic_morning('kporch')` (anchors `kwalk_shovel1..3`) |
 | across town: a chime, no chimney smoke | `ic_town('town', truck_x=f)` |
 | rule 8; the outro advice | `ic_insert('rule', n=8)`, `ic_insert('rules', eighth=True)`, `ic_insert('outro', n=0..4)` |
+
+## 5. Checks (21 Nov) and open issues
+
+- 89 stills + `contact_sheet.jpg` + `floorplan.jpg` + `index.json` (anchors of every still) in `_work/sets/`; stage test
+  (`stage_sheet.jpg`): Adam and Lina seated on the couch, Mister Shiver at the serving window (the truck's curb-side wall
+  sorts in front of him: he shows only through the window), Lina at the kerb, Mr. Kessler on his walk, Adam at the door.
+- Frame check (52 views at their widest envelope): clean except `ext_plow` and `ext_window_close`, both false positives
+  (pink / beacon light on white reads as the magenta test colour); no plate edges.
+- Bench at 2560x1440 (one warm timing each): 0.10-0.18 s/frame (worst `hall_doorclose`). Live layers (a moving plow, a
+  driving truck, f(t) curtains / hatch / door) redraw their parts every frame and cost more.
+- Open: the 1958 grade (mono 0.72) mutes Benny's RED mitten: give that shot a colour-key or lower mono; from across the
+  street (`ext_house`) truck A hides our front door (by geography); the across-town house reads dark behind the truck;
+  `ext_plow` shows the streetlight's cone as a bright vertical bar; the plow cab is a flat insert (`plow_cab`), not a 3D set.
