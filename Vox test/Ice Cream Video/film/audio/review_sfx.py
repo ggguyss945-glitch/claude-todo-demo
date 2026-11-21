@@ -47,7 +47,7 @@ def measure(path):
         import soxr
         x = soxr.resample(x, sr, SR).astype(np.float32)
     full = len(x)
-    x = x[:SR * 200]                                    # long takes: the first 200 s is enough (memory)
+    x = x[:SR * 120]                                    # long takes: the first 120 s is enough (memory: 200 s ran out)
     st = x[:, :2] if x.shape[1] > 1 else np.repeat(x, 2, 1)
     m = st.mean(1)
     n = len(m)

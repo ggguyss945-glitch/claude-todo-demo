@@ -1,6 +1,6 @@
-"""Sound effects for "If The School Bus Stops At Midnight... DON'T GET ON" (the police film's v2 SFX engine, as the
-delivery, dummy, Bunnyman and Doctor films extended it; this film's names are BUS_NAMES, the last block before
-RECIPES; the Doctor film's DOCTOR_NAMES and every earlier name stay available): recorded, layered, perspective-processed, 48 kHz stereo float.
+"""Sound effects for "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" (the police film's v2 SFX
+engine, as the delivery, dummy, Bunnyman, Doctor and Bus films extended it; THIS film's names are ICE_NAMES in
+audio/sfx_ice.py, executed here just before RECIPES; the Bus film's BUS_NAMES and every earlier name stay available): recorded, layered, perspective-processed, 48 kHz stereo float.
 
 Every sound is built from the recorded library (the owner's Epidemic files first, then the free CC0/CC-BY library in
 catalog.json via library.py), cut into single events ("grains") automatically, layered 2-3 deep (e.g. a knock =
@@ -6288,6 +6288,11 @@ KEYWORDS = [('whistle', 'whistle'), ('punch', 'ticket_punch'), ('walkie', 'walki
             ('clipboard', 'clipboard_drop'), ('belt', 'seatbelt'), ('cricket', 'suburb_night'),
             ('purr', 'cat_rumble'), ('power', 'power_down')] + KEYWORDS
 
+
+# ============================================================================== THIS film: the Ice Cream film's block
+# audio/sfx_ice.py runs in this module's namespace (its names, levels, spaces, aliases and keyword guesses come last,
+# so they win); see its header for every name the picture emits.
+exec(compile(open(os.path.join(HERE, 'sfx_ice.py')).read(), os.path.join(HERE, 'sfx_ice.py'), 'exec'))
 
 RECIPES = {k: globals()['r_' + k] for k in NAMES}
 

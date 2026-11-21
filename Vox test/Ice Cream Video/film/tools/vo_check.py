@@ -26,18 +26,20 @@ import vo_edit as V                                                # noqa: E402
 
 SR = V.SR
 SPOTS = [  # (name, first tag, last tag, why)
-    ('hook', 'hook', 'bus_safety_cat', 'the hook: three rules, his TV voice (W, tv), the intro'),
-    ('loudspeaker', 'reads_post', 'cta', 'his PA reading the post (W), held 1.05 s before "He read it off my phone.", the comment prompt'),
-    ('roll_call', 'frosted_glass', 'click_clack1', 'the spliced "And that grin." / "He calls roll.", roll call (W, door), '
-                                                     'Sami\'s whisper (S_whisper), his Sami (M_sami), "Almost."'),
-    ('door_mimic', 'three_knocks', 'peephole_white', 'his Della at the door (M_della) and the "...Clever." slide'),
-    ('blackout', 'talking_walkie', 'folded_small', 'held 1.15 s before "I\'m still holding a hand."'),
-    ('lighthouse', 'told_me_walkie', 'word_secret', 'Sami (S) and his shout (S_shout)'),
-    ('seat22', 'so_are_we', 'della_1994', 'Della (D_firm, D) and the held 0.95 s before "Seat twenty-two has been empty..."'),
-    ('two_of_me', 'top_of_steps', 'at_face', 'his "Last stop!", his Mina (M_mina), the staccato'),
-    ('lure', 'bends_down', 'step_back', 'the trade lure (W_lure) and Della (D_firm)'),
-    ('theo', 'looks_at_it', 'theo_twists', 'Theo (T), held 1.15 s before "Theo.", the shout, Theo\'s "...HERE!" (T_shout + lent h)'),
-    ('outro', 'advice_tell', 'end', '"That\'s when you tell." / "Post the smile..." (the mangled "Parents" cut), the CTA, the teaser'),
+    ('hook', 'hook', 'like_rules_said', 'the hook: three rules, his voice from the window (S, truck) by 0:15'),
+    ('radio_dad', 'radio_handed', 'nobody_goes', 'Dad in person (D), the dialogue gaps'),
+    ('kessler_1958', 'seven_rules', 'never_told', 'the 1958 memory (fx memory)'),
+    ('rule1', 'three_notes', 'eleven_oh_two', '0.70 s before / 0.45 s after "Rule number one." and its text'),
+    ('drive_by_cta', 'no_cloud', 'rule2_text', 'the comment prompt (cta) and rule 2'),
+    ('skull', 'power_dies', 'curtain_shut', 'the scare beat after the skull in the TV screen'),
+    ('fake_real_dad', 'fake_dad', 'say_again', 'his copy of Dad (S_dad), Lina (L_small), the real Dad (D radio), "Told you what?"'),
+    ('lina_walks', 'lina_walks', 'step_back', 'Lina dreamy (L_dreamy), "Who\'s the coldest? YOU are!" (S_monster), the spliced "bare"'),
+    ('transform', 'transform1', 'legs_plant', 'the transformation steps and their scare beats'),
+    ('fake_mom', 'fake_mom', 'doorknob_frost', 'his copy of Mom (S_mom, S_mom_soft), the face up the glass'),
+    ('twist', 'walter_look', 'my_turn', 'his line to Walter (S), the twist lines, the held "...was across the street."'),
+    ('climax', 'climax', 'lina_not_alone', 'the spliced "PULLS", "Inside, children." (S_monster), the boy copy (S_boy)'),
+    ('ending', 'see_you', 'kessler_knocked', '"See you..." (S), "Bye, Benny." (K_whisper), Kessler (K)'),
+    ('outro', 'outro', 'end', 'the outro advice, the comment prompt, like / subscribe / next'),
 ]
 
 
