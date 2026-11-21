@@ -215,7 +215,7 @@ ROOM = {'house_night': ('house_hum', {}, 0.0), 'house_powered': ('house_hum', {}
         'morning': ('frozen_still', {}, -6.0)}
 SPACE_MAP = {'yard': 'snow', 'street_far': 'cold_street'}
 # recipes whose transient sits off the picture's frame by a fixed amount (filled by measure_mix.py on the first mix)
-SHIFT = {}
+SHIFT = {'porch_light_click': -0.11}   # first full mix: the porch light's click landed 116 ms after the frame
 
 
 def picture_pass(out, lines, log):

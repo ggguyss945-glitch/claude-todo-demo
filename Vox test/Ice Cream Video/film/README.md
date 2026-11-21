@@ -60,3 +60,16 @@ events}`) and `shots.json` (the cut list).
   part B: warped at the door and in the attic, outside as it moves to Kessler's, warped through the crossing, `climax`
   L372-L385 (it hangs on the missing note and falls apart), warm for the morning, far across town (ending on the gap),
   warm under the outro), plus `hit`, `riser`, `rule` and `silence` events, and the tension curve (`intensity`).
+
+## Sound: the final mix
+`bash audio/final_mix.sh` (from anywhere; about 12 min, peaks at 9.5 GB RAM: run it with no render going) does it all:
+`film.py --cues` -> `audio/mix.py --plan full` -> `W/mix/final/mix_en.wav` (+ hard link `mix.wav`) -> `audio/measure_mix.py`
+(`W/mix/final/measure.txt`) -> `audio/mix_scenes.py` (`W/mix/final/scenes/NN_*.png`) -> the mix muxed onto
+`W/preview/preview.mp4` as `W/preview/preview_mix.mp4`. After a picture change: re-render the preview first (Commands),
+then run `final_mix.sh`. The stems (`W/mix/final/stems/`, 0.9 GB) are written for the measure: delete them when done.
+- The score and its scares are anchored to the narration's WORDS in `audio/music_plan.py` (EVENTS: 22 boosted scares,
+  each on its reveal frame or just after its word; a plan hit within 0.35 s of a picture hit frame snaps onto it). The
+  picture's SFX names are mapped onto this film's recipes in `audio/sfx_plan.py` (PICTURE); a name the mix does not know
+  prints `unknown SFX` in `W/mix/final/mix.log`: add it to PICTURE rather than trust the keyword fallback.
+- First full mix (21 Nov): -14.05 LUFS, true peak -1.69 dBTP, scares +6.0..+9.7 LU momentary over the integrated level,
+  bed in the gaps rising rule by rule (ARC_TARGETS in mix.py), chime returns as in the bible's chime table.

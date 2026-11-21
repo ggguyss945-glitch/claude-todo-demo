@@ -2685,12 +2685,17 @@ def _ici_card(pen, t, time_='Eleven-oh-two.', temp='Minus thirty-three.', sub=No
     for k in range(9): pen.seg((tx + 22, ty - 230 + k * 50), (tx + 40, ty - 230 + k * 50), 2, '#c8d4f0')
 
 
-def _ici_radio(pen, t, talk=0.0, static=0.0, **kw):
+def _ici_radio(pen, t, talk=0.0, static=0.0, held=False, **kw):
     """Dad's radio close: a chunky orange two-way radio, channel 3 on its little screen, the LED (talk 0..1: green when
-    a voice comes through), the grille; static 0..1: a jittery noise band on the screen."""
-    _ibg_b(pen, '#2a2030', '#0c0a10', 140)
-    pen.fill(rect(-460, 700, 2840, 700), '#4a3020'); pen.texture(rect(-460, 700, 2840, 700), 'wood', 0.5, 'overlay', 1.0, 0)
-    pen.cv.save(); pen.cv.translate(980, 560); pen.cv.rotate(-8)
+    a voice comes through), the grille; static 0..1: a jittery noise band on the screen. held: in Adam's hand (no
+    table: the dark room behind, the radio tilted toward his ear; film.py draws the hand gripping it)."""
+    if held:
+        _ibg_b(pen, '#221c2a', '#08070c', 140)
+        pen.radial(None, 900, 420, 900, [(0, '#3a3448', 120), (1, '#0c0a10', 0)])
+    else:
+        _ibg_b(pen, '#2a2030', '#0c0a10', 140)
+        pen.fill(rect(-460, 700, 2840, 700), '#4a3020'); pen.texture(rect(-460, 700, 2840, 700), 'wood', 0.5, 'overlay', 1.0, 0)
+    pen.cv.save(); pen.cv.translate(980, 560 if not held else 500); pen.cv.rotate(-8 if not held else -14)
     body = rrect(-230, -420, 460, 840, 60)
     pen.fill(moved(body, 20, 30), '#000000', 120, blur=30); pen.fill(body, '#e8761a'); pen.texture(body, 'grunge', 0.4, 'overlay', 1.2)
     pen.fill(rrect(-170, -610, 60, 220, 24), '#1a1a1a'); pen.fill(rrect(90, -470, 70, 60, 14), '#2a2a2a')

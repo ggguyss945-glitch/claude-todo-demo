@@ -1166,6 +1166,32 @@ def _draw_order(l):
         return l.depth_at(0.0)
 
 
+def win_sill_layer(ys=940.0, jamb=True, name='win_sill'):
+    """Review (he read as standing in the street in his window busts): the serving window's own frame IN FRONT of him:
+    the counter ledge across the bottom (frosted, lit pink from inside, its shadow on his coat) over the striped truck
+    wall, and the jambs at the frame edges. A flat foreground layer of the window busts."""
+    def draw(pen, t):
+        pen.linear(rect(-500, ys - 90, 2920, 92), 0, ys - 90, 0, ys, [(0, '#14060e', 0), (1, '#14060e', 150)])    # his coat in the ledge's shadow
+        wall = rect(-500, ys + 12, 2920, 900)
+        pen.fill(wall, '#f2e6ee')
+        for k in range(-6, 26):
+            pen.fill(rect(-500 + k * 120 + 40, ys + 12, 60, 900), '#e2709e', 235)
+        pen.linear(wall, 0, ys, 0, ys + 260, [(0, '#2a0c1c', 60), (1, '#0c0610', 200)])
+        pen.fill(rect(-500, ys - 30, 2920, 46), '#fbf4f8'); pen.fill(rect(-500, ys - 30, 2920, 9), '#ffd6ea', 230)
+        pen.fill(rect(-500, ys + 10, 2920, 8), '#1a0c14', 160); pen.line(rect(-500, ys - 30, 2920, 46), 3.0, '#2a1420', 220)
+        for k in range(26):                                    # frost along the ledge, short icicles under it
+            x = -200 + k * 92 + 40 * hash01(k, 77)
+            pen.fill(oval(x, ys - 30, 34 + 22 * hash01(k, 78), 7), '#ffffff', 220)
+            ln = 18 + 34 * hash01(k, 79)
+            pen.fill(poly([(x - 7, ys + 14), (x + 7, ys + 14), (x + 1, ys + 14 + ln)], True), '#eaf4ff', 210)
+        if jamb:
+            for x0, x1 in ((-500, 46), (1874, 2420)):
+                jr = rect(x0, -500, x1 - x0, ys - 470)
+                pen.fill(jr, '#f2e6ee'); pen.linear(jr, 0, -500, 0, ys, [(0, '#3a1428', 120), (1, '#1a0a14', 150)])
+                pen.line(poly([(x1 if x0 < 0 else x0, -500), (x1 if x0 < 0 else x0, ys - 28)], False), 9.0, '#fbf4f8', 235)
+    return Layer(0.8, draw, name, blur=0)
+
+
 def B_bust(F, sh):
     """A face close-up over a blurred, darkened set: p who, bg=(room, view[, cam]) + set=dict(..), cx, cy, scale, turn,
     h_turn (or a framing preset), act, expr, light; busts=[dict(who, cx, cy, scale, act, expr, light, depth)] more faces;
@@ -1211,6 +1237,7 @@ def B_bust(F, sh):
             lay, a = bust_layer(F, sh, who, cx, cy, sc, lambda a_, s: (base(a_, s), act and act(a_, s)), expr=p.get('expr'),
                                 light=p.get('light', ROOM_RIM.get((p.get('bg') or ['x'])[0], LAMP)), seed=p.get('seed', 0), blink=p.get('blink'))
     sh.A = ADict({who: a})
+    sill_ = p.get('sill', who == 'shiver' and (p.get('bg') or ('', ''))[1] == 'window_close' and p.get('scale', fr[2]) <= 1.6 and not p.get('hands'))
     on_ = list(p.get('on', []))
     if p.get('cold') and not who.startswith('shiver'): on_.append(puffs())
     if on_:
@@ -1251,6 +1278,8 @@ def B_bust(F, sh):
             def mdraw(pen, t, d0=l_.draw, dy=fdy):
                 pen.cv.save(); pen.cv.translate(0.0, dy); d0(pen, t); pen.cv.restore()
             l_.draw = mdraw
+    if sill_:                                            # (after the face-fix shift: the frame does not move with him)
+        extra.append(win_sill_layer(p.get('sill_y', 940.0) if sill_ is True else float(sill_)))
     cxs, cys = (cx(sh.t0) if callable(cx) else cx), (cy(sh.t0) if callable(cy) else cy)
     c = dict(p.get('c') or dict(mv='push', x=960 + (cxs - 960) * 0.25, y=cys - 40, rate=0.0))
     c.setdefault('free', True)
@@ -2063,6 +2092,22 @@ def BU(t, who, room, view, st=None, **p):
     else: _FILM[0].cut(t, 'bust', who=who, bg=(room, view), set=dict(st or {}), **p)
 
 
+def RIN(t, kw, who='adam', motion=None, **p):
+    """Review B1 (the radio jumped between Adam's hand and a table): the radio insert while ADAM HOLDS IT: no table,
+    his gloved hand gripping it from below (the cast's hand, his sleeve), radio and hand bobbing together."""
+    t_ = t
+    bob = lambda u: (5.0 * math.sin(u * 2.1 + 0.4), 4.0 * math.sin(u * 1.6), 0.0, 0.0)
+    mot = (lambda u: tuple(a_ + b_ for a_, b_ in zip(bob(u), motion(u)))) if motion else bob
+    kw_ = (lambda u, f=kw: dict(f(u), held=True)) if callable(kw) else dict(kw or {}, held=True)
+
+    def fn(tt):
+        dx, dy, ds, _ = mot(tt - t_)
+        x, y = 1135.0, 935.0
+        return (960 + dx + (x - 960) * (1 + ds), 540 + dy + (y - 540) * (1 + ds), 166.0, 1.0, 600.0 * (1 + ds))
+    p.setdefault('c', dict(mv='hold'))
+    return IN(t, 'radio', kw_, motion=mot, hands=[dict(who=who, fn=fn, size=600.0, shape='grip', side=1, sleeve_from=(1480, 1700))], **p)
+
+
 def IN(t, name, kw=None, **p):
     _FILM[0].cut(t, 'ins', name=name, kw=kw, **p)
 
@@ -2456,7 +2501,7 @@ def plan_setup(F):
                        lambda a, s: a.reach_to(tx + 0.35, -1, (a, 'chest'), dur=0.4, prop='walkie')))],
       c=Z(1.05, 0.02))
     # 15 D "Channel three. Say 'over' when you're done. Over."
-    IN(T(15), 'radio', dict(talk=0.0, static=0.0), c=dict(mv='push', rate=0.05))
+    RIN(T(15), dict(talk=0.0, static=0.0), 'adam_in', c=dict(mv='push', rate=0.03))
     BU(W(15, 'say'), 'dad', 'hall', 'door', HALL_ON, cx=1000, cy=600, scale=0.8, turn=-0.3, light=LAMP, expr='warm_smile',
        act=_A(radio(WD(15, 'over', 1) - 0.25, E(15) + 0.2, 1), lk(W(15, 'say'), (760, 700))), c=BZ(0.015))
     # 16 D "My orange light passes every hour. Need a grown-up? Mr. Kessler's right across the street."
@@ -2611,8 +2656,9 @@ def plan_rule1(F):
     S(T(81), 'street', 'truck', st=dict(ST_A, street=fl), ppl=[SH(lean=0.2, act=_A(lk(T(81), (960, 800))))], c=Z(1.4, 0.02, 900, 480),
       sfx=[(WD(81, 'flickers'), 'streetlight_buzz', -8, -0.4, 'outside')])
     tg = WD(82, 'flicker') + 0.05
-    BU(T(82), 'shiver', 'street', 'window_close', dict(wc, street=ST.ic_flicker(tg - 0.1, n=2, gap=0.5)), cx=960, cy=600, scale=1.2,
-       light=lambda t: dict(SH_PINK, rim_a=30) if abs(t - tg - 0.07) < 0.1 else SH_PINK, act=_A(lambda a, s: a.glimpse(tg, 0.16)),
+    BU(T(82), 'shiver', 'street', 'window_close', dict(wc, street=ST.ic_flicker(tg - 0.1, n=2, gap=WD(82, 'long') - tg + 0.04)), cx=960, cy=600, scale=1.2,
+       light=lambda t: dict(SH_PINK, rim_a=30) if abs(t - tg - 0.07) < 0.1 else SH_PINK,
+       act=_A(lambda a, s: a.glimpse(tg, 0.16), lambda a, s: a.set(WD(82, 'long') - 0.06, E(82) + 0.6, 0.05, sh_glim=1.0)),   # 'long and white': the face IS
        post_fn=lambda t: dict(fade=0.55) if abs(t - tg - 0.07) < 0.1 else {}, c=BZ(0.02), sfx=[(tg, 'stinger', -2, 0, None, dict(kind='glimpse'))])
     BU(T(83), 'shiver', 'street', 'window_close', wc, cx=960, cy=760, scale=2.4, light=dict(SH_PINK, rim_a=40),
        act=_A(lambda a, s: a.set(T(83), E(83) - 0.15, 0.04, sh_glim=1.0)), c=BZ(0.01, hit=[T(83) + 0.1]), hit=T(83) + 0.1)
@@ -2859,11 +2905,11 @@ def plan_rule3(F):
       cold=True, c=Z(1.0, 0.02), sfx=[(T(141) + 0.4, 'boot_on', -6, 0, 'inside')])
     BU(T(142), 'adam', 'hall', 'door', HALL_BLACK, cx=960, cy=620, scale=0.9, turn=0.3, light=PINK_D, expr='resolve', cold=True, act=_A(lk(T(142), (1300, 640))), c=BZ(0.02))
     # 143 The radio crackles.  144 the fake Dad: "Separate rooms."
-    IN(T(143), 'radio', lambda u: dict(talk=0.0, static=0.5 + 0.5 * abs(math.sin(u * 9))), c=dict(mv='push', rate=0.04), sfx=[(T(143), 'radio_squelch', -2, 0, 'close')])
-    IN(T(144), 'radio', lambda u: dict(talk=0.7 + 0.3 * math.sin(u * 7), static=0.15), c=dict(mv='push', rate=0.02))
+    RIN(T(143), lambda u: dict(talk=0.0, static=0.5 + 0.5 * abs(math.sin(u * 9))), c=dict(mv='push', rate=0.04), sfx=[(T(143), 'radio_squelch', -2, 0, 'close')])
+    RIN(T(144), lambda u: dict(talk=0.7 + 0.3 * math.sin(u * 7), static=0.15), c=dict(mv='push', rate=0.02))
     BU(W(144, 'stay'), 'adam', 'hall', 'door', HALL_BLACK, cx=1000, cy=620, scale=0.92, light=PINK_D, expr='suspicious', cold=True,
        act=_A(lk(W(144, 'stay'), (1100, 760))), c=BZ(0.02))          # listening: the face reads (no radio over it)
-    IN(W(144, 'separate'), 'radio', lambda u: dict(talk=0.7 + 0.3 * math.sin(u * 7), static=0.15), motion=lambda u: (0.0, 0.0, 0.5 + 0.06 * u, 0.0), c=dict(mv='hold'))
+    RIN(W(144, 'separate'), lambda u: dict(talk=0.7 + 0.3 * math.sin(u * 7), static=0.15), motion=lambda u: (0.0, 0.0, 0.5 + 0.06 * u, 0.0), c=dict(mv='hold'))
     # 145 I almost go.  146 Lina grabs my coat.
     S(T(145), 'hall', 'door', st=HALL_BLACK, ppl=[adam((-2.1, 2.4, 0.0), who='adam', path=[(T(145), (-2.1, 2.4, 0.0)), (E(145) + 0.3, (-2.1, 0.8, 0.0))],
                                                         expr='set_jaw', act=_A(reach(E(145) - 0.1, 1, 'knob_in', dur=0.35)))], cold=True, c=Z(1.4, 0.02, 960, 640))
@@ -2877,8 +2923,8 @@ def plan_rule3(F):
     BU(T(148), 'adam', 'hall', 'door', HALL_BLACK, cx=980, cy=620, scale=0.9, turn=-0.2, light=PINK_D, expr='brave', cold=True,
        act=_A(radio(T(148) - 0.3, E(149) + 0.5, 1)), c=BZ(0.02))
     # 150 Silence.  151 "Then keep her warm, kiddo. Close your eyes. Sleep is warm."
-    IN(T(150), 'radio', dict(talk=0.0, static=0.0), c=dict(mv='push', rate=0.01))
-    IN(T(151), 'radio', lambda u: dict(talk=0.6 + 0.4 * math.sin(u * 6), static=0.1), c=dict(mv='push', rate=0.02))
+    RIN(T(150), dict(talk=0.0, static=0.0), c=dict(mv='push', rate=0.01))
+    RIN(T(151), lambda u: dict(talk=0.6 + 0.4 * math.sin(u * 6), static=0.1), c=dict(mv='push', rate=0.02))
     BU(W(151, 'close'), 'lina', 'living', 'couch3q', LIV_NEST, cx=960, cy=600, scale=1.0, light=PINK_D, expr='sleepy', cold=True,
        act=_A(sleepyf(W(151, 'close'))), c=BZ(0.02))
     # 152-154 Pink light sweeps the curtain. A shadow. Long, jointed legs.  (GLIMPSE 3)
@@ -2901,8 +2947,8 @@ def plan_rule3(F):
     BU(T(159), 'adam', 'living', 'window', LIV_FROST, cx=960, cy=600, scale=1.1, light=PINK_D, expr='terrified_call', cold=True,
        act=_A(radio(T(159) - 0.4, E(159) + 0.5, 1)), c=BZ(0.03))
     # 160 Static.  161 Bells.
-    IN(T(160), 'radio', lambda u: dict(talk=0.0, static=1.0), cut='static', c=dict(mv='push', rate=0.04), sfx=[(T(160), 'radio_static', 0, 0, 'close', dict(dur=1.0))])
-    IN(T(161), 'radio', lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
+    RIN(T(160), lambda u: dict(talk=0.0, static=1.0), cut='static', c=dict(mv='push', rate=0.04), sfx=[(T(160), 'radio_static', 0, 0, 'close', dict(dur=1.0))])
+    RIN(T(161), lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
        sfx=[(WD(161, 'bells'), 'radio_bells', -2, 0, 'close')], post_fn=lambda t: dict(mix=('ic_ext', 0.0)))
     BU(T(162), 'dad', None, None, cx=960, cy=600, scale=0.85, turn=0.3, expr='suspicious', act=_A(radio(T(162) - 0.5, E(162) + 0.3, 1)), c=BZ(0.015),
        post_fn=lambda t: dict(static=0.25 + 0.2 * abs(math.sin(t * 13))), **dadcab())
@@ -3044,11 +3090,15 @@ def plan_rule4(F):
     BU(T(204), 'shiver', 'street', 'window_close', STO, cx=960, cy=640, scale=1.2, light=SH_PINK, act=_A(TFW(), lk(T(204), (960, 600))), c=BZ(0.03))
     BU(T(206), 'shiver', 'street', 'window_close', STO, cx=980, cy=560, scale=1.5, turn=0.2, light=SH_PINK, act=_A(TFW(), lk(T(206), (900, 600))), c=BZ(0.02),
        sfx=[(WD(206, 'hard'), 'bone_crack', -2, 0, 'outside')])
+    # (review: the monster busts' mfit clamp turned these ECUs into a static medium: mscale / meye frame them as ECUs)
     BU(T(208), 'shiver', 'street', 'window_close', STO, cx=960, cy=820, scale=2.3, light=SH_PINK, act=_A(TFW(), lk(T(208), (960, 600))), c=BZ(0.015),
+       mscale=1.15, meye=470.0,
        hit=WD(208, 'red') + 0.05)
-    BU(T(209), 'shiver', 'street', 'window_close', STO, cx=960, cy=520, scale=1.1, light=SH_PINK, act=_A(TFW(), lk(T(209), (960, 600))), c=BZ(0.02),
+    BU(T(209), 'shiver', 'street', 'window_close', STO, cx=960, cy=520, scale=1.1, light=SH_PINK, act=_A(TFW(), lk(T(209), (960, 600))),
+       mscale=0.56, meye=300.0, c=dict(mv='push', f=1.0, rate=0.0, x=960, y=560, z1=1.18),
        sfx=[(WD(209, 'drops'), 'jaw_drop', 0, 0, 'outside')])
-    BU(T(211), 'shiver', 'street', 'window_close', STO, cx=960, cy=360, scale=1.7, light=SH_PINK, act=_A(TFW(), lk(T(211), (960, 600))), c=BZ(0.02), face_fix=False)
+    BU(T(211), 'shiver', 'street', 'window_close', STO, cx=960, cy=360, scale=1.7, light=SH_PINK, act=_A(TFW(), lk(T(211), (960, 600))), face_fix=False,
+       mscale=0.6, meye=390.0, c=dict(mv='push', f=1.0, rate=0.0, x=960, y=560, z1=1.9))       # the push INTO the mouth: no throat, just dark, and teeth
     # 214-220 the uniform bulges, splits; legs punch out; click... they plant on the truck roof  (wide)
     trl = [WD(217, 'click'), WD(218, 'another'), WD(219, 'click'), WD(219, 'click', 1)]
     S(T(214), 'street', 'truck', st=STO, ppl=[SH(lean=0.18, act=_A(TFW(), lk(T(214), ('adam', 'head')))),
@@ -3065,20 +3115,31 @@ def plan_rule4(F):
     def pour(a, s):
         v_ = scr(s.sp, 'truck_vendor'); w_ = scr(s.sp, 'truck_window'); g_ = scr(s.sp, 'truck_curb')
         a.pour_out(T(224) + 0.1, E(226) - T(224), sill_dy=-(v_[1] - w_[1]) * 0.55, ground_dy=g_[1] - v_[1])
-    S(T(224), 'street', 'truck', st=STO, ppl=[SH(clip=None, dorder=-3.0, act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0), pour))],
-      cold=True, c=Z(1.0, 0.02), sfx=[(T(224) + 0.2, 'scuttle', -2, 0, 'outside', dict(surface='truck'))])
+    # (review B2: the kids stay in the set-up, the camera closer on the pour; he lands at LAND and closes in after the cut)
+    S(T(224), 'street', 'truck', st=STO, ppl=[SH(clip=None, dorder=-3.0, act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0), pour)),
+                                              kid('adam', (-1.55, -7.0, FOOT), id='adam', face=(0.27, -8.6), expr='terror', carry=dict(who='lina', t0=-9.0, expr='fear'),
+                                                  act=_A(lk(T(224), (900, 560)), lk(W(225, 'head') + 0.3, (930, 760), dur=0.4)))],
+      cold=True, c=Z(1.3, 0.025, 960, 600), sfx=[(T(224) + 0.2, 'scuttle', -2, 0, 'outside', dict(surface='truck'))])
+    LAND = (-0.55, -7.7, -0.48)
     # 227 I rip my foot out of the boot and run.  228 One sock.  229 Lina in my arms.
     S(T(227), 'street', 'truck', st=dict(STO, props=[('boot', -1.25, -7.15)]),
       ppl=[kid('adam_sock', (-1.25, -7.1, FOOT), id='adam', path=[(T(227) + 0.3, (-1.25, -7.1, FOOT)), (E(227) + 0.8, (-4.4, -6.7, FOOT))], run=True, surface='snow',
-               expr='terrified_call', carry=dict(who='lina', t0=-9.0, expr='fear'))],
+               expr='terrified_call', carry=dict(who='lina', t0=-9.0, expr='fear')),
+           P('shiver', LAND, light=SH_PINK, talk=False, breath=False, face=(-3.0, -7.0),
+             act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_spread=0.75),
+                    lambda a, s: a.scuttle(T(227) + 0.35, T(228) + 0.4, _line(s.sp, LAND, (-2.2, -7.25, FOOT)), None), lk(T(227), ('adam', 'head'))))],
       cold=True, c=Z(1.2, 0.02, 940, 620), sfx=[(T(227) + 0.2, 'boot_rip', 0, 0, 'outside')])
     # (he cuts up the walk and veers right into the yard: he must NOT reach the door yet, he ducks under him there at L242)
-    S(T(228), 'street', 'door', st=dict(ST_DARK, props=[('mitten', -1.75, -3.6)], door_open=True),          # up our walk, one sock
-      ppl=[kid('adam_sock', (-1.9, -3.6, FOOT), path=[(T(228) - 0.2, (-1.9, -3.6, FOOT)), (E(229) + 0.6, (-0.7, -2.8, FOOT))], run=True, surface='snow', expr='terror',
-               carry=dict(who='lina', t0=-9.0, expr='fear'))],
-      cold=True, c=Z(1.15, 0.02, 970, 700))
+    # (review B2: reversed, from our porch back to the street: Adam runs at us up the walk, HE scuttles after him from the kerb)
+    S(T(228), 'street', 'door', st=dict(STO, props=[('mitten', -1.75, -3.6)], door_open=True), cam=cm((-0.35, -1.2, 1.25), (-1.9, -6.8, 0.7), 1000),
+      ppl=[kid('adam_sock', (-1.9, -3.6, FOOT), id='adam', path=[(T(228) - 0.2, (-1.9, -3.6, FOOT)), (E(229) + 0.6, (-0.9, -2.4, FOOT))], run=True, surface='snow', expr='terror',
+               carry=dict(who='lina', t0=-9.0, expr='fear')),
+           P('shiver', (-2.2, -7.1, FOOT), light=SH_NIGHT, talk=False, breath=False, face=(-1.0, -2.6),
+             act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_spread=0.75),
+                    lambda a, s: a.scuttle(T(228) - 0.2, E(229) + 0.6, _line(s.sp, (-2.2, -7.1, FOOT), (-2.3, -5.0, FOOT)), None), lk(T(228), ('adam', 'head'))))],
+      cold=True, c=Z(1.0, 0.02))
     # 230-233 Legs stab the snow. One spears my coat. I tear free. Another pries at Lina.
-    yc = cm((3.6, -9.0, 0.6), (1.4, -4.0, 0.2), 950)
+    yc = cm((3.5, -5.6, 0.45), (0.2, -3.9, 0.45), 1000)      # (review: inside the fence, low and close: the stabs read)
     adam_run = lambda t0, t1, a0, a1, **k: kid('adam_sock', a0, id='adam', path=[(t0, a0), (t1, a1)], run=True, surface='snow', expr='terror',
                                                carry=dict(who='lina', t0=-9.0, expr='fear'), **k)
     S(T(230), 'street', 'yard', st=dict(ST_DARK), cam=yc,
@@ -3090,7 +3151,7 @@ def plan_rule4(F):
                     lambda a, s: a.leg_to(WD(231, 'spears'), 2, lambda t: s.A['adam'].where(t, 'hip'), dur=0.18, hold=max(0.2, WD(232, 'tear') - WD(231, 'spears')), back=0.3, ev='leg_spear_coat'),
                     lambda a, s: a.leg_to(WD(233, 'pries'), 4, lambda t: s.A['adam'].where(t, 'chest'), dur=0.25, hold=0.6, back=0.4, ev='leg_pry')))],
       cold=True, c=Z(1.0, 0.02), sfx=[(WD(232, 'tear'), 'cloth_tear', 0, 0, 'outside')])
-    S(T(231), 'street', 'yard', st=dict(ST_DARK), cam=cm((1.2, -7.4, 0.5), (1.4, -3.6, 0.3), 1100),
+    S(T(231), 'street', 'yard', st=dict(ST_DARK), cam=cm((4.7, -5.7, 0.5), (2.0, -3.6, 0.5), 1050),
       ppl=[adam_run(T(230) - 0.2, E(233) + 0.5, (0.0, -3.8, FOOT), (3.2, -3.0, FOOT)),
            P('shiver', (-2.4, -4.6, FOOT), light=SH_NIGHT, talk=False, breath=False, face=(3.0, -3.2),
              act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_spread=0.75), lambda a, s: a.scuttle(T(230) - 0.2, E(233) + 0.5, _line(s.sp, (-2.4, -4.6, FOOT), (1.4, -4.0, FOOT)), None),
@@ -3098,7 +3159,7 @@ def plan_rule4(F):
                     lambda a, s: a.leg_to(WD(233, 'pries'), 4, lambda t: s.A['adam'].where(t, 'chest'), dur=0.25, hold=0.6, back=0.4, ev='leg_pry')))],
       cold=True, c=Z(1.0, 0.02, hit=[WD(231, 'spears')]))
     # 234 He can't take her while I'm holding her.  235 So he wants me to let go.
-    BU(T(234), 'adam_sock', 'street', 'yard', dict(ST_DARK), cx=900, cy=600, scale=0.9, light=dict(NIGHT, rim_a=110), expr='fierce_kind', cold=True,
+    BU(T(234), 'adam_sock', 'street', 'yard', dict(ST_DARK), cx=900, cy=600, scale=0.9, light=dict(NIGHT, rim_a=110), expr='terror', cold=True,
        busts=[dict(who='lina', cx=1180, cy=760, scale=0.7, expr='fear', light=NIGHT, act=_A(lk(T(234), (900, 500))))], act=_A(lk(T(234), (1500, 400))), c=BZ(0.02))
     BU(T(235), 'shiver', 'street', 'yard', dict(ST_DARK), cx=960, cy=600, scale=1.0, light=SH_NIGHT,
        act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0), lambda a, s: a.jaw_gape(T(235), E(235) + 1), lk(T(235), (960, 900))), c=BZ(0.03))
@@ -3164,8 +3225,8 @@ def plan_rule4(F):
     # 246 I grab the radio: the bust brings it up (a lone insert hand in the dark read as floating)
     BU(T(246), 'adam_sock', 'living', 'couch3q', LIV_NEST, cx=960, cy=600, scale=1.0, light=PINK_D, expr='shout', cold=True, act=_A(radio(T(246) + 0.15, E(249) + 0.5, 1)),
        c=BZ(0.03), sfx=[(T(246) + 0.15, 'radio_grab', -4, 0, 'close')])
-    IN(T(248), 'radio', dict(talk=0.0, static=1.0), cut='static', c=dict(mv='push', rate=0.03), sfx=[(T(248), 'radio_static', 0, 0, 'close', dict(dur=1.5))])
-    IN(T(249), 'radio', lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
+    RIN(T(248), dict(talk=0.0, static=1.0), 'adam_sock', cut='static', c=dict(mv='push', rate=0.03), sfx=[(T(248), 'radio_static', 0, 0, 'close', dict(dur=1.5))])
+    RIN(T(249), lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), 'adam_sock', motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
        sfx=[(WD(249, 'bells'), 'radio_bells', -2, 0, 'close')])
     # 250-252 Her fingertips are white. Waxy. I don't rub them.
     IN(T(250), 'fingers', dict(waxy=1.0), c=dict(mv='push', rate=0.03))

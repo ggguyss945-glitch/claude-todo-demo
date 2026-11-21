@@ -67,6 +67,7 @@ for _i in range(8):
 # transformation stages: name -> (m start, m end). SH_STEPS: the 8 bible steps as sh_m values (the TRANSFORMATION strip)
 SH_STAGES = dict(smile=(0.02, 0.20), long=(0.18, 0.38), sink=(0.38, 0.47), red=(0.50, 0.56), jaw=(0.56, 0.70),
                  split=(0.68, 0.78), legs=(0.76, 1.0))
+_SH_LEGS_VIS = 0.835   # review: the legs show only from 'Splits' / 'punches out' (the uniform bulges first; cue times unchanged)
 SH_STEPS = (0.0, 0.20, 0.38, 0.48, 0.56, 0.70, 0.84, 1.0)
 SH_STEP_NAMES = ('waving', 'the smile keeps going', 'skin pulls long, bone', 'eyes sink into the dark', '...come back red',
                  'the jaw drops to the chest', 'uniform splits, legs punch out', 'legs planted: full monster')
@@ -78,7 +79,7 @@ def _sh_state(P):
     st = {k: ease_in_out(prog(m, a, b)) for k, (a, b) in SH_STAGES.items()}
     out = dict(smile=max(st['smile'], P.sh_smile), long=max(st['long'], P.sh_long), sink=max(st['sink'], P.sh_sink),
                red=max(st['red'], P.sh_red), jaw=max(st['jaw'], P.sh_jaw), split=max(st['split'], P.sh_split),
-               legs=min(max(prog(m, *SH_STAGES['legs']) * 8.0, P.sh_legs), P.sh_legcap))
+               legs=min(max(prog(m, max(SH_STAGES['legs'][0], _SH_LEGS_VIS), SH_STAGES['legs'][1]) * 8.0, P.sh_legs), P.sh_legcap))
     g = clamp(P.sh_glim)
     if g > 0:
         out['smile'] = max(out['smile'], g); out['long'] = max(out['long'], g); out['red'] = max(out['red'], g)
@@ -487,7 +488,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             # the socket: a heavy dark hollow, darkest under the brow (the owner's reference)
             x_, y_, f_ = P2(s * 0.27, 0.14)
             if f_ > -0.1:
-                kso = max(L, sink)        # normal form: only a faint cool hollow (friendly-wrong, not dead)
+                kso = max(0.3 * L, sink)  # normal form: only a faint cool hollow; the dark comes with 'the eyes sink'
                 c.glow(x_, y_ - 0.4 * cm, 4.6 * cm * (1 + 0.25 * L), 3.4 * cm * (1 + 0.4 * L), mix('#aeb9c9', '#3c4a63', kso), int(90 + 160 * kso))
                 if kso > 0.01: c.glow(x_, y_ - 0.2 * cm, 2.6 * cm * (1 + 0.3 * L), 2.0 * cm * (1 + 0.5 * L), '#1a2133', int(255 * kso))
             kap = clamp(1.0 - L / 0.5) * clamp(1.0 - sink / 0.4)
@@ -529,7 +530,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
         if L > 0.05 or sink > 0.05:
             so2, fso = hd.disc(lon_e, 0.13 - 0.01 * L, 0.12 + 0.09 * L, 0.07 + 0.10 * L, grow=0.12)
             if fso > -0.1:
-                c.fill(so2, '#050407', int(255 * clamp(max(sink, 0.8 * L))))
+                c.fill(so2, '#050407', int(255 * clamp(max(sink, 0.3 * L))))     # dark only when the eyes sink
                 c.line(so2, lw * 0.9, pal['line'], int(220 * L))
                 if L > 0.3:
                     c.line(so2, lw * 0.5, pal['frost'], int(210 * prog(L, 0.3, 1.0)))
@@ -580,8 +581,8 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     if st['smile'] < 0.05 and J < 0.05: _ms.enter_context(c.clip(sil_all))
     vis = float(np.mean(np.concatenate([Fu, Fl])))
     if vis > -0.2:
-        icy = max(prog(J, 0.05, 0.5), prog(L, 0.5, 1.0) * 0.6)
-        c.fill(mouth_c, mix(pal['mouth'], pal['mouth_m'], max(L, J)))
+        icy = max(prog(J, 0.05, 0.5), prog(L, 0.5, 1.0) * 0.3)      # icicles come with the jaw drop, not with 'White'
+        c.fill(mouth_c, mix(pal['mouth'], pal['mouth_m'], max(0.35 * L, J)))
         if maw is not None:      # no throat: a soft dark falloff, #120A10 in the middle to #2A1420 at the walls
             bbm = maw.getBounds()
             c.radial(maw, bbm.centerX(), bbm.centerY(), max(bbm.width(), bbm.height()) * 0.55,
@@ -644,8 +645,8 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                     ln = ((11.0 + 2.0 * hash01(i, 3205)) if fang else (3.5 + 3.0 * hash01(i, 3205))) * (0.5 + 0.8 * J)
                 _sh_tooth(c, view, hd, root, upd, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
         # the two big buck teeth with a gap between them, resting over the lower lip (fade as the mouth turns to icicles)
-        if icy < 0.9:
-            a_ = int(255 * (1 - icy / 0.9))
+        if icy < 0.55:     # solid until the icicles come, then gone fast (a half-alpha tooth read as a grey ghost block)
+            a_ = int(255 * clamp(1.0 - (icy - 0.4) / 0.15))
             for s in (-1, 1):
                 lon_ = s * 0.085
                 root = hd.p3(lon_, float(hd.up(lon_)) + 0.02, 0.0, jaw=0.0)
