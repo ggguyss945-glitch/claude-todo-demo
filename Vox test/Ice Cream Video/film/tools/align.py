@@ -3,7 +3,7 @@
     python3 align.py --asr-only ...      transcribe only (writes asr_cache.json + transcript.txt, no lines.py needed)
     python3 align.py --write-pauses ...  also rewrite each L(...) row of lines.py with the measured pause / pace
 Defaults: W/narration/narration_en.wav, the Parakeet TDT 0.6b v2 int8 dir ($PARAKEET_DIR or the scratchpad models dir),
-W/align, with W = Bus Video/film/_work. Script: Bus Video/script/lines.py (the recording is the truth).
+W/align, with W = Ice Cream Video/film/_work. Script: Ice Cream Video/script/lines.py (the recording is the truth).
 ASR: Silero VAD (vad.onnx beside the Parakeet dir) finds speech; neighbouring segments are merged into chunks of at most
 ~16 s, cut from the full recording with 0.3 s padding, and transcribed by Parakeet TDT with token timestamps. Words are
 cached in asr_cache.json ('en_words': [[word, t], ...] as film.py reads them, 'en_chunks': [[t0, t1, text], ...]);
@@ -28,7 +28,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Bus Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Ice Cream Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = os.environ.get('VO_MODELS') or '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -130,13 +130,14 @@ NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 't
        'forty': '40', 'first': '1st', 'second': '2nd', 'fourth': '4th', 'fifteen': '15', 'sixty': '60',
        'mr': 'mister', 'dr': 'doctor', 'thirteen': '13', 'fifty': '50', 'eighty': '80', 'nineteen': '19', 'twenty': '20',
        'seventy': '70', 'hundred': '100', 'gray': 'grey', 'shh': 'sh', 'shhh': 'sh', 'genes': 'jeans', 'ninety': '90', 'thirty': '30', 'forty': '40',
-       'sammy': 'sami', 'sammys': 'sami', 'breaks': 'brakes', 'wrex': 'rex',
-       'umina': 'mina', 'tomina': 'mina'}   # spellings of this film ("Umina": Della's "Mina.", the take's swallowed "two Mina")
+       'lena': 'lina', 'lenas': 'linas', 'leena': 'lina', 'pajamas': 'pyjamas', 'muster': 'mister',
+       'kesslers': 'kesslers', 'fiftyeight': '58', 'sixtyeight': '68'}   # spellings of this film ("Lena" for Lina, "Muster" for Mr.)
 JOIN = {('any', 'more'): 'anymore', ('arm', 'chair'): 'armchair', ('grown', 'up'): 'grownup', ('2', 'night'): 'tonight',
         ('rear', 'view'): 'rearview', ('land', 'line'): 'landline', ('type', 'writer'): 'typewriter',
         ('peep', 'hole'): 'peephole', ('street', 'light'): 'streetlight', ('wheel', 'chair'): 'wheelchair',
         ('clip', 'board'): 'clipboard', ('drive', 'way'): 'driveway', ('head', 'lights'): 'headlights',
-        ('grass', 'hopper'): 'grasshopper', ('over', 'night'): 'overnight'}
+        ('grass', 'hopper'): 'grasshopper', ('over', 'night'): 'overnight',
+        ('snow', 'flake'): 'snowflake', ('door', 'knob'): 'doorknob', ('wood', 'pile'): 'woodpile', ('snow', 'man'): 'snowman'}
 # words the recogniser splits or joins its own way
 
 

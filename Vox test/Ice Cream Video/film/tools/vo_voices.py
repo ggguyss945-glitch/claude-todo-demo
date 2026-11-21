@@ -1,9 +1,8 @@
-"""Character voices for the edited narration of "If The School Bus Stops At Midnight... DON'T GET ON" (Night Policy).
-The quoted words of Grandma Della (D), Sami (S), Theo (T), Mister Whistlestop (W) and the 911 dispatcher (X) are
-re-voiced from the narrator's own take, and so are his imitations (who 'W', fx 'mimic', tag mimic_<della|sami|mina>_*).
-The narrator's lines (N: Mina, also her own quoted words) are never touched: the quote / "she says" splits of
-script/lines.py are the cut points, so only the quoted words change. vo_edit.py calls voice_line(y, line) for every line
-before the layout. Only "...Clever." comes out longer than it went in (the slowing tape), and the layout makes room.
+"""Character voices for the edited narration of "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
+(Night Policy). The quoted words of Lina (L), Dad (D), Mr. Kessler (K) and Mister Shiver (S) are re-voiced from the
+narrator's own take, and so are his copies (who 'S', fx 'mimic', tags fake_dad*, fake_mom*, mimic_benny). The narrator's
+lines (N: Adam, also his own quoted words) are never touched: the quote splits of script/lines.py are the cut points, so
+only the quoted words change. vo_edit.py calls voice_line(y, line) for every line before the layout.
 
 Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each voice:
   - pitch: the line's F0 is moved to the voice's median (geometric), its excursions scaled (rng) and softly limited
