@@ -13,8 +13,8 @@ who: N narrator Adam (also his own quoted words: "Old people like it cold,", "We
      says one blanket,", "You just told me...", "Dad, there's a truck outsi...", "Dad!", "Good," / "Shivering means
      you're fighting." (whispered), "Wait!", "Breathe, Mom,", the ambulance call), L Lina (6), D Dad (in person at the
      start; over the radio on channel three), K Mr. Kessler (Walter, about 80), S Mister Shiver (his own voice: the
-     too-friendly vendor; "Who's the coldest? YOU are!" and "Inside, children. Rule seven." in monster form, deeper and
-     airless). His COPIES keep who='S' with fx 'mimic' and a tag naming the copied voice: fake_dad / fake_dad_sleep (the
+     too-friendly vendor, also for the lure "Who's the coldest? YOU are!"; "Inside, children. Rule seven." in monster
+     form, deeper and airless). His COPIES keep who='S' with fx 'mimic' and a tag naming the copied voice: fake_dad / fake_dad_sleep (the
      fake Dad on the radio, bells under the static), fake_mom / fake_mom_cold (the fake Mom through the front door),
      mimic_benny (the little boy's voice from the window, "Walter, I'm cold."). The narrator's voice is only cleaned;
      the character voices are baked into narration_en.wav by film/tools/vo_voices.py.

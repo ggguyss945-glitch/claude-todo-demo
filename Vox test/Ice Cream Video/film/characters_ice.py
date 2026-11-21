@@ -1466,6 +1466,12 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
     st = _sh_state(P)
     sc = max(P.ws_scale, 1e-3)
     hpx_ = float(sp.get('hh', 300.0)) * c.s                        # his head height in design px
+    if who == 'shiver':     # SET scale (on-screen head under ~160 design px, camera zoom included): re-state the face (_sh_small_read)
+        m_ = c.pen.cv.getTotalMatrix()
+        zk_ = math.sqrt(abs(m_.getScaleX() * m_.getScaleY() - m_.getSkewX() * m_.getSkewY())) / max(getattr(CFG, 'k', 1.0), 1e-6)
+        ksm = clamp((160.0 - hpx_ * zk_) / 60.0)
+    else:
+        ksm = 0.0
     _SH_BULK[0] = 1.0 + 0.34 * clamp((230.0 - hpx_) / 140.0) * (1.0 - clamp((st['legs'] - 0.2) / 1.0)) if who == 'shiver' else 1.0
     cc = c.sub(0.0, 0.0, 0.0, _WSU * sc)
     view = _WSView(P)
@@ -1496,6 +1502,7 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         if stt.get('fz', 1) <= -0.05: _sh_neck(cc_, view, R, st)
         if stt.get('fz', 1) > -0.05: _sh_collar(cc_, view, R, P, det, stt.get('fz', 1))
         _sh_head_draw(cc_, R, view, P, det, t, light, st)
+        if ksm > 0.01: _sh_small_read(cc_, R, view, P, st, ksm)
     back_view = abs(float(P.turn)) > 1.22          # |yaw| > 110 deg: the only time the body may cover the head
     mon = (st['legs'] > 0.01 or float(P.sh_m) > 0.48) and not back_view
     items.append((max(zh, zt + 1.0) if (mon or view.depth(_rx(np.array([0.0, 0.0, 1.0]), R['a'])) > -0.2) and not back_view else zh - 2.0, head))
@@ -1556,6 +1563,46 @@ def _sh_glow_feats(c, R, view, P, st, amount):
         if F_[0] > 0.1:
             _, _, _, f_ = view.p(hd.p3(lon_, float(hd.up(lon_))))
             c.fill(oval(float(X_[0]), float(Y_[0]), 1.0 * f_, 0.8 * f_), '#d9dde6', int(150 * amount))
+
+
+def _sh_small_read(c, R, view, P, st, k):
+    """SET scale (head under ~150 design px): the fine face lines vanish and the chalk egg read as a hollow outline on the
+    bright window (owner's-eyes review). Re-state the face boldly, drawn with the head (z-order kept): a cool shade on the
+    far side and under the dome, dark sockets with the eye light (blue pinpoints, or red), and the too-wide smile as a dark
+    crescent with its white teeth (until the jaw drops: then the open jaw already reads)."""
+    if k <= 0.01: return
+    hd = _SHHead(R, view, P, st)
+    A = lambda v: int(255 * clamp(v * k))
+    dpx = 1.0 / max(c.s * getattr(CFG, 'k', 1.0), 1e-6)       # one render pixel in local units
+    sils = hd.sils()
+    if sils:
+        b = sils[0].computeTightBounds(); w_, h_ = b.width(), b.height()
+        c.fill(_crescent(sils[0], -0.20 * w_, -0.15 * h_), '#8391ad', A(0.45))
+        hw = 0.5 * w_
+    else:
+        hw = 13.0
+    if hd.facing(0.0, 0.0) < 0.12: return             # turned away: only the shade
+    red, sink = st['red'], st['sink']
+    for s in (-1, 1):
+        lon_e = s * 0.27
+        so, fso = hd.disc(lon_e, 0.12, 0.17, 0.12, grow=0.12)
+        if fso < 0.08: continue
+        c.fill(so, '#151a2b' if red < 0.3 else '#0c0609', A(0.9))
+        X_, Y_, F_, _ = hd.proj(np.array([lon_e]), np.array([0.12]), 0.3)
+        x0, y0 = float(X_[0]), float(Y_[0])
+        r_ = max(2.0 * dpx, 0.07 * hw) * (0.6 + 0.4 * clamp(float(F_[0])))
+        if red > 0.3:
+            c.glow(x0, y0, 3.0 * r_, 2.6 * r_, _SH_PAL['red'], A(0.75))
+            c.fill(oval(x0, y0, r_ * 1.1, r_), _SH_PAL['red'], A(1.0))
+        elif sink < 0.5:
+            c.glow(x0, y0, 3.0 * r_, 3.0 * r_, '#6fc8ff', A(0.6))
+            c.fill(oval(x0, y0, r_, r_), '#c8ecff', A(1.0))
+    if st['jaw'] < 0.3:
+        W = hd.W
+        mo = hd.region(-0.9 * W, 0.9 * W, lambda l: np.minimum(hd.lo(l), hd.up(l) - 0.2), hd.up, nlon=20, nlat=3, grow=0.1, thr=0.05)
+        if mo is not None: c.fill(mo, '#2b0f1d', A(0.92))
+        te = hd.region(-0.72 * W, 0.72 * W, lambda l: hd.up(l) - 0.12, hd.up, nlon=16, nlat=1, grow=0.12, thr=0.05)
+        if te is not None: c.fill(te, '#f7f3e6', A(0.95))
 
 
 _figure_ice_prev = _figure
