@@ -378,7 +378,10 @@ def _ws_rig(P, _depth=0):
                 shp = h3['shape']
                 tip = (h3['fingers'][0][-1] + h3['fingers'][1][-1]) / 2.0 if shp not in ('grip', 'snap', 'hold', 'clip', 'curl') \
                     else (h3['fingers'][1][2] if shp != 'curl' else h3['fingers'][1][3])
-                Wn = arms[s]['W'] + (Tw_goal - tip) * min(1.0, w)
+                kw_ = min(1.0, w)
+                if P.__dict__.get('ws_soft_reach', 0.0) > 0.5:      # opt-in (ice film L192 wave): the fingertip fix eases in
+                    kw_ = clamp((w - 0.5) / 0.5)                    # from w 0.5, no one-frame jump of the hand
+                Wn = arms[s]['W'] + (Tw_goal - tip) * kw_
                 arms[s] = solve(Wn)
     R['arms'] = arms
     # tail: from the back of the hips, hanging straight down; never moves

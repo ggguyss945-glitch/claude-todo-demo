@@ -2496,7 +2496,7 @@ def _hair_region(c, hm, sp, P, det, sil, t):
     if kind == 'flaps':                                # Dad: trapper ear flaps down to the jaw line, fleece trim
         fl = sp['cloth'].get('fleece', '#e9dcc6')
         for s in (-1, 1):
-            pts_o, pts_i = [], []
+            pts_o, pts_i, vis_ = [], [], []
             ok = True
             for yy in np.linspace(-58.0, 57.0, 11):           # 1.3x longer: past the jaw line, tilted ~8 deg out
                 w_ = float(hm.W(min(yy, 119.0)))
@@ -2505,7 +2505,9 @@ def _hair_region(c, hm, sp, P, det, sil, t):
                 to = 0.14 * (yy + 58.0)
                 xo, yo, vo = hm.map1(s * (w_ + 8.0 + 18.0 * tp - 8.0 * rb + to), yy, 4.0)
                 xi, yi, vi = hm.map1(s * max(w_ - 6.0 - 12.0 * tp + 6.0 * rb + to, 6.0), yy, 6.0)
-                pts_o.append((xo, yo)); pts_i.append((xi, yi))
+                pts_o.append((xo, yo)); pts_i.append((xi, yi)); vis_.append(vo)
+            if getattr(P, 'flap_tidy', 0.0) > 0.5 and sum(vis_) / len(vis_) < 0.2:
+                continue                                   # (pose.flap_tidy, only the shots that set it) the far flap in a 3/4 turn hangs behind the head
             xs = [p[0] for p in pts_o]
             flap = smooth(pts_o + pts_i[::-1], True, 0.7)
             c.fill(flap, '#5a3d28')                          # the crown's knit colour, hanging from the cuff

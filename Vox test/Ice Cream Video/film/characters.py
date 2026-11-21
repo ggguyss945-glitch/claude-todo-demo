@@ -1885,6 +1885,8 @@ def _cap(c, hm, sp, P, det, cl, t):
 def _glasses(c, hm, sp, P, det, eyes, t):
     fr = '#3a2f2c'
     pts_c = []
+    # opt-in pose flag specs_clip (ice film: Kessler's 3/4 close-ups only): the lenses never reach past the face's outline
+    sil_ = hm.silhouette(grow=2.0) if P.__dict__.get('specs_clip', 0.0) > 0.5 else None
     for side, info in eyes.items():
         ex0 = side * sp['eye_dx']; ey0 = sp['eye_y']
         X, Y, V = hm.map1(ex0, ey0 + 2, 18.0)
@@ -1892,6 +1894,7 @@ def _glasses(c, hm, sp, P, det, eyes, t):
         fs = hm.sx(ex0, ey0, 18.0)
         rx, ry = 31 * fs, 25
         lens = rrect(X - rx, Y - ry, rx * 2, ry * 2, 14)
+        if sil_ is not None: lens = inter(lens, sil_)
         c.fill(lens, '#d9e6f2', 38)
         g = 0.5 + 0.5 * math.sin(t * 0.7 + side) if P.glint <= 0 else P.glint
         with c.clip(lens):
@@ -2282,10 +2285,10 @@ class Body:
             y1 = yp + dy * self.cL + z * self.sL
         else:
             z1, y1 = z, y
-        if sc > 0.0 and self.sit < 0.1 and self.L > 1e-4:     # standing: the hips go back as the chest goes forward (weight over the feet)
-            z1 -= 0.35 * clamp(sc) * (self.y_hip - self.y_sh) * math.sin(self.L) * clamp((self.bob - y) / -self.y_hip)
         X = x * self.ct + z1 * self.st
         Z = -x * self.st + z1 * self.ct
+        if sc > 0.0 and self.sit < 0.1 and self.L > 1e-4:     # standing: the hips go back as the chest goes forward (weight over the feet)
+            X -= 0.35 * clamp(sc) * (self.y_hip - self.y_sh) * math.sin(self.L) * clamp((self.bob - y) / -self.y_hip) * self.st   # (in X only: Z keeps its depth)
         s = self.D / (self.D - Z)
         Xs = X * s; Ys = self.y0c + (y1 - self.y0c) * s
         if upper and (self.tilt or self.P.sway):

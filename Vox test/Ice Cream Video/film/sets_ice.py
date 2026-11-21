@@ -2270,10 +2270,19 @@ def _ic_bath_cfg(o):
         P.append(Piece('sink', (0.12, 0.8, 0.85), sinkd, block=sink.footprint()))
         mirror = [(0.385, 1.85, 0.6), (0.385, 1.85, 1.1), (0.385, 1.15, 1.1), (0.385, 1.15, 0.6)]
         fog = _static(o.get('fog', 0.4))
+        rich = bool(o.get('mirror_rich', False))
+
         def mird(pen, v):
             path = v.poly3(mirror)
             if path.isEmpty() or not v.visible(mirror[0], (-1, 0, 0)): return
-            pen.fill(path, '#5a6a7a'); pen.fill(path, '#e8eef4', 120 * fog); pen.line(path, 2.0, '#c8ccd4')
+            pen.fill(path, '#5a6a7a'); pen.fill(path, '#e8eef4', 120 * fog)
+            if rich:            # opt-in (the 'window' view only: it sits at the frame edge): glass streaks, fog grain, a frame
+                b = path.computeTightBounds()
+                pen.linear(path, b.left(), b.top(), b.right(), b.bottom(),
+                           [(0.0, '#ffffff', 0), (0.3, '#ffffff', 120), (0.4, '#ffffff', 0), (0.55, '#ffffff', 0), (0.6, '#ffffff', 80), (0.66, '#ffffff', 0)])
+                pen.texture(path, 'grunge', 0.5, 'overlay', 0.8)
+                pen.line(path, 9.0, '#8a929c')
+            pen.line(path, 2.0, '#c8ccd4')
         P.append(Piece('mirror', (0.38, 1.5, 0.85), mird))
         toi = Box(-1.05, 0.3, 0.42, 0.6, 0.0, 0.42, 180)
         P.append(Piece('toilet', (toi.cx, 0.3, toi.cy), lambda pen, v: (draw_box(pen, v, toi, {'all': '#f0f0ec', 'top': '#f8f8f4'}, lw=1.0),
