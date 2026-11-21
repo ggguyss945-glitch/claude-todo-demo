@@ -130,19 +130,33 @@ def ring(cx, cy, r0, r1):
     return minus(oval(cx, cy, r1), oval(cx, cy, r0))
 
 
+def _inter_ok(r, a, b):
+    """An intersection result lies inside both operands' bounds (1 unit of slack)."""
+    if r.isEmpty(): return True
+    rr, ra, rb = r.computeTightBounds(), a.computeTightBounds(), b.computeTightBounds()
+    tol = 1.0
+    return (rr.left() >= max(ra.left(), rb.left()) - tol and rr.top() >= max(ra.top(), rb.top()) - tol and
+            rr.right() <= min(ra.right(), rb.right()) + tol and rr.bottom() <= min(ra.bottom(), rb.bottom()) + tol)
+
+
 def _op(a, b, op):
     """skia's path boolean, robust: skia.Op can fail ("Failed to apply op") on near-degenerate geometry (the
     Bunnyman film's fix round 1: a frame of the mascot's head killed a render worker). Retry with b nudged by a
     hundredth of a pixel, then fall back: a union adds the two paths (the same fill under non-zero winding), an
-    intersection keeps the smaller one's bounds clipped to the other's, a difference keeps a."""
+    intersection keeps the smaller one's bounds clipped to the other's, a difference keeps a.
+    An intersection can also come back WRONG without an error (the ice cream film, 7:42.73: skia returned the whole
+    first operand, so a hair mask covered the face for one frame): a result reaching outside either operand's bounds is
+    impossible, so it is retried the same way. Valid results are returned untouched (bit-identical)."""
     try:
-        return skia.Op(a, b, op)
+        r = skia.Op(a, b, op)
+        if op != skia.PathOp.kIntersect_PathOp or _inter_ok(r, a, b): return r
     except RuntimeError:
         pass
     for dx, dy in ((0.013, 0.007), (-0.011, 0.017)):
         try:
             q = skia.Path(b); q.offset(dx, dy)
-            return skia.Op(a, q, op)
+            r = skia.Op(a, q, op)
+            if op != skia.PathOp.kIntersect_PathOp or _inter_ok(r, a, q): return r
         except RuntimeError:
             continue
     if op == skia.PathOp.kUnion_PathOp:

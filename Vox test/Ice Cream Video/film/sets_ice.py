@@ -1681,11 +1681,17 @@ def ic_door_glass(v, D, o, name='door_glass'):
     fq, cq = D.glass_quads(0.0)
     kp = _kfn(o.get('pink', 1.0 if o.get('truck') == 'A' else 0.0), 600)
     face = o.get('face'); kfr = _kfn(o.get('knob_frost', 0.0), 661)
+    fsoft = o.get('frost_soft')         # (feather 0..1 of the panel height, panel alpha 0..1): a soft top edge (only the shots that pass it)
     def draw(pen, t):
         pf = v.poly3(fq)
         if not pf.isEmpty():
             b = pf.computeTightBounds()
             k = kp(t)
+            pf0 = pf
+            if fsoft:                                                   # the frost runs on up into the clear strip, faded out by the mask below
+                pen.cv.saveLayer()
+                pcs = v.poly3(cq)
+                if not pcs.isEmpty(): pf = union(pf, pcs)
             pen.fill(pf, mix('#9aa6c4', '#f0b0d0', 0.6 * k), 175 + 40 * k)
             pen.cv.save(); pen.cv.clipPath(pf, skia.ClipOp.kIntersect, True)
             pen.texture(pf, 'grunge', 0.5, 'overlay', 0.5)
@@ -1700,6 +1706,19 @@ def ic_door_glass(v, D, o, name='door_glass'):
                     pen.fill(oval(cx, fy, w * 0.2, w * 0.42), '#f4f0ec', 220 * fk, blur=max(2.0, w * 0.05))
                     for sx in (-1, 1): pen.fill(oval(cx + sx * w * 0.08, fy - w * 0.12, w * 0.025), '#ff2a2a', 230 * fk, blur=max(1.0, w * 0.015))
             pen.cv.restore()
+            if fsoft:                                                   # fade the panel's top: frost thins out towards the clear strip
+                fe, fa = float(fsoft[0]), float(fsoft[1])
+                hc = pf.computeTightBounds(); hc = max(1.0, b.top() - hc.top())         # the clear strip's height
+                y0_, y1_ = b.top() - 0.5 * hc, b.top() + max(2.0, fe * b.height())
+                mp = skia.Paint(AntiAlias=True, Shader=skia.GradientShader.MakeLinear(
+                    [skia.Point(0, y0_), skia.Point(0, y1_)],
+                    [skia.Color4f(0, 0, 0, 0.0).toColor(), skia.Color4f(0, 0, 0, 0.2 * fa).toColor(), skia.Color4f(0, 0, 0, fa).toColor()],
+                    [0.0, (b.top() - y0_) / (y1_ - y0_), 1.0]))
+                mp.setBlendMode(skia.BlendMode.kDstIn)
+                bb = pf.computeTightBounds()
+                pen.cv.drawRect(skia.Rect.MakeLTRB(bb.left() - 4, bb.top() - 4, bb.right() + 4, bb.bottom() + 4), mp)
+                pen.cv.restore()
+            pf = pf0
             pen.glow((b.left() + b.right()) / 2, (b.top() + b.bottom()) / 2, b.width() * 0.9, IC_PINK, 40 * kp(t))
         pc = v.poly3(cq)
         if not pc.isEmpty():
@@ -1720,11 +1739,29 @@ def ic_door_glass(v, D, o, name='door_glass'):
     return lay
 
 
-def ic_hatch(pen, v, k=0.0):
+def ic_hatch(pen, v, k=0.0, ajar=False):
     """The attic hatch in the hall ceiling: k 0 closed (a flush panel, a pull cord) .. 1 dropped open (the panel hangs
-    from its far hinge; the dark attic above, rafters)."""
+    from its far hinge; the dark attic above, rafters). ajar=True (the rattle, L292 only): the CLOSED panel tipped down
+    95*k degrees on its hinge over a dark sliver of the hole, never the open shaft."""
     x0, x1, y0, y1 = IC_HATCH
     C = IC_CEIL
+    if ajar and k > 0.0:
+        L = y1 - y0
+        a = math.radians(95 * k)
+
+        def hp(x, s, dz=0.0):                                                # s: distance from the hinge (y1) along the panel
+            return (x, C - 0.005 - dz - math.sin(a) * s, y1 - math.cos(a) * s)
+        hole = v.poly3([(x0, C - 0.004, y0), (x1, C - 0.004, y0), (x1, C - 0.004, y1), (x0, C - 0.004, y1)])
+        if not hole.isEmpty(): pen.fill(hole, '#0e0c0c')
+        path = v.poly3([hp(x1, 0.0), hp(x0, 0.0), hp(x0, L), hp(x1, L)])
+        if not path.isEmpty():
+            pen.fill(path, lit('#ece6da', (x0, C, y0), (0, -1, 0))); pen.line(path, 1.6, '#b8b0a0')
+            pen.line(v.poly3([hp(x1 - 0.05, 0.05, 0.001), hp(x0 + 0.05, 0.05, 0.001), hp(x0 + 0.05, L - 0.05, 0.001), hp(x1 - 0.05, L - 0.05, 0.001)]), 0.8, '#a8a090')
+        A = hp(0.5 * (x0 + x1), L - 0.08, 0.005)
+        if v.d(A[0], A[2]) > 0.3:
+            pen.seg(v.p(*A), v.p(A[0], A[1] - 0.35, A[2]), 1.0, '#e8e0d0')
+            x, y = v.p(A[0], A[1] - 0.37, A[2]); pen.fill(oval(x, y, max(1.5, 0.015 * v.s(A[0], A[2]))), '#c8b070')
+        return
     if k > 0.02:
         D = 0.6
         for (q, n) in (([(x0, C, y0), (x1, C, y0), (x1, C + D, y0), (x0, C + D, y0)], (0, 0, 1)),
@@ -2328,7 +2365,8 @@ def ic_hall(view='door', **kw):
         if _static(o.get('door', 0.0)) < 2: dyn.append(ic_door_glass(v, D, o))
     if callable(o.get('hatch')):
         hf = o['hatch']
-        dyn.append(live_layer('hatch', v, (-2.1, IC_CEIL, 5.9), lambda pen, v_, t: ic_hatch(pen, v_, hf(t)), amb, steady, var))
+        ajar = bool(o.get('hatch_ajar', False))
+        dyn.append(live_layer('hatch', v, (-2.1, IC_CEIL, 5.9), lambda pen, v_, t: ic_hatch(pen, v_, hf(t), ajar), amb, steady, var))
     sp = build_view('ic_hall_' + view, v, main, o, far=far, outside=_ic_outside(o), grade=_ic_grade(o), dyn=dyn)
     sp.info['door_glass'] = D.glass_quads(0.0)
     sp.info['note'] = 'Hall: figures OUTSIDE the door go between the outside layer and the door (sp.order_at(x, y) with y < 0).'

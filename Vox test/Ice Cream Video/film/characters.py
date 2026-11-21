@@ -2258,13 +2258,32 @@ class Body:
     # ---- projection
     def p3(self, x, y, z=0.0, upper=True):
         y = y + self.bob
-        if upper:
+        sc = getattr(self.P, 'spine_c', 0.0)
+        if upper and sc > 0.0 and abs(self.L) > 1e-4 and y < self.y_hip + self.bob:
+            # spine_c (0..1, only the shots that set it): the lean bends the spine in a curve (the low back bends less,
+            # the upper back more, the shoulders and head end at the lean angle) instead of one rigid plank at the hips
+            yp = self.y_hip + self.bob
+            d = yp - y; S = max(1.0, self.y_hip - self.y_sh)
+            a0 = 1.0 - 0.75 * clamp(sc)                    # the bend at the hips, as a share of the lean
+            th0 = self.L * a0; k = (self.L - th0) / S
+            ds = min(d, S)
+            if abs(k) > 1e-7:
+                zc = (math.cos(th0) - math.cos(th0 + k * ds)) / k; yc = (math.sin(th0 + k * ds) - math.sin(th0)) / k
+            else:
+                zc = math.sin(th0) * ds; yc = math.cos(th0) * ds
+            th = th0 + k * ds
+            if d > S: zc += math.sin(th) * (d - S); yc += math.cos(th) * (d - S)
+            z1 = zc + z * math.cos(th)
+            y1 = yp - yc + z * math.sin(th)
+        elif upper:
             yp = self.y_hip + self.bob
             dy = y - yp
             z1 = z * self.cL - dy * self.sL
             y1 = yp + dy * self.cL + z * self.sL
         else:
             z1, y1 = z, y
+        if sc > 0.0 and self.sit < 0.1 and self.L > 1e-4:     # standing: the hips go back as the chest goes forward (weight over the feet)
+            z1 -= 0.35 * clamp(sc) * (self.y_hip - self.y_sh) * math.sin(self.L) * clamp((self.bob - y) / -self.y_hip)
         X = x * self.ct + z1 * self.st
         Z = -x * self.st + z1 * self.ct
         s = self.D / (self.D - Z)
@@ -5024,16 +5043,17 @@ class Acting:
         return [self._ev(h, 'knock_door', 0.0 if i == 0 else -1.0, pan=0.0 if not side else 0.35 * side, n=1, strength=strength, **evp)
                 for i, h in enumerate(hits)]
 
-    def radio_to_mouth(self, t0, t1, side=1, tilt=13.0):
+    def radio_to_mouth(self, t0, t1, side=1, tilt=13.0, drop=0.0):
         """The hand brings the shoulder speaker-mic up beside the mouth (the coiled cord follows), the head tilts 12-15 deg
-        into it with the eyes locked on the lens, and the thumb squashes the push-to-talk key on each click."""
+        into it with the eyes locked on the lens, and the thumb squashes the push-to-talk key on each click.
+        drop (design units, default 0 = unchanged): hold it lower, the top of a tall handset below the eye line."""
         sp = self.sp; b = sp['body']; hh = sp['hh']
         clicks = [t0 + 0.38, t1 - 0.02]
         mouth = -hh / 2 + sp['mouth_y'] * hh / 240.0          # mouth relative to the chin line
         def fn(P, t):
             w = _env(t, t0, t1, 0.4, 0.4, ease)
             if w <= 0: return
-            down = mouth + 46.0 - 64.0 + 26.0 * P.shrug
+            down = mouth + 46.0 - 64.0 + 26.0 * P.shrug + drop
             out = (hh * 100.0 / 240.0) * 0.62 - (b['sh'] - 17)
             pr = 0.0
             for c_ in clicks:
