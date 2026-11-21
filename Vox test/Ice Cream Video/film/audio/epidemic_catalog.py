@@ -420,7 +420,10 @@ for _k in MAP:
     NOT[_k] = list(NOT[_k]) + ['sweeter_clean_version', 'deep_down_in_the_caverns', 'aztec_death_whistle',
                                 'electric_screwdriver', 'jail_pa_system', 'voices_futzed_ai_hitech', 'sega_saturn',
                                 'guitar_electric_od', 'velcro_tear', 'kids_walk_by_scream', 'cd_case_drop',
-                                'wooden_blow_single_note', 'toy_blow_long', 'reverse_beeps']
+                                'wooden_blow_single_note', 'toy_blow_long', 'reverse_beeps',
+                                # the Ice Cream film's rejects
+                                'reverse_tone', 'cicadas', 'designed_synthetic_power_down', 'scifi_machine_power_down',
+                                'cloth_movement_hugging']
 
 
 def slugify(name):

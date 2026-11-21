@@ -1,30 +1,25 @@
-"""Bus film sound tests ("If The School Bus Stops At Midnight... DON'T GET ON"): 8 renders in W/mix/tests/ (W =
-film/_work), each through the whole pipeline: mix.py on a window of the film (the real narration as aligned:
-W/align/vo_en.wav on W/align/timeline.json (tools/align.py writes both from W/narration/narration_en.wav), with its line voicing: tv, his, loudspeaker, door, mimic,
-mimic_slide, whisper, radio, phone, memory; this test's SFX cue sheet; the score with music_plan.py's plan: the track
-map, the tension events and the identity, the ORIGINAL "Ride Right" jingle of audio/jingle_bus.py), as the final mix
-will run it. Every window is anchored on the script's lines and words: re-run after a new voice edit.
+"""Ice Cream film sound tests ("If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"): 8 renders in
+W/mix/tests/ (W = film/_work), each through the whole pipeline: mix.py on a window of the film with the real narration
+as aligned (W/align/vo_en.wav on W/align/timeline.json) and its line voicing (his+truck, mimic+radio with his bells,
+radio, mimic+door, whisper; the narrator dry), this test's SFX cue sheet (sfx_ice.py names, as the picture will cue
+them), and the score with music_plan.py's plan: the track map, the tension events and HIS CHIME (chime_ice.py). Every
+window and cue is anchored on the script's words (music_plan.resolve): re-run after a new voice edit.
 
-    python3 sfx_tests.py [1 2 ... 8] [--jobs 1]     (default: all, one mix at a time: the machine is shared)
-    python3 sfx_tests.py --sheet                     W/mix/tests/tests_sheet.png
+    python3 audio/sfx_tests.py [1 2 ... 8] [--jobs 1]     (default: all, one mix at a time: the machine is shared)
+    python3 audio/sfx_tests.py --sheet                     W/mix/tests/tests_sheet.png
 
-    1 his_bus_midnight      rule 1: the air brakes, his idle, the PA reading the post, "I know your name!", fweet-fweet
-    2 roll_call_almost      rule 2: the gloves, the roll call through the door, "Here!", "Almost.", click-clack
-    3 fake_grandma_door     rule 3: three knocks, the fake Grandma, "...Clever." (the tape slide), the peephole
-    4 hand_in_dark          rule 4: the lights die, the hand in the dark, the glove, the walkie, the lights snap back
-    5 lighthouse_walkie     rule 4's end: the walkie, "LIGHTHOUSE!"
-    6 chase_mirror          rule 6: the chase, the swerve, the mirror ripped off, his windows behind
-    7 school_259_bell       rule 7: 2:59, the broom bending and cracking, "Theo.", the long whistle, the 3:00 bell
-    8 warm_ending           the grin slips, Theo home, the porch light, the morning bus
+    1 hook_far_chime        the cold open: the icy wind, "Who's cold?" over the chime's burst, "That was the problem."
+    2 driveby_song_stops    the truck glides by (engine only), the flicker (glimpse 1), the song stops dead outside
+    3 shatter_power_skull   the slap, the cone shatters, "Click." the furnace dies, the lights die, the TV skull
+    4 fake_dad_bells        the fake Dad on the radio (bells under him), the real Dad, "Static. Bells."
+    5 transformation        the smile, skin, bone cracks, the jaw's pop, the uniform tears, the legs punch out
+    6 chase_home            one sock, legs stabbing the snow, the coat speared, fence / car / roof, the drop, the slam
+    7 attic_leg_under_door  clicks across the ceiling, the hatch, the leg tip under the door, the towel
+    8 climax_warm_turn      the chime hangs on the empty beat, the plow and its horn, porch lights, falls apart, the
+                            ambulance, "Bye, Benny."
 
-and the measurements:
-    per one-shot SFX cue (rendered alone with the same seed): transient_ms (its loudest transient vs the cue time: the
-    picture's sync), phone_band_db (loudness left above 300 Hz: what a phone speaker plays), vs_voice_LU (the cue's
-    momentary max vs the narration's there), vs_music_LU (vs the music stem there: does it read over the score)
-    per identity event (the jingle's versions and the children's tunes, from stems/score_show.wav): its 1 s loudness
-    median vs the voice's integrated level, and its share of energy in the voice band (1-4 kHz)
-    flags: a cue more than 40 ms off, thinner than -15 dB on a phone, more than 20 LU under the voice or 12 LU under
-    the music; an identity layer more than 24 LU under the voice
+and the measurements (per cue: transient vs the cue time, phone band, vs voice, vs music; per chime event: its level
+vs the voice and its voice-band share; flags as in the Bus film's tests).
 """
 import json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -39,25 +34,16 @@ SR = 48000
 W = SX.W
 OUT = os.path.join(W, 'mix', 'tests')
 TL = os.path.join(W, 'align', 'timeline.json')
-VO = os.path.join(W, 'align', 'vo_en.wav')   # the narration exactly as TL aligned it (align.py's copy of narration_en.wav)
+VO = os.path.join(W, 'align', 'vo_en.wav')   # the narration exactly as TL aligned it
 TL_J = json.load(open(TL))
 LINES = TL_J['lines']
-WORDS = json.load(open(os.path.join(W, 'align', 'asr_cache.json')))['en_words']
 FULL = TL_J['duration_en'] + 2.5
-# no single transient to sync (beds, slides, drags, rolls, rattles, cries, the jingle): not sync-checked
-SLOW_ONSET = ('breath', 'mom_breath', 'mom_sob', 'cloth_rustle', 'riser', 'whoosh', 'door_creak', 'wood_creak',
-              'paper', 'paper_slide', 'car_pass', 'footsteps_hall', 'footsteps_stairs', 'footsteps_wood_inside',
-              'tape_glitch', 'vcr', 'lamp_flicker', 'curtain_flutter',
-              'ambience_woods', 'owl_hoot', 'crowd_parade', 'hospital_corridor', 'hospital_room', 'burn_barrel',
-              'plastic_melt', 'egg_rattle', 'ring_roll', 'ring_hand', 'oven_mitt', 'girl_cry', 'jingle', 'attic_door',
-              'chest_lid', 'page_flip', 'wet_drag', 'doorknob', 'paper_under_door', 'sirens_arrive', 'vhs_pause',
-              'music_box_wind', 'dogs_search', 'zipper', 'curtain_close', 'slot_flap', 'struggle', 'bathtub',
-              'house_night', 'landline_ring', 'line_hiss', 'pen_scratch', 'paper_burn', 'rain_house', 'halverson_car',
-              'waiting_room', 'pulse_count', 'tape_peel', 'drive_rain', 'er_doors', 'er_bustle', 'wheelchair',
-              'sit_down', 'tiny_steps', 'now_serving',
-              'suburb_night', 'bus_idle', 'his_bus_interior', 'school_night', 'morning_bus', 'bus_fast_night',
-              'cat_rumble', 'broom_bend', 'tape_slide', 'school_bell', 'bus_pull_away', 'flag_rope', 'ticket_slide',
-              'glove_squeak', 'walkie', 'pa_crackle', 'whistle', 'page_flip', 'tire_screech', 'bus_swerve')
+# no single transient to sync (beds, glides, scuttles, slides, stretches): not sync-checked
+SLOW_ONSET = ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'truck_idle', 'truck_glide', 'plow_pass',
+              'shovel_morning', 'radio_static', 'frost_creep', 'attic_crawl', 'scuttle', 'ambulance', 'skin_stretch',
+              'uniform_tear', 'boot_stuck', 'leg_tip_tile', 'snow_run', 'snow_walk', 'snow_deep', 'street_wakes',
+              'plow_horn', 'furnace_die', 'window_crack', 'curtain_yank', 'street_flicker', 'serving_window',
+              'radio_bells', 'radio_squelch', 'frost_wipe', 'blanket_yank')
 TESTS = {}
 
 
@@ -79,150 +65,128 @@ def ev(t, name, gain_db=0.0, space=None, pan=0.0, **params):
     return e
 
 
-def house(a, b, fridge=0.6, clock=0.5, rain=0.0, creaks=0.3):
-    """Grandma's house at night (sfx house_night: room tone, the fridge, the wall clock, creaks, rain)."""
-    return [ev(a, 'house_night', 0.0, dur=round(b - a, 2), fridge=fridge, clock=clock, rain=rain, creaks=creaks)]
-
-
-def night_in(a, b, dog=0.3):
-    """Inside the house at night: Larch Street through the windows (suburb_night inside=True)."""
-    return [ev(a, 'suburb_night', 0.0, dur=round(b - a, 2), dog=dog, inside=True)]
+def bed(a, b, name, gain_db=0.0, **params):
+    return ev(a, name, gain_db, dur=round(b - a, 2), **params)
 
 
 @test
-def t01_his_bus_midnight():
-    """Rule 1: his bus arrives at midnight: the air brakes, his idling diesel at the curb, the PA crackles on, the
-    jingle's first bars on the horn, he reads the post ("Sami. First grade..."), "Great smile, Mina!", "He read it off
-    my phone.", "I know your name! That makes us friends!", "Fweet-fweet." """
-    a, b = A('s65') - 0.6, A('e78') + 2.5
-    return a, b, night_in(a, b) + [
-        ev(A('s67') + 0.1, 'bus_air_brake', -2.0, 'window'),
-        ev(A('s67') + 1.2, 'bus_idle', 0.0, 'window', dur=round(b - A('s67') - 1.2, 2), kind='his'),
-        ev(A('w70:crackles') - 0.1, 'pa_crackle', 0.0, 'street', kind='on'),
-        ev(A('e72') + 0.15, 'pa_crackle', -2.0, 'street', kind='off'),
-        ev(A('s74') - 0.35, 'pa_crackle', -1.0, 'street', kind='on'),
-        ev(A('e74') + 0.1, 'pa_crackle', -2.0, 'street', kind='off'),
-        ev(A('s77') - 0.3, 'pa_crackle', -1.0, 'street', kind='on'),
-        ev(A('s77'), 'cat_rumble', 0.0, dur=3.0),
-        ev(A('s78') + 0.05, 'whistle', 0.0, 'street', kind='short'),
-    ]
+def t01_hook_far_chime():
+    """The cold open: the icy wind over the roofs, frost on the dark window, "Who's cold?..." over the chime's burst
+    (his voice from the pink window), "That was the problem." """
+    a, b = max(0.0, A('If the ice cream truck plays its song') - 0.6), A('end:That was the problem') + 2.5
+    return a, b, [bed(a, b, 'cold_night', 0.0, creaks=0.4),
+                  ev(A('And if Mom knocks') + 0.2, 'frost_creep', -6.0, dur=2.5),
+                  ev(A("Who's cold? Who wants") - 0.7, 'truck_speaker', -2.0)]
 
 
 @test
-def t02_roll_call_almost():
-    """Rule 2: the gloves on the doorframe, the roll call through the front door, "He..." -- the hand slaps over his
-    mouth, "Silence.", "Here!" in Sami's voice from the porch, "Almost.", "Click-clack.", the ticket under the door."""
-    a, b = A('s100') - 0.6, A('e121') + 1.5
-    return a, b, night_in(a, b, 0.0) + [
-        ev(A('s100') + 0.3, 'glove_squeak', -2.0, 'outside', kind='stretch'),
-        ev(A('s100') - 0.2, 'tape_skip', -4.0),
-        ev(A('w111:slaps') + 0.05, 'cloth_rustle', 2.0, 'close'),
-        ev(A('s113'), 'cat_rumble', 0.0, dur=3.5),
-        ev(A('s117') + 0.05, 'ticket_punch', 0.0, 'outside'),
-        ev(A('s118') + 0.2, 'ticket_slide', -2.0, 'close'),
-    ]
+def t02_driveby_song_stops():
+    """The drive-by: the truck glides down Birch Lane (engine only, no tires), the serving window glow, the
+    streetlight flickers (glimpse 1), the song stops dead outside: only his idle; no breath cloud."""
+    a, b = A('The truck glides down Birch Lane') - 1.0, A('end:And that smile breathes') + 2.5
+    t_stop = A('The song stops. Right outside#stops')
+    return a, b, [bed(a, b, 'cold_night', -8.0, inside=True, creaks=0.2), bed(a, b, 'house_hum', 0.0),
+                  ev(A('The truck glides down Birch Lane') + 3.5, 'truck_glide', 0.0, dur=9.0, peak=3.5),
+                  ev(A('The streetlight flickers'), 'street_flicker', -2.0, 'street', n=4),
+                  bed(t_stop, b, 'truck_idle', 0.0)]
 
 
 @test
-def t03_fake_grandma_door():
-    """Rule 3: three knocks, the fake Grandma ("Mina, open up!"), "What's the word?", the voice slides down like a
-    slowing tape: "...Clever.", the peephole goes white, the real Grandma pounding on bus 9's glass, the whisper."""
-    a, b = A('s134') - 0.5, A('e153') + 1.5
-    return a, b, night_in(a, b, 0.2) + [
-        ev(A('w134:knocks') - 0.2, 'knock_door', 0.0, 'inside', n=3, force=0.75),
-        ev(A('s143') - 0.05, 'tape_slide', -2.0, dur=1.1),
-        ev(A('s144') - 0.1, 'peephole', 0.0, 'close'),
-        ev(A('s144'), 'cat_rumble', 0.0, dur=3.0),
-        ev(A('w147:pounding'), 'knock_door', -6.0, 'street', n=5, force=0.9, material='glass', accel=0.2),
-        ev(A('s152') - 0.3, 'glove_squeak', -6.0, 'outside', kind='squeak', knuckles=False),
-    ]
+def t03_shatter_power_skull():
+    """The couch: "I slap it." the cone hits the floor and shatters like glass, "Click." the furnace dies, every light
+    goes out (the house hum stops), the long white skull in the black TV, the curtain yanked shut."""
+    a, b = A("Lina's on the couch") - 0.5, A('end:I yank the curtain shut') + 2.0
+    t_click = A('Click.')
+    return a, b, [bed(a, t_click + 2.2, 'house_hum', 0.0), bed(t_click + 2.0, b, 'house_cold', 0.0),
+                  bed(a, b, 'truck_idle', -6.0, inside=True),
+                  ev(A('I slap it') + 0.15, 'blanket_yank', -8.0, 'close'),
+                  ev(A('It hits the floor#shatters') - 0.25, 'cone_shatter', 0.0),
+                  ev(t_click, 'furnace_die', 0.0),
+                  ev(A('Every light in the house goes out'), 'power_cut', 0.0),
+                  ev(A('I yank the curtain shut') + 0.3, 'curtain_yank', 0.0)]
 
 
 @test
-def t04_hand_in_dark():
-    """Rule 4: "Two ten." every light dies (the mains dive, total black), a small cold hand, "I'm still holding a
-    hand.", the phone light, the white glove with one knuckle too many, the walkie in his other glove, "I rip free.",
-    the lights snap back on."""
-    a, b = A('s161') - 0.5, A('e182') + 1.0
-    return a, b, [
-        ev(a, 'house_night', 0.0, dur=round(A('w162:dies') - a, 2), fridge=0.6, clock=0.4, creaks=0.2),
-        ev(A('w162:dies') - 0.05, 'power_down', 0.0, 'inside'),
-        ev(A('s164') + 0.4, 'glove_squeak', -10.0, 'tight', kind='squeak', knuckles=False),
-        ev(A('w170:walkie') + 0.2, 'walkie', -8.0, 'upstairs', kind='glitch'),
-        ev(A('s172') + 0.3, 'light_switch', -1.0, 'close', kind='wall'),
-        ev(A('s173'), 'glove_squeak', 0.0, 'close', kind='stretch'),
-        ev(A('s173') - 0.3, 'cat_rumble', 2.0, dur=5.0),
-        ev(A('s177') + 0.5, 'walkie', -2.0, 'close', kind='glitch'),
-        ev(A('s179') + 0.05, 'cloth_rustle', 3.0, 'close'),
-        ev(A('w180:snap') - 0.05, 'power_up', 0.0, 'inside'),
-        ev(A('w180:snap') + 0.2, 'house_night', 0.0, dur=round(b - A('w180:snap') - 0.2, 2), fridge=0.6, clock=0.4),
-    ]
+def t04_fake_dad_bells():
+    """The fake Dad on the radio (the copy, his bells faint under it: audio only), "Silence.", "Sleep is warm", the leg
+    shadow, the REAL Dad (clean, "Over."), "Told you what?", "Static. Bells." cutting Adam off."""
+    a, b = A('The radio crackles') - 0.8, A("end:The pink one doesn't") + 2.0
+    out = [bed(a, b, 'house_cold', 0.0), bed(a, b, 'truck_idle', -6.0, inside=True),
+           ev(A('The radio crackles'), 'radio_static', 0.0, dur=1.2, bells=0.3)]
+    for ph in ('Adam. Do NOT go', 'Then keep her warm, kiddo'):
+        out += [ev(A(ph) - 0.25, 'radio_squelch', 0.0, on=True), ev(A('end:' + ph) + 0.05, 'radio_squelch', -2.0, on=False)]
+    for ph in ('Adam? Passing our street', 'Told you what', 'say again, Adam'):
+        out += [ev(A(ph) - 0.25, 'radio_clean', 0.0)]
+    out += [ev(A('Then an orange light sweeps the street'), 'plow_pass', -10.0, dur=8.0, peak=2.5),
+            ev(A('Static. Bells') - 0.05, 'radio_bells', 0.0, dur=2.2)]
+    return a, b, out
 
 
 @test
-def t05_lighthouse_walkie():
-    """Rule 4's end: upstairs, Sami hugging Rex, "You told me on the walkie to say our word..." (his glitchy squelch
-    on the walkie under "walkie"), "Sami... what did you say?", "LIGHTHOUSE!", "Then it's not our word anymore." """
-    a, b = A('s183') - 0.5, A('e189') + 1.5
-    return a, b, [
-        ev(a, 'house_night', 0.0, dur=round(b - a, 2), fridge=0.3, clock=0.4),
-        ev(A('w185:walkie') - 0.1, 'walkie', -4.0, 'close', kind='engage'),
-        ev(A('w185:walkie') + 0.35, 'walkie', -6.0, 'close', kind='glitch'),
-        ev(A('e185') + 0.1, 'walkie', -6.0, 'close', kind='beep'),
-        ev(A('s187') - 0.15, 'tape_skip', -2.0),
-        ev(A('s188'), 'cat_rumble', 0.0, dur=3.5),
-    ]
+def t05_transformation():
+    """The transformation, a foot from Adam's face (the chime cheerful through it): the smile keeps going, the skin
+    pulls long and hard, bone cracks, the eyes, the jaw drops (the deep pop), the uniform bulges and splits, a leg
+    punches out and plants ("Click."), another, two more, he pours out of the window."""
+    a, b = A('He keeps smiling. Keeps waving') - 0.6, A('end:Head first. Legs last') + 2.0
+    return a, b, [bed(a, b, 'cold_night', -4.0, creaks=0.0), bed(a, b, 'truck_idle', -2.0),
+                  ev(A('His skin pulls long'), 'skin_stretch', 0.0, dur=2.0),
+                  ev(A('Like a mask made of bone') - 0.3, 'bone_crack', 0.0, n=3),
+                  ev(A('His jaw drops') + 0.05, 'jaw_drop', 0.0),
+                  ev(A('Behind him, the striped uniform#bulges'), 'uniform_tear', 0.0),
+                  ev(A('A long brown leg punches out#punches'), 'leg_punch', 0.0, surface='metal'),
+                  ev(A('end:jointed like a spider') + 0.3, 'leg_click', 0.0, surface='metal'),
+                  ev(A('Click. Another') + 0.6, 'leg_punch', -2.0, surface='metal'),
+                  ev(A('Click. Another') + 1.5, 'leg_click', 0.0, surface='metal', n=2),
+                  ev(A('He pours out of the window'), 'scuttle', -2.0, surface='car', dur=1.6)]
 
 
 @test
-def t06_chase_mirror():
-    """Rule 6: bus 9 flat out at night, his dark bus ahead, the head out of the window turning backwards, his brake
-    lights, the swerve, the mirror ripped off, the road empty, his amber windows behind us, "Fweet-fweet." """
-    a, b = A('s272') - 1.0, A('e285') + 1.5
-    return a, b, [
-        ev(a, 'bus_fast_night', 0.0, dur=round(b - a, 2)),
-        ev(A('s277') + 0.4, 'tire_screech', -6.0, 'street'),
-        ev(A('w278:swerves') - 0.1, 'bus_swerve', 0.0, 'bus'),
-        ev(A('w279:rips') - 0.05, 'mirror_rip', 0.0, 'bus'),
-        ev(A('s281'), 'cat_rumble', 0.0, dur=4.0),
-        ev(A('s284') + 0.05, 'whistle', -4.0, 'street', kind='short', far=True),
-    ]
+def t06_chase_home():
+    """The chase home: the foot ripped out of the frozen boot, the run in one sock (knee-deep), legs stabbing the snow,
+    one spearing the coat, along the fence, over Dad's car, onto the roof, the drop at the door, the slam."""
+    a, b = A('I rip my foot out') - 0.8, A('end:and slam the door') + 2.0
+    t0 = A('I rip my foot out')
+    return a, b, [bed(a, b, 'cold_night', 0.0, creaks=0.0),
+                  ev(t0 - 0.3, 'boot_rip', 0.0),
+                  ev(t0 + 0.6, 'snow_deep', -2.0, n=8, rate=2.4),
+                  ev(A('Legs stab the snow'), 'leg_stab_snow', 0.0, n=3),
+                  ev(A('One spears my coat'), 'leg_spear_coat', 0.0),
+                  ev(A('He scuttles along our fence'), 'scuttle', 0.0, surface='fence', dur=1.8),
+                  ev(A("Over Dad's car"), 'scuttle', 0.0, surface='car', dur=1.4),
+                  ev(A('Up onto our roof'), 'scuttle', -2.0, surface='roof', dur=1.6),
+                  ev(A('And drops. Right in front'), 'leg_stab_snow', 2.0, n=2),
+                  ev(A('I duck under him#slam') + 0.1, 'door_slam', 0.0)]
 
 
 @test
-def t07_school_259_bell():
-    """Rule 7: "Two fifty-nine.", "What's your name?", "Fweet-fweet." the doors fold, Grandma jams the broom, the
-    handle bends, Mina's voice from inside, the broom cracks, "Theo.", "THEO!", the long whistle against the clock,
-    "...HERE!", the doors slam on an empty aisle, three o'clock: the school bell."""
-    a, b = A('s336') - 0.5, A('e365') + 3.0
-    return a, b, [
-        ev(a, 'school_night', 0.0, dur=round(b - a, 2)),
-        ev(a, 'his_bus_interior', -4.0, dur=round(A('s364') - a, 2)),
-        ev(A('s343') + 0.05, 'whistle', 0.0, 'school', kind='short'),
-        ev(A('s344') + 0.2, 'bus_door', -2.0, 'school', action='open'),
-        ev(A('s345') + 0.6, 'broom_bend', 0.0, 'school', dur=1.4),
-        ev(A('s346'), 'broom_bend', 2.0, 'school', dur=1.6),
-        ev(A('w353:cracks') - 0.05, 'broom_crack', 0.0, 'school'),
-        ev(A('w360:blows'), 'whistle', 2.0, 'school', kind='long'),
-        ev(A('w363:slam') - 0.05, 'bus_door', 2.0, 'school', action='close'),
-        ev(A('w365:bell') - 0.2, 'school_bell', 0.0, 'school', dur=4.0),
-    ]
+def t07_attic_leg_under_door():
+    """Rule 6: clicks across the ceiling (he is in the attic, following them), the hallway hatch drops open, a leg
+    between them, the dive into the bathroom, the needle-thin leg tip under the door on the tile, the towel jammed
+    down on it, it pulls back, the clicking stops."""
+    a, b = A('Click. Click. Click') - 1.0, A('end:The clicking stops') + 2.5
+    return a, b, [bed(a, b, 'house_cold', 0.0),
+                  ev(A('Click. Click. Click'), 'attic_crawl', 0.0, dur=4.5),
+                  ev(A('The hallway hatch drops open') + 0.2, 'hatch_drop', 0.0),
+                  ev(A('A leg reaches between us'), 'leg_click', 0.0, surface='wood', n=2),
+                  ev(A('Under the door, a needle-thin') + 0.4, 'leg_tip_tile', 0.0, dur=2.2),
+                  ev(A('I jam the towel down') + 0.4, 'towel_jam', 0.0),
+                  ev(A('It pulls back'), 'leg_tip_tile', -6.0, dur=0.6)]
 
 
 @test
-def t08_warm_ending():
-    """The warm turn: Grandma gasps, sees Theo, kneels ("Six mornings..."), she won't pull away until the porch light
-    comes on, and for the first time in thirty-two years it does; the clipboard of names; the morning: the apology,
-    the hug, "Brakes, mirrors, names." on the morning bus."""
-    a, b = A('s371') - 0.8, A('e388') + 2.0
-    return a, b, [
-        ev(a, 'school_night', -3.0, dur=round(A('s375') - a, 2)),
-        ev(A('s375'), 'bus_idle', -2.0, 'street', dur=round(A('s378') - A('s375'), 2), kind='bus9', rattle=0.0),
-        ev(A('e377') - 0.4, 'light_switch', 0.0, 'street', kind='porch'),
-        ev(A('s378'), 'page_flip', -4.0, 'close'),
-        ev(A('s386'), 'morning_bus', 0.0, dur=round(b - A('s386'), 2), kids=0.5),
-        ev(A('s387') + 0.1, 'cloth_rustle', -2.0, 'close'),
-    ]
+def t08_climax_warm_turn():
+    """The climax: the old man starts to shiver, the song reaches the empty beat and HANGS, Dad's plow roars in, the
+    horn again and again, porch lights and doors, "Cold. Alone.", the song falls apart, the truck glides into the
+    white, the mitten drops, the ambulance, "Bye, Benny." """
+    a, b = A('And the old man starts to shiver') - 0.5, A('end:Mr. Kessler whispers') + 3.0
+    return a, b, [bed(a, A('The truck glides into the white') + 3.0, 'cold_night', -2.0, creaks=0.0),
+                  bed(a, A('The truck glides into the white'), 'truck_idle', -4.0, far=True),
+                  ev(A("Dad's plow roars onto Birch Lane"), 'plow_pass', 0.0, dur=9.0, peak=1.5),
+                  ev(A('Horn blaring, again and again'), 'plow_horn', 0.0, n=5, gap=0.45),
+                  ev(A('Porch lights click on'), 'street_wakes', 0.0, n=6, span=5.0),
+                  ev(A('The truck glides into the white'), 'truck_glide', -4.0, dur=7.0, peak=1.0),
+                  ev(A("Lina's mitten drops into the snow") + 0.4, 'mitten_drop', 0.0),
+                  ev(A('The truck glides into the white') + 2.0, 'ambulance', -6.0, dur=10.0)]
 
 
 def _mom(x):
@@ -327,7 +291,7 @@ def run(k):
     json.dump(MP.music_cues(LINES, FULL), open(os.path.join(cdir, 'music_cues.json'), 'w'), indent=0)
     odir = os.path.join(OUT, 'mix_' + name)
     cmd = [sys.executable, os.path.join(HERE, 'mix.py'), TL, VO, '-', cdir, odir, '--t0', str(a), '--langs', 'en',
-           '--score-stems', '--plan', 'auto'] + os.environ.get('BUS_MIX_ARGS', '--bed-p50 -14').split()   # (the Bus film: -16 left the music 42-85 % present)
+           '--score-stems', '--plan', 'auto'] + os.environ.get('ICE_MIX_ARGS', '--bed-p50 -14').split()
     if b < FULL - 0.01:
         cmd += ['--t1', str(b)]
     t0 = time.time()
@@ -382,7 +346,7 @@ def sheet():
             ax.axvspan(e['t'], e['t'] + (e.get('len') or 0.4), color='lime', alpha=0.12)
         P = np.array(j['profile_1s'], float)
         ax2 = axs[2 * k + 1]
-        for col, lab, colr in ((1, 'voice', 'k'), (2, 'music', 'tab:blue'), (3, 'sfx', 'tab:red'), (4, 'jingle', 'tab:green')):
+        for col, lab, colr in ((1, 'voice', 'k'), (2, 'music', 'tab:blue'), (3, 'sfx', 'tab:red'), (4, 'chime', 'tab:green')):
             if P.shape[1] > col:
                 ax2.plot(P[:, 0] + 0.5, np.maximum(P[:, col], -45), color=colr, lw=1, label=lab)
         ax2.set_xlim(a, b); ax2.set_ylim(-45, 8); ax2.grid(alpha=0.3); ax2.legend(fontsize=7, ncol=4, loc='lower right')

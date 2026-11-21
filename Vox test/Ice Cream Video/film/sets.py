@@ -10070,3 +10070,11 @@ exec(compile(open(_DOCTOR_SETS_SRC).read(), _DOCTOR_SETS_SRC, 'exec'))
 # module's namespace after sets_doctor.py (it reuses its set engine). See its docstring and SETS.md.
 _BUS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_bus.py')
 exec(compile(open(_BUS_SETS_SRC).read(), _BUS_SETS_SRC, 'exec'))
+
+
+# ---------------------------------------------------------------------------------------------- Ice cream film additions
+# "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE": our house and Mr. Kessler's across Birch Lane,
+# his truck (positions A / B), the plow, 1958, the morning, across town and the inserts live in sets_ice.py, run here in
+# this module's namespace after sets_bus.py (it reuses its set engine). See its docstring and SETS.md.
+_ICE_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_ice.py')
+exec(compile(open(_ICE_SETS_SRC).read(), _ICE_SETS_SRC, 'exec'))

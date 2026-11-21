@@ -1,4 +1,4 @@
-"""Final mix (police v2 pipeline; the Bunnyman film, built on the dummy and delivery films' mix): narration with line voicing, the SFX
+"""Final mix for "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" (police v2 pipeline; the Bunnyman film, built on the dummy and delivery films' mix): narration with line voicing, the SFX
 from sfx_cues.json, and the score stems from music_cues.json, mixed to the reference measurements in
 analysis/AUDIO_SPEC.md.
 
@@ -30,6 +30,16 @@ Reads <cues>/sfx_cues.json (list of {t, name, gain_db, pan, params, space}) and 
                                   cues_sha1 (sha1 of both cue sheets: `mix.py --check <cues> <out>` exits 1 when stale)
 
 Line voicing (timeline line `fx`; LINE_FX below; each processed line is loudness-matched to the dry line)
+  THIS film, the Ice Cream film (place = TAG_FX by line tag, then TEXT_FX by the line's words, then the line's own fx,
+  then --who-fx; 'a+b' chains a then b; an unknown fx is left dry with a warning, never a crash):
+    his         Mister Shiver's own voice: dry, too close, no breath (proximity lift, presence, breaths expanded down)
+    radio       the two-way radio on channel three: 300 Hz-3 kHz, AGC and drive, gated hiss, squelch on and off
+    mimic       his copies: the copied voice, a faint wrong double and HIS BELLS (chime_ice) under it; chained with
+                the place: 'mimic+radio' (the fake Dad), 'mimic+door' (the fake Mom), 'mimic+truck' (the copied boy)
+    door        through the front door and its clear glass strip (the porch behind, the hall around us)
+    truck       his voice from the pink serving window: a little speaker horn, the cold street ('truck_far': across
+                the street)
+    memory      1958 (warm, far, a slow wow and a faint crackle); whisper (close and dry)
   THIS film, the Bus film (script/lines.py fx codes, placed by TAG_FX per line tag first; 'a+b' chains a then b;
   speaker W with no fx gets --who-fx W=his):
     tv          the 1994 Channel 6 tape on a school TV cart: VHS wow / flutter, the CRT speaker 160 Hz-5.8 kHz, hiss, buzz
@@ -545,6 +555,170 @@ LINE_FX.update({'tv': tv1994_fx, 'tape': tv1994_fx, 'television': tv1994_fx, 'hi
 LINE_FX_LU.update({'tv': -1.0, 'his': -0.5, 'loudspeaker': -1.5, 'pa': -1.5, 'door': -2.5, 'door_clear': -1.5, 'front_door': -2.5,
                    'walkie': -1.0, 'radio': -2.0, 'dash_radio': -2.0, 'phone': -1.0, 'cell': -1.0, 'mimic': -0.5,
                    'mimic_slide': -0.5, 'slide': -0.5, 'his_bus': -1.0})
+
+
+# ==================================================================================== THIS film: the Ice Cream film
+def _expander(y, below_db=-30.0, ratio=3.0, att=0.002, rel=0.06):
+    """Downward expander under below_db (rel the peak): breaths and mouth noise between words sink, words untouched."""
+    pk = float(np.abs(y).max()) + 1e-9
+    env = SX.follow(np.abs(y), SX.coef(att), SX.coef(rel))
+    lv = 20 * np.log10(env / pk + 1e-9)
+    g = np.where(lv < below_db, 10 ** ((lv - below_db) * (ratio - 1) / 20), 1.0)
+    return (y * np.maximum(g, 10 ** (-24 / 20))).astype(np.float32)
+
+
+def his_ice_fx(x):
+    """'his': Mister Shiver's own voice (the default for his lines with no place): DRY, TOO CLOSE and with NO BREATH:
+    a proximity lift (+3 dB at 140 Hz), presence (+2 dB at 3.2 kHz), a sugary sheen (+1.5 dB from 7 kHz), no room at
+    all, and every breath / mouth noise between words pushed down (a 3:1 expander under -30 dB): he never breathes
+    (-0.5 LU)."""
+    y = SX.eq(SX.hp(x, 70, 2), ('peak', 140, 3.0, 0.8), ('peak', 3200, 2.0, 1.0), ('hs', 7000, 1.5, 0.7))
+    return _expander(y, -30.0, 3.0)
+
+
+def twoway_radio_fx(x):
+    """'radio': the two-way radio on channel three (the real Dad, and the fake one inside 'mimic+radio'): 300 Hz-3 kHz,
+    a little AGC and drive, the channel hiss gated with the voice, the squelch OPENING (a key-up click and a burst
+    of hiss) before the first word and the squelch tail after the last (-2 LU)."""
+    y = band(x, 300, 3000, 6)
+    pk = float(np.abs(y).max()) + 1e-9
+    y = SX.compress(y, SX.db(pk) - 16, 3.0, 0.002, 0.08)
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(1.8 * y / pk) / np.tanh(1.8) * pk * 0.8).astype(np.float32)
+    env = SX.follow(np.abs(y), SX.coef(0.005), SX.coef(0.15))
+    rng = np.random.default_rng(31)
+    on = env / (env.max() + 1e-9) > 0.04
+    hiss = band(rng.normal(0, 1, len(y)).astype(np.float32), 500, 3500) * pk * 0.025 * on
+    y = (y + hiss).astype(np.float32)
+    act = np.flatnonzero(on)
+    if len(act):
+        k = min(int(0.09 * SR), len(y))                    # key-up: a click and a short burst before the first word
+        a = max(0, int(act[0]) - k)
+        burst = band(rng.normal(0, 1, k).astype(np.float32), 700, 3800) * pk * 0.18 * np.linspace(1, 0.2, k)
+        burst[:int(0.004 * SR)] += pk * 0.4 * np.hanning(int(0.004 * SR))
+        y[a:a + k] += burst[:len(y) - a]
+        k2 = min(int(0.16 * SR), len(y))                   # the squelch tail after the last word
+        b = min(int(act[-1]), len(y) - k2)
+        tail = band(rng.normal(0, 1, k2).astype(np.float32), 600, 4000) * pk * 0.22 * np.exp(-np.arange(k2) / (0.05 * SR))
+        y[b:b + k2] += tail
+    return y.astype(np.float32)
+
+
+_BELLS = {}
+
+
+def _bells_for(n, seed=5):
+    """His bells (audio/chime_ice.py bells) as a mono signal of n samples, peak 1."""
+    k = (n, seed)
+    if k not in _BELLS:
+        try:
+            import chime_ice as CH
+            b = SX.mono(CH.bells(n / SR + 0.5, seed))[:n]
+        except Exception as e:
+            log('WARNING: chime bells unavailable for mimic (%s)' % repr(e)[:60]); b = np.zeros(n, np.float32)
+        b = np.pad(b, (0, max(0, n - len(b))))
+        _BELLS[k] = (b / (np.abs(b).max() + 1e-9)).astype(np.float32)
+    return _BELLS[k]
+
+
+MIMIC_BELLS_DB = -24.0     # the bells under a copy, rel the copied voice's peak: faint (a fair-play tell, audio only)
+
+
+def mimic_ice_fx(x):
+    """'mimic': his copies (the fake Dad on the radio, the fake Mom at the door, the copied little boy): the copied
+    voice almost perfect, a faint WRONG double (the same words 0.4 semitone sharp, 16 ms late, 17 dB down: two mouths
+    not quite agreeing) and HIS BELLS under it (chime_ice bells, MIMIC_BELLS_DB under the voice's peak), so the
+    place chained after it ('mimic+radio', 'mimic+door', 'mimic+truck') carries the bells too (-0.5 LU)."""
+    y = _wow(x, 0.002, 0.7, 0.0003, 5.5, 29)
+    d = _pitch(x, 0.4)
+    if d is not None:
+        k = int(0.016 * SR); dd = np.zeros_like(y); dd[k:] = d[:len(y) - k]
+        y = y + SX.lp(dd, 6000, 2) * 0.14
+    pk = float(np.abs(x).max()) + 1e-9
+    env = SX.follow(np.abs(x), SX.coef(0.05), SX.coef(0.6))
+    gate = np.clip(env / (env.max() + 1e-9) * 4, 0, 1)        # the bells only while the copy speaks (and a moment after)
+    y = y + _bells_for(len(y)) * pk * 10 ** (MIMIC_BELLS_DB / 20) * gate
+    return y.astype(np.float32)
+
+
+def ice_door_fx(x):
+    """'door': through Adam's front door with its clear strip of glass (the fake Mom): the wood takes the top (2.8 kHz)
+    and booms (230 Hz), the glass strip leaks the consonants (1.6-4.5 kHz, 18 %), the porch's cold air behind her,
+    the front hall around us (-2.5 LU)."""
+    d = SX.eq(SX.lp(x, 2800, 2), ('peak', 230, 3.5, 1.1), ('hs', 1700, -4.0, 0.7))
+    glass = band(x, 1600, 4500, 2) * 0.18
+    y = SX.mono(SX.reverb(d + glass, 'porch', 0.2, 0.002))[:len(x)]
+    return SX.mono(SX.reverb(y, 'hallway', 0.2, 0.002))[:len(x)].astype(np.float32)
+
+
+def truck_fx(x, far=False):
+    """'truck': his voice from the pink serving window: a little of the roof speaker horn in it (220 Hz-6.5 kHz, a
+    1.6 kHz honk, light drive), the cold street's air and a short slap off the houses; 'truck_far': across the street
+    (heard from the bathroom window / Kessler's porch): duller, wetter (-1 / -3 LU)."""
+    y = SX.eq(band(x, 220, 6500 if not far else 4200, 2), ('peak', 1600, 3.0, 1.3), ('peak', 900, 1.0, 1.0))
+    pk = float(np.abs(y).max()) + 1e-9
+    y = (np.tanh(1.4 * y / pk) / np.tanh(1.4) * pk).astype(np.float32)
+    y = SX.mono(SX.reverb(y, 'street', 0.16 if not far else 0.42, 0.006 if not far else 0.03))[:len(x)]
+    air = band(np.random.default_rng(33).normal(0, 1, len(y)).astype(np.float32), 900, 5000) * pk * 0.006
+    return (y + air).astype(np.float32)
+
+
+def memory1958_fx(x):
+    """'memory': 1958 (a voice remembered from the flashback): warm and far, 160 Hz-5.5 kHz, a slow wow, a faint
+    crackle, a small room (-1.5 LU)."""
+    y = _wow(x, 0.0015, 0.35, 0.0002, 6.0, 37)
+    y = SX.eq(SX.lp(SX.hp(y, 160, 2), 5500, 2), ('peak', 300, 2.0, 0.9))
+    y = SX.mono(SX.reverb(y, 'living', 0.2, 0.012))[:len(x)]
+    rng = np.random.default_rng(38)
+    cr = (rng.uniform(0, 1, len(y)) > 0.9993).astype(np.float32) * rng.normal(0, 1, len(y)).astype(np.float32)
+    return (y + band(cr, 1500, 6000, 2) * float(np.abs(y).max()) * 0.05).astype(np.float32)
+
+
+LINE_FX.update({'his': his_ice_fx, 'radio': twoway_radio_fx, 'two_way': twoway_radio_fx, 'radio_clean': twoway_radio_fx,
+                'channel3': twoway_radio_fx, 'mimic': mimic_ice_fx, 'copy': mimic_ice_fx, 'door': ice_door_fx,
+                'front_door': ice_door_fx, 'through_door': ice_door_fx, 'truck': truck_fx,
+                'truck_far': lambda x: truck_fx(x, True), 'window': truck_fx, 'serving_window': truck_fx,
+                'memory': memory1958_fx, '1958': memory1958_fx, 'flashback': memory1958_fx, 'whisper': whisper_fx})
+LINE_FX_LU.update({'his': -0.5, 'radio': -2.0, 'two_way': -2.0, 'radio_clean': -2.0, 'channel3': -2.0, 'mimic': -0.5,
+                   'copy': -0.5, 'door': -2.5, 'front_door': -2.5, 'through_door': -2.5, 'truck': -1.0,
+                   'truck_far': -3.0, 'window': -1.0, 'serving_window': -1.0, 'memory': -1.5, '1958': -1.5,
+                   'flashback': -1.5, 'whisper': 0.0})
+# TAG_FX: this film's line tags -> place (script/lines.py is written by the voice teammate; empty until a tag needs to
+# override). TEXT_FX: the character lines by their words (found in the timeline's line text, case and punctuation
+# ignored), so the right place follows the line whatever its tag: the fake Dad through the radio with bells, the
+# fake Mom through the door with bells, the copied boy from the window with bells, the real Dad clean on the radio.
+TAG_FX = {}
+NARRATOR_FX = ('whisper',)          # the only place a narrator (who 'N') line may take
+TEXT_FX = [
+    ("who's cold who wants a free one", 'his+truck'),
+    ("who's the coldest you are", 'his+truck'),
+    ('walter look who s been waiting', 'his+truck_far'), ("walter look who's been waiting", 'his+truck_far'),
+    ("see you when it's this cold again", 'his+truck'),
+    ('inside children rule seven', 'his'),
+    ("walter i'm cold come to the window", 'mimic+truck'),
+    ('adam do not go to kessler', 'mimic+radio'), ('then keep her warm kiddo', 'mimic+radio'),
+    ("adam it's mom", 'mimic+door'), ('let me in baby', 'mimic+door'),
+    ('hearing a song out on elm', 'radio'), ('passing our street all good', 'radio'),
+    ("told you what i've been out on route 9", 'radio'), ('say again adam', 'radio'),
+    ("two minutes out he can't wait", 'radio'),
+    ("good i whisper", 'whisper'), ("shivering means you're fighting", 'whisper'), ('bye benny', 'whisper'),
+]
+
+
+def _tnorm(s):
+    import re as _re
+    s = str(s).lower().replace('\u2019', "'").replace('mr.', 'mister')
+    return _re.sub(r'\s+', ' ', _re.sub(r"[^a-z0-9' ]", ' ', s)).strip()
+
+
+def text_fx(line):
+    t = _tnorm(line.get('en') or line.get('text') or '')
+    for k, fx in TEXT_FX:
+        if _tnorm(k) in t:
+            return fx
+    return None
+
+
 _FX_WARNED = set()
 
 
@@ -632,7 +806,14 @@ def load_vo(path, n):
 def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
     L = tl['lines']
     who_fx = who_fx or {}
-    fx_of = lambda l: TAG_FX.get(l.get('tag')) or l.get('fx') or who_fx.get(l.get('who'))   # the Bus film: TAG_FX first
+    # the Ice Cream film: TAG_FX, then the line's words (TEXT_FX), then the line's own fx, then --who-fx
+    # The NARRATOR's voice is never changed (only cleaned): a narrator line keeps only NARRATOR_FX ('whisper': Adam's
+    # own "Good," I whisper); lines.py's 'memory' on the 1958 narration is left dry
+    def fx_of(l):
+        fx = TAG_FX.get(l.get('tag')) or text_fx(l) or l.get('fx') or who_fx.get(l.get('who'))
+        if fx and l.get('who', 'N') == 'N' and str(fx) not in NARRATOR_FX:
+            return None
+        return fx
     en_spans = [(l['t'], l['end'], fx_of(l)) for l in L if fx_of(l) and l.get('found_en', True)]
     ru_start = {}
     for g in tl.get('dub', []):
@@ -971,7 +1152,8 @@ BOOST_VCUT_DB = 16.0  # Bus final mix: 8 dB left 'Almost.', '...Clever.', the ha
                       # under the scare in 1-4.5 kHz; the cut now also sits inside the drive search (the loudness target
                       # is met with the cut in place)
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
-LINE_TAG_DB = {'please': 4.0}   # per line (timeline tag): the girl's "Please." through the door sat 6.9 dB under the
+LINE_TAG_DB = {}                # THIS film: none yet (the Bus film's 'please' +4 dB is gone); per line tag, dB
+_LINE_TAG_DB_BUS = {'please': 4.0}   # (the Bus film) the girl's "Please." through the door sat 6.9 dB under the
                                 # narration with the bed 7.9 dB under it (critic 3 m11)
 NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and SFX events by this much for that long
                      # from the hit (the window smash on "explodes": the word stays readable under the boosted hit)
@@ -986,8 +1168,13 @@ NOTCH_DB = 6.0       # a plan hit with 'notch': s cuts 1-4.5 kHz of the hits and
 # Bus film (final mix): the rows name the timeline's line TAGS (resolved at run time, so a re-paced or re-cut voice
 # edit needs no change here); the Doctor film's line indices had been left in and steered the wrong stretches.
 # rule 1 .. rule 7 rise; the comment prompt ('cta') and everything from the 3:00 bell on are left alone
-ARC_TARGETS = [('rule1', -19.0), ('cta', None), ('rule2', -17.5), ('rule3', -16.0), ('rule4', -14.5), ('rule5', -13.0),
-               ('rule6', -11.8), ('rule7', -9.0), ('bell_rings', None)]   # r3: rule 7 -10.6 measured under rule 6
+# THIS film (the Ice Cream film): the rows name a line TAG or a script PHRASE (music_plan.line_index finds it in the
+# timeline's text), so nothing depends on lines.py's tags; the comment prompt and everything from the plow's arrival
+# (the warm turn) are left alone; the climax's crossing is the loudest gap bed
+ARC_TARGETS = [('Rule number one', -19.0), ('Stop. His song is playing', None), ('Rule number two', -17.5),
+               ('Rule number three', -16.5), ('Rule number four', -15.0), ('Rule number five', -13.5),
+               ('Rule number six', -12.5), ('Then the song moves', -14.0), ('Rule number seven', -11.5),
+               ("Mr. Kessler is halfway to the window", -9.5), ("Dad's plow roars", None)]
 ARC_MAX_DB = 8.0     # Bus final mix: 6 dB clamped rules 1 and 6 short of the rule-by-rule rise
 # sound fix round (M1): the old landline's bell sat 5-10 dB under the voice peaks in the speech band and level with the
 # voice between syllables: each ring dips this much while the narration speaks (voice-keyed, 10 ms attack, 0.12 s hold)
@@ -1139,9 +1326,9 @@ def main():
     ap.add_argument('--t0', type=float, default=0.0); ap.add_argument('--t1', type=float, default=None)
     ap.add_argument('--langs', default='en'); ap.add_argument('--fallback', action='store_true')
     ap.add_argument('--strict', action='store_true', help='stop on a failed SFX cue (police behaviour)')
-    ap.add_argument('--who-fx', default='W=his',
-                    help='line fx for a speaker whose lines have none (default W=his: Mister Whistlestop always on his '
-                         'warbling tape; TAG_FX and the lines\' own fx come first)')
+    ap.add_argument('--who-fx', default='',
+                    help='line fx for a speaker whose lines have none, e.g. S=his (default none: this film places its '
+                         'character lines by TAG_FX, TEXT_FX and the lines\' own fx)')
     ap.add_argument('--plan', default='auto', choices=('auto', 'full', 'off'),
                     help='auto: a music_cues.json without track_map gets music_plan.py\'s arrangement (and its '
                          'intensity / events when the sheet has none); full (the final mix, final_mix.sh): the score '
@@ -1608,7 +1795,19 @@ def main():
     vbl_g = -0.691 + 10 * np.log10(SX._blocks(key, 0.4, 0.1) + 1e-20)
     arc_secs = []
     _tagi = {l.get('tag'): j for j, l in enumerate(tl['lines'])}
-    _arc = [(_tagi[a] if isinstance(a, str) else a, g) for a, g in ARC_TARGETS if not isinstance(a, str) or a in _tagi]
+
+    def _li(a):                                      # a tag, a script phrase (music_plan.line_index) or an index
+        if not isinstance(a, str):
+            return a
+        if a in _tagi:
+            return _tagi[a]
+        try:
+            import music_plan as _MP
+            return _MP.line_index(a, tl['lines'])
+        except Exception:
+            return None
+    _arc = [(i_, g) for i_, g in ((_li(a), g) for a, g in ARC_TARGETS) if i_ is not None]
+    _arc.sort(key=lambda r: r[0])
     for k_, (li, tgt) in enumerate(_arc[:-1]):
         if tgt is None or li >= len(tl['lines']): continue
         a_ = float(tl['lines'][li]['t']); b_ = float(tl['lines'][_arc[k_ + 1][0]]['t'])

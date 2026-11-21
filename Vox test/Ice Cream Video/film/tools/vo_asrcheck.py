@@ -21,10 +21,17 @@ from vo_edit import toks                                           # noqa: E402 
 
 # what the recogniser cannot help hearing its own way (homophones and spellings: not edit faults)
 SAME = {'gray': 'grey', 'mr': 'mister', 'dr': 'doctor', 'oh': '0', 'sh': 'shh', 'genes': 'jeans', 'colour': 'color',
-        'lena': 'lina', 'lenas': 'linas', 'pajamas': 'pyjamas', 'muster': 'mister'}
+        'lena': 'lina', 'lenas': 'linas', 'pajamas': 'pyjamas', 'muster': 'mister',
+        'moms': 'mom', 'coco': 'cocoa', 'prize': 'pries'}   # "Mom's" (apostrophe dropped), homophones
 JOIN2 = {('snow', 'flake'): 'snowflake', ('door', 'knob'): 'doorknob', ('snow', 'man'): 'snowman', ('grown', 'up'): 'grownup'}
 # lines that may fail, by tag, with the reason (checked on the spectrogram and with a second recogniser, not an edit fault)
 ALLOW_TAGS = {
+    'adam_breathe': 'the TTS fuses "Mom, I" into one glide with no dip (so it is one line, not split): Parakeet "Breathe, mamma says" (raw take too); Whisper on the edit: "Breathe, mom I say." (both paddings)',
+    'morning': 'Parakeet writes the homophone "wok" for "walk" (raw take too); Whisper on the edit: "...shovel his walk." (both paddings)',
+    'rule2': 'Parakeet writes "To rule number two" for the take\'s voiced onset of the R on its own (raw take from 184.58, 184.62, 184.64 and 184.66 alike); Whisper: "Rule number two." on the raw take and the edit',
+    'eleven_oh_two': 'both recognisers write the clock time as "1102" (raw take too): the words are all there',
+    'grab_radio1': 'the take releases the b of "grab" into "the": Parakeet "grabbed" (raw take too); Whisper on the raw take: "I grab"',
+    'grab_radio2': 'the same "grab the" release as grab_radio1: Parakeet "grabbed" (raw take too); Whisper on the raw take: "I grab"',
 }
 
 

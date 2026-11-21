@@ -1,4 +1,4 @@
-"""The voiceover edit of the Bus film ("If The School Bus Stops At Midnight..."; adapted from the Doctor film's tool): the owner's raw TTS take -> a clean, paced narration (English only).
+"""The voiceover edit of the Ice Cream film ("If The Ice Cream Truck Plays Its Song In Winter..."; adapted from the Bus film's tool): the owner's raw TTS take -> a clean, paced narration (English only).
     python3 vo_edit.py analyze        per-line source spans, what gets removed, internal pauses (prints; writes nothing)
     python3 vo_edit.py pacing [--force]   write W/narration/pacing_map.md from the rules + PACE below (keeps an existing
                                       map unless --force: the map is the source of truth, edit it by hand if you like)
@@ -8,10 +8,9 @@
     python3 vo_edit.py check          scan the edited files (residual breaths, clicks, gaps vs the map, peaks, loudness)
                                       and draw the before/after strips into W/narration/tests/; after align.py, also
                                       every line against the recogniser (tools/vo_asrcheck.py; fails the check)
-Source: W/narration/raw/narration_raw_24k.wav (24 kHz mono float: the owner's two TTS parts joined by
-tools/vo_join.py, 741.83 s); words: W/narration/asr_raw.json (tools/vo_asr.py: Parakeet TDT word start/end times,
-80 ms resolution, used as anchors); script: script/lines.py (420 lines).
-Run order: vo_join.py -> vo_asr.py raw/narration_raw_24k.wav asr_raw.json -> vo_edit.py pacing (once; then edit the
+Source: W/narration/raw/part1.wav (the owner's ONE TTS take, 24 kHz mono, 13:06); words: W/narration/asr_raw.json
+(tools/vo_asr.py: Parakeet TDT word start/end times, used as anchors); script: script/lines.py (428 lines).
+Run order: vo_asr.py raw/part1.wav asr_raw.json -> vo_edit.py pacing (once; then edit the
 map by hand) -> vo_edit.py build -> align.py --write-pauses -> vo_edit.py check -> vo_report.py.
 
 How the edit works
@@ -98,6 +97,17 @@ SPLITS = {
                                  # found 105.38 the next line read "To eleven", at 105.47 this one "call you a l")
     'saving_place': 444.510,     # "place. | I grab": the s of "place" ends in a 10 ms dip (-42 dB) before the "I" (the
                                  # found 444.66 was after the "I")
+    'adam_old_people': 134.065,  # "cold, | I say.": at the found 134.04 the d of "cold" led this line ("They say");
+                                 # both recognisers read "cold." / "I say." at 134.06-134.08
+    'blue_eyes': 148.670,        # "eyes. | A smile": the z runs into the "A" (at 148.61-148.65 the line read "The smile",
+                                 # at 148.71 "Smile"); 148.67: "Tiny blue eyes." / "A smile too wide..." (both recognisers)
+    'cta_remember': 184.640,     # "answer. | Rule number two.": the r of "answer" led the rule ("So rule"); 184.64 is the
+                                 # dip before the R (Whisper "Rule number two.")
+    'waving': 243.970,           # "Waving. | I yank": the found 243.86 cut "Wav | ing" (the next line read "Bing I yanked");
+                                 # 243.97: "Waving" / "I yanked the curtain shut." (both recognisers)
+    'adam_breathe': 491.350,     # '"Breathe, Mom," I say. | Silence.': the s of "Silence" sat in this line ("I say s");
+                                 # 491.35 is before it. ("Mom, I" is one voiced glide with no dip: one line, not split)
+    'twist_coldest': 582.815,    # "street. | Rule number seven.": the t release of "street" led the rule ("Brule")
     'one_more': 733.200,         # "one more. | Rule number eight.": the r of "more" runs into the R of "Rule" (one voiced
                                  # glide; at 733.26 the line read "one more r")
 }

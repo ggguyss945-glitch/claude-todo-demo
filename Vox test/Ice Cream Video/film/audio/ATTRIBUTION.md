@@ -3,7 +3,54 @@
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
 
-## This film: "If The School Bus Stops At Midnight... DON'T GET ON"
+## This film: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
+
+Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_ice.json, never copied out of
+_work/samples, never committed). The new set (_work/samples/epidemic_ice: 54 effects, 14 tracks, each judged in
+_work/mix/sfx_review.md) first, then the bus, doctor, bunny, dummy, delivery, police and mirror sets through the
+symlinks in _work/samples. Keep the channel connected in the Epidemic account so Content ID does not claim the tracks:
+Throbbing Anxiety and I'm the Villain (Dream Cave), The Haunted and Sleep Forever (Luella Gren), Unvaried (Elin Piel),
+Impossible Theory (Rachel Sandy), Escalation (Jon Bjork), Redeemed (Blue Saga), Lullaby before Christmas and A Heart
+Full of Spring (Franz Gordon), With the Dawn and Peaceful Melody (Megan Wofford), and the earlier sets' Turning Stones
+(Stefan Ekstrom), Are You Alone (Victor Lundberg), All Exits Closed (Guy Copeland), When the Sun Sets (Anna
+Landstrom), Can They See Us (Experia), Come Closer and Don't Look (Belladonna Strings), The Forgotten Memories (Luella
+Gren), Irene (Kevin Dailey), Dark Forebodings (Ethan Sloan). Rejected: Tears of a Shadow and City of Light (Eva
+Hummingbird: voice-like fragments heard by the recogniser; never under the narration), and five effects (cicadas
+under a winter wind, a reverse beeper, two synthetic power-downs, a cotton-jacket hug).
+
+HIS CHIME (audio/chime_ice.py) is an ORIGINAL melody composed for this film (no existing song or jingle), synthesised
+(music-box tines, a string pad) with the free library's celesta and soft piano samples (VSCO-2-CE / A Sampled Celesta,
+CC0; Salamander grand, CC-BY: credited in the shared block below).
+
+Where each SFX name of this film (audio/sfx_ice.py ICE_NAMES) comes from (source names: epidemic_catalog.ICE_MAP):
+| name | source (Epidemic set: file) | processing / synthesis |
+|---|---|---|
+| cold_night, frozen_still, house_cold | ice: Wind General Winter Wind 02/05, Wind Designed Storm Winter 08/09; ice: Doors Creak Designed Eerie Wood Creaks; ice: Ice Friction / Ice Break | wind low/high-passed, the designed wind high-passed as a whistle; creaks cut to singles, far; ice ticks thinned |
+| house_hum, power_cut | doctor: Machines Appliance Fridge Hum / Refrigerator Low Hum; ice: Wall Heater Furnace Pinging Hiss; ice: Light Switch | power_cut: the hum varispeeded down to a stop; mains clunk synthesised |
+| furnace_die, furnace_start | ice: Wall Heater Furnace (run down); ice: HVAC Boiler Start | relay click and cooling tick synthesised (modal) |
+| snow_walk, snow_run, snow_deep, snow_scuff | ice: Footsteps Boots Snow Walk, Snow Walk 03/04, Snow Run 04/10/11, Running Pass By, Boots Snow Scuff | single steps cut out; deep: slowed 0.8-0.88x, low shelf, scuff drag |
+| mitten_drop, cone_set | ice: Snow Walk (crunch grain), Ice Friction Subtle | woollen pat and wrapper whisper synthesised (filtered noise) |
+| boot_stuck, boot_rip | ice: Ice Friction Crunchy; ice: Ice Break; ice: Cloth Misc Scrape | slowed strain; groan modes synthesised |
+| shovel_scrape, shovel_morning | ice: Snow Manual Snow Plow Metal 01/03, Plastic; ice: Shovel Dig In Snow 02/03/09 | blade-knock synthesised; three shovels placed left / centre / right |
+| plow_pass, plow_horn | ice: Freight Truck Lorry Moving, Truck Passby 02; bus: Metal Friction Scrape (blade); ice: Fire Truck Air Horn Blaring, Truck Air Horn Three Honks | doppler pass and pan synthesised; blade slowed 0.7x |
+| truck_idle, truck_glide | ice: Van Idle Exterior Rear Loop 02, Van Mercedes Diesel Idle | idle slowed 0.92x; glide: engine only (no tire noise), doppler synthesised |
+| serving_window, window_crack | ice: Plastic Sliding Window Small; ice: Windows Wood Sliding Open/Close, Hotel Vertical Sliding Window | frost-seal crackle and air hiss layered |
+| truck_speaker | synthesised (pop, mains hum, crackle through the horn band) | |
+| door_tap, door_slam, door_open_street | earlier sets' knocks (knock_door recipe); bunny: Doors Wood Impact Light Door; mirror: Doors Creak Wooden Door Creaks | frame boom and latch synthesised |
+| cone_shatter | bus / bunny: Glass Break (smash grains); ice: Ice Break | floor knock and skittering shards synthesised |
+| frost_creep, doorknob_frost, frost_wipe | ice: Ice Friction Subtle Pressure Cracks 01/02, Ice Crackle Squeeze Whoosh 03/13, Crunchy; ice: Cloth Misc Scrape | high-passed fizz; brass ping synthesised |
+| radio_squelch, radio_static, radio_bells, radio_clean | bus: Walkie Talkie Engage, Squelch Stuttering; bus: Static Radio Station Search; doctor: Walkie Talkie White Noise Hiss; dummy: Radio Device Turn On | radio band and drive; HIS BELLS from chime_ice.bells (original) |
+| skin_stretch | bus: Rubber Friction Latex Glove Pull (glove_squeak); ice: Eerie Wood Creaks | an octave down, low-passed: no wetness |
+| bone_crack, jaw_drop | ice: Gore Bone Crack Cracking, Broken Bone Twist Dislocate 01; bunny: Gore Bone Break Heavy / Snap 04 | dry crack transients only (<= 0.3 s, high-passed); jaw pop sub and hinge creak synthesised / slowed |
+| uniform_tear, leg_punch, leg_spear_coat | bus: Cloth Rip Shorts / T-Shirt / Tear 02; ice: Cloth Misc Scrape; bunny: Fight Grab Punch Cloth | leg swish and chitin clicks synthesised |
+| leg_click, leg_stab_snow, scuttle, attic_crawl, leg_tip_tile | bus: Seat Belt Click Lock; doctor: Crocodile Clip; dummy: Mechanical Click Metal; ice: Snow Walk, Ice Break; bus: Metal Friction Scrape | chitin modes and surface bodies (metal, wood, ice, tile, snow) synthesised; attic: through the ceiling |
+| hatch_drop | ice: Doors Wood Hatch Open Close; ice: Boats Metal Hatch Open | bang and grit synthesised |
+| blanket_yank, towel_jam | ice: Cloth Flap Towel, Towel Drying Back | slowed, low shelf; snag click synthesised |
+| porch_light, street_wakes | ice: Fluorescent Light Switch On/Off (3 files); mirror: Door Creaks | street distance and bulb ping synthesised |
+| ambulance | doctor: Siren Ambulance 70s Distant / In Motion / Wailing | approach level, final wind-down varispeed |
+| cocoa_mug, curtain_yank | dummy: Cup Mug Teaspoon, Tea Cup Placing (mug_set recipe); earlier curtain_close recipe | |
+
+## The Bus film: "If The School Bus Stops At Midnight... DON'T GET ON"
 
 Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_bus.json, never copied out of
 _work/samples, never committed). The bus set (_work/samples/epidemic_bus: 98 effects, 11 tracks, each judged in

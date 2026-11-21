@@ -56,6 +56,13 @@ SLOW_ONSET = SLOW_ONSET + ('house_night', 'landline_ring', 'line_hiss', 'pen_scr
                            'chair_rock', 'carry_child', 'medicine_cabinet', 'lamp_flicker', 'paper_under_door', 'hold_music',
                            'ambience_dawn', 'phone_connect', 'rotary_dial')
 HIT_NAMES = ('impact_hit', 'stinger', 'braam', 'sub_drop', 'goodnight_hit', 'window_smash', 'door_crash', 'swap')
+# THIS film (the Ice Cream film): its beds, glides and scuttles have no single transient; its hits
+SLOW_ONSET = SLOW_ONSET + ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'truck_idle', 'truck_glide',
+                           'plow_pass', 'shovel_morning', 'radio_static', 'frost_creep', 'attic_crawl', 'scuttle',
+                           'ambulance', 'skin_stretch', 'uniform_tear', 'boot_stuck', 'leg_tip_tile', 'snow_run',
+                           'snow_walk', 'snow_deep', 'street_wakes', 'plow_horn', 'furnace_die', 'window_crack',
+                           'curtain_yank', 'serving_window', 'radio_bells', 'radio_squelch', 'frost_wipe', 'blanket_yank')
+HIT_NAMES = HIT_NAMES + ('cone_shatter', 'power_cut', 'jaw_drop', 'leg_punch', 'hatch_drop', 'bone_crack', 'door_slam')
 
 
 def lev(x, win=0.4, hop=HOP):

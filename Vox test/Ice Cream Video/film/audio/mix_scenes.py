@@ -1,4 +1,4 @@
-"""Scene sheets of a finished mix (the Doctor film): one PNG per scene window, so a mix can be checked by eye against
+"""Scene sheets of a finished mix (THIS film: the Ice Cream film; built for the Doctor film): one PNG per scene window, so a mix can be checked by eye against
 the picture and the narration.
 
     python3 audio/mix_scenes.py [_work/mix/final] [--scenes name,name] [--out DIR]       (from film/)
@@ -18,20 +18,32 @@ sys.path.insert(0, HERE)
 SR = 48000
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 
-# (name, first line, last line): the Bus film's scenes by narration line (W/align/timeline.json), so the windows
-# follow any re-edit; each window runs from 1 s before its first line to 1.5 s after its last line's end
-_SC = [('cold_open', 0, 8), ('tape_1994', 9, 21), ('della_post', 22, 55), ('rules_paper', 56, 58),
-       ('rule1_midnight', 59, 78), ('comment_prompt', 79, 82), ('rule2_rollcall', 83, 121), ('rule3_fake_grandma', 122, 153),
-       ('rule4_hand_dark', 154, 189), ('rule5_hallway', 190, 238), ('rule6_chase', 239, 285),
-       ('rule7_last_stop', 286, 330), ('rule7_climax', 331, 364), ('bell_defeat', 365, 371), ('theo_home', 372, 385),
-       ('morning', 386, 397), ('rule8_outro', 398, 418)]
+# THIS film (the Ice Cream film): (name, first phrase): each scene starts at the line holding its phrase (found in the
+# timeline's text by music_plan.line_index, so the windows follow any re-edit and any lines.py tags) and runs to the
+# next scene's first line; each window runs from 1 s before to 1.5 s after (the last to the film's end)
+_SC = [('cold_open', 'If the ice cream truck plays its song'), ('setup_1958', 'Larkfield. Minus thirty-one'),
+       ('rule1_far_chime', 'Rule number one'), ('drive_by', 'The truck glides down Birch Lane'),
+       ('comment_prompt', 'Stop. His song is playing'), ('rule2_cone', 'Rule number two'),
+       ('couch_power_cut', "Lina's on the couch"), ('rule3_lullaby', 'Rule number three'),
+       ('fake_dad', 'The radio crackles'), ('rule4_window', 'Rule number four'),
+       ('transformation', 'He keeps smiling. Keeps waving'), ('chase_first_aid', 'I rip my foot out'),
+       ('rule5_mom_door', 'Rule number five'), ('rule6_attic', 'Rule number six'), ('twist', 'Then the song moves'),
+       ('rule7_reread', 'Rule number seven'), ('climax_crossing', 'Mr. Kessler is halfway'),
+       ('empty_note_warm_turn', 'The song reaches the empty beat'), ('morning', 'Mr. Kessler whispers'),
+       ('stinger_rule8', 'Two nights later'), ('outro', "There's no Mister Shiver")]
 
 
 def _scenes():
+    import music_plan as MP
     tl = json.load(open(os.path.join(W, 'align', 'timeline.json')))
     L = tl['lines']; end = float(tl.get('duration_en') or L[-1]['end'])
-    return [(n, max(0.0, L[a]['t'] - 1.0), min(end + 14.0, L[b]['end'] + (14.0 if b == len(L) - 1 else 1.5)))
-            for n, a, b in _SC]
+    idx = [(n, MP.line_index(a, L)) for n, a in _SC]
+    idx = [(n, i) for n, i in idx if i is not None]
+    out = []
+    for k, (n, a) in enumerate(idx):
+        b = idx[k + 1][1] - 1 if k + 1 < len(idx) else len(L) - 1
+        out.append((n, max(0.0, L[a]['t'] - 1.0), min(end + 14.0, L[max(a, b)]['end'] + (14.0 if b == len(L) - 1 else 1.5))))
+    return out
 
 
 HIT_T = ('hit', 'stinger', 'braam', 'sub_drop', 'rule')

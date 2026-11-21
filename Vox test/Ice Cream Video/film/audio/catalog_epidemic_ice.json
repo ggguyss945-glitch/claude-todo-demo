@@ -83,9 +83,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Ice Cream Video/film/_work/samples/epidemic_ice/sfx/ES_Designed, Synthetic, Power Down, High To Low Pitch 03 - Epidemic Sound.mp3",
    "set": "ice",
    "slug": "designed_synthetic_power_down_high_to_low_pitch_03",
-   "serves": [
-    "ice_power_down"
-   ],
+   "serves": [],
    "dur": 4.74,
    "sr": 48000,
    "lufs": -23.0,
@@ -5092,14 +5090,7 @@
    "path": "/home/user/claude-todo-demo/Vox test/Ice Cream Video/film/_work/samples/epidemic_police/sfx/ambience_suburban_city_night_evening_ambience_crickets_cicadas_dog_barks_distant_traffic.wav",
    "set": "police",
    "slug": "ambience_suburban_city_night_evening_ambience_crickets_cicadas_dog_barks_distant_traffic",
-   "serves": [
-    "ambience_night",
-    "ambience_suburb",
-    "ambience_woods",
-    "dog_far",
-    "dogs_search",
-    "suburb_night"
-   ],
+   "serves": [],
    "dur": 137.51,
    "sr": 48000,
    "lufs": -33.3,

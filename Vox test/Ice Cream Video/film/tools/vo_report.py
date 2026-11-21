@@ -15,85 +15,20 @@ OUT = os.path.join(N, 'voice_report.md')
 ALIGN = os.path.join(V.W, 'align', 'timeline.json')
 JOINS = os.path.join(N, 'raw', 'joins.json')
 
-SLIPS = [  # (where in the joined take, what the TTS did, what the edit does, how it was checked)
-    ('25.89-26.12 "...old yellow tape... he looks up at you"', 'the "and" of "and he looks up" is missing (both '
-     'recognisers)', 'the "and" of "...across the room, and tore a ticket" (621.785-621.945: said after a comma pause, '
-     '131 -> 113 Hz into this "he" at 107 Hz; it ends where the voicing stops before the t closure) goes in front of '
-     '"he", no gap', 'both: "tape and he looks up at you and says very kindly"'),
-    ('29.32-29.68 "Take a seat." (cold open)', 'the k of "Take" releases into 50 ms of hissy aspiration: both '
-     'recognisers hear "Takes a seat"', '40 ms of the hiss (29.565-29.605) cut, 10 ms equal-power crossfade (the burst '
-     'and 10 ms of aspiration stay)', 'both: "Take a seat."'),
-    ('151.29-152.04 "Nurse. Always notice."', '"Nurse" for "Nurses" (with a 0.17 s pause after it)',
-     'the s of "Nurse" trimmed to 0.10 s (151.72); the "is" of "Let me take his pulse" (774.800-774.930, 208 -> 172 Hz, '
-     'between the 241 Hz end of "Nurse" and the 158-172 Hz of "always") joined by a 6 ms equal-power crossfade; '
-     '"always notice." 30 ms later', 'Parakeet: "Nurses always notice."; Whisper: "nurse is always notice" (the same '
-     'sounds, "nur-siz")'),
-    ('174.04-174.45 "...come in, she said."', 'not a slip: the take runs the quote into "she said" with no silence',
-     'split where the n murmur of "in" ends and the sh starts (174.295; the automatic dip search had cut between the sh '
-     'and the e of "she")', 'both: "I\'ll call you the second the results come in," / "she said."'),
-    ('280.30-280.87 "Ever. The phone cord"', 'run together, no pause', 'split at the dip where the voiced th of "The" '
-     'starts (280.600); the map then puts 1.0 s after the rule', 'both: "...don\'t hang up. Ever." / "The phone cord '
-     'was lying on the kitchen floor."'),
-    ('321.86-322.15 "From Grandpa\'s chair. Rule number three."', 'run together through one shared r ("chai-r-ule")',
-     'split at the r\'s F3 minimum (322.120, a 30 ms fade on "chair"); "Rule" gets a clean word-initial r from "Rule '
-     'number six." (515.225-515.285) crossfaded (10 ms) into "-ule number three." from 322.130',
-     'both: "From Grandpa\'s chair" / "Rule number three"'),
-    ('370.0-370.4 "Rule number four. If someone"', 'not a slip: a 10 ms blip in the silence joined the two sound '
-     'islands', '"four" ends where it decays into digital silence (370.066), the rule text starts on its "I" (370.385)',
-     'both: "Rule number four." / "If someone in a white coat knocks, don\'t open the door."'),
-    ('412.86-413.17 "said Doctor Halverson."', 'the d of "said" came out as a hissy z (Parakeet: "says")',
-     'the hiss (413.045-413.130) goes; 30 ms of silence join the d closure of "Doctor"', 'both: "said Doctor '
-     'Halverson."'),
-    ('469.25-470.15 "Knees above his head. Waiting. Rule number five."', 'three lines run together in one breath',
-     'split in the dip before the w (469.700) and where the "-ing" vowel (F2 2490 Hz) turns into the r (470.005); the '
-     'map then holds 1.3 s before "Waiting." and 1.4 s after it', 'both: "Knees above his head" / "Waiting" / "Rule '
-     'number five"'),
-    ('500.07-502.78 "That\'s what the voice told you in 1979 in 1979."', '"in 1979" said twice', 'the line ends after '
-     'the first "in 1979", which already falls to a full stop (f0 -> 100 Hz on "nine"), at 501.335 in the dip before the '
-     'second "in" (25 ms fade)', 'both: "That\'s what the voice told you in 1979."'),
-    ('528.68-529.85 "rah-rahs of plastic chairs"', 'a long open "rah" before the word; its second syllable reads "ras" '
-     '/ "ross", there is no usable "Rows" in the take', 'rebuilt: the clean word-initial r of the first "rah" '
-     '(528.675-528.745) + the "ow" of "in the last row," (571.935-572.200) + the take\'s own "-z of plastic chairs" from '
-     '529.640, 10 ms equal-power crossfades (a grid of 9 joins tried; these read right to both)',
-     'both: "Rows of plastic chairs"'),
-    ('945.71-946.50 "and I\'m, s-, I\'m sitting"', 'a stutter: "I\'m s- I\'m"', 'the stray s and the second "I\'m" '
-     '(946.075-946.505) go; the first "I\'m" meets "sitting" after 60 ms (cutting the first "I\'m" instead lost "and" '
-     'for both recognisers)', 'both: "It\'s three in the morning and I\'m sitting in a little office"'),
-    ('658.65-659.13 the count "Two..."', 'read as a rising "Two?" (277 Hz); in the Waiting Man\'s voice it reads as '
-     '"Till" at 2-3 of 6 paddings', 'the falling "two" of "Rule number two:" (276.950-277.230, 110-120 Hz: his own '
-     'register) takes its place, its vowel drawn out 1.5x by the voice (W_count2)', 'both: "Two" at every padding '
-     'tried (0.05-0.5 s)'),
-    ('1157.77-1159.10 "don\'t get on. the Sleemith well."', 'run into the line before (0.15 s) with a schwa before the '
-     'S and an "m-th" glide for the p of "Sleep"', 'the schwa goes (the line starts on the S, 1158.012); "slee" ends with '
-     'its clean "ee" (1158.370), a 65 ms closure stands for the p and the take\'s own aspiration (1158.520-1158.610) '
-     'is its release into "well"; the gap before it is the map\'s 1.0 s', 'both: "Don\'t get on." / "Sleep well."'),
-    ('751.22-751.47 "Grandma never wrote those rules. She-"', 'a false start: the TTS begins "She" straight out of the z '
-     'of "rules" (a rising sh and a vowel) before the real "She wrote them down."', 'the line ends before it (751.220, '
-     '25 ms fade on the z)', 'both: "Grandma never wrote those rules." (with it, both heard "...rules. She")'),
-    ('394.77-395.22 "Ruth?"', 'not a slip: the line\'s sound island clips 9 ms of onset and the th\'s decay; in Doctor '
-     'Halverson\'s voice Parakeet then heard "Rose?" on its own', 'the line keeps 394.760-395.235', 'Parakeet: "Ruth?" '
-     '(Whisper base writes "Run" for this one short word, dry or voiced)'),
-    ('825.66, 920.20, 942.35', 'TTS noises the recogniser reads as words: a long inhale ("Mm."), a breath ("Uh"), a '
-     'voiced "Mm-hmm."', 'dropped (between lines and inside "Halfway to the hospital, [inhale] I looked...")', '-'),
-    ('the six part joins (176.53, 354.37, 532.17, 709.33, 886.50, 1040.40)', 'not slips: the seven uploaded parts are '
-     'consecutive slices of one continuous take, cut inside "I me^an it", "paper. ^ Something", "toge^ther", "Ev^ery", '
-     '"now^.", "real^." (each word once; no part repeats audio of the one before)', 'joined by tools/vo_join.py: the '
-     'exporter\'s trailing zeros removed, the 3 and 25 missing samples at two cuts filled by LPC prediction, a 1.5 ms '
-     'predictive blend at the other four (tests/join_seams.png)', 'both read every seam\'s concatenation as the script'),
+SLIPS = [  # (where in the take, what the TTS did, what the edit does, how it was checked)
+    ('367.42-367.615 "Lina\'s bare hand reaches up."', 'the take mangles "bare" (Parakeet "Lean as you hand", Whisper '
+     '"Lena\'s hand")', '"Lina\'s" to the end of its s, then the "bare" of "Pyjamas, open coat, bare hands." '
+     '(345.435-345.715), then "hand reaches up." from its h (367.615)', 'both: "Lena\'s bare hand reaches up."'),
+    ('634.665 "One hooks the blanket and PULLS."', 'the TTS skipped "PULLS" (the take runs on: "...and my fingers are '
+     'numb.")', 'the line ends in the dip after "and" (-45 dB) and gets the "pulls" of "it pulls back" '
+     '(536.800-537.115) after 30 ms', 'both: "...the blanket and pulls"; a re-record would still be better'),
 ]
 KEPT = [
-    ('"She\'d been having chest pain since midnight."', 'script: "chest pains"; both recognisers hear "pain" (the '
-     'plural z is not in the take; it would merge into "since" anyway). lines.py follows the recording.'),
-    ('"We\'re calling at three in the morning"', 'the take reduces "at" (recognisers: "calling it three"); a natural '
-     'reduction in running speech, kept.'),
-    ('"The emergency doors open before we even reach them."', 'script: "opened ... reached"; the take says both verbs '
-     'in the present (both recognisers, at every padding); kept, a vivid present that reads the same.'),
-    ('"We\'ll pick up."', 'the take reduces the vowel: Parakeet writes "will" on its own (on the dry take too), '
-     '"We\'ll" in context; Whisper hears "We\'ll". Kept (vo_asrcheck ALLOW_TAGS).'),
-    ('"Fluorescent lights buzzing, half of them dead."', 'the whole-file recogniser read a stray "a" before "half": it '
-     'is the long aspirated h of "half" (both recognisers read the phrase right on its own); nothing cut.'),
-    ('"Grandma," I said. / "Because I can hear it," I said.', 'one row each in lines.py (one speaker: the narrator\'s '
-     'own quoted words; the take runs them into "I said").'),
+    ('"Dad, there\'s a truck outsi..."', 'the cut-off is meant; the take reads "out, see" (both recognisers); kept.'),
+    ('"Lina"', 'both recognisers write "Lena" (and "Muster" for "Mr." twice); the take says the script.'),
+    ('"I grab the radio." (twice)', 'the b of "grab" releases into "the": Parakeet "grabbed" (raw take too), Whisper '
+     '"I grab" on the raw take; kept (vo_asrcheck ALLOW_TAGS).'),
+    ('"Eleven-oh-two."', 'both recognisers write the clock time "1102"; every word is there.'),
 ]
 
 
@@ -127,8 +62,7 @@ def main():
     nl = len(L)
     w = []
     w.append('# Voice report: the edited narration\n')
-    w.append('The owner\'s TTS voiceover (seven parts, `raw/part1.wav` ... `part7.wav`, joined by `film/tools/vo_join.py` '
-             'into `raw/narration_raw_44k.wav`) edited into `narration_clean.wav` (cleaned and re-paced, the narrator '
+    w.append('The owner\'s TTS voiceover (one take, `raw/part1.wav`, 13:06, 24 kHz mono) edited into `narration_clean.wav` (cleaned and re-paced, the narrator '
              'untouched, no character voices) and `narration_en.wav` (the same plus the character voices on the quoted '
              'words; identical line starts). Built by `film/tools/vo_edit.py build` from `pacing_map.md`; checked by '
              '`vo_check.py` (`tests/`) and `vo_asrcheck.py`; aligned by `align.py` (`W/align`). Every source span, '
@@ -228,14 +162,13 @@ def main():
              f'difference from the map {g["max_abs_dev_vs_map"]} s ({g["n_off_map"]} over 30 ms: a line whose quiet tail '
              f'sits near -60 dBFS), {len(g["under_0.15"])} under 0.15 s, {len(g["over_2.0"])} over 2 s (the outro pause).\n')
     w.append('## Character voices (narration_en.wav only)\n')
-    w.append('The narrator (Mina) measures F0 104-276 Hz (median 171 Hz) and F1/F2/F3 about 546/1724/2725 Hz. Each '
-             'quoted line of Grandma Della (D), Sami (S), Theo (T), Mister Whistlestop (W, and his imitations) and the '
-             '911 dispatcher (X) is re-voiced with the WORLD vocoder (`tools/vo_voices.py`: Harvest F0, CheapTrick '
+    w.append('The narrator (Adam) measures F0 102-243 Hz (5-95 %, median 166 Hz; parselmouth on the first 4 minutes of '
+             'the take) and F1/F2/F3 about 496/1511/2643 Hz. Each quoted line of Lina (L), Dad (D), Mr. Kessler (K) and '
+             'Mister Shiver (S, and his copies of Dad, Mom and the little boy) is re-voiced with the WORLD vocoder (`tools/vo_voices.py`: Harvest F0, CheapTrick '
              'envelope, D4C aperiodicity, 1 ms frames) before the layout: its F0 is moved to the character\'s median with '
              'its excursions scaled and softly limited, the spectral envelope is warped (formants) independently of the '
-             'pitch, and the aperiodicity is raised for breath or a whisper; only "...Clever." (the slowing tape) changes '
-             'length, and its slot grows so both files keep identical line starts. Only the quoted words change: the '
-             '"she says." splits are the cut points. Spatial effects (tv, loudspeaker, door, phone, memory, whisper) are '
+             'pitch, and the aperiodicity is raised for breath or a whisper; no voice changes length, so both files keep identical line starts. Only the quoted words change: the '
+             'quote splits are the cut points. Spatial effects (radio, truck, mimic, memory, whisper) are '
              'left to the mix through the `fx` tags of lines.py.\n')
     w.append('Measured formant shift = the frequency warp that best maps the dry lines\' average spectral envelope onto '
              'the voiced ones\' (pitch-independent: a falsetto would measure 1.0); F0 from the voiced lines.\n')
@@ -258,7 +191,7 @@ def main():
         w.append('')
     except Exception as ex:
         w.append(f'(voice table unavailable: {ex})\n')
-    w.append('The children (Sami S*, Theo T*) are set to a x1.24-1.32 envelope warp: a child\'s vocal tract, not a '
+    w.append('The children (Lina L*, his copy of the boy S_boy) are set to a x1.32-1.34 envelope warp: a child\'s vocal tract, not a '
              'raised adult voice (the measured shift is in the table above).\n')
     w.append('| # | who | fx | line | voice | F0 median in -> out | duration in -> out (s) |')
     w.append('|---:|---|---|---|---|---|---|')
@@ -272,8 +205,7 @@ def main():
                  f'{sum(1 for r in c["asr"] if r["share"] >= 1.0)}/{len(c["asr"])} word-perfect' +
                  ('. The others: ' + '; '.join(f'"{r["en"]}" heard "{r["heard"]}"' for r in bad) if bad else '') + '.\n')
     w.append('## Checks (tests/)\n')
-    w.append('- `join_seams.png`: the six part joins, +-40 ms waveform and the > 3 kHz residual (no step, no click).')
-    w.append('- `strip_01..27_*.png`: before (joined raw take, removed sounds in red) and after (narration_en.wav, the gap '
+    w.append('- `strip_*.png`: before (raw take, removed sounds in red) and after (narration_en.wav, the gap '
              'after each line in yellow), spectrogram + 5 ms RMS, at: ' + ', '.join(c.get('strips', [])) + '.')
     br = Counter(b['kind'] for b in c['breaths_en'])
     chk = [b for b in c['breaths_en'] if b['kind'] == 'check']
@@ -305,11 +237,11 @@ def main():
         cta = next(d['t'] for d in lines if d['tag'] == 'cta')
         outro = next(d['t'] for d in lines if d['tag'] == 'outro')
         w.append('## Alignment (film/tools/align.py on narration_en.wav -> W/align)\n')
-        w.append(f'{found}/{len(lines)} lines located (all {len(lines)} matched word by word; 455/455 boundaries placed in '
-                 f'the silence between the lines); duration {tl["duration_en"]:.2f} s ({mmss(tl["duration_en"])}). Rule cards: ' +
+        w.append(f'{found}/{len(lines)} lines located (every boundary placed in the silence between the lines); duration {tl["duration_en"]:.2f} s ({mmss(tl["duration_en"])}). Rule cards: ' +
                  ', '.join(f'{t} {v:.2f} s ({mmss(v)})' for t, v in rules) +
-                 f'. Comment prompt ("Okay. Hold on."): {cta:.2f} s ({mmss(cta)}). Outro ("Okay. Breathe."): {outro:.2f} s '
-                 f'({mmss(outro)}).\n')
+                 f'. Comment prompt ("Stop." ... "Remember your answer."): {cta:.2f} s ({mmss(cta)}). Outro: {outro:.2f} s '
+                 f'({mmss(outro)}); outro question "Now... who on your street is inside alone?" '
+                 f'{next(d["t"] for d in lines if d["tag"] == "comment_prompt"):.2f} s.\n')
     ac = os.path.join(V.TESTS, 'asrcheck.txt')
     if os.path.exists(ac):
         txt = open(ac).read().strip().split('\n')

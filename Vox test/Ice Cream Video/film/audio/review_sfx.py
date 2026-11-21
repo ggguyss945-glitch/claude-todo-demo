@@ -429,17 +429,100 @@ BUS_DECISIONS = {
 }
 DECISIONS = BUS_DECISIONS
 
+# THIS film, the Ice Cream film: the owner's new set W/samples/epidemic_ice (54 effects, 14 tracks)
+ICE_DECISIONS = {
+    # ---- wind and night
+    'wind_general_winter_wind_02': ('USE', 'cold_night, frozen_still, shovel_morning', 'clean winter wind, 159 s, floor -45: the bed under the roofs'),
+    'wind_general_winter_wind_05': ('USE', 'cold_night, frozen_still, house_cold', 'a darker wind (63 % < 250 Hz): low-passed through the walls'),
+    'wind_designed_storm_wind_winter_08': ('USE', 'cold_night (the whistle layer)', 'a designed storm wind, high-passed 500 Hz: the thin whistle over the roofs'),
+    'wind_designed_storm_wind_winter_09': ('USE', 'cold_night (the whistle layer)', 'its twin, for variation'),
+    'doors_creak_designed_eerie_wood_creaks_bright_crispy_echoes_reverb_decayed_building': ('PROCESS', 'cold_night / house_cold creaks, skin_stretch, jaw_drop hinge', 'designed creaks with baked reverb: cut into single creaks, low-passed 2-2.6 kHz and placed far; never close'),
+    'ambience_rural_heavy_wind_abandoned_wooden_house_creaks_croaks_storm_cicadas': ('REJECT', '-', 'CICADAS (summer insects) and croaking frogs under the wind: wrong for a minus-thirty night; the creaks come from the eerie-creaks file instead'),
+    # ---- snow
+    'footsteps_human_boots_snow_walk': ('USE', 'snow_walk, the snow crunch of every leg stab / cone / mitten', 'boots on dry squeaky snow, 51 dB SNR: the hero walk'),
+    'footsteps_human_snow_walk_03': ('PROCESS', 'snow_walk', 'quiet (-39 LUFS) and bright: grains peak-normalised, 9 kHz top'),
+    'footsteps_human_snow_walk_04': ('PROCESS', 'snow_walk', 'as walk 03 (-35 LUFS)'),
+    'footsteps_human_boots_snow_scuff': ('USE', 'snow_scuff, the drag of snow_deep', 'a boot scuffing through snow'),
+    'footsteps_human_snow_run_04': ('PROCESS', 'snow_run, snow_deep', 'very quiet (-42 LUFS, centroid 4.8 kHz): strides normalised, the knee-deep version slowed 0.8-0.88x with a low shelf'),
+    'footsteps_human_snow_run_10': ('PROCESS', 'snow_run, snow_deep', 'bright (6.8 kHz centroid, 61 % above 4 kHz): normalised, 9 kHz top'),
+    'footsteps_human_snow_run_11': ('PROCESS', 'snow_run, snow_deep', 'as run 10'),
+    'footsteps_human_snow_running_pass_by': ('PROCESS', 'snow_run', 'a pass-by: single strides cut out (the pan of the pass is not used)'),
+    # ---- shovels and plow
+    'snow_movement_manual_snow_plow_metal_01': ('USE', 'shovel_scrape (Kessler\'s 6 AM scrape), shovel_morning', 'a metal pusher shovel on a frozen walk: THE scrape'),
+    'snow_movement_manual_snow_plow_metal_03': ('USE', 'shovel_scrape, shovel_morning', 'its twin'),
+    'snow_movement_manual_snow_plow_plastic': ('USE', 'shovel_morning', 'a plastic pusher: softer, for the kids\' shovels'),
+    'snow_impact_shovel_dig_in_snow_movement_02': ('USE', 'shovel_morning', 'digs and throws'),
+    'snow_impact_shovel_dig_in_snow_movement_03': ('USE', 'shovel_morning', 'digs and throws'),
+    'snow_impact_shovel_dig_in_snow_movement_09': ('USE', 'shovel_morning', 'digs and throws'),
+    'vehicles_freight_truck_lorry_moving': ('USE', 'plow_pass (the engine)', 'a big lorry moving (-15 LUFS, low): the plow truck, with the blade scrape layered and a doppler sweep'),
+    'vehicles_truck_van_suv_vehicle_truck_passby_02': ('USE', 'plow_pass (alternate)', 'a truck pass-by'),
+    'vehicles_freight_truck_skip_lorry_reverse_into_position_to_unload_reverse_tone': ('REJECT', '-', 'a modern reverse-warning BEEPER all through it: no beeper on Dad\'s plow (and it reads as a cheap cue)'),
+    'vehicles_horn_fire_truck_air_horn_blaring_close': ('USE', 'plow_horn', 'an air horn blaring, close: "Horn blaring, again and again"'),
+    'vehicles_horn_truck_air_horn_three_honks': ('PROCESS', 'plow_horn', 'three honks; the file is band-limited at 11.4 kHz (codec): only the horn band is used, with a street reverb'),
+    # ---- his truck
+    'vehicles_truck_van_suv_van_idle_exterior_rear_loop_02': ('USE', 'truck_idle', 'a van idling (77 % < 250 Hz): slowed 0.92x and low-passed: the low steady hum all night'),
+    'vehicles_truck_van_suv_van_mercedes_diesel_idle': ('PROCESS', 'truck_glide', 'a diesel idle (centroid 1.4 kHz): sped 1.1x and swept by with a doppler: the engine-only glide (NO tire sound)'),
+    'windows_plastic_sliding_window_small_open_close': ('USE', 'serving_window', 'a small plastic sliding window: the pink serving window, with a frost-seal crackle on the open'),
+    'windows_wood_sliding_open': ('USE', 'window_crack', 'a wooden sash sliding: the kitchen window open a crack'),
+    'windows_wood_sliding_close': ('USE', 'window_crack (close)', 'its close'),
+    'windows_wood_hotel_room_vertical_sliding_window_open': ('USE', 'window_crack (alternate)', 'a vertical sash opening, soft'),
+    # ---- ice and frost
+    'ice_break_ice_break_with_crampons': ('USE', 'cone_shatter, boot_rip (the seal), frozen_still (far cracks)', 'ice breaking: the shatter\'s crack and the far tree cracks'),
+    'ice_break_ice_crack_medium_long_01': ('USE', 'cone_shatter, frozen_still', 'a long ice crack'),
+    'ice_break_ice_cracking_push_01': ('USE', 'leg_click on ice, frost layers', 'cracking under a push (-18.7 LUFS)'),
+    'ice_friction_crunchy_ice_pressure_cracks_03': ('USE', 'boot_stuck, frost_wipe', 'crunchy ice under pressure (92 % above 4 kHz): the frozen boot\'s strain (slowed 0.8x)'),
+    'ice_friction_subtle_ice_pressure_cracks_01': ('USE', 'frost_creep, doorknob_frost, cone_set, frozen_still ticks', 'a fine fizzing crackle (96 % above 4 kHz): frost creeping on glass'),
+    'ice_friction_subtle_ice_pressure_cracks_02': ('USE', 'frost_creep, doorknob_frost', 'its twin'),
+    'ice_movement_ice_crackle_squeeze_whoosh_03': ('USE', 'frost_creep, house_cold', 'a crackling squeeze'),
+    'ice_movement_ice_crackle_squeeze_whoosh_13': ('USE', 'frost_creep, house_cold', 'its twin'),
+    # ---- the house
+    'machines_hvac_wall_heater_furnace_pinging_hiss': ('USE', 'house_hum (fan), furnace_die (wound down)', 'a wall furnace running, pinging: varispeed down to a stop for "The furnace stops"'),
+    'machines_hvac_boiler_start': ('PROCESS', 'furnace_start', 'a boiler lighting (floor -25: continuous): only its start, low-passed 6 kHz, far: Kessler\'s chimney smokes again'),
+    'electricity_buzz_hum_fluorescent_light_buzz_short_power_up_light_switch_on_off': ('USE', 'porch_light, street_wakes, power_cut (switch)', 'switch clicks and a tink: porch lights clicking on'),
+    'electricity_buzz_hum_fluorescent_light_buzz_short_power_up_light_switch_off_03': ('USE', 'power_cut, porch_light', 'a switch-off'),
+    'electricity_buzz_hum_fluorescent_light_buzz_short_soft_power_up_light_switch_on_off': ('USE', 'porch_light', 'a softer take'),
+    'designed_synthetic_power_down_high_to_low_pitch_03': ('REJECT', '-', 'a designed synth pitch sweep (49 % above 4 kHz): the power cut is the REAL house hum running down (fridge + furnace), not a sci-fi drop'),
+    'scifi_machine_power_down_object': ('REJECT', '-', 'a sci-fi power-down thump: same reason'),
+    'doors_wood_hatch_open_close': ('USE', 'hatch_drop', 'a wooden hatch opening and closing: the hallway hatch (with a modal bang and grit)'),
+    'boats_sailboat_wood_panel_metal_hatch_open': ('PROCESS', 'hatch_drop (alternate)', 'a boat hatch (85 % < 250 Hz): only the wood thump'),
+    # ---- cloth
+    'cloth_flap_towel': ('USE', 'towel_jam, blanket_yank', 'a towel flapped: slowed 0.8-0.85x with a low shelf for the hard jam and the yank'),
+    'movement_human_towel_drying_back': ('USE', 'towel_jam (alternate)', 'towel friction'),
+    'cloth_misc_scrape_ribbon_friction_thumb_multiple': ('PROCESS', 'frost_wipe, boot_rip, uniform_tear (strain)', 'a thin friction (70 % above 4 kHz, -16.6 peak): presence-boosted for the sleeve wiping glass'),
+    'cloth_movement_hugging_embrace_cotton_jacket_tap_cloth_movement': ('REJECT', '-', 'a cotton jacket hug with back pats: the pats read as taps; the kids\' padded snow coats come from the bus set\'s cloth and the towel files'),
+    # ---- the transformation
+    'gore_bone_bone_crack_bone_cracking': ('PROCESS', 'bone_crack, jaw_drop', 'Foley for the transformation ONLY: the dry crack transients cut to <= 0.3 s and high-passed 180 Hz; no wet layer, nothing graphic beyond bone cracks'),
+    'gore_bone_broken_bone_arm_leg_limb_twist_dislocate_01': ('PROCESS', 'bone_crack', 'the same: dry cracks only, short, high-passed'),
+}
+ICE_MUSIC = {
+    'throbbing_anxiety_dream_cave': ('USE', 'music_plan: the hook', 'E -> D (-2), a low throbbing pulse (83 % < 250 Hz); no vocals (0 %)'),
+    'the_haunted_luella_gren': ('USE', 'music_plan: the setup, 1958', 'G# minor -> A minor (+1), thin piano; no vocals (0.8 %, nothing recognised)'),
+    'i_m_the_villain_dream_cave': ('PROCESS', 'music_plan: the drive-by, THE CHASE', 'E minor -> D minor (-2), driving; 143 clipped samples on decode: -1 dB; one "Uh" from the recogniser at 96 s (1.3 %): an instrument transient, no lyrics'),
+    'unvaried_elin_piel': ('USE', 'music_plan: rule 2', 'A, a steady quiet bed (-17.6 LUFS); no vocals'),
+    'impossible_theory_rachel_sandy': ('PROCESS', 'music_plan: the couch, the climax build', 'A, a heavy low build, loud (-12 LUFS) with 1404 clipped samples: -3 dB; no vocals'),
+    'sleep_forever_luella_gren': ('USE', 'music_plan: rule 3', 'G# major -> A (+1), a sinister lullaby; no vocals (0.8 %)'),
+    'escalation_jon_bjork': ('USE', 'music_plan: rule 4', 'C minor -> D minor (+2), a steady escalation; no vocals'),
+    'redeemed_blue_saga': ('USE', 'music_plan: the warm turn', 'F major -> D major (-3), 90 % < 250 Hz, warm; no vocals'),
+    'lullaby_before_christmas_franz_gordon': ('USE', 'music_plan: "Bye, Benny."', 'A# major -> A (-1), tender; no vocals'),
+    'with_the_dawn_megan_wofford': ('USE', 'music_plan: the morning', 'D# major -> D (-1); no vocals'),
+    'a_heart_full_of_spring_franz_gordon': ('USE', 'music_plan: rule eight, the outro', 'A major, warm; no vocals (0.9 %)'),
+    'peaceful_melody_megan_wofford': ('PROCESS', 'music_plan: the tips', 'F major -> D (-3); loud (-10.8 LUFS, 185 clipped samples, 84 % in the voice\'s mid band): -6 dB and flattened, under the tips only'),
+    'tears_of_a_shadow_eva_hummingbird': ('REJECT', '- (planned for the fake Dad; Come Closer plays there)', 'the recogniser hears voice-like fragments ("Yeah." at 13 s, "Uh" at 61 s; 3.2 % speech): a possible wordless vocal: never under the narration'),
+    'city_of_light_eva_hummingbird': ('REJECT', '-', 'voice-like fragment ("Loom." at 40 s, 4.1 % speech) and bright (94 % mid band, G major): not needed, kept out'),
+}
+DECISIONS = dict(ICE_DECISIONS, **ICE_MUSIC)
+
 
 def write_md(res):
     """W/mix/sfx_review.md from the measurements and DECISIONS."""
-    out = ['# The owner\'s new Epidemic files (the Bus film): review', '',
-           'Every file of `_work/samples/epidemic_bus` (the bus set: 98 effects, 11 tracks; the earlier sets were '
+    out = ['# The owner\'s new Epidemic files (the Ice Cream film): review', '',
+           'Every file of `_work/samples/epidemic_ice` (the new set: 54 effects, 14 tracks; the earlier sets were '
            'judged in their own films) was measured by '
            '`audio/review_sfx.py` (loudness, peaks and clipping, noise floor, spectrum, codec low-pass, onsets, '
            'harmonic share, tonal clarity, stereo, and for crowds / voices / hospital ambiences the speech share and '
            'what a recogniser hears) and looked at as a spectrogram with its envelope (`_work/mix/review/sheet_*.png`). '
            'Verdicts: **USE** as recorded (cut into grains, levelled, placed in a space), **PROCESS** only after the '
-           'processing named, **REJECT** never used (mapped to no Bus SFX name; `epidemic_catalog.NOT` also keeps the '
+           'processing named, **REJECT** never used (mapped to no SFX name of this film; `epidemic_catalog.NOT` also keeps the '
            'older names from picking a rejected file up). Licence: the owner\'s Epidemic subscription (the files stay '
            'in `_work/samples`, never copied or committed).', '']
     for kd, title in (('sfx', 'Effects'), ('music', 'Music')):

@@ -1,4 +1,10 @@
-"""score.py: the music for "If The School Bus Stops At Midnight... DON'T GET ON" (the police film's v2 score engine, as
+"""score.py: the music for "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE". THIS film's identity is
+HIS CHIME (audio/chime_ice.py, an ORIGINAL music-box tune ending on a gap): 'jingle' events (version burst / three /
+far / closer / outside / lullaby / warped / climax / stinger / warm / bells; len, stop, loops, anchors, amount, hang,
+fall, short) render through render_jingle with JINGLE_MODULE = 'chime_ice' (SHOW_DUCK['jingle'], CHIME_LIFT); the map
+and this film's TRACKS are pinned by audio/music_plan.py. The earlier films' notes follow.
+
+(the Bus film) the music for "If The School Bus Stops At Midnight... DON'T GET ON" (the police film's v2 score engine, as
 the delivery, dummy, Bunnyman and Doctor films used it), rendered from music_cues.json. THIS film's identity is the
 ORIGINAL "Ride Right with Mister Whistlestop!" PSA jingle (audio/jingle_bus.py): 'jingle' events (version sting /
 tv1994 / pa / musicbox / tapestop / warm / studio, len, stop, loops, stop_beat, space) render through render_jingle
@@ -186,6 +192,34 @@ TRACKS = {
     'wait_for_me_on_the_other_side_instrumental_version_clngr': 0,   # bus: G major, the outro tips
     'just_a_little_sunshine_instrumental_version_staffan_carlen': 0,  # bus: D major, bright: the short outro
 }
+TRACKS_EARLIER = TRACKS                          # the earlier films' table (kept for reference; nothing loads it)
+# THIS film, the Ice Cream film: only the tracks music_plan.py maps (keys: audio/catalog_epidemic_ice.json, verdicts:
+# W/mix/sfx_review.md); varispeed so every track sits on D or A (the chime is in D major)
+TRACKS = {
+    'throbbing_anxiety_dream_cave': -2,          # ice: E (bass E) -> D, a throbbing pulse: the hook
+    'the_haunted_luella_gren': 1,                # ice: G# minor -> A minor, sparse piano, thin high drone: the setup
+    'turning_stones_stefan_ekstrom': 2,          # C minor -> D minor, pure dark drone: rule 1 under the far chime
+    'i_m_the_villain_dream_cave': -2,            # ice: E minor -> D minor, a slow villain pulse: drive-by, the chase
+    'are_you_alone_victor_lundberg': 0,          # D sub drone: the comment beat
+    'unvaried_elin_piel': 0,                     # ice: A (bass A), a steady quiet bed: rule 2
+    'impossible_theory_rachel_sandy': 0,         # ice: A, heavy low build (82 % < 250 Hz): the couch, the climax
+    'sleep_forever_luella_gren': 1,              # ice: G# major -> A, a sinister lullaby: rule 3
+    'come_closer_belladonna_strings': -1,        # mirror: D# minor -> D minor, horror strings: the fake Dad, twist 1
+    # (ice: Tears of a Shadow and City of Light are NOT loaded: voice-like fragments heard by the recogniser)
+    'escalation_jon_bjork': 2,                   # ice: C minor -> D minor, a steady escalation: rule 4
+    'all_exits_closed_guy_copeland': 0,          # bus: D, a driving pulse: the run to the window
+    'when_the_sun_sets_anna_landstrom': 1,       # mirror: C# major -> D major, a quiet warm pad: first aid
+    'can_they_see_us_experia': -1,               # bus: bass D# -> D, dark: rule 5
+    'don_t_look_belladonna_strings': -1,         # mirror: D# minor -> D minor, horror strings: the attic
+    'the_forgotten_memories_luella_gren': 2,     # doctor: C minor -> D minor, sparse sad piano: the twist's turn
+    'irene_kevin_dailey': 0,                     # mirror: D minor, near silent then builds: rule 7
+    'redeemed_blue_saga': -3,                    # ice: F major -> D major: the warm turn (the plow, the porch lights)
+    'lullaby_before_christmas_franz_gordon': -1,  # ice: A# major -> A major: "Bye, Benny."
+    'with_the_dawn_megan_wofford': -1,           # ice: D# major -> D major: the morning
+    'dark_forebodings_ethan_sloan': 0,           # police: G minor (iv of D minor), flat dark drone: the stinger
+    'a_heart_full_of_spring_franz_gordon': 0,    # ice: A major, warm: rule eight, the outro
+    'peaceful_melody_megan_wofford': -3,         # ice: F major -> D major, gentle (-11 LUFS, clipped: -6 dB): the tips
+}
 # The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
 # warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
 # centre, a little slow: an old tape) and the default start (s, in the original track).
@@ -218,6 +252,14 @@ HOLD_LIFT = {'studio': -2.0, 'phone_1979': 0.0, 'landline': -2.0,   # test 1: la
 # the Bus film: 'jingle' events render audio/jingle_bus.py ("Ride Right with Mister Whistlestop!"); how far the dark
 # bed steps back under each version and its level trim (dB on IDENTITY_LIFT)
 JINGLE_MODULE = 'jingle_bus'
+# THIS film, the Ice Cream film: 'jingle' events render HIS CHIME (audio/chime_ice.py); how far the dark bed steps back
+# under each version and its level trim (dB on IDENTITY_LIFT)
+JINGLE_MODULE = 'chime_ice'
+SHOW_DUCK['jingle'].update({'burst': -8.0, 'three': -4.0, 'far': -3.0, 'closer': -4.0, 'outside': -7.0,
+                            'lullaby': -9.0, 'warped': -5.0, 'climax': -6.0, 'stinger': -3.0, 'warm': -10.0,
+                            'bells': -2.0})
+CHIME_LIFT = {'burst': -5.0, 'three': 0.0, 'far': 0.0, 'closer': 0.0, 'outside': -2.0, 'lullaby': -3.0,
+              'warped': -2.0, 'climax': 0.0, 'stinger': 0.0, 'warm': -3.5, 'bells': -4.0}
 SHOW_DUCK['jingle'].update({'sting': -3.0, 'tv1994': -12.0, 'pa': -6.0, 'musicbox': -5.0, 'tapestop': -10.0,
                             'warm': -12.0})
 JINGLE_LIFT_BUS = {'sting': 0.0, 'tv1994': -2.0, 'pa': 5.0,   # pa: sound fix r3 (-3: his PA sat -23 / -18.6 LU under the voice)
@@ -357,7 +399,7 @@ class Bank:
 
     def __init__(self):
         self.raw, self.pitched, self.meta = {}, {}, {}
-        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_bus.json', 'catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
+        cp = next((os.path.join(HERE, f) for f in ('catalog_epidemic_ice.json', 'catalog_epidemic_bus.json', 'catalog_epidemic_doctor.json', 'catalog_epidemic_bunny.json', 'catalog_epidemic_dummy.json',
                                                      'catalog_epidemic_delivery.json', 'catalog_epidemic.json')
                    if os.path.exists(os.path.join(HERE, f))))
         epi = json.load(open(cp))
@@ -1570,7 +1612,8 @@ class Score:
         t, lv = e['t'], e['level']
         ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
-                'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat')
+                'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat',
+                'amount', 'hang', 'fall', 'short', 'dur')          # (the chime's keys)
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
         if 'phrases' in kw:
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
@@ -1608,13 +1651,15 @@ class Score:
             except Exception as ex:
                 print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
         st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
-        lifts = HOLD_LIFT if hold else (JINGLE_LIFT_BUS if JINGLE_MODULE == 'jingle_bus' else JINGLE_LIFT)
+        lifts = HOLD_LIFT if hold else (CHIME_LIFT if JINGLE_MODULE == 'chime_ice' else
+                                        JINGLE_LIFT_BUS if JINGLE_MODULE == 'jingle_bus' else JINGLE_LIFT)
         target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + lifts.get(ver, 0.0)
         y = (y * np.float32(db(target - st))).astype(np.float32)
         if hold:                                           # hold.py versions carry their own space: almost dry
             rev = {'recital': 0.05} if ver in ('studio', 'warm') else {}
         else:
-            rev = {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio', 'warm') else {} if ver in (
+            rev = ({'recital': 0.06} if ver == 'warm' else {}) if JINGLE_MODULE == 'chime_ice' else \
+                {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio', 'warm') else {} if ver in (
                 'tv1994', 'pa', 'tapestop', 'sting') else \
                 ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
         self.bus['show'].add(t, y, rev=rev)

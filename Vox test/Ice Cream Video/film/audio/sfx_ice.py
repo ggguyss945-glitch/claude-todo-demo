@@ -43,7 +43,7 @@ ICE_NAMES = ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'snow_walk
              'doorknob_frost', 'frost_wipe', 'radio_squelch', 'radio_static', 'radio_bells', 'radio_clean',
              'skin_stretch', 'bone_crack', 'jaw_drop', 'uniform_tear', 'leg_punch', 'leg_click', 'leg_stab_snow',
              'leg_spear_coat', 'scuttle', 'attic_crawl', 'hatch_drop', 'leg_tip_tile', 'blanket_yank', 'towel_jam',
-             'porch_light', 'street_wakes', 'door_open_street', 'ambulance', 'cocoa_mug', 'curtain_yank')
+             'porch_light', 'street_wakes', 'door_open_street', 'ambulance', 'cocoa_mug', 'curtain_yank', 'door_slam')
 NAMES = NAMES + ICE_NAMES
 # one-shots: momentary max, LU rel the voice at gain_db 0; beds: integrated
 LEVEL_LU.update(cold_night=-25, frozen_still=-30, house_hum=-31, house_cold=-32, snow_walk=-9, snow_run=-7,
@@ -55,8 +55,8 @@ LEVEL_LU.update(cold_night=-25, frozen_still=-30, house_hum=-31, house_cold=-32,
                 bone_crack=-3, jaw_drop=-1, uniform_tear=-3, leg_punch=-1, leg_click=-6, leg_stab_snow=-4,
                 leg_spear_coat=-3, scuttle=-7, attic_crawl=-10, hatch_drop=-2, leg_tip_tile=-12, blanket_yank=-5,
                 towel_jam=-4, porch_light=-10, street_wakes=-9, door_open_street=-10, ambulance=-14, cocoa_mug=-9,
-                curtain_yank=-6)
-PEAK_CAP.update(cone_shatter=-2.0, power_cut=-3.0, jaw_drop=-2.0, leg_punch=-2.0, bone_crack=-3.0, hatch_drop=-3.0,
+                curtain_yank=-6, door_slam=-2)
+PEAK_CAP.update(door_slam=-3.0, cone_shatter=-2.0, power_cut=-3.0, jaw_drop=-2.0, leg_punch=-2.0, bone_crack=-3.0, hatch_drop=-3.0,
                 plow_horn=-4.0, leg_stab_snow=-3.0, leg_spear_coat=-3.0, towel_jam=-3.0, boot_rip=-4.0,
                 uniform_tear=-3.0, radio_bells=-4.0, furnace_die=-4.0, serving_window=-4.0, leg_click=-4.0,
                 door_tap=-5.0, snow_run=-5.0, snow_deep=-5.0)
@@ -83,7 +83,7 @@ DEFAULT_SPACE.update(snow_walk='snow', snow_run='snow', snow_deep='snow', snow_s
                      leg_punch='street', leg_click='street', leg_stab_snow='snow', leg_spear_coat='snow',
                      scuttle='snow', hatch_drop='inside', leg_tip_tile='bathroom', blanket_yank='snow',
                      towel_jam='bathroom', porch_light='cold_street', street_wakes='dry', door_open_street='cold_street',
-                     ambulance='dry', cocoa_mug='close', curtain_yank='close')
+                     ambulance='dry', cocoa_mug='close', curtain_yank='close', door_slam='inside')
 
 
 def _space_ice(y, kind, seed=0, wet=None):
@@ -848,6 +848,20 @@ def r_curtain_yank(rng, sp, **_):
         return fl, 0.0, 0.0, False
 
 
+def r_door_slam(rng, sp, **_):
+    """'I duck under him, get inside, and slam the door.' The front door slammed hard: the wood's impact (the bunny set's
+    door impacts), the frame's boom, the latch snapping home."""
+    try:
+        g = _ip('dslam', 'ice_door_kick', ('impact',), 'onset', gap=0.2, max_len=0.8, keep=-12).get(rng, rj=0.03)
+    except KeyError:
+        g = st(noise(0.1, 3)) * 0.3
+    s_ = int(rng.integers(1 << 20))
+    boom = st(modal([95, 180, 410], [0.18, 0.1, 0.05], [1, 0.6, 0.3], 0.5, s_)) * 0.8
+    latch = st(modal([2300, 3900], [0.012, 0.008], [1, 0.5], 0.06, s_ + 1)) * 0.5
+    y = _seq([(0, g), (0.0, boom), (0.035, latch)], 0.3)
+    return y, onset_s(y, -14), 0.0, False
+
+
 ICE_ALIASES = {
     'wind_night': ('cold_night', {}), 'cold_snap': ('cold_night', {}), 'icy_wind': ('cold_night', {}),
     'still_air': ('frozen_still', {}), 'frozen_air': ('frozen_still', {}), 'room_tone_cold': ('house_cold', {}),
@@ -878,6 +892,12 @@ ICE_ALIASES = {
     'siren_arrive': ('ambulance', {}), 'mug': ('cocoa_mug', {}), 'cocoa': ('cocoa_mug', {}),
     'boot_frozen': ('boot_stuck', {}), 'foot_rip': ('boot_rip', {}), 'mitten': ('mitten_drop', {}),
     'kitchen_window': ('window_crack', {}), 'curtain_shut': ('curtain_yank', {}), 'wipe_frost': ('frost_wipe', {}),
+    # the earlier films' loose words that would land on the wrong sound here
+    'horn': ('plow_horn', {}), 'bone': ('bone_crack', {}), 'slam': ('door_slam', {}), 'door_shut': ('door_slam', {}),
+    'door_open': ('door_creak', {}), 'door_close': ('door_slam', {}), 'stab': ('leg_stab_snow', {}),
+    'spider': ('scuttle', {}), 'crawl': ('attic_crawl', {}), 'engine': ('truck_idle', {}), 'pop': ('jaw_drop', {}),
+    'glass': ('cone_shatter', {}), 'siren': ('ambulance', {}), 'legs': ('scuttle', {}), 'skin': ('skin_stretch', {}),
+    'tear': ('uniform_tear', {}), 'rip': ('uniform_tear', {}),
 }
 ALIASES.update(ICE_ALIASES)
 # keyword guesses for unknown names: this film's first (the bus film's 'radio' -> dash_radio, 'horn' -> bus_horn and

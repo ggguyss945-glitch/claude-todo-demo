@@ -209,6 +209,18 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, wind=0.7, amou
             w = SX.lp(SX.hp(SX.noise(4.0, seed + 5), 200, 2), 900, 2) * 0.012
             y = np.concatenate([y, np.zeros((SR, 2), np.float32)])
             SX.place(y, SX.st(SX.fade(w, 1.5, 2.0)), int(info['gap'][0] * SR))
+    elif v == 'closer' and int(loops or 3) == 1:            # one pass that comes from far away to right outside
+        buf = _buf(P + 3)
+        nt = _box_pass(bm, rng, buf, 0.0, 1.0, 0, 0.85, True)
+        _damp_passes(buf, bm, 1)
+        b = SX.fade(buf, 0.002, 0.8)
+        yf = far_chain(b, seed, 0.75, 650, 2600, 0.75)
+        yn = far_chain(b, seed + 1, 0.15, 380, 4800, 0.3)
+        sp = speaker(b, seed, 1.4, 0.3)
+        L = min(len(yf), len(yn), len(sp))
+        u = np.clip(np.arange(L) / (float(bm(18.0)) * SR), 0, 1)[:, None] ** 1.3   # nearest by bar 7
+        y = (yf[:L] * (1 - u) + (0.5 * yn[:L] + 0.5 * sp[:L]) * u) * (10 ** (-14 * (1 - u) / 20))
+        info['note_times'] = nt; info['gap'] = _gap_info(bm)
     elif v == 'closer':
         n = int(loops or 3)
         parts, nt = [], []
@@ -299,6 +311,17 @@ def render(version, anchors=None, tempo=None, seed=0, loops=None, wind=0.7, amou
     if pk > 0.89:
         y = y * (0.89 / pk)
     return y, info
+
+
+def gap_time(version, loops=1, short=False, tempo=None):
+    """Seconds from the start of a render (no anchors) to its gap (beat 21 of the last pass); for 'warm' the played
+    last note; for 'stinger' / short warm the render starts at beat 12."""
+    v = str(version)
+    base = tempo or {'three': 40.0, 'lullaby': 52.0, 'warm': 80.0}.get(v, TEMPO)
+    spb = 60.0 / base
+    first = 12.0 if (v == 'stinger' or (v == 'warm' and short)) else 0.0
+    n = max(1, int(loops or 1)) if v in ('far', 'outside', 'lullaby', 'warm', 'closer') else 1
+    return (n - 1) * N_BEATS * spb + (MISSING[0] - first) * spb
 
 
 def _hang(sec, rng, seed):
