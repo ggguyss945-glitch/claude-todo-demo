@@ -482,9 +482,8 @@ def _c_sh_transform_legs():
     # shot A (0 - 1.5 s): a 3/4 medium on his shoulders and back: the swell, the quiver, the split, the first pair
     ppm_a = 900.0
     am = sh(900, 1080 + 1.05 * ppm_a, ppm_a)
-    am.set(-1.0, None, 0.01, ws_bend=0.25, turn=0.62)
-    am.face(-0.35, 0.05)
-    am.slow_wave(0.0, 5.0, side=1)
+    am.set(-1.0, None, 0.01, ws_bend=0.30, turn=0.80)           # his shoulder and back to us: we watch the back swell and split
+    am.face(-0.55, 0.05)                                         # the mask still turned to us (no wave here: he goes rigid)
     am.transform(-6.0, ts)
     # shot B (1.5 - 5 s): the wide: the truck, the legs planting on the roof beside the snowflake
     ppm = 215.0
@@ -546,18 +545,18 @@ def _c_sh_scuttle():
     def ground(x):
         if x < 700: return FY - 1.1 * ppm                          # the fence top
         if x < 1150: return FY - (1.45 * ppm) * math.sin(PI * clamp((x - 700) / 450))  # over the car
-        return FY - 2.6 * ppm - (x - 1150) * 0.55                   # up the roof slope
+        return FY - 2.1 * ppm - (x - 1150) * 0.30                   # up the roof slope (low enough to keep his knees in frame)
     a = sh(150, FY, ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
     a.face(0.2, 0.0)                                   # a harvestman runs any way: the arch spread across the frame
-    path = lambda u: (150 + 1500 * u, ground(150 + 1500 * u) + 0.15 * ppm)
+    path = lambda u: (150 + 1450 * u, ground(150 + 1450 * u) + 0.15 * ppm)       # ends on the roof slope, in frame
     a.scuttle(0.2, 4.8, path, ground, stride=210.0, lift=55.0, spread=1.6)
     def draw(pen, t):
         snow_street(pen, 700)
         pen.fill(rect(0, FY - 1.1 * ppm, 700, 18), '#5a4a3a')
         for k in range(14): pen.fill(rect(20 + k * 50, FY - 1.1 * ppm, 10, 1.1 * ppm), '#5a4a3a')
         pen.fill(smooth([(700, FY), (760, FY - 1.0 * ppm), (900, FY - 1.45 * ppm), (1000, FY - 1.45 * ppm), (1150, FY - 0.9 * ppm), (1150, FY)], True, 0.6), '#3a4a6a')
-        pen.fill(poly([(1150, FY), (1150, FY - 2.6 * ppm), (1920, FY - 2.6 * ppm - 770 * 0.55), (1920, FY)], True), '#4a3a34')
+        pen.fill(poly([(1150, FY), (1150, FY - 2.1 * ppm), (1920, FY - 2.1 * ppm - 770 * 0.30), (1920, FY)], True), '#4a3a34')
         fig(pen, a, t, NIGHTI)
     return dict(draw=draw, actors=[a])
 
@@ -799,7 +798,7 @@ def _c_adam_carry():
     a = actor('adam_sock', 0, 980, ppm, seed=25, expr='fear')
     l = actor('lina', 0, 0, ppm, seed=26, expr='fear')
     a.run(0.2, 3.8, 1500, 500)
-    a.carry(0.0, l)                                    # after run(): the arms hold her, they don't pump
+    a.carry(-1.0, l)                                   # after run(): the arms hold her, they don't pump (already up at t=0)
     def pant(P, t):
         P.m_open = max(P.m_open, 0.42 + 0.14 * math.sin(t * 9.0)); P.lean += 0.06
         P.h_turn -= 0.35 * (1 if P.turn > 0 else -1)   # his face half to the lens (fear), eyes on where he runs
@@ -847,9 +846,10 @@ def _c_kessler_out():
 def _c_hug():
     ppm = 400.0
     k = actor('kessler_out', 1060, 1000, ppm, seed=29, expr='dazed')
-    l = actor('lina', 900, 1000, ppm, seed=30, expr='kind_smile')
-    k.face(-0.45); l.face(0.55)
-    l.reach_to(0.4, 1, (k, 'belly'), dur=0.6, z=40.0, shape='grip'); l.reach_to(0.5, -1, (k, 'hip'), dur=0.6, z=-30.0, shape='grip')
+    l = actor('lina', 975, 1000, ppm, seed=30, expr='kind_smile')     # pressed against him: a real hug
+    k.face(-0.45); l.face(0.70)
+    l.reach_to(0.4, 1, (k, 'hip'), dur=0.6, z=30.0, shape='grip'); l.reach_to(0.5, -1, (k, 'hip'), dur=0.6, z=-40.0, shape='grip')
+    k.look_at(0.0, (l, 'eyes'), dur=0.6)
     l.look_at(0.0, (k, 'eyes'), dur=0.3); k.look_at(1.0, (l, 'eyes'), dur=0.8)
     l.talk([(1.0, 2.8)], text='Im Lina youre not by yourself')
     k.expr('sad', 3.0)

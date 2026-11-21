@@ -1184,9 +1184,11 @@ def _sh_rime(c, X, Y, r, seed, px, lw):
 def _sh_rig(P, st):
     if P.sh_lift > 1.0:     # slung in the cage of legs: knees folded up, the body pitched forward, the head hanging
         k = clamp(P.sh_lift / 80.0)
+        pu = P.__dict__.get('_sh_pour_u')
+        kf = k * (1.0 - (prog(pu, 0.0, 0.1) - prog(pu, 0.78, 0.95)) if pu is not None else 1.0)   # pouring out: the face stays on the lens
         P = P.copy(); P.ws_crouch = max(P.ws_crouch, 1.25 * k); P.ws_bend = max(P.ws_bend, 0.38 * k)
-        P.ws_face_up = min(P.ws_face_up, 0.75 - 0.45 * k)
-        P.h_nod = P.h_nod + float(P.sh_hang) * k      # the long pale head hangs down (the bible's read test)
+        P.ws_face_up = min(P.ws_face_up, 0.75 - 0.45 * kf) if kf > 0.01 else P.ws_face_up
+        P.h_nod = P.h_nod + float(P.sh_hang) * kf     # the long pale head hangs down (the bible's read test)
     R = _ws_rig(P)
     # his long neck: the head rides up the neck line
     Nb = R['Nb']; d = _u3(R['head'] - Nb)
@@ -1731,7 +1733,7 @@ def _sh_legs_plant(self, t0, targets, stagger=0.07, dur=0.22, zd=40.0):
     return evs
 
 
-def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.42, lift=60.0, ease=0.25, spread=1.6, pitch=12.0):
+def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.42, lift=60.0, ease=0.25, spread=1.6, pitch=28.0):
     """He scuttles like a harvestman: a wide arch of legs (sh_spread `spread`) with the small body slung low under it,
     pitched forward along the path, the long head hanging down. path(u) -> world (x, y) of his feet origin for u 0..1
     (eased in/out); ground(x) -> world y of the surface under a tip (a fence top rail, a car roof, a roof slope; default:
@@ -1853,11 +1855,11 @@ def _sh_pour_out(self, t0, dur=2.4, sill_dy=-300.0, ground_dy=0.0, forward=1.0, 
         c = ease_in_out(prog(u, 0.62, 1.00))
         P.sh_legs = 8.0
         P.sh_legcap = 4.0 + 4.0 * prog(u, 0.62, 0.92)                    # the last four unfold out of the window
-        P.sh_nolegs = 0.0 if b > 0.55 else 1.0
+        P.sh_nolegs = 0.0 if c > 0.45 else 1.0                           # his own legs come out LAST, as the cage rights him
         P.ws_bend = max(P.ws_bend, 1.25 * ease_in_out(prog(u, 0.08, 0.30)) * (1.0 - c) + 0.38 * c)
         P.__dict__['_sh_pour_u'] = u                                      # for the set's mask (hips behind the wall: u < 0.1)
-        P.ws_face_up = min(P.ws_face_up, 0.75 - 0.6 * a * (1.0 - c))      # neck first: the head hangs toward the snow
-        P.h_nod += 0.35 * a * (1.0 - c)
+        P.ws_face_up = max(P.ws_face_up, 0.75 + 0.25 * a * (1.0 - c))     # neck first: the head hangs toward the snow, the face
+        P.h_nod -= 0.25 * a * (1.0 - c)                                  # still turned up at the lens (it never stops looking)
         P.dy += rise * ease_in_out(prog(u, 0.0, 0.12)) * (1.0 - c) + ground_dy * c
         P.dx += forward * self.height * (0.10 * b + 0.22 * c)
         P.sh_lift = max(P.sh_lift, 55.0 * b * (1.0 - c) + lift * c)

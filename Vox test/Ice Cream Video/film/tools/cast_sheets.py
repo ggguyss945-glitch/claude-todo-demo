@@ -149,9 +149,9 @@ def sheet_sh_transform():
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
         if m >= 0.8:     # a wider medium (a cut): the legs out of the back, the knees high over him
             P.turn = 0.08; P.ws_bend = 0.25; P.sh_spread = 0.6
-            CH.draw_bust(pen, "shiver", x0 + cw / 2, y0 + ch * 0.74, ch / 600.0 * 0.105, P, t=0.6, light=PINKW, detail=2)
+            CH.draw_bust(pen, "shiver", x0 + cw / 2, y0 + ch * 0.76, ch / 600.0 * 0.088, P, t=0.6, light=PINKW, detail=2)
         else:            # one constant scale through the face steps (no pop when the jaw drops)
-            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.30, ch / 600.0 * 0.44, P, t=0.6, light=PINKW, detail=2)
+            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.25, ch / 600.0 * 0.40, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
         pen.fill(rect(x0 + 4, y0 + ch - 34, cw - 8, 30), '#000000', 150)
         label(cv, '%d. %s  (sh_m %.2f)' % (k, nm, m), x0 + cw / 2, y0 + ch - 13, 15)
@@ -201,9 +201,9 @@ def sheet_sh_mood():
             pen.fill(rect(x0 + 380, y0 + 60, 480, 330), '#ff9fca')
             P = P_(); P.ws_bend = 0.15
             CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 190, 0.33, P, t=0.6, light=PINKW, detail=2)
-        else:            # the monster as framed wide enough for the knees (top 15%), tips planted close (sh_spread 0.6)
-            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.35; P.sh_lift = 120.0; P.sh_hang = 0.25
-            CH.draw(pen, 'shiver', x0 + 620, y0 + 690, CH.height_px('shiver', 185), P, t=0.6, light=NIGHTI, detail=2)
+        else:            # the monster framed wide enough for the knees (a wide spread keeps them lower)
+            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.7; P.sh_lift = 80.0; P.sh_hang = 0.25
+            CH.draw(pen, 'shiver', x0 + 620, y0 + 428, CH.height_px('shiver', 96), P, t=0.6, light=NIGHTI, detail=2)
         cv.restore()
     save(surf, 'sh_mood')
 
