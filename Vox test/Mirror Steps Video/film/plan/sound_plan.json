@@ -1,0 +1,9382 @@
+{
+ "meta": {
+  "title": "If The Queen Of Spades Appears In Your Mirror... DON'T MAKE A WISH",
+  "version": 2,
+  "duration": 700.0,
+  "generated_by": "plan/make_plan.py",
+  "sources": {
+   "epidemic_new": "film/_work/samples/epidemic/{sfx,music} (owner downloads; use FIRST when present)",
+   "epidemic_police": "Police Officer Video/v2/_work/pov2/samples/epidemic (74 SFX, 6 music)",
+   "free": "audio/catalog.json",
+   "v1_plan": "plan/v1/sound_plan_v1.json (the v1 cues re-homed here)"
+  }
+ },
+ "rules": ["every one-shot lands on its picture time; hits within -0.05..+0.10 s of the frame; the bed dips 15 dB in the 0.3 s before each hit", "loop_id cues (sprinkler A/B, drip) must use the identical rendered sample each time (the time loop is heard)", "nail_click_glass at 143.29 and 690.19 is the same sample", "perspective: close (dry, near), inside (cabin room), outside (night exterior), far (distance + low-pass), mirror (heard through glass: low-pass 4 kHz, hollow comb, -4 dB), memory (low-pass 5 kHz, light tape wow, wide reverb), phone (band-pass), dry (design layers)", "music the whole time (>= 97 %), bed -11.5 LU under the voice, LRA 17, 85 % of bed energy below 250 Hz, unpulsed minor drone with a flat-2 rub", "a riser of +13 LU over 5 s peaks at voice level ON each rule card, then decays over 4-5 s", "v2: every v1 cue keeps its film time unless SFX_MOVE re-timed it to the new picture; its shot id is the v2 shot that contains it (cue ids \"<shot>:<name>:<k>\" are new: an old film_events.json does not apply)", "v2: the new device names (names.new with v2=true) have a fallback existing name + params until built", "v2: card stamps rise 3-5 LU over their surround; quiet stretches (arrival, memories, the ending) may drop: LRA 4.5-6 LU at -14 LUFS"],
+ "names": {
+  "existing": ["knock_door", "doorbell_chime", "footsteps_porch", "footsteps_wood_inside", "car_pass", "car_idle", "car_door_open", "car_door_close", "siren_far", "police_radio_squelch", "radio_click", "radio_static", "bodycam_beep", "phone_ring", "phone_busy", "phone_vibrate", "phone_pickup", "mail_slot", "paper", "pen_click", "key_in_lock", "lock_turn", "chain_lock", "door_creak", "breath", "heartbeat", "whoosh", "riser", "braam", "impact_hit", "sub_drop", "stinger", "glitch", "ui_pop", "typing", "tinnitus", "ambience_night", "room_tone", "clock_tick", "countdown_tick", "tv_off", "crowd_whisper"],
+  "used_existing": ["braam", "breath", "car_door_close", "clock_tick", "crowd_whisper", "door_creak", "footsteps_porch", "footsteps_wood_inside", "glitch", "impact_hit", "key_in_lock", "paper", "phone_pickup", "phone_ring", "phone_vibrate", "radio_static", "room_tone", "stinger", "sub_drop", "tinnitus", "typing", "ui_pop", "whoosh"],
+  "new": {
+   "ambience_camp_night": {
+    "desc": "camp night bed: crickets, frogs, pine wind, lake lapping, rare owl (replaces suburban ambience_night)",
+    "build": "E \"forest night crickets frogs lake\"; L oculus forest night loop"
+   },
+   "ambience_dawn": {
+    "desc": "the other side: a dawn chorus that repeats EXACTLY every 19.48 s (the loop), no wind",
+    "build": "E \"dawn birds summer\""
+   },
+   "ambience_memory": {
+    "desc": "memories: bright summer morning, lake lap, gulls, far kids, tape wow and low-pass",
+    "build": "E \"summer camp morning ambience\""
+   },
+   "ambience_mirror": {
+    "desc": "inside the glass: hollow glassy room tone, faint high whine, sub pressure",
+    "build": "S"
+   },
+   "bare_foot_step": {
+    "desc": "the queen's bare foot on a stair tread: wet slap, low weight",
+    "build": "E \"barefoot step wood wet\""
+   },
+   "bed_creak": {
+    "desc": "bunk bed / mattress springs: sit, scoot, pat (kind pat = soft hand pat on the mattress)",
+    "build": "E \"bunk bed creak mattress springs\""
+   },
+   "bell_clean": {
+    "desc": "THE FAKE BELL: one perfect clean bell note, long beautiful reverb, no rattle (far)",
+    "build": "E \"hand bell ring single\"; S modal bell, D5"
+   },
+   "bell_cracked": {
+    "desc": "THE REAL BELL: clean note then a thin rattle like a dropped spoon (strike padlock|clapper|drop|touch|roll, part note|rattle)",
+    "build": "E \"hand bell\" + \"spoon drop\" layered; S rattle = amplitude-modulated buzz"
+   },
+   "body_fall": {
+    "desc": "a body hitting wooden floorboards",
+    "build": "E \"body fall wood floor\"; L impacts soft heavy"
+   },
+   "bus_door": {
+    "desc": "memory: school bus door hiss and idle",
+    "build": "E \"school bus door\""
+   },
+   "candy_wrapper": {
+    "desc": "cellophane twist wrapper crinkle (hand, fist, palm)",
+    "build": "E \"candy wrapper cellophane\""
+   },
+   "chair_scrape": {
+    "desc": "a kitchen chair scraping back (heard through the phone)",
+    "build": "E \"chair scrape\""
+   },
+   "clock_tick_backward": {
+    "desc": "a heavy clock tick reversed (TOCK-tick), n reverse ticks",
+    "build": "S from clock_tick reversed + lower pitch"
+   },
+   "cloth_grab": {
+    "desc": "a hand grabbing a sleeve, collar or shoulder",
+    "build": "L sfx/foley/cloth"
+   },
+   "cloth_press": {
+    "desc": "fabric stretching over fingertips; satin rustle of the queen's dress; cotton seams straining",
+    "build": "L sfx/foley/cloth slowed; E \"fabric stretch\""
+   },
+   "coffee_percolator": {
+    "desc": "a camp coffee percolator bubbling far away",
+    "build": "E \"coffee percolator\""
+   },
+   "crate_break": {
+    "desc": "kicking a slatted crate apart: crack and splinter",
+    "build": "E \"wooden crate break kick\"; L impacts plank"
+   },
+   "crate_creak": {
+    "desc": "wooden crate creak; lid thump",
+    "build": "L sfx/creaks_scrapes, impacts/wood"
+   },
+   "drop_reverse": {
+    "desc": "a drip played backward rising (the drop coming up), and the suck-back on loop resets",
+    "build": "S from water_drip reversed + pitch rise"
+   },
+   "excavator_creak": {
+    "desc": "parked excavator: cooling metal ticks",
+    "build": "S metal ticks; L metals"
+   },
+   "flashlight_click": {
+    "desc": "flashlight switch",
+    "build": "E \"flashlight switch click\"; L sfx/clicks"
+   },
+   "footsteps_gravel": {
+    "desc": "footsteps on a gravel / pine-needle path (wet=True for wet grass, soft=True sneaking)",
+    "build": "E \"footsteps gravel\"; existing footsteps engine"
+   },
+   "footsteps_run": {
+    "desc": "someone running away on gravel and porch boards (approach=-1)",
+    "build": "E \"running footsteps gravel\""
+   },
+   "gate_chain": {
+    "desc": "chain pulled through gate bars; fence rattle; kind tape_flutter = plastic tape fluttering",
+    "build": "E \"chain link fence rattle chain\""
+   },
+   "gate_creak": {
+    "desc": "metal gate swinging shut",
+    "build": "E \"metal gate creak\""
+   },
+   "glass_resonance": {
+    "desc": "glass pane ring / hum hit layer (rule cards, reveals, glass going dark)",
+    "build": "L score/percussion/bowed_metals + vibraring; S modal glass"
+   },
+   "glass_tap": {
+    "desc": "soft fingertip on glass",
+    "build": "E \"glass tap\"; L sfx/clicks"
+   },
+   "glass_wipe": {
+    "desc": "towel or sleeve wiping glass: squeal strokes (strokes=n, soft=True for the rule-card write-on)",
+    "build": "E \"glass wipe cloth squeak\""
+   },
+   "jacket_cloth": {
+    "desc": "canvas work jacket: scrape on a frame, swish, taken off",
+    "build": "L sfx/foley/cloth + zipper"
+   },
+   "kids_far": {
+    "desc": "memory: kids giggling under blankets / mess hall chatter, far and filtered",
+    "build": "E \"kids laughing distant\""
+   },
+   "kitchen_far": {
+    "desc": "distant camp kitchen: clinks, a griddle hiss",
+    "build": "E \"kitchen ambience distant\""
+   },
+   "lace_pull": {
+    "desc": "a shoelace pulled through eyelets (n pulls)",
+    "build": "L sfx/foley/cloth slowed"
+   },
+   "lantern_hum": {
+    "desc": "battery lantern hum",
+    "build": "S 120 Hz hum + filtered noise"
+   },
+   "lipstick_draw": {
+    "desc": "waxy lipstick stroke on glass (squeak + crumbly drag); clean=True: thinner, glassy, too-perfect line",
+    "build": "E \"marker on glass / squeak\"; S: band-passed friction noise with stick-slip"
+   },
+   "lipstick_smear": {
+    "desc": "finger smearing lipstick on glass; kind crumb = tiny crumbs rubbed between fingers",
+    "build": "E \"finger squeak glass\"; L sfx/creaks_scrapes"
+   },
+   "mirror_handle": {
+    "desc": "wooden mirror frame: scrape on floorboards, creak in the grip, bump",
+    "build": "L sfx/creaks_scrapes, sfx/impacts/wood"
+   },
+   "moth_flutter": {
+    "desc": "moths flapping at a lantern",
+    "build": "S filtered flutter; E \"moth flutter\""
+   },
+   "nail_click_glass": {
+    "desc": "ONE crisp fingernail click on clean glass (the film's signature sound, used at 143.29 and 690.19 identically)",
+    "build": "E \"nail tap glass\"; S: 2-3 kHz modal click + short glass ring"
+   },
+   "owl": {
+    "desc": "a far owl",
+    "build": "L sfx/ambience owl"
+   },
+   "padlock": {
+    "desc": "padlock shackle popping open / snapping shut",
+    "build": "E \"padlock open\"; existing lock_turn layer"
+   },
+   "phone_handle": {
+    "desc": "a phone set down on / picked up from a wooden sill",
+    "build": "L sfx/clicks + impacts light"
+   },
+   "phone_message": {
+    "desc": "text message received tone + short vibrate",
+    "build": "E \"phone message notification\""
+   },
+   "screen_door": {
+    "desc": "screen door spring creak and slap",
+    "build": "E \"screen door\""
+   },
+   "spoon_drop": {
+    "desc": "a spoon dropped on a table, bouncing (kind clink = light cutlery)",
+    "build": "E \"spoon drop table\""
+   },
+   "sprinkler_spit": {
+    "desc": "impact lawn sprinkler: valve hiss on, two spits, gurgle and die; loop_id A/B must reuse the identical sample",
+    "build": "E \"lawn sprinkler impact\""
+   },
+   "tape_peel": {
+    "desc": "medical tape: picking at the edge, slipping off",
+    "build": "E \"tape peel\""
+   },
+   "towel_cloth": {
+    "desc": "terry towel: rub, pull, snatch, flap/throw",
+    "build": "E \"towel cloth flap\"; L sfx/foley/cloth"
+   },
+   "towel_drop": {
+    "desc": "a towel falling straight down, soft heavy thump",
+    "build": "E \"cloth drop floor\"; L impacts soft"
+   },
+   "tv_through_wall": {
+    "desc": "a TV murmur behind a window",
+    "build": "S filtered voices from crowd_whisper; L"
+   },
+   "voices_calling_far": {
+    "desc": "memory: a search party calling a name in morning mist (no intelligible words)",
+    "build": "E \"search party calling distant\""
+   },
+   "watch_beep": {
+    "desc": "digital watch button chirp (memory)",
+    "build": "S 4 kHz square chirp"
+   },
+   "water_drip": {
+    "desc": "drip onto a towel / puddle; kind pour = water wrung out of a towel",
+    "build": "E \"water drip cloth\"; L"
+   },
+   "wet_footstep": {
+    "desc": "wet footprint appearing (bare=True slap, False sneaker squelch), heard through glass",
+    "build": "E \"wet footsteps wood barefoot\""
+   },
+   "wind_chimes": {
+    "desc": "porch wind chimes",
+    "build": "L sfx/ambience oculus windchimes"
+   },
+   "window_slide": {
+    "desc": "wooden window sash sliding down (memory)",
+    "build": "L creaks_scrapes"
+   },
+   "wood_thud": {
+    "desc": "shoulder into a bunk + bunk rattle; the wall shuddering",
+    "build": "L impacts wood heavy"
+   },
+   "chalk_draw": {
+    "desc": "chalk lines drawn on glass for the diagrams (soft scratch)",
+    "build": "E \"chalk on board\"; S band-passed friction",
+    "fallback": {
+     "name": "lipstick_draw",
+     "params": {
+      "clean": true
+     }
+    },
+    "v2": true
+   },
+   "diagram_pop": {
+    "desc": "a diagram element or count numeral popping in (tiny chalk tick / pop)",
+    "build": "S soft click + chalk tick",
+    "fallback": {
+     "name": "ui_pop",
+     "params": {}
+    },
+    "v2": true
+   },
+   "flash_hit": {
+    "desc": "a white flash cut: short bright air hit (no low end)",
+    "build": "E \"camera flash whoosh short\"; S noise burst",
+    "fallback": {
+     "name": "whoosh",
+     "params": {
+      "kind": "hard"
+     }
+    },
+    "v2": true
+   },
+   "glass_thud": {
+    "desc": "the mirror card settling: a small glass-and-wood thud",
+    "build": "E \"glass pane set down\"; S modal glass + wood knock",
+    "fallback": {
+     "name": "mirror_handle",
+     "params": {
+      "kind": "bump"
+     }
+    },
+    "v2": true
+   },
+   "glint_whoosh": {
+    "desc": "the 3-frame glass glint on a side switch: a tiny bright glass whoosh",
+    "build": "E \"glass shimmer whoosh short\"; S filtered noise + modal ring",
+    "fallback": {
+     "name": "whoosh",
+     "params": {
+      "kind": "soft"
+     }
+    },
+    "v2": true
+   },
+   "highlighter_squeak": {
+    "desc": "a highlighter swiped across paper",
+    "build": "E \"marker on paper squeak\"",
+    "fallback": {
+     "name": "paper",
+     "params": {}
+    },
+    "v2": true
+   },
+   "lipstick_stamp": {
+    "desc": "the rule numeral stamping into the glass in lipstick: soft waxy impact with crumbs (+3-5 LU over its surround)",
+    "build": "E \"stamp soft impact\"; S waxy thump + crumb ticks",
+    "fallback": {
+     "name": "lipstick_draw",
+     "params": {
+      "strokes": 1
+     }
+    },
+    "v2": true
+   },
+   "number_thump": {
+    "desc": "a giant number / type beat slamming in: low punchy thump with a short ring tail",
+    "build": "E \"ui impact low\"; S sub thump + ring",
+    "fallback": {
+     "name": "impact_hit",
+     "params": {
+      "size": 0.6
+     }
+    },
+    "v2": true
+   },
+   "pixel_glitch": {
+    "desc": "the pixel-sort glitch (589.6, 697.95): digital crunch",
+    "build": "E \"digital glitch\"; existing glitch layer",
+    "fallback": {
+     "name": "glitch",
+     "params": {
+      "dur": 0.3,
+      "amount": 0.9
+     }
+    },
+    "v2": true
+   },
+   "ring_tick": {
+    "desc": "Tess's ring-timer badge ticking one step (kind call: the bigger tick when she calls a number)",
+    "build": "S tiny wood tick; existing countdown_tick layer",
+    "fallback": {
+     "name": "countdown_tick",
+     "params": {}
+    },
+    "v2": true
+   },
+   "rubber_stamp": {
+    "desc": "a rubber stamp slammed on paper (14 YEARS, CANCELED)",
+    "build": "E \"rubber stamp\"",
+    "fallback": {
+     "name": "impact_hit",
+     "params": {
+      "size": 0.4
+     }
+    },
+    "v2": true
+   },
+   "tape_rewind": {
+    "desc": "the loop reset: a 0.2 s tape rewind scrub",
+    "build": "E \"tape rewind short\"; S pitch-swept noise",
+    "fallback": {
+     "name": "drop_reverse",
+     "params": {}
+    },
+    "v2": true
+   },
+   "towel_whip": {
+    "desc": "the orange-striped towel whipped up off the rule card (cloth whip, 0.3 s)",
+    "build": "E \"cloth whip / towel snap\"; L sfx/foley/cloth",
+    "fallback": {
+     "name": "towel_cloth",
+     "params": {
+      "kind": "snatch"
+     }
+    },
+    "v2": true
+   }
+  }
+ },
+ "sfx": [
+  {
+   "t": 0.0,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward RULE 6: red border in",
+   "origin": "device",
+   "shot": "S001",
+   "exists": false
+  },
+  {
+   "t": 0.05,
+   "name": "ambience_mirror",
+   "gain_db": -6,
+   "space": "close",
+   "note": "glass room tone in",
+   "origin": "v1",
+   "shot": "S001",
+   "exists": false
+  },
+  {
+   "t": 0.36,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward glitch out",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S001",
+   "exists": true
+  },
+  {
+   "t": 0.56,
+   "name": "lipstick_draw",
+   "gain_db": -4,
+   "space": "close",
+   "note": "stroke step 6",
+   "origin": "v1",
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 0.88,
+   "name": "lipstick_draw",
+   "gain_db": -4,
+   "space": "close",
+   "note": "stroke step 7 (top)",
+   "origin": "v1",
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 1.95,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 1 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 2.11,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 3 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 2.27,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 5 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 2.56,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the 8th line draws itself: thinner, glassy, too clean",
+   "params": {
+    "clean": true
+   },
+   "origin": "v1",
+   "shot": "S002",
+   "exists": false
+  },
+  {
+   "t": 2.56,
+   "name": "sub_drop",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "soft sub under the line",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S002",
+   "exists": true
+  },
+  {
+   "t": 2.95,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label 8TH STEP pops in",
+   "origin": "device",
+   "shot": "S002",
+   "exists": true
+  },
+  {
+   "t": 3.4,
+   "name": "bare_foot_step",
+   "gain_db": -8,
+   "space": "mirror",
+   "note": "hook: her bare foot sets down on the eighth line (inside the glass)",
+   "origin": "v2",
+   "shot": "S003",
+   "exists": false
+  },
+  {
+   "t": 3.85,
+   "name": "whoosh",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "kinetic title whoosh in (WIPE THE GLASS)",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S004",
+   "exists": true
+  },
+  {
+   "t": 3.92,
+   "name": "braam",
+   "gain_db": -3,
+   "space": "dry",
+   "note": "braam under the tag",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S004",
+   "exists": true
+  },
+  {
+   "t": 3.92,
+   "name": "impact_hit",
+   "gain_db": 0,
+   "space": "dry",
+   "note": "BIGGEST HIT OF THE OPENING (top-3 loudest bed moment)",
+   "hit": true,
+   "params": {
+    "size": 1.4
+   },
+   "origin": "v1",
+   "shot": "S004",
+   "exists": true
+  },
+  {
+   "t": 3.95,
+   "name": "glass_wipe",
+   "gain_db": -2,
+   "space": "close",
+   "note": "towel squeal down the glass",
+   "params": {
+    "strokes": 2
+   },
+   "origin": "v1",
+   "shot": "S004",
+   "exists": false
+  },
+  {
+   "t": 5.9,
+   "name": "bare_foot_step",
+   "gain_db": -16,
+   "space": "mirror",
+   "note": "far below, a step",
+   "origin": "v1",
+   "shot": "S005",
+   "exists": false
+  },
+  {
+   "t": 6.05,
+   "name": "stinger",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "red X strokes",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S005",
+   "exists": true
+  },
+  {
+   "t": 7.36,
+   "name": "bare_foot_step",
+   "gain_db": -4,
+   "space": "mirror",
+   "note": "wet slap on the tread",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S006",
+   "exists": false
+  },
+  {
+   "t": 7.36,
+   "name": "sub_drop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "low thump under the step",
+   "origin": "v1",
+   "shot": "S006",
+   "exists": true
+  },
+  {
+   "t": 10.55,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward RULE 2: red border in",
+   "origin": "device",
+   "shot": "S008",
+   "exists": false
+  },
+  {
+   "t": 10.55,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "glitch cut",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S008",
+   "exists": true
+  },
+  {
+   "t": 10.6,
+   "name": "cloth_press",
+   "gain_db": -12,
+   "space": "close",
+   "note": "flash-forward RULE 2: fingertips press through the towel",
+   "params": {
+    "kind": "stretch"
+   },
+   "origin": "v2",
+   "shot": "S008",
+   "exists": false
+  },
+  {
+   "t": 10.9,
+   "name": "tinnitus",
+   "gain_db": -22,
+   "space": "dry",
+   "note": "thin whistle tone (his gap-tooth whistle)",
+   "params": {
+    "dur": 1.6
+   },
+   "origin": "v1",
+   "shot": "S008",
+   "exists": true
+  },
+  {
+   "t": 11.14,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward glitch out",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S008",
+   "exists": true
+  },
+  {
+   "t": 11.2,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward RULE 5: red border in",
+   "origin": "device",
+   "shot": "S009",
+   "exists": false
+  },
+  {
+   "t": 11.45,
+   "name": "bell_cracked",
+   "gain_db": -12,
+   "space": "close",
+   "note": "flash-forward RULE 5: the real bell struck (cut short by the glitch)",
+   "params": {
+    "strike": "padlock",
+    "part": "note"
+   },
+   "origin": "v2",
+   "shot": "S009",
+   "exists": false
+  },
+  {
+   "t": 11.45,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash in the shot",
+   "origin": "device",
+   "shot": "S009",
+   "exists": false
+  },
+  {
+   "t": 11.82,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward glitch out",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S009",
+   "exists": true
+  },
+  {
+   "t": 11.88,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward RULE 7: red border in",
+   "origin": "device",
+   "shot": "S010",
+   "exists": false
+  },
+  {
+   "t": 11.95,
+   "name": "tinnitus",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "flash-forward RULE 7: the foot hangs over nothing",
+   "params": {
+    "dur": 0.8
+   },
+   "origin": "v2",
+   "shot": "S010",
+   "exists": true
+  },
+  {
+   "t": 12.73,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward glitch out",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S010",
+   "exists": true
+  },
+  {
+   "t": 12.86,
+   "name": "ambience_camp_night",
+   "gain_db": -8,
+   "space": "outside",
+   "note": "night bed in (crickets, frogs, pines)",
+   "params": {
+    "dur": 7
+   },
+   "origin": "v1",
+   "shot": "S011",
+   "exists": false
+  },
+  {
+   "t": 14.72,
+   "name": "rubber_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "stamp 14 YEARS",
+   "origin": "device",
+   "hit": true,
+   "shot": "S011",
+   "exists": false
+  },
+  {
+   "t": 16.06,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs)",
+   "origin": "device",
+   "shot": "S012",
+   "exists": false
+  },
+  {
+   "t": 16.08,
+   "name": "ambience_dawn",
+   "gain_db": -10,
+   "space": "inside",
+   "note": "dawn chorus loop (identical every 19.48 s)",
+   "params": {
+    "dur": 3.3
+   },
+   "origin": "v1",
+   "shot": "S012",
+   "exists": false
+  },
+  {
+   "t": 16.28,
+   "name": "lace_pull",
+   "gain_db": -12,
+   "space": "close",
+   "note": "shoelace loop",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S012",
+   "exists": false
+  },
+  {
+   "t": 17.65,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D7 pops in",
+   "origin": "device",
+   "shot": "S012",
+   "exists": false
+  },
+  {
+   "t": 17.95,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind scrub",
+   "origin": "device",
+   "shot": "S012",
+   "exists": false
+  },
+  {
+   "t": 19.26,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S013",
+   "exists": false
+  },
+  {
+   "t": 19.38,
+   "name": "owl",
+   "gain_db": -18,
+   "space": "outside",
+   "note": "far owl",
+   "params": {
+    "dist": 2
+   },
+   "origin": "v1",
+   "shot": "S013",
+   "exists": false
+  },
+  {
+   "t": 19.43,
+   "name": "ui_pop",
+   "gain_db": -5,
+   "space": "dry",
+   "note": "time card in",
+   "origin": "v1",
+   "shot": "S013",
+   "exists": true
+  },
+  {
+   "t": 19.67,
+   "name": "clock_tick",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "digits flip",
+   "params": {
+    "dur": 0.6
+   },
+   "origin": "v1",
+   "shot": "S013",
+   "exists": true
+  },
+  {
+   "t": 23.5,
+   "name": "gate_chain",
+   "gain_db": -18,
+   "space": "outside",
+   "note": "the old search tape flutters (cloth flap)",
+   "params": {
+    "kind": "tape_flutter"
+   },
+   "origin": "v1",
+   "shot": "S014",
+   "exists": false
+  },
+  {
+   "t": 26.08,
+   "name": "paper",
+   "gain_db": -14,
+   "space": "outside",
+   "note": "sign flapping",
+   "origin": "v1",
+   "shot": "S015",
+   "exists": true
+  },
+  {
+   "t": 26.18,
+   "name": "gate_chain",
+   "gain_db": -14,
+   "space": "outside",
+   "note": "fence rattles in a gust",
+   "params": {
+    "kind": "fence"
+   },
+   "origin": "v1",
+   "shot": "S015",
+   "exists": false
+  },
+  {
+   "t": 26.4,
+   "name": "highlighter_squeak",
+   "gain_db": -12,
+   "space": "close",
+   "note": "underline: SAT 7:00 AM",
+   "origin": "device",
+   "shot": "S015",
+   "exists": false
+  },
+  {
+   "t": 27.3,
+   "name": "excavator_creak",
+   "gain_db": -16,
+   "space": "outside",
+   "note": "cooling metal tick of the parked machine (v1 25.14 -> v2 27.30: re-timed to the new picture)",
+   "origin": "v1",
+   "shot": "S016",
+   "exists": false
+  },
+  {
+   "t": 28.95,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label CABIN 7 pops in",
+   "origin": "device",
+   "shot": "S017",
+   "exists": true
+  },
+  {
+   "t": 29.99,
+   "name": "footsteps_gravel",
+   "gain_db": -10,
+   "space": "outside",
+   "note": "Tess steps in",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S017",
+   "exists": false
+  },
+  {
+   "t": 30.95,
+   "name": "flashlight_click",
+   "gain_db": -6,
+   "space": "close",
+   "note": "switch on",
+   "origin": "v1",
+   "shot": "S018",
+   "exists": false
+  },
+  {
+   "t": 31.75,
+   "name": "key_in_lock",
+   "gain_db": -8,
+   "space": "close",
+   "note": "key ring jingle",
+   "params": {
+    "jingle": true
+   },
+   "origin": "v1",
+   "shot": "S018",
+   "exists": true
+  },
+  {
+   "t": 35.6,
+   "name": "highlighter_squeak",
+   "gain_db": -8,
+   "space": "close",
+   "note": "highlighter swipe: LAST SEEN WEARING A GREEN SWEATSHIRT",
+   "origin": "device",
+   "shot": "S020",
+   "exists": false
+  },
+  {
+   "t": 36.65,
+   "name": "ambience_memory",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "summer morning, lake lapping, far kids (v1 34.24 -> v2 36.65: re-timed to the new picture)",
+   "params": {
+    "dur": 2.6
+   },
+   "origin": "v1",
+   "shot": "S021",
+   "exists": false
+  },
+  {
+   "t": 40.4,
+   "name": "footsteps_gravel",
+   "gain_db": -8,
+   "space": "outside",
+   "note": "two walkers on gravel (v1 39.19 -> v2 40.40: re-timed to the new picture)",
+   "params": {
+    "dur": 3.5,
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S023",
+   "exists": false
+  },
+  {
+   "t": 43.59,
+   "name": "phone_vibrate",
+   "gain_db": -6,
+   "space": "close",
+   "note": "your pocket buzzes",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S024",
+   "exists": true
+  },
+  {
+   "t": 45.03,
+   "name": "key_in_lock",
+   "gain_db": -3,
+   "space": "close",
+   "note": "key in the padlock",
+   "origin": "v1",
+   "shot": "S024",
+   "exists": true
+  },
+  {
+   "t": 45.75,
+   "name": "padlock",
+   "gain_db": -2,
+   "space": "close",
+   "note": "padlock pops open",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S024",
+   "exists": false
+  },
+  {
+   "t": 46.0,
+   "name": "gate_chain",
+   "gain_db": -3,
+   "space": "close",
+   "note": "chain slides through the bars",
+   "origin": "v1",
+   "shot": "S024",
+   "exists": false
+  },
+  {
+   "t": 46.25,
+   "name": "phone_message",
+   "gain_db": -4,
+   "space": "close",
+   "note": "message tone",
+   "origin": "v1",
+   "shot": "S025",
+   "exists": false
+  },
+  {
+   "t": 47.45,
+   "name": "typing",
+   "gain_db": -16,
+   "space": "close",
+   "note": "typing dots (soft)",
+   "params": {
+    "dur": 0.5,
+    "cps": 6
+   },
+   "origin": "v1",
+   "shot": "S025",
+   "exists": true
+  },
+  {
+   "t": 47.68,
+   "name": "phone_message",
+   "gain_db": -6,
+   "space": "close",
+   "note": "second message tone",
+   "origin": "v1",
+   "shot": "S025",
+   "exists": false
+  },
+  {
+   "t": 51.1,
+   "name": "candy_wrapper",
+   "gain_db": -4,
+   "space": "memory",
+   "note": "wrapper crinkle (v1 49.21 -> v2 51.10: re-timed to the new picture)",
+   "origin": "v1",
+   "shot": "S027",
+   "exists": false
+  },
+  {
+   "t": 54.34,
+   "name": "wind_chimes",
+   "gain_db": -14,
+   "space": "outside",
+   "note": "porch chimes",
+   "params": {
+    "dur": 1.6
+   },
+   "origin": "v1",
+   "shot": "S028",
+   "exists": false
+  },
+  {
+   "t": 54.44,
+   "name": "footsteps_porch",
+   "gain_db": -8,
+   "space": "outside",
+   "note": "up the porch steps",
+   "params": {
+    "n": 3,
+    "creak": 0.6
+   },
+   "origin": "v1",
+   "shot": "S028",
+   "exists": true
+  },
+  {
+   "t": 56.88,
+   "name": "crate_creak",
+   "gain_db": -10,
+   "space": "close",
+   "note": "crate creaks as the boot clears it",
+   "origin": "v1",
+   "shot": "S029",
+   "exists": false
+  },
+  {
+   "t": 57.03,
+   "name": "footsteps_porch",
+   "gain_db": -4,
+   "space": "close",
+   "note": "boot lands on boards",
+   "params": {
+    "n": 1
+   },
+   "origin": "v1",
+   "shot": "S029",
+   "exists": true
+  },
+  {
+   "t": 57.78,
+   "name": "paper",
+   "gain_db": -16,
+   "space": "close",
+   "note": "tag on string flips",
+   "params": {
+    "dur": 0.4
+   },
+   "origin": "v1",
+   "shot": "S030",
+   "exists": true
+  },
+  {
+   "t": 61.75,
+   "name": "bell_cracked",
+   "gain_db": -24,
+   "space": "close",
+   "note": "the bell murmurs as the crate is nudged (sympathetic ring, no strike)",
+   "params": {
+    "strike": "touch"
+   },
+   "origin": "v1",
+   "shot": "S032",
+   "exists": false
+  },
+  {
+   "t": 64.0,
+   "name": "ui_pop",
+   "gain_db": -9,
+   "space": "dry",
+   "note": "label pop",
+   "origin": "v1",
+   "shot": "S033",
+   "exists": true
+  },
+  {
+   "t": 65.92,
+   "name": "bell_cracked",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "THE REAL BELL SOUND PLANTED: clean note + thin rattle (memory-filtered)",
+   "hit": true,
+   "params": {
+    "strike": "drop"
+   },
+   "origin": "v1",
+   "shot": "S034",
+   "exists": false
+  },
+  {
+   "t": 66.15,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D8)",
+   "origin": "device",
+   "shot": "S035",
+   "exists": false
+  },
+  {
+   "t": 66.2,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D8 pops in",
+   "origin": "device",
+   "shot": "S035",
+   "exists": false
+  },
+  {
+   "t": 69.28,
+   "name": "breath",
+   "gain_db": -12,
+   "space": "close",
+   "note": "a held \"shh\" breath",
+   "params": {
+    "kind": "held",
+    "dur": 0.6
+   },
+   "origin": "v1",
+   "shot": "S036",
+   "exists": true
+  },
+  {
+   "t": 69.35,
+   "name": "footsteps_gravel",
+   "gain_db": -14,
+   "space": "outside",
+   "note": "sneaking steps",
+   "params": {
+    "dur": 2.0,
+    "n": 2,
+    "soft": true
+   },
+   "origin": "v1",
+   "shot": "S036",
+   "exists": false
+  },
+  {
+   "t": 69.35,
+   "name": "tv_through_wall",
+   "gain_db": -18,
+   "space": "outside",
+   "note": "TV murmur behind glass",
+   "params": {
+    "dur": 2.0
+   },
+   "origin": "v1",
+   "shot": "S036",
+   "exists": false
+  },
+  {
+   "t": 71.41,
+   "name": "door_creak",
+   "gain_db": -3,
+   "space": "inside",
+   "note": "cabin door",
+   "params": {
+    "slow": 1.2
+   },
+   "origin": "v1",
+   "shot": "S036",
+   "exists": true
+  },
+  {
+   "t": 71.46,
+   "name": "room_tone",
+   "gain_db": -10,
+   "space": "inside",
+   "note": "dusty cabin tone in",
+   "params": {
+    "dur": 6
+   },
+   "origin": "v1",
+   "shot": "S036",
+   "exists": true
+  },
+  {
+   "t": 71.9,
+   "name": "padlock",
+   "gain_db": -8,
+   "space": "close",
+   "note": "Tess hangs the open padlock on Cabin 7's hasp",
+   "origin": "v2",
+   "shot": "S037",
+   "exists": false
+  },
+  {
+   "t": 74.84,
+   "name": "mirror_handle",
+   "gain_db": -4,
+   "space": "close",
+   "note": "frame scrapes on floorboards",
+   "params": {
+    "kind": "scrape"
+   },
+   "origin": "v1",
+   "shot": "S038",
+   "exists": false
+  },
+  {
+   "t": 75.98,
+   "name": "towel_cloth",
+   "gain_db": -14,
+   "space": "close",
+   "note": "thumb on terry cloth",
+   "params": {
+    "kind": "rub"
+   },
+   "origin": "v1",
+   "shot": "S039",
+   "exists": false
+  },
+  {
+   "t": 77.41,
+   "name": "sprinkler_spit",
+   "gain_db": -8,
+   "space": "memory",
+   "note": "sprinkler arcs (memory)",
+   "params": {
+    "n": 3,
+    "rhythm": "tick"
+   },
+   "origin": "v1",
+   "shot": "S039",
+   "exists": false
+  },
+  {
+   "t": 77.81,
+   "name": "footsteps_gravel",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "bare feet on wet grass",
+   "params": {
+    "dur": 1.6,
+    "wet": true
+   },
+   "origin": "v1",
+   "shot": "S040",
+   "exists": false
+  },
+  {
+   "t": 80.5,
+   "name": "water_drip",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "water pours from the twisted towel",
+   "params": {
+    "kind": "pour",
+    "dur": 1.0
+   },
+   "origin": "v1",
+   "shot": "S041",
+   "exists": false
+  },
+  {
+   "t": 82.16,
+   "name": "bed_creak",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "bunk creak as you squirm",
+   "origin": "v1",
+   "shot": "S041",
+   "exists": false
+  },
+  {
+   "t": 83.58,
+   "name": "ambience_camp_night",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "crickets through the window (memory)",
+   "params": {
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S042",
+   "exists": false
+  },
+  {
+   "t": 86.63,
+   "name": "watch_beep",
+   "gain_db": -8,
+   "space": "memory",
+   "note": "button chirps",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S043",
+   "exists": false
+  },
+  {
+   "t": 87.27,
+   "name": "watch_beep",
+   "gain_db": -8,
+   "space": "memory",
+   "note": "button chirps",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S043",
+   "exists": false
+  },
+  {
+   "t": 87.35,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram watch pops in",
+   "origin": "device",
+   "shot": "S043",
+   "exists": false
+  },
+  {
+   "t": 88.76,
+   "name": "towel_cloth",
+   "gain_db": -6,
+   "space": "close",
+   "note": "towel peeled off",
+   "params": {
+    "kind": "pull"
+   },
+   "origin": "v1",
+   "shot": "S044",
+   "exists": false
+  },
+  {
+   "t": 89.27,
+   "name": "glass_resonance",
+   "gain_db": -10,
+   "space": "close",
+   "note": "glass hum as the light hits",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S044",
+   "exists": false
+  },
+  {
+   "t": 93.6,
+   "name": "kids_far",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "giggles under blankets",
+   "origin": "v1",
+   "shot": "S046",
+   "exists": false
+  },
+  {
+   "t": 94.23,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "lipstick zigzag",
+   "params": {
+    "strokes": 3
+   },
+   "origin": "v1",
+   "shot": "S046",
+   "exists": false
+  },
+  {
+   "t": 97.03,
+   "name": "crowd_whisper",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "whispered call 1 of 3",
+   "params": {
+    "dur": 0.3,
+    "density": 2
+   },
+   "origin": "v1",
+   "shot": "S048",
+   "exists": true
+  },
+  {
+   "t": 97.03,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 1 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S048",
+   "exists": false
+  },
+  {
+   "t": 97.31,
+   "name": "crowd_whisper",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "whispered call 2 of 3",
+   "params": {
+    "dur": 0.3,
+    "density": 2
+   },
+   "origin": "v1",
+   "shot": "S048",
+   "exists": true
+  },
+  {
+   "t": 97.31,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 2 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S048",
+   "exists": false
+  },
+  {
+   "t": 97.59,
+   "name": "crowd_whisper",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "whispered call 3 of 3",
+   "params": {
+    "dur": 0.3,
+    "density": 2
+   },
+   "origin": "v1",
+   "shot": "S048",
+   "exists": true
+  },
+  {
+   "t": 97.59,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 3 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S048",
+   "exists": false
+  },
+  {
+   "t": 97.6,
+   "name": "glass_resonance",
+   "gain_db": -16,
+   "space": "mirror",
+   "note": "the third call: the glass hums faintly",
+   "origin": "v2",
+   "shot": "S048",
+   "exists": false
+  },
+  {
+   "t": 98.22,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D1)",
+   "origin": "device",
+   "shot": "S049",
+   "exists": false
+  },
+  {
+   "t": 98.27,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D1 pops in",
+   "origin": "device",
+   "shot": "S049",
+   "exists": false
+  },
+  {
+   "t": 99.03,
+   "name": "whoosh",
+   "gain_db": -12,
+   "space": "dry",
+   "note": "soft rising whoosh to the top step",
+   "params": {
+    "kind": "soft"
+   },
+   "origin": "v1",
+   "shot": "S049",
+   "exists": true
+  },
+  {
+   "t": 103.91,
+   "name": "kids_far",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "muffled laugh",
+   "params": {
+    "dur": 1.0
+   },
+   "origin": "v1",
+   "shot": "S050",
+   "exists": false
+  },
+  {
+   "t": 108.07,
+   "name": "cloth_grab",
+   "gain_db": -16,
+   "space": "close",
+   "note": "jacket rustle as she raises the light",
+   "origin": "v1",
+   "shot": "S052",
+   "exists": false
+  },
+  {
+   "t": 110.71,
+   "name": "phone_handle",
+   "gain_db": -6,
+   "space": "close",
+   "note": "phone set down on wood",
+   "params": {
+    "kind": "set_down"
+   },
+   "origin": "v1",
+   "shot": "S052",
+   "exists": false
+  },
+  {
+   "t": 113.27,
+   "name": "lipstick_smear",
+   "gain_db": -4,
+   "space": "close",
+   "note": "waxy squeak under the thumb",
+   "origin": "v1",
+   "shot": "S052",
+   "exists": false
+  },
+  {
+   "t": 115.43,
+   "name": "lipstick_smear",
+   "gain_db": -16,
+   "space": "close",
+   "note": "tiny crumbly rub",
+   "params": {
+    "kind": "crumb"
+   },
+   "origin": "v1",
+   "shot": "S053",
+   "exists": false
+  },
+  {
+   "t": 118.87,
+   "name": "glass_resonance",
+   "gain_db": -6,
+   "space": "close",
+   "note": "glass ring tail",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S054",
+   "exists": false
+  },
+  {
+   "t": 118.87,
+   "name": "impact_hit",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "HIT on the eighth step",
+   "hit": true,
+   "params": {
+    "size": 1.1
+   },
+   "origin": "v1",
+   "shot": "S054",
+   "exists": true
+  },
+  {
+   "t": 118.87,
+   "name": "lipstick_draw",
+   "gain_db": -4,
+   "space": "close",
+   "note": "the line drawing itself (glassy, clean)",
+   "params": {
+    "clean": true
+   },
+   "origin": "v1",
+   "shot": "S054",
+   "exists": false
+  },
+  {
+   "t": 119.2,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label 8TH STEP pops in",
+   "origin": "device",
+   "shot": "S054",
+   "exists": true
+  },
+  {
+   "t": 119.95,
+   "name": "breath",
+   "gain_db": -8,
+   "space": "close",
+   "note": "sharp gasp",
+   "params": {
+    "kind": "gasp"
+   },
+   "origin": "v1",
+   "shot": "S055",
+   "exists": true
+  },
+  {
+   "t": 121.03,
+   "name": "whoosh",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "pull-back whoosh",
+   "params": {
+    "kind": "soft"
+   },
+   "origin": "v1",
+   "shot": "S055",
+   "exists": true
+  },
+  {
+   "t": 121.15,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 1 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S056",
+   "exists": false
+  },
+  {
+   "t": 121.39,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 3 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S056",
+   "exists": false
+  },
+  {
+   "t": 121.51,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 4 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S056",
+   "exists": false
+  },
+  {
+   "t": 121.75,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 6 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S056",
+   "exists": false
+  },
+  {
+   "t": 121.87,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 7 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S056",
+   "exists": false
+  },
+  {
+   "t": 122.87,
+   "name": "impact_hit",
+   "gain_db": -3,
+   "space": "dry",
+   "note": "punch-in hit (v1 122.87 -> v2 122.87: re-timed to the new picture)",
+   "hit": true,
+   "params": {
+    "size": 1.0
+   },
+   "origin": "v1",
+   "shot": "S057",
+   "exists": true
+  },
+  {
+   "t": 122.87,
+   "name": "number_thump",
+   "gain_db": -9,
+   "space": "dry",
+   "note": "type beat 3: 7 RULES (layer under the v1 hit)",
+   "origin": "device",
+   "hit": false,
+   "shot": "S057",
+   "exists": false
+  },
+  {
+   "t": 124.97,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "lipstick circle: RULE 4",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S058",
+   "exists": false
+  },
+  {
+   "t": 124.97,
+   "name": "stinger",
+   "gain_db": -5,
+   "space": "dry",
+   "note": "stinger on the punch-in",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S058",
+   "exists": true
+  },
+  {
+   "t": 125.36,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward TONIGHT: red border in",
+   "origin": "device",
+   "shot": "S059",
+   "exists": false
+  },
+  {
+   "t": 125.36,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "glitch cut",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S059",
+   "exists": true
+  },
+  {
+   "t": 127.54,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "flash-forward glitch out",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S059",
+   "exists": true
+  },
+  {
+   "t": 127.9,
+   "name": "breath",
+   "gain_db": -12,
+   "space": "close",
+   "note": "shaky breathing",
+   "params": {
+    "kind": "nervous",
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S060",
+   "exists": true
+  },
+  {
+   "t": 129.8,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 129.8,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S061",
+   "exists": true
+  },
+  {
+   "t": 129.8,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 1: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 129.93,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 130.25,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 130.6,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 1 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 131.35,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks like",
+   "origin": "device",
+   "shot": "S061",
+   "exists": true
+  },
+  {
+   "t": 131.77,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 6,
+    "soft": true
+   },
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 131.85,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks subscribe",
+   "origin": "device",
+   "shot": "S061",
+   "exists": true
+  },
+  {
+   "t": 132.35,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks bell",
+   "origin": "device",
+   "shot": "S061",
+   "exists": true
+  },
+  {
+   "t": 133.29,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 133.41,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S061",
+   "exists": false
+  },
+  {
+   "t": 134.49,
+   "name": "glass_tap",
+   "gain_db": -10,
+   "space": "close",
+   "note": "fingertip on the wax (soft)",
+   "origin": "v1",
+   "shot": "S062",
+   "exists": false
+  },
+  {
+   "t": 134.95,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 1 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S062",
+   "exists": false
+  },
+  {
+   "t": 136.13,
+   "name": "lipstick_smear",
+   "gain_db": -2,
+   "space": "close",
+   "note": "smear 1",
+   "origin": "v1",
+   "shot": "S063",
+   "exists": false
+  },
+  {
+   "t": 137.55,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 2 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 137.81,
+   "name": "lipstick_smear",
+   "gain_db": -4,
+   "space": "close",
+   "note": "smear 2",
+   "origin": "v1",
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 137.95,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 3 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 138.27,
+   "name": "lipstick_smear",
+   "gain_db": -5,
+   "space": "close",
+   "note": "smear 3",
+   "origin": "v1",
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 138.3,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 4 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 138.62,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 5 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 138.92,
+   "name": "breath",
+   "gain_db": -14,
+   "space": "close",
+   "note": "breath in",
+   "params": {
+    "kind": "held"
+   },
+   "origin": "v1",
+   "shot": "S064",
+   "exists": true
+  },
+  {
+   "t": 139.05,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 6 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 139.55,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 7 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S064",
+   "exists": false
+  },
+  {
+   "t": 143.29,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash in the shot",
+   "origin": "device",
+   "shot": "S065",
+   "exists": false
+  },
+  {
+   "t": 143.29,
+   "name": "glass_resonance",
+   "gain_db": -8,
+   "space": "close",
+   "note": "thin glass ring",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S065",
+   "exists": false
+  },
+  {
+   "t": 143.29,
+   "name": "nail_click_glass",
+   "gain_db": 0,
+   "space": "close",
+   "note": "THE CLICK: crisp nail on clean glass (reused identically at 690.2)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S065",
+   "exists": false
+  },
+  {
+   "t": 143.4,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label CLEAN GLASS pops in",
+   "origin": "device",
+   "shot": "S065",
+   "exists": true
+  },
+  {
+   "t": 143.65,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D3)",
+   "origin": "device",
+   "shot": "S066",
+   "exists": false
+  },
+  {
+   "t": 143.7,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D3 pops in",
+   "origin": "device",
+   "shot": "S066",
+   "exists": false
+  },
+  {
+   "t": 144.3,
+   "name": "breath",
+   "gain_db": -10,
+   "space": "close",
+   "note": "held breath",
+   "params": {
+    "kind": "held",
+    "dur": 0.6
+   },
+   "origin": "v1",
+   "shot": "S066",
+   "exists": true
+  },
+  {
+   "t": 145.45,
+   "name": "mirror_handle",
+   "gain_db": -6,
+   "space": "close",
+   "note": "wood frame creak as it tilts",
+   "params": {
+    "kind": "creak"
+   },
+   "origin": "v1",
+   "shot": "S067",
+   "exists": false
+  },
+  {
+   "t": 146.6,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (level_guide)",
+   "origin": "device",
+   "shot": "S068",
+   "exists": false
+  },
+  {
+   "t": 146.65,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram level_guide pops in",
+   "origin": "device",
+   "shot": "S068",
+   "exists": false
+  },
+  {
+   "t": 148.88,
+   "name": "ambience_mirror",
+   "gain_db": -8,
+   "space": "mirror",
+   "note": "glass world tone swells",
+   "params": {
+    "dur": 4
+   },
+   "origin": "v1",
+   "shot": "S069",
+   "exists": false
+  },
+  {
+   "t": 148.88,
+   "name": "braam",
+   "gain_db": -5,
+   "space": "dry",
+   "note": "low braam on the woman",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S069",
+   "exists": true
+  },
+  {
+   "t": 150.68,
+   "name": "cloth_press",
+   "gain_db": -16,
+   "space": "mirror",
+   "note": "satin rustle (too close)",
+   "params": {
+    "kind": "satin"
+   },
+   "origin": "v1",
+   "shot": "S069",
+   "exists": false
+  },
+  {
+   "t": 155.36,
+   "name": "ambience_dawn",
+   "gain_db": -18,
+   "space": "mirror",
+   "note": "the old cabin heard through glass (muffled birds)",
+   "params": {
+    "dur": 3
+   },
+   "origin": "v1",
+   "shot": "S070",
+   "exists": false
+  },
+  {
+   "t": 155.99,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs)",
+   "origin": "device",
+   "shot": "S071",
+   "exists": false
+  },
+  {
+   "t": 156.16,
+   "name": "whoosh",
+   "gain_db": -12,
+   "space": "dry",
+   "note": "reveal pull",
+   "params": {
+    "kind": "soft"
+   },
+   "origin": "v1",
+   "shot": "S071",
+   "exists": true
+  },
+  {
+   "t": 159.54,
+   "name": "water_drip",
+   "gain_db": -12,
+   "space": "mirror",
+   "note": "drip (through glass)",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S071",
+   "exists": false
+  },
+  {
+   "t": 160.56,
+   "name": "water_drip",
+   "gain_db": -12,
+   "space": "mirror",
+   "note": "drip",
+   "params": {
+    "n": 1
+   },
+   "origin": "v1",
+   "shot": "S071",
+   "exists": false
+  },
+  {
+   "t": 162.08,
+   "name": "screen_door",
+   "gain_db": -10,
+   "space": "mirror",
+   "note": "screen door spring and slap (muffled)",
+   "origin": "v1",
+   "shot": "S071",
+   "exists": false
+  },
+  {
+   "t": 164.0,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A0 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 0
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 164.5,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A1 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 1
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 165.0,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A2 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 2
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 165.5,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A3 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 3
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 166.0,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A4 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 4
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 166.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B0 (shoe)",
+   "params": {
+    "bare": false,
+    "trail": "B",
+    "i": 0
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 166.5,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A5 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 5
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 167.0,
+   "name": "wet_footstep",
+   "gain_db": -12,
+   "space": "room",
+   "note": "wet print A6 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "A",
+    "i": 6
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 167.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B1 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "B",
+    "i": 1
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 168.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B2 (shoe)",
+   "params": {
+    "bare": false,
+    "trail": "B",
+    "i": 2
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 169.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B3 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "B",
+    "i": 3
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 170.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B4 (shoe)",
+   "params": {
+    "bare": false,
+    "trail": "B",
+    "i": 4
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 171.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B5 (bare)",
+   "params": {
+    "bare": true,
+    "trail": "B",
+    "i": 5
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 172.25,
+   "name": "wet_footstep",
+   "gain_db": -10,
+   "space": "room",
+   "note": "wet print B6 (shoe)",
+   "params": {
+    "bare": false,
+    "trail": "B",
+    "i": 6
+   },
+   "origin": "v2",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 172.8,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label ONE SHOE pops in",
+   "origin": "device",
+   "shot": "S072",
+   "exists": true
+  },
+  {
+   "t": 173.68,
+   "name": "bed_creak",
+   "gain_db": -16,
+   "space": "mirror",
+   "note": "the empty bunk creaks",
+   "origin": "v1",
+   "shot": "S072",
+   "exists": false
+  },
+  {
+   "t": 174.07,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S073",
+   "exists": false
+  },
+  {
+   "t": 174.64,
+   "name": "cloth_grab",
+   "gain_db": -16,
+   "space": "close",
+   "note": "sleeve rustle",
+   "origin": "v1",
+   "shot": "S073",
+   "exists": false
+  },
+  {
+   "t": 176.7,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D4)",
+   "origin": "device",
+   "shot": "S074",
+   "exists": false
+  },
+  {
+   "t": 176.75,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D4 pops in",
+   "origin": "device",
+   "shot": "S074",
+   "exists": false
+  },
+  {
+   "t": 182.8,
+   "name": "sub_drop",
+   "gain_db": -12,
+   "space": "dry",
+   "note": "low pressure under the voice",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S077",
+   "exists": true
+  },
+  {
+   "t": 187.83,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "close",
+   "note": "tap on the entry",
+   "origin": "v1",
+   "shot": "S079",
+   "exists": true
+  },
+  {
+   "t": 188.56,
+   "name": "radio_static",
+   "gain_db": -26,
+   "space": "phone",
+   "note": "faint phone-line hiss of the old message",
+   "params": {
+    "dur": 2.6,
+    "amount": 0.2
+   },
+   "origin": "v1",
+   "shot": "S080",
+   "exists": true
+  },
+  {
+   "t": 194.23,
+   "name": "tinnitus",
+   "gain_db": -24,
+   "space": "memory",
+   "note": "tiny whistle tone through the gap",
+   "params": {
+    "dur": 0.5
+   },
+   "origin": "v1",
+   "shot": "S080",
+   "exists": true
+  },
+  {
+   "t": 197.03,
+   "name": "breath",
+   "gain_db": -10,
+   "space": "close",
+   "note": "breath on glass",
+   "params": {
+    "kind": "held",
+    "dur": 0.8
+   },
+   "origin": "v1",
+   "shot": "S082",
+   "exists": true
+  },
+  {
+   "t": 198.15,
+   "name": "cloth_press",
+   "gain_db": -10,
+   "space": "mirror",
+   "note": "neck creak / satin",
+   "params": {
+    "kind": "creak"
+   },
+   "origin": "v1",
+   "shot": "S083",
+   "exists": false
+  },
+  {
+   "t": 198.15,
+   "name": "flash_hit",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "white flash in the shot (layer under the v1 hit)",
+   "origin": "device",
+   "hit": false,
+   "shot": "S083",
+   "exists": false
+  },
+  {
+   "t": 198.15,
+   "name": "impact_hit",
+   "gain_db": -1,
+   "space": "dry",
+   "note": "HIT on the head turn",
+   "hit": true,
+   "params": {
+    "size": 1.2
+   },
+   "origin": "v1",
+   "shot": "S083",
+   "exists": true
+  },
+  {
+   "t": 198.62,
+   "name": "breath",
+   "gain_db": -8,
+   "space": "close",
+   "note": "gasp",
+   "params": {
+    "kind": "gasp"
+   },
+   "origin": "v1",
+   "shot": "S083",
+   "exists": true
+  },
+  {
+   "t": 199.4,
+   "name": "glitch",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "header clock rolls over midnight (tiny glitch)",
+   "params": {
+    "dur": 0.1,
+    "amount": 0.3
+   },
+   "origin": "v1",
+   "shot": "S083",
+   "exists": true
+  },
+  {
+   "t": 202.35,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D5)",
+   "origin": "device",
+   "shot": "S085",
+   "exists": false
+  },
+  {
+   "t": 202.4,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D5 pops in",
+   "origin": "device",
+   "shot": "S085",
+   "exists": false
+  },
+  {
+   "t": 203.1,
+   "name": "braam",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "braam on the punch-in",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S085",
+   "exists": true
+  },
+  {
+   "t": 203.53,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 203.53,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S086",
+   "exists": true
+  },
+  {
+   "t": 203.53,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 2: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 203.66,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 203.98,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 204.33,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 2 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 205.08,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks like",
+   "origin": "device",
+   "shot": "S086",
+   "exists": true
+  },
+  {
+   "t": 205.42,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 10,
+    "soft": true
+   },
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 205.58,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks subscribe",
+   "origin": "device",
+   "shot": "S086",
+   "exists": true
+  },
+  {
+   "t": 206.08,
+   "name": "ui_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "cursor clicks bell",
+   "origin": "device",
+   "shot": "S086",
+   "exists": true
+  },
+  {
+   "t": 208.05,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 208.17,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S086",
+   "exists": false
+  },
+  {
+   "t": 208.7,
+   "name": "cloth_grab",
+   "gain_db": -8,
+   "space": "close",
+   "note": "hand on your jacket",
+   "origin": "v1",
+   "shot": "S087",
+   "exists": false
+  },
+  {
+   "t": 210.7,
+   "name": "mirror_handle",
+   "gain_db": -10,
+   "space": "close",
+   "note": "frame creaks in your grip",
+   "params": {
+    "kind": "creak"
+   },
+   "origin": "v1",
+   "shot": "S089",
+   "exists": false
+  },
+  {
+   "t": 213.1,
+   "name": "stinger",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "soft stinger on the hand (v1 212.54 -> v2 213.10: re-timed to the new picture)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S090",
+   "exists": true
+  },
+  {
+   "t": 216.94,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label pop",
+   "origin": "v1",
+   "shot": "S090",
+   "exists": true
+  },
+  {
+   "t": 220.4,
+   "name": "car_door_close",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "a car door slams (memory, filtered) (v1 221.42 -> v2 220.40: re-timed to the new picture)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S092",
+   "exists": true
+  },
+  {
+   "t": 221.3,
+   "name": "paper",
+   "gain_db": -14,
+   "space": "close",
+   "note": "polaroid edge (v1 218.15 -> v2 221.30: re-timed to the new picture)",
+   "params": {
+    "dur": 0.4
+   },
+   "origin": "v1",
+   "shot": "S092",
+   "exists": true
+  },
+  {
+   "t": 222.46,
+   "name": "tape_peel",
+   "gain_db": -9,
+   "space": "mirror",
+   "note": "tape edge pick 1",
+   "origin": "v1",
+   "shot": "S094",
+   "exists": false
+  },
+  {
+   "t": 222.76,
+   "name": "tape_peel",
+   "gain_db": -9,
+   "space": "mirror",
+   "note": "tape edge pick 2",
+   "origin": "v1",
+   "shot": "S094",
+   "exists": false
+  },
+  {
+   "t": 223.06,
+   "name": "tape_peel",
+   "gain_db": -9,
+   "space": "mirror",
+   "note": "tape edge pick 3",
+   "origin": "v1",
+   "shot": "S094",
+   "exists": false
+  },
+  {
+   "t": 224.81,
+   "name": "kids_far",
+   "gain_db": -18,
+   "space": "memory",
+   "note": "mess hall chatter far",
+   "origin": "v1",
+   "shot": "S095",
+   "exists": false
+  },
+  {
+   "t": 235.85,
+   "name": "window_slide",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "window sash slides down",
+   "origin": "v1",
+   "shot": "S099",
+   "exists": false
+  },
+  {
+   "t": 236.57,
+   "name": "moth_flutter",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "moths at the lantern",
+   "params": {
+    "dur": 1.2
+   },
+   "origin": "v1",
+   "shot": "S099",
+   "exists": false
+  },
+  {
+   "t": 238.17,
+   "name": "stinger",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "red X stroke",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S100",
+   "exists": true
+  },
+  {
+   "t": 238.25,
+   "name": "lipstick_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "tag KEEP IT TO YOURSELF pops in",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S100",
+   "exists": false
+  },
+  {
+   "t": 248.22,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash cut",
+   "origin": "device",
+   "shot": "S105",
+   "exists": false
+  },
+  {
+   "t": 248.39,
+   "name": "glass_resonance",
+   "gain_db": -6,
+   "space": "mirror",
+   "note": "glass ring",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S105",
+   "exists": false
+  },
+  {
+   "t": 248.39,
+   "name": "sub_drop",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "HIT: sub boom + glass resonance on her first word",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S105",
+   "exists": true
+  },
+  {
+   "t": 249.67,
+   "name": "towel_cloth",
+   "gain_db": -3,
+   "space": "close",
+   "note": "snatch",
+   "params": {
+    "kind": "snatch"
+   },
+   "origin": "v1",
+   "shot": "S106",
+   "exists": false
+  },
+  {
+   "t": 250.87,
+   "name": "towel_cloth",
+   "gain_db": -2,
+   "space": "close",
+   "note": "throw / flap",
+   "params": {
+    "kind": "flap"
+   },
+   "origin": "v1",
+   "shot": "S106",
+   "exists": false
+  },
+  {
+   "t": 250.87,
+   "name": "whoosh",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "hard whoosh with the throw",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S106",
+   "exists": true
+  },
+  {
+   "t": 251.75,
+   "name": "mirror_handle",
+   "gain_db": -8,
+   "space": "close",
+   "note": "towel slaps the frame",
+   "params": {
+    "kind": "bump"
+   },
+   "origin": "v1",
+   "shot": "S106",
+   "exists": false
+  },
+  {
+   "t": 253.83,
+   "name": "cloth_press",
+   "gain_db": -2,
+   "space": "close",
+   "note": "cloth stretching over fingertips",
+   "hit": true,
+   "params": {
+    "kind": "stretch"
+   },
+   "origin": "v1",
+   "shot": "S107",
+   "exists": false
+  },
+  {
+   "t": 253.83,
+   "name": "stinger",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "stinger",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S107",
+   "exists": true
+  },
+  {
+   "t": 254.59,
+   "name": "cloth_press",
+   "gain_db": -6,
+   "space": "close",
+   "note": "loops stretching",
+   "params": {
+    "kind": "stretch"
+   },
+   "origin": "v1",
+   "shot": "S107",
+   "exists": false
+  },
+  {
+   "t": 256.87,
+   "name": "flash_hit",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "white flash cut (layer under the v1 hit)",
+   "origin": "device",
+   "hit": false,
+   "shot": "S108",
+   "exists": false
+  },
+  {
+   "t": 256.87,
+   "name": "sub_drop",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "drop",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S108",
+   "exists": true
+  },
+  {
+   "t": 256.87,
+   "name": "towel_drop",
+   "gain_db": -3,
+   "space": "close",
+   "note": "towel falls straight down, soft thump",
+   "origin": "v1",
+   "shot": "S108",
+   "exists": false
+  },
+  {
+   "t": 261.03,
+   "name": "ambience_dawn",
+   "gain_db": -16,
+   "space": "outside",
+   "note": "birds heard through the doorway",
+   "params": {
+    "dur": 8
+   },
+   "origin": "v1",
+   "shot": "S109",
+   "exists": false
+  },
+  {
+   "t": 261.03,
+   "name": "braam",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "warm dissonant braam on the doorway",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S109",
+   "exists": true
+  },
+  {
+   "t": 266.57,
+   "name": "kitchen_far",
+   "gain_db": -16,
+   "space": "far",
+   "note": "distant camp kitchen: clinks, a griddle",
+   "params": {
+    "dur": 3
+   },
+   "origin": "v1",
+   "shot": "S111",
+   "exists": false
+  },
+  {
+   "t": 269.21,
+   "name": "coffee_percolator",
+   "gain_db": -14,
+   "space": "far",
+   "note": "percolator bubbling far away",
+   "params": {
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S111",
+   "exists": false
+  },
+  {
+   "t": 269.24,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 269.24,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S112",
+   "exists": true
+  },
+  {
+   "t": 269.24,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 3: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 269.37,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 269.69,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 270.04,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 3 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 271.05,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 8,
+    "soft": true
+   },
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 273.08,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 273.2,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S112",
+   "exists": false
+  },
+  {
+   "t": 275.69,
+   "name": "jacket_cloth",
+   "gain_db": -6,
+   "space": "close",
+   "note": "canvas jacket scraping the frame",
+   "params": {
+    "kind": "scrape"
+   },
+   "origin": "v1",
+   "shot": "S114",
+   "exists": false
+  },
+  {
+   "t": 277.29,
+   "name": "cloth_grab",
+   "gain_db": -2,
+   "space": "close",
+   "note": "sleeve grab",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S114",
+   "exists": false
+  },
+  {
+   "t": 278.91,
+   "name": "clock_tick",
+   "gain_db": -6,
+   "space": "inside",
+   "note": "ticking forward",
+   "params": {
+    "dur": 2.78
+   },
+   "origin": "v1",
+   "shot": "S115",
+   "exists": true
+  },
+  {
+   "t": 281.69,
+   "name": "clock_tick_backward",
+   "gain_db": -2,
+   "space": "inside",
+   "note": "TOCK reversed, then reverse ticks",
+   "hit": true,
+   "params": {
+    "n": 4
+   },
+   "origin": "v1",
+   "shot": "S116",
+   "exists": false
+  },
+  {
+   "t": 281.69,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind scrub",
+   "origin": "device",
+   "shot": "S116",
+   "exists": false
+  },
+  {
+   "t": 283.77,
+   "name": "braam",
+   "gain_db": -3,
+   "space": "dry",
+   "note": "braam layer",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S117",
+   "exists": true
+  },
+  {
+   "t": 283.77,
+   "name": "stinger",
+   "gain_db": 0,
+   "space": "dry",
+   "note": "BIG STINGER: the first full face",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S117",
+   "exists": true
+  },
+  {
+   "t": 289.19,
+   "name": "number_thump",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "giant 60 slams in (type beat 4)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S119",
+   "exists": false
+  },
+  {
+   "t": 289.19,
+   "name": "ring_tick",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "ring badge: Tess calls 60",
+   "origin": "device",
+   "params": {
+    "kind": "call"
+   },
+   "shot": "S119",
+   "exists": false
+  },
+  {
+   "t": 289.74,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs)",
+   "origin": "device",
+   "shot": "S120",
+   "exists": false
+  },
+  {
+   "t": 290.23,
+   "name": "whoosh",
+   "gain_db": -3,
+   "space": "dry",
+   "note": "pressure whoosh through the doorway",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S120",
+   "exists": true
+  },
+  {
+   "t": 290.47,
+   "name": "sub_drop",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "ear-pressure drop",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S120",
+   "exists": true
+  },
+  {
+   "t": 290.65,
+   "name": "ambience_dawn",
+   "gain_db": -8,
+   "space": "inside",
+   "note": "dawn bed: birds loop, lantern hum, stillness",
+   "params": {
+    "dur": 4
+   },
+   "origin": "v1",
+   "shot": "S120",
+   "exists": false
+  },
+  {
+   "t": 293.23,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 59 (tiny)",
+   "origin": "device",
+   "shot": "S121",
+   "exists": false
+  },
+  {
+   "t": 294.07,
+   "name": "lantern_hum",
+   "gain_db": -14,
+   "space": "close",
+   "note": "battery lantern hum",
+   "params": {
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S121",
+   "exists": false
+  },
+  {
+   "t": 297.27,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 58 (tiny)",
+   "origin": "device",
+   "shot": "S123",
+   "exists": false
+  },
+  {
+   "t": 298.47,
+   "name": "sprinkler_spit",
+   "gain_db": -8,
+   "space": "outside",
+   "note": "valve hiss on",
+   "origin": "v1",
+   "shot": "S124",
+   "exists": false
+  },
+  {
+   "t": 298.87,
+   "name": "sprinkler_spit",
+   "gain_db": -4,
+   "space": "outside",
+   "note": "spit 1 (reused identically at 415.75)",
+   "params": {
+    "loop_id": "A"
+   },
+   "origin": "v1",
+   "shot": "S124",
+   "exists": false
+  },
+  {
+   "t": 299.27,
+   "name": "sprinkler_spit",
+   "gain_db": -4,
+   "space": "outside",
+   "note": "spit 2 (reused at 416.23)",
+   "params": {
+    "loop_id": "B"
+   },
+   "origin": "v1",
+   "shot": "S124",
+   "exists": false
+  },
+  {
+   "t": 299.99,
+   "name": "sprinkler_spit",
+   "gain_db": -12,
+   "space": "outside",
+   "note": "gurgle and die",
+   "params": {
+    "kind": "die"
+   },
+   "origin": "v1",
+   "shot": "S125",
+   "exists": false
+  },
+  {
+   "t": 301.31,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 57 (tiny)",
+   "origin": "device",
+   "shot": "S126",
+   "exists": false
+  },
+  {
+   "t": 305.35,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 56 (tiny)",
+   "origin": "device",
+   "shot": "S127",
+   "exists": false
+  },
+  {
+   "t": 306.02,
+   "name": "lace_pull",
+   "gain_db": -12,
+   "space": "close",
+   "note": "lace",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S128",
+   "exists": false
+  },
+  {
+   "t": 307.9,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label pop (v1 308.27 -> v2 307.90: re-timed to the new picture)",
+   "origin": "v1",
+   "shot": "S129",
+   "exists": true
+  },
+  {
+   "t": 309.39,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 55 (tiny)",
+   "origin": "device",
+   "shot": "S130",
+   "exists": false
+  },
+  {
+   "t": 313.43,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 54 (tiny)",
+   "origin": "device",
+   "shot": "S132",
+   "exists": false
+  },
+  {
+   "t": 317.47,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 53 (tiny)",
+   "origin": "device",
+   "shot": "S132",
+   "exists": false
+  },
+  {
+   "t": 317.87,
+   "name": "lace_pull",
+   "gain_db": -10,
+   "space": "close",
+   "note": "lace",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S133",
+   "exists": false
+  },
+  {
+   "t": 321.07,
+   "name": "candy_wrapper",
+   "gain_db": -6,
+   "space": "close",
+   "note": "wrapper crinkle",
+   "origin": "v1",
+   "shot": "S134",
+   "exists": false
+  },
+  {
+   "t": 321.51,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 52 (tiny)",
+   "origin": "device",
+   "shot": "S134",
+   "exists": false
+  },
+  {
+   "t": 323.65,
+   "name": "candy_wrapper",
+   "gain_db": -6,
+   "space": "close",
+   "note": "crinkle as it changes hands",
+   "origin": "v1",
+   "shot": "S136",
+   "exists": false
+  },
+  {
+   "t": 325.49,
+   "name": "candy_wrapper",
+   "gain_db": -12,
+   "space": "close",
+   "note": "crinkle in the fist",
+   "origin": "v1",
+   "shot": "S136",
+   "exists": false
+  },
+  {
+   "t": 325.55,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 51 (tiny)",
+   "origin": "device",
+   "shot": "S136",
+   "exists": false
+  },
+  {
+   "t": 326.7,
+   "name": "ambience_memory",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "lake lapping, gulls",
+   "params": {
+    "dur": 3
+   },
+   "origin": "v1",
+   "shot": "S137",
+   "exists": false
+  },
+  {
+   "t": 328.05,
+   "name": "candy_wrapper",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "bag rustle",
+   "origin": "v1",
+   "shot": "S137",
+   "exists": false
+  },
+  {
+   "t": 329.59,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 50 (tiny)",
+   "origin": "device",
+   "shot": "S137",
+   "exists": false
+  },
+  {
+   "t": 332.37,
+   "name": "water_drip",
+   "gain_db": -6,
+   "space": "close",
+   "note": "drip 1",
+   "origin": "v1",
+   "shot": "S138",
+   "exists": false
+  },
+  {
+   "t": 333.33,
+   "name": "water_drip",
+   "gain_db": -7,
+   "space": "close",
+   "note": "drip 2",
+   "origin": "v1",
+   "shot": "S138",
+   "exists": false
+  },
+  {
+   "t": 333.63,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 49 (tiny)",
+   "origin": "device",
+   "shot": "S138",
+   "exists": false
+  },
+  {
+   "t": 335.89,
+   "name": "drop_reverse",
+   "gain_db": -4,
+   "space": "close",
+   "note": "reversed drip as it rises",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S138",
+   "exists": false
+  },
+  {
+   "t": 337.09,
+   "name": "tinnitus",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "thin stopped-time tone",
+   "params": {
+    "dur": 3
+   },
+   "origin": "v1",
+   "shot": "S138",
+   "exists": true
+  },
+  {
+   "t": 337.67,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 48 (tiny)",
+   "origin": "device",
+   "shot": "S138",
+   "exists": false
+  },
+  {
+   "t": 341.71,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 47 (tiny)",
+   "origin": "device",
+   "shot": "S139",
+   "exists": false
+  },
+  {
+   "t": 342.95,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D6)",
+   "origin": "device",
+   "shot": "S141",
+   "exists": false
+  },
+  {
+   "t": 343.0,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D6 pops in",
+   "origin": "device",
+   "shot": "S141",
+   "exists": false
+  },
+  {
+   "t": 345.75,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 46 (tiny)",
+   "origin": "device",
+   "shot": "S142",
+   "exists": false
+  },
+  {
+   "t": 346.83,
+   "name": "water_drip",
+   "gain_db": -3,
+   "space": "close",
+   "note": "THE SAME drip sample as 332.37 (loop)",
+   "hit": true,
+   "params": {
+    "loop_id": "drip"
+   },
+   "origin": "v1",
+   "shot": "S142",
+   "exists": false
+  },
+  {
+   "t": 349.79,
+   "name": "number_thump",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "giant 45 slams in (type beat 4)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S144",
+   "exists": false
+  },
+  {
+   "t": 349.79,
+   "name": "ring_tick",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "ring badge: Tess calls 45",
+   "origin": "device",
+   "params": {
+    "kind": "call"
+   },
+   "shot": "S144",
+   "exists": false
+  },
+  {
+   "t": 350.38,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 350.38,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S145",
+   "exists": true
+  },
+  {
+   "t": 350.38,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 4: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 350.51,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 350.83,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 351.18,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 4 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 352.19,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 5,
+    "soft": true
+   },
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 353.26,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 353.38,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S145",
+   "exists": false
+  },
+  {
+   "t": 353.71,
+   "name": "cloth_grab",
+   "gain_db": -12,
+   "space": "close",
+   "note": "hand grab",
+   "origin": "v1",
+   "shot": "S146",
+   "exists": false
+  },
+  {
+   "t": 354.99,
+   "name": "footsteps_wood_inside",
+   "gain_db": -8,
+   "space": "inside",
+   "note": "two pairs of steps (one shoe, one bare)",
+   "params": {
+    "n": 3
+   },
+   "origin": "v1",
+   "shot": "S146",
+   "exists": true
+  },
+  {
+   "t": 355.893,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 44 (tiny)",
+   "origin": "device",
+   "shot": "S146",
+   "exists": false
+  },
+  {
+   "t": 358.43,
+   "name": "impact_hit",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "hit",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S147",
+   "exists": true
+  },
+  {
+   "t": 358.43,
+   "name": "whoosh",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "reverse whoosh: the snap back",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S147",
+   "exists": true
+  },
+  {
+   "t": 359.74,
+   "name": "drop_reverse",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "suck-back",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S147",
+   "exists": false
+  },
+  {
+   "t": 359.78,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind glitch",
+   "origin": "device",
+   "shot": "S148",
+   "exists": false
+  },
+  {
+   "t": 361.996,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 43 (tiny)",
+   "origin": "device",
+   "shot": "S149",
+   "exists": false
+  },
+  {
+   "t": 362.6,
+   "name": "lace_pull",
+   "gain_db": -10,
+   "space": "close",
+   "note": "lace",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S150",
+   "exists": false
+  },
+  {
+   "t": 362.8,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label (v1 362.99 -> v2 362.80: re-timed to the new picture)",
+   "origin": "v1",
+   "shot": "S150",
+   "exists": true
+  },
+  {
+   "t": 364.51,
+   "name": "bed_creak",
+   "gain_db": -6,
+   "space": "close",
+   "note": "bunk creaks as he is dragged up",
+   "origin": "v1",
+   "shot": "S151",
+   "exists": false
+  },
+  {
+   "t": 367.79,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "static on the face swap",
+   "params": {
+    "dur": 0.15,
+    "amount": 0.8
+   },
+   "origin": "v1",
+   "shot": "S152",
+   "exists": true
+  },
+  {
+   "t": 367.79,
+   "name": "impact_hit",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "hit",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S152",
+   "exists": true
+  },
+  {
+   "t": 368.098,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 42 (tiny)",
+   "origin": "device",
+   "shot": "S152",
+   "exists": false
+  },
+  {
+   "t": 371.31,
+   "name": "bed_creak",
+   "gain_db": -5,
+   "space": "close",
+   "note": "mattress creak as you sit",
+   "origin": "v1",
+   "shot": "S155",
+   "exists": false
+  },
+  {
+   "t": 374.201,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 41 (tiny)",
+   "origin": "device",
+   "shot": "S156",
+   "exists": false
+  },
+  {
+   "t": 376.3,
+   "name": "watch_beep",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "4:45 AM: the watch alarm beeping (your prank woke him)",
+   "params": {
+    "n": 3
+   },
+   "origin": "v2",
+   "shot": "S158",
+   "exists": false
+  },
+  {
+   "t": 376.35,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram watch pops in",
+   "origin": "device",
+   "shot": "S158",
+   "exists": false
+  },
+  {
+   "t": 377.6,
+   "name": "glass_tap",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "a pale palm settles on the inside of the glass",
+   "origin": "v2",
+   "shot": "S159",
+   "exists": false
+  },
+  {
+   "t": 380.304,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 40 (tiny)",
+   "origin": "device",
+   "shot": "S160",
+   "exists": false
+  },
+  {
+   "t": 383.77,
+   "name": "bed_creak",
+   "gain_db": -10,
+   "space": "close",
+   "note": "the bunk creaks under her: she has been sitting there all along",
+   "origin": "v1",
+   "shot": "S162",
+   "exists": false
+  },
+  {
+   "t": 386.407,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 39 (tiny)",
+   "origin": "device",
+   "shot": "S162",
+   "exists": false
+  },
+  {
+   "t": 386.63,
+   "name": "clock_tick",
+   "gain_db": -8,
+   "space": "inside",
+   "note": "ticks",
+   "params": {
+    "dur": 1.89
+   },
+   "origin": "v1",
+   "shot": "S162",
+   "exists": true
+  },
+  {
+   "t": 386.75,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D7 pops in",
+   "origin": "device",
+   "shot": "S163",
+   "exists": false
+  },
+  {
+   "t": 388.4,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind glitch",
+   "origin": "device",
+   "shot": "S164",
+   "exists": false
+  },
+  {
+   "t": 388.57,
+   "name": "clock_tick_backward",
+   "gain_db": -4,
+   "space": "inside",
+   "note": "snap back",
+   "hit": true,
+   "params": {
+    "n": 1
+   },
+   "origin": "v1",
+   "shot": "S164",
+   "exists": false
+  },
+  {
+   "t": 390.73,
+   "name": "crowd_whisper",
+   "gain_db": -18,
+   "space": "close",
+   "note": "a whisper under \"a little while\"",
+   "params": {
+    "dur": 1.0,
+    "density": 1
+   },
+   "origin": "v1",
+   "shot": "S165",
+   "exists": true
+  },
+  {
+   "t": 392.51,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 38 (tiny)",
+   "origin": "device",
+   "shot": "S165",
+   "exists": false
+  },
+  {
+   "t": 395.69,
+   "name": "sub_drop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "soft low hit on \"Mom\"",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S167",
+   "exists": true
+  },
+  {
+   "t": 398.612,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 37 (tiny)",
+   "origin": "device",
+   "shot": "S168",
+   "exists": false
+  },
+  {
+   "t": 398.91,
+   "name": "ambience_memory",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "morning: birds, far voices",
+   "params": {
+    "dur": 4.5
+   },
+   "origin": "v1",
+   "shot": "S168",
+   "exists": false
+  },
+  {
+   "t": 401.29,
+   "name": "water_drip",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "drip into the puddle",
+   "origin": "v1",
+   "shot": "S170",
+   "exists": false
+  },
+  {
+   "t": 404.715,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 36 (tiny)",
+   "origin": "device",
+   "shot": "S172",
+   "exists": false
+  },
+  {
+   "t": 404.79,
+   "name": "voices_calling_far",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "distant voices calling a name (no words intelligible)",
+   "params": {
+    "dur": 2.5
+   },
+   "origin": "v1",
+   "shot": "S172",
+   "exists": false
+  },
+  {
+   "t": 405.98,
+   "name": "footsteps_porch",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "adults shuffling",
+   "params": {
+    "dur": 2.5,
+    "n": 4
+   },
+   "origin": "v1",
+   "shot": "S173",
+   "exists": true
+  },
+  {
+   "t": 410.818,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 35 (tiny)",
+   "origin": "device",
+   "shot": "S175",
+   "exists": false
+  },
+  {
+   "t": 411.63,
+   "name": "kids_far",
+   "gain_db": -16,
+   "space": "memory",
+   "note": "mess hall clatter",
+   "origin": "v1",
+   "shot": "S176",
+   "exists": false
+  },
+  {
+   "t": 411.93,
+   "name": "spoon_drop",
+   "gain_db": -20,
+   "space": "memory",
+   "note": "cutlery clink",
+   "params": {
+    "kind": "clink"
+   },
+   "origin": "v1",
+   "shot": "S176",
+   "exists": false
+  },
+  {
+   "t": 414.3,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind glitch",
+   "origin": "device",
+   "shot": "S177",
+   "exists": false
+  },
+  {
+   "t": 415.75,
+   "name": "sprinkler_spit",
+   "gain_db": -4,
+   "space": "outside",
+   "note": "SAME spit 1 as 298.87",
+   "params": {
+    "loop_id": "A"
+   },
+   "origin": "v1",
+   "shot": "S177",
+   "exists": false
+  },
+  {
+   "t": 416.23,
+   "name": "sprinkler_spit",
+   "gain_db": -4,
+   "space": "outside",
+   "note": "SAME spit 2 as 299.27",
+   "params": {
+    "loop_id": "B"
+   },
+   "origin": "v1",
+   "shot": "S177",
+   "exists": false
+  },
+  {
+   "t": 416.921,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 34 (tiny)",
+   "origin": "device",
+   "shot": "S178",
+   "exists": false
+  },
+  {
+   "t": 418.55,
+   "name": "lace_pull",
+   "gain_db": -10,
+   "space": "close",
+   "note": "lace",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S178",
+   "exists": false
+  },
+  {
+   "t": 422.4,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (loop_split)",
+   "origin": "device",
+   "shot": "S181",
+   "exists": false
+  },
+  {
+   "t": 422.45,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram loop_split pops in",
+   "origin": "device",
+   "shot": "S181",
+   "exists": false
+  },
+  {
+   "t": 423.024,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 33 (tiny)",
+   "origin": "device",
+   "shot": "S181",
+   "exists": false
+  },
+  {
+   "t": 426.1,
+   "name": "rubber_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "stamp 14 YEARS",
+   "origin": "device",
+   "hit": true,
+   "shot": "S182",
+   "exists": false
+  },
+  {
+   "t": 427.28,
+   "name": "lace_pull",
+   "gain_db": -12,
+   "space": "close",
+   "note": "lace",
+   "params": {
+    "n": 2
+   },
+   "origin": "v1",
+   "shot": "S182",
+   "exists": false
+  },
+  {
+   "t": 429.126,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 32 (tiny)",
+   "origin": "device",
+   "shot": "S182",
+   "exists": false
+  },
+  {
+   "t": 433.22,
+   "name": "voices_calling_far",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "far calling",
+   "params": {
+    "dur": 1.5
+   },
+   "origin": "v1",
+   "shot": "S184",
+   "exists": false
+  },
+  {
+   "t": 434.75,
+   "name": "screen_door",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "screen door slap",
+   "origin": "v1",
+   "shot": "S185",
+   "exists": false
+  },
+  {
+   "t": 435.05,
+   "name": "footsteps_gravel",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "hurrying steps",
+   "params": {
+    "dur": 2.5,
+    "n": 4
+   },
+   "origin": "v1",
+   "shot": "S185",
+   "exists": false
+  },
+  {
+   "t": 435.229,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 31 (tiny)",
+   "origin": "device",
+   "shot": "S185",
+   "exists": false
+  },
+  {
+   "t": 438.07,
+   "name": "coffee_percolator",
+   "gain_db": -12,
+   "space": "memory",
+   "note": "percolator gurgling to a stop",
+   "params": {
+    "dur": 1.2
+   },
+   "origin": "v1",
+   "shot": "S187",
+   "exists": false
+  },
+  {
+   "t": 438.7,
+   "name": "chalk_draw",
+   "gain_db": -10,
+   "space": "close",
+   "note": "chalk: CANCELED",
+   "origin": "device",
+   "shot": "S187",
+   "exists": false
+  },
+  {
+   "t": 438.95,
+   "name": "rubber_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "stamp CANCELED",
+   "origin": "device",
+   "hit": true,
+   "shot": "S187",
+   "exists": false
+  },
+  {
+   "t": 439.41,
+   "name": "bus_door",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "bus door hiss and engine idle",
+   "params": {
+    "dur": 2.5
+   },
+   "origin": "v1",
+   "shot": "S188",
+   "exists": false
+  },
+  {
+   "t": 441.332,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 30 (tiny)",
+   "origin": "device",
+   "shot": "S189",
+   "exists": false
+  },
+  {
+   "t": 443.02,
+   "name": "gate_creak",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "gate swings shut",
+   "origin": "v1",
+   "shot": "S190",
+   "exists": false
+  },
+  {
+   "t": 443.74,
+   "name": "gate_chain",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "chain pulled through",
+   "origin": "v1",
+   "shot": "S190",
+   "exists": false
+  },
+  {
+   "t": 444.62,
+   "name": "padlock",
+   "gain_db": -4,
+   "space": "memory",
+   "note": "padlock snaps",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S190",
+   "exists": false
+  },
+  {
+   "t": 445.5,
+   "name": "bell_cracked",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "bell knocks the crate side: faint note + rattle",
+   "params": {
+    "strike": "touch"
+   },
+   "origin": "v1",
+   "shot": "S191",
+   "exists": false
+  },
+  {
+   "t": 446.3,
+   "name": "crate_creak",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "lid thumps down",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S191",
+   "exists": false
+  },
+  {
+   "t": 446.33,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 446.33,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S192",
+   "exists": true
+  },
+  {
+   "t": 446.33,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 5: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 446.46,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 446.78,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 447.13,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 5 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 447.435,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 29 (tiny)",
+   "origin": "device",
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 448.3,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 4,
+    "soft": true
+   },
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 449.47,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 449.59,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S192",
+   "exists": false
+  },
+  {
+   "t": 449.8,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (map)",
+   "origin": "device",
+   "shot": "S193",
+   "exists": false
+  },
+  {
+   "t": 449.85,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram map pops in",
+   "origin": "device",
+   "shot": "S193",
+   "exists": false
+  },
+  {
+   "t": 453.41,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S194",
+   "exists": false
+  },
+  {
+   "t": 453.538,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 28 (tiny)",
+   "origin": "device",
+   "shot": "S194",
+   "exists": false
+  },
+  {
+   "t": 456.37,
+   "name": "ambience_camp_night",
+   "gain_db": -6,
+   "space": "outside",
+   "note": "night bed",
+   "params": {
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S195",
+   "exists": false
+  },
+  {
+   "t": 458.68,
+   "name": "footsteps_gravel",
+   "gain_db": -10,
+   "space": "memory",
+   "note": "bare feet running",
+   "params": {
+    "dur": 2,
+    "n": 8,
+    "wet": true
+   },
+   "origin": "v1",
+   "shot": "S196",
+   "exists": false
+  },
+  {
+   "t": 459.08,
+   "name": "kids_far",
+   "gain_db": -14,
+   "space": "memory",
+   "note": "laugh",
+   "origin": "v1",
+   "shot": "S196",
+   "exists": false
+  },
+  {
+   "t": 459.64,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 27 (tiny)",
+   "origin": "device",
+   "shot": "S196",
+   "exists": false
+  },
+  {
+   "t": 462.9,
+   "name": "padlock",
+   "gain_db": -4,
+   "space": "close",
+   "note": "Tess yanks the padlock off the hasp",
+   "hit": true,
+   "origin": "v2",
+   "shot": "S197",
+   "exists": false
+  },
+  {
+   "t": 463.0,
+   "name": "footsteps_run",
+   "gain_db": -6,
+   "space": "far",
+   "note": "Tess running, receding",
+   "params": {
+    "dur": 1.8,
+    "approach": -1
+   },
+   "origin": "v1",
+   "shot": "S197",
+   "exists": false
+  },
+  {
+   "t": 463.89,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs)",
+   "origin": "device",
+   "shot": "S199",
+   "exists": false
+  },
+  {
+   "t": 465.743,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 26 (tiny)",
+   "origin": "device",
+   "shot": "S200",
+   "exists": false
+  },
+  {
+   "t": 466.2,
+   "name": "cloth_press",
+   "gain_db": -10,
+   "space": "close",
+   "note": "satin settling (v1 466.12 -> v2 466.20: re-timed to the new picture)",
+   "params": {
+    "kind": "satin"
+   },
+   "origin": "v1",
+   "shot": "S200",
+   "exists": false
+  },
+  {
+   "t": 467.3,
+   "name": "bed_creak",
+   "gain_db": -3,
+   "space": "close",
+   "note": "mattress takes her weight (v1 466.52 -> v2 467.30: re-timed to the new picture)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S200",
+   "exists": false
+  },
+  {
+   "t": 468.68,
+   "name": "bed_creak",
+   "gain_db": -5,
+   "space": "close",
+   "note": "scoot creak",
+   "origin": "v1",
+   "shot": "S200",
+   "exists": false
+  },
+  {
+   "t": 471.846,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 25 (tiny)",
+   "origin": "device",
+   "shot": "S200",
+   "exists": false
+  },
+  {
+   "t": 473.8,
+   "name": "crowd_whisper",
+   "gain_db": -20,
+   "space": "close",
+   "note": "breathy presence",
+   "params": {
+    "dur": 1.2,
+    "density": 1
+   },
+   "origin": "v1",
+   "shot": "S202",
+   "exists": true
+  },
+  {
+   "t": 476.04,
+   "name": "bed_creak",
+   "gain_db": -10,
+   "space": "close",
+   "note": "pat 1",
+   "params": {
+    "kind": "pat"
+   },
+   "origin": "v1",
+   "shot": "S202",
+   "exists": false
+  },
+  {
+   "t": 476.36,
+   "name": "bed_creak",
+   "gain_db": -10,
+   "space": "close",
+   "note": "pat 2",
+   "params": {
+    "kind": "pat"
+   },
+   "origin": "v1",
+   "shot": "S202",
+   "exists": false
+  },
+  {
+   "t": 477.949,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 24 (tiny)",
+   "origin": "device",
+   "shot": "S202",
+   "exists": false
+  },
+  {
+   "t": 478.28,
+   "name": "stinger",
+   "gain_db": -1,
+   "space": "dry",
+   "note": "STINGER: full face 2",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S202",
+   "exists": true
+  },
+  {
+   "t": 479.24,
+   "name": "lipstick_smear",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the drawn smile tears open along the drawing (S3a)",
+   "origin": "v2",
+   "shot": "S202",
+   "exists": false
+  },
+  {
+   "t": 479.24,
+   "name": "sub_drop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "under the split",
+   "hit": true,
+   "origin": "v2",
+   "shot": "S202",
+   "exists": true
+  },
+  {
+   "t": 484.052,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 23 (tiny)",
+   "origin": "device",
+   "shot": "S204",
+   "exists": false
+  },
+  {
+   "t": 485.55,
+   "name": "cloth_grab",
+   "gain_db": -16,
+   "space": "memory",
+   "note": "sock pulled on",
+   "params": {
+    "kind": "sock"
+   },
+   "origin": "v1",
+   "shot": "S205",
+   "exists": false
+  },
+  {
+   "t": 490.154,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 22 (tiny)",
+   "origin": "device",
+   "shot": "S207",
+   "exists": false
+  },
+  {
+   "t": 493.56,
+   "name": "stinger",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "red X",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S208",
+   "exists": true
+  },
+  {
+   "t": 493.62,
+   "name": "lipstick_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "tag DON'T SIT DOWN pops in",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S208",
+   "exists": false
+  },
+  {
+   "t": 496.257,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 21 (tiny)",
+   "origin": "device",
+   "shot": "S208",
+   "exists": false
+  },
+  {
+   "t": 499.56,
+   "name": "sub_drop",
+   "gain_db": -12,
+   "space": "dry",
+   "note": "her irises turn red (S3b)",
+   "hit": true,
+   "origin": "v2",
+   "shot": "S209",
+   "exists": true
+  },
+  {
+   "t": 499.98,
+   "name": "ambience_camp_night",
+   "gain_db": -6,
+   "space": "outside",
+   "note": "night bed",
+   "params": {
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S209",
+   "exists": false
+  },
+  {
+   "t": 500.03,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S210",
+   "exists": false
+  },
+  {
+   "t": 500.13,
+   "name": "breath",
+   "gain_db": -8,
+   "space": "close",
+   "note": "Tess panting",
+   "params": {
+    "kind": "panting",
+    "dur": 1.8
+   },
+   "origin": "v1",
+   "shot": "S210",
+   "exists": true
+  },
+  {
+   "t": 502.36,
+   "name": "number_thump",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "giant 20 slams in (type beat 4)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S211",
+   "exists": false
+  },
+  {
+   "t": 502.36,
+   "name": "ring_tick",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "ring badge: Tess calls 20",
+   "origin": "device",
+   "params": {
+    "kind": "call"
+   },
+   "shot": "S211",
+   "exists": false
+  },
+  {
+   "t": 503.15,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs_break)",
+   "origin": "device",
+   "shot": "S212",
+   "exists": false
+  },
+  {
+   "t": 504.52,
+   "name": "candy_wrapper",
+   "gain_db": -6,
+   "space": "close",
+   "note": "crinkle",
+   "origin": "v1",
+   "shot": "S213",
+   "exists": false
+  },
+  {
+   "t": 507.88,
+   "name": "candy_wrapper",
+   "gain_db": -8,
+   "space": "close",
+   "note": "crushed crinkle",
+   "origin": "v1",
+   "shot": "S214",
+   "exists": false
+  },
+  {
+   "t": 507.911,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 19 (tiny)",
+   "origin": "device",
+   "shot": "S214",
+   "exists": false
+  },
+  {
+   "t": 508.19,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S215",
+   "exists": false
+  },
+  {
+   "t": 509.24,
+   "name": "crate_break",
+   "gain_db": -2,
+   "space": "close",
+   "note": "kick 1",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S216",
+   "exists": false
+  },
+  {
+   "t": 509.72,
+   "name": "crate_break",
+   "gain_db": -2,
+   "space": "close",
+   "note": "kick 2",
+   "origin": "v1",
+   "shot": "S216",
+   "exists": false
+  },
+  {
+   "t": 510.12,
+   "name": "crate_break",
+   "gain_db": 0,
+   "space": "close",
+   "note": "kick 3: slats split",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S216",
+   "exists": false
+  },
+  {
+   "t": 510.42,
+   "name": "bell_cracked",
+   "gain_db": -14,
+   "space": "close",
+   "note": "bell rolls on the boards",
+   "params": {
+    "strike": "roll"
+   },
+   "origin": "v1",
+   "shot": "S216",
+   "exists": false
+  },
+  {
+   "t": 511.47,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs)",
+   "origin": "device",
+   "shot": "S217",
+   "exists": false
+  },
+  {
+   "t": 513.39,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash cut",
+   "origin": "device",
+   "shot": "S218",
+   "exists": false
+  },
+  {
+   "t": 513.461,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 18 (tiny)",
+   "origin": "device",
+   "shot": "S218",
+   "exists": false
+  },
+  {
+   "t": 513.56,
+   "name": "bell_clean",
+   "gain_db": -2,
+   "space": "far",
+   "note": "THE FAKE: one perfect clean note, long beautiful reverb, NO rattle",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S218",
+   "exists": false
+  },
+  {
+   "t": 516.04,
+   "name": "cloth_grab",
+   "gain_db": -14,
+   "space": "close",
+   "note": "lace touched",
+   "params": {
+    "kind": "lace"
+   },
+   "origin": "v1",
+   "shot": "S219",
+   "exists": false
+  },
+  {
+   "t": 519.012,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 17 (tiny)",
+   "origin": "device",
+   "shot": "S220",
+   "exists": false
+  },
+  {
+   "t": 523.6,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D8)",
+   "origin": "device",
+   "shot": "S222",
+   "exists": false
+  },
+  {
+   "t": 523.65,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D8 pops in",
+   "origin": "device",
+   "shot": "S222",
+   "exists": false
+  },
+  {
+   "t": 523.75,
+   "name": "bell_cracked",
+   "gain_db": -8,
+   "space": "memory",
+   "note": "the clean note only (first half of the real bell)",
+   "params": {
+    "part": "note"
+   },
+   "origin": "v1",
+   "shot": "S222",
+   "exists": false
+  },
+  {
+   "t": 524.563,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 16 (tiny)",
+   "origin": "device",
+   "shot": "S222",
+   "exists": false
+  },
+  {
+   "t": 525.91,
+   "name": "bell_cracked",
+   "gain_db": -6,
+   "space": "memory",
+   "note": "the thin rattle (second half)",
+   "params": {
+    "part": "rattle"
+   },
+   "origin": "v1",
+   "shot": "S223",
+   "exists": false
+  },
+  {
+   "t": 527.9,
+   "name": "spoon_drop",
+   "gain_db": -4,
+   "space": "memory",
+   "note": "spoon clatter",
+   "origin": "v1",
+   "shot": "S225",
+   "exists": false
+  },
+  {
+   "t": 528.99,
+   "name": "bell_clean",
+   "gain_db": -10,
+   "space": "far",
+   "note": "perfect bell tail",
+   "origin": "v1",
+   "shot": "S226",
+   "exists": false
+  },
+  {
+   "t": 529.5,
+   "name": "tape_rewind",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "loop reset: rewind scrub",
+   "origin": "device",
+   "shot": "S226",
+   "exists": false
+  },
+  {
+   "t": 530.113,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 15 (tiny)",
+   "origin": "device",
+   "shot": "S226",
+   "exists": false
+  },
+  {
+   "t": 530.5,
+   "name": "chalk_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "chalk lines draw on (D8)",
+   "origin": "device",
+   "shot": "S227",
+   "exists": false
+  },
+  {
+   "t": 530.55,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D8 pops in",
+   "origin": "device",
+   "shot": "S227",
+   "exists": false
+  },
+  {
+   "t": 531.9,
+   "name": "whoosh",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "snap (v1 532.39 -> v2 531.90: re-timed to the new picture)",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S228",
+   "exists": true
+  },
+  {
+   "t": 534.68,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S229",
+   "exists": false
+  },
+  {
+   "t": 535.36,
+   "name": "bell_cracked",
+   "gain_db": 2,
+   "space": "close",
+   "note": "THE REAL BELL: clean note + thin rattle, loudest hit of the section",
+   "hit": true,
+   "params": {
+    "strike": "padlock"
+   },
+   "origin": "v1",
+   "shot": "S230",
+   "exists": false
+  },
+  {
+   "t": 535.36,
+   "name": "flash_hit",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "white flash cut (layer under the v1 hit)",
+   "origin": "device",
+   "hit": false,
+   "shot": "S230",
+   "exists": false
+  },
+  {
+   "t": 535.36,
+   "name": "impact_hit",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "impact layer",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S230",
+   "exists": true
+  },
+  {
+   "t": 535.664,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 14 (tiny)",
+   "origin": "device",
+   "shot": "S230",
+   "exists": false
+  },
+  {
+   "t": 538.15,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs_break)",
+   "origin": "device",
+   "shot": "S232",
+   "exists": false
+  },
+  {
+   "t": 538.25,
+   "name": "diagram_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "diagram D9 pops in",
+   "origin": "device",
+   "shot": "S232",
+   "exists": false
+  },
+  {
+   "t": 538.7,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash in the shot",
+   "origin": "device",
+   "shot": "S232",
+   "exists": false
+  },
+  {
+   "t": 538.7,
+   "name": "glitch",
+   "gain_db": -12,
+   "space": "dry",
+   "note": "header clock 07:00:00 (v1 540.40 -> v2 538.70: re-timed to the new picture)",
+   "params": {
+    "dur": 0.1
+   },
+   "origin": "v1",
+   "shot": "S232",
+   "exists": true
+  },
+  {
+   "t": 538.7,
+   "name": "number_thump",
+   "gain_db": -3,
+   "space": "dry",
+   "note": "type beat 5: 7:00 AM",
+   "origin": "device",
+   "hit": true,
+   "shot": "S232",
+   "exists": false
+  },
+  {
+   "t": 538.72,
+   "name": "bell_cracked",
+   "gain_db": -6,
+   "space": "close",
+   "note": "rattle tail continues",
+   "params": {
+    "part": "rattle"
+   },
+   "origin": "v1",
+   "shot": "S232",
+   "exists": false
+  },
+  {
+   "t": 539.84,
+   "name": "lace_pull",
+   "gain_db": -10,
+   "space": "close",
+   "note": "lace falls",
+   "origin": "v1",
+   "shot": "S233",
+   "exists": false
+  },
+  {
+   "t": 541.215,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 13 (tiny)",
+   "origin": "device",
+   "shot": "S234",
+   "exists": false
+  },
+  {
+   "t": 542.03,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 542.03,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S235",
+   "exists": true
+  },
+  {
+   "t": 542.03,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 6: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 542.16,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 542.48,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 542.83,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 6 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 543.92,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 4,
+    "soft": true
+   },
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 544.95,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 545.07,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S235",
+   "exists": false
+  },
+  {
+   "t": 545.4,
+   "name": "lipstick_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "tag HIM FIRST pops in",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S236",
+   "exists": false
+  },
+  {
+   "t": 545.52,
+   "name": "footsteps_wood_inside",
+   "gain_db": -6,
+   "space": "inside",
+   "note": "stumbling steps",
+   "params": {
+    "n": 3
+   },
+   "origin": "v1",
+   "shot": "S236",
+   "exists": true
+  },
+  {
+   "t": 545.52,
+   "name": "whoosh",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "shove",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S236",
+   "exists": true
+  },
+  {
+   "t": 546.23,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (ours)",
+   "origin": "device",
+   "shot": "S237",
+   "exists": false
+  },
+  {
+   "t": 546.25,
+   "name": "footsteps_run",
+   "gain_db": -8,
+   "space": "outside",
+   "note": "Tess sprinting back across the path",
+   "params": {
+    "dur": 0.5
+   },
+   "origin": "v2",
+   "shot": "S237",
+   "exists": false
+  },
+  {
+   "t": 546.765,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 12 (tiny)",
+   "origin": "device",
+   "shot": "S238",
+   "exists": false
+  },
+  {
+   "t": 548.4,
+   "name": "bare_foot_step",
+   "gain_db": -6,
+   "space": "close",
+   "note": "bare foot on dusty boards",
+   "origin": "v1",
+   "shot": "S238",
+   "exists": false
+  },
+  {
+   "t": 549.04,
+   "name": "sub_drop",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "pressure",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S238",
+   "exists": true
+  },
+  {
+   "t": 550.4,
+   "name": "wood_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the wall creaks and shudders",
+   "origin": "v1",
+   "shot": "S238",
+   "exists": false
+  },
+  {
+   "t": 551.3,
+   "name": "breath",
+   "gain_db": -8,
+   "space": "close",
+   "note": "Tess panting",
+   "params": {
+    "kind": "panting",
+    "dur": 1.8
+   },
+   "origin": "v1",
+   "shot": "S239",
+   "exists": true
+  },
+  {
+   "t": 551.86,
+   "name": "cloth_grab",
+   "gain_db": -2,
+   "space": "close",
+   "note": "grab",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S239",
+   "exists": false
+  },
+  {
+   "t": 552.316,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 11 (tiny)",
+   "origin": "device",
+   "shot": "S239",
+   "exists": false
+  },
+  {
+   "t": 553.62,
+   "name": "impact_hit",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "hit",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S239",
+   "exists": true
+  },
+  {
+   "t": 555.7,
+   "name": "tape_peel",
+   "gain_db": -4,
+   "space": "close",
+   "note": "tape slipping off in one go",
+   "origin": "v1",
+   "shot": "S240",
+   "exists": false
+  },
+  {
+   "t": 557.867,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 10 (tiny)",
+   "origin": "device",
+   "shot": "S241",
+   "exists": false
+  },
+  {
+   "t": 559.24,
+   "name": "body_fall",
+   "gain_db": -2,
+   "space": "close",
+   "note": "two bodies hit the floor",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S241",
+   "exists": false
+  },
+  {
+   "t": 559.6,
+   "name": "cloth_press",
+   "gain_db": -6,
+   "space": "close",
+   "note": "cotton stretching, seams creaking",
+   "params": {
+    "kind": "stretch",
+    "dur": 1.5
+   },
+   "origin": "v1",
+   "shot": "S242",
+   "exists": false
+  },
+  {
+   "t": 563.3,
+   "name": "glitch",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "tiny crack in the room tone",
+   "params": {
+    "dur": 0.1,
+    "amount": 0.3
+   },
+   "origin": "v1",
+   "shot": "S244",
+   "exists": true
+  },
+  {
+   "t": 563.417,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 9 (tiny)",
+   "origin": "device",
+   "shot": "S244",
+   "exists": false
+  },
+  {
+   "t": 568.968,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 8 (tiny)",
+   "origin": "device",
+   "shot": "S246",
+   "exists": false
+  },
+  {
+   "t": 569.85,
+   "name": "breath",
+   "gain_db": -10,
+   "space": "close",
+   "note": "his shaky breath",
+   "params": {
+    "kind": "nervous",
+    "dur": 2
+   },
+   "origin": "v1",
+   "shot": "S247",
+   "exists": true
+  },
+  {
+   "t": 573.54,
+   "name": "wood_thud",
+   "gain_db": 0,
+   "space": "close",
+   "note": "shoulder into the bunk + bunk rattle",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S249",
+   "exists": false
+  },
+  {
+   "t": 574.519,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 7 (tiny)",
+   "origin": "device",
+   "shot": "S250",
+   "exists": false
+  },
+  {
+   "t": 576.25,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (theirs_break)",
+   "origin": "device",
+   "shot": "S251",
+   "exists": false
+  },
+  {
+   "t": 576.98,
+   "name": "crowd_whisper",
+   "gain_db": -10,
+   "space": "mirror",
+   "note": "a reverberant breath shaped like a name (no words)",
+   "params": {
+    "dur": 1.4,
+    "density": 1
+   },
+   "origin": "v1",
+   "shot": "S251",
+   "exists": true
+  },
+  {
+   "t": 578.73,
+   "name": "glint_whoosh",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "side switch: glass glint (climax)",
+   "origin": "device",
+   "shot": "S253",
+   "exists": false
+  },
+  {
+   "t": 579.46,
+   "name": "cloth_grab",
+   "gain_db": -6,
+   "space": "close",
+   "note": "hands slap over ears",
+   "origin": "v1",
+   "shot": "S253",
+   "exists": false
+  },
+  {
+   "t": 580.069,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 6 (tiny)",
+   "origin": "device",
+   "shot": "S253",
+   "exists": false
+  },
+  {
+   "t": 585.62,
+   "name": "number_thump",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "giant 5 slams in (type beat 4)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S257",
+   "exists": false
+  },
+  {
+   "t": 585.62,
+   "name": "ring_tick",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "ring badge: Tess calls 5",
+   "origin": "device",
+   "params": {
+    "kind": "call"
+   },
+   "shot": "S257",
+   "exists": false
+  },
+  {
+   "t": 587.25,
+   "name": "mirror_handle",
+   "gain_db": -10,
+   "space": "close",
+   "note": "hand on the frame",
+   "params": {
+    "kind": "bump"
+   },
+   "origin": "v1",
+   "shot": "S258",
+   "exists": false
+  },
+  {
+   "t": 588.45,
+   "name": "bare_foot_step",
+   "gain_db": -6,
+   "space": "mirror",
+   "note": "her bare foot on tread 8 (just before the silence)",
+   "origin": "v2",
+   "shot": "S258",
+   "exists": false
+  },
+  {
+   "t": 589.65,
+   "name": "impact_hit",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "hit on \"Wait\" after the silence",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S258",
+   "exists": true
+  },
+  {
+   "t": 589.65,
+   "name": "pixel_glitch",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "S4: Noah's face glitches inside the void",
+   "origin": "device",
+   "shot": "S258",
+   "exists": false
+  },
+  {
+   "t": 590.29,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 4 (tiny)",
+   "origin": "device",
+   "shot": "S258",
+   "exists": false
+  },
+  {
+   "t": 593.96,
+   "name": "glitch",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "glitch cut",
+   "origin": "device",
+   "params": {
+    "dur": 0.08,
+    "amount": 0.7
+   },
+   "shot": "S260",
+   "exists": true
+  },
+  {
+   "t": 594.93,
+   "name": "ui_pop",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "tag",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S260",
+   "exists": true
+  },
+  {
+   "t": 594.96,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 3 (tiny)",
+   "origin": "device",
+   "shot": "S260",
+   "exists": false
+  },
+  {
+   "t": 595.09,
+   "name": "whoosh",
+   "gain_db": -6,
+   "space": "dry",
+   "note": "turn",
+   "params": {
+    "kind": "soft"
+   },
+   "origin": "v1",
+   "shot": "S260",
+   "exists": true
+  },
+  {
+   "t": 599.63,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 2 (tiny)",
+   "origin": "device",
+   "shot": "S261",
+   "exists": false
+  },
+  {
+   "t": 601.01,
+   "name": "jacket_cloth",
+   "gain_db": -10,
+   "space": "close",
+   "note": "jacket swish",
+   "origin": "v1",
+   "shot": "S262",
+   "exists": false
+  },
+  {
+   "t": 604.3,
+   "name": "ring_tick",
+   "gain_db": -20,
+   "space": "dry",
+   "note": "ring badge step 1 (tiny)",
+   "origin": "device",
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 605.21,
+   "name": "braam",
+   "gain_db": 0,
+   "space": "dry",
+   "note": "braam",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S264",
+   "exists": true
+  },
+  {
+   "t": 605.21,
+   "name": "impact_hit",
+   "gain_db": 2,
+   "space": "dry",
+   "note": "THE BIGGEST HIT OF THE FILM (mix momentary max +10 LU)",
+   "hit": true,
+   "params": {
+    "size": 1.5
+   },
+   "origin": "v1",
+   "shot": "S264",
+   "exists": true
+  },
+  {
+   "t": 605.31,
+   "name": "bare_foot_step",
+   "gain_db": -8,
+   "space": "mirror",
+   "note": "wet foot settling on the step",
+   "origin": "v1",
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 608.97,
+   "name": "cloth_grab",
+   "gain_db": 0,
+   "space": "close",
+   "note": "collar grabbed",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 608.97,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash in the shot",
+   "origin": "device",
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 608.97,
+   "name": "number_thump",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "giant 0 slams in (type beat 4)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 608.97,
+   "name": "ring_tick",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "ring badge: Tess calls 0",
+   "origin": "device",
+   "params": {
+    "kind": "call"
+   },
+   "shot": "S264",
+   "exists": false
+  },
+  {
+   "t": 609.48,
+   "name": "glass_resonance",
+   "gain_db": -2,
+   "space": "close",
+   "note": "card lands: the pane rings, the riser peaks here",
+   "origin": "device",
+   "hit": true,
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 609.48,
+   "name": "glitch",
+   "gain_db": -4,
+   "space": "dry",
+   "note": "card in: 2-frame static",
+   "origin": "device",
+   "params": {
+    "dur": 0.12,
+    "amount": 0.8
+   },
+   "shot": "S265",
+   "exists": true
+  },
+  {
+   "t": 609.48,
+   "name": "towel_whip",
+   "gain_db": -4,
+   "space": "close",
+   "note": "card 7: the towel whips up off the mirror card",
+   "origin": "device",
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 609.53,
+   "name": "whoosh",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "yank",
+   "params": {
+    "kind": "hard"
+   },
+   "origin": "v1",
+   "shot": "S265",
+   "exists": true
+  },
+  {
+   "t": 609.61,
+   "name": "glass_thud",
+   "gain_db": -6,
+   "space": "close",
+   "note": "the mirror card settles (4 % overshoot)",
+   "origin": "device",
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 609.93,
+   "name": "lipstick_draw",
+   "gain_db": -6,
+   "space": "close",
+   "note": "RULE written in lipstick by the bullet tip (0.35 s)",
+   "origin": "device",
+   "params": {
+    "strokes": 4
+   },
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 610.28,
+   "name": "lipstick_stamp",
+   "gain_db": -3,
+   "space": "close",
+   "note": "the numeral 7 stamps in (+3-5 LU over the surround)",
+   "origin": "device",
+   "hit": true,
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 611.61,
+   "name": "glass_wipe",
+   "gain_db": -14,
+   "space": "close",
+   "note": "statement written on (soft grease-pencil squeaks per word)",
+   "origin": "device",
+   "params": {
+    "n": 8,
+    "soft": true
+   },
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 614.44,
+   "name": "lipstick_draw",
+   "gain_db": -8,
+   "space": "close",
+   "note": "the command underline swipe in lipstick",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 614.56,
+   "name": "glass_wipe",
+   "gain_db": -5,
+   "space": "close",
+   "note": "finger-wipe exit smear (carried 0.2 s over the next shot)",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S265",
+   "exists": false
+  },
+  {
+   "t": 614.71,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash cut",
+   "origin": "device",
+   "shot": "S266",
+   "exists": false
+  },
+  {
+   "t": 614.9,
+   "name": "body_fall",
+   "gain_db": 0,
+   "space": "close",
+   "note": "you land on the boards (v1 615.13 -> v2 614.90: re-timed to the new picture)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S266",
+   "exists": false
+  },
+  {
+   "t": 616.73,
+   "name": "towel_cloth",
+   "gain_db": -3,
+   "space": "close",
+   "note": "towel shoved",
+   "params": {
+    "kind": "snatch"
+   },
+   "origin": "v1",
+   "shot": "S267",
+   "exists": false
+  },
+  {
+   "t": 618.73,
+   "name": "glass_wipe",
+   "gain_db": 0,
+   "space": "close",
+   "note": "wipe 1",
+   "origin": "v1",
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 618.75,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 1 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 619.37,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 2 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 619.37,
+   "name": "glass_wipe",
+   "gain_db": 0,
+   "space": "close",
+   "note": "wipe 2",
+   "origin": "v1",
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 619.4,
+   "name": "ui_pop",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "tag (v1 619.37 -> v2 619.40: re-timed to the new picture)",
+   "origin": "v1",
+   "shot": "S268",
+   "exists": true
+  },
+  {
+   "t": 619.69,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 3 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 619.69,
+   "name": "glass_wipe",
+   "gain_db": -1,
+   "space": "close",
+   "note": "wipe 3",
+   "origin": "v1",
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 620.15,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 4 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 620.3,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 5 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 620.45,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 6 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 620.6,
+   "name": "diagram_pop",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "numeral 7 ticks off",
+   "origin": "device",
+   "params": {
+    "kind": "tick_off"
+   },
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 620.89,
+   "name": "glass_wipe",
+   "gain_db": -3,
+   "space": "close",
+   "note": "slow squeak",
+   "origin": "v1",
+   "shot": "S268",
+   "exists": false
+  },
+  {
+   "t": 622.89,
+   "name": "cloth_press",
+   "gain_db": -10,
+   "space": "mirror",
+   "note": "satin",
+   "params": {
+    "kind": "satin"
+   },
+   "origin": "v1",
+   "shot": "S269",
+   "exists": false
+  },
+  {
+   "t": 625.65,
+   "name": "tinnitus",
+   "gain_db": -16,
+   "space": "dry",
+   "note": "held tone",
+   "params": {
+    "dur": 1.3
+   },
+   "origin": "v1",
+   "shot": "S270",
+   "exists": true
+  },
+  {
+   "t": 628.18,
+   "name": "glass_resonance",
+   "gain_db": -4,
+   "space": "close",
+   "note": "glass thump and cut-off",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S271",
+   "exists": false
+  },
+  {
+   "t": 628.18,
+   "name": "sub_drop",
+   "gain_db": 0,
+   "space": "dry",
+   "note": "the glass goes dark",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S271",
+   "exists": true
+  },
+  {
+   "t": 628.99,
+   "name": "ambience_camp_night",
+   "gain_db": -14,
+   "space": "outside",
+   "note": "crickets through the walls",
+   "params": {
+    "dur": 4
+   },
+   "origin": "v1",
+   "shot": "S272",
+   "exists": false
+  },
+  {
+   "t": 628.99,
+   "name": "room_tone",
+   "gain_db": -8,
+   "space": "inside",
+   "note": "cabin tone, crickets outside again",
+   "params": {
+    "dur": 4
+   },
+   "origin": "v1",
+   "shot": "S272",
+   "exists": true
+  },
+  {
+   "t": 634.5,
+   "name": "jacket_cloth",
+   "gain_db": -5,
+   "space": "close",
+   "note": "jacket off and around",
+   "origin": "v1",
+   "shot": "S273",
+   "exists": false
+  },
+  {
+   "t": 638.82,
+   "name": "clock_tick",
+   "gain_db": -10,
+   "space": "inside",
+   "note": "ticking forward",
+   "params": {
+    "dur": 1.4
+   },
+   "origin": "v1",
+   "shot": "S273",
+   "exists": true
+  },
+  {
+   "t": 649.47,
+   "name": "candy_wrapper",
+   "gain_db": -8,
+   "space": "close",
+   "note": "crinkle as the hand opens",
+   "origin": "v1",
+   "shot": "S277",
+   "exists": false
+  },
+  {
+   "t": 653.36,
+   "name": "candy_wrapper",
+   "gain_db": -14,
+   "space": "close",
+   "note": "candy rolls in the palm",
+   "origin": "v1",
+   "shot": "S278",
+   "exists": false
+  },
+  {
+   "t": 653.82,
+   "name": "phone_ring",
+   "gain_db": -8,
+   "space": "phone",
+   "note": "one ring-back",
+   "params": {
+    "kind": "ringback",
+    "n": 1
+   },
+   "origin": "v1",
+   "shot": "S278",
+   "exists": true
+  },
+  {
+   "t": 655.2,
+   "name": "phone_pickup",
+   "gain_db": -6,
+   "space": "phone",
+   "note": "pickup click",
+   "origin": "v1",
+   "shot": "S280",
+   "exists": true
+  },
+  {
+   "t": 665.68,
+   "name": "chair_scrape",
+   "gain_db": -4,
+   "space": "phone",
+   "note": "her chair scrapes back (through the phone)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S284",
+   "exists": false
+  },
+  {
+   "t": 674.43,
+   "name": "phone_handle",
+   "gain_db": -6,
+   "space": "close",
+   "note": "phone lifted off the wood",
+   "params": {
+    "kind": "pick_up"
+   },
+   "origin": "v1",
+   "shot": "S288",
+   "exists": false
+  },
+  {
+   "t": 677.39,
+   "name": "stinger",
+   "gain_db": -5,
+   "space": "dry",
+   "note": "red X",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S288",
+   "exists": true
+  },
+  {
+   "t": 677.45,
+   "name": "lipstick_draw",
+   "gain_db": -12,
+   "space": "close",
+   "note": "tag FACE UP pops in",
+   "origin": "device",
+   "params": {
+    "strokes": 1
+   },
+   "shot": "S288",
+   "exists": false
+  },
+  {
+   "t": 677.69,
+   "name": "glitch",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "montage tile cut",
+   "params": {
+    "dur": 0.04,
+    "amount": 0.4
+   },
+   "origin": "v2",
+   "shot": "S288",
+   "exists": true
+  },
+  {
+   "t": 678.04,
+   "name": "glitch",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "montage tile cut",
+   "params": {
+    "dur": 0.04,
+    "amount": 0.4
+   },
+   "origin": "v2",
+   "shot": "S288",
+   "exists": true
+  },
+  {
+   "t": 678.39,
+   "name": "glitch",
+   "gain_db": -14,
+   "space": "dry",
+   "note": "montage tile cut",
+   "params": {
+    "dur": 0.04,
+    "amount": 0.4
+   },
+   "origin": "v2",
+   "shot": "S288",
+   "exists": true
+  },
+  {
+   "t": 679.15,
+   "name": "glass_wipe",
+   "gain_db": -6,
+   "space": "close",
+   "note": "sleeve on glass",
+   "params": {
+    "sleeve": true
+   },
+   "origin": "v1",
+   "shot": "S289",
+   "exists": false
+  },
+  {
+   "t": 685.31,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 1 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 685.31,
+   "name": "glass_resonance",
+   "gain_db": -12,
+   "space": "close",
+   "note": "faint glass hum (v1 685.79 -> v2 685.31: re-timed to the new picture)",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 685.43,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 2 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 685.55,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 3 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 685.67,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 4 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 686.45,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 5 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 686.57,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 6 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 686.69,
+   "name": "diagram_pop",
+   "gain_db": -18,
+   "space": "dry",
+   "note": "numeral 7 pops",
+   "origin": "device",
+   "params": {
+    "kind": "pop"
+   },
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 690.19,
+   "name": "flash_hit",
+   "gain_db": -8,
+   "space": "dry",
+   "note": "white flash in the shot",
+   "origin": "device",
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 690.19,
+   "name": "glass_resonance",
+   "gain_db": -6,
+   "space": "close",
+   "note": "ring",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 690.19,
+   "name": "nail_click_glass",
+   "gain_db": 0,
+   "space": "close",
+   "note": "THE SAME click sample as 143.29",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 690.3,
+   "name": "ui_pop",
+   "gain_db": -10,
+   "space": "dry",
+   "note": "label CLEAN GLASS pops in",
+   "origin": "device",
+   "shot": "S292",
+   "exists": true
+  },
+  {
+   "t": 694.3,
+   "name": "bare_foot_step",
+   "gain_db": -16,
+   "space": "phone",
+   "note": "the tiny figure in the phone climbs one step",
+   "origin": "v2",
+   "shot": "S292",
+   "exists": false
+  },
+  {
+   "t": 696.91,
+   "name": "braam",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "final braam",
+   "hit": true,
+   "params": {
+    "key": "d"
+   },
+   "origin": "v1",
+   "shot": "S294",
+   "exists": true
+  },
+  {
+   "t": 696.91,
+   "name": "stinger",
+   "gain_db": 0,
+   "space": "dry",
+   "note": "final stinger",
+   "hit": true,
+   "origin": "v1",
+   "shot": "S294",
+   "exists": true
+  },
+  {
+   "t": 697.95,
+   "name": "pixel_glitch",
+   "gain_db": -2,
+   "space": "dry",
+   "note": "pixel-sort: Noah's face into hers",
+   "origin": "device",
+   "hit": true,
+   "shot": "S294",
+   "exists": false
+  },
+  {
+   "t": 698.88,
+   "name": "bell_clean",
+   "gain_db": -14,
+   "space": "far",
+   "note": "in the black: one faint, perfect, wrong bell note (the queen's bell); decays to nothing",
+   "origin": "v1",
+   "shot": "S295",
+   "exists": false
+  }
+ ],
+ "beds": [
+  {
+   "t0": 0.0,
+   "t1": 9.99,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 9.99
+  },
+  {
+   "t0": 9.99,
+   "t1": 11.2,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 1.21
+  },
+  {
+   "t0": 11.2,
+   "t1": 11.88,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 0.68
+  },
+  {
+   "t0": 11.88,
+   "t1": 12.79,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 0.91
+  },
+  {
+   "t0": 12.79,
+   "t1": 16.06,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_gate",
+   "dur": 3.27
+  },
+  {
+   "t0": 16.06,
+   "t1": 19.26,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 3.2
+  },
+  {
+   "t0": 19.26,
+   "t1": 36.62,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_gate",
+   "dur": 17.36
+  },
+  {
+   "t0": 36.62,
+   "t1": 40.38,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 3.76
+  },
+  {
+   "t0": 40.38,
+   "t1": 50.78,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_gate",
+   "dur": 10.4
+  },
+  {
+   "t0": 50.78,
+   "t1": 53.3,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 2.52
+  },
+  {
+   "t0": 53.3,
+   "t1": 54.46,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_path",
+   "dur": 1.16
+  },
+  {
+   "t0": 54.46,
+   "t1": 64.79,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 10.33
+  },
+  {
+   "t0": 64.79,
+   "t1": 67.59,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 2.8
+  },
+  {
+   "t0": 67.59,
+   "t1": 71.51,
+   "beds": ["ambience_camp_night", "tv_through_wall"],
+   "set": "caretaker",
+   "dur": 3.92
+  },
+  {
+   "t0": 71.51,
+   "t1": 77.51,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 6.0
+  },
+  {
+   "t0": 77.51,
+   "t1": 88.7,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 11.19
+  },
+  {
+   "t0": 88.7,
+   "t1": 93.5,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 4.8
+  },
+  {
+   "t0": 93.5,
+   "t1": 106.86,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 13.36
+  },
+  {
+   "t0": 106.86,
+   "t1": 121.1,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 14.24
+  },
+  {
+   "t0": 121.1,
+   "t1": 125.36,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 4.26
+  },
+  {
+   "t0": 125.36,
+   "t1": 127.6,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 2.24
+  },
+  {
+   "t0": 127.6,
+   "t1": 129.8,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_gate",
+   "dur": 2.2
+  },
+  {
+   "t0": 129.8,
+   "t1": 133.56,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 3.76
+  },
+  {
+   "t0": 133.56,
+   "t1": 137.12,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 3.56
+  },
+  {
+   "t0": 137.12,
+   "t1": 145.12,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 8.0
+  },
+  {
+   "t0": 145.12,
+   "t1": 146.31,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 1.19
+  },
+  {
+   "t0": 146.31,
+   "t1": 155.99,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 9.68
+  },
+  {
+   "t0": 155.99,
+   "t1": 174.07,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 18.08
+  },
+  {
+   "t0": 174.07,
+   "t1": 180.15,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 6.08
+  },
+  {
+   "t0": 180.15,
+   "t1": 182.63,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 2.48
+  },
+  {
+   "t0": 182.63,
+   "t1": 184.3,
+   "beds": ["ambience_mirror", "ambience_dawn(through glass -16 dB)"],
+   "set": "mirror",
+   "dur": 1.67
+  },
+  {
+   "t0": 184.3,
+   "t1": 188.38,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 4.08
+  },
+  {
+   "t0": 188.38,
+   "t1": 195.0,
+   "beds": ["ambience_mirror", "ambience_dawn(through glass -16 dB)"],
+   "set": "mirror",
+   "dur": 6.62
+  },
+  {
+   "t0": 195.0,
+   "t1": 196.38,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 1.38
+  },
+  {
+   "t0": 196.38,
+   "t1": 203.53,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 7.15
+  },
+  {
+   "t0": 203.53,
+   "t1": 208.32,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 4.79
+  },
+  {
+   "t0": 208.32,
+   "t1": 210.05,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 1.73
+  },
+  {
+   "t0": 210.05,
+   "t1": 218.13,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 8.08
+  },
+  {
+   "t0": 218.13,
+   "t1": 222.13,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 4.0
+  },
+  {
+   "t0": 222.13,
+   "t1": 224.6,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 2.47
+  },
+  {
+   "t0": 224.6,
+   "t1": 228.0,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 3.4
+  },
+  {
+   "t0": 228.0,
+   "t1": 229.92,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 1.92
+  },
+  {
+   "t0": 229.92,
+   "t1": 234.8,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 4.88
+  },
+  {
+   "t0": 234.8,
+   "t1": 237.84,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 3.04
+  },
+  {
+   "t0": 237.84,
+   "t1": 238.96,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 1.12
+  },
+  {
+   "t0": 238.96,
+   "t1": 240.48,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 1.52
+  },
+  {
+   "t0": 240.48,
+   "t1": 245.26,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 4.78
+  },
+  {
+   "t0": 245.26,
+   "t1": 249.1,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 3.84
+  },
+  {
+   "t0": 249.1,
+   "t1": 252.3,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 3.2
+  },
+  {
+   "t0": 252.3,
+   "t1": 256.87,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 4.57
+  },
+  {
+   "t0": 256.87,
+   "t1": 263.92,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 7.05
+  },
+  {
+   "t0": 263.92,
+   "t1": 269.24,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 5.32
+  },
+  {
+   "t0": 269.24,
+   "t1": 273.35,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 4.11
+  },
+  {
+   "t0": 273.35,
+   "t1": 289.74,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 16.39
+  },
+  {
+   "t0": 289.74,
+   "t1": 300.78,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 11.04
+  },
+  {
+   "t0": 300.78,
+   "t1": 305.94,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 5.16
+  },
+  {
+   "t0": 305.94,
+   "t1": 326.68,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 20.74
+  },
+  {
+   "t0": 326.68,
+   "t1": 331.8,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 5.12
+  },
+  {
+   "t0": 331.8,
+   "t1": 342.82,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 11.02
+  },
+  {
+   "t0": 342.82,
+   "t1": 345.06,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 2.24
+  },
+  {
+   "t0": 345.06,
+   "t1": 349.62,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 4.56
+  },
+  {
+   "t0": 349.62,
+   "t1": 350.38,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 0.76
+  },
+  {
+   "t0": 350.38,
+   "t1": 353.53,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 3.15
+  },
+  {
+   "t0": 353.53,
+   "t1": 376.18,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 22.65
+  },
+  {
+   "t0": 376.18,
+   "t1": 380.74,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 4.56
+  },
+  {
+   "t0": 380.74,
+   "t1": 398.96,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 18.22
+  },
+  {
+   "t0": 398.96,
+   "t1": 414.3,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 15.34
+  },
+  {
+   "t0": 414.3,
+   "t1": 433.04,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 18.74
+  },
+  {
+   "t0": 433.04,
+   "t1": 446.33,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 13.29
+  },
+  {
+   "t0": 446.33,
+   "t1": 449.74,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 3.41
+  },
+  {
+   "t0": 449.74,
+   "t1": 453.41,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 3.67
+  },
+  {
+   "t0": 453.41,
+   "t1": 456.37,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 2.96
+  },
+  {
+   "t0": 456.37,
+   "t1": 458.61,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 2.24
+  },
+  {
+   "t0": 458.61,
+   "t1": 461.71,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 3.1
+  },
+  {
+   "t0": 461.71,
+   "t1": 463.03,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 1.32
+  },
+  {
+   "t0": 463.03,
+   "t1": 463.89,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_path",
+   "dur": 0.86
+  },
+  {
+   "t0": 463.89,
+   "t1": 485.33,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 21.44
+  },
+  {
+   "t0": 485.33,
+   "t1": 487.87,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 2.54
+  },
+  {
+   "t0": 487.87,
+   "t1": 500.03,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 12.16
+  },
+  {
+   "t0": 500.03,
+   "t1": 503.15,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 3.12
+  },
+  {
+   "t0": 503.15,
+   "t1": 508.19,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 5.04
+  },
+  {
+   "t0": 508.19,
+   "t1": 511.47,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 3.28
+  },
+  {
+   "t0": 511.47,
+   "t1": 519.9,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 8.43
+  },
+  {
+   "t0": 519.9,
+   "t1": 528.86,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 8.96
+  },
+  {
+   "t0": 528.86,
+   "t1": 534.68,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum"],
+   "set": "cabin_dawn",
+   "dur": 5.82
+  },
+  {
+   "t0": 534.68,
+   "t1": 538.15,
+   "beds": ["ambience_camp_night", "wind_chimes"],
+   "set": "mess_porch",
+   "dur": 3.47
+  },
+  {
+   "t0": 538.15,
+   "t1": 542.03,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum", "ambience_dawn detunes and stutters"],
+   "set": "cabin_dawn",
+   "dur": 3.88
+  },
+  {
+   "t0": 542.03,
+   "t1": 545.22,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 3.19
+  },
+  {
+   "t0": 545.22,
+   "t1": 546.23,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 1.01
+  },
+  {
+   "t0": 546.23,
+   "t1": 546.73,
+   "beds": ["ambience_camp_night"],
+   "set": "camp_path",
+   "dur": 0.5
+  },
+  {
+   "t0": 546.73,
+   "t1": 551.29,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 4.56
+  },
+  {
+   "t0": 551.29,
+   "t1": 565.13,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 13.84
+  },
+  {
+   "t0": 565.13,
+   "t1": 567.77,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 2.64
+  },
+  {
+   "t0": 567.77,
+   "t1": 576.25,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 8.48
+  },
+  {
+   "t0": 576.25,
+   "t1": 578.73,
+   "beds": ["ambience_dawn(loop 19.48 s)", "lantern_hum", "ambience_dawn detunes and stutters"],
+   "set": "cabin_dawn",
+   "dur": 2.48
+  },
+  {
+   "t0": 578.73,
+   "t1": 584.41,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 5.68
+  },
+  {
+   "t0": 584.41,
+   "t1": 595.56,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 11.15
+  },
+  {
+   "t0": 595.56,
+   "t1": 599.72,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 4.16
+  },
+  {
+   "t0": 599.72,
+   "t1": 609.48,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "stairs",
+   "dur": 9.76
+  },
+  {
+   "t0": 609.48,
+   "t1": 614.71,
+   "beds": ["card_dip"],
+   "set": "rule_mirror",
+   "dur": 5.23
+  },
+  {
+   "t0": 614.71,
+   "t1": 618.4,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)", "ambience_dawn(through the doorway -14 dB)"],
+   "set": "cabin_now",
+   "dur": 3.69
+  },
+  {
+   "t0": 618.4,
+   "t1": 628.55,
+   "beds": ["ambience_mirror", "room_tone(-6 dB)"],
+   "set": "mirror",
+   "dur": 10.15
+  },
+  {
+   "t0": 628.55,
+   "t1": 629.05,
+   "beds": [],
+   "set": "black",
+   "dur": 0.5
+  },
+  {
+   "t0": 629.05,
+   "t1": 669.75,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 40.7
+  },
+  {
+   "t0": 669.75,
+   "t1": 673.06,
+   "beds": ["ambience_memory(filtered: LP 5 kHz, tape wow)"],
+   "set": "memory",
+   "dur": 3.31
+  },
+  {
+   "t0": 673.06,
+   "t1": 698.62,
+   "beds": ["room_tone", "ambience_camp_night(muffled -10 dB, LP 2 kHz)"],
+   "set": "cabin_now",
+   "dur": 25.56
+  },
+  {
+   "t0": 698.62,
+   "t1": 700.0,
+   "beds": [],
+   "set": "black",
+   "dur": 1.38
+  }
+ ],
+ "music": {
+  "sections": [
+   {
+    "id": "M1",
+    "t0": 0.0,
+    "t1": 19.18,
+    "mood": "cold glassy dread, one huge hit, then grief",
+    "key": "D minor (D-A drone, Eb rub)",
+    "intensity": "6 -> 9 -> 4",
+    "source": "new Epidemic \"dark drone\" in D if downloaded, else in_continuum_dream_cave (D) low section",
+    "layers": "sub drone, music-box bell motif (D5-F5-E5-A4), WIPE THE GLASS hit + braam",
+    "notes": "bed dips 6 dB under the premise lines 5-6; the hit at 3.92 is one of the three loudest bed moments of the film"
+   },
+   {
+    "id": "M2",
+    "t0": 19.18,
+    "t1": 54.34,
+    "mood": "night, nostalgic, uneasy",
+    "key": "D",
+    "intensity": "3 -> 4",
+    "source": "tefu_sayuri_hayashi_egnell (D), quiet sections",
+    "layers": "low strings swell under the time card, music-box motif on the memory inserts",
+    "notes": "quietest stretch; no pulse"
+   },
+   {
+    "id": "M3",
+    "t0": 54.34,
+    "t1": 88.66,
+    "mood": "sneaking; warm memory flickers",
+    "key": "D",
+    "intensity": "4 -> 5 -> 3.5",
+    "source": "tefu continues; score.py music-box over the towel memories",
+    "layers": "soft tick pulse while sneaking past the caretaker (67.5-71.4), memory pads",
+    "notes": "the real cracked bell is planted at 65.92 in a memory"
+   },
+   {
+    "id": "M4",
+    "t0": 88.66,
+    "t1": 129.8,
+    "mood": "creeping build to the eighth step, then the rule hook",
+    "key": "D",
+    "intensity": "5 -> 8 -> 8.5",
+    "source": "in_continuum_dream_cave (D) rising sections",
+    "layers": "silence 117.6 -> hit 118.87, punch-in hits, a 7 s riser into the rule 1 card",
+    "notes": "two 13 s swells: 104-117 and 121-130"
+   },
+   {
+    "id": "M5",
+    "t0": 129.8,
+    "t1": 203.53,
+    "mood": "discovery inside the glass; the queen's first turn",
+    "key": "D / B",
+    "intensity": "6 -> 9",
+    "source": "a_massive_mist_ethan_sloan (B) mid sections for the old-cabin reflection; drones return for the stairs",
+    "layers": "warm detuned pad for the too-normal reflection (154-174), silence before the voice (181.6), grief dip for the voicemail (186-196), silence + hit on the head turn (198.15)",
+    "notes": "riser into the rule 2 card"
+   },
+   {
+    "id": "M6",
+    "t0": 203.53,
+    "t1": 269.24,
+    "mood": "the hand, the wish, \"You have it\", the doorway",
+    "key": "Bb over D pedal",
+    "intensity": "7 -> 9 -> 6",
+    "source": "dark_forebodings_ethan_sloan (A#) for 211-260; drop to drones for the doorway",
+    "layers": "grief dip 218-237, silence 247 -> \"You have it\" hit, stinger on the fingers, braam on the doorway",
+    "notes": "do not layer the D drone under the A# track; crossfade at 210.9 and 260.4"
+   },
+   {
+    "id": "M7",
+    "t0": 269.24,
+    "t1": 350.38,
+    "mood": "the queen's face; stepping into the too-normal dawn",
+    "key": "D -> warm modal",
+    "intensity": "8.5 -> 9.5 -> 3 -> 8.5",
+    "source": "drones + stinger for 269-290; then score.py: music-box + warm detuned pad + soft strings (the dawn world has no horror track)",
+    "layers": "pulse_on at the face (283.8), pulse off at the step-through, stopped-time tinnitus on the hanging drop, swell into 45",
+    "notes": "the dawn side must sound still and clean: no low rumble, no wind"
+   },
+   {
+    "id": "M8",
+    "t0": 350.38,
+    "t1": 446.33,
+    "mood": "the loop; grief; the morning he vanished",
+    "key": "D minor",
+    "intensity": "8.5 -> 5 -> 4 -> 5.5",
+    "source": "tefu (D) + score.py piano and strings; memory pads for 398.9-446",
+    "layers": "hit on the face flash (367.8), silence 397.3, memory swell, riser into rule 5",
+    "notes": "the quietest bed of the film is the memory stretch (-18 LU); never fully silent"
+   },
+   {
+    "id": "M9",
+    "t0": 446.33,
+    "t1": 542.03,
+    "mood": "urgency, temptation, the fake bell, the real bell",
+    "key": "Bb / D",
+    "intensity": "8 -> 4.5 -> 10",
+    "source": "from_hell_christoffer_moe_ditlevsen (A#) for 449-478 and 499-535; score.py only for the temptation (481-499)",
+    "layers": "low pulse in, temptation dip to -18 LU, fake bell in a cleared space, the deepest silence (533.2-534.95), REAL BELL hit",
+    "notes": "the fake bell must be the most beautiful sound in the film; the real bell the ugliest"
+   },
+   {
+    "id": "M10",
+    "t0": 542.03,
+    "t1": 609.48,
+    "mood": "climax: escape, aging, the shoe, the foot below yours",
+    "key": "D",
+    "intensity": "9 -> 10",
+    "source": "from_hell peak sections, then new Epidemic \"horror tension build\" if downloaded",
+    "layers": "climax pulse, silence 588.6 -> \"Wait\" hit, thin bed at 595-600 (memory), biggest hit at 605.21",
+    "notes": "loudest minute of the bed except the very end"
+   },
+   {
+    "id": "M11",
+    "t0": 609.48,
+    "t1": 628.94,
+    "mood": "wipe the glass",
+    "key": "D",
+    "intensity": "9.5 -> 10 -> out",
+    "source": "dark_tunnels_ethan_sloan (F) high section or drones",
+    "layers": "riser into rule 7, wipes, silence while the foot hangs, sub drop when the glass goes dark, then near silence",
+    "notes": ""
+   },
+   {
+    "id": "M12",
+    "t0": 628.94,
+    "t1": 700.0,
+    "mood": "relief and grief, then the phone",
+    "key": "D major-ish -> D minor",
+    "intensity": "2.5 -> 5 -> 10 -> 0",
+    "source": "new Epidemic \"emotional strings piano\" if downloaded, else score.py strings + piano",
+    "layers": "warm swell on \"Hi, Mom\", a true pause (661.6), final riser from 677.4, final stinger 696.9, hard out at 698.62",
+    "notes": "after black: one faint perfect bell note"
+   }
+  ],
+  "intensity": [[0, 0.6],
+   [3.9, 0.9],
+   [5.4, 0.7],
+   [8.1, 0.6],
+   [12.7, 0.4],
+   [19.2, 0.35],
+   [30, 0.3],
+   [43, 0.35],
+   [54.3, 0.4],
+   [63, 0.45],
+   [67.5, 0.45],
+   [71.4, 0.5],
+   [75.8, 0.35],
+   [88.7, 0.5],
+   [100, 0.55],
+   [117.3, 0.6],
+   [118.9, 0.8],
+   [121, 0.7],
+   [125, 0.75],
+   [129.8, 0.85],
+   [133.6, 0.6],
+   [141, 0.65],
+   [143.3, 0.8],
+   [148.2, 0.8],
+   [154.2, 0.6],
+   [163.6, 0.7],
+   [174, 0.6],
+   [180, 0.7],
+   [182.8, 0.8],
+   [186.3, 0.45],
+   [196.3, 0.65],
+   [198.15, 0.9],
+   [203.5, 0.9],
+   [208.3, 0.7],
+   [211.5, 0.75],
+   [218, 0.5],
+   [229.8, 0.55],
+   [237.7, 0.65],
+   [245.2, 0.7],
+   [248.4, 0.9],
+   [252.2, 0.9],
+   [256.9, 0.8],
+   [260.4, 0.8],
+   [263.9, 0.6],
+   [269.2, 0.85],
+   [273.4, 0.7],
+   [279, 0.8],
+   [283.8, 0.95],
+   [287.4, 0.7],
+   [289.9, 0.6],
+   [290.6, 0.3],
+   [305.7, 0.45],
+   [315, 0.55],
+   [320, 0.4],
+   [331.7, 0.5],
+   [334.9, 0.7],
+   [338.7, 0.7],
+   [345, 0.75],
+   [349.9, 0.85],
+   [350.4, 0.85],
+   [353.5, 0.75],
+   [358.4, 0.85],
+   [366.6, 0.8],
+   [367.8, 0.9],
+   [371, 0.5],
+   [382, 0.55],
+   [386.6, 0.6],
+   [394.5, 0.7],
+   [397.1, 0.75],
+   [398.9, 0.4],
+   [411.3, 0.35],
+   [414.3, 0.55],
+   [419.5, 0.65],
+   [424.7, 0.5],
+   [433, 0.4],
+   [445, 0.55],
+   [446.3, 0.8],
+   [449.7, 0.75],
+   [462.6, 0.75],
+   [464.5, 0.8],
+   [477.9, 0.9],
+   [481.4, 0.5],
+   [488, 0.45],
+   [499.9, 0.7],
+   [502.4, 0.85],
+   [508, 0.8],
+   [511.4, 0.85],
+   [518.2, 0.7],
+   [528.8, 0.8],
+   [531.5, 0.9],
+   [533.7, 0.95],
+   [535.4, 1.0],
+   [539.2, 0.8],
+   [542, 0.9],
+   [545.2, 0.9],
+   [551.3, 0.9],
+   [557.3, 0.95],
+   [565, 0.85],
+   [572, 0.9],
+   [576.2, 0.9],
+   [585.6, 1.0],
+   [589.6, 1.0],
+   [594, 0.9],
+   [596, 0.75],
+   [602.4, 0.9],
+   [605.2, 1.0],
+   [607.3, 1.0],
+   [609.5, 0.95],
+   [614.7, 0.9],
+   [621.8, 0.9],
+   [625.5, 0.95],
+   [628.2, 1.0],
+   [628.9, 0.25],
+   [641.9, 0.35],
+   [653.7, 0.4],
+   [660.9, 0.5],
+   [661.4, 0.2],
+   [666.8, 0.35],
+   [673, 0.5],
+   [677.4, 0.65],
+   [685, 0.7],
+   [689.4, 0.8],
+   [690.2, 0.9],
+   [696.8, 0.95],
+   [697.2, 1.0],
+   [698.62, 0.0],
+   [700.0, 0.0]],
+  "events": [
+   {
+    "t": 0.0,
+    "type": "drone",
+    "level": 0.55,
+    "note": "D drone with Eb rub fades up from 0",
+    "shot": "S001"
+   },
+   {
+    "t": 0.3,
+    "type": "motif",
+    "level": 0.4,
+    "len": 4,
+    "note": "music-box: the bell motif D-F-E-A, detuned",
+    "shot": "S001"
+   },
+   {
+    "t": 3.4,
+    "type": "silence",
+    "level": 0.0,
+    "len": 0.45,
+    "note": "bed out 0.45 s before the hit",
+    "shot": "S003"
+   },
+   {
+    "t": 3.9,
+    "type": "swell",
+    "level": 0.9,
+    "len": 3.9,
+    "note": "auto: intensity rise 6.0 -> 9.0",
+    "shot": "S004"
+   },
+   {
+    "t": 3.92,
+    "type": "hit",
+    "level": 1.0,
+    "shot": "S004"
+   },
+   {
+    "t": 12.76,
+    "type": "dip",
+    "level": 0.3,
+    "len": 5.5,
+    "note": "bed dips under the premise line",
+    "shot": "S010"
+   },
+   {
+    "t": 13.06,
+    "type": "motif",
+    "level": 0.45,
+    "len": 5,
+    "note": "music-box bell motif, slow",
+    "shot": "S011"
+   },
+   {
+    "t": 19.15,
+    "type": "swell",
+    "level": 0.45,
+    "len": 6,
+    "note": "low strings in under the card",
+    "shot": "S012"
+   },
+   {
+    "t": 34.14,
+    "type": "motif",
+    "level": 0.4,
+    "len": 3,
+    "note": "music-box motif warm",
+    "shot": "S019"
+   },
+   {
+    "t": 45.75,
+    "type": "swell",
+    "level": 0.36,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S024"
+   },
+   {
+    "t": 65.92,
+    "type": "swell",
+    "level": 0.45,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S034"
+   },
+   {
+    "t": 89.27,
+    "type": "braam",
+    "level": 0.45,
+    "note": "soft low braam on the reveal",
+    "shot": "S044"
+   },
+   {
+    "t": 89.27,
+    "type": "swell",
+    "level": 0.5,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S044"
+   },
+   {
+    "t": 117.62,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "bed out under \"Then a fresh red line\", ends in the hit",
+    "shot": "S054"
+   },
+   {
+    "t": 118.87,
+    "type": "hit",
+    "level": 0.9,
+    "shot": "S054"
+   },
+   {
+    "t": 118.9,
+    "type": "swell",
+    "level": 0.8,
+    "len": 1.6,
+    "note": "auto: intensity rise 6.0 -> 8.0",
+    "shot": "S054"
+   },
+   {
+    "t": 122.87,
+    "type": "hit",
+    "level": 0.8,
+    "shot": "S057"
+   },
+   {
+    "t": 122.97,
+    "type": "riser",
+    "level": 0.5,
+    "len": 7.0,
+    "note": "long slow rise toward rule 1 begins (peaks on the card)",
+    "shot": "S057"
+   },
+   {
+    "t": 129.8,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S061"
+   },
+   {
+    "t": 129.8,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S061"
+   },
+   {
+    "t": 129.8,
+    "type": "swell",
+    "level": 0.85,
+    "len": 8.8,
+    "note": "auto: intensity rise 7.0 -> 8.5",
+    "shot": "S061"
+   },
+   {
+    "t": 130.4,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S061"
+   },
+   {
+    "t": 142.09,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.15,
+    "note": "bed out 1.2 s, ends in the click",
+    "shot": "S064"
+   },
+   {
+    "t": 143.29,
+    "type": "stinger",
+    "level": 0.6,
+    "shot": "S065"
+   },
+   {
+    "t": 148.2,
+    "type": "swell",
+    "level": 0.8,
+    "len": 14.6,
+    "note": "auto: intensity rise 6.0 -> 8.0",
+    "shot": "S068"
+   },
+   {
+    "t": 148.88,
+    "type": "braam",
+    "level": 0.7,
+    "shot": "S069"
+   },
+   {
+    "t": 155.36,
+    "type": "swell",
+    "level": 0.45,
+    "len": 6,
+    "note": "warm detuned pad: the too-normal world",
+    "shot": "S070"
+   },
+   {
+    "t": 164.32,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence; the first wet print ends it",
+    "shot": "S072"
+   },
+   {
+    "t": 181.58,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "bed out before the boy's voice",
+    "shot": "S076"
+   },
+   {
+    "t": 182.8,
+    "type": "swell",
+    "level": 0.8,
+    "len": 8.8,
+    "note": "auto: intensity rise 6.0 -> 8.0",
+    "shot": "S077"
+   },
+   {
+    "t": 197.0,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.15,
+    "note": "silence before the turn (REF rule 11)",
+    "shot": "S082"
+   },
+   {
+    "t": 198.15,
+    "type": "hit",
+    "level": 1.0,
+    "shot": "S083"
+   },
+   {
+    "t": 203.1,
+    "type": "braam",
+    "level": 0.8,
+    "shot": "S085"
+   },
+   {
+    "t": 203.5,
+    "type": "swell",
+    "level": 0.9,
+    "len": 7.2,
+    "note": "auto: intensity rise 6.5 -> 9.0",
+    "shot": "S085"
+   },
+   {
+    "t": 203.53,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S086"
+   },
+   {
+    "t": 203.53,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S086"
+   },
+   {
+    "t": 204.13,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S086"
+   },
+   {
+    "t": 221.42,
+    "type": "swell",
+    "level": 0.51,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S092"
+   },
+   {
+    "t": 238.17,
+    "type": "swell",
+    "level": 0.65,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S100"
+   },
+   {
+    "t": 246.99,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.4,
+    "note": "silence into \"You have it\"",
+    "shot": "S104"
+   },
+   {
+    "t": 248.39,
+    "type": "hit",
+    "level": 0.9,
+    "shot": "S105"
+   },
+   {
+    "t": 252.2,
+    "type": "swell",
+    "level": 0.9,
+    "len": 14.5,
+    "note": "auto: intensity rise 6.5 -> 9.0",
+    "shot": "S106"
+   },
+   {
+    "t": 253.83,
+    "type": "stinger",
+    "level": 0.85,
+    "shot": "S107"
+   },
+   {
+    "t": 255.72,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.15,
+    "note": "silence; ends in the drop",
+    "shot": "S107"
+   },
+   {
+    "t": 261.03,
+    "type": "braam",
+    "level": 0.8,
+    "shot": "S109"
+   },
+   {
+    "t": 269.2,
+    "type": "swell",
+    "level": 0.85,
+    "len": 5.3,
+    "note": "auto: intensity rise 6.0 -> 8.5",
+    "shot": "S111"
+   },
+   {
+    "t": 269.24,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S112"
+   },
+   {
+    "t": 269.24,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S112"
+   },
+   {
+    "t": 269.84,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S112"
+   },
+   {
+    "t": 281.69,
+    "type": "stinger",
+    "level": 0.6,
+    "shot": "S116"
+   },
+   {
+    "t": 282.56,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence before the face",
+    "shot": "S117"
+   },
+   {
+    "t": 283.77,
+    "type": "stinger",
+    "level": 1.0,
+    "shot": "S117"
+   },
+   {
+    "t": 283.8,
+    "type": "swell",
+    "level": 0.95,
+    "len": 10.4,
+    "note": "auto: intensity rise 7.0 -> 9.5",
+    "shot": "S117"
+   },
+   {
+    "t": 283.87,
+    "type": "pulse_on",
+    "level": 0.4,
+    "note": "slow heartbeat pulse starts",
+    "shot": "S117"
+   },
+   {
+    "t": 290.6,
+    "type": "swell",
+    "level": 0.35,
+    "len": 8,
+    "note": "too-normal pad: warm, detuned, unpulsed",
+    "shot": "S120"
+   },
+   {
+    "t": 290.6,
+    "type": "pulse_off",
+    "level": 0.0,
+    "shot": "S120"
+   },
+   {
+    "t": 306.11,
+    "type": "motif",
+    "level": 0.5,
+    "len": 5,
+    "note": "music-box motif: Noah",
+    "shot": "S128"
+   },
+   {
+    "t": 313.25,
+    "type": "swell",
+    "level": 0.53,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on mid-gap",
+    "shot": "S132"
+   },
+   {
+    "t": 326.6,
+    "type": "motif",
+    "level": 0.45,
+    "len": 4,
+    "note": "music-box motif, tender",
+    "shot": "S136"
+   },
+   {
+    "t": 335.89,
+    "type": "stinger",
+    "level": 0.45,
+    "shot": "S138"
+   },
+   {
+    "t": 335.89,
+    "type": "swell",
+    "level": 0.7,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S138"
+   },
+   {
+    "t": 341.53,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "time stopped: music out, only the thin tone",
+    "shot": "S139"
+   },
+   {
+    "t": 350.38,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S145"
+   },
+   {
+    "t": 350.38,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S145"
+   },
+   {
+    "t": 350.4,
+    "type": "swell",
+    "level": 0.85,
+    "len": 15.5,
+    "note": "auto: intensity rise 7.0 -> 8.5",
+    "shot": "S145"
+   },
+   {
+    "t": 350.98,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S145"
+   },
+   {
+    "t": 357.23,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence into the jerk",
+    "shot": "S146"
+   },
+   {
+    "t": 367.79,
+    "type": "hit",
+    "level": 0.85,
+    "shot": "S152"
+   },
+   {
+    "t": 367.79,
+    "type": "swell",
+    "level": 0.9,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S152"
+   },
+   {
+    "t": 389.69,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence under her promise; only the whisper",
+    "shot": "S164"
+   },
+   {
+    "t": 397.1,
+    "type": "swell",
+    "level": 0.75,
+    "len": 15.1,
+    "note": "auto: intensity rise 5.5 -> 7.5",
+    "shot": "S167"
+   },
+   {
+    "t": 397.51,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence, ends on the cut into the memory",
+    "shot": "S168"
+   },
+   {
+    "t": 398.86,
+    "type": "swell",
+    "level": 0.4,
+    "len": 8,
+    "note": "memory pad, bleached",
+    "shot": "S168"
+   },
+   {
+    "t": 411.33,
+    "type": "motif",
+    "level": 0.4,
+    "len": 3,
+    "note": "music-box motif, warm",
+    "shot": "S175"
+   },
+   {
+    "t": 419.5,
+    "type": "swell",
+    "level": 0.65,
+    "len": 8.2,
+    "note": "auto: intensity rise 3.5 -> 6.5",
+    "shot": "S179"
+   },
+   {
+    "t": 422.89,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence: the loop sinks in",
+    "shot": "S181"
+   },
+   {
+    "t": 446.3,
+    "type": "swell",
+    "level": 0.8,
+    "len": 13.3,
+    "note": "auto: intensity rise 4.0 -> 8.0",
+    "shot": "S191"
+   },
+   {
+    "t": 446.33,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S192"
+   },
+   {
+    "t": 446.33,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S192"
+   },
+   {
+    "t": 446.93,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S192"
+   },
+   {
+    "t": 449.74,
+    "type": "pulse_on",
+    "level": 0.5,
+    "note": "urgency pulse in (slow, low)",
+    "shot": "S193"
+   },
+   {
+    "t": 465.32,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.2,
+    "note": "silence; ends on her weight in the mattress",
+    "shot": "S200"
+   },
+   {
+    "t": 466.52,
+    "type": "braam",
+    "level": 0.6,
+    "shot": "S200"
+   },
+   {
+    "t": 466.52,
+    "type": "swell",
+    "level": 0.82,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S200"
+   },
+   {
+    "t": 477.9,
+    "type": "swell",
+    "level": 0.9,
+    "len": 15.3,
+    "note": "auto: intensity rise 7.5 -> 9.0",
+    "shot": "S202"
+   },
+   {
+    "t": 478.28,
+    "type": "stinger",
+    "level": 0.95,
+    "shot": "S202"
+   },
+   {
+    "t": 478.28,
+    "type": "pulse_off",
+    "level": 0.0,
+    "shot": "S202"
+   },
+   {
+    "t": 481.43,
+    "type": "dip",
+    "level": 0.2,
+    "len": 18,
+    "note": "temptation: bed drops to about -18 LU, no pulse, music-box only",
+    "shot": "S203"
+   },
+   {
+    "t": 485.25,
+    "type": "motif",
+    "level": 0.4,
+    "len": 3,
+    "shot": "S204"
+   },
+   {
+    "t": 502.4,
+    "type": "swell",
+    "level": 0.85,
+    "len": 14.4,
+    "note": "auto: intensity rise 4.5 -> 8.5",
+    "shot": "S211"
+   },
+   {
+    "t": 512.96,
+    "type": "silence",
+    "level": 0.0,
+    "len": 0.6,
+    "note": "clear space for the bell",
+    "shot": "S217"
+   },
+   {
+    "t": 513.56,
+    "type": "swell",
+    "level": 0.5,
+    "len": 4,
+    "shot": "S218"
+   },
+   {
+    "t": 533.18,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.75,
+    "note": "the deepest silence so far; ends on the real bell hit",
+    "shot": "S228"
+   },
+   {
+    "t": 535.36,
+    "type": "hit",
+    "level": 1.0,
+    "shot": "S230"
+   },
+   {
+    "t": 535.4,
+    "type": "swell",
+    "level": 1.0,
+    "len": 6.6,
+    "note": "auto: intensity rise 8.0 -> 10.0",
+    "shot": "S230"
+   },
+   {
+    "t": 542.03,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S235"
+   },
+   {
+    "t": 542.03,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S235"
+   },
+   {
+    "t": 542.63,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S235"
+   },
+   {
+    "t": 545.42,
+    "type": "pulse_on",
+    "level": 0.7,
+    "note": "climax pulse",
+    "shot": "S236"
+   },
+   {
+    "t": 559.24,
+    "type": "swell",
+    "level": 0.92,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S241"
+   },
+   {
+    "t": 565.62,
+    "type": "sub_drop",
+    "level": 0.6,
+    "note": "the drone drops an octave with his voice",
+    "shot": "S245"
+   },
+   {
+    "t": 585.56,
+    "type": "swell",
+    "level": 1.0,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on a hit",
+    "shot": "S257"
+   },
+   {
+    "t": 588.6,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.0,
+    "note": "silence before \"Wait\"",
+    "shot": "S258"
+   },
+   {
+    "t": 589.65,
+    "type": "hit",
+    "level": 0.9,
+    "shot": "S258"
+   },
+   {
+    "t": 595.46,
+    "type": "dip",
+    "level": 0.25,
+    "len": 4,
+    "note": "time stretches: the bed thins",
+    "shot": "S260"
+   },
+   {
+    "t": 603.91,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.3,
+    "note": "silence into the biggest hit",
+    "shot": "S264"
+   },
+   {
+    "t": 605.21,
+    "type": "hit",
+    "level": 1.0,
+    "shot": "S264"
+   },
+   {
+    "t": 607.3,
+    "type": "swell",
+    "level": 1.0,
+    "len": 11.3,
+    "note": "auto: intensity rise 7.5 -> 10.0",
+    "shot": "S264"
+   },
+   {
+    "t": 609.48,
+    "type": "riser",
+    "level": 0.9,
+    "len": 5.0,
+    "note": "ends ON the card (+13 LU over 5 s, peak at voice level)",
+    "shot": "S265"
+   },
+   {
+    "t": 609.48,
+    "type": "rule",
+    "level": 0.95,
+    "note": "rule sting",
+    "shot": "S265"
+   },
+   {
+    "t": 610.08,
+    "type": "swell",
+    "level": 0.6,
+    "len": 4.5,
+    "note": "decay under the card",
+    "shot": "S265"
+   },
+   {
+    "t": 625.86,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.3,
+    "note": "silence while the foot hangs",
+    "shot": "S270"
+   },
+   {
+    "t": 628.18,
+    "type": "hit",
+    "level": 0.9,
+    "shot": "S271"
+   },
+   {
+    "t": 628.7,
+    "type": "silence",
+    "level": 0.0,
+    "len": 0.6,
+    "note": "out to near silence; room tone only",
+    "shot": "S272"
+   },
+   {
+    "t": 628.94,
+    "type": "swell",
+    "level": 0.3,
+    "len": 10,
+    "note": "ending theme: low strings and piano, unpulsed, D",
+    "shot": "S272"
+   },
+   {
+    "t": 644.94,
+    "type": "swell",
+    "level": 0.36,
+    "len": 13.0,
+    "note": "breathing swell (+12 LU over 13 s) peaking on mid-gap",
+    "shot": "S277"
+   },
+   {
+    "t": 660.94,
+    "type": "swell",
+    "level": 0.55,
+    "len": 3,
+    "note": "the one warm swell",
+    "shot": "S283"
+   },
+   {
+    "t": 661.64,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.3,
+    "note": "a true pause: music out, room tone only",
+    "shot": "S283"
+   },
+   {
+    "t": 677.39,
+    "type": "riser",
+    "level": 0.6,
+    "len": 8,
+    "note": "the last rise begins (peaks at 697)",
+    "shot": "S288"
+   },
+   {
+    "t": 688.05,
+    "type": "silence",
+    "level": 0.0,
+    "len": 1.8,
+    "note": "silence into the click",
+    "shot": "S292"
+   },
+   {
+    "t": 690.19,
+    "type": "stinger",
+    "level": 0.8,
+    "shot": "S292"
+   },
+   {
+    "t": 696.91,
+    "type": "stinger",
+    "level": 1.0,
+    "shot": "S294"
+   },
+   {
+    "t": 697.2,
+    "type": "swell",
+    "level": 1.0,
+    "len": 12.2,
+    "note": "auto: intensity rise 7.0 -> 10.0",
+    "shot": "S294"
+   },
+   {
+    "t": 698.62,
+    "type": "end",
+    "level": 0.0,
+    "note": "everything out except the hit tails and the faint bell",
+    "shot": "S295"
+   }
+  ],
+  "note": "sections, intensity and events are v1's (the music map in audio/cues.py is unchanged); events re-homed to v2 shots"
+ },
+ "voice_fx": {
+  "68": {
+   "fx": "below",
+   "how": "Noah below the stairs: low-pass 3.5 kHz, dark short reverb 0.8 s, -2 dB",
+   "line": "Did they ring it yet?"
+  },
+  "97": {
+   "fx": "queen",
+   "how": "dry close + an octave-down whisper double at -18 dB + glass reverb 1.2 s",
+   "line": "You have it."
+  },
+  "110": {
+   "fx": "queen",
+   "how": "as 97",
+   "line": "There's time for both of you."
+  },
+  "196": {
+   "fx": "queen",
+   "how": "as 97",
+   "line": "I can put you back the way he remembers you,"
+  },
+  "137": {
+   "fx": "far",
+   "how": "Tess through the doorway: low-pass 5 kHz, room 0.5 s, -3 dB",
+   "line": "Forty-five."
+  },
+  "206": {
+   "fx": "far_outside",
+   "how": "Tess on the porch: exterior slap, -3 dB",
+   "line": "Twenty!"
+  },
+  "246": {
+   "fx": "far",
+   "how": "as 137",
+   "line": "Five!"
+  },
+  "249": {
+   "fx": "queen_child",
+   "how": "Noah's voice from her mouth: the queen glass reverb + whisper double, no pitch change",
+   "line": "Wait, he forgot his shoe."
+  },
+  "279": {
+   "fx": "phone",
+   "how": "lines.py fx=phone",
+   "line": "Did you find the sweatshirt?"
+  },
+  "299": {
+   "fx": "phone_child",
+   "how": "phone band-pass 300-3400 Hz + the queen glass reverb + slight bit crush (lines.py fx=phone)",
+   "line": "Can I have one more minute?"
+  }
+ },
+ "epidemic_wishlist": {
+  "note": "The owner offered to download Epidemic files for this film into film/_work/samples/epidemic/{sfx,music}. These are the searches that would lift the sound most; everything has a fallback (free library or synthesis).",
+  "sfx": [
+   {
+    "names": "nail_click_glass, glass_tap",
+    "search": "fingernail tap on glass / mirror, single"
+   },
+   {
+    "names": "lipstick_draw, lipstick_smear",
+    "search": "marker or crayon squeak on glass; finger rubbing glass"
+   },
+   {
+    "names": "glass_wipe",
+    "search": "cloth wiping window glass, squeaky strokes"
+   },
+   {
+    "names": "bell_clean, bell_cracked",
+    "search": "hand bell / school bell single ring (2-3 different), brass bell hit with metal"
+   },
+   {
+    "names": "bell_cracked",
+    "search": "spoon dropped on a table (the rattle layer)"
+   },
+   {
+    "names": "sprinkler_spit",
+    "search": "lawn sprinkler, impact sprinkler start and stop"
+   },
+   {
+    "names": "water_drip, drop_reverse",
+    "search": "water drips on fabric / towel, single drops"
+   },
+   {
+    "names": "wet_footstep, bare_foot_step",
+    "search": "wet barefoot footsteps on wood; wet sneaker squelch"
+   },
+   {
+    "names": "towel_cloth, towel_drop",
+    "search": "towel flap, cloth throw, cloth drop on floor"
+   },
+   {
+    "names": "candy_wrapper",
+    "search": "candy wrapper cellophane crinkle"
+   },
+   {
+    "names": "crate_break, crate_creak",
+    "search": "wooden crate break / kick apart, wood splinter"
+   },
+   {
+    "names": "padlock, gate_chain, gate_creak",
+    "search": "padlock open, chain pulled through metal gate, chain-link fence rattle, metal gate creak"
+   },
+   {
+    "names": "bed_creak",
+    "search": "bunk bed creak, mattress springs sit down"
+   },
+   {
+    "names": "body_fall, wood_thud",
+    "search": "body fall on wooden floor; shoulder hit on wooden bed frame"
+   },
+   {
+    "names": "tape_peel",
+    "search": "tape peel, medical tape"
+   },
+   {
+    "names": "flashlight_click",
+    "search": "flashlight switch on/off"
+   },
+   {
+    "names": "phone_message",
+    "search": "phone text message notification"
+   },
+   {
+    "names": "screen_door",
+    "search": "screen door open and slam with spring"
+   },
+   {
+    "names": "chair_scrape",
+    "search": "chair scrape on floor"
+   },
+   {
+    "names": "coffee_percolator, kitchen_far",
+    "search": "coffee percolator; distant kitchen ambience"
+   },
+   {
+    "names": "footsteps_gravel, footsteps_run",
+    "search": "footsteps on gravel path walking and running"
+   },
+   {
+    "names": "ambience_camp_night",
+    "search": "forest night ambience with crickets and frogs near a lake (2-3 min)"
+   },
+   {
+    "names": "ambience_dawn",
+    "search": "dawn birds / morning chorus, summer, calm (1-2 min)"
+   },
+   {
+    "names": "ambience_memory",
+    "search": "summer camp / lake morning ambience with distant kids"
+   },
+   {
+    "names": "kids_far, voices_calling_far",
+    "search": "kids laughing distant; people calling out searching in a forest (no clear words)"
+   },
+   {
+    "names": "bus_door",
+    "search": "school bus door open and close"
+   },
+   {
+    "names": "chalk_draw",
+    "search": "chalk on board"
+   },
+   {
+    "names": "diagram_pop",
+    "search": "S soft click + chalk tick"
+   },
+   {
+    "names": "flash_hit",
+    "search": "camera flash whoosh short"
+   },
+   {
+    "names": "glass_thud",
+    "search": "glass pane set down"
+   },
+   {
+    "names": "glint_whoosh",
+    "search": "glass shimmer whoosh short"
+   },
+   {
+    "names": "highlighter_squeak",
+    "search": "marker on paper squeak"
+   },
+   {
+    "names": "lipstick_stamp",
+    "search": "stamp soft impact"
+   },
+   {
+    "names": "number_thump",
+    "search": "ui impact low"
+   },
+   {
+    "names": "pixel_glitch",
+    "search": "digital glitch"
+   },
+   {
+    "names": "ring_tick",
+    "search": "S tiny wood tick; existing countdown_tick layer"
+   },
+   {
+    "names": "rubber_stamp",
+    "search": "rubber stamp"
+   },
+   {
+    "names": "tape_rewind",
+    "search": "tape rewind short"
+   },
+   {
+    "names": "towel_whip",
+    "search": "cloth whip / towel snap"
+   }
+  ],
+  "music": [
+   {
+    "sections": "M1, M4, M5",
+    "search": "dark ambient horror drone, unpulsed, D minor or A minor (2 tracks, 2-3 min)"
+   },
+   {
+    "sections": "M7, M8",
+    "search": "eerie innocent / nostalgic memory: music box or celesta lullaby, warm but detuned (1-2 tracks)"
+   },
+   {
+    "sections": "M8, M12",
+    "search": "sad piano with low strings, slow, D minor (grief)"
+   },
+   {
+    "sections": "M9, M10",
+    "search": "horror tension build with slow pulse and risers, climaxing (2-3 min)"
+   },
+   {
+    "sections": "M12",
+    "search": "emotional strings and piano, reunion / bittersweet, D (1 track)"
+   },
+   {
+    "sections": "all",
+    "search": "a few horror stingers, braams and risers with long tails (the new film needs ~60 hits)"
+   }
+  ]
+ },
+ "stats": {
+  "cues": 581,
+  "per_min": 49.8,
+  "hit_cues": 96,
+  "hits": 83,
+  "hits_per_min": 7.1,
+  "rises": 44,
+  "rises_per_min": 3.77,
+  "rise_len_median": 10.2,
+  "one_shots_per_min": 48.4,
+  "silences": 23,
+  "silences_per_min": 1.97,
+  "silence_len_median": 1.2,
+  "risers": 9,
+  "names_used": 92,
+  "new_names_used": 69,
+  "new_v2_names_used": 13,
+  "from_v1": 288,
+  "from_v2_shots": 32,
+  "from_devices": 261
+ }
+}
