@@ -2128,7 +2128,7 @@ def puffs(k=1.0, per=3.2):
     return fx
 
 
-def mitts(c='#e87aa4'):
+def mitts(c=ST.IC_LINA_MITTEN):                  # Lina's yellow mittens (the same pair that ends up on his string)
     """Lina's mittens on her hands (L134-L173)."""
     def fx(pen, t, a):
         s = a.height * 0.034
@@ -2164,7 +2164,7 @@ def cone_fx(part='hand_r', s=1.0, t_gone=None):
     return fx
 
 
-def held_mitten(part, c='#e87aa4', t0=-99.0, t1=None):
+def held_mitten(part, c=ST.IC_LINA_MITTEN, t0=-99.0, t1=None):
     """One of Lina's mittens on his leg tip / in a hand (the pluck, L243)."""
     def fx(pen, t, a):
         if t < t0 or (t1 is not None and t >= t1): return
@@ -2266,7 +2266,7 @@ def sill_cone(sp, at='sill_out'):
     return plane_layer(sp, at, lambda pen, t: _cone_screen(pen, x, y - 1.7 * k, k, t), 'sill_cone', front=-0.01)
 
 
-def nest_blanket(ids=('adam', 'lina'), c='#3b3150', c2='#56496e', empty=0.0):
+def nest_blanket(ids=('adam', 'lina'), c='#3b3150', c2='#56496e', empty=0.0, t_in=None, under=()):
     """acts: ONE blanket over the kids on the couch (L135+): a quilt laid over them from the chest to the knees, drawn in
     front of their figures and following their bodies (breathing, leaning); empty > 0 keeps a hollow on the right where
     Lina slept (L173: the blanket beside me is cold)."""
@@ -2275,6 +2275,7 @@ def nest_blanket(ids=('adam', 'lina'), c='#3b3150', c2='#56496e', empty=0.0):
         if not who: return []
         lays = [sh.I[k]['layer'] for k in sh.I if k in who or any(k in ALIAS.get(w, ()) for w in who)]
         def draw(pen, t):
+            if t_in is not None and t < t_in: return       # wrapped on at t_in (Adam's hands arrive)
             pts = []
             for k in who:
                 a = A[k]
@@ -2304,6 +2305,12 @@ def nest_blanket(ids=('adam', 'lina'), c='#3b3150', c2='#56496e', empty=0.0):
         if getattr(l0, 'ref_depth', None) is not None: lay.ref_depth = l0.ref_depth   # same design space as the figures
         o_ = [l_.order for l_ in lays]
         lay.order = lambda t: min((o(t) if callable(o) else o) for o in o_) - 0.02
+        uo = [sh.I[k]['layer'].order for k in under if k in sh.I]
+        if uo:                                              # stay behind these nearer figures (Adam kneeling in front)
+            ov = lambda o, t: o(t) if callable(o) else o
+            lay.order = lambda t: 0.5 * (min(ov(o, t) for o in o_) + max(ov(o, t) for o in uo))
+            ud = [sh.I[k]['layer'] for k in under if k in sh.I]
+            lay.depth = lambda t: 0.5 * (dd(t) + 0.01 + max(ov(l_.depth, t) for l_ in ud))
         return [lay]
     return acts
 
@@ -2810,9 +2817,9 @@ def _mitten_screen(pen, x, y, s, rot):
     cv = pen.cv
     cv.save(); cv.translate(x, y); cv.rotate(rot)
     m = rrect(-s, -1.2 * s, 2 * s, 2.4 * s, s * 0.9)
-    pen.fill(m, '#e87aa4'); pen.line(m, max(1.0, s * 0.06), '#1a1418')
+    pen.fill(m, ST.IC_LINA_MITTEN); pen.line(m, max(1.0, s * 0.06), '#1a1418')
     th = rrect(-1.45 * s, -0.4 * s, 0.7 * s, 1.0 * s, 0.35 * s)
-    pen.fill(th, '#e87aa4'); pen.line(th, max(1.0, s * 0.06), '#1a1418')
+    pen.fill(th, ST.IC_LINA_MITTEN); pen.line(th, max(1.0, s * 0.06), '#1a1418')
     pen.fill(rrect(-1.05 * s, 0.9 * s, 2.1 * s, 0.55 * s, 0.2 * s), '#f4f0f2'); pen.line(rrect(-1.05 * s, 0.9 * s, 2.1 * s, 0.55 * s, 0.2 * s), max(1.0, s * 0.05), '#1a1418')
     cv.restore()
 
@@ -2956,13 +2963,13 @@ def plan_rule4(F):
       cold=True, c=Z(1.0, 0.02), sfx=[(T(224) + 0.2, 'scuttle', -2, 0, 'outside', dict(surface='truck'))])
     # 227 I rip my foot out of the boot and run.  228 One sock.  229 Lina in my arms.
     S(T(227), 'street', 'truck', st=dict(STO, props=[('boot', -1.25, -7.15)]),
-      ppl=[kid('adam_sock', (-1.25, -7.1, FOOT), id='adam', path=[(T(227) + 0.3, (-1.25, -7.1, FOOT)), (E(227) + 0.8, (-2.4, -4.2, FOOT))], run=True, surface='snow',
+      ppl=[kid('adam_sock', (-1.25, -7.1, FOOT), id='adam', path=[(T(227) + 0.3, (-1.25, -7.1, FOOT)), (E(227) + 0.8, (-4.4, -6.7, FOOT))], run=True, surface='snow',
                expr='terrified_call', carry=dict(who='lina', t0=-9.0, expr='fear'))],
       cold=True, c=Z(1.2, 0.02, 940, 620), sfx=[(T(227) + 0.2, 'boot_rip', 0, 0, 'outside')])
-    S(T(228), 'street', 'yard', st=dict(ST_DARK, props=[('boot', -1.25, -7.15)]),
-      ppl=[kid('adam_sock', (-2.4, -4.4, FOOT), path=[(T(228) - 0.2, (-2.3, -4.6, FOOT)), (E(229) + 0.4, (0.6, -3.6, FOOT))], run=True, surface='snow', expr='terror',
+    S(T(228), 'street', 'door', st=dict(ST_DARK, props=[('mitten', -1.9, -3.0)], door_open=True),          # up our walk to the open door, one sock
+      ppl=[kid('adam_sock', (-1.95, -3.4, FOOT), path=[(T(228) - 0.2, (-1.9, -3.6, FOOT)), (E(229) + 0.6, (-2.05, -1.25, FOOT))], run=True, surface='snow', expr='terror',
                carry=dict(who='lina', t0=-9.0, expr='fear'))],
-      cold=True, c=Z(2.0, 0.02, 520, 600))
+      cold=True, c=Z(1.15, 0.02, 970, 700))
     # 230-233 Legs stab the snow. One spears my coat. I tear free. Another pries at Lina.
     yc = cm((3.6, -9.0, 0.6), (1.4, -4.0, 0.2), 950)
     adam_run = lambda t0, t1, a0, a1, **k: kid('adam_sock', a0, id='adam', path=[(t0, a0), (t1, a1)], run=True, surface='snow', expr='terror',
@@ -3011,7 +3018,7 @@ def plan_rule4(F):
     S(T(238), 'street', 'roof', st=dict(ST_DARK),
       ppl=[P('shiver', 'eave', light=SH_NIGHT, talk=False, breath=False, face=(-2.1, -0.3),
              act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_spread=0.7), lambda a, s: scut(a, s, T(238), E(238) + 0.3, ['eave', 'roof_edge_door'])))],
-      c=Z(1.0, 0.02), sfx=[(T(238) + 0.1, 'scuttle', -2, 0, 'outside', dict(surface='roof', dur=1.2))])
+      c=Z(1.0, 0.02, 960, 380, free=True), sfx=[(T(238) + 0.1, 'scuttle', -2, 0, 'outside', dict(surface='roof', dur=1.2))])
     # 239-241 And drops. Right in front of our door. Jaw hanging.
     S(T(239), 'street', 'door', st=dict(ST_DARK, props=MIT),
       ppl=[P('shiver', 'drop', light=SH_NIGHT, talk=False, breath=False, face=(-2.1, -8.0), act=_A(lambda a, s: a.set(-9, None, 0.1, sh_m=1.0, sh_lift=80.0),
@@ -3046,12 +3053,9 @@ def plan_rule4(F):
     IN(T(244), 'mittens', lambda u: dict(lina=u + T(244) >= WD(244, 'string') - 0.1), c=dict(mv='push', rate=0.02))
     IN(T(245), 'mittens', dict(lina=True), motion=lambda u: (-700 * ease_in_out(clamp(u / 0.8)), 0.0, 1.0 * ease_in_out(clamp(u / 0.8)), 0.0), c=dict(mv='hold'))
     # 246 I grab the radio.  247 "Dad!"  248 Static.  249 And bells.
-    S(T(246), 'living', 'radio', st=dict(LIV_NEST), cold=True,
-      acts=lambda A, sh, sp: [hand_layer('adam_sock', slide(sh.t0, sh.t0 + 0.25, (1700, 1200), (scr(sp, 'radio')[0] + 40, scr(sp, 'radio')[1] + 30), -120, -150,
-                                                            extra=lambda t, r: (r[0] + 400 * ease_in_cubic(clamp((t - sh.t0 - 0.5) / 0.3)), r[1] + 300 * ease_in_cubic(clamp((t - sh.t0 - 0.5) / 0.3)), r[2], r[3])),
-                                         260, 'grip', 1, sleeve_from=(1900, 1500))], c=Z(1.0, 0.02), sfx=[(T(246) + 0.25, 'radio_grab', -4, 0, 'close')])
-    BU(T(247), 'adam_sock', 'living', 'couch3q', LIV_NEST, cx=960, cy=600, scale=1.0, light=PINK_D, expr='shout', cold=True, act=_A(radio(T(247) - 0.4, E(249) + 0.5, 1)),
-       c=BZ(0.03))
+    # 246 I grab the radio: the bust brings it up (a lone insert hand in the dark read as floating)
+    BU(T(246), 'adam_sock', 'living', 'couch3q', LIV_NEST, cx=960, cy=600, scale=1.0, light=PINK_D, expr='shout', cold=True, act=_A(radio(T(246) + 0.15, E(249) + 0.5, 1)),
+       c=BZ(0.03), sfx=[(T(246) + 0.15, 'radio_grab', -4, 0, 'close')])
     IN(T(248), 'radio', dict(talk=0.0, static=1.0), cut='static', c=dict(mv='push', rate=0.03), sfx=[(T(248), 'radio_static', 0, 0, 'close', dict(dur=1.5))])
     IN(T(249), 'radio', lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
        sfx=[(WD(249, 'bells'), 'radio_bells', -2, 0, 'close')])
@@ -3075,7 +3079,8 @@ def plan_rule4(F):
     S(T(256), 'living', 'couch3q', st=LIV_NEST, ppl=[lina('couch_right', who='lina_pj', kind='seat', expr='sad', seed=2),
                                                      adam((3.0, 2.35, 0.0), who='adam_sock', kind='kneel', id='adam', face=(2.84, 1.68), expr='fierce_kind',
                                                           act=_A(reach(T(256) + 0.1, 1, (2.84, 1.8, 0.65), dur=0.45), reach(T(256) + 0.1, -1, (2.9, 1.55, 0.65), dur=0.45)))],
-      cold=True, c=Z(1.6, 0.02, 1050, 760), sfx=[(T(256) + 0.3, 'blanket_wrap', -6, 0, 'inside')])
+      cold=True, acts=nest_blanket(('lina',), c='#45332c', c2='#5e4639', t_in=T(256) + 0.55, under=('adam',)), c=Z(1.6, 0.02, 1050, 760),
+      sfx=[(T(256) + 0.3, 'blanket_wrap', -6, 0, 'inside')])
     # 257 Zipped inside my coat with me.  258-259 Then she shivers. Hard.  260-262 "Good," I whisper. "Shivering means you're fighting."
     two_shot = lambda t, lina_act=None, sc=0.85: BU(t, 'adam_sock', 'living', 'couch3q', LIV_NEST, cx=840, cy=560, scale=sc, turn=0.3, light=PINK_D, expr='fierce_kind',
                                                      cold=True, busts=[dict(who='lina', cx=1120, cy=700, scale=sc * 0.8, turn=-0.3, expr='sad', light=PINK_D, act=lina_act)],

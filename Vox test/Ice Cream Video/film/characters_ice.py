@@ -56,7 +56,7 @@ POSE_DEFAULTS.update(
     sh_wave=0.0,     # wave phase helper (set by slow_wave)
     sh_legcap=8.0,   # at most this many legs drawn (pour_out: the legs come last)
     sh_nolegs=0.0,   # 1: his human legs not drawn (inside the truck below the window, during the pour)
-    sh_hang=0.55,    # how far the head hangs (h_nod added) when he is slung in the legs (sh_lift)
+    sh_hang=0.15,    # how far the head hangs (h_nod added) when he is slung in the legs (sh_lift)
 )
 for _i in range(8):
     POSE_DEFAULTS.update({'sh_t%dw' % _i: 0.0, 'sh_t%dx' % _i: 0.0, 'sh_t%dy' % _i: 0.0, 'sh_t%dz' % _i: 0.0,
@@ -134,7 +134,9 @@ class _SHHead:
 
     def __init__(self, R, view, P, st):
         self.R, self.view, self.P, self.st = R, view, P, st
-        self.M = R['hrot']; self.C = R['head']
+        self.M = R['hrot']
+        self.hk = 1.0 + 0.40 * clamp(st['legs'] / 8.0)          # the monster's head grows with the legs (never a pin-head)
+        self.C = R['head'] + self.M @ np.array([0.0, -10.0 * (self.hk - 1.0), 4.0 * (self.hk - 1.0)])
         self.L = st['long']; self.J = st['jaw']; self.sm = st['smile']
         self.W = 0.98 + 0.95 * self.sm + 0.10 * self.L
         self.up, self.lo = _sh_mouth(self.W, self.L, self.sm)
@@ -155,7 +157,7 @@ class _SHHead:
         return L_
 
     def body(self, L):
-        return self.C + (self.M @ np.asarray(L, float).reshape(-1, 3).T).T
+        return self.C + (self.M @ (np.asarray(L, float).reshape(-1, 3) * self.hk).T).T
 
     def normal(self, L):
         n = L / np.array([_SH_HR[0] ** 2, (_SH_HR[1] * 0.9) ** 2, _SH_HR[2] ** 2])
@@ -329,7 +331,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     Xt, Yt = view.p2(hd.p3(0.0, 1.4))
     r_ = math.hypot(Xt - Xc, Yt - Yc)
     _, _, _, fh = view.p(hd.C)
-    cm = r_ / (_SH_HR[1] * _SH_HS * 0.98)          # px per cm at the head
+    cm = r_ / (_SH_HR[1] * _SH_HS * 0.98 * hd.hk)  # px per cm at the head
 
     def P2(lo_, la_, g=0.0, jaw=None):
         X_, Y_, F_, _ = hd.proj(np.array([lo_]), np.array([la_]), g, jaw)
@@ -824,10 +826,14 @@ def _sh_glove(c, view, R, P, s, det, t, light):
     soft grey shading (never dark gaps), knuckle bumps, a soft thumb pad, a V-stitch knit texture and a two-row ribbed
     cuff. Only the outer silhouette gets the dark line."""
     pal = _SH_WSPAL
+    clw = float(R['arms'][s].get('claw', 0.0))
+    if clw > 0.5 and (getattr(P, 'hl_shape' if s > 0 else 'hr_shape') or 'hang') == 'hang':
+        P = P.copy(); setattr(P, 'hl_shape' if s > 0 else 'hr_shape', 'claw')
     h = _ws_hand3(R, s, P)
     lw = c.lw
     W, f_, nb = h['W'], h['f'], h['nb']
-    g, gsh = '#EDEDED', '#cdd2da'
+    mk = clamp(_sh_state(P)['legs'] / 8.0)          # monster: frost-grey, dirty wool, so the mask stays the brightest value
+    g, gsh = mix('#EDEDED', '#b9bec8', mk), mix('#cdd2da', '#8f96a3', mk)
     back = view.face(nb)[0] > 0
     paths = []
     # ribbed cuff (2 rows)
@@ -837,22 +843,25 @@ def _sh_glove(c, view, R, P, s, det, t, light):
     paths.append((view.depth(W - f_ * 3.0) - 0.5, 'cuff', cuff, None))
     Xp, Yp, zp, fp = view.pa(np.array(h['palm']))
     gc = np.array([float(np.mean(Xp)), float(np.mean(Yp))])
-    palm = smooth(_hull([tuple(gc + (np.array(q) - gc) * 1.22) for q in zip(Xp.tolist(), Yp.tolist())]), True, 0.6)
+    palm = smooth(_hull([tuple(gc + (np.array(q) - gc) * 1.02) for q in zip(Xp.tolist(), Yp.tolist())]), True, 0.6)
     pz = float(np.mean(zp))
     paths.append((pz, 'palm', palm, None))
     for j, fing in enumerate(list(h['fingers']) + [h['thumb']]):
         X, Y, zd, f = view.pa(np.array(fing))
         p2 = list(zip(X.tolist(), Y.tolist()))
         n = len(p2)
-        ws = [(4.4 - 0.5 * k / (n - 1)) * 1.35 * f[k] for k in range(n)]
+        ws = [(4.4 - 0.5 * k / (n - 1)) * 0.70 * f[k] for k in range(n)]
         tp = _tube(p2, ws, 0.75)
         try: tp = union(tp, oval(p2[-1][0], p2[-1][1], ws[-1] * 0.55, ws[-1] * 0.55))
         except Exception: pass
         paths.append((view.depth(np.mean(fing, 0)) + (0.3 if j == 1 else 0.0), 'thumb' if j == len(h['fingers']) else 'finger', tp, (p2, ws)))
     paths.sort(key=lambda q: q[0])
     # one dark outline round the whole glove (under the fills: only the silhouette edge stays dark)
+    sil = None
     for _, kind, pth, _ in paths:
-        c.line(pth, lw * 2.0, pal['line'])
+        try: sil = pth if sil is None else union(sil, pth)
+        except Exception: c.line(pth, lw * 2.0, pal['line'])
+    if sil is not None: c.line(sil, lw * 2.0, pal['line'])
     prop = getattr(P, 'hl_prop' if s > 0 else 'hr_prop')
     drew = False
     for z_, kind, pth, extra in paths:
@@ -901,6 +910,12 @@ def _sh_glove(c, view, R, P, s, det, t, light):
                         w_ = ws[k] * 0.22
                         c.line(poly([(mx - w_, my - w_ * 0.6), (mx, my + w_ * 0.4), (mx + w_, my - w_ * 0.6)], False), lw * 0.35, '#9aa2ae', 60)
             c.line(pth, lw * 0.6, gsh, 230)               # finger separation: soft grey, the wool between
+    if mk > 0.05 and sil is not None and det >= 1:      # frost-grey grime in the wool
+        bb = sil.getBounds()
+        with c.clip(sil):
+            for q in range(14):
+                c.fill(oval(bb.left() + bb.width() * hash01(q, 811), bb.top() + bb.height() * hash01(q, 812),
+                            (0.9 + 1.6 * hash01(q, 813)) * fc[0], (0.7 + 1.1 * hash01(q, 814)) * fc[0]), '#6f7684', int(90 * mk))
     if prop and not drew:
         _ws_held(c, view, h, P, s, prop, pal, det, t)
     return h
@@ -935,15 +950,16 @@ def _sh_leg_h(c, view, R, s, det, light):
 
 
 # ---------------------------------------------------------------------------------------------------- spider legs
-_SH_LEG_L = (34.0, 255.0, 270.0, 150.0)       # coxa, femur, tibia, tarsus (cm, rig units; the rig is 244 tall): ~2.9x his height
+_SH_LEG_L = (30.0, 165.0, 175.0, 95.0)        # coxa, femur, tibia, tarsus (cm, rig units; the rig is 244 tall): ~1.9x his height
 _SH_LEG_ORDER = (1, 0, 3, 2, 5, 4, 7, 6)       # the order they punch out (his right top first)
 
 
 def _sh_leg_root(R, i):
     s = 1 if i % 2 == 0 else -1
     k = i // 2
-    h = 66.0 - 9.0 * k
-    q, n = _sh_surf(R, h, s * 0.42, -1.0, False)
+    h = 72.0 - 16.0 * k                                # shoulder blades (72) down to the waist (24): they frame the body
+    q, n = _sh_surf(R, h, s * (0.55 + 0.10 * k), -1.0, False)
+    q = q + _rx(np.array([0.0, 0.0, -7.0]), R['a'])     # pushed back out of the split
     return q, s, k
 
 
@@ -952,8 +968,8 @@ def _sh_leg_rest(R, P, i):
     s = 1 if i % 2 == 0 else -1
     k = i // 2
     sp = float(P.sh_spread)
-    zz = (120.0, 45.0, -40.0, -120.0)[k]
-    xx = s * (170.0 + 45.0 * (1.5 - abs(k - 1.5))) * sp
+    zz = (80.0, 30.0, -30.0, -80.0)[k]
+    xx = s * (115.0 + 30.0 * (1.5 - abs(k - 1.5))) * sp
     return np.array([xx, 0.0, zz]) + np.array([0.0, 0.0, R['Hc'][2]])
 
 
@@ -1002,7 +1018,7 @@ def _sh_leg_chain(R, P, i, e):
     return out_l
 
 
-_SH_LEG_W = ((16.0, 13.0), (13.0, 7.5), (8.5, 4.2), (4.2, 0.35))     # coxa, femur, tibia, tarsus: thick to a needle
+_SH_LEG_W = ((18.0, 15.0), (15.0, 9.5), (10.0, 5.0), (5.0, 0.4))     # coxa, femur, tibia, tarsus: heavy, to a needle
 
 
 def _sh_leg_e(n, j):
@@ -1182,13 +1198,14 @@ def _sh_rime(c, X, Y, r, seed, px, lw):
 
 # ---------------------------------------------------------------------------------------------------- the figure
 def _sh_rig(P, st):
-    if P.sh_lift > 1.0:     # slung in the cage of legs: knees folded up, the body pitched forward, the head hanging
+    kf = 0.0; k = 0.0
+    if P.sh_lift > 1.0:     # slung in the cage of legs: human legs tucked up, the torso pitched ~60 deg, the big head thrust forward
         k = clamp(P.sh_lift / 80.0)
         pu = P.__dict__.get('_sh_pour_u')
         kf = k * (1.0 - (prog(pu, 0.0, 0.1) - prog(pu, 0.78, 0.95)) if pu is not None else 1.0)   # pouring out: the face stays on the lens
-        P = P.copy(); P.ws_crouch = max(P.ws_crouch, 1.25 * k); P.ws_bend = max(P.ws_bend, 0.38 * k)
-        P.ws_face_up = min(P.ws_face_up, 0.75 - 0.45 * kf) if kf > 0.01 else P.ws_face_up
-        P.h_nod = P.h_nod + float(P.sh_hang) * kf     # the long pale head hangs down (the bible's read test)
+        P = P.copy(); P.ws_crouch = max(P.ws_crouch, 1.3 * k); P.ws_bend = max(P.ws_bend, 0.56 * k)
+        P.ws_face_up = max(P.ws_face_up, 0.75 * kf) if kf > 0.01 else P.ws_face_up     # the mask stays on the lens
+        P.h_nod = P.h_nod + min(float(P.sh_hang), 0.15) * kf
     R = _ws_rig(P)
     # his long neck: the head rides up the neck line
     Nb = R['Nb']; d = _u3(R['head'] - Nb)
@@ -1196,6 +1213,27 @@ def _sh_rig(P, st):
     R['head'] = R['head'] + ext
     R['neck'] = [R['neck'][0], R['neck'][1] + ext]
     R['mouth'] = R['mouth'] + ext
+    if kf > 0.01:           # the head pushed forward toward the lens and a little down, out of the leg cage
+        fw = np.array([0.0, 12.0 * kf, 28.0 * kf])
+        R['head'] = R['head'] + fw; R['mouth'] = R['mouth'] + fw
+        R['neck'] = [R['neck'][0], R['neck'][1] + fw]
+    a12 = R['a1'] + R['a2']
+    for s_ in (-1, 1):      # never straight rods: a default elbow flex; slung in the legs, the claw pose by the jaw
+        arm = R['arms'][s_]
+        if arm.get('rest') not in ('hang', None) or arm.get('k', 1.0) > 1.0: continue
+        if clamp(getattr(P, 'ws_lw' if s_ > 0 else 'ws_rw')) > 0.05: continue
+        S = arm['S']; W = arm['W']
+        if kf > 0.01:
+            Wc = R['head'] + np.array([s_ * 30.0, 22.0, 10.0])
+            W = W + (Wc - W) * kf
+            pole = _u3(np.array([s_ * 0.85, 0.45, -0.25]))
+        else:
+            W = W + _rx(np.array([0.0, -4.5, 9.0]), a12)
+            pole = _u3(np.array([s_ * 0.55, 0.1, -0.8]))
+        dd = float(np.linalg.norm(W - S)); mx = (_WS_L['upper'] + _WS_L['fore']) * 0.97
+        if dd > mx: W = S + (W - S) * (mx / dd)
+        E, Wr = _ik(S, W, _WS_L['upper'], _WS_L['fore'], pole)
+        R['arms'][s_] = dict(arm, J=[E], W=Wr, claw=kf)
     lift = float(P.sh_lift)
     if lift:
         sh = np.array([0.0, -lift, 0.0])
@@ -1758,7 +1796,7 @@ def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.42, lift=6
         P.dx += bx - self.x0; P.dy += by - self.y0
         P.sh_lift = max(P.sh_lift, lift)
         P.sh_spread = spread
-        P.sh_hang = max(P.sh_hang, 0.95)                      # the long pale head hanging down
+        P.sh_hang = max(P.sh_hang, 0.30)                      # the big pale head thrust forward, only a little down
         dirx = 1.0 if bx2 >= bx else -1.0
         slope = math.degrees(math.atan2(by2 - by, abs(bx2 - bx) + 1e-6)) if abs(bx2 - bx) > 0.5 else 0.0
         P.ws_bend = max(P.ws_bend, pitch / 40.0)              # the body pitched down under the arch (no 2D tilt: tips stay planted)

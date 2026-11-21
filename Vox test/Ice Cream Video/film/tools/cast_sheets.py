@@ -110,6 +110,14 @@ def _sh_bust(pen, x, y, scale, **kw):
     CH.draw_bust(pen, 'shiver', x, y, scale, P, t=0.6, light=kw.pop('light', PINKW) if False else PINKW, detail=2)
 
 
+def sh_bust_at(pen, x, y, scale, P, light=None):
+    """draw_bust with the HEAD at (x, y) whatever the lift (the monster's head never jumps or shrinks between steps)."""
+    Q = P.copy(); Q.sh_lift = 0.0
+    s = 600.0 * scale / CH.CAST['shiver']['hh']
+    hx, hy = CH._sh_pts(P)['head']; qx, qy = CH._sh_pts(Q)['head']
+    CH.draw_bust(pen, 'shiver', x - (hx - qx) * s, y - (hy - qy) * s, scale, P, t=0.6, light=light or PINKW, detail=2)
+
+
 def sheet_sh_turn():
     surf, cv, pen = canvas()
     title(cv, 'MISTER SHIVER: normal form turnaround', '6 ft 4, narrow, slightly hunched, long neck; bald chalk-white egg head a little too big; tiny blue eyes in dark sockets; buck-toothed too-wide smile; pink-and-white vertical stripes, pink bow tie + snowflake pin, SHIVER badge, white knitted gloves; no breath cloud')
@@ -147,9 +155,9 @@ def sheet_sh_transform():
         pen.linear(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), 0, y0, 0, y0 + ch, [(0, '#ffb3d2', 255), (1, '#c8487e', 255)])
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
-        if m >= 0.8:     # a wider medium (a cut): the legs out of the back, the knees high over him
-            P.turn = 0.08; P.ws_bend = 0.25; P.sh_spread = 0.6
-            CH.draw_bust(pen, "shiver", x0 + cw / 2, y0 + ch * 0.76, ch / 600.0 * 0.088, P, t=0.6, light=PINKW, detail=2)
+        if m >= 0.8:     # the same medium, eased out a little: the head stays put and big, the legs frame the mask
+            P.turn = 0.08; P.sh_spread = 0.9; P.sh_lift = 85.0 * CH.clamp((m - 0.84) / 0.16)
+            sh_bust_at(pen, x0 + cw / 2, y0 + ch * 0.25, ch / 600.0 * 0.32, P)
         else:            # one constant scale through the face steps (no pop when the jaw drops)
             CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.25, ch / 600.0 * 0.40, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
@@ -164,15 +172,15 @@ def sheet_sh_monster():
     pen.fill(rect(0, 120, 1920, 960), '#101420')
     pen.fill(rect(0, 900, 1280, 180), '#c9d6ea')
     cv.save(); cv.clipRect(skia.Rect.MakeXYWH(0, 120, 1280, 960))
-    for i, (turn, lift, ht) in enumerate(((0.0, 150, 0.0), (0.6, 150, 0.2))):
-        P = P_(); P.turn = turn; P.sh_m = 1.0; P.sh_lift = lift; P.h_turn = ht; P.sh_spread = 1.15
-        CH.draw(pen, 'shiver', 330 + i * 620, 900, CH.height_px('shiver', 150), P, light=NIGHTI, t=0.6, detail=2)
+    for i, (turn, lift, ht) in enumerate(((0.0, 85, 0.0), (0.6, 85, -0.25))):
+        P = P_(); P.turn = turn; P.sh_m = 1.0; P.sh_lift = lift; P.h_turn = ht; P.sh_spread = 1.0
+        CH.draw(pen, 'shiver', 330 + i * 620, 900, CH.height_px('shiver', 230), P, light=NIGHTI, t=0.6, detail=2)
     cv.restore()
     # silhouette read test (bible): black against the snow
     pen.fill(rect(1290, 120, 630, 960), '#dfe8f4')
     surf2 = skia.Surface(CFG.rw, CFG.rh); cv2_ = surf2.getCanvas(); cv2_.clear(skia.Color(0, 0, 0, 0)); cv2_.scale(CFG.k, CFG.k)
-    P = P_(); P.turn = 0.15; P.sh_m = 1.0; P.sh_lift = 150
-    CH.draw(Pen(cv2_), 'shiver', 1605, 900, CH.height_px('shiver', 150), P, t=0.6, detail=1)
+    P = P_(); P.turn = 0.15; P.sh_m = 1.0; P.sh_lift = 85
+    CH.draw(Pen(cv2_), 'shiver', 1605, 900, CH.height_px('shiver', 190), P, t=0.6, detail=1)
     img = surf2.makeImageSnapshot()
     p = skia.Paint(ColorFilter=skia.ColorFilters.Blend(skia.Color(10, 10, 14), skia.BlendMode.kSrcIn))
     cv.save(); cv.resetMatrix(); cv.clipRect(skia.Rect.MakeXYWH(1290 * CFG.k, 120 * CFG.k, 630 * CFG.k, 960 * CFG.k)); cv.drawImage(img, 0, 0, skia.SamplingOptions(), p); cv.restore()
@@ -202,8 +210,8 @@ def sheet_sh_mood():
             P = P_(); P.ws_bend = 0.15
             CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 190, 0.33, P, t=0.6, light=PINKW, detail=2)
         else:            # the monster framed wide enough for the knees (a wide spread keeps them lower)
-            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.7; P.sh_lift = 80.0; P.sh_hang = 0.25
-            CH.draw(pen, 'shiver', x0 + 620, y0 + 428, CH.height_px('shiver', 96), P, t=0.6, light=NIGHTI, detail=2)
+            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.1; P.sh_lift = 85.0; P.sh_hang = 0.15
+            CH.draw(pen, 'shiver', x0 + 620, y0 + 428, CH.height_px('shiver', 150), P, t=0.6, light=NIGHTI, detail=2)
         cv.restore()
     save(surf, 'sh_mood')
 
