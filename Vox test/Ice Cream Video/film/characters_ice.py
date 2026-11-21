@@ -55,6 +55,7 @@ POSE_DEFAULTS.update(
     sh_glim=0.0,     # glimpse: the long white face with red eyes for a flicker (head only)
     sh_wave=0.0,     # wave phase helper (set by slow_wave)
     sh_legcap=8.0,   # at most this many legs drawn (pour_out: the legs come last)
+    sh_nolegs=0.0,   # 1: his human legs not drawn (inside the truck below the window, during the pour)
 )
 for _i in range(8):
     POSE_DEFAULTS.update({'sh_t%dw' % _i: 0.0, 'sh_t%dx' % _i: 0.0, 'sh_t%dy' % _i: 0.0, 'sh_t%dz' % _i: 0.0,
@@ -806,14 +807,14 @@ def _sh_leg_seg(c, view, a3, b3, sgi, wd, det, light, i):
     # the joint at the start of this segment: a dark knuckle with frost rime
     if sgi >= 1:
         X, Y, _, f = view.p(a3)
-        r = wd[0] * 0.75 * f
+        r = wd[0] * 0.58 * f
         c.fill(oval(X, Y, r, r * 0.9), pal['leg_dk']); c.line(oval(X, Y, r, r * 0.9), lw * 0.7, pal['line'])
         if det >= 1:
             for k in range(6):
                 ang = hash01(i * 17 + sgi * 5 + k, 3501) * 2 * PI
                 rr = r * (0.6 + 0.6 * hash01(i * 17 + sgi * 5 + k, 3502))
                 cx_, cy_ = X + math.cos(ang) * r * 0.55, Y + math.sin(ang) * r * 0.55 - r * 0.25
-                c.fill(oval(cx_, cy_, rr * 0.32, rr * 0.22), pal['rime'], 235)
+                c.fill(poly([(cx_ - rr * 0.28, cy_ + rr * 0.1), (cx_, cy_ - rr * 0.3), (cx_ + rr * 0.24, cy_ + rr * 0.12)], True), pal['rime'], 215)
             for k in range(3):
                 ang = -PI / 2 + (k - 1) * 0.6
                 c.line(poly([(X + math.cos(ang) * r * 0.6, Y + math.sin(ang) * r * 0.6),
@@ -865,7 +866,7 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         skip = 2 if (l_ and r_) else (1 if l_ else (-1 if r_ else 0))
     items = []
     zt = view.depth(R['Ch'])
-    if not upper_only:
+    if not upper_only and P.sh_nolegs < 0.5:
         for s in (-1, 1):
             Hp, K, A, fd = R['legs'][s]
             zl = (view.depth(K) + view.depth(A)) / 2
@@ -1234,19 +1235,25 @@ def _sh_cage(self, t0, center, width, ground_y, dur=0.5, lift=150.0):
     return _sh_legs_plant(self, t0, tg, stagger=0.06, dur=dur * 0.5)
 
 
-def _sh_pour_out(self, t0, dur=1.6, sill=None, drop=260.0, forward=1.0):
-    """He pours out of the serving window head first, legs last: the body tips forward over the sill and slides down
-    and out (tilt + slide), and the legs only come out at the end (sh_legcap 0 -> 8)."""
+def _sh_pour_out(self, t0, dur=2.4, sill_dy=-300.0, ground_dy=200.0, forward=1.0, lift=110.0):
+    """He pours out of the serving window head first, legs last: the body rises to the sill and tips over it head first
+    (rotating about his hips at the sill), slides down the side of the truck to the snow, and only then the legs come out
+    (sh_legcap 0 -> 8), plant, and lift him upright into the cage of legs. sill_dy: px from his feet origin up to the sill;
+    ground_dy: px from the origin down to the snow. His human legs stay hidden (inside the truck) throughout."""
     def fn(P, t):
-        u = prog(t, t0, t0 + dur)
+        P.sh_nolegs = 1.0
         if t < t0: P.sh_legcap = 0.0; return
-        a = ease_in_out(prog(u, 0.0, 0.6))
-        P.tilt += forward * 75.0 * a * (1.0 - ease_in_out(prog(u, 0.6, 1.0)))
-        P.dx += forward * 0.35 * self.height * a
-        P.dy += drop * ease_in_out(prog(u, 0.25, 1.0)) * self.height / 1000.0
-        P.sh_legcap = 8.0 * ease_out_cubic(prog(u, 0.55, 1.0))
+        u = prog(t, t0, t0 + dur)
+        a = ease_in_out(prog(u, 0.0, 0.40))           # up onto the sill and over, head first
+        b = ease_in_out(prog(u, 0.30, 0.70))          # sliding down the side, head down
+        c = ease_in_out(prog(u, 0.62, 1.00))          # legs out, plant, rights itself
+        P.tilt += forward * ((95.0 * a + 45.0 * b) * (1.0 - c))      # head first, down the side of the truck
+        P.dy += sill_dy * a * (1.0 - c) + ground_dy * c
+        P.dx += forward * self.height * (0.18 * a + 0.10 * b + 0.25 * c)
+        P.sh_legcap = 8.0 * ease_out_cubic(prog(u, 0.58, 0.95))
+        P.sh_lift = max(P.sh_lift, lift * c)
     self._add(-INF, None, fn)
-    return [self._ev(t0, 'sh_pour', 0.0), self._ev(t0 + dur * 0.95, 'leg_click', -2.0)]
+    return [self._ev(t0, 'sh_pour', 0.0), self._ev(t0 + dur * 0.7, 'leg_click', -2.0), self._ev(t0 + dur * 0.85, 'leg_click', -2.0)]
 
 
 def _sh_hang(self, t0, dur=0.9, lower=0.4):

@@ -147,11 +147,9 @@ def sheet_sh_transform():
         pen.linear(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), 0, y0, 0, y0 + ch, [(0, '#ffb3d2', 255), (1, '#c8487e', 255)])
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
-        legs = m >= 0.7
-        if legs:
-            sc = 0.17
-            P.turn = 0.12
-            CH.draw(pen, 'shiver', x0 + cw / 2, y0 + ch * 1.02, 0.85 * ch, P, light=PINKW, t=0.6, detail=2)
+        if m >= 0.7:     # medium: the legs out of the back round him
+            P.turn = 0.08; P.ws_bend = 0.25
+            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.30, ch / 600.0 * 0.34, P, t=0.6, light=PINKW, detail=2)
         else:
             CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.36, ch / 600.0 * 0.62, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
@@ -182,7 +180,7 @@ def sheet_sh_monster():
 
 def sheet_sh_mood():
     surf, cv, pen = canvas()
-    title(cv, 'MISTER SHIVER beside the owner\'s mood references (archetype only; ours is original)', 'left: references. right: our two forms at film size (a 1/2-screen close-up and a full-frame wide, shown at 1/2 scale)')
+    title(cv, 'MISTER SHIVER beside the owner\'s mood references (archetype only; ours is original)', 'left: references. right: our two forms at film size (two medium close-ups as framed in the film, shown at 1/2 scale; wides: sh_monster)')
     for k, fn in enumerate(('owner_mood_normal.jpg', 'owner_mood_monster.jpg')):
         im = cv2.imread(os.path.join(REFD, fn))
         if im is None: continue
@@ -202,8 +200,8 @@ def sheet_sh_mood():
             P = P_(); P.ws_bend = 0.15
             CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 190, 0.33, P, t=0.6, light=PINKW, detail=2)
         else:
-            P = P_(); P.sh_m = 1.0; P.sh_lift = 150; P.turn = 0.1
-            CH.draw(pen, 'shiver', x0 + 620, y0 + 420, 330, P, t=0.6, light=NIGHTI, detail=2)
+            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.ws_bend = 0.25
+            CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 150, 0.30, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
     save(surf, 'sh_mood')
 
@@ -222,7 +220,7 @@ def sheet_sh_limits():
         CH.draw_bust(pen, 'shiver', x0 + cw / 2, 330, 0.42, P, t=0.6, light=NIGHTI, detail=2)
         cv.restore()
         label(cv, lb, x0 + cw / 2, 630, 14)
-    lines = ['no "Rod", no game name or pun anywhere in the cast code or sheets (grep-checked)',
+    lines = ['no name but Mister Shiver; nothing from the reference game (names, puns, freeze ray, factory, captives)',
              'the truck stand-in: a frosted SNOWFLAKE on the roof (never a cone); no plate; interior beyond the window never drawn (pink light only)',
              'mitten bunting: single mittens, the oldest small and RED at the LEFT; Lina\'s added at the RIGHT (truck_front mitten_lina)',
              'nobody inside the truck; taking is never shown; legs touch snow, coats and blankets only (leg_to targets in the clips)',

@@ -23,7 +23,9 @@ yard IC_G -0.5 (deep snow on top: IC_SNOW m on the lawns; the street is plowed d
   his porch and door, his chimney (smoke on / off).
   HIS TRUCK: position A (IC_TRUCK_A, until 8:48) at our kerb heading west, the serving window facing our house (between
   our front door and our living-room window); position B (IC_TRUCK_B, from 8:50) at Kessler's kerb heading east, the
-  serving window facing his door. Kessler's window is seen past the truck's rear end from our living-room window.
+  serving window facing his door across his yard (4 m west of his walk, so from our side his door and porch are seen
+  past the truck's cab: Mr. Kessler shuffles out in view of our bathroom window). Kessler's window is seen past the
+  truck's rear end from our living-room window (a 3 m step van 10 m away hides anything lower behind its roof).
 Plan: _work/sets/floorplan.jpg (ic_plan_map).
 
 STAGING DATA: identical to the Doctor / Bus sets: sp.anchors[name] -> Spot (.x .y design px of the feet / point,
@@ -98,7 +100,7 @@ IC_TRUCK_Y0, IC_TRUCK_Y1 = 0.5, 3.0  # body bottom / roof above the ground
 IC_TRUCK_FLOOR = 0.6                  # his floor inside (above the ground) where he stands at the serving window
 IC_SWIN = (-0.7, 0.7, 1.55, 2.35)     # serving window on the body's curb side: n0, n1 (body-local, + toward the front), Y0, Y1
 IC_TRUCK_A = (-0.6, -9.55, -90.0)
-IC_TRUCK_B = (1.43, -14.45, 90.0)
+IC_TRUCK_B = (-2.7, -14.45, 90.0)  # its cab ends short of his walk, so his door and porch stay in view from our side
 IC_PLOW_LANE = (-11.0, -13.0)         # the plow's lane y (westbound, eastbound)
 
 IC_PINK = '#ff9ec8'                   # the serving window: the warmest light in the film (the lure)
@@ -132,8 +134,8 @@ _GR.setdefault('ic_ins', dict(contrast=1.04, pivot=0.25, gamma=1.04, sat=1.04, w
                               bloom=0.5, bloom_thr=236, vignette=0.5, grain=0.45, shoulder=0.5))
 _GR.setdefault('ic_ins_cold', dict(contrast=1.06, pivot=0.25, gamma=1.02, sat=1.02, wb=(0.94, 1.0, 1.1), floor='#060a14',
                                    bloom=0.7, bloom_thr=230, vignette=0.45, grain=0.6, shoulder=0.5))
-_GR.setdefault('ic_ins_warm', dict(exposure=0.03, contrast=1.02, pivot=0.26, gamma=1.04, sat=1.06, wb=(1.05, 1.0, 0.94), floor='#100c08',
-                                   bloom=0.6, bloom_thr=232, vignette=0.45, grain=0.35, shoulder=0.55))
+_GR.setdefault('ic_ins_warm', dict(exposure=0.0, contrast=1.04, pivot=0.26, gamma=1.0, sat=1.04, wb=(1.04, 1.0, 0.95), floor='#100c08',
+                                   bloom=0.0, bloom_thr=250, vignette=0.6, grain=0.3, shoulder=0.6))
 
 IC_CAMS = []
 
@@ -222,7 +224,7 @@ def ic_ground(pen, v, o):
     both kerbs, our walk (o['walk'] 'buried' | 'shoveled' | 'trodden'), Kessler's walk (o['kwalk']), the driveway."""
     tod = o.get('tod', 'night')
     night = tod in ('night', '1958')
-    snow = '#cad6ee' if night else '#f2eee8'
+    snow = '#cad6ee' if night else '#e4e0e4'
     F = floor_face(-140.0, 140.0, -140.0, 40.0, IC_SNOWY)
     draw_face(pen, v, F, _snow_art(3), snow, ao=False, line=False)
     # the street: plowed, packed, a fresh dusting (no tracks: his truck never leaves any)
@@ -961,10 +963,8 @@ def ic_plow_emit(pen, v, cx, cy, fa, t=0.0, beacon=1.0, heads=1.0, G=IC_G, rate=
         pen.glow(x, y, (0.6 + 2.2 * tow ** 4) * s, IC_ORANGE, (120 + 120 * tow ** 3) * beacon)
         pen.glow(x, y, 0.12 * s, '#fff0c0', 240 * beacon)
         # the beam: a long soft wedge
-        far = (Pp[0] + bx * 12, Pp[2] + by * 12)
-        if v.d(far[0], far[1]) > 0.5:
-            ex, ey = v.p(far[0], G + 1.2, far[1])
-            pen.line(poly([(x, y), (ex, ey)], False), max(4.0, 0.9 * s), IC_ORANGE, 40 * beacon, blur=max(4.0, 0.5 * s))
+        side = max(0.0, bx * v.rx + by * v.ry) if False else abs(bx * v.rx + by * v.ry)
+        pen.ellipse_glow(x, y, (0.6 + 1.6 * side) * s, 0.35 * s, IC_ORANGE, 60 * beacon * side)
     if heads > 0.01:
         for sd in (-1, 1):
             Hh = (cab_c[0] + N[0] * 1.02 + Ux[0] * sd * 0.85, G + 1.5, cab_c[1] + N[1] * 1.02 + Ux[1] * sd * 0.85)
@@ -1088,8 +1088,8 @@ class IcStreet(Room):
             amb = '#2e3c6a'
             steady = [Lamp(kind='dir', c=IC_MOON, k=0.62, d=_norm3((0.2, -0.75, 0.62)))]
         else:
-            amb = '#8a8a98'
-            steady = [Lamp(kind='dir', c='#ffe0b8', k=1.0, d=_norm3((-0.55, -0.45, 0.7)))]
+            amb = '#5e6278'
+            steady = [Lamp(kind='dir', c='#ffd8b0', k=0.72, d=_norm3((-0.55, -0.45, 0.7)))]
         var = []
         if night:
             var.append(('street', [Lamp(IC_LAMP[0], IC_G + 6.0, IC_LAMP[1] - 1.6, 13.0, IC_STREET_C, 1.6, (1.0, 0.6, 0.2), fall=1.35)],
@@ -1110,7 +1110,7 @@ class IcStreet(Room):
             ps = o.get('porches')
             if ps is not None:
                 for i in range(4):
-                    sp_ = ps[i] if isinstance(ps, (list, tuple)) else ps
+                    sp_ = (ps[i] if i < len(ps) else 0.0) if isinstance(ps, (list, tuple)) else ps
                     x0, x1, yf, fc = IC_NEIGHBOURS[i][:4]
                     var.append(('porch%d' % i, [Lamp(IC_NEIGHBOURS[i][6], 1.95, yf - 0.5 * fc, 6.5, '#ffc888', 1.4, fall=1.5)], _kfn(sp_, 510 + i)))
         return amb, steady, var
@@ -1217,7 +1217,7 @@ class IcStreet(Room):
                 if ks_ > 0.01: ic_smoke(pen, v, IC_KCHIM[0], 4.7 + 0.95, IC_KCHIM[1], t, ks_, 9, tod)
             G.append(('kessler_glow', (IC_KH[0] * 0.5 + IC_KH[1] * 0.5, 2.0, -28.5), kess_g))
             nb = o.get('porches')
-            kn = [_kfn(nb[i] if isinstance(nb, (list, tuple)) else (nb if nb is not None else 0.0), 510 + i) for i in range(len(IC_NEIGHBOURS))]
+            kn = [_kfn((nb[i] if i < len(nb) else 0.0) if isinstance(nb, (list, tuple)) else (nb if nb is not None else 0.0), 510 + i) for i in range(len(IC_NEIGHBOURS))]
             lit_rooms = o.get('neighbour_lit', 1.0 if night else 0.0)
             def nbr(pen, t):
                 for i in range(len(IC_NEIGHBOURS)):
@@ -1305,7 +1305,8 @@ class IcStreet(Room):
         M('cross1', 0.4, -10.8, G + 0.02, 'stand', 'crossing: the north half of the lane', (0.1, -1))
         M('cross2', 1.2, -13.2, G + 0.02, 'stand', 'crossing: the south half of the lane', (0.05, -1))
         M('kgate', 1.4, -16.8, F, 'stand', "on Kessler's buried sidewalk at his walk", (0, -1))
-        M('kwalk_mid', 1.4, -19.6, G + (0.03 if o.get('kwalk') == 'shoveled' else IC_SNOW - IC_SINK), 'stand', "halfway up Kessler's walk (Mr. Kessler halfway to the window, facing north)", (0, 1))
+        M('kwalk_mid', 1.4, -19.6, G + (0.03 if o.get('kwalk') == 'shoveled' else IC_SNOW - IC_SINK), 'stand', "halfway down Kessler's walk", (0, 1))
+        M('kessler_half', -0.65, -19.7, IC_FOOT, 'stand', "Mr. Kessler halfway from his porch to the window at B (crossing his yard, facing it)", (-0.5, 0.85))
         M('kwalk_shovel1', 0.6, -18.4, G + 0.03, 'stand', "shoveling Kessler's walk (morning: Dad)", (0.6, 0.8))
         M('kwalk_shovel2', 2.2, -20.2, G + 0.03, 'stand', "shoveling Kessler's walk (morning: Adam)", (-0.5, 0.8))
         M('kwalk_shovel3', 1.4, -21.2, G + 0.03, 'stand', "on Kessler's walk (morning: Lina with the cocoa)", (0, -1))
@@ -1327,8 +1328,8 @@ class IcStreet(Room):
                 M('mitten1', -2.05, -1.6, IC_SNOWY + 0.005, 'surface', "Lina's first mitten in the snow (by our steps)")
                 M('mitten2', -1.7, -4.2, IC_SNOWY + 0.005, 'surface', "Lina's second mitten (halfway down the walk)")
             if pos == IC_TRUCK_B:
-                M('kessler_window_b', 1.42, -16.3, G + 0.02, 'stand', "Mr. Kessler at the pink window (position B), facing it", (0, 1))
-                M('cage', 1.0, -18.2, IC_FOOT, 'stand', 'the kids under the blanket where his legs cage them (south of the truck)', (0, -1))
+                M('kessler_window_b', -2.73, -16.3, G + 0.02, 'stand', "Mr. Kessler at the pink window (position B), facing it", (0, 1))
+                M('cage', -0.6, -18.4, IC_FOOT, 'stand', 'the kids under the blanket where his legs cage them (between the truck and his walk)', (0.4, -1))
         return S
 
 
@@ -1364,7 +1365,7 @@ def ic_mitten(pen, v, x, y, c=IC_LINA_MITTEN, rot=20.0):
     if v.d(x, y) < 0.4: return
     s = v.s(x, y); bx, by = v.p(x, IC_SNOWY, y)
     pen.cv.save(); pen.cv.translate(bx, by); pen.cv.scale(1.0, 0.45); pen.cv.rotate(rot)
-    sc = 0.17 * s
+    sc = 0.2 * s
     m = union(rrect(-sc * 0.4, -sc * 0.5, sc * 0.8, sc, sc * 0.38), oval(sc * 0.4, -sc * 0.05, sc * 0.18, sc * 0.26))
     pen.fill(m, c); pen.line(m, max(0.6, sc * 0.05), '#2a1a10', 200)
     pen.fill(rect(-sc * 0.42, sc * 0.35, sc * 0.84, sc * 0.18), mix(c, '#ffffff', 0.4))
@@ -1405,7 +1406,7 @@ def ic_street(view='house', tod='night', truck='A', truck_win=1.0, truck_open=0.
     grade = {'night': 'ic_ext', 'morning': 'ic_morning', '1958': 'ic_1958'}.get(tod, 'ic_ext')
     sp = build_view('ic_ext_' + view, v, main, o, outside=None, lens='lens', grade=grade, dyn=dyn, dof=0.6)
     if view == 'gap':
-        sp = sp.add(_curtain_gap_layer(0.06))
+        sp = sp.add(_curtain_gap_layer(0.16))
     if view == 'bathout':
         sp = sp.add(_ic_frosted_frame_layer())
     sp.info['note'] = ('Birch Lane: our house north (front y 0), Kessler\'s opposite (front y -24); truck A at our kerb heading west '
@@ -1439,22 +1440,22 @@ def _ic_frosted_frame_layer(wipe=(960, 520, 520, 330)):
 
 
 _icam('ic_ext_house', 760, 540, IC_G + 1.65, 3.6, -21.5, -4, _env(f=(1.0, 2.4)), 'our house from across Birch Lane: the truck at A in front, the fence, the roof, Dad\'s car', 'street')
-_icam('ic_ext_kessler', 820, 520, 1.5, 3.2, -2.6, 186, _env(f=(1.0, 2.6)), "from our yard across the lane to Kessler's house: his window, his chimney (the truck at A on the right)", 'street')
+_icam('ic_ext_kessler', 820, 520, 1.5, 3.2, -2.6, 186, _env(x=(900, 1020), y=(480, 580), f=(1.0, 2.6)), "from our yard across the lane to Kessler's house: his window, his chimney (the truck at A on the right)", 'street')
 _icam('ic_ext_lane', 860, 540, IC_G + 1.7, -19.0, -12.4, 90, _env(f=(1.0, 2.6)), 'down Birch Lane from the west: our house left, Kessler\'s right, the truck gliding in (no tracks behind)', 'street')
 _icam('ic_ext_lane_e', 860, 540, IC_G + 1.7, 19.5, -11.6, -90, _env(f=(1.0, 2.6)), 'up Birch Lane from the east: our house right, Kessler\'s left', 'street')
-_icam('ic_ext_truck', 760, 520, IC_G + 0.18 + 1.3, -3.6, -7.1, 116, _env(), 'the truck at A from our walk at child height: the serving window, the sign, the flake', 'street')
+_icam('ic_ext_truck', 800, 520, IC_FOOT + 1.15, -2.1, -4.4, 166, _env(), 'the truck at A from our walk at child height: the serving window, the sign, the flake', 'street')
 _icam('ic_ext_curb', 1000, 470, IC_G + 0.95, -1.5, -6.35, 160, _env(), 'low at the kerb, up at the serving window (he leans down, further than a man can bend)', 'street', pitch=-12.0)
-_icam('ic_ext_window_close', 1650, 520, IC_G + 1.95, -0.58, -5.6, 180, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'the truck window close-up: the pink glow, the frost, the mitten bunting', 'street')
+_icam('ic_ext_window_close', 1650, 520, IC_G + 1.95, 0.28, -5.6, 180, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.1)), 'the truck window close-up: the pink glow, the frost, the mitten bunting', 'street')
 _icam('ic_ext_door', 950, 520, IC_G + 1.5, -2.1, -5.4, 0, _env(), 'our front door from the walk: the stoop, the glass strip, the porch light', 'street')
 _icam('ic_ext_yard', 700, 520, IC_G + 1.9, 2.0, -16.5, 16, _env(f=(1.0, 2.2)), "the yard wide from the lane: the fence, Dad's car, our roof (the chase route)", 'street')
 _icam('ic_ext_roof', 760, 420, IC_G + 1.25, 1.2, -5.4, -8, _env(), 'up at our roof and eave from the yard (him on the roof)', 'street', pitch=-16.0)
-_icam('ic_ext_kwide', 760, 520, IC_G + 1.6, 12.0, -20.6, -76, _env(), "Kessler's porch and the truck at B (its serving window facing his door)", 'street')
+_icam('ic_ext_kwide', 760, 520, IC_G + 1.6, 9.0, -21.2, -72, _env(), "Kessler's porch and the truck at B (its serving window facing his door)", 'street')
 _icam('ic_ext_kporch', 900, 520, IC_G + 1.5, 2.6, -17.2, 196, _env(), "Kessler's porch and door from his walk", 'street')
 _icam('ic_ext_kdoor', 980, 520, IC_G + 1.25, 1.6, -20.0, 182, _env(), "close on Kessler's doorway at child height (the huddle)", 'street')
-_icam('ic_ext_kout', 820, 520, IC_KFLOOR + 1.45, 1.4, -23.2, 2, _env(), "from Kessler's doorway out: the truck at B, its pink window facing us, our house across the lane", 'street')
+_icam('ic_ext_kout', 820, 520, IC_KFLOOR + 1.45, 1.4, -23.2, -10, _env(), "from Kessler's doorway out: the truck at B, its pink window facing us, our house across the lane", 'street')
 _icam('ic_ext_bathout', 900, 540, 1.55, -0.5, 0.25, 176, _env(x=(940, 980), y=(520, 560), zoom=(1.0, 1.03)), 'POV through our bathroom window across the lane to Kessler\'s door', 'street')
-_icam('ic_ext_plow', 820, 520, IC_G + 1.6, -6.0, -4.6, 162, _env(), "the plow passing on Birch Lane (the orange beacon sweeping), from our yard", 'street')
-_icam('ic_ext_gap', 1050, 520, 1.25, 3.4, 0.3, 182, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'POV through the curtain crack: the truck at A, Kessler\'s window beyond', 'street')
+_icam('ic_ext_plow', 820, 520, IC_G + 1.6, 2.4, -4.4, 198, _env(), "the plow passing on Birch Lane (the orange beacon sweeping), from our yard", 'street')
+_icam('ic_ext_gap', 1000, 520, 1.25, 3.4, 0.3, 197, _env(x=(920, 1000), y=(500, 560), zoom=(1.0, 1.06)), 'POV through the curtain crack: the truck at A, Kessler\'s window beyond', 'street')
 
 
 # ====================================================================================================== props shared by sets
@@ -2373,7 +2374,7 @@ _icam('ic_liv_couch', 900, 540, 1.15, 3.4, 4.85, 180, _env(), 'from the TV to th
 _icam('ic_liv_couch3q', 980, 540, 1.2, 5.3, 4.1, -140, _env(), 'the couch at 3/4 from the front-east (seated figures)', 'living')
 _icam('ic_liv_tv', 1250, 520, 1.08, 3.2, 2.05, 3, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'from the couch to the black TV screen (POV: the reflection, us, the crack, the skull)', 'living')
 _icam('ic_liv_window', 950, 520, 1.5, 3.1, 3.7, 180, _env(), 'to the window and curtains over the couch back', 'living')
-_icam('ic_liv_radio', 1300, 380, 0.95, 4.62, 3.1, 172, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), "close on Dad's radio on the side table", 'living')
+_icam('ic_liv_radio', 1300, 360, 0.95, 4.8, 2.45, 176, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), "close on Dad's radio on the side table", 'living')
 _icam('ic_liv_opening', 860, 520, 1.5, 4.6, 3.6, -96, _env(), 'from the room to the opening and the hall', 'living')
 _icam('ic_hall_door', 820, 520, 1.5, -2.1, 6.7, 180, _env(), 'down the hall to the front door (bath door left, coats right)', 'hall')
 _icam('ic_hall_doorclose', 1150, 520, 1.4, -2.1, 1.45, 180, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'close on the front door: the clear strip, the frosted panel, the rules, the knob', 'hall')
@@ -2393,8 +2394,8 @@ def ic_1958(view='curb', mitten=True, truck=True, **kw):
     """Birch Lane in 1958 (sepia-cold grade ic_1958, older siding, two 1958 cars at the kerbs): view 'curb' (from
     Kessler's doorway: the pink window at the kerb, Benny's small footprints leading to it), 'lane' (down the lane),
     'mitten' (close, low: one red mitten at the kerb, the truck gone). Same plan as the night (the truck at B)."""
-    tracks = [('benny', [(1.4, -22.0), (1.42, -19.0), (1.45, -17.0)])]
-    props = [('mitten', 1.62, -17.05, IC_RED)] if (mitten and view == 'mitten') else []
+    tracks = [('benny', [(1.4, -22.0), (1.3, -21.0), (-0.6, -19.0), (-2.6, -17.1)])]
+    props = [('mitten', -2.4, -17.15, IC_RED)] if (mitten and view == 'mitten') else []
     if view == 'mitten': truck = False
     return ic_street(view, tod='1958', truck='B' if truck else None, tracks=tracks, props=props, porch=0.0, kporch=1.0 if view != 'mitten' else 0.0,
                      win=dict(his=0.8), smoke=1.0, car=True, **kw)
@@ -2415,7 +2416,7 @@ def ic_town(view='town', truck=True, truck_x=None, **kw):
     return ic_street(view, layout='town', truck=pos, fence=False, car=False, **kw)
 
 
-_icam('ic_ext_mitten', 1100, 300, IC_SNOWY + 0.55, 1.5, -18.9, 4, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'close and low on the kerb: one red mitten (1958)', 'street', pitch=22.0)
+_icam('ic_ext_mitten', 1100, 300, IC_SNOWY + 0.5, -2.42, -18.3, 2, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'close and low on the kerb: one red mitten (1958)', 'street', pitch=22.0)
 _icam('ic_ext_town', 760, 520, IC_G + 1.7, -7.0, -6.0, 152, _env(f=(1.0, 2.0)), 'across town: the truck slowing at the house with no chimney smoke', 'street')
 
 
@@ -2496,7 +2497,7 @@ def _ici_rule(pen, t, n=1, write=1.0, **kw):
     write 0..1 reveals it word by word (keep 1.0 while it is read: always fully legible)."""
     _ibg_b(pen, '#1a2232', '#0a0e18', 150); pen.texture(rect(*_IBGB), 'wood', 0.3, 'overlay', 1.0, 90)
     pen.cv.save(); pen.cv.translate(960, 545); pen.cv.rotate(-0.8 if n % 2 else 0.7)
-    W, H = 1500, 700
+    W, H = 1600, 760
     x0, y0 = -W / 2, -H / 2
     _lined_paper(pen, x0, y0, W, H)
     if n == 8:
@@ -2511,13 +2512,13 @@ def _ici_rule(pen, t, n=1, write=1.0, **kw):
         btext(pen, 'A.', x0 + W - 140, y0 + H - 50, 'kid', 52, '#2a3a8a', 245)
     else:
         txt = dict(IC_RULES)[n]
-        _shaky(pen, 'RULE NUMBER %s' % ('ONE TWO THREE FOUR FIVE SIX SEVEN'.split()[n - 1]), x0 + 120, y0 + 82, 50, '#1a2238', 250, n)
-        lines = _wrap(txt, 40)
+        _shaky(pen, 'RULE NUMBER %s' % ('ONE TWO THREE FOUR FIVE SIX SEVEN'.split()[n - 1]), x0 + 120, y0 + 92, 64, '#1a2238', 252, n)
+        lines = _wrap(txt, 34)
         words = sum(len(l.split()) for l in lines); nw = int(math.ceil(words * clamp(write)))
         k = 0
         for j, ln in enumerate(lines):
             shown = ' '.join(ln.split()[:max(0, nw - k)]); k += len(ln.split())
-            _shaky(pen, shown, x0 + 120, y0 + 210 + j * 84, 54, '#1a2238', 248, n * 31 + j)
+            _shaky(pen, shown, x0 + 120, y0 + 222 + j * 92, 66, '#1a2238', 250, n * 31 + j)
         _shaky(pen, 'W.K.', x0 + W - 170, y0 + H - 46, 48, '#1a2238', 245, 77)
     pen.cv.restore()
 
@@ -2693,13 +2694,13 @@ def _ici_mittens(pen, t, lina=False, drop=0.0, **kw):
         pen.fill(rect(x0, y0, w, h), '#f4f0f2')
     ms = list(IC_MITTENS) + ([IC_LINA_MITTEN] if lina else [])
     n = len(ms)
-    pts = [(-300 + 2520 * f, 260 + 160 * math.sin(math.pi * f)) for f in np.linspace(0, 1, 40)]
+    pts = [(-200 + 2320 * f, 260 + 160 * math.sin(math.pi * f)) for f in np.linspace(0, 1, 40)]
     pen.line(smooth(pts, False), 5, '#f8f0e8', 240); pen.line(smooth(pts, False), 1.5, '#a89888', 200)
     for i, c in enumerate(ms):
-        f = 0.06 + 0.88 * (i + 0.5) / n
-        x = -300 + 2520 * f; y = 260 + 160 * math.sin(math.pi * f)
+        f = 0.155 + 0.69 * (i + 0.5) / n
+        x = -200 + 2320 * f; y = 260 + 160 * math.sin(math.pi * f)
         if i == n - 1 and lina and drop > 0: y += 900 * drop ** 2
-        sc = 150 if i == 0 else 205
+        sc = 140 if i == 0 else 190
         sw = 4 * math.sin(t * 1.2 + i)
         pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(sw)
         m = union(rrect(-sc * 0.38, sc * 0.16, sc * 0.76, sc * 0.92, sc * 0.36), oval(sc * 0.37, sc * 0.52, sc * 0.17, sc * 0.27))
@@ -2790,6 +2791,15 @@ def _ici_towel(pen, t, press=1.0, tip=1.0, **kw):
     pen.fill(moved(tw, 0, 20), '#000000', 90, blur=20)
     pen.fill(tw, '#7aa0c8'); pen.texture(tw, 'fabric', 0.8, 'overlay', 0.8); pen.line(tw, 3)
     for k in range(14): pen.seg((340 + k * 100, yb - 60), (360 + k * 100, yb + 60), 2, '#5a80a8', 120)
+    if tip > 0.01:                                                             # the tip sticks out from under the towel's front edge
+        L = 420 * tip
+        A = (1050, yb + 70); Bt = (1050 - L, yb + 70 + L * 0.42)
+        leg = poly([(A[0] + 12, A[1] - 14), (A[0] - 12, A[1] + 12), (Bt[0] + 4, Bt[1] + 2), (Bt[0] - 10, Bt[1] + 6), (Bt[0] + 6, Bt[1] - 4)])
+        pen.fill(leg, '#5a3a22'); pen.line(leg, 2)
+        J = (A[0] - L * 0.42, A[1] + L * 0.42 * 0.42)
+        pen.fill(oval(J[0], J[1], 22, 17), '#6a4a2e'); pen.line(oval(J[0], J[1], 22, 17), 2)
+        pen.fill(oval(J[0], J[1] - 8, 16, 7), '#eef4ff', 220)
+        pen.seg(Bt, (Bt[0] - 30, Bt[1] + 10), 2, '#3a2412')
     pen.radial(None, 700, 900, 900, [(0, '#c8d8ff', 60), (1, '#c8d8ff', 0)])
 
 
@@ -2812,17 +2822,17 @@ def _ici_doorknob(pen, t, frost=1.0, **kw):
 
 def _ici_outro(pen, t, n=0, **kw):
     """The outro advice cards (warm, safe, legible): n 0..4 = IC_OUTRO[n] (lead-in, the instruction in big type, detail)."""
-    _ibg_b(pen, '#f4e4cc', '#e8c8a0', 90)
-    pen.radial(None, 960, 300, 1400, [(0, '#fff8ec', 200), (1, '#fff8ec', 0)])
+    _ibg_b(pen, '#8a5a34', '#4a2c18', 120); pen.texture(rect(*_IBGB), 'wood', 0.4, 'overlay', 1.0, 0)
+    pen.radial(None, 960, 300, 1400, [(0, '#ffc880', 70), (1, '#ffc880', 0)])
     lead, big, det = IC_OUTRO[n]
     card = rrect(200, 170, 1520, 740, 40)
-    pen.fill(moved(card, 14, 22), '#6a4a2a', 70, blur=24); pen.fill(card, '#fffaf2'); pen.line(card, 4, '#c8a070')
+    pen.fill(moved(card, 14, 22), '#000000', 120, blur=24); pen.fill(card, '#f6eedf'); pen.line(card, 4, '#a87a48')
     y = 330
-    for ln in _wrap(lead, 52): btext(pen, ln, 960, y, 'sans', 50, '#4a3020', 245, 'center'); y += 64
+    for ln in _wrap(lead, 52): btext(pen, ln, 960, y, 'sans_b', 50, '#3a2414', 252, 'center'); y += 64
     y += 40
-    for ln in _wrap(big, 30): btext(pen, ln, 960, y, 'head', 84, '#b8282a', 252, 'center'); y += 100
+    for ln in _wrap(big, 30): btext(pen, ln, 960, y, 'head', 88, '#a01c1e', 255, 'center'); y += 104
     y += 20
-    for ln in _wrap(det, 56): btext(pen, ln, 960, y, 'sans', 44, '#4a3020', 240, 'center'); y += 58
+    for ln in _wrap(det, 56): btext(pen, ln, 960, y, 'sans', 46, '#2a1a10', 252, 'center'); y += 60
     pen.fill(_flake_path(300, 260, 44), '#e8b070', 160)
 
 

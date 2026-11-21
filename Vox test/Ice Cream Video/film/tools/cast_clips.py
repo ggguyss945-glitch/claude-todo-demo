@@ -403,31 +403,35 @@ def _c_sh_slide():
 
 @clip('sh_lean_down_reach', 5.5, '"Mister Shiver leans down. Down. Further than a man can bend." His glove reaches down for Lina\'s bare hand; an inch from his fingers Adam yanks her into his arms. He keeps smiling, keeps waving.')
 def _c_sh_down():
-    ppm = 260.0
-    g = truck(None, 760, 520, ppm)
-    a = sh(760, g['floor'], ppm)
-    lina = actor('lina', 1080, 1000, ppm, seed=3, expr='neutral')
-    adam = actor('adam', 0, 1000, ppm, seed=4, expr='fear')
-    lina.face(-0.6); adam.face(-0.6)
-    hand = lambda t: lina.where(t, 'hand_r')
-    lina.reach_to(0.8, -1, (900, 600), t1=3.4, dur=1.0, z=60.0, shape='reach')
-    a.lean_to(0.3, (1000, 760), gap=-10.0, dur=2.6, beats=2)
-    a.reach_far(1.6, 1, lambda t: (lina.where(t, 'hand_r')[0] - 20, lina.where(t, 'hand_r')[1] - 30), t1=None, dur=1.6, z=40.0)
-    adam.run(2.2, 3.0, 1500, 1170)
-    adam.reach_to(2.9, -1, (lina, 'chest'), t1=None, dur=0.3, z=60.0)
-    def ln(P, t):
-        if t > 3.2: P.dx -= 0 
-    lina.look_at(0.2, (a, 'eyes'), dur=0.5)
-    adam.look_at(0.2, (lina, 'head'), dur=0.3)
+    ppm = 300.0
+    g = truck(None, 700, 470, ppm)
+    a = sh(700, g['floor'], ppm)
+    a.set(-1.0, None, 0.01, sh_nolegs=1.0)
+    lina = actor('lina', 1010, 1010, ppm, seed=3, expr='dazed')
+    adam = actor('adam', 0, 1010, ppm, seed=4, expr='fear')
+    lina.face(-0.6)
+    lina.look_at(0.0, (a, 'eyes'), dur=0.4)
+    lina.reach_to(0.6, -1, (860, 720), t1=3.0, dur=1.0, z=60.0, shape='reach')
+    def bend(P, t):                       # down... and down: two slow beats, past a man's waist
+        u1 = ease_in_out(clamp((t - 0.3) / 1.0)); u2 = ease_in_out(clamp((t - 1.6) / 1.1))
+        P.ws_bend = max(P.ws_bend, 0.35 * u1 + 0.95 * u2); P.ws_face_up = 0.9
+        P.sh_neck += 10.0 * u2
+    a._add(-INF, None, bend)
+    a.reach_far(1.8, 1, lambda t: (lina.where(min(t, 3.0), 'hand_r')[0] - 18, lina.where(min(t, 3.0), 'hand_r')[1] - 22), t1=3.25, dur=1.2, z=30.0, fade=0.8)
+    a.slow_wave(4.2, 5.5, side=1)
+    adam.run(1.9, 2.9, 1600, 1150)
+    adam.face(-0.6)
+    adam.look_at(1.9, (lina, 'head'), dur=0.3)
+    adam.reach_to(2.8, -1, (lina, 'chest'), dur=0.25, z=60.0)
     def lina_pull(P, t):
-        u = ease_in_out(clamp((t - 3.25) / 0.35)); P.dx += 120 * u
-    lina._add(3.25, None, lina_pull)
-    a.slow_wave(3.8, 5.5, side=-1)
+        u = ease_in_out(clamp((t - 3.0) / 0.3)); P.dx += 150 * u
+    lina._add(3.0, None, lina_pull)
+    lina.expr('fear', 3.0)
     def draw(pen, t):
         snow_street(pen, 700)
         truck_back(pen, g, ppm)
-        shiver_in_window(pen, a, t, g, lean=True)
         truck_front(pen, g, ppm, 1.0, t)
+        fig(pen, a, t, PINKW)
         fig(pen, lina, t, PINKW); fig(pen, adam, t, PINKW)
     return dict(draw=draw, actors=[a, lina, adam], grounded=[lina, adam])
 
@@ -496,17 +500,18 @@ def _c_sh_transform_legs():
 
 @clip('sh_pour_out', 4.0, 'He pours out of the window. Head first. Legs last. Then the legs carry him over the edge into the snow.')
 def _c_sh_pour():
-    ppm = 200.0
-    g = truck(None, 700, 560, ppm)
-    a = sh(700, g['floor'], ppm)
+    ppm = 230.0
+    g = truck(None, 640, 520, ppm)
+    a = sh(640, g['floor'], ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
-    a.face(0.5, 0.0)
-    a.pour_out(0.3, 2.4, drop=420.0)
+    a.face(0.15, 0.0)
+    a.pour_out(0.3, 3.2, sill_dy=-(g['floor'] - g['sill']) * 0.55, ground_dy=1010 - g['floor'])
     def draw(pen, t):
         snow_street(pen, 760)
         truck_back(pen, g, ppm)
         truck_front(pen, g, ppm, 1.0, t)
-        fig(pen, a, t, PINKW)
+        if t < 0.35: shiver_in_window(pen, a, t, g, lean=False)
+        else: fig(pen, a, t, PINKW)
     return dict(draw=draw, actors=[a])
 
 
@@ -551,9 +556,10 @@ def _c_sh_drop():
 @clip('sh_legs_spear_coat', 4.5, 'Legs stab the snow round Adam as he runs with Lina in his arms; one spears his coat to the ground; he tears free; another pries at Lina (he never touches a child who is held).')
 def _c_sh_spear():
     ppm = 210.0
-    a = sh(300, 1000, ppm)
-    a.set(-1.0, None, 0.01, sh_m=1.0, sh_lift=90.0)
+    a = sh(0, 1000, ppm)
+    a.set(-1.0, None, 0.01, sh_m=1.0, sh_spread=0.75)
     a.face(0.6, 0.0)
+    a.scuttle(0.0, 4.5, lambda u: (330 + 640 * u, 1000), None, stride=160.0, lift=90.0, ease=0.05)
     adam = actor('adam_sock', 0, 1000, ppm, seed=5, expr='terrified_call')
     lina = actor('lina', 0, 0, ppm, seed=6, expr='fear')
     adam.carry(0.0, lina)
@@ -574,14 +580,14 @@ def _c_sh_spear():
 @clip('sh_face_glass', 3.5, 'At the door as "Mom": slowly, a face slides up the clear strip of glass. Long. White. Red eyes. The doorknob grows frost.')
 def _c_sh_glass():
     ppm = 520.0
-    a = sh(960, 1600, ppm)
+    a = sh(960, 2900, ppm * 1.9)
     a.set(-1.0, None, 0.01, sh_long=1.0, sh_red=1.0, sh_sink=1.0, sh_smile=1.0)
     a.face(0.0, 0.0)
-    def rise(P, t): P.dy -= 420 * ease_in_out(clamp((t - 0.4) / 2.4))
+    def rise(P, t): P.dy -= 520 * ease_in_out(clamp((t - 0.4) / 2.4))
     a._add(-INF, None, rise)
     def draw(pen, t):
         pen.fill(rect(0, 0, 1920, 1080), '#3a2e26')
-        strip = rect(760, 120, 400, 640)
+        strip = rect(760, 140, 400, 300)
         pen.fill(strip, '#0a0e1a')
         pen.cv.save(); pen.cv.clipPath(strip, skia.ClipOp.kIntersect, True)
         fig(pen, a, t, dict(NIGHTI, dark=0.15))
@@ -597,10 +603,10 @@ def _c_sh_glass():
 def _c_sh_hatch():
     ppm = 240.0
     a = sh(960, 120, ppm)
-    a.set(-1.0, None, 0.01, sh_m=1.0)
+    a.set(-1.0, None, 0.01, sh_m=1.0, sh_legcap=1.0, sh_nolegs=1.0)
     a.face(0.0, 0.0)
-    a.hang_hatch(0.4, 1.2, lower=0.62)
-    adam = actor('adam_in', 760, 1040, ppm, seed=7, expr='fear'); lina = actor('lina_pj', 1160, 1040, ppm, seed=8, expr='fear')
+    a.hang_hatch(0.4, 1.2, lower=0.36)
+    adam = actor('adam_in', 820, 1040, ppm, seed=7, expr='fear'); lina = actor('lina_pj', 1090, 1040, ppm, seed=8, expr='fear')
     adam.face(0.35); lina.face(-0.35)
     adam.look_at(0.6, (a, 'eyes'), dur=0.3); lina.look_at(0.7, (a, 'eyes'), dur=0.3)
     adam.reach_to(2.3, 1, (lina, 'hand_l'), dur=0.3, z=40.0)
@@ -636,10 +642,12 @@ def _c_sh_under_door():
 
 @clip('sh_hook_blanket_cage', 5.0, 'Crossing the street under one blanket: legs stab the snow round them; one hooks the blanket and PULLS; then he swings round, jaw down, legs arched over them like a cage ("Inside, children. Rule seven.").')
 def _c_sh_cage():
-    ppm = 170.0
-    a = sh(1100, 1000, ppm)
+    ppm = 230.0
+    a = sh(1080, 1000, ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
     a.face(-0.3, 0.0)
+    def over(P, t): P.dx -= 140.0 * ease_in_out(clamp((t - 2.3) / 0.6))
+    a._add(-INF, None, over)
     adam = actor('adam_sock', 880, 1000, ppm, seed=9, expr='fear'); lina = actor('lina', 990, 1000, ppm, seed=10, expr='fear')
     adam.face(0.4); lina.face(0.4)
     adam.hold_hand(0.0, 1, lina, -1)
@@ -832,10 +840,12 @@ def _c_cocoa():
     k = actor('kessler_am', 1150, 1000, ppm, seed=31, expr='tender')
     l = actor('lina', 820, 1000, ppm, seed=32, expr='kid_grin')
     k.face(-0.5); l.face(0.55)
-    l.hold_prop('mug', 1, -1.0, 1.6)
-    l.reach_to(0.3, 1, (k, 'chest'), t1=1.7, dur=0.9, z=60.0, shape='grip')
-    k.reach_to(1.1, -1, lambda t: l.where(t, 'hand_l'), t1=None, dur=0.5, z=60.0, shape='grip')
-    k.hold_prop('mug', -1, 1.6, None)
+    M = (k.where(0.0, 'chest')[0] - 0.16 * ppm, k.where(0.0, 'chest')[1] + 0.18 * ppm)
+    l.hold_prop('mug', 1, -1.0, 1.9)
+    l.reach_to(0.3, 1, M, t1=1.9, dur=0.9, z=60.0, shape='grip', prop='mug')
+    k.reach_to(1.1, -1, (M[0] + 8, M[1]), t1=None, dur=0.6, z=60.0, shape='grip')
+    k.reach_to(1.2, 1, (M[0] + 30, M[1] + 4), t1=None, dur=0.6, z=60.0, shape='grip')
+    k.hold_prop('mug', -1, 1.9, None)
     k.look_at(0.0, (l, 'eyes'), dur=0.4); l.look_at(0.0, (k, 'eyes'), dur=0.3)
     k.talk([(2.2, 4.3)], text='first time anyone knocked on mine')
     def draw(pen, t):

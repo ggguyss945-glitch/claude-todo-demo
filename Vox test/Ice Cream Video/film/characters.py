@@ -7516,6 +7516,9 @@ exec(compile(open(_DOCTOR_SRC).read(), _DOCTOR_SRC, 'exec'))
 # characters_bus.py, run here the same way (see BUS_API / CAST.md).
 _BUS_SRC = os.path.join(_HERE, 'characters_bus.py')
 exec(compile(open(_BUS_SRC).read(), _BUS_SRC, 'exec'))
+# this film's cast (Mister Shiver, Adam, Lina, Dad, Mr. Kessler, 1958, the medics) lives in characters_ice.py
+_ICE_SRC = os.path.join(_HERE, 'characters_ice.py')
+exec(compile(open(_ICE_SRC).read(), _ICE_SRC, 'exec'))
 
 
 if __name__ == '__main__' and '--selftest' in sys.argv:
