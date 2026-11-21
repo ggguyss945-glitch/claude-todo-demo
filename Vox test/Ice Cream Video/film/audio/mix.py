@@ -1205,8 +1205,8 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-e
 # stays under BOOST_TARGET_LU (by grade, LU over the voice's integrated level; a fixed drive turned the sustained swap on
 # "Seven." into a +17 LU square wave), and a window already over its target comes down to it. The saturation's harmonics
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
-BOOST_SAT_DB = 20.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10);
-                      # sound fix: 20 (the hits now have only the 0.15-0.45 s scare beat before the next word)
+BOOST_SAT_DB = 24.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10);
+                      # sound fix: 24 (the hits now have only the 0.15-0.45 s scare beat before the next word)
 BOOST_TARGET_LU = {1.0: 11.5, 0.75: 10.5, 0.5: 9.5}   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
 BOOST_VCUT_DB = 10.0  # the extra 1-4.5 kHz cut keyed to the voice on the saturated hits (was 16 dB and the ONLY
                       # protection: the critic measured the voice 2.6-9 LU under the bed in the 1 s after the hits)
@@ -1809,8 +1809,9 @@ def main():
             # shaped window, so the ceiling and the drive come down over BOOST_REL_S after the window, not in 20 ms
             hx = hx * (10 ** (BOOST_DRIVE_DB * bgr * bshape / 20)).astype(np.float32)[:, None]
             cdb = 20 * np.log10(np.maximum(ceil, 1e-9))
-            cbd = -1.0 - 1.0 * (1.0 - bgr)          # sound fix: -1.0 / -1.25 / -1.5 dBFS (was -1 / -1.5 / -2: the hits now
-                                                    # have only the scare beat before the next word to be heard in)
+            cbd = -1.0 + 0.0 * bgr                  # sound fix: -1 dBFS for every grade (was -1 / -1.5 / -2: the hits now
+                                                    # have only the scare beat before the next word to be heard in; the
+                                                    # grades still differ by their loudness targets)
             ceil = (10 ** ((cdb + bshape * np.maximum(cbd - cdb, 0.0)) / 20)).astype(np.float32)
             # fix round 2: density (see BOOST_SAT_DB): per window, scale the bus so its peak sits BOOST_SAT_DB x grade
             # over the ceiling, soft-clip to the ceiling (tanh), cut the clip's 1-4.5 kHz under the voice; all faded by
@@ -1821,15 +1822,18 @@ def main():
                 if b1 - a0 < 64: continue
                 seg = hx[a0:b1]
                 w = bshape[a0:b1]
-                cl = 10 ** ((-1.0 - 1.0 * (1.0 - gd)) / 20)
+                cl = 10 ** (-1.0 / 20)
                 pk_in = float(np.abs(hx[max(0, a):min(N, b)]).max()) if b > a else 0.0
                 if pk_in <= 1e-6: continue
                 tgt = Lv_b + next((v for k, v in sorted(BOOST_TARGET_LU.items()) if gd <= k + 1e-6), 8.5)
                 ca, cb_ = max(0, a) - a0, max(min(N, b), min(N, a + int(0.45 * SR))) - a0
+                # sound fix: the 1-4.5 kHz cut is keyed to the voice only inside the words' zone (keyed to the voice's
+                # 0.25 s release it also cut the hit in its own scare beat, the gap before the next word)
+                vk_ = act_h[a0:b1] * bzone[a0:b1] if bzone is not None else act_h[a0:b1]
                 def _sat(d):
                     pre = (cl * 10 ** (d / 20)) / pk_in
                     gp = (10 ** (w * 20 * np.log10(pre) / 20)).astype(np.float32)[:, None]
-                    y_ = dyn_cut((cl * np.tanh(seg * gp / cl)).astype(np.float32), act_h[a0:b1], BOOST_VCUT_DB)
+                    y_ = dyn_cut((cl * np.tanh(seg * gp / cl)).astype(np.float32), vk_, BOOST_VCUT_DB)
                     if bzone is not None and bzone[a0:b1].any():      # sound fix (B1): the words stay over the hit
                         y_ *= speech_duck(y_, key[a0:b1], bzone[a0:b1], BOOST_DUCK_MARGIN_LU)[:, None]
                     return y_

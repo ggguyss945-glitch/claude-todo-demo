@@ -252,6 +252,7 @@ STACK_S = 0.04
 # OFF_WORDS (minors 6-8): (recipe names, from, to, why): their transients move off the spoken words into the gaps
 VO_PATH = os.path.join(MP.W, 'align', 'vo_en.wav')
 OFF_MAX = 0.45
+ON_WORD_DB = {'impact_hit': -6.0}
 OFF_WORDS = [
     (('leg_click',), "A long brown leg punches out", 'end:Another. Click. Click', 'the leg clicks before "Click."'),
     (('leg_click',), 'The house is as cold as the street', 'end:Across the ceiling', 'the ceiling clicks before "Click."'),
@@ -341,6 +342,24 @@ def _voice_gaps(a, b):
         return []
 
 
+def on_words(out, lines, log):
+    """ON_WORD_DB: the picture's reveal-frame impacts that land INSIDE a spoken word (the boosted score hits now wait
+    for the scare beat after the word) come down by that much, so the word stays over them."""
+    for c in out:
+        nm = c.get('name')
+        if nm not in ON_WORD_DB or not isinstance(c.get('t'), (int, float)):
+            continue
+        t = float(c['t'])
+        if not any(l['t'] - 0.02 <= t <= l['end'] for l in lines):
+            continue
+        gaps = _voice_gaps(t - 0.3, t + 0.3)
+        if any(g0 <= t <= g1 - 0.05 for g0, g1 in gaps):
+            continue
+        c['gain_db'] = round(float(c.get('gain_db', 0.0) or 0.0) + ON_WORD_DB[nm], 2)
+        log.append(f'ONW  {nm:18s} {t:7.2f} {ON_WORD_DB[nm]:+.1f} dB (on a spoken word)')
+    return out
+
+
 def off_words(out, lines, log):
     """OFF_WORDS (minors 6-8): a short transient of these names that lands on a spoken word moves into the nearest
     silence of the narration (within OFF_MAX s), its transient 40 ms into the gap: the sound, then the word naming it."""
@@ -402,6 +421,7 @@ def apply(cues, lines):
         log.append(f'EDIT {name:18s} {ta:7.2f}-{tb:7.2f} {sub or ""} {ch}: {len(hit)} cue(s)  ({why[:70]})')
     out = [c for c in out if not c.get('_drop')]
     out = off_words(out, lines, log)
+    out = on_words(out, lines, log)
     # THIN the speech ticks
     quiet = []
     for a, b, g in THIN_QUIET:

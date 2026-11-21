@@ -89,6 +89,11 @@ then run `final_mix.sh`. The stems (`W/mix/final/stems/`, 0.9 GB) are written fo
     360.58-364.38 s), copied to `W/align/vo_en.wav`; line times unchanged (align.py into a scratch folder matched
     timeline.json to 1 ms), so timeline.json is kept and only L192's words in asr_cache.json were replaced;
     `python3 tools/vo_asrcheck.py --every`: 0 failures.
+  - Measured on five excerpt mixes (90-130, 160-245, 290-440, 480-590, 630-700 s: every boosted scare; the full
+    mix could not run, the machine was rendering): -14.0 LUFS, -1.7 dBTP; 21 boosted scares +7.0..+10.7 LU momentary
+    over the integrated level (the towel jam is now an unboosted hit); the words after each hit +8.4..+29 LU over the
+    bed (50 ms segments); the critic's 24 lines min +4.6..+30 LU (were -10.6..+0.1) and all recognised word for word
+    (L52 "Out of tune." reads "two" only at 50 ms margins, with the bed 13.6 LU under it; right with 0.2 s).
 
 ### The final remix (run once the new cue sheets exist; from `film/`, no render running, `free -g` >= 11 GB available)
 ```
