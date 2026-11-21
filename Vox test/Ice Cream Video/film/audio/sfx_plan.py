@@ -36,7 +36,19 @@ import music_plan as MP                                   # noqa: E402
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
 EDIT = [
-    # (none yet: the first full mix of this film (measure_mix.py) fills this)
+    # sound fix round (the sound critic's minors; the picture's cue frames for these were off the words: re-check each
+    # on the new cue sheets, the rows only act on a cue inside their window)
+    ('skin_stretch', 'Past where a face should end', 'His skin pulls long#pulls', {}, {'at': 'His skin pulls long#pulls -0.12'},
+     'minor 5: the skin stretch came 1.1 s before "pulls long"'),
+    ('leg_tip_tile', 'Under the door, a needle-thin', 'Under the door, a needle-thin leg tip slides in#slides -0.3', {},
+     {'at': 'Under the door, a needle-thin leg tip slides in#slides -0.15'},
+     'minor 4: the needle tip came 2.3 s before "slides in"'),
+    ('door_tap', 'Then... a soft tap', 'end:Then... a soft tap at the front door', {},
+     {'at': 'Then... a soft tap#a -0.3'}, 'minor 8: the tap landed on the word "tap": now in the pause after "Then..."'),
+    ('furnace_die', 'Click. -0.6', 'Click. +0.3', {}, {'at': 'Click. -0.1'},
+     'minor 11: the relay click just before the word "Click.", not on it'),
+    ('leg_punch', 'A long brown leg punches out', "end:A long brown leg punches out, jointed like a spider's", {},
+     {'add_db': -4.0}, 'the picture\'s punch lands on "punches out": 4 dB down so the line stays 3+ LU over it'),
 ]
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
@@ -89,10 +101,16 @@ ADD = [
     ('Two nights later', 'frozen_still', 0.0, None, {'dur': "until:That's why I wrote one more"},
      'still frozen air across town'),
     ('The truck slows at a house', 'truck_idle', -4.0, None, {'dur': 4.0, 'far': True}, 'his engine, slowing'),
+    # ---- sound fix round
+    ('Lina grabs my coat#grabs -0.05', 'cloth_rustle', -2.0, 'close', {'kind': 'grab'},
+     'minor 12: Lina grabbing my coat had no sound'),
+    ('Door shut +0.6', 'hall_clicks', 0.0, None, {'dur': 'until:The clicking stops -0.05', 'rate': 1.0, 'keep': True},
+     'M3: his leg tips pacing behind the bathroom door, stopping on "The clicking stops."'),
 ]
 DEDUP_S = 2.0                                             # an ADD row yields to a picture cue of its sound this close
 # a picture cue of these names closer than this to the last one of the same name is a doubled tick: dropped
-DOUBLE_S = {'light_switch': 0.3, 'porch_light': 0.3, 'leg_click': 0.04, 'door_tap': 0.25}
+DOUBLE_S = {'light_switch': 0.3, 'porch_light': 0.3, 'leg_click': 0.09, 'door_tap': 0.25,
+            'furnace_die': 1.5}   # sound fix: leg clicks 60 ms apart were doubles (minor 6); the furnace died twice (11)
 
 # picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
@@ -122,21 +140,21 @@ PICTURE = {
     'paper_flutter': ('paper', {}, -6.0, 'the rule card\'s paper'),
     'slap': ('cloth_rustle', {'kind': 'grab'}, 2.0, 'I slap the cone out of her hand (hand_slap has no source here)'),
     'door_pound': ('knock_door', {'force': 1.0}, None, 'Mom pounding on the door (was a door-creak fallback)'),
-    'glass_squeak': ('frost_wipe', {}, -4.0, 'his face slides up the frosted glass (was a window-smash fallback)'),
+    'glass_squeak': ('glass_slide', {}, -4.0, 'his face slides up the frosted glass: a long squeak over the slide (was a short wipe)'),
     'door_open_far': ('door_open_street', {}, -6.0, 'doors open along the street (was a pen-click fallback)'),
     'pencil_write': ('pen_scratch', {}, None, 'rule eight written (was a pen-click fallback)'),
     'porch_light_click': ('porch_light', {}, None, 'porch lights click on (was a leg-click fallback)'),
     'cloth_tear': ('cloth_rip', {}, None, 'the coat / blanket tears'),
     'blanket_wrap': ('cloth_rustle', {}, None, 'a blanket wrapped round (was the blanket-yank fallback)'),
     'footsteps_run': ('footsteps_hall', {}, None, 'running down the hall'),
-    'attic_click': ('attic_crawl', {}, None, 'clicks across the ceiling'),
+    'attic_click': ('leg_click', {'surface': 'wood'}, None, 'one click through the ceiling (was a whole 4 s crawl per click)'),
     'attic_scuttle': ('attic_crawl', {}, None, 'scuttling in the attic'),
     'glove_snow': ('snow_scuff', {}, None, 'a glove in the snow'),
     'hatch_rattle': ('wood_creak', {'kind': 'tick'}, -2.0, 'the hatch rattles in its frame (was a second hatch drop)'),
     'leg_slide': ('leg_tip_tile', {}, None, 'the needle tip slides in on the tile'),
     'leg_withdraw': ('leg_tip_tile', {}, -4.0, 'the tip pulls back'),
     'radio_grab': ('cloth_rustle', {'kind': 'grab'}, -2.0, 'Adam grabs the radio'),
-    'sh_jaw_strain': ('wood_creak', {'kind': 'tick'}, -4.0, 'his jaw strains (was a full jaw drop each time)'),
+    'sh_jaw_strain': ('jaw_strain', {}, -6.0, 'his jaw strains (sound fix: a tendon creak and bone ratchet, was a wood creak)'),
     'sh_jaw_close': ('bone_crack', {}, -6.0, 'the jaw snaps shut as the skull shrinks back'),
     'sh_smile_creak': ('skin_stretch', {'kind': 'creak'}, -6.0, 'the smile creaks wider (was a door creak)'),
     'streetlight_buzz': ('lamp_flicker', {'kind': 'buzz'}, -4.0, 'the streetlight buzzes'),
@@ -150,6 +168,16 @@ PICTURE = {
     'sh_uniform_split': ('uniform_tear', {}, -4.0, 'the uniform splits'),
     'sh_pour': ('scuttle', {}, -4.0, 'he pours out of the window, legs first on the truck'),
     'sh_land': None,                                  # leg_stab_snow + the hit on the same frame
+    # sound fix round: the nine names that fell back to keywords in the first mix
+    'cloth_grab': ('cloth_rustle', {'kind': 'grab'}, None, 'a hand grabs cloth'),
+    'sh_bone_crack': ('bone_crack', {'n': 2}, -4.0, 'the skin hardens: two dry cracks'),
+    'leg_pry': ('leg_pry', {}, -2.0, 'a leg wedges in and pries'),
+    'leg_lift': ('leg_click', {'surface': 'metal'}, -8.0, 'a leg lifts off (a light click)'),
+    'towel_stuff': ('cloth_rustle', {}, -4.0, 'towels stuffed in the gap (was the towel-jam slam)'),
+    'snow_step': ('snow_walk', {'n': 1}, None, 'one step in snow'),
+    'leg_hook': ('blanket_yank', {}, None, 'a leg hooks the blanket and pulls'),
+    'plow_roar': ('plow_pass', {'peak': 1.0}, None, 'the plow roars in (the ADD row yields to it)'),
+    'legs_fold': ('leg_click', {'surface': 'metal', 'n': 4}, -6.0, 'the legs fold away'),
     'sh_jaw_drop': None,                              # the shot's own jaw_drop sits on "drops" 0.9 s earlier (a double)
 }
 WHO_HUM = {}
@@ -202,7 +230,7 @@ def _span(cn, params):
                                    'morning_bus', 'bus9_drive', 'bus_idle', 'siren_far', 'suburb_night', 'tape_hiss',
                                    'cold_night', 'frozen_still', 'house_hum', 'house_cold', 'truck_idle',
                                    'shovel_morning', 'radio_static', 'frost_creep', 'attic_crawl', 'scuttle',
-                                   'ambulance', 'plow_pass', 'truck_glide'):
+                                   'ambulance', 'plow_pass', 'truck_glide', 'hall_clicks'):
             return float(p['dur'])
     except (TypeError, ValueError):
         pass
@@ -216,6 +244,18 @@ ROOM = {'house_night': ('house_hum', {}, 0.0), 'house_powered': ('house_hum', {}
 SPACE_MAP = {'yard': 'snow', 'street_far': 'cold_street'}
 # recipes whose transient sits off the picture's frame by a fixed amount (filled by measure_mix.py on the first mix)
 SHIFT = {'porch_light_click': -0.11}   # first full mix: the porch light's click landed 116 ms after the frame
+# sound fix round (critic minor 10): the cast's walk cycles emit wooden steps for every space; outdoors they are snow
+INDOOR_STEPS = ('footsteps_wood_inside', 'footsteps_hall', 'footsteps_stairs')
+OUTDOOR_SPACES = ('outside', 'snow', 'yard', 'street', 'cold_street', 'porch')
+STEP_NAMES = ('snow_walk', 'snow_run', 'snow_deep', 'footsteps_wood_inside', 'footsteps_hall')
+STACK_S = 0.04
+# OFF_WORDS (minors 6-8): (recipe names, from, to, why): their transients move off the spoken words into the gaps
+VO_PATH = os.path.join(MP.W, 'align', 'vo_en.wav')
+OFF_MAX = 0.45
+OFF_WORDS = [
+    (('leg_click',), "A long brown leg punches out", 'end:Another. Click. Click', 'the leg clicks before "Click."'),
+    (('leg_click',), 'The house is as cold as the street', 'end:Across the ceiling', 'the ceiling clicks before "Click."'),
+]
 
 
 def picture_pass(out, lines, log):
@@ -253,11 +293,82 @@ def picture_pass(out, lines, log):
             c = dict(c, name=rn, params=q)
             if g is not None:
                 c['gain_db'] = g
+        if c.get('name') in INDOOR_STEPS and c.get('space') in OUTDOOR_SPACES:      # minor 10: wood steps in the snow
+            q = {k: v for k, v in (c.get('params') or {}).items() if k in ('n', 'rate', 'dur')}
+            c = dict(c, name='snow_walk', params=q, space='snow')
+            why = (why + '; ' if why else '') + 'an indoor step outdoors -> a step in snow'
         if why:
             log.append(f'PIC  {nm:18s} {t:7.2f} -> {c["name"]} {c.get("params")} {c.get("gain_db", 0):+.1f} dB  ({why})')
         res.append(c)
-    log.append(f'PICTURE: {n0} picture cues -> {len(res)}')
-    return res
+    # minor 10: several characters stepping on the same frame stacked the same step 2-3 times: one step, a little louder
+    out2, last_step = [], {}
+    for c in res:
+        nm2 = c.get('name')
+        if nm2 in STEP_NAMES and isinstance(c.get('t'), (int, float)):
+            k = last_step.get(nm2)
+            if k is not None and abs(float(c['t']) - float(k['t'])) < STACK_S:
+                k['gain_db'] = round(min(float(k.get('gain_db', 0.0) or 0.0) + 1.5, 0.0), 2)
+                log.append(f'PIC  {nm2:18s} {float(c["t"]):7.2f} merged into the step at {float(k["t"]):.2f} (stacked)')
+                continue
+            last_step[nm2] = c
+        out2.append(c)
+    log.append(f'PICTURE: {n0} picture cues -> {len(out2)}')
+    return out2
+
+
+def _voice_gaps(a, b):
+    """Silent stretches (>= 100 ms under -45 dB, 10 ms frames) of the edited narration between a and b (s)."""
+    try:
+        import soundfile as sf, numpy as np
+        info = sf.info(VO_PATH); sr = info.samplerate
+        x, _ = sf.read(VO_PATH, start=max(0, int(a * sr)), stop=int(b * sr), dtype='float32', always_2d=True)
+        x = x.mean(1); h = sr // 100; m = len(x) // h
+        db = 10 * np.log10((x[:m * h].reshape(m, h) ** 2).mean(1) + 1e-12)
+        q = db < -45.0
+        gaps, i = [], 0
+        while i < m:
+            if q[i]:
+                j = i
+                while j < m and q[j]:
+                    j += 1
+                if j - i >= 10:                          # 100 ms: not a stop closure inside a word
+                    gaps.append((a + i / 100.0, a + j / 100.0))
+                i = j
+            else:
+                i += 1
+        return gaps
+    except Exception:
+        return []
+
+
+def off_words(out, lines, log):
+    """OFF_WORDS (minors 6-8): a short transient of these names that lands on a spoken word moves into the nearest
+    silence of the narration (within OFF_MAX s), its transient 40 ms into the gap: the sound, then the word naming it."""
+    for names, a, b, why in OFF_WORDS:
+        try:
+            ta, tb = _t(a, lines), _t(b, lines)
+        except Exception as e:
+            log.append(f'OFFW {a}..{b}: bad anchor ({e!r}): skipped'); continue
+        gaps = _voice_gaps(ta - 1.0, tb + 1.0)
+        if not gaps:
+            log.append(f'OFFW {a}..{b}: no narration gaps read: skipped'); continue
+        used = []
+        for c in sorted([c for c in out if c.get('name') in names and isinstance(c.get('t'), (int, float))
+                         and ta - 0.05 <= float(c['t']) <= tb + 0.05], key=lambda c: float(c['t'])):
+            t = float(c['t'])
+            if any(g0 <= t <= g1 - 0.03 for g0, g1 in gaps):
+                continue                                               # already in a silence
+            cand = []
+            for g0, g1 in gaps:
+                p = g0 + min(0.04, (g1 - g0) / 3)
+                if abs(p - t) <= OFF_MAX and all(abs(p - u) > 0.08 for u in used):
+                    cand.append(p)
+            if not cand:
+                continue
+            p = min(cand, key=lambda x: abs(x - t)); used.append(p)
+            log.append(f'OFFW {c["name"]:18s} {t:7.2f} -> {p:7.2f} (off the word: {why})')
+            c['t'] = round(p, 3)
+    return out
 
 
 def apply(cues, lines):
@@ -290,6 +401,7 @@ def apply(cues, lines):
                 c['t'] = round(_t(ch['at'], lines), 3)
         log.append(f'EDIT {name:18s} {ta:7.2f}-{tb:7.2f} {sub or ""} {ch}: {len(hit)} cue(s)  ({why[:70]})')
     out = [c for c in out if not c.get('_drop')]
+    out = off_words(out, lines, log)
     # THIN the speech ticks
     quiet = []
     for a, b, g in THIN_QUIET:

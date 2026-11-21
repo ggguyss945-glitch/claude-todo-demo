@@ -210,8 +210,11 @@ EVENTS = [
     ('Rule number one -0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('From the inside', 'hit', 0.6, None),                                 # the breath on Kessler's glass (a fair clue)
     ('The truck glides down Birch Lane', 'swell', 0.45, 4.0),
-    ('For one flicker, his face is long#long', 'silence', 0.75, 0.9),      # first mix: silence under 'long and white'
-    ('For one flicker, his face is long#white +0.4', 'hit', 0.85, None, {'boost': 3.0}),   # glimpse 1 (the picture's reveal cut)
+    ('For one flicker, his face is long#white +0.1', 'silence', 0.75, 1.25),   # the dip under 'white. Red eyes.', up to the hit
+    # sound fix (critic B1): the boosted hits land in the voice edit's SCARE BEATS just after their words (the 0.40-0.45 s
+    # gaps left for them), never on the words; the reveal frame keeps the picture's own sound, the riser peaks on the hit
+    ('end:his face is long and white. Red eyes', 'riser', 0.55, 2.5),
+    ('end:his face is long and white. Red eyes', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),   # glimpse 1: after "Red eyes."
     ('The song stops. Right outside#stops', 'silence', 0.95, 1.6),        # the song stops dead: only the idle
     ('And that smile breathes', 'sub_drop', 0.6, None),
     # rule 2
@@ -219,42 +222,44 @@ EVENTS = [
     ("Then... a soft tap -0.9", 'silence', 0.8, 1.0),
     ('Five minutes later', 'sub_drop', 0.4, None),
     ("Lina's step-stool under it", 'riser', 0.55, 3.0),
-    ('I slap it#slap', 'hit', 0.8, None, {'boost': 2.5}),
-    ('Click. -0.9', 'silence', 0.95, 1.0),                                # the furnace relay alone
+    ('end:I slap it', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),   # after "I slap it." (the slap itself is the picture's foley)
+    ('Click. -0.9', 'silence', 0.9, 1.0),                                 # the furnace relay alone (sound fix: 0.95 muted the relay itself)
     ('The furnace stops', 'sub_drop', 0.6, None),
     ('end:Every light in the house goes out', 'hit', 0.9, None, {'boost': 2.5, 'nosnap': True}),   # just after 'out.'   # the power dies (picture power_cut)
-    ('in the curtain crack... a long white skull#skull -0.9', 'silence', 0.8, 1.1),
-    ('in the curtain crack... a long white skull#skull +0.25', 'hit', 1.0, None, {'boost': 3.5}),   # glimpse 2 (reveal cut)
-    ('I spin around', 'stinger', 0.6, None),
+    ('in the curtain crack... a long white skull#skull -0.2', 'silence', 0.8, 1.4),   # under 'skull. Red eyes.', up to the hit
+    ('end:a long white skull. Red eyes', 'riser', 0.6, 3.0),
+    ('end:a long white skull. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # glimpse 2: after "Red eyes."
+    # ('I spin around', 'stinger'): dropped (sound fix: 0.45 s after the moved glimpse-2 hit it doubled it)
     # rule 3, the fake Dad, twist 1
     ('Rule number three -0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('Frost creeps across the windows', 'swell', 0.45, 5.0),
     ('The radio crackles -0.8', 'silence', 0.8, 0.9),
     ('Silence. -0.3', 'silence', 0.95, 1.6),
     ('Sleep is warm', 'sub_drop', 0.55, None),
-    ('Across it slides a shadow#shadow +0.4', 'hit', 0.8, None, {'boost': 2.5}),     # glimpse 3
+    ('Long, jointed legs', 'silence', 0.8, 1.4),                          # minor 14: the dip before glimpse 3
+    ('end:Long, jointed legs', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),     # glimpse 3: after "Long, jointed legs."
     ('Told you what', 'hit', 0.65, None),                                  # twist 1 (a sting on the line, no boost)
-    ('Static. Bells', 'hit', 0.9, None, {'boost': 3.0}),                  # the bells cut Adam off
+    ("end:Dad, there's a truck outsi +0.05", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),   # the bells cut Adam off: on the cut, before "Static."
     ("The pink one doesn't", 'sub_drop', 0.6, None),
     # rule 4, the window, the transformation
     ('Rule number four -0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('I wake up. The blanket beside me is cold', 'sub_drop', 0.5, None),
     ('The front door is swinging open', 'hit', 0.7, None),
-    ('An inch from his fingers#fingers', 'riser', 0.65, 4.0),
-    ('An inch from his fingers#fingers', 'hit', 0.85, None, {'boost': 2.5}),
+    ('end:An inch from his fingers, I yank her into my arms', 'riser', 0.65, 4.0),
+    ('end:An inch from his fingers, I yank her into my arms', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "into my arms."
     ('Frozen to the snow', 'sub_drop', 0.55, None),
     ('Like a mask made of bone#bone +0.35', 'riser', 0.6, 6.0),
     ('Like a mask made of bone#bone +0.35', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
     ('and come back red#red', 'hit', 0.8, None),
-    ('His jaw drops#drops -0.15', 'silence', 0.8, 0.6),
+    ('His jaw drops#drops -0.15', 'silence', 0.8, 0.6, {'keep_show': True}),   # minor 2: the chime plays on through it
     ('end:His jaw drops', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # just after 'drops.'
-    ('A long brown leg punches out#punches', 'hit', 0.95, None, {'boost': 3.0}),
+    ("end:A long brown leg punches out, jointed like a spider's", 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),
     ('He pours out of the window', 'braam', 0.8, None),
     # the chase
     ('I rip my foot out', 'pulse_on', 0.8, None),
     ('One spears my coat', 'hit', 0.75, None),
-    ('And drops#drops -0.5', 'silence', 0.85, 0.75),
-    ('And drops#drops +0.3', 'hit', 0.95, None, {'boost': 3.0}),
+    ('And drops#drops -0.5', 'silence', 0.95, 0.7),                      # minor 14: a true drop-out (the scuttle stops)
+    ('end:Up onto our roof. And drops', 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # after "And drops."
     ('and slam the door', 'hit', 0.8, None),
     ('One leg plucks', 'pulse_off', 0.5, None),
     ('Saving her a place', 'sub_drop', 0.45, None),
@@ -263,17 +268,18 @@ EVENTS = [
     ('Rule number five -0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp#cloud +0.55', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # just after 'No cloud.'
     ('Let me in, baby -1.4', 'silence', 0.95, 1.4),
-    ('Red eyes. The doorknob grows frost', 'riser', 0.6, 4.5),            # the face slides up the glass ...
-    ('Red eyes. The doorknob grows frost', 'hit', 1.0, None, {'boost': 3.5}),   # ... pressed to it: red eyes
+    ('end:Long. White. Red eyes', 'riser', 0.6, 4.5),                     # the face slides up the glass ...
+    ('end:Long. White. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # ... pressed to it: after "Red eyes."
     ('The doorknob grows frost', 'sub_drop', 0.55, None),
     # rule 6
     ('Rule number six -0.1', 'rule', 0.8, None, {'nosnap': True}),
     ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),
-    ('The hallway hatch drops open#drops', 'hit', 1.0, None, {'boost': 3.5}),
+    ('The hallway hatch drops open', 'silence', 0.8, 1.45),               # minor 14: the dip before the hatch
+    ('end:The hallway hatch drops open', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # after "drops open."
     ('end:A leg reaches between us', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
     ('end:Under the door, a needle-thin leg tip slides in', 'riser', 0.55, 3.0),
     ('end:Under the door, a needle-thin leg tip slides in', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
-    ('I jam the towel#jam', 'hit', 0.85, None, {'boost': 2.5}),
+    ('end:I jam the towel down on it. Hard', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "Hard." (its 0.17 s gap)
     ('The clicking stops', 'silence', 0.8, 1.5),
     # the twist
     ("To Kessler's door +0.1", 'silence', 0.8, 0.95),
@@ -281,19 +287,20 @@ EVENTS = [
     ('Not shivering. Smiling', 'hit', 0.65, None),
     ('And nobody checked', 'sub_drop', 0.6, None),
     ("Whoever's coldest... was across -1.0", 'silence', 0.85, 1.1),
-    ("Whoever's coldest... was across#across", 'hit', 0.95, None, {'boost': 3.0}),
+    ("end:Whoever's coldest... was across the street", 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # into the 0.85 s hold
     ('Rule number seven -0.1', 'rule', 0.8, None, {'nosnap': True}),
     ("When it's my turn", 'swell', 0.5, 5.0),
     ('Because everybody inside', 'hit', 0.8, None),
     # the climax
     ('Every layer. The big blanket', 'pulse_on', 0.85, None),
     ('One hooks the blanket#pulls', 'hit', 0.8, None),
-    ('He swings around, jaw down#over', 'hit', 0.95, None, {'boost': 3.0}),   # the cage
+    ('end:legs arched over us like a cage', 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # the cage, after its line
     ('Inside, children. Rule seven', 'sub_drop', 0.6, None),
     ('We pull Mr. Kessler', 'pulse_off', 0.5, None),
     ('And the old man starts to shiver', 'swell', 0.55, 4.0),
     ("Dad's plow roars", 'swell', 0.8, 4.0),
-    ('jaw gapes for the last note +0.37', 'hit', 0.85, None, {'boost': 2.5}),   # the hung note: his jaw gapes
+    ("His jaw gapes for the last note... and can't close#and -0.3", 'silence', 0.6, 1.4, {'keep_show': True}),   # minor 14: a dip (the hung chime stays)
+    ("end:His jaw gapes for the last note... and can't close", 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "can't close.": it rolls into the plow's roar
     ('end:The song falls apart', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),     # his defeat
     ('The red one stays', 'sub_drop', 0.35, None),
     # stinger and the teaser
@@ -328,6 +335,9 @@ IDENTITY = [
     # 4:20 the lullaby; Lina's eyes droop; it fades when Adam pulls on his boots
     ('The song comes back. Softer', 'jingle', 0.45, None, dict(version='lullaby', loops=2,
                                                               until='The radio crackles -0.3', stop='fade', fade=1.0)),
+    # 5:44 M2 (sound fix): "Humming his song.": the tune soft and close, a lullaby only she hears, under L179-L182
+    ('Humming his song -0.2', 'jingle', 0.3, None, dict(version='lullaby', loops=1, until='she calls back +0.25',
+                                                        stop='fade', fade=0.6)),
     # 5:45 the serving window: cheerful and undistorted through the whole transformation, until he pours out
     ('The serving window slides open +0.3', 'jingle', 0.5, None,
      dict(version='outside', loops=5, until='end:Head first. Legs last +0.6', stop='fade', fade=0.4)),

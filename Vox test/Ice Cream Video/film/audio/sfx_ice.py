@@ -866,6 +866,102 @@ def r_door_slam(rng, sp, **_):
     return y, onset_s(y, -14), 0.0, False
 
 
+# ---------------------------------------------------------------------------------------------------- sound fix round
+# (the sound critic's minors: the jaw strain played as a wood creak, no clicks behind the bathroom door, no squeak as
+# the face slides up the glass, the leg prying fell back to a plain click)
+def r_jaw_strain(rng, sp, dur=1.2, **_):
+    """His jaw straining open (the gape at the hung note, the jaw hanging at the door): a leathery tendon creak (the
+    rubbery glove squeak slowed to under half speed, low-passed) over a slow ratchet of tiny dry bone ticks and a low
+    groan of air; no wood, no door."""
+    d = float(dur)
+    try:
+        g = _ix('glove_squeak', (), d * 0.45 + 0.3, rng, 0.3)
+    except KeyError:
+        g = st(bp(noise(d, 4), 250, 1600, 2)) * 0.3
+    g = eq(lp(rate(g, 0.42), 1800, 2), ('peak', 420, 3.0, 0.9))[:n_(d)]
+    g = g * np.linspace(0.5, 1.0, len(g))[:, None]
+    ev = [(0.0, g)]
+    try:
+        P = _ip('bone', 'ice_bone', (), 'onset', gap=0.12, max_len=0.35, keep=-12)
+        t = 0.05
+        while t < d - 0.1:
+            k = hp(P.get(rng, rj=0.08, fo=0.03), 900, 2)[:n_(0.06)] * rng.uniform(0.12, 0.25)
+            ev.append((t, k)); t += rng.uniform(0.06, 0.16) * (1.0 + t / d)       # the ratchet slows as it opens
+    except KeyError:
+        pass
+    s_ = int(rng.integers(1 << 20))
+    ev.append((0.1, st(lp(hp(noise(d, s_), 60, 2), 300, 2) * np.hanning(n_(d))) * 0.05))
+    y = _seq(ev, 0.25)
+    return fade(y, 0.08, 0.3), 0.0, 0.0, False
+
+
+def r_hall_clicks(rng, sp, dur=8.0, rate=1.0, **_):
+    """Rule 6, the bathroom: his leg tips pacing the hall floor on the other side of the shut door, heard through it:
+    slow, irregular, soft clicks with the floorboards' thump, a few quick pairs while the tip feels under the door;
+    they stop at the end (\"The clicking stops.\")."""
+    d = float(dur)
+    y = np.zeros((n_(d + 0.6), 2), np.float32)
+    t = 0.15
+    while t < d - 0.05:
+        c = _chitin(rng, 'wood', rng.uniform(0.45, 0.8))
+        th = st(modal([120, 260], [0.06, 0.04], [1, 0.5], 0.15, int(rng.integers(1 << 20)))) * 0.35
+        g = _seq([(0, c), (0, th)], 0.08)
+        place(y, pan(g, float(np.clip(0.4 * np.sin(1.3 * t), -1, 1))), n_(t))
+        if rng.uniform() < 0.25 and t + 0.12 < d:                   # a quick second tap
+            place(y, pan(_chitin(rng, 'wood', 0.35), 0.0), n_(t + rng.uniform(0.08, 0.13)))
+        t += rng.uniform(0.45, 1.1) / max(0.2, float(rate))
+    y = lp(space(y, 'door', 0), 3200, 2)
+    return fade(y, 0.01, 0.15), 0.0, 0.0, True
+
+
+def r_glass_slide(rng, sp, dur=2.2, **_):
+    """'Slowly, a face slides up the glass.' Skin dragging up the frosted glass of the front door: a long, low rubbery
+    squeak (a finger rub on glass, slowed and stretched over the slide), its pitch creeping up with the face, and the
+    frost crackling off the pane under it."""
+    d = float(dur)
+    G = src(category=None, has=['glass_friction_finger_rub'])
+    if G:
+        g = excerpt(_pick(rng, G), d * 0.7 + 0.2, rng, 0.3)
+        g = rate(g, semis(-6))[:n_(d)]
+    else:
+        try:
+            g = rate(_ix('glove_squeak', (), d * 0.6, rng, 0.3), 0.6)[:n_(d)]
+        except KeyError:
+            g = st(bp(noise(d, 6), 500, 2500, 2)) * 0.2
+    g = eq(lp(g, 3500, 2), ('peak', 900, 2.0, 1.0))
+    g = g * (np.linspace(0.35, 1.0, len(g)) ** 1.2)[:, None]
+    ev = [(0.0, g)]
+    try:
+        cr = hp(_ix('ice_ice_crackle', (), d, rng, 0.3), 1800, 2)[:n_(d)] * 0.25
+        ev.append((0.0, cr))
+    except KeyError:
+        pass
+    y = _seq(ev, 0.2)
+    return fade(y, 0.25, 0.35), 0.0, 0.0, False
+
+
+def r_leg_pry(rng, sp, **_):
+    """'Another pries at Lina.' / 'Prying.' A needle leg wedged in and levered: its click as it bites, a short hard
+    scrape of chitin forcing against wood (the new set's metal scrape, band-passed and slowed), a strained creak."""
+    c = _chitin(rng, 'wood', 0.9)
+    try:
+        sc = bp(rate(_ix('ice_metal_scrape', (), 0.5, rng, 0.2), 0.8), 600, 4000, 2)[:n_(0.45)] * 0.5
+    except KeyError:
+        sc = st(bp(noise(0.45, 8), 600, 4000, 2)) * 0.15
+    sc = sc * np.hanning(len(sc))[:, None]
+    try:
+        cr = lp(rate(_ix('glove_squeak', (), 0.4, rng, 0.2), 0.55), 2000, 2)[:n_(0.5)] * 0.5
+    except KeyError:
+        cr = st(bp(noise(0.5, 9), 300, 1500, 2)) * 0.1
+    y = _seq([(0, c), (0.04, sc), (0.12, cr)], 0.25)
+    return y, onset_s(y, -14), 0.0, False
+
+
+NAMES = NAMES + ('jaw_strain', 'hall_clicks', 'glass_slide', 'leg_pry')
+LEVEL_LU.update(jaw_strain=-8, hall_clicks=-17, glass_slide=-10, leg_pry=-6)
+DUR_BEDS = DUR_BEDS + ('hall_clicks',)
+DEFAULT_SPACE.update(jaw_strain='street', hall_clicks='dry', glass_slide='close', leg_pry='inside')
+
 ICE_ALIASES = {
     'wind_night': ('cold_night', {}), 'cold_snap': ('cold_night', {}), 'icy_wind': ('cold_night', {}),
     'still_air': ('frozen_still', {}), 'frozen_air': ('frozen_still', {}), 'room_tone_cold': ('house_cold', {}),

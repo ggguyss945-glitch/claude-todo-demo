@@ -100,7 +100,7 @@ VOICES = {
                    'faint wow (0.3 %) and a second voice an octave under it (19 dB down, formants x0.86)'),
     'S_monster': dict(_SH, f0=96.0, rng=0.85, comp=0.40, alpha=0.84, breath=-0.55, smooth=0.04, under=(-12.0, 0.78),
                       wow=(0.40, 0.006), lu=0.5, eq=[('peak', 110, 3.0, 0.8), ('peak', 2400, 1.5, 1.0), ('hs', 7000, -3.0, 0.7)],
-                      desc='Mister Shiver in monster form ("Who\'s the coldest? YOU are!", "Inside, children. Rule seven."): '
+                      desc='Mister Shiver in monster form ("Inside, children. Rule seven."): '
                            'the same sing-song words, deeper (96 Hz, formants x0.84: a far larger body), airless (-0.55), '
                            'the second voice up to 12 dB under (formants x0.78), a slow wow, +3 dB at 110 Hz, a dull top'),
     'S_dad': dict(_DAD, **_WRONG, lu=-0.5,
@@ -120,7 +120,8 @@ VOICES = {
 }
 # lines that use a variant (by tag, from script/lines.py)
 VARIANT = dict(lina_dont_leave='L_small', lina_warm='L_dreamy', lina_not_shivering='L_dreamy',
-               bye_benny='K_whisper', coldest_you='S_monster', inside_children='S_monster',
+               bye_benny='K_whisper', inside_children='S_monster',   # coldest_you (L192): his NORMAL vendor voice (S): the lure
+               # comes six seconds before the transformation, so the monster voice there gave the change away
                fake_dad='S_dad', fake_dad_sleep='S_dad', fake_mom='S_mom', fake_mom_cold='S_mom_soft',
                mimic_benny='S_boy')
 

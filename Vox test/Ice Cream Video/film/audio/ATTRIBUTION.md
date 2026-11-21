@@ -49,6 +49,10 @@ Where each SFX name of this film (audio/sfx_ice.py ICE_NAMES) comes from (source
 | porch_light, street_wakes | ice: Fluorescent Light Switch On/Off (3 files); mirror: Door Creaks | street distance and bulb ping synthesised |
 | ambulance | doctor: Siren Ambulance 70s Distant / In Motion / Wailing | approach level, final wind-down varispeed |
 | cocoa_mug, curtain_yank | dummy: Cup Mug Teaspoon, Tea Cup Placing (mug_set recipe); earlier curtain_close recipe | |
+| jaw_strain (sound fix round) | bus: Rubber Latex Glove Pull Stretch Squeak (glove_squeak); ice: Gore Bone Crack Cracking (tick grains) | squeak slowed to 0.42x, low-passed; bone ticks high-passed into a slowing ratchet; air groan synthesised |
+| hall_clicks (sound fix round) | dummy: Mechanical Click Metal (via the chitin click) | chitin modes and floorboard thumps synthesised, through the 'door' space |
+| glass_slide (sound fix round) | bunny: Glass Friction Finger Rub And Squeak On Glass Door 02 / Room 01; ice: Ice Crackle Squeeze Whoosh | squeak slowed 6 semitones and stretched over the slide; crackle high-passed |
+| leg_pry (sound fix round) | ice: Metal scrape (ice_metal_scrape); bus: Rubber Latex Glove Pull (glove_squeak) | scrape band-passed and slowed 0.8x, creak slowed 0.55x; chitin click synthesised |
 
 ## The Bus film: "If The School Bus Stops At Midnight... DON'T GET ON"
 

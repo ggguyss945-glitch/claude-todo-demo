@@ -22,7 +22,7 @@
 #                        _work/mix/final/cues_used/
 #        --bed-p50 -14   (kept from the Bus film; re-check on this film's first mix) the Bus film's bed target (sound prep tests: at -16 the music was present only 42-85 %
 #                        of each window; at -14, 70-73 % with the bed integrated -11.7..-13.7 LU)
-#        --hits-db 6     the score's hits stem +6 dB (fix round 1: +4 -> +6) (voice-keyed 1-4.5 kHz cut on the hits keeps the next words)
+#        --hits-db 6     the score's hits stem +6 dB (fix round 1: +4 -> +6) (the boost path's broadband speech duck keeps the words after every boosted hit 7 LU over the bed)
 #        --voice-ride 1  a slow 4:1 ride on the narration's loudest phrases (> +1 LU; fix round 1: at 2 / 3:1 the
 #                        narration's loudest lines still reached +5 LU momentary over the mix), so the scares top the film
 #   3. mix.wav = hard link of mix_en.wav            (render.py / deliver.sh read mix_en.wav, the job names mix.wav)

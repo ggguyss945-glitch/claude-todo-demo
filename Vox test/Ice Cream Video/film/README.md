@@ -62,14 +62,40 @@ events}`) and `shots.json` (the cut list).
   warm under the outro), plus `hit`, `riser`, `rule` and `silence` events, and the tension curve (`intensity`).
 
 ## Sound: the final mix
-`bash audio/final_mix.sh` (from anywhere; about 12 min, peaks at 9.5 GB RAM: run it with no render going) does it all:
+`bash audio/final_mix.sh` (from anywhere; about 14 min, needs about 12 GB RAM: run it with no render going) does it all:
 `film.py --cues` -> `audio/mix.py --plan full` -> `W/mix/final/mix_en.wav` (+ hard link `mix.wav`) -> `audio/measure_mix.py`
 (`W/mix/final/measure.txt`) -> `audio/mix_scenes.py` (`W/mix/final/scenes/NN_*.png`) -> the mix muxed onto
 `W/preview/preview.mp4` as `W/preview/preview_mix.mp4`. After a picture change: re-render the preview first (Commands),
 then run `final_mix.sh`. The stems (`W/mix/final/stems/`, 0.9 GB) are written for the measure: delete them when done.
 - The score and its scares are anchored to the narration's WORDS in `audio/music_plan.py` (EVENTS: 22 boosted scares,
-  each on its reveal frame or just after its word; a plan hit within 0.35 s of a picture hit frame snaps onto it). The
+  each just after its word, `nosnap`; a plan hit without `nosnap` within 0.35 s of a picture hit frame snaps onto it). The
   picture's SFX names are mapped onto this film's recipes in `audio/sfx_plan.py` (PICTURE); a name the mix does not know
   prints `unknown SFX` in `W/mix/final/mix.log`: add it to PICTURE rather than trust the keyword fallback.
 - First full mix (21 Nov): -14.05 LUFS, true peak -1.69 dBTP, scares +6.0..+9.7 LU momentary over the integrated level,
   bed in the gaps rising rule by rule (ARC_TARGETS in mix.py), chime returns as in the bible's chime table.
+- Sound fix round (21 Nov, after the sound critic's report `W/handoff/sound_critic.md`):
+  - the boosted hits land in the voice edit's scare beats JUST AFTER their words (`end:` anchors in music_plan.py
+    EVENTS, `nosnap`), never on them; mix.py's boost path holds every word in the 1.6 s after a boosted hit with a
+    broadband, level-keyed duck (`speech_duck` / `zone_duck`: the hits 8 LU and the whole bed 7 LU under the voice in
+    100 ms and 400 ms blocks, 10 ms look-ahead, 120 ms release; the gap before the next word stays the hit's own);
+    `measure_mix.py` now prints `boosted_scares` (peak +6..+10 LU, words after >= 6 LU; `off_target` lists misses);
+  - sfx_plan.py: the nine keyword-fallback names mapped, wooden steps outdoors -> snow, stacked steps merged, doubled
+    leg clicks and the second furnace death dropped, cues moved off the words they name (EDIT `at`, OFF_WORDS), new
+    recipes in sfx_ice.py (`jaw_strain`, `hall_clicks` behind the bathroom door until "The clicking stops.",
+    `glass_slide` for the face on the glass, `leg_pry`); the chime's stem gets a voice-keyed 1-4.5 kHz cut
+    (SHOW_VCUT_DB) and plays on through the dip before the jaw drop (`keep_show`); a soft lullaby under "Humming his song.".
+  - L192 "Who's the coldest? YOU are!" is in his normal vendor voice (tools/vo_voices.py VARIANT): rebuilt with
+    `cd tools && python3 vo_edit.py build` (narration_clean.wav bit-identical, narration_en.wav changed only in
+    360.58-364.38 s), copied to `W/align/vo_en.wav`; line times unchanged (align.py into a scratch folder matched
+    timeline.json to 1 ms), so timeline.json is kept and only L192's words in asr_cache.json were replaced;
+    `python3 tools/vo_asrcheck.py --every`: 0 failures.
+
+### The final remix (run once the new cue sheets exist; from `film/`, no render running, `free -g` >= 11 GB available)
+```
+python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav   # if the picture changed
+cp _work/preview_tmp/film.mp4 _work/preview/preview.mp4
+bash audio/final_mix.sh                       # cues -> mix -> measure -> scene sheets -> preview_mix.mp4 (about 14 min)
+grep -c "unknown SFX" _work/mix/final/mix.log  # 0 expected
+grep -A3 boosted_scares _work/mix/final/measure.txt   # peaks +6..+10, words_after_min_LU >= 6, off_target []
+rm -rf _work/mix/final/stems                  # 0.9 GB
+```

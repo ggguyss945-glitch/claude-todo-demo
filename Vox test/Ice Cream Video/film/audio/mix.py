@@ -934,6 +934,65 @@ def dyn_cut(x, act, depth_db):
     return b
 
 
+def speech_duck(x, v, zone, margin, max_cut=None, look=None, rel=None):
+    """Sound fix (critic B1: the boosted hits buried their own words): a BROADBAND, level-keyed duck. Returns the gain
+    (len(x), float32) that keeps x's K-weighted level at least `margin` LU under the voice v's, in 100 ms and 400 ms
+    blocks on the 50 ms grid, wherever `zone` (bool per sample: the words after a boosted hit) is set and the voice
+    speaks (block within 30 dB of the voice's loudest block here). The cut a block needs covers the whole block (so a
+    400 ms reading inside the zone always meets the margin); it starts `look` s early and releases over `rel` s."""
+    max_cut = BOOST_DUCK_MAX_DB if max_cut is None else max_cut
+    look = BOOST_DUCK_LOOK_S if look is None else look
+    rel = BOOST_DUCK_REL_S if rel is None else rel
+    n = len(x); s = int(round(SX.SEG * SR))
+    if n < 2 * s or not zone.any():
+        return np.ones(n, np.float32)
+    P, _ = SX.seg_power(x); Q, _ = SX.seg_power(v)
+    m = min(len(P), len(Q), n // s)
+    P, Q = P[:m], Q[:m]
+    zs = zone[:m * s].reshape(m, s).any(1)
+    cut = np.zeros(m)
+    qmax = 10 * np.log10(Q.max() + 1e-20)
+    for k in (2, 8):                                          # 100 ms and 400 ms blocks
+        if m < k:
+            continue
+        cp = np.concatenate([[0.0], np.cumsum(P)]); cq = np.concatenate([[0.0], np.cumsum(Q)])
+        bp = 10 * np.log10((cp[k:] - cp[:-k]) / k + 1e-20); bq = 10 * np.log10((cq[k:] - cq[:-k]) / k + 1e-20)
+        need = np.clip(bp - (bq - margin), 0.0, max_cut)
+        cz = np.concatenate([[0], np.cumsum(zs)]); inz = (cz[k:] - cz[:-k]) > 0      # the block touches the zone
+        need = np.where(inz & (bq > qmax - 30.0), need, 0.0)
+        # segment j takes the largest need of the blocks that cover it (blocks i = j-k+1 .. j)
+        needp = np.concatenate([np.zeros(k - 1), need, np.zeros(k - 1)])
+        cov = np.lib.stride_tricks.sliding_window_view(needp, k).max(1)[:m]
+        cut = np.maximum(cut, cov)
+    if (cut * zs).max() <= 0.05:
+        return np.ones(n, np.float32)
+    la = max(1, int(look * SR))
+    zl = maximum_filter1d(zone.astype(np.float32), size=la, origin=-(la // 2)) > 0   # the zone, `look` s early
+    c = np.zeros(n); c[:m * s] = np.repeat(cut, s)
+    c *= zl                                                       # sample-exact: the gap before the word stays free
+    c = SX.follow(c, SX.coef(0.004), SX.coef(rel))
+    return (10 ** (-c / 20)).astype(np.float32)
+
+
+def zone_duck(x, v, zone, margin, pad=0.6):
+    """speech_duck over the whole film, computed locally around each stretch of `zone` (the rest stays at 1)."""
+    n = len(x); g = np.ones(n, np.float32)
+    if zone is None or not zone.any():
+        return g
+    d = np.diff(np.concatenate([[0], zone.astype(np.int8), [0]]))
+    on, off = np.flatnonzero(d == 1), np.flatnonzero(d == -1)
+    p = int(pad * SR); spans = []
+    for a, b in zip(on, off):
+        a, b = max(0, a - p), min(n, b + p)
+        if spans and a <= spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], b)
+        else:
+            spans.append([a, b])
+    for a, b in spans:
+        g[a:b] = speech_duck(x[a:b], v[a:b], zone[a:b], margin)
+    return g
+
+
 def gain_env(n, segs):
     """segs: [(t0, t1, dB, fade_in, fade_out)] -> multiplicative envelope (minimum of the dips)."""
     e = np.zeros(n, np.float32)
@@ -1146,11 +1205,25 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-e
 # stays under BOOST_TARGET_LU (by grade, LU over the voice's integrated level; a fixed drive turned the sustained swap on
 # "Seven." into a +17 LU square wave), and a window already over its target comes down to it. The saturation's harmonics
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
-BOOST_SAT_DB = 16.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10)
+BOOST_SAT_DB = 20.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10);
+                      # sound fix: 20 (the hits now have only the 0.15-0.45 s scare beat before the next word)
 BOOST_TARGET_LU = {1.0: 11.5, 0.75: 10.5, 0.5: 9.5}   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
-BOOST_VCUT_DB = 16.0  # Bus final mix: 8 dB left 'Almost.', '...Clever.', the hand, the doors and 'Two of me.' 4-13 dB
-                      # under the scare in 1-4.5 kHz; the cut now also sits inside the drive search (the loudness target
-                      # is met with the cut in place)
+BOOST_VCUT_DB = 10.0  # the extra 1-4.5 kHz cut keyed to the voice on the saturated hits (was 16 dB and the ONLY
+                      # protection: the critic measured the voice 2.6-9 LU under the bed in the 1 s after the hits)
+# Sound fix (critic B1, "the hits bury their own words"): a broadband, level-keyed duck (speech_duck) on every word in
+# the BOOST_ZONE_S after each boosted hit: the hits bus alone is held BOOST_DUCK_MARGIN_LU under the voice inside the
+# drive search (so the loudness target is met by the hit's transient and body in the gaps, not over the words), then
+# the whole bed (score + SFX + hits) BOOST_BED_MARGIN_LU under it; 100 ms and 400 ms blocks, a 30 ms look-ahead and a
+# 120 ms release. The hit's own first BOOST_DUCK_FREE_S and the gap up to the next word are never ducked.
+BOOST_DUCK_MARGIN_LU = 8.0
+SHOW_VCUT_DB = 10.0   # sound fix (critic minor 15: "Out of tune.", "Remember your answer.", "Keeps waving." lost words
+                      # under the chime): the identity stem's 1-4.5 kHz dips this much more under the voice (keyed)
+BOOST_BED_MARGIN_LU = 7.0
+BOOST_DUCK_MAX_DB = 36.0
+BOOST_DUCK_LOOK_S = 0.01   # the gaps are digital silence: a word's onset needs only 10 ms of look-ahead
+BOOST_DUCK_REL_S = 0.12
+BOOST_ZONE_S = 1.6
+BOOST_DUCK_FREE_S = 0.06
 RIDE_RATIO = 4.0     # the narration's ride above --voice-ride LU (was 3:1 above +2: its loudest lines reached +5 LU)
 LINE_TAG_DB = {}                # THIS film: none yet (the Bus film's 'please' +4 dB is gone); per line tag, dB
 _LINE_TAG_DB_BUS = {'please': 4.0}   # (the Bus film) the girl's "Please." through the door sat 6.9 dB under the
@@ -1523,6 +1596,11 @@ def main():
         if k == 'hits':
             mhits += s                       # music hits: never ducked or EQ'd
         else:
+            if k == 'show' and SHOW_VCUT_DB > 0:       # sound fix (critic minor 15): HIS CHIME's music-box partials
+                ka = voice_activity(key, rel=0.25, hold=DUCK_HOLD_S)          # sit in 1-3 kHz, on the consonants:
+                la_ = int(0.05 * SR)                                          # 50 ms look-ahead, so the cut is in
+                ka = np.maximum(ka, np.concatenate([ka[la_:], np.zeros(la_, np.float32)]))   # before a word's onset
+                s = dyn_cut(s, ka, SHOW_VCUT_DB); del ka
             music += s
         del s
     del stems
@@ -1623,6 +1701,27 @@ def main():
     if bwins:
         log(f'boosted windows: {len(bwins)}, attack {BOOST_ATT_S * 1000:.0f} ms, release {BOOST_REL_S * 1000:.0f} ms, '
             f'saturation {BOOST_SAT_DB:.0f} dB x grade, voice-keyed cut {BOOST_VCUT_DB:.0f} dB')
+    # sound fix (critic B1): the zone of the broadband speech duck: every line (or part of one) spoken in the
+    # BOOST_ZONE_S after a boosted hit, from BOOST_DUCK_FREE_S after the hit on (a line under 0.7 s is widened to 0.7 s,
+    # so a 400 ms reading centred on a short word like "Hard." sits inside the zone)
+    bzone = None
+    if bwins:
+        bzone = np.zeros(N, bool)
+        for a, b, gd in bwins:
+            h = a / SR + 0.03
+            for l_ in tl['lines']:
+                lt, le = float(l_['t']) - t0, float(l_['end']) - t0
+                if le <= h or lt >= h + BOOST_ZONE_S:
+                    continue
+                ext = max(0.03, (0.7 - (le - lt)) / 2)
+                # the gap between the hit and the next word is the hit's own (the voice edit's scare beat): the zone
+                # starts 10 ms before that word, never earlier (a short word is only widened after it)
+                z0 = max(lt - 0.01, h + BOOST_DUCK_FREE_S) if lt > h else h + BOOST_DUCK_FREE_S
+                z1 = min(le + ext, h + BOOST_ZONE_S)
+                if z1 > z0:
+                    bzone[max(0, int(z0 * SR)):max(0, min(N, int(z1 * SR)))] = True
+        log(f'boost duck: {bzone.sum() / SR:.1f} s of words after the {len(bwins)} boosted hits: the hits '
+            f'{BOOST_DUCK_MARGIN_LU:.0f} LU and the whole bed {BOOST_BED_MARGIN_LU:.0f} LU under the voice')
     # the voice always clear (the Bunnyman's final mix): while a line is spoken the bed (music + SFX) stays
     # CLARITY_MARGIN_LU under the narration's own 400 ms level (K-weighted blocks every 50 ms, as measure_mix.py reads
     # them); where it does not (a swell peaking on a line's last word, a loud bar of a track under a quiet word, a hit's
@@ -1686,6 +1785,7 @@ def main():
     vpk = float(np.percentile(np.abs(key[np.abs(key) > 1e-4]), 99.9)) if (np.abs(key) > 1e-4).any() else 0.3
     log(f'voice p99.9 peak {20 * np.log10(vpk):.1f} dBFS (the hits limiter\'s reference)')
 
+    boost_duck_stat = [0.0, 0.0]            # sound fix (B1): the bed duck's deepest cut (dB) and seconds over 1 dB
     Lv_b = SX.lufs_int(key)                 # fix round 2: the boosted scares' loudness targets are set against the voice
     boost_log = []
 
@@ -1723,7 +1823,10 @@ def main():
                 def _sat(d):
                     pre = (cl * 10 ** (d / 20)) / pk_in
                     gp = (10 ** (w * 20 * np.log10(pre) / 20)).astype(np.float32)[:, None]
-                    return dyn_cut((cl * np.tanh(seg * gp / cl)).astype(np.float32), act_h[a0:b1], BOOST_VCUT_DB)
+                    y_ = dyn_cut((cl * np.tanh(seg * gp / cl)).astype(np.float32), act_h[a0:b1], BOOST_VCUT_DB)
+                    if bzone is not None and bzone[a0:b1].any():      # sound fix (B1): the words stay over the hit
+                        y_ *= speech_duck(y_, key[a0:b1], bzone[a0:b1], BOOST_DUCK_MARGIN_LU)[:, None]
+                    return y_
                 def _loud(y):
                     yc = y[ca:cb_] * w[ca:cb_, None]
                     return float(-0.691 + 10 * np.log10(SX._blocks(yc, 0.4, 0.05).max() + 1e-20))
@@ -1772,6 +1875,11 @@ def main():
             cg, cmax, cfrac = clarity_gain(bed)
             bed *= cg[:, None]; m *= cg[:, None]; s *= cg[:, None]; del cg
             clar['stat'] = (cmax, cfrac)
+        if bzone is not None:                        # sound fix (B1): the whole bed under the words after the hits
+            bg = zone_duck(bed, key, bzone, BOOST_BED_MARGIN_LU)
+            bed *= bg[:, None]; m *= bg[:, None]; s *= bg[:, None]
+            boost_duck_stat[:] = [float(-20 * np.log10(max(1e-6, float(bg.min())))), float((bg < 0.89).sum() / SR)]
+            del bg
         return bed, m, s, gr
 
     # ---------------- solve the music gain on the EN key so the bed sits at voice + bed_rel
@@ -1879,6 +1987,7 @@ def main():
               'sfx_fallbacks': [dict(key=k, **v) for k, v in fallbacks.items()], 'sfx_skipped': sorted(set(skipped)),
               'boosts': [dict(t=t_, grade=g_, sat_db=float(d_), loud_lu_rel_voice=l_, target_lu=tg_)
                          for t_, g_, d_, l_, tg_ in boost_log]}
+    log(f'boost duck on the bed: deepest {boost_duck_stat[0]:.1f} dB, {boost_duck_stat[1]:.1f} s over 1 dB')
     for t_, g_, d_, l_, tg_ in boost_log:
         log(f'boosted scare {t_:8.2f} s grade {g_:.2f}: saturation {d_:.1f} dB, loudest 400 ms {l_} LU over the voice (target {tg_})')
     stem_dir = os.path.join(A.out, 'stems'); os.makedirs(stem_dir, exist_ok=True)

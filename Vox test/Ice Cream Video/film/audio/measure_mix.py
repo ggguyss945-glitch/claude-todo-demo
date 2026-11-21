@@ -21,6 +21,8 @@ Targets (the job, ARCHITECTURE.md, analysis/AUDIO_SPEC.md)
                   non-hit cue within 1 LU of the narration's integrated loudness while it speaks), thin on a phone (< -15 dB of its
                   loudness above 300 Hz). Flags go to measure.json 'cue_flags'.
     events        hits / silences / one-shot cues per minute, hit peak over the voice, silence depth
+    scares        every boosted scare +6..+10 LU momentary over the integrated level, and the words in the 1 s after
+                  it at least 6 LU over the bed (50 ms segments where the voice speaks): 'boosted_scares'
 """
 import argparse, json, os, sys, time
 import numpy as np, soundfile as sf
@@ -321,6 +323,31 @@ def main():
                    'hit_peak_rel_voice_p50_max': [round(float(np.median(hp_)), 1), round(float(np.max(hp_)), 1)] if hp_ else None,
                    'one_shot_cues_per_min': round(sum(1 for c in sc if c['name'] not in SX.BED_BUS) / mins, 1),
                    'rule_stings': sum(1 for e in mc['events'] if e['type'] == 'rule')}
+
+    # ---------------- sound fix round (critic B1): every boosted scare: its peak momentary over the mix's integrated
+    # level (+6..+10 LU), and the words after it: voice minus bed on the 50 ms segments where the voice speaks (within
+    # 12 dB of its loudest) from 0.06 to 1.0 s after the hit (>= 6 LU)
+    pv = SX.seg_power(v)[0]; pb = SX.seg_power(bed)[0]
+    sc_rows, sc_bad = [], []
+    for e in sorted((e for e in mc['events'] if e['type'] in ('hit', 'stinger', 'braam', 'sub_drop')
+                     and float(e.get('boost') or 0) > 0), key=lambda e: e['t']):
+        h = float(e['t']); i0, i1 = int(max(0.0, h - 0.1) / HOP), int((h + 1.5) / HOP)
+        if i1 >= len(mi):
+            continue
+        pk = float(mi[i0:i1].max())
+        a_, b_ = int((h + 0.06) / SX.SEG), int((h + 1.0) / SX.SEG)
+        vs = 10 * np.log10(pv[a_:b_] + 1e-20); bs = 10 * np.log10(pb[a_:b_] + 1e-20)
+        ok = vs > vs.max() - 12 if len(vs) else np.zeros(0, bool)
+        wm = float((vs - bs)[ok].min()) if ok.any() else None
+        row = {'t': round(h, 2), 'peak_over_int_LU': round(pk, 1), 'words_after_min_LU': None if wm is None else round(wm, 1)}
+        sc_rows.append(row)
+        if not (6.0 <= pk <= 10.5) or (wm is not None and wm < 6.0):
+            sc_bad.append(row)
+    R['boosted_scares'] = {'n': len(sc_rows), 'peak_min_max': [min(r['peak_over_int_LU'] for r in sc_rows),
+                                                                max(r['peak_over_int_LU'] for r in sc_rows)] if sc_rows else None,
+                           'words_after_min_LU': min((r['words_after_min_LU'] for r in sc_rows
+                                                      if r['words_after_min_LU'] is not None), default=None),
+                           'off_target': sc_bad}
 
     # ---------------- every SFX cue, re-rendered as mix.py renders it
     if not A.no_cues:

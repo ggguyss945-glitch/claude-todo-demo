@@ -1950,7 +1950,9 @@ class Score:
             # (the Bunnyman's final mix: only a cue that plays on into the silence spares it: the count's "Seven" note
             # starts 0.3 s before the cut to silence and stops there, so it no longer kept the show stem ungated and
             # the "Six" note rang on through the silence after "Seven.")
-            if not any(x['type'] in ('jingle', 'hold', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0
+            # (Ice Cream sound fix, critic minor 2: a silence marked 'keep_show' never gates the show stem: HIS CHIME
+            # keeps playing through the dip before the jaw drop, as the bible's transformation says)
+            if not e.get('keep_show') and not any(x['type'] in ('jingle', 'hold', 'show', 'winks') and abs(float(x['t']) - t0) <= 1.0
                        and float(x['t']) + float(x.get('len') or 4.0) > t0 + 0.5 for x in self.ev):
                 self.gate_show = np.minimum(self.gate_show, g)
             gh = np.interp(tt, [t0 - 0.05, t0 + 0.2, t1 - 0.02, t1], [0, depth, depth, 0], left=0, right=0)
