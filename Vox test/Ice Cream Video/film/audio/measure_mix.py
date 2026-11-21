@@ -61,7 +61,8 @@ SLOW_ONSET = SLOW_ONSET + ('cold_night', 'frozen_still', 'house_hum', 'house_col
                            'plow_pass', 'shovel_morning', 'radio_static', 'frost_creep', 'attic_crawl', 'scuttle',
                            'ambulance', 'skin_stretch', 'uniform_tear', 'boot_stuck', 'leg_tip_tile', 'snow_run',
                            'snow_walk', 'snow_deep', 'street_wakes', 'plow_horn', 'furnace_die', 'window_crack',
-                           'curtain_yank', 'serving_window', 'radio_bells', 'radio_squelch', 'frost_wipe', 'blanket_yank')
+                           'curtain_yank', 'serving_window', 'radio_bells', 'radio_squelch', 'frost_wipe', 'blanket_yank',
+                           'shovel_scrape')   # a long push: its knock comes after the scrape
 HIT_NAMES = HIT_NAMES + ('cone_shatter', 'power_cut', 'jaw_drop', 'leg_punch', 'hatch_drop', 'bone_crack', 'door_slam')
 
 

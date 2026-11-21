@@ -117,12 +117,14 @@ FLATTEN = {'throbbing_anxiety_dream_cave': 0.35, 'the_haunted_luella_gren': 0.45
            'peaceful_melody_megan_wofford': 0.6, 'all_exits_closed_guy_copeland': 0.35}
 # slug -> level trim (dB). The owner's new tracks measured in W/mix/sfx_review.md: Impossible Theory -12 LUFS with
 # 1404 clipped samples, Peaceful Melody -11 LUFS / 218 clipped: down; the sub drones read quiet: up
-GAIN = {'turning_stones_stefan_ekstrom': 3.0, 'are_you_alone_victor_lundberg': 2.0, 'dark_forebodings_ethan_sloan': 2.5,
+GAIN = {'turning_stones_stefan_ekstrom': 4.5, 'are_you_alone_victor_lundberg': 2.0, 'dark_forebodings_ethan_sloan': 2.5,
         'escalation_jon_bjork': 3.0, 'irene_kevin_dailey': 1.0, 'the_haunted_luella_gren': 0.5,
         'don_t_look_belladonna_strings': 2.5, 'impossible_theory_rachel_sandy': -3.0, 'i_m_the_villain_dream_cave': -1.0,
         'peaceful_melody_megan_wofford': -6.0, 'redeemed_blue_saga': -1.0, 'with_the_dawn_megan_wofford': -1.5,
         'a_heart_full_of_spring_franz_gordon': -1.0, 'throbbing_anxiety_dream_cave': -1.0,
-        'can_they_see_us_experia': -1.5, 'all_exits_closed_guy_copeland': -1.0}
+        'can_they_see_us_experia': 1.0, 'all_exits_closed_guy_copeland': -1.0,
+        # first mix: the tension curve dipped in rule 3 (lullaby -22.8, fake Dad -21.1 LU in speech) under rule 2
+        'sleep_forever_luella_gren': 3.0, 'come_closer_belladonna_strings': 3.5}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [
@@ -208,8 +210,8 @@ EVENTS = [
     ('Rule number one -0.1', 'rule', 0.7, None, {'nosnap': True}),
     ('From the inside', 'hit', 0.6, None),                                 # the breath on Kessler's glass (a fair clue)
     ('The truck glides down Birch Lane', 'swell', 0.45, 4.0),
-    ('The streetlight flickers -0.8', 'silence', 0.75, 0.9),
-    ('The streetlight flickers#long', 'hit', 0.85, None, {'boost': 3.0}),   # glimpse 1
+    ('For one flicker, his face is long#long', 'silence', 0.75, 0.9),      # first mix: silence under 'long and white'
+    ('For one flicker, his face is long#white +0.4', 'hit', 0.85, None, {'boost': 3.0}),   # glimpse 1 (the picture's reveal cut)
     ('The song stops. Right outside#stops', 'silence', 0.95, 1.6),        # the song stops dead: only the idle
     ('And that smile breathes', 'sub_drop', 0.6, None),
     # rule 2
@@ -217,11 +219,12 @@ EVENTS = [
     ("Then... a soft tap -0.9", 'silence', 0.8, 1.0),
     ('Five minutes later', 'sub_drop', 0.4, None),
     ("Lina's step-stool under it", 'riser', 0.55, 3.0),
-    ('I slap it', 'hit', 0.8, None, {'boost': 2.5}),
+    ('I slap it#slap', 'hit', 0.8, None, {'boost': 2.5}),
     ('Click. -0.9', 'silence', 0.95, 1.0),                                # the furnace relay alone
     ('The furnace stops', 'sub_drop', 0.6, None),
-    ('In the black TV screen -1.0', 'silence', 0.8, 1.2),
-    ('In the black TV screen#skull', 'hit', 1.0, None, {'boost': 3.5}),   # glimpse 2
+    ('Every light in the house goes out#out', 'hit', 0.9, None, {'boost': 2.5}),   # the power dies (picture power_cut)
+    ('in the curtain crack... a long white skull#skull -0.9', 'silence', 0.8, 1.1),
+    ('in the curtain crack... a long white skull#skull +0.25', 'hit', 1.0, None, {'boost': 3.5}),   # glimpse 2 (reveal cut)
     ('I spin around', 'stinger', 0.6, None),
     # rule 3, the fake Dad, twist 1
     ('Rule number three -0.1', 'rule', 0.7, None, {'nosnap': True}),
@@ -229,48 +232,52 @@ EVENTS = [
     ('The radio crackles -0.8', 'silence', 0.8, 0.9),
     ('Silence. -0.3', 'silence', 0.95, 1.6),
     ('Sleep is warm', 'sub_drop', 0.55, None),
-    ('Across it slides a shadow', 'hit', 0.8, None, {'boost': 2.5}),     # glimpse 3
-    ('Told you what', 'hit', 0.85, None, {'boost': 3.0}),                  # twist 1
-    ('Static. Bells', 'stinger', 0.75, None),
+    ('Across it slides a shadow#shadow +0.4', 'hit', 0.8, None, {'boost': 2.5}),     # glimpse 3
+    ('Told you what', 'hit', 0.65, None),                                  # twist 1 (a sting on the line, no boost)
+    ('Static. Bells', 'hit', 0.9, None, {'boost': 3.0}),                  # the bells cut Adam off
     ("The pink one doesn't", 'sub_drop', 0.6, None),
     # rule 4, the window, the transformation
     ('Rule number four -0.1', 'rule', 0.75, None, {'nosnap': True}),
     ('I wake up. The blanket beside me is cold', 'sub_drop', 0.5, None),
     ('The front door is swinging open', 'hit', 0.7, None),
-    ('Down. Further than a man can bend', 'riser', 0.65, 3.0),
-    ('An inch from his fingers', 'hit', 0.85, None, {'boost': 2.5}),
+    ('An inch from his fingers#fingers', 'riser', 0.65, 4.0),
+    ('An inch from his fingers#fingers', 'hit', 0.85, None, {'boost': 2.5}),
     ('Frozen to the snow', 'sub_drop', 0.55, None),
-    ('And the smile keeps going', 'riser', 0.6, 4.0),
-    ('Like a mask made of bone', 'hit', 0.85, None, {'boost': 2.5}),
-    ('and come back red', 'hit', 0.8, None),
-    ('His jaw drops -0.6', 'silence', 0.8, 0.7),
-    ('His jaw drops', 'hit', 1.0, None, {'boost': 3.5}),
-    ('A long brown leg punches out', 'hit', 0.95, None, {'boost': 3.0}),
+    ('Like a mask made of bone#bone +0.35', 'riser', 0.6, 6.0),
+    ('Like a mask made of bone#bone +0.35', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    ('and come back red#red', 'hit', 0.8, None),
+    ('His jaw drops#drops -0.7', 'silence', 0.8, 0.7),
+    ('His jaw drops#drops', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),
+    ('A long brown leg punches out#punches', 'hit', 0.95, None, {'boost': 3.0}),
     ('He pours out of the window', 'braam', 0.8, None),
     # the chase
     ('I rip my foot out', 'pulse_on', 0.8, None),
     ('One spears my coat', 'hit', 0.75, None),
-    ('And drops. Right in front -0.6', 'silence', 0.85, 0.7),
-    ('And drops. Right in front', 'hit', 0.95, None, {'boost': 3.0}),
+    ('And drops#drops -0.5', 'silence', 0.85, 0.75),
+    ('And drops#drops +0.3', 'hit', 0.95, None, {'boost': 3.0}),
     ('and slam the door', 'hit', 0.8, None),
     ('One leg plucks', 'pulse_off', 0.5, None),
     ('Saving her a place', 'sub_drop', 0.45, None),
     ('Static. And bells', 'stinger', 0.55, None),
     # rule 5
     ('Rule number five -0.1', 'rule', 0.75, None, {'nosnap': True}),
-    ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp', 'hit', 0.75, None),
+    ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp#cloud', 'hit', 0.85, None, {'boost': 2.5}),
     ('Let me in, baby -1.4', 'silence', 0.95, 1.4),
-    ('Slowly, a face slides up the glass', 'hit', 1.0, None, {'boost': 3.5}),
+    ('Red eyes. The doorknob grows frost', 'riser', 0.6, 4.5),            # the face slides up the glass ...
+    ('Red eyes. The doorknob grows frost', 'hit', 1.0, None, {'boost': 3.5}),   # ... pressed to it: red eyes
     ('The doorknob grows frost', 'sub_drop', 0.55, None),
     # rule 6
     ('Rule number six -0.1', 'rule', 0.8, None, {'nosnap': True}),
     ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),
-    ('The hallway hatch drops open', 'hit', 1.0, None, {'boost': 3.5}),
-    ('Under the door, a needle-thin', 'riser', 0.55, 4.0),
-    ('I jam the towel', 'hit', 0.85, None, {'boost': 2.5}),
+    ('The hallway hatch drops open#drops', 'hit', 1.0, None, {'boost': 3.5}),
+    ('A leg reaches between us#between', 'hit', 0.85, None, {'boost': 2.5}),
+    ('Under the door, a needle-thin#tip', 'riser', 0.55, 3.0),
+    ('Under the door, a needle-thin#tip', 'hit', 0.8, None, {'boost': 2.5}),
+    ('I jam the towel#jam', 'hit', 0.85, None, {'boost': 2.5}),
     ('The clicking stops', 'silence', 0.8, 1.5),
     # the twist
-    ("To Kessler's door", 'sub_drop', 0.5, None),
+    ("To Kessler's door -0.45", 'silence', 0.8, 0.85),
+    ("To Kessler's door#door", 'hit', 0.9, None, {'boost': 3.0}),       # the big twist: the truck at HIS door
     ('Not shivering. Smiling', 'hit', 0.65, None),
     ('And nobody checked', 'sub_drop', 0.6, None),
     ("Whoever's coldest... was across -1.0", 'silence', 0.85, 1.1),
@@ -280,13 +287,14 @@ EVENTS = [
     ('Because everybody inside', 'hit', 0.8, None),
     # the climax
     ('Every layer. The big blanket', 'pulse_on', 0.85, None),
-    ('One hooks the blanket', 'hit', 0.8, None),
-    ('He swings around, jaw down', 'hit', 0.95, None, {'boost': 3.0}),
+    ('One hooks the blanket#pulls', 'hit', 0.8, None),
+    ('He swings around, jaw down#over', 'hit', 0.95, None, {'boost': 3.0}),   # the cage
     ('Inside, children. Rule seven', 'sub_drop', 0.6, None),
     ('We pull Mr. Kessler', 'pulse_off', 0.5, None),
     ('And the old man starts to shiver', 'swell', 0.55, 4.0),
     ("Dad's plow roars", 'swell', 0.8, 4.0),
-    ('The song falls apart', 'sub_drop', 0.5, None),
+    ('jaw gapes for the last note +0.37', 'hit', 0.85, None, {'boost': 2.5}),   # the hung note: his jaw gapes
+    ('The song falls apart#apart', 'hit', 0.8, None, {'boost': 2.5}),     # his defeat
     ('The red one stays', 'sub_drop', 0.35, None),
     # stinger and the teaser
     ('The truck slows at a house', 'hit', 0.7, None),

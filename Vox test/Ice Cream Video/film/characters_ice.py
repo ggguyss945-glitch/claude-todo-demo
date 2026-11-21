@@ -767,13 +767,14 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
 # his vendor coat: shoulders squared and widened, a waist, the hem flared to mid-thigh (h in cm above the hip centre)
 _SH_ROWS = ((-25.0, 17.2, 12.6), (-12.0, 15.6, 11.4), (0.0, 14.2, 10.1), (16.0, 12.4, 9.1), (46.0, 15.6, 10.6), (60.0, 18.9, 9.6),
             (68.0, 16.25, 8.6), (73.5, 8.2, 6.8))
+_SH_BULK = [1.0]    # set per draw by _shiver_figure: at SET scale (small head) the coat and sleeves fill out (no stick figure)
 
 
 def _sh_surf(R, h, xr, out=1.0, front=True):
     """Point + normal on the coat's surface at height h, across fraction xr (-1 his right .. 1 his left)."""
     rows = _SH_ROWS
     hs = [r[0] for r in rows]
-    w = float(np.interp(h, hs, [r[1] for r in rows])); d = float(np.interp(h, hs, [r[2] for r in rows]))
+    w = float(np.interp(h, hs, [r[1] for r in rows])) * _SH_BULK[0]; d = float(np.interp(h, hs, [r[2] for r in rows])) * (0.5 + 0.5 * _SH_BULK[0])
     p, a = _ws_spine_pt(R, h)
     xr = clamp(xr, -1, 1)
     z = d * math.sqrt(max(0.0, 1 - xr * xr)) * (1 if front else -1)
@@ -790,6 +791,7 @@ def _sh_torso(c, view, R, P, det, t, light, st):
     bul = st['split']
     rings = []
     for hrow, w, d in _SH_ROWS:
+        w = w * _SH_BULK[0]; d = d * (0.5 + 0.5 * _SH_BULK[0])
         p, a = _ws_spine_pt(R, hrow)
         ph = np.linspace(0, 2 * PI, 24, endpoint=False)
         sw_ = 0.16 + 0.19 * clamp(bul * 1.6) + 0.035 * math.sin(t * 47.0) * bul * (1.0 - clamp(st['legs'] / 2.0))
@@ -967,7 +969,8 @@ def _sh_arm(c, view, R, P, s, det, t, light, hands=True):
     upv = _rx(np.array([0.0, -1.0, 0.0]), a)
     Sc = S + upv * 0.8 + _rx(np.array([s * 0.6, 0.0, 0.0]), a)          # the shoulder cap sits a little up and out
     cuff = E + (W - E) * 0.80
-    _sh_stripe_tube(c, view, [Sc, (S + E) / 2, E, (E + cuff) / 2, cuff], [11.5, 10.5, 9.2, 8.6, 7.8], light)
+    kb = _SH_BULK[0]
+    _sh_stripe_tube(c, view, [Sc, (S + E) / 2, E, (E + cuff) / 2, cuff], [11.5 * kb, 10.5 * kb, 9.2 * kb, 8.6 * kb, 7.8 * kb], light)
     X, Y, _, f = view.p(cuff)
     Xe, Ye, _, fe = view.p(E)
     d = math.hypot(X - Xe, Y - Ye) or 1.0
@@ -992,7 +995,7 @@ def _sh_arm(c, view, R, P, s, det, t, light, hands=True):
             c.line(smooth([p0, p1, p3], False), c.lw * 0.7, pal['pink_sh'], 200)
     # the turned-back cuff: a wide white band at the sleeve end
     c0 = cuff - (cuff - E) * 0.16
-    tc, _ = _ws_tube3(c, view, [c0, cuff], [10.0, 10.4], '#fbf8f9', pal['white_sh'], c.lw, light)
+    tc, _ = _ws_tube3(c, view, [c0, cuff], [10.0 * kb, 10.4 * kb], '#fbf8f9', pal['white_sh'], c.lw, light)
     if det >= 1:
         Xa, Ya = view.p2(c0)
         c.line(poly([(Xa - uy * 4.8 * f, Ya + ux * 4.8 * f), (Xa + uy * 4.8 * f, Ya - ux * 4.8 * f)], False), c.lw * 0.6, pal['white_sh'], 220)
@@ -1461,6 +1464,8 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
     sp = CAST[who]
     st = _sh_state(P)
     sc = max(P.ws_scale, 1e-3)
+    hpx_ = float(sp.get('hh', 300.0)) * c.s                        # his head height in design px
+    _SH_BULK[0] = 1.0 + 0.34 * clamp((230.0 - hpx_) / 140.0) * (1.0 - clamp((st['legs'] - 0.2) / 1.0)) if who == 'shiver' else 1.0
     cc = c.sub(0.0, 0.0, 0.0, _WSU * sc)
     view = _WSView(P)
     R = _sh_rig(P, st)
@@ -1664,6 +1669,12 @@ CAST['mom_photo'] = _v3cast(
     cloth=dict(top='#eef0f2', top_sh='#bcc2c8', top_hi='#ffffff', shirt='#7a9ac0', shirt_sh='#5a7aa0', trousers='#3a4a6a',
                trousers_sh='#263248', shoes='#2a2a30', shoes_sh='#141418', pocket='#dfe3e8', button='#dfe3e8', scarf='#b0485e'))
 CAST['shiver_mom'] = dict(CAST['mom_photo'], breath=0.0, blink_rate=0.0, lock=1.0, micro=0.0)
+# film pass (requests cast 3/5): the low bun read as a short-haired BOY through the strip of glass: Mom (and his copy of
+# her) wear it down to the shoulders, with fuller lashes and lips
+for _k in ('mom_photo', 'shiver_mom'):
+    CAST[_k] = dict(CAST[_k], hair='loose', lips=0.75, lashes=1.4, brow_th=5.5)
+# her scarf: the coat's open front shows a rose knit scarf at the throat ("Her scarf." L271), not a blue shirt
+CAST['shiver_mom']['cloth'] = dict(CAST['shiver_mom']['cloth'], shirt='#b0485e', shirt_sh='#7a2e40', shirt_hi='#d0687e')
 
 # ---------------------------------------------------------------------------------------------- one boot, one sock
 # adam_sock after 6:45: the LEFT boot still on, the RIGHT foot in a grey sock caked with snow (feet_lr: side -> kind).

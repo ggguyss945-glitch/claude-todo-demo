@@ -1023,14 +1023,18 @@ def ic_smoke(pen, v, x, Y, y, t, k=1.0, seed=0, tod='night'):
     """Chimney smoke: soft puffs rising and leaning with the light wind (live)."""
     if k <= 0.01 or v.d(x, y) < 0.6: return
     rng = np.random.default_rng(abs(int(seed)))
-    c = '#aab4cc' if tod in ('night', '1958') else '#f2ece6'
-    for i in range(9):
-        ph = (t * 0.22 + i / 9.0 + rng.uniform(0, 0.05)) % 1.0
+    day = tod not in ('night', '1958')
+    c = '#aab4cc' if not day else '#b8b0ac'                       # day smoke: a warm grey that reads on the pale sky
+    n = 9 if not day else 14
+    for i in range(n):
+        ph = (t * 0.22 + i / float(n) + rng.uniform(0, 0.05)) % 1.0
         P = (x + ph * 2.6 + 0.3 * math.sin(t * 0.7 + i), Y + 0.2 + ph * 3.2, y + ph * 0.8)
         if v.d(P[0], P[2]) < 0.5: continue
         px, py = v.p(*P); s = v.s(P[0], P[2])
-        rr = (0.25 + ph * 0.9) * s
-        pen.fill(oval(px, py, rr, rr * 0.8), c, 110 * k * (1 - ph) ** 1.2, blur=rr * 0.5)
+        rr = (0.25 + ph * 0.9) * s * (1.35 if day else 1.0)
+        al = (110 if not day else 175) * k * (1 - ph) ** 1.2
+        pen.fill(oval(px, py, rr, rr * 0.8), c, al, blur=rr * 0.5)
+        if day: pen.fill(oval(px - 0.15 * rr, py - 0.2 * rr, rr * 0.6, rr * 0.48), '#f4eee8', al * 0.8, blur=rr * 0.4)
 
 
 def ic_breath_air(pen, v, t, box=(0, 0, 1920, 1080), n=70, seed=3, k=1.0, c='#ffffff'):
@@ -1244,9 +1248,12 @@ class IcStreet(Room):
                     P_ = (H['plight'], 1.95, H['yf'] - 0.07 * H['face'])
                     if k > 0.01 and v.d(P_[0], P_[2]) > 0.5:
                         x, y = v.p(*P_); s = v.s(P_[0], P_[2])
-                        pen.glow(x, y, 1.6 * s, '#ffc070', 120 * k); pen.glow(x, y, 0.12 * s, '#fff4d8', 250 * k)
+                        pen.glow(x, y, 2.6 * s, '#ffc070', 150 * k); pen.glow(x, y, 0.22 * s, '#fff4d8', 255 * k)   # a real pool on porch + step
+                        pen.glow(x, y, 0.7 * s, '#ffe0a0', 200 * k)
+                        px_, py_ = v.p(P_[0], 0.45, P_[2] - 0.5 * H['face'])
+                        pen.ellipse_glow(px_, py_, 1.8 * s, 0.55 * s, '#ffc070', 110 * k)
                         gx, gy = v.p(P_[0], IC_SNOWY, P_[2] - 1.2 * H['face'])
-                        pen.ellipse_glow(gx, gy, 2.0 * s, 0.5 * s, '#ffc070', 55 * k)
+                        pen.ellipse_glow(gx, gy, 2.8 * s, 0.75 * s, '#ffc070', 95 * k)
                     if night and o.get('neighbour_smoke', True):
                         ch = H['chimney']; ic_smoke(pen, v, ch[0], 4.8 + 0.95, ch[1], t, 0.8, 40 + i, tod)
             G.append(('far_houses', (0.0, 3.0, -50.0), nbr))
@@ -2371,7 +2378,14 @@ def ic_bath(view='door', **kw):
         hole = oval((b.left() + b.right()) / 2, (b.top() + b.bottom()) / 2, b.width() * 0.36 * wipe(t), b.height() * 0.3 * wipe(t))
         pen.cv.save(); pen.cv.clipPath(minus(path, hole) if wipe(t) > 0.01 else path, skia.ClipOp.kIntersect, True)
         pen.fill(path, '#c8d4ec', 215); pen.texture(path, 'grunge', 0.6, 'overlay', 0.8)
+        kb = beac(t)
+        if kb > 0.01:                                                   # Dad's beacon THROUGH the frosted glass (it glows, a band sweeps)
+            w_ = b.width(); ph = ((t * 1.3) % 1.0)
+            pen.fill(path, IC_ORANGE, 150 * kb)
+            pen.radial(path, b.left() - 0.3 * w_ + 1.6 * w_ * ph, (b.top() + b.bottom()) / 2, 0.7 * w_, [(0, '#ffd080', 235), (1, '#ff8a1e', 0)], a=kb, sy=1.6)
         pen.cv.restore()
+        if kb > 0.01: pen.glow((b.left() + b.right()) / 2, (b.top() + b.bottom()) / 2, 1.1 * b.width(), IC_ORANGE, 70 * kb)
+    beac = _kfn(o.get('beacon', 0.0), 652)
     lay = Layer(max(0.3, v.d(-0.5, 0.0)), frosted, 'window_frost', blur=None); lay.order = v.d(-0.5, 0.0) - 0.02
     dyn.append(lay)
     o2 = dict(o); o2['cone'] = None
@@ -2839,7 +2853,11 @@ def _ici_outro(pen, t, n=0, **kw):
     y = 330
     for ln in _wrap(lead, 52): btext(pen, ln, 960, y, 'sans_b', 50, '#3a2414', 252, 'center'); y += 64
     y += 40
-    for ln in _wrap(big, 30): btext(pen, ln, 960, y, 'head', 88, '#a01c1e', 255, 'center'); y += 104
+    bl = _wrap(big, 30); bs = 88.0                                    # fit every line inside the card (n=4 overflowed)
+    while bs > 52 and max(btext_width(ln, 'head', bs) for ln in bl) > 1400:
+        bs -= 4.0
+        if bs <= 72 and len(bl) < 3: bl = _wrap(big, 22)
+    for ln in bl: btext(pen, ln, 960, y, 'head', bs, '#a01c1e', 255, 'center'); y += bs * 1.18
     y += 20
     for ln in _wrap(det, 56): btext(pen, ln, 960, y, 'sans', 46, '#2a1a10', 252, 'center'); y += 60
     pen.fill(_flake_path(300, 260, 44), '#e8b070', 160)

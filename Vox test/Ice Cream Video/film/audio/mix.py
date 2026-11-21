@@ -1146,8 +1146,8 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-e
 # stays under BOOST_TARGET_LU (by grade, LU over the voice's integrated level; a fixed drive turned the sustained swap on
 # "Seven." into a +17 LU square wave), and a window already over its target comes down to it. The saturation's harmonics
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
-BOOST_SAT_DB = 14.0
-BOOST_TARGET_LU = {1.0: 10.0, 0.75: 9.0, 0.5: 8.0}
+BOOST_SAT_DB = 16.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10)
+BOOST_TARGET_LU = {1.0: 11.5, 0.75: 10.5, 0.5: 9.5}   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
 BOOST_VCUT_DB = 16.0  # Bus final mix: 8 dB left 'Almost.', '...Clever.', the hand, the doors and 'Two of me.' 4-13 dB
                       # under the scare in 1-4.5 kHz; the cut now also sits inside the drive search (the loudness target
                       # is met with the cut in place)

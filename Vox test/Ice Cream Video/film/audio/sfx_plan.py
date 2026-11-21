@@ -118,6 +118,20 @@ PICTURE = {
     'dash_radio': ('radio_static', {}, None, 'the two-way radio'),
     'siren_far': ('ambulance', {}, None, 'the ambulance'), 'sirens_arrive': ('ambulance', {}, None, 'the ambulance'),
     'bus_horn': ('plow_horn', {}, None, 'the plow\'s horn'),
+    # first full mix: the picture's names the mix did not know (skipped, or a wrong keyword fallback)
+    'paper_flutter': ('paper', {}, -6.0, 'the rule card\'s paper'),
+    'slap': ('hand_slap', {}, None, 'I slap the cone out of her hand'),
+    'coat_rustle': ('cloth_rustle', {}, None, 'coats on'), 'sock_pull': ('cloth_rustle', {}, -4.0, 'a sock pulled on'),
+    'boot_on': ('cloth_rustle', {}, -2.0, 'boots pulled on (was a frozen-boot fallback)'),
+    'slipper_shuffle': ('snow_scuff', {}, -4.0, 'Kessler shuffles out onto his snowy step'),
+    'phone_buzz': ('phone_vibrate', {}, -4.0, 'the phone (was a waiting-room bed fallback)'),
+    'tape_press': ('tape_peel', {}, -8.0, 'the rule taped on (was a door-tap fallback)'),
+    'flicker_sting': ('street_flicker', {}, None, 'the streetlight flickers'),
+    'sh_eyes_sink': None, 'sh_eyes_red': None,        # the score's hit on "red" carries the eyes
+    'sh_uniform_split': ('uniform_tear', {}, -4.0, 'the uniform splits'),
+    'sh_pour': ('scuttle', {}, -4.0, 'he pours out of the window, legs first on the truck'),
+    'sh_land': None,                                  # leg_stab_snow + the hit on the same frame
+    'sh_jaw_drop': None,                              # the shot's own jaw_drop sits on "drops" 0.9 s earlier (a double)
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
