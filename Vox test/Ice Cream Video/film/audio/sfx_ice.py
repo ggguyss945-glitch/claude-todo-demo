@@ -878,14 +878,14 @@ def r_jaw_strain(rng, sp, dur=1.2, **_):
         g = _ix('glove_squeak', (), d * 0.45 + 0.3, rng, 0.3)
     except KeyError:
         g = st(bp(noise(d, 4), 250, 1600, 2)) * 0.3
-    g = eq(lp(rate(g, 0.42), 1800, 2), ('peak', 420, 3.0, 0.9))[:n_(d)]
+    g = eq(lp(rate(g, 0.42), 1800, 2), ('peak', 420, 3.0, 0.9))[:n_(d)] * 1.6
     g = g * np.linspace(0.5, 1.0, len(g))[:, None]
     ev = [(0.0, g)]
     try:
         P = _ip('bone', 'ice_bone', (), 'onset', gap=0.12, max_len=0.35, keep=-12)
         t = 0.05
         while t < d - 0.1:
-            k = hp(P.get(rng, rj=0.08, fo=0.03), 900, 2)[:n_(0.06)] * rng.uniform(0.12, 0.25)
+            k = lp(hp(P.get(rng, rj=0.08, fo=0.03), 500, 2), 3500, 2)[:n_(0.06)] * rng.uniform(0.05, 0.11)   # dull, under the creak
             ev.append((t, k)); t += rng.uniform(0.06, 0.16) * (1.0 + t / d)       # the ratchet slows as it opens
     except KeyError:
         pass

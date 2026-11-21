@@ -2460,9 +2460,9 @@ def plan_open(F):
     IN(T(1), 'doormat', dict(wrapper=True), c=dict(mv='push', rate=0.04), sfx=[(T(1) + 0.1, 'cone_set', -10, 0, 'close')])
     td = WD(1, "don't")
     IN(W(1, "don't"), 'doormat', dict(wrapper=True), c=dict(mv='push', f=1.25, rate=0.03),
-       hands=[dict(who='lina_pj', fn=slide(td - 0.3, td + 0.45, (1180, 1300), (1090, 905), 160, 168,      # (review: stops short of the cone, never on it)
-                                           extra=lambda t, r: (r[0] + 60 * ease_in_out(clamp((t - td - 0.75) / 0.45)), r[1] + 200 * ease_in_out(clamp((t - td - 0.75) / 0.45)), r[2], r[3])),
-                   size=260, shape='open', side=-1, sleeve_from=(1400, 1500))])
+       hands=[dict(who='lina_pj', fn=slide(td - 0.3, td + 0.45, (1900, 760), (1410, 700), 118, 108,     # (review: from the right, stops in the air beside the cone, never on it)
+                                           extra=lambda t, r: (r[0] + 320 * ease_in_out(clamp((t - td - 0.75) / 0.45)), r[1] + 30 * ease_in_out(clamp((t - td - 0.75) / 0.45)), r[2], r[3])),
+                   size=260, shape='open', side=-1, sleeve_from=(2150, 820))])
     # 2 "And if Mom knocks... and her breath doesn't show... don't open the door."
     S(T(2), 'hall', 'doorclose', st=dict(HALL_A, hall=0.3, lamp=0.0, pink=1.0),       # her shadow on the frosted glass (drawn over the door, faint)
       ppl=[P('shiver_mom', (-2.1, -0.45, 0.0), face=(-2.1, 2.0), sil=0.5, sil_rim='#ff9ec8', sil_rim_a=0.25, dorder=-6.0,
@@ -3082,15 +3082,15 @@ def plan_rule4(F):
                 act=_A(lk(T(193), ('shiver', 'eyes')), reach(t193 - 0.1, 1, (0.2, -8.2, 1.05), dur=1.2, shape='reach', z=60.0)))],
       cold=True, c=Z(1.35, 0.01, 1000, 640))
     # 195 An inch from his fingers, I yank her into my arms.
-    LINA_PULL = -55.0                                  # (screen px: she slides right, toward Adam, as he grabs)
+    LINA_PULL, LINA_LIFT = -80.0, 120.0                                 # (screen px: she slides right, toward Adam, as he grabs)
     tyk = WD(195, 'yank')
     S(T(195), 'street', 'truck', st=STO,
       ppl=[SH(clip=None, nolegs=1.0, dorder=-3.0, act=_A(pose(-9, None, 0.1, ws_bend=1.3, ws_face_up=0.9),
                                               lambda a, s: a.reach_far(T(195) - 1, 1, (scr(s.sp, 'lina_window')[0] + 20, scr(s.sp, 'lina_window')[1] - 0.95 * spot_of(s.sp, 'lina_window').ppm),
                                                                        t1=tyk + 0.2, dur=0.5, z=30.0))),
            lina('lina_window', who='lina', id='lina', face=(0.27, -8.6), expr='dazed', light=PINK,
-                act=_A(reach(T(195) - 1, 1, (0.15, -8.15, 1.0), t1=tyk - 0.12, dur=0.4, shape='reach'), ex('fear', tyk + 0.05), lambda a, s: a._add(tyk, None, _pull(tyk, LINA_PULL, 0.2))),
-                until=tyk + 0.2),                                     # yanked: from here she is in Adam's arms (carry)
+                act=_A(reach(T(195) - 1, 1, (0.15, -8.15, 1.0), t1=tyk - 0.12, dur=0.4, shape='reach'), ex('fear', tyk + 0.05), lambda a, s: a._add(tyk, None, _pull(tyk, LINA_PULL, 0.2, LINA_LIFT))),
+                until=tyk + 0.2, dorder=-0.6),  # in front of Adam while she slides into his arms                                     # yanked: from here she is in Adam's arms (carry)
            kid('adam', (-1.6, -6.4, FOOT), id='adam', path=[(T(195) - 0.3, (-1.9, -6.0, FOOT)), (tyk, (-0.9, -7.45, FOOT)), (E(195) + 0.4, (-1.4, -6.9, FOOT))],
                run=True, surface='snow', expr='terrified_call', act=_A(reach(tyk - 0.25, -1, ('lina', 'chest'), t1=tyk + 0.1, dur=0.15)),
                carry=dict(who='lina', t0=tyk + 0.2, expr='fear'))],
@@ -3352,10 +3352,12 @@ def frozen_boot(t0, push=0.0, tug=None, z0=1.0, zr=None):
     return lambda F, sh: Layer(0.5, draw, 'frozen_boot')
 
 
-def _pull(t0, dx, dur=0.3):
-    """Lina yanked out of his reach into Adam's arms: her body slides toward Adam (ends as the carry takes her)."""
+def _pull(t0, dx, dur=0.3, lift=0.0):
+    """Lina yanked out of his reach into Adam's arms: her body slides toward Adam and up (lift) to where the carry
+    takes her, so the hand-over to the carry does not pop."""
     def fn(P_, t):
-        u = ease_in_out(clamp((t - t0) / dur)); P_.dx -= dx * u
+        u = ease_in_out(clamp((t - t0) / dur)); P_.dx -= dx * u; P_.dy -= lift * u
+        if lift: P_.turn *= 1.0 - u                    # she swings round to face out as he lifts her (the carry faces out)
     return fn
 
 
