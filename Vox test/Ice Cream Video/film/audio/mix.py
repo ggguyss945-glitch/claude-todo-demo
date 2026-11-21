@@ -1243,7 +1243,9 @@ BOOST_ATT_S, BOOST_REL_S = 0.010, 0.75   # sound fix r3: 0.35 s read as a hard-e
 # in 1-4.5 kHz are cut BOOST_VCUT_DB under the voice (keyed to it), so the words the scares ride over still read
 BOOST_SAT_DB = 24.0   # Ice Cream first mix: 14 dB left the boosted scares +5.3..+7.6 LU over the mix (target +6..+10);
                       # sound fix: 24 (the hits now have only the 0.15-0.45 s scare beat before the next word)
-BOOST_TARGET_LU = {1.0: 11.5, 0.75: 10.5, 0.5: 9.5}   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
+BOOST_TARGET_LU = {1.0: 10.5, 0.75: 10.5, 0.5: 9.5}   # final remix: grade 1.0 11.5 -> 10.5 (the skull glimpse and the face
+                     # at the glass reached +10.7 / +10.6 LU over the integrated level; the spec is +6..+10)
+#   # Ice Cream first mix: +1.5 (the master limiter takes about 2 LU)
 BOOST_VCUT_DB = 10.0  # the extra 1-4.5 kHz cut keyed to the voice on the saturated hits (was 16 dB and the ONLY
                       # protection: the critic measured the voice 2.6-9 LU under the bed in the 1 s after the hits)
 # Sound fix (critic B1, "the hits bury their own words"): a broadband, level-keyed duck (speech_duck) on every word in

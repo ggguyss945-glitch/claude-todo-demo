@@ -152,7 +152,7 @@ PICTURE = {
     'glove_snow': ('snow_scuff', {}, None, 'a glove in the snow'),
     'hatch_rattle': ('wood_creak', {'kind': 'tick'}, -2.0, 'the hatch rattles in its frame (was a second hatch drop)'),
     'leg_slide': ('leg_tip_tile', {}, None, 'the needle tip slides in on the tile'),
-    'leg_withdraw': ('leg_tip_tile', {}, -4.0, 'the tip pulls back'),
+    'leg_withdraw': ('leg_tip_tile', {'dur': 0.6}, -4.0, 'the tip pulls back (final remix: 0.6 s, its taps ran 0.5 s into "The clicking stops.")'),
     'radio_grab': ('cloth_rustle', {'kind': 'grab'}, -2.0, 'Adam grabs the radio'),
     'sh_jaw_strain': ('jaw_strain', {}, -6.0, 'his jaw strains (sound fix: a tendon creak and bone ratchet, was a wood creak)'),
     'sh_jaw_close': ('bone_crack', {}, -6.0, 'the jaw snaps shut as the skull shrinks back'),

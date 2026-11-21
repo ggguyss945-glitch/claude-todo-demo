@@ -271,7 +271,7 @@ EVENTS = [
     ('Let me in, baby -1.4', 'silence', 0.95, 1.4),
     ('end:Long. White. Red eyes', 'riser', 0.6, 4.5),                     # the face slides up the glass ...
     ('end:Long. White. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # ... pressed to it: after "Red eyes."
-    ('The doorknob grows frost', 'sub_drop', 0.55, None),
+    ('The doorknob grows frost', 'sub_drop', 0.4, None),   # final remix: 0.55 -> 0.4 (it rose under "doorknob", 5.3 LU under the words after the face hit)
     # rule 6
     ('Rule number six -0.1', 'rule', 0.8, None, {'nosnap': True}),
     ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),

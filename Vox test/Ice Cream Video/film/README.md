@@ -62,7 +62,8 @@ events}`) and `shots.json` (the cut list).
   warm under the outro), plus `hit`, `riser`, `rule` and `silence` events, and the tension curve (`intensity`).
 
 ## Sound: the final mix
-`bash audio/final_mix.sh` (from anywhere; about 14 min, needs about 12 GB RAM: run it with no render going) does it all:
+`bash audio/final_mix.sh` (from anywhere; about 14 min; peaks about 8 GB RAM, so it can run beside a 1-2 worker render; it sets
+its own `oom_score_adj` to 1000, so if RAM runs out the kernel kills the mix, never the render) does it all:
 `film.py --cues` -> `audio/mix.py --plan full` -> `W/mix/final/mix_en.wav` (+ hard link `mix.wav`) -> `audio/measure_mix.py`
 (`W/mix/final/measure.txt`) -> `audio/mix_scenes.py` (`W/mix/final/scenes/NN_*.png`) -> the mix muxed onto
 `W/preview/preview.mp4` as `W/preview/preview_mix.mp4`. After a picture change: re-render the preview first (Commands),
@@ -95,7 +96,7 @@ then run `final_mix.sh`. The stems (`W/mix/final/stems/`, 0.9 GB) are written fo
     bed (50 ms segments); the critic's 24 lines min +4.6..+30 LU (were -10.6..+0.1) and all recognised word for word
     (L52 "Out of tune." reads "two" only at 50 ms margins, with the bed 13.6 LU under it; right with 0.2 s).
 
-### The final remix (run once the new cue sheets exist; from `film/`, no render running, `free -g` >= 11 GB available)
+### The final remix (run once the new cue sheets exist; from `film/`, `free -g` >= 8 GB available)
 ```
 python3 render.py --size 640x360 --fps 30 --workers 2 --out _work/preview_tmp --audio _work/align/vo_en.wav   # if the picture changed
 cp _work/preview_tmp/film.mp4 _work/preview/preview.mp4
