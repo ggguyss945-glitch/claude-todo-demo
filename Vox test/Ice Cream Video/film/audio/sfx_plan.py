@@ -171,7 +171,7 @@ PICTURE = {
     # sound fix round: the nine names that fell back to keywords in the first mix
     'cloth_grab': ('cloth_rustle', {'kind': 'grab'}, None, 'a hand grabs cloth'),
     'sh_bone_crack': ('bone_crack', {'n': 2}, -4.0, 'the skin hardens: two dry cracks'),
-    'leg_pry': ('leg_pry', {}, -2.0, 'a leg wedges in and pries'),
+    'leg_pry': ('leg_pry', {}, -9.0, 'a leg wedges in and pries (low: its scrape sat on the spoken "Prying." and made it read "Crying.")'),
     'leg_lift': ('leg_click', {'surface': 'metal'}, -8.0, 'a leg lifts off (a light click)'),
     'towel_stuff': ('cloth_rustle', {}, -4.0, 'towels stuffed in the gap (was the towel-jam slam)'),
     'snow_step': ('snow_walk', {'n': 1}, None, 'one step in snow'),
