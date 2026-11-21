@@ -258,7 +258,7 @@ JINGLE_MODULE = 'chime_ice'
 SHOW_DUCK['jingle'].update({'burst': -8.0, 'three': -4.0, 'far': -3.0, 'closer': -4.0, 'outside': -7.0,
                             'lullaby': -9.0, 'warped': -5.0, 'climax': -6.0, 'stinger': -3.0, 'warm': -10.0,
                             'bells': -2.0})
-CHIME_LIFT = {'burst': -5.0, 'three': 0.0, 'far': 0.0, 'closer': 0.0, 'outside': -2.0, 'lullaby': -3.0,
+CHIME_LIFT = {'burst': -5.0, 'three': 0.0, 'far': 0.0, 'closer': 0.0, 'outside': -3.5, 'lullaby': -3.0,
               'warped': -2.0, 'climax': 0.0, 'stinger': 0.0, 'warm': -3.5, 'bells': -4.0}
 SHOW_DUCK['jingle'].update({'sting': -3.0, 'tv1994': -12.0, 'pa': -6.0, 'musicbox': -5.0, 'tapestop': -10.0,
                             'warm': -12.0})

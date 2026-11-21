@@ -46,7 +46,7 @@ THIN_QUIET = []
 # (anchor, name, gain_db, space, params, why). params 'dur': 'until:<anchor>' -> seconds to that anchor.
 ADD = [
     # ---- the cold: the night is always there, under the picture's own room tones
-    ('If the ice cream truck plays its song -0.5', 'cold_night', -2.0, None, {'dur': 'until:Larkfield. Minus thirty-one',
+    ('If the ice cream truck plays its song', 'cold_night', -2.0, None, {'dur': 'until:Larkfield. Minus thirty-one',
                                                                           'creaks': 0.3}, 'the cold open: icy wind'),
     ('Every morning at six#scrape -0.1', 'shovel_scrape', -2.0, 'cold_street', {'far': True},
      '"Scrape.": Mr. Kessler\'s shovel at six, across the street'),
@@ -58,8 +58,12 @@ ADD = [
     # ---- his truck idles all night (in the mix, never narrated)
     ('The song stops. Right outside#stops', 'truck_idle', -2.0, None,
      {'dur': 'until:Stop. His song is playing +6.0'}, 'only the idle remains when the song stops'),
-    ('Rule number two', 'truck_idle', -6.0, None, {'dur': 'until:Then the song moves', 'inside': True},
+    ('Rule number two', 'truck_idle', -6.0, None, {'dur': 'until:Lina is walking toward the pink window', 'inside': True},
      'his engine through the walls (position A, 2:30 to 8:48)'),
+    ('Lina is walking toward the pink window', 'truck_idle', -3.0, None, {'dur': 'until:I duck under him'},
+     'outside with him: the engine close'),
+    ('I duck under him', 'truck_idle', -6.0, None, {'dur': 'until:Then the song moves', 'inside': True},
+     'back inside: through the walls again'),
     ('The truck has rolled across the street', 'truck_idle', -6.0, None,
      {'dur': 'until:The truck glides into the white', 'far': True}, 'his engine across the street at Kessler\'s'),
     # ---- the radio
@@ -103,8 +107,8 @@ PICTURE = {
     'snow_crunch': ('snow_walk', {'n': 1}, None, 'one step in snow'),
     'footsteps_grass': ('snow_walk', {}, None, 'steps outside are in snow'),
     'footsteps_porch': ('snow_walk', {}, None, 'the porch is snowed in'),
-    'streetlight_flicker': ('street_flicker', {}, -4.0, 'the streetlight flickers'),
-    'flicker': ('street_flicker', {}, -4.0, 'the streetlight flickers'),
+    'streetlight_flicker': ('street_flicker', {}, None, 'the streetlight flickers'),
+    'flicker': ('street_flicker', {}, None, 'the streetlight flickers'),
     'lock_check': ('deadbolt', {}, -4.0, 'I check every lock'),
     'rule_tape': ('tape_rip', {}, -8.0, 'a rule taped to the door'),
     'breath_cloud': ('breath', {}, -10.0, 'breath clouding in the cold room'),

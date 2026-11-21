@@ -391,7 +391,8 @@ def _c_sh_slide():
     def win(t): return ease_in_out(clamp((t - 0.6) / 1.2))
     def handle(t): return (g['x1'] - Wd * (1 - win(t)) + 30, (g['top'] + g['sill']) / 2)
     a.reach_to(0.2, -1, handle, t1=2.1, dur=0.4, z=30.0)
-    a.lean_to(2.0, (980, 760), gap=10.0, dur=1.2)
+    a.set(2.0, None, 0.9, ws_bend=0.28)
+    a.look_at(2.2, (980, 1400), dur=0.8)
     def draw(pen, t):
         snow_street(pen, 760)
         truck_back(pen, g, ppm)
@@ -406,12 +407,12 @@ def _c_sh_down():
     g = truck(None, 760, 520, ppm)
     a = sh(760, g['floor'], ppm)
     lina = actor('lina', 1080, 1000, ppm, seed=3, expr='neutral')
-    adam = actor('adam', 1500, 1000, ppm, seed=4, expr='fear')
+    adam = actor('adam', 0, 1000, ppm, seed=4, expr='fear')
     lina.face(-0.6); adam.face(-0.6)
-    hand = lambda t: lina.where(t, 'tips_r')
+    hand = lambda t: lina.where(t, 'hand_r')
     lina.reach_to(0.8, -1, (900, 600), t1=3.4, dur=1.0, z=60.0, shape='reach')
     a.lean_to(0.3, (1000, 760), gap=-10.0, dur=2.6, beats=2)
-    a.reach_far(1.6, 1, lambda t: (lina.where(t, 'tips_r')[0] - 20, lina.where(t, 'tips_r')[1] - 30), t1=None, dur=1.6, z=40.0)
+    a.reach_far(1.6, 1, lambda t: (lina.where(t, 'hand_r')[0] - 20, lina.where(t, 'hand_r')[1] - 30), t1=None, dur=1.6, z=40.0)
     adam.run(2.2, 3.0, 1500, 1170)
     adam.reach_to(2.9, -1, (lina, 'chest'), t1=None, dur=0.3, z=60.0)
     def ln(P, t):
@@ -456,9 +457,9 @@ def _transform_times(t0=0.3, step=0.62):
 
 @clip('sh_transform_face', 5.0, 'THE TRANSFORMATION, close, at the window while he keeps waving: the smile keeps going past the cheeks; the skin pulls long, white, hard, a mask of bone; the little blue eyes sink into the dark... and come back red; the jaw drops to the chest: no throat, just dark, and icicle teeth.')
 def _c_sh_transform_face():
-    ppm = 900.0
-    g = truck(None, 960, 1080, ppm)
-    a = sh(980, g['floor'] - 0.12 * ppm, ppm)
+    ppm = 1500.0
+    g = truck(None, 960, 1300, ppm)
+    a = sh(940, 3150, ppm)
     a.set(-1.0, None, 0.01, ws_bend=0.15)
     a.face(0.0, 0.08)
     a.slow_wave(0.0, 5.0, side=1)
@@ -553,7 +554,7 @@ def _c_sh_spear():
     a = sh(300, 1000, ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0, sh_lift=90.0)
     a.face(0.6, 0.0)
-    adam = actor('adam_sock', 900, 1000, ppm, seed=5, expr='terrified_call')
+    adam = actor('adam_sock', 0, 1000, ppm, seed=5, expr='terrified_call')
     lina = actor('lina', 0, 0, ppm, seed=6, expr='fear')
     adam.carry(0.0, lina)
     adam.run(0.2, 4.4, 820, 1500)
@@ -688,6 +689,175 @@ def _c_sh_defeat():
         fig(pen, a, t, dict(PINKW, rim='#ffa040'))
         pen.cv.restore()
     return dict(draw=draw, actors=[a])
+
+
+
+# ================================================================================================ PEOPLE
+def house_window(pen, x, y, w=420, h=440, lit=False, curtains=0.0, frost=0.0):
+    window(pen, x, y, w, h, night=True, curtains=curtains)
+    if lit: pen.fill(rect(x - w / 2, y, w, h), '#ffd9a0', 90)
+    if frost > 0: pen.fill(rect(x - w / 2, y, w, h), '#e8f4ff', int(110 * frost))
+
+
+@clip('adam_radio_over', 4.0, 'Dad hands Adam the radio; Adam keys it and talks: "Channel three... Over." (eyes on the radio, then out the window)')
+def _c_adam_radio():
+    ppm = 520.0
+    a = actor('adam_in', 900, 1060, ppm, seed=21, expr='focused')
+    a.face(0.3)
+    a.hold_prop('walkie', 1, -1.0, None)
+    a.radio_to_mouth(0.6, 3.6, side=1)
+    a.look_at(0.0, (1150, 700), dur=0.4); a.look_at(2.2, (1700, 420), dur=0.5)
+    a.talk([(0.9, 2.0)], text='Dad over')
+    def draw(pen, t):
+        room(pen, '#3a3446', '#4a3a30', 1060)
+        house_window(pen, 1600, 300, frost=0.3)
+        fig(pen, a, t, WARM)
+    return dict(draw=draw, actors=[a], grounded=[a])
+
+
+@clip('lina_wave_kessler', 4.0, 'At the last curtain, Lina waves at Kessler\'s dark window across the street, like every night (gap-toothed smile, on tiptoe).')
+def _c_lina_wave():
+    ppm = 560.0
+    l = actor('lina_pj', 860, 1060, ppm, seed=22, expr='kid_grin')
+    l.face(0.55)
+    l.look_at(0.0, (1500, 500), dur=0.3)
+    l.wave(0.6, 3.5, side=1, speed=0.8, height=1.1)
+    def draw(pen, t):
+        room(pen, '#3a3446', '#4a3a30', 1060)
+        house_window(pen, 1420, 260, curtains=0.15)
+        pen.fill(rect(1440, 380, 60, 70), '#20263a')
+        fig(pen, l, t, NIGHTI)
+    return dict(draw=draw, actors=[l], grounded=[l])
+
+
+@clip('kessler_window_hand', 4.0, 'Across the street, in his dark window: Mr. Kessler. A hand lifts. Slowly. A small cloud of breath fogs his glass, from the inside.')
+def _c_kessler_window():
+    ppm = 700.0
+    k = actor('kessler', 960, 1500, ppm, seed=23, expr='lonely')
+    k.face(0.0)
+    k.wave(1.0, 3.8, side=-1, speed=0.35, height=0.9, slow=True)
+    k.look_at(0.0, (900, 1300), dur=0.3)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#0c1020')
+        pen.fill(rect(560, 120, 800, 900), '#080a12')
+        fig(pen, k, t, dict(NIGHTI, dark=0.55))
+        f = clamp((t - 2.2) / 0.8) * (1 - clamp((t - 3.4) / 0.6))
+        pen.glow(960, 500, 160, '#dfe8f4', 120 * f)
+        pen.line(rect(560, 120, 800, 900), 22, '#2a2a30')
+    return dict(draw=draw, actors=[k])
+
+
+@clip('lina_walk_humming', 5.0, '"Lina is walking toward the pink window. Pyjamas, open coat, bare hands. Humming his song. Smiling." (sleepy, dreamy, a mitten dropped behind her)')
+def _c_lina_walk():
+    ppm = 300.0
+    l = actor('lina', 0, 980, ppm, seed=24, expr='dazed')
+    l.walk(0.2, 4.8, 400, 1300, facing=0.6, surface='snow')
+    l.hum(0.3, 4.8)
+    l.look_at(0.0, (1800, 600), dur=0.3)
+    def draw(pen, t):
+        snow_street(pen, 640, glow=(1800, 560, 700, 120))
+        pen.fill(rrect(380, 985, 40, 26, 10), '#e87aa4')
+        fig(pen, l, t, PINKW)
+    return dict(draw=draw, actors=[l], grounded=[l])
+
+
+@clip('adam_run_carry_lina', 4.0, 'Adam runs with Lina in his arms through knee-deep snow, one sock, breath hurting (she clings, head on his shoulder).')
+def _c_adam_carry():
+    ppm = 300.0
+    a = actor('adam_sock', 0, 980, ppm, seed=25, expr='terrified_call')
+    l = actor('lina', 0, 0, ppm, seed=26, expr='fear')
+    a.carry(0.0, l)
+    a.run(0.2, 3.8, 1500, 500)
+    a.face(-0.6)
+    def draw(pen, t):
+        snow_street(pen, 640)
+        CH.draw_carry_child(pen, a, l, t, NIGHTI, NIGHTI)
+    return dict(draw=draw, actors=[a, l], grounded=[a])
+
+
+@clip('dad_plow_cab', 4.0, 'Dad in the plow cab, hands on the wheel, the orange beacon sweeping; he keys the radio: "Adam? Passing our street. All good? Over."')
+def _c_dad_cab():
+    ppm = 560.0
+    d = actor('dad', 900, 1500, ppm, seed=27, expr='grim_drive')
+    d.face(0.0)
+    g = CH.draw_steering_wheel.__doc__
+    d.drive(0.0, 4.0, (700, 980), (1100, 980))
+    d.talk([(1.4, 3.2)], text='Adam passing our street all good over')
+    d.look_at(0.0, (900, 600), dur=0.3)
+    def draw(pen, t):
+        pen.fill(rect(0, 0, 1920, 1080), '#14161c')
+        b = 0.5 + 0.5 * math.sin(t * 5.0)
+        pen.glow(960, -100, 900, '#ffa040', 120 * b)
+        fig(pen, d, t, dict(BEACON, rim_a=int(40 + 70 * b)))
+        CH.draw_steering_wheel(pen, 900, 1000, 260)
+    return dict(draw=draw, actors=[d])
+
+
+@clip('kessler_shuffle_out', 5.0, 'His door opens. Mr. Kessler shuffles out. Slippers. Undershirt. No coat. Not shivering. Smiling. One step off his porch. Another step.')
+def _c_kessler_out():
+    ppm = 330.0
+    k = actor('kessler_out', 0, 940, ppm, seed=28, expr='dazed')
+    k.walk(0.6, 4.8, 700, 1150, facing=0.5, surface='snow')
+    k.look_at(0.0, (1900, 500), dur=0.3)
+    def draw(pen, t):
+        snow_street(pen, 600, glow=(1900, 520, 700, 130))
+        door(pen, 520, 940, ppm=ppm, open_=1.0)
+        fig(pen, k, t, PINKW)
+    return dict(draw=draw, actors=[k], grounded=[k])
+
+
+@clip('lina_hug_kessler', 4.5, 'In his doorway, the blanket round all three; Lina hugs him: "I\'m Lina. You\'re not by yourself." And the old man starts to shiver.')
+def _c_hug():
+    ppm = 400.0
+    k = actor('kessler_out', 1060, 1000, ppm, seed=29, expr='dazed')
+    l = actor('lina', 900, 1000, ppm, seed=30, expr='kind_smile')
+    k.face(-0.45); l.face(0.55)
+    l.reach_to(0.4, 1, (k, 'belly'), dur=0.6, z=40.0, shape='grip'); l.reach_to(0.5, -1, (k, 'hip'), dur=0.6, z=-30.0, shape='grip')
+    l.look_at(0.0, (k, 'eyes'), dur=0.3); k.look_at(1.0, (l, 'eyes'), dur=0.8)
+    l.talk([(1.0, 2.8)], text='Im Lina youre not by yourself')
+    k.expr('sad', 3.0)
+    def shiver(P, t):
+        if t > 3.2: P.dx += 2.2 * math.sin(t * 60.0) * clamp((t - 3.2) / 0.4)
+    k._add(3.2, None, shiver)
+    def draw(pen, t):
+        snow_street(pen, 600)
+        door(pen, 1000, 1000, ppm=ppm, open_=1.0)
+        fig(pen, k, t, WARM); fig(pen, l, t, WARM)
+    return dict(draw=draw, actors=[k, l], grounded=[k, l])
+
+
+@clip('kessler_cocoa_morning', 4.5, 'Morning, warm: Lina brings him cocoa; he takes the mug in both hands: "Sixty-eight years... First time anyone knocked on mine."')
+def _c_cocoa():
+    ppm = 420.0
+    k = actor('kessler_am', 1150, 1000, ppm, seed=31, expr='tender')
+    l = actor('lina', 820, 1000, ppm, seed=32, expr='kid_grin')
+    k.face(-0.5); l.face(0.55)
+    l.hold_prop('mug', 1, -1.0, 1.6)
+    l.reach_to(0.3, 1, (k, 'chest'), t1=1.7, dur=0.9, z=60.0, shape='grip')
+    k.reach_to(1.1, -1, lambda t: l.where(t, 'hand_l'), t1=None, dur=0.5, z=60.0, shape='grip')
+    k.hold_prop('mug', -1, 1.6, None)
+    k.look_at(0.0, (l, 'eyes'), dur=0.4); l.look_at(0.0, (k, 'eyes'), dur=0.3)
+    k.talk([(2.2, 4.3)], text='first time anyone knocked on mine')
+    def draw(pen, t):
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#ffe6c0'), (1, '#f2c89a')])
+        pen.fill(rect(0, 1000, 1920, 80), '#e8eef4')
+        door(pen, 1350, 1000, ppm=ppm, open_=1.0)
+        fig(pen, k, t, MORNING); fig(pen, l, t, MORNING)
+    return dict(draw=draw, actors=[k, l], grounded=[k, l])
+
+
+@clip('benny_1958', 4.0, '1958, sepia: little Benny, from behind, walks alone toward the pink window at the curb; small footprints; one red mitten.')
+def _c_benny():
+    ppm = 240.0
+    b = actor('benny', 0, 960, ppm, seed=33, expr='neutral')
+    b.walk(0.2, 3.8, 900, 1350, facing=1.6, surface='snow')
+    def draw(pen, t):
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#2a2218'), (1, '#6a5a44')])
+        pen.fill(rect(0, 960, 1920, 120), '#b8a888')
+        pen.fill(rect(1500, 560, 260, 200), '#e0a0b0')
+        fig(pen, b, t, dict(rim='#f0d0a0', rim_a=50, side=-1, key=0.0))
+        pen.fill(rrect(860, 975, 26, 18, 7), '#c8322f')
+    return dict(draw=draw, actors=[b], grounded=[b])
 
 
 if __name__ == '__main__':

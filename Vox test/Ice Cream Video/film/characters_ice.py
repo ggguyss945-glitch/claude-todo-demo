@@ -37,6 +37,7 @@ _SH_PAL = dict(
 _SH_WSPAL = dict(_WS_PAL, jacket=_SH_PAL['pink'], jacket_sh=_SH_PAL['pink_sh'], jacket_hi=_SH_PAL['pink_hi'],
                  trim=_SH_PAL['white'], fur='#e9e9e6', fur_dk='#b6b9c0', fur_hi='#ffffff', glove='#EDEDED', glove_sh='#b3b8c2',
                  glove_dirt='#b3b8c2', grime=0.0, trousers='#efe9ec', trousers_sh='#bfb3bc', shoe='#3b3337', line='#1a1418')
+_SH_WSPAL['glove_sh'] = '#cdd2da'
 
 POSE_DEFAULTS.update(
     sh_m=0.0,        # the transformation 0..1 (drives the stages below through SH_STAGES)
@@ -92,11 +93,11 @@ def _sh_mouth(W, L, sm):
     """Lip latitudes for the smile: upper(lon), lower(lon) and the corner latitude."""
     def up(lon):
         q = np.clip(np.abs(np.asarray(lon, float)) / W, 0, 1)
-        return -0.37 + 0.19 * q ** 2 - 0.05 * L
+        return -0.37 + (0.19 + 0.16 * sm) * q ** 2 - 0.05 * L
 
     def lo(lon):
         q = np.clip(np.abs(np.asarray(lon, float)) / W, 0, 1)
-        return up(lon) - (0.25 + 0.05 * sm) * (1.0 - q ** 2) ** 0.75
+        return up(lon) - (0.25 + 0.10 * sm) * (1.0 - q ** 2) ** 0.75
     return up, lo
 
 
@@ -111,7 +112,8 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
     y = -ry * sl
     z = rz * cl * np.cos(lon)
     fr = np.clip(np.cos(lon), 0.0, None)
-    z = z + fr * (2.7 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.12) ** 2 - ((lat + 0.06) / 0.15) ** 2)          # the nose
+    z = z + fr * (3.8 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
+                  + 1.2 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
                   + (1.1 + 0.8 * L) * np.exp(-((np.abs(lon) - 0.52) / 0.24) ** 2 - ((lat + 0.06) / 0.13) ** 2)  # cheekbones
                   + (0.9 + 0.6 * L) * np.exp(-((lat - 0.31) / 0.10) ** 2) * np.exp(-(lon / 0.6) ** 2)        # brow ridge
                   - (1.3 + 2.2 * L) * np.exp(-((np.abs(lon) - 0.27) / 0.13) ** 2 - ((lat - 0.13) / 0.11) ** 2)  # sockets
@@ -130,7 +132,7 @@ class _SHHead:
         self.R, self.view, self.P, self.st = R, view, P, st
         self.M = R['hrot']; self.C = R['head']
         self.L = st['long']; self.J = st['jaw']; self.sm = st['smile']
-        self.W = 0.98 + 0.72 * self.sm + 0.10 * self.L
+        self.W = 0.98 + 0.95 * self.sm + 0.10 * self.L
         self.up, self.lo = _sh_mouth(self.W, self.L, self.sm)
 
     def jaw_w(self, lon, lat):
@@ -273,7 +275,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
         M = R['hrot']
         out_ = M @ np.array([s * 1.0, 0.0, 0.0]); upv = M @ np.array([0.0, -1.0, 0.0]); bk = M @ np.array([0.0, 0.0, -1.0])
         bk = _u3(bk * 0.75 + out_ * 0.65)
-        ring = [Ec + upv * (4.6 * math.cos(a_) - 0.6) * (1.0 if math.cos(a_) > 0 else 0.8) + bk * (2.9 * math.sin(a_) + 0.6) + out_ * 0.4
+        ring = [Ec + upv * (3.7 * math.cos(a_) - 0.5) * (1.0 if math.cos(a_) > 0 else 0.8) + bk * (2.3 * math.sin(a_) + 0.6) + out_ * 0.4
                 for a_ in np.linspace(0, 2 * PI, 12, endpoint=False)]
         pts = [view.p2(q) for q in ring]
         ears.append((view.depth(out_), s, smooth(pts, True, 0.8), pts))
@@ -389,7 +391,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     # the mouth: interior, teeth (buck teeth -> icicles), pale lips
     vis = float(np.mean(np.concatenate([Fu, Fl])))
     if vis > -0.2:
-        icy = max(prog(J, 0.15, 0.6), prog(L, 0.6, 1.0) * 0.6)
+        icy = max(prog(J, 0.05, 0.5), prog(L, 0.5, 1.0) * 0.6)
         c.fill(mouth, mix(pal['mouth'], pal['mouth_m'], max(L, J)))
         with c.clip(mouth):
             M = R['hrot']
@@ -440,7 +442,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 root = hd.p3(lon_, float(hd.up(lon_)) + 0.02, 0.0, jaw=0.0)
                 tipy = hd.p3(lon_, float(hd.lo(lon_)) - 0.035, 0.0, jaw=1.0)
                 tg = _u3(hd.p3(lon_ + 0.02, float(hd.up(lon_)), 0.0, 0.0) - hd.p3(lon_ - 0.02, float(hd.up(lon_)), 0.0, 0.0))
-                ln_ = float(np.linalg.norm(tipy - root))
+                ln_ = min(float(np.linalg.norm(tipy - root)), 6.5)
                 _sh_tooth(c, view, hd, root + tg * s * 0.5, _u3(tipy - root), tg, 3.6, ln_, pal['teeth'], pal['icicle_rim'], lw, 0.0, a_)
         # lips: pale, thin; the upper lip over the teeth roots, the lower under them
         if L < 0.85:
@@ -538,11 +540,14 @@ def _sh_torso(c, view, R, P, det, t, light, st):
         # stripes: even in angle round the body so they wrap like real vertical stripes
         hs = np.linspace(-12.0, 72.0, 14)
         nst = 9
-        for i in range(nst):
-            a0 = -PI / 2 + (i + 0.25) * PI / nst; a1 = -PI / 2 + (i + 0.75) * PI / nst
-            e0 = [view.p2(_ws_surf(R, h_, math.sin(a0), 0.3, front)[0]) for h_ in hs]
-            e1 = [view.p2(_ws_surf(R, h_, math.sin(a1), 0.3, front)[0]) for h_ in hs[::-1]]
-            c.fill(poly(e0 + e1, True), pal['pink'])
+        for side_ in (False, True):          # both halves; a stripe is drawn where its surface faces the lens
+            for i in range(nst):
+                a0 = -PI / 2 + (i + 0.25) * PI / nst; a1 = -PI / 2 + (i + 0.75) * PI / nst
+                nrm = _ws_surf(R, 40.0, math.sin((a0 + a1) / 2), 0.3, side_)[1]
+                if view.face(nrm)[0] < -0.02: continue
+                e0 = [view.p2(_ws_surf(R, h_, math.sin(a0), 0.3, side_)[0]) for h_ in hs]
+                e1 = [view.p2(_ws_surf(R, h_, math.sin(a1), 0.3, side_)[0]) for h_ in hs[::-1]]
+                c.fill(poly(e0 + e1, True), pal['pink'])
         xs = np.concatenate([r[:, 0] for r in rings])
         c.grad(body, xs.min(), 0, xs.max(), 0, [(0, '#ffffff', 60), (0.45, pal['white'], 0), (1, pal['pink_sh'], 150)])
         if det >= 1: c.texture(body, 'fabric', 0.10, 0.6)
@@ -812,7 +817,7 @@ def _sh_leg_seg(c, view, a3, b3, sgi, wd, det, light, i):
             for k in range(3):
                 ang = -PI / 2 + (k - 1) * 0.6
                 c.line(poly([(X + math.cos(ang) * r * 0.6, Y + math.sin(ang) * r * 0.6),
-                             (X + math.cos(ang) * r * 1.5, Y + math.sin(ang) * r * 1.5)], False), lw * 0.5, '#ffffff', 220)
+                             (X + math.cos(ang) * r * 1.15, Y + math.sin(ang) * r * 1.15)], False), lw * 0.4, '#ffffff', 140)
 
 
 # ---------------------------------------------------------------------------------------------------- the figure
@@ -1123,7 +1128,7 @@ def _sh_slow_wave(self, t0, t1, side=1, period=2.2, lift=0.0):
         ppc = _ws_ppc(self)
         ph = math.sin(2 * PI * (t - t0) / period)
         out = 1.0 if sx >= hx else -1.0
-        return (sx + out * (30.0 + 14.0 * ph) * ppc, sy - (26.0 + lift) * ppc + abs(ph) * 3.0 * ppc)
+        return (hx + out * (44.0 + 10.0 * ph) * ppc, hy - (16.0 + lift) * ppc + abs(ph) * 3.0 * ppc)
     return self.reach_to(t0, side, tgt, t1=t1, dur=0.9, shape='host', z=25.0)
 
 

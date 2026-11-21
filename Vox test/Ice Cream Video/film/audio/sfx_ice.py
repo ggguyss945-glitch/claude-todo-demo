@@ -46,14 +46,14 @@ ICE_NAMES = ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'snow_walk
              'porch_light', 'street_wakes', 'door_open_street', 'ambulance', 'cocoa_mug', 'curtain_yank', 'door_slam')
 NAMES = NAMES + ICE_NAMES
 # one-shots: momentary max, LU rel the voice at gain_db 0; beds: integrated
-LEVEL_LU.update(cold_night=-25, frozen_still=-30, house_hum=-31, house_cold=-32, snow_walk=-9, snow_run=-7,
-                snow_deep=-7, snow_scuff=-10, mitten_drop=-14, boot_stuck=-7, boot_rip=-4, shovel_scrape=-12,
+LEVEL_LU.update(cold_night=-25, frozen_still=-30, house_hum=-31, house_cold=-32, snow_walk=-9, snow_run=-10,
+                snow_deep=-10, snow_scuff=-10, mitten_drop=-14, boot_stuck=-7, boot_rip=-4, shovel_scrape=-12,
                 shovel_morning=-22, plow_pass=-6, plow_horn=-3, truck_idle=-26, truck_glide=-12, serving_window=-6,
                 truck_speaker=-10, door_tap=-8, cone_set=-9, window_crack=-9, cone_shatter=-1, furnace_die=-6,
                 power_cut=-3, furnace_start=-12, frost_creep=-14, doorknob_frost=-9, frost_wipe=-10,
-                radio_squelch=-9, radio_static=-20, radio_bells=-4, radio_clean=-10, skin_stretch=-5,
-                bone_crack=-3, jaw_drop=-1, uniform_tear=-3, leg_punch=-1, leg_click=-6, leg_stab_snow=-4,
-                leg_spear_coat=-3, scuttle=-7, attic_crawl=-10, hatch_drop=-2, leg_tip_tile=-12, blanket_yank=-5,
+                radio_squelch=-9, radio_static=-20, radio_bells=-4, radio_clean=-6, skin_stretch=-5,
+                bone_crack=0, jaw_drop=-1, uniform_tear=-3, leg_punch=-1, leg_click=-6, leg_stab_snow=-4,
+                leg_spear_coat=-3, scuttle=-10, attic_crawl=-10, hatch_drop=-2, leg_tip_tile=-12, blanket_yank=-5,
                 towel_jam=-4, porch_light=-10, street_wakes=-9, door_open_street=-10, ambulance=-14, cocoa_mug=-9,
                 curtain_yank=-6, door_slam=-2)
 PEAK_CAP.update(door_slam=-3.0, cone_shatter=-2.0, power_cut=-3.0, jaw_drop=-2.0, leg_punch=-2.0, bone_crack=-3.0, hatch_drop=-3.0,
@@ -65,6 +65,10 @@ DUR_BEDS = DUR_BEDS + ('radio_static', 'frost_creep', 'attic_crawl', 'scuttle', 
 BED_BUS = BED_BUS + ('cold_night', 'frozen_still', 'house_hum', 'house_cold', 'truck_idle', 'shovel_morning',
                      'radio_static')
 HITS = HITS + ('cone_shatter', 'power_cut', 'jaw_drop', 'leg_punch', 'hatch_drop', 'bone_crack', 'radio_bells')
+# the small phone speaker: these are mostly thump; their top is lifted until it reads (sfx.phone_presence; sfx.py
+# adds ICE_PHONE_FIX to PHONE_FIX)
+ICE_PHONE_FIX = ('power_cut', 'jaw_drop', 'door_slam', 'hatch_drop', 'snow_walk', 'snow_run', 'snow_deep',
+                         'leg_stab_snow', 'furnace_die')
 SPACE_LU.update(snow=-1.0, cold_street=-3.0, attic_above=-4.0)
 SPACE_ALIAS.update(yard='snow', front_yard='snow', snowbank='snow', birch_lane='cold_street', across_street='cold_street',
                    kessler='cold_street', kesslers='cold_street', ceiling='attic_above', hallway_ceiling='attic_above',
@@ -667,7 +671,7 @@ def r_leg_punch(rng, sp, surface='metal', **_):
     joints = [(0.12 + 0.05 * k, _chitin(rng, 'wood', 0.35)) for k in range(3)]
     plant = _chitin(rng, surface, 1.2)
     y = _seq([(0, rip * 0.8), (0.05, sw)] + joints + [(0.42, plant * 1.3)], 0.3)
-    return y, 0.42, 0.0, False                            # the plant ("Click.") lands on t
+    return y, onset_s(y, -14), 0.0, False                 # the punch lands on t; the plant ("Click.") 0.42 s later
 
 
 def r_leg_click(rng, sp, surface='metal', n=1, **_):

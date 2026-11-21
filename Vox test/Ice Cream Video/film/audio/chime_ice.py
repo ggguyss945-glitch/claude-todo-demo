@@ -20,7 +20,9 @@ Versions: render(version, anchors=None, tempo=None, seed=0, **kw) -> (stereo flo
     far        far away across town: thin (650 Hz-2.6 kHz), wind-smeared (gusting level, pitch smear), a big cold
                distance; the full tune with its gap. wind= 0..1 (default 0.7)
     closer     coming street by street: loops= passes (default 3: Elm, Maple, Cedar), each pass a step nearer
-               (thin and wet -> fuller and drier), the gap between passes
+               (thin and wet -> fuller and drier), the gap between passes; loops=1: ONE pass that comes all the way
+               from across town to the speaker horn by bar 7 (the film's 1:45 entry)
+    gap_time(version, loops, short) -> seconds from a render's start to its gap (music_plan's 'gap_at')
     outside    right outside: full, through the chrome speaker horn on the roof (380 Hz-5 kHz, a 1.6 kHz honk,
                a little drive, the house fronts' slap-back); loops=
     lullaby    softer and slower (52 bpm), an octave down on soft celesta + music box, low-passed, a slow sway;

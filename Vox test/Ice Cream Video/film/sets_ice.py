@@ -61,7 +61,7 @@ IC_BWIN = (-0.78, -0.22, 1.28, 1.86)  # the bathroom's small frosted window on y
 IC_HATCH = (-2.55, -1.65, 5.5, 6.3)   # the attic hatch in the hall ceiling (x0, x1, y0 hinge edge .. y1)
 IC_COUCH = Box(3.4, 1.72, 2.15, 0.92, 0.0, 0.84, 180)     # its back to the window, facing the TV (+y)
 IC_TVSTAND = Box(3.4, 5.36, 1.5, 0.44, 0.0, 0.52, 0)
-IC_TV = (3.4, 5.42, 1.26, 0.74, 0.6)  # flat TV: centre x, y (screen plane), w, h, bottom Y; facing -y
+IC_TV = (3.4, 5.42, 1.48, 0.86, 0.58)  # flat TV: centre x, y (screen plane), w, h, bottom Y; facing -y
 IC_SIDE = Box(4.86, 1.62, 0.5, 0.5, 0.0, 0.6, 180)        # the side table at the couch's east end (Dad's radio on it)
 IC_ARM = Box(5.75, 3.5, 0.9, 0.88, 0.0, 1.0, 90)          # the armchair against the east wall facing west
 IC_FLAMP = (6.0, 0.55)
@@ -1517,7 +1517,9 @@ def _ic_common_var(o, pink_panes, pink_d, beacon_panes, seed=600):
         var.append(('pink', [Lamp(kind='win', c=IC_PINK, k=1.4, soft=8.0, panes=pink_panes, d=_norm3(pink_d))], _kfn(o.get('pink', 1.0 if o.get('truck') == 'A' else 0.0), seed)))
     if beacon_panes:
         var.append(('beacon', [Lamp(kind='win', c=IC_ORANGE, k=1.8, soft=8.0, panes=beacon_panes, d=_norm3((0.0, -0.3, 1.0)))], _kfn(o.get('beacon', 0.0), seed + 1)))
-    var.append(_phone_lamp(o, seed + 2)); var.append(_flash_lamp(o, seed + 3))
+    P = o.get('phone_at', (0.0, 1.1, 2.0)); F_ = o.get('flash_at', (0.0, 1.0, 1.0))
+    var.append(('phone', [Lamp(P[0], P[1], P[2], 2.6, '#e8f0ff', 1.1, (1.0, 1.0, 0.8), fall=1.7)], _kfn(o.get('phone', 0.0), seed + 2)))
+    var.append(('flash', [Lamp(F_[0], F_[1], F_[2], 4.0, '#fff2d0', 1.3, (1.0, 1.0, 0.6), fall=1.5)], _kfn(o.get('flash', 0.0), seed + 3)))
     return var
 
 
@@ -1931,13 +1933,19 @@ def ic_tv_screen(pen, v, o, k=0.0, skull=0.0, t=0.0):
     cxk = b.left() + W * 0.5
     crack = _static(o.get('curtains', 0.04), 0.04)
     if crack > 0.005:
-        pen.fill(rect(cxk - W * 0.01, wy0, W * 0.02, wy1 - wy0), mix('#8aa0d0', IC_PINK, pk), 150)
+        pen.fill(rect(cxk - W * 0.022, wy0, W * 0.044, wy1 - wy0), mix('#8aa0d0', IC_PINK, pk), 150)
     pen.fill(rrect(b.left() + W * 0.1, b.top() + H * 0.6, W * 0.8, H * 0.5, H * 0.12), '#0e1014', 230)
+    if o.get('us', True):                                                     # "In the black TV screen: us."
+        for (fx, sc) in ((0.42, 1.0), (0.6, 0.78)):
+            hx, hy = b.left() + W * fx, b.top() + H * (0.6 - 0.08 * sc)
+            sil = union(oval(hx, hy, W * 0.045 * sc, H * 0.1 * sc), rrect(hx - W * 0.09 * sc, hy + H * 0.07 * sc, W * 0.18 * sc, H * 0.4, W * 0.05 * sc))
+            pen.fill(sil, '#1c2230', 235); pen.line(sil, 1.0, mix('#4a5a80', IC_PINK, 0.5 * pk), 120)
     if skull > 0.01:                                                           # glimpse 2: in the crack, a long white skull
         sx, sy = cxk, wy0 + (wy1 - wy0) * 0.45
-        sk = poly([(sx - W * 0.012, sy - H * 0.1), (sx + W * 0.012, sy - H * 0.1), (sx + W * 0.009, sy + H * 0.1), (sx, sy + H * 0.14), (sx - W * 0.009, sy + H * 0.1)])
+        sk = poly([(sx - W * 0.02, sy - H * 0.13), (sx + W * 0.02, sy - H * 0.13), (sx + W * 0.016, sy + H * 0.12), (sx, sy + H * 0.2), (sx - W * 0.016, sy + H * 0.12)])
         pen.fill(sk, '#ece8e0', 230 * skull, blur=1.5)
-        for dx in (-1, 1): pen.fill(oval(sx + dx * W * 0.005, sy - H * 0.05, W * 0.0035), '#ff2020', 250 * skull)
+        for dx in (-1, 1): pen.fill(oval(sx + dx * W * 0.008, sy - H * 0.06, W * 0.005), '#ff2020', 250 * skull)
+        pen.glow(sx, sy - H * 0.06, W * 0.03, '#ff2020', 90 * skull)
     pen.linear(path, b.left(), b.top(), b.right(), b.bottom(), [(0, '#ffffff', 0), (0.35, '#ffffff', 22), (0.42, '#ffffff', 0)])
     pen.cv.restore()
     pen.line(path, 1.0, '#000000')
@@ -2069,3 +2077,867 @@ def _ic_boots_mat(pen, v):
 
 def _ic_bath_door():
     return dr_panel_door((-1.4, IC_BDOOR[0]), IC_BDOOR[1] - IC_BDOOR[0], (0.0, 1.0), -1, 'right', '#efe9dc', 'six')
+
+
+# ---------------------------------------------------------------------------------------------- the kitchen
+def _ic_kit_cfg(o):
+    def lights(o):
+        amb = _ic_light(o)
+        steady = [Lamp(kind='win', c=IC_MOON, k=0.6, soft=10.0, panes=_panes_y(IC_KWIN[0], IC_KWIN[1], IC_KWIN[2], IC_KWIN[3], 0.0), d=_norm3((0.3, -0.5, 1.0)))]
+        var = [('kitchen_light', [Lamp(-4.6, 2.4, 2.3, 4.5, '#fff0d8', 1.3, (1.0, 0.5, 0.2), fall=1.3)], _kfn(o.get('kitchen_light', 0.0), 631))]
+        var += _ic_common_var(o, _panes_y(IC_KWIN[0], IC_KWIN[1], IC_KWIN[2], IC_KWIN[3], 0.0) if o.get('truck') == 'A' else None, (0.4, -0.2, 1.0), None, 635)
+        return amb, steady, var
+
+    def west(p_, W, H):
+        pass
+    def back(p_, W, H):                                                       # run (-6.4, 4.6) -> (-2.8, 4.6): u = x + 6.4
+        _wall_clock(p_, (3.0) * 100, H - 200, 12, 11, 2)
+        p_.fill(rect(40, H - 230, 160, 70), '#e8dcc0'); p_.line(rect(40, H - 230, 160, 70), 0.6)
+    def front(p_, W, H):                                                       # run (-2.8, 0) -> (-6.4, 0): u = -2.8 - x
+        for k in range(int(W / 15)):                                          # tile backsplash band behind the counter
+            p_.fill(rect(k * 15, H - 145, 14, 54), '#d8e4e8' if k % 2 else '#e8eef0')
+    holes = {'east': [(-2.8, IC_KDOOR[0], -2.8, IC_KDOOR[1], 0.0, IC_KDOOR[2])]}
+    wins = {'front': [(IC_KWIN[0], 0.0, IC_KWIN[1], 0.0, IC_KWIN[2], IC_KWIN[3], (2, 2))]}
+    runs = _rect_runs(IC_KIT, holes, wins, {'back': back, 'front': front})
+
+    def pieces(o):
+        P = []
+        cnt = Box(-4.6, 0.32, 3.6, 0.62, 0.0, 0.92, 180)
+        def counter(pen, v):
+            draw_box(pen, v, cnt, {'top': dict(fill='#d8d0c0', art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'grunge', 0.3, 'overlay', 1.0)),
+                                   'front': dict(fill='#7a8a9a', art=lambda p_, W, H: [p_.line(rect(6 + k * W / 5, 10, W / 5 - 12, H - 20), 1.0, '#000000', 90) for k in range(5)]),
+                                   'all': '#6a7a8a'}, lw=1.0)
+            sk = Box(-4.85, 0.3, 0.6, 0.42, 0.78, 0.93, 180)
+            draw_box(pen, v, sk, {'top': '#9aa4b0', 'all': '#8a949e'}, lw=0.8, skip=('bottom',))
+            A = (-4.85, 0.93, 0.08); B_ = (-4.85, 1.2, 0.08)
+            if v.d(A[0], A[2]) > 0.3: pen.seg(v.p(*A), v.p(*B_), max(1.0, 0.025 * v.s(A[0], A[2])), '#c8ccd4')
+        P.append(Piece('counter', (-4.6, 0.5, 0.32), counter, block=cnt.footprint()))
+        up = Box(-3.3, 0.18, 1.0, 0.35, 1.5, 2.3, 180)
+        P.append(Piece('cabinet', (-3.3, 1.9, 0.18), lambda pen, v: draw_box(pen, v, up, {'all': '#7a8a9a', 'front': dict(fill='#7a8a9a', art=lambda p_, W, H: p_.line(rect(6, 6, W - 12, H - 12), 1.0, '#000000', 90))}, lw=1.0, skip=('bottom',))))
+        fr = Box(-6.05, 3.6, 0.8, 0.7, 0.0, 1.8, 90)
+        def fridge(pen, v):
+            def art(p_, W, H):
+                p_.fill(rect(0, 0, W, H), '#e8eae8'); p_.line(rect(2, H * 0.32, W - 4, 2), 1.0, '#9a9a9a')
+                p_.fill(rect(W - 12, 20, 4, 40), '#b8b8b8'); p_.fill(rect(W - 12, H * 0.36, 4, 60), '#b8b8b8')
+                _bu_photo(p_, W * 0.42, H * 0.18, 26, 32, 'grandpa')                  # Mom's photo (the real Mom, in scrubs)
+                p_.fill(rect(W * 0.18, H * 0.48, 30, 22), '#f8f0d8'); p_.fill(rect(W * 0.5, H * 0.52, 26, 30), '#d8f0f8')
+                btext(p_, 'MOM', W * 0.42, H * 0.18 + 24, 'kid', 6, '#c82a5a', 230, 'center')
+            draw_box(pen, v, fr, {'front': dict(fill='#e8eae8', art=art), 'all': '#d8dad8'}, lw=1.0)
+        P.append(Piece('fridge', (fr.cx, 0.9, fr.cy), fridge, block=fr.footprint()))
+        st = Box(-4.6, 4.28, 0.76, 0.62, 0.0, 0.92, 0)
+        def stove(pen, v):
+            draw_box(pen, v, st, {'front': dict(fill='#e8e4dc', art=lambda p_, W, H: (p_.fill(rect(8, 22, W - 16, H * 0.5), '#2a2a2a'), p_.line(rect(8, 22, W - 16, H * 0.5), 1.0))),
+                                  'top': dict(fill='#1a1a1a', art=lambda p_, W, H: [p_.line(oval(W * (0.28 + 0.44 * (k % 2)), H * (0.3 + 0.4 * (k // 2)), 10), 1.4, '#5a5a5a') for k in range(4)]),
+                                  'all': '#d8d4cc'}, lw=1.0)
+        P.append(Piece('stove', (st.cx, 0.5, st.cy), stove, block=st.footprint()))
+        tb = Box(-4.3, 2.5, 1.1, 0.8, 0.0, 0.75, 0)
+        P.append(Piece('table', (tb.cx, 0.4, tb.cy), lambda pen, v: draw_parts(pen, v, table_parts(tb, '#a8845a', apron=0.06)), block=tb.footprint()))
+        stl = o.get('stool', 'window')
+        if stl:
+            sx, sy = IC_STOOL if stl == 'window' else (-5.8, 1.6)
+            P.append(Piece('stool', (sx, 0.2, sy), lambda pen, v: _ic_stool(pen, v, sx, sy), block=_r4p((sx - 0.2, sx + 0.2, sy - 0.15, sy + 0.15))))
+        return P
+
+    def spots(v, o):
+        S = {}
+        kx = (IC_KWIN[0] + IC_KWIN[1]) / 2
+        S['stool'] = _mk_spot(v, 'stool', IC_STOOL[0], IC_STOOL[1], 0.24, 'stand', "on Lina's step-stool at the window (facing it)", face=(0, -1))
+        S['window_in'] = _mk_spot(v, 'window_in', kx, 0.85, 0.0, 'stand', 'at the counter facing the kitchen window', face=(0, -1))
+        S['sill_out'] = _mk_spot(v, 'sill_out', kx, -0.12, IC_KWIN[2] + 0.01, 'surface', 'the OUTSIDE sill (the cone, five minutes later)')
+        S['window_crack'] = _mk_spot(v, 'window_crack', kx, -0.02, IC_KWIN[2] + 0.08, 'point', 'the crack under the raised sash')
+        S['fridge_photo'] = _mk_spot(v, 'fridge_photo', -5.65, 3.6, 1.6, 'point', "Mom's photo on the fridge (the real Mom)")
+        S['kitchen_mid'] = _mk_spot(v, 'kitchen_mid', -4.3, 1.5, 0.0, 'stand', 'the middle of the kitchen')
+        S['doorway'] = _mk_spot(v, 'doorway', -3.1, 2.95, 0.0, 'stand', 'in the kitchen doorway (facing in, -x)', face=(-1, 0))
+        return S
+
+    return dict(name='kitchen', R=IC_KIT, H=IC_CEIL, floor=dict(base='#c8c0b0', kind='checker', ink='#5a6a7a', seed=31), runs=runs,
+                walls=dict(paper=IC_PAL['kit_paper'], ink='#c8b890', kind='gingham', wains=0.0, seed=33, scale=1.0, pa=50),
+                ceil=dict(c='#ece6da'), lights=lights, pieces=pieces, spots=spots)
+
+
+def _ic_stool(pen, v, x, y):
+    """Lina's little two-step stool (pink, a daisy decal)."""
+    B1 = Box(x, y, 0.4, 0.3, 0.0, 0.24, 0)
+    B2 = Box(x, y + 0.08, 0.4, 0.14, 0.24, 0.4, 0)
+    for B in (B1, B2):
+        draw_box(pen, v, B, {'top': '#f4a8c4', 'front': dict(fill='#e888aa', art=lambda p_, W, H: p_.fill(_flake_path(W / 2, H / 2, 6), '#ffffff', 200)), 'all': '#d87898'}, lw=0.8)
+
+
+# ---------------------------------------------------------------------------------------------- the bathroom
+def _ic_bath_cfg(o):
+    def lights(o):
+        amb = _ic_light(o)
+        steady = [Lamp(kind='win', c=IC_MOON, k=0.55, soft=10.0, panes=_panes_y(IC_BWIN[0], IC_BWIN[1], IC_BWIN[2], IC_BWIN[3], 0.0), d=_norm3((0.0, -0.5, 1.0)))]
+        var = [('bath_light', [Lamp(-0.5, 2.3, 1.1, 3.0, '#fff4e0', 1.2, fall=1.3)], _kfn(o.get('bath_light', 0.0), 641))]
+        var += _ic_common_var(o, None, (0, 0, 1), _panes_y(IC_BWIN[0], IC_BWIN[1], IC_BWIN[2], IC_BWIN[3], 0.0), 645)
+        if o.get('truck') == 'B':
+            var.append(('pink', [Lamp(kind='win', c=IC_PINK, k=0.9, soft=10.0, panes=_panes_y(IC_BWIN[0], IC_BWIN[1], IC_BWIN[2], IC_BWIN[3], 0.0), d=_norm3((-0.1, -0.3, 1.0)))],
+                        _kfn(o.get('pink', 1.0), 649)))
+        return amb, steady, var
+
+    def east(p_, W, H):                                                       # run (0.4, 2.2) -> (0.4, 0): u = 2.2 - y
+        p_.fill(rect(0, H - 120, W, 120), IC_PAL['bath_tile']); pat(p_, W, 120, 'tile', '#9ab0b8', 90) if False else None
+        for k in range(int(W / 15) + 1):
+            for j in range(8): p_.line(rect(k * 15, H - 120 + j * 15, 15, 15), 0.5, '#9ab0b8', 120)
+    def west(p_, W, H):
+        p_.fill(rect(0, H - 120, W, 120), IC_PAL['bath_tile'])
+        for k in range(int(W / 15) + 1):
+            for j in range(8): p_.line(rect(k * 15, H - 120 + j * 15, 15, 15), 0.5, '#9ab0b8', 120)
+        p_.fill(rect(25, H - 155, 50, 4), '#c8c8d0')                                         # towel bar by the door
+    def back(p_, W, H):
+        p_.fill(rect(0, H - 180, W, 180), IC_PAL['bath_tile'])
+        for k in range(int(W / 15) + 1):
+            for j in range(12): p_.line(rect(k * 15, H - 180 + j * 15, 15, 15), 0.5, '#9ab0b8', 120)
+    def front(p_, W, H):
+        p_.fill(rect(0, H - 120, W, 120), IC_PAL['bath_tile'])
+        for k in range(int(W / 15) + 1):
+            for j in range(8): p_.line(rect(k * 15, H - 120 + j * 15, 15, 15), 0.5, '#9ab0b8', 120)
+    holes = {'west': [(-1.4, IC_BDOOR[0], -1.4, IC_BDOOR[1], 0.0, IC_BDOOR[2])]}
+    wins = {'front': [(IC_BWIN[0], 0.0, IC_BWIN[1], 0.0, IC_BWIN[2], IC_BWIN[3], (1, 1))]}
+    runs = _rect_runs(IC_BATH, holes, wins, {'east': east, 'west': west, 'back': back, 'front': front})
+
+    def pieces(o):
+        P = []
+        tub = Box(-0.5, 1.82, 1.7, 0.72, 0.0, 0.56, 0)
+        def tubd(pen, v):
+            draw_box(pen, v, tub, {'top': '#f4f4f0', 'all': '#eceae4'}, lw=1.0)
+            inner = [tub.at(-0.75, -0.26, 0.565), tub.at(0.75, -0.26, 0.565), tub.at(0.75, 0.26, 0.565), tub.at(-0.75, 0.26, 0.565)]
+            path = v.poly3(inner)
+            if not path.isEmpty(): pen.fill(path, lit('#d8dce0', inner[0], (0, 1, 0))); pen.line(path, 0.8)
+            A = tub.at(0.6, -0.33, 0.8); 
+            if v.d(A[0], A[2]) > 0.3: pen.seg(v.p(*A), v.p(A[0], 0.62, A[2]), max(1.0, 0.02 * v.s(A[0], A[2])), '#c8ccd4')
+        P.append(Piece('tub', (tub.cx, 0.3, tub.cy), tubd, block=tub.footprint()))
+        sink = Box(0.12, 0.85, 0.5, 0.42, 0.78, 0.9, -90)
+        def sinkd(pen, v):
+            A = (0.2, 0.0, 0.85); B_ = (0.2, 0.78, 0.85)
+            if v.d(A[0], A[2]) > 0.3: pen.seg(v.p(*A), v.p(*B_), max(1.5, 0.1 * v.s(A[0], A[2])), lit('#eceae4', B_, (-1, 0, 0)))
+            draw_box(pen, v, sink, {'top': '#f4f4f0', 'all': '#eceae4'}, lw=1.0)
+        P.append(Piece('sink', (0.12, 0.8, 0.85), sinkd, block=sink.footprint()))
+        mirror = [(0.385, 1.85, 0.6), (0.385, 1.85, 1.1), (0.385, 1.15, 1.1), (0.385, 1.15, 0.6)]
+        fog = _static(o.get('fog', 0.4))
+        def mird(pen, v):
+            path = v.poly3(mirror)
+            if path.isEmpty() or not v.visible(mirror[0], (-1, 0, 0)): return
+            pen.fill(path, '#5a6a7a'); pen.fill(path, '#e8eef4', 120 * fog); pen.line(path, 2.0, '#c8ccd4')
+        P.append(Piece('mirror', (0.38, 1.5, 0.85), mird))
+        toi = Box(-1.05, 0.3, 0.42, 0.6, 0.0, 0.42, 180)
+        P.append(Piece('toilet', (toi.cx, 0.3, toi.cy), lambda pen, v: (draw_box(pen, v, toi, {'all': '#f0f0ec', 'top': '#f8f8f4'}, lw=1.0),
+                                                                       draw_box(pen, v, Box(-1.05, 0.08, 0.44, 0.18, 0.42, 0.82, 180), {'all': '#f0f0ec'}, lw=1.0)), block=toi.footprint()))
+        tw = o.get('towels', 'rack')
+        if tw in ('gap', 'jammed'):
+            P.append(Piece('towels_gap', (-1.3, 0.05, 1.35), lambda pen, v: _ic_towel_gap(pen, v, tw == 'jammed')))
+        D = _ic_bath_door()
+        dv = o.get('door', 0.0)
+        if not callable(dv):
+            P.append(Piece('door', (-1.4, 1.0, 1.35), lambda pen, v: D.draw(pen, v, _static(dv))))
+        return P
+
+    def spots(v, o):
+        S = {}
+        S['tub_sit'] = _mk_spot(v, 'tub_sit', -0.5, 1.82, 0.0, 'seat', 'in the empty tub, sitting (the two of them, one blanket)', face=(0, -1), seat_Y=0.12)
+        S['floor_sit'] = _mk_spot(v, 'floor_sit', -0.6, 1.0, 0.0, 'floor_sit', 'sitting on the bath mat against the tub', face=(-1, 0))
+        S['door_kneel'] = _mk_spot(v, 'door_kneel', -1.1, 1.35, 0.0, 'kneel', 'kneeling at the door, jamming the towel down (facing it, -x)', face=(-1, 0))
+        S['gap'] = _mk_spot(v, 'gap', -1.38, 1.35, 0.02, 'point', 'the gap under the door (the needle-thin leg tip slides in here)')
+        S['window_wipe'] = _mk_spot(v, 'window_wipe', (IC_BWIN[0] + IC_BWIN[1]) / 2, 0.45, 0.0, 'stand', 'at the small window, wiping the frost off (facing it)', face=(0, -1))
+        S['window'] = _mk_spot(v, 'window', (IC_BWIN[0] + IC_BWIN[1]) / 2, 0.02, 1.55, 'point', 'the small frosted window')
+        return S
+
+    return dict(name='bath', R=IC_BATH, H=IC_CEIL, floor=dict(base='#e8e4dc', kind='hex', ink='#9aa0a8', seed=41, scale=0.6), runs=runs,
+                walls=dict(paper='#dfe6e2', ink='#c8d4d0', kind='stripe', wains=0.0, seed=43, scale=0.8, pa=40),
+                ceil=dict(c='#ece8e0'), lights=lights, pieces=pieces, spots=spots)
+
+
+def _ic_towel_gap(pen, v, jammed=False):
+    """Towels stuffed into the gap under the bathroom door (inside); jammed: one pressed down hard (on the leg tip)."""
+    for i, (y0, y1, c) in enumerate(((IC_BDOOR[0] + 0.02, IC_BDOOR[0] + 0.42, '#7aa0c8'), (IC_BDOOR[0] + 0.38, IC_BDOOR[1] - 0.02, '#e8c8a8'))):
+        B = Box(-1.3, (y0 + y1) / 2, 0.16, y1 - y0, 0.0, 0.1 if not (jammed and i == 1) else 0.07, 90)
+        draw_box(pen, v, B, {'all': dict(fill=c, art=lambda p_, W, H: p_.texture(rect(0, 0, W, H), 'fabric', 0.6, 'overlay', 0.6)), 'top': mix(c, '#ffffff', 0.15)}, lw=0.8)
+
+
+# ---------------------------------------------------------------------------------------------- builders
+_IC_HOUSE_DEF = dict(tod='night', truck='A', curtains=0.04, rules=True, eighth=False, hall=0.0, lamp=0.0, ceil=0.0, tv=0.0, radio='table')
+
+
+def _ic_grade(o, warm_keys=('lamp', 'ceil', 'hall', 'kitchen_light', 'bath_light')):
+    if o.get('blackout'): return 'ic_dark'
+    if any(_static(o.get(k_, 0.0)) > 0.3 for k_ in warm_keys): return 'ic_warm'
+    return 'ic_night'
+
+
+def ic_living(view='wide', **kw):
+    """Our living room. view: wide | couch | couch3q | tv | window | radio | opening. Levels (number or f(t)): lamp,
+    ceil, tv (screen on), hall, pink (his window through the curtains; default on when truck='A'), beacon (Dad's
+    orange sweep: ST.ic_pass(t0)), phone (+phone_at), flash. curtains: 0 shut .. 1 open (0.04 = Lina's crack) or f(t);
+    skull: glimpse 2 in the black TV screen (level / f(t)); frost: frost creeping on the INSIDE of the window (0..1 / f(t));
+    blanket: the one-blanket nest on the couch; radio 'table' | None (in a hand); cone 'floor' (the shards); blackout."""
+    o = _ic_house_o(kw, _IC_HOUSE_DEF)
+    v = cam('ic_liv_' + view)
+    main = BuBox(_ic_liv_cfg(o))
+    far = [BuBox(_ic_hall_cfg(dict(o, _far=True)), far=True)]
+    dyn = []
+    amb, steady, var = main.lights(o)
+    if callable(o.get('curtains')):
+        cf = o['curtains']
+        dyn.append(live_layer('curtains', v, (3.4, 1.4, 0.14), lambda pen, v_, t: curtain_pair(pen, v_, (6.4, 0.0), (0.4, 0.0), 6.4 - IC_PWIN[1], 6.4 - IC_PWIN[0],
+                                                                                              2.3, 2.25, 0.0, cf(t), IC_PAL['curt'], sheer=False), amb, steady, var))
+    if o.get('frost') is not None:
+        dyn.append(_ic_frost_layer(v, [[(IC_PWIN[0], IC_PWIN[3], 0.0), (IC_PWIN[1], IC_PWIN[3], 0.0), (IC_PWIN[1], IC_PWIN[2], 0.0), (IC_PWIN[0], IC_PWIN[2], 0.0)]],
+                                   o['frost'], 'frost', 1, order=v.d(3.4, 0.0) - 0.01))
+    sp = build_view('ic_liv_' + view, v, main, o, far=far, outside=_ic_outside(o), grade=_ic_grade(o), dyn=dyn)
+    sp.info['tv_quad'] = _ic_tv_quad()
+    sp.info['window_quad'] = [(IC_PWIN[0], IC_PWIN[3], 0.0), (IC_PWIN[1], IC_PWIN[3], 0.0), (IC_PWIN[1], IC_PWIN[2], 0.0), (IC_PWIN[0], IC_PWIN[2], 0.0)]
+    sp.info['note'] = 'Living room: the couch faces the TV (+y) with its back to the window; seats couch_left / couch_mid / couch_right.'
+    return sp
+
+
+def ic_hall(view='door', **kw):
+    """The hall. view: door | doorclose | back | hatch | bathdoor. Levels: hall (ceiling lights), lamp (living-room
+    spill), pink (his window through the door glass), beacon, phone, flash. door (deg open or f(t)), rules, eighth;
+    face: the long white face sliding up the frosted glass (level, or f(t) -> (k, rise 0..1)); knob_frost (0..1 / f(t));
+    hatch 0 closed .. 1 dropped open (or f(t)); bath_door (deg, default 85 open; 0 shut); blackout."""
+    o = _ic_house_o(kw, _IC_HOUSE_DEF)
+    v = cam('ic_hall_' + view)
+    main = BuBox(_ic_hall_cfg(o))
+    far = [BuBox(_ic_liv_cfg(dict(o, _far=True)), far=True), BuBox(_ic_kit_cfg(dict(o, _far=True)), far=True)]
+    if _static(o.get('bath_door', 85.0), 85.0) > 5 or callable(o.get('bath_door')): far.append(BuBox(_ic_bath_cfg(dict(o, _far=True)), far=True))
+    dyn = []
+    amb, steady, var = main.lights(o)
+    D = ic_front_door(o.get('rules', True), o.get('eighth', False))
+    if callable(o.get('door')):
+        df = o['door']
+        dyn.append(live_layer('front_door', v, (-2.1, 1.0, 0.1), lambda pen, v_, t: D.draw(pen, v_, df(t)), amb, steady, var))
+    else:
+        if _static(o.get('door', 0.0)) < 2: dyn.append(ic_door_glass(v, D, o))
+    if callable(o.get('hatch')):
+        hf = o['hatch']
+        dyn.append(live_layer('hatch', v, (-2.1, IC_CEIL, 5.9), lambda pen, v_, t: ic_hatch(pen, v_, hf(t)), amb, steady, var))
+    sp = build_view('ic_hall_' + view, v, main, o, far=far, outside=_ic_outside(o), grade=_ic_grade(o), dyn=dyn)
+    sp.info['door_glass'] = D.glass_quads(0.0)
+    sp.info['note'] = 'Hall: figures OUTSIDE the door go between the outside layer and the door (sp.order_at(x, y) with y < 0).'
+    return sp
+
+
+def ic_kitchen(view='window', **kw):
+    """The kitchen. view: window | wide. kitchen_light, pink, phone, flash; sash (0 shut .. 1: the window raised a crack
+    = 0.12); cone 'sill' (on the OUTSIDE sill); stool 'window' | 'away' | None; blackout."""
+    o = _ic_house_o(kw, dict(_IC_HOUSE_DEF, stool='window'))
+    v = cam('ic_kit_' + view)
+    cfg = _ic_kit_cfg(o)
+    sash = _static(o.get('sash', 0.0))
+    if sash > 0:
+        for r in cfg['runs']:
+            r['wins'] = [w_[:6] + ((2, 2),) for w_ in r['wins']]
+    main = BuBox(cfg)
+    if sash > 0:
+        sh = main.shell
+        def shell(pen, v_, o_, sh=sh):
+            sh(pen, v_, o_)
+            a, b = (-2.8, 0.0), (-6.4, 0.0)
+            window_unit(pen, v_, a, b, -2.8 - IC_KWIN[1], -2.8 - IC_KWIN[0], IC_KWIN[2], IC_KWIN[3], 0.0, (2, 2), '#f1ece0', sash_open=sash)
+        main.shell = shell
+    far = [BuBox(_ic_hall_cfg(dict(o, _far=True)), far=True)]
+    dyn = []
+    if o.get('frost') is not None:
+        dyn.append(_ic_frost_layer(v, [[(IC_KWIN[0], IC_KWIN[3], 0.0), (IC_KWIN[1], IC_KWIN[3], 0.0), (IC_KWIN[1], IC_KWIN[2], 0.0), (IC_KWIN[0], IC_KWIN[2], 0.0)]], o['frost'], 'frost', 2))
+    return build_view('ic_kit_' + view, v, main, o, far=far, outside=_ic_outside(o), grade=_ic_grade(o), dyn=dyn)
+
+
+def ic_bath(view='door', **kw):
+    """The bathroom (the smallest room; no gas appliances). view: door | gap (low at the door gap: the leg tip) | window
+    | wide. bath_light, beacon, pink (his window across the street once he is at B), phone, flash; towels 'rack' | 'gap'
+    | 'jammed'; door (deg open, 0 shut); fog (mirror 0..1); frost (on the window inside); wipe (the patch wiped clear on
+    the window: 0..1); truck default 'B' (the song moved across the street)."""
+    o = _ic_house_o(kw, dict(_IC_HOUSE_DEF, truck='B', towels='gap', door=0.0, blackout=True))
+    v = cam('ic_bath_' + view)
+    main = BuBox(_ic_bath_cfg(o))
+    far = [BuBox(_ic_hall_cfg(dict(o, _far=True)), far=True)] if _static(o.get('door', 0.0)) > 5 else []
+    dyn = []
+    q = [[(IC_BWIN[0], IC_BWIN[3], 0.0), (IC_BWIN[1], IC_BWIN[3], 0.0), (IC_BWIN[1], IC_BWIN[2], 0.0), (IC_BWIN[0], IC_BWIN[2], 0.0)]]
+    wipe = _kfn(o.get('wipe', 0.0), 651)
+    def frosted(pen, t):
+        path = v.poly3(q[0])
+        if path.isEmpty() or not v.visible(q[0][0], (0, 0, 1)): return
+        b = path.computeTightBounds()
+        hole = oval((b.left() + b.right()) / 2, (b.top() + b.bottom()) / 2, b.width() * 0.36 * wipe(t), b.height() * 0.3 * wipe(t))
+        pen.cv.save(); pen.cv.clipPath(minus(path, hole) if wipe(t) > 0.01 else path, skia.ClipOp.kIntersect, True)
+        pen.fill(path, '#c8d4ec', 215); pen.texture(path, 'grunge', 0.6, 'overlay', 0.8)
+        pen.cv.restore()
+    lay = Layer(max(0.3, v.d(-0.5, 0.0)), frosted, 'window_frost', blur=None); lay.order = v.d(-0.5, 0.0) - 0.02
+    dyn.append(lay)
+    o2 = dict(o); o2['cone'] = None
+    return build_view('ic_bath_' + view, v, main, o, far=far, outside=_ic_outside(o2), grade='ic_dark' if o.get('blackout') else _ic_grade(o), dyn=dyn)
+
+
+_icam('ic_liv_wide', 760, 520, 1.6, 6.05, 5.25, -138, _env(), 'the living room from the back-east corner: the window and curtains, the couch (its back to the window) at 3/4, the opening to the hall', 'living')
+_icam('ic_liv_couch', 900, 540, 1.15, 3.4, 4.85, 180, _env(), 'from the TV to the couch face-on, the window and the curtain crack behind them (the reverse of the reflection)', 'living')
+_icam('ic_liv_couch3q', 980, 540, 1.2, 5.3, 4.1, -140, _env(), 'the couch at 3/4 from the front-east (seated figures)', 'living')
+_icam('ic_liv_tv', 1250, 520, 1.08, 3.2, 2.05, 3, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'from the couch to the black TV screen (POV: the reflection, us, the crack, the skull)', 'living')
+_icam('ic_liv_window', 950, 520, 1.5, 3.1, 3.7, 180, _env(), 'to the window and curtains over the couch back', 'living')
+_icam('ic_liv_radio', 1300, 380, 0.95, 4.62, 3.1, 172, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), "close on Dad's radio on the side table", 'living')
+_icam('ic_liv_opening', 860, 520, 1.5, 4.6, 3.6, -96, _env(), 'from the room to the opening and the hall', 'living')
+_icam('ic_hall_door', 820, 520, 1.5, -2.1, 6.7, 180, _env(), 'down the hall to the front door (bath door left, coats right)', 'hall')
+_icam('ic_hall_doorclose', 1150, 520, 1.4, -2.1, 1.45, 180, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'close on the front door: the clear strip, the frosted panel, the rules, the knob', 'hall')
+_icam('ic_hall_back', 820, 520, 1.55, -2.1, 0.45, 0, _env(), 'from the front door down the hall: the hatch in the ceiling, the bedroom doors', 'hall')
+_icam('ic_hall_hatch', 700, 600, 1.3, -2.1, 3.9, 0, _env(), 'up at the attic hatch from the hall (it drops open; his face upside down)', 'hall', pitch=-34.0)
+_icam('ic_hall_bathdoor', 900, 520, 1.4, -2.55, 3.4, 150, _env(), 'the bathroom door from the hall', 'hall')
+_icam('ic_kit_window', 950, 520, 1.45, -4.85, 2.9, 180, _env(), "the kitchen window over the sink, Lina's step-stool, the outside sill", 'kitchen')
+_icam('ic_kit_wide', 820, 520, 1.55, -3.15, 4.2, -128, _env(), 'the kitchen from the doorway: window, fridge (Mom\'s photo), table', 'kitchen')
+_icam('ic_bath_door', 900, 520, 1.1, 0.25, 1.3, -90, _env(), 'inside the bathroom to the door (towels in the gap)', 'bath')
+_icam('ic_bath_gap', 1100, 360, 0.35, -0.55, 1.35, -90, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.08)), 'low at the door gap: the needle-thin leg tip slides in under the towels', 'bath', pitch=14.0)
+_icam('ic_bath_window', 1000, 520, 1.5, -0.5, 1.75, 180, _env(), 'to the small frosted window (he wipes the frost off)', 'bath')
+_icam('ic_bath_wide', 760, 520, 1.6, 0.3, 2.1, -140, _env(), 'the bathroom wide: the tub, the door, the window', 'bath')
+
+
+# ====================================================================================================== 1958, morning, across town
+def ic_1958(view='curb', mitten=True, truck=True, **kw):
+    """Birch Lane in 1958 (sepia-cold grade ic_1958, older siding, two 1958 cars at the kerbs): view 'curb' (from
+    Kessler's doorway: the pink window at the kerb, Benny's small footprints leading to it), 'lane' (down the lane),
+    'mitten' (close, low: one red mitten at the kerb, the truck gone). Same plan as the night (the truck at B)."""
+    tracks = [('benny', [(1.4, -22.0), (1.42, -19.0), (1.45, -17.0)])]
+    props = [('mitten', 1.62, -17.05, IC_RED)] if (mitten and view == 'mitten') else []
+    if view == 'mitten': truck = False
+    return ic_street(view, tod='1958', truck='B' if truck else None, tracks=tracks, props=props, porch=0.0, kporch=1.0 if view != 'mitten' else 0.0,
+                     win=dict(his=0.8), smoke=1.0, car=True, **kw)
+
+
+def ic_morning(view='kessler', **kw):
+    """The morning after (sunrise, warm and safe): Kessler's walk shoveled (anchors kwalk_shovel1..3), his chimney
+    smoking again, our walk shoveled, no truck. Any Birch Lane view."""
+    d = dict(tod='morning', truck=None, smoke=1.0, our_smoke=1.0, walk='shoveled', kwalk='shoveled', street=0.0)
+    d.update(kw)
+    return ic_street(view, **d)
+
+
+def ic_town(view='town', truck=True, truck_x=None, **kw):
+    """Two nights later, across town: a house alone with NO chimney smoke between neighbours whose chimneys smoke; his
+    truck slowing at its kerb (truck_x: slide it along the kerb), the chime ending on the missing note."""
+    pos = (IC_TRUCK_B[0] if truck_x is None else truck_x, IC_TRUCK_B[1], 90.0) if truck else None
+    return ic_street(view, layout='town', truck=pos, fence=False, car=False, **kw)
+
+
+_icam('ic_ext_mitten', 1100, 300, IC_SNOWY + 0.55, 1.5, -18.9, 4, _env(x=(900, 1020), y=(480, 580), zoom=(1.0, 1.1)), 'close and low on the kerb: one red mitten (1958)', 'street', pitch=22.0)
+_icam('ic_ext_town', 760, 520, IC_G + 1.7, -7.0, -6.0, 152, _env(f=(1.0, 2.0)), 'across town: the truck slowing at the house with no chimney smoke', 'street')
+
+
+# ====================================================================================================== inserts
+IC_RULES = [(1, 'WHEN YOU HEAR HIS SONG, CLOSE EVERY CURTAIN. IF HE CAN\'T SEE YOU, HE CAN\'T CALL YOU.'),
+            (2, 'IF HE LEAVES YOU A FREE ONE, DON\'T TOUCH IT, DON\'T BRING IT IN, AND NEVER TASTE IT. NOTHING HE GIVES IS FREE.'),
+            (3, 'IF THE HEAT GOES OUT, PUT ON EVERY LAYER YOU OWN, AND GET UNDER ONE BLANKET TOGETHER. NOBODY SLEEPS ALONE TONIGHT.'),
+            (4, 'IF YOU STOP SHIVERING, TELL SOMEONE RIGHT AWAY. SHIVERING MEANS YOU\'RE STILL FIGHTING.'),
+            (5, 'IF SOMEONE YOU LOVE KNOCKS, LOOK FOR THEIR BREATH. IN THIS COLD, EVERYONE\'S BREATH MAKES A CLOUD. HIS DOESN\'T.'),
+            (6, 'IF THE HOUSE GETS AS COLD AS OUTSIDE, IT ISN\'T INSIDE ANYMORE. FIND THE SMALLEST ROOM, SHUT THE DOOR, AND BLOCK THE DRAFTS.'),
+            (7, 'DON\'T GO OUTSIDE BEFORE SUNRISE. NOT FOR ANYONE. NOT FOR ANYTHING. NOT EVEN FOR ME.')]
+IC_RULE8 = (8, 'Never go out for him. Go out for each other. Together, with a grown-up.')
+IC_OUTRO = [('If someone stopped shivering, is sleepy, confused, or says they feel warm:', 'CALL EMERGENCY SERVICES.', 'Get them inside and dry. Wrap their middle. Stay close.'),
+            ('White, waxy fingers?', 'FROSTBITE. DON\'T RUB.', 'Warm them gently against skin (under the arms).'),
+            ('No heat?', 'NEVER HEAT WITH AN OVEN OR GRILL INDOORS.', 'Layers, one blanket, the smallest room.'),
+            ('"Free treat."  "Your dad said it\'s okay."  "Just come to the window."', 'NEVER. TELL A GROWN-UP.', ''),
+            ('This week, with a grown-up:', 'KNOCK ON THE DOOR OF SOMEONE WHO LIVES ALONE.', '')]
+
+
+def _wrap(text, n):
+    out, line = [], ''
+    for w in text.split():
+        if len(line) + len(w) + 1 > n and line: out.append(line); line = w
+        else: line = (line + ' ' + w).strip()
+    if line: out.append(line)
+    return out
+
+
+def _shaky(pen, s, x, y, size, c='#1a2238', a=245, seed=0, font='hand'):
+    """Kessler's shaky hand-drawn capitals: each letter jittered a little."""
+    rng = np.random.default_rng(abs(int(seed)))
+    xx = x
+    for ch in s:
+        w = btext_width(ch, font, size)
+        btext(pen, ch, xx + rng.uniform(-0.6, 0.6), y + rng.uniform(-1.4, 1.4), font, size * rng.uniform(0.96, 1.05), c, a)
+        xx += w * 1.02
+    return xx
+
+
+def _lined_paper(pen, x0, y0, W, H, tape=True, c='#f6f1e2'):
+    pen.fill(rect(x0 + 14, y0 + 22, W, H), '#000000', 110, blur=20)
+    pen.fill(rect(x0, y0, W, H), c); pen.texture(rect(x0, y0, W, H), 'paper', 0.45, 'multiply', 1.0)
+    for i in range(int(H / 40)): pen.fill(rect(x0, y0 + 96 + i * 40, W, 2), '#8ab0d8', 110)
+    pen.fill(rect(x0 + 80, y0, 3, H), '#d88a8a', 130)
+    if tape:
+        for (tx, ty, r) in ((x0 + 50, y0 - 4, -14), (x0 + W - 50, y0 - 4, 12), (x0 + 50, y0 + H + 4, 10), (x0 + W - 50, y0 + H + 4, -12)):
+            _bu_tape(pen, tx, ty, 140, 44, r, 190)
+
+
+def _ici_rules(pen, t, show=7, hl=0, eighth=False, door='ours', **kw):
+    """The seven rules taped to a door (ours: slate blue / Kessler's: brown), shaky capitals, signed W.K.; hl = the rule
+    being read (a soft highlight); eighth = rule 8 added below in Adam's hand."""
+    c = IC_PAL['door'] if door == 'ours' else IC_PAL['door_k']
+    _ibg_b(pen, c, _darken(c, 0.3), 140); pen.texture(rect(*_IBGB), 'wood', 0.35, 'overlay', 1.2, 90)
+    pen.cv.save(); pen.cv.translate(960, 540); pen.cv.rotate(-1.0)
+    W, H = 1240, 1010 if eighth else 960
+    x0, y0 = -W / 2, -H / 2 - (20 if eighth else 0)
+    _lined_paper(pen, x0, y0, W, H)
+    _shaky(pen, 'RULES FOR A COLD SNAP', x0 + 330, y0 + 70, 46, '#1a2238', 245, 3)
+    yy = y0 + 132
+    for (n, txt) in IC_RULES[:show]:
+        lines = _wrap(txt, 64)
+        if hl == n: pen.fill(rect(x0 + 92, yy - 30, W - 130, 40 * len(lines) + 6), '#fff08a', 160)
+        _shaky(pen, '%d.' % n, x0 + 100, yy, 30, '#1a2238', 245, n)
+        for j, ln in enumerate(lines): _shaky(pen, ln, x0 + 140, yy + j * 40, 28, '#1a2238', 240, n * 10 + j)
+        yy += 40 * len(lines) + 4
+    _shaky(pen, 'W.K.', x0 + W - 150, y0 + H - 26 - (50 if eighth else 0), 40, '#1a2238', 245, 99)
+    if eighth:
+        n, txt = IC_RULE8
+        lines = _wrap(txt, 60)
+        btext(pen, '8.', x0 + 100, yy + 16, 'kid', 34, '#2a3a8a', 250)
+        for j, ln in enumerate(lines): btext(pen, ln, x0 + 140, yy + 16 + j * 40, 'kid', 33, '#2a3a8a', 245)
+    pen.cv.restore()
+
+
+def _ici_rule(pen, t, n=1, write=1.0, **kw):
+    """One rule as a full card (Kessler's shaky capitals on lined paper, tape at the corners, W.K.); n 8 = Adam's.
+    write 0..1 reveals it word by word (keep 1.0 while it is read: always fully legible)."""
+    _ibg_b(pen, '#1a2232', '#0a0e18', 150); pen.texture(rect(*_IBGB), 'wood', 0.3, 'overlay', 1.0, 90)
+    pen.cv.save(); pen.cv.translate(960, 545); pen.cv.rotate(-0.8 if n % 2 else 0.7)
+    W, H = 1500, 700
+    x0, y0 = -W / 2, -H / 2
+    _lined_paper(pen, x0, y0, W, H)
+    if n == 8:
+        txt = IC_RULE8[1]
+        btext(pen, 'RULE NUMBER EIGHT', x0 + 120, y0 + 82, 'kid', 54, '#2a3a8a', 250)
+        lines = _wrap(txt, 40)
+        words = sum(len(l.split()) for l in lines); nw = int(math.ceil(words * clamp(write)))
+        k = 0
+        for j, ln in enumerate(lines):
+            shown = ' '.join(ln.split()[:max(0, nw - k)]); k += len(ln.split())
+            btext(pen, shown, x0 + 120, y0 + 220 + j * 92, 'kid', 70, '#2a3a8a', 250)
+        btext(pen, 'A.', x0 + W - 140, y0 + H - 50, 'kid', 52, '#2a3a8a', 245)
+    else:
+        txt = dict(IC_RULES)[n]
+        _shaky(pen, 'RULE NUMBER %s' % ('ONE TWO THREE FOUR FIVE SIX SEVEN'.split()[n - 1]), x0 + 120, y0 + 82, 50, '#1a2238', 250, n)
+        lines = _wrap(txt, 40)
+        words = sum(len(l.split()) for l in lines); nw = int(math.ceil(words * clamp(write)))
+        k = 0
+        for j, ln in enumerate(lines):
+            shown = ' '.join(ln.split()[:max(0, nw - k)]); k += len(ln.split())
+            _shaky(pen, shown, x0 + 120, y0 + 210 + j * 84, 54, '#1a2238', 248, n * 31 + j)
+        _shaky(pen, 'W.K.', x0 + W - 170, y0 + H - 46, 48, '#1a2238', 245, 77)
+    pen.cv.restore()
+
+
+def _snow_bg(pen, c1='#2a3a6a', c2='#0a1028'):
+    _ibg_b(pen, c1, c2, 150)
+    rng = np.random.default_rng(3)
+    for i in range(120):
+        pen.fill(oval(rng.uniform(-400, 2320), rng.uniform(-300, 1380), rng.uniform(1, 3)), '#ffffff', int(rng.uniform(60, 200)))
+
+
+def _ici_doormat(pen, t, wrapper=True, **kw):
+    """The cone on our doormat outside (the stoop under snow, the door's bottom edge): steaming with cold; the wrapper
+    lettered "Free. For whoever's coldest.\""""
+    _ibg_b(pen, '#3a4a7a', '#141c3a', 130)
+    pen.fill(rect(-460, -320, 2840, 520), IC_PAL['door']); pen.texture(rect(-460, -320, 2840, 520), 'wood', 0.35, 'overlay', 1.0, 90)
+    pen.fill(rect(-460, 190, 2840, 26), '#c8ccd4')
+    pen.fill(poly([(-460, 1400), (2380, 1400), (2380, 220), (-460, 220)]), '#cad6ee')
+    pen.texture(rect(-460, 220, 2840, 1200), 'grunge', 0.3, 'overlay', 2.0)
+    mat = poly([(420, 380), (1500, 380), (1720, 980), (200, 980)])
+    pen.fill(mat, '#5a3a2a'); pen.texture(mat, 'fabric', 0.7, 'overlay', 1.4); pen.line(mat, 3)
+    btext(pen, 'WELCOME', 960, 760, 'serif_b', 120, '#3a2418', 160, 'center')
+    pen.fill(rect(-460, 216, 2840, 40), '#000000', 60, blur=20)
+    pen.radial(None, 1150, 200, 1200, [(0, IC_PINK, 70), (1, IC_PINK, 0)])                      # his window's glow from the street
+    pen.cv.save(); pen.cv.translate(960, 640); pen.cv.rotate(-58)
+    _cone2d(pen, 0, 0, 2.6, t)
+    pen.cv.restore()
+    if wrapper:
+        pen.cv.save(); pen.cv.translate(1260, 880); pen.cv.rotate(-6)
+        tag = rrect(-230, -70, 460, 140, 10)
+        pen.fill(moved(tag, 8, 12), '#000000', 90, blur=10); pen.fill(tag, '#f6f0e6'); pen.texture(tag, 'paper', 0.4, 'multiply', 1.0)
+        btext(pen, 'Free.', 0, -10, 'script', 52, '#c23a78', 250, 'center')
+        btext(pen, "For whoever's coldest.", 0, 44, 'cursive_b', 34, '#7a3a62', 250, 'center')
+        pen.cv.restore()
+
+
+def _cone2d(pen, x, y, s=1.0, t=0.0, broken=0.0):
+    """The cone in 2D (insert scale, pointing +x): waffle cone, the wrapper, the swirl, frost vapour."""
+    L = 260 * s
+    cone = poly([(x, y - 60 * s), (x, y + 60 * s), (x + L, y)])
+    pen.fill(cone, '#d8a868'); pen.line(cone, 2.5)
+    for k in range(-5, 6):
+        pen.seg((x + 20 * s, y + k * 12 * s), (x + L * 0.8, y - k * 3 * s), 1.2, '#a87838', 180)
+        pen.seg((x + 20 * s, y - k * 12 * s), (x + L * 0.8, y + k * 3 * s), 1.2, '#a87838', 140)
+    wr = poly([(x - 6 * s, y - 70 * s), (x + 110 * s, y - 44 * s), (x + 110 * s, y + 44 * s), (x - 6 * s, y + 70 * s)])
+    pen.fill(wr, '#f4f0e8', 235); pen.line(wr, 1.6, '#9a9488')
+    for i, (dx, r, c) in enumerate(((-40, 78, '#fbf3f6'), (-100, 68, IC_STRIPE), (-150, 56, '#fbf3f6'), (-192, 40, IC_STRIPE), (-222, 22, '#fbf3f6'))):
+        sw = oval(x + dx * s, y + (6 if i % 2 else -6) * s, r * 0.62 * s, r * s)
+        pen.fill(sw, c); pen.line(sw, 2.0, '#8a4a6a', 220)
+        pen.line(smooth([(x + dx * s, y - r * 0.8 * s), (x + (dx - 14) * s, y), (x + dx * s, y + r * 0.8 * s)], False), 1.4, '#ffffff', 150)
+    for i in range(6):
+        ph = (t * 0.35 + i / 6) % 1.0
+        pen.fill(oval(x - 120 * s - ph * 60 * s, y + (i - 3) * 30 * s + ph * 140 * s, (30 + 60 * ph) * s, (20 + 30 * ph) * s), '#ffffff', 70 * (1 - ph), blur=20 * s)
+
+
+def _ici_wrapper(pen, t, **kw):
+    _ibg_b(pen, '#cad6ee', '#8a9ac4', 120); pen.texture(rect(*_IBGB), 'grunge', 0.3, 'overlay', 2.0)
+    pen.radial(None, 1500, 100, 1300, [(0, IC_PINK, 80), (1, IC_PINK, 0)])
+    pen.cv.save(); pen.cv.translate(960, 540); pen.cv.rotate(-4)
+    tag = rrect(-640, -230, 1280, 460, 20)
+    pen.fill(moved(tag, 16, 24), '#000000', 100, blur=24); pen.fill(tag, '#f6f0e6'); pen.texture(tag, 'paper', 0.45, 'multiply', 1.0)
+    pen.line(rrect(-610, -200, 1220, 400, 14), 3, IC_STRIPE, 200)
+    btext(pen, 'Free.', 0, -30, 'script', 160, '#c23a78', 252, 'center')
+    btext(pen, "For whoever's coldest.", 0, 130, 'cursive_b', 96, '#7a3a62', 252, 'center')
+    for (fx, fy) in ((-520, -140), (520, 140)): pen.fill(_flake_path(fx, fy, 40), '#e58fb4', 200)
+    pen.cv.restore()
+
+
+def _ici_shatter(pen, t, brk=1.0, **kw):
+    """The cone hitting the floorboards and shattering like glass (brk 0 = whole, about to hit .. 1 = in pieces)."""
+    _ibg_b(pen, '#4a3020', '#1a100a', 130); pen.texture(rect(*_IBGB), 'wood', 0.6, 'overlay', 1.0, 0)
+    for k in range(8): pen.fill(rect(-520, -400 + k * 230, 2960, 3), '#000000', 100)
+    pen.fill(rect(-520, -400, 2960, 1900), '#1a2448', 90)
+    if brk < 0.05:
+        pen.cv.save(); pen.cv.translate(940, 560); pen.cv.rotate(-30); _cone2d(pen, -130, 0, 2.2, t); pen.cv.restore(); return
+    rng = np.random.default_rng(5)
+    pen.fill(oval(960, 640, 380 * brk, 90 * brk), '#000000', 60, blur=20)
+    for i in range(70):
+        a = rng.uniform(0, 2 * math.pi); r = rng.uniform(40, 560) * brk
+        x, y = 960 + math.cos(a) * r, 620 + math.sin(a) * r * 0.42
+        sz = rng.uniform(10, 46) * (1.2 - 0.5 * brk)
+        c = ('#f7c6dc', '#fbf3f6', '#e58fb4', '#d8a868', '#ffffff')[i % 5]
+        sh = poly([(x - sz, y), (x - sz * 0.1, y - sz * 1.1), (x + sz, y - sz * 0.2), (x + sz * 0.3, y + sz * 0.7)])
+        pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(rng.uniform(0, 360)); pen.cv.translate(-x, -y)
+        pen.fill(sh, c, 240); pen.line(sh, 1.5, '#ffffff', 180); pen.line(sh, 0.8, '#5a3a4a', 120)
+        pen.cv.restore()
+    for i in range(14):                                                        # the glassy ring of the impact
+        a = 2 * math.pi * i / 14
+        pen.seg((960, 620), (960 + math.cos(a) * 520 * brk, 620 + math.sin(a) * 210 * brk), 1.4, '#ffffff', 60 * (1.0 - brk * 0.6))
+    pen.fill(oval(960, 620, 240 * brk, 60 * brk), '#ffffff', 50 * (1 - brk), blur=30)
+
+
+def _phone2d(pen, x=960, y=540, s=1.0, tilt=-4.0):
+    pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(tilt); pen.cv.scale(s, s)
+    body = rrect(-290, -560, 580, 1120, 64)
+    pen.fill(moved(body, 14, 22), '#000000', 110, blur=24); pen.fill(body, '#16161c'); pen.line(body, 3, '#4a4a54')
+    scr = rrect(-270, -540, 540, 1080, 50)
+    return scr
+
+
+def _ici_phone(pen, t, time_='11:47', bars=0, **kw):
+    """Adam's phone in the dark: NO BARS (No Service), the time, the battery; the screen lights his fingers."""
+    _ibg_b(pen, '#141a2e', '#05070e', 160)
+    scr = _phone2d(pen)
+    pen.linear(scr, 0, -540, 0, 540, [(0, '#1e2a4a'), (1, '#0c1222')])
+    btext(pen, time_, 0, -250, 'sans', 150, '#f4f6ff', 250, 'center')
+    btext(pen, 'Saturday, January 17', 0, -170, 'sans', 34, '#c8d0e8', 230, 'center')
+    for i in range(4):                                                         # the signal bars: empty
+        r = rect(-238 + i * 22, -490 - i * 9, 14, 18 + i * 9)
+        pen.fill(r, '#f4f6ff', 230 if i < bars else 50)
+    btext(pen, 'No Service' if bars == 0 else 'LTE', -150, -486, 'sans_b', 26, '#f4f6ff', 240)
+    pen.fill(rrect(170, -500, 60, 26, 6), '#f4f6ff', 70); pen.fill(rrect(172, -498, 20, 22, 4), '#ff5a4a', 230)
+    if bars == 0:
+        card = rrect(-230, 60, 460, 150, 26)
+        pen.fill(card, '#2a3450', 230)
+        btext(pen, 'No Service', 0, 130, 'sans_b', 40, '#ffffff', 250, 'center')
+        btext(pen, 'Calls and data unavailable', 0, 180, 'sans', 28, '#c8d0e8', 235, 'center')
+    pen.cv.restore()
+    pen.glow(960, 540, 700, '#8aa8ff', 40)
+
+
+def _ici_card(pen, t, time_='Eleven-oh-two.', temp='Minus thirty-three.', sub=None, **kw):
+    """A time / temperature card: frost-rimmed dark glass, the time and the temperature in big frosty type, a small
+    thermometer (the narration's words exactly, e.g. 'Eleven-oh-two.' / 'Minus thirty-three.')."""
+    _ibg_b(pen, '#0e1630', '#04060e', 170)
+    rng = np.random.default_rng(7)
+    for i in range(160):                                                       # frost creeping in from the edges
+        ed = i % 4
+        x, y = ((rng.uniform(-200, 120), rng.uniform(-100, 1180)), (rng.uniform(1800, 2120), rng.uniform(-100, 1180)),
+                (rng.uniform(-100, 2020), rng.uniform(-150, 90)), (rng.uniform(-100, 2020), rng.uniform(990, 1230)))[ed]
+        a = rng.uniform(0, 2 * math.pi); L = rng.uniform(40, 160)
+        pts = [(x, y)]
+        for j in range(4): x += math.cos(a) * L / 4; y += math.sin(a) * L / 4; a += rng.uniform(-0.5, 0.5); pts.append((x, y))
+        pen.line(smooth(pts, False), 2.0, '#dfe8ff', 140)
+    if time_: btext(pen, time_, 960, 470, 'head', 150, '#eef4ff', 252, 'center', spacing=0.02)
+    if temp: btext(pen, temp, 960, 650, 'head_r', 100, '#9ab8ff', 250, 'center', spacing=0.02)
+    if sub: btext(pen, sub, 960, 770, 'head_r', 54, '#c8d4f0', 230, 'center')
+    tx, ty = 1640, 540                                                          # the thermometer
+    pen.fill(rrect(tx - 18, ty - 260, 36, 480, 18), '#e8eef8', 220); pen.line(rrect(tx - 18, ty - 260, 36, 480, 18), 2)
+    pen.fill(oval(tx, ty + 240, 34), '#3a6aff'); pen.fill(rect(tx - 7, ty + 120, 14, 130), '#3a6aff')
+    for k in range(9): pen.seg((tx + 22, ty - 230 + k * 50), (tx + 40, ty - 230 + k * 50), 2, '#c8d4f0')
+
+
+def _ici_radio(pen, t, talk=0.0, static=0.0, **kw):
+    """Dad's radio close: a chunky orange two-way radio, channel 3 on its little screen, the LED (talk 0..1: green when
+    a voice comes through), the grille; static 0..1: a jittery noise band on the screen."""
+    _ibg_b(pen, '#2a2030', '#0c0a10', 140)
+    pen.fill(rect(-460, 700, 2840, 700), '#4a3020'); pen.texture(rect(-460, 700, 2840, 700), 'wood', 0.5, 'overlay', 1.0, 0)
+    pen.cv.save(); pen.cv.translate(980, 560); pen.cv.rotate(-8)
+    body = rrect(-230, -420, 460, 840, 60)
+    pen.fill(moved(body, 20, 30), '#000000', 120, blur=30); pen.fill(body, '#e8761a'); pen.texture(body, 'grunge', 0.4, 'overlay', 1.2)
+    pen.fill(rrect(-170, -610, 60, 220, 24), '#1a1a1a'); pen.fill(rrect(90, -470, 70, 60, 14), '#2a2a2a')
+    pen.fill(rrect(-190, -380, 380, 300, 30), '#1a1a1e')
+    for k in range(9):
+        for j in range(7): pen.fill(oval(-150 + k * 38, -340 + j * 38, 9), '#050506')
+    pen.fill(rrect(-170, -40, 340, 150, 14), '#9ab890'); pen.line(rrect(-170, -40, 340, 150, 14), 3)
+    btext(pen, 'CH 3', 0, 70, 'vhs', 110, '#1a2a1a', 240, 'center')
+    if static > 0.01:
+        rng = np.random.default_rng(int(t * 30))
+        for i in range(30): pen.fill(rect(-160 + rng.uniform(0, 300), -30 + rng.uniform(0, 130), rng.uniform(4, 40), 3), '#1a2a1a', 160 * static)
+    pen.fill(oval(130, -470, 18), '#3aff6a' if talk > 0.01 else '#2a3a2a', 255 if talk > 0.01 else 200)
+    if talk > 0.01: pen.glow(1110, 120, 80, '#3aff6a', 120 * talk)
+    pen.fill(rrect(-200, 160, 400, 200, 20), '#c8621a'); btext(pen, 'PUSH TO TALK', 0, 280, 'head', 38, '#2a1a0a', 220, 'center')
+    pen.cv.restore()
+
+
+def _ici_mittens(pen, t, lina=False, drop=0.0, **kw):
+    """The mitten bunting close, inside the pink window: single children's mittens on clothes pegs along a string, the
+    oldest small and RED at the left; Lina's yellow one added at the right (lina); drop 0..1: hers falling away."""
+    _ibg_b(pen, '#ffd0e4', '#e070a8', 60)
+    pen.radial(None, 960, 480, 1300, [(0, '#fff0f6', 200), (1, '#ff9ec8', 0)])
+    for (x0, y0, w, h) in ((-460, -320, 2840, 150), (-460, 1180, 2840, 220), (-460, -320, 140, 1720), (2240, -320, 140, 1720)):
+        pen.fill(rect(x0, y0, w, h), '#f4f0f2')
+    ms = list(IC_MITTENS) + ([IC_LINA_MITTEN] if lina else [])
+    n = len(ms)
+    pts = [(-300 + 2520 * f, 260 + 160 * math.sin(math.pi * f)) for f in np.linspace(0, 1, 40)]
+    pen.line(smooth(pts, False), 5, '#f8f0e8', 240); pen.line(smooth(pts, False), 1.5, '#a89888', 200)
+    for i, c in enumerate(ms):
+        f = 0.06 + 0.88 * (i + 0.5) / n
+        x = -300 + 2520 * f; y = 260 + 160 * math.sin(math.pi * f)
+        if i == n - 1 and lina and drop > 0: y += 900 * drop ** 2
+        sc = 150 if i == 0 else 205
+        sw = 4 * math.sin(t * 1.2 + i)
+        pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(sw)
+        m = union(rrect(-sc * 0.38, sc * 0.16, sc * 0.76, sc * 0.92, sc * 0.36), oval(sc * 0.37, sc * 0.52, sc * 0.17, sc * 0.27))
+        pen.fill(moved(m, 10, 14), '#7a2a4a', 90, blur=10)
+        pen.fill(m, c); pen.texture(m, 'fabric', 0.7, 'overlay', 0.7)
+        for k in range(5): pen.line(smooth([(-sc * 0.3, sc * (0.35 + 0.12 * k)), (0, sc * (0.38 + 0.12 * k)), (sc * 0.3, sc * (0.35 + 0.12 * k))], False), 1.4, '#000000', 50)
+        pen.line(m, 2.4, '#2a1018', 220)
+        pen.fill(rect(-sc * 0.42, sc * 0.88, sc * 0.84, sc * 0.22), mix(c, '#ffffff', 0.45)); pen.line(rect(-sc * 0.42, sc * 0.88, sc * 0.84, sc * 0.22), 1.5, '#2a1018', 180)
+        pen.fill(rrect(-10, -16, 20, 46, 4), '#e8dcc8'); pen.line(rrect(-10, -16, 20, 46, 4), 1.4)
+        pen.cv.restore()
+    pen.fill(rect(*_IBGB), '#ffffff', 18)
+
+
+def _ici_boot(pen, t, **kw):
+    """Adam's boot frozen upright in the snow where he stood (one sock gone with him), rimed with ice, pink light."""
+    _ibg_b(pen, '#c8d4ee', '#6a7aa8', 120); pen.texture(rect(*_IBGB), 'grunge', 0.35, 'overlay', 3.0)
+    pen.radial(None, 1700, 100, 1500, [(0, IC_PINK, 90), (1, IC_PINK, 0)])
+    pen.fill(oval(960, 840, 360, 80), '#3a4a7a', 140, blur=20)
+    sh = rrect(780, 240, 360, 640, 60)
+    pen.fill(sh, '#3a2a22'); pen.texture(sh, 'fabric', 0.6, 'overlay', 1.0); pen.line(sh, 4)
+    pen.fill(rrect(760, 200, 400, 110, 40), '#d8d0c0'); pen.texture(rrect(760, 200, 400, 110, 40), 'fabric', 0.8, 'overlay', 1.0); pen.line(rrect(760, 200, 400, 110, 40), 3)
+    for k in range(6):
+        y = 360 + k * 70
+        pen.seg((820, y), (1100, y + 30), 6, '#d8cca8'); pen.seg((820, y + 30), (1100, y), 6, '#c8bc98')
+    pen.fill(poly([(600, 900), (1320, 900), (1300, 780), (1140, 820), (960, 760), (780, 820), (620, 780)]), '#eef4ff')
+    for i in range(40):
+        x = 760 + i * 10; pen.seg((x, 820), (x + 5, 870), 2, '#ffffff', 160)
+    pen.line(rrect(780, 240, 360, 640, 60), 8, '#ffffff', 60, blur=4)
+
+
+def _child_hand(pen, x, y, s=1.0, rot=0.0, waxy=1.0, skin='#e8b898', sleeve='#f2c23a'):
+    """Lina's small bare hand, palm up, fingers slightly curled: shaded skin, knuckle creases, nails, the cuff of her
+    yellow coat; waxy 0..1 turns the fingertips white and waxy (frostbite: subtle, never gory)."""
+    pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(rot); pen.cv.scale(s, s)
+    pen.fill(rrect(-260, -90, 280, 190, 60), sleeve); pen.texture(rrect(-260, -90, 280, 190, 60), 'fabric', 0.6, 'overlay', 0.8); pen.line(rrect(-260, -90, 280, 190, 60), 3)
+    pen.fill(rrect(-40, -70, 60, 150, 26), mix(sleeve, '#ffffff', 0.2)); pen.line(rrect(-40, -70, 60, 150, 26), 2)
+    palm = rrect(0, -80, 230, 170, 80)
+    pen.fill(palm, skin)
+    pen.linear(palm, 0, -80, 0, 90, [(0, '#ffffff', 40), (1, '#a86a5a', 70)])
+    fingers = [(-56, 150), (-18, 175), (20, 168), (58, 140)]
+    for i, (fy, L) in enumerate(fingers):
+        f = rrect(200, fy - 19, L, 38, 19)
+        pen.fill(f, skin); pen.linear(f, 0, fy - 19, 0, fy + 19, [(0, '#ffffff', 30), (1, '#a86a5a', 80)])
+        tip = rrect(200 + L - 56, fy - 19, 56, 38, 19)
+        if waxy > 0.01:
+            pen.fill(tip, '#f4f2ec', 235 * waxy); pen.fill(tip, '#dfe4ec', 80 * waxy)
+            pen.line(smooth([(200 + L - 56, fy - 16), (200 + L - 62, fy), (200 + L - 56, fy + 16)], False), 2, '#c8b8b0', 160 * waxy)
+        pen.fill(rrect(200 + L - 26, fy - 12, 20, 24, 9), '#f8e0d8' if waxy < 0.5 else '#f8f6f2', 230)
+        for k_ in (0.45, 0.72): pen.seg((200 + L * k_, fy - 12), (200 + L * k_ + 4, fy + 12), 1.6, '#9a6a5a', 120)
+        pen.line(f, 2.2, '#6a3a2a', 200)
+    th = rrect(60, 70, 150, 44, 22)
+    pen.cv.save(); pen.cv.translate(80, 70); pen.cv.rotate(28); pen.cv.translate(-80, -70)
+    pen.fill(th, skin); pen.line(th, 2.2, '#6a3a2a', 200)
+    if waxy > 0.01: pen.fill(rrect(160, 70, 50, 44, 22), '#f4f2ec', 225 * waxy)
+    pen.cv.restore()
+    pen.line(smooth([(40, -30), (120, -10), (190, -40)], False), 2, '#9a6a5a', 120)
+    pen.line(palm, 2.4, '#6a3a2a', 220)
+    pen.cv.restore()
+
+
+def _ici_fingers(pen, t, waxy=1.0, **kw):
+    """Lina's fingertips: white, waxy (Adam does NOT rub them: he tucks them under his arms). Phone light, cold."""
+    _ibg_b(pen, '#1a2240', '#080c18', 150)
+    pen.fill(rect(-460, -320, 2840, 1720), '#2a3a6a', 120); pen.texture(rect(-460, -320, 2840, 1720), 'fabric', 0.5, 'overlay', 1.2)
+    pen.radial(None, 900, 520, 900, [(0, '#c8d8ff', 70), (1, '#c8d8ff', 0)])
+    _child_hand(pen, 620, 560, 2.0, -8.0, waxy)
+
+
+def _ici_towel(pen, t, press=1.0, tip=1.0, **kw):
+    """Low at the bathroom door from inside: the door's bottom edge, the gap, the towels stuffed in; a needle-thin brown
+    jointed leg tip (frost on the joint) sliding in under them; press 0..1: the towel jammed down hard on it."""
+    _ibg_b(pen, '#2a3040', '#0a0c14', 140)
+    pen.fill(rect(-460, -320, 2840, 900), '#d8d4cc'); pen.texture(rect(-460, -320, 2840, 900), 'wood', 0.3, 'overlay', 1.0, 90)
+    pen.fill(rect(-460, -320, 2840, 900), '#1a2448', 140)
+    pen.fill(rect(-460, 580, 2840, 30), '#05060a')
+    pen.fill(rect(-460, 610, 2840, 800), '#e8e4dc'); pen.fill(rect(-460, 610, 2840, 800), '#1a2448', 120)
+    for k in range(30):
+        for j in range(8): pen.line(rect(-460 + k * 100, 610 + j * 100, 100, 100), 1.5, '#5a6070', 120)
+    if tip > 0.01:
+        L = 700 * tip
+        leg = poly([(1180, 590), (1180 - L, 640), (1180 - L - 40, 650), (1180 - L, 660), (1180, 610)])
+        pen.fill(leg, '#5a3a22'); pen.line(leg, 2)
+        pen.fill(oval(1180 - L * 0.45, 640, 22, 16), '#6a4a2e'); pen.line(oval(1180 - L * 0.45, 640, 22, 16), 2)
+        pen.fill(oval(1180 - L * 0.45, 632, 16, 7), '#eef4ff', 220)
+        pen.seg((1180 - L - 40, 650), (1180 - L - 70, 652), 2, '#3a2412')
+    yb = 560 + 70 * press
+    tw = rrect(300, yb - 80, 1400, 160, 60)
+    pen.fill(moved(tw, 0, 20), '#000000', 90, blur=20)
+    pen.fill(tw, '#7aa0c8'); pen.texture(tw, 'fabric', 0.8, 'overlay', 0.8); pen.line(tw, 3)
+    for k in range(14): pen.seg((340 + k * 100, yb - 60), (360 + k * 100, yb + 60), 2, '#5a80a8', 120)
+    pen.radial(None, 700, 900, 900, [(0, '#c8d8ff', 60), (1, '#c8d8ff', 0)])
+
+
+def _ici_doorknob(pen, t, frost=1.0, **kw):
+    """Our front doorknob from inside, growing frost (frost 0..1 or f(t)): a brass knob, the frost feathering out over it."""
+    k = frost(t) if callable(frost) else frost
+    _ibg_b(pen, IC_PAL['door'], _darken(IC_PAL['door'], 0.4), 140); pen.texture(rect(*_IBGB), 'wood', 0.35, 'overlay', 1.2, 90)
+    pen.fill(oval(960, 560, 260), '#b89a5a'); pen.line(oval(960, 560, 260), 3)
+    pen.fill(oval(960, 560, 200), '#c8a868'); pen.radial(oval(960, 560, 200), 880, 480, 260, [(0, '#fff0c0', 180), (1, '#6a5020', 60)])
+    pen.fill(oval(960, 560, 60), '#a88a48')
+    rng = np.random.default_rng(9)
+    pen.fill(oval(960, 560, 270), '#e8f2ff', 120 * k)
+    for i in range(int(260 * k)):
+        a = rng.uniform(0, 2 * math.pi); r0 = rng.uniform(0, 260); L = rng.uniform(20, 90) * k
+        x, y = 960 + math.cos(a) * r0, 560 + math.sin(a) * r0
+        b = a + rng.uniform(-1.2, 1.2)
+        pen.seg((x, y), (x + math.cos(b) * L, y + math.sin(b) * L), 2.0, '#ffffff', 190)
+        for sd in (-1, 1): pen.seg((x + math.cos(b) * L * 0.5, y + math.sin(b) * L * 0.5), (x + math.cos(b + sd * 0.8) * L * 0.8, y + math.sin(b + sd * 0.8) * L * 0.8), 1.2, '#ffffff', 150)
+
+
+def _ici_outro(pen, t, n=0, **kw):
+    """The outro advice cards (warm, safe, legible): n 0..4 = IC_OUTRO[n] (lead-in, the instruction in big type, detail)."""
+    _ibg_b(pen, '#f4e4cc', '#e8c8a0', 90)
+    pen.radial(None, 960, 300, 1400, [(0, '#fff8ec', 200), (1, '#fff8ec', 0)])
+    lead, big, det = IC_OUTRO[n]
+    card = rrect(200, 170, 1520, 740, 40)
+    pen.fill(moved(card, 14, 22), '#6a4a2a', 70, blur=24); pen.fill(card, '#fffaf2'); pen.line(card, 4, '#c8a070')
+    y = 330
+    for ln in _wrap(lead, 52): btext(pen, ln, 960, y, 'sans', 50, '#4a3020', 245, 'center'); y += 64
+    y += 40
+    for ln in _wrap(big, 30): btext(pen, ln, 960, y, 'head', 84, '#b8282a', 252, 'center'); y += 100
+    y += 20
+    for ln in _wrap(det, 56): btext(pen, ln, 960, y, 'sans', 44, '#4a3020', 240, 'center'); y += 58
+    pen.fill(_flake_path(300, 260, 44), '#e8b070', 160)
+
+
+def _ici_plow_cab(pen, t, beacon=1.0, talk=0.0, **kw):
+    """Dad's plow cab at night: the windshield onto a snowy road in his headlights, the wipers, the orange beacon's sweep
+    on the hood, the radio handset on its coil cord (talk: its LED)."""
+    _ibg_b(pen, '#0a0c14', None, 0)
+    ws = poly([(-100, 80), (2020, 80), (1900, 700), (20, 700)])
+    pen.linear(ws, 0, 80, 0, 700, [(0, '#0a1430'), (0.55, '#2a3a6a'), (1, '#c8d4ee')])
+    pen.fill(poly([(860, 430), (1060, 430), (1700, 700), (220, 700)]), '#e8eef8', 220)
+    for k in range(5): pen.line(poly([(960 - 10 * k, 430), (960 - 160 * k - 200, 700)], False), 2, '#9aa8c8', 120)
+    rng = np.random.default_rng(int(t * 24) % 1000)
+    for i in range(90):
+        x, y = rng.uniform(0, 1920), rng.uniform(80, 700)
+        pen.fill(oval(x, y, rng.uniform(1, 3)), '#ffffff', 200)
+    ang = t * 1.3 * 2 * math.pi; kb = beacon * max(0.0, math.cos(ang)) ** 2
+    pen.radial(None, 960, 760, 1200, [(0, IC_ORANGE, 160 * kb), (1, IC_ORANGE, 0)])
+    pen.fill(minus(rect(-460, -320, 2840, 1720), ws), '#1a1c22')
+    pen.fill(rect(-460, 700, 2840, 700), '#2a2c32'); pen.fill(rect(-460, 700, 2840, 18), '#3a3c44')
+    for (bx, a) in ((560, -24 + 18 * math.sin(t * 2.0)), (1360, -24 + 18 * math.sin(t * 2.0))):
+        ex, ey = bx + 520 * math.cos(math.radians(180 + a)), 690 + 520 * math.sin(math.radians(180 + a))
+        pen.seg((bx, 690), (ex, ey), 9, '#0a0a0a')
+    pen.fill(rrect(1500, 760, 150, 250, 30), '#1a1a1a'); pen.line(rrect(1500, 760, 150, 250, 30), 2, '#3a3a3a')
+    pen.fill(oval(1575, 800, 12), '#3aff6a' if talk > 0.01 else '#2a3a2a')
+    pen.line(smooth([(1575, 1010), (1540, 1080), (1600, 1150), (1530, 1220), (1590, 1300)], False), 6, '#141414')
+    pen.fill(rrect(300, 760, 520, 120, 16), '#141418'); btext(pen, 'CH 3', 560, 840, 'vhs', 70, '#ff9a3a', 230, 'center')
+
+
+IC_INSERTS = {
+    'rules': (_ici_rules, 'ic_ins', 'the seven rules taped to a door, shaky capitals, signed W.K. (show n, hl k, eighth, door ours|kessler)'),
+    'rule': (_ici_rule, 'ic_ins', 'one rule as a full card, legible (n 1..7 Kessler, 8 Adam; write 0..1)'),
+    'doormat': (_ici_doormat, 'ic_ins_cold', 'the cone on our doormat, steaming with cold, its wrapper "Free. For whoever\'s coldest."'),
+    'wrapper': (_ici_wrapper, 'ic_ins_cold', 'the wrapper close: "Free. For whoever\'s coldest."'),
+    'shatter': (_ici_shatter, 'ic_ins', 'the cone hits the floor and shatters like glass (brk 0..1)'),
+    'phone': (_ici_phone, 'ic_ins_cold', 'the phone: No Service, no bars (time_, bars)'),
+    'card': (_ici_card, 'ic_ins_cold', "a time / temperature card (time_ 'Eleven-oh-two.', temp 'Minus thirty-three.', sub)"),
+    'radio': (_ici_radio, 'ic_ins', "Dad's radio close: CH 3 (talk 0..1: LED; static 0..1)"),
+    'mittens': (_ici_mittens, 'ic_ins', 'the mitten string in the pink window (lina: hers added at the right; drop 0..1)'),
+    'boot': (_ici_boot, 'ic_ins_cold', "Adam's boot frozen in the snow"),
+    'fingers': (_ici_fingers, 'ic_ins_cold', "Lina's white, waxy fingertips (waxy 0..1)"),
+    'towel': (_ici_towel, 'ic_ins_cold', 'the towel jammed down on the leg tip under the bathroom door (press, tip 0..1)'),
+    'doorknob': (_ici_doorknob, 'ic_ins_cold', 'the doorknob growing frost (frost 0..1 or f(t))'),
+    'outro': (_ici_outro, 'ic_ins_warm', 'the outro advice cards (n 0..4), warm and legible'),
+    'plow_cab': (_ici_plow_cab, 'ic_ins', "Dad's plow cab: windshield, wipers, the beacon on the hood, the handset (talk)"),
+}
+
+
+def ic_insert(name, prop_kw=None, motion=None, t0=0.0, grade=None):
+    """A close-up insert from IC_INSERTS (flat 1920 x 1080 design space with margin for a drift): prop_kw dict (values
+    may be f(t)) or f(t) -> dict; motion f(t) -> (dx, dy, dscale, drot)."""
+    fn, gr, note = IC_INSERTS[name]
+    static = not callable(prop_kw) and motion is None and not any(callable(v_) for v_ in (prop_kw or {}).values()) and name not in ('doormat', 'mittens', 'radio', 'plow_cab', 'phone')
+
+    def draw(pen, t):
+        kw = prop_kw(t) if callable(prop_kw) else dict(prop_kw or {})
+        kw = {k_: (v_(t) if callable(v_) and k_ not in ('frost',) else v_) for k_, v_ in kw.items()}
+        cv = pen.cv
+        if motion is not None:
+            dx, dy, ds, dr = motion(t)
+            cv.save(); cv.translate(960 + dx, 540 + dy); cv.rotate(dr); cv.scale(1 + ds, 1 + ds); cv.translate(-960, -540)
+        fn(pen, t - t0, **kw)
+        if motion is not None: cv.restore()
+    key = 'icins:%s:%s' % (name, _okey(prop_kw or {}) if isinstance(prop_kw, dict) else 'f')
+    lay = Layer(1.0, draw, 'insert', cache=key if static else False, bounds=(-460, -320, 2380, 1400), blur=0)
+    return BSet('ic_ins_' + name, [lay], {}, {}, lens=None, grade=grade or gr, focus=1.0, dof=0.0, cover=(-460, -320, 2380, 1400), info={'note': note})
+
+
+# ====================================================================================================== the plan map, the registry
+def _ic_plan_panels():
+    def blocks(*sets_):
+        b = {}
+        for sp_ in sets_:
+            for k_, q in (sp_.info.get('blocks') or {}).items():
+                if not k_.startswith('far_') and q: b[k_] = q
+        return b
+
+    def marks(sp_, names):
+        return [(sp_.anchors[n].X, sp_.anchors[n].Yp, n) for n in names if n in sp_.anchors]
+    lv, hl, kt, bt = ic_living('wide'), ic_hall('door'), ic_kitchen('window'), ic_bath('door')
+    P = [dict(title='OUR HOUSE  (floor Y 0, ceiling %.2f; one storey + attic)' % IC_CEIL, ext=(-7.0, 7.0, -2.6, 9.6), ray=1.2,
+              floors=[('LIVING ROOM', IC_LIV_POLY), ('HALL', _r4p(IC_HALL)), ('KITCHEN', _r4p(IC_KIT)), ('BATH', _r4p(IC_BATH)), ('stoop', _r4p(IC_PORCH)),
+                      ('hatch (ceiling)', _r4p(IC_HATCH)), ('bedrooms (not built)', _r4p((-6.4, -2.8, 4.6, 9.0))), ('(not built)', _r4p((-1.4, 6.4, 5.6, 9.0)))],
+              blocks=blocks(lv, hl, kt, bt),
+              doors=[((IC_FDOOR[0], 0.0), (IC_FDOOR[1], 0.0), 'front door (glass)'), ((-1.4, IC_BDOOR[0]), (-1.4, IC_BDOOR[1]), 'bath'),
+                     ((-1.4, IC_LOPEN[0]), (-1.4, IC_LOPEN[1]), 'opening'), ((-2.8, IC_KDOOR[0]), (-2.8, IC_KDOOR[1]), 'kitchen')],
+              windows=[((IC_PWIN[0], 0.0), (IC_PWIN[1], 0.0)), ((IC_KWIN[0], 0.0), (IC_KWIN[1], 0.0)), ((IC_BWIN[0], 0.0), (IC_BWIN[1], 0.0))], lines=[],
+              marks=marks(lv, ('couch_mid', 'radio', 'curtain_crack', 'tv_screen')) + marks(hl, ('door_in', 'under_hatch', 'bath_door_hall')) +
+                    marks(kt, ('stool', 'sill_out')) + marks(bt, ('tub_sit', 'gap')),
+              cams=[k for k in IC_CAMS if CAMS[k]['room'] in ('living', 'hall', 'kitchen', 'bath')])]
+    ea, eb = ic_street('house', truck='A'), ic_street('kout', truck='B')
+    bk = {'our house': _r4p(IC_HOUSE), "Kessler's": _r4p((IC_KH[0], IC_KH[1], IC_KH[2], IC_KH[3])), 'truck A': ea.info['blocks'].get('truck'),
+          'truck B': eb.info['blocks'].get('truck'), "Dad's car": ea.info['blocks'].get('car')}
+    P.append(dict(title='BIRCH LANE  (ground Y %.1f; snow %.2f m; truck A until 8:48, B from 8:50)' % (IC_G, IC_SNOW), ext=(-16.0, 14.0, -34.0, 10.0), ray=4.0,
+                  floors=[('Birch Lane', [(-16, IC_KS), (14, IC_KS), (14, IC_KN), (-16, IC_KN)]), ('driveway', _r4p(IC_DRIVE)),
+                          ("his porch", _r4p(IC_KPORCH)), ('our stoop', _r4p(IC_PORCH))],
+                  blocks={k_: q for k_, q in bk.items() if q}, doors=[((IC_FDOOR[0], 0.0), (IC_FDOOR[1], 0.0), ''), ((IC_KDOOR2[0], IC_KH[3]), (IC_KDOOR2[1], IC_KH[3]), '')],
+                  windows=[((IC_PWIN[0], 0.0), (IC_PWIN[1], 0.0)), ((IC_KWIN2[0], IC_KH[3]), (IC_KWIN2[1], IC_KH[3]))],
+                  lines=[[(IC_FENCE_X[0], IC_FENCE_Y), (IC_GATE[0], IC_FENCE_Y)], [(IC_GATE[1], IC_FENCE_Y), (IC_FENCE_X[1], IC_FENCE_Y)]],
+                  marks=marks(ea, ('truck_window', 'drop', 'boot', 'car_roof', 'lamp')) + marks(eb, ('truck_window', 'kdoor', 'kwalk_mid', 'cage')),
+                  cams=[k for k in IC_CAMS if CAMS[k]['room'] == 'street']))
+    return P
+
+
+def ic_plan_map(path, pw=900, ph=1000, cols=2):
+    """This film's floor plans with every camera -> JPEG (the Doctor film's renderer on this film's panels)."""
+    import inspect
+    src = inspect.getsource(dr_plan_map).replace('def dr_plan_map(', 'def _ic_plan_map_impl(').replace('_dr_plan_panels()', '_ic_plan_panels()')
+    ns = dict(globals()); exec(src, ns)
+    return ns['_ic_plan_map_impl'](path, pw, ph, cols)
+
+
+IC_SETS = {'ic_street': ic_street, 'ic_living': ic_living, 'ic_hall': ic_hall, 'ic_kitchen': ic_kitchen, 'ic_bath': ic_bath, 'ic_1958': ic_1958,
+           'ic_morning': ic_morning, 'ic_town': ic_town, 'ic_insert': ic_insert}
+IC_API = {nm: sorted({k[len(pre):] for k in IC_CAMS if k.startswith(pre)}) for nm, pre in (
+    ('ic_street', 'ic_ext_'), ('ic_living', 'ic_liv_'), ('ic_hall', 'ic_hall_'), ('ic_kitchen', 'ic_kit_'), ('ic_bath', 'ic_bath_'))}
+IC_API['ic_insert'] = sorted(IC_INSERTS)
+__all__ += ['ic_street', 'ic_living', 'ic_hall', 'ic_kitchen', 'ic_bath', 'ic_1958', 'ic_morning', 'ic_town', 'ic_insert', 'ic_plan_map', 'ic_pass', 'ic_flicker',
+            'IC_API', 'IC_INSERTS', 'IC_RULES', 'IC_RULE8', 'IC_OUTRO', 'IC_TRUCK_A', 'IC_TRUCK_B', 'IC_CAMS', 'ic_cone', 'ic_boot', 'ic_mitten', 'ic_radio']

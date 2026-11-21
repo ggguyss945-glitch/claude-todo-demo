@@ -6302,6 +6302,7 @@ RECIPES = {k: globals()['r_' + k] for k in NAMES}
 # space they get a high shelf until their loudness above 300 Hz is within 12 dB of the whole (measure_mix's phone check)
 PHONE_FIX = ('footsteps_wood_inside', 'footsteps_grass', 'footsteps_stairs', 'footsteps_porch', 'footsteps_hall',
              'knock_door')
+PHONE_FIX = PHONE_FIX + ICE_PHONE_FIX                  # the Ice Cream film (audio/sfx_ice.py)
 
 
 def phone_presence(y, floor=-12.0, max_db=12.0):
