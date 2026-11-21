@@ -56,6 +56,7 @@ POSE_DEFAULTS.update(
     sh_wave=0.0,     # wave phase helper (set by slow_wave)
     sh_legcap=8.0,   # at most this many legs drawn (pour_out: the legs come last)
     sh_nolegs=0.0,   # 1: his human legs not drawn (inside the truck below the window, during the pour)
+    sh_hang=0.55,    # how far the head hangs (h_nod added) when he is slung in the legs (sh_lift)
 )
 for _i in range(8):
     POSE_DEFAULTS.update({'sh_t%dw' % _i: 0.0, 'sh_t%dx' % _i: 0.0, 'sh_t%dy' % _i: 0.0, 'sh_t%dz' % _i: 0.0,
@@ -294,7 +295,8 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
         c15, s15 = math.cos(0.26), math.sin(0.26)
         upv = _u3(up0 * c15 + bk0 * s15)                 # tilted back 15 degrees
         bk = _u3(bk0 * c15 - up0 * s15 + out_ * 0.22)    # nearly flat to the skull
-        ring = [Ec + upv * (2.75 * ek * math.cos(a_) - 0.3) * (1.0 if math.cos(a_) > 0 else 0.82) + bk * (1.55 * ek * math.sin(a_) + 0.35) + out_ * 0.35
+        ring = [Ec + upv * (3.2 * ek * math.cos(a_) - 0.3) * (1.0 if math.cos(a_) > 0 else 0.80)
+                + bk * (1.9 * ek * math.sin(a_) * (1.0 if math.sin(a_) > 0 else 0.35) + 0.6) + out_ * 0.6
                 for a_ in np.linspace(0, 2 * PI, 12, endpoint=False)]
         pts = [view.p2(q) for q in ring]
         ears.append((view.depth(out_), s, smooth(pts, True, 0.8), pts))
@@ -308,6 +310,11 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     up_lat, lo_lat = hd.up(lons), hd.lo(lons)
     Xu, Yu, Fu, _ = hd.proj(lons, up_lat, 0.1, jaw=0.0)
     Xl, Yl, Fl, _ = hd.proj(lons, lo_lat, 0.1, jaw=1.0)
+    vm = np.maximum(Fu, Fl) > -0.10
+    if J < 0.05 and 3 < vm.sum() < len(vm):       # turned: only the visible run (a crescent back toward the ear)
+        idx = np.where(vm)[0]
+        i0, i1 = int(idx.min()), int(idx.max()) + 1
+        Xu, Yu, Fu, Xl, Yl, Fl = Xu[i0:i1], Yu[i0:i1], Fu[i0:i1], Xl[i0:i1], Yl[i0:i1], Fl[i0:i1]
     mouth_pts = list(zip(Xu.tolist(), Yu.tolist())) + list(zip(Xl[::-1].tolist(), Yl[::-1].tolist()))
     mouth = smooth(mouth_pts, True, 0.5)
     for sp_ in sils:
@@ -350,6 +357,15 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 c.glow(x_, y_ - 0.2 * cm, 2.6 * cm * (1 + 0.3 * L), 2.0 * cm * (1 + 0.5 * L), '#1a2133', 140 + int(115 * max(L, sink)))
         x_, y_, f_ = P2(0.0, 0.30)
         if f_ > 0: c.glow(x_, y_ - 1.5 * cm, 7.5 * cm, 1.8 * cm, '#ffffff', 70)                  # brow ridge catches the light
+        if L > 0.05:
+            # the hard skull under the mask: zygoma planes under the sockets, deep temple hollows, the cheek cut-in
+            for s in (-1, 1):
+                q = [P2(s * a_, b_)[:2] for a_, b_ in ((0.16, -0.06), (0.56, -0.01), (0.80, -0.26), (0.62, -0.46), (0.30, -0.30))]
+                c.fill(smooth(q, True, 0.4), pal['bone_sh'], int(130 * L))
+                q2 = [P2(s * a_, b_)[:2] for a_, b_ in ((0.58, -0.30), (0.86, -0.28), (0.80, -0.62), (0.52, -0.58))]
+                c.fill(smooth(q2, True, 0.5), '#6f7a88', int(110 * L))
+                x_, y_, f_ = P2(s * 0.98, 0.36)
+                if f_ > -0.3: c.glow(x_, y_, 4.5 * cm, 6.5 * cm, '#5d6876', int(150 * L))
         if det >= 1:
             c.texture(sil_all, 'skin', 0.04, 0.5)
         # faint blue veins at the temples (cold)
@@ -366,10 +382,16 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     for s in (-1, 1):
         lon_e = s * 0.27
         if L > 0.05 or sink > 0.05:
-            so2, fso = hd.disc(lon_e, 0.13, 0.12 + 0.06 * L, 0.07 + 0.06 * L, grow=0.12)
+            so2, fso = hd.disc(lon_e, 0.13 - 0.01 * L, 0.12 + 0.09 * L, 0.07 + 0.10 * L, grow=0.12)
             if fso > -0.1:
                 c.fill(so2, '#050407', int(255 * clamp(max(sink, 0.8 * L))))
                 c.line(so2, lw * 0.9, pal['line'], int(220 * L))
+                if L > 0.3:
+                    c.line(so2, lw * 0.5, pal['frost'], int(210 * prog(L, 0.3, 1.0)))
+                    for run in hd.curve(lon_e + s * np.linspace(-0.20, 0.20, 9), 0.32 + 0.05 * np.sin(np.linspace(0, PI, 9)), 0.2):
+                        c.line(smooth(run, False), lw * 1.4, pal['bone_sh'], int(200 * L))
+                    for run in hd.curve(lon_e + s * np.linspace(-0.17, 0.17, 7), 0.36 + 0.05 * np.sin(np.linspace(0, PI, 7)), 0.3):
+                        c.line(smooth(run, False), lw * 0.9, '#ffffff', int(170 * L))
         if det >= 1 and L < 0.9:
             for run in hd.curve(lon_e + s * np.linspace(-0.12, 0.11, 7), 0.045 - 0.02 * np.sin(np.linspace(0, PI, 7))):
                 c.line(smooth(run, False), lw * 0.6, pal['skin_dk'], int(190 * (1 - L)))
@@ -389,7 +411,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 for run in hd.curve(s * np.array([0.05, 0.10, 0.11, 0.085]), np.array([-0.12, -0.14, -0.18, -0.20]), 0.8):
                     c.line(smooth(run, False), lw * 0.7, pal['skin_dk'], a_)
             x_, y_, f_ = P2(0.0, -0.10, 2.0)
-            if f_ > 0: c.fill(oval(x_ - 0.3 * cm, y_ - 0.4 * cm, 0.7 * cm, 0.5 * cm), '#ffffff', int(a_ * 0.7))
+            if f_ > 0.6: c.fill(oval(x_ - 0.3 * cm, y_ - 0.4 * cm, 0.7 * cm, 0.5 * cm), '#ffffff', int(a_ * 0.7))
         if L > 0.3:
             k = prog(L, 0.3, 1.0)
             for s in (-1, 1):
@@ -401,9 +423,9 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     if det >= 1:
         for s in (-1, 1):
             lc = s * (W + 0.05)
-            for run in hd.curve(np.array([s * 0.14, s * 0.30, s * (0.45 + 0.45 * W), lc]),
-                                np.array([-0.10, -0.20, -0.30, float(hd.up(W)) + 0.02]), 0.3):
-                c.line(smooth(run, False), lw * 0.9, pal['skin_dk'], int(200 * (1 - 0.6 * L)))
+            for run in hd.curve(np.array([s * 0.16, s * 0.30, s * (0.42 + 0.40 * W)]),
+                                np.array([-0.12, -0.21, -0.29]), 0.3):
+                c.line(smooth(run, False), lw * 1.6, pal['skin_sh'], int(90 * (1 - 0.6 * L)))
             for run in hd.curve(np.array([lc + s * 0.05, lc + s * 0.10, lc + s * 0.06]),
                                 np.array([float(hd.up(W)) + 0.08, float(hd.up(W)), float(hd.up(W)) - 0.07]), 0.3):
                 c.line(smooth(run, False), lw * 0.8, pal['skin_dk'], int(180 * (1 - 0.5 * L)))
@@ -418,11 +440,22 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             if J > 0.25:   # no throat: the dark deepens into the middle
                 Xm, Ym = view.p2((hd.p3(0.0, float(hd.up(0.0)), 0.0, 0.0) + hd.p3(0.0, float(hd.lo(0.0)), 0.0, 1.0)) / 2)
                 c.glow(Xm, Ym, 14.0 * cm * J, 18.0 * cm * J, '#000000', 230)
+                # the mouth's side walls: pale stretched sinews and frost strands from the skull to the dropped jaw
+                ks = prog(J, 0.25, 0.8)
+                for sg in (-1, 1):
+                    for k in range(5):
+                        u0 = 0.62 + 0.08 * k + 0.03 * hash01(k, 3611); u1 = 0.55 + 0.09 * k
+                        a0 = hd.p3(sg * W * u0, float(hd.up(W * u0)) - 0.01, 0.0, 0.0)
+                        b0 = hd.p3(sg * W * u1, float(hd.lo(W * u1)) + 0.01, 0.0, 1.0)
+                        mid = (a0 + b0) / 2 + R['hrot'] @ np.array([-sg * (1.5 + 1.2 * hash01(k, 3612)), 0.0, -2.0])
+                        pp = [view.p2(a0), view.p2(mid), view.p2(b0)]
+                        if hd.facing(sg * W * u0, float(hd.up(W * u0))) < -0.15: continue
+                        c.line(smooth(pp, False), lw * (0.7 + 0.8 * hash01(k, 3613)), '#b9c3cf', int(120 * ks))
             elif icy < 0.5:   # the gum line behind the teeth
                 for run in hd.curve(lons * 0.9, hd.up(lons * 0.9) - 0.03, 0.0, -1.0):
                     c.line(smooth(run, False), lw * 2.0, '#6e2a3a', 200)
             # upper teeth
-            n_up = 12 if icy < 0.5 else 15
+            n_up = 12 if icy < 0.5 else 11
             for i in range(n_up):
                 u = (i + 0.5) / n_up * 2 - 1
                 lon_ = u * W * (0.86 if icy < 0.5 else 0.95)
@@ -435,13 +468,15 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 if icy < 0.5:
                     wid = spc * 0.86; ln = 2.1 * (1 - 0.45 * abs(u))
                 else:
-                    wid = 2.0 + 0.8 * hash01(i, 3201); ln = (6.0 + 9.0 * hash01(i, 3202)) * (1 - 0.35 * abs(u)) * (0.5 + 0.9 * J)
+                    fang = i in (2, 5, 8)
+                    wid = (2.9 if fang else 2.0 + 0.6 * hash01(i, 3201))
+                    ln = ((15.0 + 3.0 * hash01(i, 3202)) if fang else (4.5 + 3.5 * hash01(i, 3202))) * (1 - 0.30 * abs(u)) * (0.5 + 0.9 * J)
                 _sh_tooth(c, view, hd, root, dn, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
             # lower teeth (gap-toothed in the vendor grin)
-            n_lo = 8 if icy < 0.5 else 13
+            n_lo = 7 if icy < 0.5 else 9
             for i in range(n_lo):
                 u = (i + 0.5) / n_lo * 2 - 1
-                if icy < 0.5 and (hash01(i, 3203) < 0.4 or abs(u) < 0.2): continue
+                if icy < 0.5 and i in (2, 4): continue            # the gaps in his lower row
                 lon_ = u * W * 0.8
                 if hd.facing(lon_, float(hd.lo(lon_))) < -0.05: continue
                 root = hd.p3(lon_, float(hd.lo(lon_)) - 0.015, 0.0, jaw=1.0)
@@ -449,9 +484,11 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 if icy < 0.5:
                     dl_ = W * 0.8 / n_lo
                     wid = 0.9 * float(np.linalg.norm(hd.p3(lon_ + dl_, float(hd.lo(lon_ + dl_)), 0.0, 1.0) - hd.p3(lon_ - dl_, float(hd.lo(lon_ - dl_)), 0.0, 1.0)))
-                    ln = 1.3 * (1 - 0.4 * abs(u))
+                    ln = 2.1 * (1 - 0.4 * abs(u))
                 else:
-                    wid = 1.8 + 0.6 * hash01(i, 3204); ln = (4.0 + 7.0 * hash01(i, 3205)) * (0.5 + 0.8 * J)
+                    fang = i in (2, 6)
+                    wid = (2.6 if fang else 1.8 + 0.5 * hash01(i, 3204))
+                    ln = ((11.0 + 2.0 * hash01(i, 3205)) if fang else (3.5 + 3.0 * hash01(i, 3205))) * (0.5 + 0.8 * J)
                 _sh_tooth(c, view, hd, root, upd, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
         # the two big buck teeth with a gap between them, resting over the lower lip (fade as the mouth turns to icicles)
         if icy < 0.9:
@@ -471,6 +508,23 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             if len(up_run) > 1: c.line(smooth(up_run, False), lw * 1.3, pal['lip'], a_)
             if len(lo_run) > 1: c.line(smooth(lo_run, False), lw * 1.8, pal['lip'], a_)
         c.line(mouth, lw * 1.1, pal['line'])
+        if J > 0.3:
+            # the dropped jaw ends in a bone mandible: a U band under the lower teeth, cracked, its own shading
+            kj = prog(J, 0.3, 0.7)
+            Wm = W * 0.98
+            band = hd.region(-Wm, Wm, lambda lo_: hd.lo(np.abs(lo_)) - 0.30 - 0.10 * (1 - (np.abs(lo_) / Wm) ** 2),
+                             lambda lo_: hd.lo(np.abs(lo_)) - 0.01, nlon=18, nlat=3, grow=0.2, thr=-0.3, jaw=1.0)
+            if band is not None:
+                c.fill(band, pal['bone'], int(255 * kj))
+                bbj = band.getBounds()
+                c.grad(band, 0, bbj.top(), 0, bbj.bottom(), [(0, '#ffffff', 0), (0.55, pal['bone'], 0), (1, pal['bone_sh'], int(230 * kj))])
+                if det >= 1:
+                    for k in range(4):
+                        lo0 = (k - 1.5) * 0.45 * Wm
+                        run_l = np.array([lo0, lo0 + 0.06, lo0 + 0.02, lo0 + 0.09]); run_a = hd.lo(np.abs(run_l)) - np.array([0.04, 0.12, 0.20, 0.28])
+                        for run in hd.curve(run_l, run_a, 0.3, -0.3, jaw=1.0):
+                            c.line(poly(run, False), lw * 0.6, pal['crack_dk'], int(220 * kj))
+                c.line(band, lw * 1.1, pal['line'], int(255 * kj))
     # frost: flecks on the brow (normal), frost cracks across the mask (monster)
     if det >= 1:
         for i in range(34):
@@ -562,7 +616,8 @@ def _sh_torso(c, view, R, P, det, t, light, st):
     for hrow, w, d in _SH_ROWS:
         p, a = _ws_spine_pt(R, hrow)
         ph = np.linspace(0, 2 * PI, 24, endpoint=False)
-        k = 1.0 + 0.16 * bul * math.exp(-((hrow - 50.0) / 18.0) ** 2)
+        sw_ = 0.16 + 0.19 * clamp(bul * 1.6) + 0.035 * math.sin(t * 47.0) * bul * (1.0 - clamp(st['legs'] / 2.0))
+        k = 1.0 + sw_ * bul * math.exp(-((hrow - 50.0) / 18.0) ** 2)
         back = np.where(np.sin(ph) < 0, k + 0.1 * bul * np.cos(ph * 3) ** 2, 1.0)
         loc = np.stack([w * np.cos(ph) * (1 + 0.06 * bul), np.zeros_like(ph), d * np.sin(ph) * back], -1)
         Q = p + _rx(loc, a)
@@ -875,7 +930,7 @@ def _sh_leg_h(c, view, R, s, det, light):
 
 
 # ---------------------------------------------------------------------------------------------------- spider legs
-_SH_LEG_L = (34.0, 185.0, 200.0, 125.0)       # coxa, femur, tibia, tarsus (cm, rig units): ~2.8x his height stretched
+_SH_LEG_L = (34.0, 255.0, 270.0, 150.0)       # coxa, femur, tibia, tarsus (cm, rig units; the rig is 244 tall): ~2.9x his height
 _SH_LEG_ORDER = (1, 0, 3, 2, 5, 4, 7, 6)       # the order they punch out (his right top first)
 
 
@@ -945,6 +1000,11 @@ def _sh_leg_chain(R, P, i, e):
 _SH_LEG_W = ((16.0, 13.0), (13.0, 7.5), (7.0, 3.5), (3.5, 0.35))     # coxa, femur, tibia, tarsus: thick to a needle
 
 
+def _sh_leg_e(n, j):
+    """How far leg j (in _SH_LEG_ORDER) is out when n legs are out: they punch out one PAIR at a time."""
+    return clamp((n - 2 * (j // 2)) / 2.0)
+
+
 def _sh_leg_items(view, R, P, st, det, light, zt):
     """Depth-sorted draw items for the legs: the coxa (always behind the torso: it comes out of the split back) and the
     rest of each leg (femur, tibia, tarsus and their joints) as one item, so the joints overlap in the right order."""
@@ -952,7 +1012,7 @@ def _sh_leg_items(view, R, P, st, det, light, zt):
     items = []
     Bx, By = view.p2(R['Ch'])
     for j, i in enumerate(_SH_LEG_ORDER):
-        e = clamp(n - j)
+        e = _sh_leg_e(n, j)
         if e <= 0.01: continue
         ch = _sh_leg_chain(R, P, i, e)
         zc = min((view.depth(ch[0]) + view.depth(ch[1])) / 2, zt - 3.0)
@@ -1010,6 +1070,7 @@ def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
             tp = _tube([pts[0], ((pts[0][0] + q[0]) / 2, (pts[0][1] + q[1]) / 2), q], [ws[0], ws[0] * 0.78, wq], 0.8)
             c.fill(tp, pal['leg'])
             c.fill(_crescent(tp, side * 0.2 * ws[0], 0.25 * ws[0]), pal['leg_dk'], 170)
+            if light and light.get('rim'): c.fill(_crescent(tp, -side * 0.3 * ws[0], 0.0), light['rim'], int(light.get('rim_a', 60) * 1.3))
             c.line(tp, lw * 0.8, pal['line'])
             nd = _tube([q, ((q[0] + pts[-1][0]) / 2, (q[1] + pts[-1][1]) / 2), pts[-1]], [wq, wq * 0.45, max(ws[-1], 0.05)], 0.8)
             c.grad(nd, q[0], q[1], pts[-1][0], pts[-1][1], [(0, pal['leg_dk'], 255), (0.45, '#9a8f86', 255), (1, pal['tip'], 255)])
@@ -1020,6 +1081,8 @@ def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
         with c.clip(tp):
             c.fill(_crescent(tp, side * 0.22 * ws[1], 0.30 * ws[1]), pal['leg_hi'], 160)       # the lit edge
             c.fill(_crescent(tp, -side * 0.20 * ws[1], -0.26 * ws[1]), pal['leg_dk'], 170)     # the shadow edge
+            if light and light.get('rim'):                                                      # moon / window rim: reads on the night
+                c.fill(_crescent(tp, -side * 0.30 * ws[1], 0.0), light['rim'], int(light.get('rim_a', 60) * 1.3))
             if det >= 1:
                 dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]
                 Ld = math.hypot(dx, dy) or 1.0
@@ -1048,7 +1111,7 @@ def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
                 vx, vy = ox * sa + tx * ca, oy * sa + ty * ca
                 c.line(poly([(sx_, sy_), (sx_ + vx * ln, sy_ + vy * ln)], False), max(lw * 0.45, 0.8 * px), pal['leg_dk'], 230)
         # the flared end cap over the joint at this segment's far end (the next segment's ball sits under it)
-        if sgi < 3:
+        if 0 < sgi < 3:
             ex, ey = pts[-1]
             rr = ws[-1] * 0.5 * 1.15
             cap = oval(ex, ey, rr, rr)
@@ -1058,9 +1121,27 @@ def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
         # the dark ball joint at the start of this segment, under the previous segment's flare
         if sgi >= 1:
             X, Y = view.p2(a3)
-            rb = 0.42 * wd[0] * fa
+            rb = (0.30 if sgi == 1 else 0.42) * wd[0] * fa
             ball = oval(X, Y, rb, rb)
             c.fill(ball, pal['leg_dk']); c.line(ball, lw * 0.7, pal['line'])
+    if 0 in segs:
+        Xr, Yr, _, fr_ = view.p(ch[0])
+        Xq, Yq = view.p2(ch[1])
+        ang0 = math.atan2(Yq - Yr, Xq - Xr)
+        for k in range(4):
+            a_ = ang0 + (k - 1.5) * 0.85 + (hash01(i * 7 + k, 3531) - 0.5) * 0.4
+            ln = (8.0 + 6.0 * hash01(i * 5 + k, 3532)) * fr_
+            wb = (3.0 + 1.5 * hash01(i + k, 3533)) * fr_
+            px_, py_ = -math.sin(a_), math.cos(a_)
+            bx_, by_ = Xr + math.cos(a_) * 5.0 * fr_, Yr + math.sin(a_) * 5.0 * fr_
+            tipx, tipy = bx_ + math.cos(a_) * ln, by_ + math.sin(a_) * ln
+            jag = [(bx_ - px_ * wb, by_ - py_ * wb), (bx_ + math.cos(a_) * ln * 0.55 - px_ * wb * 0.9, by_ + math.sin(a_) * ln * 0.55 - py_ * wb * 0.9),
+                   (tipx - px_ * wb * 0.3, tipy - py_ * wb * 0.3), (bx_ + math.cos(a_) * ln * 0.75 + px_ * wb * 0.1, by_ + math.sin(a_) * ln * 0.75 + py_ * wb * 0.1),
+                   (tipx + px_ * wb * 0.5, tipy + py_ * wb * 0.5), (bx_ + px_ * wb, by_ + py_ * wb)]
+            fl = poly(jag, True)
+            c.fill(fl, _SH_PAL['pink'] if k % 2 == 0 else _SH_PAL['white'])
+            c.fill(_crescent(fl, 0, -wb * 0.3), _SH_PAL['pink_sh'], 140)
+            c.line(fl, lw * 0.7, pal['line'])
     if det >= 1:
         for ex, ey, w_cm, jn in joints:
             _sh_rime(c, ex, ey, w_cm * view.p(ch[jn])[3] * 0.62, i * 11 + jn, px, lw)
@@ -1100,6 +1181,7 @@ def _sh_rig(P, st):
         k = clamp(P.sh_lift / 80.0)
         P = P.copy(); P.ws_crouch = max(P.ws_crouch, 1.25 * k); P.ws_bend = max(P.ws_bend, 0.38 * k)
         P.ws_face_up = min(P.ws_face_up, 0.75 - 0.45 * k)
+        P.h_nod = P.h_nod + float(P.sh_hang) * k      # the long pale head hangs down (the bible's read test)
     R = _ws_rig(P)
     # his long neck: the head rides up the neck line
     Nb = R['Nb']; d = _u3(R['head'] - Nb)
@@ -1231,7 +1313,7 @@ def _sh_pts(P):
                 out[kk] = (out[kk][0], out[kk][1] - P.sh_lift * k)
     n = st['legs']
     for j, i in enumerate(_SH_LEG_ORDER):
-        ch = _sh_leg_chain(R, P, i, clamp(n - j) if n > j else 1.0)
+        ch = _sh_leg_chain(R, P, i, _sh_leg_e(n, j) if n > j else 1.0)
         out['leg%d' % i] = pr(ch[-1]); out['knee%d' % i] = pr(ch[2])
     return out
 
@@ -1261,7 +1343,6 @@ _ADAM_CLOTH = dict(top='#263a66', top_sh='#16244a', top_hi='#3c5590', hood='#223
 CAST['adam'] = _v3cast(outfit='raincoat_kid', feet='boots', **_ADAM, cloth=dict(_ADAM_CLOTH))
 CAST['adam_in'] = _v3cast(outfit='hoodie3', feet='socks', **dict(_ADAM, hair='side_short'),        # indoors, no hat
                           cloth=dict(_ADAM_CLOTH, top='#4b6a8c', top_sh='#324c6a', top_hi='#6a8aac'))
-CAST['adam_sock'] = _v3cast(outfit='raincoat_kid', feet='socks', **_ADAM, cloth=dict(_ADAM_CLOTH))   # lost a boot (see CAST.md)
 
 # Lina, 6: big gap-toothed smile, pink pyjamas with snowflakes, an open puffy yellow coat, a pom-pom hat, bare hands.
 _LINA = dict(_JUNE, hair='della_cap', hair_c='#3a2418', brow_c='#2c1a10', iris_c='#4a3020', gap=True, m=1.15, hh=242.0,
@@ -1315,6 +1396,213 @@ CAST['mom_photo'] = _v3cast(
     cloth=dict(top='#eef0f2', top_sh='#bcc2c8', top_hi='#ffffff', shirt='#7a9ac0', shirt_sh='#5a7aa0', trousers='#3a4a6a',
                trousers_sh='#263248', shoes='#2a2a30', shoes_sh='#141418', pocket='#dfe3e8', button='#dfe3e8', scarf='#b0485e'))
 CAST['shiver_mom'] = dict(CAST['mom_photo'], breath=0.0, blink_rate=0.0, lock=1.0, micro=0.0)
+
+# ---------------------------------------------------------------------------------------------- one boot, one sock
+# adam_sock after 6:45: the LEFT boot still on, the RIGHT foot in a grey sock caked with snow (feet_lr: side -> kind).
+_draw_legs3_ice_prev = _draw_legs3
+
+
+def _draw_legs3(c, sp, B, P, det, t, legc, legsh, shoec, order_only=False):
+    lr = sp.get('feet_lr')
+    if not lr:
+        return _draw_legs3_ice_prev(c, sp, B, P, det, t, legc, legsh, shoec, order_only)
+    b = sp['body']
+    cl = sp['cloth']
+    legs = []
+    for side in (-1, 1):
+        H, K, A, pitch = _leg_chain(sp, B, P, side)
+        h2 = B.p3(H[0], H[1] - B.bob, H[2], upper=False); k2 = B.p3(K[0], K[1] - B.bob, K[2], upper=False)
+        a2 = B.p3(A[0], A[1] - B.bob, A[2], upper=False)
+        legs.append((h2, k2, a2, side, A, pitch))
+    legs.sort(key=lambda o: o[0][3] + o[2][3])
+    lw0, lw1 = b['leg']
+    for hp, kp, ap, side, A, pitch in legs:
+        kind = lr.get(side, sp.get('feet', 'shoes'))
+        P2 = [(hp[0], hp[1]), (kp[0], kp[1]), (ap[0], ap[1])]
+        widths = [lw0 * hp[2], (lw0 + lw1) / 2 * kp[2], lw1 * ap[2]]
+        tp = _tube(P2, widths)
+        pts = []
+        cp, spp = math.cos(pitch), math.sin(pitch)
+        for (fx, fy, fz) in _foot_box(kind):
+            yy = fy * cp - fz * spp; zz = fz * cp + fy * spp
+            X, Y, s_, Z = B.p3(A[0] + fx, A[1] + 38.0 + yy - B.bob, A[2] + zz, upper=False)
+            pts.append((X, Y))
+        foot = smooth(_hull(pts), True, 0.6)
+        foot_back = (B.ct * math.cos(pitch) < -0.1)
+        if foot_back: _foot_fill(c, sp, kind, foot, cl, det, P, B, side)
+        c.fill(tp, legc); _cloth_shade(c, tp, legsh, 160, 1.0, 10)
+        if det >= 1 and sp.get('legs_tex', True): c.texture(tp, 'fabric', 0.08, 0.6)
+        _leg_extra(c, sp, P2, widths, det, side, B)
+        c.line(tp, c.lw)
+        if not foot_back: _foot_fill(c, sp, kind, foot, cl, det, P, B, side)
+
+
+_foot_fill_ice_prev = _foot_fill
+
+
+def _foot_fill(c, sp, kind, foot, cl, det, P, B, side):
+    _foot_fill_ice_prev(c, sp, kind, foot, cl, det, P, B, side)
+    if kind == 'socks' and cl.get('sock_snow') and det >= 1:      # wet wool caked with snow clumps
+        bb = foot.getBounds()
+        with c.clip(foot):
+            for k in range(6):
+                x_ = bb.left() + bb.width() * (0.12 + 0.76 * hash01(k, 3801)); y_ = bb.top() + bb.height() * (0.35 + 0.6 * hash01(k, 3802))
+                r_ = bb.height() * (0.10 + 0.08 * hash01(k, 3803))
+                c.fill(oval(x_, y_, r_ * 1.3, r_), '#ffffff', 235); c.fill(oval(x_ + r_ * 0.3, y_ + r_ * 0.3, r_ * 0.8, r_ * 0.5), '#c9d6ea', 200)
+            c.fill(rect(bb.left() - 4, bb.bottom() - bb.height() * 0.22, bb.width() + 8, bb.height()), '#9aa6b8', 120)   # soaked sole
+        c.line(foot, c.lw)
+
+
+CAST['adam_sock'] = _v3cast(outfit='raincoat_kid', feet='boots', **_ADAM,
+                            cloth=dict(_ADAM_CLOTH, socks='#d8d8e0', socks_sh='#9fa3b0', sock_toe=None, sock_snow=True))
+CAST['adam_sock']['feet_lr'] = {1: 'boots', -1: 'socks'}
+
+
+# ---------------------------------------------------------------------------------------------- carrying Lina
+def _ice_carry(self, t0, child, t1=None, fade=0.5, face_lens=0.55):
+    """Carry a small child on the hip and chest (Adam with Lina): her seat on his near forearm, her thighs round his
+    waist with the knees bent, her arms locked round his neck, her cheek on his shoulder and her face turned to the lens;
+    his near arm under her seat, his far arm across her back. Draw with draw_carry_child (it places her)."""
+    self._carry = child
+    child._carried_by = self
+    near = lambda t: (1 if math.sin(self._raw(t, False).turn * PI / 2) <= 0 else -1)
+    s_near = near(t0 + 0.01)
+    self.reach_to(t0, s_near, (child, 'hip'), t1=t1, dur=fade, z=30.0, contact='palm', shape='grip', fade=fade, lean=False)
+    self.reach_to(t0, -s_near, (child, 'chest'), t1=t1, dur=fade, z=-6.0, contact='palm', shape='open', fade=fade, lean=False)
+
+    def fn(P, t):
+        w = _env(t, t0, t1, fade, fade)
+        if w <= 0: return
+        Pc = self._raw(t, False)
+        P.turn = lerp(P.turn, -Pc.turn, w)                     # chest to chest
+        P.sit = max(P.sit, 0.95 * w); P.seat = max(getattr(P, 'seat', 0.0) or 0.0, 1.0 * w); P.crouch = 0.0
+        P.h_turn += face_lens * (1 if Pc.turn > 0 else -1) * w   # her face turned out to the lens, cheek on his shoulder
+        P.h_tilt += 12.0 * w; P.h_nod += 0.10 * w
+        for side in (-1, 1): child._arm(P, side, w, 30.0, 40.0, 170.0, 'fist', up=0.0)
+    child._add(t0, None if t1 is None else t1 + fade, fn)
+    for side in (-1, 1):                                      # arms locked round his neck
+        child.reach_to(t0, side, (self, 'neck'), t1=t1, dur=fade, z=(-8.0 if side == s_near else 8.0), contact='palm', shape='grip',
+                       fade=fade, lean=False)
+    return self
+
+
+Acting.carry = _ice_carry
+
+
+def carry_anchor(carrier, t):
+    """Design point where a carried child's hips sit: on the carrier's forearm at the hip, against the front of the body."""
+    bx, by = carrier.where(t, 'belly', post=False)
+    hx, hy = carrier.where(t, 'hip', post=False)
+    P = carrier._raw(t, False)
+    face = math.sin(P.turn * PI / 2)
+    s = carrier.height / 1000.0
+    return bx + face * 92.0 * s, (by + hy) / 2 + 95.0 * s
+
+
+def draw_carry_child(pen, carrier, child, t, light=None, clight=None):
+    """Draw a child carried on the hip (carrier.carry(t0, child)): the carrier with its far arm, the child placed at
+    carry_anchor (her hips on his forearm), then the carrier's near arm over her seat."""
+    ax, ay = carry_anchor(carrier, t)
+    child.place(0.0, 0.0)
+    hx, hy = child.where(t, 'hip', post=False)
+    child.place(ax - hx, ay - hy)
+    Pc = child.at(t)
+    Pcar = carrier.at(t)
+    near = 1 if math.sin(Pcar.turn * PI / 2) <= 0 else -1
+    draw(pen, carrier.who, carrier.x0, carrier.y0, carrier.height, Pcar, light=light, t=t)
+    draw(pen, child.who, child.x0, child.y0, child.height, Pc, light=clight or light, t=t)
+    draw_arm(pen, carrier.who, near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
+
+
+def draw_breath(pen, actor, t, period=1.1, k=1.0, c='#ffffff', phase=0.0):
+    """A white breath puff from the mouth in the cold (people only: never Mister Shiver), one per `period` s, drifting
+    up and forward and fading. k: size (1 = a calm breath; 1.5 = panting)."""
+    if CAST[actor.who].get('shiver') or CAST[actor.who].get('breath', 1.0) <= 0: return
+    mx, my = actor.where(t, 'mouth')
+    P = actor._raw(t, False)
+    face = math.sin(P.turn * PI / 2) or 0.3
+    s = actor.height / 1000.0
+    for n in range(2):
+        u = ((t + phase) / period - n) % 1.0 if n == 0 else ((t + phase) / period + 0.5) % 1.0
+        if n == 1 and k < 1.3: continue
+        a = int(150 * (1.0 - u) ** 1.5 * min(1.0, u * 8.0))
+        if a <= 2: continue
+        x = mx + face * (30.0 + 90.0 * u) * s * k; y = my - 25.0 * u * s
+        r = (14.0 + 40.0 * u) * s * k
+        pen.glow(x, y, r, c, a)
+
+
+# ---------------------------------------------------------------------------------------------- the kids' coats
+# Lina's puffy yellow coat hangs OPEN over her pink snowflake pyjamas; Adam's navy coat is quilted in puffy baffles.
+_front_coat_small_ice_prev = _FRONTS3['coat_small']
+_front_raincoat_kid_ice_prev = _FRONTS3['raincoat_kid']
+
+
+def _ice_snowflake(c, X, Y, r, colr, a=255):
+    for k in range(3):
+        a_ = PI / 2 + k * PI / 3
+        dx, dy = math.cos(a_) * r, math.sin(a_) * r
+        c.line(poly([(X - dx, Y - dy), (X + dx, Y + dy)], False), max(r * 0.28, 0.6), colr, a)
+
+
+def _front_coat_open(c, sp, B, rows, P, det, t):
+    if not sp.get('open_coat'):
+        return _front_coat_small_ice_prev(c, sp, B, rows, P, det, t)
+    cl = sp['cloth']; b = sp['body']; lw = c.lw
+    yS, yH = B.y_sh, B.y_hip
+    gap, v = _surf_poly(B, rows, [(-15, yS + 2), (15, yS + 2), (34, yH + 4), (-34, yH + 4)], dz=2)
+    if v > -0.2:
+        gp = smooth(gap, True, 0.35)
+        c.fill(gp, cl.get('pj', '#f2a8c4')); c.fill(_crescent(gp, 0, -5), cl.get('pj_sh', '#c97898'), 120)
+        if det >= 1:
+            for k, (xx, yy) in enumerate(((-6, 0.30), (8, 0.52), (-10, 0.74), (4, 0.92))):
+                X, Y, vv, s_ = B.surf(xx, yS + (yH - yS) * yy, 3, False, rows)
+                if vv > 0.1: _ice_snowflake(c, X, Y, 9.0 * s_, '#ffffff', 250)
+        c.line(gp, lw * 0.9)
+        for sd in (-1, 1):                         # the coat's open front edges: thick, padded
+            ed, v2 = _surf_poly(B, rows, [(sd * 15, yS + 2), (sd * 34, yH + 4)], dz=5)
+            if v2 > -0.2: c.line(poly(ed, False), lw * 2.2, cl.get('top_sh', '#c99a24'), 200)
+    for sd in (-1, 1):                             # collar
+        cc, v3 = _surf_poly(B, rows, [(sd * 2, yS - 24), (sd * (b['neck'] + 8), yS - 30), (sd * (b['neck'] + 20), yS - 6), (sd * 22, yS + 18), (sd * 9, yS + 6)], dz=6)
+        if v3 > -0.2: cp = smooth(cc, True, 0.8); c.fill(cp, cl['collar']); c.line(cp, lw * 0.6)
+    if det >= 1:                                   # puffy baffles across each front panel
+        for k in range(1, 4):
+            yy = yS + k * (yH - yS) / 4.0
+            for sd in (-1, 1):
+                x0 = 11 + 14 * k / 4.0
+                pts, v4 = _surf_poly(B, rows, [(sd * x0, yy), (sd * (x0 + 20), yy + 3), (sd * (b['ch'] * 0.95), yy)], dz=4)
+                if v4 > -0.2: c.line(smooth(pts, False), lw * 0.8, cl.get('top_sh', '#c99a24'), 210)
+
+
+def _front_raincoat_quilt(c, sp, B, rows, P, det, t):
+    _front_raincoat_kid_ice_prev(c, sp, B, rows, P, det, t)
+    if sp.get('quilt') and det >= 1:              # three horizontal quilting baffles on the puffy navy coat
+        cl = sp['cloth']; b = sp['body']
+        yS, yH = B.y_sh, B.y_hip
+        for k in range(1, 4):
+            yy = yS + 18 + k * (yH - yS - 18) / 4.0
+            pts, v = _surf_poly(B, rows, [(-b['ch'] * 0.98, yy), (-b['ch'] * 0.5, yy + 4), (0, yy + 5), (b['ch'] * 0.5, yy + 4), (b['ch'] * 0.98, yy)], dz=4)
+            if v > -0.2:
+                c.line(smooth(pts, False), c.lw * 1.0, cl.get('top_sh', '#16244a'), 230)
+                c.line(smooth([(x_, y_ - 4.0) for x_, y_ in pts], False), c.lw * 1.4, cl.get('top_hi', '#3c5590'), 90)
+
+
+_FRONTS3['coat_small'] = _front_coat_open
+_FRONTS3['raincoat_kid'] = _front_raincoat_quilt
+for _w in ('adam', 'adam_sock', 'walter58'):
+    CAST[_w]['quilt'] = True
+CAST['lina']['open_coat'] = True
+CAST['lina']['cloth'].update(pj='#f2a8c4', pj_sh='#c97898')
+CAST['lina'].update(eye_r=CAST['lina']['eye_r'] * 1.10, eye_y=CAST['lina'].get('eye_y', 0) + 5)
+CAST['lina_pj'].update(eye_r=CAST['lina_pj']['eye_r'] * 1.10, eye_y=CAST['lina_pj'].get('eye_y', 0) + 5)
+# Mr. Kessler: the large ears (the bible); out in the snow with no coat: the blue-grey skin of severe cold
+for _w in ('kessler', 'kessler_out', 'kessler_am'):
+    CAST[_w]['ears'] = 1.6
+CAST['kessler_out'].update(skin=mix(CAST['kessler_out']['skin'], '#B9C3CF', 0.38), skin_sh=mix(CAST['kessler_out'].get('skin_sh', '#a88a7c'), '#8593a6', 0.4),
+                           blush=mix(CAST['kessler_out'].get('blush', '#d98d80'), '#B9C3CF', 0.6))
+# Dad: heavier stubble
+CAST['dad']['stub'] = 0.85
+
 
 ICE_CAST = ('shiver', 'adam', 'adam_in', 'adam_sock', 'lina', 'lina_pj', 'dad', 'kessler', 'kessler_out', 'kessler_am',
             'walter58', 'benny', 'medic_a', 'medic_b', 'mom_photo', 'shiver_mom')
@@ -1372,8 +1660,10 @@ def _sh_transform(self, t0, times=None, step=1.4):
            self._ev(times[3], 'sh_eyes_sink', -8.0), self._ev(t_at(SH_STAGES['red'][0]), 'sh_eyes_red', -4.0),
            self._ev(times[5] - 0.3, 'sh_jaw_drop', 0.0), self._ev(t_at(SH_STAGES['split'][0]), 'sh_uniform_split', -2.0)]
     a, b = SH_STAGES['legs']
-    for j in range(8):
-        evs.append(self._ev(t_at(a + (b - a) * (j + 1) / 8.0), 'leg_click', -2.0 + (2.0 if j < 3 else 0.0), leg=_SH_LEG_ORDER[j]))
+    for p_ in range(4):                     # one pair per click ("Click. Another. Click. Click.")
+        tc = t_at(a + (b - a) * (2 * p_ + 2) / 8.0)
+        evs.append(self._ev(tc, 'leg_click', -2.0 + (2.0 if p_ < 2 else 0.0), leg=_SH_LEG_ORDER[2 * p_]))
+        evs.append(self._ev(tc + 0.06, 'leg_click', -6.0, leg=_SH_LEG_ORDER[2 * p_ + 1]))
     return evs
 
 
@@ -1436,11 +1726,13 @@ def _sh_legs_plant(self, t0, targets, stagger=0.07, dur=0.22, zd=40.0):
     return evs
 
 
-def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.16, lift=0.0, ease=0.25):
-    """He scuttles: path(u) -> world (x, y) of his feet origin for u 0..1 (eased in/out), ground(x) -> world y of the
-    surface under a leg tip (a fence top, a car, a roof; default: the path's y). Each leg steps in a staggered gait,
-    needle tips planted between steps. 'leg_click' on every landing (pan follows)."""
-    phases = [((j * 3) % 8) / 8.0 for j in range(8)]
+def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.42, lift=60.0, ease=0.25, spread=1.6, pitch=12.0):
+    """He scuttles like a harvestman: a wide arch of legs (sh_spread `spread`) with the small body slung low under it,
+    pitched forward along the path, the long head hanging down. path(u) -> world (x, y) of his feet origin for u 0..1
+    (eased in/out); ground(x) -> world y of the surface under a tip (a fence top rail, a car roof, a roof slope; default:
+    the path's y): every tip is planted ON it. Alternating tetrapod gait (legs 0,3,4,7 against 1,2,5,6); a 'leg_click'
+    for every tip that lands (pan follows)."""
+    grp = {i: (0.0 if i in (0, 3, 4, 7) else 0.5) for i in range(8)}
     S_ = stride if stride is not None else self.height * 0.55
     dur = t1 - t0
 
@@ -1455,31 +1747,50 @@ def _sh_scuttle(self, t0, t1, path, ground=None, stride=None, swing=0.16, lift=0
     def fn(P, t):
         if t < t0: return
         (bx, by), uu = body_xy(t)
+        (bx2, by2), _ = body_xy(min(t + 0.05, t1 + 0.05))
         P.dx += bx - self.x0; P.dy += by - self.y0
         P.sh_lift = max(P.sh_lift, lift)
+        P.sh_spread = spread
+        P.sh_hang = max(P.sh_hang, 0.95)                      # the long pale head hanging down
+        dirx = 1.0 if bx2 >= bx else -1.0
+        slope = math.degrees(math.atan2(by2 - by, abs(bx2 - bx) + 1e-6)) if abs(bx2 - bx) > 0.5 else 0.0
+        P.ws_bend = max(P.ws_bend, pitch / 40.0)              # the body pitched down under the arch (no 2D tilt: tips stay planted)
         view = _WSView(P)
         R = _sh_rig(P, _sh_state(P))
         sc = self.height / 1000.0 * _WSU * max(P.ws_scale, 1e-3)
-        for j, i in enumerate(_SH_LEG_ORDER):
+        xb = bx - self.x0
+        for i in range(8):
             rc = _sh_leg_rest(R, P, i)
             rx_, ry_ = view.p2(rc)
             ox = rx_ * sc
-            xb = bx - self.x0
-            ph = phases[j] * S_
-            n = math.floor((xb + ph) / S_)
-            fr = (xb + ph) / S_ - n
-            spot0 = n * S_ - ph; spot1 = spot0 + S_
+            ph = grp[i] * S_
+            n = math.floor((xb * dirx + ph) / S_)
+            fr = (xb * dirx + ph) / S_ - n
+            spot0 = (n * S_ - ph) * dirx; spot1 = spot0 + S_ * dirx
             sw = clamp((fr - (1 - swing)) / swing)
             tipx = self.x0 + ox + spot0 + (spot1 - spot0) * ease_in_out(sw)
             gy = ground(tipx) if ground is not None else by
             q = _sh_world_cm(self, P, tipx, gy, rc[2])
             setattr(P, 'sh_t%dw' % i, 1.0); setattr(P, 'sh_t%dx' % i, q[0]); setattr(P, 'sh_t%dy' % i, q[1]); setattr(P, 'sh_t%dz' % i, q[2])
-            setattr(P, 'sh_t%dlift' % i, 45.0 * math.sin(PI * sw))
+            setattr(P, 'sh_t%dlift' % i, 55.0 * math.sin(PI * sw))
     self._add(t0, None, fn)
+    # a click for every landing: sample the body path, count stride crossings per group
     evs = []
-    n_ev = int(dur / 0.11)
-    for k in range(n_ev):
-        evs.append(self._ev(t0 + 0.11 * k + 0.05 * hash01(k, 3701), 'leg_click', -6.0 - 3.0 * hash01(k, 3702), leg=k % 8))
+    last = {}
+    k = 0
+    for m in range(int(dur * 120) + 1):
+        t = t0 + m / 120.0
+        (bx, by), _ = body_xy(t)
+        (bx2, _), _ = body_xy(min(t + 0.05, t1 + 0.05))
+        dirx = 1.0 if bx2 >= bx else -1.0
+        xb = (bx - self.x0) * dirx
+        for gph in (0.0, 0.5):
+            n = math.floor((xb + gph * S_) / S_)
+            if gph in last and n != last[gph]:
+                for j, i in enumerate([i_ for i_ in range(8) if grp[i_] == gph]):
+                    evs.append(self._ev(t + 0.025 * j, 'leg_click', -4.0 - 3.0 * hash01(k + j, 3702), leg=i))
+                k += 4
+            last[gph] = n
     return evs
 
 
@@ -1508,25 +1819,59 @@ def _sh_cage(self, t0, center, width, ground_y, dur=0.5, lift=150.0):
     return _sh_legs_plant(self, t0, tg, stagger=0.06, dur=dur * 0.5)
 
 
-def _sh_pour_out(self, t0, dur=2.4, sill_dy=-300.0, ground_dy=200.0, forward=1.0, lift=110.0):
-    """He pours out of the serving window head first, legs last: the body rises to the sill and tips over it head first
-    (rotating about his hips at the sill), slides down the side of the truck to the snow, and only then the legs come out
-    (sh_legcap 0 -> 8), plant, and lift him upright into the cage of legs. sill_dy: px from his feet origin up to the sill;
-    ground_dy: px from the origin down to the snow. His human legs stay hidden (inside the truck) throughout."""
+def _sh_pour_out(self, t0, dur=2.4, sill_dy=-300.0, ground_dy=0.0, forward=1.0, lift=110.0, roof_dy=None, frame_w=None, ground=None):
+    """He pours out of the serving window HEAD FIRST, LEGS LAST, always held by his spider legs (never floating):
+      0.00-0.30  four legs already grip the roof edge and the window frame; he rises to the sill and curls over it neck
+                 first (ws_bend 0 -> 1.25), the long head hanging toward the snow; both gloves reach down and plant in
+                 the snow below the window;
+      0.30-0.62  the roof legs haul his hips up and out over the sill (the human legs fold under, coming out last);
+      0.62-1.00  the other four legs unfold out of the window one by one and step over the roof edge to the snow, the
+                 roof legs step down after them, and he is lowered into the cage of legs on the snow (lift cm).
+    sill_dy: px from his feet origin up to the sill; ground_dy: px from the origin down to the snow; roof_dy: px from the
+    origin up to the roof edge (default sill_dy - 1.4 m); frame_w: window width px (default 1.25 m); ground(x) -> snow y
+    (tips are clamped to it). Draw him in two passes (see CAST.md): through the window hole, then in front of the wall;
+    sh_nolegs is set here (human legs hidden until the hips are over the sill)."""
+    ppm = self.height / _SH_M
+    roof_dy = (sill_dy - 1.4 * ppm) if roof_dy is None else roof_dy
+    fw = (1.25 * ppm) if frame_w is None else frame_w
+    hip_px = 0.50 * self.height
+    rise = min(0.0, sill_dy + hip_px - 0.06 * ppm)                       # the origin up so the hips reach the sill
+    x0, y0 = self.x0, self.y0
+    gy = (lambda x: y0 + ground_dy) if ground is None else ground
+    plant = {0: (x0 + 0.95 * fw, y0 + roof_dy), 1: (x0 - 0.95 * fw, y0 + roof_dy),
+             2: (x0 + 0.52 * fw, y0 + sill_dy - 0.95 * ppm), 3: (x0 - 0.52 * fw, y0 + sill_dy - 0.95 * ppm)}
+
     def fn(P, t):
-        P.sh_nolegs = 1.0
-        if t < t0: P.sh_legcap = 0.0; return
-        u = prog(t, t0, t0 + dur)
-        a = ease_in_out(prog(u, 0.0, 0.40))           # up onto the sill and over, head first
-        b = ease_in_out(prog(u, 0.30, 0.70))          # sliding down the side, head down
-        c = ease_in_out(prog(u, 0.62, 1.00))          # legs out, plant, rights itself
-        P.tilt += forward * ((95.0 * a + 45.0 * b) * (1.0 - c))      # head first, down the side of the truck
-        P.dy += sill_dy * a * (1.0 - c) + ground_dy * c
-        P.dx += forward * self.height * (0.18 * a + 0.10 * b + 0.25 * c)
-        P.sh_legcap = 8.0 * ease_out_cubic(prog(u, 0.58, 0.95))
-        P.sh_lift = max(P.sh_lift, lift * c)
+        u = prog(t, t0, t0 + dur) if t >= t0 else 0.0
+        a = ease_in_out(prog(u, 0.0, 0.30))
+        b = ease_in_out(prog(u, 0.30, 0.62))
+        c = ease_in_out(prog(u, 0.62, 1.00))
+        P.sh_legs = 8.0
+        P.sh_legcap = 4.0 + 4.0 * prog(u, 0.62, 0.92)                    # the last four unfold out of the window
+        P.sh_nolegs = 0.0 if b > 0.55 else 1.0
+        P.ws_bend = max(P.ws_bend, 1.25 * ease_in_out(prog(u, 0.08, 0.30)) * (1.0 - c) + 0.38 * c)
+        P.__dict__['_sh_pour_u'] = u                                      # for the set's mask (hips behind the wall: u < 0.1)
+        P.ws_face_up = min(P.ws_face_up, 0.75 - 0.6 * a * (1.0 - c))      # neck first: the head hangs toward the snow
+        P.h_nod += 0.35 * a * (1.0 - c)
+        P.dy += rise * ease_in_out(prog(u, 0.0, 0.12)) * (1.0 - c) + ground_dy * c
+        P.dx += forward * self.height * (0.10 * b + 0.22 * c)
+        P.sh_lift = max(P.sh_lift, 55.0 * b * (1.0 - c) + lift * c)
+        # the four gripping legs: on the roof edge and the window frame, then (0.70-0.95) each steps down to the snow
+        for k, (i, (tx, ty)) in enumerate(sorted(plant.items())):
+            s0 = 0.70 + 0.06 * k
+            w = 1.0 - ease_in_out(prog(u, s0, s0 + 0.12))
+            q = _sh_world_cm(self, P, tx, min(ty, gy(tx)), 40.0)
+            setattr(P, 'sh_t%dw' % i, w); setattr(P, 'sh_t%dx' % i, q[0]); setattr(P, 'sh_t%dy' % i, q[1]); setattr(P, 'sh_t%dz' % i, q[2])
+            setattr(P, 'sh_t%dlift' % i, 60.0 * math.sin(PI * prog(u, s0, s0 + 0.12)))
     self._add(-INF, None, fn)
-    return [self._ev(t0, 'sh_pour', 0.0), self._ev(t0 + dur * 0.7, 'leg_click', -2.0), self._ev(t0 + dur * 0.85, 'leg_click', -2.0)]
+    # the gloves go down first and plant in the snow below the window, released as the legs take him
+    for side, dxk in ((1, 0.22), (-1, -0.22)):
+        self.reach_far(t0 + dur * 0.06, side, (x0 + dxk * fw, gy(x0 + dxk * fw) - 0.02 * ppm), t1=t0 + dur * 0.66,
+                       dur=dur * 0.24, z=55.0, shape='flat')
+    evs = [self._ev(t0, 'sh_pour', 0.0), self._ev(t0 + dur * 0.30, 'glove_snow', -6.0)]
+    evs += [self._ev(t0 + dur * (0.62 + 0.30 * k / 4.0), 'leg_click', -2.0, leg=_SH_LEG_ORDER[4 + k]) for k in range(4)]
+    evs += [self._ev(t0 + dur * (0.82 + 0.06 * k), 'leg_click', -3.0, leg=k) for k in range(4)]
+    return evs
 
 
 def _sh_hang(self, t0, dur=0.9, lower=0.4):

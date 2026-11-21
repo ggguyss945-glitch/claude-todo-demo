@@ -147,11 +147,11 @@ def sheet_sh_transform():
         pen.linear(rect(x0 + 4, y0 + 4, cw - 8, ch - 8), 0, y0, 0, y0 + ch, [(0, '#ffb3d2', 255), (1, '#c8487e', 255)])
         cv.save(); cv.clipRect(skia.Rect.MakeXYWH(x0 + 4, y0 + 4, cw - 8, ch - 8))
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
-        if m >= 0.7:     # medium: the legs out of the back round him
-            P.turn = 0.08; P.ws_bend = 0.25
-            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.30, ch / 600.0 * 0.34, P, t=0.6, light=PINKW, detail=2)
-        else:
-            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.36, ch / 600.0 * 0.62, P, t=0.6, light=PINKW, detail=2)
+        if m >= 0.8:     # a wider medium (a cut): the legs out of the back, the knees high over him
+            P.turn = 0.08; P.ws_bend = 0.25; P.sh_spread = 0.6
+            CH.draw_bust(pen, "shiver", x0 + cw / 2, y0 + ch * 0.74, ch / 600.0 * 0.105, P, t=0.6, light=PINKW, detail=2)
+        else:            # one constant scale through the face steps (no pop when the jaw drops)
+            CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.30, ch / 600.0 * 0.44, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
         pen.fill(rect(x0 + 4, y0 + ch - 34, cw - 8, 30), '#000000', 150)
         label(cv, '%d. %s  (sh_m %.2f)' % (k, nm, m), x0 + cw / 2, y0 + ch - 13, 15)
@@ -163,9 +163,11 @@ def sheet_sh_monster():
     title(cv, 'MISTER SHIVER: monster form', 'eight brown jointed legs out of the split back (frost rime on every joint, pale needle tips); the small striped body slung under a high arch; long bone mask, red eyes, jaw to the chest, icicle teeth')
     pen.fill(rect(0, 120, 1920, 960), '#101420')
     pen.fill(rect(0, 900, 1280, 180), '#c9d6ea')
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(0, 120, 1280, 960))
     for i, (turn, lift, ht) in enumerate(((0.0, 150, 0.0), (0.6, 150, 0.2))):
-        P = P_(); P.turn = turn; P.sh_m = 1.0; P.sh_lift = lift; P.h_turn = ht
-        CH.draw(pen, 'shiver', 330 + i * 620, 900, CH.height_px('shiver', 220), P, light=NIGHTI, t=0.6, detail=2)
+        P = P_(); P.turn = turn; P.sh_m = 1.0; P.sh_lift = lift; P.h_turn = ht; P.sh_spread = 1.15
+        CH.draw(pen, 'shiver', 330 + i * 620, 900, CH.height_px('shiver', 150), P, light=NIGHTI, t=0.6, detail=2)
+    cv.restore()
     # silhouette read test (bible): black against the snow
     pen.fill(rect(1290, 120, 630, 960), '#dfe8f4')
     surf2 = skia.Surface(CFG.rw, CFG.rh); cv2_ = surf2.getCanvas(); cv2_.clear(skia.Color(0, 0, 0, 0)); cv2_.scale(CFG.k, CFG.k)
@@ -199,9 +201,9 @@ def sheet_sh_mood():
             pen.fill(rect(x0 + 380, y0 + 60, 480, 330), '#ff9fca')
             P = P_(); P.ws_bend = 0.15
             CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 190, 0.33, P, t=0.6, light=PINKW, detail=2)
-        else:
-            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.ws_bend = 0.25
-            CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 150, 0.30, P, t=0.6, light=PINKW, detail=2)
+        else:            # the monster as framed wide enough for the knees (top 15%), tips planted close (sh_spread 0.6)
+            P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.35; P.sh_lift = 120.0; P.sh_hang = 0.25
+            CH.draw(pen, 'shiver', x0 + 620, y0 + 690, CH.height_px('shiver', 185), P, t=0.6, light=NIGHTI, detail=2)
         cv.restore()
     save(surf, 'sh_mood')
 
@@ -251,10 +253,10 @@ def sheet_faces():
             ('lina', 'fear', 'fear'), ('lina', 'pleading', '"Don\'t leave me"'), ('lina_pj', 'kind_smile', '"You\'re not by yourself"')]
     _faces('faces_kids', [(w, P_(e), lb) for w, e, lb in kids], 'Adam and Lina: expressions', 'v3 faces: brows, lids, eyes lock on what the line is about', light=NIGHTI, cols=6)
     ads = [('dad', 'warm', 'Dad: warm ("Over.")'), ('dad', 'grim_drive', 'in the cab'), ('dad', 'shout', 'horn, again and again'),
-           ('kessler', 'stern', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', 'dazed', 'out in the snow: not shivering'),
+           ('kessler', 'stern', 'Kessler: grumpy'), ('kessler', 'lonely', 'at his dark window'), ('kessler_out', dict(expr='dazed', lid_l=0.55, lid_r=0.55, m_open=0.18, brow_up=0.0), 'out in the snow: NOT shivering (heavy lids, slack, blue-grey)'),
            ('kessler_out', 'sad', '"Bye, Benny."'), ('kessler', 'tender', 'cocoa: "First time anyone knocked"'), ('mom_photo', 'warm_smile', 'Mom (photo)'),
            ('shiver_mom', 'still_smile', 'HIS copy at the glass: no breath'), ('medic_a', 'focused', 'paramedic'), ('medic_b', 'calm_firm', 'paramedic')]
-    _faces('faces_adults', [(w, P_(e), lb) for w, e, lb in ads], 'Dad, Mr. Kessler, Mom, paramedics', '', light=NIGHTI, cols=6)
+    _faces('faces_adults', [(w, (P_(e.pop('expr'), **e) if isinstance(e, dict) else P_(e)), lb) for w, e, lb in ads], 'Dad, Mr. Kessler, Mom, paramedics', '', light=NIGHTI, cols=6)
 
 
 SHEETS = dict(sh_turn=sheet_sh_turn, sh_head=sheet_sh_head, sh_transform=sheet_sh_transform, sh_monster=sheet_sh_monster,

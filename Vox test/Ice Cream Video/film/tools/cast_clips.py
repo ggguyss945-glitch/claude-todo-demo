@@ -476,20 +476,33 @@ def _c_sh_transform_face():
     return dict(draw=draw, actors=[a])
 
 
-@clip('sh_transform_legs', 4.5, 'Wide: behind him the striped uniform bulges and splits; a long brown leg punches out, jointed like a spider\'s. Click. Another. Click. Click. They plant on the truck roof beside the snowflake. The song keeps playing; the warm pink window behind him.')
+@clip('sh_transform_legs', 5.0, 'Behind him the striped uniform bulges (it swells and quivers), splits along the stripes, and a long brown leg punches out, jointed like a spider\'s, one PAIR per click (a 3/4 medium on the split, then the wide): Click. Another. Click. Click. They plant on the truck roof beside the snowflake, the knees high over the roof. The song keeps playing; the warm pink window behind him.')
 def _c_sh_transform_legs():
-    ppm = 300.0
-    g = truck(None, 960, 700, ppm)
+    ts = [-6.0, -5.5, -5.0, -4.5, -4.0, 0.0, 1.4, 4.2]
+    # shot A (0 - 1.5 s): a 3/4 medium on his shoulders and back: the swell, the quiver, the split, the first pair
+    ppm_a = 900.0
+    am = sh(900, 1080 + 1.05 * ppm_a, ppm_a)
+    am.set(-1.0, None, 0.01, ws_bend=0.25, turn=0.62)
+    am.face(-0.35, 0.05)
+    am.slow_wave(0.0, 5.0, side=1)
+    am.transform(-6.0, ts)
+    # shot B (1.5 - 5 s): the wide: the truck, the legs planting on the roof beside the snowflake
+    ppm = 215.0
+    g = truck(None, 960, 860, ppm)
     a = sh(960, g['floor'], ppm)
     a.set(-1.0, None, 0.01, ws_bend=0.2)
-    a.slow_wave(0.0, 4.5, side=1)
-    ts = [-4.0, -3.5, -3.0, -2.5, -2.0, -0.2, 1.8, 3.6]
-    a.transform(-4.0, ts)
+    a.slow_wave(0.0, 5.0, side=1)
+    evs = a.transform(-6.0, ts)
     roof = g['roof']
-    tg = {i: (960 + (1 if i % 2 == 0 else -1) * (380 + 95 * (i // 2)), roof + 4) for i in range(8)}
-    a.legs_plant(-5.0, tg, stagger=0.0, dur=0.01)      # each leg unfolds straight onto its spot on the roof
+    tg = {i: (960 + (1 if i % 2 == 0 else -1) * (270 + 100 * (i // 2)), roof + 4) for i in range(8)}
+    a.legs_plant(-7.0, tg, stagger=0.0, dur=0.01)      # each leg unfolds straight onto its spot on the roof
     def draw(pen, t):
-        snow_street(pen, 860)
+        if t < 1.5:
+            pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#ffc6de'), (1, '#d8588e')])     # only his pink light behind
+            pen.glow(700, 300, 900, '#fff0f6', 120)
+            fig(pen, am, t, PINKW)
+            return
+        snow_street(pen, 960)
         truck_back(pen, g, ppm)
         truck_front(pen, g, ppm, 1.0, t)
         pen.cv.save(); pen.cv.clipPath(rect(0, g['sill'] + 10, 1920, 2000), skia.ClipOp.kDifference, True)
@@ -498,20 +511,31 @@ def _c_sh_transform_legs():
     return dict(draw=draw, actors=[a])
 
 
-@clip('sh_pour_out', 4.0, 'He pours out of the window. Head first. Legs last. Then the legs carry him over the edge into the snow.')
+@clip('sh_pour_out', 4.0, 'He pours out of the window. Head first. Legs last. Four legs grip the roof and the window frame; he curls over the sill neck first, the gloves plant in the snow, the legs haul his hips out, the last four legs unfold out of the window and everything steps down into the snow.')
 def _c_sh_pour():
-    ppm = 230.0
-    g = truck(None, 640, 520, ppm)
-    a = sh(640, g['floor'], ppm)
+    ppm = 190.0
+    g = truck(None, 760, 640, ppm)
+    a = sh(760, g['floor'], ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
-    a.face(0.15, 0.0)
-    a.pour_out(0.3, 3.2, sill_dy=-(g['floor'] - g['sill']) * 0.55, ground_dy=1010 - g['floor'])
+    a.face(0.1, 0.0)
+    a.pour_out(0.3, 3.4, sill_dy=g['sill'] - g['floor'], ground_dy=0.45 * ppm, forward=0.6, roof_dy=g['roof'] - g['floor'],
+               frame_w=g['x1'] - g['x0'])
     def draw(pen, t):
         snow_street(pen, 760)
         truck_back(pen, g, ppm)
+        pen.cv.save(); pen.cv.clipPath(g['hole'], skia.ClipOp.kIntersect, True)       # pass 1: seen through the window
+        P = a.at(t); P.sh_nolegs = 0.0
+        CH.draw(pen, a.who, a.x0, a.y0, a.height, P, light=PINKW, t=t)
+        pen.cv.restore()
         truck_front(pen, g, ppm, 1.0, t)
-        if t < 0.35: shiver_in_window(pen, a, t, g, lean=False)
-        else: fig(pen, a, t, PINKW)
+        hide = a.at(t).__dict__.get('_sh_pour_u', 0.0) < 0.10                          # still standing inside: wall hides him
+        if hide:
+            pen.cv.save(); pen.cv.clipPath(rect(0, g['sill'] + 10, 1920, 2000), skia.ClipOp.kDifference, True)
+        fig(pen, a, t, PINKW)                                                          # pass 2: out in front of the wall
+        if hide: pen.cv.restore()
+        if a.at(t).sh_nolegs > 0.5:                                                    # the sill ledge over his hips
+            Wd = g['x1'] - g['x0']
+            pen.fill(rect(g['x0'] - 20, g['sill'] - 6, Wd + 40, 22), '#d9dde4'); pen.line(rect(g['x0'] - 20, g['sill'] - 6, Wd + 40, 22), 3, '#1a1418')
     return dict(draw=draw, actors=[a])
 
 
@@ -524,10 +548,10 @@ def _c_sh_scuttle():
         if x < 1150: return FY - (1.45 * ppm) * math.sin(PI * clamp((x - 700) / 450))  # over the car
         return FY - 2.6 * ppm - (x - 1150) * 0.55                   # up the roof slope
     a = sh(150, FY, ppm)
-    a.set(-1.0, None, 0.01, sh_m=1.0, sh_spread=0.7)
-    a.face(0.75, 0.0)
-    path = lambda u: (150 + 1500 * u, ground(150 + 1500 * u) + 0.2 * ppm)
-    a.scuttle(0.2, 4.8, path, ground, stride=180.0, lift=70.0)
+    a.set(-1.0, None, 0.01, sh_m=1.0)
+    a.face(0.2, 0.0)                                   # a harvestman runs any way: the arch spread across the frame
+    path = lambda u: (150 + 1500 * u, ground(150 + 1500 * u) + 0.15 * ppm)
+    a.scuttle(0.2, 4.8, path, ground, stride=210.0, lift=55.0, spread=1.6)
     def draw(pen, t):
         snow_street(pen, 700)
         pen.fill(rect(0, FY - 1.1 * ppm, 700, 18), '#5a4a3a')
@@ -562,8 +586,8 @@ def _c_sh_spear():
     a.scuttle(0.0, 4.5, lambda u: (330 + 640 * u, 1000), None, stride=160.0, lift=90.0, ease=0.05)
     adam = actor('adam_sock', 0, 1000, ppm, seed=5, expr='terrified_call')
     lina = actor('lina', 0, 0, ppm, seed=6, expr='fear')
-    adam.carry(0.0, lina)
     adam.run(0.2, 4.4, 820, 1500)
+    adam.carry(0.0, lina)                              # after run(): his arms hold her
     adam.face(0.6)
     lina.look_at(0.0, (a, 'eyes'), dur=0.3)
     a.leg_to(0.5, 0, lambda t: (adam.where(t, 'foot_l')[0] - 90, 1000), dur=0.18, hold=0.3, back=0.3)
@@ -583,7 +607,7 @@ def _c_sh_glass():
     a = sh(960, 2900, ppm * 1.9)
     a.set(-1.0, None, 0.01, sh_long=1.0, sh_red=1.0, sh_sink=1.0, sh_smile=1.0)
     a.face(0.0, 0.0)
-    def rise(P, t): P.dy -= 520 * ease_in_out(clamp((t - 0.4) / 2.4))
+    def rise(P, t): P.dy -= 860 * ease_in_out(clamp((t - 0.4) / 2.4))      # the long face slides UP into the clear strip
     a._add(-INF, None, rise)
     def draw(pen, t):
         pen.fill(rect(0, 0, 1920, 1080), '#3a2e26')
@@ -606,10 +630,10 @@ def _c_sh_hatch():
     a.set(-1.0, None, 0.01, sh_m=1.0, sh_legcap=1.0, sh_nolegs=1.0)
     a.face(0.0, 0.0)
     a.hang_hatch(0.4, 1.2, lower=0.36)
-    adam = actor('adam_in', 820, 1040, ppm, seed=7, expr='fear'); lina = actor('lina_pj', 1090, 1040, ppm, seed=8, expr='fear')
+    adam = actor('adam_in', 860, 1040, ppm, seed=7, expr='fear'); lina = actor('lina_pj', 1010, 1040, ppm, seed=8, expr='fear')
     adam.face(0.35); lina.face(-0.35)
     adam.look_at(0.6, (a, 'eyes'), dur=0.3); lina.look_at(0.7, (a, 'eyes'), dur=0.3)
-    adam.reach_to(2.3, 1, (lina, 'hand_l'), dur=0.3, z=40.0)
+    adam.hold_hand(2.3, 1, lina, -1)                    # he grabs her hand and she grabs back (the leg reaches between them)
     a.leg_to(2.0, 1, (960, 900), dur=0.35, hold=1.2, back=0.4, ev='leg_pry')
     def draw(pen, t):
         room(pen, '#2e3446', '#4a3a30', 1040)
@@ -772,14 +796,19 @@ def _c_lina_walk():
 @clip('adam_run_carry_lina', 4.0, 'Adam runs with Lina in his arms through knee-deep snow, one sock, breath hurting (she clings, head on his shoulder).')
 def _c_adam_carry():
     ppm = 300.0
-    a = actor('adam_sock', 0, 980, ppm, seed=25, expr='terrified_call')
+    a = actor('adam_sock', 0, 980, ppm, seed=25, expr='fear')
     l = actor('lina', 0, 0, ppm, seed=26, expr='fear')
-    a.carry(0.0, l)
     a.run(0.2, 3.8, 1500, 500)
-    a.face(-0.6)
+    a.carry(0.0, l)                                    # after run(): the arms hold her, they don't pump
+    def pant(P, t):
+        P.m_open = max(P.m_open, 0.42 + 0.14 * math.sin(t * 9.0)); P.lean += 0.06
+        P.h_turn -= 0.35 * (1 if P.turn > 0 else -1)   # his face half to the lens (fear), eyes on where he runs
+    a._add(-INF, None, pant)
     def draw(pen, t):
         snow_street(pen, 640)
         CH.draw_carry_child(pen, a, l, t, NIGHTI, NIGHTI)
+        CH.draw_breath(pen, a, t, period=0.55, k=1.5)
+        CH.draw_breath(pen, l, t, period=0.9, k=0.9, phase=0.3)
     return dict(draw=draw, actors=[a, l], grounded=[a])
 
 
@@ -837,10 +866,10 @@ def _c_hug():
 @clip('kessler_cocoa_morning', 4.5, 'Morning, warm: Lina brings him cocoa; he takes the mug in both hands: "Sixty-eight years... First time anyone knocked on mine."')
 def _c_cocoa():
     ppm = 420.0
-    k = actor('kessler_am', 1150, 1000, ppm, seed=31, expr='tender')
-    l = actor('lina', 820, 1000, ppm, seed=32, expr='kid_grin')
+    k = actor('kessler_am', 1120, 1000, ppm, seed=31, expr='tender')
+    l = actor('lina', 905, 1000, ppm, seed=32, expr='kid_grin')
     k.face(-0.5); l.face(0.55)
-    M = (k.where(0.0, 'chest')[0] - 0.16 * ppm, k.where(0.0, 'chest')[1] + 0.18 * ppm)
+    M = (k.where(0.0, 'chest')[0] - 0.20 * ppm, k.where(0.0, 'chest')[1] + 0.34 * ppm)      # within her reach, at his belly
     l.hold_prop('mug', 1, -1.0, 1.9)
     l.reach_to(0.3, 1, M, t1=1.9, dur=0.9, z=60.0, shape='grip', prop='mug')
     k.reach_to(1.1, -1, (M[0] + 8, M[1]), t1=None, dur=0.6, z=60.0, shape='grip')
