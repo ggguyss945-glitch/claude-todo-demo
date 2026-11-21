@@ -1704,8 +1704,8 @@ def _hair_new(c, hm, sp, P, det, sil, t):
                 c.line(q, c.lw * 0.8, LINE); c.line(q, c.lw * 0.4, hhi)
     if style == 'bald' and det >= 1:                            # two wisps of white hair on the dome
         for sd in (-1, 1):
-            X_, Y_, V_ = hm.map([sd * 8, sd * 14, sd * 6], [-112, -128, -134], 2.0)
-            if V_.min() > -0.3: c.line(_pts_path(X_, Y_, False), c.lw * 0.5, mix(hc, '#9a958e', 0.3), 230)
+            X_, Y_, V_ = hm.map([sd * 6, sd * 16, sd * 24, sd * 20], [-100, -108, -104, -98], 0.5)   # lying flat ON the scalp
+            if V_.min() > -0.3: c.line(_pts_path(X_, Y_, False), c.lw * 0.4, mix(hc, '#9a958e', 0.3), 200)
 
 
 def _hair_region(c, hm, sp, P, det, sil, t):

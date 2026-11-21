@@ -157,7 +157,7 @@ def sheet_sh_transform():
         P = P_(); P.sh_m = m; P.h_turn = 0.08; P.ws_bend = 0.1
         if m >= 0.8:     # the same medium, eased out a little: the head stays put and big, the legs frame the mask
             P.turn = 0.08; P.sh_spread = 0.9; P.sh_lift = 85.0 * CH.clamp((m - 0.84) / 0.16)
-            sh_bust_at(pen, x0 + cw / 2, y0 + ch * 0.25, ch / 600.0 * 0.32, P)
+            sh_bust_at(pen, x0 + cw / 2, y0 + ch * 0.32, ch / 600.0 * (0.30 if m < 0.95 else 0.27), P)   # x1.4 monster head: same face size as step 5
         else:            # one constant scale through the face steps (no pop when the jaw drops)
             CH.draw_bust(pen, 'shiver', x0 + cw / 2, y0 + ch * 0.25, ch / 600.0 * 0.40, P, t=0.6, light=PINKW, detail=2)
         cv.restore()
@@ -168,7 +168,7 @@ def sheet_sh_transform():
 
 def sheet_sh_monster():
     surf, cv, pen = canvas()
-    title(cv, 'MISTER SHIVER: monster form', 'eight brown jointed legs out of the split back (frost rime on every joint, pale needle tips); the small striped body slung under a high arch; long bone mask, red eyes, jaw to the chest, icicle teeth')
+    title(cv, 'MISTER SHIVER: monster form', 'eight brown jointed legs out of the split back (frost rime on every joint, pale needle tips); the big pale head thrust forward at us, the legs arching round it; long bone mask, red eyes, jaw to the chest, icicle teeth')
     pen.fill(rect(0, 120, 1920, 960), '#101420')
     pen.fill(rect(0, 900, 1280, 180), '#c9d6ea')
     cv.save(); cv.clipRect(skia.Rect.MakeXYWH(0, 120, 1280, 960))
@@ -184,7 +184,7 @@ def sheet_sh_monster():
     img = surf2.makeImageSnapshot()
     p = skia.Paint(ColorFilter=skia.ColorFilters.Blend(skia.Color(10, 10, 14), skia.BlendMode.kSrcIn))
     cv.save(); cv.resetMatrix(); cv.clipRect(skia.Rect.MakeXYWH(1290 * CFG.k, 120 * CFG.k, 630 * CFG.k, 960 * CFG.k)); cv.drawImage(img, 0, 0, skia.SamplingOptions(), p); cv.restore()
-    label(cv, 'silhouette read test: arch of legs, slung body, hanging head', 1605, 1060, 15, '#20242c')
+    label(cv, 'silhouette read test: arch of legs round a big head thrust forward', 1605, 1060, 15, '#20242c')
     save(surf, 'sh_monster')
 
 
@@ -211,7 +211,7 @@ def sheet_sh_mood():
             CH.draw_bust(pen, 'shiver', x0 + 620, y0 + 190, 0.33, P, t=0.6, light=PINKW, detail=2)
         else:            # the monster framed wide enough for the knees (a wide spread keeps them lower)
             P = P_(); P.sh_m = 1.0; P.turn = 0.08; P.h_turn = 0.1; P.sh_spread = 1.1; P.sh_lift = 85.0; P.sh_hang = 0.15
-            CH.draw(pen, 'shiver', x0 + 620, y0 + 428, CH.height_px('shiver', 150), P, t=0.6, light=NIGHTI, detail=2)
+            CH.draw(pen, 'shiver', x0 + 620, y0 + 560, CH.height_px('shiver', 255), P, t=0.6, light=NIGHTI, detail=2)   # big head, legs framing it past the edges
         cv.restore()
     save(surf, 'sh_mood')
 
@@ -257,7 +257,7 @@ def sheet_lineup():
 def sheet_faces():
     kids = [('adam', 'neutral', 'Adam: neutral'), ('adam', 'fear', 'fear'), ('adam', 'resolve', 'resolve'), ('adam', 'terrified_call', '"Dad!"'),
             ('adam', 'tender', '"Good. Shivering..."'), ('adam_in', 'guilt', '"Old people like it cold"'),
-            ('lina', 'kid_grin', 'Lina: gap-toothed grin'), ('lina', 'sleepy', 'sleepy (cold)'), ('lina', 'dazed', '"I\'m warm, Adam"'),
+            ('lina', 'kid_grin', 'Lina: gap-toothed grin'), ('lina', 'sleepy', 'sleepy (cold)'), ('lina', 'cold_warm', '"I\'m warm, Adam"'),
             ('lina', 'fear', 'fear'), ('lina', 'pleading', '"Don\'t leave me"'), ('lina_pj', 'kind_smile', '"You\'re not by yourself"')]
     _faces('faces_kids', [(w, P_(e), lb) for w, e, lb in kids], 'Adam and Lina: expressions', 'v3 faces: brows, lids, eyes lock on what the line is about', light=NIGHTI, cols=6)
     ads = [('dad', 'warm', 'Dad: warm ("Over.")'), ('dad', 'grim_drive', 'in the cab'), ('dad', 'shout', 'horn, again and again'),

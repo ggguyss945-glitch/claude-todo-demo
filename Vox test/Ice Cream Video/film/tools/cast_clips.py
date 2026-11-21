@@ -414,11 +414,13 @@ def _c_sh_down():
     lina.reach_to(0.6, -1, (860, 720), t1=3.0, dur=1.0, z=60.0, shape='reach')
     def bend(P, t):                       # down... and down: two slow beats, past a man's waist
         u1 = ease_in_out(clamp((t - 0.3) / 1.0)); u2 = ease_in_out(clamp((t - 1.6) / 1.1))
-        P.ws_bend = max(P.ws_bend, 0.35 * u1 + 0.95 * u2); P.ws_face_up = 0.9
-        P.sh_neck += 10.0 * u2
+        P.ws_bend = max(P.ws_bend, 0.30 * u1 + 0.42 * u2); P.ws_face_up = 0.95     # hinges over the sill, hips stay inside
+        P.sh_neck += 25.0 * u2
     a._add(-INF, None, bend)
-    a.reach_far(1.8, 1, lambda t: (lina.where(min(t, 3.0), 'hand_r')[0] - 18, lina.where(min(t, 3.0), 'hand_r')[1] - 22), t1=3.25, dur=1.2, z=30.0, fade=0.8)
-    a.slow_wave(4.2, 5.5, side=1)
+    def tgt(t):                                       # palm down, fingers open, ~55 px short of her hand: every frame
+        hx, hy = lina.where(min(t, 3.0), 'hand_r'); return (hx - 55, hy - 30)
+    a.reach_far(1.8, 1, tgt, t1=3.4, dur=1.2, z=30.0, fade=0.9)
+    a.look_at(0.4, (lina, 'head'), dur=0.6)
     adam.run(1.9, 2.9, 1600, 1150)
     adam.face(-0.6)
     adam.look_at(1.9, (lina, 'head'), dur=0.3)
@@ -469,58 +471,78 @@ def _c_sh_transform_face():
     a.slow_wave(0.0, 5.0, side=1)
     ts = [0.2, 1.0, 1.9, 2.6, 3.2, 4.2, 9.0, 9.5]
     a.transform(0.2, ts)
+    cy0 = a.where(0.5, 'crown')[1]
     def draw(pen, t):
+        # the camera eases out ~25% across steps 4-5 so the dropped jaw lands in frame (crown ~8% from the top, jaw end ~88%)
+        z = 1.0 - 0.25 * ease_in_out(clamp((t - 3.0) / 1.4))
         pen.fill(rect(0, 0, 1920, 1080), '#0a0c16')
-        truck_back(pen, g, ppm)
+        pen.cv.save(); pen.cv.translate(960, 86); pen.cv.scale(z, z); pen.cv.translate(-960, -cy0)
+        pen.fill(rect(-2000, -2000, 6000, 6000), '#ff9fca')        # only his warm pink light round him (no truck interior)
+        pen.linear(rect(-2000, -2000, 6000, 6000), 0, g['top'], 0, g['sill'], [(0, '#ffd2e6', 200), (1, '#d8588e', 220)])   # = truck_back, seamless
         shiver_in_window(pen, a, t, g, lean=True)
+        pen.cv.restore()
     return dict(draw=draw, actors=[a])
 
 
 @clip('sh_transform_legs', 5.0, 'Behind him the striped uniform bulges (it swells and quivers), splits along the stripes, and a long brown leg punches out, jointed like a spider\'s, one PAIR per click (a 3/4 medium on the split, then the wide): Click. Another. Click. Click. They plant on the truck roof beside the snowflake, the knees high over the roof. The song keeps playing; the warm pink window behind him.')
 def _c_sh_transform_legs():
-    ts = [-6.0, -5.5, -5.0, -4.5, -4.0, 0.0, 1.4, 4.2]
+    ts = [-6.0, -5.5, -5.0, -4.5, -4.0, 0.0, 1.4, 3.6]
     # shot A (0 - 1.5 s): a 3/4 medium on his shoulders and back: the swell, the quiver, the split, the first pair
     ppm_a = 900.0
     am = sh(900, 1080 + 1.05 * ppm_a, ppm_a)
     am.set(-1.0, None, 0.01, ws_bend=0.30, turn=0.80)           # his shoulder and back to us: we watch the back swell and split
     am.face(-0.55, 0.05)                                         # the mask still turned to us (no wave here: he goes rigid)
     am.transform(-6.0, ts)
-    # shot B (1.5 - 5 s): the wide: the truck, the legs planting on the roof beside the snowflake
-    ppm = 215.0
-    g = truck(None, 960, 860, ppm)
-    a = sh(960, g['floor'], ppm)
-    a.set(-1.0, None, 0.01, ws_bend=0.2)
-    a.slow_wave(0.0, 5.0, side=1)
-    evs = a.transform(-6.0, ts)
-    roof = g['roof']
-    tg = {i: (960 + (1 if i % 2 == 0 else -1) * (270 + 100 * (i // 2)), roof + 4) for i in range(8)}
-    a.legs_plant(-7.0, tg, stagger=0.0, dur=0.01)      # each leg unfolds straight onto its spot on the roof
+    # shot B (1.4 - 4.0 s): the MEDIUM-WIDE (bible step 6, "hold on the full monster"): window + head, the mask >= 22% of the
+    # frame, the femurs and knees bracketing the face, legs out of the frame edges; shot C (4.0 - 5.0 s): a tight wide
+    # (truck ~70% of the frame) for "they plant on the truck roof"
+    def setup(ppm, cx, sill):
+        g = truck(None, cx, sill, ppm)
+        a = sh(cx, g['floor'], ppm)
+        a.set(-1.0, None, 0.01, ws_bend=0.2)
+        a.slow_wave(0.0, 5.0, side=1)
+        a.transform(-6.0, ts)
+        tg = {i: (cx + (1 if i % 2 == 0 else -1) * (270 + 100 * (i // 2)) * ppm / 215.0, g['roof'] + 4) for i in range(8)}
+        a.legs_plant(-7.0, tg, stagger=0.0, dur=0.01)
+        return g, a
+    g0, a0 = setup(215.0, 960, 860)                      # measure the mask at a reference scale
+    hx, hy = a0.where(3.0, 'crown'); cx_, cy_ = a0.where(3.0, 'chin')
+    mask0 = abs(cy_ - hy)
+    ppm_b = 430.0                                       # mask ~24% of the frame (measured on the strip)
+    gb, ab = setup(ppm_b, 960, 860)
+    hx, hy = ab.where(3.0, 'crown')
+    gb, ab = setup(ppm_b, 960, 860 + (250 - hy))         # the crown a third down: the knees bracket it, just inside the top
+    ppm_c = 1340.0 / 4.6
+    gc, ac = setup(ppm_c, 960, 1000)
+    hx, hy = ac.where(4.5, 'crown')
+    gc, ac = setup(ppm_c, 960, 1000 + (300 - hy) * 0.6)
     def draw(pen, t):
-        if t < 1.5:
+        if t < 1.4:
             pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#ffc6de'), (1, '#d8588e')])     # only his pink light behind
             pen.glow(700, 300, 900, '#fff0f6', 120)
             fig(pen, am, t, PINKW)
             return
+        g, a, ppm = (gb, ab, ppm_b) if t < 4.0 else (gc, ac, ppm_c)
         snow_street(pen, 960)
         truck_back(pen, g, ppm)
         truck_front(pen, g, ppm, 1.0, t)
         pen.cv.save(); pen.cv.clipPath(rect(0, g['sill'] + 10, 1920, 2000), skia.ClipOp.kDifference, True)
         fig(pen, a, t, PINKW)
         pen.cv.restore()
-    return dict(draw=draw, actors=[a])
+    return dict(draw=draw, actors=[ab])
 
 
 @clip('sh_pour_out', 4.0, 'He pours out of the window. Head first. Legs last. Four legs grip the roof and the window frame; he curls over the sill neck first, the gloves plant in the snow, the legs haul his hips out, the last four legs unfold out of the window and everything steps down into the snow.')
 def _c_sh_pour():
-    ppm = 190.0
-    g = truck(None, 760, 640, ppm)
-    a = sh(760, g['floor'], ppm)
+    ppm = 470.0                                   # the window ~30% of the frame; he pours toward the lens
+    g = truck(None, 960, 400, ppm)
+    a = sh(960, g['floor'], ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
     a.face(0.1, 0.0)
     a.pour_out(0.3, 3.4, sill_dy=g['sill'] - g['floor'], ground_dy=0.45 * ppm, forward=0.6, roof_dy=g['roof'] - g['floor'],
                frame_w=g['x1'] - g['x0'])
     def draw(pen, t):
-        snow_street(pen, 760)
+        snow_street(pen, 560)
         truck_back(pen, g, ppm)
         pen.cv.save(); pen.cv.clipPath(g['hole'], skia.ClipOp.kIntersect, True)       # pass 1: seen through the window
         P = a.at(t); P.sh_nolegs = 0.0
@@ -540,38 +562,49 @@ def _c_sh_pour():
 
 @clip('sh_scuttle_fence_car_roof', 5.0, 'He scuttles along our fence, over Dad\'s car, up onto our roof: low and fast, legs stabbing left and right, every plant a click.')
 def _c_sh_scuttle():
-    ppm = 150.0
-    FY = 860.0
+    # a 3/4 tracking shot at snow level, much closer: the camera pans with him (world x -> screen x - cam(t)), his big
+    # pale head leading low and forward (>= 8% of the frame), the legs stabbing round it
+    ppm = 300.0
+    FY = 1010.0
     def ground(x):
-        if x < 700: return FY - 1.1 * ppm                          # the fence top
-        if x < 1150: return FY - (1.45 * ppm) * math.sin(PI * clamp((x - 700) / 450))  # over the car
-        return FY - 2.1 * ppm - (x - 1150) * 0.30                   # up the roof slope (low enough to keep his knees in frame)
-    a = sh(150, FY, ppm)
+        if x < 1100: return FY - 1.1 * ppm                          # the fence top
+        if x < 1900: return FY - (1.45 * ppm) * math.sin(PI * clamp((x - 1100) / 800))  # over the car
+        return FY - 1.6 * ppm - (x - 1900) * 0.16                   # up the roof slope
+    a = sh(300, FY, ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0)
-    a.face(0.2, 0.0)                                   # a harvestman runs any way: the arch spread across the frame
-    path = lambda u: (150 + 1450 * u, ground(150 + 1450 * u) + 0.15 * ppm)       # ends on the roof slope, in frame
-    a.scuttle(0.2, 4.8, path, ground, stride=210.0, lift=55.0, spread=1.6)
+    a.face(0.35, 0.0)                                  # 3/4 toward the lens
+    X0, X1 = 300.0, 2900.0
+    path = lambda u: (X0 + (X1 - X0) * u, ground(X0 + (X1 - X0) * u) + 0.15 * ppm)
+    a.scuttle(0.0, 4.8, path, ground, stride=300.0, lift=55.0, spread=1.25)
+    def cam(t):                                        # leads him a little: he runs INTO the frame's near third
+        hx, hy = a.where(t, 'head')
+        return hx - 960 - 220, min(0.0, hy - 430)
     def draw(pen, t):
-        snow_street(pen, 700)
-        pen.fill(rect(0, FY - 1.1 * ppm, 700, 18), '#5a4a3a')
-        for k in range(14): pen.fill(rect(20 + k * 50, FY - 1.1 * ppm, 10, 1.1 * ppm), '#5a4a3a')
-        pen.fill(smooth([(700, FY), (760, FY - 1.0 * ppm), (900, FY - 1.45 * ppm), (1000, FY - 1.45 * ppm), (1150, FY - 0.9 * ppm), (1150, FY)], True, 0.6), '#3a4a6a')
-        pen.fill(poly([(1150, FY), (1150, FY - 2.1 * ppm), (1920, FY - 2.1 * ppm - 770 * 0.30), (1920, FY)], True), '#4a3a34')
+        cx, cy = cam(t)
+        pen.linear(rect(0, 0, 1920, 1080), 0, 0, 0, 1080, [(0, '#05070f'), (1, '#16203a')])
+        pen.cv.save(); pen.cv.translate(-cx, -cy)
+        pen.linear(rect(cx - 50, FY - 380, 2100, 2000), 0, FY - 380, 0, FY + 200, [(0, '#5a6a8c', 255), (1, '#8a9cbc', 255)])
+        pen.fill(rect(-400, FY - 1.1 * ppm, 1500, 22), '#6a5846')
+        for k in range(30): pen.fill(rect(-380 + k * 50, FY - 1.1 * ppm, 12, 1.1 * ppm), '#6a5846')
+        pen.fill(smooth([(1100, FY), (1180, FY - 1.0 * ppm), (1380, FY - 1.45 * ppm), (1620, FY - 1.45 * ppm), (1900, FY - 0.9 * ppm), (1900, FY)], True, 0.6), '#3a4a6a')
+        pen.fill(poly([(1900, FY), (1900, FY - 1.6 * ppm), (4200, FY - 1.6 * ppm - 2300 * 0.16), (4200, FY)], True), '#4a3a34')
         fig(pen, a, t, NIGHTI)
+        pen.cv.restore()
     return dict(draw=draw, actors=[a])
 
 
 @clip('sh_drop_door', 3.5, 'And drops. Right in front of our door. Jaw hanging. (Adam ducks under him and slams the door.)')
 def _c_sh_drop():
-    ppm = 210.0
-    a = sh(960, 1000, ppm)
+    # closer; the fall reads (0.35 - 0.90 s, legs folded high), a squash on landing, the legs slam out, then the jaw hangs
+    ppm = 330.0
+    a = sh(960, 1050, ppm)
     a.set(-1.0, None, 0.01, sh_m=1.0, sh_lift=80.0)
     a.face(0.0, 0.0)
-    a.drop_to(0.6, 0.42, from_dy=-700.0)
-    a.jaw_gape(1.2, 3.5)
+    a.drop_to(0.35, 0.55, from_dy=-900.0)
+    a.jaw_gape(1.05, 3.5)
     def draw(pen, t):
-        snow_street(pen, 820)
-        door(pen, 960, 1000, ppm=ppm)
+        snow_street(pen, 860)
+        door(pen, 960, 1050, ppm=ppm)
         fig(pen, a, t, NIGHTI)
     return dict(draw=draw, actors=[a])
 
@@ -624,24 +657,36 @@ def _c_sh_glass():
 
 @clip('sh_hatch_upside_down', 4.0, 'The hallway hatch drops open. His face lowers, upside down. A leg reaches between the kids, prying.')
 def _c_sh_hatch():
-    ppm = 240.0
-    a = sh(960, 120, ppm)
-    a.set(-1.0, None, 0.01, sh_m=1.0, sh_legcap=1.0, sh_nolegs=1.0)
+    # a low angle from the kids: they fill the bottom of the frame (waist up), he hangs upside down out of the hatch
+    # above them, his inverted face >= 20% of the frame; one leg stabs down BETWEEN them; Adam pulls Lina behind him
+    ppm = 520.0
+    a = sh(960, 30, ppm)
+    a.set(-1.0, None, 0.01, sh_m=1.0, sh_legcap=2.0, sh_nolegs=1.0)
     a.face(0.0, 0.0)
-    a.hang_hatch(0.4, 1.2, lower=0.36)
-    adam = actor('adam_in', 860, 1040, ppm, seed=7, expr='fear'); lina = actor('lina_pj', 1010, 1040, ppm, seed=8, expr='fear')
-    adam.face(0.35); lina.face(-0.35)
-    adam.look_at(0.6, (a, 'eyes'), dur=0.3); lina.look_at(0.7, (a, 'eyes'), dur=0.3)
-    adam.hold_hand(2.3, 1, lina, -1)                    # he grabs her hand and she grabs back (the leg reaches between them)
-    a.leg_to(2.0, 1, (960, 900), dur=0.35, hold=1.2, back=0.4, ev='leg_pry')
+    a.hang_hatch(0.3, 1.0, lower=0.22)
+    kp = 560.0
+    adam = actor('adam_in', 660, 1250, kp, seed=7, expr='fear'); lina = actor('lina_pj', 1250, 1250, kp, seed=8, expr='fear')
+    adam.face(0.45); lina.face(-0.45)
+    adam.look_at(0.5, (a, 'eyes'), dur=0.25); lina.look_at(0.55, (a, 'eyes'), dur=0.25)
+    a.leg_to(1.6, 1, (960, 1240), dur=0.30, hold=2.0, back=0.4, ev='leg_pry')
+    adam.hold_hand(2.4, -1, lina, 1)
+    def pull(P, t):                       # round the stabbed leg and in behind his back
+        u = ease_in_out(clamp((t - 2.5) / 0.6)); P.dx -= 760 * u
+    lina._add(2.5, None, pull)
+    def shield(P, t):
+        u = ease_in_out(clamp((t - 2.5) / 0.5)); P.dx += 50 * u
+    adam._add(2.6, None, shield)
+    lina.look_at(2.6, (adam, 'head'), dur=0.2); lina.look_at(3.3, (a, 'eyes'), dur=0.3)
     def draw(pen, t):
-        room(pen, '#2e3446', '#4a3a30', 1040)
-        pen.fill(rect(820, 0, 280, 40), '#111018')
+        room(pen, '#2e3446', '#4a3a30', 1300)
+        pen.fill(rect(720, 0, 480, 40), '#111018')
         pen.cv.save(); pen.cv.clipPath(rect(0, 40, 1920, 1080), skia.ClipOp.kIntersect, True)
         fig(pen, a, t, NIGHTI)
         pen.cv.restore()
-        fig(pen, adam, t, NIGHTI); fig(pen, lina, t, NIGHTI)
-    return dict(draw=draw, actors=[a, adam, lina], grounded=[adam, lina])
+        behind = lina.where(t, 'head')[0] < adam.where(t, 'head')[0] - 40
+        if behind: fig(pen, lina, t, NIGHTI); fig(pen, adam, t, NIGHTI)
+        else: fig(pen, adam, t, NIGHTI); fig(pen, lina, t, NIGHTI)
+    return dict(draw=draw, actors=[a, adam, lina])
 
 
 @clip('sh_under_door', 3.5, 'Under the bathroom door, a needle-thin leg tip slides in, feeling for Lina\'s sock. Adam jams the towel down on it. It pulls back.')
@@ -895,7 +940,16 @@ def _c_benny():
         pen.fill(rect(0, 960, 1920, 120), '#b8a888')
         pen.fill(rect(1500, 560, 260, 200), '#e0a0b0')
         fig(pen, b, t, dict(rim='#f0d0a0', rim_a=50, side=-1, key=0.0))
-        pen.fill(rrect(860, 975, 26, 18, 7), '#c8322f')
+        # ONE red mitten, on his right hand while he walks; it slips off at the curb only at the end of the walk
+        td = 3.55
+        hx, hy = b.where(min(t, td), 'hand_r')
+        if t < td:
+            m_ = rrect(hx - 13, hy - 6, 26, 30, 9); pen.fill(m_, '#c8322f'); pen.line(m_, 2.5, '#1a1418')
+            pen.fill(rrect(hx - 13, hy - 8, 26, 7, 3), '#e8d8c8')
+        else:
+            u = clamp((t - td) / 0.35); gy = 975.0
+            y_ = hy + (gy - hy) * u * u; x_ = hx + 30 * u
+            m_ = rrect(x_ - 15, y_ - 9, 30, 18, 7); pen.fill(m_, '#c8322f'); pen.line(m_, 2.5, '#1a1418')
     return dict(draw=draw, actors=[b], grounded=[b])
 
 

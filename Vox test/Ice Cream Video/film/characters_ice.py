@@ -114,7 +114,7 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
     y = -ry * sl
     z = rz * cl * np.cos(lon)
     fr = np.clip(np.cos(lon), 0.0, None)
-    z = z + fr * (4.8 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
+    z = z + fr * (2.9 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
                   + 2.8 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
                   + 0.7 * (1.0 - L) * np.exp(-(lon / 0.30) ** 2 - ((lat + 0.33) / 0.08) ** 2)                   # upper lip
                   - 0.8 * np.exp(-(lon / 0.18) ** 2 - ((lat - 0.14) / 0.06) ** 2)                               # nasal bridge
@@ -193,6 +193,7 @@ class _SHHead:
                     except Exception: pass
             return [sil]
         w = self.jaw_w(lo, la)
+        self.hull_all = poly(_hull(P2), True)       # skull + dropped jaw: the cheek walls between them are filled dark
         out = []
         for m in (w < 0.5, w >= 0.5):
             if m.sum() > 3: out.append(poly(_hull(P2[m]), True))
@@ -319,8 +320,15 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
         Xu, Yu, Fu, Xl, Yl, Fl = Xu[i0:i1], Yu[i0:i1], Fu[i0:i1], Xl[i0:i1], Yl[i0:i1], Fl[i0:i1]
     mouth_pts = list(zip(Xu.tolist(), Yu.tolist())) + list(zip(Xl[::-1].tolist(), Yl[::-1].tolist()))
     mouth = smooth(mouth_pts, True, 0.5)
+    try: mouth.setFillType(skia.PathFillType.kWinding)     # a folded lip line must never punch a see-through hole
+    except Exception: pass
+    ha = getattr(hd, 'hull_all', None) if J > 0.02 else None
+    if ha is not None:
+        c.line(ha, lw * 2.2, pal['line'])
     for sp_ in sils:
         c.line(sp_, lw * 2.2, pal['line'])
+    if ha is not None:
+        c.fill(ha, pal['mouth_m'])         # opaque: nothing shows through the cheeks when the jaw hangs
     if J > 0.02:
         c.fill(mouth, pal['mouth_m'])      # under the skin silhouettes: shows in the gap between skull and jaw
     for sp_ in sils:
@@ -375,11 +383,13 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             for s in (-1, 1):
                 for run in hd.curve(s * np.linspace(0.92, 1.25, 7), 0.30 + 0.06 * np.sin(np.linspace(0, 5, 7))):
                     c.line(smooth(run, False), lw * 0.45, '#7f9bc4', int(110 * (1 - L)))
-        # forehead creases (age, not a doll)
+        # no forehead creases (they read as old-age wrinkles): a faint cool sheen and tiny frost sparkles instead
         if det >= 1:
-            for la_ in (0.52, 0.62):
-                for run in hd.curve(np.linspace(-0.40, 0.40, 11), la_ + 0.025 * np.cos(np.linspace(-1.5, 1.5, 11))):
-                    c.line(smooth(run, False), lw * 0.45, pal['skin_dk'], int(120 * (1 - L)))
+            x_, y_, f_ = P2(-0.15, 0.62)
+            if f_ > 0: c.glow(x_, y_, 9.0 * cm, 3.5 * cm, '#e6f2ff', int(60 * (1 - L)))
+            for i in range(11):
+                x_, y_, f_ = P2((hash01(i, 3391) - 0.5) * 0.9, 0.42 + 0.35 * hash01(i, 3392), 0.3)
+                if f_ > 0.2: c.fill(oval(x_, y_, max(0.5, 0.35 * cm), max(0.5, 0.35 * cm)), '#DDEFFF', 180)
     # sockets turning to bone holes as the mask forms; lower lid bags
     for s in (-1, 1):
         lon_e = s * 0.27
@@ -431,7 +441,10 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             for run in hd.curve(np.array([lc + s * 0.05, lc + s * 0.10, lc + s * 0.06]),
                                 np.array([float(hd.up(W)) + 0.08, float(hd.up(W)), float(hd.up(W)) - 0.07]), 0.3):
                 c.line(smooth(run, False), lw * 0.8, pal['skin_dk'], int(180 * (1 - 0.5 * L)))
-    # the mouth: interior, teeth (buck teeth -> icicles), pale lips
+    # the mouth: interior, teeth (buck teeth -> icicles), pale lips (normal form: never past the cheek outline)
+    import contextlib as _cl
+    _ms = _cl.ExitStack()
+    if st['smile'] < 0.05 and J < 0.05: _ms.enter_context(c.clip(sil_all))
     vis = float(np.mean(np.concatenate([Fu, Fl])))
     if vis > -0.2:
         icy = max(prog(J, 0.05, 0.5), prog(L, 0.5, 1.0) * 0.6)
@@ -445,14 +458,14 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 # the mouth's side walls: pale stretched sinews and frost strands from the skull to the dropped jaw
                 ks = prog(J, 0.25, 0.8)
                 for sg in (-1, 1):
-                    for k in range(5):
+                    for k in range(1, 4):
                         u0 = 0.62 + 0.08 * k + 0.03 * hash01(k, 3611); u1 = 0.55 + 0.09 * k
                         a0 = hd.p3(sg * W * u0, float(hd.up(W * u0)) - 0.01, 0.0, 0.0)
                         b0 = hd.p3(sg * W * u1, float(hd.lo(W * u1)) + 0.01, 0.0, 1.0)
                         mid = (a0 + b0) / 2 + R['hrot'] @ np.array([-sg * (1.5 + 1.2 * hash01(k, 3612)), 0.0, -2.0])
                         pp = [view.p2(a0), view.p2(mid), view.p2(b0)]
                         if hd.facing(sg * W * u0, float(hd.up(W * u0))) < -0.15: continue
-                        c.line(smooth(pp, False), lw * (0.7 + 0.8 * hash01(k, 3613)), '#b9c3cf', int(120 * ks))
+                        c.line(smooth(pp, False), lw * (0.5 + 0.5 * hash01(k, 3613)), '#8f99a6', int(110 * ks))
             elif icy < 0.5:   # the gum line behind the teeth
                 for run in hd.curve(lons * 0.9, hd.up(lons * 0.9) - 0.03, 0.0, -1.0):
                     c.line(smooth(run, False), lw * 2.0, '#6e2a3a', 200)
@@ -514,7 +527,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             # the dropped jaw ends in a bone mandible: a U band under the lower teeth, cracked, its own shading
             kj = prog(J, 0.3, 0.7)
             Wm = W * 0.98
-            band = hd.region(-Wm, Wm, lambda lo_: hd.lo(np.abs(lo_)) - 0.40 - 0.16 * (1 - (np.abs(lo_) / Wm) ** 2),
+            band = hd.region(-Wm, Wm, lambda lo_: hd.lo(np.abs(lo_)) - 0.52 - 0.22 * (1 - (np.abs(lo_) / Wm) ** 2),
                              lambda lo_: hd.lo(np.abs(lo_)) - 0.01, nlon=18, nlat=3, grow=0.2, thr=-0.3, jaw=1.0)
             if band is not None:
                 c.fill(band, pal['bone'], int(255 * kj))
@@ -527,6 +540,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                         for run in hd.curve(run_l, run_a, 0.3, -0.3, jaw=1.0):
                             c.line(poly(run, False), lw * 0.6, pal['crack_dk'], int(220 * kj))
                 c.line(band, lw * 1.1, pal['line'], int(255 * kj))
+    _ms.close()
     # frost: flecks on the brow (normal), frost cracks across the mask (monster)
     if det >= 1:
         for i in range(34):
@@ -553,11 +567,11 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     # eyes: tiny bright blue with a pinpoint highlight; they sink, a beat of black, then red
     for s in (-1, 1):
         lon_e = s * 0.25
-        X_, Y_, F_, zd_ = hd.proj(np.array([lon_e]), np.array([0.13]), -0.5 - 2.0 * sink)
+        X_, Y_, F_, zd_ = hd.proj(np.array([lon_e]), np.array([0.13]), -0.5 - 2.0 * sink * (1.0 - 0.8 * red))   # red: they come back up into the sockets
         if F_[0] < 0.05: continue
         x0, y0 = float(X_[0]), float(Y_[0])
         _, _, _, f_ = view.p(hd.p3(lon_e, 0.13))
-        rr = 0.88 * f_
+        rr = 0.88 * f_ * hd.hk
         kb = 1.0 - prog(sink, 0.0, 0.9)
         if kb > 0.02 and red < 0.5:
             c.fill(oval(x0, y0, rr * (0.55 + 0.45 * kb) * 1.15, rr * (0.55 + 0.45 * kb)), '#0d1b2a', int(255 * kb))
@@ -566,10 +580,13 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             c.fill(oval(x0 - 0.25 * rr, y0 - 0.25 * rr, rr * 0.16, rr * 0.16), '#ffffff', int(255 * kb))
         if red > 0.02:
             g = red
-            c.glow(x0, y0, rr * 5.0, rr * 4.0, pal['red'], int(120 * g))
-            c.fill(oval(x0, y0, rr * 0.95, rr * 0.85), '#5a0000', int(255 * g))
-            c.fill(oval(x0, y0, rr * 0.75, rr * 0.65), pal['red'], int(255 * g))
-            c.fill(oval(x0 - 0.15 * rr, y0 - 0.15 * rr, rr * 0.3, rr * 0.25), '#ffd0c8', int(230 * g))
+            ri = rr * (1.0 + 1.3 * g)                    # the red iris fills ~45% of the socket
+            rb = max(2.5 * ri, 4.0 / max(getattr(CFG, 'k', 1.0), 0.25))   # bloom: never under ~4 px on output
+            c.glow(x0, y0, rb, rb * 0.85, pal['red'], int(130 * g))
+            c.fill(oval(x0, y0, ri * 1.08, ri * 0.98), '#5a0000', int(255 * g))
+            c.fill(oval(x0, y0, ri * 0.86, ri * 0.76), pal['red'], int(255 * g))
+            c.fill(oval(x0, y0, ri * 0.30, ri * 0.36), '#2a0000', int(200 * g))
+            c.fill(oval(x0 - 0.28 * ri, y0 - 0.25 * ri, ri * 0.26, ri * 0.22), '#ffd0c8', int(230 * g))
     # rim light from the window / streetlight
     if light and light.get('rim'):
         with c.clip(sil_all):
@@ -766,14 +783,21 @@ def _sh_stripe_tube(c, view, pts, widths, light, n=2):
     tp, p2 = _ws_tube3(c, view, pts, widths, pal['white'], None, c.lw, None, line=False)
     X, Y, zd, f = view.pa(np.asarray(pts))
     with c.clip(tp):
-        for off in (-0.62, 0.0, 0.62):
-            q = []
-            for i in range(len(pts)):
-                j0, j1 = max(0, i - 1), min(len(pts) - 1, i + 1)
-                dx, dy = X[j1] - X[j0], Y[j1] - Y[j0]; d = math.hypot(dx, dy) or 1.0
-                q.append((X[i] - dy / d * off * widths[i] * f[i], Y[i] + dx / d * off * widths[i] * f[i]))
-            c.line(smooth(q, False), widths[0] * float(f[0]) * 0.42, pal['pink'])
-        c.fill(_crescent(tp, 1.2, 0.5), pal['pink_sh'], 120)
+        # 6 stripes that wrap round the cylinder: spaced by sin(theta), narrowing toward the silhouette edges
+        nrm = []
+        for i in range(len(pts)):
+            j0, j1 = max(0, i - 1), min(len(pts) - 1, i + 1)
+            dx, dy = X[j1] - X[j0], Y[j1] - Y[j0]; d = math.hypot(dx, dy) or 1.0
+            nrm.append((-dy / d, dx / d))
+
+        def run(off):
+            return [(X[i] + nrm[i][0] * off * widths[i] * f[i], Y[i] + nrm[i][1] * off * widths[i] * f[i]) for i in range(len(pts))]
+        for th in (-75.0, -45.0, -15.0, 15.0, 45.0, 75.0):
+            r_ = math.radians(th)
+            try: c.fill(_tube(run(math.sin(r_)), [0.19 * widths[i] * f[i] * math.cos(r_) + 0.25 for i in range(len(pts))], 0.75), pal['pink'])
+            except Exception: c.line(smooth(run(math.sin(r_)), False), widths[0] * float(f[0]) * 0.36 * math.cos(r_), pal['pink'])
+        c.fill(_crescent(tp, 1.5, 0.6), mix(pal['pink_sh'], '#8a4a6a', 0.3), 180)
+        c.line(smooth(run(0.35), False), max(1.0, 0.09 * widths[0] * float(f[0])), mix(pal['pink_sh'], '#8a4a6a', 0.5), 70)   # core shadow
         if light and light.get('rim'): c.fill(_crescent(tp, -light.get('side', 1) * 1.0, 0), light['rim'], light.get('rim_a', 60) * 0.8)
     c.line(tp, c.lw, pal['line'])
     return tp, p2
@@ -787,9 +811,9 @@ def _sh_arm(c, view, R, P, s, det, t, light, hands=True):
     S, E, W = arm['S'], arm['J'][0], arm['W']
     a = R['a'] + R.get('hunch', 0.0)
     upv = _rx(np.array([0.0, -1.0, 0.0]), a)
-    Sc = S + upv * 2.5 + _rx(np.array([s * 1.5, 0.0, 0.0]), a)          # the shoulder cap sits a little up and out
+    Sc = S + upv * 0.8 + _rx(np.array([s * 0.6, 0.0, 0.0]), a)          # the shoulder cap sits a little up and out
     cuff = E + (W - E) * 0.80
-    _sh_stripe_tube(c, view, [Sc, (S + E) / 2, E, (E + cuff) / 2, cuff], [13.0, 11.6, 10.4, 9.6, 9.0], light)
+    _sh_stripe_tube(c, view, [Sc, (S + E) / 2, E, (E + cuff) / 2, cuff], [11.5, 10.5, 9.2, 8.6, 7.8], light)
     X, Y, _, f = view.p(cuff)
     Xe, Ye, _, fe = view.p(E)
     d = math.hypot(X - Xe, Y - Ye) or 1.0
@@ -924,20 +948,27 @@ def _sh_glove(c, view, R, P, s, det, t, light):
 def _sh_leg_h(c, view, R, s, det, light):
     """His human legs: charcoal vendor trousers with a pressed front crease, long black shoes (about 30 cm) with a shine."""
     Hp, K, A, fd = R['legs'][s]
-    tr, tr_sh = '#3a3540', '#24212a'
-    t1, p1 = _ws_tube3(c, view, [Hp, (Hp + K) / 2, K], [15.0, 13.5, 12.0], tr, tr_sh, c.lw, light)
-    t2, p2 = _ws_tube3(c, view, [K, (K + A) / 2, A + np.array([0.0, 3.0, 0.0])], [12.0, 11.4, 11.2], tr, tr_sh, c.lw, light)
+    tr, tr_sh = '#4d4556', '#2e2936'      # lighter than the night sky: his legs never vanish outdoors
+    lt = dict(light or {}); lt.setdefault('rim', '#cfd8e8'); lt.setdefault('rim_a', 70)
+    hem = A + np.array([0.0, 3.0, 0.0])
+    shoe_first = []
+    # ONE tube hip -> hem (no seam at the knee), a slight flare over the shoe
+    t1, p1 = _ws_tube3(c, view, [Hp, (Hp + K) / 2, K, (K + A) / 2, hem], [15.0, 13.8, 12.2, 11.6, 12.6], tr, tr_sh, c.lw, lt)
     if det >= 1:
-        for pp, tp in ((p1, t1), (p2, t2)):
-            with c.clip(tp):
-                c.line(smooth(pp, False), c.lw * 0.6, '#5a5462', 200)          # the pressed crease
+        with c.clip(t1):
+            c.line(smooth(p1, False), c.lw * 0.6, '#6a6176', 200)          # one continuous pressed crease
+            Xh, Yh, _, fh_ = view.p(hem); Xk, Yk, _, _ = view.p(A + (K - A) * 0.12)
+            dx, dy = Xh - Xk, Yh - Yk; d = math.hypot(dx, dy) or 1.0; nx, ny = -dy / d, dx / d
+            w_ = 7.0 * fh_
+            c.line(smooth([(Xk - nx * w_ * 0.8, Yk - ny * w_ * 0.8), (Xk + dx * 0.5 + nx * 1.0, Yk + dy * 0.5 + ny * 1.0),
+                           (Xk + nx * w_ * 0.8, Yk + ny * w_ * 0.8)], False), c.lw * 0.6, tr_sh, 200)   # the hem break at the instep
     heel = A + np.array([0.0, 7.0, 0.0]) - fd * 5.0
     toe = A + fd * 27.0 + np.array([0.0, 7.5, 0.0])
     top = A + np.array([0.0, 2.5, 0.0]) + fd * 3.0
     X, Y, _, f = view.pa(np.array([heel, top, A + fd * 15.0 + np.array([0.0, 4.0, 0.0]), toe, A + fd * 16.0 + np.array([0.0, 9.0, 0.0])]))
     pts = list(zip(X.tolist(), Y.tolist()))
     if math.hypot(pts[3][0] - pts[0][0], pts[3][1] - pts[0][1]) < 8 * float(f[0]):
-        sh = oval((pts[0][0] + pts[3][0]) / 2, (pts[0][1] + pts[3][1]) / 2, 6.5 * f[0], 4.0 * f[0])
+        sh = oval((pts[0][0] + pts[3][0]) / 2, (pts[0][1] + pts[3][1]) / 2 + 1.0 * f[0], 9.0 * f[0], 5.5 * f[0])   # front view: a real shoe, not a beetle
     else:
         hull = poly(_hull(pts + [(x_ + 2.6 * f[0], y_) for x_, y_ in pts[:1]]), True)
         sh = _tube([pts[0], pts[2], pts[3]], [8.5 * f[0], 7.8 * f[0], 5.5 * f[0]], 0.9)
@@ -946,7 +977,12 @@ def _sh_leg_h(c, view, R, s, det, light):
     c.fill(sh, '#141216'); c.fill(_crescent(sh, 0, 1.4), '#2c2830', 160)
     bb = sh.getBounds()
     c.glow(bb.centerX() + (pts[3][0] - pts[0][0]) * 0.18, bb.top() + bb.height() * 0.35, bb.width() * 0.16, bb.height() * 0.12, '#ffffff', 90)
+    c.glow(pts[3][0] * 0.7 + bb.centerX() * 0.3, bb.top() + bb.height() * 0.45, bb.width() * 0.10, bb.height() * 0.10, '#ffffff', 120)   # toe cap
+    with c.clip(sh):
+        c.fill(rect(bb.left(), bb.bottom() - max(1.5, 1.2 * float(f[0])), bb.width(), 4.0 * float(f[0])), '#5b5560', 255)   # the sole line
     c.line(sh, c.lw, _SH_PAL['line'])
+    with c.clip(sh):      # the trouser hem breaks over the top of the shoe
+        c.fill(t1, tr); c.line(t1, c.lw, _SH_PAL['line'])
 
 
 # ---------------------------------------------------------------------------------------------------- spider legs
@@ -989,14 +1025,14 @@ def _sh_leg_chain(R, P, i, e):
     upv = np.array([0.0, -1.0, 0.0])
     hor = T - Rt; hor[1] = 0.0
     out = _u3(hor + np.array([s * 30.0, 0.0, 0.0])) if np.linalg.norm(hor) > 1 else np.array([float(s), 0.0, 0.0])
-    C1 = Rt + _u3(out * 0.6 + upv * 0.8 + _rx(np.array([0.0, 0.0, -0.5]), a)) * _SH_LEG_L[0]
+    C1 = Rt + _u3(out * 0.9 + upv * 0.4 + _rx(np.array([0.0, 0.0, -0.5]), a)) * _SH_LEG_L[0]
     a_, b_ = _SH_LEG_L[1], _SH_LEG_L[2] + _SH_LEG_L[3] * 0.85
     # harvestman knee: always up and out over its own side (never crossing over his head), then down to the tip
     hd = T - C1; hd[1] = 0.0
     hdl = float(np.linalg.norm(hd))
     oh = hd / hdl if hdl > 1e-6 else out
-    kh = 0.80 + 0.35 * hash01(i, 3601)                 # every knee at its own height: never a neat row
-    x_ = min(0.42 * hdl + 25.0, a_ * 0.92)
+    kh = 0.50 + 0.24 * hash01(i, 3601)                 # every knee at its own height: never a neat row
+    x_ = min(0.50 * hdl + 40.0, a_ * 0.92)
     y_ = math.sqrt(max(a_ * a_ - x_ * x_, 0.0)) * kh
     K = C1 + oh * x_ + upv * y_
     if K[1] > min(C1[1], T[1]) - 40.0:                 # keep the knee the highest point
@@ -1204,7 +1240,7 @@ def _sh_rig(P, st):
         pu = P.__dict__.get('_sh_pour_u')
         kf = k * (1.0 - (prog(pu, 0.0, 0.1) - prog(pu, 0.78, 0.95)) if pu is not None else 1.0)   # pouring out: the face stays on the lens
         P = P.copy(); P.ws_crouch = max(P.ws_crouch, 1.3 * k); P.ws_bend = max(P.ws_bend, 0.56 * k)
-        P.ws_face_up = max(P.ws_face_up, 0.75 * kf) if kf > 0.01 else P.ws_face_up     # the mask stays on the lens
+        P.ws_face_up = max(P.ws_face_up, 0.75 + 0.25 * kf) if kf > 0.01 else P.ws_face_up     # the mask stays on the lens
         P.h_nod = P.h_nod + min(float(P.sh_hang), 0.15) * kf
     R = _ws_rig(P)
     # his long neck: the head rides up the neck line
@@ -1266,7 +1302,7 @@ def _shiver_figure(c, who, P, det, t, light=None, upper_only=False):
         skip = 2 if (l_ and r_) else (1 if l_ else (-1 if r_ else 0))
     items = []
     zt = view.depth(R['Ch'])
-    if not upper_only and P.sh_nolegs < 0.5:
+    if not upper_only and P.sh_nolegs < 0.5 and P.sh_lift < 40.0:     # slung in the cage: his own legs tucked away in the coat
         for s in (-1, 1):
             Hp, K, A, fd = R['legs'][s]
             zl = (view.depth(K) + view.depth(A)) / 2
@@ -1316,8 +1352,9 @@ def _sh_glow_feats(c, R, view, P, st, amount):
         _, _, _, f_ = view.p(hd.p3(s * 0.25, 0.13))
         x0, y0 = float(X_[0]), float(Y_[0])
         if st['red'] > 0.3:
-            c.glow(x0, y0, 6.0 * f_, 5.0 * f_, _SH_PAL['red'], int(160 * amount))
-            c.fill(oval(x0, y0, 0.9 * f_, 0.8 * f_), _SH_PAL['red'], int(255 * amount))
+            ri = 2.0 * f_ * hd.hk; rb = max(2.5 * ri, 4.0 / max(getattr(CFG, 'k', 1.0), 0.25))
+            c.glow(x0, y0, rb, rb * 0.85, _SH_PAL['red'], int(170 * amount))
+            c.fill(oval(x0, y0, ri * 0.86, ri * 0.76), _SH_PAL['red'], int(255 * amount))
         elif st['sink'] < 0.5:
             c.glow(x0, y0, 3.0 * f_, 3.0 * f_, _SH_PAL['eye'], int(110 * amount))
             c.fill(oval(x0, y0, 0.7 * f_, 0.7 * f_), '#bfe6ff', int(255 * amount))
@@ -1843,10 +1880,13 @@ def _sh_drop_to(self, t0, dur=0.45, from_dy=-400.0, land=None):
     """Drops from above (a roof edge) to the feet point: falls with the legs folded high, lands, the legs slam out round
     him ('sh_land' + clicks). from_dy: start offset (px, negative = above)."""
     def fn(P, t):
-        if t < t0: P.dy += from_dy; P.sh_spread = 0.35; return
+        if t < t0: P.dy += from_dy; P.sh_spread = 0.35; P.sh_jaw = max(P.sh_jaw, 0.0); return
         u = prog(t, t0, t0 + dur)
         P.dy += from_dy * (1.0 - u * u)
         P.sh_spread = 0.35 + 0.65 * ease_out_back(prog(t, t0 + dur * 0.85, t0 + dur + 0.25))
+        if t > t0 + dur:            # the squash: the body dips ~15 cm into the planted legs, then recovers
+            q = prog(t, t0 + dur, t0 + dur + 0.32)
+            P.sh_lift = max(0.0, P.sh_lift - 15.0 * math.sin(PI * q) * (1.0 - 0.3 * q))
     self._add(-INF, None, fn)
     return [self._ev(t0 + dur, 'sh_land', 2.0)] + [self._ev(t0 + dur + 0.04 * k, 'leg_click', -3.0, leg=k) for k in range(4)]
 
@@ -1948,3 +1988,161 @@ Acting.cage = _sh_cage
 Acting.pour_out = _sh_pour_out
 Acting.hang_hatch = _sh_hang
 Acting.jaw_gape = _sh_jaw_gape
+
+
+# ---------------------------------------------------------------------------------------------------- ICE face overrides
+# (this film only: characters_ice.py is exec'd in the characters namespace, so these rebinds reach the shared drawing)
+for _k, _v in EXPR.items():                   # no cartoon sweat drops at minus forty
+    if isinstance(_v, dict) and _v.get('sweat'): _v['sweat'] = 0.0
+EXPR.update({
+    # the cold-danger look (the film's lesson): pale bluish skin, no rosy cheeks, blue-grey lips, heavy lids, slack mouth
+    'sleepy': dict(eye_open=0.55, brow_sad=0.3, h_nod=0.12, m_open=0.07, smile=-0.12, pale=0.6, blush=-1.1),
+    'cold_warm': dict(eye_open=0.6, pupil=1.25, brow_sad=0.2, m_open=0.12, smile=0.06, pale=0.6, blush=-1.1, lock=0.0),
+    # "Dad!": a wide open shout with the upper teeth, not a narrow slot
+    'terrified_call': dict(m_open=0.85, m_round=0.5, m_wide=0.45, teeth=0.55, brow_sad=0.9, brow_up=0.7, wide=0.7, pupil=0.4, tremble=0.3),
+    # fear: more white round a smaller iris, the mouth corners pulled down
+    'fear': dict(EXPR.get('fear', {}), wide=0.8, pupil=0.36, smile=-0.55, sweat=0.0),
+    # grumpy (Kessler): heavy upper lids over the iris, inner brows down, mouth corners down
+    'grumpy': dict(eye_open=0.68, squint=0.2, brow_angry=0.5, brow_sad=0.1, smile=-0.3, m_press=0.45, pupil=0.95),
+})
+_ICE_COLD_SKIN = '#B9C3CF'
+_dhl_base = draw_head_local
+
+
+def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
+    """ICE: the cold-danger look (pale >= 0.5 with the blush off): skin 25% toward cold blue-grey, blue-grey lips, no
+    rosy cheeks, a faint blue shadow under the eyes. Kids (age < 13) never get adult folds."""
+    sp = sp or CAST[who]
+    if P.pale >= 0.5 and P.blush < -0.5 and not sp.get('shiver'):
+        sp = dict(sp, skin=mix(sp['skin'], _ICE_COLD_SKIN, 0.25), skin_sh=mix(sp['skin_sh'], '#8593a6', 0.25),
+                  lip='#9AA3B5', blush=mix(sp.get('blush', '#e19c94'), _ICE_COLD_SKIN, 0.85), skin_dp=mix(sp['skin_dp'], '#8fa0b8', 0.4))
+        P = P.copy(); P.pale = 0.0          # our own tint instead of the grey 'pale'
+    return _dhl_base(c, who, P, yaw, pitch, det, t, light, sp)
+
+
+_wrinkles_base = _wrinkles
+
+
+def _wrinkles(c, hm, sp, P, det, sh):
+    if sp.get('kidface'): return            # a 6-year-old never gets forehead lines or frown folds
+    return _wrinkles_base(c, hm, sp, P, det, sh)
+
+
+for _w in ('adam', 'adam_in', 'adam_sock', 'lina', 'lina_pj', 'walter58', 'benny'):
+    if _w in CAST: CAST[_w].update(kidface=True, fold_k=0.0)
+
+
+# ---------------------------------------------------------------------------------------------------- ICE knit hats
+# Smooth-domed knit hats (no notched 'pot-lid' top) with a folded cuff; Lina's pom-pom, Dad's trapper ear flaps,
+# young Walter's 1958 flat cap. Set per cast entry with sp['ice_hat'] in ('cuff', 'pom', 'flaps', 'flat').
+def _ice_dome(hm, grow, ytop, ybot, ysh=-108.0):
+    ys = np.linspace(ytop, ybot, 34)
+    w0 = float(hm.W(ysh)) + grow
+    ws = np.array([(float(hm.W(min(max(y, -119.9), 119.9))) + grow) if y >= ysh else
+                   w0 * math.sqrt(max(0.0, 1.0 - ((y - ysh) / (ytop - ysh)) ** 2)) for y in ys])
+    ws = np.maximum(ws, 0.5)
+    xl, xr = hm.extent(ws)
+    ring = [(float(xr[i]), float(ys[i])) for i in range(len(ys))] + [(float(xl[i]), float(ys[i])) for i in range(len(ys) - 1, -1, -1)]
+    return smooth(ring, True, 0.9)
+
+
+_hair_region_ice_base = _hair_region
+
+
+def _hair_region(c, hm, sp, P, det, sil, t):
+    kind = sp.get('ice_hat')
+    if not kind or sp.get('hair') != 'della_cap':
+        return _hair_region_ice_base(c, hm, sp, P, det, sil, t)
+    _hair_region_ice_base(c, hm, dict(sp, hair='set_curls'), P, det, sil, t)       # the hair at the ears and nape
+    cc = sp['cloth'].get('cap', '#7a2f3a'); csh = mix(cc, '#000000', 0.3); chi = mix(cc, '#ffffff', 0.25)
+    if kind == 'flat':                                   # 1958: a tweed flat cap, a short stiff brim
+        X, Y = hm.arc_phi(lambda ph: -66.0 + 6.0 * np.abs(np.sin(ph)) ** 2, 120)
+        if len(X) < 3: return
+        cap = inter(_ice_dome(hm, 8.0, -128.0, 40.0, ysh=-100.0), _region_above(X, Y))
+        c.fill(cap, cc)
+        with c.clip(cap):
+            c.radial(None, -30, -110, 150, [(0, chi, 110), (0.6, cc, 0), (1, csh, 200)], clip=False)
+            if det >= 1:
+                for k in range(26):
+                    x_, y_, v_ = hm.map1((hash01(k, 71) - 0.5) * 180, -125 + 55 * hash01(k, 72), 9.0)
+                    if v_ > 0.1: c.line(poly([(x_ - 3, y_), (x_ + 3, y_ + 1)], False), c.lw * 0.35, csh, 150)
+        c.line(cap, c.lw)
+        pts = []
+        for xx in np.linspace(-62, 62, 13):
+            x_, y_, v_ = hm.map1(xx, -66.0 + 4.0 * (xx / 62.0) ** 2, 24.0 + 6.0 * (1 - (xx / 62.0) ** 2))
+            if v_ > 0.0: pts.append((x_, y_))
+        if len(pts) > 3:
+            pts2 = [(x_, y_ + 9.0) for x_, y_ in pts[::-1]]
+            brim = smooth(pts + pts2, True, 0.7)
+            c.fill(brim, csh); c.line(brim, c.lw)
+        return
+    # knit beanie: smooth dome, ribs following it, a folded cuff band (22% of the height, 8% darker)
+    X, Y = hm.arc_phi(lambda ph: -56.0 + 10.0 * np.abs(np.sin(ph)) ** 2, 120)
+    if len(X) < 3: return
+    ytop = -152.0
+    cap = inter(_ice_dome(hm, 9.0, ytop, 40.0), _region_above(X, Y))
+    c.fill(cap, cc)
+    with c.clip(cap):
+        c.radial(None, -30, -110, 170, [(0, chi, 120), (0.5, cc, 0), (1, csh, 200)], clip=False)
+        if det >= 1:
+            rib = []
+            for k in range(-9, 10):
+                pts = []
+                for yy in np.linspace(ytop + 8, -60.0, 8):
+                    x_, y_, v_ = hm.map1(k * 12.0 * math.sqrt(max(0.05, 1 - ((yy + 108) / (ytop + 108)) ** 2)) if yy < -108 else k * 12.0, yy, 10.0)
+                    pts.append((x_, y_))
+                rib.append(smooth(pts, False, 0.8))
+            c.line(_multi(rib), c.lw * 0.45, csh, 140)
+    hh_ = -56.0 - ytop
+    Xc, Yc = hm.arc_phi(lambda ph: -56.0 - 0.22 * hh_ + 10.0 * np.abs(np.sin(ph)) ** 2, 120)
+    if len(Xc) > 2:
+        cuff = inter(cap, minus(_region_above(X, Y), _region_above(Xc, Yc)))
+        cf = mix(cc, '#000000', 0.08)
+        c.fill(cuff, cf)
+        with c.clip(cuff):
+            if det >= 1:
+                for k in range(-12, 13):
+                    x_, y_, v_ = hm.map1(k * 9.0, -56.0 - 0.11 * hh_, 10.0)
+                    if v_ > 0.05: c.line(poly([(x_, y_ - 0.1 * hh_), (x_, y_ + 0.1 * hh_)], False), c.lw * 0.4, csh, 120)
+            c.line(smooth(list(zip(Xc.tolist(), Yc.tolist())), False), c.lw * 2.2, '#000000', 50)   # the fold's shadow
+        c.line(cuff, c.lw * 0.8)
+    c.line(cap, c.lw)
+    if kind == 'pom':                                  # Lina: a fluffy pom-pom on top
+        wcap = float(hm.W(-108.0)) * 2
+        r = 0.17 * wcap
+        x_, y_, v_ = hm.map1(0.0, ytop + 0.35 * r, 0.0)
+        pc = sp['cloth'].get('pom', mix(cc, '#ffffff', 0.55))
+        bl = []
+        for k in range(14):
+            a_ = k * 2 * PI / 14
+            rr = r * (1.0 + 0.10 * math.sin(k * 2.3))
+            bl.append((x_ + math.cos(a_) * rr, y_ + math.sin(a_) * rr * 0.92))
+        pom = smooth(bl, True, 0.55)
+        c.fill(pom, pc)
+        with c.clip(pom):
+            c.radial(None, x_ - r * 0.3, y_ - r * 0.35, r * 1.4, [(0, '#ffffff', 150), (0.6, pc, 0), (1, mix(pc, '#000000', 0.25), 180)], clip=False)
+        c.line(pom, c.lw * 0.9)
+    if kind == 'flaps':                                # Dad: trapper ear flaps down to the jaw line, fleece trim
+        fl = sp['cloth'].get('fleece', '#e9dcc6')
+        for s in (-1, 1):
+            pts_o, pts_i = [], []
+            ok = True
+            for yy in np.linspace(-58.0, 30.0, 9):
+                w_ = float(hm.W(min(yy, 119.0)))
+                rb = clamp((yy - 10.0) / 20.0)                     # rounded bottom
+                xo, yo, vo = hm.map1(s * (w_ + 13.0 - 6.0 * rb), yy, 4.0)
+                xi, yi, vi = hm.map1(s * max(w_ - 3.0 + 4.0 * rb, 6.0), yy, 6.0)
+                pts_o.append((xo, yo)); pts_i.append((xi, yi))
+            xs = [p[0] for p in pts_o]
+            flap = smooth(pts_o + pts_i[::-1], True, 0.7)
+            c.fill(flap, cc)
+            with c.clip(flap):
+                c.fill(_crescent(flap, -s * 6, 0), csh, 120)
+            c.line(smooth(pts_o[3:] + [pts_i[-1]], False), c.lw * 2.6, fl)  # fleece trim round the lower edge
+            c.line(flap, c.lw)
+
+CAST['adam']['ice_hat'] = 'cuff'; CAST['adam_sock']['ice_hat'] = 'cuff'
+CAST['lina']['ice_hat'] = 'pom'
+CAST['dad']['ice_hat'] = 'flaps'
+CAST['walter58']['ice_hat'] = 'flat'
+CAST['kessler']['hair_c'] = CAST['kessler_out']['hair_c'] = CAST['kessler_am']['hair_c'] = '#cfcac2'

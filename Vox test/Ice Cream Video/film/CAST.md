@@ -25,14 +25,21 @@ characters.py runs it (the `_ICE_SRC` exec line after the bus module is in place
 Pose: `sh_m` 0..1 = THE TRANSFORMATION (`SH_STEPS`, 8 states: wave, smile past cheeks, long bone mask + frost cracks,
 eyes sink, red, jaw to chest with icicle teeth, uniform splits + legs punch out, planted). Overrides: `sh_smile`,
 `sh_long`, `sh_sink`, `sh_red`, `sh_jaw`, `sh_gape`, `sh_split`, `sh_legs` (0..8, they punch out one PAIR at a time),
-`sh_glim` (glimpse), `sh_lift` (cm, body slung in the leg cage; the head hangs by `sh_hang`, default 0.55), `sh_spread`,
+`sh_glim` (glimpse), `sh_lift` (cm, body slung in the leg cage; use 80-90; the torso pitches ~60 deg, the head is thrust
+FORWARD at the lens and only nods by `sh_hang` (default 0.15, capped 0.15), his own legs tuck away above 40 cm), `sh_spread`,
 `sh_legcap`, `sh_nolegs` (human legs hidden), `ws_bend` (lean / down and down).
-Legs: 8 jointed harvestman legs (femur ~2.9x his height): femur bowed out and tibia bowed in (an organic S), spindles tapering from thick at the body to a pale needle,
+Legs (round 2): 8 jointed harvestman legs, ~35% shorter and thicker than round 1 (coxa/femur/tibia/tarsus 30/165/175/95 cm),
+knees ~1.4-1.6x his crown height; roots spread down the back (shoulder blades to waist) so the pairs frame the body; the HEAD
+GROWS x1.4 as the legs come out (never a pin-head) and the red eyes fill ~45% of the sockets with a bloom >= 4 px on output;
+the dropped jaw's cheek walls are opaque; in the cage the arms claw forward at jaw height and the gloves go frost-grey.
+Femur bowed out and tibia bowed in (an organic S), spindles tapering from thick at the body to a pale needle,
 lit/shadow edges + rim light, telescoping rings, bristles, dark ball joints under flared segment ends, frost rime crusted on
 top of every knee with tiny icicles, torn stripe flaps round each root. The mask: zygoma planes, temple hollows, brow ridge,
 big sockets with a frost rim, the lower mask tapering ~2x long; the jaw drops ~one head to the chest and ends in a wide cracked bone mandible (the mask keeps its scale), sinews and
-frost strands at the mouth's sides, icicle teeth with 3 long fangs above and 2 below. In medium shots frame wide enough for
-the knees (they ride high over his head; a WIDER `sh_spread` lowers them, e.g. 1.7, as on sh_mood).
+frost strands at the mouth's sides, icicle teeth with 3 long fangs above and 2 below. FRAME ON THE FACE: the legs may leave
+the frame edges (they bracket the mask); never frame so wide that the head is under ~8% of the frame height (sh_mood, the
+medium-wide in sh_transform_legs). Normal form: arms are tapered striped cylinders (6 wrapping stripes), one-piece trousers
+#4d4556 with a hem break, no forehead creases (frost sparkles), smile clipped to the head until the transformation.
 ```python
 a = CH.Acting('shiver', seed=1, height=CH.height_px('shiver', ppm)).place(x, floor_y)
 a.transform(t0, times)          # 8 times keyed to the words; events sh_smile_creak, sh_bone_crack, sh_eyes_sink, sh_eyes_red, sh_jaw_drop, sh_uniform_split, leg_click x8
@@ -56,8 +63,13 @@ hole, the truck wall, then the figure again in front (clip away below the sill w
 ledge over his hips while `P.sh_nolegs` is 1. **scuttle**: tetrapod gait, `spread` 1.6, body slung low and pitched forward (`pitch` 28), head hanging; stage
 him facing the lens (3/4) so the arch spreads across the frame; tips land on `ground(x)` (fence rail, car roof, roof slope).
 **transform**: the back swells and quivers, splits, then one PAIR of legs per click (keep >= 0.45 s apart); clip
-`sh_transform_legs` cuts a medium on his shoulder and back (turn 0.8, the mask turned to us, no wave: he goes rigid; only his pink light
-behind, no truck interior) for the swell, the split and the torn flaps, to the wide (knees high over the roof, tips beside the snowflake).
+`sh_transform_legs` cuts a medium on his shoulder and back (0-1.4 s: turn 0.8, the mask turned to us, he goes rigid; only his pink light
+behind) -> a MEDIUM-WIDE (1.4-4.0 s, bible step 6 'hold on the full monster': window + head, mask ~24% of the frame, legs out of the
+frame edges) -> a tight wide for <= 1 s (truck ~70% of the frame, tips on the roof beside the snowflake). Copy these framings.
+Other round-2 stagings: `sh_pour_out` ppm 470 (window ~30% of the frame, he pours toward the lens); `sh_scuttle_fence_car_roof` a
+tracking shot (camera follows his head, ppm 300); `sh_drop_door` 0.55 s fall + 15 cm squash on landing (`drop_to`), jaw after;
+`sh_hatch_upside_down` a low angle from the kids (inverted face ~20% of the frame, leg stabs between them, Adam pulls Lina behind
+him); `sh_lean_down_reach` hinges over the sill (no flip), neck +25 cm, glove tracks Lina's hand ~55 px short.
 Lights: `light=dict(rim=, rim_a=, side=, dark=0..1)` (dark: only eyes and teeth catch light).
 
 ## People
@@ -76,10 +88,21 @@ bathroom `sh_under_door`; climax `sh_hook_blanket_cage`; defeat `sh_defeat_shrin
 `lina_wave_kessler`, `kessler_window_hand`, `lina_walk_humming`, `adam_run_carry_lina`, `dad_plow_cab`,
 `kessler_shuffle_out`, `lina_hug_kessler`, `kessler_cocoa_morning`, `benny_1958`.
 
+## Faces and hats (round 2)
+- No sweat drops in this film (EXPR sweat = 0). Kids (`kidface`) never get forehead lines, frown or smile folds.
+- COLD-DANGER look: `sleepy` (stopped shivering, sleepy) and `cold_warm` ("I'm warm, Adam") give pale blue-grey skin, no rosy
+  cheeks, blue-grey lips, heavy lids. Any expression with pale >= 0.5 and blush <= -0.5 gets this tint. `grumpy` (Kessler):
+  heavy lids, brows down, mouth corners down. `fear`: smaller iris, corners down. `terrified_call`: wider shout.
+- Hats (`ice_hat`): Adam a smooth knit beanie with a folded cuff; Lina the same with a POM-POM; Dad trapper ear flaps with
+  fleece trim; walter58 a 1958 flat cap. Kessler's wisps lie flat on the scalp.
+- Benny's ONE red mitten is on his right hand in `benny_1958` and drops at the curb at the end of the walk.
+
 ## Open issues
 - Lina's mittens and Benny's red mitten are props for the shot, not on the rig; Kessler's blanket is a shot overlay.
-- Adam's hat cuff, Dad's trapper ear flaps and Kessler's two hair wisps are unchanged: they are drawn by shared rigs in characters.py
-  (outside this module); a characters.py owner can add a flag.
+- Not done in round 2 (left for the next pass): Adam's coat baffles still read flat; Benny's pyjama stripes; walter58's sepia grade
+  in the lineup (apply the sepia grade at shot level) and Kessler's ear scale; Dad's grip on the wheel / horn presses
+  (`dad_plow_cab`); the people's hands (still thin) in the shared hand system; `lina_hug_kessler` reaction; `adam_run_carry_lina`
+  3/4 hero framing; the cool rim light on Shiver in window shots; leg surface highlights at small sizes; 'cold_hands' (7:25 insert).
 - Reach-miss counts in strip-only renders over-count carried children (the child is placed at draw time); full 60 fps
   renders are the measure. `sh_lean_down_reach` keeps a ~55 px glove-to-hand gap at the end of the reach on purpose (she never touches him).
   `lina_hug_kessler` is a real hug now (pressed to him, both arms round his hips).
