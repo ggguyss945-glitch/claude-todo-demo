@@ -114,12 +114,12 @@ def _sh_head_local(lon, lat, grow=0.0, L=0.0):
     y = -ry * sl
     z = rz * cl * np.cos(lon)
     fr = np.clip(np.cos(lon), 0.0, None)
-    z = z + fr * (3.8 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
-                  + 2.0 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
+    z = z + fr * (4.8 * (1.0 - 0.85 * L) * np.exp(-(lon / 0.10) ** 2 - ((lat + 0.08) / 0.13) ** 2)          # the nose
+                  + 2.8 * np.exp(-(lon / 0.35) ** 2 - ((lat + 0.95) / 0.20) ** 2)                               # chin
                   + 0.7 * (1.0 - L) * np.exp(-(lon / 0.30) ** 2 - ((lat + 0.33) / 0.08) ** 2)                   # upper lip
                   - 0.8 * np.exp(-(lon / 0.18) ** 2 - ((lat - 0.14) / 0.06) ** 2)                               # nasal bridge
                   + (1.1 + 0.8 * L) * np.exp(-((np.abs(lon) - 0.52) / 0.24) ** 2 - ((lat + 0.06) / 0.13) ** 2)  # cheekbones
-                  + (1.5 + 0.9 * L) * np.exp(-((lat - 0.29) / 0.09) ** 2) * np.exp(-(lon / 0.6) ** 2)        # brow ridge
+                  + (1.9 + 0.9 * L) * np.exp(-((lat - 0.29) / 0.09) ** 2) * np.exp(-(lon / 0.6) ** 2)        # brow ridge
                   - (1.3 + 2.2 * L) * np.exp(-((np.abs(lon) - 0.27) / 0.13) ** 2 - ((lat - 0.13) / 0.11) ** 2)  # sockets
                   - (0.9 + 1.4 * L) * np.exp(-((np.abs(lon) - 0.66) / 0.20) ** 2 - ((lat + 0.36) / 0.17) ** 2))  # hollows
     x = x - np.sign(lon) * (0.9 + 0.6 * L) * np.exp(-((np.abs(lon) - 1.25) / 0.30) ** 2 - ((lat - 0.22) / 0.22) ** 2)  # temples
@@ -150,7 +150,7 @@ class _SHHead:
         L_ = _sh_head_local(lon, lat, grow, self.L).reshape(-1, 3)
         if self.J > 1e-3:
             w = self.jaw_w(np.ravel(lon), np.ravel(lat)) if jaw is None else np.full(L_.shape[0], float(jaw))
-            drop = self.J * (24.0 + 6.0 * self.L)
+            drop = self.J * (20.0 + 5.0 * self.L)
             L_ = L_ + np.stack([np.zeros_like(w), w * drop, w * (3.0 * self.J)], -1)
         return L_
 
@@ -289,7 +289,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     ears = []
     for s in (-1, 1):
         ek = 1.0 - 0.5 * L
-        Ec = hd.body(_sh_head_local(s * 1.46, -0.03, 0.15, L)[None, :])[0]
+        Ec = hd.body(_sh_head_local(s * 1.66, -0.04, 0.15, L)[None, :])[0]
         M = R['hrot']
         out_ = M @ np.array([s * 1.0, 0.0, 0.0]); up0 = M @ np.array([0.0, -1.0, 0.0]); bk0 = M @ np.array([0.0, 0.0, -1.0])
         c15, s15 = math.cos(0.26), math.sin(0.26)
@@ -455,7 +455,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 for run in hd.curve(lons * 0.9, hd.up(lons * 0.9) - 0.03, 0.0, -1.0):
                     c.line(smooth(run, False), lw * 2.0, '#6e2a3a', 200)
             # upper teeth
-            n_up = 12 if icy < 0.5 else 11
+            n_up = 12 if icy < 0.5 else 9
             for i in range(n_up):
                 u = (i + 0.5) / n_up * 2 - 1
                 lon_ = u * W * (0.86 if icy < 0.5 else 0.95)
@@ -468,12 +468,12 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                 if icy < 0.5:
                     wid = spc * 0.86; ln = 2.1 * (1 - 0.45 * abs(u))
                 else:
-                    fang = i in (2, 5, 8)
+                    fang = i in (1, 4, 7)
                     wid = (2.9 if fang else 2.0 + 0.6 * hash01(i, 3201))
                     ln = ((15.0 + 3.0 * hash01(i, 3202)) if fang else (4.5 + 3.5 * hash01(i, 3202))) * (1 - 0.30 * abs(u)) * (0.5 + 0.9 * J)
                 _sh_tooth(c, view, hd, root, dn, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
             # lower teeth (gap-toothed in the vendor grin)
-            n_lo = 7 if icy < 0.5 else 9
+            n_lo = 7
             for i in range(n_lo):
                 u = (i + 0.5) / n_lo * 2 - 1
                 if icy < 0.5 and i in (2, 4): continue            # the gaps in his lower row
@@ -486,7 +486,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
                     wid = 0.9 * float(np.linalg.norm(hd.p3(lon_ + dl_, float(hd.lo(lon_ + dl_)), 0.0, 1.0) - hd.p3(lon_ - dl_, float(hd.lo(lon_ - dl_)), 0.0, 1.0)))
                     ln = 2.1 * (1 - 0.4 * abs(u))
                 else:
-                    fang = i in (2, 6)
+                    fang = i in (1, 5)
                     wid = (2.6 if fang else 1.8 + 0.5 * hash01(i, 3204))
                     ln = ((11.0 + 2.0 * hash01(i, 3205)) if fang else (3.5 + 3.0 * hash01(i, 3205))) * (0.5 + 0.8 * J)
                 _sh_tooth(c, view, hd, root, upd, tg, wid, ln, pal['icicle'] if icy >= 0.5 else pal['teeth'], pal['icicle_rim'], lw, icy)
@@ -512,7 +512,7 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             # the dropped jaw ends in a bone mandible: a U band under the lower teeth, cracked, its own shading
             kj = prog(J, 0.3, 0.7)
             Wm = W * 0.98
-            band = hd.region(-Wm, Wm, lambda lo_: hd.lo(np.abs(lo_)) - 0.30 - 0.10 * (1 - (np.abs(lo_) / Wm) ** 2),
+            band = hd.region(-Wm, Wm, lambda lo_: hd.lo(np.abs(lo_)) - 0.40 - 0.16 * (1 - (np.abs(lo_) / Wm) ** 2),
                              lambda lo_: hd.lo(np.abs(lo_)) - 0.01, nlon=18, nlat=3, grow=0.2, thr=-0.3, jaw=1.0)
             if band is not None:
                 c.fill(band, pal['bone'], int(255 * kj))
@@ -577,10 +577,15 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
             c.line(sp_, lw * 1.2, pal['line'])
     for dz, s, ep, pts in ears:
         if dz >= 0.45:
-            c.fill(ep, skin); c.fill(_crescent(ep, s * 0.6, 0.4), skin_sh, 190); c.line(ep, lw, pal['line'])
-            # the helix: a C inside the rim, and the dark little hollow of the ear canal
-            ce = smooth([(pts[i][0] * 0.62 + pts[(i + 6) % 12][0] * 0.38, pts[i][1] * 0.62 + pts[(i + 6) % 12][1] * 0.38) for i in (11, 0, 1, 2, 3, 4)], False)
-            c.line(ce, lw * 0.7, pal['skin_dk'], 220)
+            c.fill(ep, skin); c.fill(_crescent(ep, s * 0.6, 0.4), skin_sh, 200); c.line(ep, lw * 0.75, pal['skin_dk'], 230)
+            # the helix: a thick C rolled over the back rim (opens toward the face), the concha bowl inside it
+            ce = smooth([(pts[i][0] * 0.80 + pts[(i + 6) % 12][0] * 0.20, pts[i][1] * 0.80 + pts[(i + 6) % 12][1] * 0.20) for i in (10, 11, 0, 1, 2, 3, 4, 5)], False)
+            c.line(ce, lw * 1.3, pal['line'], 210)
+            ci = smooth([(pts[i][0] * 0.55 + pts[(i + 6) % 12][0] * 0.45, pts[i][1] * 0.55 + pts[(i + 6) % 12][1] * 0.45) for i in (11, 0, 1, 2, 3)], False)
+            c.line(ci, lw * 0.6, pal['skin_dk'], 200)
+            if abs(hd.facing(0.0, 0.0)) < 0.45 and L < 0.5:       # near profile: the jaw line from under the ear to the chin
+                for run in hd.curve(s * np.array([1.42, 1.15, 0.85, 0.55, 0.30]), np.array([-0.30, -0.55, -0.74, -0.86, -0.92]), 0.1):
+                    c.line(smooth(run, False), lw * 0.9, pal['skin_dk'], int(150 * (1 - 2 * L)))
             cx_ = sum(q[0] for q in pts) / 12; cy_ = sum(q[1] for q in pts) / 12
             ex_ = math.hypot(pts[0][0] - pts[6][0], pts[0][1] - pts[6][1])
             c.fill(oval(cx_, cy_ + ex_ * 0.08, ex_ * 0.10, ex_ * 0.13), pal['skin_dk'], 200)
@@ -997,7 +1002,7 @@ def _sh_leg_chain(R, P, i, e):
     return out_l
 
 
-_SH_LEG_W = ((16.0, 13.0), (13.0, 7.5), (7.0, 3.5), (3.5, 0.35))     # coxa, femur, tibia, tarsus: thick to a needle
+_SH_LEG_W = ((16.0, 13.0), (13.0, 7.5), (8.5, 4.2), (4.2, 0.35))     # coxa, femur, tibia, tarsus: thick to a needle
 
 
 def _sh_leg_e(n, j):
@@ -1035,7 +1040,7 @@ def _sh_seg2d(view, a3, b3, sgi, Bc, wd):
     away = (mx - Bc[0]) * nx + (my - Bc[1]) * ny
     sg = 1.0 if away >= 0 else -1.0
     if sgi == 2: sg = -sg                                   # the tibia bows back in
-    bow = 0.0 if sgi in (0, 3) else sg * (0.6 * wd[0] * (fa + fb) / 2 + 0.035 * L)
+    bow = 0.0 if sgi in (0, 3) else sg * (0.6 * wd[0] * (fa + fb) / 2 + (0.075 if sgi == 1 else 0.05) * L)
     us = (0.0, 0.3, 0.6, 0.85, 1.0)
     w0, w1 = wd[0] * fa, wd[1] * fb
     pts, ws = [], []
@@ -1094,7 +1099,7 @@ def _sh_leg_draw(c, view, ch, det, light, i, Bc, segs):
                     w_ = ws[k] + (ws[k + 1] - ws[k]) * fr
                     c.line(smooth([(cx_ - ty * w_ * 0.6 - tx * w_ * 0.08, cy_ + tx * w_ * 0.6 - ty * w_ * 0.08), (cx_ + tx * w_ * 0.12, cy_ + ty * w_ * 0.12),
                                    (cx_ + ty * w_ * 0.6 - tx * w_ * 0.08, cy_ - tx * w_ * 0.6 - ty * w_ * 0.08)], False), lw * 0.55, pal['leg_dk'], 230)
-        c.line(tp, lw * 0.9, pal['line'])
+        c.line(tp, lw * (0.9 if sgi < 2 else 0.65), pal['line'])
         if det >= 1:                                       # short dark bristles along the outer edge, raked toward the tip
             nb = 6 + int(4 * hash01(i * 5 + sgi, 3511))
             dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]

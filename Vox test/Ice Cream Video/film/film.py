@@ -659,7 +659,11 @@ def figure(F, sh, sp, q, k=0, rim=None):
         a.lie(-1.0, q.get('lie_face', 'up'), arms=q.get('arms', 'side'))
     elif kind == 'floor':
         a.sit_floor(-1.0, None, 0.01)
-    if q.get('act'): q['act'](a, sh)
+    if q.get('act'):
+        try: q['act'](a, sh)
+        except KeyError:                                    # it reaches an actor not placed yet: run it after all are placed
+            if getattr(sh, '_defer', None) is None: raise
+            sh._defer.append((q['act'], a))
     child = None
     if q.get('carry'):                                  # a child carried in the arms (draw_carry_child)
         cq = q['carry']
@@ -841,14 +845,31 @@ def dimmed(sp, k, keep=()):
 
 
 
+ALIAS = {'adam': ('adam', 'adam_in', 'adam_sock'), 'lina': ('lina', 'lina_pj'), 'kessler': ('kessler', 'kessler_out', 'kessler_am'),
+         'shiver': ('shiver', 'shiver_mom')}
+class ADict(dict):
+    """The shot's actors by id; 'adam' / 'lina' / 'kessler' also find the costume variant placed in the shot."""
+    def _k(self, k):
+        if dict.__contains__(self, k): return k
+        for v in ALIAS.get(k, ()):
+            if dict.__contains__(self, v): return v
+        return None
+    def __missing__(self, k):
+        kk = self._k(k)
+        if kk is None: raise KeyError(k)
+        return dict.__getitem__(self, kk)
+    def __contains__(self, k): return self._k(k) is not None
+
+
 def B_set(F, sh):
     """A set view with figures on the plan (see the module docstring)."""
     p = sh.p
     sp = make_set(p['room'], p['view'], p.get('cam'), **p.get('set', {}))
     sh.sp = sp
     rim = p.get('rim', ROOM_RIM.get(p['room']))
-    L, A, I = [], {}, {}
-    sh.A = A                                  # acts can reach actors placed before them (s.A['mina'])
+    L, A, I = [], ADict(), {}
+    sh.A = A                                  # acts can reach actors placed before them (s.A['mina']); later ones are deferred
+    sh._defer = []
     ppl = list(p.get('ppl', []))
     for k, q in enumerate(ppl):
         q = dict(q)
@@ -859,6 +880,8 @@ def B_set(F, sh):
         lay, a, info = figure(F, sh, sp, q, k, rim)
         L.append(lay); key = q.get('id', q['who']); A[key] = a; I[key] = info
         info['layer'] = lay
+    for fn, a_ in sh._defer: fn(a_, sh)       # acts that reach an actor placed after them
+    sh._defer = []
     sh.I = I                                  # acts can draw in a walker's own layer space (I[who]['layer'] depth / ref_depth)
     if p.get('acts'):
         L += [l for l in (p['acts'](A, sh, sp) or []) if l is not None]
@@ -1164,7 +1187,7 @@ def B_bust(F, sh):
     act = p.get('act')
     lay, a = bust_layer(F, sh, who, cx, cy, sc, lambda a_, s: (base(a_, s), act and act(a_, s)), expr=p.get('expr'),
                         light=p.get('light', ROOM_RIM.get((p.get('bg') or ['x'])[0], LAMP)), seed=p.get('seed', 0), blink=p.get('blink'))
-    sh.A = {who: a}
+    sh.A = ADict({who: a})
     on_ = list(p.get('on', []))
     if p.get('cold') and not who.startswith('shiver'): on_.append(puffs())
     if on_:
@@ -2455,7 +2478,7 @@ def plan_rule1(F):
     # 65-68 the truck glides in (no tracks); pink and white; the warm pink window; no tire tracks
     g65 = glide(T(65), E(66) + 0.3, 24.0, ST.IC_TRUCK_A[0])
     S(T(65), 'street', 'lane', st=dict(truck=None, win=dict(liv=0.6)), acts=lambda A, sh, sp: truck_live(sp, g65), c=Z(1.2, 0.02, 900, 560),
-      sfx=[(T(65), 'truck_glide', -4, 0.2, 'outside', dict(dur=2.5))], music=[(T(65), 'jingle', 0.45, 20.0, dict(version='outside', loop=True))])
+      sfx=[(T(65), 'truck_glide', -4, 0.2, 'outside', dict(dur=2.5))], music=[(T(65), 'jingle', 0.45, round(WD(84, 'stops') + 0.25 - T(65), 2), dict(version='outside', loop=True))])
     S(T(66), 'street', 'yard', st=dict(truck=None, win=dict(liv=0.6)), acts=lambda A, sh, sp: truck_live(sp, g65), c=Z(1.3, 0.02, 640, 470))
     S(T(67), 'street', 'window_close', st=dict(truck='A'), c=Z(1.0, 0.03))
     S(T(68), 'street', 'lane', st=ST_A, c=Z(1.4, 0.03, 1000, 600))
@@ -3022,6 +3045,7 @@ def plan_globals(F):
     J(144, 145, 'bells', 0.12)
     J(151, 152, 'bells', 0.12)
     J(160, 163, 'bells', 0.4)
+    J(174, 199, 'warped', 0.28, loop=True)             # the song she walks out humming (the door swinging open .. the transformation)
     J(199, 227, 'outside', 0.45, loop=True)            # cheerful and undistorted through the whole transformation
     J(248, 250, 'bells', 0.4)
 
