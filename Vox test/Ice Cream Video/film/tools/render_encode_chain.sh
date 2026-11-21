@@ -37,7 +37,9 @@ mv "$S/ranges.now" "$S/ranges.txt"
 echo "== $(wc -l < "$S/ranges.txt") chunks, $(awk '{s+=$4} END {print s}' "$S/ranges.txt") frames"
 export C S
 set +e
-awk '{print $1, $2, $3, $4}' "$S/ranges.txt" | xargs -P "$P" -L 1 bash -c '
+# ONLY="00 03 17" limits this run to those chunks (a background task has a 2 h limit: split long runs).
+# Parallelism can be changed while it runs: kill -USR1 <xargs pid> adds a lane, kill -USR2 removes one.
+awk -v only="$ONLY" '{ if (only == "" || index(" " only " ", " " $1 " ")) print $1, $2, $3, $4 }' "$S/ranges.txt" | xargs -P "$P" -L 1 bash -c '
   k=$0; a=$1; b=$2; n=$3; d=$C/c$k
   [ -f $S/s$k/OK ] && exit 0
   if [ ! -f $d/OK ]; then

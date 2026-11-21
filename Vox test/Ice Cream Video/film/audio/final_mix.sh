@@ -36,8 +36,17 @@ FILM="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$FILM"
 W=_work; OUT=$W/mix/final
 mkdir -p "$OUT"
+# memory: if RAM runs out, the kernel kills this mix first, never the picture render running beside it
+echo 1000 > /proc/self/oom_score_adj 2>/dev/null || true
 python3 film.py --cues
-( cd audio && python3 mix.py ../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 --bed-p50 -14 ) 2>&1 | tee "$OUT/mix.log"
+# the score is rendered first in its own process (it alone peaks at about 7 GB) into a RAM cache, then the mix loads
+# it (bit-identical to rendering it inside the mix, which peaked at 9.5 GB with the voice and SFX buses held)
+export MIX_SCORE_CACHE=${MIX_SCORE_CACHE:-/dev/shm/ice_score_cache}
+rm -rf "$MIX_SCORE_CACHE"; trap 'rm -rf "$MIX_SCORE_CACHE"' EXIT      # the cache is RAM: never leave it behind
+MIXARGS="../$W/align/timeline.json ../$W/align/vo_en.wav - ../$W/cues ../$OUT --langs en --plan full --hits-db 6 --voice-ride 1.0 --bed-p50 -14"
+( cd audio && python3 mix.py $MIXARGS --score-only ) 2>&1 | tee "$OUT/score.log"
+( cd audio && python3 mix.py $MIXARGS ) 2>&1 | tee "$OUT/mix.log"
+rm -rf "$MIX_SCORE_CACHE"
 ln -f "$OUT/mix_en.wav" "$OUT/mix.wav"
 python3 audio/measure_mix.py "$OUT" --plot | tee "$OUT/measure.txt"
 python3 audio/mix_scenes.py "$OUT" > "$OUT/scenes.log"

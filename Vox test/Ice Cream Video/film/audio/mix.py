@@ -879,7 +879,35 @@ def placeholder_score(cues, dur):
     return {'drone': st * env[:, None], 'hits': hits}
 
 
+def _score_key(cues, dur):
+    """The score stems' cache key: the exact cue window, length and seed, plus score.py and its sound modules."""
+    import hashlib
+    h = hashlib.sha1(json.dumps([cues, round(float(dur), 6), SCORE_SEED], sort_keys=True, default=str).encode())
+    here = os.path.dirname(os.path.abspath(__file__))
+    for f in sorted(os.listdir(here)):
+        if f.endswith('.py') and f not in ('mix.py', 'measure_mix.py', 'mix_scenes.py'):
+            h.update(f.encode()); h.update(open(os.path.join(here, f), 'rb').read())
+    return h.hexdigest()
+
+
 def score_stems(cues, dur, force_fallback=False):
+    """MIX_SCORE_CACHE=<dir> (final_mix.sh, memory): the score is rendered first in its own process
+    (mix.py --score-only) and saved there as .npy; the mix loads the stems instead of rendering them on top of its
+    voice and SFX buses (score.py alone peaks at about 7.4 GB for the full film). Same seed and inputs: bit-identical."""
+    cdir = os.environ.get('MIX_SCORE_CACHE', '')
+    if cdir and not force_fallback:
+        key = _score_key(cues, dur)
+        mp = os.path.join(cdir, 'score_key.json')
+        if os.path.exists(mp) and json.load(open(mp)).get('key') == key:
+            names = json.load(open(mp))['stems']
+            st = {k: np.load(os.path.join(cdir, k + '.npy'), mmap_mode='c') for k in names}
+            if not SCORE_ONLY:                       # the cache is RAM (/dev/shm): unlink it now, so its pages go
+                for k in names:                      # as soon as the music bus has taken each stem
+                    os.remove(os.path.join(cdir, k + '.npy'))
+                os.remove(mp)
+            log('score.py stems from the cache %s: %s' % (cdir, ', '.join(st)))
+            return st, 'score.py'
+        log('score cache %s: no match for these cues, rendering here' % cdir)
     if not force_fallback:
         try:
             import importlib
@@ -887,6 +915,13 @@ def score_stems(cues, dur, force_fallback=False):
             st = score.render(cues, dur, seed=SCORE_SEED)
             if isinstance(st, dict) and st:
                 log('score.py stems:', ', '.join(st))
+                if cdir and SCORE_ONLY:
+                    os.makedirs(cdir, exist_ok=True)
+                    names = list(st)
+                    for k in names:
+                        np.save(os.path.join(cdir, k + '.npy'), np.ascontiguousarray(st.pop(k), np.float32))
+                    json.dump({'key': key, 'stems': names}, open(mp, 'w'))
+                    return {}, 'score.py'
                 return st, 'score.py'
             log('score.py returned nothing; using placeholder')
         except Exception as e:
@@ -1185,6 +1220,7 @@ DUCK_HOLD_S = 0.12   # the Bunnyman's final mix: the music / beds duck holds 0.1
                      # only 0.6 LU in the gaps; the references come up 2.5-3 LU)
 CLARITY_MARGIN_LU = 6.0   # the voice always clear: while a line is spoken the bed stays this far under the narration's own
 CLARITY_MAX_CUT_DB = 10.0  # 400 ms level (measure_mix.py flags < 4 LU); the excess is cut, at most this much
+SCORE_ONLY = False   # mix.py --score-only: render the score into MIX_SCORE_CACHE and stop
 SCORE_SEED = 1987    # score.py's random choices (track offsets, voicings, jitter) from a fixed seed: by default the seed was
                      # the hash of the cue sheets, so any cue change re-rolled the whole score and moved every weak spot
 # fix round 1 (critic 3 M6: the scares never got louder than the narration's own loudest lines, +5 LU): the boosted
@@ -1390,6 +1426,23 @@ def short_term_rel(x, ref, win=0.4, hop=0.1):
 
 
 # ============================================================================ main
+def score_window(mcues, t0, t1):
+    """The score's cue sheet for the window t0..t1: (cues, score length, pre-roll samples)."""
+    ts = max(0.0, t0 - 30.0) if t0 > 0 else 0.0
+    sdur = t1 - ts; npre = int(round((t0 - ts) * SR))
+    mc = dict(mcues)
+    mc['duration'] = sdur
+    if mcues.get('intensity'):
+        iv = np.array(mcues['intensity'], float)
+        mc['intensity'] = [[0.0, float(np.interp(ts, iv[:, 0], iv[:, 1]))]] + \
+                          [[p[0] - ts, p[1]] for p in mcues['intensity'] if 0 < p[0] - ts < sdur] + \
+                          [[sdur, float(np.interp(t1, iv[:, 0], iv[:, 1]))]]
+    mc['events'] = [dict(e, t=e['t'] - ts) for e in mcues.get('events', []) if 0 <= e['t'] - ts < sdur]
+    if mcues.get('track_map'):
+        mc['track_map'] = window_track_map(mcues['track_map'], ts, sdur)
+    return mc, sdur, npre
+
+
 def main():
     if len(sys.argv) == 4 and sys.argv[1] == '--check':          # mix.py --check <cues dir> <out dir>
         st_ = stale(sys.argv[2], sys.argv[3])
@@ -1425,6 +1478,8 @@ def main():
                     help='gain on the score\'s hits stem (final_mix.sh: +4; the full-length checks measured the hits '
                          'p50 7 LU under the voice, the references +2)')
     ap.add_argument('--music-width', type=float, default=0.7)
+    ap.add_argument('--score-only', action='store_true',
+                    help='render only the score into MIX_SCORE_CACHE (final_mix.sh runs this first, for memory) and stop')
     A = ap.parse_args()
     T0 = time.time()
     langs = [s for s in A.langs.split(',') if s]
@@ -1460,6 +1515,17 @@ def main():
     t0 = A.t0; t1 = min(full, A.t1) if A.t1 else full
     dur = t1 - t0; N = int(round(dur * SR)); i0 = int(round(t0 * SR))
     log(f'window {t0:.1f}-{t1:.1f} s ({dur:.1f} s), {len(sfx_cues)} sfx cues, langs {langs}')
+    if A.score_only:
+        global SCORE_ONLY
+        if not os.environ.get('MIX_SCORE_CACHE'):
+            sys.exit('--score-only needs MIX_SCORE_CACHE=<dir>')
+        SCORE_ONLY = True
+        mc_, sdur_, _ = score_window(mcues, t0, t1)
+        _, src_ = score_stems(mc_, sdur_, A.fallback)
+        import resource
+        log(f'score only: {src_} stems in {os.environ["MIX_SCORE_CACHE"]} ({time.time() - T0:.1f} s, peak RSS '
+            f'{resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024} MB)')
+        return
 
     # ---------------- voice
     nfull = int(round(full * SR)) + SR
@@ -1573,18 +1639,8 @@ def main():
     # ---------------- music
     # windowed renders: the score starts at a pre-roll (up to 30 s before t0) so swells and tails that began before
     # the window are there, and only events at t >= 0 are passed; the pre-roll is cut off afterwards
+    mc, sdur, npre = score_window(mcues, t0, t1)
     ts = max(0.0, t0 - 30.0) if t0 > 0 else 0.0
-    sdur = t1 - ts; npre = int(round((t0 - ts) * SR))
-    mc = dict(mcues)
-    mc['duration'] = sdur
-    if mcues.get('intensity'):
-        iv = np.array(mcues['intensity'], float)
-        mc['intensity'] = [[0.0, float(np.interp(ts, iv[:, 0], iv[:, 1]))]] + \
-                          [[p[0] - ts, p[1]] for p in mcues['intensity'] if 0 < p[0] - ts < sdur] + \
-                          [[sdur, float(np.interp(t1, iv[:, 0], iv[:, 1]))]]
-    mc['events'] = [dict(e, t=e['t'] - ts) for e in mcues.get('events', []) if 0 <= e['t'] - ts < sdur]
-    if mcues.get('track_map'):
-        mc['track_map'] = window_track_map(mcues['track_map'], ts, sdur)
     tm = time.time()
     stems, score_src = score_stems(mc, sdur, A.fallback)
     stem_names = list(stems)

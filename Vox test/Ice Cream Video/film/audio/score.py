@@ -2081,7 +2081,7 @@ class Score:
                         out[k] *= g
             self.norm_gain_db = float(REF_LUFS - li)
         self.log(f'done {time.time() - t00:.1f}s')
-        return {k: out[k].astype(np.float32) for k in STEMS}
+        return {k: out[k].astype(np.float32, copy=False) for k in STEMS}   # no second copy of the stems (memory)
 
 
 def act_db(act):
