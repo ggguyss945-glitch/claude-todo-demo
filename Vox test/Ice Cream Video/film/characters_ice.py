@@ -1676,6 +1676,20 @@ for _k in ('mom_photo', 'shiver_mom'):
     CAST[_k] = dict(CAST[_k], hair='loose', lips=0.75, lashes=1.4, brow_th=5.5)
 # her scarf: the coat's open front shows a rose knit scarf at the throat ("Her scarf." L271), not a blue shirt
 CAST['shiver_mom']['cloth'] = dict(CAST['shiver_mom']['cloth'], shirt='#b0485e', shirt_sh='#7a2e40', shirt_hi='#d0687e')
+# review: the rose shirt strip read as a TIE: a real knit scarf (a thick loop round the neck, one fringed end down the
+# front, the cast's _scarf) over a soft sweater
+CAST['shiver_mom']['cloth'] = dict(CAST['shiver_mom']['cloth'], shirt='#8e7f8c', shirt_sh='#6a5c68', shirt_hi='#a898a4', scarf_wrap=True,
+                                   scarf='#c0506a', scarf_sh='#7a2e40', scarf_hi='#e07890')
+_front_labcoat3_ice_prev = _FRONTS3['labcoat3']
+
+
+def _front_labcoat3_scarf(c, sp, B, rows, P, det, t):
+    _front_labcoat3_ice_prev(c, sp, B, rows, P, det, t)
+    if sp['cloth'].get('scarf_wrap'):
+        _scarf(c, sp, B, rows, P, det, t)
+
+
+_FRONTS3['labcoat3'] = _front_labcoat3_scarf
 
 # ---------------------------------------------------------------------------------------------- one boot, one sock
 # adam_sock after 6:45: the LEFT boot still on, the RIGHT foot in a grey sock caked with snow (feet_lr: side -> kind).

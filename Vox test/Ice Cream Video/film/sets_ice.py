@@ -1024,7 +1024,7 @@ def ic_smoke(pen, v, x, Y, y, t, k=1.0, seed=0, tod='night'):
     if k <= 0.01 or v.d(x, y) < 0.6: return
     rng = np.random.default_rng(abs(int(seed)))
     day = tod not in ('night', '1958')
-    c = '#aab4cc' if not day else '#b8b0ac'                       # day smoke: a warm grey that reads on the pale sky
+    c = '#aab4cc' if not day else '#8c8482'                       # day smoke: a warm grey that reads on the pale sky (darker: film pass 2)
     n = 9 if not day else 14
     for i in range(n):
         ph = (t * 0.22 + i / float(n) + rng.uniform(0, 0.05)) % 1.0
@@ -1032,7 +1032,7 @@ def ic_smoke(pen, v, x, Y, y, t, k=1.0, seed=0, tod='night'):
         if v.d(P[0], P[2]) < 0.5: continue
         px, py = v.p(*P); s = v.s(P[0], P[2])
         rr = (0.25 + ph * 0.9) * s * (1.35 if day else 1.0)
-        al = (110 if not day else 175) * k * (1 - ph) ** 1.2
+        al = (110 if not day else 225) * k * (1 - ph) ** 1.0
         pen.fill(oval(px, py, rr, rr * 0.8), c, al, blur=rr * 0.5)
         if day: pen.fill(oval(px - 0.15 * rr, py - 0.2 * rr, rr * 0.6, rr * 0.48), '#f4eee8', al * 0.8, blur=rr * 0.4)
 
@@ -2586,8 +2586,20 @@ def _cone2d(pen, x, y, s=1.0, t=0.0, broken=0.0):
     for k in range(-5, 6):
         pen.seg((x + 20 * s, y + k * 12 * s), (x + L * 0.8, y - k * 3 * s), 1.2, '#a87838', 180)
         pen.seg((x + 20 * s, y - k * 12 * s), (x + L * 0.8, y + k * 3 * s), 1.2, '#a87838', 140)
-    wr = poly([(x - 6 * s, y - 70 * s), (x + 110 * s, y - 44 * s), (x + 110 * s, y + 44 * s), (x - 6 * s, y + 70 * s)])
-    pen.fill(wr, '#f4f0e8', 235); pen.line(wr, 1.6, '#9a9488')
+    # review: the plain white sleeve read as a paper cup: a short pink-striped vendor wrapper with a scalloped edge,
+    # under ONE soft-serve swirl (a single silhouette with its ridges, not loose eggs)
+    wr = poly([(x - 4 * s, y - 66 * s), (x + 58 * s, y - 50 * s), (x + 58 * s, y + 50 * s), (x - 4 * s, y + 66 * s)])
+    pen.fill(wr, '#f6eef2', 240)
+    pen.cv.save(); pen.cv.clipPath(wr, skia.ClipOp.kIntersect, True)
+    for k in range(-4, 5):
+        pen.fill(poly([(x - 10 * s, y + (k * 30 - 8) * s), (x + 70 * s, y + (k * 30 + 12) * s), (x + 70 * s, y + (k * 30 + 24) * s), (x - 10 * s, y + (k * 30 + 4) * s)]), IC_STRIPE, 220)
+    pen.cv.restore()
+    pen.line(wr, 1.6, '#8a4a6a')
+    for k in range(7):
+        pen.fill(oval(x - 4 * s, y + (-60 + 20 * k) * s, 9 * s, 7 * s), '#f6eef2')
+    base = smooth([(x + 4 * s, y - 74 * s), (x - 70 * s, y - 80 * s), (x - 160 * s, y - 62 * s), (x - 226 * s, y - 30 * s), (x - 252 * s, y),
+                   (x - 226 * s, y + 30 * s), (x - 160 * s, y + 62 * s), (x - 70 * s, y + 80 * s), (x + 4 * s, y + 74 * s)], True)
+    pen.fill(base, '#fbf3f6'); pen.line(base, 2.4, '#8a4a6a', 230)
     for i, (dx, r, c) in enumerate(((-40, 78, '#fbf3f6'), (-100, 68, IC_STRIPE), (-150, 56, '#fbf3f6'), (-192, 40, IC_STRIPE), (-222, 22, '#fbf3f6'))):
         sw = oval(x + dx * s, y + (6 if i % 2 else -6) * s, r * 0.62 * s, r * s)
         pen.fill(sw, c); pen.line(sw, 2.0, '#8a4a6a', 220)
@@ -2727,9 +2739,12 @@ def _ici_mittens(pen, t, lina=False, drop=0.0, **kw):
     for i, c in enumerate(ms):
         f = 0.155 + 0.69 * (i + 0.5) / n
         x = -200 + 2320 * f; y = 260 + 160 * math.sin(math.pi * f)
-        if i == n - 1 and lina and drop > 0: y += 900 * drop ** 2
         sc = 140 if i == 0 else 190
         sw = 4 * math.sin(t * 1.2 + i)
+        fall = i == n - 1 and lina and drop > 0
+        if fall:                                       # film pass 2: the peg stays on the string; the mitten slips out and tumbles
+            pen.fill(rrect(x - 10, y - 16, 20, 46, 4), '#e8dcc8'); pen.line(rrect(x - 10, y - 16, 20, 46, 4), 1.4)
+            y += 1100 * drop ** 2 + 40 * drop; sw += 160 * drop ** 1.5; x += 60 * drop
         pen.cv.save(); pen.cv.translate(x, y); pen.cv.rotate(sw)
         m = union(rrect(-sc * 0.38, sc * 0.16, sc * 0.76, sc * 0.92, sc * 0.36), oval(sc * 0.37, sc * 0.52, sc * 0.17, sc * 0.27))
         pen.fill(moved(m, 10, 14), '#7a2a4a', 90, blur=10)
@@ -2737,7 +2752,7 @@ def _ici_mittens(pen, t, lina=False, drop=0.0, **kw):
         for k in range(5): pen.line(smooth([(-sc * 0.3, sc * (0.35 + 0.12 * k)), (0, sc * (0.38 + 0.12 * k)), (sc * 0.3, sc * (0.35 + 0.12 * k))], False), 1.4, '#000000', 50)
         pen.line(m, 2.4, '#2a1018', 220)
         pen.fill(rect(-sc * 0.42, sc * 0.88, sc * 0.84, sc * 0.22), mix(c, '#ffffff', 0.45)); pen.line(rect(-sc * 0.42, sc * 0.88, sc * 0.84, sc * 0.22), 1.5, '#2a1018', 180)
-        pen.fill(rrect(-10, -16, 20, 46, 4), '#e8dcc8'); pen.line(rrect(-10, -16, 20, 46, 4), 1.4)
+        if not fall: pen.fill(rrect(-10, -16, 20, 46, 4), '#e8dcc8'); pen.line(rrect(-10, -16, 20, 46, 4), 1.4)
         pen.cv.restore()
     pen.fill(rect(*_IBGB), '#ffffff', 18)
 
