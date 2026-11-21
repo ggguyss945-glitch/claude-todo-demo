@@ -323,21 +323,24 @@ def _sh_mandible(c, hd, view, Xu, Yu, Fu, Xl, Yl, J, k, det, light):
     i0 = len(Xl) // 2
     top = np.array([float(Xl[i0]), float(Yl[i0])]) - ey * 0.02 * H
     top = top + ex * float(np.dot((sl + sr) / 2 - top, ex)) * 0.6        # centred under the mask
-    hw, hh = 0.50 * Wd, 0.22 * H
+    hw, hh = 0.50 * Wd, 0.27 * H
     L_ = lambda u, v: tuple(top + ex * u + ey * v)       # noqa: E731
-    out = [L_(-hw, -0.10 * hh), L_(-hw * 0.55, 0.0), L_(0.0, 0.03 * hh), L_(hw * 0.55, 0.0), L_(hw, -0.10 * hh),
-           L_(hw * 0.92, 0.35 * hh), L_(hw * 0.70, 0.78 * hh), L_(hw * 0.32, 1.0 * hh), L_(-hw * 0.32, 1.0 * hh),
-           L_(-hw * 0.70, 0.78 * hh), L_(-hw * 0.92, 0.35 * hh)]
-    md = smooth(out, True, 0.45)
+    rc = 0.30 * hw     # a squared jaw block: corner radius ~0.15 of its width
+    out = [L_(-hw, -0.12 * hh), L_(-hw * 0.55, -0.02 * hh), L_(0.0, 0.02 * hh), L_(hw * 0.55, -0.02 * hh), L_(hw, -0.12 * hh),
+           L_(hw * 0.98, 0.45 * hh), L_(hw * 0.96, hh - rc * 0.9), L_(hw * 0.96 - rc * 0.3, hh - rc * 0.3), L_(hw * 0.96 - rc, hh),
+           L_(-hw * 0.96 + rc, hh), L_(-hw * 0.96 + rc * 0.3, hh - rc * 0.3), L_(-hw * 0.96, hh - rc * 0.9), L_(-hw * 0.98, 0.45 * hh)]
+    md = smooth(out, True, 0.2)
     # sinews and frost strands across the dark gap: skull lip corners -> mandible top corners
     ur = [(float(x), float(y)) for x, y, f in zip(Xu, Yu, Fu) if f > -0.1]
-    if len(ur) > 4:
-        for sg, run in ((-1, ur[:len(ur) // 2]), (1, ur[len(ur) // 2:][::-1])):
-            for q in range(3):
-                p0 = run[min(len(run) - 1, 1 + q * 2)]
-                p1 = L_(sg * hw * (0.95 - 0.16 * q), -0.06 * hh)
-                mid = ((p0[0] + p1[0]) / 2 + ex[0] * sg * (6 + 4 * q) * lw, (p0[1] + p1[1]) / 2 + ex[1] * sg * (6 + 4 * q) * lw)
-                c.line(smooth([p0, mid, p1], False), lw * (1.1 - 0.25 * q), '#8d98a8' if q != 1 else '#c4d3e0', int(a * 0.6))
+    maw = getattr(hd, 'maw', None)
+    if len(ur) > 4 and maw is not None:       # 2 strands a side, INSIDE the mouth, bowed inward, half alpha
+        with c.clip(maw):
+            for sg, run in ((-1, ur[:len(ur) // 2]), (1, ur[len(ur) // 2:][::-1])):
+                for q in range(2):
+                    p0 = run[min(len(run) - 1, 3 + q * 3)]
+                    p1 = L_(sg * hw * (0.70 - 0.16 * q), -0.06 * hh)
+                    mid = ((p0[0] + p1[0]) / 2 - ex[0] * sg * (3 + 3 * q) * lw, (p0[1] + p1[1]) / 2 - ex[1] * sg * (3 + 3 * q) * lw)
+                    c.line(smooth([p0, mid, p1], False), lw * (1.0 - 0.2 * q), '#8d98a8' if q == 0 else '#c4d3e0', int(a * 0.5))
     c.line(md, lw * 2.0, pal['line'], a)
     c.fill(md, pal['bone'], a)
     bb = md.getBounds()
@@ -355,8 +358,8 @@ def _sh_mandible(c, hd, view, Xu, Yu, Fu, Xl, Yl, J, k, det, light):
         u = (i + 0.5) / n * 2 - 1
         fang = i in (1, 4)
         x0, y0 = L_(u * hw * 0.86, -0.10 * hh * u * u + 0.01 * hh)
-        ln = (0.17 if fang else 0.06 + 0.04 * hash01(i, 3711)) * H * (0.4 + 0.6 * k)
-        _sh_icicle2d(c, x0, y0, -ey[0], -ey[1], (0.045 if fang else 0.032) * Wd, ln, lw, a)
+        ln = (0.21 if fang else 0.08 + 0.04 * hash01(i, 3711)) * H * (0.4 + 0.6 * k)
+        _sh_icicle2d(c, x0, y0, -ey[0], -ey[1], (0.055 if fang else 0.04) * Wd, ln, lw, a)
 
 
 def _sh_head_draw(c, R, view, P, det, t, light, st):
@@ -412,6 +415,18 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     try: mouth.setFillType(skia.PathFillType.kWinding)     # a folded lip line must never punch a see-through hole
     except Exception: pass
     ha = getattr(hd, 'hull_all', None) if J > 0.02 else None
+    maw = None; kman0 = prog(J, 0.3, 0.55); hd.maw = None
+    if kman0 > 0.0:     # the dropped maw is inset ~9% of the head width at each side: skull, a notch, then the jaw bone
+        cr_ = np.array(view.p2(hd.p3(0.0, 1.5, 0.0, 0.0))); ch_ = np.array(view.p2(hd.p3(0.0, -1.45, 0.0, 0.0)))
+        Hh_ = float(np.linalg.norm(ch_ - cr_)) or 1.0
+        ey_ = (ch_ - cr_) / Hh_; ex_ = np.array([ey_[1], -ey_[0]])
+        sl_ = np.array(view.p2(hd.p3(-1.5, -0.1, 0.0, 0.0))); sr_ = np.array(view.p2(hd.p3(1.5, -0.1, 0.0, 0.0)))
+        Wd_ = abs(float(np.dot(sr_ - sl_, ex_))) or 1.0
+        md_ = (sl_ + sr_) / 2; hwb = (0.50 - 0.10 * kman0) * Wd_
+        B_ = lambda u, v: tuple(md_ + ex_ * u + ey_ * v)     # noqa: E731
+        band = smooth([B_(-hwb, -2 * Hh_), B_(hwb, -2 * Hh_), B_(hwb, 0.2 * Hh_), B_(hwb * 0.9, 3 * Hh_), B_(-hwb * 0.9, 3 * Hh_), B_(-hwb, 0.2 * Hh_)], True, 0.1)
+        maw = inter(mouth, band); hd.maw = maw
+    mouth_c = maw if maw is not None else mouth
     kgap = prog(J, 0.3, 0.7)
     if ha is not None and kgap < 0.99:
         c.line(ha, lw * 2.2, pal['line'], int(255 * (1 - kgap)))
@@ -419,12 +434,12 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     for sp_ in (sils if kman <= 0.0 else sils[:1]):
         c.line(sp_, lw * 2.2, pal['line'])
     if ha is not None:     # the cheek walls: a #120A10 falloff (a dark gap between skull and mandible, not a capsule)
-        c.fill(ha, pal['mouth_m'], int(255 * (1 - 0.35 * kgap)))
-        if kgap > 0.01:
+        c.fill(ha, pal['mouth_m'], int(255 * (1 - 0.35 * kgap) * (1 - kman0)))
+        if kgap > 0.01 and kman0 < 0.99:
             bbh = ha.getBounds()
-            c.radial(ha, bbh.centerX(), bbh.centerY(), bbh.width() * 0.5, [(0, pal['mouth_m'], int(200 * kgap)), (0.55, pal['mouth_m'], int(150 * kgap)), (1.0, pal['mouth_m'], 0)], sy=bbh.height() / max(bbh.width(), 1.0))
+            c.radial(ha, bbh.centerX(), bbh.centerY(), bbh.width() * 0.5, [(0, pal['mouth_m'], int(200 * kgap * (1 - kman0))), (0.55, pal['mouth_m'], int(150 * kgap * (1 - kman0))), (1.0, pal['mouth_m'], 0)], sy=bbh.height() / max(bbh.width(), 1.0))
     if J > 0.02:
-        c.fill(mouth, pal['mouth_m'])      # under the skin silhouettes: shows in the gap between skull and jaw
+        c.fill(mouth_c, pal['mouth_m'])      # under the skin silhouettes: shows in the gap between skull and jaw
     kman = prog(J, 0.3, 0.55)
     for k_, sp_ in enumerate(sils):
         if k_ == 1 and kman > 0.0:
@@ -555,24 +570,29 @@ def _sh_head_draw(c, R, view, P, det, t, light, st):
     vis = float(np.mean(np.concatenate([Fu, Fl])))
     if vis > -0.2:
         icy = max(prog(J, 0.05, 0.5), prog(L, 0.5, 1.0) * 0.6)
-        c.fill(mouth, mix(pal['mouth'], pal['mouth_m'], max(L, J)))
-        with c.clip(mouth):
+        c.fill(mouth_c, mix(pal['mouth'], pal['mouth_m'], max(L, J)))
+        if maw is not None:      # no throat: a soft dark falloff, #120A10 in the middle to #2A1420 at the walls
+            bbm = maw.getBounds()
+            c.radial(maw, bbm.centerX(), bbm.centerY(), max(bbm.width(), bbm.height()) * 0.55,
+                     [(0, '#120A10', int(255 * kman0)), (0.55, '#1a0e16', int(255 * kman0)), (1.0, '#2A1420', int(255 * kman0))],
+                     sy=bbm.height() / max(bbm.width(), 1.0))
+        with c.clip(mouth_c):
             M = R['hrot']
             dn = M @ _u3(np.array([0.0, 1.0, 0.12])); upd = M @ _u3(np.array([0.0, -1.0, 0.12]))
             if J > 0.25:   # no throat: the dark deepens into the middle
                 Xm, Ym = view.p2((hd.p3(0.0, float(hd.up(0.0)), 0.0, 0.0) + hd.p3(0.0, float(hd.lo(0.0)), 0.0, 1.0)) / 2)
-                c.glow(Xm, Ym, 14.0 * cm * J, 18.0 * cm * J, '#000000', 230)
+                if maw is None: c.glow(Xm, Ym, 14.0 * cm * J, 18.0 * cm * J, '#000000', 230)
                 # the mouth's side walls: pale stretched sinews and frost strands from the skull to the dropped jaw
                 ks = prog(J, 0.25, 0.8)
                 for sg in (-1, 1):
-                    for k in range(1, 4):
-                        u0 = 0.62 + 0.08 * k + 0.03 * hash01(k, 3611); u1 = 0.55 + 0.09 * k
+                    for k in range(1, 3):       # 2 per side, inside the mouth, half alpha
+                        u0 = 0.52 + 0.08 * k + 0.03 * hash01(k, 3611); u1 = 0.55 + 0.09 * k
                         a0 = hd.p3(sg * W * u0, float(hd.up(W * u0)) - 0.01, 0.0, 0.0)
                         b0 = hd.p3(sg * W * u1, float(hd.lo(W * u1)) + 0.01, 0.0, 1.0)
                         mid = (a0 + b0) / 2 + R['hrot'] @ np.array([-sg * (1.5 + 1.2 * hash01(k, 3612)), 0.0, -2.0])
                         pp = [view.p2(a0), view.p2(mid), view.p2(b0)]
                         if hd.facing(sg * W * u0, float(hd.up(W * u0))) < -0.15: continue
-                        c.line(smooth(pp, False), lw * (0.9 + 0.7 * hash01(k, 3613)), '#9aa6b4', int(200 * ks))
+                        c.line(smooth(pp, False), lw * (0.9 + 0.7 * hash01(k, 3613)), '#9aa6b4', int(128 * ks))
             elif icy < 0.5:   # the gum line behind the teeth
                 for run in hd.curve(lons * 0.9, hd.up(lons * 0.9) - 0.03, 0.0, -1.0):
                     c.line(smooth(run, False), lw * 2.0, '#6e2a3a', 200)
