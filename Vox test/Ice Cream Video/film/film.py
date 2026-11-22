@@ -2493,7 +2493,7 @@ def plan_open(F):
     # (fullsize QA: she was drawn IN FRONT of the door; now she stands outside it: the bust sits behind the door leaf, seen
     #  only through its glass, her eyes in the clear strip, her mouth behind the thinned, feathered top of the frost)
     BU(W(2, 'breath'), 'shiver_mom', 'hall', 'doorclose', dict(HALL_A, hall=0.2, lamp=0.0, frost_soft=(0.5, 0.42)), cx=960, cy=425, scale=0.36,
-       depth=1.52, light=PINK_D, cold=False, act=_A(lk(T(2) - 1, (960, 700))), c=Z(1.55, 0.02, 960, 450), post=dict(blur=0))
+       depth=1.52, light=PINK_D, cold=False, act=_A(pose(-9, None, 0.1, hair_ucheck=1.0), lk(T(2) - 1, (960, 700))), c=Z(1.55, 0.02, 960, 450), post=dict(blur=0))
     C(W(2, "don't"), 'set', room='hall', view='door', set=dict(HALL_A, hall=0.55, lamp=0.0, pink=1.0),       # (review: the deadbolt hit reads)
       ppl=[adam('door_in', face=(-1.74, 0.0), expr='stern_afraid', act=_A(reach(W(2, "don't") + 0.05, 1, 'lock', dur=0.3, shape='pinch')))],
       sfx=[(F.w(2, 'door') + 0.0, 'deadbolt', 0, -0.2, 'inside', dict(kind='throw'))], c=Z(1.0, 0.02, hit=[F.w(2, 'door')]))
@@ -2975,7 +2975,7 @@ def plan_rule3(F):
     tgr = WD(146, 'grabs')
     S(T(146), 'hall', 'door', st=HALL_BLACK, cam=cm((-1.6, 3.4, 1.2), (-2.1, 0.8, 1.0), 1000),
       ppl=[adam((-2.1, 0.8, 0.0), who='adam', id='adam', face=(-2.1, 0.0), expr='set_jaw', act=_A(lk(tgr + 0.2, ('lina', 'head'), dur=0.3, body=0.5))),
-           lina((-1.7, 2.2, 0.0), who='lina', id='lina', path=[(T(146), (-1.7, 2.2, 0.0)), (tgr, (-1.78, 1.0, 0.0))], run=True, expr='pleading',     # (fullsize QA: beside him, not stacked on him)
+           lina((-1.74, 1.45, 0.0), who='lina', id='lina', path=[(T(146), (-1.74, 1.45, 0.0)), (tgr, (-1.78, 1.0, 0.0))], run=True, expr='pleading',     # (fullsize QA: beside him, not stacked on him; v3: she starts close beside him and takes one short step in; same walk keys/steps as before, so the footstep cues are unchanged)
                 act=_A(reach(tgr - 0.05, 1, ('adam', 'hip'), dur=0.25)))], cold=True, breath_back_off=True, c=Z(1.0, 0.02))
     BU(T(147), 'lina', 'hall', 'door', HALL_BLACK, cx=960, cy=600, scale=0.95, light=PINK_D, expr='pleading', cold=True, act=_A(lk(T(147), (960, 300))), c=BZ(0.02))
     # 148-149 "The rule says one blanket," I tell the radio.
@@ -4199,7 +4199,7 @@ def plan_rule7(F):
     S(T(363), 'street', 'kdoor', st=KP, ppl=huddle(lact=_A()), acts=cloak(('adam', 'lina', 'kessler')), cold=True, c=Z(1.0, 0.02),
       sfx=[(T(363) + 0.1, 'blanket_wrap', -4, 0, 'outside')])
     BU(T(364), 'kessler_out', 'street', 'kdoor', KP, cx=1150, cy=470, scale=0.8, turn=-0.35, light=PINK_L, expr='dazed', cold=True,
-       act=_A(KCLIP(), klk(T(364) + 0.3, (800, 760), dur=0.6)),
+       act=_A(KCLIP(), pose(-9, None, 0.1, fringe_pin=1.0), klk(T(364) + 0.3, (800, 600), dur=0.6)),   # fringe_pin: no temple wedge in the nod
        busts=[dict(who='lina', cx=820, cy=760, scale=0.8, turn=0.5, expr='cry_shut', light=PINK_L,
                    act=_A(lambda a, s: a._add(T(364), None, lambda P_, t: setattr(P_, 'dx', P_.dx + 60 * ease_out_back(clamp((t - T(364) - 0.1) / 0.4))))))],
        c=BZ(0.02))

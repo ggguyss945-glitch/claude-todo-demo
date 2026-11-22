@@ -1598,9 +1598,33 @@ def _gran_bun(c, hm, sp, det, behind):
     c.line(bun, c.lw)
 
 
+def _union_checked(a, b):
+    """union(a, b), retried when skia hands back a wrong-but-plausible result (no error): a union must cover both
+    operands' bounds. The ice cream film, 0:11.200 (frame 672, Mom's close-up through the door glass): the union of
+    the long hair's volume with its spiky 'mess' outline came back as only the crown (bottom -54 instead of 162, a
+    fifth of the area), so the fringe vanished for one frame and the face showed over a flat cap. Nudging b by a
+    hundredth of a unit (as engine.core._op does for intersections) gives the right shape. Valid results untouched.
+    (Opt-in: pose flag hair_ucheck, used only by that shot.)"""
+    def ok(r):
+        rr, ra, rb = r.computeTightBounds(), a.computeTightBounds(), b.computeTightBounds()
+        return (rr.left() <= min(ra.left(), rb.left()) + 1.0 and rr.top() <= min(ra.top(), rb.top()) + 1.0 and
+                rr.right() >= max(ra.right(), rb.right()) - 1.0 and rr.bottom() >= max(ra.bottom(), rb.bottom()) - 1.0)
+    r = union(a, b)
+    if r is not None and ok(r): return r
+    for dx, dy in ((0.013, 0.007), (-0.011, 0.017), (0.021, -0.009)):
+        try:
+            q = skia.Path(b); q.offset(dx, dy)
+            r2 = skia.Op(a, q, skia.PathOp.kUnion_PathOp)
+            if r2 is not None and ok(r2): return r2
+        except RuntimeError:
+            continue
+    out = skia.Path(a); out.addPath(b); return out             # same fill under non-zero winding
+
+
 def _hair_region(c, hm, sp, P, det, sil, t):
     style = sp['hair']
     if style not in _HAIR3: return _hair_region_v2(c, hm, sp, P, det, sil, t)
+    union = _union_checked if P.__dict__.get('hair_ucheck', 0.0) > 0.5 else globals()['union']
     hc = sp['hair_c']
     hsh = mix(hc, '#000000', 0.36); hhi = mix(hc, '#ffffff', 0.28)
     yf, grow = _hairline(style, sp['part'])

@@ -1603,6 +1603,39 @@ def _lowbun(c, hm, sp, det, behind):
     c.line(bun, c.lw)
 
 
+def _arc_phi_xclip(hm, yfun, lo, hi, n=96):
+    """HeadMap.arc_phi for a hairline with off-head sentinel heights (+-400: 'no hair here'), its X taken at the height
+    clipped to the real hairline's range [lo, hi] (Y keeps the sentinel). arc_phi puts the sentinel itself on the
+    pitched head: with a nod (the L364 hug bust, pitch 0.44, yaw -0.76) the +-400 points slide ~115 units sideways, the
+    run folds, and the region polygons cut a tall wedge of fringe from the temple to the crown. Pinned, a sentinel run
+    drops straight off the head from where the real hairline ends. Same run/visibility logic as arc_phi.
+    (Opt-in: pose flag fringe_pin, used only by that shot.)"""
+    phis = np.linspace(-PI, PI, n, endpoint=False)
+    y0 = yfun(phis)
+    yx = np.clip(y0, lo, hi)
+    w = np.maximum(hm.W(np.clip(yx, -120, 120)), 1.0)
+    wy = np.maximum(hm.W(np.clip(y0, -120, 120)), 1.0)
+    c = np.cos(phis); s = np.sin(phis)
+    d = np.where(c > 0, hm.DF, hm.DB)
+    X = (w * s) * hm.ct + (d * w * c * hm.cp - yx * hm.spi) * hm.st
+    y1 = hm.J(y0) * hm.cp + (d * wy * c) * hm.spi
+    vis = (-s * d * hm.st + c * hm.ct) > -0.02
+    if not vis.any(): return np.array([]), np.array([])
+    if vis.all(): i0 = int(np.argmin(X))
+    else:
+        i0 = int(np.argmax(vis & ~np.roll(vis, 1)))
+    idx = (np.arange(n) + i0) % n
+    idx = idx[vis[idx]]
+    run = [idx[0]]
+    for j in idx[1:]:
+        if (j - run[-1]) % n != 1: break
+        run.append(j)
+    run = np.array(run)
+    X, Y = X[run], y1[run]
+    if X[0] > X[-1]: X, Y = X[::-1], Y[::-1]
+    return X, Y
+
+
 def _hair_new(c, hm, sp, P, det, sil, t):
     """The dummy film's hair styles: 'shaggy' (you), 'cowlick' (Owen), 'lowbun' (mom), 'pomp' (young Walter), 'bald'
     (Grandpa's white fringe over big ears, liver spots and a shine on the dome)."""
@@ -1632,7 +1665,13 @@ def _hair_new(c, hm, sp, P, det, sil, t):
             def yu(ph):
                 a = np.abs(ph)
                 return np.interp(a, [0, 1.16, 1.24, 1.4, 1.65, 2.0, 2.6, PI], [400.0, 400.0, -8.0, -26.0, -42.0, -54.0, -60.0, -62.0])
-        Xu, Yu = hm.arc_phi(yu, 120)
+        if P.__dict__.get('fringe_pin', 0.0) > 0.5:            # (opt-in, the L364 hug bust) see _arc_phi_xclip
+            Xu, Yu = _arc_phi_xclip(hm, yu, -62.0, 14.0, 120)
+            X, Y = _arc_phi_xclip(hm, yf, -2.0, 70.0, 120)
+            if len(X) < 3: return
+            region = _region_above(X, Y)
+        else:
+            Xu, Yu = hm.arc_phi(yu, 120)
         if len(Xu) < 3: return
         Yu = Yu + 4.5 * np.sin(Xu * 0.33) + 2.5 * np.sin(Xu * 0.71 + 1.0)       # a wispy, uneven top edge
         region = inter(region, _region_above(Xu, Yu, 420.0))
