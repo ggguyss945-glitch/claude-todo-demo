@@ -2519,7 +2519,7 @@ def plan_open(F):
     stw = dict(truck_open=1.0)
     BU(T(3), 'shiver', 'street', 'window_close', stw, cx=960, cy=600, scale=0.78, light=SH_PINK,
        # (popscan v2: the wave's glove snapped up in one frame at 14.2: ws_arc_reach raises the arm through its joints)
-       act=_A(pose(-9, None, 0.1, ws_bend=0.18, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7), lambda a, s: a.slow_wave(s.t0, s.t1 + 1, 1), lk(T(3) + 0.3, (1500, 600), dur=0.25, snap=True),
+       act=_A(pose(-9, None, 0.1, ws_bend=0.18, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7, ws_arc_lift=0.0), lambda a, s: a.slow_wave(s.t0, s.t1 + 1, 1), lk(T(3) + 0.3, (1500, 600), dur=0.25, snap=True),
               lk(W(3, 'who', 1) + 0.1, (500, 640), dur=0.25, snap=True), lk(W(3, 'just') - 0.2, (960, 560), dur=0.2, snap=True)),
        c=BZ(0.03), sfx=[(T(3) - 0.05, 'serving_window', -6, 0, 'outside')])
     BU(W(3, 'just'), 'shiver', 'street', 'window_close', stw, cx=960, cy=640, scale=1.15, light=SH_PINK, sill=1015.0,
@@ -3128,7 +3128,7 @@ def plan_rule4(F):
       cold=True, c=Z(2.0, 0.03, 920, 560))          # (review: 'further than a man can bend' close on the bend over her)
     # 192 S "Who's the coldest? YOU are! Free for whoever's coldest!"
     BU(T(192), 'shiver', 'street', 'curb', STO, cx=960, cy=560, scale=1.0, light=SH_PINK, rot=-12,
-       act=_A(pose(-9, None, 0.1, ws_bend=0.4, ws_soft_reach=1.0, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7), lambda a, s: a.slow_wave(T(192), E(192) + 1, 1), lk(T(192), (960, 700))), c=BZ(0.02))
+       act=_A(pose(-9, None, 0.1, ws_bend=0.4, ws_soft_reach=1.0, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7, ws_arc_lift=0.0), lambda a, s: a.slow_wave(T(192), E(192) + 1, 1), lk(T(192), (960, 700))), c=BZ(0.02))
     # (the snap look is settled before the cut: the close-up's first frame is never the un-looked pose)
     BU(W(192, 'you'), 'shiver', 'street', 'curb', STO, cx=960, cy=-210, scale=1.5, light=SH_PINK, rot=-14, face_fix=False,
        act=_A(pose(-9, None, 0.1, ws_bend=0.45), lambda a, s: a.set(W(192, 'you'), None, 0.3, sh_smile=0.15), lk(W(192, 'you') - 0.15, (960, 760), snap=True, dur=0.1)),
