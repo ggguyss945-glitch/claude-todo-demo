@@ -149,6 +149,7 @@ from engine.core import (DW, DH, LINE, CFG, Pen, col, mix, rgb, poly, smooth, re
                          moved, scaled, clamp, lerp, prog, ease, ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back,
                          noise1, hash01, text, text_width, typeface, image_from, surface_for)
 from engine.scene import Layer
+from engine.core import tex_ns_key  # noqa: E402
 from engine.post import police_flash
 
 __all__ = ['SetPiece', 'Anchor', 'View', 'lightbar', 'flicker', 'drive', 'SETS', 'build', 'PROPS', 'PROP_SIZE', 'draw_prop', 'insert',
@@ -660,6 +661,7 @@ def _sprite(pen, key, draw_fn, bounds, scale=1.0, alpha=1.0, rot=0.0):
     d = 1.12 ** math.ceil(math.log(max(1e-3, dev * 1.05)) / math.log(1.12))
     rq = round(rot / 0.25) * 0.25
     k = (key, round(d, 4), rq)
+    if tex_ns_key() is not None: k = k + ('tex', tex_ns_key())     # (opt-in deterministic textures: engine.core.tex_ns)
     e = _SPR.get(k)
     x0, y0, x1, y1 = bounds
     if rq:

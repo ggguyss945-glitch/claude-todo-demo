@@ -134,7 +134,9 @@ def _density_bucket(d):
 
 
 def _base_key(layer):
-    return layer.cache if isinstance(layer.cache, str) else ('uid', layer._uid)
+    k = layer.cache if isinstance(layer.cache, str) else ('uid', layer._uid)
+    ns = core.tex_ns_key()                    # opt-in deterministic texture seeds (core.tex_ns): never reuse a raster
+    return k if ns is None else (k, 'tex', ns)   # drawn with another shot's (per-process) textures
 
 
 def _gained(key, e, gains):

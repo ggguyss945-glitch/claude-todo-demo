@@ -56,6 +56,7 @@ import skia
 from engine import *                                                    # noqa: F401,F403
 from engine import hud as H
 from engine import post as _epost
+from engine.core import tex_ns  # noqa: E402
 from engine.core import DW, DH, CFG, clamp, lerp, ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, noise1, hash01, prog, image_from
 import characters as CH
 import sets as ST
@@ -271,6 +272,16 @@ class Film:
     # ---------------------------------------------------------------- frame
     def frame(self, t, i, bg='#000000', overlay=True):
         sh = self.shot_at(t)
+        # opt-in shot param tex_seed (popscan v2 chunk-join texture jumps): the shot's grain / stain / frost textures are
+        # seeded from the shot (True: its kind and start; a string: that name) instead of the per-process hash
+        ts_ = sh.p.get('tex_seed')
+        prev_ns = tex_ns(None if not ts_ else (ts_ if isinstance(ts_, str) else '%s@%.2f' % (sh.kind, sh.t0)))
+        try:
+            return self._frame(sh, t, i, bg, overlay)
+        finally:
+            tex_ns(prev_ns)
+
+    def _frame(self, sh, t, i, bg, overlay):
         spec = self._build(sh)
         for ts in (getattr(spec, 'pre', None) or []):          # the VHS pause's frozen frames are rendered first
             self.freeze(ts)
@@ -2125,7 +2136,7 @@ def IN(t, name, kw=None, **p):
     _FILM[0].cut(t, 'ins', name=name, kw=kw, **p)
 
 
-def RULE(t, n): _FILM[0].cut(t, 'rule', n=n)
+def RULE(t, n, **p): _FILM[0].cut(t, 'rule', n=n, **p)
 
 
 def Z(f=1.0, rate=0.02, x=960, y=540, **k): return dict(mv='push', f=f, rate=rate, x=x, y=y, **k)
@@ -2160,7 +2171,14 @@ def reach(t0, side, target, t1=None, dur=0.5, shape='grip', contact='palm', z=30
 def wavef(t0, t1, side=1, slow=True): return lambda a, s: a.wave(t0, t1, side, slow=slow)
 
 
-def radio(t0, t1, side=1, drop=0.0): return lambda a, s: a.radio_to_mouth(t0, t1, side, drop=drop)
+def radio(t0, t1, side=1, drop=0.0, rise=0.4): return lambda a, s: a.radio_to_mouth(t0, t1, side, drop=drop, rise=rise)
+
+
+def quiet(f):
+    """An act whose sound events are dropped (the same action continues into the next shot, which owns the sounds)."""
+    def run(a, s):
+        n = len(a.events); f(a, s); del a.events[n:]
+    return run
 
 
 RADIO_LOW = 60.0       # Adam's handset in the part-B close-ups: at the mouth corner, its top below the eye line
@@ -2500,7 +2518,8 @@ def plan_open(F):
     # 3 S "Who's cold? Who wants a free one? Just come to the window!"  (his voice: no lip sync; he is busy at the window)
     stw = dict(truck_open=1.0)
     BU(T(3), 'shiver', 'street', 'window_close', stw, cx=960, cy=600, scale=0.78, light=SH_PINK,
-       act=_A(pose(-9, None, 0.1, ws_bend=0.18), lambda a, s: a.slow_wave(s.t0, s.t1 + 1, 1), lk(T(3) + 0.3, (1500, 600), dur=0.25, snap=True),
+       # (popscan v2: the wave's glove snapped up in one frame at 14.2: ws_arc_reach raises the arm through its joints)
+       act=_A(pose(-9, None, 0.1, ws_bend=0.18, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7), lambda a, s: a.slow_wave(s.t0, s.t1 + 1, 1), lk(T(3) + 0.3, (1500, 600), dur=0.25, snap=True),
               lk(W(3, 'who', 1) + 0.1, (500, 640), dur=0.25, snap=True), lk(W(3, 'just') - 0.2, (960, 560), dur=0.2, snap=True)),
        c=BZ(0.03), sfx=[(T(3) - 0.05, 'serving_window', -6, 0, 'outside')])
     BU(W(3, 'just'), 'shiver', 'street', 'window_close', stw, cx=960, cy=640, scale=1.15, light=SH_PINK, sill=1015.0,
@@ -2556,7 +2575,7 @@ def plan_setup(F):
       tags=[tagc(WD(18, 'lina'), 'LINA, 6', 'pill', 960, 170, 2.0)], c=Z(1.5, 0.02, 1000, 650))
     BU(T(19), 'lina_pj', 'living', 'couch3q', LIV_EVE, cx=960, cy=620, scale=0.9, light=LAMP, expr='kid_grin', act=_A(tilt(T(19) + 0.2, 10.0)), c=BZ(0.02))
     tm = WD(19, 'mittens')
-    BU(W(19, 'mittens'), 'lina_pj', 'living', 'couch3q', LIV_EVE, cx=1000, cy=640, scale=0.95, light=LAMP, expr='stern', act=_A(shake_head(tm, 3)),
+    BU(W(19, 'mittens'), 'lina_pj', 'living', 'couch3q', LIV_EVE, cx=1000, cy=640, scale=0.95, light=LAMP, expr='stern', act=_A(pose(-9, None, 0.1, ear_fade=1.0), shake_head(tm, 3)),     # (ear_fade: popscan v2 ear pop 51.9 s)
        hands=[dict(who='lina_pj', fn=slide(tm, tm + 0.5, (900, 1000), (420, 1300), 20, 70), size=140, shape='fist', side=1, sleeve_from=(1000, 1400))],
        c=BZ(0.02))
     # 20-23 Mr. Kessler's shovel at six; every walk clear; "the town does it"
@@ -2570,12 +2589,14 @@ def plan_setup(F):
        act=_A(tilt(T(23) + 0.3, 9.0, 1.4)), c=BZ(0.015))
     # 24-25 the rules taped up; signed W.K.
     tk = T(24) + 0.6
-    IN(T(24), 'rules', dict(show=7, door='ours'), c=dict(mv='push', f=1.0, rate=0.02),
+    # (popscan v2 65.667: the card's paper grain / stains changed at the chunk join: tex_seed makes both shots draw the
+    #  same textures in every render process)
+    IN(T(24), 'rules', dict(show=7, door='ours'), c=dict(mv='push', f=1.0, rate=0.02), tex_seed='rules_L24',
        hands=[dict(who='kessler', fn=slide(tk - 0.5, tk, (1900, 120), (1540, 160), 125, 135,
                                            extra=lambda t, r: (r[0] - 8 * math.sin(clamp((t - tk) / 0.6) * math.pi), r[1], r[2], r[3] * (1 - clamp((t - tk - 1.6) / 0.4)))),
                    size=300, shape='flat', side=-1, sleeve_from=(2200, -200))], sfx=[(tk, 'tape_press', -8, 0.3, 'close')])
     IN(T(25), 'rules', dict(show=7, door='ours'), motion=lambda u: (-560 * ease_in_out(clamp(u / 0.9)), -400 * ease_in_out(clamp(u / 0.9)),
-                                                                    0.9 * ease_in_out(clamp(u / 0.9)), 0.0), c=dict(mv='hold'))
+                                                                    0.9 * ease_in_out(clamp(u / 0.9)), 0.0), c=dict(mv='hold'), tex_seed='rules_L24')
     # 26-30 1958 (memory, sepia)
     def walk58(who, t0, t1, a0, a1, seed=0, expr='neutral', **k):
         return P(who, a0, path=[(t0, a0), (t1, a1)], surface='snow', expr=expr, seed=seed, light=SEPIA, **k)
@@ -2942,7 +2963,7 @@ def plan_rule3(F):
     S(T(133), 'living', 'couch3q', st=LIV_FROST, ppl=[adam('couch_mid', who='adam', kind='seat', expr='focused', act=_A(lambda a, s: a.set(-9, None, 0.1, lean=0.35, spine_c=1.0),
                                                                                                                        reach(T(133), 1, (3.3, 1.95, 0.1), dur=0.3)))],
       cold=True, c=Z(2.2, 0.02, 1000, 760), post=dict(exposure=0.6))     # (owner's-eyes: lit, closer on the socks he grabs)
-    BU(T(134), 'lina', 'living', 'couch3q', LIV_FROST, cx=960, cy=600, scale=0.9, light=PINK_D, expr='stern', cold=True, act=_A(shake_head(WD(134, 'lina'), 2, dur=0.7)),
+    BU(T(134), 'lina', 'living', 'couch3q', LIV_FROST, cx=960, cy=600, scale=0.9, light=PINK_D, expr='stern', cold=True, act=_A(pose(-9, None, 0.1, ear_fade=1.0), shake_head(WD(134, 'lina'), 2, dur=0.7)),     # (ear_fade: ear pop 263.25 s)
        acts=lambda A, sh, sp: [Layer(0.85, lambda pen, t: [_mitten_screen(pen, 760, 1000 - 20 * math.sin(t * 2), 70, -15), _mitten_screen(pen, 1160, 1000 - 20 * math.sin(t * 2 + 1), 70, 15)], 'mitts')],
        c=BZ(0.02))
     # 135 One blanket, both of us.
@@ -3003,9 +3024,12 @@ def plan_rule3(F):
     BU(T(157), 'adam', 'living', 'window', LIV_FROST, cx=1000, cy=620, scale=0.92, light=PINK_D, expr='asking', cold=True, act=_A(radio(T(157) - 0.3, E(157) + 0.5, 1)), c=BZ(0.02))
     BU(T(158), 'dad', None, None, cx=960, cy=600, scale=0.9, turn=0.3, expr='suspicious', act=_A(pose(-9, None, 0.1, flap_tidy=1.0), radio(T(158) - 0.5, E(158) + 0.3, 1)), c=BZ(0.015), **dadcab())
     BU(W(158, 'hour'), 'adam', 'living', 'window', LIV_FROST, cx=980, cy=620, scale=1.0, light=PINK_D, expr='shock', cold=True,
-       act=_A(radio(T(157), W(158, 'hour') + 0.05, 1)), c=BZ(0.03))      # the radio drops from his mouth: it sinks in
-    BU(T(159), 'adam', 'living', 'window', LIV_FROST, cx=960, cy=600, scale=1.1, light=PINK_D, expr='terrified_call', cold=True,
-       act=_A(radio(T(159) - 0.4, E(159) + 0.5, 1)), c=BZ(0.03))
+       act=_A(radio(T(157), W(158, 'hour') + 0.05, 1), quiet(radio(T(159) - 0.16, E(159) + 0.5, 1, rise=0.16)),
+              ex('terrified_call', T(159) - 0.16, None, 0.16)), c=BZ(0.03))      # the radio drops from his mouth: it sinks in
+    # (popscan v2: the radio was already at his face on the cut's first frame (309.967) with the tilt and the new face:
+    #  it now rises over 10 frames at the end of the shot before and still arrives at T(159), the cut; the face changes with it)
+    BU(T(159), 'adam', 'living', 'window', LIV_FROST, cx=960, cy=600, scale=1.1, light=PINK_D, expr='shock', cold=True,
+       act=_A(radio(T(159) - 0.16, E(159) + 0.5, 1, rise=0.16), ex('terrified_call', T(159) - 0.16, None, 0.16)), c=BZ(0.03))
     # 160 Static.  161 Bells.
     RIN(T(160), lambda u: dict(talk=0.0, static=1.0), cut='static', c=dict(mv='push', rate=0.04), sfx=[(T(160), 'radio_static', 0, 0, 'close', dict(dur=1.0))])
     RIN(T(161), lambda u: dict(talk=0.5 + 0.5 * math.sin(u * 30), static=0.9), motion=lambda u: (0.0, 0.0, 0.4, 0.0), c=dict(mv='hold'),
@@ -3104,7 +3128,7 @@ def plan_rule4(F):
       cold=True, c=Z(2.0, 0.03, 920, 560))          # (review: 'further than a man can bend' close on the bend over her)
     # 192 S "Who's the coldest? YOU are! Free for whoever's coldest!"
     BU(T(192), 'shiver', 'street', 'curb', STO, cx=960, cy=560, scale=1.0, light=SH_PINK, rot=-12,
-       act=_A(pose(-9, None, 0.1, ws_bend=0.4, ws_soft_reach=1.0), lambda a, s: a.slow_wave(T(192), E(192) + 1, 1), lk(T(192), (960, 700))), c=BZ(0.02))
+       act=_A(pose(-9, None, 0.1, ws_bend=0.4, ws_soft_reach=1.0, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.7), lambda a, s: a.slow_wave(T(192), E(192) + 1, 1), lk(T(192), (960, 700))), c=BZ(0.02))
     # (the snap look is settled before the cut: the close-up's first frame is never the un-looked pose)
     BU(W(192, 'you'), 'shiver', 'street', 'curb', STO, cx=960, cy=-210, scale=1.5, light=SH_PINK, rot=-14, face_fix=False,
        act=_A(pose(-9, None, 0.1, ws_bend=0.45), lambda a, s: a.set(W(192, 'you'), None, 0.3, sh_smile=0.15), lk(W(192, 'you') - 0.15, (960, 760), snap=True, dur=0.1)),
@@ -3409,8 +3433,28 @@ def _shrink_curve(t0, dur):
         if t < t0: return
         if x < 0.5: m = lerp(1.0, 0.9, x / 0.5)      # the head shrinks between 0.98 and 0.9: spread evenly over ~1 s
         else: m = lerp(0.9, 0.0, ease_in_out((x - 0.5) / 0.5))
-        P_.sh_m = m
+        P_.sh_m = _skip_jaw_xfade(m)
     return fn
+
+
+def _skip_jaw_xfade(m, j0=0.3, j1=0.55):
+    """popscan v2 (693.617): the cast cross-fades the dropped jaw into the closed one while the jaw stage is between 0.3
+    and 0.55 (a translucent jaw silhouette over a band-clipped maw: a hard-edged see-through rectangle across the jaw and
+    chest). The L386 shrink closes the jaw in ~3 frames, so that state was one lone in-between frame: sh_m values whose
+    jaw lands in the cross-fade are moved to its nearer edge (jaw 0.55 = the maw still open, or 0.3 = closed)."""
+    a, b = CH.SH_STAGES['jaw']
+    jf = lambda m_: ease_in_out(prog(m_, a, b))         # noqa: E731
+    if not (j0 < jf(m) < j1): return m
+
+    def solve(j):
+        lo, hi = a, b
+        for _ in range(40):
+            mid = 0.5 * (lo + hi)
+            if jf(mid) < j: lo = mid
+            else: hi = mid
+        return 0.5 * (lo + hi)
+    m0, m1 = solve(j0) - 1e-4, solve(j1) + 1e-4
+    return m0 if (m - m0) < (m1 - m) else m1
 
 
 def _step_back(t0, dx):
@@ -3641,20 +3685,31 @@ def jleg(pen, pts, w0=24.0, hook=False, rim=None):
         pen.fill(poly([(x_ - r_ * 0.25, y_ + r_ * 0.6), (x_ + r_ * 0.2, y_ + r_ * 0.6), (x_, y_ + r_ * 1.6)], True), '#e8f2ff', 200)
 
 
-def blanket_hook(sp, t0, tgt, src, knee=None, w0=30.0):
+def blanket_hook(sp, t0, tgt, src, knee=None, w0=30.0, drop=None):
     """A jointed leg (root src: screen px or f(t) -> px, e.g. his body) hooking the blanket at tgt(t) and PULLING (L355);
-    also the leg stabbing down between the kids (L296-297)."""
+    also the leg stabbing down between the kids (L296-297).
+    drop (px, opt-in, needs a fixed knee; popscan v2 524.02: the tip started at the root ABOVE the knee, so the lower
+    segment and claw folded back up over the joint for 2 frames): the knee slides down from `drop` px higher into place
+    while the tip starts just below it along the lower segment, so the leg stays unfolded on every frame."""
     def draw(pen, t):
         u = ease_out_cubic(clamp((t - t0) / 0.25))
         if u <= 0: return
         s_ = src(t) if callable(src) else src
         tx, ty = tgt(t)
-        tip = (lerp(s_[0], tx, u), lerp(s_[1], ty, u))
-        if knee is None:
-            kn = (lerp(s_[0], tip[0], 0.45) + 40, min(s_[1], tip[1]) - 170)
-        else:
+        if drop is not None and knee is not None:
             k_ = knee(t) if callable(knee) else knee
-            kn = (lerp(k_[0], tip[0], 0.15), lerp(k_[1], tip[1], 0.15))
+            dx_, dy_ = tx - k_[0], ty - k_[1]; dl_ = math.hypot(dx_, dy_) or 1.0
+            st_ = (k_[0] + 80.0 * dx_ / dl_, k_[1] + 80.0 * dy_ / dl_ - drop)
+            tip = (lerp(st_[0], tx, u), lerp(st_[1], ty, u))
+            kk_ = (k_[0], k_[1] - drop * (1.0 - u))
+            kn = (lerp(kk_[0], tip[0], 0.15), lerp(kk_[1], tip[1], 0.15))
+        else:
+            tip = (lerp(s_[0], tx, u), lerp(s_[1], ty, u))
+            if knee is None:
+                kn = (lerp(s_[0], tip[0], 0.45) + 40, min(s_[1], tip[1]) - 170)
+            else:
+                k_ = knee(t) if callable(knee) else knee
+                kn = (lerp(k_[0], tip[0], 0.15), lerp(k_[1], tip[1], 0.15))
         an = (lerp(kn[0], tip[0], 0.55) + 0.08 * (tip[1] - kn[1]), lerp(kn[1], tip[1], 0.55) - 0.08 * (tip[0] - kn[0]))
         jleg(pen, [s_, kn, an, tip], w0, hook=True, rim='#ff9ccc')
     lay = Layer(0.85, draw, 'hook_leg', blur=None)
@@ -3857,7 +3912,8 @@ def plan_rule5(F):
     BU(T(278), 'adam_sock', 'hall', 'door', HALL_PINK, cx=980, cy=600, scale=0.95, turn=-0.25, light=PINK_D, expr='stern_afraid', cold=True,
        act=_A(lk(T(278), (500, 560))), c=BZ(0.02))
     S(T(279), 'hall', 'doorclose', st=HALL_PINK, ppl=[P('shiver_mom', (-2.1, -0.45, 0.0), face=(-2.1, 2.0), sil=0.5, sil_rim='#ff9ec8', sil_rim_a=0.25,
-                                                         dorder=-6.0, light=PINK, talk=False, breath=False)], c=Z(1.0, 0.0))
+                                                         dorder=-6.0, light=PINK, talk=False, breath=False)], c=Z(1.0, 0.0),
+      tex_seed=True)       # (tex_seed: popscan v2 492.517, the frosted glass blotches changed at the chunk join)
     BU(T(280), 'shiver_mom', 'hall', 'doorclose', HALL_PINK, cx=960, cy=560, scale=0.9, light=PINK_D, cold=False,
        act=_A(lambda a, s: a.head_tilt(T(280), -12.0, 1.6), lk(T(280), (960, 760))), c=BZ(0.025))
     # 281-284 Slowly, a face slides up the glass. Long. White. Red eyes.
@@ -3920,7 +3976,7 @@ def plan_rule6(F):
     # review (the leg read as a rope and crossed Lina's face): a real jointed leg stabs straight DOWN between them from the
     # open hatch above; they recoil apart from it (Adam left, Lina right) and it pries in the gap
     leg_dn = lambda t0, pry=0.0: [blanket_hook(None, t0, lambda t: (1010 + pry * 34 * math.sin((t - t0) * 9.0), 860 + pry * 22 * abs(math.sin((t - t0) * 9.0))),
-                                               (1150, -260), knee=(1170, 200), w0=90.0)]
+                                               (1150, -260), knee=(1170, 200), w0=90.0, drop=520.0)]
     kids2 = lambda t, ex_, t_leg, pry, k_=0.0: BU(t, 'adam_sock', 'hall', 'back', HALL_BLACK, cx=lambda tt: 680 - k_ * 90 * ease_out_cubic(clamp((tt - t_leg - 0.1) / 0.3)) - (1 - k_) * 90,
                                               cy=620, scale=0.85, turn=0.35, light=PINK_D, expr=ex_, cold=True,
                                               busts=[dict(who='lina', cx=lambda tt: 1290 + k_ * 80 * ease_out_cubic(clamp((tt - t_leg - 0.12) / 0.3)) + (1 - k_) * 80,
@@ -4014,7 +4070,8 @@ def plan_twist(F):
     BU(T(319), 'shiver', 'street', 'window_close', STO_B, cx=900, cy=520, scale=0.62, light=SH_PINK, face_fix=False,
        act=_A(pose(-9, None, 0.1, ws_bend=0.15), lambda a, s: a.slow_wave(T(319), E(320) + 1, 1), lk(T(319), (1300, 560))), c=BZ(0.02))
     BU(T(320), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=0.95, light=SH_PINK,
-       act=_A(pose(-9, None, 0.1, ws_bend=0.25), lambda a, s: a.slow_wave(T(320), E(320) + 1, 1), lk(T(320), (1500, 700)),
+       # (popscan v2: the glove popped up from below the counter in one frame at 558.5: ws_arc_reach raises it through its joints)
+       act=_A(pose(-9, None, 0.1, ws_bend=0.25, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.85, ws_arc_lift=0.0), lambda a, s: a.slow_wave(T(320), E(320) + 1, 1), lk(T(320), (1500, 700)),
               lambda a, s: a.set(WD(320, 'look'), None, 0.4, sh_smile=0.25)), c=BZ(0.025))
     # 321 Mr. Kessler takes one step off his porch.
     S(T(321), 'street', 'kporch', st=KP, ppl=[kess((1.35, -23.0, 0.0), path=[(T(321) + 0.4, (1.35, -23.0, 0.0)), (E(321) + 0.2, (1.35, -22.2, -0.17))],
@@ -4058,7 +4115,7 @@ def plan_twist(F):
 # ==================================================================================================== RULE 7, THE CROSSING, THE HUDDLE (331-373)
 def plan_rule7(F):
     KP = dict(ST_B, truck_open=1.0)
-    RULE(T(331), 7)
+    RULE(T(331), 7, tex_seed=True)       # (tex_seed: popscan v2 591.033, the card's paper texture changed at the chunk join)
     # 336 Sixty-eight years, he taped that to our doors.  337 When it's my turn... don't come.
     tk = T(336) + 0.6
     IN(T(336), 'rules', dict(show=7, hl=7, door='ours'), c=dict(mv='push', f=1.0, rate=0.02),
@@ -4205,7 +4262,8 @@ def plan_rule7(F):
        c=BZ(0.02))
     # 365 From the window, a little boy's voice.  366 Copied, like Mom's.  367 S mimic "Walter, I'm cold. Come to the window."
     BU(T(365), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=1.0, light=SH_PINK, mscale=0.27, meye=330.0,
-       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.2), lambda a, s: a.slow_wave(T(365), E(367) + 1, 1), lk(T(365), (700, 760))), c=BZ(0.02))
+       # (popscan v2: hand on hip -> raised finger in one frame at 656.7: ws_arc_reach raises the arm through its joints)
+       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.2, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.85), lambda a, s: a.slow_wave(T(365), E(367) + 1, 1), lk(T(365), (700, 760))), c=BZ(0.02))
     sbm = lambda t, sc, cy, **k: BU(t, 'shiver', 'street', 'window_close', STO_B, cx=960, cy=cy, scale=sc, light=SH_PINK,
                                     act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.2), lambda a, s: a.slow_wave(t - 1, t + 4, 1), lk(t, (900, 820)), *(k.pop('acts_', []))), c=BZ(0.02), **k)
     sbm(T(366), 0.9, 620, acts_=[lambda a, s: a.head_tilt(T(366), 14.0, 1.2)])
@@ -4256,7 +4314,9 @@ def plan_dawn(F):
     S(T(374), 'street', 'lane', st=dict(KP, plow=pl(T(374))), c=Z(1.2, 0.03, 900, 540), sfx=[(T(374), 'plow_roar', 2, 0, 'outside', dict(dur=3.0))])
     BU(T(375), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=1.0,
        light=dict(BEACON, rim_a=210, key=-0.05),
-       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.1), lambda a, s: a.jaw_gape(T(375) - 2, E(376) + 1), lk(T(375), (820, 780), dur=0.15, snap=True)), c=BZ(0.02))
+       act=_A(pose(-9, None, 0.1, sh_m=1.0, ws_bend=0.1), lambda a, s: a.jaw_gape(T(375) - 2, E(376) + 1),
+              # (popscan v2: the snap look started ON the cut, so frame 1 was the un-looked upright skull: settled before the cut)
+              lk(T(375) - 0.3, (820, 780), dur=0.15, snap=True)), c=BZ(0.02))
     th = [WD(376, 'horn'), WD(376, 'again') , WD(376, 'again', 1)]
     BU(T(376), 'dad', None, None, cx=960, cy=600, scale=0.9, turn=0.3, expr='fierce_kind', plain=('#2a1c14', '#0a0706'), bg_fn=cab_bg(),
        light=dict(BEACON, rim_a=190), act=_A(lambda a, s: a.set(T(376), None, 0.2, lean=0.15), *[(lambda tt: lambda a, s: a.head_tilt(tt - 0.05, 7.0, 0.3))(tt) for tt in th]),
@@ -4292,10 +4352,12 @@ def plan_dawn(F):
        # back into the smile, landing on his face (the L387 close-up's size)
        c=dict(mv='push', x=960, y=430, rate=0.0, z1=2.2, free=True),
        sfx=[(T(386) + 0.1, 'skin_stretch', -4, 0, 'outside')])
-    BU(T(387), 'shiver', 'street', 'window_close', STO_B, cx=960, cy=600, scale=0.95, light=dict(SH_PINK, rim='#ffa040'),
+    # (popscan v2 raise: he sits 160 px left of centre so the raised glove never leaves the frame mid-raise)
+    BU(T(387), 'shiver', 'street', 'window_close', STO_B, cx=800, cy=600, scale=0.95, light=dict(SH_PINK, rim='#ffa040'),
        # fullsize QA (a glove floating with no arm): the wave is held higher (lift) so the striped sleeve reads from the
        # shoulder to the glove above the counter, and the glove eases up (ws_soft_reach) instead of popping in
-       act=_A(pose(-9, None, 0.1, ws_bend=0.2, ws_soft_reach=1.0), lambda a, s: a.slow_wave(T(387), E(387) + 1, 1, lift=28.0), lk(T(387), (1400, 700))), c=BZ(0.02))
+       # (popscan v2: a handless horizontal sleeve, then a glove with no forearm at 694.63-694.65: ws_arc_reach)
+       act=_A(pose(-9, None, 0.1, ws_bend=0.2, ws_soft_reach=1.0, ws_arc_reach=1.0, ws_arc_w0=0.12, ws_arc_w1=0.85, ws_arc_lift=0.0), lambda a, s: a.slow_wave(T(387), E(387) + 1, 1, lift=28.0), lk(T(387), (1400, 700))), c=BZ(0.02))
     # 388 The truck glides into the white.
     S(T(388), 'street', 'kout', st=dict(KP, truck=None, porches=1.0, kporch=1.0),
       acts=lambda A, sh, sp: truck_live(sp, glide(T(388) - 0.2, E(388) + 2.5, ST.IC_TRUCK_B[0], -30.0), y=ST.IC_TRUCK_B[1], fa=-90.0),

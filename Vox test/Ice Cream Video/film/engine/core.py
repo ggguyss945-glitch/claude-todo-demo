@@ -275,11 +275,35 @@ def _norm01(a, lo=None, hi=None):
     return np.clip((a - lo) / (hi - lo + 1e-9), 0, 1)
 
 
+# Texture seeds. hash(name) is salted per Python process (PYTHONHASHSEED), so every render process (each chunk of the
+# full render, each still) draws its own grain / stain / frost pattern: on a static shot split across two chunks the
+# texture jumps at the join (popscan v2: 65.667 note card, 492.517 frost, 591.033 rule-07 card). Opt-in fix: while a
+# texture namespace is set (tex_ns(key), the film sets it per shot from the shot param tex_seed), tex() seeds from a
+# stable CRC of (namespace, name), identical in every process. With no namespace the old seeds stay (other shots are
+# unchanged, so frames already rendered still match their neighbours).
+_TEX_NS = [None]
+
+
+def tex_ns(ns=None):
+    """Set the deterministic texture namespace (None = the old per-process seeds); returns the previous one."""
+    prev = _TEX_NS[0]; _TEX_NS[0] = ns
+    return prev
+
+
+def tex_ns_key():
+    """The current namespace, to fold into any cache key built from tex() output."""
+    return _TEX_NS[0]
+
+
 def tex(name, n=512):
     """Cached tileable grey texture (float32 HxW in 0..1, mean ~0.5 = neutral for overlay blends)."""
-    key = (name, n)
+    ns = _TEX_NS[0]
+    key = (name, n) if ns is None else (name, n, ns)
     if key in _texc: return _texc[key]
-    s = abs(hash(name)) % 997
+    if ns is None: s = abs(hash(name)) % 997
+    else:
+        import zlib
+        s = zlib.crc32(('%s|%s' % (ns, name)).encode('utf-8')) % 997
     if name == 'grunge':
         lo = _spec_noise(n, 2.4, s); hi = _spec_noise(n, 1.3, s + 1)
         blot = np.clip((lo - 0.6) * 1.2, 0, 1)
@@ -315,7 +339,7 @@ def tex(name, n=512):
 
 
 def _tex_image(name, blend):
-    key = ('img', name, blend)
+    key = ('img', name, blend) if _TEX_NS[0] is None else ('img', name, blend, _TEX_NS[0])
     if key not in _texc:
         g = tex(name)
         if blend == 'multiply': g = 1.0 - np.clip((0.5 - g) * 2.0, 0, 1)       # only darker-than-mid areas darken

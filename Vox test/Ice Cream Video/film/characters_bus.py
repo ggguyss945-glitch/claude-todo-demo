@@ -218,6 +218,29 @@ def _ws_hand3(R, s, P):
 
 
 # ---------------------------------------------------------------------------------------------------- the rig
+def _ws_arc_blend(A, B, u, s, lift=1.0):
+    """Arm A (rest) -> arm B (settled) at u 0..1 through the joints: the upper arm and the forearm turn (normalised
+    blends of their directions; a forearm turning from down to up swings out and forward, never through the body), the
+    bone lengths blend. u 0 is exactly A and u 1 exactly B, so the arm meets both poses without a jump."""
+    if u <= 0.0: return A
+    if u >= 1.0: return B
+    S = A['S']; E0, E1 = A['J'][0], B['J'][0]; W0, W1 = A['W'], B['W']
+    bias = _u3(np.array([s * 0.4, -0.15, 0.9]))
+
+    def turn(p, q, extra=None):
+        p = _u3(p); q = _u3(q)
+        d = float(np.dot(p, q))
+        v = p * (1.0 - u) + q * u + bias * (math.sin(PI * u) * (1.0 - d) * 0.5)
+        if extra is not None: v = v + extra * math.sin(PI * u)
+        return _u3(v)
+    lu = (1.0 - u) * float(np.linalg.norm(E0 - S)) + u * float(np.linalg.norm(E1 - S))
+    lf = (1.0 - u) * float(np.linalg.norm(W0 - E0)) + u * float(np.linalg.norm(W1 - E1))
+    # the elbow leads: it lifts out and up mid-move (a raise starts at the shoulder), and settles back into the end pose
+    E = S + turn(E0 - S, E1 - S, np.array([s * 0.3, -0.5, 0.45]) * lift) * lu
+    W = E + turn(W0 - E0, W1 - E1) * lf
+    return dict(S=S, J=[E], W=W, k=(1.0 - u) * A['k'] + u * B['k'], rest=A['rest'])
+
+
 _WS_HUNCH = 0.30      # rad: rounded shoulders, the neck pushed forward (the 1994 host stands straighter)
 _WS_HUP = 12.0         # cm from the neck's top to the head's centre (the crown at 244 cm)
 
@@ -345,8 +368,9 @@ def _ws_rig(P, _depth=0):
             W = W + ((mouth + np.array([s * 3.0, 12.0, 8.0])) - W) * ease_in_out(clamp(P.ws_whistle))
         if afold > 0.001:
             W = W + ((S + _rx(np.array([s * 2.0, 26.0, 12.0]), a12)) - W) * afold
+        W_rest = W
         w = clamp(getattr(P, 'ws_lw' if s > 0 else 'ws_rw'))
-        Tw_goal = None
+        Tw_goal = Tw_full = None
         if w > 0.001:
             pre = 'ws_l' if s > 0 else 'ws_r'
             Tw = _ws_world_to_cm(P, getattr(P, pre + 'x'), getattr(P, pre + 'y'), getattr(P, pre + 'z'))
@@ -356,6 +380,7 @@ def _ws_rig(P, _depth=0):
                 off = {'flat': 18.0, 'curl': 14.0, 'grip': 9.0, 'snap': 9.0, 'hold': 8.0, 'pinch': 20.0, 'point': 22.0,
                        'reach': 22.0, 'claw': 18.0, 'open': 20.0}.get(shp, 16.0)
                 Tw = Tw - _u3(Tw - S) * off
+                Tw_full = Tw
                 W = W + (Tw - W) * w
         Lu, Lf = _WS_L['upper'], _WS_L['fore']
         pole = _u3(np.array([s * 0.7, 0.1, -0.7]) if rest in ('hang', 'fold') else np.array([s * 0.75, 0.45, -0.45]))
@@ -371,7 +396,26 @@ def _ws_rig(P, _depth=0):
             E, Wr = _ik(S, W, Lu, Lf, pole)
             return dict(S=S, J=[E], W=Wr, k=1.0, rest=rest)
         arms[s] = solve(W)
-        if w > 0.5 and Tw_goal is not None:
+        if Tw_goal is not None and P.__dict__.get('ws_arc_reach', 0.0) > 0.5:
+            # opt-in (ice film L3 / L192 wave): the plain path blends the wrist in a straight line (the arm folds into an
+            # inverted V) and switches the fingertip fix on at w 0.5 (the glove jumps a forearm's length in one frame).
+            # Here the settled arm (full reach, fingertip on the goal) is solved every frame and the arm travels from its
+            # rest pose to it by its joints (upper arm and forearm directions, forearm swinging out-and-forward) over the
+            # w window ws_arc_w0..ws_arc_w1 (default 0.25..0.6: about 7 frames of the 0.9 s slow_wave ramp, eased).
+            R['arms'] = arms
+            arms[s] = solve(Tw_full)
+            for _ in range(2):
+                h3 = _ws_hand3(R, s, P)
+                shp = h3['shape']
+                tip = (h3['fingers'][0][-1] + h3['fingers'][1][-1]) / 2.0 if shp not in ('grip', 'snap', 'hold', 'clip', 'curl') \
+                    else (h3['fingers'][1][2] if shp != 'curl' else h3['fingers'][1][3])
+                arms[s] = solve(arms[s]['W'] + (Tw_goal - tip))
+            wa0 = float(P.__dict__.get('ws_arc_w0', 0.25)); wa1 = float(P.__dict__.get('ws_arc_w1', 0.6))
+            ua = ease_in_out(clamp((w - wa0) / max(wa1 - wa0, 1e-3)))
+            # (ws_arc_lift, opt-in per shot, default 1: how far the elbow lifts out mid-raise; 0 keeps a raise whose glove
+            #  ends near the frame edge inside the frame - ice film L387 close bust)
+            arms[s] = _ws_arc_blend(solve(W_rest), arms[s], ua, s, lift=float(P.__dict__.get('ws_arc_lift', 1.0)))
+        elif w > 0.5 and Tw_goal is not None:
             R['arms'] = arms
             for _ in range(2):
                 h3 = _ws_hand3(R, s, P)

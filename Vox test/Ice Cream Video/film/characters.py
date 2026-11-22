@@ -284,7 +284,7 @@ from engine.core import (CFG, LINE, col, mix, Pen, smooth, poly, rect, rrect, ov
                          set_render_size,
                          ease, ease_in_out, ease_out_cubic, ease_in_cubic, ease_out_back, ease_out_quad, spring, noise1, hash01,
                          tex, text)
-from engine.core import _ramp, _stops_key                                                   # noqa: E402
+from engine.core import _ramp, _stops_key, tex_ns_key                                                 # noqa: E402
 
 PI = math.pi
 INF = float('inf')
@@ -614,7 +614,8 @@ _TXI = {}
 
 def _overlay_img(name, k=2.2):
     """Normal-blend version of a core texture: dark specks = black with alpha, light = white with alpha (fast src-over)."""
-    key = (name, k)
+    ns = tex_ns_key()
+    key = (name, k) if ns is None else (name, k, ns)          # (opt-in deterministic seeds: engine.core.tex_ns)
     if key not in _TXI:
         g = tex(name)
         d = np.clip((0.5 - g) * k, 0, 1); l_ = np.clip((g - 0.5) * k, 0, 1)
@@ -942,6 +943,28 @@ def _ear(c, hm, sp, side, skin, sh, det):
                         (AX + 4 * du * ek, AY + 14 * ek)], False)
         c.line(inner, c.lw * 0.5, sp['skin_dp'], 190)
         c.glow(AX + 8 * du * ek, AY, 9 * ek, 14 * ek, sh, 110)
+
+
+# opt-in pose flag ear_fade (ice film popscan v2: Lina at 51.9 s and 263.25 s): the near ear no longer jumps from behind
+# the skull to in front of the hair when the head turn crosses 0.25 (one or two frames of a full ear on a small shake or
+# tremble). It stays behind the skull up to _EAR_FADE[1] and its front copy fades in over the window, so a turn that
+# only grazes 0.25 shows no ear and a real turn brings it in gradually.
+_EAR_FADE = (0.25, 0.5)
+
+
+def _ear_fade_on(P):
+    return float(P.__dict__.get('ear_fade', 0.0) or 0.0) > 0.5
+
+
+def _ear_front_faded(c, hm, sp, side, skin, sh, det):
+    u = clamp((-side * hm.st - _EAR_FADE[0]) / (_EAR_FADE[1] - _EAR_FADE[0]))
+    a = u * u * (3.0 - 2.0 * u)
+    if a < 0.004: return
+    if a > 0.996: return _ear(c, hm, sp, side, skin, sh, det)
+    cv = c.pen.cv
+    cv.saveLayerAlpha(None, int(255 * a))
+    _ear(c, hm, sp, side, skin, sh, det)
+    cv.restore()
 
 
 def _eye(c, hm, sp, P, side, det, t, skin, sh):
@@ -2136,7 +2159,7 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
         _kid_hair_back(c, hm, sp, P, det, t)
     if sp['hair'] == 'lowbun': _lowbun(c, hm, sp, det, True)
     for side in (-1, 1):
-        if -side * hm.st < 0.25 and sp['hair'] not in _EARLESS: _ear(c, hm, sp, side, skin, sh, det)
+        if -side * hm.st < (_EAR_FADE[1] if _ear_fade_on(P) else 0.25) and sp['hair'] not in _EARLESS: _ear(c, hm, sp, side, skin, sh, det)
     # skull
     c.fill(sil, skin)
     # skin shading: every layer is drawn on a path inside the silhouette (no clip masks: they are slow at 2560)
@@ -2206,7 +2229,9 @@ def draw_head_local(c, who, P, yaw, pitch, det, t, light=None, sp=None):
             for side in (-1, 1):
                 _brow(c, hm, sp, P, side, eyes.get(side))
     for side in (-1, 1):
-        if -side * hm.st >= 0.25 and sp['hair'] not in _EARLESS: _ear(c, hm, sp, side, skin, sh, det)
+        if sp['hair'] in _EARLESS: continue
+        if _ear_fade_on(P): _ear_front_faded(c, hm, sp, side, skin, sh, det)
+        elif -side * hm.st >= 0.25: _ear(c, hm, sp, side, skin, sh, det)
     if sp.get('glasses') and face_v > -0.2 and getattr(P, 'specs', 1.0) > 0.5:
         _glasses(c, hm, sp, P, det, eyes, t)
     if sp['hat'] == 'cap':
@@ -5094,15 +5119,16 @@ class Acting:
         return [self._ev(h, 'knock_door', 0.0 if i == 0 else -1.0, pan=0.0 if not side else 0.35 * side, n=1, strength=strength, **evp)
                 for i, h in enumerate(hits)]
 
-    def radio_to_mouth(self, t0, t1, side=1, tilt=13.0, drop=0.0):
+    def radio_to_mouth(self, t0, t1, side=1, tilt=13.0, drop=0.0, rise=0.4):
         """The hand brings the shoulder speaker-mic up beside the mouth (the coiled cord follows), the head tilts 12-15 deg
         into it with the eyes locked on the lens, and the thumb squashes the push-to-talk key on each click.
-        drop (design units, default 0 = unchanged): hold it lower, the top of a tall handset below the eye line."""
+        drop (design units, default 0 = unchanged): hold it lower, the top of a tall handset below the eye line.
+        rise (s, default 0.4 = unchanged): how long the raise takes from t0 (the first click stays 0.02 s before arrival)."""
         sp = self.sp; b = sp['body']; hh = sp['hh']
-        clicks = [t0 + 0.38, t1 - 0.02]
+        clicks = [t0 + rise - 0.02, t1 - 0.02]
         mouth = -hh / 2 + sp['mouth_y'] * hh / 240.0          # mouth relative to the chin line
         def fn(P, t):
-            w = _env(t, t0, t1, 0.4, 0.4, ease)
+            w = _env(t, t0, t1, rise, 0.4, ease)
             if w <= 0: return
             down = mouth + 46.0 - 64.0 + 26.0 * P.shrug + drop
             out = (hh * 100.0 / 240.0) * 0.62 - (b['sh'] - 17)
