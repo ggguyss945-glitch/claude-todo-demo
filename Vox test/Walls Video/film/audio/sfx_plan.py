@@ -108,6 +108,14 @@ PICTURE = {
     # the August heat: wind / cold names from the earlier films land on the August night
     'wind': ('august_night', {}, None, 'the August night'), 'cold_night': ('august_night', {}, None, 'the August night'),
     'house_hum': ('room_tone_house', {}, None, 'no furnace in August'),
+    # THIS film's picture names (full mix 1): every name the picture writes, mapped on purpose
+    'laugh': None, 'sigh': None,           # Dad's laugh / sigh are in his voice take: no canned laugh or sigh
+    'crawl_thump': None,                   # the wall_crawl recipe (from 'scuttle') carries the hand and knee thumps
+    'scuttle': ('wall_crawl', {'speed': 1.3}, None, 'the crawl inside the wall, fast'),
+    'box_set': ('box_drop', {}, -14.0, 'the GONE FOREVER box set on the top shelf'),
+    'switch_click': None,                  # a doubled tick: the picture's light_switch 0.25 s before is the flip
+    'rubber_peel': ('glove_squeak', {'kind': 'stretch', 'knuckles': False}, None, 'the rubber mask pulled off'),
+    'pipe_knock': ('knock_door', {'n': 3, 'force': 0.5}, None, 'the pipes knock, inside the wall'),
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
