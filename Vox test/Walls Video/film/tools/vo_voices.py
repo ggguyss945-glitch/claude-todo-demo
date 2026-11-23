@@ -1,45 +1,26 @@
-"""Character voices for the edited narration of "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
-(Night Policy). The quoted words of Lina (L), Dad (D), Mr. Kessler (K) and Mister Shiver (S) are re-voiced from the
-narrator's own take, and so are his copies (who 'S', fx 'mimic', tags fake_dad*, fake_mom*, mimic_benny). The narrator's
-lines (N: Adam, also his own quoted words) are never touched: the quote splits of script/lines.py are the cut points, so
-only the quoted words change. vo_edit.py calls voice_line(y, line) for every line before the layout.
+"""Child voices for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (Night Policy; the Ice Cream
+film's WORLD revoice). ElevenLabs will not design child voices, so Theo (6) and Sam (12) were read in ONE adult take
+(W/narration/raw/index.json: theo_and_sam_adult_take) and are re-voiced here, line by line, as tools/vo_edit.py cuts
+them (vo_edit calls voice_line(y, line) for every theo / sam line). Every other character has its own take: untouched.
 
 Method: WORLD vocoder (pyworld: Harvest F0, CheapTrick envelope, D4C aperiodicity, 1 ms frames). For each voice:
   - pitch: the line's F0 is moved to the voice's median (geometric), its excursions scaled (rng) and softly limited
-    (comp: e -> comp * tanh(e / comp) octaves; the narrator slides over an octave inside one sentence), optionally
-    smoothed (an even contour), with an optional tremor and jitter (age); never a plain resample, so no chipmunk.
-    Creak (frames more than FRY octaves under the line's median: the take's sentence-final fry) keeps its own depth
-    below the new median instead of being compressed into a voiced vowel;
-    f0 None keeps the line's own median (his imitation of Mina is her own pitch);
-  - formants: the spectral envelope is warped along frequency (x alpha: a smaller or larger vocal tract), independent
-    of the pitch; piecewise-linear (x alpha up to 4.5 kHz, then straight to Nyquist), so a strong top band of the take
-    is not stretched into a hiss (Sami's practice "HERE!" has one at 6 kHz: a plain x1.32 put it at 8 kHz, "static"); voiceless frames (s, h, th, f) keep only a third of the move (UNV), easing over 15 ms, because a full
-    child warp pushes their noise up into an "s" ("He..." was heard as "See", "Theo." as "See ya");
-  - breath: the aperiodicity is raised toward noise (breathy, whispered) or, with a negative amount, lowered toward pure
-    voicing (Whistlestop's airless, too-smooth voice);
-  - tape (his voice and his imitations): a slow wow (a sine plus a seeded drift) and an end sag move pitch AND formants
-    together, like a tape changing speed. In an imitation the warble is the "subtly wrong" tell, and every imitation
-    sinks a little as it ends. "...Clever." morphs from Della into his own voice and then slows like a stopping tape:
-    playback speed eases down over the word's second half, so pitch and formants fall together and the word lengthens.
-    That is the story bible's FX signature: an imitation ends by sliding half a tape-speed down into his TV voice;
-  - undertone: his faint second voice, a copy an octave lower with a longer vocal tract, sits under every Whistlestop
-    line, imitations included (fainter there, so they pass at first hearing);
-  - voicing: a frame is voiced when Harvest says so AND D4C finds it periodic below 2 kHz (a breathy h reads
-    aperiodicity 1.0 there, a vowel 0.01-0.02, while Harvest calls both voiced) AND it is within 30 dB of the line's
-    speech level (Harvest also "voices" silence after a word); a voiced run whose peak stays 18 dB or more under the
-    line's speech level (a hum or a breath at the end of "He...") is not voiced either and is turned down 10 dB;
-  - voiceless sounds (h, s, th, f, t, k, breaths) pass through dry with 8 ms ramps, only the voiced sound is converted:
-    a child's shouted "HERE!" keeps its h only this way (warped, the h read "Care" / "Fair" / "Yeah");
-  - a gentle tone EQ (warmth, proximity, a softer top, a fixed smile's presence).
+    (comp: e -> comp * tanh(e / comp) octaves), with a little jitter; never a plain resample, so no chipmunk;
+  - formants: the spectral envelope is warped along frequency (x alpha: a child's shorter vocal tract), independent of
+    the pitch; piecewise-linear (x alpha up to 4.5 kHz, then straight to Nyquist, so the top band is not stretched into
+    a hiss); voiceless frames keep only the share 'unv' of the move, easing over 15 ms;
+  - "face" heard as "verse" (the first test, x1.38): the onset of a voiceless fricative before a vowel was converted
+    (Harvest voices the f's last 10-20 ms, and the 8 ms crossfade widened it), so the warped vowel started with a buzz
+    (a v) and its formants glided down into an "er". Fix ('fric'): a voiced run is only converted from the first frame
+    whose low band (< 1 kHz) carries the voicing (D4C aperiodicity < 0.25 there), so the f stays dry noise to its
+    end, and the warp eases in over the vowel's first 'ease' ms from the voiceless share (no glide from a v);
+  - breath: the aperiodicity is raised a little toward noise (a child's breathy voice);
+  - voicing: a frame is voiced when Harvest says so AND D4C finds it periodic below 2 kHz AND it is within 30 dB of
+    the line's speech level; voiceless sounds (h, s, th, f, t, k) pass through dry with 8 ms ramps;
+  - a gentle tone EQ (no chest, a little presence).
 Each processed line is loudness-matched to the same line dry (+ the voice's offset), with 12 ms fades at its edges.
-Measured on the take (Praat, voiced frames of the 353 narrator lines): the narrator reads F0 106-284 Hz (5-95 %, median
-172 Hz), F1/F2/F3 535/1736/2718 Hz: a young-adult, male-leaning voice, so every character is a real move away from it.
-
-Test: python3 tools/vo_voices.py --test [who|tag|voice ...]
-  voices the character lines as the build cut them (narration_clean.wav at edit_list.json's times; without a build,
-  straight from the raw take: the line map's word bounds, trimmed), writes dry/wet pairs to
-  _work/narration/tests/voices/, and prints F0 in -> out, the measured formant warp and Parakeet on the dry and the voiced
-  line in isolation (voices_test.json beside them).
+Test: python3 tools/vo_voices.py --test [theo|sam ...]   -> W/narration/tests/voices/<tag>_{dry,wet}.wav and
+  voices_test.json: F0 in -> out, the measured formant warp (measure_warp) and Parakeet + Whisper on each line alone.
 """
 import numpy as np
 
@@ -62,75 +43,20 @@ UNV = 0.35                                             # share of the formant wa
 # speed) playback slowed from that share of the speech to its end, down to that speed (the word gets longer).
 _B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, under=None, eq=None,
           lu=0.0, wow=None, sag=None, morph=None, tape=None)
-_WRONG = dict(wow=(0.8, 0.008), sag=(0.30, 1.0), under=(-22.0, 0.86))         # what gives a copy away
-_DAD = dict(_B, f0=112.0, rng=0.75, comp=0.35, alpha=0.89, breath=0.16, jit=0.008,
-            eq=[('peak', 180, 1.5, 0.8), ('peak', 350, 1.0, 0.9), ('hs', 6500, -2.0, 0.7)])
-_MOM = dict(_B, f0=208.0, rng=0.95, comp=0.45, alpha=1.13, breath=0.14, jit=0.006,
-            eq=[('ls', 180, -2.0, 0.7), ('peak', 2800, 1.0, 1.0)])
-_LINA = dict(_B, f0=298.0, rng=0.95, comp=0.42, alpha=1.34, breath=0.12, jit=0.004,
-             eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)])
-_SH = dict(_B, alpha=0.95, breath=-0.40, jit=0.0, smooth=0.05, under=(-19.0, 0.86), wow=(0.55, 0.003),
-           eq=[('peak', 160, 2.0, 0.8), ('peak', 2800, 2.5, 1.0), ('hs', 9000, -1.0, 0.7)])
+_KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=40.0)
 VOICES = {
-    'L': dict(_LINA, lu=-1.0,
-              desc="Lina, 6: a real small girl (298 Hz; a child's vocal tract, formants x1.34 measured on the take), a "
-                   'lively melody (x0.95), a little breath (0.12), no chest (-4 dB under 220 Hz), 1 dB softer'),
-    'L_small': dict(_LINA, f0=286.0, rng=0.80, comp=0.35, breath=0.32, eq=[('ls', 220, -5.0, 0.7)], lu=-2.5,
-                    desc='Lina frightened ("Don\'t leave me."): the same girl, small and breathy (286 Hz, 0.32), 2.5 dB softer'),
-    'L_dreamy': dict(_LINA, f0=288.0, rng=0.65, comp=0.30, smooth=0.03, breath=0.30, eq=[('ls', 220, -5.0, 0.7),
-                     ('hs', 6000, -2.0, 0.7)], lu=-2.5,
-                     desc='Lina hypothermic and calling back ("I\'m warm, Adam," / "I\'m not even shivering."): the same girl, '
-                          'dreamy and flat (melody x0.65, smoothed), breathy (0.30), a softer top, 2.5 dB softer'),
-    'D': dict(_DAD, lu=-0.5,
-              desc='Dad: a warm, tired adult man (112 Hz; a larger vocal tract, formants x0.89), an even, tired melody '
-                   '(x0.75), a little breath (0.16) and roughness (0.8 % jitter), warm low-mids (+1.5 dB at 180 Hz), a '
-                   'softer top; the mix adds the radio for fx radio'),
-    'K': dict(_B, f0=124.0, rng=0.70, comp=0.32, alpha=0.93, breath=0.34, trem=(5.5, 0.030), jit=0.022, lu=-2.0,
-              eq=[('ls', 150, -3.0, 0.7), ('peak', 1800, 1.0, 1.0), ('hs', 6000, -2.5, 0.7)],
-              desc='Mr. Kessler, about 80: a frail, kind old man (124 Hz, formants x0.93), a small melody (x0.70), an '
-                   "old man's tremor (5.5 Hz, 3 %) and roughness (2.2 % jitter), breathy (0.34), a thin chest (-3 dB under "
-                   '150 Hz), 2 dB softer'),
-    'K_whisper': dict(_B, f0=120.0, rng=0.55, comp=0.25, alpha=0.93, breath=0.62, trem=(5.5, 0.030), jit=0.022, lu=-4.0,
-                      eq=[('ls', 150, -4.0, 0.7), ('hs', 6000, -2.0, 0.7)],
-                      desc='Mr. Kessler whispering "Bye, Benny.": the same old man, half-whispered (0.62), 4 dB softer'),
-    'S': dict(_SH, f0=158.0, rng=1.30, comp=0.55, lu=-1.0,
-              desc='Mister Shiver, the too-friendly vendor: a sing-song, sugary voice (158 Hz, formants x0.95; the melody '
-                   'stretched x1.30 into a sing-song but smoothed over 50 ms: too even), airless (aperiodicity -0.40: no '
-                   'breath at all), too close (+2 dB at 160 Hz) with a fixed smile\'s presence (+2.5 dB at 2.8 kHz), a '
-                   'faint wow (0.3 %) and a second voice an octave under it (19 dB down, formants x0.86)'),
-    'S_monster': dict(_SH, f0=96.0, rng=0.85, comp=0.40, alpha=0.84, breath=-0.55, smooth=0.04, under=(-12.0, 0.78),
-                      wow=(0.40, 0.006), lu=0.5, eq=[('peak', 110, 3.0, 0.8), ('peak', 2400, 1.5, 1.0), ('hs', 7000, -3.0, 0.7)],
-                      desc='Mister Shiver in monster form ("Inside, children. Rule seven."): '
-                           'the same sing-song words, deeper (96 Hz, formants x0.84: a far larger body), airless (-0.55), '
-                           'the second voice up to 12 dB under (formants x0.78), a slow wow, +3 dB at 110 Hz, a dull top'),
-    'S_dad': dict(_DAD, **_WRONG, lu=-0.5,
-                  desc='his copy of Dad on the radio: Dad\'s voice (112 Hz, x0.89) but wrong: a warble on pitch and '
-                       'formants together (0.8 Hz, 0.8 %), the line sinking 1 semitone over its last 0.3 s, his second '
-                       'voice faint under it (22 dB down); the mix adds the radio static and the bells'),
-    'S_mom': dict(_MOM, **_WRONG, lu=0.0,
-                  desc='his copy of Mom at the front door: an adult woman, urgent (208 Hz, formants x1.13), with the same '
-                       'warble, sag and second voice; the mix puts it through the door'),
-    'S_mom_soft': dict(_MOM, **_WRONG, f0=196.0, rng=0.75, comp=0.35, breath=0.24, lu=-1.5,
-                       desc='his copy of Mom, soft ("...Let me in, baby. I\'m so cold."): lower and breathier (196 Hz, '
-                            '0.24), 1.5 dB down, the same warble, sag and second voice'),
-    'S_boy': dict(_B, **_WRONG, f0=284.0, rng=0.80, comp=0.35, alpha=1.32, breath=0.26, jit=0.004, lu=-2.0,
-                  eq=[('ls', 220, -5.0, 0.7), ('hs', 6000, -1.5, 0.7)],
-                  desc='his copy of a little boy (Benny) from the window ("Walter, I\'m cold."): a small boy (284 Hz, '
-                       'formants x1.32), breathy (0.26), 2 dB softer, with the warble, sag and second voice'),
+    'theo': dict(_KID, f0=285.0, alpha=1.38, lu=-0.5, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)],
+                 desc="Theo, 6: a small boy (285 Hz; a child's vocal tract, formants x1.38), a lively melody (x0.95), "
+                      'a little breath (0.12), no chest (-4 dB under 220 Hz)'),
+    'sam': dict(_KID, f0=232.0, alpha=1.245, rng=0.90, comp=0.40, breath=0.10, lu=-0.5,
+                eq=[('ls', 200, -3.0, 0.7), ('peak', 3000, 0.8, 1.0)],
+                desc='Sam, 12: a boy before his voice breaks (232 Hz, formants x1.245), a calmer melody (x0.90), '
+                     'a little breath (0.10), a lighter chest (-3 dB under 200 Hz)'),
 }
-# lines that use a variant (by tag, from script/lines.py)
-VARIANT = dict(lina_dont_leave='L_small', lina_warm='L_dreamy', lina_not_shivering='L_dreamy',
-               bye_benny='K_whisper', inside_children='S_monster',   # coldest_you (L192): his NORMAL vendor voice (S): the lure
-               # comes six seconds before the transformation, so the monster voice there gave the change away
-               fake_dad='S_dad', fake_dad_sleep='S_dad', fake_mom='S_mom', fake_mom_cold='S_mom_soft',
-               mimic_benny='S_boy')
 
 
 def voice_for(line):
-    who, tag = line['who'], line.get('tag') or ''
-    if who == 'N': return None
-    if tag in VARIANT: return VARIANT[tag]
-    return who if who in VOICES else None
+    return line['who'] if line.get('who') in VOICES else None
 
 
 # ============================================================================ DSP helpers
@@ -282,6 +208,13 @@ def revoice(x, key):
     f1 = new_f0(f0, s, t)
     q = quiet_runs(xp, f1)
     f1[q] = 0.0
+    if s.get('fric'):                                                 # a voiced run starts converting only where the
+        lo = ap[:, :max(1, int(ap.shape[1] * 1000 / (SR / 2)))].mean(1)   # low band carries the voicing: the end of
+        d = np.diff(np.concatenate([[0], (f1 > 0).astype(np.int8), [0]]))   # an f / s / th before a vowel stays dry
+        for a_, b_ in zip(np.where(d == 1)[0], np.where(d == -1)[0]):    # noise ("face" was heard as "verse")
+            k = a_
+            while k < b_ and lo[k] >= 0.25: k += 1
+            f1[a_:k] = 0.0
     v = f1 > 0
     alpha = np.full(len(t), s['alpha'])
     ap1 = breathe(ap, s['breath'])
@@ -297,7 +230,13 @@ def revoice(x, key):
         if s2.get('under') and not under: under, ug = s2['under'], r
     from scipy.ndimage import uniform_filter1d                       # consonants keep their noise: the full warp on
     wv = uniform_filter1d(v.astype(np.float64), size=int(15 / FP), mode='nearest')   # voiced frames, a third of it on
-    alpha = np.exp(np.log(alpha) * (UNV + (1 - UNV) * wv))         # voiceless ones (x1.38 turned "He"/"Theo" into "See")
+    if s.get('ease'):                                                 # the warp eases in over a vowel's first ms
+        rr = np.zeros(len(v)); d = np.diff(np.concatenate([[0], v.astype(np.int8), [0]]))
+        for a_, b_ in zip(np.where(d == 1)[0], np.where(d == -1)[0]):
+            rr[a_:b_] = np.clip((np.arange(b_ - a_) + 1) / (s['ease'] / FP), 0, 1)
+        wv = np.minimum(wv, uniform_filter1d(rr, size=int(5 / FP), mode='nearest'))
+    unv = s.get('unv', UNV)
+    alpha = np.exp(np.log(alpha) * (unv + (1 - unv) * wv))         # voiceless ones (x1.38 turned "He"/"Theo" into "See")
     m = tape_curve(t, v, s)
     f1 = f1 * m; alpha = alpha * m
     C = np.ascontiguousarray
@@ -445,69 +384,56 @@ def measure_warp(dry, wet):
     return round(float(ba), 2), round(f00, 1), round(f01, 1)
 
 
-# ============================================================================ test: the voices on the raw take
-def _take_line(T, i):
-    """Line i straight from the repaired take: its recognised words' bounds, trimmed to its sound (-48 dB, 1 ms)."""
-    own = (lambda j: (T.owned.get(j) if isinstance(T.owned, dict) else T.owned[j]) or [])
-    ks = own(i)
-    lo = min(T.words[k][1] for k in ks) - 0.06; hi = max(T.words[k][2] for k in ks) + 0.15
-    prv = [T.words[k][2] for j in range(max(0, i - 3), i) for k in own(j)]       # never into a neighbour's words
-    nxt = [T.words[k][1] for j in range(i + 1, i + 4) for k in own(j)]
-    if prv: lo = max(lo, max(prv) + 0.02)
-    if nxt: hi = min(hi, min(nxt) - 0.02)
-    d = T.db[int(lo * 1000):int(hi * 1000)]
-    on = np.where(d > -48)[0]
-    if len(on): lo, hi = lo + max(0, on[0] - 15) / 1000, lo + min(len(d), on[-1] + 40) / 1000
-    return T.x[int(lo * SR):int(hi * SR)].astype(np.float64)
+# ============================================================================ test: the voices on the cut lines
+_REC = {}
 
 
-def _test(sel):
-    import io, os, sys, json, contextlib
-    import soundfile as sf, soxr, sherpa_onnx
-    here = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, here)
-    import vo_edit as E
-    from vo_asrcheck import norm
-    from lines import LINES
-    with contextlib.redirect_stdout(io.StringIO()): T = E.Take()
-    pk = os.environ.get('PARAKEET_DIR', '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/'
-                        'scratchpad/models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8')
-    rec = sherpa_onnx.OfflineRecognizer.from_transducer(encoder=f'{pk}/encoder.int8.onnx', decoder=f'{pk}/decoder.int8.onnx',
-                                                        joiner=f'{pk}/joiner.int8.onnx', tokens=f'{pk}/tokens.txt',
-                                                        model_type='nemo_transducer', num_threads=2)
+def hear(y, pad=0.3):
+    """(Parakeet, Whisper) on one line alone, padded with silence."""
+    import soxr, sherpa_onnx, os
+    m = os.environ.get('VO_MODELS', '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models')
+    if not _REC:
+        pk, wd = m + '/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8', m + '/sherpa-onnx-whisper-base.en'
+        _REC['p'] = sherpa_onnx.OfflineRecognizer.from_transducer(
+            encoder=f'{pk}/encoder.int8.onnx', decoder=f'{pk}/decoder.int8.onnx', joiner=f'{pk}/joiner.int8.onnx',
+            tokens=f'{pk}/tokens.txt', model_type='nemo_transducer', num_threads=2)
+        _REC['w'] = sherpa_onnx.OfflineRecognizer.from_whisper(
+            encoder=f'{wd}/base.en-encoder.int8.onnx', decoder=f'{wd}/base.en-decoder.int8.onnx',
+            tokens=f'{wd}/base.en-tokens.txt', num_threads=2)
+    z = np.concatenate([np.zeros(int(16000 * pad)), soxr.resample(y, SR, 16000), np.zeros(int(16000 * pad))]).astype(np.float32)
+    out = []
+    for k in ('p', 'w'):
+        st = _REC[k].create_stream(); st.accept_waveform(16000, z); _REC[k].decode_stream(st); out.append(st.result.text.strip())
+    return out
 
-    def hear(z):
-        z16 = np.concatenate([np.zeros(4800), soxr.resample(z, SR, 16000), np.zeros(4800)]).astype(np.float32)
-        st = rec.create_stream(); st.accept_waveform(16000, z16); rec.decode_stream(st)
-        return st.result.text.strip()
-    od = os.path.join(E.N, 'tests', 'voices'); os.makedirs(od, exist_ok=True)
-    cut, clean = {}, None                                            # the build's own dry lines when there is a build
-    if os.path.exists(E.EDL) and os.path.exists(E.OUT_CLEAN):
-        clean, _ = sf.read(E.OUT_CLEAN)
-        for e in json.load(open(E.EDL))['lines']:
-            if e['i'] < len(LINES) and e['tag'] == LINES[e['i']]['tag']: cut[e['i']] = e['out']
-        print(f'dry lines from {E.OUT_CLEAN} ({len(cut)} cuts of edit_list.json)')
-    rows = []
-    for i, l in enumerate(LINES):
-        key = voice_for(l)
-        ks = T.owned.get(i) if isinstance(T.owned, dict) else T.owned[i]
-        if key is None or not ks: continue
-        if sel and not ({l['who'], l['tag'], key} & set(sel)): continue
-        if i in cut: a, b = cut[i]; x = clean[int((a - 0.05) * SR):int((b + 0.05) * SR)].astype(np.float64)   # as vo_asrcheck
-        else: x = _take_line(T, i)
-        y, st = voice_line(x.copy(), l)
-        al, f0d, f0w = measure_warp(x, y)
-        hd, hw = hear(x), hear(y)
-        ok_d, ok_w = norm(hd) == norm(l['en']), norm(hw) == norm(l['en'])
-        for nm, z in (('dry', x), ('wet', y)):
-            sf.write(os.path.join(od, f'{i:03d}_{l["tag"]}_{nm}.wav'), z, SR, subtype='PCM_24')
-        rows.append(dict(i=i, tag=l['tag'], voice=key, f0=[f0d, f0w], warp=al, set=VOICES[key]['alpha'],
-                         dur=[st['dur_in'], st['dur_out']], asr_dry=hd, asr_wet=hw, ok_dry=ok_d, ok_wet=ok_w))
-        print(f'{i:3d} {key:15s} F0 {f0d:6.1f}->{f0w:6.1f}  warp x{al} (set x{VOICES[key]["alpha"]})  '
-              f'{"OK " if ok_w else ("dry" if not ok_d else "BAD")} {hw!r}' + ('' if ok_d else f'  [dry: {hd!r}]'))
-    json.dump(rows, open(os.path.join(od, 'voices_test.json'), 'w'), indent=1)
-    bad = [r for r in rows if r['ok_dry'] and not r['ok_wet']]
-    print(f'{len(rows)} lines; word-perfect voiced {sum(r["ok_wet"] for r in rows)}, dry {sum(r["ok_dry"] for r in rows)}; '
-          f'lost by the voice: {[r["tag"] for r in bad]}')
+
+def _test(args):
+    import json, os, soundfile as sf
+    import vo_edit as V
+    sel = [a for a in args if '=' not in a]
+    for a in args:                                                    # key=value: try a setting on the selected voices
+        if '=' in a:
+            k, v = a.split('=')
+            for kk in (sel or VOICES):
+                if kk in VOICES: VOICES[kk][k] = float(v)
+    L = V.prepared()
+    out = os.path.join(V.N, 'tests', 'voices'); os.makedirs(out, exist_ok=True)
+    res, bad = [], 0
+    for l in L:
+        if l['who'] not in VOICES or (sel and l['who'] not in sel): continue
+        y, _ = V.line_audio(l)
+        z, st = voice_line(y.copy(), l)
+        st['measured_warp'], _, _ = measure_warp(y, z)
+        st['heard_dry'], st['heard'] = hear(y), hear(z)
+        ok = [V.toks(h) == V.toks(l['en']) for h in st['heard']]
+        st['word_perfect'] = ok; bad += not all(ok)
+        sf.write(os.path.join(out, l['tag'] + '_dry.wav'), y.astype(np.float32), SR)
+        sf.write(os.path.join(out, l['tag'] + '_wet.wav'), z.astype(np.float32), SR)
+        print('%-30s F0 %5.1f->%5.1f warp %s | P: %s | W: %s %s' % (l['tag'], st['f0_in_median'], st['f0_out_median'],
+              st['measured_warp'], st['heard'][0], st['heard'][1], '' if all(ok) else '  <-- MISMATCH'))
+        res.append(st)
+    json.dump(res, open(os.path.join(out, 'voices_test.json'), 'w'), indent=1)
+    print('%d lines, %d not word-perfect on both recognisers' % (len(res), bad))
     return 1 if bad else 0
 
 
