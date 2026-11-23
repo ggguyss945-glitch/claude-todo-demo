@@ -428,7 +428,19 @@ def n_(sec):
 
 
 def fade(y, fi=0.002, fo=0.015):
+    """Fade the edges. Owner, 23 Nov: a sound must never pop in or stop dead in the middle of itself. If the cut lands
+    while the sound is still going (first ms already loud = cut into it; last 50 ms still above -30 dB of the peak =
+    cut off while ringing), the edge fade is lengthened: in to 15 ms, out to up to 350 ms (a quarter of the sound)."""
     y = np.array(y, np.float32, copy=True)
+    m = np.abs(y if y.ndim == 1 else y.max(1))
+    pk = float(m.max()) if len(m) else 0.0
+    if pk > 0 and len(m) > n_(0.2):
+        head = float(np.sqrt(np.mean(m[:n_(0.001)] ** 2)))
+        tail = float(np.sqrt(np.mean(m[-n_(0.05):] ** 2)))
+        if head > 0.15 * pk:
+            fi = max(fi, 0.015)
+        if tail > 0.0316 * pk:
+            fo = max(fo, min(0.35, 0.25 * len(y) / SR))
     a, b = min(n_(fi), len(y) // 2), min(n_(fo), len(y) // 2)
     if a > 1:
         w = np.sin(np.linspace(0, np.pi / 2, a)) ** 2
@@ -6334,7 +6346,9 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
     h = int(hashlib.md5(f'{name}|{seed}'.encode()).hexdigest()[:8], 16)
     rng = np.random.default_rng(h)
     memory = bool(params.pop('memory', False)) or sp == 'memory'
+    hard_end = bool(params.pop('hard_end', False))      # a deliberate dead stop (e.g. a tape stop): keep its edge
     y, pre, offs, spaced = RECIPES[name](rng, sp, **params)
+    params['hard_end'] = hard_end
     y = st(y)
     if memory:                                            # 21 years ago (film.py: memory=True)
         y = memory_fx(y, rng)
@@ -6343,6 +6357,8 @@ def render_event(name, seed=0, space=None, level=0.0, **params):
         y = globals()['space'](y, sp, seed)
     if name in PHONE_FIX:
         y = phone_presence(y)
+    if not params.get('hard_end'):                        # owner, 23 Nov: no sound pops in or stops dead mid-sound,
+        y = fade(y, 0.0, 0.0)                             # whichever path the recipe took (fade() eases loud edges)
     target = REF + LEVEL_LU[name] + SPACE_LU.get(sp, 0.0) + offs + float(level)
     bed = name in BEDS or (params.get('dur') and name in DUR_BEDS)
     L = lufs_int(y) if bed else mom_max(y)

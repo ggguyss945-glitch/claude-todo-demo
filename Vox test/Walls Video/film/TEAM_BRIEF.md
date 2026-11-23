@@ -163,3 +163,17 @@ Read this whole file first.
   - The full list of 17 is in `W/narration/drop_tags.json`.
   - Every character speaks in their own voice, so the picture shows who is talking.
 - Keep "Dad read it out loud, and laughed." and "'Night, Dad,' I almost said."
+
+## Owner, 23 Nov: sound effects must never pop in, stop dead, or be too loud (it happened in the Ice Cream film and earlier)
+- No sound may start or stop in the middle of itself.
+  - Every effect fades in if it is cut into, and lets its tail die away (or fades out over up to 350 ms) if it is cut off while still ringing.
+  - `audio/sfx.py` now does this for every event: `fade()` adapts, and `render_event()` applies it at the end.
+  - Use `hard_end=True` only for a deliberate dead stop, and only where the film needs one.
+  - The same holds where the mix trims or ducks: beds trimmed to a shot, window edges, ducking ramps, a sound cut at a picture cut.
+- No effect may jump out of the mix.
+  - Everyday foley (doors, steps, bags, switches) sits under the voice.
+  - Only the few planned scare hits rise above it (+6 to +10 LU momentary), and they have a smooth release.
+- Before calling the mix done, measure every event in the effects stem:
+  - its first and last 10 ms against its own peak (no loud edge);
+  - its momentary loudness against the voice at the same time;
+  - list and fix every outlier.
