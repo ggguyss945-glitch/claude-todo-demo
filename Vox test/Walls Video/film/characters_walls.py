@@ -32,7 +32,7 @@ for _o, _n in (('mom', 'mom_bunny'), ('dad', 'dad_ice'), ('theo', 'theo94')):
     if _o in CAST and _n not in CAST: CAST[_n] = CAST[_o]
 
 POSE_DEFAULTS.update(mask_lift=0.0, ear_sw=0.0, crawl=0.0, crawl_ph=0.0, cuffs=0.0)
-WALLS_TILT = dict(h_tilt=13.0, h_nod=0.10, tilt=-1.5)      # Dad's habit and the doorway figure's: the SAME every time
+WALLS_TILT = dict(h_tilt=21.0, h_nod=0.12, tilt=-2.0)      # Dad's habit and the doorway figure's: the SAME every time
 
 # ====================================================================================================== outfits
 _DOC_ROWS.update({'flannel3': (24, 0.93, 8, 12, 14, 16, 16, 12), 'tee_w': (12, 0.88, 2, 4, 6, 8, 8, 6)})
@@ -249,7 +249,7 @@ _HD = dict(rub='#c9a37c', rub_sh='#8c6848', rub_dk='#5a3f2c', rub_hi='#e6c9a4', 
            ear='#8a5d3b', ear_sh='#5c3c25', ear_in='#b07a58', nose='#141012', hole='#120907', haw='#ad4a50', haw_dk='#6e2830',
            tape='#a4a7aa', tape_hi='#d3d6d8', teeth='#e8dfc6', teeth_sh='#b8ab88', gum='#9c5a58', lip='#a8706a')
 _HM_MASK = dict(head_ys=[-120, -114, -100, -70, -30, 10, 50, 82, 104, 116, 120],
-                head_ws=[0, 56, 82, 98, 103, 102, 97, 88, 76, 58, 0])
+                head_ws=[0, 40, 70, 94, 103, 102, 97, 88, 76, 58, 0])
 
 
 def _hd_cols(light):
@@ -258,19 +258,19 @@ def _hd_cols(light):
     return {n: mix(v, '#6f7890', min(0.5, -0.4 * k)) for n, v in _HD.items()}
 
 
-def _muz_w(y): return float(np.interp(y, [-6, 20, 50, 85, 104, 118], [24, 34, 42, 50, 54, 44]))
+def _muz_w(y): return float(np.interp(y, [-6, 20, 50, 85, 104, 118], [13, 24, 37, 47, 50, 38]))
 def _muz_d(y): return float(np.interp(y, [-6, 10, 36, 60, 95, 118], [4, 18, 40, 42, 36, 26]))
 
 
 def _hd_ear(c, hm, side, ang, cols, det, tape):
     """One long ear hanging from the side of the dome; ang = swing (deg) in the head frame."""
-    y0 = -42.0
-    w = float(hm.W(y0)) * 0.96
+    y0 = -52.0
+    w = float(hm.W(y0)) * 0.93
     X, Y, V = hm.map1(side * w, y0, -2.0)
     ec = c.sub(X, Y, ang, 1.0)
     s = side
-    pts = [(0, -6), (s * 16, 26), (s * 27, 90), (s * 27, 148), (s * 15, 186), (-s * 4, 194), (-s * 19, 170), (-s * 22, 104),
-           (-s * 14, 34), (-s * 6, -2)]
+    pts = [(-s * 4, -10), (s * 14, 20), (s * 25, 80), (s * 24, 132), (s * 10, 166), (-s * 8, 170), (-s * 20, 150), (-s * 21, 92),
+           (-s * 14, 30), (-s * 10, 0)]
     e = smooth(pts, True, 0.9)
     ec.fill(e, cols['ear'])
     ec.grad(e, -s * 22, 0, s * 27, 0, [(0, cols['ear_sh'], 200), (0.45, cols['ear'], 0), (1, cols['ear_sh'], 120)])
@@ -279,14 +279,14 @@ def _hd_ear(c, hm, side, ang, cols, det, tape):
         ec.line(smooth([(s * 3, 18), (s * 8, 80), (s * 6, 140), (-s * 2, 176)], False), c.lw * 0.45, cols['ear_sh'], 200)
         ec.line(smooth([(s * 18, 60), (s * 22, 120)], False), c.lw * 0.6, cols['rub_hi'], 70)
     if tape:
-        tp = poly([(-s * 26, 102), (s * 31, 92), (s * 33, 117), (-s * 24, 127)], True)
+        tp = poly([(-s * 26, 88), (s * 31, 78), (s * 33, 102), (-s * 24, 112)], True)
         with ec.clip(e):
             ec.fill(tp, cols['tape']); ec.line(tp, c.lw * 0.35, '#6e7174', 200)
             if det >= 1:
-                ec.line(_multi([poly([(s * (-14 + 11 * k), 100 - 1.6 * k), (s * (-12 + 11 * k), 121 - 1.6 * k)], False) for k in range(4)]),
+                ec.line(_multi([poly([(s * (-14 + 11 * k), 86 - 1.6 * k), (s * (-12 + 11 * k), 107 - 1.6 * k)], False) for k in range(4)]),
                         c.lw * 0.3, '#7d8083', 150)
-                ec.line(poly([(-s * 20, 104), (s * 26, 95)], False), c.lw * 0.5, cols['tape_hi'], 150)
-        tab = poly([(s * 27, 94), (s * 36, 90), (s * 37, 104), (s * 28, 108)], True)
+                ec.line(poly([(-s * 20, 90), (s * 26, 81)], False), c.lw * 0.5, cols['tape_hi'], 150)
+        tab = poly([(s * 27, 80), (s * 36, 76), (s * 37, 90), (s * 28, 94)], True)
         ec.fill(tab, cols['tape']); ec.line(tab, c.lw * 0.45)
     ec.line(e, c.lw)
     return V
@@ -301,20 +301,20 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
     R = P.tilt + P.h_tilt
     ears = []
     for side in (-1, 1):
-        w = float(hm.W(-42.0)) * 0.96
-        V = hm.map1(side * w, -42.0, -2.0)[2]
+        w = float(hm.W(-52.0)) * 0.93
+        V = hm.map1(side * w, -52.0, -2.0)[2]
         a = -0.72 * R + getattr(P, 'ear_sw', 0.0) + side * 3.0 - 10.0 * math.sin(yaw) * 0.4
         ears.append((V, side, a))
     for V, side, a in ears:
         if V < -0.06: _hd_ear(c, hm, side, a, cols, det, side > 0)
     # the loose rubber hem round his neck (under the jowls)
-    hem_y = 150.0
-    wav = [(-66 + 132 * k / 10.0, hem_y + 5.0 * math.sin(k * 2.1 + 0.7) + 3.0 * hash01(k, 33)) for k in range(11)]
-    neck = smooth([(-58, 90), (58, 90), (68, hem_y - 6)] + wav[::-1] + [(-68, hem_y - 6)], True, 0.6)
+    hem_y = 146.0
+    wav = [(-56 + 112 * k / 10.0, hem_y + 4.0 * math.sin(k * 2.1 + 0.7) + 3.0 * hash01(k, 33)) for k in range(11)]
+    neck = smooth([(-46, 92), (46, 92), (57, hem_y - 6)] + wav[::-1] + [(-57, hem_y - 6)], True, 0.6)
     c.fill(neck, cols['rub_sh']); c.grad(neck, 0, 90, 0, hem_y, [(0, cols['rub_dk'], 200), (1, cols['rub_sh'], 60)])
     if det >= 1:
-        c.line(_multi([smooth([(-56 + 4 * k, 110 + 11 * k), (-10, 116 + 12 * k), (30, 112 + 11 * k), (58 - 3 * k, 117 + 10 * k)], False)
-                       for k in range(3)]), c.lw * 0.4, cols['rub_dk'], 170)
+        c.line(_multi([smooth([(-46 + 3 * k, 112 + 10 * k), (-8, 117 + 11 * k), (24, 113 + 10 * k), (48 - 3 * k, 118 + 9 * k)], False)
+                           for k in range(3)]), c.lw * 0.4, cols['rub_dk'], 170)
     c.line(smooth(wav, False), c.lw * 1.6, cols['rub_hi'], 160)
     c.line(neck, c.lw)
     # the dome
@@ -344,13 +344,14 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
         for side in (-1, 1):
             ex, ey = side * sp['eye_dx'], sp['eye_y'] + 2.0
             if fm.map1(ex, ey, 2)[2] < 0.1: continue
-            hole_f = [(ex - side * 22, ey - 2), (ex - side * 8, ey - 13), (ex + side * 12, ey - 12), (ex + side * 27, ey + 4),
-                      (ex + side * 18, ey + 11), (ex, ey + 12), (ex - side * 16, ey + 6)]
+            hole_f = [(ex - side * 22, ey - 3), (ex - side * 8, ey - 15), (ex + side * 12, ey - 14), (ex + side * 28, ey + 5),
+                      (ex + side * 19, ey + 13), (ex, ey + 14), (ex - side * 17, ey + 7)]
             hole = smooth([fm.map1(x, y, 3)[:2] for x, y in hole_f], True, 0.9)
             sock = smooth([fm.map1(x, y, 2)[:2] for x, y in
                            [(ex - side * 30, ey - 6), (ex - side * 10, ey - 26), (ex + side * 22, ey - 22), (ex + side * 38, ey + 8),
                             (ex + side * 22, ey + 30), (ex - side * 6, ey + 28), (ex - side * 28, ey + 14)]], True, 0.9)
-            c.fill(sock, cols['rub_sh'], 150)
+            c.fill(sock, cols['rub_dk'], 150)
+            c.fill(sock, cols['rub_sh'], 90)
             c.fill(hole, cols['hole'])
             if not empty:
                 with c.clip(hole):
@@ -392,7 +393,10 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
                        cols['muz_sh'], 200)
             c.line(_multi([smooth([fm.map1(side * x, y, _muz_d(y) * 0.6)[:2] for x, y in ((22, 58), (36, 80), (46, 102), (42, 116))], False)
                            for side in (-1, 1)]), c.lw * 0.8, cols['rub_dk'], 200)
-        c.line(muz, c.lw)
+        k0 = 4
+        c.line(smooth(L[k0:] + [C[-1]] + Rr[k0:][::-1], False, 0.7), c.lw)
+        c.line(smooth(L[1:k0 + 1], False), c.lw * 0.5, cols['rub_dk'], 150); c.line(smooth(Rr[1:k0 + 1], False), c.lw * 0.5, cols['rub_dk'], 150)
+        c.line(smooth(C[1:5], False), c.lw * 2.2, cols['rub_hi'], 80)
         # mouth slit: dark, his upper teeth, his lower lip (drops with his jaw when he whispers)
         mo = clamp(P.m_open)
         my0, my1 = 84.0, 96.0 + 10.0 * mo

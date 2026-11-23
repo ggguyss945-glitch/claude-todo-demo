@@ -40,7 +40,7 @@ def bed(pen, x0, x1, top, c='#5a6a8a', y=FLOOR):
 
 # ------------------------------------------------------------------------------------------------ the sheet
 def sheet():
-    W, H = 1920, 1080
+    W, H = 1920, 1440
     surf, cv = _surface(W, H)
     cv.clear(skia.Color(32, 34, 44)); cv.save(); cv.scale(CFG.k, CFG.k)
     pen = Pen(cv)
@@ -70,21 +70,23 @@ def sheet():
         p = skia.Paint(ColorFilter=skia.ColorFilters.Blend(skia.Color(14, 12, 16), skia.BlendMode.kSrcIn))
         cv.restore(); cv.drawImage(img, 0, 0, skia.SamplingOptions(), p); cv.save(); cv.scale(CFG.k, CFG.k)
         text(pen.cv, ('Dad' if k == 0 else 'the figure'), x, 1066, 600, 15, '#d8dce6')
-    # busts: Pell masked (night), Pell bare, kids, Mom, Dad, Mrs. D, Reyes
-    busts = [('pell', 0.25, NIGHT), ('pell', -0.55, NIGHT), ('pell_bare', 0.3, None), ('sam', 0.25, None), ('theo', -0.25, None),
-             ('mom', 0.25, None), ('dad', -0.2, None), ('dabrowski', 0.2, None), ('reyes', -0.25, None)]
-    for k, (who, yaw, lt) in enumerate(busts):
-        x = 1240 + (k % 3) * 220; y = 640 + (k // 3) * 150
-        if k >= 6: y = 640 + 2 * 150
+    # busts row (y 1080..1440): Pell masked (3/4, tilted + whisper), Pell bare, Sam, Theo, Mom, Dad, Mrs. D, Reyes
+    pen.fill(rect(0, 1080, W, 360), '#2a2d38')
+    busts = [('pell', 0.25, NIGHT, 0.0), ('pell', -0.55, NIGHT, 1.0), ('pell_bare', 0.3, None, 0.0), ('sam', 0.25, None, 0.0),
+             ('theo', -0.25, None, 0.0), ('mom', 0.25, None, 0.0), ('dad', -0.2, None, 0.0), ('dabrowski', 0.2, None, 0.0),
+             ('reyes', -0.25, None, 0.0)]
+    for k, (who, yaw, lt, tl) in enumerate(busts):
         a = CH.Acting(who, seed=k, height=600); P = a.at(3.0); P.h_turn = yaw
-        if who == 'pell' and k == 1: P.h_tilt = 13.0; P.m_open = 0.5
-        CH.draw_bust(pen, who, x, y, 0.2, P, t=3.0, light=lt)
-    # the crack-eye insert and the empty mask in a hand-scale prop
-    pen.fill(rect(1360, 560, 540, 50), '#1a1410')
+        if tl: P.h_tilt = 21.0; P.m_open = 0.5
+        CH.draw_bust(pen, who, 110 + k * 212, 1230, 0.17, P, t=3.0, light=lt)
+    # the crack-eye insert (clipped to the crack) and the empty mask as Reyes holds it
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1180 * CFG.k / CFG.k, 600, 560, 70)); cv.clear(skia.Color(18, 14, 12))
     P = CH.Pose(); P.h_turn = 0.2
-    CH.draw_head_at(pen, 'pell', P, 1500, 585, 2.2, 'eye_l', t=0.0, light=NIGHT)
-    pen.fill(rect(1360, 530, 540, 38), '#3a3f4e'); pen.fill(rect(1360, 602, 540, 30), '#3a3f4e')
-    CH.draw_prop3(pen, 'hound_mask', 1840, 560, 3.2)
+    CH.draw_head_at(pen, 'pell', P, 1450, 635, 2.4, 'eye_l', t=0.0, light=NIGHT)
+    cv.restore()
+    text(pen.cv, 'eye at the crack (insert)', 1460, 700, 600, 15, '#d8dce6')
+    CH.draw_prop3(pen, 'hound_mask', 1820, 760, 6.0)
+    text(pen.cv, 'mask in her hand', 1820, 1050, 600, 15, '#d8dce6')
     cv.restore()
     os.makedirs(OUT, exist_ok=True)
     img = _grab(surf)
