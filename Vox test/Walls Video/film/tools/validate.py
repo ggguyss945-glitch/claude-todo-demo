@@ -21,6 +21,10 @@ and checks what can be checked without looking at pixels. EVERY shot type is cov
   REACH   reach / hand-over contacts that miss their target at full weight (Acting.misses, > 20 design px)
   PROP    a prop held by two hands at once; a prop drawn by the set AND held (the note, the phone, the pie)
   LIEFRAME a lying figure in a wide shot (lying figures only in close or medium shots: on screen >= 30 % of the width)
+  LIEBED  a lying figure on a bed (review 1): its body along the bed's long axis on screen (not across it), its head on the
+          bed's top, under the duvet; seen from the bed's foot (kind 'pillow') it must be clipped at the quilt's hem
+  VANISH  a person in the shots before AND after (same room, same scene) missing from a people shot between them
+  NEAR    a strong push (f >= 2) on a perspective set: near-plane geometry can sweep across a face (review 1 #146): WARN
   FACE    Pell's face beats in 3/4 (a bust of him in profile, |h_turn| > 0.7, is a WARN)
   CUTPOS  the same person jumping > 0.8 m across a cut on the same plan
   STATE   the story's states (see states()): the red flannel on Dad only on moving day (L12-L27), then on Pell; Sam in
@@ -330,6 +334,11 @@ def extra_checks(k, sh, ts, acts, held):
                 L_ = a_.height * mag
                 if L_ < 0.30 * 1920:
                     add('ERROR', k, 'LIEFRAME', '%s lies in a wide shot (%.0f px long on screen; lying figures only in close or medium shots)' % (ident, L_))
+            if kind in ('lie', 'pillow') and isinstance(q.get('at'), str) and 'bed' in q['at'] or q.get('kind') == 'pillow':
+                liebed(k, sh, sp, q, a_, kind, ident)
+        cm_ = p.get('c') or {}
+        if cm_.get('mv') == 'push' and float(cm_.get('f', 1.0)) >= 2.0 and p.get('ppl'):
+            add('WARN', k, 'NEAR', 'push x%.1f on a perspective set with people: check near-plane geometry crossing a face' % float(cm_['f']))
         if p['room'] == 'street' and (p.get('set') or {}).get('police'):            # VEHICLE: nobody inside a cruiser
             cars = [(s_.X, s_.Yp) for nm, s_ in sp.anchors.items() if nm.startswith('police_')]
             for ident, (p0, p1, walks) in (getattr(sh, '_plan_pos', None) or {}).items():
@@ -350,6 +359,65 @@ def extra_checks(k, sh, ts, acts, held):
     if sh.kind == 'bust' and p.get('who') == 'pell' and abs(p.get('h_turn', 0.0)) > 0.7:
         add('WARN', k, 'FACE', "Pell's face in profile (h_turn %.2f): his face beats are 3/4" % p.get('h_turn', 0.0))
 
+
+
+_BEDS = {'theo_bed': 'WL_TBED', 'sam_bed': 'WL_SBED', 'bed_dad': 'WL_PBED', 'bed_mom': 'WL_PBED', 'pillow_dad': 'WL_PBED',
+         'pillow_mom': 'WL_PBED', 'theo_head': 'WL_TBED'}
+
+
+def liebed(k, sh, sp, q, a_, kind, ident):
+    """LIEBED (review 1 blocker 1): a lying figure lies ALONG its bed, head on it, under the bedding."""
+    B = getattr(ST, _BEDS.get(q.get('at'), ''), None)
+    if B is None: return
+    if kind == 'pillow':
+        if q.get('clip') is None and q.get('hem') is None:
+            add('ERROR', k, 'LIEBED', '%s lies in bed seen from its foot without the quilt over the body (no hem clip)' % ident)
+        return
+    v = sp.view; Y = B.Y1
+    h0, h1 = v.p(*B.at(0, -B.d / 2, Y)), v.p(*B.at(0, B.d / 2, Y))         # the bed's long axis (head .. foot) on screen
+    tm = (sh.t0 + sh.t1) / 2
+    hd = a_.where(tm, 'head'); fl, fr = a_.where(tm, 'foot_l'), a_.where(tm, 'foot_r')
+    ft = ((fl[0] + fr[0]) / 2, (fl[1] + fr[1]) / 2)
+    bx, by = h1[0] - h0[0], h1[1] - h0[1]; fx, fy = ft[0] - hd[0], ft[1] - hd[1]
+    nb, nf = math.hypot(bx, by), math.hypot(fx, fy)
+    if nb < 5 or nf < 5: return
+    ang = math.degrees(math.acos(min(1.0, abs(bx * fx + by * fy) / (nb * nf))))
+    if ang > 35.0:
+        add('ERROR', k, 'LIEBED', '%s lies %.0f deg across the bed on screen (lying figures lie along the bed)' % (ident, ang))
+    corners = [v.p(*B.at(sx * B.w / 2, sy * B.d / 2, Y)) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    xs, ys = [c[0] for c in corners], [c[1] for c in corners]
+    pad = 0.12 * max(max(xs) - min(xs), max(ys) - min(ys)) + 0.15 * a_.height
+    if not (min(xs) - pad <= hd[0] <= max(xs) + pad and min(ys) - pad - 0.2 * a_.height <= hd[1] <= max(ys) + pad):
+        add('ERROR', k, 'LIEBED', "%s's head is off the bed (screen %.0f, %.0f)" % (ident, hd[0], hd[1]))
+    if q.get('cover') is False:
+        add('WARN', k, 'LIEBED', '%s lies on the bed with no duvet over the body' % ident)
+
+
+_CANON = {'sam_pj': 'sam', 'mom_pj': 'mom', 'dad_pj': 'dad', 'dad_tee': 'dad', 'pell_bare': 'pell', 'pell_own': 'pell'}
+
+
+def check_vanish():
+    """VANISH (review 1 M11): within one scene (same room, < 25 s apart), a person in the room's people shots before AND
+    after must not be missing from a people shot (or a wide / bed view) between them."""
+    rows = []
+    for k in range(N):
+        sh = SH[k]
+        if sh.kind != 'set': continue
+        ids = set()
+        for q in sh.p.get('ppl', []):
+            if q.get('until') is not None and q['until'] < sh.t1 - 0.2: continue
+            ids.add(_CANON.get(q.get('id', q['who']), q.get('id', q['who'])))
+            if q.get('hush') or q.get('carry'): ids.add((q.get('hush') or q.get('carry'))['who'])
+        rows.append((k, sh.p['room'], sh.p.get('view'), sh.t0, sh.t1, ids, sh.p.get('era', 'now')))
+    for i, (k, room, view, t0, t1, ids, era) in enumerate(rows):
+        if not ids and view not in ('wide', 'bed'): continue
+        prev = next((r for r in reversed(rows[:i]) if r[1] == room and r[6] == era and r[5]), None)
+        nxt = next((r for r in rows[i + 1:] if r[1] == room and r[6] == era and r[5]), None)
+        if prev is None or nxt is None or t0 - prev[4] > 25.0 or nxt[3] - t1 > 25.0: continue
+        gone = (prev[5] & nxt[5]) - ids
+        if view not in ('wide', 'bed') and view != prev[2]: continue       # a detail of the room (a bed, the door) may leave people out
+        if gone and k in KS:
+            add('ERROR' if nxt[3] - prev[4] < 12.0 else 'WARN', k, 'VANISH', '%s in shots %d and %d but missing here (%s, %s)' % (', '.join(sorted(gone)), prev[0], nxt[0], room, view))
 
 
 def check_shot(k):
@@ -609,6 +677,7 @@ for k in KS:
         add('ERROR', k, 'BUILD', 'the check failed: %r' % ex_)
     F._built.clear()
 check_cuts()
+check_vanish()
 states()
 if not a.no_lip: check_lips()
 

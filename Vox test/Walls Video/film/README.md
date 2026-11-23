@@ -29,7 +29,7 @@ All commands run from this folder (`Vox test/Walls Video/film`). The work dir is
   outro checklist (L285-295), every item legible while read. `card`: the outro cards.
 
 ## Continuity (enforced by validate.py STATE)
-Dad wears the red flannel (`dad`) only on moving day (L12-27); after that `dad_tee` / `dad_pj` and the flannel is on Pell.
+Dad wears the red flannel (`dad`) only on moving day (L12-27); after that `dad_tee` / `dad_pj` and the flannel is on Pell. On moving day Pell in the wall wears his own drab work shirt (`pell_own`): one flannel at a time.
 Sam in `sam_pj` at night. Pell masked until Reyes pulls the mask off (L251), `pell_bare` after. The doorway figure is
 Pell's silhouette with Dad's tilt (`door_pell`, the hall light behind him). Lip sync only on the characters' own lines.
 
