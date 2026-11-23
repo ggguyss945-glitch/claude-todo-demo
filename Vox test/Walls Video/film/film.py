@@ -81,7 +81,7 @@ def LT(i, off=0.0):
 # drawn. Pell speaks from the ceiling, the wall, the mask, the vent and outdoors: his lips move on all of them.
 VOICE = {'sam': [('sam', None)], 'sam_pj': [('sam', None)], 'theo': [('theo', None)], 'mom': [('mom', None)], 'mom_pj': [('mom', None)],
          'dad': [('dad', None)], 'dad_tee': [('dad', None)], 'dad_pj': [('dad', None)], 'pell': [('pell', None)],
-         'pell_bare': [('pell', None)], 'dabrowski': [('dabrowski', None)], 'reyes': [('officer', None)], 'officer_w': []}
+         'pell_bare': [('pell', None)], 'pell_own': [('pell', None)], 'dabrowski': [('dabrowski', None)], 'reyes': [('officer', None)], 'officer_w': []}
 KIDS = ('sam', 'sam_pj', 'theo')
 # ---------------------------------------------------------------- the header corner (place / time), keyed to lines
 CORNER = [(0, '3:00 AM'), (4, '14 LARKSPUR LANE'), (11, 'THE MORNING AFTER'), (12, 'AUGUST'), (28, 'NIGHT ONE   3:00 AM'), (36, 'MORNING'),
@@ -640,6 +640,18 @@ def figure(F, sh, sp, q, k=0, rim=None):
         a.kneel_down(q.get('kneel_t', -2.0), q.get('kneel_dur', 0.01), knees=q.get('knees', 1), t1=q.get('rise_t'))
     elif kind == 'lie':
         a.lie(-1.0, q.get('lie_face', 'up'), arms=q.get('arms', 'side'))
+        if q.get('cover', True) and 'bed' in str(q.get('at')):         # in bed: the duvet over him (review 1, blocker 1)
+            q = dict(q, _extras=list(q.get('_extras', [])) + [_bed_cover(COVER_C.get(str(q.get('at')), '#6a4a5a'))])
+    elif kind == 'pillow':
+        # lying in bed seen from the bed's foot (review 1, blocker 1): the head rests on the pillow (the spot), the rest of
+        # the body is under the quilt (the bed piece draws it): the figure is clipped at the quilt's hem (plan point `hem`)
+        a.set(-9.0, None, 0.01, h_tilt=q.get('h_tilt', 12.0))
+        hy_ = a.where(sh.t0 + 0.02, 'head')[1]
+        q = dict(q, dy=q.get('dy', 0.0) + (s0.y - hy_) - 0.02 * h0)
+        if q.get('hem') is not None: q['clip'] = float(spot_of(sp, q['hem']).y)
+        bo_ = [ov for k_, ov in sp.info.get('orders', {}).items() if k_ == q.get('bed', 'bed') or k_.startswith(q.get('bed', 'bed') + '_')]
+        if bo_ and 'order' not in q: q['order'] = min(bo_) - 0.03                      # in front of the pillow (the clip hides the rest)
+        a.place(s0.x, s0.y + q['dy'])
     elif kind == 'floor':
         a.sit_floor(-1.0, None, 0.01)
     if q.get('act'):
@@ -813,6 +825,71 @@ def figure(F, sh, sp, q, k=0, rim=None):
     lay = Layer(s0.depth + q.get('dz', 0.0), draw, name, ref_depth=s0.depth + q.get('dz', 0.0), alpha=q.get('alpha', 1.0), **lkw)
     lay.order = q.get('order', sp.order_at(s0.X, s0.Yp) + q.get('dorder', 0.0))
     return lay, a, dict(depth=s0.depth, spot=s0)
+
+
+COVER_C = {'theo_bed': '#3a6a9a', 'sam_bed': '#4a5a7a'}
+
+
+def _bed_cover(col, hem='#e6e0d2'):
+    """A duvet drawn over a lying figure on a bed (side views; review 1, blocker 1): from under the arms to past the feet,
+    as wide as his arms and hands (they lie under it), the sheet's hem folded back over the chest."""
+    def fx(pen, t, a):
+        try:
+            Q = lambda n_: np.array(a.where(t, n_), float)
+            nk, hp = Q('neck'), Q('hip')
+            ft = (Q('foot_l') + Q('foot_r')) / 2.0
+            ax = ft - nk
+            L = float(np.hypot(ax[0], ax[1]))
+            if L < 5.0: return
+            u = ax / L
+            n = np.array([-u[1], u[0]])
+            if n[1] < 0: n = -n                                   # n: down the screen (the near side of the bed)
+            ds = [float(np.dot(Q(k_) - nk, n)) for k_ in ('hand_l', 'hand_r', 'elbow_l', 'elbow_r', 'shoulder_l', 'shoulder_r',
+                                                         'knee_l', 'knee_r', 'foot_l', 'foot_r')]
+            wf, wn = -min(ds) + 0.05 * L, max(ds) + 0.09 * L
+            A = nk + u * max(0.12 * L, 0.3 * float(np.dot(hp - nk, u)))
+            B = ft + u * 0.07 * L
+            M = (A + B) / 2.0
+            pts = [A - n * wf, M - n * (wf + 0.02 * L), B - n * (wf * 0.8), B + u * 0.035 * L, B + n * (wn * 0.9),
+                   M + n * (wn + 0.015 * L), A + n * wn]
+            path = smooth([tuple(p_) for p_ in pts], True, 0.6)
+            pen.fill(path, col)
+            pen.line(path, None, '#1c1820', 200)
+            for k_ in (0.42, 0.7):                                # two soft folds across the duvet
+                c_ = A + (B - A) * k_
+                pen.line(poly([tuple(c_ - n * wf * 0.7), tuple(c_ + u * 0.03 * L), tuple(c_ + n * wn * 0.7)], False), None, '#000000', 60)
+            h0_, h1_ = A - n * (wf + 0.01 * L), A + n * (wn + 0.01 * L)
+            band = poly([tuple(h0_), tuple(h1_), tuple(h1_ + u * 0.06 * L), tuple(h0_ + u * 0.06 * L)])
+            pen.fill(band, hem)
+            pen.line(band, None, '#1c1820', 160)
+        except Exception:
+            pass
+    return fx
+
+
+def cushion_layer(who, sp, t0, dur=0.6, col='#4a7a44'):
+    """Mr. Pell's seat cushion lifted between the hands of `who` from t0 (review 1 M15): the bare deck and the drawings,
+    folded very small, show under it."""
+    s0 = sp.anchors['chair_seat']; k = s0.ppm
+
+    def draw(pen, t):
+        u = ease_in_out(clamp((t - t0) / dur))
+        if u > 0.01:
+            pen.fill(oval(s0.x, s0.y + 0.01 * k, 0.25 * k, 0.07 * k), '#2c4428')
+            for j in range(3):
+                r_ = rect(s0.x - 0.06 * k + j * 0.012 * k, s0.y - 0.012 * k - j * 0.01 * k, 0.12 * k, 0.03 * k)
+                pen.fill(r_, ('#efe8d6', '#f4d27a', '#e8eef4')[j]); pen.line(r_, None, '#2a2420', 180)
+        try:
+            hl, hr = who.where(t, 'hand_l'), who.where(t, 'hand_r')
+            hx, hy = (hl[0] + hr[0]) / 2.0, (hl[1] + hr[1]) / 2.0
+        except Exception:
+            hx, hy = s0.x, s0.y
+        cx, cy = lerp(s0.x, hx, u), lerp(s0.y - 0.035 * k, hy - 0.01 * k, u)
+        c_ = rrect(cx - 0.26 * k, cy - 0.065 * k, 0.52 * k, 0.13 * k, 0.05 * k)
+        pen.fill(c_, col); pen.fill(rrect(cx - 0.24 * k, cy - 0.06 * k, 0.48 * k, 0.04 * k, 0.02 * k), '#6a9a5e', 150); pen.line(c_, None)
+    lay = Layer(s0.depth, draw, 'cushion', **sp.light_kw(s0.X, s0.Yp, s0.Y))
+    lay.order = sp.order_at(s0.X, s0.Yp) - 0.03
+    return lay
 
 
 def prop_layer(sp, track, at, name='prop', order_dz=-0.05):
@@ -1779,7 +1856,7 @@ ROOMS = {'street': 'wl_street', 'living': 'wl_living', 'kitchen': 'wl_kitchen', 
          'dead': 'wl_dead'}
 _PRE = {'street': 'wl_ext_', 'living': 'wl_liv_', 'kitchen': 'wl_kit_', 'hall': 'wl_hall_', 'boys': 'wl_boys_', 'parents': 'wl_par_', 'dead': 'wl_dead_'}
 ROOM_RIM = {'street': NIGHT, 'living': NIGHT, 'kitchen': NL, 'hall': NL, 'boys': NIGHT, 'parents': NIGHT, 'dead': PHONE}
-ALIAS = {'sam': ('sam', 'sam_pj'), 'mom': ('mom', 'mom_pj'), 'dad': ('dad', 'dad_tee', 'dad_pj'), 'pell': ('pell', 'pell_bare')}
+ALIAS = {'sam': ('sam', 'sam_pj'), 'mom': ('mom', 'mom_pj'), 'dad': ('dad', 'dad_tee', 'dad_pj'), 'pell': ('pell', 'pell_own', 'pell_bare')}
 SPACE = {'street': 'outside', 'living': 'inside', 'kitchen': 'inside', 'hall': 'inside', 'boys': 'inside', 'parents': 'inside', 'dead': 'wall'}
 DAYK = ('day', 'morning')
 
@@ -1962,6 +2039,27 @@ def _hole_frame(pen, seed=0):
     pen.fill(edge, '#000000', 110)
 
 
+def sidestep(t0, dx, dur=1.4):
+    """In the wall: he slides sideways between the studs (dx design px), a little bob on each step (review 1 M8)."""
+    def act(a, s):
+        def fn(P, t):
+            u = ease_in_out(prog(t, t0, t0 + dur))
+            if u <= 0: return
+            P.dx += dx * u
+            P.bob += 6.0 * abs(math.sin(math.pi * 3 * u)) * (1.0 if u < 1 else 0.0)
+        a._add(t0, None, fn)
+    return act
+
+
+def ear_to(t0, xy, side=1, dur=0.6):
+    """He leans in and lays a long flat hand on the plaster at xy, the ear turned to it, listening (review 1 M8)."""
+    def act(a, s):
+        a.reach_to(t0, side, xy, dur=dur, contact='palm', shape='flat')
+        a._add(t0, None, lambda P, t: (setattr(P, 'lean', P.lean + 0.12 * ease_in_out(prog(t, t0, t0 + dur))),
+                                       setattr(P, 'h_tilt', P.h_tilt + 14.0 * side * ease_in_out(prog(t, t0 + 0.2, t0 + dur + 0.3)))))
+    return act
+
+
 def WP(who='pell', x=960.0, h=None, **k):
     """A figure inside the walls: x (design px) on the cavity plate, height h (px; default from the mode), act, expr,
     turn / h_turn, food=(kind, side, t0, t1), light."""
@@ -1981,8 +2079,14 @@ def B_wall(F, sh):
         hh = q.get('h') or {'wall': 800.0, 'attic': 700.0, 'chase': 760.0}[mode]
         a = CH.Acting(who, seed=q.get('seed', 0) + k * 11 + sh.idx * 3, height=hh, expr=q.get('expr', 'neutral'), blink=q.get('blink'))
         a.place(q['x'], fl + q.get('dy', 0.0))
-        if q.get('turn') is not None: a.face(q['turn'], q.get('h_turn', 0.0))
+        if q.get('turn') is not None:
+            tr_ = q['turn']
+            if mode == 'wall' and abs(tr_) > 0.35 and not q.get('keep_turn'):
+                tr_ = math.copysign(0.32, tr_)                 # review 1 M8: 3/4, never profile (the hound mask reads)
+            a.face(tr_, q.get('h_turn', 0.0))
         A[q.get('id', who)] = a
+        if mode == 'wall' and who.startswith('pell') and q.get('creep', True):
+            a.creep(sh.t0, sh.t1, tilt=0.0, jerk_at=False, sway=6.0)         # never dead still: a slow weight shift
         if q.get('act'): q['act'](a, sh)
         if q.get('talk', True):
             for l in F.voice_lines(sh.t0, sh.t1, VOICE.get(who, [])):
@@ -2548,11 +2652,22 @@ PAR_N = dict(lamp=0.0, door=70.0)
 # ==================================================================================================== the shot plan
 # Line by line (timeline.json): every cut at T(i) (a moment before line i) or W(i, 'word'); every event at WD / pdur.
 SAMW = (5.6, 2.85, 2.9)                       # beside Sam's bed (the wall by it), standing room
-THEO_CAM = cm((1.05, 2.75, 4.05), (2.0, 0.95, 3.35), 900)        # Theo's bed from its foot corner: Pell kneeling faces us at 3/4
+THEO_CAM = cm((1.2, 2.95, 4.45), (1.85, 0.8, 3.5), 950)        # Theo's bed from its foot corner: Pell kneeling faces us at 3/4
 DOOR_CAM = cm((3.2, 3.2, 4.2), (0.78, 4.0, 4.0), 1100)                # the doorway from inside the room (he stands in it)
 BL = dict(theo_bed='empty', sam_bed='empty')                            # the boys IN bed (the duvet drawn over the lying figure)
 BLH = dict(BL, hall_light=0.7)
 POV_CAM = cm((5.4, 0.5, 3.75), (0.78, 4.02, 3.95), 2400)              # from Sam's pillow, long lens on the doorway (the figure)                                          # ... and the hall light behind the doorway figure
+
+
+PAR_BED = dict(PAR_N, bed='made')                                         # the parents asleep: the quilt pulled up
+HEM_X = -5.975 + 0.42                                                      # the made quilt's hem (bu_bed_parts n0) on WL_PBED
+
+
+def par_bed(who, side, expr='sleep', **k):
+    """Mom or Dad asleep in their bed seen from its foot: head on the pillow, the quilt over the body (review 1, blocker 1)."""
+    Yp = 6.42 if side == 'dad' else 7.2
+    return P(who, 'pillow_' + side, kind='pillow', hem=(HEM_X, Yp, 2.9 + 0.56), expr=expr, id=k.pop('id', side),
+             h_tilt=k.pop('h_tilt', 10.0 if side == 'dad' else -10.0), **k)
 
 
 def MC(at, ang, d=2.4, h=1.45, lh=1.0, S=1000.0, sy=560.0):
@@ -2563,6 +2678,8 @@ def MC(at, ang, d=2.4, h=1.45, lh=1.0, S=1000.0, sy=560.0):
     return cm((X + d * math.sin(a), Yp + d * math.cos(a), Y + h), (X, Yp, Y + lh), S, sy=sy)
 
 
+CURBCAM = MC((3.5, -8.2, -0.62), 180, 5.0, h=1.15, lh=0.6, S=1250)      # from the lane: Pell on our kerb, a patrol car each side
+PFOOT = MC((-5.45, 6.8, 2.9), 90, 3.2, h=1.85, lh=0.55, S=1500)          # the parents' bed from its foot (both pillows)
 KIDCAM = MC((3.9, 1.75, 2.9), 0, 2.4, h=1.35, lh=0.75, S=1000)          # the boys' room: the two of them by the window
 KCAM = MC((3.1, 8.2, 0.0), 200, 2.7, h=1.55, lh=1.0, S=1000)            # the kitchen: the counter, the fridge, the family
 KDOOR = MC((5.4, 4.6, 0.0), 300, 2.3, h=1.5, lh=1.1, S=1000)            # the door from the garage
@@ -2580,6 +2697,14 @@ def sam_bed(expr='sleep', **k): return P('sam_pj', 'sam_bed', kind='lie', lie_fa
 
 
 def theo_bed(expr='sleep', **k): return P('theo', 'theo_bed', kind='lie', lie_face='down', expr=expr, id='theo', **k)
+
+
+def theo_head(expr='sleep', **k):
+    """Theo asleep seen from his bed's foot (THEO_CAM): head on the pillow, the quilt (theo_bed 'made') over him."""
+    return P('theo', 'theo_head', kind='pillow', bed='theo_bed', hem=(1.33, 0.525, 2.9 + 0.56), expr=expr, id='theo', h_tilt=k.pop('h_tilt', 8.0), **k)
+
+
+BLM = dict(BL, theo_bed='made')                                          # Theo's quilt pulled up (the tuck)
 
 
 def lie_bust(t, who, expr='sleep', act=None, **k):
@@ -2636,8 +2761,8 @@ def plan_open(F):
     S(W(2, 'just'), 'boys', 'sam_wall', st=BL, ppl=[sam_bed()], c=ZO(1.8, 'sam_pillow'))
     S(W(2, "don't"), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.8, 0.02, 960, 330))
     # 3 Your dad is asleep.
-    S(T(3), 'parents', 'bed', st=PAR_N, ppl=[P('dad_pj', 'bed_dad', kind='lie', expr='sleep'), P('mom_pj', 'bed_mom', kind='lie', expr='sleep')],
-      c=ZO(1.6, 'bed_dad', ody=-40), hit=E(3) - 0.05)
+    S(T(3), 'parents', 'bed', st=PAR_BED, cam=PFOOT, ppl=[par_bed('dad_pj', 'dad'), par_bed('mom_pj', 'mom')],
+      c=ZO(1.3, 'pillow_dad', ody=40), hit=E(3) - 0.05)
     # 4-8 Theo's seven rules; he was six; the dinosaur notebook; I was twelve; the silliest rules
     S(T(4), 'boys', 'wide', st=dict(MORN, theo_bed='made', sam_bed='made'), cam=KIDCAM,
       ppl=[P('theo', (3.1, 2.0, 2.9), face=(4.3, 3.4), expr='kid_grin', id='theo', act=_A(lk(T(4), ('sam', 'head')))),
@@ -2654,13 +2779,17 @@ def plan_open(F):
     # 9-10 Every grown-up had an explanation. Every explanation was wrong.
     S(T(9), 'kitchen', 'wide', st=KIT_D, cam=KCAM, ppl=[P('dad_tee', (3.5, 8.5, 0.0), face=(2.4, 5.8), expr='talk_smile', id='dad', act=_A(lambda a, s: a.laugh(T(9) + 0.4, 1.4))),
                                                P('mom', (2.6, 8.2, 0.0), face=(3.4, 7.0), expr='kind_smile', id='mom')], c=Z(1.0, 0.012))
-    WL(T(10), 'wall', [WP('pell', 900, turn=0.45, h_turn=0.35, act=_A(tilt(T(10) + 0.3, 16, 1.8)))], slits=[(1250, 260, 760, 1.0)], c=Z(1.25, 0.02, 960, 380))
+    WL(T(10), 'wall', [WP('pell', 900, turn=0.45, h_turn=0.35, act=_A(ear_to(T(10) + 0.2, (1230, 420), 1), tilt(T(10) + 0.9, 12, 1.4)))], slits=[(1250, 260, 760, 1.0)],
+       c=ZO(1.7, '@pell', part='chest', ody=-60))
     # 11 By morning: three police cars, a hole in my closet wall, a man with a dog's face on our curb in handcuffs ... living in his house.
     S(T(11), 'street', 'house', st=dict(police=ST.wl_police(T(11) - 3), win=dict(boys=0.6, par=0.6)), c=Z(1.2, 0.015, 1000, 560))
     S(W(11, 'hole'), 'boys', 'closet_sam', st=dict(sam_closet=140.0, hole=True, flash=0.5, flash_at=(4.3, 4.3, 3.9), police=True), c=Z(1.2, 0.02))
-    S(W(11, 'man'), 'street', 'curb', st=dict(police=True), ppl=[P('pell', 'curb_sit', id='pell', hands=None, act=_A(lambda a, s: a.cuffed(), lk(W(11, 'telling'), (300, 380), dur=0.8))),
-                                                              P('reyes', 'curb_officer', face='curb_sit', expr='calm_firm', id='reyes', act=_A(lk(W(11, 'man'), ('pell', 'head'))))],
-      c=ZO(1.8, 'curb_sit', h=0.7), cut='blink')
+    # review 1 blocker 2: from the lane, his dog face to us (3/4), cuffed, sitting ON our kerb between the patrol cars
+    S(W(11, 'man'), 'street', 'curb', st=dict(police=True), cam=CURBCAM,
+      ppl=[P('pell', (3.5, ST.WL_KN - 0.3, ST.WL_ROAD), kind='seat', seat=ST.WL_G - ST.WL_ROAD, face=(2.6, -12.0), id='pell', hands=None,
+             act=_A(lambda a, s: a.cuffed(), tilt(W(11, 'face') + 0.1, 12, 1.4), lk(W(11, 'telling'), (300, 380), dur=0.8))),
+           P('reyes', (4.0, ST.WL_KN + 0.45, ST.WL_G), face=(3.5, ST.WL_KN - 0.3), expr='calm_firm', id='reyes', act=_A(lk(W(11, 'man'), ('pell', 'head'))))],
+      c=ZO(1.1, (3.5, ST.WL_KN - 0.3, ST.WL_ROAD), h=0.8), cut='blink')
     BU(W(11, 'living'), 'pell', 'street', 'curb', dict(police=True), cx=980, cy=560, scale=0.95, h_turn=0.4, light=POLICE,
        act=_A(tilt(W(11, 'living') + 0.2, 14, 1.4), lookxy(1500, 300, W(11, 'living'))), c=BZ(0.02))
 
@@ -2701,7 +2830,7 @@ def plan_moving(F):
     IN(T(25), 'note', (lambda u, t0=T(25): kw(u, t0)), c=dict(mv='push', rate=0.012))
     BU(W(25, 'settles'), 'dad', 'kitchen', 'wide', DAYS, cx=980, cy=600, scale=0.92, h_turn=0.3, expr='talk_smile', light=DAY,
        act=_A(lookxy(760, 820, W(25, 'settles'))), c=BZ(0.015))
-    WL(W(25, 'mice'), 'wall', [WP('pell', 860, turn=0.5, h_turn=0.4, act=_A(tilt(W(25, 'mice') + 0.2, 18, 1.6)))], slits=[(1300, 200, 760, 0.9)],
+    WL(W(25, 'mice'), 'wall', [WP('pell_own', 700, turn=0.5, h_turn=0.4, act=_A(sidestep(W(25, 'mice') - 0.1, 260, 1.3), tilt(W(25, 'mice') + 1.0, 14, 1.2)))], slits=[(1300, 200, 760, 0.9)],
        c=Z(1.4, 0.02, 900, 360))
     IN(W(25, 'one'), 'note', (lambda u, t0=W(25, 'one'): kw(u, t0)), c=dict(mv='push', rate=0.02))
     S(W(25, 'be'), 'kitchen', 'wide', st=dict(DAYS, note=False), cam=KCAM, ppl=[P('dad', 'counter_front', face=(2.4, 5.8), id='dad', expr='talk_smile',
@@ -2720,7 +2849,7 @@ def plan_night1(F):
     lie_bust(T(28), 'sam_pj', 'neutral', act=_A(blinks(T(28) + 0.5), lookxy(400, 300, pdur(28, 0.6), dur=0.5)))
     S(T(29), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.0, 0.01))
     S(T(30), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(2.2, 0.01, 930, 760))
-    S(T(31), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85)], c=Z(2.6, 0.01, 930, 420))
+    S(T(31), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85, acts=(tilt(T(31) + 0.15, 12, 0.9),))], c=Z(1.6, 0.01, 930, 190))   # review 1 M5: the head, tilting on the word
     S(T(32), 'boys', 'theo', st=BL, ppl=[theo_bed()], c=ZO(2.4, 'theo_pillow', h=0.2))
     lie_bust(T(33), 'sam_pj', 'sleepy', act=_A(lookxy(300, 300, T(33))))
     S(T(34), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.3, 0.01, 960, 420))
@@ -2742,7 +2871,7 @@ def plan_night1(F):
     BU(T(39), 'theo', 'kitchen', 'wide', KN, cx=960, cy=620, scale=0.95, h_turn=-0.3, expr='nervous', light=LAMP,
        act=_A(lambda a, s: a.point(T(39) + 0.2, E(39) + 0.4, -1, 1.0, -0.1), lookxy(200, 500, T(39))), c=BZ(0.015))
     BU(T(40), 'theo', 'kitchen', 'wide', KN, cx=900, cy=600, scale=1.05, h_turn=0.2, expr='nervous', light=LAMP, c=BZ(0.02))
-    WL(W(40, 'he', 1), 'wall', [WP('pell', 1000, turn=-0.3, h_turn=0.35, act=_A(tilt(W(40, 'sad') - 0.2, 18, 1.4)))], slits=[(700, 240, 700, 1.0)],
+    WL(W(40, 'he', 1), 'wall', [WP('pell', 1000, turn=-0.3, h_turn=0.35, act=_A(ear_to(W(40, 'he', 1) + 0.1, (730, 420), -1), tilt(W(40, 'sad') - 0.2, 18, 1.4)))], slits=[(700, 240, 700, 1.0)],
        c=ZO(2.0, '@pell', part='head', ody=40))
     # 41-42 Mom and Dad looked at each other. Because they knew where a sad dog face came from.
     BU(T(41), 'mom', 'kitchen', 'wide', KN, cx=700, cy=620, scale=0.8, h_turn=0.45, expr='nervous', light=LAMP, act=_A(lookxy(1300, 470, T(41) + 0.2)),
@@ -2865,14 +2994,14 @@ def plan_rule2(F):
       ppl=[P('sam_pj', 'crack_lean', face=(6.0, 9.42), id='sam', expr='fear', act=_A(lambda a, s: a.head_to(T(105) + 0.2, scr(s.sp, 'crack', 0, 45), 'eye_l', dur=0.8)))],
       c=ZO(1.5, 'crack', ody=60))
     # 106-109 An eye leaned in on the other side. A heavy, droopy, sad eye. In a face made of rubber. It blinked.
-    PR(T(106), 'crack', open=1.0, shelf=False, layers=[EYE(985, 520, 9.0, WD(106, 'eye') - 0.1, clip=crack_poly(1.0), lean=80.0)], hit=WD(106, 'eye'),
+    PR(T(106), 'crack', open=2.2, shelf=False, layers=[EYE(968, 540, 12.0, WD(106, 'eye') - 0.1, clip=crack_poly(2.2), lean=80.0)], hit=WD(106, 'eye'),
        c=dict(mv='push', rate=0.03))
-    PR(T(107), 'crack', open=1.9, shelf=False, layers=[EYE(985, 540, 15.0, T(107) - 0.8, clip=crack_poly(1.9))], c=dict(mv='push', f=1.1, rate=0.02))
-    PR(T(108), 'crack', open=3.2, shelf=False, layers=[EYE(1000, 520, 6.5, T(108) - 0.8, clip=crack_poly(3.2), part='eye_l', yaw=0.35)],
+    PR(T(107), 'crack', open=2.8, shelf=False, layers=[EYE(968, 540, 17.0, T(107) - 0.8, clip=crack_poly(2.8))], c=dict(mv='push', f=1.2, rate=0.02))
+    PR(T(108), 'crack', open=3.6, shelf=False, layers=[EYE(975, 520, 8.0, T(108) - 0.8, clip=crack_poly(3.6), part='eye_l', yaw=0.35)],
        c=dict(mv='push', rate=0.015))
-    PR(T(109), 'crack', open=1.9, shelf=False, layers=[EYE(985, 540, 15.0, T(109) - 0.8, clip=crack_poly(1.9), blinks_=(WD(109, 'blinked') + 0.05,))],
-       c=dict(mv='push', f=1.15, rate=0.01), sfx=[(WD(109, 'blinked') + 0.05, 'eyelid_click', -12, 0, 'close')])
-    PR(T(110), 'crack', open=1.0, shelf=False, layers=[EYE(985, 520, 9.0, T(110) - 3, t_out=T(110) + 0.2, clip=crack_poly(1.0))], c=dict(mv='push', rate=0.02))
+    PR(T(109), 'crack', open=2.8, shelf=False, layers=[EYE(968, 540, 17.0, T(109) - 0.8, clip=crack_poly(2.8), blinks_=(WD(109, 'blinked') + 0.05,))],
+       c=dict(mv='push', f=1.25, rate=0.01), sfx=[(WD(109, 'blinked') + 0.05, 'eyelid_click', -12, 0, 'close')])
+    PR(T(110), 'crack', open=2.2, shelf=False, layers=[EYE(968, 540, 12.0, T(110) - 3, t_out=T(110) + 0.2, clip=crack_poly(2.2))], c=dict(mv='push', rate=0.02))
     tcw = W(110, 'something')
     WL(tcw, 'chase', [WP('pell', 200, dy=-4.0, act=_A(lambda a, s: a.crawl(tcw + 0.1, W(110, 'up') + 0.2, -150, 2050, facing=1)))], seed=1,
        sfx=[(tcw + 0.15, 'scuttle', -6, 0.3, 'wall', dict(dur=round(W(110, 'up') - tcw, 2)))], c=dict(mv='hold'))
@@ -2895,15 +3024,22 @@ def plan_rule3(F):
     S(T(118), 'living', 'wide', st=dict(), cam=CHAIRFRONT, ppl=[P('pell', 'armchair', id='pell', stand_t=T(118) + 0.4, act=_A(tilt(T(118) - 0.4, 10, 0.8)))],
       c=Z(1.0, 0.01))
     # 119 "Vent's right under it,"
-    S(T(119), 'living', 'wide', st=MORN, cam=MC((-3.0, 2.6, 0.0), 120, 2.3), ppl=[P('dad_tee', 'chair_front', face=(-1.2, 1.5), id='dad', expr='talk_smile',
-                                               act=_A(lambda a, s: a.point(T(119) + 0.1, E(119) + 0.4, 1, -0.3, 0.8)))], c=Z(1.0, 0.012))
+    # review 1 M14: Dad beside the chair (the vent clear), looking down at it and pointing at it
+    S(T(119), 'living', 'wide', st=MORN, cam=MC((-3.1, 2.95, 0.0), 120, 2.7, h=1.45, lh=0.7), ppl=[P('dad_tee', (-2.65, 3.4, 0.0), face=(-3.32, 2.92), id='dad', expr='talk_smile',
+                                               act=_A(lk(T(119), ('vent'), dur=0.3), reach(T(119) + 0.1, -1, (-3.32, 2.92, 0.12), t1=E(119) + 0.4, dur=0.4, shape='point')))], c=Z(1.0, 0.012))
     S(T(120), 'living', 'window', st=MORN, c=Z(1.2, 0.02))
     S(T(121), 'living', 'vent', st=MORN, c=Z(1.1, 0.02))
     # 122-123 I lifted the seat cushion. Under it, folded very small, were Theo's drawings.
-    S(T(122), 'living', 'chair', st=MORN, cam=CHAIRCAM, ppl=[P('sam', (-3.0, 2.62, 0.0), face='armchair', id='sam', expr='focused',
-                                                act=_A(reach(T(122) + 0.2, 1, (-3.35, 2.92, 0.52), t1=E(122) + 1.0, dur=0.45, shape='grip'),
-                                                       reach(T(122) + 0.3, -1, (-3.42, 3.05, 0.52), t1=E(122) + 1.0, dur=0.45, shape='grip')))],
-      c=Z(1.05, 0.012))
+    tc_ = T(122) + 0.85                                   # review 1 M15: his hands lift the cushion (the drawings under it)
+
+    def lift_cushion(a, s):
+        p_l, p_r = scr(s.sp, (-3.35, 2.92, 0.52)), scr(s.sp, (-3.42, 3.05, 0.52))
+        k_ = s.sp.anchors['chair_seat'].ppm
+        up = lambda t: ease_in_out(clamp((t - tc_) / 0.6)) * 0.28 * k_
+        a.reach_to(T(122) + 0.2, 1, lambda t: (p_l[0], p_l[1] - up(t)), t1=E(122) + 1.0, dur=0.45, shape='grip', contact='palm', z=30.0)
+        a.reach_to(T(122) + 0.3, -1, lambda t: (p_r[0], p_r[1] - up(t)), t1=E(122) + 1.0, dur=0.45, shape='grip', contact='palm', z=30.0)
+    S(T(122), 'living', 'chair', st=MORN, cam=CHAIRCAM, ppl=[P('sam', (-3.0, 2.62, 0.0), face='armchair', id='sam', expr='focused', act=_A(lift_cushion))],
+      acts=lambda A, sh, sp: [cushion_layer(A['sam'], sp, tc_)], c=Z(1.05, 0.012))
     IN(T(123), 'drawings', dict(state='folded'), c=dict(mv='push', rate=0.03))
     # 124-126 The ones that kept falling off the fridge. We never found them. We thought Theo lost them.
     S(T(124), 'kitchen', 'wide', st=KIT_D, cam=KCAM, ppl=[P('theo', (2.5, 7.75, 0.0), face='fridge', id='theo', expr='sad', act=_A(lk(T(124), 'fridge')))], c=ZO(1.4, (2.4, 8.1, 0.0), h=0.8))
@@ -2912,7 +3048,7 @@ def plan_rule3(F):
     # 127-129 Every drawing was the same. A tall man, inside a wall, with a sad dog face. In a red shirt.
     IN(T(127), 'drawings', dict(state='spread'), c=dict(mv='push', rate=0.02))
     IN(T(128), 'drawings', dict(state='spread'), c=dict(mv='push', f=1.6, rate=0.03, x=820, y=480))
-    WL(T(129), 'wall', [WP('pell', 960, h=900, turn=0.15, h_turn=0.3, act=_A(tilt(T(129) + 0.1, 12, 1.0)))], slits=[(600, 240, 800, 1.0)], c=ZO(1.5, '@pell', part='chest', ody=-60))
+    WL(T(129), 'wall', [WP('pell', 960, h=900, turn=0.15, h_turn=0.3, act=_A(ear_to(T(129) + 0.1, (640, 430), -1), tilt(T(129) + 0.5, 12, 1.0)))], slits=[(600, 240, 800, 1.0)], c=ZO(1.5, '@pell', part='chest', ody=-60))
     # 130-131 Somebody had been taking them down. So that we would never see all of them together.
     S(T(130), 'kitchen', 'wide', st=dict(KIT_N, kitchen_light=0.0), cam=KCAM, ppl=[P('pell', (2.45, 7.9, 0.0), face='fridge', id='pell', light=NL,
                                                                                    act=_A(reach(T(130) + 0.3, -1, (2.2, 8.75, 1.4), t1=E(130) + 0.5, dur=0.6, shape='grip')))],
@@ -2937,7 +3073,7 @@ def plan_rule4(F):
     BU(T(141), 'mom', 'street', 'porch', DAYS, cx=960, cy=600, scale=0.92, h_turn=0.3, expr='polite', light=DAY, c=BZ(0.015))
     # 143-147 two a.m.: the switch that does nothing; the line of light; the voice in the ceiling: "Off."
     tf = W(143, 'flipped') + 0.1
-    S(T(143), 'hall', 'down', st=HALL_N, ppl=[P('sam_pj', 'switch_stand', face='switch', id='sam', expr='nervous')], c=ZO(2.2, 'switch_stand', h=1.0))
+    S(T(143), 'hall', 'down', st=HALL_N, ppl=[P('sam_pj', 'switch_stand', face='switch', id='sam', expr='nervous')], c=ZO(1.4, 'switch_stand', h=1.0, rate=0.01))
     S(W(143, 'flipped'), 'hall', 'switch', st=dict(HALL_N, switch=lambda t: 1.0 if t >= tf + 0.25 else 0.0),
       ppl=[P('sam_pj', 'switch_stand', face='switch', id='sam', expr='nervous', act=_A(lambda a, s: a.flip_switch(tf, 1, scr(s.sp, 'switch'))))],
       c=ZO(1.7, 'switch_stand', h=1.1), sfx=[(tf + 0.25, 'light_switch', -8, 0, 'inside')])
@@ -2964,9 +3100,9 @@ def plan_rule4(F):
       c=ZO(1.7, 'switch_stand', h=1.1), sfx=[(toff + 0.25, 'light_switch', -8, 0, 'inside')])
     S(T(154), 'hall', 'back', st=HALL_N, ppl=[P('sam_pj', (0.1, 7.6, 2.9), id='sam', expr='set_jaw', path=[(T(154), (-0.05, 5.2, 2.9)), (W(154, 'told') - 0.2, (0.0, 7.55, 2.9))])],
       c=ZO(1.5, (0.0, 7.0, 2.9), h=1.0))
-    S(W(154, 'told'), 'parents', 'bed', st=dict(PAR_N, lamp=0.4), ppl=[P('dad_pj', 'bed_dad', kind='lie', expr='sleepy', id='dad'),
-                                                                     P('sam_pj', (-5.2, 5.65, 2.9), face='bed_dad', id='sam', expr='pleading')],
-      c=ZO(1.4, 'bed_dad', ody=-80))
+    S(W(154, 'told'), 'parents', 'bed', st=dict(PAR_BED, lamp=0.4), cam=PFOOT, ppl=[par_bed('dad_pj', 'dad', 'sleepy'), par_bed('mom_pj', 'mom'),
+                                                                     P('sam_pj', (-5.3, 5.75, 2.9), face=(-5.0, 7.0), id='sam', expr='pleading')],
+      c=ZO(1.15, 'pillow_dad', ody=60))
     BU(T(155), 'dad_pj', 'parents', 'bed', dict(PAR_N, lamp=0.4), rot=90, cx=960, cy=560, scale=0.9, expr='sleepy', light=LAMP,
        act=_A(lambda a, s: a.sigh(T(155) - 0.3, 1.0)), c=BZ(0.015))
 
@@ -3024,7 +3160,8 @@ def plan_rule5(F):
     IN(T(181), 'note', dict(hl=None), grade='wl_ins_night', c=dict(mv='push', f=1.05, rate=0.025),
        hands=[dict(who='pell', fn=lambda t, t0=T(181): (1240 + 120 * math.sin((t - t0) * 1.3), 700 + 30 * math.sin((t - t0) * 5.1), -40.0, 1.0), size=420.0,
                    shape='grip', side=1, sleeve_from=(1900, 1300), pen=True)], sfx=[(T(181) + 0.3, 'pen_scratch', -12, 0, 'close', dict(dur=3.5))])
-    WL(T(182), 'wall', [WP('pell', 960, turn=0.4, h_turn=0.35, act=_A(tilt(T(182) + 0.3, 18, 1.8)))], slits=[(1250, 220, 760, 1.0)], c=Z(1.5, 0.02, 960, 420))
+    WL(T(182), 'wall', [WP('pell', 760, turn=0.4, h_turn=0.35, act=_A(sidestep(T(182) + 0.1, 300, 1.5), ear_to(T(182) + 1.7, (1230, 420), 1), tilt(T(182) + 2.2, 14, 1.4)))],
+       slits=[(1250, 220, 760, 1.0)], c=ZO(1.6, '@pell', part='chest', ody=-60))
 
 
 def plan_rule6(F):
@@ -3033,13 +3170,13 @@ def plan_rule6(F):
     lie_bust(T(186), 'sam_pj', 'neutral', act=_A(blinks(T(186) + 0.4), lookxy(400, 300, pdur(186, 0.6), dur=0.5)))
     S(T(187), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.0, 0.01))
     S(T(188), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(2.2, 0.01, 930, 760))
-    S(T(189), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85)], c=Z(2.6, 0.01, 930, 420))
+    S(T(189), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85, acts=(tilt(T(189) + 0.15, 12, 0.9),))], c=Z(1.6, 0.01, 930, 190))   # review 1 M5: the head, tilting on the word
     S(T(190), 'boys', 'theo', st=BL, ppl=[theo_bed()], c=ZO(2.4, 'theo_pillow', h=0.2))
     lie_bust(T(191), 'sam_pj', 'sleepy', act=_A(lookxy(300, 300, T(191)), pose(pdur(191, 0.3), pdur(191, 0.7), 0.2, m_open=0.12)), no_lip=True)
     # 192-193 from down the hall, through my parents' open door... I heard my dad snore.
     S(T(192), 'hall', 'down', st=HALL_N, c=ZO(1.6, 'par_door', ody=-150, rate=0.02))
-    S(T(193), 'parents', 'bed', st=PAR_N, ppl=[P('dad_pj', 'bed_dad', kind='lie', expr='sleep', act=_A(pose(T(193) - 1, None, 0.3, m_open=0.18))),
-                                               P('mom_pj', 'bed_mom', kind='lie', expr='sleep')], c=ZO(1.7, 'bed_dad', ody=-40),
+    S(T(193), 'parents', 'bed', st=PAR_BED, cam=PFOOT, ppl=[par_bed('dad_pj', 'dad', act=_A(pose(T(193) - 1, None, 0.3, m_open=0.18))),
+                                               par_bed('mom_pj', 'mom')], c=ZO(1.4, 'pillow_dad', ody=40),
       sfx=[(WD(193, 'snore'), 'snore', -10, 0, 'inside')], hit=E(193) + 0.05, no_lip=True)
     # 194 The man in the doorway stepped into our room.
     S(T(194), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[P('pell', 'doorway', face='sam_pillow', id='pell', sil=0.0, path=[(T(194) + 0.2, 'doorway'), (E(194), (1.6, 3.6, 2.9))],
@@ -3055,11 +3192,13 @@ def plan_rule6(F):
        c=BZ(0.015), hit=WD(200, 'teeth') + 0.05, no_lip=True)
     # 201-204 He knelt down beside Theo's bed. And he tucked Theo in. Gently. Like he'd done it a hundred times.
     tk = T(201) + 0.4
-    PK = lambda **k: P('pell', 'theo_kneel', face='theo_pillow', id='pell', **k)
-    S(T(201), 'boys', 'theo', st=BL, ppl=[theo_bed(), PK(kind='kneel', knees=1)], c=ZO(1.5, 'theo_kneel', h=0.8))
+    PK = lambda **k: P('pell', 'theo_kneel', face=(1.3, 1.15), id='pell', **k)                # 3/4 to THEO_CAM (review 1, blocker 4)
+    # review 1 blocker 4: from the bed's foot corner (THEO_CAM) he kneels on the word against the mattress, 3/4 to us
+    S(T(201), 'boys', 'theo', st=BLM, cam=THEO_CAM, ppl=[theo_head(), PK(kind='kneel', kneel_t=T(201) + 0.2, kneel_dur=0.8, knees=1, snap=True)],
+      c=ZO(1.15, 'theo_kneel', h=1.15))
     tt_ = T(202) + 0.2
-    S(T(202), 'boys', 'theo', st=BL, ppl=[theo_bed(), PK(snap=True, act=_A(lambda a, s: a.tuck_blanket(tt_, scr(s.sp, (1.75, 0.6, 3.45)), scr(s.sp, (1.75, 1.25, 3.45)), dur=2.2, knees=1)))],
-      c=ZO(1.7, (1.9, 0.8, 2.9), h=0.6), sfx=[(tt_ + 0.4, 'cloth_rustle', -14, 0, 'inside')])
+    S(T(202), 'boys', 'theo', st=BLM, cam=THEO_CAM, ppl=[theo_head(), PK(snap=True, act=_A(lambda a, s: a.tuck_blanket(T(202) - 0.95, scr(s.sp, (1.75, 0.6, 3.45)), scr(s.sp, (1.75, 1.25, 3.45)), dur=2.3, knees=1)))],
+      c=ZO(1.25, (1.9, 0.8, 2.9), h=1.0), sfx=[(tt_ + 0.4, 'cloth_rustle', -14, 0, 'inside')])
     lie_bust(T(203), 'theo', 'sleep', bg=('boys', 'theo', B_NIGHT), rot=-90,
              hands=[dict(who='pell', fn=lambda t, t0=T(203): (1150 + 60 * math.sin((t - t0) * 1.6), 760, -100.0, 1.0), size=380.0, shape='flat', side=-1, sleeve_from=(1900, 1100))])
     BU(T(204), 'pell', 'boys', 'theo', B_NIGHT, cx=960, cy=560, scale=1.05, h_turn=-0.4, light=NIGHT, act=_A(tilt(T(204) + 0.1, 16, 1.6), lookxy(500, 900, T(204))), c=BZ(0.015))
@@ -3084,7 +3223,12 @@ def plan_rule6(F):
     BU(T(214), 'sam_pj', 'boys', 'wide', B_NIGHT, cx=960, cy=620, scale=0.95, h_turn=-0.35, expr='set_jaw', light=NIGHT, act=_A(lookxy(300, 600, T(214) + 0.3)), c=BZ(0.015))
     # 215 I picked Theo up, blanket and all, with my hand over his mouth, and I walked down that hall, past the closet, where the door had opened just a crack.
     S(T(215), 'boys', 'theo', st=dict(B_NIGHT, theo_bed='empty'),
-      cam=MC((2.1, 1.2, 2.9), 50, 2.4, h=1.3, lh=0.9), ppl=[P('sam_pj', (2.15, 1.05, 2.9), face=(3.5, 2.4), id='sam', expr='hush_fear', hush=dict(who='theo', t0=T(215) + 0.3, expr='sleepy'))],
+      cam=MC((2.1, 1.2, 2.9), 50, 2.4, h=1.3, lh=0.9),
+      # review 1 M18: he bends over the bed, lifts Theo (blanket and all) on "up", the hand over the mouth, then starts for the door
+      ppl=[theo_bed(until=W(215, 'up')),
+           P('sam_pj', (2.15, 1.05, 2.9), face=(1.2, 1.0), id='sam', expr='hush_fear', hush=dict(who='theo', t0=W(215, 'up'), expr='sleepy'),
+             act=_A(lambda a, s: a.crouch(T(215) + 0.05, 0.85, t1=W(215, 'up') + 0.1, dur=0.5, fade=0.5)),
+             path=[(W(215, 'mouth') + 0.2, (2.15, 1.05, 2.9)), (W(215, 'walked') + 0.2, (1.85, 2.15, 2.9))], surface='inside_quiet')],
       c=Z(1.0, 0.01))
     S(W(215, 'walked'), 'hall', 'down', st=dict(HALL_N, closet=7.0), ppl=[P('sam_pj', (0.45, 4.0, 2.9), id='sam', expr='hush_fear', hush=dict(who='theo'),
                                                                                 path=[(W(215, 'walked'), (0.45, 4.1, 2.9)), (E(216), (0.0, 6.9, 2.9))], surface='inside_quiet')],
@@ -3102,9 +3246,10 @@ def plan_rule6(F):
       ppl=[P('sam_pj', (-1.4, 7.1, 2.9), id='sam', expr='hush_fear', hush=dict(who='theo'), path=[(T(219), (-0.9, 7.25, 2.9)), (W(220, 'slipped') + 0.4, (-1.6, 7.0, 2.9))])],
       c=ZO(1.2, 'lock', ody=100), sfx=[(WD(220, 'shut') + 0.3, 'door_close', -10, 0, 'inside', dict(soft=True)), (WD(220, 'locked') + 0.1, 'lock_turn', -8, 0, 'inside')])
     ts_ = W(220, 'shook')
-    S(ts_, 'parents', 'bed', st=PAR_N, ppl=[P('dad_pj', 'bed_dad', kind='lie', expr='sleep', id='dad', act=_A(ex('shock', E(220) + 0.4, None, 0.3))),
-                                            P('sam_pj', (-5.2, 5.65, 2.9), face='bed_dad', id='sam', expr='hush_fear', act=_A(lambda a, s: a.shake_awake(ts_ + 0.1, E(220) + 0.6, s.A['dad'])))],
-      c=ZO(1.5, 'bed_dad', ody=-60))
+    S(ts_, 'parents', 'bed', st=PAR_BED, cam=PFOOT, ppl=[par_bed('dad_pj', 'dad', act=_A(ex('shock', E(220) + 0.4, None, 0.3))), par_bed('mom_pj', 'mom'),
+                                            P('sam_pj', (-5.3, 5.75, 2.9), face=(-5.0, 7.0), id='sam', expr='hush_fear', act=_A(lambda a, s: a.shake_awake(ts_ + 0.1, E(220) + 0.6, s.A['dad']))),
+                                            P('theo', (-4.55, 5.72, 2.9), face=(-4.4, 7.0), id='theo', expr='fear')],
+      c=ZO(1.1, 'pillow_dad', ody=80))
     # 221-223 "Sam, it's just the..." / "Dad," "Your shirt is upstairs. He's wearing it."
     BU(T(221), 'dad_pj', 'parents', 'bed', PAR_N, rot=90, cx=960, cy=560, scale=0.92, expr='sleepy', light=NIGHT, c=BZ(0.015))
     BU(T(222), 'sam_pj', 'parents', 'bed', PAR_N, cx=960, cy=620, scale=1.0, h_turn=0.3, expr='hush_fear', light=NIGHT, c=BZ(0.012))
@@ -3112,16 +3257,27 @@ def plan_rule6(F):
     BU(T(224), 'dad_pj', 'parents', 'bed', PAR_N, rot=90, cx=960, cy=560, scale=1.0, expr='shock', light=NIGHT, act=_A(blinks(T(224) + 0.4)), c=BZ(0.02))
     BU(T(225), 'dad_pj', 'parents', 'bed', PAR_N, cx=960, cy=600, scale=0.95, h_turn=-0.2, expr='resolve', light=NIGHT, c=BZ(0.015))
     # 226-233 Mom grabbed her phone and dialed nine-one-one. "What's the address of your emergency?" ... Theo could. "Fourteen Larkspur Lane..."
-    PH = dict(PAR_N, phone=1.0, phone_at=(-4.4, 3.7, 7.2), door=0.0, lock=1.0)
-    S(T(226), 'parents', 'bed', st=PH, ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='terrified_call', act=_A(lambda a, s: a.phone_to_ear(W(226, 'dialed') + 0.6, None, side=1)))],
-      c=ZO(1.9, 'bed_huddle', h=0.5))
+    PH = dict(PAR_N, phone=1.0, phone_at=(-4.4, 3.7, 7.2), door=0.0, lock=1.0, phone_on_stand=False)
+
+    def FAMB(mom_expr='fear', mom_act=None, look=None, t0=None):
+        """review 1 M11: the huddle stays together in every shot of the parents' room (Mom on the bed with the phone, Sam and
+        Theo at the bed's foot, Dad between them and the locked door)."""
+        lk_ = (lambda at: _A(lk(t0 + 0.1, at, dur=0.3))) if look else (lambda at: None)
+        return [P('mom_pj', 'bed_huddle', id='mom', expr=mom_expr, act=mom_act or lk_(look)),
+                P('sam_pj', (-3.55, 7.3, 2.9), face=(-5.0, 7.0), id='sam', expr='hush_fear', act=lk_(look)),
+                P('theo', (-3.6, 6.25, 2.9), face=(-5.0, 7.0), id='theo', expr='fear', act=lk_(look)),
+                P('dad_pj', (-3.0, 7.95, 2.9), face=(-0.6, 7.2), id='dad', expr='resolve', act=lk_(look))]
+    S(T(226), 'parents', 'bed', st=PH, ppl=FAMB('terrified_call', _A(lambda a, s: a.phone_to_ear(W(226, 'grabbed'), None, side=1))),
+      c=ZO(1.6, 'bed_huddle', h=0.6))                    # review 1 M10: the phone is in her hand from "grabbed"
     IN(W(226, 'dialed'), 'phone', lambda u: dict(state='dial'), c=dict(mv='push', rate=0.02), sfx=[(WD(226, 'nine'), 'dial_911', -8, 0, 'close')])
     IN(T(227), 'phone', lambda u: dict(state='call', secs=int(u)), c=dict(mv='push', rate=0.02))
     BU(T(228), 'mom_pj', 'parents', 'bed', PH, cx=960, cy=600, scale=0.95, h_turn=0.3, expr='terrified_call', light=PHONE,
        act=_A(lambda a, s: a.phone_to_ear(T(228) - 1, None, side=1), blinks(pdur(228, 0.5))), c=BZ(0.02))
     BU(T(229), 'theo', 'parents', 'bed', PH, cx=960, cy=640, scale=0.95, h_turn=-0.3, expr='determined', light=PHONE, act=_A(lookxy(1500, 500, T(229))), c=BZ(0.015))
-    S(T(230), 'parents', 'bed', st=PH, cam=MC((-3.9, 6.6, 2.9), 120, 2.2, h=1.3, lh=0.7), ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='terrified_call', act=_A(lambda a, s: a.phone_to(T(230) - 0.4, 1, s.A['theo']))),
-                                            P('theo', (-3.8, 7.25, 2.9), face='bed_huddle', id='theo', expr='determined')],
+    S(T(230), 'parents', 'bed', st=PH, cam=MC((-3.9, 6.6, 2.9), 120, 2.2, h=1.3, lh=0.7), ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='fear', act=_A(lambda a, s: a.phone_to(T(230) - 0.4, 1, s.A['theo']))),
+                                            P('theo', (-3.8, 7.25, 2.9), face='bed_huddle', id='theo', expr='determined'),
+                                            P('sam_pj', (-3.45, 7.75, 2.9), face='bed_huddle', id='sam', expr='hush_fear'),
+                                            P('dad_pj', (-2.75, 8.1, 2.9), face=(-0.6, 7.2), id='dad', expr='resolve')],
       acts=lambda A, sh, sp: [notes_layer(lambda t, a=A['theo']: a.where(t, 'mouth'), T(230), E(231), c='#ffe8a0', a=150)], c=Z(1.0, 0.012))
     BU(T(231), 'theo', 'parents', 'bed', PH, cx=960, cy=640, scale=1.0, h_turn=-0.3, expr='determined', light=PHONE, c=BZ(0.015))
     IN(T(232), 'phone', lambda u, t0=T(232): dict(state='call', secs=int(t0 + u - T(227))), c=dict(mv='push', rate=0.015))
@@ -3140,8 +3296,9 @@ def plan_rule6(F):
     WL(T(237), 'wall', [WP('pell', 960, h=900, turn=0.8, h_turn=0.3, act=_A(reach(T(237) + 0.1, 1, (1250, 430), t1=E(237) + 0.3, dur=0.3, shape='point'),
                                                                             lambda a, s: a.crouch(T(237), 0.5)))], seed=3, slits=[(1650, 260, 700, 0.8)], c=Z(1.5, 0.01, 1000, 460),
        sfx=scr_(T(237) + 0.1, 3))
-    S(T(238), 'parents', 'wide', st=PH, c=ZO(1.8, 'dresser', ody=40, rate=0.02), sfx=scr_(T(238) + 0.1, 3))
-    S(T(239), 'parents', 'bed', st=PH, ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='terror', act=_A(lk(T(239) + 0.1, 'headboard', dur=0.25)))],
+    S(T(238), 'parents', 'wide', st=PH, cam=MC((-2.6, 8.5, 2.9), 160, 3.4, h=1.5, lh=0.8), ppl=FAMB('terror', look='dresser', t0=T(238)),
+      c=ZO(1.15, 'dresser', ody=60, rate=0.02), sfx=scr_(T(238) + 0.1, 3))                 # review 1 M12: the dresser, the family turning to it
+    S(T(239), 'parents', 'bed', st=PH, ppl=FAMB('terror', look='headboard', t0=T(239)),
       c=ZO(1.5, 'headboard', ody=60), sfx=scr_(T(239) + 0.1, 3))
     rat = lambda t: 0.9 * clamp((t - WD(240, 'rattled')) / 0.2) * (1 - clamp((t - WD(240, 'rattled') - 1.6) / 0.6))
     S(T(240), 'parents', 'vent', st=PH, c=Z(1.1, 0.02), sfx=[(WD(240, 'rattled'), 'vent_rattle', -6, 0, 'inside', dict(dur=1.8))])
@@ -3151,10 +3308,18 @@ def plan_rule6(F):
        c=dict(mv='push', f=1.15, rate=0.015), hit=E(241) + 0.05)
 
 
+def FAMB_(t0):
+    """The huddle when the sirens come (review 1 M11): all four, looking up at the blue light on the ceiling."""
+    lk_ = lambda: _A(lk(t0 + 0.2, 'ceiling', dur=0.4))
+    return [P('mom_pj', 'bed_huddle', id='mom', expr='relief', act=lk_()), P('sam_pj', (-3.55, 7.3, 2.9), face=(-5.0, 7.0), id='sam', expr='hush_fear', act=lk_()),
+            P('theo', (-3.6, 6.25, 2.9), face=(-5.0, 7.0), id='theo', expr='fear', act=lk_()),
+            P('dad_pj', (-3.0, 7.95, 2.9), face=(-0.6, 7.2), id='dad', expr='resolve', act=lk_())]
+
+
 def plan_police(F):
     # 242-244 Then sirens. Blue light on the ceiling. Heavy boots on the stairs.
     S(T(242), 'street', 'house', st=dict(police=ST.wl_police(T(242)), win=dict(par=0.5)), c=Z(1.1, 0.02), sfx=[(T(242), 'sirens_arrive', -4, 0, 'outside')])
-    S(T(243), 'parents', 'bed', st=dict(PAR_N, door=0.0, lock=1.0, police=True), ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='relief', act=_A(lk(T(243) + 0.2, 'ceiling')))],
+    S(T(243), 'parents', 'bed', st=dict(PAR_N, door=0.0, lock=1.0, police=True, phone_on_stand=False), ppl=FAMB_(T(243)),
       c=Z(1.15, 0.015, 960, 380))
     OFF = lambda t0, **k: [P('reyes', (0.1, 3.6, 2.9), id='reyes', expr='calm_firm', path=[(t0, (0.1, 3.6, 2.9)), (t0 + 1.6, (0.15, 5.0, 2.9))], surface='heavy',
                              torch=dict(side=1, a=0.85)),
@@ -3193,9 +3358,13 @@ def plan_police(F):
     WL(T(258), 'wall', [WP('pell', 960, turn=0.45, h_turn=0.35, food=('bread', -1, T(258) - 1), act=_A(to_mouth([T(258) + 0.3]), chew(T(258) + 0.7, E(258)),
                                                                                                   tilt(pdur(258, 0.6), 12, 1.0)))], era='memory', chew=True, c=Z(1.2, 0.012))
     # 259-261 On the way to the car, he looked up at my window. "That was my room," "When I was a boy."
-    S(T(259), 'street', 'curb', st=dict(police=True), ppl=[P('pell_bare', (1.6, -7.2, -0.5), face=(0.4, -8.4), id='pell', expr='lonely',
-                                                               act=_A(lk(W(259, 'looked'), (3.4, -0.02, 4.35), dur=1.0))),
-                                                             P('reyes', (2.3, -7.0, -0.5), face=(1.6, -7.2), id='reyes', expr='calm_firm')], c=ZO(1.5, (1.8, -7.2, -0.5), ody=-200))
+    # review 1 M13: cuffed, walked to the car with Reyes's hand on his arm; on "looked" he turns and lifts his face to my window
+    tl_ = W(259, 'looked')
+    S(T(259), 'street', 'curb', st=dict(police=True), ppl=[P('pell_bare', (1.9, -6.5, -0.5), id='pell', expr='lonely', path=[(T(259) - 0.6, (1.9, -6.5, -0.5)), (tl_ - 0.1, (1.5, -7.5, -0.5))],
+                                                               act=_A(lambda a, s: a.cuffed(), lk(tl_, (3.4, -0.02, 4.35), dur=1.0, body=0.75))),
+                                                             P('reyes', (2.5, -6.4, -0.5), id='reyes', expr='calm_firm', path=[(T(259) - 0.6, (2.5, -6.4, -0.5)), (tl_ - 0.1, (2.1, -7.4, -0.5))],
+                                                               act=_A(lambda a, s: a.reach_to(T(259), -1, (s.A['pell'], 'elbow_l'), dur=0.4, contact='palm', shape='grip')))],
+      c=ZO(1.4, (1.7, -7.2, -0.5), ody=-150))
     S(W(259, 'window'), 'street', 'up', st=dict(police=True, win=dict(boys=0.4)), c=ZO(1.6, 'boys_window', ody=40, rate=0.02))
     BU(T(260), 'pell_bare', 'street', 'curb', dict(police=True), cx=960, cy=580, scale=1.0, h_turn=0.35, expr='lonely', light=POLICE,
        act=_A(lookxy(1400, 100, T(260) - 1)), c=BZ(0.012))

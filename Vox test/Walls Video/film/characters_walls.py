@@ -75,6 +75,29 @@ def _buffalo(c, path, cl, ang, ax, ay, sx=1.0, per=58.0):
         cc.fill(_multi(hz), cl['check'], 140)
 
 
+# review 1 M6: the check must never drop out (it did below detail 1, so it popped on mid-push and the doorway figure wore
+# plain red): a figure in a plaid outfit is always drawn at detail >= 1, so the torso / sleeve fabric pass (the check) runs
+_PL_MIN = {'v': 0}
+_auto_detail_w_prev = _auto_detail
+
+
+def _auto_detail(pen, head_design):
+    return max(_PL_MIN['v'], _auto_detail_w_prev(pen, head_design))
+
+
+_draw_w_prev = draw
+
+
+def draw(pen, who, *a, **k):
+    if CAST.get(who, {}).get('outfit') in _PLAID_OUT and not k.get('detail'):
+        _PL_MIN['v'] = 1
+        try:
+            return _draw_w_prev(pen, who, *a, **k)
+        finally:
+            _PL_MIN['v'] = 0
+    return _draw_w_prev(pen, who, *a, **k)
+
+
 _ctx_texture_w_prev = Ctx.texture
 
 
@@ -101,7 +124,11 @@ def _neck3(c, sp, B, skin, skin_sh):
 _draw_arm3_w_prev = _draw_arm3
 
 
+_HB = {'back': False}                                     # review 1 M16: the arm being drawn belongs to a figure seen from behind
+
+
 def _draw_arm3(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
+    _HB['back'] = getattr(B, 'ct', 1.0) < -0.25
     S, E, Wr = _arm_data(sp, B, P, side)
     if sp.get('outfit') in _PLAID_OUT:
         s3, e3 = B.p3(*S), B.p3(*E)
@@ -110,7 +137,7 @@ def _draw_arm3(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light):
     try:
         r = _draw_arm3_w_prev(c, sp, B, P, side, det, t, skin, sh, sleeve, sleeve_sh, light)
     finally:
-        _W_PLAID['on'] = None
+        _W_PLAID['on'] = None; _HB['back'] = False
     if getattr(P, 'cuffs', 0.0) > 0.5:
         _cuff(c, sp, B, P, side, E, Wr)
     return r
@@ -143,6 +170,13 @@ _draw_hand_w_prev = _draw_hand
 
 
 def _draw_hand(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring=False, press=0.0, t=0.0):
+    if _HB['back'] and shape not in ('point',):
+        # seen from behind: the back of the hand (no palm creases or palm lines), three knuckle ticks instead
+        r = _draw_hand_w_prev(c, sp, shape, x, y, scale, angle, side, 0, skin, sh, ring, press, t)
+        if det >= 1:
+            hc = c.sub(x, y, angle, scale * sp['body'].get('hand', 1.0))
+            hc.line(_multi([poly([(k * 7.0 - 2.0, 14.0), (k * 7.0 + 2.0, 15.5)], False) for k in (-1, 0, 1)]), hc.lw * 0.35, sp['skin_dp'], 150)
+        return r
     r = _draw_hand_w_prev(c, sp, shape, x, y, scale, angle, side, det, skin, sh, ring, press, t)
     if sp.get('dust') and det >= 1:                          # plaster dust on the fingertips (pale chalky ends + specks)
         try: G = _hand_cached(shape, side, round(press, 1))
@@ -218,6 +252,9 @@ _PELL = dict(hair='thin', sex='m', hh=168.0, m=1.88, head_ws=[0, 50, 72, 86, 90,
 _PELL_CL = dict(_FLANNEL, trousers='#7d7f82', trousers_sh='#55575a', socks='#8f9195', socks_sh='#636569', tee='#cfc9bc')
 CAST['pell_bare'] = _v3cast(outfit='flannel3', feet='socks', **_PELL, cloth=dict(_PELL_CL))
 CAST['pell'] = dict(CAST['pell_bare'], hound=True, blink_rate=0.12)
+# review 1 M7: on moving day Dad still wears his flannel, so Pell in the wall wears his own drab work shirt (one flannel at a time)
+CAST['pell_own'] = dict(_v3cast(outfit='tee_w', feet='socks', **_PELL, cloth=dict(_PELL_CL, top='#6b6754', top_sh='#4a4839', top_hi='#88846c',
+                                                                                    trim='#57543f')), hound=True, blink_rate=0.12)
 # Mrs. Dabrowski, late 60s, across the street: set ash-blond curls, glasses on a chain, coral lipstick, a teal cardigan over
 # a flowered blouse; nice, nosy. Holds out a pie.
 CAST['dabrowski'] = _v3cast(
@@ -238,7 +275,7 @@ CAST['reyes'] = _v3cast(
     body=dict(sh=114, ch=110, wa=92, hip=104, arm=(44, 36), leg=(58, 46), neck=40, hand=0.92), cloth=dict(_POLICE, shirt='#22304d'))
 CAST['officer_w'] = dict(CAST['cop'], skin='#e0b294', skin_sh='#b3826a', skin_dp='#704a3e', blush='#d8948a', lip='#a06a60',
                          hair_c='#6a4a2e', brow_c='#5a3e26', stubble='#6a4a2e', stub=0.3, hat=None)
-WALLS_CAST = ('sam', 'sam_pj', 'theo', 'mom', 'mom_pj', 'dad', 'dad_tee', 'dad_pj', 'pell', 'pell_bare', 'dabrowski', 'reyes',
+WALLS_CAST = ('sam', 'sam_pj', 'theo', 'mom', 'mom_pj', 'dad', 'dad_tee', 'dad_pj', 'pell', 'pell_own', 'pell_bare', 'dabrowski', 'reyes',
               'officer_w')
 
 # ====================================================================================================== the hound mask

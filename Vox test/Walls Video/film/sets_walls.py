@@ -563,19 +563,25 @@ def wl_ext_glow(v, o, name='ext_glow'):
             bb = path.computeTightBounds()
             pen.linear(path, 0, bb.top(), 0, bb.bottom(), [(0, '#ffd090', 200 * k), (1, '#e89a48', 220 * k)])
             pen.glow((bb.left() + bb.right()) / 2, (bb.top() + bb.bottom()) / 2, bb.width(), '#ffb060', 40 * k)
+        if tod == 'night' and v.d(WL_KEYPAD[0], -0.03) > 0.5:
+            x, y = v.p(WL_KEYPAD[0], WL_KEYPAD[1], -0.03); s = v.s(WL_KEYPAD[0], -0.03)
+            pen.glow(x, y, 0.14 * s, '#a8ffb0', 70)
+    def draw_attic(pen, t):                     # review 1 M17: its own layer IN FRONT of the house piece (it was hidden behind it)
         k = ka(t)
         if k > 0.01 and v.visible((1.5, 6.5, -0.5), (0, 0, -1)):
             path = v.poly3(_wl_dormer_quad())
             if not path.isEmpty():
                 bb = path.computeTightBounds()
-                pen.fill(path, '#ffcc66', 200 * k)
-                pen.glow((bb.left() + bb.right()) / 2, (bb.top() + bb.bottom()) / 2, 1.6 * bb.width(), WL_ATTIC, 60 * k)
-        if tod == 'night' and v.d(WL_KEYPAD[0], -0.03) > 0.5:
-            x, y = v.p(WL_KEYPAD[0], WL_KEYPAD[1], -0.03); s = v.s(WL_KEYPAD[0], -0.03)
-            pen.glow(x, y, 0.14 * s, '#a8ffb0', 70)
+                pen.fill(path, '#ffd477', 245 * k)
+                pen.glow((bb.left() + bb.right()) / 2, (bb.top() + bb.bottom()) / 2, 2.2 * bb.width(), WL_ATTIC, 95 * k)
+                pen.glow((bb.left() + bb.right()) / 2, (bb.top() + bb.bottom()) / 2, 0.7 * bb.width(), '#fff2c8', 120 * k)
+                pen.line(path, None, '#3a2a18', 200)
     lay = Layer(30.0, draw, name, blur=None); lay.order = ORDER_SHELL - 0.5
     lay2 = Layer(10.0, draw_house, name + '_house', blur=None); lay2.order = ORDER_SHELL - 0.5
-    return [lay, lay2]
+    L = [lay, lay2]
+    if o.get('attic'):
+        lay3 = Layer(10.0, draw_attic, name + '_attic', blur=None); lay3.order = max(0.3, v.d((WL_DORMER[0] + WL_DORMER[1]) / 2, WL_DORMER[2]) - 0.3); L.append(lay3)
+    return L
 
 
 def _wl_police_layers(v, o):
@@ -1350,7 +1356,8 @@ def _wl_boys_cfg(o):
         S['sam_bed'] = _mk_spot(v, 'sam_bed', WL_SBED.cx, WL_SBED.cy - 0.1, _WU + 0.5, 'lie', "Sam's bed (head at the front; the wall by his bed on his right)")
         S['sam_pillow'] = _mk_spot(v, 'sam_pillow', WL_SBED.cx, 0.35, _WU + 0.62, 'point', "Sam's head on the pillow")
         S['theo_pillow'] = _mk_spot(v, 'theo_pillow', WL_TBED.cx, 0.35, _WU + 0.62, 'point', "Theo's head on the pillow")
-        S['theo_kneel'] = _mk_spot(v, 'theo_kneel', 2.15, 0.95, _WU, 'stand', "kneeling beside Theo's bed, facing it (-x): tucking him in", face=(-1, 0))
+        S['theo_head'] = _mk_spot(v, 'theo_head', WL_TBED.cx, 0.36, _WU + 0.7, 'lie', "Theo's head on his pillow (the quilt pulled up over him)")
+        S['theo_kneel'] = _mk_spot(v, 'theo_kneel', 2.08, 0.9, _WU, 'stand', "kneeling beside Theo's bed, facing it (-x): tucking him in", face=(-1, 0))
         S['sam_edge'] = _mk_spot(v, 'sam_edge', 4.85, 1.3, _WU, 'seat', "sitting on the edge of Sam's bed (facing -x)", face=(-1, 0), seat_Y=0.5)
         S['doorway'] = _mk_spot(v, 'doorway', 0.78, 4.02, _WU, 'stand', 'in the doorway (facing in, +x): "Dad" watching us sleep', face=(1, 0))
         S['door_in'] = _mk_spot(v, 'door_in', 1.35, 3.9, _WU, 'stand', 'one step into the room (the moonlight hits his face)', face=(1, -0.4))
@@ -1414,6 +1421,8 @@ def _wl_par_cfg(o):
         S = {}
         S['bed_dad'] = _mk_spot(v, 'bed_dad', -4.85, 6.4, _WU + 0.5, 'lie', "Dad asleep (snoring) on the bed's front half")
         S['bed_mom'] = _mk_spot(v, 'bed_mom', -4.85, 7.2, _WU + 0.5, 'lie', "Mom on the bed's back half (nearest her phone)")
+        S['pillow_dad'] = _mk_spot(v, 'pillow_dad', -5.74, 6.42, _WU + 0.7, 'lie', "Dad's head on his pillow (side by side, the quilt over him)")
+        S['pillow_mom'] = _mk_spot(v, 'pillow_mom', -5.74, 7.2, _WU + 0.7, 'lie', "Mom's head on her pillow (side by side, the quilt over her)")
         S['bed_edge'] = _mk_spot(v, 'bed_edge', -3.75, 6.8, _WU, 'seat', 'sitting on the foot of the bed (facing +x, the door)', face=(1, 0), seat_Y=0.5)
         S['bed_huddle'] = _mk_spot(v, 'bed_huddle', -4.4, 7.4, _WU + 0.5, 'seat', 'the family huddled on the bed (facing the door)', face=(1, 0), seat_Y=0.0)
         S['door_in'] = _mk_spot(v, 'door_in', -1.05, 7.22, _WU, 'stand', 'just inside the door, facing it (+x): shut it, lock it', face=(1, 0))
