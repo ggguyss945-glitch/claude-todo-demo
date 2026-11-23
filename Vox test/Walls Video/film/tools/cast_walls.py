@@ -1,6 +1,6 @@
 """cast_walls.py: the walls film's cast sheet and acting strips (characters_walls.py), written to W/cast/.
 
-    cd "Vox test/Walls Video/film" && python3 tools/cast_walls.py [sheet] [strips [names...]]
+    cd "Vox test/Walls Video/film" && python3 tools/cast_walls.py [sheet] [faces] [strips [names...]]
 
 sheet  -> _work/cast/cast_sheet.png: the line-up (to scale), Mr. Pell in five views, the doorway silhouettes (Dad / the
           figure, same build and tilt), face busts, the crack-eye insert, the empty mask in Reyes' hand.
@@ -80,11 +80,11 @@ def sheet():
         if tl: P.h_tilt = 21.0; P.m_open = 0.5
         CH.draw_bust(pen, who, 110 + k * 212, 1230, 0.17, P, t=3.0, light=lt)
     # the crack-eye insert (clipped to the crack) and the empty mask as Reyes holds it
-    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1180 * CFG.k / CFG.k, 600, 560, 70)); cv.clear(skia.Color(18, 14, 12))
+    cv.save(); cv.clipRect(skia.Rect.MakeXYWH(1180, 585, 560, 110)); cv.clear(skia.Color(18, 14, 12))
     P = CH.Pose(); P.h_turn = 0.2
-    CH.draw_head_at(pen, 'pell', P, 1450, 635, 2.4, 'eye_l', t=0.0, light=NIGHT)
+    CH.draw_head_at(pen, 'pell', P, 1450, 640, 6.5, 'eye_l', t=0.0, light=NIGHT)
     cv.restore()
-    text(pen.cv, 'eye at the crack (insert)', 1460, 700, 600, 15, '#d8dce6')
+    text(pen.cv, 'eye at the crack (insert)', 1460, 715, 600, 15, '#d8dce6')
     CH.draw_prop3(pen, 'hound_mask', 1820, 760, 6.0)
     text(pen.cv, 'mask in her hand', 1820, 1050, 600, 15, '#d8dce6')
     cv.restore()
@@ -122,8 +122,8 @@ def _s_doorway():
 def _s_tuck():
     ppm = 300.0
     th = actor('theo', 1240, 742, ppm, seed=3, expr='sleep'); th.lie(-1e9, face='up', arms='side')
-    p = actor('pell', 640, FLOOR, ppm, seed=4); p.set(-1e9, None, 0.1, turn=0.55)
-    p.tuck_blanket(0.2, (830, 735), (1010, 735), dur=2.6, t1=3.6)
+    p = actor('pell', 1060, FLOOR + 40, ppm, seed=4); p.set(-1e9, None, 0.1, turn=0.45)
+    p.tuck_blanket(0.2, (1150, 742), (1300, 742), dur=2.6, t1=5.4)
     p.look_at(3.2, (120, 470), dur=0.7)
     p.shush(3.9, None, side=1)
     p.look_at(0.4, (th, 'eyes'), t1=3.0, dur=0.6)
@@ -176,7 +176,7 @@ def _s_shake():
     ppm = 300.0
     d = actor('dad_pj', 1150, 745, ppm, seed=9, expr='sleep'); d.lie(-1e9, face='up', arms='side')
     d.expr('shock', 2.4, None, 0.3)
-    s = actor('sam_pj', 640, FLOOR, ppm, seed=10, expr='hush_fear'); s.set(-1e9, None, 0.1, turn=0.6)
+    s = actor('sam_pj', 860, FLOOR, ppm, seed=10, expr='hush_fear'); s.set(-1e9, None, 0.1, turn=0.6)
     s.shake_awake(0.4, 2.4, d)
     s.look_at(0.2, (d, 'eyes'), dur=0.4)
     def draw(pen, t):
@@ -192,10 +192,9 @@ def _s_shake():
 def _s_phone():
     ppm = 330.0
     m = actor('mom_pj', 760, FLOOR, ppm, seed=11, expr='terrified_call'); m.set(-1e9, None, 0.1, turn=0.35)
-    th = actor('theo', 1120, FLOOR, ppm, seed=12); th.set(-1e9, None, 0.1, turn=-0.4)
+    th = actor('theo', 1000, FLOOR, ppm, seed=12); th.set(-1e9, None, 0.1, turn=-0.4)
     m.phone_to_ear(0.2, 2.2, side=1)
-    m.reach_to(2.6, 1, (th, 'mouth'), dur=0.6, z=120.0, contact='grip', shape='grip', prop='cell')
-    m.hold_prop('cell', 1, 2.3, None)
+    m.phone_to(2.6, 1, th)
     th.look_at(2.6, (m, 'hand_l'), dur=0.4)
     th.sing([(3.1, 4.9, 'Fourteen Larkspur Lane Maple Falls')], env=None)
     m.look_at(2.4, (th, 'eyes'), dur=0.5)
@@ -232,8 +231,8 @@ def _s_pie():
 
 @strip('unmask', 3.6)
 def _s_unmask():
-    p = actor('pell', 1040, FLOOR, 330.0, seed=16); p.set(-1e9, None, 0.1, turn=-0.45)
-    r = actor('reyes', 760, FLOOR, 330.0, seed=17, expr='calm_firm'); r.set(-1e9, None, 0.1, turn=0.5)
+    p = actor('pell', 1040, FLOOR, 330.0, seed=16); p.set(-1e9, None, 0.1, turn=-0.45); p.kneel_down(-1e9, 0.01, knees=1)
+    r = actor('reyes', 840, FLOOR, 330.0, seed=17, expr='calm_firm'); r.set(-1e9, None, 0.1, turn=0.5)
     r.lift_mask(0.4, p, dur=1.6)
     r.look_at(0.0, (p, 'eyes'), dur=0.4)
     p.expr('exhausted', 2.0, None, 0.4)
@@ -269,6 +268,29 @@ def _s_switch():
     return dict(draw=draw, actors=[s], grounded=[s])
 
 
+def faces640():
+    """Four film-like close-ups rendered at 640x360 (the size faces must read at): the mask at the door in moonlight,
+    the shush, Pell unmasked, Sam and Theo."""
+    tiles = []
+    shots = [[('pell', 960, 560, 0.62, dict(h_turn=0.15, h_tilt=21.0), NIGHT, '#141826')],
+             [('pell', 900, 560, 0.62, dict(h_turn=-0.35, m_open=0.35), NIGHT, '#141826')],
+             [('pell_bare', 960, 560, 0.62, dict(h_turn=0.2, blink=0.35), NIGHT, '#1c2232')],
+             [('sam_pj', 640, 600, 0.45, dict(h_turn=0.3), NIGHT, '#1c2232'), ('theo', 1250, 640, 0.5, dict(h_turn=-0.3, m_open=0.4), NIGHT, None)]]
+    for shot in shots:
+        surf, cv = _surface(640, 360)
+        cv.save(); cv.scale(CFG.k, CFG.k); pen = Pen(cv)
+        for who, x, y, sc, kw, lt, bg in shot:
+            if bg: pen.fill(rect(0, 0, 1920, 1080), bg)
+            a = CH.Acting(who, seed=5, height=600, expr={'sam_pj': 'hush_fear', 'pell_bare': 'exhausted'}.get(who, 'neutral'))
+            P = a.at(2.0)
+            for k, v in kw.items(): setattr(P, k, v)
+            CH.draw_bust(pen, who, x, y, sc, P, t=2.0, light=lt)
+        cv.restore()
+        tiles.append(_grab(surf))
+    img = np.vstack([np.hstack(tiles[:2]), np.hstack(tiles[2:])])
+    cv2.imwrite(os.path.join(OUT, 'faces_640.jpg'), img, [cv2.IMWRITE_JPEG_QUALITY, 90])
+
+
 def render_strip(name):
     f, dur = STRIPS[name]
     S = f()
@@ -286,10 +308,25 @@ def render_strip(name):
     print('%-16s reach miss max %.1f px, foot gaps %s' % (name, miss, feet))
 
 
+def crops(specs, out):
+    """specs: [(strip name, t, (x, y, w, h) design crop)] -> one image of 2 x n/2 crops at 640x360 each."""
+    tiles = []
+    for name, t, (x, y, w, h) in specs:
+        S = STRIPS[name][0]()
+        surf, cv = _surface(1920, 1080)
+        cv.save(); cv.clear(skia.Color(20, 22, 30)); cv.scale(CFG.k, CFG.k)
+        S['draw'](Pen(cv), t); cv.restore()
+        img = _grab(surf)[int(y):int(y + h), int(x):int(x + w)]
+        tiles.append(cv2.resize(img, (640, 360), interpolation=cv2.INTER_AREA))
+    rows = [np.hstack(tiles[k:k + 2]) for k in range(0, len(tiles), 2)]
+    cv2.imwrite(out, np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 88])
+
+
 if __name__ == '__main__':
     args = sys.argv[1:] or ['sheet', 'strips']
     os.makedirs(OUT, exist_ok=True)
     if 'sheet' in args: sheet(); print('sheet ->', os.path.join(OUT, 'cast_sheet.png'))
+    if 'faces' in args: faces640(); print('faces ->', os.path.join(OUT, 'faces_640.jpg'))
     if 'strips' in args:
         names = [a for a in args if a in STRIPS] or list(STRIPS)
         for n in names: render_strip(n)

@@ -10080,3 +10080,11 @@ exec(compile(open(_BUS_SETS_SRC).read(), _BUS_SETS_SRC, 'exec'))
 # this module's namespace after sets_bus.py (it reuses its set engine). See its docstring and SETS.md.
 _ICE_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_ice.py')
 exec(compile(open(_ICE_SETS_SRC).read(), _ICE_SETS_SRC, 'exec'))
+
+
+# ======================================================================================================================
+# THE WALLS FILM ("If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"): 14 Larkspur Lane (the house
+# outside and in, the dead space between the closets), the night street with the police cars and the inserts live in
+# sets_walls.py, run here in this module's namespace after sets_ice.py (it reuses its set engine). See its docstring and SETS.md.
+_WALLS_SETS_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sets_walls.py')
+exec(compile(open(_WALLS_SETS_SRC).read(), _WALLS_SETS_SRC, 'exec'))

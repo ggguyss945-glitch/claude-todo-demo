@@ -3,7 +3,9 @@
     python3 align.py --asr-only ...      transcribe only (writes asr_cache.json + transcript.txt, no lines.py needed)
     python3 align.py --write-pauses ...  also rewrite each L(...) row of lines.py with the measured pause / pace
 Defaults: W/narration/narration_en.wav, the Parakeet TDT 0.6b v2 int8 dir ($PARAKEET_DIR or the scratchpad models dir),
-W/align, with W = Ice Cream Video/film/_work. Script: Ice Cream Video/script/lines.py (the recording is the truth).
+W/align, with W = Walls Video/film/_work. Script: Walls Video/film/script/lines.py (tools/vo_lines.py; the recording is
+the truth). With W/narration/edit_list.json (tools/vo_edit.py) the line bounds are the edit's own (exact); the matched
+bounds are only compared with them (printed), and every line also gets its recognised words ('words': [[w, t], ...]).
 ASR: Silero VAD (vad.onnx beside the Parakeet dir) finds speech; neighbouring segments are merged into chunks of at most
 ~16 s, cut from the full recording with 0.3 s padding, and transcribed by Parakeet TDT with token timestamps. Words are
 cached in asr_cache.json ('en_words': [[word, t], ...] as film.py reads them, 'en_chunks': [[t0, t1, text], ...]);
@@ -28,7 +30,7 @@ import difflib, json, os, re, sys
 import numpy as np, soundfile as sf, librosa
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Ice Cream Video
+ROOT = os.path.dirname(os.path.dirname(HERE))                               # .../Walls Video
 W = os.path.join(ROOT, 'film', '_work')
 MODELS = os.environ.get('VO_MODELS') or '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -122,8 +124,9 @@ print(f'ASR: {len(words)} words, {len(cache.get("en_chunks", []))} chunks')
 if ASR_ONLY: sys.exit(0)
 
 # ------------------------------------------------------------------ match script words to ASR words
-sys.path.insert(0, os.path.join(ROOT, 'script'))
+sys.path.insert(0, os.path.join(ROOT, 'film', 'script'))
 from lines import LINES
+LINES = [dict(l, ru=l.get('ru', ''), pace=l.get('pace')) for l in LINES if not l.get('drop')]   # owner: no dialogue tags
 
 NUM = {'zero': '0', 'oh': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5',
        'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12', 'thirty': '30',
@@ -355,17 +358,33 @@ def spoken(s):
     return re.sub(r'(\d{1,2}):(\d\d)', mm, s)
 
 
+EDL = os.path.join(W, 'narration', 'edit_list.json')
+if os.path.exists(EDL) and os.path.abspath(EN) == os.path.abspath(os.path.join(W, 'narration', 'narration_en.wav')):
+    el = json.load(open(EDL))['lines']
+    assert [e['tag'] for e in el] == [l['tag'] for l in LINES], 'edit_list.json is not this lines.py: rebuild the edit'
+    dev = [max(abs(e['out'][0] - a), abs(e['out'][1] - b)) for e, a, b in zip(el, en_st, en_en)]
+    k = int(np.argmax(dev))
+    print(f'bounds: from the edit (edit_list.json); matched bounds agree within {dev[k]:.3f} s at worst (line {k}), '
+          f'{sum(1 for d in dev if d > 0.1)} lines differ by more than 0.1 s')
+    en_st = [e['out'][0] for e in el]; en_en = [e['out'][1] for e in el]
+    pause_rec = [round(max(0.0, (en_st[k + 1] if k + 1 < len(LINES) else DUR) - en_en[k]), 2) for k in range(len(LINES))]
 rate = [len(re.sub(r'[^A-Za-z0-9]', '', spoken(l['en']))) / max(0.2, en_en[k] - en_st[k]) for k, l in enumerate(LINES)]
 med = float(np.median([r for r, l in zip(rate, LINES) if len(l['en']) >= 20]))
 pace_rec = [round(r / med, 2) for r in rate]                      # speaking rate vs the narrator's median (1.0)
 
-sf.write(os.path.join(OUT, 'vo_en.wav'), en48, SR, subtype='PCM_24')
-tl = {'duration_en': round(DUR, 3), 'lines': [], 'dub': []}
+_vo = os.path.join(OUT, 'vo_en.wav')                              # a link, not a copy (disk): mix.py reads it
+if os.path.lexists(_vo): os.remove(_vo)
+if os.path.abspath(EN) == os.path.abspath(os.path.join(W, 'narration', 'narration_en.wav')) and sf.info(EN).samplerate == SR:
+    os.symlink(os.path.relpath(EN, OUT), _vo)
+else:
+    sf.write(_vo, en48, SR, subtype='PCM_24')
+tl = {'duration_en': round(DUR, 3), 'lines': [], 'dub': [], 'fx_baked': True}   # every line's fx is already in the voice track
 for k, l in enumerate(LINES):
     tl['lines'].append({'i': k, 'who': l['who'], 'tag': l['tag'], 'fx': l['fx'], 'en': l['en'], 'ru': l['ru'],
                         'pause': l['pause'], 'pace': l['pace'], 't': round(en_st[k], 3), 'end': round(en_en[k], 3),
                         'found_en': k in first, 'match': round(score[k], 2), 'pause_rec': pause_rec[k], 'pace_rec': pace_rec[k],
-                        'ru_src': None, 'found_ru': False})
+                        'ru_src': None, 'found_ru': False, 'fx_baked': bool(l['fx']),
+                        'words': [[w, t] for w, t in words if en_st[k] - 0.05 <= t <= en_en[k] + 0.02]})
 json.dump(tl, open(os.path.join(OUT, 'timeline.json'), 'w'), ensure_ascii=False, indent=1)
 json.dump(cache, open(CACHE, 'w'), ensure_ascii=False)
 

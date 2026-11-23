@@ -61,9 +61,10 @@ def mix_wet(dry, wet, db):
 
 
 def speech_db(y):
-    w = int(0.01 * SR); n = len(y) // w
-    p = (y[:n * w].reshape(n, w) ** 2).mean(1); pdb = 10 * np.log10(p + 1e-20)
-    return float(10 * np.log10(p[pdb > pdb.max() - 20].mean() + 1e-20))
+    """The edit's speech level (tools/vo_edit.py speech_level: median 20 ms level within 20 dB of the loudest)."""
+    w = int(0.02 * SR); n = len(y) // w
+    p = 10 * np.log10((y[:n * w].reshape(n, w) ** 2).mean(1) + 1e-20)
+    return float(np.median(p[p > p.max() - 20]))
 
 
 def ceiling(y):

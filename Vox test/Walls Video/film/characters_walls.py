@@ -22,7 +22,8 @@ Pell: doorway(t0, t1), back_away(t0, t1, steps), tuck_blanket(t0, a, b, dur), sh
   'eye_l'); insert: draw_head_at(pen, 'pell', P, x, y, px_per_unit, part='eye_l').
 Family: carry_hush(t0, child, t1) + draw_carry_walls(pen, sam, theo, t, blanket=True); shake_awake(t0, t1, other);
   flip_switch(t0, side, xy) -> flip time; read_note(t0, t1); laugh(t0, dur); sigh(t0, dur); sing = talk;
-  Mom on the phone: phone_to_ear(t0, t1, side) + expr 'terrified_call'; phone_to_mouth(t0, t1) (Theo sings into it).
+  Mom on the phone: phone_to_ear(t0, t1, side) + expr 'terrified_call'; then phone_to(t0, side, theo) holds it under his
+  mouth while he sings (theo.sing(intervals)); phone_to_mouth(t0, t1): Theo holds it himself.
 Mrs. Dabrowski: offer_pie(t0, dur, facing).  Reyes: lift_mask(t0, pell, dur) (the mask goes to her hand, 'hound_mask').
 Props: 'pie' / 'pie_r', 'hound_mask' (limp, held by the crown).  Parts: where(t, 'mouth') is the MASK's mouth when on.
 """
@@ -213,7 +214,7 @@ _PELL = dict(hair='thin', sex='m', hh=168.0, m=1.88, head_ws=[0, 50, 72, 86, 90,
              skin='#dcc4b2', skin_sh='#ad9283', skin_dp='#6c5650', blush='#cf9e98', lip='#a07a74', stubble='#a8a49e', stub=0.85,
              stub_dots=1.0, gaunt=1.2, hair_c='#a9a6a0', brow_c='#8a8680', bags=1.0, age=1.0, lashes=0.2, blink_rate=0.22,
              hand_k=1.32, dust=True, stoop=0.28,
-             body=dict(sh=116, ch=104, wa=92, hip=96, arm=(40, 33), leg=(46, 38), neck=36, hand=1.12))
+             body=dict(sh=122, ch=106, wa=92, hip=96, arm=(40, 33), leg=(46, 38), neck=36, hand=1.12))
 _PELL_CL = dict(_FLANNEL, trousers='#7d7f82', trousers_sh='#55575a', socks='#8f9195', socks_sh='#636569', tee='#cfc9bc')
 CAST['pell_bare'] = _v3cast(outfit='flannel3', feet='socks', **_PELL, cloth=dict(_PELL_CL))
 CAST['pell'] = dict(CAST['pell_bare'], hound=True, blink_rate=0.12)
@@ -258,8 +259,8 @@ def _hd_cols(light):
     return {n: mix(v, '#6f7890', min(0.5, -0.4 * k)) for n, v in _HD.items()}
 
 
-def _muz_w(y): return float(np.interp(y, [-6, 20, 50, 85, 104, 118], [13, 24, 37, 47, 50, 38]))
-def _muz_d(y): return float(np.interp(y, [-6, 10, 36, 60, 95, 118], [4, 18, 40, 42, 36, 26]))
+def _muz_w(y): return float(np.interp(y, [-6, 20, 50, 85, 108, 124], [13, 24, 37, 48, 54, 42]))
+def _muz_d(y): return float(np.interp(y, [-6, 10, 36, 60, 95, 124], [4, 24, 60, 62, 52, 34]))
 
 
 def _hd_ear(c, hm, side, ang, cols, det, tape):
@@ -269,8 +270,8 @@ def _hd_ear(c, hm, side, ang, cols, det, tape):
     X, Y, V = hm.map1(side * w, y0, -2.0)
     ec = c.sub(X, Y, ang, 1.0)
     s = side
-    pts = [(-s * 4, -10), (s * 14, 20), (s * 25, 80), (s * 24, 132), (s * 10, 166), (-s * 8, 170), (-s * 20, 150), (-s * 21, 92),
-           (-s * 14, 30), (-s * 10, 0)]
+    pts = [(-s * 6, -10), (s * 10, 20), (s * 19, 80), (s * 18, 128), (s * 6, 160), (-s * 9, 162), (-s * 19, 142), (-s * 20, 90),
+           (-s * 15, 30), (-s * 12, 0)]
     e = smooth(pts, True, 0.9)
     ec.fill(e, cols['ear'])
     ec.grad(e, -s * 22, 0, s * 27, 0, [(0, cols['ear_sh'], 200), (0.45, cols['ear'], 0), (1, cols['ear_sh'], 120)])
@@ -286,8 +287,9 @@ def _hd_ear(c, hm, side, ang, cols, det, tape):
                 ec.line(_multi([poly([(s * (-14 + 11 * k), 86 - 1.6 * k), (s * (-12 + 11 * k), 107 - 1.6 * k)], False) for k in range(4)]),
                         c.lw * 0.3, '#7d8083', 150)
                 ec.line(poly([(-s * 20, 90), (s * 26, 81)], False), c.lw * 0.5, cols['tape_hi'], 150)
-        tab = poly([(s * 27, 80), (s * 36, 76), (s * 37, 90), (s * 28, 94)], True)
-        ec.fill(tab, cols['tape']); ec.line(tab, c.lw * 0.45)
+        if V > -0.06:
+            tab = poly([(s * 27, 80), (s * 36, 76), (s * 37, 90), (s * 28, 94)], True)
+            ec.fill(tab, cols['tape']); ec.line(tab, c.lw * 0.45)
     ec.line(e, c.lw)
     return V
 
@@ -303,7 +305,7 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
     for side in (-1, 1):
         w = float(hm.W(-52.0)) * 0.93
         V = hm.map1(side * w, -52.0, -2.0)[2]
-        a = -0.72 * R + getattr(P, 'ear_sw', 0.0) + side * 3.0 - 10.0 * math.sin(yaw) * 0.4
+        a = -0.72 * R + getattr(P, 'ear_sw', 0.0) + side * 7.0 - 10.0 * math.sin(yaw) * 0.4   # hang in along the jowls
         ears.append((V, side, a))
     for V, side, a in ears:
         if V < -0.06: _hd_ear(c, hm, side, a, cols, det, side > 0)
@@ -315,7 +317,8 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
     if det >= 1:
         c.line(_multi([smooth([(-46 + 3 * k, 112 + 10 * k), (-8, 117 + 11 * k), (24, 113 + 10 * k), (48 - 3 * k, 118 + 9 * k)], False)
                            for k in range(3)]), c.lw * 0.4, cols['rub_dk'], 170)
-    c.line(smooth(wav, False), c.lw * 1.6, cols['rub_hi'], 160)
+    c.line(smooth([(x_, y_ + 5) for x_, y_ in wav], False), c.lw * 2.2, '#000000', 70)       # its shadow on his neck
+    c.line(smooth(wav, False), c.lw * 2.4, cols['rub_hi'], 200)                               # the rolled rubber lip
     c.line(neck, c.lw)
     # the dome
     sil = hm.silhouette()
@@ -328,6 +331,11 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
         c.fill(_blob(*hm.map1(-28, -78)[:2], 26, 9, 9, 3, 0.2), '#fff6e6', 55)          # rubber sheen
     if light and light.get('rim'):
         c.fill(_crescent(sil, -light.get('side', 1) * 8, 0), light['rim'], light.get('rim_a', 70))
+    if math.cos(yaw) < -0.25:                                 # the cheap mask's back seam, crown to hem
+        sy_ = np.linspace(-112, 118, 12)
+        seam = [(-1.15 * float(hm.W(y_)) * math.sin(yaw) * 0.9, y_) for y_ in sy_]
+        c.line(smooth(seam, False), c.lw * 0.6, cols['rub_dk'], 200)
+        if det >= 1: c.line(_multi([poly([(x_ - 3, y_), (x_ + 3, y_ + 2)], False) for x_, y_ in seam[1:-1]]), c.lw * 0.35, cols['rub_dk'], 170)
     c.line(sil, c.lw)
     if fz > -0.3:
         # worried brow folds (inner ends high) and forehead wrinkles
@@ -377,7 +385,7 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
             c.line(smooth([fm.map1(x, y, 3)[:2] for x, y in [(ex - side * 22, ey + 22), (ex, ey + 32), (ex + side * 30, ey + 24)]], False),
                    c.lw * 0.7, cols['rub_dk'], 170)
         # the muzzle (projects forward: dz), its flews, the mouth slit with his teeth, the wet nose
-        ys = np.linspace(-6, 118, 14)
+        ys = np.linspace(-6, 124, 14)
         L = [fm.map1(-_muz_w(y), y, _muz_d(y) * 0.45)[:2] for y in ys]
         C = [fm.map1(0, y, _muz_d(y))[:2] for y in ys]
         Rr = [fm.map1(_muz_w(y), y, _muz_d(y) * 0.45)[:2] for y in ys]
@@ -399,7 +407,7 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
         c.line(smooth(C[1:5], False), c.lw * 2.2, cols['rub_hi'], 80)
         # mouth slit: dark, his upper teeth, his lower lip (drops with his jaw when he whispers)
         mo = clamp(P.m_open)
-        my0, my1 = 84.0, 96.0 + 10.0 * mo
+        my0, my1 = 90.0, 102.0 + 10.0 * mo
         mf = [(-30, my0 + 3), (-14, my0 - 1), (0, my0), (14, my0 - 1), (30, my0 + 3), (20, my1), (0, my1 + 3), (-20, my1)]
         mouth = smooth([fm.map1(x, y, _muz_d(y) * 0.92)[:2] for x, y in mf], True, 0.9)
         c.fill(mouth, '#1e0c0c')
@@ -420,9 +428,12 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
                 c.fill(lp, cols['lip'])
         c.line(mouth, c.lw * 0.9)
         # nose: big, wet, black
-        nd = _muz_d(42) + 7.0
-        nose = smooth([fm.map1(x, y, nd - 0.012 * (x * x))[:2] for x, y in
-                       ((-27, 40), (-20, 31), (0, 28), (20, 31), (27, 40), (18, 54), (5, 57), (-5, 57), (-18, 54))], True, 0.9)
+        nd = _muz_d(42) + 4.0
+        nf = ((-31, 40), (-23, 28), (0, 24), (23, 28), (31, 40), (21, 56), (6, 60), (-6, 60), (-21, 56))
+        layers = [smooth([fm.map1(x * (1 - 0.13 * k), 42 + (y - 42) * (1 - 0.13 * k), nd - 14 + 5 * k - 0.008 * x * x)[:2] for x, y in nf], True, 0.9)
+                  for k in range(4)]
+        nose = layers[0]
+        for L_ in layers[1:]: nose = union(nose, L_)
         c.fill(nose, cols['nose'])
         nx, ny = fm.map1(0, 40, nd)[:2]
         c.radial(nose, nx - 8, ny - 8, 30, [(0, '#5a5050', 255), (0.5, '#221c1c', 160), (1, '#000000', 0)])
@@ -432,7 +443,7 @@ def _hd_head(c, sp, P, yaw, pitch, det, t, light, empty=False):
             c.fill(oval(hx, hy, 7.0, 3.6), '#ffffff', 215); c.fill(oval(hx + 13, hy + 1, 2.6, 1.8), '#ffffff', 190)
             c.fill(oval(*fm.map1(10, 50, nd)[:2], 4.0, 1.6), '#ffffff', 110)
         c.line(nose, c.lw)
-        c.line(smooth([fm.map1(0, y, _muz_d(y))[:2] for y in (57, 70, 84)], False), c.lw * 0.7, cols['rub_dk'], 200)
+        c.line(smooth([fm.map1(0, y, _muz_d(y))[:2] for y in (60, 75, 90)], False), c.lw * 0.7, cols['rub_dk'], 200)
     for V, side, a in ears:
         if V >= -0.06: _hd_ear(c, hm, side, a, cols, det, side > 0)
 
@@ -534,6 +545,22 @@ def _walls_at(self, t):
 
 
 Acting.at = _walls_at
+_where_prev_walls = Acting.where
+
+
+def _walls_where(self, t, part='head', post=True):
+    """where() that also follows a lying figure (pose.lie: draw() turns it about the hips onto its back / front)."""
+    P = self._raw(t, post) if not post else self.at(t)
+    lie = getattr(P, 'lie', 0.0)
+    if abs(lie) <= 1e-3: return _where_prev_walls(self, t, part, post)
+    ox, oy, s = _origin(self, P)
+    X, Y = _body_point(self, P, part)
+    a = math.radians(90.0 * lie); T = 422.0 * (1.0 - abs(lie)) + 62.0 * abs(lie)
+    X, Y = -422.0 * math.sin(a) + X * math.cos(a) - Y * math.sin(a), -T + 422.0 * math.cos(a) + X * math.sin(a) + Y * math.cos(a)
+    return ox + X * s, oy + Y * s
+
+
+Acting.where = _walls_where
 Acting.__call__ = _walls_at
 _leg_chain_prev_walls = _leg_chain
 
@@ -568,6 +595,7 @@ def _w_doorway(self, t0, t1=None, fade=0.5):
         if w <= 0: return
         for sd in (-1, 1): self._arm(P, sd, w, 4.0, 0.98 * L, 0.06 * L, 'relaxed', up=0.0)
         P.lock = lerp(P.lock, 1.0, w); P.still = lerp(P.still, 1.0, w)
+        P.hunch -= 0.8 * self.sp.get('stoop', 0.0) * w          # he stands up straight to be Dad
     return self._add(t0, None if t1 is None else t1 + fade, fn)
 
 
@@ -607,8 +635,9 @@ def _w_shush(self, t0, t1=None, side=1, dur=0.8, fade=0.6):
     s = self.height / 1000.0
     def tgt(t):
         x, y = self.where(t, 'mouth', post=False)
-        return x, y - 18.0 * s
-    self.reach_to(t0, side, tgt, t1=t1, dur=dur, z=150.0, contact='tips', shape='point', fade=fade, lean=False)
+        return x - side * 40.0 * s, y + 42.0 * s
+    self.reach_to(t0, side, tgt, t1=t1, dur=dur, z=170.0, contact='palm', shape='point', fade=fade, lean=False)
+    self._hush_side = side
     return self
 
 
@@ -670,6 +699,7 @@ def _w_carry_hush(self, t0, child, t1=None, fade=0.5):
     self.carry(t0, child, t1=t1, fade=fade)
     near = 1 if math.sin(self._raw(t0 + 0.01, False).turn * PI / 2) <= 0 else -1
     self.reach_to(t0 + 0.05, -near, (child, 'mouth'), t1=t1, dur=fade, z=40.0, contact='palm', shape='relaxed', fade=fade, lean=False)
+    self._hush_t = (t0, t1)
     return self
 
 
@@ -698,8 +728,14 @@ def _w_flip_switch(self, t0, side, xy, dur=0.5):
 
 def _w_read_note(self, t0, t1, side=-1):
     """Hold the note up in front (read it), the eyes on it."""
-    self.hold_up('note', t0, t1, side)
-    self.set(t0, t1, 0.5, h_nod=0.22, look_y=0.35)
+    s = self.height / 1000.0
+    face = 1.0 if math.sin(self._raw(t0, False).turn * PI / 2) >= 0 else -1.0
+    def tgt(t):
+        x, y = self.where(t, 'chin', post=False)
+        return x + face * 80.0 * s, y + 100.0 * s
+    self.hold_prop('note', side, t0 - 0.5, None)
+    self.reach_to(t0, side, tgt, t1=t1, dur=0.6, z=200.0, contact='grip', shape='grip', fade=0.5, prop='note', lean=False)
+    self.look_at(t0 + 0.2, lambda t: self.where(t, 'hand_l' if side > 0 else 'hand_r'), t1=t1, dur=0.4)
     return self
 
 
@@ -744,6 +780,15 @@ def _w_phone_to_mouth(self, t0, t1=None, fade=0.5):
     return self
 
 
+def _w_phone_to(self, t0, side, other, t1=None, dur=0.6, fade=0.5):
+    """Hold the phone ('cell') out just under another actor's mouth (Mom lets Theo sing the address into it)."""
+    so = other.height / 1000.0
+    self.hold_prop('cell', side, t0 - 0.3, None)
+    self.reach_to(t0, side, lambda t: (other.where(t, 'chin', post=False)[0], other.where(t, 'chin', post=False)[1] + 70.0 * so),
+                  t1=t1, dur=dur, z=150.0, contact='grip', shape='grip', fade=fade, prop='cell')
+    return self
+
+
 def _w_offer_pie(self, t0=-1e9, dur=0.9, facing=1, t1=None):
     """Hold the pie in both hands and offer it forward (facing +1: toward screen right)."""
     s = self.height / 1000.0
@@ -759,7 +804,7 @@ def _w_offer_pie(self, t0=-1e9, dur=0.9, facing=1, t1=None):
         P.lean += 0.06 * u * w
     self._add(-1e9, None, fn)
     self.reach_to(-1e9, -side, lambda t: (self.grip_point(t, side, name, False)[0] + facing * 25.0 * ppc, self.grip_point(t, side, name, False)[1] + 3 * ppc),
-                  t1=t1, dur=0.01, contact='palm', shape='flat', lean=False)
+                  t1=t1, dur=0.01, z=170.0, contact='palm', shape='flat', lean=False)
     return self
 
 
@@ -784,7 +829,7 @@ for _n, _f in (('walls_tilt', _w_tilt), ('doorway', _w_doorway), ('back_away', _
                ('shush', _w_shush), ('crawl', _w_crawl), ('slide_panel', _w_slide_panel), ('cuffed', _w_cuffed),
                ('carry_hush', _w_carry_hush), ('shake_awake', _w_shake_awake), ('flip_switch', _w_flip_switch),
                ('read_note', _w_read_note), ('laugh', _w_laugh), ('sigh', _w_sigh), ('phone_to_mouth', _w_phone_to_mouth),
-               ('offer_pie', _w_offer_pie), ('lift_mask', _w_lift_mask)):
+               ('offer_pie', _w_offer_pie), ('phone_to', _w_phone_to), ('lift_mask', _w_lift_mask)):
     setattr(Acting, _n, _f)
 Acting.sing = Acting.talk
 
@@ -806,8 +851,8 @@ def draw_carry_walls(pen, carrier, child, t, light=None, clight=None, blanket=Tr
         f1 = child.where(t, 'foot_l', post=False); f2 = child.where(t, 'foot_r', post=False)
         fx, fy = (f1[0] + f2[0]) / 2, max(f1[1], f2[1])
         sw = 1 if fx > bx else -1
-        pts = [(bx - sw * 150 * s, by - 20 * s), (bx + sw * 170 * s, by - 40 * s), (fx + sw * 150 * s, fy + 60 * s),
-               (fx + sw * 40 * s, fy + 190 * s), (fx - sw * 60 * s, fy + 110 * s), (bx - sw * 190 * s, by + 260 * s)]
+        pts = [(bx - sw * 110 * s, by - 10 * s), (bx + sw * 130 * s, by - 30 * s), (fx + sw * 110 * s, fy + 30 * s),
+               (fx + sw * 30 * s, fy + 120 * s), (fx - sw * 50 * s, fy + 70 * s), (bx - sw * 140 * s, by + 190 * s)]
         bl = smooth(pts, True, 0.8)
         c = Ctx(pen, skia.Matrix(), _lw_for(child.height * 0.24))
         c.fill(bl, bc)
@@ -815,9 +860,12 @@ def draw_carry_walls(pen, carrier, child, t, light=None, clight=None, blanket=Tr
         with c.clip(bl):
             c.line(_multi([poly([(bx - 400 * s + k * 90 * s, by - 100 * s), (bx - 200 * s + k * 90 * s, fy + 300 * s)], False) for k in range(10)]),
                    c.lw * 0.5, mix(bc, '#ffffff', 0.35), 120)
-        c.line(smooth([(fx + sw * 150 * s, fy + 60 * s), (fx + sw * 60 * s, fy + 130 * s), (fx - sw * 20 * s, fy + 120 * s)], False),
+        c.line(smooth([(fx + sw * 110 * s, fy + 30 * s), (fx + sw * 45 * s, fy + 85 * s), (fx - sw * 20 * s, fy + 80 * s)], False),
                c.lw * 0.5, LINE, 150)
         c.line(bl, c.lw)
+    h = getattr(carrier, '_hush_t', None)
+    if h and t >= h[0] and (h[1] is None or t <= h[1]):        # the hushing hand lies OVER his mouth (drawn after him)
+        draw_arm(pen, carrier.who, -near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
     draw_arm(pen, carrier.who, near, Pcar, x=carrier.x0, y_feet=carrier.y0, height=carrier.height, light=light, t=t)
 
 

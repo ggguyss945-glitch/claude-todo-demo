@@ -1,284 +1,119 @@
-"""Checks for the edited narration (run as `python3 vo_edit.py check`, or directly).
-    python3 vo_check.py [--no-strips] [--no-asr]
-Writes into W/narration/tests/:
-  strip_XX_<name>.png   before / after: the raw take (top) and the edit (bottom) of the same lines, spectrogram + 5 ms
-                        RMS (dBFS) + line labels; 27 spots (rule transitions, reveal beats, every character voice, the counts,
-                        the comment prompt, the outro, every repaired slip)
-  check.json            the scans below, read by voice_report.md
-Scans of narration_en.wav / narration_clean.wav:
-  gaps      the silence between every two lines measured on the file (last sound above -60 dBFS to the next first
-            sound), against pacing_map.md; plus every silence < 0.15 s or > 2 s between sentences
-  breaths   residual breath-like events: sound islands (> -60 dBFS) that are unvoiced (pitch < 20 % of frames), last
-            >= 80 ms and sit >= 60 ms away from any voiced sound
-  clicks    sample discontinuities: |x[n] - x[n-1]| more than 12x the local 99th percentile of the step size within
-            +-5 ms, in sound; plus any non-zero sample inside the gaps (the gaps must be digital silence)
-  edits     the waveform step at every piece edge of edit_list.json (each edge must be faded: step < 1e-3)
-  peaks     samples at or above full scale, true peak, loudness, the spread of the narrator's line levels
-  asr       every character line and every repaired phrase re-recognised (Parakeet) on narration_en.wav: share of
-            the script words heard
+"""Measured checks of the edited voice track (run as `python3 tools/vo_edit.py check`, or directly).
+    python3 tools/vo_check.py        -> prints, writes W/narration/check.json; exit 1 on a failure
+Scans narration_en.wav against edit_list.json:
+  gaps      the silence between every two lines on the file (last sound above -60 dBFS to the next first sound) vs
+            the planned pause (+-30 ms; a staged line's fx tail may run into its gap)
+  edges     every line's first and last 4 ms: more than 20 dB under the line's speech level (or a forced split with its
+            8 ms fade): no word clipped at a cut; every join inside a line likewise
+  breaths   residual breath-like events: sound islands (> -60 dBFS) that are unvoiced (pitch on < 15 % of frames),
+            last >= 80 ms, sit >= 60 ms from voiced sound, have a breath's spectrum (centroid < 3.5 kHz: a t / k / s
+            release is higher) and no recognised word starting within 0.7 s before them (whispered and devoiced
+            words are listed, not failed); two within 0.5 s = a double breath
+  clicks    a step between neighbouring samples > 12x the local RMS step, in sound (> -50 dBFS)
+  levels    each line's speech level on the file vs the narrator's median (median per voice; a line > 6 dB off fails,
+            4-6 dB is listed: the narrator's own whispers)
+  peaks     true peak (<= -0.9 dBTP), total length
 """
-import json, os, re, sys
+import json, os, sys
 import numpy as np, soundfile as sf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import vo_edit as V                                                # noqa: E402
+import vo_edit as V                                                 # noqa: E402
 
 SR = V.SR
-SPOTS = [  # (name, first tag, last tag, why)
-    ('hook', 'hook', 'like_rules_said', 'the hook: three rules, his voice from the window (S, truck) by 0:15'),
-    ('radio_dad', 'radio_handed', 'nobody_goes', 'Dad in person (D), the dialogue gaps'),
-    ('kessler_1958', 'seven_rules', 'never_told', 'the 1958 memory (fx memory)'),
-    ('rule1', 'three_notes', 'eleven_oh_two', '0.70 s before / 0.45 s after "Rule number one." and its text'),
-    ('drive_by_cta', 'no_cloud', 'rule2_text', 'the comment prompt (cta) and rule 2'),
-    ('skull', 'power_dies', 'curtain_shut', 'the scare beat after the skull in the TV screen'),
-    ('fake_real_dad', 'fake_dad', 'say_again', 'his copy of Dad (S_dad), Lina (L_small), the real Dad (D radio), "Told you what?"'),
-    ('lina_walks', 'lina_walks', 'step_back', 'Lina dreamy (L_dreamy), "Who\'s the coldest? YOU are!" (S_monster), the spliced "bare"'),
-    ('transform', 'transform1', 'legs_plant', 'the transformation steps and their scare beats'),
-    ('fake_mom', 'fake_mom', 'doorknob_frost', 'his copy of Mom (S_mom, S_mom_soft), the face up the glass'),
-    ('twist', 'walter_look', 'my_turn', 'his line to Walter (S), the twist lines, the held "...was across the street."'),
-    ('climax', 'climax', 'lina_not_alone', 'the spliced "PULLS", "Inside, children." (S_monster), the boy copy (S_boy)'),
-    ('ending', 'see_you', 'kessler_knocked', '"See you..." (S), "Bye, Benny." (K_whisper), Kessler (K)'),
-    ('outro', 'outro', 'end', 'the outro advice, the comment prompt, like / subscribe / next'),
-]
-
-
-def load():
-    edl = json.load(open(V.EDL))
-    en, _ = sf.read(V.OUT, dtype='float64')
-    cl, _ = sf.read(V.OUT_CLEAN, dtype='float64')
-    raw, sr = sf.read(V.RAW, dtype='float64')
-    return edl, en, cl, raw, sr
-
-
-def tag_index(edl):
-    return {l['tag']: l['i'] for l in edl['lines'] if l['tag']}
-
-
-# ============================================================================ strips
-def strip(name, a_tag, b_tag, why, edl, en, raw, raw_sr, k):
-    import matplotlib; matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    from scipy import signal
-    ti = tag_index(edl); L = edl['lines']
-    i0, i1 = ti[a_tag], ti[b_tag]
-    sel = L[i0:i1 + 1]
-    s0 = min(l['src_span'][0] for l in sel) - 0.3; s1 = max(l['src_span'][1] for l in sel) + 0.3
-    o0 = sel[0]['out'][0] - 0.3; o1 = sel[-1]['out'][1] + 0.3
-    fig, axs = plt.subplots(2, 1, figsize=(22, 8.6))
-    for ax, (x, sr, t0, t1, title, src) in zip(axs, [(raw, raw_sr, s0, s1, 'BEFORE: raw take %.2f-%.2f s' % (s0, s1), True),
-                                                     (en, SR, o0, o1, 'AFTER: narration_en.wav %.2f-%.2f s' % (o0, o1), False)]):
-        y = x[max(0, int(t0 * sr)):int(t1 * sr)]
-        nper = int(0.02 * sr); hop = int(0.004 * sr)
-        f, t, S = signal.spectrogram(y, fs=sr, nperseg=nper, noverlap=nper - hop, window='hann')
-        S = 10 * np.log10(S + 1e-14)
-        ax.pcolormesh(t + t0, f, S, vmin=S.max() - 95, vmax=S.max(), shading='auto', cmap='magma')
-        ax.set_ylim(0, 12000); ax.set_xlim(t0, t1)
-        w = int(0.005 * sr); h = int(0.001 * sr); m = max(0, (len(y) - w) // h)
-        cs = np.concatenate([[0.0], np.cumsum(y * y)]); idx = np.arange(m) * h
-        db = 10 * np.log10((cs[idx + w] - cs[idx]) / w + 1e-14)
-        ax2 = ax.twinx(); ax2.plot(t0 + (idx + w / 2) / sr, db, color='cyan', lw=0.7); ax2.set_ylim(-100, 0)
-        ax2.axhline(-60, color='cyan', lw=0.4, ls=':')
-        ax2.set_ylabel('dBFS (5 ms RMS)')
-        for l in sel:
-            a, b = (l['src_span'] if src else l['out'])
-            ax.axvspan(a, b, ymin=0.96, ymax=1.0, color='w' if l['who'] == 'N' else 'lime', alpha=0.8)
-            ax.text(a, 11300, ('%s: ' % l['who'] if l['who'] != 'N' else '') + l['en'][:38], color='w', fontsize=7.5,
-                    va='top', clip_on=True)
-            if not src and l['i'] < i1:
-                ax.text(b + 0.02, 600, '%.2f' % l['gap_after'], color='yellow', fontsize=8)
-        if src:
-            for l in sel:
-                for r in l['removed_inside']:
-                    ax.axvspan(r['src'][0], r['src'][1], color='red', alpha=0.25)
-            for r in edl['removed_between_lines']:
-                if s0 <= r['src'][0] <= s1: ax.axvspan(r['src'][0], r['src'][1], color='red', alpha=0.25)
-        ax.set_title(title, fontsize=10, loc='left')
-    fig.suptitle(f'{name}: {why}   (red: removed from the take; yellow: the gap after each line, s)', fontsize=11, x=0.01, ha='left')
-    plt.tight_layout()
-    out = os.path.join(V.TESTS, 'strip_%02d_%s.png' % (k, name))
-    plt.savefig(out, dpi=50); plt.close()
-    return out
-
-
-# ============================================================================ scans
-def islands_of(x, thr=-60.0):
-    db = V.envelope(x)
-    return db, V.islands(db, thr)
-
-
-def scan_gaps(edl, x):
-    """Measured silence between lines vs the map."""
-    db = V.envelope(x)
-    def first_sound(t):
-        k = int(t * 1000)
-        while k < len(db) and db[k] <= -60: k += 1
-        return k / 1000
-    def last_sound(t):
-        k = int(t * 1000)
-        while k > 0 and db[k] <= -60: k -= 1
-        return k / 1000 + 0.005
-    rows, bad = [], []
-    L = edl['lines']
-    for a, b in zip(L, L[1:]):
-        e = last_sound(a['out'][1] + 0.02); s = first_sound(b['out'][0] - 0.02)
-        g = round(s - e, 3)
-        rows.append((a['i'], g, a['gap_after']))
-        dev = g - a['gap_after']
-        if abs(dev) > 0.03: bad.append({'i': a['i'], 'measured': g, 'map': a['gap_after'], 'en': a['en'][:50]})
-    gaps = np.array([r[1] for r in rows])
-    return {'n': len(rows), 'max_abs_dev_vs_map': round(float(np.max(np.abs(gaps - np.array([r[2] for r in rows])))), 3),
-            'off_map_over_30ms': bad[:40], 'n_off_map': len(bad),
-            'under_0.15': [r for r in rows if r[1] < 0.149], 'over_2.0': [r for r in rows if r[1] > 2.0],
-            'histogram_s': {f'{lo:.2f}-{hi:.2f}': int(((gaps >= lo) & (gaps < hi)).sum())
-                            for lo, hi in [(0, 0.15), (0.15, 0.25), (0.25, 0.35), (0.35, 0.5), (0.5, 0.7), (0.7, 1.0),
-                                           (1.0, 1.5), (1.5, 2.0), (2.0, 3.5)]}}
-
-
-def scan_breaths(x, edl=None):
-    """Isolated unvoiced sound islands >= 80 ms in the edited file (what a breath looks like): sound islands (> -60 dBFS)
-    that sit >= 60 ms from any other sound and whose own pitch track (Praat, on the island +-20 ms alone, so a quiet
-    passage is not judged against the loudest one) is voiced in under 20 % of its frames. With the edit list, each is
-    classed: 'final consonant' (it ends its line and the line's last word ends in a stop / fricative / affricate: the
-    release or the s the take spells out after a closure), 'the whole line' (an unvoiced line, "Shh."), or 'check'."""
-    import parselmouth
-    db = V.envelope(x)
-    isl = V.islands(db)
-    out = []
-    for j, (a, b) in enumerate(isl):
-        if b - a < 0.08: continue
-        gp = a - isl[j - 1][1] if j else 9; gn = isl[j + 1][0] - b if j + 1 < len(isl) else 9
-        if min(gp, gn) < 0.06: continue
-        seg = x[max(0, int((a - 0.02) * SR)):int((b + 0.02) * SR)]
-        p = parselmouth.Sound(seg, sampling_frequency=SR).to_pitch_ac(time_step=0.005, pitch_floor=70, pitch_ceiling=600)
-        f0 = p.selected_array['frequency']
-        if len(f0) and (f0 > 0).mean() >= 0.2: continue
-        r = {'t': [round(a, 3), round(b, 3)], 'peak_db': round(float(db[int(a * 1000):int(b * 1000)].max()), 1),
-             'gap_before': round(gp, 3), 'gap_after': round(gn, 3), 'kind': 'check'}
-        if edl:
-            l = next((l for l in edl['lines'] if l['out'][0] - 0.05 <= a <= l['out'][1] + 0.05), None)
-            if l:
-                r['line'] = l['i']
-                lw = re.sub(r'[^a-z]', '', l['en'].split()[-1].lower())
-                if b - a > 0.5 * (l['out'][1] - l['out'][0]): r['kind'] = 'the whole line'
-                elif b >= l['out'][1] - 0.06 and re.search(r'(s|z|t|k|p|c|ch|sh|f|th|d|g|x|ce|se|te|ke)$', lw):
-                    r['kind'] = 'final consonant'
-        out.append(r)
-    return out
-
-
-def step_clicks(x):
-    """Sample discontinuities: |x[n] - x[n-1]| above 12x its 10 ms moving mean, in sound (one hit per 20 ms)."""
-    from scipy.ndimage import uniform_filter1d
-    d = np.abs(np.diff(x))
-    ref = uniform_filter1d(d, size=int(0.010 * SR) + 1, mode='nearest')
-    loud = np.abs(x[1:]) > 10 ** (-60 / 20)
-    cand = np.where((d > 12 * ref + 1e-4) & loud)[0]
-    out, last = [], -10 * SR
-    for k in cand:
-        if k - last < int(0.02 * SR): continue
-        out.append(k); last = k
-    return np.array(out, dtype=np.int64)
-
-
-def scan_clicks(x, edl, raw48=None):
-    """Discontinuities in the edit vs the same detector on the raw take (TTS plosive bursts trip it too: what matters
-    is that the edit adds none), the ones within 5 ms of an edit point, and non-zero samples inside the gaps."""
-    hits = step_clicks(x)
-    edges = np.array(sorted(int(round(t * SR)) for l in edl['lines'] if 'stretch' not in l
-                            for pc in l['pieces'] for t in pc['out']))
-    near = []
-    if len(hits) and len(edges):
-        pos = np.searchsorted(edges, hits)
-        for h, p_ in zip(hits, pos):
-            dmin = min(abs(h - edges[min(p_, len(edges) - 1)]), abs(h - edges[max(p_ - 1, 0)]))
-            if dmin <= int(0.005 * SR): near.append(round(h / SR, 4))
-    nz = []
-    L = edl['lines']
-    for a, b in zip(L, L[1:]):
-        g0, g1 = int((a['out'][1] + 0.040) * SR), int((b['out'][0] - 0.025) * SR)
-        if g1 > g0 and np.abs(x[g0:g1]).max() > 0:
-            nz.append({'i': a['i'], 'max_dbfs': round(float(20 * np.log10(np.abs(x[g0:g1]).max())), 1)})
-    r = {'n_discontinuities': int(len(hits)), 'at_edit_points': near, 'nonzero_in_gaps': nz}
-    if raw48 is not None:
-        r['n_discontinuities_raw_take'] = int(len(step_clicks(raw48)))
-    return r
-
-
-def scan_levels(x, edl):
-    lv = []
-    for l in edl['lines']:
-        if l['who'] != 'N' or len(l['en']) < 12: continue
-        a, b = l['out']
-        lv.append(V.speech_level(x[int(a * SR):int(b * SR)]))
-    lv = np.array(lv)
-    return {'narrator_line_level_p5_p50_p95_db': [round(float(np.percentile(lv, q)), 2) for q in (5, 50, 95)],
-            'narrator_line_level_std_db': round(float(lv.std()), 2)}
-
-
-def asr_check(edl, x):
-    """Re-recognise the character lines and the repaired phrases on the edited file."""
-    import sherpa_onnx, soxr
-    PK = os.path.join(V.os.path.dirname(V.os.path.abspath(__file__)), '')  # noqa
-    MODELS = '/tmp/claude-0/-home-user-claude-todo-demo/aa250ae7-a0b4-594f-9bc6-bd18b596cf27/scratchpad/models'
-    PK = os.environ.get('PARAKEET_DIR', os.path.join(MODELS, 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8'))
-    pk = sherpa_onnx.OfflineRecognizer.from_transducer(encoder=f'{PK}/encoder.int8.onnx', decoder=f'{PK}/decoder.int8.onnx',
-                                                       joiner=f'{PK}/joiner.int8.onnx', tokens=f'{PK}/tokens.txt',
-                                                       model_type='nemo_transducer', num_threads=2)
-    import difflib
-    rows = []
-    fixed = set(V.FIXES)
-    for l in edl['lines']:
-        if l['who'] == 'N' and l['tag'] not in fixed: continue
-        a, b = l['out']
-        y = x[max(0, int((a - 0.15) * SR)):int((b + 0.15) * SR)]
-        y16 = soxr.resample(np.concatenate([np.zeros(SR // 4), y, np.zeros(SR // 4)]), SR, 16000).astype(np.float32)
-        st = pk.create_stream(); st.accept_waveform(16000, y16); pk.decode_stream(st)
-        heard = st.result.text.strip()
-        A, B = V.toks(l['en']), V.toks(heard)
-        sm = difflib.SequenceMatcher(None, A, B, autojunk=False)
-        share = sum(bl.size for bl in sm.get_matching_blocks()) / max(1, len(A))
-        rows.append({'i': l['i'], 'who': l['who'], 'tag': l['tag'], 'en': l['en'], 'heard': heard, 'share': round(share, 2)})
-    return rows
 
 
 def main():
-    os.makedirs(V.TESTS, exist_ok=True)
-    edl, en, cl, raw, raw_sr = load()
-    res = {}
-    if '--no-strips' not in sys.argv:
-        res['strips'] = [os.path.basename(strip(n, a, b, w, edl, en, raw, raw_sr, k + 1)) for k, (n, a, b, w) in enumerate(SPOTS)]
-    res['gaps'] = scan_gaps(edl, en)
-    res['breaths_en'] = scan_breaths(en, edl)
-    res['breaths_clean'] = scan_breaths(cl, edl)
-    import soxr
-    raw48 = soxr.resample(raw, raw_sr, SR, quality='VHQ')
-    res['clicks_en'] = scan_clicks(en, edl)
-    res['clicks_clean'] = scan_clicks(cl, edl, raw48)
-    res['levels_clean'] = scan_levels(cl, edl)
-    res['full_scale_samples_en'] = int((np.abs(en) >= 0.999).sum())
-    res['true_peak_en'] = round(V.true_peak(en), 2); res['lufs_en'] = round(V.loudness(en), 2)
-    res['true_peak_clean'] = round(V.true_peak(cl), 2); res['lufs_clean'] = round(V.loudness(cl), 2)
-    if '--no-asr' not in sys.argv:
-        res['asr'] = asr_check(edl, en)
-    json.dump(res, open(os.path.join(V.TESTS, 'check.json'), 'w'), indent=1)
-    g = res['gaps']
-    print(f"gaps: {g['n']} boundaries, max |measured - map| {g['max_abs_dev_vs_map']} s, {g['n_off_map']} off by > 30 ms, "
-          f"{len(g['under_0.15'])} under 0.15 s, {len(g['over_2.0'])} over 2 s; histogram {g['histogram_s']}")
-    print(f"breath-like islands: en {len(res['breaths_en'])}, clean {len(res['breaths_clean'])}")
-    for b in res['breaths_en']:
-        if b['kind'] == 'check': print('   check:', b)
-    for k in ('clicks_en', 'clicks_clean'):
-        c = res[k]
-        print(f"{k}: {c['n_discontinuities']} step detections (raw take: {c.get('n_discontinuities_raw_take', '-')}), "
-              f"{len(c['at_edit_points'])} within 5 ms of an edit point {c['at_edit_points'][:10]}, "
-              f"non-zero samples in {len(c['nonzero_in_gaps'])} gaps")
-    print('levels', res['levels_clean'], 'full-scale samples', res['full_scale_samples_en'],
-          'TP en/clean', res['true_peak_en'], res['true_peak_clean'], 'LUFS en/clean', res['lufs_en'], res['lufs_clean'])
-    if 'asr' in res:
-        for r in res['asr']:
-            print('   asr %-2s %4.2f  %-48s | %s' % (r['who'], r['share'], r['en'][:48], r['heard']))
+    y, sr = sf.read(V.OUT, dtype='float64'); assert sr == SR
+    d = json.load(open(V.EDL)); el = d['lines']
+    e = V.envelope(y)
+    res, fails = {}, []
+    # gaps
+    gaps = []
+    for a, b in zip(el[:-1], el[1:]):
+        lo, hi = int(a['out'][1] * 1000) - 150, int(b['out'][0] * 1000) + 150
+        seg = e[lo:hi] > -60
+        idx = np.where(seg)[0]
+        # last sound of a / first sound of b around the planned edges
+        mid = int((a['out'][1] + a.get('fx_tail', 0) + b['out'][0]) * 500) - lo
+        s_end = (lo + idx[idx < mid].max()) / 1000 + 0.005 if (idx < mid).any() else a['out'][1]
+        s_beg = (lo + idx[idx >= mid].min()) / 1000 if (idx >= mid).any() else b['out'][0]
+        g = s_beg - s_end
+        err = g - a['pause']
+        soft = 0.06 if (a.get('fx') or b.get('fx') or a.get('voice') or b.get('voice')) else 0.0   # a processed
+        if err < -0.03 - soft or err > 0.03 + a.get('fx_tail', 0) + soft:         # line's quiet onset / decay
+            gaps.append([a['i'], a['tag'], round(a['pause'], 3), round(g, 3)])
+    res['gaps_off'] = gaps
+    # edges and joins
+    edges = []
+    for x in el:
+        a, b = int(x['out'][0] * SR), int(x['out'][1] * SR)
+        z = y[a:b]
+        lvl = V.speech_level(z)
+        n = int(0.004 * SR)
+        for where, w, forced in (('start', z[:n], x['forced'][0]), ('end', z[-n:], x['forced'][1])):
+            l = 10 * np.log10(np.mean(w ** 2) + 1e-20)
+            if l > lvl - 20 and not forced and not x.get('fx'):
+                edges.append([x['i'], x['tag'], where, round(l - lvl, 1)])
+    res['edges_loud'] = edges
+    # breaths (on the dry narration path the voicing tracker is reliable; whispered lines are listed)
+    import parselmouth
+    p = parselmouth.Sound(y, sampling_frequency=SR).to_pitch_ac(time_step=0.005, pitch_floor=65, pitch_ceiling=600,
+                                                                 voicing_threshold=0.45)
+    v = np.zeros(len(e), bool)
+    for t, f in zip(p.xs(), p.selected_array['frequency']):
+        if f > 0: k = int(t * 1000); v[max(0, k - 3):k + 3] = True
+    vi = np.where(v)[0] / 1000.0
+    words = json.load(open(os.path.join(V.W, 'align', 'asr_cache.json')))['en_words'] if os.path.exists(
+        os.path.join(V.W, 'align', 'asr_cache.json')) else []
+    wt = np.array([w[1] for w in words]) if words else np.zeros(0)
+    br, whisper = [], []
+    for s, t in V.islands(e):
+        i0, i1 = int(s * 1000), int(t * 1000)
+        if t - s < 0.08 or v[i0:i1].mean() >= 0.15: continue
+        near = np.abs(vi - s).min() if len(vi) else 9
+        near = min(near, np.abs(vi - t).min() if len(vi) else 9)
+        if near < 0.06: continue
+        line = next((x for x in el if x['out'][0] - 0.01 <= s <= x['out'][1] + 0.01), None)
+        has_word = (len(wt) and ((wt >= s - 0.7) & (wt <= t + 0.05)).any()) or V.centroid(y[int(s * SR):int(t * SR)]) >= 3500
+        row = [round(s, 3), round(t - s, 3), line['tag'] if line else None]
+        (whisper if has_word else br).append(row)
+    res['breaths'] = br; res['unvoiced_words'] = whisper
+    res['double_breaths'] = [[a, b] for a, b in zip(br, br[1:]) if b[0] - (a[0] + a[1]) < 0.5]
+    # clicks
+    dy = np.abs(np.diff(y))
+    w = int(0.002 * SR)
+    loc = np.sqrt(np.convolve(dy ** 2, np.ones(w) / w, mode='same')) + 1e-9
+    k = np.where((dy > 12 * loc) & (np.abs(y[1:]) > 10 ** (-50 / 20)))[0]
+    res['clicks'] = sorted(set(round(i / SR, 2) for i in k))[:50]
+    # levels
+    nar = d['narrator_median_db']
+    lv = {}
+    for x in el:
+        a, b = int(x['out'][0] * SR), int(x['out'][1] * SR)
+        lv.setdefault(x['who'], []).append((x['i'], x['tag'], V.speech_level(y[a:b]) - d['final_gain_db']))
+    res['level_median_vs_narrator_db'] = {k: round(float(np.median([r[2] for r in r_])) - nar, 2) for k, r_ in lv.items()}
+    res['level_off'] = [[i, t, round(l - nar, 1)] for r_ in lv.values() for i, t, l in r_ if abs(l - nar) > 6.0]
+    res['level_note'] = [[i, t, round(l - nar, 1)] for r_ in lv.values() for i, t, l in r_ if 4.0 < abs(l - nar) <= 6.0]
+    # peaks, length
+    res['true_peak_dbtp'] = round(20 * np.log10(V.true_peak(y)), 2)
+    res['duration'] = round(len(y) / SR, 3)
+    m, s = divmod(res['duration'], 60)
+    print('length %d:%05.2f, true peak %.2f dBTP' % (m, s, res['true_peak_dbtp']))
+    print('gaps off plan: %d %s' % (len(gaps), gaps[:8]))
+    print('loud line edges (clipped word?): %d %s' % (len(edges), edges[:8]))
+    print('residual breaths: %d %s | double: %d' % (len(br), br[:8], len(res['double_breaths'])))
+    print('unvoiced islands holding words (whispers, listed): %d' % len(whisper))
+    print('clicks: %d %s' % (len(res['clicks']), res['clicks'][:10]))
+    print('level vs narrator median (dB):', res['level_median_vs_narrator_db'], '| lines > 6 dB off:', res['level_off'],
+          '| 4-6 dB (listed):', res['level_note'])
+    fails = gaps or edges or br or res['clicks'] or res['level_off'] or res['true_peak_dbtp'] > -0.9
+    res['pass'] = not fails
+    json.dump(res, open(os.path.join(V.N, 'check.json'), 'w'), indent=1)
+    print('check:', 'PASS' if not fails else 'FAIL')
+    return 1 if fails else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

@@ -21,11 +21,13 @@ How it works
      colon 0.20-0.35, ellipsis 0.30-0.50, mid-line full stop 0.15-0.30, none <= 0.25; character lines may hold x1.5,
      Mr. Pell x2: his slow, hushed delivery). Pauses inside words (< 120 ms) are never touched. Nothing is stretched.
   4. Level: one gain per line, never inside a phrase: a narrator line moves 60 % of its distance to the narrator's
-     median speech level (+-3 dB, nothing inside 1.5 dB); a character take is first brought to the narrator's median
-     (+ VOICE_LU), then each of its lines as a narrator line. The narrator's voice is otherwise untouched.
+     median speech level (+-6 dB, nothing inside 1.5 dB: his whispers stay whispers, only softer than the rest by
+     less); a character line goes the whole way to the narrator's median (+ VOICE_LU), so every voice sits at the
+     narrator's level. The narrator's voice is otherwise untouched.
   5. Voices and places: Theo and Sam are re-voiced into child voices (tools/vo_voices.py); the staged lines get their
      place (tools/vo_fx.py: ceiling, wall, mask, vent, phone), each loudness-matched to the dry line + its offset.
-  6. Finish: 70 Hz high-pass, the gaps gated to digital silence, one gain puts the true peak at -1 dBTP.
+  6. Finish: (each take is 70 Hz high-passed on loading, before any level is measured), the gaps gated to digital
+     silence, one gain puts the true peak at -1 dBTP.
 """
 import json, os, re, sys, difflib
 import numpy as np, soundfile as sf
@@ -60,11 +62,12 @@ NUM = {'zero': '0', 'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3',
 SAME = {'larksburg': 'larkspur', 'larkspurs': 'larkspur', 'markspur': 'larkspur', 'pel': 'pell', 'pells': 'pell',
         'grey': 'gray', 'shh': 'shhh', 'sh': 'shhh', 'mr': 'mister', 'mrs': 'missus', 'hushabai': 'hushabye',
         'hushaby': 'hushabye', 'hushabi': 'hushabye', 'okay': 'ok', 'goodnight': 'good night', 'dabrowskis': 'dabrowski',
-        'misses': 'missus', 'dubrowski': 'dabrowski', 'grill': 'grille'}
-PAIRS = {('arm', 'chair'): 'armchair', ('door', 'frame'): 'doorframe', ('2', 'night'): 'tonight', ('dead', 'bolt'): 'deadbolt',
+        'misses': 'missus', 'dubrowski': 'dabrowski', 'grill': 'grille', 'larksbury': 'larkspur', 'larksburgh': 'larkspur',
+        'larksford': 'larkspur', 'hashabai': 'hushabye', 'hashaby': 'hushabye', 'hushabuy': 'hushabye'}
+PAIRS = {('larks', 'per'): 'larkspur', ('larks', 'for'): 'larkspur', ('arm', 'chair'): 'armchair', ('door', 'frame'): 'doorframe', ('2', 'night'): 'tonight', ('dead', 'bolt'): 'deadbolt',
          ('grown', 'up'): 'grownup', ('grown', 'ups'): 'grownups', ('flash', 'light'): 'flashlight', ('head', 'board'): 'headboard'}
 HUSH = [('hush', 'a', 'bye'), ('hush', 'a', 'by'), ('hush', 'a', 'bi'), ('hush', 'a', 'bai'), ('hush', 'abye'),
-        ('hush', 'aby'), ('hush', 'a', 'buy')]
+        ('hush', 'aby'), ('hush', 'a', 'buy'), ('husha', 'bai'), ('husha', 'bye'), ('husha', 'by')]
 
 
 def log(*a):
@@ -148,9 +151,9 @@ def map_lines(L):
             if op == 'equal':
                 for d in range(i2 - i1): by[S[i1 + d][0]]['asr'].append(dict(A[j1 + d], li=S[i1 + d][1]))
                 continue
-            if op in ('replace', 'insert'):
-                for j in range(j1, j2):
-                    si = i1 + (j - j1) * (i2 - i1) // (j2 - j1) if op == 'replace' else max(0, i1 - 1)
+            if op == 'replace':                            # (an 'insert' is a word the script does not have: the
+                for j in range(j1, j2):                    # recogniser's double of a word at a chunk edge, "I looked I
+                    si = i1 + (j - j1) * (i2 - i1) // (j2 - j1)   # kept": it anchors no line and moves no cut)
                     by[S[si][0]]['asr'].append(dict(A[j], li=S[si][1]))
             owner = S[i1][0] if i1 < len(S) else S[-1][0]
             by[owner]['diff'].append((op, [s[2] for s in S[i1:i2]], [a['tok'] for a in A[j1:j2]]))
@@ -169,7 +172,8 @@ def take(key):
         ix = json.load(open(os.path.join(RAWDIR, 'index.json')))
         x, sr = sf.read(os.path.join(RAWDIR, ix[key]), dtype='float64')
         assert sr == SR, (key, sr)
-        e = envelope(x)
+        x = highpass(x)                                # 70 Hz first: levels are measured on what is heard (a whisper
+        e = envelope(x)                                # line's sub-bass rumble read 5 dB of "speech")
         import parselmouth
         p = parselmouth.Sound(x, sampling_frequency=SR).to_pitch_ac(time_step=0.005, pitch_floor=65, pitch_ceiling=600,
                                                                      voicing_threshold=0.45)
@@ -288,15 +292,19 @@ def line_islands(l):
         elif not voiced: why = None if inword else 'breath'                              # a whispered line
         elif f['t'] <= v0 + 0.001:                                                       # before the first voiced sound
             ok = gn <= 0.10 and (f['c'] >= 3000 or f['pk'] > ref - 15)                   # an s / sh / f onset, a loud
-            ok = ok or (l.get('head_unmatched') and dur >= 0.08)                         # whispered word; an unheard
+            ok = ok or (l.get('head_unmatched') and dur >= 0.08) or (inword and f['pk'] > ref - 18)   # whispered
+            # word; an unheard
             why = None if ok else ('breath' if dur >= 0.08 else 'click')                 # first word ("Shhh.")
         elif f['s'] >= v1 - 0.001:                                                       # after the last voiced sound
             wl = words[:-1] + [(words[-1][0], min(words[-1][1], words[-1][0] + 0.5))] if words else []
             inw = sum(ov(f, w0, w1 + 0.05) for w0, w1 in wl) >= min(0.04, 0.5 * dur)
-            ok = (gp <= 0.15 or inw) and not quiet                                       # a coda, a devoiced end
+            q2 = f['pk'] < ref - 18 and f['c'] < 3500 and dur >= 0.08
+            ok = (gp <= 0.15 or inw or not q2) and not quiet                             # a coda, a devoiced end,
+            # a whispered word (loud, bright); a breath after the line is soft and dull
             why = None if ok else ('breath' if dur >= 0.08 else 'click')
         else:                                                                            # between voiced sounds
-            ok = (inword or (gp <= 0.15 and gn <= 0.15)) and not (quiet and gn >= 0.03)
+            q2 = f['pk'] < ref - 18 and f['c'] < 3500 and dur >= 0.08                  # breath-like: soft, dull
+            ok = (not q2) or ((inword or (gp <= 0.15 and gn <= 0.15)) and not quiet)   # (a whispered word is not)
             why = None if ok else ('breath' if dur >= 0.08 else 'click')
         if why: drop.append((f['s'], f['t'], why, round(f['c']), round(f['pk'], 1)))
         else: keep.append((f['s'], f['t']))
@@ -391,10 +399,19 @@ def cmd_build():
     take_med = {k: float(np.median(v)) for k, v in take_med.items()}
     parts, t, el = [np.zeros(int(LEAD * SR))], LEAD, []
     for l, y in zip(L, dry):
+        if l.get('drop'):                              # owner: no dialogue tags; keep the longer of the two pauses
+            if el:
+                extra = max(0.0, float(l['pause']) - el[-1]['pause'])
+                if extra > 0:
+                    parts.append(np.zeros(int(round(extra * SR)))); t += extra
+                    el[-1]['pause'] = round(el[-1]['pause'] + extra, 3)
+            continue
         ref = nar_med if l['who'] == 'narrator' else take_med[l['who']]
-        d = ref - l['lvl']
-        g = 0.0 if abs(d) < 1.5 else float(np.clip(0.6 * d, -3, 3))
-        if l['who'] != 'narrator': g += nar_med - ref + VOICE_LU.get(l['who'], 0.0)
+        if l['who'] == 'narrator':                     # 60 % of the way to the median, +-6 dB, nothing inside 1.5 dB
+            d = nar_med - l['lvl']
+            g = 0.0 if abs(d) < 1.5 else float(np.clip(0.6 * d, -6, 6))
+        else:                                          # a character line: the whole way (one level per voice)
+            g = nar_med - l['lvl'] + VOICE_LU.get(l['who'], 0.0)
         y = y * 10 ** (g / 20)
         vst = None
         if l['who'] in ('theo', 'sam'):
@@ -412,7 +429,6 @@ def cmd_build():
                        pieces=l['pieces'], dropped=l['dropped'], voice=vst, fx_tail=tail))
         t += n0 / SR + gap
     y = np.concatenate(parts)
-    y = highpass(y)
     mask = np.zeros(len(y))                            # the gaps gated to digital silence (fx tails kept)
     for e in el:
         a = int((e['out'][0] - 0.004) * SR); b = int((e['out'][1] + e['fx_tail'] + 0.03) * SR)

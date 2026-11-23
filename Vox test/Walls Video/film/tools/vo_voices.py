@@ -43,12 +43,12 @@ UNV = 0.35                                             # share of the formant wa
 # speed) playback slowed from that share of the speech to its end, down to that speed (the word gets longer).
 _B = dict(f0=None, rng=1.0, comp=None, smooth=0.0, alpha=1.0, breath=0.0, trem=None, jit=0.0, under=None, eq=None,
           lu=0.0, wow=None, sag=None, morph=None, tape=None)
-_KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=0.0)
+_KID = dict(_B, rng=0.95, comp=0.42, breath=0.12, jit=0.004, unv=0.35, fric=True, ease=0.0, nasal=0.0)
 VOICES = {
-    'theo': dict(_KID, f0=285.0, alpha=1.38, lu=-0.5, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)],
-                 desc="Theo, 6: a small boy (285 Hz; a child's vocal tract, formants x1.38), a lively melody (x0.95), "
+    'theo': dict(_KID, f0=285.0, alpha=1.26, lu=-0.5, eq=[('ls', 220, -4.0, 0.7), ('peak', 3200, 1.0, 1.0)],
+                 desc="Theo, 6: a small boy (285 Hz; a child's vocal tract, formants x1.26: from x1.28 up the recognisers heard Larkspur as marks per in the sung address), a lively melody (x0.95), "
                       'a little breath (0.12), no chest (-4 dB under 220 Hz)'),
-    'sam': dict(_KID, f0=232.0, alpha=1.245, rng=0.90, comp=0.40, breath=0.10, lu=-0.5,
+    'sam': dict(_KID, f0=232.0, alpha=1.245, rng=0.90, comp=0.40, breath=0.10, lu=-0.5, nasal=-20.0,
                 eq=[('ls', 200, -3.0, 0.7), ('peak', 3000, 0.8, 1.0)],
                 desc='Sam, 12: a boy before his voice breaks (232 Hz, formants x1.245), a calmer melody (x0.90), '
                      'a little breath (0.10), a lighter chest (-3 dB under 200 Hz)'),
@@ -235,6 +235,11 @@ def revoice(x, key):
         for a_, b_ in zip(np.where(d == 1)[0], np.where(d == -1)[0]):
             rr[a_:b_] = np.clip((np.arange(b_ - a_) + 1) / (s['ease'] / FP), 0, 1)
         wv = np.minimum(wv, uniform_filter1d(rr, size=int(5 / FP), mode='nearest'))
+    if s.get('nasal'):                                                # a nasal murmur (n, m: little energy above
+        fb = np.arange(sp.shape[1]) * (SR / 2) / (sp.shape[1] - 1)    # 1 kHz) keeps the voiceless share of the warp:
+        r = 10 * np.log10(sp[:, (fb >= 1000) & (fb < 4000)].sum(1) / (sp[:, fb < 800].sum(1) + 1e-20) + 1e-20)
+        mur = uniform_filter1d((v & (r < s['nasal'])).astype(np.float64), size=int(10 / FP), mode='nearest')
+        wv = wv * (1 - mur)                                           # fully warped it read as an l ("Night" -> "Like")
     unv = s.get('unv', UNV)
     alpha = np.exp(np.log(alpha) * (unv + (1 - unv) * wv))         # voiceless ones (x1.38 turned "He"/"Theo" into "See")
     m = tape_curve(t, v, s)

@@ -1,4 +1,42 @@
-# CAST: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
+# CAST: "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+
+## Walls film (this film): `characters_walls.py`, see `WALLS_API`
+Run in the `characters` namespace after `characters_ice.py` (the `_WALLS_SRC` exec line in characters.py). Use
+`import characters as CH`. Old ids kept: `mom_bunny`, `dad_ice`, `theo94`.
+
+- **Sheet / strips:** `python3 tools/cast_walls.py [sheet] [faces] [strips [names]]` -> `_work/cast/cast_sheet.png`,
+  `faces_640.jpg` (four close-ups at 640x360), `strip_<name>.jpg` (8 frames each; stand-in scenery; prints reach misses
+  and foot gaps). Self-test: `python3 characters.py --selftest` (walls checks run last).
+- **Ids** (draw height `CH.height_px(id, ppm)`): `sam` 1.50 m (green tee) / `sam_pj`; `theo` 1.16 m (blue dinosaur
+  pyjamas); `mom` / `mom_pj`; `dad` 1.87 m in THE red buffalo-check flannel (day one) / `dad_tee` / `dad_pj`; `pell`
+  1.88 m masked (Dad's flannel, grey trousers, grey socks, long pale hands with plaster-dust fingertips, stoop 0.28);
+  `pell_bare` (grey stubble, tired); `dabrowski` (late 60s, teal cardigan, glasses); `reyes`; `officer_w`.
+- **The mask** (`pell`): original latex hound over his own head: pale fawn dome, worried brow folds, heavy half-closed
+  rubber lids over dark holes with HIS eyes in them (they blink), red droopy lower lids, long muzzle, wet black nose,
+  his own teeth in the mouth slit (moves with `talk`), long ears hanging in along the jowls that swing a beat late
+  (`pose.ear_sw`, set automatically), grey tape on his left ear, a loose rubber hem and back seam. `pose.mask_lift` 0..1
+  pulls it up off his face; `where(t, 'mouth'|'nose'|'crown')` are the MASK's points while it is on.
+- **Shared tilt:** `WALLS_TILT` (h_tilt 21, nod 0.12); `a.walls_tilt(t0, t1, dur)` for Dad's habit; `pell.doorway(t0, t1)`
+  = the same tilt, arms hanging, dead still, stoop straightened (his doorway silhouette = Dad's: sheet row 2).
+- **Pell acting:** `back_away(t0, t1, steps)` (legs only: shrink height / raise y_feet for the hall depth);
+  `tuck_blanket(t0, a, b, dur, knees, t1)` (kneels, both palms along the blanket edge a->b, returns press time);
+  `shush(t0, t1, side)` (index across the mask's mouth); `crawl(t0, t1, x0, x1, facing)` (hands and knees, side view;
+  `crawl_thump` events); `slide_panel(t0, side, grip, dx, dur)` -> `panel_dx(t)` for the set; `cuffed(t0, t1)` (hands
+  together at the lap, steel cuffs + chain) with `seated(curb_y, hands=None)`; eye at the crack: `head_to(t0, pt,
+  'eye_l')` or the insert `CH.draw_head_at(pen, 'pell', P, x, y, px_per_unit, 'eye_l')`.
+- **Family:** `sam.carry_hush(t0, theo, t1)` + `CH.draw_carry_walls(pen, sam, theo, t, light, blanket=True)` (hand over
+  his mouth, the blanket hanging); `sam.shake_awake(t0, t1, dad)` (dad lying: `lie(..., face='up')`; `where()` now
+  follows lying figures); `sam.flip_switch(t0, side, xy)` -> flip time; `dad.read_note(t0, t1, side)` (prop 'note',
+  kept in the hand after), `dad.laugh(t0, dur)`, `dad.sigh(t0, dur)`; `mom.phone_to_ear(t0, t1, side)` + expr
+  `terrified_call`, then `mom.phone_to(t0, side, theo)`; `theo.sing(intervals)` (= talk, lip sync);
+  `theo.phone_to_mouth(t0, t1)` if he holds it himself.
+- **Neighbour / police:** `dabrowski.offer_pie(t0, dur, facing)` (both hands; props `pie` / `pie_r`);
+  `reyes.lift_mask(t0, pell, dur)` -> time the face is clear; the mask then hangs from her hand (`hound_mask`).
+- **Open:** lying figures are the old front view turned 90 deg (stage bed shots close); the crawl's legs read best in
+  side view; profile mask is weaker than front / 3/4 (prefer 3/4 for his face beats).
+
+---
+# (reference) Ice Cream film cast
 
 This film's cast and staging tools are in `characters_ice.py` (see `ICE_API`), run in the `characters` namespace after
 `characters_bus.py`. Use everything as `import characters as CH`.
