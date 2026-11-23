@@ -128,3 +128,15 @@ Lawrence Pell. You're safe now, all of you. You did everything right. You stayed
 ---
 
 Note: each designed voice is new and belongs to your account; none of them copies a real person. If a child voice comes out sounding too old, generate again; if it still does, we can fix the pitch in post.
+
+---
+
+## Eleven v4 versions of the lines (`voices_v4/`)
+
+The same words as `voices/`, with Eleven v4 audio tags: short directions in square brackets at the start of a paragraph or line. The model follows them; it does not read them aloud.
+
+- Generate with the Eleven v4 model. If there is a stability setting, start with Natural.
+- The narrator has delivery tags only. There is no whispering, no sighs and no breaths, so his voice stays clean and fully voiced. Mr. Pell is the only voice that whispers.
+- There are no sound-effect tags. We add every sound ourselves.
+- The narrator is in 6 parts, each under 2,400 characters. Generate them in order with the same voice.
+- If a tag is ever read out loud or makes a line sound wrong, delete that tag and generate the line again.
