@@ -843,7 +843,7 @@ def dimmed(sp, k, keep=()):
 
 
 class ADict(dict):
-    """The shot's actors by id; 'adam' / 'lina' / 'kessler' also find the costume variant placed in the shot."""
+    """The shot's actors by id; 'sam' / 'mom' / 'dad' / 'pell' also find the costume variant placed in the shot (ALIAS)."""
     def _k(self, k):
         if dict.__contains__(self, k): return k
         for v in ALIAS.get(k, ()):
@@ -2551,7 +2551,8 @@ SAMW = (5.6, 2.85, 2.9)                       # beside Sam's bed (the wall by it
 THEO_CAM = cm((1.05, 2.75, 4.05), (2.0, 0.95, 3.35), 900)        # Theo's bed from its foot corner: Pell kneeling faces us at 3/4
 DOOR_CAM = cm((3.2, 3.2, 4.2), (0.78, 4.0, 4.0), 1100)                # the doorway from inside the room (he stands in it)
 BL = dict(theo_bed='empty', sam_bed='empty')                            # the boys IN bed (the duvet drawn over the lying figure)
-BLH = dict(BL, hall_light=0.7)                                          # ... and the hall light behind the doorway figure
+BLH = dict(BL, hall_light=0.7)
+POV_CAM = cm((5.4, 0.5, 3.75), (0.78, 4.02, 3.95), 2400)              # from Sam's pillow, long lens on the doorway (the figure)                                          # ... and the hall light behind the doorway figure
 
 
 def MC(at, ang, d=2.4, h=1.45, lh=1.0, S=1000.0, sy=560.0):
@@ -2570,7 +2571,7 @@ CHAIRCAM = MC((-3.25, 2.85, 0.0), 200, 2.2, h=1.3, lh=0.8, S=1000)        # Mr. 
 CHAIRFRONT = MC((-3.62, 3.22, 0.0), 135, 2.4, h=1.3, lh=0.9, S=1000)    # the armchair from the room (seated in it)
 
 
-def door_pell(t0=-9.0, sil=0.85, acts=(), **k):
+def door_pell(t0=-9.0, sil=1.0, acts=(), **k):
     """The doorway figure (Pell, Dad's flannel, Dad's tilt), facing Sam's bed."""
     return P('pell', 'doorway', face='sam_pillow', sil=sil, sil_rim='#ffc884', sil_rim_a=0.6, act=_A(sil_door(t0), *acts), id='pell', **k)
 
@@ -2619,9 +2620,9 @@ def to_mouth(times, side=-1, hold=0.7):
 
 def plan_open(F):
     # 0 If your little brother says someone lives in the walls... don't laugh.
-    S(T(0), 'boys', 'sam_wall', st=BL, ppl=[sam_bed('neutral', act=_A(lk(T(0) + 0.5, ('theo', 'head')))),
+    S(T(0), 'boys', 'sam_wall', st=dict(B_NIGHT, lamp=0.35), cam=MC((5.5, 2.1, 2.9), 300, 2.4, h=1.35, lh=0.8), ppl=[
                                                  P('theo', SAMW, face=(6.0, 2.85), id='theo', act=_A(reach(T(0) + 0.6, -1, (5.98, 2.85, 3.75), dur=0.6, shape='flat', contact='palm')))],
-      c=ZO(1.35, SAMW, h=0.8))
+      c=Z(1.0, 0.012))
     WL(W(0, "don't"), 'wall', [WP('pell', 1080, turn=-0.55, h_turn=-0.2, act=_A(lambda a, s: a.head_to(WD(0, "don't") + 0.1, (720, 300), 'eye_l', dur=0.9), tilt(E(0) - 0.3, 14, 1.6)))],
        slits=[(720, 220, 640, 1.0)], c=Z(1.3, 0.02, 900, 420), sfx=[(WD(0, 'laugh'), 'knock_door', -14, 0.3, 'wall', dict(n=1, soft=True))])
     # 1 If the armchair is warm in the morning, and nobody sat in it... don't say it's the heater.
@@ -2630,10 +2631,10 @@ def plan_open(F):
     S(W(1, 'nobody'), 'living', 'chair', st=MORN, c=ZO(1.25, 'armchair', ody=-100, rate=0.02))
     S(W(1, "don't"), 'living', 'vent', st=MORN, c=Z(1.0, 0.02))
     # 2 ... your dad stands in your bedroom doorway at three in the morning, in his red flannel shirt, head tilted, just watching you sleep... don't say goodnight.
-    S(T(2), 'boys', 'door_pov', st=BLH, ppl=[door_pell()], c=ZO(2.6, '@pell', part='chest', rate=0.01))
-    S(W(2, 'red'), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(1.5, 0.01, 930, 640))
+    S(T(2), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.0, 0.01))
+    S(W(2, 'red'), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(2.2, 0.01, 930, 760))
     S(W(2, 'just'), 'boys', 'sam_wall', st=BL, ppl=[sam_bed()], c=ZO(1.8, 'sam_pillow'))
-    S(W(2, "don't"), 'boys', 'door_pov', st=BLH, ppl=[door_pell()], c=ZO(3.0, '@pell', part='head', rate=0.02))
+    S(W(2, "don't"), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.8, 0.02, 960, 330))
     # 3 Your dad is asleep.
     S(T(3), 'parents', 'bed', st=PAR_N, ppl=[P('dad_pj', 'bed_dad', kind='lie', expr='sleep'), P('mom_pj', 'bed_mom', kind='lie', expr='sleep')],
       c=ZO(1.6, 'bed_dad', ody=-40), hit=E(3) - 0.05)
@@ -2717,15 +2718,15 @@ def plan_moving(F):
 def plan_night1(F):
     # 28-35 the first night: "Dad" in the doorway
     lie_bust(T(28), 'sam_pj', 'neutral', act=_A(blinks(T(28) + 0.5), lookxy(400, 300, pdur(28, 0.6), dur=0.5)))
-    S(T(29), 'boys', 'door_pov', st=BLH, ppl=[door_pell()], c=ZO(2.6, '@pell', part='chest'))
-    S(T(30), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(1.6, 0.01, 930, 660))
+    S(T(29), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.0, 0.01))
+    S(T(30), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(2.2, 0.01, 930, 760))
     S(T(31), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85)], c=Z(2.6, 0.01, 930, 420))
     S(T(32), 'boys', 'theo', st=BL, ppl=[theo_bed()], c=ZO(2.4, 'theo_pillow', h=0.2))
     lie_bust(T(33), 'sam_pj', 'sleepy', act=_A(lookxy(300, 300, T(33))))
-    S(T(34), 'boys', 'door_pov', st=BLH, ppl=[door_pell()], c=ZO(2.6, '@pell', part='head'))
-    S(T(35), 'boys', 'door_pov', st=B_NIGHT, ppl=[P('pell', 'doorway', face='sam_pillow', sil=0.85, sil_rim='#ffc884', id='pell', no_walk=True,
+    S(T(34), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.3, 0.01, 960, 420))
+    S(T(35), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[P('pell', 'doorway', face='sam_pillow', sil=0.85, sil_rim='#ffc884', id='pell', no_walk=True,
                                                   path=[(W(35, 'backed'), 'doorway'), (E(35) + 0.2, (0.2, 4.6, 2.9))], act=_A(sil_door(), lambda a, s: a.back_away(W(35, 'backed'), E(35), 4)))],
-      c=ZO(2.0, 'doorway', h=1.0))
+      c=Z(1.0, 0.01))
     # 36-37 In the morning, Dad couldn't find his red flannel shirt. He said it got lost in the move.
     S(T(36), 'living', 'wide', st=dict(MORN, boxes=True), ppl=[P('dad_tee', 'room_mid', face=(-3.4, 1.4), id='dad', expr='grumpy',
                                                                  act=_A(lambda a, s: a.crouch(T(36) + 0.2, 0.6, E(36) + 0.5), lk(T(36), (-3.4, 1.4, 0.3))))],
@@ -3030,8 +3031,8 @@ def plan_rule6(F):
     RULE(T(183), 6)
     # 186-191 three a.m.: "Dad" in the doorway again (the same tilt)
     lie_bust(T(186), 'sam_pj', 'neutral', act=_A(blinks(T(186) + 0.4), lookxy(400, 300, pdur(186, 0.6), dur=0.5)))
-    S(T(187), 'boys', 'door_pov', st=BLH, ppl=[door_pell()], c=ZO(2.6, '@pell', part='chest'))
-    S(T(188), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(1.6, 0.01, 930, 660))
+    S(T(187), 'boys', 'door_pov', st=BLH, cam=POV_CAM, ppl=[door_pell()], c=Z(1.0, 0.01))
+    S(T(188), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.5)], c=Z(2.2, 0.01, 930, 760))
     S(T(189), 'boys', 'doorway', st=BLH, cam=DOOR_CAM, ppl=[door_pell(sil=0.85)], c=Z(2.6, 0.01, 930, 420))
     S(T(190), 'boys', 'theo', st=BL, ppl=[theo_bed()], c=ZO(2.4, 'theo_pillow', h=0.2))
     lie_bust(T(191), 'sam_pj', 'sleepy', act=_A(lookxy(300, 300, T(191)), pose(pdur(191, 0.3), pdur(191, 0.7), 0.2, m_open=0.12)), no_lip=True)
@@ -3130,20 +3131,20 @@ def plan_rule6(F):
     # 234-241 So we stayed. And the man in the walls came looking for us: scratching, behind the dresser, the headboard; the vent rattles: "Hush-a-bye. That's my house."
     FAM = lambda: [P('mom_pj', 'bed_huddle', id='mom', expr='fear'), P('sam_pj', (-3.55, 7.3, 2.9), face=(-5.0, 7.0), id='sam', expr='hush_fear'),
                    P('theo', (-3.6, 6.25, 2.9), face=(-5.0, 7.0), id='theo', expr='fear'), P('dad_pj', 'room_mid', face=(-0.6, 7.2), id='dad', expr='resolve')]
-    S(T(234), 'parents', 'wide', st=dict(PAR_N, door=0.0, lock=1.0), ppl=FAM(), c=Z(1.2, 0.012))
+    S(T(234), 'parents', 'wide', st=PH, ppl=FAM(), c=Z(1.2, 0.012))
     WL(T(235), 'chase', [WP('pell', 200, dy=-4.0, act=_A(lambda a, s: a.crawl(T(235) + 0.1, E(235), -100, 2000, facing=1)))], seed=2, c=dict(mv='hold'),
        sfx=[(T(235) + 0.1, 'scuttle', -8, 0.2, 'wall', dict(dur=round(E(235) - T(235), 2)))])
     scr_ = lambda t0, n=4: [(t0 + 0.25 * k, 'scratch', -10, -0.3 + 0.2 * k, 'wall') for k in range(n)]
-    S(T(236), 'parents', 'wide', st=dict(PAR_N, door=0.0, lock=1.0), ppl=[P(q['who'], q['at'], **{k_: v_ for k_, v_ in q.items() if k_ not in ('who', 'at')}) for q in FAM()],
+    S(T(236), 'parents', 'wide', st=PH, ppl=[P(q['who'], q['at'], **{k_: v_ for k_, v_ in q.items() if k_ not in ('who', 'at')}) for q in FAM()],
       c=Z(1.35, 0.015, 1000, 520), sfx=scr_(T(236) + 0.2))
     WL(T(237), 'wall', [WP('pell', 960, h=900, turn=0.8, h_turn=0.3, act=_A(reach(T(237) + 0.1, 1, (1250, 430), t1=E(237) + 0.3, dur=0.3, shape='point'),
                                                                             lambda a, s: a.crouch(T(237), 0.5)))], seed=3, slits=[(1650, 260, 700, 0.8)], c=Z(1.5, 0.01, 1000, 460),
        sfx=scr_(T(237) + 0.1, 3))
-    S(T(238), 'parents', 'wide', st=dict(PAR_N, door=0.0, lock=1.0), c=ZO(1.8, 'dresser', ody=40, rate=0.02), sfx=scr_(T(238) + 0.1, 3))
-    S(T(239), 'parents', 'bed', st=dict(PAR_N, door=0.0, lock=1.0), ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='terror', act=_A(lk(T(239) + 0.1, 'headboard', dur=0.25)))],
+    S(T(238), 'parents', 'wide', st=PH, c=ZO(1.8, 'dresser', ody=40, rate=0.02), sfx=scr_(T(238) + 0.1, 3))
+    S(T(239), 'parents', 'bed', st=PH, ppl=[P('mom_pj', 'bed_huddle', id='mom', expr='terror', act=_A(lk(T(239) + 0.1, 'headboard', dur=0.25)))],
       c=ZO(1.5, 'headboard', ody=60), sfx=scr_(T(239) + 0.1, 3))
     rat = lambda t: 0.9 * clamp((t - WD(240, 'rattled')) / 0.2) * (1 - clamp((t - WD(240, 'rattled') - 1.6) / 0.6))
-    S(T(240), 'parents', 'vent', st=dict(PAR_N, door=0.0, lock=1.0), c=Z(1.1, 0.02), sfx=[(WD(240, 'rattled'), 'vent_rattle', -6, 0, 'inside', dict(dur=1.8))])
+    S(T(240), 'parents', 'vent', st=PH, c=Z(1.1, 0.02), sfx=[(WD(240, 'rattled'), 'vent_rattle', -6, 0, 'inside', dict(dur=1.8))])
     IN(W(240, 'through'), 'vent', dict(rattle=rat), layers=[EYE(960, 560, 9.0, W(240, 'through') + 0.4, clip=vent_gaps(), part='eye_l', yaw=0.3)],
        c=dict(mv='push', rate=0.02))
     IN(T(241), 'vent', dict(rattle=0.15), layers=[EYE(960, 560, 9.0, T(241) - 1, clip=vent_gaps(), part='mouth', yaw=0.3, talk=True)],
