@@ -1,19 +1,19 @@
 #!/bin/bash
-# Rebuild the final mix after picture changes ("If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"),
+# Rebuild the final mix after picture changes ("If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"),
 # from any directory:
-#   bash "Vox test/Ice Cream Video/film/audio/final_mix.sh"      cues -> mix -> measure -> preview_mix.mp4
+#   bash "Vox test/Walls Video/film/audio/final_mix.sh"          cues -> mix -> measure -> preview_mix.mp4
 # Prepared once (sound prep, already done; re-run only when the owner's packs change):
-#   python3 audio/epidemic_catalog.py --ice         audio/catalog_epidemic_ice.json (the ice set first, then the others)
+#   (no new Epidemic set for this film: the linked sets of _work/samples, audio/catalog_epidemic_ice.json)
 #   python3 audio/review_sfx.py --md                _work/mix/sfx_review.md (verdicts on the new files)
-#   python3 audio/chime_ice.py                      HIS CHIME's versions -> _work/mix/chime_ice (checks, sheet)
+#   python3 audio/motif_walls.py                    THEO'S ADDRESS SONG's versions -> _work/mix/motif (checks, sheet)
 #   python3 audio/music_plan.py --table             the music map (word-anchored on _work/align/timeline.json)
-#   python3 audio/sfx_tests.py                      8 test windows -> _work/mix/tests (re-run after a new voice edit)
+#   python3 audio/sfx_tests_walls.py                8 test sounds -> _work/mix/tests + the owner's per-event check
 #   ... final_mix.sh --no-preview                                        skip the preview mux
 # Steps (each one is also fine to run by hand from film/):
 #   1. python3 film.py --cues                       cue sheets from the picture -> _work/cues/{sfx,music}_cues.json
 #   2. python3 audio/mix.py ... _work/mix/final      the police mix (about 14 min, peaks at 12 GB: no render running);
-#                        character lines get their places from mix.py TAG_FX / TEXT_FX (radio, mimic+radio,
-#                        mimic+door, his+truck, whisper ...); no --who-fx default
+#                        the voice track has every character voice and place-effect BAKED in (timeline fx_baked):
+#                        mix.py adds no voice effect; no --who-fx
 #        --plan full     the score follows audio/music_plan.py (word-anchored tension events, snapped to the picture's
 #                        hit frames; film.py's own music events are replaced) and audio/sfx_plan.py refines the
 #                        picture's SFX sheet (PICTURE: film.py's names onto this film's recipes, the identity layer's

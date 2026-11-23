@@ -1,4 +1,6 @@
-"""Sound effects for "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE" (the police film's v2 SFX
+"""Sound effects for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (THIS film's names are
+WALLS_NAMES in audio/sfx_walls.py, executed after sfx_ice.py). Before it: "If The Ice Cream Truck Plays Its Song In
+Winter... DON'T GO OUTSIDE" (the police film's v2 SFX
 engine, as the delivery, dummy, Bunnyman, Doctor and Bus films extended it; THIS film's names are ICE_NAMES in
 audio/sfx_ice.py, executed here just before RECIPES; the Bus film's BUS_NAMES and every earlier name stay available): recorded, layered, perspective-processed, 48 kHz stereo float.
 
@@ -6200,7 +6202,8 @@ def r_dial_911(rng, sp, kind='call', **_):
     pickup click, through the phone's speaker; 'fail': no bars: the call drops (two short low error tones)."""
     def dt(lo, hi, d=0.11):
         t = np.arange(n_(d)) / SR
-        return ((np.sin(2 * np.pi * lo * t) + np.sin(2 * np.pi * hi * t)) * 0.25 * np.hanning(len(t)) ** 0.1).astype(np.float32)
+        e = np.sin(np.pi / 2 * np.clip(np.minimum(t / 0.025, (t[-1] - t) / 0.015), 0, 1)) ** 2   # the owner: no key tone pops in
+        return ((np.sin(2 * np.pi * lo * t) + np.sin(2 * np.pi * hi * t)) * 0.25 * e).astype(np.float32)
     if kind == 'fail':
         t = np.arange(n_(0.18)) / SR
         a = (np.sin(2 * np.pi * 480 * t) * 0.3).astype(np.float32); b = (np.sin(2 * np.pi * 380 * t) * 0.3).astype(np.float32)
@@ -6305,6 +6308,9 @@ KEYWORDS = [('whistle', 'whistle'), ('punch', 'ticket_punch'), ('walkie', 'walki
 # audio/sfx_ice.py runs in this module's namespace (its names, levels, spaces, aliases and keyword guesses come last,
 # so they win); see its header for every name the picture emits.
 exec(compile(open(os.path.join(HERE, 'sfx_ice.py')).read(), os.path.join(HERE, 'sfx_ice.py'), 'exec'))
+# THIS film, the Walls film ("If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"): audio/sfx_walls.py
+# (its names, spaces 'in_wall' / 'in_wall_far' / 'vent', aliases and keyword guesses come last, so they win)
+exec(compile(open(os.path.join(HERE, 'sfx_walls.py')).read(), os.path.join(HERE, 'sfx_walls.py'), 'exec'))
 
 RECIPES = {k: globals()['r_' + k] for k in NAMES}
 
@@ -6315,6 +6321,7 @@ RECIPES = {k: globals()['r_' + k] for k in NAMES}
 PHONE_FIX = ('footsteps_wood_inside', 'footsteps_grass', 'footsteps_stairs', 'footsteps_porch', 'footsteps_hall',
              'knock_door')
 PHONE_FIX = PHONE_FIX + ICE_PHONE_FIX                  # the Ice Cream film (audio/sfx_ice.py)
+PHONE_FIX = PHONE_FIX + WALLS_PHONE_FIX                # the Walls film (audio/sfx_walls.py)
 
 
 def phone_presence(y, floor=-12.0, max_db=12.0):

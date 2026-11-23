@@ -3,6 +3,36 @@
 Paste the block below into the video description. CC BY items require it; the CC0 credits are courtesy.
 The owner's Epidemic Sound tracks and effects are licensed through the channel's subscription and need no credit.
 
+## This film: "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+
+Original music: THEO'S ADDRESS SONG ("Fourteen Larkspur Lane. Maple Falls. That's my house. That's my name.") and its
+"hush-a-bye" lullaby were composed for this film in code (audio/motif_walls.py: no melody of any existing song; its
+toy piano, music box and hummed voice are synthesised; the warm version adds the free library's celesta and grand
+piano samples, credited below). No new downloads: every sound comes from the linked libraries already catalogued.
+
+Epidemic Sound (the owner's subscription; reached through the symlinks in _work/samples, never copied out, never
+committed). Keep the channel connected in the Epidemic account so Content ID does not claim the tracks: Are You Alone
+(Victor Lundberg), Haunted Mind (Etienne Roussel), Afterthoughts and End of Rain (Beyza), Come Closer and Don't Look
+(Belladonna Strings), Sleep Forever, The Haunted, Midnight Wanderer and The Forgotten Memories (Luella Gren), Turning
+Stones (Stefan Ekstrom), The Logic of Tyrants (Hampus Naeselius), Dark Tunnels and Dark Forebodings (Ethan Sloan),
+Escalation (Jon Bjork), Irene (Kevin Dailey), Code of Violence and One Step Away (Dian Shuai), When the Sun Sets (Anna
+Landstrom), At First Light (Gavin Luke), In Those Hazel Eyes (Tall Oak Town). Effects (audio/sfx_walls.py): the police
+set's suburban night crickets, heavy shoes on wood and deadbolt; the mirror set's candy wrappers, metal gate rattle and
+wooden stairs; the ice set's sliding wood windows and ribbon friction; the dummy set's metal clicks; the bus set's latex
+glove (the mask pulled off).
+
+Free files (audio/catalog.json) used by this film's new recipes:
+- box fans (box_fan, august_night): "Oculus Audio Pack 01" by Oculus VR, LLC
+  (https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/), machfan_fan_loop_01, licensed under
+  CC BY 4.0 (credit required: it is in the block below).
+- pencil on the doorframe (pencil_mark): owlishmedia, paper_pencil_scratch_1 / _2, CC0 1.0.
+- handcuff ratchets (handcuffs): VS Chamber Orchestra: Community Edition (https://github.com/sgossner/VSCO-2-CE),
+  percussion ratchet1, CC0 1.0.
+- the crawl's cloth drag (wall_crawl, through r_cloth_rustle): the library's cloth rustles (Epidemic and the CC0 1.0
+  owlishmedia takes).
+Synthesised (no source): the chewing, the snore, nail stick-slip on studs, sheet-metal vent ticks, the keypad beeps, the
+garage opener, the attic bulb's buzz.
+
 ## This film: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
 
 Epidemic Sound (the owner's subscription; catalogued in audio/catalog_epidemic_ice.json, never copied out of

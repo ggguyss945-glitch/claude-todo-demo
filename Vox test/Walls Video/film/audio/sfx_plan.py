@@ -1,5 +1,6 @@
-"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If The Ice Cream Truck Plays Its
-Song In Winter... DON'T GO OUTSIDE"). THIS film's tables (EDIT, ADD, PICTURE, FAMILY, ROOM, SHIFT, DOUBLE_S) are
+"""sfx_plan.py: the final mix's sound-design pass over the picture's SFX cue sheet ("If Your Little Brother Says
+Someone Lives In The Walls... DON'T LAUGH"; the Ice Cream film's tables replaced: ADD, PICTURE, ROOM, SPACE_MAP,
+OFF_WORDS are this film's, EDIT and SHIFT wait for the first full mix). THIS film's tables (EDIT, ADD, PICTURE, FAMILY, ROOM, SHIFT, DOUBLE_S) are
 written for it; anchors are script PHRASES (music_plan.resolve), so they follow any voice edit or lines.py tag scheme.
 The Bus film's notes below describe the mechanism.
 
@@ -35,21 +36,7 @@ import music_plan as MP                                   # noqa: E402
 # (name, t0, t1, match params (subset), change, why). t0 / t1: anchors or seconds (the window the cue's t falls in).
 # change: {'add_db': x} | {'gain_db': x} | {'min_db': x} | {'params': {...}} | {'space': s} | {'drop': True}
 # Names here are the names AFTER the picture pass (the recipes).
-EDIT = [
-    # sound fix round (the sound critic's minors; the picture's cue frames for these were off the words: re-check each
-    # on the new cue sheets, the rows only act on a cue inside their window)
-    ('skin_stretch', 'Past where a face should end', 'His skin pulls long#pulls', {}, {'at': 'His skin pulls long#pulls -0.12'},
-     'minor 5: the skin stretch came 1.1 s before "pulls long"'),
-    ('leg_tip_tile', 'Under the door, a needle-thin', 'Under the door, a needle-thin leg tip slides in#slides -0.3', {},
-     {'at': 'Under the door, a needle-thin leg tip slides in#slides -0.15'},
-     'minor 4: the needle tip came 2.3 s before "slides in"'),
-    ('door_tap', 'Then... a soft tap', 'end:Then... a soft tap at the front door', {},
-     {'at': 'Then... a soft tap#a -0.3'}, 'minor 8: the tap landed on the word "tap": now in the pause after "Then..."'),
-    ('furnace_die', 'Click. -0.6', 'Click. +0.3', {}, {'at': 'Click. -0.1'},
-     'minor 11: the relay click just before the word "Click.", not on it'),
-    ('leg_punch', 'A long brown leg punches out', "end:A long brown leg punches out, jointed like a spider's", {},
-     {'add_db': -4.0}, 'the picture\'s punch lands on "punches out": 4 dB down so the line stays 3+ LU over it'),
-]
+EDIT = []          # the Walls film: filled from the first full mix's measures (the picture is not built yet)
 THIN_MIN_GAP = 0.26
 THIN_GAIN = {None: -10.0}
 THIN_QUIET = []
@@ -57,55 +44,57 @@ THIN_QUIET = []
 # --------------------------------------------------------------------------------------------- ADD
 # (anchor, name, gain_db, space, params, why). params 'dur': 'until:<anchor>' -> seconds to that anchor.
 ADD = [
-    # ---- the cold: the night is always there, under the picture's own room tones
-    ('If the ice cream truck plays its song', 'cold_night', -2.0, None, {'dur': 'until:Larkfield. Minus thirty-one',
-                                                                          'creaks': 0.3}, 'the cold open: icy wind'),
-    ('Every morning at six#scrape -0.1', 'shovel_scrape', -2.0, 'cold_street', {'far': True},
-     '"Scrape.": Mr. Kessler\'s shovel at six, across the street'),
-    ('The plow pulled away', 'plow_pass', -4.0, None, {'dur': 9.0, 'peak': 3.0}, 'the plow pulls away, its blade'),
-    ('And under the radio static', 'radio_static', -6.0, 'close', {'dur': 'until:Rule number one +1.0', 'bells': 0.0},
-     'the radio static the three notes come through'),
-    ('Eleven-oh-two. Minus thirty-three', 'frozen_still', 0.0, None, {'dur': 'until:Maple. Cedar. Closer'},
-     'still frozen air before the song'),
-    # ---- his truck idles all night (in the mix, never narrated)
-    ('The song stops. Right outside#stops', 'truck_idle', -2.0, None,
-     {'dur': 'until:Stop. His song is playing +6.0'}, 'only the idle remains when the song stops'),
-    ('Rule number two', 'truck_idle', -6.0, None, {'dur': 'until:Lina is walking toward the pink window', 'inside': True},
-     'his engine through the walls (position A, 2:30 to 8:48)'),
-    ('Lina is walking toward the pink window', 'truck_idle', -3.0, None, {'dur': 'until:I duck under him'},
-     'outside with him: the engine close'),
-    ('I duck under him', 'truck_idle', -6.0, None, {'dur': 'until:Then the song moves', 'inside': True},
-     'back inside: through the walls again'),
-    ('The truck has rolled across the street', 'truck_idle', -6.0, None,
-     {'dur': 'until:The truck glides into the white', 'far': True}, 'his engine across the street at Kessler\'s'),
-    # ---- the radio
-    ('Static. Bells', 'radio_bells', 0.0, 'close', {}, '"Static. Bells.": his bells cut Adam off'),
-    ('Static. And bells', 'radio_bells', -2.0, 'close', {}, '"Static. And bells.": the jammed call'),
-    ('I grab the radio. No bells', 'radio_static', -4.0, 'close', {'dur': 2.0, 'bells': 0.0},
-     '"No bells in the static. He\'s busy.": clean static'),
-    # ---- the plow, the horn, the porch lights, the ambulance
-    ('Then an orange light sweeps the street', 'plow_pass', -10.0, None, {'dur': 8.0, 'peak': 2.5},
-     'Dad\'s plow passing the street (far)'),
-    ('Orange light sweeps the window', 'plow_pass', -8.0, None, {'dur': 8.0, 'peak': 2.0}, 'it\'s really him'),
-    ("Dad's plow roars onto Birch Lane", 'plow_pass', 0.0, None, {'dur': 9.0, 'peak': 1.5}, 'the plow roars in'),
-    ("Horn blaring, again and again", 'plow_horn', 0.0, None, {'n': 5, 'gap': 0.45}, 'the horn, again and again'),
-    ('Porch lights click on', 'street_wakes', 0.0, None, {'n': 6, 'span': 5.0}, 'porch lights and doors along the street'),
-    ('The truck glides into the white', 'ambulance', -6.0, None, {'dur': 'until:Paramedics said twenty +2.0'},
-     'the ambulance arriving out of the white'),
-    # ---- the morning
-    ('In the morning, Dad, Lina and I shovel', 'shovel_morning', 0.0, None, {'dur': 'until:Lina brings him cocoa +2.0'},
-     'three people shoveling his walk'),
-    ('His chimney smokes again', 'furnace_start', -6.0, 'inside', {}, 'his furnace lit again'),
-    ('Lina brings him cocoa +1.2', 'cocoa_mug', -4.0, 'close', {}, 'the cocoa set down'),
-    # ---- the stinger
-    ('Two nights later', 'frozen_still', 0.0, None, {'dur': "until:That's why I wrote one more"},
-     'still frozen air across town'),
-    ('The truck slows at a house', 'truck_idle', -4.0, None, {'dur': 4.0, 'far': True}, 'his engine, slowing'),
-    # ---- sound fix round
-    ('Lina grabs my coat#grabs -0.05', 'cloth_rustle', -2.0, 'close', {'kind': 'grab'},
-     'minor 12: Lina grabbing my coat had no sound'),
-    ('Door shut +0.6', 'hall_clicks', 0.0, None, {'dur': 'until:The clicking stops -0.05', 'rate': 1.0, 'keep': True},
-     'M3: his leg tips pacing behind the bathroom door, stopping on "The clicking stops."'),
+    # ---- the August nights: crickets through the window screens, the box fans (under the picture's own room tones)
+    ('A heat wave', 'box_fan', -4.0, None, {'dur': 'until:The old owner, Mr. Pell'}, '"Fans in every window."'),
+    ('That first night, I woke up at three', 'august_night', -2.0, None,
+     {'dur': "until:In the morning, Dad couldn't find"}, 'the first night: Dad in the doorway'),
+    ('On the fifth night, I went down for water', 'august_night', -4.0, None, {'dur': 'until:Rule number two'},
+     'the dark kitchen at two in the morning'),
+    ('That night, I heard chewing', 'august_night', -5.0, None, {'dur': 'until:I told Dad. Dad said I was dreaming'},
+     'the pantry at night'),
+    ('That night at two, I stood in the upstairs hall', 'august_night', -5.0, None, {'dur': 'until:Rule number five'},
+     'the upstairs hall at two'),
+    ('That night, I heard it through the wall', 'august_night', -5.0, None, {'dur': 'until:Rule number six'},
+     'the bedroom: the song in the wall'),
+    ('That night, at three, I woke up', 'august_night', -3.0, None, {'dur': 'until:Then sirens'},
+     'the 3 a.m. house, the call, the climax'),
+    # ---- the signs (the picture may draw them too: an ADD row yields to its own cue within DEDUP_S)
+    ("It still opened on Mr. Pell's old code", 'keypad', -3.0, None, {'n': 4}, 'the old code still works'),
+    ('By morning, there would be three police cars#handcuffs', 'handcuffs', -4.0, 'street', {'n': 1},
+     'the man on our curb in handcuffs'),
+    ('Click. -0.15', 'deadbolt_slow', 0.0, None, {'dur': 2.4}, 'the deadbolt turns by itself; the click before "Click."'),
+    ('The bag, folded neatly, twisted shut again#twisted', 'bread_bag', -2.0, None, {'kind': 'twist', 'dur': 1.4},
+     'the bread bag twisted shut'),
+    ('That night, I heard chewing +0.3', 'chewing', 0.0, None, {'dur': 'until:There was a crack in the plaster'},
+     '"Slow. Careful.": chewing inside the pantry wall'),
+    ('And then it was gone#crawling', 'wall_crawl', 0.0, None, {'dur': 3.5, 'speed': 1.4, 'travel': [-0.6, 0.9]},
+     'crawling away inside the wall, fast, up toward the ceiling'),
+    ('That night at two, I stood in the upstairs hall#flipped', 'light_switch', -2.0, None, {'kind': 'wall'},
+     'the switch that does nothing'),
+    ('Somewhere above me, in a place that was sealed#light', 'attic_light', 0.0, None,
+     {'dur': 'until:I flipped the switch off'}, 'the sealed attic\'s bulb comes on, buzzing'),
+    ('I flipped the switch off#off', 'light_switch', -2.0, None, {'kind': 'wall'}, 'off again'),
+    ('Then the knocking started +0.2', 'knock_door', -3.0, 'in_wall', {'n': 3, 'force': 0.55},
+     'the knocking inside the wall by the bed'),
+    # ---- 3 a.m.
+    ('I heard my dad snore#snore -0.3', 'snore', -2.0, None, {'n': 1}, 'the real Dad, asleep down the hall'),
+    ('And he tucked Theo in', 'cloth_rustle', -4.0, None, {}, 'the blanket tucked in'),
+    ('I heard the back wall of my closet slide#slide -0.5', 'closet_slide', 0.0, None, {'action': 'open', 'speed': 0.9},
+     'the closet\'s back panel slides'),
+    ("I slipped in, shut it, locked it#locked", 'lock_turn', -2.0, None, {}, 'the parents\' door locked'),
+    ('Mom grabbed her phone and dialed#dialed +0.2', 'dial_911', -2.0, 'close', {}, 'nine-one-one'),
+    ('Scratching, inside the bedroom wall', 'wall_scratch', 0.0, 'in_wall',
+     {'dur': 'until:Behind the dresser', 'travel': [-0.8, 0.0]}, 'scratching inside the bedroom wall'),
+    ('Behind the dresser', 'wall_scratch', -1.0, 'in_wall', {'dur': 1.4, 'travel': [0.0, 0.5]}, 'behind the dresser'),
+    ('Behind the headboard', 'wall_scratch', 0.0, 'in_wall', {'dur': 1.3, 'travel': [0.5, 0.9]}, 'behind the headboard'),
+    ('Then the vent by the floor rattled#rattled -0.1', 'vent_rattle', 0.0, None, {'dur': 1.2}, 'the floor vent rattles'),
+    # ---- the police
+    ('Then sirens', 'sirens_arrive', -3.0, 'outside', {'dur': 'until:The officers found him +2.0', 'n_cars': 3},
+     'three police cars arriving, through the walls'),
+    ('Heavy boots on the stairs -0.3', 'boots_stairs', 0.0, None, {'dur': 2.5, 'officers': 3, 'direction': 'up'},
+     'heavy boots up the stairs'),
+    ('When Officer Reyes pulled the mask off#pulled', 'glove_squeak', -2.0, None, {'kind': 'stretch', 'knuckles': False},
+     'the rubber mask pulled off'),
 ]
 DEDUP_S = 2.0                                             # an ADD row yields to a picture cue of its sound this close
 # a picture cue of these names closer than this to the last one of the same name is a doubled tick: dropped
@@ -114,71 +103,11 @@ DOUBLE_S = {'light_switch': 0.3, 'porch_light': 0.3, 'leg_click': 0.09, 'door_ta
 
 # picture name -> (recipe, extra params, gain or None, why); None drops the cue
 PICTURE = {
-    # his chime, Lina's humming and the voices are not SFX: the score's identity layer and the narration carry them
-    'chime': None, 'jingle': None, 'ice_cream_chime': None, 'truck_song': None, 'music_box': None, 'humming': None,
-    'hum_song': None, 'typing': None,
-    # NO TIRE SOUND for his truck: any car / tire name on him becomes the engine-only glide
-    'car_pass': ('truck_glide', {}, None, 'his truck: engine only, no tires'),
-    'tire_crunch': ('truck_glide', {}, None, 'no tire tracks: engine only'),
-    'van_idle': ('truck_idle', {}, None, 'his van idling'), 'bus_idle': ('truck_idle', {}, None, 'his van idling'),
-    'car_idle': ('truck_idle', {}, None, 'his van idling'),
-    'snow_crunch': ('snow_walk', {'n': 1}, None, 'one step in snow'),
-    'footsteps_grass': ('snow_walk', {}, None, 'steps outside are in snow'),
-    'footsteps_porch': ('snow_walk', {}, None, 'the porch is snowed in'),
-    'streetlight_flicker': ('street_flicker', {}, None, 'the streetlight flickers'),
-    'flicker': ('street_flicker', {}, None, 'the streetlight flickers'),
-    'lock_check': ('deadbolt', {}, -4.0, 'I check every lock'),
-    'rule_tape': ('tape_rip', {}, -8.0, 'a rule taped to the door'),
-    'breath_cloud': ('breath', {}, -10.0, 'breath clouding in the cold room'),
-    'wind': ('cold_night', {}, None, 'the cold night'),
-    'radio': ('radio_squelch', {}, None, 'the two-way radio'),
-    'walkie': ('radio_squelch', {}, None, 'the two-way radio'),
-    'dash_radio': ('radio_static', {}, None, 'the two-way radio'),
-    'siren_far': ('ambulance', {}, None, 'the ambulance'), 'sirens_arrive': ('ambulance', {}, None, 'the ambulance'),
-    'bus_horn': ('plow_horn', {}, None, 'the plow\'s horn'),
-    # first full mix: the picture's names the mix did not know (skipped, or a wrong keyword fallback)
-    'paper_flutter': ('paper', {}, -6.0, 'the rule card\'s paper'),
-    'slap': ('cloth_rustle', {'kind': 'grab'}, 2.0, 'I slap the cone out of her hand (hand_slap has no source here)'),
-    'door_pound': ('knock_door', {'force': 1.0}, None, 'Mom pounding on the door (was a door-creak fallback)'),
-    'glass_squeak': ('glass_slide', {}, -4.0, 'his face slides up the frosted glass: a long squeak over the slide (was a short wipe)'),
-    'door_open_far': ('door_open_street', {}, -6.0, 'doors open along the street (was a pen-click fallback)'),
-    'pencil_write': ('pen_scratch', {}, None, 'rule eight written (was a pen-click fallback)'),
-    'porch_light_click': ('porch_light', {}, None, 'porch lights click on (was a leg-click fallback)'),
-    'cloth_tear': ('cloth_rip', {}, None, 'the coat / blanket tears'),
-    'blanket_wrap': ('cloth_rustle', {}, None, 'a blanket wrapped round (was the blanket-yank fallback)'),
-    'footsteps_run': ('footsteps_hall', {}, None, 'running down the hall'),
-    'attic_click': ('leg_click', {'surface': 'wood'}, None, 'one click through the ceiling (was a whole 4 s crawl per click)'),
-    'attic_scuttle': ('attic_crawl', {}, None, 'scuttling in the attic'),
-    'glove_snow': ('snow_scuff', {}, None, 'a glove in the snow'),
-    'hatch_rattle': ('wood_creak', {'kind': 'tick'}, -2.0, 'the hatch rattles in its frame (was a second hatch drop)'),
-    'leg_slide': ('leg_tip_tile', {}, None, 'the needle tip slides in on the tile'),
-    'leg_withdraw': ('leg_tip_tile', {'dur': 0.6}, -4.0, 'the tip pulls back (final remix: 0.6 s, its taps ran 0.5 s into "The clicking stops.")'),
-    'radio_grab': ('cloth_rustle', {'kind': 'grab'}, -2.0, 'Adam grabs the radio'),
-    'sh_jaw_strain': ('jaw_strain', {}, -6.0, 'his jaw strains (sound fix: a tendon creak and bone ratchet, was a wood creak)'),
-    'sh_jaw_close': ('bone_crack', {}, -6.0, 'the jaw snaps shut as the skull shrinks back'),
-    'sh_smile_creak': ('skin_stretch', {'kind': 'creak'}, -6.0, 'the smile creaks wider (was a door creak)'),
-    'streetlight_buzz': ('lamp_flicker', {'kind': 'buzz'}, -4.0, 'the streetlight buzzes'),
-    'coat_rustle': ('cloth_rustle', {}, None, 'coats on'), 'sock_pull': ('cloth_rustle', {}, -4.0, 'a sock pulled on'),
-    'boot_on': ('cloth_rustle', {}, -2.0, 'boots pulled on (was a frozen-boot fallback)'),
-    'slipper_shuffle': ('snow_scuff', {}, -4.0, 'Kessler shuffles out onto his snowy step'),
-    'phone_buzz': ('phone_vibrate', {}, -4.0, 'the phone (was a waiting-room bed fallback)'),
-    'tape_press': ('tape_peel', {}, -8.0, 'the rule taped on (was a door-tap fallback)'),
-    'flicker_sting': ('street_flicker', {}, None, 'the streetlight flickers'),
-    'sh_eyes_sink': None, 'sh_eyes_red': None,        # the score's hit on "red" carries the eyes
-    'sh_uniform_split': ('uniform_tear', {}, -4.0, 'the uniform splits'),
-    'sh_pour': ('scuttle', {}, -4.0, 'he pours out of the window, legs first on the truck'),
-    'sh_land': None,                                  # leg_stab_snow + the hit on the same frame
-    # sound fix round: the nine names that fell back to keywords in the first mix
-    'cloth_grab': ('cloth_rustle', {'kind': 'grab'}, None, 'a hand grabs cloth'),
-    'sh_bone_crack': ('bone_crack', {'n': 2}, -4.0, 'the skin hardens: two dry cracks'),
-    'leg_pry': ('leg_pry', {}, -9.0, 'a leg wedges in and pries (low: its scrape sat on the spoken "Prying." and made it read "Crying.")'),
-    'leg_lift': ('leg_click', {'surface': 'metal'}, -8.0, 'a leg lifts off (a light click)'),
-    'towel_stuff': ('cloth_rustle', {}, -4.0, 'towels stuffed in the gap (was the towel-jam slam)'),
-    'snow_step': ('snow_walk', {'n': 1}, None, 'one step in snow'),
-    'leg_hook': ('blanket_yank', {}, None, 'a leg hooks the blanket and pulls'),
-    'plow_roar': ('plow_pass', {'peak': 1.0}, None, 'the plow roars in (the ADD row yields to it)'),
-    'legs_fold': ('leg_click', {'surface': 'metal', 'n': 4}, -6.0, 'the legs fold away'),
-    'sh_jaw_drop': None,                              # the shot's own jaw_drop sits on "drops" 0.9 s earlier (a double)
+    # the motif and every sung line are not SFX: the score's identity layer and the voice track carry them
+    'chime': None, 'jingle': None, 'music_box': None, 'humming': None, 'singing': None, 'song': None, 'hum': None,
+    # the August heat: wind / cold names from the earlier films land on the August night
+    'wind': ('august_night', {}, None, 'the August night'), 'cold_night': ('august_night', {}, None, 'the August night'),
+    'house_hum': ('room_tone_house', {}, None, 'no furnace in August'),
 }
 WHO_HUM = {}
 FAMILY = {'footsteps_wood_inside': 'steps', 'footsteps_porch': 'steps', 'footsteps_grass': 'steps',
@@ -237,25 +166,23 @@ def _span(cn, params):
     return 0.0
 
 
-ROOM = {'house_night': ('house_hum', {}, 0.0), 'house_powered': ('house_hum', {}, 0.0),
-        'house_dead': ('house_cold', {}, 0.0), 'house_cold': ('house_cold', {}, 0.0),
-        'night_out': ('cold_night', {'creaks': 0.4}, 0.0), 'still': ('frozen_still', {}, 0.0),
-        'morning': ('frozen_still', {}, -6.0)}
-SPACE_MAP = {'yard': 'snow', 'street_far': 'cold_street'}
+ROOM = {'house_night': ('august_night', {}, 0.0), 'night_in': ('august_night', {}, 0.0),
+        'night_out': ('august_night', {'inside': False}, 0.0), 'house_powered': ('room_tone_house', {}, 0.0),
+        'house_day': ('room_tone_house', {}, 0.0), 'morning': ('room_tone_house', {}, -3.0)}
+SPACE_MAP = {'wall': 'in_wall', 'vent': 'vent'}
 # recipes whose transient sits off the picture's frame by a fixed amount (filled by measure_mix.py on the first mix)
-SHIFT = {'porch_light_click': -0.11}   # first full mix: the porch light's click landed 116 ms after the frame
+SHIFT = {}                          # the Walls film: filled from the first full mix
 # sound fix round (critic minor 10): the cast's walk cycles emit wooden steps for every space; outdoors they are snow
 INDOOR_STEPS = ('footsteps_wood_inside', 'footsteps_hall', 'footsteps_stairs')
 OUTDOOR_SPACES = ('outside', 'snow', 'yard', 'street', 'cold_street', 'porch')
-STEP_NAMES = ('snow_walk', 'snow_run', 'snow_deep', 'footsteps_wood_inside', 'footsteps_hall')
+STEP_NAMES = ('footsteps_grass', 'footsteps_porch', 'footsteps_wood_inside', 'footsteps_hall')
 STACK_S = 0.04
 # OFF_WORDS (minors 6-8): (recipe names, from, to, why): their transients move off the spoken words into the gaps
 VO_PATH = os.path.join(MP.W, 'align', 'vo_en.wav')
 OFF_MAX = 0.45
 ON_WORD_DB = {'impact_hit': -6.0}
 OFF_WORDS = [
-    (('leg_click',), "A long brown leg punches out", 'end:Another. Click. Click', 'the leg clicks before "Click."'),
-    (('leg_click',), 'The house is as cold as the street', 'end:Across the ceiling', 'the ceiling clicks before "Click."'),
+    (('deadbolt_slow', 'deadbolt', 'lock_turn'), 'And I watched the deadbolt', 'end:Click.', 'the bolt\'s click before "Click."'),
 ]
 
 
@@ -294,10 +221,10 @@ def picture_pass(out, lines, log):
             c = dict(c, name=rn, params=q)
             if g is not None:
                 c['gain_db'] = g
-        if c.get('name') in INDOOR_STEPS and c.get('space') in OUTDOOR_SPACES:      # minor 10: wood steps in the snow
+        if c.get('name') in INDOOR_STEPS and c.get('space') in OUTDOOR_SPACES:      # wood steps outdoors: the lawn
             q = {k: v for k, v in (c.get('params') or {}).items() if k in ('n', 'rate', 'dur')}
-            c = dict(c, name='snow_walk', params=q, space='snow')
-            why = (why + '; ' if why else '') + 'an indoor step outdoors -> a step in snow'
+            c = dict(c, name='footsteps_grass', params=q, space='outside')
+            why = (why + '; ' if why else '') + 'an indoor step outdoors -> a step on the August lawn'
         if why:
             log.append(f'PIC  {nm:18s} {t:7.2f} -> {c["name"]} {c.get("params")} {c.get("gain_db", 0):+.1f} dB  ({why})')
         res.append(c)

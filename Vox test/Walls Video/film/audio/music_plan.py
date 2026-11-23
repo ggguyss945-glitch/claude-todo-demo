@@ -1,36 +1,35 @@
-"""music_plan.py: the music map of "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE", built the
-police film's way (intensity curve, tension events, score.py), anchored to the script's WORDS: every anchor names a
-phrase of script/narration_en.txt and is found in the timeline's line texts at run time (W/align/timeline.json), so a
-re-paced or re-cut voice edit and any line split or tag scheme in script/lines.py need no change here. Nothing is a
-hard-coded film time and nothing from the Bus film is left in.
+"""music_plan.py: the music map of "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (Night
+Policy), built the earlier films' way (intensity curve, tension events, score.py), anchored to the script's WORDS:
+every anchor names a phrase of script/narration_en.txt and is found in the timeline's line texts at run time
+(W/align/timeline.json; word onsets from each line's own 'words'), so a re-paced voice edit needs no change here.
+Nothing is a hard-coded film time. The dialogue tags are cut from the voice track, so no anchor uses one.
 
 Anchors (resolve(anchor, lines)):
-    'Rule number one'            the start of the line holding that phrase (case and punctuation ignored)
-    'end:Head first. Legs last'  the end of the line holding the phrase's LAST word
-    'Sweet. Too slow#gap'        the onset of the word 'gap' inside that line (W/align/asr_cache.json words when
-                                 present, else interpolated by character position inside the line)
-    ... +0.4 / ... -1.2          an offset in seconds (a space, then the signed number, at the very end)
-    'sN' / 'eN' / 'wN:word'      a line index form (kept for tools), or plain seconds
+    'Rule number one'              the start of the line holding that phrase (case and punctuation ignored)
+    'end:Human teeth'              the end of the line holding the phrase's LAST word
+    'whispered, Off#Off'           the onset of the word 'Off' inside the line that holds it (timeline words)
+    ... +0.4 / ... -1.2            an offset in seconds (a space, then the signed number, at the very end)
+    'sN' / 'eN' / 'wN:word'        a line index form (kept for tools), or plain seconds
 An anchor that is not found is skipped with a warning (the row drops out; the mix never fails on the plan).
 
-The arc (AUDIO_SPEC): one track section per stretch of the story, varispeeded to D / A in score.TRACKS. Icy dread
-from the hook (Throbbing Anxiety); the setup and 1958 on The Haunted's thin piano; rule by rule the bed thickens
-(ARC adds intensity from rule 2 to the climax); silence before the biggest scares ("The song stops.", "Click.", the TV,
-"Silence.", "No cloud.", the hatch, "was across the street."); hard hits on the three glimpses, the transformation
-and the twists; a DRIVING chase from "I run." to the slammed door (I'm the Villain); the attic dread (Don't Look);
-the twist's turn on a sparse sad piano (The Forgotten Memories); rule 7's slow swell (Irene); a pulsing build across
-the street (Impossible Theory) to the empty note; then the warm turn: Redeemed under the plow's horn and the porch
-lights, Lullaby before Christmas for "Bye, Benny", With the Dawn for the morning and the cocoa, A Heart Full of Spring
-under rule eight, Peaceful Melody under the tips, and a SHORT warm outro (the chime redeemed).
+The arc: quiet unease in the move-in (a pale pad), the first doorway and Hushabye on horror strings and a sinister
+lullaby; then rule by rule the bed thickens (ARC): the locks on a low pulse, the pantry wall (the eye), the warm
+armchair on a sparse sad piano, the attic switch ("Off."), the address song and the voice in the wall repeating the
+note, the 3 a.m. doorway building on Irene to the snore, the mask and the tuck-in; the closet slide and the walk down
+the hall on a dark pulse, a low drone under the calm 911 call, the CLIMAX (scratching around the room, the vent) at
+intensity 1.0; then the police relief (a warm pad under the sirens and boots), the dead space and the unmasked old
+man on a sad piano, one last chill at the fresh pencil mark, rule seven warm and pale, and a warm outro.
+Silences sit before the big scares; boosted hits (+6..+10 LU momentary, smooth releases) land in the voice edit's
+scare beats just after their words: "Your dad is asleep.", the eye, "Off.", the snore, "Human teeth.", the vent,
+"Dated last week."
 
-The film's own sound (IDENTITY, score.py 'chime' events = JINGLE_MODULE 'chime_ice' on the stem `show`): HIS CHIME
-(audio/chime_ice.py), an ORIGINAL music-box tune that always ends on a GAP where the last note should be, returning
-as the night gets worse: the burst under "Who's cold?", three slow notes in the radio static, far away and coming
-closer street by street (its gap lands on "a gap where the last note should be"), full outside until it stops dead,
-the lullaby, warped as it moves to Kessler's, cheerful through the whole transformation, hanging on the empty beat at
-the climax and falling apart, the stinger across town, and redeemed (the last note PLAYED) in the morning and the
-outro. His bells under the copied voices are mix.py's 'mimic' line FX; the bells in the static are sfx.py's
-'radio_bells' / 'radio_static' (bells=) cues.
+The film's own sound (IDENTITY, score.py 'jingle' events = JINGLE_MODULE 'motif_walls' on the stem `show`): THEO'S
+ADDRESS SONG (audio/motif_walls.py), an ORIGINAL child's tune, returning: a warped music-box phrase under the hook,
+sweet under "My little brother Theo", the hush-a-bye lullaby after Theo names Hushabye, the toy piano after Theo sings
+it (rule 5), a man humming it inside the wall (slow, low, wrong) before Pell's own line, the lullaby hummed in the room
+at the tuck-in, the wall hum at its most warped (dragged down) while he scratches around the bedroom, the music box
+warped under the pencil marks (it was HIS address too), and the motif warm after "Believe me." and at the very end,
+resolving on the hush-a-bye lullaby. The motif never plays over a sung voice line (the voice track carries those).
 
 How it reaches the mix: mix.py --plan full (audio/final_mix.sh) takes this module's track map, intensity, events and
 identity (snapping hits within 0.35 s to the picture's hit frames); --plan auto adds the track map and, when the
@@ -42,324 +41,230 @@ music_cues(lines, duration), load_lines(timeline_path=None), table(lines).
 
 CLI: python3 music_plan.py [--timeline T] [--out W/cues/music_cues_plan.json] [--table]
 """
-import json, os, re, sys
+import importlib, json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 W = os.path.normpath(os.path.join(HERE, '..', '_work'))
 TIMELINE = os.path.join(W, 'align', 'timeline.json')
-WORDS = os.path.join(W, 'align', 'asr_cache.json')
+WORDS = os.path.join(W, 'align', 'asr_cache.json')        # fallback only: the timeline's own line words come first
+MOTIF_MODULE = 'motif_walls'                               # the identity's renderer (score.JINGLE_MODULE)
 
 # ---------------------------------------------------------------------------------------------------- arrangement
 # (anchor, track slug, offset s in the varispeed track, why). Tracks and shifts: score.TRACKS (this film's table).
 TRACK_MAP = [
-    ('If the ice cream truck plays its song', 'throbbing_anxiety_dream_cave', 0.0,
-     'the hook: icy dread under the three "If... don\'t" lines; steps back under the chime burst ("Who\'s cold?")'),
-    ('Larkfield. Minus thirty-one', 'the_haunted_luella_gren', 4.0,
-     'the setup: the absent adults, the radio, the shovel, 1958 and the red mitten on a thin piano and a high drone'),
-    ('Rule number one', 'turning_stones_stefan_ekstrom', 0.0,
-     'rule 1: a pure low drone, so the far chime is the only melody coming street by street'),
-    ('The truck glides down Birch Lane', 'i_m_the_villain_dream_cave', 6.0,
-     'the drive-by: his slow pulse under the chime; glimpse 1; drops to nothing when the song stops'),
-    ('Stop. His song is playing outside', 'are_you_alone_victor_lundberg', 0.0,
-     'the comment beat: only a sub drone and the idling engine'),
-    ('Rule number two', 'unvaried_elin_piel', 10.0,
-     'rule 2: a steady creeping bed (the tap, the doormat, the windowsill, the open window)'),
-    ("Lina's on the couch, holding the cone", 'impossible_theory_rachel_sandy', 0.0,
-     'the near miss: a heavy build to the slap; cut by "Click." (the furnace, the lights, the TV skull)'),
-    ('Rule number three', 'sleep_forever_luella_gren', 0.0,
-     'rule 3: the cold coming in (frost inside, breath clouds); steps back under the chime lullaby'),
-    ('The radio crackles', 'come_closer_belladonna_strings', 0.0,
-     'the fake Dad: a trusted voice twisting the rules; the leg shadow; twist 1 and the jammed radio (Tears of a '
-     'Shadow was planned here: the recogniser hears voice-like fragments in it, so it never plays under narration)'),
-    ('Rule number four', 'escalation_jon_bjork', 0.0,
-     'rule 4: two-ten, the blanket cold, the door swinging open, Lina walking to the window'),
-    ('I run. Knee-deep snow', 'all_exits_closed_guy_copeland', 30.0,
-     'the run to the window: the driving part of the pulse (from 30 s: -16..-11 LUFS short-term)'),
-    ('He keeps smiling. Keeps waving', 'are_you_alone_victor_lundberg', 20.0,
-     'the transformation: only a sub drone under it, so the chime plays on cheerful and alone; hits on every step'),
-    ('I rip my foot out of the boot', 'i_m_the_villain_dream_cave', 123.0,
-     'THE CHASE home: its loudest driving stretch (from 110 s of the original: -16..-11 LUFS short-term), from the '
-     'one-sock run to the slammed door and the stolen mitten'),
-    ('Her fingertips are white', 'when_the_sun_sets_anna_landstrom', 0.0,
-     'first aid: a quiet warm pad (care, not threat); "Shivering means you\'re fighting."'),
-    ('Rule number five', 'can_they_see_us_experia', 0.0,
-     'rule 5: Mom at the door, the breath test, the face up the glass, the frosting knob'),
-    ('Rule number six', 'don_t_look_belladonna_strings', 0.0,
-     'rule 6: the attic dread: clicks across the ceiling, the hatch, the leg under the door'),
-    ('Then the song moves', 'the_forgotten_memories_luella_gren', 0.0,
-     'the twist\'s turn: the truck at Kessler\'s door; every clue clicking into place on a sparse sad piano'),
-    ('Rule number seven', 'irene_kevin_dailey', 0.0,
-     'rule 7 and the reread: near silence building ("everybody inside means somebody alone")'),
-    ("Mr. Kessler is halfway to the window", 'impossible_theory_rachel_sandy', 40.0,
-     'the climax: a pulsing build across the street, the cage, the copied boy, to the empty note'),
-    ("Dad's plow roars onto Birch Lane", 'redeemed_blue_saga', 0.0,
-     'the warm turn: the horn, the porch lights, "Cold. Alone. He needs both."; the song falls apart over it'),
-    ('Mr. Kessler whispers', 'lullaby_before_christmas_franz_gordon', 0.0,
-     '"Bye, Benny." and the paramedics: tender'),
-    ('In the morning, Dad, Lina and I shovel', 'with_the_dawn_megan_wofford', 0.0,
-     'the morning: three shovels, the chimney smoking, the cocoa, "First time anyone knocked on mine."'),
-    ('Two nights later, across town', 'dark_forebodings_ethan_sloan', 0.0,
-     'the stinger: a flat dark drone under the far chime; a house with no chimney smoke'),
-    ('Rule number eight', 'a_heart_full_of_spring_franz_gordon', 0.0,
-     'rule eight: warm, together, with a grown-up'),
-    ("There's no Mister Shiver", 'peaceful_melody_megan_wofford', 0.0,
-     'the tips (cold signs, frostbite, no oven, the lures, knock on a door): gentle, low, never on the voice'),
-    ("Like if you'd have crossed the street", 'a_heart_full_of_spring_franz_gordon', 60.0,
-     'the SHORT outro under the chime redeemed; "Next time..." gets one shadow'),
+    ('If your little brother says someone lives', 'are_you_alone_victor_lundberg', 0.0,
+     'the hook: a dark sub drone that swells to one spike under the three "If... don\'t" lines'),
+    ('My little brother Theo had seven rules', 'haunted_mind_etienne_roussel', 0.0,
+     'the setup of the rules, every explanation wrong, three police cars to come: a slow mid build'),
+    ('We moved into fourteen Larkspur Lane', 'afterthoughts_beyza', 0.0,
+     'the move-in: heat wave, Pell\'s things, the frog, the note: quiet unease, no drums'),
+    ('That first night, I woke up at three', 'come_closer_belladonna_strings', 0.0,
+     'the first doorway: Dad who is not Dad, backing away'),
+    ('The next night, Theo told us about Hushabye', 'sleep_forever_luella_gren', 0.0,
+     'Hushabye and the hound mask taped into GONE FOREVER: a sinister lullaby'),
+    ('Okay. Before rule two', 'turning_stones_stefan_ekstrom', 0.0,
+     'the comment prompt: a pure low drone, room for the question'),
+    ('Rule number one', 'the_logic_of_tyrants_hampus_naeselius', 0.0,
+     'rule 1: the locks, the same door every morning, the deadbolt turning by itself: a dark low pulse'),
+    ('Rule number two', 'dark_tunnels_ethan_sloan', 0.0,
+     'rule 2: the food, the twisted bread bag, chewing in the pantry wall, the eye, the crawl'),
+    ('Rule number three', 'the_haunted_luella_gren', 0.0,
+     'rule 3: the warm armchair and the hidden drawings: sparse piano over a thin drone'),
+    ('Rule number four', 'don_t_look_belladonna_strings', 0.0,
+     'rule 4: Mrs. Dabrowski, the switch that does nothing, the light, "Off."'),
+    ('Rule number five', 'midnight_wanderer_luella_gren', 0.0,
+     'rule 5: the address song (the toy piano carries it), the man humming it in the wall'),
+    ('Then the knocking started', 'escalation_jon_bjork', 0.0,
+     'the voice in the wall repeats the note\'s excuses: a steady escalation to rule 6'),
+    ('Rule number six', 'irene_kevin_dailey', 0.0,
+     'rule 6 and 3 a.m.: near silent, building through the snore, the mask, the tuck-in'),
+    ('He stood up, and he went into my closet', 'code_of_violence_dian_shuai', 0.0,
+     'the closet slide, the walk down the hall past the open crack, the locked door, waking Dad'),
+    ('Mom grabbed her phone and dialed', 'turning_stones_stefan_ekstrom', 40.0,
+     'the 911 call: a low drone under the calm dispatcher and Theo\'s address'),
+    ('So we stayed', 'one_step_away_dian_shuai', 0.0,
+     'THE CLIMAX: the man in the walls looking for them, scratching around the room, the vent'),
+    ('Then sirens', 'when_the_sun_sets_anna_landstrom', 0.0,
+     'the police relief: a quiet warm pad under the sirens, the boots, the dead space and the empty box'),
+    ('When Officer Reyes pulled the mask off', 'the_forgotten_memories_luella_gren', 0.0,
+     'the unmasked tired old man, he never walked away, "That was my room": sparse sad piano'),
+    ('The next morning, I found the pencil marks', 'dark_forebodings_ethan_sloan', 0.0,
+     'the last chill: L age four, eight, twelve... and a fresh one, dated last week'),
+    ('Rule number seven', 'end_of_rain_beyza', 0.0, 'rule 7: the blank line, "Believe me.": a pale warm pad'),
+    ('Okay. Breathe', 'at_first_light_gavin_luke', 0.0, 'the outro: lights on, none of this happened, the real list'),
+    ('Now. Go back to the word', 'in_those_hazel_eyes_tall_oak_town', 0.0,
+     'the comment payoff ("Person."), like, subscribe, "Believe him." (the motif resolves on top)'),
 ]
 
 # slug -> share of the track's own dynamics evened out (score.FLATTEN 0.3 otherwise)
-FLATTEN = {'throbbing_anxiety_dream_cave': 0.35, 'the_haunted_luella_gren': 0.45, 'turning_stones_stefan_ekstrom': 0.5,
-           'unvaried_elin_piel': 0.5, 'sleep_forever_luella_gren': 0.45, 'come_closer_belladonna_strings': 0.4,
-           'when_the_sun_sets_anna_landstrom': 0.6, 'the_forgotten_memories_luella_gren': 0.45,
-           'irene_kevin_dailey': 0.3, 'redeemed_blue_saga': 0.4, 'lullaby_before_christmas_franz_gordon': 0.5,
-           'with_the_dawn_megan_wofford': 0.55, 'a_heart_full_of_spring_franz_gordon': 0.55,
-           'peaceful_melody_megan_wofford': 0.6, 'all_exits_closed_guy_copeland': 0.35}
-# slug -> level trim (dB). The owner's new tracks measured in W/mix/sfx_review.md: Impossible Theory -12 LUFS with
-# 1404 clipped samples, Peaceful Melody -11 LUFS / 218 clipped: down; the sub drones read quiet: up
-GAIN = {'turning_stones_stefan_ekstrom': 4.5, 'are_you_alone_victor_lundberg': 2.0, 'dark_forebodings_ethan_sloan': 2.5,
-        'escalation_jon_bjork': 3.0, 'irene_kevin_dailey': 1.0, 'the_haunted_luella_gren': 0.5,
-        'don_t_look_belladonna_strings': 2.5, 'impossible_theory_rachel_sandy': -3.0, 'i_m_the_villain_dream_cave': -1.0,
-        'peaceful_melody_megan_wofford': -6.0, 'redeemed_blue_saga': -1.0, 'with_the_dawn_megan_wofford': -1.5,
-        'a_heart_full_of_spring_franz_gordon': -1.0, 'throbbing_anxiety_dream_cave': -1.0,
-        'can_they_see_us_experia': 1.0, 'all_exits_closed_guy_copeland': -1.0,
-        # first mix: the tension curve dipped in rule 3 (lullaby -22.8, fake Dad -21.1 LU in speech) under rule 2
-        'sleep_forever_luella_gren': 3.0, 'come_closer_belladonna_strings': 3.5}
+FLATTEN = {'are_you_alone_victor_lundberg': 0.3, 'haunted_mind_etienne_roussel': 0.45, 'afterthoughts_beyza': 0.5,
+           'come_closer_belladonna_strings': 0.4, 'sleep_forever_luella_gren': 0.45,
+           'turning_stones_stefan_ekstrom': 0.5, 'the_logic_of_tyrants_hampus_naeselius': 0.4,
+           'dark_tunnels_ethan_sloan': 0.4, 'the_haunted_luella_gren': 0.45, 'don_t_look_belladonna_strings': 0.4,
+           'midnight_wanderer_luella_gren': 0.5, 'irene_kevin_dailey': 0.3, 'when_the_sun_sets_anna_landstrom': 0.6,
+           'the_forgotten_memories_luella_gren': 0.45, 'end_of_rain_beyza': 0.6, 'at_first_light_gavin_luke': 0.55,
+           'in_those_hazel_eyes_tall_oak_town': 0.55}
+# slug -> level trim (dB): the sub drones and very quiet pads read quiet (catalogue LUFS: end of rain -20.7, sun sets
+# -20.9, afterthoughts -14.8 with long near-silent stretches); the loud warm ones down (hazel eyes -9.3)
+GAIN = {'are_you_alone_victor_lundberg': 2.0, 'turning_stones_stefan_ekstrom': 4.5, 'afterthoughts_beyza': 1.5,
+        'end_of_rain_beyza': 3.0, 'when_the_sun_sets_anna_landstrom': 3.0, 'irene_kevin_dailey': 1.0,
+        'don_t_look_belladonna_strings': 2.5, 'come_closer_belladonna_strings': 3.0, 'sleep_forever_luella_gren': 2.5,
+        'dark_forebodings_ethan_sloan': 2.5, 'one_step_away_dian_shuai': -1.0, 'escalation_jon_bjork': 3.0,
+        'in_those_hazel_eyes_tall_oak_town': -3.0, 'at_first_light_gavin_luke': -1.0}
 
 # ---------------------------------------------------------------------------------------------------- intensity
 INTENSITY = [
-    # cold open: strong, steps back under the catchphrase, the mystery line
-    ('If the ice cream truck plays its song', 0.62), ("And if Mom knocks", 0.7), ("Who's cold? Who wants", 0.5),
-    ("That's Mister Shiver", 0.62), ('That was the problem', 0.72),
-    # setup (the calmest stretch) and 1958
-    ('Larkfield. Minus thirty-one', 0.25), ("Mom's on night shift", 0.22), ('My sister Lina is six', 0.22),
-    ('Every morning at six', 0.25), ('In 1958, twelve-year-old', 0.4), ('Just one red mitten', 0.5),
-    ('Walter never told anyone', 0.42), ('This morning, no scrape', 0.45), ('The plow pulled away', 0.5),
-    # rule 1: the song coming street by street
-    ('Rule number one', 0.5), ('Eleven-oh-two', 0.35), ('Far away... a chime', 0.4), ('Maple. Cedar. Closer', 0.5),
-    ('I close every curtain', 0.45), ('A hand lifts. Slowly', 0.55), ('And a small cloud of breath', 0.62),
-    ('Old people like it cold', 0.4), ('Lina sneaks back', 0.48),
-    # the drive-by
-    ('The truck glides down Birch Lane', 0.55), ('He leans out. Bald', 0.6), ('He looks across at Kessler', 0.62),
-    ('The streetlight flickers', 0.72), ('The song stops. Right outside', 0.2), ('And that smile breathes', 0.6),
-    ('Stop. His song is playing', 0.3),
-    # rule 2 and the couch
-    ('Rule number two', 0.42), ("I look across at Kessler's dark window", 0.4), ('On the doormat', 0.45),
-    ("I don't open the door", 0.42), ('Five minutes later', 0.5), ('I check every lock', 0.5),
-    ('When I come back, the kitchen window', 0.58), ("Lina's on the couch", 0.68), ('I slap it', 0.75),
-    ('It was inside. Brought in', 0.6), ('The furnace stops', 0.55), ('In the black TV screen', 0.6),
-    ('I spin around', 0.75), ('I yank the curtain shut', 0.55),
-    # rule 3, the lullaby, the fake Dad
-    ('Rule number three', 0.45), ('Frost creeps across the windows', 0.5), ('Coats. Hats. Two pairs', 0.35),
-    ('The song comes back. Softer', 0.3), ('Dad said if we needed a grown-up', 0.4), ('The radio crackles', 0.55),
-    ('I almost go', 0.5), ('Lina grabs my coat', 0.45), ('Then keep her warm, kiddo', 0.62),
-    ('Pink light sweeps the curtain', 0.7), ('Then an orange light sweeps', 0.45),
-    ('You just told me not to go', 0.6), ('Told you what', 0.8), ('Static. Bells', 0.85), ('The orange light fades', 0.6),
-    ("The pink one doesn't", 0.7),
-    # rule 4, the window, the transformation, the chase
-    ('Rule number four', 0.55), ('Two-ten. Minus thirty-eight', 0.4), ('I wake up. The blanket', 0.55),
-    ('The front door is swinging open', 0.65), ('Lina is walking toward the pink window', 0.7), ('I run. Knee-deep', 0.8),
-    ('The serving window slides open', 0.7), ('Mister Shiver leans down', 0.78), ('An inch from his fingers', 0.85),
-    ('I step back. My boot', 0.6), ('He keeps smiling. Keeps waving', 0.55), ('And the smile keeps going', 0.65),
-    ('His jaw drops', 0.85), ('Behind him, the striped uniform', 0.9), ('And the song keeps playing', 0.6),
-    ('He pours out of the window', 0.9), ('I rip my foot out', 0.92), ('He scuttles along our fence', 0.95),
-    ('And drops. Right in front', 0.98), ('I duck under him', 0.9), ('One leg plucks', 0.55), ('I grab the radio', 0.5),
-    ('Her fingertips are white', 0.3), ('Then she shivers. Hard', 0.3),
-    # rule 5 and rule 6
-    ('Rule number five', 0.55), ('Pounding on the door', 0.7), ('No cloud. Not a wisp', 0.75), ('Breathe, Mom', 0.6),
-    ('Slowly, a face slides up', 0.85), ('The doorknob grows frost', 0.7),
-    ('Rule number six', 0.65), ('The house is as cold as the street', 0.6), ('Click. Click. Click', 0.72),
-    ('The hallway hatch drops open', 0.92), ('We dive into the bathroom', 0.85), ('Under the door, a needle-thin', 0.8),
-    ('I jam the towel', 0.9), ('The clicking stops', 0.4),
-    # the twist
-    ('Then the song moves', 0.45), ('The truck has rolled across', 0.5), ('His door opens', 0.55),
-    ('Walter! Look who', 0.65), ("The town never shoveled", 0.55), ('Every night, he broke', 0.6),
-    ("Whoever's coldest... was across", 0.85), ('Rule number seven', 0.6), ('Sixty-eight years', 0.5),
-    ('Because everybody inside', 0.75), ('Mr. Kessler is halfway', 0.8),
-    # the climax
-    ('I grab the radio. No bells', 0.6), ('Two minutes out', 0.72), ('Every layer. The big blanket', 0.82),
-    ('Legs stab the snow around us', 0.92), ('He swings around, jaw down', 0.98), ('I lock my arm', 0.9),
-    ('We pull Mr. Kessler into his doorway', 0.75), ('From the window, a little boy', 0.85), ('Lina holds on tighter', 0.7),
-    ('And the old man starts to shiver', 0.62), ('The song reaches the empty beat', 0.35),
-    ("Dad's plow roars", 0.72), ('Porch lights click on', 0.65), ('Cold. Alone. He needs both', 0.6),
-    ('The song falls apart', 0.5), ('The truck glides into the white', 0.35), ("Lina's mitten drops", 0.3),
-    # resolution, stinger, outro
-    ('Mr. Kessler whispers', 0.25), ('Paramedics said twenty more', 0.3), ('In the morning, Dad, Lina', 0.3),
-    ('Sixty-eight years I taped', 0.32), ('Two nights later', 0.45), ('The truck slows at a house', 0.55),
-    ("That's why I wrote one more", 0.35), ('Rule number eight', 0.42), ("There's no Mister Shiver", 0.3),
-    ("Like if you'd have crossed", 0.38), ('Next time... if a snowman', 0.45),
+    # the hook, then the setup of the rules
+    ('If your little brother says', 0.55), ('And if your dad stands in your bedroom doorway', 0.65),
+    ('Your dad is asleep', 0.75), ('My little brother Theo had seven rules', 0.3), ('Every explanation was wrong', 0.38),
+    ('By morning, there would be three police cars', 0.45),
+    # the move-in (the calmest stretch), the first doorway, Hushabye
+    ('We moved into fourteen Larkspur Lane', 0.18), ('The old owner, Mr. Pell', 0.22), ('On the kitchen counter', 0.25),
+    ('Dad read it out loud', 0.22), ('That first night, I woke up at three', 0.45), ('Just watching us sleep', 0.55),
+    ('He just backed away', 0.5), ("In the morning, Dad couldn't find", 0.3),
+    ('The next night, Theo told us about Hushabye', 0.35), ("Dad's old Halloween mask", 0.42), ('Nobody checked', 0.5),
+    ("That's when Theo made his rules", 0.4), ('Okay. Before rule two', 0.25),
+    # rule 1: the deadbolt
+    ('Rule number one', 0.35), ('And every morning, one door was unlocked', 0.4),
+    ('On the fifth night, I went down for water', 0.48), ('And I watched the deadbolt', 0.58), ('From the kitchen side', 0.6),
+    ('There was nobody in the kitchen', 0.5),
+    # rule 2: the pantry wall, the eye
+    ('Rule number two', 0.38), ('Things went missing', 0.35), ("Because that's what we found, every time", 0.42),
+    ('That night, I heard chewing', 0.55), ('There was a crack in the plaster', 0.6), ('An eye leaned in', 0.75),
+    ('And then it was gone', 0.72), ('I told Dad. Dad said I was dreaming', 0.45),
+    # rule 3: the armchair, the drawings
+    ('Rule number three', 0.4), ("Mr. Pell's green armchair", 0.42), ('It was August', 0.45),
+    ('I lifted the seat cushion', 0.5), ('Every drawing was the same', 0.58), ('Somebody had been taking them down', 0.55),
+    # rule 4: the attic light
+    ('Rule number four', 0.45), ('On Saturday, Mrs. Dabrowski', 0.35), ('That night at two, I stood', 0.55),
+    ('Somewhere above me', 0.65), ('And a voice in the ceiling', 0.7), ('I wanted to open that closet', 0.55),
+    ('Old wiring, Sam', 0.45),
+    # rule 5: the song in the wall, the note's words
+    ('Rule number five', 0.45), ('Theo had a song', 0.35), ('That night, I heard it through the wall', 0.55),
+    ("In a man's voice", 0.62), ('Then the knocking started', 0.62), ("It wasn't Dad's voice", 0.66),
+    ("They were the note's words", 0.68),
+    # rule 6: 3 a.m.
+    ('Rule number six', 0.5), ('That night, at three, I woke up', 0.55), ('And then, from down the hall', 0.7),
+    ('The man in the doorway stepped', 0.78), ('The moonlight hit his face', 0.8), ('He knelt down beside', 0.75),
+    ('Then the dog face turned', 0.82), ('He stood up, and he went into my closet', 0.75), ('I did not scream', 0.7),
+    ('I picked Theo up', 0.78), ("Mom and Dad's door", 0.72), ('My dad looked at my face', 0.6),
+    # the call, THE CLIMAX
+    ('Mom grabbed her phone', 0.62), ('And my mom, in a brand new house', 0.66), ('Theo could', 0.55),
+    ('Stay in that room', 0.6), ('So we stayed', 0.8), ('Scratching, inside the bedroom wall', 0.88),
+    ('Behind the headboard', 0.95), ('Then the vent by the floor rattled', 1.0),
+    # the police relief, the dead space, the pencil marks
+    ('Then sirens', 0.55), ('Heavy boots on the stairs', 0.5), ('The officers found him', 0.4),
+    ('He was wearing the mask', 0.45), ('When Officer Reyes pulled the mask off', 0.38), ('He never walked away', 0.42),
+    ('He had lived in our walls', 0.5), ('On the way to the car', 0.4),
+    ('The next morning, I found the pencil marks', 0.4), ('And one more, higher', 0.55), ('Dated last week', 0.62),
+    # rule 7 and the warm outro
+    ('Rule number seven', 0.35), ('Rule seven was two words', 0.3), ('Okay. Breathe', 0.18),
+    ("So here's the real list", 0.25), ('Now. Go back to the word', 0.3), ('There was a third word', 0.4),
+    ('If this story made you go check', 0.3), ('Sleep well', 0.25),
 ]
 
-# the bed thickens rule by rule (AUDIO_SPEC: Q2 the calmest, the last part the loudest): (from, to, + intensity)
+# the bed thickens rule by rule (the move-in the calmest, the climax the loudest): (from, to, + intensity)
 ARC = [('Rule number two', 'Rule number three', 0.02), ('Rule number three', 'Rule number four', 0.04),
-       ('Rule number four', 'Rule number five', 0.06), ('Rule number five', 'Rule number six', 0.08),
-       ('Rule number six', 'Then the song moves', 0.1), ('Rule number seven', "Dad's plow roars", 0.1)]
+       ('Rule number four', 'Rule number five', 0.05), ('Rule number five', 'Rule number six', 0.07),
+       ('Rule number six', 'Then sirens', 0.08)]
 
 # ---------------------------------------------------------------------------------------------------- events
 # (anchor, type, level, len, extra). Hits: 'boost' (>= 3.5 -> +10 LU momentary over the voice, >= 2.5 -> +9, else
-# +8) only on the biggest scares. Silences sit under the line before the scare and end on it ('level' >= 0.95: a TRUE
-# silence that also mutes the SFX events). 'nosnap' keeps a word's time when the picture has a hit nearby.
+# +8) only on the biggest scares, each in the voice edit's scare beat just after its word (the gaps measured on the
+# timeline: 0.5-1.1 s). Silences sit under the line before the scare and end on it ('level' >= 0.95 would also mute
+# the SFX: never used here, the deadbolt, the snore and the vent must stay). 'nosnap' keeps a word's time.
 EVENTS = [
-    # cold open
-    ("And her breath doesn't show -0.1", 'sub_drop', 0.45, None),
-    ('That was the problem -1.4', 'silence', 0.8, 1.3), ('That was the problem', 'sub_drop', 0.6, None),
-    # setup
-    ('Just one red mitten', 'sub_drop', 0.4, None),
-    ('end:three slow notes -2.0', 'silence', 0.9, 2.0),                   # the notes in the static alone
-    # rule 1
-    ('Rule number one -0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ('From the inside', 'hit', 0.6, None),                                 # the breath on Kessler's glass (a fair clue)
-    ('The truck glides down Birch Lane', 'swell', 0.45, 4.0),
-    ('For one flicker, his face is long#white +0.1', 'silence', 0.75, 1.25),   # the dip under 'white. Red eyes.', up to the hit
-    # sound fix (critic B1): the boosted hits land in the voice edit's SCARE BEATS just after their words (the 0.40-0.45 s
-    # gaps left for them), never on the words; the reveal frame keeps the picture's own sound, the riser peaks on the hit
-    ('end:his face is long and white. Red eyes', 'riser', 0.55, 2.5),
-    ('end:his face is long and white. Red eyes', 'hit', 0.85, None, {'boost': 3.0, 'nosnap': True}),   # glimpse 1: after "Red eyes."
-    ('The song stops. Right outside#stops', 'silence', 0.95, 1.6),        # the song stops dead: only the idle
-    ('And that smile breathes', 'sub_drop', 0.6, None),
-    # rule 2
-    ('Rule number two -0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ("Then... a soft tap -0.9", 'silence', 0.8, 1.0),
-    ('Five minutes later', 'sub_drop', 0.4, None),
-    ("Lina's step-stool under it", 'riser', 0.55, 3.0),
-    ('end:I slap it', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),   # after "I slap it." (the slap itself is the picture's foley)
-    ('Click. -0.9', 'silence', 0.9, 1.0),                                 # the furnace relay alone (sound fix: 0.95 muted the relay itself)
-    ('The furnace stops', 'sub_drop', 0.6, None),
-    ('end:Every light in the house goes out', 'hit', 0.9, None, {'boost': 2.5, 'nosnap': True}),   # just after 'out.'   # the power dies (picture power_cut)
-    ('in the curtain crack... a long white skull#skull -0.2', 'silence', 0.8, 1.4),   # under 'skull. Red eyes.', up to the hit
-    ('end:a long white skull. Red eyes', 'riser', 0.45, 3.0),
-    ('end:a long white skull. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # glimpse 2: after "Red eyes."
-    # ('I spin around', 'stinger'): dropped (sound fix: 0.45 s after the moved glimpse-2 hit it doubled it)
-    # rule 3, the fake Dad, twist 1
-    ('Rule number three -0.1', 'rule', 0.7, None, {'nosnap': True}),
-    ('Frost creeps across the windows', 'swell', 0.45, 5.0),
-    ('The radio crackles -0.8', 'silence', 0.8, 0.9),
-    ('Silence. -0.3', 'silence', 0.95, 1.6),
-    ('Sleep is warm', 'sub_drop', 0.55, None),
-    ('Long, jointed legs', 'silence', 0.8, 1.4),                          # minor 14: the dip before glimpse 3
-    ('end:Long, jointed legs', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),     # glimpse 3: after "Long, jointed legs."
-    ('Told you what', 'hit', 0.65, None),                                  # twist 1 (a sting on the line, no boost)
-    ("end:Dad, there's a truck outsi +0.05", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),   # the bells cut Adam off: on the cut, before "Static."
-    ("The pink one doesn't", 'sub_drop', 0.6, None),
-    # rule 4, the window, the transformation
-    ('Rule number four -0.1', 'rule', 0.75, None, {'nosnap': True}),
-    ('I wake up. The blanket beside me is cold', 'sub_drop', 0.5, None),
-    ('The front door is swinging open', 'hit', 0.7, None),
-    ('end:An inch from his fingers, I yank her into my arms', 'riser', 0.65, 4.0),
-    ('end:An inch from his fingers, I yank her into my arms', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "into my arms."
-    ('Frozen to the snow', 'sub_drop', 0.55, None),
-    ('Like a mask made of bone#bone +0.35', 'riser', 0.6, 6.0),
-    ('Like a mask made of bone#bone +0.35', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
-    ('and come back red#red', 'hit', 0.8, None),
-    ('His jaw drops#drops -0.15', 'silence', 0.8, 0.6, {'keep_show': True}),   # minor 2: the chime plays on through it
-    ('end:His jaw drops', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # just after 'drops.'
-    ("end:A long brown leg punches out, jointed like a spider's", 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),
-    ('He pours out of the window', 'braam', 0.8, None),
-    # the chase
-    ('I rip my foot out', 'pulse_on', 0.8, None),
-    ('One spears my coat', 'hit', 0.75, None),
-    ('And drops#drops -0.85', 'silence', 0.95, 0.55),                    # minor 14: a true drop-out (the scuttle stops); it
-                                                                          # ends 0.65 s before the hit (its 0.5 s release)
-    ('end:Up onto our roof. And drops', 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # after "And drops."
-    ('and slam the door', 'hit', 0.8, None),
-    ('One leg plucks', 'pulse_off', 0.5, None),
-    ('Saving her a place', 'sub_drop', 0.45, None),
-    ('Static. And bells', 'stinger', 0.55, None),
-    # rule 5
-    ('Rule number five -0.1', 'rule', 0.75, None, {'nosnap': True}),
-    ('No cloud. Not a wisp -0.7', 'silence', 0.8, 0.8), ('No cloud. Not a wisp#cloud +0.55', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # just after 'No cloud.'
-    ('Let me in, baby -1.4', 'silence', 0.95, 1.4),
-    ('end:Long. White. Red eyes', 'riser', 0.6, 4.5),                     # the face slides up the glass ...
-    ('end:Long. White. Red eyes', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # ... pressed to it: after "Red eyes."
-    ('The doorknob grows frost', 'sub_drop', 0.4, None),   # final remix: 0.55 -> 0.4 (it rose under "doorknob", 5.3 LU under the words after the face hit)
-    # rule 6
-    ('Rule number six -0.1', 'rule', 0.8, None, {'nosnap': True}),
-    ('Click. Click. Click -0.8', 'silence', 0.8, 0.9),
-    ('The hallway hatch drops open', 'silence', 0.8, 1.45),               # minor 14: the dip before the hatch
-    ('end:The hallway hatch drops open', 'hit', 1.0, None, {'boost': 3.5, 'nosnap': True}),   # after "drops open."
-    ('end:Prying', 'hit', 0.75, None, {'nosnap': True}),   # moved after "Prying." (not boosted): its tail sat on the word, 0.15 s after "between us.", and made it read "Crying."; the hatch drop just before is the boosted scare   # not boosted: "Prying." follows 50 ms after it and was masked (read as "Crying."); the hatch drop just before is the boosted scare
-    ("end:leg tip slides in. Feeling for Lina's sock", 'riser', 0.55, 3.0),
-    ("end:leg tip slides in. Feeling for Lina's sock", 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),   # after "...Lina's sock." (0.28 s)
-    ('end:I jam the towel down on it. Hard', 'hit', 0.7, None, {'nosnap': True}),   # after "Hard.": Adam's blow, not a scare
-    # (sound fix: no longer boosted: 2.3 s after the leg-tip scare, in a 0.17 s gap it could not reach +6 LU)
-    ('The clicking stops', 'silence', 0.8, 1.5),
-    # the twist
-    ("To Kessler's door +0.1", 'silence', 0.8, 0.95),
-    ("end:To Kessler's door", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),       # the big twist: the truck at HIS door
-    ('Not shivering. Smiling', 'hit', 0.65, None),
-    ('end:And nobody checked', 'sub_drop', 0.6, None),          # after the line (it sat on "And nobody checked.")
-    ("Whoever's coldest... was across -1.0", 'silence', 0.85, 1.1),
-    ("end:Whoever's coldest... was across the street", 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # into the 0.85 s hold
-    ('Rule number seven -0.1', 'rule', 0.8, None, {'nosnap': True}),
-    ("When it's my turn", 'swell', 0.5, 5.0),
-    ('Because everybody inside', 'hit', 0.8, None),
-    # the climax
-    ('Every layer. The big blanket', 'pulse_on', 0.85, None),
-    ('One hooks the blanket#pulls', 'hit', 0.8, None),
-    ('end:legs arched over us like a cage', 'hit', 0.95, None, {'boost': 3.0, 'nosnap': True}),   # the cage, after its line
-    ('Inside, children. Rule seven', 'sub_drop', 0.6, None),
-    ('We pull Mr. Kessler', 'pulse_off', 0.5, None),
-    ('And the old man starts to shiver', 'swell', 0.55, 4.0),
-    ("Dad's plow roars", 'swell', 0.8, 4.0),
-    ("His jaw gapes for the last note... and can't close#and -0.3", 'silence', 0.6, 1.4, {'keep_show': True}),   # minor 14: a dip (the hung chime stays)
-    ("end:His jaw gapes for the last note... and can't close", 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),   # after "can't close.": it rolls into the plow's roar
-    ('end:The song falls apart', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),     # his defeat
-    ('The red one stays', 'sub_drop', 0.35, None),
-    # stinger and the teaser
-    ('The truck slows at a house', 'hit', 0.7, None),
-    ('Rule number eight -0.1', 'rule', 0.55, None, {'nosnap': True}),
-    ('Next time... if a snowman', 'sub_drop', 0.45, None),
+    # the hook
+    ('Your dad is asleep -1.1', 'silence', 0.85, 1.05),
+    ('end:Your dad is asleep +0.06', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
+    ('Every explanation was wrong', 'sub_drop', 0.4, None),
+    ('Nobody checked', 'sub_drop', 0.45, None),
+    # rule 1: the deadbolt turns by itself (the bed dips while it turns; the SFX carries the click)
+    ('Rule number one -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('Slowly. All by itself', 'silence', 0.7, 2.3),
+    ('From the kitchen side', 'sub_drop', 0.5, None),
+    # rule 2: the eye in the plaster crack
+    ('Rule number two -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('That night, I heard chewing', 'pulse_on', 0.4, None),
+    ('An eye leaned in on the other side -1.0', 'silence', 0.8, 0.95),
+    ('end:An eye leaned in on the other side +0.05', 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
+    ('It blinked', 'sub_drop', 0.5, None),
+    ('And then it was gone', 'swell', 0.6, 5.0),                          # the crawl away inside the wall
+    ('I told Dad. Dad said I was dreaming', 'pulse_off', 0.4, None),
+    # rule 3: the drawings
+    ('Rule number three -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('Every drawing was the same', 'swell', 0.45, 5.0),
+    ('In a red shirt', 'sub_drop', 0.45, None),
+    # rule 4: the switch that does nothing, the light, "Off."
+    ('Rule number four -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ('Somewhere above me, in a place that was sealed#light', 'hit', 0.55, None),
+    ('whispered, Off#Off -1.45', 'silence', 0.9, 1.4),
+    ('end:whispered, Off +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    # rule 5: the address song in a man's voice, the note's words
+    ('Rule number five -0.1', 'rule', 0.6, None, {'nosnap': True}),
+    ("In a man's voice", 'sub_drop', 0.5, None),
+    ('Then the knocking started', 'pulse_on', 0.5, None),
+    ("They were the note's words", 'sub_drop', 0.5, None),
+    # rule 6: 3 a.m. -- the snore, the mask, the tuck-in, the closet
+    ('Rule number six -0.1', 'rule', 0.65, None, {'nosnap': True}),
+    ('And then, from down the hall -0.2', 'silence', 0.85, 3.6),           # the house holds its breath for the snore
+    ('end:I heard my dad snore +0.1', 'hit', 0.95, None, {'boost': 3.5, 'nosnap': True}),
+    ('The man in the doorway stepped', 'pulse_on', 0.6, None),
+    ('end:Human teeth +0.05', 'hit', 0.85, None, {'boost': 2.5, 'nosnap': True}),
+    ('end:Shhh. Just the pipes +0.05', 'sub_drop', 0.55, None),
+    ('Then nothing -0.05', 'silence', 0.85, 1.6),
+    ('I picked Theo up', 'pulse_on', 0.6, None),
+    ('Mom grabbed her phone', 'pulse_off', 0.45, None),
+    # THE CLIMAX: scratching around the room, the vent
+    ('Scratching, inside the bedroom wall', 'swell', 0.75, 8.0),
+    ("end:Hush-a-bye. That's my house +0.1", 'hit', 0.9, None, {'boost': 3.0, 'nosnap': True}),
+    # the dead space, the unmasking, the pencil marks
+    ('Empty', 'sub_drop', 0.4, None),
+    ('Lawrence Pell', 'sub_drop', 0.35, None),
+    ('Fresh pencil -0.15', 'silence', 0.75, 1.3),
+    ('end:Dated last week +0.08', 'hit', 0.8, None, {'boost': 2.5, 'nosnap': True}),
+    ('Rule number seven -0.1', 'rule', 0.55, None, {'nosnap': True}),
 ]
 
 # ---------------------------------------------------------------------------------------------------- identity
-# HIS CHIME (audio/chime_ice.py; score.py 'chime' events). (anchor, type, level, len, extra): 'version', 'until'
-# (an anchor: sets len), stop ('fade' | 'cut' | 'drag'), fade (fade-in s), loops, anchors [(beat, anchor)] (the tune
-# bends so those beats land on the words), 'gap_at' (an anchor: the event starts so that the version's gap (or the
-# warm version's played last note) lands there), 'hang_until' (climax: the hang lasts until that anchor), wind,
-# amount, short.
+# THEO'S ADDRESS SONG (audio/motif_walls.py; score.py 'jingle' events). (anchor, type, level, len, extra): 'version',
+# 'until' (an anchor: sets len), stop ('fade' | 'cut' | 'drag'), fade (fade-in s), loops, phrases, amount, inst,
+# tempo, anchors [(beat, anchor)], 'gap_at' (an anchor: the event starts so that the version's LAST note lands there).
 IDENTITY = [
-    # 0:15 the cold open: a bright burst under the catchphrase, from the window's speaker
-    ("Who's cold? Who wants -0.6", 'jingle', 0.55, None, dict(version='burst', until="That's Mister Shiver -0.2",
-                                                             stop='fade', fade=0.05)),
-    # 1:33 three slow notes under the radio static as the plow leaves, straight into the rule 1 card
-    ('end:three slow notes -1.9', 'jingle', 0.5, None, dict(version='three', until='Rule number one +1.2', stop='fade',
-                                                          fade=0.02)),
-    # 1:45 far away, coming closer street by street (one pass at its own too-slow 72 bpm: its gap falls just after
-    # "...a gap where the last note should be.")
-    ('Far away... a chime -0.2', 'jingle', 0.5, None, dict(version='closer', loops=1,
-                                                          until='Far away... a chime +20.0', stop='fade', fade=0.5)),
-    # then near (the speaker, quieter) while the curtains close and Kessler's glass fogs ...
-    ('Far away... a chime +19.8', 'jingle', 0.32, None,
-     dict(version='outside', loops=2, until='The truck glides down Birch Lane +1.0', stop='fade', fade=1.0)),
-    # 2:15 ... and right outside: full, the speaker horn, until it stops DEAD on "stops"
-    ('The truck glides down Birch Lane', 'jingle', 0.45, None,
-     dict(version='outside', loops=3, until='The song stops. Right outside#stops', stop='cut', fade=1.0)),
-    # 4:20 the lullaby; Lina's eyes droop; it fades when Adam pulls on his boots
-    ('The song comes back. Softer', 'jingle', 0.45, None, dict(version='lullaby', loops=2,
-                                                              until='The radio crackles -0.3', stop='fade', fade=1.0)),
-    # 5:44 M2 (sound fix): "Humming his song.": the tune soft and close, a lullaby only she hears, under L179-L182
-    ('Humming his song -0.2', 'jingle', 0.3, None, dict(version='lullaby', loops=1, until='she calls back +0.25',
-                                                        stop='fade', fade=0.6)),
-    # 5:45 the serving window: cheerful and undistorted through the whole transformation, until he pours out
-    ('The serving window slides open +0.3', 'jingle', 0.5, None,
-     dict(version='outside', loops=5, until='end:Head first. Legs last +0.6', stop='fade', fade=0.4)),
-    # 8:45 the song moves to Kessler's: warped, the night at its worst; dragged down as Kessler steps out
-    ('Then the song moves', 'jingle', 0.45, None, dict(version='warped', amount=0.6, loops=2,
-                                                      until='Rule number seven -0.6', stop='drag', fade=0.6)),
-    # 11:00 the climax: the tune plays, reaches the empty beat on "empty", HANGS until "The song falls apart." and
-    # falls apart there
-    ('The song reaches the empty beat#empty', 'jingle', 0.65, None,
-     dict(version='climax', gap_at='The song reaches the empty beat#empty', hang_until='The song falls apart',
-          fall=3.0, stop='fade')),
-    # 11:45 the stinger across town: the last phrase, far, ending on the note that isn't there
-    ('Two nights later#chime', 'jingle', 0.45, None, dict(version='stinger', until='end:The truck slows at a house +2.5',
-                                                        stop='fade')),
-    # the morning: the motif redeemed, the last note finally PLAYED after "First time anyone knocked on mine."
-    ('Lina brings him cocoa', 'jingle', 0.4, None, dict(version='warm', gap_at='end:anyone knocked on mine -0.3',
-                                                       until='Two nights later +0.8', stop='fade', fade=1.5)),
-    # the SHORT outro: bars 5-8 and the resolution, warm
-    ("Like if you'd have crossed the street", 'jingle', 0.4, None,
-     dict(version='warm', short=True, until='Next time... if a snowman -0.2', stop='fade', fade=0.8)),
+    # the hook: the first phrase on a warped music box, before anyone explains anything
+    ('If your little brother says -0.2', 'jingle', 0.4, None,
+     dict(version='first', amount=0.6, until='If the armchair is warm -0.2', stop='fade', fade=0.05)),
+    # Theo, six: the same phrase sweet
+    ('My little brother Theo had seven rules -0.3', 'jingle', 0.35, None,
+     dict(version='first', amount=0.0, until='I was twelve -0.2', stop='fade', fade=0.05)),
+    # "He sings hush-a-bye, hush-a-bye.": the lullaby, faint, as the parents look at each other
+    ('Mom and Dad looked at each other -0.3', 'jingle', 0.35, None,
+     dict(version='hush', inst='box', amount=0.3, until="Dad's old Halloween mask -0.2", stop='fade', fade=0.4)),
+    # rule 5: after Theo sings it, the toy piano keeps singing it "fifty times a day"
+    ('He sang it fifty times a day -0.25', 'jingle', 0.45, None,
+     dict(version='toy', tempo=112.0, until='That night, I heard it through the wall -0.4', stop='fade', fade=0.05)),
+    # "...through the wall by my bed. But not in Theo's voice. In a man's voice. Slow. Low. Wrong.": he hums it
+    # inside the wall ("Fourteen Larkspur Lane..."), and stops before his own line
+    ('That night, I heard it through the wall +1.6', 'jingle', 0.5, None,
+     dict(version='wall', amount=0.7, phrases='A', until="Fourteen Larkspur Lane... that's my house -0.35",
+          stop='fade', fade=0.8)),
+    # the tuck-in: after his whispered "Hush-a-bye," the lullaby hummed in the room, until "Shhh."
+    ('Then the dog face turned -0.2', 'jingle', 0.4, None,
+     dict(version='hush', inst='hum_room', amount=0.5, until='Shhh. Just the pipes -0.3', stop='fade', fade=0.5)),
+    # the climax: the man in the walls, humming it at its most warped while he scratches around the room; dragged
+    # down before the vent
+    ('And the man in the walls came looking for us', 'jingle', 0.5, None,
+     dict(version='wall', amount=1.0, phrases='ABCD', tempo=62.0, until='Then the vent by the floor rattled -0.1', stop='drag',
+          fade=1.0)),
+    # the pencil marks: it was HIS address too: the music box, warped
+    ('The next morning, I found the pencil marks -0.2', 'jingle', 0.42, None,
+     dict(version='box', amount=0.5, until='Fresh pencil -0.25', stop='fade', fade=0.3)),
+    # "Believe me.": the motif warm (That's my house / That's my name / mm)
+    ('end:Believe me +0.25', 'jingle', 0.42, None,
+     dict(version='warm', short=True, until="So here's the real list -0.3", stop='fade', fade=0.3)),
+    # the very end: warm, resolving on the hush-a-bye lullaby; its home note just after "Believe him."
+    ('If this story made you go check', 'jingle', 0.4, None,
+     dict(version='warm', phrases='CDH1H2H3', gap_at='end:Believe him +0.7', stop='fade', fade=1.0)),
 ]
 
 
@@ -383,10 +288,16 @@ def _ntext(s):
 def _words():
     global _WORDS
     if _WORDS is None:
-        try:
-            _WORDS = [(_norm(w), float(t)) for w, t in json.load(open(WORDS)).get('en_words', [])]
+        try:                                            # the timeline's own per-line words (the edited voice)
+            _WORDS = sorted((_norm(w), float(t)) for l in json.load(open(TIMELINE))['lines'] for w, t in l.get('words') or [])
+            _WORDS = [(w, t) for w, t in sorted(_WORDS, key=lambda x: x[1])]
         except Exception:
             _WORDS = []
+        if not _WORDS:
+            try:
+                _WORDS = [(_norm(w), float(t)) for w, t in json.load(open(WORDS)).get('en_words', [])]
+            except Exception:
+                _WORDS = []
     return _WORDS
 
 
@@ -560,9 +471,8 @@ def events(lines):
 
 
 def identity_events(lines):
-    """HIS CHIME's versions (score.py 'chime'). 'until' sets len; 'anchors' [(beat, anchor)] become film seconds;
-    'gap_at' moves the start so the version's gap (warm: the played last note) lands on that anchor; 'hang_until'
-    sets the climax's hang."""
+    """THEO'S ADDRESS SONG's versions (score.py 'jingle', MOTIF_MODULE). 'until' sets len; 'anchors' [(beat, anchor)]
+    become film seconds; 'gap_at' moves the start so the version's LAST note lands on that anchor."""
     ev = []
     sys.path.insert(0, HERE)
     for a, ty, lv, ln, extra in IDENTITY:
@@ -574,10 +484,11 @@ def identity_events(lines):
             g = _try(x.pop('gap_at'), lines, 'identity gap')
             if g is not None:
                 try:
-                    import chime_ice as CH
-                    t = g - CH.gap_time(x.get('version'), loops=int(x.get('loops') or 1), short=bool(x.get('short')))
+                    CH = importlib.import_module(MOTIF_MODULE)
+                    kw = {k: x[k] for k in ('phrases', 'amount', 'inst', 'tempo', 'hush') if k in x}
+                    t = g - CH.gap_time(x.get('version'), loops=int(x.get('loops') or 1), short=bool(x.get('short')), **kw)
                 except Exception as e:
-                    print(f'[music_plan] WARNING: chime gap time failed ({repr(e)[:60]})', flush=True)
+                    print(f'[music_plan] WARNING: motif gap time failed ({repr(e)[:60]})', flush=True)
         if x.get('hang_until'):
             hu = _try(x.pop('hang_until'), lines, 'identity hang')
             g = _try(a, lines, 'identity')
@@ -588,9 +499,6 @@ def identity_events(lines):
             u = _try(x.pop('until'), lines, 'identity until')
             if u is not None:
                 ln = max(0.5, u - t)
-        if x.get('version') == 'climax' and 'hang' in x and ln is None:
-            import chime_ice as CH
-            ln = CH.gap_time('climax') + float(x['hang']) + float(x.get('fall', 3.0)) + 1.5
         if x.get('anchors'):
             an = [(float(b), _try(s, lines, 'identity beat')) for b, s in x['anchors']]
             x['anchors'] = [[b, round(s, 3)] for b, s in an if s is not None]

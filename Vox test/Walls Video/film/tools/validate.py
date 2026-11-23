@@ -1,36 +1,35 @@
-"""tools/validate.py: the staging validator for the ice cream film's shot list (film.py: "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE").
+"""tools/validate.py: the staging validator for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH" (film.py).
 
-    python3 tools/validate.py                      # every check on every shot; exit code 1 on any ERROR
+    python3 tools/validate.py                      # every check on every shot at 8 fps; exit code 1 on any ERROR
     python3 tools/validate.py --shots 100-140      # a range (the cut / state checks still look at the neighbours)
-    python3 tools/validate.py --part A             # part A only (timeline lines 0-262: the cold open .. rule 4); --part B
-    python3 tools/validate.py --json W/tests/polish/validate.json --fps 10
+    python3 tools/validate.py --part A             # lines 0-185 (.. rule six); --part B the rest
+    python3 tools/validate.py --json _work/tests/polish/validate.json --fps 8
 
 It reads the plan the way the renderer builds it (Film(timeline) -> shots -> builders: sets with their anchors, floors and
-furniture footprints, actors with their clips, props) and checks what can be checked without looking at pixels:
+furniture footprints, the cutaway inside the walls with its plate, prop close-ups with their shelf, actors with their clips)
+and checks what can be checked without looking at pixels. EVERY shot type is covered (the owner's rule, 23 Nov):
 
-  ANCHOR  set anchors: every staging point lies on a floor of its level (a point anchor with its plan y and its height
-          swapped once put the bathroom keyhole in the downstairs hall at attic height)
-  FLOOR   a figure's feet are inside a room's floor and clear of furniture footprints (sets' walkable()); a seated figure
-          sits on a seat anchor; nobody stands on a couch, a bed or a table
-  LEVEL   a figure's feet are at the floor height of where it stands (stairs: the tread's height); paths too, key by key
+  ANCHOR  set anchors lie on a floor of their level
+  FLOOR   feet inside a room's floor and clear of furniture footprints (sp.walkable); seated figures on seat anchors
+  LEVEL   feet at the floor height of where they stand (ground floor 0, upstairs WL_UP, yards WL_G, road WL_ROAD, porch)
+  GROUND  the ground LINE, sampled at --fps: a standing figure's lower ankle sits at its feet line (ankle = 0.038 h above
+          the sole), a kneeling figure's knees on the floor, inside the walls the feet / knees / hands on the cavity's
+          plate (B_wall: sh._ground), a prop close-up's box base on its shelf (B_prop: sh._props); tolerance 4 px +
+          1.2 % of the figure's height (design px): floating or sinking past it is an ERROR
+  VEHICLE a figure's plan point inside a police car's rectangle (street shots with the cruisers at the kerb)
   OVERLAP two figures closer than 0.32 m on the plan (bodies inside each other)
-  REACH   reach / hand-over / point contacts that miss their target at full weight (Acting.misses, > 20 design px)
-  PROP    props: a PropTrack that jumps when it changes state (picked up from somewhere else than its hand), a prop held by
-          two hands at once, a prop drawn by the set AND held by an actor in the same shot (doubled)
-  CUTPOS  continuity across cuts: the same person on the same plan (the house and its yard / the woods / the hospital)
-          in consecutive set shots, or with only close-ups / inserts between them (< 8 s), stands > 0.8 m from where the
-          last shot left them, with no walk to explain it
-  STATE   the story's states shot by shot (keyed to lines, W/shotmap.md): his truck (none before L65, at A L69-L306, at B
-          L310-L388, gone after), our power (dead from L116 to the morning: every house shot blacked out), the living-room
-          curtains (shut from L124), Adam in one sock (`adam_sock`) from L227 to the morning, the attic hatch (shut until
-          L294 'drops', open after), the towels (in the gap from L300), Kessler's chimney (no smoke until the morning),
-          the neighbours' porch lights (off until L377), and Mister Shiver never breathes a cloud
-  CAM     camera: a move (> 10 % magnification or > 120 design px of pan) that lasts > 4.2 s; a set shot > 3 s whose
-          camera moves while nobody in it acts (only the camera moves over still figures); an empty set held > 5 s
-          under a moving camera
-  LEN     shot lengths (< 0.6 s outside flashes / blacks; > 7 s outside rule cards, cards and the VHS pause) + the
-          median / cuts per minute against the police film's pace
-  LIP     lips move only on the actor's own lines (film.lip_check); Doctor Later never moves a mouth
+  REACH   reach / hand-over contacts that miss their target at full weight (Acting.misses, > 20 design px)
+  PROP    a prop held by two hands at once; a prop drawn by the set AND held (the note, the phone, the pie)
+  LIEFRAME a lying figure in a wide shot (lying figures only in close or medium shots: on screen >= 30 % of the width)
+  FACE    Pell's face beats in 3/4 (a bust of him in profile, |h_turn| > 0.7, is a WARN)
+  CUTPOS  the same person jumping > 0.8 m across a cut on the same plan
+  STATE   the story's states (see states()): the red flannel on Dad only on moving day (L12-L27), then on Pell; Sam in
+          pyjamas at night; Pell masked until Reyes pulls the mask off (L251), bare after; rule seven's line blank until
+          "Believe me." (L275); the closet's back wall still before L210; no police light before the sirens (L242) but in
+          the flash-forward (L11); the parents' door locked from L220 to the police
+  CAM     a move > 4.2 s; only the camera moving over still figures; an empty set under a moving camera
+  LEN     shot lengths + the median / cuts per minute
+  LIP     lips move only on the actor's own lines (film.lip_check)
 Severity: ERROR (a visible mistake: fix it), WARN (look at it on the strips), INFO. Allowed exceptions are listed in ALLOW
 with the reason. The result table goes to stdout and --json.
 """
@@ -46,7 +45,7 @@ ap.add_argument('--fps', type=float, default=8.0, help='sampling rate of the act
 ap.add_argument('--json', default=os.path.join(HERE, '_work', 'tests', 'polish', 'validate.json'))
 ap.add_argument('--quiet', action='store_true')
 ap.add_argument('--no-lip', action='store_true')
-ap.add_argument('--part', default=None, help='A (lines 0-262) or B (263-427)')
+ap.add_argument('--part', default=None, help='A (lines 0-185) or B (186-311)')
 a = ap.parse_args()
 
 from engine.core import set_render_size
@@ -98,15 +97,17 @@ def _lines(*ii):
     return lambda s, who=None: any(s.t0 - 0.05 <= F.t(i) < s.t1 for i in ii)
 
 
+def _during(*ii):
+    """The shot starts inside one of these lines, or one of them starts inside the shot."""
+    return lambda s, who=None: any(F.t(i) - 0.3 <= s.t0 <= F.e(i) + 0.3 or s.t0 <= F.t(i) < s.t1 for i in ii)
+
+
 ALLOW = [
-    ('LIP', _ws, "Mister Shiver never lip-syncs (his jaw gapes and drops as acting, not speech)"),
-    ('LIP', lambda s, who: who.startswith('kessler') and _lines(393)(s), "L393 'Bye, Benny.' is a whisper: the lips barely part (checked on the sheet)"),
-    ('LIP', lambda s, who: who.startswith('adam') and _lines(172)(s), "L172 'I wake up.': the shock expression opens his mouth on 'wake' (acting, no speech)"),
-    ('REACH', _lines(193, 194), "L193-194: Lina's hand and his glove stop an inch apart on purpose (she never touches him)"),
-    ('REACH', _lines(12, 14, 54, 64), "part A: checked on stills at the worst time (fridge photo touched, radio handed over, curtain gripped, Lina's hand hidden behind the couch)"),
-    ('CUTPOS', _lines(27, 28), "1958: memory cuts across Walter's walk out and his run home (time jumps inside the memory)"),
-    ('CUTPOS', _lines(36, 105, 131), "a time ellipsis in the narration (L36 the walk later, L105 'When I come back', L131 the coats)"),
-    ('CUTPOS', _lines(185), "L185 'Knee-deep snow': Adam keeps running between the cuts (door -> yard)"),
+    ('LIP', lambda s, who: who.startswith('dad') and _during(9, 26)(s), "Dad laughs (L9 the explanations, L26 'and laughed'): a laugh, not speech"),
+    ('CUTPOS', _during(70, 131, 154, 215, 219, 220, 255), "a time ellipsis in the narration (the next morning; another night; he walked there; the memory montage)"),
+    ('LIP', lambda s, who: who.startswith('pell') and bool(s.p.get('chew')), "he chews (his own teeth in the mask's slit): acting, not speech"),
+    ('LIP', lambda s, who: bool(s.p.get('no_lip')), "a held open mouth (the teeth L200, the snore L193, 'I almost said' L191): a pose, not speech"),
+    ('LIP', lambda s, who: who == 'theo' and any(s.t0 - 0.05 <= F.t(i) < s.t1 for i in (162, 163, 164)), "Theo hums his song (a closed mouth)"),
 ]
 
 
@@ -120,27 +121,29 @@ def allowed(check, sh, who=''):
     return None
 
 # ---------------------------------------------------------------------------------------------------- build helpers
-HOUSE = ('living', 'hall', 'kitchen', 'bath')
+HOUSE = ('living', 'kitchen', 'hall', 'boys', 'parents', 'dead')
+UPSTAIRS = ('hall', 'boys', 'parents', 'dead')
 PLAN_OF = {r: 'house' for r in HOUSE}
-PLAN_OF.update(street='street', y58='y58', morning='morning', town='town')
+PLAN_OF.update(street='street')
 LEVELS = {}
 STAIR = None
 
 
 def stair_Y(x, y):
-    """No stairs in this film's sets (one-storey house; the attic is reached only by him)."""
+    """The stairs are never walked on camera in this film."""
     return None
 
 
 def ice_level(sp, room, X, Yp, Y):
-    """Expected feet height: the house floor 0; outside the snow (IC_FOOT, sunk) unless on a porch / its steps / the
-    truck floor (within 0.6 m of a porch, step or truck anchor of the set)."""
+    """Expected feet height at plan (X, Yp): the ground floor 0, upstairs WL_UP; outside the yards WL_G or the road
+    WL_ROAD, the porch deck 0 and anything within 0.7 m of a staging anchor at its own height (steps, the kerb)."""
+    if room in UPSTAIRS: return [ST.WL_UP]
     if room in HOUSE: return [0.0]
-    out = [ST.IC_FOOT]
+    out = [ST.WL_G, ST.WL_ROAD]
+    x0, x1, y0, y1 = ST.WL_PORCH
+    if x0 - 0.05 <= X <= x1 + 0.05 and y0 - 0.05 <= Yp <= y1 + 0.05: out.append(0.0)
     for nm, s_ in sp.anchors.items():
-        if '.' in nm: continue
-        if (nm.startswith(('kporch', 'kdoor', 'ksteps', 'porch', 'steps', 'truck_vendor')) or nm in ('door_glass',)) and math.hypot(s_.X - X, s_.Yp - Yp) < 0.7:
-            out.append(s_.Y)
+        if '.' not in nm and s_.kind in ('stand', 'seat') and math.hypot(s_.X - X, s_.Yp - Yp) < 0.7: out.append(s_.Y)
     return out
 
 
@@ -275,10 +278,85 @@ LIERS = {}
 LIE_HALF = 0.85                          # half the length of a lying figure along its axis (m)
 
 
+ANKLE = 0.038                  # the rig's ankle point above the sole, per unit of figure height (all cast ids)
+KNEE = 0.017                   # a kneeling figure's knee point above the floor
+
+
+def _tol(h): return 4.0 + 0.012 * h
+
+
+def _ground_one(k, a, line, kind, ts, who, where='set'):
+    """Worst gap (+ sinking, - floating) of a figure's ground contact against its ground line over the samples."""
+    worst = (0.0, None)
+    for t in ts:
+        P = a.at(t)
+        if abs(getattr(P, 'lie', 0.0)) > 0.05 or getattr(P, 'sit', 0.0) > 0.3 or getattr(P, 'walk_amt', 0.0) > 0.1: continue
+        h = a.height
+        # the lowest ground contact (soles, knee caps, and on all fours the palms) must sit ON the line
+        cs = [a.where(t, 'foot_l')[1] + ANKLE * h, a.where(t, 'foot_r')[1] + ANKLE * h,
+              a.where(t, 'knee_l')[1] + KNEE * h, a.where(t, 'knee_r')[1] + KNEE * h]
+        if kind == 'crawl' or getattr(P, 'crawl', 0.0) > 0.5:
+            cs += [a.where(t, 'hand_l')[1] - 0.02 * h, a.where(t, 'hand_r')[1] - 0.02 * h]
+        # kneeling, the knees and the soles lie at different depths (in a back 3/4 view the soles are nearer the lens and
+        # lower on screen): their mean is the ground footprint; standing / on all fours, the lowest contact
+        # standing, the two soles straddle the anchor in depth (a 3/4 stance puts the near foot lower): their mean
+        if getattr(P, 'kneel', 0.0) > 0.5: g = sum(cs[:4]) / 4.0 - line
+        elif len(cs) > 4: g = max(cs) - line
+        else: g = max((cs[0] + cs[1]) / 2.0, max(cs[2:4])) - line
+        if abs(g) > abs(worst[0]): worst = (g, t)
+    g, t = worst
+    if t is not None and abs(g) > _tol(a.height):
+        sev = 'ERROR' if abs(g) > 2 * _tol(a.height) else 'WARN'
+        add(sev, k, 'GROUND', '%s (%s, %s) %s %.0f design px %s its ground line at %.2f s' % (who, kind, where, 'sinks' if g > 0 else 'floats', abs(g),
+                                                                                          'below' if g > 0 else 'above', t), t)
+
+
+def extra_checks(k, sh, ts, acts, held):
+    p = sh.p
+    if sh.kind == 'set':
+        sp = sh.sp
+        for q in p.get('ppl', []):
+            ident = q.get('id', q['who']); a_ = (getattr(sh, 'A', None) or {}).get(ident)
+            if a_ is None or q.get('path') or q.get('hush'): continue
+            kind, s0 = figure_kind(sp, q)
+            if kind in ('stand', 'kneel'):
+                _ground_one(k, a_, a_.y0, kind, ts, ident)
+            if kind == 'lie':                                                # LIEFRAME: lying figures only close / medium
+                try:
+                    cs = sh.spec_cam.at((sh.t0 + sh.t1) / 2)
+                    mag = cs.zoom * cs.fz * cs.pz
+                except Exception:
+                    mag = 1.0
+                L_ = a_.height * mag
+                if L_ < 0.30 * 1920:
+                    add('ERROR', k, 'LIEFRAME', '%s lies in a wide shot (%.0f px long on screen; lying figures only in close or medium shots)' % (ident, L_))
+        if p['room'] == 'street' and (p.get('set') or {}).get('police'):            # VEHICLE: nobody inside a cruiser
+            cars = [(s_.X, s_.Yp) for nm, s_ in sp.anchors.items() if nm.startswith('police_')]
+            for ident, (p0, p1, walks) in (getattr(sh, '_plan_pos', None) or {}).items():
+                for (X, Yp, Y) in (p0, p1):
+                    for (cx, cy) in cars:
+                        if abs(X - cx) < 2.45 and abs(Yp - cy) < 1.0:
+                            add('ERROR', k, 'VEHICLE', '%s stands inside a police car at plan (%.2f, %.2f)' % (ident, X, Yp))
+        st = p.get('set') or {}
+        if p['room'] == 'kitchen' and st.get('note') and 'note' in held:
+            add('ERROR', k, 'PROP', "Pell's note lies on the counter (note=True) AND is in %s's hand" % ', '.join(sorted(w for w, _ in held['note'])))
+        if p['room'] == 'parents' and st.get('phone_on_stand') and 'phone' in held:
+            add('ERROR', k, 'PROP', "Mom's phone is on the nightstand AND in a hand")
+    for (a_, line, kind) in getattr(sh, '_ground', None) or []:                  # inside the walls: the cavity's plate
+        _ground_one(k, a_, line, kind, ts, a_.who, 'inside the wall')
+    for (name, bottom, line) in getattr(sh, '_props', None) or []:               # prop close-ups: the shelf
+        if abs(bottom - line) > 3.0:
+            add('ERROR', k, 'GROUND', '%s %s %.0f px %s its shelf' % (sh.kind, name, abs(bottom - line), 'below' if bottom > line else 'above'))
+    if sh.kind == 'bust' and p.get('who') == 'pell' and abs(p.get('h_turn', 0.0)) > 0.7:
+        add('WARN', k, 'FACE', "Pell's face in profile (h_turn %.2f): his face beats are 3/4" % p.get('h_turn', 0.0))
+
+
+
 def check_shot(k):
     sh = SH[k]
     p = sh.p
     spec = F._build(sh)
+    sh.spec_cam = spec.cam
     ts = sample_times(sh)
     # ---- camera
     try:
@@ -328,7 +406,7 @@ def check_shot(k):
                         Ls = ice_level(sp, p['room'], X, Yp, Y)
                         if p['room'] != 'town' and min(abs(L_ - Y) for L_ in Ls) > (0.12 if p['room'] in HOUSE else 0.3):
                             add('ERROR', k, 'LEVEL', '%s feet at %.2f m, expected %s (plan %.2f, %.2f)' % (who, Y, '/'.join('%.2f' % L_ for L_ in Ls), X, Yp), t)
-                    if room_ok and False:
+                    if False:
                         L = floor_level(sp, X, Yp, Y)
                         tol = 0.2 if stair_Y(X, Yp) is not None else 0.12          # a ramp up the treads is within a riser
                         if L is not None and abs(L - Y) > tol:
@@ -411,6 +489,7 @@ def check_shot(k):
             if before[0] > -1e5 and after[0] > -1e5:
                 d = math.hypot(after[0] - before[0], after[1] - before[1])
                 if d > 40: add('ERROR', k, 'PROP', '%s jumps %.0f design px when it changes state (%s) at %.2f s' % (tr.name, d, stt[0], tk), tk)
+    extra_checks(k, sh, ts, acts, held)
     # ---- length
     if sh.d < 0.6 and sh.kind not in ('black',) and not p.get('flash'):
         add('WARN', k, 'LEN', 'a %.2f s shot (too short to read?)' % sh.d)
@@ -461,47 +540,43 @@ def _lv(v, t):
 
 
 def states():
-    """The story's prop / light / cast states against the lines (see the docstring)."""
-    t_A, t_B, t_gone = T(65), F.t(309) - 0.2, F.e(388) + 0.5     # (the cold open L0-L8 flashes forward: truck at A)
-    t_dark, t_morn, t_shut = T(116) + 0.6, T(395) - 0.2, T(124) + 1.2
-    t_sock = T(227) + 0.5
-    t_hatch = F.w(294, 'drops') + 0.3
-    t_tow = T(300) + 1.0
-    t_porch = F.w(377, 'click') - 0.2
+    """The story's states against the lines (see the docstring)."""
+    t_move0, t_move1 = T(12) - 0.2, F.e(27) + 0.3
+    t_unmask = F.w(251, 'pulled') + 1.7
+    t_believe = F.w(275, 'believe') - 0.2
+    t_slide, t_police = T(210) - 0.2, T(242) - 0.2
+    t_lock0, t_lock1 = F.w(220, 'locked') + 0.6, T(242)
     for k in KS:
         sh = SH[k]; p = sh.p
         era = p.get('era', 'now')
         st = p.get('set', {}) or {}
         room = p.get('room') or ((p.get('bg') or [None])[0])
         who = [q['who'] for q in p.get('ppl', [])] + ([p.get('who')] if sh.kind == 'bust' else []) + [b['who'] for b in p.get('busts', [])]
-        for q in p.get('ppl', []):
-            if q['who'].startswith('shiver') and q.get('breath', True) is not False:
-                add('ERROR', k, 'STATE', 'Mister Shiver breathes a cloud (breath=False on him, always)')
-        if sh.kind not in ('set', 'bust') or era != 'now': continue
-        if t_sock < sh.t0 < t_morn and any(w in ('adam', 'adam_in') for w in who):
-            add('ERROR', k, 'STATE', "Adam in both boots / indoors between L227 (the boot left behind) and the morning: use 'adam_sock'")
-        if room == 'street':
-            tr = st.get('truck', 'A')
-            if isinstance(tr, str):
-                if tr == 'A' and not (t_A - 1 < sh.t0 < t_B) and sh.t0 > T(9): add('ERROR', k, 'STATE', 'his truck at A outside L69-L306 (t %.1f)' % sh.t0)
-                if tr == 'B' and not (t_B - 0.5 < sh.t0 < t_gone): add('ERROR', k, 'STATE', 'his truck at B outside L310-L388 (t %.1f)' % sh.t0)
-            if sh.t0 < t_morn and (_lv(st.get('smoke', 0.0), sh.t0) or 0) > 0.05:
-                add('ERROR', k, 'STATE', "Kessler's chimney smokes before the morning (his furnace died)")
-            pc = st.get('porches')
-            if sh.t0 < t_porch and pc and not callable(pc) and not isinstance(pc, list):
-                add('ERROR', k, 'STATE', "the neighbours' porch lights are on before L377")
-        if room in HOUSE and t_dark < sh.t0 < t_morn and sh.kind == 'set' and not (st.get('blackout') or room == 'bath' or st.get('kitchen_light', 1) == 0):
-            add('ERROR', k, 'STATE', 'a lamp is on in the house after the power died (L116)')
-        if room == 'living' and t_shut < sh.t0 < t_morn:
-            c = st.get('curtains', 0.0)
-            if not callable(c) and c > 0.01: add('ERROR', k, 'STATE', 'the living-room curtains are open after Adam yanked them shut (L124)')
-        if room == 'hall' and p.get('view') == 'hatch':
-            h = st.get('hatch', 0.0)
-            if not callable(h):
-                if sh.t0 < t_hatch and h > 0.1: add('ERROR', k, 'STATE', 'the attic hatch is open before it drops (L294)')
-                if t_hatch < sh.t0 < t_morn and h < 0.5: add('ERROR', k, 'STATE', 'the attic hatch is shut again after it dropped (L294)')
-        if room == 'bath' and sh.t0 > t_tow and st.get('towels', 'gap') == 'rack':
-            add('ERROR', k, 'STATE', 'the towels are back on the rack after Adam stuffed them in the gap (L300)')
+        if era == 'now':
+            if 'dad' in who and not (t_move0 <= sh.t0 <= t_move1):
+                add('ERROR', k, 'STATE', "Dad in the red flannel ('dad') off moving day: after L27 it is on Pell (use dad_tee / dad_pj)")
+            if any(w in ('dad_tee', 'dad_pj') for w in who) and t_move0 <= sh.t0 <= t_move1:
+                add('ERROR', k, 'STATE', 'Dad out of his red flannel on moving day (L12-L27)')
+            if 'pell_bare' in who and sh.t0 < t_unmask - 1.8:
+                add('ERROR', k, 'STATE', 'Pell unmasked before Reyes pulls the mask off (L251)')
+            if 'pell' in who and sh.t0 > t_unmask:
+                add('ERROR', k, 'STATE', 'Pell masked after Reyes pulled the mask off (L251): pell_bare')
+        night = sh.kind in ('set', 'bust') and room not in (None, 'street') and st.get('tod', 'night') not in ('day', 'morning')
+        if night and 'sam' in who and era == 'now':
+            add('ERROR', k, 'STATE', "Sam in his day tee at night: 'sam_pj'")
+        if sh.kind == 'ins' and sh.t0 < t_believe:
+            kw = p.get('kw')
+            kw0 = kw(0.0) if callable(kw) else (kw or {})
+            kw1 = kw(max(0.0, sh.d - 0.05)) if callable(kw) else (kw or {})
+            if (p.get('name') == 'rules' and max(kw0.get('seven', 0), kw1.get('seven', 0)) > 0) or \
+               (p.get('name') == 'rule' and kw1.get('n') == 7 and kw1.get('write', 0) > 0 and sh.t0 + sh.d * 0.0 < t_believe - 0.5):
+                add('ERROR', k, 'STATE', "rule seven's line written before \"Believe me.\" (L275)")
+        if room == 'boys' and sh.kind == 'set' and sh.t0 < t_slide and _lv(st.get('slide', 0.0), sh.t0) > 0.01:
+            add('ERROR', k, 'STATE', "the closet's back wall slid before L210")
+        if sh.kind == 'set' and st.get('police') and T(12) < sh.t0 < t_police:
+            add('ERROR', k, 'STATE', 'police light before the sirens (L242)')
+        if room == 'parents' and sh.kind == 'set' and t_lock0 < sh.t0 < t_lock1 and not _lv(st.get('lock', 0.0), sh.t0):
+            add('ERROR', k, 'STATE', "the parents' door unlocked after Sam locked it (L220)")
 
 
 # ---------------------------------------------------------------------------------------------------- lips

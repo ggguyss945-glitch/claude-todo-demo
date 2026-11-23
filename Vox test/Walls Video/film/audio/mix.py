@@ -688,7 +688,13 @@ LINE_FX_LU.update({'his': -0.5, 'radio': -2.0, 'two_way': -2.0, 'radio_clean': -
 # ignored), so the right place follows the line whatever its tag: the fake Dad through the radio with bells, the
 # fake Mom through the door with bells, the copied boy from the window with bells, the real Dad clean on the radio.
 TAG_FX = {}
-NARRATOR_FX = ('whisper',)          # the only place a narrator (who 'N') line may take
+NARRATOR_FX = ('whisper',)          # the only place a narrator (who 'N' / 'narrator') line may take
+NARRATOR_WHO = ('N', 'narrator', 'narr', None)
+
+
+def is_narrator(l):
+    """A narrator line: who 'narrator' (the Walls film's timeline), 'N' (the earlier films) or no who at all."""
+    return l.get('who') in NARRATOR_WHO
 TEXT_FX = [
     ("who's cold who wants a free one", 'his+truck'),
     ("who's the coldest you are", 'his+truck'),
@@ -809,9 +815,16 @@ def voice_tracks(tl, vo_en, vo_ru, n_full, langs, who_fx=None):
     # the Ice Cream film: TAG_FX, then the line's words (TEXT_FX), then the line's own fx, then --who-fx
     # The NARRATOR's voice is never changed (only cleaned): a narrator line keeps only NARRATOR_FX ('whisper': Adam's
     # own "Good," I whisper); lines.py's 'memory' on the 1958 narration is left dry
+    # The Walls film: the voice track carries every character voice and its place-effect BAKED in (timeline
+    # 'fx_baked': true; the line 'fx' fields only document them): the mix never adds a voice effect again. Narrator
+    # lines are who 'narrator' here ('N' in the earlier films).
+    baked = bool(tl.get('fx_baked'))
+
     def fx_of(l):
+        if baked or l.get('fx_baked'):
+            return None
         fx = TAG_FX.get(l.get('tag')) or text_fx(l) or l.get('fx') or who_fx.get(l.get('who'))
-        if fx and l.get('who', 'N') == 'N' and str(fx) not in NARRATOR_FX:
+        if fx and is_narrator(l) and str(fx) not in NARRATOR_FX:
             return None
         return fx
     en_spans = [(l['t'], l['end'], fx_of(l)) for l in L if fx_of(l) and l.get('found_en', True)]

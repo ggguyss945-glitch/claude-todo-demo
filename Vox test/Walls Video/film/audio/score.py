@@ -1,4 +1,11 @@
-"""score.py: the music for "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE". THIS film's identity is
+"""score.py: the music for "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH". THIS film's identity
+is THEO'S ADDRESS SONG (audio/motif_walls.py, an ORIGINAL child's tune, its warped returns hummed inside the walls and
+the hush-a-bye lullaby): 'jingle' events (version toy / box / first / wall / vent / hush / warm; len, stop, loops,
+phrases, amount, inst, tempo, short, anchors) render through render_jingle with JINGLE_MODULE = 'motif_walls'
+(SHOW_DUCK['jingle'], MOTIF_LIFT); the map and this film's TRACKS (the last TRACKS table) are pinned by
+audio/music_plan.py. The earlier films' notes follow.
+
+(the Ice Cream film) identity was
 HIS CHIME (audio/chime_ice.py, an ORIGINAL music-box tune ending on a gap): 'jingle' events (version burst / three /
 far / closer / outside / lullaby / warped / climax / stinger / warm / bells; len, stop, loops, anchors, amount, hang,
 fall, short) render through render_jingle with JINGLE_MODULE = 'chime_ice' (SHOW_DUCK['jingle'], CHIME_LIFT); the map
@@ -220,6 +227,32 @@ TRACKS = {
     'a_heart_full_of_spring_franz_gordon': 0,    # ice: A major, warm: rule eight, the outro
     'peaceful_melody_megan_wofford': -3,         # ice: F major -> D major, gentle (-11 LUFS, clipped: -6 dB): the tips
 }
+TRACKS_ICE = TRACKS
+# THIS film, the Walls film: only the tracks music_plan.py maps (keys from the table above, the earlier films'
+# catalogues); varispeed so every track sits on D or A (the motif is in D major; its wall hums sink toward D minor)
+TRACKS = {
+    'are_you_alone_victor_lundberg': 0,          # D sub drone that swells to one spike: the hook
+    'haunted_mind_etienne_roussel': 0,           # A minor, slow build, mid register: the rules set up
+    'afterthoughts_beyza': -3,                   # F minor -> D minor, slow, no drums: the move-in
+    'come_closer_belladonna_strings': -1,        # D# minor -> D minor, horror strings: the first doorway
+    'sleep_forever_luella_gren': 1,              # G# major -> A, a sinister lullaby: Hushabye, the mask
+    'turning_stones_stefan_ekstrom': 2,          # C minor -> D minor, pure dark drone: the prompt, the 911 call
+    'the_logic_of_tyrants_hampus_naeselius': 1,  # bass C# -> D, dark low pulse: rule 1, the deadbolt
+    'dark_tunnels_ethan_sloan': -3,              # F minor -> D minor: rule 2, the pantry wall, the eye
+    'the_haunted_luella_gren': 1,                # G# minor -> A minor, sparse piano: rule 3, the drawings
+    'don_t_look_belladonna_strings': -1,         # D# minor -> D minor, horror strings: rule 4, the attic light
+    'midnight_wanderer_luella_gren': -2,         # E minor -> D minor: rule 5, the address song
+    'escalation_jon_bjork': 2,                   # C minor -> D minor, a steady escalation: the note's words
+    'irene_kevin_dailey': 0,                     # D minor, near silent then builds: rule 6, 3 a.m.
+    'code_of_violence_dian_shuai': 0,            # D minor, dark pulsing bass build: the closet, the hall
+    'one_step_away_dian_shuai': 0,               # A, percussive build: THE CLIMAX
+    'when_the_sun_sets_anna_landstrom': 1,       # C# major -> D major, a quiet warm pad: the police relief
+    'the_forgotten_memories_luella_gren': 2,     # C minor -> D minor, sparse sad piano: the unmasked old man
+    'dark_forebodings_ethan_sloan': 0,           # G minor (iv of D minor), flat dark drone: the pencil marks
+    'end_of_rain_beyza': 0,                      # A major, very quiet pad: rule 7
+    'at_first_light_gavin_luke': 0,              # A major: the outro, the real list
+    'in_those_hazel_eyes_tall_oak_town': 0,      # D major, warm acoustic: the comment payoff, the end
+}
 # The vintage tunes (the dummy set) are NOT arranged as tracks: they are the diegetic show on the TV (event 'show') and,
 # warped, Mister Winks's theme (event 'winks'). slug -> semitones for the TV (the tune sits on A, the film's second
 # centre, a little slow: an old tape) and the default start (s, in the original track).
@@ -255,9 +288,15 @@ JINGLE_MODULE = 'jingle_bus'
 # THIS film, the Ice Cream film: 'jingle' events render HIS CHIME (audio/chime_ice.py); how far the dark bed steps back
 # under each version and its level trim (dB on IDENTITY_LIFT)
 JINGLE_MODULE = 'chime_ice'
+JINGLE_MODULE = 'motif_walls'                    # THIS film (the Walls film): THEO'S ADDRESS SONG
 SHOW_DUCK['jingle'].update({'burst': -8.0, 'three': -4.0, 'far': -3.0, 'closer': -4.0, 'outside': -7.0,
                             'lullaby': -9.0, 'warped': -5.0, 'climax': -6.0, 'stinger': -3.0, 'warm': -10.0,
                             'bells': -2.0})
+# THIS film, the Walls film: 'jingle' events render THEO'S ADDRESS SONG (audio/motif_walls.py); how far the dark bed
+# steps back under each version and its level trim (dB on IDENTITY_LIFT). The wall / vent hums are the threat: the bed
+# steps back least there; the sweet and warm versions get the room.
+MOTIF_DUCK = {'toy': -9.0, 'box': -6.0, 'first': -4.0, 'wall': -5.0, 'vent': -4.0, 'hush': -7.0, 'warm': -10.0}
+MOTIF_LIFT = {'toy': -4.0, 'box': -3.0, 'first': -2.0, 'wall': 0.0, 'vent': 0.0, 'hush': -3.0, 'warm': -3.5}
 CHIME_LIFT = {'burst': -5.0, 'three': 0.0, 'far': 0.0, 'closer': 0.0, 'outside': -3.5, 'lullaby': -3.0,
               'warped': -2.0, 'climax': 0.0, 'stinger': 0.0, 'warm': -3.5, 'bells': -4.0}
 SHOW_DUCK['jingle'].update({'sting': -3.0, 'tv1994': -12.0, 'pa': -6.0, 'musicbox': -5.0, 'tapestop': -10.0,
@@ -1613,9 +1652,9 @@ class Score:
         ver = str(e.get('version') or ('landline' if hold else 'musicbox'))
         keys = ('tempo', 'loops', 'phrases', 'who', 'transpose', 'n', 'minor', 'wind_down', 'speed', 'pass_at', 'far',
                 'cut', 'phrase3_only', 'wind', 'speeds', 'sag_to', 'hum_transpose', 'stop_beat',
-                'amount', 'hang', 'fall', 'short', 'dur')          # (the chime's keys)
+                'amount', 'hang', 'fall', 'short', 'dur', 'hush', 'inst')   # (the chime's and the motif's keys)
         kw = {k: e[k] for k in keys if k in e and e[k] is not None}
-        if 'phrases' in kw:
+        if 'phrases' in kw and not isinstance(kw['phrases'], str):    # the motif's phrases are a string ('AC')
             kw['phrases'] = tuple(int(p) for p in kw['phrases'])
         if e.get('anchors'):
             kw['anchors'] = [(float(b), float(x) - t) for b, x in e['anchors']]
@@ -1651,19 +1690,21 @@ class Score:
             except Exception as ex:
                 print(f'[score] WARNING: jingle space {e.get("space")!r} failed ({repr(ex)[:80]}): dry', flush=True)
         st = short_term(y, 0.25).max() if len(y) > 3 * SR else momentary_max(y)
-        lifts = HOLD_LIFT if hold else (CHIME_LIFT if JINGLE_MODULE == 'chime_ice' else
+        lifts = HOLD_LIFT if hold else (MOTIF_LIFT if JINGLE_MODULE == 'motif_walls' else
+                                        CHIME_LIFT if JINGLE_MODULE == 'chime_ice' else
                                         JINGLE_LIFT_BUS if JINGLE_MODULE == 'jingle_bus' else JINGLE_LIFT)
         target = REF_LUFS + 4.0 + 8.0 * (lv - 0.5) + IDENTITY_LIFT + lifts.get(ver, 0.0)
         y = (y * np.float32(db(target - st))).astype(np.float32)
         if hold:                                           # hold.py versions carry their own space: almost dry
             rev = {'recital': 0.05} if ver in ('studio', 'warm') else {}
         else:
-            rev = ({'recital': 0.06} if ver == 'warm' else {}) if JINGLE_MODULE == 'chime_ice' else \
+            rev = ({'recital': 0.06} if ver == 'warm' else {}) if JINGLE_MODULE in ('chime_ice', 'motif_walls') else \
                 {'recital': 0.08} if ver in ('vhs', 'parade', 'outro', 'studio', 'warm') else {} if ver in (
                 'tv1994', 'pa', 'tapestop', 'sting') else \
                 ({'hall': 0.35} if ver in ('climax', 'count', 'speaker') else {'recital': 0.12})
         self.bus['show'].add(t, y, rev=rev)
-        self._duck_span(t, t + len(y) / SR, SHOW_DUCK['hold' if hold else 'jingle'].get(ver, -4.0))
+        duck = MOTIF_DUCK if (JINGLE_MODULE == 'motif_walls' and not hold) else SHOW_DUCK['hold' if hold else 'jingle']
+        self._duck_span(t, t + len(y) / SR, duck.get(ver, -4.0))
         self.log(f'{"hold" if hold else "jingle"} {ver} {t:.1f}-{t + len(y) / SR:.1f}s stop {stop}')
 
     def _duck_span(self, a, b, depth):
