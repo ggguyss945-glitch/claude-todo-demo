@@ -401,7 +401,11 @@ def cmd_build():
     for l, y in zip(L, dry):
         if l.get('drop'):                              # owner: no dialogue tags; keep the longer of the two pauses
             if el:
-                extra = max(0.0, float(l['pause']) - el[-1]['pause'])
+                want = float(l['pause'])
+                nxt = next((m for m in L[L.index(l) + 1:] if not m.get('drop')), None)
+                if nxt is not None and nxt['who'] == el[-1]['who'] != 'narrator':   # one speaker's two quotes now meet:
+                    want = max(want, 0.55 if nxt['who'] == 'pell' else 0.40)        # a natural phrase pause between them
+                extra = max(0.0, want - el[-1]['pause'])
                 if extra > 0:
                     parts.append(np.zeros(int(round(extra * SR)))); t += extra
                     el[-1]['pause'] = round(el[-1]['pause'] + extra, 3)
