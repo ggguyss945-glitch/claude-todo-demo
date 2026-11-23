@@ -35,7 +35,7 @@ parents `bed_dad`, `bed_mom`, `bed_huddle`, `door_in`, `lock`, `phone`, `vent`, 
 Grades: `wl_night`, `wl_ext`, `wl_warm`, `wl_day`, `wl_police`, `wl_dead`, `wl_ins`, `wl_ins_night` (picked by the builders).
 Night rule: the frame is dark, the subject lit (moonlight through the windows, the hall nightlight spilling into the
 boys' doorway, the kitchen nightlight by the deadbolt, the attic line, phone, flashlight, police bars). Measured mean
-luma at 2560: boys wide 23 -> ~35 after the fix, living wide 33, house + police 50.
+luma: boys wide 36 (was 23 before lifting the night ambient), living wide 33, house + police 50.
 Bench 2560 (one warm frame): quiet views ~0.2 s; police views 0.58 s (the red / blue bars relight the room every frame).
 Open: cruisers are side-view sprites (none in from_window, only their light pools); the hole seen from the boys' room
 (closet_sam) reads weakly, use `wl_dead('hole' / 'slot')` for the reveal.
