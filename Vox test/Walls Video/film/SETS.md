@@ -1,4 +1,48 @@
-# SETS.md: the sets of "If The Ice Cream Truck Plays Its Song In Winter... DON'T GO OUTSIDE"
+# SETS.md: the sets of "If Your Little Brother Says Someone Lives In The Walls... DON'T LAUGH"
+
+## Walls film (this film): `sets_walls.py`
+Exec'd inside `sets.py` after `sets_ice.py` (hook at the end of sets.py). Every name is `wl_* / WL_* / _wl*`; use
+`import sets as ST`. The module docstring has the full plan (14 Larkspur Lane, metres: x east, y north from the front
+wall, Y up; ground floor Y 0, upstairs `WL_UP` 2.9, yards `WL_G` -0.5, road `WL_ROAD` -0.62). `ST.WL_API` lists every
+view, `ST.WL_INSERTS` every insert (with notes). Sheet, index (anchors of every still), floor plan, bench: `_work/sets/`.
+```
+python3 tools/sets_sheet_walls.py                     # every variant -> _work/sets/sets_sheet.png + index.json + floorplan.jpg
+python3 tools/sets_sheet_walls.py --only boys_,ins_   # some -> sets_partial.png;  --keep name1,name2 also writes wl_<name>.jpg
+python3 tools/sets_sheet_walls.py --no_stills --bench --bench_only boys_police   # 2560x1440 timing -> bench_2560.json
+```
+Variants (the best example of every state): `tools/sets_sheet_walls_list.py`.
+
+| builder (views) | states (number or f(t) where it says level) |
+|---|---|
+| `wl_street(view)`: house, porch, frog, garage, keypad, across, curb, up, from_window | tod 'night' / 'day' / 'morning'; porch (light); win {liv, liv_w1, liv_w2, dining, bath, stair, boys, par, kitchen}; attic (the dormer lit: "right around two"); police None / True / `ST.wl_police(t0)` (three cruisers at our kerb, drawn in views across the lane: house, curb, up, across); frog_lift 0..1 / f(t) (the key under it), key; flash, flash_at |
+| `wl_living(view)`: wide, chair, vent, window | tod; lamp, ceil, phone (+phone_at), flash; boxes |
+| `wl_kitchen(view)`: wide, counter, door, water, pantry, crack | tod; kitchen_light, pantry_light, crack (the sliver of light), phone, flash; nightlight (by the garage door); bolt 1 locked .. 0 or f(t) (turning by itself); gdoor, pantry_door (deg); note; bread 'twisted' / 'open' / None |
+| `wl_hall(view)`: down, switch, closet, back, hatch | hall_light, attic (the yellow line round the closet door / the hatch), boys_moon, par_lamp, phone, flash, police; switch 0/1; closet deg (7 = "opened just a crack") or f(t); boys_door (80) or f(t); par_door (70); lock; nightlight |
+| `wl_boys(view)`: wide, closets, door_pov, doorway, theo, sam_wall, doorframe, closet_sam | tod ('morning' for the marks); moon; nightlight; ceil, lamp, hall_light, phone, flash, police (red / blue on the ceiling); door (80) / sam_closet / theo_closet deg or f(t); slide 0..1 or f(t) (Sam's closet back wall); hole; marks, fresh; theo_bed / sam_bed 'made' / 'turned' / 'empty' |
+| `wl_parents(view)`: wide, door, vent, bed | lamp, ceil, hall_light, phone (+phone_at), flash, police; door deg or f(t); lock 0/1 or f(t); bed; phone_on_stand |
+| `wl_dead(view)`: slot, hole | flash (default 1, flash_at), dad_flash, police; hole |
+| `wl_insert(name, prop_kw, motion)` | note (hl 0..8), rules (show, hl 1..7, seven 0..1 = "Believe me."), rule (n 1..7, write), frog (lift, key, tod), keypad (press, tod), deadbolt (turn), bread (state), drawings ('folded' / 'spread'), switch (on), vent (rattle), phone ('dial' / 'call', secs), marks (fresh) |
+
+Key anchors (`sp.anchors`, Spots with plan + screen data; seats carry seat_y): street `porch_door`, `porch_out`,
+`step_bottom`, `frog`, `frog_kneel`, `keypad(_stand)`, `boys_window`, `attic_window`, `curb_sit` (Pell on the kerb, feet in
+the gutter), `curb_officer`, `to_car`, `police_0..2`, `dab_door`, `dab_walk`; living `armchair`, `chair_front`,
+`chair_seat`, `vent`, `couch_*`; kitchen `note`, `bread`, `counter_front`, `sink`, `deadbolt`, `knob`, `door_in`,
+`pantry_door`, `table_n/s`, `fridge`; pantry `crack`, `crack_lean`; hall `switch`, `switch_stand`, `closet_door`,
+`closet_front`, `boys_door`, `par_door`, `hall_mid`, `ceiling`, `hatch`; boys `theo_bed`, `sam_bed` (lie), `sam_pillow`,
+`theo_kneel`, `doorway`, `door_in`, `sam_closet`, `sam_wall`, `vent`, `marks`, `marks_fresh`, `slide_panel`;
+parents `bed_dad`, `bed_mom`, `bed_huddle`, `door_in`, `lock`, `phone`, `vent`, `dresser`, `headboard`; dead space
+`sleeping_bag`, `crouch`, `flashlight`, `bread_bags`, `gone_forever`, `hole`.
+Grades: `wl_night`, `wl_ext`, `wl_warm`, `wl_day`, `wl_police`, `wl_dead`, `wl_ins`, `wl_ins_night` (picked by the builders).
+Night rule: the frame is dark, the subject lit (moonlight through the windows, the hall nightlight spilling into the
+boys' doorway, the kitchen nightlight by the deadbolt, the attic line, phone, flashlight, police bars). Measured mean
+luma at 2560: boys wide 23 -> ~35 after the fix, living wide 33, house + police 50.
+Bench 2560 (one warm frame): quiet views ~0.2 s; police views 0.58 s (the red / blue bars relight the room every frame).
+Open: cruisers are side-view sprites (none in from_window, only their light pools); the hole seen from the boys' room
+(closet_sam) reads weakly, use `wl_dead('hole' / 'slot')` for the reveal.
+
+---
+
+# (previous film, kept for reference) The Ice Cream film's sets
 
 Code: `sets_ice.py` (exec'd inside `sets.py` after `sets_bus.py`; its docstring and `IC_API` are the API reference). Every
 name is `ic_* / IC_* / _ic*`; use `import sets as ST`. The older films' builders are unchanged (the bus film's are in
